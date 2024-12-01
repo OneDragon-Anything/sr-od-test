@@ -17,9 +17,11 @@ class TestGetMatchScreenName(SrTestBase):
             'bag_consumable': '背包-消耗品',
             'bag_mission': '背包-任务',
             'bag_valuable': '背包-贵重物',
-            'bag_pet': '背包-随宠'
+            'bag_pet': '背包-随宠',
+            'bag_relic_salvage': '背包-遗器分解',
+            'bag_relic_salvage_filter': '背包-遗器分解-快速选择'
         }
         for image_name, screen_name in screen_map.items():
             screen = self.get_test_image(image_name)
             result = screen_utils.get_match_screen_name(self.ctx, screen)
-            self.assertEqual(result, screen_name)
+            self.assertEqual(screen_name, result)

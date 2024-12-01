@@ -66,7 +66,7 @@ class SrTestBase(unittest.TestCase):
         if not file_name.endswith('.png'):
             file_name = f'{file_name}.png'
         img_path = os.path.join(self.sub_package_path, file_name)
-        self.assertTrue(os.path.exists(img_path), '图片不存在')
+        self.assertTrue(os.path.exists(img_path), f'图片不存在 {img_path}')
         return cv2_utils.read_image(img_path)
 
     def add_mock_screenshot(self, file_name: str) -> MatLike:
