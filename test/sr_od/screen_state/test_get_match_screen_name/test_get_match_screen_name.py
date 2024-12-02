@@ -10,6 +10,7 @@ class TestGetMatchScreenName(SrTestBase):
     def test_get_match_screen_name(self):
         screen_map = {
             'normal_world_basic': '大世界-普通',
+            'normal_world_battle_fail': '大世界-战斗失败',
             'bag_upgrade_material': '背包-养成材料',
             'bag_light_cone': '背包-光锥',
             'bag_relic': '背包-遗器',
