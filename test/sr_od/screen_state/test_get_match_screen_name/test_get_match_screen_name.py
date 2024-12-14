@@ -23,6 +23,7 @@ class TestGetMatchScreenName(SrTestBase):
             'bag_relic_salvage': '背包-遗器分解',
             'bag_relic_salvage_filter': '背包-遗器分解-快速选择',
             'phone_menu': '菜单',
+            'enter_game_logout_dialog': '进入游戏-退出登陆'
         }
         for image_name, screen_name in screen_map.items():
             screen = self.get_test_image(image_name)
