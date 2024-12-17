@@ -1,4 +1,3 @@
-from one_dragon.base.screen import screen_utils
 from sr_od.screen_state import battle_screen_state
 from test import SrTestBase
 
