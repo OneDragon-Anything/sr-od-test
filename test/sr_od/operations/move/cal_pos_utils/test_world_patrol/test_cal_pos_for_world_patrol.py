@@ -1,3 +1,5 @@
+import time
+
 import os
 
 import cv2
@@ -54,6 +56,7 @@ class TestCalPosForWorldPatrol(SrTestBase):
         verify = VerifyPosInfo(last_pos=Point(case.possible_pos[0], case.possible_pos[1]),
                                max_distance=case.possible_pos[1])
 
+        start_time = time.time()
         pos = cal_pos_utils.cal_character_pos(
             self.ctx,
             lm_info=lm_info,
@@ -65,6 +68,7 @@ class TestCalPosForWorldPatrol(SrTestBase):
             show=show,
             verify=verify
         )
+        print('耗时 %.4f' % (time.time() - start_time))
         if show:
             cv2.waitKey(0)
 
