@@ -23,7 +23,16 @@ class TestGetMatchScreenName(SrTestBase):
             'bag_relic_salvage': '背包-遗器分解',
             'bag_relic_salvage_filter': '背包-遗器分解-快速选择',
             'phone_menu': '菜单',
-            'enter_game_logout_dialog': '进入游戏-退出登陆'
+            'enter_game_logout_dialog': '进入游戏-退出登陆',
+            'div_uni_entry': '差分宇宙-入口',
+            'div_uni_normal_world': '差分宇宙-大世界',
+            'div_uni_choose_curio': '差分宇宙-选择奇物',
+            'div_uni_choose_equation': '差分宇宙-选择方程',
+            'div_uni_choose_bless': '差分宇宙-选择祝福',
+            'sim_uni_get_reward': '模拟宇宙-获得物品',
+            'sim_uni_get_curio': '模拟宇宙-获得奇物',
+            'sim_uni_get_bless': '模拟宇宙-获得祝福',
+            'div_uni_get_equation': '差分宇宙-获得方程',
         }
         for image_name, screen_name in screen_map.items():
             screen = self.get_test_image(image_name)
