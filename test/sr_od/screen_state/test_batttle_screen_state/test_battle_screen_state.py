@@ -1,3 +1,8 @@
+import os
+import pytest
+
+pytestmark = __import__('pytest').mark.skipif(bool(__import__('os').environ.get('CI')), reason='需完整 SR 数据栈（screen 配置/模板/OCR），CI clean checkout 无；本地有数据则跑')
+
 from sr_od.screen_state import battle_screen_state
 from test import SrTestBase
 
