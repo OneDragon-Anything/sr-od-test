@@ -1,4 +1,4 @@
-from sr_od.app.sim_uni import sim_uni_screen_state
+from sr_od.application.sim_universe import sim_uni_screen_state
 from test import SrTestBase
 
 
