@@ -269,7 +269,7 @@ def test_click_game_tool_delegates() -> None:
     tool = mcp._tool_manager._tools['click_game']
     fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
     result = fn(x=960, y=540)
-    backend.click_game.assert_called_once_with(960, 540, 0.0)
+    backend.click_game.assert_called_once_with(960, 540, 0.1, False)
     assert result['success'] is True
 
 
@@ -288,3 +288,174 @@ def test_input_text_tool_delegates() -> None:
     result = fn(text='abc', use_clipboard=True)
     backend.input_text.assert_called_once_with('abc', True)
     assert result['method'] == 'clipboard'
+
+
+def test_analyze_screen_tool_passes_save_image() -> None:
+    """analyze_screen tool 应把 save_image 透传给 backend.analyze,并回带 screenshot_path。"""
+    mcp, backend = _mcp_with_backend()
+    backend.analyze.return_value = AnalyzeScreenResult(
+        success=True, ocr_texts=[], error=None, screenshot_path='/tmp/x.png')
+    tool = mcp._tool_manager._tools['analyze_screen']
+    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+    result = fn(save_image=True)
+    backend.analyze.assert_called_once_with(None, True)
+    assert result.screenshot_path == '/tmp/x.png'
+
+
+# ===== list_operations / describe_operation / run_operation(自定义 operation 入口)=====
+
+_OPEN_AND_ENTER = 'sr_od.operations.enter_game.open_and_enter_game.OpenAndEnterGame'
+_TALK_INTERACT = 'sr_od.operations.interact.talk_interact.TalkInteract'
+_BUY_STORE_ITEM = 'sr_od.operations.store.buy_store_item.BuyStoreItem'
+_STORE_ITEM = 'sr_od.operations.store.store_const.StoreItem'
+
+
+def test_registers_operation_tools() -> None:
+    """create_mcp_server 应注册 list_operations/describe_operation/run_operation。"""
+    mcp, _ = _mcp_with_backend()
+    names = set(mcp._tool_manager._tools.keys())
+    assert {'list_operations', 'describe_operation', 'run_operation'} <= names
+
+
+def test_list_operations_contains_open_and_enter_game() -> None:
+    """list_operations 扫描结果应含 OpenAndEnterGame(operation 承载包)。"""
+    from sr_od.backend.mcp.service_app import make_list_operations
+
+    backend = MagicMock()
+    result = make_list_operations(backend)()
+    op_ids = [o.op_id for o in result.operations]
+    assert _OPEN_AND_ENTER in op_ids
+
+
+def test_list_operations_error_fallback() -> None:
+    """scan_operations 抛异常时 list_operations 返回 {error}(工具层兜底)。"""
+    from sr_od.backend import operation_registry
+    from sr_od.backend.mcp.service_app import make_list_operations
+
+    backend = MagicMock()
+    original = operation_registry.scan_operations
+
+    def _boom(_ctx, refresh: bool = False):  # noqa: ANN202
+        raise RuntimeError('扫描失败')
+
+    operation_registry.scan_operations = _boom
+    try:
+        res = make_list_operations(backend)()
+    finally:
+        operation_registry.scan_operations = original
+    assert isinstance(res, dict) and 'error' in res
+
+
+def test_describe_operation_delegates() -> None:
+    """describe_operation 纯反射参数 schema(op_id 走参数)。"""
+    from sr_od.backend.mcp.service_app import make_describe_operation
+
+    backend = MagicMock()
+    info = make_describe_operation(backend)(_TALK_INTERACT)
+    assert info['op_id'] == _TALK_INTERACT
+    assert info['class_name'] == 'TalkInteract'
+    param_names = [p['name'] for p in info['params']]
+    assert param_names == ['option', 'lcs_percent', 'conversation_seconds']
+
+
+def test_describe_operation_error_on_bad_op() -> None:
+    """describe_operation 非 Operation → {error}(异常兜底)。"""
+    from sr_od.backend.mcp.service_app import make_describe_operation
+
+    backend = MagicMock()
+    info = make_describe_operation(backend)(_STORE_ITEM)
+    assert isinstance(info, dict) and 'error' in info
+
+
+def test_run_operation_runs_via_slot() -> None:
+    """合法 op_id + 空 args → run_slot._start 被调(op_factory 路径),started=True。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, Future())
+    backend.query_status.return_value = RunStatusResult(
+        state='running', source='mcp', started_at='2026-07-02T00:00:00', duration_seconds=1.0)
+    res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, args={}, block=False))
+    assert res['started'] is True
+    backend.run_slot._start.assert_called_once()
+    call = backend.run_slot._start.call_args
+    assert call.args[0] == 'mcp'                                   # source
+    op_factory = call.kwargs.get('op_factory') or call.args[1]
+    assert callable(op_factory)
+    assert call.kwargs.get('display_name') == _OPEN_AND_ENTER      # op_id 作定位标识
+
+
+def test_run_operation_rejects_non_operation() -> None:
+    """op_id 解析出非 Operation(resolve_op_class raise)→ {started: False, error},不调 _start。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    backend = MagicMock()
+    res = asyncio.run(make_run_operation(backend)(op_id=_STORE_ITEM, block=False))
+    assert res['started'] is False and 'error' in res
+    backend.run_slot._start.assert_not_called()
+
+
+def test_run_operation_rejects_missing_required() -> None:
+    """缺必填参数(validate_args 返错)→ {started: False, error},不调 _start。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    backend = MagicMock()
+    res = asyncio.run(make_run_operation(backend)(
+        op_id=_TALK_INTERACT, args={}, block=False))
+    assert res['started'] is False
+    assert 'option' in res['error']
+    backend.run_slot._start.assert_not_called()
+
+
+def test_run_operation_rejects_complex_dataclass() -> None:
+    """复杂数据类参数(BuyStoreItem.item)→ {started: False, error}。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    backend = MagicMock()
+    res = asyncio.run(make_run_operation(backend)(op_id=_BUY_STORE_ITEM, args={}, block=False))
+    assert res['started'] is False
+    assert 'item' in res['error']
+    backend.run_slot._start.assert_not_called()
+
+
+def test_run_operation_concurrent_reject() -> None:
+    """单跑道已有运行 → run_slot._start 返 (False, None) → {started: False, source}。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (False, None)
+    backend.query_status.return_value = RunStatusResult(state='running', source='http')
+    res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, block=False))
+    assert res['started'] is False
+    assert res['error'] == '已有运行在进行中'
+    assert res['source'] == 'http'
+
+
+def test_run_operation_block_success() -> None:
+    """block=True + 成功结果 → 返回成功摘要字符串。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    fut: Future = Future()
+    fut.set_result(OperationResult(success=True, status='ok'))
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, fut)
+    res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, args={}, block=True))
+    assert isinstance(res, str) and '成功' in res
+
+
+def test_run_operation_bakes_args_into_factory() -> None:
+    """op_factory 闭包 bake 了 args:展开后等价 cls(ctx, option=..., lcs_percent=...)。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+    from sr_od.operations.interact.talk_interact import TalkInteract
+
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, Future())
+    backend.query_status.return_value = RunStatusResult(state='running', source='mcp')
+    asyncio.run(make_run_operation(backend)(
+        op_id=_TALK_INTERACT, args={'option': '对话', 'lcs_percent': 1.0}, block=False))
+    call = backend.run_slot._start.call_args
+    op_factory = call.kwargs.get('op_factory') or call.args[1]
+    op = op_factory(MagicMock(name='SrContext'))
+    assert isinstance(op, TalkInteract)
+    assert op.option == '对话'
+    assert op.lcs_percent == 1.0

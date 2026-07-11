@@ -180,7 +180,7 @@ def test_analyze_exception_no_writeback(monkeypatch) -> None:
 
 
 def test_start_run_delegates_to_run_slot() -> None:
-    """start_run 应委托 run_slot._start_run，返回 (ok, future) 元组。
+    """start_run 应委托 run_slot._start(op 路径)，返回 (ok, future) 元组。
 
     覆盖旧的 enter_game 用例：不再有同步 enter_game 方法，运行由
     run_slot 异步派发；此处直接 mock run_slot，验证透传与返回结构。
@@ -191,7 +191,7 @@ def test_start_run_delegates_to_run_slot() -> None:
     fut: Future = Future()
     fut.set_result(object())
     backend.run_slot = MagicMock()
-    backend.run_slot._start_run.return_value = (True, fut)
+    backend.run_slot._start.return_value = (True, fut)
 
     def _factory(_ctx: object) -> object:
         return object()
@@ -199,7 +199,9 @@ def test_start_run_delegates_to_run_slot() -> None:
     ok, future = backend.start_run("mcp", _factory)
     assert ok is True
     assert future is fut
-    backend.run_slot._start_run.assert_called_once_with("mcp", _factory)
+    backend.run_slot._start.assert_called_once_with(
+        "mcp", op_factory=_factory, display_name=None
+    )
 
 
 def test_query_status_delegates_to_run_slot() -> None:
@@ -226,6 +228,28 @@ def test_stop_delegates_to_run_slot() -> None:
     backend.run_slot._stop.assert_called_once()
 
 
+def test_list_applications_no_refresh(monkeypatch) -> None:
+    """list_applications 是只读路径,不应调用 _refresh_runtime_config。"""
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.standalone_app_config.active_app_id = ''
+    ctx.standalone_app_config.app_list = []
+    group_config = MagicMock()
+    group_config.app_list = []
+    ctx.app_group_manager.get_one_dragon_group_config.return_value = group_config
+    ctx.run_context.is_app_registered.return_value = False
+    ctx.run_context.default_group_apps = []
+    ctx.current_instance_idx = 0
+    backend = SrBackendContext(ctx)
+
+    called: list = []
+    monkeypatch.setattr(backend, '_refresh_runtime_config', lambda: called.append(True))
+
+    result = backend.list_applications()
+    assert result.applications == []
+    assert called == []                          # 只读路径不刷新配置
+
+
 def test_close_game_delegates() -> None:
     """close_game 应委托 controller.close_game()。"""
     controller = MagicMock()
@@ -235,3 +259,100 @@ def test_close_game_delegates() -> None:
     msg = backend.close_game()
     controller.close_game.assert_called_once()
     assert msg == '已发送关闭游戏信号,可用 check_game_window 验证'
+
+
+def test_analyze_save_image_persists_and_returns_path(monkeypatch) -> None:
+    """analyze(save_image=True) 实时模式:存盘 + screenshot_path 回传路径。"""
+    import numpy as np
+    import sr_od.backend.backend_context as bc
+
+    saved_args: list = []
+
+    def fake_save(image):
+        saved_args.append(image)
+        return '/tmp/fake_screenshot.png'
+
+    monkeypatch.setattr(bc, '_save_screenshot', fake_save)
+    controller = MagicMock()
+    controller.is_game_window_ready = True
+    controller.get_screenshot.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.controller = controller
+    ctx.ocr_service.get_ocr_result_list.return_value = []
+    backend = SrBackendContext(ctx)
+    result = backend.analyze(save_image=True)
+    assert result.success is True
+    assert result.screenshot_path == '/tmp/fake_screenshot.png'
+    assert len(saved_args) == 1
+
+
+def test_analyze_save_image_false_does_not_persist(monkeypatch) -> None:
+    """analyze() 默认 save_image=False:不存盘,screenshot_path=None。"""
+    import sr_od.backend.backend_context as bc
+
+    called: list = []
+    monkeypatch.setattr(bc, '_save_screenshot', lambda img: called.append(img) or '/tmp/x.png')
+    controller = MagicMock()
+    controller.is_game_window_ready = True
+    controller.get_screenshot.return_value = object()
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.controller = controller
+    ctx.ocr_service.get_ocr_result_list.return_value = []
+    backend = SrBackendContext(ctx)
+    result = backend.analyze()
+    assert result.success is True
+    assert result.screenshot_path is None
+    assert called == []
+
+
+def test_analyze_offline_ignores_save_image(monkeypatch, tmp_path) -> None:
+    """analyze(screenshot=path) 离线模式:save_image 被忽略,screenshot_path=None。"""
+    import cv2
+    import numpy as np
+    import sr_od.backend.backend_context as bc
+
+    called: list = []
+    monkeypatch.setattr(bc, '_save_screenshot', lambda img: called.append(img) or '/tmp/x.png')
+    img_path = tmp_path / 'shot.png'
+    cv2.imwrite(str(img_path), np.zeros((4, 4, 3), dtype=np.uint8))
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.ocr_service.get_ocr_result_list.return_value = []
+    backend = SrBackendContext(ctx)
+    result = backend.analyze(screenshot=str(img_path), save_image=True)
+    assert result.success is True
+    assert result.screenshot_path is None
+    assert called == []
+
+
+def test_analyze_save_image_capture_fails_no_path() -> None:
+    """实时捕获失败(get_screenshot None)→ success=False,screenshot_path=None。"""
+    controller = MagicMock()
+    controller.is_game_window_ready = True
+    controller.get_screenshot.return_value = None
+    backend = _backend(ready=True, controller=controller)
+    result = backend.analyze(save_image=True)
+    assert result.success is False
+    assert result.screenshot_path is None
+
+
+def test_analyze_save_image_then_ocr_fail_returns_path(monkeypatch) -> None:
+    """存盘成功但后续 OCR 异常 → success=False, screenshot_path 仍回传(排障)。"""
+    import numpy as np
+    import sr_od.backend.backend_context as bc
+
+    monkeypatch.setattr(bc, '_save_screenshot', lambda img: '/tmp/fake.png')
+    controller = MagicMock()
+    controller.is_game_window_ready = True
+    controller.get_screenshot.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.controller = controller
+    ctx.ocr_service.get_ocr_result_list.side_effect = RuntimeError('ocr boom')
+    backend = SrBackendContext(ctx)
+    result = backend.analyze(save_image=True)
+    assert result.success is False
+    assert result.screenshot_path == '/tmp/fake.png'
+    assert result.error is not None

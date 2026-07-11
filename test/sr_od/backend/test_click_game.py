@@ -26,7 +26,8 @@ def test_click_game_delegates_to_controller(mock_ctx_game_ready):
     # Point 无 __eq__(比 id),故比坐标字段而非 == Point(...)
     assert (call.args[0].x, call.args[0].y) == (960, 540)
     assert call.kwargs['press_time'] == 0.5
-    assert result == {'success': True, 'x': 960, 'y': 540, 'in_window': True}
+    assert call.kwargs['pc_alt'] is False
+    assert result == {'success': True, 'x': 960, 'y': 540, 'in_window': True, 'pc_alt': False}
 
 
 def test_click_game_out_of_window_returns_false(mock_ctx_game_ready):
@@ -34,7 +35,7 @@ def test_click_game_out_of_window_returns_false(mock_ctx_game_ready):
     mock_ctx_game_ready.controller.click.return_value = False
     backend = SrBackendContext(mock_ctx_game_ready)
     result = backend.click_game(9999, 9999)
-    assert result == {'success': False, 'x': 9999, 'y': 9999, 'in_window': False}
+    assert result == {'success': False, 'x': 9999, 'y': 9999, 'in_window': False, 'pc_alt': False}
 
 
 def test_click_game_window_not_ready_raises(mock_ctx_game_ready):
@@ -45,8 +46,8 @@ def test_click_game_window_not_ready_raises(mock_ctx_game_ready):
         backend.click_game(100, 100)
 
 
-def test_click_game_default_press_time_zero(mock_ctx_game_ready):
-    """press_time 默认 0。"""
+def test_click_game_default_press_time(mock_ctx_game_ready):
+    """press_time 默认 0.1。"""
     backend = SrBackendContext(mock_ctx_game_ready)
     backend.click_game(10, 20)
-    assert mock_ctx_game_ready.controller.click.call_args.kwargs['press_time'] == 0.0
+    assert mock_ctx_game_ready.controller.click.call_args.kwargs['press_time'] == 0.1
