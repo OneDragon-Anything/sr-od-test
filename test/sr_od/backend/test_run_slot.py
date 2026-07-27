@@ -4,6 +4,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from one_dragon.base.operation.application.application_run_context import (
+    ApplicationRunResult,
+    RunFinishReason,
+)
 from one_dragon.base.operation.operation_base import OperationResult
 from sr_od.backend.backend_context import RunState, RunType
 from sr_od.backend.schemas import RunStatusResult
@@ -149,7 +153,9 @@ def test_op_path_uses_display_name_as_op_id(slot):
 
 def test_app_path_delegates_run_application(slot, mock_ctx):
     """app 路径:run_application 被调、last_application_result 固化、app=展示名、run_type=APPLICATION。"""
-    mock_ctx.run_context.run_application.return_value = True
+    mock_ctx.run_context.run_application.return_value = ApplicationRunResult(
+        finish_reason=RunFinishReason.COMPLETED, app_id='one_dragon', instance_idx=0, group_id='default',
+    )
     mock_ctx.run_context.last_application_result = OperationResult(success=True, status='一条龙完成')
     mock_ctx.run_context.get_application_name.return_value = '一条龙'
 
@@ -167,7 +173,9 @@ def test_app_path_delegates_run_application(slot, mock_ctx):
 
 def test_app_path_refresh_config_called(slot, mock_ctx):
     """app 路径:refresh_config 在 run_application 前被调。"""
-    mock_ctx.run_context.run_application.return_value = True
+    mock_ctx.run_context.run_application.return_value = ApplicationRunResult(
+        finish_reason=RunFinishReason.COMPLETED, app_id='one_dragon', instance_idx=0, group_id='default',
+    )
     mock_ctx.run_context.last_application_result = OperationResult(success=True, status='ok')
     mock_ctx.run_context.get_application_name.return_value = '一条龙'
     called = []
@@ -201,6 +209,23 @@ def test_app_path_exception_fixates_failed(slot, mock_ctx):
     fut.result(timeout=5)
     assert slot.terminal_state == RunState.FAILED
     assert slot.last_status == '执行异常: app boom'
+
+
+def test_app_path_not_started_fixates_failed(slot, mock_ctx):
+    """app 路径 run_application 返回 NOT_STARTED(初始化失败/未取得运行权)→ FAILED,不卡 RUNNING。
+
+    run_application 返回 ApplicationRunResult(finish_reason=NOT_STARTED)时,即便
+    last_application_result 为 None 也固化 FAILED(对齐上游 #3a96adec 前的 run 状态修正)。
+    """
+    mock_ctx.run_context.run_application.return_value = ApplicationRunResult(
+        finish_reason=RunFinishReason.NOT_STARTED, app_id='one_dragon', instance_idx=0, group_id='default',
+    )
+    mock_ctx.run_context.last_application_result = None
+    mock_ctx.run_context.get_application_name.return_value = '一条龙'
+    _, fut = slot._start('mcp', app_id='one_dragon', group_id='default')
+    fut.result(timeout=5)
+    assert slot.terminal_state == RunState.FAILED
+    assert slot.last_status is not None and 'NOT_STARTED' in slot.last_status
 
 
 # ============ _query_status / _stop ============
