@@ -278,5 +278,15 @@ class TestCurrencyWarComps(SrTestBase):
         for comp in COMP_LIBRARY:
             for c in comp.core_chars:
                 self.assertIn(c, CHARACTER_ROSTER,
-                              f"{comp.name}.core_chars 含非规范名 '{c}'(不在 CHARACTER_ROSTER)"
-                              f"—— 用 cw_chars.to_canonical 映射回规范名)")
+                              f"{comp.name}.core_chars 含非规范名 '{c}'(不在 CHARACTER_ROSTER)")
+
+    def test_comp_library_key_equips_canonical(self):
+        """COMP_LIBRARY key_equips 必须是规范装备名(EQUIPMENTS 注册表内)。
+
+        工程化:装备也是领域实体,有注册表;key_equips 引用规范名(与 core_chars 同纪律)。
+        """
+        from sr_od.application.currency_war.cw_equipment import EQUIPMENTS
+        for comp in COMP_LIBRARY:
+            for e in comp.key_equips:
+                self.assertIn(e, EQUIPMENTS,
+                              f"{comp.name}.key_equips 含非规范装备名 '{e}'(不在 EQUIPMENTS 注册表)")
