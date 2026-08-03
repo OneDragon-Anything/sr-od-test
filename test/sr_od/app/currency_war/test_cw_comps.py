@@ -91,13 +91,12 @@ class TestCurrencyWarComps(SrTestBase):
         self.assertLess(equip_fit(阿雅, irrelevant), 0.5, "持装备但无关键件 → 略低")
 
     def test_equip_fit_no_key_equips_neutral(self):
-        """comp 无关键装备依赖(列车同行无 key_equips 时)→ 中性 0.5。"""
-        列车 = get_comp("列车同行")
-        列车.key_equips = []   # 临时清空测中性分支
-        try:
-            self.assertEqual(equip_fit(列车, GameState(equips=["护盾反震"])), 0.5)
-        finally:
-            列车.key_equips = ["护盾反震"]   # 还原(避免污染共享对象)
+        """comp 无关键装备依赖 → 中性 0.5(用局部 Comp,不污染共享 COMP_LIBRARY)。"""
+        from sr_od.application.currency_war.cw_comps import Comp
+        comp_no_equip = Comp(name="测试", factions=["巡海游侠"], core_chars=[], form_tiers={},
+                             strength="A", form_difficulty="easy", key_equips=[])
+        self.assertEqual(equip_fit(comp_no_equip, GameState(equips=["冷笑话引擎"])), 0.5,
+                         "无 key_equips 的 comp → 装备中性 0.5")
 
     # —— mechanics_fit 双向(debuff=buff;用户核心洞察)——
 
@@ -189,14 +188,15 @@ class TestCurrencyWarComps(SrTestBase):
         self.assertNotIn("巡击青雀", names2, "forbid 仙舟 → 排除巡击青雀")
 
     def test_select_comp_optionality_top_n(self):
-        """top_n=N → 返回 N 个(分数降序)。"""
+        """top_n=N → 返回 N 个(按 comp_score 降序;用空 priority 避免 boost 干扰排序断言)。"""
         s = GameState(round_num=5, gold=50)
-        cfg = _cfg()
-        top3 = select_comp(s, make_score_context(s), cfg, top_n=3)
-        self.assertEqual(len(top3), 3)
-        # 降序:第 1 的 comp_score ≥ 第 2
+        cfg = _cfg(character_priority=[], faction_priority=[])   # 空 → boost=0,排序=纯 comp_score
         ctx = make_score_context(s)
+        top3 = select_comp(s, ctx, cfg, top_n=3)
+        self.assertEqual(len(top3), 3)
+        # 降序:第 1 的 comp_score ≥ 第 2 ≥ 第 3
         self.assertGreaterEqual(comp_score(top3[0], s, ctx), comp_score(top3[1], s, ctx))
+        self.assertGreaterEqual(comp_score(top3[1], s, ctx), comp_score(top3[2], s, ctx))
 
     def test_difficulty_phase_factor_early_prefers_easy(self):
         """早期/穷:easy×1.15、hard×0.85;后期均 1.0。"""
@@ -268,3 +268,15 @@ class TestCurrencyWarComps(SrTestBase):
             self.assertIn(c.form_difficulty, ("easy", "medium", "hard"), f"{c.name} difficulty 非法")
             for f, t in c.form_tiers.items():
                 self.assertGreater(t, 0, f"{c.name} form_tiers[{f}] 必须>0")
+
+    def test_comp_library_core_chars_canonical(self):
+        """COMP_LIBRARY core_chars 必须用规范名(CHARACTER_ROSTER),禁粉丝缩写(红A/杨叔/记忆主等)。
+
+        用户 2026-08-03:有全量 roster 就该用它,别在代码数据里缩写。OCR/char_id 匹配靠规范名。
+        """
+        from sr_od.application.currency_war.cw_chars import CHARACTER_ROSTER
+        for comp in COMP_LIBRARY:
+            for c in comp.core_chars:
+                self.assertIn(c, CHARACTER_ROSTER,
+                              f"{comp.name}.core_chars 含非规范名 '{c}'(不在 CHARACTER_ROSTER)"
+                              f"—— 用 cw_chars.to_canonical 映射回规范名)")
