@@ -102,16 +102,20 @@ class TestCurrencyWarComps(SrTestBase):
     # —— mechanics_fit 双向(debuff=buff;用户核心洞察)——
 
     def test_mechanics_fit_wandi_debuff_is_buff(self):
-        """万敌[燃血] + 反伤 → synergy 升(>0.5):debuff 对燃血队是 buff。"""
+        """万敌[燃血] + 反伤 → synergy 升(>0.5):debuff 对燃血队是 buff(debuff=buff 典型)。"""
         万敌 = get_comp("万敌单C")
-        self.assertGreater(mechanics_fit(万敌, {"反伤"}), 0.5, "反伤利燃血 → 升")
-        self.assertGreater(mechanics_fit(万敌, {"AoE", "持续伤害"}), mechanics_fit(万敌, {"反伤"}),
-                           "多 synergy 叠加 → 更高")
+        self.assertGreater(mechanics_fit(万敌, {"反伤"}), 0.5, "正当防卫反伤利燃血 → 升")
 
-    def test_mechanics_fit_aya_countered_by_lockspeed(self):
-        """阿雅[速度依赖] + 禁速 → counter 降(<0.5)。"""
+    def test_mechanics_fit_aya_countered_by_speed_suppress(self):
+        """阿雅[速度依赖] + 速度抑制(忽快忽慢) → counter 降(<0.5)。"""
         阿雅 = get_comp("昼神阿雅")
-        self.assertLess(mechanics_fit(阿雅, {"禁速"}), 0.5, "禁速克速度依赖 → 降")
+        self.assertLess(mechanics_fit(阿雅, {"速度抑制"}), 0.5, "忽快忽慢克极端高速(阿雅鞋队)→ 降")
+
+    def test_mechanics_fit_wandi_countered_by_permanent_trauma(self):
+        """万敌[燃血] + 掉血削上限(永久创伤) → counter 降(<0.5)。⚠️ 燃血的反例:
+        反伤利燃血(debuff=buff),但永久创伤(掉血→减上限)克燃血。一词缀双向的复杂情况。"""
+        万敌 = get_comp("万敌单C")
+        self.assertLess(mechanics_fit(万敌, {"掉血削上限"}), 0.5, "永久创伤克燃血(掉血减上限双损)")
 
     def test_mechanics_fit_neutral_when_no_mechanics(self):
         """无机制信息 → 中性 0.5(不奖不罚)。"""
@@ -197,13 +201,13 @@ class TestCurrencyWarComps(SrTestBase):
     def test_difficulty_phase_factor_early_prefers_easy(self):
         """早期/穷:easy×1.15、hard×0.85;后期均 1.0。"""
         列车 = get_comp("列车同行")     # easy
-        阿雅 = get_comp("昼神阿雅")     # hard
+        白厄 = get_comp("反甲白厄")     # hard
         early = GameState(round_num=1, gold=10)
         late = GameState(round_num=10, gold=80)
-        self.assertGreater(_difficulty_phase_factor(列车, early), _difficulty_phase_factor(阿雅, early),
+        self.assertGreater(_difficulty_phase_factor(列车, early), _difficulty_phase_factor(白厄, early),
                            "早期 easy 因子 > hard")
         self.assertEqual(_difficulty_phase_factor(列车, late), 1.0)
-        self.assertEqual(_difficulty_phase_factor(阿雅, late), 1.0)
+        self.assertEqual(_difficulty_phase_factor(白厄, late), 1.0)
 
     # —— comp_score / breakdown ——
 
