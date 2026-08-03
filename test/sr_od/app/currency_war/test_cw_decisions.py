@@ -6,9 +6,11 @@ economy_mode、boss 克制。用 mock config(SimpleNamespace)避免 config IO。
 """
 from __future__ import annotations
 
+import random
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_decisions import (
+    MAX_REFRESH_PER_ROUND,
     _maybe_sell_for_interest,
     char_quality_score,
     decide_boss_priority,
@@ -23,6 +25,7 @@ from sr_od.application.currency_war.cw_state import (
     DeployMove,
     GameState,
     LevelUp,
+    RefreshShop,
     SellBench,
     ShopCard,
     simulate,
@@ -74,15 +77,27 @@ class TestCurrencyWarDecisions(SrTestBase):
         poor = GameState(gold=0, round_num=5, level=6, plane=2)
         self.assertGreater(economy_score(rich, "adaptive"), economy_score(poor, "adaptive"))
 
-    def test_phase_weights_reduce_economy_early(self):
-        """A3:前期(plane1)economy 权重降 → 同经济分,plane1 的 evaluate 总分 < 中期(经济主导态)。"""
+    def test_phase_weights_hp_danger_reduces_economy(self):
+        """A3 + review agent:HP 危险才保血(economy 降权);健康时 economy 不压(snowball 到 50)。
+        原"前期 plane1 → economy 0.4"已被研究推翻(前期该 snowball 经济),改测 HP 维度。"""
         from sr_od.application.currency_war.cw_decisions import evaluate
         cfg = _cfg()
-        s1 = GameState(gold=50, round_num=3, level=5, plane=1)   # 前期:economy 权重 0.4
-        s2 = GameState(gold=50, round_num=3, level=7, plane=2)   # 中期:economy 权重 1.0
-        # 两者 economy_score 相同(无 plane 衰减),但 phase 权重不同 → evaluate 总分 s2 > s1
-        self.assertGreater(evaluate(s2, cfg, cfg.faction_priority),
-                           evaluate(s1, cfg, cfg.faction_priority))
+        healthy = GameState(gold=50, round_num=3, level=5, plane=1)         # hp100 健康:economy 权重 1.0
+        danger = GameState(gold=50, round_num=3, level=5, plane=1, hp=30)   # hp<HP_DANGER:economy 权重 0.4
+        # 同 economy_score(50 金),HP 危险时 economy 降权 → evaluate 总分更低
+        self.assertGreater(evaluate(healthy, cfg, cfg.faction_priority),
+                           evaluate(danger, cfg, cfg.faction_priority),
+                           "HP 危险时 economy 降权,总分 < 健康(同为 plane1)")
+
+    def test_refresh_cap_dynamic(self):
+        """_refresh_cap 关键回合放宽(review agent + 用户:固定 2 太死)。"""
+        from sr_od.application.currency_war.cw_decisions import MAX_REFRESH_PER_ROUND, _refresh_cap
+        base = GameState(gold=50, round_num=3, level=5, plane=1, hp=100)     # 健康前期
+        self.assertEqual(_refresh_cap(base), MAX_REFRESH_PER_ROUND, "健康前期 = 基线 2")
+        late = GameState(gold=50, round_num=6, level=8, plane=3, hp=100)     # plane3/升8
+        self.assertGreater(_refresh_cap(late), MAX_REFRESH_PER_ROUND, "plane3/升8 放宽")
+        danger = GameState(gold=50, round_num=3, level=5, plane=1, hp=30)    # HP 危险
+        self.assertGreater(_refresh_cap(danger), MAX_REFRESH_PER_ROUND, "HP 危险放宽")
 
     def test_economy_mode_effects(self):
         """economy_mode 只调利息项:rush_level < adaptive < interest_first。"""
@@ -90,6 +105,44 @@ class TestCurrencyWarDecisions(SrTestBase):
         adaptive = economy_score(s, "adaptive")
         self.assertLess(economy_score(s, "rush_level"), adaptive, "rush_level 降低利息项")
         self.assertGreater(economy_score(s, "interest_first"), adaptive, "interest_first 抬高利息项")
+
+    def test_economy_rush_level_rewards_level(self):
+        """rush_level 等级项 ×1.5:等级领先时 rush_level > adaptive(review r5 修)。"""
+        ahead = GameState(gold=0, round_num=3, level=7, plane=1)   # expected_level(3,1)=5,level=7 领先
+        self.assertGreater(economy_score(ahead, "rush_level") - economy_score(ahead, "adaptive"), 0,
+                           "等级领先时 rush_level 应 > adaptive(等级项加权)")
+
+    def test_evaluate_target_comp_applies_progress(self):
+        """战略↔战术接法:evaluate(target_comp) = evaluate() − TARGET_PROGRESS_WEIGHT × 剩余进度。
+
+        target_comp 给定时扣「剩余成型进度」分(接近 form_tiers → 少扣);None 时不扣(向后兼容)。
+        """
+        from sr_od.application.currency_war.cw_comps import get_comp
+        from sr_od.application.currency_war.cw_decisions import (
+            TARGET_PROGRESS_WEIGHT,
+            _target_progress_remaining,
+            evaluate,
+        )
+        cfg = _cfg()
+        青雀 = get_comp("巡击青雀")   # form_tiers {仙舟:5, 追击:3}
+        s_far = GameState(board={})                       # 完全没起步 → 剩余 1.0
+        s_close = GameState(board={"仙舟": 5, "追击": 3})  # 已成型 → 剩余 0.0
+        # _target_progress_remaining:已成型=0,没起步=1
+        self.assertAlmostEqual(_target_progress_remaining(s_close, 青雀), 0.0, places=6)
+        self.assertAlmostEqual(_target_progress_remaining(s_far, 青雀), 1.0, places=6)
+        # evaluate(target) = evaluate() − WP × remaining(精确关系)
+        base_far = evaluate(s_far, cfg, cfg.faction_priority)
+        self.assertAlmostEqual(evaluate(s_far, cfg, cfg.faction_priority, target_comp=青雀),
+                               base_far - TARGET_PROGRESS_WEIGHT * 1.0, places=6)
+        # 已成型时 target 不扣分(= 无 target 的 evaluate)
+        base_close = evaluate(s_close, cfg, cfg.faction_priority)
+        self.assertAlmostEqual(evaluate(s_close, cfg, cfg.faction_priority, target_comp=青雀),
+                               base_close, places=6,
+                               msg="已成型 → 剩余 0 → target 不扣分")
+        # 接近成型 > 远离成型(有 target 时,战略导向)
+        self.assertGreater(evaluate(s_close, cfg, cfg.faction_priority, target_comp=青雀),
+                           evaluate(s_far, cfg, cfg.faction_priority, target_comp=青雀),
+                           "接近 target 成型 → evaluate 更高")
 
     # —— plan 硬门 ——
 
@@ -142,6 +195,17 @@ class TestCurrencyWarDecisions(SrTestBase):
         state = GameState(gold=200, round_num=6, level=10, plane=3, bench_full_flag=True)
         actions = plan(state, cfg, cfg.faction_priority)
         self.assertFalse(any(isinstance(a, LevelUp) for a in actions), "满级不应再升等级")
+
+    def test_plan_caps_refresh_per_round(self):
+        """每回合主动刷新(D 牌)次数 ≤ MAX_REFRESH_PER_ROUND(review r5:防无限刷死代码)。"""
+        cfg = _cfg()
+        # 高金 + 商店无可用牌 → 刷新期望可能正;即便如此也被上限挡住
+        state = GameState(gold=80, round_num=4, level=6, plane=2,
+                          shop=[ShopCard(x=1, faction="公司", name="", cost=5)])
+        actions = plan(state, cfg, cfg.faction_priority, rng=random.Random(0))
+        n_refresh = sum(1 for a in actions if isinstance(a, RefreshShop))
+        self.assertLessEqual(n_refresh, MAX_REFRESH_PER_ROUND,
+                             f"每回合刷新应 ≤ {MAX_REFRESH_PER_ROUND},实际 {n_refresh}")
 
     # —— deploy 站位 + 3合1 + 凑整吃息 + char_quality 已上阵(review r1 新覆盖)——
 
