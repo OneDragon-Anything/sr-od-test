@@ -74,11 +74,15 @@ class TestCurrencyWarDecisions(SrTestBase):
         poor = GameState(gold=0, round_num=5, level=6, plane=2)
         self.assertGreater(economy_score(rich, "adaptive"), economy_score(poor, "adaptive"))
 
-    def test_economy_plane1_reduced(self):
-        """第一位面利息价值衰减(保血):同 gold、各自等级=期望(去掉等级项),plane1 利息分 < plane2。"""
-        s1 = GameState(gold=50, round_num=3, level=5, plane=1)
-        s2 = GameState(gold=50, round_num=3, level=7, plane=2)
-        self.assertGreater(economy_score(s2, "adaptive"), economy_score(s1, "adaptive"))
+    def test_phase_weights_reduce_economy_early(self):
+        """A3:前期(plane1)economy 权重降 → 同经济分,plane1 的 evaluate 总分 < 中期(经济主导态)。"""
+        from sr_od.application.currency_war.cw_decisions import evaluate
+        cfg = _cfg()
+        s1 = GameState(gold=50, round_num=3, level=5, plane=1)   # 前期:economy 权重 0.4
+        s2 = GameState(gold=50, round_num=3, level=7, plane=2)   # 中期:economy 权重 1.0
+        # 两者 economy_score 相同(无 plane 衰减),但 phase 权重不同 → evaluate 总分 s2 > s1
+        self.assertGreater(evaluate(s2, cfg, cfg.faction_priority),
+                           evaluate(s1, cfg, cfg.faction_priority))
 
     def test_economy_mode_effects(self):
         """economy_mode 只调利息项:rush_level < adaptive < interest_first。"""
