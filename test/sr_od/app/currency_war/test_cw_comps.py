@@ -261,6 +261,15 @@ class TestCurrencyWarComps(SrTestBase):
         self.assertIsNotNone(result, "target 来不及成型应 pivot")
         self.assertEqual(result.form_difficulty, "easy", "ceiling 不可达 → 切 easy")
 
+    def test_maybe_pivot_formed_target_no_ceiling_pivot(self):
+        """信号2 已成型守卫:target=阿雅已成型(board=昼之半神:4=form_tiers)+ plane3 round5
+        (remaining≈1<8)→ **不**因 ceiling 切走(form_progress=1.0 豁免信号2;不该放弃已完成 comp)。"""
+        cfg = _cfg(faction_priority=["昼之半神"])
+        s = GameState(board={"昼之半神": 4}, round_num=5, plane=3, hp=100, gold=50)  # 阿雅成型
+        target = get_comp("昼神阿雅")
+        result = maybe_pivot(s, make_score_context(s), cfg, target=target)
+        self.assertIsNone(result, "已成型 target 不该因 ceiling 切走(信号2 已成型守卫)")
+
     # —— select_megastar ——
 
     def test_select_megastar_binds_core(self):
