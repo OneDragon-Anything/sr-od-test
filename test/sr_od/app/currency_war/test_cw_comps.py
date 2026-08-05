@@ -241,6 +241,26 @@ class TestCurrencyWarComps(SrTestBase):
         # 列车同行(easy,typical_form_round=4)是成型最快的 easy 之一
         self.assertEqual(result.form_difficulty, "easy")
 
+    def test_maybe_pivot_better_comp_emerges(self):
+        """信号 1(更优涌现):target=反甲白厄(毁灭),场面成型列车同行(更优 + 分差>PIVOT_GAP)
+        → pivot 到列车同行。early round(remaining 足够)+ hp 健康 → 信号 2/3 不触发,只验信号 1。"""
+        cfg = _cfg(faction_priority=["列车同行"])
+        s = GameState(board={"列车同行": 4}, round_num=2, plane=1, hp=100, gold=50)  # 列车同行成型
+        target = get_comp("反甲白厄")  # 毁灭,场面没有 → 远不如列车同行
+        result = maybe_pivot(s, make_score_context(s), cfg, target=target)
+        self.assertIsNotNone(result, "更优 comp 涌现应 pivot")
+        self.assertEqual(result.name, "列车同行", "应 pivot 到更优的列车同行")
+
+    def test_maybe_pivot_ceiling_unreachable_switches_easy(self):
+        """信号 2(ceiling 不可达):target=阿雅(form_round=8)但 plane3 round5 → remaining≈1<8;
+        board 部分成型使阿雅=best(信号 1 跳过)→ 切成型最快的 easy comp。"""
+        cfg = _cfg(faction_priority=["昼之半神"])
+        s = GameState(board={"昼之半神": 2}, round_num=5, plane=3, hp=100, gold=50)  # 阿雅部分但来不及
+        target = get_comp("昼神阿雅")
+        result = maybe_pivot(s, make_score_context(s), cfg, target=target)
+        self.assertIsNotNone(result, "target 来不及成型应 pivot")
+        self.assertEqual(result.form_difficulty, "easy", "ceiling 不可达 → 切 easy")
+
     # —— select_megastar ——
 
     def test_select_megastar_binds_core(self):
