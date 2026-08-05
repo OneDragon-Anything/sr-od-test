@@ -29,8 +29,9 @@ from sr_od.application.currency_war.cw_comps import (
     progress,
     select_comp,
     select_megastar,
+    shop_supply,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.cw_state import BenchChar, GameState, ShopCard
 from test import SrTestBase
 
 
@@ -280,6 +281,27 @@ class TestCurrencyWarComps(SrTestBase):
         target = get_comp("昼神阿雅")
         result = maybe_pivot(s, make_score_context(s), cfg, target=target)
         self.assertIsNone(result, "已成型 target 不该因 ceiling 切走(信号2 已成型守卫)")
+
+    # —— shop_supply(I14:shop presence 主导,board-only 弱信号)——
+
+    def test_shop_supply_shop_present_high(self):
+        """comp 阵营在 shop 出现 → 1.0(可成型:能买到核心)。"""
+        comp = get_comp("列车同行")  # factions=["列车同行"]
+        s = GameState(shop=[ShopCard(x=0, faction="列车同行")])
+        self.assertEqual(shop_supply(comp, s), 1.0)
+
+    def test_shop_supply_board_only_low(self):
+        """I14:仅 board 有、shop 无 → 0.3(已持 1 张但买不到更多 → 成型难,非 1.0)。
+        旧版此情形返 1.0 → select_comp 不降权 → 选了 shop 供不上的 target → 永不成型(win-rate 阻塞)。"""
+        comp = get_comp("昼神阿雅")  # factions=["昼之半神"]
+        s = GameState(board={"昼之半神": 1})   # board 有,shop 空
+        self.assertEqual(shop_supply(comp, s), 0.3)
+
+    def test_shop_supply_neither_zero(self):
+        """阵营 shop/board 都无 → 0.0(商店刷不出 → 不可成型)。"""
+        comp = get_comp("列车同行")
+        s = GameState(shop=[ShopCard(x=0, faction="击破")], board={"持续伤害": 2})
+        self.assertEqual(shop_supply(comp, s), 0.0)
 
     # —— select_megastar ——
 
