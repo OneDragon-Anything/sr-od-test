@@ -158,6 +158,11 @@ class TestStartCurrencyWarMatchFlow:
         assert fixture_controller.phase_idx == len(phases) - 1, (
             f'剧本未推进到末 phase:phase_idx={fixture_controller.phase_idx}'
         )
+        # 简报词缀读取验证:op 简报分支 read_affixes → ctx.cw_briefing_affixes(A8 最高 4 词缀)
+        assert test_context.cw_briefing_affixes, '简报词缀未读取(简报分支没读存)'
+        assert len(test_context.cw_briefing_affixes) == 4, (
+            f'期望 4 词缀(A8),实际 {test_context.cw_briefing_affixes}'
+        )
 
     def test_new_match_a5_switches_to_max_rank(
         self,
