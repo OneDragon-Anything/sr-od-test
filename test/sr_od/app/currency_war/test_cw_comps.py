@@ -241,6 +241,17 @@ class TestCurrencyWarComps(SrTestBase):
         # 列车同行(easy,typical_form_round=4)是成型最快的 easy 之一
         self.assertEqual(result.form_difficulty, "easy")
 
+    def test_maybe_pivot_low_hp_signal3_preempts_signal1(self):
+        """D-40:hp 危险时信号 3(保命)抢占信号 1(更优涌现)—— 即使有更优 comp 涌现,也只切最快 easy,
+        不切高难度 comp(防振荡 churn:列车同行→...→昼神阿雅 死亡螺旋)。target=巡击青雀(medium),
+        board 成型列车同行(更优,信号 1 会选它),但 hp=20 危险 → 应选最快 easy(DOT队),非列车同行。"""
+        cfg = _cfg(faction_priority=["列车同行"])
+        s = GameState(board={"列车同行": 4}, round_num=5, plane=1, hp=20, gold=50)  # 列车同行成型(信号1 会选)
+        result = maybe_pivot(s, make_score_context(s), cfg, target=get_comp("巡击青雀"))
+        self.assertIsNotNone(result, "hp 危险应 pivot 到最快 easy")
+        self.assertEqual(result.form_difficulty, "easy", "保命只选 easy comp")
+        self.assertNotEqual(result.name, "列车同行", "不该切到成型的列车同行(信号1 的选择)—— 保命要最快 easy")
+
     def test_maybe_pivot_better_comp_emerges(self):
         """信号 1(更优涌现):target=反甲白厄(毁灭),场面成型列车同行(更优 + 分差>PIVOT_GAP)
         → pivot 到列车同行。early round(remaining 足够)+ hp 健康 → 信号 2/3 不触发,只验信号 1。"""
