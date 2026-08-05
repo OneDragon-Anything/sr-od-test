@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.cw_comps import ScoreContext, get_comp
 from sr_od.application.currency_war.cw_performance import (
-    HP_LOSS_FULL,
     PerformanceTracker,
     RoundOutcome,
     comp_viability,
@@ -185,6 +184,39 @@ class TestCurrencyWarPerformance(SrTestBase):
         sig = t.boss_kill_signal()
         self.assertIsNotNone(sig)
         self.assertAlmostEqual(sig, 0.5, places=6, msg="1 杀 1 未杀 → 0.5")
+
+    # —— set_required_damage(跨局击杀伤害下界)——
+
+    def test_set_required_damage_takes_min_per_difficulty(self):
+        """set_required_damage 取下界(杀死 boss 的最小伤害阈值;越跑越准);按 difficulty 独立分桶。"""
+        t = PerformanceTracker()
+        t.set_required_damage("A8", 100.0)
+        self.assertEqual(t.required_damage["A8"], 100.0)
+        t.set_required_damage("A8", 80.0)    # 更低 → 取下界
+        self.assertEqual(t.required_damage["A8"], 80.0, "更低伤害 → 取下界")
+        t.set_required_damage("A8", 120.0)   # 更高 → 不变
+        self.assertEqual(t.required_damage["A8"], 80.0, "更高伤害 → 不变(保留下界)")
+        # 不同 difficulty 独立分桶
+        t.set_required_damage("A5", 50.0)
+        self.assertEqual(t.required_damage["A5"], 50.0)
+        self.assertEqual(t.required_damage["A8"], 80.0, "A5 不影响 A8 桶")
+
+    # —— is_losing_streak(连败=持续高掉血)——
+
+    def test_is_losing_streak_threshold_and_cold_start(self):
+        """is_losing_streak:trend > HP_LOSS_FULL*0.6(=18)→ True;低掉血 → False;冷启动 → False。"""
+        # 每回合掉 20(普通关 normalized=20)> 18 → streak
+        t_streak = PerformanceTracker()
+        t_streak.record(_out(1, 100))
+        t_streak.record(_out(2, 80))
+        self.assertTrue(t_streak.is_losing_streak(), "trend=20>18 → 连败")
+        # 小掉血(normalized=5)< 18 → 非 streak
+        t_ok = PerformanceTracker()
+        t_ok.record(_out(1, 100))
+        t_ok.record(_out(2, 95))
+        self.assertFalse(t_ok.is_losing_streak(), "trend=5<18 → 非连败")
+        # 冷启动(样本不足 trend=None)→ False
+        self.assertFalse(PerformanceTracker().is_losing_streak(), "冷启动 → False")
 
     # —— RoundOutcome 字段完整性(telemetry 用)——
 
