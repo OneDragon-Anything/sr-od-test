@@ -3,16 +3,17 @@
 从 ZZZ(`zzz-od-test/test/conftest.py`)同步、SrContext 适配。供 fixture-driven op
 流程测试(`test/harness/fixture_controller.py`)使用 —— 跑多节点 op 的完整 ``execute()``。
 
-与现有 ``test/__init__.py`` 的 ``SrTestBase``(unittest 风格、单步 ``round_by_find_area``)
-并存:
+所有测试用 pytest 函数风格 + 本文件 fixture(``test/__init__.py`` 的 ``SrTestBase`` 已废弃移除):
 
-- 老的单步测试继续用 ``SrTestBase``(各自 ``__init__`` 建 ctx);
-- 新的端到端 flow 测试用本文件的 ``test_context`` fixture(session 复用 ctx,更快)。
+- ``test_context``(session):session 级 ``SrTestContext``,ctx/OCR 只 init 一次复用
+  (替代旧 ``SrTestBase`` 每 test 方法重初始化 —— 那是测试慢的根因);
+- ``test_image_dir``:测试模块所在目录,读本地 png(替代旧 ``SrTestBase.get_test_image``);
+- 端到端 flow 测试(``test/harness/fixture_controller.py``)也用 ``test_context``。
 
 适配 ZZZ 的主要差异:
 
 - ``ZContext`` → ``SrContext``;``ctx.init()`` → SR 的分步
-  (``init_by_config`` + ``load_instance_config`` + ``ocr.init_model``,对齐 ``SrTestBase``);
+  (``init_by_config`` + ``load_instance_config`` + ``ocr.init_model``);
 - ``MockController.get_screenshot`` 返回 ``mock_screenshot``(经基类 ``screenshot``
   包成 ``(time, img)`` 元组,匹配 ``ControllerBase`` 签名)。
 """
@@ -168,3 +169,18 @@ def test_context() -> SrTestContext:
     )
 
     return ctx
+
+
+@pytest.fixture
+def test_image_dir(request) -> Path:
+    """测试模块所在目录(替代 ``SrTestBase.sub_package_path``):读测试自带的本地 png。
+
+    迁移自 ``SrTestBase.get_test_image`` —— 后者靠 TestCase 实例的 ``sub_package_path``
+    (子类模块所在目录)定位 png;去掉 TestCase 后改用 ``request.module.__file__`` 定位。
+
+    用法::
+
+        def test_x(test_image_dir: Path) -> None:
+            img = cv2_utils.read_image(str(test_image_dir / '0.png'))
+    """
+    return Path(request.module.__file__).parent
