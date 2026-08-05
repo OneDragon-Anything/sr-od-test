@@ -68,3 +68,20 @@ def test_read_affixes_briefing(test_context: SrTestContext) -> None:
     assert any(k in joined for k in ('强化', '不利', '废', '幸运', '熄火', '行动')), (
         f'未读到预期词缀,实际 {affixes}'
     )
+
+
+def test_read_invest_env_options(test_context: SrTestContext) -> None:
+    """投资环境 3 卡名读取(HandleInvestEnv._read_options by NAME_CY 行过滤)。
+
+    fixture ``screens/货币战争-投资环境/default.webp``。NAME_CY [360,410] 容卡名 y 随立绘变
+    (修前 [378,408] 漏 y<378 的卡名,实机 3 卡名 y 375-378)。
+    """
+    if not test_context.has_screen('货币战争-投资环境', 'default'):
+        pytest.skip('存档截图缺失:screens/货币战争-投资环境/default.webp')
+    from sr_od.application.currency_war.operations.handlers.handle_invest_env import (
+        HandleInvestEnv,
+    )
+    screen = test_context.load_screen('货币战争-投资环境', 'default')
+    op = HandleInvestEnv(test_context)
+    opts = op._read_options(screen)
+    assert len(opts) == 3, f'期望 3 卡名,实际 {opts}'
