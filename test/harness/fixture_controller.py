@@ -230,6 +230,10 @@ class FixtureController(MockController):
         # 国际服换服滚动会触达;CN 登录流程不会。记录一次 click 以便调试。
         self.recorded_clicks.append(Point(int(end.x), int(end.y)))
 
+    def active_window(self) -> None:
+        """stub:op 调 controller.active_window 聚焦游戏窗口(测试无真实窗口,空操作)。"""
+        pass
+
     # ----------------------------- 推进判定 ----------------------------- #
 
     def _current_exit(self) -> tuple | None:

@@ -1,0 +1,80 @@
+"""货币战争 商店牌读取测试(OCR 集成,需 OCR 模型 + 测试图;CI 无数据 skip)。
+
+验证 ``cw_observation.read_shop_cards`` + ``read_game_state``:对备战屏 OCR → 5 张牌
+(阵营 + 名 + 派生 cost)+ HUD(gold/hp/level/plane)。原 ``shop_strategy.read_shop_factions``
+(只读阵营、按文本聚合会丢同阵营牌)已被取代。
+"""
+from one_dragon.base.geometry.rectangle import Rect
+from sr_od.application.currency_war.cw_chars import CHARACTER_ROSTER
+from sr_od.application.currency_war.cw_decisions import HP_DANGER
+from sr_od.application.currency_war.cw_factions import FACTIONS
+from sr_od.application.currency_war.cw_observation import (
+    read_game_state,
+    read_hp,
+    read_shop_cards,
+)
+from test import SrTestBase
+
+
+class TestCurrencyWarShop(SrTestBase):
+
+    def __init__(self, *args, **kwargs):
+        SrTestBase.__init__(self, *args, **kwargs)
+
+    def _has_text(self, screen, kw: str) -> bool:
+        """全屏 OCR,判断关键词是否出现(子串,容 OCR 分词差异)。"""
+        texts = [m.data for m in
+                 self.ctx.ocr_service.get_ocr_result_list(image=screen, rect=Rect(0, 0, 1920, 1080))]
+        return any(kw in t for t in texts)
+
+    def test_read_shop_cards(self):
+        """商店屏 → OCR 读出 5 张牌(每张:阵营 ∈ FACTIONS / 名 ∈ CHARACTER_ROSTER 或未知)。"""
+        screen = self.get_test_image('currency_war_shop.png')
+        cards = read_shop_cards(self.ctx, screen)
+        print(f'\n[shop cards] {[(c.x, c.faction, c.name, c.cost) for c in cards]}')
+        self.assertEqual(len(cards), 5, f'应读 5 张牌(实测 {len(cards)}): {cards}')
+        for c in cards:
+            self.assertTrue(c.faction == '?' or c.faction in FACTIONS,
+                            f'牌位 x={c.x} 阵营脏值 {c.faction!r}')
+            self.assertTrue(c.name == '' or c.name in CHARACTER_ROSTER,
+                            f'牌位 x={c.x} 名字未规范 {c.name!r}')
+
+    def test_read_game_state_prep(self):
+        """备战屏 → read_game_state 读 gold/plane/round/board/shop + level 启发式(打印实测值)。"""
+        screen = self.get_test_image('currency_war_shop.png')
+        state = read_game_state(self.ctx, screen)
+        print(f'\n[game state] gold={state.gold} hp={state.hp} level={state.level} '
+              f'plane={state.plane} round={state.round_num} board={state.board}')
+        self.assertTrue(0 <= state.gold <= 400, f'gold 越界 {state.gold}')
+        self.assertTrue(1 <= state.level <= 10, f'level 越界 {state.level}')
+        self.assertTrue(1 <= state.plane <= 3, f'plane 越界 {state.plane}')
+
+    def test_read_hp_shop_state(self):
+        """HP 只在 shop **关闭**态显示右上角(shop 开启态该区空 → 默认 100)。
+
+        多样本确认(2026-08-03):5 张 shop-关闭态全读到真 HP(80/80/80/29/84)、shop-开启态该区空。
+        回归 guard:锁住 ``BuyShopCards``「shop 关闭帧读 hp 覆盖 state.hp」修复的前提 —— 改 read_hp /
+        shop 流程后重跑本测试,确保 HP 读取行为不回归。
+        """
+        closed = self.get_test_image('currency_war_prep_closed.png')        # shop 关,hp=84
+        lowhp = self.get_test_image('currency_war_prep_closed_lowhp.png')  # shop 关,hp=29
+        open_shop = self.get_test_image('currency_war_shop.png')           # shop 开,hp 区空
+        self.assertEqual(read_hp(self.ctx, closed), 84)
+        self.assertEqual(read_hp(self.ctx, lowhp), 29)
+        self.assertLess(read_hp(self.ctx, lowhp), HP_DANGER, '低血(< HP_DANGER)应能让保血触发')
+        self.assertEqual(read_hp(self.ctx, open_shop), 100, 'shop 开 → HP 区空 → 默认 100')
+
+    def test_prep_anchor_buyexp_present_on_prep_absent_elsewhere(self):
+        """``BuyShopCards`` 非备战屏守卫(2026-08-04 plane2 投资策略叠层实测)的前提:
+
+        备战锚点「购买经验」在**备战屏有**(→ 守卫不触发,正常买牌)、**非备战屏无**(→ 守卫
+        round_fail 快速退出,交主循环 loop 接手处理事件叠层;否则 round_retry 在非商店屏浪费
+        max_retry 次后才恢复)。用可靠 fixture(备战 shop 屏 + 大厅)锁守卫检测前提,改守卫/OCR
+        后重跑确保不回归。
+        """
+        prep = self.get_test_image('currency_war_shop.png')        # 备战屏(shop 开,底部有「购买经验」)
+        self.assertTrue(self._has_text(prep, '购买经验'),
+                        '备战屏应有「购买经验」→ 守卫不触发,正常买牌')
+        lobby = self.get_test_image('currency_war_lobby.png')      # 货币战争大厅(非备战)
+        self.assertFalse(self._has_text(lobby, '购买经验'),
+                         '非备战屏无「购买经验」→ 守卫应 round_fail 退出,交主循环处理')
