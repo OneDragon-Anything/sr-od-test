@@ -147,6 +147,46 @@ def test_mechanic_tables_bidirectional() -> None:
     assert "燃血" in MECHANIC_SYNERGIES["反伤"]
 
 
+def test_mechanics_fit_jipo_pizairouhou_synergy() -> None:
+    """击破流萤[击破] + 皮糙肉厚 → synergy 升:皮糙肉厚利击破(未被击破受伤-30%,击破流不受罚)。D-49。"""
+    流萤 = get_comp("击破流萤")
+    assert mechanics_fit(流萤, {"皮糙肉厚"}) > 0.5, "皮糙肉厚利击破 → 升"
+
+
+def test_mechanics_fit_honga_bangyang_countered() -> None:
+    """命运圣杯红A[高倍率单核] + 榜样激励 → counter 降:榜样激励克单核(伤害第一的 75%)。D-49。"""
+    红a = get_comp("命运圣杯红A")
+    assert mechanics_fit(红a, {"榜样激励"}) < 0.5, "榜样激励克单核 → 降"
+
+
+def test_mechanics_fit_lietong_shield_countered() -> None:
+    """列车同行[治疗护盾] + 治疗削弱(重症难题) → counter 降。D-49 对齐 comp 属性(护盾→治疗护盾)。"""
+    列车 = get_comp("列车同行")
+    assert "治疗护盾" in 列车.mechanic_attributes, "comp 属性对齐 MECHANIC(治疗护盾,非护盾)"
+    assert mechanics_fit(列车, {"治疗削弱"}) < 0.5, "重症难题克治疗/护盾 → 降"
+
+
+def test_mechanics_fit_baie_renwubukaren_countered() -> None:
+    """反甲白厄[高频低单次] + 多段惩罚(忍无可忍:敌受 7 击提前 100%) → counter 降。D-55。"""
+    白厄 = get_comp("反甲白厄")
+    assert "高频低单次" in 白厄.mechanic_attributes
+    assert mechanics_fit(白厄, {"多段惩罚"}) < 0.5, "忍无可忍克高频低单次(反甲白厄多段打→敌频动)→ 降"
+
+
+def test_mechanics_fit_aya_chenzhongjiaobu_countered() -> None:
+    """昼神阿雅[速度依赖] + 行动延后(沉重脚步:受击延后 8%) → counter 降。D-55。"""
+    阿雅 = get_comp("昼神阿雅")
+    assert "速度依赖" in 阿雅.mechanic_attributes
+    assert mechanics_fit(阿雅, {"行动延后"}) < 0.5, "沉重脚步克速度依赖(鞋队 tuning 被打乱)→ 降"
+
+
+def test_current_enemy_mechanics_maps_d55_affixes() -> None:
+    """AFFIX_MECHANIC_MAP(D-55):忍无可忍→多段惩罚、沉重脚步→行动延后。"""
+    mechs = current_enemy_mechanics(GameState(enemy_affixes=["忍无可忍", "沉重脚步"]))
+    assert "多段惩罚" in mechs, "忍无可忍 → 多段惩罚"
+    assert "行动延后" in mechs, "沉重脚步 → 行动延后"
+
+
 # —— boss_fit / env_fit ——
 
 
