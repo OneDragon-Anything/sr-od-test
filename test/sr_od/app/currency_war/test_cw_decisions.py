@@ -161,10 +161,11 @@ def test_evaluate_target_comp_applies_progress() -> None:
     base_far = evaluate(s_far, cfg, cfg.faction_priority)
     assert (evaluate(s_far, cfg, cfg.faction_priority, target_comp=青雀)
             == pytest.approx(base_far - TARGET_PROGRESS_WEIGHT * 1.0))
-    # 已成型时 target 不扣分(= 无 target 的 evaluate)
+    # 已成型时 target progress 不扣分(剩余 0);T#97 step-2(tuned)target bonus(×1.5 on tier)对 target 阵营加成
+    # → evaluate(s_close, target) > base_close(target 阵营 仙舟/追击 tier ×1.5)。
     base_close = evaluate(s_close, cfg, cfg.faction_priority)
     assert (evaluate(s_close, cfg, cfg.faction_priority, target_comp=青雀)
-            == pytest.approx(base_close)), "已成型 → 剩余 0 → target 不扣分"
+            > base_close), "已成型 → progress 不扣分 + target tier bonus → > base_close"
     # 接近成型 > 远离成型(有 target 时,战略导向)
     assert (evaluate(s_close, cfg, cfg.faction_priority, target_comp=青雀)
             > evaluate(s_far, cfg, cfg.faction_priority, target_comp=青雀)), (
@@ -222,6 +223,30 @@ def test_plan_buys_synergy_push() -> None:
     )
     actions = plan(state, cfg, cfg.faction_priority)
     assert any(isinstance(a, BuyCard) for a in actions), "能推 tier 的牌应被买入(无 level gate 干预)"
+
+
+def test_plan_d79_prefilter_skips_offtarget_priority_for_target() -> None:
+    """D-79:commitment prefilter 不再豁免 character_priority 的 off-target 角色。
+
+    target=DOT队(持续伤害/减益),shop 有 阿格莱雅(能量,priority 列,off-target)+ 黄泉(减益,target core),
+    gold=3(够黄泉 或 阿格莱雅,非两者)→ 买 target 黄泉(深化 comp),不买 off-target 阿格莱雅。
+    旧码(D-79 前)priority 豁免 + buy delta 加 CHAR_PRIORITY_BONUS×2(+16)→ 阿格莱雅 先买 → gold 剩 2
+    买不起黄泉 → 漏 target、买 off-target → board spread(plane1-9 实采 7 阵营零成型根因)。
+    level=4=期望(1,1)避 level/saving 门,纯验 prefilter。
+    """
+    target = Comp(name="DOT队", factions=["持续伤害", "减益"],
+                  core_chars=["卡芙卡", "桑博", "黄泉"], form_tiers={"持续伤害": 4, "减益": 4},
+                  strength="B", form_difficulty="easy")
+    cfg = _cfg(character_priority=["阿格莱雅"])   # 阿格莱雅 在 priority(模拟 DEFAULT_CHARACTER_PRIORITY)
+    state = GameState(
+        gold=3, round_num=1, level=4, plane=1,
+        shop=[ShopCard(x=100, faction="能量", name="阿格莱雅", cost=1),
+              ShopCard(x=200, faction="减益", name="黄泉", cost=3)],
+    )
+    actions = plan(state, cfg, cfg.faction_priority, rng=random.Random(0), target_comp=target)
+    buys = [a.card.name for a in actions if isinstance(a, BuyCard)]
+    assert "黄泉" in buys, "target core 黄泉 应买(prefilter 让 target 通过)"
+    assert "阿格莱雅" not in buys, "off-target priority 阿格莱雅 应跳过(D-79:prefilter 不再豁免 priority)"
 
 
 # —— level_plan 硬 gate(task#18 经济统一论):level_plan 说 level_up + 够钱 → 强制升级 ——
@@ -587,15 +612,15 @@ def test_effective_hp_threshold_fallback_no_difficulty() -> None:
 
 
 def test_effective_hp_threshold_override_by_difficulty() -> None:
-    """difficulty="A8" + override 含 A8 → 用覆盖值(高难更早保血)。"""
-    s = GameState(difficulty="A8")
+    """selected_difficulty="A8" + override 含 A8 → 用覆盖值(高难更早保血)。"""
+    s = GameState(selected_difficulty="A8")
     cfg = _cfg(hp_safe_threshold=40, difficulty_hp_override={"A8": 55})
     assert effective_hp_threshold(s, cfg) == 55, "A8 覆盖优先于 hp_safe_threshold"
 
 
 def test_effective_hp_threshold_missing_key_falls_back() -> None:
     """difficulty="A4" + override 只含 A8(无 A4 键)→ 回退 hp_safe_threshold。"""
-    s = GameState(difficulty="A4")
+    s = GameState(selected_difficulty="A4")
     cfg = _cfg(hp_safe_threshold=40, difficulty_hp_override={"A8": 55})
     assert effective_hp_threshold(s, cfg) == 40, "override 无 A4 键 → 回退 hp_safe_threshold"
 
@@ -603,7 +628,7 @@ def test_effective_hp_threshold_missing_key_falls_back() -> None:
 def test_eval_difficulty_aware_hp_threshold() -> None:
     """evaluate 经 effective_hp_threshold 接 difficulty:A8+override=55 时 hp=42<55→保血权重;
     无 difficulty 时 hp=42>40→健康权重(证明 difficulty 派生改变 eval 行为,D-32 接线有效)。"""
-    s_a8 = GameState(difficulty="A8", hp=42, plane=1)
+    s_a8 = GameState(selected_difficulty="A8", hp=42, plane=1)
     cfg_a8 = _cfg(hp_safe_threshold=40, difficulty_hp_override={"A8": 55})
     assert (_phase_weights(s_a8.plane, s_a8.hp, effective_hp_threshold(s_a8, cfg_a8))
             == (1.2, 0.4, 1.2)), "A8 override=55,hp=42<55 → 保血权重"
