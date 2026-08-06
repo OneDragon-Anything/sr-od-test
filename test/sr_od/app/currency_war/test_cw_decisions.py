@@ -18,6 +18,7 @@ from sr_od.application.currency_war.cw_decisions import (
     SupplyOption,
     _maybe_sell_for_interest,
     _phase_weights,
+    _sample_shop,
     alpha_t,
     char_quality_score,
     decide_boss_priority,
@@ -609,3 +610,27 @@ def test_eval_difficulty_aware_hp_threshold() -> None:
     s_none = GameState(hp=42, plane=1)
     assert (_phase_weights(s_none.plane, s_none.hp, effective_hp_threshold(s_none, _cfg()))
             == (1.0, 1.0, 1.0)), "无 difficulty,threshold=40,hp=42>40 → 健康权重"
+
+
+def test_sample_shop_weights_target_factions() -> None:
+    """D-63/F2:_sample_shop 加权 target_comp 阵营(蒙特卡洛 roll 估值该考虑 roll 出 target 卡的价值)。
+
+    target 阵营不在 user priority 时,采样仍加权它(2×)→ r_yes(target) > r_no(无 target)。
+    解「roll 估值偏低 → bot 不 roll → shop 无 target 卡时纯攒金 → target 永不深成型」。
+    """
+    state = GameState(level=6)
+    target = Comp(name="T", factions=["击破"], core_chars=[], form_tiers={"击破": 3},
+                  strength="B", form_difficulty="medium")
+
+    def hit_rate(seed: int, target_comp: Comp | None) -> float:
+        rng = random.Random(seed)
+        n_hit = n_tot = 0
+        for _ in range(2000):
+            for c in _sample_shop(state, [], rng, n=5, target_comp=target_comp):
+                n_tot += 1
+                n_hit += (c.faction == "击破")
+        return n_hit / n_tot
+
+    r_no = hit_rate(42, None)        # 无 target:击破 不加权(均匀)
+    r_yes = hit_rate(42, target)     # 有 target:击破 加权 2×
+    assert r_yes > r_no * 1.5, f"target 阵营该被加权采样:r_yes={r_yes:.3f} vs r_no={r_no:.3f}"
