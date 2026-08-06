@@ -311,15 +311,16 @@ def test_maybe_pivot_low_hp_returns_fastest_easy() -> None:
 
 
 def test_maybe_pivot_low_hp_signal3_preempts_signal1() -> None:
-    """D-40:hp 危险时信号 3(保命)抢占信号 1(更优涌现)—— 即使有更优 comp 涌现,也只切最快 easy,
-    不切高难度 comp(防振荡 churn:列车同行→...→昼神阿雅 死亡螺旋)。target=巡击青雀(medium),
-    board 成型列车同行(更优,信号 1 会选它),但 hp=20 危险 → 应选最快 easy(DOT队),非列车同行。"""
+    """D-40:hp 危险时信号 3(保命)抢占信号 1 —— 只选 easy comp(不选 medium/hard 涌现,防 churn 死亡螺旋)。
+    D-65:保命优先 board 有 progress 的 easy comp(防切到 board 不支持的 fast-easy → 无法成型 → 还是死)。
+    target=巡击青雀(medium),board 成型列车同行(easy,full progress)→ 保命选 列车同行(easy+board 支持),
+    非弃成型切未成型 fast-easy。"""
     cfg = _cfg(faction_priority=["列车同行"])
     s = GameState(board={"列车同行": 4}, round_num=5, plane=1, hp=20, gold=50)  # 列车同行成型(信号1 会选)
     result = maybe_pivot(s, make_score_context(s), cfg, target=get_comp("巡击青雀"))
-    assert result is not None, "hp 危险应 pivot 到最快 easy"
+    assert result is not None, "hp 危险应 pivot"
     assert result.form_difficulty == "easy", "保命只选 easy comp"
-    assert result.name != "列车同行", "不该切到成型的列车同行(信号1 的选择)—— 保命要最快 easy"
+    assert result.name == "列车同行", "D-65:优先 board 有 progress 的 easy(列车同行 full 成型),非弃成型切未成型"
 
 
 def test_maybe_pivot_better_comp_emerges() -> None:
