@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war import cw_observation
+from sr_od.application.currency_war import cw_briefing_obs, cw_observation
 from sr_od.application.currency_war.cw_observation import (
     parse_settlement_hp,
     read_affix_effect,
@@ -203,15 +203,19 @@ def test_read_board_xy_count_and_next_tier(test_context: SrTestContext, monkeypa
 
 
 def test_write_affix_effects_merge(tmp_path) -> None:
-    """merge updates 进 affix_effects_data.py:新名新增、不一致覆盖、空 updates 不写(写回仍是合法 py + 中文)。"""
+    """merge updates 进 affix_effects_data.py:新名新增、不一致覆盖、空 updates 不写(写回仍是合法 py + 中文)。
+
+    _AFFIX_EFFECTS_PATH + write_affix_effects 在 cw_briefing_obs(D-70 拆分);函数 read 其模块全局,
+    故 monkeypatch cw_briefing_obs._AFFIX_EFFECTS_PATH(不是 cw_observation 的 re-export 绑定)。
+    """
     py_file = tmp_path / 'affix_effects_data.py'
     py_file.write_text('AFFIX_EFFECTS = {"旧词缀": "旧效果"}\n', encoding='utf-8')
-    original = cw_observation._AFFIX_EFFECTS_PATH
-    cw_observation._AFFIX_EFFECTS_PATH = py_file
+    original = cw_briefing_obs._AFFIX_EFFECTS_PATH
+    cw_briefing_obs._AFFIX_EFFECTS_PATH = py_file
     try:
-        assert cw_observation.write_affix_effects({}) is False                 # 空 → 不写
-        assert cw_observation.write_affix_effects({'新词缀': '效果A'}) is True  # 新名 → 写
-        assert cw_observation.write_affix_effects({                              # 不一致 → 覆盖 + 新名追加
+        assert cw_briefing_obs.write_affix_effects({}) is False                 # 空 → 不写
+        assert cw_briefing_obs.write_affix_effects({'新词缀': '效果A'}) is True  # 新名 → 写
+        assert cw_briefing_obs.write_affix_effects({                              # 不一致 → 覆盖 + 新名追加
             '旧词缀': '旧效果改', '词缀2': '效果C',
         }) is True
         # 写回的文件仍是合法 py(exec 能解析)+ 内容正确
@@ -219,21 +223,24 @@ def test_write_affix_effects_merge(tmp_path) -> None:
         exec(py_file.read_text(encoding='utf-8'), ns)   # noqa: S102
         assert ns['AFFIX_EFFECTS'] == {'旧词缀': '旧效果改', '新词缀': '效果A', '词缀2': '效果C'}
     finally:
-        cw_observation._AFFIX_EFFECTS_PATH = original
+        cw_briefing_obs._AFFIX_EFFECTS_PATH = original
 
 
 def test_load_affix_effects_from_file(tmp_path) -> None:
-    """读 affix_effects_data.py → AFFIX_EFFECTS dict(采集对比用);文件不存在 → 空。"""
+    """读 affix_effects_data.py → AFFIX_EFFECTS dict(采集对比用);文件不存在 → 空。
+
+    _AFFIX_EFFECTS_PATH 在 cw_briefing_obs(D-70 拆分),monkeypatch 它(非 cw_observation re-export)。
+    """
     py_file = tmp_path / 'affix_effects_data.py'
     py_file.write_text('AFFIX_EFFECTS = {"词缀A": "效果A"}\n', encoding='utf-8')
-    original = cw_observation._AFFIX_EFFECTS_PATH
-    cw_observation._AFFIX_EFFECTS_PATH = py_file
+    original = cw_briefing_obs._AFFIX_EFFECTS_PATH
+    cw_briefing_obs._AFFIX_EFFECTS_PATH = py_file
     try:
-        assert cw_observation.load_affix_effects_from_file() == {'词缀A': '效果A'}
-        cw_observation._AFFIX_EFFECTS_PATH = tmp_path / 'no_exist.py'          # 文件不存在 → 空
-        assert cw_observation.load_affix_effects_from_file() == {}
+        assert cw_briefing_obs.load_affix_effects_from_file() == {'词缀A': '效果A'}
+        cw_briefing_obs._AFFIX_EFFECTS_PATH = tmp_path / 'no_exist.py'          # 文件不存在 → 空
+        assert cw_briefing_obs.load_affix_effects_from_file() == {}
     finally:
-        cw_observation._AFFIX_EFFECTS_PATH = original
+        cw_briefing_obs._AFFIX_EFFECTS_PATH = original
 
 
 def test_read_affix_effect_returns_raw_for_compare(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
