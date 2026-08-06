@@ -15,6 +15,8 @@ from sr_od.application.currency_war.cw_observation import (
     parse_settlement_hp,
     read_affix_effect,
     read_affixes,
+    read_board,
+    read_board_next_tier,
     read_bosses,
 )
 from test.conftest import SrTestContext
@@ -182,6 +184,22 @@ def test_read_affix_effect_no_tooltip(test_context: SrTestContext, monkeypatch: 
     ocr = [_ocr('阵营', 229, 651), _ocr('软弱无力', 822, 967), _ocr('下一步', 1474, 967)]
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
     assert read_affix_effect(test_context, None, '软弱无力') == ''
+
+
+def test_read_board_xy_count_and_next_tier(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """左面板 'X/Y' → count=X + next_tier=Y(doc 13 FactionState;D-68 备战字段采集)。
+
+    聚焦 OCR 读对 "X/Y"(全屏密度把 "2/3" 误读 "213";区域裁切/mock 读对)。count 走 X(read_board
+    回归),next_tier 走 Y(read_board_next_tier 新)。裸数字(tier 链残留)不当 count。
+    """
+    ocr = [
+        _ocr('能量', 105, 222), _ocr('2/3', 108, 259),       # count=2, next_tier=3
+        _ocr('仙舟', 106, 310), _ocr('1/3', 108, 342),       # count=1, next_tier=3
+        _ocr('贝洛伯格', 108, 476), _ocr('1/2', 108, 513),   # count=1, next_tier=2
+    ]
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
+    assert read_board(test_context, None) == {'能量': 2, '仙舟': 1, '贝洛伯格': 1}
+    assert read_board_next_tier(test_context, None) == {'能量': 3, '仙舟': 3, '贝洛伯格': 2}
 
 
 def test_write_affix_effects_merge(tmp_path) -> None:
