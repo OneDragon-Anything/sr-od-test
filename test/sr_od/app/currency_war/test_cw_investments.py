@@ -12,6 +12,7 @@ from sr_od.application.currency_war.cw_investments import (
     env_faction,
     envs_boosting_faction,
     get_env,
+    is_known_env,
 )
 
 
@@ -55,3 +56,43 @@ def test_strategies_t0_present() -> None:
     assert "高效决策" in INVESTMENT_STRATEGIES
     assert "采购专员·彩" in INVESTMENT_STRATEGIES
     assert INVESTMENT_STRATEGIES["高效决策"].rarity == "棱彩"
+
+
+def test_d68_full_registry_categories() -> None:
+    """D-68:注册表全量,7 类齐全(概念股/邀请/契约/时代/经济/规则/专家)。"""
+    cats = {e.category for e in INVESTMENT_ENVS.values()}
+    assert cats == {"概念股", "邀请", "契约", "时代", "经济", "规则", "专家"}
+    # 全量规模(36 → 远超;数据银行 83 总,本表收全部有名)
+    assert len(INVESTMENT_ENVS) > 70, f"全量注册表应 >70,实际 {len(INVESTMENT_ENVS)}"
+
+
+def test_d68_new_envs_present() -> None:
+    """D-68:数据银行新发现的 4 个环境在注册表(原 doc 缺)。命运圣杯 = Fate 联动阵营。"""
+    for name in ("红钻贵族", "蓝钻贵族", "命运圣杯邀请", "命运圣杯契约"):
+        assert name in INVESTMENT_ENVS, f"{name} 应在注册表(D-68 新增)"
+    # 命运圣杯邀请/契约带 faction(Fate 联动阵营)
+    assert env_faction("命运圣杯邀请") == "命运圣杯"
+    assert env_faction("命运圣杯契约") == "命运圣杯"
+    # 战技点概念股实存(D-36 误标"未单抓",D-68 数据银行确认存在)
+    战技 = get_env("战技点概念股")
+    assert isinstance(战技, InvestmentEnv) and 战技.faction == "战技点"
+
+
+def test_d68_nonexistent_concept_stocks_removed() -> None:
+    """D-68:数据银行无「持续伤害概念股」「量子同频概念股」独立卡 → 不存在,从注册表删。
+
+    (只剩持续伤害/量子同频的「邀请」「契约」形态,它们仍在。)
+    """
+    assert "持续伤害概念股" not in INVESTMENT_ENVS
+    assert "量子同频概念股" not in INVESTMENT_ENVS
+    # 邀请/契约形态仍在
+    assert "持续伤害邀请" in INVESTMENT_ENVS and "持续伤害契约" in INVESTMENT_ENVS
+    assert "量子同频邀请" in INVESTMENT_ENVS and "量子同频契约" in INVESTMENT_ENVS
+
+
+def test_is_known_env() -> None:
+    """is_known_env:注册表内 True,外 False(识别完整性信号,供 handle_invest_env log warn)。"""
+    assert is_known_env("追击概念股") is True
+    assert is_known_env("命运圣杯邀请") is True
+    assert is_known_env("不存在环境") is False
+    assert is_known_env("") is False
