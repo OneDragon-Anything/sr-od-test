@@ -18,6 +18,7 @@ from sr_od.application.currency_war.cw_observation import (
     read_board,
     read_board_next_tier,
     read_bosses,
+    read_node_type,
     read_xp_progress,
 )
 from test.conftest import SrTestContext
@@ -216,6 +217,20 @@ def test_read_xp_progress_xy(test_context: SrTestContext, monkeypatch: pytest.Mo
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('购买经验', 282, 935)])
     assert read_xp_progress(test_context, None) is None
+
+
+def test_read_node_type_keyword(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """顶部节点类型标签 → node_type(首领→boss 等);无已知关键词 → None(D-72 备战字段采集)。"""
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('首领', 1337, 82)])
+    assert read_node_type(test_context, None) == 'boss'
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('补给', 1200, 82)])
+    assert read_node_type(test_context, None) == 'supply'
+    # 无已知节点类型关键词(如只读到 "1-9" 轮次)→ None
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('1-9', 441, 59)])
+    assert read_node_type(test_context, None) is None
 
 
 def test_write_affix_effects_merge(tmp_path) -> None:
