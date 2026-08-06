@@ -18,6 +18,7 @@ from sr_od.application.currency_war.cw_observation import (
     read_board,
     read_board_next_tier,
     read_bosses,
+    read_xp_progress,
 )
 from test.conftest import SrTestContext
 
@@ -200,6 +201,21 @@ def test_read_board_xy_count_and_next_tier(test_context: SrTestContext, monkeypa
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
     assert read_board(test_context, None) == {'能量': 2, '仙舟': 1, '贝洛伯格': 1}
     assert read_board_next_tier(test_context, None) == {'能量': 3, '仙舟': 3, '贝洛伯格': 2}
+
+
+def test_read_xp_progress_xy(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """购买经验下方 "X/Y" → (cur_xp, xp_to_next);越界/无 → None(D-69 备战字段采集)。"""
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('4/20', 282, 935)])
+    assert read_xp_progress(test_context, None) == (4, 20)
+    # 越界(cur>next)→ None
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('20/4', 282, 935)])
+    assert read_xp_progress(test_context, None) is None
+    # 无 "X/Y" → None
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('购买经验', 282, 935)])
+    assert read_xp_progress(test_context, None) is None
 
 
 def test_write_affix_effects_merge(tmp_path) -> None:
