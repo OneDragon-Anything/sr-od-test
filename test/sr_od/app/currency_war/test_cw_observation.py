@@ -18,7 +18,11 @@ from sr_od.application.currency_war.cw_observation import (
     read_board,
     read_board_next_tier,
     read_bosses,
+    read_enemy_difficulty,
+    read_level_up_cost,
     read_node_type,
+    read_shop_refresh_cost,
+    read_streak,
     read_xp_progress,
 )
 from test.conftest import SrTestContext
@@ -231,6 +235,37 @@ def test_read_node_type_keyword(test_context: SrTestContext, monkeypatch: pytest
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('1-9', 441, 59)])
     assert read_node_type(test_context, None) is None
+
+
+def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """备战左上/购买经验/商店区数字字段:enemy_difficulty/level_up_cost/shop_refresh_cost/streak(D-74)。
+
+    各字段 OCR 其 screen_info area → int(越界/空 → None 或默认)。shop_refresh_cost 默认 2。
+    """
+    # enemy_difficulty(文本-难度,stylized 但能读到时):"108" → 108
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('108', 136, 70)])
+    assert read_enemy_difficulty(test_context, None) == 108
+    # level_up_cost(文本-购买经验金币数):"4" → 4
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('4', 296, 990)])
+    assert read_level_up_cost(test_context, None) == 4
+    # shop_refresh_cost(文本-刷新金币数):"2" → 2;空 → 默认 2
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('2', 1621, 855)])
+    assert read_shop_refresh_cost(test_context, None) == 2
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: [])
+    assert read_shop_refresh_cost(test_context, None) == 2   # 空 → 默认 2
+    # streak(文本-连胜数):"3" → 3;空 → None
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('3', 1523, 875)])
+    assert read_streak(test_context, None) == 3
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: [])
+    assert read_streak(test_context, None) is None
+    # enemy_difficulty 越界(>300)→ None
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('999', 136, 70)])
+    assert read_enemy_difficulty(test_context, None) is None
 
 
 def test_write_affix_effects_merge(tmp_path) -> None:
