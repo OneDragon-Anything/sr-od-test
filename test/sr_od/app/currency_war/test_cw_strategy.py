@@ -150,6 +150,63 @@ def test_create_session() -> None:
     assert session.performance is not None
 
 
+def test_update_target_drought_bail_after_3_dry_rounds(monkeypatch) -> None:
+    """D-92:target 连续 3 轮 shop 无其阵营卡(shop_supply<1.0)→ 弃 target 重选(防 commit 锁死不可达 target)。
+
+    live round4-6 target=DOT队 但 shop/board 始终无 持续伤害/减益 → comp 建不成 → HP4 死。
+    修:update_target 追踪 target_drought;≥3 → 弃 target(=None)→ select_comp 重选(shop-aware 挑买得到的)。
+    隔离:monkeypatch select_comp 恒返 [dot](挡住 maybe_pivot 的 pivot 噪声,专验 drought 机制)。
+    """
+    from sr_od.application.currency_war import cw_comps as _cw_comps
+    from sr_od.application.currency_war.cw_comps import Comp
+    from sr_od.application.currency_war.cw_state import GameState, ShopCard
+
+    strat = DefaultCwStrategy()
+    sess = strat.create_session(_cfg())
+    dot = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
+               form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
+    monkeypatch.setattr(_cw_comps, "select_comp", lambda *a, **k: [dot])
+
+    # shop 全 off-faction(无 持续伤害/减益)→ shop_supply(dot)=0 <1.0 → drought 累积
+    state = GameState(gold=10, hp=60, level=5, round_num=5, plane=1,
+                      shop=[ShopCard(x=1, faction="群攻", name="", cost=1)])
+
+    strat.update_target(state, sess, _cfg())      # 首轮 target None → select → dot;drought 不检(=0)
+    assert sess.target_comp is not None
+    assert sess.target_drought == 0
+    strat.update_target(state, sess, _cfg())      # target=dot,dry → drought 1
+    assert sess.target_drought == 1
+    strat.update_target(state, sess, _cfg())      # drought 2
+    assert sess.target_drought == 2
+    strat.update_target(state, sess, _cfg())      # drought 3 → bail → 弃 target 重选 → drought 0
+    assert sess.target_drought == 0, "连续 3 轮 dry 应 bail 重选,drought 归 0"
+    assert sess.target_comp is not None
+
+
+def test_update_target_drought_resets_when_shop_supplies(monkeypatch) -> None:
+    """D-92:shop 重新出现 target 阵营卡(shop_supply=1.0)→ drought 归 0(正常 shop 波动不累积成 bail)。"""
+    from sr_od.application.currency_war import cw_comps as _cw_comps
+    from sr_od.application.currency_war.cw_comps import Comp
+    from sr_od.application.currency_war.cw_state import GameState, ShopCard
+
+    strat = DefaultCwStrategy()
+    sess = strat.create_session(_cfg())
+    dot = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
+               form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
+    monkeypatch.setattr(_cw_comps, "select_comp", lambda *a, **k: [dot])
+    dry = GameState(gold=10, hp=60, level=5, round_num=5, plane=1,
+                    shop=[ShopCard(x=1, faction="群攻", name="", cost=1)])
+    wet = GameState(gold=10, hp=60, level=5, round_num=5, plane=1,
+                    shop=[ShopCard(x=1, faction="持续伤害", name="", cost=1)])  # 有 target 阵营卡
+
+    strat.update_target(dry, sess, _cfg())   # select → dot
+    strat.update_target(dry, sess, _cfg())   # drought 1
+    assert sess.target_drought == 1
+    strat.update_target(wet, sess, _cfg())   # shop 供上 → drought 归 0(不累积)
+    assert sess.target_drought == 0
+
+
+
 def test_update_target_writes_session() -> None:
     """首轮 update_target → 写 session.target_comp(select_comp 首选)。"""
     strat = DefaultCwStrategy()
