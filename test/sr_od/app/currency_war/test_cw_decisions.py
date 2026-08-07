@@ -282,6 +282,41 @@ def test_plan_t97_committed_refuses_offtarget_when_no_target_in_shop() -> None:
     assert buys_early, "未 commit + shop 无 target → 允许 off-target tempo(早期不该饿死)"
 
 
+def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
+    """D-107:rebuild_deployed_from_board 从 board 重建 deployed,计数=sum(board),back 先填至 back_max 再 front。"""
+    from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
+    dep = rebuild_deployed_from_board({"能量": 2, "护盾": 6}, back_max=6)   # 总 8
+    assert len(dep) == 8
+    assert sum(1 for d in dep if d.position_pref == "back") == 6    # back_max=6 先填满
+    assert sum(1 for d in dep if d.position_pref == "front") == 2   # 溢出 2 去 front
+    assert sum(1 for d in dep if d.faction == "能量") == 2          # faction 保留
+    assert sum(1 for d in dep if d.faction == "护盾") == 6
+
+
+def test_plan_t107_saves_interest_when_board_full_low_gold() -> None:
+    """D-107(RC1,治 T#97 战术层 desync):board 满 + gold<50 + hp ok → _saving_for_interest 抑制散买(攒息)。
+
+    根因(子agent 查实):read_game_state 不填 deployed → 恒 [] → deployed_count() 恒 0 →
+    _saving_for_interest(需 deployed>=max_units)永不触发 → bot 不攒息、散买 off-target(gold→0 spread 根因)。
+    修:rebuild_deployed_from_board 从 board 真值重建 deployed → 计数对齐 → 攒息门触发。
+    round=2 未 commit(隔离 saving,非 D-106 commitment);level=8 → max_units=8 = board 计数(满)。
+    """
+    from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
+    target = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
+                  form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
+    cfg = _cfg()
+    state = GameState(gold=30, hp=100, level=8, round_num=2, plane=1,
+                      board={"持续伤害": 4, "减益": 4})
+    state.deployed = rebuild_deployed_from_board(state.board, state.back_max)
+    assert state.deployed_count() == 8 and state.deployed_count() >= state.max_units(), "rebuild 后计数=board 真"
+    state.shop = [ShopCard(x=100, faction="能量", name="阿格莱雅", cost=1)]   # off-target,买得起
+    actions = plan(state, cfg, cfg.faction_priority, rng=random.Random(0), target_comp=target)
+    buys = [a.card.name for a in actions if isinstance(a, BuyCard)]
+    assert "阿格莱雅" not in buys, (
+        "board 满 + gold<50 + hp ok → _saving_for_interest 攒息,不散买 off-target(D-107 RC1)"
+    )
+
+
 # —— level_plan 硬 gate(task#18 经济统一论):level_plan 说 level_up + 够钱 → 强制升级 ——
 
 
