@@ -206,6 +206,34 @@ def test_update_target_drought_resets_when_shop_supplies(monkeypatch) -> None:
     assert sess.target_drought == 0
 
 
+def test_on_round_end_stores_last_hp_when_confident() -> None:
+    """D-94:on_round_end 达阈置信度的结算 hp_after → 存 session.last_hp(给下回合 prep state.hp)。"""
+    from sr_od.application.currency_war.cw_performance import (
+        RoundOutcome,
+    )
+
+    strat = DefaultCwStrategy()
+    sess = strat.create_session(_cfg())
+    assert sess.last_hp is None
+    obs = RoundOutcome(round_num=4, plane=1, node_type='普通战斗', comp_tag='DOT队',
+                       hp_after=58, hp_confidence=1.0)   # 结算屏读对(高置信)
+    strat.on_round_end(GameState(), sess, _cfg(), obs)
+    assert sess.last_hp == 58
+
+
+def test_on_round_end_skips_low_confidence_hp() -> None:
+    """D-94:低置信(hp_confidence<阈,如结算屏 OCR 失败 hp_after=0)→ 不存(防 0 污染下回合 prep)。"""
+    from sr_od.application.currency_war.cw_performance import RoundOutcome
+
+    strat = DefaultCwStrategy()
+    sess = strat.create_session(_cfg())
+    sess.last_hp = 70   # 上轮已存的可靠值
+    obs = RoundOutcome(round_num=5, plane=1, node_type='普通战斗', comp_tag='DOT队',
+                       hp_after=0, hp_confidence=0.0)   # OCR 失败(conf 0)
+    strat.on_round_end(GameState(), sess, _cfg(), obs)
+    assert sess.last_hp == 70, "低置信结算不应覆盖已存的可靠 HP"
+
+
 
 def test_update_target_writes_session() -> None:
     """首轮 update_target → 写 session.target_comp(select_comp 首选)。"""
