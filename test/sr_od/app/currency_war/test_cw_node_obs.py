@@ -67,3 +67,29 @@ def test_read_encounter_options_reward_assigned_by_nearest_x() -> None:
     opts = read_encounter_options(_FakeCtx(m), None)
     assert opts[0].difficulty == 2 and opts[0].rewards == ['装备']
     assert opts[1].difficulty == 5 and opts[1].rewards == ['晶矿']
+
+
+def test_read_megastar_options_parses_candidates() -> None:
+    """D-95:巨星候选「盛会之星一X先生/女士!」→ MegastarOption(char_id=X),按 x 左→右 idx。
+
+    baseline cw_megastar OCR(2026-08-07):花火(左 822)+ 星期日(右 1061)。容错半角叹号。
+    """
+    from sr_od.application.currency_war.cw_node_obs import read_megastar_options
+
+    m = _ocr_map([
+        ('盛会之星一花火女士！', 822, 333),    # 左(全角 !)
+        ('盛会之星一星期日先生!', 1061, 334),   # 右(半角 !)
+        ('请选择1名角色成为巨星', 935, 124),
+        ('确认选择', 1441, 549),
+    ])
+    opts = read_megastar_options(_FakeCtx(m), None)
+    assert len(opts) == 2
+    assert opts[0].idx == 0 and opts[0].char_id == '花火'
+    assert opts[1].idx == 1 and opts[1].char_id == '星期日'
+
+
+def test_read_megastar_options_no_candidates_empty() -> None:
+    """非巨星屏(无「盛会之星一X」候选)→ [](handler 退默认 idx0)。"""
+    from sr_od.application.currency_war.cw_node_obs import read_megastar_options
+
+    assert read_megastar_options(_FakeCtx({}), None) == []
