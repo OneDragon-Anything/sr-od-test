@@ -249,6 +249,39 @@ def test_plan_d79_prefilter_skips_offtarget_priority_for_target() -> None:
     assert "阿格莱雅" not in buys, "off-target priority 阿格莱雅 应跳过(D-79:prefilter 不再豁免 priority)"
 
 
+def test_plan_t97_committed_refuses_offtarget_when_no_target_in_shop() -> None:
+    """T#97:已 commit + shop 无 target 卡 → 拒 off-target(commit 后买散牌 = spread 根因)。
+
+    live 复现(plane1 r1-3,target 巡击青雀[仙舟/追击]):买完唯一 target 卡(追击/赛飞儿)后 simulate 把它移出
+    shop → shop 无 target → 旧 prefilter「防饿死」放行 off-target → 买 能量/持续伤害 散牌 → board spread
+    → plane2 comp 弱秒死。修:已 commit 也拒 off-target(该 Refresh 找 target / 攒金;drought bail 处理
+    真不可达)。**未 commit**(round=1)同 shop 仍放行 off-target(早期 tempo,防饿死)。
+
+    level=10 隔离 level/saving 门(无 _want_level / _saving_for_level);deployed=0 避 _saving_for_interest
+    → 唯一阻断 off-target 的是 commitment prefilter(纯验 T#97 逻辑)。
+    """
+    target = Comp(name="巡击青雀", factions=["仙舟", "追击"], core_chars=["青雀", "知更鸟"],
+                  form_tiers={"仙舟": 5, "追击": 3}, strength="B", form_difficulty="medium")
+    shop = [ShopCard(x=100, faction="能量", name="阿格莱雅", cost=1),
+            ShopCard(x=200, faction="持续伤害", name="艾丝妲", cost=1),
+            ShopCard(x=300, faction="群攻", name="黑塔", cost=1)]
+    cfg = _cfg()
+    # 已 commit:round=4 plane=1 → (1-1)*9+4=4 >= COMMIT_ROUND(4) → committed
+    st_comm = GameState(gold=6, round_num=4, level=10, plane=1, shop=shop)
+    buys_comm = [a.card.name for a in plan(st_comm, cfg, cfg.faction_priority,
+                                           rng=random.Random(0), target_comp=target)
+                 if isinstance(a, BuyCard)]
+    assert buys_comm == [], (
+        f"已 commit + shop 无 target → 不买 off-target(应 Refresh 找 target / 攒金),got {buys_comm}"
+    )
+    # 未 commit:round=1 → 早期 tempo 允许 off-target(回归守卫:别把早期也禁了 → 饿死)
+    st_early = GameState(gold=6, round_num=1, level=10, plane=1, shop=shop)
+    buys_early = [a.card.name for a in plan(st_early, cfg, cfg.faction_priority,
+                                            rng=random.Random(0), target_comp=target)
+                  if isinstance(a, BuyCard)]
+    assert buys_early, "未 commit + shop 无 target → 允许 off-target tempo(早期不该饿死)"
+
+
 # —— level_plan 硬 gate(task#18 经济统一论):level_plan 说 level_up + 够钱 → 强制升级 ——
 
 

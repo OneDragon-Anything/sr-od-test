@@ -150,11 +150,12 @@ def test_create_session() -> None:
     assert session.performance is not None
 
 
-def test_update_target_drought_bail_after_3_dry_rounds(monkeypatch) -> None:
-    """D-92:target 连续 3 轮 shop 无其阵营卡(shop_supply<1.0)→ 弃 target 重选(防 commit 锁死不可达 target)。
+def test_update_target_drought_bail_after_5_dry_rounds(monkeypatch) -> None:
+    """D-92 + T#97:target 连续 5 轮 shop 无其阵营卡(shop_supply<1.0)→ 弃 target 重选(防 commit 锁死不可达)。
 
     live round4-6 target=DOT队 但 shop/board 始终无 持续伤害/减益 → comp 建不成 → HP4 死。
-    修:update_target 追踪 target_drought;≥3 → 弃 target(=None)→ select_comp 重选(shop-aware 挑买得到的)。
+    修(D-92):update_target 追踪 target_drought;≥DROUGHT_BAIL → 弃 target(=None)→ select_comp 重选。
+    T#97:DROUGHT_BAIL 3→5(3 太激进 —— shop 随机 3 轮无阵营卡是正常波动不该弃;5 容忍随机,稳 commit)。
     隔离:monkeypatch select_comp 恒返 [dot](挡住 maybe_pivot 的 pivot 噪声,专验 drought 机制)。
     """
     from sr_od.application.currency_war import cw_comps as _cw_comps
@@ -178,8 +179,12 @@ def test_update_target_drought_bail_after_3_dry_rounds(monkeypatch) -> None:
     assert sess.target_drought == 1
     strat.update_target(state, sess, _cfg())      # drought 2
     assert sess.target_drought == 2
-    strat.update_target(state, sess, _cfg())      # drought 3 → bail → 弃 target 重选 → drought 0
-    assert sess.target_drought == 0, "连续 3 轮 dry 应 bail 重选,drought 归 0"
+    strat.update_target(state, sess, _cfg())      # drought 3(T#97:3→5,未达 bail)
+    assert sess.target_drought == 3
+    strat.update_target(state, sess, _cfg())      # drought 4
+    assert sess.target_drought == 4
+    strat.update_target(state, sess, _cfg())      # drought 5 → bail → 弃 target 重选 → drought 0
+    assert sess.target_drought == 0, "连续 5 轮 dry 应 bail 重选,drought 归 0"
     assert sess.target_comp is not None
 
 
