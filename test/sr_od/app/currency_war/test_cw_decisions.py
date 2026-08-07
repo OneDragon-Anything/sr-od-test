@@ -727,3 +727,33 @@ def test_sample_shop_weights_target_factions() -> None:
     r_no = hit_rate(42, None)        # 无 target:击破 不加权(均匀)
     r_yes = hit_rate(42, target)     # 有 target:击破 加权 2×
     assert r_yes > r_no * 1.5, f"target 阵营该被加权采样:r_yes={r_yes:.3f} vs r_no={r_no:.3f}"
+
+
+# —— D-109: _board_alignment + shop_supply 收紧 ——
+
+
+def test_board_alignment_deep_shallow_none() -> None:
+    """D-109:_board_alignment —— board count≥2 → ×1.2(boost);count≥1 → ×1.0(neutral);全无 → ×0.7(penalty)。"""
+    from sr_od.application.currency_war.cw_comps import _board_alignment
+    comp = Comp(name="test", factions=["仙舟", "追击"], core_chars=[],
+                form_tiers={"仙舟": 5, "追击": 3}, strength="S", form_difficulty="medium")
+    # deep-stack(仙舟:2)→ boost
+    assert _board_alignment(comp, GameState(board={"仙舟": 2, "能量": 1})) == 1.2
+    # shallow(仙舟:1)→ neutral
+    assert _board_alignment(comp, GameState(board={"仙舟": 1, "能量": 1})) == 1.0
+    # 全无 comp 阵营 → penalty
+    assert _board_alignment(comp, GameState(board={"能量": 2, "护盾": 1})) == 0.7
+
+
+def test_shop_supply_core_vs_noncore() -> None:
+    """D-109:shop_supply 收紧 —— 核心(form_tiers)阵营在 shop → 1.0;仅非核心 → 0.5。"""
+    from sr_od.application.currency_war.cw_comps import shop_supply
+    # comp: factions=[仙舟,追击,盛会之星],form_tiers={仙舟:5,追击:3} → core={仙舟,追击},盛会之星 非核心
+    target = Comp(name="test", factions=["仙舟", "追击", "盛会之星"], core_chars=[],
+                  form_tiers={"仙舟": 5, "追击": 3}, strength="S", form_difficulty="medium")
+    # 核心阵营(仙舟)在 shop → 1.0
+    s_core = GameState(shop=[ShopCard(x=1, faction="仙舟", name="", cost=1)])
+    assert shop_supply(target, s_core) == 1.0
+    # 仅非核心(盛会之星)在 shop → 0.5
+    s_noncore = GameState(shop=[ShopCard(x=1, faction="盛会之星", name="", cost=1)])
+    assert shop_supply(target, s_noncore) == 0.5
