@@ -83,3 +83,41 @@ def test_prep_anchor_buyexp_present_on_prep_absent_elsewhere(test_context, test_
     assert _has_text(test_context, prep, '购买经验'), '备战屏应有「购买经验」→ 守卫不触发,正常买牌'
     lobby = cv2_utils.read_image(str(test_image_dir / 'currency_war_lobby.png'))      # 货币战争大厅(非备战)
     assert not _has_text(test_context, lobby, '购买经验'), '非备战屏无「购买经验」→ 守卫应 round_fail 退出,交主循环处理'
+
+
+def test_read_deploy_paddle_cap_and_count(test_context, test_image_dir: Path) -> None:
+    """D-139:「区域-部署数」paddle「X/Y」→ read_deployed_count=X、read_deploy_cap=Y(同源)。
+
+    回归 guard:refactor(read_deployed_count → _read_deploy_paddle[0])不破坏 X 读取;新增
+    read_deploy_cap 给真 cap(非 level 估,deploy_bench D-139 用)。paddle 在小 stylized 区偶 OCR 漏 →
+    读不到=None 合法(调用方 fallback),故只断言「读到则 sane」+ X<=Y。打印实测值供多样本核实。
+    """
+    from sr_od.application.currency_war.cw_observation import (
+        read_deploy_cap,
+        read_deployed_count,
+    )
+    for name in ('currency_war_shop.png', 'currency_war_prep_closed.png',
+                 'currency_war_prep_herta.png'):
+        screen = cv2_utils.read_image(str(test_image_dir / name))
+        x = read_deployed_count(test_context, screen)
+        y = read_deploy_cap(test_context, screen)
+        print(f'\n[deploy paddle {name}] deployed={x} cap={y}')
+        if x is not None:
+            assert 0 <= x <= 9, f'deployed 越界 {x}'
+        if y is not None:
+            assert 1 <= y <= 9, f'cap 越界 {y}'
+        if x is not None and y is not None:
+            assert x <= y, f'deployed({x}) > cap({y})'
+
+
+def test_tracked_bench_chars_seeds_identity() -> None:
+    """D-84:tracked_bench(buy OCR 名)→ BenchChar(跨轮 seed state.bench)。
+
+    SIFT 屏幕识别立绘不可行(主游脸库 + 图鉴立绘都不 match 备战 half-body)→ 用 buy 时
+    read_shop_cards OCR 的规范名持久化,跨轮 seed bench。锁 helper:名 → BenchChar 保身份 + roster 阵营。
+    """
+    from sr_od.application.currency_war.operations.prep.shop import _tracked_bench_chars
+    bcs = _tracked_bench_chars(['飞霄', '三月七', ''])
+    assert [bc.char_id for bc in bcs] == ['飞霄', '三月七']   # 空名跳过
+    assert all(bc.faction in FACTIONS or bc.faction == '?' for bc in bcs)   # 阵营 roster 派生 or '?'
+    assert all(bc.char_id for bc in bcs)   # 身份非空

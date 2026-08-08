@@ -163,6 +163,11 @@ class TestStartCurrencyWarMatchFlow:
         assert len(test_context.cw_briefing_affixes) == 4, (
             f'期望 4 词缀(A8),实际 {test_context.cw_briefing_affixes}'
         )
+        # 简报首领读取验证:op 简报分支 read_bosses → ctx.cw_briefing_bosses(3 位面 boss)
+        assert test_context.cw_briefing_bosses, '简报首领未读取(简报分支没读存)'
+        assert len(test_context.cw_briefing_bosses) == 3, (
+            f'期望 3 boss(3 位面),实际 {test_context.cw_briefing_bosses}'
+        )
 
     def test_new_match_a5_switches_to_max_rank(
         self,

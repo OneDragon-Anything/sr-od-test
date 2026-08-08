@@ -248,6 +248,28 @@ def test_select_comp_forbid_filter() -> None:
     assert "巡击青雀" not in names2, "forbid 仙舟 → 排除巡击青雀"
 
 
+def test_shop_history_factor_formable_vs_rare() -> None:
+    """D-126:shop 历史长期可得性 —— comp 核心阵营反复出现(可成型)→ boost;从未出现 → penalty。
+
+    人玩「跟 shop 走」:commit 到反复出现的阵营。替 shop_supply 单回合短视(D-120 选 unacquirable target)。
+    """
+    from sr_od.application.currency_war.cw_comps import (
+        ScoreContext,
+        _shop_history_factor,
+    )
+    青雀 = get_comp("巡击青雀")   # factions 仙舟/追击,核心 form_tiers 仙舟/追击
+    # 仙舟/追击 反复出现(核心 avg≥2)→ boost ×1.2
+    ctx_seen = ScoreContext(shop_faction_seen={"仙舟": 3, "追击": 2})
+    assert _shop_history_factor(青雀, ctx_seen) == 1.2
+    # 核心阵营从未出现(shop 只有别的阵营)→ penalty ×0.7
+    ctx_rare = ScoreContext(shop_faction_seen={"能量": 5, "群攻": 4})
+    assert _shop_history_factor(青雀, ctx_rare) == 0.7
+    # 无 shop 历史 → 中性 1.0
+    assert _shop_history_factor(青雀, ScoreContext()) == 1.0
+
+
+
+
 def test_select_comp_optionality_top_n() -> None:
     """top_n=N → 返回 N 个(按 comp_score 降序;用空 priority 避免 boost 干扰排序断言)。"""
     s = GameState(round_num=5, gold=50)
@@ -321,6 +343,20 @@ def test_maybe_pivot_low_hp_signal3_preempts_signal1() -> None:
     assert result is not None, "hp 危险应 pivot"
     assert result.form_difficulty == "easy", "保命只选 easy comp"
     assert result.name == "列车同行", "D-65:优先 board 有 progress 的 easy(列车同行 full 成型),非弃成型切未成型"
+
+
+def test_maybe_pivot_d141_no_easy_progress_keeps_target() -> None:
+    """D-141:hp 危险(信号3)+ **无 easy comp 有 board progress** + 当前 target(medium)有 progress
+    → **保持 target**(return None),不转 0-foundation easy comp(board 不支持 → 必死)。
+
+    实跑 r8 bug:target=巡击青雀(medium,board 追击+仙舟 有 progress)被 easy 过滤排除;无 easy comp
+    (列车同行/DOT队)有 board progress → 旧 fallback pool=easy → 最快 easy=DOT(board 0 持续伤害)→ 转
+    0-foundation → 必死。本测锁修法:该场景保持 target,不弃有 progress 的去追 0-progress easy。"""
+    cfg = _cfg()
+    # board 只有仙舟+追击(巡击青雀 factions)→ 巡击青雀有 progress;列车同行/DOT队(easy)都 0 progress。
+    s = GameState(board={"仙舟": 2, "追击": 2}, round_num=8, plane=1, hp=20, gold=50)
+    result = maybe_pivot(s, make_score_context(s), cfg, target=get_comp("巡击青雀"))
+    assert result is None, "无 easy comp 有 progress + target 有 progress → 保持 target,不转 0-foundation easy"
 
 
 def test_maybe_pivot_better_comp_emerges() -> None:

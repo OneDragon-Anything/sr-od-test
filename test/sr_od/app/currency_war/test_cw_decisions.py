@@ -14,11 +14,17 @@ import pytest
 from sr_od.application.currency_war.cw_comps import Comp
 from sr_od.application.currency_war.cw_decisions import (
     MAX_REFRESH_PER_ROUND,
+    REINFORCE_BONUS,
+    SPREAD_PENALTY,
     EncounterOption,
     SupplyOption,
+    _bench_faction_counts,
+    _concentration_delta,
+    _distinct_factions,
     _maybe_sell_for_interest,
     _phase_weights,
     _sample_shop,
+    _should_deploy,
     alpha_t,
     char_quality_score,
     decide_boss_priority,
@@ -225,6 +231,28 @@ def test_plan_buys_synergy_push() -> None:
     assert any(isinstance(a, BuyCard) for a in actions), "能推 tier 的牌应被买入(无 level gate 干预)"
 
 
+def test_plan_d142_tempo_weak_board_buys_not_save() -> None:
+    """D-142 tempo(战力断档)破息:板弱(无 target)+ 板满 + 健康 + gold<50 → **破息买 reinforce**(非 buy0)。
+
+    实跑 match2 r3:board 满+散+gold11+无 target → 旧 _saving_for_interest(gold<50 + 满 + 健康)堵死全部非 target
+    买 → 无 target 全堵 → buy0 → 永不集中 → 永无 target → 死循环。D-142 加板强判据(板弱不攒息/级),
+    本测锁之:该场景 plan 应买 reinforce(击破 existing→count2→emergent target),非空。"""
+    cfg = _cfg()
+    state = GameState(
+        gold=11, hp=100, round_num=1, level=4, plane=1,
+        board={"击破": 1, "追击": 1, "仙舟": 1, "能量": 1},   # 4 阵营各 1(散;无 target → 板弱)
+        deployed=[BenchChar(slot=0, faction="击破"),           # deployed 4 = max_units min(4,10)=4(板满)
+                  BenchChar(slot=1, faction="追击"),
+                  BenchChar(slot=2, faction="仙舟"),
+                  BenchChar(slot=3, faction="能量")],
+        shop=[ShopCard(x=377, faction="击破", name="", cost=1)],  # reinforce 击破(existing 阵营)
+    )
+    actions = plan(state, cfg, cfg.faction_priority)   # 无 target_comp → _board_strong=False → 不 _saving
+    assert any(isinstance(a, BuyCard) for a in actions), (
+        "D-142:板弱(无 target)+ 满 + 健康 + gold<50 → 破息买 reinforce(非 buy0 死循环)"
+    )
+
+
 def test_plan_d79_prefilter_skips_offtarget_priority_for_target() -> None:
     """D-79:commitment prefilter 不再豁免 character_priority 的 off-target 角色。
 
@@ -280,6 +308,28 @@ def test_plan_t97_committed_refuses_offtarget_when_no_target_in_shop() -> None:
                                             rng=random.Random(0), target_comp=target)
                   if isinstance(a, BuyCard)]
     assert buys_early, "未 commit + shop 无 target → 允许 off-target tempo(早期不该饿死)"
+
+
+def test_plan_d137_buys_target_faction_despite_board_spread() -> None:
+    """D-137:target 阵营卡即使 board 已 ≥cap 阵营也该买(target 免 spread 罚)。
+
+    复现 round3(target=DOT队,board 4 阵营,shop 有 target 卡 减益/椒丘):旧逻辑 _concentration_delta
+    对新 target 阵营 减益 也 -8 spread 罚 → buy delta 负 → 不买 → comp 永不深 → buy0 输。修:target 阵营免罚。
+    """
+    dot = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
+               form_tiers={"持续伤害": 4, "减益": 3}, strength="B", form_difficulty="easy")
+    shop = [ShopCard(x=100, faction="减益", name="椒丘", cost=1),    # target 阵营(新进)
+            ShopCard(x=200, faction="群攻", name="黑塔", cost=1)]   # off-target
+    cfg = _cfg()
+    # board 已 4 阵营(≥cap 3)+ level10(无 saving)+ 减益 target 卡 → 应买减益(不再被 spread 罚卡死)
+    st = GameState(gold=20, round_num=4, level=10, plane=1,
+                   board={"银河学者": 2, "击破": 1, "群攻": 1, "持续伤害": 1}, shop=shop)
+    buys = [a.card.faction for a in plan(st, cfg, cfg.faction_priority,
+                                         rng=random.Random(0), target_comp=dot)
+            if isinstance(a, BuyCard)]
+    assert "减益" in buys, (
+        f"target 阵营卡(减益)board≥cap 也应买(D-137 免 spread 罚),got buys={buys}"
+    )
 
 
 def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
@@ -757,3 +807,53 @@ def test_shop_supply_core_vs_noncore() -> None:
     # 仅非核心(盛会之星)在 shop → 0.5
     s_noncore = GameState(shop=[ShopCard(x=1, faction="盛会之星", name="", cost=1)])
     assert shop_supply(target, s_noncore) == 0.5
+
+
+# ===== D-122 concentration(deployed-lock 防 spread)=====
+
+
+def test_concentration_delta_reinforce_vs_spread() -> None:
+    """D-122 L1 _concentration_delta:强化已 collect 阵营 +REINFORCE_BONUS;新阵营≥cap −SPREAD_PENALTY。"""
+    # board 有 仙舟 → 买 仙舟 = reinforce
+    s = GameState(board={"仙舟": 1})
+    assert _concentration_delta(ShopCard(x=0, faction="仙舟"), s) == REINFORCE_BONUS
+    # 空 board + 新阵营(第 1,未达 cap)= 中性 0(允许集中起步)
+    assert _concentration_delta(ShopCard(x=0, faction="仙舟"), GameState(board={})) == 0.0
+    # 已 3 阵营(cap)+ 第 4 新阵营 = spread penalty(防 deployed-lock 永久占槽)
+    s_cap = GameState(board={"仙舟": 1, "追击": 1, "击破": 1})
+    assert _concentration_delta(ShopCard(x=0, faction="能量"), s_cap) == -SPREAD_PENALTY
+    # bench 也算 collected(强化 bench 已有阵营)
+    s_bench = GameState(board={}, bench=[BenchChar(slot=1, char_id="x", faction="仙舟")])
+    assert _concentration_delta(ShopCard(x=0, faction="仙舟"), s_bench) == REINFORCE_BONUS
+    # D-137: target 阵营卡(新进,board≥cap)→ 免 spread 罚(target 阵营深化 comp 非 spread;
+    # round3 DOT 队 减益 因 board 4 阵营被旧逻辑 -8 罚 → target 卡不买 → comp 不深 → buy0)
+    dot = Comp(name="DOT", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
+               form_tiers={"持续伤害": 4}, strength="B", form_difficulty="easy")
+    assert _concentration_delta(ShopCard(x=0, faction="减益"), s_cap, dot) == 0.0   # target 阵营免罚
+    assert _concentration_delta(ShopCard(x=0, faction="杂牌", name="卡芙卡"), s_cap, dot) == 0.0  # core_char 免罚
+    assert _concentration_delta(ShopCard(x=0, faction="能量"), s_cap, dot) == -SPREAD_PENALTY  # off-target 仍罚
+
+
+def test_should_deploy_target_or_concentrated() -> None:
+    """D-122 L2 _should_deploy:target 阵营 OR 集中阵营(board+bench count≥2)才 deploy;off-target 单张留 bench。"""
+    dot = Comp(name="DOT", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
+               form_tiers={"持续伤害": 4}, strength="B", form_difficulty="easy")
+    # target 阵营角色 → deploy(深化 target)
+    assert _should_deploy(BenchChar(slot=1, char_id="x", faction="持续伤害"),
+                          GameState(board={"持续伤害": 1}), dot) is True
+    # off-target 单张(count 1)+ 有 target → 留 bench(防 spread-lock)
+    assert _should_deploy(BenchChar(slot=1, char_id="y", faction="仙舟"),
+                          GameState(board={"持续伤害": 1}), dot) is False
+    # off-target 但 board count≥2(集中)+ 无 target → deploy(集中深化,emergent)
+    assert _should_deploy(BenchChar(slot=1, char_id="z", faction="仙舟"),
+                          GameState(board={"仙舟": 2}), None) is True
+    # off-target count 1 + 无 target → 留 bench(r1 散单不 deploy)
+    assert _should_deploy(BenchChar(slot=1, char_id="z", faction="仙舟"),
+                          GameState(board={"仙舟": 1}), None) is False
+
+
+def test_distinct_factions_and_counts_include_board() -> None:
+    """D-122 fix:board(deployed ground truth)+ bench 都算 collected(曾漏 board 致 _should_deploy 误判)。"""
+    s = GameState(board={"仙舟": 2}, bench=[BenchChar(slot=1, char_id="x", faction="击破")])
+    assert _distinct_factions(s) == {"仙舟", "击破"}
+    assert _bench_faction_counts(s) == {"仙舟": 2, "击破": 1}

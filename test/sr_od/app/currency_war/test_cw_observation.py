@@ -69,6 +69,16 @@ def test_zero_hp_allowed_at_min() -> None:
     assert parse_settlement_hp(['小队生命值0']) == 0
 
 
+def test_parse_hp_garble_missing_sheng() -> None:
+    """OCR garble「生命值」→「命值」(missing 生)→ 仍解析(2026-08-07 hp garble fix e440e496)。
+
+    on_round_end 结算屏 OCR 偶 garble「生命值」→「命值」→ parse_settlement_hp 旧版失败 → hp 0 →
+    PerformanceTracker trend 噪声。garble fix 容忍「命值」→ 准确 hp → comp_viability 输入可信。
+    """
+    assert parse_settlement_hp(['小队命值74i']) == 74
+    assert parse_settlement_hp(['挑战结束', '小队命值58', '继续挑战']) == 58
+
+
 def test_read_affixes_briefing(test_context: SrTestContext) -> None:
     """简报词缀行 → 4 个词缀(A8 最高 4)。
 

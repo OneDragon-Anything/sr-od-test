@@ -168,8 +168,10 @@ def test_update_target_drought_bail_after_5_dry_rounds(monkeypatch) -> None:
                form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
     monkeypatch.setattr(_cw_comps, "select_comp", lambda *a, **k: [dot])
 
-    # shop 全 off-faction(无 持续伤害/减益)→ shop_supply(dot)=0 <1.0 → drought 累积
+    # shop 全 off-faction(无 持续伤害/减益)→ shop_supply(dot)=0.3(board-back)<1.0 → drought 累积。
+    # board={持续伤害:2} 提供 emergent 信号(D-122:阵营 count≥2 才选 target),否则 target 恒 None。
     state = GameState(gold=10, hp=60, level=5, round_num=5, plane=1,
+                      board={"持续伤害": 2},
                       shop=[ShopCard(x=1, faction="群攻", name="", cost=1)])
 
     strat.update_target(state, sess, _cfg())      # 首轮 target None → select → dot;drought 不检(=0)
@@ -200,8 +202,10 @@ def test_update_target_drought_resets_when_shop_supplies(monkeypatch) -> None:
                form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
     monkeypatch.setattr(_cw_comps, "select_comp", lambda *a, **k: [dot])
     dry = GameState(gold=10, hp=60, level=5, round_num=5, plane=1,
+                    board={"持续伤害": 2},   # D-122 emergent 信号(否则 target 恒 None)
                     shop=[ShopCard(x=1, faction="群攻", name="", cost=1)])
     wet = GameState(gold=10, hp=60, level=5, round_num=5, plane=1,
+                    board={"持续伤害": 2},
                     shop=[ShopCard(x=1, faction="持续伤害", name="", cost=1)])  # 有 target 阵营卡
 
     strat.update_target(dry, sess, _cfg())   # select → dot
@@ -209,6 +213,28 @@ def test_update_target_drought_resets_when_shop_supplies(monkeypatch) -> None:
     assert sess.target_drought == 1
     strat.update_target(wet, sess, _cfg())   # shop 供上 → drought 归 0(不累积)
     assert sess.target_drought == 0
+
+
+def test_update_target_emergent_no_signal_then_signal() -> None:
+    """D-122:emergent target —— 阵营 count≥2(board+bench)前 target 恒 None(解 target-buy 错配)。
+
+    target r1 空板预选 → 选 unacquirable comp → 不 acquire → spread(D-120/121 失败根因)。改:
+    无阵营 count≥2 信号 → target 保持 None(L1+L2 集中化驱动 buy/deploy);信号出现 → target emerge。
+    """
+    from sr_od.application.currency_war.cw_state import GameState
+
+    strat = DefaultCwStrategy()
+    sess = strat.create_session(_cfg())
+    # 无信号:board 各阵营 count 1(无 ≥2)→ target 保持 None
+    no_sig = GameState(gold=10, hp=60, level=4, round_num=2, plane=1,
+                       board={"仙舟": 1, "击破": 1})
+    strat.update_target(no_sig, sess, _cfg())
+    assert sess.target_comp is None, "无阵营 count≥2 → target 保持 None(emergent,L1+L2 驱动)"
+    # 有信号:board 阵营 count≥2 → select_comp 选含该阵营 comp(target emerge from board)
+    sig = GameState(gold=10, hp=60, level=4, round_num=3, plane=1, board={"仙舟": 2})
+    strat.update_target(sig, sess, _cfg())
+    assert sess.target_comp is not None, "阵营 count≥2 信号 → target emerge(select_comp 选 board-leader comp)"
+
 
 
 def test_on_round_end_stores_last_hp_when_confident() -> None:
