@@ -216,24 +216,23 @@ def test_update_target_drought_resets_when_shop_supplies(monkeypatch) -> None:
 
 
 def test_update_target_emergent_no_signal_then_signal() -> None:
-    """D-122:emergent target —— 阵营 count≥2(board+bench)前 target 恒 None(解 target-buy 错配)。
+    """D-146:早选 target(EMERGENT_SIGNAL_COUNT 2→1)—— 阵营 count≥1(starter 任一在场,r1 即触发)。
 
-    target r1 空板预选 → 选 unacquirable comp → 不 acquire → spread(D-120/121 失败根因)。改:
-    无阵营 count≥2 信号 → target 保持 None(L1+L2 集中化驱动 buy/deploy);信号出现 → target emerge。
+    D-122 count≥2 太慢(spread starter 难达 r6-7,HP 在 comp 成型前崩)。改 count1:r1 starter 在场即
+    选 comp + 早聚焦买(D-138)+ D-145 deploy 全板 → 快集中。无信号 = 空板(count0,无任何阵营)。
     """
     from sr_od.application.currency_war.cw_state import GameState
 
     strat = DefaultCwStrategy()
     sess = strat.create_session(_cfg())
-    # 无信号:board 各阵营 count 1(无 ≥2)→ target 保持 None
-    no_sig = GameState(gold=10, hp=60, level=4, round_num=2, plane=1,
-                       board={"仙舟": 1, "击破": 1})
+    # 无信号:board 空(count0,无任何阵营)→ target 保持 None
+    no_sig = GameState(gold=10, hp=60, level=4, round_num=1, plane=1, board={})
     strat.update_target(no_sig, sess, _cfg())
-    assert sess.target_comp is None, "无阵营 count≥2 → target 保持 None(emergent,L1+L2 驱动)"
-    # 有信号:board 阵营 count≥2 → select_comp 选含该阵营 comp(target emerge from board)
-    sig = GameState(gold=10, hp=60, level=4, round_num=3, plane=1, board={"仙舟": 2})
+    assert sess.target_comp is None, "空板(无阵营 count≥1)→ target 保持 None"
+    # 有信号:board 阵营 count≥1(starter 在场,r1 即触发)→ select_comp 早选 comp(D-146)
+    sig = GameState(gold=10, hp=60, level=4, round_num=1, plane=1, board={"仙舟": 1})
     strat.update_target(sig, sess, _cfg())
-    assert sess.target_comp is not None, "阵营 count≥2 信号 → target emerge(select_comp 选 board-leader comp)"
+    assert sess.target_comp is not None, "阵营 count≥1 → target 早选(D-146,select_comp 选 board-leader comp)"
 
 
 
