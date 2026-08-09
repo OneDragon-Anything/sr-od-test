@@ -9,6 +9,8 @@ from one_dragon.base.screen.screen_match import (
     AreaMatchDetail,
     AreaType,
     ScreenMatch,
+    UnmatchedArea,
+    UnmatchedReason,
     find_area_with_detail,
     find_screen_matches,
 )
@@ -314,3 +316,93 @@ def test_scope_inactive_traverses_all_screens(monkeypatch) -> None:
     # 三画面均进候选(全量遍历,无 scope 过滤)
     names = {m.screen_name for m in result}
     assert names == {'画面A', '画面B', '画面C'}
+
+
+# --- 未命中 area(unmatched_areas)测试 ---
+
+
+def test_precise_unmatched_areas_categorized(monkeypatch) -> None:
+    """精准命中 → unmatched_areas 按原因分类:纯定位区 NO_METHOD,未命中识别区 SUB_STATE。
+
+    画面含:id_mark(命中→精准)、纯定位区(永不命中)、未命中文本子态区、命中模板区。
+    unmatched 只含纯定位区 + 文本子态区;分类与字段(pc_rect / text)透传正确。
+    """
+    id_mark = _id_mark_text_area('标题', '菜单')                                  # id_mark,命中
+    plain = ScreenArea(area_name='点击区', pc_rect=Rect(10, 20, 110, 120))        # 纯定位,无 text/template
+    sub_text = ScreenArea(area_name='开关态', pc_rect=Rect(0, 0, 50, 50), text='已开启')   # 子态文本,未命中
+    hit_tmpl = ScreenArea(area_name='图标', pc_rect=Rect(1700, 40, 1760, 100),
+                          template_id='mail', template_sub_dir='menu')           # 模板,命中
+    screen = _screen_info('菜单', [id_mark, plain, sub_text, hit_tmpl])
+    ctx = MagicMock()
+    ctx.screen_loader = _make_loader([screen], current='菜单')
+    _patch_find(monkeypatch, {'标题': True, '图标': True})   # 仅 id_mark + 模板命中
+
+    result = find_screen_matches(ctx, MagicMock())
+
+    assert len(result) == 1 and result[0].is_precise is True
+    by_name = {u.area_name: u for u in result[0].unmatched_areas}
+    # 命中区(标题/图标)不出现在 unmatched
+    assert '标题' not in by_name and '图标' not in by_name
+    # 纯定位区 → NO_METHOD,pc_rect 透传
+    assert by_name['点击区'].reason == UnmatchedReason.NO_METHOD
+    assert by_name['点击区'].pc_rect == [10, 20, 110, 120]
+    assert by_name['点击区'].text == '' and by_name['点击区'].template_id == ''
+    # 子态文本区 → SUB_STATE,text 透传
+    assert by_name['开关态'].reason == UnmatchedReason.SUB_STATE
+    assert by_name['开关态'].text == '已开启'
+
+
+def test_precise_unmatched_template_sub_state(monkeypatch) -> None:
+    """精准命中 + 未命中模板子态区 → SUB_STATE,template_id 透传。"""
+    id_mark = _id_mark_text_area('标题', '菜单')
+    sub_tmpl = ScreenArea(area_name='面板展开态', pc_rect=Rect(1700, 40, 1760, 100),
+                          template_id='panel_open', template_sub_dir='menu')
+    screen = _screen_info('菜单', [id_mark, sub_tmpl])
+    ctx = MagicMock()
+    ctx.screen_loader = _make_loader([screen], current='菜单')
+    _patch_find(monkeypatch, {'标题': True})   # 模板子态区未命中
+
+    result = find_screen_matches(ctx, MagicMock())
+
+    by_name = {u.area_name: u for u in result[0].unmatched_areas}
+    assert by_name['面板展开态'].reason == UnmatchedReason.SUB_STATE
+    assert by_name['面板展开态'].template_id == 'panel_open'
+
+
+def test_precise_all_recognizable_hit_unmatched_empty(monkeypatch) -> None:
+    """精准命中且所有识别区都命中(无纯定位区)→ unmatched_areas 为空。"""
+    id_mark = _id_mark_text_area('标题', '菜单')
+    hit_text = ScreenArea(area_name='副标题', pc_rect=Rect(0, 0, 100, 50), text='子')
+    screen = _screen_info('菜单', [id_mark, hit_text])
+    ctx = MagicMock()
+    ctx.screen_loader = _make_loader([screen], current='菜单')
+    _patch_find(monkeypatch, {'标题': True, '副标题': True})
+
+    result = find_screen_matches(ctx, MagicMock())
+
+    assert result[0].is_precise is True
+    assert result[0].unmatched_areas == []
+
+
+def test_fuzzy_match_unmatched_areas_empty(monkeypatch) -> None:
+    """模糊候选(无 id_mark 全中)→ unmatched_areas 恒空(仅精准命中才计算)。"""
+    a1 = ScreenArea(area_name='a1', pc_rect=Rect(0, 0, 10, 10), text='a')   # 无 id_mark → 永不精准
+    plain = ScreenArea(area_name='点击区', pc_rect=Rect(10, 20, 110, 120))
+    screen = _screen_info('画面A', [a1, plain])
+    ctx = MagicMock()
+    ctx.screen_loader = _make_loader([screen])
+    _patch_find(monkeypatch, {'a1': True})   # a1 命中但无 id_mark → 模糊候选
+
+    result = find_screen_matches(ctx, MagicMock())
+
+    assert len(result) == 1 and result[0].is_precise is False
+    assert result[0].unmatched_areas == []
+
+
+def test_unmatched_area_is_dataclass_serializable() -> None:
+    """UnmatchedArea 是 dataclass、reason 是 str Enum(可序列化、可直接当字符串比较)。"""
+    u = UnmatchedArea(area_name='点击区', reason=UnmatchedReason.NO_METHOD,
+                      pc_rect=[10, 20, 110, 120])
+    assert u.reason == 'no_method'                       # str Enum 可直接当字符串
+    assert UnmatchedReason.SUB_STATE == 'sub_state'
+    assert u.id_mark is False and u.text == '' and u.template_id == ''

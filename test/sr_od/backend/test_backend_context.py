@@ -359,3 +359,107 @@ def test_analyze_save_image_then_ocr_fail_returns_path(monkeypatch) -> None:
     assert result.success is False
     assert result.screenshot_path == '/tmp/fake.png'
     assert result.error is not None
+
+
+# ---------- analyze extras(画面额外识别器)----------
+
+def _precise_analyze_backend(monkeypatch, screen_name: str) -> SrBackendContext:
+    """构造一个 analyze 精准命中 ``screen_name`` 的 backend(mock find_screen_matches + OCR)。"""
+    from one_dragon.base.screen.screen_match import ScreenMatch
+
+    controller = MagicMock()
+    controller.is_game_window_ready = True
+    controller.get_screenshot.return_value = MagicMock()
+    backend = _backend(ready=True, controller=controller)
+
+    precise = ScreenMatch(screen_name=screen_name, is_precise=True, areas=[])
+    monkeypatch.setattr(
+        'sr_od.backend.backend_context.find_screen_matches',
+        lambda ctx, screen, top_n=5: [precise],
+    )
+    backend.ctx.ocr_service.get_ocr_result_list.return_value = []
+    return backend
+
+
+def test_analyze_extras_filled_on_precise_with_recognizer(monkeypatch) -> None:
+    """精准命中 + 该画面有 recognizer → extras 填 recognizer 返回的 dict。"""
+    import sr_od.backend.backend_context as bc
+
+    backend = _precise_analyze_backend(monkeypatch, '货币战争-备战')
+
+    fake_recognizer = MagicMock()
+    fake_recognizer.recognize.return_value = {'gold': 50, 'phase': [1, 3]}
+    monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: fake_recognizer)
+
+    result = backend.analyze()
+    assert result.success is True
+    assert result.extras == {'gold': 50, 'phase': [1, 3]}
+    fake_recognizer.recognize.assert_called_once()
+
+
+def test_analyze_extras_none_when_recognizer_raises(monkeypatch) -> None:
+    """recognizer 抛异常 → extras=None,但 analyze 仍 success=True(错误隔离,主结果不丢)。"""
+    import sr_od.backend.backend_context as bc
+
+    backend = _precise_analyze_backend(monkeypatch, '货币战争-备战')
+
+    fake_recognizer = MagicMock()
+    fake_recognizer.recognize.side_effect = RuntimeError('recognizer boom')
+    monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: fake_recognizer)
+
+    result = backend.analyze()
+    assert result.success is True            # 主结果(OCR + 匹配)照常
+    assert result.screens[0].is_precise is True
+    assert result.extras is None             # recognizer 异常被兜成 None
+
+
+def test_analyze_extras_none_when_no_recognizer(monkeypatch) -> None:
+    """精准命中但该画面无注册 recognizer → extras=None(get_recognizer 返 None)。"""
+    import sr_od.backend.backend_context as bc
+
+    backend = _precise_analyze_backend(monkeypatch, '某无识别器画面')
+    monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: None)
+
+    result = backend.analyze()
+    assert result.success is True
+    assert result.extras is None
+
+
+def test_analyze_extras_none_when_no_precise(monkeypatch) -> None:
+    """无精准命中(模糊 top_n)→ 不跑 recognizer,extras=None。"""
+    from one_dragon.base.screen.screen_match import ScreenMatch
+
+    controller = MagicMock()
+    controller.is_game_window_ready = True
+    controller.get_screenshot.return_value = MagicMock()
+    backend = _backend(ready=True, controller=controller)
+
+    fuzzy = ScreenMatch(screen_name='某画面', is_precise=False, areas=[])
+    monkeypatch.setattr(
+        'sr_od.backend.backend_context.find_screen_matches',
+        lambda ctx, screen, top_n=5: [fuzzy],
+    )
+    backend.ctx.ocr_service.get_ocr_result_list.return_value = []
+
+    result = backend.analyze()
+    assert result.success is True
+    assert result.extras is None
+
+
+def test_analyze_extras_none_when_recognizer_returns_non_serializable(monkeypatch) -> None:
+    """recognizer 返回非 JSON 可序列化值 → json.dumps 校验拦下 → extras=None(json 守卫)。"""
+    import sr_od.backend.backend_context as bc
+
+    backend = _precise_analyze_backend(monkeypatch, '货币战争-备战')
+
+    class _NotJson:
+        pass
+
+    fake_recognizer = MagicMock()
+    fake_recognizer.recognize.return_value = {'bad': _NotJson()}   # 不可 JSON 序列化
+    monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: fake_recognizer)
+
+    result = backend.analyze()
+    assert result.success is True
+    assert result.extras is None             # json.dumps 抛 → 兜成 None
+
