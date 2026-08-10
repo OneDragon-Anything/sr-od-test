@@ -281,7 +281,8 @@ def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pyte
 
 
 def test_write_affix_effects_merge(tmp_path) -> None:
-    """merge updates 进 affix_effects_data.py:新名新增、不一致覆盖、空 updates 不写(写回仍是合法 py + 中文)。
+    """merge updates 进 affix_effects_data.py:新名新增、**不一致不覆盖(D-81:静态数据现有值更可信)**、
+    空 updates 不写(写回仍是合法 py + 中文)。
 
     _AFFIX_EFFECTS_PATH + write_affix_effects 在 cw_briefing_obs(D-70 拆分);函数 read 其模块全局,
     故 monkeypatch cw_briefing_obs._AFFIX_EFFECTS_PATH(不是 cw_observation 的 re-export 绑定)。
@@ -293,13 +294,13 @@ def test_write_affix_effects_merge(tmp_path) -> None:
     try:
         assert cw_briefing_obs.write_affix_effects({}) is False                 # 空 → 不写
         assert cw_briefing_obs.write_affix_effects({'新词缀': '效果A'}) is True  # 新名 → 写
-        assert cw_briefing_obs.write_affix_effects({                              # 不一致 → 覆盖 + 新名追加
+        assert cw_briefing_obs.write_affix_effects({                              # D-81:旧词缀 divergent 不覆盖 + 新名追加
             '旧词缀': '旧效果改', '词缀2': '效果C',
         }) is True
-        # 写回的文件仍是合法 py(exec 能解析)+ 内容正确
+        # 写回的文件仍是合法 py(exec 能解析)+ 内容正确(旧词缀保留旧效果,未被 divergent 覆盖)
         ns: dict = {}
         exec(py_file.read_text(encoding='utf-8'), ns)   # noqa: S102
-        assert ns['AFFIX_EFFECTS'] == {'旧词缀': '旧效果改', '新词缀': '效果A', '词缀2': '效果C'}
+        assert ns['AFFIX_EFFECTS'] == {'旧词缀': '旧效果', '新词缀': '效果A', '词缀2': '效果C'}
     finally:
         cw_briefing_obs._AFFIX_EFFECTS_PATH = original
 
