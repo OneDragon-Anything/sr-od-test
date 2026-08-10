@@ -97,6 +97,23 @@ def test_read_equipped_back_feixiao_2(test_context: SrTestContext, equip_grays) 
     assert set(out.get(1, [])) == _GT_FEIXIAO_2
 
 
+@pytest.mark.parametrize('fixture, rect', [
+    ('equipped_back1_feixiao_3', _BACK1),                       # 后排-1 cx604
+    ('equipped_back4_feixiao_3', Rect(967, 600, 1097, 739)),     # 后排-4 cx1032(跨度证)
+])
+def test_read_equipped_back_feixiao_3(test_context: SrTestContext, equip_grays, fixture, rect) -> None:
+    """飞霄后排(3件,drag 换位):read_equipped_below = {光能电池,步步生花,武器大师}。
+
+    参数化后排-1(cx604)+ 后排-4(cx1032):证 half_w 后排跨 cx 通用 + dy=14 跨排通用(D-49)。
+    CW 备战屏支持 drag 角色换位(前排↔后排、后排内),装备跟随角色。
+    """
+    if not test_context.has_screen('货币战争-备战', fixture):
+        pytest.skip(f'fixture {fixture} 未采')
+    screen = test_context.load_screen('货币战争-备战', fixture)
+    out = read_equipped_below(screen, equip_grays, [(1, avatar_to_below(rect))])
+    assert set(out.get(1, [])) == _GT_FEIXIAO_3
+
+
 def test_read_equipped_front_feixiao_1(test_context: SrTestContext, equip_grays) -> None:
     """飞霄前排-1(1件态,步步生花):read_equipped_below = {步步生花}。
 
