@@ -246,3 +246,17 @@ def test_below_icon_diff_detects_equip(test_context: SrTestContext) -> None:
     # 同态 → ~0(无变化)
     assert _below_icon_diff(states[0], states[0], avatar_x,
                             EquipAll.BELOW_ICON_Y, EquipAll.BX_HALF, EquipAll.BY_HALF) < thr
+
+
+def test_empty_slots_skips_occupied() -> None:
+    """equip_all P0-2 占位检测(``_empty_slots``):已穿槽跳过,只返空槽(1-based)。
+
+    ``read_row_equipped`` 返 ``{slot_idx: [装备名]}``(1-based);槽不在 dict = 空。
+    全空 → 全槽;部分已穿 → 跳过;全已穿 → 空(op 应停)。
+    修原 bug:``target=FRONT_AVATARS[equipped]`` 按已穿计数索引 → 已穿槽被覆盖。
+    """
+    from sr_od.application.currency_war.operations.prep.equip_all import _empty_slots
+    assert _empty_slots({}, 4) == [1, 2, 3, 4]                            # 全空 → 全槽
+    assert _empty_slots({1: ['x']}, 4) == [2, 3, 4]                       # slot1 已穿 → 跳过
+    assert _empty_slots({1: ['x'], 3: ['y']}, 4) == [2, 4]                # 多个已穿 → 跳过对应
+    assert _empty_slots({1: ['x'], 2: ['y'], 3: ['z'], 4: ['w']}, 4) == []  # 全已穿 → 空(停)
