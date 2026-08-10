@@ -18,6 +18,8 @@ from sr_od.application.currency_war.cw_observation import (
     read_board,
     read_board_next_tier,
     read_bosses,
+    read_deploy_cap,
+    read_deployed_count,
     read_enemy_difficulty,
     read_level_up_cost,
     read_node_type,
@@ -346,3 +348,31 @@ def test_read_round_outcome_failure_hp_zero(test_context: SrTestContext, monkeyp
     obs = read_round_outcome(test_context, None, plane=1, round_num=9, comp_tag='DOT队')
     assert obs.hp_after == 0, f'失败屏应 hp=0,实际 {obs.hp_after}'
     assert obs.hp_confidence == 1.0, f'失败屏 conf 应 1.0(确定死),实际 {obs.hp_confidence}'
+
+
+def test_read_deploy_cap_equals_level(test_context: SrTestContext) -> None:
+    """区域-部署数 'X/Y' → cap(Y)恒= level(无钻石时);D-53 实测核正 + 修复 reader 回归。
+
+    旧 reader 全 None(区域-部署数 pc_rect 终点 y240 切在文字 y244 上方 + 无 padding → paddle det
+    拆斜杠 + 3x 放大进一步碎化)。D-53 修:pc_rect 给足 padding(右留余量容 'X/10')+ 原生 OCR
+    (不放大,字体够大)+ 斜杠 normalize + X>Y guard。fixture 跨 lv3/4/5/7 核 cap=level。
+    """
+    if not test_context.has_screen('货币战争-备战', 'deployed_p1r9'):
+        pytest.skip('存档截图缺失:screens/货币战争-备战/deployed_p1r9.webp')
+    # deployed_p1r9:5/5@lv5(全部署)
+    screen = test_context.load_screen('货币战争-备战', 'deployed_p1r9')
+    assert cw_observation.read_level(test_context, screen, 1, 9) == 5
+    assert read_deploy_cap(test_context, screen) == 5
+    assert read_deployed_count(test_context, screen) == 5
+    # prep_1-6:4/4@lv4
+    screen2 = test_context.load_screen('货币战争-备战', 'prep_1-6_all_positions')
+    assert read_deploy_cap(test_context, screen2) == 4
+    assert read_deployed_count(test_context, screen2) == 4
+    # a8_start:真值 0/3@lv3,OCR 噪声 "10/3"(slash 致 X 虚高)→ X>Y guard 兜:cap=3,deployed=None
+    screen3 = test_context.load_screen('货币战争-备战', 'shop_closed_a8_start')
+    assert read_deploy_cap(test_context, screen3) == 3
+    assert read_deployed_count(test_context, screen3) is None
+    # lowhp:6/7@lv7
+    screen4 = test_context.load_screen('货币战争-备战', 'shop_closed_lowhp')
+    assert read_deploy_cap(test_context, screen4) == 7
+    assert read_deployed_count(test_context, screen4) == 6
