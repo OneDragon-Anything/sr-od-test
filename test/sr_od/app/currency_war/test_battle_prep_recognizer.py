@@ -28,6 +28,7 @@ def test_recognize_composes_pure_reads(monkeypatch) -> None:
     monkeypatch.setattr(mod, 'read_deployed_count', lambda ctx, screen: 4)
     monkeypatch.setattr(mod, 'read_deploy_cap', lambda ctx, screen: 5)
     monkeypatch.setattr(mod, 'read_board', lambda ctx, screen: {'仙舟': 2, '猎犬': 1})
+    monkeypatch.setattr(mod, 'read_level', lambda ctx, screen, p, r: 5)
     # 角色识别 reader mock 空(角色识别单测见下;避免 MagicMock screen 进 SIFT 崩)
     monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates: [])
     monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [])
@@ -37,7 +38,7 @@ def test_recognize_composes_pure_reads(monkeypatch) -> None:
     out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out == {
         'gold': 42, 'phase': (2, 5), 'hp': 80, 'streak': 3,
-        'deploy_count': 4, 'deploy_cap': 5, 'board': {'仙舟': 2, '猎犬': 1},
+        'deploy_count': 4, 'deploy_cap': 5, 'level': 5, 'board': {'仙舟': 2, '猎犬': 1},
         'front_line': None, 'back_line': None, 'bench': None,
         'front_equips': None, 'back_equips': None, 'bench_equips': None,
     }
