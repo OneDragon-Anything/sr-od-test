@@ -158,17 +158,17 @@ def test_read_equipped_back_multi_positions(test_context: SrTestContext, equip_g
     assert set(out.get(5, [])) == {'治疗星徽'}
 
 
-def test_read_equipped_back6_boundary_clipped(test_context: SrTestContext, equip_grays) -> None:
-    """后排-6(cx1316 最右边界)飞霄3件:武器大师被角色卡框裁切 val0.57<0.6 漏 → 识别2件(光能+步步)。
+def test_read_equipped_back6_feixiao_3(test_context: SrTestContext, equip_grays) -> None:
+    """后排-6(cx1316 最右)飞霄3件:read_equipped_below = {光能电池,步步生花,武器大师}。
 
-    D-51(pi 确认):icon 正方形 UI 无透视变形,但最右 icon 被角色卡框右边界裁切(右边 truncated)
-    → 内容缺 → val 降。接受边界漏检(threshold 0.6 不降,防空位假阳 0.58-0.62);后排 1-5 各cx 3件全中。
+    D-51(已修):icon 尺寸随位置变(梯形视角:前排~32px/后排最右~34px)。武器大师后排-6 best scale=0.35
+    val0.601,step 0.03 漏 0.35(0.36=0.481)致漏检;scales 加 0.35 后全中。非裁切/遮挡(pi+用户确认无遮挡)。
     """
     if not test_context.has_screen('货币战争-备战', 'equipped_back6_feixiao_3'):
         pytest.skip('fixture equipped_back6_feixiao_3 未采')
     screen = test_context.load_screen('货币战争-备战', 'equipped_back6_feixiao_3')
     out = read_equipped_below(screen, equip_grays, [(6, avatar_to_below(Rect(1245, 600, 1386, 739)))])
-    assert set(out.get(6, [])) == {'光能电池', '步步生花'}  # 边界:武器大师被卡框裁切漏(D-51)
+    assert set(out.get(6, [])) == _GT_FEIXIAO_3
 
 
 # ===== 各位置通用性(D-49:cx 各异的 below 区都准;空位置无假阳性)=====
