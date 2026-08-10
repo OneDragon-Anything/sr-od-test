@@ -138,6 +138,39 @@ def test_read_equipped_front_feixiao_0(test_context: SrTestContext, equip_grays)
     assert out.get(1, []) == []  # 裸装:无装备 icon,不误识别
 
 
+def test_read_equipped_back_multi_positions(test_context: SrTestContext, equip_grays) -> None:
+    """后排多 cx(2/3/5)多件数(3/1/1):avatar_to_below 后排各 cx 通用(一张图多角色)。
+
+    drag 多前排角色到后排同图:后排-2(cx747 飞霄3件)/后排-3(cx888 减益星徽)/后排-5(cx1174 治疗星徽)。
+    与 test_read_equipped_back_feixiao_3(后排-1/4)合证后排 1-5 各 cx 通用(D-49)。
+    """
+    if not test_context.has_screen('货币战争-备战', 'equipped_back_235'):
+        pytest.skip('fixture equipped_back_235 未采')
+    screen = test_context.load_screen('货币战争-备战', 'equipped_back_235')
+    below = [
+        (2, avatar_to_below(Rect(679, 600, 814, 739))),   # 后排-2 cx747
+        (3, avatar_to_below(Rect(823, 600, 953, 739))),   # 后排-3 cx888
+        (5, avatar_to_below(Rect(1106, 600, 1241, 739))),  # 后排-5 cx1174
+    ]
+    out = read_equipped_below(screen, equip_grays, below)
+    assert set(out.get(2, [])) == _GT_FEIXIAO_3
+    assert set(out.get(3, [])) == {'减益星徽'}
+    assert set(out.get(5, [])) == {'治疗星徽'}
+
+
+def test_read_equipped_back6_boundary_clipped(test_context: SrTestContext, equip_grays) -> None:
+    """后排-6(cx1316 最右边界)飞霄3件:武器大师被角色卡框裁切 val0.57<0.6 漏 → 识别2件(光能+步步)。
+
+    D-51(pi 确认):icon 正方形 UI 无透视变形,但最右 icon 被角色卡框右边界裁切(右边 truncated)
+    → 内容缺 → val 降。接受边界漏检(threshold 0.6 不降,防空位假阳 0.58-0.62);后排 1-5 各cx 3件全中。
+    """
+    if not test_context.has_screen('货币战争-备战', 'equipped_back6_feixiao_3'):
+        pytest.skip('fixture equipped_back6_feixiao_3 未采')
+    screen = test_context.load_screen('货币战争-备战', 'equipped_back6_feixiao_3')
+    out = read_equipped_below(screen, equip_grays, [(6, avatar_to_below(Rect(1245, 600, 1386, 739)))])
+    assert set(out.get(6, [])) == {'光能电池', '步步生花'}  # 边界:武器大师被卡框裁切漏(D-51)
+
+
 # ===== 各位置通用性(D-49:cx 各异的 below 区都准;空位置无假阳性)=====
 # 备战 1-6 全位置 fixture(前排4 + 后排6 + 备战5)
 _SLOTS_ALL = [
