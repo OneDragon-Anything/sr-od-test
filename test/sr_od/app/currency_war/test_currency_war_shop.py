@@ -1,19 +1,18 @@
-"""货币战争 商店牌读取测试(OCR 集成,需 OCR 模型 + 测试图;CI 无数据 skip)。
+"""货币战争 商店牌读取测试。
 
-验证 ``cw_observation.read_shop_cards`` + ``read_game_state``:对备战屏 OCR → 5 张牌
-(阵营 + 名 + 派生 cost)+ HUD(gold/hp/level/plane)。原 ``shop_strategy.read_shop_factions``
-(只读阵营、按文本聚合会丢同阵营牌)已被取代。
+``read_shop_cards`` **D-55 由 OCR 改 SIFT**(裁 商店牌-1..5 肖像区 → SIFT 立绘库 → 规范名;
+OCR 对开拓者等自定义名读不到)。``read_game_state`` 的 HUD(gold/hp/level/plane)仍 OCR。
 """
 from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import pytest
 from cv2.typing import MatLike
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.cw_chars import CHARACTER_ROSTER
 from sr_od.application.currency_war.cw_decisions import HP_DANGER
 from sr_od.application.currency_war.cw_factions import FACTIONS
 from sr_od.application.currency_war.cw_observation import (
@@ -33,15 +32,20 @@ def _has_text(ctx: SrTestContext, screen: MatLike, kw: str) -> bool:
     return any(kw in t for t in texts)
 
 
-def test_read_shop_cards(test_context, test_image_dir: Path) -> None:
-    """商店屏 → OCR 读出 5 张牌(每张:阵营 ∈ FACTIONS / 名 ∈ CHARACTER_ROSTER 或未知)。"""
-    screen = cv2_utils.read_image(str(test_image_dir / 'currency_war_shop.png'))
+def test_read_shop_cards_sift(test_context) -> None:
+    """商店屏 → SIFT 读出 5 张牌名 + roster 派生 faction/cost(D-55 OCR→SIFT)。
+
+    read_shop_cards 裁 ``商店牌-1..5`` 肖像区(VLM 定位)→ SIFT ``character_cw_portrait`` 立绘库
+    → 规范名;faction/cost 从 roster 派生。fixture ``shop_open.webp`` GT:翡翠/丹恒·腾荒/不死途/飞霄/三月七。
+    """
+    if not test_context.has_screen('货币战争-备战', 'shop_open'):
+        pytest.skip('存档截图缺失:screens/货币战争-备战/shop_open.webp')
+    screen = test_context.load_screen('货币战争-备战', 'shop_open')
     cards = read_shop_cards(test_context, screen)
-    print(f'\n[shop cards] {[(c.x, c.faction, c.name, c.cost) for c in cards]}')
-    assert len(cards) == 5, f'应读 5 张牌(实测 {len(cards)}): {cards}'
-    for c in cards:
-        assert c.faction == '?' or c.faction in FACTIONS, f'牌位 x={c.x} 阵营脏值 {c.faction!r}'
-        assert c.name == '' or c.name in CHARACTER_ROSTER, f'牌位 x={c.x} 名字未规范 {c.name!r}'
+    gt = ['翡翠', '丹恒·腾荒', '不死途', '飞霄', '三月七']
+    assert [c.name for c in cards] == gt, f'SIFT 牌名错,实际 {[c.name for c in cards]}'
+    assert all(c.faction in FACTIONS for c in cards), f'阵营应 roster 派生 ∈ FACTIONS,实际 {[c.faction for c in cards]}'
+    assert all(c.cost >= 1 for c in cards), f'cost 应 roster 派生 ≥1,实际 {[c.cost for c in cards]}'
 
 
 def test_read_game_state_prep(test_context, test_image_dir: Path) -> None:
