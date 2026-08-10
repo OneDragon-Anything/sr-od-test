@@ -260,3 +260,21 @@ def test_empty_slots_skips_occupied() -> None:
     assert _empty_slots({1: ['x']}, 4) == [2, 3, 4]                       # slot1 已穿 → 跳过
     assert _empty_slots({1: ['x'], 3: ['y']}, 4) == [2, 4]                # 多个已穿 → 跳过对应
     assert _empty_slots({1: ['x'], 2: ['y'], 3: ['z'], 4: ['w']}, 4) == []  # 全已穿 → 空(停)
+
+
+def test_select_layout_no_complete_returns_empty() -> None:
+    """D-61: 无完整1/2/3件布局(单件落非合法候选)→ 返 [](不返 fallback 候选,防空槽误匹配)。
+
+    完美投影仪 val0.62 单件落 +21 候选(2件布局右位,缺 -21)= 无完整布局 → 误检,返空。
+    修前返 fallback ``[完美投影仪]``(D-61 实测 front_equips 假阳);修后返 ``[]``。
+    另验合法 1件{0} 仍返该件(修不破坏合法路径)。
+    """
+    import numpy as np
+    from sr_od.application.currency_war.cw_equipment import _select_equipped_layout
+    dummy = np.zeros((100, 200, 3), dtype=np.uint8)
+    rect = Rect(0, 0, 200, 100)
+    cx = 100
+    # 单件落 +21(非合法 1件{0}/2件{±21}完整)→ 无完整布局 → 返 [](D-61 修)
+    assert _select_equipped_layout([('完美投影仪', 0.62, cx + 21)], cx, 2, dummy, rect) == []
+    # 合法 1件落 0 → 返 [该件](修不破坏合法路径)
+    assert _select_equipped_layout([('和平手枪', 0.80, cx)], cx, 1, dummy, rect) == ['和平手枪']
