@@ -31,12 +31,15 @@ def test_recognize_composes_pure_reads(monkeypatch) -> None:
     # 角色识别 reader mock 空(角色识别单测见下;避免 MagicMock screen 进 SIFT 崩)
     monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates: [])
     monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [])
+    # 装备识别 mock 跳过(ensure 返 None → front/back/bench_equips None;装备识别 fixture 测见 test_cw_equipment)
+    monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
 
     out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out == {
         'gold': 42, 'phase': (2, 5), 'hp': 80, 'streak': 3,
         'deploy_count': 4, 'deploy_cap': 5, 'board': {'仙舟': 2, '猎犬': 1},
         'front_line': None, 'back_line': None, 'bench': None,
+        'front_equips': None, 'back_equips': None, 'bench_equips': None,
     }
 
 
@@ -51,6 +54,7 @@ def test_recognize_phase_none_when_unreadable(monkeypatch) -> None:
     monkeypatch.setattr(mod, 'read_board', lambda ctx, screen: {})
     monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates: [])
     monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [])
+    monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
 
     out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out['phase'] is None
@@ -96,6 +100,7 @@ def test_recognize_identifies_chars(monkeypatch) -> None:
         _char('藿藿', 'front'), _char('希儿', 'back'),
     ])
     monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [_char('飞霄', 'back')])
+    monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
 
     out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out['front_line'] == ['藿藿']
@@ -114,6 +119,7 @@ def test_recognize_no_chars_when_templates_none(monkeypatch) -> None:
     monkeypatch.setattr(mod, 'read_board', lambda ctx, screen: {})
     monkeypatch.setattr(mod, 'read_deployed_chars', lambda *a, **k: [])   # 不该被调(templates None 跳过)
     monkeypatch.setattr(mod, 'read_bench_chars', lambda *a, **k: [])
+    monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
 
     ctx = MagicMock()
     ctx.cw_portrait_templates = None   # 模拟 bot 未加载立绘库
@@ -121,3 +127,4 @@ def test_recognize_no_chars_when_templates_none(monkeypatch) -> None:
     assert out['front_line'] is None
     assert out['back_line'] is None
     assert out['bench'] is None
+    assert out['front_equips'] is None  # ensure mock None → 装备识别跳过
