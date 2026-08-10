@@ -119,3 +119,55 @@ def test_read_equipped_front_feixiao_0(test_context: SrTestContext, equip_grays)
     screen = test_context.load_screen('货币战争-备战', 'equipped_front1_feixiao_0')
     out = read_equipped_below(screen, equip_grays, [(1, avatar_to_below(_FRONT1))])
     assert out.get(1, []) == []  # 裸装:无装备 icon,不误识别
+
+
+# ===== 各位置通用性(D-49:cx 各异的 below 区都准;空位置无假阳性)=====
+# 备战 1-6 全位置 fixture(前排4 + 后排6 + 备战5)
+_SLOTS_ALL = [
+    ('前排-1', 1, Rect(677, 329, 810, 467)),
+    ('前排-2', 2, Rect(823, 329, 951, 467)),
+    ('前排-3', 3, Rect(969, 329, 1097, 467)),
+    ('前排-4', 4, Rect(1109, 329, 1241, 467)),
+    ('后排-1', 5, Rect(534, 600, 675, 739)),
+    ('后排-2', 6, Rect(679, 600, 814, 739)),
+    ('后排-3', 7, Rect(823, 600, 953, 739)),
+    ('后排-4', 8, Rect(967, 600, 1097, 739)),
+    ('后排-5', 9, Rect(1106, 600, 1241, 739)),
+    ('后排-6', 10, Rect(1245, 600, 1386, 739)),
+    ('备战栏-1', 11, Rect(382, 845, 495, 979)),
+    ('备战栏-2', 12, Rect(507, 844, 620, 978)),
+    ('备战栏-3', 13, Rect(632, 844, 743, 978)),
+    ('备战栏-4', 14, Rect(757, 845, 869, 979)),
+    ('备战栏-5', 15, Rect(882, 846, 995, 980)),
+]
+
+
+def test_read_equipped_front_all_positions(test_context: SrTestContext, equip_grays) -> None:
+    """前排1-4 各位置(cx 743/887/1033/1175 各异):avatar_to_below half_w 横向通用。
+
+    备战1-6 fixture:前排-1(3件 光能电池+步步生花+武器大师)/前排-2(空)/前排-3(减益星徽)/前排-4(治疗星徽)。
+    验证不同 cx 的 below 区都覆盖 icon(D-49:icon 固定 32px,half_w=70 覆盖3件横排)。
+    """
+    if not test_context.has_screen('货币战争-备战', 'prep_1-6_all_positions'):
+        pytest.skip('fixture prep_1-6_all_positions 未采')
+    screen = test_context.load_screen('货币战争-备战', 'prep_1-6_all_positions')
+    below = [(idx, avatar_to_below(r)) for _, idx, r in _SLOTS_ALL[:4]]
+    out = read_equipped_below(screen, equip_grays, below)
+    assert set(out.get(1, [])) == _GT_FEIXIAO_3
+    assert out.get(2, []) == []
+    assert set(out.get(3, [])) == {'减益星徽'}
+    assert set(out.get(4, [])) == {'治疗星徽'}
+
+
+def test_read_equipped_no_false_positive_empty_positions(test_context: SrTestContext, equip_grays) -> None:
+    """后排(空占位)+ 备战栏(未上阵角色,无 below icon):无假阳性。
+
+    CW 机制:装备只显示在舞台已 deploy 角色脚下;备战栏角色不显示装备 icon(pi 确认)。
+    故后排(当前无角色)+ 备战栏(5角色无icon)read_equipped_below 全空,不误识别。
+    """
+    if not test_context.has_screen('货币战争-备战', 'prep_1-6_all_positions'):
+        pytest.skip('fixture prep_1-6_all_positions 未采')
+    screen = test_context.load_screen('货币战争-备战', 'prep_1-6_all_positions')
+    below = [(idx, avatar_to_below(r)) for _, idx, r in _SLOTS_ALL[4:]]  # 后排6 + 备战5
+    out = read_equipped_below(screen, equip_grays, below)
+    assert not out, f"空位置应无假阳性,实际命中 {out}"
