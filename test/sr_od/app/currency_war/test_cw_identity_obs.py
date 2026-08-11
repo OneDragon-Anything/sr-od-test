@@ -16,6 +16,7 @@ from sr_od.application.currency_war.currency_war_char_id import load_avatar_temp
 from sr_od.application.currency_war.cw_identity_obs import (
     identify_slots,
     read_deployed_chars,
+    read_star,
     resolve_char_name,
 )
 from sr_od.context.sr_context import SrContext
@@ -24,13 +25,6 @@ from test.conftest import SrTestContext
 # character_avatar 脸库在主仓 assets/(sr_od 所在 repo 根;同 conftest.application_plugin_dirs 定位法)
 _REPO_ROOT = file_utils.find_src_dir(inspect.getfile(SrContext)).parent
 _AVATAR_DIR = _REPO_ROOT / 'assets' / 'template' / 'character_avatar'
-
-
-@pytest.fixture(autouse=True)
-def _no_calibration_capture(monkeypatch):
-    """禁采集钩子:identify_slots 内 cw_shot_unique 测试不落盘(CLAUDE.md —— 测试侧 monkeypatch,非生产加开关)。"""
-    from sr_od.application.currency_war import cw_identity_obs
-    monkeypatch.setattr(cw_identity_obs, 'cw_shot_unique', lambda *a, **k: None)
 
 
 def test_resolve_char_name_basic() -> None:
@@ -83,3 +77,20 @@ def test_read_deployed_chars_via_ctx(test_context: SrTestContext, avatar_templat
     assert front == ['佩拉', '黑塔', 'Saber', '藿藿']
     # 后排空(fixture 该态无后排部署;VLM 曾幻觉"1 个后排",实为空)
     assert [c for c in chars if c.position_pref == 'back'] == []
+
+
+def test_read_star_front_row_1star(test_context: SrTestContext) -> None:
+    """read_star:deployed_p1r9 前排 4 槽(佩拉/黑塔/Saber/藿藿,早期 round → 1 星)→ read_star 都=1。
+
+    金星计数(立绘底部金色五角星)。⚠️ 仅 1 星样本验过(2/3 星缺 live 样本);逻辑同(数金星个数),
+    2/3 星待后期回合采到样本再补断言。
+    """
+    if not test_context.has_screen('货币战争-备战', 'deployed_p1r9'):
+        pytest.skip('fixture deployed_p1r9.webp 未采')
+    screen = test_context.load_screen('货币战争-备战', 'deployed_p1r9')
+    # 前排-1..4 rect(同 test_identify_deployed_front_row ground truth)= 采 star_front_1..4 的槽位
+    front_rects = [Rect(*r) for r in [
+        [677, 329, 810, 467], [823, 329, 951, 467],
+        [969, 329, 1097, 467], [1109, 329, 1241, 467]]]
+    for r in front_rects:
+        assert read_star(screen[r.y1:r.y2, r.x1:r.x2]) == 1, f'前排槽 {r} 应为 1 星(1 个金星)'
