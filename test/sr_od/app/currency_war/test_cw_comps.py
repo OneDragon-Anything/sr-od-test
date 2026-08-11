@@ -48,17 +48,17 @@ def _cfg(**overrides) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
-# —— form_progress / progress 单调 ——(巡击青雀 factions=[仙舟,追击],form_tiers={仙舟:5,追击:3})
+# —— form_progress / progress 单调 ——(追击飞霄 factions=[追击],form_tiers={追击:3})
 
 
 def test_form_progress_monotonic() -> None:
-    青雀 = get_comp("巡击青雀")
+    飞霄 = get_comp("追击飞霄")
     s0 = GameState(board={})
-    s_half = GameState(board={"仙舟": 3, "追击": 2})
-    s_full = GameState(board={"仙舟": 5, "追击": 3})
-    v0 = form_progress(青雀, s0)
-    v_half = form_progress(青雀, s_half)
-    v_full = form_progress(青雀, s_full)
+    s_half = GameState(board={"追击": 2})
+    s_full = GameState(board={"追击": 3})
+    v0 = form_progress(飞霄, s0)
+    v_half = form_progress(飞霄, s_half)
+    v_full = form_progress(飞霄, s_full)
     assert v0 == 0.0
     assert v_half > v0
     assert v_full > v_half
@@ -67,11 +67,11 @@ def test_form_progress_monotonic() -> None:
 
 def test_progress_includes_core_chars() -> None:
     """progress = 0.6 form + 0.4 core_char;持有核心角色 → 高于纯 form_progress。"""
-    青雀 = get_comp("巡击青雀")
-    s_no_core = GameState(board={"仙舟": 5, "追击": 3})   # 满成型但无核心角色
-    s_with_core = GameState(board={"仙舟": 5, "追击": 3},
-                            bench=[BenchChar(slot=0, char_id="青雀", faction="仙舟")])
-    assert progress(青雀, s_with_core) > progress(青雀, s_no_core), (
+    飞霄 = get_comp("追击飞霄")
+    s_no_core = GameState(board={"追击": 3})   # 满成型但无核心角色
+    s_with_core = GameState(board={"追击": 3},
+                            bench=[BenchChar(slot=0, char_id="飞霄", faction="追击")])
+    assert progress(飞霄, s_with_core) > progress(飞霄, s_no_core), (
         "持有核心角色 → progress 更高"
     )
 
@@ -207,10 +207,10 @@ def test_env_fit_t0_hardbind() -> None:
 
 
 def test_env_fit_faction_map() -> None:
-    """env 加成对应阵营(追击邀请 → 含追击的巡击青雀 → 1.0)。"""
-    青雀 = get_comp("巡击青雀")
-    assert env_fit(青雀, "追击邀请") == pytest.approx(1.0, abs=1e-6)
-    assert env_fit(青雀, "") == 0.5
+    """env 加成对应阵营(追击邀请 → 含追击的追击飞霄 → 1.0)。"""
+    飞霄 = get_comp("追击飞霄")
+    assert env_fit(飞霄, "追击邀请") == pytest.approx(1.0, abs=1e-6)
+    assert env_fit(飞霄, "") == 0.5
 
 
 # —— current_enemy_mechanics 映射 ——
@@ -243,29 +243,28 @@ def test_select_comp_forbid_filter() -> None:
     cfg_char = _cfg(character_forbid=["阿格莱雅"])
     names = [c.name for c in select_comp(s, make_score_context(s), cfg_char, top_n=99)]
     assert "昼神阿雅" not in names, "forbid 阿格莱雅 → 排除昼神阿雅"
-    cfg_fac = _cfg(faction_forbid=["仙舟"])
+    cfg_fac = _cfg(faction_forbid=["追击"])
     names2 = [c.name for c in select_comp(s, make_score_context(s), cfg_fac, top_n=99)]
-    assert "巡击青雀" not in names2, "forbid 仙舟 → 排除巡击青雀"
+    assert "追击飞霄" not in names2, "forbid 追击 → 排除追击飞霄"
 
 
-def test_shop_history_factor_formable_vs_rare() -> None:
-    """D-126:shop 历史长期可得性 —— comp 核心阵营反复出现(可成型)→ boost;从未出现 → penalty。
+def test_acquirability_factor_level_cost() -> None:
+    """D-92:acquirability = 核心角色在当前等级的理论刷新概率(min),替 shop_supply / shop_history 观察法。
 
-    人玩「跟 shop 走」:commit 到反复出现的阵营。替 shop_supply 单回合短视(D-120 选 unacquirable target)。
+    用户点破:刷新概率独立 → 观察(shop 本回合/历史)无预测力,用理论 REFRESH_PROB 表。
+    阵容受最稀卡限制 → 取核心角色里最低 refresh_prob(level, cost)。
     """
-    from sr_od.application.currency_war.cw_comps import (
-        ScoreContext,
-        _shop_history_factor,
-    )
-    青雀 = get_comp("巡击青雀")   # factions 仙舟/追击,核心 form_tiers 仙舟/追击
-    # 仙舟/追击 反复出现(核心 avg≥2)→ boost ×1.2
-    ctx_seen = ScoreContext(shop_faction_seen={"仙舟": 3, "追击": 2})
-    assert _shop_history_factor(青雀, ctx_seen) == 1.2
-    # 核心阵营从未出现(shop 只有别的阵营)→ penalty ×0.7
-    ctx_rare = ScoreContext(shop_faction_seen={"能量": 5, "群攻": 4})
-    assert _shop_history_factor(青雀, ctx_rare) == 0.7
-    # 无 shop 历史 → 中性 1.0
-    assert _shop_history_factor(青雀, ScoreContext()) == 1.0
+    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.cw_shop_odds import acquirability_factor, refresh_prob
+    青雀 = get_comp("追击飞霄")   # core_chars 飞霄/知更鸟/缇宝/不死途
+    costs = [CHARACTERS[n].cost for n in 青雀.core_chars if n in CHARACTERS]
+    assert costs, "core_chars 应在 CHARACTERS"
+    # = min refresh_prob(level, cost) 跨等级
+    for lv in (4, 7, 10):
+        expected = min(refresh_prob(lv, c) for c in costs)
+        assert acquirability_factor(青雀.core_chars, lv) == expected
+    # 空 core_chars / 无识别角色 → 1.0(中性,不降权)
+    assert acquirability_factor([], 7) == 1.0
 
 
 
@@ -335,11 +334,11 @@ def test_maybe_pivot_low_hp_returns_fastest_easy() -> None:
 def test_maybe_pivot_low_hp_signal3_preempts_signal1() -> None:
     """D-40:hp 危险时信号 3(保命)抢占信号 1 —— 只选 easy comp(不选 medium/hard 涌现,防 churn 死亡螺旋)。
     D-65:保命优先 board 有 progress 的 easy comp(防切到 board 不支持的 fast-easy → 无法成型 → 还是死)。
-    target=巡击青雀(medium),board 成型列车同行(easy,full progress)→ 保命选 列车同行(easy+board 支持),
+    target=追击飞霄(medium),board 成型列车同行(easy,full progress)→ 保命选 列车同行(easy+board 支持),
     非弃成型切未成型 fast-easy。"""
     cfg = _cfg(faction_priority=["列车同行"])
     s = GameState(board={"列车同行": 4}, round_num=5, plane=1, hp=20, gold=50)  # 列车同行成型(信号1 会选)
-    result = maybe_pivot(s, make_score_context(s), cfg, target=get_comp("巡击青雀"))
+    result = maybe_pivot(s, make_score_context(s), cfg, target=get_comp("追击飞霄"))
     assert result is not None, "hp 危险应 pivot"
     assert result.form_difficulty == "easy", "保命只选 easy comp"
     assert result.name == "列车同行", "D-65:优先 board 有 progress 的 easy(列车同行 full 成型),非弃成型切未成型"
@@ -349,13 +348,13 @@ def test_maybe_pivot_d141_no_easy_progress_keeps_target() -> None:
     """D-141:hp 危险(信号3)+ **无 easy comp 有 board progress** + 当前 target(medium)有 progress
     → **保持 target**(return None),不转 0-foundation easy comp(board 不支持 → 必死)。
 
-    实跑 r8 bug:target=巡击青雀(medium,board 追击+仙舟 有 progress)被 easy 过滤排除;无 easy comp
+    实跑 r8 bug:target=追击飞霄(medium,board 追击 有 progress)被 easy 过滤排除;无 easy comp
     (列车同行/DOT队)有 board progress → 旧 fallback pool=easy → 最快 easy=DOT(board 0 持续伤害)→ 转
     0-foundation → 必死。本测锁修法:该场景保持 target,不弃有 progress 的去追 0-progress easy。"""
     cfg = _cfg()
-    # board 只有仙舟+追击(巡击青雀 factions)→ 巡击青雀有 progress;列车同行/DOT队(easy)都 0 progress。
-    s = GameState(board={"仙舟": 2, "追击": 2}, round_num=8, plane=1, hp=20, gold=50)
-    result = maybe_pivot(s, make_score_context(s), cfg, target=get_comp("巡击青雀"))
+    # board 只有追击(追击飞霄 factions)→ 追击飞霄有 progress;列车同行/DOT队(easy)都 0 progress。
+    s = GameState(board={"追击": 2}, round_num=8, plane=1, hp=20, gold=50)
+    result = maybe_pivot(s, make_score_context(s), cfg, target=get_comp("追击飞霄"))
     assert result is None, "无 easy comp 有 progress + target 有 progress → 保持 target,不转 0-foundation easy"
 
 
@@ -420,9 +419,9 @@ def test_shop_supply_neither_zero() -> None:
 
 
 def test_select_megastar_binds_core() -> None:
-    """target.core_chars 含可选巨星 → 绑该角色(巡击青雀含知更鸟)。"""
-    青雀 = get_comp("巡击青雀")
-    assert select_megastar(GameState(), 青雀, ["知更鸟", "花火"]) == "知更鸟"
+    """target.core_chars 含可选巨星 → 绑该角色(追击飞霄含知更鸟)。"""
+    飞霄 = get_comp("追击飞霄")
+    assert select_megastar(GameState(), 飞霄, ["知更鸟", "花火"]) == "知更鸟"
 
 
 def test_select_megastar_no_target_returns_first() -> None:

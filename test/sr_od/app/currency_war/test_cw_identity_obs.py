@@ -26,6 +26,13 @@ _REPO_ROOT = file_utils.find_src_dir(inspect.getfile(SrContext)).parent
 _AVATAR_DIR = _REPO_ROOT / 'assets' / 'template' / 'character_avatar'
 
 
+@pytest.fixture(autouse=True)
+def _no_calibration_capture(monkeypatch):
+    """禁采集钩子:identify_slots 内 cw_shot_unique 测试不落盘(CLAUDE.md —— 测试侧 monkeypatch,非生产加开关)。"""
+    from sr_od.application.currency_war import cw_identity_obs
+    monkeypatch.setattr(cw_identity_obs, 'cw_shot_unique', lambda *a, **k: None)
+
+
 def test_resolve_char_name_basic() -> None:
     """avatar_id(主游英文 id)→ 货币战争规范名(直接命中 roster)。"""
     assert resolve_char_name('pela') == '佩拉'

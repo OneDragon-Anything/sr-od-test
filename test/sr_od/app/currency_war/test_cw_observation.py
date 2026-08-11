@@ -27,6 +27,7 @@ from sr_od.application.currency_war.cw_observation import (
     read_streak,
     read_xp_progress,
 )
+from sr_od.application.currency_war.cw_settlement_obs import parse_streak
 from test.conftest import SrTestContext
 
 # 2026-08-05 实跑结算屏 OCR(战斗后「挑战结束」屏):小队生命值=71(战前 84,本战损 13)。
@@ -79,6 +80,20 @@ def test_parse_hp_garble_missing_sheng() -> None:
     """
     assert parse_settlement_hp(['小队命值74i']) == 74
     assert parse_settlement_hp(['挑战结束', '小队命值58', '继续挑战']) == 58
+
+
+def test_parse_streak_win_loss_direction() -> None:
+    """结算「连胜×N」/「连败×N」前缀=方向:连胜 + / 连败 −;未读到 0(fixture 核实 2026-08-11)。"""
+    assert parse_streak(['连胜×0']) == 0
+    assert parse_streak(['挑战结束', '连胜×3', '继续挑战']) == 3
+    assert parse_streak(['连败×2']) == -2
+    assert parse_streak(['连胜x5']) == 5               # × 读成 x 也容忍
+    assert parse_streak(['挑战结束', '数据统计']) == 0   # 无 streak 文本
+
+
+def test_parse_streak_from_real_settlement_ocr() -> None:
+    """实跑结算屏 OCR(_SETTLEMENT_OCR 含 '连胜×0')→ streak 0。"""
+    assert parse_streak(_SETTLEMENT_OCR) == 0
 
 
 def test_read_affixes_briefing(test_context: SrTestContext) -> None:

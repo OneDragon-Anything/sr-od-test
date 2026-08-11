@@ -102,6 +102,65 @@ def test_economy_interest() -> None:
     assert economy_score(rich, "adaptive") > economy_score(poor, "adaptive")
 
 
+def test_economy_streak_bonus() -> None:
+    """C 杠杆 2(streak 接线):连胜/连败 magnitude 对称加分(auto-chess streak 档位金);0 streak 无加。
+
+    fixture 核实(2026-08-11)结算「连胜×N」前缀=方向 → state.streak 带符号。方向驱动的 plan 行为
+    (保连胜 vs fold)留 R2-4b,economy 只取 magnitude(连胜/连败都给金)。
+    """
+    base = GameState(gold=50, round_num=5, level=6, plane=2)             # streak 默认 0
+    win3 = GameState(gold=50, round_num=5, level=6, plane=2, streak=3)   # 连胜 3
+    loss3 = GameState(gold=50, round_num=5, level=6, plane=2, streak=-3)  # 连败 3
+    assert economy_score(win3, "adaptive") > economy_score(base, "adaptive"), "连胜 3 > 无 streak"
+    assert economy_score(win3, "adaptive") == pytest.approx(economy_score(loss3, "adaptive")), (
+        "连胜/连败 magnitude 对称(都给档位金)"
+    )
+
+
+def test_get_node_goal_node_plan_rules() -> None:
+    """node_plan 骨架(14 §2):节点 → NodeGoal target_level / spend_mode(人玩节奏)。"""
+    from sr_od.application.currency_war.cw_decisions import get_node_goal
+    assert (get_node_goal(1, 1).target_level, get_node_goal(1, 1).spend_mode) == (4, "saving"), "P1 早期 冲Lv4 攒息"
+    assert (get_node_goal(1, 5).target_level, get_node_goal(1, 5).spend_mode) == (6, "interest"), "P1 中期 Lv6 吃息"
+    assert (get_node_goal(2, 5).target_level, get_node_goal(2, 5).spend_mode) == (8, "level"), "P2 中后期 升 8 搜核心"
+    assert (get_node_goal(3, 1).target_level, get_node_goal(3, 1).spend_mode) == (9, "allin"), "P3 早期 上 9"
+    assert (get_node_goal(3, 5).target_level, get_node_goal(3, 5).spend_mode) == (10, "allin"), "P3 后期 上 10"
+
+
+def test_get_node_goal_fallback() -> None:
+    """未匹配(plane>3 / round 超区间)→ fallback:target_level=_expected_level, spend_mode=adaptive。"""
+    from sr_od.application.currency_war.cw_decisions import (
+        _expected_level,
+        get_node_goal,
+    )
+    fb = get_node_goal(4, 1)   # plane 4 无规则(CW 3 位面)→ fallback
+    assert fb.target_level == _expected_level(1, 4)
+    assert fb.spend_mode == "adaptive"
+
+
+def test_maybe_sell_for_interest_allin_skips() -> None:
+    """node_plan spend_mode allin(P3)→ _maybe_sell_for_interest 跳过(花光成型不囤息;14 §2.2)。"""
+    from sr_od.application.currency_war.cw_decisions import _maybe_sell_for_interest
+    cfg = _cfg()
+    # P3 round 3 → allin;gold 39 + 可卖 bench(飞霄,refund 1 → 跨 40 档)→ 正常会卖,allin 跳过
+    state = GameState(gold=39, round_num=3, level=9, plane=3,
+                      bench=[BenchChar(slot=0, char_id='飞霄', faction='追击', star=1)])
+    actions: list = []
+    _maybe_sell_for_interest(state, actions, cfg.character_priority, cfg)
+    assert not any(isinstance(a, SellBench) for a in actions), "P3 allin → 不卖息(花光成型)"
+
+
+def test_sample_cost_uses_refresh_prob() -> None:
+    """A4.3:_sample_cost 用 REFRESH_PROB 权威表(Lv1-3 纯 1 费;Lv4 只 1/2/3 费;Lv10 不出表外)。"""
+    from sr_od.application.currency_war.cw_decisions import _sample_cost
+    rng = random.Random(0)
+    assert all(_sample_cost(1, rng) == 1 for _ in range(20)), "Lv1 纯 1 费(REFRESH_PROB[1]={1:1.0})"
+    for _ in range(50):
+        assert _sample_cost(4, rng) in (1, 2, 3), "Lv4 只 1/2/3 费(不出 4/5)"
+    for _ in range(50):
+        assert 1 <= _sample_cost(10, rng) <= 5, "Lv10 出 1-5 费(不出表外)"
+
+
 def test_phase_weights_hp_danger_reduces_economy() -> None:
     """A3 + review agent:HP 危险才保血(economy 降权);健康时 economy 不压(snowball 到 50)。
     原"前期 plane1 → economy 0.4"已被研究推翻(前期该 snowball 经济),改测 HP 维度。"""
@@ -146,9 +205,11 @@ def test_economy_rush_level_rewards_level() -> None:
 
 
 def test_evaluate_target_comp_applies_progress() -> None:
-    """战略↔战术接法:evaluate(target_comp) = evaluate() − TARGET_PROGRESS_WEIGHT × 剩余进度。
+    """战略↔战术接法(晚期 α=1):evaluate(target) = evaluate() − WP × 剩余进度。
 
-    target_comp 给定时扣「剩余成型进度」分(接近 form_tiers → 少扣);None 时不扣(向后兼容)。
+    成型压力(target_progress)随 α(t) 缩:早期 α=0 不罚(未成型正常),晚期 α=1 全罚。
+    故用**晚期**状态(plane3 r6,α=1)验精确关系;早期 α=0 的灵活期权行为见
+    ``test_evaluate_optionality_alpha_blend``。target_comp=None 时不扣(向后兼容)。
     """
     from sr_od.application.currency_war.cw_comps import get_comp
     from sr_od.application.currency_war.cw_decisions import (
@@ -157,24 +218,25 @@ def test_evaluate_target_comp_applies_progress() -> None:
         evaluate,
     )
     cfg = _cfg()
-    青雀 = get_comp("巡击青雀")   # form_tiers {仙舟:5, 追击:3}
-    s_far = GameState(board={})                       # 完全没起步 → 剩余 1.0
-    s_close = GameState(board={"仙舟": 5, "追击": 3})  # 已成型 → 剩余 0.0
+    飞霄 = get_comp("追击飞霄")   # form_tiers {追击:3}
+    # 晚期 α=1(elapsed 18 > R_CLOSE 12)→ target_progress 全罚 + optionality=0
+    s_far = GameState(board={}, plane=3, round_num=6)              # 完全没起步 → 剩余 1.0
+    s_close = GameState(board={"追击": 3}, plane=3, round_num=6)    # 已成型 → 剩余 0.0
     # _target_progress_remaining:已成型=0,没起步=1
-    assert _target_progress_remaining(s_close, 青雀) == pytest.approx(0.0)
-    assert _target_progress_remaining(s_far, 青雀) == pytest.approx(1.0)
-    # evaluate(target) = evaluate() − WP × remaining(精确关系)
+    assert _target_progress_remaining(s_close, 飞霄) == pytest.approx(0.0)
+    assert _target_progress_remaining(s_far, 飞霄) == pytest.approx(1.0)
+    # evaluate(target) = evaluate() − WP × remaining(α=1 精确关系;optionality=0)
     base_far = evaluate(s_far, cfg, cfg.faction_priority)
-    assert (evaluate(s_far, cfg, cfg.faction_priority, target_comp=青雀)
+    assert (evaluate(s_far, cfg, cfg.faction_priority, target_comp=飞霄)
             == pytest.approx(base_far - TARGET_PROGRESS_WEIGHT * 1.0))
     # 已成型时 target progress 不扣分(剩余 0);T#97 step-2(tuned)target bonus(×1.5 on tier)对 target 阵营加成
-    # → evaluate(s_close, target) > base_close(target 阵营 仙舟/追击 tier ×1.5)。
+    # → evaluate(s_close, target) > base_close(target 阵营 追击 tier ×1.5)。
     base_close = evaluate(s_close, cfg, cfg.faction_priority)
-    assert (evaluate(s_close, cfg, cfg.faction_priority, target_comp=青雀)
+    assert (evaluate(s_close, cfg, cfg.faction_priority, target_comp=飞霄)
             > base_close), "已成型 → progress 不扣分 + target tier bonus → > base_close"
     # 接近成型 > 远离成型(有 target 时,战略导向)
-    assert (evaluate(s_close, cfg, cfg.faction_priority, target_comp=青雀)
-            > evaluate(s_far, cfg, cfg.faction_priority, target_comp=青雀)), (
+    assert (evaluate(s_close, cfg, cfg.faction_priority, target_comp=飞霄)
+            > evaluate(s_far, cfg, cfg.faction_priority, target_comp=飞霄)), (
         "接近 target 成型 → evaluate 更高"
     )
 
@@ -280,7 +342,7 @@ def test_plan_d79_prefilter_skips_offtarget_priority_for_target() -> None:
 def test_plan_t97_committed_refuses_offtarget_when_no_target_in_shop() -> None:
     """T#97:已 commit + shop 无 target 卡 → 拒 off-target(commit 后买散牌 = spread 根因)。
 
-    live 复现(plane1 r1-3,target 巡击青雀[仙舟/追击]):买完唯一 target 卡(追击/赛飞儿)后 simulate 把它移出
+    live 复现(plane1 r1-3,target 追击飞霄[追击]):买完唯一 target 卡(追击/赛飞儿)后 simulate 把它移出
     shop → shop 无 target → 旧 prefilter「防饿死」放行 off-target → 买 能量/持续伤害 散牌 → board spread
     → plane2 comp 弱秒死。修:已 commit 也拒 off-target(该 Refresh 找 target / 攒金;drought bail 处理
     真不可达)。**未 commit**(round=1)同 shop 仍放行 off-target(早期 tempo,防饿死)。
@@ -288,15 +350,15 @@ def test_plan_t97_committed_refuses_offtarget_when_no_target_in_shop() -> None:
     level=10 隔离 level/saving 门(无 _want_level / _saving_for_level);deployed=0 避 _saving_for_interest
     → 唯一阻断 off-target 的是 commitment prefilter(纯验 T#97 逻辑)。
     """
-    target = Comp(name="巡击青雀", factions=["仙舟", "追击"], core_chars=["青雀", "知更鸟"],
-                  form_tiers={"仙舟": 5, "追击": 3}, strength="B", form_difficulty="medium")
+    target = Comp(name="追击飞霄", factions=["追击"], core_chars=["飞霄", "知更鸟", "缇宝", "不死途"],
+                  form_tiers={"追击": 3}, strength="B", form_difficulty="medium")
     shop = [ShopCard(x=100, faction="能量", name="阿格莱雅", cost=1),
             ShopCard(x=200, faction="持续伤害", name="艾丝妲", cost=1),
             ShopCard(x=300, faction="群攻", name="黑塔", cost=1)]
     cfg = _cfg()
-    # 已 commit:board 有 target 投入(仙舟×2 → form_progress 0.2>0)+ round=4 轮数兜底 → committed
+    # 已 commit:board 有 target 投入(追击×2 → form_progress 0.67>0)+ round=4 轮数兜底 → committed
     # (D-90:轮数兜底现要求 form_progress>0,防零投入误锁;故 state 需给 target 真实投入才算 commit)
-    st_comm = GameState(gold=6, round_num=4, level=10, plane=1, shop=shop, board={"仙舟": 2})
+    st_comm = GameState(gold=6, round_num=4, level=10, plane=1, shop=shop, board={"追击": 2})
     buys_comm = [a.card.name for a in plan(st_comm, cfg, cfg.faction_priority,
                                            rng=random.Random(0), target_comp=target)
                  if isinstance(a, BuyCard)]
@@ -690,13 +752,76 @@ def test_alpha_t_monotonic() -> None:
 
 
 def test_optionality_shared_char_rewards() -> None:
-    """bench 角色属 ≥2 comp(风堇∈昼神阿雅+万敌)→ 加分;只属 1 comp(青雀)→ 0;空 → 0。"""
+    """bench 角色属 ≥2 comp(风堇∈昼神阿雅+万敌)→ 加分;只属 1 comp(飞霄)→ 0;空 → 0。"""
     multi = GameState(bench=[BenchChar(slot=0, char_id="风堇")])     # 风堇 ∈ 2 comp
-    single = GameState(bench=[BenchChar(slot=0, char_id="青雀")])    # 青雀 ∈ 1 comp(巡击青雀)
+    single = GameState(bench=[BenchChar(slot=0, char_id="飞霄")])    # 飞霄 ∈ 1 comp(追击飞霄)
     empty = GameState(bench=[])
     assert optionality_score(multi) > 0.0, "风堇 属 2 comp 应加分"
-    assert optionality_score(single) == 0.0, "青雀 只属 1 comp 不加分"
+    assert optionality_score(single) == 0.0, "飞霄 只属 1 comp 不加分"
     assert optionality_score(empty) == 0.0, "空 bench → 0"
+
+
+def test_evaluate_optionality_alpha_blend() -> None:
+    """承诺-期权混合(ADR 0096 / F-3,2026-08-11 接线 ``α·commit + (1−α)·optionality``)。
+
+    风堇(∈2 comp)vs 飞霄(∈1 comp):同 1 bench 角色、同 star=1、都不在 character_priority →
+    char_quality / synergy / economy 完全相同,差**仅 optionality**(隔离)。
+    - 早(α=0):风堇 − 飞霄 == OPTIONALITY_WEIGHT(optionality 全);成型压力 0(未成型不该罚)。
+    - 晚(α=1):差 == 0(optionality=0,让位 commit)。
+    """
+    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.cw_decisions import OPTIONALITY_WEIGHT, evaluate
+    cfg = _cfg()
+    飞霄comp = get_comp("追击飞霄")
+    # 早期(plane1 r1 → α=0)
+    early_vers = GameState(bench=[BenchChar(slot=0, char_id="风堇")], plane=1, round_num=1)
+    early_one = GameState(bench=[BenchChar(slot=0, char_id="飞霄")], plane=1, round_num=1)
+    assert alpha_t(early_vers) == 0.0
+    _diff_early = evaluate(early_vers, cfg, cfg.faction_priority) - evaluate(early_one, cfg, cfg.faction_priority)
+    assert _diff_early == pytest.approx(OPTIONALITY_WEIGHT), (
+        "早期 α=0 → optionality 全:风堇 − 飞霄 == OPTIONALITY_WEIGHT(隔离 char/synergy/econ 后仅 optionality)"
+    )
+    # 早期成型压力=0:空 board + 空 bench,有 target 也不扣(未成型正常;BENCH_TARGET/optionality 均为 0)
+    s_empty = GameState(board={}, plane=1, round_num=1)
+    _base = evaluate(s_empty, cfg, cfg.faction_priority)
+    assert evaluate(s_empty, cfg, cfg.faction_priority, target_comp=飞霄comp) == pytest.approx(_base), (
+        "早期 α=0 → target_progress 不罚(未成型正常)"
+    )
+    # 晚期(plane3 r6 → α=1):optionality=0,风堇/飞霄 持平
+    late_vers = GameState(bench=[BenchChar(slot=0, char_id="风堇")], plane=3, round_num=6)
+    late_one = GameState(bench=[BenchChar(slot=0, char_id="飞霄")], plane=3, round_num=6)
+    assert alpha_t(late_vers) == 1.0
+    _diff_late = evaluate(late_vers, cfg, cfg.faction_priority) - evaluate(late_one, cfg, cfg.faction_priority)
+    assert _diff_late == pytest.approx(0.0), "晚期 α=1 → optionality=0,风堇/飞霄 持平(让位 commit)"
+
+
+def test_transition_tempo_score_rewards_tempo_factions() -> None:
+    """P1 过渡羁绊分(review round-4 HIGH-2):仙舟/狼狩/dot/列车/贝洛伯格 ≥2 → tempo;非过渡 ≥2 → 0;<2 → 0。"""
+    from sr_od.application.currency_war.cw_decisions import (
+        TRANSITION_TEMPO_BONUS,
+        transition_tempo_score,
+    )
+    # 单过渡羁绊凑出(仙舟 2)
+    assert transition_tempo_score(GameState(board={'仙舟': 2})) == pytest.approx(TRANSITION_TEMPO_BONUS)
+    # 2 过渡羁绊(人上人级:仙舟 + dot)
+    assert transition_tempo_score(GameState(board={'仙舟': 2, '持续伤害': 3})) == pytest.approx(2 * TRANSITION_TEMPO_BONUS)
+    # 3 过渡羁绊 → 封顶 2(边际递减)
+    assert transition_tempo_score(GameState(board={'仙舟': 2, '狼狩': 2, '列车同行': 2})) == pytest.approx(2 * TRANSITION_TEMPO_BONUS)
+    # 非过渡羁绊 ≥2 → 0(追击 是成型羁绊非过渡)
+    assert transition_tempo_score(GameState(board={'追击': 3})) == 0.0
+    # 过渡羁绊只 1 人(未凑出 ≥2)→ 0
+    assert transition_tempo_score(GameState(board={'仙舟': 1})) == 0.0
+
+
+def test_evaluate_transition_tempo_early_game() -> None:
+    """过渡羁绊早期(α=0)加分保血(review round-4 HIGH-2);α-fade 同 optionality(已测)。"""
+    from sr_od.application.currency_war.cw_decisions import evaluate
+    cfg = _cfg()
+    early_tempo = GameState(board={'仙舟': 2}, plane=1, round_num=1)   # α=0,有过渡羁绊
+    early_empty = GameState(board={}, plane=1, round_num=1)            # α=0,无
+    assert evaluate(early_tempo, cfg, cfg.faction_priority) > evaluate(early_empty, cfg, cfg.faction_priority), (
+        "早期 α=0 → 过渡羁绊(仙舟2)加分稳血"
+    )
 
 
 def test_phase_weights_hp_threshold_override() -> None:

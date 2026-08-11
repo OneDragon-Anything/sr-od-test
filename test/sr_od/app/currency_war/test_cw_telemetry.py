@@ -55,7 +55,7 @@ def test_record_decision_schema() -> None:
         state = GameState(gold=50, hp=80, round_num=3, plane=1, board={"巡海游侠": 2})
         actions = [BuyCard(ShopCard(x=377, faction="巡海游侠", cost=3))]
         rec.record_decision("r1", "A8", state, "列车同行",
-                            {"列车同行": 0.8, "巡击青雀": 0.6},
+                            {"列车同行": 0.8, "追击飞霄": 0.6},
                             {"progress": 0.8, "mechanics_fit": 0.5}, actions)
         lines = read_jsonl(tmp_path / "decisions.jsonl")
         assert len(lines) == 1
@@ -104,7 +104,7 @@ def test_run_summary_accumulates_gold_and_comps() -> None:
     with tempfile.TemporaryDirectory(prefix="cw_telemetry_") as tmp:
         rec, tmp_path = _fresh(tmp)
         rec.start_run("r1", "A8")
-        for rnd, gold, comp in [(1, 50, ""), (2, 40, "列车同行"), (3, 60, "列车同行"), (4, 55, "巡击青雀")]:
+        for rnd, gold, comp in [(1, 50, ""), (2, 40, "列车同行"), (3, 60, "列车同行"), (4, 55, "追击飞霄")]:
             rec.record_decision("r1", "A8", GameState(gold=gold, round_num=rnd), comp, {}, {}, [])
         rec.record_run_summary("r1", "win", plane_reached=3, rounds_survived=18, final_hp=30)
         lines = read_jsonl(tmp_path / "runs.jsonl")
@@ -113,8 +113,8 @@ def test_run_summary_accumulates_gold_and_comps() -> None:
         assert s["result"] == "win"
         assert s["difficulty"] == "A8"
         assert s["gold_trajectory"] == [50, 40, 60, 55]
-        # comps: 空 target 不记;列车同行记一次(连续去重);巡击青雀 pivot 记一次
-        assert s["comps_committed"] == ["列车同行", "巡击青雀"]
+        # comps: 空 target 不记;列车同行记一次(连续去重);追击飞霄 pivot 记一次
+        assert s["comps_committed"] == ["列车同行", "追击飞霄"]
         assert s["plane_reached"] == 3
 
 
