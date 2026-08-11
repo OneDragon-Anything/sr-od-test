@@ -11,6 +11,7 @@ import pytest
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import cw_briefing_obs, cw_observation
+from sr_od.application.currency_war.cw_briefing_obs import parse_enemy_difficulty
 from sr_od.application.currency_war.cw_observation import (
     parse_selected_difficulty,
     parse_settlement_hp,
@@ -415,3 +416,12 @@ def test_read_selected_difficulty_a8_a5(test_context: SrTestContext) -> None:
     if test_context.has_screen('货币战争-难度确认', 'a5'):
         screen5 = test_context.load_screen('货币战争-难度确认', 'a5')
         assert read_selected_difficulty(test_context, screen5) == 'A5'
+
+
+def test_parse_enemy_difficulty() -> None:
+    """简报「敌人难度N」OCR → int;过滤词缀/首领;越界(>300)→ None(3.5.2)。"""
+    assert parse_enemy_difficulty(['敌人难度108', '随从强化']) == 108
+    assert parse_enemy_difficulty(['敌人难度 50']) == 50
+    assert parse_enemy_difficulty(['随从强化', '开局不利']) is None  # 无难度文字
+    assert parse_enemy_difficulty(['敌人难度999']) is None  # 越界(>300)
+    assert parse_enemy_difficulty([]) is None
