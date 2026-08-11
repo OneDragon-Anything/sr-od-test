@@ -11,7 +11,10 @@ import pytest
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import cw_briefing_obs, cw_observation
-from sr_od.application.currency_war.cw_briefing_obs import parse_enemy_difficulty
+from sr_od.application.currency_war.cw_briefing_obs import (
+    parse_enemy_difficulty,
+    read_briefing_enemy_difficulty,
+)
 from sr_od.application.currency_war.cw_observation import (
     parse_selected_difficulty,
     parse_settlement_hp,
@@ -131,6 +134,23 @@ def test_read_bosses_briefing(test_context: SrTestContext) -> None:
     assert len(bosses) == 3, f'期望 3 boss(3 位面),实际 {bosses}'
     # boss 名中文 4-8 字(如 增熵能源集团/火线动力机甲/银甲武装公司)
     assert all(4 <= len(b) <= 8 for b in bosses), f'boss 名长度异常,实际 {bosses}'
+
+
+def test_read_briefing_enemy_difficulty(test_context: SrTestContext) -> None:
+    """简报「敌人难度N」(标识-敌人难度 area OCR → parse_enemy_difficulty)→ int。
+
+    fixture ``screens/货币战争-简报/default.webp``:左下「敌人难度N」(N 为数值,如 108)。
+    read_briefing_enemy_difficulty OCR 区域 → parse → int(0<N≤300)。下游
+    ctx.cw_enemy_difficulty → session.enemy_difficulty → state(3.5.2,diagnostic;danger_d
+    未实现 dormant)。值跨局随职级/词缀叠算变,只校验读到合法 int(非 specific 值)。
+    对照 sibling reader:test_read_affixes_briefing / test_read_bosses_briefing。
+    """
+    if not test_context.has_screen('货币战争-简报', 'default'):
+        pytest.skip('存档截图缺失:screens/货币战争-简报/default.webp')
+    screen = test_context.load_screen('货币战争-简报', 'default')
+    difficulty = read_briefing_enemy_difficulty(test_context, screen)
+    assert difficulty is not None, '未读到敌人难度(标识-敌人难度 area OCR 应含「敌人难度N」)'
+    assert 0 < difficulty <= 300, f'敌人难度越界(应 0<N≤300),实际 {difficulty}'
 
 
 def test_read_invest_env_options(test_context: SrTestContext) -> None:
