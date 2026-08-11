@@ -148,8 +148,8 @@ def test_comp_viability_cold_start_pure_prior() -> None:
     v = comp_viability(阿雅, state, ctx, t)
     assert v > 0.0
     assert v <= 1.0
-    # 纯先验 = 0.45*form(1.0) + 0.30*equip(0.5) + 0.25*mech(0.5) = 0.45+0.15+0.125 = 0.725
-    assert v == pytest.approx(0.725, abs=1e-2), "冷启动纯先验"
+    # 纯先验 = 0.40*form(1.0) + 0.25*equip(0.5) + 0.20*mech(0.5) + 0.15*star(0,无核心持有) = 0.625
+    assert v == pytest.approx(0.625, abs=1e-2), "冷启动纯先验"
 
 
 def test_comp_viability_observation_blends() -> None:
@@ -164,6 +164,21 @@ def test_comp_viability_observation_blends() -> None:
         t.record(_out(r, hp, comp="昼神阿雅"))
     warm = comp_viability(阿雅, state, ctx, t)
     assert warm < cold, "观测到大掉血 → viability 低于纯先验"
+
+
+def test_star_achievement_scales_with_core_star() -> None:
+    """star_achievement:核心角色 star 升 → 达成度高(1星=0 / 2星=0.5 / 3星=1.0;review HIGH-1)。"""
+    from sr_od.application.currency_war.cw_performance import star_achievement
+    from sr_od.application.currency_war.cw_state import BenchChar
+    飞霄 = get_comp("追击飞霄")
+    core = 飞霄.core_chars[0]
+    s1 = GameState(bench=[BenchChar(slot=0, char_id=core, faction='追击', star=1)])
+    assert star_achievement(飞霄, s1) == pytest.approx(0.0, abs=1e-6)
+    s2 = GameState(bench=[BenchChar(slot=0, char_id=core, faction='追击', star=2)])
+    assert star_achievement(飞霄, s2) == pytest.approx(0.5, abs=1e-6)
+    s3 = GameState(bench=[BenchChar(slot=0, char_id=core, faction='追击', star=3)])
+    assert star_achievement(飞霄, s3) == pytest.approx(1.0, abs=1e-6)
+    assert star_achievement(飞霄, GameState()) == 0.0   # 无核心持有 → 0
 
 
 # —— is_run_dead 三门 ——
