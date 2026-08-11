@@ -278,3 +278,33 @@ def test_select_layout_no_complete_returns_empty() -> None:
     assert _select_equipped_layout([('完美投影仪', 0.62, cx + 21)], cx, 2, dummy, rect) == []
     # 合法 1件落 0 → 返 [该件](修不破坏合法路径)
     assert _select_equipped_layout([('和平手枪', 0.80, cx)], cx, 1, dummy, rect) == ['和平手枪']
+
+
+def test_prioritize_wearable_comp_driven() -> None:
+    """equip_all comp 驱动穿戴(ADR-0101):``_prioritize_wearable`` 按 target_comp.key_equips 优先,
+    替 naive ``wearable[0]``(read_equips 返回第一个)。无 target / 无 key_equips → 原序(等价旧行为)。
+    key_equips 含重复(阿雅需 2 反重力皮靴)→ 按 multiplicity 消费(命中的重复件也优先,但不超额)。
+    """
+    from sr_od.application.currency_war.operations.prep.equip_all import _prioritize_wearable
+    # wearable = [(name, (cx, cy)), ...](read_equips 命中顺序)
+    w = [('光速螺旋桨', (1800, 900)), ('反重力皮靴', (1850, 900)), ('火力风暴潮', (1700, 900))]
+    # 无 target / 无 key_equips → 原序(等价旧行为)
+    assert _prioritize_wearable(w, None) == w
+    assert _prioritize_wearable(w, []) == w
+    # target key_equips = [反重力皮靴×2](阿雅)→ 命中件优先在前
+    out = _prioritize_wearable(w, ['反重力皮靴', '反重力皮靴'])
+    names = [n for n, _ in out]
+    assert names[0] == '反重力皮靴', 'key_equip 件应排第一'
+    assert set(names[1:]) == {'光速螺旋桨', '火力风暴潮'}, '其余件在后'
+    # 无命中 → 原序
+    assert _prioritize_wearable(w, ['以牙还牙甲']) == w
+    # multiplicity:key_equips 2 反重力皮靴,wearable 也有 2 → 都优先(前 2 位)
+    w2 = [('光速螺旋桨', (1, 1)), ('反重力皮靴', (2, 2)), ('火力风暴潮', (3, 3)), ('反重力皮靴', (4, 4))]
+    out2 = _prioritize_wearable(w2, ['反重力皮靴', '反重力皮靴'])
+    assert [n for n, _ in out2][:2] == ['反重力皮靴', '反重力皮靴'], '重复 key_equip 按 multiplicity 都优先'
+    # multiplicity 不超额:key_equips 1 反重力皮靴,wearable 2 → 只消费 1(第二个回原序)
+    out3 = _prioritize_wearable(w2, ['反重力皮靴'])
+    names3 = [n for n, _ in out3]
+    assert names3[0] == '反重力皮靴', '1 multiplicity → 第一个优先'
+    assert names3[1] != '反重力皮靴', '第二个不超额优先(回原序)'
+    assert names3[-1] == '反重力皮靴'  # 第二个落回 rest(原 wearable 顺序)
