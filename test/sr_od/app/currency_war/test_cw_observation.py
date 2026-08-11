@@ -12,6 +12,7 @@ import pytest
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import cw_briefing_obs, cw_observation
 from sr_od.application.currency_war.cw_observation import (
+    parse_selected_difficulty,
     parse_settlement_hp,
     read_affix_effect,
     read_affixes,
@@ -23,6 +24,7 @@ from sr_od.application.currency_war.cw_observation import (
     read_enemy_difficulty,
     read_level_up_cost,
     read_node_type,
+    read_selected_difficulty,
     read_shop_refresh_cost,
     read_streak,
     read_xp_progress,
@@ -392,3 +394,24 @@ def test_read_deploy_cap_equals_level(test_context: SrTestContext) -> None:
     screen4 = test_context.load_screen('货币战争-备战', 'shop_closed_lowhp')
     assert read_deploy_cap(test_context, screen4) == 7
     assert read_deployed_count(test_context, screen4) == 6
+
+
+def test_parse_selected_difficulty() -> None:
+    """难度确认 OCR 文字 → 职级(A\\d+(-\\d+)?);过滤非职级(财富造物主 等)。"""
+    assert parse_selected_difficulty(['A8', '财富造物主']) == 'A8'
+    assert parse_selected_difficulty(['A5']) == 'A5'
+    assert parse_selected_difficulty(['A8-1']) == 'A8-1'
+    assert parse_selected_difficulty(['A8-50']) == 'A8-50'
+    assert parse_selected_difficulty(['财富造物主', '当前职级难度效果']) == ''
+    assert parse_selected_difficulty([]) == ''
+
+
+def test_read_selected_difficulty_a8_a5(test_context: SrTestContext) -> None:
+    """难度确认屏 fixture → 职级(a8→A8 / a5→A5;AX label 左上 OCR → effective_hp_threshold D-32)。"""
+    if not test_context.has_screen('货币战争-难度确认', 'a8'):
+        pytest.skip('fixture 未采:screens/货币战争-难度确认/a8')
+    screen = test_context.load_screen('货币战争-难度确认', 'a8')
+    assert read_selected_difficulty(test_context, screen) == 'A8'
+    if test_context.has_screen('货币战争-难度确认', 'a5'):
+        screen5 = test_context.load_screen('货币战争-难度确认', 'a5')
+        assert read_selected_difficulty(test_context, screen5) == 'A5'
