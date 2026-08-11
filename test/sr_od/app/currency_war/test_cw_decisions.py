@@ -294,8 +294,9 @@ def test_plan_t97_committed_refuses_offtarget_when_no_target_in_shop() -> None:
             ShopCard(x=200, faction="持续伤害", name="艾丝妲", cost=1),
             ShopCard(x=300, faction="群攻", name="黑塔", cost=1)]
     cfg = _cfg()
-    # 已 commit:round=4 plane=1 → (1-1)*9+4=4 >= COMMIT_ROUND(4) → committed
-    st_comm = GameState(gold=6, round_num=4, level=10, plane=1, shop=shop)
+    # 已 commit:board 有 target 投入(仙舟×2 → form_progress 0.2>0)+ round=4 轮数兜底 → committed
+    # (D-90:轮数兜底现要求 form_progress>0,防零投入误锁;故 state 需给 target 真实投入才算 commit)
+    st_comm = GameState(gold=6, round_num=4, level=10, plane=1, shop=shop, board={"仙舟": 2})
     buys_comm = [a.card.name for a in plan(st_comm, cfg, cfg.faction_priority,
                                            rng=random.Random(0), target_comp=target)
                  if isinstance(a, BuyCard)]
