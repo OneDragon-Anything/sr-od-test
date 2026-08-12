@@ -17,6 +17,7 @@ from sr_od.application.currency_war.cw_comps import (
     MECHANIC_COUNTERS,
     MECHANIC_SYNERGIES,
     _difficulty_phase_factor,
+    _held_base_copies,
     boss_fit,
     comp_score,
     comp_score_breakdown,
@@ -251,26 +252,52 @@ def test_select_comp_forbid_filter() -> None:
     assert "追击飞霄" not in names2, "forbid 追击 → 排除追击飞霄"
 
 
-def test_acquirability_factor_level_cost() -> None:
-    """D-92:acquirability = 核心角色在当前等级的理论刷新概率(min),替 shop_supply / shop_history 观察法。
+def test_acquirability_factor_pool_aware() -> None:
+    """ADR-0110:acq 牌池感知 —— P(单次刷新 5 格≥1 张该角色),扣玩家持有副本(牌库有限,用户根因)。
 
-    用户点破:刷新概率独立 → 观察(shop 本回合/历史)无预测力,用理论 REFRESH_PROB 表。
-    阵容受最稀卡限制 → 取核心角色里最低 refresh_prob(level, cost)。
+    取代 ADR-0092 的 min(refresh_prob):后者是「该费用刷新率」非「该角色刷出率」(漏 ÷v:1 格该费用里
+    只 1/v 是该角色),且不扣持有副本(牌库有限:买掉即减)。本测试验:
+    ① ÷v:特定角色 acq < 该角色费用 refresh_prob;② held 消耗:持越多越难刷;③ 空 core→1.0。
     """
     from sr_od.application.currency_war.cw_chars import CHARACTERS
     from sr_od.application.currency_war.cw_shop_odds import (
         acquirability_factor,
         refresh_prob,
     )
-    青雀 = get_comp("追击飞霄")   # core_chars 飞霄/知更鸟/缇宝/不死途
+    青雀 = get_comp("追击飞霄")   # core_chars 飞霄/知更鸟/缇宝/不死途(混合费用)
     costs = [CHARACTERS[n].cost for n in 青雀.core_chars if n in CHARACTERS]
     assert costs, "core_chars 应在 CHARACTERS"
-    # = min refresh_prob(level, cost) 跨等级
-    for lv in (4, 7, 10):
-        expected = min(refresh_prob(lv, c) for c in costs)
-        assert acquirability_factor(青雀.core_chars, lv) == expected
-    # 空 core_chars / 无识别角色 → 1.0(中性,不降权)
+    # ① 牌池感知:特定角色 acq < min refresh_prob(÷v:1 张角色 < 1 格该费用,5 格也补不回 v 倍差)
+    for lv in (7, 10):
+        acq = acquirability_factor(青雀.core_chars, lv)
+        min_cost_prob = min(refresh_prob(lv, c) for c in costs)
+        assert 0.0 < acq < min_cost_prob, (
+            f"lv{lv}: 牌池感知 acq({acq:.4f}) 应在 (0, min refresh_prob={min_cost_prob})"
+        )
+    # ② held 消耗(牌库有限):持有副本 → 该角色剩余少 → acq 不升(持最稀核心则降)
+    acq_fresh = acquirability_factor(青雀.core_chars, 7)
+    held_all = dict.fromkeys(青雀.core_chars, 3)   # 每核心持 3 基础副本
+    acq_held = acquirability_factor(青雀.core_chars, 7, held=held_all)
+    assert acq_held <= acq_fresh, f"持有副本后 acq({acq_held:.4f}) 应 ≤ 满池({acq_fresh:.4f})"
+    # ③ 空 core_chars / 无识别角色 → 1.0(中性,不降权)
     assert acquirability_factor([], 7) == 1.0
+
+
+def test_held_base_copies_folds_star() -> None:
+    """ADR-0110:_held_base_copies 按 star 折基础副本(3合1:1星=1/2星=3/3星=9/4星=27),bench+deployed 合并。"""
+    s = GameState(
+        bench=[BenchChar(slot=0, char_id="飞霄", star=2),     # 3 基础副本
+               BenchChar(slot=1, char_id="知更鸟", star=1)],   # 1
+        deployed=[BenchChar(slot=0, char_id="飞霄", star=3)],  # 9(同角色累加)
+    )
+    held = _held_base_copies(s)
+    assert held["飞霄"] == 3 + 9, "飞霄 2星(3)+ 3星(9)= 12 基础副本"
+    assert held["知更鸟"] == 1, "知更鸟 1星 = 1"
+    # 空 bench/deployed → {}
+    assert _held_base_copies(GameState()) == {}
+    # 缺 char_id 的槽不计
+    s2 = GameState(bench=[BenchChar(slot=0, char_id="", star=2)])
+    assert _held_base_copies(s2) == {}, "空 char_id 不计"
 
 
 
