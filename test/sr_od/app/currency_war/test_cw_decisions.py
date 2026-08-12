@@ -28,7 +28,6 @@ from sr_od.application.currency_war.cw_decisions import (
     _should_deploy,
     alpha_t,
     char_quality_score,
-    decide_boss_priority,
     decide_encounter,
     decide_event,
     decide_supply,
@@ -644,14 +643,6 @@ def test_decide_event_dot_needs_major_faction() -> None:
     assert decide_event(["净化身心", "普通选项"], cfg, s1).option_idx == 0, (
         "count=1 非DoT主派,不避(选第一个)"
     )
-
-
-def test_decide_boss_priority_demotes() -> None:
-    """boss 克制表里的阵营被降到末尾。"""
-    cfg = _cfg(faction_priority=["贝洛伯格", "昼之半神", "仙舟"])
-    result = decide_boss_priority(["电视机"], cfg)
-    assert result[-1] == "昼之半神", "'电视机'应把'昼之半神'降末尾"
-    assert result[0] == "贝洛伯格"
 
 
 # —— 遭遇节点 decide_encounter(design 08;纯逻辑)——
