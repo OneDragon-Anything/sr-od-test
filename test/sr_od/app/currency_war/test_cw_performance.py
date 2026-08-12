@@ -148,8 +148,9 @@ def test_comp_viability_cold_start_pure_prior() -> None:
     v = comp_viability(阿雅, state, ctx, t)
     assert v > 0.0
     assert v <= 1.0
-    # 纯先验 = 0.40*form(1.0) + 0.25*equip(0.5) + 0.20*mech(0.5) + 0.15*star(0,无核心持有) = 0.625
-    assert v == pytest.approx(0.625, abs=1e-2), "冷启动纯先验"
+    # 纯先验(ADR-0107 动态归一:equip/mech 无数据返 None → 剔除,权重重分配给 form/star):
+    # = 0.40*form(1.0) / (0.40+0.15) = 0.40/0.55 ≈ 0.727(star=0 无核心持有,仍进加权但贡献 0)
+    assert v == pytest.approx(0.727, abs=1e-2), "冷启动纯先验(动态归一,无 equip/mech 数据)"
 
 
 def test_comp_viability_observation_blends() -> None:

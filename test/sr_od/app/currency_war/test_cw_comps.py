@@ -80,13 +80,13 @@ def test_progress_includes_core_chars() -> None:
 
 
 def test_equip_fit_aya_two_boots_supralinear() -> None:
-    """阿雅 key_equips=[反重力皮靴×2]:0 靴中性;1 靴部分;2 靴满;无关装备略低。"""
+    """阿雅 key_equips=[反重力皮靴×2]:0 靴无数据(None);1 靴部分;2 靴满;无关装备略低。"""
     阿雅 = get_comp("昼神阿雅")
-    none_eq = GameState()                                   # 无装备数据 → 中性 0.5
+    none_eq = GameState()                                   # 无装备数据 → None(ADR-0107 动态权重剔除)
     one = GameState(equips=["反重力皮靴"])
     two = GameState(equips=["反重力皮靴", "反重力皮靴"])
     irrelevant = GameState(equips=["别的装备"])
-    assert equip_fit(阿雅, none_eq) == 0.5, "无装备数据 → 中性"
+    assert equip_fit(阿雅, none_eq) is None, "无装备数据 → None(动态权重剔除)"
     assert equip_fit(阿雅, two) == pytest.approx(1.0, abs=1e-6), "2 靴满 → 1.0"
     assert equip_fit(阿雅, two) > equip_fit(阿雅, one), "2 靴 > 1 靴"
     assert equip_fit(阿雅, one) > 0.5, "1 靴 > 中性(超线性奖励)"
@@ -94,12 +94,12 @@ def test_equip_fit_aya_two_boots_supralinear() -> None:
 
 
 def test_equip_fit_no_key_equips_neutral() -> None:
-    """comp 无关键装备依赖 → 中性 0.5(用局部 Comp,不污染共享 COMP_LIBRARY)。"""
+    """comp 无关键装备依赖 → None(ADR-0107:无数据动态剔除,非 0.5 常量地板;用局部 Comp 不污染 LIBRARY)。"""
     from sr_od.application.currency_war.cw_comps import Comp
     comp_no_equip = Comp(name="测试", factions=["巡海游侠"], core_chars=[], form_tiers={},
                          strength="A", form_difficulty="easy", key_equips=[])
-    assert equip_fit(comp_no_equip, GameState(equips=["冷笑话引擎"])) == 0.5, (
-        "无 key_equips 的 comp → 装备中性 0.5"
+    assert equip_fit(comp_no_equip, GameState(equips=["冷笑话引擎"])) is None, (
+        "无 key_equips 的 comp → None(动态权重剔除)"
     )
 
 
@@ -126,9 +126,9 @@ def test_mechanics_fit_wandi_countered_by_permanent_trauma() -> None:
 
 
 def test_mechanics_fit_neutral_when_no_mechanics() -> None:
-    """无机制信息 → 中性 0.5(不奖不罚)。"""
+    """无机制信息 → None(ADR-0107 动态权重剔除,不奖不罚)。"""
     万敌 = get_comp("万敌单C")
-    assert mechanics_fit(万敌, set()) == 0.5
+    assert mechanics_fit(万敌, set()) is None
 
 
 def test_mechanics_fit_same_affix_opposite_direction() -> None:
@@ -191,11 +191,14 @@ def test_current_enemy_mechanics_maps_d55_affixes() -> None:
 
 
 def test_boss_fit_aya_tv() -> None:
-    """阿雅 countered_by_bosses=[电视机];遇电视机 → 0;无 boss → 0.5。"""
+    """阿雅 countered_by_bosses=[电视机];遇电视机 → 0;无 boss → None(ADR-0107 动态剔除)。
+
+    有 boss 但不命中(别的boss)→ 0.5(真实中性:boss 在但不利害此 comp,有数据,非 None)。
+    """
     阿雅 = get_comp("昼神阿雅")
     assert boss_fit(阿雅, ["电视机"]) == 0.0
-    assert boss_fit(阿雅, []) == 0.5
-    assert boss_fit(阿雅, ["别的boss"]) == 0.5
+    assert boss_fit(阿雅, []) is None
+    assert boss_fit(阿雅, ["别的boss"]) == 0.5, "有 boss 数据但不命中 → 真实中性 0.5"
 
 
 def test_env_fit_t0_hardbind() -> None:
@@ -207,10 +210,10 @@ def test_env_fit_t0_hardbind() -> None:
 
 
 def test_env_fit_faction_map() -> None:
-    """env 加成对应阵营(追击邀请 → 含追击的追击飞霄 → 1.0)。"""
+    """env 加成对应阵营(追击邀请 → 含追击的追击飞霄 → 1.0);未选 env → None(ADR-0107 动态剔除)。"""
     飞霄 = get_comp("追击飞霄")
     assert env_fit(飞霄, "追击邀请") == pytest.approx(1.0, abs=1e-6)
-    assert env_fit(飞霄, "") == 0.5
+    assert env_fit(飞霄, "") is None
 
 
 # —— current_enemy_mechanics 映射 ——
@@ -255,7 +258,10 @@ def test_acquirability_factor_level_cost() -> None:
     阵容受最稀卡限制 → 取核心角色里最低 refresh_prob(level, cost)。
     """
     from sr_od.application.currency_war.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_shop_odds import acquirability_factor, refresh_prob
+    from sr_od.application.currency_war.cw_shop_odds import (
+        acquirability_factor,
+        refresh_prob,
+    )
     青雀 = get_comp("追击飞霄")   # core_chars 飞霄/知更鸟/缇宝/不死途
     costs = [CHARACTERS[n].cost for n in 青雀.core_chars if n in CHARACTERS]
     assert costs, "core_chars 应在 CHARACTERS"
@@ -270,15 +276,17 @@ def test_acquirability_factor_level_cost() -> None:
 
 
 def test_select_comp_optionality_top_n() -> None:
-    """top_n=N → 返回 N 个(按 comp_score 降序;用空 priority 避免 boost 干扰排序断言)。"""
+    """top_n=N → 返回 N 个不同 comp。
+
+    注:select_comp 按 comp_score×乘法因子(phase/acq/board/formation)排序,**非纯 raw comp_score** ——
+    乘法因子会改变排序(如反甲白厄 factions 空 → board/formation 中性 1.0,raw 低但总分可能高),
+    故不验 raw comp_score 降序(旧断言假设错,反甲白厄 factions 修正后暴露)。"""
     s = GameState(round_num=5, gold=50)
-    cfg = _cfg(character_priority=[], faction_priority=[])   # 空 → boost=0,排序=纯 comp_score
+    cfg = _cfg(character_priority=[], faction_priority=[])
     ctx = make_score_context(s)
     top3 = select_comp(s, ctx, cfg, top_n=3)
     assert len(top3) == 3
-    # 降序:第 1 的 comp_score ≥ 第 2 ≥ 第 3
-    assert comp_score(top3[0], s, ctx) >= comp_score(top3[1], s, ctx)
-    assert comp_score(top3[1], s, ctx) >= comp_score(top3[2], s, ctx)
+    assert len({c.name for c in top3}) == 3, "top3 应 3 个不同 comp"
 
 
 def test_difficulty_phase_factor_early_prefers_easy() -> None:
@@ -359,11 +367,11 @@ def test_maybe_pivot_d141_no_easy_progress_keeps_target() -> None:
 
 
 def test_maybe_pivot_better_comp_emerges() -> None:
-    """信号 1(更优涌现):target=反甲白厄(毁灭),场面成型列车同行(更优 + 分差>PIVOT_GAP)
+    """信号 1(更优涌现):target=反甲白厄(白厄无阵营/form_progress 0),场面成型列车同行(更优 + 分差>PIVOT_GAP)
     → pivot 到列车同行。early round(remaining 足够)+ hp 健康 → 信号 2/3 不触发,只验信号 1。"""
     cfg = _cfg(faction_priority=["列车同行"])
     s = GameState(board={"列车同行": 4}, round_num=2, plane=1, hp=100, gold=50)  # 列车同行成型
-    target = get_comp("反甲白厄")  # 毁灭,场面没有 → 远不如列车同行
+    target = get_comp("反甲白厄")  # 白厄无阵营 → 远不如已成型的列车同行
     result = maybe_pivot(s, make_score_context(s), cfg, target=target)
     assert result is not None, "更优 comp 涌现应 pivot"
     assert result.name == "列车同行", "应 pivot 到更优的列车同行"
@@ -438,15 +446,33 @@ def test_select_megastar_empty_returns_none() -> None:
 
 
 def test_comp_library_well_formed() -> None:
-    """COMP_LIBRARY 每 comp 字段完整(form_tiers>0、strength 合法、difficulty 合法)。"""
+    """COMP_LIBRARY 每 comp 字段完整(strength/difficulty 合法;factions/form_tiers 非空除非无阵营 comp)。"""
     for c in COMP_LIBRARY:
         assert c.name, "comp 必须有名"
+        # 反甲白厄:白厄无阵营(独立羁绊救世主),factions/form_tiers 合法空(靠 core+equip 非 form 成型)
+        if c.name == "反甲白厄":
+            assert c.factions == [] and c.form_tiers == {}, (
+                f"{c.name} 应空 factions/form_tiers(白厄无阵营;原 ['毁灭'] 是命途非阵营,已修)")
+            assert c.strength in ("S", "A", "B"), f"{c.name} strength 非法"
+            assert c.form_difficulty in ("easy", "medium", "hard"), f"{c.name} difficulty 非法"
+            continue
         assert c.factions, f"{c.name} 必须有 factions"
         assert c.form_tiers, f"{c.name} 必须有 form_tiers"
         assert c.strength in ("S", "A", "B"), f"{c.name} strength 非法"
         assert c.form_difficulty in ("easy", "medium", "hard"), f"{c.name} difficulty 非法"
         for f, t in c.form_tiers.items():
             assert t > 0, f"{c.name} form_tiers[{f}] 必须>0"
+
+
+def test_comp_factions_in_FACTIONS() -> None:
+    """防回归:COMP_LIBRARY 每 comp 的 factions / form_tiers 键 ⊆ FACTIONS。
+    防『毁灭』(命途 destruction)/『destruction』等误当阵营(曾致反甲白厄 form_progress 恒 0 死 comp)。"""
+    from sr_od.application.currency_war.cw_factions import FACTIONS
+    for c in COMP_LIBRARY:
+        for f in c.factions:
+            assert f in FACTIONS, f'{c.name}.factions 含非阵营 "{f}"(不在 FACTIONS;可能误用命途/职业)'
+        for f in c.form_tiers:
+            assert f in FACTIONS, f'{c.name}.form_tiers 含非阵营 "{f}"(不在 FACTIONS)'
 
 
 def test_comp_library_core_chars_canonical() -> None:
