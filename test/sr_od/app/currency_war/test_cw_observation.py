@@ -445,3 +445,37 @@ def test_parse_enemy_difficulty() -> None:
     assert parse_enemy_difficulty(['随从强化', '开局不利']) is None  # 无难度文字
     assert parse_enemy_difficulty(['敌人难度999']) is None  # 越界(>300)
     assert parse_enemy_difficulty([]) is None
+
+
+def test_parse_damage_value() -> None:
+    """伤害值文本 parse(万/亿/纯数字;无数字/异常 → None;3.5.4 战斗总伤害)。"""
+    from sr_od.application.currency_war.cw_observation import parse_damage_value
+    assert parse_damage_value('126.5万') == 1_265_000
+    assert parse_damage_value('89.8万') == 898_000
+    assert parse_damage_value('83.7万') == 837_000
+    assert parse_damage_value('1439282') == 1_439_282
+    assert parse_damage_value('1.5亿') == 150_000_000
+    assert parse_damage_value('0') == 0
+    assert parse_damage_value('') is None
+    assert parse_damage_value('abc') is None
+    assert parse_damage_value('试用') is None  # 战斗屏噪声
+
+
+def test_read_total_damage() -> None:
+    """战斗右侧「伤害」列 OCR → 求和(126.5万+89.8万+83.7万=3,000,000;噪声「羁绊/试用」过滤)。"""
+    import numpy as np
+
+    from sr_od.application.currency_war.cw_observation import read_total_damage
+    screen = np.zeros((1080, 1920, 3), dtype=np.uint8)
+    # OCR 返 3 角色伤害 + 噪声(羁绊/试用)→ 只求和伤害(parse_damage_value 过滤噪声)
+    _ocr = [SimpleNamespace(data=d) for d in ['羁绊', '126.5万', '89.8万', '83.7万', '试用']]
+    ctx = SimpleNamespace(ocr_service=SimpleNamespace(
+        get_ocr_result_list=lambda image=None: _ocr))
+    assert read_total_damage(ctx, screen, (1680, 240, 1820, 420)) == 1_265_000 + 898_000 + 837_000
+    # 空区域(crop.size==0)→ None
+    assert read_total_damage(ctx, screen, (0, 0, 0, 0)) is None
+    # 无伤害数字(全噪声)→ None
+    _ocr_noise = [SimpleNamespace(data=d) for d in ['试用', '羁绊', '伤害']]
+    ctx2 = SimpleNamespace(ocr_service=SimpleNamespace(
+        get_ocr_result_list=lambda image=None: _ocr_noise))
+    assert read_total_damage(ctx2, screen, (1680, 240, 1820, 420)) is None
