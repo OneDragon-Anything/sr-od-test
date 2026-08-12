@@ -21,6 +21,7 @@ from sr_od.application.currency_war.cw_decisions import (
     _bench_faction_counts,
     _concentration_delta,
     _distinct_factions,
+    _economy_mode_for,
     _maybe_sell_for_interest,
     _phase_weights,
     _sample_shop,
@@ -385,7 +386,9 @@ def test_plan_d137_buys_target_faction_despite_board_spread() -> None:
             ShopCard(x=200, faction="群攻", name="黑塔", cost=1)]   # off-target
     cfg = _cfg()
     # board 已 4 阵营(≥cap 3)+ level10(无 saving)+ 减益 target 卡 → 应买减益(不再被 spread 罚卡死)
-    st = GameState(gold=20, round_num=4, level=10, plane=1,
+    # gold=25(非利息档边界):ADR-0102 后 round4=P1 mid interest→interest_first,bot 会保利息档;
+    # 用 25(买 1 费卡 25→24 不掉档)隔离 concentration 测试,免被 tempo 档边界副作用干扰。
+    st = GameState(gold=25, round_num=4, level=10, plane=1,
                    board={"银河学者": 2, "击破": 1, "群攻": 1, "持续伤害": 1}, shop=shop)
     buys = [a.card.faction for a in plan(st, cfg, cfg.faction_priority,
                                          rng=random.Random(0), target_comp=dot)
@@ -983,3 +986,24 @@ def test_distinct_factions_and_counts_include_board() -> None:
     s = GameState(board={"仙舟": 2}, bench=[BenchChar(slot=1, char_id="x", faction="击破")])
     assert _distinct_factions(s) == {"仙舟", "击破"}
     assert _bench_faction_counts(s) == {"仙舟": 2, "击破": 1}
+
+
+def test_economy_mode_for_maps_spend_mode() -> None:
+    """ADR-0102:_economy_mode_for 把 node spend_mode → economy_score 档位(14 §2.2)。"""
+    cfg = SimpleNamespace(economy_mode="adaptive")
+    # P1 早期 saving → interest_first(攒息 snowball)
+    assert _economy_mode_for(GameState(plane=1, round_num=1), cfg) == "interest_first"
+    # P1 中期 interest → interest_first
+    assert _economy_mode_for(GameState(plane=1, round_num=5), cfg) == "interest_first"
+    # P2 level → rush_level(弱化守息 + 强化等级,升人口)
+    assert _economy_mode_for(GameState(plane=2, round_num=3), cfg) == "rush_level"
+    # P1 后期 hold → adaptive(economy-low 非 economy_mode 处理)
+    assert _economy_mode_for(GameState(plane=1, round_num=8), cfg) == "adaptive"
+    # P3 allin → adaptive(economy-low 由 _phase_weights plane3 we=0.3)
+    assert _economy_mode_for(GameState(plane=3, round_num=2), cfg) == "adaptive"
+
+
+def test_economy_mode_for_adaptive_falls_back_to_config() -> None:
+    """ADR-0102:adaptive 节点(get_node_goal fallback,如 plane>3)→ config.economy_mode 用户偏好辅。"""
+    cfg = SimpleNamespace(economy_mode="interest_first")
+    assert _economy_mode_for(GameState(plane=4, round_num=1), cfg) == "interest_first"
