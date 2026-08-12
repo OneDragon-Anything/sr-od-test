@@ -6,7 +6,13 @@ active_strategies/megastar_char/partner_char)+ NodeInfo 类型 + BenchChar.equip
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_state import BenchChar, GameState, NodeInfo
+from sr_od.application.currency_war.cw_state import (
+    BenchChar,
+    GameState,
+    NodeInfo,
+    _bench_char_cost,
+    sell_refund,
+)
 
 
 def test_new_fields_default_none_or_empty() -> None:
@@ -73,7 +79,12 @@ def test_mutate_bench_deployed_buy_merge_sell_deploy() -> None:
     转移规则与 ``simulate`` 一致(单一源);与 simulate 的区别 = 就地改 vs copy(前瞻)。
     """
     from sr_od.application.currency_war.cw_state import (
-        BuyCard, DeployMove, LevelUp, SellBench, ShopCard, mutate_bench_deployed,
+        BuyCard,
+        DeployMove,
+        LevelUp,
+        SellBench,
+        ShopCard,
+        mutate_bench_deployed,
     )
     bench: list[BenchChar] = []
     deployed: list[BenchChar] = []
@@ -110,3 +121,27 @@ def test_mutate_bench_deployed_buy_merge_sell_deploy() -> None:
     mutate_bench_deployed(bench, deployed, DeployMove(bench_idx=99, to_row="back", faction="x"))
     mutate_bench_deployed(bench, deployed, SellBench(bench_idx=99))
     assert (len(bench), len(deployed)) == before
+
+
+def test_sell_refund_cost_based() -> None:
+    """卖出退金 = cost × 合成倍数 − 手续费(2星以上 −1;economy_research §2 + 用户 2026-08-12 核 2星少1)。
+
+    1星=cost(无合成,免费);2星=cost×3−1(用户印象 + 修内部矛盾);3星=cost×9−1(推测待实机核)。
+    """
+    # 1星 = cost(各费用,买卖净0 → 免费牌池操纵)
+    assert sell_refund(1, 1) == 1
+    assert sell_refund(1, 3) == 3
+    assert sell_refund(1, 5) == 5
+    # 2星 = cost×3 − 1(用户「少1金币」)
+    assert sell_refund(2, 1) == 2    # 3 − 1
+    assert sell_refund(2, 3) == 8    # 9 − 1
+    assert sell_refund(2, 5) == 14   # 15 − 1
+    # 3星 = cost×9 − 1(推测同 −1 手续费,待实机核)
+    assert sell_refund(3, 3) == 26   # 27 − 1
+    assert sell_refund(3, 5) == 44   # 45 − 1
+
+
+def test_bench_char_cost_unknown_defaults_3() -> None:
+    """_bench_char_cost:未知 char_id → 默认中费 3(sell_refund 兜底,防身份未识别时崩)。"""
+    assert _bench_char_cost(BenchChar(slot=0, char_id="", star=1)) == 3
+    assert _bench_char_cost(BenchChar(slot=0, char_id="不存在的角色xyz", star=1)) == 3
