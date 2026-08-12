@@ -902,7 +902,7 @@ def test_sample_shop_weights_target_factions() -> None:
 
 
 def test_board_alignment_deep_shallow_none() -> None:
-    """D-109:_board_alignment —— board count≥2 → ×1.2(boost);count≥1 → ×1.0(neutral);全无 → ×0.7(penalty)。"""
+    """D-109:_board_alignment —— board count≥2 → ×1.2(boost);count≥1 → ×1.0(neutral);全无 → ×0.3(重 penalty;review🔴 改:原0.7 压不过 acq 主导致 spread)。"""
     from sr_od.application.currency_war.cw_comps import _board_alignment
     comp = Comp(name="test", factions=["仙舟", "追击"], core_chars=[],
                 form_tiers={"仙舟": 5, "追击": 3}, strength="S", form_difficulty="medium")
@@ -911,7 +911,7 @@ def test_board_alignment_deep_shallow_none() -> None:
     # shallow(仙舟:1)→ neutral
     assert _board_alignment(comp, GameState(board={"仙舟": 1, "能量": 1})) == 1.0
     # 全无 comp 阵营 → penalty
-    assert _board_alignment(comp, GameState(board={"能量": 2, "护盾": 1})) == 0.7
+    assert _board_alignment(comp, GameState(board={"能量": 2, "护盾": 1})) == 0.3
 
 
 def test_shop_supply_core_vs_noncore() -> None:
