@@ -191,7 +191,7 @@ def test_current_enemy_mechanics_maps_d55_affixes() -> None:
 
 
 def test_boss_fit_aya_tv() -> None:
-    """阿雅 boss_weakness=[电视机];遇电视机 → 0;无 boss → 0.5。"""
+    """阿雅 countered_by_bosses=[电视机];遇电视机 → 0;无 boss → 0.5。"""
     阿雅 = get_comp("昼神阿雅")
     assert boss_fit(阿雅, ["电视机"]) == 0.0
     assert boss_fit(阿雅, []) == 0.5
