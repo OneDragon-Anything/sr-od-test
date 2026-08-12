@@ -329,6 +329,27 @@ def test_difficulty_phase_factor_early_prefers_easy() -> None:
     assert _difficulty_phase_factor(白厄, late) == 1.0
 
 
+def test_difficulty_phase_factor_global_elapsed_not_per_plane() -> None:
+    """ADR-0108:_difficulty_phase_factor 用**全局 elapsed** 判早期(round+(plane-1)*6≤3),非位面内 round_num。
+
+    防回归:原 per-plane `round_num≤3` 误把 plane2/3 的 r1-3 当早期(实为全局 elapsed 7-15,中后期)。
+    gold≥30 排除「穷」分支,纯测轮次维度的全局 elapsed。
+    """
+    列车 = get_comp("列车同行")   # easy
+    # plane1 r2 = 全局 elapsed 2 ≤3(真早期)→ easy 因子 >1.0
+    assert _difficulty_phase_factor(列车, GameState(plane=1, round_num=2, gold=80)) > 1.0, (
+        "plane1 r2 全局 elapsed 2 ≤3 → 早期 easy 因子 >1.0"
+    )
+    # plane2 r2 = 全局 elapsed 8 >3(非早期)→ =1.0(原 per-plane 会误判 r2≤3 早期)
+    assert _difficulty_phase_factor(列车, GameState(plane=2, round_num=2, gold=80)) == 1.0, (
+        "plane2 r2 全局 elapsed 8 >3 → 非早期 =1.0(防 per-plane 误判)"
+    )
+    # plane3 r3 = 全局 elapsed 15 >3(非早期)→ =1.0
+    assert _difficulty_phase_factor(列车, GameState(plane=3, round_num=3, gold=80)) == 1.0, (
+        "plane3 r3 全局 elapsed 15 >3 → 非早期 =1.0"
+    )
+
+
 # —— comp_score / breakdown ——
 
 
