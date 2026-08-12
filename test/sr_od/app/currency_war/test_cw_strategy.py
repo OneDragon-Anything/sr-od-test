@@ -39,7 +39,6 @@ def _cfg(**overrides) -> SimpleNamespace:
         "character_priority": ["阿格莱雅"],
         "economy_mode": "adaptive",
         "event_whitelist": {"中产阶级": 82, "定期福利": 90},
-        "boss_counter": {"电视机": ["昼之半神"]},
         "dot_punish_envs": ["净化身心"],
         "character_build_around": [],
         "strategy_id": "default",
