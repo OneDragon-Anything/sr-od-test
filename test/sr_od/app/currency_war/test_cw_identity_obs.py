@@ -152,6 +152,27 @@ def test_read_star_bench9_edge_2star(test_context: SrTestContext) -> None:
     assert read_star(screen[844:980, 1379:1493]) == 2, '备战-9 飞霄 2★(边槽 circ 边界,ADR-0115 解)'
 
 
+def test_read_star_edge_slots_2star(test_context: SrTestContext) -> None:
+    """read_star:**各排边槽** 2★ 读 2(左右边槽 + 不同角色;用 DragCwChar op 拖到边槽采的 fixture)。
+
+    覆盖 ADR-0115 后的边槽鲁棒性(不同角色 / 不同排的左右边槽):
+    - 备战-1(飞霄,最**左**槽)← deployed_2star_bench1(对照 deployed_2star_bench9 最右槽)
+    - 前排-1(万敌,左槽)/ 前排-4(万敌,右槽)← deployed_2star_front1 / front4(前排 2★ 边槽)
+    每排左右边槽 + 中心(deployed_2star_full)+ 备战-9 bug 槽 → 各排边槽 2★ 全覆盖。
+    """
+    # 备战-1 左边槽(飞霄 2★)
+    if test_context.has_screen('货币战争-备战', 'deployed_2star_bench1'):
+        s = test_context.load_screen('货币战争-备战', 'deployed_2star_bench1')
+        assert read_star(s[845:979, 382:495]) == 2, '备战-1 飞霄 2★(左边槽)'
+    # 前排-1 左槽 + 前排-4 右槽(万敌 2★,跨排 deployed→deployed 拖到)
+    if test_context.has_screen('货币战争-备战', 'deployed_2star_front1'):
+        s = test_context.load_screen('货币战争-备战', 'deployed_2star_front1')
+        assert read_star(s[329:467, 677:810]) == 2, '前排-1 万敌 2★(左槽)'
+    if test_context.has_screen('货币战争-备战', 'deployed_2star_front4'):
+        s = test_context.load_screen('货币战争-备战', 'deployed_2star_front4')
+        assert read_star(s[329:467, 1109:1241]) == 2, '前排-4 万敌 2★(右槽)'
+
+
 # character_cw_portrait 立绘库(主仓 assets/,71 角色 <name>/raw.png)
 _PORTRAIT_DIR = _REPO_ROOT / 'assets' / 'template' / 'character_cw_portrait'
 
