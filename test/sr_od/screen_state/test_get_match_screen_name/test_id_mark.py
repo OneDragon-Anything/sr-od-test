@@ -81,14 +81,16 @@ def test_id_mark(screen: str, state: str, test_context: SrTestContext) -> None:
         'fixture 非该屏典型态?自行核实)'
     )
 
-    # 2. 无碰撞:别家 id_mark 画面不该在这张 fixture 全命中
-    collisions = [
-        info.screen_name
-        for info in test_context.screen_loader.screen_info_list
-        if info.screen_name != screen
-        and any(a.id_mark for a in info.area_list)
-        and screen_utils.is_target_screen(test_context, img, screen_info=info)
-    ]
+    # 2. 无碰撞:别家 id_mark 画面不该在这张 fixture 全命中。
+    #    能区分靠各屏 id_mark 互不重叠:备战 id_mark 含「前台区域」(overlay 会盖住),
+    #    所以 partner/megastar/wish 帧里备战凑不齐 → 备战不是 is_precise → 不撞车;
+    #    overlay 自己的 id_mark(购买经验 + 标题)更独有,只在 overlay 帧全命中。
+    collisions = []
+    for info in test_context.screen_loader.screen_info_list:
+        if info.screen_name == screen or not any(a.id_mark for a in info.area_list):
+            continue
+        if screen_utils.is_target_screen(test_context, img, screen_info=info):
+            collisions.append(info.screen_name)
     assert not collisions, (
         f'{screen}/{state}:被别家画面 {collisions} 的 id_mark 全命中(撞车)'
         ' → 给本屏或撞车屏加更独有的 id_mark(更长关键词 / 独有锚 / 第 2 个 id_mark)'
