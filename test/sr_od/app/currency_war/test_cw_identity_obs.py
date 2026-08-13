@@ -11,7 +11,7 @@ import inspect
 import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
-from one_dragon.utils import file_utils
+from one_dragon.utils import cv2_utils, file_utils
 from sr_od.application.currency_war.currency_war_char_id import load_avatar_templates
 from sr_od.application.currency_war.cw_identity_obs import (
     identify_slots,
@@ -109,3 +109,75 @@ def test_read_star_2star_positions(test_context: SrTestContext) -> None:
     assert read_star(screen[600:739, 823:953]) == 2, '后排-3 应为 2 星(thresh 0.50:第2星 val0.511)'
     assert read_star(screen[845:979, 757:869]) == 2, '备战栏-4 应为 2 星(紧贴 TM 分离)'
     assert read_star(screen[845:979, 382:495]) == 1, '备战栏-1 应为 1 星(对照,不回归)'
+
+
+def test_read_star_all_rows_2star_full(test_context: SrTestContext) -> None:
+    """read_star:deployed_2star_full → 前排/后排/备战栏**三行各覆盖 1★+2★**(各位置广覆盖)。
+
+    单 fixture 同时含三行 × {1,2} 星(ground truth = 实机 analyze extras 双证):前排-3 花火 1★ /
+    前排-4 万敌 2★;后排-1 三月七 1★ / 后排-3 椒丘 2★;备战栏 多 1★ + 备战-4 飞霄 2★ + 备战-8 万敌 1★
+    (万敌同名异星:2★ 上阵 vs 1★ 备战,证 read_star 看立绘金星非角色身份)。与 ``test_read_star_2star_positions``
+    (deployed_2star,各行的**最难单 case**:衣服淹没/thresh/紧贴)互补:本测广覆盖各行多槽位,证 read_star
+    对**不同 crop 尺寸**(前排 133×138 / 后排 141×139 / 备战 113×134)的 1★(单星)与 2★(双星)均准。
+    """
+    if not test_context.has_screen('货币战争-备战', 'deployed_2star_full'):
+        pytest.skip('fixture deployed_2star_full.webp 未采')
+    screen = test_context.load_screen('货币战争-备战', 'deployed_2star_full')
+    # 前排(crop 133×138):1★ + 2★
+    assert read_star(screen[329:467, 969:1097]) == 1, '前排-3 花火 1★'
+    assert read_star(screen[329:467, 1109:1241]) == 2, '前排-4 万敌 2★'
+    # 后排(crop 141×139):1★ + 2★
+    assert read_star(screen[600:739, 534:675]) == 1, '后排-1 三月七 1★'
+    assert read_star(screen[600:739, 823:953]) == 2, '后排-3 椒丘 2★'
+    # 备战栏(crop 113×134):多 1★ + 2★ + 同名异星对照
+    assert read_star(screen[845:979, 382:495]) == 1, '备战-1 艾丝妲 1★'
+    assert read_star(screen[844:978, 507:620]) == 1, '备战-2 黑塔 1★'
+    assert read_star(screen[845:979, 757:869]) == 2, '备战-4 飞霄 2★'
+    assert read_star(screen[846:980, 882:995]) == 1, '备战-5 阿格莱雅 1★'
+    assert read_star(screen[845:979, 1256:1368]) == 1, '备战-8 万敌 1★(同名异星对照,非 2★)'
+
+
+def test_read_star_bench9_edge_2star(test_context: SrTestContext) -> None:
+    """read_star:deployed_2star_bench9 → 备战-9 飞霄 2★ 读 2(**边槽 circ 边界 case,ADR-0115**)。
+
+    备战-9(最右槽)把飞霄两颗金星之一渲染得偏高 → 该金星 circ 落到 0.34(原 circ>0.35 阈下)被误拒
+    → 旧代码读 1(假阴)。``_STAR_CIRC_MIN`` 放宽到 0.25 后读回 2。同 fixture 后排-3 椒丘 / 后排-5 万敌
+    亦 2★(对照,非边槽不受影响)。这是「备战每个槽位都要覆盖」发现的边槽回归 —— 锁回归测试。
+    """
+    if not test_context.has_screen('货币战争-备战', 'deployed_2star_bench9'):
+        pytest.skip('fixture deployed_2star_bench9.webp 未采')
+    screen = test_context.load_screen('货币战争-备战', 'deployed_2star_bench9')
+    assert read_star(screen[600:739, 823:953]) == 2, '后排-3 椒丘 2★(对照)'
+    assert read_star(screen[600:739, 1106:1241]) == 2, '后排-5 万敌 2★(对照)'
+    assert read_star(screen[844:980, 1379:1493]) == 2, '备战-9 飞霄 2★(边槽 circ 边界,ADR-0115 解)'
+
+
+# character_cw_portrait 立绘库(主仓 assets/,71 角色 <name>/raw.png)
+_PORTRAIT_DIR = _REPO_ROOT / 'assets' / 'template' / 'character_cw_portrait'
+
+
+def test_read_star_portrait_library_no_false_positive() -> None:
+    """read_star:立绘库 71 张 → **全部读 1(无 >1 误判)**,即 ADR-0114/0115「立绘库 0/71」回归守卫。
+
+    **立绘库无星级 UI 金星**(是 SIFT 身份模板 ``<name>/raw.png`` 半身立绘艺术,非游戏截图)—— 但立绘本身
+    带金色衣服 / 装饰:实测 58/71 全图有金像素、5/71 底部带金块 TM≥thresh 触发计数路径(Momojie 被
+    aspect 拒 / 千冶·刃 单金块过形状算 1 / 余 TM 低不计数)。因**没有任何立绘含 ≥2 个过形状的金块**,
+    read_star 全读 1(≥1 fallback:角色必有星,read_star 设计上不返 0)。
+
+    故本测守的是**「装饰误判成多星」**(false positive:>1),**不**测真金星计数(真星在 ``deployed_*``
+    fixture 测)。改 read_star 阈值(area/aspect/circ/V/thresh/region)后,若衣服装饰被数成 2+ 星 → 本测
+    挡住。0/71 不靠 circ(area+aspect+V>150+TM 已挡死),故本测也间接证 circ 放宽(ADR-0115)安全。
+    """
+    portraits = sorted(_PORTRAIT_DIR.glob('*/raw.png'))
+    if not portraits:
+        pytest.skip(f'立绘库目录无模板:{_PORTRAIT_DIR}')
+    violators: list[str] = []
+    for p in portraits:
+        img = cv2_utils.read_image(str(p))
+        if img is None:
+            violators.append(f'{p.parent.name}(读图失败)')
+            continue
+        n = read_star(img)
+        if n != 1:
+            violators.append(f'{p.parent.name}={n}')
+    assert not violators, f'立绘库 read_star 误判(应全 1):{violators}'
