@@ -141,16 +141,18 @@ def test_read_star_2star_all_slots_multifixture(test_context: SrTestContext) -> 
 
 
 def test_read_star_1star_back_bench_slots(test_context: SrTestContext) -> None:
-    """read_star 1★:后排-3/5/6 + 备战-9(1★ 单星易 case,补全 1★ 槽位覆盖)。
+    """read_star 1★:后排-2/3/4/5/6 + 备战-9(1★ 单星易 case,补全 1★ 全槽覆盖)。
 
     1★ 单颗星 val 0.6+ 稳读 1(从未误判)。前排 1-4 见 ``test_read_star_front_row_1star``,
-    备战 1-8 见 ``test_read_star_all_rows_2star_full``。后排-2/4 为 2★ 占位(DragCwChar swap
-    受限,不能无损换 1★),within-row uniform(后排 1/3/5/6 1★ 证该行)兜底。
+    备战 1-8 见 ``test_read_star_all_rows_2star_full``,后排-1 见 ``test_read_star_all_rows_2star_full``。
+    后排-2/4:把 2★ 挪走(deployed→deployed 到空槽)+ 1★(三月七/花火)挪进 —— 无损 shuffle(CW swap/
+    sell 拖不生效,但 deployed→deployed 到空槽可行)。至此 1★ 全 19 槽覆盖。
     """
     cases: list[tuple[str, list[tuple[str, list[int]]]]] = [
         ('deployed_2star_3rows',        [('后排-3', [823, 600, 953, 739])]),
         ('deployed_1star_back5_bench9', [('后排-5', [1106, 600, 1241, 739]), ('备战栏-9', [1379, 844, 1493, 980])]),
         ('deployed_1star_back6',        [('后排-6', [1245, 600, 1386, 739])]),
+        ('deployed_1star_back24',       [('后排-2', [679, 600, 814, 739]), ('后排-4', [967, 600, 1097, 739])]),
     ]
     ran = False
     for fx, slots in cases:
