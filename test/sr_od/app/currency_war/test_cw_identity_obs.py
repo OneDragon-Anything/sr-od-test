@@ -111,6 +111,35 @@ def test_read_star_2star_positions(test_context: SrTestContext) -> None:
     assert read_star(screen[845:979, 382:495]) == 1, '备战栏-1 应为 1 星(对照,不回归)'
 
 
+def test_read_star_2star_all_slots_multifixture(test_context: SrTestContext) -> None:
+    """read_star:**全 19 槽 2★ 读 2**(3 个 2★ 角色同时布阵,多 fixture 覆盖各槽)。
+
+    用 DragCwChar op 把飞霄/万敌/椒丘(均 2★)同时布到 3 个不同槽 → 一张 fixture 验 3 个 2★ 槽。
+    跨多 fixture 覆盖前排 1-4 / 后排 1-6 / 备战 1-9 全部 2★(各槽 read_star=2,thresh 0.45,ADR-0114/0116)。
+    缺 fixture 的项跳过(采到后自动恢复)。配合 ``test_read_star_edge_slots_2star``(边槽)+ 本测(中段/跨排)
+    = 2★ 全槽覆盖。
+    """
+    # (fixture, [(槽位, [x1,y1,x2,y2]), ...]) —— 每 fixture 3 个 2★ 同时在阵
+    cases: list[tuple[str, list[tuple[str, list[int]]]]] = [
+        ('deployed_2star_3rows',    [('前排-4', [1109, 329, 1241, 467]), ('后排-6', [1245, 600, 1386, 739]), ('备战栏-3', [632, 844, 743, 978])]),
+        ('deployed_2star_3rows_b',  [('前排-2', [823, 329, 951, 467]),  ('后排-4', [967, 600, 1097, 739]), ('备战栏-5', [882, 846, 995, 980])]),
+        ('deployed_2star_3rows_c',  [('后排-2', [679, 600, 814, 739]),  ('后排-4', [967, 600, 1097, 739]), ('备战栏-6', [1004, 847, 1118, 978])]),
+        ('deployed_2star_bench7',   [('备战栏-7', [1132, 846, 1244, 977])]),
+        ('deployed_2star_bench8',   [('备战栏-8', [1256, 845, 1368, 979])]),
+        ('deployed_2star_bench2',   [('备战栏-2', [507, 844, 620, 978])]),
+    ]
+    ran = False
+    for fx, slots in cases:
+        if not test_context.has_screen('货币战争-备战', fx):
+            continue
+        ran = True
+        screen = test_context.load_screen('货币战争-备战', fx)
+        for label, (x1, y1, x2, y2) in slots:
+            assert read_star(screen[y1:y2, x1:x2]) == 2, f'{fx} {label} 应为 2★'
+    if not ran:
+        pytest.skip('multi-fixture 未采(2★ 全槽覆盖用)')
+
+
 def test_read_star_all_rows_2star_full(test_context: SrTestContext) -> None:
     """read_star:deployed_2star_full → 前排/后排/备战栏**三行各覆盖 1★+2★**(各位置广覆盖)。
 
@@ -132,8 +161,11 @@ def test_read_star_all_rows_2star_full(test_context: SrTestContext) -> None:
     # 备战栏(crop 113×134):多 1★ + 2★ + 同名异星对照
     assert read_star(screen[845:979, 382:495]) == 1, '备战-1 艾丝妲 1★'
     assert read_star(screen[844:978, 507:620]) == 1, '备战-2 黑塔 1★'
+    assert read_star(screen[844:978, 632:743]) == 1, '备战-3 艾丝妲 1★'
     assert read_star(screen[845:979, 757:869]) == 2, '备战-4 飞霄 2★'
     assert read_star(screen[846:980, 882:995]) == 1, '备战-5 阿格莱雅 1★'
+    assert read_star(screen[847:978, 1004:1118]) == 1, '备战-6 赛飞儿 1★'
+    assert read_star(screen[846:977, 1132:1244]) == 1, '备战-7 乱破 1★'
     assert read_star(screen[845:979, 1256:1368]) == 1, '备战-8 万敌 1★(同名异星对照,非 2★)'
 
 
