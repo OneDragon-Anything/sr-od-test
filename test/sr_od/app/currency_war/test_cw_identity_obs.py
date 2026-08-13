@@ -140,6 +140,30 @@ def test_read_star_2star_all_slots_multifixture(test_context: SrTestContext) -> 
         pytest.skip('multi-fixture 未采(2★ 全槽覆盖用)')
 
 
+def test_read_star_1star_back_bench_slots(test_context: SrTestContext) -> None:
+    """read_star 1★:后排-3/5/6 + 备战-9(1★ 单星易 case,补全 1★ 槽位覆盖)。
+
+    1★ 单颗星 val 0.6+ 稳读 1(从未误判)。前排 1-4 见 ``test_read_star_front_row_1star``,
+    备战 1-8 见 ``test_read_star_all_rows_2star_full``。后排-2/4 为 2★ 占位(DragCwChar swap
+    受限,不能无损换 1★),within-row uniform(后排 1/3/5/6 1★ 证该行)兜底。
+    """
+    cases: list[tuple[str, list[tuple[str, list[int]]]]] = [
+        ('deployed_2star_3rows',        [('后排-3', [823, 600, 953, 739])]),
+        ('deployed_1star_back5_bench9', [('后排-5', [1106, 600, 1241, 739]), ('备战栏-9', [1379, 844, 1493, 980])]),
+        ('deployed_1star_back6',        [('后排-6', [1245, 600, 1386, 739])]),
+    ]
+    ran = False
+    for fx, slots in cases:
+        if not test_context.has_screen('货币战争-备战', fx):
+            continue
+        ran = True
+        screen = test_context.load_screen('货币战争-备战', fx)
+        for label, (x1, y1, x2, y2) in slots:
+            assert read_star(screen[y1:y2, x1:x2]) == 1, f'{fx} {label} 应为 1★'
+    if not ran:
+        pytest.skip('1★ back/bench fixture 未采')
+
+
 def test_read_star_all_rows_2star_full(test_context: SrTestContext) -> None:
     """read_star:deployed_2star_full → 前排/后排/备战栏**三行各覆盖 1★+2★**(各位置广覆盖)。
 
