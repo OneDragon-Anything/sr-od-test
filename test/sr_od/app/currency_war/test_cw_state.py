@@ -124,19 +124,22 @@ def test_mutate_bench_deployed_buy_merge_sell_deploy() -> None:
 
 
 def test_sell_refund_cost_based() -> None:
-    """卖出退金 = cost × 合成倍数 − 手续费(2星以上 −1;economy_research §2 + 用户 2026-08-12 核 2星少1)。
+    """卖出退金 = cost × 合成倍数;手续费仅 star≥2 且 cost≥2(cost=1 exempt;ADR-0121)。
 
-    1星=cost(无合成,免费);2星=cost×3−1(用户印象 + 修内部矛盾);3星=cost×9−1(推测待实机核)。
+    1星=cost(无合成,免费);2星=cost×3(1费)或 cost×3−1(cost≥2);3星同理 cost×9 / cost×9−1。
+    cost=1 全额退(live 实测 2★1费=+3);cost≥2 star≥2 −1(用户「2费开始减1」)。
     """
     # 1星 = cost(各费用,买卖净0 → 免费牌池操纵)
     assert sell_refund(1, 1) == 1
     assert sell_refund(1, 3) == 3
     assert sell_refund(1, 5) == 5
-    # 2星 = cost×3 − 1(用户「少1金币」)
-    assert sell_refund(2, 1) == 2    # 3 − 1
+    # 2星:cost=1 全额(无费,live 实测 +3);cost≥2 −1
+    assert sell_refund(2, 1) == 3    # 1×3,cost=1 无费(live 实测 万敌 2★1费=+3,ADR-0121)
+    assert sell_refund(2, 2) == 5    # 2×3 − 1,cost≥2 减1(用户「2费开始减」)
     assert sell_refund(2, 3) == 8    # 9 − 1
     assert sell_refund(2, 5) == 14   # 15 − 1
-    # 3星 = cost×9 − 1(推测同 −1 手续费,待实机核)
+    # 3星:cost=1 全额;cost≥2 −1(推测同 2星,待 live 核)
+    assert sell_refund(3, 1) == 9    # 1×9,cost=1 无费(同 2星规则)
     assert sell_refund(3, 3) == 26   # 27 − 1
     assert sell_refund(3, 5) == 44   # 45 − 1
 
