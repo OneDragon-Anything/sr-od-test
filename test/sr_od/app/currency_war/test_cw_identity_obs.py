@@ -83,7 +83,7 @@ def test_read_star_front_row_1star(test_context: SrTestContext) -> None:
     """read_star:deployed_p1r9 前排 4 槽(佩拉/黑塔/Saber/藿藿,早期 round → 1 星)→ read_star 都=1。
 
     金星计数(立绘底部金色**四角星** ✦,ADR-0114 TM 法)。1星各槽稳读 1;
-    2星见 ``test_read_star_2star_positions`` / ``test_read_star_2star_back3_xfail``。
+    2星见 ``test_read_star_2star_positions``(各位置覆盖)。
     """
     if not test_context.has_screen('货币战争-备战', 'deployed_p1r9'):
         pytest.skip('fixture deployed_p1r9.webp 未采')
