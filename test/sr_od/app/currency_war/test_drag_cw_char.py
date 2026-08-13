@@ -1,8 +1,8 @@
-"""DragCwChar op 单元测试(槽位拖角色,开发/测试用)。
+"""DragCwChar op 单元测试(槽位拖角色,开发/测试用 + 统一拖拽原语 drag_char)。
 
-验**纯逻辑**:_src_changed 像素 diff 验 + _slot_center 槽中心解析。drag 节点的 retry/交互
-(mouse_move/drag_to/长按拾取)经 run_operation live 实测(bench→bench / deployed→deployed ✓,
-commit),此处不重复(交互不便单测);仅锁纯函数回归。
+验**纯逻辑**:_src_changed 像素 diff 验 + _slot_center 槽中心解析(含 back_centers 覆盖,财富宝钻>6)。
+drag_char / drag 节点的 retry/交互(mouse_move/drag_to/中心拖+hold0)经 run_operation live 实测
+(bench→bench ✓,commit),此处不重复(交互不便单测);仅锁纯函数回归。
 """
 from __future__ import annotations
 
@@ -58,4 +58,25 @@ def test_slot_center_none_when_no_screen_info() -> None:
     ctx = MagicMock()
     ctx.screen_loader.get_screen.return_value = None
     op = DragCwChar(ctx, 'front', 1, 'front', 2)
+    assert op._slot_center('front', 1) is None
+
+
+def test_slot_center_back_centers_override() -> None:
+    """_slot_center:``back_centers`` 覆盖 screen_info(财富宝钻致后排 >6 时调用方传实际后排槽)。
+
+    screen_info「后排-1..6」基准不够 → 调用方传 7 槽的 back_centers → 后排-7 可解析;front/bench 不受影响。
+    """
+    ctx = MagicMock()
+    ctx.screen_loader.get_screen.return_value = SimpleNamespace(area_list=[
+        _mock_area('后排-1', 604, 670), _mock_area('后排-6', 1316, 670),   # 基准 6(无后排-7)
+    ])
+    back_centers = [Point(604 + i * 142, 670) for i in range(7)]   # 7 槽(财富宝钻 +1,等距 142px)
+    op = DragCwChar(ctx, 'bench', 1, 'back', 7, back_centers=back_centers)
+    # back 走 back_centers:后排-7 = 第 7 个(0-based idx 6)= (1456, 670)
+    p7 = op._slot_center('back', 7)
+    assert p7 is not None
+    assert (p7.x, p7.y) == (604 + 6 * 142, 670)
+    # 越界 → None
+    assert op._slot_center('back', 8) is None
+    # front/bench 仍走 screen_info(不受 back_centers 影响);mock 无 前排-1 → None
     assert op._slot_center('front', 1) is None
