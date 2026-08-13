@@ -97,26 +97,15 @@ def test_read_star_front_row_1star(test_context: SrTestContext) -> None:
 
 
 def test_read_star_2star_positions(test_context: SrTestContext) -> None:
-    """read_star TM:deployed_2star(3 个 2星 + 1星对照)→ 前排-3/备战栏-4 读 2,备战栏-1 读 1。
+    """read_star TM:deployed_2star(3 个 2星 + 1星对照)→ 前排-3/后排-3/备战栏-4 读 2,备战栏-1 读 1。
 
-    ADR-0114(2026-08-13):TM + V>150 滤暗金衣服。**前排-3** 是关键 case —— 角色立绘底部大量暗金
-    衣服(V80-150)淹没金星,旧轮廓法抓成 area1279 大块崩溃;V>150 滤衣服后 TM 分出 2 颗四角星。
-    备战栏-4 验 2星紧贴(TM NMS 分离)。备战栏-1 验 1星不回归。
+    ADR-0114(2026-08-13):TM + V>150 滤暗金衣服 + thresh 0.50。**前排-3** = 衣服淹没 case(暗金衣服
+    V80-150,V>150 滤);**后排-3** = 第2星 val0.511(thresh 0.50 解,原 0.55 漏);备战栏-4 = 2星紧贴。
     """
     if not test_context.has_screen('货币战争-备战', 'deployed_2star'):
         pytest.skip('fixture deployed_2star.webp 未采')
     screen = test_context.load_screen('货币战争-备战', 'deployed_2star')
     assert read_star(screen[329:467, 969:1097]) == 2, '前排-3 应为 2 星(衣服淹没 case,V>150 解)'
+    assert read_star(screen[600:739, 823:953]) == 2, '后排-3 应为 2 星(thresh 0.50:第2星 val0.511)'
     assert read_star(screen[845:979, 757:869]) == 2, '备战栏-4 应为 2 星(紧贴 TM 分离)'
     assert read_star(screen[845:979, 382:495]) == 1, '备战栏-1 应为 1 星(对照,不回归)'
-
-
-@pytest.mark.xfail(reason='ADR-0114 已知局限:后排-3 两星 gap<NMS 距离(tw*0.6)合并读 1;'
-                          'read_star 是 offline 旁路(live 走 bot tracking star),待 live 多 2星样本调优',
-                   strict=True)
-def test_read_star_2star_back3_xfail(test_context: SrTestContext) -> None:
-    """后排-3 2星:实测 TM=1(应为 2)—— 两星 gap 极小,NMS 合并。xfail 跟踪,修复后转 pass 删标记。"""
-    if not test_context.has_screen('货币战争-备战', 'deployed_2star'):
-        pytest.skip('fixture deployed_2star.webp 未采')
-    screen = test_context.load_screen('货币战争-备战', 'deployed_2star')
-    assert read_star(screen[600:739, 823:953]) == 2
