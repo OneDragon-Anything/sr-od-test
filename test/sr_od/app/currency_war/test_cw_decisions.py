@@ -431,6 +431,44 @@ def test_plan_t107_saves_interest_when_board_full_low_gold() -> None:
     )
 
 
+def test_should_save_for_interest_winning_streak_breaks_it() -> None:
+    """C 杠杆 3 winning half(R2-4b,ADR-0117):连胜 ≥ WIN_STREAK_BREAK_INTEREST → 破息(保连胜>吃息)。
+
+    同场景(board 满 + gold<50 + HP 安全 + 板强):streak=0/连败(HP 安全)→ 攒息 True;连胜 ≥2 → False
+    (花钱提质量维持连胜,断连胜亏 > 利息亏)。连败 fold 半已由 HP-gating 覆盖(HP 安全仍 fold 攒息)。
+    streak 带符号(parse_streak:连胜 +/连败 −),magnitude 对称给金(economy_score),方向驱 plan 行为(本测)。
+    """
+    from sr_od.application.currency_war.cw_decisions import (
+        WIN_STREAK_BREAK_INTEREST,
+        _should_save_for_interest,
+    )
+    from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
+    target = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
+                  form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
+    cfg = _cfg()
+    base = GameState(gold=30, hp=100, level=8, round_num=2, plane=1, board={"持续伤害": 4, "减益": 4})
+    base.deployed = rebuild_deployed_from_board(base.board, base.back_max)
+    assert base.deployed_count() >= base.max_units(), "板满前置(隔离)"
+    # streak=0(默认 None):全条件满足 → 攒息
+    assert _should_save_for_interest(base, cfg, target) is True, "无连胜 + 板满+gold<50+HP安全+板强 → 攒息"
+    # 连败 streak=-3(HP 安全):magnitude 对称(连败也 fold 攒息;急救由 HP-gate,此处 HP 安全不急救)
+    loss = base.copy()
+    loss.streak = -3
+    assert _should_save_for_interest(loss, cfg, target) is True, "连败(HP 安全)→ 仍 fold 攒息(非急救)"
+    # 连胜 streak=3:保连胜 > 吃息 → 破息
+    win = base.copy()
+    win.streak = 3
+    assert _should_save_for_interest(win, cfg, target) is False, "连胜 ≥2 → 破息提质量保连胜(R2-4b)"
+    # 连胜刚好 = 阈值(2)→ 也破息(边界,auto-chess 连胜金 2 连起档)
+    win2 = base.copy()
+    win2.streak = WIN_STREAK_BREAK_INTEREST
+    assert _should_save_for_interest(win2, cfg, target) is False, "连胜=阈值(2)→ 破息(边界)"
+    # 连胜 1(<阈值)→ 不破息(1 连无连胜金,不值得破息)
+    win1 = base.copy()
+    win1.streak = 1
+    assert _should_save_for_interest(win1, cfg, target) is True, "连胜 1(<阈值)→ 仍攒息(未到连胜金档)"
+
+
 # —— level_plan 硬 gate(task#18 经济统一论):level_plan 说 level_up + 够钱 → 强制升级 ——
 
 
