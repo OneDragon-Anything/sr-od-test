@@ -171,6 +171,13 @@ def test_read_star_edge_slots_2star(test_context: SrTestContext) -> None:
     if test_context.has_screen('货币战争-备战', 'deployed_2star_front4'):
         s = test_context.load_screen('货币战争-备战', 'deployed_2star_front4')
         assert read_star(s[329:467, 1109:1241]) == 2, '前排-4 万敌 2★(右槽)'
+    # 后排-1 左槽(椒丘)/ 后排-6 右槽(椒丘,**边槽第2星 TM 偏低 bug,ADR-0116**)
+    if test_context.has_screen('货币战争-备战', 'deployed_2star_back1'):
+        s = test_context.load_screen('货币战争-备战', 'deployed_2star_back1')
+        assert read_star(s[600:739, 534:675]) == 2, '后排-1 椒丘 2★(左槽)'
+    if test_context.has_screen('货币战争-备战', 'deployed_2star_back6'):
+        s = test_context.load_screen('货币战争-备战', 'deployed_2star_back6')
+        assert read_star(s[600:739, 1245:1386]) == 2, '后排-6 椒丘 2★(右槽,第2星 TM val~0.45-0.50,ADR-0116 thresh 0.45 解)'
 
 
 # character_cw_portrait 立绘库(主仓 assets/,71 角色 <name>/raw.png)
