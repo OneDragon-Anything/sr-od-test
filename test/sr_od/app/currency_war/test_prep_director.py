@@ -575,3 +575,27 @@ def test_rule3_shop_open_closes_shop_first() -> None:
     obs2 = _obs(spheres=[('gold', None, 40)] * 2, free_bench_slots=3, shop_open=False)
     a2 = S.decide_prep_action(obs2, _sess(), _cfg())
     assert isinstance(a2, ClickSpheres) and a2.max_k == 2
+
+def test_level_up_clamps_phantom_jump(test_context, monkeypatch) -> None:
+    """live 幽灵 lv10 回归(2026-08-15):_level_up 接受窗钳 before+2 —— 6→10 不确认成功。"""
+    from sr_od.application.currency_war import prep_actions as pa_mod
+    import numpy as np
+
+    op = PrepDirector(test_context)
+    ex = pa_mod.PrepActionExecutor(op, test_context)
+    monkeypatch.setattr(test_context.controller, 'mouse_move', lambda p: True, raising=False)
+    fake = np.zeros((1080, 1920, 3), dtype=np.uint8)
+    monkeypatch.setattr(op, 'screenshot', lambda: fake)
+    # 基线读 6(真),循环读 10(XP 数字混入)→ 窗外 → 不确认
+    reads = {'n': 0}
+
+    def _raw(ctx, screen):
+        reads['n'] += 1
+        return 6 if reads['n'] == 1 else 10
+
+    monkeypatch.setattr(pa_mod, '_read_level_raw', _raw)
+    sess = _sess(last_level_obs=6, last_state=GameState(level=6))
+    monkeypatch.setattr(op.ctx if hasattr(op, 'ctx') else test_context, 'cw_match', None, raising=False)
+    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+    ok, detail = ex._level_up()
+    assert not ok, f'幽灵 6→10 不得确认成功(窗外): {detail}'
