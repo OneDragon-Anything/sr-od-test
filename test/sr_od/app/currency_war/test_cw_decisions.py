@@ -1051,3 +1051,38 @@ def test_economy_mode_for_adaptive_falls_back_to_config() -> None:
     """ADR-0102:adaptive 节点(get_node_goal fallback,如 plane>3)→ config.economy_mode 用户偏好辅。"""
     cfg = SimpleNamespace(economy_mode="interest_first")
     assert _economy_mode_for(GameState(plane=4, round_num=1), cfg) == "interest_first"
+
+
+# ===== ADR-0124 买牌 tempo 例外 =====
+
+def _mk_card(faction: str, cost: int, name: str = '未知卡') -> ShopCard:
+    return ShopCard(x=500, faction=faction, name=name, cost=cost)
+
+
+def test_prefilter_tempo_exception_unformed() -> None:
+    """ADR-0124:未成型 commit 期,板直接增强散牌(≥2 同阵营)不被 prefilter 拒。"""
+    from sr_od.application.currency_war.cw_comps import form_progress, get_comp
+    from sr_od.application.currency_war.cw_decisions import plan
+    from sr_od.application.currency_war.cw_state import BuyCard
+
+    comp = get_comp('列车同行')
+    st = GameState(plane=1, round_num=4, level=6, gold=10, board={'仙舟': 2, '列车同行': 1})
+    assert form_progress(comp, st) < 0.4   # 前提:未成型
+    st.shop = [_mk_card('仙舟', 2)]
+    acts = plan(st, _cfg(), [], rng=random.Random(7), target_comp=comp)
+    assert any(isinstance(a, BuyCard) for a in acts), '仙舟已 2,板增强散牌应可买(tempo 例外)'
+
+
+def test_prefilter_strict_when_formed() -> None:
+    """ADR-0124:成型后(fp≥COMMIT_FRAC)仍严格拒 off-target 散牌(T#97 不变)。"""
+    from sr_od.application.currency_war.cw_comps import form_progress, get_comp
+    from sr_od.application.currency_war.cw_decisions import plan
+    from sr_od.application.currency_war.cw_state import BuyCard
+
+    comp = get_comp('列车同行')
+    st = GameState(plane=1, round_num=8, level=8, gold=10, board={'列车同行': 4})
+    assert form_progress(comp, st) >= 0.4
+    st.shop = [_mk_card('仙舟', 3)]
+    acts = plan(st, _cfg(), [], rng=random.Random(7), target_comp=comp)
+    assert not any(isinstance(a, BuyCard) for a in acts), '成型后 off-target 严格拒'
+
