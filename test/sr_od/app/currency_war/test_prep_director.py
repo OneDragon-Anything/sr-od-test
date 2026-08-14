@@ -117,6 +117,20 @@ def test_rule4_chain_b_level_up_wants_shop_open() -> None:
     assert isinstance(a, EnsureShopOpen)
 
 
+def test_chain_b_untrusted_gold_requires_heavy_reread() -> None:
+    """MED-1:shop_open=True 但 trusted=False(缓存过期)→ 仍 EnsureShopOpen(不信 gold)。"""
+    bench = [_bc(1, '路人', '?')]
+    st = GameState(level=5)
+    sess = _sess(tracked_bench_chars=bench, tracked_deployed=[],
+                 last_state=st, last_level_obs=5)
+    obs = _obs(spheres=[('gold', None, 40)], free_bench_slots=0,
+               deploy_vacancy=0, bench_chars=bench, shop_open=True,
+               state_gold_trusted=False,   # shop 开但 state 非 fresh
+               state=GameState(level=5, gold=50))
+    a = S.decide_prep_action(obs, sess, _cfg())
+    assert isinstance(a, EnsureShopOpen), 'untrusted gold 不得直接判 gate(会误判有金/无金)'
+
+
 def test_rule5_defer_gate_falls_to_main_flow() -> None:
     """defer≥2 → 球留置进主流程(不空转,§5.1 规则 4 门)。"""
     a = S.decide_prep_action(_obs(spheres=[('gold', None, 40)],
@@ -294,6 +308,7 @@ def _make_director(monkeypatch, executor) -> PrepDirector:
     d._cached_bench = []
     d._cached_deployed = []
     d._cached_vacancy = 0
+    d._cached_gold_trusted = False
     import sr_od.application.currency_war.currency_war_config as cfg_mod
     monkeypatch.setattr(cfg_mod, 'CurrencyWarConfig', lambda idx: _cfg())
     monkeypatch.setattr(pd_mod.time, 'sleep', lambda s: None)   # 恢复等待不拖测试
@@ -322,7 +337,8 @@ def test_loop_h1_heavy_reread_after_action(monkeypatch) -> None:
     """
     obs1 = _obs(spheres=[('gold', None, 40)], free_bench_slots=0, shop_open=False)
     obs2 = _obs(spheres=[('gold', None, 40)], free_bench_slots=0, shop_open=True,
-                state=GameState(level=2, gold=50, plane=1, round_num=1))
+                state=GameState(level=2, gold=50, plane=1, round_num=1),
+                state_gold_trusted=True)   # MED-1:链 b 判 trusted 位(非裸 shop_open)
     real = DefaultCwStrategy()
     seen: list[str] = []
 
@@ -456,3 +472,67 @@ def test_weakest_bench_protects_same_star_only() -> None:
     bench_mixed = [_bc(1, '飞霄', star=1), _bc(2, '飞霄', star=2), _bc(3, '散件', star=1)]
     idx = cw_decisions._weakest_bench_idx(GameState(bench=bench_mixed), [])
     assert idx is not None and idx != -1   # 有候选(不因同名保护而 None)
+
+def test_observe_light_reuses_heavy_cache(monkeypatch, test_context: SrTestContext) -> None:
+    """LOW-3:_observe 分支直测 —— light 步沿用 heavy 缓存(state/trusted/vacancy)。"""
+    d = _make_director(monkeypatch, _FakeExecutor())
+    d.ctx = test_context
+    monkeypatch.setattr(d, 'screenshot', lambda: None)
+    monkeypatch.setattr(d, 'round_by_find_area',
+                        lambda scr, scr_name, area, **kw: SimpleNamespace(
+                            is_success=(scr_name == '货币战争-备战-开商店')))   # 模拟 shop 开
+    monkeypatch.setattr(pd_mod, 'read_reward_spheres', lambda c, s: [])
+    monkeypatch.setattr(pd_mod, 'read_supply_boxes', lambda c, s: [])
+    monkeypatch.setattr(pd_mod, 'row_area_centers', lambda c, p: [Point(i, i) for i in range(9)]
+                        if p == '备战栏' else [])
+    monkeypatch.setattr(pd_mod, 'slot_occupied', lambda s, x, y: False)
+    monkeypatch.setattr(pd_mod, 'ensure_portrait_templates', lambda c: None)
+    heavy_state = GameState(gold=42, level=5)
+    monkeypatch.setattr(pd_mod, 'read_game_state', lambda c, s: heavy_state)
+    monkeypatch.setattr(pd_mod, 'read_deploy_cap', lambda c, s: None)
+    monkeypatch.setattr(pd_mod, 'read_deployed_count', lambda c, s: None)
+    o1 = d._observe(heavy=True)
+    assert o1.state is heavy_state
+    assert o1.state_gold_trusted is True   # shop 开态 heavy 读 → trusted
+    o2 = d._observe(heavy=False)
+    assert o2.state is heavy_state   # LOW-3:light 沿用缓存(旧 bug 为 None)
+    assert o2.state_gold_trusted is True   # MED-1:trusted 位随缓存 state 带出
+    assert o2.deploy_vacancy == o1.deploy_vacancy
+
+
+def test_observe_gold_zero_reread(monkeypatch, test_context: SrTestContext) -> None:
+    """MED-2:shop 开态 gold 读 0(间歇漏读)→ 重读取真值(防链 b 误判无金误卖)。"""
+    d = _make_director(monkeypatch, _FakeExecutor())
+    d.ctx = test_context
+    shots = {'n': 0}
+
+    def _screenshot():
+        shots['n'] += 1
+        return None
+
+    monkeypatch.setattr(d, 'screenshot', _screenshot)
+    monkeypatch.setattr(d, 'round_by_find_area',
+                        lambda scr, scr_name, area, **kw: SimpleNamespace(
+                            is_success=(scr_name == '货币战争-备战-开商店')))
+    monkeypatch.setattr(pd_mod, 'read_reward_spheres', lambda c, s: [])
+    monkeypatch.setattr(pd_mod, 'read_supply_boxes', lambda c, s: [])
+    monkeypatch.setattr(pd_mod, 'row_area_centers', lambda c, p: [Point(i, i) for i in range(9)]
+                        if p == '备战栏' else [])
+    monkeypatch.setattr(pd_mod, 'slot_occupied', lambda s, x, y: False)
+    monkeypatch.setattr(pd_mod, 'ensure_portrait_templates', lambda c: None)
+    st0 = GameState(gold=0, level=5)   # read_game_state 读到 gold=0(漏读)
+    monkeypatch.setattr(pd_mod, 'read_game_state', lambda c, s: st0)
+    monkeypatch.setattr(pd_mod, 'read_deploy_cap', lambda c, s: None)
+    monkeypatch.setattr(pd_mod, 'read_deployed_count', lambda c, s: None)
+    monkeypatch.setattr(pd_mod, 'read_gold', lambda c, s: 55)   # 重读拿到真值
+    o = d._observe(heavy=True)
+    assert o.state.gold == 55, 'MED-2:gold=0 应触发重读取真值'
+
+
+def test_levelup_raw_read_no_fallback(monkeypatch, test_context: SrTestContext) -> None:
+    """MED-8:_read_level_raw 无 _expected_level 兜底(漏读返 None,不造假值)。"""
+    from sr_od.application.currency_war.prep_actions import _read_level_raw
+
+    # 区域缺失(area_rect None)→ None
+    monkeypatch.setattr(pa_mod, '_area_rect', lambda ctx, name, screen_name=None: None)
+    assert _read_level_raw(test_context, None) is None
