@@ -121,7 +121,7 @@ def test_get_node_goal_node_plan_rules() -> None:
     from sr_od.application.currency_war.cw_decisions import get_node_goal
     assert (get_node_goal(1, 1).target_level, get_node_goal(1, 1).spend_mode) == (4, "saving"), "P1 早期 冲Lv4 攒息"
     assert (get_node_goal(1, 5).target_level, get_node_goal(1, 5).spend_mode) == (6, "interest"), "P1 中期 Lv6 吃息"
-    assert (get_node_goal(2, 5).target_level, get_node_goal(2, 5).spend_mode) == (9, "level"), "P2 中后期 升 9 搜核心(live 校准 ADR-0126)"
+    assert (get_node_goal(2, 5).target_level, get_node_goal(2, 5).spend_mode) == (8, "level"), "P2 中后期 lv8(H4 软化:M8 lv9 锚点疑幽灵)"
     assert (get_node_goal(3, 1).target_level, get_node_goal(3, 1).spend_mode) == (9, "allin"), "P3 早期 上 9"
     assert (get_node_goal(3, 5).target_level, get_node_goal(3, 5).spend_mode) == (10, "allin"), "P3 后期 上 10"
 
