@@ -536,3 +536,42 @@ def test_levelup_raw_read_no_fallback(monkeypatch, test_context: SrTestContext) 
     # 区域缺失(area_rect None)→ None
     monkeypatch.setattr(pa_mod, '_area_rect', lambda ctx, name, screen_name=None: None)
     assert _read_level_raw(test_context, None) is None
+def test_composite_reads_success_field(test_context: SrTestContext,
+                                       monkeypatch) -> None:
+    """live 回归(2026-08-14):_run_composite 读 OperationResult.success(非 is_success)。"""
+    from sr_od.application.currency_war import prep_actions as pa
+    from sr_od.application.currency_war.prep_actions import RunBuyPhase
+
+    ex = pa.PrepActionExecutor(PrepDirector(test_context), test_context)
+
+    class _OpResult:   # 形状对齐 one_dragon OperationResult(success 字段)
+        def __init__(self) -> None:
+            self.success = True
+            self.status = 'plan 买2张 升1次 刷0次'
+
+    class _FakeOp:
+        def __init__(self, ctx) -> None:
+            pass
+
+        def execute(self):
+            return _OpResult()
+
+    class _FakeModule:
+        BuyShopCards = _FakeOp
+
+    import importlib
+    real_import = importlib.import_module
+    monkeypatch.setattr(importlib, 'import_module',
+                        lambda path: _FakeModule if path.endswith('.shop') else real_import(path))
+    ok, detail = ex.execute(RunBuyPhase())
+    assert ok, f'success=True 的组合结果必须判成功(live bug:旧读 is_success 恒 False): {detail}'
+
+def test_rule3_shop_open_closes_shop_first() -> None:
+    """live 回归(2026-08-14 1-2):商店开态奖励面板与概率表按钮重叠 → 假球误开弹窗。"""
+    from sr_od.application.currency_war.prep_actions import EnsureShopClosed
+    obs = _obs(spheres=[('gold', None, 40)] * 2, free_bench_slots=3, shop_open=True)
+    a = S.decide_prep_action(obs, _sess(), _cfg())
+    assert isinstance(a, EnsureShopClosed), '商店开态须先关店再收球(防假球点击)'
+    obs2 = _obs(spheres=[('gold', None, 40)] * 2, free_bench_slots=3, shop_open=False)
+    a2 = S.decide_prep_action(obs2, _sess(), _cfg())
+    assert isinstance(a2, ClickSpheres) and a2.max_k == 2
