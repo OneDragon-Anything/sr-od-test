@@ -35,12 +35,16 @@ def test_recognize_composes_pure_reads(monkeypatch) -> None:
     # 立绘库未加载 → 不产角色(front/back/bench None);装备识别 mock 跳过(equips 注入 BenchChar.equips)
     monkeypatch.setattr(mod, 'ensure_portrait_templates', lambda ctx: None)
     monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
+    monkeypatch.setattr(mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
+    monkeypatch.setattr(mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(MagicMock screen 进 cv2 崩)
+    monkeypatch.setattr(mod, 'read_reward_spheres', lambda ctx, screen: [])
 
     out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out == {
         'gold': 42, 'phase': (2, 5), 'hp': 80, 'streak': 3,
         'deploy_count': 4, 'deploy_cap': 5, 'level': 5, 'board': {'仙舟': 2, '猎犬': 1},
-        'front_line': None, 'back_line': None, 'bench': None,
+        'front_line': None, 'back_line': None, 'bench': None, 'owned_equips': None,
+        'supply_boxes': None, 'reward_spheres': None,   # B6 新增键(空 reader → None,与 owned_equips 同语义)
     }
 
 
@@ -57,6 +61,9 @@ def test_recognize_phase_none_when_unreadable(monkeypatch) -> None:
     monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [])
     monkeypatch.setattr(mod, 'ensure_portrait_templates', lambda ctx: None)
     monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
+    monkeypatch.setattr(mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
+    monkeypatch.setattr(mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(MagicMock screen 进 cv2 崩)
+    monkeypatch.setattr(mod, 'read_reward_spheres', lambda ctx, screen: [])
 
     out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out['phase'] is None
@@ -103,7 +110,10 @@ def test_recognize_identifies_chars(monkeypatch) -> None:
     ])
     monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [_char('飞霄', 'back', slot=1)])
     monkeypatch.setattr(mod, 'ensure_portrait_templates', lambda ctx: 'templates')   # 非 None → 产角色
-    monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)          # 装备跳过 → equips=[]
+    monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
+    monkeypatch.setattr(mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
+    monkeypatch.setattr(mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(MagicMock screen 进 cv2 崩)
+    monkeypatch.setattr(mod, 'read_reward_spheres', lambda ctx, screen: [])          # 装备跳过 → equips=[]
 
     out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert [c.char_id for c in out['front_line']] == ['藿藿']
@@ -126,6 +136,9 @@ def test_recognize_no_chars_when_templates_none(monkeypatch) -> None:
     monkeypatch.setattr(mod, 'read_bench_chars', lambda *a, **k: [])
     monkeypatch.setattr(mod, 'ensure_portrait_templates', lambda ctx: None)   # 立绘库不可用
     monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
+    monkeypatch.setattr(mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
+    monkeypatch.setattr(mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(MagicMock screen 进 cv2 崩)
+    monkeypatch.setattr(mod, 'read_reward_spheres', lambda ctx, screen: [])
 
     out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out['front_line'] is None
