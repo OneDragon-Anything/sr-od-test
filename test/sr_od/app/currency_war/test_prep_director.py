@@ -599,3 +599,21 @@ def test_level_up_clamps_phantom_jump(test_context, monkeypatch) -> None:
     monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
     ok, detail = ex._level_up()
     assert not ok, f'幽灵 6→10 不得确认成功(窗外): {detail}'
+
+def test_offtarget_sell_protects_core_enablers() -> None:
+    """live 回归(2026-08-15 M1):comp 核心辅助(阵营∉comp 阵营)不得当 off-target 卖。
+
+    列车同行 core 含 花火(其阵营=战技点/盛会之星,∉列车同行)—— M1 位面2 deploy-swap
+    把花火卖掉 → 板成型度崩(列车同行4→1)。target 判定须含 core_chars(ADR-0103 同语义)。
+    """
+    # 纯逻辑:_is_tgt_char 语义在 deploy_bench 闭包内 —— 用 cw_decisions._card_hits_target
+    # 同语义对照(它已含 core 命中):花火 ∈ core_chars → True(即便阵营不交集)。
+    from sr_od.application.currency_war import cw_decisions
+    from sr_od.application.currency_war.cw_comps import get_comp
+
+    comp = get_comp('列车同行')
+    assert comp is not None and '花火' in comp.core_chars
+    # 花火:core 命中(阵营不交集也应 True)
+    assert cw_decisions._card_hits_target('花火', '盛会之星', comp) is True
+    # 普通盛会之星单位(非 core):按阵营不交集 → False(可卖)
+    assert cw_decisions._card_hits_target('陌生角色', '盛会之星', comp) is False
