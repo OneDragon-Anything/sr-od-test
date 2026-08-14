@@ -3,6 +3,7 @@
 扫描真实 import ``sr_od.operations`` + ``sr_od.application`` 承载包,验证发现 / 过滤 / 容错 / 缓存。
 用 MagicMock 伪造 SrContext(扫描纯反射,ctx 仅占位)。
 """
+import dataclasses
 import importlib
 from unittest.mock import MagicMock
 
@@ -143,3 +144,31 @@ def test_get_recognizer_hit_and_miss(mock_ctx: MagicMock) -> None:
     scan_recognizers(mock_ctx, refresh=True)     # 填缓存
     assert get_recognizer(mock_ctx, '货币战争-备战') is not None
     assert get_recognizer(mock_ctx, '不存在的画面') is None
+
+
+# ---------- extras_doc 字段说明(随 analyze 响应平级返回) ----------
+
+def test_all_recognizers_declare_extras_doc(mock_ctx: MagicMock) -> None:
+    """所有注册的 recognizer 都声明了非空 extras_doc(缺了调用方拿到 extras 只能猜)。"""
+    result = scan_recognizers(mock_ctx, refresh=True)
+    for name in result.registry.screen_names():
+        recognizer = result.registry.get(name)
+        assert getattr(recognizer, 'extras_doc', None), f'{name} 未声明 extras_doc'
+
+
+@pytest.mark.parametrize(('recognizer_mod', 'state_cls'), [
+    ('sr_od.application.currency_war.recognizers.battle_prep_recognizer', '_BattlePrepState'),
+    ('sr_od.application.currency_war.recognizers.briefing_recognizer', '_BriefingState'),
+    ('sr_od.application.currency_war.recognizers.settlement_recognizer', '_SettlementState'),
+    ('sr_od.application.currency_war.recognizers.invest_strategy_recognizer', '_InvestStrategyState'),
+])
+def test_extras_doc_keys_match_state_fields(recognizer_mod: str, state_cls: str) -> None:
+    """extras_doc 键集与领域模型字段一致(加 / 改字段时防漂移)。"""
+    mod = importlib.import_module(recognizer_mod)
+    state = getattr(mod, state_cls)
+    recognizer = next(
+        cls for _n, cls in vars(mod).items()
+        if _is_recognizer(recognizer_mod, cls)
+    )
+    expected = {f.name for f in dataclasses.fields(state)}
+    assert set(recognizer.extras_doc) == expected

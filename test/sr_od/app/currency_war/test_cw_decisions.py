@@ -186,6 +186,22 @@ def test_refresh_cap_dynamic() -> None:
     danger = GameState(gold=50, round_num=3, level=5, plane=1, hp=30)    # HP 危险
     assert _refresh_cap(danger) > MAX_REFRESH_PER_ROUND, "HP 危险放宽"
 
+    # 刷新减费策略持有 → 放宽到 6(handle_invest_strategy 写 active_strategies;2026-08-14 接通)
+    from sr_od.application.currency_war.cw_decisions import REFRESH_DISCOUNT_STRATEGIES
+    with_discount = GameState(gold=50, round_num=3, level=5, plane=1, hp=100,
+                              active_strategies=['加油站'])   # 健康前期 + 持有减费策略
+    assert _refresh_cap(with_discount) >= 6, "持有刷新减费策略 → 放宽到 6"
+    # 与关键回合叠加:max(plane3/升8/HP危险=4, 减费=6) = 6(减费更高,不因已放宽而忽略)
+    with_discount_late = GameState(gold=50, round_num=6, level=8, plane=3, hp=100,
+                                   active_strategies=['高效决策'])
+    assert _refresh_cap(with_discount_late) >= 6, "关键回合 + 减费策略 → 仍 ≥6"
+    # 非减费策略 → 不放宽(验证白名单精确,非「持有任意策略」)
+    with_non_discount = GameState(gold=50, round_num=3, level=5, plane=1, hp=100,
+                                  active_strategies=['羁绊的力量'])   # 非减费策略
+    assert _refresh_cap(with_non_discount) == MAX_REFRESH_PER_ROUND, "非减费策略 → 不放宽"
+    # REFRESH_DISCOUNT_STRATEGIES 不含砂里淘金(与白名单一致,电表倒转不推荐 bot 玩法)
+    assert '砂里淘金' not in REFRESH_DISCOUNT_STRATEGIES, "砂里淘金不入(与 INVESTMENT_STRATEGIES 白名单一致)"
+
 
 def test_economy_mode_effects() -> None:
     """economy_mode 只调利息项:rush_level < adaptive < interest_first。"""
