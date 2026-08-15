@@ -195,3 +195,53 @@ def test_adr0150_plaza_new_entries() -> None:
     # 飞光·映月效果已知(召唤物建档待办闭环):镜流+特殊1费景元,师徒羁绊
     assert "镜流" in INVESTMENT_STRATEGIES["飞光·映月"].effect
 
+
+# ===== ADR-0151 策略语义绑定(逐卡手建模;↺ ADR-0134 文本扫描派生)=====
+def test_adr0151_bindings_table_valid() -> None:
+    """语义绑定表:键 ⊆ 注册表;值 ⊆ FACTIONS/CHARACTERS(构建层孤儿 raise + 此处显式断言)。"""
+    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.cw_factions import FACTIONS
+    from sr_od.application.currency_war.cw_investments import STRATEGY_BINDINGS
+
+    assert set(STRATEGY_BINDINGS) <= set(INVESTMENT_STRATEGIES)
+    for name, (fs, cs) in STRATEGY_BINDINGS.items():
+        assert fs <= set(FACTIONS), f"{name} 阵营值不在 FACTIONS:{sorted(fs - set(FACTIONS))}"
+        assert cs <= set(CHARACTERS), f"{name} 角色值不在 CHARACTERS:{sorted(cs - set(CHARACTERS))}"
+    # 未建模卡 → 空绑定(新 API 卡待 diff 提示后建模,不炸)
+    from sr_od.application.currency_war.cw_investments import get_strategy, strategy_bindings
+    fs, cs = strategy_bindings(get_strategy("开源节流"))
+    assert fs == frozenset() and cs == frozenset()
+
+
+def test_adr0151_noise_bindings_removed() -> None:
+    """文本扫描噪声清除(泛用效果顺带提及阵营 ≠ 绑定):战术义眼/祝福系不再误绑。"""
+    from sr_od.application.currency_war.cw_investments import get_strategy, strategy_bindings
+
+    for name in ("战术义眼", "战术义眼+", "战术义眼++", "生命之花祝福",
+                 "幸运星祝福", "折叠小刀祝福", "和平手枪祝福", "量产型装甲祝福"):
+        fs, cs = strategy_bindings(get_strategy(name))
+        assert not fs and not cs, f"{name} 应无绑定(泛用数值卡,旧扫描曾误绑)"
+
+
+def test_adr0151_semantic_bindings_present() -> None:
+    """语义绑定抽查:套组/机制强化/赠角色 三类 + 契约环境阵营。"""
+    from sr_od.application.currency_war.cw_investments import (
+        STRATEGY_BINDINGS,
+        env_faction,
+        get_strategy,
+        strategy_bindings,
+    )
+
+    # 套组:阵营+角色双绑
+    assert STRATEGY_BINDINGS["追击星徽套组"] == (frozenset({"追击"}), frozenset({"飞霄"}))
+    # 机制强化:阵营绑
+    assert strategy_bindings(get_strategy("离火燎原"))[0] == frozenset({"减益"})
+    assert strategy_bindings(get_strategy("超充站"))[0] == frozenset({"能量"})
+    # 赠 key 角色:仅角色绑
+    assert STRATEGY_BINDINGS["双龙会"] == (frozenset(), frozenset({"丹恒·饮月", "丹恒·腾荒"}))
+    # 契约环境阵营(ADR-0151 补:赠阵营角色)
+    for name, faction in (("量子同频契约", "量子同频"), ("公司契约", "公司"),
+                          ("持续伤害契约", "持续伤害"), ("战技点契约", "战技点"),
+                          ("星核猎手契约", "星核猎手"), ("欢愉契约", "欢愉")):
+        assert env_faction(name) == faction, f"{name} 应绑 {faction}"
+
