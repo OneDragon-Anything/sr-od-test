@@ -96,3 +96,102 @@ def test_is_known_env() -> None:
     assert is_known_env("命运圣杯邀请") is True
     assert is_known_env("不存在环境") is False
     assert is_known_env("") is False
+
+
+# ===== ADR-0138 OCR 名归一用框架 LCS 相似匹配(非全等) =====
+def test_canon_name_lcs_with_guards() -> None:
+    """_canon_name:艺术小字形变靠 find_best_match_by_lcs(th=0.5);长度差>3 拒;效果 LCS<0.5 拒。"""
+    from sr_od.application.currency_war.operations.tools.harvest_invest_codex import (
+        HarvestInvestCodex,
+    )
+    op = HarvestInvestCodex.__new__(HarvestInvestCodex)
+    op.kind = 'strategies'
+    # 形变 + 分隔符差:• vs ·,OCR 误读(狸=禄)→ LCS 命中
+    assert op._canon_name('飞光•传剑',
+                          '获得【彦卿】和【景元】，他们获得【师徒】羁绊。'
+                          '【彦卿】的【天河泻】获得强化，造成战斗中【仙舟】神君和【景元】累计伤害值15%的伤害。') == '飞光·传剑'
+    assert op._canon_name('步狸村之谜', '获得一个穿戴【狼狩星徽】的【狸狸】') == '步狸村之谜'  # 图鉴勘误:狸是规范名(2026-08-15 前测试断言旧名'步禄村之谜'未同步)
+    # 防误配:短名偶合高分(胜利，还 vs 返利)→ 长度守卫拒(6 vs 2);效果不符拒
+    assert op._canon_name('胜利，还', '使当前连胜数变成3连胜') == '胜利，还'
+    # 全等直通
+    assert op._canon_name('开源节流', '获得10金币') == '开源节流'
+
+
+# ===== ADR-0150 两层架构:plaza API base × curated overlay =====
+def test_adr0150_base_layer_full() -> None:
+    """base 层全量:策略 335(334 plaza + 1 补遗)/ 环境 83(官方全量,与数据银行同口径)。"""
+    from sr_od.application.currency_war.cw_invest_data import PLAZA_AUGMENTS, PLAZA_PORTALS
+    assert len(PLAZA_AUGMENTS) == 334
+    assert len(PLAZA_PORTALS) == 83
+    assert len(INVESTMENT_STRATEGIES) == 335  # + 补遗 追击星徽套组(二)
+    assert len(INVESTMENT_ENVS) == 83
+    # id 主键唯一
+    ids = [a.id for a in PLAZA_AUGMENTS]
+    assert len(set(ids)) == len(ids)
+    # 补遗在表且 source 是米游社 content
+    extra = INVESTMENT_STRATEGIES["追击星徽套组(二)"]
+    assert extra.source == "6302"
+
+
+def test_adr0150_overlay_no_orphans() -> None:
+    """overlay(STRATEGY_ECONOMY/ENV_CATEGORY/ENV_FACTION/PICK_VALUE/ENV_PICK_VALUE)键 ⊆ 注册表键。
+
+    构建层 import 即 raise 孤儿;此处显式断言防回归(版本更新后重跑生成器,
+    overlay 键未跟改名 → 本测试红,提示修 overlay)。
+    """
+    from sr_od.application.currency_war.cw_investments import (
+        ENV_CATEGORY,
+        ENV_FACTION,
+        ENV_PICK_VALUE,
+        PICK_VALUE,
+        STRATEGY_ECONOMY,
+    )
+    assert set(STRATEGY_ECONOMY) <= set(INVESTMENT_STRATEGIES)
+    assert set(PICK_VALUE) <= set(INVESTMENT_STRATEGIES)
+    assert set(ENV_CATEGORY) <= set(INVESTMENT_ENVS)
+    assert set(ENV_FACTION) <= set(INVESTMENT_ENVS)
+    assert set(ENV_PICK_VALUE) <= set(INVESTMENT_ENVS)
+
+
+def test_adr0150_key_convention() -> None:
+    """键约定(canon 归一,OCR 精确匹配层一致):半角冒号/逗号、无空格、无 •、无罗马数字。
+
+    OCR 实测把全角冒号读成半角(战术专家:佩拉)→ 键用半角;叹号保持官方全角
+    (艾丝妲的猛犬！/都是这家伙的错！,无实测证据不动)。
+    """
+    bad = [n for n in INVESTMENT_STRATEGIES if "：" in n or "，" in n or "•" in n
+           or n != n.strip() or any(c.isspace() for c in n) or any(c in "ⅠⅡⅢ" for c in n)]
+    assert not bad, f"策略键未 canon 归一:{bad[:5]}"
+    bad_env = [n for n in INVESTMENT_ENVS if "：" in n or "，" in n or "•" in n
+               or any(c.isspace() for c in n)]
+    assert not bad_env, f"环境键未 canon 归一:{bad_env[:5]}"
+    # OCR 友好形抽查(旧键已 RENAME)
+    assert "本姑娘就是罗刹" in INVESTMENT_STRATEGIES
+    assert "摸个鱼吧III" in INVESTMENT_STRATEGIES
+
+
+def test_adr0150_official_data_corrections() -> None:
+    """官方 API 修正落表:rarity 13 条(抽查)+ 占位 effect 替换为官方全文。"""
+    # 原 curated 手打错(占位 effect + 品质错)
+    assert INVESTMENT_STRATEGIES["定点爆破"].rarity == "棱彩"
+    assert INVESTMENT_STRATEGIES["数值碾压"].rarity == "棱彩"
+    assert INVESTMENT_STRATEGIES["攻防一体"].rarity == "棱彩"
+    assert INVESTMENT_STRATEGIES["返利+"].rarity == "银"
+    # 原 codex 采集错(棱彩 → 金)
+    assert INVESTMENT_STRATEGIES["步狸村之谜"].rarity == "金"
+    # 占位 4 字 effect 已被官方全文替换
+    for name in ("定点爆破", "数值碾压", "攻防一体", "羁绊的力量"):
+        assert len(INVESTMENT_STRATEGIES[name].effect) > 20, f"{name} 效果仍是占位"
+    # 效果数值纠错(艾丝妲的猛犬 ×1000% → 官方 ×2000%)
+    assert "2000%" in INVESTMENT_STRATEGIES["艾丝妲的猛犬！"].effect
+
+
+def test_adr0150_plaza_new_entries() -> None:
+    """plaza API 补齐 14 条(米游社 doc 315 之外的版本新条目);环境 83 全量无缺。"""
+    for name in ("星星相印", "命运圣杯星徽", "不虚此行", "离火燎原", "战术专家:佩拉",
+                 "领航专家:姬子", "狸财经狸", "狸狸的早晨", "大变活狸", "环保大使叽米",
+                 "黑塔纪元", "飞光·映月", "都是这家伙的错！", "摸个鱼吧III", "锻冶专家:刃"):
+        assert name in INVESTMENT_STRATEGIES, f"{name} 应在注册表(plaza 补齐)"
+    # 飞光·映月效果已知(召唤物建档待办闭环):镜流+特殊1费景元,师徒羁绊
+    assert "镜流" in INVESTMENT_STRATEGIES["飞光·映月"].effect
+

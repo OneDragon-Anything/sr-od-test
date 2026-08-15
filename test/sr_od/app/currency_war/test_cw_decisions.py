@@ -12,29 +12,53 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.cw_comps import Comp
-from sr_od.application.currency_war.cw_decisions import (
+from sr_od.application.currency_war.cw_economy import (
+    WIN_STREAK_BREAK_INTEREST,
+    _expected_level,
+    _refresh_cost,
+    clicks_to_next_level,
+    economy_score,
+    get_node_goal,
+    xp_click_cost,
+)
+from sr_od.application.currency_war.cw_evaluate import (
     MAX_REFRESH_PER_ROUND,
-    REINFORCE_BONUS,
-    SPREAD_PENALTY,
-    EncounterOption,
-    SupplyOption,
-    _bench_faction_counts,
-    _concentration_delta,
-    _distinct_factions,
+    OPTIONALITY_WEIGHT,
+    TARGET_PROGRESS_WEIGHT,
+    TRANSITION_TEMPO_BONUS,
     _economy_mode_for,
-    _maybe_sell_for_interest,
     _phase_weights,
-    _sample_shop,
-    _should_deploy,
+    _refresh_cap,
+    _should_save_for_interest,
+    _target_progress_remaining,
     alpha_t,
     char_quality_score,
+    evaluate,
+    optionality_score,
+    synergy_score,
+    transition_tempo_score,
+)
+from sr_od.application.currency_war.cw_events import (
+    EncounterOption,
+    SupplyOption,
+    _option_rarity,
     decide_encounter,
     decide_event,
     decide_supply,
-    economy_score,
-    optionality_score,
+)
+from sr_od.application.currency_war.cw_plan import (
+    REINFORCE_BONUS,
+    SPREAD_PENALTY,
+    _bench_faction_counts,
+    _concentration_delta,
+    _distinct_factions,
+    _maybe_sell_for_interest,
+    _pick_deploy_row,
+    _sample_cost,
+    _sample_shop,
+    _should_deploy,
+    level_up_gate,
     plan,
-    synergy_score,
 )
 from sr_od.application.currency_war.cw_state import (
     BenchChar,
@@ -102,23 +126,20 @@ def test_economy_interest() -> None:
 
 
 def test_economy_streak_bonus() -> None:
-    """C 杠杆 2(streak 接线):连胜/连败 magnitude 对称加分(auto-chess streak 档位金);0 streak 无加。
-
-    fixture 核实(2026-08-11)结算「连胜×N」前缀=方向 → state.streak 带符号。方向驱动的 plan 行为
-    (保连胜 vs fold)留 R2-4b,economy 只取 magnitude(连胜/连败都给金)。
+    """C 杠杆 2(streak 接线)。ADR-0128(复查 #5,核心机制:27):货币战争**无连败补偿** ——
+    只计连胜方向;连败 0 分(旧 magnitude 对称计 = 虚构连败金,已修)。
     """
     base = GameState(gold=50, round_num=5, level=6, plane=2)             # streak 默认 0
     win3 = GameState(gold=50, round_num=5, level=6, plane=2, streak=3)   # 连胜 3
     loss3 = GameState(gold=50, round_num=5, level=6, plane=2, streak=-3)  # 连败 3
     assert economy_score(win3, "adaptive") > economy_score(base, "adaptive"), "连胜 3 > 无 streak"
-    assert economy_score(win3, "adaptive") == pytest.approx(economy_score(loss3, "adaptive")), (
-        "连胜/连败 magnitude 对称(都给档位金)"
+    assert economy_score(loss3, "adaptive") == pytest.approx(economy_score(base, "adaptive")), (
+        "无连败补偿:连败 3 不加分(核心机制:27)"
     )
 
 
 def test_get_node_goal_node_plan_rules() -> None:
     """node_plan 骨架(14 §2):节点 → NodeGoal target_level / spend_mode(人玩节奏)。"""
-    from sr_od.application.currency_war.cw_decisions import get_node_goal
     assert (get_node_goal(1, 1).target_level, get_node_goal(1, 1).spend_mode) == (4, "saving"), "P1 早期 冲Lv4 攒息"
     assert (get_node_goal(1, 5).target_level, get_node_goal(1, 5).spend_mode) == (6, "interest"), "P1 中期 Lv6 吃息"
     assert (get_node_goal(2, 5).target_level, get_node_goal(2, 5).spend_mode) == (8, "level"), "P2 中后期 lv8(H4 软化:M8 lv9 锚点疑幽灵)"
@@ -128,10 +149,6 @@ def test_get_node_goal_node_plan_rules() -> None:
 
 def test_get_node_goal_fallback() -> None:
     """未匹配(plane>3 / round 超区间)→ fallback:target_level=_expected_level, spend_mode=adaptive。"""
-    from sr_od.application.currency_war.cw_decisions import (
-        _expected_level,
-        get_node_goal,
-    )
     fb = get_node_goal(4, 1)   # plane 4 无规则(CW 3 位面)→ fallback
     assert fb.target_level == _expected_level(1, 4)
     assert fb.spend_mode == "adaptive"
@@ -139,7 +156,6 @@ def test_get_node_goal_fallback() -> None:
 
 def test_maybe_sell_for_interest_allin_skips() -> None:
     """node_plan spend_mode allin(P3)→ _maybe_sell_for_interest 跳过(花光成型不囤息;14 §2.2)。"""
-    from sr_od.application.currency_war.cw_decisions import _maybe_sell_for_interest
     cfg = _cfg()
     # P3 round 3 → allin;gold 39 + 可卖 bench(飞霄,refund 1 → 跨 40 档)→ 正常会卖,allin 跳过
     state = GameState(gold=39, round_num=3, level=9, plane=3,
@@ -151,7 +167,6 @@ def test_maybe_sell_for_interest_allin_skips() -> None:
 
 def test_sample_cost_uses_refresh_prob() -> None:
     """A4.3:_sample_cost 用 REFRESH_PROB 权威表(Lv1-3 纯 1 费;Lv4 只 1/2/3 费;Lv10 不出表外)。"""
-    from sr_od.application.currency_war.cw_decisions import _sample_cost
     rng = random.Random(0)
     assert all(_sample_cost(1, rng) == 1 for _ in range(20)), "Lv1 纯 1 费(REFRESH_PROB[1]={1:1.0})"
     for _ in range(50):
@@ -163,7 +178,6 @@ def test_sample_cost_uses_refresh_prob() -> None:
 def test_phase_weights_hp_danger_reduces_economy() -> None:
     """A3 + review agent:HP 危险才保血(economy 降权);健康时 economy 不压(snowball 到 50)。
     原"前期 plane1 → economy 0.4"已被研究推翻(前期该 snowball 经济),改测 HP 维度。"""
-    from sr_od.application.currency_war.cw_decisions import evaluate
     cfg = _cfg()
     healthy = GameState(gold=50, round_num=3, level=5, plane=1)         # hp100 健康:economy 权重 1.0
     danger = GameState(gold=50, round_num=3, level=5, plane=1, hp=30)   # hp<HP_DANGER:economy 权重 0.4
@@ -175,10 +189,6 @@ def test_phase_weights_hp_danger_reduces_economy() -> None:
 
 def test_refresh_cap_dynamic() -> None:
     """_refresh_cap 关键回合放宽(review agent + 用户:固定 2 太死)。"""
-    from sr_od.application.currency_war.cw_decisions import (
-        MAX_REFRESH_PER_ROUND,
-        _refresh_cap,
-    )
     base = GameState(gold=50, round_num=3, level=5, plane=1, hp=100)     # 健康前期
     assert _refresh_cap(base) == MAX_REFRESH_PER_ROUND, "健康前期 = 基线 2"
     late = GameState(gold=50, round_num=6, level=8, plane=3, hp=100)     # plane3/升8
@@ -186,21 +196,22 @@ def test_refresh_cap_dynamic() -> None:
     danger = GameState(gold=50, round_num=3, level=5, plane=1, hp=30)    # HP 危险
     assert _refresh_cap(danger) > MAX_REFRESH_PER_ROUND, "HP 危险放宽"
 
-    # 刷新减费策略持有 → 放宽到 6(handle_invest_strategy 写 active_strategies;2026-08-14 接通)
-    from sr_od.application.currency_war.cw_decisions import REFRESH_DISCOUNT_STRATEGIES
+    # ADR-0131:刷新放宽改效果驱动(旧 REFRESH_DISCOUNT_STRATEGIES 名单已删 —— 语义全错)
+    # 加油站(每节点 1 次免费刷新)→ 有免费额度 → 放宽
     with_discount = GameState(gold=50, round_num=3, level=5, plane=1, hp=100,
-                              active_strategies=['加油站'])   # 健康前期 + 持有减费策略
-    assert _refresh_cap(with_discount) >= 6, "持有刷新减费策略 → 放宽到 6"
-    # 与关键回合叠加:max(plane3/升8/HP危险=4, 减费=6) = 6(减费更高,不因已放宽而忽略)
+                              active_strategies=['加油站'])
+    assert _refresh_cap(with_discount) >= 6, "有免费刷新额度策略 → 放宽到 6"
+    # 与关键回合叠加:max(plane3/升8/HP危险=4, 免费额度=6) = 6
     with_discount_late = GameState(gold=50, round_num=6, level=8, plane=3, hp=100,
-                                   active_strategies=['高效决策'])
-    assert _refresh_cap(with_discount_late) >= 6, "关键回合 + 减费策略 → 仍 ≥6"
-    # 非减费策略 → 不放宽(验证白名单精确,非「持有任意策略」)
+                                   active_strategies=['高效决策'])   # 9999 次免费刷爆发窗
+    assert _refresh_cap(with_discount_late) >= 6, "关键回合 + 免费刷策略 → 仍 ≥6"
+    # 无经济效果策略 → 不放宽(验证效果驱动精确,非「持有任意策略」)
     with_non_discount = GameState(gold=50, round_num=3, level=5, plane=1, hp=100,
-                                  active_strategies=['羁绊的力量'])   # 非减费策略
-    assert _refresh_cap(with_non_discount) == MAX_REFRESH_PER_ROUND, "非减费策略 → 不放宽"
-    # REFRESH_DISCOUNT_STRATEGIES 不含砂里淘金(与白名单一致,电表倒转不推荐 bot 玩法)
-    assert '砂里淘金' not in REFRESH_DISCOUNT_STRATEGIES, "砂里淘金不入(与 INVESTMENT_STRATEGIES 白名单一致)"
+                                  active_strategies=['羁绊的力量'])
+    assert _refresh_cap(with_non_discount) == MAX_REFRESH_PER_ROUND, "无刷新效果策略 → 不放宽"
+    # 砂里淘金无刷新经济效果(电表倒转不推荐 bot 玩法,未注册经济效果)
+    from sr_od.application.currency_war.cw_investments import economy_effect_of
+    assert economy_effect_of('砂里淘金').free_refresh_per_node == 0, "砂里淘金无免费刷新效果"
 
 
 def test_economy_mode_effects() -> None:
@@ -227,11 +238,6 @@ def test_evaluate_target_comp_applies_progress() -> None:
     ``test_evaluate_optionality_alpha_blend``。target_comp=None 时不扣(向后兼容)。
     """
     from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_decisions import (
-        TARGET_PROGRESS_WEIGHT,
-        _target_progress_remaining,
-        evaluate,
-    )
     cfg = _cfg()
     飞霄 = get_comp("追击飞霄")   # form_tiers {追击:3}
     # 晚期 α=1(elapsed 18 > R_CLOSE 12)→ target_progress 全罚 + optionality=0
@@ -454,10 +460,6 @@ def test_should_save_for_interest_winning_streak_breaks_it() -> None:
     (花钱提质量维持连胜,断连胜亏 > 利息亏)。连败 fold 半已由 HP-gating 覆盖(HP 安全仍 fold 攒息)。
     streak 带符号(parse_streak:连胜 +/连败 −),magnitude 对称给金(economy_score),方向驱 plan 行为(本测)。
     """
-    from sr_od.application.currency_war.cw_decisions import (
-        WIN_STREAK_BREAK_INTEREST,
-        _should_save_for_interest,
-    )
     from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
     target = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
                   form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
@@ -610,14 +612,26 @@ def test_plan_no_levelup_at_max() -> None:
 
 
 def test_plan_caps_refresh_per_round() -> None:
-    """每回合主动刷新(D 牌)次数 ≤ MAX_REFRESH_PER_ROUND(review r5:防无限刷死代码)。"""
+    """每回合主动刷新(D 牌)次数受 _refresh_cap 约束(review r5 防无限刷 + ADR-0128 comp 停留放宽)。
+
+    基线:target lv6=level_up(列车同行)非停留 roll → ≤ MAX_REFRESH_PER_ROUND;
+    comp 停留 roll 级(列车 lv7=roll 3星姬子)→ 放宽到 4(人玩「停留概率级 D 核心」)。
+    """
+    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
     cfg = _cfg()
-    # 高金 + 商店无可用牌 → 刷新期望可能正;即便如此也被上限挡住
-    state = GameState(gold=80, round_num=4, level=6, plane=2,
+    train = next(c for c in COMP_LIBRARY if c.name == "列车同行")
+    # 金 30(追级地板 20 之上、升不起整级)→ 停留 lv6 非 roll;商店无可用牌 → 刷新期望可能正,但受基线上限挡
+    state = GameState(gold=30, round_num=4, level=6, plane=2,
                       shop=[ShopCard(x=1, faction="公司", name="", cost=5)])
-    actions = plan(state, cfg, cfg.faction_priority, rng=random.Random(0))
+    actions = plan(state, cfg, cfg.faction_priority, rng=random.Random(0), target_comp=train)
     n_refresh = sum(1 for a in actions if isinstance(a, RefreshShop))
-    assert n_refresh <= MAX_REFRESH_PER_ROUND, f"每回合刷新应 ≤ {MAX_REFRESH_PER_ROUND},实际 {n_refresh}"
+    assert n_refresh <= MAX_REFRESH_PER_ROUND, f"非停留回合刷新应 ≤ {MAX_REFRESH_PER_ROUND},实际 {n_refresh}"
+    # comp 停留 roll(lv7)→ cap 放宽 4(ADR-0128)
+    state7 = GameState(gold=80, round_num=4, level=7, plane=2,
+                       shop=[ShopCard(x=1, faction="公司", name="", cost=5)])
+    actions7 = plan(state7, cfg, cfg.faction_priority, rng=random.Random(0), target_comp=train)
+    n7 = sum(1 for a in actions7 if isinstance(a, RefreshShop))
+    assert n7 <= 4, f"停留 roll 回合刷新应 ≤ 4(放宽),实际 {n7}"
 
 
 # —— deploy 站位 + 3合1 + 凑整吃息 + char_quality 已上阵(review r1 新覆盖)——
@@ -817,7 +831,6 @@ def test_evaluate_optionality_alpha_blend() -> None:
     - 晚(α=1):差 == 0(optionality=0,让位 commit)。
     """
     from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_decisions import OPTIONALITY_WEIGHT, evaluate
     cfg = _cfg()
     飞霄comp = get_comp("追击飞霄")
     # 早期(plane1 r1 → α=0)
@@ -844,10 +857,6 @@ def test_evaluate_optionality_alpha_blend() -> None:
 
 def test_transition_tempo_score_rewards_tempo_factions() -> None:
     """P1 过渡羁绊分(review round-4 HIGH-2):仙舟/狼狩/dot/列车/贝洛伯格 ≥2 → tempo;非过渡 ≥2 → 0;<2 → 0。"""
-    from sr_od.application.currency_war.cw_decisions import (
-        TRANSITION_TEMPO_BONUS,
-        transition_tempo_score,
-    )
     # 单过渡羁绊凑出(仙舟 2)
     assert transition_tempo_score(GameState(board={'仙舟': 2})) == pytest.approx(TRANSITION_TEMPO_BONUS)
     # 2 过渡羁绊(人上人级:仙舟 + dot)
@@ -862,7 +871,6 @@ def test_transition_tempo_score_rewards_tempo_factions() -> None:
 
 def test_evaluate_transition_tempo_early_game() -> None:
     """过渡羁绊早期(α=0)加分保血(review round-4 HIGH-2);α-fade 同 optionality(已测)。"""
-    from sr_od.application.currency_war.cw_decisions import evaluate
     cfg = _cfg()
     early_tempo = GameState(board={'仙舟': 2}, plane=1, round_num=1)   # α=0,有过渡羁绊
     early_empty = GameState(board={}, plane=1, round_num=1)            # α=0,无
@@ -1039,8 +1047,11 @@ def test_economy_mode_for_maps_spend_mode() -> None:
     assert _economy_mode_for(GameState(plane=1, round_num=1), cfg) == "interest_first"
     # P1 中期 interest → interest_first
     assert _economy_mode_for(GameState(plane=1, round_num=5), cfg) == "interest_first"
-    # P2 level → rush_level(弱化守息 + 强化等级,升人口)
-    assert _economy_mode_for(GameState(plane=2, round_num=3), cfg) == "rush_level"
+    # P2 level → rush_level(弱化守息 + 强化等级,升人口);ADR-0148:穷金(gold<30)降档
+    # interest_first(息引擎重建,M20 实证 P1 末烧空进场 13-18 金 rush 是破产螺旋)
+    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=50), cfg) == "rush_level"
+    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=18), cfg) == "interest_first"
+    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=0), cfg) == "interest_first"   # 原默认态
     # P1 后期 hold → adaptive(economy-low 非 economy_mode 处理)
     assert _economy_mode_for(GameState(plane=1, round_num=8), cfg) == "adaptive"
     # P3 allin → adaptive(economy-low 由 _phase_weights plane3 we=0.3)
@@ -1062,7 +1073,6 @@ def _mk_card(faction: str, cost: int, name: str = '未知卡') -> ShopCard:
 def test_prefilter_tempo_exception_unformed() -> None:
     """ADR-0124:未成型 commit 期,板直接增强散牌(≥2 同阵营)不被 prefilter 拒。"""
     from sr_od.application.currency_war.cw_comps import form_progress, get_comp
-    from sr_od.application.currency_war.cw_decisions import plan
     from sr_od.application.currency_war.cw_state import BuyCard
 
     comp = get_comp('列车同行')
@@ -1076,7 +1086,6 @@ def test_prefilter_tempo_exception_unformed() -> None:
 def test_prefilter_strict_when_formed() -> None:
     """ADR-0124:成型后(fp≥COMMIT_FRAC)仍严格拒 off-target 散牌(T#97 不变)。"""
     from sr_od.application.currency_war.cw_comps import form_progress, get_comp
-    from sr_od.application.currency_war.cw_decisions import plan
     from sr_od.application.currency_war.cw_state import BuyCard
 
     comp = get_comp('列车同行')
@@ -1097,7 +1106,6 @@ def _bc_at(slot, name, star=1, faction='?') -> BenchChar:
 def test_h1_merge_window_reachable_from_shop() -> None:
     """review H1:deployed 1 + bench 1 + shop 同名 → 可买(第 3 份 = 游戏语义当场升星)。"""
     from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_decisions import plan
     from sr_od.application.currency_war.cw_state import BuyCard
     comp = get_comp('列车同行')
     st = GameState(gold=20, level=6, plane=1, round_num=5,
@@ -1112,7 +1120,6 @@ def test_h1_merge_window_reachable_from_shop() -> None:
 def test_h1_copies_cap_at_3() -> None:
     """review H1:总副本 ≥3(1★)不再买(纯浪费)。"""
     from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_decisions import plan
     from sr_od.application.currency_war.cw_state import BuyCard
     comp = get_comp('列车同行')
     st = GameState(gold=20, level=6, plane=1, round_num=5,
@@ -1128,7 +1135,6 @@ def test_h1_copies_cap_at_3() -> None:
 def test_m3_no_same_name_double_deploy_in_plan() -> None:
     """review M3:场上同名已 deployed → plan 不再 emit 该角色的 DeployMove(游戏 5.1.7 禁双)。"""
     from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_decisions import plan
     from sr_od.application.currency_war.cw_state import DeployMove
     comp = get_comp('列车同行')
     st = GameState(gold=10, level=6, plane=1, round_num=5,
@@ -1138,4 +1144,363 @@ def test_m3_no_same_name_double_deploy_in_plan() -> None:
     st.shop = []
     acts = plan(st, _cfg(), [], rng=random.Random(7), target_comp=comp)
     assert not any(isinstance(a, DeployMove) for a in acts), '同名 2★ 不得与场上 1★ 双上阵'
+
+
+
+# ===== ADR-0129 购买经验决策(单击价模型替整级大金;升级滞后 live 实锤修复) =====
+def test_xp_helpers_clicks_and_cost() -> None:
+    """clicks_to_next_level 向上取整;xp_click_cost 用 OCR 实读优先。"""
+    assert clicks_to_next_level(GameState(level=5, xp_progress=(0, 20), hp=100)) == 5
+    assert clicks_to_next_level(GameState(level=5, xp_progress=(18, 20), hp=100)) == 1
+    assert clicks_to_next_level(GameState(level=6, xp_progress=None, hp=100)) == 10   # 40 XP / 4
+    assert clicks_to_next_level(GameState(level=10, xp_progress=(0, 84), hp=100)) == 0
+    assert xp_click_cost(GameState(level=5, hp=100)) == 4                      # 兜底
+    assert xp_click_cost(GameState(level=5, level_up_cost=8, hp=100)) == 8     # OCR 实读
+
+
+def test_level_up_gate_floor_semantics() -> None:
+    """追级期地板 20(旧门要求整级 36-60 大金 → 过度保守);非追级/满级不点。"""
+    # 追级期(P1r1 target 4,cur 3):扣单击价后 ≥20 才点
+    assert level_up_gate(GameState(level=3, gold=24, hp=100, plane=1, round_num=1))
+    assert not level_up_gate(GameState(level=3, gold=23, hp=100, plane=1, round_num=1))
+    # 非追级期(lv8 已到 P2 地板 8 且通用 goal=roll):不追级 → gate False(攒息)
+    assert not level_up_gate(GameState(level=8, gold=80, hp=100, plane=2, round_num=1))
+    # 满级
+    assert not level_up_gate(GameState(level=10, gold=99, hp=100))
+
+
+def test_plan_emits_xp_clicks_to_complete_level() -> None:
+    """plan 买经验按「点到下一级」发多次单击(每击 4 金),非旧整级大金一次。"""
+    s = GameState(level=5, gold=60, xp_progress=(0, 20), hp=100, plane=1, round_num=7)
+    actions = plan(s, _cfg(), [], reactive=True)
+    lv = [a for a in actions if isinstance(a, LevelUp)]
+    assert len(lv) == 5, "0/20 → 5 击升 6 级"
+    assert sum(a.cost for a in lv) == 20
+
+
+def test_plan_bench_full_levels_with_clicks() -> None:
+    """bench-full 破墙:点够升 1 级的单击数(旧按整级大金判可负担性 → 高估 → 不必要卖牌)。"""
+    s = GameState(level=4, gold=30, xp_progress=(2, 6), hp=100, plane=1, round_num=3)
+    s.bench = [BenchChar(slot=i) for i in range(9)]   # 满
+    actions = plan(s, _cfg(), [], rng=random.Random(7), reactive=True)
+    lv = [a for a in actions if isinstance(a, LevelUp)]
+    # bench-full 段 1 击(2/6 → 升 5);主 gate 若仍追级且预算够可再点(goal[5]=level_up)→ 断 ≥1
+    assert len(lv) >= 1, "2/6 → 至少 1 击升 5 级"
+    # 破墙优先级:LevelUp 全部先于任何 SellBench(点得起经验就不靠卖牌破墙;
+    # 尾部凑息卖非关键牌是合法经济行为,不在此禁)
+    first_sell = next((i for i, a in enumerate(actions) if isinstance(a, SellBench)), len(actions))
+    first_lv = next((i for i, a in enumerate(actions) if isinstance(a, LevelUp)), len(actions))
+    assert first_lv < first_sell, f"LevelUp 应先于 SellBench(得 {actions})"
+
+
+
+# ===== ADR-0131 投资策略经济效果进模型(免费刷新/利息上限/买经验折扣/每节点金) =====
+def test_refresh_cost_free_allowance() -> None:
+    """_refresh_cost:加油站(每节点 1 次免费)→ 第 1 次刷新 0 金、第 2 次恢复 2 金。"""
+    s = GameState(gold=10, hp=100, active_strategies=['加油站'])
+    assert _refresh_cost(s, 0) == 0, "免费额度内第 1 次刷新 = 0 金"
+    assert _refresh_cost(s, 1) == 2, "额度用尽 → 恢复 2 金"
+    s2 = GameState(gold=10, hp=100)   # 无策略
+    assert _refresh_cost(s2, 0) == 2
+
+
+def test_economy_interest_cap_override() -> None:
+    """economy_score 利息上限覆写:利息上调(cap 10)gold 100 → 满 10 档;买断制 → 0 档不吃息。"""
+    plain = GameState(gold=100, round_num=5, level=6, plane=2)
+    raised = GameState(gold=100, round_num=5, level=6, plane=2,
+                       active_strategies=['利息上调'])
+    bought_out = GameState(gold=100, round_num=5, level=6, plane=2,
+                           active_strategies=['买断制'])
+    assert economy_score(raised, "adaptive") > economy_score(plain, "adaptive"), "cap 10 > cap 5(同金)"
+    # 买断制不吃息但有每节点 4XP + 立刻 15 金(选时) —— 利息项归零(比同金 plain 低息差部分)
+    assert economy_score(bought_out, "adaptive") < economy_score(raised, "adaptive")
+
+
+def test_economy_gold_per_node_income() -> None:
+    """定期福利(每节点 +2 金)→ economy_score 高于无策略同局面(白拿收入计入)。"""
+    base = GameState(gold=50, round_num=5, level=6, plane=2)
+    with_wf = GameState(gold=50, round_num=5, level=6, plane=2,
+                        active_strategies=['定期福利'])
+    assert economy_score(with_wf, "adaptive") > economy_score(base, "adaptive")
+
+
+def test_xp_click_cost_strategy_discount() -> None:
+    """商业间谍(买经验 -1 金)→ xp_click_cost 折扣;无策略不受影响。"""
+    s = GameState(level=5, hp=100, active_strategies=['商业间谍'])
+    assert xp_click_cost(s) == 3, "4 - 1 = 3"
+    s2 = GameState(level=5, hp=100)
+    assert xp_click_cost(s2) == 4
+
+
+def test_aggregate_economy_caps_take_max() -> None:
+    """aggregate:利息上限取 max(开源节流 9 + 利息上调 10 → 10);免费额度求和。"""
+    from sr_od.application.currency_war.cw_investments import aggregate_economy
+    e = aggregate_economy(['开源节流', '利息上调'])
+    assert e.interest_cap_override == 10
+    assert e.instant_gold == 35
+    e2 = aggregate_economy(['加油站', '加油站'])
+    assert e2.free_refresh_per_node == 2, "同名策略双持(理论)额度求和"
+
+
+def test_economy_reclassified_fields_adr0142() -> None:
+    """ADR-0142:9 条曾错装一次性 instant_gold 的重复性效果按原文归位。"""
+    from sr_od.application.currency_war.cw_investments import (
+        aggregate_economy,
+        get_strategy,
+    )
+    # 特战资金系 → gold_per_boss_node(非一次性)
+    s = get_strategy('特战资金+')
+    assert s is not None and s.economy is not None
+    assert s.economy.gold_per_boss_node == 11 and s.economy.instant_gold == 0
+    # 长期主义系 → 分期节点金(现在+3次,非一次性9金)
+    s2 = get_strategy('长期主义')
+    assert s2 is not None and s2.economy is not None
+    assert s2.economy.gold_next_nodes_amount == 7 and s2.economy.gold_next_nodes_count == 3
+    assert s2.economy.instant_gold == 0
+    # 节节高升 → 每次升级金
+    s3 = get_strategy('节节高升')
+    assert s3 is not None and s3.economy is not None and s3.economy.gold_per_level_up == 1
+    # 返利 → 纯 gold_per_three_5cost(返利+ 对照:6 即时 + 3/三张)
+    s4 = get_strategy('返利')
+    assert s4 is not None and s4.economy is not None
+    assert s4.economy.gold_per_three_5cost == 3 and s4.economy.instant_gold == 0
+    # 保险 → 按损血,不进一次性
+    s5 = get_strategy('保险')
+    assert s5 is not None and s5.economy is not None and s5.economy.gold_per_20hp_lost == 5
+    # 按劳分配/剩余价值 → 每场结算金 ≈ per_node 保守
+    for _n in ('按劳分配', '剩余价值'):
+        _s = get_strategy(_n)
+        assert _s is not None and _s.economy is not None
+        assert _s.economy.gold_per_node == 1 and _s.economy.instant_gold == 0
+    # 聚合:分期金 amount 求和 / count 取 max
+    agg = aggregate_economy(['长期主义+', '长期主义'])
+    assert agg.gold_next_nodes_amount == 16 and agg.gold_next_nodes_count == 3
+
+
+
+# ===== ADR-0133 全量图鉴 ingest + decide_event 注册表先验 =====
+def test_strategy_registry_full_ingest() -> None:
+    """注册表全量 315(curated 19 + doc ingest 296);长尾经济抽取抽查。"""
+    from sr_od.application.currency_war.cw_investments import (
+        INVESTMENT_STRATEGIES,
+        get_strategy,
+    )
+    assert len(INVESTMENT_STRATEGIES) == 335   # 334(plaza API base,ADR-0150)+1(补遗 追击星徽套组(二))
+    s = get_strategy("乱成一锅粥+")
+    assert s is not None and s.economy is not None
+    assert s.economy.instant_gold == 14 and s.economy.free_refresh_burst == 7
+    # 搜打撤 = 每当进入新节点获得1次 → per_node 非 burst(条件修正)
+    s2 = get_strategy("搜打撤")
+    assert s2 is not None and s2.economy is not None and s2.economy.free_refresh_per_node == 1
+    # 条件性免费刷不按无条件 per_node 计(存款回报)
+    s3 = get_strategy("存款回报")
+    assert s3 is not None and s3.economy is None
+    # 战力/条件长尾也有名录(选卡先验可查)
+    assert get_strategy("盗用身份") is not None and get_strategy("盗用身份").rarity == "棱彩"
+
+
+def test_decide_event_registry_prior() -> None:
+    """先验:白名单 T0(90)仍胜棱彩经济先验(70);先验胜未注册(0)。"""
+    cfg = _cfg()
+    st = GameState(board={}, hp=100)
+    assert decide_event(["定期福利", "乱成一锅粥+"], cfg, st).option_idx == 0, "白名单 T0 > 先验"
+    assert decide_event(["无名甲", "乱成一锅粥+"], cfg, st).option_idx == 1, "棱彩经济先验 > 未注册 0"
+    # 品质梯度:棱彩无经济(50) vs 未注册(0)
+    assert decide_event(["银色无名", "及时雨"], cfg, st).option_idx == 1
+
+
+
+# ===== ADR-0134 comp 匹配分(星徽套组对齐 target 压倒品质/白名单) =====
+def test_strategy_bindings_extraction() -> None:
+    """绑定派生:追击星徽套组 → (追击, 飞霄);无绑定策略 → 空集(安全回落)。"""
+    from sr_od.application.currency_war.cw_investments import (
+        get_strategy,
+        strategy_bindings,
+    )
+    fs, cs = strategy_bindings(get_strategy("追击星徽套组"))
+    assert "追击" in fs and "飞霄" in cs
+    fs2, cs2 = strategy_bindings(get_strategy("数值碾压"))
+    assert not fs2 and not cs2, "纯战力无绑定 → 空(回落品质先验)"
+
+
+def test_decide_event_comp_match_wins() -> None:
+    """星徽套组对齐 target(飞霄)→ 压倒白名单 T0 与棱彩品质先验;不对齐 = 裸品质。"""
+    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    feixiao = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
+    cfg = _cfg()
+    st = GameState(board={}, hp=100)
+    # 对齐套组(追击+飞霄,65+) vs 白名单 T0 定期福利(90)—— comp 匹配 1 命中 = 65 < 90?
+    # 单命中 45+20=65 不压 T0;双命中(阵营+角色都在 target)= 110 压 T0(成型加速语义)。
+    pick = decide_event(["定期福利", "追击星徽套组"], cfg, st, target_comp=feixiao)
+    assert pick.option_idx == 1, "阵营+角色双命中(110) > 白名单 T0(90)"
+    # 不对齐:燃血套组 vs 追击 target → 无命中 = 裸棱彩品质 50 < T0 90
+    pick2 = decide_event(["定期福利", "燃血星徽套组"], cfg, st, target_comp=feixiao)
+    assert pick2.option_idx == 0, "不对齐套组 = 裸品质(50) < 白名单 T0(90)"
+    # 无 target(None)→ 行为同旧(品质先验)
+    pick3 = decide_event(["无名甲", "乱成一锅粥+"], cfg, st)
+    assert pick3.option_idx == 1
+
+
+
+# ===== ADR-0139 comp 特定站位覆盖命途默认(char_positions) =====
+def test_pick_deploy_row_comp_override() -> None:
+    """char_positions 覆盖:绯英 comp 爻光(命途默认 front)→ back;万敌 comp 万敌 → front;无 comp 条目按默认。"""
+    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    fy = next(c for c in COMP_LIBRARY if c.name == "绯英欢愉")
+    wd = next(c for c in COMP_LIBRARY if c.name == "万敌单C")
+    # 爻光:Character 命途默认 front(欢愉),但绯英 comp 要求 back(攻略实证)
+    from sr_od.application.currency_war.cw_state import BenchChar
+    yaoguang = BenchChar(slot=1, char_id="爻光", faction="欢愉", position_pref="front")
+    st = GameState(hp=100, board={}, level=6)
+    st.deployed = [BenchChar(slot=i, char_id=f"c{i}") for i in range(3)]
+    row_no, _ = _pick_deploy_row(st, yaoguang)
+    assert row_no == "front", "无 comp 覆盖按命途默认 front"
+    row_fy, ok = _pick_deploy_row(st, yaoguang, fy)
+    assert ok and row_fy == "back", "绯英 comp:爻光必后台(ADR-0139)"
+    # 万敌:front
+    wd_char = BenchChar(slot=2, char_id="万敌", faction="夜之半神", position_pref="front")
+    row_wd, ok2 = _pick_deploy_row(st, wd_char, wd)
+    assert ok2 and row_wd == "front"
+
+
+def test_comp_char_positions_data() -> None:
+    """三 comp 站位数据在库:绯英(爻光 back)/追击(知更鸟 front)/万敌(万敌 front)。"""
+    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    by = {c.name: c.char_positions for c in COMP_LIBRARY}
+    assert by["绯英欢愉"].get("爻光") == "back"
+    assert by["追击飞霄"].get("知更鸟") == "front"
+    assert by["万敌单C"].get("万敌") == "front"
+
+
+
+# ===== ADR-0140 中期护航三套(escort_for + tempo 护航感知) =====
+def test_escort_for_serves_matching() -> None:
+    """escort_for 按 target 机制属性匹配:希儿量子(量子拉条)→龙丹护航;击破流萤→灵砂护航;万敌(燃血成长型)→None。"""
+    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY, escort_for
+    xe = next(c for c in COMP_LIBRARY if c.name == "希儿量子")
+    lj = next(c for c in COMP_LIBRARY if c.name == "击破流萤")
+    wd = next(c for c in COMP_LIBRARY if c.name == "万敌单C")
+    assert escort_for(xe).name == "龙丹护航"
+    assert escort_for(lj).name == "灵砂护航"
+    assert escort_for(wd) is None, "成长型(燃血)不护航"
+
+
+def test_transition_tempo_escort_bonus() -> None:
+    """护航羁绊凑出(≥2)→ tempo 分加权(P1 后期窗口内);过窗口/无 target 无加。"""
+    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    xe = next(c for c in COMP_LIBRARY if c.name == "希儿量子")
+    base = GameState(hp=100, board={"战技点": 2}, plane=1, round_num=7)   # 无过渡羁绊计数
+    with_t = transition_tempo_score(base, xe)
+    without_t = transition_tempo_score(base, None)
+    assert with_t > TRANSITION_TEMPO_BONUS * 1.4, "护航羁绊(战技点 2)命中 → 1.5x 加权"
+    assert without_t == 0.0, "无 target 无护航分"
+    late = GameState(hp=100, board={"战技点": 2}, plane=2, round_num=8)   # 过 2-7 分水岭
+    assert transition_tempo_score(late, xe) == 0.0, "过分水岭退役,无加"
+
+
+
+# ===== ADR-0141 品质→敌难度进选卡(金+3/彩+6 的风险项) =====
+def test_roll_affordable_gate_adr0147() -> None:
+    """ADR-0147 roll 可负担性门:M20 死亡态(lv7 穷金)拦截;P2 健康金(35+)放行。
+
+    M20 死亡窗实证:roll 分支满血也 cap=4 × 5 轮 plan,散板 MC 恒正烧光金(18→0)。
+    门:E[刷到下一张核心]×2金(lv7 3费 ≈13.7金)vs 预算金(gold−xp_floor 20)。
+    """
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.cw_economy import roll_affordable
+    tgt = next(c for c in COMP_LIBRARY if c.name == '列车同行')
+    cfg = SimpleNamespace(economy_mode='adaptive')
+    assert not roll_affordable(GameState(board={}, gold=18, level=7, plane=2, round_num=2), cfg, tgt)
+    assert not roll_affordable(GameState(board={}, gold=5, level=7, plane=2, round_num=2), cfg, tgt)
+    assert roll_affordable(GameState(board={}, gold=35, level=7, plane=2, round_num=2), cfg, tgt)
+    assert roll_affordable(GameState(board={}, gold=50, level=7, plane=2, round_num=2), cfg, tgt)
+    assert not roll_affordable(GameState(board={}, gold=50, level=6, plane=1, round_num=5), cfg, tgt)
+
+
+def test_decide_event_refresh_suggestion_adr0146() -> None:
+    """ADR-0146:三张最优 < 50 → PickEvent.refresh=True(纯建议,handler 决定真刷否)。"""
+    cfg = _cfg()
+    st = GameState(board={})
+    pick = decide_event(["赌神·银", "恢复生机", "气氛组"], cfg, st)   # 20/12/20
+    assert pick.refresh is True and 'suggest-refresh' in pick.reason
+    pick2 = decide_event(["彩虹时代", "恢复生机", "气氛组"], cfg, st)   # 72
+    assert pick2.refresh is False
+    pick3 = decide_event(["定期福利", "恢复生机", "气氛组"], cfg, st)   # 白名单 90
+    assert pick3.refresh is False
+
+
+def test_env_pick_value_adr0144() -> None:
+    """ADR-0144 环境侧评估分:env 原恒 0 分(fallback 恒选第一张)→ 基准分 + 阵营条件分 + HP 钩子。"""
+    from sr_od.application.currency_war.cw_investments import get_env
+    cfg = _cfg()
+    st = GameState(board={})
+    # 基准分:彩虹时代 72 > 增发货币 48(旧:全 0 分 → 恒选第一张)
+    pick = decide_event(["增发货币", "彩虹时代"], cfg, st)
+    assert pick.option_idx == 1
+    assert 'env-eval' in pick.reason
+    # 阵营条件分:无 comp 时 追击概念股 52 < 彩虹时代 72;target 含追击 → floor 78 反超
+    pick2 = decide_event(["追击概念股", "彩虹时代"], cfg, st)
+    assert pick2.option_idx == 1, "无 comp:裸分 52 < 72"
+    tgt = Comp(name="t2", factions=["追击"], core_chars=[], form_tiers={"追击": 4},
+               strength="A", form_difficulty="medium")
+    pick3 = decide_event(["追击概念股", "彩虹时代"], cfg, st, target_comp=tgt)
+    assert pick3.option_idx == 0 and 'env-faction' in pick3.reason, "comp 匹配:78 > 72"
+    # HP 钩子:白银时代 35 vs 增发货币 48 —— 正常增发胜;hp<40 白银 35+15=50 反超(降难度求稳)
+    pick_a = decide_event(["白银时代", "增发货币"], cfg, st)
+    assert pick_a.option_idx == 1
+    st_low = GameState(board={}, hp=20)
+    pick_b = decide_event(["白银时代", "增发货币"], cfg, st_low)
+    assert pick_b.option_idx == 0, "HP危:50 > 48 —— 环境钩子改变行为"
+    # 注册表字段实值(评估表派生):彩虹时代 72 / 追击概念股 52
+    _e = get_env("彩虹时代")
+    assert _e is not None and _e.pick_value == 72
+    _e2 = get_env("追击概念股")
+    assert _e2 is not None and _e2.pick_value == 52
+    # 策略/env 注册表不相交:策略名不落 env 分支
+    pick_c = decide_event(["免费午餐", "彩虹时代"], cfg, st)   # 50 vs 72
+    assert pick_c.option_idx == 1
+    # ADR-0144b 跨表污染守卫(评审+自查双实证:83 env 名 29 个 LCS 误中策略名):
+    # ①env 名不进策略 LCS 兜底(增发货币曾误中超发货币 55 计分);②env 无品质不吃难度惩罚
+    # (列车同行概念股曾误中列车同行星徽棱彩 -12,floor 78 被削到 66 —— 评审量化)。
+    tgt2 = Comp(name="tf", factions=["列车同行"], core_chars=[], form_tiers={"列车同行": 4},
+                strength="A", form_difficulty="medium")
+    pick_d = decide_event(["列车同行概念股", "增发货币"], cfg, st, target_comp=tgt2)
+    assert pick_d.option_idx == 0 and 'env-faction' in pick_d.reason, "floor 78 无品质惩罚叠加"
+    pick_e = decide_event(["增发货币", "头彩"], cfg, st)   # 48 vs 55:头彩 env 分高,表内胜出(无策略串台)
+    assert pick_e.option_idx == 1 and 'env-eval' in pick_e.reason
+
+
+def test_decide_event_rarity_difficulty_penalty() -> None:
+    """ADR-0143 评估分基线上:惩罚只调相对序;HP 危险加倍改变行为。"""
+    cfg = _cfg()
+    st = GameState(board={}, hp=100)
+    # 三张经济类(避开白名单,评估分:乱成一锅粥+ 45 彩 / 黄金垃圾 48 金 / 免费午餐 50 银)
+    pick = decide_event(["免费午餐", "黄金垃圾", "乱成一锅粥+"], cfg, st)
+    # 分:午餐 50-0 / 垃圾 48-6=42 / 锅粥+ 45-12=33 → 银胜(评估分已含品质+经济,0143 行为改变:
+    # 旧裸先验下彩 58 胜;现在「免费午餐」被评为好卡,惩罚叠加后仍压过 —— 分数为纲非品质为纲)
+    assert pick.option_idx == 0
+    # 高评估彩压过惩罚:鲜血阶梯 75(彩) vs 免费午餐 50(银):75-12=63 > 50 → 彩胜
+    # (惩罚只调相对序非禁选,0143 语义不变)
+    pick_b = decide_event(["鲜血阶梯", "免费午餐"], cfg, st)
+    assert pick_b.option_idx == 0, "高评估彩(63)仍胜银(50) —— 惩罚只调相对序"
+    # HP 危险加倍 + 评估分接近:乱成一锅粥+ 45(彩) vs 尾款交付 30(银):
+    # 正常 45-12=33 > 30 彩胜;危险 45-24=21 < 30 → **银胜**(危险期惩罚改变行为,设计意图:
+    # 低血时不再为品质赌难度;剩余价值是金不适用此例,尾款交付=银 eval 30)
+    pick_c = decide_event(["尾款交付", "乱成一锅粥+"], cfg, st)
+    assert pick_c.option_idx == 1, "正常期:彩(33)胜银(30)"
+    st_low = GameState(board={}, hp=20)
+    pick3 = decide_event(["尾款交付", "乱成一锅粥+"], cfg, st_low)
+    assert pick3.option_idx == 0, "HP危:银(30)胜彩(21) —— 危险期惩罚改变行为"
+    # 未注册(0) vs 金经济(48-12=36) → 金胜
+    pick2 = decide_event(["银色无名甲", "黄金垃圾"], cfg, st_low)
+    assert pick2.option_idx == 1
+
+
+def test_option_rarity_lcs_fallback() -> None:
+    """_option_rarity:精确名直查;OCR 形变名(•→·)走 LCS 兜底;未知返空。"""
+    assert _option_rarity("及时雨") == "棱彩"
+    assert _option_rarity("全都要•银") == "银"   # LCS 兜底(注册表是 ·)
+    assert _option_rarity("完全不存在的名字xyz") == ""
 
