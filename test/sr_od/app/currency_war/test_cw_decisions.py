@@ -1086,3 +1086,56 @@ def test_prefilter_strict_when_formed() -> None:
     acts = plan(st, _cfg(), [], rng=random.Random(7), target_comp=comp)
     assert not any(isinstance(a, BuyCard) for a in acts), '成型后 off-target 严格拒'
 
+
+
+# ===== ADR-0125/0127 review 补测(H1 窗口语义 / room-bench / 同名 deploy 去重)=====
+
+def _bc_at(slot, name, star=1, faction='?') -> BenchChar:
+    return BenchChar(slot=slot, char_id=name, faction=faction, star=star)
+
+
+def test_h1_merge_window_reachable_from_shop() -> None:
+    """review H1:deployed 1 + bench 1 + shop 同名 → 可买(第 3 份 = 游戏语义当场升星)。"""
+    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.cw_decisions import plan
+    from sr_od.application.currency_war.cw_state import BuyCard
+    comp = get_comp('列车同行')
+    st = GameState(gold=20, level=6, plane=1, round_num=5,
+                   deployed=[_bc_at(1, '三月七', faction='列车同行')],
+                   bench=[_bc_at(1, '三月七', faction='列车同行')],
+                   board={'列车同行': 1})
+    st.shop = [_mk_card('列车同行', 1, name='三月七')]
+    acts = plan(st, _cfg(), [], rng=random.Random(7), target_comp=comp)
+    assert any(isinstance(a, BuyCard) for a in acts), 'deployed1+bench1 买第3份应可达(全场合并语义)'
+
+
+def test_h1_copies_cap_at_3() -> None:
+    """review H1:总副本 ≥3(1★)不再买(纯浪费)。"""
+    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.cw_decisions import plan
+    from sr_od.application.currency_war.cw_state import BuyCard
+    comp = get_comp('列车同行')
+    st = GameState(gold=20, level=6, plane=1, round_num=5,
+                   deployed=[_bc_at(1, '三月七', faction='列车同行')],
+                   bench=[_bc_at(1, '三月七', faction='列车同行'),
+                           _bc_at(2, '三月七', faction='列车同行')],
+                   board={'列车同行': 1})
+    st.shop = [_mk_card('列车同行', 1, name='三月七')]
+    acts = plan(st, _cfg(), [], rng=random.Random(7), target_comp=comp)
+    assert not any(isinstance(a, BuyCard) for a in acts), '1★ 副本已 3 → 不再买'
+
+
+def test_m3_no_same_name_double_deploy_in_plan() -> None:
+    """review M3:场上同名已 deployed → plan 不再 emit 该角色的 DeployMove(游戏 5.1.7 禁双)。"""
+    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.cw_decisions import plan
+    from sr_od.application.currency_war.cw_state import DeployMove
+    comp = get_comp('列车同行')
+    st = GameState(gold=10, level=6, plane=1, round_num=5,
+                   deployed=[_bc_at(1, '三月七', faction='列车同行')],
+                   bench=[_bc_at(1, '三月七', star=2, faction='列车同行')],   # 2★ 同名(merge 产物)
+                   board={'列车同行': 1})
+    st.shop = []
+    acts = plan(st, _cfg(), [], rng=random.Random(7), target_comp=comp)
+    assert not any(isinstance(a, DeployMove) for a in acts), '同名 2★ 不得与场上 1★ 双上阵'
+
