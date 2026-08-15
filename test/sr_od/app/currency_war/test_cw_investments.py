@@ -239,9 +239,14 @@ def test_adr0151_semantic_bindings_present() -> None:
     assert strategy_bindings(get_strategy("超充站"))[0] == frozenset({"能量"})
     # 赠 key 角色:仅角色绑
     assert STRATEGY_BINDINGS["双龙会"] == (frozenset(), frozenset({"丹恒·饮月", "丹恒·腾荒"}))
+    # 偶像经济:火花 = 星间旅人 4 费核心(plaza traits 确认)→ 阵营+角色双绑
+    assert STRATEGY_BINDINGS["偶像经济"] == (frozenset({"星间旅人"}), frozenset({"火花"}))
+    # 盗用身份:{NICKNAME} 占位符已归一为 开拓者(生成器 strip_rich)
+    assert "开拓者" in get_strategy("盗用身份").effect and "{" not in get_strategy("盗用身份").effect
     # 契约环境阵营(ADR-0151 补:赠阵营角色)
     for name, faction in (("量子同频契约", "量子同频"), ("公司契约", "公司"),
                           ("持续伤害契约", "持续伤害"), ("战技点契约", "战技点"),
-                          ("星核猎手契约", "星核猎手"), ("欢愉契约", "欢愉")):
+                          ("星核猎手契约", "星核猎手"), ("欢愉契约", "欢愉"),
+                          ("特邀专家:加拉赫", "击破")):
         assert env_faction(name) == faction, f"{name} 应绑 {faction}"
 
