@@ -479,3 +479,16 @@ def test_read_total_damage() -> None:
     ctx2 = SimpleNamespace(ocr_service=SimpleNamespace(
         get_ocr_result_list=lambda image=None: _ocr_noise))
     assert read_total_damage(ctx2, screen, (1680, 240, 1820, 420)) is None
+
+
+# ===== ADR-0129 XP 分母反推真等级 =====
+def test_level_from_xp_inverse_table() -> None:
+    """XP 条分母 = 当前级→下一级门槛(用户实测表):反查得真等级;表外值/None 安全返 None。"""
+    from sr_od.application.currency_war.cw_observation import _level_from_xp
+    assert _level_from_xp((0, 4)) == 3      # 3→4 需 4
+    assert _level_from_xp((18, 20)) == 5    # 5→6 需 20(M15 位面 2 真实 lv5 实锤)
+    assert _level_from_xp((2, 40)) == 6
+    assert _level_from_xp((0, 52)) == 7
+    assert _level_from_xp((0, 2)) is None   # 1-2 级门槛不在表 → 不覆盖
+    assert _level_from_xp(None) is None
+

@@ -10,6 +10,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 import pytest
+
 from one_dragon.base.geometry.rectangle import Rect
 from sr_od.application.currency_war.cw_identity_obs import find_supply_boxes
 
@@ -28,7 +29,7 @@ def _slots() -> list[tuple[int, Rect]]:
     return [(i, Rect(*r)) for i, r in enumerate(_BENCH_RECTS, start=1)]
 
 
-def _load(path: str) -> 'np.ndarray':
+def _load(path: str) -> np.ndarray:
     img = cv2.imdecode(np.fromfile(path, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         pytest.skip(f'实机截图 fixture 缺: {path}')
@@ -60,12 +61,12 @@ def test_supply_box_no_false_positive_on_empty() -> None:
 def test_supply_box_threshold_margin() -> None:
     """分离度:箱槽 val 应超阈值,角色槽远低于(防阈值贴边脆断)。"""
     from sr_od.application.currency_war.cw_identity_obs import (
-        _get_supply_box_gray,
         _SUPPLY_BOX_TM_THR,
+        _get_supply_box_gray,
     )
     tm = _get_supply_box_gray()
     if tm is None:
-        pytest.skip('补给箱模板缺(assets/template/cw_supply/补给箱.png)')
+        pytest.skip('补给箱模板缺(assets/template/currency_war/supply/补给箱.png)')
     gray = cv2.cvtColor(_load(_SHOT), cv2.COLOR_BGR2GRAY)
     box_val, char_max = 0.0, 0.0
     for i, r in enumerate(_BENCH_RECTS, start=1):

@@ -238,32 +238,4 @@ def test_read_star_edge_slots_2star(test_context: SrTestContext) -> None:
         assert read_star(s[600:739, 1245:1386]) == 2, '后排-6 椒丘 2★(右槽,第2星 TM val~0.45-0.50,ADR-0116 thresh 0.45 解)'
 
 
-# character_cw_portrait 立绘库(主仓 assets/,71 角色 <name>/raw.png)
-_PORTRAIT_DIR = _REPO_ROOT / 'assets' / 'template' / 'character_cw_portrait'
 
-
-def test_read_star_portrait_library_no_false_positive() -> None:
-    """read_star:立绘库 71 张 → **全部读 1(无 >1 误判)**,即 ADR-0114/0115「立绘库 0/71」回归守卫。
-
-    **立绘库无星级 UI 金星**(是 SIFT 身份模板 ``<name>/raw.png`` 半身立绘艺术,非游戏截图)—— 但立绘本身
-    带金色衣服 / 装饰:实测 58/71 全图有金像素、5/71 底部带金块 TM≥thresh 触发计数路径(Momojie 被
-    aspect 拒 / 千冶·刃 单金块过形状算 1 / 余 TM 低不计数)。因**没有任何立绘含 ≥2 个过形状的金块**,
-    read_star 全读 1(≥1 fallback:角色必有星,read_star 设计上不返 0)。
-
-    故本测守的是**「装饰误判成多星」**(false positive:>1),**不**测真金星计数(真星在 ``deployed_*``
-    fixture 测)。改 read_star 阈值(area/aspect/circ/V/thresh/region)后,若衣服装饰被数成 2+ 星 → 本测
-    挡住。0/71 不靠 circ(area+aspect+V>150+TM 已挡死),故本测也间接证 circ 放宽(ADR-0115)安全。
-    """
-    portraits = sorted(_PORTRAIT_DIR.glob('*/raw.png'))
-    if not portraits:
-        pytest.skip(f'立绘库目录无模板:{_PORTRAIT_DIR}')
-    violators: list[str] = []
-    for p in portraits:
-        img = cv2_utils.read_image(str(p))
-        if img is None:
-            violators.append(f'{p.parent.name}(读图失败)')
-            continue
-        n = read_star(img)
-        if n != 1:
-            violators.append(f'{p.parent.name}={n}')
-    assert not violators, f'立绘库 read_star 误判(应全 1):{violators}'

@@ -8,7 +8,9 @@ from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.recognizers.briefing_recognizer as mod
 from sr_od.application.currency_war.cw_obs_core import BRIEFING_SCREEN
-from sr_od.application.currency_war.recognizers.briefing_recognizer import BriefingRecognizer
+from sr_od.application.currency_war.recognizers.briefing_recognizer import (
+    BriefingRecognizer,
+)
 
 
 def test_screen_name_matches_briefing() -> None:

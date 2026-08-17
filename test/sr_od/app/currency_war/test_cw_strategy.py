@@ -17,12 +17,11 @@ import pytest
 
 from one_dragon.base.operation.application.plugin_info import PluginSource
 from sr_od.application.currency_war import cw_strategy as _cw_strategy_mod
-from sr_od.application.currency_war.cw_decisions import (
+from sr_od.application.currency_war.cw_events import (
     MegastarOption,
     PartnerOption,
-    PickEvent,
 )
-from sr_od.application.currency_war.cw_state import GameState, ShopCard
+from sr_od.application.currency_war.cw_state import GameState, PickEvent, ShopCard
 from sr_od.application.currency_war.cw_strategy import (
     CurrencyWarMatch,
     CwStrategy,
@@ -37,9 +36,6 @@ def _cfg(**overrides) -> SimpleNamespace:
     base = {
         "faction_priority": ["贝洛伯格", "仙舟", "巡海游侠"],
         "character_priority": ["阿格莱雅"],
-        "economy_mode": "adaptive",
-        "event_whitelist": {"中产阶级": 82, "定期福利": 90},
-        "dot_punish_envs": ["净化身心"],
         "character_build_around": [],
         "strategy_id": "default",
         "strategy_seed": None,

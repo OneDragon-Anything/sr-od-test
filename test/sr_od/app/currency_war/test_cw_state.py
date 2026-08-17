@@ -1,15 +1,16 @@
 """货币战争 GameState 模型(cw_state)测试 —— 纯逻辑,不依赖游戏。
 
-D-78 加法块:strategy/13 §13.2 补字段(node_path/match_type/plane_modifiers/shop_locked/
-active_strategies/megastar_char/partner_char)+ NodeInfo 类型 + BenchChar.equips + current_boss 派生。
+D-78 加法块:strategy/13 §13.2 补字段(match_type/plane_modifiers/shop_locked/
+active_strategies/megastar_char/partner_char)+ BenchChar.equips + current_boss 派生。
 均 None/空兜底(OCR 未接→安全降级),零行为变化。
+⚖️ NodeInfo/node_path 已随死字段删除(2026-08-16 review D3:0 写 0 读;节点序列
+由 cw_node_reader.NodeSlot 承载)。
 """
 from __future__ import annotations
 
 from sr_od.application.currency_war.cw_state import (
     BenchChar,
     GameState,
-    NodeInfo,
     _bench_char_cost,
     sell_refund,
 )
@@ -18,7 +19,6 @@ from sr_od.application.currency_war.cw_state import (
 def test_new_fields_default_none_or_empty() -> None:
     """D-78 新字段默认值:None / 空容器(OCR 未接 → 安全降级,不编默认值)。"""
     s = GameState()
-    assert s.node_path == []
     assert s.match_type is None
     assert s.plane_modifiers == []
     assert s.shop_locked is False
@@ -33,15 +33,6 @@ def test_bench_char_equips_default() -> None:
     assert bc.equips == []
     bc.equips = ["反重力皮靴", "冷笑话引擎"]
     assert bc.equips == ["反重力皮靴", "冷笑话引擎"]
-
-
-def test_node_info_defaults() -> None:
-    """NodeInfo(node_path 元素)默认 type 空 / status future(未接 OCR 时)。"""
-    ni = NodeInfo()
-    assert ni.type == ""
-    assert ni.status == "future"
-    typed = NodeInfo(type="boss", status="current")
-    assert typed.type == "boss" and typed.status == "current"
 
 
 def test_current_boss_derived_from_plane() -> None:
@@ -148,3 +139,33 @@ def test_bench_char_cost_unknown_defaults_3() -> None:
     """_bench_char_cost:未知 char_id → 默认中费 3(sell_refund 兜底,防身份未识别时崩)。"""
     assert _bench_char_cost(BenchChar(slot=0, char_id="", star=1)) == 3
     assert _bench_char_cost(BenchChar(slot=0, char_id="不存在的角色xyz", star=1)) == 3
+
+
+# ===== ADR-0129 购买经验模型(单击 +4 XP,攒门槛升级,溢出结转) =====
+def test_simulate_level_up_accumulates_xp() -> None:
+    """一次 LevelUp = +4 XP(单击),不直接升级;经验条同步推进。"""
+    from sr_od.application.currency_war.cw_state import LevelUp, simulate
+    s = GameState(level=5, gold=40, xp_progress=(0, 20), hp=100)
+    s2 = simulate(s, LevelUp(cost=4))
+    assert s2.level == 5, "4/20 未到门槛,不应升级"
+    assert s2.xp_progress == (4, 20)
+    assert s2.gold == 36
+
+
+def test_simulate_level_up_crosses_threshold_with_carryover() -> None:
+    """18/20 时点 1 次(22 XP)→ 升到 6 级,溢出 2 结转(2/40,用户门槛表)。"""
+    from sr_od.application.currency_war.cw_state import LevelUp, simulate
+    s = GameState(level=5, gold=40, xp_progress=(18, 20), hp=100)
+    s2 = simulate(s, LevelUp(cost=4))
+    assert s2.level == 6
+    assert s2.xp_progress == (2, 40)
+
+
+def test_simulate_level_up_xp_unknown_starts_zero() -> None:
+    """xp 未知(None)按 0 进度起步 —— 保守(多估所需击数,不虚报升级)。"""
+    from sr_od.application.currency_war.cw_state import LevelUp, simulate
+    s = GameState(level=3, gold=10, xp_progress=None, hp=100)
+    s2 = simulate(s, LevelUp(cost=4))
+    assert s2.level == 4, "lv3 门槛 4,一击 +4 恰好升级"
+    assert s2.xp_progress == (0, 6)
+

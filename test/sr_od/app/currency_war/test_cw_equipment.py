@@ -9,6 +9,7 @@ from __future__ import annotations
 import inspect
 
 import pytest
+
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import file_utils
 from sr_od.application.currency_war.cw_equipment import (
@@ -23,7 +24,7 @@ from sr_od.context.sr_context import SrContext
 from test.conftest import SrTestContext
 
 _REPO_ROOT = file_utils.find_src_dir(inspect.getfile(SrContext)).parent
-_EQUIP_DIR = _REPO_ROOT / 'assets' / 'template' / 'cw_equip'
+_EQUIP_DIR = _REPO_ROOT / 'assets' / 'template' / 'currency_war' / 'equip_legacy'
 
 
 def test_key_equips_present() -> None:
@@ -270,6 +271,7 @@ def test_select_layout_no_complete_returns_empty() -> None:
     另验合法 1件{0} 仍返该件(修不破坏合法路径)。
     """
     import numpy as np
+
     from sr_od.application.currency_war.cw_equipment import _select_equipped_layout
     dummy = np.zeros((100, 200, 3), dtype=np.uint8)
     rect = Rect(0, 0, 200, 100)
@@ -285,7 +287,9 @@ def test_prioritize_wearable_comp_driven() -> None:
     替 naive ``wearable[0]``(read_equips 返回第一个)。无 target / 无 key_equips → 原序(等价旧行为)。
     key_equips 含重复(阿雅需 2 反重力皮靴)→ 按 multiplicity 消费(命中的重复件也优先,但不超额)。
     """
-    from sr_od.application.currency_war.operations.prep.equip_all import _prioritize_wearable
+    from sr_od.application.currency_war.operations.prep.equip_all import (
+        _prioritize_wearable,
+    )
     # wearable = [(name, (cx, cy)), ...](read_equips 命中顺序)
     w = [('光速螺旋桨', (1800, 900)), ('反重力皮靴', (1850, 900)), ('火力风暴潮', (1700, 900))]
     # 无 target / 无 key_equips → 原序(等价旧行为)

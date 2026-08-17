@@ -7,7 +7,9 @@
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.recognizers.settlement_recognizer as mod
-from sr_od.application.currency_war.recognizers.settlement_recognizer import SettlementRecognizer
+from sr_od.application.currency_war.recognizers.settlement_recognizer import (
+    SettlementRecognizer,
+)
 
 
 def _ctx_with_ocr(ocr_texts: list[str]) -> MagicMock:

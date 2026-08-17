@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import prep_actions as pa_mod
 from sr_od.application.currency_war import prep_director as pd_mod
+from sr_od.application.currency_war.cw_evaluate import _card_hits_target
 from sr_od.application.currency_war.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.prep_actions import (
@@ -41,9 +42,6 @@ def _cfg(**overrides) -> SimpleNamespace:
     base = {
         "faction_priority": ["贝洛伯格", "仙舟", "巡海游侠"],
         "character_priority": ["阿格莱雅"],
-        "economy_mode": "adaptive",
-        "event_whitelist": {},
-        "dot_punish_envs": [],
         "character_build_around": [],
         "strategy_id": "default",
         "strategy_seed": None,
@@ -132,9 +130,12 @@ def test_chain_b_untrusted_gold_requires_heavy_reread() -> None:
 
 
 def test_rule5_defer_gate_falls_to_main_flow() -> None:
-    """defer≥2 → 球留置进主流程(不空转,§5.1 规则 4 门)。"""
+    """defer≥2 → 球留置进主流程(不空转,§5.1 规则 4 门)。
+
+    free=1(有空席)隔离 M-6 门:主流程第一步 = RunBuyPhase。
+    """
     a = S.decide_prep_action(_obs(spheres=[('gold', None, 40)],
-                                  free_bench_slots=0),
+                                  free_bench_slots=1),
                              _sess(defer_count=2), _cfg())
     assert isinstance(a, (RunBuyPhase, RunDeploy, RunEquip, StartBattle))
 
@@ -203,15 +204,15 @@ def test_chain_c3in1_protection_none_sellable() -> None:
 
 def test_weakest_bench_idx_protects_triplicates() -> None:
     """_weakest_bench_idx 3合1 保护(直测):同名同星 2 张保护,只返回散件。"""
-    from sr_od.application.currency_war import cw_decisions
+    from sr_od.application.currency_war import cw_plan
 
     bench = [_bc(1, '飞霄'), _bc(2, '飞霄'), _bc(3, '散件')]
     st = GameState(bench=bench)
-    idx = cw_decisions._weakest_bench_idx(st, [])
+    idx = cw_plan._weakest_bench_idx(st, [])
     assert idx == 2   # 前两张保护(3合1 进行),返回散件下标
     # 全保护 → None
     st2 = GameState(bench=[_bc(1, '飞霄'), _bc(2, '飞霄')])
-    assert cw_decisions._weakest_bench_idx(st2, []) is None
+    assert cw_plan._weakest_bench_idx(st2, []) is None
 
 
 # ===== §5.3 主流程(P1 组合;阶段位推进)=====
@@ -233,10 +234,30 @@ def test_main_flow_phase_progression() -> None:
 
 
 def test_main_flow_m6_gate_skips_buy_when_free0() -> None:
-    """M-6 门:free=0 跳过买牌直奔部署(防 shop._handle_bench_full 位置式卖)。"""
+    """M-6 门:free=0 跳过买牌(防 shop._handle_bench_full 位置式卖)→ 走腾席链 a/b/c 破满席。
+
+    M24 卡死修(2026-08-16):旧逻辑直奔 RunDeploy,deploy-swap 卖拖拽失败(bug#1 变体)+ 金不够
+    升级 → 警告不消死循环。新语义:满席先过腾席链(deploy/升级/卖最弱),链 d(Defer)落回部署段。
+    mock 无 gold 真值 → 链 b EnsureShopOpen(开态重读,合法破局步)。
+    """
     sess = _sess()
     a = S._main_flow_step(_obs(free_bench_slots=0), sess, _cfg())
-    assert isinstance(a, RunDeploy) and sess.prep_phase == 2
+    assert not isinstance(a, RunBuyPhase), "free=0 永不买牌(M-6 门)"
+    assert isinstance(a, (DeployMove, LevelUp, EnsureShopOpen, SellBench, RunDeploy))
+
+
+def test_m6_gate_chain_c_sells_weakest_when_no_gold() -> None:
+    """M24 死循环破坏守卫:满席 + gold 真值 + 升级门不通 → 链 c 卖最弱(而非回 RunDeploy 空转)。"""
+    bench = [_bc(1, '藿藿', '仙舟'), _bc(2, '三月七', '列车同行')]
+    st = GameState(level=7, gold=4)   # 金 4 不够任何升级(52 XP 档)
+    sess = _sess(tracked_bench_chars=bench, tracked_deployed=[],
+                 last_state=st, last_level_obs=7)
+    obs = _obs(free_bench_slots=0, deploy_vacancy=0, bench_chars=bench,
+               state_gold_trusted=True, state=st)
+    a = S._main_flow_step(obs, sess, _cfg())
+    assert isinstance(a, SellBench), (
+        f"满席+金不够升级+无 deploy 空位 → 链 c 卖最弱破局,得 {type(a).__name__}"
+    )
 
 
 # ===== level_up_gate 单一源 =====
@@ -244,14 +265,14 @@ def test_main_flow_m6_gate_skips_buy_when_free0() -> None:
 
 def test_level_up_gate() -> None:
     """level_up_gate:level<10 + gold≥cost + (goal 说升/落后 node goal)。"""
-    from sr_od.application.currency_war import cw_decisions
+    from sr_od.application.currency_war import cw_plan
 
     # level 10 封顶
-    assert not cw_decisions.level_up_gate(GameState(level=10, gold=999))
+    assert not cw_plan.level_up_gate(GameState(level=10, gold=999))
     # 不够钱
-    assert not cw_decisions.level_up_gate(GameState(level=5, gold=0))
+    assert not cw_plan.level_up_gate(GameState(level=5, gold=0))
     # 落后 node goal(早期 plane1 r1 target_level 高)+ 够钱 → 升
-    assert cw_decisions.level_up_gate(GameState(level=2, gold=50, plane=1, round_num=1))
+    assert cw_plan.level_up_gate(GameState(level=2, gold=50, plane=1, round_num=1))
 
 
 # ===== 框架杂项 =====
@@ -309,6 +330,8 @@ def _make_director(monkeypatch, executor) -> PrepDirector:
     d._cached_deployed = []
     d._cached_vacancy = 0
     d._cached_gold_trusted = False
+    # 光标 parking no-op(2026-08-16 重 IO 动作,mock 环境无 controller)
+    monkeypatch.setattr(d, 'park_cursor', lambda *a, **kw: None)
     import sr_od.application.currency_war.currency_war_config as cfg_mod
     monkeypatch.setattr(cfg_mod, 'CurrencyWarConfig', lambda idx: _cfg())
     monkeypatch.setattr(pd_mod.time, 'sleep', lambda s: None)   # 恢复等待不拖测试
@@ -464,13 +487,13 @@ def test_validate_rejects_unknown_action_type(test_context: SrTestContext) -> No
 
 def test_weakest_bench_protects_same_star_only() -> None:
     """L-5 回归:3合1 保护按 (char_id, star) —— 同名不同星不保护。"""
-    from sr_od.application.currency_war import cw_decisions
+    from sr_od.application.currency_war import cw_plan
 
     bench2 = [_bc(1, '飞霄', star=1), _bc(2, '飞霄', star=1), _bc(3, '散件', star=1)]
-    assert cw_decisions._weakest_bench_idx(GameState(bench=bench2), []) == 2
+    assert cw_plan._weakest_bench_idx(GameState(bench=bench2), []) == 2
     # 同名不同星:两单张不构成进度 → 都可候选(不保护)
     bench_mixed = [_bc(1, '飞霄', star=1), _bc(2, '飞霄', star=2), _bc(3, '散件', star=1)]
-    idx = cw_decisions._weakest_bench_idx(GameState(bench=bench_mixed), [])
+    idx = cw_plan._weakest_bench_idx(GameState(bench=bench_mixed), [])
     assert idx is not None and idx != -1   # 有候选(不因同名保护而 None)
 
 def test_observe_light_reuses_heavy_cache(monkeypatch, test_context: SrTestContext) -> None:
@@ -483,6 +506,7 @@ def test_observe_light_reuses_heavy_cache(monkeypatch, test_context: SrTestConte
                             is_success=(scr_name == '货币战争-备战-开商店')))   # 模拟 shop 开
     monkeypatch.setattr(pd_mod, 'read_reward_spheres', lambda c, s: [])
     monkeypatch.setattr(pd_mod, 'read_supply_boxes', lambda c, s: [])
+    monkeypatch.setattr(pd_mod, 'cw_identity_obs_read_tomes', lambda c, s: [])
     monkeypatch.setattr(pd_mod, 'row_area_centers', lambda c, p: [Point(i, i) for i in range(9)]
                         if p == '备战栏' else [])
     monkeypatch.setattr(pd_mod, 'slot_occupied', lambda s, x, y: False)
@@ -516,6 +540,7 @@ def test_observe_gold_zero_reread(monkeypatch, test_context: SrTestContext) -> N
                             is_success=(scr_name == '货币战争-备战-开商店')))
     monkeypatch.setattr(pd_mod, 'read_reward_spheres', lambda c, s: [])
     monkeypatch.setattr(pd_mod, 'read_supply_boxes', lambda c, s: [])
+    monkeypatch.setattr(pd_mod, 'cw_identity_obs_read_tomes', lambda c, s: [])
     monkeypatch.setattr(pd_mod, 'row_area_centers', lambda c, p: [Point(i, i) for i in range(9)]
                         if p == '备战栏' else [])
     monkeypatch.setattr(pd_mod, 'slot_occupied', lambda s, x, y: False)
@@ -578,8 +603,9 @@ def test_rule3_shop_open_closes_shop_first() -> None:
 
 def test_level_up_clamps_phantom_jump(test_context, monkeypatch) -> None:
     """live 幽灵 lv10 回归(2026-08-15):_level_up 接受窗钳 before+2 —— 6→10 不确认成功。"""
-    from sr_od.application.currency_war import prep_actions as pa_mod
     import numpy as np
+
+    from sr_od.application.currency_war import prep_actions as pa_mod
 
     op = PrepDirector(test_context)
     ex = pa_mod.PrepActionExecutor(op, test_context)
@@ -606,14 +632,64 @@ def test_offtarget_sell_protects_core_enablers() -> None:
     列车同行 core 含 花火(其阵营=战技点/盛会之星,∉列车同行)—— M1 位面2 deploy-swap
     把花火卖掉 → 板成型度崩(列车同行4→1)。target 判定须含 core_chars(ADR-0103 同语义)。
     """
-    # 纯逻辑:_is_tgt_char 语义在 deploy_bench 闭包内 —— 用 cw_decisions._card_hits_target
+    # 纯逻辑:_is_tgt_char 语义在 deploy_bench 闭包内 —— 用 _card_hits_target
     # 同语义对照(它已含 core 命中):花火 ∈ core_chars → True(即便阵营不交集)。
-    from sr_od.application.currency_war import cw_decisions
     from sr_od.application.currency_war.cw_comps import get_comp
 
     comp = get_comp('列车同行')
     assert comp is not None and '花火' in comp.core_chars
     # 花火:core 命中(阵营不交集也应 True)
-    assert cw_decisions._card_hits_target('花火', '盛会之星', comp) is True
+    assert _card_hits_target('花火', '盛会之星', comp) is True
     # 普通盛会之星单位(非 core):按阵营不交集 → False(可卖)
-    assert cw_decisions._card_hits_target('陌生角色', '盛会之星', comp) is False
+    assert _card_hits_target('陌生角色', '盛会之星', comp) is False
+
+
+# ===== ADR-0136 M16 死循环修复(未达上限弹窗勾选 + 备战席已满警告感知) =====
+def test_start_battle_dialog_checkbox_equipped(monkeypatch) -> None:
+    """_start_battle 弹窗处理 = 勾选(幂等)+确认(对齐 HandleDeployNotFull;M16 只确认→每次出战都弹)。"""
+    import sr_od.application.currency_war.prep_actions as pa
+
+    clicks: list[tuple[int, int]] = []
+    screens = {'iter': 0}
+
+    class _FakeArea:
+        def __init__(self, ok: bool): self.is_success = ok
+
+    class _Dir:
+        def screenshot(self):
+            screens['iter'] += 1
+            return object()
+        def round_by_find_area(self, scr, screen, area):
+            # iter1-2: 出战按钮/弹窗在;iter3+: 弹窗消失+备战标识消失 = 出战成功
+            if area == '按钮-出战':
+                return _FakeArea(screens['iter'] == 1)
+            if area == '标识-未达上限警告':
+                return _FakeArea(screens['iter'] == 2)
+            if area == '备战标识-购买经验':
+                return _FakeArea(screens['iter'] < 3)   # iter≥3 消失
+            return _FakeArea(False)
+        def save_screenshot(self, prefix=None): pass
+
+    class _Ctrl:
+        def mouse_move(self, p): pass
+        def click(self, p): clicks.append((p.x, p.y))
+
+    class _Ctx:
+        controller = _Ctrl()
+
+    area_centers = {
+        ('按钮-出战', None): None,
+        ('勾选-本局不再提示', '货币战争-未达上限警告'): None,   # None → fallback 常量
+        ('按钮-确认', '货币战争-未达上限警告'): None,
+    }
+    monkeypatch.setattr(pa, 'area_center', lambda ctx, name, screen=None: area_centers.get((name, screen)))
+    ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
+    ex._op = _Dir(); ex._ctx = _Ctx()
+    ok, detail = pa.PrepActionExecutor._start_battle(ex)
+    assert ok, detail
+    # iter2 弹窗:勾选(912,589)先于确认(1159,653)—— M16 修复核心断言
+    assert (912, 589) in clicks and (1159, 653) in clicks
+    i_check = clicks.index((912, 589))
+    i_confirm = clicks.index((1159, 653))
+    assert i_check < i_confirm, "勾选必须先于确认(否则整局每次出战都弹)"
+

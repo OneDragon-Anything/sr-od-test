@@ -181,3 +181,44 @@ def test_breakdown_feeds_telemetry() -> None:
         assert set(d["eval_breakdown"].keys()) == set(breakdown.keys()), (
             "breakdown schema 透传到 telemetry"
         )
+
+
+# ===== ADR-0132 投资卡效果原文采集(bucket_card_texts + invest_cards.jsonl) =====
+def test_bucket_card_texts_nearest_anchor() -> None:
+    """分桶:文本归 x 最近锚点卡;y 带外(标题/卡名行/底部 UI)不归;桶内 y 升序。"""
+    from sr_od.application.currency_war.cw_telemetry import bucket_card_texts
+    anchors = [(0, 300), (1, 920), (2, 1540)]
+    items = [
+        ("请选择投资策略", 960, 98),    # 标题:带外
+        ("中产阶级", 300, 490),        # 卡名行:带外(y<505)
+        ("每次进入新节点获得2金币", 290, 560),
+        ("立刻获得4金币", 930, 545),
+        ("商店刷新费用降低", 1550, 610),
+        ("确认", 978, 983),            # 底部 UI:带外
+    ]
+    out = bucket_card_texts(anchors, items, 505, 835)
+    assert out[0] == ["每次进入新节点获得2金币"]
+    assert out[1] == ["立刻获得4金币"]
+    assert out[2] == ["商店刷新费用降低"]
+
+
+def test_bucket_card_texts_empty_anchors() -> None:
+    from sr_od.application.currency_war.cw_telemetry import bucket_card_texts
+    assert bucket_card_texts([], [("x", 1, 2)], 0, 100) == {}
+
+
+def test_record_invest_cards_writes_jsonl(tmp_path, monkeypatch) -> None:
+    """record_invest_cards:逐卡一行写 invest_cards.jsonl(带 run_id/kind/chosen);无 run 时不写。"""
+    from sr_od.application.currency_war import cw_telemetry
+    rec = cw_telemetry.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(cw_telemetry, '_RECORDER', rec)
+    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'run_test_1')
+    cw_telemetry.record_invest_cards('strategy', [
+        {"idx": 0, "name": "定期福利", "x": 300, "effect_text": "立刻获得4金币 | 每次进入新节点获2金币", "chosen": True},
+        {"idx": 1, "name": "数值碾压", "x": 920, "effect_text": "", "chosen": False},
+    ])
+    rows = cw_telemetry.read_jsonl(tmp_path / 'invest_cards.jsonl')
+    assert len(rows) == 2
+    assert rows[0]['kind'] == 'strategy' and rows[0]['run_id'] == 'run_test_1'
+    assert rows[0]['chosen'] is True and '金币' in rows[0]['effect_text']
+

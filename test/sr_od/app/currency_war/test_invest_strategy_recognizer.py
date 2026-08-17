@@ -6,7 +6,9 @@
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.recognizers.invest_strategy_recognizer as mod
-from sr_od.application.currency_war.recognizers.invest_strategy_recognizer import InvestStrategyRecognizer
+from sr_od.application.currency_war.recognizers.invest_strategy_recognizer import (
+    InvestStrategyRecognizer,
+)
 
 
 def test_screen_name_matches_invest_strategy() -> None:

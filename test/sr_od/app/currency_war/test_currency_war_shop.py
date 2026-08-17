@@ -13,7 +13,7 @@ from cv2.typing import MatLike
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.cw_decisions import HP_DANGER
+from sr_od.application.currency_war.cw_evaluate import HP_DANGER
 from sr_od.application.currency_war.cw_factions import FACTIONS
 from sr_od.application.currency_war.cw_observation import (
     read_game_state,
@@ -35,7 +35,7 @@ def _has_text(ctx: SrTestContext, screen: MatLike, kw: str) -> bool:
 def test_read_shop_cards_sift(test_context) -> None:
     """商店屏 → SIFT 读出 5 张牌名 + roster 派生 faction/cost(D-55 OCR→SIFT)。
 
-    read_shop_cards 裁 ``商店牌-1..5`` 肖像区(VLM 定位)→ SIFT ``character_cw_portrait`` 立绘库
+    read_shop_cards 裁 ``商店牌-1..5`` 肖像区(VLM 定位)→ SIFT ``currency_war/portrait_plaza`` 官方立绘库
     → 规范名;faction/cost 从 roster 派生。fixture ``shop_open.webp`` GT:翡翠/丹恒·腾荒/不死途/飞霄/三月七。
     """
     if not test_context.has_screen('货币战争-备战', 'shop_open'):

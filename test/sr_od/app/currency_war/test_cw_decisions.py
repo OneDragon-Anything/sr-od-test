@@ -79,9 +79,6 @@ def _cfg(**overrides) -> SimpleNamespace:
     base = {
         "faction_priority": ["贝洛伯格", "仙舟", "巡海游侠"],
         "character_priority": ["阿格莱雅"],
-        "economy_mode": "adaptive",
-        "event_whitelist": {"中产阶级": 82, "定期福利": 90},
-        "dot_punish_envs": ["净化身心"],
     }
     base.update(overrides)
     return SimpleNamespace(**base)
@@ -540,23 +537,23 @@ def test_plan_no_levelup_when_cannot_afford() -> None:
 def test_plan_target_steers_buy_over_reactive() -> None:
     """A2 接线核心区分性:有 target 时买 target 阵营牌,而非 reactive 偏好的他派。
 
-    强制 target=击破流萤(``character_build_around=['流萤']`` 只放过含流萤的 comp);
-    空板 + 金 1(只够买 1 张)+ 商店[击破 cost1, 列车同行 cost1]。
-    - reactive(无 target):synergy 上 列车同行(ceiling 0.5)> 击破(0.33)→ 会先买列车同行;
-    - 有 target:击破买还降击破流莺 target_progress 剩余(+WP×0.167 ≈ 2.5)→ 击破反超 → 买击破。
+    强制 target=万敌单C(``character_build_around=['万敌']`` 只放过含万敌的 comp;万敌 1 费 lv1 可刷);
+    空板 + 金 1(只够买 1 张)+ 商店[夜之半神 cost1, 列车同行 cost1]。
+    - reactive(无 target):synergy 上 列车同行(ceiling 0.5)> 夜之半神 → 会先买列车同行;
+    - 有 target:夜之半神买还降万敌单C target_progress 剩余 → 夜之半神反超 → 买它(万敌属夜之半神+燃血)。
     **断线(plan 不传 target)= 退回 reactive 买列车同行 → 本测试失败**(回归守卫)。
     """
-    cfg = _cfg(character_build_around=["流萤"])
+    cfg = _cfg(character_build_around=["万敌"])
     state = GameState(
         gold=1, round_num=1, level=1, plane=1,
-        shop=[ShopCard(x=1, faction="击破", name="", cost=1),
+        shop=[ShopCard(x=1, faction="夜之半神", name="", cost=1),
               ShopCard(x=2, faction="列车同行", name="", cost=1)],
     )
     actions = plan(state, cfg, cfg.faction_priority, rng=random.Random(0))
     buys = [a for a in actions if isinstance(a, BuyCard)]
     assert buys, "金 1 够买 cost1,应至少买入 1 张"
-    assert buys[0].card.faction == "击破", (
-        "有 target(击破流萤)时应买击破(target 阵营),而非 reactive 偏好的列车同行"
+    assert buys[0].card.faction == "夜之半神", (
+        "有 target(万敌单C)时应买夜之半神(target 阵营),而非 reactive 偏好的列车同行"
     )
 
 
@@ -585,7 +582,7 @@ def test_plan_uses_passed_target_comp_not_reselect() -> None:
     防 2026-08-04 实跑的 target 振荡(列车同行↔DOT队)→ churn。
     """
     from sr_od.application.currency_war.cw_comps import get_comp
-    击破流萤 = get_comp("击破流萤")   # factions=['击破']
+    巡海击破 = get_comp("巡海击破")   # factions=['击破'](ADR-0152:击破流萤更名)
     dot队 = get_comp("DOT队")         # factions=['持续伤害','减益']
     cfg = _cfg()
     state = GameState(
@@ -593,12 +590,12 @@ def test_plan_uses_passed_target_comp_not_reselect() -> None:
         shop=[ShopCard(x=1, faction="击破", name="", cost=1),
               ShopCard(x=2, faction="持续伤害", name="", cost=1)],
     )
-    a1 = plan(state, cfg, cfg.faction_priority, rng=random.Random(0), target_comp=击破流萤)
+    a1 = plan(state, cfg, cfg.faction_priority, rng=random.Random(0), target_comp=巡海击破)
     buys1 = [a for a in a1 if isinstance(a, BuyCard)]
     a2 = plan(state, cfg, cfg.faction_priority, rng=random.Random(0), target_comp=dot队)
     buys2 = [a for a in a2 if isinstance(a, BuyCard)]
-    assert buys1, "target=击破流萤 应买牌"
-    assert buys1[0].card.faction == "击破", "target=击破流萤 → 买击破(target 阵营)"
+    assert buys1, "target=巡海击破 应买牌"
+    assert buys1[0].card.faction == "击破", "target=巡海击破 → 买击破(target 阵营)"
     assert buys2, "target=DOT队 应买牌"
     assert buys2[0].card.faction == "持续伤害", "target=DOT队 → 买持续伤害(target 阵营)"
 
@@ -689,13 +686,8 @@ def test_char_quality_counts_deployed() -> None:
 
 
 # —— 事件 + boss ——
-
-
-def test_decide_event_whitelist() -> None:
-    """选项含白名单名 → 选它。"""
-    cfg = _cfg()
-    pick = decide_event(["随便一个", "中产阶级", "另一个"], cfg, GameState())
-    assert pick.option_idx == 1, "应选白名单'中产阶级'"
+# (原 test_decide_event_whitelist 已删,ADR-0204:event_whitelist 配置删除,用户语义由
+#  strategy/env priority(+30)/forbid(−10000)覆盖,见下方转向轴测试族。)
 
 
 def test_decide_event_dot_needs_major_faction() -> None:
@@ -709,6 +701,42 @@ def test_decide_event_dot_needs_major_faction() -> None:
     # count=1 不触发 on_dot,净化身心 无惩罚;两选项白名单都0分 → 选第一个(idx0)
     assert decide_event(["净化身心", "普通选项"], cfg, s1).option_idx == 0, (
         "count=1 非DoT主派,不避(选第一个)"
+    )
+
+
+# —— 用户转向轴:投资策略/环境 priority/forbid(config.md §3;2026-08-17 用户定调)——
+
+
+def test_decide_event_strategy_forbid_avoided() -> None:
+    """strategy_forbid:被禁策略有替代时永不选(哪怕评估分更高)。"""
+    cfg = _cfg(strategy_forbid=["淘金客"])   # 淘金客 eval=50 > 成本控制 48
+    pick = decide_event(["淘金客", "成本控制"], cfg, GameState())
+    assert pick.option_idx == 1, "淘金客被禁,应选成本控制"
+
+
+def test_decide_event_strategy_priority_boost() -> None:
+    """strategy_priority:低评估分命中优先轴 → +30 反超(soft 倾向,非硬绑定)。"""
+    cfg = _cfg(strategy_priority=["成本控制"])   # 成本控制 48 vs 淘金客 50
+    pick = decide_event(["淘金客", "成本控制"], cfg, GameState())
+    assert pick.option_idx == 1, "priority +30 应让成本控制(48+30)反超淘金客(50)"
+
+
+def test_decide_event_env_axes() -> None:
+    """env_forbid / env_priority 走 env 轴(注册表命中归 env,不落 strategy 轴)。"""
+    # 长线利好 65 vs 蓝海 38:forbid 长线利好 → 选蓝海
+    cfg = _cfg(env_forbid=["长线利好"])
+    assert decide_event(["长线利好", "蓝海"], cfg, GameState()).option_idx == 1, (
+        "长线利好被禁应选蓝海"
+    )
+    # priority 蓝海 → 38+30=68 > 65 → 反超
+    cfg = _cfg(env_priority=["蓝海"])
+    assert decide_event(["长线利好", "蓝海"], cfg, GameState()).option_idx == 1, (
+        "蓝海 priority +30 应反超长线利好"
+    )
+    # strategy 轴不误伤 env 名(只配 strategy_forbid 时 env 选项不受影响)
+    cfg = _cfg(strategy_forbid=["蓝海"])
+    assert decide_event(["长线利好", "蓝海"], cfg, GameState()).option_idx == 0, (
+        "strategy_forbid 不该影响 env 选项"
     )
 
 
@@ -856,17 +884,20 @@ def test_evaluate_optionality_alpha_blend() -> None:
 
 
 def test_transition_tempo_score_rewards_tempo_factions() -> None:
-    """P1 过渡羁绊分(review round-4 HIGH-2):仙舟/狼狩/dot/列车/贝洛伯格 ≥2 → tempo;非过渡 ≥2 → 0;<2 → 0。"""
-    # 单过渡羁绊凑出(仙舟 2)
-    assert transition_tempo_score(GameState(board={'仙舟': 2})) == pytest.approx(TRANSITION_TEMPO_BONUS)
-    # 2 过渡羁绊(人上人级:仙舟 + dot)
-    assert transition_tempo_score(GameState(board={'仙舟': 2, '持续伤害': 3})) == pytest.approx(2 * TRANSITION_TEMPO_BONUS)
+    """P1 过渡羁绊分:激活档判据(评审🟡7,ADR-0152 续)—— 仙舟(3/5/7/10)2 人不激活=0、3 人激活;
+    巡海游侠(1/…)1 人即 tier-1;非过渡 ≥2 → 0;封顶 2。"""
+    # 仙舟 2 人:最低档 3 未激活 → 不算凑出(评审🟡7:旧 ≥2 死板判据给幻影分)
+    assert transition_tempo_score(GameState(board={'仙舟': 2})) == 0.0
+    # 仙舟 3 人:tier-1 激活 → tempo
+    assert transition_tempo_score(GameState(board={'仙舟': 3})) == pytest.approx(TRANSITION_TEMPO_BONUS)
+    # 2 过渡羁绊(人上人级:仙舟3 + dot2)
+    assert transition_tempo_score(GameState(board={'仙舟': 3, '持续伤害': 2})) == pytest.approx(2 * TRANSITION_TEMPO_BONUS)
     # 3 过渡羁绊 → 封顶 2(边际递减)
-    assert transition_tempo_score(GameState(board={'仙舟': 2, '狼狩': 2, '列车同行': 2})) == pytest.approx(2 * TRANSITION_TEMPO_BONUS)
+    assert transition_tempo_score(GameState(board={'仙舟': 3, '狼狩': 3, '列车同行': 2})) == pytest.approx(2 * TRANSITION_TEMPO_BONUS)
     # 非过渡羁绊 ≥2 → 0(追击 是成型羁绊非过渡)
     assert transition_tempo_score(GameState(board={'追击': 3})) == 0.0
-    # 过渡羁绊只 1 人(未凑出 ≥2)→ 0
-    assert transition_tempo_score(GameState(board={'仙舟': 1})) == 0.0
+    # 巡海游侠最低档 1:1 人即激活(评审🟡7:与真实 tier 对齐,不再要求 ≥2)
+    assert transition_tempo_score(GameState(board={'巡海游侠': 1})) == pytest.approx(TRANSITION_TEMPO_BONUS)
 
 
 def test_evaluate_transition_tempo_early_game() -> None:
@@ -880,7 +911,7 @@ def test_evaluate_transition_tempo_early_game() -> None:
 
 
 def test_phase_weights_hp_threshold_override() -> None:
-    """config.hp_safe_threshold 可调保血触发点(D-18 unification):默认 40 时 hp=50 平衡,
+    """保血阈值可调触发点(D-18 unification;现 HP_DANGER 直传,ADR-0204 后阈值表为代码常量):默认 40 时 hp=50 平衡,
     threshold=60 时 hp=50 触发保血。"""
     assert _phase_weights(1, 50) == (1.0, 1.0, 1.0), "默认 threshold=40,hp=50 健康→平衡"
     assert _phase_weights(1, 50, hp_threshold=60) == (1.2, 0.4, 1.2), (
@@ -899,40 +930,58 @@ def test_plan_levels_when_behind_expected_even_if_goal_roll() -> None:
     )
 
 
-# —— difficulty → hp_safe_threshold 派生(D-32,向后兼容)——
+# —— difficulty → 保血阈值(D-32;ADR-0204 起阈值表为代码常量 cw_state.DIFFICULTY_HP_TABLE)——
 
 
 def test_effective_hp_threshold_fallback_no_difficulty() -> None:
-    """difficulty 未检测("")→ 回退 hp_safe_threshold(无该字段 → 40=HP_DANGER)。向后兼容。"""
+    """difficulty 未检测("")→ 回退 HP_SAFE_THRESHOLD(40)。"""
     s = GameState()  # difficulty 默认 ""
-    assert effective_hp_threshold(s, _cfg()) == 40, "无 hp_safe_threshold 字段 → 默认 40"
-    cfg50 = _cfg(hp_safe_threshold=50)
-    assert effective_hp_threshold(s, cfg50) == 50, "difficulty 未检测 → 用 hp_safe_threshold"
+    assert effective_hp_threshold(s) == 40, "无 difficulty → 默认 40"
 
 
 def test_effective_hp_threshold_override_by_difficulty() -> None:
-    """selected_difficulty="A8" + override 含 A8 → 用覆盖值(高难更早保血)。"""
+    """selected_difficulty="A8" + 表含 A8 → 用覆盖值(高难更早保血)。"""
     s = GameState(selected_difficulty="A8")
-    cfg = _cfg(hp_safe_threshold=40, difficulty_hp_override={"A8": 55})
-    assert effective_hp_threshold(s, cfg) == 55, "A8 覆盖优先于 hp_safe_threshold"
+    assert effective_hp_threshold(s) == 55, "A8 表值 55(高难保血地板)"
 
 
 def test_effective_hp_threshold_missing_key_falls_back() -> None:
-    """difficulty="A4" + override 只含 A8(无 A4 键)→ 回退 hp_safe_threshold。"""
+    """difficulty="A4" → 表值 40(低难不吃升阶)。"""
     s = GameState(selected_difficulty="A4")
-    cfg = _cfg(hp_safe_threshold=40, difficulty_hp_override={"A8": 55})
-    assert effective_hp_threshold(s, cfg) == 40, "override 无 A4 键 → 回退 hp_safe_threshold"
+    assert effective_hp_threshold(s) == 40, "A4 → 40"
+
+
+def test_effective_hp_threshold_plane_model_ratio() -> None:
+    """ADR-0176:P2+ 上浮由首达模型解出(替代 0174 手写 ×1.25/×1.5)。
+
+    - P1:精确零漂移(ratio 分母恒等 → base 原值,M57 行为保持);
+    - 弱板 P2:上浮 >1 且落于健康带(ratio 夹 [1,2] → ≤80);
+    - 弱板 P3 ≥ P2(位面难度单调进乘子);
+    - 弱板 > 强板(乘子随板强变化,手写常乘子做不到)。
+    """
+    # P1 零漂移
+    assert effective_hp_threshold(GameState(plane=1, level=4)) == 40
+    # 弱板(lv4)P2 上浮
+    t_p2 = effective_hp_threshold(GameState(plane=2, round_num=1, level=4))
+    assert t_p2 > 40, "弱板 P2 应上浮(模型导出)"
+    assert 40 < t_p2 <= 80, "上浮落健康带(≤2.0 夹界)"
+    # 位面单调
+    t_p3 = effective_hp_threshold(GameState(plane=3, round_num=1, level=4))
+    assert t_p3 >= t_p2, "P3 乘子 ≥ P2"
+    # 强板(lv10 → tier 满)同样上落健康带:CV 恒定先验下 ratio≈μ 比(≈1.6)近全域常数,
+    # 板强分化待实测桶(肥尾)替换先验后由本测试家族的 ratio 断言接管 —— 当前断言健壮带。
+    t_p2_strong = effective_hp_threshold(GameState(plane=2, round_num=1, level=10))
+    assert 40 < t_p2_strong <= 80, "强板 P2 上浮同样落健康带(细格下无量化病态)"
 
 
 def test_eval_difficulty_aware_hp_threshold() -> None:
-    """evaluate 经 effective_hp_threshold 接 difficulty:A8+override=55 时 hp=42<55→保血权重;
+    """evaluate 经 effective_hp_threshold 接 difficulty:A8 表值 55 时 hp=42<55→保血权重;
     无 difficulty 时 hp=42>40→健康权重(证明 difficulty 派生改变 eval 行为,D-32 接线有效)。"""
     s_a8 = GameState(selected_difficulty="A8", hp=42, plane=1)
-    cfg_a8 = _cfg(hp_safe_threshold=40, difficulty_hp_override={"A8": 55})
-    assert (_phase_weights(s_a8.plane, s_a8.hp, effective_hp_threshold(s_a8, cfg_a8))
-            == (1.2, 0.4, 1.2)), "A8 override=55,hp=42<55 → 保血权重"
+    assert (_phase_weights(s_a8.plane, s_a8.hp, effective_hp_threshold(s_a8))
+            == (1.2, 0.4, 1.2)), "A8 表值 55,hp=42<55 → 保血权重"
     s_none = GameState(hp=42, plane=1)
-    assert (_phase_weights(s_none.plane, s_none.hp, effective_hp_threshold(s_none, _cfg()))
+    assert (_phase_weights(s_none.plane, s_none.hp, effective_hp_threshold(s_none))
             == (1.0, 1.0, 1.0)), "无 difficulty,threshold=40,hp=42>40 → 健康权重"
 
 
@@ -1041,27 +1090,25 @@ def test_distinct_factions_and_counts_include_board() -> None:
 
 
 def test_economy_mode_for_maps_spend_mode() -> None:
-    """ADR-0102:_economy_mode_for 把 node spend_mode → economy_score 档位(14 §2.2)。"""
-    cfg = SimpleNamespace(economy_mode="adaptive")
+    """ADR-0102:_economy_mode_for 把 node spend_mode → economy_score 档位(14 §2.2;
+    ADR-0204 起 spend_mode 单一源,原 config.economy_mode 辅档已删)。"""
     # P1 早期 saving → interest_first(攒息 snowball)
-    assert _economy_mode_for(GameState(plane=1, round_num=1), cfg) == "interest_first"
+    assert _economy_mode_for(GameState(plane=1, round_num=1)) == "interest_first"
     # P1 中期 interest → interest_first
-    assert _economy_mode_for(GameState(plane=1, round_num=5), cfg) == "interest_first"
+    assert _economy_mode_for(GameState(plane=1, round_num=5)) == "interest_first"
     # P2 level → rush_level(弱化守息 + 强化等级,升人口);ADR-0148:穷金(gold<30)降档
     # interest_first(息引擎重建,M20 实证 P1 末烧空进场 13-18 金 rush 是破产螺旋)
-    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=50), cfg) == "rush_level"
-    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=18), cfg) == "interest_first"
-    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=0), cfg) == "interest_first"   # 原默认态
-    # P1 后期 hold → adaptive(economy-low 非 economy_mode 处理)
-    assert _economy_mode_for(GameState(plane=1, round_num=8), cfg) == "adaptive"
+    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=50)) == "rush_level"
+    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=18)) == "interest_first"
+    assert _economy_mode_for(GameState(plane=2, round_num=3, gold=0)) == "interest_first"   # 原默认态
+    # P1 后期 hold → adaptive(economy-low 非此处处理)
+    assert _economy_mode_for(GameState(plane=1, round_num=8)) == "adaptive"
     # P3 allin → adaptive(economy-low 由 _phase_weights plane3 we=0.3)
-    assert _economy_mode_for(GameState(plane=3, round_num=2), cfg) == "adaptive"
+    assert _economy_mode_for(GameState(plane=3, round_num=2)) == "adaptive"
 
 
-def test_economy_mode_for_adaptive_falls_back_to_config() -> None:
-    """ADR-0102:adaptive 节点(get_node_goal fallback,如 plane>3)→ config.economy_mode 用户偏好辅。"""
-    cfg = SimpleNamespace(economy_mode="interest_first")
-    assert _economy_mode_for(GameState(plane=4, round_num=1), cfg) == "interest_first"
+# (原 test_economy_mode_for_adaptive_falls_back_to_config 已删,ADR-0204:
+#  config.economy_mode 死配置删除,adaptive 节点恒 neutral。)
 
 
 # ===== ADR-0124 买牌 tempo 例外 =====
@@ -1375,10 +1422,10 @@ def test_comp_char_positions_data() -> None:
 
 # ===== ADR-0140 中期护航三套(escort_for + tempo 护航感知) =====
 def test_escort_for_serves_matching() -> None:
-    """escort_for 按 target 机制属性匹配:希儿量子(量子拉条)→龙丹护航;击破流萤→灵砂护航;万敌(燃血成长型)→None。"""
+    """escort_for 按 target 机制属性匹配:希儿量子(量子拉条)→龙丹护航;巡海击破→灵砂护航;万敌(燃血成长型)→None。"""
     from sr_od.application.currency_war.cw_comps import COMP_LIBRARY, escort_for
     xe = next(c for c in COMP_LIBRARY if c.name == "希儿量子")
-    lj = next(c for c in COMP_LIBRARY if c.name == "击破流萤")
+    lj = next(c for c in COMP_LIBRARY if c.name == "巡海击破")   # ADR-0152:击破流萤更名
     wd = next(c for c in COMP_LIBRARY if c.name == "万敌单C")
     assert escort_for(xe).name == "龙丹护航"
     assert escort_for(lj).name == "灵砂护航"
@@ -1411,7 +1458,7 @@ def test_roll_affordable_gate_adr0147() -> None:
     from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
     from sr_od.application.currency_war.cw_economy import roll_affordable
     tgt = next(c for c in COMP_LIBRARY if c.name == '列车同行')
-    cfg = SimpleNamespace(economy_mode='adaptive')
+    cfg = SimpleNamespace()
     assert not roll_affordable(GameState(board={}, gold=18, level=7, plane=2, round_num=2), cfg, tgt)
     assert not roll_affordable(GameState(board={}, gold=5, level=7, plane=2, round_num=2), cfg, tgt)
     assert roll_affordable(GameState(board={}, gold=35, level=7, plane=2, round_num=2), cfg, tgt)
@@ -1425,9 +1472,9 @@ def test_decide_event_refresh_suggestion_adr0146() -> None:
     st = GameState(board={})
     pick = decide_event(["赌神·银", "恢复生机", "气氛组"], cfg, st)   # 20/12/20
     assert pick.refresh is True and 'suggest-refresh' in pick.reason
-    pick2 = decide_event(["彩虹时代", "恢复生机", "气氛组"], cfg, st)   # 72
+    pick2 = decide_event(["彩虹时代", "恢复生机", "气氛组"], cfg, st)   # env 72
     assert pick2.refresh is False
-    pick3 = decide_event(["定期福利", "恢复生机", "气氛组"], cfg, st)   # 白名单 90
+    pick3 = decide_event(["远见", "恢复生机", "气氛组"], cfg, st)      # 策略 eval 70(原白名单 90 案例已删,ADR-0204)
     assert pick3.refresh is False
 
 

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import pytest
+
 from one_dragon.base.geometry.rectangle import Rect
 from sr_od.application.currency_war.cw_identity_obs import find_reward_spheres
 

@@ -31,10 +31,15 @@ def test_load_node_type_templates() -> None:
 
 
 def test_classify_clean_node_row() -> None:
-    """clean 节点行 fixture(1-1 备战,8 槽)→ 8 槽 + 1 当前/7 未来 + 未来 Hu 匹配 4 类型 + cy 已存。"""
+    """clean 节点行 fixture(1-1 备战,8 槽)→ 8 槽 + 1 当前/7 未来 + 未来 Hu 匹配 4 类型 + cy 已存。
+
+    ⚠️ 通道对齐(review P1,2026-08-16):classify_node_row 语义 = **RGB**(框架截图链 BGRA2RGB);
+    fixture 经 imdecode 读到 BGR → 测试先翻 RGB 再传(与生产 live 同侧)。
+    """
     tpls = load_node_type_templates(_ASSETS)
-    img = cv2.imdecode(np.fromfile(str(_FIXTURE), dtype=np.uint8), cv2.IMREAD_COLOR)
-    assert img is not None
+    img_bgr = cv2.imdecode(np.fromfile(str(_FIXTURE), dtype=np.uint8), cv2.IMREAD_COLOR)
+    assert img_bgr is not None
+    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)   # 生产语义:RGB
     slots = classify_node_row(img, tpls)
     assert len(slots) == 8                                          # 基础 8 槽全检出
     states = [s.state for s in slots]
@@ -45,8 +50,13 @@ def test_classify_clean_node_row() -> None:
     # 未来槽全匹配到已知类型(Hu 最近邻,非 None)
     upcoming_types = [s.node_type for s in slots if s.state == 'upcoming']
     assert all(t is not None for t in upcoming_types)
-    # 未来类型分布(回归值:1-1 round1 未来 7 节点 = battle×4 / supply×1 / encounter×1 / reward×1)
-    assert Counter(upcoming_types) == {'battle': 4, 'supply': 1, 'encounter': 1, 'reward': 1}
+    # 未来类型分布(回归值,2026-08-16 模板重制后修正):
+    # 旧期望 battle×4/supply×1/encounter×1/reward×1 中「slot8=reward」是模板自匹配假回归
+    # (旧 reward 模板 20x36 截半、原从 fixture slot8 裁取,自距离 0.0 恒命中)。真相(RGB 模板
+    # + HSV 前景色 + VLM 三源确认):slot1 = 金色宝箱 = 真奖励(新模板 0.15 正确命中);
+    # slot7(淡彩 H177/S62,hu=6.00 全模板不近)= 真未识别,疑第 5 类节点图标(投资节点?
+    # doc 列 7 类只建 4 模板)—— 采集钩子的正当工作对象,身份待人工确认后补模板。
+    assert Counter(upcoming_types) == {'battle': 3, 'supply': 2, 'reward': 1, 'encounter': 1}
     # cy 已存(非 0,圆心 y 在行内 —— Task 2 采集图标定位依赖)
     assert all(s.cy > 0 for s in slots)
 

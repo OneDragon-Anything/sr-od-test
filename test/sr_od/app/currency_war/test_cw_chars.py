@@ -33,7 +33,7 @@ def test_registry_complete_all_costs() -> None:
 
 def test_roster_derived_from_registry() -> None:
     """CHARACTER_ROSTER 是从 CHARACTERS 派生的规范名集合(单一真相源)。"""
-    assert CHARACTER_ROSTER == frozenset(CHARACTERS.keys())
+    assert frozenset(CHARACTERS.keys()) == CHARACTER_ROSTER
 
 
 def test_canonical_names_no_nicknames() -> None:
@@ -73,8 +73,22 @@ def test_chars_by_faction() -> None:
 
 
 def test_chars_by_cost_count() -> None:
-    """3费=13(与 D牌期望表 77124902 实测点 v=13 吻合)。"""
-    assert len(chars_by_cost(3)) == 13
+    """费用分布(2026-08-15 勘误后):娜塔莎 1→3、爻光 2→1、罗刹 5→4(广场 config rarity+bwiki 双源)。
+
+    旧断言 3费=13 来自 D牌期望表 77124902 实测点 v=13 —— 该实测点统计口径含娜塔莎错录 1 费,
+    勘误后 3费=14。D牌期望表若重校,按新分布回归。
+    """
+    assert len(chars_by_cost(3)) == 14
+    assert len(chars_by_cost(1)) == 20   # 19 + 停云(plaza 补录,专家顾问)
+    assert len(chars_by_cost(5)) == 9    # 10 - 罗刹(5→4)
+    # 勘误个体(广场 config rarity 权威值)
+    assert CHARACTERS["娜塔莎"].cost == 3
+    assert CHARACTERS["爻光"].cost == 1
+    assert CHARACTERS["罗刹"].cost == 4
+    # 停云补录(plaza id=1202,1费后台,仙舟+能量)
+    assert CHARACTERS["停云"].cost == 1
+    assert CHARACTERS["停云"].position == "back"
+    assert "仙舟" in CHARACTERS["停云"].factions
 
 
 def test_faction_members_cross_module() -> None:

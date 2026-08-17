@@ -203,37 +203,10 @@ def test_is_run_dead_three_gates() -> None:
     assert not is_run_dead(danger_boss, PerformanceTracker(), "boss"), "冷启动 trend None → 不死"
 
 
-# —— boss_kill_signal ——
-
-
-def test_boss_kill_signal() -> None:
-    """boss 节点 killed 可观测 → 击杀率;无 boss 观测 → None。"""
-    t = PerformanceTracker()
-    assert t.boss_kill_signal() is None, "无 boss 观测 → None"
-    t.record(_out(1, 90, node="boss", comp="c"))
-    t.record(RoundOutcome(round_num=2, plane=1, node_type="boss", comp_tag="c", killed=True))
-    t.record(RoundOutcome(round_num=3, plane=1, node_type="boss", comp_tag="c", killed=False))
-    sig = t.boss_kill_signal()
-    assert sig is not None
-    assert sig == pytest.approx(0.5, abs=1e-6), "1 杀 1 未杀 → 0.5"
-
-
-# —— set_required_damage(跨局击杀伤害下界)——
-
-
-def test_set_required_damage_takes_min_per_difficulty() -> None:
-    """set_required_damage 取下界(杀死 boss 的最小伤害阈值;越跑越准);按 difficulty 独立分桶。"""
-    t = PerformanceTracker()
-    t.set_required_damage("A8", 100.0)
-    assert t.required_damage["A8"] == 100.0
-    t.set_required_damage("A8", 80.0)    # 更低 → 取下界
-    assert t.required_damage["A8"] == 80.0, "更低伤害 → 取下界"
-    t.set_required_damage("A8", 120.0)   # 更高 → 不变
-    assert t.required_damage["A8"] == 80.0, "更高伤害 → 不变(保留下界)"
-    # 不同 difficulty 独立分桶
-    t.set_required_damage("A5", 50.0)
-    assert t.required_damage["A5"] == 50.0
-    assert t.required_damage["A8"] == 80.0, "A5 不影响 A8 桶"
+# —— boss_kill_signal / set_required_damage ——
+# ⚖️ 已随敌方侧死链删除(2026-08-16 review D4-D7):boss 击杀信号与伤害基准的正式归宿
+# 是 19 号伤害账本(cw_damage_ledger,ADR-0166);原方法无生产调用/无读者,测试随之移除。
+# ledger 侧对应用例见 test_cw_damage_ledger.py(括号法收敛/修改器定价)。
 
 
 # —— is_losing_streak(连败=持续高掉血)——
