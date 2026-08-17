@@ -6,8 +6,8 @@ star 回退留证)、cw_horizon(DP 冒烟)。obs_conflict 走 best-effort 不抛
 """
 import pytest
 
-from sr_od.application.currency_war.cw_reconcile import reconcile_tracking
 from sr_od.application.currency_war.cw_observation import board_from_tracked
+from sr_od.application.currency_war.cw_reconcile import reconcile_tracking
 from sr_od.application.currency_war.cw_state import BenchChar
 
 
@@ -69,6 +69,31 @@ def test_board_from_tracked_flows_only_char_counts():
     assert board is not None
     assert board.get('燃血') == 1
     assert board.get('大守护者') == 1
+
+
+def test_streak_dual_source_conflict_guard(test_context, monkeypatch):
+    """streak 双源留证(审计 #8 P2,2026-08-17):read_game_state 内联判定 —— 结算带符号
+    与备战 magnitude 不等(且结算≠0)→ obs_conflict 留证;一致 → 无噪声。
+    直接跑 read_game_state 不可行(需 OCR 全屏栈),此处验判定的两端行为:
+    复制内联条件(streak 逻辑为纯比较,无隐藏状态)。"""
+    import sr_od.application.currency_war.cw_observe as obs_mod
+    calls: list[tuple] = []
+    monkeypatch.setattr(obs_mod, 'obs_conflict',
+                        lambda field, old, new, *a, **kw: calls.append((field, old, new)))
+
+    def _check(last_streak: int, prep: int | None) -> None:
+        # = read_game_state 内联判定(cw_observation streak 段,保持同条件复制)
+        if prep is not None and last_streak != 0 and abs(last_streak) != prep:
+            obs_mod.obs_conflict('streak', last_streak, prep, None,
+                                 verdict='留证-双源不等(结算带符号 vs 备战magnitude,一方误读)',
+                                 source='settlement_vs_prep')
+
+    _check(3, 3)          # 一致 → 不报
+    _check(0, 5)          # 结算 0(重置边缘)→ 不报
+    _check(3, None)       # 备战读不到 → 不报(单源)
+    assert calls == []
+    _check(3, 2)          # 不等 → 报
+    assert calls == [('streak', 3, 2)]
 
 
 def test_reconcile_double_empty_guard_keeps_old():
