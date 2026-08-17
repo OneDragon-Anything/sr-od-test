@@ -168,27 +168,28 @@ def test_close_game_tool_registered() -> None:
 
 
 def test_close_game_tool_error_on_not_ready() -> None:
-    """close_game 在 backend 未就绪时返回包含「错误」的字符串(工具层兜底)。"""
+    """close_game 在 backend 未就绪时返回 {success: False, error}(工具层兜底)。"""
     mcp, backend = _mcp_with_backend()
     backend.close_game.side_effect = BackendNotReadyError("未就绪")
     tool = mcp._tool_manager._tools["close_game"]
     fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
     assert fn is not None
     out = fn()
-    assert "错误" in out
+    assert out['success'] is False
+    assert '未就绪' in out['error']
 
 
 def test_capture_game_screen_returns_path() -> None:
-    """capture_game_screen 应保存截图并返回保存路径字符串。"""
+    """capture_game_screen 应保存截图并返回 {success, path}。"""
     import numpy as np
 
     mcp, backend = _mcp_with_backend()
     backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
     tool = mcp._tool_manager._tools["capture_game_screen"]
     fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
-    path = fn()
-    assert isinstance(path, str)
-    assert path.endswith(".png")
+    out = fn()
+    assert out['success'] is True
+    assert out['path'].endswith(".png")
 
 
 # ===== open_game 工厂委托(enter 选 op)+ get_run_status/stop_run =====
@@ -214,7 +215,8 @@ def test_open_game_block_success_enter_true() -> None:
     fut.set_result(OperationResult(success=True, status='成功'))
     backend.start_run.return_value = (True, fut)
     tool = app_mod.make_open_game(backend)
-    assert asyncio.run(tool(enter=True, block=True)) == '成功打开并进入星穹铁道游戏'
+    res = asyncio.run(tool(enter=True, block=True))
+    assert res == {'success': True, 'result': '成功打开并进入星穹铁道游戏'}
 
 
 def test_open_game_block_success_enter_false() -> None:
@@ -224,7 +226,8 @@ def test_open_game_block_success_enter_false() -> None:
     fut.set_result(OperationResult(success=True, status='成功'))
     backend.start_run.return_value = (True, fut)
     tool = app_mod.make_open_game(backend)
-    assert asyncio.run(tool(enter=False, block=True)) == '成功打开游戏(未登录)'
+    res = asyncio.run(tool(enter=False, block=True))
+    assert res == {'success': True, 'result': '成功打开游戏(未登录)'}
 
 
 def test_open_game_block_failed() -> None:
@@ -233,7 +236,8 @@ def test_open_game_block_failed() -> None:
     fut.set_result(OperationResult(success=False, status='打开游戏失败'))
     backend.start_run.return_value = (True, fut)
     tool = app_mod.make_open_game(backend)
-    assert asyncio.run(tool(enter=True, block=True)) == '打开游戏失败: 打开游戏失败'
+    res = asyncio.run(tool(enter=True, block=True))
+    assert res == {'success': False, 'result': '打开游戏失败: 打开游戏失败'}
 
 
 def test_open_game_enter_false_selects_open_game_op() -> None:
@@ -457,7 +461,7 @@ def test_run_operation_concurrent_reject() -> None:
 
 
 def test_run_operation_block_success() -> None:
-    """block=True + 成功结果 → 返回成功摘要字符串。"""
+    """block=True + 成功结果 → 返回 {success: True, result} 终态 dict。"""
     from sr_od.backend.mcp.service_app import make_run_operation
 
     fut: Future = Future()
@@ -465,7 +469,7 @@ def test_run_operation_block_success() -> None:
     backend = MagicMock()
     backend.run_slot._start.return_value = (True, fut)
     res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, args={}, block=True))
-    assert isinstance(res, str) and '成功' in res
+    assert res['success'] is True and '成功' in res['result']
 
 
 @pytest.mark.skip(reason="uses ZZZ MapTransport op fixture (sr_od.operation.map_transport.MapTransport); SR 无等价 op——需 SR-op fixture 重写")

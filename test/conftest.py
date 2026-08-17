@@ -71,6 +71,10 @@ class MockController(ControllerBase):
             return True
         return 0 <= pos.x < self.standard_width and 0 <= pos.y < self.standard_height
 
+    def park_cursor(self, game_pos: Point,
+                    before_wait: float = 0.0, after_wait: float = 0.2) -> None:
+        """no-op(光标 parking 是真机 IO,测试无光标)。"""
+
     def get_screenshot(self, independent: bool = False) -> MatLike:
         return self.mock_screenshot
 

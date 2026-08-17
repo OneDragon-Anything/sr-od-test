@@ -59,15 +59,31 @@ def _discover_fixtures() -> list[tuple[str, str]]:
 
 _FIXTURES: list[tuple[str, str]] = _discover_fixtures()
 
+# 已知错档 fixture(归档目录 ≠ 画面实属屏):strict xfail 记录该缺口,修复后转 XPASS 会响,
+# 提示移除本标记。2026-08-15 无名勋礼两张错档已迁移根治(webp 迁 screens/无名勋礼/ +
+# 独立屏建档,详见 docs/game/screens/无名勋礼.md),现为空集;机制保留,供未来错档登记。
+_KNOWN_MISFILED: set[tuple[str, str]] = set()
+
 
 @pytest.mark.parametrize(
     'screen,state',
-    _FIXTURES,
+    [
+        pytest.param(s, st, marks=pytest.mark.xfail(
+            reason='fixture 错档:实为无名勋礼面板屏(菜单锚不可见),待迁移+建模',
+            strict=True,
+        )) if (s, st) in _KNOWN_MISFILED else (s, st)
+        for s, st in _FIXTURES
+    ],
     ids=[f'{s}/{st}' for s, st in _FIXTURES],
 )
 def test_id_mark(screen: str, state: str, test_context: SrTestContext) -> None:
     """每张 fixture:自家 id_mark 命中(真阳性)+ 别家 id_mark 不命中(无碰撞)。"""
-    target = test_context.screen_loader.get_screen(screen)
+    try:
+        target = test_context.screen_loader.get_screen(screen)
+    except Exception:
+        # get_screen 对未建模画面抛「未找到画面」而非返 None(孤儿 fixture);
+        # 这些屏已知未建模(如差分宇宙,见 docs/game/screens/README.md)→ skip
+        pytest.skip(f'无 screen_info:{screen}(仅归档截图,未建 screen_info entry)')
     if target is None:
         pytest.skip(f'无 screen_info:{screen}(仅归档截图,未建 screen_info entry)')
     if not any(a.id_mark for a in target.area_list):
