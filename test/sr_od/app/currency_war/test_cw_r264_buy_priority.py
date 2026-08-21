@@ -67,12 +67,17 @@ def test_star3rd_and_new_component_both() -> None:
 
 
 def test_war_low_gold_buys_nothing() -> None:
-    """④ war 态金 6:不买(floor 30 语义;all-in 归 emergency)。"""
+    """④ war 态金 6:地板 5 语义下藿藿(1费)买后 5=地板 → 可买;
+    椒丘同费也可。r274 语义变更(原 floor 30 冻结 → 低金降级 5):
+    局19 实锤 war 低金整轮冻结买0 = 板面不长流血到死。
+    金 6 买 1 张 1 费(6-1=5≥5)——验证降级地板生效且不穿 5。"""
     s, st, sess = _mk('jizi_train', [], 6, mode='war')
     st.shop = [ShopCard(x=0, faction='仙舟', name='藿藿', cost=1),
                ShopCard(x=1, faction='狼狩', name='椒丘', cost=1)]
     got = _buys(s.decide_prep(st, sess, None))
-    assert got == [], f'war 低金守 floor(战力≠panic),得 {got}'
+    # r274 降级语义:可买但不穿 5 地板(金6 买1 张1费 后 5)
+    assert st.gold - 1 * len(got) >= 5, f'穿 5 地板:{got}'
+    assert len(got) <= 1, f'金 6 买 {len(got)} 张超预算'
 
 
 def test_carry_bought_when_affordable() -> None:
