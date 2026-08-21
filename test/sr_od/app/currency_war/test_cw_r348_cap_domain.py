@@ -43,3 +43,23 @@ def test_unverified_set_semantics() -> None:
     assert _UNVERIFIED_BACK_SLOTS == frozenset({7, 9, 10, 11})
     assert effective_back_slots(5) == 6   # cap≤6 钳制→已实拍基线
     assert effective_back_slots(7) == 7   # 未实拍档
+
+
+def test_cap_domain_behavior_level(monkeypatch) -> None:
+    """review-L4(r353b):行为级锁(源码字符串断言锁不住重构)——
+    直接调用 _observe 的 cap 检查段不可行(重观测依赖),改锁
+    分支纯函数面:effective_back_slots×_UNVERIFIED_BACK_SLOTS
+    的组合枚举 = 域检查的全部决策输入。"""
+    # (cap, level) → 是否应留证(落入未实拍档)
+    cases = [
+        (7, 6, True),    # cap7/lv6 单宝钻但档未实拍 → 留证(review C 问)
+        (7, 7, True),    # 无宝钻 7 档 → 仍留证(档问题非宝钻问题)
+        (6, 6, False),   # 常态无叠加已实拍 → 不留证
+        (8, 6, False),   # 双宝钻但 8 档已实拍(狸猫局) → 不留证
+        (5, 3, False),   # cap<level? 否(5>3)→6 槽已实拍 → 不留证
+    ]
+    for cap, level, should_flag in cases:
+        slots = effective_back_slots(cap)
+        flagged = slots in _UNVERIFIED_BACK_SLOTS
+        assert flagged == should_flag, \
+            f'cap={cap}/lv={level}: 留证={flagged},期望 {should_flag}'
