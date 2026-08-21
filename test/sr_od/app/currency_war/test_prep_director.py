@@ -514,6 +514,7 @@ def test_observe_light_reuses_heavy_cache(monkeypatch, test_context: SrTestConte
     heavy_state = GameState(gold=42, level=5)
     # r331:heavy 读已上收 observe_full——打桩随迁(patch 其模块)
     from sr_od.application.currency_war import cw_observe_full as of_mod
+    monkeypatch.setattr(of_mod, 'ensure_portrait_templates', lambda c: None)
     monkeypatch.setattr(of_mod, 'read_game_state', lambda c, s: heavy_state)
     monkeypatch.setattr(of_mod, 'read_node_sequence', lambda c, s: None)
     monkeypatch.setattr(of_mod, 'read_shop_cards', lambda c, s: [])
@@ -553,6 +554,7 @@ def test_observe_gold_zero_reread(monkeypatch, test_context: SrTestContext) -> N
     # r331:heavy 读在 observe_full——打桩随迁;gold==0 重读
     # 用 read_game_state(重截图;首帧 0,重读返真值 55)
     from sr_od.application.currency_war import cw_observe_full as of_mod
+    monkeypatch.setattr(of_mod, 'ensure_portrait_templates', lambda c: None)
     _calls = {'n': 0}
 
     def _gs(c, s):
