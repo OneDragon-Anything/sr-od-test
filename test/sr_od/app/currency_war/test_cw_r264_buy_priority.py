@@ -21,7 +21,8 @@ from sr_od.application.currency_war.strategies.line_strategy import (
 )
 
 
-def _mk(locked, bench, gold, rnd=5, mode='economy'):
+def _mk(locked, bench, gold, rnd=3, mode='economy'):
+    # rnd 默认 3(r285 起 r5+ 进破息窗,优先级帧留在 economy 域测)
     s = LineStrategy()
     st = GameState()
     st.plane, st.round_num, st.level, st.gold, st.hp = 1, rnd, 5, gold, 80
