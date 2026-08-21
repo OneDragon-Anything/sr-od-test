@@ -50,3 +50,35 @@ def test_shop_currency_war_config_module_level() -> None:
     src = inspect.getsource(shop.BuyShopCards.buy)
     assert 'currency_war_config import' not in src, \
         'buy 体内不得再有局部 import CurrencyWarConfig(r345 局38 崩溃根因)'
+
+
+def test_shop_contextlib_module_level_no_local_import() -> None:
+    """r346(review H1,gate bug #5 同型):buy 体内 `import contextlib`
+    原只在两个 gate 分支内,L352 的 `with contextlib.suppress`
+    (decide_prep 异常留证路径)在分支外——shop 开态入口或 flag off
+    时 decide_prep 抛异常会先抛 UnboundLocalError,吞掉原始异常
+    与遥测留证。锁:模块级存在 + buy/buy_card 体内无局部 import
+    contextlib + contextlib.suppress 使用点无局部 import 保护。"""
+    from sr_od.application.currency_war.operations.prep import shop
+    assert getattr(shop, 'contextlib', None) is not None, \
+        'shop.py 必须模块级 import contextlib(r346 H1)'
+    for method in (shop.BuyShopCards.buy,):
+        src = inspect.getsource(method)
+        assert 'import contextlib' not in src, \
+            f'{method.__name__} 体内不得有局部 import contextlib(r346 H1 雷)'
+
+
+def test_director_gate_open_shop_tolerated_not_bail() -> None:
+    """r346(局38 r2 停机根因):环入口 gate 超时后必须先区分
+    「开商店稳定态」(合法,游戏在战斗胜利后新回合可能自动开)
+    vs「真特效」——开态走收起+round_retry 重进,只有非开态才
+    _bail(3-strike 停机)。锁源检:超时分支含开商店检测与收起重进
+    路径,bail 仍保留。"""
+    from sr_od.application.currency_war import prep_director
+    src = inspect.getsource(prep_director.PrepDirector._run_loop)
+    assert '环入口开商店态' in src, \
+        'gate 超时分支必须有开商店态容忍路径(r346)'
+    assert '环入口商店开,已收起重进' in src, \
+        '开态路径必须收起后 round_retry 重进(非 bail)'
+    assert '环入口帧不clean' in src, \
+        '真特效/overlay 的原 bail 路径必须保留(容忍不能吞掉消化门)'
