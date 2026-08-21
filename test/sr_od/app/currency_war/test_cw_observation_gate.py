@@ -1,10 +1,9 @@
-"""cw_observation_gate 单测(批次1 首件;flag off 零接线)。"""
+"""cw_observation_gate 单测(r324 框架复用版;flag off 零接线)。"""
 from __future__ import annotations
 
 import numpy as np
 
 from sr_od.application.currency_war.cw_observation_gate import (
-    _fingerprint,
     wait_stable_frame,
 )
 
