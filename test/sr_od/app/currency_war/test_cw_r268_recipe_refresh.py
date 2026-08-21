@@ -102,3 +102,18 @@ def test_mid_level_refresh_ok() -> None:
     st.level = 5
     acts = s.decide_prep(st, sess, None)
     assert any(isinstance(a, RefreshShop) for a in acts)
+
+
+def test_multi_refresh_cap() -> None:
+    """r270 连续刷上限:店持续无配方件时至多 _RECIPE_REFRESH_MAX 次。"""
+    from sr_od.application.currency_war.strategies.line_strategy import (
+        _RECIPE_REFRESH_MAX,
+    )
+    assert _RECIPE_REFRESH_MAX == 3
+    board = {'仙舟': 1, '列车同行': 2, '公司': 1}
+    shop = [ShopCard(x=0, faction='公司', name='翡翠', cost=1)]
+    s, st, sess = _mk(6, board, shop, gold=30)
+    st.level = 5
+    acts = s.decide_prep(st, sess, None)
+    n = sum(1 for a in acts if isinstance(a, RefreshShop))
+    assert n <= _RECIPE_REFRESH_MAX, f'刷了 {n} 次超上限'
