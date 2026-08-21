@@ -104,8 +104,9 @@ def test_timeout_returns_none_when_never_stable():
     assert out is None
 
 
-def test_screenshot_exception_returns_none_offline_contract():
-    """离线契约:截图异常 → None(放行旧路径,环级测试依赖)。"""
+def test_screenshot_exception_raises_not_none():
+    """终验 P1①:截图异常 → raise(非 None)——异常与超时分流;
+    折叠进 None 会被 None 语义表接成 3-strike 停机。"""
     clk = _FakeClock()
 
     class _Boom(_FakeOp):
@@ -116,7 +117,12 @@ def test_screenshot_exception_returns_none_offline_contract():
     prof = {'anchor_screen': 'x', 'anchor_area': 'a',
             'fingerprint_rects': (), 'circle_gate': False,
             'timeout_s': 1.0, 'min_stable_s': 0.3}
-    assert wait_stable_frame(op, profile=prof, clock=clk) is None
+    try:
+        wait_stable_frame(op, profile=prof, clock=clk)
+        raised = False
+    except RuntimeError:
+        raised = True
+    assert raised, '异常必须 raise,不得折叠进 None'
 
 
 def test_fingerprint_changes_with_pixels():
