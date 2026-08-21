@@ -80,3 +80,25 @@ def test_low_gold_no_refresh() -> None:
     s, st, sess = _mk(6, board, shop, gold=6)
     acts = s.decide_prep(st, sess, None)
     assert not any(isinstance(a, RefreshShop) for a in acts)
+
+
+def test_low_prob_no_refresh() -> None:
+    """r269b 概率门:lv8(1费 p=14%,配方件 p_any~12%<25%)→ 不刷
+    (等级塌掉 1 费概率,刷了白刷;该升人口换费用段)。"""
+    board = {'仙舟': 1, '列车同行': 2, '公司': 1}
+    shop = [ShopCard(x=0, faction='公司', name='翡翠', cost=1)]
+    s, st, sess = _mk(6, board, shop, gold=30)
+    st.level = 8
+    acts = s.decide_prep(st, sess, None)
+    assert not any(isinstance(a, RefreshShop) for a in acts), \
+        'lv8 1费概率塌掉,期望门该拦'
+
+
+def test_mid_level_refresh_ok() -> None:
+    """r269b 概率门:lv5(p_any~38%>25%)→ 刷(中低等级找件划算)。"""
+    board = {'仙舟': 1, '列车同行': 2, '公司': 1}
+    shop = [ShopCard(x=0, faction='公司', name='翡翠', cost=1)]
+    s, st, sess = _mk(6, board, shop, gold=30)
+    st.level = 5
+    acts = s.decide_prep(st, sess, None)
+    assert any(isinstance(a, RefreshShop) for a in acts)
