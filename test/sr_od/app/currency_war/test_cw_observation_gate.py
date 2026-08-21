@@ -110,6 +110,29 @@ def test_timeout_returns_none_when_never_stable(monkeypatch):
     assert out is None
 
 
+def test_anchor_blip_recovery_returns_frame(monkeypatch):
+    """r327 回归(终审 B):锚短暂 miss 后恢复(指纹未变)→
+    稳定窗必须重新达成并返帧——旧 bug 只重置 stable_since
+    不重置 first_fp,恢复后 same 成立跳过重设分支 → 永超时
+    →(director 站)3-strike 停机。"""
+    from one_dragon.base.screen import screen_utils as su
+    _seq = ['x', None, None, 'x', 'x', 'x', 'x', 'x']   # 1 miss 后恢复
+    _i = {'n': 0}
+
+    def _fake(ctx, screen, screen_name_list, crop_first=True):
+        v = _seq[min(_i['n'], len(_seq) - 1)]
+        _i['n'] += 1
+        return v
+    monkeypatch.setattr(su, 'get_match_screen_name', _fake)
+    frames = [_gray() for _ in range(8)]
+    op = _FakeOp(frames)
+    prof = {'screen_list': ['x'], 'expect_screen': 'x',
+            'fingerprint_rects': (), 'timeout_s': 6.0,
+            'min_stable_s': 0.5}
+    out = wait_stable_frame(op, profile=prof, clock=_TickingClock(0.3))
+    assert out is not None, '锚 blip 恢复后必须能返帧(r327 回归锁)'
+
+
 def test_screenshot_exception_raises_not_none():
     """终验 P1①:截图异常 → raise(非 None)——异常与超时分流;
     折叠进 None 会被 None 语义表接成 3-strike 停机。"""
