@@ -339,10 +339,12 @@ def _make_director(monkeypatch, executor) -> PrepDirector:
 
 
 def _seq_observe(seq):
-    """_observe 替身:按序返回 obs(耗尽复用最后个);记录 heavy 调用序(分层断言用)。"""
+    """_observe 替身:按序返回 obs(耗尽复用最后个);记录 heavy 调用序(分层断言用)。
+
+    screen 关键字收下不消费(r344:_observe 新增可选 gate 帧参数,替身对齐签名)。"""
     state = {'i': 0, 'heavy_calls': []}
 
-    def _obs_at(heavy: bool):
+    def _obs_at(heavy: bool, screen=None):
         state['heavy_calls'].append(heavy)
         i = min(state['i'], len(seq) - 1) if seq else 0
         state['i'] += 1

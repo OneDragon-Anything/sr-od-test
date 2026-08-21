@@ -196,10 +196,12 @@ def test_poll_cost_exceeding_budget_returns_frame(monkeypatch):
     assert out is not None, 'poll 成本超预算时稳定帧不得被饿死(r344 锁)'
 
 
-def test_screen_match_uses_cropped_ocr(monkeypatch):
-    """r344 传参锁:gate poll 的屏判定必须 crop_first=True——
-    poll 循环每帧新截图,全图 OCR(~5s/轮实机)无缓存复用却
-    吞掉超时预算。此锁防未来随手改回 False。"""
+def test_screen_match_uses_fullframe_ocr_for_cache_reuse(monkeypatch):
+    """r344 传参锁(用户定调 2026-08-22):gate poll 的屏判定必须
+    crop_first=False——全图 OCR 按 id(image) 缓存,同帧多消费者
+    (gate 判 4 个 id_mark 区首区触发、后续全缓存命中;gate 末帧
+    传 _observe 后 heavy 观察全部命中)共享一次全图 OCR。
+    cropped 口径丢弃缓存复用且小 area 易漏字(项目统一 False)。"""
     from one_dragon.base.screen import screen_utils as su
     _seen: list[bool] = []
 
@@ -214,5 +216,20 @@ def test_screen_match_uses_cropped_ocr(monkeypatch):
             'min_stable_s': 0.5}
     out = wait_stable_frame(op, profile=prof, clock=_TickingClock(0.3))
     assert out is not None
-    assert _seen and all(_seen), \
-        f'gate 屏判定必须 cropped OCR(crop_first=True),实际 {_seen}'
+    assert _seen and not any(_seen), \
+        f'gate 屏判定必须全图 OCR(crop_first=False)复用缓存,实际 {_seen}'
+
+
+def test_profile_timeouts_cover_fullframe_ocr_poll_cost():
+    """r344 预算锁:profile timeout 必须 ≥2 轮全图 OCR poll
+    (~5s/轮实机)+余量——旧 4.5s<单轮成本,稳定窗结构性饿死
+    (局37 ping-pong 停机根因)。防未来调回小值忘了成本模型。"""
+    from sr_od.application.currency_war.cw_observation_gate import (
+        PROFILE_CLOSED,
+        PROFILE_OPEN,
+        PROFILE_POPUP,
+    )
+    for name, prof in (('closed', PROFILE_CLOSED), ('open', PROFILE_OPEN),
+                       ('popup', PROFILE_POPUP)):
+        assert prof['timeout_s'] >= 12.0, \
+            f'{name} timeout={prof["timeout_s"]} 必须 ≥12s(2 轮全图 OCR poll+余量)'

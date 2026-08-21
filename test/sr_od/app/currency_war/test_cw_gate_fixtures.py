@@ -98,10 +98,11 @@ def test_gate_open_profile_passes_shop_open(test_context) -> None:
 
 
 def test_gate_closed_passes_on_r1_stop_frame(test_context) -> None:
-    """r344 实机回归锁(局37 停机现场帧):gate poll 改
-    crop_first=True 后,备战屏 4 个 id_mark 区(购买经验/出战/
-    前台/后台)在真机 r1 备战帧上 cropped OCR 必须全中——
-    crop 漏字会让 gate 把正确屏判为失配,ping-pong 停机复发。
+    """r344 实机回归锁(局37 停机现场帧):gate 超时预算按全图
+    OCR poll 成本(~5s/轮)调 12s 后,真机 r1 备战帧上关态 gate
+    必须放行(屏判定 crop_first=False 全图 OCR,局37 diag
+    screen:0 实证 4 个 id_mark 区全中,缺的只是预算)。防
+    预算/口径回退让 ping-pong 停机复发。
     fixture=局37 bail_pingpong 停机保全帧(hp=80/r1/gold=3)。"""
     if not test_context.has_screen('货币战争-备战', 'r1_idle_stop'):
         pytest.skip('fixture 缺:货币战争-备战/r1_idle_stop.webp')
