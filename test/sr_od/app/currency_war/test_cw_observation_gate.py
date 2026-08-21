@@ -128,9 +128,14 @@ def test_screenshot_exception_raises_not_none():
 def test_fingerprint_changes_with_pixels():
     """指纹随像素变化(首尾一致性判据的基元)。"""
     from one_dragon.base.geometry.rectangle import Rect
+    from sr_od.application.currency_war.cw_observation_gate import _fp_same
     r = (Rect(0, 0, 64, 64),)
     a = _fingerprint(_gray(v=10), r)
     b = _fingerprint(_gray(v=10), r)
     c = _fingerprint(_gray(v=200), r)
-    assert a == b
-    assert a != c
+    assert _fp_same(a, b)
+    assert not _fp_same(a, c)
+    # 阈值容忍:小噪声(±2)视为同帧(局36 diag:字节恒等被
+    # 截屏噪声否决)
+    noisy = _fingerprint(_gray(v=12), r)
+    assert _fp_same(a, noisy)
