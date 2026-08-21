@@ -162,6 +162,7 @@ def test_update_target_drought_bail_after_5_dry_rounds(monkeypatch) -> None:
     dot = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
                form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
     monkeypatch.setattr(_cw_comps, "select_comp", lambda *a, **k: [dot])
+    monkeypatch.setattr(_cw_comps, "select_comp_scored", lambda *a, **k: [(0.5, dot)])   # r20:生产改用 scored 版
 
     # shop 全 off-faction(无 持续伤害/减益)→ shop_supply(dot)=0.3(board-back)<1.0 → drought 累积。
     # board={持续伤害:2} 提供 emergent 信号(D-122:阵营 count≥2 才选 target),否则 target 恒 None。
@@ -196,6 +197,7 @@ def test_update_target_drought_resets_when_shop_supplies(monkeypatch) -> None:
     dot = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
                form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
     monkeypatch.setattr(_cw_comps, "select_comp", lambda *a, **k: [dot])
+    monkeypatch.setattr(_cw_comps, "select_comp_scored", lambda *a, **k: [(0.5, dot)])   # r20:生产改用 scored 版
     dry = GameState(gold=10, hp=60, level=5, round_num=5, plane=1,
                     board={"持续伤害": 2},   # D-122 emergent 信号(否则 target 恒 None)
                     shop=[ShopCard(x=1, faction="群攻", name="", cost=1)])

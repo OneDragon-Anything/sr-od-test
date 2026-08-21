@@ -123,11 +123,32 @@ def test_reconcile_none_side_kept():
 def test_reconcile_star_rollback_no_crash():
     """M41 实机回归(2026-08-16):同名 star 回退(缇宝 2★→1★)走留证分支
     **不得抛异常**——旧版 _conflict 封装无 **ctx,char= 触发 TypeError → PrepDirector
-    error-loop 卡死 30min(P3-4 实锤)。留证后采新写回(tracking 更新)。"""
+    error-loop 卡死 30min(P3-4 实锤)。
+    2026-08-18 防抖升级(274 存证离线复现:36/40 同图重读 2★,live 读 1★ =
+    3合1 合成动画窗):首次回退 star **保旧**(动画窗读数不毒化 tracking),
+    连续第二次仍回退才采新确认。"""
     sess = _Sess(bench=[BenchChar(slot=1, char_id='缇宝', star=2)])
-    new = [BenchChar(slot=1, char_id='缇宝', star=1)]
-    assert reconcile_tracking(sess, new, [], None, source='t') is True
-    assert sess.tracked_bench_chars[0].star == 1
+    # 首次:防抖保旧(不写回 1★)
+    assert reconcile_tracking(
+        sess, [BenchChar(slot=1, char_id='缇宝', star=1)], [], None, source='t') is True
+    assert sess.tracked_bench_chars[0].star == 2, '首次回退保旧(疑合成动画窗)'
+    # 连续第二次(独立新读对象——防抖会原地改 star,复用同对象会假自愈):确认真回退 → 采新
+    assert reconcile_tracking(
+        sess, [BenchChar(slot=1, char_id='缇宝', star=1)], [], None, source='t') is True
+    assert sess.tracked_bench_chars[0].star == 1, '连续 2 次回退确认采新'
+
+
+def test_reconcile_star_regression_pending_self_heals():
+    """防抖自愈(2026-08-18):首帧回退(动画窗)→ 下帧读回正常 → pending 清零、
+    tracking star 保持旧值(2★)未被动画窗 1★ 毒化。"""
+    sess = _Sess(bench=[BenchChar(slot=1, char_id='万敌', star=2)])
+    # 首帧:动画窗读 1★ → 保旧
+    reconcile_tracking(sess, [BenchChar(slot=1, char_id='万敌', star=1)], [], None, source='t')
+    assert sess.tracked_bench_chars[0].star == 2
+    # 下帧:动画结束读回 2★(=旧值,非回退)→ 自愈,防抖挂起清零
+    reconcile_tracking(sess, [BenchChar(slot=1, char_id='万敌', star=2)], [], None, source='t')
+    assert sess.tracked_bench_chars[0].star == 2
+    assert not getattr(sess, 'star_pending_regression', {}).get('万敌'), '读回恢复清防抖'
 
 
 def test_horizon_dp_smoke():
@@ -139,4 +160,72 @@ def test_horizon_dp_smoke():
     assert p.save is True and p.tag == 'fallback'
     assert hz.interest(49) == 4
     assert hz.interest(50) == 5
-    assert hz.interest(110) == 5   # 封顶
+
+
+# ===== 等级三源解析 _resolve_level(2026-08-18 治本:live 乒乓根因) =====
+from sr_od.application.currency_war.cw_observation import _resolve_level  # noqa: E402
+
+
+def _kinds(events) -> list[str]:
+    return [e[0] for e in events]
+
+
+def test_resolve_level_pingpong_root_live_regression():
+    """live 乒乓场景回归(2026-08-18 10:47-10:48 实锤):OCR 失读 + 启发式兜底 6
+    被写进 last_level_obs 毒化;XP 分母反推 5(真值,XP「0/20」+ 部署 5/5 双证)。
+    旧链:XP 采新 5 → 单调守卫用毒化 6 打回 → 每帧 6↔5 乒乓。
+    新链:XP 主权豁免单调守卫,向下校正到 5 并留证。"""
+    level, events, auth = _resolve_level(None, 6, 5, 6)
+    assert level == 5
+    assert _kinds(events) == ['xp_down']
+    assert auth is True   # XP 可读 → 真实观测,写回 last_level_obs(链路自愈)
+
+
+def test_resolve_level_heuristic_not_authoritative():
+    """毒化防线:OCR 与 XP 双失读 → 纯启发式值不作真实观测(authoritative=False,
+    调用方不写回 last_level_obs —— 毒源堵住)。解析值本身照给(决策层用)。"""
+    level, events, auth = _resolve_level(None, 6, None, 4)
+    assert level == 6 and auth is False   # 6 > 4+2? 不(6=4+2)→ 不触发跳变守卫
+    assert events == []
+
+
+def test_resolve_level_monotonic_guard_preserved():
+    """旧守卫保留:XP 未确认的下降(纯 OCR 误读)仍保旧(r1 lv4→r2 lv5→r3 lv4 倒退防)。"""
+    level, events, auth = _resolve_level(4, 5, None, 6)
+    assert level == 6
+    assert _kinds(events) == ['mono']
+    assert auth is True
+
+
+def test_resolve_level_jump_guard_preserved():
+    """旧守卫保留:单源 OCR 大跳(疑似 XP 数字混入,如「升到 lv10」需 360 金)拒。"""
+    level, events, _ = _resolve_level(10, 5, None, 4)
+    assert level == 4
+    assert _kinds(events) == ['jump']
+
+
+def test_resolve_level_jump_confirmed_by_xp():
+    """M38 语义保留:XP 分母独立确认的真跳变(连点一波 4→8)放行 + 留证。"""
+    level, events, _ = _resolve_level(8, 5, 8, 4)
+    assert level == 8
+    assert _kinds(events) == ['jump_ok']
+
+
+def test_resolve_level_xp_override_real_disagreement_logged():
+    """OCR 可读 6 与 XP 反推 5 真分歧 → 覆盖 + 留证(ADR-0129)。"""
+    level, events, _ = _resolve_level(6, 6, 5, 0)
+    assert level == 5
+    assert _kinds(events) == ['xp_override']
+
+
+def test_resolve_level_xp_over_fallback_silent():
+    """OCR 失读时「兜底让位 XP」= 设计常态,不逐帧记 [cw!](live 10:47-10:48
+    每帧 2 冲突的遥测噪声源);新局 last=0 无守卫交互。"""
+    level, events, auth = _resolve_level(None, 6, 5, 0)
+    assert level == 5 and events == [] and auth is True
+
+
+def test_resolve_level_agree_no_events():
+    """双源一致 → 零事件(健康帧不产遥测噪声)。"""
+    level, events, auth = _resolve_level(7, 5, 7, 6)
+    assert level == 7 and events == [] and auth is True

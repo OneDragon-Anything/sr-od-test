@@ -50,4 +50,4 @@ def test_boss_tags_roundtrip():
     canon, tags = boss_tags(['剧目', '电视机'])
     assert '造梦兄弟影业' in canon
     assert 'share_hp' in tags          # 剧目 → 共享血量
-    assert 'speed_lock' in tags        # 电视机俗称 → 禁速 tag
+    assert 'speed_lock' not in tags and 'share_hp' in tags  # 电视机已定位造梦互动娱乐(2026-08-17),tag 挂钩退役

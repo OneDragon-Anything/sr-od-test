@@ -81,16 +81,17 @@ def test_progress_includes_core_chars() -> None:
 
 
 def test_equip_fit_aya_two_boots_supralinear() -> None:
-    """阿雅 key_equips=[反重力皮靴×2]:0 靴无数据(None);1 靴部分;2 靴满;无关装备略低。"""
+    """阿雅 key_equips=[反重力皮靴×2, 白昼·光速螺旋桨, 火力风暴潮](ADR-0209 API 换血
+    +guide 双鞋机制保留):双靴是最高优先件;2 靴 > 1 靴 > 无关。"""
     阿雅 = get_comp("昼神阿雅")
     none_eq = GameState()                                   # 无装备数据 → None(ADR-0107 动态权重剔除)
     one = GameState(equips=["反重力皮靴"])
     two = GameState(equips=["反重力皮靴", "反重力皮靴"])
     irrelevant = GameState(equips=["别的装备"])
     assert equip_fit(阿雅, none_eq) is None, "无装备数据 → None(动态权重剔除)"
-    assert equip_fit(阿雅, two) == pytest.approx(1.0, abs=1e-6), "2 靴满 → 1.0"
+    assert equip_fit(阿雅, two) > 0.6, "2 靴(4 件 key 占 2;双靴超线性体现在 two>one 斜率)"
     assert equip_fit(阿雅, two) > equip_fit(阿雅, one), "2 靴 > 1 靴"
-    assert equip_fit(阿雅, one) > 0.5, "1 靴 > 中性(超线性奖励)"
+    assert equip_fit(阿雅, one) > 0.35, "1 靴 > 无关件(超线性体现在 two/one 比值)"
     assert equip_fit(阿雅, irrelevant) < 0.5, "持装备但无关键件 → 略低"
 
 
@@ -471,10 +472,12 @@ def test_shop_supply_shop_present_high() -> None:
 
 
 def test_shop_supply_board_only_low() -> None:
-    """I14:仅 board 有、shop 无 → 0.3(已持 1 张但买不到更多 → 成型难,非 1.0)。
-    旧版此情形返 1.0 → select_comp 不降权 → 选了 shop 供不上的 target → 永不成型(win-rate 阻塞)。"""
+    """I14:仅 board 有、shop 有牌但无该阵营 → 0.3(已持 1 张但买不到更多 → 成型难,非 1.0)。
+    旧版此情形返 1.0 → select_comp 不降权 → 选了 shop 供不上的 target → 永不成型(win-rate 阻塞)。
+    r99:空 shop 语义改「无商店相位」(奖励关/事件节点,返 1.0 中性——无观测≠断供,
+    局18 drought 白涨实证);board-only 弱信号场景需 shop 有真牌面。"""
     comp = get_comp("昼神阿雅")  # factions=["昼之半神"]
-    s = GameState(board={"昼之半神": 1})   # board 有,shop 空
+    s = GameState(board={"昼之半神": 1}, shop=[ShopCard(x=0, faction="击破")])
     assert shop_supply(comp, s) == 0.3
 
 

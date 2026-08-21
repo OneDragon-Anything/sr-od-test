@@ -56,6 +56,35 @@ def test_boss_node_calendar() -> None:
     assert led.calendar_at(8) == 7.0 and led.calendar_at(0) == 0.0
 
 
+def test_solved_with_strategies_ledger_wiring() -> None:
+    """intake #6 接线(2026-08-18):_solved(strategies) 持卡 → 台账注入解。
+
+    「买断制」(interest_cap=0,息恒 0)用例,两层断言:
+    ① 指纹层:持卡解 ≠ 'base'(接线通,67-P1c 哨兵从恒 base 变可分);
+    ② 值函数层:息是 DP 值函数直接项(gold≥50 每节点 +5 vs +0),长期位
+       value_at 必差 —— 姿态可能局部同(息差5在某状态点不翻最优动作,这本身
+       是 DP 的正确答案非接线失效),值函数不受该敏感度影响,作硬断言。"""
+    from sr_od.application.currency_war import cw_horizon as hz
+    from sr_od.application.currency_war.cw_effect_ledger import (
+        build_ledger,
+        effects_from_strategies,
+    )
+    from sr_od.application.currency_war.cw_investments import get_strategy
+    s = get_strategy('买断制')
+    if s is None or s.economy is None or s.economy.interest_cap_override != 0:
+        import pytest
+        pytest.skip('注册表无 买断制 interest_cap_override=0(数据改版)——换张 cap 0 卡再测')
+    led = build_ledger(effects_from_strategies(['买断制']))
+    # ① 指纹可分(接线通的最低证明;旧版哨兵恒 'base')
+    assert hz.ledger_fingerprint(led) != 'base'
+    # ② 值函数分歧(息直接项):P1 早期满息位,两种解的值必差
+    base_sol = hz.solve_cached()
+    led_sol = hz.solve_cached(led)
+    v_base = base_sol.value_at(4, 50, 5, 80, 1)
+    v_led = led_sol.value_at(4, 50, 5, 80, 1)
+    assert abs(v_base - v_led) > 1e-6, '买断制息=0 → 满息位值函数必须低于 base(息流被掐)'
+
+
 def test_v1_overlay_routes() -> None:
     """v1 全量扫描补的路由:采购专员 surprise_every / 淘金客 xp_per_refresh /
     买断制 xp_per_node / 免费午餐 burst。"""

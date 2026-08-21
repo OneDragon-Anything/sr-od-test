@@ -1,10 +1,24 @@
 """cw_progress_curves(p(t) 编译器)测试 + 审判层端到端(ADR-0171 供给)。"""
-from sr_od.application.currency_war.cw_line_tribunal import LineHypothesis, timeline_lag_lr, verdict
+from sr_od.application.currency_war.cw_line_tribunal import (
+    LineHypothesis,
+    timeline_lag_lr,
+    verdict,
+)
 from sr_od.application.currency_war.cw_progress_curves import (
     dominant_tempo,
     expected_curve,
     expected_curve_for_carry,
 )
+
+
+def test_curve_full_resolution_every_node():
+    """全分辨率(2026-08-18 修):每节点一键 —— 旧「每 2 节点」粒度 + 消费端按
+    1-based 精确查 → 奇数轮判决静默 no-op(cw_evaluate tribunal 量纲修复配套)。"""
+    c = expected_curve('7级搜牌')
+    assert set(c) == set(range(0, 27)), '节点 0-26 全覆盖(含奇数节点)'
+    # 奇数节点可查(旧版 1/3/5… 键不存在 → progress_lag 恒 0)
+    h = LineHypothesis('h', '线', 'commit', checkpoints=[3], deadline=8, expected=c)
+    assert h.progress_lag(3, 0.0) > 0.0
 
 
 def test_curve_monotone_and_bounded():

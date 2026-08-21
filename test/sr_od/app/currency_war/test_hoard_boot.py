@@ -1,0 +1,46 @@
+"""r106 预囤测试(蒙特卡洛结论的代码级锁)。"""
+import sys
+
+sys.path.insert(0, 'src')
+
+from sr_od.application.currency_war.cw_transition import pick_framework, transition_score
+
+
+class BC:
+    def __init__(self, n):
+        self.char_id = n
+
+
+class Card:
+    def __init__(self, n):
+        self.name = n
+
+
+def test_boot_gate_1p5():
+    """r106 启动门 1.5:持有 1 + 在售 1(1.0+0.5) → 启动。"""
+    fw = pick_framework([BC('三月七')], [], [Card('姬子·启行')])
+    assert fw == '列车'
+
+
+def test_boot_pure_shop_still_blocked():
+    """纯 shop(1.0)仍不够——防噪声启动。"""
+    assert pick_framework([], [], [Card('三月七'), Card('姬子·启行')]) == ''
+
+
+def test_hoard_score_framework_undefined():
+    """预囤:framework='' 时框架件仍有档位分(carry 1.0)。"""
+    s = transition_score('三月七', '列车同行', '')
+    assert s >= 1.0, f'预囤模式 carry 应有档位分,实得 {s}'
+
+
+def test_hoard_score_scatter_zero():
+    """散件(非 TRANSITION_PACK)在预囤模式 = 0 分,不抢预算。"""
+    s = transition_score('万敌', '夜之半神', '')
+    assert s == 0.0
+
+
+def test_hysteresis_unchanged():
+    """滞后语义回归:现任列车持有 3,shop 仙舟 2 在售(2.5 vs 3.0)不翻转。"""
+    bench = [BC('三月七'), BC('姬子·启行'), BC('姬子·启行')]
+    fw = pick_framework(bench, [], [Card('藿藿'), Card('卡芙卡')], current='列车')
+    assert fw == '列车'

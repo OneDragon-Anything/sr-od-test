@@ -25,9 +25,10 @@ _FIXTURE = Path(__file__).parent / 'cw_node_row_clean.png'
 
 
 def test_load_node_type_templates() -> None:
-    """4 节点类型模板全加载(battle/supply/encounter/reward)。"""
+    """节点类型模板全加载(battle/supply/encounter/reward + encounter_v2 变体聚合同 key)。"""
     tpls = load_node_type_templates(_ASSETS)
     assert set(tpls.keys()) == {'battle', 'supply', 'encounter', 'reward'}
+    assert len(tpls['encounter']) == 2   # encounter + encounter_v2(r86 三叉箭头变体)
 
 
 def test_classify_clean_node_row() -> None:
@@ -50,13 +51,10 @@ def test_classify_clean_node_row() -> None:
     # 未来槽全匹配到已知类型(Hu 最近邻,非 None)
     upcoming_types = [s.node_type for s in slots if s.state == 'upcoming']
     assert all(t is not None for t in upcoming_types)
-    # 未来类型分布(回归值,2026-08-16 模板重制后修正):
-    # 旧期望 battle×4/supply×1/encounter×1/reward×1 中「slot8=reward」是模板自匹配假回归
-    # (旧 reward 模板 20x36 截半、原从 fixture slot8 裁取,自距离 0.0 恒命中)。真相(RGB 模板
-    # + HSV 前景色 + VLM 三源确认):slot1 = 金色宝箱 = 真奖励(新模板 0.15 正确命中);
-    # slot7(淡彩 H177/S62,hu=6.00 全模板不近)= 真未识别,疑第 5 类节点图标(投资节点?
-    # doc 列 7 类只建 4 模板)—— 采集钩子的正当工作对象,身份待人工确认后补模板。
-    assert Counter(upcoming_types) == {'battle': 3, 'supply': 2, 'reward': 1, 'encounter': 1}
+    # 未来类型分布(r86 更新:encounter_v2 深蓝圆底三叉箭头变体入模板后,原判 supply
+    # 的 idx7 改判 encounter dist3.18 < 对 supply 的距离 —— 变体聚合 min 吸收;
+    # 186 张积压采样实锤该变体,自模板回归 184/186)。
+    assert Counter(upcoming_types) == {'battle': 3, 'supply': 1, 'reward': 1, 'encounter': 2}
     # cy 已存(非 0,圆心 y 在行内 —— Task 2 采集图标定位依赖)
     assert all(s.cy > 0 for s in slots)
 

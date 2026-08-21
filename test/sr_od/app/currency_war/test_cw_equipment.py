@@ -15,6 +15,7 @@ from one_dragon.utils import file_utils
 from sr_od.application.currency_war.cw_equipment import (
     EQUIPMENTS,
     Equipment,
+    _owned_order_anomaly,
     get_equip,
     load_equip_tm_grays,
     read_equipped_below,
@@ -55,6 +56,34 @@ def test_get_equip_fields() -> None:
 _GT_FEIXIAO_3 = {'光能电池', '步步生花', '武器大师'}  # 飞霄3件(D-49 CV 验全中)
 _GT_FEIXIAO_2 = {'步步生花', '折叠小刀'}  # 飞霄2件(轮滑鞋+生命之花合成步步生花)
 _FRONT1 = Rect(677, 329, 810, 467)  # screen_info 前排-1 avatar rect
+
+
+# ===== owned 栏行内跳格检测(2026-08-18 治本:换行误报修复) =====
+
+def test_owned_order_row_wrap_not_anomaly() -> None:
+    """换行跳变 ≠ 跳格(live 2026-08-18 10:45/10:47 实锤回归):row1 两件 +
+    row2 两件,行尾→行首 x 大跳(220 vs 行内 78)是正常布局 —— 旧欧氏全局中位
+    每逢跨行必误报;新行内判定放行。"""
+    # live 10:47 实测坐标形态:row1(冶金炉 1785,163 / 拆装扳手 1836,172),
+    # row2 两件(cy ~260+,x 1836/1785 同列)
+    pts = [(1785, 163), (1836, 172), (1836, 261), (1785, 268)]
+    assert _owned_order_anomaly(pts) is None
+
+
+def test_owned_order_real_gap_in_row_detected() -> None:
+    """行内真跳格检出:同行 4 个 x,中段空一格(51×2=102 > 1.8×51)→ 报。"""
+    xs = (1836, 1785, 1734, 1632)   # 第三→第四间距 102,中位 51
+    pts = [(x, 170) for x in xs]
+    anomaly = _owned_order_anomaly(pts)
+    assert anomaly is not None and '跳格' in anomaly
+
+
+def test_owned_order_too_few_or_dense_none() -> None:
+    """<4 点不判;单行 2 点不判(首行独立布局常见);满行连续 → None。"""
+    assert _owned_order_anomaly([(1, 1), (2, 2), (3, 3)]) is None
+    assert _owned_order_anomaly([(1785, 163), (1836, 172)]) is None
+    dense = [(1836, 170), (1785, 172), (1734, 169), (1683, 171)]   # 连续无跳
+    assert _owned_order_anomaly(dense) is None
 _BACK1 = Rect(534, 600, 675, 739)   # screen_info 后排-1 avatar rect
 
 

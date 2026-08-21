@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""r262 早期升人口宽松门测试(局15 板深根因)。"""
+"""r262/r263 升人口门测试(局15 板深根因;r263 修订:lv5 基线)。"""
 from __future__ import annotations
 
 from sr_od.application.currency_war.cw_state import (
@@ -24,27 +24,27 @@ def _mk(round_num, level, gold, plane=1):
 
 
 def test_early_low_level_relaxed_gate() -> None:
-    """P1 r4 lv4 金 30 → 升人口(宽松门 10;旧门 50 恒不触发)。"""
+    """P1 lv4 金 30 → 升人口(宽松门 10;旧门 50 恒不触发)。"""
     s, st, sess = _mk(round_num=4, level=4, gold=30)
     acts = s.decide_prep(st, sess, None)
     assert any(isinstance(a, LevelUp) for a in acts), \
-        f'早期低等该升,得 {[type(a).__name__ for a in acts]}'
+        f'lv<5 该升,得 {[type(a).__name__ for a in acts]}'
 
 
-def test_level6_reached_strict_again() -> None:
-    """lv6 后恢复满息门(金 40 不升,守息)。"""
-    s, st, sess = _mk(round_num=5, level=6, gold=40)
+def test_level5_reached_strict_again() -> None:
+    """lv5(过渡成型基线,攻略[13])后恢复满息门(金 40 不升)。"""
+    s, st, sess = _mk(round_num=4, level=5, gold=40)
     acts = s.decide_prep(st, sess, None)
     assert not any(isinstance(a, LevelUp) for a in acts), \
-        'lv6+ 该守息(满息门)'
+        'lv5+ 守息(过渡成型攒息)'
 
 
-def test_round7_strict_even_low_level() -> None:
-    """r7+ 窗口外恢复满息门(后期利息优先)。"""
-    s, st, sess = _mk(round_num=7, level=4, gold=40)
+def test_lv4_late_still_relaxed() -> None:
+    """lv4 晚期(罕见滞后)仍宽松升到 5(r263:门只看 lv 不看轮)。"""
+    s, st, sess = _mk(round_num=7, level=4, gold=30)
     acts = s.decide_prep(st, sess, None)
-    assert not any(isinstance(a, LevelUp) for a in acts), \
-        'r7+ 守息(窗口外)'
+    assert any(isinstance(a, LevelUp) for a in acts), \
+        'lv<5 无论轮次都该升(lv5 基线)'
 
 
 def test_low_gold_never_level() -> None:

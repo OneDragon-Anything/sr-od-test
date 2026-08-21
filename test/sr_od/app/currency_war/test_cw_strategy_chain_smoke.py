@@ -1,0 +1,53 @@
+"""策略链冒烟(r98):核心决策入口 import + 调用级冒烟,防「import 错路径直到实跑才爆」。
+
+背景(r98,局15/16/18 三局同病根):_stash_form_progress 里写了不存在的模块路径
+``from one_dragon.utils import calc_utils`` → 进攒息门的 plan 调用全部 ImportError →
+buy op retry 4 次失败 → 0 买出战。三个局的「钱变不成板」都是这一个静态错误,
+但直到留证钩子(r95)+日志 append 生效才抓到。单测只测各自函数,没人调攒息门全链
+→ import 错误漏网。本文件锁:策略链入口模块全部可导入 + 关键决策函数真调用一遍。
+"""
+from sr_od.application.currency_war import (
+    cw_comps,
+    cw_economy,
+    cw_evaluate,
+    cw_horizon,
+    cw_plan,
+    cw_telemetry,
+)
+from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.strategies import default_strategy
+
+
+def test_strategy_chain_importable():
+    """策略链入口模块全部可导入(import 错路径在此爆,不等实跑)。"""
+    for m in (cw_comps, cw_economy, cw_evaluate, cw_horizon, cw_plan, cw_telemetry,
+              default_strategy):
+        assert m is not None
+
+
+def test_save_interest_path_smoke():
+    """攒息门真调用(局18 崩点:_stash_form_progress import;含 dual_track 双分支)。"""
+    from sr_od.application.currency_war.cw_comps import Comp
+    tgt = Comp(name="景元仙舟", factions=["仙舟"], core_chars=["景元"],
+               form_tiers={"仙舟": 3}, strength="A", form_difficulty="easy")
+    for dual in (False, True):
+        st = GameState(gold=30, hp=80, level=5, round_num=3, plane=1,
+                       board={"仙舟": 1}, dual_track_phase=dual)
+        out = cw_evaluate._should_save_for_interest(st, None, tgt)
+        assert isinstance(out, bool)
+
+
+def test_decide_prep_smoke():
+    """decide_prep 全链真调用(plan 内部含攒息门/骨架买/蒙特卡洛;无游戏依赖)。"""
+    strat = default_strategy.DefaultCwStrategy()
+
+    class _Cfg:
+        faction_priority: list[str] = ['仙舟', '列车同行', '持续伤害']
+    sess = strat.create_session(_Cfg())
+    from sr_od.application.currency_war.cw_state import ShopCard
+    st = GameState(gold=30, hp=80, level=5, round_num=3, plane=1,
+                   board={"仙舟": 2, "持续伤害": 1},
+                   shop=[ShopCard(x=400, faction="仙舟", name="爻光", cost=1)],
+                   dual_track_phase=True)
+    actions = strat.decide_prep(st, sess, _Cfg())
+    assert isinstance(actions, list)

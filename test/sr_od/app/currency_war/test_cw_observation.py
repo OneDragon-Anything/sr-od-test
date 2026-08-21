@@ -102,6 +102,65 @@ def test_parse_streak_from_real_settlement_ocr() -> None:
     assert parse_streak(_SETTLEMENT_OCR) == 0
 
 
+# ===== 挑战进度/胜负真值(2026-08-18 用户点破:「扣血=战斗失败,游戏内有记录」) =====
+
+def test_parse_settlement_progress_live_forms() -> None:
+    """挑战进度三 live 形态:后随 +N(赢)/ 前置 -N(输,M41 战败屏)/ 无符号累计值不取。"""
+    from sr_od.application.currency_war.cw_settlement_obs import (
+        parse_settlement_progress,
+    )
+    # live 11:32 样本(遭遇赢):分离 token '+2' 跟后
+    assert parse_settlement_progress(['28', '挑战结束', '遭遇', '挑战进度', '+2', '基础伤害']) == 2
+    # M41 战败屏实锤形态:数字前置
+    assert parse_settlement_progress(['2-1战斗', '-22', '挑战进度', '前往结算']) == -22
+    # 同 token 粘连
+    assert parse_settlement_progress(['挑战进度+3']) == 3
+    assert parse_settlement_progress(['挑战进度-15']) == -15
+    # live 11:33 样本(挑战成功屏):「挑战进度」'46' 无符号 = 累计值非 delta → None(防 -22 记成 +46)
+    assert parse_settlement_progress(['31', '挑战成功', '奖励', '挑战进度', '46', '点击空白加速']) is None
+    # 无进度文本
+    assert parse_settlement_progress(['挑战成功', '继续挑战']) is None
+
+
+def test_parse_settlement_won_live_forms() -> None:
+    """胜负真值:挑战成功→True / 挑战失败→False / 负进度→False / 无据→None。"""
+    from sr_od.application.currency_war.cw_settlement_obs import parse_settlement_won
+    assert parse_settlement_won(['31', '挑战成功', '挑战进度', '46']) is True
+    assert parse_settlement_won(['挑战失败', '下一步']) is False
+    # 轮败屏(活着):挑战结束 + 负进度,无成功/失败字样
+    assert parse_settlement_won(['挑战结束', '-22', '挑战进度', '前往结算']) is False
+    assert parse_settlement_won(['挑战结束', '挑战进度', '+2', '继续挑战']) is True
+    assert parse_settlement_won(['数据统计', '继续挑战']) is None
+
+
+def test_round_outcome_carries_killed_and_progress() -> None:
+    """read_round_outcome 填 killed/progress_delta(胜负真值进 outcomes.jsonl)。"""
+    from sr_od.application.currency_war.cw_settlement_obs import read_round_outcome
+
+    class _FakeOcr:
+        def __init__(self, texts):
+            self._texts = texts
+
+        def get_ocr_result_list(self, image, rect, crop_first):
+            from types import SimpleNamespace
+            return [SimpleNamespace(data=t, y=i) for i, t in enumerate(self._texts)]
+
+    class _FakeCtx:
+        ocr_service = None
+
+        def __init__(self, texts):
+            _FakeCtx.ocr_service = _FakeOcr(texts)
+
+    # 输轮屏:挑战结束 -22 → killed=False, progress_delta=-22
+    ctx = _FakeCtx(['2-1战斗', '-22', '挑战进度', '前往结算'])
+    obs = read_round_outcome(ctx, None, plane=2, round_num=1, comp_tag='x')
+    assert obs.killed is False and obs.progress_delta == -22
+    # 赢轮屏:挑战成功 → killed=True
+    ctx2 = _FakeCtx(['31', '挑战成功', '挑战进度', '46', '继续挑战'])
+    obs2 = read_round_outcome(ctx2, None, plane=1, round_num=8, comp_tag='x')
+    assert obs2.killed is True
+
+
 def test_read_affixes_briefing(test_context: SrTestContext) -> None:
     """简报词缀行 → 4 个词缀(A8 最高 4)。
 
@@ -196,8 +255,11 @@ def test_read_select_partner_candidates(test_context: SrTestContext) -> None:
 # ===== read_affix_effect:点词缀后 tooltip → 效果原文(mock OCR;2026-08-05 A8 实机数据)=====
 
 def _ocr(text: str, x: int, y: int) -> SimpleNamespace:
-    """造 OCR result(data + center),给 read_affix_effect mock 用。"""
-    return SimpleNamespace(data=text, center=Point(x, y))
+    """造 OCR result(data + center + x/w),给 read_affix_effect / _node_type_label mock 用。
+
+    x/w 以「center=x」补齐(x-20 宽40 → x+w/2 = x):真实 OcrMatchResult 有 x/w 属性
+    (r80 read_node_type 位置化后消费),mock 对齐。"""
+    return SimpleNamespace(data=text, center=Point(x, y), x=x - 20, w=40)
 
 
 def test_read_affix_effect_tooltip(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
