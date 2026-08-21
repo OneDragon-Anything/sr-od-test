@@ -41,6 +41,17 @@ def test_r8_boss_breaker_invests() -> None:
     assert st.gold - spent >= 10, f'破息不穿 10 地板(花 {spent})'
 
 
+def test_war_frame_not_bypassed() -> None:
+    """r291(局26 实锤):war 态 r6 也走破息窗(原窗口在 war
+    return 之后永远到不了——金 23 war 帧只 LevelUp 买 0,
+    配方冻死连掉)。"""
+    s, st, sess = _mk(rnd=6, gold=23)
+    sess.v2_state = ('war', False, False, 0, 0, 0, 0, 0)
+    acts = s.decide_prep(st, sess, None)
+    buys = [a.card.name for a in acts if isinstance(a, BuyCard)]
+    assert buys, f'war 帧 r6 该投资(店有仙舟件),得 {buys}'
+
+
 def test_r7_not_boss_breaker() -> None:
     """r7(非 boss 前窗)走原 economy 象限(不提前破息)。"""
     s, st, sess = _mk(rnd=7, gold=44)
