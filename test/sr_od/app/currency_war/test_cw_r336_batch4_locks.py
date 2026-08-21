@@ -37,3 +37,16 @@ def test_prep_settle_attribution_declared() -> None:
     from sr_od.application.currency_war.operations import battle_loop
     src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
     assert 'r336' in src and '正交' in src
+
+
+def test_shop_currency_war_config_module_level() -> None:
+    """r345(局38 实机,gate bug #5):shop.py 的 CurrencyWarConfig
+    必须模块级 import——原局部 import 在「收起按钮可见」条件分支
+    内,shop 关态入口(分支跳过)+后方引用 = UnboundLocalError,
+    buy 全崩。锁:模块级名存在 + buy 体内无任何局部 import。"""
+    from sr_od.application.currency_war.operations.prep import shop
+    assert getattr(shop, 'CurrencyWarConfig', None) is not None, \
+        'shop.py 必须模块级 import CurrencyWarConfig'
+    src = inspect.getsource(shop.BuyShopCards.buy)
+    assert 'currency_war_config import' not in src, \
+        'buy 体内不得再有局部 import CurrencyWarConfig(r345 局38 崩溃根因)'
