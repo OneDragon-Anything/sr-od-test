@@ -17,6 +17,7 @@ _TEST_ROOT = Path(__file__).resolve().parents[4]    # 测试仓根(sr-od-test)
 sys.path.insert(0, str(_ROOT / 'src'))
 
 from one_dragon.utils import cv2_utils
+from sr_od.application.currency_war.cw_identity_obs import read_deployed_chars
 from sr_od.application.currency_war.currency_war_char_id import (
     identify_character,
     load_avatar_templates,
@@ -182,16 +183,14 @@ def test_layout_grid_model_complete():
     assert grid[0:11][-1] == 1742      # 11 槽右端
 
 
-def test_unarchived_layout_falls_back_clean(templates):
+def test_unarchived_layout_falls_back_clean(test_context, templates):
     """无档有效槽数(现仅理论态:6-11 全档后 cap≥12 或异常读)→ 退基线 + 停机钩子。
 
     r84 全档收口(6-11)后,停机钩子只对「有效槽数无档」触发(实测正常局不再出现);
     本测试用 monkeypatch 造无档槽数验证钩子机制本身。r81:cap≤6 钳制基线不触发。
+    (2026-08 精简审计:改用 session 级 test_context,避免自建 SrContext 重复 init。)
     """
-    from sr_od.context.sr_context import SrContext
-    from sr_od.application.currency_war.cw_identity_obs import read_deployed_chars
-    ctx = SrContext()
-    ctx.init_by_config()
+    ctx = test_context
 
     class _FakeRunCtx:
         def __init__(self):

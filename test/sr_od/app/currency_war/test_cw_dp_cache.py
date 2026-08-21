@@ -29,7 +29,13 @@ def test_fingerprint_excludes_non_dp_effects() -> None:
 
 
 def test_cache_roundtrip_and_hit() -> None:
-    """盘缓存:同进程第二次调用 memo 直返(<1s;基线冷解 ~67s、盘载 ~5s[232MB pickle])。"""
+    """盘缓存:同进程第二次调用 memo 直返(<1s)。
+
+    历史包袱已根治(v6):DP 向量化后求解 ~秒级,**盘 pickle 层已移除**
+    (旧 232MB pickle 冷解 ~67s / 盘载 ~5s 是「跑测试就卡」的元凶,
+    现 solve_cached 只有进程内 memo,无任何盘 IO)。本断言锁:
+    ① 解规模(策略表 >1M 项,防求解退化成小表);② memo 命中 <1s。
+    """
     t0 = time.time()
     s1 = solve_cached(None)
     t1 = time.time()

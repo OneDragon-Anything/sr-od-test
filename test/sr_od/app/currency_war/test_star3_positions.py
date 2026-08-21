@@ -22,9 +22,9 @@ _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / 'src'))
 
 from one_dragon.utils import cv2_utils  # noqa: E402
-from sr_od.context.sr_context import SrContext  # noqa: E402
 from sr_od.application.currency_war.cw_identity_obs import read_star  # noqa: E402
 from sr_od.application.currency_war.cw_obs_core import _area_rect  # noqa: E402
+from test.conftest import SrTestContext  # noqa: E402
 
 _SLOTS = [f'前排-{i}' for i in range(1, 5)] + [f'后排-{i}' for i in range(1, 7)] \
     + [f'备战栏-{i}' for i in range(1, 10)]
@@ -38,15 +38,13 @@ def _load_truth() -> dict[str, dict[str, int]] | None:
     return json.loads(p.read_text(encoding='utf-8'))
 
 
-@pytest.fixture(scope='module')
-def sr_ctx() -> SrContext:
-    ctx = SrContext()
-    ctx.init()
-    return ctx
+def test_star3_all_positions_read_3(test_context: SrTestContext) -> None:
+    """层1:19 张 fixture 目标位全读 3。
 
-
-def test_star3_all_positions_read_3(sr_ctx: SrContext) -> None:
-    """层1:19 张 fixture 目标位全读 3。"""
+    (2026-08 精简审计:改用 session 级 test_context fixture,
+    避免自建 SrContext 重复 init——全量跑时 ctx 只初始化一次。)
+    """
+    sr_ctx = test_context
     fixes = sorted(_FIX_DIR.glob('*.webp'))
     if not fixes:
         pytest.skip('star3_slots/ fixture 缺')
@@ -60,12 +58,13 @@ def test_star3_all_positions_read_3(sr_ctx: SrContext) -> None:
         assert got == 3, f'{fix.stem}: 目标位 3星应读 3,实得 {got}'
 
 
-def test_star3_full_frame_truth(sr_ctx: SrContext) -> None:
+def test_star3_full_frame_truth(test_context: SrTestContext) -> None:
     """层2(全帧校验):每张 fixture 全部 19 槽位与真值表一致(361 校验点)。
 
     真值 = 采集时同帧其余槽位的真实星级(2星占位角色/1星/空槽 fallback=1)。
     防 read_star 在非 3 星槽上的回归(此前只测过目标位)。
     """
+    sr_ctx = test_context
     truth = _load_truth()
     if truth is None:
         pytest.skip('truth.json 缺(先跑 star3_truth_gen.py)')

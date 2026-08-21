@@ -43,6 +43,8 @@ def test_b_hoard_excludes_drop():
     """审计B:预囤模式 drop 档返 0(椒丘/卡芙卡/艾丝妲不囤)。"""
     assert transition_score('椒丘', '仙舟', '') == 0.0
     assert transition_score('卡芙卡', '仙舟', '') == 0.0
+    # r107b 散件锁(合并自 test_stash_compensation.py,原文件已删)
+    assert transition_score('艾丝妲', '?', '') == 0.0
     # carry 仍有分
     assert transition_score('藿藿', '仙舟', '') >= 1.0
 

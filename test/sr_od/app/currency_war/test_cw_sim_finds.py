@@ -3,8 +3,11 @@
 
 模拟器批量跑时发现的情况,逐个构造同款 GameState 断言确定行为:
 1. 散店+无方向+金够 → 刷新(方向刷新通道);
-2. 遭遇/奖励节点的结算分流(node_type 四分类);
-3. 深夜金边(金 6 刷后穿地板)→ 不刷。
+2. 深夜金边(金 6 刷后穿地板)→ 不刷。
+
+(节点分层零战力/遭遇更难的模拟器不变量锁在 test_cw_sim.py 的
+test_reward_node_no_damage / test_encounter_harder_than_battle——
+2026-08 精简审计去重,本文件只留决策单帧锁。)
 """
 from __future__ import annotations
 
@@ -42,33 +45,6 @@ def test_scatter_shop_no_direction_refreshes() -> None:
     acts = s.decide_prep(st, sess, None)
     assert any(isinstance(a, RefreshShop) for a in acts), \
         f'散店该刷,得 {[type(a).__name__ for a in acts]}'
-
-
-def test_reward_supply_node_zero_damage() -> None:
-    """模拟发现②:奖励/补给节点零战力要求 → 结算不掉血。
-
-    节点分层(node_delta)是模拟校准层;本帧锁定其分流语义。"""
-    import random
-
-    from sr_od.application.currency_war.cw_sim import node_delta
-    rng = random.Random(7)
-    for node in ('reward', 'supply'):
-        d = node_delta(node, round_num=7, dir_round=99, rng=rng)
-        assert d > 0, f'{node} 零战力节点不应掉血,得 {d}'
-
-
-def test_encounter_settlement_harder_than_battle() -> None:
-    """模拟发现③:遭遇结算强度 > 同期普通战斗(均值)。
-
-    用户口述:遭遇(尤其三四)战力要求高于普通甚至 boss。"""
-    import random
-
-    from sr_od.application.currency_war.cw_sim import node_delta
-    enc = [node_delta('encounter', 6, 99, random.Random(i))
-           for i in range(50)]
-    bat = [node_delta('battle', 6, 99, random.Random(i))
-           for i in range(50)]
-    assert -sum(enc) / 50 > -sum(bat) / 50, '遭遇均值损应大于战斗'
 
 
 def test_low_gold_edge_no_refresh() -> None:

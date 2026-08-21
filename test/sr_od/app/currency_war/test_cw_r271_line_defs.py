@@ -15,6 +15,11 @@ def test_recipe_set_semantics() -> None:
     """配方集合(攻略[20]):基础(仙舟/DOT)+渐进(列车/护盾)。"""
     assert RECIPE_FACTIONS == frozenset(
         {'仙舟', '持续伤害', '列车同行', '护盾'})
+    # r263b 局15 锁(合并自 test_cw_r263b_recipe.py,原文件已删):
+    # 散件元凶阵营不得进配方
+    assert '减益' not in RECIPE_FACTIONS
+    assert '星核猎手' not in RECIPE_FACTIONS
+    assert '燃血' not in RECIPE_FACTIONS
 
 
 def test_recipe_base_line() -> None:
