@@ -23,7 +23,7 @@ def test_recognize_composes_pure_reads(monkeypatch) -> None:
     """recognize 组合各纯 reader → dict(gold/phase/hp/streak/deploy/board 字段齐全)。"""
     monkeypatch.setattr(mod, 'read_gold', lambda ctx, screen: 42)
     monkeypatch.setattr(mod, '_read_phase_round_pure', lambda ctx, screen: (2, 5))
-    monkeypatch.setattr(mod, 'read_hp', lambda ctx, screen: 80)
+    monkeypatch.setattr(mod, 'read_hp_opt', lambda ctx, screen: 80)
     monkeypatch.setattr(mod, 'read_streak', lambda ctx, screen: 3)
     monkeypatch.setattr(mod, 'read_deployed_count', lambda ctx, screen: 4)
     monkeypatch.setattr(mod, 'read_deploy_cap', lambda ctx, screen: 5)
@@ -52,7 +52,7 @@ def test_recognize_phase_none_when_unreadable(monkeypatch) -> None:
     """phase 纯读读不到 → None(不伪造 (1,1));其余字段仍产出。"""
     monkeypatch.setattr(mod, 'read_gold', lambda ctx, screen: 0)
     monkeypatch.setattr(mod, '_read_phase_round_pure', lambda ctx, screen: None)
-    monkeypatch.setattr(mod, 'read_hp', lambda ctx, screen: 100)
+    monkeypatch.setattr(mod, 'read_hp_opt', lambda ctx, screen: 100)
     monkeypatch.setattr(mod, 'read_streak', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_deployed_count', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_deploy_cap', lambda ctx, screen: None)
@@ -100,7 +100,7 @@ def test_recognize_identifies_chars(monkeypatch) -> None:
     """templates 已加载 + SIFT 识别 → front_line / back_line / bench 产 BenchChar(含 char_id)。"""
     monkeypatch.setattr(mod, 'read_gold', lambda ctx, screen: 0)
     monkeypatch.setattr(mod, '_read_phase_round_pure', lambda ctx, screen: None)
-    monkeypatch.setattr(mod, 'read_hp', lambda ctx, screen: 100)
+    monkeypatch.setattr(mod, 'read_hp_opt', lambda ctx, screen: 100)
     monkeypatch.setattr(mod, 'read_streak', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_deployed_count', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_deploy_cap', lambda ctx, screen: None)
@@ -127,7 +127,7 @@ def test_recognize_no_chars_when_templates_none(monkeypatch) -> None:
     """立绘库不可用(ensure_portrait_templates → None)→ 不产角色(三字段 None)。"""
     monkeypatch.setattr(mod, 'read_gold', lambda ctx, screen: 0)
     monkeypatch.setattr(mod, '_read_phase_round_pure', lambda ctx, screen: None)
-    monkeypatch.setattr(mod, 'read_hp', lambda ctx, screen: 100)
+    monkeypatch.setattr(mod, 'read_hp_opt', lambda ctx, screen: 100)
     monkeypatch.setattr(mod, 'read_streak', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_deployed_count', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_deploy_cap', lambda ctx, screen: None)
