@@ -83,3 +83,43 @@ def test_starting_state_valid() -> None:
     """开局态:lv3/gold5/hp80/非空 bench(开局送牌)。"""
     r = simulate_p1(5)
     assert r.hp_trail, '至少跑了 r1'
+
+
+def test_node_sequence_shape() -> None:
+    """节点序列:9 项,首槽 battle(开局弱敌),末槽 boss(位面末)。"""
+    import random
+
+    from sr_od.application.currency_war.cw_sim import sample_node_sequence
+    for seed in (1, 2, 3):
+        seq = sample_node_sequence(random.Random(seed))
+        assert len(seq) == 9
+        assert seq[0] == 'battle'
+        assert seq[-1] == 'boss'
+
+
+def test_reward_node_no_damage() -> None:
+    """奖励/补给节点零战力要求 → 不掉血(r260 分层)。"""
+    import random
+
+    from sr_od.application.currency_war.cw_sim import node_delta
+    rng = random.Random(7)
+    for node in ('reward', 'supply'):
+        for rn in (3, 5, 8):
+            d = node_delta(node, rn, 99, rng)
+            assert d > 0, f'{node} r{rn} 不应掉血,得 {d}'
+
+
+def test_encounter_harder_than_battle() -> None:
+    """遭遇轮结算强度 > 同期普通战斗(用户口述:遭遇可比 boss 难)。"""
+    import random
+
+    from sr_od.application.currency_war.cw_sim import node_delta
+    losses_enc, losses_bat = [], []
+    for seed in range(50):
+        rng = random.Random(seed)
+        losses_enc.append(node_delta('encounter', 6, 99, rng))
+        losses_bat.append(node_delta('battle', 6, 99, rng))
+    avg_enc = -sum(losses_enc) / len(losses_enc)
+    avg_bat = -sum(losses_bat) / len(losses_bat)
+    assert avg_enc > avg_bat, \
+        f'遭遇均值损 {avg_enc} 应大于战斗 {avg_bat}'
