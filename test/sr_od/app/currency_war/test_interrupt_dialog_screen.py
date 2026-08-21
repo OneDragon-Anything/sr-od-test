@@ -51,5 +51,10 @@ def test_interrupt_dialog_areas(test_context: SrTestContext) -> None:
     for name in ('按钮-暂时离开', '文本-小队生命值'):
         area = next((a for a in si.area_list if a.area_name == name), None)
         assert area is not None, f'area 缺:{name}'
-        assert find_area_in_screen(test_context, img, area).value == 1, (
+        # 文本-小队生命值 = 图标(❤)紧邻数值:全图 OCR 把图标+数字并成一个框,无法按区域
+        # 切分(crop_first=False 语义,见 OcrService 类 docstring 缺点)→ 该查询显式走
+        # crop_first=True(先裁剪再 OCR,「从连续文本中只提取特定区域」的合法场景)。
+        assert find_area_in_screen(
+            test_context, img, area, crop_first=(name == '文本-小队生命值'),
+        ).value == 1, (
             f'area 应命中:{name}')

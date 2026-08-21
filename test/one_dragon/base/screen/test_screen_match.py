@@ -114,7 +114,7 @@ def test_find_area_plain_returns_none() -> None:
 
 
 def test_find_area_default_crop_first_false() -> None:
-    """默认 crop_first=False(全图 OCR 缓存复用,与 find_area_in_screen 默认 True 相反)。"""
+    """默认 crop_first=False(全图 OCR 缓存复用,与框架 find_* 系列默认一致)。"""
     ctx = MagicMock()
     ctx.ocr_service.get_ocr_result_list.return_value = []
     find_area_with_detail(ctx, MagicMock(), _text_area())
