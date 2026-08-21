@@ -95,3 +95,17 @@ def test_gate_open_profile_passes_shop_open(test_context) -> None:
     op = _FixtureOp(test_context, frame)
     out = _gate(op, PROFILE_OPEN, timeout_s=8)
     assert out is not None, '商店开帧开态 gate 应放行'
+
+
+def test_gate_closed_passes_on_r1_stop_frame(test_context) -> None:
+    """r344 实机回归锁(局37 停机现场帧):gate poll 改
+    crop_first=True 后,备战屏 4 个 id_mark 区(购买经验/出战/
+    前台/后台)在真机 r1 备战帧上 cropped OCR 必须全中——
+    crop 漏字会让 gate 把正确屏判为失配,ping-pong 停机复发。
+    fixture=局37 bail_pingpong 停机保全帧(hp=80/r1/gold=3)。"""
+    if not test_context.has_screen('货币战争-备战', 'r1_idle_stop'):
+        pytest.skip('fixture 缺:货币战争-备战/r1_idle_stop.webp')
+    frame = test_context.load_screen('货币战争-备战', 'r1_idle_stop')
+    op = _FixtureOp(test_context, frame)
+    out = _gate(op, PROFILE_CLOSED, timeout_s=8)
+    assert out is not None, '局37 停机现场帧关态 gate 必须放行(r344 锁)'

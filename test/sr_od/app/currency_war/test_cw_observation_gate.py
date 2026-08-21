@@ -168,3 +168,51 @@ def test_fingerprint_changes_with_pixels():
     # 截屏噪声否决)
     noisy = cv2_utils.fingerprint_in_rects(_gray(v=12), r)
     assert cv2_utils.fingerprint_same(a, noisy)
+
+
+def test_poll_cost_exceeding_budget_returns_frame(monkeypatch):
+    """r344 回归锁(局37 停机根因):单轮 poll 成本(截图+OCR)
+    超过整个超时预算、画面稳定 → gate 仍必须返帧——旧实现
+    `while _now() < deadline` 在首轮 poll 后直接退出,稳定窗
+    结构性不可能达成(diag {'screen':0,'fp':1,'ok':0}),
+    director 3-strike ping-pong 停机。grace poll 兜底。"""
+    from one_dragon.base.screen import screen_utils as su
+    monkeypatch.setattr(su, 'get_match_screen_name',
+                        lambda ctx, screen, screen_name_list, crop_first=True:
+                        screen_name_list[0])
+    clk = _FakeClock()
+    frames = [_gray(), _gray(), _gray()]
+    op = _FakeOp(frames)
+    _orig_shot = op.screenshot
+
+    def _slow_shot():
+        clk.advance(6.0)   # 单轮 poll 成本 6s > timeout 2s(实机全图 OCR ~5s)
+        return _orig_shot()
+    op.screenshot = _slow_shot
+    prof = {'screen_list': ['x'], 'expect_screen': 'x',
+            'fingerprint_rects': (), 'timeout_s': 2.0,
+            'min_stable_s': 0.5}
+    out = wait_stable_frame(op, profile=prof, clock=clk)
+    assert out is not None, 'poll 成本超预算时稳定帧不得被饿死(r344 锁)'
+
+
+def test_screen_match_uses_cropped_ocr(monkeypatch):
+    """r344 传参锁:gate poll 的屏判定必须 crop_first=True——
+    poll 循环每帧新截图,全图 OCR(~5s/轮实机)无缓存复用却
+    吞掉超时预算。此锁防未来随手改回 False。"""
+    from one_dragon.base.screen import screen_utils as su
+    _seen: list[bool] = []
+
+    def _rec(ctx, screen, screen_name_list, crop_first=True):
+        _seen.append(crop_first)
+        return screen_name_list[0]
+    monkeypatch.setattr(su, 'get_match_screen_name', _rec)
+    frames = [_gray(), _gray()]
+    op = _FakeOp(frames)
+    prof = {'screen_list': ['x'], 'expect_screen': 'x',
+            'fingerprint_rects': (), 'timeout_s': 5.0,
+            'min_stable_s': 0.5}
+    out = wait_stable_frame(op, profile=prof, clock=_TickingClock(0.3))
+    assert out is not None
+    assert _seen and all(_seen), \
+        f'gate 屏判定必须 cropped OCR(crop_first=True),实际 {_seen}'
