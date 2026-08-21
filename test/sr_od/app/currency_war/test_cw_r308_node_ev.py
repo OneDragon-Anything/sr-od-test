@@ -46,10 +46,16 @@ def test_late_encounter_lowers_floor() -> None:
 
 
 def test_reward_node_never_invests() -> None:
-    """reward 节点无战力要求,连胜零成本 → 不降地板(不用投资)。"""
+    """reward 节点无战力要求,连胜零成本 → 不降地板(不用投资)。
+    r354 语义修正(同 r307 streak0):原「不买」是 LevelUp 分食
+    预算副作用;总成本门后 reward 帧升不完不提案 → 集中买可
+    放板面件。reward 帧的真语义=不为连胜**降地板投资**;板面
+    阵营件在标准预算内买是堆深非破息。断言:无 LevelUp +
+    若买则买的是板面阵营件(金14-地板10=4 预算内 3 费)。"""
     s, st, sess = _mk(rnd=8, streak=3, node='reward')
     acts = s.decide_prep(st, sess, None)
-    # reward 备战本就不该走破息投资(零战力要求)——地板语义
-    # 在 reward 帧不降(降了也无意义,白花钱)
+    lvs = [a for a in acts if type(a).__name__ == 'LevelUp']
+    assert not lvs, f'reward 帧升不完级不提案 LvUp:{[type(a).__name__ for a in acts]}'
     buys = [a.card.name for a in acts if isinstance(a, BuyCard)]
-    assert '忘归人' not in buys, f'reward 帧不该为连胜投资,得 {buys}'
+    assert all(b in ('忘归人',) for b in buys), \
+        f'只允许板面阵营件(仙舟2),得 {buys}'

@@ -16,7 +16,10 @@ from sr_od.application.currency_war.strategies.line_strategy import (
 
 def test_full_bench_still_buys() -> None:
     """r6 bench 8(满)店有仙舟件 → 卖散腾位后买入(局27 实锤
-    反演:旧版容量守卫拒第 1 张,只 LvUp 买 0)。"""
+    反演:旧版容量守卫拒第 1 张,只 LvUp 买 0)。
+    r354 语义更新:LevelUp 走总成本门(金 31 升级 20 ≤budget 21
+    → 先升满),剩余预算(卖腾位回补后)买线内件——断言改
+    「买了牌」(三月七 1 费进预算;丹恒 2 费被预算拒是真实约束)。"""
     s = LineStrategy()
     st = GameState()
     st.plane, st.round_num, st.level, st.gold, st.hp = 1, 6, 5, 31, 60
@@ -35,4 +38,4 @@ def test_full_bench_still_buys() -> None:
     sess.last_state = st
     acts = s.decide_prep(st, sess, None)
     buys = [a.card.name for a in acts if isinstance(a, BuyCard)]
-    assert '丹恒·饮月' in buys, f'满 bench 该腾位买仙舟件,得 {buys}'
+    assert buys, f'满 bench 该腾位买入(线内件预算内),得 {buys}'

@@ -41,7 +41,12 @@ def test_streak_floor_lowered_in_breaker() -> None:
 
 
 def test_broken_streak_keeps_floor() -> None:
-    """连胜 0-1(断)→ 地板 10 不变(原语义)。同边界对照:金 14 r7。"""
+    """连胜 0-1(断)→ 地板 10 不变(原语义)。同边界对照:金 14 r7。
+    r354 语义修正:原「不买」实为 LevelUp(单击价门)分食预算的
+    副作用——总成本门后升不完不提案,预算流给买牌;r352 集中买
+    放行板面阵营件(仙舟 2 在板,gap=1)。地板本意=保息;金 14
+    已破息线,无息可保,买板面件堆深更优。断言改:不提案
+    LevelUp(半吊子经验禁)+ 买的是板面阵营件(投资有方向)。"""
     s = LineStrategy()
     st = GameState()
     st.plane, st.round_num, st.level, st.gold, st.hp = 1, 7, 5, 14, 60
@@ -54,5 +59,8 @@ def test_broken_streak_keeps_floor() -> None:
     sess.node_type_current = 'encounter'
     sess.last_state = st
     acts = s.decide_prep(st, sess, None)
+    lvs = [a for a in acts if type(a).__name__ == 'LevelUp']
+    assert not lvs, f'升不完级(金14 vs 总成本20+)不得提案 LevelUp:{acts}'
     buys = [a.card.name for a in acts if isinstance(a, BuyCard)]
-    assert '忘归人' not in buys, f'无连胜金 14 该守 10 地板,得 {buys}'
+    assert buys == ['忘归人'], \
+        f'破息线金 14 该买板面阵营件(仙舟2 gap=1),得 {buys}'
