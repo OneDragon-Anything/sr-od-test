@@ -16,14 +16,14 @@ import pytest
 from sr_od.application.currency_war.cw_observation_gate import (
     PROFILE_CLOSED,
     PROFILE_OPEN,
-    _fingerprint,
-    _fp_same,
     wait_stable_frame,
 )
 
 
 class _FixtureOp:
-    """把 fixture 截图喂给 gate 的桩 op(带 ctx 供锚识别)。"""
+    """把 fixture 截图喂给 gate 的桩 op(r324 后 gate 走
+    screen_utils.get_match_screen_name——真 ctx 建档判定,
+    fixture 场景恰好完美匹配,无需 mock 锚)。"""
 
     def __init__(self, ctx, frame):
         self.ctx = ctx
@@ -35,39 +35,6 @@ class _FixtureOp:
 
     def screenshot(self):
         return self._frame
-
-    def round_by_ocr(self, frame, kw, **kwargs):
-        return _Res(self._has(kw))
-
-    def round_by_find_area(self, frame, scr, area, **kwargs):
-        return _Res(self._area_hit(scr, area))
-
-    # —— 识别委托真实框架(test_context 建档齐全)——
-    def _has(self, kw: str) -> bool:
-        from one_dragon.base.geometry.rectangle import Rect
-        texts = [m.data for m in self.ctx.ocr_service.get_ocr_result_list(
-            image=self._frame, rect=Rect(0, 0, 1920, 1080))]
-        return any(kw in t for t in texts)
-
-    def _area_hit(self, scr: str, area: str) -> bool:
-        """真框架找锚(load_screen 的 ctx 已注册 screen_info)。"""
-        from sr_od.application.currency_war.cw_obs_core import _area_rect
-        from one_dragon.base.geometry.rectangle import Rect
-        rect = _area_rect(self.ctx, area, screen_name=scr)
-        if rect is None:
-            return False
-        texts = [m.data for m in self.ctx.ocr_service.get_ocr_result_list(
-            image=self._frame, rect=rect)]
-        # 锚语义=**找到该锚自己的文字**(非「该区有任何文字」
-        # ——fixture 抓到的误判:备战帧上按开商店屏 rect 读到
-        # 别的文字,count>0 ≠「收起」可见)。area 名取尾词匹配。
-        kw = area.split('-')[-1]
-        return any(kw in t for t in texts)
-
-
-class _Res:
-    def __init__(self, ok: bool):
-        self.is_success = ok
 
 
 def _gate(op, profile, **kw):
@@ -97,15 +64,17 @@ def test_gate_closed_passes_on_reward_panel_frame(test_context) -> None:
 
 
 def test_gate_fingerprint_same_source_stable(test_context) -> None:
-    """同源图连续指纹必稳(阈值比较,截屏噪声容差)。"""
+    """同源图连续指纹必稳(阈值比较,截屏噪声容差;r324 基元
+    在 cv2_utils)。"""
     if not test_context.has_screen('货币战争-备战', '补给节点'):
         pytest.skip('fixture 缺')
     from one_dragon.base.geometry.rectangle import Rect
+    from one_dragon.utils import cv2_utils
     frame = test_context.load_screen('货币战争-备战', '补给节点')
     r = (Rect(1408, 23, 1498, 103), Rect(60, 895, 320, 975))
-    a = _fingerprint(frame, r)
-    b = _fingerprint(frame, r)   # 同一图再读=完全一致
-    assert _fp_same(a, b), '同源图指纹必须一致(阈值语义)'
+    a = cv2_utils.fingerprint_in_rects(frame, r)
+    b = cv2_utils.fingerprint_in_rects(frame, r)   # 同一图再读=完全一致
+    assert cv2_utils.fingerprint_same(a, b), '同源图指纹必须一致(阈值语义)'
 
 
 def test_gate_closed_rejects_shop_open_frame(test_context) -> None:

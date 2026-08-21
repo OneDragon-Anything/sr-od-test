@@ -35,11 +35,14 @@ class _TickingClock(_FakeClock):
 
 
 class _FakeOp:
-    """离线 op 桩:park/screenshot/round_by_* 可脚本化。"""
+    """离线 op 桩:r324 后 gate 走 screen_utils.get_match_screen_name
+    (框架 id_mark 体系),桩提供 ctx;画面判定用 monkeypatch
+    screen_utils(见各测试)。"""
 
     def __init__(self, frames):
         self._frames = list(frames)
         self.park_calls = 0
+        self.ctx = _FakeCtx()
 
     def park_cursor(self):
         self.park_calls += 1
@@ -49,15 +52,11 @@ class _FakeOp:
             raise RuntimeError('no more frames')
         return self._frames.pop(0)
 
-    def round_by_ocr(self, frame, kw, **kw2):
-        class R:
-            is_success = True
-        return R()
 
-    def round_by_find_area(self, frame, scr, area, **kw2):
-        class R:
-            is_success = True
-        return R()
+class _FakeCtx:
+    """最小 ctx 桩(gate 只透传给 screen_utils,由 monkeypatch 接管)。"""
+
+    screen_loader = None
 
 
 def _gray(w=1920, h=1080, v=128):
@@ -66,23 +65,31 @@ def _gray(w=1920, h=1080, v=128):
     return img
 
 
-def test_returns_stable_frame_when_fingerprint_constant():
+def test_returns_stable_frame_when_fingerprint_constant(monkeypatch):
     """静止画面:首尾指纹一致且持续 min_stable_s → 返回帧。"""
+    from one_dragon.base.screen import screen_utils as su
+    monkeypatch.setattr(su, 'get_match_screen_name',
+                        lambda ctx, screen, screen_name_list, crop_first=True:
+                        screen_name_list[0])
     clk = _TickingClock(step=0.3)   # 每轮询推进 0.3s
     frames = [_gray(), _gray(), _gray(), _gray(), _gray(), _gray()]
     op = _FakeOp(frames)
-    prof = {'anchor_screen': 'x', 'anchor_area': 'a',
+    prof = {'screen_list': ['x'], 'expect_screen': 'x',
             'fingerprint_rects': (),
-            'circle_gate': False, 'timeout_s': 5.0,
+            'timeout_s': 5.0,
             'min_stable_s': 0.5}
     out = wait_stable_frame(op, profile=prof, clock=clk)
     assert out is not None
     assert op.park_calls == 1
 
 
-def test_timeout_returns_none_when_never_stable():
+def test_timeout_returns_none_when_never_stable(monkeypatch):
     """画面持续变化:超时 → None(None 语义:调用方走旧路径)。"""
     from one_dragon.base.geometry.rectangle import Rect
+    from one_dragon.base.screen import screen_utils as su
+    monkeypatch.setattr(su, 'get_match_screen_name',
+                        lambda ctx, screen, screen_name_list, crop_first=True:
+                        screen_name_list[0])
     frames = [_gray(v=v) for v in (10, 20, 30, 40, 50, 60, 70, 80,
                                    90, 100, 110, 120, 130, 140, 150,
                                    160, 170, 180, 190, 200)]
@@ -96,9 +103,9 @@ def test_timeout_returns_none_when_never_stable():
             self.n += 1
             return self.n * 0.3   # 20 帧×0.3=6s > timeout 5s
 
-    prof = {'anchor_screen': 'x', 'anchor_area': 'a',
+    prof = {'screen_list': ['x'], 'expect_screen': 'x',
             'fingerprint_rects': (Rect(0, 0, 64, 64),),
-            'circle_gate': False, 'timeout_s': 5.0,
+            'timeout_s': 5.0,
             'min_stable_s': 0.5}
     out = wait_stable_frame(op, profile=prof, clock=_Tick())
     assert out is None
@@ -114,8 +121,8 @@ def test_screenshot_exception_raises_not_none():
             raise RuntimeError('offline')
 
     op = _Boom([])
-    prof = {'anchor_screen': 'x', 'anchor_area': 'a',
-            'fingerprint_rects': (), 'circle_gate': False,
+    prof = {'screen_list': ['x'], 'expect_screen': 'x',
+            'fingerprint_rects': (),
             'timeout_s': 1.0, 'min_stable_s': 0.3}
     try:
         wait_stable_frame(op, profile=prof, clock=clk)
@@ -126,16 +133,16 @@ def test_screenshot_exception_raises_not_none():
 
 
 def test_fingerprint_changes_with_pixels():
-    """指纹随像素变化(首尾一致性判据的基元)。"""
+    """指纹随像素变化(基元在 cv2_utils;r324 下沉)。"""
     from one_dragon.base.geometry.rectangle import Rect
-    from sr_od.application.currency_war.cw_observation_gate import _fp_same
+    from one_dragon.utils import cv2_utils
     r = (Rect(0, 0, 64, 64),)
-    a = _fingerprint(_gray(v=10), r)
-    b = _fingerprint(_gray(v=10), r)
-    c = _fingerprint(_gray(v=200), r)
-    assert _fp_same(a, b)
-    assert not _fp_same(a, c)
+    a = cv2_utils.fingerprint_in_rects(_gray(v=10), r)
+    b = cv2_utils.fingerprint_in_rects(_gray(v=10), r)
+    c = cv2_utils.fingerprint_in_rects(_gray(v=200), r)
+    assert cv2_utils.fingerprint_same(a, b)
+    assert not cv2_utils.fingerprint_same(a, c)
     # 阈值容忍:小噪声(±2)视为同帧(局36 diag:字节恒等被
     # 截屏噪声否决)
-    noisy = _fingerprint(_gray(v=12), r)
-    assert _fp_same(a, noisy)
+    noisy = cv2_utils.fingerprint_in_rects(_gray(v=12), r)
+    assert cv2_utils.fingerprint_same(a, noisy)
