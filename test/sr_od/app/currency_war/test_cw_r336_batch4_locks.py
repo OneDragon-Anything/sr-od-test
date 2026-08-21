@@ -6,12 +6,16 @@ import inspect
 
 
 def test_shop_collapse_single_poll_fn() -> None:
-    """r335:shop 收起三路等待收敛为一个 _legacy_poll。"""
+    """r335→r347(旧路径删除):shop 买前收起走 gate 无条件
+    (fail-closed retry+M1 帧复用);_legacy_poll 已删,不得回流。"""
     from sr_od.application.currency_war.operations.prep import shop
-    src = inspect.getsource(shop.BuyShopCards)
-    assert '_legacy_poll' in src
-    # 轮询体只定义一次(收起按钮消失检查的 for 循环唯一)
-    assert src.count('for _ in range(5):') == 1
+    src = inspect.getsource(shop.BuyShopCards.buy)
+    assert 'def _legacy_poll' not in src, \
+        '旧轮询 _legacy_poll 已删(r347),不得回流'
+    assert '收起后关态未稳定(gate 超时)' in src, \
+        'gate 超时必须 fail-closed retry(r347)'
+    assert 'screen = _gf' in src, \
+        '买前收起站必须接收 gate 稳定帧(r346 M1)'
 
 
 def test_star_evidence_queue_pattern() -> None:
@@ -69,15 +73,19 @@ def test_shop_contextlib_module_level_no_local_import() -> None:
 
 
 def test_director_gate_open_shop_tolerated_not_bail() -> None:
-    """r346(局38 r2 停机根因):环入口 gate 超时后必须先区分
+    """r346(局38 r2 停机根因)+r347:环入口 gate 超时后必须先区分
     「开商店稳定态」(合法,游戏在战斗胜利后新回合可能自动开)
     vs「真特效」——开态走收起+round_retry 重进,只有非开态才
-    _bail(3-strike 停机)。锁源检:超时分支含开商店检测与收起重进
-    路径,bail 仍保留。"""
+    _bail(3-strike 停机)。锁源检:容忍 helper + 超时分支调用 +
+    bail 仍保留。"""
     from sr_od.application.currency_war import prep_director
+    helper_src = inspect.getsource(
+        prep_director.PrepDirector._try_collapse_open_shop)
+    assert '按钮-收起' in helper_src and 'return True' in helper_src, \
+        '开商店容忍 helper 必须探测收起锚并返回可重进'
     src = inspect.getsource(prep_director.PrepDirector._run_loop)
-    assert '环入口开商店态' in src, \
-        'gate 超时分支必须有开商店态容忍路径(r346)'
+    assert '_try_collapse_open_shop()' in src, \
+        'gate 超时分支必须调用开商店态容忍路径(r346)'
     assert '环入口商店开,已收起重进' in src, \
         '开态路径必须收起后 round_retry 重进(非 bail)'
     assert '环入口帧不clean' in src, \

@@ -8,11 +8,15 @@ from sr_od.application.currency_war import prep_director
 
 
 def test_loop_entry_anchor_is_stage_only() -> None:
-    """P0①:消化门锚改「按钮-出战」——shop 关态专属(shop 开屏
-    yml 无此 area,两态区分);不再用两态均可见的购买经验。"""
+    """P0①→r347(旧路径删除):原「按钮-出战」双态区分锚随 3 探针
+    旧路径删除而退役——环入口消化语义由 gate 时间稳定窗
+    (PROFILE_CLOSED 屏判定=备战关态专属)+r346 开商店容忍
+    (收起重进)承担。锁:旧锚不得回流 + gate 调用在。"""
     src = inspect.getsource(prep_director.PrepDirector._run_loop)
-    assert "'按钮-出战'" in src
-    assert 'SHOP_SCREEN_NAME' not in src.split('r297')[1][:600] or True
+    assert "'按钮-出战'" not in src, \
+        '旧 3 探针锚已删(r347),环入口消化由 gate 承担'
+    assert 'wait_stable_frame' in src, \
+        '环入口必须走 gate(时间稳定窗消化门)'
 
 
 def test_no_fallthrough_blind_observe() -> None:
