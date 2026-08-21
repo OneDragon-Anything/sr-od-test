@@ -76,3 +76,42 @@ def test_boss_depth_buy_tier_gap_priority() -> None:
     buys = [a.card.name for a in acts if type(a).__name__ == 'BuyCard']
     assert buys and buys[0] == '彦卿', \
         f'档位缺口小者(仙舟2→3)必须先买:{buys}'
+
+
+def test_boss_depth_buy_skips_unaffordable_not_break() -> None:
+    """r352c(review H):首张买不起 continue 而非 break——排序键
+    跨组无价格序,break 会跳过同组更便宜卡与后续组可买卡
+    (金滞留复发)。场景:仙舟2 档的 4 费卡买不起,但银河学者
+    1 档的 3 费卡买得起 → 两张都该进。"""
+    strat = LineStrategy()
+    st = GameState(plane=1, round_num=9, gold=24, level=6, hp=68,
+                   board={'仙舟': 2, '银河学者': 1}, bench=[],
+                   shop=[SimpleNamespace(name='彦卿', faction='仙舟', cost=4),
+                         SimpleNamespace(name='真理医生', faction='银河学者', cost=3)])
+    acts = strat._boss_breaker_actions(st, _sess())
+    buys = [a.card.name for a in acts if type(a).__name__ == 'BuyCard']
+    assert '真理医生' in buys, \
+        f'买不起贵卡不得跳过便宜可买卡(review-H): {buys}'
+
+
+def _card(faction: str, name: str = '') -> object:
+    from types import SimpleNamespace as _SN
+    return _SN(name=name or '测试', faction=faction, cost=1)
+
+
+def _sess(line: str = 'jizi_train'):
+    s = StrategySession()
+    s.locked_line = line
+    s.node_type_current = 'boss'
+    return s
+
+
+def test_locked_line_unknown_falls_back_engine_gate() -> None:
+    """r352c(review M2):locked_line 查不到 line(理论态)回退
+    引擎门而非空集——空集=挂件通道全锁死。"""
+    st = GameState(plane=1, round_num=7, gold=30, level=5,
+                   board={'银河学者': 1}, bench=[])
+    ok = LineStrategy._pair_wants(
+        _card('银河学者', '艾丝妲'), st,
+        _sess(line='no_such_line_id'))
+    assert ok, 'line 查不到必须回退引擎门(DOT flow 放行),不得锁死'
