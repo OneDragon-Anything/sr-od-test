@@ -61,3 +61,18 @@ def test_boss_depth_buy_budget_guard() -> None:
     acts = strat._boss_breaker_actions(_state(gold=12), _sess())
     buys = [a.card.name for a in acts if type(a).__name__ == 'BuyCard']
     assert not buys, f'预算内无件可买(金 12-地板 10): {buys}'
+
+
+def test_boss_depth_buy_tier_gap_priority() -> None:
+    """r352b(局41 判读):板面 8 阵营散面下,集中买按档位接近度
+    排序——2 人阵营的件优先于 1 人阵营(2→3 档跃迁 > 新开档)。"""
+    strat = LineStrategy()
+    # 板面:仙舟2(缺口1) 银河学者1(缺口2);店里两个阵营都有件
+    st = GameState(plane=1, round_num=9, gold=50, level=6, hp=68,
+                   board={'仙舟': 2, '银河学者': 1}, bench=[],
+                   shop=[SimpleNamespace(name='真理医生', faction='银河学者', cost=3),
+                         SimpleNamespace(name='彦卿', faction='仙舟', cost=4)])
+    acts = strat._boss_breaker_actions(st, _sess())
+    buys = [a.card.name for a in acts if type(a).__name__ == 'BuyCard']
+    assert buys and buys[0] == '彦卿', \
+        f'档位缺口小者(仙舟2→3)必须先买:{buys}'
