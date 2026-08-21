@@ -27,16 +27,16 @@ def test_light_tier_skips_sift() -> None:
 
 
 def test_gold_reread_is_second_gate() -> None:
-    """MED-2 gold==0 重读进本层(帧稳定≠OCR 稳定)。"""
+    """MED-2 gold==0 重读进本层(帧稳定≠OCR 稳定)。
+
+    (r337:行为锁迁 test_cw_r337_behavior.py——本断言保底
+    字段存在;旧 st_gold_reread_semantics 空壳已删,review
+    第 16 条「零效力」处置。)
+    """
     src = inspect.getsource(
         __import__('sr_od.application.currency_war.cw_observe_full',
                    fromlist=['observe_full']))
     assert 'gold_reread' in src
-    assert st_gold_reread_semantics()
-
-
-def st_gold_reread_semantics() -> bool:
-    return True
 
 
 def test_substate_marks_readability() -> None:
