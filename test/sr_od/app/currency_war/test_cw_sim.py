@@ -86,14 +86,18 @@ def test_starting_state_valid() -> None:
 
 
 def test_node_sequence_shape() -> None:
-    """节点序列:9 项,首槽 battle(开局弱敌),末槽 boss(位面末)。"""
+    """节点序列(r284 固定骨架):首二 reward,slot2-3 battle,
+    slot4 supply,slot5-6 变异位,末 boss(遥测 14 帧实证)。"""
     import random
 
     from sr_od.application.currency_war.cw_sim import sample_node_sequence
     for seed in (1, 2, 3):
         seq = sample_node_sequence(random.Random(seed))
         assert len(seq) == 9
-        assert seq[0] == 'battle'
+        assert seq[0] == 'reward' and seq[1] == 'reward'
+        assert seq[2] == 'battle' and seq[3] == 'battle'
+        assert seq[4] == 'supply'
+        assert seq[5] in ('battle', 'encounter')
         assert seq[-1] == 'boss'
 
 
