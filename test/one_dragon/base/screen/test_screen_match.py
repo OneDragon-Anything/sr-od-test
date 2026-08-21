@@ -282,7 +282,7 @@ def test_color_range_none_ocr_reuses_cache(monkeypatch) -> None:
     real_call_keys: list[tuple] = []
     cache: dict[tuple, list] = {}
 
-    def _ocr_with_cache(image, rect=None, color_range=None, crop_first=True):
+    def _ocr_with_cache(image, rect=None, color_range=None, crop_first=False):
         key = (repr(color_range), crop_first)
         if key not in cache:
             real_call_keys.append(key)   # 仅首次"实际跑 OCR"计数

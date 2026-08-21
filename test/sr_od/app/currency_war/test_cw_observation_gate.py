@@ -68,7 +68,7 @@ def test_returns_stable_frame_when_fingerprint_constant(monkeypatch):
     """静止画面:首尾指纹一致且持续 min_stable_s → 返回帧。"""
     from one_dragon.base.screen import screen_utils as su
     monkeypatch.setattr(su, 'get_match_screen_name',
-                        lambda ctx, screen, screen_name_list, crop_first=True:
+                        lambda ctx, screen, screen_name_list, crop_first=False:
                         screen_name_list[0])
     clk = _TickingClock(step=0.3)   # 每轮询推进 0.3s
     frames = [_gray(), _gray(), _gray(), _gray(), _gray(), _gray()]
@@ -87,7 +87,7 @@ def test_timeout_returns_none_when_never_stable(monkeypatch):
     from one_dragon.base.geometry.rectangle import Rect
     from one_dragon.base.screen import screen_utils as su
     monkeypatch.setattr(su, 'get_match_screen_name',
-                        lambda ctx, screen, screen_name_list, crop_first=True:
+                        lambda ctx, screen, screen_name_list, crop_first=False:
                         screen_name_list[0])
     frames = [_gray(v=v) for v in (10, 20, 30, 40, 50, 60, 70, 80,
                                    90, 100, 110, 120, 130, 140, 150,
@@ -119,7 +119,7 @@ def test_anchor_blip_recovery_returns_frame(monkeypatch):
     _seq = ['x', None, None, 'x', 'x', 'x', 'x', 'x']   # 1 miss 后恢复
     _i = {'n': 0}
 
-    def _fake(ctx, screen, screen_name_list, crop_first=True):
+    def _fake(ctx, screen, screen_name_list, crop_first=False):
         v = _seq[min(_i['n'], len(_seq) - 1)]
         _i['n'] += 1
         return v
@@ -178,7 +178,7 @@ def test_poll_cost_exceeding_budget_returns_frame(monkeypatch):
     director 3-strike ping-pong 停机。grace poll 兜底。"""
     from one_dragon.base.screen import screen_utils as su
     monkeypatch.setattr(su, 'get_match_screen_name',
-                        lambda ctx, screen, screen_name_list, crop_first=True:
+                        lambda ctx, screen, screen_name_list, crop_first=False:
                         screen_name_list[0])
     clk = _FakeClock()
     frames = [_gray(), _gray(), _gray()]
@@ -205,7 +205,7 @@ def test_screen_match_uses_fullframe_ocr_for_cache_reuse(monkeypatch):
     from one_dragon.base.screen import screen_utils as su
     _seen: list[bool] = []
 
-    def _rec(ctx, screen, screen_name_list, crop_first=True):
+    def _rec(ctx, screen, screen_name_list, crop_first=False):
         _seen.append(crop_first)
         return screen_name_list[0]
     monkeypatch.setattr(su, 'get_match_screen_name', _rec)
