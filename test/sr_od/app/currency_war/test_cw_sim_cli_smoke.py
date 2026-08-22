@@ -57,6 +57,13 @@ def test_sim_batch_dir_structure(tmp_path: Path) -> None:
                  'shop_snapshots.jsonl'):
         assert (d / name).exists(), f'缺 {name}'
     # outcomes 用生产词表(视图 NT 归一同源)
-    first = (d / 'outcomes.jsonl').read_text(
-        encoding='utf-8').splitlines()[0]
-    assert '"node_type": "' in first
+    import json
+    rows = [json.loads(ln) for ln in
+            (d / 'outcomes.jsonl').read_text(encoding='utf-8').splitlines()]
+    assert rows and all(r.get('node_type') for r in rows[:2])
+    # killed 极性=产线语义(**胜**;审查 major 曾反):delta≥0 ↔ killed
+    for r in rows:
+        s = r.get('sim') or {}
+        if 'delta' in s and 'killed' in s:
+            assert s['killed'] == (s['delta'] >= 0), \
+                f"killed 极性反转(产线 killed=胜): {r}"
