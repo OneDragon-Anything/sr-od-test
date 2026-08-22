@@ -55,9 +55,13 @@ def test_pair_buy_still_works() -> None:
 
 
 def test_depth_proxy_deploy_semantics() -> None:
-    """r343:sim 深度代理=可 deploy 件数(源码锁——count≥2 口径)。"""
+    """r343:sim 深度代理=可 deploy 件数(① 收口 _deployable_depth
+    后,源码锁指向 helper——simulate_p1 消费它,语义不变)。"""
     import inspect
+
     from sr_od.application.currency_war import cw_sim
-    src = inspect.getsource(cw_sim.simulate_p1)
+    src = inspect.getsource(cw_sim._deployable_depth)
     assert '_SIM_ENGINE_FACTIONS' in src
     assert 'cnt >= 2' in src   # 阵营集中判据(deploy 口径)
+    main_src = inspect.getsource(cw_sim.simulate_p1)
+    assert '_deployable_depth(st)' in main_src   # 采样/账本走同一源
