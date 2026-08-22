@@ -31,7 +31,12 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
 
 
 def test_views_render_sim_ledger(tmp_path: Path) -> None:
-    """同构接线:rounds/economy/supply 视图直接渲染 sim 批次目录。"""
+    """同构接线:rounds/economy/supply/hp/tiers 视图直接渲染 sim 批次目录。
+
+    保真度锁(视图 sim 回退):hp 板深读 sim.depth(非 '-')、
+    tiers 三维同屏换 深/核/方向 维度(非 档0)、rounds 板面位
+    显示 sim 维度(非 (空))。
+    """
     rep = simulate_p1_batch(3, pool='snapshot', seed_base=900,
                             ledger=tmp_path / 'iso')
     d = Path(rep['ledger_dir'])
@@ -46,6 +51,15 @@ def test_views_render_sim_ledger(tmp_path: Path) -> None:
     assert any(f'run' not in ln and 'hp=' in ln for ln in rounds)
     # 卖牌项(⑤):有 SellBench 的局显示 卖+N(无卖局不显示,不回归)
     assert any(('卖+' in ln or True) for ln in eco)   # 形状锁,不锁分布
+    # 保真度:sim 行回退账本维度(板深恒 '-' / 档0 / (空) = 同构破洞)
+    hp = tel.query_hp(d, rid)
+    assert any('板深=' in ln and '板深=-' not in ln for ln in hp), \
+        'hp 视图 sim 板深应回退 sim.depth'
+    tiers = tel.query_tiers(d, rid)
+    assert any('深=' in ln and '核=' in ln for ln in tiers), \
+        'tiers 视图 sim 行应显示 深/核 代理维度'
+    assert any('(sim 深=' in ln for ln in rounds), \
+        'rounds 视图 sim 板面位应显示 深/核'
 
 
 def test_sim_batch_dir_structure(tmp_path: Path) -> None:
