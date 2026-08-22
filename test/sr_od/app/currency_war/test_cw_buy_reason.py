@@ -1,0 +1,84 @@
+# -*- coding: utf-8 -*-
+"""① 账本基建锁:classify_buy 单一源 + BuyCard.reason 打标。
+
+对抗审查二轮#2/#5 定谳:检查端只读 reason 不重算(第二源漂移);
+label 集合以代码分支为准(line/bridge_seed/engine/pair/p2_core/
+board_focus/emergency/swap/plan),不预设三分法。
+"""
+from __future__ import annotations
+
+from sr_od.application.currency_war.cw_line_defs import classify_buy
+from sr_od.application.currency_war.cw_state import BenchChar, BuyCard, GameState, ShopCard
+
+
+def _st(board: dict[str, int] | None = None, bench: list[BenchChar] | None = None) -> GameState:
+    st = GameState()
+    st.plane, st.round_num, st.level, st.gold = 1, 1, 3, 10
+    st.board = board or {}
+    st.bench = bench or []
+    return st
+
+
+def test_buy_card_has_reason_field() -> None:
+    """BuyCard.reason 字段存在且默认空(旧调用兼容)。"""
+    c = BuyCard(card=ShopCard(x=0, faction='仙舟', name='爻光', cost=1))
+    assert c.reason == ''
+
+
+def test_classify_coldstart_bridge_vs_off() -> None:
+    """局49 判据面:冷启动(板面空+bench 空)身份分类。
+
+    桥名单件=bridge_seed;引擎阵营=engine;线外杂卡=off——
+    r368 门=白名单 {bridge_seed, engine},检查端读同源标签。
+    """
+    st = _st()   # 全空 = 冷启动形态
+    # 桥名单件(P1 BRIDGE_POOL fixed∪core 成员,如 丹恒·饮月)
+    assert classify_buy(ShopCard(x=0, faction='仙舟', name='丹恒·饮月', cost=1), st) == 'bridge_seed'
+    # 引擎阵营件(非桥名单但属 ENGINE_FACTIONS)
+    assert classify_buy(ShopCard(x=1, faction='持续伤害', name='卡芙卡', cost=2), st) in ('bridge_seed', 'engine')
+    # 线外杂卡(局49 形态:盛会之星/公司)
+    assert classify_buy(ShopCard(x=2, faction='公司', name='翡翠', cost=1), st) == 'off'
+
+
+def test_classify_pair_when_owned() -> None:
+    """非冷启动:同阵营=pair;桥名单件优先 bridge_seed(分类序:
+    bridge_seed > engine > pair——桥名单件即使已拥有阵营也标
+    桥身份,检查端判「方向件」时两类都算)。"""
+    st = _st(board={'仙舟': 1})
+    # 藿藿 ∈ 桥名单核心 → bridge_seed(优先于 pair)
+    assert classify_buy(ShopCard(x=0, faction='仙舟', name='藿藿', cost=1), st) == 'bridge_seed'
+    # 非桥名单的板面同阵营件 → pair
+    assert classify_buy(ShopCard(x=1, faction='公司', name='托帕', cost=1),
+                        _st(board={'公司': 1})) == 'pair'
+
+
+def test_line_strategy_labels_reasons() -> None:
+    """OR 链打标:line 通道产出带 reason(非空且属合法 label 集)。"""
+    from sr_od.application.currency_war.strategies.line_strategy import LineStrategy
+
+    strat = LineStrategy()
+    sess = strat.create_session(None)
+    sess.locked_line = 'v2:jizi_train'
+    st = _st(board={'仙舟': 2}, bench=[BenchChar(slot=1, char_id='藿藿', faction='仙舟', star=1)])
+    st.gold = 30
+    st.shop = [ShopCard(x=0, faction='仙舟', name='爻光', cost=1)]
+    acts = strat.decide_prep(st, sess, None)
+    labels = {a.reason for a in acts if isinstance(a, BuyCard)}
+    assert all(l in ('line', 'bridge_seed', 'engine', 'pair', 'p2_core',
+                     'board_focus', 'emergency', 'swap', 'plan')
+               for l in labels)
+    # jizi 锁线下仙舟 1 费经 _bridge_seed 收(线形态键不含仙舟)
+    # → reason=bridge_seed(方向件);语义锁:非空合法 label
+    bought = [a for a in acts if isinstance(a, BuyCard)]
+    if bought:
+        assert labels <= {'bridge_seed', 'line', 'engine', 'pair'}
+        assert labels == {'bridge_seed'}
+
+
+def test_coldstart_gate_consumes_classify() -> None:
+    """r368 门消费 classify_buy 单一源(门=白名单 label 集)。"""
+    import inspect
+
+    from sr_od.application.currency_war.strategies import line_strategy
+    src = inspect.getsource(line_strategy.LineStrategy._pair_wants)
+    assert 'classify_buy' in src, 'r368 冷启动门应收口 classify_buy(防第二源)'
