@@ -20,6 +20,8 @@
 
 import inspect
 import os
+import warnings
+from collections.abc import Iterator
 from functools import cached_property
 from pathlib import Path
 
@@ -188,3 +190,51 @@ def test_image_dir(request) -> Path:
             img = cv2_utils.read_image(str(test_image_dir / '0.png'))
     """
     return Path(request.module.__file__).parent
+
+
+# --------------------------------------------------------------------------- #
+# 共享态守卫(session 级 test_context 的污染防线,autouse)
+# --------------------------------------------------------------------------- #
+# 背景:``test_context`` 是 session 级共享,测试若裸赋值替换其属性(如
+# ``ctx.run_context = _FakeRunCtx()``)且不还原,污染会泄漏到**后续别的测试
+# 文件**才炸(单跑必过/全量必挂的假 flaky;实锤:test_cw_back_layout 裸赋值
+# run_context → test_enter_currency_war_flow 的 op 初始化读 run_context.event_bus
+# AttributeError,曾被误诊为并发干扰)。
+#
+# 守卫语义:记录守卫属性的「对象身份」,测试后若被换成别的对象 → 还原 + 警告
+# (还原让后续测试不被拖垮;警告让污染点当场可见,而非几周后遥遥挂别处)。
+#
+# 合法替换姿势不受扰:``monkeypatch.setattr``。同 scope 下 autouse fixture
+# 先 setup 后 teardown —— 本守卫的对比发生在 monkeypatch 还原**之后**,
+# 用 monkeypatch 的测试看到的一定是已还原的原对象,零误报。
+#
+# 新增守卫属性:改 ``_GUARDED_CTX_ATTRS``(只守「整个对象被替换」类污染;
+# 对象内部可变状态(如 mock_screenshot)是测试的常规工作面,不在守卫范围)。
+#: 守卫的共享 ctx 属性(整对象替换 = 高危;None 表示属性原本缺失)。
+_GUARDED_CTX_ATTRS: tuple[str, ...] = ('run_context', 'controller')
+
+
+@pytest.fixture(autouse=True)
+def _guard_shared_ctx(test_context: SrTestContext) -> Iterator[None]:
+    """session 级 ctx 属性替换守卫(见上方注释;autouse 全测试生效)。"""
+    before: dict[str, object | None] = {
+        name: getattr(test_context, name, None)
+        if hasattr(test_context, name) else None
+        for name in _GUARDED_CTX_ATTRS
+    }
+    had_attr = {name: hasattr(test_context, name) for name in _GUARDED_CTX_ATTRS}
+    yield
+    for name, orig in before.items():
+        cur_has = hasattr(test_context, name)
+        cur = getattr(test_context, name, None) if cur_has else None
+        polluted = (cur_has != had_attr[name]) or (cur is not orig)
+        if polluted:
+            warnings.warn(
+                f'test_context.{name} 被本测试替换且未还原(已自动还原)。'
+                f'合法替换请用 monkeypatch.setattr(自动还原,不触发本守卫)。',
+                stacklevel=2,
+            )
+            if had_attr[name]:
+                setattr(test_context, name, orig)
+            else:
+                delattr(test_context, name)

@@ -183,12 +183,16 @@ def test_layout_grid_model_complete():
     assert grid[0:11][-1] == 1742      # 11 槽右端
 
 
-def test_unarchived_layout_falls_back_clean(test_context, templates):
+def test_unarchived_layout_falls_back_clean(test_context, templates, monkeypatch):
     """无档有效槽数(现仅理论态:6-11 全档后 cap≥12 或异常读)→ 退基线 + 停机钩子。
 
     r84 全档收口(6-11)后,停机钩子只对「有效槽数无档」触发(实测正常局不再出现);
     本测试用 monkeypatch 造无档槽数验证钩子机制本身。r81:cap≤6 钳制基线不触发。
     (2026-08 精简审计:改用 session 级 test_context,避免自建 SrContext 重复 init。)
+    ⚠️ run_context 替换必须走 monkeypatch(自动还原):session 级 ctx 裸赋值会
+    污染后续所有测试(op 框架初始化读 run_context.event_bus → AttributeError;
+    实锤:test_enter_recovers_when_transport_already_done 全量必挂/单跑必过,
+    曾被误诊为「实机并发干扰」)。
     """
     ctx = test_context
 
@@ -199,7 +203,7 @@ def test_unarchived_layout_falls_back_clean(test_context, templates):
         def stop_running(self):
             self.stopped = True
 
-    ctx.run_context = _FakeRunCtx()
+    monkeypatch.setattr(ctx, 'run_context', _FakeRunCtx())
     flag = _ROOT / '.debug/temp/currency_war/back_layout_stop_hook.flag'
     # 清哈希去重残留(该 fixture 首次测试已采同内容帧,cw_shot_unique 会判「已采过」跳过)
     for _n in (5, 12):
