@@ -28,14 +28,28 @@ def test_set_ctx_match_ref_slot() -> None:
 
 
 def test_live_delta_depth_conditioned() -> None:
-    """r340:板深条件化池 + live_delta_for 回退链。"""
+    """r340:板深条件化池 + live_delta_for 回退链(⓪ 后显式池注入)。
+
+    ⓪(sim 判读同构基建)起 pool_map 显式注入——「离线无 replay
+    返回 None」的隐式两态语义已废除(缺源 auto 现 raise,
+    DeltaPoolUnavailable),本锁改构造池双向锁:命中桶采样 +
+    无更浅桶 → None(调用方走旧模型)。
+    """
+    import random
+
     from sr_od.application.currency_war import cw_sim
     src = inspect.getsource(cw_sim.live_delta_for)
     assert 'bucket' in src and '回退' not in src.split('"""')[0]   # 有邻桶回退
-    import random
-    v = cw_sim.live_delta_for('battle', 7, random.Random(1))
-    # 有数据环境返回 int;离线无 replay 返回 None(两态皆合法)
-    assert v is None or isinstance(v, int)
+    pool = {'battle': {6: [-3, -5]}}
+    v = cw_sim.live_delta_for('battle', 7, random.Random(1),
+                              pool_map=pool)
+    assert v in (-3, -5)     # 深7 → 桶6 命中
+    # 深0 → 桶0 缺,浅侧回退桶-3 也缺 → None(r343 E 修:只向浅侧)
+    assert cw_sim.live_delta_for('battle', 0, random.Random(1),
+                                 pool_map=pool) is None
+    # 节点缺 → None
+    assert cw_sim.live_delta_for('boss', 6, random.Random(1),
+                                 pool_map=pool) is None
 
 
 def test_sim_events_reach_node_delta() -> None:

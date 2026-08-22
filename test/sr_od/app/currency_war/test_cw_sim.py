@@ -20,8 +20,8 @@ from sr_od.application.currency_war.cw_sim import (
 
 def test_seed_reproducible() -> None:
     """同 seed 同局(结果全字段一致)。"""
-    a = simulate_p1(42)
-    b = simulate_p1(42)
+    a = simulate_p1(42, pool='fallback')
+    b = simulate_p1(42, pool='fallback')
     assert a.final_hp == b.final_hp
     assert a.hp_trail == b.hp_trail
     assert a.dir_round == b.dir_round
@@ -57,22 +57,22 @@ def test_pool_cap_respected() -> None:
 
 def test_direction_matches_strategy_claim() -> None:
     """方向建立 = 策略认领(锁线/桥);模拟本身不另立判据。"""
-    r = simulate_p1(3)
+    r = simulate_p1(3, pool='fallback')
     # 若报告已建立,则建立轮之后每一轮都应保持认领态(锁线粘性)
     assert r.dir_round < 99 or r.locked_line is None
 
 
 def test_ab_channel_refresh() -> None:
     """use_refresh=False 时刷新数为 0(A/B 通道工作)。"""
-    on = simulate_p1(11, use_refresh=True)
-    off = simulate_p1(11, use_refresh=False)
+    on = simulate_p1(11, pool='fallback', use_refresh=True)
+    off = simulate_p1(11, pool='fallback', use_refresh=False)
     assert off.refreshes == 0
     assert on.refreshes >= 0          # 开通道至少不崩
 
 
 def test_batch_stats_shape() -> None:
     """批量统计口径齐全(HP≥60/方向分布/平均)。"""
-    s = simulate_p1_batch(60)
+    s = simulate_p1_batch(60, pool='fallback')
     assert s['n'] == 60
     assert 0.0 <= s['hp_ge_60'] <= 1.0
     assert 0.0 <= s['dir_by_r4'] <= 1.0
@@ -81,7 +81,7 @@ def test_batch_stats_shape() -> None:
 
 def test_starting_state_valid() -> None:
     """开局态:lv3/gold5/hp80/非空 bench(开局送牌)。"""
-    r = simulate_p1(5)
+    r = simulate_p1(5, pool='fallback')
     assert r.hp_trail, '至少跑了 r1'
 
 
