@@ -25,10 +25,12 @@ def _mk(round_num=2, gold=20, shop=None, locked=None):
 
 
 def test_scatter_shop_triggers_refresh():
-    """P1r2 无锁线,店全是非引擎散件 → 刷(找种子)。"""
-    shop = [ShopCard(x=0, faction='狼狩', name='飞霄', cost=1),
-            ShopCard(x=1, faction='公司', name='翡翠', cost=1),
-            ShopCard(x=2, faction='盛会之星', name='大丽花', cost=1)]
+    """P1r2 无锁线,店全非方向散件 → 刷(找种子)。
+    (原用例飞霄 r353[8add6d5e]入 hunt3 fixed=桥种子件,会被
+    买走→已获方向不刷——换真散件黑塔锁原刷新语义。)"""
+    shop = [ShopCard(x=0, faction='公司', name='翡翠', cost=1),
+            ShopCard(x=1, faction='盛会之星', name='大丽花', cost=1),
+            ShopCard(x=2, faction='银河学者', name='黑塔', cost=1)]
     s, st, sess = _mk(round_num=2, gold=20, shop=shop)
     acts = s.decide_prep(st, sess, None)
     assert any(isinstance(a, RefreshShop) for a in acts), \

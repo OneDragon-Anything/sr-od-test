@@ -65,9 +65,12 @@ def test_no_seed_spending_above_floor():
 
 
 def test_non_seed_non_pair_not_bought():
-    """非种子非凑对的高费卡不买(乱买守卫)。"""
+    """非种子非凑对的高费卡不买(乱买守卫)。
+    (原用例希儿 r353[8add6d5e]入 dot_belog fixed=桥种子件,
+    r400 四体系定稿又确认希儿系为过渡方向件——现行为=意图;
+    换真线外件黑塔锁守卫语义。)"""
     s, st, sess = _mk(gold=30)
-    st.shop = [ShopCard(x=0, faction='量子同频', name='希儿', cost=3)]
+    st.shop = [ShopCard(x=0, faction='银河学者', name='黑塔', cost=3)]
     st.board = {}    # 无同阵营
     acts = s.decide_prep(st, sess, None)
     assert not [a for a in acts if isinstance(a, BuyCard)]

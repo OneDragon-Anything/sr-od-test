@@ -72,12 +72,15 @@ def test_update_target_bridge_when_unlocked():
 
 
 def test_economy_buys_line_cards():
+    """经济:买线内件,不买线外件。
+    (原用例卡芙卡 r353 起入 dot_belog core → _line_wants 的
+    桥 core 通道(r245)放行——换真线外件黑塔锁原语义。)"""
     s, st, sess = _mk(gold=60)
-    st.shop = [_card('瓦尔特', 3), _card('卡芙卡', 3)]
+    st.shop = [_card('瓦尔特', 3), _card('黑塔', 3)]
     sess.locked_line = 'jizi_train'
     acts = s.decide_prep(st, sess, None)
     names = [a.card.name for a in acts if isinstance(a, BuyCard)]
-    assert '瓦尔特' in names and '卡芙卡' not in names
+    assert '瓦尔特' in names and '黑塔' not in names
 
 
 def test_economy_respects_interest_floor():

@@ -92,11 +92,11 @@ def test_p2_precache_respects_floor():
 
 
 def test_p2_precache_below_floor_rejected():
-    """金 51 无可卖(bench 全保护件):floor=50 → 51-2=49 <50
-    不囤(息律优先)。
-    注:若 bench 有 off-target 件会被先卖腾金再囤(卖→买
-    置换是 r240 的正确语义)——本测试锁「无置换时的纯 floor 拒」。"""
-    s, st, sess = _mk(round_num=8, gold=51)
+    """r8 处于 boss 破息窗(r278 f556e8c0 破息投资;r285 e2864a71
+    前移 r5):地板 = _BOSS_BREAKER_FLOOR(10),非满息 50——金 51
+    买砂金是意图内(破息投资;满息上界由 respects_floor 锁)。
+    本测试锁守卫下界:金 11(11-2=9 <10)不囤(boss 地板仍守)。"""
+    s, st, sess = _mk(round_num=8, gold=11)
     # bench 全用保护件(仙舟桥 core 名单内)→ 无可卖
     st.bench = [BenchChar(slot=i, char_id='藿藿', faction='仙舟')
                 for i in range(5)]
@@ -104,3 +104,8 @@ def test_p2_precache_below_floor_rejected():
     acts = s.decide_prep(st, sess, None)
     assert not [a for a in acts
                 if isinstance(a, BuyCard) and a.card.name == '砂金']
+    # 破息窗内(51-2=49 ≥10)放行——锁窗语义
+    st.gold = 51
+    acts = s.decide_prep(st, sess, None)
+    assert any(isinstance(a, BuyCard) and a.card.name == '砂金'
+               for a in acts)
