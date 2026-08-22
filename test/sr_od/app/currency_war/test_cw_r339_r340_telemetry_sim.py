@@ -39,7 +39,7 @@ def test_live_delta_depth_conditioned() -> None:
 
     from sr_od.application.currency_war import cw_sim
     src = inspect.getsource(cw_sim.live_delta_for)
-    assert 'bucket' in src and '回退' not in src.split('"""')[0]   # 有邻桶回退
+    assert '浅侧' in src and 'bucket - _DEPTH_BUCKET_W' in src   # 邻桶回退只向浅侧(真锁:实现语句在)
     pool = {'battle': {6: [-3, -5]}}
     v = cw_sim.live_delta_for('battle', 7, random.Random(1),
                               pool_map=pool)
