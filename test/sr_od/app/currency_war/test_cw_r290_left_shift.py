@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""r290 current 左移优先测试(局20 node=reward 污染根修)。"""
+"""r290 current 左移优先测试(局20 node=reward 污染根修;r363 锚定版)。"""
 from __future__ import annotations
 
 import inspect
@@ -21,6 +21,15 @@ def test_left_shift_takes_priority() -> None:
 
 
 def test_ocr_fallback_only_when_no_shift() -> None:
-    """OCR 只在左移无值时兜底(首帧)。"""
+    """OCR 只在 current 无值时兜底(首帧)。
+
+    r363 锚定版:断言随结构演进取新形态——左移锚定轮次(防同轮
+    超前)后,current 直读降为「current 无值才写」的兜底;旧断言
+    `if _direct is None:` 是 r290 形态,r363 改为 getattr 判 None
+    (语义不变:直读仅兜底)。
+    """
     src = inspect.getsource(prep_director.PrepDirector._probe_node_type)
-    assert "if _direct is None:" in src
+    assert "node_type_current', None) is None" in src
+    # 兜底分支在左移分支之后(优先级序保持)
+    assert src.index("node_type_current', None) is None") \
+        > src.index('_prev[0]')

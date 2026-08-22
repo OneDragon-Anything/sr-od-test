@@ -55,13 +55,18 @@ def test_pair_buy_still_works() -> None:
 
 
 def test_depth_proxy_deploy_semantics() -> None:
-    """r343:sim 深度代理=可 deploy 件数(① 收口 _deployable_depth
-    后,源码锁指向 helper——simulate_p1 消费它,语义不变)。"""
+    """sim 深度代理口径(r390 演进):**读 st.deployed**(执行层
+    真实围栏输出,cw_deploy_logic 与 DeployBench op 同源)——
+    旧锁(r343 数 bench 阵营对的字面量)随 r390 口径升级过期:
+    deploy 代理升级后板深若还数 bench,变异差异死在中间
+    (r390 探针实证:围栏改了、depth 没读,分布不动)。
+    行为锁(r390 仓 test_cw_r390_deploy_agent.test_depth_reads_
+    deployed_not_bench)锁数值;本锁保 simulate_p1 消费同一源。
+    """
     import inspect
 
     from sr_od.application.currency_war import cw_sim
     src = inspect.getsource(cw_sim._deployable_depth)
-    assert '_SIM_ENGINE_FACTIONS' in src
-    assert 'cnt >= 2' in src   # 阵营集中判据(deploy 口径)
+    assert 'st.deployed' in src   # r390:读 deployed(围栏输出)
     main_src = inspect.getsource(cw_sim.simulate_p1)
     assert '_deployable_depth(st)' in main_src   # 采样/账本走同一源
