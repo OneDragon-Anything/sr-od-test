@@ -48,30 +48,35 @@ def test_consistency_check_bidirectional() -> None:
 
 
 def test_coldstart_check_bidirectional() -> None:
-    """局49 指纹(r371b 语义):开局轮 pair 通道非方向件必报;
-    方向件/其它通道/非开局轮不报。"""
-    # 坏:pair 通道买线外(channel=off)——门失效指纹
+    """局49 指纹(r371b 语义):开局轮 reason∈{pair,off} 必报;
+    方向件/其它通道/非开局轮不报。
+
+    ⚠ reason 空间=self-attack 修正:_want_label 的 pair 谓词分支
+    返回 classify_buy **身份**——门失效的线外件 reason='pair'
+    (同阵营)或 'off'(异阵营=局49 原始形态,翡翠/大丽花对空板
+    A5 门)。只查 'pair' 会漏掉局49 原始形态。
+    """
+    # 坏:异阵营线外(reason=off)——局49 原始形态
     bad = [{'plane': 1, 'round_num': 1, 'target_comp': '',
             'actions': [{'__type__': 'BuyCard',
                          'card': {'name': '翡翠', 'cost': 1},
-                         'reason': 'pair', 'channel': 'off'}]}]
+                         'reason': 'off', 'channel': 'off'}]}]
     v = chk.check_coldstart_seed_squander(bad)
     assert v and '翡翠' in v[0]
-    # 坏:局53 形态(系统 bench 带卡,pair 通道同阵营非桥)——
-    # r371b 正是要拦的形态
+    # 坏:局53 形态(系统 bench 带卡,同阵营线外)
     bad2 = [{'plane': 1, 'round_num': 2, 'target_comp': '',
              'actions': [{'__type__': 'BuyCard',
                           'card': {'name': '阿格莱雅', 'cost': 1},
                           'reason': 'pair', 'channel': 'pair'}]}]
     assert chk.check_coldstart_seed_squander(bad2)
-    # 好:pair 通道买桥名单件(channel=bridge_seed)
+    # 好:pair 谓词放行的方向件(reason=身份=bridge_seed)
     good = [{'plane': 1, 'round_num': 1, 'target_comp': '',
              'actions': [{'__type__': 'BuyCard',
                           'card': {'name': '丹恒·饮月', 'cost': 1},
-                          'reason': 'pair',
+                          'reason': 'bridge_seed',
                           'channel': 'bridge_seed'}]}]
     assert not chk.check_coldstart_seed_squander(good)
-    # 好:其它通道(line/emergency)不辖于门——即使 channel 非 OK
+    # 好:其它通道(line/emergency)不辖于门
     other = [{'plane': 1, 'round_num': 1, 'target_comp': '',
               'actions': [{'__type__': 'BuyCard',
                            'card': {'name': '翡翠', 'cost': 1},
