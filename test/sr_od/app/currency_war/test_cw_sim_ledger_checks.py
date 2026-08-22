@@ -48,19 +48,46 @@ def test_consistency_check_bidirectional() -> None:
 
 
 def test_coldstart_check_bidirectional() -> None:
-    """局49 指纹:白名单外 reason 必报;方向件/已有方向不报。"""
-    bad = [_row(actions=[{'__type__': 'BuyCard', 'name': '翡翠',
-                          'cost': 1, 'reason': 'pair'}])]
+    """局49 指纹(r371b 语义):开局轮 pair 通道非方向件必报;
+    方向件/其它通道/非开局轮不报。"""
+    # 坏:pair 通道买线外(channel=off)——门失效指纹
+    bad = [{'plane': 1, 'round_num': 1, 'target_comp': '',
+            'actions': [{'__type__': 'BuyCard',
+                         'card': {'name': '翡翠', 'cost': 1},
+                         'reason': 'pair', 'channel': 'off'}]}]
     v = chk.check_coldstart_seed_squander(bad)
     assert v and '翡翠' in v[0]
-    good = [_row(actions=[{'__type__': 'BuyCard', 'name': '丹恒·饮月',
-                           'cost': 1, 'reason': 'bridge_seed'}])]
+    # 坏:局53 形态(系统 bench 带卡,pair 通道同阵营非桥)——
+    # r371b 正是要拦的形态
+    bad2 = [{'plane': 1, 'round_num': 2, 'target_comp': '',
+             'actions': [{'__type__': 'BuyCard',
+                          'card': {'name': '阿格莱雅', 'cost': 1},
+                          'reason': 'pair', 'channel': 'pair'}]}]
+    assert chk.check_coldstart_seed_squander(bad2)
+    # 好:pair 通道买桥名单件(channel=bridge_seed)
+    good = [{'plane': 1, 'round_num': 1, 'target_comp': '',
+             'actions': [{'__type__': 'BuyCard',
+                          'card': {'name': '丹恒·饮月', 'cost': 1},
+                          'reason': 'pair',
+                          'channel': 'bridge_seed'}]}]
     assert not chk.check_coldstart_seed_squander(good)
-    # 已有方向(r1 即锁线)非冷启动形态 → 不报
-    directed = [_row(target_comp='v2:jizi_train',
-                     actions=[{'__type__': 'BuyCard', 'name': '翡翠',
-                               'cost': 1, 'reason': 'pair'}])]
-    assert not chk.check_coldstart_seed_squander(directed)
+    # 好:其它通道(line/emergency)不辖于门——即使 channel 非 OK
+    other = [{'plane': 1, 'round_num': 1, 'target_comp': '',
+              'actions': [{'__type__': 'BuyCard',
+                           'card': {'name': '翡翠', 'cost': 1},
+                           'reason': 'emergency', 'channel': 'off'}]}]
+    assert not chk.check_coldstart_seed_squander(other)
+    # 好:非开局轮(r3+)pair 凑对恢复旧语义(r371b 回归点)
+    late = [{'plane': 1, 'round_num': 3, 'target_comp': '',
+             'actions': [{'__type__': 'BuyCard',
+                          'card': {'name': '翡翠', 'cost': 1},
+                          'reason': 'pair', 'channel': 'pair'}]}]
+    assert not chk.check_coldstart_seed_squander(late)
+
+
+def test_coldstart_check_in_batch_set() -> None:
+    """r371b 后局49 检查进批量集(sim 批次自动扫)。"""
+    assert 'coldstart_direction' in chk._BATCH_CHECKS
 
 
 def test_run_checks_report_shape() -> None:
