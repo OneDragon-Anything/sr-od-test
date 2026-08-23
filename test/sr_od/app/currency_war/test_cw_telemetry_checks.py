@@ -26,6 +26,13 @@ def _write_replay(d: Path, runs: list[dict]) -> None:
                 'round_num': r['round'], 'node_type': '普通战斗',
                 'hp_after': 80,
             }, ensure_ascii=False) + '\n')
+    # ADR-0273:真实语料每局有 runs.jsonl summary 行——fixture 同步补,
+    # 否则 coverage 检查(summary_write_path_coverage)对合成语料恒 ⚠。
+    with (d / 'runs.jsonl').open('w', encoding='utf-8') as f:
+        for r in runs:
+            f.write(json.dumps({
+                'run_id': r['run_id'], 'result': 'loss', 'plane_reached': 1,
+            }, ensure_ascii=False) + '\n')
 
 
 def _buy(name: str, reason: str) -> dict:
@@ -95,6 +102,9 @@ def _write_multirow_replay(d: Path) -> None:
         f.write(json.dumps({'run_id': 'run_t4', 'plane': 1,
                             'round_num': 1, 'node_type': '普通战斗',
                             'hp_after': 80}, ensure_ascii=False) + '\n')
+    with (d / 'runs.jsonl').open('w', encoding='utf-8') as f:
+        f.write(json.dumps({'run_id': 'run_t4', 'result': 'loss',
+                            'plane_reached': 1}, ensure_ascii=False) + '\n')
 
 
 def test_multiline_round_not_lossy(tmp_path: Path) -> None:
