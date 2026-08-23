@@ -107,19 +107,29 @@ def test_rule4_spheres_no_free_enter_free_chain() -> None:
     assert isinstance(a, DeferSpheres)
 
 
-def test_rule4_chain_b_level_up_wants_shop_open() -> None:
-    """腾席链 b:level<10 + shop 关 → EnsureShopOpen(gold 关态不可信,M2)。"""
+def _full_board_bench_worth() -> tuple[list, list, GameState]:
+    """ADR-0274 腾席链 b 可达 fixture:板满(cap=deployed)+ bench 有应上场件
+    (同阵营 count≥2 → _should_deploy True)→ 真缺人口缺口 ≥1。"""
     st = GameState(level=5)
+    bench = [_bc(1, '甲', '贝洛伯格'), _bc(2, '乙', '贝洛伯格')]
+    deployed = [_bc(i, f'd{i}', '仙舟') for i in range(1, 6)]   # cap 5 全满
+    return bench, deployed, st
+
+
+def test_rule4_chain_b_level_up_wants_shop_open() -> None:
+    """腾席链 b:真缺人口 + level<10 + shop 关 → EnsureShopOpen(gold 关态不可信,M2)。"""
+    bench, deployed, st = _full_board_bench_worth()
     a = S.decide_prep_action(_obs(spheres=[('gold', None, 40)], free_bench_slots=0),
-                             _sess(last_state=st, last_level_obs=5), _cfg())
+                             _sess(last_state=st, last_level_obs=5,
+                                   tracked_bench_chars=bench,
+                                   tracked_deployed=deployed), _cfg())
     assert isinstance(a, EnsureShopOpen)
 
 
 def test_chain_b_untrusted_gold_requires_heavy_reread() -> None:
     """MED-1:shop_open=True 但 trusted=False(缓存过期)→ 仍 EnsureShopOpen(不信 gold)。"""
-    bench = [_bc(1, '路人', '?')]
-    st = GameState(level=5)
-    sess = _sess(tracked_bench_chars=bench, tracked_deployed=[],
+    bench, deployed, st = _full_board_bench_worth()
+    sess = _sess(tracked_bench_chars=bench, tracked_deployed=deployed,
                  last_state=st, last_level_obs=5)
     obs = _obs(spheres=[('gold', None, 40)], free_bench_slots=0,
                deploy_vacancy=0, bench_chars=bench, shop_open=True,
@@ -164,10 +174,10 @@ def test_chain_a_deploy_vacancy() -> None:
 
 
 def test_chain_b_needs_shop_open_gold() -> None:
-    """b. shop 关态 gold 不可信 → EnsureShopOpen(开态重读,§5.2b M2)。"""
-    bench = [_bc(1, '路人', '?')]
-    st = GameState(level=5, gold=50)
-    sess = _sess(tracked_bench_chars=bench, tracked_deployed=[],
+    """b. shop 关态 gold 不可信 → EnsureShopOpen(开态重读,§5.2b M2;ADR-0274 后
+    需真缺人口 fixture 才可达链 b)。"""
+    bench, deployed, st = _full_board_bench_worth()
+    sess = _sess(tracked_bench_chars=bench, tracked_deployed=deployed,
                  last_state=st, last_level_obs=5)
     obs = _obs(spheres=[('gold', None, 40)], free_bench_slots=0,
                deploy_vacancy=0, bench_chars=bench, shop_open=False)
@@ -362,7 +372,8 @@ def test_loop_h1_heavy_reread_after_action(monkeypatch) -> None:
     """
     obs1 = _obs(spheres=[('gold', None, 40)], free_bench_slots=0, shop_open=False)
     obs2 = _obs(spheres=[('gold', None, 40)], free_bench_slots=0, shop_open=True,
-                state=GameState(level=2, gold=50, plane=1, round_num=1),
+                state=GameState(level=2, gold=50, plane=1, round_num=1,
+                                deployed=[_bc(1, 'd1', '仙舟'), _bc(2, 'd2', '列车')]),
                 state_gold_trusted=True)   # MED-1:链 b 判 trusted 位(非裸 shop_open)
     real = DefaultCwStrategy()
     seen: list[str] = []
@@ -379,9 +390,14 @@ def test_loop_h1_heavy_reread_after_action(monkeypatch) -> None:
     observe = _seq_observe([obs1, obs2, obs2])
     monkeypatch.setattr(d, '_observe', observe)
     monkeypatch.setattr(d, '_record_step', lambda o, a: None)
+    # ADR-0274:链 b 需真缺人口(cap=2 板满 + bench 同阵营 count≥2 应上场件)
     match = SimpleNamespace(strategy=SimpleNamespace(decide_prep_action=_decide),
                             session=_sess(last_level_obs=2,
-                                          last_state=GameState(level=2, plane=1, round_num=1)))
+                                          last_state=GameState(level=2, plane=1, round_num=1),
+                                          tracked_bench_chars=[_bc(1, '甲', '贝洛伯格'),
+                                                               _bc(2, '乙', '贝洛伯格')],
+                                          tracked_deployed=[_bc(1, 'd1', '仙舟'),
+                                                            _bc(2, 'd2', '列车')]))
     d._run_loop(match)
     assert seen[0] == 'EnsureShopOpen', f'第一步应开商店(腾席链 b gold 前置),实得 {seen[0]}'
     assert seen[1] == 'LevelUp', f'H-1 回归:shop 开+fresh state 后应出 LevelUp,实得 {seen[1]}'
