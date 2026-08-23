@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """决策项 1 锁:生产遥测接 checks(栈判别+coldstart 适配)。"""
 from __future__ import annotations
 
@@ -143,3 +142,22 @@ def test_unknown_strategy_id_skipped(tmp_path: Path) -> None:
     }])
     out = '\n'.join(run_checks_on_replay(tmp_path))
     assert 'run_t6' in out and '未知栈' in out and '跳过' in out
+
+
+def test_decision_v2_stack_runs_coldstart(tmp_path: Path) -> None:
+    """decision_v2 判 v2 栈(继承 LineStrategy,reason 词表/coldstart
+    检查集同辖)——检查必须跑且报违规,不得按「未知栈」跳过(注册桥
+    观察局判读链锁)。样本:off 买(翡翠,局49 败坏形态)必报 ⚠;
+    engine_seed 买(v2 合法放行词,ADR-0260)不误报。"""
+    from sr_od.application.currency_war.cw_telemetry import (
+        run_checks_on_replay,
+    )
+    _write_replay(tmp_path, [{
+        'run_id': 'run_t7', 'strategy_id': 'decision_v2', 'round': 1,
+        'actions': [_buy('翡翠', 'off'),
+                    _buy('丹恒·饮月', 'engine_seed')],
+    }])
+    out = '\n'.join(run_checks_on_replay(tmp_path))
+    assert 'run_t7' in out and '⚠ 1 条' in out and '翡翠' in out, \
+        'decision_v2 局 coldstart 必须跑且 off 败坏买被检出'
+    assert '未知栈' not in out, 'decision_v2 须判 v2 栈,不得按未知栈跳过'

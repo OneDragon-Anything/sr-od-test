@@ -28,6 +28,12 @@ from sr_od.application.currency_war.cw_strategy import (
     StrategySession,
 )
 from sr_od.application.currency_war.cw_strategy_manager import StrategyManager
+from sr_od.application.currency_war.decision_v2.registry import (
+    DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.decision_v2.strategy import (
+    DecisionV2Strategy,
+)
 from sr_od.application.currency_war.strategies.default_strategy import DefaultCwStrategy
 
 
@@ -75,6 +81,31 @@ def test_instantiate_missing_falls_back_to_default() -> None:
     mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
     strat = mgr.instantiate("totally_nonexistent_strategy")
     assert isinstance(strat, DefaultCwStrategy)
+
+
+def test_discovers_decision_v2_builtin() -> None:
+    """BUILTIN 扫描发现 ``decision_v2``(注册桥壳 DecisionV2Live;与 default/line_v2 并存)。"""
+    mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
+    ids = [info.strategy_id for info in mgr.strategies]
+    assert "decision_v2" in ids
+    # 桥的加入不挤占既有注册面(default/line_v2 仍在)
+    assert "default" in ids and "line_v2" in ids
+    info = next(i for i in mgr.strategies if i.strategy_id == "decision_v2")
+    assert info.source == PluginSource.BUILTIN
+
+
+def test_instantiate_decision_v2_bridges_to_real_strategy() -> None:
+    """instantiate('decision_v2') → DecisionV2Strategy 实例(锁「桥到真身」——防壳与实现脱钩)。"""
+    mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
+    strat = mgr.instantiate("decision_v2")
+    assert isinstance(strat, DecisionV2Strategy)
+
+
+def test_instantiate_decision_v2_default_registry() -> None:
+    """decision_v2 实例缺省持有 DEFAULT_REGISTRY(锁 registry 注入链完好,A/B 通道前提)。"""
+    mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
+    strat = mgr.instantiate("decision_v2")
+    assert strat.registry is DEFAULT_REGISTRY
 
 
 def test_third_party_discovery() -> None:
