@@ -52,3 +52,11 @@ def test_no_bench_not_reported() -> None:
     """bench 无货(全上场了)→ 不报。"""
     rows = [_row(2, 1, 3, 2), _row(3, 1, 3, 2)]
     assert not check_deploy_fills_cap(rows)
+
+
+def test_growing_deployed_not_reported() -> None:
+    """ADR-0260 增长豁免:连续短缺但 deployed 在增长 → 不报
+    (deploy 代理先于买入,每轮买新件时账本恒见滞后一拍的
+    「上轮买未部署」形态;engine_seed 放行后 seed4 实证)。"""
+    rows = [_row(2, 4, 6, 9), _row(3, 5, 7, 9)]
+    assert not check_deploy_fills_cap(rows)

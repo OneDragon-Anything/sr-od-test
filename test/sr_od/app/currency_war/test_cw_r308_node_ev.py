@@ -30,11 +30,17 @@ def _mk(rnd: int, streak: int, node: str):
 
 def test_early_battle_keeps_floor() -> None:
     """r308:r3 battle(剩 6)息成本>奖励 EV → 守 10 地板
-    (r307 的无条件降地板是错的——用户指正)。"""
+    (r307 的无条件降地板是错的——用户指正)。
+    ADR-0260 注:「忘归人不买」旧断言锁的是无门想要她的副作用
+    (r354 同型);engine_seed 放行后仙舟件可买,真语义锁改为
+    **地板不被降**(无 LevelUp 提案 + 买后金仍 ≥10)。"""
     s, st, sess = _mk(rnd=3, streak=3, node='battle')
     acts = s.decide_prep(st, sess, None)
-    buys = [a.card.name for a in acts if isinstance(a, BuyCard)]
-    assert '忘归人' not in buys, f'r3 battle 该攒息,得 {buys}'
+    assert not [a for a in acts if type(a).__name__ == 'LevelUp'], \
+        'r3 battle 不为连胜降地板(r308)'
+    buys = [a for a in acts if isinstance(a, BuyCard)]
+    assert all(st.gold - a.card.cost >= 10 for a in buys), \
+        f'买入不得穿 10 地板: {[(a.card.name, a.card.cost) for a in buys]}'
 
 
 def test_late_encounter_lowers_floor() -> None:

@@ -49,12 +49,21 @@ def test_boss_depth_buy_board_faction() -> None:
 
 
 def test_boss_depth_buy_rejects_nonboard_faction() -> None:
-    """线外且非板面阵营(昼之半神)仍拒——r352 只放板面集中,
-    不重开散买(局38 艾丝妲教训,r350 语义保持)。"""
+    """线外且非板面阵营仍拒——r352 只放板面集中,不重开散买
+    (局38 艾丝妲教训,r350 语义保持)。
+    ADR-0260 注:原用例海瑟音(昼之半神/持续伤害 flow)已被
+    engine_seed 通道合法放行(过渡体系 bonds 含 flow,与 deploy
+    侧 ignition 同口径)——拒买锁改用真线外件阿格莱雅(昼之半神,
+    无过渡羁绊)。"""
     strat = LineStrategy()
-    acts = strat._boss_breaker_actions(_state(), _sess())
+    st = _state()
+    st.shop = [SimpleNamespace(name='彦卿', faction='仙舟', cost=4),
+               SimpleNamespace(name='砂金', faction='护盾', cost=2),
+               SimpleNamespace(name='阿格莱雅', faction='昼之半神',
+                               cost=4)]
+    acts = strat._boss_breaker_actions(st, _sess())
     buys = [a.card.name for a in acts if type(a).__name__ == 'BuyCard']
-    assert '海瑟音' not in buys, f'非板面阵营线外件必须拒: {buys}'
+    assert '阿格莱雅' not in buys, f'非板面阵营线外件必须拒: {buys}'
 
 
 def test_boss_depth_buy_budget_guard() -> None:
