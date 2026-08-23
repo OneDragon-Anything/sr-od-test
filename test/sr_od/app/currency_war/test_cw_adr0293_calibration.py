@@ -39,8 +39,11 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: (n=100 终验 mean 28.26/团灭 6/配对差 -2.89 的参数组)
 #: ADR-0295 形态域结构批更新:新增 bench_form_weight/target_hold_cap_frac
 #: 两字段(标定五参值不变);新批次 hash 见下
-_EXPECTED_HASH = '16858a49a2430f6782dbcf44cadf2626aa79'
-_EXPECTED_HASH += 'ce689c5bd61aa0f27b3506fab0b8'
+#: ADR-0297 并存仲裁批更新:新增 refresh_starve_discount/refresh_starve_gold
+#: /refresh_game_cap/levelup_reserve_gold 四字段 + constraints 增
+#: refresh_budget(标定五参与 0295 两参值不变)
+_EXPECTED_HASH = '57450124a284064377ea9de06b079fd3b6'
+_EXPECTED_HASH += '8a74157ec56b6bf64a96e64b526762'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
