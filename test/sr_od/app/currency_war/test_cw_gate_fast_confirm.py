@@ -176,75 +176,67 @@ def test_preset_baseline_mismatch_falls_back(monkeypatch):
     assert op.shot_count >= 2, '指纹不匹配的预置不得触发一轮返帧'
 
 
-# ===== ADR-0264 修订:flow_aware 流程分段 =====
+# ===== ADR-0264 终裁:融合(指纹快 poll 骨架 + 用户流程知识加速器) =====
 
-def test_node_end_segment_advances_on_first_anchor_hit(monkeypatch):
-    """修订①:节点结束段(高信任)——锚命中即返帧,不等指纹双轮。
+def test_node_end_accelerator_is_fast_poll_not_trust(monkeypatch):
+    """终裁锁(加速器① + 不做纯信任放行):节点结束段 = 锚命中后立即
+    进指纹快 poll——锚命中帧设基线,后续轮纯 CV;**不是**锚命中即返。
 
-    序列 [miss, miss, hit]:第 3 帧(首锚命中帧)即返,无任何指纹
-    比对轮;对照完整门,同序列至少还需 1 轮指纹确认。
+    序列 [miss, hit, same, same]:锚在第 2 帧命中,必须再经指纹双轮
+    窗(min_stable 0.5,轮进 0.3:命中帧设基线→1 轮比对→窗达成)
+    才返帧;OCR 恰 1 次(快 poll 骨架)。
     """
-    calls = _patch_anchor_hit(monkeypatch, seq=[None, None, 'x', 'x'])
-    op = _FakeOp([_gray(v=10), _gray(v=10), _gray(v=10),
-                  _gray(v=10)])
-    out = wait_stable_frame(op, profile=_prof(), segment='node_end',
-                            clock=_TickingClock(0.3))
+    calls = _patch_anchor_hit(monkeypatch, seq=[None, 'x', 'x', 'x'])
+    op = _FakeOp([_gray(v=10)] * 4)
+    out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
     assert out is not None
-    assert op.shot_count == 3, \
-        f'node_end 段应锚命中即返(3 帧),实际消费 {op.shot_count}'
-    assert calls['n'] == 3
-    # 高信任推进把残留 overlay 预置基线一并消费
-    assert 'x' not in _PRESET_BASELINE
+    # OCR 恰 2 次 = 1 次前置锚 miss(battle 后画面未到)+ 1 次锚命中;
+    # 命中后的确认轮零 OCR(快 poll 骨架)。
+    assert calls['n'] == 2, \
+        f'锚命中后确认轮不得再调 OCR,实际 OCR {calls["n"]} 次'
+    assert op.shot_count >= 3, \
+        f'不得锚命中即返(纯信任),须指纹窗确认,实际 {op.shot_count} 帧'
 
 
-def test_node_end_segment_timeout_returns_none(monkeypatch):
-    """修订①兜底:node_end 段锚持续 miss → 超时 None(调用方容忍链)。"""
-    _patch_anchor_hit(monkeypatch, seq=[None])
-    op = _FakeOp([_gray()] * 20)
-    out = wait_stable_frame(op, profile=_prof(), segment='node_end',
-                            clock=_TickingClock(0.3))
-    assert out is None
-
-
-def test_op_settle_single_fingerprint_check_passes(monkeypatch):
-    """修订②:操作段——2s 预估后单次指纹校验通过即返帧。
-
-    min_stable_s=5.0(远超时钟推进)仍 2 帧返:稳定窗在操作段降为
-    「首帧设基线+次帧一致=一次校验」,不坐等时间窗。
-    """
+def test_op_settle_waits_then_baseline_then_fast_poll(monkeypatch):
+    """终裁锁(加速器②):操作段 2s 预估等待 = 基线重置点——
+    先等 2s 再取基线,随后快 poll 确认 min_stable 窗(非单校验)。"""
+    from sr_od.application.currency_war import cw_observation_gate as gate
     _patch_anchor_hit(monkeypatch)
-    op = _FakeOp([_gray(v=50), _gray(v=50)])
-    prof = _prof(min_stable_s=5.0)
-    out = wait_stable_frame(op, profile=prof, segment='op_settle',
-                            clock=_TickingClock(0.3))
-    assert out is not None
-    assert op.shot_count == 2, \
-        f'op_settle 单校验通过应 2 帧返,实际 {op.shot_count}'
-
-
-def test_op_settle_check_fail_falls_back_to_rounds(monkeypatch):
-    """修订③:操作段单校验不过(特效拖长)→ 回退逐轮模式。
-
-    序列 [A, B, B]:首对 A≠B(校验失败)→ 逐轮继续,B 对一致
-    才返——完整门语义兜底,不在差异帧上放行。
-    """
-    _patch_anchor_hit(monkeypatch)
-    op = _FakeOp([_gray(v=10), _gray(v=200), _gray(v=200)])
+    op = _FakeOp([_gray(v=50)] * 4)
     out = wait_stable_frame(op, profile=_prof(), segment='op_settle',
                             clock=_TickingClock(0.3))
     assert out is not None
-    assert op.shot_count == 3, \
-        f'校验失败应逐轮到 B 对一致(3 帧),实际 {op.shot_count}'
+    assert gate._LAST_SETTLE_WAIT == gate._OP_SETTLE_S == 2.0, \
+        '操作段必须先走 2s 预估等待(基线重置点)'
+    assert op.shot_count >= 2, \
+        f'须基线+至少一轮指纹确认(非单帧放行),实际 {op.shot_count}'
 
 
-def test_flow_aware_false_ignores_segment(monkeypatch):
-    """修订③开关:flow_aware=False → segment 一律忽略,回完整门。"""
+def test_op_settle_window_still_enforced(monkeypatch):
+    """终裁锁(加速器②护栏):操作段不豁免稳定窗——窗未达 → None。
+
+    min_stable_s=5.0 > timeout 3.0:即使指纹全程一致,窗在预算内达
+    不到必超时;防「单校验通过即放行」的带噪观察面回潮。"""
+    from sr_od.application.currency_war import cw_observation_gate as gate
+    _patch_anchor_hit(monkeypatch)
+    op = _FakeOp([_gray(v=50)] * 20)
+    out = wait_stable_frame(op, profile=_prof(min_stable_s=5.0),
+                            segment='op_settle',
+                            timeout_s=3.0,
+                            clock=_TickingClock(0.3))
+    assert out is None, '操作段稳定窗必须真实测量,不得单校验放行'
+    assert gate._LAST_SETTLE_WAIT == 2.0
+
+
+def test_fast_confirm_false_restores_full_gate(monkeypatch):
+    """终裁锁(回退开关④):fast_confirm=False → 每轮 poll 都做
+    全图 OCR 锚判定的旧完整门(A/B 回退)。"""
     calls = _patch_anchor_hit(monkeypatch)
     prof = _prof()
-    prof['flow_aware'] = False
-    # node_end 被忽略 → 走完整门:锚命中后仍需指纹轮
-    op = _FakeOp([_gray()] * 4)
-    out = wait_stable_frame(op, profile=prof, segment='node_end',
-                            clock=_TickingClock(0.3))
+    prof['fast_confirm'] = False   # profile 键同样有效
+    op = _FakeOp([_gray()] * 5)
+    out = wait_stable_frame(op, profile=prof, clock=_TickingClock(0.3))
     assert out is not None
-    assert op.shot_count >= 2, 'flow_aware=False 时不得锚命中即返'
+    assert calls['n'] >= 2, \
+        f'关 fast_confirm 时每轮 poll 必须做 OCR 锚判定,实际 {calls["n"]}'
