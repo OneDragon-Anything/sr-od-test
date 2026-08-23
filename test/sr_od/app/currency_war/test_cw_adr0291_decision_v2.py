@@ -170,10 +170,16 @@ def test_filter_catchup_forbids() -> None:
 
 
 def test_filter_mode_economy_allows_bond_fallback() -> None:
-    """模式(economy)态含 bond_fallback(0/N 买入根因③回归锁)。"""
+    """模式(economy)态含 bond_fallback(0/N 买入根因③回归锁)。
+
+    ADR-0300 后 pair 通道在 _buy_tag 中先于 bond_fallback——常态
+    「同阵营已拥有」件被 pair 接管;bond_fallback 的独占场景=
+    r350 方向门外(锁线后线外阵营 pair 拒、[31] 降级仍收)。"""
     assert 'bond_fallback' in _REG.economy_tags
     sess = _sess(mode='economy')
-    st = _state(shop=[_card('凑档件', faction='仙舟罗浮', cost=1)])
+    sess.locked_line = 'jizi_train'
+    st = _state(round_num=5, board={'昼之半神': 1},
+                shop=[_card('凑档件', faction='昼之半神', cost=1)])
     cands = generate_candidates(st, sess, _REG)
     kept, _ = filter_candidates(cands, st, sess, _REG)
     assert any(c.tag == 'bond_fallback' for c in kept)
