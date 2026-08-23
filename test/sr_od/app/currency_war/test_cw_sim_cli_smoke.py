@@ -35,10 +35,14 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # smoke 豁免这些**已登记待裁**的检查(待裁清单单一源=
     # ADR-0289 §3);裁决落地(修复或判据定案)后从本豁免表移除,
     # 届时回归 0 容忍。未列名的新检查仍须全绿。
-    _PENDING_ADJUDICATION = ('phantom_equip_no_wear',
-                             'engine_seed_not_resold',
-                             'dead_system_second_pivot',
-                             'degrade_recover_mutex')
+    # ADR-0294(红项修复合卷):phantom_equip_no_wear / engine_seed_
+    # not_resold 两真发现已修复,n=30 批内违规 0——移出豁免,回归
+    # 0 容忍。decision_v2_candidate_coverage(ADR-0291 骨架检查)
+    # 结构层探针期待 sell/synthesize 候选,decision_v2 生成器尚在
+    # 飞实现(标定批)——留豁免,实现合流后移除。
+    _PENDING_ADJUDICATION = ('dead_system_second_pivot',
+                             'degrade_recover_mutex',
+                             'decision_v2_candidate_coverage')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS or name in _PENDING_ADJUDICATION:
             assert 'violations' in r, f'{name}: 缺 violations 计数'
