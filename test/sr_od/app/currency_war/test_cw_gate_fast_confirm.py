@@ -174,3 +174,77 @@ def test_preset_baseline_mismatch_falls_back(monkeypatch):
     out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
     assert out is not None
     assert op.shot_count >= 2, '指纹不匹配的预置不得触发一轮返帧'
+
+
+# ===== ADR-0264 修订:flow_aware 流程分段 =====
+
+def test_node_end_segment_advances_on_first_anchor_hit(monkeypatch):
+    """修订①:节点结束段(高信任)——锚命中即返帧,不等指纹双轮。
+
+    序列 [miss, miss, hit]:第 3 帧(首锚命中帧)即返,无任何指纹
+    比对轮;对照完整门,同序列至少还需 1 轮指纹确认。
+    """
+    calls = _patch_anchor_hit(monkeypatch, seq=[None, None, 'x', 'x'])
+    op = _FakeOp([_gray(v=10), _gray(v=10), _gray(v=10),
+                  _gray(v=10)])
+    out = wait_stable_frame(op, profile=_prof(), segment='node_end',
+                            clock=_TickingClock(0.3))
+    assert out is not None
+    assert op.shot_count == 3, \
+        f'node_end 段应锚命中即返(3 帧),实际消费 {op.shot_count}'
+    assert calls['n'] == 3
+    # 高信任推进把残留 overlay 预置基线一并消费
+    assert 'x' not in _PRESET_BASELINE
+
+
+def test_node_end_segment_timeout_returns_none(monkeypatch):
+    """修订①兜底:node_end 段锚持续 miss → 超时 None(调用方容忍链)。"""
+    _patch_anchor_hit(monkeypatch, seq=[None])
+    op = _FakeOp([_gray()] * 20)
+    out = wait_stable_frame(op, profile=_prof(), segment='node_end',
+                            clock=_TickingClock(0.3))
+    assert out is None
+
+
+def test_op_settle_single_fingerprint_check_passes(monkeypatch):
+    """修订②:操作段——2s 预估后单次指纹校验通过即返帧。
+
+    min_stable_s=5.0(远超时钟推进)仍 2 帧返:稳定窗在操作段降为
+    「首帧设基线+次帧一致=一次校验」,不坐等时间窗。
+    """
+    _patch_anchor_hit(monkeypatch)
+    op = _FakeOp([_gray(v=50), _gray(v=50)])
+    prof = _prof(min_stable_s=5.0)
+    out = wait_stable_frame(op, profile=prof, segment='op_settle',
+                            clock=_TickingClock(0.3))
+    assert out is not None
+    assert op.shot_count == 2, \
+        f'op_settle 单校验通过应 2 帧返,实际 {op.shot_count}'
+
+
+def test_op_settle_check_fail_falls_back_to_rounds(monkeypatch):
+    """修订③:操作段单校验不过(特效拖长)→ 回退逐轮模式。
+
+    序列 [A, B, B]:首对 A≠B(校验失败)→ 逐轮继续,B 对一致
+    才返——完整门语义兜底,不在差异帧上放行。
+    """
+    _patch_anchor_hit(monkeypatch)
+    op = _FakeOp([_gray(v=10), _gray(v=200), _gray(v=200)])
+    out = wait_stable_frame(op, profile=_prof(), segment='op_settle',
+                            clock=_TickingClock(0.3))
+    assert out is not None
+    assert op.shot_count == 3, \
+        f'校验失败应逐轮到 B 对一致(3 帧),实际 {op.shot_count}'
+
+
+def test_flow_aware_false_ignores_segment(monkeypatch):
+    """修订③开关:flow_aware=False → segment 一律忽略,回完整门。"""
+    calls = _patch_anchor_hit(monkeypatch)
+    prof = _prof()
+    prof['flow_aware'] = False
+    # node_end 被忽略 → 走完整门:锚命中后仍需指纹轮
+    op = _FakeOp([_gray()] * 4)
+    out = wait_stable_frame(op, profile=prof, segment='node_end',
+                            clock=_TickingClock(0.3))
+    assert out is not None
+    assert op.shot_count >= 2, 'flow_aware=False 时不得锚命中即返'
