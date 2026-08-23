@@ -22,7 +22,14 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     rep = simulate_p1_batch(25, pool='snapshot', ledger=tmp_path / 'b1')
     assert rep['pool_fingerprint'] == cw_delta_pool_data.META['fingerprint']
     assert rep['pool_source'] == 'snapshot'
+    # ADR-0268:池级检查(桶饥饿/深崖单调)是**数据披露**非策略
+    # 断言——语料饥饿时恒非零(披露即目的),不适用 0 容忍;
+    # 行为检查仍全绿。
+    _POOL_CHECKS = ('delta_pool_bucket_min_n', 'depth_cliff_monotonicity')
     for name, r in rep['checks_violations'].items():
+        if name in _POOL_CHECKS:
+            assert 'violations' in r, f'{name}: 缺 violations 计数'
+            continue
         assert r['violations'] == 0, f'{name}: {r}'
     # 同 seed 确定性(非分布数值——逐局末 HP 全等)
     a = [simulate_p1(i, pool='snapshot').final_hp for i in range(25)]
