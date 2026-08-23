@@ -55,8 +55,10 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: for_gold/levelup(应急集内容修正)+ 新增 crisis_hoard_gold/
 #: crisis_buy_bias/crisis_buy_tags 三字段(值=ADR-0302 暂驻 filters
 #: 的原值,纯上移;其余数值字段不变)
-_EXPECTED_HASH = '3446bf3c3d34c94e9a71745e14461f99'
-_EXPECTED_HASH += '8257da6906cab2c69876ef8002fc3983'
+#: ADR-0304 回退+战力转化批更新:新增 copy_swap_target_exempt
+#: (=False,豁免回退开关;其余字段不变)
+_EXPECTED_HASH = '68a0ce8daa894961f9234ded2415ac02'
+_EXPECTED_HASH += '9e439eaf686dfd36552b10e786f9444a'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

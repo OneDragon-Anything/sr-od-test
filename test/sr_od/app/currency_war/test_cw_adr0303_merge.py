@@ -5,9 +5,10 @@
 ① 常量上移:应急集 for_gold/levelup 与危机三参(crisis_hoard_gold/
    crisis_buy_bias/crisis_buy_tags)在 registry 单一源,filters 暂驻
    常量已删(旧名残留即红);
-② copy_swap 豁免:在场目标件(∈ _target_names 保护集)的第 2 份
-   不被 r410 守卫拦(3合1 素材/阵容深度,非换卡);非目标件照旧拦
-   (v1 守卫判据不动)。
+② copy_swap 豁免(ADR-0303 落地;ADR-0304 裁决默认关=回退守卫直通,
+   开关 registry.copy_swap_target_exempt 留作 A/B 通道):开=在场
+   目标件(∈ _target_names 保护集)的第 2 份不被 r410 守卫拦;非目标
+   件照旧拦(v1 守卫判据不动)。
 决策见 docs/develop/currency_war/decisions/0303-decision-v2-merge.md。
 """
 from __future__ import annotations
@@ -94,9 +95,10 @@ def _target_and_non_target() -> tuple[str, str]:
 
 
 def test_copy_swap_exempts_onboard_target_piece() -> None:
-    """锁:目标件在场时第 2 份不被守卫拦(候选生成)——守卫前提
-    (在场副本会被 off-target 卖)对保护集内件不成立;第 2 份语义
-    =3合1 素材/阵容深度(批㉞ M2:483 次误拦)。"""
+    """锁(ADR-0304 语义化:豁免默认关,开关打开才放行):registry
+    copy_swap_target_exempt=True 时目标件在场第 2 份不被守卫拦
+    (第 2 份语义=3合1 素材/阵容深度,批㉞ M2:483 次误拦)。"""
+    from dataclasses import replace
     target, _nt = _target_and_non_target()
     ch = CHARACTERS[target]
     sess = _sess()   # 无方向:桥 fixed∪core 全是目标(保护集口径)
@@ -110,14 +112,22 @@ def test_copy_swap_exempts_onboard_target_piece() -> None:
     )
     # 镜像:v1 守卫本身会拦(target_comp=None 无保留判据)
     assert _cands._copy_swap_useless(st.shop[0], st, sess)
-    # 豁免后:不拦 + 买候选生成
-    assert not _cands._copy_swap_blocked(st.shop[0], st, sess)
-    assert target in _buy_names(st, sess)
+    # 默认关(ADR-0304 裁决回退):守卫直通,照拦
+    assert not _REG.copy_swap_target_exempt
+    assert _cands._copy_swap_blocked(st.shop[0], st, sess, _REG)
+    assert target not in _buy_names(st, sess)
+    # 开关开(ADR-0303 豁免,A/B 通道):不拦 + 买候选生成
+    reg_on = replace(_REG, copy_swap_target_exempt=True)
+    assert not _cands._copy_swap_blocked(st.shop[0], st, sess, reg_on)
+    assert target in {c.action.card.name
+                      for c in generate_candidates(st, sess, reg_on)
+                      if getattr(c.action, 'card', None) is not None}
 
 
 def test_copy_swap_still_blocks_non_target_piece() -> None:
     """锁:非目标件在场第 2 份照旧被拦(v1 r410 判据不动;豁免=
-    目标件名单交叉,非守卫整体下线)。"""
+    目标件名单交叉,非守卫整体下线——开/关两态皆拦)。"""
+    from dataclasses import replace
     _t, non_target = _target_and_non_target()
     ch = CHARACTERS[non_target]
     sess = _sess()
@@ -130,5 +140,11 @@ def test_copy_swap_still_blocks_non_target_piece() -> None:
                        cost=ch.cost)],
     )
     assert _cands._copy_swap_useless(st.shop[0], st, sess)
-    assert _cands._copy_swap_blocked(st.shop[0], st, sess)
+    assert _cands._copy_swap_blocked(st.shop[0], st, sess, _REG)
+    reg_on = replace(_REG, copy_swap_target_exempt=True)
+    assert _cands._copy_swap_blocked(st.shop[0], st, sess, reg_on)
     assert non_target not in _buy_names(st, sess)
+    assert non_target not in {
+        c.action.card.name
+        for c in generate_candidates(st, sess, reg_on)
+        if getattr(c.action, 'card', None) is not None}
