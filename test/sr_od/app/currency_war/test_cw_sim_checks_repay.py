@@ -335,13 +335,24 @@ def test_conditional_disclosures_skip_and_fire() -> None:
 # --- 锚登记/工具(批⑭/批⑯/批⑤) -------------------------------------
 
 def test_anchor_seed_portability_and_lowchannel() -> None:
-    rep = {'pool_fingerprint': '066c41856dd5d4f5xx',
-           'engines2_by_r6': 0.407, 'avg_final_hp': 33.98,
-           'hp_ge_60': 0.127, 'recipe5_by_r6': 0.713,
-           'avg_refreshes': 4.003}
+    """锚登记对照检查(语义锁:rep 从当前锚登记派生,随换锚自动跟)。
+
+    ADR-0306 换锚(886f8a39)暴露原硬编码 066c4185 值锁=锁旧锚
+    副作用;本锁语义=「登记锚在位时,同指纹同指标报告判 match +
+    drift 全零」;失配检测能力由负例锁(不属于任何登记段的指纹
+    → 不判 match)。
+    """
+    reg = chk.ANCHOR_REGISTRY_N300
+    rep = {'pool_fingerprint': reg['pool_fingerprint_prefix'] + 'xx',
+           **{k: v for k, v in reg['metrics'].items()
+              if isinstance(v, (int, float))}}
     r = chk.check_anchor_seed_portability_n600(rep)
     assert r['n300_fp_match'] and r['violations'] == 0
+    assert all(d == 0 for d in r['n300_drift'].values())
     assert 's300_n600_drift' in r
+    bad = dict(rep, pool_fingerprint='deadbeef00000000xx')
+    rb = chk.check_anchor_seed_portability_n600(bad)
+    assert not rb['n300_fp_match']
     r2 = chk.check_anchor_lowchannel_registry({})
     assert r2['registry_in_place']
 

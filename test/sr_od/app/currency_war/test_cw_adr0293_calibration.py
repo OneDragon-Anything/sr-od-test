@@ -57,8 +57,12 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: 的原值,纯上移;其余数值字段不变)
 #: ADR-0304 回退+战力转化批更新:新增 copy_swap_target_exempt
 #: (=False,豁免回退开关;其余字段不变)
-_EXPECTED_HASH = '68a0ce8daa894961f9234ded2415ac02'
-_EXPECTED_HASH += '9e439eaf686dfd36552b10e786f9444a'
+#: ADR-0305 金充裕不买诊断批更新:新增 goldrich_buy_bias/goldrich_
+#: min_gold/goldrich_buy_tags 三字段(默认 0=通道关,只顶 0 分
+#: 差分;既有数值字段不变)。全量清偿时发现 0305 漏更本锁
+#: (欠账随 ADR-0306 批的全量补跑暴露),按锁语义补记
+_EXPECTED_HASH = '1f86fb0d2bf68add989b484d4ea73e89'
+_EXPECTED_HASH += '83b68a28d2f890145494d93ed57b16b0'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

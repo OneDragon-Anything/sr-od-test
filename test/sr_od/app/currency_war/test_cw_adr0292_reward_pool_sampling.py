@@ -127,15 +127,15 @@ def test_pool_build_never_mixes_runs(tmp_path: Path) -> None:
 
 
 def test_sampler_v4_and_snapshot_selfconsistent() -> None:
-    """采样器 v4(reward/supply 池采样语义入指纹)+ 快照自洽。"""
-    assert cw_sim._SAMPLER_VERSION == 4
+    """采样器版本(ADR-0306 起 v5;本锁语义=版本入指纹+快照自洽)。"""
+    assert cw_sim._SAMPLER_VERSION == 5
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'
     from sr_od.application.currency_war import cw_delta_pool_data
     assert fp == cw_delta_pool_data.META['fingerprint']
-    assert cw_delta_pool_data.META['sampler_version'] == 4
-    # 池语义变更使指纹与 v3 快照(d891233d)可区分
-    assert not fp.startswith('d891233d')
+    assert cw_delta_pool_data.META['sampler_version'] == 5
+    # 池语义变更使指纹与旧版快照(d891233d/066c4185)可区分
+    assert not fp.startswith(('d891233d', '066c4185'))
 
 
 def test_batch_report_embeds_reward_lock() -> None:
