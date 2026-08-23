@@ -199,9 +199,11 @@ def test_unarchived_layout_falls_back_clean(test_context, templates, monkeypatch
     class _FakeRunCtx:
         def __init__(self):
             self.stopped = False
+            self.stop_source = ''
 
-        def stop_running(self):
+        def stop_running(self, reason: str = ''):
             self.stopped = True
+            self.stop_source = reason
 
     monkeypatch.setattr(ctx, 'run_context', _FakeRunCtx())
     flag = _ROOT / '.debug/temp/currency_war/back_layout_stop_hook.flag'
@@ -221,12 +223,12 @@ def test_unarchived_layout_falls_back_clean(test_context, templates, monkeypatch
         # cap=7 → 有档(r84)→ 不停机
         out = read_deployed_chars(ctx, frame8, templates, deploy_cap=7)
         assert isinstance(out, list) and not ctx.run_context.stopped
-        # cap=12 → 有效 12 槽无档(理论态,monkeypatch 验证钩子机制)→ 停机
+        # cap=12 → 超已知档上限(>11)→ r414:OCR 误读大概率,降级跑不停机
+        # (12槽误档事故:cap=12 实为 8/8 离线复析实锤;旧「停机」语义已被
+        # r414 反转——超范围值留证 obs_conflict,按基线降级识别)
         out = read_deployed_chars(ctx, frame8, templates, deploy_cap=12)
         assert isinstance(out, list) and out          # 退基线识别不抛
-        assert ctx.run_context.stopped                # 停机钩子触发
-        assert flag.exists()                          # sentinel 写入
-        assert '12' in flag.read_text(encoding='utf-8')
+        assert not ctx.run_context.stopped            # r414:超档不停机(降级跑)
     finally:
         if _orig is not None:
             flag.write_text(_orig, encoding='utf-8')   # 恢复生产 flag(测试别覆盖真实停机内容)
