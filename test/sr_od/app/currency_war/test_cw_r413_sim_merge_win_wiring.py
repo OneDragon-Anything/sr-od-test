@@ -33,13 +33,19 @@ from sr_od.application.currency_war.strategies.line_strategy import (
 def test_merge_counted_in_ledger_and_bench_drained() -> None:
     """merge 生效:批次内出现合并事件(merges>0),同名副本不再
     无限堆积(批⑩ F5 的「末轮 bench 均值 10.69>9 物理上限」形态
-    应消失:末轮 bench ≤9)。"""
-    for seed in (0, 1, 2):
+    应消失:末轮 bench ≤9)。
+
+    ADR-0284(批㉒ F1/F3)后同窗同名 3 份 = 真实供给约束(同名
+    占满多槽/多窗刷新),特定 seed 不再稳定触发——断言改为种子段
+    扫描内「至少一局出现合并」(merge 接线仍生效的锁)。"""
+    any_merge = False
+    for seed in range(15):
         r = simulate_p1(seed, pool='fallback')
-        assert any((row['sim'].get('merges') or 0) > 0
-                   for row in r.ledger), f'seed{seed}: 3合1 未触发'
+        any_merge = any_merge or any(
+            (row['sim'].get('merges') or 0) > 0 for row in r.ledger)
         assert all(len(row['state']['bench']) <= 9
                    for row in r.ledger), f'seed{seed}: bench 超物理上限'
+    assert any_merge, '种子段 0-14 内 3合1 全未触发(merge 接线回归)'
 
 
 def test_merge_no_duplicate_star1_pile() -> None:
@@ -237,16 +243,25 @@ def test_boss_win_calibration_bidirectional() -> None:
 
 
 def test_formation_hp_coupling_bidirectional() -> None:
-    """坏:成型局 hp 不高于未达局(≤0)→ 报;好:显著为正 → 过。"""
-    formed = [_lrow(rn=9, hp=40, board_factions={'列车同行': 2,
-                                                 '仙舟': 3})]
-    unformed = [_lrow(rn=9, hp=45, board_factions={})]
-    rep = chk.check_formation_hp_coupling_sentinel([formed, unformed])
+    """坏:成型局 hp 不高于未达局(≤0)→ 报;好:显著为正 → 过。
+
+    ADR-0286 小批护栏:检查在任一侧 <5 局时只披露不判定(CI smoke
+    n=25 的 formed_n=2 噪声假红)——本锁两侧各 6 局(≥5,判定态)。"""
+    formed = [[_lrow(rn=9, hp=40, board_factions={'列车同行': 2,
+                                                  '仙舟': 3})]
+              for _ in range(6)]
+    unformed = [[_lrow(rn=9, hp=45, board_factions={})]
+                for _ in range(6)]
+    rep = chk.check_formation_hp_coupling_sentinel(formed + unformed)
     assert rep['violations'] == 1, '成型局更短命 = 价值链仍断'
-    unformed2 = [_lrow(rn=9, hp=10, board_factions={})]
-    rep2 = chk.check_formation_hp_coupling_sentinel(
-        [formed, unformed2])
+    unformed2 = [[_lrow(rn=9, hp=10, board_factions={})]
+                 for _ in range(6)]
+    rep2 = chk.check_formation_hp_coupling_sentinel(formed + unformed2)
     assert rep2['violations'] == 0 and rep2['diff'] > 0
+    # 护栏本身:两侧 1 局(小批)= 只披露不判定
+    rep3 = chk.check_formation_hp_coupling_sentinel(
+        formed[:1] + unformed[:1])
+    assert rep3['violations'] == 0 and 'note' in rep3
 
 
 def test_levelup_binding_bidirectional() -> None:
