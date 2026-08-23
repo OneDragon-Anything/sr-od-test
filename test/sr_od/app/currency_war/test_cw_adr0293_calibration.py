@@ -51,8 +51,12 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: 标定)+ form_refresh_ev(=0.0,双窗否决默认关闭)/form_refresh_
 #: max_round/form_refresh_min_gold/form_refresh_engines_target 四
 #: 注册字段(既有数值字段全部不变)
-_EXPECTED_HASH = 'deaa0764f4b9e66c6fd5e8332521dc24'
-_EXPECTED_HASH += '1bfc1871ff937856a46d1b9c5560bd90'
+#: ADR-0302/0303 危机修复+合流批更新:emergency_tags 并入
+#: for_gold/levelup(应急集内容修正)+ 新增 crisis_hoard_gold/
+#: crisis_buy_bias/crisis_buy_tags 三字段(值=ADR-0302 暂驻 filters
+#: 的原值,纯上移;其余数值字段不变)
+_EXPECTED_HASH = '3446bf3c3d34c94e9a71745e14461f99'
+_EXPECTED_HASH += '8257da6906cab2c69876ef8002fc3983'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

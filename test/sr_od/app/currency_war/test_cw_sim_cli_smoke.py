@@ -40,8 +40,13 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # 0 容忍。decision_v2_candidate_coverage 结构层探针红已清偿
     # (ADR-0296:sell/synthesize 生成器补完 + 探针判据修正)——
     # 移出豁免,回归 0 容忍。
+    # 批㉜ F4 价值表覆盖披露(ADR-0303 合流批登记):key_equips ≥3
+    # 引用但 _EQUIP_VALUE 缺值——docstring 明示「裁决归策略域,裁决前
+    # 恒红」,与 dead_system_second_pivot 同款待裁豁免;策略域补值/
+    # 裁决后移除,回归 0 容忍。
     _PENDING_ADJUDICATION = ('dead_system_second_pivot',
-                             'degrade_recover_mutex')
+                             'degrade_recover_mutex',
+                             'equip_value_strategy_key_coverage')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS or name in _PENDING_ADJUDICATION:
             assert 'violations' in r, f'{name}: 缺 violations 计数'

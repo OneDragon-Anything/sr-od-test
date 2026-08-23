@@ -2,7 +2,7 @@
 
 锁定对象(decision_v2 filters/scoring 应急段):
 ① 危机囤金修复:应急态(hp≤emergency_hp)且金≥囤金线(40)时,
-   战力买候选加分差恰为 _CRISIS_BUY_BIAS(score_state 无 hp 项,
+   战力买候选加分差恰为 registry.crisis_buy_bias(score_state 无 hp 项,
    hp 20/40 双态差分=偏置的加性锁);息崖(金 52→49 买)不被
    偏置翻越([18] 不为苟住破息);
 ② 危机搜牌:危机态 refresh 放行(层2)+ 评分 ≥ refresh_ev−费;
@@ -26,8 +26,6 @@ from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
 )
 from sr_od.application.currency_war.decision_v2.filters import (
-    _CRISIS_BUY_BIAS,
-    _CRISIS_HOARD_GOLD,
     crisis_hoard_active,
     filter_candidates,
 )
@@ -86,16 +84,17 @@ def test_crisis_buy_bias_additive() -> None:
                  and c.action.card.name == '藿藿']
         assert cands, '桥 core 件(无方向)应生成买候选'
         v[key], _ = score_candidate(cands[0], st, sess, _REG)
-    assert v['crisis'] - v['ok'] == _CRISIS_BUY_BIAS, v
+    assert v['crisis'] - v['ok'] == _REG.crisis_buy_bias, v
     assert v['crisis'] > 0, '危机囤金态战力买应可执行(>0)'
 
 
 def test_crisis_hoard_gold_gate() -> None:
     """囤金金线:金≥_CRISIS_HOARD_GOLD 才进危机囤金态;金 39 同应急
     hp 不触发(偏置/搜牌解锁都不生效)。"""
-    assert crisis_hoard_active(_state(gold=_CRISIS_HOARD_GOLD), _REG)
+    assert crisis_hoard_active(
+        _state(gold=_REG.crisis_hoard_gold), _REG)
     assert not crisis_hoard_active(
-        _state(gold=_CRISIS_HOARD_GOLD - 1), _REG)
+        _state(gold=_REG.crisis_hoard_gold - 1), _REG)
     assert not crisis_hoard_active(_state(hp=40), _REG)  # 非应急
 
 
