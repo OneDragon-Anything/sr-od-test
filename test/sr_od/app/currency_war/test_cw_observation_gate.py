@@ -114,7 +114,12 @@ def test_anchor_blip_recovery_returns_frame(monkeypatch):
     """r327 回归(终审 B):锚短暂 miss 后恢复(指纹未变)→
     稳定窗必须重新达成并返帧——旧 bug 只重置 stable_since
     不重置 first_fp,恢复后 same 成立跳过重设分支 → 永超时
-    →(director 站)3-strike 停机。"""
+    →(director 站)3-strike 停机。
+
+    ADR-0264 注:fast_confirm 默认开时后续确认轮跳过 OCR,锚
+    blip 序列不再被逐轮观测——本锁显式 fast_confirm=False 保持
+    「每轮 OCR」旧口径,专锁 r327 锚 miss 重置语义(blip 场景
+    下快路径回锚由 test_cw_gate_fast_confirm 覆盖)。"""
     from one_dragon.base.screen import screen_utils as su
     _seq = ['x', None, None, 'x', 'x', 'x', 'x', 'x']   # 1 miss 后恢复
     _i = {'n': 0}
@@ -129,7 +134,8 @@ def test_anchor_blip_recovery_returns_frame(monkeypatch):
     prof = {'screen_list': ['x'], 'expect_screen': 'x',
             'fingerprint_rects': (), 'timeout_s': 6.0,
             'min_stable_s': 0.5}
-    out = wait_stable_frame(op, profile=prof, clock=_TickingClock(0.3))
+    out = wait_stable_frame(op, profile=prof, clock=_TickingClock(0.3),
+                            fast_confirm=False)
     assert out is not None, '锚 blip 恢复后必须能返帧(r327 回归锁)'
 
 

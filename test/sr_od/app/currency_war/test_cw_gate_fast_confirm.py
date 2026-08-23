@@ -1,0 +1,176 @@
+"""cw_observation_gate 提速锁(ADR-0264:fast_confirm + overlay 预置基线)。
+
+- 方案 A(fast_confirm):锚命中 1 次后,后续稳定确认轮跳过全图 OCR
+  只比指纹;指纹变化即回锚定模式;fast_confirm=False 关回旧行为。
+- 方案 B(overlay 预置基线):overlay 关闭后预置首帧指纹 → gate
+  首次锚命中即一轮达标(仍须锚命中+指纹一致,不裸跳)。
+"""
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from sr_od.application.currency_war.cw_observation_gate import (
+    _PRESET_BASELINE,
+    preset_stable_baseline,
+    wait_stable_frame,
+)
+
+
+class _FakeClock:
+    """可推进假时钟;作为 clock 传入时 gate 的 _sleep 也是它驱动。"""
+
+    def __init__(self):
+        self.t = 0.0
+
+    def __call__(self):
+        return self.t
+
+    def advance(self, s: float):
+        self.t += s
+
+
+class _TickingClock(_FakeClock):
+    """每次被调用推进 step——gate 的 while 轮询天然推进。"""
+
+    def __init__(self, step: float = 0.3):
+        super().__init__()
+        self._step = step
+
+    def __call__(self):
+        self.t += self._step
+        return self.t
+
+
+class _FakeOp:
+    """离线 op 桩(gate 只用 ctx 透传 + screenshot/park_cursor)。"""
+
+    def __init__(self, frames):
+        self._frames = list(frames)
+        self.park_calls = 0
+        self.shot_count = 0
+        self.ctx = _FakeCtx()
+
+    def park_cursor(self):
+        self.park_calls += 1
+
+    def screenshot(self):
+        if not self._frames:
+            raise RuntimeError('no more frames')
+        self.shot_count += 1
+        return self._frames.pop(0)
+
+
+class _FakeCtx:
+    screen_loader = None
+
+
+def _gray(w=1920, h=1080, v=128):
+    img = np.zeros((h, w, 3), dtype=np.uint8)
+    img[:, :] = v
+    return img
+
+
+@pytest.fixture(autouse=True)
+def _clear_preset():
+    """模块级基线表隔离:每条测试前后清空,防跨测试泄漏。"""
+    _PRESET_BASELINE.clear()
+    yield
+    _PRESET_BASELINE.clear()
+
+
+def _prof(min_stable_s: float = 0.5) -> dict:
+    from one_dragon.base.geometry.rectangle import Rect
+    return {
+        'screen_list': ['x'],
+        'expect_screen': 'x',
+        'fingerprint_rects': (Rect(0, 0, 64, 64),),
+        'timeout_s': 6.0,
+        'min_stable_s': min_stable_s,
+    }
+
+
+def _patch_anchor_hit(monkeypatch, seq=None):
+    """接管 get_match_screen_name;seq=None 恒命中,否则按序返回(None=miss)。"""
+    from one_dragon.base.screen import screen_utils as su
+    calls = {'n': 0}
+    if seq is None:
+        def _fake(ctx, screen, screen_name_list, crop_first=False):
+            calls['n'] += 1
+            return screen_name_list[0]
+    else:
+        def _fake(ctx, screen, screen_name_list, crop_first=False):
+            v = seq[min(calls['n'], len(seq) - 1)]
+            calls['n'] += 1
+            return v
+    monkeypatch.setattr(su, 'get_match_screen_name', _fake)
+    return calls
+
+
+def test_fast_confirm_skips_ocr_after_first_anchor(monkeypatch):
+    """方案 A:锚命中 1 次后,后续确认轮不再调全图 OCR(指纹-only)。"""
+    calls = _patch_anchor_hit(monkeypatch)
+    op = _FakeOp([_gray()] * 5)
+    out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
+    assert out is not None
+    assert calls['n'] == 1, \
+        f'fast_confirm 下 OCR 锚判定只应调 1 次,实际 {calls["n"]}'
+
+
+def test_fast_confirm_fingerprint_change_re_anchors(monkeypatch):
+    """方案 A 兜底:指纹变化(屏可能已切换)→ 回锚定模式(重做 OCR)。"""
+    calls = _patch_anchor_hit(monkeypatch)
+    frames = [_gray(v=10), _gray(v=200), _gray(v=200),
+              _gray(v=200), _gray(v=200), _gray(v=200)]
+    op = _FakeOp(frames)
+    out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
+    assert out is not None
+    assert calls['n'] >= 2, \
+        f'指纹变化后必须回锚定模式(重做 OCR),实际 OCR 调用 {calls["n"]}'
+
+
+def test_fast_confirm_false_keeps_ocr_every_poll(monkeypatch):
+    """A/B 口:fast_confirm=False 关回旧行为——每轮 poll 都做 OCR 锚判定。"""
+    calls = _patch_anchor_hit(monkeypatch)
+    op = _FakeOp([_gray()] * 5)
+    out = wait_stable_frame(op, profile=_prof(), fast_confirm=False,
+                            clock=_TickingClock(0.3))
+    assert out is not None
+    assert calls['n'] >= 2, '关 fast_confirm 时每轮 poll 必须做 OCR 锚判定'
+
+
+def test_preset_baseline_reaches_stable_in_one_poll(monkeypatch):
+    """方案 B:overlay 预置基线后,gate 首次锚命中(1 轮 poll)即返帧。
+
+    语义:仍须「锚命中 + 指纹一致」确认(不裸跳);预置时刻距今
+    ≥ min_stable_s → 稳定窗一轮达标,跳过「从零等 2 轮」。
+    """
+    calls = _patch_anchor_hit(monkeypatch)
+    frame = _gray()
+    clk = _FakeClock()
+    preset_stable_baseline(frame, profile=_prof(), clock=clk)
+    assert 'x' in _PRESET_BASELINE, '预置必须落基线表'
+    clk.advance(1.0)   # 预置时刻距今 1.0s ≥ min_stable 0.5
+    op = _FakeOp([frame])
+    out = wait_stable_frame(op, profile=_prof(), clock=clk)
+    assert out is not None, '预置基线一致 + 锚命中 → 1 轮即稳定'
+    assert op.shot_count == 1, f'应只消费 1 帧,实际 {op.shot_count}'
+    assert calls['n'] == 1
+    # 单次消费:基线已 pop,下一次 gate 不再吃到(仍须 2 轮起)
+    op2 = _FakeOp([frame, frame, frame])
+    out2 = wait_stable_frame(op2, profile=_prof(), clock=_TickingClock(0.3))
+    assert out2 is not None
+    assert op2.shot_count >= 2, '无预置时不得一轮裸跳(仍须 2 轮起)'
+
+
+def test_preset_baseline_mismatch_falls_back(monkeypatch):
+    """方案 B 边界:预置基线过期(指纹已变)→ 走正常从零稳定路径。"""
+    _patch_anchor_hit(monkeypatch)
+    clk = _FakeClock()
+    preset_stable_baseline(_gray(v=10), profile=_prof(), clock=clk)
+    clk.advance(1.0)
+    # 当前画面指纹 ≠ 预置 → 正常路径:set fp → 下一轮比对 → 稳定
+    op = _FakeOp([_gray(v=200)] * 5)
+    out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
+    assert out is not None
+    assert op.shot_count >= 2, '指纹不匹配的预置不得触发一轮返帧'
