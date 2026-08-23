@@ -203,6 +203,34 @@ def test_score_has_level_and_targets_terms() -> None:
     assert s['level'] == 5.25    # 5 + 1/4
 
 
+def test_engine_frac_progress_term_adr0301() -> None:
+    """ADR-0301 成型进度项:过渡体系进度小数余量显影(unit>0),
+    unit=0 关闭;cap 饱和态买进度件评分随 unit 单调(非 0 分拒的
+    「评分没买」主因回归锁)。"""
+    from dataclasses import replace as _repl
+    # 两件仙舟 deployed(进度 2/3,未跨阈值→余量 2/3)
+    st = _state(gold=30, level=5,
+                deployed=[_bench('藿藿', slot=0), _bench('爻光', slot=1)])
+    s = score_state(st, _REG)
+    assert 'eng_frac' in s
+    assert s['eng_frac'] == 0.667, f'2/3 余量×unit=1.0(实际 {s})'
+    reg0 = _repl(_REG, engine_frac_unit=0.0)
+    assert score_state(st, reg0)['eng_frac'] == 0.0
+    # cap 饱和态(deployed=cap):仙舟进度件买入评分 unit>0 严格更高
+    sess = _sess(line='jizi_train')
+    st2 = _state(gold=60, level=5,
+                 deployed=[_bench(f'板件{i}', faction='公司', slot=i)
+                           for i in range(5)],
+                 shop=[_card('藿藿', faction='仙舟', cost=1)])
+    cands = [c for c in generate_candidates(st2, sess, _REG)
+             if c.action.__class__.__name__ == 'BuyCard'
+             and c.action.card.name == '藿藿']
+    assert cands, '仙舟件(桥 core)应生成买候选'
+    v_on, _ = score_candidate(cands[0], st2, sess, _REG)
+    v_off, _ = score_candidate(cands[0], st2, sess, reg0)
+    assert v_on > v_off, (v_on, v_off)
+
+
 def test_target_buy_positive_at_saturated_cap() -> None:
     """cap 饱和态(level=deployed)目标件买入评分>0(持有进度显影;
     全 0 分空转攒金团灭的回归锁)。"""

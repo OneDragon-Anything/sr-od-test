@@ -47,8 +47,12 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: ADR-0300 copy/pair 通道迁移批更新:buy_tag_priority 增 pair/copy
 #: + economy/war/catchup 放行标签集增 pair/copy(数值字段全部不变;
 #: emergency 集保持窄——应急态保命优先,v2 应急集设计本就窄于常态)
-_EXPECTED_HASH = '509c228d6b346e683e09a21a1c049e2d'
-_EXPECTED_HASH += '8519eec059115d965761f5e4f93d27ba'
+#: ADR-0301 成型攻坚批更新:新增 engine_frac_unit(=1.0,双窗网格
+#: 标定)+ form_refresh_ev(=0.0,双窗否决默认关闭)/form_refresh_
+#: max_round/form_refresh_min_gold/form_refresh_engines_target 四
+#: 注册字段(既有数值字段全部不变)
+_EXPECTED_HASH = 'deaa0764f4b9e66c6fd5e8332521dc24'
+_EXPECTED_HASH += '1bfc1871ff937856a46d1b9c5560bd90'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
