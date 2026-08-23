@@ -282,7 +282,8 @@ def test_anchor_registry_n300_completeness() -> None:
     """登记制:报告缺登记锚指标 → 报;全含 → 过 + 披露 drift。"""
     rep = chk.check_anchor_registry_n300({'pool_fingerprint': 'x'})
     assert rep['violations'] > 0, '锚指标缺失未报'
-    full = {'pool_fingerprint': 'e19afdfa4173077e',
+    full = {'pool_fingerprint':
+            chk.ANCHOR_REGISTRY_N300['pool_fingerprint_prefix'],
             **chk.ANCHOR_REGISTRY_N300['metrics']}
     rep2 = chk.check_anchor_registry_n300(full)
     assert rep2['violations'] == 0

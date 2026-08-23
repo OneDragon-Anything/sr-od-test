@@ -34,6 +34,8 @@ def test_live_delta_depth_conditioned() -> None:
     返回 None」的隐式两态语义已废除(缺源 auto 现 raise,
     DeltaPoolUnavailable),本锁改构造池双向锁:命中桶采样 +
     无更浅桶 → None(调用方走旧模型)。
+    (ADR-0279:battle 桶键=rung;depth 路径锁用 boss/encounter
+    承载,battle 全 rung 不可达走全池兜底。)
     """
     import random
 
@@ -43,11 +45,8 @@ def test_live_delta_depth_conditioned() -> None:
     pool = {'battle': {6: [-3, -5]}}
     v = cw_sim.live_delta_for('battle', 7, random.Random(1),
                               pool_map=pool)
-    assert v in (-3, -5)     # 深7 → 桶6 命中
-    # 深0 → 桶0 缺,浅侧回退桶-3 也缺 → None(r343 E 修:只向浅侧)
-    assert cw_sim.live_delta_for('battle', 0, random.Random(1),
-                                 pool_map=pool) is None
-    # 节点缺 → None
+    assert v in (-3, -5)     # rung 桶不可达 → 全池兜底命中样本
+    # boss 桶缺 → None(r343 E 修:只向浅侧;节点缺 → None)
     assert cw_sim.live_delta_for('boss', 6, random.Random(1),
                                  pool_map=pool) is None
 
