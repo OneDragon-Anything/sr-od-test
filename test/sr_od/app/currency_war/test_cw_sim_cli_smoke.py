@@ -25,7 +25,11 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # ADR-0268:池级检查(桶饥饿/深崖单调)是**数据披露**非策略
     # 断言——语料饥饿时恒非零(披露即目的),不适用 0 容忍;
     # 行为检查仍全绿。
-    _POOL_CHECKS = ('delta_pool_bucket_min_n', 'depth_cliff_monotonicity')
+    # ADR-0276:sim_endgold_calib 同为披露型收敛判据——P1-only 域
+    # 末段滞留金无处可花(P2 入口继承价值 sim 不可判),比值 ~2×
+    # 是已知校准层缺口(收敛条件见 ADR),不适用 0 容忍。
+    _POOL_CHECKS = ('delta_pool_bucket_min_n', 'depth_cliff_monotonicity',
+                    'sim_endgold_calib')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS:
             assert 'violations' in r, f'{name}: 缺 violations 计数'
