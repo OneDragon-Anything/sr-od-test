@@ -145,15 +145,22 @@ def test_locked_line_carry_tag_and_bond_fallback_gate() -> None:
 
 
 def test_filter_emergency_narrows() -> None:
-    """应急态(HP≤25):refresh/levelup/bond_fallback 被滤出。"""
+    """应急态(HP≤25):refresh/bond_fallback 被滤出;ADR-0302 后
+    应急集=战力买+卖弱件(for_gold)+升级(levelup)——旧版把
+    for_gold/levelup 一并滤死(应急卖弱件/金>50 升级通道死亡)是
+    批㉝ F4 实证的应急集内容缺陷,本锁改为断言正确语义。"""
     sess = _sess(mode='economy')
-    st = _state(hp=20, shop=[_card(_SEED_CORE)],
+    st = _state(hp=20, gold=30, shop=[_card(_SEED_CORE)],
                 bench=[_bench('散件甲', faction='公司')])
     cands = generate_candidates(st, sess, _REG)
     kept, flog = filter_candidates(cands, st, sess, _REG)
     kept_tags = {c.tag for c in kept}
-    assert 'refresh' not in kept_tags and 'levelup' not in kept_tags
+    assert 'refresh' not in kept_tags
     assert 'bond_fallback' not in kept_tags
+    # ADR-0302:卖弱件(for_gold,应急态非目标 bench 件的生成标签)
+    # 与升级进应急集
+    assert 'for_gold' in kept_tags, '应急态卖弱件通道应放行(ADR-0302)'
+    assert 'levelup' in kept_tags, '应急态升级应放行(ADR-0302)'
     assert flog and flog[0]['level'] == 'emergency'
 
 
