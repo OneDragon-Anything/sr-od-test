@@ -148,8 +148,9 @@ def test_batch_report_embeds_pool_checks() -> None:
 
 
 def test_sampler_version_bumped_and_snapshot_guarded() -> None:
-    """采样器 v3(ADR-0279 battle rung 分桶语义入指纹)+ 提交快照自洽。"""
-    assert cw_sim._SAMPLER_VERSION == 3
+    """采样器 v4(ADR-0292 reward/supply 池采样语义入指纹;v3=ADR-0279
+    battle rung 分桶)+ 提交快照自洽。"""
+    assert cw_sim._SAMPLER_VERSION == 4
     assert cw_sim._BUCKET_MIN_N == 5
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'

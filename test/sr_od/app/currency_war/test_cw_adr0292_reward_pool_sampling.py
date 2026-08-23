@@ -1,0 +1,146 @@
+"""ADR-0292 reward/supply Δ池采样锁(批㉗ F3/F4;EARLY_WIN_DELTA 真值化)。
+
+批㉗ F4 断言的奖励轮「右胖尾 mean 9.15/p90+39」经语料复核为**跨 run
+配对伪影**(同 run 差分 n=43 全 +2;胖尾/负值样本只出现在跨 run 相邻
+行)——本批落地的是诚实真值化:reward/supply 结算由恒 EARLY_WIN_DELTA
+改 Δ池经验分布采样,池缺回退常数。
+"""
+from __future__ import annotations
+
+import json
+import random
+from pathlib import Path
+
+from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.cw_sim_checks import (
+    REWARD_POOL_TRUTH_MEAN,
+    check_reward_delta_pool_bucket_lock,
+)
+
+
+def _reward_snap(tmp_path: Path, reward_buckets: dict) -> Path:
+    """构造含自定义 reward 池的 JSON 快照(resolve_pool Path 模式)。"""
+    pool = {'battle': {0: [-11] * 6, 1: [-6] * 6},
+            'reward': {int(b): list(v) for b, v in reward_buckets.items()}}
+    fp = cw_sim.pool_fingerprint(pool)
+    p = tmp_path / 'snap.json'
+    p.write_text(json.dumps(
+        {'meta': {'fingerprint': fp}, 'snapshot': {
+            n: {str(b): v for b, v in bs.items()} for n, bs in pool.items()}},
+        ensure_ascii=False), encoding='utf-8')
+    return p
+
+
+def test_reward_deltas_sampled_from_pool(tmp_path: Path) -> None:
+    """结算接线:reward 轮 Δ 来自池经验分布(含胖尾/负值可采样)。"""
+    buckets = {6: [2] * 8 + [17, 25], 9: [2] * 6 + [-3]}
+    snap = _reward_snap(tmp_path, buckets)
+    vals = set()
+    for seed in range(12):
+        r = cw_sim.simulate_p1(seed, pool=snap)
+        for _, nt, d, _ in r.hp_events:
+            if nt == 'reward':
+                vals.add(d)
+                assert d in (2, 17, 25, -3)
+    # 池的非常数样本确实可达(采样生效,非恒常数)
+    assert vals & {17, 25, -3}, f'池胖尾/负值样本不可达: {vals}'
+
+
+def test_reward_full_pool_fallback_shallow_depth(tmp_path: Path) -> None:
+    """浅板深(r1-r2)缺桶 → 全池兜底采样(不退恒常数;ADR-0292)。"""
+    # 只给深桶 9:r1 depth∈[3,5] → 桶 3 缺、浅回退 0 缺 → 全池兜底
+    pool = {'reward': {9: [2] * 5 + [11]}}
+    rng = random.Random(0)
+    drawn = {cw_sim.live_delta_for('reward', 4, rng, pool_map=pool)
+             for _ in range(30)}
+    assert drawn <= {2, 11} and 11 in drawn   # 全池样本可达
+    # 池空 → None(调用方回退 EARLY_WIN_DELTA)
+    assert cw_sim.live_delta_for('reward', 4, random.Random(0),
+                                 pool_map={'reward': {}}) is None
+    assert cw_sim.live_delta_for(
+        'supply', 4, random.Random(0), pool_map={}) is None
+
+
+def test_fallback_pool_reward_delta_is_constant() -> None:
+    """fallback 空池:reward/supply 回退 EARLY_WIN_DELTA(两态语义)。"""
+    r = cw_sim.simulate_p1(0, pool='fallback')
+    rd = [d for _, nt, d, _ in r.hp_events if nt in ('reward', 'supply')]
+    assert rd and set(rd) == {cw_sim.EARLY_WIN_DELTA}
+
+
+def test_snapshot_reward_pool_matches_corpus_truth() -> None:
+    """提交快照对拍:reward 池入位、n≥30、均值=真值(恒 +2)。"""
+    pm, _, _ = cw_sim.resolve_pool('snapshot')
+    rep = check_reward_delta_pool_bucket_lock(pm)
+    assert rep['violations'] == 0, rep
+    assert rep['reward']['n'] >= 30
+    assert rep['reward']['mean'] == REWARD_POOL_TRUTH_MEAN
+
+
+def test_reward_lock_catches_drift_and_artifact() -> None:
+    """检查项变异:均值漂移 / 跨 run 伪影形态(负值、大正值)必报。"""
+    drift = {'reward': {6: [2] * 30 + [9] * 10}}   # 均值 3.75 > 带
+    rep = check_reward_delta_pool_bucket_lock(drift)
+    assert rep['violations'] >= 1 and any('漂移' in i for i in rep['issues'])
+    artifact = {'reward': {6: [2] * 30 + [41, -2]}}   # 批㉗ F4 形态
+    rep2 = check_reward_delta_pool_bucket_lock(artifact)
+    assert rep2['violations'] >= 1 \
+        and any('伪影' in i for i in rep2['issues'])
+    starved = {'reward': {6: [2] * 8}}   # n<30:分布证据不足
+    rep3 = check_reward_delta_pool_bucket_lock(starved)
+    assert rep3['violations'] >= 1
+    # 空池(fallback)不辖(同 battle 锁空池语义)
+    assert check_reward_delta_pool_bucket_lock({})['violations'] == 0
+
+
+def test_pool_build_never_mixes_runs(tmp_path: Path) -> None:
+    """跨 run 配对伪影防线:生成器/池构建按 run 分组——上一 run 末行
+    hp 与下一 run 首个奖励行 hp 的差分(批㉗ F4 伪影源)不入池。"""
+    d = tmp_path / 'replay'
+    d.mkdir()
+    (d / 'decisions.jsonl').write_text(
+        json.dumps({'run_id': 'r1', 'plane': 1, 'round_num': 1,
+                    'state': {'board': {'仙舟': 6}, 'deployed': []}},
+                   ensure_ascii=False) + '\n'
+        + json.dumps({'run_id': 'r2', 'plane': 1, 'round_num': 1,
+                      'state': {'board': {'仙舟': 6}, 'deployed': []}},
+                     ensure_ascii=False) + '\n'
+        + json.dumps({'run_id': 'r2', 'plane': 1, 'round_num': 2,
+                      'state': {'board': {'仙舟': 6}, 'deployed': []}},
+                      ensure_ascii=False) + '\n',
+        encoding='utf-8')
+    # r1 末行 hp 30 → r2 首行(奖励)hp 71:全局相邻差分 = +41(伪影)
+    (d / 'outcomes.jsonl').write_text(
+        json.dumps({'run_id': 'r1', 'plane': 1, 'round_num': 1,
+                    'node_type': '普通战斗', 'hp_after': 30},
+                   ensure_ascii=False) + '\n'
+        + json.dumps({'run_id': 'r2', 'plane': 1, 'round_num': 1,
+                      'node_type': '奖励', 'hp_after': 71},
+                     ensure_ascii=False) + '\n'
+        + json.dumps({'run_id': 'r2', 'plane': 1, 'round_num': 2,
+                      'node_type': '奖励', 'hp_after': 73},
+                      ensure_ascii=False) + '\n',
+        encoding='utf-8')
+    pool, _ = cw_sim._pool_from_replay(d)
+    assert pool.get('reward') == {6: [2]}   # 只有 r2 同 run 差分 +2
+    assert 41 not in [x for v in pool['reward'].values() for x in v]
+
+
+def test_sampler_v4_and_snapshot_selfconsistent() -> None:
+    """采样器 v4(reward/supply 池采样语义入指纹)+ 快照自洽。"""
+    assert cw_sim._SAMPLER_VERSION == 4
+    m, fp, src = cw_sim.resolve_pool('snapshot')
+    assert src == 'snapshot'
+    from sr_od.application.currency_war import cw_delta_pool_data
+    assert fp == cw_delta_pool_data.META['fingerprint']
+    assert cw_delta_pool_data.META['sampler_version'] == 4
+    # 池语义变更使指纹与 v3 快照(d891233d)可区分
+    assert not fp.startswith('d891233d')
+
+
+def test_batch_report_embeds_reward_lock() -> None:
+    """simulate_p1_batch 内嵌 reward 分布锁(fallback 空池不辖=0)。"""
+    rep = cw_sim.simulate_p1_batch(3, pool='fallback', ledger=False)
+    cv = rep['checks_violations']
+    assert 'reward_delta_pool_bucket_lock' in cv
+    assert cv['reward_delta_pool_bucket_lock']['violations'] == 0
