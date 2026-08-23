@@ -110,7 +110,24 @@ def test_write_batch_ledger_guard() -> None:
 
 
 def test_checks_module_does_not_import_sim() -> None:
-    """依赖方向:checks 不 import cw_sim(二轮#7;调用方传账本)。"""
+    """依赖方向:checks 不 import cw_sim(二轮#7;调用方传账本)。
+
+    r405 修订:原断言 `'from sr_od' not in src` 过宽——新检查
+    (no_component_equipped_p1)合法 lazy-import cw_synthesis.
+    RESERVED_COMPONENTS(叶子模块,单一源纪律;压测经济批规格),
+    非循环依赖。锁收窄到本意:不 import cw_sim(AST 级判,免疫
+    docstring 字样)。
+    """
+    import ast
     import inspect
-    src = inspect.getsource(chk)
-    assert 'import cw_sim' not in src and 'from sr_od' not in src
+
+    tree = ast.parse(inspect.getsource(chk))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names = [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            names = [node.module or '']
+        else:
+            continue
+        for n in names:
+            assert 'cw_sim' not in n, f'checks 不得 import cw_sim: {n}'
