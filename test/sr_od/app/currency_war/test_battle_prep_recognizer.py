@@ -30,8 +30,8 @@ def test_recognize_composes_pure_reads(monkeypatch) -> None:
     monkeypatch.setattr(mod, 'read_board', lambda ctx, screen: {'仙舟': 2, '猎犬': 1})
     monkeypatch.setattr(mod, 'read_level', lambda ctx, screen, p, r: 5)
     # 角色识别 reader mock 空(角色识别单测见下;避免 MagicMock screen 进 SIFT 崩)
-    monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates: [])
-    monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [])
+    monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates, level=None: [])
+    monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates, level=None: [])
     # 立绘库未加载 → 不产角色(front/back/bench None);装备识别 mock 跳过(equips 注入 BenchChar.equips)
     monkeypatch.setattr(mod, 'ensure_portrait_templates', lambda ctx: None)
     monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
@@ -57,8 +57,8 @@ def test_recognize_phase_none_when_unreadable(monkeypatch) -> None:
     monkeypatch.setattr(mod, 'read_deployed_count', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_deploy_cap', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_board', lambda ctx, screen: {})
-    monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates: [])
-    monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [])
+    monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates, level=None: [])
+    monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates, level=None: [])
     monkeypatch.setattr(mod, 'ensure_portrait_templates', lambda ctx: None)
     monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
     monkeypatch.setattr(mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
@@ -105,10 +105,10 @@ def test_recognize_identifies_chars(monkeypatch) -> None:
     monkeypatch.setattr(mod, 'read_deployed_count', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_deploy_cap', lambda ctx, screen: None)
     monkeypatch.setattr(mod, 'read_board', lambda ctx, screen: {})
-    monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates: [
+    monkeypatch.setattr(mod, 'read_deployed_chars', lambda ctx, screen, templates, level=None: [
         _char('藿藿', 'front', slot=1), _char('希儿', 'back', slot=1),
     ])
-    monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates: [_char('飞霄', 'back', slot=1)])
+    monkeypatch.setattr(mod, 'read_bench_chars', lambda ctx, screen, templates, level=None: [_char('飞霄', 'back', slot=1)])
     monkeypatch.setattr(mod, 'ensure_portrait_templates', lambda ctx: 'templates')   # 非 None → 产角色
     monkeypatch.setattr(mod, 'ensure_equip_tm_templates', lambda ctx: None)
     monkeypatch.setattr(mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)

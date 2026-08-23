@@ -24,10 +24,13 @@ def _deployed():
 
 def test_generic_goes_to_core_first():
     """通用件兜底:core(白厄)先吃满(容量 3 = 全部 3 件),非 core(砂金/赛飞儿)0 件
-    (r134 语义:core 全吃 → 非 core 无剩可分;核心换血摩擦最小)。"""
+    (r134 语义:core 全吃 → 非 core 无剩可分;核心换血摩擦最小)。
+
+    r405(ADR-0265)修订:owned 原 生命之花(合成保留组件,P1 现
+    不入穿戴池)——换非组件名保持原语义。"""
     comp = _mk_comp()
     alloc = equip_allocation(comp, _deployed(),
-                             ['狙击枪', '生命之花', '物质分解液'])
+                             ['狙击枪', '永动机', '物质分解液'])
     baiyu = [w for c, w in alloc if c == '白厄']
     shajin = [w for c, w in alloc if c == '砂金']
     assert len(baiyu) == 3, f'core 应吃满全部,实得 {baiyu}'

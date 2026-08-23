@@ -20,10 +20,21 @@ def _row(rn: int, node: str, owned: list, equipped: list,
 
 
 def test_persistent_unworn_reported() -> None:
-    """战斗轮 owned 有货连续 2 轮零穿着 → 报(r388 过矫指纹)。"""
-    rows = [_row(5, 'battle', ['轮滑鞋'], []),
-            _row(6, 'battle', ['轮滑鞋'], [])]
+    """战斗轮 owned 有货连续 2 轮零穿着 → 报(r388 过矫指纹)。
+
+    r405(ADR-0265)修订:owned 原用 轮滑鞋(合成保留组件,P1
+    现不入「owned 非空」判定)——换非组件名保持原语义。"""
+    rows = [_row(5, 'battle', ['蓄能帆'], []),
+            _row(6, 'battle', ['蓄能帆'], [])]
     assert check_equip_worn_in_battle(rows)
+
+
+def test_all_reserved_components_not_reported() -> None:
+    """r405(ADR-0265):owned 全是合成保留组件 → equipped 空合法
+    (组件待合成,不算白板挨打)。"""
+    rows = [_row(5, 'battle', ['轮滑鞋', '光能电池'], []),
+            _row(6, 'battle', ['轮滑鞋', '光能电池'], [])]
+    assert not check_equip_worn_in_battle(rows)
 
 
 def test_worn_not_reported() -> None:

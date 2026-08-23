@@ -17,7 +17,7 @@ from sr_od.application.currency_war.cw_reconcile import reconcile_tracking  # no
 class _Ctx:
     def __init__(self, tmp_path):
         self.stopped = False
-        self.run_context = SimpleNamespace(stop_running=lambda: setattr(self, 'stopped', True))
+        self.run_context = SimpleNamespace(stop_running=lambda reason='': setattr(self, 'stopped', True))
         self._cwd = Path.cwd()
         import os
         os.chdir(tmp_path)   # sentinel 写 .debug/... 隔离

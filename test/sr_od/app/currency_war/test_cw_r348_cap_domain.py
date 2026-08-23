@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-"""r348/r350b(ADR-0220+用户点题):deploy cap 域两段反转锁——
-①cap<level 才是真异常;②cap 落入未实拍后排档(7/9/10/11)
-必须 obs_conflict 留证采集(7/9 后台建档信号,不得降 debug)。"""
+"""r348/r350b(ADR-0220)→ ADR-0281 重写:deploy cap 域检查锁——
+①cap<level 才是真异常(不可能向,读错检测保留);②布局选档 level 驱动后
+(cap 与布局无关,双源实证),旧「cap 落入未实拍档留证」分支作废(7/9/10/11
+档是循环论证幻影,已删);采集信号改 lv6 待采留证(back_7slots_pending)。"""
 from __future__ import annotations
 
 import inspect
 
 from sr_od.application.currency_war import prep_director
 from sr_od.application.currency_war.cw_back_layout import (
-    _UNVERIFIED_BACK_SLOTS,
+    _PENDING_7SLOT_LEVELS,
     effective_back_slots,
 )
 
@@ -23,43 +24,34 @@ def test_cap_domain_check_inverted() -> None:
         '旧窄域 verdict 文案不得回流(假警报源)'
 
 
-def test_unverified_layout_slot_collects_evidence() -> None:
-    """r350b(用户点题):cap 落入未实拍后排档(7/9/10/11)必须
-    obs_conflict 留证——7/9 后台只有格点推导坐标,只有 8 后台
-    做过狸猫局实拍级建档;该 hook 是新档实拍采集信号,
-    r348 曾误降 debug 静音(已修)。"""
+def test_lv6_pending_collects_evidence() -> None:
+    """ADR-0281:采集信号 = lv6 待采留证(note_pending_7slots,
+    back_7slots_pending)——旧「cap 落入未实拍档」hook 随幻影档作废。"""
     src = inspect.getsource(prep_director.PrepDirector._observe)
-    assert '_UNVERIFIED_BACK_SLOTS' in src, \
-        'cap 检查必须接未实拍档集合(采集信号)'
-    assert 'deploy_cap_unverified_layout' in src, \
-        '未实拍档必须 obs_conflict 留证(独立冲突类型)'
-    assert '处理:本局识别/拖拽逐位验证' in src, \
-        'verdict 必须带可执行处理步骤(hook 三要素)'
+    assert 'note_pending_7slots' in src, \
+        'cap 检查段必须接 lv6 待采留证(ADR-0281 采集信号)'
+    assert 'deploy_cap_unverified_layout' not in src, \
+        '旧「未实拍档留证」分支已作废(7/9/10/11 是幻影,ADR-0281)'
+    assert '_UNVERIFIED_BACK_SLOTS' not in src, \
+        '旧集合已删(勿回流)'
 
 
-def test_unverified_set_semantics() -> None:
-    """未实拍档集合语义:7/9/10/11 在内(格点推导);6(多局基线)
-    与 8(狸猫局实拍)不在。"""
-    assert _UNVERIFIED_BACK_SLOTS == frozenset({7, 9, 10, 11})
-    assert effective_back_slots(5) == 6   # cap≤6 钳制→已实拍基线
-    assert effective_back_slots(7) == 7   # 未实拍档
+def test_level_routing_semantics() -> None:
+    """ADR-0281:level 驱动路由 —— lv≤5→6 / lv≥7→8 / lv6→保守 6;
+    待采集 = {6};cap 不再进选档决策。"""
+    assert _PENDING_7SLOT_LEVELS == frozenset({6})
+    assert effective_back_slots(3) == 6
+    assert effective_back_slots(5) == 6
+    assert effective_back_slots(6) == 6   # 待采:保守 6
+    assert effective_back_slots(7) == 8   # level 驱动(旧 cap 模型为 7=幻影)
+    assert effective_back_slots(8) == 8
 
 
-def test_cap_domain_behavior_level(monkeypatch) -> None:
-    """review-L4(r353b):行为级锁(源码字符串断言锁不住重构)——
-    直接调用 _observe 的 cap 检查段不可行(重观测依赖),改锁
-    分支纯函数面:effective_back_slots×_UNVERIFIED_BACK_SLOTS
-    的组合枚举 = 域检查的全部决策输入。"""
-    # (cap, level) → 是否应留证(落入未实拍档)
-    cases = [
-        (7, 6, True),    # cap7/lv6 单宝钻但档未实拍 → 留证(review C 问)
-        (7, 7, True),    # 无宝钻 7 档 → 仍留证(档问题非宝钻问题)
-        (6, 6, False),   # 常态无叠加已实拍 → 不留证
-        (8, 6, False),   # 双宝钻但 8 档已实拍(狸猫局) → 不留证
-        (5, 3, False),   # cap<level? 否(5>3)→6 槽已实拍 → 不留证
-    ]
-    for cap, level, should_flag in cases:
-        slots = effective_back_slots(cap)
-        flagged = slots in _UNVERIFIED_BACK_SLOTS
-        assert flagged == should_flag, \
-            f'cap={cap}/lv={level}: 留证={flagged},期望 {should_flag}'
+def test_cap_domain_behavior_level() -> None:
+    """review-L4(r353b)→ ADR-0281 行为级锁:选档只看 level——
+    同 level 不同 cap(cap=宝钻叠加,与布局无关)选档恒同。"""
+    for lv in (3, 4, 5, 6, 7, 8):
+        base = effective_back_slots(lv)
+        for cap in (lv, lv + 1, lv + 2, lv + 3):
+            assert effective_back_slots(lv) == base, \
+                f'lv={lv}/cap={cap}: 选档不得随 cap 变(ADR-0281)'

@@ -109,7 +109,8 @@ def test_run_failed(slot):
 
 
 def test_run_stopped(slot):
-    _, fut = slot._start('mcp', op_factory=_make_op(OperationResult(success=False, status='人工结束')))
+    """停止终态判据:「已停止[来源]」前缀(stop_source 贯通后替代旧文案「人工结束」)。"""
+    _, fut = slot._start('mcp', op_factory=_make_op(OperationResult(success=False, status='已停止[mcp:stop_run]')))
     fut.result(timeout=5)
     assert slot.terminal_state == RunState.STOPPED
     assert slot.failed_node is None                           # STOPPED 不记失败节点

@@ -99,11 +99,14 @@ def test_p2_locked_buys_line_pieces():
 
 def test_equip_rotation_no_comp():
     """comp=None:3 角色 5 件 → 轮转(每人 1 件一圈),
-    不灌满前排第一人(用户「装备都给了前台1」回归锁)。"""
+    不灌满前排第一人(用户「装备都给了前台1」回归锁)。
+    ADR-0265 语义修正:owned 原含 光能电池/以太钻头/折叠小刀
+    (合成保留组件,P1 现不入穿戴池)——轮转语义与组件无关,
+    换非组件名保持原断言;组件保留行为另测(test_cw_r4xx)。"""
     dep = [BenchChar(slot=1, char_id='飞霄', position_pref='front'),
            BenchChar(slot=2, char_id='真理医生', position_pref='front'),
            BenchChar(slot=3, char_id='翡翠', position_pref='back')]
-    owned = ['光能电池', '拆装扳手', '以太钻头', '折叠小刀', '垃圾袋']
+    owned = ['蓄能帆', '拆装扳手', '永动机', '冷笑话引擎', '垃圾袋']
     alloc = equip_allocation(None, dep, owned)
     first = [a[0] for a in alloc[:3]]
     assert len(set(first)) == 3        # 前三件给三个人(轮转)

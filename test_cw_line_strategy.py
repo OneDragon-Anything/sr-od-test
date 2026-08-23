@@ -114,8 +114,14 @@ def test_war_mode_buys_up_to_2_with_floor():
 
 
 def test_catchup_mode_level_up():
-    """追赶:升人口置顶(金够时)。"""
+    """追赶:升人口置顶(金够时)。
+
+    r406(ADR-0266)语义修正:原参数(金 40,lv5,从未满息)在新
+    息引擎门下被拒(40-cost<50)——「金够就升」补上息引擎维度。
+    锁改用曾满息 latch(语义主体:追赶升人口置顶不变);引擎门
+    的锁见 test_cw_r406_levelup_engine_gate.py::test_catchup_engine_gate。"""
     s, st, sess = _mk(gold=40)
+    sess.v2_ever_full_interest = True
     sess.v2_state = (MODE_ECONOMY, False, True, 0, 0, 0, 0, 0)
     acts = s.decide_prep(st, sess, None)
     assert any(isinstance(a, LevelUp) for a in acts)

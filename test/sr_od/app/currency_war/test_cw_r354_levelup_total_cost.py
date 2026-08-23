@@ -41,9 +41,14 @@ def test_levelup_total_cost_gate_blocks_insufficient() -> None:
 
 
 def test_levelup_total_cost_gate_allows_sufficient() -> None:
-    """金够升完(差 1 击=4 金)→ 正常提案。"""
+    """金够升完(差 1 击=4 金)→ 正常提案。
+
+    r406(ADR-0266)语义修正:金 30 从未满息时新息引擎门会拒
+    (30-4=26<50)——「升得完就升」的前提补上息引擎已立。锁改用
+    金 55(花完 51≥50,双门皆过):总成本门语义(r354)不变,
+    息引擎维度的锁见 test_cw_r406_levelup_engine_gate.py。"""
     strat = LineStrategy()
-    st = _state(gold=30, level=6, xp_progress=(44, 48))  # 差 1 击
+    st = _state(gold=55, level=6, xp_progress=(44, 48))  # 差 1 击
     acts = strat._boss_breaker_actions(st, _sess())
     lvs = [a for a in acts if type(a).__name__ == 'LevelUp']
     assert lvs, '升得完级必须提案(人口是板深杠杆)'
