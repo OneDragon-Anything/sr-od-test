@@ -88,6 +88,27 @@ def test_coldstart_check_bidirectional() -> None:
                           'card': {'name': '翡翠', 'cost': 1},
                           'reason': 'pair', 'channel': 'pair'}]}]
     assert not chk.check_coldstart_seed_squander(late)
+    # decision_v2 栈:reason 带 d2_ 前缀(+'_merge' 尾,arbiter
+    # _materialize)——归一化后同指纹必报(防对新栈无声失效,
+    # 2026-08-24 leader 核实观察局首验)
+    d2bad = [{'plane': 1, 'round_num': 1, 'target_comp': '',
+              'actions': [{'__type__': 'BuyCard',
+                           'card': {'name': '翡翠', 'cost': 1},
+                           'reason': 'd2_off', 'channel': 'off'}]}]
+    v2 = chk.check_coldstart_seed_squander(d2bad)
+    assert v2 and '翡翠' in v2[0]
+    d2bad2 = [{'plane': 1, 'round_num': 2, 'target_comp': '',
+               'actions': [{'__type__': 'BuyCard',
+                            'card': {'name': '阿格莱雅', 'cost': 1},
+                            'reason': 'd2_pair_merge',
+                            'channel': 'pair'}]}]
+    assert chk.check_coldstart_seed_squander(d2bad2)
+    d2good = [{'plane': 1, 'round_num': 1, 'target_comp': '',
+               'actions': [{'__type__': 'BuyCard',
+                            'card': {'name': '丹恒·饮月', 'cost': 1},
+                            'reason': 'd2_engine_seed',
+                            'channel': 'engine_seed'}]}]
+    assert not chk.check_coldstart_seed_squander(d2good)
 
 
 def test_coldstart_check_in_batch_set() -> None:
