@@ -3,8 +3,9 @@
 
 - 件1(ADR-0276):3合1 merge 接入 sim 执行层——同名×3 自动合成
   升星(生产 `_merge_bench` 同语义),merges 入账本;
-- 件2(ADR-0277):boss 胜分支——胜率=f(成型度 rung),e2=25%,
-  rung0/1 恒负;胜时 Δ=+2 小额;
+- 件2(ADR-0277 → ADR-0308 修订):boss 胜分支——胜负面 = W31
+  实测节点×轮次胜率阶梯(``node_win_p``,n=192,boss 0.05),
+  不再随成型度 rung 变化;胜时 Δ=+2 小额;
 - 件3(ADR-0276):simulate_p1 结算补写 session.last_streak /
   决策前写 session.node_type_current(批⑤ F4,r308 保连胜门);
 - 件4(ADR-0278):⑧-1 可负担门降级为日志观测(不过滤锁信号);
@@ -17,7 +18,7 @@ import random
 from sr_od.application.currency_war import cw_sim_checks as chk
 from sr_od.application.currency_war.cw_sim import (
     BOSS_WIN_DELTA,
-    BOSS_WIN_P_BY_ENGINES,
+    NODE_WIN_P_BY_TYPE,
     boss_settle_delta,
     simulate_p1,
 )
@@ -82,21 +83,19 @@ def _st_with_rung(rung: int) -> GameState:
     return st
 
 
-def test_boss_win_rate_by_rung() -> None:
-    """胜率=f(成型度):rung0 恒负;rung2 ≈25% 胜(种子化批量)。"""
+def test_boss_win_rate_ladder_flat_across_rung() -> None:
+    """ADR-0308:胜负面 = W31 阶梯边际(~0.05),不再随 rung 变化
+    (旧 ADR-0277 rung 门的拍脑袋语义废弃;语料=旧策略病局镜像)。"""
     rng = random.Random(42)
-    # rung 1(列车2 单体系):e1 档 0 胜
-    st1 = _st_with_rung(1)
-    n_pos = sum(1 for _ in range(200)
-                if boss_settle_delta(st1, 9, rng) > 0)
-    assert n_pos == 0, f'rung1 不应胜(实测 {n_pos}/200)'
-    # rung 2(列车2+仙舟3 两体系):≈25%(带宽 15%-35%)
-    st2 = _st_with_rung(2)
-    n_pos2 = sum(1 for _ in range(400)
-                 if boss_settle_delta(st2, 9, rng) > 0)
-    expect = BOSS_WIN_P_BY_ENGINES[2] * 400
-    assert 0.6 * expect <= n_pos2 <= 1.4 * expect, \
-        f'rung2 胜率 {n_pos2}/400 偏离 {BOSS_WIN_P_BY_ENGINES[2]}'
+    expect_p = NODE_WIN_P_BY_TYPE['boss']
+    for rung in (1, 2):
+        st = _st_with_rung(rung)
+        n = 4000
+        n_pos = sum(1 for _ in range(n)
+                    if boss_settle_delta(st, 9, rng) > 0)
+        # 带宽 ±40%(二项 sd@4000 ≈ 0.34%,带宽充裕)
+        assert 0.6 * expect_p * n <= n_pos <= 1.4 * expect_p * n, \
+            f'rung{rung} 胜率 {n_pos}/{n} 偏离阶梯 {expect_p}(ADR-0308)'
 
 
 def test_boss_win_delta_is_small_positive() -> None:
@@ -110,9 +109,11 @@ def test_boss_win_delta_is_small_positive() -> None:
 
 
 def test_boss_win_emerges_in_batch() -> None:
-    """批⑪ F1 验收:批量 boss 胜率 >0(结构性恒败解除)。"""
+    """批⑪ F1 验收(ADR-0308 口径):批量 boss 胜率 >0(结构性恒败
+    解除)。阶梯胜率 ~0.05 → 种子段须足够长(15 局 P(0胜)≈54% 会
+    假红;150 局 P(0胜)≈0.04%)。"""
     wins = rounds = 0
-    for seed in range(15):
+    for seed in range(150):
         r = simulate_p1(seed, pool='fallback')
         for _, nt, d, _ in r.hp_events:
             if nt == 'boss':
@@ -235,11 +236,20 @@ def test_engine_seed_exemption_bidirectional() -> None:
 
 
 def test_boss_win_calibration_bidirectional() -> None:
-    """坏:boss 轮全负(恒败回归)→ 报;好:有胜且桶间单调 → 过。"""
-    bad = [[_lrow(rn=9, node='boss', delta=-18, depth=5)]]
+    """坏:boss 轮 ≥n 地板且全负(恒败回归)→ 报;好:有胜 → 过;
+    小批(<地板)0 胜 = 抽样噪声,不报(ADR-0308:阶梯胜率 ~0.05,
+    0.95^25≈28%,smoke 级小批判恒败 = 恒假红)。"""
+    # 坏:n=120(≥地板 100)全负 → 报
+    bad = [[_lrow(rn=9, node='boss', delta=-18, depth=5)]
+           for _ in range(120)]
     assert chk.check_boss_win_calibration(bad)['violations'] == 1
     good = [[_lrow(rn=9, node='boss', delta=2, depth=5)]]
     assert chk.check_boss_win_calibration(good)['violations'] == 0
+    # 小批 0 胜(噪声带):地板下不判
+    small = [[_lrow(rn=9, node='boss', delta=-18, depth=5)]
+             for _ in range(25)]
+    out = chk.check_boss_win_calibration(small)
+    assert out['violations'] == 0 and out['min_rounds'] == 100
 
 
 def test_formation_hp_coupling_bidirectional() -> None:

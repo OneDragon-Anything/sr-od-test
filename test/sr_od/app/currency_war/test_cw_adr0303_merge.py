@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0303 合流批锁(危机常量上移 registry + copy_swap 守卫×目标件豁免)。
 
 锁定对象(decision_v2/registry.py + filters.py + candidates.py):
@@ -60,9 +59,11 @@ def test_crisis_constants_in_registry() -> None:
     """危机三参在 registry 单一源(ADR-0302 值不变,ADR-0303 上移)。"""
     assert _REG.crisis_hoard_gold == 40
     assert _REG.crisis_buy_bias == 1.0
+    # W35 载体批语义化:crisis 战力买偏置辖的标签集并入 'plugin'
+    # (层1 插件通道,定义节 class5——危机态插件同属战力买)
     assert _REG.crisis_buy_tags == frozenset({
         'line_carry', 'line_opportunistic', 'bridge_core',
-        'engine_seed', 'carry_gate',
+        'engine_seed', 'plugin', 'carry_gate',
     })
 
 

@@ -67,10 +67,24 @@ def _bench(name: str, faction: str = '仙舟罗浮',
 
 def _sess(line: str | None = None, bridge: str | None = None,
           mode: str = 'economy') -> StrategySession:
+    """语义化(W35 载体批):``line`` 参数=意向锁定视窗(v3_hoard/v3_core),
+    非旧 locked_line——candidates 层1 已换源 cw_intention。"""
     s = StrategySession()
-    s.locked_line = line
-    s.bridge_id = bridge
     s.v2_state = (mode, False, False, 0, 0, 0, 0, 0)
+    s.v3_mode = mode
+    if line:
+        from sr_od.application.currency_war.cw_intention import (
+            HoardTarget,
+            IntentionState,
+        )
+        ist = IntentionState()
+        ist.phase = 'locked'
+        ist.locked_comp = '姬子列车'
+        s.v3_intention = ist
+        s.v3_hoard = HoardTarget(
+            frozenset({'姬子·启行', '瓦尔特', '三月七', '花火'}),
+            frozenset(), 'locked')
+        s.v3_core_names = {'姬子·启行'}
     return s
 
 

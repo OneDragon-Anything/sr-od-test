@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0293 标定批回归锁:标定参数快照 + 刷新双门 + 弱件换金偏置。
 
 - 快照锁:标定五参(refresh_ev/refresh_max_round/refresh_min_gold/
@@ -12,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_state import (
@@ -61,8 +59,11 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: min_gold/goldrich_buy_tags 三字段(默认 0=通道关,只顶 0 分
 #: 差分;既有数值字段不变)。全量清偿时发现 0305 漏更本锁
 #: (欠账随 ADR-0306 批的全量补跑暴露),按锁语义补记
-_EXPECTED_HASH = '1f86fb0d2bf68add989b484d4ea73e89'
-_EXPECTED_HASH += '83b68a28d2f890145494d93ed57b16b0'
+#: ADR-0309 载体批(W35)更新:四覆盖态标签集/危机买偏置辖集并入
+#: 'plugin'(层1 插件通道,定义节 class5)——纯标签集变更,数值
+#: 字段零变化(标定五参快照锁另行核)。
+_EXPECTED_HASH = '7c7d63c78d8710a43a97fa5c6c6ac3b1'
+_EXPECTED_HASH += '0d9454ce5954c4c1de11f16d07548733'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

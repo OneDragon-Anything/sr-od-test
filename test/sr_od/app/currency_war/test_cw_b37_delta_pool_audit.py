@@ -3,14 +3,15 @@
 覆盖三新检查 + 两处加固:
 - ``check_delta_pool_poverty_selfconsistency``(贫困披露↔池内容
   双向结构对拍;变异杀:格式漂移/漏披露/过期披露/n 值不符);
-- ``check_boss_win_p_cache_freshness``(boss_win_p 缓存一致性;
-  变异杀:META 换值后缓存失配=批㊲ 探针实证形态);
 - ``check_boss_rung_corpus_sample_gate``(boss rung 语料样本门;
   变异杀:killed 全 None 采集断裂);
 - ``check_ab_verdict_claim`` 词表反转(变异杀:换措辞'首超'/
   'wins' 旧版绕过、新版必辖);
 - ``check_paired_prefork_wave_identity`` 扩全波(变异杀:第二波
   篡改旧版漏检、新版必红)。
+
+(check_boss_win_p_cache_freshness 已随 ADR-0308 废除:rung 外推
+机制被 W31 节点胜率阶梯替换,无进程内缓存可查。)
 
 数据边界:全部合成 dict/list 纯函数锁 + 真快照自洽(resolve_pool
 产物,只读;不触 replay/不写 .debug)。来源实证见
@@ -27,7 +28,6 @@ from sr_od.application.currency_war.cw_delta_pool_data import (
 from sr_od.application.currency_war.cw_sim_checks import (
     check_ab_verdict_claim,
     check_boss_rung_corpus_sample_gate,
-    check_boss_win_p_cache_freshness,
     check_delta_pool_poverty_selfconsistency,
     check_paired_prefork_wave_identity,
 )
@@ -117,49 +117,9 @@ def test_poverty_selfconsistency_n_mismatch_flags() -> None:
 
 
 # --------------------------------------------------------------------
-# check_boss_win_p_cache_freshness
+# (check_boss_win_p_cache_freshness 六锁已随 ADR-0308 删除——被检
+#  机制 boss_win_p/_BOSS_WIN_P_EXTRAPOLATED 缓存已废弃,锁死码无义)
 # --------------------------------------------------------------------
-
-def test_cache_freshness_match_green() -> None:
-    out = check_boss_win_p_cache_freshness(0.6667, 0.6667)
-    assert out['violations'] == 0
-
-
-def test_cache_freshness_none_cache_discloses() -> None:
-    out = check_boss_win_p_cache_freshness(None, 0.6667)
-    assert out['violations'] == 0
-    assert '缓存未建' in out['note']
-
-
-def test_cache_freshness_meta_none_fallback_ok() -> None:
-    out = check_boss_win_p_cache_freshness(0.25, None)
-    assert out['violations'] == 0
-
-
-def test_cache_freshness_stale_flags() -> None:
-    """变异杀:META 已换 0.5 缓存仍 0.6667 → 违规(批㊲ 探针实证
-    形态:batch37_sim_probe stale_cache_used=True)。"""
-    out = check_boss_win_p_cache_freshness(0.6667, 0.5)
-    assert out['violations'] == 1
-    assert '固化' in out['detail'][0]
-
-
-def test_cache_freshness_fallback_semantics_regression() -> None:
-    """变异杀:META 缺字段但缓存 ≠ 兜底 0.25 → 违规(fallback 语义)。"""
-    out = check_boss_win_p_cache_freshness(0.6667, None)
-    assert out['violations'] == 1
-
-
-def test_cache_freshness_real_module_consistent() -> None:
-    """真实链路:boss_win_p 固化后缓存值 == 当前 META 值(0 违规)。"""
-    v = cw_sim.boss_win_p(3)          # 触发固化(纯读)
-    meta_v = ((SNAP_META.get('battle_rung') or {}).get('2')
-              or {}).get('win_killed')
-    out = check_boss_win_p_cache_freshness(
-        cw_sim.__dict__.get('_BOSS_WIN_P_EXTRAPOLATED'), meta_v)
-    assert out['violations'] == 0, f'{out}'
-    assert v == meta_v   # 镜像兜底:当前源一致性
-
 
 # --------------------------------------------------------------------
 # check_boss_rung_corpus_sample_gate

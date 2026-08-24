@@ -1,16 +1,14 @@
-"""ADR-0306(Δ池扩容批)锁:胜判定权威口径 + rung≥3 胜率外推 +
-桶覆盖披露检查(delta_pool_bucket_coverage)+ 快照 META 扩展字段。
+"""ADR-0306(Δ池扩容批)锁 + ADR-0308(W31 节点胜率阶梯)迁移后状态。
 
-裁决要点(详 ADR-0306):
+裁决要点(ADR-0306 仍有效的部分):
 - 胜判定唯一权威口径 = killed(结算屏 extras);Δ(相邻轮 hp 差分)
-  是派生量。生成器口径下 killed 已知行异号实证 0/61——0305 的
-  「3/9 异号」系 tier×core 与 rung 两种分桶错位对照的伪影;
-- rung≥3 无桶(语料不足,如实披露)→ boss 胜分支降级路径的胜率
-  由拍脑袋 0.25 改为「rung2 桶实测」外推(快照 META 单一源);
+  是派生量。生成器口径下 killed 已知行异号实证 0/61;
 - 各桶 n≥10 或 META bucket_poverty 显式披露贫困。
-"""
 
-import pytest
+ADR-0308(W37)迁移:boss 回退胜率的 rung 外推机制(boss_win_p /
+BOSS_WIN_P_* / _BOSS_WIN_P_EXTRAPOLATED 缓存)整体废弃,胜负面单一
+取值口 = ``node_win_p``(W31 实测节点×轮次阶梯,n=192)。
+"""
 
 from sr_od.application.currency_war import cw_delta_pool_data, cw_sim
 from sr_od.application.currency_war.cw_sim_checks import (
@@ -18,8 +16,35 @@ from sr_od.application.currency_war.cw_sim_checks import (
 )
 
 
-def _clear_extrap_cache() -> None:
-    cw_sim.__dict__.pop('_BOSS_WIN_P_EXTRAPOLATED', None)
+def test_node_win_p_ladder_w31_source_of_truth() -> None:
+    """ADR-0308:回退层胜负面单一取值口 = W31 实测阶梯。
+
+    - 逐轮实测组合优先:battle r3 0.30 / r4 0.29、encounter r7 0.04、
+      boss r9 0.05(常量与 W31_报告 §2 数字一致);
+    - 未观测组合退类型边际(battle 0.29 / encounter 0.04 / boss 0.05);
+    - reward/supply 恒 1.0(零战力节点实测全胜);
+    - 未知节点类型兜底 0.0(保守)。
+    """
+    assert cw_sim.node_win_p('battle', 3) == 0.30
+    assert cw_sim.node_win_p('battle', 4) == 0.29
+    assert cw_sim.node_win_p('encounter', 7) == 0.04
+    assert cw_sim.node_win_p('boss', 9) == 0.05
+    # 未观测组合 → 类型边际
+    assert cw_sim.node_win_p('battle', 6) == cw_sim.NODE_WIN_P_BY_TYPE['battle']
+    assert cw_sim.node_win_p('encounter', 6) == 0.04
+    assert cw_sim.node_win_p('boss', 8) == 0.05
+    for nt in ('reward', 'supply'):
+        for rn in (1, 2, 5, 8):
+            assert cw_sim.node_win_p(nt, rn) == 1.0
+    assert cw_sim.node_win_p('unknown_node', 5) == 0.0
+
+
+def test_node_win_p_values_all_valid_probabilities() -> None:
+    """阶梯全体值 ∈ [0,1](胜率语义自洽)。"""
+    for (_nt, _rn), v in cw_sim.NODE_WIN_P_LADDER.items():
+        assert 0.0 <= v <= 1.0, (_nt, _rn, v)
+    for nt, v in cw_sim.NODE_WIN_P_BY_TYPE.items():
+        assert 0.0 <= v <= 1.0, (nt, v)
 
 
 def test_snapshot_meta_win_stats_fields() -> None:
@@ -53,31 +78,13 @@ def test_snapshot_meta_corpus_accounting_and_poverty() -> None:
     assert 'battle:桶4(缺)' in poverty
 
 
-def test_boss_win_p_rung3_extrapolated_from_rung2() -> None:
-    """rung≥3 胜率 = rung2 桶实测(快照 META win_killed)外推;
-    rung0/1/2 仍用批③ H3 实测矩阵。"""
-    _clear_extrap_cache()
-    expect = cw_delta_pool_data.META['battle_rung']['2']['win_killed']
-    assert expect is not None
-    assert cw_sim.boss_win_p(3) == pytest.approx(expect)
-    assert cw_sim.boss_win_p(4) == pytest.approx(expect)
-    assert cw_sim.boss_win_p(99) == pytest.approx(expect)
-    assert cw_sim.boss_win_p(0) == 0.0
-    assert cw_sim.boss_win_p(1) == 0.0
-    assert cw_sim.boss_win_p(2) == cw_sim.BOSS_WIN_P_BY_ENGINES[2]
-
-
-def test_boss_win_p_fallback_without_meta(monkeypatch: pytest.MonkeyPatch) -> None:
-    """快照 META 缺 rung2 实测时退 BOSS_WIN_P_FALLBACK(不静默归零)。"""
-    _clear_extrap_cache()
-    meta_no_rung2 = {
-        k: v for k, v in cw_delta_pool_data.META.items()
-        if k != 'battle_rung'}
-    monkeypatch.setattr(cw_delta_pool_data, 'META', meta_no_rung2)
-    try:
-        assert cw_sim.boss_win_p(3) == cw_sim.BOSS_WIN_P_FALLBACK
-    finally:
-        _clear_extrap_cache()
+def test_boss_win_p_machinery_removed() -> None:
+    """ADR-0308:rung 外推机制整体废弃——残留 = 死码回潮信号。"""
+    for gone in ('boss_win_p', 'BOSS_WIN_P_BY_ENGINES',
+                 'BOSS_WIN_P_EXTRAPOLATED_MIN_RUNG', 'BOSS_WIN_P_FALLBACK',
+                 '_BOSS_WIN_P_EXTRAPOLATED'):
+        assert gone not in cw_sim.__dict__, \
+            f'{gone} 已随 ADR-0308 废弃,不应残留(死码回潮)'
 
 
 def test_check_delta_pool_bucket_coverage_unit() -> None:
@@ -118,8 +125,8 @@ def test_batch_report_embeds_coverage_check() -> None:
 
 
 def test_boss_settle_uses_win_p_single_source() -> None:
-    """boss_settle_delta 掷胜走 boss_win_p 单一取值口(不散落内联表)。"""
+    """boss_settle_delta 掷胜走 node_win_p 单一取值口(不散落内联表)。"""
     import inspect
     src = inspect.getsource(cw_sim.boss_settle_delta)
-    assert 'boss_win_p' in src
-    assert 'BOSS_WIN_P_BY_ENGINES[' not in src
+    assert 'node_win_p' in src
+    assert 'NODE_WIN_P_LADDER[' not in src

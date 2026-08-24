@@ -162,13 +162,14 @@ def test_pool_from_replay_battle_rung_keys(tmp_path: Path) -> None:
 
 
 def test_settle_wiring_battle_rung_single_source() -> None:
-    """结算接线:simulate_p1 battle 走 _settle_rung(与 boss_settle_
-    delta 同源;rung 定义单一源 = _engines_count)。"""
+    """结算接线:simulate_p1 battle 走 _settle_rung(rung 定义单一源
+    = _engines_count;ADR-0308 起 boss 回退胜负面换 W31 阶梯,boss
+    侧不再 rung 键)。"""
     src = inspect.getsource(_sim.simulate_p1)
     assert '_settle_rung' in src
     assert "live_delta_for('battle', _settle_rung(st)" in src
     boss_src = inspect.getsource(_sim.boss_settle_delta)
-    assert '_settle_rung' in boss_src
+    assert 'node_win_p' in boss_src   # ADR-0308 胜负面单一取值口
     assert '_engines_count' not in boss_src   # 单一源收口,不散落内联
 
 

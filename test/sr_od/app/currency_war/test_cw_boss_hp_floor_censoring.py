@@ -82,9 +82,37 @@ class TestBossHpFloorCensoring:
         assert r['violations'] == 1
         assert 'hp_after 缺失' in r['detail'][0]
 
-    def test_hp_after_zero_violation(self) -> None:
-        """批40 补:killed=False 但 hp_after==0 → 地板矛盾红。"""
+    def test_hp_after_zero_censored_disclosure(self) -> None:
+        """批41 改判:killed=False 且 hp_after==0 = 合法团灭形态 → 不红,
+        与 ==1 同族按删失披露(note 级)。批40 原判「写端矛盾」语义倒置
+        (killed=玩家击败对手,团灭 killed=False 恰正确;写端失败屏
+        hp=0 是 ground truth,HP_MIN=0 可解析真 0)。"""
         rows = [_row(hp_after=0, hp_before=50)]
         r = chk(rows)
-        assert r['violations'] == 1
-        assert any('hp_after==0' in v for v in r['detail'])
+        assert r['violations'] == 0
+        assert r['censored_rows'] == 1
+        assert r['censored_idx'] == [0]
+        assert r['censor_note'] is not None and '团灭' in r['censor_note']
+
+    def test_hp_before_no_cross_run_backfill(self) -> None:
+        """批41 补:hp_before 缺省回填上一行须同 run_id——上一局末 hp
+        不是本局 boss 前值,跨 run 回填会产出伪「hp 未降」违规。"""
+        rows = [
+            {'run_id': 'run_a', 'round_num': 9, 'node_type': '普通战斗',
+             'killed': False, 'hp_after': 80},
+            # run_b 首行 boss,无显式 hp_before:不得继承 run_a 的 80
+            _row(hp_after=90, rnd=9),
+        ]
+        rows[1]['run_id'] = 'run_b'
+        r = chk(rows)
+        assert r['violations'] == 0   # 跨 run:hp_before=None,不比不红
+
+    def test_hp_before_same_run_backfill_still_works(self) -> None:
+        """批41 守卫不误伤:同 run 内上一行回填照常(掉血合法不红)。"""
+        rows = [
+            {'run_id': 'run_x', 'round_num': 8, 'node_type': '普通战斗',
+             'killed': False, 'hp_after': 95},
+            _row(hp_after=70, rnd=9),
+        ]
+        r = chk(rows)
+        assert r['violations'] == 0
