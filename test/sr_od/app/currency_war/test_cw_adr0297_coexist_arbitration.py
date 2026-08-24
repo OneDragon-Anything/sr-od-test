@@ -93,12 +93,12 @@ def test_game_cap_rejects_refresh() -> None:
     sess.v2_refresh_used = 2
     st = _state(gold=50)
     reason = _check_constraint('refresh_budget', _refresh_cand(), st.copy(),
-                               st, sess, reg, pending_bench=0)
-    assert reason is not None and '预算' in reason
+                               st, sess, reg)
+    assert reason is not None and '预算' in reason.describe
     # 未用尽放行
     sess.v2_refresh_used = 1
     assert _check_constraint('refresh_budget', _refresh_cand(), st.copy(),
-                             st, sess, reg, pending_bench=0) is None
+                             st, sess, reg) is None
 
 
 def test_levelup_reserve_rejects_refresh() -> None:
@@ -108,13 +108,12 @@ def test_levelup_reserve_rejects_refresh() -> None:
     sess = StrategySession()
     st = _state(gold=31)     # 刷后 29 < 30
     reason = _check_constraint('refresh_budget', _refresh_cand(), st.copy(),
-                               st, sess, reg, pending_bench=0)
-    assert reason is not None and '保留金' in reason
+                               st, sess, reg)
+    assert reason is not None and '保留金' in reason.describe
     # 等级封顶:追级通道不存在,保留金豁免
     st_max = _state(gold=31, level=DEFAULT_REGISTRY.level_max)
     assert _check_constraint('refresh_budget', _refresh_cand(),
-                             st_max.copy(), st_max, sess, reg,
-                             pending_bench=0) is None
+                             st_max.copy(), st_max, sess, reg) is None
 
 
 def test_two_channels_coexist_same_round() -> None:

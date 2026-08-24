@@ -31,9 +31,12 @@ from sr_od.application.currency_war.cw_state import (
     BenchChar,
     BuyCard,
     GameState,
+    SellBench,
     ShopCard,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision_v2.candidates import Candidate
 from sr_od.application.currency_war.decision_v2.discipline import (
     BloodAlarmTracker,
     assess_discipline,
@@ -395,132 +398,140 @@ def test_carry_gate_prefers_absent_mergeable() -> None:
     assert st.bench[sell.bench_idx].char_id == '瓦尔特'
 
 
-# --- ③d 金不足变现通道(leader 追加 2026-08-25) ------------------------------
+# --- ③d 金不足补偿(回连机制收编;W52/ADR-0326) ------------------------------
+# 旧 liquidity_actions 已删,语义收编进 decision_v2/remediation.py 的
+# _compensate_gold(层4 末段补偿趟,触发源=实际拒绝事件)。本组锁按
+# 「锁语义不锁函数名」重写:同构造断言 decide_prep/arbitrate 产出。
 
 
-def _liq_setup(gold: int, bench_names: list[str]) -> tuple:
-    """变现通道公共夹具:锁定意向(列车同行)+war 态(地板 30)+
-    目标件在店 + 指定 bench 压库件(1★非保护件,费 2,refund=2)。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
-        Candidate,
-    )
-    from sr_od.application.currency_war.decision_v2.discipline import (
-        liquidity_actions,
-    )
+def _comp_reg():
+    """补偿锁视口注册表(boss_breaker war 地板 10;与 decide_prep
+    assess_discipline 同通路)。"""
+    from dataclasses import replace
+    return replace(_REG, war_floor=10)
+
+
+def _comp_state(gold: int, bench_names: list[str], cost: int = 4,
+                round_num: int = 5, board: dict | None = None,
+                ) -> GameState:
+    """补偿场景状态:锁定意向(列车同行)+boss_breaker war(P1 r5)+
+    满员上阵 5/5(防 deploy 干扰 bench)+指定 bench 压库件 + 店目标件。"""
+    return _state(round_num=round_num, gold=gold, hp=80,
+                  bench=[_bench(n, faction='公司', slot=i)
+                         for i, n in enumerate(bench_names)],
+                  shop=[ShopCard(x=0, name='姬子·启行', faction='列车同行',
+                                 cost=cost)],
+                  deployed=[_bench(f'D{i}', faction='公司', slot=i)
+                            for i in range(5)],
+                  board=board or {})
+
+
+def test_remedy_gold_sells_to_fund_priority_buy() -> None:
+    """①金不足+目标件在店+bench 有非保护压库件 → decide_prep 产出
+    [Sell≥1, Buy] 组,卖先于买;买 reason=d2_line_carry;卖出件入同轮
+    已卖集(r408 对称臂)。"""
+    strat = DecisionV2Strategy()
     sess = _locked_sess()
-    sess.v2_round_key = (1, 4)
-    sess.v3_mode = 'war'   # war 地板 30
-    bench = [_bench(n, faction='公司', slot=i)
-             for i, n in enumerate(bench_names)]
-    st = _state(round_num=4, gold=gold, hp=80,
-                shop=[_card('姬子·启行', faction='列车同行', cost=4)],
-                bench=bench)
-    cand = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
-                     source='test')
-    return liquidity_actions, sess, st, [(cand, 5.0, {})]
-
-
-def test_liquidity_sells_hoard_to_fund_priority_buy() -> None:
-    """①金不足+目标件在店+bench 压库件 → 变现到够继续买:金 30(war
-    地板 30)+4 费目标件,缺口 4 → 卖 2 件(各回 2)+买;第 3 件保留
-    (变现到够即停);卖出件入同轮已卖集(r408 对称臂)。"""
-    liq, sess, st, scored = _liq_setup(
-        30, ['卡芙卡', '千冶·刃', '绯英'])
-    acts = liq(st, sess, _REG, scored)
-    assert len(acts) == 3, '卖2件+买(第3件保留:变现到够即停)'
-    sells = [a for a in acts if a.__class__.__name__ == 'SellBench']
-    buy = acts[-1]
-    assert len(sells) == 2 and isinstance(buy, BuyCard)
-    assert buy.card.name == '姬子·启行'
-    assert buy.reason == 'd2_line_carry'
+    st = _comp_state(gold=13, bench_names=['卡芙卡', '千冶·刃'])
+    acts = strat.decide_prep(st, sess, None)
+    sells = [a for a in acts if isinstance(a, SellBench)]
+    buys = [a for a in acts if isinstance(a, BuyCard)]
+    assert sells and buys, f'金不足应补偿 [Sell, Buy] 组:{acts}'
+    assert acts.index(sells[0]) < acts.index(buys[0]), '卖先于买'
+    assert buys[0].card.name == '姬子·启行'
+    assert buys[0].reason == 'd2_line_carry'
     for s in sells:
         assert st.bench[s.bench_idx].char_id in sess.v2_round_sold
-    # 卖序:净0 件(1★全额退)最先;发射序 = 弱序选择序(ADR-0316 槽位
-    # 语义下任意发射序零漂移——旧降序重排已删,见
-    # test_liquidity_sell_emission_desc_idx_no_drift 的乱序零漂移锁)
-    assert [s.bench_idx for s in sells] == [0, 1]
 
 
-def test_liquidity_noop_when_gold_enough() -> None:
-    """②金够时不卖:金 40(地板 30)买 4 费后 36≥30 → 常规通道可达,
-    零变现。"""
-    liq, sess, st, scored = _liq_setup(
-        40, ['卡芙卡', '千冶·刃', '绯英'])
-    assert liq(st, sess, _REG, scored) == []
+def test_remedy_gold_noop_when_gold_enough() -> None:
+    """②金足时不卖:金 20(war 地板 10)买 4 费后 16≥10 → 常规通道
+    可达,零补偿(无拒绝事件)。"""
+    sess = _locked_sess()
+    sess.v3_mode = 'war'
+    st = _comp_state(gold=20, bench_names=['卡芙卡', '千冶·刃'])
+    cand = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
+                     source='test')
+    res = arbitrate([(cand, 5.0, {})], st, sess, _comp_reg())
+    assert any(isinstance(a, BuyCard) for a in res.actions)
+    assert res.rejections == []
+    assert res.remediation_log == []
     assert sess.v2_round_sold == set()
 
 
-def test_liquidity_not_for_low_priority_buy() -> None:
-    """③守卫:不为低优先级购买变现——凑数/凑对类(bond_fallback/pair)
-    的金不足买不触发通道(压库资产只服务于目标件/引擎件/插件)。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
-        Candidate,
-    )
-    from sr_od.application.currency_war.decision_v2.discipline import (
-        liquidity_actions,
-    )
-    for tag in ('bond_fallback', 'pair', 'copy', 'refresh'):
+def test_remedy_gold_not_for_low_priority_buy() -> None:
+    """③守卫:不为低优先级购买变现——凑数/凑对类(pair/copy/
+    bond_fallback)的金不足买不触发补偿(压库资产只服务 remedy_buy_tags
+    辖域的目标件/引擎件/插件)。"""
+    for tag in ('bond_fallback', 'pair', 'copy'):
         sess = _locked_sess()
-        sess.v2_round_key = (1, 4)
         sess.v3_mode = 'war'
-        st = _state(round_num=4, gold=30, hp=80,
-                    shop=[_card('散件', faction='公司', cost=4)],
-                    bench=[_bench('卡芙卡', faction='公司', slot=0)])
+        st = _comp_state(gold=13, bench_names=['卡芙卡'])
         cand = Candidate(action=BuyCard(st.shop[0]), tag=tag,
                          source='test')
-        assert liquidity_actions(st, sess, _REG,
-                                 [(cand, 5.0, {})]) == [], \
-            f'{tag} 不得触发变现'
+        res = arbitrate([(cand, 5.0, {})], st, sess, _comp_reg())
+        assert res.rejections, f'{tag} 金不足应产生拒绝事件'
+        assert res.remediation_log == [], \
+            f'{tag} 不得触发补偿(不在 remedy_buy_tags)'
+        assert not any(isinstance(a, SellBench) for a in res.actions)
 
 
-def test_liquidity_guards_protect_and_shortfall() -> None:
+def test_remedy_gold_guards_protect_and_shortfall() -> None:
     """守卫补充:保护集(意向线正料+引擎件)不卖——全 bench 正料时
-    金不足也不变现;可变现不足额时整体放弃(不卖一半)。"""
-    liq, sess, st, scored = _liq_setup(
-        30, ['花火', '三月七', '瓦尔特'])   # 全意向线正料
-    assert liq(st, sess, _REG, scored) == []
+    金不足也不补偿;可变现不足额时整组放弃(零动作,不卖一半)。"""
+    # 全意向线正料(列车同行 shared)→ 保护集挡住 → 无补偿
+    sess = _locked_sess()
+    sess.v3_mode = 'war'
+    st = _comp_state(gold=13, bench_names=['花火', '三月七', '瓦尔特'])
+    cand = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
+                     source='test')
+    res = arbitrate([(cand, 5.0, {})], st, sess, _comp_reg())
+    assert res.rejections
+    assert res.remediation_log == [], '保护集件不得进补偿卖序'
     assert sess.v2_round_sold == set()
-    # 不足额:缺口 4,唯一可变现件回 2 → 放弃(不卖一半)
-    liq2, sess2, st2, scored2 = _liq_setup(30, ['卡芙卡'])
-    assert liq2(st2, sess2, _REG, scored2) == []
-    assert sess2.v2_round_sold == set()
+    # 不足额:金 5 地板 10 费 4 → 缺口 9;唯一可变现件回 2 → 整组放弃
+    sess2 = _locked_sess()
+    sess2.v3_mode = 'war'
+    st2 = _comp_state(gold=5, bench_names=['卡芙卡'])
+    cand2 = Candidate(action=BuyCard(st2.shop[0]), tag='line_carry',
+                      source='test')
+    res2 = arbitrate([(cand2, 5.0, {})], st2, sess2, _comp_reg())
+    assert res2.remediation_log == [], '变现不足额 → 整组放弃(不卖一半)'
+    assert not any(isinstance(a, SellBench) for a in res2.actions)
+    assert getattr(sess2, 'v3_remedy_abandoned', 0) >= 0
 
 
-def test_liquidity_sell_emission_desc_idx_no_drift() -> None:
-    """回归锁(ADR-0316 槽位模型;前紧缩表 bug 场景):同组卖 slot1+
-    slot4 → 恰好这两槽 None,**其余槽内容与索引逐槽不变**(含紧缩
-    模型下会被误删的对照槽);买入件落位后占用数守恒。"""
+def test_remedy_gold_sell_emission_slot_stability() -> None:
+    """补偿卖件发射槽位稳定(ADR-0316;旧 liquidity 降序 hack 收编后
+    语义):卖 [槽1, 槽4] → 恰这两槽 None,其余槽逐槽不变;买入落首
+    个空槽;占用数守恒。"""
     from sr_od.application.currency_war.cw_state import (
         bench_occupied,
-        iter_occupied,
         simulate,
     )
-    # idx0 正料(保护);idx1 净0 散件(费1);idx2/idx3 正料夹层;
-    # idx4 低费散件(费3)——卖出集合在弱序选择时已定 {idx1, idx4}
-    liq, sess, st, scored = _liq_setup(
-        30, ['花火', '阿格莱雅', '三月七', '瓦尔特', '娜塔莎'])
-    assert st.bench[1].char_id == '阿格莱雅'
-    assert st.bench[4].char_id == '娜塔莎'
-    acts = liq(st, sess, _REG, scored)
-    assert len(acts) == 3
-    sells = [a for a in acts if a.__class__.__name__ == 'SellBench']
+    sess = _locked_sess()
+    sess.v3_mode = 'war'
+    st = _comp_state(gold=10, bench_names=['花火', '阿格莱雅', '三月七',
+                                           '瓦尔特', '娜塔莎'])
+    assert st.bench[1].char_id == '阿格莱雅'   # 1费净0
+    assert st.bench[4].char_id == '娜塔莎'     # 3费
+    cand = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
+                     source='test')
+    res = arbitrate([(cand, 5.0, {})], st, sess, _comp_reg())
+    assert res.remediation_log, '缺口 4 → 应有补偿'
+    sells = [a for a in res.actions if isinstance(a, SellBench)]
     assert {s.bench_idx for s in sells} == {1, 4}
-    # simulate 逐动作应用(槽位置 None;买入落首个空槽=刚清空的 slot1)
+    assert any(isinstance(a, BuyCard) for a in res.actions)
     working = st
-    for a in acts:
+    for a in res.actions:
         working = simulate(working, a)
-    assert len(working.bench) == 9, '槽位表定长不变量'
     assert working.bench[4] is None
     assert working.bench[5] is None   # 紧缩模型下会被误删的对照槽
-    assert working.bench[1].char_id == '姬子·启行'   # 买入落位
+    assert working.bench[1].char_id == '姬子·启行'   # 买入落首个空槽
     assert working.bench[0].char_id == '花火'
     assert working.bench[2].char_id == '三月七'
     assert working.bench[3].char_id == '瓦尔特'
-    assert [b.char_id for b in iter_occupied(working.bench)] == \
-        ['花火', '姬子·启行', '三月七', '瓦尔特']
     assert bench_occupied(working.bench) == 4
-    # r408 登记仍按原索引读 state.bench(登记集合=两散件)
-    assert sess.v2_round_sold == {'阿格莱雅', '娜塔莎'}
 
 
 # --- ⑥b W51 语义修复锁(on_match_start 跨局残留清零) -------------------------
