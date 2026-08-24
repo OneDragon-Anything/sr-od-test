@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """r413(ADR-0276/0277/0278)锁:sim 修复批五件。
 
 - 件1(ADR-0276):3合1 merge 接入 sim 执行层——同名×3 自动合成
@@ -27,7 +26,6 @@ from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.strategies.line_strategy import (
     LineStrategy,
 )
-
 
 # --- 件1:merge 接入 -------------------------------------------------------
 
@@ -255,17 +253,19 @@ def test_boss_win_calibration_bidirectional() -> None:
 def test_formation_hp_coupling_bidirectional() -> None:
     """坏:成型局 hp 不高于未达局(≤0)→ 报;好:显著为正 → 过。
 
-    ADR-0286 小批护栏:检查在任一侧 <5 局时只披露不判定(CI smoke
-    n=25 的 formed_n=2 噪声假红)——本锁两侧各 6 局(≥5,判定态)。"""
+    ADR-0286 小批护栏:检查在任一侧 <20 局时只披露不判定(ADR-0312
+    W50 从 <5 提到 <20:CI smoke n=25 两度噪声假红[formed_n=2 /
+    13:12 侧 −4.11],v7 同批 n=300 真判 +5.39 绿)——本锁两侧各
+    20 局(≥20,判定态)。"""
     formed = [[_lrow(rn=9, hp=40, board_factions={'列车同行': 2,
                                                   '仙舟': 3})]
-              for _ in range(6)]
+              for _ in range(20)]
     unformed = [[_lrow(rn=9, hp=45, board_factions={})]
-                for _ in range(6)]
+                for _ in range(20)]
     rep = chk.check_formation_hp_coupling_sentinel(formed + unformed)
     assert rep['violations'] == 1, '成型局更短命 = 价值链仍断'
     unformed2 = [[_lrow(rn=9, hp=10, board_factions={})]
-                 for _ in range(6)]
+                 for _ in range(20)]
     rep2 = chk.check_formation_hp_coupling_sentinel(formed + unformed2)
     assert rep2['violations'] == 0 and rep2['diff'] > 0
     # 护栏本身:两侧 1 局(小批)= 只披露不判定

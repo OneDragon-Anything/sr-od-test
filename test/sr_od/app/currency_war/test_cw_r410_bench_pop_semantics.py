@@ -54,24 +54,54 @@ def test_deployed_accumulates_monotonic() -> None:
 
 
 def test_board_is_deployed_faction_counts() -> None:
-    """state.board = deployed 主阵营聚合(生产 DeployMove 口径)。"""
+    """state.board = deployed 羁绊全集聚合(ADR-0312 W50 口径;
+    per-unit 单一源 unit_bond_tags——本锁锁「sim 维护 board ← 聚合」
+    的接线,per-unit 值由 test_cw_w50_board_caliber 直锁)。"""
+    from sr_od.application.currency_war.cw_bond_equips import unit_bond_tags
     r = simulate_p1(7, pool='fallback')
     for row in r.ledger:
-        dep = row['state']['deployed']
         expect: dict[str, int] = {}
-        for d in dep:
+        for d in row['state']['deployed']:
+            tags = unit_bond_tags(_ns(d))
+            if tags:
+                for t in tags:
+                    expect[t] = expect.get(t, 0) + 1
+                continue
             f = d.get('faction') or ''
             if f and f != '?':
                 expect[f] = expect.get(f, 0) + 1
         assert row['state']['board'] == expect
 
 
-def test_board_counts_of_primary_faction_only() -> None:
-    """_board_counts_of:主阵营逐件计数;未识别/『?』不计。"""
+def _ns(d: dict):
+    from types import SimpleNamespace
+    return SimpleNamespace(
+        char_id=d.get('char_id') or '',
+        position_pref=d.get('position_pref') or 'back',
+        faction=d.get('faction') or '',
+        equips=d.get('equips') or [])
+
+
+def test_board_counts_of_fullset_caliber() -> None:
+    """_board_counts_of:羁绊全集(factions+flows+independent+星徽装备
+    贡献;ADR-0312 W50);未识别回退 faction 单标签(空/'?' 不计)。"""
+    from sr_od.application.currency_war.cw_chars import CHARACTERS
     dep = [
         BenchChar(slot=1, char_id='希儿', faction='量子同频'),
         BenchChar(slot=2, char_id='银狼', faction='量子同频'),
         BenchChar(slot=3, char_id='', faction='?'),
+        BenchChar(slot=4, char_id='银狼LV.999', faction='星核猎手',
+                  equips=['欢愉卡带']),
     ]
-    assert _board_counts_of(dep) == {'量子同频': 2}
+    expect: dict[str, int] = {}
+    for d in dep[:2] :
+        ch = CHARACTERS[d.char_id]
+        for t in (*ch.factions, *ch.flows, ch.independent):
+            if t:
+                expect[t] = expect.get(t, 0) + 1
+    # 银狼LV.999 = 星核猎手 + 欢愉(flow) + 头号玩家(独立)+ 卡带欢愉 +1
+    expect['星核猎手'] = expect.get('星核猎手', 0) + 1
+    expect['欢愉'] = expect.get('欢愉', 0) + 2
+    expect['头号玩家'] = expect.get('头号玩家', 0) + 1
+    assert _board_counts_of(dep) == expect
     assert _board_counts_of([]) == {}

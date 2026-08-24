@@ -41,15 +41,14 @@ def _char(name: str, slot: int = 0, row: str = 'back') -> BenchChar:
 
 
 def _state_with_deployed(names: list[str]) -> GameState:
-    """构造 deployed + 同步 board 的单帧(char 身份=注册表真值)。"""
+    """构造 deployed + 同步 board 的单帧(char 身份=注册表真值)。
+
+    ADR-0312(W50):_recount_board 已是**全集口径**(factions+flows+
+    independent)——旧「首阵营聚合后手工补多阵营」的补丁循环随之删除
+    (保留会双计)。"""
     st = GameState()
     st.deployed = [_char(n, slot=i) for i, n in enumerate(names)]
     st.board = _recount_board(st.deployed)
-    # _recount_board 只按首阵营聚合;多羁绊角色(饮月=仙舟+列车)按身份全集补齐
-    for c in st.deployed:
-        ch = CHARACTERS[c.char_id]
-        for f in (ch.factions or ())[1:]:
-            st.board[f] = st.board.get(f, 0) + 1
     return st
 
 

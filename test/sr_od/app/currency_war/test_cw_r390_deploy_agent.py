@@ -48,13 +48,14 @@ def test_target_bridge_carry_channel() -> None:
 
 
 def test_depth_reads_deployed_not_bench() -> None:
-    """_deployable_depth 口径=st.deployed 长度(r390 变异差异死点)。"""
+    """_deployable_depth 口径=Σboard(W50 ADR-0312;空板=0,
+    bench 有件不产生板深——r390「不数 bench」语义的现行形态)。"""
     from sr_od.application.currency_war.cw_sim import _deployable_depth
     st = GameState()
     st.level = 5
     st.bench = _bench(('三月七', '列车同行'), ('三月七', '列车同行'),
-                      ('艾丝妲', '银河学者'))   # 旧口径会数 2(对)
-    st.deployed = []            # 新口径:0(没上场就是 0)
+                      ('艾丝妲', '银河学者'))   # bench 有件不产生板深
+    st.deployed = []            # board 空 → 0(没上场就是 0)
     assert _deployable_depth(st) == 0
 
 

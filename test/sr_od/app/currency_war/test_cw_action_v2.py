@@ -87,8 +87,9 @@ def test_comp_transaction_full_swap_no_half_state():
     from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
     assert trio == set(_CORE_TRIO)
     assert len(out.deployed) == 3
-    # 新档全员在场:board = 仙舟3(丹恒·饮月双阵营计主阵营仙舟)
-    assert out.board == {'仙舟': 3}
+    # 新档全员在场:仙舟 3(ADR-0312 W50 全集口径——board 另含铁三角的
+    # 流派/副阵营键,精确等值由下行 _recount_board 一致性锁辖)
+    assert out.board.get('仙舟') == 3
     # 无半档:board 与 deployed 聚合一致;旧档/余料不在 bench 不在场上
     assert out.board == _recount_board(out.deployed)
     assert out.bench == []
@@ -210,13 +211,36 @@ def test_mutate_bench_deployed_v2_actions():
 
 # ---------- 4. checks 渗透(含变异探针:去门必须涌现违规) ----------
 
+def _agg(dep: list[dict]) -> dict[str, int]:
+    """账本行 deployed 的羁绊全集聚合(ADR-0312 W50;unit_bond_tags 同源)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.cw_bond_equips import unit_bond_tags
+    out: dict[str, int] = {}
+    for d in dep:
+        ns = SimpleNamespace(
+            char_id=d.get('char_id') or '',
+            position_pref=d.get('position_pref') or 'back',
+            faction=d.get('faction') or '',
+            equips=d.get('equips') or [])
+        tags = unit_bond_tags(ns)
+        if tags:
+            for t in tags:
+                out[t] = out.get(t, 0) + 1
+            continue
+        f = d.get('faction')
+        if f and f != '?':
+            out[f] = out.get(f, 0) + 1
+    return out
+
+
 def _row(actions: list[dict], board: dict | None = None,
          deployed: list[dict] | None = None) -> dict:
     dep = deployed if deployed is not None else [
         {'char_id': '藿藿', 'faction': '仙舟', 'slot': 0,
          'position_pref': 'back'}]
     return {'plane': 1, 'round_num': 3, 'state': {
-        'board': board if board is not None else {'仙舟': 1},
+        'board': board if board is not None else _agg(dep),
         'deployed': dep}, 'actions': actions, 'sim': {}}
 
 
@@ -305,12 +329,9 @@ def test_sim_explicit_action_skips_fence_with_ledger():
     types = [a.get('__type__') for a in row['actions']]
     assert 'skip_fence' in types
     assert (row.get('sim') or {}).get('fence_skipped') is True
-    agg: dict[str, int] = {}
-    for d in (row.get('state') or {}).get('deployed') or []:
-        f = d.get('faction')
-        if f and f != '?':
-            agg[f] = agg.get(f, 0) + 1
-    assert agg == dict((row.get('state') or {}).get('board') or {})
+    # board 一致(ADR-0312 W50 全集口径;_agg 与 unit_bond_tags 同源)
+    assert _agg((row.get('state') or {}).get('deployed') or []) \
+        == dict((row.get('state') or {}).get('board') or {})
     # 其余轮无 skip_fence(围栏照常)
     assert sum(1 for row in res.ledger
                if any(a.get('__type__') == 'skip_fence'
