@@ -1,5 +1,10 @@
 """W35 载体批锁(decision_v2 唯一策略载体 + 纪律族移植 + registry 双注册)。
 
+W51 语义修复批(R1 审查 leader 裁决):报警分支位面末 ALL IN 语义锁
+(两向)/三臂窗口单位(战斗节点计数器,跨位面重置)/处置梯度①时限+
+[19] 血边际/carry_gate 种子死锁豁免+absent_mergeable 弱序/
+on_match_start 跨局残留清零——原「锁实现字面」的测试改语义锁。
+
 锁定对象(ADR-0309):
 ① 继承解耦:DecisionV2Strategy 不再继承 LineStrategy(独立
    DefaultCwStrategy 实现;decision_v2 包不 import line_strategy);
@@ -152,19 +157,37 @@ def test_update_target_round_guard_no_miss_inflation() -> None:
 # --- ③ 纪律族逐条 ------------------------------------------------------------
 
 
-def test_blood_alarm_does_not_trigger_allin() -> None:
-    """hp 报警语义(点4):三臂报警激活 → 处置梯度(war+保血通道),
-    **不触发 ALL IN**——地板保持(allin=False;仲裁地板非零)。"""
+def _alarm_tracker() -> BloodAlarmTracker:
+    """臂①激活且处置梯度已升级到②的 tracker(连续 3 场战斗净掉血
+    ≥10;生产节点值「普通战斗」——报警激活后第 2 个战斗节点窗耗尽)。"""
     tracker = BloodAlarmTracker()
-    tracker.record('battle', 80, 60, 1)   # 单场 -20(打输)
-    tracker.record('battle', 60, 38, 2)   # 连续第 2 场打输(臂①)
-    assert tracker.alarm_active()
-    sess = _sess(v3_alarm=tracker, node_type_current='battle')
-    st = _state(round_num=5, gold=55)
-    disc = assess_discipline(st, sess, _REG)
-    assert disc.coverage == 'blood_alarm'
-    assert disc.allin is False, 'hp 报警不得触发 ALL IN(点4 报警语义)'
-    reg_view = disc.arbiter_registry(_REG)
+    tracker.record('普通战斗', 80, 60, 1)   # 单场 -20(打输代理)
+    tracker.record('普通战斗', 60, 38, 2)   # 连续第 2 场(臂①)→ 报警激活
+    tracker.record('普通战斗', 38, 16, 3)   # ①自然窗耗尽未达标 → ②升级
+    return tracker
+
+
+def test_blood_alarm_semantics_allin_only_plane_last() -> None:
+    """hp 报警语义(点4/[18],W51 语义锁):报警激活 → 处置梯度,
+    **报警不是 ALL IN 的触发**——非位面末 allin=False 且地板保持;
+    位面末最后一战(boss+轮=位面节点数)→ allin=True(地板清零,
+    [18]/点4 授权的报警处置梯度③终点,与 emergency/boss_breaker 同式)。"""
+    sess = _sess(v3_alarm=_alarm_tracker(),
+                 node_type_current='boss')
+    # 正向:报警 + 位面末 boss → ALL IN 通
+    disc = assess_discipline(_state(round_num=9, gold=55, hp=80),
+                             sess, _REG)
+    assert disc.coverage == 'blood_alarm'   # 覆盖序:报警 > boss_breaker
+    assert disc.allin is True, '报警态位面末必须开通 ALL IN([18] 授权)'
+    assert disc.arbiter_registry(_REG).war_floor == 0
+    # 反向:报警 + 非位面末 → 不 ALL IN,地板保持
+    sess_nb = _sess(v3_alarm=_alarm_tracker(),
+                    node_type_current='battle')
+    disc2 = assess_discipline(_state(round_num=5, gold=55, hp=80),
+                              sess_nb, _REG)
+    assert disc2.coverage == 'blood_alarm'
+    assert disc2.allin is False, '报警不得单独触发 ALL IN(点4 报警语义)'
+    reg_view = disc2.arbiter_registry(_REG)
     assert reg_view.interest_floor == _REG.interest_floor != 0
 
 
@@ -201,18 +224,79 @@ def test_emergency_coverage_and_floor() -> None:
 
 
 def test_blood_alarm_hard_node_allows_refresh() -> None:
-    """保血通道(点12):报警+遭遇/boss 节点 → war 态放行 refresh
-    (弃息 D 保血);非硬节点不放行。"""
-    tracker = BloodAlarmTracker()
-    tracker.record('battle', 80, 60, 1)
-    tracker.record('battle', 60, 38, 2)
-    sess = _sess(v3_alarm=tracker, node_type_current='encounter')
-    disc = assess_discipline(_state(round_num=5), sess, _REG)
+    """保血通道(点12):报警已升级(②弃息 D)+遭遇/boss 节点 → war 态
+    放行 refresh(弃息 D 保血);非硬节点不放行。"""
+    sess = _sess(v3_alarm=_alarm_tracker(), node_type_current='encounter')
+    disc = assess_discipline(_state(round_num=5, hp=80), sess, _REG)
     assert disc.allow_refresh_in_war is True
     assert 'refresh' in disc.arbiter_registry(_REG).war_tags
-    sess2 = _sess(v3_alarm=tracker, node_type_current='奖励')
-    disc2 = assess_discipline(_state(round_num=5), sess2, _REG)
+    sess2 = _sess(v3_alarm=_alarm_tracker(), node_type_current='奖励')
+    disc2 = assess_discipline(_state(round_num=5, hp=80), sess2, _REG)
     assert disc2.allow_refresh_in_war is False
+
+
+# --- ③b W51 语义修复锁(三臂窗口单位/处置梯度时限/血边际) -------------------
+
+
+def test_blood_alarm_non_battle_nodes_not_counted_nor_reset() -> None:
+    """战斗语义(点4 冻结):非战斗节点不入窗、不清臂——臂①连续计数
+    跨非战斗节点保持(战斗失败 → 奖励关 → 战斗失败 → 仍臂①触发)。"""
+    t = BloodAlarmTracker()
+    t.record('普通战斗', 80, 68, 1)          # loss 12 → consec 1
+    t.record('奖励', 0, 0, 2)                # 非战斗:不计入不重置
+    assert t.consec_battle_fails == 1
+    assert len(t.recent_losses) == 1
+    t.record('普通战斗', 68, 50, 3)          # loss 18 → consec 2
+    assert t.alarm_active()
+
+
+def test_blood_alarm_plane_crossing_resets_arms() -> None:
+    """窗口单位=连续战斗节点计数器,**跨位面重置**(W51:慢性臂不再
+    按轮漂移横跨整个位面——新位面不带旧位面掉血趋势)。"""
+    t = BloodAlarmTracker()
+    t.record('普通战斗', 80, 60, 1, plane=1)   # consec 1
+    t.record('普通战斗', 60, 38, 2, plane=1)   # consec 2 → 报警激活
+    assert t.alarm_active()
+    t.record('普通战斗', 38, 20, 10, plane=2)  # 位面变更 → 三臂全清后计本节点
+    assert t.consec_battle_fails == 1
+    assert len(t.recent_losses) == 1
+    assert not t.alarm_active()
+    assert t.alarm_battles == 0   # 梯度计时一并重置
+
+
+def test_blood_alarm_gradient_natural_window_then_escalate() -> None:
+    """处置梯度①时限(S4 上界 1 个战斗节点,W51 补):报警激活后首个
+    战斗节点窗内 = ①自然补强(mode=economy,不弃息、硬节点也不放行
+    refresh);窗耗尽未达标(下一战斗节点后报警仍在)→ ②弃息 D 保血
+    (war+硬节点放行 refresh)。"""
+    t = BloodAlarmTracker()
+    t.record('普通战斗', 80, 60, 1)          # consec 1
+    t.record('普通战斗', 60, 38, 2)          # consec 2 → 报警,alarm_battles=1
+    sess = _sess(v3_alarm=t, node_type_current='遭遇')
+    disc = assess_discipline(_state(round_num=5, hp=80), sess, _REG)
+    assert disc.coverage == 'blood_alarm' and disc.mode == 'economy', \
+        '①自然补强窗内不弃息'
+    assert disc.allow_refresh_in_war is False
+    t.record('普通战斗', 38, 16, 3)          # 窗耗尽仍未达标,alarm_battles=2
+    disc2 = assess_discipline(_state(round_num=6, hp=60), sess, _REG)
+    assert disc2.mode == 'war' and disc2.allow_refresh_in_war is True, \
+        '① 1 个战斗节点未达标 → 直入②弃息 D(血边际 60≥40,纯计时器升级)'
+
+
+def test_blood_alarm_low_hp_margin_skips_natural_window() -> None:
+    """[19]② 血边际变量(W51 接):hp<BLOOD_MARGIN_LOW_HP(40)时处置
+    梯度本就生效——跳过①自然补强窗直入②(war+保血通道)。"""
+    from sr_od.application.currency_war.decision_v2.discipline import (
+        BLOOD_MARGIN_LOW_HP,
+    )
+    t = BloodAlarmTracker()
+    t.record('普通战斗', 80, 60, 1)
+    t.record('普通战斗', 60, 38, 2)          # alarm_battles=1(①窗内)
+    sess = _sess(v3_alarm=t, node_type_current='遭遇')
+    disc = assess_discipline(
+        _state(round_num=5, hp=BLOOD_MARGIN_LOW_HP - 1), sess, _REG)
+    assert disc.mode == 'war', '血边际低 → 不等①自然窗,梯度直接生效'
+    assert disc.allow_refresh_in_war is True
 
 
 def test_carry_gate_demotes_protection_and_buys_core() -> None:
@@ -243,6 +327,236 @@ def test_carry_gate_noop_when_bench_not_full() -> None:
                 shop=[_card('姬子·启行', faction='列车同行', cost=4)],
                 bench=[_bench('杂件0', faction='公司')])
     assert carry_gate_actions(st, sess, _REG) == []
+
+
+# --- ③c W51 语义修复锁(carry_gate 种子死锁豁免/absent_mergeable 弱序) ------
+
+
+def test_carry_gate_seed_deadlock_exemption() -> None:
+    """种子死锁豁免(v1 _seed_cands 补移植,W51):bench 满+全保护件+
+    唯一可卖=种子(ADR-0289 §5 年龄窗)→ 兜底放行仍腾位(不腾则
+    carry 死锁);有非种子直接可卖件时走直接通道不降保护集。"""
+    # 场景 1:全 bench 为种子(保护件,2 轮窗内 cnt=1;各名 2 份,
+    # 非超上限/非 3合1 完整份——纯靠豁免放行)
+    from sr_od.application.currency_war.cw_system_cards import (
+        engine_char_names,
+    )
+    _names = (['花火', '花火', '三月七', '三月七', '瓦尔特', '瓦尔特']
+              + sorted(n for n in engine_char_names()
+                       if n not in ('姬子·启行', '三月七', '花火', '瓦尔特'))[:3])
+    assert len(_names) >= 9
+    sess = _locked_sess()
+    sess.v2_round_key = (1, 4)
+    sess.v2_seed_bought = dict.fromkeys(set(_names), ((1, 3), 1))
+    bench = [_bench(n, faction='欢愉', slot=i)
+             for i, n in enumerate(_names[:9])]
+    st = _state(round_num=4, gold=50,
+                shop=[_card('姬子·启行', faction='列车同行', cost=4)],
+                bench=bench)
+    acts = carry_gate_actions(st, sess, _REG)
+    assert len(acts) == 2, '唯一可卖=种子 → 豁免放行(防 carry 死锁)'
+    sell, buy = acts
+    assert sell.__class__.__name__ == 'SellBench'
+    assert isinstance(buy, BuyCard) and buy.card.name == '姬子·启行'
+    assert st.bench[sell.bench_idx].char_id in sess.v2_round_sold
+    # 场景 2(对照):存在非种子、非保护、非板面阵营的可卖件 → 直接
+    # 卖通道已解,不走降保护集
+    sess2 = _locked_sess()
+    sess2.v2_round_key = (1, 4)
+    sess2.v2_seed_bought = {'花火': ((1, 3), 1)}
+    bench2 = ([_bench('杂件', faction='公司', slot=0)]
+              + [_bench('花火', faction='欢愉', slot=i)
+                 for i in range(1, 9)])
+    st2 = _state(round_num=4, gold=50,
+                 shop=[_card('姬子·启行', faction='列车同行', cost=4)],
+                 bench=bench2)
+    assert carry_gate_actions(st2, sess2, _REG) == []
+
+
+def test_carry_gate_prefers_absent_mergeable() -> None:
+    """absent_mergeable 弱序(v1 r416b 补移植,W51):上场份缺席的角色
+    架内 ≥2 加权副本 = 合成份缺席场冗余,弱序升为最弱级——优先于
+    普通保护件(1 份)被卖。"""
+    sess = _locked_sess()
+    sess.v2_round_key = (1, 4)
+    # 瓦尔特 2★(加权副本 2,deployed 无同名 → absent_mergeable)
+    # vs 花火×8(超上限冗余 cp=8)——两者均最弱级,按 cp 取小 → 瓦尔特;
+    # 修复前(absent_mergeable 缺席)瓦尔特 key=(protect,1,2) 排
+    # 花火 (protect,0,8) 之后 → 卖花火(锁旧行为的差异面)
+    bench = ([_bench('瓦尔特', faction='列车同行', slot=0, star=2)]
+             + [_bench('花火', faction='欢愉', slot=i)
+                for i in range(1, 9)])
+    st = _state(round_num=4, gold=50,
+                shop=[_card('姬子·启行', faction='列车同行', cost=4)],
+                bench=bench)
+    acts = carry_gate_actions(st, sess, _REG)
+    assert len(acts) == 2
+    sell = acts[0]
+    assert st.bench[sell.bench_idx].char_id == '瓦尔特'
+
+
+# --- ③d 金不足变现通道(leader 追加 2026-08-25) ------------------------------
+
+
+def _liq_setup(gold: int, bench_names: list[str]) -> tuple:
+    """变现通道公共夹具:锁定意向(列车同行)+war 态(地板 30)+
+    目标件在店 + 指定 bench 压库件(1★非保护件,费 2,refund=2)。"""
+    from sr_od.application.currency_war.decision_v2.candidates import (
+        Candidate,
+    )
+    from sr_od.application.currency_war.decision_v2.discipline import (
+        liquidity_actions,
+    )
+    sess = _locked_sess()
+    sess.v2_round_key = (1, 4)
+    sess.v3_mode = 'war'   # war 地板 30
+    bench = [_bench(n, faction='公司', slot=i)
+             for i, n in enumerate(bench_names)]
+    st = _state(round_num=4, gold=gold, hp=80,
+                shop=[_card('姬子·启行', faction='列车同行', cost=4)],
+                bench=bench)
+    cand = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
+                     source='test')
+    return liquidity_actions, sess, st, [(cand, 5.0, {})]
+
+
+def test_liquidity_sells_hoard_to_fund_priority_buy() -> None:
+    """①金不足+目标件在店+bench 压库件 → 变现到够继续买:金 30(war
+    地板 30)+4 费目标件,缺口 4 → 卖 2 件(各回 2)+买;第 3 件保留
+    (变现到够即停);卖出件入同轮已卖集(r408 对称臂)。"""
+    liq, sess, st, scored = _liq_setup(
+        30, ['卡芙卡', '千冶·刃', '绯英'])
+    acts = liq(st, sess, _REG, scored)
+    assert len(acts) == 3, '卖2件+买(第3件保留:变现到够即停)'
+    sells = [a for a in acts if a.__class__.__name__ == 'SellBench']
+    buy = acts[-1]
+    assert len(sells) == 2 and isinstance(buy, BuyCard)
+    assert buy.card.name == '姬子·启行'
+    assert buy.reason == 'd2_line_carry'
+    for s in sells:
+        assert st.bench[s.bench_idx].char_id in sess.v2_round_sold
+    # 卖序:净0 件(1★全额退)最先;发射序 = 弱序选择序(ADR-0316 槽位
+    # 语义下任意发射序零漂移——旧降序重排已删,见
+    # test_liquidity_sell_emission_desc_idx_no_drift 的乱序零漂移锁)
+    assert [s.bench_idx for s in sells] == [0, 1]
+
+
+def test_liquidity_noop_when_gold_enough() -> None:
+    """②金够时不卖:金 40(地板 30)买 4 费后 36≥30 → 常规通道可达,
+    零变现。"""
+    liq, sess, st, scored = _liq_setup(
+        40, ['卡芙卡', '千冶·刃', '绯英'])
+    assert liq(st, sess, _REG, scored) == []
+    assert sess.v2_round_sold == set()
+
+
+def test_liquidity_not_for_low_priority_buy() -> None:
+    """③守卫:不为低优先级购买变现——凑数/凑对类(bond_fallback/pair)
+    的金不足买不触发通道(压库资产只服务于目标件/引擎件/插件)。"""
+    from sr_od.application.currency_war.decision_v2.candidates import (
+        Candidate,
+    )
+    from sr_od.application.currency_war.decision_v2.discipline import (
+        liquidity_actions,
+    )
+    for tag in ('bond_fallback', 'pair', 'copy', 'refresh'):
+        sess = _locked_sess()
+        sess.v2_round_key = (1, 4)
+        sess.v3_mode = 'war'
+        st = _state(round_num=4, gold=30, hp=80,
+                    shop=[_card('散件', faction='公司', cost=4)],
+                    bench=[_bench('卡芙卡', faction='公司', slot=0)])
+        cand = Candidate(action=BuyCard(st.shop[0]), tag=tag,
+                         source='test')
+        assert liquidity_actions(st, sess, _REG,
+                                 [(cand, 5.0, {})]) == [], \
+            f'{tag} 不得触发变现'
+
+
+def test_liquidity_guards_protect_and_shortfall() -> None:
+    """守卫补充:保护集(意向线正料+引擎件)不卖——全 bench 正料时
+    金不足也不变现;可变现不足额时整体放弃(不卖一半)。"""
+    liq, sess, st, scored = _liq_setup(
+        30, ['花火', '三月七', '瓦尔特'])   # 全意向线正料
+    assert liq(st, sess, _REG, scored) == []
+    assert sess.v2_round_sold == set()
+    # 不足额:缺口 4,唯一可变现件回 2 → 放弃(不卖一半)
+    liq2, sess2, st2, scored2 = _liq_setup(30, ['卡芙卡'])
+    assert liq2(st2, sess2, _REG, scored2) == []
+    assert sess2.v2_round_sold == set()
+
+
+def test_liquidity_sell_emission_desc_idx_no_drift() -> None:
+    """回归锁(ADR-0316 槽位模型;前紧缩表 bug 场景):同组卖 slot1+
+    slot4 → 恰好这两槽 None,**其余槽内容与索引逐槽不变**(含紧缩
+    模型下会被误删的对照槽);买入件落位后占用数守恒。"""
+    from sr_od.application.currency_war.cw_state import (
+        bench_occupied,
+        iter_occupied,
+        simulate,
+    )
+    # idx0 正料(保护);idx1 净0 散件(费1);idx2/idx3 正料夹层;
+    # idx4 低费散件(费3)——卖出集合在弱序选择时已定 {idx1, idx4}
+    liq, sess, st, scored = _liq_setup(
+        30, ['花火', '阿格莱雅', '三月七', '瓦尔特', '娜塔莎'])
+    assert st.bench[1].char_id == '阿格莱雅'
+    assert st.bench[4].char_id == '娜塔莎'
+    acts = liq(st, sess, _REG, scored)
+    assert len(acts) == 3
+    sells = [a for a in acts if a.__class__.__name__ == 'SellBench']
+    assert {s.bench_idx for s in sells} == {1, 4}
+    # simulate 逐动作应用(槽位置 None;买入落首个空槽=刚清空的 slot1)
+    working = st
+    for a in acts:
+        working = simulate(working, a)
+    assert len(working.bench) == 9, '槽位表定长不变量'
+    assert working.bench[4] is None
+    assert working.bench[5] is None   # 紧缩模型下会被误删的对照槽
+    assert working.bench[1].char_id == '姬子·启行'   # 买入落位
+    assert working.bench[0].char_id == '花火'
+    assert working.bench[2].char_id == '三月七'
+    assert working.bench[3].char_id == '瓦尔特'
+    assert [b.char_id for b in iter_occupied(working.bench)] == \
+        ['花火', '姬子·启行', '三月七', '瓦尔特']
+    assert bench_occupied(working.bench) == 4
+    # r408 登记仍按原索引读 state.bench(登记集合=两散件)
+    assert sess.v2_round_sold == {'阿格莱雅', '娜塔莎'}
+
+
+# --- ⑥b W51 语义修复锁(on_match_start 跨局残留清零) -------------------------
+
+
+def test_on_match_start_clears_cross_match_keys() -> None:
+    """W51:on_match_start 补清 v3_intention_key/v3_prev_hp——session
+    跨局复用时两局键不串:新局 (1,1) 首轮意向必须驱动(不被旧局同键
+    吞);三臂首 record 的 hp_before 不带旧局终值。"""
+    strat = DecisionV2Strategy()
+    sess = _sess()
+    # 旧局残留:轮键停在 (1,1)、prev_hp 带旧局终值、事件去重串旧局
+    sess.v3_intention_key = (1, 1)
+    sess.v3_prev_hp = 45
+    sess.v3_last_intention_event = 'lock'
+    strat.on_match_start(_state(), sess, None)
+    assert sess.v3_intention_key is None
+    assert sess.v3_prev_hp is None
+    assert sess.v3_last_intention_event == ''
+    # 行为面 1:新局 (1,1) 首轮意向必须驱动——核心在店 → 锁定
+    # (若旧键 (1,1) 残留,段级守卫误吞 → phase 停留初始态)
+    st = _state(round_num=1,
+                shop=[_card('姬子·启行', faction='列车同行', cost=4)])
+    strat.update_target(st, sess, None)
+    assert sess.v3_intention.phase == 'locked'
+    assert sess.v3_intention_key == (1, 1)
+    # 行为面 2:新局首结算的掉血不入窗(prev_hp 从本局首结算起算)
+    from sr_od.application.currency_war.cw_performance import RoundOutcome
+    sess2 = _sess()
+    strat.on_match_start(_state(), sess2, None)
+    obs = RoundOutcome(round_num=1, plane=1, node_type='普通战斗',
+                       comp_tag='?', hp_after=80, streak=0)
+    strat.on_round_end(_state(round_num=1), sess2, None, obs)
+    assert len(sess2.v3_alarm.recent_losses) == 0, \
+        '首结算无 hp_before(旧局终值已清)→ 不入窗'
+    assert sess2.v3_prev_hp == 80
 
 
 def test_catchup_coverage_level_gate() -> None:
@@ -330,3 +644,121 @@ def test_config_switch_field_exists() -> None:
         CurrencyWarConfig,
     )
     assert "strategy_id" in inspect.getsource(CurrencyWarConfig)
+
+
+# --- ⑦ F2 跨源共存锁(ADR-0316 槽位语义;W51 扩面批)--------------------------
+
+
+def test_cross_source_mixed_actions_slot_stability() -> None:
+    """F2(索引坐标系审查):decide_prep 五源拼装(演进/rollback/carry_gate/
+    liquidity/arbiter 采纳集)的所有 bench_idx 都基于同一原始 state.bench
+    生成,执行层按序消费——ADR-0316 槽位语义下任意发射序零漂移。
+
+    本锁模拟真实跨源混合动作组(卖集合覆盖 carry_gate/liquidity/arbiter
+    三个发射点,索引互不重叠、含夹层正料对照),逐动作 simulate 断言:
+    ① 每个 SellBench 执行时命中的恰是生成期指向的槽(名字比对);
+    ② 未卖槽内容逐槽不变(含紧缩模型下会被误删的对照槽);
+    ③ 买入落首个空槽(= 最早被卖空的槽);占用数守恒。
+    """
+    from sr_od.application.currency_war.cw_state import (
+        SellBench,
+        bench_occupied,
+        simulate,
+    )
+    # idx0 正料(保护,不卖);idx1 净0 散件(费1);idx2/idx3 正料夹层
+    # (不卖——跨源卖集合互不重叠的对照);idx4 低费散件(费3);
+    # idx5 引擎件(保护,不卖);idx6/idx7 压库散件(费2,arbiter 采纳卖)。
+    st = GameState(
+        round_num=4, gold=30, hp=80, level=5, plane=1,
+        bench=[
+            _bench('花火', faction='列车同行', slot=0),   # 正料
+            _bench('阿格莱雅', faction='公司', slot=1, star=1),  # 净0 费1
+            _bench('三月七', faction='列车同行', slot=2),   # 正料夹层
+            _bench('瓦尔特', faction='列车同行', slot=3),   # 正料夹层
+            _bench('娜塔莎', faction='公司', slot=4, star=1),  # 费3
+            _bench('姬子·启行', faction='列车同行', slot=5),  # 引擎件
+            _bench('千冶·刃', faction='公司', slot=6, star=1),  # 费2
+            _bench('绯英', faction='公司', slot=7, star=1),  # 费2
+        ],
+        shop=[ShopCard(x=0, name='卡芙卡', faction='公司', cost=4)],
+        board={},
+    )
+    _expected = [b.char_id if b is not None else None
+                 for b in st.bench]
+    # 跨源混合动作组(发射序 = 非降序乱序,模拟 liquidity 弱序选择序
+    # [1,4] + carry_gate [0→最低] + arbiter 采纳 [6,7] 拼装后的原样序;
+    # 槽位语义下发射序无语义负载——乱序也不漂移)
+    acts = [
+        SellBench(bench_idx=6, income=2),   # 源1(carry_gate 降保护集)
+        SellBench(bench_idx=1, income=1),   # 源2(liquidity 净0 先)
+        SellBench(bench_idx=4, income=3),   # 源2(liquidity)
+        SellBench(bench_idx=7, income=2),   # 源3(arbiter 采纳 off_target)
+        BuyCard(ShopCard(x=0, name='卡芙卡', faction='公司', cost=4),
+                reason='d2_line_carry'),
+    ]
+    # ① 逐动作:每个 SellBench 执行时 bench[bench_idx] 仍是生成期那件
+    working = st
+    for a in acts:
+        if isinstance(a, SellBench):
+            cur = working.bench[a.bench_idx]
+            assert cur is not None and cur.char_id == _expected[a.bench_idx], \
+                (f'执行时 bench[{a.bench_idx}] 应是生成期指向的'
+                 f'{_expected[a.bench_idx]},实得 {cur.char_id if cur else None}'
+                 f'——索引漂移(F2)')
+        working = simulate(working, a)
+    # ② 未卖槽逐槽不变(含夹层正料/引擎件对照);卖槽中最早被卖空的
+    # slot1 被买入占据(落首个空槽),其余卖槽(4/6/7)保持 None
+    for i, e in enumerate(_expected):
+        if i == 1:
+            continue   # 首个空槽 = 买入落位(下方单独断言)
+        if i in (4, 6, 7):
+            assert working.bench[i] is None, f'槽 {i} 应已卖出置 None'
+        elif e is None:
+            assert working.bench[i] is None, f'原空槽 {i} 不应被占用'
+        else:
+            cur = working.bench[i]
+            assert cur is not None and cur.char_id == e, \
+                f'未卖槽 {i} 内容被移位({e} vs {cur.char_id if cur else None})'
+    # ③ 买入落首个空槽(最早被卖空的槽 1);占用数守恒(8 卖 4 + 买 1)
+    assert working.bench[1].char_id == '卡芙卡'
+    assert bench_occupied(working.bench) == 5
+    assert len(working.bench) == 9, '槽位表定长不变量'
+
+
+def test_cross_source_index_drift_guard_arbiter_aligned() -> None:
+    """arbiter index_drift 守卫(ADR-0316 对齐):working 态槽位被前序
+    动作清空(置 None)时,后续候选同 idx 判定为 drift 拒绝——槽位
+    语义下索引恒稳,守卫保「目标名与现槽名不一致仍拒」语义。"""
+    from sr_od.application.currency_war.cw_state import SellBench
+    from sr_od.application.currency_war.decision_v2.arbiter import (
+        arbitrate,
+    )
+    from sr_od.application.currency_war.decision_v2.candidates import (
+        Candidate,
+    )
+    st = GameState(
+        round_num=4, gold=30, hp=80, level=5, plane=1,
+        bench=[_bench('花火', faction='列车同行', slot=0),
+               _bench('阿格莱雅', faction='公司', slot=1)],
+        shop=[ShopCard(x=0, name='卡芙卡', faction='公司', cost=4)],
+        board={},
+    )
+    sess = _locked_sess()
+    sess.v2_round_key = (1, 4)
+    # 两个候选引用同一槽 1(一个 off_target 卖一个 for_gold 卖),
+    # 模拟前序源已把槽 1 清空后的陈旧提案——arbiter 应按 drift 拒
+    cands = [
+        (Candidate(action=SellBench(bench_idx=1), tag='off_target',
+                   source='bench', breakdown_hint={'name': '阿格莱雅'}),
+         1.0, {}),
+        (Candidate(action=SellBench(bench_idx=1), tag='for_gold',
+                   source='bench', breakdown_hint={'name': '阿格莱雅'}),
+         1.0, {}),
+    ]
+    res = arbitrate(cands, st, sess, _REG)
+    # 第一个候选接受并清空槽 1(working 置 None);第二个同 idx 被
+    # index_drift 拒(working 槽已空→cur=None≠intended)
+    sells = [r for r in res.log if r['tag'] in ('off_target', 'for_gold')]
+    assert any(r['accepted'] for r in sells)
+    assert any('index_drift' in (r['reject'] or '') for r in sells), \
+        f'陈旧提案应被 index_drift 拒:{list(sells)}'

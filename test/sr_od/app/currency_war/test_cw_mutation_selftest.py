@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """检查的变异自检锁(锁防锁第 3 层):冷启动门失效 → 检查必须报警。
 
 把审查 316ebbc0 的一次性变异探针(去门重跑,违规涌现)固化为
@@ -27,6 +26,8 @@ def test_mutation_gate_off_violations_emerge(monkeypatch) -> None:
     def _gate_off(card, state, session=None):   # noqa: ANN001
         owned = set(state.board.keys())
         for b in (state.bench or []):
+            if b is None:
+                continue   # ADR-0316 槽位表空槽(变异体同生产适配)
             if b.faction and b.faction != '?':
                 owned.add(b.faction)
         return len(owned) < 3 or card.faction in owned

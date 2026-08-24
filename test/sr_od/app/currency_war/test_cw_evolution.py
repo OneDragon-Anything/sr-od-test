@@ -26,7 +26,6 @@ from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
 from sr_od.application.currency_war.cw_state import (
     BenchChar,
     CompTransaction,
-    FillSpec,
     GameState,
     SellDeployed,
     SwapDeploy,
@@ -79,12 +78,13 @@ def test_evolution_dot2_to_xianzhou3_full_replacement():
     # 无半档:board 与 deployed 聚合一致;旧档主力转 bench(回滚窗,非卖)
     assert out.board == _recount_board(out.deployed)
     assert out.board['仙舟'] >= 3
-    bench_names = {b.char_id for b in out.bench}
+    bench_names = {b.char_id for b in out.bench if b is not None}
     assert {'桑博', '卡芙卡'} <= bench_names   # 保回滚窗:退役暂缓 bench 非卖出
     assert tx.sell == []   # bench 有余量 → 零卖出
     # 账本 applied + 原状态不动(simulate 纯函数)
     assert out.action_log[-1]['result'] == 'applied'
-    assert len(st.deployed) == 3 and len(st.bench) == 3
+    from sr_od.application.currency_war.cw_state import bench_occupied
+    assert len(st.deployed) == 3 and bench_occupied(st.bench) == 3
     # memory 记录回滚窗锚
     assert set(mem.last_deployed) == set(_CORE_TRIO)
     assert {'桑博', '卡芙卡', '艾丝妲'} <= set(mem.last_retained)

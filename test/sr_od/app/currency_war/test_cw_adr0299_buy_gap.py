@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0299 买入面差异解剖批锁(engine_seed 生成通道 + 锁线目标集补 fixed)。
 
 锁定对象(decision_v2/candidates.py + registry.py,ADR-0299):

@@ -6,8 +6,8 @@
    equip_assign 为空的长尾套走旧值回退(旧读者不炸);
 2. **v2 字段结构校验**(form_tiers_max/sub_tiers/equip_assign 键域/special_systems
    枚举/substitute_plan 必备键/branch_of 互指/family 域);
-3. **插件注册表完整性**(22 单卡 + 14 小羁绊,建库基准=三B/三C;禁用矩阵引用有效
-   + 盾系×万敌对称性:盾系插件对万敌燃血全禁)。
+3. **插件注册表完整性**(22 单卡 + 15 小羁绊,建库基准=三B/三C;禁用矩阵引用有效
+   + 盾系×万敌对称性:盾系插件[含三月七,W55 补行]对万敌燃血全禁)。
 """
 from __future__ import annotations
 
@@ -36,12 +36,38 @@ def test_derive_key_equips_identity_all_comps() -> None:
 
     口径=多重集(Counter):equip_fit/合成材料判定等消费均为多重集语义;顺序差异仅影响
     equip_allocation 的 carry 按序取件微差(装备到人重排的预期副作用,非语义变更)。
+
+    ⚠️ 本测试锁的是「两套表示不漂移」的 C5 兼容不变量,**不是**「到人正确」的 C4 语义
+    (R2 §6 点名:恒等绿无法暴露到人错配——历史上 以牙还牙甲→三月七 类错误在本测试下恒绿)。
+    到人语义由 test_equip_assign_doctrine_v2(W55 新增)承接;A/B 拆分批放开恒等时,
+    本测试需改写为「到人对拍 v2 教义」方向(届时欠账才可见)。
     """
     assert len(COMP_LIBRARY) == 20
     for comp in COMP_LIBRARY:
         assert Counter(derive_key_equips(comp)) == Counter(comp.key_equips), (
             f"{comp.name}: derive 与旧手编 key_equips 不恒等(C5 兼容断裂)"
         )
+
+
+def test_equip_assign_doctrine_v2() -> None:
+    """到人教义锚(W55,R2 §1 四处旧值重排修正的语义锁——恒等测试锁不到这层)。
+
+    依据 comp_definitions_v2.md 各套「装备」节(数据源=三B/三C 定稿文档):
+    - 姬子列车 A 流铁三角:三月七=自适应外骨骼(吸仇恨刚需);以牙还牙甲属姬子(×2-3),
+      **不得**再错给三月七(旧值重排残留,R2 §1 点名);
+    - 狼尊:银狼=风暴潮+速度件(升费链要行动)→ 皮靴在身,电锯(非速度件)不在;
+    - 圣杯A:Archer=战技点件(动能激发剑,战技点燃料层主C 本命件);
+    - 圣杯线 闪闪=反重力皮靴(锁轴速度载体,41%)。
+    """
+    lt = get_comp("列车同行").equip_assign
+    assert lt["三月七"] == ["自适应外骨骼"], "三月七=A 流铁三角吸仇恨件(外骨骼),非以牙还牙甲"
+    assert "以牙还牙甲" not in derive_key_equips(get_comp("列车同行")), "甲属姬子A流(拆分批落位),当前条不得携带"
+    wolf = get_comp("狼尊欢愉").equip_assign
+    assert wolf["银狼LV.999"] == ["火力风暴潮", "反重力皮靴"], "银狼=风暴潮+速度件(皮靴)"
+    honga = get_comp("命运圣杯红A").equip_assign
+    assert "动能激发剑" in honga["Archer"], "Archer=战技点件(动能激发剑)"
+    assert "高周波电锯" not in honga["Archer"], "电锯是旧平铺残件,v2 专属装备落地后须让位"
+    assert get_comp("双王圣杯").equip_assign["吉尔伽美什"] == ["反重力皮靴"], "闪闪=反重力皮靴"
 
 
 def test_derive_key_equips_fallback_when_no_assign() -> None:
@@ -189,16 +215,21 @@ def test_free_slots_schema() -> None:
 
 
 def test_plugin_library_counts_and_schema() -> None:
-    """22 单卡(三B:T1=6/T2=7/T3=9)+ 14 小羁绊(三C:T1=3/T2=3/T3=8 含角色特定 2)。"""
+    """22 单卡(三B:T1=6/T2=7/T3=9)+ 15 小羁绊(三C:T1=3/T2=3/T3=9 含角色特定 2)。
+
+    W55(R2 §2 🔴 断言改造):小羁绊锁 **15** 而非 14——三C 定稿 T3 名单明列 7 个队员口径件
+    (星核2/贝洛伯格2/夜半2/学者2/公司2/**圣杯2**/击破2)+ 角色特定 2;建库时 圣杯2 被静默
+    丢弃(无出池记录)且被旧断言 smalls==14 固化——错误值被测试保护的典型(R2 §2/§6)。
+    """
     units = [p for p in PLUGIN_LIBRARY.values() if p.kind == "unit"]
     smalls = [p for p in PLUGIN_LIBRARY.values() if p.kind == "small_faction"]
-    assert len(units) == 22 and len(smalls) == 14
+    assert len(units) == 22 and len(smalls) == 15
     ids = [p.plugin_id for p in (*units, *smalls)]
-    assert len(set(ids)) == 36   # id 无重复
+    assert len(set(ids)) == 37   # id 无重复
     unit_tier = Counter(p.tier for p in units)
     assert unit_tier == {"T1": 6, "T2": 7, "T3": 9}
     small_tier = Counter(p.tier for p in smalls)
-    assert small_tier == {"T1": 3, "T2": 3, "T3": 8}
+    assert small_tier == {"T1": 3, "T2": 3, "T3": 9}
     for p in PLUGIN_LIBRARY.values():
         assert p.kind in ("unit", "small_faction")
         assert p.tier in ("T1", "T2", "T3")
@@ -208,12 +239,22 @@ def test_plugin_library_counts_and_schema() -> None:
     # 三B 定稿要点:椒丘被剔除(v3)不入池;巡海游侠1 出池(三C)
     assert "椒丘" not in PLUGIN_LIBRARY
     assert "巡海游侠1" not in PLUGIN_LIBRARY
+    # 三C 定稿 15 件全落(W55 🔴):圣杯2 在库
+    assert "圣杯2" in PLUGIN_LIBRARY
+    # 规范名(R2 §2):单卡 plugin_id 必须是 CHARACTERS 注册表键(买门按名匹配)
+    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    for p in units:
+        assert p.plugin_id in CHARACTERS, f"单卡 plugin_id '{p.plugin_id}' 非注册表规范名(买门永不命中)"
 
 
 def test_plugin_disable_matrix_symmetry_shield_vs_wandi() -> None:
-    """禁用矩阵对称性:盾系插件(护盾2/砂金/腾荒/杰帕德)对万敌燃血**全禁**;
-    杰帕德对两个吸仇恨流(姬子列车/白厄反甲)全禁。"""
-    shield_plugins = {"护盾2", "砂金", "丹恒·腾荒", "杰帕德"}
+    """禁用矩阵对称性:盾系插件(护盾2/砂金/腾荒/杰帕德/**三月七**)对万敌燃血**全禁**;
+    杰帕德对两个吸仇恨流(姬子列车/白厄反甲)全禁。
+
+    W55(R2 §2 断言扩面):三月七入盾系断言集——注册表 flows=("护盾",) 且效果含「行动护盾」,
+    按判定法她是盾系单卡,旧矩阵漏行(三B 原文「砂金/腾荒/杰帕德**等**」的「等」即留此口)。
+    """
+    shield_plugins = {"护盾2", "砂金", "丹恒·腾荒", "杰帕德", "三月七"}
     for pid in shield_plugins:
         assert plugin_disabled(pid, "万敌燃血"), f"盾系 '{pid}' 未对万敌燃血禁用(矩阵漏行)"
         assert ("护盾" in PLUGIN_DISABLE_MATRIX[(pid, "万敌燃血")]

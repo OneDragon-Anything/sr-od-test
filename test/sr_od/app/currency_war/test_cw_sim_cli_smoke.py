@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """④⑤ CI smoke + 判读同构接线锁。
 
 - smoke:固定 seed 小批量(池=主仓提交快照)——锁**链路**不锁
@@ -76,7 +75,7 @@ def test_views_render_sim_ledger(tmp_path: Path) -> None:
     sup = tel.query_supply(d, rid)
     assert any('[offer]' in ln for ln in sup), 'supply 读 shop_snapshots 流'
     rounds = tel.query_rounds(d, rid)
-    assert any(f'run' not in ln and 'hp=' in ln for ln in rounds)
+    assert any('run' not in ln and 'hp=' in ln for ln in rounds)
     # 卖牌项(⑤):有 SellBench 的局显示 卖+N(无卖局不显示,不回归)
     assert any(('卖+' in ln or True) for ln in eco)   # 形状锁,不锁分布
     # 保真度:sim 行回退账本维度(板深恒 '-' / 档0 / (空) = 同构破洞)

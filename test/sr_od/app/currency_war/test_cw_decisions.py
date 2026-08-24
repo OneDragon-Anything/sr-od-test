@@ -690,11 +690,13 @@ def test_deploy_uses_position_pref() -> None:
 
 def test_compound_3merge() -> None:
     """买 3 张同名同星 → 自动合并升星(3×1星→1×2星)。"""
+    from sr_od.application.currency_war.cw_state import bench_occupied
     s = GameState(gold=100)
     for _ in range(3):
         s = simulate(s, BuyCard(ShopCard(x=1, name="阿格莱雅", cost=1, star=1)))
-    assert len(s.bench) == 1, "3 同名1星应合并为1张"
-    assert s.bench[0].star == 2, "合并后应为2星"
+    assert bench_occupied(s.bench) == 1, "3 同名1星应合并为1张"
+    merged = [b for b in s.bench if b is not None]
+    assert merged[0].star == 2, "合并后应为2星"
 
 
 def test_sell_for_interest_crosses_boundary() -> None:

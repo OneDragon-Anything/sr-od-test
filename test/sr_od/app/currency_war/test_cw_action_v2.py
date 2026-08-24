@@ -91,9 +91,11 @@ def test_comp_transaction_full_swap_no_half_state():
     # 流派/副阵营键,精确等值由下行 _recount_board 一致性锁辖)
     assert out.board.get('仙舟') == 3
     # 无半档:board 与 deployed 聚合一致;旧档/余料不在 bench 不在场上
+    # (ADR-0316 槽位表:全空=bench_occupied==0,len(bench) 恒 9)
     assert out.board == _recount_board(out.deployed)
-    assert out.bench == []
-    assert all(n not in {b.char_id for b in out.bench}
+    from sr_od.application.currency_war.cw_state import bench_occupied
+    assert bench_occupied(out.bench) == 0
+    assert all(n not in {b.char_id for b in out.bench if b is not None}
                for n in old_names)
     # 卖出回金入账(旧档 3 人 + 青雀)
     assert out.gold == 20 + _income
@@ -122,7 +124,12 @@ def test_comp_transaction_rejected_gold_short_no_partial_apply():
     # 整体拒绝:状态与原状态完全一致(无任何部分应用痕迹)
     out.action_log = []   # 唯一允许的差异 = 拒绝记录本身
     st.action_log = []
-    assert out == st
+    # ADR-0316:simulate 入口 pad bench 到定长 9,原子性对照只看占用内容
+    from sr_od.application.currency_war.cw_state import bench_occupied
+    assert bench_occupied(out.bench) == bench_occupied(st.bench)
+    assert [c.char_id for c in out.bench if c] \
+        == [c.char_id for c in st.bench if c]
+    assert out.deployed == st.deployed and out.gold == st.gold
     # 拒绝记录进账本(checks 可见)
     assert simulate(st, tx).action_log[-1]['result'] == 'rejected'
     assert 'gold_short' in simulate(st, tx).action_log[-1]['reason']
@@ -163,7 +170,9 @@ def test_sell_deployed_lifecycle():
     assert out2.action_log[-1]['result'] == 'rejected'
     out2.action_log = []
     st.action_log = []
-    assert out2 == st
+    from sr_od.application.currency_war.cw_state import bench_occupied
+    assert bench_occupied(out2.bench) == bench_occupied(st.bench)
+    assert out2.deployed == st.deployed and out2.gold == st.gold
 
 
 def test_swap_deploy_equips_follow_char():
@@ -182,15 +191,19 @@ def test_swap_deploy_equips_follow_char():
 
 
 def test_mutate_bench_deployed_v2_actions():
-    bench = _xianzhou_trio() + [_char('青雀', slot=3)]
+    from sr_od.application.currency_war.cw_state import (
+        bench_occupied,
+        pad_bench,
+    )
+    bench = pad_bench(_xianzhou_trio() + [_char('青雀', slot=3)])
     deployed = _old_line_deployed(3)
-    n0 = (len(bench), len(deployed))
+    n0 = (bench_occupied(bench), len(deployed))
     mutate_bench_deployed(bench, deployed, SellDeployed(0))
     assert len(deployed) == n0[1] - 1
     mutate_bench_deployed(bench, deployed, SwapDeploy(0, 0))
-    assert len(bench) == n0[0] and len(deployed) == n0[1] - 1
+    assert bench_occupied(bench) == n0[0] and len(deployed) == n0[1] - 1
     # 事务部分:重建干净 fixture(上面两步已移动槽位)
-    bench = _xianzhou_trio() + [_char('青雀', slot=3)]
+    bench = pad_bench(_xianzhou_trio() + [_char('青雀', slot=3)])
     deployed = _old_line_deployed(3)
     tx = CompTransaction(deploy=[(0, 'front'), (1, 'back'), (2, 'back')],
                          undeploy=[0, 1, 2], sell=[(3, 'bench')],
@@ -198,14 +211,14 @@ def test_mutate_bench_deployed_v2_actions():
     mutate_bench_deployed(bench, deployed, tx)
     assert {c.char_id for c in deployed} == {
         c.char_id for c in _xianzhou_trio()}
-    assert len(bench) == 3   # 旧档下场进 bench(转移语义;卖出走生产侧)
+    assert bench_occupied(bench) == 3   # 旧档下场进 bench(转移语义;卖出走生产侧)
     # 拒绝路径:越界事务整体不动
     tx_bad = CompTransaction(deploy=[(99, 'front')], undeploy=[],
                              sell=[], reason='bad')
     b2, d2 = list(bench), list(deployed)
     mutate_bench_deployed(b2, d2, tx_bad)
-    assert [(c.char_id, c.slot) for c in b2] == \
-        [(c.char_id, c.slot) for c in bench]
+    assert [(c.char_id, c.slot) for c in b2 if c is not None] == \
+        [(c.char_id, c.slot) for c in bench if c is not None]
     assert len(d2) == len(deployed)
 
 

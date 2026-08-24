@@ -114,8 +114,10 @@ def test_merge_star_up_inherits_equips_conserved():
     s2 = simulate(st, BuyCard(card=ShopCard(x=100, faction='贝洛伯格',
                                             name='桑博', cost=1)))
     # 4 张同名 1★ → 3 合 1 出一张 2★(装备随载体继承)+ 余一张 1★
-    two_star = [c for c in s2.bench if c.char_id == '桑博' and c.star == 2]
-    one_star = [c for c in s2.bench if c.char_id == '桑博' and c.star == 1]
+    two_star = [c for c in s2.bench if c is not None
+                and c.char_id == '桑博' and c.star == 2]
+    one_star = [c for c in s2.bench if c is not None
+                and c.char_id == '桑博' and c.star == 1]
     assert len(two_star) == 1 and len(one_star) == 1
     assert sorted(two_star[0].equips) == ['A', 'D']       # 装备随载体继承
     assert state_equips_multiset(s2) == Counter({'A': 1, 'D': 1})
@@ -144,7 +146,8 @@ def test_swap_deploy_equips_travel_with_chars():
     st.bench[1].equips = ['Y']
     s2 = simulate(st, SwapDeploy(deployed_idx=0, bench_idx=1))
     assert [c.equips for c in s2.deployed if c.char_id == '卡芙卡'] == [['Y']]
-    assert [c.equips for c in s2.bench if c.char_id == '希儿'] == [['B']]
+    assert [c.equips for c in s2.bench if c is not None
+            and c.char_id == '希儿'] == [['B']]
     assert state_equips_multiset(s2) == state_equips_multiset(st)
 
 
@@ -161,7 +164,8 @@ def test_comp_transaction_ledger_conserved():
     entry = [e for e in s2.action_log if e['action'] == 'CompTransaction']
     assert entry and entry[0]['result'] == 'applied'
     assert 'A' in s2.equips                                   # 卖 bench 带 A → 回池
-    assert [c for c in s2.bench if c.char_id == '希儿'][0].equips == ['B']   # 下场带装回 bench
+    assert [c for c in s2.bench if c is not None
+            and c.char_id == '希儿'][0].equips == ['B']   # 下场带装回 bench
     assert state_equips_multiset(s2) == state_equips_multiset(st)
     assert not [e for e in s2.action_log if e['action'] == 'EquipsLedger']
 

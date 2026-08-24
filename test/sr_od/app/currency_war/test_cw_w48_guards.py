@@ -34,6 +34,7 @@ from sr_od.application.currency_war.cw_state import (
     ShopCard,
     SwapDeploy,
     _recount_board,
+    bench_occupied,
     board_unique_key,
     mutate_bench_deployed,
     simulate,
@@ -79,7 +80,11 @@ def test_tx_duplicate_on_board_rejected_whole():
     # 原子:无部分应用痕迹(拒绝记录本身除外)
     out.action_log = []
     st.action_log = []
-    assert out == st
+    # ADR-0316:simulate 入口 pad bench 到定长 9,原子性对照只看占用内容
+    assert bench_occupied(out.bench) == bench_occupied(st.bench)
+    assert [c.char_id for c in out.bench if c] \
+        == [c.char_id for c in st.bench if c]
+    assert out.deployed == st.deployed and out.gold == st.gold
 
 
 def test_tx_duplicate_via_undeploy_swap_ok():
@@ -147,7 +152,7 @@ def test_deploy_move_duplicate_rejected_and_logged():
     log = out.action_log[-1]
     assert log == {'action': 'DeployMove', 'result': 'rejected',
                    'reason': f'duplicate_on_board:{dup_name}'}
-    assert len(out.deployed) == 3 and len(out.bench) == 2   # 零残留
+    assert len(out.deployed) == 3 and bench_occupied(out.bench) == 2   # 零残留
     # 【正例】异名上场照常
     out2 = simulate(st, DeployMove(bench_idx=1, to_row='back',
                                    faction=st.bench[1].faction))
@@ -174,7 +179,7 @@ def test_mutate_bench_deployed_parity_guards():
     # DeployMove 同名 → no-op
     mutate_bench_deployed(bench, deployed,
                           DeployMove(0, 'back', '量子同频'))
-    assert len(bench) == 1 and len(deployed) == 2
+    assert bench_occupied(bench) == 1 and len(deployed) == 2
     # SwapDeploy 上场者与场上其余同名 → no-op
     mutate_bench_deployed(bench, deployed, SwapDeploy(1, 0))
     assert deployed[1].char_id == '符玄' and bench[0].char_id == '青雀'

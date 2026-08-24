@@ -129,14 +129,15 @@ def test_equip_allocation_carry_first() -> None:
 
     from sr_od.application.currency_war.cw_comps import EQUIP_CAPACITY, equip_allocation
 
-    lt = get_comp("列车同行")   # key_equips: 风暴潮×2/电锯/以牙还牙甲;carry=姬子·启行
+    lt = get_comp("列车同行")   # key_equips: 风暴潮×1/电锯/自适应外骨骼/冷笑话(W55);carry=姬子·启行
     dep = [SimpleNamespace(char_id='三月七', position_pref='back', slot=1),
            SimpleNamespace(char_id='姬子·启行', position_pref='front', slot=2)]
-    alloc = equip_allocation(lt, dep, ['火力风暴潮', '高周波电锯', '以牙还牙甲', '蓄能帆'])
-    # 姬子(carry)按序拿 key(API 口径:风暴/电锯/以牙还牙;ADR-0209 换血)
+    # W55(R2 §1):池内 以牙还牙甲→自适应外骨骼(三月七=A 流吸仇恨件,甲属姬子拆分批)
+    alloc = equip_allocation(lt, dep, ['火力风暴潮', '高周波电锯', '自适应外骨骼', '蓄能帆'])
+    # 姬子(carry)按序拿 key(API 口径:风暴/电锯/外骨骼;ADR-0209 换血)
     jz = [e for c, e in alloc if c == '姬子·启行']
-    assert jz == ['火力风暴潮', '高周波电锯', '以牙还牙甲'], f"carry 按序拿 key,得 {jz}"
-    # 三月七(core)拿第四件(以牙还牙甲不在池 → 通用兜底:蓄能帆)
+    assert jz == ['火力风暴潮', '高周波电锯', '自适应外骨骼'], f"carry 按序拿 key,得 {jz}"
+    # 三月七(core)拿第四件(自适应外骨骼不在池 → 通用兜底:蓄能帆)
     sy = [e for c, e in alloc if c == '三月七']
     assert sy == ['蓄能帆'], f"core 兜底拿剩余,得 {sy}"
 
