@@ -90,6 +90,7 @@ class TestTierDerivation:
         assert feats['faction_counts']['能量'] == 2
         assert feats['tier_hist'] == {'1': 2}
         assert feats['max_tier'] == 1
+        assert feats['tier3_count'] == 0
         assert feats['total_cost'] == 5
 
     def test_tier2_boundary(self):
@@ -107,6 +108,43 @@ class TestTierDerivation:
         assert feats['faction_counts']['治疗'] == 2
         assert feats['tier_hist'] == {'1': 2, '2': 1}
         assert feats['max_tier'] == 2
+        assert feats['tier3_count'] == 0
+
+
+class TestTier3Count:
+    def test_single_tier3_bond(self):
+        """1 个 t3 羁绊:7 仙舟 → tiers(3,5,7,10) 中 3、5、7 达标 → tier3。
+
+        7 仙舟 = 青雀/停云/景元/符玄/彦卿/丹恒·饮月/藿藿(全部仙舟,
+        对照 cw_chars 注册表)。流派侧:战技点=青雀+丹恒·饮月=2→tier1;
+        能量=停云+藿藿=2→0;治疗=符玄+藿藿=2→tier1;群攻=景元 1→0;
+        狼狩=彦卿 1→0;减益=彦卿 1→0;量子同频=符玄 1→0。
+        ⇒ tier_hist={1:2, 3:1},max_tier=3,**tier3_count=1**。
+        """
+        feats = features_from_deployed([
+            _d('青雀'), _d('停云'), _d('景元'), _d('符玄'),
+            _d('彦卿'), _d('丹恒·饮月'), _d('藿藿'),
+        ])
+        assert feats['faction_counts']['仙舟'] == 7
+        assert feats['tier_hist'] == {'1': 2, '3': 1}
+        assert feats['max_tier'] == 3
+        assert feats['tier3_count'] == 1
+
+    def test_three_tier3_bonds(self):
+        """3 个 t3 羁绊:6× 椒丘(同角色复用,狼狩/持续伤害/减益并计)。
+
+        椒丘 traits=(狼狩,持续伤害,减益),6 人 ⇒ 三羁绊计数均 6:
+        狼狩 tiers(3,5,6,8): 6≥3,5,6 → tier3;
+        减益 tiers(2,4,6,8): 6≥2,4,6 → tier3;
+        持续伤害 tiers(2,4,6): 6≥2,4,6 → tier3。
+        ⇒ tier_hist={3:3},max_tier=3,**tier3_count=3**(批39 分界语义:
+        t3=3 板与 t3=1 板 max_tier 同值,靠本特征区分)。
+        """
+        feats = features_from_deployed([_d('椒丘')] * 6)
+        assert feats['faction_counts'] == {'狼狩': 6, '持续伤害': 6, '减益': 6}
+        assert feats['tier_hist'] == {'3': 3}
+        assert feats['max_tier'] == 3
+        assert feats['tier3_count'] == 3
 
 
 if __name__ == '__main__':
