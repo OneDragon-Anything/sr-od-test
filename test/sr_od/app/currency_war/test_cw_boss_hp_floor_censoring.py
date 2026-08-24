@@ -74,3 +74,17 @@ class TestBossHpFloorCensoring:
         r = chk(rows)
         assert r['violations'] == 0
         assert r['censored_rows'] == 0
+
+    def test_missing_hp_after_violation(self) -> None:
+        """批40 补:killed=False 但 hp_after 缺失 → 采集缺口红。"""
+        rows = [_row(hp_after=None, hp_before=50)]  # type: ignore[arg-type]
+        r = chk(rows)
+        assert r['violations'] == 1
+        assert 'hp_after 缺失' in r['detail'][0]
+
+    def test_hp_after_zero_violation(self) -> None:
+        """批40 补:killed=False 但 hp_after==0 → 地板矛盾红。"""
+        rows = [_row(hp_after=0, hp_before=50)]
+        r = chk(rows)
+        assert r['violations'] == 1
+        assert any('hp_after==0' in v for v in r['detail'])
