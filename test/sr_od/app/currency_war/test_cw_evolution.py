@@ -15,8 +15,11 @@
 from sr_od.application.currency_war.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_evolution import (
     EvolutionState,
+    UpgradeOption,
+    UpgradeVerdict,
     evaluate_upgrade,
     evolution_step,
+    execute_replacement,
     fill_gap_after,
     fill_slot_policy,
     propose_upgrades,
@@ -221,6 +224,48 @@ def test_fill_gap_true_core_waits_on_bench():
     assert fills
     picked = [st.bench[f.idx].char_id for f in fills if f.source == 'bench']
     assert '飞霄' not in picked and picked[0] == '灵砂'
+
+
+# ---------- 5. W65/ADR-0323:部署名单按名去重(同名副本不整事务拒) ----------
+
+def test_execute_replacement_dedup_same_name_copies():
+    """bench 2 张同名万敌 → 部署名单按名去重(取最高星一件上场),其余
+    副本留 bench 当 3合1 合成素材(不卖);事务可应用(不再
+    duplicate_on_board 整拒——W64 模式 B:seed 81 49 次可执行全拒)。"""
+    st = GameState()
+    st.gold = 20
+    st.level = 6   # cap=6,足容
+    st.bench = [
+        _char('万敌', '夜之半神', star=1),
+        _char('万敌', '夜之半神', star=2),
+        _char('刃', '星核猎手'),
+        _char('千冶·刃', '星核猎手'),
+        _char('风堇', '昼之半神'),
+        _char('赛飞儿', '夜之半神'),   # 非新线成员(bench 未部署不进场)
+    ]
+    opt = UpgradeOption('new_faction', '燃血', 4, 5.0, True,
+                        '万敌单C', 'comp')
+    verdict = UpgradeVerdict(opt, True, True, True, True, '三条件齐备')
+    actions = execute_replacement(verdict, st)
+    assert len(actions) == 1
+    tx = actions[0]
+    assert isinstance(tx, CompTransaction)
+    dep_names = [st.bench[i].char_id for i, _r in tx.deploy]
+    assert dep_names.count('万敌') == 1, \
+        f'部署名单不得同名重复:{dep_names}'
+    assert '万敌' in dep_names
+    # 事务可应用(不是整事务拒)
+    out = simulate(st, tx)
+    assert out.action_log[-1]['result'] == 'applied', \
+        out.action_log[-1]
+    # 最高星副本上场;其余副本留 bench 当合成素材(不卖)
+    dep = [d.char_id for d in out.deployed]
+    assert dep.count('万敌') == 1
+    up_wandi = next(d for d in out.deployed if d.char_id == '万敌')
+    assert up_wandi.star == 2, '同名取最高星'
+    bench_names = [b.char_id for b in out.bench if b is not None]
+    assert bench_names.count('万敌') == 1, \
+        '其余副本留 bench 当 3合1 素材(不卖)'
 
 
 # ---------- 4. 中断恢复 / 谷底回滚 ----------

@@ -13,14 +13,14 @@ from __future__ import annotations
 from sr_od.application.currency_war.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_comps import get_comp
 from sr_od.application.currency_war.cw_intention import (
+    CORE_MISS_N,
     CROSS_LINE_SKELETON,
     FALLBACK_COMP_NAME,
-    CORE_MISS_N,
+    IntentionState,
     detect_signals,
     encounter_window_rounds,
     hoard_target_set,
     update_intention,
-    IntentionState,
 )
 from sr_od.application.currency_war.cw_state import BenchChar, GameState, ShopCard
 
@@ -244,6 +244,20 @@ def test_lock_effect_hoard_target_set() -> None:
     ist2 = update_intention(_state(shop=['希儿']), IntentionState())
     ht2 = hoard_target_set(_state(), ist2)
     assert '火力风暴潮·特权' in ht2.equip_targets
+
+
+def test_line_hoard_flows_members_in_target_set() -> None:
+    """W65/ADR-0323:锁定万敌线 → 燃血(flows 流派)成员 刃/镜流/布洛妮娅
+    进囤货目标集——旧版 _line_hoard 只查 c.factions,flows 成员被排除
+    (W64 Ring1:燃血 8 成员 3/8 采购面缺失)。泛化修正:档位键与
+    factions ∪ flows 全集交集,非万敌特判。"""
+    st = _state(bench=['万敌'])
+    ist = update_intention(st, IntentionState())
+    assert ist.locked_comp == '万敌单C'
+    ht = hoard_target_set(st, ist)
+    for name in ('刃', '镜流', '布洛妮娅'):
+        assert name in ht.char_targets, \
+            f'燃血(flows)成员 {name} 应在锁定线目标集内'
 
 
 def test_encounter_window_monotonic() -> None:

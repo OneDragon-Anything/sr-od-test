@@ -62,8 +62,13 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: ADR-0309 载体批(W35)更新:四覆盖态标签集/危机买偏置辖集并入
 #: 'plugin'(层1 插件通道,定义节 class5)——纯标签集变更,数值
 #: 字段零变化(标定五参快照锁另行核)。
-_EXPECTED_HASH = '7c7d63c78d8710a43a97fa5c6c6ac3b1'
-_EXPECTED_HASH += '0d9454ce5954c4c1de11f16d07548733'
+#: ADR-0326 回连机制批(W52)更新:新增 remedy_buy_tags(旧
+#: LIQUIDITY_BUY_TAGS 语义迁入,含 'carry_gate')/remedy_min_score/
+#: remedy_alarm_refresh 三字段(补偿趟注册表化;既有数值字段不变)。
+#: ADR-0327 S5 批(W52)更新:新增 remeet_window_rounds/through_rate/
+#: sell_key_weight_scale 三字段(统一卖件弱序表;既有数值字段不变)。
+_EXPECTED_HASH = 'f512ccd4d7f17da024f61788187331e8'
+_EXPECTED_HASH += '128622d6a20505f928bf05aee7597e26'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

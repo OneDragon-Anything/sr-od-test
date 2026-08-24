@@ -302,11 +302,19 @@ def test_check_skip_fence_pairing_locks():
               {'__type__': 'skip_fence', 'reason': 'x'},
               {'__type__': 'skip_fence', 'reason': 'x'}])])
     assert v and '多条' in v[0]
-    # rejected 显式动作仍占显式通道 → 仍须配对
-    v = check_skip_fence_pairing([
-        _row([{'__type__': 'CompTransaction', 'result': 'rejected',
-               'reject_reason': 'gold_short'}])])
-    assert v and '未配对' in v[0]
+    # W65/ADR-0323:rejected 显式动作**不**占显式通道(被拒不消耗围栏,
+    # 同轮围栏照跑)→ 不要求配对;被拒轮记 skip_fence = 误记
+    rej = _row([{'__type__': 'CompTransaction', 'result': 'rejected',
+                 'reject_reason': 'duplicate_on_board:万敌'}])
+    assert check_skip_fence_pairing([rej]) == [], \
+        '被拒事务不要求 skip_fence 配对(W65:被拒不跳围栏)'
+    rej_skip = _row([
+        {'__type__': 'CompTransaction', 'result': 'rejected',
+         'reject_reason': 'duplicate_on_board:万敌'},
+        {'__type__': 'skip_fence', 'reason': 'explicit_action_v2'}])
+    v = check_skip_fence_pairing([rej_skip])
+    assert v and '误记' in v[0], \
+        '被拒轮记 skip_fence = 误记(围栏没跳却记账)'
 
 
 # ---------- 5. 开关联动:显式动作轮围栏跳过(sim 集成) ----------

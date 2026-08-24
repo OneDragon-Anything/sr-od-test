@@ -303,13 +303,20 @@ def test_blood_alarm_low_hp_margin_skips_natural_window() -> None:
 
 
 def test_carry_gate_demotes_protection_and_buys_core() -> None:
-    """carry 腾位门(v1 r416 移植):bench 满(全保护件)+意向核心在店+
-    金足 → [SellBench(最弱), BuyCard(核心, reason=carry_gate)];
-    卖出件入同轮已卖集(r408 对称臂)。"""
+    """carry 腾位门(v1 r416 移植;W52/ADR-0327 适配):bench 满(全保护
+    件,各 1 份)+意向核心在店+金足 → [SellBench(最弱保护件), BuyCard
+    (核心, reason=carry_gate)];卖出件入同轮已卖集(r408 对称臂)。
+
+    构造注:9 槽满员且 bench 不得含 carry(②门「未持有」);用 7 个互异
+    保护件 + 2 重复(重复份加权≥2 是 3合1 素材,被 AD9-2-3 统一挡,
+    不进卖序——其余 1 份保护件可卖)。
+    """
     sess = _locked_sess()
     sess.v2_round_key = (1, 4)
-    bench = [_bench('花火', faction='欢愉', slot=i)
-             for i in range(_REG.bench_capacity)]   # 全保护件(shared)
+    bench = [_bench(n, faction='列车同行', slot=i)
+             for i, n in enumerate(['三月七', '花火', '瓦尔特',
+                                    '丹恒·饮月', '希儿', '爻光',
+                                    '藿藿', '花火', '三月七'])]
     st = _state(round_num=4, gold=50,
                 shop=[_card('姬子·启行', faction='列车同行', cost=4)],
                 bench=bench)
@@ -321,6 +328,8 @@ def test_carry_gate_demotes_protection_and_buys_core() -> None:
     assert buy.reason == 'carry_gate'
     sold_name = st.bench[sell.bench_idx].char_id
     assert sold_name in sess.v2_round_sold
+    assert sold_name not in ('花火', '三月七'), \
+        '重复份(加权≥2)是 3合1 素材,不得卖(AD9-2-3)'
 
 
 def test_carry_gate_noop_when_bench_not_full() -> None:
@@ -376,26 +385,30 @@ def test_carry_gate_seed_deadlock_exemption() -> None:
     assert carry_gate_actions(st2, sess2, _REG) == []
 
 
-def test_carry_gate_prefers_absent_mergeable() -> None:
-    """absent_mergeable 弱序(v1 r416b 补移植,W51):上场份缺席的角色
-    架内 ≥2 加权副本 = 合成份缺席场冗余,弱序升为最弱级——优先于
-    普通保护件(1 份)被卖。"""
+def test_carry_gate_merge_material_not_sold() -> None:
+    """AD9-2-3 适配(W52/ADR-0327):3合1 进行中素材(加权副本≥2,如
+    2★ 件)不可卖——carry 腾位时跳过素材件,改卖 1 份保护件。
+
+    旧行为(absent_mergeable 最弱级先卖)已按指挥官裁决反转:拆合成
+    进度防于腾位通道之前;原锁语义重写(锁语义不锁旧行为)。"""
     sess = _locked_sess()
     sess.v2_round_key = (1, 4)
-    # 瓦尔特 2★(加权副本 2,deployed 无同名 → absent_mergeable)
-    # vs 花火×8(超上限冗余 cp=8)——两者均最弱级,按 cp 取小 → 瓦尔特;
-    # 修复前(absent_mergeable 缺席)瓦尔特 key=(protect,1,2) 排
-    # 花火 (protect,0,8) 之后 → 卖花火(锁旧行为的差异面)
+    # 瓦尔特 2★(加权副本 2=进行中素材)→ 不可卖;其余 1 份保护件可卖
     bench = ([_bench('瓦尔特', faction='列车同行', slot=0, star=2)]
-             + [_bench('花火', faction='欢愉', slot=i)
-                for i in range(1, 9)])
+             + [_bench(n, faction='列车同行', slot=i)
+                for i, n in enumerate(['三月七', '花火', '丹恒·饮月',
+                                       '希儿', '爻光', '藿藿', '三月七',
+                                       '花火'])])
     st = _state(round_num=4, gold=50,
                 shop=[_card('姬子·启行', faction='列车同行', cost=4)],
                 bench=bench)
     acts = carry_gate_actions(st, sess, _REG)
     assert len(acts) == 2
     sell = acts[0]
-    assert st.bench[sell.bench_idx].char_id == '瓦尔特'
+    sold_name = st.bench[sell.bench_idx].char_id
+    assert sold_name != '瓦尔特', \
+        '2★ 素材(加权副本 2)不可卖(AD9-2-3 拆合成进度防御)'
+    assert sold_name in sess.v2_round_sold
 
 
 # --- ③d 金不足补偿(回连机制收编;W52/ADR-0326) ------------------------------
