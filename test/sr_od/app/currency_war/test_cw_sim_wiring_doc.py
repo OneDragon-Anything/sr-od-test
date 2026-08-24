@@ -42,12 +42,12 @@ def test_doc_covers_all_gamestate_fields() -> None:
 
 
 def test_tier_counts_match_declared_reconciliation() -> None:
-    """三档+已接计数与文档头对账声明一致(17+12+3+5=37,ADR-0286 +deploy_cap)。"""
+    """三档+已接计数与文档头对账声明一致(18+12+4+5=39,ADR-0286 +deploy_cap;批㉖ F1 +enemy_difficulty_live、契约包 C1 步2 +action_log)。"""
     rows = _tier_rows()
     counts = {k: len(v) for k, v in rows.items()}
-    assert sum(counts.values()) == len(fields(GameState)) == 37
+    assert sum(counts.values()) == len(fields(GameState)) == 39
     assert any('已接线' in k for k in counts) and counts[
-        next(k for k in counts if '已接线' in k)] == 17
+        next(k for k in counts if '已接线' in k)] == 18
     assert counts[next(k for k in counts if '必须接线' in k)] == 12
-    assert counts[next(k for k in counts if '观测冗余' in k)] == 3
+    assert counts[next(k for k in counts if '观测冗余' in k)] == 4
     assert counts[next(k for k in counts if '结构未建' in k)] == 5
