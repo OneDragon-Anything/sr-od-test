@@ -442,10 +442,16 @@ def _comp_state(gold: int, bench_names: list[str], cost: int = 4,
 def test_remedy_gold_sells_to_fund_priority_buy() -> None:
     """①金不足+目标件在店+bench 有非保护压库件 → decide_prep 产出
     [Sell≥1, Buy] 组,卖先于买;买 reason=d2_line_carry;卖出件入同轮
-    已卖集(r408 对称臂)。"""
+    已卖集(r408 对称臂)。
+
+    W67/ADR-0328 构造适配:exec_state 执行域对齐后,演进事务先于
+    arbitrate 落地(见 decide_prep ⑤ 注释)——压库件须选演进不消费的
+    件(阮·梅/星期日非体系候选,COMP 不 deploy 它们;卡芙卡/千冶·刃
+    是千冶减益目标,会被演进抢先上场致补偿无可卖件)。锁语义不变:
+    金不足+可卖压库件 → 补偿卖凑金买目标件。"""
     strat = DecisionV2Strategy()
     sess = _locked_sess()
-    st = _comp_state(gold=13, bench_names=['卡芙卡', '千冶·刃'])
+    st = _comp_state(gold=13, bench_names=['阮·梅', '星期日'])
     acts = strat.decide_prep(st, sess, None)
     sells = [a for a in acts if isinstance(a, SellBench)]
     buys = [a for a in acts if isinstance(a, BuyCard)]
