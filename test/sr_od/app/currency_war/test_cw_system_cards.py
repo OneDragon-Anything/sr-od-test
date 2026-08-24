@@ -8,7 +8,8 @@
 2. tie-break 可审计:同分构造下 ``pick_card_combination`` 返回裁决记录非空;
 3. 空窗期:无体系+店有目标件 → 只买目标件;无目标件 → 费用带内购买,
    不为凑数 D;
-4. DOT2 默认首站(可达则优先)+ 铁三角一轮成型例外。
+4. readiness 统一维度(ADR-0311:门槛低=容易被先凑出,不是优先级特权)
+   + 行为等价性四项(铁三角胜/仅 DOT 件胜/同 readiness 裁决/空窗不变)。
 """
 from sr_od.application.currency_war.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_state import (
@@ -18,6 +19,8 @@ from sr_od.application.currency_war.cw_state import (
     _recount_board,
 )
 from sr_od.application.currency_war.cw_system_cards import (
+    _WEIGHT_PIECE,
+    _WEIGHT_READINESS,
     SYSTEM_CARDS,
     blank_window_policy,
     card_active,
@@ -135,21 +138,24 @@ def test_engine_required_and_star_goal_registry():
     assert SYSTEM_CARDS['seele'].engine_required == ['希儿']
 
 
-# ---------- 3. 组合选择(来牌主判据/意向 tie-break/词条/DOT2 首站/例外) ----------
+# ---------- 3. 组合选择(来牌主判据/readiness 统一维度/意向/词条/等价性四项) ----------
 
-def test_pick_dot2_default_first_station():
-    """DOT2 默认首站:2 件在手(可达)→ 主选 dot2(p1_definition 组合规则3)。"""
+def test_pick_dot2_wins_by_score_when_only_dot_pieces():
+    """等价性②:仅 2 张 DOT 件在手 → DOT2 胜(原来靠首站加成,现在靠分;
+    readiness=2/2 满格,其余系 0)。"""
     st = GameState()
     st.bench = [_char('卡芙卡'), _char('桑博')]
     st.board = {}
     dec = pick_card_combination(st)
     assert dec.blank_window is False
     assert dec.chosen[0] == 'dot2'
-    assert any('默认首站' in r for r in dec.ruling)
+    assert dec.scores['dot2'] == (2 * _WEIGHT_PIECE + 1.0 * _WEIGHT_READINESS)
+    assert not any('首站' in r for r in dec.ruling)   # 特权措辞已删
 
 
-def test_pick_trio_ready_exception_overrides_dot():
-    """铁三角一轮成型例外:三人全在手 → 直取仙舟3(盖过 DOT 首站)。"""
+def test_equiv_trio_full_hand_beats_dot():
+    """等价性①:铁三角全在手+DOT2 可达 → 仙舟3 仍胜
+    (原来靠例外条款直取,现在靠分:pieces 3>2 且 readiness 双满格)。"""
     st = GameState()
     st.bench = [_char('卡芙卡'), _char('桑博')]   # DOT 也可达,制造竞争
     st.deployed = [_char('爻光', slot=0, row='back'),
@@ -158,7 +164,36 @@ def test_pick_trio_ready_exception_overrides_dot():
     st.board = _recount_board(st.deployed)
     dec = pick_card_combination(st)
     assert dec.chosen[0] == 'xianzhou3'
-    assert any('一轮成型' in r for r in dec.ruling)
+    assert dec.scores['xianzhou3'] > dec.scores['dot2']
+    assert not any('例外' in r or '一轮成型' in r for r in dec.ruling)   # 例外条款已删
+
+
+def test_equiv_same_readiness_no_dot_privilege():
+    """等价性③(按裁定改变):2 列车件 vs 2 DOT 件(同 pieces 同 readiness)→
+    来牌/词条/意向裁决,不再有 DOT 特权(旧 +1 首站加成下意向翻不过)。"""
+    st = GameState()
+    st.bench = [_char('三月七'), _char('姬子·启行'), _char('卡芙卡'), _char('桑博')]
+    dec = pick_card_combination(st)
+    assert dec.scores['train2'] == dec.scores['dot2']
+    assert any('tie-break' in r for r in dec.ruling)   # 同分如实记录可审计
+    # 意向同向裁决:列车意向 → train2 胜(旧特权语义下 DOT 恒胜,此为行为变化)
+    dec_intent = pick_card_combination(st, intent='姬子列车')
+    assert dec_intent.chosen[0] == 'train2'
+    # 词条裁决:敌方频动旺 → DOT 权重升 → dot2 胜
+    dec_affix = pick_card_combination(st, affixes=['忍无可忍'])
+    assert dec_affix.chosen[0] == 'dot2'
+
+
+def test_readiness_unified_across_cards():
+    """readiness 统一维度:全卡按 pieces/激活件数折算(仙舟3=3、DOT2/列车2=2、
+    希儿系≈3),门槛低=分高,无任何卡专属 if。"""
+    # 2 仙舟件(readiness 2/3)vs 1 列车件(readiness 1/2):
+    # pieces 2>1 主判据胜;readiness 0.667>0.5 同向
+    st = GameState()
+    st.bench = [_char('爻光'), _char('藿藿'), _char('三月七')]
+    dec = pick_card_combination(st)
+    assert dec.chosen[0] == 'xianzhou3'
+    assert dec.scores['xianzhou3'] == (2 * _WEIGHT_PIECE + 2 / 3 * _WEIGHT_READINESS)
 
 
 def test_pick_arrival_is_primary_signal():
@@ -203,11 +238,12 @@ def test_pick_seele_affix_fear_counter():
     dec = pick_card_combination(st, affixes=['量子熄火'])
     assert SYSTEM_CARDS['seele'].affix_fears == ['量子熄火']
     assert card_pieces(SYSTEM_CARDS['seele'], st) == 2
-    assert dec.scores['seele'] == 2 * 1.0 - 3.0   # 2 件 - fear 3.0 = -1(counter 压制)
+    assert dec.scores['seele'] == (2 * _WEIGHT_PIECE + 2 / 3 * _WEIGHT_READINESS - 3.0)
+    #   # 2 件(readiness 2/3)+ fear -3.0 = -0.33(counter 压制)
 
 
 def test_pick_blank_when_nothing_arrived():
-    """空窗:四系 0 件 → blank_window=True,chosen=[]。"""
+    """等价性④:空窗行为不变——四系 0 件(readiness 恒 0)→ blank_window=True,chosen=[]。"""
     st = GameState()
     # 灵砂=狼狩+治疗,不沾四系任一判据阵营(瓦尔特含列车同行,不可用)
     st.bench = [_char('灵砂')]
