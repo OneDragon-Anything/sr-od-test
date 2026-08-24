@@ -71,12 +71,30 @@ def _state(**kw) -> GameState:
 # --- ① 危机囤金买偏置 --------------------------------------------------------
 
 
+def _formed_state(**kw) -> GameState:
+    """已成型板(引擎 2:仙舟3+持续伤害2;藿藿不在板)→ 成型补充偏置
+    (ADR-0332)不触发——危机偏置加性锁的双态隔离板(店藿藿=桥 core
+    非副本,双态唯一差异=危机偏置)。"""
+    base = {'plane': 1, 'round_num': 8, 'gold': 72, 'level': 6,
+            'board': {'仙舟': 3, '持续伤害': 2, '公司': 1},
+            'deployed': [_bench('爻光', faction='仙舟', slot=0),
+                         _bench('符玄', faction='仙舟', slot=1),
+                         _bench('停云', faction='仙舟', slot=2),
+                         _bench('卡芙卡', faction='星核猎手', slot=3),
+                         _bench('黑天鹅', faction='盛会之星', slot=4),
+                         _bench('板件5', faction='公司', slot=5)],
+            'bench': [], 'shop': [], 'hp': 20}
+    base.update(kw)
+    return GameState(**base)
+
+
 def test_crisis_buy_bias_additive() -> None:
     """危机态战力买加分:hp 20 vs 40 同板差分恰=_CRISIS_BUY_BIAS
-    (score_state 无 hp 项,双态唯一差异=偏置);且危机态分>0。"""
+    (score_state 无 hp 项,双态唯一差异=偏置;板已成型→ADR-0332 成型
+    偏置双态均不触发);且危机态分>0。"""
     sess = _sess()
-    st_crisis = _state(shop=[_card('藿藿')])          # hp=20 金=72
-    st_ok = _state(hp=40, shop=[_card('藿藿')])       # 非应急同板
+    st_crisis = _formed_state(shop=[_card('藿藿')])     # hp=20 金=72
+    st_ok = _formed_state(hp=40, shop=[_card('藿藿')])  # 非应急同板
     v = {}
     for key, st in (('crisis', st_crisis), ('ok', st_ok)):
         cands = [c for c in generate_candidates(st, sess, _REG)

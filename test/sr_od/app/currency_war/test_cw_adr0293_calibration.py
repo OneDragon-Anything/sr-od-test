@@ -67,8 +67,11 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: remedy_alarm_refresh 三字段(补偿趟注册表化;既有数值字段不变)。
 #: ADR-0327 S5 批(W52)更新:新增 remeet_window_rounds/through_rate/
 #: sell_key_weight_scale 三字段(统一卖件弱序表;既有数值字段不变)。
-_EXPECTED_HASH = 'f512ccd4d7f17da024f61788187331e8'
-_EXPECTED_HASH += '128622d6a20505f928bf05aee7597e26'
+#: ADR-0332 成型评分活性批更新:新增 forming_bias(=5.0,成型补充偏置
+#: 顶正)/forming_bias_val_max(=0.5,顶分上沿)两字段(既有数值字段
+#: 全部不变;双窗 A/B 验证见 ADR-0332)。
+_EXPECTED_HASH = '16a61bb4e5e69357f6554893553b0c37'
+_EXPECTED_HASH += '492be1378836694028bb31c25bcc50e0'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
