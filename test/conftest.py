@@ -34,8 +34,32 @@ from one_dragon.base.operation.application.plugin_info import PluginSource
 from one_dragon.base.push.push_config import PushProxy
 from one_dragon.envs.env_config import ProxyTypeEnum
 from one_dragon.utils import cv2_utils, file_utils
+from one_dragon.utils.log_utils import (
+    LoggerConfig,
+    configure_logger,
+    get_log_file_path,
+)
+from one_dragon.utils.log_utils import log as framework_log
 from sr_od.config.game_config import GameConfig
 from sr_od.context.sr_context import SrContext
+
+# --------------------------------------------------------------------------- #
+# 测试进程日志分流(conftest 导入期生效,早于任何测试/ctx 初始化)
+# --------------------------------------------------------------------------- #
+# 职责划分(文件即进程身份):GUI/调度器→log.txt;MCP server→mcp_server.log;
+# pytest→test.log。修前测试继承 log_utils 默认配置,一趟全量往 .log/log.txt
+# 写 1w+ 行 fixture 回放的 op 流转(格式与真实运行完全相同),污染运行日志
+# 排查(2026-08-24 实证:fixture 测试的「切账号」链被误读为真进程)。
+# console handler 关闭:pytest 有自己的捕获体系,stdout 噪声纯浪费;
+# 要看测试内框架日志查 .log/test.log。
+configure_logger(
+    framework_log,
+    LoggerConfig(
+        log_file_path=get_log_file_path(default_name='test.log'),
+        add_console_handler=False,
+        propagate=False,
+    ),
+)
 
 
 class MockController(ControllerBase):
