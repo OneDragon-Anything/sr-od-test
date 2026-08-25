@@ -56,7 +56,7 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # 段的早期买入 → r2-r4 deployed 增长变慢,seed16 涌现 deploy_
     # fills_cap 1 例。裁决归步②b 的 Q1 四档 sim 对照(不设/10/20/30)
     # ——定档后从本豁免表移除,回归 0 容忍。
-    # W131/ADR-0353(检查器判据重定义):levelup_interest_engine_gate
+    # W131/ADR-0354(检查器判据重定义):levelup_interest_engine_gate
     # 裁决已落地——判据改读授权依据(账本 LevelUp 行 auth 键,白名单
     # {pop_slot, dp};static_ev/无依据的 <50 升级仍计违规),seeds 0-19
     # 新判据 0 违规(旧判据 206/82 局,W123 §5.2/W126 记档)。移出豁免,
