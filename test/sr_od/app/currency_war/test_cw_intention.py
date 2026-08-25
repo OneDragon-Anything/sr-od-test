@@ -422,3 +422,15 @@ def test_p1_recipe_lock_off_restores_baseline(monkeypatch) -> None:
     assert ist.phase == 'locked' and ist.locked_comp == 'DOT队'
     assert ist.p1_pair == ()
     assert hoard_target_set(st, ist).mode == 'locked'
+
+
+def test_p1_pair_serialized_to_telemetry() -> None:
+    """锁定目标数据形态显式可读(ADR-0357 约束基准契约):p1_pair 落
+    ``serialize_intention`` 输出(decisions 行可读,后续「通道约束批」
+    按此字段约束 opportunistic/bond_fallback——不隐式)。"""
+    from sr_od.application.currency_war.cw_telemetry import serialize_intention
+    ist = update_intention(_state(bench=['桑博']), IntentionState())
+    d = serialize_intention(ist)
+    assert d is not None and list(d['p1_pair']) == ['列车同行', '持续伤害']
+    d2 = serialize_intention(update_intention(_state(), IntentionState()))
+    assert d2 is not None and list(d2['p1_pair']) == []
