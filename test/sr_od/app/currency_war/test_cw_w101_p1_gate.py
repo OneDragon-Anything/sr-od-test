@@ -50,14 +50,14 @@ def _state(**kw) -> GameState:
 # ===== ③核心卡:P1 门拦终局专属线 =====
 
 def test_p1_gate_blocks_final_line_core_card() -> None:
-    """P1 万敌(贯穿件)在手 → ③不发万敌单C,意向 unlocked 落⑤兜底
-    (囤货方向仍含万敌件——[21] 买而不上不辖,只辖锁线证据)。"""
+    """P1 万敌(贯穿件)在手 → ③不发万敌单C,意向 unlocked;囤货方向落
+    配方过渡方向(W145/ADR-0357 起 P1 兜底=四体系全集,非绯英)。"""
     st = _state(bench=['万敌'])
     sigs = detect_signals(st)
     assert not any(s.comp_name == '万敌单C' for s in sigs if s.layer == 3)
     ist = update_intention(st, IntentionState())
     assert ist.phase == 'unlocked' and ist.locked_comp == ''
-    assert hoard_target_set(st, ist).mode == 'fallback'
+    assert hoard_target_set(st, ist).mode == 'p1_transition'
 
 
 def test_p2_core_card_still_locks_final_line() -> None:
@@ -86,29 +86,35 @@ def test_p1_gate_qualified_by_env_locks() -> None:
 # ===== 过渡线/兜底线不受辖 =====
 
 def test_p1_gate_free_for_transition_lines() -> None:
-    """P1 过渡线③照常:DOT队(主档=持续伤害)锁线;⑤兜底线(绯英欢愉)
-    锁与不锁囤货方向恒同,门对其 no-op。"""
+    """过渡线信号检测不受辖(detect_signals 层③照发);W145/ADR-0357 起
+    P1 ③不再锁终局 comp——DOT队/绯英欢愉锁定被配方锁取代(落体系对/
+    过渡方向),锁线仅 P2(回归见 test_p2_core_card)。"""
     st = _state(shop=['卡芙卡'])
     sigs = detect_signals(st)
     assert any(s.comp_name == 'DOT队' and s.kind == 'core_card'
                for s in sigs if s.layer == 3)
     ist = update_intention(st, IntentionState())
-    assert ist.locked_comp == 'DOT队'
+    assert ist.phase == 'unlocked' and ist.locked_comp == ''
     st_f = _state(shop=['绯英'])
     sigs_f = detect_signals(st_f)
     assert any(s.comp_name == '绯英欢愉' for s in sigs_f if s.layer == 3)
     ist_f = update_intention(st_f, IntentionState())
-    assert ist_f.locked_comp == '绯英欢愉'
+    assert ist_f.phase == 'unlocked' and ist_f.locked_comp == ''
+    # P2:③照旧锁 comp(过渡线在 P2 是合法终局方向)
+    ist_p2 = update_intention(_state(plane=2, shop=['卡芙卡']),
+                              IntentionState())
+    assert ist_p2.locked_comp == 'DOT队'
 
 
 def test_p1_gate_free_for_seele_line() -> None:
-    """希儿系=四体系之一(单卡即战力,伤害在希儿技能层):P1 ③照常。"""
+    """希儿系=四体系之一:③信号检测照发;P1 锁定产物=配方对
+    (希儿系进对须希儿到手,见 test_cw_intention W145 节),comp 不锁。"""
     st = _state(shop=['希儿'])
     sigs = detect_signals(st)
     assert any(s.comp_name == '希儿量子' and s.kind == 'core_card'
                for s in sigs if s.layer == 3)
     ist = update_intention(st, IntentionState())
-    assert ist.locked_comp == '希儿量子'
+    assert ist.phase == 'unlocked' and ist.locked_comp == ''
 
 
 # ===== ④资源层同门 =====
@@ -127,8 +133,10 @@ def test_p1_gate_resource_layer() -> None:
 
 def test_gate_off_restores_baseline(monkeypatch) -> None:
     """P1_FINAL_LINE_GATE=False(A/B 基线臂)→ 万敌单C ③锁恢复
-    (W97 诊断的 30.5% 病灶形态即此臂)。"""
+    (W97 诊断的 30.5% 病灶形态即此臂)。W145 后 P1 comp 锁定另受
+    P1_RECIPE_LOCK 辖——基线臂须双开关同关(回 W143 前完整行为)。"""
     monkeypatch.setattr(cw_intention, 'P1_FINAL_LINE_GATE', False)
+    monkeypatch.setattr(cw_intention, 'P1_RECIPE_LOCK', False)
     st = _state(bench=['万敌'])
     sigs = detect_signals(st)
     assert any(s.comp_name == '万敌单C' and s.kind == 'core_card'

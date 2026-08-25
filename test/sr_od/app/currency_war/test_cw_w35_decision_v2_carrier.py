@@ -127,10 +127,11 @@ def test_decision_v2_modules_do_not_import_line_strategy() -> None:
 
 def test_update_target_locks_intention_and_writes_hoard() -> None:
     """③核心卡信号(姬子·启行在店)→ 意向锁定;v3_hoard/target_comp
-    写入(target_comp=COMP_LIBRARY v2 真 Comp,属性面兼容 deploy 消费)。"""
+    写入(target_comp=COMP_LIBRARY v2 真 Comp,属性面兼容 deploy 消费)。
+    (锁线场景设 P2:W145/ADR-0357 起 P1 ③不锁 comp、落配方方向。)"""
     strat = DecisionV2Strategy()
     sess = _sess()
-    st = _state(shop=[_card('姬子·启行', faction='列车同行', cost=4)])
+    st = _state(plane=2, shop=[_card('姬子·启行', faction='列车同行', cost=4)])
     strat.update_target(st, sess, None)
     ist = sess.v3_intention
     assert ist.phase == 'locked' and ist.locked_comp == '列车同行'
@@ -147,11 +148,11 @@ def test_update_target_round_guard_no_miss_inflation() -> None:
     (sim 每轮最多 8 段重入——撤销出口①的分母=轮)。"""
     strat = DecisionV2Strategy()
     sess = _sess()
-    # 锁定一条核心不可见的线(构造:先锁定后撤走核心)
-    st = _state(shop=[_card('姬子·启行', faction='列车同行', cost=4)])
+    # 锁定一条核心不可见的线(构造:先锁定后撤走核心;P2——W145 起 P1 ③不锁)
+    st = _state(plane=2, shop=[_card('姬子·启行', faction='列车同行', cost=4)])
     strat.update_target(st, sess, None)
     assert sess.v3_intention.phase == 'locked'
-    st2 = _state(shop=[], level=8)   # 高等级:刷新窗开,核心不可见
+    st2 = _state(plane=2, shop=[], level=8)   # 高等级:刷新窗开,核心不可见
     for _ in range(8):               # 同轮 8 段重入
         strat.update_target(st2, sess, None)
     assert sess.v3_intention.phase == 'locked', \
@@ -565,21 +566,22 @@ def test_on_match_start_clears_cross_match_keys() -> None:
     吞);三臂首 record 的 hp_before 不带旧局终值。"""
     strat = DecisionV2Strategy()
     sess = _sess()
-    # 旧局残留:轮键停在 (1,1)、prev_hp 带旧局终值、事件去重串旧局
-    sess.v3_intention_key = (1, 1)
+    # 旧局残留:轮键停在 (2,1)、prev_hp 带旧局终值、事件去重串旧局
+    # (锁线场景设 P2——W145/ADR-0357 起 P1 ③不锁 comp;同键撞键语义不变)
+    sess.v3_intention_key = (2, 1)
     sess.v3_prev_hp = 45
     sess.v3_last_intention_event = 'lock'
     strat.on_match_start(_state(), sess, None)
     assert sess.v3_intention_key is None
     assert sess.v3_prev_hp is None
     assert sess.v3_last_intention_event == ''
-    # 行为面 1:新局 (1,1) 首轮意向必须驱动——核心在店 → 锁定
-    # (若旧键 (1,1) 残留,段级守卫误吞 → phase 停留初始态)
-    st = _state(round_num=1,
+    # 行为面 1:新局 (2,1) 首轮意向必须驱动——核心在店 → 锁定
+    # (若旧键 (2,1) 残留,段级守卫误吞 → phase 停留初始态)
+    st = _state(plane=2, round_num=1,
                 shop=[_card('姬子·启行', faction='列车同行', cost=4)])
     strat.update_target(st, sess, None)
     assert sess.v3_intention.phase == 'locked'
-    assert sess.v3_intention_key == (1, 1)
+    assert sess.v3_intention_key == (2, 1)
     # 行为面 2:新局首结算的掉血不入窗(prev_hp 从本局首结算起算)
     from sr_od.application.currency_war.cw_performance import RoundOutcome
     sess2 = _sess()

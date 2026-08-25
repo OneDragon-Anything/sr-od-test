@@ -61,12 +61,19 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # {pop_slot, dp};static_ev/无依据的 <50 升级仍计违规),seeds 0-19
     # 新判据 0 违规(旧判据 206/82 局,W123 §5.2/W126 记档)。移出豁免,
     # 回归 0 容忍。
+    # W145/ADR-0357(P1 配方锁):P1 锁定产物改体系对后,锁定局 form_ok
+    # 从三件套(核心 2★ 质量)切 W132 兜底门(engines≥2,星级盲)——
+    # 成型停手提前触发低质量双引擎板,seed19(n=25 snapshot)涌现危机态
+    # 囤金零买 1 例(hp 22 金 51 只升不买,A 臂同 seed hp 34)。交互面在
+    # decision_v2 phase/filters(本批边界=意向层单文件),按 ADR-0289
+    # 纪律登记待裁(裁决:兜底门是否补质量位/危机与成型停手豁免边)。
     _PENDING_ADJUDICATION = ('ledger_consistency',
                              'coldstart_direction',
                              'degrade_recover_mutex',
                              'equip_value_strategy_key_coverage',
                              'engine_seed_not_resold',
-                             'deploy_fills_cap')
+                             'deploy_fills_cap',
+                             'decision_v2_crisis_gold_hoard')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS or name in _PENDING_ADJUDICATION:
             assert 'violations' in r, f'{name}: 缺 violations 计数'

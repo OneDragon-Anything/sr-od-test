@@ -96,12 +96,13 @@ def test_layer2_family_bond_signal() -> None:
 
 
 def test_bond_lock_requires_qualification() -> None:
-    """银河学者×2(经济凑数位)无资格 → 不锁大黑塔银河学者,意向落⑤兜底;
+    """银河学者×2(经济凑数位)无资格 → 不锁大黑塔银河学者;P1 方向落
+    配方过渡方向(p1_transition,ADR-0357——绯英兜底不辖 P1);
     持黑塔纪元(资格策略)→ 放行锁直通。"""
     st = _state(board={'银河学者': 2})          # 学者2 = 买 DOT 的副产品
     ist = update_intention(st, IntentionState())
     assert ist.phase == 'unlocked' and ist.locked_comp == ''
-    assert hoard_target_set(st, ist).mode == 'fallback'
+    assert hoard_target_set(st, ist).mode == 'p1_transition'
     st_q = _state(board={'银河学者': 2}, strategies=['黑塔纪元'])
     ist_q = update_intention(st_q, IntentionState())
     assert ist_q.phase == 'locked' and ist_q.locked_comp == '大黑塔银河学者'
@@ -118,10 +119,10 @@ def test_bond_lock_wan_di_rejected_core_card_still_legal() -> None:
     st = _state(board={'夜之半神': 2})
     ist = update_intention(st, IntentionState())
     assert ist.phase == 'unlocked' and ist.locked_comp == ''
-    # P1:贯穿件在手但无①类资格 → ③证据被门拦下,意向落⑤兜底
+    # P1:贯穿件在手但无①类资格 → ③证据被门拦下,意向落配方过渡方向
     ist_p1 = update_intention(_state(bench=['万敌']), IntentionState())
     assert ist_p1.phase == 'unlocked' and ist_p1.locked_comp == ''
-    assert hoard_target_set(_state(), ist_p1).mode == 'fallback'
+    assert hoard_target_set(_state(), ist_p1).mode == 'p1_transition'
     # P2:门不辖([21] 上场窗口/换血点都在 P1 后),③照旧
     ist2 = update_intention(_state(plane=2, bench=['万敌']), IntentionState())
     assert ist2.phase == 'locked' and ist2.locked_comp == '万敌单C'
@@ -140,13 +141,23 @@ def test_bond_lock_train_requires_strategy() -> None:
 
 
 def test_layer3_core_card_signal() -> None:
-    """③核心卡:具名意向核心在店 → 对应线;锁线。"""
-    st = _state(shop=['希儿'])
+    """③核心卡:具名意向核心在店 → 对应线;P2 锁线(回归)。
+
+    P1(W145/ADR-0357):③不再锁终局 comp(锁定产物=过渡配方体系对);
+    希儿仅在店可见≠到手([23] 锁定由贯穿件=到手)→ 不构成配方证据,
+    p1_pair 空、方向落四体系全集(p1_transition)。"""
+    st = _state(plane=2, shop=['希儿'])
     sigs = detect_signals(st)
     assert any(s.comp_name == '希儿量子' and s.kind == 'core_card'
                for s in sigs if s.layer == 3)
     ist = update_intention(st, IntentionState())
     assert ist.phase == 'locked' and ist.locked_comp == '希儿量子'
+    # P1:③证据不再锁 comp
+    st1 = _state(shop=['希儿'])
+    ist1 = update_intention(st1, IntentionState())
+    assert ist1.phase == 'unlocked' and ist1.locked_comp == ''
+    assert ist1.p1_pair == ()
+    assert hoard_target_set(st1, ist1).mode == 'p1_transition'
 
 
 def test_layer4_resource_signal() -> None:
@@ -163,8 +174,9 @@ def test_layer4_resource_signal() -> None:
 
 
 def test_layer5_fallback_no_signal() -> None:
-    """⑤无信号兜底:无任何信号 → 不锁线;囤货方向落绯英档。"""
-    st = _state()
+    """⑤无信号兜底:无任何信号 → 不锁线;P2+ 囤货方向落绯英档
+    (P1 配方方向见 W145 配方锁测试;绯英兜底不辖 P1,ADR-0357)。"""
+    st = _state(plane=2)
     assert detect_signals(st) == []
     ist = update_intention(st, IntentionState())
     assert ist.phase == 'unlocked' and ist.locked_comp == ''
@@ -185,11 +197,12 @@ def test_layer_priority_order() -> None:
 # ===== 撤销两出口 =====
 
 def test_revoke_exit1_core_miss_n() -> None:
-    """撤销出口①:意向核心 6 轮不可得(开窗轮)→ 降级弱意向,只囤跨线骨架。"""
-    st = _state(shop=['希儿'])           # 锁希儿量子(3费,lv5 开窗)
+    """撤销出口①:意向核心 6 轮不可得(开窗轮)→ 降级弱意向,只囤跨线骨架。
+    (锁线场景设 P2:W145/ADR-0357 起 P1 ③不锁 comp。)"""
+    st = _state(plane=2, shop=['希儿'])   # 锁希儿量子(3费,lv5 开窗)
     ist = update_intention(st, IntentionState())
     assert ist.locked_comp == '希儿量子'
-    gone = _state()                       # 店里/bench 无希儿,窗口仍开
+    gone = _state(plane=2)                # 店里/bench 无希儿,窗口仍开
     for _ in range(CORE_MISS_N - 1):
         update_intention(gone, ist)
         assert ist.phase == 'locked'      # 前 5 轮只计数
@@ -203,12 +216,13 @@ def test_revoke_exit1_core_miss_n() -> None:
 
 def test_revoke_exit2_higher_signal_with_reachability() -> None:
     """撤销出口②:更高层信号 + 可达性对照 → 撤;下轮新信号锁新线;不可达则不撤。
-    (初始锁线用 P1 合格线希儿量子——万敌单C 的 P1 ③被 ADR-0341 门拦。)"""
-    st = _state(shop=['希儿'])           # ③锁希儿量子(layer3,P1 合格线)
+    (锁线场景设 P2:W145 起 P1 ③不锁 comp——希儿量子 P1 落配方方向。)"""
+    st = _state(plane=2, shop=['希儿'])  # ③锁希儿量子(layer3)
     ist = update_intention(st, IntentionState())
     assert ist.locked_comp == '希儿量子'
-    # 可达:plane1 剩余节点 > 姬子再遇窗 → 撤,降弱意向
-    st2 = _state(active_env='列车同行概念股', shop=['希儿'], round_num=2)
+    # 可达:plane2 剩余节点 > 姬子再遇窗 → 撤,降弱意向
+    st2 = _state(plane=2, active_env='列车同行概念股', shop=['希儿'],
+                 round_num=2)
     update_intention(st2, ist)
     assert ist.phase == 'weak' and ist.weak_comp == '希儿量子'
     assert 'higher' in ist.last_event
@@ -224,14 +238,14 @@ def test_revoke_exit2_higher_signal_with_reachability() -> None:
 
 
 def test_revoke_exit1_resets_on_core_visible() -> None:
-    """核心再现 → miss 计数清零(不冤枉撤销)。"""
-    st = _state(shop=['希儿'])
+    """核心再现 → miss 计数清零(不冤枉撤销)。(锁线场景设 P2,W145。)"""
+    st = _state(plane=2, shop=['希儿'])
     ist = update_intention(st, IntentionState())
-    gone = _state()
+    gone = _state(plane=2)
     for _ in range(3):
         update_intention(gone, ist)
     assert ist.tracks['希儿量子'].miss_count == 3
-    update_intention(_state(shop=['希儿']), ist)
+    update_intention(_state(plane=2, shop=['希儿']), ist)
     assert ist.tracks['希儿量子'].miss_count == 0
     assert ist.phase == 'locked'
 
@@ -239,11 +253,12 @@ def test_revoke_exit1_resets_on_core_visible() -> None:
 # ===== 窗口冻结语义 =====
 
 def test_freeze_counter_and_eviction() -> None:
-    """窗口未开不计 miss;冻结超位面剩余节点 → 移出候选集、回⑤、该轮不触发③。"""
-    st = _state(shop=['希儿'])            # lv5 锁希儿量子(3费)
+    """窗口未开不计 miss;冻结超位面剩余节点 → 移出候选集、回⑤、该轮不触发③。
+    (锁线场景设 P2:W145 起 P1 ③不锁 comp;冻结语义本身位面无关。)"""
+    st = _state(plane=2, shop=['希儿'])  # lv5 锁希儿量子(3费)
     ist = update_intention(st, IntentionState())
     assert ist.locked_comp == '希儿量子'
-    frozen = _state(level=3, shop=['希儿'])   # lv3 不出 3费 → 窗口关
+    frozen = _state(plane=2, level=3, shop=['希儿'])   # lv3 不出 3费 → 窗口关
     # 轮 2-5:frozen 1..4,均未超位面剩余(轮5 剩 5)→ 仍锁;miss 恒 0(未开窗不计)
     for r in range(2, 6):
         frozen.round_num = r
@@ -257,7 +272,7 @@ def test_freeze_counter_and_eviction() -> None:
     assert ist.last_event.startswith('evict:frozen')
     assert hoard_target_set(frozen, ist).mode == 'fallback'
     # 之后希儿再出现,③信号也被 evicted 过滤(等同信号未发生)
-    update_intention(_state(shop=['希儿']), ist)
+    update_intention(_state(plane=2, shop=['希儿']), ist)
     assert ist.phase == 'unlocked' and ist.locked_comp == ''
 
 
@@ -299,9 +314,9 @@ def test_lock_effect_hoard_target_set() -> None:
         assert c in ht.char_targets
     assert '高周波电锯' in ht.equip_targets
     assert '以牙还牙甲' not in ht.equip_targets   # equip_taboos(盾装连带禁)
-    # 希儿线装备配方也在锁定时切过去
-    ist2 = update_intention(_state(shop=['希儿']), IntentionState())
-    ht2 = hoard_target_set(_state(), ist2)
+    # 希儿线装备配方也在锁定时切过去(锁线场景设 P2:W145 起 P1 ③不锁)
+    ist2 = update_intention(_state(plane=2, shop=['希儿']), IntentionState())
+    ht2 = hoard_target_set(_state(plane=2), ist2)
     assert '火力风暴潮·特权' in ht2.equip_targets
 
 
@@ -332,3 +347,78 @@ def test_cross_line_skeleton_source() -> None:
         '瓦尔特', '千冶·刃', '符玄', '星期日', '开拓者·记忆',
         '花火', '缇宝', '刻律德菈', '三月七', '藿藿',
     }
+
+
+# ===== P1 过渡配方锁(W145/ADR-0357)=====
+
+
+def test_p1_pair_lock_from_dot_assets() -> None:
+    """P1 锁定产物=体系对:DOT 2 件在手(DOT 支持度 1.0)→ 锁
+    (持续伤害, 列车同行)(第二体系按激活占比序);囤货=对成员集,
+    mode=p1_pair;不锁任何终局 comp。"""
+    st = _state(bench=['桑博', '卡芙卡'])
+    ist = update_intention(st, IntentionState())
+    assert ist.phase == 'unlocked' and ist.locked_comp == ''
+    assert ist.p1_pair == ('列车同行', '持续伤害')
+    ht = hoard_target_set(st, ist)
+    assert ht.mode == 'p1_pair'
+    assert '桑博' in ht.char_targets          # DOT 成员
+    assert '三月七' in ht.char_targets        # 列车成员(第二体系=目标件)
+    assert not ht.equip_targets               # 过渡装备随意([20])
+
+
+def test_p1_pair_shifts_with_assets() -> None:
+    """体系对随资产重派生([20] 变体按来牌选):仙舟三人组到手(1.0)
+    → 对切 (列车同行, 仙舟)——饮月双阵营(仙舟+列车)各系并计,
+    列车以平手占比序挤掉 DOT(对内序=激活占比序)。"""
+    ist = update_intention(_state(bench=['桑博']), IntentionState())
+    assert ist.p1_pair == ('列车同行', '持续伤害')
+    ist = update_intention(
+        _state(bench=['桑博', '藿藿', '丹恒·饮月', '爻光']), ist)
+    assert ist.p1_pair == ('列车同行', '仙舟')
+    assert ist.last_event.startswith('p1_pair:')
+
+
+def test_p1_pair_seele_owned_not_shop() -> None:
+    """希儿系=到手才计支持度([23] 锁定由贯穿件=到手):店里可见不锁希儿系,
+    bench 到手 → 希儿系进对。"""
+    ist = update_intention(_state(shop=['希儿']), IntentionState())
+    assert '希儿系' not in ist.p1_pair
+    ist2 = update_intention(_state(bench=['希儿']), IntentionState())
+    assert '希儿系' in ist2.p1_pair
+    ht = hoard_target_set(_state(bench=['希儿']), ist2)
+    assert '希儿' in ht.char_targets and '缇宝' in ht.char_targets
+
+
+def test_p1_pair_boundary_empty_fallback() -> None:
+    """边界:无任何过渡体系件(空窗期,[31]①)→ 不锁对;方向=四体系
+    引擎件全集(p1_transition),不落绯英兜底(零引擎覆盖,W143)。"""
+    st = _state(bench=['万敌'])   # 终局专属件,不构成体系支持
+    ist = update_intention(st, IntentionState())
+    assert ist.p1_pair == ()
+    ht = hoard_target_set(st, ist)
+    assert ht.mode == 'p1_transition'
+    for name in ('三月七', '桑博', '丹恒·饮月'):   # 三体系代表件
+        assert name in ht.char_targets
+
+
+def test_p1_pair_exits_at_p2() -> None:
+    """进 P2:配方锁退场(p1_pair 清空),comp 锁定通道照旧
+    (P2 锁定产物=终局 comp,回归)。"""
+    ist = update_intention(_state(bench=['桑博']), IntentionState())
+    assert ist.p1_pair == ('列车同行', '持续伤害')
+    ist = update_intention(_state(plane=2), ist)
+    assert ist.p1_pair == () and ist.last_event == 'p1_pair:exit_p1'
+    assert hoard_target_set(_state(plane=2), ist).mode == 'fallback'
+
+
+def test_p1_recipe_lock_off_restores_baseline(monkeypatch) -> None:
+    """A/B 通道:P1_RECIPE_LOCK=False → P1 ③恢复锁终局 comp
+    (W143 锚行为,sim 基线臂)。"""
+    from sr_od.application.currency_war import cw_intention
+    monkeypatch.setattr(cw_intention, 'P1_RECIPE_LOCK', False)
+    st = _state(shop=['卡芙卡'])
+    ist = update_intention(st, IntentionState())
+    assert ist.phase == 'locked' and ist.locked_comp == 'DOT队'
+    assert ist.p1_pair == ()
+    assert hoard_target_set(st, ist).mode == 'locked'
