@@ -150,6 +150,12 @@ _EXPECTED_HASH = ('b6f56fb72b40183c42b15e81105b28b2'
 # 锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = ('b835dcbf8e0c8b9be5fc2e904b219cbe'
                   'c380a2dd2531c9b5dec7c2e435ce849d')
+# W179/ADR-0372 P1 早期新件买入门批更新:新增 p1_early_gate_enabled
+# (=True)/p1_early_min_missing(=6)/p1_early_round_cap(=1)三字段
+# (双条件窗:缺件密度 × 息档口径;关=回 W174 后行为)——有意改参,
+# 锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = ('dbda54fec1bb165f4a18b2e0cd4dc8ea'
+                  'e5710d92a03a36c8285c0b1c697a0b77')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
