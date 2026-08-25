@@ -85,6 +85,10 @@ _EXPECTED_HASH += 'e17440afac0996ec4fa7f7f9e397c22af'
 # ([13] 停手线;既有数值字段全部不变)——有意改参,锁同步更新
 _EXPECTED_HASH = ('ee7a9c38ca6b9fd2799f64bbc4545ffe'
                   '761e97528a78d075ec279d4adda9a9e3')
+# W114/ADR-0346 相位影子观测批更新:新增 phase_form_score_gate(=0.5,
+# 兜底局 form_ok 降级门,sim 校准域;影子期零消费)——有意改参,锁同步
+# 更新(既有数值字段全部不变)
+_EXPECTED_HASH = '117316f74fdbd93413f1937622a1710c6865fd35d0769b399335a74dbd045fe5'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
