@@ -56,19 +56,17 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # 段的早期买入 → r2-r4 deployed 增长变慢,seed16 涌现 deploy_
     # fills_cap 1 例。裁决归步②b 的 Q1 四档 sim 对照(不设/10/20/30)
     # ——定档后从本豁免表移除,回归 0 容忍。
-    # W119/ADR-0347([12] 门收编 EV 总账):levelup_interest_engine_gate
-    # 的旧判据(lv≥5 升级时点金<50 且未曾满息=违规)与收编后的授权
-    # 语义冲突——[33] 人口位(bench 有目标件等上场,花后≥form_floor)
-    # 与 DP 花费授权的 <50 升级是**合法放行面**,25 局涌现 16 例
-    # (games 1/3/4/6/7)。裁决归步②b:判据改读授权依据(decisions 行
-    # dp_posture/EV trace)或按 hp/interest 净效应定案;定案后移除。
+    # W131/ADR-0353(检查器判据重定义):levelup_interest_engine_gate
+    # 裁决已落地——判据改读授权依据(账本 LevelUp 行 auth 键,白名单
+    # {pop_slot, dp};static_ev/无依据的 <50 升级仍计违规),seeds 0-19
+    # 新判据 0 违规(旧判据 206/82 局,W123 §5.2/W126 记档)。移出豁免,
+    # 回归 0 容忍。
     _PENDING_ADJUDICATION = ('ledger_consistency',
                              'coldstart_direction',
                              'degrade_recover_mutex',
                              'equip_value_strategy_key_coverage',
                              'engine_seed_not_resold',
-                             'deploy_fills_cap',
-                             'levelup_interest_engine_gate')
+                             'deploy_fills_cap')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS or name in _PENDING_ADJUDICATION:
             assert 'violations' in r, f'{name}: 缺 violations 计数'
