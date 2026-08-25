@@ -316,6 +316,57 @@ def test_overheat_reward_node_treated_as_battle() -> None:
             assert v < 0, f'无环境 reward 轮界门照辖(实际 {v})'
 
 
+# --- 附2:W120 证明批检验点锁(P5 边界/P6 无特判)-----------------------------
+
+
+def test_w120_p5_c_interest_boundary() -> None:
+    """W120 P5 定理退化输出(W119/ADR-0347 C_interest 公式的边界断言):
+    金 50/51 时 D 候选被 EV 拒(跨 50 档,C_interest≥R);金 ≥52+刷价
+    放行(C_interest=0,由常分决定)——「花完仍≥50」是公式的自然输出
+    而非外加约束。注入 (val=0.5, int_emb=0) 锁门语义(常分口径。"""
+    from sr_od.application.currency_war.cw_state import RefreshShop
+    cand = Candidate(action=RefreshShop(cost=2), tag='refresh',
+                     source='shop')
+    for gold, expect in ((50, False), (51, False), (52, True), (53, True)):
+        sess = StrategySession()
+        sess.v3_mode = 'economy'
+        st = _state(round_num=5, gold=gold, node_type='battle')
+        res = arbitrate([(cand, 0.5, {'int_emb': 0.0})], st, sess, _REG)
+        row = next(r for r in res.log if r['tag'] == 'refresh')
+        assert row['accepted'] is expect, (gold, row)
+        if not expect:
+            assert 'EV' in (row['reject'] or ''), row
+
+
+def test_w120_p6_no_per_round_special_case() -> None:
+    """W120 P6:前两轮无 per-round 特判——统一 EV 路径自动给出「买」
+    (零息损+全额退免费期权)。断言 r1/r2 无决策分支读 round_num 做
+    买/刷的特殊放行(scoring/arbiter 源码静态检查;唯一轮界门
+    refresh_max_round/bond_fallback_min_round/form_refresh_max_round 是
+    ADR-0293/0340 既有门,非 r1/r2 特判)。"""
+    import inspect
+    from sr_od.application.currency_war.decision_v2 import arbiter as _arb
+    from sr_od.application.currency_war.decision_v2 import scoring as _sc
+    src = inspect.getsource(_arb) + inspect.getsource(_sc)
+    for pat in ('round_num <= 1', 'round_num <= 2', 'round_num < 1',
+                'round_num < 2', 'round_num == 1', 'round_num == 2',
+                'round_num >= 1', 'round_num >= 2'):
+        assert pat not in src, f'r1/r2 特判模式出现: {pat}'
+
+
+def test_w120_p9_hp1_dead_end_marker() -> None:
+    """W120 P9:HP=1 死局/早停候选标记(披露非违规)——check 恒空
+    (violations=0),数据面 hp1_dead_end_rounds 给出轮号供早停判读。"""
+    from sr_od.application.currency_war.cw_sim_checks import (
+        check_hp1_dead_end_candidate,
+        hp1_dead_end_rounds,
+    )
+    rows = [{'round_num': 6, 'hp': 3}, {'round_num': 7, 'hp': 1},
+            {'round_num': 8, 'hp': 1}, {'round_num': 9, 'hp': 0}]
+    assert check_hp1_dead_end_candidate(rows) == []   # 恒不违规
+    assert hp1_dead_end_rounds(rows) == [7, 8, 9]     # 数据面含 hp=0
+
+
 # --- 附:旁路护栏 + HOARD 相位域 ---------------------------------------------
 
 
