@@ -109,17 +109,19 @@ def test_form_ev_positive_break_buy_allowed() -> None:
     st = _state(round_num=5, gold=51, node_type='battle')
     cand = Candidate(action=BuyCard(_card('引擎件', cost=4), reason=''),
                      tag='engine_seed', source='shop')
-    # EV 正:V = 30 −(−25) = 55,C = 1 档×R(23)→ EV≈32 > 0 → 放行
+    # EV 正:V = 30 −(−25) = 55,C = 1 档×min(R,3)=3(W131 买侧回档
+    # 折中口径)→ EV≈52 > 0 → 放行
     res_pos = arbitrate([(cand, 30.0, {'int_emb': -25.0})], st, sess,
                         _REG)
     row = next(r for r in res_pos.log if r['tag'] == 'engine_seed')
     assert row['accepted'] is True, row
     assert row['ev_auth']['ev_auth'] > 0, row   # 授权依据 trace 在场
     assert any(isinstance(a, BuyCard) for a in res_pos.actions)
-    # EV 负:V = 5 − 0 = 5 < C → 拒
+    # EV 负:V = 1 − 0 = 1 < C(3)→ 拒(W131 前 C=1×R≈23,标定后买侧
+    # C=回档折中口径——低价值买仍拒,门语义保留)
     sess2 = StrategySession()
     sess2.v3_mode = 'economy'
-    res_neg = arbitrate([(cand, 5.0, {'int_emb': 0.0})], st, sess2,
+    res_neg = arbitrate([(cand, 1.0, {'int_emb': 0.0})], st, sess2,
                         _REG)
     row2 = next(r for r in res_neg.log if r['tag'] == 'engine_seed')
     assert row2['accepted'] is False, row2

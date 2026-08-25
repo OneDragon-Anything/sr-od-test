@@ -142,6 +142,7 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_review_income_slotfix_locks.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_run_allocator.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_shop_odds.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_sim_checks_repay.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_sim_checks_streak_income.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_sim_cli_smoke.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_sim_ledger_checks.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_sim_wiring_doc.py
