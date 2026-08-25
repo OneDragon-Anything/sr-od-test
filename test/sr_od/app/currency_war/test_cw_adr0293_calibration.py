@@ -70,8 +70,11 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: ADR-0332 成型评分活性批更新:新增 forming_bias(=5.0,成型补充偏置
 #: 顶正)/forming_bias_val_max(=0.5,顶分上沿)两字段(既有数值字段
 #: 全部不变;双窗 A/B 验证见 ADR-0332)。
-_EXPECTED_HASH = '16a61bb4e5e69357f6554893553b0c37'
-_EXPECTED_HASH += '492be1378836694028bb31c25bcc50e0'
+#: ADR-0333 体系集中度批(W72)更新:新增 engine_affinity_enabled(=True,
+#: 候选层 engine_seed 配方亲和过滤开关;关闭=回 W70 行为,A/B 通道;
+#: 既有数值字段全部不变,验证见 ADR-0333)。
+_EXPECTED_HASH = 'e8ebea1bd906f476223e4c19796cc668'
+_EXPECTED_HASH += '0f4e3b623d8afdb69e5799c4215764a0'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
