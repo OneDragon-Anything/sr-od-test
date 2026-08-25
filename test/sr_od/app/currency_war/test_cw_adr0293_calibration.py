@@ -128,6 +128,12 @@ _EXPECTED_HASH = ('4d691245755180dc3ae21c8dfe075d19'
 # +末轮围栏;既有数值字段全部不变)——有意改参,锁同步更新
 _EXPECTED_HASH = ('a3c0989b51b467323e429e1592219198'
                   'dfab74d94ec006cdde9bfff26cc2238c')
+# W154/ADR-0361 P2 段 V_D 修法批更新:新增 vd_p2_enabled(=True)/
+# vd_p2_loss(=16.0,P2 掉血期望保守中值)/vd_p2_recovery_rounds(=2.31,
+# P2 穿 50 段回档上界)/vd_p2_liquidity_rho(=0.0,溢余金影子价起步)
+# 四字段(P11/P12 口径;P1 分支零变化)——有意改参,锁同步更新
+_EXPECTED_HASH = ('c42f073df31bbecc215857816a7da9a'
+                  'ec4f5cd2f6c0684eaa121441aec68481c')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
