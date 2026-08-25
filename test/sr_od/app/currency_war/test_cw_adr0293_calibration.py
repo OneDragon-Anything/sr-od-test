@@ -73,8 +73,11 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: ADR-0333 体系集中度批(W72)更新:新增 engine_affinity_enabled(=True,
 #: 候选层 engine_seed 配方亲和过滤开关;关闭=回 W70 行为,A/B 通道;
 #: 既有数值字段全部不变,验证见 ADR-0333)。
-_EXPECTED_HASH = '646b6a0cd39c9347fa386aaec58b4e1b'
-_EXPECTED_HASH += '6168a9c50e6bd44d2a4ef0d9638be10a'
+#: W96/ADR-0340 断买修复批更新:新增 merge_progress_unit(=3.0,3合1
+#: 中间进度项——目标件第 2 份 1★ 期权显影;未网格标定,sim A/B
+#: 方向见 deep_read/W96_报告.md)——有意改参,锁同步更新
+_EXPECTED_HASH = '8a7c4ee67326db5cb4d4007abb9ace9'
+_EXPECTED_HASH += 'e17440afac0996ec4fa7f7f9e397c22af'
 # W88/ADR-0339:新增 core_star_unit=3.0(核心升星价值项,配对 A/B 标定
 # n=150:+18/0)——有意改参,锁同步更新
 
