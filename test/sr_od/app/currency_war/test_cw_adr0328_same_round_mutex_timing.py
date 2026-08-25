@@ -85,7 +85,7 @@ def _locked_sess() -> StrategySession:
     ist.locked_comp = '列车同行'
     s = _sess(v3_intention=ist)
     s.v3_hoard = HoardTarget(
-        frozenset({'姬子·启行', '三月七', '花火', '瓦尔特'}),
+        frozenset({'姬子·启行', '花火', '瓦尔特', '三月七'}),
         frozenset(), 'locked')
     s.v3_core_names = {'姬子·启行'}
     return s
@@ -95,10 +95,10 @@ def _oscillation_state() -> GameState:
     """W66 违规形态(S3 同星豁免放大面):bench 满(9/9)含 X×2 同 1★,
     店内第 3 张 X → BUY X(merge,容量豁免)与 SELL X(free_bench,目标
     件让位)候选共现——修前同趟双双过,oscillation 白拿 XP。"""
-    st = _state(bench=[_bench('三月七', faction='列车同行', slot=i)
+    st = _state(bench=[_bench('花火', faction='量子同频', slot=i)
                        if i < 2 else _bench(f'C{i}', slot=i)
                        for i in range(9)],
-                shop=[_card('三月七', faction='列车同行', cost=1)])
+                shop=[_card('花火', faction='量子同频', cost=2)])
     return st
 
 
@@ -132,14 +132,14 @@ def test_arbitrate_buy_then_sell_same_round_rejected() -> None:
     buy_c = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
                       merge=True, source='test')
     sell_c = Candidate(action=SellBench(bench_idx=0), tag='free_bench',
-                       source='test', breakdown_hint={'name': '三月七'})
+                       source='test', breakdown_hint={'name': '花火'})
     res = arbitrate([(buy_c, 5.0, {}), (sell_c, 1.0, {})], st, sess, _REG)
     buys = [a for a in res.actions if isinstance(a, BuyCard)]
     sells = [a for a in res.actions if isinstance(a, SellBench)]
-    assert buys and buys[0].card.name == '三月七', 'BUY X 应先采纳'
+    assert buys and buys[0].card.name == '花火', 'BUY X 应先采纳'
     assert not sells, f'同趟已采纳 BUY X → SELL X 应被拒(修前双双过):{res.actions}'
-    assert '三月七' in sess.v2_round_bought, '采纳即登记已买集(ADR-0328)'
-    assert '三月七' not in sess.v2_round_sold
+    assert '花火' in sess.v2_round_bought, '采纳即登记已买集(ADR-0328)'
+    assert '花火' not in sess.v2_round_sold
     rejects = [r['reject'] for r in res.log if not r['accepted']]
     assert any('同轮已买' in (r or '') for r in rejects), rejects
     # 转录账本 → 检查器零违规(修复后 sim 侧同构)
@@ -187,15 +187,15 @@ def test_mutation_remove_registration_reveals_violation(monkeypatch) -> None:
     buy_c = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
                       merge=True, source='test')
     sell_c = Candidate(action=SellBench(bench_idx=0), tag='free_bench',
-                       source='test', breakdown_hint={'name': '三月七'})
+                       source='test', breakdown_hint={'name': '花火'})
     monkeypatch.setattr(arbiter_mod, '_register_accepted',
                         lambda a, st_, sess_: None)
     res = arbitrate([(buy_c, 5.0, {}), (sell_c, 1.0, {})], st, sess, _REG)
     sells = [a for a in res.actions if isinstance(a, SellBench)]
     assert sells, '变异(去登记)后 SELL X 应通过守卫——变异生效前提'
-    assert '三月七' not in sess.v2_round_bought
+    assert '花火' not in sess.v2_round_bought
     v = check_no_same_round_buy_sell([_ledger_row(st, res.actions)])
-    assert v and '三月七' in v[0], \
+    assert v and '花火' in v[0], \
         f'去守卫变异必须涌现违规(守卫=唯一闸门):{v}'
 
 
@@ -235,9 +235,9 @@ def test_decide_pipeline_oscillation_pair_rejected() -> None:
     st = _oscillation_state()
     cands = generate_candidates(st, sess, _REG)
     buys_x = [c for c in cands if isinstance(c.action, BuyCard)
-              and c.action.card.name == '三月七']
+              and c.action.card.name == '花火']
     sells_x = [c for c in cands if c.tag in _SELL_TAGS
-               and c.breakdown_hint.get('name') == '三月七']
+               and c.breakdown_hint.get('name') == '花火']
     assert buys_x and sells_x, \
         f'候选管线应共现 BUY X + SELL X(修前双双过):' \
         f'buy={[(c.tag, c.merge) for c in buys_x]} ' \

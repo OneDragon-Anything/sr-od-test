@@ -357,9 +357,10 @@ def test_s5_key_orders_low_cost_net0_first() -> None:
     )
     sess = _sess()
     sess.v2_round_key = (1, 4)
-    # 三月七(1费)vs 瓦尔特(5费)——均单份 1★ 可卖
-    st = _state(gold=60, bench=[_bench('三月七', faction='列车同行', slot=0),
-                                _bench('瓦尔特', faction='列车同行', slot=1)],
+    # 黑塔(1费)vs 娜塔莎(3费)——均单份 1★ 可卖(W184 后三月七/瓦尔特
+    # 为 TT 列车件另有唯一引擎卖禁,通用键序锁改用非 TT 件)
+    st = _state(gold=60, bench=[_bench('黑塔', faction='公司', slot=0),
+                                _bench('娜塔莎', faction='公司', slot=1)],
                 board={})
     k_low = sell_priority_key(st.bench[0], st, sess, None, _REG)
     k_high = sell_priority_key(st.bench[1], st, sess, None, _REG)
@@ -540,9 +541,10 @@ def test_remedy_single_pass_per_round() -> None:
     sess.v3_mode = 'war'
     sess.v2_round_key = (1, 4)
     reg10 = replace(_REG, war_floor=10)
-    # 第一次仲裁:金不足 buy → 补偿卖出
+    # 第一次仲裁:金不足 buy → 补偿卖出(绯英=非 TT 件,W184 后 TT
+    # 唯一引擎件不进补偿卖序,通用锁用非 TT 件)
     st1 = _state(round_num=4, gold=13, hp=80,
-                 bench=[_bench('卡芙卡', faction='公司', slot=0)],
+                 bench=[_bench('绯英', faction='公司', slot=0)],
                  shop=[_card('姬子·启行', cost=4)],
                  deployed=[_bench(f'D{i}', faction='公司', slot=i)
                            for i in range(5)], board={})
@@ -575,7 +577,7 @@ def test_remedy_sold_not_rebought_same_round() -> None:
     sess.v2_round_key = (1, 4)
     reg10 = replace(_REG, war_floor=10)
     st1 = _state(round_num=4, gold=13, hp=80,
-                 bench=[_bench('卡芙卡', faction='公司', slot=0)],
+                 bench=[_bench('绯英', faction='公司', slot=0)],
                  shop=[_card('姬子·启行', cost=4)],
                  deployed=[_bench(f'D{i}', faction='公司', slot=i)
                            for i in range(5)], board={})
@@ -583,10 +585,10 @@ def test_remedy_sold_not_rebought_same_round() -> None:
                                  tag='line_carry', source='test'),
                        5.0, {})], st1, sess, reg10)
     assert res1.remediation_log, '第一次应有补偿'
-    assert '卡芙卡' in sess.v2_round_sold, '补偿卖出应入已卖集'
-    # 同轮店内又现卡芙卡 → 买候选被 same_round_mutex 拒
+    assert '绯英' in sess.v2_round_sold, '补偿卖出应入已卖集'
+    # 同轮店内又现绯英 → 买候选被 same_round_mutex 拒
     st2 = _state(round_num=4, gold=60, hp=80, bench=[],
-                 shop=[_card('卡芙卡', cost=2)],
+                 shop=[_card('绯英', cost=2)],
                  deployed=[_bench(f'D{i}', faction='公司', slot=i)
                            for i in range(5)], board={})
     res2 = arbitrate([(Candidate(action=BuyCard(st2.shop[0]),
@@ -640,7 +642,7 @@ def test_marginal_bond_guard_protects_recipe_parts() -> None:
     sess.v2_round_key = (1, 4)
     st = _state(round_num=4, gold=13, hp=80,
                 bench=[_bench('青雀', faction='仙舟', slot=0),
-                       _bench('卡芙卡', faction='公司', slot=1)],
+                       _bench('银枝', faction='公司', slot=1)],
                 shop=[_card('姬子·启行', cost=4)],
                 deployed=[_bench(f'D{i}', faction='仙舟', slot=i)
                           for i in range(5)],
@@ -650,9 +652,9 @@ def test_marginal_bond_guard_protects_recipe_parts() -> None:
                       5.0, {})], st, sess, replace(_REG, war_floor=10))
     sells = [a for a in res.actions if isinstance(a, SellBench)]
     assert len(sells) == 1 and st.bench[sells[0].bench_idx].char_id \
-        == '卡芙卡', \
+        == '银枝', \
         f'只卖垫层件(配方件青雀不卖):{[s.bench_idx for s in sells]}'
-    assert sess.v2_round_sold == {'卡芙卡'}
+    assert sess.v2_round_sold == {'银枝'}
     # 全配方件 → 整组放弃
     sess2 = _locked_sess()
     sess2.v3_mode = 'war'
@@ -783,7 +785,7 @@ def test_ad9_2_1_remedy_before_accepted_refresh() -> None:
     reg10 = replace(_REG, war_floor=10)
     # war 地板 10:金 13 → 买 13-4=9<10 拒(缺 1);refresh 13-2=11>=10 采纳
     st = _state(round_num=4, gold=13, hp=80,
-                bench=[_bench('卡芙卡', faction='公司', slot=0)],
+                bench=[_bench('绯英', faction='公司', slot=0)],
                 shop=[_card('姬子·启行', cost=4)],
                 deployed=[_bench(f'D{i}', faction='公司', slot=i)
                           for i in range(5)], board={})

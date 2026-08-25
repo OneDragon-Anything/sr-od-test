@@ -156,6 +156,11 @@ _EXPECTED_HASH = ('b835dcbf8e0c8b9be5fc2e904b219cbe'
 # 锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = ('dbda54fec1bb165f4a18b2e0cd4dc8ea'
                   'e5710d92a03a36c8285c0b1c697a0b77')
+# W184/ADR-0373 卖侧唯一体系引擎守卫批更新:新增 sell_sole_engine_
+# guard_enabled(=True,S2 恶化谱系 A/B 通道总开关;关=回 W179 后
+# 行为)——有意改参,锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = ('fcfa610b0496e5f58975b2a82be1b30d'
+                  'd3e11d6bd40dbca9721220f930697c35')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

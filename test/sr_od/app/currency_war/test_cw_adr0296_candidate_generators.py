@@ -75,10 +75,13 @@ def _sell_tags(st: GameState, sess: StrategySession) -> dict[str, str]:
 
 def test_sell_off_target_normal_state() -> None:
     """常态:非目标 bench 件 → off_target(引擎阵营件无卖禁——旧
-    engine 阵营级保护删除,件值交评分层;青雀=仙舟引擎阵营)。"""
+    engine 阵营级保护删除,件值交评分层)。W184/ADR-0373 后 TT 件
+    (青雀=仙舟)在 owned≤tier 时另有唯一引擎卖禁(辖域锁见
+    test_cw_w184_sole_engine_sell_guard),本锁改用非 TT 件银枝锁
+    通用 off_target 语义。"""
     sess = _sess(line='jizi')
-    st = _state(bench=[BenchChar(slot=0, char_id='青雀', faction='仙舟')])
-    assert _sell_tags(st, sess) == {'青雀': 'off_target'}
+    st = _state(bench=[BenchChar(slot=0, char_id='银枝', faction='智识')])
+    assert _sell_tags(st, sess) == {'银枝': 'off_target'}
 
 
 def test_sell_target_piece_not_sellable() -> None:
@@ -92,16 +95,16 @@ def test_sell_for_gold_emergency() -> None:
     """应急态(hp≤emergency_hp):非目标弱件 → for_gold(折现换金)。"""
     sess = _sess(line='jizi')
     st = _state(hp=20, bench=[
-        BenchChar(slot=0, char_id='青雀', faction='仙舟')])
-    assert _sell_tags(st, sess) == {'青雀': 'for_gold'}
+        BenchChar(slot=0, char_id='银枝', faction='智识')])
+    assert _sell_tags(st, sess) == {'银枝': 'for_gold'}
 
 
 def test_sell_free_bench_full_target_yields() -> None:
     """bench 满:目标件也降保护集让位(free_bench,v1 carry 腾位门
     语义);非目标件在 bench 满时同样 free_bench 语义域。"""
     sess = _sess(line='jizi')
-    bench = [BenchChar(slot=i, char_id='娜塔莎' if i == 0 else '青雀',
-                       faction='护盾' if i == 0 else '仙舟')
+    bench = [BenchChar(slot=i, char_id='娜塔莎' if i == 0 else '银枝',
+                       faction='护盾' if i == 0 else '智识')
              for i in range(_REG.bench_capacity)]
     st = _state(bench=bench)
     tags = _sell_tags(st, sess)
@@ -116,39 +119,39 @@ def test_sell_blocked_same_round_bought_r408() -> None:
     """r408:同轮已买件不生成卖候选;同名 ≥3 份(让位语境)放行。"""
     sess = _sess(line='jizi')
     sess.v2_round_key = (1, 5)
-    sess.v2_round_bought = {'青雀'}
-    st = _state(bench=[BenchChar(slot=0, char_id='青雀', faction='仙舟')])
-    assert '青雀' not in _sell_tags(st, sess), '同轮已买不卖(r408)'
+    sess.v2_round_bought = {'银枝'}
+    st = _state(bench=[BenchChar(slot=0, char_id='银枝', faction='智识')])
+    assert '银枝' not in _sell_tags(st, sess), '同轮已买不卖(r408)'
     # 3合1 让位豁免:3 份(其中含同轮买入)→ 放行(free_bench 域外
     # 不可卖因素材豁免,构造 4 份冗余语境 → 可卖)
-    st2 = _state(bench=[BenchChar(slot=i, char_id='青雀', faction='仙舟')
+    st2 = _state(bench=[BenchChar(slot=i, char_id='银枝', faction='智识')
                         for i in range(4)])
-    assert '青雀' in _sell_tags(st2, sess), \
+    assert '银枝' in _sell_tags(st2, sess), \
         '同轮买 ≥3 份让位语境应放行(r408 豁免边)'
 
 
 def test_sell_blocked_seed_age_window() -> None:
     """ADR-0289 §5:买入 ≤2 轮的种子(engine_seed)不进可卖集。"""
     sess = _sess(line='jizi')
-    sess.v2_seed_bought = {'青雀': ((1, 3), 1)}   # r3 买 1 份
+    sess.v2_seed_bought = {'银枝': ((1, 3), 1)}   # r3 买 1 份
     st = _state(round_num=4, bench=[
-        BenchChar(slot=0, char_id='青雀', faction='仙舟')])
-    assert '青雀' not in _sell_tags(st, sess), '种子 2 轮窗内不卖'
+        BenchChar(slot=0, char_id='银枝', faction='智识')])
+    assert '银枝' not in _sell_tags(st, sess), '种子 2 轮窗内不卖'
     st3 = _state(round_num=7, bench=[   # r7 = 买后第 4 轮 → 可卖
-        BenchChar(slot=0, char_id='青雀', faction='仙舟')])
-    assert _sell_tags(st3, sess).get('青雀') == 'off_target'
+        BenchChar(slot=0, char_id='银枝', faction='智识')])
+    assert _sell_tags(st3, sess).get('银枝') == 'off_target'
 
 
 def test_sell_blocked_complete_merge_material() -> None:
     """3合1 素材豁免:同名星级加权恰 3 份(完整合成份)不卖;
     >3 冗余份可卖(v1 copies>cap 优先腾语义)。"""
     sess = _sess(line='jizi')
-    st = _state(bench=[BenchChar(slot=i, char_id='青雀', faction='仙舟')
+    st = _state(bench=[BenchChar(slot=i, char_id='银枝', faction='智识')
                        for i in range(3)])
-    assert '青雀' not in _sell_tags(st, sess), '完整 3合1 份不拆卖'
-    st4 = _state(bench=[BenchChar(slot=i, char_id='青雀', faction='仙舟')
+    assert '银枝' not in _sell_tags(st, sess), '完整 3合1 份不拆卖'
+    st4 = _state(bench=[BenchChar(slot=i, char_id='银枝', faction='智识')
                         for i in range(4)])
-    assert '青雀' in _sell_tags(st4, sess), '第 4 份冗余可卖'
+    assert '银枝' in _sell_tags(st4, sess), '第 4 份冗余可卖'
 
 
 # --- ③ synthesize 独立生成器 ------------------------------------------------
