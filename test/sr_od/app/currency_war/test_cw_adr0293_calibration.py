@@ -140,6 +140,11 @@ _EXPECTED_HASH = ('c42f073df31bbecc215857816a7da9a'
 # 该批合流时如再改默认值须随批重锁)
 _EXPECTED_HASH = ('3729d4bacdfa8edb41195c1ea386c5d1'
                   '045e4f980db545bd52d827d6952df78d')
+# W170/ADR-0369 P1 体系对缺件找牌通道批更新:新增 vd_p1_pair_enabled
+# (=True,P1 pair 缺件找牌通道总开关;core 通道/P2 分支不受辖)——
+# 有意改参(通道默认开),锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = ('b6f56fb72b40183c42b15e81105b28b2'
+                  '17f6d162097c61d90ba4fcba52c2a1ca')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
