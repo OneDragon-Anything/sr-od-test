@@ -261,3 +261,40 @@ def test_war_mode_refresh_candidate_present() -> None:
     # 端到端:war 帧 refresh 被采纳
     res = arbitrate([(rc, val, _bd)], st, s, _REG)
     assert any(isinstance(a, RefreshShop) for a in res.actions)
+
+
+# --- ⑩ 伴随修复:CompTransaction shop fill 索引漂移(B 批 sim 涌现)--------
+
+
+def test_comp_tx_shop_fill_index_drift_fixed() -> None:
+    """⑩W126 sim ledger_consistency 2→12/100 涌现的根:CompTransaction
+    多笔 shop fill 的 apply 循环内 ``s.shop.remove`` 左移列表,后续
+    f.idx 失效——买错卡(错档部署)+记错账(实扣 6 记 4)。修复=按
+    校验期解析的卡对象(``plan['shop_fill_cards']``)按身份消费。
+    锁:两笔 shop fill([1]=2费,[2]=2费)后金恰扣 4、上场的是提案的
+    两张(非移位后的遐蝶 4费)、店内只剩未提案的。"""
+    from sr_od.application.currency_war.cw_state import (
+        CompTransaction,
+        FillSpec,
+        ShopCard,
+        simulate,
+    )
+    st = GameState(plane=1, round_num=5, gold=30, level=4, hp=60,
+                   shop=[ShopCard(name='卡零', faction='公司', cost=1, x=0),
+                         ShopCard(name='砂金', faction='公司', cost=2, x=1),
+                         ShopCard(name='佩拉', faction='贝洛伯格', cost=2, x=2),
+                         ShopCard(name='遐蝶', faction='夜之半神', cost=4, x=3)],
+                   bench=[], deployed=[], node_type='battle')
+    tx = CompTransaction(deploy=[], undeploy=[], sell=[],
+                         fill=[FillSpec(source='shop', idx=1, row='back'),
+                               FillSpec(source='shop', idx=2, row='back')],
+                         reason='test:drift')
+    out = simulate(st, tx)
+    log = out.action_log[-1]
+    assert log['result'] == 'applied', log
+    assert log['fill_cost'] == 4, log
+    assert st.gold - out.gold == 4, (st.gold, out.gold)
+    dep_names = {d.char_id for d in out.deployed}
+    assert dep_names == {'砂金', '佩拉'}, dep_names
+    shop_names = [c.name for c in out.shop]
+    assert shop_names == ['卡零', '遐蝶'], shop_names
