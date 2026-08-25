@@ -29,11 +29,8 @@ _ADR_FILE_RE = re.compile(r'^(\d{4})-.+\.md$')
 # ADR 文件首行标题形态(实测多种并存):`# 0333 - ...` / `# ADR 0097 ...` / `# ADR-0114:...`
 _TITLE_RE = re.compile(r'^#\s*(?:ADR[-\s:]*)?(\d{4})\b')
 
-# 已知历史遗留豁免(实测发现的真实缺陷;主仓侧修复后必须删本豁免,让守卫重新接管):
-# - INDEX 0309 行链接的是 0310 文件(编号/文件名前缀不一致);
-# - 0309-board-by-row-and-bench-equip-ledger.md 未登记进 INDEX(孤儿)。
-_KNOWN_PREFIX_MISMATCH: set[str] = {'0310-decision-v2-sole-carrier.md'}
-_KNOWN_ORPHANS: set[str] = {'0309-board-by-row-and-bench-equip-ledger.md'}
+# 历史豁免已清(2026-08-26 主仓勘误后删除):0309/0310 撞号与孤儿已修
+# (0310 载体批正名+0309-board 补 INDEX 行,主仓 commit 见 git log),守卫全面接管。
 
 
 def _collect_violations(index_text: str, decisions_dir: Path) -> list[str]:
@@ -66,11 +63,9 @@ def _collect_violations(index_text: str, decisions_dir: Path) -> list[str]:
             continue
         # 3. 行编号 == 文件名前缀编号
         file_num = filename[:4]
-        if num != file_num and filename not in _KNOWN_PREFIX_MISMATCH:
+        if num != file_num:
             problems.append(f'INDEX 行编号 {num} 与文件名前缀 {file_num} 不一致: {filename}')
-        # 5. 标题自洽(豁免文件:0310 文件标题写 0309,沿用 INDEX 行号,同组历史遗留)
-        if filename in _KNOWN_PREFIX_MISMATCH:
-            continue
+        # 5. 标题自洽
         first_line = path.read_text(encoding='utf-8').splitlines()[0]
         tm = _TITLE_RE.match(first_line)
         if tm is None:
@@ -83,7 +78,7 @@ def _collect_violations(index_text: str, decisions_dir: Path) -> list[str]:
         am = _ADR_FILE_RE.match(path.name)
         if not am or not path.is_file():
             continue
-        if path.name not in linked_files and path.name not in _KNOWN_ORPHANS:
+        if path.name not in linked_files:
             problems.append(f'孤儿 ADR 文件(不在 INDEX): {path.name}')
 
     if not seen_nums:
