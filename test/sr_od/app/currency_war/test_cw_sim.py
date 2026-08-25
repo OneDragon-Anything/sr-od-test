@@ -71,9 +71,14 @@ def test_ab_channel_refresh() -> None:
 
 
 def test_batch_stats_shape() -> None:
-    """批量统计口径齐全(HP≥60/方向分布/平均)。"""
-    s = simulate_p1_batch(60, pool='fallback')
-    assert s['n'] == 60
+    """批量统计口径齐全(HP≥60/方向分布/平均)。
+
+    n=10 够锁形状(断言全是范围/回显检查,与 n 无关;更大的种子扫面归
+    sim A/B 批日常工作流,不靠这条测试);ledger=False 不落盘(测试纪律:
+    不写真实 .debug/ 路径,账本落盘路径由 test_cw_sim_cli_smoke 的 tmp_path 覆盖)。
+    """
+    s = simulate_p1_batch(10, pool='fallback', ledger=False)
+    assert s['n'] == 10
     assert 0.0 <= s['hp_ge_60'] <= 1.0
     assert 0.0 <= s['dir_by_r4'] <= 1.0
     assert 0 <= s['avg_final_hp'] <= 100

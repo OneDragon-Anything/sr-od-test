@@ -11,7 +11,8 @@ import,常规测试不触发,存活 6 天才被 MCP ``list_operations`` 暴露�
 - 断言:全仓违规数 == 0(白名单过滤后);白名单只承载「人工确认的合法转发」或
   「已裁决暂缓的已知遗留项」,每条必须带豁免原因;
 - 白名单自维护:条目若已不再对应真实违规(被修掉了)→ 本测试红,提示删条目;
-- 性能:全仓 AST 扫描 < 30s(实测 ~1s,纯 AST 零 import 副作用为主路径)。
+- 性能:全仓 AST 扫描实测 ~3s;同一次 pytest 内 ``src/`` 不变,三条测试经
+  ``_audit_cached()`` 共享**一次**扫描(旧版各扫一遍 = 3×3s 纯浪费)。
 """
 from __future__ import annotations
 
@@ -32,23 +33,41 @@ SRC_ROOT = REPO_ROOT / 'src'
 #: (首条 convert_screen_info 死代码已于 e17574b5 删除,条目随之清空。)
 WHITELIST: dict[tuple[str, int, str], str] = {}
 
-#: 全仓扫描耗时上限(秒)。纯 AST 主路径 ~1s,给足余量。
+#: 全仓扫描耗时上限(秒)。纯 AST 主路径 ~3s,给足余量。
 SCAN_TIME_LIMIT_S = 30.0
+
+#: 进程内扫描缓存:三条测试共享一次(同 pytest 进程 src/ 不变,重复扫描纯浪费)。
+_RAW_AUDIT = None
+
+
+def _audit_cached():
+    """``run_audit(SRC_ROOT)``(无白名单原始扫描)的进程内单次缓存。"""
+    global _RAW_AUDIT  # noqa: PLW0603
+    if _RAW_AUDIT is None:
+        _RAW_AUDIT = run_audit(SRC_ROOT)
+    return _RAW_AUDIT
+
+
+def _after_whitelist(violations):
+    """白名单过滤(复现 scanner walker 语义:逐 kwarg 剔,剔空整条消失)。"""
+    return [v for v in violations
+            if any((v.file, v.line, k) not in WHITELIST for k in v.kwargs)]
 
 
 def test_kwarg_call_sites_match_signatures() -> None:
     """全仓调用点 keyword 名必须 ∈ 被调签名形参集(白名单过滤后 == 0)。"""
-    result = run_audit(SRC_ROOT, whitelist=set(WHITELIST))
+    result = _audit_cached()
     assert result.elapsed_seconds < SCAN_TIME_LIMIT_S, (
         f'全仓 AST 扫描超时: {result.elapsed_seconds:.1f}s '
         f'(上限 {SCAN_TIME_LIMIT_S}s)'
     )
-    assert result.violation_count == 0, (
-        f'调用点 kwarg 名与签名不符 {result.violation_count} 处'
+    violations = _after_whitelist(result.violations)
+    assert not violations, (
+        f'调用点 kwarg 名与签名不符 {len(violations)} 处'
         f'(完整报告: uv run python .debug/temp/currency_war/cw_dev/kwarg_audit.py)\n'
         + '\n'.join(
             f'  {v.file}:{v.line}:{v.col}  {v.callee}  kwarg={v.kwargs}  | {v.snippet}'
-            for v in result.violations[:20]
+            for v in violations[:20]
         )
     )
 
@@ -59,7 +78,7 @@ def test_whitelist_entries_still_apply() -> None:
     先做无白名单的原始扫描,再逐条核对:白名单条目 (file, line, kwarg) 必须出现在
     原始违规里;且被豁免的 kwarg 数量不得超过原始违规数(防条目漂移)。
     """
-    result = run_audit(SRC_ROOT)  # 不带白名单
+    result = _audit_cached()  # 缓存版即无白名单原始扫描
     raw = {(v.file, v.line, kw) for v in result.violations for kw in v.kwargs}
     stale = [key for key in WHITELIST if key not in raw]
     assert not stale, (
@@ -70,7 +89,7 @@ def test_whitelist_entries_still_apply() -> None:
 
 def test_audit_stats_sanity() -> None:
     """扫描覆盖面快照(量级护栏,防扫描器退化漏扫)。"""
-    result = run_audit(SRC_ROOT)
+    result = _audit_cached()
     assert result.files_scanned > 800, f'扫描文件数异常少: {result.files_scanned}'
     assert result.kw_call_nodes > 5000, (
         f'含 keyword 调用点异常少: {result.kw_call_nodes}'

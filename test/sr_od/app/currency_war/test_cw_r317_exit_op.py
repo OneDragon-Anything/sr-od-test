@@ -31,6 +31,7 @@ from test.harness.fixture_controller import (
     FixtureController,
     WatchdogOperationMixin,
     enter_running_state,
+    fast_sleep,
     reset_running_state,
 )
 
@@ -135,7 +136,8 @@ def test_invest_strategy_screen_takes_select_confirm_path(
 
     enter_running_state(test_context)
     try:
-        result = op.execute()
+        with fast_sleep():
+            result = op.execute()
     finally:
         reset_running_state(test_context, op)
 

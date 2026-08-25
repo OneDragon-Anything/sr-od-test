@@ -18,9 +18,12 @@
   包成 ``(time, img)`` 元组,匹配 ``ControllerBase`` 签名)。
 """
 
+import hashlib
 import inspect
+import logging
 import os
 import warnings
+from collections import OrderedDict
 from collections.abc import Iterator
 from functools import cached_property
 from pathlib import Path
@@ -30,9 +33,12 @@ from cv2.typing import MatLike
 
 from one_dragon.base.controller.controller_base import ControllerBase
 from one_dragon.base.geometry.point import Point
+from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.base.matcher.ocr.ocr_match_result import OcrMatchResult
 from one_dragon.base.operation.application.plugin_info import PluginSource
 from one_dragon.base.push.push_config import PushProxy
 from one_dragon.envs.env_config import ProxyTypeEnum
+from one_dragon.envs.ghproxy_service import GhProxyService
 from one_dragon.utils import cv2_utils, file_utils
 from one_dragon.utils.log_utils import (
     LoggerConfig,
@@ -60,6 +66,11 @@ configure_logger(
         propagate=False,
     ),
 )
+# 降噪(模块级,对**所有**测试生效——cw sim 等纯逻辑测试不依赖 test_context
+# fixture,放 fixture 里单独跑它们时拦不住):sim 逐决策 INFO 一轮全量写
+# 100MB+ test.log(2026-08-25 实测:line_strategy/cw_economy 占 75%+)。
+# 排查具体测试时临时注释本行重跑(日志仍走 .log/test.log,恢复 INFO 量级)。
+framework_log.setLevel(logging.WARNING)
 
 
 class MockController(ControllerBase):
@@ -169,21 +180,176 @@ class SrTestContext(SrContext):
         self.controller.mock_screenshot = screen
 
 
+# --------------------------------------------------------------------------- #
+# OCR 内容哈希 memo(测试侧性能层,不动生产代码)
+# --------------------------------------------------------------------------- #
+# 背景:生产 OCR 缓存按 ``id(image)`` 键控、容量 5(ocr_service),语义是
+# 「同一帧多区域查询复用」。测试里同一张 fixture webp 被多个测试文件反复
+# ``load_screen`` —— 每次都是新对象/新 id → 每个文件都对同一张图重跑
+# 全图 OCR(det+rec 逐行,~0.5s/张)。本 memo 按图片**内容哈希**记两层缓存:
+#
+# 1. 进程内 dict(原层):session 内每张不同内容的图只推理一次;
+# 2. 磁盘层(.pytest_cache/v/ocr_memo/,经 pytest cache 目录):跨 pytest
+#    会话复用——id_mark 的 ~112 张 fixture 每轮全量都是同样的图,冷轮推理
+#    ~50s,warm 轮直接命中(键含 OCR 模型文件指纹,模型更新自动失效;
+#    ``pytest --cache-clear`` 即清)。CI 每次全新环境 → 恒冷路径,无收益
+#    也无额外成本(读写各一次小 pickle)。
+#
+# 正确性前提(2026-08-25 实测):同 provider 同图推理确定(DML 三次自洽)、
+# CPU 与 DML 文本集一致;键含 provider 标志。任何读/写失败按 miss 处理,
+# 坏缓存最坏代价 = 重算一次,不影响断言。命中返回浅拷贝(防原地改污染)。
+
+
+def _ocr_model_fingerprint(matcher) -> str:
+    """模型文件指纹(det/rec 的 size+mtime)+ provider → 缓存键前缀。"""
+
+    parts = [f'gpu={matcher.is_use_gpu()}']
+    for attr in ('det_model_dir', 'rec_model_dir'):
+        path = Path(getattr(matcher._ocr_param, attr, ''))  # noqa: SLF001
+        try:
+            st = path.stat()
+            parts.append(f'{path.name}:{st.st_size}:{int(st.st_mtime)}')
+        except OSError:
+            parts.append(f'{path.name}:missing')
+    raw = '|'.join(parts)
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def _pytest_cache_dir(request: pytest.FixtureRequest) -> Path | None:
+    """pytest cache 下的 ocr_memo 目录(不存在 cache 机制时返 None)。"""
+    try:
+        return request.config.cache.mkdir('ocr_memo')  # type: ignore[union-attr]
+    except Exception:
+        return None
+
+
+def _install_ocr_content_memo(ocr_service, cache_dir: Path | None) -> None:
+    """给 ``ocr_service.get_ocr_result_list`` 包内容哈希 memo(进程内 + 磁盘)。
+
+    仅测试侧安装(conftest fixture 内调用);不改变 ``OcrService`` 行为语义,
+    未命中时原样透传全部参数。
+    """
+    import pickle
+
+    orig_get = ocr_service.get_ocr_result_list
+    memo: dict[tuple, list[OcrMatchResult]] = {}
+    model_fp = _ocr_model_fingerprint(ocr_service.ocr_matcher)  # noqa: SLF001
+    #: 同对象 → 内容哈希的身份缓存(持引用防 GC 后 id 复用;bounded 防涨)。
+    _digest_by_obj: OrderedDict[int, tuple[MatLike, str]] = OrderedDict()
+    _DIGEST_CACHE_MAX = 8
+
+    def _content_digest(image: MatLike) -> str:
+        cached = _digest_by_obj.get(id(image))
+        if cached is not None and cached[0] is image:
+            _digest_by_obj.move_to_end(id(image))
+            return cached[1]
+        digest = hashlib.sha256(image.tobytes()).hexdigest()
+        _digest_by_obj[id(image)] = (image, digest)
+        while len(_digest_by_obj) > _DIGEST_CACHE_MAX:
+            _digest_by_obj.popitem(last=False)
+        return digest
+
+    def _disk_path(key: tuple) -> Path | None:
+        if cache_dir is None:
+            return None
+        khash = hashlib.sha256(repr(key).encode()).hexdigest()[:40]
+        return cache_dir / f'{khash}.pkl'
+
+    def _memo_get_ocr_result_list(
+        image: MatLike,
+        color_range: list[list[int]] | None = None,
+        rect: Rect | None = None,
+        crop_first: bool = False,
+        threshold: float = 0,
+        merge_line_distance: float = -1,
+    ) -> list[OcrMatchResult]:
+        if image is None:
+            return orig_get(
+                image=image, color_range=color_range, rect=rect,
+                crop_first=crop_first, threshold=threshold,
+                merge_line_distance=merge_line_distance,
+            )
+        key = (
+            model_fp,
+            _content_digest(image),
+            image.shape, image.dtype.str,
+            None if color_range is None else tuple(tuple(c) for c in color_range),
+            bool(crop_first),
+            rect,
+            threshold, merge_line_distance,
+        )
+        if key not in memo:
+            hit = None
+            dpath = _disk_path(key)
+            if dpath is not None and dpath.exists():
+                try:
+                    with dpath.open('rb') as f:
+                        hit = pickle.load(f)
+                except Exception:
+                    hit = None  # 坏缓存按 miss,最坏代价=重算
+            if hit is None:
+                hit = orig_get(
+                    image=image, color_range=color_range, rect=rect,
+                    crop_first=crop_first, threshold=threshold,
+                    merge_line_distance=merge_line_distance,
+                )
+                if dpath is not None:
+                    try:
+                        tmp = dpath.with_suffix('.tmp')
+                        with tmp.open('wb') as f:
+                            pickle.dump(hit, f)
+                        tmp.replace(dpath)
+                    except Exception:
+                        pass  # 写失败只影响下次 warm 命中,不影响正确性
+            memo[key] = hit
+        return list(memo[key])
+
+    ocr_service.get_ocr_result_list = _memo_get_ocr_result_list  # type: ignore[method-assign]
+
+
 @pytest.fixture(scope='session')
-def test_context() -> SrTestContext:
+def test_context(request: pytest.FixtureRequest) -> SrTestContext:
     """创建 session 级模拟 ctx(复用,避免每个 test 重新 init)。"""
     ctx = SrTestContext()
 
     ctx.env_config.is_debug = True
     ctx.current_instance_idx = 99  # 使用特定的实例 id
-    ctx.init_by_config()
+
+    # 测试不开真实网络:init_by_config 在 is_gh_proxy 时会请求 ghproxy.link
+    # 拉免费代理地址(~1s + 不确定性),测试环境无意义 → 临时短路,init 后还原。
+    _real_update_proxy = GhProxyService.update_proxy_url
+    GhProxyService.update_proxy_url = lambda self: False  # type: ignore[assignment, method-assign]
+    try:
+        ctx.init_by_config()
+    finally:
+        GhProxyService.update_proxy_url = _real_update_proxy  # type: ignore[assignment, method-assign]
+
     ctx.load_instance_config()
-    ctx.ocr.init_model()
+
+    # OCR 设备统一:有 DirectML 就用(实测快 ~27%:553 vs 759ms/张;两种设备
+    # 文本集一致、DML 自洽,详见 sr-od-test/README「运行速度」);无 DML(如 CI)
+    # 维持 CPU。显式覆盖本地配置,避免测试速度取决于开发机的 model.yml。
+    # 坏驱动护栏:DML 初始化失败则回退 CPU 重载,不让整批 OCR 测试静默空结果。
+    _switched_to_dml = False
+    try:
+        import onnxruntime as _ort
+
+        _has_dml = 'DmlExecutionProvider' in _ort.get_available_providers()
+    except Exception:
+        _has_dml = False
+    if _has_dml and not ctx.ocr.is_use_gpu():
+        ctx.ocr.update_use_gpu(True)
+        _switched_to_dml = True
+    if not ctx.ocr.init_model() and _switched_to_dml:
+        ctx.ocr.update_use_gpu(False)
+        ctx.ocr.init_model()
     ctx.controller = MockController(
         game_config=ctx.game_config,
         standard_width=ctx.project_config.screen_standard_width,
         standard_height=ctx.project_config.screen_standard_height,
     )
+
+    _install_ocr_content_memo(ctx.ocr_service, cache_dir=_pytest_cache_dir(request))
 
     # 部分配置统一使用 mock,不把运行过程的值写入本地配置
     ctx.push_service.push_config.file_path = None
@@ -236,6 +402,48 @@ def test_image_dir(request) -> Path:
 # 对象内部可变状态(如 mock_screenshot)是测试的常规工作面,不在守卫范围)。
 #: 守卫的共享 ctx 属性(整对象替换 = 高危;None 表示属性原本缺失)。
 _GUARDED_CTX_ATTRS: tuple[str, ...] = ('run_context', 'controller')
+
+
+# --------------------------------------------------------------------------- #
+# 真实外网连接守卫(README 测试纪律 5 的机检层)
+# --------------------------------------------------------------------------- #
+# 拦 ``socket.connect``:非 loopback 地址直接 AssertionError(带定位指引),防
+# 测试静默触网——慢(单次秒级)+ 不确定(断网/代理 = 假 flaky)。判例:曾发现
+# ctx 初始化链路真实请求 ghproxy.link ~1s/次(已短路,本守卫防同型回归)。
+# 放行 loopback(127.0.0.1/::1/localhost):进程内 TestClient 虽不走 socket,
+# 本地 server 类测试不受影响。逃生口:环境变量 ``SR_TEST_ALLOW_NET=1``
+# (fresh 环境首次下载 OCR 模型等合法场景)。
+
+#: 放行的回环地址(socket.connect 的 address 可能是 tuple 或裸 str)。
+_LOOPBACK_HOSTS = frozenset({'127.0.0.1', '::1', 'localhost', ''})
+
+
+@pytest.fixture(autouse=True, scope='session')
+def _block_external_network() -> Iterator[None]:
+    """测试进程内禁止真实外网 TCP 连接(见上方注释;autouse 全测试生效)。"""
+    if os.environ.get('SR_TEST_ALLOW_NET'):
+        yield
+        return
+
+    import socket as _socket
+
+    _orig_connect = _socket.socket.connect
+
+    def _guarded_connect(self, address):  # noqa: ANN001, ANN202
+        host = address[0] if isinstance(address, tuple) else address
+        if isinstance(host, str) and host not in _LOOPBACK_HOSTS:
+            raise AssertionError(
+                f'测试禁止真实外网连接: {address!r}。'
+                '触网链路应在测试入口 mock(README 测试纪律 5);'
+                '确需联网(如 fresh 环境下载模型)设 SR_TEST_ALLOW_NET=1。'
+            )
+        return _orig_connect(self, address)
+
+    _socket.socket.connect = _guarded_connect  # type: ignore[method-assign]
+    try:
+        yield
+    finally:
+        _socket.socket.connect = _orig_connect  # type: ignore[method-assign]
 
 
 @pytest.fixture(autouse=True)

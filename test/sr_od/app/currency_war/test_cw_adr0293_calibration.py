@@ -73,8 +73,10 @@ from sr_od.application.currency_war.decision_v2.strategy import (
 #: ADR-0333 体系集中度批(W72)更新:新增 engine_affinity_enabled(=True,
 #: 候选层 engine_seed 配方亲和过滤开关;关闭=回 W70 行为,A/B 通道;
 #: 既有数值字段全部不变,验证见 ADR-0333)。
-_EXPECTED_HASH = 'e8ebea1bd906f476223e4c19796cc668'
-_EXPECTED_HASH += '0f4e3b623d8afdb69e5799c4215764a0'
+_EXPECTED_HASH = '646b6a0cd39c9347fa386aaec58b4e1b'
+_EXPECTED_HASH += '6168a9c50e6bd44d2a4ef0d9638be10a'
+# W88/ADR-0339:新增 core_star_unit=3.0(核心升星价值项,配对 A/B 标定
+# n=150:+18/0)——有意改参,锁同步更新
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

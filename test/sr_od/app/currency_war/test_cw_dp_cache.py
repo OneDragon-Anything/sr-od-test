@@ -34,13 +34,16 @@ def test_cache_roundtrip_and_hit() -> None:
     历史包袱已根治(v6):DP 向量化后求解 ~秒级,**盘 pickle 层已移除**
     (旧 232MB pickle 冷解 ~67s / 盘载 ~5s 是「跑测试就卡」的元凶,
     现 solve_cached 只有进程内 memo,无任何盘 IO)。本断言锁:
-    ① 解规模(策略表 >1M 项,防求解退化成小表);② memo 命中 <1s。
+    ① 解规模(策略表 >1M 项,防求解退化成小表;flat 数组 size 判定——
+    不物化 .policy dict 视图,3M 条目物化 ~6s 是旧版慢的元凶,生产路径零消费);
+    ② memo 命中 <1s 且同对象。
     """
     t0 = time.time()
     s1 = solve_cached(None)
     t1 = time.time()
     s2 = solve_cached(None)
     t2 = time.time()
-    assert len(s1.policy) > 1_000_000
+    assert s1._act.size > 1_000_000  # noqa: SLF001
     assert t2 - t1 < 1.0, f'memo 命中过慢: {t2 - t1:.2f}s'
-    assert s1.policy.keys() == s2.policy.keys()
+    assert s1 is s2, 'memo 命中应返回同一对象(指纹键控)'
+    assert t1 - t0 < 5.0, f'首次求解过慢(向量化基准 ~0.3s): {t1 - t0:.2f}s'

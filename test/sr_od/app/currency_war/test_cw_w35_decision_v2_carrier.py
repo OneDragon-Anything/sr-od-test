@@ -346,11 +346,13 @@ def test_carry_gate_noop_when_bench_not_full() -> None:
 
 
 def test_carry_gate_seed_deadlock_exemption() -> None:
-    """种子死锁豁免(v1 _seed_cands 补移植,W51):bench 满+全保护件+
-    唯一可卖=种子(ADR-0289 §5 年龄窗)→ 兜底放行仍腾位(不腾则
-    carry 死锁);有非种子直接可卖件时走直接通道不降保护集。"""
-    # 场景 1:全 bench 为种子(保护件,2 轮窗内 cnt=1;各名 2 份,
-    # 非超上限/非 3合1 完整份——纯靠豁免放行)
+    """种子窗口绝对不让位(W88/ADR-0339 件3 语义重写;原 W51「死锁豁免」
+    已裁决移除):bench 满+全保护件+唯一可卖=种子(ADR-0289 §5 年龄窗)
+    → 本轮**不腾位**(carry 延后,窗口 ≤2 轮自然解锁,死锁有界)——
+    旧豁免=买侧见即买 engine_seed 与卖侧 carry_gate 互踩(seed16
+    姬子·启行 r4 买 r6 卖 r7 再买,engine_seed_not_resold 0 容忍与
+    设计豁免矛盾);有非种子直接可卖件时走直接通道不降保护集。"""
+    # 场景 1:全 bench 为种子(保护件,2 轮窗内 cnt=1)→ 不腾(carry 让位)
     from sr_od.application.currency_war.cw_system_cards import (
         engine_char_names,
     )
@@ -366,12 +368,8 @@ def test_carry_gate_seed_deadlock_exemption() -> None:
     st = _state(round_num=4, gold=50,
                 shop=[_card('姬子·启行', faction='列车同行', cost=4)],
                 bench=bench)
-    acts = carry_gate_actions(st, sess, _REG)
-    assert len(acts) == 2, '唯一可卖=种子 → 豁免放行(防 carry 死锁)'
-    sell, buy = acts
-    assert sell.__class__.__name__ == 'SellBench'
-    assert isinstance(buy, BuyCard) and buy.card.name == '姬子·启行'
-    assert st.bench[sell.bench_idx].char_id in sess.v2_round_sold
+    assert carry_gate_actions(st, sess, _REG) == [], \
+        '窗口内种子不让位给 carry 腾位(互踩裁决:carry 延后有界)'
     # 场景 2(对照):存在非种子、非保护、非板面阵营的可卖件 → 直接
     # 卖通道已解,不走降保护集
     sess2 = _locked_sess()

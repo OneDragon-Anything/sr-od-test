@@ -28,6 +28,7 @@ from test.harness.fixture_controller import (
     FixtureController,
     WatchdogOperationMixin,
     enter_running_state,
+    fast_sleep,
     reset_running_state,
 )
 
@@ -137,7 +138,8 @@ class TestStartCurrencyWarMatchFlow:
 
         enter_running_state(test_context)
         try:
-            result = op.execute()
+            with fast_sleep():
+                result = op.execute()
         finally:
             reset_running_state(test_context, op)
 
@@ -183,7 +185,8 @@ class TestStartCurrencyWarMatchFlow:
 
         enter_running_state(test_context)
         try:
-            result = op.execute()
+            with fast_sleep():
+                result = op.execute()
         finally:
             reset_running_state(test_context, op)
 

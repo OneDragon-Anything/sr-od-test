@@ -19,6 +19,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 from cv2.typing import MatLike
@@ -383,9 +386,64 @@ def reset_running_state(ctx: SrTestContext, op: object) -> None:
     ctx.run_context.event_bus.unlisten_all_event(op)  # noqa: SLF001
 
 
+# --------------------------------------------------------------------------- #
+# 轮间等待 no-op:流程测试的时间加速器
+# --------------------------------------------------------------------------- #
+
+
+class _NoSleepTimeProxy:
+    """``operation.py`` 模块级 ``time`` 引用的替身。
+
+    只把 ``sleep`` 变成记录 no-op,其余属性(``time()`` / ``monotonic()`` 等)
+    透传真模块 —— 轮次计时语义不变,只是不再真实等待。挂回 ``operation.time``
+    时只影响 op 框架,不动全局 ``time`` 模块(线程同步等真实 sleep 不受影响)。
+    """
+
+    def __init__(self, real_module: ModuleType, skipped: list[float]) -> None:
+        self._real_module: ModuleType = real_module
+        self.skipped: list[float] = skipped
+
+    def sleep(self, seconds: float) -> None:
+        """记录被跳过的等待时长(诊断用),不真正睡眠。"""
+        self.skipped.append(seconds)
+
+    def __getattr__(self, name: str):
+        return getattr(self._real_module, name)
+
+
+@contextmanager
+def fast_sleep() -> Iterator[list[float]]:
+    """流程测试内把 op 框架的轮间/点击前等待变成 no-op 记录。
+
+    背景:op 框架的 ``_after_round_wait`` / ``pre_delay`` 在真机上等待画面切换,
+    是必要延迟;但 fixture 流程测试里 mock 画面在 click 后**瞬间**切换,这些
+    sleep 纯属空等(2026-08-25 实测:单条流程测试 24s 中 ~21s 是 time.sleep,
+    占全量套件 ~315s 中的 ~85s)。本上下文管理器把 ``operation.py`` 模块里的
+    ``time`` 引用换成替身,``execute()`` 期间不再真实等待。
+
+    用法::
+
+        with fast_sleep():
+            result = op.execute()
+
+    Yields:
+        被跳过的 sleep 时长列表(诊断/断言等待行为时可用)。
+    """
+    import one_dragon.base.operation.operation as operation_module
+
+    skipped: list[float] = []
+    real_time: ModuleType = operation_module.time
+    operation_module.time = _NoSleepTimeProxy(real_time, skipped)  # type: ignore[assignment]
+    try:
+        yield skipped
+    finally:
+        operation_module.time = real_time  # type: ignore[assignment]
+
+
 __all__ = [
     'FixtureController',
     'WatchdogOperationMixin',
     'enter_running_state',
     'reset_running_state',
+    'fast_sleep',
 ]

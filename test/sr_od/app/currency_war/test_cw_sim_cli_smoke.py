@@ -62,10 +62,23 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
             assert 'violations' in r, f'{name}: 缺 violations 计数'
             continue
         assert r['violations'] == 0, f'{name}: {r}'
-    # 同 seed 确定性(非分布数值——逐局末 HP 全等)
-    a = [simulate_p1(i, pool='snapshot').final_hp for i in range(25)]
-    b = [simulate_p1(i, pool='snapshot').final_hp for i in range(25)]
-    assert a == b
+    # 同 seed 确定性(非分布数值——逐局末 HP 全等)。从主 batch 账本 outcomes
+    # 流提取逐局末 HP(run_id 尾缀 seed,每局最后一行 = 终值),对一遍轻量复跑
+    # (checks/ledger 关——主 batch 已覆盖,复跑只验确定性)。旧版独立跑两遍
+    # 25 局 = 全测试 75 局,现在主 batch + 复跑 = 50 局(语义不变:逐位全等)。
+    import json
+    import re
+
+    last_by_run: dict[int, int] = {}
+    for ln in Path(rep['ledger_dir'], 'outcomes.jsonl').read_text(
+            encoding='utf-8').splitlines():
+        row = json.loads(ln)
+        m = re.search(r'_s(\d+)$', row['run_id'])
+        last_by_run[int(m.group(1))] = row['hp_after']
+    hps_ledger = [last_by_run[s] for s in sorted(last_by_run)]
+    assert len(hps_ledger) == 25, f'账本局数异常: {len(hps_ledger)}'
+    hps_rerun = [simulate_p1(i, pool='snapshot').final_hp for i in range(25)]
+    assert hps_ledger == hps_rerun, '同 seed 复跑末 HP 不一致(确定性破)'
 
 
 def test_views_render_sim_ledger(tmp_path: Path) -> None:
