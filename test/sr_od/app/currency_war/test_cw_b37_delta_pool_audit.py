@@ -53,9 +53,11 @@ def _mini_meta() -> dict:
 
 def test_poverty_selfconsistency_real_snapshot_green() -> None:
     """真实快照(resolve_pool 产物)↔ META 双向自洽 = 0 违规
-    (锁生成器 _poverty_list 与池内容同源;重生成后仍须自洽)。"""
+    (锁生成器 _poverty_list 与池内容同源;重生成后仍须自洽;
+    ADR-0362:检查项辖 plane=1 视图,与批内 pool-level 检查同口径)。"""
     pm, _, _ = cw_sim.resolve_pool('snapshot')
-    out = check_delta_pool_poverty_selfconsistency(pm, SNAP_META)
+    out = check_delta_pool_poverty_selfconsistency(
+        cw_sim.plane_view(pm), SNAP_META)
     assert out['violations'] == 0, f'{out}'
     assert out['disclosed_n'] == out['pool_poor_n']
 

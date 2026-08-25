@@ -21,8 +21,10 @@ from sr_od.application.currency_war.cw_sim_checks import (
 
 
 def test_snapshot_battle_buckets_are_rung_domain() -> None:
-    """快照 battle 桶键全落 rung 域(0-4);depth 域键(≥6)= 未生效。"""
+    """快照 battle 桶键全落 rung 域(0-4);depth 域键(≥6)= 未生效。
+    (ADR-0362:消费 plane=1 视图;P2 桶另辖。)"""
     m, _, _ = _sim.resolve_pool('snapshot')
+    m = _sim.plane_view(m)
     battle = m['battle']
     assert battle, 'battle 池缺失'
     assert all(int(b) <= 4 for b in battle), \
@@ -33,8 +35,10 @@ def test_snapshot_battle_buckets_are_rung_domain() -> None:
 
 
 def test_snapshot_battle_rung_means_match_b13_truth() -> None:
-    """双主桶均值符合批⑬量级(r0≈-11.5 / r1≈-6.3,漂移 ≤3hp)。"""
+    """双主桶均值符合批⑬量级(r0≈-11.5 / r1≈-6.3,漂移 ≤3hp;
+    ADR-0362:plane=1 视图口径)。"""
     m, _, _ = _sim.resolve_pool('snapshot')
+    m = _sim.plane_view(m)
     for rg, truth in BATTLE_RUNG_TRUTH.items():
         v = m['battle'][rg]
         mean = sum(v) / len(v)
@@ -45,6 +49,7 @@ def test_snapshot_battle_rung_means_match_b13_truth() -> None:
 def test_snapshot_encounter_boundary_declared_depth_keyed() -> None:
     """批⑬ F1 边界声明:encounter 样本不足暂沿用 depth 分桶(键 ≥6)。"""
     m, _, _ = _sim.resolve_pool('snapshot')
+    m = _sim.plane_view(m)
     enc = m.get('encounter') or {}
     assert enc, 'encounter 池缺失'
     assert any(int(b) >= 6 for b in enc), \
@@ -59,6 +64,7 @@ def test_snapshot_boss_pool_domain_covers_extremes() -> None:
     扩域诉求兑现为「域不缩」(ADR-0279 Considered Options)。
     """
     m, _, _ = _sim.resolve_pool('snapshot')
+    m = _sim.plane_view(m)
     boss_vals = [d for v in m['boss'].values() for d in v]
     assert min(boss_vals) <= -36
 
@@ -93,8 +99,9 @@ def test_check_battle_rung_pool_bucket_lock_unit() -> None:
 
 
 def test_live_delta_battle_rung_sampling_paths() -> None:
-    """battle 采样:rung 桶命中 / 高 rung 下探 / 键截幅入 rung 域。"""
-    pool = {'battle': {0: [-10] * 5, 1: [-5] * 5}}
+    """battle 采样:rung 桶命中 / 高 rung 下探 / 键截幅入 rung 域
+    (ADR-0362:合成池带 plane 层 {1: {桶: [Δ]}})。"""
+    pool = {'battle': {1: {0: [-10] * 5, 1: [-5] * 5}}}
     rng = random.Random(0)
     assert all(_sim.live_delta_for('battle', 0, rng, pool_map=pool) == -10
                for _ in range(10))
@@ -113,7 +120,7 @@ def test_live_delta_battle_rung_sampling_paths() -> None:
 
 def test_live_delta_battle_guard_merges_adjacent_rungs() -> None:
     """battle 防饥饿守卫:薄 rung 桶与相邻 rung(±1)合并采样。"""
-    pool = {'battle': {1: [-3] * 6, 2: [-6]}}   # rung2 n=1 饥饿
+    pool = {'battle': {1: {1: [-3] * 6, 2: [-6]}}}   # rung2 n=1 饥饿
     rng = random.Random(0)
     drawn = [_sim.live_delta_for('battle', 2, rng, pool_map=pool)
              for _ in range(200)]
@@ -156,8 +163,9 @@ def test_pool_from_replay_battle_rung_keys(tmp_path: Path) -> None:
 
     _sim.reset_resolved_cache()
     pool, meta = _sim._pool_from_replay(tmp_path)
-    assert pool['battle'] == {1: [-10], 3: [-15]}
-    assert pool['encounter'] == {6: [-15]}
+    # ADR-0362:桶挂 plane=1 层(差分归属后行位面)
+    assert pool['battle'] == {1: {1: [-10], 3: [-15]}}
+    assert pool['encounter'] == {1: {6: [-15]}}
     assert meta['runs'] == {'r1': 4}
 
 

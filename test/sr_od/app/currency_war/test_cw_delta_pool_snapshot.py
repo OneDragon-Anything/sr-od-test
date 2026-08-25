@@ -36,9 +36,13 @@ def test_resolve_pool_snapshot_and_fallback() -> None:
     assert fp == cw_delta_pool_data.META['fingerprint']
     # 归一化后语义等价(int 桶键;json round-trip 的 str 键会让
     # live_delta_for 的 int 查询全 miss = 快照静默失效)
+    # ADR-0362:位面层同样归一 int 键
     assert m == _sim._normalize_pool(cw_delta_pool_data.SNAPSHOT)
     assert all(isinstance(b, int)
-               for buckets in m.values() for b in buckets)
+               for planes in m.values() for b in planes)
+    assert all(isinstance(b, int)
+               for planes in m.values()
+               for buckets in planes.values() for b in buckets)
     assert m.get('battle')
 
     m2, fp2, src2 = _sim.resolve_pool('fallback')
@@ -54,15 +58,16 @@ def test_resolve_pool_auto_missing_raises_loudly(tmp_path: None | Path) -> None:
 
 
 def test_resolve_pool_path_json_snapshot(tmp_path: Path) -> None:
-    """Path 模式:JSON 快照文件(生成器 --export-json 产物)。"""
+    """Path 模式:JSON 快照文件(生成器 --export-json 产物;
+    ADR-0362 起形状 {节点:{位面:{桶:[Δ]}}})。"""
     p = tmp_path / 'snap.json'
     p.write_text(json.dumps(
-        {'meta': {}, 'snapshot': {'battle': {6: [-4]}}},
+        {'meta': {}, 'snapshot': {'battle': {1: {6: [-4]}}}},
         ensure_ascii=False), encoding='utf-8')
     m, fp, src = _sim.resolve_pool(p)
     assert src == f'path:{p.name}'
-    assert m == {'battle': {6: [-4]}}
-    assert fp == _sim.pool_fingerprint({'battle': {6: [-4]}})
+    assert m == {'battle': {1: {6: [-4]}}}
+    assert fp == _sim.pool_fingerprint({'battle': {1: {6: [-4]}}})
 
 
 def test_simulate_p1_records_pool_identity() -> None:
@@ -93,8 +98,9 @@ def test_snapshot_pool_is_live_in_sim() -> None:
 
     m, _, _ = _sim.resolve_pool('snapshot')
     hit = False
+    # ADR-0362:桶在 plane=1 层下
     for node in ('battle', 'boss', 'encounter'):
-        for bucket in m.get(node, {}):
+        for bucket in (m.get(node, {}).get(1) or {}):
             v = _sim.live_delta_for(node, bucket, random.Random(1),
                                     pool_map=m)
             if v is not None:

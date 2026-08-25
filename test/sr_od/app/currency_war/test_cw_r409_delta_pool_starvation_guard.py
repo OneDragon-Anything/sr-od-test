@@ -26,8 +26,9 @@ def test_guard_hungry_bucket_not_deterministic_cliff() -> None:
     encounter 承载——同一条守卫代码路径。)
     """
     # 桶6 n=1 恒 -11(批③ F1 原始形态);桶9 n=6 健康
-    pool = {'encounter': {6: [-11],
-                          9: [-4, -5, -6, -7, -8, -9]}}
+    # (ADR-0362:合成池带 plane 层)
+    pool = {'encounter': {1: {6: [-11],
+                               9: [-4, -5, -6, -7, -8, -9]}}}
     rng = random.Random(0)
     drawn = [cw_sim.live_delta_for('encounter', 7, rng, pool_map=pool)
              for _ in range(200)]
@@ -37,11 +38,11 @@ def test_guard_hungry_bucket_not_deterministic_cliff() -> None:
 
 def test_guard_picks_lower_variance_candidate() -> None:
     """降级选择:邻桶合并候选中取方差最小者(浅邻方差小 → 收敛浅邻)。"""
-    pool = {'encounter': {
+    pool = {'encounter': {1: {
         3: [-3, -4, -5, -6, -7, -8],           # 浅邻:方差小
         6: [-11],                               # 饥饿桶
         9: [-30, -1, -30, -1, -30, -1],         # 深邻:方差大
-    }}
+    }}}
     rng = random.Random(1)
     for _ in range(200):
         v = cw_sim.live_delta_for('encounter', 6, rng, pool_map=pool)
@@ -51,7 +52,7 @@ def test_guard_picks_lower_variance_candidate() -> None:
 
 def test_guard_tiny_pool_falls_back_to_bare_sample() -> None:
     """极端小池(无邻桶可合并):退回裸样本,语义不破(r340 兼容)。"""
-    pool = {'battle': {6: [-3, -5]}}   # n=2,无邻桶,全池=本桶
+    pool = {'battle': {1: {6: [-3, -5]}}}   # n=2,无邻桶,全池=本桶
     v = cw_sim.live_delta_for('battle', 7, random.Random(1),
                               pool_map=pool)
     assert v in (-3, -5)
@@ -64,7 +65,7 @@ def test_guard_preserves_missing_bucket_none() -> None:
     (批⑬ F3「池均值兜底」形态,保经验分布方差)而非 None——
     battle 键 0 命中池内合并样本。
     """
-    pool = {'battle': {6: [-11], 9: [-4] * 6}}
+    pool = {'battle': {1: {6: [-11], 9: [-4] * 6}}}
     assert cw_sim.live_delta_for('boss', 6, random.Random(1),
                                  pool_map=pool) is None
     assert cw_sim.live_delta_for('battle', 0, random.Random(1),
@@ -73,7 +74,7 @@ def test_guard_preserves_missing_bucket_none() -> None:
 
 def test_guard_healthy_bucket_unchanged() -> None:
     """n≥5 健康桶照旧裸采样(守卫零影响面)。"""
-    pool = {'battle': {6: [-4, -5, -6, -7, -8]}}
+    pool = {'battle': {1: {6: [-4, -5, -6, -7, -8]}}}
     rng = random.Random(2)
     for _ in range(50):
         v = cw_sim.live_delta_for('battle', 7, rng, pool_map=pool)
@@ -151,8 +152,9 @@ def test_sampler_version_bumped_and_snapshot_guarded() -> None:
     """采样器版本锁(历次语义: v3=ADR-0279 battle rung 分桶 /
     v4=ADR-0292 reward/supply 池采样 / v5=ADR-0306 胜率外推 /
     v6=ADR-0308 W31 节点×轮次胜率阶梯 / v7=ADR-0312 W50 采样键
-    Σboard 全集口径)+ 提交快照自洽。"""
-    assert cw_sim._SAMPLER_VERSION == 7
+    Σboard 全集口径 / v8=ADR-0362 W157 Δ池 plane 维键化)+
+    提交快照自洽。"""
+    assert cw_sim._SAMPLER_VERSION == 8
     assert cw_sim._BUCKET_MIN_N == 5
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'

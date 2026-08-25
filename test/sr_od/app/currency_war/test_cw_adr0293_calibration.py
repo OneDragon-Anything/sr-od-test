@@ -134,6 +134,12 @@ _EXPECTED_HASH = ('a3c0989b51b467323e429e1592219198'
 # 四字段(P11/P12 口径;P1 分支零变化)——有意改参,锁同步更新
 _EXPECTED_HASH = ('c42f073df31bbecc215857816a7da9a'
                   'ec4f5cd2f6c0684eaa121441aec68481c')
+# 并行批(W160/ADR-0363,在飞工作树)新增 evolve_engine_guard_enabled
+# (=True)/evolve_final_freeze_enabled(=True)两字段——hash 锁按当前
+# registry 现值重算(本批 W157 未触碰 registry;锁值追平并行批字段,
+# 该批合流时如再改默认值须随批重锁)
+_EXPECTED_HASH = ('3729d4bacdfa8edb41195c1ea386c5d1'
+                  '045e4f980db545bd52d827d6952df78d')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

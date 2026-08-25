@@ -108,10 +108,11 @@ def test_check_delta_pool_bucket_coverage_unit() -> None:
 
 
 def test_snapshot_coverage_zero_undisclosed() -> None:
-    """提交快照:贫困披露与池内容自洽(0 未披露)。"""
+    """提交快照:贫困披露与池内容自洽(0 未披露;ADR-0362:辖
+    plane=1 视图,与批内 pool-level 检查同口径)。"""
     pool_map, _, _ = cw_sim.resolve_pool('snapshot')
     rep = check_delta_pool_bucket_coverage(
-        pool_map, meta=cw_delta_pool_data.META)
+        cw_sim.plane_view(pool_map), meta=cw_delta_pool_data.META)
     assert rep['violations'] == 0
 
 

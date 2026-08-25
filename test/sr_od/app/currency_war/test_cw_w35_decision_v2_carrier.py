@@ -606,11 +606,16 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
                                reason='evolve:test')
     seen: dict = {}
 
-    def _fake_evo(state, session, memory, off_lock_penalty=0.0):
+    def _fake_evo(state, session, memory, off_lock_penalty=0.0,
+                  engine_guard=True, final_freeze=True):
         # W155/ADR-0360:evolution_step 增 off_lock_penalty 关键字
-        # (锁定帧 off-lock 提案降级分,registry 注入)——桩同步收参
+        # (锁定帧 off-lock 提案降级分,registry 注入)——桩同步收参;
+        # W160/ADR-0363:S1 型修法两件(引擎下界守卫/末轮演进冻结)
+        # 同款 registry 注入——桩同步收参(接线锁,语义归 W160 锁)
         seen['memory'] = memory
         seen['off_lock_penalty'] = off_lock_penalty
+        seen['engine_guard'] = engine_guard
+        seen['final_freeze'] = final_freeze
         return [sentinel]
 
     import sr_od.application.currency_war.decision_v2.strategy as m
@@ -622,6 +627,9 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
     assert seen['memory'] is sess.v3_evolution
     # W155:registry 的 off-lock 降级分从接线传入(默认 registry 开=3.0)
     assert seen['off_lock_penalty'] == 3.0
+    # W160:两开关默认 True 从 registry 注入
+    assert seen['engine_guard'] is True
+    assert seen['final_freeze'] is True
 
 
 # --- ⑤ 冒烟:P1 一轮 sim 决策不炸 --------------------------------------------

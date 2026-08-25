@@ -19,14 +19,17 @@ from sr_od.application.currency_war.cw_sim_checks import (
 
 
 def _reward_snap(tmp_path: Path, reward_buckets: dict) -> Path:
-    """构造含自定义 reward 池的 JSON 快照(resolve_pool Path 模式)。"""
-    pool = {'battle': {0: [-11] * 6, 1: [-6] * 6},
-            'reward': {int(b): list(v) for b, v in reward_buckets.items()}}
+    """构造含自定义 reward 池的 JSON 快照(resolve_pool Path 模式;
+    ADR-0362 起池形状 {节点:{位面:{桶:[Δ]}}},构造带 plane=1 层)。"""
+    pool = {'battle': {1: {0: [-11] * 6, 1: [-6] * 6}},
+            'reward': {1: {int(b): list(v)
+                           for b, v in reward_buckets.items()}}}
     fp = cw_sim.pool_fingerprint(pool)
     p = tmp_path / 'snap.json'
     p.write_text(json.dumps(
         {'meta': {'fingerprint': fp}, 'snapshot': {
-            n: {str(b): v for b, v in bs.items()} for n, bs in pool.items()}},
+            n: {str(pl): {str(b): v for b, v in bs.items()}
+                for pl, bs in planes.items()} for n, planes in pool.items()}},
         ensure_ascii=False), encoding='utf-8')
     return p
 
@@ -49,14 +52,15 @@ def test_reward_deltas_sampled_from_pool(tmp_path: Path) -> None:
 def test_reward_full_pool_fallback_shallow_depth(tmp_path: Path) -> None:
     """浅板深(r1-r2)缺桶 → 全池兜底采样(不退恒常数;ADR-0292)。"""
     # 只给深桶 9:r1 depth∈[3,5] → 桶 3 缺、浅回退 0 缺 → 全池兜底
-    pool = {'reward': {9: [2] * 5 + [11]}}
+    # (ADR-0362:合成池带 plane 层 {1: {9: [...]}})
+    pool = {'reward': {1: {9: [2] * 5 + [11]}}}
     rng = random.Random(0)
     drawn = {cw_sim.live_delta_for('reward', 4, rng, pool_map=pool)
              for _ in range(30)}
     assert drawn <= {2, 11} and 11 in drawn   # 全池样本可达
     # 池空 → None(调用方回退 EARLY_WIN_DELTA)
     assert cw_sim.live_delta_for('reward', 4, random.Random(0),
-                                 pool_map={'reward': {}}) is None
+                                 pool_map={'reward': {1: {}}}) is None
     assert cw_sim.live_delta_for(
         'supply', 4, random.Random(0), pool_map={}) is None
 
@@ -75,14 +79,16 @@ def test_snapshot_reward_pool_matches_corpus_truth() -> None:
     等值=池耦合 change-detector,再生即红)。supply 无真值锚
     (ADR-0345):合法样本(如 Δ=0)不辖,只锁伪影哨兵带。"""
     pm, _, _ = cw_sim.resolve_pool('snapshot')
-    rep = check_reward_delta_pool_bucket_lock(pm)
+    rep = check_reward_delta_pool_bucket_lock(cw_sim.plane_view(pm))
     assert rep['violations'] == 0, rep
     assert rep['reward']['n'] >= 30
     assert abs(rep['reward']['mean'] - REWARD_POOL_TRUTH_MEAN) <= 1.0
 
 
 def test_reward_lock_catches_drift_and_artifact() -> None:
-    """检查项变异:均值漂移 / 跨 run 伪影形态(负值、大正值)必报。"""
+    """检查项变异:均值漂移 / 跨 run 伪影形态(负值、大正值)必报。
+    (ADR-0362:检查项消费 plane=1 视图口径,合成池直接给扁平桶——
+    检查代码本身零改动,与 plane_view 输出同形。)"""
     drift = {'reward': {6: [2] * 30 + [9] * 10}}   # 均值 3.75 > 带
     rep = check_reward_delta_pool_bucket_lock(drift)
     assert rep['violations'] >= 1 and any('漂移' in i for i in rep['issues'])
@@ -134,20 +140,22 @@ def test_pool_build_never_mixes_runs(tmp_path: Path) -> None:
                       ensure_ascii=False) + '\n',
         encoding='utf-8')
     pool, _ = cw_sim._pool_from_replay(d)
-    assert pool.get('reward') == {6: [2]}   # 只有 r2 同 run 差分 +2
-    assert 41 not in [x for v in pool['reward'].values() for x in v]
+    # ADR-0362:差分归属后行位面——reward 行 plane=1,桶挂 plane=1 层
+    assert pool.get('reward') == {1: {6: [2]}}   # 只有 r2 同 run 差分 +2
+    assert 41 not in [x for v in pool['reward'][1].values() for x in v]
 
 
 def test_sampler_v4_and_snapshot_selfconsistent() -> None:
-    """采样器版本(ADR-0312 起 v7;本锁语义=版本入指纹+快照自洽)。"""
-    assert cw_sim._SAMPLER_VERSION == 7
+    """采样器版本(ADR-0362 起 v8;本锁语义=版本入指纹+快照自洽)。"""
+    assert cw_sim._SAMPLER_VERSION == 8
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'
     from sr_od.application.currency_war import cw_delta_pool_data
     assert fp == cw_delta_pool_data.META['fingerprint']
-    assert cw_delta_pool_data.META['sampler_version'] == 7
-    # 池语义变更使指纹与旧版快照(d891233d/066c4185/886f8a39/fd48f135)可区分
-    assert not fp.startswith(('d891233d', '066c4185', '886f8a39', 'fd48f135'))
+    assert cw_delta_pool_data.META['sampler_version'] == 8
+    # 池语义变更使指纹与旧版快照(…/fd48f135/bab146c6 系)可区分
+    assert not fp.startswith(('d891233d', '066c4185', '886f8a39',
+                              'fd48f135', 'bab146c6'))
 
 
 def test_batch_report_embeds_reward_lock() -> None:
