@@ -276,11 +276,14 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
 
 
 def test_overheat_reward_node_treated_as_battle() -> None:
-    """⑥「经济过热」类环境 reward 节点=**低危战斗**(口述定谒:扑满
-    不掉血,真损失=打不过没奖励):
+    """⑥「经济过热」类环境 reward 节点=**奖励型战斗**(口述定谒 [16]
+    +W120 P8;W122 F-01:扑满不掉血,真损失=打不过没奖励——轻投入凑
+    羁绊刷伤害拿奖励,**禁深花保血**):
     - 战斗向刷新理由开放:r>refresh_max_round 的刷新在过热局 reward
-      节点转正分(为凑伤害 D 牌;金保底仍辖);
-    - 地板不降:连胜 EV 地板**不**因扑满节点降 5(_hard_node 不辖);
+      节点转正分——但受 **P8 上限**辖(单节点 s≤2金 → 限 1 次/节点,
+      超出按无证拒回常规门恒负分);
+    - 地板不降:连胜 EV 地板**不**因扑满节点降 5(_hard_node 不辖;
+      boss/遭遇窗的下探授权对扑满全部不适用);
     - 环境名单从 cw_invest_data 效果文本派生(单一源断言)。"""
     from sr_od.application.currency_war.cw_invest_data import PLAZA_PORTALS
     # 名单派生:效果文本含「奖励节点替换」
@@ -296,24 +299,29 @@ def test_overheat_reward_node_treated_as_battle() -> None:
     st_hot = _state(round_num=4, node_type='reward',
                     active_env='经济过热', gold=40)
     assert _streak_floor(st_hot, sess, _REG, 30) == 30
-    # 战斗向刷新开放:r7(>refresh_max_round=6)reward 节点 + 过热
-    # → 刷新正分;无环境对照恒负分(轮界门照辖)
+    # 战斗向刷新开放×P8 上限:r7(>refresh_max_round=6)reward 节点 +
+    # 过热 → 首刷正分(轮计数 0<cap);同轮已刷 1 次(计数≥cap)→
+    # 豁免失效回常规门恒负分;无环境对照恒负分(轮界门照辖)
     from sr_od.application.currency_war.cw_state import RefreshShop
     from sr_od.application.currency_war.decision_v2.scoring import (
         score_candidate as _sc,
     )
-    for env, expect_pos in (('经济过热', True), ('', False)):
+    for used, env, expect_pos in ((0, '经济过热', True),
+                                  (_REG.piggy_refresh_round_cap,
+                                   '经济过热', False),
+                                  (0, '', False)):
         s = StrategySession()
         s.v3_mode = 'economy'
+        s.v2_round_refreshes = used
         st_r = _state(round_num=7, node_type='reward',
                       active_env=env, gold=40)
         rf = Candidate(action=RefreshShop(cost=2), tag='refresh',
                        source='shop')
         v, _bd = _sc(rf, st_r, s, _REG)
         if expect_pos:
-            assert v > 0, f'过热局扑满轮刷新应开放(实际 {v})'
+            assert v > 0, f'过热局扑满轮首刷应开放(实际 {v})'
         else:
-            assert v < 0, f'无环境 reward 轮界门照辖(实际 {v})'
+            assert v < 0, f'豁免超限/无环境应恒负分(实际 {v})'
 
 
 # --- 附2:W120 证明批检验点锁(P5 边界/P6 无特判)-----------------------------

@@ -96,6 +96,10 @@ _EXPECTED_HASH = '117316f74fdbd93413f1937622a1710c6865fd35d0769b399335a74dbd045f
 # 与 levelup_interest_engine_gate([12] 门收编 EV 总账,E6 latch 退场)
 # ——有意改参,锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = '837f521098a44ac0f8e81b8febf6208dd320d212f4d5975e29053ca979946679'
+# W122 F-01(W120 P8 上限接线)更新:新增 piggy_refresh_round_cap(=1,
+# 扑满节点单节点刷新豁免上限——s≤0.277R 采前保守 2 金)——有意改参,
+# 锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = '3ad13e863c742a386bbfcffcf3d75f72ea01f685fc9cd2ef27e0d1fa8312a519'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
