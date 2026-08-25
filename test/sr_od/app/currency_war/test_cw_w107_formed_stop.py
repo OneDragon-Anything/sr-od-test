@@ -223,12 +223,17 @@ def test_sim_formed_stop_e2e_seed_scan() -> None:
     r_off = simulate_p1(seed, pool='snapshot',
                         strategy=DecisionV2Strategy(registry=reg_off))
     assert not any(row.get('formed_stop') for row in r_off.ledger)
-    # 门咬住:首个分歧行 = 闸门首次实际拦截——成型停手轮,关臂该轮
-    # 买入严格多于开臂
+    # 门咬住:首个**行为**分歧行 = 闸门首次实际拦截——成型停手轮,关臂
+    # 该轮买入严格多于开臂。找分歧时剔除 formed_stop 标志位本身(W121
+    # G1 批实证 seed10:标志先于行为分歧(该轮无买候选,两臂行为同)——
+    # 标志位差异≠闸门咬合,直判会把标志行当拦截处误报 0<0)
+    def _behavior(row: dict) -> dict:
+        return {k: v for k, v in row.items() if k != 'formed_stop'}
     pair = next(((a, b) for a, b in zip(r_on.ledger, r_off.ledger,
                                         strict=False)
-                 if a != b), None)
-    assert pair is not None, '开臂有触发轮但与关臂账本无分歧=门未咬'
+                 if _behavior(a) != _behavior(b)), None)
+    assert pair is not None, ('开臂有触发轮但与关臂行为无分歧=门未咬'
+                               '(标志位差异不算——见 _behavior 注释)')
     diff_on, diff_off = pair
     assert diff_on.get('formed_stop') is True, (
         f'首个分歧行非成型停手轮(r{diff_on.get("round_num")})'

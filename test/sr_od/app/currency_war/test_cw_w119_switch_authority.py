@@ -375,6 +375,45 @@ def test_w120_p9_hp1_dead_end_marker() -> None:
     assert hp1_dead_end_rounds(rows) == [7, 8, 9]     # 数据面含 hp=0
 
 
+# --- 附3:W121 G1 人口位判据方向锁 -------------------------------------------
+
+
+def test_w121_g1_population_slot_trigger_direction() -> None:
+    """W121 G1(高严重度):人口位升级触发 = **cap 满 ∧ bench 有等待上场
+    的目标/框架件**——W113 §3.3 通道 2 原文「deployed<cap 且 bench 有
+    成型可上件」把判据写反(deployed<cap=有余量=该件直接上场即可,
+    [32](b) 判定此时再升纯浪费)。
+
+    双态断言(金 45/lv6/bench 引擎件希儿,裸 session=targets 含引擎件):
+    - A:deployed=cap(位满)→ 总账放行(① 人口位,花后 41≥form_floor);
+    - B:deployed=cap−1(有空位)→ ① 不触发,DP 臂平台未破不过、静态账
+      平台延迟损拒 →「息引擎总账拒」。"""
+    from sr_od.application.currency_war.decision_v2.candidates import (
+        _target_names,
+    )
+    from sr_od.application.currency_war.decision_v2.discipline import (
+        engine_char_names,
+    )
+    from sr_od.application.currency_war.decision_v2.ev import (
+        levelup_ev_authorized,
+    )
+    targets = _target_names(None, None)
+    assert '希儿' in engine_char_names() and '希儿' in targets
+    dep_full = [BenchChar(slot=i, char_id=f'杂件{i}', faction='公司',
+                          star=1) for i in range(6)]
+    dep_gap = dep_full[:5]
+    for deployed, expect in ((dep_full, True), (dep_gap, False)):
+        sess = StrategySession()
+        sess.v3_mode = 'economy'
+        st = _state(round_num=7, gold=45, level=6, deployed=deployed,
+                    bench=[BenchChar(slot=0, char_id='希儿',
+                                     faction='公司', star=1)],
+                    node_type='battle')
+        got = levelup_ev_authorized(
+            st, sess, _REG, 45, 4, targets, val=1.0, int_emb=0.0)
+        assert got is expect, (len(deployed), expect, got)
+
+
 # --- 附:旁路护栏 + HOARD 相位域 ---------------------------------------------
 
 
