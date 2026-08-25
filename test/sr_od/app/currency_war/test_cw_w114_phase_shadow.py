@@ -56,7 +56,7 @@ def _sess_locked() -> StrategySession:
 
 
 def test_case1_unlocked_empty_board_form() -> None:
-    """①意向未锁+板面空 → FORM;form_ok=False(兜底门:score 0 < 0.5)。"""
+    """①意向未锁+板面空 → FORM;form_ok=False(兜底门:有效体系数 0<2)。"""
     state = GameState(plane=1, round_num=1, gold=10, level=3, hp=100)
     sess = StrategySession()   # 默认 unlocked
     assert form_ok(state, sess, DEFAULT_REGISTRY) is False
@@ -101,18 +101,21 @@ def test_case4_core_one_star_form() -> None:
 
 
 def test_phase_score_bounds_and_fallback_gate() -> None:
-    """form_score ∈ [0,1];兜底门走 registry 常量(可 A/B 注入,禁散落)。
+    """form_score ∈ [0,1](纯遥测观测,ADR-0353 起不进判据);兜底门走
+    registry 结构常量(可 A/B 注入,禁散落)。
 
-    兜底降级路径:未锁但上场阵容拉满 2 过渡体系(仙舟3+列车2 真角色
-    上场)→ score ≥ gate → form_ok True(体系判定单一源 _engines_count)。
+    兜底降级路径(W132/ADR-0353 结构判据):未锁但上场阵容拉满 2 过渡
+    体系(真角色上场)→ 有效体系数 ≥ phase_fallback_min_engines →
+    form_ok True(体系判定单一源 _engines_count);r<phase_fallback_min_round
+    同板仍 False。
     """
-    assert 0.0 <= DEFAULT_REGISTRY.phase_form_score_gate <= 1.0
+    assert DEFAULT_REGISTRY.phase_fallback_min_engines >= 1
+    assert DEFAULT_REGISTRY.phase_fallback_min_round >= 1
     from sr_od.application.currency_war.cw_chars import CHARACTERS
     from sr_od.application.currency_war.cw_deploy_logic import (
         TRANSITION_TRAITS,
     )
     traits = dict(TRANSITION_TRAITS)
-    want: list[tuple[str, int]] = list(traits.items())[:2]   # 前两体系
     deployed: list[BenchChar] = []
     used: set[str] = set()
     for bond, tier in list(traits.items())[:2]:   # 前两体系逐个凑
@@ -127,13 +130,69 @@ def test_phase_score_bounds_and_fallback_gate() -> None:
                     slot=len(deployed), char_id=cid,
                     faction=ch.factions[0], star=1))
         assert got >= tier, f'角色表凑不齐体系 {bond}×{tier}'
+    sess = StrategySession()   # unlocked → 兜底门路径
     state = GameState(plane=1, round_num=5, gold=30, level=6, hp=80,
                       deployed=deployed, bench=[], shop=[])
-    sess = StrategySession()   # unlocked → 兜底门路径
     score = form_score(state, DEFAULT_REGISTRY)
-    assert score >= DEFAULT_REGISTRY.phase_form_score_gate, score
+    assert 0.0 <= score <= 1.0
     assert form_ok(state, sess, DEFAULT_REGISTRY) is True
     assert derive_phase(state, sess, DEFAULT_REGISTRY) is Phase.HOARD
+    # 同板 r<min_round → 仍 FORM(轮数下限合取)
+    s_early = GameState(plane=1, round_num=4, gold=30, level=6, hp=80,
+                        deployed=deployed, bench=[], shop=[])
+    assert form_ok(s_early, sess, DEFAULT_REGISTRY) is False
+
+
+def test_fallback_gate_run15_counterexample() -> None:
+    """W132/ADR-0353 病象锁:实机 run15 r4/r6 帧(意向未锁,仙舟3 单体系
+    + 多线散件,form_score=0.65)在新门下**仍 FORM**——「凑羁绊档过门」
+    ≠「板面朝一条线收敛」(用户判读原则 2026-08-26)。
+
+    帧 = run_20260825_225052 r6 复刻:deployed 饮月/藿藿/腾荒/爻光/
+    阿格莱雅(仙舟3 引擎=1,其余散线各 1 档);旧门 score 0.65≥0.5 且
+    r6≥5 曾转真(HOARD→SPEND,金 49→92 板面不动)。
+    """
+    names = ['丹恒·饮月', '藿藿', '丹恒·腾荒', '爻光', '阿格莱雅']
+    deployed = [BenchChar(slot=i, char_id=n, faction='仙舟', star=1)
+                for i, n in enumerate(names)]
+    sess = StrategySession()   # unlocked
+    state = GameState(plane=1, round_num=6, gold=49, level=5, hp=52,
+                      deployed=deployed, bench=[], shop=[])
+    assert form_score(state, DEFAULT_REGISTRY) >= 0.5, (
+        '复刻帧应具旧门过门分数(病象前提)')
+    assert form_ok(state, sess, DEFAULT_REGISTRY) is False, (
+        '单体系+散线板:有效体系数 1 < 2,兜底门必须拒')
+    assert derive_phase(state, sess, DEFAULT_REGISTRY) is Phase.FORM
+
+
+def test_fallback_gate_hp_charge_stack_exemption() -> None:
+    """W132/ADR-0353 万敌豁免(W127 global_accumulators 消费):万敌 2★
+    上场(hp_charge_stack 型受击驱动全局叠层)计 1 等效体系;1★ 不豁免;
+    豁免集不含 cost_escalation 型(银狼)。
+    """
+    from sr_od.application.currency_war.cw_comps import hp_charge_stack_chars
+    from sr_od.application.currency_war.decision_v2.phase import (
+        fallback_engines_count,
+    )
+    assert hp_charge_stack_chars() == frozenset({'万敌'})
+    # 仙舟3 单体系 + 万敌 2★ → 有效体系数 2 → True(r≥5)
+    trio = ['丹恒·饮月', '藿藿', '爻光']
+    deployed = [BenchChar(slot=i, char_id=n, faction='仙舟', star=1)
+                for i, n in enumerate(trio)]
+    deployed.append(BenchChar(slot=3, char_id='万敌',
+                              faction='夜之半神', star=2))
+    sess = StrategySession()
+    state = GameState(plane=1, round_num=5, gold=30, level=6, hp=80,
+                      deployed=deployed, bench=[], shop=[])
+    assert fallback_engines_count(state) == 2
+    assert form_ok(state, sess, DEFAULT_REGISTRY) is True
+    # 万敌 1★:豁免不生效(核心 2★ 同向保守)
+    deployed[3] = BenchChar(slot=3, char_id='万敌',
+                            faction='夜之半神', star=1)
+    state2 = GameState(plane=1, round_num=5, gold=30, level=6, hp=80,
+                       deployed=deployed, bench=[], shop=[])
+    assert fallback_engines_count(state2) == 1
+    assert form_ok(state2, sess, DEFAULT_REGISTRY) is False
 
 
 def test_sim_ledger_has_phase_fields() -> None:

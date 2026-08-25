@@ -110,6 +110,18 @@ _EXPECTED_HASH = '3ad13e863c742a386bbfcffcf3d75f72ea01f685fc9cd2ef27e0d1fa8312a5
 # 'catchup' 列改 'mode'——有意改参(D 是一等通道/追赶态退场),
 # 锁同步更新(target_hold_base/off_target_sell_bias 两存活标定值不变)
 _EXPECTED_HASH = 'fa157543a85e59250753dab71ced739a9cd354564647023d1fdd63f5aa87ca09'
+# W132/ADR-0353 兜底门结构判据批更新:删 phase_form_score_gate(=0.5),
+# 新增 phase_fallback_min_engines(=2,有效体系数下限——四体系两两组合=
+# 过渡成型;run15 实机散板过旧门两证);并存批同期新增
+# interest_recovery_rounds(=3.0,W131/ADR-0352 买侧回档折中)——有意
+# 改参,锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = '4d691245755180dc3ae21c8dfe075d19f941ddc8ef4603b05ac2def6dcc6e5d4'
+# W131/ADR-0352 买侧 EV 标定批更新:新增 interest_recovery_rounds(=3.0,
+# 买侧 C_interest 回档折中视界:P6 下界 1-3 金与平面 R 上界≈20-23 的
+# 折中;只辖 arbiter.interest_rule 的 BuyCard 分支,刷新/升级口径不动)
+# ——有意改参(买侧 V/C 量级错档标定),锁同步更新(其余数值不变)
+_EXPECTED_HASH = ('4d691245755180dc3ae21c8dfe075d19'
+                  'f941ddc8ef4603b05ac2def6dcc6e5d4')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

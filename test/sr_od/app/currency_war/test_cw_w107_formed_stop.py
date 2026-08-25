@@ -210,30 +210,35 @@ def test_sim_formed_stop_e2e_seed_scan() -> None:
         return sum(1 for a in row.get('actions') or []
                    if a.get('__type__') == 'BuyCard')
 
+    def _behavior(row: dict) -> dict:
+        return {k: v for k, v in row.items() if k != 'formed_stop'}
+
+    # W132/ADR-0353:兜底门改结构判据后,窗口内首个触发局可能是
+    # 「仅标志局」(触发轮无被拦买入,两臂行为同)——扫描取首个
+    # **咬合局**(有触发且有行为分歧且分歧轮被拦),存在性语义不变。
     picked = None
     for seed in range(80):
         r_on = simulate_p1(seed, pool='snapshot')
         if not any(row.get('formed_stop') for row in r_on.ledger):
             continue
-        picked = (seed, r_on)
+        r_off = simulate_p1(
+            seed, pool='snapshot',
+            strategy=DecisionV2Strategy(registry=reg_off))
+        assert not any(row.get('formed_stop') for row in r_off.ledger)
+        pair = next(((a, b) for a, b in zip(r_on.ledger, r_off.ledger,
+                                            strict=False)
+                     if _behavior(a) != _behavior(b)), None)
+        if pair is None:
+            continue
+        if pair[0].get('formed_stop') is not True:
+            continue
+        if not _buys_in(pair[0]) < _buys_in(pair[1]):
+            continue
+        picked = (seed, r_on, r_off, pair)
         break
-    assert picked, ('seed 窗口 0-79 无成型停手触发局——成型停手在'
-                    ' sim 真实轨迹上失活')
-    seed, r_on = picked
-    r_off = simulate_p1(seed, pool='snapshot',
-                        strategy=DecisionV2Strategy(registry=reg_off))
-    assert not any(row.get('formed_stop') for row in r_off.ledger)
-    # 门咬住:首个**行为**分歧行 = 闸门首次实际拦截——成型停手轮,关臂
-    # 该轮买入严格多于开臂。找分歧时剔除 formed_stop 标志位本身(W121
-    # G1 批实证 seed10:标志先于行为分歧(该轮无买候选,两臂行为同)——
-    # 标志位差异≠闸门咬合,直判会把标志行当拦截处误报 0<0)
-    def _behavior(row: dict) -> dict:
-        return {k: v for k, v in row.items() if k != 'formed_stop'}
-    pair = next(((a, b) for a, b in zip(r_on.ledger, r_off.ledger,
-                                        strict=False)
-                 if _behavior(a) != _behavior(b)), None)
-    assert pair is not None, ('开臂有触发轮但与关臂行为无分歧=门未咬'
-                               '(标志位差异不算——见 _behavior 注释)')
+    assert picked, ('seed 窗口 0-79 无成型停手咬合局——成型停手在'
+                    ' sim 真实轨迹上失活(或只余仅标志局)')
+    seed, r_on, r_off, pair = picked
     diff_on, diff_off = pair
     assert diff_on.get('formed_stop') is True, (
         f'首个分歧行非成型停手轮(r{diff_on.get("round_num")})'
