@@ -78,13 +78,59 @@ def test_layer1_strategy_signal() -> None:
 
 
 def test_layer2_family_bond_signal() -> None:
-    """②类专属羁绊:持续伤害×2 → DOT 家族线;量子×2 不触发(希儿量子无②——量子/贝是放大器)。"""
+    """②类专属羁绊(ADR-0338 资格门):羁绊副产品计数不是直通资格——
+    持续伤害×2 无资格不发②;持有资格(env 特邀专家:桑博 → 专家桑博DOT)
+    才发;量子×2 恒不触发(希儿量子无②——量子/贝是放大器)。"""
     st = _state(board={'持续伤害': 2})
     lay = _layers(detect_signals(st))
-    assert {'DOT队', '专家桑博DOT'} <= lay.get(2, set())
-    st2 = _state(board={'量子同频': 2})
+    assert lay.get(2, set()) == set(), '无资格时②羁绊信号不得发射(锁直通=旧病)'
+    st2 = _state(board={'持续伤害': 2}, active_env='特邀专家:桑博')
     lay2 = _layers(detect_signals(st2))
-    assert '希儿量子' not in lay2.get(2, set())
+    assert '专家桑博DOT' in lay2.get(2, set())
+    st3 = _state(board={'量子同频': 2})
+    lay3 = _layers(detect_signals(st3))
+    assert '希儿量子' not in lay3.get(2, set())
+
+
+# ===== ADR-0338:直通终局线资格门(W85 五局同型根因修复)=====
+
+
+def test_bond_lock_requires_qualification() -> None:
+    """银河学者×2(经济凑数位)无资格 → 不锁大黑塔银河学者,意向落⑤兜底;
+    持黑塔纪元(资格策略)→ 放行锁直通。"""
+    st = _state(board={'银河学者': 2})          # 学者2 = 买 DOT 的副产品
+    ist = update_intention(st, IntentionState())
+    assert ist.phase == 'unlocked' and ist.locked_comp == ''
+    assert hoard_target_set(st, ist).mode == 'fallback'
+    st_q = _state(board={'银河学者': 2}, strategies=['黑塔纪元'])
+    ist_q = update_intention(st_q, IntentionState())
+    assert ist_q.phase == 'locked' and ist_q.locked_comp == '大黑塔银河学者'
+    # env 侧资格同放行(银河学者概念股)
+    st_e = _state(board={'银河学者': 2}, active_env='银河学者概念股')
+    ist_e = update_intention(st_e, IntentionState())
+    assert ist_e.locked_comp == '大黑塔银河学者'
+
+
+def test_bond_lock_wan_di_rejected_core_card_still_legal() -> None:
+    """夜之半神×2(燃血副产品)不锁万敌单C(003757 r6 病);贯穿件万敌到手
+    → ③锁线照旧([23] 合法路径保持)。"""
+    st = _state(board={'夜之半神': 2})
+    ist = update_intention(st, IntentionState())
+    assert ist.phase == 'unlocked' and ist.locked_comp == ''
+    ist2 = update_intention(_state(bench=['万敌']), IntentionState())
+    assert ist2.phase == 'locked' and ist2.locked_comp == '万敌单C'
+    assert ist2.lock_layer == 3
+
+
+def test_bond_lock_train_requires_strategy() -> None:
+    """列车同行×2 不锁列车同行 comp(终局形态需列车4+姬子,024503 r7 病);
+    持「本姑娘就是罗刹」(资格策略)→ 放行。"""
+    st = _state(board={'列车同行': 2})
+    ist = update_intention(st, IntentionState())
+    assert ist.phase == 'unlocked' and ist.locked_comp == ''
+    st_q = _state(board={'列车同行': 2}, strategies=['本姑娘就是罗刹'])
+    ist_q = update_intention(st_q, IntentionState())
+    assert ist_q.locked_comp == '列车同行'
 
 
 def test_layer3_core_card_signal() -> None:

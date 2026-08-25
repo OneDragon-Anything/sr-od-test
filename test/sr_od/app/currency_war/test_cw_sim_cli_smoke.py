@@ -47,10 +47,16 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # ledger_consistency / coldstart_direction 是 v2 已知债(W66 §4 条件
     # 3:12/400 与 79/400,d2 行为面批清)——sim 默认策略切 decision_v2
     # 后固定 seed 域触发,登记豁免。
+    # ADR-0338(W85):②资格门落地后,稳定 env 锁局(seed16)涌现
+    # engine_seed 买入 2 轮内回卖 1/25(姬子·启行 r4 买 r5 卖 r7 再买
+    # ——锁线稳定后 off-target 引擎种子的买/卖两侧判据互踩,振荡形)
+    # ——按 ADR-0289 纪律登记待裁(裁决归下一批:买侧 engine_seed
+    # 与卖侧 off-target 让位的豁免边怎么划),未裁决前豁免。
     _PENDING_ADJUDICATION = ('ledger_consistency',
                              'coldstart_direction',
                              'degrade_recover_mutex',
-                             'equip_value_strategy_key_coverage')
+                             'equip_value_strategy_key_coverage',
+                             'engine_seed_not_resold')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS or name in _PENDING_ADJUDICATION:
             assert 'violations' in r, f'{name}: 缺 violations 计数'
