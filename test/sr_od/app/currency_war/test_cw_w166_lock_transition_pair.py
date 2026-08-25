@@ -216,15 +216,21 @@ def test_direction_factions_unlock_pair_systems() -> None:
 
 def test_guard_protects_pair_engine_pieces_on_evolve() -> None:
     """①锁局 evolve 保护基准扩辖:对件(希儿系——非三羁绊成员,旧口径
-    裸奔)进 _locked_protected_names;无副方向帧不辖(对照,证扩辖是
-    transition_pair 语义)。"""
+    裸奔)进 _locked_protected_names。
+
+    旧「无副方向帧希儿不辖」对照断言已随 W192/ADR-0375 过期:希儿本人
+    唯一种子自此**恒入保护集**(guard_seele_scope_enabled,不依赖
+    transition_pair 帧)——对照改 scope off(=W188 后行为)时希儿
+    不辖,证扩辖来源。"""
     old_line = [_char_bc('希儿'), _char_bc('阿格莱雅')]
     sess = _qlock_session(('列车同行', '希儿系'))
     prot = _locked_protected_names(old_line, sess)
     assert '希儿' in prot, '对件引擎贡献(希儿系)须进保护集'
     sess_plain = _qlock_session(())
-    prot_plain = _locked_protected_names(old_line, sess_plain)
-    assert '希儿' not in prot_plain, '无副方向帧希儿不辖(对照)'
+    assert '希儿' in _locked_protected_names(
+        old_line, sess_plain), 'W192 起:希儿唯一种子恒辖(非 pair 帧独占)'
+    assert '希儿' not in _locked_protected_names(
+        old_line, sess_plain, seele_scope=False), 'scope off 对照'
 
 
 def test_guard_faction_scope_not_offlock_for_pair_system() -> None:

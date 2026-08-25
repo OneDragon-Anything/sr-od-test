@@ -161,6 +161,12 @@ _EXPECTED_HASH = ('dbda54fec1bb165f4a18b2e0cd4dc8ea'
 # 行为)——有意改参,锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = ('fcfa610b0496e5f58975b2a82be1b30d'
                   'd3e11d6bd40dbca9721220f930697c35')
+# W192/ADR-0375 希儿系守卫辖域补全批更新:新增 guard_seele_scope_
+# enabled(=True,希儿系(单卡判据 tier=1)并入卖侧唯一体系引擎守卫
+# 与演进保护集辖域;关=回 W188 后行为)——有意改参,锁同步更新
+# (其余数值字段不变)
+_EXPECTED_HASH = ('1db429c1050915da537c35e6e9cc047b'
+                  '9c75144aa70eed372ea25e3e4921d07f')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

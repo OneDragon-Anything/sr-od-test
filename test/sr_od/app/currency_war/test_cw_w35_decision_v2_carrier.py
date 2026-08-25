@@ -394,12 +394,16 @@ def test_carry_gate_merge_material_not_sold() -> None:
     sess = _locked_sess()
     sess.v2_round_key = (1, 4)
     # 瓦尔特 2★(加权副本 2=进行中素材)→ 不可卖;其余 1 份保护件可卖
+    # (W192/ADR-0375 适配:原 fixture 的希儿(唯一种子)与花火(希儿在
+    # 手时量子放大 ≤2)现被卖守卫辖——本锁域意图是素材件不卖,换冗余
+    # 仙舟件符玄并置 board 含仙舟(③ 直接卖通道判定按 faction∈board
+    # 跳过),保持「全保护/无直接可卖 → 降保护集」前置成立)
     bench = ([_bench('瓦尔特', faction='列车同行', slot=0, star=2)]
              + [_bench(n, faction='列车同行', slot=i)
                 for i, n in enumerate(['三月七', '花火', '丹恒·饮月',
-                                       '希儿', '爻光', '藿藿', '三月七',
-                                       '花火'])])
-    st = _state(round_num=4, gold=50,
+                                       '希儿', '爻光', '藿藿', '三月七'])
+                ] + [_bench('符玄', faction='仙舟', slot=8)])
+    st = _state(round_num=4, gold=50, board={'仙舟': 1},
                 shop=[_card('姬子·启行', faction='列车同行', cost=4)],
                 bench=bench)
     acts = carry_gate_actions(st, sess, _REG)
@@ -608,18 +612,20 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
 
     def _fake_evo(state, session, memory, off_lock_penalty=0.0,
                   engine_guard=True, final_freeze=True,
-                  engine_completion=True):
+                  engine_completion=True, seele_scope=True):
         # W155/ADR-0360:evolution_step 增 off_lock_penalty 关键字
         # (锁定帧 off-lock 提案降级分,registry 注入)——桩同步收参;
         # W160/ADR-0363:S1 型修法两件(引擎下界守卫/末轮演进冻结)
         # 同款 registry 注入——桩同步收参(接线锁,语义归 W160 锁);
         # W174/ADR-0371:引擎补完守卫同款注入——桩同步收参(语义归
-        # test_cw_w174_engine_completion)
+        # test_cw_w174_engine_completion);W192/ADR-0375:希儿系守卫
+        # 辖域同款注入——桩同步收参(语义归 test_cw_w192_seele_scope)
         seen['memory'] = memory
         seen['off_lock_penalty'] = off_lock_penalty
         seen['engine_guard'] = engine_guard
         seen['final_freeze'] = final_freeze
         seen['engine_completion'] = engine_completion
+        seen['seele_scope'] = seele_scope
         return [sentinel]
 
     import sr_od.application.currency_war.decision_v2.strategy as m
@@ -636,6 +642,8 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
     assert seen['final_freeze'] is True
     # W174/ADR-0371:引擎补完守卫开关默认 True 从 registry 注入
     assert seen['engine_completion'] is True
+    # W192/ADR-0375:希儿系守卫辖域开关默认 True 从 registry 注入
+    assert seen['seele_scope'] is True
 
 
 # --- ⑤ 冒烟:P1 一轮 sim 决策不炸 --------------------------------------------

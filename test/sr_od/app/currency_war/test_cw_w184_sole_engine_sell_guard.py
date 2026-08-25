@@ -117,9 +117,13 @@ def test_guard_covers_deployed_and_flows_caliber() -> None:
                 deployed=[_bc('椒丘', '持续伤害', slot=9)])
     assert sole_engine_sell_blocked(st.bench[0], st, _REG) is True
     # 再加 deployed 艾丝妲 → owned 3 > tier 2 → 桑博可卖
+    # (W192/ADR-0375 适配:桑博=贝+DOT 双籍,希儿系侧另辖——补 deployed
+    # 娜塔莎(贝)使希儿系在手 2>1,本锁回归纯 TT 口径;希儿系辖域由
+    # test_cw_w192_seele_scope ⑤ 锁)
     st2 = _state(bench=[_bc('桑博', '持续伤害')],
                  deployed=[_bc('椒丘', '持续伤害', slot=9),
-                           _bc('艾丝妲', '持续伤害', slot=10)])
+                           _bc('艾丝妲', '持续伤害', slot=10),
+                           _bc('娜塔莎', '贝洛伯格', slot=11)])
     assert sole_engine_sell_blocked(st.bench[0], st2, _REG) is False
 
 

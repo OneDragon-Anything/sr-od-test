@@ -291,8 +291,10 @@ def test_s2_alarm_refresh_compensated_when_authorized() -> None:
         DisciplineView,
     )
     # 报警升级态:war 地板 30,金 25,refresh 2 费 → 缺 7;可卖件用
-    # **各 1 份**的散件(加权副本≥2 的 3合1 素材不可卖,AD9-2-3)
-    sellable_names = ['卡芙卡', '千冶·刃', '绯英', '娜塔莎', '阿格莱雅']
+    # **各 1 份**的散件(加权副本≥2 的 3合1 素材不可卖,AD9-2-3;
+    # W192/ADR-0375 适配:娜塔莎=贝洛伯格希儿系贡献件唯一时卖禁,
+    # 换非希儿系 3 费件黄泉凑足缺金)
+    sellable_names = ['卡芙卡', '千冶·刃', '绯英', '黄泉', '阿格莱雅']
     sess = _locked_sess()
     sess.v3_mode = 'war'
     sess.v2_round_key = (1, 4)
@@ -357,10 +359,11 @@ def test_s5_key_orders_low_cost_net0_first() -> None:
     )
     sess = _sess()
     sess.v2_round_key = (1, 4)
-    # 黑塔(1费)vs 娜塔莎(3费)——均单份 1★ 可卖(W184 后三月七/瓦尔特
-    # 为 TT 列车件另有唯一引擎卖禁,通用键序锁改用非 TT 件)
+    # 黑塔(1费)vs 黄泉(3费)——均单份 1★ 可卖(W184 后三月七/瓦尔特
+    # 为 TT 列车件另有唯一引擎卖禁;W192 后娜塔莎为希儿系贡献件另有
+    # 卖禁,通用键序锁改用非 TT 非希儿系件)
     st = _state(gold=60, bench=[_bench('黑塔', faction='公司', slot=0),
-                                _bench('娜塔莎', faction='公司', slot=1)],
+                                _bench('黄泉', faction='公司', slot=1)],
                 board={})
     k_low = sell_priority_key(st.bench[0], st, sess, None, _REG)
     k_high = sell_priority_key(st.bench[1], st, sess, None, _REG)

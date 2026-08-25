@@ -48,7 +48,7 @@ def _sess(line: str | None = None) -> StrategySession:
         ist.locked_comp = '姬子列车'
         s.v3_intention = ist
         s.v3_hoard = HoardTarget(
-            frozenset({'娜塔莎', '姬子·启行', '瓦尔特', '三月七'}),
+            frozenset({'娜塔莎', '姬子·启行', '瓦尔特', '三月七', '黄泉'}),
             frozenset(), 'locked')
         s.v3_core_names = {'姬子·启行'}
     return s
@@ -101,14 +101,19 @@ def test_sell_for_gold_emergency() -> None:
 
 def test_sell_free_bench_full_target_yields() -> None:
     """bench 满:目标件也降保护集让位(free_bench,v1 carry 腾位门
-    语义);非目标件在 bench 满时同样 free_bench 语义域。"""
+    语义);非目标件在 bench 满时同样 free_bench 语义域。
+
+    W192/ADR-0375 适配:目标件由娜塔莎(贝洛伯格=希儿系贡献件,唯一
+    在手时卖禁;瓦尔特/三月七/姬子·启行=TT 件同因 W184 卖禁)换黄泉
+    并入 hoard 目标集——目标件让位语义与守卫辖域正交,辖域由
+    test_cw_w192_seele_scope 锁。"""
     sess = _sess(line='jizi')
-    bench = [BenchChar(slot=i, char_id='娜塔莎' if i == 0 else '银枝',
-                       faction='护盾' if i == 0 else '智识')
+    bench = [BenchChar(slot=i, char_id='黄泉' if i == 0 else '银枝',
+                       faction='巡海游侠' if i == 0 else '智识')
              for i in range(_REG.bench_capacity)]
     st = _state(bench=bench)
     tags = _sell_tags(st, sess)
-    assert tags.get('娜塔莎') == 'free_bench', \
+    assert tags.get('黄泉') == 'free_bench', \
         f'bench 满时目标件应让位:{tags}'
 
 
