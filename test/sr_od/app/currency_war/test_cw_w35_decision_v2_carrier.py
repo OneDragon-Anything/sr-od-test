@@ -606,8 +606,11 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
                                reason='evolve:test')
     seen: dict = {}
 
-    def _fake_evo(state, session, memory):
+    def _fake_evo(state, session, memory, off_lock_penalty=0.0):
+        # W155/ADR-0360:evolution_step 增 off_lock_penalty 关键字
+        # (锁定帧 off-lock 提案降级分,registry 注入)——桩同步收参
         seen['memory'] = memory
+        seen['off_lock_penalty'] = off_lock_penalty
         return [sentinel]
 
     import sr_od.application.currency_war.decision_v2.strategy as m
@@ -617,6 +620,8 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
     acts = strat.decide_prep(st, sess, None)
     assert acts and acts[0] is sentinel, '演进动作必须前置决策循环'
     assert seen['memory'] is sess.v3_evolution
+    # W155:registry 的 off-lock 降级分从接线传入(默认 registry 开=3.0)
+    assert seen['off_lock_penalty'] == 3.0
 
 
 # --- ⑤ 冒烟:P1 一轮 sim 决策不炸 --------------------------------------------
