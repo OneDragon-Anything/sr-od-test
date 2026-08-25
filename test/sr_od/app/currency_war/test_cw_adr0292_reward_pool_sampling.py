@@ -69,12 +69,16 @@ def test_fallback_pool_reward_delta_is_constant() -> None:
 
 
 def test_snapshot_reward_pool_matches_corpus_truth() -> None:
-    """提交快照对拍:reward 池入位、n≥30、均值=真值(恒 +2)。"""
+    """提交快照对拍(regen-robust,W111):reward 池入位、n≥30、
+    均值≈语料真值(带形式——ADR-0292 规格原文即「≈」,经检查项
+    ±1hp 漂移带+伪影哨兵带断言;池每次局终自动再生,锁瞬时均值
+    等值=池耦合 change-detector,再生即红)。supply 无真值锚
+    (ADR-0345):合法样本(如 Δ=0)不辖,只锁伪影哨兵带。"""
     pm, _, _ = cw_sim.resolve_pool('snapshot')
     rep = check_reward_delta_pool_bucket_lock(pm)
     assert rep['violations'] == 0, rep
     assert rep['reward']['n'] >= 30
-    assert rep['reward']['mean'] == REWARD_POOL_TRUTH_MEAN
+    assert abs(rep['reward']['mean'] - REWARD_POOL_TRUTH_MEAN) <= 1.0
 
 
 def test_reward_lock_catches_drift_and_artifact() -> None:
@@ -91,6 +95,14 @@ def test_reward_lock_catches_drift_and_artifact() -> None:
     assert rep3['violations'] >= 1
     # 空池(fallback)不辖(同 battle 锁空池语义)
     assert check_reward_delta_pool_bucket_lock({})['violations'] == 0
+    # supply(W111/ADR-0345):无真值锚——合法小样本(Δ=0,语料实测
+    # 形态)不辖;跨 run 大跳变伪影仍必报(检测价值不降)
+    supply_legit = {'supply': {9: [0]}}   # 语料首现真实样本形态
+    assert check_reward_delta_pool_bucket_lock(supply_legit)['violations'] == 0
+    supply_artifact = {'supply': {9: [0] * 3 + [41]}}   # 批㉗ F4 量级
+    rep4 = check_reward_delta_pool_bucket_lock(supply_artifact)
+    assert rep4['violations'] >= 1 \
+        and any('伪影' in i for i in rep4['issues'])
 
 
 def test_pool_build_never_mixes_runs(tmp_path: Path) -> None:

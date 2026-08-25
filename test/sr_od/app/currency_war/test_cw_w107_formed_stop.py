@@ -7,7 +7,9 @@
 - 开关:formed_stop_enabled=False=旧行为;
 - 检查器联动:overflow_gold_zero_buy_streak 对 formed_stop 轮重置 streak
   (旧局无字段不受影响);
-- sim 端到端:seed 33(已知 r7-r9 触发)账本行带标志且该轮零 BuyCard;
+- sim 端到端(W111 改 regen-robust):小窗 seed 扫描证存在性——池内
+  必有成型停手触发局,标志入账本且门咬住(固定 seed 触发面随池
+  再生漂移,锁瞬时 seed=池耦合 change-detector);
   关臂同 seed 标志恒 False。
 """
 from __future__ import annotations
@@ -175,26 +177,50 @@ def test_checker_exempts_formed_stop_rounds() -> None:
         [_row(5), _row(6), _row(7, fs=True), _row(8)])
 
 
-def test_sim_seed33_ledger_flag_and_no_buy() -> None:
-    """sim 端到端:seed 33 成型 r7-r9 触发——标志入账本(轮内 OR 聚合,
-    演进可轮中点亮成型,段前买入合法故锁「门咬住」而非零买);
-    关臂同 seed 标志恒 False;检查器对开臂账本不误报。"""
-    r_on = simulate_p1(33, pool='snapshot')
-    fs_rows = [row for row in r_on.ledger if row.get('formed_stop')]
-    assert fs_rows, 'seed 33 应有成型停手轮(触发面扫描实证)'
+def test_sim_formed_stop_e2e_seed_scan() -> None:
+    """sim 端到端(regen-robust,W111):快照池每次局终自动再生
+    (ADR-0344),固定 seed 的触发面随池内容漂移(W109 实证:seed 33
+    在池 4d28822c 下无触发轮)——改锁**存在性语义**:小窗 seed 扫描
+    证明「池内必有成型停手触发局且门咬住」;窗口内无任何触发局 =
+    成型停手在 sim 真实轨迹上失活,锁必须红(检测价值不降)。
+    门咬住的锁法(轨迹因果不变式,比总数对比诚实):开/关臂同 seed
+    同 RNG 流,闸门不拦截时两臂动作逐位相同 → **账本首个分歧行
+    =闸门首次实际拦截处**——该行必为成型停手轮且关臂买入数严格
+    多于开臂(总数对比在分歧后轨迹分叉,不再可比)。触发轮标志入
+    账本为轮内 OR 聚合(演进可轮中点亮成型,段前买入合法,故标记
+    轮内仍可有合法买入);关臂同 seed 标志恒 False;检查器对开臂
+    账本不误报。"""
+    reg_off = replace(DEFAULT_REGISTRY, formed_stop_enabled=False)
 
-    def _buys_r7plus(res) -> int:
-        return sum(1 for row in res.ledger
-                   if (row.get('round_num') or 0) >= 7
-                   for a in row.get('actions') or []
+    def _buys_in(row: dict) -> int:
+        return sum(1 for a in row.get('actions') or []
                    if a.get('__type__') == 'BuyCard')
 
-    reg_off = replace(DEFAULT_REGISTRY, formed_stop_enabled=False)
-    r_off = simulate_p1(33, pool='snapshot',
+    picked = None
+    for seed in range(80):
+        r_on = simulate_p1(seed, pool='snapshot')
+        if not any(row.get('formed_stop') for row in r_on.ledger):
+            continue
+        picked = (seed, r_on)
+        break
+    assert picked, ('seed 窗口 0-79 无成型停手触发局——成型停手在'
+                    ' sim 真实轨迹上失活')
+    seed, r_on = picked
+    r_off = simulate_p1(seed, pool='snapshot',
                         strategy=DecisionV2Strategy(registry=reg_off))
     assert not any(row.get('formed_stop') for row in r_off.ledger)
-    # 门必须咬住:开臂 r7+ 买入数严格少于关臂(该局成型态店内有可买候选)
-    assert _buys_r7plus(r_on) < _buys_r7plus(r_off), (
-        f'gate 未生效:on={_buys_r7plus(r_on)} off={_buys_r7plus(r_off)}')
+    # 门咬住:首个分歧行 = 闸门首次实际拦截——成型停手轮,关臂该轮
+    # 买入严格多于开臂
+    pair = next(((a, b) for a, b in zip(r_on.ledger, r_off.ledger,
+                                        strict=False)
+                 if a != b), None)
+    assert pair is not None, '开臂有触发轮但与关臂账本无分歧=门未咬'
+    diff_on, diff_off = pair
+    assert diff_on.get('formed_stop') is True, (
+        f'首个分歧行非成型停手轮(r{diff_on.get("round_num")})'
+        '——分歧非闸门所致')
+    assert _buys_in(diff_on) < _buys_in(diff_off), (
+        f'分歧轮买入 on={_buys_in(diff_on)} off={_buys_in(diff_off)}'
+        '——关臂未多买,门未咬住')
     # 检查器不误报:开臂账本(成型轮零买不进 streak)整体无违规
     assert check_overflow_gold_zero_buy_streak(r_on.ledger) == []
