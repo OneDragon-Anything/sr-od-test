@@ -272,13 +272,16 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
     assert row['accepted'] is False and '息引擎总账拒' in row['reject'], row
 
 
-# --- ⑥ 扑满守卫(ADR-0348)---------------------------------------------------
+# --- ⑥ 扑满守卫(ADR-0348;口述定谒 2026-08-26=低危战斗)---------------------
 
 
 def test_overheat_reward_node_treated_as_battle() -> None:
-    """⑥「经济过热」类环境:reward 节点按战斗节点处理——连胜 EV 地板
-    (_streak_floor 降 5);无环境对照不辖。环境名单从 cw_invest_data
-    效果文本派生(单一源断言)。"""
+    """⑥「经济过热」类环境 reward 节点=**低危战斗**(口述定谒:扑满
+    不掉血,真损失=打不过没奖励):
+    - 战斗向刷新理由开放:r>refresh_max_round 的刷新在过热局 reward
+      节点转正分(为凑伤害 D 牌;金保底仍辖);
+    - 地板不降:连胜 EV 地板**不**因扑满节点降 5(_hard_node 不辖);
+    - 环境名单从 cw_invest_data 效果文本派生(单一源断言)。"""
     from sr_od.application.currency_war.cw_invest_data import PLAZA_PORTALS
     # 名单派生:效果文本含「奖励节点替换」
     expect = {p.name for p in PLAZA_PORTALS
@@ -286,15 +289,31 @@ def test_overheat_reward_node_treated_as_battle() -> None:
     assert expect == {'经济过热', '经济严重过热'}
     assert REWARD_BATTLE_ENVS == frozenset(expect)
     sess = StrategySession()
-    sess.last_streak = 2
     sess.v3_mode = 'economy'
-    # 过热局 reward 节点:硬节点 → 连胜地板降 5
+    # 地板不降:过热局 reward 节点连胜在手 → 地板原值(不掉血,
+    # 深花保血没有对象)
+    sess.last_streak = 2
     st_hot = _state(round_num=4, node_type='reward',
-                    active_env='经济过热')
-    assert _streak_floor(st_hot, sess, _REG, 30) == 5
-    # 对照:无环境 reward 节点不辖(地板原值)
-    st_cold = _state(round_num=4, node_type='reward', active_env='')
-    assert _streak_floor(st_cold, sess, _REG, 30) == 30
+                    active_env='经济过热', gold=40)
+    assert _streak_floor(st_hot, sess, _REG, 30) == 30
+    # 战斗向刷新开放:r7(>refresh_max_round=6)reward 节点 + 过热
+    # → 刷新正分;无环境对照恒负分(轮界门照辖)
+    from sr_od.application.currency_war.cw_state import RefreshShop
+    from sr_od.application.currency_war.decision_v2.scoring import (
+        score_candidate as _sc,
+    )
+    for env, expect_pos in (('经济过热', True), ('', False)):
+        s = StrategySession()
+        s.v3_mode = 'economy'
+        st_r = _state(round_num=7, node_type='reward',
+                      active_env=env, gold=40)
+        rf = Candidate(action=RefreshShop(cost=2), tag='refresh',
+                       source='shop')
+        v, _bd = _sc(rf, st_r, s, _REG)
+        if expect_pos:
+            assert v > 0, f'过热局扑满轮刷新应开放(实际 {v})'
+        else:
+            assert v < 0, f'无环境 reward 轮界门照辖(实际 {v})'
 
 
 # --- 附:旁路护栏 + HOARD 相位域 ---------------------------------------------
