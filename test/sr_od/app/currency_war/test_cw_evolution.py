@@ -354,3 +354,132 @@ def test_dot_same_line_degenerates_to_deepen():
         assert tx.undeploy == [] and tx.sell == []   # 加深无替换
         out = simulate(st2, tx)
         assert out.board == _recount_board(out.deployed)
+
+
+# ---------- 6. W160/ADR-0363:S1 型成型后引擎丢失修法两件 ----------
+
+def _engines(st_or_dep) -> int:
+    """过渡引擎数(cw_sim._engines_count 口径,W158 strict 度量同源)。"""
+    from sr_od.application.currency_war.cw_sim import (
+        _board_factions_of,
+        _engines_count,
+    )
+    dep = st_or_dep.deployed if isinstance(st_or_dep, GameState) else st_or_dep
+    return _engines_count(_board_factions_of(dep),
+                          {d.char_id for d in dep if d.char_id})
+
+
+def _s1_frame() -> GameState:
+    """S1 事故帧(W159 §2 seed63 型):双引擎在场(列车2+DOT2),
+    末轮单体系加深提案(仙舟3)把两引擎整批划 old_line。"""
+    st = GameState()
+    st.gold = 20
+    st.level = 8
+    st.deployed = [
+        _char('三月七', '列车同行'), _char('瓦尔特', '列车同行'),
+        _char('桑博', '持续伤害'), _char('卡芙卡', '持续伤害'),
+    ]
+    st.bench = [_char('藿藿', '仙舟'), _char('爻光', '仙舟'),
+                _char('青雀', '仙舟')]
+    st.board = _recount_board(st.deployed)
+    return st
+
+
+def _xz_verdict() -> UpgradeVerdict:
+    opt = UpgradeOption('new_faction', '仙舟', 3, 5.0, True,
+                        'xianzhou3', 'card')
+    return UpgradeVerdict(opt, True, True, True, True, '三条件齐备')
+
+
+def test_engine_guard_keeps_engine_contributors_deployed():
+    """件1·引擎下界守卫:事务净效果 engines 2→<2 时,被拆引擎体系的
+    deployed 贡献件留场(新线同级资格)——换血可以,拆引擎不行。"""
+    st = _s1_frame()
+    assert _engines(st) == 2
+    tx = execute_replacement(_xz_verdict(), st, engine_guard=True)[0]
+    out = simulate(st, tx)
+    assert out.action_log[-1]['result'] == 'applied', out.action_log[-1]
+    # 引擎贡献件不被划进 old_line 下场:四件全部留场
+    names = {d.char_id for d in out.deployed}
+    assert {'三月七', '瓦尔特', '桑博', '卡芙卡'} <= names
+    # 事务后引擎数不跌破 2(修的就是 S1:e2 曾成后终局 <2)
+    assert _engines(out) >= 2
+
+
+def test_engine_guard_off_reproduces_s1_channel():
+    """件1 关(A/B 基线臂):同帧下复现 S1 通道——旧档整批下场,engines
+    2→1(与 W159 §2 逐局实证的 evolve_tx→to_bench 通道同形)。"""
+    st = _s1_frame()
+    tx = execute_replacement(_xz_verdict(), st, engine_guard=False)[0]
+    out = simulate(st, tx)
+    assert out.action_log[-1]['result'] == 'applied'
+    names = {d.char_id for d in out.deployed}
+    assert not ({'三月七', '桑博'} & names)   # 旧档整批下场
+    assert _engines(out) < 2   # S1:engines 曾 ≥2 终局 <2
+
+
+def test_engine_guard_not_governing_single_engine_runs():
+    """engines<2 局不受辖(成型问题非丢失问题):单引擎帧上守卫开/关
+    产出的事务逐位相同。"""
+    st = _dot2_state()   # 仅 DOT2 单引擎
+    assert _engines(st) == 1
+    opt = UpgradeOption('new_faction', '仙舟', 3, 5.0, True,
+                        'xianzhou3', 'card')
+    verdict = UpgradeVerdict(opt, True, True, True, True, '三条件齐备')
+    t_on = execute_replacement(verdict, st, engine_guard=True)[0]
+    t_off = execute_replacement(verdict, st, engine_guard=False)[0]
+    assert (t_on.deploy, t_on.undeploy, t_on.sell) \
+        == (t_off.deploy, t_off.undeploy, t_off.sell)
+    assert _engines(simulate(st, t_on)) < 2   # 单引擎换血不受辖(既有行为)
+
+
+def test_engine_guard_targets_lost_system_contributors_only():
+    """守卫是定向的,不是一刀切保 deployed:只有被拆引擎体系的贡献件
+    留场;与丢失无关的散件/填充照旧划 old_line 下场([31]④ 填充可回收;
+    benign 换血面的分布级对照见 sim A/B,非单帧锁)。"""
+    st = _s1_frame()
+    st.deployed = [*st.deployed, _char('娜塔莎')]   # 散件(贝治疗,非引擎贡献)
+    st.board = _recount_board(st.deployed)
+    tx = execute_replacement(_xz_verdict(), st, engine_guard=True)[0]
+    out = simulate(st, tx)
+    assert out.action_log[-1]['result'] == 'applied'
+    names = {d.char_id for d in out.deployed}
+    # 引擎贡献件留场;非贡献散件照旧下场进 bench
+    assert {'三月七', '瓦尔特', '桑博', '卡芙卡'} <= names
+    assert '娜塔莎' not in names
+    assert '娜塔莎' in {b.char_id for b in out.bench if b is not None}
+
+
+def test_final_freeze_blocks_dismantle_in_final_window():
+    """件2·末轮演进冻结:剩 ≤1 轮(r8-9)换档拆板事务冻结不发射。"""
+    st = _dot2_state()
+    st.round_num = 9   # 位面末轮(NODES_PER_PLANE=9)
+    mem = EvolutionState()
+    actions = evolution_step(st, None, mem)
+    assert not any(isinstance(a, CompTransaction) for a in actions)
+    # r9 关开关(final_freeze=False)→ 拆板事务照发(A/B 基线臂)
+    mem2 = EvolutionState()
+    actions2 = evolution_step(st, None, mem2, final_freeze=False)
+    assert any(isinstance(a, CompTransaction) for a in actions2)
+    # 末窗之前的轮(r7)不受辖
+    st3 = _dot2_state()
+    st3.round_num = 7
+    mem3 = EvolutionState()
+    actions3 = evolution_step(st3, None, mem3)
+    assert any(isinstance(a, CompTransaction) for a in actions3)
+
+
+def test_final_freeze_allows_pure_deepen_in_final_window():
+    """件2 辖拆板不辖加深:末窗纯 deploy 事务(undeploy/sell 空)照发
+    ——末轮只许目标体系件与填充,不许换挡拆板。"""
+    st = _dot2_state()
+    st.round_num = 9
+    st.bench = [_char('椒丘', '持续伤害')]
+    st.deployed = [_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害')]
+    st.board = _recount_board(st.deployed)
+    st.level = 5
+    mem = EvolutionState()
+    actions = evolution_step(st, None, mem)
+    for a in actions:
+        if isinstance(a, CompTransaction):
+            assert a.undeploy == [] and a.sell == []
