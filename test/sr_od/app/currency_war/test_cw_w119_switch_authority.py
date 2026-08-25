@@ -43,6 +43,9 @@ from sr_od.application.currency_war.decision_v2.discipline import (
     assess_discipline,
     boss_window_active,
 )
+from sr_od.application.currency_war.decision_v2.ev import (
+    REWARD_BATTLE_ENVS,
+)
 from sr_od.application.currency_war.decision_v2.filters import (
     formed_stop_active,
 )
@@ -267,6 +270,31 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
                                 bench=[], shop=[]), sess2, _REG)
     row = next(r for r in res_save.log if r['tag'] == 'levelup')
     assert row['accepted'] is False and '息引擎总账拒' in row['reject'], row
+
+
+# --- ⑥ 扑满守卫(ADR-0348)---------------------------------------------------
+
+
+def test_overheat_reward_node_treated_as_battle() -> None:
+    """⑥「经济过热」类环境:reward 节点按战斗节点处理——连胜 EV 地板
+    (_streak_floor 降 5);无环境对照不辖。环境名单从 cw_invest_data
+    效果文本派生(单一源断言)。"""
+    from sr_od.application.currency_war.cw_invest_data import PLAZA_PORTALS
+    # 名单派生:效果文本含「奖励节点替换」
+    expect = {p.name for p in PLAZA_PORTALS
+              if '奖励节点替换' in (p.effect or '')}
+    assert expect == {'经济过热', '经济严重过热'}
+    assert REWARD_BATTLE_ENVS == frozenset(expect)
+    sess = StrategySession()
+    sess.last_streak = 2
+    sess.v3_mode = 'economy'
+    # 过热局 reward 节点:硬节点 → 连胜地板降 5
+    st_hot = _state(round_num=4, node_type='reward',
+                    active_env='经济过热')
+    assert _streak_floor(st_hot, sess, _REG, 30) == 5
+    # 对照:无环境 reward 节点不辖(地板原值)
+    st_cold = _state(round_num=4, node_type='reward', active_env='')
+    assert _streak_floor(st_cold, sess, _REG, 30) == 30
 
 
 # --- 附:旁路护栏 + HOARD 相位域 ---------------------------------------------
