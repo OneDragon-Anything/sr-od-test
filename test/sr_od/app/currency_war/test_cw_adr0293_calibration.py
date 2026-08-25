@@ -122,6 +122,12 @@ _EXPECTED_HASH = '4d691245755180dc3ae21c8dfe075d19f941ddc8ef4603b05ac2def6dcc6e5
 # ——有意改参(买侧 V/C 量级错档标定),锁同步更新(其余数值不变)
 _EXPECTED_HASH = ('4d691245755180dc3ae21c8dfe075d19'
                   'f941ddc8ef4603b05ac2def6dcc6e5d4')
+# W150/ADR-0359 买侧通道锁定目标约束批更新:新增 buy_lock_constraint_
+# enabled(=True)/off_lock_buy_tags/off_lock_buy_penalty(=3.0)/
+# off_lock_final_fence_enabled(=True)四字段(锁定帧非目标件评分降级
+# +末轮围栏;既有数值字段全部不变)——有意改参,锁同步更新
+_EXPECTED_HASH = ('a3c0989b51b467323e429e1592219198'
+                  'dfab74d94ec006cdde9bfff26cc2238c')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
