@@ -145,10 +145,11 @@ def test_unknown_strategy_id_skipped(tmp_path: Path) -> None:
 
 
 def test_decision_v2_stack_runs_coldstart(tmp_path: Path) -> None:
-    """decision_v2 判 v2 栈(继承 LineStrategy,reason 词表/coldstart
-    检查集同辖)——检查必须跑且报违规,不得按「未知栈」跳过(注册桥
-    观察局判读链锁)。样本:off 买(翡翠,局49 败坏形态)必报 ⚠;
-    engine_seed 买(v2 合法放行词,ADR-0260)不误报。"""
+    """decision_v2 判 v2 栈(reason 词表/coldstart 检查集同辖;旧
+    line_v2 随 ADR-0336 删,判栈保留历史字符串)——检查必须跑且报
+    违规,不得按「未知栈」跳过(注册桥观察局判读链锁)。样本:off 买
+    (翡翠,局49 败坏形态)必报 ⚠;engine_seed 买(v2 合法放行词,
+    ADR-0260)不误报。"""
     from sr_od.application.currency_war.cw_telemetry import (
         run_checks_on_replay,
     )

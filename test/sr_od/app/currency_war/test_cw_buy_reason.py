@@ -52,33 +52,10 @@ def test_classify_pair_when_owned() -> None:
                         _st(board={'公司': 1})) == 'pair'
 
 
-def test_line_strategy_labels_reasons() -> None:
-    """OR 链打标:line 通道产出带 reason(非空且属合法 label 集)。"""
-    from sr_od.application.currency_war.strategies.line_strategy import LineStrategy
-
-    strat = LineStrategy()
-    sess = strat.create_session(None)
-    sess.locked_line = 'v2:jizi_train'
-    st = _st(board={'仙舟': 2}, bench=[BenchChar(slot=1, char_id='藿藿', faction='仙舟', star=1)])
-    st.gold = 30
-    st.shop = [ShopCard(x=0, faction='仙舟', name='爻光', cost=1)]
-    acts = strat.decide_prep(st, sess, None)
-    labels = {a.reason for a in acts if isinstance(a, BuyCard)}
-    assert all(l in ('line', 'bridge_seed', 'engine', 'pair', 'p2_core',
-                     'board_focus', 'emergency', 'swap', 'plan')
-               for l in labels)
-    # jizi 锁线下仙舟 1 费经 _bridge_seed 收(线形态键不含仙舟)
-    # → reason=bridge_seed(方向件);语义锁:非空合法 label
-    bought = [a for a in acts if isinstance(a, BuyCard)]
-    if bought:
-        assert labels <= {'bridge_seed', 'line', 'engine', 'pair'}
-        assert labels == {'bridge_seed'}
-
-
 def test_coldstart_gate_consumes_classify() -> None:
     """r368 门消费 classify_buy 单一源(门=白名单 label 集)。"""
     import inspect
 
-    from sr_od.application.currency_war.strategies import line_strategy
-    src = inspect.getsource(line_strategy.LineStrategy._pair_wants)
+    from sr_od.application.currency_war.decision_v2 import discipline
+    src = inspect.getsource(discipline.pair_wants)
     assert 'classify_buy' in src, 'r368 冷启动门应收口 classify_buy(防第二源)'

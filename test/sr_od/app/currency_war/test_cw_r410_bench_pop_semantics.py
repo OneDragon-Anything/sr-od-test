@@ -20,20 +20,34 @@ from sr_od.application.currency_war.cw_state import BenchChar
 
 
 def test_units_conservation_bench_excludes_deployed() -> None:
-    """上阵即 pop + 3合1 合并:bench+deployed+2×merges 守恒。"""
+    """上阵即 pop + 3合1 合并:bench+deployed+2×merges 守恒。
+
+    (ADR-0336 适配:decision_v2 的 CompTransaction 整档替换事务
+    内部含 fill(shop 源买新件)/ sell(卖件),账本不落 tx 明细
+    (只记 reason/result)——tx 轮重置守恒基线(该轮单位数作新
+    起点),非 tx 段内 v1 同式守恒照验;tx 披露缺口登记 ADR-0336。)"""
     for seed in (0, 1, 2, 3, 42):
         r = simulate_p1(seed, pool='fallback')
+        base_units = START_BENCH_COUNT
         buys = sells = merges = 0
         for row in r.ledger:
+            has_tx = any(a['__type__'] == 'CompTransaction'
+                         and a.get('result') == 'applied'
+                         for a in row['actions'])
+            n_bench = len(row['state']['bench'])
+            n_dep = len(row['state']['deployed'])
+            if has_tx:
+                # tx 单位变化不入账本:重置基线(ADR-0336 登记)
+                base_units = n_bench + n_dep
+                buys = sells = merges = 0
+                continue
             for a in row['actions']:
                 if a['__type__'] == 'BuyCard':
                     buys += 1
                 elif a['__type__'] == 'SellBench':
                     sells += 1
             merges += (row['sim'].get('merges') or 0)
-            n_bench = len(row['state']['bench'])
-            n_dep = len(row['state']['deployed'])
-            expect = START_BENCH_COUNT + buys - sells - 2 * merges
+            expect = base_units + buys - sells - 2 * merges
             assert n_bench + n_dep == expect, (
                 f'seed{seed} r{row["round_num"]}: bench{n_bench}'
                 f'+deployed{n_dep} != {expect}'
@@ -41,12 +55,20 @@ def test_units_conservation_bench_excludes_deployed() -> None:
 
 
 def test_deployed_accumulates_monotonic() -> None:
-    """deployed 跨轮累积(生产跟踪态),轮间单调不减。"""
+    """deployed 跨轮累积(生产跟踪态),轮间单调不减。
+
+    (ADR-0336 适配:decision_v2 的 CompTransaction 整档替换会
+    合法缩减 deployed(换人下场)——tx 轮跳过;非 tx 轮单调照验。)"""
     for seed in (0, 5, 11):
         r = simulate_p1(seed, pool='fallback')
         prev = 0
         for row in r.ledger:
             n = len(row['state']['deployed'])
+            has_tx = any(a['__type__'] == 'CompTransaction'
+                         and a.get('result') == 'applied'
+                         for a in row['actions'])
+            if has_tx:
+                continue   # tx 整档替换合法缩减排面(ADR-0336)
             assert n >= prev, (
                 f'seed{seed} r{row["round_num"]}: deployed {n}<{prev}'
                 '(累积态不应缩减——无下场机制)')

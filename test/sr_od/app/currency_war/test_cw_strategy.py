@@ -84,12 +84,12 @@ def test_instantiate_missing_falls_back_to_default() -> None:
 
 
 def test_discovers_decision_v2_builtin() -> None:
-    """BUILTIN 扫描发现 ``decision_v2``(注册桥壳 DecisionV2Live;与 default/line_v2 并存)。"""
+    """BUILTIN 扫描发现 ``decision_v2``(注册桥壳 DecisionV2Live;与 default 并存)。"""
     mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
     ids = [info.strategy_id for info in mgr.strategies]
     assert "decision_v2" in ids
-    # 桥的加入不挤占既有注册面(default/line_v2 仍在)
-    assert "default" in ids and "line_v2" in ids
+    # 桥的加入不挤占既有注册面(default 仍在;旧 line_v2 已删,ADR-0336)
+    assert "default" in ids
     info = next(i for i in mgr.strategies if i.strategy_id == "decision_v2")
     assert info.source == PluginSource.BUILTIN
 

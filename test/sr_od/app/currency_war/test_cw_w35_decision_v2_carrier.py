@@ -6,8 +6,8 @@ W51 语义修复批(R1 审查 leader 裁决):报警分支位面末 ALL IN 语义
 on_match_start 跨局残留清零——原「锁实现字面」的测试改语义锁。
 
 锁定对象(ADR-0309):
-① 继承解耦:DecisionV2Strategy 不再继承 LineStrategy(独立
-   DefaultCwStrategy 实现;decision_v2 包不 import line_strategy);
+① 继承解耦:DecisionV2Strategy 独立实现(继承 DefaultCwStrategy;
+   decision_v2 包不 import line_strategy——旧件已随 ADR-0336 删);
 ② 意向接线:update_target 驱动 cw_intention 锁线,写 v3_hoard/
    target_comp(COMP_LIBRARY v2 真 Comp);
 ③ 纪律族逐条(strategy_v4 点4/点7/点12):
@@ -47,9 +47,6 @@ from sr_od.application.currency_war.decision_v2.registry import (
 )
 from sr_od.application.currency_war.decision_v2.strategy import (
     DecisionV2Strategy,
-)
-from sr_od.application.currency_war.strategies.line_strategy import (
-    LineStrategy,
 )
 
 _REG = DEFAULT_REGISTRY
@@ -99,9 +96,13 @@ def _locked_sess() -> StrategySession:
 
 
 def test_no_linestrategy_inheritance() -> None:
-    """DecisionV2Strategy 独立实现:MRO 无 LineStrategy(执行钩子继承
-    DefaultCwStrategy——战略/备战决策自持,ADR-0309 载体批)。"""
-    assert LineStrategy not in DecisionV2Strategy.__mro__
+    """DecisionV2Strategy 独立实现:MRO 无 LineStrategy(旧件已随
+    ADR-0336 删除,执行钩子继承 DefaultCwStrategy——战略/备战决策
+    自持,ADR-0309 载体批)。"""
+    from sr_od.application.currency_war.strategies.default_strategy import (
+        DefaultCwStrategy,
+    )
+    assert DefaultCwStrategy in DecisionV2Strategy.__mro__
     assert DecisionV2Strategy.STRATEGY_ID == 'decision_v2'
 
 
@@ -644,8 +645,8 @@ def test_smoke_one_sim_game_new_carrier() -> None:
 
 
 def test_dual_registration_both_strategies_discoverable() -> None:
-    """双注册:line_v2 与 decision_v2 同 registry 可发现(回退开关
-    前提;C5——test_cw_strategy 同款发现面,此处锁载体批后仍成立)。"""
+    """唯一载体:decision_v2 与 default 同 registry 可发现
+    (旧 line_v2 随 ADR-0336 删除;回退路径=git revert)。"""
     import sr_od.application.currency_war.cw_strategy as _cw_mod
     from one_dragon.base.operation.application.plugin_info import (
         PluginSource,
@@ -657,12 +658,11 @@ def test_dual_registration_both_strategies_discoverable() -> None:
     mgr = StrategyManager(ctx=None,
                           plugin_dirs=[(builtin, PluginSource.BUILTIN)])
     ids = [i.strategy_id for i in mgr.strategies]
-    assert 'line_v2' in ids, f'旧策略未注册(回退开关失效):{ids}'
     assert 'decision_v2' in ids, f'新策略未注册:{ids}'
-    # 载体批后桥到的真身是独立实现(非 LineStrategy 子类)
+    assert 'default' in ids, f'内置策略未注册:{ids}'
+    # 桥到的真身是独立实现
     strat = mgr.instantiate('decision_v2')
     assert isinstance(strat, DecisionV2Strategy)
-    assert LineStrategy not in strat.__class__.__mro__
 
 
 def test_config_switch_field_exists() -> None:

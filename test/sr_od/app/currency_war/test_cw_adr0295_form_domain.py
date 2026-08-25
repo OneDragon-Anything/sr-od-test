@@ -83,15 +83,19 @@ def test_bench_weight_adjustable() -> None:
 def test_target_hold_ceiling_discounted() -> None:
     """持有进度项天花板折减:n≥base 时 targets = cap_frac × value。"""
     from sr_od.application.currency_war.cw_bridge_pool import BRIDGE_POOL
+    from sr_od.application.currency_war.cw_intention import HoardTarget
     from sr_od.application.currency_war.cw_strategy import StrategySession
-    # 目标件取桥池 fixed∪core(无方向种子语义=全集,必在 tset 内)
+    # 目标件取桥池 fixed∪core 并作意向 hoard(ADR-0336 后裸 session
+    # 只走引擎件种子;意向载体才是目标集生产形态)
     names = sorted({n for combo in BRIDGE_POOL
                     for n in set(combo.fixed) | set(combo.core)
                     if n in CHARACTERS})
     name = names[0]
     n = DEFAULT_REGISTRY.target_hold_base + 1
     st = _state(bench=[_bench(name, i) for i in range(1, n + 1)])
-    bd = score_state(st, DEFAULT_REGISTRY, StrategySession())
+    sess = StrategySession()
+    sess.v3_hoard = HoardTarget(frozenset({name}), frozenset(), 'locked')
+    bd = score_state(st, DEFAULT_REGISTRY, sess)
     expect = (DEFAULT_REGISTRY.target_hold_cap_frac
               * DEFAULT_REGISTRY.target_hold_value)
     assert abs(bd['targets'] - round(expect, 3)) < 0.01, (

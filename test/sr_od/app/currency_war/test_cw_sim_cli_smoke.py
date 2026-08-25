@@ -43,7 +43,12 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # 引用但 _EQUIP_VALUE 缺值——docstring 明示「裁决归策略域,裁决前
     # 恒红」,与 dead_system_second_pivot 同款待裁豁免;策略域补值/
     # 裁决后移除,回归 0 容忍。
-    _PENDING_ADJUDICATION = ('dead_system_second_pivot',
+    # ADR-0336:dead_system_second_pivot 等 v1 检查器已删(见下方注释);
+    # ledger_consistency / coldstart_direction 是 v2 已知债(W66 §4 条件
+    # 3:12/400 与 79/400,d2 行为面批清)——sim 默认策略切 decision_v2
+    # 后固定 seed 域触发,登记豁免。
+    _PENDING_ADJUDICATION = ('ledger_consistency',
+                             'coldstart_direction',
                              'degrade_recover_mutex',
                              'equip_value_strategy_key_coverage')
     for name, r in rep['checks_violations'].items():

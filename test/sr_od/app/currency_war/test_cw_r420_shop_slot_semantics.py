@@ -154,45 +154,9 @@ def test_pool_take_floor_hits_recorded() -> None:
 
 
 # --- 件2:carry 门 floor 对齐(批㉑ F1) ----------------------------------
-
-
-def _deadlock_row(rn: int, wave_gold: int, cost: int = 2) -> dict:
-    return {
-        'plane': 1, 'round_num': rn, 'gold': wave_gold,
-        'target_comp': 'feiying_joy',
-        'state': {'bench': [{'char_id': '爻光', 'faction': '欢愉'}] * 9,
-                  'deployed': [], 'cap': 5},
-        'actions': [],
-        'sim': {'shop_waves': [
-            {'event': 'offer', 'gold': wave_gold,
-             'cards': [{'name': '绯英', 'faction': '欢愉',
-                        'cost': cost}]}]},
-    }
-
-
-def test_carry_gate_floor_boundary_two_states() -> None:
-    """floor 边界两态(r7 boss_breaker 地板 10,cost 2):
-    gold=12 → 12−2=10 ≥ floor(金足,miss 可救)→ 报;
-    gold=11 → 9 < floor(破地板,合法 miss)→ 不报。
-    (批㉑ F1:seed30/39 的恒 2 违规正是 gold−cost=9/7<floor 形态。)"""
-    assert chk.check_carry_gate_bench_deadlock(
-        [_deadlock_row(rn=5, wave_gold=12)]), \
-        'gold−cost 恰达 floor = 金足,miss 可救应报'
-    assert not chk.check_carry_gate_bench_deadlock(
-        [_deadlock_row(rn=5, wave_gold=11)]), \
-        'gold−cost < floor = 破息档地板的合法 miss,不应报'
-
-
-def test_carry_gate_floor_est_ladder() -> None:
-    """地板保守估计梯级(与 line_strategy 三档同步维护:
-    50/30/10;r≥5 恒 boss_breaker)。"""
-    est = chk._carry_floor_est
-    assert est(5, 12) == 10 and est(7, 99) == 10, 'r≥5 恒 boss 档'
-    assert est(3, 55) == 50, '高位金 economy 满息档'
-    assert est(3, 35) == 30, '中位金 war 档'
-    assert est(3, 12) == 5, '低位金 war 降档(>gold%10)'
-    assert est(3, 8) == 5, '个位金 war 降档'
-
+# (check_carry_gate_bench_deadlock 随 v1 线库检查器删除,ADR-0336;
+# carry 腾位门语义由 decision_v2 discipline 层4 承载,对应锁在
+# test_cw_w35 纪律族)
 
 # --- 件3:endgold 双口径(批㉑ F3/F5) ------------------------------------
 

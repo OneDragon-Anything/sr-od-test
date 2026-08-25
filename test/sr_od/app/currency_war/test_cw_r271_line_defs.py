@@ -43,7 +43,8 @@ def test_recipe_tier_helper() -> None:
 
 
 def test_consumers_share_single_source() -> None:
-    """消费方共享单源:deploy_bench 与 line_strategy 的名字一致。"""
+    """消费方共享单源:deploy_bench 与 cw_line_defs 的名字一致
+    (旧 line_strategy 局部 set 随 ADR-0336 删)。"""
     from sr_od.application.currency_war.operations.prep import (
         deploy_bench,
     )

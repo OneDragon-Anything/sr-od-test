@@ -309,16 +309,18 @@ def test_sim_redecide_after_shop_fill_tx_no_phantom():
 # ---------- 裁决 3:账本 target_comp 补 v3 意向 ----------
 
 def test_target_comp_label_v3_fallback_and_v2_priority():
-    """v2 锁线/桥非空优先;空 → 回退 v3_intention.locked_comp。"""
+    """账本 target_comp = v3_intention.locked_comp(ADR-0336 后唯一
+    源;旧 locked_line/bridge_id 优先分支随 LineStrategy 删除)。"""
     sess = SimpleNamespace(locked_line=None, bridge_id=None,
                            v3_intention=SimpleNamespace(locked_comp='仙舟3'))
     assert _target_comp_label(sess) == '仙舟3'
+    # 旧 v1 字段不再被读(ADR-0336);意向缺失 → 空
     sess2 = SimpleNamespace(locked_line='DOT2', bridge_id=None,
                             v3_intention=SimpleNamespace(locked_comp='仙舟3'))
-    assert _target_comp_label(sess2) == 'DOT2'
+    assert _target_comp_label(sess2) == '仙舟3'
     sess3 = SimpleNamespace(locked_line=None, bridge_id='列车2',
                             v3_intention=None)
-    assert _target_comp_label(sess3) == '列车2'
+    assert _target_comp_label(sess3) == ''
     sess4 = SimpleNamespace(locked_line=None, bridge_id=None,
                             v3_intention=None)
     assert _target_comp_label(sess4) == ''

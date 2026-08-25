@@ -197,8 +197,7 @@ def test_filter_mode_economy_allows_bond_fallback() -> None:
     「同阵营已拥有」件被 pair 接管;bond_fallback 的独占场景=
     r350 方向门外(锁线后线外阵营 pair 拒、[31] 降级仍收)。"""
     assert 'bond_fallback' in _REG.economy_tags
-    sess = _sess(mode='economy')
-    sess.locked_line = 'jizi_train'
+    sess = _sess(line='jizi', mode='economy')   # 意向锁定(线外阵营 pair 拒)
     st = _state(round_num=5, board={'昼之半神': 1},
                 shop=[_card('凑档件', faction='昼之半神', cost=1)])
     cands = generate_candidates(st, sess, _REG)

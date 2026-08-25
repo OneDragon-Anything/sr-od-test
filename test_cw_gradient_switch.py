@@ -22,18 +22,18 @@ def _mgr() -> StrategyManager:
     return StrategyManager(None, [(_STRATEGIES_DIR, PluginSource.BUILTIN)])
 
 
-def test_line_strategy_discoverable():
+def test_strategies_discoverable():
     ids = [i.strategy_id for i in _mgr().discover()]
-    assert 'line_v2' in ids and 'default' in ids
+    assert 'decision_v2' in ids and 'default' in ids
 
 
 def test_instantiate_line_v2():
-    from sr_od.application.currency_war.strategies.line_strategy import (
-        LineStrategy,
+    from sr_od.application.currency_war.decision_v2.strategy import (
+        DecisionV2Strategy,
     )
     mgr = _mgr()
     mgr.discover()
-    assert isinstance(mgr.instantiate('line_v2'), LineStrategy)
+    assert isinstance(mgr.instantiate('decision_v2'), DecisionV2Strategy)
 
 
 def test_fallback_to_default_on_unknown():
@@ -50,8 +50,8 @@ def test_config_strategy_id_writable():
     cfg = CurrencyWarConfig()
     old = cfg.strategy_id
     try:
-        cfg.strategy_id = 'line_v2'
-        assert cfg.strategy_id == 'line_v2'
+        cfg.strategy_id = 'decision_v2'
+        assert cfg.strategy_id == 'decision_v2'
     finally:
         cfg.strategy_id = old
 

@@ -8,35 +8,6 @@ change-detector 陷阱)。
 from __future__ import annotations
 
 from sr_od.application.currency_war import cw_sim_checks as chk
-from sr_od.application.currency_war.cw_line_library_v1 import line_of
-
-
-def _line_ids() -> tuple[str, str]:
-    """取两个真实线 id(测试锁用真实注册表,防线库变更后失真)。"""
-    ids = sorted(_all_line_ids())
-    assert ids, '线库为空,测试无法进行'
-    return ids[0], ids[-1]
-
-
-def _all_line_ids() -> list[str]:
-    from sr_od.application.currency_war import cw_line_library_v1 as lib
-    out: list[str] = []
-    for name in dir(lib):
-        obj = getattr(lib, name)
-        if isinstance(obj, dict):
-            for k in obj:
-                if isinstance(k, str) and line_of(k) is not None:
-                    out.append(k)
-    # 兜底:从 LINES 类属性/常量扫
-    if not out:
-        for name in dir(lib):
-            obj = getattr(lib, name)
-            if isinstance(obj, (list, tuple)):
-                for lin in obj:
-                    lid = getattr(lin, 'line_id', None)
-                    if lid:
-                        out.append(lid)
-    return sorted(set(out))
 
 
 def _row(rn: int = 1, gold: int = 10, bench: list | None = None,
@@ -187,61 +158,10 @@ def test_phantom_equip_no_wear_bidirectional() -> None:
 
 
 # --- 线/供给类(成型批) ----------------------------------------------
-
-def test_no_future_carry_sold_bidirectional() -> None:
-    lid, _ = _line_ids()
-    line = line_of(lid)
-    bad = [_row(rn=5, target_comp=lid, actions=[
-        {'__type__': 'SellBench', 'name': line.carry}])]
-    assert chk.check_no_future_carry_sold(bad), 'carry 卖出未报'
-    good = [_row(rn=5, target_comp=lid, actions=[
-        {'__type__': 'SellBench', 'name': '无关件'}])]
-    assert not chk.check_no_future_carry_sold(good)
-
-
-def test_carry_on_shelf_responded_bidirectional() -> None:
-    lid, _ = _line_ids()
-    line = line_of(lid)
-    wave = {'gold': 60, 'cards': [{'name': line.carry, 'cost': 1,
-                                   'faction': 'x'}]}
-    sim = {'node': 'battle', 'merges': 0, 'shop_waves': [wave]}
-    bad = [_row(rn=6, target_comp=lid, sim=sim)]
-    assert chk.check_carry_on_shelf_responded(bad), \
-        'carry 在架金足未响应未报'
-    good = [_row(rn=6, target_comp=lid, sim=sim, actions=[
-        {'__type__': 'BuyCard', 'card': {'name': line.carry, 'cost': 1},
-         'reason': 'line'}])]
-    assert not chk.check_carry_on_shelf_responded(good)
-    # 好:已持有(囤件合法)
-    owned = [{'char_id': line.carry, 'faction': 'x'}]
-    good2 = [_row(rn=6, target_comp=lid, sim=sim, bench=owned)]
-    assert not chk.check_carry_on_shelf_responded(good2)
-
-
-def test_dead_system_second_pivot_bidirectional() -> None:
-    lid, _ = _line_ids()
-    line = line_of(lid)
-    # 口径(ADR-0289 修正):线目标件(carry∪core∪opportunistic)
-    # 在店连续 3 轮零出现 = 死线死守
-    targets = {line.carry} | set(line.core_cards) \
-        | set(line.opportunistic_cards)
-    some_t = next(iter(targets))
-    sim = {'node': 'battle', 'merges': 0,
-           'shop_waves': [{'gold': 50,
-                           'cards': [{'name': '别家', 'cost': 1,
-                                      'faction': '无关'}]}]}
-    bad = [_row(rn=5 + i, target_comp=lid, sim=dict(sim))
-           for i in range(3)]
-    assert chk.check_dead_system_second_pivot(bad), '死线死守未报'
-    # 好:有目标件在店
-    sim_ok = {'node': 'battle', 'merges': 0,
-              'shop_waves': [{'gold': 50,
-                              'cards': [{'name': some_t, 'cost': 1,
-                                         'faction': 'x'}]}]}
-    good = [_row(rn=5 + i, target_comp=lid, sim=dict(sim_ok))
-            for i in range(3)]
-    assert not chk.check_dead_system_second_pivot(good)
-
+# (v1 线库语义检查器——no_future_carry_sold / carry_on_shelf_responded /
+# dead_system_second_pivot / bond_fallback / carry_gate / protect_set /
+# carry_gate_outcome / recipe_refresh——随 ADR-0336 删除,双向锁同步删;
+# degrade_recover_mutex 是通用 target 切换检查,保留)
 
 def test_degrade_recover_mutex_bidirectional() -> None:
     a, b = 'lineA', 'lineB'
@@ -380,13 +300,13 @@ def test_rare_metric_min_n() -> None:
 
 
 def test_new_checks_in_batch_set() -> None:
-    """清偿批逐局锁进批量集(sim 批次自动扫;ADR-0289)。"""
+    """清偿批逐局锁进批量集(sim 批次自动扫;ADR-0289)。
+    (v1 线库语义检查器随 ADR-0336 删除;degrade_recover_mutex 保留)"""
     for name in ('gold_nonneg', 'bench_capacity',
                  'deployed_schema_filter', 'engine_seed_not_resold',
                  'buys_at_full_bench', 'oscillation_xp_cap',
                  'levelup_flat4_lock', 'phantom_equip_no_wear',
-                 'carry_on_shelf_responded', 'no_future_carry_sold',
-                 'dead_system_second_pivot', 'degrade_recover_mutex'):
+                 'degrade_recover_mutex'):
         assert name in chk._BATCH_CHECKS, name
 
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """③ 攒数据地基锁:core_count_for 按 target 语境路由单一口径。
 
-三源收口(二轮#8):线库 core_cards / 桥池 fixed+core / 仙舟
-三人组 _CORE_TRIO——非仙舟线局 core_count 不再恒 0。
+桥池 fixed+core / 仙舟三人组 _CORE_TRIO(旧 v1 线库 core_cards 分支
+随 ADR-0336 删除——decision_v2 target 是 COMP 套名,不查线库)。
 """
 from __future__ import annotations
 
@@ -22,13 +22,6 @@ def test_p2_bridge_routed() -> None:
     assert core_count_for('train4_shield3', {'三月七'}) >= 1
 
 
-def test_known_line_without_core_returns_none() -> None:
-    """dot_fallback(已知线,core_cards=[] 不锁信号)→ None
-    (无核心概念;退三人组=③ dot 桶噪声,审查#1)。"""
-    assert core_count_for('dot_fallback', {'卡芙卡', '藿藿'}) is None
-    assert core_count_for('v2:dot_fallback', {'卡芙卡'}) is None
-
-
 def test_bridge_field_name_is_real() -> None:
     """桥字段存在性(审查#3:getattr 链死防御掩盖改名;直接属性
     访问,改名即刻 AttributeError)。"""
@@ -41,32 +34,21 @@ def test_bridge_field_name_is_real() -> None:
 
 
 def test_line_bridge_id_no_overlap() -> None:
-    """线 id ∩ 桥 id = ∅(审查#7:桥先于线库匹配是隐式约定,
-    未来撞名会静默先撞桥——断言钉住值域不相交)。"""
+    """桥 id 唯一性(旧线库已删;桥 id 与 COMP/角色名不撞即可)。"""
     from sr_od.application.currency_war.cw_bridge_pool import (
         BRIDGE_POOL,
         BRIDGE_POOL_P2,
     )
-    from sr_od.application.currency_war.cw_line_library_v1 import (
-        LINE_LIBRARY_V1,
-    )
     bridge_ids = {c.bridge_id
                   for c in (*BRIDGE_POOL, *BRIDGE_POOL_P2)}
-    line_ids = {l.line_id for l in LINE_LIBRARY_V1}
-    assert not (bridge_ids & line_ids), \
-        f'线/桥 id 撞名:{bridge_ids & line_ids}(core_count_for 路由歧义)'
-
-
-def test_line_target_counts_core_cards() -> None:
-    """锁线 v2: 前缀 → 线库 core_cards(jizi=姬子·启行)。"""
-    assert core_count_for('v2:jizi_train', {'姬子·启行', '三月七'}) == 1
-    assert core_count_for('feiying_joy', {'绯英'}) == 1
+    assert len(bridge_ids) == len((*BRIDGE_POOL, *BRIDGE_POOL_P2)), \
+        '桥 id 重复(core_count_for 路由歧义)'
 
 
 def test_empty_and_unknown_fallback_trio() -> None:
     """空 target → 三人组缺省;未知 target 不 crash 退缺省。"""
     assert core_count_for('', {'爻光', '藿藿', '丹恒·饮月'}) == 3
-    assert core_count_for('v2:nonexistent', {'藿藿'}) == 1
+    assert core_count_for('nonexistent', {'藿藿'}) == 1
 
 
 def test_sim_ledger_core_count_semantics() -> None:

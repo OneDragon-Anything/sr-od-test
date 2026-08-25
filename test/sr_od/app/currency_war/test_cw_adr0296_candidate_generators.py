@@ -35,9 +35,22 @@ _REG = DEFAULT_REGISTRY
 
 
 def _sess(line: str | None = None) -> StrategySession:
+    """意向载体(ADR-0336 后唯一形态;``line`` 参数=意向 hoard 目标集,
+    旧 locked_line 垫片已删)。"""
     s = StrategySession()
-    s.locked_line = line
-    s.bridge_id = None
+    if line:
+        from sr_od.application.currency_war.cw_intention import (
+            HoardTarget,
+            IntentionState,
+        )
+        ist = IntentionState()
+        ist.phase = 'locked'
+        ist.locked_comp = '姬子列车'
+        s.v3_intention = ist
+        s.v3_hoard = HoardTarget(
+            frozenset({'娜塔莎', '姬子·启行', '瓦尔特', '三月七'}),
+            frozenset(), 'locked')
+        s.v3_core_names = {'姬子·启行'}
     return s
 
 
