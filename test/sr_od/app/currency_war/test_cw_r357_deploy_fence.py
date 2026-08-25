@@ -17,11 +17,13 @@ from sr_od.application.currency_war.operations.prep.deploy_bench import (
 
 
 def test_deploy_fence_includes_bridge_factions() -> None:
-    """r357 主锁:围栏集含桥派生阵营(狼狩/贝洛伯格)——
-    r353 桥件买来必须能上场(hunt3/dot_belog 是 V4.0 过渡配方)。"""
+    """r357 主锁(围栏=RECIPE ∪ ENGINE 桥派生单一源)。
+    W126/ADR-0350:狼狩/贝洛伯格已随四体系封闭裁定退出围栏
+    (hunt3/dot_belog 桥删除)——已封存体系件不再有框架豁免通道;
+    桥派生(存活三桥=仙舟/dot/列车)与配方四老成员保持。"""
     assert _DEPLOY_FENCE == frozenset(RECIPE_FACTIONS | ENGINE_FACTIONS)
-    assert '狼狩' in _DEPLOY_FENCE, 'hunt3 桥件(飞霄系)必须过围栏'
-    assert '贝洛伯格' in _DEPLOY_FENCE, 'dot_belog 桥件必须过围栏'
+    assert '狼狩' not in _DEPLOY_FENCE, 'W126:已封存体系退出围栏'
+    assert '贝洛伯格' not in _DEPLOY_FENCE, 'W126:已封存体系退出围栏'
     # 配方四老成员不丢
     for f in ('仙舟', '列车同行', '护盾', '持续伤害'):
         assert f in _DEPLOY_FENCE

@@ -29,11 +29,11 @@ def test_recipe_base_line() -> None:
 
 def test_engine_derived_from_bridges() -> None:
     """引擎阵营从桥池派生(单一源,不再手抄)。
-    r353(V4.0 口径):能打伤害的前期羁绊五家=仙舟/狼狩/DOT/
-    列车/贝洛伯格(transitions.md §1);dot_belog 与 hunt3 桥
-    入池后贝洛伯格/狼狩随 engine_bonds 派生进引擎门。"""
+    W126/ADR-0350:dot_belog/hunt3 两桥已随四体系封闭裁定删除——
+    狼狩/贝洛伯格退出引擎门(贝只在希儿系判据内保留计数);存活三桥
+    (xianzhou_dot/xianzhou_train/train_dot)派生出四体系三羁绊。"""
     assert ENGINE_FACTIONS == frozenset(
-        {'仙舟', '列车同行', '持续伤害', '狼狩', '贝洛伯格'})
+        {'仙舟', '列车同行', '持续伤害'})
 
 
 def test_recipe_tier_helper() -> None:

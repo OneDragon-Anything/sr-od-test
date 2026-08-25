@@ -10,11 +10,13 @@ from sr_od.application.currency_war.cw_line_defs import core_count_for
 
 
 def test_bridge_target_counts_pool_core() -> None:
-    """桥 id → 桥池 fixed+core 在场数(hunt3:飞霄/椒丘/貊泽/灵砂)。"""
+    """桥 id → 桥池 fixed+core 在场数(W126/ADR-0350:hunt3/dot_belog
+    已封存删除——hunt3 路由退缺省;存活桥照常计数)。"""
     names = {'飞霄', '椒丘'}
-    assert core_count_for('hunt3', names) == 2
+    # hunt3 已删:未知桥 id 走缺省路由(飞霄/椒丘 ∉ 三人组 → 0)
+    assert core_count_for('hunt3', names) == 0
     assert core_count_for('xianzhou_dot', {'爻光', '藿藿'}) == 2   # fixed+core
-    assert core_count_for('hunt3', {'飞霄', '姬子·启行'}) == 1    # 非核心不计
+    assert core_count_for('xianzhou_dot', {'爻光', '姬子·启行'}) == 1  # 非核心不计
 
 
 def test_p2_bridge_routed() -> None:

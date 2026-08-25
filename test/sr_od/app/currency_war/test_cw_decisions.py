@@ -971,8 +971,19 @@ def test_transition_tempo_score_rewards_tempo_factions() -> None:
     assert transition_tempo_score(GameState(board={'仙舟': 3, '狼狩': 3, '列车同行': 2})) == pytest.approx(2 * TRANSITION_TEMPO_BONUS)
     # 非过渡羁绊 ≥2 → 0(追击 是成型羁绊非过渡)
     assert transition_tempo_score(GameState(board={'追击': 3})) == 0.0
-    # 巡海游侠最低档 1:1 人即激活(评审🟡7:与真实 tier 对齐,不再要求 ≥2)
-    assert transition_tempo_score(GameState(board={'巡海游侠': 1})) == pytest.approx(TRANSITION_TEMPO_BONUS)
+    # W126/ADR-0350 四体系封闭:巡海游侠(skeleton 派生非四体系)不再奖
+    assert transition_tempo_score(GameState(board={'巡海游侠': 1})) == 0.0
+    # 希儿系(第四体系):希儿在场 + 量/贝任一 ≥2 → 计一档
+    from sr_od.application.currency_war.cw_state import BenchChar
+    _seele_dep = [BenchChar(slot=0, char_id='希儿', faction='贝洛伯格',
+                            star=1)]
+    assert transition_tempo_score(GameState(
+        board={'贝洛伯格': 2}, deployed=_seele_dep)) == pytest.approx(
+        TRANSITION_TEMPO_BONUS)
+    # 贝洛伯格不在希儿系判据内(无希儿在场)→ 不作独立伤害源
+    assert transition_tempo_score(GameState(board={'贝洛伯格': 2})) == 0.0
+    # 狼狩(已封存体系)不再奖
+    assert transition_tempo_score(GameState(board={'狼狩': 3})) == 0.0
 
 
 def test_evaluate_transition_tempo_early_game() -> None:
