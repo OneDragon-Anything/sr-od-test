@@ -16,7 +16,6 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.cw_state import (
     BenchChar,
     GameState,
-    RefreshShop,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
@@ -100,6 +99,17 @@ _EXPECTED_HASH = '837f521098a44ac0f8e81b8febf6208dd320d212f4d5975e29053ca9799466
 # 扑满节点单节点刷新豁免上限——s≤0.277R 采前保守 2 金)——有意改参,
 # 锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = '3ad13e863c742a386bbfcffcf3d75f72ea01f685fc9cd2ef27e0d1fa8312a519'
+# W126/ADR-0349 步③切调度更新:删 refresh 附庸闸十一参(refresh_ev/
+# refresh_max_round/refresh_min_gold/refresh_starve_discount/
+# refresh_starve_gold/refresh_game_cap/levelup_reserve_gold/
+# form_refresh_ev/form_refresh_max_round/form_refresh_min_gold/
+# form_refresh_engines_target)+追赶到四参(catchup_tags/
+# catchup_forbidden_tags/catchup_min_level/pop_baseline);新增
+# piggy_refresh_ev(=2.5,扑满凑伤害 D 专属);war_tags 增 refresh
+# (war 滤 refresh 废除);constraints 删 refresh_budget;审计表
+# 'catchup' 列改 'mode'——有意改参(D 是一等通道/追赶态退场),
+# 锁同步更新(target_hold_base/off_target_sell_bias 两存活标定值不变)
+_EXPECTED_HASH = 'fa157543a85e59250753dab71ced739a9cd354564647023d1fdd63f5aa87ca09'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
@@ -120,12 +130,11 @@ def _state(**kw) -> GameState:
 
 
 def test_calibration_snapshot_values() -> None:
-    """标定五参快照(ADR-0293 标定结果;改动须重标定+更新本锁)。"""
-    assert DEFAULT_REGISTRY.refresh_ev == 2.5
-    assert DEFAULT_REGISTRY.refresh_max_round == 6
-    assert DEFAULT_REGISTRY.refresh_min_gold == 20
+    """标定存活参快照(refresh 附庸闸十一参已随 W126/ADR-0349 删除;
+    改动须重标定+更新本锁)。"""
     assert DEFAULT_REGISTRY.target_hold_base == 9
     assert DEFAULT_REGISTRY.off_target_sell_bias == 0.5
+    assert DEFAULT_REGISTRY.piggy_refresh_ev == 2.5   # 扑满凑伤害 D 专属
 
 
 def _norm(v):
@@ -152,32 +161,19 @@ def test_calibration_registry_hash() -> None:
         '若是有意改参——重标定(ADR-0293 流程)并更新本锁')
 
 
-def test_refresh_round_gate() -> None:
-    """轮界门:r≤6 按 refresh_ev 计净值;r>6 恒负分不刷。"""
-    sess = StrategySession()
-    cost = RefreshShop(cost=2).cost
-    for rn, expect_pos in ((5, True), (7, False)):
-        st = _state(round_num=rn, gold=50,
+def test_refresh_no_target_context_negative() -> None:
+    """W126/ADR-0349 V_D 批口径:无目标语境(未锁线)的刷新恒负分
+    ——refresh 附庸闸(轮界/金门/常量 EV)已删,D 让位语义由
+    vd_refresh_score 承载([31] 刷新金只用于找目标件)。"""
+    for rn, gold in ((5, 50), (7, 50), (2, 15), (8, 60)):
+        st = _state(round_num=rn, gold=gold,
                     shop=[_card('占位件', faction='公司', cost=1)])
+        sess = StrategySession()
         cand = [c for c in generate_candidates(st, sess,
                                                DEFAULT_REGISTRY)
                 if c.tag == 'refresh'][0]
         val, _ = score_candidate(cand, st, sess, DEFAULT_REGISTRY)
-        if expect_pos:
-            assert val == DEFAULT_REGISTRY.refresh_ev - cost
-        else:
-            assert val < 0, 'r>refresh_max_round 刷新必须恒负分'
-
-
-def test_refresh_gold_floor_gate() -> None:
-    """金保底门:金<20 不刷(防 re-decide 链抽干金流锁死息引擎)。"""
-    st = _state(round_num=2, gold=15,
-                shop=[_card('占位件', faction='公司', cost=1)])
-    sess = StrategySession()
-    cand = [c for c in generate_candidates(st, sess, DEFAULT_REGISTRY)
-            if c.tag == 'refresh'][0]
-    val, _ = score_candidate(cand, st, sess, DEFAULT_REGISTRY)
-    assert val < 0, '金<refresh_min_gold 刷新必须恒负分'
+        assert val < 0, f'r{rn} g{gold} 无目标语境刷新必须负分(实际 {val})'
 
 
 def test_off_target_sell_bias_flips_zero_score() -> None:
@@ -203,4 +199,4 @@ def test_strategy_default_uses_calibrated_registry() -> None:
     """默认策略注入标定后 registry(标定参数即生产行为)。"""
     s = DecisionV2Strategy()
     assert s.registry is DEFAULT_REGISTRY
-    assert s.registry.refresh_ev == 2.5
+    assert s.registry.target_hold_base == 9

@@ -881,27 +881,24 @@ def test_s6_bench_compensation_no_sellable_noop() -> None:
 
 
 def test_rejections_collect_only_resource_type() -> None:
-    """rejections 收集面反锁:非资源型拒绝(刷新预算/纪律型)不进
+    """rejections 收集面反锁:非资源型拒绝(纪律型)不进
     rejections;资源型拒绝(gold_floor/bench/deploy)进(§1.1 捕获条件
-    + 正分闸)。"""
-    from dataclasses import replace
-    # 非资源型:refresh 被 refresh_budget 拒(金足)→ rejections 空
-    reg = replace(_REG, refresh_game_cap=1, levelup_reserve_gold=0)
+    + 正分闸)。W126/ADR-0349:refresh_budget 已退场,纪律型代表改用
+    refresh 的「非正分」拒绝(评分侧 V_D 判负 → 段尾拒,不进回连)。"""
     sess = _sess()
     sess.v2_round_key = (1, 4)
-    sess.v2_refresh_used = 1
     st = _state(round_num=2, gold=60, shop=[_card('甲', cost=1)])
     cands = [
         (Candidate(action=RefreshShop(cost=2), tag='refresh', source='test'),
-         2.0, {}),
+         -2.0, {}),   # 评分制:非正分(裸 session 无 V_D 目标语境)
         (Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
                    source='test'), 5.0, {}),
     ]
-    res = arbitrate(cands, st, sess, reg)
+    res = arbitrate(cands, st, sess, _REG)
     # log 序=主循环(买)在前、refresh 收尾在后
     assert [r['accepted'] for r in res.log] == [True, False]
     assert res.rejections == [], \
-        '纪律型拒绝(刷新预算)不得进 rejections(§1.1 捕获条件)'
+        '纪律型拒绝(非正分刷新)不得进 rejections(§1.1 捕获条件)'
     # 资源型:金不足买被 gold_floor 拒(war 地板 30,金 25 费 4)
     sess2 = _sess(v3_mode='war')
     sess2.v2_round_key = (1, 4)

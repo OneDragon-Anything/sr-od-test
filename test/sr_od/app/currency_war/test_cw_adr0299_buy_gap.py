@@ -120,11 +120,11 @@ def test_engine_seed_target_piece_takes_target_tag() -> None:
 
 
 def test_engine_seed_registered_everywhere() -> None:
-    """engine_seed 进 buy_tag_priority 与四覆盖态放行标签集
-    (层2 过滤不误杀)。"""
+    """engine_seed 进 buy_tag_priority 与各放行标签集
+    (层2 过滤不误杀;追赶标签集已随 W126/ADR-0349 退场)。"""
     assert 'engine_seed' in _REG.buy_tag_priority
     for tags in (_REG.economy_tags, _REG.war_tags,
-                 _REG.emergency_tags, _REG.catchup_tags):
+                 _REG.emergency_tags):
         assert 'engine_seed' in tags
 
 

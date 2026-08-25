@@ -178,18 +178,6 @@ def test_filter_emergency_narrows() -> None:
     assert flog and flog[0]['level'] == 'emergency'
 
 
-def test_filter_catchup_forbids() -> None:
-    """追赶态(等级≥6 且人口<基线-1):for_gold/refresh 禁。"""
-    sess = _sess(mode='economy')
-    st = _state(level=6, plane=2, round_num=3,
-                deployed=[_bench('甲'), _bench('乙'), _bench('丙')])
-    cands = generate_candidates(st, sess, _REG)
-    kept, flog = filter_candidates(cands, st, sess, _REG)
-    kept_tags = {c.tag for c in kept}
-    assert 'refresh' not in kept_tags
-    assert flog and flog[0]['level'] == 'catchup'
-
-
 def test_filter_mode_economy_allows_bond_fallback() -> None:
     """模式(economy)态含 bond_fallback(0/N 买入根因③回归锁)。
 

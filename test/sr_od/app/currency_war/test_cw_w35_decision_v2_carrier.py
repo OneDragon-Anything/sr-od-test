@@ -592,20 +592,6 @@ def test_on_match_start_clears_cross_match_keys() -> None:
     assert sess2.v3_prev_hp == 80
 
 
-def test_catchup_coverage_level_gate() -> None:
-    """追赶(r232 等级门):等级≥6+人口<基线-1 → catchup;P1 早期
-    (低等级)人口低不算追赶。"""
-    from sr_od.application.currency_war.decision_v2.filters import (
-        is_catchup,
-    )
-    sess = _sess()
-    st = _state(plane=2, level=6, deployed=[_bench('甲'), _bench('乙')])
-    disc = assess_discipline(st, sess, _REG)
-    assert disc.coverage == 'catchup' and disc.mode == 'economy'
-    assert is_catchup(_state(plane=1, level=3,
-                             deployed=[_bench('甲')]), sess, _REG) is False
-
-
 # --- ④ 演进引擎进决策循环 ----------------------------------------------------
 
 

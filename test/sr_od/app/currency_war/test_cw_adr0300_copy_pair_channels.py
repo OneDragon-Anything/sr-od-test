@@ -192,11 +192,12 @@ def test_target_piece_takes_target_tag_not_copy() -> None:
 
 
 def test_pair_copy_registered_everywhere() -> None:
-    """pair/copy 进 buy_tag_priority 与 economy/war/catchup 放行
-    标签集 + _PIPELINE_TAGS(层2 不误杀/层3 板面显影)。"""
+    """pair/copy 进 buy_tag_priority 与 economy/war 放行
+    标签集 + _PIPELINE_TAGS(层2 不误杀/层3 板面显影;
+    追赶标签集已随 W126/ADR-0349 退场)。"""
     assert 'pair' in _REG.buy_tag_priority
     assert 'copy' in _REG.buy_tag_priority
-    for tags in (_REG.economy_tags, _REG.war_tags, _REG.catchup_tags):
+    for tags in (_REG.economy_tags, _REG.war_tags):
         assert 'pair' in tags
         assert 'copy' in tags
     assert 'pair' in _PIPELINE_TAGS

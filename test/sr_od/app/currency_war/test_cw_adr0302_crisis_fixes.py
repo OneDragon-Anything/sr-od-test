@@ -132,21 +132,40 @@ def test_crisis_buy_bias_does_not_cross_interest_cliff() -> None:
 
 
 def test_crisis_refresh_unlocked_in_hoard_state() -> None:
-    """危机囤金态:refresh 层2 放行 + 评分 ≥ refresh_ev−费(r8 常规
-    轮界门外);金<40 应急态 refresh 仍滤出。"""
+    """危机囤金态:refresh 层2 放行(候选在场);**评分=V_D 同公式**
+    (W126/ADR-0349 E7 应急 D 变现 EV 化——同一本账,不是另一个门:
+    危机态锁定核心在概率窗内 → V_D 正分照常点火,无目标语境恒负分);
+    金<40 应急态 refresh 仍滤出。"""
     sess = _sess()
-    st = _state()          # hp20 金72 r8:危机囤金态
+    st = _state()          # hp20 金72 r8:危机囤金态(裸 session,无目标)
     cands = generate_candidates(st, sess, _REG)
     kept, flog = filter_candidates(cands, st, sess, _REG)
     assert any(c.tag == 'refresh' for c in kept), '危机囤金态应放行搜牌'
     rc = next(c for c in cands if c.tag == 'refresh')
     val, _ = score_candidate(rc, st, sess, _REG)
-    assert val >= _REG.refresh_ev - (rc.action.cost or 0), val
+    assert val < 0, '危机态无目标语境:V_D 同账判负(恒不无证刷)'
+    # 危机 + 锁定核心在概率窗内 → V_D 正分(变现通道活跃)
+    from sr_od.application.currency_war.cw_intention import IntentionState
+    from sr_od.application.currency_war.cw_comps import get_comp
+    sess2 = _sess()
+    sess2.v3_intention = IntentionState(phase='locked',
+                                        locked_comp='DOT队')
+    sess2.target_comp = get_comp('DOT队')
+    st2 = _state(level=8, bench=[_bench('卡芙卡', faction='公司',
+                                        slot=0),
+                                 _bench('卡芙卡', faction='公司',
+                                        slot=1)],
+                 deployed=[_bench(f'板件{i}', faction='公司', slot=9 + i)
+                           for i in range(6)])
+    rc2 = [c for c in generate_candidates(st2, sess2, _REG)
+           if c.tag == 'refresh'][0]
+    val2, _ = score_candidate(rc2, st2, sess2, _REG)
+    assert val2 > 0, f'危机+核心在窗:L8 卡芙卡 roll 窗 V_D 应正分(实际 {val2})'
     # 非囤金应急态(金 30):refresh 滤出
-    st2 = _state(gold=30)
-    kept2, _f = filter_candidates(generate_candidates(st2, sess, _REG),
-                                  st2, sess, _REG)
-    assert not any(c.tag == 'refresh' for c in kept2)
+    st3 = _state(gold=30)
+    kept3, _f = filter_candidates(generate_candidates(st3, sess, _REG),
+                                  st3, sess, _REG)
+    assert not any(c.tag == 'refresh' for c in kept3)
 
 
 # --- ③ 应急集内容 ------------------------------------------------------------
