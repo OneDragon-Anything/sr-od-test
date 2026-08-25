@@ -112,12 +112,18 @@ def test_bond_lock_requires_qualification() -> None:
 
 
 def test_bond_lock_wan_di_rejected_core_card_still_legal() -> None:
-    """夜之半神×2(燃血副产品)不锁万敌单C(003757 r6 病);贯穿件万敌到手
-    → ③锁线照旧([23] 合法路径保持)。"""
+    """夜之半神×2(燃血副产品)不锁万敌单C(003757 r6 病);
+    贯穿件万敌到手:③锁线在 P2/P3 照旧([23] 合法路径),但 P1 被
+    ADR-0341 资格门拦下(终局专属线 P1 锁向=板面饥饿,W97:hp 差 9-11)。"""
     st = _state(board={'夜之半神': 2})
     ist = update_intention(st, IntentionState())
     assert ist.phase == 'unlocked' and ist.locked_comp == ''
-    ist2 = update_intention(_state(bench=['万敌']), IntentionState())
+    # P1:贯穿件在手但无①类资格 → ③证据被门拦下,意向落⑤兜底
+    ist_p1 = update_intention(_state(bench=['万敌']), IntentionState())
+    assert ist_p1.phase == 'unlocked' and ist_p1.locked_comp == ''
+    assert hoard_target_set(_state(), ist_p1).mode == 'fallback'
+    # P2:门不辖([21] 上场窗口/换血点都在 P1 后),③照旧
+    ist2 = update_intention(_state(plane=2, bench=['万敌']), IntentionState())
     assert ist2.phase == 'locked' and ist2.locked_comp == '万敌单C'
     assert ist2.lock_layer == 3
 
@@ -144,11 +150,16 @@ def test_layer3_core_card_signal() -> None:
 
 
 def test_layer4_resource_signal() -> None:
-    """④资源:升费链角色(银狼LV.999)到手 → 狼尊欢愉资源信号。"""
+    """④资源:升费链角色(银狼LV.999)到手 → 狼尊欢愉资源信号;
+    P1 被 ADR-0341 资格门拦下(④与③同为「卡/资源到手」证据类)。"""
     st = _state(bench=['银狼LV.999'])
     sigs = detect_signals(st)
+    assert not any(s.comp_name == '狼尊欢愉' and s.kind == 'resource'
+                   for s in sigs if s.layer == 4), 'P1 终局专属线④证据应被门拦下'
+    st2 = _state(plane=2, bench=['银狼LV.999'])
+    sigs2 = detect_signals(st2)
     assert any(s.comp_name == '狼尊欢愉' and s.kind == 'resource'
-               for s in sigs if s.layer == 4)
+               for s in sigs2 if s.layer == 4)
 
 
 def test_layer5_fallback_no_signal() -> None:
@@ -191,24 +202,25 @@ def test_revoke_exit1_core_miss_n() -> None:
 
 
 def test_revoke_exit2_higher_signal_with_reachability() -> None:
-    """撤销出口②:更高层信号 + 可达性对照 → 撤;下轮新信号锁新线;不可达则不撤。"""
-    st = _state(bench=['万敌'])           # ③锁万敌单C(layer3)
+    """撤销出口②:更高层信号 + 可达性对照 → 撤;下轮新信号锁新线;不可达则不撤。
+    (初始锁线用 P1 合格线希儿量子——万敌单C 的 P1 ③被 ADR-0341 门拦。)"""
+    st = _state(shop=['希儿'])           # ③锁希儿量子(layer3,P1 合格线)
     ist = update_intention(st, IntentionState())
-    assert ist.locked_comp == '万敌单C'
-    # 可达:plane1 剩 26 节点 > 姬子再遇窗(~13 轮)→ 撤,降弱意向
-    st2 = _state(active_env='列车同行概念股', bench=['万敌'], round_num=2)
+    assert ist.locked_comp == '希儿量子'
+    # 可达:plane1 剩余节点 > 姬子再遇窗 → 撤,降弱意向
+    st2 = _state(active_env='列车同行概念股', shop=['希儿'], round_num=2)
     update_intention(st2, ist)
-    assert ist.phase == 'weak' and ist.weak_comp == '万敌单C'
+    assert ist.phase == 'weak' and ist.weak_comp == '希儿量子'
     assert 'higher' in ist.last_event
     update_intention(st2, ist)             # 直至新信号:env 再锁列车线
     assert ist.phase == 'locked' and ist.locked_comp == '列车同行'
-    # 不可达:P3 末轮只剩 1 节点,新信号核心再遇窗远超 → 层级高≠必换,不撤
-    st3 = _state(bench=['万敌'], active_env='列车同行概念股',
+    # 不可达:P3 末轮只剩少量节点,新信号核心再遇窗远超 → 层级高≠必换,不撤
+    st3 = _state(shop=['希儿'], active_env='列车同行概念股',
                  plane=3, round_num=9)
-    ist2 = update_intention(_state(bench=['万敌']), IntentionState())
-    assert ist2.locked_comp == '万敌单C'
+    ist2 = update_intention(_state(plane=3, shop=['希儿']), IntentionState())
+    assert ist2.locked_comp == '希儿量子'
     update_intention(st3, ist2)
-    assert ist2.phase == 'locked' and ist2.locked_comp == '万敌单C'
+    assert ist2.phase == 'locked' and ist2.locked_comp == '希儿量子'
 
 
 def test_revoke_exit1_resets_on_core_visible() -> None:
@@ -277,8 +289,9 @@ def test_forced_lock_demote_endgame() -> None:
 # ===== 锁后效果(只改囤货方向) =====
 
 def test_lock_effect_hoard_target_set() -> None:
-    """锁定 → 囤货集合切到意向线(角色件含核心/羁绊成员;装备件=到人配方−禁忌)。"""
-    st = _state(bench=['万敌'])
+    """锁定 → 囤货集合切到意向线(角色件含核心/羁绊成员;装备件=到人配方−禁忌)。
+    (万敌单C P1 ③被 ADR-0341 门拦,锁线场景设 P2。)"""
+    st = _state(plane=2, bench=['万敌'])
     ist = update_intention(st, IntentionState())
     ht = hoard_target_set(st, ist)
     assert ht.mode == 'locked'
@@ -296,8 +309,9 @@ def test_line_hoard_flows_members_in_target_set() -> None:
     """W65/ADR-0323:锁定万敌线 → 燃血(flows 流派)成员 刃/镜流/布洛妮娅
     进囤货目标集——旧版 _line_hoard 只查 c.factions,flows 成员被排除
     (W64 Ring1:燃血 8 成员 3/8 采购面缺失)。泛化修正:档位键与
-    factions ∪ flows 全集交集,非万敌特判。"""
-    st = _state(bench=['万敌'])
+    factions ∪ flows 全集交集,非万敌特判。(锁线场景设 P2:万敌单C
+    的 P1 ③证据被 ADR-0341 资格门拦。)"""
+    st = _state(plane=2, bench=['万敌'])
     ist = update_intention(st, IntentionState())
     assert ist.locked_comp == '万敌单C'
     ht = hoard_target_set(st, ist)
