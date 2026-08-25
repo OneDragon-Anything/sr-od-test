@@ -145,6 +145,11 @@ _EXPECTED_HASH = ('3729d4bacdfa8edb41195c1ea386c5d1'
 # 有意改参(通道默认开),锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = ('b6f56fb72b40183c42b15e81105b28b2'
                   '17f6d162097c61d90ba4fcba52c2a1ca')
+# W174/ADR-0371 引擎补完守卫批更新:新增 evolve_engine_completion_enabled
+# (=True,own-gap 修法 A/B 通道总开关;关=回 W170 后行为)——有意改参,
+# 锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = ('b835dcbf8e0c8b9be5fc2e904b219cbe'
+                  'c380a2dd2531c9b5dec7c2e435ce849d')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
