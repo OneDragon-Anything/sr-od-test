@@ -80,6 +80,11 @@ _EXPECTED_HASH = '8a7c4ee67326db5cb4d4007abb9ace9'
 _EXPECTED_HASH += 'e17440afac0996ec4fa7f7f9e397c22af'
 # W88/ADR-0339:新增 core_star_unit=3.0(核心升星价值项,配对 A/B 标定
 # n=150:+18/0)——有意改参,锁同步更新
+# W107/ADR-0343 成型停手批更新:新增 formed_stop_enabled(=True)/
+# formed_stop_min_round(=7)/formed_stop_min_level(=5)三字段
+# ([13] 停手线;既有数值字段全部不变)——有意改参,锁同步更新
+_EXPECTED_HASH = ('ee7a9c38ca6b9fd2799f64bbc4545ffe'
+                  '761e97528a78d075ec279d4adda9a9e3')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
