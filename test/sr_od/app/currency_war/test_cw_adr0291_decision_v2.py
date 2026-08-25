@@ -270,14 +270,42 @@ def test_target_buy_positive_at_saturated_cap() -> None:
 
 
 def test_active_floor_tiered_economy() -> None:
-    """经济态阶梯地板(v1 同式镜像;恒 50 根因②回归锁)。"""
+    """地板分派:相位地板(W119/ADR-0347,阶梯地板退场)+旁路优先序。
+
+    - 经济态 FORM(意向未锁/板面空)→ FORM_FLOOR(保险丝 20);
+    - HOARD(form_ok+金<50)/SPEND(金≥50)→ INTEREST_FLOOR(50);
+    - 应急(hp≤25)→ rebirth_floor(旁路,优先于相位——逐位不变);
+    - boss 窗(node_type 缺读 P1 r≥9 兜底)→ boss_floor(节点图统一
+      口径,轮数兜底只此一处)。
+    """
     sess = _sess(mode='economy')
-    assert _active_floor(_state(gold=55), sess, _REG) == 50
-    assert _active_floor(_state(gold=44), sess, _REG) == 4
-    assert _active_floor(_state(gold=12), sess, _REG) == 2
-    assert _active_floor(_state(gold=7), sess, _REG) == 0
+    # FORM:unlocked 空 board → form_ok False
+    assert _active_floor(_state(gold=55), sess, _REG) == _REG.form_floor
+    assert _active_floor(_state(gold=12), sess, _REG) == _REG.form_floor
     assert _active_floor(_state(hp=20, gold=55), sess, _REG) == \
         _REG.rebirth_floor
+    # boss 兜底:node_type 缺读 + P1 r9 → boss_floor
+    assert _active_floor(_state(round_num=9, gold=55), sess, _REG) == \
+        _REG.boss_floor
+    # HOARD/SPEND:form_ok 真帧(锁定+三件套)金 40/55 → 50
+    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.cw_intention import (
+        IntentionState,
+        intention_core,
+    )
+    comp = get_comp('DOT队')
+    core = intention_core(comp)
+    _f = dict(plane=1, round_num=7, level=5, hp=60,
+              board={f: t for f, t in comp.form_tiers.items()},
+              deployed=[BenchChar(slot=0, char_id=core,
+                                  faction='仙舟罗浮', star=2)],
+              bench=[], shop=[])
+    s2 = StrategySession()
+    s2.v3_intention = IntentionState(phase='locked', locked_comp='DOT队')
+    assert _active_floor(_state(gold=40, **_f), s2, _REG) == \
+        _REG.interest_floor
+    assert _active_floor(_state(gold=55, **_f), s2, _REG) == \
+        _REG.interest_floor
 
 
 def test_audit_report_full_matrix() -> None:

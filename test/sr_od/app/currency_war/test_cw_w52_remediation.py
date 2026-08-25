@@ -601,12 +601,16 @@ def test_remedy_sold_not_rebought_same_round() -> None:
 def test_prior_accepted_sell_no_compensation() -> None:
     """W56 攻击面 3(先采纳卖→金足→无补偿):同轮存在高正分卖候选
     且先于买被采纳 → 卖出回金后买候选直接通过(无拒绝事件)→
-    无补偿动作(不与常规通道重复变现)。"""
+    无补偿动作(不与常规通道重复变现)。
+
+    W119/ADR-0347 构造适配:经济态地板=FORM_FLOOR(20,相位地板)——
+    gold 取 22(卖回金 2 后买 4 费恰达 20 地板;无卖则 18<20 会拒,
+    保住「卖先采纳→金足」的因果链)。"""
     from dataclasses import replace
     sess = _locked_sess()
     sess.v2_round_key = (1, 4)
     reg10 = replace(_REG, war_floor=10)
-    st = _state(round_num=4, gold=13, hp=80,
+    st = _state(round_num=4, gold=22, hp=80,
                 bench=[_bench('卡芙卡', faction='公司', slot=0)],
                 shop=[_card('姬子·启行', cost=4)],
                 deployed=[_bench(f'D{i}', faction='公司', slot=i)

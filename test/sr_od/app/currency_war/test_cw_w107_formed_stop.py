@@ -69,15 +69,20 @@ def _cands() -> list[Candidate]:
 
 
 def _formed_state(**kw) -> GameState:
-    """成型态:DOT队 form_tiers 全满 + 核心 2★ + lv5 + P1 r7。"""
+    """成型态:DOT队 form_tiers 全满 + 核心**上场** 2★ + P1 r7。
+
+    W119/ADR-0347 构造适配:formed_stop 收编 form_ok——核心须上场
+    (旧帧核心躺 bench;「核心须上场」是 2026-08-25 用户裁决,
+    W114 影子批已注记本锁需同步)。"""
     comp = get_comp('DOT队')
     core = intention_core(comp)
     board = {f: t for f, t in comp.form_tiers.items()}
     base = {
         'plane': 1, 'round_num': 7, 'gold': 60, 'level': 5,
         'hp': 60, 'board': board,
-        'bench': [BenchChar(slot=0, char_id=core, faction='仙舟罗浮',
-                            star=2)],
+        'deployed': [BenchChar(slot=0, char_id=core, faction='仙舟罗浮',
+                               star=2)],
+        'bench': [],
         'shop': [],
     }
     base.update(kw)
@@ -104,18 +109,27 @@ def test_formed_stop_blocks_buy_keeps_exceptions() -> None:
 
 
 def test_unformed_each_piece_passes() -> None:
-    """[13] 三件套缺一即不辖:等级不足/羁绊未满/核心未 2★。"""
+    """form_ok 谓词缺一即不辖(W119/ADR-0347 收编后;Q2 裁决:等级
+    不再是独立条件——lv4 帧随裁决改为合法成型,不辖项换成谓词族):
+    ① 核心 2★ 躺 bench(未上场,「核心须上场」裁决);
+    ② 羁绊未满(主档缺 1);
+    ③ 核心上场但 1★。"""
     comp = get_comp('DOT队')
-    # ① 等级 <5
-    s1 = _formed_state(level=4)
+    core = intention_core(comp)
+    # ① 核心 2★ 在 bench 不上场
+    s1 = _formed_state(
+        deployed=[BenchChar(slot=0, char_id='桑博', faction='仙舟罗浮',
+                            star=1)],
+        bench=[BenchChar(slot=0, char_id=core, faction='仙舟罗浮',
+                         star=2)])
     # ② 羁绊未满(主档缺 1)
     board2 = dict(comp.form_tiers)
     k0 = next(iter(board2))
     board2[k0] = board2[k0] - 1
     s2 = _formed_state(board=board2)
-    # ③ 核心 1★
-    s3 = _formed_state(bench=[BenchChar(slot=0, char_id=intention_core(comp),
-                                        faction='仙舟罗浮', star=1)])
+    # ③ 核心上场但 1★
+    s3 = _formed_state(deployed=[BenchChar(slot=0, char_id=core,
+                                           faction='仙舟罗浮', star=1)])
     for s in (s1, s2, s3):
         sess = _sess_locked()
         assert formed_stop_active(s, sess, DEFAULT_REGISTRY) is False

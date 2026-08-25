@@ -425,10 +425,14 @@ def _comp_reg():
 
 def _comp_state(gold: int, bench_names: list[str], cost: int = 4,
                 round_num: int = 5, board: dict | None = None,
+                node_type: str = 'boss',
                 ) -> GameState:
-    """补偿场景状态:锁定意向(列车同行)+boss_breaker war(P1 r5)+
-    满员上阵 5/5(防 deploy 干扰 bench)+指定 bench 压库件 + 店目标件。"""
+    """补偿场景状态:锁定意向(列车同行)+boss 节点(boss_breaker war;
+    W119/ADR-0347 构造适配:boss 窗改节点图口径,node_type='boss' 显式
+    命中——旧 r≥5 轮数口径已退场)+满员上阵 5/5(防 deploy 干扰
+    bench)+指定 bench 压库件 + 店目标件。"""
     return _state(round_num=round_num, gold=gold, hp=80,
+                  node_type=node_type,
                   bench=[_bench(n, faction='公司', slot=i)
                          for i, n in enumerate(bench_names)],
                   shop=[ShopCard(x=0, name='姬子·启行', faction='列车同行',

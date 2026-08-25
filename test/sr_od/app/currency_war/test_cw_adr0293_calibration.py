@@ -89,6 +89,13 @@ _EXPECTED_HASH = ('ee7a9c38ca6b9fd2799f64bbc4545ffe'
 # 兜底局 form_ok 降级门,sim 校准域;影子期零消费)——有意改参,锁同步
 # 更新(既有数值字段全部不变)
 _EXPECTED_HASH = '117316f74fdbd93413f1937622a1710c6865fd35d0769b399335a74dbd045fe5'
+# W119/ADR-0347 切授权批更新:新增 form_floor(=20,Q1 四档 sim 对照
+# 待校准)/phase_fallback_min_round(=5,W118 兜底门校准判据)/
+# boss_window_fallback_round(=9,boss 窗节点图统一口径的缺读兜底)
+# 三字段;删除 formed_stop_min_level(Q2 裁决:等级不作为独立门槛)
+# 与 levelup_interest_engine_gate([12] 门收编 EV 总账,E6 latch 退场)
+# ——有意改参,锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = '837f521098a44ac0f8e81b8febf6208dd320d212f4d5975e29053ca979946679'
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
