@@ -196,7 +196,73 @@ def test_adr0150_plaza_new_entries() -> None:
     assert "镜流" in INVESTMENT_STRATEGIES["飞光·映月"].effect
 
 
-# ===== ADR-0151 策略语义绑定(逐卡手建模;↺ ADR-0134 文本扫描派生)=====
+# ===== W144 OCR 间隔号形变归一(AGENTS.md OCR 分层②;run_20260826_004527 实机缺陷链)=====
+def test_w144_get_strategy_bullet_variant_hits() -> None:
+    """①`全都要•彩`(OCR 把 · 误读为 •)经 get_strategy 命中注册表条目,返回规范形。
+
+    修前:精确查 miss → handle_invest_strategy L216 假告警「数据缺口」。
+    """
+    from sr_od.application.currency_war.cw_investments import get_strategy, normalize_invest_name
+    s = get_strategy('全都要•彩')
+    assert s is not None, 'bullet 形变名应命中注册表(归一后精确查)'
+    assert s.name == '全都要·彩'          # 返回的是注册表规范形条目
+    assert s.rarity == '棱彩'
+    # 归一函数本体:无歧义映射;非形变字符不动
+    assert normalize_invest_name('全都要•彩') == '全都要·彩'
+    assert normalize_invest_name('飞光‧传剑') == '飞光·传剑'   # U+2027 同族
+    assert normalize_invest_name('开源节流') == '开源节流'
+    # 环境名同口径(银·金·彩 是注册表唯一含 · 的环境名)
+    from sr_od.application.currency_war.cw_investments import get_env
+    assert get_env('银•金•彩') is not None
+
+
+def test_w144_economy_aggregate_bullet_name_not_dropped() -> None:
+    """②economy 聚合:active_strategies 含 bullet 形变名时经济效果不再静默丢。
+
+    修前:`economy_effect_of('采购专员•彩')` 精确查 miss → 全 0 EconomyEffect
+    → cw_economy 按名聚合把策略经济效果静默丢弃(真金影响,run_20260826_004527 缺陷链)。
+    锚卡:采购专员·彩(含 · 名 + STRATEGY_ECONOMY 有 economy:refresh_surprise_every=5)。
+    对照:规范名与 bullet 形变名聚合结果逐字段相等;真未知名仍全 0(归一不虚增)。
+    """
+    from sr_od.application.currency_war.cw_investments import EconomyEffect, aggregate_economy, economy_effect_of
+    eff_canon = economy_effect_of('采购专员·彩')
+    eff_bullet = economy_effect_of('采购专员•彩')
+    assert eff_canon.refresh_surprise_every == 5
+    assert eff_bullet == eff_canon, 'bullet 形变名与规范名的经济效果应等价(修前 miss 全 0)'
+    # 聚合口径:bullet 形变名混在 active_strategies 里,效果必须聚合上
+    agg = aggregate_economy(['采购专员•彩', '本金充裕'])
+    assert agg.refresh_surprise_every == 5 and agg.instant_gold == 26
+    # 对照:完全未知名(非形变)仍全 0(归一只做无歧义映射,不虚增)
+    assert economy_effect_of('完全未知策略') == EconomyEffect()
+
+
+def test_w144_raw_name_not_polluted_by_lookup() -> None:
+    """③原始名保留:查找边界归一不回写——get_strategy 不改注册表键,也不改入参语义。
+
+    数据边界声明:采集/telemetry(invest_cards.jsonl)在 handle_invest_strategy 内
+    直接用 OCR 原始名落盘,不经 get_strategy → 无直接可测入口;此处锁「查找不改
+    注册表与写入端」:get_strategy 归一仅作用于查询入参,INVESTMENT_STRATEGIES 键集
+    不含任何 bullet 形变(注册表数据层未被规范化污染)。
+    """
+    from sr_od.application.currency_war.cw_investments import INVESTMENT_ENVS, get_strategy
+    # 查询 bullet 名后,注册表键集不变(无 bullet 键被写入/替换)
+    _ = get_strategy('全都要•彩')
+    bad = [n for n in INVESTMENT_STRATEGIES if any(c in n for c in '•‧∙・')]
+    assert not bad, f'注册表被归一污染(出现 bullet 键):{bad[:5]}'
+    bad_env = [n for n in INVESTMENT_ENVS if any(c in n for c in '•‧∙・')]
+    assert not bad_env, f'环境注册表被归一污染:{bad_env[:5]}'
+
+
+def test_w144_augment_affinity_normalized_lookup() -> None:
+    """④dict 直查消费点走规范化入口:AUGMENT_COMP_AFFINITY(飞光·传剑 等含 · 键)bullet 形变不再 miss。"""
+    from sr_od.application.currency_war.cw_comps import augment_affinity, augment_env_affinity
+    assert augment_affinity('飞光•传剑') == {'景元仙舟': 1.0}
+    assert augment_affinity('黑塔纪元') == {'大黑塔银河学者': 1.0}   # 无分隔符名不受影响
+    assert augment_affinity('不存在策略') == {}
+    # 环境侧同口径(ENV_COMP_AFFINITY 现键无 ·,锁守卫:未来加含 · 键时同样被归一救)
+    assert augment_env_affinity('不存在环境') == {}
+    from sr_od.application.currency_war.cw_comps import ENV_COMP_AFFINITY
+    assert augment_env_affinity('仙舟概念股') == ENV_COMP_AFFINITY['仙舟概念股']
 def test_adr0151_bindings_table_valid() -> None:
     """语义绑定表:键 ⊆ 注册表;值 ⊆ FACTIONS/CHARACTERS(构建层孤儿 raise + 此处显式断言)。"""
     from sr_od.application.currency_war.cw_chars import CHARACTERS
