@@ -503,6 +503,75 @@ def test_validate_rejects_unknown_action_type(test_context: SrTestContext) -> No
     assert err is not None and '未知动作类型' in err
 
 
+# ===== W209j 刹车语义锁(run 27 停机事故第三层,ADR-0388)=====
+# 实证链:14:09:08 Deploy 钩子 stop_running → 14:09:14「出战成功」(CW 备战
+# 不自动出战,出战必是 bot 点的)= 停 bot 后 director 环仍落地动作。
+# 判据 = last_run_result 非空(start_running 清 None/stop 写入;run_state
+# STOP 是 idle 初始态不能直接用——离线测试 ctx 恒 STOP 会全拒)。
+
+class _StoppedRunCtx:
+    """运行中被停的 run_context 替身:last_run_result 已写入。"""
+
+    def __init__(self) -> None:
+        self.last_run_result = object()   # 非 None = 本次运行被请求停止
+        self.is_context_stop = True
+
+
+def test_executor_brake_rejects_action_when_stopped(
+        test_context: SrTestContext, monkeypatch) -> None:
+    """第二层锁:executor 拒绝执行任何动作(含 StartBattle),零点击落地。"""
+    from sr_od.application.currency_war.prep_actions import StartBattle
+    op = PrepDirector(test_context)
+    ex = pa_mod.PrepActionExecutor(op, test_context)
+    clicked: list = []
+    monkeypatch.setattr(test_context.controller, 'click',
+                        lambda p, *a, **k: clicked.append(p), raising=False)
+    monkeypatch.setattr(test_context, 'run_context', _StoppedRunCtx())
+    progressed, detail = ex.execute(StartBattle())
+    assert not progressed and '已停止' in detail
+    assert not clicked, '停机后不得有任何点击落地(W209j 刹车)'
+
+
+def test_director_loop_brake_before_each_step(monkeypatch, test_context) -> None:
+    """第一层锁:环顶查停机标志 → 不再发动作直接收口(run 27 形态:Deploy
+    停后不发 StartBattle)。"""
+    match = SimpleNamespace(
+        strategy=SimpleNamespace(
+            decide_prep_action=lambda o, s, c: pa_mod.StartBattle()),
+        session=_sess())
+    ex = _FakeExecutor(default=(True, '不该被执行'))
+    d = _make_director(monkeypatch, ex)
+    # ctx 挂运行中被停的 run_context(_make_director 的 SimpleNamespace ctx
+    # 无该属性 → getattr None = 不拦;测试显式挂上)
+    d.ctx.run_context = _StoppedRunCtx()
+    d.ctx.controller = getattr(test_context, 'controller', None)
+    monkeypatch.setattr(d, '_observe', _seq_observe([]))
+    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
+    result = d._run_loop(match)
+    assert '已停止' in (result.status or ''), \
+        f'环顶刹车应收口停止态,实得 {result.status}'
+    assert not ex.calls, '停机标志已设后不得再发任何动作'
+
+
+def test_brake_inactive_when_running(test_context: SrTestContext, monkeypatch) -> None:
+    """正常运行(last_run_result=None,idle/运行中未停)不误拦——刹车判据
+    不把离线测试(ctx run_state=STOP 初始态)误判为停机。"""
+    from types import SimpleNamespace
+
+    class _IdleRunCtx:
+        last_run_result = None
+        is_context_stop = True   # idle 初始态也是 STOP——但未在运行,不拦
+
+    monkeypatch.setattr(test_context, 'run_context', _IdleRunCtx())
+    op = PrepDirector(test_context)
+    ex = pa_mod.PrepActionExecutor(op, test_context)
+    monkeypatch.setattr(test_context.controller, 'mouse_move', lambda p: True,
+                        raising=False)
+    # 用控制流动作(BailToOuter)验证 execute 未被刹车误拦
+    progressed, detail = ex.execute(pa_mod.BailToOuter(reason='t'))
+    assert '刹车' not in detail, f'idle 态不得误拦: {detail}'
+
+
 def test_weakest_bench_protects_same_star_only() -> None:
     """L-5 回归:3合1 保护按 (char_id, star) —— 同名不同星不保护。"""
     from sr_od.application.currency_war import cw_plan

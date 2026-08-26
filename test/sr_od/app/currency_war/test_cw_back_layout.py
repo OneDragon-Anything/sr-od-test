@@ -180,11 +180,14 @@ def test_cap_diff_routing():
 
 
 def test_phantom_layouts_absent_from_yml():
-    """yml(源 + merged)不再有 后排7/9/10/11槽 area(幻影档清除,源与派生层同步)。"""
+    """yml(源 + merged)无 后排9/10/11槽 幻影 area(ADR-0281 清除,源与派生
+    层同步)。**后排7槽 不在幻影清单**:7 格=钻石+1 局真值档(口述公式),
+    实锤建档后合法存在(_LAYOUT_PREFIX 是否已登记 7 由 test_cap_diff_routing
+    的 _LAYOUT_PREFIX 断言辖,不在此双锁)。"""
     for rel in ('assets/game_data/screen_info/currency_war_battle_prep.yml',
                 'assets/game_data/screen_info/_od_merged.yml'):
         txt = (_ROOT / rel).read_text(encoding='utf-8')
-        for pfx in ('后排7槽', '后排9槽', '后排10槽', '后排11槽'):
+        for pfx in ('后排9槽', '后排10槽', '后排11槽'):
             assert pfx not in txt, f'{rel} 残留幻影档 {pfx}'
         assert '后排8槽-1' in txt and '后排-1' in txt, f'{rel} 缺 6/8 真值档'
 
