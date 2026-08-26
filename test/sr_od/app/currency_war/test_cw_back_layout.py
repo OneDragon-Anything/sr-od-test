@@ -156,22 +156,23 @@ def test_cap11_frame_is_8grid(templates):
 
 def test_cap_diff_routing():
     """W209/ADR-0385 口述公式「后台格数 = 6+(cap−level)」路由:
-    diff0→6 / diff≥2→8 / diff==1(7 格未建档)→保守 8 格超集;
+    diff0→6 / diff1→7(已建档,2026-08-26 佩佩局实锤)/ diff≥2→8;
     diff<0(读错族)按 0;diff>2(域外)按 2。level 单独不参与。"""
     from sr_od.application.currency_war.cw_back_layout import (
         _LAYOUT_PREFIX,
         back_slots_from_cap_diff,
         fallback_back_slots,
     )
-    # 幻影档不存在(7/9/10/11 是循环论证产物,已删;7 待 diff==1 局实拍补档)
-    assert set(_LAYOUT_PREFIX) == {6, 8}
+    # 三真值档(7 = 佩佩局交互实锤建档;9/10/11 仍是循环论证幻影,已删)
+    assert set(_LAYOUT_PREFIX) == {6, 7, 8}
     assert _LAYOUT_PREFIX[6] == '后排'
+    assert _LAYOUT_PREFIX[7] == '后排7槽'
     assert _LAYOUT_PREFIX[8] == '后排8槽'
-    for n in (7, 9, 10, 11, 12):
+    for n in (9, 10, 11, 12):
         assert n not in _LAYOUT_PREFIX
     # 公式路由
     assert back_slots_from_cap_diff(0) == 6
-    assert back_slots_from_cap_diff(1) == 8    # 7 格未建档 → 8 格超集
+    assert back_slots_from_cap_diff(1) == 7    # 7 格已建档 → 直读(佩佩局锚)
     assert back_slots_from_cap_diff(2) == 8
     assert back_slots_from_cap_diff(3) == 8    # 域外按 2(cap10/lv8、cap11/lv8 局同 8 格)
     assert back_slots_from_cap_diff(-1) == 6   # cap<level 读错族按 0
@@ -219,10 +220,10 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 7)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 9)
     assert cbl.select_back_layout(None, frame) == (8, '后排8槽')   # 狸猫局 lv7 cap9
-    # diff==1(钻石+1):7 格未建档 → 8 格超集 + back_7slots_pending 留证
+    # diff==1(钻石+1):7 格已建档(佩佩局实锤)→ 直读 7 格
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
-    assert cbl.select_back_layout(None, frame) == (8, '后排8槽')
-    # 件③:7 格留证机器已废(存在性=钻石+1 由公式回答);停机钩子测试见下
+    assert cbl.select_back_layout(None, frame) == (7, '后排7槽')
+    # 件③:7 格留证机器已废(存在性=钻石+1 由公式回答;坐标档已建档钩子静默)
     # 读不到 cap → diff 按 0 → 6(失败安全侧;别按扩展档跑)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: None)
     assert cbl.select_back_layout(None, frame) == (6, '后排')
@@ -233,10 +234,15 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
 def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模板加载惰性
     """CV 通道实测格数:槽位存在性 std 签名(真 fixture 全量标定)。
 
-    8 格帧(狸猫局/全位验证/cap9/10/11)→ 8;6 格帧(shop_closed/a8_start/
-    prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;「后排7槽-P2开局局」→ **6**
-    (旧「7 槽」观察经 CV 复核两端扩展位均为背景 = 同属幻影,实为 6 格——
-    公式通道自洽的又一实证);非 1080p 小帧 → None(越界守卫)。
+    8 格帧(狸猫/全位验证/cap9/cap10,左端 std 62.5-65.6 清晰带)→ 8;
+    **P3 局(cap11)左1 空槽 std 38.8 落不可判带 [12,48] → None 退公式**
+    (「8 格空左格 [38.8]」与「6/7 格羁绊面板渗入 [26.2-40.2]」std 重叠,
+    W209k 单阈值盲区量证收口;公式 diff≥2→8 兜底);6 格帧(shop_closed/
+    a8_start/prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;「后排7槽-P2开局局」
+    → **6**(旧「7 槽」观察实为 6 格幻影);**真 7 格帧(佩佩局双帧,2026-08-26
+    用户口述真值+拖测实锤)左端渗入 26.2/40.2 落不可判带 → None 退公式
+    diff1→7**(7/8 的区分靠 cap 差公式,paddle 直读权威)。非 1080p 小帧 →
+    None(越界守卫)。
 
     run 26 崩坏现场帧(后排6格-run26崩坏现场.png,编排者 VLM+右端位置双重
     确认 = 标准 6 格正样本)→ 6:事故形态的直接回归锚。
@@ -246,7 +252,9 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
     for fn, want in (
             ('后排8槽-狸猫局.webp', 8), ('后排8槽-全位验证.webp', 8),
             ('后排9槽-双宝钻局.webp', 8), ('后排10槽-满级局.webp', 8),
-            ('后排11槽-P3局.webp', 8),
+            ('后排11槽-P3局.webp', None),   # 左1 空槽 38.8 ∈ 不可判带 → 退公式
+            ('后排7槽-佩佩局.png', None),       # 渗入 26.2 ∈ 不可判带 → 退公式 diff1→7
+            ('后排7槽-佩佩局-拖测后.png', None),  # 渗入 40.2 ∈ 不可判带 → 退公式 diff1→7
             ('后排7槽-P2开局局.webp', 6), ('shop_closed.webp', 6),
             ('shop_closed_a8_start.webp', 6), ('prep_1-6_all_positions.webp', 6),
             ('deployed_p1r9.webp', 6), ('r1_idle_stop.webp', 6),
@@ -408,8 +416,10 @@ def test_deploy_excludes_system_units():
 
 def test_layout_hook_no_stop_only_evidence(
         test_context, templates, monkeypatch, tmp_path, frame):
-    """W209i 降级锁:n_raw=7(钻石+1,CV 三读稳定)→ **不停机**,落
-    back_7slots_collect 留证(带公式/CV/防抖序列),无 flag 文件。"""
+    """W209i 降级锁(7 格建档后语义):n_raw 未建档(用 9 模拟未来新档,
+    CV 三读稳定)→ **不停机**,落 back_layout_unarchived_grid 留证(带公式/
+    CV/防抖序列),无 flag 文件;真实 7 格(diff==1)已建档 → 见
+    test_layout_hook_silent_on_archived。"""
     import json as _json
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
@@ -426,31 +436,26 @@ def test_layout_hook_no_stop_only_evidence(
             self.stopped = True
             self.stop_calls.append(reason)
 
-    class _FakeShotCtx:
-        def screenshot(self):
-            return frame
-
     monkeypatch.setattr(ctx, 'run_context', _FakeRunCtx())
-    monkeypatch.setattr(ctx, 'screenshot',
-                        _FakeShotCtx().screenshot, raising=False)
     monkeypatch.setattr(core, 'is_prep_like_frame', lambda c, s: True)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
-    # 公式 diff==1(lv8 cap9)且 CV 三读稳定 7(防抖过)→ n_raw=7
     monkeypatch.setattr(cio, '_session_level', lambda c: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s: 9)
-    monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 7)
+    # 公式 8(lv8 cap10 diff2)且 CV 三读稳定 9(防抖过)→ n_raw=9 未建档
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s: 10)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 9)
+    monkeypatch.setattr(ctx, 'screenshot', lambda: frame, raising=False)
     out = cio.read_deployed_chars(ctx, frame, templates, level=8)
     assert isinstance(out, list) and out                    # 读板照常不抛
     assert not ctx.run_context.stopped and not ctx.run_context.stop_calls, \
-        'W209i:n_raw=7 不得停机(实时制游戏停 bot 不停游戏,run 27 实证)'
+        'W209i:未建档档不得停机(实时制游戏停 bot 不停游戏,run 27 实证)'
     journal = tmp_path / 'obs.jsonl'
     assert journal.exists(), '降级后必须留证'
     rec = _json.loads(journal.read_text(encoding='utf-8').strip().splitlines()[-1])
-    assert rec['field'] == 'back_7slots_collect'
-    assert rec['formula'] == 7 and rec['cv_readings'] == [7, 7, 7]
+    assert rec['field'] == 'back_layout_unarchived_grid'
+    assert rec['old'] == 9 and rec['cv_readings'] == [9, 9, 9]
     assert '不停机' in rec['verdict']                        # 如实声明画面可能推进
     assert not (tmp_path / '.debug/temp/currency_war/back_layout_stop_hook.flag').exists(), \
         '停机 flag 机制已废弃不得回流'
@@ -458,7 +463,10 @@ def test_layout_hook_no_stop_only_evidence(
 
 def test_layout_hook_silent_on_archived(
         test_context, templates, monkeypatch, tmp_path, frame):
-    """6/8 已建档(含超集运行态与对账一致态)→ 无留证无副作用。"""
+    """6/8/7 已建档(含超集运行态、对账一致态与 7 格直读态)→ 无留证无副作用。
+
+    2026-08-26 佩佩局 7 格建档后,(8,9,7) = diff1 直读 7 的真值态,必须
+    静默(旧「7 未建档刷留证」行为已废,证据垃圾)。"""
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
@@ -468,8 +476,8 @@ def test_layout_hook_silent_on_archived(
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
-    # 6 格(run 26 形态)/ 8 格(狸猫局形态)都不留证
-    for lv, cap, cv in ((8, 8, 6), (7, 9, 8)):
+    # 6 格(run 26 形态)/ 8 格(狸猫局形态)/ 7 格(佩佩局直读)都不留证
+    for lv, cap, cv in ((8, 8, 6), (7, 9, 8), (8, 9, 7)):
         monkeypatch.setattr(cio, '_session_level', lambda c, _lv=lv: _lv)
         monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, _cap=cap: _cap)
         monkeypatch.setattr(cbl, 'cv_back_slots', lambda s, _cv=cv: _cv)
@@ -514,8 +522,11 @@ class _FakeCtx:
 
 
 def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
-    """run 27 事故形态:首读假阳 7,重读回到真值 6(序列 [7,6,6])→
-    退公式 6,**不停机**(n_raw=6 已建档);瞬态留证 obs_conflict。"""
+    """run 27 事故形态(以未建档 9 模拟新格数瞬态):首读假阳 9,重读回到
+    真值 6(序列 [9,6,6])→ 退公式 8,不停机;瞬态留证 obs_conflict。
+
+    (7 格已建档:CV 稳定 7 = 合法档直读,不经防抖;瞬态 7 误读的代价仅是
+    多读一个空扩展窗(超集语义,无动作损失),run 27 型停机事故不再可能。)"""
     import json as _json
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
@@ -530,70 +541,142 @@ def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)  # 公式 6
-    # 序列 stub:首帧(入参 frame)假阳 7,重读帧(真 6 格 fixture)= 6
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)  # 公式 8
+    # 序列 stub:首帧(入参 frame)假阳 9,重读帧(真 6 格 fixture)= 6
     real_cv = cbl.cv_back_slots
 
     def _seq_cv(scr):
         if scr is frame:
-            return 7
+            return 9
         return real_cv(scr)   # 重读帧=真 6 格帧
     monkeypatch.setattr(cbl, 'cv_back_slots', _seq_cv)
-    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=8)
-    assert r['n'] == 6 and r['n_raw'] == 6      # 瞬态自愈 → 公式值
-    assert r['cv_readings'] == [7, 6, 6]        # 序列留档
+    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=10)
+    assert r['n'] == 8 and r['n_raw'] == 8      # 瞬态自愈 → 公式值
+    assert r['cv_readings'] == [9, 6, 6]        # 序列留档
     assert journal.exists() and 'back_layout_cv_transient' in \
         journal.read_text(encoding='utf-8')     # 瞬态留证
     assert fctx.shots == 2                      # 重读恰好 2 次
 
 
 def test_cv_stable_new_grid_confirmed(tmp_path, monkeypatch, frame):
-    """稳定新格数(真 7 格局):三读一致 [7,7,7] → 采 CV 值(n_raw=7 触发
-    停机钩子采集流程,防抖不拦真信号)。"""
+    """稳定未建档新格数(以 9 模拟):三读一致 [9,9,9] → 采 CV 值
+    (n_raw=9 触发留证钩子采集流程,防抖不拦真信号;运行值退 8 超集)。"""
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
     import sr_od.application.currency_war.cw_observe as cobs
-    fctx = _FakeCtx([frame, frame])   # 重读帧同 frame(stub 全 7)
+    fctx = _FakeCtx([frame, frame])   # 重读帧同 frame(stub 全 9)
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)  # 公式 6
-    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 7)         # 三读全 7
-    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=8)
-    assert r['n_raw'] == 7 and r['n'] == 8      # 采 CV 7 → 运行 8 超集
-    assert r['cv_readings'] == [7, 7, 7]
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)  # 公式 8
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 9)          # 三读全 9
+    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=10)
+    assert r['n_raw'] == 9 and r['n'] == 8      # 采 CV 9 → 运行 8 超集(未建档)
+    assert r['cv_readings'] == [9, 9, 9]
     assert fctx.shots == 2
 
 
 def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
-    """重读帧间不一致(如 [7,7,6])= 瞬态 → 退公式 + 序列留证(obs_conflict
-    带 cv_readings 上下文),不采 CV。"""
+    """重读帧间不一致(如 [9,9,6],未建档 9 模拟)= 瞬态 → 退公式 + 序列留证
+    (obs_conflict 带 cv_readings 上下文),不采 CV。"""
     import json as _json
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
     import sr_od.application.currency_war.cw_observe as cobs
     frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
-    fctx = _FakeCtx([frame, frame6])   # 重读 1=frame(7),重读 2=frame6(6)
+    fctx = _FakeCtx([frame, frame6])   # 重读 1=frame(9),重读 2=frame6(6)
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)
     real_cv = cbl.cv_back_slots
 
     def _seq_cv(scr):
         if scr is frame6:
             return real_cv(scr)       # 6
-        return 7
+        return 9
     monkeypatch.setattr(cbl, 'cv_back_slots', _seq_cv)
-    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=8)
-    assert r['n'] == 6 and r['n_raw'] == 6       # 不一致 → 公式值
-    assert r['cv_readings'] == [7, 7, 6]
+    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=10)
+    assert r['n'] == 8 and r['n_raw'] == 8       # 不一致 → 公式值
+    assert r['cv_readings'] == [9, 9, 6]
     assert journal.exists() and 'back_layout_cv_transient' in \
         journal.read_text(encoding='utf-8')
+
+
+# ===== 7. 佩佩局真 7 格板面识别(2026-08-26 用户口述真值;识别层修复锚) =====
+# 事故形态:plaza 官方立绘(插画)对棋盘站立小人弱命中 —— 万敌 8 内点漏读/
+# 卡芙卡零信号/佩佩无模板误名狸小虎/空槽背景假阳(风堇 11)。
+# 修法三件:①现场变体模板(raw_board.png,run20 商店卡同机制);②佩佩
+# 入库(roster cost=0 + raw.png);③相邻幽灵去重 + 部署排门槛 15。
+
+_C7 = (604, 746, 888, 1032, 1173, 1315, 1458)
+
+
+def _slots7():
+    return [(i, Rect(x - 71, 600, x + 71, 739)) for i, x in enumerate(_C7, 1)]
+
+
+def test_pepe_board_truth_current(templates):
+    """佩佩局当前帧(用户口述真值+VLM 交叉):1=万敌/3=乱破/5=卡芙卡/
+    7=佩佩,2/4/6 空。**走生产路径参数**(min_inliers=15 + live_only):
+    隐式锁三件修法——乱破@3 左渗 s2 幽灵被相邻去重剔除;s6 风堇假阳(11)
+    被门槛拦;s2 空槽 plaza 乱破:19 本底被 live_only 拒。"""
+    fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
+    got = {c.slot: c.char_id for c in identify_slots(
+        fix, templates, _slots7(), 'back', min_inliers=15, live_only=True)}
+    assert got == {1: '万敌', 3: '乱破', 5: '卡芙卡', 7: '佩佩'}, got
+
+
+def test_pepe_board_truth_golden(templates):
+    """佩佩局拖测前帧(用户口述真值):1=卡芙卡/3=万敌/5=爻光/7=佩佩。
+    空槽 plaza 本底(乱破:19@s2/爻光:26@s4)必须被 live_only 拒——
+    2026-08-26 量证:假阳带 11-26 与真命中带重叠,阈值无解,只认现场 art。"""
+    fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局.png'))
+    got = {c.slot: c.char_id for c in identify_slots(
+        fix, templates, _slots7(), 'back', min_inliers=15, live_only=True)}
+    assert got == {1: '卡芙卡', 3: '万敌', 5: '爻光', 7: '佩佩'}, got
+
+
+def test_deployed_live_only_rejects_plaza_baseline(templates):
+    """live_only 假阳拦截锁:黄金帧 s4 空槽 plaza 爻光 art 本底 26 内点
+    (≥15 门槛拦不住),必须被「主档命中+存在现场变体」规则拒;
+    同窗 live_only=False(备战栏语义)时按原行为收(门槛内)。"""
+    fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局.png'))
+    crop = fix[600:739, 967:1097]   # s4 空槽(爻光 plaza 本底 26)
+    name, inliers = identify_character(crop, templates, min_inliers=15)
+    assert name == '爻光' and inliers >= 15, f's4 本底应过门槛: {name},{inliers}'
+    out = identify_slots(
+        fix, templates, [(4, Rect(967, 600, 1097, 739))], 'back',
+        min_inliers=15, live_only=True)
+    assert not out, f'live_only 未拦 plaza 本底: {[(c.slot, c.char_id) for c in out]}'
+
+
+def test_pepe_roster_and_template(templates):
+    """佩佩建档三面:立绘模板在库;roster cost=0(系统召唤单位);deploy
+    候选剔除(不可拖,同狸猫对)。"""
+    assert '佩佩' in templates
+    from sr_od.application.currency_war.cw_chars import get_char
+    ch = get_char('佩佩')
+    assert ch is not None and ch.cost == 0
+    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.operations.prep.deploy_bench import (
+        exclude_system_units,
+    )
+    out = exclude_system_units([BenchChar(slot=7, char_id='佩佩'),
+                                BenchChar(slot=1, char_id='万敌')])
+    assert [c.char_id for c in out] == ['万敌']
+
+
+def test_live_board_variants_in_library(templates):
+    """现场变体入库(raw_board.png → 键 名#k):万敌/卡芙卡/乱破/爻光四件,
+    棋盘站立小人识别的治本通道(run20 商店卡同机制)。"""
+    for name in ('万敌', '卡芙卡', '乱破', '爻光'):
+        keys = [k for k in templates if k.split('#')[0] == name]
+        assert any('#' in k for k in keys), f'{name} 缺现场变体(raw_board.png)'

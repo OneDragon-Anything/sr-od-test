@@ -39,10 +39,10 @@ def test_lv6_pending_hook_retired() -> None:
 
 def test_cap_diff_formula_semantics() -> None:
     """W209/ADR-0385:口述公式「后台格数 = 6+(cap−level)」——
-    diff0→6 / diff≥2→8 / diff==1(7 格未建档)→保守 8 格超集。"""
+    diff0→6 / diff1→7(已建档,2026-08-26 佩佩局实锤)/ diff≥2→8。"""
     assert back_slots_from_cap_diff(0) == 6
     assert back_slots_from_cap_diff(2) == 8
-    assert back_slots_from_cap_diff(1) == 8   # 7 格未建档 → 8 格超集
+    assert back_slots_from_cap_diff(1) == 7   # 7 格已建档 → 直读(佩佩局锚)
 
 
 def test_cap_drives_selection_level_alone_does_not() -> None:
