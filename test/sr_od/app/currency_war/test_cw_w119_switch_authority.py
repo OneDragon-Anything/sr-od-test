@@ -17,6 +17,7 @@
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_comps import get_comp
@@ -187,7 +188,13 @@ def test_levelup_rejected_seed6_frame() -> None:
 def test_formed_stop_round_comp_derived() -> None:
     """③辖轮 = max(comp.typical_form_round, formed_stop_min_round):
     早成型 DOT队(typical 4→辖 7):r6 不停/r7 停;晚成型 昼神阿雅
-    (typical 8→辖 8):r7 不停/r8 停。"""
+    (typical 8→辖 8):r7 不停/r8 停。
+    (W227/ADR-0400 注:本锁改用 handoff_gate_enabled=False 的注册表
+    ——末窗承接维(承接档位未达标不停手)会使本锁的最小构造帧
+    (仅核心 1 件上场,无体系引擎 → 投影总档 0)在 r8 不停,与本锁
+    要隔离的「comp 派生辖轮」语义正交;承接维行为由
+    test_cw_w227_handoff_gate 锁。)"""
+    _reg_gate_off = replace(_REG, handoff_gate_enabled=False)
     for comp_name, stop_r, nostop_r in (('DOT队', 7, 6),
                                         ('昼神阿雅', 8, 7)):
         comp = get_comp(comp_name)
@@ -195,7 +202,7 @@ def test_formed_stop_round_comp_derived() -> None:
         for r, expect in ((nostop_r, False), (stop_r, True)):
             sess = _sess_locked(comp_name)
             st = _formed_frame(comp_name, round_num=r)
-            assert formed_stop_active(st, sess, _REG) is expect, (
+            assert formed_stop_active(st, sess, _reg_gate_off) is expect, (
                 f'{comp_name} r{r}:期望 {expect}')
 
 

@@ -190,6 +190,13 @@ _EXPECTED_HASH = ('86cf1f1d2a7c8016e776b3e90de27977'
 # (其余数值字段不变)
 _EXPECTED_HASH = ('1be534f9571445ac589e4e45b751dcb2'
                   'c2157211ee608c85c95ef52f6f8483f7')
+# W227/ADR-0400 P1 末窗承接门批更新:新增 handoff_gate_enabled(=False,
+# 承接门总开关;A/B 裁决默认关,见 ADR-0400)/handoff_gate_min_round(=8,
+# 末窗下界)/handoff_gate_tier_target(=1,承接达标总档位)/handoff_ev_
+# gap_bonus(=5.0,EV 承接缺口项单位值)四字段(设计件 08 §4.2 Phase 1;
+# 开=承接门行为)——有意改参,锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = ('576fc5520257d7ca53d3c5466677b417'
+                  '5cac946c910301fd0f752b43c5767291')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
