@@ -397,19 +397,17 @@ def test_deploy_excludes_system_units():
 
 
 
-# ===== 6b. 布局停机钩子(件③,W209/ADR-0385 重构)=====
-# 语义自 ADR-0281 钩子续用,输入链从「level 对应档无档」改到双通道对账原始
-# 格数 n_raw 无档(=7,钻石+1 局);旧「lv6=7 格待采」留证机器(back_7slots_
-# pending)已清理——7 格存在性=钻石+1 由公式回答,缺的只是坐标档,归本钩子管。
+# ===== 6b. 布局留证采集钩子(W209i/ADR-0385 决策 12:停机钩子降级废弃)=====
+# run 27 停机事故实证:货币战争备战实时倒计时,停 bot ≠ 停游戏——hook 停机后
+# 画面自行推进到首领战败结算(14:09 停 → 14:16 结算),「停机保画面待采集」
+# 对实时制游戏是虚假承诺。降级:n_raw=7 → obs_conflict 留证+去重截图不停机;
+# 7 格坐标由 CV 持续留证 + 人工在场经 MCP 交互采集。
 
-def test_layout_stop_hook_fires_on_unarchived_7(
+def test_layout_hook_no_stop_only_evidence(
         test_context, templates, monkeypatch, tmp_path, frame):
-    """件③:对账 n_raw=7(未建档)→ 停机 + flag(flag 带公式/CV 两值与采集流程)。
-
-    场景:钻石+1 局(cap=level+1),CV stub 成单端扩展(7)与公式一致。
-    ⚠️ run_context 替换走 monkeypatch(自动还原;session 级 ctx 裸赋值污染
-    后续测试)。
-    """
+    """W209i 降级锁:n_raw=7(钻石+1,CV 三读稳定)→ **不停机**,落
+    back_7slots_collect 留证(带公式/CV/防抖序列),无 flag 文件。"""
+    import json as _json
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_obs_core as core
@@ -419,15 +417,13 @@ def test_layout_stop_hook_fires_on_unarchived_7(
 
     class _FakeRunCtx:
         stopped = False
-        stop_source = ''
+        stop_calls: list[str] = []
 
         def stop_running(self, reason: str = ''):
             self.stopped = True
-            self.stop_source = reason
+            self.stop_calls.append(reason)
 
     class _FakeShotCtx:
-        """W209h 防抖重读帧源(钩子测试经 test_context 传 ctx 给 resolve;
-        screenshot 回放 frame——cv stub 已全 7,重读帧内容不参与判定)。"""
         def screenshot(self):
             return frame
 
@@ -439,52 +435,53 @@ def test_layout_stop_hook_fires_on_unarchived_7(
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / '.debug/temp/currency_war').mkdir(parents=True, exist_ok=True)
-    # 公式 diff==1(lv8 cap9)且 CV 同为 7 → n_raw=7 无档 → 停机
+    # 公式 diff==1(lv8 cap9)且 CV 三读稳定 7(防抖过)→ n_raw=7
     monkeypatch.setattr(cio, '_session_level', lambda c: 8)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s: 9)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 7)
     out = cio.read_deployed_chars(ctx, frame, templates, level=8)
-    assert isinstance(out, list) and out          # 退超集识别不抛
-    assert ctx.run_context.stopped                # 7 格无档 → 停机
-    flag = tmp_path / '.debug/temp/currency_war/back_layout_stop_hook.flag'
-    assert flag.exists()
-    txt = flag.read_text(encoding='utf-8')
-    assert '公式 7' in txt and 'CV 7' in txt       # flag 带双通道两值(件③文案)
+    assert isinstance(out, list) and out                    # 读板照常不抛
+    assert not ctx.run_context.stopped and not ctx.run_context.stop_calls, \
+        'W209i:n_raw=7 不得停机(实时制游戏停 bot 不停游戏,run 27 实证)'
+    journal = tmp_path / 'obs.jsonl'
+    assert journal.exists(), '降级后必须留证'
+    rec = _json.loads(journal.read_text(encoding='utf-8').strip().splitlines()[-1])
+    assert rec['field'] == 'back_7slots_collect'
+    assert rec['formula'] == 7 and rec['cv_readings'] == [7, 7, 7]
+    assert '不停机' in rec['verdict']                        # 如实声明画面可能推进
+    assert not (tmp_path / '.debug/temp/currency_war/back_layout_stop_hook.flag').exists(), \
+        '停机 flag 机制已废弃不得回流'
 
 
-def test_layout_stop_hook_silent_on_archived(
+def test_layout_hook_silent_on_archived(
         test_context, templates, monkeypatch, tmp_path, frame):
-    """6/8 已建档(含超集运行态与对账一致态)→ 永不停机(钩子不误触)。"""
+    """6/8 已建档(含超集运行态与对账一致态)→ 无留证无副作用。"""
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
     import sr_od.application.currency_war.cw_observe as cobs
     ctx = test_context
-
-    class _FakeRunCtx:
-        stopped = False
-
-        def stop_running(self, reason: str = ''):
-            self.stopped = True
-
-    monkeypatch.setattr(ctx, 'run_context', _FakeRunCtx())
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / '.debug/temp/currency_war').mkdir(parents=True, exist_ok=True)
-    # 6 格(run 26 形态)/ 8 格(狸猫局形态)都不停机
+    # 6 格(run 26 形态)/ 8 格(狸猫局形态)都不留证
     for lv, cap, cv in ((8, 8, 6), (7, 9, 8)):
         monkeypatch.setattr(cio, '_session_level', lambda c, _lv=lv: _lv)
         monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, _cap=cap: _cap)
         monkeypatch.setattr(cbl, 'cv_back_slots', lambda s, _cv=cv: _cv)
         cio.read_deployed_chars(ctx, frame, templates, level=lv)
-        assert not ctx.run_context.stopped, f'lv={lv} cap={cap} 不应停机'
-    flag = tmp_path / '.debug/temp/currency_war/back_layout_stop_hook.flag'
-    assert not flag.exists()
+    assert not (tmp_path / 'obs.jsonl').exists()
+
+
+def test_layout_hook_no_stop_machinery_in_src():
+    """W209i 源码级锁:read_deployed_chars 不得再调 stop_running/写停机 flag
+    (停机钩子整段废弃,回流即红)。"""
+    import inspect
+    from sr_od.application.currency_war import cw_identity_obs
+    src = inspect.getsource(cw_identity_obs.read_deployed_chars)
+    assert 'stop_running' not in src and 'back_layout_stop_hook.flag' not in src, \
+        '停机机制已废弃(ADR-0385 决策 12);采集走留证+人工经 MCP'
 
 
 def test_pending_7slots_machinery_removed():
