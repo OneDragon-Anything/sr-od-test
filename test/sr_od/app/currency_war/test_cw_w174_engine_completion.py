@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """W174/ADR-0371 引擎补完守卫单帧锁(own-gap 修法)。
 
 锁验收(「拥有≥门槛 ∧ 上场<门槛时的上场选择行为」;锁契约不锁分布):
@@ -13,6 +12,11 @@
 """
 from __future__ import annotations
 
+import re
+
+import pytest
+
+from sr_od.application.currency_war import cw_evolution as cw_evolution_mod
 from sr_od.application.currency_war.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_evolution import (
     EvolutionState,
@@ -180,3 +184,41 @@ def test_completion_bench_overflow_sells_unprotected():
             if src == 'bench'}
     assert sold <= set(filler)
     assert _board_factions_of(out.deployed).get('列车同行', 0) >= 2
+
+
+class _LogRecorder:
+    """记录 log.info 调用(观测行格式锁用;不触发真实日志链路)。"""
+
+    def __init__(self) -> None:
+        self.lines: list[str] = []
+
+    def info(self, msg: str, *args: object) -> None:
+        self.lines.append(msg % args if args else msg)
+
+
+def test_engine_complete_log_undeploy_roster(monkeypatch: pytest.MonkeyPatch):
+    """⑧W228 观测行格式锁:engine-complete 行 undeploy 追加下场名单
+    (角色名 list;空则 [])——W220 判读问题⑥,补完保护锚点(W192-3)
+    需名单级可核。零行为改动:仅锁日志行格式。"""
+    rec = _LogRecorder()
+    monkeypatch.setattr(cw_evolution_mod, 'log', rec)
+    # 有下场件帧(cap 满):undeployed=[角色名,...],名单与 tx 索引一致
+    st = _t42_frame()
+    txs = _completion_txs(evolution_step(st, _sess(('列车同行', '仙舟')),
+                                         EvolutionState()))
+    assert txs
+    line = next(x for x in rec.lines if 'engine-complete' in x)
+    expect_names = [st.deployed[i].char_id
+                    for i in (txs[0].undeploy or [])]
+    assert f'undeployed={expect_names}' in line, line
+    assert re.search(r'undeploy=\d+', line), line  # 计数仍在
+    # 无下场件帧(cap 未满,纯 deploy 补完):名单为空 → undeployed=[]
+    # (列车 owned 4 ≥ tier ∧ 上场 0 缺口;deployed 仅 2 散件有 room,
+    # 补完不需换下任何人)
+    st2 = _state(bench=[_char(n) for n in _B_TRAIN],
+                 deployed=_B_FILLER[:2])
+    txs2 = _completion_txs(evolution_step(st2, _sess(('列车同行', '仙舟')),
+                                          EvolutionState()))
+    assert txs2 and not (txs2[0].undeploy or []), txs2
+    line2 = [x for x in rec.lines if 'engine-complete' in x][-1]
+    assert 'undeployed=[]' in line2, line2
