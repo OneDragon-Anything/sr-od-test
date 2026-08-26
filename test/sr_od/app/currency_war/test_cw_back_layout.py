@@ -425,7 +425,15 @@ def test_layout_stop_hook_fires_on_unarchived_7(
             self.stopped = True
             self.stop_source = reason
 
+    class _FakeShotCtx:
+        """W209h 防抖重读帧源(钩子测试经 test_context 传 ctx 给 resolve;
+        screenshot 回放 frame——cv stub 已全 7,重读帧内容不参与判定)。"""
+        def screenshot(self):
+            return frame
+
     monkeypatch.setattr(ctx, 'run_context', _FakeRunCtx())
+    monkeypatch.setattr(ctx, 'screenshot',
+                        _FakeShotCtx().screenshot, raising=False)
     monkeypatch.setattr(core, 'is_prep_like_frame', lambda c, s: True)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
@@ -486,3 +494,106 @@ def test_pending_7slots_machinery_removed():
     assert not hasattr(cbl, 'note_7slots_pending')
     assert not hasattr(cbl, '_pending_note_ts')
     assert not hasattr(cbl, '_PENDING_7SLOT_LEVELS')
+
+
+# ===== 6c. CV 新格数防抖重读(W209h,ADR-0385 决策 11;run 27 停机事故) =====
+# 事故:特效/粒子瞬态把 1458 位单帧 std 顶到 6.5(阈值 6.0 擦线,真槽 ≥10.5/
+# 背景 ≤2.9 之间无人带)→ CV 假阳 7 → 停机。修:新格数读数(≠公式 且 ∉{6,8})
+# 单帧不行动——重读 2 次三次一致才采 CV;任一不一致 = 瞬态自愈退公式+留证。
+
+class _FakeCtx:
+    """重读帧源:queue 依次回放,耗尽 = 最后一帧(生产=ctx.screenshot 现截)。"""
+
+    def __init__(self, frames):
+        self._frames = list(frames)
+        self.shots = 0
+
+    def screenshot(self):
+        self.shots += 1
+        return self._frames[min(self.shots - 1, len(self._frames) - 1)]
+
+
+def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
+    """run 27 事故形态:首读假阳 7,重读回到真值 6(序列 [7,6,6])→
+    退公式 6,**不停机**(n_raw=6 已建档);瞬态留证 obs_conflict。"""
+    import json as _json
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.cw_observe as cobs
+    # 6 格真帧(shop_closed)×2 作重读帧
+    frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
+    fctx = _FakeCtx([frame6, frame6])
+    journal = tmp_path / 'obs.jsonl'
+    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
+    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)  # 公式 6
+    # 序列 stub:首帧(入参 frame)假阳 7,重读帧(真 6 格 fixture)= 6
+    real_cv = cbl.cv_back_slots
+
+    def _seq_cv(scr):
+        if scr is frame:
+            return 7
+        return real_cv(scr)   # 重读帧=真 6 格帧
+    monkeypatch.setattr(cbl, 'cv_back_slots', _seq_cv)
+    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=8)
+    assert r['n'] == 6 and r['n_raw'] == 6      # 瞬态自愈 → 公式值
+    assert r['cv_readings'] == [7, 6, 6]        # 序列留档
+    assert journal.exists() and 'back_layout_cv_transient' in \
+        journal.read_text(encoding='utf-8')     # 瞬态留证
+    assert fctx.shots == 2                      # 重读恰好 2 次
+
+
+def test_cv_stable_new_grid_confirmed(tmp_path, monkeypatch, frame):
+    """稳定新格数(真 7 格局):三读一致 [7,7,7] → 采 CV 值(n_raw=7 触发
+    停机钩子采集流程,防抖不拦真信号)。"""
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.cw_observe as cobs
+    fctx = _FakeCtx([frame, frame])   # 重读帧同 frame(stub 全 7)
+    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
+    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)  # 公式 6
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 7)         # 三读全 7
+    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=8)
+    assert r['n_raw'] == 7 and r['n'] == 8      # 采 CV 7 → 运行 8 超集
+    assert r['cv_readings'] == [7, 7, 7]
+    assert fctx.shots == 2
+
+
+def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
+    """重读帧间不一致(如 [7,7,6])= 瞬态 → 退公式 + 序列留证(obs_conflict
+    带 cv_readings 上下文),不采 CV。"""
+    import json as _json
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.cw_observe as cobs
+    frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
+    fctx = _FakeCtx([frame, frame6])   # 重读 1=frame(7),重读 2=frame6(6)
+    journal = tmp_path / 'obs.jsonl'
+    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
+    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    real_cv = cbl.cv_back_slots
+
+    def _seq_cv(scr):
+        if scr is frame6:
+            return real_cv(scr)       # 6
+        return 7
+    monkeypatch.setattr(cbl, 'cv_back_slots', _seq_cv)
+    r = cbl.resolve_back_slots(fctx, frame, level=8, cap=8)
+    assert r['n'] == 6 and r['n_raw'] == 6       # 不一致 → 公式值
+    assert r['cv_readings'] == [7, 7, 6]
+    assert journal.exists() and 'back_layout_cv_transient' in \
+        journal.read_text(encoding='utf-8')
