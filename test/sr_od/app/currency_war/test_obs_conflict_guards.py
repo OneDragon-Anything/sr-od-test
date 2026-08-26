@@ -117,7 +117,8 @@ def test_reconcile_none_side_kept():
     new_dep = [BenchChar(slot=1, char_id='姬子·启行')]
     assert reconcile_tracking(sess, None, new_dep, None, source='t') is True
     assert sess.tracked_bench_chars == []
-    assert sess.tracked_deployed == new_dep
+    # ADR-0392:tracked_deployed 槽位表——按占用序对拍(紧缩视图)
+    assert [d for d in sess.tracked_deployed if d is not None] == new_dep
 
 
 def test_reconcile_star_rollback_no_crash():

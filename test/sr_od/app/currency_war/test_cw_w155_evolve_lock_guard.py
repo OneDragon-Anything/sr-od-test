@@ -207,7 +207,8 @@ def test_bench_newline_dedup_against_deployed_keep():
         f'留场新线同名 bench 副本不得进部署名单:{dep_names}'
     out = simulate(st, tx)
     assert out.action_log[-1]['result'] == 'applied', out.action_log[-1]
-    assert [d.char_id for d in out.deployed].count('万敌') == 1
+    assert [d.char_id for d in out.deployed
+            if d is not None].count('万敌') == 1   # ADR-0392 滤 None
     bench_names = [b.char_id for b in out.bench if b is not None]
     assert bench_names.count('万敌') == 1, \
         '副本留 bench 当 3合1 素材(不卖)'

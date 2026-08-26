@@ -79,7 +79,8 @@ def test_dedup_same_name_copies_single_deploy():
     out = simulate(st, txs[0])
     assert out.action_log[-1]['result'] == 'applied', out.action_log[-1]
     # 同名只上一份:场上椒丘恰 1(且为高星那份)
-    jqs = [d for d in out.deployed if d.char_id == '椒丘']
+    jqs = [d for d in out.deployed
+           if d is not None and d.char_id == '椒丘']   # ADR-0392 滤 None
     assert len(jqs) == 1 and (jqs[0].star or 1) == 2
     # DOT on-board 达门槛(≥2)
     assert _board_factions_of(out.deployed).get('持续伤害', 0) >= 2
@@ -105,6 +106,7 @@ def test_distinct_flag_off_restores_full_count():
     out = simulate(st, txs[0])
     assert out.action_log[-1]['result'] == 'applied', out.action_log[-1]
     # 部分补完:只上得了 1 份椒丘(distinct 供给只有 1)
-    jqs = [d for d in out.deployed if d.char_id == '椒丘']
+    jqs = [d for d in out.deployed
+           if d is not None and d.char_id == '椒丘']   # ADR-0392 滤 None
     assert len(jqs) == 1
     assert _board_factions_of(out.deployed).get('持续伤害', 0) == 1

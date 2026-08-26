@@ -177,7 +177,8 @@ def test_replay_entry_shared_loop_and_inheritance() -> None:
         or p2[0]['hp'] <= 52    # 死局钳制兜底
     st0 = e.build_state()
     assert st0.hp == 52 and st0.gold == 40 and st0.plane == 2
-    assert st0.deployed[0].star == 2 and st0.deployed[0].equips == ['星徽']
+    _first = next(d for d in st0.deployed if d is not None)   # ADR-0392 槽位表
+    assert _first.star == 2 and _first.equips == ['星徽']
     assert st0.bench[0] is not None and st0.bench[1] is None  # 9 槽 pad
 
 

@@ -181,7 +181,7 @@ def test_pop_slot_affordable_below_form_floor_allowed() -> None:
     form_floor 保险丝拦;修复后放行(人口位价值=当轮战力兑现,
     保险丝=可负担性)。对照:金不足(15<20)仍拒(可负担性入口门)。"""
     st, s = _state(5, ['希儿'], 23, 5, deployed=5)
-    assert len(st.deployed) >= st.max_units(), '前置:cap 满'
+    assert st.deployed_count() >= st.max_units(), '前置:cap 满(ADR-0392 占用数)'
     targets = _target_names(st, s)
     assert '希儿' in targets, '前置:bench 目标件'
     assert levelup_ev_authorized(st, s, _REG, 23, 20, targets,
@@ -191,7 +191,7 @@ def test_pop_slot_affordable_below_form_floor_allowed() -> None:
                                  val=1.0, int_emb=0.0) is False
     # 无人口位对照:deployed<cap 同帧 → arm① 不辖
     st2, s2 = _state(5, ['希儿'], 23, 5, deployed=4)
-    assert len(st2.deployed) < st2.max_units()
+    assert st2.deployed_count() < st2.max_units()   # ADR-0392 占用数
     assert levelup_ev_authorized(st2, s2, _REG, 23, 20,
                                  _target_names(st2, s2),
                                  val=1.0, int_emb=0.0) is False
@@ -294,7 +294,7 @@ def test_comp_tx_shop_fill_index_drift_fixed() -> None:
     assert log['result'] == 'applied', log
     assert log['fill_cost'] == 4, log
     assert st.gold - out.gold == 4, (st.gold, out.gold)
-    dep_names = {d.char_id for d in out.deployed}
-    assert dep_names == {'砂金', '佩拉'}, dep_names
+    dep_names = {d.char_id for d in out.deployed if d is not None}
+    assert dep_names == {'砂金', '佩拉'}, dep_names   # ADR-0392 滤 None
     shop_names = [c.name for c in out.shop]
     assert shop_names == ['卡零', '遐蝶'], shop_names

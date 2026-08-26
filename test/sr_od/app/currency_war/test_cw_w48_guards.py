@@ -35,6 +35,8 @@ from sr_od.application.currency_war.cw_state import (
     SwapDeploy,
     _recount_board,
     bench_occupied,
+    deployed_occupied,
+    iter_occupied_deployed,
     board_unique_key,
     mutate_bench_deployed,
     simulate,
@@ -54,11 +56,10 @@ def _dup_fixture() -> GameState:
     names = [n for n, c in CHARACTERS.items()
              if (c.factions or [''])[0] == '贝洛伯格'][:3]
     assert len(names) == 3, '测试假设:贝洛伯格系 ≥3 人(注册表)'
-    st = GameState()
-    st.gold = 30
-    st.level = 8
-    st.deployed = [_char(nm, slot=i) for i, nm in enumerate(names)]
-    st.bench = [_char(names[0], slot=10), _char('青雀', slot=11)]
+    # ADR-0392:构造器入参 → __post_init__ pad 槽位表(与 simulate 出态同形)
+    st = GameState(gold=30, level=8,
+                   deployed=[_char(nm, slot=i) for i, nm in enumerate(names)],
+                   bench=[_char(names[0], slot=10), _char('青雀', slot=11)])
     st.board = _recount_board(st.deployed)
     return st
 
@@ -95,7 +96,7 @@ def test_tx_duplicate_via_undeploy_swap_ok():
                          reason='swap_same_name')
     out = simulate(st, tx)
     assert out.action_log[-1]['result'] == 'applied'
-    names = [c.char_id for c in out.deployed]
+    names = [c.char_id for c in iter_occupied_deployed(out.deployed)]
     assert names.count(dup_name) == 1
 
 
@@ -110,8 +111,8 @@ def test_tx_fill_bench_duplicate_rejected():
     assert out.action_log[-1]['result'] == 'rejected'
     assert 'duplicate_on_board' in out.action_log[-1]['reason']
     # 原子:fill/deploy 均未应用
-    assert len(out.deployed) == 3 and dup_name in \
-        {c.char_id for c in out.deployed}
+    assert deployed_occupied(out.deployed) == 3 and dup_name in \
+        {c.char_id for c in iter_occupied_deployed(out.deployed)}
 
 
 def test_tx_fill_shop_duplicate_rejected():
@@ -140,7 +141,8 @@ def test_swap_deploy_duplicate_rejected():
     # 【正例】换掉同名本尊(1 换 1)合法
     out2 = simulate(st, SwapDeploy(0, 0, reason='swap'))
     assert out2.action_log[-1]['result'] == 'applied'
-    assert [c.char_id for c in out2.deployed].count(dup_name) == 1
+    assert [c.char_id for c in iter_occupied_deployed(out2.deployed)]\
+        .count(dup_name) == 1
 
 
 def test_deploy_move_duplicate_rejected_and_logged():
@@ -152,12 +154,14 @@ def test_deploy_move_duplicate_rejected_and_logged():
     log = out.action_log[-1]
     assert log == {'action': 'DeployMove', 'result': 'rejected',
                    'reason': f'duplicate_on_board:{dup_name}'}
-    assert len(out.deployed) == 3 and bench_occupied(out.bench) == 2   # 零残留
+    assert deployed_occupied(out.deployed) == 3 \
+        and bench_occupied(out.bench) == 2   # 零残留(ADR-0392 占用数)
     # 【正例】异名上场照常
     out2 = simulate(st, DeployMove(bench_idx=1, to_row='back',
                                    faction=st.bench[1].faction))
-    assert len(out2.deployed) == 4
-    assert out2.deployed[-1].char_id == '青雀'
+    assert deployed_occupied(out2.deployed) == 4   # ADR-0392 占用数
+    assert any(c.char_id == '青雀'
+               for c in iter_occupied_deployed(out2.deployed))
 
 
 def test_board_unique_key_trailblazer_and_unknown():
@@ -179,15 +183,17 @@ def test_mutate_bench_deployed_parity_guards():
     # DeployMove 同名 → no-op
     mutate_bench_deployed(bench, deployed,
                           DeployMove(0, 'back', '量子同频'))
-    assert bench_occupied(bench) == 1 and len(deployed) == 2
+    assert bench_occupied(bench) == 1 \
+        and deployed_occupied(deployed) == 2   # ADR-0392 占用数
     # SwapDeploy 上场者与场上其余同名 → no-op
     mutate_bench_deployed(bench, deployed, SwapDeploy(1, 0))
     assert deployed[1].char_id == '符玄' and bench[0].char_id == '青雀'
     # SellDeployed 代际不符 → no-op(相符 → 正常执行)
     mutate_bench_deployed(bench, deployed, SellDeployed(1, expect='别人'))
-    assert len(deployed) == 2
+    assert deployed_occupied(deployed) == 2
     mutate_bench_deployed(bench, deployed, SellDeployed(1, expect='符玄'))
-    assert len(deployed) == 1 and deployed[0].char_id == '青雀'
+    assert deployed_occupied(deployed) == 1 \
+        and deployed[0].char_id == '青雀'   # ADR-0392:置 None 计占用
 
 
 # ---------- 裁决 2:代际校验(提案生成→应用之间 idx 已变) ----------

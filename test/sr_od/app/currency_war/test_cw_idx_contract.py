@@ -4,14 +4,16 @@
 
 三组锁,对应「动作索引五查」的人工面塌缩:
 
-A. **deployed 域最小反例**(五查②:两笔引用同容器、前者先删)——锁「坑
-   真实存在且被 expect 拦住」的**现状拒绝语义**(不是锁左移正确;左移根
-   治=deployed 槽位表化 ADR 议程,届时本锁改锁恒稳)。
+A. **deployed 域最小反例**(五查②:两笔引用同容器、前者先删)——ADR-0392
+   deployed 槽位表化后锁**恒稳语义**:前者卖出置 None 不移位 → 后者索引
+   恒指向生成期指向的原槽原人(旧「拒绝语义」锁随紧缩表示一并作废)。
 B. **expect 写入端静态锁**(五查④:零写入=死防线)——扫族 A 全 Action 类
    的 expect 字段 × grep src/ 发射点赋值;零写入 → fail,除非字段定义处
    带 `expect-whitelist:` 豁免标记(草案级字段等有意不写入的场景)。
 C. **sim↔执行对拍**(五查⑤:双实现同式地错)——同一动作序列过 simulate
    与生产守卫(sell_guard_ok),断言 accept/reject 一致。
+D. **F2 型跨源共存锁**(ADR-0392 新增):同轮多源混合动作组,断言每个
+   deployed_idx 执行后命中的恰是生成期指向的槽——槽位表不变量的端到端锁。
 """
 from __future__ import annotations
 
@@ -23,13 +25,16 @@ import pytest
 
 from sr_od.application.currency_war.cw_state import (
     BENCH_CAPACITY,
+    DEPLOYED_CAPACITY,
     BenchChar,
+    CompTransaction,
     DeployMove,
     FillSpec,
     GameState,
     SellBench,
     SellDeployed,
     SwapDeploy,
+    deployed_occupied,
     simulate,
 )
 
@@ -42,42 +47,32 @@ def _bc(name: str, slot: int = 0, star: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
 
 
-# ===== A. deployed 域最小反例(现状拒绝语义)=====
+# ===== A. deployed 域最小反例(ADR-0392 恒稳语义)=====
 
-def test_deployed_double_sell_later_index_left_shift_intercepted() -> None:
-    """五查② deployed 域反例:同批两笔 SellDeployed,前者先删 → 后者索引
-    左移指向别人。锁现状防御:后笔带 expect 时被按名拦截(stale_proposal),
-    **不误卖索引漂移后指到的人**。
+def test_deployed_double_sell_same_batch_index_stable() -> None:
+    """五查② deployed 域反例(ADR-0392 槽位表化后):同批两笔 SellDeployed,
+    前者卖出**置 None 不移位** → 后者索引恒稳,命中的恰是生成期指向的原人。
 
     场景:deployed=[飞霄, 三月七];两笔都按生成期快照发射。第一笔卖飞霄
-    (idx0)成功 pop 后,第二笔 idx1 已左移指向「空」(越界)→ 拒。
-    第二笔换成 idx0(漂移后恰在界内、指向三月七)但 expect=飞霄 → 名不符
-    拒。两形态都不得卖错人。"""
-    for second_idx, second_expect, must_survive in (
-        (1, '三月七', '三月七'),   # 左移越界:第二笔 no-op
-        (0, '飞霄', '三月七'),     # 左移界内指向别人:expect 按名拦截
-    ):
-        st = GameState(deployed=[_bc('飞霄', 1), _bc('三月七', 2)])
-        s1 = simulate(st, SellDeployed(deployed_idx=0, expect='飞霄'))
-        sold = [a for a in s1.action_log
-                if a.get('action') == 'SellDeployed']
-        assert sold and sold[0].get('result') == 'applied'
-        s2 = simulate(s1, SellDeployed(
-            deployed_idx=second_idx, expect=second_expect))
-        # must_survive 的人不得被误卖(仍 deployed 且存活)
-        names = [d.char_id for d in s2.deployed]
-        assert must_survive in names, \
-            f'第二笔 {second_idx}/{second_expect} 误卖: {names}'
-        # 第二笔必须被拒绝或 no-op(不得 applied 卖错人)
-        applied2 = [a for a in s2.action_log
-                    if a.get('action') == 'SellDeployed'
-                    and a.get('result') == 'applied']
-        assert len(applied2) <= 1, f'第二笔被应用(卖错人): {applied2}'
+    (idx0)成功后,第二笔 idx1 **仍指向三月七**(不左移、不越界)——
+    任意发射序零漂移。旧紧缩语义下本场景第二笔会漂移/越界(由 expect 拦),
+    槽位表示下坑在结构上不存在。
+    """
+    st = GameState(deployed=[_bc('飞霄', 1), _bc('三月七', 2)])
+    s1 = simulate(st, SellDeployed(deployed_idx=0, expect='飞霄'))
+    sold = [a for a in s1.action_log if a.get('action') == 'SellDeployed']
+    assert sold and sold[0].get('result') == 'applied'
+    s2 = simulate(s1, SellDeployed(deployed_idx=1, expect='三月七'))
+    # 恒稳语义:第二笔索引不变、照常命中三月七(applied,不是拒绝)
+    sold2 = [a for a in s2.action_log if a.get('action') == 'SellDeployed']
+    assert sold2[-1].get('result') == 'applied'
+    assert sold2[-1].get('char') == '三月七'
+    assert deployed_occupied(s2.deployed) == 0   # 两槽皆空(None 留槽)
 
 
-def test_deployed_swap_after_sell_rejected_by_expect() -> None:
-    """同反例的 SwapDeploy 面:第一笔卖出后 deployed_idx 漂移,SwapDeploy
-    的 expect_deployed 按名拦截(跨代际提案,坑同源)。"""
+def test_deployed_swap_after_sell_index_stable() -> None:
+    """同反例的 SwapDeploy 面:第一笔卖出后 deployed_idx 恒稳,SwapDeploy
+    命中生成期指向的槽(旧紧缩语义下 idx 漂移由 expect 拦,现恒稳直通)。"""
     bench = [None] * BENCH_CAPACITY
     bench[0] = _bc('黑塔', 1)
     st = GameState(deployed=[_bc('飞霄', 1), _bc('三月七', 2)], bench=bench)
@@ -85,9 +80,12 @@ def test_deployed_swap_after_sell_rejected_by_expect() -> None:
     s2 = simulate(s1, SwapDeploy(
         deployed_idx=1, bench_idx=0,
         expect_deployed='三月七', expect_bench='黑塔'))
-    # idx1 已左移越界(len=1)→ 拒;三月七不上场不换走
-    assert [d.char_id for d in s2.deployed] == ['三月七']
-    assert s2.bench[0] is not None and s2.bench[0].char_id == '黑塔'
+    # idx1 恒指向三月七 → 换位照常 applied(不因前笔卖出而漂移)
+    applied = [a for a in s2.action_log if a.get('action') == 'SwapDeploy'
+               and a.get('result') == 'applied']
+    assert applied, '槽位表恒稳:换位应照常执行'
+    assert s2.deployed[1].char_id == '黑塔'      # 上场者落原槽
+    assert s2.bench[0].char_id == '三月七'
 
 
 def test_bench_domain_no_left_shift_by_construction() -> None:
@@ -206,4 +204,51 @@ def test_deploy_move_index_semantics_sim_only() -> None:
     out = simulate(st, DeployMove(bench_idx=3, to_row='front', faction='巡海游侠'))
     assert out.bench[3] is None, '上场后槽位置 None(不下移填充)'
     assert len(out.bench) == BENCH_CAPACITY, '定长不变'
-    assert [d.char_id for d in out.deployed] == ['飞霄']
+    assert [d.char_id for d in out.deployed if d is not None] == ['飞霄']
+
+
+# ===== D. F2 型跨源共存锁(ADR-0392 新增)=====
+
+def test_f2_cross_source_mixed_batch_slot_stable() -> None:
+    """F2 跨源共存:同轮多源混合动作组(演进 CompTransaction + 换位通道
+    SwapDeploy + 直卖通道 SellDeployed)对同一 deployed 槽位表按序消费——
+    断言每个 deployed_idx 执行后命中的恰是生成期指向的槽。
+
+    构造(全部 idx 按同一生成期快照发射,模拟 decide_prep 多源拼装):
+    - deployed 槽位表:0=桑博 / 1=希儿 / 5=卡芙卡(front 0-3 / back 4-9)
+    - 源 A(演进):CompTransaction undeploy 桑凡(槽 0)卖掉
+    - 源 B(换位):SwapDeploy(槽 1)希儿 ↔ bench
+    - 源 C(直卖):SellDeployed(槽 5)卡芙卡
+    三笔任意序执行,每笔命中的都是生成期指向的原槽原人。"""
+    deployed = [None] * DEPLOYED_CAPACITY
+    deployed[0] = BenchChar(slot=1, char_id='桑博', faction='持续伤害',
+                            position_pref='front')
+    deployed[1] = BenchChar(slot=2, char_id='希儿', faction='量子同频',
+                            position_pref='front')
+    deployed[5] = BenchChar(slot=2, char_id='卡芙卡', faction='持续伤害',
+                            position_pref='back')
+    bench = [None] * BENCH_CAPACITY
+    bench[0] = _bc('黑塔', 1)
+    st = GameState(deployed=deployed, bench=bench, level=8)
+
+    # 源 A/B/C 的动作(idx 全部按生成期快照,跨源拼接)
+    tx = CompTransaction(deploy=[], undeploy=[], sell=[(0, 'deployed')],
+                         reason='f2:evolve')
+    swap = SwapDeploy(1, 0, reason='f2:swap',
+                      expect_deployed='希儿', expect_bench='黑塔')
+    sell_c = SellDeployed(5, reason='f2:recycle', expect='卡芙卡')
+
+    cur = st
+    for act in (tx, swap, sell_c):   # 生成序=执行序(拼装批)
+        cur = simulate(cur, act)
+        log = cur.action_log[-1]
+        assert log.get('result') == 'applied', \
+            f'槽位表恒稳:{type(act).__name__} 应命中生成期指向的槽: {log}'
+
+    # 终态断言:每笔打的是生成期指向的原槽原人
+    assert cur.deployed[0] is None        # 源 A 卖的是槽 0 桑博
+    assert cur.deployed[1].char_id == '黑塔'   # 源 B 换的是槽 1(希儿下黑塔上)
+    assert cur.deployed[5] is None        # 源 C 卖的是槽 5 卡芙卡
+    assert deployed_occupied(cur.deployed) == 1
+    # bench 侧:黑塔上场腾槽 0,希儿下场落槽(装备/对象随人走)
+    assert cur.bench[0].char_id == '希儿'

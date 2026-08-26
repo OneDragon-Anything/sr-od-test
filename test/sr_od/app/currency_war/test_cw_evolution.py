@@ -33,6 +33,8 @@ from sr_od.application.currency_war.cw_state import (
     SellDeployed,
     SwapDeploy,
     _recount_board,
+    deployed_occupied,
+    iter_occupied_deployed,
     simulate,
 )
 
@@ -75,7 +77,7 @@ def test_evolution_dot2_to_xianzhou3_full_replacement():
     assert '仙舟3' in tx.reason and '持续伤害' in tx.reason
     out = simulate(st, tx)
     # 旧档 0 人在场:铁三角全员上阵
-    names = {d.char_id for d in out.deployed}
+    names = {d.char_id for d in iter_occupied_deployed(out.deployed)}
     assert set(_CORE_TRIO) <= names
     assert '桑博' not in names and '卡芙卡' not in names
     # 无半档:board 与 deployed 聚合一致;旧档主力转 bench(回滚窗,非卖)
@@ -87,7 +89,8 @@ def test_evolution_dot2_to_xianzhou3_full_replacement():
     # 账本 applied + 原状态不动(simulate 纯函数)
     assert out.action_log[-1]['result'] == 'applied'
     from sr_od.application.currency_war.cw_state import bench_occupied
-    assert len(st.deployed) == 3 and bench_occupied(st.bench) == 3
+    assert deployed_occupied(st.deployed) == 3 \
+        and bench_occupied(st.bench) == 3   # ADR-0392 占用数
     # memory 记录回滚窗锚
     assert set(mem.last_deployed) == set(_CORE_TRIO)
     assert {'桑博', '卡芙卡', '艾丝妲'} <= set(mem.last_retained)
@@ -259,9 +262,10 @@ def test_execute_replacement_dedup_same_name_copies():
     assert out.action_log[-1]['result'] == 'applied', \
         out.action_log[-1]
     # 最高星副本上场;其余副本留 bench 当合成素材(不卖)
-    dep = [d.char_id for d in out.deployed]
+    dep = [d.char_id for d in iter_occupied_deployed(out.deployed)]
     assert dep.count('万敌') == 1
-    up_wandi = next(d for d in out.deployed if d.char_id == '万敌')
+    up_wandi = next(d for d in iter_occupied_deployed(out.deployed)
+                    if d.char_id == '万敌')
     assert up_wandi.star == 2, '同名取最高星'
     bench_names = [b.char_id for b in out.bench if b is not None]
     assert bench_names.count('万敌') == 1, \
@@ -366,7 +370,8 @@ def _engines(st_or_dep) -> int:
     )
     dep = st_or_dep.deployed if isinstance(st_or_dep, GameState) else st_or_dep
     return _engines_count(_board_factions_of(dep),
-                          {d.char_id for d in dep if d.char_id})
+                          {d.char_id for d in dep
+                           if d is not None and d.char_id})   # ADR-0392 滤 None
 
 
 def _s1_frame() -> GameState:
@@ -400,7 +405,7 @@ def test_engine_guard_keeps_engine_contributors_deployed():
     out = simulate(st, tx)
     assert out.action_log[-1]['result'] == 'applied', out.action_log[-1]
     # 引擎贡献件不被划进 old_line 下场:四件全部留场
-    names = {d.char_id for d in out.deployed}
+    names = {d.char_id for d in iter_occupied_deployed(out.deployed)}
     assert {'三月七', '瓦尔特', '桑博', '卡芙卡'} <= names
     # 事务后引擎数不跌破 2(修的就是 S1:e2 曾成后终局 <2)
     assert _engines(out) >= 2
@@ -413,7 +418,7 @@ def test_engine_guard_off_reproduces_s1_channel():
     tx = execute_replacement(_xz_verdict(), st, engine_guard=False)[0]
     out = simulate(st, tx)
     assert out.action_log[-1]['result'] == 'applied'
-    names = {d.char_id for d in out.deployed}
+    names = {d.char_id for d in iter_occupied_deployed(out.deployed)}
     assert not ({'三月七', '桑博'} & names)   # 旧档整批下场
     assert _engines(out) < 2   # S1:engines 曾 ≥2 终局 <2
 
@@ -443,7 +448,7 @@ def test_engine_guard_targets_lost_system_contributors_only():
     tx = execute_replacement(_xz_verdict(), st, engine_guard=True)[0]
     out = simulate(st, tx)
     assert out.action_log[-1]['result'] == 'applied'
-    names = {d.char_id for d in out.deployed}
+    names = {d.char_id for d in iter_occupied_deployed(out.deployed)}
     # 引擎贡献件留场;非贡献散件照旧下场进 bench
     assert {'三月七', '瓦尔特', '桑博', '卡芙卡'} <= names
     assert '娜塔莎' not in names

@@ -424,11 +424,16 @@ def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
     """D-107:rebuild_deployed_from_board 从 board 重建 deployed,计数=sum(board),back 先填至 back_max 再 front。"""
     from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
     dep = rebuild_deployed_from_board({"能量": 2, "护盾": 6}, back_max=6)   # 总 8
-    assert len(dep) == 8
-    assert sum(1 for d in dep if d.position_pref == "back") == 6    # back_max=6 先填满
-    assert sum(1 for d in dep if d.position_pref == "front") == 2   # 溢出 2 去 front
-    assert sum(1 for d in dep if d.faction == "能量") == 2          # faction 保留
-    assert sum(1 for d in dep if d.faction == "护盾") == 6
+    # ADR-0392:rebuild 出槽位表(定长 10 含 None)——计数/口径断言走占用序
+    assert sum(1 for d in dep if d is not None) == 8
+    assert sum(1 for d in dep if d is not None
+               and d.position_pref == "back") == 6    # back_max=6 先填满
+    assert sum(1 for d in dep if d is not None
+               and d.position_pref == "front") == 2   # 溢出 2 去 front
+    assert sum(1 for d in dep if d is not None
+               and d.faction == "能量") == 2          # faction 保留
+    assert sum(1 for d in dep if d is not None
+               and d.faction == "护盾") == 6
 
 
 def test_plan_t107_saves_interest_when_board_full_low_gold() -> None:

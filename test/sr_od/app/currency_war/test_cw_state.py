@@ -78,6 +78,7 @@ def test_mutate_bench_deployed_buy_merge_sell_deploy() -> None:
         SellBench,
         ShopCard,
         bench_occupied,
+        deployed_occupied,
         iter_occupied,
         mutate_bench_deployed,
     )
@@ -102,24 +103,24 @@ def test_mutate_bench_deployed_buy_merge_sell_deploy() -> None:
     # deploy bench[1](阿雅)→ 槽位置 None + deployed append + position_pref 记实际站位
     mutate_bench_deployed(bench, deployed, DeployMove(bench_idx=1, to_row="front", faction="击破"))
     assert bench_occupied(bench) == 1 and bench[0].char_id == "姬子"
-    assert len(deployed) == 1 and deployed[0].char_id == "阿雅"
-    assert deployed[0].position_pref == "front"
+    assert deployed_occupied(deployed) == 1 and deployed[0].char_id == "阿雅"
+    assert deployed[0].position_pref == "front"   # ADR-0392 占用数(表定长 10)
 
     # sell bench[0](姬子)→ 槽清空;deployed 不受 sell 影响
     mutate_bench_deployed(bench, deployed, SellBench(bench_idx=0))
     assert bench_occupied(bench) == 0
-    assert len(deployed) == 1
+    assert deployed_occupied(deployed) == 1
 
     # LevelUp / RefreshShop / PickEvent 不影响 bench/deployed → no-op
-    before = (bench_occupied(bench), len(deployed))
+    before = (bench_occupied(bench), deployed_occupied(deployed))
     mutate_bench_deployed(bench, deployed, LevelUp(cost=4))
-    assert (bench_occupied(bench), len(deployed)) == before
+    assert (bench_occupied(bench), deployed_occupied(deployed)) == before
 
     # 越界 idx 安全 no-op(deploy/sell 不崩);空槽 sell 同 no-op
     mutate_bench_deployed(bench, deployed, DeployMove(bench_idx=99, to_row="back", faction="x"))
     mutate_bench_deployed(bench, deployed, SellBench(bench_idx=99))
     mutate_bench_deployed(bench, deployed, SellBench(bench_idx=0))
-    assert (bench_occupied(bench), len(deployed)) == before
+    assert (bench_occupied(bench), deployed_occupied(deployed)) == before
 
 
 def test_sell_refund_cost_based() -> None:

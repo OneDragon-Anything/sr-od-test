@@ -99,7 +99,7 @@ def test_completion_protects_engine_and_pair_pieces():
     out = simulate(st, txs[0])
     assert out.action_log[-1]['result'] == 'applied'
     # 仙舟引擎件(符玄)不被换下;下的全是非保护散件
-    assert '符玄' in {d.char_id for d in out.deployed}
+    assert '符玄' in {d.char_id for d in out.deployed if d is not None}   # ADR-0392
     downed = {st.deployed[i].char_id for i in (txs[0].undeploy or [])}
     assert downed <= set(_B_FILLER)
 
@@ -160,7 +160,7 @@ def test_completion_seeie_system_single_card():
     assert txs and '希儿系' in txs[0].reason
     out = simulate(st, txs[0])
     assert out.action_log[-1]['result'] == 'applied'
-    assert '希儿' in {d.char_id for d in out.deployed}
+    assert '希儿' in {d.char_id for d in out.deployed if d is not None}   # ADR-0392
 
 
 def test_completion_bench_overflow_sells_unprotected():

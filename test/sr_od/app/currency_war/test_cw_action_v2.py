@@ -26,6 +26,8 @@ from sr_od.application.currency_war.cw_state import (
     ShopCard,
     SwapDeploy,
     _recount_board,
+    deployed_occupied,
+    iter_occupied_deployed,
     mutate_bench_deployed,
     sell_refund,
     simulate,
@@ -56,11 +58,10 @@ def _old_line_deployed(n: int = 3) -> list[BenchChar]:
 
 def _tx_state() -> GameState:
     """DOT2 在场 + 仙舟铁三角 bench 齐 的单帧(验收1 构造)。"""
-    st = GameState()
-    st.gold = 20
-    st.level = 8
-    st.deployed = _old_line_deployed(3)
-    st.bench = _xianzhou_trio() + [_char('青雀', slot=3)]
+    # ADR-0392:构造器入参 → __post_init__ pad 槽位表(与 simulate 出态同形)
+    st = GameState(gold=20, level=8,
+                   deployed=_old_line_deployed(3),
+                   bench=_xianzhou_trio() + [_char('青雀', slot=3)])
     st.board = _recount_board(st.deployed)
     return st
 
@@ -69,10 +70,11 @@ def _tx_state() -> GameState:
 
 def test_comp_transaction_full_swap_no_half_state():
     st = _tx_state()
-    old_names = [c.char_id for c in st.deployed]
+    old_names = [c.char_id for c in iter_occupied_deployed(st.deployed)]
     _income = sum(sell_refund(
         c.star, CHARACTERS[c.char_id].cost)
-        for c in st.deployed) + sell_refund(1, CHARACTERS['青雀'].cost)
+        for c in iter_occupied_deployed(st.deployed)) \
+        + sell_refund(1, CHARACTERS['青雀'].cost)
     tx = CompTransaction(
         deploy=[(0, 'front'), (1, 'back'), (2, 'back')],
         undeploy=[],
@@ -83,10 +85,10 @@ def test_comp_transaction_full_swap_no_half_state():
         reason='evolve:DOT2→仙舟3')
     out = simulate(st, tx)
     # 旧档 0 人在场:deployed 全为铁三角
-    trio = {c.char_id for c in out.deployed}
+    trio = {c.char_id for c in iter_occupied_deployed(out.deployed)}
     from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
     assert trio == set(_CORE_TRIO)
-    assert len(out.deployed) == 3
+    assert deployed_occupied(out.deployed) == 3   # ADR-0392 占用数
     # 新档全员在场:仙舟 3(ADR-0312 W50 全集口径——board 另含铁三角的
     # 流派/副阵营键,精确等值由下行 _recount_board 一致性锁辖)
     assert out.board.get('仙舟') == 3
@@ -100,7 +102,8 @@ def test_comp_transaction_full_swap_no_half_state():
     # 卖出回金入账(旧档 3 人 + 青雀)
     assert out.gold == 20 + _income
     # 原状态不被改(simulate 纯函数)
-    assert len(st.deployed) == 3 and len(st.bench) == 4
+    assert deployed_occupied(st.deployed) == 3 \
+        and bench_occupied(st.bench) == 4
     assert out.action_log[-1] == {'action': 'CompTransaction',
                                   'result': 'applied',
                                   'reason': 'evolve:DOT2→仙舟3',
@@ -144,7 +147,7 @@ def test_comp_transaction_rejected_cap_and_overlap():
     out = simulate(st, tx)
     assert out.action_log[-1]['result'] == 'rejected'
     assert 'deploy_cap_exceeded' in out.action_log[-1]['reason']
-    assert len(out.deployed) == 3   # 未动
+    assert deployed_occupied(out.deployed) == 3   # 未动(ADR-0392 占用数)
     # deploy 与 sell 指向同 bench 槽 → 拒绝
     tx2 = CompTransaction(deploy=[(0, 'front')], undeploy=[],
                           sell=[(0, 'bench')], reason='overlap')
@@ -158,8 +161,8 @@ def test_sell_deployed_lifecycle():
     sold = st.deployed[1]
     sold.equips = ['虚构装备']
     out = simulate(st, SellDeployed(1, reason='evict_replaced'))
-    assert len(out.deployed) == 2
-    assert all(c is not sold for c in out.deployed)
+    assert deployed_occupied(out.deployed) == 2   # ADR-0392 占用数
+    assert all(c is not sold for c in iter_occupied_deployed(out.deployed))
     assert out.board == _recount_board(out.deployed)
     assert out.gold == 20 + sell_refund(
         sold.star, CHARACTERS[sold.char_id].cost)
@@ -197,11 +200,12 @@ def test_mutate_bench_deployed_v2_actions():
     )
     bench = pad_bench(_xianzhou_trio() + [_char('青雀', slot=3)])
     deployed = _old_line_deployed(3)
-    n0 = (bench_occupied(bench), len(deployed))
+    n0 = (bench_occupied(bench), deployed_occupied(deployed))
     mutate_bench_deployed(bench, deployed, SellDeployed(0))
-    assert len(deployed) == n0[1] - 1
+    assert deployed_occupied(deployed) == n0[1] - 1   # ADR-0392 置 None
     mutate_bench_deployed(bench, deployed, SwapDeploy(0, 0))
-    assert bench_occupied(bench) == n0[0] and len(deployed) == n0[1] - 1
+    assert bench_occupied(bench) == n0[0] \
+        and deployed_occupied(deployed) == n0[1] - 1
     # 事务部分:重建干净 fixture(上面两步已移动槽位)
     bench = pad_bench(_xianzhou_trio() + [_char('青雀', slot=3)])
     deployed = _old_line_deployed(3)
@@ -209,7 +213,7 @@ def test_mutate_bench_deployed_v2_actions():
                          undeploy=[0, 1, 2], sell=[(3, 'bench')],
                          reason='evolve')
     mutate_bench_deployed(bench, deployed, tx)
-    assert {c.char_id for c in deployed} == {
+    assert {c.char_id for c in iter_occupied_deployed(deployed)} == {
         c.char_id for c in _xianzhou_trio()}
     assert bench_occupied(bench) == 3   # 旧档下场进 bench(转移语义;卖出走生产侧)
     # 拒绝路径:越界事务整体不动
@@ -219,7 +223,7 @@ def test_mutate_bench_deployed_v2_actions():
     mutate_bench_deployed(b2, d2, tx_bad)
     assert [(c.char_id, c.slot) for c in b2 if c is not None] == \
         [(c.char_id, c.slot) for c in bench if c is not None]
-    assert len(d2) == len(deployed)
+    assert deployed_occupied(d2) == deployed_occupied(deployed)
 
 
 # ---------- 4. checks 渗透(含变异探针:去门必须涌现违规) ----------
@@ -329,9 +333,11 @@ class _ExplicitStub:
         pass
 
     def decide_prep(self, st, sess, screen):   # noqa: ARG002
-        if not self.fired and st.deployed:
+        # ADR-0392:槽位表滤 None;SellDeployed 打占用槽(空槽会拒)
+        occ = [i for i, d in enumerate(st.deployed) if d is not None]
+        if not self.fired and occ:
             self.fired = True
-            return [SellDeployed(0, reason='plugin_recycle')]
+            return [SellDeployed(occ[0], reason='plugin_recycle')]
         return []
 
 

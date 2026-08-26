@@ -220,7 +220,8 @@ def test_completion_undeploy_keeps_seele_engine() -> None:
     assert downed <= set(_FILL), f'希儿系贡献件被下场:{downed}'
     out = simulate(st, tx)
     assert out.action_log[-1]['result'] == 'applied', out.action_log[-1]
-    assert '希儿' in {d.char_id for d in out.deployed if d.char_id}
+    assert '希儿' in {d.char_id for d in out.deployed
+                    if d is not None and d.char_id}   # ADR-0392 滤 None
     assert _board_factions_of(out.deployed).get('贝洛伯格', 0) >= 2
 
     # scope off:undeploy 吃希儿+佩拉(最弱两件,均无 TT 保护)= W190
@@ -232,5 +233,6 @@ def test_completion_undeploy_keeps_seele_engine() -> None:
         f'scope off 应下希儿+佩拉(旧行为):{downed_off}'
     out_off = simulate(st, tx_off)
     assert out_off.action_log[-1]['result'] == 'applied'
-    names_off = {d.char_id for d in out_off.deployed if d.char_id}
+    names_off = {d.char_id for d in out_off.deployed
+                 if d is not None and d.char_id}   # ADR-0392 滤 None
     assert '希儿' not in names_off, 'scope off:希儿系单卡被下场(旧行为)'

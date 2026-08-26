@@ -145,7 +145,8 @@ def test_swap_deploy_equips_travel_with_chars():
     st = _state_with_equips()
     st.bench[1].equips = ['Y']
     s2 = simulate(st, SwapDeploy(deployed_idx=0, bench_idx=1))
-    assert [c.equips for c in s2.deployed if c.char_id == '卡芙卡'] == [['Y']]
+    assert [c.equips for c in s2.deployed
+            if c is not None and c.char_id == '卡芙卡'] == [['Y']]   # ADR-0392
     assert [c.equips for c in s2.bench if c is not None
             and c.char_id == '希儿'] == [['B']]
     assert state_equips_multiset(s2) == state_equips_multiset(st)
