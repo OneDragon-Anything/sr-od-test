@@ -86,3 +86,52 @@ def test_upcoming_types_unchanged() -> None:
     upcoming = [s.node_type for s in slots[:-1] if s.state == 'upcoming']
     assert Counter(upcoming) == {'battle': 3, 'supply': 1, 'reward': 2, 'encounter': 1}
     assert next(s for s in slots if s.state == 'current').idx == 0
+
+
+# ===== 位面详情节点带(区域-节点条@货币战争-位面详情,2026-08-26 用户权威坐标) =====
+
+_PD_FIXTURE = Path(__file__).parent / 'cw_plane_detail_nodes.png'
+
+
+def _load_pd_fixture_rgb():
+    img_bgr = cv2.imdecode(np.fromfile(str(_PD_FIXTURE), dtype=np.uint8), cv2.IMREAD_COLOR)
+    assert img_bgr is not None, f'fixture 缺失: {_PD_FIXTURE}'
+    return cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+
+def test_plane_detail_band_recognition() -> None:
+    """位面详情节点带(9 圆):boss SIFT 巨鹿生物制药(与备战条同源互证)。
+
+    带内语义与备战条不同:位面详情无高亮当前槽 S 峰 → 无 current 锚时
+    HSV 单特征把节点判 past(低饱和预览态)→ 非 boss 槽不进 Hu(node_type
+    全 None)。锁这个真实语义(boss 识别不依赖判态/类型,恒走位置判+SIFT)。
+    """
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
+    bt = load_boss_templates(_BOSS_TPL_DIR)
+    slots = classify_node_row(_load_pd_fixture_rgb(), tpls, boss_templates=bt)
+    assert len(slots) == 9
+    assert slots[-1].boss == '巨鹿生物制药', \
+        f'位面详情带 boss 应巨鹿生物制药,得 {slots[-1].boss}'
+    # 无 current 锚(罕见)兜底路径下非 boss 槽全 past → 不进 Hu
+    assert all(s.node_type is None for s in slots[:-1])
+
+
+def test_plane_detail_band_read_fn() -> None:
+    """read_plane_detail_nodes 生产入口:yml 带(区域-节点条@位面详情屏)
+    → 9 槽 + boss 巨鹿生物制药(端到端,含模板懒加载)。"""
+    import pytest
+    from sr_od.application.currency_war import cw_observation
+    from sr_od.context.sr_context import SrContext
+    from one_dragon.utils import cv2_utils
+
+    ctx = SrContext()
+    ctx.screen_loader.reload(from_separated_files=True)
+    # 模板缓存清零验懒加载路径(全局缓存可能被本文件其它测试预热)
+    cw_observation._NODE_TYPE_TEMPLATES = None
+    cw_observation._BOSS_TEMPLATES = None
+    img = cv2_utils.read_image(str(Path('.debug/sr_od_mcp/screenshot/'
+                                        'screenshot_20260826_190830_854104.png')))
+    # 全帧(函数自己按 yml 裁带)
+    slots = cw_observation.read_plane_detail_nodes(ctx, img)
+    assert slots is not None and len(slots) == 9
+    assert slots[-1].boss == '巨鹿生物制药'
