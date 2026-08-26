@@ -197,6 +197,12 @@ _EXPECTED_HASH = ('1be534f9571445ac589e4e45b751dcb2'
 # 开=承接门行为)——有意改参,锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = ('576fc5520257d7ca53d3c5466677b417'
                   '5cac946c910301fd0f752b43c5767291')
+# W232/ADR-0402 产星通道批更新:新增 filler_star_unit(=0.0,填充件
+# 升星期权分单位值;默认关=A/B 通道保留,ADR-0305 先例)/pair_copy_
+# direction_exempt(=False,同名副本豁免 pair_wants 方向门;与 A 同臂
+# 开)两字段——有意改参,锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = ('9e19c00dd27a472e62f692166770752d'
+                  '449bba586450d4d1bc6a315f9a206702')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
