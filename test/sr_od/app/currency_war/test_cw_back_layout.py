@@ -680,3 +680,26 @@ def test_live_board_variants_in_library(templates):
     for name in ('万敌', '卡芙卡', '乱破', '爻光'):
         keys = [k for k in templates if k.split('#')[0] == name]
         assert any('#' in k for k in keys), f'{name} 缺现场变体(raw_board.png)'
+
+
+def test_read_level_xp_backinference(test_context, monkeypatch):
+    """等级漏读 → 经验条反推真级(2026-08-26 佩佩局实弹修复):
+
+    OCR 漏读 Lv.3 小字 → 旧 _expected_level(P1,R1) 兜底 4 → cap−level=0
+    → 后排选 6 格档 → **佩佩@slot7 窗口未被枚举丢读**。修:漏读时
+    read_xp_progress 的 xp_to_next 经 XP_TO_NEXT_LEVEL 倒查("0/4"→lv3),
+    仍读不到才退期望曲线。"""
+    import sr_od.application.currency_war.cw_observation as cwo
+    from sr_od.application.currency_war.cw_obs_core import _area_rect
+    img = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
+    _lv_rect = _area_rect(test_context, '文本-等级')
+    _real_ocr = cwo._ocr
+    monkeypatch.setattr(
+        cwo, '_ocr',
+        lambda ctx, scr, rect: [] if rect == _lv_rect else _real_ocr(ctx, scr, rect),
+    )                                                                  # 仅等级区漏读
+    got = cwo.read_level(test_context, img, 1, 1)
+    assert got == 3, f'经验条反推应为 lv3(0/4),实得 {got}'
+    # 经验条也漏(全黑)→ 退期望曲线(旧行为)
+    monkeypatch.setattr(cwo, 'read_xp_progress', lambda ctx, scr: None)
+    assert cwo.read_level(test_context, img, 1, 1) == cwo._expected_level(1, 1)
