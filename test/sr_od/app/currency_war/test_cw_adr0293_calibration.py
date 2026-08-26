@@ -184,6 +184,12 @@ _EXPECTED_HASH = ('8314847986466986c65ef285bb456647'
 # 逐件计数)——有意改参,锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = ('86cf1f1d2a7c8016e776b3e90de27977'
                   '0da77f3d22717f4944bccd8c6c9d2b97')
+# W202/ADR-0382 补完保护集分级批更新:新增 engine_complete_grade_
+# down(=True,undeploy 候选枯竭且缺口持续 ≥4 轮时按分级序降级换血;
+# 关=回 ADR-0371/0381 后「不硬拆」)——有意改参,锁同步更新
+# (其余数值字段不变)
+_EXPECTED_HASH = ('1be534f9571445ac589e4e45b751dcb2'
+                  'c2157211ee608c85c95ef52f6f8483f7')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

@@ -613,7 +613,7 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
     def _fake_evo(state, session, memory, off_lock_penalty=0.0,
                   engine_guard=True, final_freeze=True,
                   engine_completion=True, complete_distinct=True,
-                  seele_scope=True, sell_floor=True):
+                  seele_scope=True, sell_floor=True, grade_down=True):
         # W155/ADR-0360:evolution_step 增 off_lock_penalty 关键字
         # (锁定帧 off-lock 提案降级分,registry 注入)——桩同步收参;
         # 同款 registry 注入——桩同步收参(接线锁,语义归 W160 锁);
@@ -622,7 +622,8 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
         # owned 口径同款注入(语义归 test_cw_w201_completion_dedup);
         # W192/ADR-0375:希儿系守卫辖域同款注入——桩同步收参(语义归
         # test_cw_w192_seele_scope);W197/ADR-0380:溢出卖出下界守卫
-        # 同款注入(语义归 test_cw_w197)
+        # 同款注入(语义归 test_cw_w197);W202/ADR-0382:补完保护集
+        # 分级同款注入(语义归 test_cw_w202_grade_down)
         seen['memory'] = memory
         seen['off_lock_penalty'] = off_lock_penalty
         seen['engine_guard'] = engine_guard
@@ -631,6 +632,7 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
         seen['complete_distinct'] = complete_distinct
         seen['seele_scope'] = seele_scope
         seen['sell_floor'] = sell_floor
+        seen['grade_down'] = grade_down
         return [sentinel]
 
     import sr_od.application.currency_war.decision_v2.strategy as m
@@ -653,6 +655,8 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
     assert seen['seele_scope'] is True
     # W197/ADR-0380:溢出卖出下界守卫开关默认 True 从 registry 注入
     assert seen['sell_floor'] is True
+    # W202/ADR-0382:补完保护集分级开关默认 True 从 registry 注入
+    assert seen['grade_down'] is True
 
 
 # --- ⑤ 冒烟:P1 一轮 sim 决策不炸 --------------------------------------------
