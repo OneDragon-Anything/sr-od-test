@@ -14,13 +14,13 @@ def test_is_prep_like_frame_exists() -> None:
 
 
 def test_layout_hook_gated() -> None:
-    """back_layout 旧停机钩子已随 level 驱动模型作废删除(W209/ADR-0385:
-    公式选档恒落 6/8 已建档档,无「无档」态可停机;7 格未建档走 8 格超集 +
-    note_7slots_pending 留证,不停机)——本锁改为钉死旧钩子不回流。"""
+    """back_layout 停机钩子过帧态门(过渡帧跳过)。件③(W209/ADR-0385)重构:
+    触发判据从「level 对应档无档」改到双通道对账原始格数 n_raw 无档(=7,
+    钻石+1 局);帧态门(is_prep_like_frame)语义不变。"""
     from sr_od.application.currency_war import cw_identity_obs
     src = inspect.getsource(cw_identity_obs.read_deployed_chars)
-    assert 'is_prep_like_frame' not in src, \
-        '布局停机钩子已废(ADR-0385);勿再在 read_deployed_chars 挂布局停机'
+    assert 'is_prep_like_frame' in src
+    assert "n_raw" in src, '触发判据应消费 resolve_back_slots 的 n_raw(双通道)'
 
 
 def test_bookcard_hook_gated() -> None:
