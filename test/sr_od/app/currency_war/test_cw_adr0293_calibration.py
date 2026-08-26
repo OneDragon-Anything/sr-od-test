@@ -179,6 +179,11 @@ _EXPECTED_HASH = ('49b1c3a170e29543d1b606f610008864'
 # 更新(其余数值字段不变)
 _EXPECTED_HASH = ('8314847986466986c65ef285bb456647'
                   '4ddc7e215e87eabfefe3d24c61f9fa9a')
+# W201/ADR-0381 补完修法批更新:新增 engine_complete_distinct_owned
+# (=True,补完缺口 owned 口径 distinct 名单数;关=回 W174 后全羁绊
+# 逐件计数)——有意改参,锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = ('86cf1f1d2a7c8016e776b3e90de27977'
+                  '0da77f3d22717f4944bccd8c6c9d2b97')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
