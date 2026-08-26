@@ -97,3 +97,9 @@ def test_enter_recovers_when_transport_already_done(
     assert fixture_controller.phase_idx == len(phases) - 1, (
         f'剧本应推进到末 phase(大厅):phase_idx={fixture_controller.phase_idx}'
     )
+    # F 分支真按了 F(防伪绿:修复前 controller.btn_tap 缺失 → AttributeError 被
+    # 框架吞成 round_retry,靠异常重试的 poll 副作用推进剧本也能 PASS,F 从未被按)
+    assert test_context.game_config.key_interact in fixture_controller.recorded_btn_taps, (
+        '朝露公馆入口应按交互键 F 进大厅,但 recorded_btn_taps 里没有:'
+        f'{fixture_controller.recorded_btn_taps}'
+    )

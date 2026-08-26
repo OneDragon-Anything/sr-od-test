@@ -66,10 +66,16 @@ class _FakeKeyboardMouse:
 
 
 class _FakeBtnController:
-    """``PcButtonController`` 的空实现,仅保留 ``tap`` 等按键接口。"""
+    """``PcButtonController`` 的空实现,仅保留 ``tap`` 等按键接口。
+
+    按键记录到给定列表(供断言 op 是否按了 F/ESC 等)。
+    """
+
+    def __init__(self, recorder: list[str]) -> None:
+        self._recorder: list[str] = recorder
 
     def tap(self, key: str) -> None:
-        pass
+        self._recorder.append(key)
 
     def press(self, key: str, press_time: float | None = None) -> None:
         pass
@@ -140,11 +146,14 @@ class FixtureController(MockController):
         # 动作记录(供测试断言)
         self.recorded_clicks: list[Point] = []
         self.recorded_inputs: list[str] = []
+        # 按键记录(顶层 btn_tap/btn_press 等转发到 btn_controller 时落账;
+        # 判例:EnterCurrencyWar F 分支经 controller.btn_tap 按交互键)
+        self.recorded_btn_taps: list[str] = []
 
         # MockController 缺失、但 op 会触达的子对象;
         # _FakeKeyboard.type 记录到 self.recorded_inputs(供断言输入账密)。
         self.keyboard_controller: _FakeKeyboardMouse = _FakeKeyboardMouse(self.recorded_inputs)
-        self.btn_controller: _FakeBtnController = _FakeBtnController()
+        self.btn_controller: _FakeBtnController = _FakeBtnController(self.recorded_btn_taps)
         self.game_win: _FakeGameWin = _FakeGameWin()
 
     # ----------------------------- 剧本管理 ----------------------------- #
@@ -156,6 +165,7 @@ class FixtureController(MockController):
         self._poll_count = 0
         self.recorded_clicks.clear()
         self.recorded_inputs.clear()
+        self.recorded_btn_taps.clear()
 
     @property
     def phase_idx(self) -> int:
@@ -236,6 +246,19 @@ class FixtureController(MockController):
     def active_window(self) -> None:
         """stub:op 调 controller.active_window 聚焦游戏窗口(测试无真实窗口,空操作)。"""
         pass
+
+    # 顶层按键便捷方法:真控制器(PcControllerBase)是顶层转发到 btn_controller,
+    # op 代码直接调 controller.btn_tap(如 EnterCurrencyWar 的 F 交互)。漏补它们时
+    # op 走到按键分支必 AttributeError,被框架异常 handler 吞成 round_retry 存图,
+    # 测试仍可能伪绿(判例:_WatchedEnterCurrencyWar 每跑一次落 3 张 .debug 图)。
+    def btn_tap(self, key: str) -> None:
+        self.btn_controller.tap(key)
+
+    def btn_press(self, key: str, press_time: float | None = None) -> None:
+        self.btn_controller.press(key, press_time)
+
+    def btn_release(self, key: str) -> None:
+        self.btn_controller.release(key)
 
     # ----------------------------- 推进判定 ----------------------------- #
 

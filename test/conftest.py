@@ -22,6 +22,7 @@ import hashlib
 import inspect
 import logging
 import os
+import time
 import warnings
 from collections import OrderedDict
 from collections.abc import Iterator
@@ -470,3 +471,35 @@ def _guard_shared_ctx(test_context: SrTestContext) -> Iterator[None]:
                 setattr(test_context, name, orig)
             else:
                 delattr(test_context, name)
+
+
+# --------------------------------------------------------------------------- #
+# 调试图落盘隔离(README 测试纪律 2 的机检层)
+# --------------------------------------------------------------------------- #
+# 背景:op 框架的异常 handler(``Operation.execute`` catch 后 ``save_screenshot``)
+# 与部分业务代码直接调 ``debug_utils.save_debug_image``,测试进程中会写真实
+# ``.debug/images/``。判例:fixture 流程测试里 op 节点抛 AttributeError 被框架
+# 吞成 round_retry 重试,每次异常落一张 2.4MB 图(单跑一条测试即写 3 张,
+# 反复跑累积 30+ 张),测试还照样绿 —— 盘脏了且无人察觉。
+# 隔离:``save_debug_image`` 重定向到 pytest tmp_path,真实 .debug/ 零写入;
+# 文件保留在 tmp(诊断时仍可看),文件名返回值语义不变。
+
+
+@pytest.fixture(autouse=True)
+def _isolate_debug_images(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """把 ``debug_utils.save_debug_image`` 的写入重定向到 tmp_path(见上方注释)。"""
+    from one_dragon.utils import debug_utils
+
+    debug_dir = tmp_path / 'debug_images'
+    debug_dir.mkdir(exist_ok=True)
+
+    def _save_to_tmp(image, file_name=None, prefix: str = '', copy_screenshot: bool = False) -> str:  # noqa: ANN001, ANN202
+        # 与原实现同名生成规则;copy_screenshot(剪贴板)在测试中跳过
+        if file_name is None:
+            file_name = f'{prefix}_{round(time.time() * 1000)}'
+        cv2_utils.save_image(image, str(debug_dir / f'{file_name}.png'))
+        return file_name
+
+    monkeypatch.setattr(debug_utils, 'save_debug_image', _save_to_tmp)
