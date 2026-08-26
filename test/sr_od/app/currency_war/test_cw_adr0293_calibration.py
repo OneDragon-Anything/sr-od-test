@@ -167,6 +167,12 @@ _EXPECTED_HASH = ('fcfa610b0496e5f58975b2a82be1b30d'
 # (其余数值字段不变)
 _EXPECTED_HASH = ('1db429c1050915da537c35e6e9cc047b'
                   '9c75144aa70eed372ea25e3e4921d07f')
+# W194/ADR-0378 P2 谱系三件批更新:新增 levelup_multihit_enabled
+# (=True,[33] 稳态 LevelUp 多击组——辖域 P2+;关=回 W193 后行为)
+# 与 p2_core_firstpiece_enabled(=True,P2 核心件首件同息档门)两
+# 字段——有意改参,锁同步更新(其余数值字段不变)
+_EXPECTED_HASH = ('49b1c3a170e29543d1b606f610008864'
+                  '25cd004bac2f728beec703d7b2957943')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
