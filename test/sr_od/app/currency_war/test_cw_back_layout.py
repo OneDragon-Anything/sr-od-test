@@ -1,15 +1,18 @@
-# -*- coding: utf-8 -*-
-"""后排槽位布局表测试(ADR-0281 布局模型重审后重写,2026-08-23)。
+"""后排槽位布局表测试(W209/ADR-0385 cap 差公式勘误后重写,2026-08-26)。
 
 锁六件事:
 1. 8 格档识别:狸猫局/全位验证/双宝钻局(cap9!)/满级局(cap10!)/P3局(cap11!)
    —— 旧 9/10/11 档三帧**实为同一个 8 格布局**(393-1529 带,空槽签名终判),
-   全部按 8 格档锁(新模型最强证据:cap9/10/11 局狸猫恒在 1316/1458)。
-2. level 路由:lv3/5→6 / lv7、lv8→8 / lv6→保守 6+待采;cap 与布局无关。
+   全部按 8 格档锁(口述公式自洽:cap9/10/11 的 lv7/8 局 diff≥2 全落 8 格)。
+2. cap 差公式路由(ADR-0385 口述「后台格数 = 6+(cap−level)」):
+   diff 0 → 6 / diff≥2 → 8 / diff==1(7 格未建档)→ 保守 8 格超集 + 留证;
+   **level 单独不再参与选档**(run 26 lv8 无召唤物局恒 6 格 = 崩坏根因①反向锚)。
 3. 幻影档不存在:_LAYOUT_PREFIX 只含 {6,8};yml(源+merged)无 后排7/9/10/11槽 area。
-4. lv6 待采留证(back_7slots_pending)。
-5. 系统单位恒最右布局自检(layout_mismatch_by_system_unit):对/错档两态。
-6. deploy 剔除系统单位(exclude_system_units)。
+4. 7 格待采留证(back_7slots_pending,口述公式 diff==1 态)。
+5. 系统单位恒最右布局自检(layout_mismatch_by_system_unit):对/错档两态
+   (ADR-0385 保留作公式选档的交叉验证网)。
+6. deploy 剔除系统单位(exclude_system_units)+ off-target 卖出熔断
+   (run 26 崩坏根因②,W209/ADR-0386,见 test_cw_w209_offtarget_sell_guard)。
 """
 import json
 import sys
@@ -23,13 +26,12 @@ sys.path.insert(0, str(_ROOT / 'src'))
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.cw_identity_obs import (
-    check_system_unit_layout,
-    identify_slots,
-)
 from sr_od.application.currency_war.currency_war_char_id import (
     identify_character,
     load_avatar_templates,
+)
+from sr_od.application.currency_war.cw_identity_obs import (
+    identify_slots,
 )
 
 FIXTURES = _TEST_ROOT / 'screens' / '货币战争-备战'
@@ -146,33 +148,29 @@ def test_cap11_frame_is_8grid(templates):
     assert got == {3: '藿藿', 6: '开拓者·欢愉', 7: '狸小虎', 8: '狸小龙'}, got
 
 
-# ===== 2/3. level 路由 + 幻影档不存在 =====
+# ===== 2/3. cap 差公式路由 + 幻影档不存在 =====
 
-def test_level_routing():
-    """ADR-0281:后排槽数 level 驱动 —— lv≤5→6 / lv≥7→8 / lv6→保守 6(待采)。
-
-    cap(宝钻叠加)与布局无关:两帧同 lv7 cap8/9 同为 8 格实证。
-    """
+def test_cap_diff_routing():
+    """W209/ADR-0385 口述公式「后台格数 = 6+(cap−level)」路由:
+    diff0→6 / diff≥2→8 / diff==1(7 格未建档)→保守 8 格超集;
+    diff<0(读错族)按 0;diff>2(域外)按 2。level 单独不参与。"""
     from sr_od.application.currency_war.cw_back_layout import (
         _LAYOUT_PREFIX,
-        _PENDING_7SLOT_LEVELS,
-        effective_back_slots,
+        back_slots_from_cap_diff,
         fallback_back_slots,
     )
-    # 幻影档不存在(7/9/10/11 是循环论证产物,已删)
+    # 幻影档不存在(7/9/10/11 是循环论证产物,已删;7 待 diff==1 局实拍补档)
     assert set(_LAYOUT_PREFIX) == {6, 8}
     assert _LAYOUT_PREFIX[6] == '后排'
     assert _LAYOUT_PREFIX[8] == '后排8槽'
     for n in (7, 9, 10, 11, 12):
         assert n not in _LAYOUT_PREFIX
-    # level 路由
-    assert effective_back_slots(3) == 6
-    assert effective_back_slots(4) == 6
-    assert effective_back_slots(5) == 6
-    assert effective_back_slots(6) == 6       # 7 格存在性待采 → 保守 6
-    assert effective_back_slots(7) == 8
-    assert effective_back_slots(8) == 8
-    assert _PENDING_7SLOT_LEVELS == frozenset({6})
+    # 公式路由
+    assert back_slots_from_cap_diff(0) == 6
+    assert back_slots_from_cap_diff(1) == 8    # 7 格未建档 → 8 格超集
+    assert back_slots_from_cap_diff(2) == 8
+    assert back_slots_from_cap_diff(3) == 8    # 域外按 2(cap10/lv8、cap11/lv8 局同 8 格)
+    assert back_slots_from_cap_diff(-1) == 6   # cap<level 读错族按 0
     slots = fallback_back_slots()
     assert len(slots) == 6 and slots[0][0] == 1
 
@@ -187,21 +185,64 @@ def test_phantom_layouts_absent_from_yml():
         assert '后排8槽-1' in txt and '后排-1' in txt, f'{rel} 缺 6/8 真值档'
 
 
-# ===== 4. lv6 待采留证 =====
+# ===== 4. select_back_layout 选档入口 + 7 格待采留证 =====
 
-def test_lv6_pending_note(tmp_path, monkeypatch, frame):
-    """lv6 → note_pending_7slots 留证 back_7slots_pending(节流;非 lv6 不触发)。"""
+def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
+    """选档单一入口:cap/level 两读数按口述公式合流;读不到 → 6(失败安全侧)。
+
+    run 26 反向锚:lv8 无召唤物(cap=level)→ 恒 6 格(旧模型按 level≥7 选 8 格
+    = 崩坏根因①);lv7 cap9(狸猫局)→ 8 格。
+    """
     import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.cw_observe as cobs
+    journal = tmp_path / 'obs.jsonl'
+    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
+    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    monkeypatch.setattr(cbl, '_pending_note_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    assert cbl.select_back_layout(None, frame) == (6, '后排')      # run 26 形态:lv8 cap8
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)
+    assert cbl.select_back_layout(None, frame) == (8, '后排8槽')   # diff2 → 8
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 7)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 9)
+    assert cbl.select_back_layout(None, frame) == (8, '后排8槽')   # 狸猫局 lv7 cap9
+    # diff==1(钻石+1):7 格未建档 → 8 格超集 + back_7slots_pending 留证
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    assert cbl.select_back_layout(None, frame) == (8, '后排8槽')
+    assert journal.exists() and 'back_7slots_pending' in journal.read_text(encoding='utf-8')
+    # 读不到 cap → diff 按 0 → 6(失败安全侧;别按扩展档跑)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: None)
+    assert cbl.select_back_layout(None, frame) == (6, '后排')
+
+
+def test_read_deployed_chars_formula_driven(
+        test_context, templates, monkeypatch, tmp_path, frame):
+    """read_deployed_chars 布局选档经 select_back_layout(公式驱动)。
+
+    狸猫局 fixture + monkeypatch cap:diff2 → 8 格档读到位7/8 狸猫;
+    同帧 diff0 → 6 格档:最右扩展格(1458 狸小龙)不再被读(6 格基线右界 1315,
+    恰含 1316 狸小虎——两档共享 604-1316 段,差异只在两端扩展格)。
+    """
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.cw_observation as cwo
     import sr_od.application.currency_war.cw_observe as cobs
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_pending_note_ts', {})
-    cbl.note_pending_7slots(frame, 6, 'test')
-    lines = (tmp_path / 'obs.jsonl').read_text(encoding='utf-8').strip().splitlines()
-    assert lines and json.loads(lines[-1])['field'] == 'back_7slots_pending'
-    # 非 lv6 不触发
-    cbl.note_pending_7slots(frame, 7, 'test')
-    assert len((tmp_path / 'obs.jsonl').read_text(encoding='utf-8').strip().splitlines()) == 1
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 9)
+    out8 = cio.read_deployed_chars(test_context, frame, templates, level=7)
+    got8 = {c.char_id for c in out8 if c.position_pref == 'back'}
+    assert {'狸小虎', '狸小龙'} <= got8
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    out6 = cio.read_deployed_chars(test_context, frame, templates, level=8)
+    got6 = {c.char_id for c in out6}
+    assert '狸小龙' not in got6   # 1458 扩展格在 6 格基线外
 
 
 # ===== 5. 系统单位恒最右布局自检 =====
@@ -257,52 +298,8 @@ def test_deploy_excludes_system_units():
     assert [c.char_id for c in out] == ['藿藿', '']
 
 
-# ===== 停机钩子机制(level 对应档无档;现 6/8 都有档,模拟补档窗口态) =====
 
-def test_layout_hook_fires_only_when_level_profile_missing(
-        test_context, templates, monkeypatch, tmp_path):
-    """ADR-0281:停机条件 = level 对应档无档(正常 6/8 都有档 → 永不触发);
-    monkeypatch 摘掉 8 档模拟「补档窗口」验证钩子机制本身。lv6 走留证不停机。
-
-    ⚠️ run_context 替换必须走 monkeypatch(自动还原;session 级 ctx 裸赋值污染
-    后续测试,实锤见旧版注释)。
-    """
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_obs_core as core
-    import sr_od.application.currency_war.cw_observe as cobs
-    ctx = test_context
-
-    class _FakeRunCtx:
-        def __init__(self):
-            self.stopped = False
-            self.stop_source = ''
-
-        def stop_running(self, reason: str = ''):
-            self.stopped = True
-            self.stop_source = reason
-
-    monkeypatch.setattr(ctx, 'run_context', _FakeRunCtx())
-    monkeypatch.setattr(core, 'is_prep_like_frame', lambda c, s: True)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
-    monkeypatch.setattr(cio, '_sysunit_conflict_ts', {})
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / '.debug/temp/currency_war').mkdir(parents=True, exist_ok=True)
-    frame8 = cv2_utils.read_image(str(FIXTURES / '后排8槽-狸猫局.webp'))
-
-    # 正常态:lv5/lv7 都有档 → 不停机
-    cio.read_deployed_chars(ctx, frame8, templates, level=5)
-    assert not ctx.run_context.stopped
-    cio.read_deployed_chars(ctx, frame8, templates, level=7)
-    assert not ctx.run_context.stopped
-    # lv6 → 留证不停机(保守 6 格跑)
-    cio.read_deployed_chars(ctx, frame8, templates, level=6)
-    assert not ctx.run_context.stopped
-    assert 'back_7slots_pending' in (tmp_path / 'obs.jsonl').read_text(encoding='utf-8')
-    # 补档窗口态(8 档被摘)→ lv7 停机 + flag
-    monkeypatch.setattr(cbl, '_LAYOUT_PREFIX', {6: '后排'})
-    out = cio.read_deployed_chars(ctx, frame8, templates, level=7)
-    assert isinstance(out, list) and out          # 退基线识别不抛
-    assert ctx.run_context.stopped                # level 对应档无档 → 停机
-    assert (tmp_path / '.debug/temp/currency_war/back_layout_stop_hook.flag').exists()
+# ===== 旧布局停机钩子已删(W209/ADR-0385)=====
+# 旧钩子停机条件「level 对应档无档」随 level 驱动模型作废:公式选档恒落
+# 6/8 已建档档(7 格未建档走 8 格超集 + obs_conflict 留证,不停机);
+# 补档窗口守卫改由 note_7slots_pending 采集指引承载(见 test_select_back_layout_formula)。
