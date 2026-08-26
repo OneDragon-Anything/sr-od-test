@@ -188,7 +188,8 @@ def test_phantom_layouts_absent_from_yml():
 # ===== 4. select_back_layout 选档入口 + 7 格待采留证 =====
 
 def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
-    """选档单一入口:cap/level 两读数按口述公式合流;读不到 → 6(失败安全侧)。
+    """选档单一入口·公式通道(cv 通道 stub 掉隔离;双通道对账见下方专项锁):
+    cap/level 两读数按口述公式合流;读不到 → 6(失败安全侧)。
 
     run 26 反向锚:lv8 无召唤物(cap=level)→ 恒 6 格(旧模型按 level≥7 选 8 格
     = 崩坏根因①);lv7 cap9(狸猫局)→ 8 格。
@@ -201,9 +202,11 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_pending_note_ts', {})
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)   # CV 不可判 → 公式
     assert cbl.select_back_layout(None, frame) == (6, '后排')      # run 26 形态:lv8 cap8
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)
     assert cbl.select_back_layout(None, frame) == (8, '后排8槽')   # diff2 → 8
@@ -219,13 +222,103 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
     assert cbl.select_back_layout(None, frame) == (6, '后排')
 
 
+# ===== 4b. CV 通道 + 双通道对账(ADR-0385 口述双通道指令,W209 追加) =====
+
+def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模板加载惰性
+    """CV 通道实测格数:槽位存在性 std 签名(真 fixture 全量标定)。
+
+    8 格帧(狸猫局/全位验证/cap9/10/11)→ 8;6 格帧(shop_closed/a8_start/
+    prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;「后排7槽-P2开局局」→ **6**
+    (旧「7 槽」观察经 CV 复核两端扩展位均为背景 = 同属幻影,实为 6 格——
+    公式通道自洽的又一实证);非 1080p 小帧 → None(越界守卫)。
+    """
+    import numpy as np
+    from sr_od.application.currency_war.cw_back_layout import cv_back_slots
+    for fn, want in (
+            ('后排8槽-狸猫局.webp', 8), ('后排8槽-全位验证.webp', 8),
+            ('后排9槽-双宝钻局.webp', 8), ('后排10槽-满级局.webp', 8),
+            ('后排11槽-P3局.webp', 8),
+            ('后排7槽-P2开局局.webp', 6), ('shop_closed.webp', 6),
+            ('shop_closed_a8_start.webp', 6), ('prep_1-6_all_positions.webp', 6),
+            ('deployed_p1r9.webp', 6), ('r1_idle_stop.webp', 6)):
+        img = cv2_utils.read_image(str(FIXTURES / fn))
+        got = cv_back_slots(img)
+        assert got == want, f'{fn}: CV 实测 {got} ≠ 期望 {want}'
+    assert cv_back_slots(np.zeros((600, 900, 3), dtype=np.uint8)) is None
+
+
+def test_reconcile_channels_agree(tmp_path, monkeypatch, frame):
+    """对账·一致 → 公式值,无 back_layout_channel_conflict 留证。"""
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.cw_observe as cobs
+    journal = tmp_path / 'obs.jsonl'
+    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
+    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    monkeypatch.setattr(cbl, '_pending_note_ts', {})
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 7)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 9)
+    # 狸猫局真帧:公式 diff2 → 8,CV 实测 8 → 一致用公式值
+    assert cbl.select_back_layout(None, frame) == (8, '后排8槽')
+    assert not journal.exists() or 'back_layout_channel_conflict' not in \
+        journal.read_text(encoding='utf-8')
+
+
+def test_reconcile_channels_disagree_cv_wins(tmp_path, monkeypatch, frame):
+    """对账·不一致 → **CV 实测值** + obs_conflict 留证带两值(画面事实>推导)。
+
+    场景=run 26 事故族的反向:公式说 6(两个 OCR 读数错成 cap=level)但画面
+    实为 8 格(狸猫真帧)→ 采 CV 的 8(不误按 6 格丢读扩展带)+ 留证
+    old=6(公式)/new=8(CV)供判读查 reader。
+    """
+    import json as _json
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.cw_observe as cobs
+    journal = tmp_path / 'obs.jsonl'
+    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
+    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    monkeypatch.setattr(cbl, '_pending_note_ts', {})
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)   # 公式:6
+    assert cbl.select_back_layout(None, frame) == (8, '后排8槽')      # CV 8 优先
+    assert journal.exists(), '不一致未留证'
+    rec = _json.loads(journal.read_text(encoding='utf-8')
+                      .strip().splitlines()[-1])
+    assert rec['field'] == 'back_layout_channel_conflict'
+    assert rec['old'] == 6 and rec['new'] == 8   # 两值齐报(公式/CV)
+
+
+def test_reconcile_cv_none_formula_fallback(tmp_path, monkeypatch, frame):
+    """CV 不可判(锚缺失/越界/特效遮挡)→ 退公式值(公式=CV 失效的兜底)。"""
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.cw_observation as cwo
+    monkeypatch.setattr(cbl, '_pending_note_ts', {})
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
+    assert cbl.select_back_layout(None, frame) == (8, '后排8槽')
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    assert cbl.select_back_layout(None, frame) == (6, '后排')
+
+
 def test_read_deployed_chars_formula_driven(
         test_context, templates, monkeypatch, tmp_path, frame):
-    """read_deployed_chars 布局选档经 select_back_layout(公式驱动)。
+    """read_deployed_chars 布局选档经 select_back_layout(双通道合流)。
 
-    狸猫局 fixture + monkeypatch cap:diff2 → 8 格档读到位7/8 狸猫;
-    同帧 diff0 → 6 格档:最右扩展格(1458 狸小龙)不再被读(6 格基线右界 1315,
-    恰含 1316 狸小虎——两档共享 604-1316 段,差异只在两端扩展格)。
+    狸猫局 fixture + monkeypatch cap:diff2(与 CV 一致)→ 8 格档读到位7/8 狸猫;
+    同帧 diff0 + CV stub 一致(6)→ 6 格档:最右扩展格(1458 狸小龙)不再被读
+    (6 格基线右界 1315,恰含 1316 狸小虎——两档共享 604-1316 段,差异只在
+    两端扩展格)。
     """
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
@@ -234,12 +327,14 @@ def test_read_deployed_chars_formula_driven(
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_pending_note_ts', {})
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 9)
     out8 = cio.read_deployed_chars(test_context, frame, templates, level=7)
     got8 = {c.char_id for c in out8 if c.position_pref == 'back'}
     assert {'狸小虎', '狸小龙'} <= got8
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 6)   # 两通道一致 6
     out6 = cio.read_deployed_chars(test_context, frame, templates, level=8)
     got6 = {c.char_id for c in out6}
     assert '狸小龙' not in got6   # 1458 扩展格在 6 格基线外
