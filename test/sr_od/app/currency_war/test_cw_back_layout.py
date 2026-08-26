@@ -231,6 +231,9 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
     prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;「后排7槽-P2开局局」→ **6**
     (旧「7 槽」观察经 CV 复核两端扩展位均为背景 = 同属幻影,实为 6 格——
     公式通道自洽的又一实证);非 1080p 小帧 → None(越界守卫)。
+
+    run 26 崩坏现场帧(后排6格-run26崩坏现场.png,编排者 VLM+右端位置双重
+    确认 = 标准 6 格正样本)→ 6:事故形态的直接回归锚。
     """
     import numpy as np
     from sr_od.application.currency_war.cw_back_layout import cv_back_slots
@@ -240,7 +243,8 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
             ('后排11槽-P3局.webp', 8),
             ('后排7槽-P2开局局.webp', 6), ('shop_closed.webp', 6),
             ('shop_closed_a8_start.webp', 6), ('prep_1-6_all_positions.webp', 6),
-            ('deployed_p1r9.webp', 6), ('r1_idle_stop.webp', 6)):
+            ('deployed_p1r9.webp', 6), ('r1_idle_stop.webp', 6),
+            ('后排6格-run26崩坏现场.png', 6)):
         img = cv2_utils.read_image(str(FIXTURES / fn))
         got = cv_back_slots(img)
         assert got == want, f'{fn}: CV 实测 {got} ≠ 期望 {want}'
