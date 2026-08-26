@@ -612,20 +612,23 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
 
     def _fake_evo(state, session, memory, off_lock_penalty=0.0,
                   engine_guard=True, final_freeze=True,
-                  engine_completion=True, seele_scope=True):
+                  engine_completion=True, seele_scope=True,
+                  sell_floor=True):
         # W155/ADR-0360:evolution_step 增 off_lock_penalty 关键字
         # (锁定帧 off-lock 提案降级分,registry 注入)——桩同步收参;
         # W160/ADR-0363:S1 型修法两件(引擎下界守卫/末轮演进冻结)
         # 同款 registry 注入——桩同步收参(接线锁,语义归 W160 锁);
         # W174/ADR-0371:引擎补完守卫同款注入——桩同步收参(语义归
         # test_cw_w174_engine_completion);W192/ADR-0375:希儿系守卫
-        # 辖域同款注入——桩同步收参(语义归 test_cw_w192_seele_scope)
+        # 辖域同款注入——桩同步收参(语义归 test_cw_w192_seele_scope);
+        # W197/ADR-0380:溢出卖出下界守卫同款注入(语义归 test_cw_w197)
         seen['memory'] = memory
         seen['off_lock_penalty'] = off_lock_penalty
         seen['engine_guard'] = engine_guard
         seen['final_freeze'] = final_freeze
         seen['engine_completion'] = engine_completion
         seen['seele_scope'] = seele_scope
+        seen['sell_floor'] = sell_floor
         return [sentinel]
 
     import sr_od.application.currency_war.decision_v2.strategy as m
@@ -644,6 +647,8 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
     assert seen['engine_completion'] is True
     # W192/ADR-0375:希儿系守卫辖域开关默认 True 从 registry 注入
     assert seen['seele_scope'] is True
+    # W197/ADR-0380:溢出卖出下界守卫开关默认 True 从 registry 注入
+    assert seen['sell_floor'] is True
 
 
 # --- ⑤ 冒烟:P1 一轮 sim 决策不炸 --------------------------------------------

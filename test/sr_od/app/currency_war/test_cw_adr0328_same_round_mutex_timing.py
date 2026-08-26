@@ -155,18 +155,21 @@ def test_arbitrate_sell_then_buy_same_round_rejected() -> None:
     same_round_mutex(已卖禁买)拒——r408 原方向在同趟内也成立
     (修前 v2_round_sold 同样延迟登记,先卖后买也可双双过)。"""
     sess = _sess()
-    st = _state(bench=[_bench('三月七', faction='列车同行', slot=0)],
-                shop=[_card('三月七', faction='列车同行', cost=2)])
+    # W197/ADR-0380 语义化适配:卖出件换非 TT 件银枝(原三月七=列车
+    # 唯一件,现被卖侧下界守卫拒——TT 辖域由 test_cw_w197 承接;
+    # 本锁的语义=同轮先卖后买的互斥,与件身份无关)
+    st = _state(bench=[_bench('银枝', faction='星间旅人', slot=0)],
+                shop=[_card('银枝', faction='星间旅人', cost=2)])
     sell_c = Candidate(action=SellBench(bench_idx=0), tag='off_target',
-                       source='test', breakdown_hint={'name': '三月七'})
+                       source='test', breakdown_hint={'name': '银枝'})
     buy_c = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
                       source='test')
     res = arbitrate([(sell_c, 5.0, {}), (buy_c, 4.0, {})], st, sess, _REG)
     sells = [a for a in res.actions if isinstance(a, SellBench)]
     buys = [a for a in res.actions if isinstance(a, BuyCard)]
-    assert sells and st.bench[sells[0].bench_idx].char_id == '三月七'
+    assert sells and st.bench[sells[0].bench_idx].char_id == '银枝'
     assert not buys, f'同轮已卖 X → BUY X 应被拒(r408 不回归):{res.actions}'
-    assert '三月七' in sess.v2_round_sold, '采纳即登记已卖集(ADR-0328)'
+    assert '银枝' in sess.v2_round_sold, '采纳即登记已卖集(ADR-0328)'
     rejects = [r['reject'] for r in res.log if not r['accepted']]
     assert any('同轮已卖' in (r or '') for r in rejects), rejects
     # 卖→买(腾位)合法形态对照:不同名卖后买不报(检查器边界)

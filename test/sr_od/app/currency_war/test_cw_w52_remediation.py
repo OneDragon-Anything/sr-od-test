@@ -616,7 +616,9 @@ def test_prior_accepted_sell_no_compensation() -> None:
     sess.v2_round_key = (1, 4)
     reg10 = replace(_REG, war_floor=10)
     st = _state(round_num=4, gold=22, hp=80,
-                bench=[_bench('卡芙卡', faction='公司', slot=0)],
+                # W197/ADR-0380 语义化适配:卡芙卡(DOT)换非 TT 件银枝
+                # (cost 同 2,回金链不变;TT 唯一件卖出由 test_cw_w197 辖)
+                bench=[_bench('银枝', faction='星间旅人', slot=0)],
                 shop=[_card('姬子·启行', cost=4)],
                 deployed=[_bench(f'D{i}', faction='公司', slot=i)
                           for i in range(5)], board={})
@@ -624,7 +626,7 @@ def test_prior_accepted_sell_no_compensation() -> None:
                       source='test')
     sell_c = Candidate(action=SellBench(bench_idx=0), tag='off_target',
                        source='test',
-                       breakdown_hint={'name': '卡芙卡'})
+                       breakdown_hint={'name': '银枝'})
     res = arbitrate([(buy_c, 2.0, {}), (sell_c, 5.0, {})], st, sess,
                     reg10)
     assert any(isinstance(a, SellBench) for a in res.actions)

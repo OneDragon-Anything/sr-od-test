@@ -173,6 +173,12 @@ _EXPECTED_HASH = ('1db429c1050915da537c35e6e9cc047b'
 # 字段——有意改参,锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = ('49b1c3a170e29543d1b606f610008864'
                   '25cd004bac2f728beec703d7b2957943')
+# W197/ADR-0380 卖侧下界守卫执行点补全批更新:新增 sell_floor_exec_
+# guard_enabled(=True,arbiter 卖候选采纳点复检 + execute_replacement
+# 溢出卖出对 TT 体系件改留场;关=回 W195 后行为)——有意改参,锁同步
+# 更新(其余数值字段不变)
+_EXPECTED_HASH = ('8314847986466986c65ef285bb456647'
+                  '4ddc7e215e87eabfefe3d24c61f9fa9a')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

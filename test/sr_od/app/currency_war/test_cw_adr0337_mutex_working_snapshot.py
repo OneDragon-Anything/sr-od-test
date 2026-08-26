@@ -96,11 +96,13 @@ def _exec_ledger(st: GameState, actions: list, rn: int = 4) -> dict:
 
 def _double_snapshot_state() -> GameState:
     """W81 seed 259 r1 形态的 exec_state:演进已腾空槽 0(其余 8 槽占用),
-    arbitrate 收到的是执行域快照——候选(原始态生成)intended=三月七,
-    槽 0 已空;同趟买入 三月七 将落该空槽。"""
+    arbitrate 收到的是执行域快照——候选(原始态生成)intended=银枝
+    (W197/ADR-0380 语义化适配:原三月七=列车唯一件,现被卖侧下界守卫
+    先拒——本锁语义=双快照互斥窗口,与件身份无关,换非 TT 件银枝),
+    槽 0 已空;同趟买入 银枝 将落该空槽。"""
     return _state(bench=[None] + [_bench(f'C{i}', slot=i)
                                   for i in range(1, 9)],
-                  shop=[_card('三月七', faction='列车同行', cost=1)])
+                  shop=[_card('银枝', faction='星间旅人', cost=1)])
 
 
 # --- ① 核心:双快照不一致态 → 拒卖 ---------------------------------------
@@ -117,14 +119,14 @@ def test_double_snapshot_emptied_slot_sell_rejected() -> None:
     buy_c = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
                       source='test')
     sell_c = Candidate(action=SellBench(bench_idx=0), tag='off_target',
-                       source='test', breakdown_hint={'name': '三月七'})
+                       source='test', breakdown_hint={'name': '银枝'})
     res = arbitrate([(buy_c, 5.0, {}), (sell_c, 1.0, {})], st, sess, _REG)
     buys = [a for a in res.actions if isinstance(a, BuyCard)]
     sells = [a for a in res.actions if isinstance(a, SellBench)]
-    assert buys and buys[0].card.name == '三月七', 'BUY X 应先采纳'
+    assert buys and buys[0].card.name == '银枝', 'BUY X 应先采纳'
     assert not sells, \
         f'双快照窗口 SELL X 应被拒(同轮已买;修前实卖刚买卡):{res.actions}'
-    assert '三月七' in sess.v2_round_bought, '采纳即登记已买集(ADR-0328)'
+    assert '银枝' in sess.v2_round_bought, '采纳即登记已买集(ADR-0328)'
     rejects = [r['reject'] for r in res.log if not r['accepted']]
     assert any('同轮已买' in (r or '') for r in rejects), rejects
     # 执行序账本 → 检查器零违规(无卖执行)
@@ -144,15 +146,15 @@ def test_mutation_no_registration_reveals_violation(monkeypatch) -> None:
     buy_c = Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
                       source='test')
     sell_c = Candidate(action=SellBench(bench_idx=0), tag='off_target',
-                       source='test', breakdown_hint={'name': '三月七'})
+                       source='test', breakdown_hint={'name': '银枝'})
     monkeypatch.setattr(arbiter_mod, '_register_accepted',
                         lambda a, st_, sess_: None)
     res = arbitrate([(buy_c, 5.0, {}), (sell_c, 1.0, {})], st, sess, _REG)
     sells = [a for a in res.actions if isinstance(a, SellBench)]
     assert sells, '变异(去登记)后 SELL X 应通过守卫——变异生效前提'
-    assert '三月七' not in sess.v2_round_bought
+    assert '银枝' not in sess.v2_round_bought
     v = check_no_same_round_buy_sell([_exec_ledger(st, res.actions)])
-    assert v and '三月七' in v[0], \
+    assert v and '银枝' in v[0], \
         f'去守卫变异必须涌现违规(守卫=唯一闸门):{v}'
 
 
