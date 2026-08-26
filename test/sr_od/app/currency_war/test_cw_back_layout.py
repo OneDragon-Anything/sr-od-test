@@ -235,14 +235,12 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
     """CV 通道实测格数:槽位存在性 std 签名(真 fixture 全量标定)。
 
     8 格帧(狸猫/全位验证/cap9/cap10,左端 std 62.5-65.6 清晰带)→ 8;
-    **P3 局(cap11)左1 空槽 std 38.8 落不可判带 [12,48] → None 退公式**
-    (「8 格空左格 [38.8]」与「6/7 格羁绊面板渗入 [26.2-40.2]」std 重叠,
-    W209k 单阈值盲区量证收口;公式 diff≥2→8 兜底);6 格帧(shop_closed/
-    a8_start/prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;「后排7槽-P2开局局」
-    → **6**(旧「7 槽」观察实为 6 格幻影);**真 7 格帧(佩佩局双帧,2026-08-26
-    用户口述真值+拖测实锤)左端渗入 26.2/40.2 落不可判带 → None 退公式
-    diff1→7**(7/8 的区分靠 cap 差公式,paddle 直读权威)。非 1080p 小帧 →
-    None(越界守卫)。
+    **P3 局(cap11)左1 空槽 std 38.8 落不可判带 [12,48] → None 退公式**;
+    6 格帧(shop_closed/a8_start/prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;
+    「后排7槽-P2开局局」→ **6**(旧「7 槽」观察实为 6 格幻影);**真 7 格帧
+    (佩佩局,居中重排 534..1386)左端 464 探针=真 s1 左半覆盖 std 26-44
+    落不可判带 → None 退公式 diff=1→7**(ADR-0390 勘误:非「羁绊面板渗入」;
+    7/8 的区分靠 cap 差公式+等级经验条反推)。非 1080p 小帧 → None(越界守卫)。
 
     run 26 崩坏现场帧(后排6格-run26崩坏现场.png,编排者 VLM+右端位置双重
     确认 = 标准 6 格正样本)→ 6:事故形态的直接回归锚。
@@ -482,7 +480,12 @@ def test_layout_hook_silent_on_archived(
         monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, _cap=cap: _cap)
         monkeypatch.setattr(cbl, 'cv_back_slots', lambda s, _cv=cv: _cv)
         cio.read_deployed_chars(ctx, frame, templates, level=lv)
-    assert not (tmp_path / 'obs.jsonl').exists()
+    # 只辖本测对象(未建档留证钩子);check_system_unit_layout 在 (8,9,7) 态
+    # 对 8 格狸猫帧按 7 格选档正确报 layout_mismatch(自检职责,另锁辖)
+    if (tmp_path / 'obs.jsonl').exists():
+        txt = (tmp_path / 'obs.jsonl').read_text(encoding='utf-8')
+        assert 'back_layout_unarchived_grid' not in txt, \
+            '已建档档位(6/7/8)不得落未建档留证'
 
 
 def test_layout_hook_no_stop_machinery_in_src():
@@ -610,13 +613,14 @@ def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
         journal.read_text(encoding='utf-8')
 
 
-# ===== 7. 佩佩局真 7 格板面识别(2026-08-26 用户口述真值;识别层修复锚) =====
-# 事故形态:plaza 官方立绘(插画)对棋盘站立小人弱命中 —— 万敌 8 内点漏读/
-# 卡芙卡零信号/佩佩无模板误名狸小虎/空槽背景假阳(风堇 11)。
-# 修法三件:①现场变体模板(raw_board.png,run20 商店卡同机制);②佩佩
-# 入库(roster cost=0 + raw.png);③相邻幽灵去重 + 部署排门槛 15。
+# ===== 7. 佩佩局真 7 格板面识别(2026-08-26 用户口述真值;ADR-0389/0390) =====
+# 识别层三件:①现场变体模板(raw_board.png,真窗口采——错位残片变体会致
+# live_only 假阴,万敌@s2 丢读实证后全量重采);②佩佩入库(roster cost=0
+# + raw.png);③相邻幽灵去重 + 部署排门槛 15。
+# 几何(ADR-0390):7 格=整排居中重排 中心 534..1386(旧记 604..1458 错位
+# +71px 已勘误;错位时代的「假阳带/弱命中/幽灵」全族伪象随真窗口消失)。
 
-_C7 = (604, 746, 888, 1032, 1173, 1315, 1458)
+_C7 = (534, 676, 818, 960, 1102, 1244, 1386)   # 居中重排(ADR-0390;排中心恒 960)
 
 
 def _slots7():
@@ -624,10 +628,9 @@ def _slots7():
 
 
 def test_pepe_board_truth_current(templates):
-    """佩佩局当前帧(用户口述真值+VLM 交叉):1=万敌/3=乱破/5=卡芙卡/
-    7=佩佩,2/4/6 空。**走生产路径参数**(min_inliers=15 + live_only):
-    隐式锁三件修法——乱破@3 左渗 s2 幽灵被相邻去重剔除;s6 风堇假阳(11)
-    被门槛拦;s2 空槽 plaza 乱破:19 本底被 live_only 拒。"""
+    """佩佩局当前帧(用户口述真值):1=万敌/3=乱破/5=卡芙卡/7=佩佩,
+    2/4/6 空。**生产参数**(min15+live_only);真窗口下空槽全库 0 假阳、
+    残影幽灵自然消失(错位窗口时代的伪象,ADR-0390 勘误)。"""
     fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
     got = {c.slot: c.char_id for c in identify_slots(
         fix, templates, _slots7(), 'back', min_inliers=15, live_only=True)}
@@ -635,27 +638,36 @@ def test_pepe_board_truth_current(templates):
 
 
 def test_pepe_board_truth_golden(templates):
-    """佩佩局拖测前帧(用户口述真值):1=卡芙卡/3=万敌/5=爻光/7=佩佩。
-    空槽 plaza 本底(乱破:19@s2/爻光:26@s4)必须被 live_only 拒——
-    2026-08-26 量证:假阳带 11-26 与真命中带重叠,阈值无解,只认现场 art。"""
+    """佩佩局拖测前帧(用户口述真值):1=卡芙卡/3=万敌/5=爻光/7=佩佩。"""
     fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局.png'))
     got = {c.slot: c.char_id for c in identify_slots(
         fix, templates, _slots7(), 'back', min_inliers=15, live_only=True)}
     assert got == {1: '卡芙卡', 3: '万敌', 5: '爻光', 7: '佩佩'}, got
 
 
-def test_deployed_live_only_rejects_plaza_baseline(templates):
-    """live_only 假阳拦截锁:黄金帧 s4 空槽 plaza 爻光 art 本底 26 内点
-    (≥15 门槛拦不住),必须被「主档命中+存在现场变体」规则拒;
-    同窗 live_only=False(备战栏语义)时按原行为收(门槛内)。"""
-    fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局.png'))
-    crop = fix[600:739, 967:1097]   # s4 空槽(爻光 plaza 本底 26)
-    name, inliers = identify_character(crop, templates, min_inliers=15)
-    assert name == '爻光' and inliers >= 15, f's4 本底应过门槛: {name},{inliers}'
-    out = identify_slots(
-        fix, templates, [(4, Rect(967, 600, 1097, 739))], 'back',
-        min_inliers=15, live_only=True)
-    assert not out, f'live_only 未拦 plaza 本底: {[(c.slot, c.char_id) for c in out]}'
+def test_pepe_board_coverage_s246(templates):
+    """7 格全覆盖锁(用户交办「拖动角色到后台246 覆盖测试」,2026-08-26):
+    万敌 534→676→960→1244 逐位拖测三帧,2/4/6 各读对万敌(真中心拾取,
+    板内→空位可拖实证;ADR-0390)。"""
+    for fn, slot in (('后排7槽-佩佩局-覆盖s2.png', 2),
+                     ('后排7槽-佩佩局-覆盖s4.png', 4),
+                     ('后排7槽-佩佩局-覆盖s6.png', 6)):
+        fix = cv2_utils.read_image(str(FIXTURES / fn))
+        got = {c.slot: c.char_id for c in identify_slots(
+            fix, templates, _slots7(), 'back', min_inliers=15, live_only=True)}
+        assert got.get(slot) == '万敌', f'{fn}: s{slot} 应为万敌,实得 {got}'
+        assert got.get(3) == '风堇' and got.get(5) == '艾丝妲' \
+            and got.get(7) == '佩佩', f'{fn}: 基准位漂移 {got}'
+
+
+def test_true_grid_empty_slots_zero_baseline(templates):
+    """真窗口空槽零假阳锁(ADR-0390 勘误后):全库对空槽(2/4/6)最高内点
+    应为 0(错位时代的 11-26 假阳带=邻卡残影伪影,已消)。"""
+    fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
+    for cx in (676, 960, 1244):
+        crop = fix[600:739, cx - 71:cx + 71]
+        _, inliers = identify_character(crop, templates, min_inliers=1)
+        assert inliers == 0, f'空槽@{cx} 出非零本底 {inliers}(假阳带回流)'
 
 
 def test_pepe_roster_and_template(templates):
