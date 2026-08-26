@@ -74,7 +74,8 @@ def test_start_requires_exactly_one_of_op_factory_or_app_id(slot):
 
 
 def test_op_path_backfills_current_op_and_stops(slot, mock_ctx):
-    """op 路径:运行中 current_op 回填、run_type=OPERATION;结束后 stop_running 被调、current_op 清除。"""
+    """op 路径:运行中 current_op 回填、run_type=OPERATION;结束后 finish_running
+    被调(ADR-0396:自然完成收口不置停机闩)、current_op 清除。"""
     event = threading.Event()
     _, fut = slot._start('mcp', op_factory=_make_blocking_op(event, OperationResult(success=True)))
     try:
@@ -86,7 +87,8 @@ def test_op_path_backfills_current_op_and_stops(slot, mock_ctx):
     finally:
         event.set()
     fut.result(timeout=5)
-    assert mock_ctx.run_context.stop_running.called           # op 路径 finally 调 stop_running
+    assert mock_ctx.run_context.finish_running.called        # op 路径 finally 调 finish_running(ADR-0396)
+    assert not mock_ctx.run_context.stop_running.called      # 自然完成不走停止路径
     assert slot.current_op is None                           # 运行结束后清除
 
 
