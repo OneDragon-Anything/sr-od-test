@@ -210,3 +210,4 @@ sr-od-test/test/sr_od/app/currency_war/test_supply_box.py
 sr-od-test/test/sr_od/app/currency_war/test_telemetry_extra_sig.py
 sr-od-test/test/sr_od/app/currency_war/test_telemetry_replay.py
 sr-od-test/test/sr_od/app/currency_war/test_trailblazer_form.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w282_merge_preview.py
