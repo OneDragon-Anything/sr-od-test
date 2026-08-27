@@ -265,8 +265,14 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # .debug/temp/currency_war/w353_p2_survival/w354_calibrate_p2_loss.py
 # (P2 损血谱粗档)。两开关默认 False=现行为零漂移(A/B 基线臂)——
 # 有意加字段,锁同步更新(既有字段默认值不变)
-_EXPECTED_HASH = ('8cbb039440081a7716fba6987d44b3b1a3d47dfd'
-                  '3649f678edf41dd2f75a1e31')
+# W300 press 通道批更新(V-B3 全量 registry 化):新增 press 七字段
+# (press_channel_enabled/press_band_cum_threshold/press_channel_max_level
+# /press_copy_unit/press_copy_round_cap/press_exempt_round_cap/
+# press_core_mirror_bonus;默认全关/中性=零漂移)+ buy_tag_priority 增
+# copy_press + economy/war 放行标签集增 copy_press。设计单一源=
+# .debug/temp/currency_war/w300_dup_ruling/design.md v3 节——有意加
+# 字段,锁同步更新(既有字段默认值不变)
+_EXPECTED_HASH = ('699785f4866b7c682eca89a16765692dc4c4adf04072f5d10c76a2f50ad389a4')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
