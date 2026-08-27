@@ -291,8 +291,14 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # .debug/temp/currency_war/w373_c3c4_redesign/w375_dual_source_calib.json,
 # 终值覆写归 M1 定稿)。两开关默认 False=现行为零漂移——有意改字段面,
 # 锁同步更新(既有数值字段不变)。
-_EXPECTED_HASH = ('7cc61343c323c3075db17b62101e080ac396'
-                  'eae29216f4b3eb467cad2959bc84')
+# C1 溢余必花定向优先级批更新:新增 c1_directed_spend_enabled 一字段
+# (默认 False=现行为零漂移,A/B 基线臂;辖域=P1 末窗投影安全带
+# d≥emergency_hp 的 FLIP 正交补集,设计单一源=
+# .debug/temp/currency_war/w382_c1_design/DESIGN.md §2/§3;破息分支
+# 不实现,过账判据存档于 registry 注释)——有意加字段,锁同步更新
+# (既有字段默认值不变)。
+_EXPECTED_HASH = ('599c0094cae6a27ad9c624d17169080f'
+                  '445d14bb832af464d1fcc411cfc2af99')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
