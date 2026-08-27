@@ -142,19 +142,35 @@ def test_gold_per_node_and_instant_gold_apply() -> None:
 
 
 def test_free_refresh_per_node_zero_cost() -> None:
-    """加油站(每节点 1 次免费刷):首轮 RefreshShop 计数但 spend 0。
+    """加油站(每节点 1 次免费刷):每轮第 i 次刷 cost == 0 if i < 额度 else 原价。
 
-    构造:use_refresh 默认开;若策略未发刷则宽松(结构锁在刷价表达式,
-    用账本 refresh 花销 == max(0, 刷次-免费额度)*2 的不变式)。
+    构造:use_refresh 默认开;若策略未发刷则自然宽松(无刷新 = 无逐笔
+    断言对象,故另设 any_refresh 防构造失效)。不变式 = 每节点免费额度
+    语义逐行成立(ADR-0131:额度内刷价 0,超出付 SHOP_REFRESH_COST),
+    同节点多次刷新合法——旧口径的总和上界 ``max(0, (refreshes-rounds))*2``
+    隐含「每节点 ≤1 刷」分布假设(非游戏规则非 ADR 口径),粗战斗模型
+    引入的多刷局误红,已废。
     """
+    from sr_od.application.currency_war.cw_economy import SHOP_REFRESH_COST
+    from sr_od.application.currency_war.cw_investments import aggregate_economy
+
     prof = SimInvestProfile(picks=((1, 1, '加油站'),))
     r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
-    total_refresh_cost = sum(
-        (row.get('sim') or {}).get('spend', {}).get('refresh', 0)
-        for row in r.ledger)
-    # 免费额度 1/节点:每轮首刷免费 → 总花销 ≤ (总刷次-轮数)*2 的上界
-    rounds = len(r.ledger)
-    assert total_refresh_cost <= max(0, (r.refreshes - rounds)) * 2
+    quota = aggregate_economy(['加油站']).free_refresh_per_node
+    assert quota > 0
+    any_refresh = False
+    for row in r.ledger:
+        acts = [a for a in (row.get('actions') or [])
+                if a.get('__type__') == 'RefreshShop']
+        for i, a in enumerate(acts):
+            expect = 0 if i < quota else SHOP_REFRESH_COST
+            assert a['cost'] == expect, (row.get('round_num'), i, a['cost'])
+        if acts:
+            any_refresh = True
+            # 账本自洽:轮内 spend.refresh 与 actions 逐笔成本一致
+            assert (row.get('sim') or {}).get('spend', {}).get('refresh', 0) \
+                == sum(a['cost'] for a in acts), row.get('round_num')
+    assert any_refresh, '构造失效:整局零刷新,免费额度语义未被锁到'
 
 
 # ---------- 频次表与日程 ----------
