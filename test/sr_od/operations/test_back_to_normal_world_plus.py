@@ -351,9 +351,19 @@ class TestNpcDialogGuard:
             counters['fallback_click'] += 1
             return self.round_success(status=area_name)
 
+        # 大厅关闭按钮的 area 点击(实机验证过的「按钮-关闭」,点 X 回大世界);
+        # 其余 find_and_click 一律未命中(逐光捡金/战斗退出等分支不得误吸)。
+        area_clicks: list[tuple[str, str]] = []
+
+        def _fake_find_and_click(self, screen, screen_name, area_name, *args, **kwargs):
+            if screen_name == '货币战争-大厅' and area_name == '按钮-关闭':
+                area_clicks.append((screen_name, area_name))
+                return self.round_success(status=f'{screen_name}-{area_name}')
+            return self.round_wait(status=f'未找到 {area_name}')
+
         monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
         monkeypatch.setattr(
-            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_area
+            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_and_click
         )
         monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
         monkeypatch.setattr(
@@ -375,14 +385,6 @@ class TestNpcDialogGuard:
 
         op = _WatchedBackToNormal(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
-        x_clicks: list = []
-
-        def _record_click(pos=None, *args, **kwargs):
-            x_clicks.append(pos)
-            counters['x_click'] += 1
-            return True
-
-        monkeypatch.setattr(op.ctx.controller, 'click', _record_click, raising=False)
         sleeps = _patch_round_sleep(monkeypatch)
 
         enter_running_state(test_context)
@@ -391,16 +393,16 @@ class TestNpcDialogGuard:
         finally:
             reset_running_state(test_context, op)
 
-        # 分支每轮点右上角 X(点击发出但画面不变——点击不落地语义),round_retry
-        # 有界:耗尽 20 次 retry 后 FAIL,而非守卫时代的 retry 永动。
+        # 分支每轮走「按钮-关闭」area 点击(实机验证的退出手势,点 X 回大世界),
+        # round_retry 有界:耗尽 20 次 retry 后 FAIL,而非守卫时代的 retry 永动。
         assert not result.success, f'画面不变时应有界 FAIL,status={result.status}'
         rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
         assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
         assert len(sleeps) >= rounds, f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
-        # 每轮点的都是右上角 X 坐标(而非守卫的空白推进位/兜底的右上角返回 area)
-        assert counters['x_click'] == rounds and counters['fallback_click'] == 0, (
-            f'X 点击数({counters["x_click"]})应==轮次,兜底({counters["fallback_click"]})应为 0'
+        # 每轮点的都是大厅「按钮-关闭」area(而非守卫的空白推进位/兜底的右上角返回 area)
+        assert len(area_clicks) == rounds and counters['fallback_click'] == 0, (
+            f'area 点击数({len(area_clicks)})应==轮次,兜底({counters["fallback_click"]})应为 0'
         )
-        assert all(
-            p is not None and int(p.x) == 1857 and int(p.y) == 63 for p in x_clicks
-        ), f'X 点击坐标漂移:{x_clicks[:3]}'
+        assert all(sn == '货币战争-大厅' and an == '按钮-关闭' for sn, an in area_clicks), (
+            f'点击 area 漂移:{area_clicks[:3]}'
+        )
