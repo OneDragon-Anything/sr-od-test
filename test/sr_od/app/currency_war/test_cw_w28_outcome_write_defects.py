@@ -83,8 +83,9 @@ def _make_loop(monkeypatch, *, new_match: bool, elapsed_s: float,
 
     captured: list[dict] = []
 
-    def _fake_record_outcome(outcome, source: str = '') -> None:
-        captured.append({'outcome': outcome, 'source': source})
+    def _fake_record_outcome(outcome, source: str = '', supply_pick=None) -> None:
+        captured.append({'outcome': outcome, 'source': source,
+                         'supply_pick': supply_pick})
 
     monkeypatch.setattr(bl.cw_telemetry, 'record_outcome', _fake_record_outcome)
     monkeypatch.setattr(bl.cw_telemetry, 'record_exogenous',
@@ -192,8 +193,9 @@ def test_supply_outcome_synthesized(monkeypatch) -> None:
 
     captured: list[dict] = []
 
-    def _fake_record_outcome(outcome, source: str = '') -> None:
-        captured.append({'outcome': outcome, 'source': source})
+    def _fake_record_outcome(outcome, source: str = '', supply_pick=None) -> None:
+        captured.append({'outcome': outcome, 'source': source,
+                         'supply_pick': supply_pick})
 
     monkeypatch.setattr(bl.cw_telemetry, 'record_outcome', _fake_record_outcome)
     monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: (1, 5))
@@ -228,8 +230,9 @@ def test_supply_outcome_hp_unreadable_low_confidence(monkeypatch) -> None:
     captured: list[dict] = []
 
     monkeypatch.setattr(bl.cw_telemetry, 'record_outcome',
-                        lambda outcome, source='': captured.append(
-                            {'outcome': outcome, 'source': source}))
+                        lambda outcome, source='', supply_pick=None: captured.append(
+                            {'outcome': outcome, 'source': source,
+                             'supply_pick': supply_pick}))
     monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: (2, 5))
 
     class _Loop(bl.CurrencyWarRunLoop):
