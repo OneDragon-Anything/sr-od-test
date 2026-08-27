@@ -40,11 +40,22 @@ def _fixture_replay(root: Path, run_id: str, *, r2_node: str = '普通战斗') -
 
 @pytest.fixture()
 def guarded_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """把生成器写目标指到 tmp(白名单同步——生产签名零测试参数)。"""
+    """把生成器写目标指到 tmp(白名单同步——生产签名零测试参数)。
+
+    同步撤销池冻结标志:池已退役停更(退役第一步),但生成机制
+    本体的回归覆盖仍要能单测——测试内解冻,不改生产默认。
+    """
     target = tmp_path / 'cw_delta_pool_data.py'
     monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', target)
     monkeypatch.setattr(cw_delta_pool_gen, 'WRITABLE_TARGETS', (target,))
+    monkeypatch.setattr(cw_delta_pool_gen, '_DELTA_POOL_FROZEN', False)
     return target
+
+
+def test_regenerate_frozen_by_default() -> None:
+    """退役第一步:池冻结——regenerate_snapshot 一律 raise(管线停跑)。"""
+    with pytest.raises(cw_delta_pool_gen.DeltaPoolFrozen):
+        cw_delta_pool_gen.regenerate_snapshot(quiet=True)
 
 
 def test_regenerate_writes_guarded_artifact(
@@ -82,9 +93,29 @@ def _patch_pool_meta(monkeypatch: pytest.MonkeyPatch, runs: dict) -> None:
     monkeypatch.setattr(dpd, 'META', {'runs': runs})
 
 
+def _unfreeze_freshness(monkeypatch: pytest.MonkeyPatch) -> None:
+    """池冻结态下新鲜度检查整体跳过(停更=预期);测三态逻辑先解冻。"""
+    from sr_od.application.currency_war import cw_coarse_battle
+    monkeypatch.setattr(cw_coarse_battle, 'BATTLE_ENGINE_MODE', 'delta')
+
+
+def test_freshness_frozen_skips(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """退役第一步:coarse 引擎默认下新鲜度检查跳过(停更非断裂)。"""
+    replay = tmp_path / 'replay'
+    replay.mkdir()
+    (replay / 'runs.jsonl').write_text(
+        json.dumps({'run_id': 'run_20990101_000009'}) + '\n',
+        encoding='utf-8')
+    _patch_pool_meta(monkeypatch, {'run_20990101_000001': 9})
+    res = cw_sim_checks.check_pool_freshness(replay)
+    assert res['violations'] == 0 and res.get('skipped')
+
+
 def test_freshness_fresh_and_stale(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """件2:lag=1 瞬态过;lag≥2 违规(管线断);detail 带重跑指引。"""
+    _unfreeze_freshness(monkeypatch)
     replay = tmp_path / 'replay'
     replay.mkdir()
     with (replay / 'runs.jsonl').open('w', encoding='utf-8') as f:
@@ -103,6 +134,7 @@ def test_freshness_fresh_and_stale(
 def test_freshness_skip_and_empty_pool(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """件2:无本机 replay 跳过不辖;META.runs 空=违规。"""
+    _unfreeze_freshness(monkeypatch)
     empty_dir = tmp_path / 'nowhere'
     res = cw_sim_checks.check_pool_freshness(empty_dir)
     assert res['violations'] == 0 and res.get('skipped')
