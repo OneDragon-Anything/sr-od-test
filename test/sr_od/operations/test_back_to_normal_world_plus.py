@@ -25,6 +25,7 @@ import pytest
 import sr_od.operations.back_to_normal_world_plus as btnw_module
 from one_dragon.base.geometry.point import Point
 from one_dragon.base.matcher.match_result import MatchResult
+from one_dragon.base.operation.operation_round_result import OperationRoundResult
 from one_dragon.utils.i18_utils import gt
 from sr_od.operations.back_to_normal_world_plus import BackToNormalWorldPlus
 from sr_od.operations.interact.talk_interact import TalkInteract
@@ -333,6 +334,129 @@ class TestNamelessHonorBranches:
             f'{screen_name}: area 点击数({len(find_clicks)})应==轮次({rounds})'
         )
         assert all(sn == screen_name and an == click_area for sn, an in find_clicks)
+
+
+class TestVersionAnnouncementBranches:
+    """版本公告轮播分支(W301):第 1 页翻页 / 第 2 页关闭,真帧输入。
+
+    背景:游戏级版本公告弹窗(「贪饕」侵蚀,2026-08-26 版本)待机自动弹出、
+    盖在任意画面上;第 1 页无出口只有右箭头翻页,第 2 页底部中央出「关闭」钮
+    (编排者 2026-08-27 live 实证;无此分支时 CW 独立 app 首跑 52s 失败)。
+    分支结构(W286/W293 同构):标题 id_mark(两页共享)正面识别 → 「按钮-关闭」
+    可见与否区分子态 → area 点击 → round_retry 逐帧重识别。
+
+    与上方 mock 分支测试不同,本类**不 mock 画面识别**(round_by_find_area 走
+    session 级真 OCR / 真命中),只对点击层做记录——fixture 用测试仓归档的
+    真实公告帧(贪饕侵蚀-第1页/第2页.webp),锁「真帧 → 分支路由 + 点击 area」
+    全链,识别漂移(锚点失配 / 误吸他分支)会在此红。
+    """
+
+    SCREEN = '版本公告轮播'
+
+    def _run_check_screen(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+        state: str,
+    ) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
+        """真帧驱动单轮 check_screen,返回 (结果, find记录, find+click记录, 裸click记录)。
+
+        - ``op.last_screenshot`` 直接注入归档真帧(不经截图链路);
+        - 三类 round_by_* 均为**包装真实方法**(识别照跑,只加记录);
+        - 模拟宇宙状态 / 列车补给 / 对话守卫恒无(与本测试无关,防噪音)。
+        """
+        img = test_context.load_screen(self.SCREEN, state)
+        finds: list[tuple[str, str]] = []
+        find_clicks: list[tuple[str, str]] = []
+        bare_clicks: list[tuple[str, str]] = []
+
+        real_find = BackToNormalWorldPlus.round_by_find_area
+        real_find_click = BackToNormalWorldPlus.round_by_find_and_click_area
+        real_click = BackToNormalWorldPlus.round_by_click_area
+
+        def _spy_find(self, screen, s_name: str, a_name: str, *a, **k):
+            r = real_find(self, screen, s_name, a_name, *a, **k)
+            if r.is_success:
+                finds.append((s_name, a_name))
+            return r
+
+        def _spy_find_click(self, screen, s_name: str, a_name: str, *a, **k):
+            r = real_find_click(self, screen, s_name, a_name, *a, **k)
+            if r.is_success:
+                find_clicks.append((s_name, a_name))
+            return r
+
+        def _spy_click(self, s_name: str, a_name: str, *a, **k):
+            r = real_click(self, s_name, a_name, *a, **k)
+            bare_clicks.append((s_name, a_name))
+            return r
+
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _spy_find)
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_find_and_click_area', _spy_find_click,
+        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _spy_click)
+        monkeypatch.setattr(
+            btnw_module.sim_uni_screen_state,
+            'get_sim_uni_screen_state',
+            lambda *args, **kw: None,
+        )
+        monkeypatch.setattr(
+            btnw_module.common_screen_state,
+            'is_express_supply',
+            lambda *args, **kw: False,
+        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
+
+        op = _WatchedBackToNormal(test_context)
+        op.last_screenshot = img  # 真帧注入:check_screen 每轮读它做识别
+        monkeypatch.setattr(op, 'screenshot', lambda: img)
+
+        enter_running_state(test_context)
+        try:
+            result = op.check_screen()
+        finally:
+            reset_running_state(test_context, op)
+        return result, finds, find_clicks, bare_clicks
+
+    def test_page1_flips_to_next(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """页 1 真帧:标题 id_mark 命中、无「关闭」→ 点右箭头翻页 area,不点关闭。"""
+        result, finds, find_clicks, bare_clicks = self._run_check_screen(
+            test_context, monkeypatch, '贪饕侵蚀-第1页',
+        )
+
+        # 分支路由:round_retry 等下一轮逐帧重识别(非 success / 兜底)
+        assert not result.is_success, f'页 1 应 round_retry,status={result.status}'
+        assert result.status == '版本公告轮播'
+        # 识别事实(真 OCR):标题命中、关闭钮缺席(页 1 子态判据)
+        assert (self.SCREEN, '标识-贪饕侵蚀') in finds
+        assert (self.SCREEN, '按钮-关闭') not in finds
+        # 动作:只裸点右箭头翻页 area;不得点「关闭」
+        assert bare_clicks == [(self.SCREEN, '按钮-下一页')], f'裸点击漂移:{bare_clicks}'
+        assert find_clicks == [], f'页 1 不应有 find+click:{find_clicks}'
+
+    def test_page2_closes(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """页 2 真帧:「关闭」钮可见 → find+click 关闭 area,不再翻页。"""
+        result, finds, find_clicks, bare_clicks = self._run_check_screen(
+            test_context, monkeypatch, '贪饕侵蚀-第2页',
+        )
+
+        assert not result.is_success, f'页 2 应 round_retry,status={result.status}'
+        assert result.status == '版本公告轮播'
+        assert (self.SCREEN, '标识-贪饕侵蚀') in finds
+        assert (self.SCREEN, '按钮-关闭') in finds
+        assert find_clicks == [(self.SCREEN, '按钮-关闭')], (
+            f'关闭点击漂移:{find_clicks}'
+        )
+        assert bare_clicks == [], f'页 2 不应再翻页:{bare_clicks}'
 
 
 def _patch_round_sleep(monkeypatch: pytest.MonkeyPatch) -> list[float]:
