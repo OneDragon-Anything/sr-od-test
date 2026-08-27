@@ -203,6 +203,15 @@ _EXPECTED_HASH = ('576fc5520257d7ca53d3c5466677b417'
 # 开)两字段——有意改参,锁同步更新(其余数值字段不变)
 _EXPECTED_HASH = ('9e19c00dd27a472e62f692166770752d'
                   '449bba586450d4d1bc6a315f9a206702')
+# W238/ADR-0403 承接门 hp 维 boss 投影批更新:新增 handoff_boss_project
+# (=False,投影总开关,与 handoff_gate_enabled 正交;A/B 裁决默认关,见
+# ADR-0403)/handoff_boss_e_damage(=E[boss伤害|板深档] 常数表 {9:29.25,
+# 12:30.35,15:17.5},Δ池 plane=1 boss 桶删失剔除均值)/handoff_boss_
+# e_damage_default(=27.33,缺桶 fallback 全池未删失均值)/handoff_boss_
+# reward_bonus(=2,r8 奖励胜唯一正项)四字段(设计件 09 §3.1 第一步;
+# 开=boss 后投影 hp 喂档位切点)——有意改参,锁同步更新(其余字段不变)
+_EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
+                  '3b2a9daa3b3f5aafce836cdc40dfc5d9')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
