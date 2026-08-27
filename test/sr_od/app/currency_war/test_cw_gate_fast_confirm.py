@@ -214,19 +214,65 @@ def test_op_settle_waits_then_baseline_then_fast_poll(monkeypatch):
 
 
 def test_op_settle_window_still_enforced(monkeypatch):
-    """终裁锁(加速器②护栏):操作段不豁免稳定窗——窗未达 → None。
+    """终裁锁(加速器②护栏):操作段不豁免稳定窗——画面持续变化
+    (特效尾帧)→ 指纹逐轮重置基线,窗永不达成 → None。
 
-    min_stable_s=5.0 > timeout 3.0:即使指纹全程一致,窗在预算内达
-    不到必超时;防「单校验通过即放行」的带噪观察面回潮。"""
+    操作段稳定窗已分级到地板 0.6s(_OP_SETTLE_MIN_STABLE_S),
+    但「窗须真实测量、不得单校验放行」的语义不变:指纹每轮变化
+    时即使窗再短也必超时(None 语义:调用方走兜底)。"""
     from sr_od.application.currency_war import cw_observation_gate as gate
     _patch_anchor_hit(monkeypatch)
-    op = _FakeOp([_gray(v=50)] * 20)
+    op = _FakeOp([_gray(v=v) for v in
+                  (10, 50, 90, 130, 170, 210, 30, 70, 110, 150,
+                   190, 20, 60, 100, 140, 180, 40, 80, 120, 160)])
     out = wait_stable_frame(op, profile=_prof(min_stable_s=5.0),
                             segment='op_settle',
                             timeout_s=3.0,
                             clock=_TickingClock(0.3))
     assert out is None, '操作段稳定窗必须真实测量,不得单校验放行'
     assert gate._LAST_SETTLE_WAIT == 2.0
+
+
+def test_op_settle_window_graded_to_floor(monkeypatch):
+    """操作段稳定窗分级锁:profile 窗 0.8s 时,settle 段取地板
+    0.6s——同场景下 settle 段确认轮数严格少于非 settle 段。"""
+    from sr_od.application.currency_war import cw_observation_gate as gate
+    assert gate._OP_SETTLE_MIN_STABLE_S == 0.6, \
+        'settle 稳定窗地板必须 = 0.6s(特效帧误读红线,实机耗时报告风险声明)'
+    _patch_anchor_hit(monkeypatch)
+    op_s = _FakeOp([_gray(v=50)] * 8)
+    out_s = wait_stable_frame(op_s, profile=_prof(min_stable_s=0.8),
+                              segment='op_settle',
+                              timeout_s=6.0,
+                              clock=_TickingClock(0.3))
+    assert out_s is not None
+    op_n = _FakeOp([_gray(v=50)] * 8)
+    out_n = wait_stable_frame(op_n, profile=_prof(min_stable_s=0.8),
+                              timeout_s=6.0,
+                              clock=_TickingClock(0.3))
+    assert out_n is not None
+    assert op_s.shot_count < op_n.shot_count, \
+        (f'settle 段须按 0.6s 地板更早返帧(确认轮更少),'
+         f'实际 settle={op_s.shot_count} 帧 vs 非 settle={op_n.shot_count} 帧')
+
+
+def test_non_settle_keeps_profile_window(monkeypatch):
+    """分级边界:非 settle 段(环入口/兜底门)不吃 0.6 地板——
+    profile 窗抬高时确认轮随之变多(窗仍由 profile 驱动)。"""
+    _patch_anchor_hit(monkeypatch)
+    op_lo = _FakeOp([_gray(v=50)] * 8)
+    out_lo = wait_stable_frame(op_lo, profile=_prof(min_stable_s=0.8),
+                               timeout_s=6.0,
+                               clock=_TickingClock(0.3))
+    assert out_lo is not None
+    op_hi = _FakeOp([_gray(v=50)] * 12)
+    out_hi = wait_stable_frame(op_hi, profile=_prof(min_stable_s=1.7),
+                               timeout_s=6.0,
+                               clock=_TickingClock(0.3))
+    assert out_hi is not None
+    assert op_hi.shot_count > op_lo.shot_count, \
+        (f'非 settle 段窗必须随 profile 变化(不吃 0.6 地板),'
+         f'实际 0.8s={op_lo.shot_count} 帧 vs 1.7s={op_hi.shot_count} 帧')
 
 
 def test_fast_confirm_false_restores_full_gate(monkeypatch):
