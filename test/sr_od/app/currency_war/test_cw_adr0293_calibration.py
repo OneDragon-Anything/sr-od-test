@@ -244,8 +244,16 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # (W275 四臂配对 AB 兑换「调常量」映射;core2≥1 进场率 +6.7pt/金面
 # 无信号;落地前置核验=回放漂移仅限 P1 r6+、提前窗买质量反升——
 # 证据链见 ADR-0418)——有意改参,锁同步更新(其余字段不变)
-_EXPECTED_HASH = ('8233f2820f3a26ed6cfa94cc448b61c4'
-                  '9f77c21fecece50a431be1fabe12c296')
+# _EXPECTED_HASH = ('8233f2820f3a26ed6cfa94cc448b61c4'
+#                   '9f77c21fecece50a431be1fabe12c296')
+# W332b 未成型期姿态批更新:新增 release/换线判据参数族(release_enabled/
+# k_alert/k_linear/k_hp_calibration_grid/blood_margin_low_hp/boss_tax_p75/
+# boss_tax_anchor_group/delta_hp_normal/delta_hp_boss/line_switch_enabled/
+# line_switch_theta/line_switch_debias_delta/line_switch_min_dwell;
+# 符号不稳参数=默认值+标定接口,sim 批网格标定后锁值)——有意加字段,
+# 锁同步更新(既有字段默认值不变)
+_EXPECTED_HASH = ('429e7e7ddb68f078c5a3f5ef07f8efba'
+                  'c0591539a2dc9ef8d1014a668276c63b')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
