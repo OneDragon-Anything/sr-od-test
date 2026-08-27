@@ -20,6 +20,8 @@ fixture(screens/):
 import pytest
 from test.conftest import SrTestContext
 
+from sr_od.application.nameless_honor.nameless_honor_app import NamelessHonorApp
+from sr_od.application.sr_application import SrApplication
 from sr_od.screen_state import common_screen_state
 
 # NamelessHonorApp 各节点引用的 (screen_name, area_name)(均在 '无名勋礼' screen,2026-08-15 从菜单屏迁出)
@@ -29,7 +31,18 @@ APP_AREA_REFS: list[tuple[str, str]] = [
     ('无名勋礼', '按钮-点击空白处关闭'),  # _claim_task / _check_screen_after_reward
     ('无名勋礼', '按钮-奖励-一键领取'),  # _claim_reward
     ('无名勋礼', '按钮-奖励-取消'),  # _check_screen_after_reward
+    ('无名勋礼-等级加速弹窗', '按钮-点击空白处关闭'),  # _check_screen_after_reward(W293,弹窗提示位 y≈737,与主面板同名 area y≈945 坐标异)
 ]
+
+
+class _DirectNamelessHonor(NamelessHonorApp):
+    """绕过游戏窗口前置的 NamelessHonorApp(仅调单节点方法,不 execute)。"""
+
+    def __init__(self, ctx) -> None:
+        SrApplication.__init__(
+            self, ctx, 'nameless_honor', op_name='无名勋礼',
+            need_check_game_win=False, run_record=None,
+        )
 
 
 class TestNamelessHonorApp:
@@ -62,3 +75,66 @@ class TestNamelessHonorApp:
         assert common_screen_state.in_secondary_ui(test_context, screen, '无名勋礼'), (
             '应判定在「无名勋礼」二级页'
         )
+
+    def test_after_reward_levelup_popup_closed(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """W293/run 48:一键领取后弹「无名勋礼等级加速」弹窗 → 新候选命中点关闭,WAIT。
+
+        背景(2026-08-27 run 48 实机,日志 19:09:22-28):领取奖励点击成功后弹该
+        说明弹窗,旧三候选(secondary UI/奖励-取消/点击空白处关闭)全不命中 →
+        「未知画面状态」×4 → op 失败。修复=补弹窗独立屏候选(命中→点提示位
+        →round_wait 重跑本节点等回主界面)。真实 fixture 帧(测试仓
+        ``screens/无名勋礼-等级加速弹窗/等级加速弹窗.webp``)作输入。
+        """
+        if not test_context.has_screen('无名勋礼-等级加速弹窗', '等级加速弹窗'):
+            pytest.skip('存档截图缺失:screens/无名勋礼-等级加速弹窗/等级加速弹窗.webp')
+
+        op = _DirectNamelessHonor(test_context)
+        op.last_screenshot = test_context.load_screen('无名勋礼-等级加速弹窗', '等级加速弹窗')
+
+        clicks: list[tuple[str, str]] = []
+
+        def _fake_find_and_click(self, screen, screen_name, area_name, *args, **kwargs):
+            if screen_name == '无名勋礼-等级加速弹窗' and area_name == '按钮-点击空白处关闭':
+                clicks.append((screen_name, area_name))
+                return self.round_success(status=f'{screen_name}-{area_name}')
+            return self.round_wait(status=f'未找到 {area_name}')
+
+        monkeypatch.setattr(
+            NamelessHonorApp, 'round_by_find_and_click_area', _fake_find_and_click
+        )
+
+        result = op._check_screen_after_reward()
+
+        # 弹窗帧不走 secondary UI / 主面板候选,新候选命中 → WAIT 等回主界面。
+        assert result.is_success is False, (
+            f'弹窗候选命中应 round_wait 非成功,status={result.status}'
+        )
+        assert result.status == '无名勋礼-等级加速弹窗-按钮-点击空白处关闭', (
+            f'应点弹窗独立屏的关闭提示位,status={result.status}'
+        )
+        assert len(clicks) == 1, f'应恰好点一次关闭提示位,实际 {clicks}'
+
+    def test_after_reward_panel_candidates_still_first(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """主面板帧(secondary UI 命中)不受新候选影响,仍走原成功路径。"""
+        if not test_context.has_screen('无名勋礼', '奖励'):
+            pytest.skip('存档截图缺失:screens/无名勋礼/奖励.webp')
+
+        op = _DirectNamelessHonor(test_context)
+        op.last_screenshot = test_context.load_screen('无名勋礼', '奖励')
+
+        def _boom(*args, **kwargs):
+            raise AssertionError('主面板帧应由 secondary UI 分支接管,不应触达任何点击候选')
+
+        monkeypatch.setattr(NamelessHonorApp, 'round_by_find_and_click_area', _boom)
+
+        result = op._check_screen_after_reward()
+
+        assert result.is_success, f'主面板帧应 round_success,status={result.status}'
