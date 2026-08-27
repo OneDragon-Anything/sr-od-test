@@ -28,5 +28,5 @@ def test_streak_gold_table_constant() -> None:
 def test_base_income_varies_by_node() -> None:
     """VLM 判读:基础奖励随节点变(r2=4/r3=5)——
     sim BASE_INCOME=5 是近似,采够样本后建表。"""
-    from sr_od.application.currency_war.cw_sim import BASE_INCOME
+    from sr_od.application.currency_war.cw_economy import BASE_INCOME
     assert BASE_INCOME == 5   # 近似值,待采集成表替换
