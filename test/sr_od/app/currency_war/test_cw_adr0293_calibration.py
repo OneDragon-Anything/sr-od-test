@@ -228,7 +228,11 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # W251/ADR-0408 假设 A 批更新:新增 early_pace_* 五字段(enabled=False
 # 默认关/min 3/max 4/bias 5.0/val_max 0.5)——有意加字段,锁同步更新
 # (其余字段不变)
-_EXPECTED_HASH = ('ae2150ea96f4cdc7d148cf59433ed375ad712edc6d53d413bbdc93eb84e6506e')
+# W252/ADR-0409 M-A 批更新:新增 handoff_refresh_directed(False)/
+# directed_refresh_per_round(2)/directed_refresh_game_cap(6)——
+# 与 W251 未提交常量**合并重算**(同一工作树口径;W251 收账若改参
+# 以其批再同步)
+_EXPECTED_HASH = ('4aed01b80c9fc6445ff3b73cf9af632a204d274dd839cafe0f0a65c1af097443')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
