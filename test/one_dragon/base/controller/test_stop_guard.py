@@ -1,25 +1,34 @@
-"""停机刹车语义锁(ADR-0396,W217):停机信号后零游戏输入。
+"""停机刹车语义锁(ADR-0396,W217;ADR-0406 手动端点豁免语义修订):停机信号后零游戏输入。
 
 锁的是**语义**不锁实现:
 - 闩语义:运行中被 stop_running 打断 → is_stop_interrupted=True;idle 杂散
-  stop / 自然完成收口(finish_running)不置闩;start_running 清闩;
-  consume_stop_interrupted 显式消费(手动接管入口)。
+  stop / 自然完成收口(finish_running)不置闩;start_running 清闩。
+  **无显式消费入口**(ADR-0406 移除 consume_stop_interrupted——手动端点
+  不再摘全局闩)。
 - 守卫语义:controller 公开输入入口(click/drag/btn/scroll/input/mouse_move)
   在闩置位后抛 StopRunInterrupted,动作零落地。
+- 手动豁免语义(ADR-0406):显式外部接管走 ``stop_guard_exemption`` 本地
+  豁免——动作放行但闩不清位、豁免按线程隔离(run 线程视角守卫永远生效)。
 - 穿透语义:守卫异常不被中间 op 层吞成普通失败——嵌套 op 链(外环→子 op→
   点击)停机后首个被拦输入即整链中止,外环不再继续下一节点(ADR-0388 实证
   的 director「已停止后又出战」形态由本层结构性消除)。
 
 run 26 实证背景:.log/mcp_server.log 08-26 12:56:12「已停止[gui:hotkey]」后
 12:56:16 director 仍点「出战成功」——stop 只设标志位,轮内执行链不查。
+ADR-0406 实证背景(W241 A1b):stop_run 返回≠run 线程结束,MCP 手动端点在
+run 收口期清全局闩 → unwind 中的多动作节点失去守卫成幽灵输入。
 """
+import threading
 from unittest.mock import MagicMock
 
 import pytest
 
 from one_dragon.base.controller.controller_base import ControllerBase
 from one_dragon.base.controller.pc_controller_base import PcControllerBase
-from one_dragon.base.controller.stop_guard import StopRunInterrupted
+from one_dragon.base.controller.stop_guard import (
+    StopRunInterrupted,
+    stop_guard_exemption,
+)
 from one_dragon.base.geometry.point import Point
 from one_dragon.base.operation.application.application_run_context import (
     ApplicationRunContext,
@@ -75,13 +84,14 @@ def test_finish_running_does_not_arm_latch():
     assert rc.is_stop_interrupted is False
 
 
-def test_consume_stop_interrupted():
-    """显式消费:手动接管入口(click_game 等)调用后闩清位。"""
+def test_no_consume_entry_on_latch():
+    """无显式消费入口(ADR-0406):consume_stop_interrupted 已移除——
+    手动端点不再有「单 actor 清全局闩」路径,闩只由 start_running 清。"""
     rc = _make_run_context()
     rc.start_running()
     rc.stop_running(reason='mcp:stop_run')
-    rc.consume_stop_interrupted()
-    assert rc.is_stop_interrupted is False
+    assert rc.is_stop_interrupted is True
+    assert not hasattr(rc, 'consume_stop_interrupted')
 
 
 # ============ ② 守卫语义(controller 输入入口) ============
@@ -171,6 +181,51 @@ def test_pc_controller_real_entries_guarded():
     with pytest.raises(StopRunInterrupted):
         c.mouse_move(Point(1, 1))
 
+
+# ============ ②b 手动豁免语义(ADR-0406:手动端点不清闩,本地豁免) ============
+
+
+def test_exemption_passes_but_keeps_latch_armed():
+    """本地豁免:闩置位下豁免内动作放行,且闩不清位——豁免退出后同线程
+    (模拟 run 线程视角)的后续输入仍被拦(ADR-0406 核心:收口期守卫仍活)。"""
+    c = _RecordingController()
+    rc = _make_run_context()
+    rc.start_running()
+    rc.stop_running(reason='mcp:stop_run')
+    c.stop_guard = lambda: rc.is_stop_interrupted
+    # 模拟 MCP 手动端点(click_game 内层形态):豁免令牌内 controller 调用
+    with stop_guard_exemption():
+        assert c.click(Point(100, 100)) is True
+        c.btn_tap('esc')  # 无返回值,不抛即过
+    assert c.actions == ['click', 'btn_tap:esc'], '豁免内手动动作应落地'
+    # 闩未被清:run 收口期(unwind 中)的输入仍被守卫拦截
+    assert rc.is_stop_interrupted is True
+    with pytest.raises(StopRunInterrupted):
+        c.click(Point(1, 1))
+
+
+def test_exemption_is_thread_local():
+    """豁免按线程隔离(模拟 run 线程视角):手动端点线程持有豁免期间,
+    另一线程(run 线程)同时发起的输入仍被守卫拦截——线程级豁免而非
+    全局开关,是「不清闩」修复不引入新竞态的关键性质。"""
+    c = _RecordingController()
+    c.stop_guard = lambda: True
+
+    def _run_thread_input():
+        # 模拟 unwind 中的 run 线程:无豁免,闩置位 → 被拦(异常就地吞,
+        # 落地与否由 actions 断言)
+        try:
+            c.click(Point(1, 1))
+        except StopRunInterrupted:
+            pass
+
+    with stop_guard_exemption():
+        assert c.click(Point(100, 100)) is True  # 手动线程放行
+        t = threading.Thread(target=_run_thread_input)
+        t.start()
+        t.join(timeout=5)
+    assert not t.is_alive()
+    assert c.actions == ['click'], 'run 线程输入不得落地(线程隔离)'
 
 # ============ ③ 穿透语义:嵌套 op 链停机即整链中止 ============
 
@@ -290,8 +345,8 @@ def test_run_application_collects_guard_stop_as_stopped(test_context, monkeypatc
     assert rc.last_application_result is not None
     assert rc.last_application_result.status.startswith('已停止')
     assert 'gui:hotkey' in rc.last_application_result.status
-    # 顶层收口后消费闩 + 复位 session 态(不污染后续测试文件)
-    rc.consume_stop_interrupted()
+    # 顶层收口后复位 session 态(不污染后续测试文件;闩复位由
+    # _restore_session_run_state 直改,ADR-0406 后无消费入口)
     from test.harness.fixture_controller import reset_running_state
     for op in factory.created:
         reset_running_state(test_context, op)
