@@ -271,8 +271,9 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # press_core_mirror_bonus;默认全关/中性=零漂移)+ buy_tag_priority 增
 # copy_press + economy/war 放行标签集增 copy_press。设计单一源=
 # .debug/temp/currency_war/w300_dup_ruling/design.md v3 节——有意加
-# 字段,锁同步更新(既有字段默认值不变)
-_EXPECTED_HASH = ('699785f4866b7c682eca89a16765692dc4c4adf04072f5d10c76a2f50ad389a4')
+# 字段,锁同步更新(既有字段默认值不变)。后续 release_spend_gate_enabled
+# 默认值翻转(False→True,开臂,行为面=A/B 验证的 gate 生效),锁再同步。
+_EXPECTED_HASH = ('378ba1588de74fdd2505eb879ebf67c9bab3e05026ca7efcb1336868204d5699')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
