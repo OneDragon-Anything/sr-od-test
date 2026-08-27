@@ -82,17 +82,19 @@ def test_settlement_ocr_lcs_tightened() -> None:
         )
 
 
-def test_battle_prep_ocr_lcs_tightened() -> None:
-    """lcs 锁:「备战阶段」裸 OCR 收紧 lcs=0.8。
+def test_battle_prep_detection_area_based() -> None:
+    """T#103 化债锁:「备战阶段」检测走 screen_info area(标识-备战阶段),
+    裸 OCR 调用退役。
 
-    回归防:默认 0.5 时在投资策略屏误命中「返回备战界面」(LCS 2/4=0.5)
-    → 每轮 esc → 141x 死循环(r317 根修点 ①,实录真首卡点)。
+    r317 曾以 lcs=0.8 收紧裸 OCR(默认 0.5 在投资策略屏误命中「返回备战界面」);
+    T#103 建 positional rect 后误配面被结构性消灭,回归面 = 别再退回全屏扫。
     """
     src = inspect.getsource(ExitCurrencyWarMatch.exit_match)
-    idx = src.index("'备战阶段'")
-    call_region = src[idx:idx + 80]
-    assert 'lcs_percent=0.8' in call_region, (
-        '「备战阶段」OCR 应收紧 lcs_percent=0.8(r317 根修点 ①)'
+    assert "'标识-备战阶段'" in src, (
+        '「备战阶段」检测应使用 screen_info 标识-备战阶段 area(T#103)'
+    )
+    assert "round_by_ocr(screen, '备战阶段'" not in src, (
+        '「备战阶段」不应再走全屏 OCR(r317 误配史:T#103 已 area 化,勿回退)'
     )
 
 

@@ -122,6 +122,9 @@ def _make_loop(monkeypatch, *, new_match: bool, elapsed_s: float,
         def round_by_ocr(self, screen, word, **kw):
             return SimpleNamespace(is_success=False)
 
+        def round_by_find_area(self, screen, screen_name, area_name, **kw):
+            return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
+
     return _Loop(), captured
 
 

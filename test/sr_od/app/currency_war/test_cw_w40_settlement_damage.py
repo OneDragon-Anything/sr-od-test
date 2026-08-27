@@ -156,6 +156,9 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
         def round_by_ocr(self, screen, word, **kw):
             return SimpleNamespace(is_success=False)
 
+        def round_by_find_area(self, screen, screen_name, area_name, **kw):
+            return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
+
     op = _Loop()
     op._record_round_outcome(screen=None)
     assert len(captured) == 1
