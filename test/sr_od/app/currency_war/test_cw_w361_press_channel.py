@@ -58,6 +58,10 @@ from sr_od.application.currency_war.decision_v2.scoring import (
 _ARMA = replace(DEFAULT_REGISTRY, press_channel_enabled=True,
                 press_copy_unit=0.5, press_core_mirror_bonus=0.5)
 
+# 注入关臂:press 通道已正式开臂(默认 True,commit cb7688d4——W368
+# A/B R2 验收);「通道关」行为锁改为显式注入,不再依赖默认值。
+_ARM0 = replace(DEFAULT_REGISTRY, press_channel_enabled=False)
+
 # 方向外低费件(CW 注册表真值:刃=星核猎手/燃血,黑塔=群攻/银河学者;
 # 均 ∉ 姬子列车方向 {仙舟,列车同行,持续伤害},∉ 插件库/引擎名单)
 _FILLER = '刃'
@@ -115,10 +119,10 @@ def test_guard_synth_point_single_source() -> None:
     (V-B1.5「探针态必须产出候选」空臂红线)。"""
     sess = _sess()
     st = _state(shop=[_shop_card()])
-    assert _copy_swap_blocked(st.shop[0], st, sess, DEFAULT_REGISTRY)
+    assert _copy_swap_blocked(st.shop[0], st, sess, _ARM0)
     assert _FILLER not in {c.action.card.name
                            for c in generate_candidates(st, sess,
-                                                        DEFAULT_REGISTRY)
+                                                        _ARM0)
                            if isinstance(c.action, BuyCard)}
     assert not _copy_swap_blocked(st.shop[0], st, sess, _ARMA)
     got = [c for c in generate_candidates(st, sess, _ARMA)
@@ -134,17 +138,18 @@ def test_guard_zero_drift_arms_unchanged() -> None:
     ③C 臂(末窗 gap>0)放行不变;通道默认关下 press 臂不参与。"""
     sess = _sess()
     st = _state(shop=[_shop_card()])
-    # ① target 豁免(青雀非目标件,开关无效,守卫仍拦)
+    # ① target 豁免(青雀非目标件,开关无效,守卫仍拦)——注入关臂
+    # 隔离 press 豁免臂(开臂后默认注册表已带 press 臂)
     assert _copy_swap_blocked(st.shop[0], st, sess,
-                              replace(DEFAULT_REGISTRY,
+                              replace(_ARM0,
                                       copy_swap_target_exempt=True)) is True
     # ② A 臂:filler_star_unit>0 → 放行(与收拢前内联块同判据)
-    reg_a = replace(DEFAULT_REGISTRY, filler_star_unit=1.0)
+    reg_a = replace(_ARM0, filler_star_unit=1.0)
     assert not _copy_swap_blocked(st.shop[0], st, sess, reg_a)
     # ③ C 臂:r≥handoff_gate_min_round 且 gap>0 → 放行(锁线帧 gap)
     s2 = _sess()
     st_c = _state(round_num=7, shop=[_shop_card()])
-    reg_c = replace(DEFAULT_REGISTRY, handoff_gate_min_round=6)
+    reg_c = replace(_ARM0, handoff_gate_min_round=6)
     assert not _copy_swap_blocked(st_c.shop[0], st_c, s2, reg_c)
 
 
@@ -160,8 +165,8 @@ def test_tag_registration_and_priority_position() -> None:
     assert 'copy_press' in _cands.BUY_TAGS
     st = _state(shop=[_shop_card()])
     sess = _sess()
-    # 通道关:无标签
-    assert _buy_tag(st.shop[0], st, sess, DEFAULT_REGISTRY) is None
+    # 通道关(注入):无标签(开臂后默认注册表通道开,copy_press 激活)
+    assert _buy_tag(st.shop[0], st, sess, _ARM0) is None
     # 通道开:copy_press
     assert _buy_tag(st.shop[0], st, sess, _ARMA) == 'copy_press'
     # bench 满:E03 门字面(〔W300 口述〕「囤满备战席→没位置」)
@@ -274,8 +279,10 @@ def test_channel_shutdown_conditions() -> None:
 
 
 def test_registry_press_defaults_zero_drift() -> None:
-    """V-B3 默认值锁:7 参数 arm0 全关/中性,行为零漂移。"""
-    assert DEFAULT_REGISTRY.press_channel_enabled is False
+    """V-B3 默认值锁:press_channel_enabled 已正式开臂(默认 True,
+    commit cb7688d4——W368 A/B R2 验收;「默认全关零漂移」旧锁随开臂
+    失效,通道关行为改由 _ARM0 注入锁);其余 6 参保持中性/关值。"""
+    assert DEFAULT_REGISTRY.press_channel_enabled is True
     assert DEFAULT_REGISTRY.press_band_cum_threshold == 0.50
     assert DEFAULT_REGISTRY.press_channel_max_level == 6
     assert DEFAULT_REGISTRY.press_copy_unit == 0.0
@@ -322,9 +329,9 @@ def test_press_floor_exempt_cap_and_ruling() -> None:
     auth: dict = {}
     assert _press_floor_exempt(probe, working, st, sess, reg_on, auth)
     assert 'press_floor_exempt' in auth
-    # 通道关:不放行(零漂移)
+    # 通道关(注入 _ARM0):不放行(开臂后默认注册表通道开)
     assert not _press_floor_exempt(probe, working, st, sess,
-                                   DEFAULT_REGISTRY)
+                                   _ARM0)
     # 跨档有息损:不放行(gold=19, cost=19 → 0//10=0 < 1)
     cand_cross = BuyCard(_shop_card(_FILLER, 19), reason='')
     probe_cross = _cands.Candidate(action=cand_cross, tag='bridge_core',
@@ -392,11 +399,13 @@ def test_checker_dup_dual_domain() -> None:
                 if c.cost == 1
                 and set(c.factions or ()) & set(ENGINE_FACTIONS))
     cards = [{'name': name, 'cost': 1, 'faction': '?'}]
-    # deployed 同名(通道关=arm0):真拦撤销,转披露
+    # deployed 同名(通道开=新默认,commit cb7688d4):未买=C-B 真拦
+    # (通道开转正=买家被授权买;旧「通道关转披露 copy_press_channel_
+    # closed」语义由 seg_copy_press_disclosure 在通道关注册表下保留)
     row_dep = _seg_row(cards, deployed=[{'char_id': name}])
-    assert not chk.seg_check_lossless_buy_missed([row_dep])
-    disc = chk.seg_copy_press_disclosure([row_dep])
-    assert disc and disc[0]['kind'] == 'copy_press_channel_closed'
+    evs_dep = chk.seg_check_lossless_buy_missed([row_dep])
+    assert evs_dep and evs_dep[0]['class'] == 'C-B', evs_dep
+    assert not chk.seg_copy_press_disclosure([row_dep])
     # bench-only 同名:披露不进真拦(V-B9.3)
     row_bench = _seg_row(cards, deployed=[],
                          bench=[{'char_id': name}])

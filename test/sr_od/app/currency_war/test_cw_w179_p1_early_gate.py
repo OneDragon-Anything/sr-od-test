@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """W179/ADR-0372 P1 早期新件买入门单帧锁(pass_buy 修法)。
 
 锁契约(每条=一个确定输入下的确定行为;不锁分布数值):
@@ -41,6 +40,12 @@ from sr_od.application.currency_war.decision_v2.scoring import score_all
 
 _REG = DEFAULT_REGISTRY
 
+# 注入「press 通道关」注册表:press 通道已正式开臂(commit cb7688d4,
+# press_channel_enabled 默认 True),1费/同档无损买改由 arbiter 的
+# press_floor_exempt 前置臂(V-B8)授权。本文件锁的是 W179 p1_early
+# 早期门自身的辖域行为,注入关臂把该前置臂隔离在本门锁之外。
+_REG_NO_PRESS = dataclasses.replace(_REG, press_channel_enabled=False)
+
 
 def _sess() -> StrategySession:
     s = StrategySession()   # 未锁线 → FORM 相位(engines<2)
@@ -81,8 +86,8 @@ def test_gate_open_form_phase_buy_passes() -> None:
     st = _state()
     s = _sess()
     cand = _cand('停云', 1)
-    scored = score_all([cand], st, s, _REG)
-    res = arbitrate(scored, st, s, _REG)
+    scored = score_all([cand], st, s, _REG_NO_PRESS)
+    res = arbitrate(scored, st, s, _REG_NO_PRESS)
     row = _buy_rows(res)[0]
     assert row['accepted'] is True, row
     assert row['ev_auth'].get('p1_early'), row   # 授权依据 trace
@@ -125,11 +130,12 @@ def test_same_name_not_governed() -> None:
     """④同名不辖:state 已持有(青雀在 bench)→ 不在门内集;同轮前笔
     买入(working 现持)后的同名第二笔也不经本门(distinct=对 working
     现持判定)。"""
-    # ④a:已持有名(青雀)→ 门内集不含 → 拒
+    # ④a:已持有名(青雀)→ 门内集不含 → 拒(注入关臂隔离 press
+    # 前置臂——开臂后该臂会另行授权 1费同档买,与本门辖域无关)
     st = _state()
     s = _sess()
-    res = arbitrate(score_all([_cand('青雀', 1)], st, s, _REG),
-                    st, s, _REG)
+    res = arbitrate(score_all([_cand('青雀', 1)], st, s, _REG_NO_PRESS),
+                    st, s, _REG_NO_PRESS)
     row = _buy_rows(res)[0]
     assert row['accepted'] is False, row
     assert not row.get('ev_auth', {}).get('p1_early')
@@ -137,7 +143,8 @@ def test_same_name_not_governed() -> None:
     st2 = _state()
     s2 = _sess()
     cands = [_cand('停云', 1), _cand('停云', 1)]
-    res2 = arbitrate(score_all(cands, st2, s2, _REG), st2, s2, _REG)
+    res2 = arbitrate(score_all(cands, st2, s2, _REG_NO_PRESS),
+                     st2, s2, _REG_NO_PRESS)
     rows = _buy_rows(res2)
     gated = [r for r in rows if r.get('ev_auth', {}).get('p1_early')]
     assert len(gated) <= 1, rows   # 同名重复不辖(copy 面)
@@ -158,8 +165,10 @@ def test_no_refresh_authorized() -> None:
 
 
 def test_flag_off_reverts_bitwise() -> None:
-    """⑥flag off:同帧回到 W174 后行为(gold_floor 原样拒)。"""
-    reg = dataclasses.replace(_REG, p1_early_gate_enabled=False)
+    """⑥flag off:同帧回到 W174 后行为(gold_floor 原样拒)——
+    同时注入 press 通道关(开臂前默认态;通道开时该买由 press_
+    floor_exempt 前置臂授权,不落回金地板,与本门无关)。"""
+    reg = dataclasses.replace(_REG_NO_PRESS, p1_early_gate_enabled=False)
     st = _state()
     s = _sess()
     res = arbitrate(score_all([_cand('停云', 1)], st, s, reg),
@@ -175,24 +184,29 @@ def test_round_cap_blocks_second_buy() -> None:
     st = _state()
     s = _sess()
     cands = [_cand('停云', 1), _cand('藿藿', 1)]
-    res = arbitrate(score_all(cands, st, s, _REG), st, s, _REG)
+    res = arbitrate(score_all(cands, st, s, _REG_NO_PRESS),
+                    st, s, _REG_NO_PRESS)
     rows = _buy_rows(res)
     gated = [r for r in rows if r.get('ev_auth', {}).get('p1_early')]
     assert len(gated) == 1, rows
-    assert s.v2_round_p1_early == _REG.p1_early_round_cap
+    assert s.v2_round_p1_early == _REG_NO_PRESS.p1_early_round_cap
 
 
 def test_p2_and_emergency_not_governed() -> None:
-    """⑧P2 不辖(买入门只辖 P1)/ 应急态不辖([18] 纪律态地板优先)。"""
+    """⑧P2 不辖(买入门只辖 P1)/ 应急态不辖([18] 纪律态地板优先)。
+    注入关臂隔离 press 前置臂——其辖域边界只列应急/boss/war 不列
+    plane,P2 的 1费买在通道开后由该臂另行授权,非本门辖域变化。"""
     st_p2 = _state(plane=2)
     s1 = _sess()
-    res1 = arbitrate(score_all([_cand('停云', 1)], st_p2, s1, _REG),
-                     st_p2, s1, _REG)
+    res1 = arbitrate(score_all([_cand('停云', 1)], st_p2, s1,
+                               _REG_NO_PRESS),
+                     st_p2, s1, _REG_NO_PRESS)
     assert _buy_rows(res1)[0]['accepted'] is False
     st_em = _state(hp=20)   # hp≤emergency_hp=25 → 应急态
     s2 = _sess()
-    res2 = arbitrate(score_all([_cand('停云', 1)], st_em, s2, _REG),
-                     st_em, s2, _REG)
+    res2 = arbitrate(score_all([_cand('停云', 1)], st_em, s2,
+                               _REG_NO_PRESS),
+                     st_em, s2, _REG_NO_PRESS)
     row = _buy_rows(res2)[0]
     assert row['accepted'] is False, row
     assert not row.get('ev_auth', {}).get('p1_early')

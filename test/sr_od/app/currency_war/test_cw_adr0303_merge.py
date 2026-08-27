@@ -12,6 +12,8 @@
 """
 from __future__ import annotations
 
+from dataclasses import replace
+
 from sr_od.application.currency_war.cw_bridge_pool import BRIDGE_POOL
 from sr_od.application.currency_war.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_state import (
@@ -31,6 +33,11 @@ from sr_od.application.currency_war.decision_v2.registry import (
 
 _REG = DEFAULT_REGISTRY
 
+# 注入「press 通道关」注册表:press 通道已正式开臂(commit cb7688d4,
+# press_channel_enabled 默认 True)。copy_swap 守卫锁与该通道无关,
+# 锁守卫自身判据时注入关臂隔离 press 豁免臂。
+_REG_NO_PRESS = replace(_REG, press_channel_enabled=False)
+
 
 def _sess() -> StrategySession:
     s = StrategySession()
@@ -47,8 +54,11 @@ def _state(**kw) -> GameState:
     return GameState(**base)
 
 
-def _buy_names(st: GameState, sess: StrategySession) -> set[str]:
-    return {c.action.card.name for c in generate_candidates(st, sess, _REG)
+def _buy_names(st: GameState, sess: StrategySession,
+               reg: object | None = None) -> set[str]:
+    """reg=None 用默认注册表;锁通道无关行为时传 _REG_NO_PRESS。"""
+    use = _REG if reg is None else reg
+    return {c.action.card.name for c in generate_candidates(st, sess, use)
             if getattr(c.action, 'card', None) is not None}
 
 
@@ -113,10 +123,11 @@ def test_copy_swap_exempts_onboard_target_piece() -> None:
     )
     # 镜像:v1 守卫本身会拦(target_comp=None 无保留判据)
     assert _cands._copy_swap_useless(st.shop[0], st, sess)
-    # 默认关(ADR-0304 裁决回退):守卫直通,照拦
+    # 默认关(ADR-0304 裁决回退):守卫直通,照拦——注入关臂隔离
+    # press 豁免臂(开臂后默认注册表该臂会放行 band 内副本)
     assert not _REG.copy_swap_target_exempt
-    assert _cands._copy_swap_blocked(st.shop[0], st, sess, _REG)
-    assert target not in _buy_names(st, sess)
+    assert _cands._copy_swap_blocked(st.shop[0], st, sess, _REG_NO_PRESS)
+    assert target not in _buy_names(st, sess, _REG_NO_PRESS)
     # 开关开(ADR-0303 豁免,A/B 通道):不拦 + 买候选生成
     reg_on = replace(_REG, copy_swap_target_exempt=True)
     assert not _cands._copy_swap_blocked(st.shop[0], st, sess, reg_on)
@@ -141,10 +152,10 @@ def test_copy_swap_still_blocks_non_target_piece() -> None:
                        cost=ch.cost)],
     )
     assert _cands._copy_swap_useless(st.shop[0], st, sess)
-    assert _cands._copy_swap_blocked(st.shop[0], st, sess, _REG)
-    reg_on = replace(_REG, copy_swap_target_exempt=True)
+    assert _cands._copy_swap_blocked(st.shop[0], st, sess, _REG_NO_PRESS)
+    reg_on = replace(_REG_NO_PRESS, copy_swap_target_exempt=True)
     assert _cands._copy_swap_blocked(st.shop[0], st, sess, reg_on)
-    assert non_target not in _buy_names(st, sess)
+    assert non_target not in _buy_names(st, sess, _REG_NO_PRESS)
     assert non_target not in {
         c.action.card.name
         for c in generate_candidates(st, sess, reg_on)

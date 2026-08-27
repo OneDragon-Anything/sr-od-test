@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0378(W194)两件锁:[33] 稳态 LevelUp 多击组 + tracks 活引用深拷贝。
 
 锁面:
@@ -34,13 +33,19 @@ from sr_od.application.currency_war.decision_v2.arbiter import (
 )
 from sr_od.application.currency_war.decision_v2.registry import (
     DEFAULT_REGISTRY,
-    DecisionV2Registry,
 )
 from sr_od.application.currency_war.decision_v2.remediation import (
     steady_state_levelup_group,
 )
 
 logging.disable(logging.CRITICAL)
+
+# 注入「press 通道关」注册表:press 通道已正式开臂(commit cb7688d4,
+# press_channel_enabled 默认 True),同档/1费买改由 press_floor_exempt
+# 前置臂授权。本文件锁的是 P2 核心首件门自身的辖域与轮计数,注入关臂
+# 隔离该前置臂。
+_REG_NO_PRESS = dataclasses.replace(DEFAULT_REGISTRY,
+                                    press_channel_enabled=False)
 
 _ENGINE = '希儿'          # engine_char_names 成员(_target_names 恒含)
 _NON_TARGET = '散件'       # 注册表外名(不在目标集)
@@ -280,9 +285,9 @@ def test_p2_core_firstpiece_arbitrate_counter() -> None:
     st.shop = []
     cand = _core_cand()
     scored = [(cand, 5.0, {})]
-    res = arbitrate(scored, st, sess, DEFAULT_REGISTRY)
+    res = arbitrate(scored, st, sess, _REG_NO_PRESS)
     assert len(res.actions) == 1
     assert sess.v2_round_p2_core == 1
     # 同轮第二笔(跨档外的同档帧也拒——上限耗尽)
-    res2 = arbitrate([(cand, 5.0, {})], st, sess, DEFAULT_REGISTRY)
+    res2 = arbitrate([(cand, 5.0, {})], st, sess, _REG_NO_PRESS)
     assert res2.actions == []

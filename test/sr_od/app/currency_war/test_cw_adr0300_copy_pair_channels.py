@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0300 copy/pair 通道迁移批锁(买入面残余清偿)。
 
 锁定对象(decision_v2/candidates.py + registry.py + scoring.py):
@@ -11,6 +10,8 @@
    放行标签集(emergency 保持窄)+ _PIPELINE_TAGS(板面显影)。
 """
 from __future__ import annotations
+
+from dataclasses import replace
 
 from sr_od.application.currency_war.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_state import (
@@ -30,6 +31,11 @@ from sr_od.application.currency_war.decision_v2.scoring import (
 )
 
 _REG = DEFAULT_REGISTRY
+
+# 注入「press 通道关」注册表:press 通道已正式开臂(commit cb7688d4,
+# press_channel_enabled 默认 True)。r410 无效换卡守卫锁与该通道无关,
+# 锁守卫自身判据时注入关臂隔离 press 豁免臂。
+_REG_NO_PRESS = replace(_REG, press_channel_enabled=False)
 
 #: 阿格莱雅:非桥池件(非目标)、非过渡体系阵营(bonds ∩ 引擎
 #: 阵营=∅——pair 判据不与 engine_seed 交叠)——测试用搭档件载体;
@@ -65,9 +71,12 @@ def _state(**kw) -> GameState:
     return GameState(**base)
 
 
-def _buy_tags(st: GameState, sess: StrategySession) -> dict[str, str]:
+def _buy_tags(st: GameState, sess: StrategySession,
+              reg: object | None = None) -> dict[str, str]:
+    """reg=None 用默认注册表;锁通道无关行为时传 _REG_NO_PRESS。"""
+    use = _REG if reg is None else reg
     out: dict[str, str] = {}
-    for c in generate_candidates(st, sess, _REG):
+    for c in generate_candidates(st, sess, use):
         card = getattr(c.action, 'card', None)
         if card is not None and card.name:
             out[card.name] = c.tag
@@ -142,14 +151,15 @@ def test_copy_tag_for_same_name_second_copy() -> None:
 def test_copy_blocked_by_useless_swap_guard() -> None:
     """r410 保留判据镜像:在场副本会被 off-target 卖出(非
     target_core 且 bonds ∩ target_factions=∅)→ 买新副本=无效
-    换卡,不生成候选(v1 _copy_swap_useless 直通)。"""
+    换卡,不生成候选(v1 _copy_swap_useless 直通;注入关臂隔离
+    press 豁免臂——开臂后该臂会另行授权 band 内副本,非守卫判据)。"""
     sess = _sess()   # target_comp=None → 在场副本无保留判据
     st = _state(
         board={_PL_F: 1},
         deployed=[BenchChar(slot=0, char_id=_PL, faction=_PL_F,
                             position_pref='back')],
         shop=[_pela()])
-    assert _PL not in _buy_tags(st, sess)
+    assert _PL not in _buy_tags(st, sess, _REG_NO_PRESS)
 
 
 def test_copy_allowed_when_deployed_copy_kept() -> None:
