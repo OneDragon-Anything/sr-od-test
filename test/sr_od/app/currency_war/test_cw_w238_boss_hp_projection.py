@@ -114,32 +114,32 @@ def test_weak_board_gap_governed_by_board_dim() -> None:
     assert handoff_gate_gap(st, s_proj, _REG) >= 1
 
 
-# ---------- ③ 投影公式(r8 +2 / r9 无 / 缺桶 fallback / 钳制) ----------
+# ---------- ③ 投影公式(min_round +2 / 非 min_round 无 / 缺桶 fallback / 钳制) ----------
 
 def test_projection_formula_round_bonus_and_fallback() -> None:
-    """r8 加奖励 +2、r9 不加;表内净星深档 vs 表外档(缺桶 fallback);
-    hp_proj 钳 [0,100]。
+    """min_round(ADR-0418 前移后=r6)加奖励 +2、其他轮不加;
+    表内净星深档 vs 表外档(缺桶 fallback);hp_proj 钳 [0,100]。
     构造(表值≠default 以区分两路):临时 registry 表 {0: 10.0}、
     default=27.57——deployed 全 1★ → 净星深 0 → 桶 0(表内):
-    r8: round(30+2−10)=22;r9: round(30−10)=20;
+    r6: round(30+2−10)=22;r9: round(30−10)=20;
     三件 2★ → 净星深 3 → 桶 3(表外→default):r8 round(30+2−27.57)=4。"""
     reg = replace(_REG, handoff_boss_e_damage={0: 10.0},
                   handoff_boss_e_damage_default=27.57)
-    st8 = GameState(plane=1, round_num=8, gold=50, level=5, hp=30,
+    st6 = GameState(plane=1, round_num=6, gold=50, level=5, hp=30,
                     board={'仙舟': 3},
                     deployed=[BenchChar(slot=0, char_id='卡芙卡',
                                         faction='仙舟罗浮', star=1)],
                     bench=[], shop=[], node_type='battle')
-    st9 = replace(st8, round_num=9)
-    assert boss_projected_hp(st8, 30, reg) == 22   # 表内桶 0:r8 +2
+    st9 = replace(st6, round_num=9)
+    assert boss_projected_hp(st6, 30, reg) == 22   # 表内桶 0:r6(min_round)+2
     assert boss_projected_hp(st9, 30, reg) == 20   # 表内桶 0:r9 无 +2
-    st_deep = replace(st8, deployed=[
+    st_deep = replace(st6, deployed=[
         BenchChar(slot=i, char_id='卡芙卡', faction='仙舟罗浮', star=2)
         for i in range(3)])   # 净星深 3 → 桶 3(表外)
     assert boss_projected_hp(st_deep, 30, reg) == 4   # default
     # 钳制:低 hp 不为负 / 高 hp 不破百
-    assert boss_projected_hp(st8, 0, _REG) == 0
-    assert boss_projected_hp(st8, 200, _REG) == 100
+    assert boss_projected_hp(st6, 0, _REG) == 0
+    assert boss_projected_hp(st6, 200, _REG) == 100
 
 
 # ---------- ④ W240 方向锁:净星深键下升星不落浅桶(ADR-0403 缺口②修复) ----------
