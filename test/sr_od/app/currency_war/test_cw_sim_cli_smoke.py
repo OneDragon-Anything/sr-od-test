@@ -57,10 +57,10 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # fills_cap 1 例。裁决归步②b 的 Q1 四档 sim 对照(不设/10/20/30)
     # ——定档后从本豁免表移除,回归 0 容忍。
     # W131/ADR-0354(检查器判据重定义):levelup_interest_engine_gate
-    # 裁决已落地——判据改读授权依据(账本 LevelUp 行 auth 键,白名单
-    # {pop_slot, dp};static_ev/无依据的 <50 升级仍计违规),seeds 0-19
-    # 新判据 0 违规(旧判据 206/82 局,W123 §5.2/W126 记档)。移出豁免,
-    # 回归 0 容忍。
+    # 裁决已落地——判据改读授权依据(账本 LevelUp 行 auth 键);W255/
+    # ADR-0410 白名单扩为 {pop_slot, dp, static_ev}(boss 升级禁令删除
+    # 后 static_ev 是末窗主授权臂;无授权依据仍计违规),seeds 0-19
+    # 新判据 0 违规(旧判据 206/82 局,W123 §5.2/W126 记档)。回归 0 容忍。
     # W145/ADR-0357(P1 配方锁):P1 锁定产物改体系对后,锁定局 form_ok
     # 从三件套(核心 2★ 质量)切 W132 兜底门(engines≥2,星级盲)——
     # 成型停手提前触发低质量双引擎板,seed19(n=25 snapshot)涌现危机态

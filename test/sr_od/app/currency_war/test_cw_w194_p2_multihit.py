@@ -71,8 +71,12 @@ def test_steady_group_emits_clicks_to_next_level() -> None:
 
 
 def test_steady_group_guards() -> None:
-    """六路挡:flag off / P1 不辖 / boss 轮 / cap 未满 / bench 无方向件
-    / 已跨级。"""
+    """五路挡:flag off / P1 不辖 / cap 未满 / bench 无方向件
+    / 已跨级。
+
+    (旧「boss 轮不发」断言随 W255/ADR-0410 过期:boss 升级禁令删除,
+    稳态组在 boss 轮改由 EV 总账裁决——boss 帧放行面见 test_cw_w255 锁
+    与 ADR-0410 ②;其余守卫语义不变。)"""
     sess = StrategySession()
     st = _steady_state()
     reg_off = dataclasses.replace(DEFAULT_REGISTRY,
@@ -84,9 +88,6 @@ def test_steady_group_guards() -> None:
     assert steady_state_levelup_group(
         p1.copy(), p1, sess, DEFAULT_REGISTRY) == []  # P1 不辖(辙回:
     # 全位面泛化 n=300 引入 never2 9→10 回归;P1 已有补偿臂覆盖)
-    assert steady_state_levelup_group(
-        _steady_state(node='boss').copy(),
-        _steady_state(node='boss'), sess, DEFAULT_REGISTRY) == []  # [32]
     not_full = _steady_state()
     not_full.deployed = not_full.deployed[:-1]
     assert steady_state_levelup_group(

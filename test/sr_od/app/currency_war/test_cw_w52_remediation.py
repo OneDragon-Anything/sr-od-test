@@ -221,19 +221,22 @@ def test_s4_levelup_group_emitted_when_gold_covers_total() -> None:
         '受益 DeployMove 本轮仍拒(升级解的是下轮)'
 
 
-def test_s4_swap_when_boss_round_or_gold_short() -> None:
-    """S4 ②臂:金不足总价 或 boss 轮 → LevelUp 臂不发,改 SwapDeploy
-    (换下最弱非核心);SwapDeploy 带 expect 代际校验字段。"""
-    # boss 轮(r9 plane1):boss_levelup_ban → ② SwapDeploy
+def test_s4_swap_when_gold_short() -> None:
+    """S4 ②臂:金不足总价 → LevelUp 臂不发(可负担性入口门拒),改
+    SwapDeploy(换下最弱非核心);SwapDeploy 带 expect 代际校验字段。
+
+    (旧「boss 轮也走 ②」断言随 W255/ADR-0410 过期:boss 升级禁令删除,
+    boss 轮 LevelUp 改由 EV 总账裁决——合法面见 test_cw_w255 锁。)"""
+    # 金 12 只够部分点击:① 臂 EV 可负担性不过(按 n×总价口径)→ ②
     sess = _locked_sess()
-    sess.v2_round_key = (1, 9)
-    st = _s4_state(round_num=9, gold=70)
+    sess.v2_round_key = (1, 8)
+    st = _s4_state(round_num=8, gold=12)
     cand = Candidate(action=DeployMove(bench_idx=0, to_row='back',
                                        faction='列车同行'),
                      tag='deploy', source='test')
     res = arbitrate([(cand, 5.0, {})], st, sess, _REG)
     swaps = [a for a in res.actions if isinstance(a, SwapDeploy)]
-    assert len(swaps) == 1, f'boss 轮 → SwapDeploy(实得 {res.actions})'
+    assert len(swaps) == 1, f'金不足总价 → SwapDeploy(实得 {res.actions})'
     sw = swaps[0]
     assert sw.bench_idx == 0 and sw.expect_bench == '姬子·启行'
     assert sw.expect_deployed in ('卡芙卡', '千冶·刃', '绯英', '娜塔莎',
@@ -243,11 +246,17 @@ def test_s4_swap_when_boss_round_or_gold_short() -> None:
 
 def test_s4_noop_when_bench_weaker_than_deployed() -> None:
     """S4 反例:cap 满但 bench 件弱于全场 deployed → 无动作(换上不优
-    不换)。"""
+    不换)。W255/ADR-0410 适配:①臂 boss 禁令删后,EV 总账人口位需
+    「bench 有目标件」——本反例 bench=卡芙卡(非列车同行采购集)→
+    ① 臂自然不走(非 boss 语义),② 臂「换上不优」判据为行为锁本体。
+    故基座移到非 boss 轮,断言不变。"""
     sess = _locked_sess()
-    sess.v2_round_key = (1, 9)   # boss 轮 → 只走 ② 臂
+    sess.v2_round_key = (1, 5)
     # bench 件=卡芙卡(2费 1星);deployed 全 2★ 高费 → 换上不优
-    st = _s4_state(round_num=9, gold=70, bench_units=['卡芙卡'],
+    # W255/ADR-0410 适配:金 70 时 EV 总账臂②(DP 说升+平台未破)会发
+    # 升级组——「换上不优 → 无动作」锁的纯度要 ② 臂也不开,压到金不足
+    # 平台的金位(12,「换上不优」判据不依赖金位)。
+    st = _s4_state(round_num=5, gold=12, bench_units=['卡芙卡'],
                    deployed_units=['丹恒·饮月', '千冶·刃', '绯英',
                                    '娜塔莎', '阿格莱雅'])
     st.deployed = [BenchChar(slot=i, char_id=n, faction='公司', star=2)

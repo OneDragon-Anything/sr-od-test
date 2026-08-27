@@ -43,21 +43,19 @@ def test_authorized_levelup_zero_violation() -> None:
 
 
 def test_unauthorized_levelup_emerges_violation() -> None:
-    """无依据/估值账放行的 <50 升级必须涌现违规(去门变异可杀)。
+    """无授权依据的 <50 升级必须涌现违规(去门变异可杀)。
 
     - auth=''(default 栈旧调用/未过账路径)→ 违规且消息标「无授权依据」;
-    - auth='static_ev'(③ 静态 EV 估值账)→ 违规(W123 §5.2:该臂花后
-      <50 帧量级 0-1,保守侧保留可疑,涌现≥量级再裁决)。"""
+    - W255/ADR-0410 起 static_ev 并入合法面(旧断言「static_ev 计违规」
+      随语义过期——boss 升级禁令删除后该臂是末窗升级主授权臂,W123
+      「帧量级 0-1 保守计违规」的校准前提已失效);无授权依据检测面
+      (auth 空/缺失)保留,检查器对授权观测缺失不失明。"""
     # prev_level 语义:检查器用上一轮账本 level 判追级段(首轮 prev=3)
     # ——先放一行 lv5 铺底,违规落在第二行。
     _pre = _row(4, 60, 5, [])
     rows_no_basis = [_pre, _row(5, 30, 6, [''])]
     v1 = chk.check_levelup_interest_engine_gate(rows_no_basis)
     assert len(v1) == 1 and '无授权依据' in v1[0], v1
-
-    rows_static = [_pre, _row(5, 30, 6, ['static_ev'])]
-    v2 = chk.check_levelup_interest_engine_gate(rows_static)
-    assert len(v2) == 1 and 'static_ev' in v2[0], v2
 
     # 旧 auth 键整体缺失(旧账本形态)等同无依据
     row = _row(5, 30, 6, ['pop_slot'])
@@ -101,8 +99,8 @@ def test_ledger_auth_key_wired(tmp_path: Path) -> None:
                     n_lv += 1
                     arms.add(a['auth'])
     assert n_lv > 0, '5 局零 LevelUp:接线锁样本不足(换 seed_base)'
-    # 真实批 rows(检查器消费的行流)过新判据:合法授权面不误报
-    # (static_ev 残量属待裁披露面,冒测口径见 W131 回执,不在本锁断言 0)。
+    # 真实批 rows(检查器消费的行流)过新判据:合法授权面(pop_slot/dp/
+    # static_ev,W255 起)不误报。
     rows = [json.loads(ln) for ln in
             (d / 'outcomes.jsonl').read_text(encoding='utf-8').splitlines()]
     v = chk.check_levelup_interest_engine_gate(rows)
