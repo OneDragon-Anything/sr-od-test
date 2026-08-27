@@ -213,3 +213,4 @@ sr-od-test/test/sr_od/app/currency_war/test_trailblazer_form.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w282_merge_preview.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w289_match_start_reset.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w292_merge_gate.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w322_deploy_cap_readchain.py
