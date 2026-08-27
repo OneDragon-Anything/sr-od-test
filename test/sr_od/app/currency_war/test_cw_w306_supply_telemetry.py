@@ -57,9 +57,46 @@ def test_pick_slot_set_then_consume_once() -> None:
         assert got['equip'] == '长枪'
         assert got['has_diamond'] is True
         assert got['refreshed'] is True
+        # W306c:不传 options → 无 options/n_options 键(兜底路径形态容忍)
+        assert 'options' not in got and 'n_options' not in got
         assert consume_last_supply_pick() is None   # 清槽:残留不串下一轮
     finally:
         consume_last_supply_pick()   # 测试卫生:无论断言走哪支都清干净
+
+
+def test_pick_slot_options_dynamic_column_count() -> None:
+    """W306c 锁:选项清单按**实际识别列数**记录(n_options=len(options),逐列内容
+    透传);列数动态(3 与 5 都成立)——补给通常 4 选 1,augment 改写可变 3-5,禁写死。"""
+    try:
+        for n in (3, 4, 5):
+            opts = [{'char': f'c{i}', 'equip': f'e{i}', 'has_diamond': i % 2 == 0}
+                    for i in range(n)]
+            set_last_supply_pick('c0', 'e0', True, refreshed=False, options=opts)
+            got = consume_last_supply_pick()
+            assert got['n_options'] == n
+            assert got['options'] == opts
+            assert consume_last_supply_pick() is None
+    finally:
+        consume_last_supply_pick()
+
+
+def test_synthetic_row_carries_options_list(monkeypatch) -> None:
+    """synthetic 行透传选项清单(实际列数+逐列内容,合成行与牌面对拍源)。"""
+    op, captured = _make_loop(
+        monkeypatch,
+        GameState(hp=14, gold=55, plane=1, round_num=5),
+        pick={'char': '姬子', 'equip': '火焰', 'has_diamond': False,
+              'refreshed': False, 'gold': 55,
+              'options': [{'char': '姬子', 'equip': '火焰', 'has_diamond': False},
+                          {'char': '', 'equip': '熔炉', 'has_diamond': True},
+                          {'char': '笑笑', 'equip': '面具', 'has_diamond': False}],
+              'n_options': 3})
+    op._record_supply_outcome(screen=None)
+    row = captured[0]['supply_pick']
+    assert row['n_options'] == 3          # 动态列数(此局 3 列)
+    assert len(row['options']) == row['n_options']
+    assert row['options'][0] == {'char': '姬子', 'equip': '火焰',
+                                 'has_diamond': False}
 
 
 # ===== ② battle_loop 合成路径(消费者接线) =====
@@ -127,12 +164,14 @@ def test_synthetic_row_gold_unreadable_omitted(monkeypatch) -> None:
 
 
 def test_supply_producer_wiring_in_source() -> None:
-    """弱锁保底:RunSupplyNode 选定分支真接线(set_last_supply_pick 调用)。"""
+    """弱锁保底:RunSupplyNode 选定分支真接线(set_last_supply_pick + 选项清单透传,
+    W306c:options=逐列内容动态列表)。"""
     import inspect
 
     from sr_od.application.currency_war.operations.run_nodes import run_supply_node
     src = inspect.getsource(run_supply_node.RunSupplyNode._do_action)
     assert 'set_last_supply_pick(' in src
+    assert "options=[{'char': o.char" in src   # 逐列内容透传(实际识别列数)
 
 
 # ===== W306b 补给备战状态采集 detour =====
