@@ -221,8 +221,11 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # W242/ADR-0405 末窗星级定向授权批更新:新增 handoff_star_directed=
 # False(默认关,与 gate/proj 三 flag 正交;零数值常量)——有意加字段,
 # 锁同步更新(其余字段不变)
-_EXPECTED_HASH = ('f2b0f572dd420ee69f8e5ccc279753713'
-                  '9d18c14bec6cea80011d369179e9062')
+# W244/编排者裁决批更新:handoff_boss_e_damage {0:27.57}→{0:34.0}/
+# _default 27.57→34.0——boss Δ 全分布双峰(W244:低伤簇 13.25±1.04/
+# 高伤簇 34.10±1.77,中间零观测),投影口径均值→Q3 保守(防 hp 临界局
+# tier 高估一档=重蹈 W234 缺口)——有意改参,锁同步更新
+_EXPECTED_HASH = ('febd84d603ba31892925d51470876919e4784b6845a237b3209da0714d4b103d')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
