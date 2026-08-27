@@ -1,14 +1,16 @@
-"""W238/ADR-0403:承接门 hp 维 boss 投影单帧锁(设计件 09 §3.1 第一步)。
+"""W238/ADR-0403:承接门 hp 维 boss 投影单帧锁(设计件 09 §3.1 第一步;
+W240/ADR-0404 键改净星深后重标定)。
 
 锁面(结构面;分布面=A/B sim 批):
-- 常数表:档键域/正值/深板方向(桶 15 期望伤害 < 桶 12——板深效应
-  方向锁,不锁标定小数位);
+- 常数表:档键域=Δ池 v10 boss 净星深桶域 {0}(P1 boss 语料全落桶 0
+  ——旧 Σboard 三桶条件性=键口径伪影);正值(=期望掉血量);
 - 盲区修复(run28/31/33 型):r8 hp 22-33 ∧ 板面 tier1 局 → 投影臂
   gap≥1 / 现投影(gate 无投影)臂 gap=0——设计件 09 §2 盲区类的
   行为差证据行;
 - 弱板局两臂同值(min 由板面维压死,投影不改变 gap 数值);
 - r8 +2 / r9 无 +2(hp_proj 直读);缺桶 fallback;
 - 正交性:仅投影开(门关)= 零行为(gap 恒 0);
+- W240 方向锁:3合1 升星后净星深键不落浅桶(修 ADR-0403 缺口②);
 - sim 侧:账本 handoff_hp_proj 字段(投影开非 None/关 None);A/B
   proj_only 臂整局逐位=基线臂(两 flag 正交);非末窗零漂移。
 n 取断言成立最小值;sim 结构断言用 fallback 池(README 纪律)。
@@ -73,15 +75,17 @@ def _sess_locked() -> StrategySession:
     return s
 
 
-# ---------- ① 常数表(标定方向锁;小数位不锁,重标定随 ADR 更新) ----------
+# ---------- ① 常数表(标定锁;小数位不锁死,重标定随 ADR 更新) ----------
 
 def test_boss_e_damage_table_shape() -> None:
-    """档键域=Δ池 boss 板深桶域 {9,12,15};正值(=期望掉血量);
-    深板方向:桶 15 < 桶 12(板面输出越高 boss 伤越小,run 26 型)。"""
+    """档键域=Δ池 v10 boss 净星深桶域 {0}(W240/ADR-0404:净星深=
+    上场件 Σ(star−1),桶 min(sd//3,5)*3;P1 boss 语料 49 行全落
+    桶 0,旧 Σboard 桶 9/12/15 条件性=键口径伪影);正值(=期望掉血);
+    default=全池未删失均值(单桶下与桶 0 同值,表保留结构供深桶
+    语料攒厚后扩)。"""
     tbl = DEFAULT_REGISTRY.handoff_boss_e_damage
-    assert set(tbl) == {9, 12, 15}
+    assert set(tbl) == {0}
     assert all(v > 0 for v in tbl.values())
-    assert tbl[15] < tbl[12], '深板桶期望伤害应更小(设计件 09 §1.1)'
     assert DEFAULT_REGISTRY.handoff_boss_e_damage_default > 0
 
 
@@ -117,18 +121,26 @@ def test_weak_board_both_arms_same_gap() -> None:
 # ---------- ③ 投影公式(r8 +2 / r9 无 / 缺桶 fallback / 钳制) ----------
 
 def test_projection_formula_round_bonus_and_fallback() -> None:
-    """r8 加奖励 +2、r9 不加;表外板深档走 default;hp_proj 钳 [0,100]。
-    构造:Σboard 落表外桶(如 3→桶 3)→ dmg=default(27.33):
-    r8: round(30+2−27.33)=5;r9: round(30−27.33)=3。"""
+    """r8 加奖励 +2、r9 不加;表内净星深档 vs 表外档(缺桶 fallback);
+    hp_proj 钳 [0,100]。
+    构造(表值≠default 以区分两路):临时 registry 表 {0: 10.0}、
+    default=27.57——deployed 全 1★ → 净星深 0 → 桶 0(表内):
+    r8: round(30+2−10)=22;r9: round(30−10)=20;
+    三件 2★ → 净星深 3 → 桶 3(表外→default):r8 round(30+2−27.57)=4。"""
+    reg = replace(_PROJ_ON, handoff_boss_e_damage={0: 10.0},
+                  handoff_boss_e_damage_default=27.57)
     st8 = GameState(plane=1, round_num=8, gold=50, level=5, hp=30,
-                    board={'仙舟': 3}, deployed=[], bench=[], shop=[],
-                    node_type='battle')
+                    board={'仙舟': 3},
+                    deployed=[BenchChar(slot=0, char_id='卡芙卡',
+                                        faction='仙舟罗浮', star=1)],
+                    bench=[], shop=[], node_type='battle')
     st9 = replace(st8, round_num=9)
-    assert boss_projected_hp(st8, 30, _PROJ_ON) == 5
-    assert boss_projected_hp(st9, 30, _PROJ_ON) == 3
-    # 表内桶(Σboard 12 → 桶 12,dmg=30.35):r8 round(30+2−30.35)=2
-    st12 = replace(st8, board={'仙舟': 12})
-    assert boss_projected_hp(st12, 30, _PROJ_ON) == 2
+    assert boss_projected_hp(st8, 30, reg) == 22   # 表内桶 0:r8 +2
+    assert boss_projected_hp(st9, 30, reg) == 20   # 表内桶 0:r9 无 +2
+    st_deep = replace(st8, deployed=[
+        BenchChar(slot=i, char_id='卡芙卡', faction='仙舟罗浮', star=2)
+        for i in range(3)])   # 净星深 3 → 桶 3(表外)
+    assert boss_projected_hp(st_deep, 30, reg) == 4   # default
     # 钳制:低 hp 不为负 / 高 hp 不破百
     assert boss_projected_hp(st8, 0, _PROJ_ON) == 0
     assert boss_projected_hp(st8, 200, _PROJ_ON) == 100
@@ -144,26 +156,58 @@ def test_projection_flag_off_zero_drift() -> None:
     assert getattr(s, 'v3_handoff_hp_proj', None) is None
 
 
-# ---------- ④ 缺口②实证:Σboard 键 vs 升星方向(声明边界的证据锁) ----------
+# ---------- ④ W240 方向锁:净星深键下升星不落浅桶(ADR-0403 缺口②修复) ----------
 
-def test_merge_reduces_board_sum_direction_gap() -> None:
-    """3合1 升星消耗场上副本 → Σboard 下移(ADR-0403 已知边界实证):
-    Δ池 boss 桶键=Σboard,升星使键落更浅桶,而浅桶期望伤害更大
-    (test ① 方向锁)→ sim 判「升星→boss 伤害↑」与 [27] 机制相反。
-    本锁钉死机制面:合并后 Σboard 必减(表更浅桶的方向前提)。"""
+def test_merge_star_depth_never_shallower() -> None:
+    """3合1 升星消耗场上副本 → **净星深键不落浅桶**(W240/ADR-0404
+    修 ADR-0403 缺口②:Σboard 键下合并使场上件 3→1(键 −2/次)落
+    浅桶,而浅桶期望伤害更大 → sim 判「升星→boss 伤害↑」与 [27]
+    机制相反)。净星深=上场件 Σ(star−1):1★×3(键 0)→ 2★×1(键 1)
+    ——键单调不减 ⇒ 桶 min(sd//3,5) 不变或更深 ⇒ sim 判升星后
+    boss 期望伤害不升(同桶同值/深桶见池方向锁)。"""
+    from sr_od.application.currency_war.cw_sim import (
+        _DEPTH_BUCKET_W,
+        deployed_star_depth,
+    )
+
+    def _bucket(sd: int) -> int:
+        return min(sd // _DEPTH_BUCKET_W, 5) * _DEPTH_BUCKET_W
+
     deployed = [BenchChar(slot=i, char_id='卡芙卡', faction='仙舟罗浮',
                           star=1) for i in range(3)]
     bench: list[BenchChar | None] = []
+    sd_before = deployed_star_depth(GameState(
+        plane=1, round_num=8, gold=50, level=5, hp=30, board={'仙舟': 3},
+        deployed=list(deployed), bench=[], shop=[], node_type='battle'))
     _merge_bench(bench, deployed)
     assert deployed[0].star == 2   # 载体升星
-    board_after = sum(1 for d in deployed if d is not None)
-    assert board_after == 1, '三副本合并后场上件数 3→1(Σboard −2)'
-    # 池桶方向对照:快照 boss plane=1 桶均值浅桶 > 深桶(迁移=更痛)
+    assert sum(1 for d in deployed if d is not None) == 1, (
+        '三副本合并后场上件数 3→1(Σboard −2=旧键冲突根源)')
+    st_after = GameState(
+        plane=1, round_num=8, gold=50, level=5, hp=30, board={'仙舟': 1},
+        deployed=[d for d in deployed if d is not None], bench=[],
+        shop=[], node_type='battle')
+    sd_after = deployed_star_depth(st_after)
+    assert sd_after >= sd_before, '升星后净星深不得减少(方向前提)'
+    assert _bucket(sd_after) >= _bucket(sd_before), (
+        '升星后 boss 桶键不得落更浅桶(ADR-0403 缺口②修复锁)')
+
+
+def test_v10_pool_boss_buckets_direction() -> None:
+    """v10 池方向锁:boss plane=1 深桶期望伤害 ≤ 浅桶(净星深键下
+    语料方向与机制 [27] 一致;当前语料全落桶 0 → 单桶非空 + 若干桶
+    则均值随桶深不增)。桶键域 ⊆ 净星深桶域 {0,3,...,15}。"""
     pool_map, _fp, _label = cw_sim.resolve_pool('snapshot')
     boss_p1 = pool_map.get('boss', {}).get(1, {})
+    assert boss_p1, '快照 boss plane=1 桶不应为空(标定源)'
+    assert all(b % 3 == 0 and 0 <= b <= 15 for b in boss_p1), (
+        'boss 桶键应落净星深桶域(3 宽)')
     means = {b: sum(v) / len(v) for b, v in boss_p1.items() if v}
-    assert means, '快照 boss plane=1 桶不应为空(标定源)'
-    assert min(means) < max(means), '桶间应有差异(方向可判)'
+    ks = sorted(means)
+    for b1, b2 in zip(ks, ks[1:], strict=False):
+        assert means[b2] <= means[b1] + 1e-9, (
+            f'净星深深桶({b2})期望伤害应 ≤ 浅桶({b1})'
+            f'({means[b2]:.2f} vs {means[b1]:.2f})——方向与机制相反')
 
 
 # ---------- ⑤ sim 侧:账本披露 + proj_only 整局正交 + 非末窗零漂移 ----------

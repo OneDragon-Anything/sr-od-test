@@ -212,6 +212,14 @@ _EXPECTED_HASH = ('9e19c00dd27a472e62f692166770752d'
 # 开=boss 后投影 hp 喂档位切点)——有意改参,锁同步更新(其余字段不变)
 _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
                   '3b2a9daa3b3f5aafce836cdc40dfc5d9')
+# W240/ADR-0404 Δ池 boss 桶键改批更新:handoff_boss_e_damage 重标定
+# (键域 {9:29.25,12:30.35,15:17.5}→{0:27.57},boss 桶键 Σboard→净星深
+# =上场件 Σ(star−1);P1 boss 语料 49 行全落桶 0,旧三桶条件性=键口径
+# 伪影)/handoff_boss_e_damage_default(27.33→27.57,全池未删失均值)
+# 两字段值变(ADR-0403 已知边界②的修复落地,键口径论证见 ADR-0404)
+# ——有意改参,锁同步更新(其余字段不变)
+_EXPECTED_HASH = ('29814027b7b96c1bb9a40b5e1859a986'
+                  '9faa3b31b667bac4501bc90e5d15d718')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

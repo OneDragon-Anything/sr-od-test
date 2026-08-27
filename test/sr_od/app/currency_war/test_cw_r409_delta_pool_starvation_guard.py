@@ -152,9 +152,10 @@ def test_sampler_version_bumped_and_snapshot_guarded() -> None:
     """采样器版本锁(历次语义: v3=ADR-0279 battle rung 分桶 /
     v4=ADR-0292 reward/supply 池采样 / v5=ADR-0306 胜率外推 /
     v6=ADR-0308 W31 节点×轮次胜率阶梯 / v7=ADR-0312 W50 采样键
-    Σboard 全集口径 / v8=ADR-0362 W157 Δ池 plane 维键化)+
+    Σboard 全集口径 / v8(快照 note 链记 v9)=ADR-0362 W157 Δ池
+    plane 维键化 / v10=ADR-0404 W240 boss 桶键 Σboard→净星深)+
     提交快照自洽。"""
-    assert cw_sim._SAMPLER_VERSION == 8
+    assert cw_sim._SAMPLER_VERSION == 10
     assert cw_sim._BUCKET_MIN_N == 5
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'

@@ -146,13 +146,15 @@ def test_pool_build_never_mixes_runs(tmp_path: Path) -> None:
 
 
 def test_sampler_v4_and_snapshot_selfconsistent() -> None:
-    """采样器版本(ADR-0362 起 v8;本锁语义=版本入指纹+快照自洽)。"""
-    assert cw_sim._SAMPLER_VERSION == 8
+    """采样器版本(W240/ADR-0404 起 v10——boss 桶键 Σboard→净星深;
+    v8/v9=ADR-0362 plane 维键化,note 链与常量错位自 v10 对齐;本锁
+    语义=版本入指纹+快照自洽)。"""
+    assert cw_sim._SAMPLER_VERSION == 10
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'
     from sr_od.application.currency_war import cw_delta_pool_data
     assert fp == cw_delta_pool_data.META['fingerprint']
-    assert cw_delta_pool_data.META['sampler_version'] == 8
+    assert cw_delta_pool_data.META['sampler_version'] == 10
     # 池语义变更使指纹与旧版快照(…/fd48f135/bab146c6 系)可区分
     assert not fp.startswith(('d891233d', '066c4185', '886f8a39',
                               'fd48f135', 'bab146c6'))
