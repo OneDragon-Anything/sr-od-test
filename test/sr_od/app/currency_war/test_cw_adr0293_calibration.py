@@ -252,8 +252,12 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # line_switch_theta/line_switch_debias_delta/line_switch_min_dwell;
 # 符号不稳参数=默认值+标定接口,sim 批网格标定后锁值)——有意加字段,
 # 锁同步更新(既有字段默认值不变)
-_EXPECTED_HASH = ('429e7e7ddb68f078c5a3f5ef07f8efba'
-                  'c0591539a2dc9ef8d1014a668276c63b')
+# 连胜 EV 地板标定批更新:新增 streak_floor_loss_damage/streak_floor_
+# win_rate 两字段(discipline._streak_floor 标定账,ADR-0356 挂账项;
+# 来源=W324 语料 two_state_model/win_rate_table_injected)——有意加
+# 字段,锁同步更新(既有字段默认值不变)
+_EXPECTED_HASH = ('c5b8c032ad918efb89bd2f512174f80f'
+                  'dca9320d72ffb934d97fbb6ef66e0b62')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
