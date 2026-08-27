@@ -218,8 +218,11 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # 伪影)/handoff_boss_e_damage_default(27.33→27.57,全池未删失均值)
 # 两字段值变(ADR-0403 已知边界②的修复落地,键口径论证见 ADR-0404)
 # ——有意改参,锁同步更新(其余字段不变)
-_EXPECTED_HASH = ('29814027b7b96c1bb9a40b5e1859a986'
-                  '9faa3b31b667bac4501bc90e5d15d718')
+# W242/ADR-0405 末窗星级定向授权批更新:新增 handoff_star_directed=
+# False(默认关,与 gate/proj 三 flag 正交;零数值常量)——有意加字段,
+# 锁同步更新(其余字段不变)
+_EXPECTED_HASH = ('f2b0f572dd420ee69f8e5ccc279753713'
+                  '9d18c14bec6cea80011d369179e9062')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
