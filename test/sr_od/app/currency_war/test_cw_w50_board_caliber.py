@@ -111,6 +111,12 @@ def test_unit_bond_tags_equip_grants() -> None:
     # 非成员佩戴欢愉卡带:加入即 +1(欢愉 1)
     tags3 = unit_bond_tags(_char('符玄', equips=['欢愉卡带']))
     assert tags3.count('欢愉') == 1
+    # 组合「卡带X+星徽X」(非成员):卡带授 X 后即「已有」,星徽 X 不再重复 → 仍 1
+    tags_combo = unit_bond_tags(_char('符玄', equips=['欢愉卡带', '欢愉星徽']))
+    assert tags_combo.count('欢愉') == 1
+    # 卡带自身可双计不受影响:成员两件欢愉系卡带 → 欢愉 3(自报 1 + 卡带 2)
+    tags_tape2 = unit_bond_tags(_char('银狼LV.999', equips=['欢愉卡带', '欢愉卡带Max']))
+    assert tags_tape2.count('欢愉') == 3
     # 符玄(仙舟自报)+ 仙舟星徽:成员穿同羁绊星徽不重复(仍 1);不影响自报标签
     tags4 = unit_bond_tags(_char('符玄', equips=['仙舟星徽']))
     assert tags4.count('仙舟') == 1
