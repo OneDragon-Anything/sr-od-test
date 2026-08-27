@@ -256,8 +256,11 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # win_rate 两字段(discipline._streak_floor 标定账,ADR-0356 挂账项;
 # 来源=W324 语料 two_state_model/win_rate_table_injected)——有意加
 # 字段,锁同步更新(既有字段默认值不变)
-_EXPECTED_HASH = ('c5b8c032ad918efb89bd2f512174f80f'
-                  'dca9320d72ffb934d97fbb6ef66e0b62')
+# release 活栈消费门批更新:新增 release_spend_gate_enabled 一字段(判据
+# 单一源=decision_v2.posture_release.spend_gate_active;开关语义见
+# registry 字段注释)——有意加字段,锁同步更新(既有字段默认值不变)
+_EXPECTED_HASH = ('5106b0ece31b9e4ab4f6c31b436ee78db'
+                  '3b1f5519fa83833226a03e539cbfaf0')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
