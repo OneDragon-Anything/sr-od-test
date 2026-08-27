@@ -274,7 +274,25 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # 字段,锁同步更新(既有字段默认值不变)。后续 release_spend_gate_enabled
 # 默认值翻转(False→True,开臂,行为面=A/B 验证的 gate 生效),锁再同步。
 # 再后续 press_channel_enabled 默认翻转(False→True,W368 A/B R2 成立开臂),锁再同步。
-_EXPECTED_HASH = ('c686a58876babd3bf96c83cfda8b0aacdc15e880de66ece03a7df4cae7d19a5d')
+# 再后续 P2 损血参数重校批更新:vd_p2_loss 16.0→20.05(P12 收益侧条件败局
+# 伤害;标定源=.debug/temp/currency_war/w353_p2_survival/w354_p2_loss_calib.json
+# p2|normal 桶均值 n=19,删失 hp≤1→偏低估下界;旧值系实测带拍值无标定依据。
+# DP 侧同批重校 cw_horizon.P2_LOSS_SCALE=5.33(无条件口径=条件×(1−p̄),
+# 非 registry 字段,锁在
+# test_cw_w370_p2_loss_recalib.py)——有意改参(校准直接生效),锁同步更新
+# (其余字段不变)。
+# C3/C4 重设计落码批更新:删 line_switch_round_loss(等权除数口径退役,
+# 由剩余节点逐节点投影取代);新增 line_switch_node_loss(节点损血表,
+# 默认暂抄现行三档+reward 零损档)/p_win_p2_by_rung(两态口径占位,
+# 空 dict=p=1 退化为常数)/encounter_heal_est(回血期望,默认 0 下界)/
+# line_switch_boss_ci_halfwidth(1.53,投影路径含 boss 的不确定性附加费)/
+# dying_band_high_cost_floor(4,定向刷新存在性名集的高费下界)五字段;
+# dying_band_next_loss 数值不变(重标定值见
+# .debug/temp/currency_war/w373_c3c4_redesign/w375_dual_source_calib.json,
+# 终值覆写归 M1 定稿)。两开关默认 False=现行为零漂移——有意改字段面,
+# 锁同步更新(既有数值字段不变)。
+_EXPECTED_HASH = ('7cc61343c323c3075db17b62101e080ac396'
+                  'eae29216f4b3eb467cad2959bc84')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
