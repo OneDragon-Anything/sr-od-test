@@ -21,11 +21,11 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+
+import sr_od.operations.back_to_normal_world_plus as btnw_module
 from one_dragon.base.geometry.point import Point
 from one_dragon.base.matcher.match_result import MatchResult
 from one_dragon.utils.i18_utils import gt
-
-import sr_od.operations.back_to_normal_world_plus as btnw_module
 from sr_od.operations.back_to_normal_world_plus import BackToNormalWorldPlus
 from sr_od.operations.interact.talk_interact import TalkInteract
 from sr_od.operations.sr_operation import SrOperation
@@ -170,6 +170,169 @@ class TestBackToNormalWorldPlusFallback:
         assert len(sleeps) >= rounds, (
             f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds}),存在无 wait 重试轮'
         )
+
+
+class TestNamelessHonorBranches:
+    """无名勋礼退出链分支(W293):推广页 / 等级加速弹窗 / 主面板。
+
+    背景:2026-08-26 版本周期首进无名勋礼先落购买推广页(点「开启无名勋礼」
+    不会付费,用户裁决),实证退出链(编排者 2026-08-27 live 四步全走通):
+    推广页 → 开启 → 等级加速弹窗(点提示位关闭)→ 主面板 → 右上角关闭 → 菜单页。
+    三支均「id_mark 命中 → area 点击 → round_retry 逐帧重识别」(W286 大厅分支
+    同构):点击可能不落地,RETRY 计入 node_max_retry_times=20 有界 FAIL;
+    多跳中间态靠逐帧重识别天然容忍,无跨轮状态。
+    """
+
+    def test_nameless_honor_promo_branch(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """W293 场景:无名勋礼购买推广页帧命中专属分支,不进对话态守卫与兜底。
+
+        背景(2026-08-26 版本周期首进,编排者 2026-08-27 live 实证退出链):
+        版本更新后第一次进无名勋礼先落整屏购买推广页,点「开启无名勋礼」是
+        查看/继续语义(**不会付费**,用户裁决)→ 弹「等级加速」说明弹窗 →
+        主面板 → 右上角关闭 → 菜单页(既有分支接管)。本分支逐帧重识别,
+        多跳中间态天然容忍;round_retry 有界,点击不落地时 FAIL 不永动。
+        """
+        counters: dict[str, int] = {'fallback_click': 0}
+        find_clicks: list[tuple[str, str]] = []
+
+        def _fake_find_area(self, screen, screen_name, area_name, *args, **kwargs):
+            if screen_name == '无名勋礼-购买推广页' and area_name == '按钮-开启无名勋礼':
+                return self.round_success(status=f'{screen_name}-{area_name}')
+            return self.round_wait(status=f'未找到 {area_name}')
+
+        def _fake_find_and_click(self, screen, screen_name, area_name, *args, **kwargs):
+            if screen_name == '无名勋礼-购买推广页' and area_name == '按钮-开启无名勋礼':
+                find_clicks.append((screen_name, area_name))
+                return self.round_success(status=f'{screen_name}-{area_name}')
+            return self.round_wait(status=f'未找到 {area_name}')
+
+        def _fake_click_area(self, screen_name, area_name, *args, **kwargs):
+            counters['fallback_click'] += 1
+            return self.round_success(status=area_name)
+
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_and_click
+        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
+        monkeypatch.setattr(
+            btnw_module.sim_uni_screen_state,
+            'get_sim_uni_screen_state',
+            lambda *args, **kw: None,
+        )
+        monkeypatch.setattr(
+            btnw_module.common_screen_state,
+            'is_express_supply',
+            lambda *args, **kw: False,
+        )
+        # 守卫被触达即回归(会与推广页分支抢路径/误点对话隐藏按钮)
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'check_npc_dialog',
+            lambda self, screen: (_ for _ in ()).throw(
+                AssertionError('推广页应被专属分支接管,不应进入对话态守卫')),
+        )
+
+        op = _WatchedBackToNormal(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        sleeps = _patch_round_sleep(monkeypatch)
+
+        enter_running_state(test_context)
+        try:
+            result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        # 画面不变时 round_retry 有界:耗尽 20 次 retry 后 FAIL 而非 WAIT 永动。
+        assert not result.success, f'画面不变时应有界 FAIL,status={result.status}'
+        rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
+        assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
+        assert len(sleeps) >= rounds, f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
+        # 每轮点的都是推广页「按钮-开启无名勋礼」area;兜底右上角返回不得被触达。
+        assert len(find_clicks) == rounds and counters['fallback_click'] == 0, (
+            f'area 点击数({len(find_clicks)})应==轮次,兜底({counters["fallback_click"]})应为 0'
+        )
+        assert all(
+            sn == '无名勋礼-购买推广页' and an == '按钮-开启无名勋礼'
+            for sn, an in find_clicks
+        ), f'点击 area 漂移:{find_clicks[:3]}'
+
+    @pytest.mark.parametrize(
+        'screen_name, mark_area, click_area',
+        [
+            ('无名勋礼-等级加速弹窗', '标识-等级加速', '按钮-点击空白处关闭'),
+            ('无名勋礼', '标识-无名勋礼', '按钮-关闭'),
+        ],
+        ids=['levelup-popup', 'main-panel'],
+    )
+    def test_nameless_honor_intermediate_branches(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+        screen_name: str,
+        mark_area: str,
+        click_area: str,
+    ) -> None:
+        """W293 退出链中间态:弹窗帧点「点击空白处关闭」、主面板帧点「按钮-关闭」。
+
+        推广页分支(上一测)不命中时逐帧重识别落到这两支:每支都是「id_mark 命中
+        → area 点击 → round_retry」,多跳中间态靠逐帧重识别容忍。每支独立锁死
+        点击 area,防分支间串扰或落兜底。
+        """
+        find_clicks: list[tuple[str, str]] = []
+
+        def _fake_find_area(self, screen, s_name, area_name, *args, **kwargs):
+            if s_name == screen_name and area_name == mark_area:
+                return self.round_success(status=f'{s_name}-{area_name}')
+            return self.round_wait(status=f'未找到 {area_name}')
+
+        def _fake_find_and_click(self, screen, s_name, area_name, *args, **kwargs):
+            if s_name == screen_name and area_name == click_area:
+                find_clicks.append((s_name, area_name))
+                return self.round_success(status=f'{s_name}-{area_name}')
+            return self.round_wait(status=f'未找到 {area_name}')
+
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_and_click
+        )
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_click_area',
+            lambda self, s_name, area_name, *a, **kw: self.round_success(status=area_name),
+        )
+        monkeypatch.setattr(
+            btnw_module.sim_uni_screen_state,
+            'get_sim_uni_screen_state',
+            lambda *args, **kw: None,
+        )
+        monkeypatch.setattr(
+            btnw_module.common_screen_state,
+            'is_express_supply',
+            lambda *args, **kw: False,
+        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
+
+        op = _WatchedBackToNormal(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        _patch_round_sleep(monkeypatch)
+
+        enter_running_state(test_context)
+        try:
+            result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        # 帧恒停在中间态时应有界 FAIL(retry 语义),且每轮点的都是该态专属 area。
+        assert not result.success
+        rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
+        assert 20 <= rounds <= 25
+        assert len(find_clicks) == rounds, (
+            f'{screen_name}: area 点击数({len(find_clicks)})应==轮次({rounds})'
+        )
+        assert all(sn == screen_name and an == click_area for sn, an in find_clicks)
 
 
 def _patch_round_sleep(monkeypatch: pytest.MonkeyPatch) -> list[float]:
