@@ -96,19 +96,24 @@ def test_unit_bond_tags_unknown_and_trailblazer() -> None:
 
 
 def test_unit_bond_tags_equip_grants() -> None:
-    """L2 星徽贡献:装备追加羁绊;欢愉卡带对成员 = 自身1+卡1(净+1)。"""
-    # 姬子·启行(列车+领航员)+ 列车同行星徽 → 列车计数 2
+    """L2 装备贡献:**星徽=额外增加一个羁绊(add-if-absent,成员穿不重复)**;
+    卡带=计数+1(可双计)。用户口述 2026-08-28 分流语义。"""
+    # 姬子·启行(列车+领航员)+ 列车同行星徽 → 列车计数 1(已是成员,星徽不重复)
     tags = unit_bond_tags(_char('姬子·启行', equips=['列车同行星徽']))
-    assert tags.count('列车同行') == 2
+    assert tags.count('列车同行') == 1
     assert tags.count('领航员') == 1
-    # 银狼LV.999(欢愉 flow 成员)+ 欢愉卡带 → 欢愉 2(净 +1,非 +2)
+    # 非成员 + 星徽 → 变成员(+1)
+    tags_nonmember = unit_bond_tags(_char('佩拉', equips=['列车同行星徽']))
+    assert tags_nonmember.count('列车同行') == 1
+    # 银狼LV.999(欢愉 flow 成员)+ 欢愉卡带 → 欢愉 2(卡带可双计)
     tags2 = unit_bond_tags(_char('银狼LV.999', equips=['欢愉卡带']))
     assert tags2.count('欢愉') == 2
     # 非成员佩戴欢愉卡带:加入即 +1(欢愉 1)
     tags3 = unit_bond_tags(_char('符玄', equips=['欢愉卡带']))
     assert tags3.count('欢愉') == 1
-    # 符玄 + 仙舟星徽:跨阵营星徽追加仙舟
-    assert '仙舟' in unit_bond_tags(_char('符玄', equips=['仙舟星徽']))
+    # 符玄(仙舟自报)+ 仙舟星徽:成员穿同羁绊星徽不重复(仍 1);不影响自报标签
+    tags4 = unit_bond_tags(_char('符玄', equips=['仙舟星徽']))
+    assert tags4.count('仙舟') == 1
     # 星核猎手卡带:无条件 +1
     assert unit_bond_tags(
         _char('姬子·启行', equips=['星核猎手卡带'])).count('星核猎手') == 1
@@ -140,9 +145,9 @@ def test_three_sides_same_function_fullset_with_equips() -> None:
     ]
     _three_sides_agree(dep)
     b = _recount_board(dep)
-    assert b['欢愉'] == 2          # 银狼999 flow 1 + 卡带 1
-    assert b['列车同行'] == 2      # 姬子启行 1 + 星徽 1
-    assert b['仙舟'] == 2          # 符玄自身仙舟 1 + 星徽 1
+    assert b['欢愉'] == 2          # 银狼999 flow 1 + 卡带 1(卡带可双计)
+    assert b['列车同行'] == 1      # 姬子启行自报 1;成员穿星徽不重复
+    assert b['仙舟'] == 1          # 符玄自报 1;成员穿星徽不重复
     assert b['救世主'] == 1        # 白厄独立羁绊
     assert b['燃血'] == 1 and b['大守护者'] == 1
 
