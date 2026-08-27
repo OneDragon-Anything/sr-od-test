@@ -14,6 +14,9 @@
   买候选授权路径(interest_rule 缺口项/copy 放行)零改动;正分刷新
   走既有 V_D 路径不耗预算;gold_floor 金地板照辖。
 n 取断言成立最小值。
+
+W263/ADR-0412 追名判据扩展节(⑤):未锁线(unlocked/weak/fallback)
+模式追名名集并入当前活跃过渡组合成员;锁线帧不并入(双向锁)。
 """
 from __future__ import annotations
 
@@ -181,7 +184,63 @@ def test_affordability_floor_still_governs_authorized_refresh() -> None:
     assert any(isinstance(a, RefreshShop) for a in res3.actions)
 
 
+# ---------- ⑤ W263/ADR-0412 追名判据扩展(未锁线并入活跃过渡组合成员) ----------
+
+
+def _transition_peak_state() -> GameState:
+    """未锁线追名帧:唯一 peak≥2 的名 = 三月七(列车同行过渡件,
+    star 加权 2∈[2,3)),且**不在**采购目标名集内(fallback 式窄集);
+    末窗承接缺口帧族与 `_state` 同式。"""
+    return GameState(
+        plane=1, round_num=8, gold=55, level=5, hp=20,
+        board={'列车同行': 1, _FAC: 1},
+        deployed=[_deployed(_FILLER, _FAC)],
+        bench=[_bench('三月七', '列车同行', slot=0),
+               _bench('三月七', '列车同行', slot=1)],
+        shop=[], node_type='battle')
+
+
+def _sess_mode(mode: str, targets: set[str]) -> StrategySession:
+    """指定意向模式的 session(phase=unlocked ∧ locked_comp 空 =
+    未锁线;W263 扩展辖面)。"""
+    from sr_od.application.currency_war.cw_intention import (
+        HoardTarget,
+        IntentionState,
+    )
+    s = StrategySession()
+    s.v2_state = ('economy', False, False, 0, 0, 0, 0, 0)
+    s.v3_mode = 'economy'
+    ist = IntentionState()
+    ist.phase = 'unlocked'
+    ist.locked_comp = ''
+    s.v3_intention = ist
+    s.v3_hoard = HoardTarget(frozenset(targets), frozenset(), mode)
+    return s
+
+
+def test_w263_unlocked_transition_member_authorizes() -> None:
+    """扩展主锁:未锁线(unlocked/weak/fallback 模式)下,活跃过渡
+    组合成员(p1_early_pair 派生体系对成员——bench 两张三月七支撑
+    列车同行系)即使不在采购目标名集内,peak≥2 也授权预算>0
+    (ADR-0409 只锚锁线采购集时此类局恒 0,W260 观测面)。"""
+    sess = _sess_mode('fallback', {'花火', '瓦尔特'})   # 窄采购集,不含三月七
+    st = _transition_peak_state()
+    assert directed_refresh_budget(st, sess, _REG) \
+        == DEFAULT_REGISTRY.directed_refresh_per_round
+
+
+def test_w263_locked_frame_not_extended() -> None:
+    """锁线不变形锁(双向):phase='locked'∧locked_comp 非空时扩展
+    **不生效**——追名仍只锚锁定采购目标名集,目标集外过渡件 peak≥2
+    不授权(若无此守卫、无条件并入,本帧会错误拿到 budget>0)。"""
+    sess = _sess()
+    sess.v3_hoard = type(sess.v3_hoard)(
+        frozenset({_CARRY, '花火', '瓦尔特'}), frozenset(), 'locked')
+    assert directed_refresh_budget(_transition_peak_state(), sess, _REG) == 0
+
+
 # ---------- ④ 局级消耗边界 + 数值单一源 ----------
+
 
 
 def test_game_cap_exhaustion() -> None:
