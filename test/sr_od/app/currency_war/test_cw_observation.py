@@ -469,10 +469,11 @@ def test_read_deploy_cap_equals_level(test_context: SrTestContext) -> None:
     screen2 = test_context.load_screen('货币战争-备战', 'prep_1-6_all_positions')
     assert read_deploy_cap(test_context, screen2) == 4
     assert read_deployed_count(test_context, screen2) == 4
-    # a8_start:真值 0/3@lv3,OCR 噪声 "10/3"(slash 致 X 虚高)→ X>Y guard 兜:cap=3,deployed=None
+    # a8_start:真值 0/3@lv3,OCR "10/3"(人形图标并入 X 成前缀 '1')→ W287 图标前缀守卫
+    # 去前缀得 X=0(画面事实,空板;旧 X>Y guard 只能兜 None)。W287 锁值更新。
     screen3 = test_context.load_screen('货币战争-备战', 'shop_closed_a8_start')
     assert read_deploy_cap(test_context, screen3) == 3
-    assert read_deployed_count(test_context, screen3) is None
+    assert read_deployed_count(test_context, screen3) == 0
     # lowhp:6/7@lv7
     screen4 = test_context.load_screen('货币战争-备战', 'shop_closed_lowhp')
     assert read_deploy_cap(test_context, screen4) == 7
