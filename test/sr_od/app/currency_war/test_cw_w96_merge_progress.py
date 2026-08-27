@@ -162,13 +162,18 @@ def test_r9_frame_second_copy_buy_scores_positive() -> None:
 
 def test_r7_frame_generation_guard_unchanged() -> None:
     """W93 r7 帧形态锁(生成层不变式):deployed 非核心目标件的第 2 份
-    仍不生成候选——r410 守卫未动(ADR-0303/0304 豁免默认关);生成层
-    重估只写设计建议(W96_报告.md),归后续批。"""
+    在**非末窗**仍不生成候选——r410 守卫未动(ADR-0303/0304 豁免默认
+    关);生成层重估只写设计建议(W96_报告.md),归后续批。
+    (语义演进史,W257/ADR-0411:末窗承接缺口 gap>0 时同名副本候选经
+    C 项定向授权放行——原构造帧恰落末窗缺口内,随 flag 家族清理转正
+    后改用 r7 帧钉守卫基线;末窗放行行为由 test_cw_w242_star_directed
+    锁。)"""
     sess = _sess()
-    st = _state(deployed=[_deployed(_TARGET_FILLER,
+    st = _state(round_num=7,
+                deployed=[_deployed(_TARGET_FILLER,
                                     faction='仙舟罗浮')],
                 shop=[_shop_card(_TARGET_FILLER, faction='仙舟罗浮',
-                                cost=5)])
+                                 cost=5)])
     cands = generate_candidates(st, sess, _REG)
     names = {c.action.card.name for c in cands
              if c.action.__class__.__name__ == 'BuyCard'}

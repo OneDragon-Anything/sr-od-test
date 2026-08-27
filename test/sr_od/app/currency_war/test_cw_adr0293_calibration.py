@@ -232,7 +232,14 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # directed_refresh_per_round(2)/directed_refresh_game_cap(6)——
 # 与 W251 未提交常量**合并重算**(同一工作树口径;W251 收账若改参
 # 以其批再同步)
-_EXPECTED_HASH = ('4aed01b80c9fc6445ff3b73cf9af632a204d274dd839cafe0f0a65c1af097443')
+# _EXPECTED_HASH = ('4aed01b80c9fc6445ff3b73cf9af632a204d274dd839cafe0f0a65c1af097443')
+# W257/ADR-0411 承接门 flag 家族清理批更新:删除 handoff_gate_enabled/
+# handoff_boss_project/handoff_star_directed/handoff_refresh_directed
+# 四布尔字段(gate/proj/star 定向/M-A 定向刷新四通道转正为无条件路径,
+# 量级常量保留:handoff_gate_min_round/tier_target/ev_gap_bonus/
+# boss_e_damage 族/directed_refresh_per_round/game_cap 不变)——有意
+# 删字段,锁同步更新(其余字段不变)
+_EXPECTED_HASH = ('475f84c3d7e9ee0a0fadd67b7b248e4976fc08254a004d00205ed0b8cadb5af5')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

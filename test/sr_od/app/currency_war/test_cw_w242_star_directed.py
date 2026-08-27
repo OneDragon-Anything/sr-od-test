@@ -1,27 +1,26 @@
 """W242/ADR-0405:末窗星级定向授权(C 项)单帧锁。
 
-锁面(结构面;分布面=w242 四臂 A/B sim 批):
+**语义演进(ADR-0411 flag 家族清理)**:C 项授权自 W257 起无条件启用
+——历史 handoff_star_directed(及 gate/proj 正交 flag)布尔删除,原
+「默认关零漂移/仅 C 开正交臂/off 臂整局一致」锁面随 flag 退场
+(docstring 记过期原因);gap 判据经薄封装 ``star_directed_gap``(
+flag 检查 + gate_gap)并入 ``handoff_gate_gap`` 本体。历史四臂 A/B
+数字见 ADR-0405/0411。
+
+锁面:
 - 授权点:candidates 层(r410 守卫+方向门)只放行候选生成,不是授权
   (copies_cap/r408 同轮守卫/bench 容量照常辖);arbiter 非正分门放行
   'copy' 标签买候选进约束链——授权值零新增(EV 由 interest_rule 的
   W227 缺口项独担,防双计);
-- 窗口/开关:gap>0 只在 P1 末窗(r>=8)∧ 门开 ∧ C flag 开;三 flag
-  正交(仅 C flag 开=gap 恒 0 = 零行为);
-- 零漂移:默认 registry(三 flag 关)下副本候选不生成/非正分照拒
-  (W232 锁的语义延续);
-- 定向性:只辖 'copy' 标签(其它零分候选照拒);r408 同轮已卖仍拒;
-- sim 侧:四臂 A/B 的 off 臂与基线臂整局一致(全关零漂移)。
-n 取断言成立最小值;sim 结构断言用 fallback 池(README 纪律)。
+- 窗口:gap>0 只在 P1 末窗(r>=8)∧ P1(非末窗/P2 恒 0);
+- 定向性:只辖 'copy' 标签(其它零分候选照拒);r408 同轮已卖仍拒。
+n 取断言成立最小值。
 """
 from __future__ import annotations
 
 import logging
-from dataclasses import replace
 from types import SimpleNamespace
 
-import pytest
-
-from sr_od.application.currency_war import cw_sim
 from sr_od.application.currency_war.cw_state import (
     BenchChar,
     BuyCard,
@@ -40,7 +39,6 @@ from sr_od.application.currency_war.decision_v2.candidates import (
 )
 from sr_od.application.currency_war.decision_v2.handoff import (
     handoff_gate_gap,
-    star_directed_gap,
 )
 from sr_od.application.currency_war.decision_v2.registry import (
     DEFAULT_REGISTRY,
@@ -48,12 +46,8 @@ from sr_od.application.currency_war.decision_v2.registry import (
 
 logging.disable(logging.CRITICAL)
 
-#: 四臂(与 w242_ab.py 同构):off / gate / gate+proj / star 全开
-_OFF = DEFAULT_REGISTRY
-_GATE = replace(DEFAULT_REGISTRY, handoff_gate_enabled=True)
-_GP = replace(_GATE, handoff_boss_project=True)
-_STAR = replace(_GP, handoff_star_directed=True)
-_STAR_ONLY = replace(DEFAULT_REGISTRY, handoff_star_directed=True)
+#: ADR-0411:C 项授权无条件启用——行为臂即 DEFAULT_REGISTRY
+_REG = DEFAULT_REGISTRY
 
 _CARRY = '姬子·启行'
 _FILLER = '娜塔莎'
@@ -93,8 +87,8 @@ def _sess() -> StrategySession:
 
 
 def _state(**kw) -> GameState:
-    """末窗承接缺口帧:P1 r8,hp 临界(投影后 hp_tier=0)+板面 tier0
-    (全 1★ → core2=0)→ gap=1(C 项目标场景:星级深度主罚维)。"""
+    """末窗承接缺口帧:P1 r8,hp 临界(boss 投影后 hp_tier=0)+板面
+    tier0(全 1★ → core2=0)→ gap=1(C 项目标场景:星级深度主罚维)。"""
     base = {'plane': 1, 'round_num': 8, 'gold': 55, 'level': 5,
             'hp': 20,
             'board': {'列车同行': 2, _FAC: 1},
@@ -108,22 +102,18 @@ def _state(**kw) -> GameState:
 # ---------- ① 授权点:candidates 层放行生成(非授权) ----------
 
 
-def test_c_arm_generates_copy_candidate_in_final_window() -> None:
-    """star 全开臂:末窗 gap≥1 时方向外 deployed 填充件同名卡生成
-    'copy' 候选(r410 守卫+方向门双豁免);gate/gp 臂(无 C flag)不
-    生成;默认臂不生成。"""
+def test_copy_candidate_generated_in_final_window() -> None:
+    """末窗 gap≥1 时方向外 deployed 填充件同名卡生成 'copy' 候选
+    (r410 守卫+方向门双豁免)。"""
     sess = _sess()
     st = _state(shop=[ShopCard(x=1, faction=_FAC, name=_FILLER, cost=3)])
-    assert star_directed_gap(st, sess, _STAR) >= 1   # 前置:缺口成立
-    got = generate_candidates(st, sess, _STAR)
+    assert handoff_gate_gap(st, sess, _REG) >= 1   # 前置:缺口成立
+    got = generate_candidates(st, sess, _REG)
     names = [c.action.card.name for c in got if isinstance(c.action,
                                                            BuyCard)]
     assert _FILLER in names
-    tag = _buy_tag(st.shop[0], st, sess, _STAR)
+    tag = _buy_tag(st.shop[0], st, sess, _REG)
     assert tag == 'copy'
-    # gate/gp(无 C flag)/默认:不生成(W232 双关现行为延续)
-    for reg in (_OFF, _GATE, _GP):
-        assert _buy_tag(st.shop[0], st, sess, reg) is None
 
 
 def test_copies_cap_and_r408_still_govern() -> None:
@@ -135,7 +125,7 @@ def test_copies_cap_and_r408_still_govern() -> None:
         bench=[_bench(_FILLER, _FAC, slot=0),
                _bench(_FILLER, _FAC, slot=1)],
         shop=[ShopCard(x=1, faction=_FAC, name=_FILLER, cost=3)])
-    names = [c.action.card.name for c in generate_candidates(st, sess, _STAR)
+    names = [c.action.card.name for c in generate_candidates(st, sess, _REG)
              if isinstance(c.action, BuyCard)]
     assert _FILLER not in names
     # r408 同轮已卖:session 簿记已卖名 → 不生成
@@ -143,7 +133,7 @@ def test_copies_cap_and_r408_still_govern() -> None:
     s2 = _sess()
     s2.v2_round_key = (1, 8)
     s2.v2_round_sold = {_FILLER}
-    assert _buy_tag(st2.shop[0], st2, s2, _STAR) is None
+    assert _buy_tag(st2.shop[0], st2, s2, _REG) is None
 
 
 # ---------- ② arbiter 非正分门:定向放行 + 防双计 ----------
@@ -156,31 +146,26 @@ def _copy_cand(st: GameState, cost: int = 3) -> Candidate:
 
 
 def test_arbiter_nonpositive_gate_directed_pass() -> None:
-    """C 项主通道:末窗 gap≥1 时零分 'copy' 买候选进约束链而非
-    「非正分」拒(放行≠必买:金不足/容量约束仍拒);非末窗/无 C flag
-    照拒(零漂移);非 'copy' 标签零分候选照拒(定向性)。"""
+    """主通道:末窗 gap≥1 时零分 'copy' 买候选进约束链而非「非正分」
+    拒(放行≠必买:金不足/容量约束仍拒);非末窗照拒;非 'copy'
+    标签零分候选照拒(定向性)。"""
     st = _state(gold=55)
-    # star 臂:零分 copy 候选被放行(gold 55 − 3 = 52 ≥ 地板)→ 采纳
     sess = _sess()
-    res = arbitrate([(_copy_cand(st), 0.0, {'cost': 3})], st, sess, _STAR)
+    res = arbitrate([(_copy_cand(st), 0.0, {'cost': 3})], st, sess, _REG)
     row = res.log[0]
     assert row['accepted'] is True, f'末窗 gap 授权应放行(log={row})'
     assert any(isinstance(a, BuyCard) for a in res.actions)
     # 同帧 r7(非末窗):gap=0 → 非正分照拒
     st7 = _state(round_num=7)
     res7 = arbitrate([(_copy_cand(st7), 0.0, {'cost': 3})], st7, sess,
-                     _STAR)
+                     _REG)
     assert res7.log[0]['reject'] == '非正分'
-    # gp 臂(无 C flag):末窗同帧照拒
-    res_gp = arbitrate([(_copy_cand(st), 0.0, {'cost': 3})], st, sess,
-                       _GP)
-    assert res_gp.log[0]['reject'] == '非正分'
     # 定向性:非 copy 标签的零分候选照拒(如 line_opportunistic)
     res_other = arbitrate(
         [(Candidate(action=BuyCard(
             ShopCard(x=1, faction='列车同行', name='三月七', cost=3),
             reason=''), tag='line_opportunistic', source='shop'),
-          0.0, {'cost': 3})], st, sess, _STAR)
+          0.0, {'cost': 3})], st, sess, _REG)
     assert res_other.log[0]['reject'] == '非正分'
 
 
@@ -190,54 +175,42 @@ def test_arbiter_constraint_chain_still_rejects() -> None:
     st = _state(gold=8)   # boss 前低金:经济地板 50 远超
     sess = _sess()
     res = arbitrate([(_copy_cand(st, cost=3), 0.0, {'cost': 3})], st,
-                    sess, _STAR)
+                    sess, _REG)
     assert res.log[0]['accepted'] is False
     assert not any(isinstance(a, BuyCard) for a in res.actions)
 
 
 def test_ev_gap_bonus_single_source_no_double_count() -> None:
     """防双计:EV 授权值单一源 = interest_rule 的 W227 缺口项
-    (handoff_ev_gap_bonus×gap);C 臂不加第二份授权值——正分 copy 候选
-    在 r8(boss 窗外)跨档买,EV 放行值与 gate 臂同式(auth 带
-    handoff_gap);C 臂未新增任何数值常量(registry 无
-    star_directed_*_bonus 字段)。"""
+    (handoff_ev_gap_bonus×gap);C 授权路径不加第二份授权值——r8
+    (boss 窗外)跨档买经缺口项放行(auth 带 handoff_gap);
+    registry 无 C 项专有数值常量(no star_directed_* bonus 字段)。"""
     st = _state(gold=53, hp=30)   # hp 30:投影后 hp_tier=0 但非应急态
     sess = _sess()
     cand = _copy_cand(st, cost=4)
     auth: dict = {}
-    r = _check_constraint('interest_rule', cand, st, st, sess, _STAR,
+    r = _check_constraint('interest_rule', cand, st, st, sess, _REG,
                           val=1.0, bd={'int_emb': 0.0}, auth=auth)
     # r8 node_type=battle → interest_rule 辖:缺口项 V+5×1 → 放行
     assert r is None
     assert auth.get('handoff_gap') == 1
     assert auth.get('ev_auth', 0) > 0
-    # 授权值与 gate 臂(无 C flag)同式:同帧同参下 ev_auth 相等
-    auth_g: dict = {}
-    _check_constraint('interest_rule', cand, st, st, sess, _GATE,
-                      val=1.0, bd={'int_emb': 0.0}, auth=auth_g)
-    assert auth_g['ev_auth'] == auth['ev_auth'], (
-        'C 臂不得在 interest_rule 缺口项之外叠加第二份授权值(双计)')
     # 数值单一源:registry 无 C 项专有 bonus 常量
     assert not [f for f in type(DEFAULT_REGISTRY).__dataclass_fields__
-                if f.startswith('handoff_star')
-                and f != 'handoff_star_directed']
+                if f.startswith('handoff_star')]
 
 
-# ---------- ③ 窗口/正交/零漂移 ----------
+# ---------- ③ 窗口辖域 ----------
 
 
-def test_gap_window_and_flag_orthogonality() -> None:
-    """star_directed_gap 窗口辖域:P1 末窗∧门开∧C flag 开才 >0;
-    仅 C flag 开(门关)= 恒 0(三 flag 正交:只在门开路径内被消费);
-    非末窗/P2/达标帧恒 0。"""
+def test_gap_window_scope() -> None:
+    """缺口窗口辖域:P1 末窗(r>=8)才 >0;非末窗/P2/达标帧恒 0。"""
     sess = _sess()
     st = _state()
-    assert star_directed_gap(st, sess, _STAR) >= 1
-    assert star_directed_gap(st, sess, _STAR_ONLY) == 0, (
-        '仅 C flag 开(门关)应零行为——正交性结构前提')
-    assert star_directed_gap(_state(round_num=7), sess, _STAR) == 0
-    assert star_directed_gap(_state(plane=2), sess, _STAR) == 0
-    # 达标帧(W227 锁同式 DOT 队成型帧,hp 64):gap=0 → C 授权随之关
+    assert handoff_gate_gap(st, sess, _REG) >= 1
+    assert handoff_gate_gap(_state(round_num=7), sess, _REG) == 0
+    assert handoff_gate_gap(_state(plane=2), sess, _REG) == 0
+    # 达标帧(W227 锁同式 DOT 队成型帧,hp 高带):gap=0 → C 授权随之关
     # (授权强度单一源随 gap 走,gap=0 即零行为)
     from sr_od.application.currency_war.cw_comps import get_comp
     from sr_od.application.currency_war.cw_intention import (
@@ -247,7 +220,7 @@ def test_gap_window_and_flag_orthogonality() -> None:
     comp = get_comp('DOT队')
     core = intention_core(comp)
     st_ok = GameState(
-        plane=1, round_num=8, gold=55, level=5, hp=64,
+        plane=1, round_num=8, gold=55, level=5, hp=90,
         board=dict(comp.form_tiers),
         deployed=[BenchChar(slot=0, char_id=core, faction='仙舟罗浮',
                             star=2),
@@ -257,29 +230,4 @@ def test_gap_window_and_flag_orthogonality() -> None:
     s_ok = StrategySession()
     s_ok.v3_intention = IntentionState(phase='locked', locked_comp='DOT队')
     s_ok.v3_mode = 'economy'
-    assert handoff_gate_gap(st_ok, s_ok, _STAR) == 0
-    assert star_directed_gap(st_ok, s_ok, _STAR) == 0
-
-
-def test_default_off_zero_drift_constants() -> None:
-    """默认值锁:handoff_star_directed=False(三 flag 正交,默认关=
-    现行为零漂移;A/B 裁决先例 ADR-0400/0402/0403)。"""
-    assert DEFAULT_REGISTRY.handoff_star_directed is False
-
-
-def test_sim_star_only_full_identity() -> None:
-    """sim 侧正交(结构证据,n=4 最小 fallback 池):仅 C flag 开的
-    整局 ledger 与基线(全关)逐位一致——C flag 只在门开路径内被消费。"""
-    import json
-
-    from sr_od.application.currency_war.decision_v2.strategy import (
-        DecisionV2Strategy,
-    )
-    for seed in range(4):
-        on = cw_sim.simulate_p1(
-            seed, pool='fallback', planes=2,
-            strategy=DecisionV2Strategy(registry=_STAR_ONLY))
-        off = cw_sim.simulate_p1(seed, pool='fallback', planes=2)
-        assert json.dumps(on.ledger, default=str, ensure_ascii=False) \
-            == json.dumps(off.ledger, default=str, ensure_ascii=False), (
-            f'seed {seed}:仅 C flag 开不得有行为——正交性被破坏')
+    assert handoff_gate_gap(st_ok, s_ok, _REG) == 0

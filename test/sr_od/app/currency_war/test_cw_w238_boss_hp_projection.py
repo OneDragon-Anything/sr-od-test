@@ -1,23 +1,25 @@
-"""W238/ADR-0403:承接门 hp 维 boss 投影单帧锁(设计件 09 §3.1 第一步;
+"""W238/ADR-0403:承接门 hp 维 boss 投影单帧锁(设计件 09 §3.1;
 W240/ADR-0404 键改净星深后重标定)。
 
-锁面(结构面;分布面=A/B sim 批):
+**语义演进(ADR-0411 flag 家族清理)**:投影自 W257 起无条件启用
+——历史 handoff_gate_enabled/handoff_boss_project 双布尔删除,原
+「关臂零漂移/proj_only 正交臂」锁面随 flag 退场(docstring 记过期
+原因);现行为面 = DEFAULT_REGISTRY 直接消费。历史 A/B 数字见
+ADR-0403/0411。
+
+锁面:
 - 常数表:档键域=Δ池 v10 boss 净星深桶域 {0}(P1 boss 语料全落桶 0
   ——旧 Σboard 三桶条件性=键口径伪影);正值(=期望掉血量);
-- 盲区修复(run28/31/33 型):r8 hp 22-33 ∧ 板面 tier1 局 → 投影臂
-  gap≥1 / 现投影(gate 无投影)臂 gap=0——设计件 09 §2 盲区类的
-  行为差证据行;
-- 弱板局两臂同值(min 由板面维压死,投影不改变 gap 数值);
+- 盲区修复(run28/31/33 型):r8 hp 22-33 ∧ 板面 tier1 局 → gap≥1
+  触发(hp 临界类由 boss 后投影捞起);
+- 弱板局 min 由板面维压死(gap 数值不受投影影响的结构面);
 - r8 +2 / r9 无 +2(hp_proj 直读);缺桶 fallback;
-- 正交性:仅投影开(门关)= 零行为(gap 恒 0);
 - W240 方向锁:3合1 升星后净星深键不落浅桶(修 ADR-0403 缺口②);
-- sim 侧:账本 handoff_hp_proj 字段(投影开非 None/关 None);A/B
-  proj_only 臂整局逐位=基线臂(两 flag 正交);非末窗零漂移。
+- sim 侧:账本 handoff_hp_proj 字段(末窗非 None)。
 n 取断言成立最小值;sim 结构断言用 fallback 池(README 纪律)。
 """
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import replace
 
@@ -43,16 +45,14 @@ from sr_od.application.currency_war.decision_v2.registry import (
 
 logging.disable(logging.CRITICAL)
 
-_GATE_OFF = DEFAULT_REGISTRY
-_GATE_ON = replace(DEFAULT_REGISTRY, handoff_gate_enabled=True)
-_PROJ_ON = replace(_GATE_ON, handoff_boss_project=True)
-_PROJ_ONLY = replace(DEFAULT_REGISTRY, handoff_boss_project=True)
+#: ADR-0411:门与投影均无条件启用——行为帧即 DEFAULT_REGISTRY
+_REG = DEFAULT_REGISTRY
 
 
 def _blindspot_frame(hp: int = 30, **kw) -> GameState:
     """run 28/31/33 型盲区帧:锁定成型(DOT 队,核心 2★ → 板面 tier1)
-    P1 r8,hp 22-33 临界带(现投影 hp_tier=1 → 总档 1 → 门不触发;
-    boss 后真值投影 hp_tier=0 → 总档 0 → 触发)。"""
+    P1 r8,hp 22-33 临界带(boss 后真值投影 hp_tier=0 → 总档 0 → 触发;
+    若喂 boss 前 hp 则 hp_tier=1 → 门不触发=盲区)。"""
     comp = get_comp('DOT队')
     core = intention_core(comp)
     base = {
@@ -89,33 +89,29 @@ def test_boss_e_damage_table_shape() -> None:
     assert DEFAULT_REGISTRY.handoff_boss_e_damage_default > 0
 
 
-# ---------- ② 盲区修复(run28/31/33 型行为差) ----------
+# ---------- ② 盲区修复(run28/31/33 型) ----------
 
 def test_blindspot_gap_projection_triggers() -> None:
-    """r8 hp 22-33 ∧ 板面 tier1:现投影臂 gap=0(盲区)/投影臂 gap≥1
-    (触发);投影 hp 披露写入 session(ADR-0403 判读面)。"""
+    """r8 hp 22-33 ∧ 板面 tier1:boss 后投影把临界带 hp 归 hp_tier 0
+    → gap≥1 触发;投影 hp 披露写入 session(ADR-0403 判读面)。"""
     for hp in (22, 30, 33):
         st = _blindspot_frame(hp=hp)
-        s_gate, s_proj = _sess_locked(), _sess_locked()
-        assert handoff_gate_gap(st, s_gate, _GATE_ON) == 0, (
-            f'hp={hp}:现投影臂不应触发(盲区类——hp_tier=1∧板面 tier1)')
-        assert handoff_gate_gap(st, s_proj, _PROJ_ON) >= 1, (
-            f'hp={hp}:投影臂应触发(boss 后投影 hp 归 hp_tier 0)')
+        s_proj = _sess_locked()
+        assert handoff_gate_gap(st, s_proj, _REG) >= 1, (
+            f'hp={hp}:投影应触发(boss 后投影 hp 归 hp_tier 0)')
         assert 0 <= s_proj.v3_handoff_hp_proj <= 20, (
             '临界带投影 hp 应落 hp_tier=0 档(≤20)')
 
 
-def test_weak_board_both_arms_same_gap() -> None:
-    """弱板局(板面 tier0):两臂 gap 同值——min 由板面维压死,投影
-    不改变 gap 数值(设计件 09 §2「弱板局投影修正不改变 gap」)。"""
+def test_weak_board_gap_governed_by_board_dim() -> None:
+    """弱板局(板面 tier0):gap≥1 且数值由板面维压死——hp 维投影
+    不改变 min 结构(设计件 09 §2「弱板局投影修正不改变 gap」)。"""
     st = _blindspot_frame(hp=15)
     st = replace(st, deployed=[
         BenchChar(slot=0, char_id='卡芙卡', faction='仙舟罗浮', star=1),
         BenchChar(slot=1, char_id='桑博', faction='仙舟罗浮', star=1)])
-    s_gate, s_proj = _sess_locked(), _sess_locked()
-    g_gate = handoff_gate_gap(st, s_gate, _GATE_ON)
-    g_proj = handoff_gate_gap(st, s_proj, _PROJ_ON)
-    assert g_gate == g_proj >= 1
+    s_proj = _sess_locked()
+    assert handoff_gate_gap(st, s_proj, _REG) >= 1
 
 
 # ---------- ③ 投影公式(r8 +2 / r9 无 / 缺桶 fallback / 钳制) ----------
@@ -127,7 +123,7 @@ def test_projection_formula_round_bonus_and_fallback() -> None:
     default=27.57——deployed 全 1★ → 净星深 0 → 桶 0(表内):
     r8: round(30+2−10)=22;r9: round(30−10)=20;
     三件 2★ → 净星深 3 → 桶 3(表外→default):r8 round(30+2−27.57)=4。"""
-    reg = replace(_PROJ_ON, handoff_boss_e_damage={0: 10.0},
+    reg = replace(_REG, handoff_boss_e_damage={0: 10.0},
                   handoff_boss_e_damage_default=27.57)
     st8 = GameState(plane=1, round_num=8, gold=50, level=5, hp=30,
                     board={'仙舟': 3},
@@ -142,18 +138,8 @@ def test_projection_formula_round_bonus_and_fallback() -> None:
         for i in range(3)])   # 净星深 3 → 桶 3(表外)
     assert boss_projected_hp(st_deep, 30, reg) == 4   # default
     # 钳制:低 hp 不为负 / 高 hp 不破百
-    assert boss_projected_hp(st8, 0, _PROJ_ON) == 0
-    assert boss_projected_hp(st8, 200, _PROJ_ON) == 100
-
-
-def test_projection_flag_off_zero_drift() -> None:
-    """正交性:仅投影开(门关)恒 0;两 flag 全关恒 0(=基线逐位的
-    结构前提);投影 hp 披露不写。"""
-    st = _blindspot_frame(hp=30)
-    s = _sess_locked()
-    assert handoff_gate_gap(st, s, _GATE_OFF) == 0
-    assert handoff_gate_gap(st, s, _PROJ_ONLY) == 0
-    assert getattr(s, 'v3_handoff_hp_proj', None) is None
+    assert boss_projected_hp(st8, 0, _REG) == 0
+    assert boss_projected_hp(st8, 200, _REG) == 100
 
 
 # ---------- ④ W240 方向锁:净星深键下升星不落浅桶(ADR-0403 缺口②修复) ----------
@@ -210,29 +196,14 @@ def test_v10_pool_boss_buckets_direction() -> None:
             f'({means[b2]:.2f} vs {means[b1]:.2f})——方向与机制相反')
 
 
-# ---------- ⑤ sim 侧:账本披露 + proj_only 整局正交 + 非末窗零漂移 ----------
+# ---------- ⑤ sim 侧:账本披露 ----------
 
 def test_sim_ledger_projection_disclosure() -> None:
-    """投影开臂账本轮行带 handoff_hp_proj(末窗非 None);关臂恒 None
-    (零漂移披露面)。"""
-    from sr_od.application.currency_war.decision_v2.strategy import (
-        DecisionV2Strategy,
-    )
-    on = cw_sim.simulate_p1(0, pool='fallback', planes=2,
-                            strategy=DecisionV2Strategy(registry=_PROJ_ON))
-    off = cw_sim.simulate_p1(0, pool='fallback', planes=2)
-    assert all('handoff_hp_proj' in row for row in on.ledger)
-    on_rows = [row for row in on.ledger
-               if row.get('plane') == 1 and row['round_num'] >= 8]
-    assert any(row['handoff_hp_proj'] is not None for row in on_rows), (
+    """默认注册表(投影无条件启用)账本轮行带 handoff_hp_proj,末窗
+    非 None(判读「boss 后投影 hp」面)。n=1 最小。"""
+    r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
+    assert all('handoff_hp_proj' in row for row in r.ledger)
+    rows = [row for row in r.ledger
+            if row.get('plane') == 1 and row['round_num'] >= 8]
+    assert any(row['handoff_hp_proj'] is not None for row in rows), (
         '末窗轮投影 hp 应披露(非 None)')
-    assert all(row.get('handoff_hp_proj') is None for row in off.ledger)
-
-
-def test_ab_proj_only_full_identity_and_zero_drift() -> None:
-    """A/B(n=4 最小):proj_only(仅投影开)整局 ledger 与基线臂逐位
-    一致(两 flag 正交结构证据);gate/proj 臂 P1 非末窗零漂移。"""
-    rep = cw_sim.simulate_handoff_ab(4, pool='fallback', seed_base=0)
-    assert rep['proj_only_orthogonality']['ok']
-    assert rep['p1_zero_drift']['ok']
-    assert 'blindspot' in rep and rep['blindspot']['rounds'] >= 0

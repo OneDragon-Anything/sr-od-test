@@ -189,12 +189,13 @@ def test_formed_stop_round_comp_derived() -> None:
     """③辖轮 = max(comp.typical_form_round, formed_stop_min_round):
     早成型 DOT队(typical 4→辖 7):r6 不停/r7 停;晚成型 昼神阿雅
     (typical 8→辖 8):r7 不停/r8 停。
-    (W227/ADR-0400 注:本锁改用 handoff_gate_enabled=False 的注册表
-    ——末窗承接维(承接档位未达标不停手)会使本锁的最小构造帧
-    (仅核心 1 件上场,无体系引擎 → 投影总档 0)在 r8 不停,与本锁
-    要隔离的「comp 派生辖轮」语义正交;承接维行为由
-    test_cw_w227_handoff_gate 锁。)"""
-    _reg_gate_off = replace(_REG, handoff_gate_enabled=False)
+    (语义演进史,W227/ADR-0400 → ADR-0411:本锁曾用
+    handoff_gate_enabled=False 隔离末窗承接维——该布尔字段已随
+    ADR-0411 flag 家族清理删除,承接门无条件启用。现改用同款隔离
+    效果的合法手段:handoff_gate_min_round 提到 9(量级常量仍在
+    registry),本锁全部构造轮(r≤8)落到承接门外,gap 恒 0——隔离
+    「comp 派生辖轮」语义;承接维行为由 test_cw_w227_handoff_gate 锁。)"""
+    _reg_no_gate_window = replace(_REG, handoff_gate_min_round=9)
     for comp_name, stop_r, nostop_r in (('DOT队', 7, 6),
                                         ('昼神阿雅', 8, 7)):
         comp = get_comp(comp_name)
@@ -202,7 +203,8 @@ def test_formed_stop_round_comp_derived() -> None:
         for r, expect in ((nostop_r, False), (stop_r, True)):
             sess = _sess_locked(comp_name)
             st = _formed_frame(comp_name, round_num=r)
-            assert formed_stop_active(st, sess, _reg_gate_off) is expect, (
+            assert formed_stop_active(st, sess,
+                                      _reg_no_gate_window) is expect, (
                 f'{comp_name} r{r}:期望 {expect}')
 
 
