@@ -259,8 +259,14 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # release 活栈消费门批更新:新增 release_spend_gate_enabled 一字段(判据
 # 单一源=decision_v2.posture_release.spend_gate_active;开关语义见
 # registry 字段注释)——有意加字段,锁同步更新(既有字段默认值不变)
-_EXPECTED_HASH = ('5106b0ece31b9e4ab4f6c31b436ee78db'
-                  '3b1f5519fa83833226a03e539cbfaf0')
+# P2 生存批更新:新增濒死带期望账三字段(dying_band_account_enabled/
+# dying_band_next_loss)+存活轮数门三字段(line_switch_survival_gate_
+# enabled/line_switch_survival_margin/line_switch_round_loss);标定源=
+# .debug/temp/currency_war/w353_p2_survival/w354_calibrate_p2_loss.py
+# (P2 损血谱粗档)。两开关默认 False=现行为零漂移(A/B 基线臂)——
+# 有意加字段,锁同步更新(既有字段默认值不变)
+_EXPECTED_HASH = ('8cbb039440081a7716fba6987d44b3b1a3d47dfd'
+                  '3649f678edf41dd2f75a1e31')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
