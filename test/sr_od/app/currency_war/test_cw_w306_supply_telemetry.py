@@ -209,9 +209,11 @@ def _make_supply_op(monkeypatch):
     op.round_by_find_and_click_area = (
         lambda screen, sn, an, **kw: (click_log.append((sn, an)) or
                                       SimpleNamespace(is_success=True)))
-    # 重进后 overlay 判定(_in_node 内部用):桩成命中(离线无画面)
+    # 重进后 overlay 判定(_in_node 内部用)与 OCR 文本兜底点击:桩离线无画面
     op.round_by_find_area = (
         lambda screen, sn, an, **kw: SimpleNamespace(is_success=True))
+    op.round_by_ocr_and_click = (
+        lambda screen, text, **kw: SimpleNamespace(is_success=False))
     return op, decision_captured
 
 
@@ -259,7 +261,7 @@ def test_detour_return_miss_no_snapshot(monkeypatch) -> None:
 
 
 def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
-    """重进失败 → 本轮不做任何选择动作(防备战屏盲点卡身),交下轮 _in_node 判定。"""
+    """重进失败 → 本轮不做任何选择动作(防备战屏盲点卡身),交下轮重试 detour。"""
     from sr_od.application.currency_war.operations.run_nodes import run_supply_node as m
 
     op, captured = _make_supply_op(monkeypatch)
@@ -270,6 +272,8 @@ def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
             return SimpleNamespace(is_success=True)
         return SimpleNamespace(is_success=False)
     op.round_by_find_and_click_area = _fail_reenter
+    op.round_by_find_area = (
+        lambda screen, sn, an, **kw: SimpleNamespace(is_success=False))
 
     pick_calls: list = []
     monkeypatch.setattr(m, 'read_supply_options',
@@ -279,6 +283,28 @@ def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
     assert len([r for r in captured
                 if r['extra'].get('phase') == 'supply_detour']) == 1
     assert pick_calls == []   # 未进入选择读帧(detour 失败即止)
+
+
+def test_detour_failure_not_marked_retry_next_round(monkeypatch) -> None:
+    """失败不落标记(宁可见 FAIL bail 不带病假完成):session 无 _supply_detour_done,
+    下轮 _should_supply_detour 仍 True → 重试整个 detour;OCR 文本兜底点击已尝试。"""
+
+    op, captured = _make_supply_op(monkeypatch)
+    ocr_clicks: list[str] = []
+    op.round_by_find_and_click_area = (
+        lambda screen, sn, an, **kw: SimpleNamespace(
+            is_success=(an == '按钮-返回备战界面')))
+    op.round_by_find_area = (
+        lambda screen, sn, an, **kw: SimpleNamespace(is_success=False))
+    op.round_by_ocr_and_click = (
+        lambda screen, text, **kw: (ocr_clicks.append(text) or
+                                    SimpleNamespace(is_success=False)))
+    match = op.ctx.cw_match
+    assert op._supply_detour_collect(match) is False
+    assert not getattr(match.session, '_supply_detour_done', False), \
+        '失败不得落标记(否则下轮跳过 detour 直接在错误画面选择)'
+    assert op._should_supply_detour(match) is True   # 下轮重试 detour
+    assert ocr_clicks == ['返回补给阶段']   # OCR 文本兜底枪已打(重试序列末位)
 
 
 def test_detour_semantics_lock_in_source() -> None:
