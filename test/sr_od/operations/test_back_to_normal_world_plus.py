@@ -359,65 +359,9 @@ class TestVersionAnnouncementBranches:
         monkeypatch: pytest.MonkeyPatch,
         state: str,
     ) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
-        """真帧驱动单轮 check_screen,返回 (结果, find记录, find+click记录, 裸click记录)。
-
-        - ``op.last_screenshot`` 直接注入归档真帧(不经截图链路);
-        - 三类 round_by_* 均为**包装真实方法**(识别照跑,只加记录);
-        - 模拟宇宙状态 / 列车补给 / 对话守卫恒无(与本测试无关,防噪音)。
-        """
-        img = test_context.load_screen(self.SCREEN, state)
-        finds: list[tuple[str, str]] = []
-        find_clicks: list[tuple[str, str]] = []
-        bare_clicks: list[tuple[str, str]] = []
-
-        real_find = BackToNormalWorldPlus.round_by_find_area
-        real_find_click = BackToNormalWorldPlus.round_by_find_and_click_area
-        real_click = BackToNormalWorldPlus.round_by_click_area
-
-        def _spy_find(self, screen, s_name: str, a_name: str, *a, **k):
-            r = real_find(self, screen, s_name, a_name, *a, **k)
-            if r.is_success:
-                finds.append((s_name, a_name))
-            return r
-
-        def _spy_find_click(self, screen, s_name: str, a_name: str, *a, **k):
-            r = real_find_click(self, screen, s_name, a_name, *a, **k)
-            if r.is_success:
-                find_clicks.append((s_name, a_name))
-            return r
-
-        def _spy_click(self, s_name: str, a_name: str, *a, **k):
-            r = real_click(self, s_name, a_name, *a, **k)
-            bare_clicks.append((s_name, a_name))
-            return r
-
-        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _spy_find)
-        monkeypatch.setattr(
-            BackToNormalWorldPlus, 'round_by_find_and_click_area', _spy_find_click,
+        return _run_real_frame_check_screen(
+            test_context, monkeypatch, self.SCREEN, state,
         )
-        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _spy_click)
-        monkeypatch.setattr(
-            btnw_module.sim_uni_screen_state,
-            'get_sim_uni_screen_state',
-            lambda *args, **kw: None,
-        )
-        monkeypatch.setattr(
-            btnw_module.common_screen_state,
-            'is_express_supply',
-            lambda *args, **kw: False,
-        )
-        monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
-
-        op = _WatchedBackToNormal(test_context)
-        op.last_screenshot = img  # 真帧注入:check_screen 每轮读它做识别
-        monkeypatch.setattr(op, 'screenshot', lambda: img)
-
-        enter_running_state(test_context)
-        try:
-            result = op.check_screen()
-        finally:
-            reset_running_state(test_context, op)
-        return result, finds, find_clicks, bare_clicks
 
     def test_page1_flips_to_next(
         self,
@@ -457,6 +401,117 @@ class TestVersionAnnouncementBranches:
             f'关闭点击漂移:{find_clicks}'
         )
         assert bare_clicks == [], f'页 2 不应再翻页:{bare_clicks}'
+
+
+def _run_real_frame_check_screen(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+    screen_name: str,
+    state: str,
+) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
+    """真帧驱动单轮 check_screen,返回 (结果, find记录, find+click记录, 裸click记录)。
+
+    - ``op.last_screenshot`` 直接注入归档真帧(不经截图链路);
+    - 三类 round_by_* 均为**包装真实方法**(识别照跑,只加记录);
+    - 模拟宇宙状态 / 列车补给 / 对话守卫恒无(与本测试无关,防噪音)。
+    """
+    img = test_context.load_screen(screen_name, state)
+    finds: list[tuple[str, str]] = []
+    find_clicks: list[tuple[str, str]] = []
+    bare_clicks: list[tuple[str, str]] = []
+
+    real_find = BackToNormalWorldPlus.round_by_find_area
+    real_find_click = BackToNormalWorldPlus.round_by_find_and_click_area
+    real_click = BackToNormalWorldPlus.round_by_click_area
+
+    def _spy_find(self, screen, s_name: str, a_name: str, *a, **k):
+        r = real_find(self, screen, s_name, a_name, *a, **k)
+        if r.is_success:
+            finds.append((s_name, a_name))
+        return r
+
+    def _spy_find_click(self, screen, s_name: str, a_name: str, *a, **k):
+        r = real_find_click(self, screen, s_name, a_name, *a, **k)
+        if r.is_success:
+            find_clicks.append((s_name, a_name))
+        return r
+
+    def _spy_click(self, s_name: str, a_name: str, *a, **k):
+        r = real_click(self, s_name, a_name, *a, **k)
+        bare_clicks.append((s_name, a_name))
+        return r
+
+    monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _spy_find)
+    monkeypatch.setattr(
+        BackToNormalWorldPlus, 'round_by_find_and_click_area', _spy_find_click,
+    )
+    monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _spy_click)
+    monkeypatch.setattr(
+        btnw_module.sim_uni_screen_state,
+        'get_sim_uni_screen_state',
+        lambda *args, **kw: None,
+    )
+    monkeypatch.setattr(
+        btnw_module.common_screen_state,
+        'is_express_supply',
+        lambda *args, **kw: False,
+    )
+    monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
+
+    op = _WatchedBackToNormal(test_context)
+    op.last_screenshot = img  # 真帧注入:check_screen 每轮读它做识别
+    monkeypatch.setattr(op, 'screenshot', lambda: img)
+
+    enter_running_state(test_context)
+    try:
+        result = op.check_screen()
+    finally:
+        reset_running_state(test_context, op)
+    return result, finds, find_clicks, bare_clicks
+
+
+class TestCwLobbyResidualBranch:
+    """CW 大厅残留态分支(W316)真帧输入锁:上局结束「回大厅」的死按钮残留态。
+
+    背景(2026-08-27 run49 首跑 147s 失败根因,编排者 live 实证):上局结束
+    「回大厅」后的大厅 UI 层是残留态——开始按钮不响应任何点击(app 重试循环
+    与手动双击均无效),右上角「按钮-关闭」才是真退出(关 X 露出世界场景后
+    世界入口接管一切正常)。该残留态与开局前大厅共用同一 screen_info 档
+    (货币战争-大厅,创业指南 id_mark 锚 + 按钮-关闭 template),由既有
+    W286 大厅分支接管:标识命中 → find+click「按钮-关闭」→ round_retry
+    逐帧重识别露世界 → 「角色图标」分支 SUCCESS。
+
+    真帧锁:fixture = run49 真实失败帧(死按钮大厅态,含创业指南+开始钮+
+    右上关闭钮,测试仓归档 ``大厅-残留态-run49.webp``)。不 mock 画面识别,
+    锁「真帧 → 分支路由 + 点击 area」全链:锚点失配 / 模板漂移 / 误吸
+    别分支(尤其对话守卫与兜底)会在此红。
+    """
+
+    SCREEN = '货币战争-大厅'
+    STATE = '大厅-残留态-run49'
+
+    def test_residual_lobby_closes(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """run49 残留态真帧:命中大厅分支,find+click「按钮-关闭」,round_retry。"""
+        result, finds, find_clicks, bare_clicks = _run_real_frame_check_screen(
+            test_context, monkeypatch, self.SCREEN, self.STATE,
+        )
+
+        # 分支路由:round_retry 等下一轮逐帧重识别露世界(非 success / 兜底)
+        assert not result.is_success, f'残留态应 round_retry,status={result.status}'
+        assert result.status == self.SCREEN
+        # 识别事实(真 OCR):创业指南 id_mark 锚命中(分支入口判据)。
+        # 「按钮-关闭」是 template area,本分支仅经 round_by_find_and_click_area
+        # 消费(记入 find_clicks,不入 finds)——命中与否由下方点击断言锁死。
+        assert (self.SCREEN, '标识-创业指南') in finds, f'识别命中:{finds}'
+        # 动作:只 find+click 关闭 area;不点开始钮、不落兜底裸点击
+        assert find_clicks == [(self.SCREEN, '按钮-关闭')], (
+            f'关闭点击漂移:{find_clicks}'
+        )
+        assert bare_clicks == [], f'不应有兜底/翻页类裸点击:{bare_clicks}'
 
 
 def _patch_round_sleep(monkeypatch: pytest.MonkeyPatch) -> list[float]:
