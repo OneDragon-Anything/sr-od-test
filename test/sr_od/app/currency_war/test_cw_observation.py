@@ -362,6 +362,15 @@ def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pyte
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('4', 296, 990)])
     assert read_level_up_cost(test_context, None) == 4
+    # level_up_cost 二级管线:一级(3x 放大)读空 → OTSU 二值化重试兜回
+    calls = {'n': 0}
+
+    def _two_stage(**kw):
+        calls['n'] += 1
+        return [_ocr('4', 296, 990)] if calls['n'] == 2 else []
+
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', _two_stage)
+    assert read_level_up_cost(test_context, None) == 4
     # shop_refresh_cost(文本-刷新金币数):"2" → 2;空 → 默认 2
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('2', 1621, 855)])
@@ -554,4 +563,33 @@ def test_level_from_xp_inverse_table() -> None:
     assert _level_from_xp((0, 52)) == 7
     assert _level_from_xp((0, 2)) is None   # 1-2 级门槛不在表 → 不覆盖
     assert _level_from_xp(None) is None
+
+
+# ===== 购买经验费用实帧锁(两级管线:3x 放大 + OTSU 二值化重试) =====
+def test_read_level_up_cost_real_fixture(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """真实备战帧锁:费用数字原生分辨率 det 漏检(全语料实读 0% 的失读字段),
+    两级管线应恢复读数。锁两帧:shop_closed(3x 放大即可读)+ 双宝钻局(仅 OTSU
+    二值化级可读,防二级管线被静默剥除)。模型不可用 / fixture 缺失 → skip。
+    """
+    from pathlib import Path
+
+    from one_dragon.base.matcher.ocr.ocr_service import OcrService
+    from one_dragon.utils import cv2_utils
+
+    fix_dir = Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战'
+    frames = [fix_dir / 'shop_closed.webp', fix_dir / '后排9槽-双宝钻局.webp']
+    if not all(p.exists() for p in frames):
+        pytest.skip('fixture 缺失')
+    try:
+        from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
+        matcher = OnnxOcrMatcher()
+        if not matcher.init_model(download_by_github=False, download_by_gitee=True):
+            pytest.skip('OCR 模型不可用')
+    except Exception:
+        pytest.skip('OCR 模型不可用')
+    monkeypatch.setattr(test_context, 'ocr_service', OcrService(ocr_matcher=matcher))
+    for p in frames:
+        img = cv2_utils.read_image(str(p))
+        assert read_level_up_cost(test_context, img) == 4, f'{p.name} 费用应读 4'
 
