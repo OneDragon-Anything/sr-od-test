@@ -206,6 +206,27 @@ def test_cap_debounce_reread_recovers_then_rejects(monkeypatch) -> None:
     assert calls['n'] == 1
 
 
+def test_cap_debounce_out_of_domain_equal_pair_accepted(monkeypatch) -> None:
+    """W292/ADR-0420:域外但**两帧一致**且 ≤ 绝对上界 13 → 采信(e4972b43
+    实拍 diff=5 真实高档,旧域拒信致 6 槽降级跑在 9 格板上)+ 留证。"""
+    conflicts: list[tuple] = []
+    monkeypatch.setattr(cw_observation, 'obs_conflict',
+                        lambda *a, **k: conflicts.append((a, k)))
+    calls = _patch_reader(monkeypatch, [13, 13])
+    assert cw_observation.read_deploy_cap_debounced(
+        _FakeCtx(), object(), 8) == 13
+    assert calls['n'] == 2 and len(conflicts) == 1
+    assert '采信' in str(conflicts[0][1]), '采信路径必须留证供判读'
+    # 两帧一致但超绝对上界(前台4+后台9=13 实拍上限)→ 拒
+    calls = _patch_reader(monkeypatch, [15, 15])
+    assert cw_observation.read_deploy_cap_debounced(
+        _FakeCtx(), object(), 8) is None
+    # cap<level 两帧一致仍恒拒(物理不可能)
+    calls = _patch_reader(monkeypatch, [3, 3])
+    assert cw_observation.read_deploy_cap_debounced(
+        _FakeCtx(), object(), 5) is None
+
+
 def test_max_units_deploy_cap_priority() -> None:
     """max_units:deploy_cap 真值优先(≥level 才信),level 兜底,封顶 10。"""
     assert GameState(level=5, deploy_cap=7).max_units() == 7
