@@ -43,9 +43,13 @@
   本机 `true` = DirectML,实测 553ms/张 vs CPU 759ms/张(快 ~27%),且 6 张 fixture
   两种设备文本集完全一致、DML 同图多次自洽;无 DML 的环境(CI)自动回退纯 CPU,
   不会崩。注意:开 GPU 时若同机还有实机局/MCP server 在用 DML,会互相争用。
+- **测试进程默认不写日志文件**(conftest 日志隔离,W276):pytest 进程退出共享
+  日志写入方集合(框架 logger 挂 NullHandler 占位),从源头消掉与并行的 sim 批/
+  regen 进程的午夜轮转竞态(WinError 32 随机红)。排查具体测试要看框架日志时,
+  设 `SR_TEST_LOG_FILE=1` 走旧路径 `.log/test.log`(配合下一行降噪改 INFO)。
 - **sim 日志已降噪**(conftest 模块级 framework log INFO→WARNING):sim 逐决策
-  INFO 曾一轮全量写 100MB+ test.log。排查具体测试时,临时注释 conftest 里
-  `setLevel(logging.WARNING)` 那行重跑即可。
+  INFO 曾一轮全量写 100MB+ test.log。排查具体测试时,设 `SR_TEST_LOG_FILE=1`
+  并临时把 conftest 里 `setLevel(logging.WARNING)` 改回 INFO 重跑。
 - 本机可选 `-n 8`(dev 组已带 pytest-xdist;缓存生效后 OCR 大头已摊薄,并行
   边际收益缩小,不再显著优于串行 warm),**不作规范**:内存 ~1.2-2GB/worker、
   CPU 峰值 15+ 核;机器忙时(实机局/其他 agent 在跑)别用——实测两套 -n 8 并跑

@@ -15,6 +15,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 from one_dragon.utils import log_utils
+from one_dragon.utils.log_utils import _close_managed_handlers
 from sr_od.backend.entry.server import create_app
 
 
@@ -74,7 +75,12 @@ def test_configure_server_logging_routes_to_dedicated_file() -> None:
             f'不应再有 console(StreamHandler),否则框架日志双写进 main_server.log,实得 {stream_handlers}'
         )
     finally:
-        # 还原默认配置(测试进程内该 logger 是共享单例,别让分流配置泄漏给其他测试)
-        log_utils.configure_logger(
-            logger, log_utils.LoggerConfig(add_console_handler=False),
-        )
+        # 还原为 pytest 进程的「不落盘」默认态(conftest 日志隔离,W276):
+        # 该 logger 是共享单例,别让 mcp_server.log 分流配置泄漏给其他测试;
+        # 也不得还原成默认 log.txt handler——那会让本 pytest 进程重新持有
+        # 共享日志句柄,回到并发轮转竞态面。
+        _close_managed_handlers(logger)
+        _null_handler = logging.NullHandler()
+        _null_handler._one_dragon_logger_owner = logger.name  # noqa: SLF001
+        logger.addHandler(_null_handler)
+        logger.propagate = False

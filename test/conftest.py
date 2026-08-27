@@ -51,26 +51,47 @@ from sr_od.config.game_config import GameConfig
 from sr_od.context.sr_context import SrContext
 
 # --------------------------------------------------------------------------- #
-# 测试进程日志分流(conftest 导入期生效,早于任何测试/ctx 初始化)
+# 测试进程日志隔离(conftest 导入期生效,早于任何测试/ctx 初始化)
 # --------------------------------------------------------------------------- #
-# 职责划分(文件即进程身份):GUI/调度器→log.txt;MCP server→mcp_server.log;
-# pytest→test.log。修前测试继承 log_utils 默认配置,一趟全量往 .log/log.txt
-# 写 1w+ 行 fixture 回放的 op 流转(格式与真实运行完全相同),污染运行日志
-# 排查(2026-08-24 实证:fixture 测试的「切账号」链被误读为真进程)。
-# console handler 关闭:pytest 有自己的捕获体系,stdout 噪声纯浪费;
-# 要看测试内框架日志查 .log/test.log。
-configure_logger(
-    framework_log,
-    LoggerConfig(
-        log_file_path=get_log_file_path(default_name='test.log'),
-        add_console_handler=False,
-        propagate=False,
-    ),
-)
+# 职责划分(文件即进程身份):GUI/调度器→log.txt;MCP server→mcp_server.log。
+# pytest 进程默认**不写任何共享日志文件**(挂一个框架持有的 NullHandler 占位,
+# 防止后续 import 侧的 ``log = get_logger()`` 重新挂默认 log.txt 句柄):
+#
+#   W276 治理(WinError 32 四度实证):轮转型 FileHandler 的换名在 Windows 上
+#   只要文件被任何进程打开即抛 PermissionError(32)。修前 pytest 全部进程共用
+#   .log/test.log,与并行的 sim 批/regen 进程在午夜轮转窗口互踩 → 测试随机红
+#   (非代码错误)。测试日志无运维价值(排查时临时开),最彻底的隔离 =
+#   测试进程退出「共享日志写入方」集合 —— 零句柄,零竞态面。
+#
+# 逃生口:设环境变量 ``SR_TEST_LOG_FILE=1`` 时仍走旧路径(.log/test.log,
+# 现已换 SafeTimedRotatingFileHandler,轮转被占用会退避重试+推迟而非报错),
+# 用于排查具体测试的框架日志流向。
+_test_keep_file_log = bool(os.environ.get('SR_TEST_LOG_FILE'))
+if _test_keep_file_log:
+    configure_logger(
+        framework_log,
+        LoggerConfig(
+            log_file_path=get_log_file_path(default_name='test.log'),
+            add_console_handler=False,
+            propagate=False,
+        ),
+    )
+else:
+    # 默认分支:本进程不落盘。用「关闭全部框架托管 handler + 挂框架持有的
+    # NullHandler」表达;占位 owner 标记让 get_or_create_logger 认为
+    # 'OneDragon' 已初始化,后续 import 不再挂默认 log.txt 的 handler。
+    from one_dragon.utils.log_utils import _close_managed_handlers
+
+    _close_managed_handlers(framework_log)
+    _null_handler = logging.NullHandler()
+    _null_handler._one_dragon_logger_owner = framework_log.name  # noqa: SLF001
+    framework_log.addHandler(_null_handler)
+    framework_log.propagate = False
 # 降噪(模块级,对**所有**测试生效——cw sim 等纯逻辑测试不依赖 test_context
 # fixture,放 fixture 里单独跑它们时拦不住):sim 逐决策 INFO 一轮全量写
 # 100MB+ test.log(2026-08-25 实测:line_strategy/cw_economy 占 75%+)。
-# 排查具体测试时临时注释本行重跑(日志仍走 .log/test.log,恢复 INFO 量级)。
+# 排查具体测试时临时设 SR_TEST_LOG_FILE=1 并把本行改回 logging.INFO 重跑
+# (日志仍走 .log/test.log,恢复 INFO 量级)。
 framework_log.setLevel(logging.WARNING)
 
 
