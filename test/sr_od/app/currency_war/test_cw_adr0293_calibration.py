@@ -273,7 +273,8 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # .debug/temp/currency_war/w300_dup_ruling/design.md v3 节——有意加
 # 字段,锁同步更新(既有字段默认值不变)。后续 release_spend_gate_enabled
 # 默认值翻转(False→True,开臂,行为面=A/B 验证的 gate 生效),锁再同步。
-_EXPECTED_HASH = ('378ba1588de74fdd2505eb879ebf67c9bab3e05026ca7efcb1336868204d5699')
+# 再后续 press_channel_enabled 默认翻转(False→True,W368 A/B R2 成立开臂),锁再同步。
+_EXPECTED_HASH = ('c686a58876babd3bf96c83cfda8b0aacdc15e880de66ece03a7df4cae7d19a5d')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
