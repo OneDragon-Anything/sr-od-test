@@ -74,15 +74,20 @@ def test_dimension_assertions() -> None:
     st = _state()
     r = cross_plane_remaining_nodes(st)
     assert r >= 10, '前置:跨位面 R 量级(P1 中段 ≈20+)'
+    from sr_od.application.currency_war.decision_v2.scoring import (
+        p1_battle_loss_est,
+    )
     dwin01 = _REG.h3_win_rate[1] - _REG.h3_win_rate[0]
     dwin12 = _REG.h3_win_rate[2] - _REG.h3_win_rate[1]
+    # ADR-0425:战斗项=条件掉血拟合(成型后档)×战斗数(裸 session
+    # 无槽序表 → registry 骨架缺省)
     assert abs(engine_jump_gold(0, st, _REG)
                - (_REG.rung_value[1] * r
-                  + dwin01 * _REG.expected_battle_loss
+                  + dwin01 * p1_battle_loss_est(st, _REG, rung=1)
                   * _REG.hp_to_gold * _REG.battles_left_est)) < 1e-6
     assert abs(engine_jump_gold(1, st, _REG)
                - ((_REG.rung_value[2] - _REG.rung_value[1]) * r
-                  + dwin12 * _REG.expected_battle_loss
+                  + dwin12 * p1_battle_loss_est(st, _REG, rung=2)
                   * _REG.hp_to_gold * _REG.battles_left_est)) < 1e-6
     assert engine_jump_gold(2, st, _REG) == 0.0
     # C 两口径:52→48 跨 1 档

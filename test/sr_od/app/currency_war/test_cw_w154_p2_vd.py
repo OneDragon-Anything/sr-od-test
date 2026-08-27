@@ -256,9 +256,14 @@ def test_p1_branch_bitwise_unchanged() -> None:
     e8 = expected_refreshes_for_card(8, 2, target_star=2, owned=2)
     drung = _REG.rung_value[2] - _REG.rung_value[1]
     dwin = _REG.h3_win_rate[2] - _REG.h3_win_rate[1]
+    # ADR-0425:P1 收益侧战斗项=条件掉血拟合(成型后档 rung=2)
+    # ×战斗数(裸 session 无槽序表 → 骨架缺省)
+    from sr_od.application.currency_war.decision_v2.scoring import (
+        p1_battle_loss_est,
+    )
     expected = (drung * cross_plane_remaining_nodes(st8)
-                + dwin * _REG.expected_battle_loss * _REG.hp_to_gold
-                * _REG.battles_left_est - e8 * 2)
+                + dwin * p1_battle_loss_est(st8, _REG, rung=2)
+                * _REG.hp_to_gold * _REG.battles_left_est - e8 * 2)
     assert abs(vd8 - expected) < 1e-6, (vd8, expected)
 
 

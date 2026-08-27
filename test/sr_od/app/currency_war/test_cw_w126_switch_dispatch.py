@@ -96,11 +96,18 @@ def test_vd_batch_caliber_positive_frame() -> None:
             if c.tag == 'refresh'][0]
     val, _bd = score_candidate(cand, st, s, _REG)
     assert val == vd, (val, vd)
-    # 批成本项在分内:收益毛值(1.6R+9.05)> val(净)=毛值−E×刷价
+    # 批成本项在分内:收益毛值(R 项+战斗项,ADR-0425 标定口径)> val
+    # (净)=毛值−E×刷价
     from sr_od.application.currency_war.decision_v2.ev import (
         cross_plane_remaining_nodes,
     )
-    gross = (1.6 * cross_plane_remaining_nodes(st) + 9.05)
+    from sr_od.application.currency_war.decision_v2.scoring import (
+        p1_battle_loss_est,
+    )
+    win_term = (( _REG.h3_win_rate[2] - _REG.h3_win_rate[1])
+                * p1_battle_loss_est(st, _REG, rung=2)
+                * _REG.hp_to_gold * _REG.battles_left_est)
+    gross = 1.6 * cross_plane_remaining_nodes(st) + win_term
     assert val < gross, '批口径成本项(E×刷价)必须在分内(禁单次边际)'
     # 离窗对照:L8(c5 概率 p=0.03)→ 批成本爆炸 → 负分
     st8, s8 = _state(8, ['Archer', 'Archer'], 100, 8,

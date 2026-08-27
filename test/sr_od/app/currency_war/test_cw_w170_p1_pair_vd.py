@@ -86,13 +86,17 @@ def _e1(level: int, cost: int) -> float:
 
 
 def _jump(e_cur: int, st: GameState) -> float:
-    """下一档引擎跳变金值本地复算(与 engine_jump_gold 同式,registry 单一源)。"""
+    """下一档引擎跳变金值本地复算(与 engine_jump_gold 同式,registry
+    单一源;ADR-0424 起战斗项=条件掉血拟合×战斗数骨架缺省)。"""
+    from sr_od.application.currency_war.decision_v2.scoring import (
+        p1_battle_loss_est,
+    )
     drung = _REG.rung_value.get(e_cur + 1, 0.0) - _REG.rung_value.get(e_cur, 0.0)
     dwin = (_REG.h3_win_rate.get(e_cur + 1, 0.0)
             - _REG.h3_win_rate.get(e_cur, 0.0))
     return (drung * cross_plane_remaining_nodes(st)
-            + dwin * _REG.expected_battle_loss * _REG.hp_to_gold
-            * _REG.battles_left_est)
+            + dwin * p1_battle_loss_est(st, _REG, rung=e_cur + 1)
+            * _REG.hp_to_gold * _REG.battles_left_est)
 
 
 # --- ① 开窗正例 -----------------------------------------------------------------
