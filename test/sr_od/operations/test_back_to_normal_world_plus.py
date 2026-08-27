@@ -197,11 +197,12 @@ class TestNpcDialogGuard:
     图标,check_screen 所有既有分支不命中,兜底点「菜单-右上角返回」与对话的
     隐藏按钮重叠 → 一点把对话 UI 收掉 → 裸场景假象 + 键盘输入被吞。
 
-    守卫语义(三层,均为逐帧反应式):
+    守卫语义(W286 加严后,逐帧反应式):
 
     - 告别类选项命中 → 点选项退出对话(WAIT,同帧不落兜底);
-    - 只有未知选项 → 不乱点(可能接受任务/开商店),点空白推进 + RETRY(有界);
-    - 交互区无文字 → None,落回原兜底(行为与修复前一致)。
+    - 交互区无告别词(含只有未知文字)→ None,落回原兜底——「区域有字」是弱证据,
+      不再单独构成对话态(2026-08-27 run 46:CW 大厅面板文字曾被误判成未知对话
+      选项 → 点空白推进 → retry 永动;CW 大厅改由 check_screen 专属分支接管)。
     """
 
     BLANK = np.zeros((1080, 1920, 3), dtype=np.uint8)
@@ -267,7 +268,12 @@ class TestNpcDialogGuard:
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """只有未知选项:不点未知选项(防误触任务/购物),点空白推进 + RETRY 有界。"""
+        """只有未知文字、无告别词:不构成对话态证据 → None 落回兜底,零动作。
+
+        W286 加严(2026-08-27 run 46 实证):旧版把交互区未知文字当「未知对话
+        选项」点空白推进 + RETRY——选项态下空白推进无效,形成 retry 永动,且
+        空白点击落在任意未知画面上有误触风险。
+        """
         op, moves, clicks = self._make_op(test_context, monkeypatch)
         monkeypatch.setattr(
             test_context.ocr, 'match_words', lambda image, words, **kw: {},
@@ -279,13 +285,10 @@ class TestNpcDialogGuard:
 
         result = op.check_npc_dialog(self.BLANK)
 
-        assert result is not None
-        assert '对话态-未知选项' in (result.status or '')
-        # 点的是空白推进位(画面中下方),而非交互区里的未知选项
-        assert len(clicks) == 1 and clicks[0] is not None
-        assert int(clicks[0].x) == test_context.project_config.screen_standard_width // 2
-        assert int(clicks[0].y) == test_context.project_config.screen_standard_height - 100
-        assert len(moves) == 0  # 没有把鼠标移向任何选项
+        assert result is None, (
+            f'未知文字不应构成对话态证据,status={getattr(result, "status", None)}'
+        )
+        assert clicks == [] and moves == [], '守卫不触发时不允许任何点击/移动'
 
     def test_no_dialog_returns_none(
         self,
@@ -330,36 +333,74 @@ class TestNpcDialogGuard:
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """W286 场景锁死:货币战争-大厅静态面板文字不得触发对话态分支。
+        """W286 场景锁死:货币战争-大厅帧命中 check_screen 专属分支,不进对话态守卫。
 
-        背景(2026-08-27 run 46 实机):守卫对 TalkInteract.INTERACT_RECT 区域 OCR,
-        把 CW 大厅右侧面板文字(『数据银行』『预期收益』『√奖励已全领取』『83%』
-        『75/91』)误判为未知对话选项 → 点空白推进 → retry 耗尽报错 → 一条龙重启
-        再陷死循环。修复=先验画面短路:id_mark 精确命中已知非对话画面即跳过守卫。
+        背景(2026-08-27 run 46 实机):大厅前序分支全不命中,守卫对 INTERACT_RECT
+        OCR 把右侧面板文字(『数据银行』『预期收益』『√奖励已全领取』『83%』『75/91』)
+        误判为未知对话选项 → 点空白推进 → retry 永动 → 一条龙重启再陷。
+        修复=check_screen 补大厅分支(id_mark 命中 → 点右上角 X,round_retry 有界)。
         """
-        op, moves, clicks = self._make_op(test_context, monkeypatch)
+        counters: dict[str, int] = {'fallback_click': 0, 'x_click': 0}
 
-        # 已知非对话画面的 id_mark('标识-创业指南')精确命中 → 必须短路返回 None
+        def _fake_find_area(self, screen, screen_name, area_name, *args, **kwargs):
+            if screen_name == '货币战争-大厅' and area_name == '标识-创业指南':
+                return self.round_success(status=f'{screen_name}-{area_name}')
+            return self.round_wait(status=f'未找到 {area_name}')
+
+        def _fake_click_area(self, screen_name, area_name, *args, **kwargs):
+            counters['fallback_click'] += 1
+            return self.round_success(status=area_name)
+
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
         monkeypatch.setattr(
-            BackToNormalWorldPlus, 'round_by_find_area',
-            lambda self, screen, sn, an, *a, **kw: self.round_success(status=f'{sn}-{an}'),
+            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_area
+        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
+        monkeypatch.setattr(
+            btnw_module.sim_uni_screen_state,
+            'get_sim_uni_screen_state',
+            lambda *args, **kw: None,
         )
         monkeypatch.setattr(
-            test_context.ocr, 'match_words', lambda image, words, **kw: {},
+            btnw_module.common_screen_state,
+            'is_express_supply',
+            lambda *args, **kw: False,
         )
+        # 守卫被触达即回归(run 46 死循环路径)——显式炸出来
         monkeypatch.setattr(
-            test_context.ocr, 'run_ocr',
-            lambda image, *a, **kw: {
-                w: _FakeMatchList(50, 50)
-                for w in ['数据银行', '预期收益', '奖励已全领取', '83%', '75/91']
-            },
+            BackToNormalWorldPlus, 'check_npc_dialog',
+            lambda self, screen: (_ for _ in ()).throw(
+                AssertionError('CW 大厅应被专属分支接管,不应进入对话态守卫')),
         )
 
-        result = op.check_npc_dialog(self.BLANK)
+        op = _WatchedBackToNormal(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        x_clicks: list = []
 
-        assert result is None, (
-            f'已知非对话画面应短路跳过守卫,却触发了对话分支:'
-            f'status={getattr(result, "status", None)}'
+        def _record_click(pos=None, *args, **kwargs):
+            x_clicks.append(pos)
+            counters['x_click'] += 1
+            return True
+
+        monkeypatch.setattr(op.ctx.controller, 'click', _record_click, raising=False)
+        sleeps = _patch_round_sleep(monkeypatch)
+
+        enter_running_state(test_context)
+        try:
+            result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        # 分支每轮点右上角 X(点击发出但画面不变——点击不落地语义),round_retry
+        # 有界:耗尽 20 次 retry 后 FAIL,而非守卫时代的 retry 永动。
+        assert not result.success, f'画面不变时应有界 FAIL,status={result.status}'
+        rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
+        assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
+        assert len(sleeps) >= rounds, f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
+        # 每轮点的都是右上角 X 坐标(而非守卫的空白推进位/兜底的右上角返回 area)
+        assert counters['x_click'] == rounds and counters['fallback_click'] == 0, (
+            f'X 点击数({counters["x_click"]})应==轮次,兜底({counters["fallback_click"]})应为 0'
         )
-        # 短路后不允许任何脱困动作(点空白/移向选项)
-        assert clicks == [] and moves == []
+        assert all(
+            p is not None and int(p.x) == 1857 and int(p.y) == 63 for p in x_clicks
+        ), f'X 点击坐标漂移:{x_clicks[:3]}'
