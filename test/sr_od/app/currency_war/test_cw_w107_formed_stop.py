@@ -96,12 +96,27 @@ def _sess_locked(comp_name: str = 'DOT队') -> StrategySession:
 
 
 def test_formed_stop_blocks_buy_keeps_exceptions() -> None:
-    """成型态:买被拦;等级买/刷新/卖/上阵保留([12]/[33] 例外)。"""
-    state = _formed_state()
+    """成型态(gap=0)买被拦;等级买/刷新/卖/上阵保留([12]/[33] 例外)。
+
+    W288/ADR-0418 gate_min_round 前移 8→6 后 r7 落进新授权窗——窗内
+    gap>0 时承接维不停手继续投资,与「成型停手拦买」原意图冲突;与
+    W227 对 ADR-0418 的既定改法同式,夹具改构造「窗内∧承接达标
+    (gap=0)」帧(hp 64 → boss 投影后 hp 档达标)锁「窗内 gap=0 仍
+    停手拦买」:停手结构本身在原参数语义下不变。」"""
+    # 承接达标构造:镜像 w227 locked 帧形态——单核心上场帧板面维不足
+    # (gap 恒 1),补 DOT 第二件(桑博 1★)后 hp 64 投影达标 gap=0。
+    core_name = intention_core(get_comp('DOT队'))
+    state = _formed_state(
+        hp=64,
+        deployed=[BenchChar(slot=0, char_id=core_name, faction='仙舟罗浮',
+                            star=2),
+                  BenchChar(slot=1, char_id='桑博', faction='仙舟罗浮',
+                            star=1)])
     sess = _sess_locked()
     kept, log = filter_candidates(_cands(), state, sess, DEFAULT_REGISTRY)
+    assert sess.v3_handoff_gap == 0, '夹具前提:承接达标帧 gap=0'
     tags = {c.tag for c in kept}
-    assert 'line_carry' not in tags, '成型 r7+ 买候选必须被拦'
+    assert 'line_carry' not in tags, '成型 r7+(gap=0)买候选必须被拦'
     assert {'levelup', 'refresh', 'for_gold', 'deploy'} <= tags
     assert sess.v3_formed_stop is True
     dropped = [e for e in log if e['formed_stop']]
@@ -155,13 +170,33 @@ def test_unlocked_intent_not_governed() -> None:
 
 
 def test_emergency_does_not_exempt() -> None:
-    """应急态(hp≤emergency_hp)不豁免——W105 反因路径正是对象。"""
+    """应急态(hp≤emergency_hp)不豁免——W105 反因路径正是对象。
+
+    W288/ADR-0418 前移后 r7 ∈ 新授权窗,应急帧 hp=10 必然 gap>0,
+    承接维接管=继续投资(与「应急不豁免」断言正交);本锁用 replace
+    把 min_round 钉回 8,在旧窗参数下保住原边界意图(应急帧停在授权
+    窗外时停手拦买、应急不额外豁免);窗内 gap>0 时承接维让应急让位
+    的现行行为(继续投资)另显式立锁于下一用例。"""
+    reg = replace(DEFAULT_REGISTRY, handoff_gate_min_round=8)
     s = _formed_state(hp=10)   # hp ≤ 25 = emergency
     sess = _sess_locked()
-    kept, _ = filter_candidates(_cands(), s, sess, DEFAULT_REGISTRY)
+    kept, _ = filter_candidates(_cands(), s, sess, reg)
     assert not any(isinstance(c.action, BuyCard) for c in kept)
     # 等级买在应急集内本就放行,停手不额外拦
     assert any(c.tag == 'levelup' for c in kept)
+
+
+def test_emergency_in_new_window_handoff_takes_over() -> None:
+    """W313 新窗行为锁(ADR-0418):授权窗内(r7)承接缺口帧 gap>0 →
+    承接维接管,应急态(hp≤25)让位——现行行为=不停手继续投资(买
+    候选保留;应急豁免逻辑只作用于停手线,不反拦承接投资例外)。"""
+    s = _formed_state(hp=10)   # 应急 ∧ 低血 → 承接缺口必 >0
+    sess = _sess_locked()
+    kept, _ = filter_candidates(_cands(), s, sess, DEFAULT_REGISTRY)
+    assert sess.v3_handoff_gap >= 1, '夹具前提:应急低血帧承接缺口>0'
+    assert sess.v3_formed_stop is False, '承接维接管:不停手'
+    assert any(isinstance(c.action, BuyCard) for c in kept), (
+        '窗内 gap>0 应急帧=继续投资(ADR-0418 现行行为)')
 
 
 def test_switch_off_restores_old_behavior() -> None:

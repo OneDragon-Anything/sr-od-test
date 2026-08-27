@@ -16,6 +16,7 @@
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -162,19 +163,22 @@ def test_r9_frame_second_copy_buy_scores_positive() -> None:
 
 def test_r7_frame_generation_guard_unchanged() -> None:
     """W93 r7 帧形态锁(生成层不变式):deployed 非核心目标件的第 2 份
-    在**非末窗**仍不生成候选——r410 守卫未动(ADR-0303/0304 豁免默认
+    在**授权窗外**仍不生成候选——r410 守卫未动(ADR-0303/0304 豁免默认
     关);生成层重估只写设计建议(W96_报告.md),归后续批。
     (语义演进史,W257/ADR-0411:末窗承接缺口 gap>0 时同名副本候选经
     C 项定向授权放行——原构造帧恰落末窗缺口内,随 flag 家族清理转正
     后改用 r7 帧钉守卫基线;末窗放行行为由 test_cw_w242_star_directed
-    锁。)"""
+    锁。W288/ADR-0418 gate_min_round 前移 8→6 后 r7 落进新授权窗
+    {r6..r9},本锁用 replace 把 min_round 钉回 8 保住「非末窗守卫
+    不动」的原边界意图——C 臂窗内放行行为另由 W313 新窗锁覆盖。)"""
+    reg = replace(DEFAULT_REGISTRY, handoff_gate_min_round=8)
     sess = _sess()
     st = _state(round_num=7,
                 deployed=[_deployed(_TARGET_FILLER,
                                     faction='仙舟罗浮')],
                 shop=[_shop_card(_TARGET_FILLER, faction='仙舟罗浮',
                                  cost=5)])
-    cands = generate_candidates(st, sess, _REG)
+    cands = generate_candidates(st, sess, reg)
     names = {c.action.card.name for c in cands
              if c.action.__class__.__name__ == 'BuyCard'}
     assert _TARGET_FILLER not in names, \

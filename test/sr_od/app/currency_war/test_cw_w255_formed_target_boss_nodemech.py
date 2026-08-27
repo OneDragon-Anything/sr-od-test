@@ -67,14 +67,21 @@ def _cands(buy_names: list[str]) -> list[Candidate]:
 
 
 def _formed_state(**kw) -> GameState:
-    """成型态(DOT队 form_tiers 全满 + 核心上场 2★ + P1 r7,金 60)。"""
+    """成型态(DOT队 form_tiers 全满 + 核心上场 2★ + P1 r7,金 60)。
+
+    W288/ADR-0418 前移后 r7 ∈ 新授权窗 {r6..r9}:白名单锁的夹具需
+    成型停手真激活(窗内 gap>0 会转承接继续投资)。默认部署只含核心
+    单件时板面维不足(gap 恒 1),镜像 w227 locked 帧补 DOT 第二件
+    (桑博 1★)并抬 hp 到 64 → 承接达标 gap=0;kw 可覆盖。"""
     comp = get_comp('DOT队')
     core = intention_core(comp)
     base = {
         'plane': 1, 'round_num': 7, 'gold': 60, 'level': 5,
-        'hp': 60, 'board': {f: t for f, t in comp.form_tiers.items()},
+        'hp': 64, 'board': {f: t for f, t in comp.form_tiers.items()},
         'deployed': [BenchChar(slot=0, char_id=core, faction='仙舟罗浮',
-                               star=2)],
+                               star=2),
+                     BenchChar(slot=1, char_id='桑博', faction='仙舟罗浮',
+                               star=1)],
         'bench': [],
         'shop': [],
     }

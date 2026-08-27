@@ -13,9 +13,16 @@
    生成候选(bench-only 囤件名不豁免);copies_cap 照常辖。
 5. 评分断言:A+B 开臂时,deployed 填充件第 2 份买入候选正分且
    filler_star 维构成 delta。
+
+W288/ADR-0418 gate_min_round 前移 8→6 后,本文件夹具基准轮 r7 落进
+新授权窗 {r6..r9}——窗内 gap>0 时承接门 C 臂独立放行同名副本
+(line_opportunistic),与 A/B 臂辖域无关,会混淆各臂边界意图。
+本文件全部 registry 用 replace(handoff_gate_min_round=8) 钉回旧窗,
+使各臂边界断言在原参数语义下成立;新窗放行行为由 W313 新窗锁覆盖。
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -39,10 +46,11 @@ from sr_od.application.currency_war.decision_v2.scoring import (
     score_state,
 )
 
-_REG = DEFAULT_REGISTRY
-_AB = DecisionV2Registry(filler_star_unit=1.0,
-                         pair_copy_direction_exempt=True)
-_A_ONLY = DecisionV2Registry(filler_star_unit=1.0)
+# 旧窗钉(W288/ADR-0418 前移后用 min_round=8 保各臂边界意图,见文件头)
+_REG = replace(DEFAULT_REGISTRY, handoff_gate_min_round=8)
+_AB = replace(_REG, filler_star_unit=1.0,
+              pair_copy_direction_exempt=True)
+_A_ONLY = replace(_REG, filler_star_unit=1.0)
 _CARRY = '姬子·启行'          # 核心件(v3_core_names;line_carry)
 _FILLER = '娜塔莎'             # 方向外填充件(贝洛伯格/治疗,∉方向阵营)
 _FILLER_FAC = '贝洛伯格'
@@ -166,7 +174,7 @@ def test_b_exempts_direction_gate_before_pair_wants() -> None:
     sess = _sess()
     st = _state(shop=[ShopCard(x=1, faction=_FILLER_FAC, name=_FILLER,
                                cost=3)])
-    b_only = DecisionV2Registry(pair_copy_direction_exempt=True)
+    b_only = replace(_REG, pair_copy_direction_exempt=True)
     # B 单独:pair_wants 方向门拦(r410 守卫也拦 deployed 名)——
     # 但 B 的豁免在 _buy_tag 层,r410 守卫仍在 → deployed 副本需 A 臂
     # 开才过生成层;b_only 下该帧不生成(B 单独对 deployed 名无效果,
@@ -187,7 +195,7 @@ def test_b_alone_unlocks_bench_only_copy() -> None:
         deployed=[_deployed(_CARRY, '列车同行')],
         bench=[_bench(_FILLER, _FILLER_FAC, slot=0)],
         shop=[ShopCard(x=1, faction=_FILLER_FAC, name=_FILLER, cost=3)])
-    b_only = DecisionV2Registry(pair_copy_direction_exempt=True)
+    b_only = replace(_REG, pair_copy_direction_exempt=True)
     # 默认:方向门拦(owned 阵营门也拦——贝洛伯格∈owned 放行,但
     # 方向门先拦);B 开:豁免
     assert _FILLER not in _shop_of(generate_candidates(st, sess, _REG))
