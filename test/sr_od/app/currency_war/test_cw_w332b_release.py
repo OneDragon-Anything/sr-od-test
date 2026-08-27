@@ -4,9 +4,9 @@
 设计=唯一规格:`.debug/temp/currency_war/w328_unformed_posture/DESIGN.md`。
 锁契约(每条=一个确定输入下的确定行为;不锁分布数值):
 - ① FLIP 谓词边界:辖区 [emergency_hp,∞) 归 FLIP、≤25 归应急;非末窗
-  hp<40 持续兑现臂 / 末窗投影臂 hp−boss_tax_p75<25;FORM 未成型 ∧ g>50
-  前置;假帧守卫=100 兜底帧(两个保真位皆 False)不评估,沿用真值帧
-  放行(ADR-0428);
+  hp<40 持续兑现臂(FORM 辖域)/ 末窗投影臂 hp−boss_tax_p75<25
+  (相位无关,保命义务不属成型分期);g>50 前置;假帧守卫=100 兜底帧
+  (两个保真位皆 False)不评估,沿用真值帧放行(ADR-0428);
 - ② 预算三方合并:FLIP 命中帧 release 覆盖 max(g−50, DP 预算×刷价);
   DP 已有授权不缩水;
 - ③ slot 守卫第三路径:末窗 deployed<cap ∧ bench 非空 → rush_level 压掉,
@@ -142,6 +142,45 @@ def test_flip_scope_p12_only() -> None:
     assert not flip_hit(_state(plane=3), s, _REG, 'FORM')
 
 
+def test_flip_boss_projection_phase_independent() -> None:
+    """末窗投影臂相位无关锁:boss 战后必入应急带是保命义务,不属成型
+    分期——SPEND 相位(已成型)在 boss 窗帧同样命中。帧形态=实机观察局
+    进店帧(phase=SPEND/hp=38/gold=67/r9/node=boss/投影 38−34=4<25),
+    修前被 FORM 相位门短路致泄息通道结构性静默;修后必须命中。
+    同帧投影不命中的对照(hp−34≥25 → hp=59)仍拒。"""
+    s = StrategySession()
+    st = _state(gold=67, hp=38, plane=1, r=9, node='boss')
+    assert flip_hit(st, s, _REG, 'SPEND')
+    st.hp = 59
+    assert not flip_hit(st, s, _REG, 'SPEND')
+
+
+def test_flip_continuous_arm_stays_form_scoped() -> None:
+    """非末窗持续兑现臂零漂移锁:相位门只辖持续臂——非 boss 窗的
+    SPEND 帧不因重排误入持续臂;FORM 同帧语义不变。"""
+    s = StrategySession()
+    assert not flip_hit(_state(gold=67, hp=38), s, _REG, 'SPEND')
+    assert flip_hit(_state(gold=67, hp=38), s, _REG, 'FORM')   # hp<40 命中
+
+
+def test_cap_full_flip_frame_keeps_level_up_rule2() -> None:
+    """cap 满员第三路径验证(DESIGN §②规则2):相位无关重排后,SPEND
+    相位的 cap 满员 boss 窗帧由 FLIP 命中承接——third_path=False
+    (非 slot 守卫注入),wrap 后 level_up 保留(追级与泄息并存)。"""
+    s = StrategySession()
+    st = _state(gold=67, hp=38, plane=1, r=9, node='boss',
+                deployed_n=6)
+    assert not slot_guard_blocks_level(st)   # 满员:slot 守卫不触发
+    posture = Posture(save=False, level_up=True, refresh_budget=6)
+    d = release_directive(st, s, _REG, 'SPEND', posture)
+    assert d is not None and d.third_path is False
+    # 预算合并:max(溢余 17, DP 6×2=12) = 17
+    assert d.budget_gold == 17 and d.rolls == 8
+    p = wrap_posture(posture, d)
+    assert p.tag == 'release' and p.level_up is True
+    assert p.refresh_budget == 8
+
+
 # --- ② 预算三方合并 -----------------------------------------------------------
 
 
@@ -203,13 +242,19 @@ def test_third_path_not_outside_boss_window() -> None:
 
 
 def test_third_path_not_when_cap_full() -> None:
-    """cap 满员:slot 守卫不触发(rush_level 有真实 slot 边际,并存裁决)。"""
+    """cap 满员:slot 守卫不触发,第三路径(规则1/3 注入)不辖;末窗
+    投影臂命中 → 由 FLIP 承接走规则2 并存裁决(third_path=False,
+    level_up 保留,追级与泄息同轮并存)。修前该帧两臂双盲返回 None
+    (泄息通道静默),本锁防回归到死区。"""
     s = StrategySession()
     st = _state(gold=60, node='boss', deployed_n=6)
     assert not slot_guard_blocks_level(st)
-    assert release_directive(st, s, _REG, 'SPEND',
-                             Posture(save=False, level_up=True,
-                                     refresh_budget=0)) is None
+    posture = Posture(save=False, level_up=True, refresh_budget=6)
+    d = release_directive(st, s, _REG, 'SPEND', posture)
+    assert d is not None and d.third_path is False
+    assert d.budget_gold == 12 and d.rolls == 6   # max(溢余10, DP 6×2=12)
+    p = wrap_posture(posture, d)
+    assert p.tag == 'release' and p.level_up is True
 
 
 # --- ⑦ latch 单窗 --------------------------------------------------------------
