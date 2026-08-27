@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parents[1] / 'src'))
 
@@ -19,8 +20,12 @@ class _R:
         self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
 
 
-_EVIDENCE = (Path(__file__).parents[1] / '.debug/temp/currency_war/shots'
-             / 'summon_unknown__42d15804.png')
+_EVIDENCE = Path(__file__).parent / 'screens' / '货币战争-武装箱' / 'r256_summon_42d15804.png'
+
+
+def _imread(p: Path):
+    """imdecode 读图(cv2.imread 吃不了中文路径)。"""
+    return cv2.imdecode(np.fromfile(str(p), dtype=np.uint8), cv2.IMREAD_COLOR)
 
 
 def test_crate_template_matches_evidence():
@@ -28,7 +33,7 @@ def test_crate_template_matches_evidence():
     邻槽(角色)不命中(<0.5)。"""
     tm = _get_crate_gray()
     assert tm is not None, '模板文件缺失'
-    img = cv2.imread(str(_EVIDENCE))
+    img = _imread(_EVIDENCE)
     assert img is not None, '证据截图缺失(本地档)'
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     slot3 = gray[815:1000, 600:780]
@@ -41,7 +46,7 @@ def test_crate_template_matches_evidence():
 
 def test_find_supply_boxes_multi_template():
     """find_supply_boxes 多模板(补给箱+武装箱)任一命中即报。"""
-    img = cv2.imread(str(_EVIDENCE))
+    img = _imread(_EVIDENCE)
     if img is None:
         return   # 证据是本地档,无此文件时跳过
     slots = [(3, _R(600, 815, 780, 1000))]
