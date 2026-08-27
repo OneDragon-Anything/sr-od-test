@@ -18,6 +18,27 @@ if TYPE_CHECKING:
     from test.conftest import SrTestContext
 
 
+def test_supply_options_five_column_fixture(test_context: SrTestContext) -> None:
+    """W306c 正样本:5 选项特例帧 → 动态探测到 **5** 列(禁写死 4/5 的行为证明)。
+
+    fixture ``screens/货币战争-补给/default.png|webp``(1-5 补给,5 张角色卡各带装备:
+    银枝/希儿/丹恒·腾荒/飞霄/忘归人——augment 改写特例)。用户口径:补给通常 4 选 1,
+    augment 动态改 3-5,列数以 read_supply_options 实际识别为准。
+    """
+    from sr_od.application.currency_war.cw_node_obs import read_supply_options
+
+    if not test_context.has_screen('货币战争-补给', 'default'):
+        pytest.skip('fixture 缺:screens/货币战争-补给/default.webp')
+    screen = test_context.load_screen('货币战争-补给', 'default')
+    opts = read_supply_options(test_context, screen)
+    assert len(opts) == 5, f'5 选项特例帧应动态探到 5 列,实际 {len(opts)}:{[o.equip for o, _p in opts]}'
+    # 每列装备名非空(装备行定义列);角色按最近 x 配对(roster-validated),
+    # OCR 艺术字形变下容忍部分列配空(如「丹恒·腾荒」间隔号连读)——动态列数
+    # 与逐列内容透传是本批锁点,名字准确性归 get_char roster 校验上游。
+    assert sum(bool(o.char) for o, _p in opts) >= 3, (
+        f'5 列中角色配对不足 3(大面积漏读):{[(o.char, o.equip) for o, _p in opts]}')
+
+
 def test_supply_screen_id_mark_true_positive(test_context: SrTestContext) -> None:
     """真阳性:补给 fixture(未选择/已选择)→ 精准匹配 货币战争-补给。"""
     for state in ('未选择', '已选择'):
