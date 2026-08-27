@@ -174,3 +174,147 @@ def test_supply_producer_wiring_in_source() -> None:
     assert "options=[{'char': o.char" in src   # 逐列内容透传(实际识别列数)
 
 
+# ===== W311 补给备战状态采集 detour(坐标 2026-08-27 编排者 live 实测后复实现) =====
+
+
+def _make_supply_op(monkeypatch):
+    """构 RunSupplyNode 桩(__new__ 绕过 op __init__;只喂 detour 依赖面)。
+
+    返回 (op, decision_captured)。round_by_find_and_click_area 全成功;
+    截图恒为同一伪帧(离线桩);read_game_state 桩出确定值。
+    """
+    from sr_od.application.currency_war.operations.run_nodes import run_supply_node as m
+
+    decision_captured: list[dict] = []
+
+    monkeypatch.setattr(cw_telemetry, 'record_decision',
+                        lambda state, target_comp='', candidate_scores=None,
+                        eval_breakdown=None, actions=None, gold_point=True,
+                        extra=None: decision_captured.append(
+                            {'target_comp': target_comp,
+                             'actions': list(actions or []),
+                             'gold_point': gold_point,
+                             'extra': dict(extra or {})}))
+    monkeypatch.setattr(m, 'read_game_state',
+                        lambda ctx, screen: GameState(hp=88, gold=66, plane=1,
+                                                      round_num=5))
+    op = m.RunSupplyNode.__new__(m.RunSupplyNode)
+    fake_screen = object()
+    match = SimpleNamespace(session=SimpleNamespace(target_comp=None,
+                                                    last_state=None))
+    op.ctx = SimpleNamespace(cw_match=match, current_instance_idx=1)
+    op.screenshot = lambda: fake_screen   # noqa: ANN001  实例属性遮蔽方法
+    click_log: list[tuple] = []
+    op._click_log = click_log
+    op.round_by_find_and_click_area = (
+        lambda screen, sn, an, **kw: (click_log.append((sn, an)) or
+                                      SimpleNamespace(is_success=True)))
+    # 重进后 overlay 判定(_in_node 内部用):桩成命中(离线无画面)
+    op.round_by_find_area = (
+        lambda screen, sn, an, **kw: SimpleNamespace(is_success=True))
+    # OCR 文本兜底枪(重进序列末位):桩离线无画面
+    op.round_by_ocr_and_click = (
+        lambda screen, text, **kw: SimpleNamespace(is_success=False))
+    return op, decision_captured
+
+
+def test_detour_records_non_buy_snapshot(monkeypatch) -> None:
+    """detour 快照语义锁:actions=[] + phase='supply_detour'(**非购买轮**标注);
+    流程 = 点返回备战 → 采集 → 点返回补给阶段 重进。"""
+    op, captured = _make_supply_op(monkeypatch)
+    match = op.ctx.cw_match
+    ok = (op._should_supply_detour(match) and op._mark_supply_detour(match)
+          is None and op._supply_detour_collect(match))
+    assert ok is True
+    assert len(captured) == 1
+    row = captured[0]
+    assert row['actions'] == []                 # 无任何购买动作
+    assert row['extra']['phase'] == 'supply_detour'
+    assert row['target_comp'] == ''             # 无 target=非购买轮决策
+    assert ('货币战争-补给', '按钮-返回备战界面') in op._click_log
+    assert ('货币战争-备战', '按钮-返回补给阶段') in op._click_log
+    assert match.session._supply_detour_done is True
+
+
+def test_detour_once_per_node(monkeypatch) -> None:
+    """一次语义锁:_mark 后不再触发(_should_supply_detour=False);无 match 退实例态。"""
+    op, _c = _make_supply_op(monkeypatch)
+    match = op.ctx.cw_match
+    assert op._should_supply_detour(match) is True
+    op._mark_supply_detour(match)
+    assert op._should_supply_detour(match) is False
+    # 实例态兜底(离线/测试无 match 路径)
+    op2, _c2 = _make_supply_op(monkeypatch)
+    op2.ctx.cw_match = None
+    assert op2._should_supply_detour(None) is True
+    op2._mark_supply_detour(None)
+    assert op2._should_supply_detour(None) is False
+
+
+def test_detour_return_miss_no_snapshot(monkeypatch) -> None:
+    """「返回备战界面」点击 miss → 不记快照、不误采集(detour 静默放弃)。"""
+    op, captured = _make_supply_op(monkeypatch)
+    op.round_by_find_and_click_area = (
+        lambda screen, sn, an, **kw:
+        SimpleNamespace(is_success=(an != '按钮-返回备战界面')))
+    assert op._supply_detour_collect(op.ctx.cw_match) is False
+    assert captured == []
+
+
+def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
+    """重进失败 → 本轮不做任何选择动作(防备战屏盲点卡身),交下轮重试 detour。"""
+    from sr_od.application.currency_war.operations.run_nodes import run_supply_node as m
+
+    op, captured = _make_supply_op(monkeypatch)
+
+    def _fail_reenter(screen, sn, an, **kw):
+        # 「返回备战界面」成功;备战侧「按钮-返回补给阶段」恒失败 → 重进不通
+        if an == '按钮-返回备战界面':
+            return SimpleNamespace(is_success=True)
+        return SimpleNamespace(is_success=False)
+    op.round_by_find_and_click_area = _fail_reenter
+    op.round_by_find_area = (
+        lambda screen, sn, an, **kw: SimpleNamespace(is_success=False))
+
+    pick_calls: list = []
+    monkeypatch.setattr(m, 'read_supply_options',
+                        lambda ctx, screen: pick_calls.append(screen) or [])
+    monkeypatch.setattr(m.cw_telemetry, 'consume_last_supply_pick', lambda: None)
+    op._do_action(object())
+    assert len([r for r in captured
+                if r['extra'].get('phase') == 'supply_detour']) == 1
+    assert pick_calls == []   # 未进入选择读帧(detour 失败即止)
+
+
+def test_detour_failure_not_marked_retry_next_round(monkeypatch) -> None:
+    """失败不落标记(宁可见 FAIL bail 不带病假完成):session 无 _supply_detour_done,
+    下轮 _should_supply_detour 仍 True → 重试整个 detour;OCR 文本兜底点击已尝试。"""
+
+    op, captured = _make_supply_op(monkeypatch)
+    ocr_clicks: list[str] = []
+    op.round_by_find_and_click_area = (
+        lambda screen, sn, an, **kw: SimpleNamespace(
+            is_success=(an == '按钮-返回备战界面')))
+    op.round_by_find_area = (
+        lambda screen, sn, an, **kw: SimpleNamespace(is_success=False))
+    op.round_by_ocr_and_click = (
+        lambda screen, text, **kw: (ocr_clicks.append(text) or
+                                    SimpleNamespace(is_success=False)))
+    match = op.ctx.cw_match
+    assert op._supply_detour_collect(match) is False
+    assert not getattr(match.session, '_supply_detour_done', False), \
+        '失败不得落标记(否则下轮跳过 detour 直接在错误画面选择)'
+    assert op._should_supply_detour(match) is True   # 下轮重试 detour
+    assert ocr_clicks == ['返回补给阶段']   # OCR 文本兜底枪已打(重试序列末位)
+
+
+def test_detour_semantics_lock_in_source() -> None:
+    """弱锁:detour 快照带 phase='supply_detour' 且 actions=[](非购买轮语义)。"""
+    import inspect
+
+    from sr_od.application.currency_war.operations.run_nodes import run_supply_node
+    src = inspect.getsource(run_supply_node.RunSupplyNode._supply_detour_collect)
+    assert "extra={'phase': 'supply_detour'}" in src
+    assert 'actions=[], gold_point=True' in src
+
+
