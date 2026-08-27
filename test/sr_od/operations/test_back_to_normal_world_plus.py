@@ -324,3 +324,42 @@ class TestNpcDialogGuard:
         result = op.check_npc_dialog(self.BLANK)
         assert result is not None
         assert '对话态-告别' in (result.status or '')
+
+    def test_cw_lobby_panel_text_not_dialog(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """W286 场景锁死:货币战争-大厅静态面板文字不得触发对话态分支。
+
+        背景(2026-08-27 run 46 实机):守卫对 TalkInteract.INTERACT_RECT 区域 OCR,
+        把 CW 大厅右侧面板文字(『数据银行』『预期收益』『√奖励已全领取』『83%』
+        『75/91』)误判为未知对话选项 → 点空白推进 → retry 耗尽报错 → 一条龙重启
+        再陷死循环。修复=先验画面短路:id_mark 精确命中已知非对话画面即跳过守卫。
+        """
+        op, moves, clicks = self._make_op(test_context, monkeypatch)
+
+        # 已知非对话画面的 id_mark('标识-创业指南')精确命中 → 必须短路返回 None
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_find_area',
+            lambda self, screen, sn, an, *a, **kw: self.round_success(status=f'{sn}-{an}'),
+        )
+        monkeypatch.setattr(
+            test_context.ocr, 'match_words', lambda image, words, **kw: {},
+        )
+        monkeypatch.setattr(
+            test_context.ocr, 'run_ocr',
+            lambda image, *a, **kw: {
+                w: _FakeMatchList(50, 50)
+                for w in ['数据银行', '预期收益', '奖励已全领取', '83%', '75/91']
+            },
+        )
+
+        result = op.check_npc_dialog(self.BLANK)
+
+        assert result is None, (
+            f'已知非对话画面应短路跳过守卫,却触发了对话分支:'
+            f'status={getattr(result, "status", None)}'
+        )
+        # 短路后不允许任何脱困动作(点空白/移向选项)
+        assert clicks == [] and moves == []
