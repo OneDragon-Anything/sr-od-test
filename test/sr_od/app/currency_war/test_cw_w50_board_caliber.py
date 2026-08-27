@@ -9,8 +9,9 @@
    _board_counts_of,状态派生)/_board_agg_of_deployed_row(checks 镜像)
    全部经 unit_bond_tags——构造同一 deployed,三处结果逐键相等;
 3. **Δ池桶键**:_deployable_depth = Σboard(全集口径,与池语料同口径;
-   W240/ADR-0404 后辖 encounter/reward/supply——boss 桶键已改净星深
-   deployed_star_depth,见 test_cw_w238_boss_hp_projection);
+   v11/ADR-0407 后辖 reward/supply——boss 桶键已改净星深
+   deployed_star_depth(W240/ADR-0404),encounter 桶键已改 rung
+   _settle_rung,见 test_cw_w238_boss_hp_projection);
 4. **W47 条2**:W16_MAJORITY_LINES 补全 + CROSS_LINE_SKELETON 派生 ==
    原 10 名快照(不等 = 数据错)。
 """

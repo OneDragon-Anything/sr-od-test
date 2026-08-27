@@ -46,14 +46,18 @@ def test_snapshot_battle_rung_means_match_b13_truth() -> None:
             f'battle rung{rg} 均值 {mean:+.1f} 距批⑬真值 {truth:+.1f} 漂移>3hp'
 
 
-def test_snapshot_encounter_boundary_declared_depth_keyed() -> None:
-    """批⑬ F1 边界声明:encounter 样本不足暂沿用 depth 分桶(键 ≥6)。"""
+def test_snapshot_encounter_rung_keyed_v11() -> None:
+    """v11(ADR-0407):encounter 桶键已迁 rung——桶键全落 0-4 域
+    且主桶(rung0/rung1)达标(批⑬ F1 的「暂 depth 分桶」边界声明
+    已被扩容+键查证解禁取代)。"""
     m, _, _ = _sim.resolve_pool('snapshot')
     m = _sim.plane_view(m)
     enc = m.get('encounter') or {}
     assert enc, 'encounter 池缺失'
-    assert any(int(b) >= 6 for b in enc), \
-        f'encounter 桶键全落 rung 域: {sorted(enc)}(边界声明被破坏)'
+    depth_like = sorted(b for b in enc if int(b) >= 6)
+    assert not depth_like, f'encounter 桶键落 depth 域: {depth_like}'
+    assert len(enc.get(0, [])) >= 10, 'encounter rung0 主桶饥饿'
+    assert len(enc.get(1, [])) >= 10, 'encounter rung1 主桶饥饿'
 
 
 def test_snapshot_boss_pool_domain_covers_extremes() -> None:
@@ -70,7 +74,7 @@ def test_snapshot_boss_pool_domain_covers_extremes() -> None:
 
 
 def test_check_battle_rung_pool_bucket_lock_unit() -> None:
-    """检查双向锁:depth 键池/缺主桶/漂移>3hp/encounter 越界 → 报。"""
+    """检查双向锁:depth 键池/缺主桶/漂移>3hp/encounter depth 化 → 报。"""
     # 旧 depth 键池(未重生成)→ 报
     old = {'battle': {6: [-7] * 10, 9: [-6] * 10},
            'encounter': {9: [-13] * 5}, 'boss': {12: [-25] * 5}}
@@ -84,14 +88,14 @@ def test_check_battle_rung_pool_bucket_lock_unit() -> None:
     drift = {'battle': {0: [-5] * 10, 1: [-6] * 10}}
     rep_d = check_battle_rung_pool_bucket_lock(drift)
     assert any('漂移' in i for i in rep_d['issues'])
-    # encounter 意外 rung 化 → 报
+    # encounter 意外 depth 化(≥6)→ 报(v11/ADR-0407 辖域反转)
     bad_enc = {'battle': {0: [-11] * 10, 1: [-6] * 10},
-               'encounter': {1: [-13] * 5}, 'boss': {12: [-42] * 5}}
+               'encounter': {9: [-13] * 5}, 'boss': {12: [-42] * 5}}
     rep_e = check_battle_rung_pool_bucket_lock(bad_enc)
-    assert any('边界声明被破坏' in i for i in rep_e['issues'])
-    # 健康池(真值表量级 + boss 域覆盖)→ 0 违规
+    assert any('rung 分桶未生效' in i for i in rep_e['issues'])
+    # 健康池(真值表量级 + encounter rung 键 + boss 域覆盖)→ 0 违规
     good = {'battle': {0: [-11] * 26, 1: [-6] * 24, 2: [-5] * 9},
-            'encounter': {9: [-13] * 5}, 'boss': {12: [-36] * 5}}
+            'encounter': {0: [-13] * 5}, 'boss': {12: [-36] * 5}}
     assert check_battle_rung_pool_bucket_lock(good)['violations'] == 0
     # 空池(fallback)不辖
     rep_n = check_battle_rung_pool_bucket_lock({})
@@ -164,8 +168,10 @@ def test_pool_from_replay_battle_rung_keys(tmp_path: Path) -> None:
     _sim.reset_resolved_cache()
     pool, meta = _sim._pool_from_replay(tmp_path)
     # ADR-0362:桶挂 plane=1 层(差分归属后行位面)
+    # v11/ADR-0407:encounter 桶键=rung(board_before {'散':7} 无
+    # 四体系 → rung0;encounter 意为该节点从 75→60 的差分 -15)
     assert pool['battle'] == {1: {1: [-10], 3: [-15]}}
-    assert pool['encounter'] == {1: {6: [-15]}}
+    assert pool['encounter'] == {1: {0: [-15]}}
     assert meta['runs'] == {'r1': 4}
 
 
