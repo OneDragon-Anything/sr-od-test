@@ -114,6 +114,9 @@ def test_unit_bond_tags_equip_grants() -> None:
     # 组合「卡带X+星徽X」(非成员):卡带授 X 后即「已有」,星徽 X 不再重复 → 仍 1
     tags_combo = unit_bond_tags(_char('符玄', equips=['欢愉卡带', '欢愉星徽']))
     assert tags_combo.count('欢愉') == 1
+    # 反序(星徽在前)同判:计数与穿戴顺序无关(P19 幂等性)
+    tags_combo_rev = unit_bond_tags(_char('符玄', equips=['欢愉星徽', '欢愉卡带']))
+    assert tags_combo_rev.count('欢愉') == 1
     # 卡带自身可双计不受影响:成员两件欢愉系卡带 → 欢愉 3(自报 1 + 卡带 2)
     tags_tape2 = unit_bond_tags(_char('银狼LV.999', equips=['欢愉卡带', '欢愉卡带Max']))
     assert tags_tape2.count('欢愉') == 3
