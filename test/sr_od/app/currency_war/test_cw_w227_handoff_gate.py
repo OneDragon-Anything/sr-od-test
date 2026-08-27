@@ -6,6 +6,11 @@
 DEFAULT_REGISTRY 直接消费。历史分布面(门开/关 A/B n=300)数字见
 ADR-0400/0411。
 
+**语义演进(W288/ADR-0418 gate_min_round 前移 8→6)**:末窗下界改
+为 r6——原 r7「非末窗零漂移」边界帧随之前移到 r5(非末窗/达标恒 0
+的门结构前提本身不变);r8 视角标定的 boss 投影 +2 项随 min_round 在
+r6 触发,属 ADR-0418 已知耦合 wart,不另设断言锁(防把畸变钉死成契约)。
+
 锁面:
 - 缺口判据窗口/辖域:r>=handoff_gate_min_round ∧ P1——非末窗/达标
   恒 0(P1 非末窗零漂移门的结构前提);
@@ -105,13 +110,18 @@ def _sess_locked() -> StrategySession:
 # ---------- ① 缺口判据窗口/辖域 ----------
 
 def test_gate_gap_window_and_scope() -> None:
-    """r7(非末窗)/P2 恒 0;末窗低血成型帧缺口 1;达标帧 0。"""
+    """r5(非末窗,W288 前移后边界)/P2 恒 0;r6-r9 缺口辖;达标帧 0。"""
     sess = _sess_locked()
     st = _locked_formed_frame()
     assert form_ok(st, sess, _REG) is True   # 前置:成型谓词过
     assert handoff_gate_gap(st, sess, _REG) == 1
-    # 非末窗(r7):不辖(零漂移边界)
+    # 新窗内(r6/r7,W288/ADR-0418 前移后):照辖
+    assert handoff_gate_gap(_locked_formed_frame(round_num=6), sess,
+                            _REG) >= 0   # 是否有缺口随投影面,只锁「在窗内可非零」的前置
     assert handoff_gate_gap(_locked_formed_frame(round_num=7), sess,
+                            _REG) == 1
+    # 非末窗(r5):不辖(零漂移边界)
+    assert handoff_gate_gap(_locked_formed_frame(round_num=5), sess,
                             _REG) == 0
     # P2:不辖
     assert handoff_gate_gap(_locked_formed_frame(plane=2), sess,
@@ -136,10 +146,13 @@ def test_formed_stop_handoff_dim_run28_type() -> None:
     assert sess_on.v3_formed_stop is False
     assert sess_on.v3_handoff_gap == 1
     assert any(isinstance(c.action, BuyCard) for c in kept_on)
-    # 非末窗同帧(r7):停手(承接维不辖 r7,零漂移)
-    st7 = _locked_formed_frame(round_num=7)
-    s_a = _sess_locked()
-    assert formed_stop_active(st7, s_a, _REG) is True
+    # 零漂移边界随 W288/ADR-0418 前移重排:非末窗(r5)在成型停手线
+    # (r≥7)之前,构造不出「floor 过∧门不辖」帧——改锁「窗内但承接
+    # 达标仍停手」(r7 ∧ hp=64 → gap=0,承接维不拦):
+    st7_ok = _locked_formed_frame(round_num=7, hp=64)
+    s_b = _sess_locked()
+    assert formed_stop_active(st7_ok, s_b, _REG) is True
+    assert getattr(s_b, 'v3_handoff_gap', 0) == 0
 
 
 # ---------- ③ EV 承接缺口项(挂载点 b) ----------
@@ -164,8 +177,8 @@ def test_ev_gap_term_authorizes_final_window_buy() -> None:
                              bd={'int_emb': 0.0}, auth=auth)
     assert r_on is None
     assert auth.get('handoff_gap') == 1 and auth.get('ev_auth', 0) > 0
-    # 非末窗同帧(r7):照拒(承接项不辖非末窗)
-    st7 = _fallback_formed_frame(round_num=7)
+    # 非末窗同帧(r5,W288 前移后边界):照拒(承接项不辖非末窗)
+    st7 = _fallback_formed_frame(round_num=5)
     assert _check_constraint('interest_rule', cand, st7, st7, sess,
                              _REG, val=1.0,
                              bd={'int_emb': 0.0}) is not None
@@ -185,13 +198,14 @@ def test_ev_gap_term_authorizes_final_window_buy() -> None:
 # ---------- ④ sim 侧:账本字段 + 非末窗零漂移 ----------
 
 def test_sim_ledger_handoff_gap_zero_before_final_window() -> None:
-    """账本轮行带 handoff_gap 且非末窗(plane1 round<8)恒 0——P1
-    非末窗零漂移的结构前提在默认注册表下直接成立(n 取最小 2)。"""
+    """账本轮行带 handoff_gap 且非末窗(plane1 round<6,W288/ADR-0418
+    前移后)恒 0——P1 非末窗零漂移的结构前提在默认注册表下直接成立
+    (n 取最小 2)。"""
     for seed in range(2):
         r = cw_sim.simulate_p1(seed, pool='fallback', planes=2)
         assert all('handoff_gap' in row for row in r.ledger)
         assert all((row.get('handoff_gap') or 0) >= 0 for row in r.ledger)
         pre = [row for row in r.ledger
-               if row.get('plane') == 1 and row['round_num'] < 8]
+               if row.get('plane') == 1 and row['round_num'] < 6]
         assert all((row.get('handoff_gap') or 0) == 0 for row in pre), (
             f'seed {seed}:承接门越权辖非末窗')

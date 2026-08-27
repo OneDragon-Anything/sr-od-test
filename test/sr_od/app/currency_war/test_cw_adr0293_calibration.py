@@ -239,7 +239,13 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # 量级常量保留:handoff_gate_min_round/tier_target/ev_gap_bonus/
 # boss_e_damage 族/directed_refresh_per_round/game_cap 不变)——有意
 # 删字段,锁同步更新(其余字段不变)
-_EXPECTED_HASH = ('475f84c3d7e9ee0a0fadd67b7b248e4976fc08254a004d00205ed0b8cadb5af5')
+# _EXPECTED_HASH = ('475f84c3d7e9ee0a0fadd67b7b248e4976fc08254a004d00205ed0b8cadb5af5')
+# W288/ADR-0418 gate_min_round 前移批更新:handoff_gate_min_round 8→6
+# (W275 四臂配对 AB 兑换「调常量」映射;core2≥1 进场率 +6.7pt/金面
+# 无信号;落地前置核验=回放漂移仅限 P1 r6+、提前窗买质量反升——
+# 证据链见 ADR-0418)——有意改参,锁同步更新(其余字段不变)
+_EXPECTED_HASH = ('8233f2820f3a26ed6cfa94cc448b61c4'
+                  '9f77c21fecece50a431be1fabe12c296')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

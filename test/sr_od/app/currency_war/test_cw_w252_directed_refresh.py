@@ -104,8 +104,11 @@ def test_budget_requires_gap_and_peak() -> None:
     st = _state()
     assert directed_refresh_budget(st, sess, _REG) \
         == DEFAULT_REGISTRY.directed_refresh_per_round
-    # 非末窗(r7):gap=0 → 不授权
-    assert directed_refresh_budget(_state(round_num=7), sess, _REG) == 0
+    # 非末窗(r5,W288/ADR-0418 前移后边界):gap=0 → 不授权
+    assert directed_refresh_budget(_state(round_num=5), sess, _REG) == 0
+    # 新窗内(r7,W288 前移后):照常授权(窗加宽语义)
+    assert directed_refresh_budget(_state(round_num=7), sess, _REG) \
+        == DEFAULT_REGISTRY.directed_refresh_per_round
     # 追名 peak 出域:已满 3 份(copies_cap 面)→ 不授权
     st_full = _state(bench=[_bench(_CARRY, '列车同行', slot=0),
                             _bench(_CARRY, '列车同行', slot=1)])
@@ -137,11 +140,12 @@ def test_arbiter_nonpositive_refresh_bounded_pass() -> None:
 
 
 def test_nonfinal_window_nonpositive_rejected() -> None:
-    """非末窗(r7,gap=0):非正分刷新照拒(窗口外零行为)。"""
+    """非末窗(r5,W288/ADR-0418 前移后边界,gap=0):非正分刷新照拒
+    (窗口外零行为)。"""
     from sr_od.application.currency_war.decision_v2.candidates import (
         Candidate,
     )
-    st = _state(round_num=7, gold=55)
+    st = _state(round_num=5, gold=55)
     cand = Candidate(action=RefreshShop(cost=2), tag='refresh',
                      source='shop')
     res = arbitrate([(cand, -2.0, {'int_emb': 0.0})], st,

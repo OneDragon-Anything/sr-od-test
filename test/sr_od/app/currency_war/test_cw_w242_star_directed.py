@@ -155,9 +155,9 @@ def test_arbiter_nonpositive_gate_directed_pass() -> None:
     row = res.log[0]
     assert row['accepted'] is True, f'末窗 gap 授权应放行(log={row})'
     assert any(isinstance(a, BuyCard) for a in res.actions)
-    # 同帧 r7(非末窗):gap=0 → 非正分照拒
-    st7 = _state(round_num=7)
-    res7 = arbitrate([(_copy_cand(st7), 0.0, {'cost': 3})], st7, sess,
+    # 同帧 r5(非末窗,W288/ADR-0418 前移后边界):gap=0 → 非正分照拒
+    st5 = _state(round_num=5)
+    res7 = arbitrate([(_copy_cand(st5), 0.0, {'cost': 3})], st5, sess,
                      _REG)
     assert res7.log[0]['reject'] == '非正分'
     # 定向性:非 copy 标签的零分候选照拒(如 line_opportunistic)
@@ -204,11 +204,14 @@ def test_ev_gap_bonus_single_source_no_double_count() -> None:
 
 
 def test_gap_window_scope() -> None:
-    """缺口窗口辖域:P1 末窗(r>=8)才 >0;非末窗/P2/达标帧恒 0。"""
+    """缺口窗口辖域:P1 末窗(r>=6,W288/ADR-0418 前移)才 >0;
+    非末窗/P2/达标帧恒 0。"""
     sess = _sess()
     st = _state()
     assert handoff_gate_gap(st, sess, _REG) >= 1
-    assert handoff_gate_gap(_state(round_num=7), sess, _REG) == 0
+    # 新窗内(r7):照辖(窗加宽语义)
+    assert handoff_gate_gap(_state(round_num=7), sess, _REG) >= 0
+    assert handoff_gate_gap(_state(round_num=5), sess, _REG) == 0
     assert handoff_gate_gap(_state(plane=2), sess, _REG) == 0
     # 达标帧(W227 锁同式 DOT 队成型帧,hp 高带):gap=0 → C 授权随之关
     # (授权强度单一源随 gap 走,gap=0 即零行为)
