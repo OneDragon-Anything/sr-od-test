@@ -613,6 +613,71 @@ def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
         journal.read_text(encoding='utf-8')
 
 
+# ===== 6d. cap 通道防抖接线(W218,ADR-0395;run 27 型 = 读数瞬态直驱行动) =====
+# 高危点:resolve_back_slots 的 cap 直读(未显式传 cap 时)进 diff → 公式通道
+# 选档;deploy_bench 板满门 cap 直读(→ 留 bench 战力真空,r60 贵方向)。
+# 修:两处消费点改走 read_deploy_cap_debounced(ADR-0286 域防抖:域外重读
+# 一帧,仍域外 → None → 失读兜底链)。run 27 实证同型:瞬态单帧读数不行动。
+
+class _CapFakeCtx:
+    """cap 重读帧源(debounced 经 ctx.controller.screenshot 现截)。"""
+
+    def __init__(self) -> None:
+        self.controller = type('C', (), {'screenshot': staticmethod(lambda: object())})()
+
+
+def _patch_cap_reader(monkeypatch, seq):
+    calls = {'n': 0}
+
+    def _fake(ctx, scr):
+        i = min(calls['n'], len(seq) - 1)
+        calls['n'] += 1
+        return seq[i]
+    import sr_od.application.currency_war.cw_observation as cwo
+    monkeypatch.setattr(cwo, 'read_deploy_cap', _fake)
+    return calls
+
+
+def test_cap_transient_in_formula_channel_debounced(tmp_path, monkeypatch):
+    """run 27 型(格数类):cap 首读瞬态 3(域外,lv6),重读回真值 8(宝钻×2)
+    → 采重读值 → 公式 6+(8−6)=8 格;若无防抖 diff=−5 → 6 格错档。"""
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    calls = _patch_cap_reader(monkeypatch, [3, 8])
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)  # CV 不可判
+    r = cbl.resolve_back_slots(_CapFakeCtx(), object(), level=6, cap=None)
+    assert calls['n'] == 2, '域外首读应触发重读'
+    assert r['cap'] == 8 and r['formula_raw'] == 8
+    assert r['n'] == 8 and r['prefix'] == '后排8槽'
+
+
+def test_cap_still_domain_rejected_falls_baseline(tmp_path, monkeypatch):
+    """cap 域外且重读仍域外([3,3],lv6)→ 拒信 None → diff=0 退 6 格基线
+    (失败安全侧,不在瞬态值上选档)+ deploy_cap_domain 留证。"""
+    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.cw_observation as cwo
+    calls = _patch_cap_reader(monkeypatch, [3, 3])
+    conflicts = []
+    monkeypatch.setattr(cwo, 'obs_conflict', lambda *a, **k: conflicts.append(a))
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
+    r = cbl.resolve_back_slots(_CapFakeCtx(), object(), level=6, cap=None)
+    assert calls['n'] == 2 and len(conflicts) == 1
+    assert r['cap'] is None and r['n'] == 6 and r['prefix'] == '后排'
+
+
+def test_deploy_bench_gate_wired_to_debounced_reader():
+    """静态接线锁:deploy_bench 板满门走 read_deploy_cap_debounced,
+    无裸 read_deploy_cap( 直调(W218 收口,防回归)。"""
+    src = (_ROOT / 'src/sr_od/application/currency_war/operations/prep'
+           / 'deploy_bench.py').read_text(encoding='utf-8')
+    assert 'read_deploy_cap_debounced' in src
+    assert 'read_deploy_cap(self.ctx' not in src, \
+        '板满门 cap 必须经域防抖读(ADR-0395),不得裸直读'
+
+
 # ===== 7. 佩佩局真 7 格板面识别(2026-08-26 用户口述真值;ADR-0389/0390) =====
 # 识别层三件:①现场变体模板(raw_board.png,真窗口采——错位残片变体会致
 # live_only 假阴,万敌@s2 丢读实证后全量重采);②佩佩入库(roster cost=0

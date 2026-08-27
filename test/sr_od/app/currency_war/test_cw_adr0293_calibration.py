@@ -225,7 +225,10 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # _default 27.57→34.0——boss Δ 全分布双峰(W244:低伤簇 13.25±1.04/
 # 高伤簇 34.10±1.77,中间零观测),投影口径均值→Q3 保守(防 hp 临界局
 # tier 高估一档=重蹈 W234 缺口)——有意改参,锁同步更新
-_EXPECTED_HASH = ('febd84d603ba31892925d51470876919e4784b6845a237b3209da0714d4b103d')
+# W251/ADR-0408 假设 A 批更新:新增 early_pace_* 五字段(enabled=False
+# 默认关/min 3/max 4/bias 5.0/val_max 0.5)——有意加字段,锁同步更新
+# (其余字段不变)
+_EXPECTED_HASH = ('ae2150ea96f4cdc7d148cf59433ed375ad712edc6d53d413bbdc93eb84e6506e')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
