@@ -1,8 +1,8 @@
-"""W312 行为锁:overlay 选项选择族落盘(exogenous.jsonl kind='event_choice')。
+"""行为锁:overlay 选项选择族落盘(exogenous.jsonl kind='event_choice')。
 
-实证缺口(W309 遥测审计 G1):遭遇/巨星/伙伴/策划事件/命运卜者/装备选卡/祈愿
+实证缺口(遥测审计 G1):遭遇/巨星/伙伴/策划事件/命运卜者/装备选卡/祈愿
 七个 handler 的选项选择此前只 log.info 不进账本——「当时提供了什么选项、bot 选了
-哪个、为什么」跨局归因在遥测上断链(对照:invest 族全量落盘、W306 supply_pick)。
+哪个、为什么」跨局归因在遥测上断链(对照:invest 族全量落盘、supply_pick)。
 修法三段:
 ① schema:ExogenousEvent.choice 可选字段(kind='event_choice' 行携带;旧记录
   与其它 kind 恒 None——缺省兼容);

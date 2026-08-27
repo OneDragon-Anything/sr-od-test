@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""W287 观测读链修复批锁(ADR-0417):商店行/羁绊计数不再当部署数 + board 裁决翻转。
+"""观测读链修复批锁(ADR-0417):商店行/羁绊计数不再当部署数 + board 裁决翻转。
 
-背景(W285 分层抽样实证,`.debug/temp/currency_war/w285_obs_conflict_sampling.md`):
+背景(分层抽样实证,`.debug/temp/currency_war/w285_obs_conflict_sampling.md`):
 - deployed_align 3/6 误判:旧对齐目标 ``min(sum(board), level)`` 把羁绊计数(多阵营
   角色重复计)当部署数,补齐/截断幻影;
 - tracking 空板帧幻影 2 张:底部商店行/备战栏被读链误当部署;
 - board 3/6 采 computed 错:左栏徽标(OCR)才是画面事实,旧裁决采身份 computed。
 
-fixture = W285 判读过的实机帧(自 shots 目录拷入本目录,框架 ``cv2_utils.read_image``
+fixture = 判读过的实机帧(自 shots 目录拷入本目录,框架 ``cv2_utils.read_image``
 RGB 口径直读)。三条帧锁 + 源码锁,纯离线。
 """
 from __future__ import annotations
@@ -38,7 +38,7 @@ def _load(name: str):
 def test_paddle_excludes_bench_row_on_empty_board(test_context) -> None:
     """空板帧(1-1,0/3,底部备战栏 4 卡)→ paddle X=0。
 
-    W285 tracking 幻影帧(6796888e)锁:部署数目标取舞台指示,几何上不含底部
+    tracking 幻影帧(6796888e)锁:部署数目标取舞台指示,几何上不含底部
     商店行/备战栏 —— 空板不再幻影出部署角色。旧链 board 徽标/计数源无此保证。
     """
     screen = _load('w287_tracking_empty_6796888e.png')
@@ -49,7 +49,7 @@ def test_paddle_excludes_bench_row_on_empty_board(test_context) -> None:
 def test_paddle_obscured_board_sum_is_not_deploy_count(test_context) -> None:
     """实部署 4 帧(前台2+后台2,角色详情 overlay 遮 paddle)→ 对齐基准行为锁。
 
-    W285 deployed_align 误判帧(37e6d7fd)双断言:
+    deployed_align 误判帧(37e6d7fd)双断言:
     - paddle 被 overlay 遮挡 → read_deployed_count=None → read_game_state 跳过
       对齐(tracked 4 保真,宁缺勿造);
     - 同帧左栏徽标羁绊和 = 8 ≠ 4 —— 实证 board 羁绊和当部署数必错
@@ -66,7 +66,7 @@ def test_paddle_obscured_board_sum_is_not_deploy_count(test_context) -> None:
 def test_board_pairs_reads_badge_truth(test_context) -> None:
     """左栏徽标「盛会之星=2」帧 → _board_pairs 读 2(徽标=画面事实)。
 
-    W285 board 误裁帧(b6fc9934)锁:OCR 徽标行真值可读;旧裁决在该帧采
+    board 误裁帧(b6fc9934)锁:OCR 徽标行真值可读;旧裁决在该帧采
     computed=1(错)。裁决翻转后此读数即采信源。
     """
     screen = _load('w287_board_b6fc9934.png')
@@ -81,7 +81,7 @@ def test_rebuild_cap_zero_blocks_phantom() -> None:
 
     锁 ``rebuild_deployed_from_board`` 的 max_count 语义 = read_game_state 重建
     分支 ``min(level, paddle X)`` 的依赖:board 徽标误读(如 6)不再幻影出
-    超额部署角色(空板帧 W285 同根)。注意返回是**槽位表**(定长含 None,
+    超额部署角色(空板帧 同根)。注意返回是**槽位表**(定长含 None,
     ADR-0392),计数走占用数。
     """
     board = {'盛会之星': 6}
@@ -93,7 +93,7 @@ def test_rebuild_cap_zero_blocks_phantom() -> None:
 def test_source_deployed_align_uses_paddle_not_board_sum() -> None:
     """源码锁:read_game_state 部署对齐不再用羁绊和,改用 paddle X。
 
-    防 W287 修复回退(旧 ``min(sum(state.board.values()), level)`` 是
+    防 修复回退(旧 ``min(sum(state.board.values), level)`` 是
     deployed_align 误判族根因)。
     """
     src = inspect.getsource(obs_mod.read_game_state)
@@ -107,7 +107,7 @@ def test_source_deployed_align_uses_paddle_not_board_sum() -> None:
 def test_source_board_arbitration_prefers_badge_with_overlay_guard() -> None:
     """源码锁:board 裁决翻转(备战帧徽标覆入)+ overlay 双不可信守卫。
 
-    W285 board 3/6 采 computed 错 → 备战帧裁决翻转为采徽标;W285 overlay 干扰
+    board 3/6 采 computed 错 → 备战帧裁决翻转为采徽标;overlay 干扰
     2/6(徽标与 computed 各错一次)→ 非备战帧(is_prep_like_frame=False)不裁
     不覆,保 computed 底座防新错。
     """

@@ -1,6 +1,6 @@
-"""W315 行为锁:四条旁路 jsonl 流的查询视图(遥测审计 G3 读端补齐)。
+"""行为锁:四条旁路 jsonl 流的查询视图(遥测审计 G3 读端补齐)。
 
-实证缺口(W309 遥测审计 G3):query CLI 此前只读 decisions/outcomes/
+实证缺口(遥测审计 G3):query CLI 此前只读 decisions/outcomes/
 shop_snapshots/runs 五件,exogenous / exec_events / invest_cards /
 obs_conflicts 四条流只能裸翻文件(审计统计都得现写 PowerShell)。
 修法:cw_telemetry 新增四个 query 视图 + --view 挂载,约定=按 run_id
@@ -28,7 +28,7 @@ def _write_jsonl(path: Path, rows: list[dict]) -> None:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
-# ===== ① exogenous:run 过滤 + 最新优先 + kind 计数 + W312 choice 展开 =====
+# ===== ① exogenous:run 过滤 + 最新优先 + kind 计数 + choice 展开 =====
 
 
 def test_exogenous_view_filter_and_order_and_choice(tmp_path) -> None:
@@ -56,7 +56,7 @@ def test_exogenous_view_filter_and_order_and_choice(tmp_path) -> None:
     # 最新优先:ts 倒序(node_enter r6 首行,briefing r4 末行)
     assert "node_enter" in lines[1] and "r6" in lines[1]
     assert "briefing" in lines[-1] and "r4" in lines[-1]
-    # W312 choice 展开:候选摘要 + pick + reason 可见
+    # choice 展开:候选摘要 + pick + reason 可见
     assert "pick=1" in joined and "难度3" in joined and "formed→high-diff" in joined
     # run_b 的行不出现
     assert "别的局的行" not in joined

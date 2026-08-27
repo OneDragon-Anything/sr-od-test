@@ -1,6 +1,6 @@
-"""W222 两处遥测缺口回归锁(W220 判读立批池①+②)。
+"""两处遥测缺口回归锁(判读立批池①+②)。
 
-背景(W220 判读实锤,2026-08-27):
+背景(判读实锤,2026-08-27):
 - 缺口① decisions.state.equips 两局恒空:owned 穿戴池的 session 写端
   (equip_all)与 _pseudo_state 读端拷贝都在,但 decisions 落盘用的 state
   是 OCR 现读对象(shop 循环 read_game_state / director obs.state),
@@ -85,7 +85,7 @@ def test_record_decision_state_carries_equips(tmp_path) -> None:
 
 def test_briefing_modules_use_framework_logger() -> None:
     """三模块 _log 必须是框架 'OneDragon' logger(裸 getLogger=__name__ 无 handler,
-    INFO 从未落地——W220 全日志 0 条的根因)。"""
+    INFO 从未落地——全日志 0 条的根因)。"""
     import importlib
 
     for mod_name in (

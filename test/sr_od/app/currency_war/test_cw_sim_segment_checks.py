@@ -1,4 +1,4 @@
-"""段级检查表 _SEGMENT_CHECKS 回归锁(W278 sim 段级短跑批)。
+"""段级检查表 _SEGMENT_CHECKS 回归锁(sim 段级短跑批)。
 
 锁防锁纪律(与 test_cw_sim_ledger_checks 同款):合成账本双向断言——
 坏账本必报(防静默失效/空转)、好账本必过(防误报);例外条件

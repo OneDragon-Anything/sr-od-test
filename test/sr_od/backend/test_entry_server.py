@@ -75,7 +75,7 @@ def test_configure_server_logging_routes_to_dedicated_file() -> None:
             f'不应再有 console(StreamHandler),否则框架日志双写进 main_server.log,实得 {stream_handlers}'
         )
     finally:
-        # 还原为 pytest 进程的「不落盘」默认态(conftest 日志隔离,W276):
+        # 还原为 pytest 进程的「不落盘」默认态(conftest 日志隔离):
         # 该 logger 是共享单例,别让 mcp_server.log 分流配置泄漏给其他测试;
         # 也不得还原成默认 log.txt handler——那会让本 pytest 进程重新持有
         # 共享日志句柄,回到并发轮转竞态面。

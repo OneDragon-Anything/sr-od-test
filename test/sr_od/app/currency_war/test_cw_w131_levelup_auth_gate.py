@@ -1,6 +1,6 @@
-# 检查器判据重定义批(W131/ADR-0353):levelup_interest_engine_gate
+# 检查器判据重定义批(ADR-0353):levelup_interest_engine_gate
 # 改读授权依据(旧「金<50 且未曾满息」判据把 [33] 人口位合法 <50 升级
-# 全数计违规——W123 §5.3.3 实测 378 违规绝大多数为合法面,W126 后 206)。
+# 全数计违规——§5.3.3 实测 378 违规绝大多数为合法面,后 206)。
 #
 # 锁面(双向,检查器非安慰剂):
 # 1. 合法授权升级(pop_slot/dp)0 违规——重定义的放行面;
@@ -46,9 +46,8 @@ def test_unauthorized_levelup_emerges_violation() -> None:
     """无授权依据的 <50 升级必须涌现违规(去门变异可杀)。
 
     - auth=''(default 栈旧调用/未过账路径)→ 违规且消息标「无授权依据」;
-    - W255/ADR-0410 起 static_ev 并入合法面(旧断言「static_ev 计违规」
-      随语义过期——boss 升级禁令删除后该臂是末窗升级主授权臂,W123
-      「帧量级 0-1 保守计违规」的校准前提已失效);无授权依据检测面
+    - ADR-0410 起 static_ev 并入合法面(旧断言「static_ev 计违规」
+      随语义过期——boss 升级禁令删除后该臂是末窗升级主授权臂,「帧量级 0-1 保守计违规」的校准前提已失效);无授权依据检测面
       (auth 空/缺失)保留,检查器对授权观测缺失不失明。"""
     # prev_level 语义:检查器用上一轮账本 level 判追级段(首轮 prev=3)
     # ——先放一行 lv5 铺底,违规落在第二行。
@@ -100,7 +99,7 @@ def test_ledger_auth_key_wired(tmp_path: Path) -> None:
                     arms.add(a['auth'])
     assert n_lv > 0, '5 局零 LevelUp:接线锁样本不足(换 seed_base)'
     # 真实批 rows(检查器消费的行流)过新判据:合法授权面(pop_slot/dp/
-    # static_ev,W255 起)不误报。
+    # static_ev)不误报。
     rows = [json.loads(ln) for ln in
             (d / 'outcomes.jsonl').read_text(encoding='utf-8').splitlines()]
     v = chk.check_levelup_interest_engine_gate(rows)

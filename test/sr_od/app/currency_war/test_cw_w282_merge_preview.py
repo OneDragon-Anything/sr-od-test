@@ -1,6 +1,6 @@
-"""W282 升星预览✦(商店牌头顶 merge preview)单帧锁。
+"""升星预览✦(商店牌头顶 merge preview)单帧锁。
 
-信号语义(W104 发现 / ADR-0416):商店牌 art 顶部✦数 = 已持同名同星副本份数,
+信号语义(发现 / ADR-0416):商店牌 art 顶部✦数 = 已持同名同星副本份数,
 买第 3 张即 3合1 升星——bot tracking merge_progress 的视觉印证(观测层冗余信号)。
 读取器 ``read_merge_preview``(cw_identity_obs)挂 ``read_shop_cards`` → ``ShopCard.merge_preview``。
 

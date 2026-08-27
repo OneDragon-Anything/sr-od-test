@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""W221(ADR-0398)行为锁:boss 节点定位 = 位置先验点击 + 详情条「首领」标签验证 + 徽章态分流。
+"""ADR-0398行为锁:boss 节点定位 = 位置先验点击 + 详情条「首领」标签验证 + 徽章态分流。
 
 背景(run 29/30 同夜实证,2026-08-26):
 - **头像态**(run29/佩佩局):最右节点=红框 boss 头像,详情条大图标 SIFT 断层命中
@@ -41,7 +41,7 @@ _FIXTURE = Path(__file__).parent / 'cw_plane_detail_emblem_full.png'
 _ASSETS = Path(cv2_utils.__file__).resolve().parents[3] / 'assets'   # 仓根 assets
 _NODE_TPL_DIR = _ASSETS / 'game_data' / 'cw_node_types'
 _BOSS_TPL_DIR = _ASSETS / 'template' / 'currency_war' / 'boss_avatar'
-#: 位面详情节点带(与 screen_info「货币战争-位面详情/区域-节点条」一致;yml 单一源,测试兜底)
+#位面详情节点带(与 screen_info「货币战争-位面详情/区域-节点条」一致;yml 单一源,测试兜底)
 _PD_BAND_RECT = (385, 514, 1596, 661)
 
 

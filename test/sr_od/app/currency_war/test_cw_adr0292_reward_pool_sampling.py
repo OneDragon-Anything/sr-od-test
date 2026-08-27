@@ -73,7 +73,7 @@ def test_fallback_pool_reward_delta_is_constant() -> None:
 
 
 def test_snapshot_reward_pool_matches_corpus_truth() -> None:
-    """提交快照对拍(regen-robust,W111):reward 池入位、n≥30、
+    """提交快照对拍(regen-robust):reward 池入位、n≥30、
     均值≈语料真值(带形式——ADR-0292 规格原文即「≈」,经检查项
     ±1hp 漂移带+伪影哨兵带断言;池每次局终自动再生,锁瞬时均值
     等值=池耦合 change-detector,再生即红)。supply 无真值锚
@@ -101,7 +101,7 @@ def test_reward_lock_catches_drift_and_artifact() -> None:
     assert rep3['violations'] >= 1
     # 空池(fallback)不辖(同 battle 锁空池语义)
     assert check_reward_delta_pool_bucket_lock({})['violations'] == 0
-    # supply(W111/ADR-0345):无真值锚——合法小样本(Δ=0,语料实测
+    # supply(ADR-0345):无真值锚——合法小样本(Δ=0,语料实测
     # 形态)不辖;跨 run 大跳变伪影仍必报(检测价值不降)
     supply_legit = {'supply': {9: [0]}}   # 语料首现真实样本形态
     assert check_reward_delta_pool_bucket_lock(supply_legit)['violations'] == 0
@@ -146,8 +146,8 @@ def test_pool_build_never_mixes_runs(tmp_path: Path) -> None:
 
 
 def test_sampler_v4_and_snapshot_selfconsistent() -> None:
-    """采样器版本(W240/ADR-0404 起 v10——boss 桶键 Σboard→净星深;
-    v11=ADR-0407 W250 encounter 桶键 depth→rung;v8/v9=ADR-0362
+    """采样器版本(ADR-0404 起 v10——boss 桶键 Σboard→净星深;
+    v11=ADR-0407 encounter 桶键 depth→rung;v8/v9=ADR-0362
     plane 维键化,note 链与常量错位自 v10 对齐;本锁语义=版本入指纹
     +快照自洽)。"""
     assert cw_sim._SAMPLER_VERSION == 11

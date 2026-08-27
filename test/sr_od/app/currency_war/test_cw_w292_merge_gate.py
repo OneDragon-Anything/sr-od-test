@@ -1,4 +1,4 @@
-"""W292 合成特效帧态门 + cap 域外双帧一致采信(ADR-0420,W285 抽样批3)。
+"""合成特效帧态门 + cap 域外双帧一致采信(ADR-0420 抽样批3)。
 
 锁面:
 1. 帧态门两签名(星爆粒子/满席横幅)合成图正负样本——阈值不贴边;
@@ -65,7 +65,7 @@ def _read(star: int) -> list[SimpleNamespace]:
 
 def test_gate_blocks_confirm_and_freezes_pending(monkeypatch) -> None:
     """特效帧上的第 2 次回退:**保旧 + 防抖冻结**(pending 不推进、不计数、
-    不采新)——W285 star 层 2/2 采新帧全错(动画窗 ≥2 帧骗过连续确认)的
+    不采新)——star 层 2/2 采新帧全错(动画窗 ≥2 帧骗过连续确认)的
     直接回归锁。随后干净帧(screen=None)同回退 → 仍走确认采新(门冻结非清零)。"""
     import sr_od.application.currency_war.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)

@@ -207,7 +207,7 @@ def test_cap_debounce_reread_recovers_then_rejects(monkeypatch) -> None:
 
 
 def test_cap_debounce_out_of_domain_equal_pair_accepted(monkeypatch) -> None:
-    """W292/ADR-0420:域外但**两帧一致**且 ≤ 绝对上界 13 → 采信(e4972b43
+    """ADR-0420:域外但**两帧一致**且 ≤ 绝对上界 13 → 采信(e4972b43
     实拍 diff=5 真实高档,旧域拒信致 6 槽降级跑在 9 格板上)+ 留证。"""
     conflicts: list[tuple] = []
     monkeypatch.setattr(cw_observation, 'obs_conflict',

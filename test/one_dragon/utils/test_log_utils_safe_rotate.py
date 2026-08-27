@@ -1,4 +1,4 @@
-"""W276 回归锁:.log 并发写竞态(SafeTimedRotatingFileHandler)。
+"""回归锁:.log 并发写竞态(SafeTimedRotatingFileHandler)。
 
 机制(先证后裁的实证面):Windows 不允许 rename 被任何进程打开中的文件,
 ``TimedRotatingFileHandler.doRollover`` 的 ``os.rename`` 遇另一份打开句柄即抛
@@ -97,7 +97,7 @@ def test_safe_handler_emits_record_after_deferred_rollover(tmp_path) -> None:
 def test_pytest_process_holds_no_file_handler_on_framework_logger() -> None:
     """conftest 日志隔离锁:pytest 进程的框架 logger 不得挂真实文件 handler。
 
-    依据 W276:测试进程退出共享日志写入方集合(零句柄),从源头消掉与
+    依据 :测试进程退出共享日志写入方集合(零句柄),从源头消掉与
     sim 批/regen 进程的轮转竞态。本断言跑在 pytest 进程内 = 直接验证默认态;
     设 SR_TEST_LOG_FILE=1 时有意放开(逃生口),此时跳过。
     """

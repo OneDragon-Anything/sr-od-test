@@ -1,7 +1,7 @@
-"""W238/ADR-0403:承接门 hp 维 boss 投影单帧锁(设计件 09 §3.1;
-W240/ADR-0404 键改净星深后重标定)。
+"""ADR-0403:承接门 hp 维 boss 投影单帧锁(设计件 09 §3.1;
+ADR-0404 键改净星深后重标定)。
 
-**语义演进(ADR-0411 flag 家族清理)**:投影自 W257 起无条件启用
+**语义演进(ADR-0411 flag 家族清理)**:投影自 起无条件启用
 ——历史 handoff_gate_enabled/handoff_boss_project 双布尔删除,原
 「关臂零漂移/proj_only 正交臂」锁面随 flag 退场(docstring 记过期
 原因);现行为面 = DEFAULT_REGISTRY 直接消费。历史 A/B 数字见
@@ -14,7 +14,7 @@ ADR-0403/0411。
   触发(hp 临界类由 boss 后投影捞起);
 - 弱板局 min 由板面维压死(gap 数值不受投影影响的结构面);
 - r8 +2 / r9 无 +2(hp_proj 直读);缺桶 fallback;
-- W240 方向锁:3合1 升星后净星深键不落浅桶(修 ADR-0403 缺口②);
+- 方向锁:3合1 升星后净星深键不落浅桶(修 ADR-0403 缺口②);
 - sim 侧:账本 handoff_hp_proj 字段(末窗非 None)。
 n 取断言成立最小值;sim 结构断言用 fallback 池(README 纪律)。
 """
@@ -45,7 +45,7 @@ from sr_od.application.currency_war.decision_v2.registry import (
 
 logging.disable(logging.CRITICAL)
 
-#: ADR-0411:门与投影均无条件启用——行为帧即 DEFAULT_REGISTRY
+#ADR-0411:门与投影均无条件启用——行为帧即 DEFAULT_REGISTRY
 _REG = DEFAULT_REGISTRY
 
 
@@ -78,7 +78,7 @@ def _sess_locked() -> StrategySession:
 # ---------- ① 常数表(标定锁;小数位不锁死,重标定随 ADR 更新) ----------
 
 def test_boss_e_damage_table_shape() -> None:
-    """档键域=Δ池 v10 boss 净星深桶域 {0}(W240/ADR-0404:净星深=
+    """档键域=Δ池 v10 boss 净星深桶域 {0}(ADR-0404:净星深=
     上场件 Σ(star−1),桶 min(sd//3,5)*3;P1 boss 语料 49 行全落
     桶 0,旧 Σboard 桶 9/12/15 条件性=键口径伪影);正值(=期望掉血);
     default=全池未删失均值(单桶下与桶 0 同值,表保留结构供深桶
@@ -142,10 +142,10 @@ def test_projection_formula_round_bonus_and_fallback() -> None:
     assert boss_projected_hp(st6, 200, _REG) == 100
 
 
-# ---------- ④ W240 方向锁:净星深键下升星不落浅桶(ADR-0403 缺口②修复) ----------
+# ---------- ④ 方向锁:净星深键下升星不落浅桶(ADR-0403 缺口②修复) ----------
 
 def test_merge_star_depth_never_shallower() -> None:
-    """3合1 升星消耗场上副本 → **净星深键不落浅桶**(W240/ADR-0404
+    """3合1 升星消耗场上副本 → **净星深键不落浅桶**(ADR-0404
     修 ADR-0403 缺口②:Σboard 键下合并使场上件 3→1(键 −2/次)落
     浅桶,而浅桶期望伤害更大 → sim 判「升星→boss 伤害↑」与 [27]
     机制相反)。净星深=上场件 Σ(star−1):1★×3(键 0)→ 2★×1(键 1)

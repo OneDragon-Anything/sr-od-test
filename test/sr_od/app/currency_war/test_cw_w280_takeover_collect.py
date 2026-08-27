@@ -1,8 +1,8 @@
-"""W280 行为锁:接管补采独立 op(TakeoverCollectPlaneIntel)。
+"""行为锁:接管补采独立 op(TakeoverCollectPlaneIntel)。
 
-背景:battle_loop 的 CollectPlaneIntel 实采块(W219 内联)只在 loop 对局轮的
+背景:battle_loop 的 CollectPlaneIntel 实采块(内联)只在 loop 对局轮的
 备战稳定帧触发;MCP 重启后内存 session 全丢、loop 首局 target 重选断档期,
-手动补真值需要**不经 loop 即可调起**的独立入口(组装口径 W277 已裁决=位面
+手动补真值需要**不经 loop 即可调起**的独立入口(组装口径 已裁决=位面
 详情屏唯一)。本文件锁住该 op 的壳层契约:
 
 1. run_operation 可发现(op 注册扫描含它);
@@ -269,12 +269,12 @@ def test_static_write_semantics_locked() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# fixture 真帧锚:W277 引用帧仍是组装画面单一源(id_mark 在屏可判)
+# fixture 真帧锚:存档引用帧仍是组装画面单一源(id_mark 在屏可判)
 # --------------------------------------------------------------------------- #
 
 
 def test_w277_reference_frame_ids_plane_detail(test_context: SrTestContext) -> None:
-    """锁⑦:W277 引用帧(screens png 存档)上「标识-位面详情标题」id_mark
+    """锁⑦:存档引用帧(screens png 存档)上「标识-位面详情标题」id_mark
     必命中——组装画面锚漂移即本 op 入口判定失效的前置信号。"""
     import cv2
     import numpy as np

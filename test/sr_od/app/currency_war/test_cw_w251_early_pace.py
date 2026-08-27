@@ -1,10 +1,10 @@
-"""W251/ADR-0408:r3/r4 投资节奏前置(假设 A)单帧锁。
+"""ADR-0408:r3/r4 投资节奏前置(假设 A)单帧锁。
 
 锁面(结构面;分布面=w251_ab.py 三窗 A/B sim 批):
 - 授权点 = 层3 评分(scoring.score_candidate):P1 r3-r4 战力买标签
   (crisis_buy_tags 同集)的 0/小分买候选顶成 +early_pace_bias 进约束链
   ——破息授权仍由 interest_rule EV 账随 V 单一裁决(零新增授权常量,
-  防双计,W232/W238 先例);
+  防双计,先例);
 - 窗口辖域:P1 ∧ r∈[min,max](缺省 3-4);r5 起由既有息纪律接管;
 - 纪律态先行:emergency([18])不越权(boss 窗在 r≥9窗外本就不触);
 - 正交/零漂移:默认 flag 关=逐位现行为(sim 整局 ledger 恒等);
@@ -78,7 +78,7 @@ def _cand(st: GameState) -> Candidate:
 
 def test_scoring_bias_topup_in_window() -> None:
     """主通道与防叠边界:r3 窗内,val≤上沿的买候选被顶成 +bias(A 臂);
-    已正分(>val_max)候选不叠加(W232 双计防线同款);OFF 臂原分不动。
+    已正分(>val_max)候选不叠加(双计防线同款);OFF 臂原分不动。
     两分支都锁——具体落哪支由该帧板面差分决定(语义:非正分显影,
     正分不二次加分)。"""
     st, sess = _state(), _sess()
@@ -183,7 +183,7 @@ def test_sim_default_flag_full_identity() -> None:
     """sim 侧零漂移(结构证据,n=4 最小 fallback 池):默认 registry(关)
     改码后整局 ledger 与改码前不变量靠「该分支永不进入」的结构保证
     ——此处锁「同一份代码里 flag 关与显式关臂恒等」退化断言不可行,
-    直接锁整局行为与 off 注册表注入一致(W242 同款手法)。"""
+    直接锁整局行为与 off 注册表注入一致(test_cw_w242 同款手法)。"""
     for seed in range(2):
         a = cw_sim.simulate_p1(seed, pool='fallback', planes=2,
                                strategy=__import__(

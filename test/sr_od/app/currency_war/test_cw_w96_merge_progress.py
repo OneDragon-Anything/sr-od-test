@@ -7,7 +7,7 @@
    unit=0 关闭(A/B 通道)。
 2. r9 病灶帧单帧锁:deployed 目标核心 1★ + 店内同名 → 买入候选
    正分(W93:候选生成但全维度零 delta 被「非正分」拒)。
-3. r7 病灶帧生成层不变式:r410 守卫(copy_swap_useless)未动——
+3. r7 病灶帧生成层不变式:同轮买卖互斥守卫(copy_swap_useless)未动——
    deployed 非核心目标件的第 2 份仍不生成候选(ADR-0303/0304
    豁免默认关;生成层重估=设计建议,见 W96_报告.md)。
 4. 检查器回灌:溢出金断买(P1 金>50 连续 ≥2 轮零买零升级)进
@@ -77,7 +77,7 @@ def _sess() -> StrategySession:
         frozenset({'姬子·启行', '三月七', '花火', '瓦尔特'}),
         frozenset(), 'locked')
     s.v3_core_names = {'姬子·启行'}
-    # r410 守卫的 core 豁免面(target_comp;W93 r9 帧吉尔伽美什=line_carry
+    # 同轮买卖互斥守卫的 core 豁免面(target_comp;W93_报告 r9 帧吉尔伽美什=line_carry
     # 生成即此路径:core 显式保留 → 买副本合法)
     s.target_comp = SimpleNamespace(factions=_FACTIONS,
                                     core_chars=(_CARRY,))
@@ -163,14 +163,14 @@ def test_r9_frame_second_copy_buy_scores_positive() -> None:
 
 def test_r7_frame_generation_guard_unchanged() -> None:
     """W93 r7 帧形态锁(生成层不变式):deployed 非核心目标件的第 2 份
-    在**授权窗外**仍不生成候选——r410 守卫未动(ADR-0303/0304 豁免默认
+    在**授权窗外**仍不生成候选——同轮买卖互斥守卫未动(ADR-0303/0304 豁免默认
     关);生成层重估只写设计建议(W96_报告.md),归后续批。
-    (语义演进史,W257/ADR-0411:末窗承接缺口 gap>0 时同名副本候选经
+    (语义演进史,ADR-0411:末窗承接缺口 gap>0 时同名副本候选经
     C 项定向授权放行——原构造帧恰落末窗缺口内,随 flag 家族清理转正
     后改用 r7 帧钉守卫基线;末窗放行行为由 test_cw_w242_star_directed
-    锁。W288/ADR-0418 gate_min_round 前移 8→6 后 r7 落进新授权窗
+    锁。ADR-0418 gate_min_round 前移 8→6 后 r7 落进新授权窗
     {r6..r9},本锁用 replace 把 min_round 钉回 8 保住「非末窗守卫
-    不动」的原边界意图——C 臂窗内放行行为另由 W313 新窗锁覆盖。)"""
+    不动」的原边界意图——C 臂窗内放行行为另由 新窗锁覆盖。)"""
     reg = replace(DEFAULT_REGISTRY, handoff_gate_min_round=8)
     sess = _sess()
     st = _state(round_num=7,

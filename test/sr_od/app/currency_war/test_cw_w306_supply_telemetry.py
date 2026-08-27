@@ -1,4 +1,4 @@
-"""W306 行为锁:补给节点选择写入 synthetic_supply 合成行(选择+刷新+金 快照)。
+"""行为锁:补给节点选择写入 synthetic_supply 合成行(选择+刷新+金 快照)。
 
 实证缺口(W23/cw_node_validate「P1 r5 补给行 34/34 全缺」的语义补齐):W28 已接
 合成行(节点通过/hp),但补给的**选择**(角色+装备)与**效果归因**(如治疗生效)
@@ -57,7 +57,7 @@ def test_pick_slot_set_then_consume_once() -> None:
         assert got['equip'] == '长枪'
         assert got['has_diamond'] is True
         assert got['refreshed'] is True
-        # W306c:不传 options → 无 options/n_options 键(兜底路径形态容忍)
+        #不传 options → 无 options/n_options 键(兜底路径形态容忍)
         assert 'options' not in got and 'n_options' not in got
         assert consume_last_supply_pick() is None   # 清槽:残留不串下一轮
     finally:
@@ -65,7 +65,7 @@ def test_pick_slot_set_then_consume_once() -> None:
 
 
 def test_pick_slot_options_dynamic_column_count() -> None:
-    """W306c 锁:选项清单按**实际识别列数**记录(n_options=len(options),逐列内容
+    """锁:选项清单按**实际识别列数**记录(n_options=len(options),逐列内容
     透传);列数动态(3 与 5 都成立)——补给通常 4 选 1,augment 改写可变 3-5,禁写死。"""
     try:
         for n in (3, 4, 5):
@@ -165,7 +165,7 @@ def test_synthetic_row_gold_unreadable_omitted(monkeypatch) -> None:
 
 def test_supply_producer_wiring_in_source() -> None:
     """弱锁保底:RunSupplyNode 选定分支真接线(set_last_supply_pick + 选项清单透传,
-    W306c:options=逐列内容动态列表)。"""
+    :options=逐列内容动态列表)。"""
     import inspect
 
     from sr_od.application.currency_war.operations.run_nodes import run_supply_node
@@ -174,7 +174,7 @@ def test_supply_producer_wiring_in_source() -> None:
     assert "options=[{'char': o.char" in src   # 逐列内容透传(实际识别列数)
 
 
-# ===== W311 补给备战状态采集 detour(坐标 2026-08-27 编排者 live 实测后复实现) =====
+# ===== 补给备战状态采集 detour(坐标 2026-08-27 实机实测后复实现) =====
 
 
 def _make_supply_op(monkeypatch):

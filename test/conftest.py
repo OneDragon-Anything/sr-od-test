@@ -1,7 +1,7 @@
 """SR 测试公共脚手架:MockController + SrTestContext + test_context fixture。
 
 从 ZZZ(`zzz-od-test/test/conftest.py`)同步、SrContext 适配。供 fixture-driven op
-流程测试(`test/harness/fixture_controller.py`)使用 —— 跑多节点 op 的完整 ``execute()``。
+流程测试(`test/harness/fixture_controller.py`)使用 —— 跑多节点 op 的完整 ``execute``。
 
 所有测试用 pytest 函数风格 + 本文件 fixture(``test/__init__.py`` 的 ``SrTestBase`` 已废弃移除):
 
@@ -12,7 +12,7 @@
 
 适配 ZZZ 的主要差异:
 
-- ``ZContext`` → ``SrContext``;``ctx.init()`` → SR 的分步
+- ``ZContext`` → ``SrContext``;``ctx.init`` → SR 的分步
   (``init_by_config`` + ``load_instance_config`` + ``ocr.init_model``);
 - ``MockController.get_screenshot`` 返回 ``mock_screenshot``(经基类 ``screenshot``
   包成 ``(time, img)`` 元组,匹配 ``ControllerBase`` 签名)。
@@ -55,9 +55,9 @@ from sr_od.context.sr_context import SrContext
 # --------------------------------------------------------------------------- #
 # 职责划分(文件即进程身份):GUI/调度器→log.txt;MCP server→mcp_server.log。
 # pytest 进程默认**不写任何共享日志文件**(挂一个框架持有的 NullHandler 占位,
-# 防止后续 import 侧的 ``log = get_logger()`` 重新挂默认 log.txt 句柄):
+# 防止后续 import 侧的 ``log = get_logger`` 重新挂默认 log.txt 句柄):
 #
-#   W276 治理(WinError 32 四度实证):轮转型 FileHandler 的换名在 Windows 上
+#   治理(WinError 32 四度实证):轮转型 FileHandler 的换名在 Windows 上
 #   只要文件被任何进程打开即抛 PermissionError(32)。修前 pytest 全部进程共用
 #   .log/test.log,与并行的 sim 批/regen 进程在午夜轮转窗口互踩 → 测试随机红
 #   (非代码错误)。测试日志无运维价值(排查时临时开),最彻底的隔离 =
@@ -256,7 +256,7 @@ def _install_ocr_content_memo(ocr_service, cache_dir: Path | None) -> None:
     orig_get = ocr_service.get_ocr_result_list
     memo: dict[tuple, list[OcrMatchResult]] = {}
     model_fp = _ocr_model_fingerprint(ocr_service.ocr_matcher)  # noqa: SLF001
-    #: 同对象 → 内容哈希的身份缓存(持引用防 GC 后 id 复用;bounded 防涨)。
+    #同对象 → 内容哈希的身份缓存(持引用防 GC 后 id 复用;bounded 防涨)。
     _digest_by_obj: OrderedDict[int, tuple[MatLike, str]] = OrderedDict()
     _DIGEST_CACHE_MAX = 8
 
@@ -408,7 +408,7 @@ def test_image_dir(request) -> Path:
 # 共享态守卫(session 级 test_context 的污染防线,autouse)
 # --------------------------------------------------------------------------- #
 # 背景:``test_context`` 是 session 级共享,测试若裸赋值替换其属性(如
-# ``ctx.run_context = _FakeRunCtx()``)且不还原,污染会泄漏到**后续别的测试
+# ``ctx.run_context = _FakeRunCtx``)且不还原,污染会泄漏到**后续别的测试
 # 文件**才炸(单跑必过/全量必挂的假 flaky;实锤:test_cw_back_layout 裸赋值
 # run_context → test_enter_currency_war_flow 的 op 初始化读 run_context.event_bus
 # AttributeError,曾被误诊为并发干扰)。
@@ -422,7 +422,7 @@ def test_image_dir(request) -> Path:
 #
 # 新增守卫属性:改 ``_GUARDED_CTX_ATTRS``(只守「整个对象被替换」类污染;
 # 对象内部可变状态(如 mock_screenshot)是测试的常规工作面,不在守卫范围)。
-#: 守卫的共享 ctx 属性(整对象替换 = 高危;None 表示属性原本缺失)。
+#守卫的共享 ctx 属性(整对象替换 = 高危;None 表示属性原本缺失)。
 _GUARDED_CTX_ATTRS: tuple[str, ...] = ('run_context', 'controller')
 
 
@@ -436,7 +436,7 @@ _GUARDED_CTX_ATTRS: tuple[str, ...] = ('run_context', 'controller')
 # 本地 server 类测试不受影响。逃生口:环境变量 ``SR_TEST_ALLOW_NET=1``
 # (fresh 环境首次下载 OCR 模型等合法场景)。
 
-#: 放行的回环地址(socket.connect 的 address 可能是 tuple 或裸 str)。
+#放行的回环地址(socket.connect 的 address 可能是 tuple 或裸 str)。
 _LOOPBACK_HOSTS = frozenset({'127.0.0.1', '::1', 'localhost', ''})
 
 

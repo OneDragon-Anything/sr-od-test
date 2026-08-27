@@ -1,4 +1,4 @@
-"""后排槽位布局表测试(W209/ADR-0385 双通道对账勘误后重写,2026-08-26,
+"""后排槽位布局表测试(ADR-0385 双通道对账勘误后重写,2026-08-26,
 含同日件③停机钩子重构)。
 
 锁六件事:
@@ -16,7 +16,7 @@
 5. 系统单位恒最右布局自检(layout_mismatch_by_system_unit):对/错档两态
    (ADR-0385 保留作选档的交叉验证网)。
 6. deploy 剔除系统单位(exclude_system_units)+ off-target 卖出熔断
-   (run 26 崩坏根因②,W209/ADR-0386,见 test_cw_w209_offtarget_sell_guard)。
+   (run 26 崩坏根因②,ADR-0386,见 test_cw_w209_offtarget_sell_guard)。
 """
 import json
 import sys
@@ -155,7 +155,7 @@ def test_cap11_frame_is_8grid(templates):
 # ===== 2/3. cap 差公式路由 + 幻影档不存在 =====
 
 def test_cap_diff_routing():
-    """W209/ADR-0385 口述公式「后台格数 = 6+(cap−level)」路由:
+    """ADR-0385 口述公式「后台格数 = 6+(cap−level)」路由:
     diff0→6 / diff1→7(已建档,2026-08-26 佩佩局实锤)/ diff≥2→8;
     diff<0(读错族)按 0;diff>2(域外)按 2。level 单独不参与。"""
     from sr_od.application.currency_war.cw_back_layout import (
@@ -229,7 +229,7 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
     assert cbl.select_back_layout(None, frame) == (6, '后排')
 
 
-# ===== 4b. CV 通道 + 双通道对账(ADR-0385 口述双通道指令,W209 追加) =====
+# ===== 4b. CV 通道 + 双通道对账(ADR-0385 口述双通道指令,追加) =====
 
 def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模板加载惰性
     """CV 通道实测格数:槽位存在性 std 签名(真 fixture 全量标定)。
@@ -406,7 +406,7 @@ def test_deploy_excludes_system_units():
 
 
 
-# ===== 6b. 布局留证采集钩子(W209i/ADR-0385 决策 12:停机钩子降级废弃)=====
+# ===== 6b. 布局留证采集钩子(ADR-0385 决策 12:停机钩子降级废弃)=====
 # run 27 停机事故实证:货币战争备战实时倒计时,停 bot ≠ 停游戏——hook 停机后
 # 画面自行推进到首领战败结算(14:09 停 → 14:16 结算),「停机保画面待采集」
 # 对实时制游戏是虚假承诺。降级:n_raw=7 → obs_conflict 留证+去重截图不停机;
@@ -414,7 +414,7 @@ def test_deploy_excludes_system_units():
 
 def test_layout_hook_no_stop_only_evidence(
         test_context, templates, monkeypatch, tmp_path, frame):
-    """W209i 降级锁(7 格建档后语义):n_raw 未建档(用 9 模拟未来新档,
+    """降级锁(7 格建档后语义):n_raw 未建档(用 9 模拟未来新档,
     CV 三读稳定)→ **不停机**,落 back_layout_unarchived_grid 留证(带公式/
     CV/防抖序列),无 flag 文件;真实 7 格(diff==1)已建档 → 见
     test_layout_hook_silent_on_archived。"""
@@ -489,7 +489,7 @@ def test_layout_hook_silent_on_archived(
 
 
 def test_layout_hook_no_stop_machinery_in_src():
-    """W209i 源码级锁:read_deployed_chars 不得再调 stop_running/写停机 flag
+    """源码级锁:read_deployed_chars 不得再调 stop_running/写停机 flag
     (停机钩子整段废弃,回流即红)。"""
     import inspect
     from sr_od.application.currency_war import cw_identity_obs
@@ -507,7 +507,7 @@ def test_pending_7slots_machinery_removed():
     assert not hasattr(cbl, '_PENDING_7SLOT_LEVELS')
 
 
-# ===== 6c. CV 新格数防抖重读(W209h,ADR-0385 决策 11;run 27 停机事故) =====
+# ===== 6c. CV 新格数防抖重读(ADR-0385 决策 11;run 27 停机事故) =====
 # 事故:特效/粒子瞬态把 1458 位单帧 std 顶到 6.5(阈值 6.0 擦线,真槽 ≥10.5/
 # 背景 ≤2.9 之间无人带)→ CV 假阳 7 → 停机。修:新格数读数(≠公式 且 ∉{6,8})
 # 单帧不行动——重读 2 次三次一致才采 CV;任一不一致 = 瞬态自愈退公式+留证。
@@ -613,7 +613,7 @@ def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
         journal.read_text(encoding='utf-8')
 
 
-# ===== 6d. cap 通道防抖接线(W218,ADR-0395;run 27 型 = 读数瞬态直驱行动) =====
+# ===== 6d. cap 通道防抖接线(ADR-0395;run 27 型 = 读数瞬态直驱行动) =====
 # 高危点:resolve_back_slots 的 cap 直读(未显式传 cap 时)进 diff → 公式通道
 # 选档;deploy_bench 板满门 cap 直读(→ 留 bench 战力真空,r60 贵方向)。
 # 修:两处消费点改走 read_deploy_cap_debounced(ADR-0286 域防抖:域外重读
@@ -670,7 +670,7 @@ def test_cap_still_domain_rejected_falls_baseline(tmp_path, monkeypatch):
 
 def test_deploy_bench_gate_wired_to_debounced_reader():
     """静态接线锁:deploy_bench 板满门走 read_deploy_cap_debounced,
-    无裸 read_deploy_cap( 直调(W218 收口,防回归)。"""
+    无裸 read_deploy_cap( 直调(收口,防回归)。"""
     src = (_ROOT / 'src/sr_od/application/currency_war/operations/prep'
            / 'deploy_bench.py').read_text(encoding='utf-8')
     assert 'read_deploy_cap_debounced' in src

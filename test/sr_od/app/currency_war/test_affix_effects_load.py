@@ -1,6 +1,6 @@
-"""load_affix_effects_from_file ast 解析锁(W266)。
+"""load_affix_effects_from_file ast 解析锁。
 
-W266 把原 ``exec`` 解析换成 ast 静态提取(零代码执行)。本文件锁两件事:
+把原 ``exec`` 解析换成 ast 静态提取(零代码执行)。本文件锁两件事:
 
 1. **行为等价**:对真实文件形态(writer 生成 / 测试 seed 的 AnnAssign 形态、plain Assign 形态)
    与 exec 参照实现**同输入同输出**;

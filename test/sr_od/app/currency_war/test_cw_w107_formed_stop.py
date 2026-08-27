@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""W107/ADR-0343 成型停手纪律单帧锁。
+"""ADR-0343 成型停手纪律单帧锁。
 
 锁行为(每条=一个确定输入下的确定行为):
 - 成型态五项判定([13] 三件套+r7+/P1)逐项:满足→买候选被拦/缺一→放行;
@@ -7,7 +7,7 @@
 - 开关:formed_stop_enabled=False=旧行为;
 - 检查器联动:overflow_gold_zero_buy_streak 对 formed_stop 轮重置 streak
   (旧局无字段不受影响);
-- sim 端到端(W111 改 regen-robust):小窗 seed 扫描证存在性——池内
+- sim 端到端(改 regen-robust):小窗 seed 扫描证存在性——池内
   必有成型停手触发局,标志入账本且门咬住(固定 seed 触发面随池
   再生漂移,锁瞬时 seed=池耦合 change-detector);
   关臂同 seed 标志恒 False。
@@ -71,9 +71,9 @@ def _cands() -> list[Candidate]:
 def _formed_state(**kw) -> GameState:
     """成型态:DOT队 form_tiers 全满 + 核心**上场** 2★ + P1 r7。
 
-    W119/ADR-0347 构造适配:formed_stop 收编 form_ok——核心须上场
+    ADR-0347 构造适配:formed_stop 收编 form_ok——核心须上场
     (旧帧核心躺 bench;「核心须上场」是 2026-08-25 用户裁决,
-    W114 影子批已注记本锁需同步)。"""
+    影子批已注记本锁需同步)。"""
     comp = get_comp('DOT队')
     core = intention_core(comp)
     board = {f: t for f, t in comp.form_tiers.items()}
@@ -98,9 +98,9 @@ def _sess_locked(comp_name: str = 'DOT队') -> StrategySession:
 def test_formed_stop_blocks_buy_keeps_exceptions() -> None:
     """成型态(gap=0)买被拦;等级买/刷新/卖/上阵保留([12]/[33] 例外)。
 
-    W288/ADR-0418 gate_min_round 前移 8→6 后 r7 落进新授权窗——窗内
+    ADR-0418 gate_min_round 前移 8→6 后 r7 落进新授权窗——窗内
     gap>0 时承接维不停手继续投资,与「成型停手拦买」原意图冲突;与
-    W227 对 ADR-0418 的既定改法同式,夹具改构造「窗内∧承接达标
+    对 ADR-0418 的既定改法同式,夹具改构造「窗内∧承接达标
     (gap=0)」帧(hp 64 → boss 投影后 hp 档达标)锁「窗内 gap=0 仍
     停手拦买」:停手结构本身在原参数语义下不变。」"""
     # 承接达标构造:镜像 w227 locked 帧形态——单核心上场帧板面维不足
@@ -124,7 +124,7 @@ def test_formed_stop_blocks_buy_keeps_exceptions() -> None:
 
 
 def test_unformed_each_piece_passes() -> None:
-    """form_ok 谓词缺一即不辖(W119/ADR-0347 收编后;Q2 裁决:等级
+    """form_ok 谓词缺一即不辖(ADR-0347 收编后;Q2 裁决:等级
     不再是独立条件——lv4 帧随裁决改为合法成型,不辖项换成谓词族):
     ① 核心 2★ 躺 bench(未上场,「核心须上场」裁决);
     ② 羁绊未满(主档缺 1);
@@ -170,9 +170,9 @@ def test_unlocked_intent_not_governed() -> None:
 
 
 def test_emergency_does_not_exempt() -> None:
-    """应急态(hp≤emergency_hp)不豁免——W105 反因路径正是对象。
+    """应急态(hp≤emergency_hp)不豁免——反因路径正是对象。
 
-    W288/ADR-0418 前移后 r7 ∈ 新授权窗,应急帧 hp=10 必然 gap>0,
+    ADR-0418 前移后 r7 ∈ 新授权窗,应急帧 hp=10 必然 gap>0,
     承接维接管=继续投资(与「应急不豁免」断言正交);本锁用 replace
     把 min_round 钉回 8,在旧窗参数下保住原边界意图(应急帧停在授权
     窗外时停手拦买、应急不额外豁免);窗内 gap>0 时承接维让应急让位
@@ -187,7 +187,7 @@ def test_emergency_does_not_exempt() -> None:
 
 
 def test_emergency_in_new_window_handoff_takes_over() -> None:
-    """W313 新窗行为锁(ADR-0418):授权窗内(r7)承接缺口帧 gap>0 →
+    """新窗行为锁(ADR-0418):授权窗内(r7)承接缺口帧 gap>0 →
     承接维接管,应急态(hp≤25)让位——现行行为=不停手继续投资(买
     候选保留;应急豁免逻辑只作用于停手线,不反拦承接投资例外)。"""
     s = _formed_state(hp=10)   # 应急 ∧ 低血 → 承接缺口必 >0
@@ -227,8 +227,8 @@ def test_checker_exempts_formed_stop_rounds() -> None:
 
 
 def test_sim_formed_stop_e2e_seed_scan() -> None:
-    """sim 端到端(regen-robust,W111):快照池每次局终自动再生
-    (ADR-0344),固定 seed 的触发面随池内容漂移(W109 实证:seed 33
+    """sim 端到端(regen-robust):快照池每次局终自动再生
+    (ADR-0344),固定 seed 的触发面随池内容漂移(实证:seed 33
     在池 4d28822c 下无触发轮)——改锁**存在性语义**:小窗 seed 扫描
     证明「池内必有成型停手触发局且门咬住」;窗口内无任何触发局 =
     成型停手在 sim 真实轨迹上失活,锁必须红(检测价值不降)。
@@ -248,7 +248,7 @@ def test_sim_formed_stop_e2e_seed_scan() -> None:
     def _behavior(row: dict) -> dict:
         return {k: v for k, v in row.items() if k != 'formed_stop'}
 
-    # W132/ADR-0353:兜底门改结构判据后,窗口内首个触发局可能是
+    # ADR-0353:兜底门改结构判据后,窗口内首个触发局可能是
     # 「仅标志局」(触发轮无被拦买入,两臂行为同)——扫描取首个
     # **咬合局**(有触发且有行为分歧且分歧轮被拦),存在性语义不变。
     picked = None

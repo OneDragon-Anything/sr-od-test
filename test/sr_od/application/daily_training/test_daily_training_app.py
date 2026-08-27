@@ -13,12 +13,12 @@ fixture(screens/):
 
 注:
 - 两个 ``phone_menu_utils`` 函数是纯截图函数(裁 ``GUIDE_TRAINING_REWARD_CLAIM_RECT`` → 模板匹配
-  ``training_reward_gift`` / ``training_reward_completed``),不跑 op ``execute()``(后者在无
+  ``training_reward_gift`` / ``training_reward_completed``),不跑 op ``execute``(后者在无
   running 状态的 mock harness 下不收敛,见 echo_of_war 测试说明)。
 - 不 pin 精确完成数 / 是否命中(随账号每日状态变 + 小区域模板匹配有抖动):只验证提取管线通
   (裁剪 → 模板匹配 → 返回正确类型),真坏了会抛异常或返错类型。
 - ``claim_reward`` 节点的语义锁(未完成=良性跳过)用全 mock 节点级测试,不依赖存档截图
-  (W294:礼盒模板对灰态礼盒也命中,当天实训未做时不可把「还未完成」当硬失败)。
+  (:礼盒模板对灰态礼盒也命中,当天实训未做时不可把「还未完成」当硬失败)。
 """
 
 from types import SimpleNamespace
@@ -71,7 +71,7 @@ class TestDailyTrainingApp:
 
 
 class TestClaimRewardSemantics:
-    """claim_reward 节点语义锁(W294):「还未完成」= 良性业务态,跳过收批不失败。
+    """claim_reward 节点语义锁:「还未完成」= 良性业务态,跳过收批不失败。
 
     背景:礼盒模板(带红叹号)对未达标的灰态礼盒也会命中(2026-08-27 两次实机实证),
     当天实训没做时点击礼盒无效果,旧逻辑把「复核未完成」当 round_fail 沿失败链把
@@ -121,7 +121,7 @@ class TestClaimRewardSemantics:
 
     def test_incomplete_is_benign_skip(self, test_context: SrTestContext,
                                        monkeypatch: pytest.MonkeyPatch) -> None:
-        """点击礼盒后复核仍未完成(当天实训未做)→ 良性跳过成功收批,不失败(W294)。"""
+        """点击礼盒后复核仍未完成(当天实训未做)→ 良性跳过成功收批,不失败。"""
         app = self._make_app(test_context, monkeypatch, completed_returns=[False, False])
         result = app.claim_reward()
         assert result.is_success, (

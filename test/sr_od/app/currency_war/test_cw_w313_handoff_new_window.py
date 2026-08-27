@@ -1,8 +1,8 @@
-"""W313/ADR-0418 新授权窗行为锁:gate_min_round 8→6 后 {r6..r9} 的
+"""ADR-0418 新授权窗行为锁:gate_min_round 8→6 后 {r6..r9} 的
 承接门家族放行行为(旧窗边界语义由 w96/w232 replace 钉窗锁与
 w227/w252/w242/adr0293 已同步先例覆盖,本文件只锁新窗正面行为)。
 
-锁行为(每条=一个确定输入下的确定行为,帧构造经 W310 探针实证):
+锁行为(每条=一个确定输入下的确定行为,帧构造经探针实证):
 - 生成层 C 臂:r7(新窗内)承接缺口 gap>0 时,deployed 目标件+店内
   同名 → 副本候选放行,tag='line_opportunistic';同帧 r5(窗外)
   gap=0 → 买候选不生成(零漂移边界);
@@ -64,7 +64,7 @@ def _sess() -> StrategySession:
 
 
 def _state(round_num: int, hp: int = 40) -> GameState:
-    """W310 探针帧:deployed 目标件单件 + 店内同名;hp=40(低血,
+    """探针帧:deployed 目标件单件 + 店内同名;hp=40(低血,
     hp 维缺口)+ 板面浅 → 新窗内 gap=1、r5 窗外 gap=0。"""
     return GameState(
         plane=1, round_num=round_num, gold=60, level=5, hp=hp,
@@ -78,8 +78,8 @@ def _state(round_num: int, hp: int = 40) -> GameState:
 
 def test_c_arm_new_window_r7_allows_line_opportunistic_copy() -> None:
     """C 臂(ADR-0405/0411 无条件):r7 ∈ 新窗 ∧ gap>0 → deployed
-    目标件的店内同名副本放行,tag='line_opportunistic'(W288 前该帧
-    基线 gap=0 候选=[];W310 探针实证)。"""
+    目标件的店内同名副本放行,tag='line_opportunistic'(gate 前移前该帧
+    基线 gap=0 候选=[];探针实证)。"""
     sess = _sess()
     st = _state(7)
     assert handoff_gate_gap(st, sess, _REG) == 1

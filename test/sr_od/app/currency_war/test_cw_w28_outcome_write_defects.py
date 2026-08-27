@@ -149,7 +149,7 @@ def test_second_settlement_not_tagged(monkeypatch) -> None:
     op._record_round_outcome(screen=None)
     op._record_round_outcome(screen=None)
     assert [c['source'] for c in captured] == ['recovered', '']
-    # W239:屏面「X-Y」解析升级为全路径(残留专用 → 单调门内恒采纳),
+    #屏面「X-Y」解析升级为全路径(残留专用 → 单调门内恒采纳),
     # 第二行(非残留)round 也按屏面真值 6 落,不再保 last-known 兜底 1。
     assert captured[1]['outcome'].round_num == 6
     assert captured[1]['outcome'].plane == 1
@@ -163,7 +163,7 @@ def test_fresh_match_not_tagged(monkeypatch) -> None:
         ocr_texts=['挑战成功', '1-6', '战斗'])
     op._record_round_outcome(screen=None)
     assert captured[0]['source'] == ''
-    # W239:屏面解析全路径生效 → round=6(旧锁「保 last-known 1」已随 W239 失效)
+    #屏面解析全路径生效 → round=6(旧锁「保 last-known 1」已随 失效)
     assert captured[0]['outcome'].round_num == 6
     # 场景2:宽限内但已见过结算屏(续跑/恢复段)
     op2, captured2 = _make_loop(

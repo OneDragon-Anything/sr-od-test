@@ -1,4 +1,4 @@
-"""停机刹车语义锁(ADR-0396,W217;ADR-0406 手动端点豁免语义修订):停机信号后零游戏输入。
+"""停机刹车语义锁(ADR-0396;ADR-0406 手动端点豁免语义修订):停机信号后零游戏输入。
 
 锁的是**语义**不锁实现:
 - 闩语义:运行中被 stop_running 打断 → is_stop_interrupted=True;idle 杂散
@@ -15,7 +15,7 @@
 
 run 26 实证背景:.log/mcp_server.log 08-26 12:56:12「已停止[gui:hotkey]」后
 12:56:16 director 仍点「出战成功」——stop 只设标志位,轮内执行链不查。
-ADR-0406 实证背景(W241 A1b):stop_run 返回≠run 线程结束,MCP 手动端点在
+ADR-0406 实证背景(A1b):stop_run 返回≠run 线程结束,MCP 手动端点在
 run 收口期清全局闩 → unwind 中的多动作节点失去守卫成幽灵输入。
 """
 import threading
@@ -248,7 +248,7 @@ class _InnerOp(Operation):
 
 
 class _OuterOp(Operation):
-    """外环(模拟 PrepDirector/battle_loop 形态):节点内调子 op.execute(),
+    """外环(模拟 PrepDirector/battle_loop 形态):节点内调子 op.execute,
     子 op 返回失败后**外环仍想继续下一节点再点一次**——守卫语义下这一次
     必须被拦,且异常穿出到外环 execute 之外。"""
 

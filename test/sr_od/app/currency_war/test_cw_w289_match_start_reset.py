@@ -1,6 +1,6 @@
-"""W289(ADR-0419)新局开始全量状态重置锁:上一局残留不进下一局。
+"""ADR-0419新局开始全量状态重置锁:上一局残留不进下一局。
 
-根因(W285 抽样判读 §三 deploy_cap_vs_level 4/4 / phase_round 2/3 / level):run 异常
+根因(抽样判读 §三 deploy_cap_vs_level 4/4 / phase_round 2/3 / level):run 异常
 停在上局对局中时 ``ctx.cw_match`` 残留非 None → 下一次入口链开**新局**时
 ``RunLoop.handle_init`` 续跑判定(``cw_match is None``)误判为续跑,把旧 session 整体
 延用 —— level 单调守卫拿上局值打新局真读(obs_conflict 三层 329 张残留源)。
@@ -34,9 +34,9 @@ class _FakeCtx:
 
 
 def _polluted_match() -> CurrencyWarMatch:
-    """构造带跨局毒值的容器(覆盖 W285 三层实证字段 + tracked 宿主代表)。"""
+    """构造带跨局毒值的容器(覆盖 三层实证字段 + tracked 宿主代表)。"""
     s = StrategySession()
-    s.last_level_obs = 5          # 上局等级(W285 cap_vs_level 抽样 4/4 的旧 level=5)
+    s.last_level_obs = 5          # 上局等级(cap_vs_level 抽样 4/4 的旧 level=5)
     s.last_streak = -7            # 上局连败(economy fold 门输入)
     s.last_hp_real = 12           # hp 对账锚
     s.tracked_deployed = [BenchChar(slot=1, char_id='旧局角色')]
@@ -71,7 +71,7 @@ def test_discard_idempotent_when_no_container():
 
 def test_phase_round_cross_match_reset():
     """锁 3(phase_round 跨局重置豁免语义):last-known-good 在新局边界被清,
-    单调守卫不会拿上局 [9,9] 打回新局 1-9(W285 phase_round 抽样 2/3 ✗ 根因)。"""
+    单调守卫不会拿上局 [9,9] 打回新局 1-9(phase_round 抽样 2/3 ✗ 根因)。"""
     import sr_od.application.currency_war.cw_observation as obs_mod
     obs_mod._last_phase_round = (3, 9)     # 模拟上局 P3-9 残留
     try:

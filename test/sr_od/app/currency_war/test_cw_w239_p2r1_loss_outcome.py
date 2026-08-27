@@ -1,4 +1,4 @@
-"""W239 行为锁:P2r1 死亡局 outcome 的 plane 归属与落账(W237 发现的遥测缺口)。
+"""行为锁:P2r1 死亡局 outcome 的 plane 归属与落账(遥测缺口)。
 
 缺口两形态(replay 实证,44 例 P2r1 死亡局复算):
 - **败局行结构性缺失**(主导):输轮 outcome 写入点挂分支3b(「前往结算」OCR 文本门),
@@ -8,7 +8,7 @@
   首个结算前若无帧成功读到「2-1」,缓存停在 (1,9) → 行落 (1,9) + node_type=普通战斗
   (P1r9 恒为 boss,不可能;run_20260825_145641 等两例实锤)。
 
-修复(观测链零行为变更,同 W222 先例):
+修复(观测链零行为变更,同 先例):
 - 1f 翻页前补 telemetry-only 记录(不喂 on_round_end/last_hp/summary 链);
 - 结算屏头部「X-Y」屏面真值升级为全路径采纳(W28 残留专用 → 单调门内恒采纳)。
 
@@ -204,7 +204,7 @@ def test_loss_page_failures_do_not_raise(monkeypatch) -> None:
 
 
 def test_branch_wiring_in_source() -> None:
-    """loop() 源码弱锁:1f 分支调 _record_loss_page;3b 原输轮记录仍在。"""
+    """loop 源码弱锁:1f 分支调 _record_loss_page;3b 原输轮记录仍在。"""
     from sr_od.application.currency_war.operations import battle_loop
     src = inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
     # 1f(失败结算页)翻页前补录

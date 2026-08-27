@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 def test_supply_options_five_column_fixture(test_context: SrTestContext) -> None:
-    """W306c 正样本:5 选项特例帧 → 动态探测到 **5** 列(禁写死 4/5 的行为证明)。
+    """正样本:5 选项特例帧 → 动态探测到 **5** 列(禁写死 4/5 的行为证明)。
 
     fixture ``screens/货币战争-补给/default.png|webp``(1-5 补给,5 张角色卡各带装备:
     银枝/希儿/丹恒·腾荒/飞霄/忘归人——augment 改写特例)。用户口径:补给通常 4 选 1,

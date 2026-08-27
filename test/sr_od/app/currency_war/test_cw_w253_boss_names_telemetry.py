@@ -1,17 +1,17 @@
-"""W253 行为锁:outcomes 行补 boss_names/难度/词缀字段(W244 数据欠账)。
+"""行为锁:outcomes 行补 boss_names/难度/词缀字段(数据欠账)。
 
-W244 结论④:P1 boss Δ 双峰归因被堵在「不知道每局 boss 是谁」——outcomes schema
+结论④:P1 boss Δ 双峰归因被堵在「不知道每局 boss 是谁」——outcomes schema
 不记录 boss 身份/难度/affix。修法(battle_loop 局终链之外的单一写入端):
 ``TelemetryRecorder.record_outcome`` 落行时从 ``ctx.cw_match.session`` 快照
 
 - ``boss_names`` = session.briefing_bosses 全量透传(位面序 3 元素;
   None=该位面徽章态采不到身份,**保位勿滤**——滤掉会让后续位面名字左移错位,
-  W221/ADR-0398);
+  ADR-0398);
 - ``selected_difficulty`` / ``enemy_affixes`` = 同 session 的职级与简报词缀
-  (W244 §2 「难度/affix 不可分层」缺口一并补)。
+  (§2 「难度/affix 不可分层」缺口一并补)。
 
 旧行兼容:三个字段都是 schema 末尾追加、可选默认——旧记录无键,读取端须走
-``.get()``(本文件末尾锁钉死该契约)。record 端快照 best-effort(镜像 r339 板深
+``.get``(本文件末尾锁钉死该契约)。record 端快照 best-effort(镜像 r339 板深
 快照惯例):session 缺字段/无 ctx 时落默认值,不阻塞记录。
 
 纯桩测试(TelemetryRecorder 指向 tmp_path;set_ctx_match 后 finally 还原,
@@ -103,7 +103,7 @@ def test_record_outcome_empty_briefing_bosses_is_none(tmp_path) -> None:
 def test_legacy_row_without_fields_readable(tmp_path) -> None:
     """旧 schema 行(无三新键)读取端容忍:.get 取默认不 KeyError。
 
-    锁的是消费端契约——历史语料(outcomes.jsonl 大量 W244 前旧行)与新代码共存时,
+    锁的是消费端契约——历史语料(outcomes.jsonl 大量 前旧行)与新代码共存时,
     分层/Δ池生成器等读 side 必须走 .get('/默认'),不得裸下标。
     """
     legacy = {'schema_version': 1, 'ts': '2026-08-26T09:00:00', 'run_id': 'run_old',

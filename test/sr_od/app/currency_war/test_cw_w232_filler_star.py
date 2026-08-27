@@ -1,6 +1,6 @@
-"""W232 产星通道锁(ADR-0402;方案 A filler_star 期权分 + 方案 B 方向门豁免)。
+"""产星通道锁(ADR-0402;方案 A filler_star 期权分 + 方案 B 方向门豁免)。
 
-锁定对象(W231 诊断 §③ 定稿,W232 实现批):
+锁定对象(诊断 §③ 定稿,实现批):
 1. 评分项 filler_star:已 deployed 填充件(目标集外)第 2 份同名 1★
    计期权分;bench-only 囤件不折;目标集内名让位 merge_progress;
    star≥2 回落;unit=0 关闭。
@@ -8,17 +8,17 @@
    冷启动例外 r383b 的全轮域推广);默认关。
 3. 默认双关零漂移:filler_star_unit=0 且 pair_copy_direction_exempt=
    False(=DEFAULT_REGISTRY)时,方向外 deployed 填充件同名卡不生成
-   任何买候选(r410 守卫 + 方向门现行为,W96 锁的语义延续)。
-4. r410 守卫 A 臂豁免:filler_star_unit>0 时已 deployed 名的同名副本
+   任何买候选(同轮买卖互斥守卫 + 方向门现行为,与 test_cw_w96 锁的语义延续)。
+4. 同轮买卖互斥守卫 A 臂豁免:filler_star_unit>0 时已 deployed 名的同名副本
    生成候选(bench-only 囤件名不豁免);copies_cap 照常辖。
 5. 评分断言:A+B 开臂时,deployed 填充件第 2 份买入候选正分且
    filler_star 维构成 delta。
 
-W288/ADR-0418 gate_min_round 前移 8→6 后,本文件夹具基准轮 r7 落进
+ADR-0418 gate_min_round 前移 8→6 后,本文件夹具基准轮 r7 落进
 新授权窗 {r6..r9}——窗内 gap>0 时承接门 C 臂独立放行同名副本
 (line_opportunistic),与 A/B 臂辖域无关,会混淆各臂边界意图。
 本文件全部 registry 用 replace(handoff_gate_min_round=8) 钉回旧窗,
-使各臂边界断言在原参数语义下成立;新窗放行行为由 W313 新窗锁覆盖。
+使各臂边界断言在原参数语义下成立;新窗放行行为由 test_cw_w313 新窗锁覆盖。
 """
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ from sr_od.application.currency_war.decision_v2.scoring import (
     score_state,
 )
 
-# 旧窗钉(W288/ADR-0418 前移后用 min_round=8 保各臂边界意图,见文件头)
+# 旧窗钉(ADR-0418 前移后用 min_round=8 保各臂边界意图,见文件头)
 _REG = replace(DEFAULT_REGISTRY, handoff_gate_min_round=8)
 _AB = replace(_REG, filler_star_unit=1.0,
               pair_copy_direction_exempt=True)
@@ -158,7 +158,7 @@ def _shop_of(cands: list) -> list[str]:
 
 def test_default_arm_no_candidate_off_direction_deployed_filler() -> None:
     """默认双关(unit=0 + exempt=False):方向外 deployed 填充件同名卡
-    不生成任何买候选——r410 守卫 + 方向门现行为(W96 r7 帧锁的语义
+    不生成任何买候选——同轮买卖互斥守卫 + 方向门现行为(test_cw_w96 的 r7 帧锁语义
     延续;零漂移门的行为面)。"""
     sess = _sess()
     st = _state(shop=[ShopCard(x=1, faction=_FILLER_FAC, name=_FILLER,
@@ -175,8 +175,8 @@ def test_b_exempts_direction_gate_before_pair_wants() -> None:
     st = _state(shop=[ShopCard(x=1, faction=_FILLER_FAC, name=_FILLER,
                                cost=3)])
     b_only = replace(_REG, pair_copy_direction_exempt=True)
-    # B 单独:pair_wants 方向门拦(r410 守卫也拦 deployed 名)——
-    # 但 B 的豁免在 _buy_tag 层,r410 守卫仍在 → deployed 副本需 A 臂
+    # B 单独:pair_wants 方向门拦(同轮买卖互斥守卫也拦 deployed 名)——
+    # 但 B 的豁免在 _buy_tag 层,同轮买卖互斥守卫仍在 → deployed 副本需 A 臂
     # 开才过生成层;b_only 下该帧不生成(B 单独对 deployed 名无效果,
     # 对 bench-only 名有效,见下一用例)
     assert _FILLER not in _shop_of(generate_candidates(st, sess, b_only))
@@ -189,7 +189,7 @@ def test_b_exempts_direction_gate_before_pair_wants() -> None:
 
 def test_b_alone_unlocks_bench_only_copy() -> None:
     """B 单独:bench-only 同名副本(方向外)候选生成——无 deployed 名
-    → r410 守卫不辖,豁免只跳过方向门。"""
+    → 同轮买卖互斥守卫不辖,豁免只跳过方向门。"""
     sess = _sess()
     st = _state(
         deployed=[_deployed(_CARRY, '列车同行')],
@@ -204,11 +204,11 @@ def test_b_alone_unlocks_bench_only_copy() -> None:
     assert got and got[0].tag == 'copy'
 
 
-# --- 件4:r410 守卫 A 臂豁免 --------------------------------------------------
+# --- 件4:同轮买卖互斥守卫 A 臂豁免 --------------------------------------------------
 
 
 def test_r410_guard_a_arm_exemption_scope() -> None:
-    """filler_star_unit>0 时已 deployed 名的同名副本过 r410 守卫;
+    """filler_star_unit>0 时已 deployed 名的同名副本过 同轮买卖互斥守卫;
     bench-only 名不豁免(默认关=W96 守卫现行为)。"""
     sess = _sess()
     # deployed 填充件名:A 臂开(无 B)→ 过守卫;但方向门仍拦

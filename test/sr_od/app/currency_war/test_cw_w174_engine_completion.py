@@ -1,11 +1,11 @@
-"""W174/ADR-0371 引擎补完守卫单帧锁(own-gap 修法)。
+"""ADR-0371 引擎补完守卫单帧锁(own-gap 修法)。
 
 锁验收(「拥有≥门槛 ∧ 上场<门槛时的上场选择行为」;锁契约不锁分布):
 1. 缺口帧发补完事务:pair 体系 owned≥tier ∧ on-board<tier → bench 体系件
    上场(cap 满时换下最弱非保护件);
 2. 保护序:pair/引擎件不被换下(undeploy 只吃非保护散件);
 3. 无缺口帧(owned≥tier∧on-board≥tier / owned<tier)不发射;
-4. flag off(engine_completion=False)逐位回 W170 后行为(无补完事务);
+4. flag off(engine_completion=False)逐位回 后行为(无补完事务);
 5. 末窗豁免:r8 补完事务照发(净效果复核过);boss 冻结轮不启动;
 6. 希儿系单卡判据(希儿在手未上场 → 上);
 7. bench 容量不足卖最弱非保护 bench 件腾位。
@@ -110,7 +110,7 @@ def test_completion_protects_engine_and_pair_pieces():
 
 def test_completion_no_gap_no_tx():
     """③无缺口不发射:owned≥tier∧已上场够 / owned<tier → 无补完事务
-   (获取问题不辖——本批边界,归 W175 早期买入门)。"""
+   (获取问题不辖——本批边界,归 早期买入门)。"""
     # 已成帧:仙舟 3 上场 + 列车 2 上场 → 无缺口
     st = _state(
         deployed=('丹恒·饮月', '符玄', '藿藿', '姬子·启行', '姬子'),
@@ -125,7 +125,7 @@ def test_completion_no_gap_no_tx():
 
 
 def test_completion_flag_off_restores_baseline():
-    """④A/B 通道:engine_completion=False 回 W170 后行为(同帧无补完
+    """④A/B 通道:engine_completion=False 回 后行为(同帧无补完
    事务);对照组(开)同帧有——差异即本批行为面。"""
     st = _t42_frame()
     sess = _sess(('列车同行', '仙舟'))
@@ -198,7 +198,7 @@ class _LogRecorder:
 
 def test_engine_complete_log_undeploy_roster(monkeypatch: pytest.MonkeyPatch):
     """⑧W228 观测行格式锁:engine-complete 行 undeploy 追加下场名单
-    (角色名 list;空则 [])——W220 判读问题⑥,补完保护锚点(W192-3)
+    (角色名 list;空则 [])——判读问题⑥,补完保护锚点(-3)
     需名单级可核。零行为改动:仅锁日志行格式。"""
     rec = _LogRecorder()
     monkeypatch.setattr(cw_evolution_mod, 'log', rec)

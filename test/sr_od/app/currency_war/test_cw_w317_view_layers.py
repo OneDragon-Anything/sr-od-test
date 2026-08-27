@@ -1,6 +1,6 @@
-"""W317(G4 读端欠账):hp/anomalies 视图显示 killed/boss_names/node_type/词缀。
+"""(G4 读端欠账):hp/anomalies 视图显示 killed/boss_names/node_type/词缀。
 
-W244 建 outcomes 的 killed/boss_names/enemy_affixes 字段后,视图读端
+建 outcomes 的 killed/boss_names/enemy_affixes 字段后,视图读端
 未跟上——断层归因(这轮输给谁/词缀是什么)要另开窗口直查 jsonl。
 本文件用 tmp_path 直写 jsonl 样本行锁定输出格式(直写而非走
 record_outcome:锁的是「视图对已落盘行的渲染契约」,与写端解耦)。

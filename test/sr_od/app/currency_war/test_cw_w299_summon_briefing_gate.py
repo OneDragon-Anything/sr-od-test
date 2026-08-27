@@ -1,6 +1,6 @@
-"""W299 summon 兜底 × 首领简报画面负样本回放锁。
+"""summon 兜底 × 首领简报画面负样本回放锁。
 
-背景(2026-08-27,W295 抽样判读):summon_unknown 兜底批 133 张中 21 张是
+背景(2026-08-27,抽样判读):summon_unknown 兜底批 133 张中 21 张是
 「货币战争-简报」画面帧(2026-08-18 23:13 采集,火线动力机甲/绘师家族产业/
 本场对局首领 UI)——采集时 r330 帧态门(08-21)与 ADR-0269 两段式(08-23)
 尚不存在,兜底在非备战画面跑了 bench 槽判定并停机。现行为:两段式第一段
@@ -40,7 +40,7 @@ def test_briefing_id_mark_hits_fixture(test_context, state: str) -> None:
     """负样本成立之根:简报 id_mark「本场对局首领」在归档帧上真命中。
 
     若此处失配(OCR 形变/坐标漂移),两段式第一段就看不见简报 →
-    summon 兜底会重新在简报帧上跑 bench 判定(= W295 病灶复发)。
+    summon 兜底会重新在简报帧上跑 bench 判定(= 病灶复发)。
     """
     from one_dragon.base.screen import screen_utils
     frame = _load(test_context, state)
@@ -53,7 +53,7 @@ def test_briefing_id_mark_hits_fixture(test_context, state: str) -> None:
 
 @pytest.mark.parametrize('state', _W299_FIXTURES)
 def test_prep_like_frame_rejects_briefing(test_context, state: str) -> None:
-    """W299 主锁:简报帧 is_prep_like_frame 必 False(21 张 B 族的代表 6 张)。"""
+    """主锁:简报帧 is_prep_like_frame 必 False(21 张 B 族的代表 6 张)。"""
     from sr_od.application.currency_war.cw_obs_core import is_prep_like_frame
     frame = _load(test_context, state)
     assert is_prep_like_frame(test_context, frame) is False, (

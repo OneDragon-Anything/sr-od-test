@@ -174,12 +174,12 @@ class TestBackToNormalWorldPlusFallback:
 
 
 class TestNamelessHonorBranches:
-    """无名勋礼退出链分支(W293):推广页 / 等级加速弹窗 / 主面板。
+    """无名勋礼退出链分支:推广页 / 等级加速弹窗 / 主面板。
 
     背景:2026-08-26 版本周期首进无名勋礼先落购买推广页(点「开启无名勋礼」
     不会付费,用户裁决),实证退出链(编排者 2026-08-27 live 四步全走通):
     推广页 → 开启 → 等级加速弹窗(点提示位关闭)→ 主面板 → 右上角关闭 → 菜单页。
-    三支均「id_mark 命中 → area 点击 → round_retry 逐帧重识别」(W286 大厅分支
+    三支均「id_mark 命中 → area 点击 → round_retry 逐帧重识别」(大厅分支
     同构):点击可能不落地,RETRY 计入 node_max_retry_times=20 有界 FAIL;
     多跳中间态靠逐帧重识别天然容忍,无跨轮状态。
     """
@@ -189,7 +189,7 @@ class TestNamelessHonorBranches:
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """W293 场景:无名勋礼购买推广页帧命中专属分支,不进对话态守卫与兜底。
+        """场景:无名勋礼购买推广页帧命中专属分支,不进对话态守卫与兜底。
 
         背景(2026-08-26 版本周期首进,编排者 2026-08-27 live 实证退出链):
         版本更新后第一次进无名勋礼先落整屏购买推广页,点「开启无名勋礼」是
@@ -277,7 +277,7 @@ class TestNamelessHonorBranches:
         mark_area: str,
         click_area: str,
     ) -> None:
-        """W293 退出链中间态:弹窗帧点「点击空白处关闭」、主面板帧点「按钮-关闭」。
+        """退出链中间态:弹窗帧点「点击空白处关闭」、主面板帧点「按钮-关闭」。
 
         推广页分支(上一测)不命中时逐帧重识别落到这两支:每支都是「id_mark 命中
         → area 点击 → round_retry」,多跳中间态靠逐帧重识别容忍。每支独立锁死
@@ -337,12 +337,12 @@ class TestNamelessHonorBranches:
 
 
 class TestVersionAnnouncementBranches:
-    """版本公告轮播分支(W301):第 1 页翻页 / 第 2 页关闭,真帧输入。
+    """版本公告轮播分支:第 1 页翻页 / 第 2 页关闭,真帧输入。
 
     背景:游戏级版本公告弹窗(「贪饕」侵蚀,2026-08-26 版本)待机自动弹出、
     盖在任意画面上;第 1 页无出口只有右箭头翻页,第 2 页底部中央出「关闭」钮
-    (编排者 2026-08-27 live 实证;无此分支时 CW 独立 app 首跑 52s 失败)。
-    分支结构(W286/W293 同构):标题 id_mark(两页共享)正面识别 → 「按钮-关闭」
+    (2026-08-27 实机实证;无此分支时 CW 独立 app 首跑 52s 失败)。
+    分支结构(与上方大厅/无名勋礼分支同构):标题 id_mark(两页共享)正面识别 → 「按钮-关闭」
     可见与否区分子态 → area 点击 → round_retry 逐帧重识别。
 
     与上方 mock 分支测试不同,本类**不 mock 画面识别**(round_by_find_area 走
@@ -471,14 +471,14 @@ def _run_real_frame_check_screen(
 
 
 class TestCwLobbyResidualBranch:
-    """CW 大厅残留态分支(W316)真帧输入锁:上局结束「回大厅」的死按钮残留态。
+    """CW 大厅残留态分支真帧输入锁:上局结束「回大厅」的死按钮残留态。
 
     背景(2026-08-27 run49 首跑 147s 失败根因,编排者 live 实证):上局结束
     「回大厅」后的大厅 UI 层是残留态——开始按钮不响应任何点击(app 重试循环
     与手动双击均无效),右上角「按钮-关闭」才是真退出(关 X 露出世界场景后
     世界入口接管一切正常)。该残留态与开局前大厅共用同一 screen_info 档
     (货币战争-大厅,创业指南 id_mark 锚 + 按钮-关闭 template),由既有
-    W286 大厅分支接管:标识命中 → find+click「按钮-关闭」→ round_retry
+    大厅分支接管:标识命中 → find+click「按钮-关闭」→ round_retry
     逐帧重识别露世界 → 「角色图标」分支 SUCCESS。
 
     真帧锁:fixture = run49 真实失败帧(死按钮大厅态,含创业指南+开始钮+
@@ -539,7 +539,7 @@ class TestNpcDialogGuard:
     图标,check_screen 所有既有分支不命中,兜底点「菜单-右上角返回」与对话的
     隐藏按钮重叠 → 一点把对话 UI 收掉 → 裸场景假象 + 键盘输入被吞。
 
-    守卫语义(W286 加严后,逐帧反应式):
+    守卫语义(加严后,逐帧反应式):
 
     - 告别类选项命中 → 点选项退出对话(WAIT,同帧不落兜底);
     - 交互区无告别词(含只有未知文字)→ None,落回原兜底——「区域有字」是弱证据,
@@ -612,7 +612,7 @@ class TestNpcDialogGuard:
     ) -> None:
         """只有未知文字、无告别词:不构成对话态证据 → None 落回兜底,零动作。
 
-        W286 加严(2026-08-27 run 46 实证):旧版把交互区未知文字当「未知对话
+        加严(2026-08-27 run 46 实证):旧版把交互区未知文字当「未知对话
         选项」点空白推进 + RETRY——选项态下空白推进无效,形成 retry 永动,且
         空白点击落在任意未知画面上有误触风险。
         """
@@ -675,7 +675,7 @@ class TestNpcDialogGuard:
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """W286 场景锁死:货币战争-大厅帧命中 check_screen 专属分支,不进对话态守卫。
+        """场景锁死:货币战争-大厅帧命中 check_screen 专属分支,不进对话态守卫。
 
         背景(2026-08-27 run 46 实机):大厅前序分支全不命中,守卫对 INTERACT_RECT
         OCR 把右侧面板文字(『数据银行』『预期收益』『√奖励已全领取』『83%』『75/91』)

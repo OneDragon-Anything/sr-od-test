@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""ADR-0401(W230)form 星级分量锁。
+"""ADR-0401form 星级分量锁。
 
 锁面:
 - form 分量断言:star_depth 折算(Σ(star−1) deployed 全量口径)/
@@ -25,7 +25,7 @@ logging.disable(logging.CRITICAL)
 def _st(stars: tuple[int, ...] = (), level: int = 6) -> GameState:
     st = GameState()
     st.plane, st.level, st.gold, st.hp = 2, level, 50, 60
-    # 仙舟×3 = 达成仙舟体系 → engines=1(绝对锚,同 W193 锁)
+    # 仙舟×3 = 达成仙舟体系 → engines=1(绝对锚,同 锁)
     units = [BenchChar(slot=1, char_id='c0', faction='仙舟', star=stars[0] if stars else 1),
              BenchChar(slot=2, char_id='c1', faction='仙舟', star=stars[1] if len(stars) > 1 else 1),
              BenchChar(slot=3, char_id='c2', faction='仙舟', star=stars[2] if len(stars) > 2 else 1)]
@@ -69,7 +69,7 @@ def test_form_star_weight_zero_returns_old_form() -> None:
 def test_calibration_anchor_r1_in_band() -> None:
     """案 b 臂(真值进场态)锚 R1 主统计量带内:存活轮 ∈ [0,7](真值
     轮数带 [0,6]+1)/聚合胜率 ∈ [0, 0.285](真值边际 0.135+0.15)。
-    语料=truth_star.json 标定口径(W230);单 seed 抽样核(全量对拍
+    语料=truth_star.json 标定口径;单 seed 抽样核(全量对拍
     在批报告,本锁防 form 改动把统计量打出带)。"""
     entries = [
         P2ReplayEntry(hp=60, gold=30, level=6,

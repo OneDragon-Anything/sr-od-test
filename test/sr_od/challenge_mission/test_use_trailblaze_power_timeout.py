@@ -1,4 +1,4 @@
-"""UseTrailblazePower 开拓力「等待战斗结果」超时语义锁(W304)。
+"""UseTrailblazePower 开拓力「等待战斗结果」超时语义锁。
 
 背景(2026-08-27 实锤断面,run 48):新版本「贪饕侵蚀」机制把拟造花萼常规战斗拖到
 20分49秒,旧 600s 节点上限到点直接判失败 → op 放弃但游戏内战斗继续自打(孤 battle),
@@ -29,7 +29,7 @@ from sr_od.interastral_peace_guide.guide_def import (
     GuideTab,
 )
 
-# run 48 实测最坏战斗时长:20分49秒 = 1249 秒(W304 断面证据,超时判据的下界依据)
+# run 48 实测最坏战斗时长:20分49秒 = 1249 秒(断面证据,超时判据的下界依据)
 OBSERVED_WORST_BATTLE_SECONDS: int = 1249
 
 
@@ -40,7 +40,7 @@ def _make_mission() -> GuideMission:
 
 
 class TestWaitBattleResultTimeout:
-    """开拓力刷取战斗等待超时治本(W304)的语义锁。"""
+    """开拓力刷取战斗等待超时治本的语义锁。"""
 
     def _make_op(self, test_context: SrTestContext,
                  on_battle_success=None,

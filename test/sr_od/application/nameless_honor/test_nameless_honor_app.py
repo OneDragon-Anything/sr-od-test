@@ -12,7 +12,7 @@ fixture(screens/):
 - ``无名勋礼/任务.webp``:任务 tab(tab2),本周任务/本期任务列表,追踪按钮。
 - ``无名勋礼/无名勋礼-奖励.webp`` / ``无名勋礼-任务.webp``:上版本实拍(历史态,等级轨 19→30)。
 
-注:节点含消耗型领奖 + 红点判定,需 running 状态,不 mock ``execute()``。模板类的
+注:节点含消耗型领奖 + 红点判定,需 running 状态,不 mock ``execute``。模板类的
 ``get_phone_menu_item_pos(NAMELESS_HONOR)`` / ``get_nameless_honor_tab_pos`` 走模板匹配
 非 area 引用,不在此校验。
 """
@@ -31,7 +31,7 @@ APP_AREA_REFS: list[tuple[str, str]] = [
     ('无名勋礼', '按钮-点击空白处关闭'),  # _claim_task / _check_screen_after_reward
     ('无名勋礼', '按钮-奖励-一键领取'),  # _claim_reward
     ('无名勋礼', '按钮-奖励-取消'),  # _check_screen_after_reward
-    ('无名勋礼-等级加速弹窗', '按钮-点击空白处关闭'),  # _check_screen_after_reward(W293,弹窗提示位 y≈737,与主面板同名 area y≈945 坐标异)
+    ('无名勋礼-等级加速弹窗', '按钮-点击空白处关闭'),  # _check_screen_after_reward(弹窗提示位 y≈737,与主面板同名 area y≈945 坐标异)
 ]
 
 
@@ -81,7 +81,7 @@ class TestNamelessHonorApp:
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """W293/run 48:一键领取后弹「无名勋礼等级加速」弹窗 → 新候选命中点关闭,WAIT。
+        """run 48:一键领取后弹「无名勋礼等级加速」弹窗 → 新候选命中点关闭,WAIT。
 
         背景(2026-08-27 run 48 实机,日志 19:09:22-28):领取奖励点击成功后弹该
         说明弹窗,旧三候选(secondary UI/奖励-取消/点击空白处关闭)全不命中 →

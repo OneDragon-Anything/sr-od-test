@@ -225,7 +225,7 @@ def test_s4_swap_when_gold_short() -> None:
     """S4 ②臂:金不足总价 → LevelUp 臂不发(可负担性入口门拒),改
     SwapDeploy(换下最弱非核心);SwapDeploy 带 expect 代际校验字段。
 
-    (旧「boss 轮也走 ②」断言随 W255/ADR-0410 过期:boss 升级禁令删除,
+    (旧「boss 轮也走 ②」断言随 ADR-0410 过期:boss 升级禁令删除,
     boss 轮 LevelUp 改由 EV 总账裁决——合法面见 test_cw_w255 锁。)"""
     # 金 12 只够部分点击:① 臂 EV 可负担性不过(按 n×总价口径)→ ②
     sess = _locked_sess()
@@ -246,14 +246,14 @@ def test_s4_swap_when_gold_short() -> None:
 
 def test_s4_noop_when_bench_weaker_than_deployed() -> None:
     """S4 反例:cap 满但 bench 件弱于全场 deployed → 无动作(换上不优
-    不换)。W255/ADR-0410 适配:①臂 boss 禁令删后,EV 总账人口位需
+    不换)。ADR-0410 适配:①臂 boss 禁令删后,EV 总账人口位需
     「bench 有目标件」——本反例 bench=卡芙卡(非列车同行采购集)→
     ① 臂自然不走(非 boss 语义),② 臂「换上不优」判据为行为锁本体。
     故基座移到非 boss 轮,断言不变。"""
     sess = _locked_sess()
     sess.v2_round_key = (1, 5)
     # bench 件=卡芙卡(2费 1星);deployed 全 2★ 高费 → 换上不优
-    # W255/ADR-0410 适配:金 70 时 EV 总账臂②(DP 说升+平台未破)会发
+    # ADR-0410 适配:金 70 时 EV 总账臂②(DP 说升+平台未破)会发
     # 升级组——「换上不优 → 无动作」锁的纯度要 ② 臂也不开,压到金不足
     # 平台的金位(12,「换上不优」判据不依赖金位)。
     st = _s4_state(round_num=5, gold=12, bench_units=['卡芙卡'],
@@ -301,7 +301,7 @@ def test_s2_alarm_refresh_compensated_when_authorized() -> None:
     )
     # 报警升级态:war 地板 30,金 25,refresh 2 费 → 缺 7;可卖件用
     # **各 1 份**的散件(加权副本≥2 的 3合1 素材不可卖,AD9-2-3;
-    # W192/ADR-0375 适配:娜塔莎=贝洛伯格希儿系贡献件唯一时卖禁,
+    # ADR-0375 适配:娜塔莎=贝洛伯格希儿系贡献件唯一时卖禁,
     # 换非希儿系 3 费件黄泉凑足缺金)
     sellable_names = ['卡芙卡', '千冶·刃', '绯英', '黄泉', '阿格莱雅']
     sess = _locked_sess()
@@ -368,8 +368,8 @@ def test_s5_key_orders_low_cost_net0_first() -> None:
     )
     sess = _sess()
     sess.v2_round_key = (1, 4)
-    # 黑塔(1费)vs 黄泉(3费)——均单份 1★ 可卖(W184 后三月七/瓦尔特
-    # 为 TT 列车件另有唯一引擎卖禁;W192 后娜塔莎为希儿系贡献件另有
+    # 黑塔(1费)vs 黄泉(3费)——均单份 1★ 可卖(后三月七/瓦尔特
+    # 为 TT 列车件另有唯一引擎卖禁;后娜塔莎为希儿系贡献件另有
     # 卖禁,通用键序锁改用非 TT 非希儿系件)
     st = _state(gold=60, bench=[_bench('黑塔', faction='公司', slot=0),
                                 _bench('黄泉', faction='公司', slot=1)],
@@ -553,7 +553,7 @@ def test_remedy_single_pass_per_round() -> None:
     sess.v3_mode = 'war'
     sess.v2_round_key = (1, 4)
     reg10 = replace(_REG, war_floor=10)
-    # 第一次仲裁:金不足 buy → 补偿卖出(绯英=非 TT 件,W184 后 TT
+    # 第一次仲裁:金不足 buy → 补偿卖出(绯英=非 TT 件,后 TT
     # 唯一引擎件不进补偿卖序,通用锁用非 TT 件)
     st1 = _state(round_num=4, gold=13, hp=80,
                  bench=[_bench('绯英', faction='公司', slot=0)],
@@ -617,7 +617,7 @@ def test_prior_accepted_sell_no_compensation() -> None:
     且先于买被采纳 → 卖出回金后买候选直接通过(无拒绝事件)→
     无补偿动作(不与常规通道重复变现)。
 
-    W119/ADR-0347 构造适配:经济态地板=FORM_FLOOR(20,相位地板)——
+    ADR-0347 构造适配:经济态地板=FORM_FLOOR(20,相位地板)——
     gold 取 22(卖回金 2 后买 4 费恰达 20 地板;无卖则 18<20 会拒,
     保住「卖先采纳→金足」的因果链)。"""
     from dataclasses import replace
@@ -625,7 +625,7 @@ def test_prior_accepted_sell_no_compensation() -> None:
     sess.v2_round_key = (1, 4)
     reg10 = replace(_REG, war_floor=10)
     st = _state(round_num=4, gold=22, hp=80,
-                # W197/ADR-0380 语义化适配:卡芙卡(DOT)换非 TT 件银枝
+                # ADR-0380 语义化适配:卡芙卡(DOT)换非 TT 件银枝
                 # (cost 同 2,回金链不变;TT 唯一件卖出由 test_cw_w197 辖)
                 bench=[_bench('银枝', faction='星间旅人', slot=0)],
                 shop=[_card('姬子·启行', cost=4)],
@@ -899,7 +899,7 @@ def test_s6_bench_compensation_no_sellable_noop() -> None:
 def test_rejections_collect_only_resource_type() -> None:
     """rejections 收集面反锁:非资源型拒绝(纪律型)不进
     rejections;资源型拒绝(gold_floor/bench/deploy)进(§1.1 捕获条件
-    + 正分闸)。W126/ADR-0349:refresh_budget 已退场,纪律型代表改用
+    + 正分闸)。ADR-0349:refresh_budget 已退场,纪律型代表改用
     refresh 的「非正分」拒绝(评分侧 V_D 判负 → 段尾拒,不进回连)。"""
     sess = _sess()
     sess.v2_round_key = (1, 4)

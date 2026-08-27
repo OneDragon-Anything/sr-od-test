@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""W119/ADR-0347 切授权单帧锁(经济循环总模型步②「切授权」)。
+"""ADR-0347 切授权单帧锁(经济循环总模型步②「切授权」)。
 
 锁契约(每条=一个确定输入下的确定行为;不锁分布数值):
 - ① FORM 段 EV 正破息买放行(interest_rule EV 授权,含 ev_auth trace);
@@ -110,7 +110,7 @@ def test_form_ev_positive_break_buy_allowed() -> None:
     st = _state(round_num=5, gold=51, node_type='battle')
     cand = Candidate(action=BuyCard(_card('引擎件', cost=4), reason=''),
                      tag='engine_seed', source='shop')
-    # EV 正:V = 30 −(−25) = 55,C = 1 档×min(R,3)=3(W131 买侧回档
+    # EV 正:V = 30 −(−25) = 55,C = 1 档×min(R,3)=3(买侧回档
     # 折中口径)→ EV≈52 > 0 → 放行
     res_pos = arbitrate([(cand, 30.0, {'int_emb': -25.0})], st, sess,
                         _REG)
@@ -118,7 +118,7 @@ def test_form_ev_positive_break_buy_allowed() -> None:
     assert row['accepted'] is True, row
     assert row['ev_auth']['ev_auth'] > 0, row   # 授权依据 trace 在场
     assert any(isinstance(a, BuyCard) for a in res_pos.actions)
-    # EV 负:V = 1 − 0 = 1 < C(3)→ 拒(W131 前 C=1×R≈23,标定后买侧
+    # EV 负:V = 1 − 0 = 1 < C(3)→ 拒(前 C=1×R≈23,标定后买侧
     # C=回档折中口径——低价值买仍拒,门语义保留)
     sess2 = StrategySession()
     sess2.v3_mode = 'economy'
@@ -189,7 +189,7 @@ def test_formed_stop_round_comp_derived() -> None:
     """③辖轮 = max(comp.typical_form_round, formed_stop_min_round):
     早成型 DOT队(typical 4→辖 7):r6 不停/r7 停;晚成型 昼神阿雅
     (typical 8→辖 8):r7 不停/r8 停。
-    (语义演进史,W227/ADR-0400 → ADR-0411:本锁曾用
+    (语义演进史,ADR-0400 → ADR-0411:本锁曾用
     handoff_gate_enabled=False 隔离末窗承接维——该布尔字段已随
     ADR-0411 flag 家族清理删除,承接门无条件启用。现改用同款隔离
     效果的合法手段:handoff_gate_min_round 提到 9(量级常量仍在
@@ -288,7 +288,7 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
 
 def test_overheat_reward_node_treated_as_battle() -> None:
     """⑥「经济过热」类环境 reward 节点=**奖励型战斗**(口述定谒 [16]
-    +W120 P8;W122 F-01:扑满不掉血,真损失=打不过没奖励——轻投入凑
+    +P8;F-01:扑满不掉血,真损失=打不过没奖励——轻投入凑
     羁绊刷伤害拿奖励,**禁深花保血**):
     - 战斗向刷新理由开放:r>refresh_max_round 的刷新在过热局 reward
       节点转正分——但受 **P8 上限**辖(单节点 s≤2金 → 限 1 次/节点,
@@ -335,11 +335,11 @@ def test_overheat_reward_node_treated_as_battle() -> None:
             assert v < 0, f'豁免超限/无环境应恒负分(实际 {v})'
 
 
-# --- 附2:W120 证明批检验点锁(P5 边界/P6 无特判)-----------------------------
+# --- 附2:证明批检验点锁(P5 边界/P6 无特判)-----------------------------
 
 
 def test_w120_p5_c_interest_boundary() -> None:
-    """W120 P5 定理退化输出(W119/ADR-0347 C_interest 公式的边界断言):
+    """P5 定理退化输出(ADR-0347 C_interest 公式的边界断言):
     金 50/51 时 D 候选被 EV 拒(跨 50 档,C_interest≥R);金 ≥52+刷价
     放行(C_interest=0,由常分决定)——「花完仍≥50」是公式的自然输出
     而非外加约束。注入 (val=0.5, int_emb=0) 锁门语义(常分口径。"""
@@ -358,7 +358,7 @@ def test_w120_p5_c_interest_boundary() -> None:
 
 
 def test_w120_p6_no_per_round_special_case() -> None:
-    """W120 P6:前两轮无 per-round 特判——统一 EV 路径自动给出「买」
+    """P6:前两轮无 per-round 特判——统一 EV 路径自动给出「买」
     (零息损+全额退免费期权)。断言 r1/r2 无决策分支读 round_num 做
     买/刷的特殊放行(scoring/arbiter 源码静态检查;唯一轮界门
     refresh_max_round/bond_fallback_min_round/form_refresh_max_round 是
@@ -374,7 +374,7 @@ def test_w120_p6_no_per_round_special_case() -> None:
 
 
 def test_w120_p9_hp1_dead_end_marker() -> None:
-    """W120 P9:HP=1 死局/早停候选标记(披露非违规)——check 恒空
+    """P9:HP=1 死局/早停候选标记(披露非违规)——check 恒空
     (violations=0),数据面 hp1_dead_end_rounds 给出轮号供早停判读。"""
     from sr_od.application.currency_war.cw_sim_checks import (
         check_hp1_dead_end_candidate,
@@ -386,12 +386,12 @@ def test_w120_p9_hp1_dead_end_marker() -> None:
     assert hp1_dead_end_rounds(rows) == [7, 8, 9]     # 数据面含 hp=0
 
 
-# --- 附3:W121 G1 人口位判据方向锁 -------------------------------------------
+# --- 附3:G1 人口位判据方向锁 -------------------------------------------
 
 
 def test_w121_g1_population_slot_trigger_direction() -> None:
-    """W121 G1(高严重度):人口位升级触发 = **cap 满 ∧ bench 有等待上场
-    的目标/框架件**——W113 §3.3 通道 2 原文「deployed<cap 且 bench 有
+    """G1(高严重度):人口位升级触发 = **cap 满 ∧ bench 有等待上场
+    的目标/框架件**——§3.3 通道 2 原文「deployed<cap 且 bench 有
     成型可上件」把判据写反(deployed<cap=有余量=该件直接上场即可,
     [32](b) 判定此时再升纯浪费)。
 
@@ -430,7 +430,7 @@ def test_w121_g1_population_slot_trigger_direction() -> None:
 
 def test_bypass_emergency_floor_unchanged() -> None:
     """旁路护栏:应急帧(hp≤25)地板=rebirth_floor、interest_rule
-    让位(语义逐位不变——W119 验证门 1 专项)。"""
+    让位(语义逐位不变——验证门 1 专项)。"""
     sess = StrategySession()
     sess.v3_mode = 'economy'
     st = _state(hp=20, gold=55, node_type='battle')

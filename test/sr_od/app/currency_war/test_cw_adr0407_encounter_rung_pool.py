@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""ADR-0407(W250):Δ池 encounter 桶键 depth→rung(v11)方向锁。
+"""ADR-0407:Δ池 encounter 桶键 depth→rung(v11)方向锁。
 
-W248 断言「投资换伤害减免主通道断裂」的 encounter 维裁决:
+断言「投资换伤害减免主通道断裂」的 encounter 维裁决:
 扩容+逐样本键查证(n=56,P1)证明——
 - dep(Σboard)与 sd(净星深)键下期望伤害**真平**(中位分界两组
   置换检验 p=0.87;Spearman(dep,Δ)=−0.001;宽桶 w=6 两桶 CI 大幅

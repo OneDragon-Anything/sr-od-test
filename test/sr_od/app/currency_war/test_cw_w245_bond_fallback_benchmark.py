@@ -1,17 +1,17 @@
-"""W245/A4:bond_fallback 泄放路径 benchmark 锁(W241 巡检 A4 观察收口)。
+"""A4:bond_fallback 泄放路径 benchmark 锁(巡检 A4 观察收口)。
 
-背景(w241_audit5.md §A4 + W242 插话回应 b6918ae4):bond_fallback 条件
+背景(w241_audit5.md §A4 + 插话回应 b6918ae4):bond_fallback 条件
 (填充件阵营∈owned+cost∈[1,2]+round≥3)买入的评分**不经过
 filler_star 期权分**(期权只辖 deployed 填充件的第 2 份;候选分数里
 没有该维度时仲裁「非正分」拒)——即 bond_fallback 路径的量值独立于
-filler_star_unit 开关。W242 AB 实测 gp/star 两臂该通道各 2 笔/30 局
+filler_star_unit 开关。AB 实测 gp/star 两臂该通道各 2 笔/30 局
 零差异、末窗 0 笔=路径在授权语义上正交。
 
 本文件钉两组 benchmark,防未来改评分/改 filler 项时该路径静默变号:
 - 开关正交锁:filler_star_unit 0→0.5,bond_fallback 条件帧分值不变;
 - 泄放形态锁:bond_fallback 帧(非目标集外副本、阵营 owned 已有)
   在默认 registry 下走非正分门的分值为基准负值(结构性拒形态,
-  W231 诊断——若未来变正,说明有人给该路径加了新评分维,须有 ADR)。
+  诊断——若未来变正,说明有人给该路径加了新评分维,须有 ADR)。
 """
 import sys
 
@@ -55,7 +55,7 @@ def _state(round_num: int = 5) -> GameState:
 
 
 def _sess() -> StrategySession:
-    """与 W242 锁同构的意向环境(锁线=h三月七仙舟,凑档判据可成立)。"""
+    """与 test_cw_w242 锁同构的意向环境(锁线=h三月七仙舟,凑档判据可成立)。"""
     from sr_od.application.currency_war.cw_intention import (
         HoardTarget,
         IntentionState,
@@ -85,7 +85,7 @@ def test_bond_fallback_score_orthogonal_to_filler_star_unit() -> None:
 
     该路径不经期权分(A4 披露)——它走 [31] 凑档散件的基础分。
     若此锁红:有人让 filler_star 维度渗入 bond_fallback 通道,
-    需检查是否双计(W232 期权 + 本通道重叠)。
+    需检查是否双计(期权 + 本通道重叠)。
     """
     st, sess = _state(), _sess()
     cand = _fallback_cand(st, sess)
@@ -98,7 +98,7 @@ def test_bond_fallback_score_orthogonal_to_filler_star_unit() -> None:
 
 
 def test_bond_fallback_default_registry_structural_reject() -> None:
-    """benchmark 锁(实测 +2.0,W241/A4 披露):bond_fallback 凑档帧
+    """benchmark 锁(实测 +2.0,A4 披露):bond_fallback 凑档帧
     在默认 registry 下为固定正分——「凑档+基础价差」的正分,与
     filler_star 期权分无关(A4/审计2:该路径量值独立于开关)。若此值
     漂移:bond_fallback 评分或其依赖(board 分桶/cost 窗口)被改,
