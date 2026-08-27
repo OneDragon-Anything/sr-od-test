@@ -1,6 +1,6 @@
-"""W323 行为锁:卖牌回金落盘(exogenous.jsonl kind='sell_income')+ economy 视图「卖回」格。
+"""行为锁:卖牌回金落盘(exogenous.jsonl kind='sell_income')+ economy 视图「卖回」格。
 
-实证缺口(W309 遥测审计 G2):decisions 行的 actions 里有 SellBench,但卖出
+实证缺口(遥测审计卖回件):decisions 行的 actions 里有 SellBench,但卖出
 **实际回金**没单独落字段——economy 视图对卖牌收入只能靠 gold 差分倒推
 (混入利息/连胜金噪声),「金去向(升级/买件/刷新/卖回)」四分账缺卖回一格。
 修法两段:
@@ -43,7 +43,7 @@ def _reset_run_ctx(monkeypatch):
 
 @contextmanager
 def _recorder_as_module(tmp_path):
-    """构造 enabled recorder 并临时注入模块 get_recorder(参照 W312 测试手法)。"""
+    """构造 enabled recorder 并临时注入模块 get_recorder(参照 event_choice 落盘测试手法)。"""
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     origin = cw_telemetry.get_recorder
     cw_telemetry.get_recorder = lambda: rec   # noqa: ANN001  测试内注入

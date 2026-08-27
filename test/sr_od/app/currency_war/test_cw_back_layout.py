@@ -615,7 +615,7 @@ def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
 
 # ===== 6d. cap 通道防抖接线(ADR-0395;run 27 型 = 读数瞬态直驱行动) =====
 # 高危点:resolve_back_slots 的 cap 直读(未显式传 cap 时)进 diff → 公式通道
-# 选档;deploy_bench 板满门 cap 直读(→ 留 bench 战力真空,r60 贵方向)。
+# 选档;deploy_bench 板满门 cap 直读(→ 留 bench 战力真空,低读贵方向)。
 # 修:两处消费点改走 read_deploy_cap_debounced(ADR-0286 域防抖:域外重读
 # 一帧,仍域外 → None → 失读兜底链)。run 27 实证同型:瞬态单帧读数不行动。
 
@@ -768,7 +768,7 @@ def test_read_level_xp_backinference(test_context, monkeypatch):
     仍读不到才退期望曲线。"""
     import sr_od.application.currency_war.cw_observation as cwo
     img = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
-    # 等级区漏读(W322 后直读单一源 = read_level_raw_opt,patch 该缝)
+    # 等级区漏读(直读单一源 = read_level_raw_opt,patch 该缝)
     monkeypatch.setattr(cwo, 'read_level_raw_opt', lambda ctx, scr: None)
     got = cwo.read_level(test_context, img, 1, 1)
     assert got == 3, f'经验条反推应为 lv3(0/4),实得 {got}'

@@ -660,7 +660,7 @@ def test_levelup_raw_read_no_fallback(monkeypatch, test_context: SrTestContext) 
     """MED-8:_read_level_raw 无 _expected_level 兜底(漏读返 None,不造假值)。"""
     from sr_od.application.currency_war.prep_actions import _read_level_raw
 
-    # 直读失读(W322 后 _read_level_raw 委托 read_level_raw_opt,patch 该缝)→ None
+    # 直读失读(_read_level_raw 委托 read_level_raw_opt,patch 该缝)→ None
     import sr_od.application.currency_war.cw_observation as cwo
     monkeypatch.setattr(cwo, 'read_level_raw_opt', lambda ctx, scr: None)
     assert _read_level_raw(test_context, None) is None

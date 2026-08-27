@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""W322 行为锁:deploy_cap 拒信族根因 = 等级/XP 小字 OCR 双失读 → 启发式等级虚高。
+"""行为锁:deploy_cap 拒信族根因 = 等级/XP 小字 OCR 双失读 → 启发式等级虚高。
 
 判读实证(2026-08-27 run48 前后窗口,obs_conflicts.jsonl deploy_cap_domain 30 条):
 冲突帧画面自洽(paddle「3/3」+Lv.3、「3/4」+Lv.4),虚高全在 state.level 侧 ——
@@ -56,7 +56,7 @@ def test_parse_xp_pair_normal_slash() -> None:
 
 
 def test_parse_xp_pair_slash_read_as_one() -> None:
-    """斜杠被识成数字 '1'(W322 冲突帧实测 "214"/"416"):按等级表分母先验插 '/'。"""
+    """斜杠被识成数字 '1'(冲突帧实测 "214"/"416"):按等级表分母先验插 '/'。"""
     assert _parse_xp_pair('214') == (2, 4)      # 23dee97a 帧 "2/4" 实读形态
     assert _parse_xp_pair('416') == (4, 6)      # 77a0e871 帧 "4/6" 实读形态
     assert _parse_xp_pair('2140') == (2, 40)    # 6 级门槛 40 同族
