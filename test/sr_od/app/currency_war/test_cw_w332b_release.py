@@ -5,7 +5,8 @@
 锁契约(每条=一个确定输入下的确定行为;不锁分布数值):
 - ① FLIP 谓词边界:辖区 [emergency_hp,∞) 归 FLIP、≤25 归应急;非末窗
   hp<40 持续兑现臂 / 末窗投影臂 hp−boss_tax_p75<25;FORM 未成型 ∧ g>50
-  前置;hp_readable 假帧不评估;
+  前置;假帧守卫=100 兜底帧(两个保真位皆 False)不评估,沿用真值帧
+  放行(ADR-0428);
 - ② 预算三方合并:FLIP 命中帧 release 覆盖 max(g−50, DP 预算×刷价);
   DP 已有授权不缩水;
 - ③ slot 守卫第三路径:末窗 deployed<cap ∧ bench 非空 → rush_level 压掉,
@@ -18,6 +19,7 @@
   可达(FLIP→decide_prep→session.v3_release/tag);锁B release 帧凑息向
   卖候选抑制(free_bench 腾位卖不受辖——slot 动机非凑息动机;演进替换
   事务卖不经候选生成器);锁D 息 EV 中性(spend_gate_active 判据);
+  锁E V_D 的 C_dec 息损项中性(同判据,scoring.vd_refresh_score P2 分支);
 - ⑥ release 义务预算的有界放行:累计 ≤ 预算 ∧ 花后 ≥ boss_floor;
 - ⑦ latch 单窗:同轮内命中后不回退,跨轮失效;
 - ⑧ 换线判据:E_rounds 有限性 / θ 滞回 / D_min 驻留 / 双 inf 维持 /
@@ -107,10 +109,30 @@ def test_flip_boss_projection_arm() -> None:
 
 
 def test_flip_unreadable_hp_frame_skipped() -> None:
-    """假帧不评估(hp_readable=False,hp 为沿用值;discipline 同守卫)。"""
+    """假帧不评估:100 兜底帧(readable=False ∧ trusted=False,hp 为开局
+    无真值的假 100)仍拒——ADR-0428 守卫收紧语义的既有锁,防回归。"""
     s = StrategySession()
     st = _state(hp=30, gold=60)
     st.hp_readable = False
+    st.hp_trusted = False
+    assert not flip_hit(st, s, _REG, 'FORM')
+
+
+def test_flip_trusted_carried_hp_frame_hits() -> None:
+    """ADR-0428 新行为锁:shop 开态帧 hp_readable=False 但 hp_trusted=True
+    (hp=沿用的 last_hp_real 真值)→ 守卫放行,末窗投影臂正常命中。
+    帧形态=实机局A r9 决策帧的判读字段(phase=FORM/hp=41/gold=75/
+    node_type=boss/blood 上行窗):修前恒死于 hp_readable 守卫,导致 FLIP
+    在实机商店帧结构性 0 触发(shop 开态血量区物理读不到 → readable 恒
+    False);修后该帧必须触发。100 兜底帧仍拒见上锁(两臂在 hp=100 时
+    本就不命中,无误触发面)。"""
+    s = StrategySession()
+    st = _state(hp=41, gold=75, plane=1, r=9, node='boss')
+    st.hp_readable = False
+    st.hp_trusted = True
+    assert flip_hit(st, s, _REG, 'FORM')
+    # 可信位是必要条件之一:trusted=False 的同字段兜底帧仍拒(双位齐查)
+    st.hp_trusted = False
     assert not flip_hit(st, s, _REG, 'FORM')
 
 
@@ -442,3 +464,64 @@ def test_release_gate_neutralizes_interest_ev() -> None:
     assert sc_on['interest'] == 0.0
     sc_off = score_state(st, _gate_reg(True), StrategySession())
     assert sc_off['interest'] > 0.0
+
+
+def _vd_p2_frame():
+    """P2 入场 release 帧(卡芙卡 2费@lv6 j=2,金 80,刷价 5,rb=6):
+    金 80 花 E×5 穿息档 → Δinterest≠0,V_D 的 C_dec 息损项有非零原料。"""
+    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.cw_intention import IntentionState
+    from sr_od.application.currency_war.decision_v2.ev import RoundPosture
+    s = StrategySession()
+    s.v3_release = ReleaseDirective(budget_gold=8, rolls=4)
+    s.v3_intention = IntentionState(phase='locked', locked_comp='DOT队')
+    s.target_comp = get_comp('DOT队')
+    s.v3_mode = 'economy'
+    s.v3_dp_posture = RoundPosture(
+        (2, 1), Posture(save=False, level_up=True, refresh_budget=6))
+    st = GameState(
+        plane=2, round_num=1, gold=80, level=6, hp=69,
+        shop_refresh_cost=5,
+        deployed=[BenchChar(slot=9 + i, char_id=f'杂件{i}',
+                            faction='公司', star=1) for i in range(4)],
+        bench=[BenchChar(slot=i, char_id='卡芙卡', faction='公司', star=1)
+               for i in range(2)]
+        + [None] * (BENCH_CAPACITY - 2),
+        shop=[], node_type='battle')
+    return st, s
+
+
+def test_release_gate_neutralizes_vd_c_dec_interest_loss() -> None:
+    """锁E(V_D 的 C_dec 息损项中性,同锁D判据):release 门开帧
+    vd_refresh_score 的 P2 分支息损项(Δinterest×min(R,recovery))计 0
+    ——泄息义务帧的 D 罚分与花钱义务对冲(D 候选被息账让位=泄息意图
+    在 D 通道被对冲);流动性成本 ρ·spend(真实刷金代价)不在辖域。
+    对照=同 registry 无 release 态(session 判据单一源,v3_release=None)
+    息损项照计,两臂分值差=息损项对拍值(测试本地复算,禁从被测函数
+    借值)。"""
+    from sr_od.application.currency_war.cw_shop_odds import (
+        expected_refreshes_for_card,
+    )
+    from sr_od.application.currency_war.decision_v2.ev import (
+        cross_plane_remaining_nodes,
+    )
+    from sr_od.application.currency_war.decision_v2.scoring import (
+        vd_refresh_score,
+    )
+    st, s_on = _vd_p2_frame()
+    vd_on = vd_refresh_score(st, s_on, _gate_reg(True))
+    _, s_off = _vd_p2_frame()
+    s_off.v3_release = None   # 对照臂:无 release 态(判据单一源关闭)
+    vd_off = vd_refresh_score(st, s_off, _gate_reg(True))
+    assert vd_on is not None and vd_off is not None
+    # 门辖帧息损项=0:ρ=0(缺省)下 C_dec 全项为 0,V_D=benefit^P2
+    assert vd_on > vd_off, (vd_on, vd_off)
+    e = expected_refreshes_for_card(6, 2, target_star=2, owned=2)
+    spend = e * (st.shop_refresh_cost or 2)
+    d_int = (min(st.gold // 10, _REG.interest_cap)
+             - min(int(st.gold - spend) // 10, _REG.interest_cap))
+    r = cross_plane_remaining_nodes(st)
+    loss_term = max(0, d_int) * min(r, _REG.vd_p2_recovery_rounds)
+    assert loss_term > 0.0
+    assert abs((vd_on - vd_off) - loss_term) < 1e-6, (vd_on, vd_off,
+                                                      loss_term)
