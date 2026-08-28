@@ -117,8 +117,14 @@ class TestCompareMergePreview:
 
 class TestRefreshExpect:
     def test_basic_delta(self) -> None:
-        """金 −2;旧五张回池账按名计数(重复牌合并)。"""
-        r = refresh_expect(10, [('甲', 1), ('甲', 1), ('乙', 2), ('丙', 3), ('丁', 4)])
+        """金 −刷新费;旧五张回池账按名计数(重复牌合并)。
+
+        口径(用户裁决·倾向口径):新五格按当前等级概率独立抽取,同牌可
+        重复——本函数是期望增量,对账只硬验金差/五格有牌/池守恒统计面,
+        **不逐张断言全异**,故无「新五张互异」类断言(这是收窄后的规格)。
+        """
+        r = refresh_expect(10, [('甲', 1), ('甲', 1), ('乙', 2), ('丙', 3), ('丁', 4)],
+                           refresh_cost=2)
         assert r.gold_after == 8 and r.refresh_cost == 2
         assert r.insufficient is False
         assert r.pool_returned == {'甲': 2, '乙': 1, '丙': 1, '丁': 1}
@@ -126,15 +132,22 @@ class TestRefreshExpect:
 
     def test_insufficient_gold(self) -> None:
         """金不足:insufficient True,算术差如实为负(执行判归调用方)。"""
-        r = refresh_expect(1, [('甲', 1)])
+        r = refresh_expect(1, [('甲', 1)], refresh_cost=2)
         assert r.insufficient is True and r.gold_after == -1
 
     def test_custom_refresh_cost(self) -> None:
+        """费用不写死(W554:疑似 f(当前金币))→ 必填参数,任意现读值合法。"""
         assert refresh_expect(10, [], refresh_cost=0).gold_after == 10
+        assert refresh_expect(10, [], refresh_cost=3).gold_after == 7
+
+    def test_refresh_cost_is_required(self) -> None:
+        """无默认值:漏传费用 = TypeError(防调用方写死 2 的旧习惯回流)。"""
+        with pytest.raises(TypeError):
+            refresh_expect(10, [])  # type: ignore[call-arg]
 
     def test_empty_old_cards(self) -> None:
         """空旧表合法(首刷无旧牌):回池账空、insufficient 按 gold 判。"""
-        r = refresh_expect(5, [])
+        r = refresh_expect(5, [], refresh_cost=2)
         assert r.pool_returned == {} and r.insufficient is False
         assert r.gold_after == 3
 
