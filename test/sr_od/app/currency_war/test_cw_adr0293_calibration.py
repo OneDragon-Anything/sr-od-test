@@ -297,8 +297,12 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # .debug/temp/currency_war/w382_c1_design/DESIGN.md §2/§3;破息分支
 # 不实现,过账判据存档于 registry 注释)——有意加字段,锁同步更新
 # (既有字段默认值不变)。
-_EXPECTED_HASH = ('599c0094cae6a27ad9c624d17169080f'
-                  '445d14bb832af464d1fcc411cfc2af99')
+# 损血表合一更新:删 dying_band_next_loss/line_switch_node_loss 两字段,
+# 合一为 p2_node_loss_table 单表(C3 桶位查表与 C4 逐节点投影共读;默认值
+# =现行生效值零漂移,重标定值指针见 registry 字段注释)——有意改字段面,
+# 锁同步更新(存活数值不变;单一源不变量锁在 test_cw_w373_c3c4_redesign
+# .test_p2_node_loss_table_single_source)。
+_EXPECTED_HASH = ('ba903798c0747e99d3c744d4e9a619232063270ef08fcede010313245aef4ea0')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

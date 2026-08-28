@@ -35,6 +35,7 @@ from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.cw_system_cards import engine_char_names
 from sr_od.application.currency_war.decision_v2.candidates import Candidate
 from sr_od.application.currency_war.decision_v2.filters import (
+    _next_battle_loss,
     filter_candidates,
 )
 from sr_od.application.currency_war.decision_v2.registry import (
@@ -312,13 +313,39 @@ def test_c4_l3_unknown_node_counts_as_normal_battle() -> None:
 
 
 def test_c4_l4_missing_kind_zero_loss_calendar_still_ticks() -> None:
-    """line_switch_node_loss 缺 kind → 该轮损 0、轮数照计(与旧实现
+    """p2_node_loss_table 缺 kind → 该轮损 0、轮数照计(与旧实现
     「缺读=normal 最大战斗档」方向相反且各自声明):缺 encounter/boss
     档,hp=1 走完 encounter(0 损)与 boss(0 损)→ ra=2=全表长。"""
     reg = dataclasses.replace(DEFAULT_REGISTRY,
-                              line_switch_node_loss={'normal': 20.05})
+                              p2_node_loss_table={'normal': 20.05})
     sess = _sess(table=['encounter', 'boss'])
     assert rounds_alive(_state(hp=1), sess, reg) == 2
+
+
+# --- S8 单一源不变量锁:C3/C4 损血表合一 ---------------------------------------
+
+
+def test_p2_node_loss_table_single_source() -> None:
+    """损血表单一源不变量(C3 桶位查表 _next_battle_loss 与 C4 逐节点
+    投影 rounds_alive 共读 registry.p2_node_loss_table):注入自定义表
+    后两消费点同步位移,旧两表字段不复存在——重标定覆写只改一处,
+    「数值源唯一」由本锁固化,不靠人工纪律。"""
+    assert not hasattr(DEFAULT_REGISTRY, 'dying_band_next_loss')
+    assert not hasattr(DEFAULT_REGISTRY, 'line_switch_node_loss')
+    reg = dataclasses.replace(
+        DEFAULT_REGISTRY,
+        p2_node_loss_table={'normal': 5.0, 'encounter': 6.0,
+                            'boss': 8.0, 'reward': 0.0})
+    sess = _sess(table=P2_FULL_TABLE)
+    sess_boss = _sess(table=P2_FULL_TABLE)
+    sess_boss.node_type_current = 'boss'
+    # C3 桶位查表跟随表值(normal 档 5.0 / boss 档 8.0)
+    assert _next_battle_loss(_state(hp=25), sess, reg) == 5.0
+    assert _next_battle_loss(_state(hp=25), sess_boss, reg) == 8.0
+    # C4 逐节点投影跟随同一份表(hp=25:默认表 20.05/16.67/26.71 →
+    # ra=2;轻损表 5/6/8 → 25−5−5−6+0−6+0−8 死于 boss → ra=7)
+    assert rounds_alive(_state(hp=25), _sess()) == 2
+    assert rounds_alive(_state(hp=25), sess, reg) == 7
 
 
 # --- C4-L5:死锁画像双向锁 ----------------------------------------------------
