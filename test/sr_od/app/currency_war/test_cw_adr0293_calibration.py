@@ -98,6 +98,12 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'blood_budget_stop_enabled': ('bool', True),
     'blood_budget_stop_d': ('int', 1),
     'p1_levelup_stop_rung': ('int', 2),
+    # 血预算停手·第二波(设计件 12 §6;ADR-0451):60=期望预算线
+    # (W524 充分不必要);两开关默认 True=W516 方向性排除证据恒接线,
+    # False=A/B 对照臂(语义注释落点=registry 字段注释)
+    'p1_exit_blood_target': ('int', 60),
+    'p1_exit_downgrade_enabled': ('bool', True),
+    'blood_budget_refresh_stop_enabled': ('bool', True),
     # ===== 相位观测与授权(W119/ADR-0347)=====
     'phase_fallback_min_round': ('int', 5),
     'phase_fallback_min_engines': ('int', 2),

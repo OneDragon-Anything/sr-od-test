@@ -158,12 +158,14 @@ def test_formed_stop_handoff_dim_run28_type() -> None:
 # ---------- ③ EV 承接缺口项(挂载点 b) ----------
 
 def test_ev_gap_term_authorizes_final_window_buy() -> None:
-    """末窗兜底成型全 1★ 板的跨档买(53→49 破 50 平台):V+5×1 放行,
+    """末窗兜底成型全 1★ 板的跨档买(53→49 破 50 平台):V+bonus 放行,
     auth trace 带 handoff_gap;同帧 r7(非末窗)拒(零漂移);达标帧
     拒(不达标才放宽)。
     (过期语义记录:原「基线臂 EV≤0 破息拒」对照断言已随 ADR-0411
-    转正删除——本行为即当前无条件路径。)"""
-    st = _fallback_formed_frame()
+    转正删除——本行为即当前无条件路径。语义演进(ADR-0451 血预算
+    停手·第二波):授权帧改 hp=70 带外——hp<60 末窗帧缺口项降格不加成
+    (血预算停手·P1-a),反例:hp=40 帧同构造被拒。)"""
+    st = _fallback_formed_frame(hp=70)
     sess = StrategySession()          # 未锁 → 兜底 form_ok(engines=2)
     sess.v3_mode = 'economy'
     assert form_ok(st, sess, _REG) is True
@@ -181,6 +183,12 @@ def test_ev_gap_term_authorizes_final_window_buy() -> None:
     st7 = _fallback_formed_frame(round_num=5)
     assert _check_constraint('interest_rule', cand, st7, st7, sess,
                              _REG, val=1.0,
+                             bd={'int_emb': 0.0}) is not None
+    # ADR-0451 反例:hp=40(末窗血预算不足带)缺口项不加成 → 照拒
+    st_band = _fallback_formed_frame()
+    assert handoff_gate_gap(st_band, sess, _REG) == 1
+    assert _check_constraint('interest_rule', cand, st_band, st_band,
+                             sess, _REG, val=1.0,
                              bd={'int_emb': 0.0}) is not None
     # 达标帧(核心 2★ 补上 + hp 60:boss 投影后 hp=28 → hp_tier=1,
     # 板面维亦达标 → 总档 1):照拒(不达标才放宽)。

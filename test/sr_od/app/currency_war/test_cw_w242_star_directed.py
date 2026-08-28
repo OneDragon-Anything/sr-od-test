@@ -104,9 +104,15 @@ def _state(**kw) -> GameState:
 
 def test_copy_candidate_generated_in_final_window() -> None:
     """末窗 gap≥1 时方向外 deployed 填充件同名卡生成 'copy' 候选
-    (r410 守卫+方向门双豁免)。"""
+    (r410 守卫+方向门双豁免)。
+
+    语义演进(ADR-0451 血预算停手·第二波):授权帧改 hp=90(带外,
+    ≥p1_exit_blood_target;board 维 tier0 主罚 gap≥1 前置不变)——
+    原 hp=20 帧已入末窗血预算不足带,降格面停定向 'copy' 生成臂
+    (反例见同文件 test_copy_arm_downgraded_in_blood_band)。"""
     sess = _sess()
-    st = _state(shop=[ShopCard(x=1, faction=_FAC, name=_FILLER, cost=3)])
+    st = _state(hp=90,
+                shop=[ShopCard(x=1, faction=_FAC, name=_FILLER, cost=3)])
     assert handoff_gate_gap(st, sess, _REG) >= 1   # 前置:缺口成立
     got = generate_candidates(st, sess, _REG)
     names = [c.action.card.name for c in got if isinstance(c.action,
@@ -114,6 +120,15 @@ def test_copy_candidate_generated_in_final_window() -> None:
     assert _FILLER in names
     tag = _buy_tag(st.shop[0], st, sess, _REG)
     assert tag == 'copy'
+
+
+def test_copy_arm_downgraded_in_blood_band() -> None:
+    """ADR-0451 反例锁:同构造 hp=20(末窗血预算不足带)定向 'copy'
+    臂降格不生成——血预算不足帧行为(战力投资搜索 → 减损保血)。"""
+    sess = _sess()
+    st = _state(shop=[ShopCard(x=1, faction=_FAC, name=_FILLER, cost=3)])
+    assert handoff_gate_gap(st, sess, _REG) >= 1   # 前置:缺口仍在
+    assert _buy_tag(st.shop[0], st, sess, _REG) != 'copy'
 
 
 def test_copies_cap_and_r408_still_govern() -> None:
@@ -148,8 +163,11 @@ def _copy_cand(st: GameState, cost: int = 3) -> Candidate:
 def test_arbiter_nonpositive_gate_directed_pass() -> None:
     """主通道:末窗 gap≥1 时零分 'copy' 买候选进约束链而非「非正分」
     拒(放行≠必买:金不足/容量约束仍拒);非末窗照拒;非 'copy'
-    标签零分候选照拒(定向性)。"""
-    st = _state(gold=55)
+    标签零分候选照拒(定向性)。
+
+    语义演进(ADR-0451):授权帧改 hp=90 带外——血预算不足帧的非正分
+    'copy' 豁免同步降格(见 test_copy_arm_downgraded_in_blood_band)。"""
+    st = _state(gold=55, hp=90)
     sess = _sess()
     res = arbitrate([(_copy_cand(st), 0.0, {'cost': 3})], st, sess, _REG)
     row = res.log[0]
@@ -184,8 +202,11 @@ def test_ev_gap_bonus_single_source_no_double_count() -> None:
     """防双计:EV 授权值单一源 = interest_rule 的 W227 缺口项
     (handoff_ev_gap_bonus×gap);C 授权路径不加第二份授权值——r8
     (boss 窗外)跨档买经缺口项放行(auth 带 handoff_gap);
-    registry 无 C 项专有数值常量(no star_directed_* bonus 字段)。"""
-    st = _state(gold=53, hp=30)   # hp 30:投影后 hp_tier=0 但非应急态
+    registry 无 C 项专有数值常量(no star_directed_* bonus 字段)。
+
+    语义演进(ADR-0451):授权帧改 hp=70 带外——hp<60 末窗帧缺口项
+    降格不加成(血预算停手·P1-a),反例:hp=30 帧同构造被拒。"""
+    st = _state(gold=53, hp=70)   # 带外:投影后 hp_tier=2,board 维 tier0
     sess = _sess()
     cand = _copy_cand(st, cost=4)
     auth: dict = {}
@@ -195,6 +216,12 @@ def test_ev_gap_bonus_single_source_no_double_count() -> None:
     assert r is None
     assert auth.get('handoff_gap') == 1
     assert auth.get('ev_auth', 0) > 0
+    # ADR-0451 反例:hp=30(末窗血预算不足带)缺口项不加成 → EV≤0 拒
+    st_band = _state(gold=53, hp=30)
+    r_band = _check_constraint('interest_rule', _copy_cand(st_band, cost=4),
+                               st_band, st_band, sess, _REG,
+                               val=1.0, bd={'int_emb': 0.0})
+    assert r_band is not None
     # 数值单一源:registry 无 C 项专有 bonus 常量
     assert not [f for f in type(DEFAULT_REGISTRY).__dataclass_fields__
                 if f.startswith('handoff_star')]

@@ -123,9 +123,14 @@ def test_budget_requires_gap_and_peak() -> None:
 
 def test_arbiter_nonpositive_refresh_bounded_pass() -> None:
     """主通道:非正分刷新在授权窗开时有界放行(进 actions+计数);
-    预算外的第二次放行被轮上限拦回「非正分」。"""
+    预算外的第二次放行被轮上限拦回「非正分」。
+
+    语义演进(ADR-0451 血预算停手·第二波):授权帧改 hp=70(带外,
+    >p1_exit_blood_target)——原 hp=30 帧已落入末窗血预算不足带,搜索型
+    刷新停付取代 M-A 授权(见 test_refresh_stop_overrides_ma);hp 维
+    不影响 gap(board 维 tier0 主罚,gap≥1 前置不变)。"""
     sess = _sess()
-    st = _state(gold=55, hp=30)   # hp>25 非应急([18]);board 维仍 tier0→gap≥1
+    st = _state(gold=55, hp=70)   # 带外非应急([18]);board 维 tier0→gap≥1
     from sr_od.application.currency_war.decision_v2.candidates import (
         Candidate,
     )
@@ -137,6 +142,23 @@ def test_arbiter_nonpositive_refresh_bounded_pass() -> None:
     assert any(isinstance(a, RefreshShop) for a in res.actions)
     assert (getattr(sess, 'v3_dir_refresh_round', 0),
             getattr(sess, 'v3_dir_refresh_used', 0)) == (1, 1)
+
+
+def test_refresh_stop_overrides_ma() -> None:
+    """ADR-0451 接缝锁:末窗血预算不足帧(25<hp<60)血线胜——M-A
+    预算虽在,刷新收尾被 blood_budget_refresh_stop 前置拒付,预算
+    零消耗(独立谓词 AND,承接/定向授权不豁免停手)。"""
+    from sr_od.application.currency_war.decision_v2.candidates import (
+        Candidate as _C,
+    )
+    sess = _sess()
+    st = _state(gold=55, hp=30)
+    cand = _C(action=RefreshShop(cost=2), tag='refresh', source='shop')
+    res = arbitrate([(cand, -2.0, {'int_emb': 0.0})], st, sess, _REG)
+    assert res.log[-1]['accepted'] is False
+    assert '搜索型刷新停拒' in (res.log[-1].get('reject') or '')
+    assert not any(isinstance(a, RefreshShop) for a in res.actions)
+    assert getattr(sess, 'v3_dir_refresh_used', 0) == 0
 
 
 def test_nonfinal_window_nonpositive_rejected() -> None:
@@ -173,17 +195,19 @@ def test_positive_vd_path_not_billed_to_budget() -> None:
 
 def test_affordability_floor_still_governs_authorized_refresh() -> None:
     """可负担性下限照辖:金 11 刷 2 → 花后 9 < boss_floor(10)拒;
-    金 13 → 花后 11 达标放行(收尾的下限兜底,M-A 授权≠无限透支)。"""
+    金 13 → 花后 11 达标放行(收尾的下限兜底,M-A 授权≠无限透支)。
+    (ADR-0451:hp 改 70 带外——原 hp=30 帧已入血预算停手辖域,
+    授权面语义迁移见 test_refresh_stop_overrides_ma。)"""
     from sr_od.application.currency_war.decision_v2.candidates import (
         Candidate,
     )
     cand = Candidate(action=RefreshShop(cost=2), tag='refresh',
                      source='shop')
     res = arbitrate([(cand, -2.0, {'int_emb': 0.0})],
-                    _state(gold=11, hp=30), _sess(), _REG)
+                    _state(gold=11, hp=70), _sess(), _REG)
     assert res.log[-1]['accepted'] is False
     res3 = arbitrate([(cand, -2.0, {'int_emb': 0.0})],
-                     _state(gold=13, hp=30), _sess(), _REG)
+                     _state(gold=13, hp=70), _sess(), _REG)
     assert res3.log[-1]['accepted'] is True
     assert any(isinstance(a, RefreshShop) for a in res3.actions)
 
