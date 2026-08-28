@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """W332b 未成型期姿态批单帧锁(泄息通道 release / 预算三方合并 / 换线判据)。
 
 设计=唯一规格:`.debug/temp/currency_war/w328_unformed_posture/DESIGN.md`。
@@ -23,7 +22,10 @@
 - ⑥ release 义务预算的有界放行:累计 ≤ 预算 ∧ 花后 ≥ boss_floor;
 - ⑦ latch 单窗:同轮内命中后不回退,跨轮失效;
 - ⑧ 换线判据:E_rounds 有限性 / θ 滞回 / D_min 驻留 / 双 inf 维持 /
-  末窗辖域门。
+  末窗辖域门;
+- ⑩ 成型帧末窗投影臂义务预算消费定向化:预算保留但只许花在找件
+  (店内存在名集件)/升级(不经本门),盲刷拒;未成型帧与第三路径
+  注入不辖。
 """
 from __future__ import annotations
 
@@ -33,6 +35,11 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_economy import NodeGoal
 from sr_od.application.currency_war.cw_horizon import Posture
+from sr_od.application.currency_war.cw_line_switch import (
+    e_rounds,
+    should_switch_e,
+    switch_allowed,
+)
 from sr_od.application.currency_war.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
@@ -50,11 +57,6 @@ from sr_od.application.currency_war.decision_v2.posture_release import (
 )
 from sr_od.application.currency_war.decision_v2.registry import (
     DEFAULT_REGISTRY,
-)
-from sr_od.application.currency_war.cw_line_switch import (
-    e_rounds,
-    should_switch_e,
-    switch_allowed,
 )
 
 _REG = DEFAULT_REGISTRY
@@ -208,7 +210,6 @@ def test_merge_dp_authority_not_shrunk() -> None:
 
 def test_wrap_keeps_level_for_parallel() -> None:
     """cap 满员并存裁决:FLIP 帧保留 level_up(追级与泄息同一笔溢余预算)。"""
-    st = _state(gold=72, deployed_n=6)
     d = ReleaseDirective(budget_gold=22, rolls=11)
     p = wrap_posture(Posture(save=True, level_up=True, refresh_budget=0), d)
     assert p.tag == 'release' and p.level_up is True
@@ -297,6 +298,89 @@ def test_release_budget_bounded_authorization() -> None:
     assert not authorize_release_refresh(s, 11, 2, _REG)   # 花后 9 < boss_floor 10
     s.v3_release = None
     assert not authorize_release_refresh(s, 60, 2, _REG)
+
+
+# --- ⑩ 成型帧末窗投影臂义务预算消费定向化 ---------------------------------------
+
+
+def _form_boss_state(**kw) -> GameState:
+    """成型帧末窗投影臂底座:SPEND 相位 + boss 窗 + hp−boss_tax_p75<25
+    (hp=38 命中)+ 溢余段;其余同 _state 默认。"""
+    return _state(gold=67, hp=38, plane=1, r=9, node='boss', **kw)
+
+
+def _shop_card(name: str) -> object:
+    from sr_od.application.currency_war.cw_state import ShopCard
+    return ShopCard(name=name, faction='仙舟罗浮', cost=1, x=0, star=1)
+
+
+def _target_name() -> str:
+    from sr_od.application.currency_war.cw_system_cards import (
+        engine_char_names,
+    )
+    return sorted(engine_char_names())[0]
+
+
+def test_formed_projection_blind_refresh_denied() -> None:
+    """定向化锁(盲刷拒):成型帧(phase=SPEND)末窗投影臂 FLIP 命中 →
+    directive.directed_only=True;店内无可找件 → find_ok=False →
+    authorize_release_refresh 拒(义务预算保留但盲刷不是合规消费)。"""
+    s = StrategySession()
+    d = release_directive(_form_boss_state(), s, _REG, 'SPEND',
+                          Posture(save=False, level_up=False,
+                                  refresh_budget=6))
+    assert d is not None and d.third_path is False
+    assert d.directed_only is True and d.find_ok is False
+    s.v3_release = d
+    s.v3_release_spent = 0
+    assert not authorize_release_refresh(s, 60, 2, _REG)
+
+
+def test_formed_projection_find_refresh_allowed() -> None:
+    """定向化锁(找件放行):同帧店内出现名集件(目标件)→ find_ok=True →
+    预算内有界放行(找件消费合规;升级不经本门不受辖)。"""
+    s = StrategySession()
+    st = _form_boss_state()
+    st.shop = [_shop_card('无关件乙'), _shop_card(_target_name())]
+    d = release_directive(st, s, _REG, 'SPEND',
+                          Posture(save=False, level_up=False,
+                                  refresh_budget=6))
+    assert d is not None and d.directed_only is True and d.find_ok is True
+    s.v3_release = d
+    s.v3_release_spent = 0
+    assert authorize_release_refresh(s, 60, 2, _REG)
+    assert s.v3_release_spent == 2
+
+
+def test_unformed_projection_not_directed() -> None:
+    """辖域边界:未成型帧(phase=FORM)末窗投影臂命中 → directed_only=False
+    → 盲刷照旧放行(定向化只辖成型帧——未成型帧泄息语义由设计承载,
+    本批不扩权)。"""
+    s = StrategySession()
+    st = _state(gold=67, hp=38, plane=1, r=9, node='boss')   # shop=[]
+    d = release_directive(st, s, _REG, 'FORM',
+                          Posture(save=False, level_up=False,
+                                  refresh_budget=6))
+    assert d is not None and d.directed_only is False and d.find_ok is True
+    s.v3_release = d
+    s.v3_release_spent = 0
+    assert authorize_release_refresh(s, 60, 2, _REG)
+
+
+def test_third_path_directive_not_directed() -> None:
+    """第三路径(slot 守卫注入)不辖定向化:其语义=防泄息通道静默关闭,
+    定向化会重新造出静默面——third_path 帧盲刷照旧放行。"""
+    s = StrategySession()
+    st = _form_boss_state(deployed_n=5, bench_n=1)   # deployed<cap ∧ bench 有件
+    assert slot_guard_blocks_level(st)
+    d = release_directive(st, s, _REG, 'SPEND',
+                          Posture(save=False, level_up=True,
+                                  refresh_budget=0))
+    assert d is not None and d.third_path is True
+    assert d.directed_only is False and d.find_ok is True
+    s.v3_release = d
+    s.v3_release_spent = 0
+    assert authorize_release_refresh(s, 60, 2, _REG)
 
 
 # --- ④⑤ spend_mode 状态机与 cw_horizon 合并语义 ---------------------------------

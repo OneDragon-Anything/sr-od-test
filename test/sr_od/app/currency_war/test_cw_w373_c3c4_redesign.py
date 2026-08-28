@@ -145,36 +145,72 @@ def test_c3_l2_hoard_buy_dropped_incl_final_target() -> None:
     assert drops.get('plugin') == 'hoard_buy'
 
 
-# --- C3-L6:买侧合成豁免锁(bench 对子 + 店同名牌 = 即时 2★ 上场) -------------
+# --- C3-L6:买侧合成豁免完备式锁(c.merge ∧ 合成后可上才豁免) -----------------
 
 
-def test_c3_l6_merge_buy_exempt_from_hoard_drop() -> None:
-    """濒死帧无空位(free=0)∧ bench 蹲目标件对子(1★×2)∧ 店有同名牌
-    → merge 买候选放行(买第 3 张即合成 2★ 上场,Δp_board>0 的可部署
-    性,与 C1 侧判据同款);对照:同帧非合成 hoard 买仍删。"""
+def test_c3_l6_merge_buy_complete_criterion() -> None:
+    """濒死帧无空位(free=0)下合成豁免取完备式:「会发生合成」(c.merge)
+    不等价「Δp_board≥1」——合成后可上(_deploy_free_after_merge≥1)才
+    豁免。三帧各锁:
+    - 删:bench 对子(1★×2)+ 店同名牌,板上无同名 → 合成 2★ 落 bench
+      无位可上,Δp_board=0,仍删(hoard_buy)——「bench 对子+店同名牌
+      即时 2★ 上场」旧豁免在板满帧的反例收口;
+    - 删:板上 1 份同名同星 + bench 1 份 → 合成载体落场上占原位,净腾 0 位;
+    - 放行:板上同名同星 2 份 → 合成消 2 份场上份、载体占 1 份,净腾
+      1 位(cw_state._merge_bench 载体=场上优先,被消份按槽位置 None,
+      ADR-0392)。对照:非合成 hoard 买三帧全删。"""
     tgt = sorted(engine_char_names())[0]
-    st = _state(level=5,
-                deployed=[_unit(i, i < 3) for i in range(5)],
-                bench=[BenchChar(slot=0, char_id=tgt, faction='仙舟罗浮',
-                                 star=1, position_pref='front'),
-                       BenchChar(slot=1, char_id=tgt, faction='仙舟罗浮',
-                                 star=1, position_pref='front')])
-    # 生产形态:merge 标志挂在常规标签买候选上(candidates.py 买侧
-    # will_merge_on_buy 标定),synthesize 标签候选不在任何放行标签集,
-    # 层1即拦,不涉本判据;独立标签避免与对照买在链日志按 tag 相互覆盖
+
+    def _deployed(names: list[str]) -> list[BenchChar]:
+        return [_unit(i, i < 3) for i in range(5 - len(names))] + [
+            BenchChar(slot=10 + k, char_id=n, faction='仙舟罗浮', star=1,
+                      position_pref='front')
+            for k, n in enumerate(names)]
+
     merge_buy = Candidate(action=BuyCard(_card(tgt), reason=''),
                           tag='bridge_core', source='shop', merge=True)
-    kept, flog = filter_candidates(_cands(tgt) + [merge_buy], st,
-                                   StrategySession(), _REG_DYING)
-    assert any(isinstance(c.action, BuyCard) and c.merge for c in kept)
-    kept_buy_names = [c.action.card.name for c in kept
+    # 帧1:bench 对子、板上无同名 → 合成落 bench 无位可上 → 仍删
+    st_bench_pair = _state(level=5,
+                           deployed=[_unit(i, i < 3) for i in range(5)],
+                           bench=[BenchChar(slot=0, char_id=tgt,
+                                            faction='仙舟罗浮', star=1,
+                                            position_pref='front'),
+                                  BenchChar(slot=1, char_id=tgt,
+                                            faction='仙舟罗浮', star=1,
+                                            position_pref='front')])
+    kept1, flog1 = filter_candidates(_cands(tgt) + [merge_buy], st_bench_pair,
+                                     StrategySession(), _REG_DYING)
+    assert not any(isinstance(c.action, BuyCard) and c.merge for c in kept1)
+    drops1 = {e['tag']: e.get('dying_band', '') for e in flog1
+              if not e['kept']}
+    assert drops1.get('bridge_core') == 'hoard_buy'
+    assert drops1.get('line_carry') == 'hoard_buy'
+    assert drops1.get('plugin') == 'hoard_buy'
+    # 帧2:板上 1 份同名同星 + bench 1 份 → 载体占原位,净腾 0 → 仍删
+    st_one_on_board = _state(level=5,
+                             deployed=_deployed([tgt]),
+                             bench=[BenchChar(slot=0, char_id=tgt,
+                                              faction='仙舟罗浮', star=1,
+                                              position_pref='front')])
+    kept2, flog2 = filter_candidates(
+        _cands(tgt) + [Candidate(action=BuyCard(_card(tgt), reason=''),
+                                 tag='bridge_core', source='shop',
+                                 merge=True)],
+        st_one_on_board, StrategySession(), _REG_DYING)
+    assert not any(isinstance(c.action, BuyCard) and c.merge for c in kept2)
+    assert {e['tag']: e.get('dying_band', '') for e in flog2
+            if not e['kept']}.get('bridge_core') == 'hoard_buy'
+    # 帧3:板上同名同星 2 份 → 合成净腾 1 位 → 放行(唯一存活的买)
+    st_two_on_board = _state(level=5, deployed=_deployed([tgt, tgt]))
+    kept3, _ = filter_candidates(
+        _cands(tgt) + [Candidate(action=BuyCard(_card(tgt), reason=''),
+                                 tag='bridge_core', source='shop',
+                                 merge=True)],
+        st_two_on_board, StrategySession(), _REG_DYING)
+    assert any(isinstance(c.action, BuyCard) and c.merge for c in kept3)
+    kept_buy_names = [c.action.card.name for c in kept3
                       if isinstance(c.action, BuyCard)]
-    assert kept_buy_names == [tgt]   # 唯一存活的买=合成买
-    drops = {e['tag']: e.get('dying_band', '')
-             for e in flog if not e['kept']}
-    # 对照:非合成买(无对子可合)同帧仍删
-    assert drops.get('line_carry') == 'hoard_buy'
-    assert drops.get('plugin') == 'hoard_buy'
+    assert kept_buy_names == [tgt]
 
 
 # --- C3-L3:可上强件锁(A1-β) ------------------------------------------------

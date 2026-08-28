@@ -7,7 +7,8 @@
 
 - 定向优先级锁(registry.c1_directed_spend_enabled,默认关=零漂移):
   C1 帧内零 boss 增量支出删(纯 hoard 买/盲刷/升完无件可上的 LevelUp),
-  可部署买/3合1 即时合成买/定向刷新放行,卖/上阵不辖——溢余段花金
+  可部署买/3合1 合成且合成后可上买(完备式,与濒死带同款)/定向刷新放行,
+  卖/上阵不辖——溢余段花金
   零息损(成本恒 0),Δp≤0 支出确定性零收益,「必花+定向」的优先级
   语义=零贡献让位有增量;
 - 辖域正交锁:d 边界(hp=58/59)上 flip_hit(FLIP 末窗投影臂)与
@@ -162,8 +163,10 @@ def test_c1_narrows_zero_delta_spend() -> None:
 
 
 def test_c1_keeps_merge_and_directed_refresh() -> None:
-    """3合1 即时合成买保留(合成后上场星级即涨);有空位时买全放行;
-    店有可买+上的名集件时定向刷新放行(存在性判据)。"""
+    """3合1 合成买取完备式(合成后可上才豁免,与濒死带侧同款):板满+
+    合成落 bench 无位可上仍删;板满+合成消场上同名同星 2 份净腾 1 位
+    放行。有空位时买全放行;店有可买+上的名集件时定向刷新放行(存在性
+    判据)。"""
     tgt = _target_name()
     st_room = _c1_state(shop=[_card(tgt)])
     kept, _ = filter_candidates(_cands(tgt), st_room, _boss_session(),
@@ -172,11 +175,22 @@ def test_c1_keeps_merge_and_directed_refresh() -> None:
     # bench 空:升级无件可上(Δp=0)照删;有空位时两类买+定向刷新放行
     assert {'line_carry', 'plugin', 'refresh'} <= tags
     assert 'levelup' not in tags
-    st_merge = _bench_full_state()
-    cands = _cands(tgt, merge=True)
-    kept2, _ = filter_candidates(cands, st_merge, _boss_session(), _REG_C1)
-    assert any(c.merge and c.tag == 'line_carry' for c in kept2), \
-        '合成候选在 bench 满帧也保留(买入即升星上场)'
+    # 板满+合成落 bench 无位可上(板上无同名同星)→ 仍删(c1_hoard_buy)
+    st_merge_bench = _bench_full_state()
+    kept2, flog2 = filter_candidates(_cands(tgt, merge=True), st_merge_bench,
+                                     _boss_session(), _REG_C1)
+    assert not any(c.merge for c in kept2)
+    drops = {e['tag']: e.get('c1_directed', '') for e in flog2
+             if not e['kept']}
+    assert drops.get('line_carry') == 'c1_hoard_buy'
+    # 板满+合成消场上同名同星 2 份(载体落场上占 1 份,净腾 1 位)→ 放行
+    st_merge_board = _c1_state(
+        deployed=[_unit(i, f'上{i}') for i in range(3)]
+        + [_unit(10, tgt), _unit(11, tgt)])
+    kept3, _ = filter_candidates(_cands(tgt, merge=True), st_merge_board,
+                                 _boss_session(), _REG_C1)
+    assert any(c.merge and c.tag == 'line_carry' for c in kept3), \
+        '合成候选在合成后可上帧放行(消场上份净腾上阵位)'
 
 
 def test_c1_off_zero_drift() -> None:
