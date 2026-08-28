@@ -7,8 +7,9 @@ handler 复现同一 OS 层约束(A 的流开着,B 换名必撞锁),与跨进程
 进程边界不改变句柄语义。
 
 判定标准:SafeTimedRotatingFileHandler 轮转被占用时不得抛异常 —— 退避重试,
-全失败则放弃本次轮转、恢复可写流并推迟下一个轮转时点;原版 handler 则应
-复现抛错(证明测试自身测的是真病,不是安慰剂)。
+rename 仍被挡则 copytruncate 兜底当场完成归档(数据零丢失);兜底也被阻断时
+放弃本次轮转、恢复可写流并推迟下一个轮转时点;原版 handler 则应复现抛错
+(证明测试自身测的是真病,不是安慰剂)。
 """
 
 import logging
@@ -37,7 +38,7 @@ def _make_stock_handler(path: str) -> logging.handlers.TimedRotatingFileHandler:
 @_NT_ONLY
 @pytest.mark.parametrize('safe', [False, True])
 def test_rollover_with_foreign_open_handle(tmp_path, safe: bool) -> None:
-    """A 流保持打开,B 换名:原版抛 WinError 32,safe 版推迟不抛。"""
+    """A 流保持打开,B 换名:原版抛 WinError 32,safe 版 copytruncate 兜底不抛。"""
     target = str(tmp_path / 'log.txt')
     holder = _make_stock_handler(target)
     try:
@@ -58,12 +59,13 @@ def test_rollover_with_foreign_open_handle(tmp_path, safe: bool) -> None:
 
             if safe:
                 assert not raised, 'safe handler 被占用轮转不应抛异常'
-                # 降级而非停摆:无归档文件产生,流可写,轮转时点已推迟。
-                assert not any(p.name.startswith('log.txt.') for p in tmp_path.iterdir())
-                assert rotator.stream is not None and not rotator.stream.closed
-                rotator.stream.write('post-defer\n')
-                rotator.stream.flush()
-                assert rotator.rolloverAt > time.time(), '全败后应推迟下一个轮转时点'
+                # 兜底而非停摆:归档当场产生且含占用时刻全部内容(数据零丢失),
+                # 轮转时点正常推进(不再推迟降级)。
+                archives = [p.name for p in tmp_path.iterdir() if p.name.startswith('log.txt.2')]
+                assert len(archives) == 1, f'copytruncate 兜底应产生归档: {archives}'
+                assert (tmp_path / archives[0]).read_text(encoding='utf-8') == 'held open\n'
+                assert (tmp_path / 'log.txt').stat().st_size == 0, '当前文件应被截空'
+                assert rotator.rolloverAt > time.time(), '兜底成功应正常推进轮转时点'
             else:
                 assert raised, '原版 handler 应在此场景复现 WinError 32(测试有效性前提)'
         finally:

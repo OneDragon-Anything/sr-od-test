@@ -76,7 +76,11 @@ def test_rename_succeeded_cleanup_blocked_completes_rollover(tmp_path) -> None:
 
 @_NT_ONLY
 def test_defer_reopen_guard_keeps_live_stream(tmp_path, monkeypatch) -> None:
-    """全败降级时若并发 emit 已重开流,降级路径不得把它替换成第二个句柄。"""
+    """全败降级时若并发 emit 已重开流,降级路径不得把它替换成第二个句柄。
+
+    修 copytruncate 兜底后,「全败降级」只在兜底也失败(归档名不可写)时到达:
+    除 rename 外连 copyfile 一并阻断,才能落到本测试的降级路径。
+    """
     target = str(tmp_path / 'log.txt')
     holder = _make_holder(target)
     handler = SafeTimedRotatingFileHandler(
@@ -103,7 +107,11 @@ def test_defer_reopen_guard_keeps_live_stream(tmp_path, monkeypatch) -> None:
                 live = handler._open()
                 handler.stream = live
 
+    def _blocked_copy(src: str, dst: str):
+        raise PermissionError(13, '模拟归档名也被占用', src)
+
     monkeypatch.setattr(log_utils_mod.os, 'rename', _rename_then_concurrent_reopen)
+    monkeypatch.setattr(log_utils_mod.shutil, 'copyfile', _blocked_copy)
     try:
         handler.rolloverAt = int(time.time())  # 强制到点
         handler.doRollover()  # 换名被 holder 阻塞,重试全败走降级
@@ -121,19 +129,26 @@ def test_defer_reopen_guard_keeps_live_stream(tmp_path, monkeypatch) -> None:
 
 @_NT_ONLY
 def test_double_rollover_occupied_then_free_single_stream(tmp_path) -> None:
-    """跨零点场景:第一次轮转被占用降级续写旧文件,释放后第二次轮转成功
-    —— 全程单 handler、单归档、流唯一。"""
+    """跨零点场景:第一次轮转被占用走 copytruncate 兜底完成归档,释放后第二次
+    轮转成功 —— 全程单 handler、归档内容不丢、流唯一。
+
+    修 copytruncate 兜底后,被占用不再降级续写旧文件,而是当场归档(数据零
+    丢失、归档不再错期);本测试同步锁新行为。
+    """
     target = str(tmp_path / 'log.txt')
     holder = _make_holder(target)
     handler = SafeTimedRotatingFileHandler(
         target, when='midnight', backupCount=3, encoding='utf-8', delay=True,
     )
     try:
-        # 第一次到点:被占用 → 降级
+        # 第一次到点:rename 被 holder 挡 → copytruncate 当场归档
         handler.rolloverAt = int(time.time())
         handler.doRollover()
         assert handler.rolloverAt > time.time()
-        assert not any(p.name.startswith('log.txt.') for p in tmp_path.iterdir())
+        archives = [p.name for p in tmp_path.iterdir() if p.name.startswith('log.txt.20')]
+        assert len(archives) == 1, f'被占用时兜底应当场产生归档: {archives}'
+        assert (tmp_path / archives[0]).read_text(encoding='utf-8') == 'held\n', \
+            '兜底归档必须携带被占用时的全部内容(数据零丢失)'
 
         # 占用释放,冷却期后再到点:轮转成功
         holder.close()
