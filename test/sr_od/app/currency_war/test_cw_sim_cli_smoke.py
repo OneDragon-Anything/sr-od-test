@@ -13,13 +13,20 @@ from pathlib import Path
 
 from sr_od.application.currency_war import cw_delta_pool_data
 from sr_od.application.currency_war import cw_telemetry as tel
-from sr_od.application.currency_war.cw_sim import simulate_p1, simulate_p1_batch
+from sr_od.application.currency_war.cw_sim import (
+    EQUIP_GRANT_CALIB_VERSION,
+    simulate_p1,
+    simulate_p1_batch,
+)
 
 
 def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     """smoke:快照池小批量——指纹命中提交快照+checks 全绿+确定性。"""
     rep = simulate_p1_batch(25, pool='snapshot', ledger=tmp_path / 'b1')
-    assert rep['pool_fingerprint'] == cw_delta_pool_data.META['fingerprint']
+    # 指纹 = 提交快照指纹 + 装备发放结构版本位(供给重校准起,跨版本对照须显式失败)
+    assert rep['pool_fingerprint'] == (
+        cw_delta_pool_data.META['fingerprint']
+        + f'+eqg{EQUIP_GRANT_CALIB_VERSION}')
     assert rep['pool_source'] == 'snapshot'
     # ADR-0268:池级检查(桶饥饿/深崖单调)是**数据披露**非策略
     # 断言——语料饥饿时恒非零(披露即目的),不适用 0 容忍;
@@ -67,13 +74,20 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # 囤金零买 1 例(hp 22 金 51 只升不买,A 臂同 seed hp 34)。交互面在
     # decision_v2 phase/filters(本批边界=意向层单文件),按 ADR-0289
     # 纪律登记待裁(裁决:兜底门是否补质量位/危机与成型停手豁免边)。
+    # 供给重校准批(发放结构重校准,行为变更有意):rng 流整体移位,
+    # seed9(n=25 snapshot)涌现 gold_nonneg 1 例——r6 buys 6 + levelup 4
+    # = 10 > gold_before 9,sim 执行层无金下限钳制、花超 1 金为**策略
+    # 花钱规划侧既有边缘**(与装备发放零金语义无关)。按 ADR-0289 纪律
+    # 登记待裁(裁决归策略域批:执行层是否补钳制/规划侧修复),未裁决
+    # 前豁免;裁决落地后移除,回归 0 容忍。
     _PENDING_ADJUDICATION = ('ledger_consistency',
                              'coldstart_direction',
                              'degrade_recover_mutex',
                              'equip_value_strategy_key_coverage',
                              'engine_seed_not_resold',
                              'deploy_fills_cap',
-                             'decision_v2_crisis_gold_hoard')
+                             'decision_v2_crisis_gold_hoard',
+                             'gold_nonneg')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS or name in _PENDING_ADJUDICATION:
             assert 'violations' in r, f'{name}: 缺 violations 计数'

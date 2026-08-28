@@ -195,8 +195,10 @@ def test_coarse_game_smoke_snapshot_fingerprint() -> None:
     r = cw_sim.simulate_p1(1, pool='snapshot')
     assert r.hp_trail
     assert all(0 <= h <= 100 for h in r.hp_trail)
-    assert r.pool_fingerprint == cw_sim.pool_fingerprint(
-        cw_sim.resolve_pool('snapshot')[0])
+    # 局指纹 = 池指纹 + 装备发放结构版本位(供给重校准起)
+    assert r.pool_fingerprint == (
+        cw_sim.pool_fingerprint(cw_sim.resolve_pool('snapshot')[0])
+        + f'+eqg{cw_sim.EQUIP_GRANT_CALIB_VERSION}')
 
 
 # ===== 位面维(P1 先行)锁:结构见 test_cw_w405_planarize 说明 =====

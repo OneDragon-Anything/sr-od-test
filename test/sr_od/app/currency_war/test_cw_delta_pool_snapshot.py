@@ -71,20 +71,30 @@ def test_resolve_pool_path_json_snapshot(tmp_path: Path) -> None:
 
 
 def test_simulate_p1_records_pool_identity() -> None:
-    """SimResult 带池指纹+来源(跨日基线对照须核指纹一致)。"""
+    """SimResult 带池指纹+来源(跨日基线对照须核指纹一致)。
+
+    供给重校准起指纹含装备发放结构版本位(``+eqgN``)——发放结构是
+    行为语义的一部分,新旧结构不可比,跨版本对照必须显式失败。
+    """
     r = _sim.simulate_p1(42, pool='fallback')
     assert r.pool_source == 'fallback'
-    assert r.pool_fingerprint == _sim.pool_fingerprint({})
+    assert r.pool_fingerprint == (
+        _sim.pool_fingerprint({})
+        + f'+eqg{_sim.EQUIP_GRANT_CALIB_VERSION}')
     r2 = _sim.simulate_p1(42, pool='snapshot')
     assert r2.pool_source == 'snapshot'
-    assert r2.pool_fingerprint == cw_delta_pool_data.META['fingerprint']
+    assert r2.pool_fingerprint == (
+        cw_delta_pool_data.META['fingerprint']
+        + f'+eqg{_sim.EQUIP_GRANT_CALIB_VERSION}')
 
 
 def test_batch_report_carries_pool_fingerprint() -> None:
     """批量结果携带池指纹(基线数字可追溯其校准地基)。"""
     s = _sim.simulate_p1_batch(10, pool='fallback')
     assert s['pool_source'] == 'fallback'
-    assert s['pool_fingerprint'] == _sim.pool_fingerprint({})
+    assert s['pool_fingerprint'] == (
+        _sim.pool_fingerprint({})
+        + f'+eqg{_sim.EQUIP_GRANT_CALIB_VERSION}')
 
 
 def test_snapshot_pool_is_live_in_sim() -> None:

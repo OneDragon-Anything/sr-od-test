@@ -78,7 +78,7 @@ def test_calibration_anchor_r1_in_band() -> None:
         P2ReplayEntry(hp=35, gold=20, level=6,
                       deployed=[{'char_id': '丹恒·饮月', 'faction': '仙舟',
                                  'star': 1, 'position_pref': 'front'},
-                                {'char_id': '白露', 'faction': '仙舟',
+                                {'char_id': '停云', 'faction': '仙舟',
                                  'star': 2, 'position_pref': 'front'},
                                 {'char_id': '符玄', 'faction': '仙舟',
                                  'star': 1, 'position_pref': 'front'}]),
