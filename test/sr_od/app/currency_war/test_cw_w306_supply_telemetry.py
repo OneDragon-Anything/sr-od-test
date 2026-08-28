@@ -12,6 +12,7 @@
 """
 from __future__ import annotations
 
+import time
 from types import SimpleNamespace
 
 from sr_od.application.currency_war import cw_telemetry
@@ -177,6 +178,26 @@ def test_supply_producer_wiring_in_source() -> None:
 # ===== 补给备战状态采集 detour(坐标 2026-08-27 实机实测后复实现) =====
 
 
+class _NoSleepTime:
+    """time 替身:sleep 只记账不真睡,其余属性透传真 time 模块。
+
+    detour 的等待常量(TO_PREP_SETTLE_S 等)是为真机画面过渡设计的;离线桩里
+    mock 画面点击后瞬间就位,这些 sleep 纯属空等(两用例曾各烧 10.5s)。
+    同 test harness fast_sleep 的思路,但 run_supply_node 模块自持
+    ``import time``,fast_sleep 替换的是 operation.py 的 time,覆盖不到这里。
+    """
+
+    def __init__(self) -> None:
+        self.skipped: list[float] = []
+
+    def sleep(self, seconds: float) -> None:
+        """记录被跳过的等待时长(诊断用),不真正睡眠。"""
+        self.skipped.append(seconds)
+
+    def __getattr__(self, name: str):
+        return getattr(time, name)
+
+
 def _make_supply_op(monkeypatch):
     """构 RunSupplyNode 桩(__new__ 绕过 op __init__;只喂 detour 依赖面)。
 
@@ -184,6 +205,9 @@ def _make_supply_op(monkeypatch):
     截图恒为同一伪帧(离线桩);read_game_state 桩出确定值。
     """
     from sr_od.application.currency_war.operations.run_nodes import run_supply_node as m
+
+    # 离线桩空等消除:模块自持 import time,换 no-sleep 替身(类 docstring 详因)
+    monkeypatch.setattr(m, 'time', _NoSleepTime())
 
     decision_captured: list[dict] = []
 
