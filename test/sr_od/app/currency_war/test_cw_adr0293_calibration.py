@@ -306,7 +306,20 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # .debug/temp/currency_war/w415_form_design/DESIGN.md;决策 why=
 # ADR-0432/0433/0434;开臂 A/B 判据挂账见 registry 字段注释)——
 # 有意加字段,锁同步更新(既有字段默认值不变)。
-_EXPECTED_HASH = ('ec44b8f3f1d537c685554c1fcaf1ca6d24fa47a861f357bc968c7c4a2d22e828')
+# copy_press 评分路由定谳清理批更新(ADR-0427 增补节,策略开关生命周期
+# 第 4 态):删除 press_copy_unit/press_core_mirror_bonus 两字段(生产
+# 默认 0.0 恒零 + 生成域被上游臂截流至近空,无观测支点);另清 war_tags
+# 重复字段定义(语义正确份保留,字段面无变化)——有意删字段,锁同步
+# 更新(其余字段不变)。
+# boss 税 p75 位面锚预埋批更新:新增 boss_tax_p75_by_plane 一字段
+# ({1: 34.0, 2: 34.0},结构预埋不激活:plane1=现值零漂移,plane2 槽位
+# 就位但默认仍取现值;P2 sim 观测真值与激活挂账见 registry 字段注释;
+# 消费点=decision_v2.filters 投影安全带取数行,锁在
+# test_cw_boss_tax_p75_by_plane.py)——有意加字段,锁同步更新
+# (既有字段默认值不变)。
+#: ADR-0437 同名牌集中度批更新:新增 dup_concentration_enabled
+#: (=False,默认关零漂移;行为锁 test_cw_dup_concentration)
+_EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173dbed')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
