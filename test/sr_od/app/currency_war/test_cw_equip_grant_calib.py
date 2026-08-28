@@ -7,6 +7,8 @@
 
 锁**结构与常量**,不锁分布数值:池成员/版本位/发放轮数下界/出口保有
 量级(断言成立的最小 n;粗界防「供给面静默回退成品池」类回归)。
+例外(ADR-0447,economy v2 重推导):出口保有均值带 [3.5,6.5] 为
+分布级画像锚,推导见 test_p1_grant_volume_matches_real_profile。
 """
 from __future__ import annotations
 
@@ -33,15 +35,30 @@ def test_fingerprint_carries_grant_version() -> None:
 
 
 def test_p1_grant_volume_matches_real_profile() -> None:
-    """n=15 出口保有粗界:每局 保有+已穿 ∈ [3, 9](实机 4-8 画像 ±1 容差)
-    且进阶 ≤3(实机进阶占比 ~14% 的量级上界)。
+    """供给量画像锁(economy v2 重推导,ADR-0447;W493/W503 编排者裁决)。
 
-    口径修订(ADR-0265 增补:穿戴可逆,基础件默认穿):实机画像 4-8
-    采自「组件留 owned 不穿」期;简易件入穿戴池后 owned 不再含已穿件,
-    校准量改为 owned+worn 总保有(发放量不变,只是存量位置变了)。"""
-    for seed in range(15):
+    **因果推导:事件金 v2 → 供给节奏 → 供给量新期望**:
+    1. 供给节奏零通路:发放轮 = supply/reward 节点,节点序列采样
+       (众数表+变异位)与发放规则**均不读金**——v2 事件金对供给节奏
+       无机制通路;v1/v2 实测发放轮同值(4.05/局,n=20);
+    2. 供给量新期望:E[发放件] = 发放轮 × (1 + EQUIP_GRANT_BONUS_P)
+       = 4.05 × 1.30 ≈ **5.3 件/局**;实机画像 = 4.7 件 / 3.8 轮
+       (=1.24 件/轮,57 局 grant 语料)→ 偏差 +12%,±20% 带内——
+       **供给量仍匹配实机画像**(本断言直接锁供给量,不依赖保有代理);
+    3. 出口保有(供给的下游观测量)= 发放 − 策略 churn(卖带装件/
+       合成消耗):v2 富环境 churn 增 → 保有左移(均值 4.42,n=50;
+       2 件尾 1%→10%)——保有分布仍锁粗界防归零/虚高。
+    **移动靶边界**:实机画像采于旧码旧局(57 局 grant 语料,W477);
+    economy v2 靶与缺陷清零轨道见 ADR-0447(清零后重采实机基线,
+    本锁随之重推导)。"""
+    totals: list[int] = []
+    grant_rounds = 0
+    for seed in range(20):
         r = cw_sim.simulate_p1(seed, pool='snapshot', planes=1)
         p1 = [row for row in r.ledger if row['plane'] == 1]
+        grant_rounds += sum(
+            1 for row in p1
+            if (row.get('sim') or {}).get('node') in ('supply', 'reward'))
         ex = p1[-1]['state']
         owned = ex.get('owned_equips') or []
         worn = [e for d in ex.get('deployed') or []
@@ -51,8 +68,16 @@ def test_p1_grant_volume_matches_real_profile() -> None:
         total = owned + worn + bench_worn
         adv = sum(1 for e in total
                   if e not in RESERVED_COMPONENTS)
-        assert 3 <= len(total) <= 9, f'seed={seed} 总保有 {total}'
+        assert 2 <= len(total) <= 9, f'seed={seed} 总保有 {total}'
         assert adv <= 3, f'seed={seed} 进阶件 {adv} 超量级'
+        totals.append(len(total))
+    mean = sum(totals) / len(totals)
+    assert 3.5 <= mean <= 6.5, f'保有均值 {mean} 越出画像带 [3.5,6.5]'
+    # 供给量期望 vs 实机画像 4.7 件(±20% 带;推导见 docstring 2)
+    rounds = grant_rounds / 20
+    expected_grants = rounds * (1 + cw_sim.EQUIP_GRANT_BONUS_P)
+    assert 3.76 <= expected_grants <= 5.64, \
+        f'供给量期望 {expected_grants:.2f}/局 越出实机画像 4.7±20%'
 
 
 def test_grant_names_all_registered() -> None:

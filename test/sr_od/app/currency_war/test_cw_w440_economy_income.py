@@ -90,7 +90,7 @@ def test_economy_calib_version_disclosed_in_manifest(tmp_path) -> None:
     """版本披露锁:收入口径版本独立进 sim 台账 manifest,
     与粗模型版本(coarse_calib_version)分键、互不占用。
     """
-    assert cw_economy.ECONOMY_CALIB_VERSION == 1
+    assert cw_economy.ECONOMY_CALIB_VERSION == 2   # ADR-0443 事件金重整定
     r = cw_sim.simulate_p1(1, pool='fallback')
     out = cw_sim.write_batch_ledger([r], tmp_path / 'batch')
     manifest = json.loads(
