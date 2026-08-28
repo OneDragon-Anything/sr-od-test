@@ -336,7 +336,11 @@ _EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173d
 # (开臂前置「散买挤掉第三张」已被 ADR-0438 merge 完成豁免消除,ex_dup
 # 复测零独立行为面)——有意删字段,锁同步更新(其余字段不变;行为锁
 # test_cw_dup_concentration 一并删除)。
-_EXPECTED_HASH = ('467d40b090d9eb64de610bb5b5e75d3065af92b50fdc79e0cefd9e69e731ac59')
+# 过渡框架启动重接线批更新:新增 framework_startup_v2_enabled=False
+# (开关生命周期第 1 态:落码默认关,关态决策序列零漂移——同 seed sim
+# 20 局对拍逐位一致;开臂判据挂账见 registry 字段注释)——有意增字段,
+# 锁同步更新(其余字段不变,行为面无漂移)。
+_EXPECTED_HASH = ('ea07c24bf248fdd0251a9d5ed3a4849a308cafe7a6f36d2572d727c8b9d69ff5')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
