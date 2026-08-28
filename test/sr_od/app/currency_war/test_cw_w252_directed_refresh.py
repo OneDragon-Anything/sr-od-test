@@ -261,4 +261,5 @@ def test_no_new_bonus_constant_single_source() -> None:
               if f.startswith('handoff_refresh')
               or f.startswith('directed_refresh')]
     assert set(fields) == {
-        'directed_refresh_per_round', 'directed_refresh_game_cap'}
+        'directed_refresh_per_round', 'directed_refresh_game_cap',
+        'directed_refresh_high_cost_floor'}   # 第三项=C3 清理批 dying_band_high_cost_floor 改名并入(ADR-0426 增补节),非分数 bonus

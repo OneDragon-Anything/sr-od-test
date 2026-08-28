@@ -259,12 +259,13 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # release 活栈消费门批更新:新增 release_spend_gate_enabled 一字段(判据
 # 单一源=decision_v2.posture_release.spend_gate_active;开关语义见
 # registry 字段注释)——有意加字段,锁同步更新(既有字段默认值不变)
-# P2 生存批更新:新增濒死带期望账三字段(dying_band_account_enabled/
-# dying_band_next_loss)+存活轮数门三字段(line_switch_survival_gate_
-# enabled/line_switch_survival_margin/line_switch_round_loss);标定源=
-# .debug/temp/currency_war/w353_p2_survival/w354_calibrate_p2_loss.py
-# (P2 损血谱粗档)。两开关默认 False=现行为零漂移(A/B 基线臂)——
-# 有意加字段,锁同步更新(既有字段默认值不变)
+# P2 生存批更新:新增濒死带期望账与存活轮数门字段;其后 C3/C4 重设计、
+# 损血表合一两次字段面重构;最终 C3 濒死带概念定谳清理(删 dying_band_
+# account_enabled;dying_band_high_cost_floor 改名 directed_refresh_high_
+# cost_floor,消费语义不变),字段演进史与裁决见 ADR-0426 增补节
+# (关联 ADR-0429=C4)。清理批有意改字段面,锁同步更新(存活数值字段
+# 不变;现字段面=p2_node_loss_table 单表 + directed_refresh_high_cost_
+# floor + C4 门字段)。
 # W300 press 通道批更新(V-B3 全量 registry 化):新增 press 七字段
 # (press_channel_enabled/press_band_cum_threshold/press_channel_max_level
 # /press_copy_unit/press_copy_round_cap/press_exempt_round_cap/
@@ -281,34 +282,19 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # 非 registry 字段,锁在
 # test_cw_w370_p2_loss_recalib.py)——有意改参(校准直接生效),锁同步更新
 # (其余字段不变)。
-# C3/C4 重设计落码批更新:删 line_switch_round_loss(等权除数口径退役,
-# 由剩余节点逐节点投影取代);新增 line_switch_node_loss(节点损血表,
-# 默认暂抄现行三档+reward 零损档)/p_win_p2_by_rung(两态口径占位,
-# 空 dict=p=1 退化为常数)/encounter_heal_est(回血期望,默认 0 下界)/
-# line_switch_boss_ci_halfwidth(1.53,投影路径含 boss 的不确定性附加费)/
-# dying_band_high_cost_floor(4,定向刷新存在性名集的高费下界)五字段;
-# dying_band_next_loss 数值不变(重标定值见
-# .debug/temp/currency_war/w373_c3c4_redesign/w375_dual_source_calib.json,
-# 终值覆写归 M1 定稿)。两开关默认 False=现行为零漂移——有意改字段面,
-# 锁同步更新(既有数值字段不变)。
 # C1 溢余必花定向优先级批更新:新增 c1_directed_spend_enabled 一字段
 # (默认 False=现行为零漂移,A/B 基线臂;辖域=P1 末窗投影安全带
 # d≥emergency_hp 的 FLIP 正交补集,设计单一源=
 # .debug/temp/currency_war/w382_c1_design/DESIGN.md §2/§3;破息分支
 # 不实现,过账判据存档于 registry 注释)——有意加字段,锁同步更新
 # (既有字段默认值不变)。
-# 损血表合一更新:删 dying_band_next_loss/line_switch_node_loss 两字段,
-# 合一为 p2_node_loss_table 单表(C3 桶位查表与 C4 逐节点投影共读;默认值
-# =现行生效值零漂移,重标定值指针见 registry 字段注释)——有意改字段面,
-# 锁同步更新(存活数值不变;单一源不变量锁在 test_cw_w373_c3c4_redesign
-# .test_p2_node_loss_table_single_source)。
 # C1 资产臂批更新:新增 c1_asset_channel_enabled(总开关,默认 False=
 # 现行为零漂移)/c1_asset_m_min(0.5,替班计入)/c1_asset_p_slot(0.5,
 # 待标定)/c1_asset_delta_unit(0.03,待标定·主缺口)/c1_asset_l2_loss
 # (12.0,待标定)五字段,设计单一源=
 # .debug/temp/currency_war/w397_s5_asset_channel/DESIGN.md §2/§3——
 # 有意加字段,锁同步更新(既有字段默认值不变)。
-_EXPECTED_HASH = ('1c27f7d29b1f8b0e222161ddb9d4f0e0d5334518a56ce97e4cfd361584cefc37')
+_EXPECTED_HASH = ('69f9d94294efdeaee3f5a5ba44f775b2032517315106bd999986b8055cfc4900')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

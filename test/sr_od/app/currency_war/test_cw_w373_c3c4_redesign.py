@@ -1,9 +1,8 @@
-"""C3/C4 重设计落码批单帧锁(§6.2 锁清单)。
+"""C4 重设计落码批单帧锁(§6.2 锁清单;C3 侧锁已随 ADR-0426 增补节
+定谳清理删除)。
 
 设计=唯一规格:`.debug/temp/currency_war/w373_c3c4_redesign/REDESIGN.md`
-§2/§3/§4/§6.2。旧 W354 语义的两处反模式在本批锁死不复发:
-- A1-α:濒死帧 LevelUp 被动作类型黑名单无条件滤出(旧语义),而 bench
-  蹲着可上件时升级恰是最大 Δp 载体——C3-L1 锁放行;
+§3/§4/§6.2。旧 W354 语义的反模式在本批锁死不复发:
 - A3:rounds_alive 用 ceil(hp/等权均值) 把战斗均摊损失摊到奖励零损轮,
   系统性低估存活——C4-L1/L2 锁投影口径。
 """
@@ -21,46 +20,22 @@ from sr_od.application.currency_war.cw_line_switch import (
     should_switch_e,
     survival_gate,
 )
-from sr_od.application.currency_war.cw_state import (
-    BenchChar,
-    BuyCard,
-    DeployMove,
-    GameState,
-    LevelUp,
-    RefreshShop,
-    SellBench,
-    ShopCard,
-)
+from sr_od.application.currency_war.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_system_cards import engine_char_names
-from sr_od.application.currency_war.decision_v2.candidates import Candidate
-from sr_od.application.currency_war.decision_v2.filters import (
-    _next_battle_loss,
-    filter_candidates,
-)
 from sr_od.application.currency_war.decision_v2.registry import (
     DEFAULT_REGISTRY,
 )
 
-_REG_DYING = dataclasses.replace(DEFAULT_REGISTRY,
-                                 dying_band_account_enabled=True)
 _REG_GATE = dataclasses.replace(DEFAULT_REGISTRY,
                                 line_switch_survival_gate_enabled=True)
-#: 两态口径夹具(p_rung=0.65,W346 §3.2 rung2 胜占比量级;空板 rung=0)
+#: 两态口径夹具(p_rung=0.65,W346 §3.2 rung2 胜占比量级;空板 rung=0;
+#: rounds_two_state_enabled=True——两态通道总开关,默认关=零漂移锚)
 _REG_TWO_STATE = dataclasses.replace(
-    _REG_GATE, p_win_p2_by_rung={0: 0.65, 1: 0.65, 2: 0.65})
+    _REG_GATE, rounds_two_state_enabled=True,
+    p_win_p2_by_rung={0: 0.65, 1: 0.65, 2: 0.65})
 
 P2_FULL_TABLE = ['battle', 'battle', 'encounter', 'reward',
                  'encounter', 'reward', 'boss']
-
-
-def _card(name: str, cost: int = 1) -> ShopCard:
-    return ShopCard(name=name, faction='仙舟罗浮', cost=cost, x=0, star=1)
-
-
-def _unit(slot: int, front: bool) -> BenchChar:
-    return BenchChar(slot=slot, char_id=f'件{slot}', faction='仙舟罗浮',
-                     star=1, position_pref='front' if front else 'back')
 
 
 def _state(**kw) -> GameState:
@@ -80,194 +55,6 @@ def _sess(round_num: int = 1,
     s.plane_node_table_plane = 2
     s.round_num = round_num
     return s
-
-
-def _cands(target: str, other: str = '散件甲') -> list[Candidate]:
-    return [
-        Candidate(action=BuyCard(_card(target), reason=''), tag='line_carry',
-                  source='shop'),
-        Candidate(action=BuyCard(_card(other), reason=''), tag='plugin',
-                  source='shop'),
-        Candidate(action=LevelUp(cost=4), tag='levelup', source='xp'),
-        Candidate(action=RefreshShop(cost=2), tag='refresh', source='shop'),
-        Candidate(action=SellBench(bench_idx=0, income=1, expect=''),
-                  tag='for_gold', source='bench'),
-        Candidate(action=DeployMove(bench_idx=1, to_row='front',
-                                    faction='仙舟罗浮'),
-                  tag='deploy', source='fence'),
-    ]
-
-
-def _kept_ids(kept: list[Candidate]) -> set[tuple]:
-    out = set()
-    for c in kept:
-        a = c.action
-        name = getattr(getattr(a, 'card', None), 'name', '')
-        out.add((c.tag, type(a).__name__, name))
-    return out
-
-
-# --- C3-L1:A1-α 反模式锁(濒死帧 LevelUp 是唯一生存动作) --------------------
-
-
-def test_c3_l1_levelup_with_deployable_bench_survives() -> None:
-    """濒死帧(hp≤下战损)bench 蹲 2 件、空位不足(free=1<2)→ LevelUp
-    放行(升完立刻多上 1 件,Δp_board=1);dying_band 日志无 levelup
-    删除行——动作类型黑名单反模式(ADR-0302/0303 已修族)不复发。"""
-    tgt = sorted(engine_char_names())[0]
-    st = _state(level=5, deployed=[_unit(0, True), _unit(1, True),
-                                   _unit(2, True), _unit(3, False)],
-                bench=[_unit(0, True), _unit(1, False)])
-    assert st.max_units() - st.deployed_count() == 1   # 夹具前提:free<bench_n
-    kept, flog = filter_candidates(_cands(tgt), st, StrategySession(),
-                                   _REG_DYING)
-    assert any(isinstance(c.action, LevelUp) for c in kept)
-    lv_rows = [e for e in flog if e['tag'] == 'levelup']
-    assert lv_rows and all(e['kept'] or e.get('dying_band') != 'levelup'
-                           for e in lv_rows)
-
-
-# --- C3-L2:hoard 买锁 --------------------------------------------------------
-
-
-def test_c3_l2_hoard_buy_dropped_incl_final_target() -> None:
-    """濒死帧无空位(deployed=cap)→ 买候选全删,原因 hoard_buy;
-    final 目标件「买而不上」同判([21] 正常囤在濒死帧来不及兑现,
-    Δp_board=0,设计内意图显式锁)。"""
-    tgt = sorted(engine_char_names())[0]
-    st = _state(level=5,
-                deployed=[_unit(i, i < 3) for i in range(5)])
-    assert st.max_units() - st.deployed_count() == 0   # 夹具前提:无空位
-    kept, flog = filter_candidates(_cands(tgt), st, StrategySession(),
-                                   _REG_DYING)
-    assert not any(isinstance(c.action, BuyCard) for c in kept)
-    drops = {e['tag']: e.get('dying_band', '') for e in flog if not e['kept']}
-    assert drops.get('line_carry') == 'hoard_buy'
-    assert drops.get('plugin') == 'hoard_buy'
-
-
-# --- C3-L6:买侧合成豁免完备式锁(c.merge ∧ 合成后可上才豁免) -----------------
-
-
-def test_c3_l6_merge_buy_complete_criterion() -> None:
-    """濒死帧无空位(free=0)下合成豁免取完备式:「会发生合成」(c.merge)
-    不等价「Δp_board≥1」——合成后可上(_deploy_free_after_merge≥1)才
-    豁免。三帧各锁:
-    - 删:bench 对子(1★×2)+ 店同名牌,板上无同名 → 合成 2★ 落 bench
-      无位可上,Δp_board=0,仍删(hoard_buy)——「bench 对子+店同名牌
-      即时 2★ 上场」旧豁免在板满帧的反例收口;
-    - 删:板上 1 份同名同星 + bench 1 份 → 合成载体落场上占原位,净腾 0 位;
-    - 放行:板上同名同星 2 份 → 合成消 2 份场上份、载体占 1 份,净腾
-      1 位(cw_state._merge_bench 载体=场上优先,被消份按槽位置 None,
-      ADR-0392)。对照:非合成 hoard 买三帧全删。"""
-    tgt = sorted(engine_char_names())[0]
-
-    def _deployed(names: list[str]) -> list[BenchChar]:
-        return [_unit(i, i < 3) for i in range(5 - len(names))] + [
-            BenchChar(slot=10 + k, char_id=n, faction='仙舟罗浮', star=1,
-                      position_pref='front')
-            for k, n in enumerate(names)]
-
-    merge_buy = Candidate(action=BuyCard(_card(tgt), reason=''),
-                          tag='bridge_core', source='shop', merge=True)
-    # 帧1:bench 对子、板上无同名 → 合成落 bench 无位可上 → 仍删
-    st_bench_pair = _state(level=5,
-                           deployed=[_unit(i, i < 3) for i in range(5)],
-                           bench=[BenchChar(slot=0, char_id=tgt,
-                                            faction='仙舟罗浮', star=1,
-                                            position_pref='front'),
-                                  BenchChar(slot=1, char_id=tgt,
-                                            faction='仙舟罗浮', star=1,
-                                            position_pref='front')])
-    kept1, flog1 = filter_candidates(_cands(tgt) + [merge_buy], st_bench_pair,
-                                     StrategySession(), _REG_DYING)
-    assert not any(isinstance(c.action, BuyCard) and c.merge for c in kept1)
-    drops1 = {e['tag']: e.get('dying_band', '') for e in flog1
-              if not e['kept']}
-    assert drops1.get('bridge_core') == 'hoard_buy'
-    assert drops1.get('line_carry') == 'hoard_buy'
-    assert drops1.get('plugin') == 'hoard_buy'
-    # 帧2:板上 1 份同名同星 + bench 1 份 → 载体占原位,净腾 0 → 仍删
-    st_one_on_board = _state(level=5,
-                             deployed=_deployed([tgt]),
-                             bench=[BenchChar(slot=0, char_id=tgt,
-                                              faction='仙舟罗浮', star=1,
-                                              position_pref='front')])
-    kept2, flog2 = filter_candidates(
-        _cands(tgt) + [Candidate(action=BuyCard(_card(tgt), reason=''),
-                                 tag='bridge_core', source='shop',
-                                 merge=True)],
-        st_one_on_board, StrategySession(), _REG_DYING)
-    assert not any(isinstance(c.action, BuyCard) and c.merge for c in kept2)
-    assert {e['tag']: e.get('dying_band', '') for e in flog2
-            if not e['kept']}.get('bridge_core') == 'hoard_buy'
-    # 帧3:板上同名同星 2 份 → 合成净腾 1 位 → 放行(唯一存活的买)
-    st_two_on_board = _state(level=5, deployed=_deployed([tgt, tgt]))
-    kept3, _ = filter_candidates(
-        _cands(tgt) + [Candidate(action=BuyCard(_card(tgt), reason=''),
-                                 tag='bridge_core', source='shop',
-                                 merge=True)],
-        st_two_on_board, StrategySession(), _REG_DYING)
-    assert any(isinstance(c.action, BuyCard) and c.merge for c in kept3)
-    kept_buy_names = [c.action.card.name for c in kept3
-                      if isinstance(c.action, BuyCard)]
-    assert kept_buy_names == [tgt]
-
-
-# --- C3-L3:可上强件锁(A1-β) ------------------------------------------------
-
-
-def test_c3_l3_offtarget_playable_buy_survives() -> None:
-    """濒死帧有空位∧店有非目标战力件 → 买候选存活——名单不再是放行
-    门槛(名单退居评分先验;买谁由 EV 层定价)。"""
-    tgt = sorted(engine_char_names())[0]
-    st = _state(shop=[_card('散件甲'), _card(tgt)])
-    kept, _ = filter_candidates(_cands(tgt), st, StrategySession(),
-                                _REG_DYING)
-    assert any(isinstance(c.action, BuyCard)
-               and c.action.card.name == '散件甲' for c in kept)
-
-
-# --- C3-L4:盲刷锁 ------------------------------------------------------------
-
-
-def test_c3_l4_blind_refresh_existence_gate() -> None:
-    """危机金(≥40,refresh 解锁)下:店无可买+上件 → refresh 删
-    (blind_refresh);店有 → 存活(定向刷新)。"""
-    tgt = sorted(engine_char_names())[0]
-    sess = StrategySession()
-    kept_no, flog = filter_candidates(
-        _cands(tgt), _state(gold=45, shop=[_card('无关件乙')]), sess,
-        _REG_DYING)
-    assert not any(isinstance(c.action, RefreshShop) for c in kept_no)
-    assert any(e['tag'] == 'refresh' and
-               e.get('dying_band') == 'blind_refresh' for e in flog)
-    kept_yes, _ = filter_candidates(
-        _cands(tgt), _state(gold=45, shop=[_card(tgt)]), sess, _REG_DYING)
-    assert any(isinstance(c.action, RefreshShop) for c in kept_yes)
-
-
-# --- C3-L5:收窄性质不变量锁 --------------------------------------------------
-
-
-def test_c3_l5_narrowing_invariant() -> None:
-    """纯收窄不变量:濒死带开臂前后,四类动作×(可上/不可上)状态枚举下
-    开臂后存活集 ⊆ 开臂前存活集(只删不增,W363 A1 结论固化)。"""
-    tgt = sorted(engine_char_names())[0]
-    states = []
-    for deployed in ([], [_unit(i, i < 3) for i in range(5)]):
-        for bench in ([], [_unit(0, True), _unit(1, False)]):
-            for shop in ([], [_card(tgt)], [_card('无关件乙')]):
-                states.append(_state(deployed=deployed, bench=bench,
-                                     shop=shop))
-    for st in states:
-        before, _ = filter_candidates(_cands(tgt), st, StrategySession(),
-                                      DEFAULT_REGISTRY)
-        after, _ = filter_candidates(_cands(tgt), st, StrategySession(),
-                                     _REG_DYING)
-        assert _kept_ids(after) <= _kept_ids(before), \
-            f'开臂后存活集必须 ⊆ 开臂前(deployed={len(st.deployed)},'\
-            f'bench={len(st.bench)},shop={len(st.shop)})'
 
 
 # --- C4-L1:投影手算锁(常数口径数表入注释) ----------------------------------
@@ -322,26 +109,23 @@ def test_c4_l4_missing_kind_zero_loss_calendar_still_ticks() -> None:
     assert rounds_alive(_state(hp=1), sess, reg) == 2
 
 
-# --- S8 单一源不变量锁:C3/C4 损血表合一 ---------------------------------------
+# --- S8 单一源不变量锁:损血表唯一(消费面=C4 投影) ----------------------------
 
 
 def test_p2_node_loss_table_single_source() -> None:
-    """损血表单一源不变量(C3 桶位查表 _next_battle_loss 与 C4 逐节点
-    投影 rounds_alive 共读 registry.p2_node_loss_table):注入自定义表
-    后两消费点同步位移,旧两表字段不复存在——重标定覆写只改一处,
-    「数值源唯一」由本锁固化,不靠人工纪律。"""
+    """损血表单一源不变量(C4 逐节点投影 rounds_alive 读
+    registry.p2_node_loss_table;原批 C3 桶位查表消费点已随 ADR-0426
+    增补节定谳清理删除,单消费点):注入自定义表后投影同步位移,
+    旧分表字段不复存在——重标定覆写只改一处,「数值源唯一」由本锁
+    固化,不靠人工纪律。"""
     assert not hasattr(DEFAULT_REGISTRY, 'dying_band_next_loss')
     assert not hasattr(DEFAULT_REGISTRY, 'line_switch_node_loss')
+    assert not hasattr(DEFAULT_REGISTRY, 'dying_band_account_enabled')
     reg = dataclasses.replace(
         DEFAULT_REGISTRY,
         p2_node_loss_table={'normal': 5.0, 'encounter': 6.0,
                             'boss': 8.0, 'reward': 0.0})
     sess = _sess(table=P2_FULL_TABLE)
-    sess_boss = _sess(table=P2_FULL_TABLE)
-    sess_boss.node_type_current = 'boss'
-    # C3 桶位查表跟随表值(normal 档 5.0 / boss 档 8.0)
-    assert _next_battle_loss(_state(hp=25), sess, reg) == 5.0
-    assert _next_battle_loss(_state(hp=25), sess_boss, reg) == 8.0
     # C4 逐节点投影跟随同一份表(hp=25:默认表 20.05/16.67/26.71 →
     # ra=2;轻损表 5/6/8 → 25−5−5−6+0−6+0−8 死于 boss → ra=7)
     assert rounds_alive(_state(hp=25), _sess()) == 2
@@ -440,10 +224,8 @@ def test_std_l1_dual_source_calibration_semantics() -> None:
 
 
 def test_zero_drift_default_off_chain() -> None:
-    """双开关默认关:registry 缺省下濒死判据恒 False、门恒放行——
-    decide 全链与基线逐位一致的结构前提(registry hash 锁另辖字段面)。"""
-    assert DEFAULT_REGISTRY.dying_band_account_enabled is False
+    """开关默认关:registry 缺省下门恒放行——decide 全链与基线逐位
+    一致的结构前提(registry hash 锁另辖字段面)。"""
     assert DEFAULT_REGISTRY.line_switch_survival_gate_enabled is False
     st = _state(hp=20)
-    assert not DEFAULT_REGISTRY.dying_band_account_enabled and \
-        survival_gate(st, _sess(), 99.0, DEFAULT_REGISTRY)[0] is True
+    assert survival_gate(st, _sess(), 99.0, DEFAULT_REGISTRY)[0] is True

@@ -1,22 +1,19 @@
-"""P2 生存批单帧锁:C3 濒死带支出收窄 + C4 换线存活轮数门(重设计语义)。
+"""P2 生存批单帧锁:C4 换线存活轮数门(重设计语义)+ 定谳清理卫生锁。
 
 设计=唯一规格:`.debug/temp/currency_war/w373_c3c4_redesign/REDESIGN.md`
-§2(C3 Δp_board 代理)/§3(C4 剩余节点逐节点投影)/§6.2 锁清单。旧版
-(W354 语义)锁的「目标名单授权/LevelUp 无条件滤出/ceil 等权除数」
-已随重设计过期:名单退居评分先验、LevelUp 改可部署性谓词、存活轮数
-改日历轮投影(逐批处置见本文件各 docstring)。锁的是策略决策行为
-(单帧锁=回归工具):
+§3(C4 剩余节点逐节点投影)/§6.2 锁清单。旧版(W354 语义)锁的
+「目标名单授权/LevelUp 无条件滤出/ceil 等权除数」已随重设计过期:
+存活轮数改日历轮投影(逐批处置见本文件各 docstring)。锁的是策略
+决策行为(单帧锁=回归工具):
 
-- C3 濒死带(registry.dying_band_account_enabled,默认关=零漂移):
-  Δp_board 符号判定——bench 满无空位的纯 hoard 买/升完仍无件可上的
-  LevelUp/店无可上件的盲刷删,可上买/可引爆 bench 的 LevelUp/定向
-  刷新放行,卖/上阵不辖;四边界(开关/hp_readable 守卫/plane≥2/嵌套
-  应急触发线)逐项。
 - C4 存活轮数门(registry.line_switch_survival_gate_enabled,默认关):
   rounds_alive(剩余节点逐节点投影) ≥ E_rounds(新线)×(1+δ)+余量;
   边界(开关/plane≥2/inf 豁免);与 should_switch_e 串联语义。
   投影手算/奖励零损/未知占位/缺档/死锁画像/去重专项锁在
   test_cw_w373_c3c4_redesign.py。
+- 定谳清理卫生锁:C3 濒死带(同批设计 §2)已被 ADR-0426 增补节定谳
+  清理(删码留档)——开关/谓词/查表包装不再存在,共享面(损血表/
+  部署空位判据/刷新名集/hp 可信位守卫)仍健在供 C4/C1 消费。
 """
 from __future__ import annotations
 
@@ -28,29 +25,17 @@ from sr_od.application.currency_war.cw_line_switch import (
     should_switch_e,
     survival_gate,
 )
-from sr_od.application.currency_war.cw_state import (
-    BenchChar,
-    BuyCard,
-    DeployMove,
-    GameState,
-    LevelUp,
-    RefreshShop,
-    SellBench,
-    ShopCard,
-)
+from sr_od.application.currency_war.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_system_cards import engine_char_names
-from sr_od.application.currency_war.decision_v2.candidates import Candidate
 from sr_od.application.currency_war.decision_v2.filters import (
-    dying_band_active,
-    filter_candidates,
+    _deploy_free,
+    _deploy_free_after_merge,
+    _refreshable_names,
 )
 from sr_od.application.currency_war.decision_v2.registry import (
     DEFAULT_REGISTRY,
 )
 
-_REG_DYING = dataclasses.replace(DEFAULT_REGISTRY,
-                                 dying_band_account_enabled=True)
 _REG_GATE = dataclasses.replace(DEFAULT_REGISTRY,
                                 line_switch_survival_gate_enabled=True)
 
@@ -59,17 +44,8 @@ P2_FULL_TABLE = ['battle', 'battle', 'encounter', 'reward',
                  'encounter', 'reward', 'boss']
 
 
-def _card(name: str, cost: int = 1) -> ShopCard:
-    return ShopCard(name=name, faction='仙舟罗浮', cost=cost, x=0, star=1)
-
-
-def _unit(slot: int, name: str = '件', front: bool = True) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, faction='仙舟罗浮', star=1,
-                     position_pref='front' if front else 'back')
-
-
 def _dying_state(**kw) -> GameState:
-    """濒死帧:P2 r3、应急深带内(hp=20 ≤ normal 档 20.05)、hp 可读。"""
+    """P2 帧夹具:plane=2、r3、hp 可读(C4 投影/守卫锁共用底座)。"""
     base = {
         'plane': 2, 'round_num': 3, 'gold': 30, 'level': 5,
         'hp': 20, 'hp_readable': True,
@@ -77,23 +53,6 @@ def _dying_state(**kw) -> GameState:
     }
     base.update(kw)
     return GameState(**base)
-
-
-def _cands(target: str, other: str = '散件甲') -> list[Candidate]:
-    """六类候选各一:目标件买/非目标件买/升级/刷新/卖/上阵。"""
-    return [
-        Candidate(action=BuyCard(_card(target), reason=''), tag='line_carry',
-                  source='shop'),
-        Candidate(action=BuyCard(_card(other), reason=''), tag='plugin',
-                  source='shop'),
-        Candidate(action=LevelUp(cost=4), tag='levelup', source='xp'),
-        Candidate(action=RefreshShop(cost=2), tag='refresh', source='shop'),
-        Candidate(action=SellBench(bench_idx=0, income=1, expect=''),
-                  tag='for_gold', source='bench'),
-        Candidate(action=DeployMove(bench_idx=1, to_row='front',
-                                    faction='仙舟罗浮'),
-                  tag='deploy', source='fence'),
-    ]
 
 
 def _tabled_session(round_num: int = 1,
@@ -105,110 +64,55 @@ def _tabled_session(round_num: int = 1,
     return sess
 
 
-# --- C3:濒死带判据边界 ------------------------------------------------------
+# --- 定谳清理卫生锁:C3 删除面不复存在 + 共享面健在 ---------------------------
 
 
-def test_dying_band_default_off() -> None:
-    """默认关=零漂移:registry 缺省下濒死判据恒 False。"""
-    assert not dying_band_active(_dying_state(), StrategySession(),
-                                 DEFAULT_REGISTRY)
+def test_c3_symbols_removed_from_registry() -> None:
+    """C3 定谳清理(ADR-0426 增补节):总开关与 C3 专属字段不再存在于
+    registry——死概念不留「开关还在」的错误信号。"""
+    assert not hasattr(DEFAULT_REGISTRY, 'dying_band_account_enabled')
+    assert not hasattr(DEFAULT_REGISTRY, 'dying_band_high_cost_floor')
+    assert hasattr(DEFAULT_REGISTRY, 'directed_refresh_high_cost_floor')
 
 
-def test_dying_band_hp_readable_guard() -> None:
-    """hp_readable=False(置信 0 帧,hp 是沿用值)假帧不评估。"""
-    st = _dying_state(hp_readable=False, hp=1)
-    assert not dying_band_active(st, StrategySession(), _REG_DYING)
+def test_shared_loss_table_alive_for_c4() -> None:
+    """共享损血表健在锁:p2_node_loss_table 仍被 C4 投影消费(轻损表
+    注入后 rounds_alive 位移)——表是 C4 的活数据,清理不伤。"""
+    reg = dataclasses.replace(
+        DEFAULT_REGISTRY,
+        p2_node_loss_table={'normal': 5.0, 'encounter': 6.0,
+                            'boss': 8.0, 'reward': 0.0})
+    assert rounds_alive(_dying_state(hp=25, round_num=1),
+                        _tabled_session(), reg) == 7
 
 
-def test_dying_band_trusted_carried_hp_frame_evaluates() -> None:
-    """hp 决策可信位单一源锁:shop 帧 hp_readable=False 但 hp_trusted=True
-    (hp=沿用的 last_hp_real 真值)→ 守卫放行,濒死判定照常评估——与
-    posture_release.flip_hit 同源(hp_decision_trusted,ADR-0428 口径);
-    100 兜底帧(两位皆 False)仍拒见上锁。"""
-    st = _dying_state(hp_readable=False, hp_trusted=True, hp=20)
-    assert dying_band_active(st, StrategySession(), _REG_DYING)
-
-
-def test_dying_band_plane_scope() -> None:
-    """辖域 plane≥2:P1 濒死帧不辖(批辖域声明)。"""
-    st = _dying_state(plane=1, round_num=7)
-    assert not dying_band_active(st, StrategySession(), _REG_DYING)
-
-
-def test_dying_band_nested_in_emergency() -> None:
-    """触发线嵌套:hp>emergency_hp 恒 False——濒死带不新增覆盖态触发线,
-    与 release FLIP 辖区(hp>25)零交集(结构互斥)。"""
-    st = _dying_state(hp=DEFAULT_REGISTRY.emergency_hp + 1)
-    assert not dying_band_active(st, StrategySession(), _REG_DYING)
-
-
-def test_dying_band_threshold_boundary() -> None:
-    """边界:hp ≤ 下一战期望损血(缺读节点→normal 档)即濒死;
-    hp=20 ≤ 20.05 命中,hp=emergency_hp(25)>20.05 不命中。"""
-    sess = StrategySession()
-    assert dying_band_active(_dying_state(hp=20), sess, _REG_DYING)
-    assert not dying_band_active(_dying_state(hp=25), sess, _REG_DYING)
-
-
-def test_dying_band_boss_bucket_lookup() -> None:
-    """三档谱查表:同一 hp=25(应急带内),boss 节点走 boss 档(≤26.71)
-    濒死;normal 节点(>20.05)不濒死——档位查表生效。"""
-    sess_boss = StrategySession()
-    sess_boss.node_type_current = 'boss'
-    sess_norm = StrategySession()
-    assert dying_band_active(_dying_state(hp=25), sess_boss, _REG_DYING)
-    assert not dying_band_active(_dying_state(hp=25), sess_norm, _REG_DYING)
-
-
-# --- C3:支出收窄(Δp_board 符号判定链行为) ----------------------------------
-
-
-def _target_name() -> str:
-    """目标件名(裸 session 目标集=引擎件全集,单一源回退语义)。"""
-    return sorted(engine_char_names())[0]
-
-
-def test_dying_band_narrows_by_delta_p_board() -> None:
-    """濒死帧 Δp_board 收窄:有空位时买(目标与非目标)都放行(名单不再
-    是门槛,A1-β);bench 无件 LevelUp 删(levelup_no_deploy——升完仍无
-    件可上,Δp=0);金<危机线 refresh 仍被应急标签集滤出(基线行为);
-    卖/上阵不辖。(此帧空位充足,买类不触发 hoard 收窄。)"""
-    tgt = _target_name()
+def test_shared_face_helpers_alive_for_c1() -> None:
+    """C1 判据共享面健在锁:部署空位/合成后空位/刷新名集/hp 可信位
+    守卫四组符号仍在且可执行(C1 仍处演进中,清理批只删 C3 专属)。"""
+    from sr_od.application.currency_war.decision_v2.posture_release import (
+        hp_decision_trusted,
+    )
     st = _dying_state()
     sess = StrategySession()
-    kept, flog = filter_candidates(_cands(tgt), st, sess, _REG_DYING)
-    tags = {c.tag for c in kept}
-    assert {'line_carry', 'plugin', 'for_gold', 'deploy'} <= tags, \
-        '有空位时两类买+卖/上阵必须放行'
-    assert 'levelup' not in tags
-    drops = {e['tag']: e.get('dying_band', '') for e in flog if not e['kept']}
-    assert drops.get('levelup') == 'levelup_no_deploy'
-
-
-def test_dying_band_directed_refresh_by_playable_presence() -> None:
-    """定向刷新(金≥40 危机线开 refresh):店有可买+上的目标件→放行;
-    店无任何名集件(且非高费强件)→删(blind_refresh,存在性判据)。"""
-    tgt = _target_name()
-    sess = StrategySession()
-    st_with = _dying_state(gold=45, shop=[_card(tgt)])
-    kept, _ = filter_candidates(_cands(tgt), st_with, sess, _REG_DYING)
-    assert any(isinstance(c.action, RefreshShop) for c in kept)
-    st_without = _dying_state(gold=45, shop=[_card('无关件乙')])
-    kept2, flog2 = filter_candidates(_cands(tgt), st_without, sess, _REG_DYING)
-    assert not any(isinstance(c.action, RefreshShop) for c in kept2)
-    drops = {e['tag']: e.get('dying_band', '') for e in flog2 if not e['kept']}
-    assert drops.get('refresh') == 'blind_refresh'
-
-
-def test_dying_band_off_zero_drift() -> None:
-    """零漂移锚:同帧开关关 → 应急标签集行为不变(两类买/升级全放行)。"""
-    tgt = _target_name()
-    st = _dying_state()
-    sess = StrategySession()
-    kept_off, _ = filter_candidates(_cands(tgt), st, sess, DEFAULT_REGISTRY)
-    tags = {c.tag for c in kept_off}
-    assert {'line_carry', 'plugin', 'levelup', 'for_gold',
-            'deploy'} <= tags
+    assert _deploy_free(st) == st.max_units()
+    assert isinstance(_refreshable_names(st, sess, DEFAULT_REGISTRY),
+                      frozenset) and _refreshable_names(st, sess,
+                                                        DEFAULT_REGISTRY)
+    assert hp_decision_trusted(st) is True
+    # 合成后空位完备式:板上 2 份同名 1★ + 买入合成 → 净腾 1 位
+    from sr_od.application.currency_war.cw_state import BenchChar, ShopCard
+    card = ShopCard(name='件甲', faction='仙舟罗浮', cost=1, x=0, star=1)
+    st2 = _dying_state(
+        deployed=[BenchChar(slot=i, char_id='件甲', faction='仙舟罗浮',
+                            star=1, position_pref='front')
+                  for i in range(st.max_units())])
+    from sr_od.application.currency_war.decision_v2.candidates import (
+        Candidate,
+    )
+    from sr_od.application.currency_war.cw_state import BuyCard
+    merge_c = Candidate(action=BuyCard(card, reason=''), tag='bridge_core',
+                        source='shop', merge=True)
+    assert _deploy_free_after_merge(merge_c, st2) == 1
 
 
 # --- C4:存活轮数门(投影口径) ----------------------------------------------
