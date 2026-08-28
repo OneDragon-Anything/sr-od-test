@@ -14,7 +14,7 @@ from sr_od.application.currency_war.cw_strategy_manager import (
     StrategyManager,
 )
 
-_STRATEGIES_DIR = Path(__file__).parents[1] / 'src' / 'sr_od' \
+_STRATEGIES_DIR = Path(__file__).parents[5] / 'src' / 'sr_od' \
     / 'application' / 'currency_war' / 'strategies'
 
 

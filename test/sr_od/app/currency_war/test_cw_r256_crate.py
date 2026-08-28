@@ -5,7 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).parents[1] / 'src'))
+sys.path.insert(0, str(Path(__file__).parents[5] / 'src'))
 
 from sr_od.application.currency_war.cw_identity_obs import (  # noqa: E402
     _get_crate_gray,
@@ -20,7 +20,7 @@ class _R:
         self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
 
 
-_EVIDENCE = Path(__file__).parent / 'screens' / '货币战争-武装箱' / 'r256_summon_42d15804.png'
+_EVIDENCE = Path(__file__).parents[4] / 'screens' / '货币战争-武装箱' / 'r256_summon_42d15804.png'
 
 
 def _imread(p: Path):
