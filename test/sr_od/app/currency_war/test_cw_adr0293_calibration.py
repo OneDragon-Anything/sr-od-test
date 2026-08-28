@@ -302,7 +302,13 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # =现行生效值零漂移,重标定值指针见 registry 字段注释)——有意改字段面,
 # 锁同步更新(存活数值不变;单一源不变量锁在 test_cw_w373_c3c4_redesign
 # .test_p2_node_loss_table_single_source)。
-_EXPECTED_HASH = ('ba903798c0747e99d3c744d4e9a619232063270ef08fcede010313245aef4ea0')
+# C1 资产臂批更新:新增 c1_asset_channel_enabled(总开关,默认 False=
+# 现行为零漂移)/c1_asset_m_min(0.5,替班计入)/c1_asset_p_slot(0.5,
+# 待标定)/c1_asset_delta_unit(0.03,待标定·主缺口)/c1_asset_l2_loss
+# (12.0,待标定)五字段,设计单一源=
+# .debug/temp/currency_war/w397_s5_asset_channel/DESIGN.md §2/§3——
+# 有意加字段,锁同步更新(既有字段默认值不变)。
+_EXPECTED_HASH = ('1c27f7d29b1f8b0e222161ddb9d4f0e0d5334518a56ce97e4cfd361584cefc37')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
