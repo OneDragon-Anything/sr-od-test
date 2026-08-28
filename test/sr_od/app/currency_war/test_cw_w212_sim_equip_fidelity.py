@@ -22,10 +22,10 @@ def test_sim_equip_allocation_call_shape_plane_and_occupied() -> None:
     calls: list[dict] = []
     orig = cw_comps.equip_allocation
 
-    def spy(comp, deployed, owned, occupied=None, plane=1):
+    def spy(comp, deployed, owned, occupied=None, plane=1, **kwargs):
         calls.append({'plane': plane, 'occupied': occupied,
                       'deployed_n': len(list(deployed or []))})
-        return orig(comp, deployed, owned, occupied, plane)
+        return orig(comp, deployed, owned, occupied, plane, **kwargs)
 
     cw_comps.equip_allocation = spy
     try:
@@ -58,9 +58,9 @@ def test_sim_p1_only_still_runs_with_shape_fix() -> None:
     calls: list[int] = []
     orig = cw_comps.equip_allocation
 
-    def spy(comp, deployed, owned, occupied=None, plane=1):
+    def spy(comp, deployed, owned, occupied=None, plane=1, **kwargs):
         calls.append(plane)
-        return orig(comp, deployed, owned, occupied, plane)
+        return orig(comp, deployed, owned, occupied, plane, **kwargs)
 
     cw_comps.equip_allocation = spy
     try:
