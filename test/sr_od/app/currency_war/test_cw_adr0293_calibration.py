@@ -336,14 +336,14 @@ _EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173d
 # (开臂前置「散买挤掉第三张」已被 ADR-0438 merge 完成豁免消除,ex_dup
 # 复测零独立行为面)——有意删字段,锁同步更新(其余字段不变;行为锁
 # test_cw_dup_concentration 一并删除)。
-# 过渡框架启动重接线批更新:新增 framework_startup_v2_enabled=False
-# (开关生命周期第 1 态:落码默认关,关态决策序列零漂移——同 seed sim
-# 20 局对拍逐位一致;开臂判据挂账见 registry 字段注释)——有意增字段,
-# 锁同步更新(其余字段不变,行为面无漂移)。
-# 过渡收敛三层贯彻批更新(ADR-0442):新增 transition_focus_enabled=False
-# + transition_focus_buy_prior=5.0 两字段(开关生命周期第 1 态:落码默认关,
-# 关态零漂移同上;全机制 A/B 判据挂账见 registry 字段注释)——有意增字段,
-# 锁重锚(其余字段不变)。
+# 过渡收敛链定谳删除批更新(ADR-0442 rejected,W474 审计终裁收窄范围):
+# 删除 transition_focus_enabled/transition_focus_buy_prior 两字段(收敛
+# 载体+三层贯彻删除;成本裁决措辞=功效 37.7% 效应真值未排除+输入缺失为
+# 未评估非不可实现,详见 ADR 删除裁决段);framework_startup_v2_enabled
+# 保留休眠(dv 路径 transition_framework 唯一定期写入者+复活种子基建,
+# 默认关零漂移不变);行为锁 test_cw_transition_focus 删除、
+# test_cw_fw_startup 保留——有意删两字段,锁同步更新(其余字段不变)。
+# _EXPECTED_HASH = ('a9bb1c5544d7468f9d8d279de4c6f171a67370ef0b020fd195f0d9c5f425de80')
 # c1 系开关定谳批(ADR-0443)重锚:registry 破息分支存档注释段改写为
 # 定谳注记(filters docstring 同步指向 ADR)——注释级改动,字段面零
 # 变化,全字段 hash 重算与上一锚逐位一致,锁值不变,本条仅记重锚缘由。
@@ -355,7 +355,7 @@ _EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173d
 # 上意向从不锁线,m 表结构性无定义,通道构造性恒不激活;三「待标定」量
 # 永无标定数据源),registry 留定谳注记,行为锁 test_cw_c1_directed_spend
 # 资产臂节一并删除——有意删字段,锁同步更新(其余字段不变)。
-_EXPECTED_HASH = ('a9bb1c5544d7468f9d8d279de4c6f171a67370ef0b020fd195f0d9c5f425de80')
+_EXPECTED_HASH = ('ea0c58e50df0c21a482d85cb74c11fb8fcf7855628506e366de6b66b6f2b21f9')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
