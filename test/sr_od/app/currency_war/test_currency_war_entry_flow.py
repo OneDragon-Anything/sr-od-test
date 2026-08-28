@@ -208,9 +208,9 @@ class TestStartCurrencyWarMatchFlow:
         assert len(test_context.cw_briefing_affixes) == 4, (
             f'期望 4 词缀(A8),实际 {test_context.cw_briefing_affixes}'
         )
-        # 简报首领候选集读取验证:op 简报分支 read_bosses → ctx.cw_briefing_bosses
-        # (ADR-0397:画面 x 序候选集,仅供遥测——不再 copy 进 session 当 plane_bosses;
-        # 真值走 CollectPlaneIntel 实采,锁见 test_cw_w219_boss_collect_channel.py)
+        # 简报首领读取验证:op 简报分支 read_bosses + LCS 清洗 → ctx.cw_briefing_bosses
+        # (位面序真值,ADR-0397 勘误节;battle_loop __init__ copy 进 session 当
+        # plane_bosses,锁见 test_cw_w219_boss_collect_channel.py)
         assert test_context.cw_briefing_bosses, '简报首领候选集未读取(简报分支没读存)'
         assert len(test_context.cw_briefing_bosses) == 3, (
             f'期望 3 boss(3 位面),实际 {test_context.cw_briefing_bosses}'

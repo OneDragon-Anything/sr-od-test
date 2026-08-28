@@ -1,66 +1,92 @@
-"""W219(ADR-0397)行为锁:boss 采集主通道切 CollectPlaneIntel。
+"""行为锁:简报 boss 位面序真值链(ADR-0397 勘误后设计)。
 
-锁三件事(修复语义的固化出口):
-- **简报读数不进 session**:`ctx.cw_briefing_bosses`(简报三卡 OCR,画面 x 序)
-  不再 copy 进 `session.briefing_bosses`——简报卡排列≠位面序(2026-08-26 佩佩局
-  实证:读数 [巨鹿,造梦互动,深穹智械] vs 位面详情逐位面亲证 [巨鹿,增熵,绘师]),
-  按序消费 = 位面 2/3 的 boss_fit 从第一天打错 boss;
-- **实采通道存在且统一**:session.briefing_bosses 唯一写入端 = battle_loop 备战
-  稳定帧的 CollectPlaneIntel 实采块(触发条件「新 match 且 session 空」——开局局
-  简报后 session 恒空,自然走同通道,接管局同);
-- **消费端回归**:session.briefing_bosses(实采真值,位面序)→ state.plane_bosses
-  (default_strategy.update_target 注入,boss_fit 输入)。
+设计变更背景:ADR-0397 原「简报三卡排列≠位面序」结论系单条日志孤证误判
+(对照日志通道不可靠),已被用户 2026-08-28 裁决推翻(详见 ADR-0397 文内
+勘误节)。旧锁钉「简报读数不进 session」——用户裁决=设计变更,锁跟设计
+不跟旧码,本文件整体改写钉新语义:
 
-静态锁模式沿用 r333/r337/w28 先例(inspect.getsource 断言接线形态)。
+- **简报读数=位面序真值进 session**:读侧 ``clean_boss_names_by_lcs`` 清洗
+  (参考表 = ``cw_enemy_data.BOSS_MECHANICS`` 规范 boss 名,防 OCR 简称/形变)
+  → ``battle_loop.__init__`` copy 进 ``session.briefing_bosses`` →
+  ``state.plane_bosses`` → boss_fit;
+- **实采通道保留(接管场景重采)**:CollectPlaneIntel 写入端仍在,触发条件
+  「新 match 且 session 空」——开局局简报读得时不触发(简报即真值,零额外
+  采集),接管局/简报读空时兜底;
+- **对账网**:实采完成后与简报读数逐位面 LCS 比对存证(kind='briefing_reconcile'),
+  不一致进 defect 台账(L2 留证),门控 config.briefing_reconcile(默认开)。
+
+静态锁模式沿用 inspect.getsource 断言接线形态先例。
 """
 import inspect
 
 
-def test_briefing_boss_slot_not_copied_into_session() -> None:
-    """锁①:简报候选集槽不再被 copy 进 session(旧 __init__ copy 行不存在)。"""
+def test_briefing_bosses_copied_into_session() -> None:
+    """锁①(改写):简报位面序真值 copy 进 session(接线在 loop __init__)。"""
     from sr_od.application.currency_war.operations import battle_loop
 
     src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
-    # 旧接线唯一形态:`_session.briefing_bosses = list(self.ctx.cw_briefing_bosses)`
-    # (ADR-0397 前的 __init__ copy)。任何把简报读数按序送进 session 的回潮都算破坏。
-    assert '_session.briefing_bosses = list(self.ctx.cw_briefing_bosses)' not in src, (
-        '简报读数回潮进 session(ADR-0397:简报卡排列≠位面序,禁止按序当 plane_bosses)'
+    assert '_session.briefing_bosses = list(self.ctx.cw_briefing_bosses)' in src, (
+        '简报真值→session copy 接线消失(boss_fit 失去开局输入,ADR-0397 勘误节)'
     )
-    # ctx 简报槽仍可被写(候选集/遥测),但不应有任何「取走清空」式消费残留
-    # (旧 copy 块的配套行;存在 = 又有消费方把它当真值)。
+    # ctx 简报槽无「取走清空」消费:槽保留作实采对账源;跨局残留由
+    # HandleBriefing 每局重读覆写/读空清 None 兜住(该行为有专锁)。
     assert 'self.ctx.cw_briefing_bosses = None' not in src
 
 
-def test_collect_plane_intel_is_session_boss_writer() -> None:
-    """锁②:session.briefing_bosses 唯一写入端 = CollectPlaneIntel 实采块,开局局统一触发。"""
+def test_briefing_read_side_cleans_and_overwrites() -> None:
+    """锁②(新):读侧 LCS 清洗接线 + 每局覆写/读空清 None(防跨局残留成假真值)。"""
+    from sr_od.application.currency_war.operations.handlers import handle_briefing
+
+    src = inspect.getsource(handle_briefing)
+    assert 'clean_boss_names_by_lcs' in src, '简报读数未过 LCS 清洗(简称/形变直进 boss_fit)'
+    assert 'self.ctx.cw_briefing_bosses = clean_boss_names_by_lcs(_bosses) if _bosses else None' in src, (
+        '读侧覆写/清 None 兜底消失(跨局残留会被 loop copy 成假真值)'
+    )
+
+
+def test_collect_plane_intel_is_takeover_refill_channel() -> None:
+    """锁③(语义更新):CollectPlaneIntel 实采写入端在(接管重采/读空兜底)。"""
     from sr_od.application.currency_war.operations import battle_loop
 
     src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
-    # 实采写入端:接管/开局统一块的 `_sess.briefing_bosses = _names`
     assert '_sess.briefing_bosses = _names' in src, (
-        'CollectPlaneIntel 实采接线消失(session.briefing_bosses 失去写入端)'
+        'CollectPlaneIntel 实采接线消失(接管场景失去重采通道)'
     )
-    # 触发条件含「session.briefing_bosses 空」——开局局简报后 session 恒空,
-    # 该条件保证开局局与接管局走同一实采通道(条件退化成「仅接管局」即回潮)。
+    # 触发条件仍含「session.briefing_bosses 空」:开局局简报读得时 session 已由
+    # __init__ 填(不重复采),接管局/读空时兜底——条件消失=简报信任被绕过。
     assert "not getattr(self.ctx.cw_match.session, 'briefing_bosses', None)" in src
-    # 实采 op 确实被调用(防条件块保留但 op 调用被删的空壳)。
     assert 'CollectPlaneIntel(self.ctx)' in src
 
 
+def test_reconcile_wiring_in_both_collect_paths() -> None:
+    """锁④(新):对账网接线在两条实采完成路径上都在(loop 内联块 + takeover 写回)。"""
+    from sr_od.application.currency_war.operations import battle_loop
+    from sr_od.application.currency_war.operations.entry import (
+        takeover_collect_plane_intel,
+    )
+
+    assert 'reconcile_briefing_vs_plane_intel(' in inspect.getsource(battle_loop.CurrencyWarRunLoop), (
+        'loop 内联实采块缺对账接线'
+    )
+    assert 'reconcile_briefing_vs_plane_intel(' in inspect.getsource(
+        takeover_collect_plane_intel.TakeoverCollectPlaneIntel.write_back), (
+        'takeover 写回缺对账接线'
+    )
+
+
 def test_session_collected_bosses_flow_to_state_plane_bosses() -> None:
-    """锁③(消费端回归):session.briefing_bosses(位面序实采真值)→ state.plane_bosses。"""
-    from sr_od.application.currency_war.cw_strategy import StrategySession
+    """锁⑤(原锁③保留):session.briefing_bosses(位面序真值)→ state.plane_bosses。"""
     from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.cw_strategy import StrategySession
     from sr_od.application.currency_war.strategies.default_strategy import (
         DefaultCwStrategy,
     )
 
-    # 佩佩局亲证真值序(位面 1..3)——实采值经注入链进 state 供 boss_fit 按位面消费
     truth = ['巨鹿', '增熵', '绘师']
     state = GameState()
     session = StrategySession()
     session.briefing_bosses = list(truth)
     DefaultCwStrategy().update_target(state, session, None)
     assert state.plane_bosses == truth, (
-        f'实采真值未注入 state.plane_bosses(实际 {state.plane_bosses})'
+        f'真值未注入 state.plane_bosses(实际 {state.plane_bosses})'
     )
