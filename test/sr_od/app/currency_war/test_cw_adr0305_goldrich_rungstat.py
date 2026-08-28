@@ -77,8 +77,12 @@ def _buy_score(st: GameState, registry=_REG) -> float:
 
 
 def test_goldrich_bias_default_off() -> None:
-    """三窗否决回退锁:默认 bias=0(通道保留,A/B 显式开臂);
-    金下沿/辖标签常量随锁(28 / 四标签)。"""
+    """定谳待清锁:概念已被 A/B 否决(三窗 gap 无一致方向,成型加速
+    可见但 hp 不跟;ADR-0305,ADR-0408 同族复证同构)——开关生命周期
+    第 4 态待清,删除批=注册表三字段与 scoring 消费块同批;删除批前
+    默认 bias 恒 0(行为零漂移)。与 ADR-0445 的边界:本偏置辖金
+    28-50 储备段,溢余义务(g>R*)不吞并其辖域,清理依据是自身 A/B
+    否决非义务覆盖。金下沿/辖标签常量随锁(28 / 四标签)。"""
     assert _REG.goldrich_buy_bias == 0.0
     assert _REG.goldrich_min_gold == 28
     assert _REG.goldrich_buy_tags == frozenset(
