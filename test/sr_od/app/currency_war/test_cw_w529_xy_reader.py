@@ -75,10 +75,10 @@ def test_resolve_level_constraint_filters() -> None:
 _EXPECTS = {
     'r1_idle_stop.webp': (0, 3),                # 图标前缀 '10/3' 变异(W287 同款)
     'shop_closed_a8_start.webp': (0, 3),        # 同上,编排者锚点
-    '后排10槽-满级局.webp': (9, 10),             # 锚点;raw 'i9/10'
-    '后排11槽-P3局.webp': (8, 11),               # raw '18/11'
+    '后排8槽-满级局.webp': (9, 10),             # 锚点;raw 'i9/10'
+    '后排8槽-P3局.webp': (8, 11),               # raw '18/11'
     '后排8槽-全位验证.webp': (8, 8),             # raw '18/8'
-    '后排9槽-双宝钻局.webp': (8, 9),             # 双宝钻 cap=level+2 实拍
+    '后排8槽-双宝钻局.webp': (8, 9),             # 双宝钻 cap=level+2 实拍
     '攻略已应用.webp': (7, 7),                   # 斜杠读成数字 raw '717'(旧层死穴①)
     'char_detail.webp': (1, 6),
     'shop_closed.webp': (3, 4),

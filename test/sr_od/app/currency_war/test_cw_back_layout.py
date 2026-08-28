@@ -128,14 +128,14 @@ def test_cap9_frame_is_8grid(templates):
     旧 9 槽格点前 8 格与 8 格档完全同位(464..1458)——即旧「9 槽实证」的
     全部命中本就落在 8 格布局内,第 9 格(1600)是背景(空槽签名终判)。
     """
-    fix = cv2_utils.read_image(str(FIXTURES / '后排9槽-双宝钻局.webp'))
+    fix = cv2_utils.read_image(str(FIXTURES / '后排8槽-双宝钻局.webp'))
     got = {c.slot: c.char_id for c in identify_slots(fix, templates, _slots8(), 'back')}
     assert got == {1: '藿藿', 2: '爻光', 6: '开拓者·欢愉', 7: '狸小虎', 8: '狸小龙'}, got
 
 
 def test_cap10_frame_is_8grid(templates):
     """满级局(cap10/lv8)帧按 8 格档识别(旧「10槽」档是幻影)。"""
-    fix = cv2_utils.read_image(str(FIXTURES / '后排10槽-满级局.webp'))
+    fix = cv2_utils.read_image(str(FIXTURES / '后排8槽-满级局.webp'))
     got = {c.slot: c.char_id for c in identify_slots(fix, templates, _slots8(), 'back')}
     assert got == {1: '爻光', 2: '三月七', 3: '藿藿', 6: '开拓者·欢愉',
                    7: '狸小虎', 8: '狸小龙'}, got
@@ -147,7 +147,7 @@ def test_cap11_frame_is_8grid(templates):
     三触发帧狸猫恒在 1316/1458(=8 格档位7/8,恒最右模型)——与「7/9/10/11
     全是幻影」双源交叉实证(cap 与布局无关)。
     """
-    fix = cv2_utils.read_image(str(FIXTURES / '后排11槽-P3局.webp'))
+    fix = cv2_utils.read_image(str(FIXTURES / '后排8槽-P3局.webp'))
     got = {c.slot: c.char_id for c in identify_slots(fix, templates, _slots8(), 'back')}
     assert got == {3: '藿藿', 6: '开拓者·欢愉', 7: '狸小虎', 8: '狸小龙'}, got
 
@@ -237,26 +237,27 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
     8 格帧(狸猫/全位验证/cap9/cap10,左端 std 62.5-65.6 清晰带)→ 8;
     **P3 局(cap11)左1 空槽 std 38.8 落不可判带 [12,48] → None 退公式**;
     6 格帧(shop_closed/a8_start/prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;
-    「后排7槽-P2开局局」→ **6**(旧「7 槽」观察实为 6 格幻影);**真 7 格帧
+    「后排6槽-P2开局局」→ **6**(旧「7 槽」观察实为 6 格幻影,W535 按实格数
+    改名;**真 7 格帧
     (佩佩局,居中重排 534..1386)左端 464 探针=真 s1 左半覆盖 std 26-44
     落不可判带 → None 退公式 diff=1→7**(ADR-0390 勘误:非「羁绊面板渗入」;
     7/8 的区分靠 cap 差公式+等级经验条反推)。非 1080p 小帧 → None(越界守卫)。
 
-    run 26 崩坏现场帧(后排6格-run26崩坏现场.png,编排者 VLM+右端位置双重
+    run 26 崩坏现场帧(后排6槽-run26崩坏现场.png,编排者 VLM+右端位置双重
     确认 = 标准 6 格正样本)→ 6:事故形态的直接回归锚。
     """
     import numpy as np
     from sr_od.application.currency_war.cw_back_layout import cv_back_slots
     for fn, want in (
             ('后排8槽-狸猫局.webp', 8), ('后排8槽-全位验证.webp', 8),
-            ('后排9槽-双宝钻局.webp', 8), ('后排10槽-满级局.webp', 8),
-            ('后排11槽-P3局.webp', None),   # 左1 空槽 38.8 ∈ 不可判带 → 退公式
+            ('后排8槽-双宝钻局.webp', 8), ('后排8槽-满级局.webp', 8),
+            ('后排8槽-P3局.webp', None),   # 左1 空槽 38.8 ∈ 不可判带 → 退公式
             ('后排7槽-佩佩局.png', None),       # 渗入 26.2 ∈ 不可判带 → 退公式 diff1→7
             ('后排7槽-佩佩局-拖测后.png', None),  # 渗入 40.2 ∈ 不可判带 → 退公式 diff1→7
-            ('后排7槽-P2开局局.webp', 6), ('shop_closed.webp', 6),
+            ('后排6槽-P2开局局.webp', 6), ('shop_closed.webp', 6),
             ('shop_closed_a8_start.webp', 6), ('prep_1-6_all_positions.webp', 6),
             ('deployed_p1r9.webp', 6), ('r1_idle_stop.webp', 6),
-            ('后排6格-run26崩坏现场.png', 6)):
+            ('后排6槽-run26崩坏现场.png', 6)):
         img = cv2_utils.read_image(str(FIXTURES / fn))
         got = cv_back_slots(img)
         assert got == want, f'{fn}: CV 实测 {got} ≠ 期望 {want}'
@@ -698,7 +699,8 @@ def test_pepe_board_truth_current(templates):
     残影幽灵自然消失(错位窗口时代的伪象,ADR-0390 勘误)。"""
     fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
     got = {c.slot: c.char_id for c in identify_slots(
-        fix, templates, _slots7(), 'back', min_inliers=15, live_only=True)}
+        fix, templates, _slots7(), 'back', min_inliers=15, live_only=True,
+        center_gate=True)}
     assert got == {1: '万敌', 3: '乱破', 5: '卡芙卡', 7: '佩佩'}, got
 
 
@@ -706,7 +708,8 @@ def test_pepe_board_truth_golden(templates):
     """佩佩局拖测前帧(用户口述真值):1=卡芙卡/3=万敌/5=爻光/7=佩佩。"""
     fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局.png'))
     got = {c.slot: c.char_id for c in identify_slots(
-        fix, templates, _slots7(), 'back', min_inliers=15, live_only=True)}
+        fix, templates, _slots7(), 'back', min_inliers=15, live_only=True,
+        center_gate=True)}
     assert got == {1: '卡芙卡', 3: '万敌', 5: '爻光', 7: '佩佩'}, got
 
 
@@ -719,7 +722,8 @@ def test_pepe_board_coverage_s246(templates):
                      ('后排7槽-佩佩局-覆盖s6.png', 6)):
         fix = cv2_utils.read_image(str(FIXTURES / fn))
         got = {c.slot: c.char_id for c in identify_slots(
-            fix, templates, _slots7(), 'back', min_inliers=15, live_only=True)}
+            fix, templates, _slots7(), 'back', min_inliers=15, live_only=True,
+            center_gate=True)}
         assert got.get(slot) == '万敌', f'{fn}: s{slot} 应为万敌,实得 {got}'
         assert got.get(3) == '风堇' and got.get(5) == '艾丝妲' \
             and got.get(7) == '佩佩', f'{fn}: 基准位漂移 {got}'

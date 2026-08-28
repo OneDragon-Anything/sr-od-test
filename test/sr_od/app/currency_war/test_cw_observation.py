@@ -586,7 +586,7 @@ def test_read_level_up_cost_real_fixture(
     from one_dragon.utils import cv2_utils
 
     fix_dir = Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战'
-    frames = [fix_dir / 'shop_closed.webp', fix_dir / '后排9槽-双宝钻局.webp']
+    frames = [fix_dir / 'shop_closed.webp', fix_dir / '后排8槽-双宝钻局.webp']
     if not all(p.exists() for p in frames):
         pytest.skip('fixture 缺失')
     try:
@@ -620,7 +620,7 @@ def test_read_enemy_difficulty_real_fixture(
         'shop_closed.webp': 39,
         'shop_closed_lowhp.webp': 42,
         'char_detail.webp': 108,
-        '后排10槽-满级局.webp': 117,
+        '后排8槽-满级局.webp': 117,
         '补给节点.webp': None,          # 无旗牌:区域空白 → None(非默认/兜底值)
         'deployed_2star_full.webp': None,
     }
