@@ -64,6 +64,16 @@ _FIXTURES: list[tuple[str, str]] = _discover_fixtures()
 # 独立屏建档,详见 docs/game/screens/无名勋礼.md),现为空集;机制保留,供未来错档登记。
 _KNOWN_MISFILED: set[tuple[str, str]] = set()
 
+# 已知合法双命中(fixture 帧上父屏 id_mark 全可见):小型侧边 overlay 不遮父屏
+# 任何 id_mark 元素,父屏(货币战争-备战)对这些帧 is_precise 属画面事实,不算撞车。
+# (真正的撞车 = 双方都该 is_precise 但语义互斥;这三帧是「父屏 + 小浮窗」叠加态,
+# 上层排除由 cw_obs_core.UPPER_SCREENS 两段式门负责,不经 screen 匹配竞争。)
+_ALLOWED_DUAL_HIT: dict[tuple[str, str], set[str]] = {
+    ('货币战争-备战-装备详情浮窗', 'equip_detail_roller'): {'货币战争-备战'},
+    ('货币战争-备战-装备详情浮窗', 'equip_detail_synth_target'): {'货币战争-备战'},
+    ('货币战争-备战-角色信息提示', 'char_detail'): {'货币战争-备战'},
+}
+
 
 @pytest.mark.parametrize(
     'screen,state',
@@ -102,8 +112,10 @@ def test_id_mark(screen: str, state: str, test_context: SrTestContext) -> None:
     #    所以 partner/megastar/wish 帧里备战凑不齐 → 备战不是 is_precise → 不撞车;
     #    overlay 自己的 id_mark(购买经验 + 标题)更独有,只在 overlay 帧全命中。
     collisions = []
+    _exempt = _ALLOWED_DUAL_HIT.get((screen, state), set())
     for info in test_context.screen_loader.screen_info_list:
-        if info.screen_name == screen or not any(a.id_mark for a in info.area_list):
+        if info.screen_name == screen or info.screen_name in _exempt \
+                or not any(a.id_mark for a in info.area_list):
             continue
         if screen_utils.is_target_screen(test_context, img, screen_info=info):
             collisions.append(info.screen_name)

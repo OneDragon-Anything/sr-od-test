@@ -19,6 +19,9 @@ from sr_od.application.currency_war.cw_observation import (
 )
 
 _FIX_DIR = Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战'
+# overlay 帧已按画面形态归档到独立 screen 目录(原在 备战/ 目录)
+_FIX_FLOAT_DIR = Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战-装备详情浮窗'
+_FIX_TIP_DIR = Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战-角色信息提示'
 
 
 # ===== 约束验证器真值表(玩法先验:x≤y;1≤y≤13;y≥level) =====
@@ -80,7 +83,7 @@ _EXPECTS = {
     '后排8槽-全位验证.webp': (8, 8),             # raw '18/8'
     '后排8槽-双宝钻局.webp': (8, 9),             # 双宝钻 cap=level+2 实拍
     '攻略已应用.webp': (7, 7),                   # 斜杠读成数字 raw '717'(旧层死穴①)
-    'char_detail.webp': (1, 6),
+    '货币战争-备战-角色信息提示/char_detail.webp': (1, 6),
     'shop_closed.webp': (3, 4),
     'shop_closed_lowhp.webp': (6, 7),
     '补给节点.webp': (4, 4),                     # 补给面板帧 paddle 仍显示(VLM 亲读)
@@ -107,15 +110,24 @@ def _make_real_ocr_ctx(test_context: SrTestContext, monkeypatch: pytest.MonkeyPa
     return conflicts
 
 
+def _fix_path(name: str) -> Path:
+    """fixture 名 → 实际路径(备战目录;角色提示/装备浮窗帧在各自 screen 目录)。"""
+    if name.startswith('货币战争-备战-角色信息提示/'):
+        return _FIX_TIP_DIR / name.split('/', 1)[1]
+    if name.startswith('货币战争-备战-装备详情浮窗/'):
+        return _FIX_FLOAT_DIR / name.split('/', 1)[1]
+    return _FIX_DIR / name
+
+
 def test_read_deploy_paddle_real_fixtures(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """58 帧对拍代表集的终态锁:解析层对「图标前缀/斜杠读成数字/遮挡」全部读对。"""
     from one_dragon.utils import cv2_utils
-    if not all((_FIX_DIR / n).exists() for n in _EXPECTS):
+    if not all(_fix_path(n).exists() for n in _EXPECTS):
         pytest.skip('fixture 缺失')
     _make_real_ocr_ctx(test_context, monkeypatch)
     for name, expect in _EXPECTS.items():
-        img = cv2_utils.read_image(str(_FIX_DIR / name))
+        img = cv2_utils.read_image(str(_fix_path(name)))
         assert _read_deploy_paddle(test_context, img) == expect, f'{name} 应读 {expect}'
 
 
@@ -136,7 +148,7 @@ def test_covered_frame_leaves_conflict_evidence(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """双级均解析失败(overlay 遮 Y)→ (None, None) 且 obs_conflict 留证。"""
     from one_dragon.utils import cv2_utils
-    p = _FIX_DIR / 'equip_detail_synth_target.webp'
+    p = _FIX_FLOAT_DIR / 'equip_detail_synth_target.webp'
     if not p.exists():
         pytest.skip('fixture 缺失')
     conflicts = _make_real_ocr_ctx(test_context, monkeypatch)

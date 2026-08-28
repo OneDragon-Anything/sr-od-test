@@ -360,7 +360,8 @@ def test_read_node_type_keyword(test_context: SrTestContext, monkeypatch: pytest
 def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """备战左上/购买经验/商店区数字字段:enemy_difficulty/level_up_cost/shop_refresh_cost/streak(D-74)。
 
-    各字段 OCR 其 screen_info area → int(越界/空 → None 或默认)。shop_refresh_cost 默认 2。
+    各字段 OCR 其 screen_info area → int(越界/空 → None 或默认)。shop_refresh_cost
+    放大两级管线,空 → None(读不到语义;金币图标 'G0'/'GO' 前缀归一读 0)。
     """
     # enemy_difficulty(文本-难度,stylized 但能读到时):"108" → 108
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
@@ -379,12 +380,19 @@ def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pyte
 
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', _two_stage)
     assert read_level_up_cost(test_context, None) == 4
-    # shop_refresh_cost(文本-刷新金币数):"2" → 2;空 → 默认 2
+    # shop_refresh_cost(文本-刷新金币数):"2" → 2;空 → None(读不到语义,消费方 or 2 兜底)
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('2', 1621, 855)])
     assert read_shop_refresh_cost(test_context, None) == 2
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: [])
-    assert read_shop_refresh_cost(test_context, None) == 2   # 空 → 默认 2
+    assert read_shop_refresh_cost(test_context, None) is None   # 空 → None(不再兜底默认 2)
+    # 刷价金币图标并入前缀('G0'/'GO')→ 归一后读 0(真 0 不再被兜底改 2)
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('G0', 1621, 855)])
+    assert read_shop_refresh_cost(test_context, None) == 0
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [_ocr('GO', 1621, 855)])
+    assert read_shop_refresh_cost(test_context, None) == 0
     # streak(文本-连胜数):"3" → 3;空 → None
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('3', 1523, 875)])
@@ -615,14 +623,14 @@ def test_read_enemy_difficulty_real_fixture(
     from one_dragon.base.matcher.ocr.ocr_service import OcrService
     from one_dragon.utils import cv2_utils
 
-    fix_dir = Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战'
+    fix_dir = Path(__file__).resolve().parents[4] / 'screens'
     expects = {
-        'shop_closed.webp': 39,
-        'shop_closed_lowhp.webp': 42,
-        'char_detail.webp': 108,
-        '后排8槽-满级局.webp': 117,
-        '补给节点.webp': None,          # 无旗牌:区域空白 → None(非默认/兜底值)
-        'deployed_2star_full.webp': None,
+        '货币战争-备战/shop_closed.webp': 39,
+        '货币战争-备战/shop_closed_lowhp.webp': 42,
+        '货币战争-备战-角色信息提示/char_detail.webp': 108,
+        '货币战争-备战/后排8槽-满级局.webp': 117,
+        '货币战争-备战/补给节点.webp': None,   # 无旗牌:区域空白 → None(非默认/兜底值)
+        '货币战争-备战/deployed_2star_full.webp': None,
     }
     frames = [fix_dir / n for n in expects]
     if not all(p.exists() for p in frames):
@@ -637,6 +645,50 @@ def test_read_enemy_difficulty_real_fixture(
     monkeypatch.setattr(test_context, 'ocr_service', OcrService(ocr_matcher=matcher))
     for p in frames:
         img = cv2_utils.read_image(str(p))
-        assert read_enemy_difficulty(test_context, img) == expects[p.name], \
-            f'{p.name} 难度应读 {expects[p.name]}'
+        assert read_enemy_difficulty(test_context, img) == expects[p.relative_to(fix_dir).as_posix()], \
+            f'{p.name} 难度应读 {expects[p.relative_to(fix_dir).as_posix()]}'
+
+
+# ===== 刷新费/连胜 实帧锁(放大两级管线 + 图标前缀归一;真 0 不再被兜底改 2) =====
+def test_read_refresh_cost_and_streak_real_fixture(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """真实备战帧锁:read_shop_refresh_cost / read_streak 放大管线读数。
+
+    真值(裁片拼图视觉亲读):带横幅帧(攻略已应用)刷费真 0、连胜真 1——
+    旧 native 直读 + 兜底 2 曾把真 0 静默改成 2;基线帧锁现读正确值防回归。
+    deployed_2star 连胜真值未标(不留锁);模型不可用 / fixture 缺失 → skip。
+    """
+    from pathlib import Path
+
+    from one_dragon.base.matcher.ocr.ocr_service import OcrService
+    from one_dragon.utils import cv2_utils
+
+    fix_dir = Path(__file__).resolve().parents[4] / 'screens'
+    expects = {
+        '货币战争-备战/攻略已应用.webp': (0, 1),
+        '货币战争-备战/shop_closed.webp': (0, 0),
+        '货币战争-备战/deployed_2star.webp': (2, None),
+        '货币战争-备战/后排8槽-满级局.webp': (3, 0),
+        '货币战争-备战/shop_closed_lowhp.webp': (2, 0),
+    }
+    frames = [fix_dir / n for n in expects]
+    if not all(p.exists() for p in frames):
+        pytest.skip('fixture 缺失')
+    try:
+        from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
+        matcher = OnnxOcrMatcher()
+        if not matcher.init_model(download_by_github=False, download_by_gitee=True):
+            pytest.skip('OCR 模型不可用')
+    except Exception:
+        pytest.skip('OCR 模型不可用')
+    monkeypatch.setattr(test_context, 'ocr_service', OcrService(ocr_matcher=matcher))
+    for p in frames:
+        img = cv2_utils.read_image(str(p))
+        exp_cost, exp_streak = expects[p.relative_to(fix_dir).as_posix()]
+        got_cost = read_shop_refresh_cost(test_context, img)
+        assert got_cost == exp_cost, f'{p.name} 刷新费应读 {exp_cost},实读 {got_cost}'
+        got_streak = read_streak(test_context, img)
+        if exp_streak is not None:
+            assert got_streak == exp_streak, \
+                f'{p.name} 连胜应读 {exp_streak},实读 {got_streak}'
 
