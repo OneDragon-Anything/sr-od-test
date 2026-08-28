@@ -61,13 +61,15 @@ def _sess(round_num: int = 1,
 
 
 def test_c4_l1_projection_hand_computed() -> None:
-    """满表夹具×常数口径(默认表 20.05/16.67/26.71,p 表空),r1 起:
-    hp=29:战 8.95→战 −11.1 死 → ra=2;hp=43:22.95→2.9→遭遇 −13.8 死
-    → ra=3;hp=60:39.95→19.9→3.2→奖励→遭遇 −13.4 死 → ra=5。"""
+    """满表夹具×常数口径(W443 后幅度源=p2_cond_loss_table 条件败面档
+    12.77/13.33/15.50,p 表空),r1 起:
+    hp=29:12.77→16.23→12.77→3.46→遭遇 13.33 死 → ra=3;hp=43:
+    30.23→17.46→4.13→奖励→遭遇死 → ra=5;hp=60:…→奖励→7.8→奖励→
+    boss 15.5 死 → ra=7。"""
     sess = _sess()
-    assert rounds_alive(_state(hp=29), sess) == 2
-    assert rounds_alive(_state(hp=43), sess) == 3
-    assert rounds_alive(_state(hp=60), sess) == 5
+    assert rounds_alive(_state(hp=29), sess) == 3
+    assert rounds_alive(_state(hp=43), sess) == 5
+    assert rounds_alive(_state(hp=60), sess) == 7
 
 
 # --- C4-L2:奖励零损轮锁 ------------------------------------------------------
@@ -88,23 +90,24 @@ def test_c4_l2_reward_front_extends_survival() -> None:
 
 
 def test_c4_l3_unknown_node_counts_as_normal_battle() -> None:
-    """表含「?」占位 → 按 battle+normal 档计损(hp=20 一场即死 → ra=1,
-    未知多算一的一场损失=存活估计更短=门更紧,保守方向声明)。"""
+    """表含「?」占位 → 按 battle+normal 档计损(hp=20:12.77→7.23→
+    奖励→遭遇死 → ra=3;未知多算一场损失=存活估计更短=门更紧,
+    保守方向声明)。"""
     table = ['?', 'reward', 'encounter', 'reward', 'encounter',
              'reward', 'boss']
     assert node_loss_kind('?') == 'normal'
-    assert rounds_alive(_state(hp=20), _sess(table=table)) == 1
+    assert rounds_alive(_state(hp=20), _sess(table=table)) == 3
 
 
 # --- C4-L4:缺档零损锁 --------------------------------------------------------
 
 
 def test_c4_l4_missing_kind_zero_loss_calendar_still_ticks() -> None:
-    """p2_node_loss_table 缺 kind → 该轮损 0、轮数照计(与旧实现
+    """p2_cond_loss_table 缺 kind → 该轮损 0、轮数照计(与旧实现
     「缺读=normal 最大战斗档」方向相反且各自声明):缺 encounter/boss
     档,hp=1 走完 encounter(0 损)与 boss(0 损)→ ra=2=全表长。"""
     reg = dataclasses.replace(DEFAULT_REGISTRY,
-                              p2_node_loss_table={'normal': 20.05})
+                              p2_cond_loss_table={'normal': 12.77})
     sess = _sess(table=['encounter', 'boss'])
     assert rounds_alive(_state(hp=1), sess, reg) == 2
 
@@ -114,19 +117,20 @@ def test_c4_l4_missing_kind_zero_loss_calendar_still_ticks() -> None:
 
 def test_p2_node_loss_table_single_source() -> None:
     """损血表单一源不变量(C4 逐节点投影 rounds_alive 读
-    registry.p2_node_loss_table;原批 C3 桶位查表消费点已随 ADR-0426
-    增补节定谳清理删除,单消费点):注入自定义表后投影同步位移,
-    旧分表字段不复存在——重标定覆写只改一处,「数值源唯一」由本锁
-    固化,不靠人工纪律。"""
+    registry.p2_cond_loss_table 条件败面档;原批 C3 桶位查表消费点已随
+    ADR-0426 增补节定谳清理删除;无条件期望表 p2_node_loss_table 是另一
+    estimand,消费面=阈值层 _loss_dist,W443 起):注入自定义表后投影
+    同步位移——重标定覆写只改一处,「数值源唯一」由本锁固化,不靠人工
+    纪律。"""
     assert not hasattr(DEFAULT_REGISTRY, 'dying_band_next_loss')
     assert not hasattr(DEFAULT_REGISTRY, 'line_switch_node_loss')
     assert not hasattr(DEFAULT_REGISTRY, 'dying_band_account_enabled')
     reg = dataclasses.replace(
         DEFAULT_REGISTRY,
-        p2_node_loss_table={'normal': 5.0, 'encounter': 6.0,
+        p2_cond_loss_table={'normal': 5.0, 'encounter': 6.0,
                             'boss': 8.0, 'reward': 0.0})
     sess = _sess(table=P2_FULL_TABLE)
-    # C4 逐节点投影跟随同一份表(hp=25:默认表 20.05/16.67/26.71 →
+    # C4 逐节点投影跟随同一份表(hp=25:默认条件档 12.77/13.33/15.50 →
     # ra=2;轻损表 5/6/8 → 25−5−5−6+0−6+0−8 死于 boss → ra=7)
     assert rounds_alive(_state(hp=25), _sess()) == 2
     assert rounds_alive(_state(hp=25), sess, reg) == 7

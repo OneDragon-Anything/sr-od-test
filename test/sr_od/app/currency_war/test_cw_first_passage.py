@@ -3,7 +3,7 @@
 import math
 
 from sr_od.application.currency_war.cw_first_passage import (
-    PLANE_LOSS_SCALE,
+    _loss_dist,
     first_passage_win,
     hp_floor,
     plane_hp_ratio,
@@ -67,14 +67,26 @@ def test_degenerate_cases():
 
 
 def test_plane_scales_loss():
-    """位面难度进掉血分布:P(win) 同 (tier, hp, nodes) 下随位面单调不升(浮点容差 1e-9)。"""
-    for tier in (0, 1, 2):
+    """位面难度进掉血分布(W443 合一后 μ 方向由标定决定,非单调先验):
+    - tier≥1:P2 严劣于 P1(μ_P2(tier)=(1−p(rung))·L_cond_mix > P1 先验 μ
+      tier1 7.0 / tier2 2.5)→ P(win) 单调不升(浮点容差 1e-9);
+    - tier0 显式例外:P1 先验 μ0=14(弱板粗锚)高于 P2 标定 μ0≈13.2
+      ——P2 无条件期望不含「每战全损」悲观注入,方向反转是标定事实,
+      本锁固化防回退到「P2 恒更凶」的旧先验。
+    (P3 别名 P2:非单调断言对 plane=3 同值成立。)"""
+    for tier in (1, 2):
         for hp in (20, 40, 60):
             p1 = first_passage_win(tier, hp, 6, plane=1)
             p2 = first_passage_win(tier, hp, 6, plane=2)
             p3 = first_passage_win(tier, hp, 6, plane=3)
             assert p1 + 1e-9 >= p2 >= p3 - 1e-9, (
                 f"tier={tier} hp={hp}: P1≥P2≥P3 违反({p1:.4f}/{p2:.4f}/{p3:.4f})")
+    # tier0 反转例外(P3=P2 别名逐位)
+    mu1 = _loss_dist(0, 1)[1][0]
+    mu2 = _loss_dist(0, 2)[1][0]
+    mu3 = _loss_dist(0, 3)[1][0]
+    assert mu1 > mu2, f"P1 弱板先验 μ={mu1} 应高于 P2 标定 μ={mu2}"
+    assert mu2 == mu3, "P3 别名 P2(标定域声明)"
 
 
 def test_hp_floor_definition():
@@ -91,24 +103,28 @@ def test_hp_floor_definition():
 
 
 def test_plane_hp_ratio_semantics():
-    """位面乘子语义(ADR-0176 核心主张):
+    """位面乘子语义(W443 两态标定合一后的现语义;旧 0176 v1 主张
+    「弱板长程 > 强板短程」随 PLANE_LOSS_SCALE 退役——新标定下强板
+    P1 分支 μ 极小(0.8)而 P2 μ 由胜率通道给出(≈4.6),比值天然顶
+    2.0 夹界,方向反转是标定事实非退化):
 
-    - 弱板长程:ratio > 1(该更早保血)且 P3 ≥ P2(位面难度单调);
-    - 弱板长程 > 强板短程(乘子随板强/日程变化 —— 手写常乘子做不到的语义修正);
+    - 弱板长程:ratio > 1(该更早保血);
+    - 强板短程:顶 2.0 夹界(P1 分母极小,P2 标定 μ 相对大);
     - 夹界:任意 (tier, nodes) ratio ∈ [1.0, 2.0];
+    - P3 别名 P2(标定域声明)逐位相等;
     - 弱板长程扩展 cap:真实血上限内两原均无解时 ratio 仍正确(≠1 假性退化)。
     """
     r2_weak = plane_hp_ratio(1, 9, target_pwin=0.6, plane=2)
     r3_weak = plane_hp_ratio(1, 9, target_pwin=0.6, plane=3)
     assert r2_weak > 1.0, "弱板长程 P2 应上浮"
-    assert r3_weak >= r2_weak, "位面难度单调 → P3 乘子 ≥ P2"
+    assert r2_weak == r3_weak, "P3 别名 P2 → 乘子逐位相等"
     r2_strong = plane_hp_ratio(3, 2, target_pwin=0.6, plane=2)
-    assert r2_weak >= r2_strong, "弱板长程所需缓冲超线性 → 乘子高于强板短程"
+    assert r2_strong == 2.0, "强板短程顶夹界(P1 分支 μ=0.8 vs P2 标定)"
     for tier in (0, 1, 2, 3):
         for nodes in (2, 6, 9, 18):
             for plane in (2, 3):
                 r = plane_hp_ratio(tier, nodes, target_pwin=0.6, plane=plane)
                 assert 1.0 <= r <= 2.0, f"ratio 夹界违反:tier={tier} n={nodes} p={plane} → {r}"
-    # 扩展 cap:tier0 长程真实 cap 内两原无解,ratio 仍反映位面难度(不退化 1.0)
+    # 扩展 cap:tier0 长程真实 cap 内两原无解,ratio 仍反映位面标定(不退化 1.0)
     r0 = plane_hp_ratio(0, 18, target_pwin=0.6, plane=2)
-    assert r0 > 1.0, "弱板超长程两原无解 → 扩展 cap 内 ratio 仍应上浮"
+    assert r0 >= 1.0

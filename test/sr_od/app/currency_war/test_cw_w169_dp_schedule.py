@@ -5,8 +5,8 @@
 - ① 日程单一源 schedule_of:seen 序列=位面轮数真值(未揭晓位面回退 9);
   脏表封顶 [1,9](同 W154/ADR-0366 守卫语义);
 - ② 默认日程 ≡ 旧常量语义逐位一致(offsets/ends/node_income boss 槽,
-  difficulty_scale P1/P3 段——P1 零漂移的结构面;P2 段已按实测损血谱
-  重校为常数 P2_LOSS_SCALE,语义锁在本文件与重校批锁文件);
+  difficulty_scale P1/P3 段——P1 零漂移的结构面;P2 段已两态化,损血
+  语义锁在本文件与重校批锁文件);
 - ③ 修正日程 (9,7,9):boss 奖金落 P2 真实末轮 t=15(旧幻影 t=17);
   t=16 归 P3(P3 前移,总程 25 槽);
 - ④ slot_of 查询映射:默认日程 ≡ 旧 ``t=(p-1)*9+r-1``;修正日程
@@ -58,17 +58,21 @@ def test_default_schedule_offsets_and_ends():
 
 
 def test_default_difficulty_scale_equals_legacy_divmod():
-    # P2 段已按实测损血谱重校(常数 P2_LOSS_SCALE,推导见该常量注释);
-    # P1/P3 段仍逐位旧语义(P1 零漂移的结构面)。
+    # P2 段已两态化(drop=(1−p)·L_cond,见 cw_horizon P2 两态损血段;
+    # 误用 difficulty_scale 即 raise);P1/P3 段仍逐位旧语义(P1 零漂移
+    # 的结构面)。
+    import pytest
     for t in range(hz.TOTAL_NODES):
         plane, node = divmod(t, 9)   # 旧式
         if plane == 0:
             old = 0.5 if node < 4 else (0.9 if node < 8 else 1.4)
+            assert hz.difficulty_scale(t) == old, t
         elif plane == 1:
-            old = hz.P2_LOSS_SCALE
+            with pytest.raises(ValueError):
+                hz.difficulty_scale(t)
         else:
             old = 1.8 + 0.05 * node
-        assert hz.difficulty_scale(t) == old, t
+            assert hz.difficulty_scale(t) == old, t
 
 
 def test_default_node_income_boss_slots_equal_legacy_mod():
@@ -89,7 +93,9 @@ def test_corrected_schedule_boss_at_real_p2_end():
     assert hz.node_income(15, None) == hz.node_income(14, None)  # 旧日程无差
     # t=16 归 P3 node0(修正)而非 P2 node7(旧)——P3 前移
     assert hz.difficulty_scale(16, pl) == 1.8
-    assert hz.difficulty_scale(16) == hz.P2_LOSS_SCALE
+    import pytest
+    with pytest.raises(ValueError):
+        hz.difficulty_scale(16)   # 旧日程 t=16=P2 槽 → 两态递推辖域
 
 
 # ---------- ④ slot_of 查询映射 ----------

@@ -75,11 +75,12 @@ def test_two_state_switch_default_off() -> None:
 
 def test_flag_off_table_injected_still_conditional_constant() -> None:
     """开关关 + 表已注入(默认 registry 现态)→ rounds_alive 与
-    「p 表为空」的 M1a 条件常数投影逐位一致(hp=29:战 8.95 → 战
-    −11.1 死 → ra=2;hp=60 → ra=5,与 C4-L1 手算同数表)。"""
+    「p 表为空」的 M1a 条件常数投影逐位一致(W443 后幅度源=条件败面档
+    12.77/13.33/15.50;hp=29:12.77→16.23→3.46→遭遇死 → ra=3;
+    hp=43 → ra=5;hp=60 → ra=7,与 C4-L1 手算同数表)。"""
     reg_empty = dataclasses.replace(
         DEFAULT_REGISTRY, p_win_p2_by_rung={})
-    for hp, ra in ((29, 2), (43, 3), (60, 5)):
+    for hp, ra in ((29, 3), (43, 5), (60, 7)):
         assert rounds_alive(_state(hp=hp), _sess()) == ra
         assert rounds_alive(_state(hp=hp), _sess(), reg_empty) == ra
     # 门链同锚:默认 registry 下门放行路径与注入前一致(开关关=放行
@@ -97,9 +98,10 @@ _REG_TWO = dataclasses.replace(
 
 
 def test_flag_on_consumes_p_win() -> None:
-    """开关开 → loss=(1−p_win)·表值:空板 rung=0、p=0.65、hp=29 →
-    ra=7 ≥ need → 放行(REDESIGN §3.6 两行行为的两态行,数表逐节点
-    20.05/16.67/26.71 ×0.35)。开关关时同帧 ra=2(上锁),闸唯一。"""
+    """开关开 → loss=(1−p_win)·条件败面档:空板 rung=0、p=0.65、hp=29 →
+    ra=7 ≥ need → 放行(REDESIGN §3.6 两行行为的两态行;W443 后数表=
+    条件档 12.77/13.33/15.50 ×0.35,总损 23.7<29 走完全表)。开关关时
+    同帧 ra=3(上锁),闸唯一。"""
     assert rounds_alive(_state(hp=29), _sess(), _REG_TWO) == 7
     ok, why = survival_gate(_state(hp=29), _sess(), 2.0, _REG_TWO)
     assert ok and why == 'ok'
@@ -107,11 +109,12 @@ def test_flag_on_consumes_p_win() -> None:
 
 def test_flag_on_empty_table_degrades_to_conditional_constant() -> None:
     """开关开但表缺档(rung 缺键)→ p_win=0 → 退化条件常数(空表=
-    缺档同路,M1a 保底不因开臂丢失)。"""
+    缺档同路,M1a 保底不因开臂丢失;条件档下 hp=29:12.77→16.23→3.46
+    →遭遇死 → ra=3)。"""
     reg = dataclasses.replace(
         DEFAULT_REGISTRY, rounds_two_state_enabled=True,
         p_win_p2_by_rung={1: 0.65, 2: 0.65})   # 缺 rung 0 键
-    assert rounds_alive(_state(hp=29), _sess(), reg) == 2
+    assert rounds_alive(_state(hp=29), _sess(), reg) == 3
 
 
 # --- rung 取样坐标锁 -----------------------------------------------------------
@@ -131,7 +134,7 @@ def _mixed_domain_state() -> GameState:
 def test_rung_sampling_follows_settle_rung_coordinate() -> None:
     """两态分支 rung 取样必须走 _settle_rung(与 W346 表采样键同源):
     本夹具下若错用 _engines_formed(rung 1,p=0.65)→ ra=7;正确 settle
-    坐标(rung 0,p=0.0)→ 条件常数 ra=2。"""
+    坐标(rung 0,p=0.0)→ 条件常数 ra=3。"""
     st = _mixed_domain_state()
     # 夹具前提自证:两坐标确已分裂
     assert cw_sim._settle_rung(st) == 0
@@ -139,4 +142,4 @@ def test_rung_sampling_follows_settle_rung_coordinate() -> None:
     reg = dataclasses.replace(
         DEFAULT_REGISTRY, rounds_two_state_enabled=True,
         p_win_p2_by_rung={0: 0.0, 1: 0.65, 2: 0.65})
-    assert rounds_alive(st, _sess(), reg) == 2
+    assert rounds_alive(st, _sess(), reg) == 3

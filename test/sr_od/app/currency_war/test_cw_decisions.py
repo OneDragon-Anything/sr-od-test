@@ -1043,26 +1043,29 @@ def test_effective_hp_threshold_missing_key_falls_back() -> None:
 
 
 def test_effective_hp_threshold_plane_model_ratio() -> None:
-    """ADR-0176:P2+ 上浮由首达模型解出(替代 0174 手写 ×1.25/×1.5)。
+    """P2+ 上浮由首达模型解出(W443 两态标定合一后现语义;ADR-0176 的
+    「上浮」主张随 PLANE_LOSS_SCALE 退役,方向由标定决定):
 
     - P1:精确零漂移(ratio 分母恒等 → base 原值,M57 行为保持);
-    - 弱板 P2:上浮 >1 且落于健康带(ratio 夹 [1,2] → ≤80);
-    - 弱板 P3 ≥ P2(位面难度单调进乘子);
-    - 弱板 > 强板(乘子随板强变化,手写常乘子做不到)。
+    - 弱板(lv4 → tier0)P2:不上浮(P2 标定 μ0≈13.2 低于 P1 弱板先验
+      μ0=14 → ratio 夹下界 1.0)——「P2 恒更凶」旧先验不回植;
+    - 中板(lv7 → tier2)P2:上浮(μ2≈4.6 > μ1=2.5)且落健康带;
+    - P3 别名 P2 逐位相等(标定域声明);
+    - 强板(lv10)顶 2.0 夹界(P1 分支 μ=0.8 极小)。
     """
     # P1 零漂移
     assert effective_hp_threshold(GameState(plane=1, level=4)) == 40
-    # 弱板(lv4)P2 上浮
-    t_p2 = effective_hp_threshold(GameState(plane=2, round_num=1, level=4))
-    assert t_p2 > 40, "弱板 P2 应上浮(模型导出)"
-    assert 40 < t_p2 <= 80, "上浮落健康带(≤2.0 夹界)"
-    # 位面单调
-    t_p3 = effective_hp_threshold(GameState(plane=3, round_num=1, level=4))
-    assert t_p3 >= t_p2, "P3 乘子 ≥ P2"
-    # 强板(lv10 → tier 满)同样上落健康带:CV 恒定先验下 ratio≈μ 比(≈1.6)近全域常数,
-    # 板强分化待实测桶(肥尾)替换先验后由本测试家族的 ratio 断言接管 —— 当前断言健壮带。
+    # 弱板(lv4 → tier0)P2 不上浮(P1 先验 μ0=14 ≥ P2 标定 μ0)
+    assert effective_hp_threshold(GameState(plane=2, round_num=1, level=4)) == 40
+    # 中板(lv7 → tier2)P2 上浮落健康带
+    t_p2 = effective_hp_threshold(GameState(plane=2, round_num=1, level=7))
+    assert 40 < t_p2 <= 80, "中板 P2 上浮(模型导出)"
+    # P3 剩余日程更短(同轮次 P3 已到后程,nodes_left 更少)→ 阈值略低
+    t_p3 = effective_hp_threshold(GameState(plane=3, round_num=1, level=7))
+    assert t_p3 < t_p2, "P3 同轮次剩余日程更短 → 所需缓冲更低(位面维=P2 别名)"
+    # 强板(lv10 → tier 满)顶夹界(base×2.0 封顶)
     t_p2_strong = effective_hp_threshold(GameState(plane=2, round_num=1, level=10))
-    assert 40 < t_p2_strong <= 80, "强板 P2 上浮同样落健康带(细格下无量化病态)"
+    assert t_p2_strong == min(100, 2 * 40), "强板 P2 顶 2.0 夹界"
 
 
 def test_eval_difficulty_aware_hp_threshold() -> None:
@@ -1188,12 +1191,14 @@ def test_economy_mode_for_maps_spend_mode() -> None:
     assert _economy_mode_for(GameState(plane=1, round_num=1, gold=2, level=3, hp=80)) == "interest_first"
     # DP:P1 早段有金 lv3 → level(便宜早升)→ rush_level(ADR-0208 的切流目的)
     assert _economy_mode_for(GameState(plane=1, round_num=1, gold=8, level=3, hp=80)) == "rush_level"
-    # DP:P2 gold 60 lv7 hp40 → 存息 hold(W370/W371 重校后该带血紧:
-    # b=2.0 模型损血 15/节点,血 40≈2.5 节点 → 保守持息)→ interest_first
-    # (旧行为「level 冲 8 → rush_level」随 P2 损血重校失效,ADR 欠账)
+    # DP:P2 gold 60 lv7 hp40 → 存息 hold(W443 两态后血 40≈9 节点期望
+    # 生命(drop 4.5/节点),仍保守持息)→ interest_first
+    # (旧 6.0 折中 15/节点时代「40≈2.5 节点」的更紧语义随两态化失效)
     assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=40)) == "interest_first"
-    # DP:P2 gold 60 lv7 hp100 → +D4 找件(找件通道仍开,非存息)→ adaptive
-    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=100)) == "adaptive"
+    # DP:P2 gold 60 lv7 hp100 → 存息 hold(W443 两态化行为变化:强板
+    # 悲观消除——b=2.0 drop 4.5/节点,血 100≈22 节点>P2 剩余,满血强板
+    # 无需烧金找件,存息吃息差;旧 6.0 折中时代「+D4 找件」已失效)
+    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=100)) == "interest_first"
     # DP:P2 gold 51 lv7 → adaptive(d_search 先成型)→ adaptive
     assert _economy_mode_for(GameState(plane=2, round_num=2, gold=51, level=7, hp=40)) == "interest_first"
 

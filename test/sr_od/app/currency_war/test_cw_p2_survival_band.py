@@ -76,11 +76,12 @@ def test_c3_symbols_removed_from_registry() -> None:
 
 
 def test_shared_loss_table_alive_for_c4() -> None:
-    """共享损血表健在锁:p2_node_loss_table 仍被 C4 投影消费(轻损表
-    注入后 rounds_alive 位移)——表是 C4 的活数据,清理不伤。"""
+    """共享损血表健在锁:p2_cond_loss_table(条件败面档,W443 起为 C4
+    投影幅度源)仍被 C4 投影消费(轻损表注入后 rounds_alive 位移)——
+    表是 C4 的活数据,清理不伤。"""
     reg = dataclasses.replace(
         DEFAULT_REGISTRY,
-        p2_node_loss_table={'normal': 5.0, 'encounter': 6.0,
+        p2_cond_loss_table={'normal': 5.0, 'encounter': 6.0,
                             'boss': 8.0, 'reward': 0.0})
     assert rounds_alive(_dying_state(hp=25, round_num=1),
                         _tabled_session(), reg) == 7
@@ -119,11 +120,12 @@ def test_shared_face_helpers_alive_for_c1() -> None:
 
 
 def test_rounds_alive_projection_basic() -> None:
-    """投影底座:默认表(常数口径,p 表空)+P2 满表夹具,r1 起逐节点扣:
-    hp=50 → 战斗 29.95/9.9 → 遭遇 −6.77 死 → ra=3;hp=0 → 0。
-    (旧 ceil(hp/等权均值) 口径已废除,查表锁随之更新。)"""
+    """投影底座:默认表(W443 后=条件败面档 12.77/13.33/15.50,p 表空)
+    +P2 满表夹具,r1 起逐节点扣:hp=50 → 37.23/24.46/11.13→奖励→
+    遭遇死 → ra=5;hp=0 → 0。(旧 ceil(hp/等权均值) 口径已废除,查表锁
+    随之更新。)"""
     sess = _tabled_session()
-    assert rounds_alive(_dying_state(hp=50, round_num=1), sess) == 3
+    assert rounds_alive(_dying_state(hp=50, round_num=1), sess) == 5
     assert rounds_alive(_dying_state(hp=0), sess) == 0
 
 

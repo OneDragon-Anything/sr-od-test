@@ -326,7 +326,12 @@ _EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173d
 # 开臂翻默认:merge_completion_exempt=True/copy_swap_target_exempt=True
 # (开臂判据与数字见 registry 注释+ADR-0438 验证节)——有意翻默认,
 # 锁同步更新(其余字段不变)。
-_EXPECTED_HASH = ('f0ed5f35750f97644ece286f2545d06c367a19307f8fed3be1386e9fc8829e7b')
+# W443 批 C(W370 清偿终站/ADR-0440)更新:p2_node_loss_table 覆写 W375
+# 无条件期望三档(10.16/12.00/15.50),新增 p2_cond_loss_table(W375 条件
+# 败面 12.77/13.33/15.50,两态决策层幅度源)与 p2_loss_calib_version=1
+# (P2 损血标定家族版本披露锚)——有意重标定+口径定稿,锁同步更新
+# (其余字段不变)。
+_EXPECTED_HASH = ('2166d50b386fd036a6b27e0f3e931ec2c5fb5cfdff499eddaf62a61d2f9e6798')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
