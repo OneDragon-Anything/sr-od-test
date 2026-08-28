@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0399:P2 承接快照 Phase 0(纯观测零行为)单帧锁。
 
 锁面(设计件 08_p2_handoff §4.2 Phase 0 / §4.1 验收判据):
@@ -207,7 +206,12 @@ def test_sim_replay_entry_snapshot() -> None:
 # ---------- ⑤ 生产遥测 ----------
 
 def test_decision_trace_handoff_field(tmp_path) -> None:
-    """DecisionTrace.handoff:extra 透传 dict;缺省 None(schema 兼容)。"""
+    """DecisionTrace.handoff:extra 透传 dict;缺省 None(schema 兼容)。
+
+    P10④ 挂账落码后读端富化:落账行在快照 dict 副本上补
+    ``salvageable_1star_value``(计算式锁在 test_cw_w428_salvageable_
+    1star_value.py);快照本体 as_dict() 键集不变(sim 同构不受影响)。
+    """
     from sr_od.application.currency_war import cw_telemetry
     rec = cw_telemetry.TelemetryRecorder(tmp_path, enabled=True)
     st = _state(shop=[ShopCard(x=0, name='藿藿', faction='仙舟', cost=1)])
@@ -218,7 +222,10 @@ def test_decision_trace_handoff_field(tmp_path) -> None:
     line = (tmp_path / 'decisions.jsonl').read_text(encoding='utf-8')
     import json
     row = json.loads(line.strip().splitlines()[-1])
-    assert row['handoff'] == snap.as_dict()
+    expect = dict(snap.as_dict())
+    expect['salvageable_1star_value'] = row['handoff']['salvageable_1star_value']
+    assert row['handoff'] == expect
+    assert set(snap.as_dict()) == _SNAP_KEYS   # 快照本体键集不变
     # 缺省(旧调用形态):None 不破坏 schema
     rec.record_decision('run_t', 'A4', st, '', {}, {}, [])
     line = (tmp_path / 'decisions.jsonl').read_text(encoding='utf-8')
