@@ -10,13 +10,16 @@ win_rate_table_injected)。本文件锁:
 4. boss 钳制条件化(hp_before≤35 门 + 区间内钳制率,>35 不钳);
 5. 难度乘子:默认关闭(A8),开关置位后按 1.052^(Δ难度) 生效;
 6. 引擎开关双模式(coarse 默认 / delta 对照臂),reward/supply 两
-   模式下均仍走 Δ池(实现批裁决保留)。
+   模式下均仍走 Δ池(实现批裁决保留);
+7. 位面维(P1 先行形态):P1 层 = 冻结语料拟合现值逐位(零漂移锁);
+   P2 层 = 显式别名指向 P1(别名锁);校准结构版本披露锁。
 
 纪律:单点行为用脚本化 rng 桩(确定性,不锁频率分布);批量模拟
 只跑 1 局冒烟(契约锁不锁分布数值)。
 """
 from __future__ import annotations
 
+import json
 import random
 
 import pytest
@@ -30,6 +33,25 @@ _DELIVERY_WIN_P: dict[str, dict[int, float]] = {
     'battle': {0: 0.009, 1: 0.356, 2: 0.315, 3: 0.292},
     'encounter': {0: 0.038, 1: 0.026, 2: 0.264, 3: 0.275},
     'boss': {0: 0.077, 1: 0.027, 2: 0.187, 3: 0.238},
+}
+
+
+# 位面维前 = 冻结语料拟合交付值(位面化 P1 层零漂移锁的逐位真值;
+# 与上方 _DELIVERY_WIN_P 同源:冻结语料 417 条战斗差分拟合产物)
+_DELIVERY_LOSS_HIST: dict[str, dict[int, int]] = {
+    'battle': {-64: 1, -43: 1, -42: 1, 1: 7, 3: 3, 4: 9, 5: 10, 6: 5,
+               7: 2, 8: 19, 9: 11, 10: 6, 11: 18, 12: 6, 13: 74, 14: 1,
+               15: 9, 17: 3, 18: 3, 19: 4, 20: 2, 21: 4, 23: 2, 46: 1,
+               84: 1, 88: 1},
+    'encounter': {4: 1, 5: 1, 6: 4, 7: 1, 8: 4, 9: 7, 10: 10, 15: 1,
+                  17: 1, 18: 1, 22: 1, 24: 11, 26: 7, 28: 15, 45: 2,
+                  83: 2},
+    'boss': {3: 1, 11: 2, 12: 1, 13: 2, 14: 4, 30: 1, 32: 5, 34: 11,
+             36: 8},
+}
+_DELIVERY_LOSS_FIT: dict[str, tuple[float, float, float]] = {
+    'battle': (11.32, -0.37, 11.07),
+    'encounter': (24.32, -4.53, 20.71),
 }
 
 
@@ -56,9 +78,9 @@ def test_win_p_table_matches_delivery() -> None:
 
 def test_rung01_cells_not_injected() -> None:
     """rung0/1 单元遥测样本充足,不注入(份额 0,值 = p_data)。"""
-    for node, cell in cb._WIN_TABLE.items():
+    for node, planes in cb._WIN_TABLE.items():
         for rung in (0, 1):
-            n, p_data = cell[rung]
+            n, p_data = planes[1][rung]
             assert cb.prior_share(node, rung) == 0.0
             assert cb.injected_win_p(node, rung) == p_data
             assert n > 0
@@ -70,7 +92,7 @@ def test_prior_share_hard_caps() -> None:
         for rung in (2, 3):
             share = cb.prior_share(node, rung)
             assert 0.0 < share <= cb.PLAZA_SHARE_MAX + 1e-12
-            n = cb._WIN_TABLE[node][rung][0]
+            n = cb._WIN_TABLE[node][1][rung][0]
             alpha = share * n / (1 - share)
             assert alpha <= cb.ALPHA_CAP + 1e-9
     # 值锁两例(份额帽在薄/厚单元的两个端型):
@@ -175,3 +197,90 @@ def test_coarse_game_smoke_snapshot_fingerprint() -> None:
     assert all(0 <= h <= 100 for h in r.hp_trail)
     assert r.pool_fingerprint == cw_sim.pool_fingerprint(
         cw_sim.resolve_pool('snapshot')[0])
+
+
+# ===== 位面维(P1 先行)锁:结构见 test_cw_w405_planarize 说明 =====
+
+
+def test_p1_layer_zero_drift_literals() -> None:
+    """P1 层零漂移锁:三表 plane 1 逐位 = 冻结语料拟合交付值。
+
+    位面化只加结构不改数:P1 层是 W346 一阶矩门 + W377 剂量曲线
+    三方一致的载体,任何 P1 数值变动必须走显式重校准批(禁止顺手调)。
+    """
+    for node, hist in _DELIVERY_LOSS_HIST.items():
+        assert cb._LOSS_HIST[node][1] == hist
+    for node, fit in _DELIVERY_LOSS_FIT.items():
+        assert cb._LOSS_FIT[node][1] == fit
+    for node, rungs in _DELIVERY_WIN_P.items():
+        for rung, p in rungs.items():
+            assert cb.injected_win_p(node, rung, plane=1) == \
+                pytest.approx(p)
+
+
+def test_p2_alias_lock() -> None:
+    """P2 别名锁:别名表显式指向 plane 1,取表回同一对象(不拷贝)。
+
+    P2 未采样,别名即「已知偏差」的机器可读声明(W357 regate:
+    boss +4.57 hp / 钳制率 −38.81 pp / encounter 钳制率 −6.19 pp
+    为继承的现状,非本结构引入);未来 P2 语料换表只动 plane 2 槽位。
+    """
+    assert set(cb._P2_ALIAS) == {'battle', 'encounter', 'boss'}
+    for node, aliased in cb._P2_ALIAS.items():
+        assert aliased == 1
+        assert cb._node_table(cb._LOSS_HIST, node, 2) \
+            is cb._LOSS_HIST[node][1]
+        assert cb._node_table(cb._WIN_TABLE, node, 2) \
+            is cb._WIN_TABLE[node][1]
+    # _LOSS_FIT 无 boss 条目(斜率 CI 含 0 退常数,不做均值匹配),
+    # 别名断言只辖 battle/encounter
+    for node in ('battle', 'encounter'):
+        assert cb._node_table(cb._LOSS_FIT, node, 2) \
+            is cb._LOSS_FIT[node][1]
+    # 钳制参数:P2 别名同值
+    assert cb._boss_clamp_params(2) == cb._boss_clamp_params(1) \
+        == (cb.BOSS_CLAMP_HP_CUT, cb.BOSS_CLAMP_P_LOW)
+    # 未声明位面(如 3)按别名链落到 plane 1,不 KeyError
+    assert cb._node_table(cb._LOSS_HIST, 'boss', 3) is cb._LOSS_HIST['boss'][1]
+    # 行为面:同 seed 下 plane=2 与 plane=1 采样逐位一致
+    for node in ('battle', 'encounter', 'boss'):
+        rng_a = random.Random(11)
+        rng_b = random.Random(11)
+        for _ in range(30):
+            a = cb.sample_battle_delta(node, 2, 60, rng_a, plane=1)
+            b = cb.sample_battle_delta(node, 2, 60, rng_b, plane=2)
+            assert a == b
+        assert cb.injected_win_p(node, 2, plane=2) \
+            == cb.injected_win_p(node, 2, plane=1)
+        assert cb.prior_share(node, 2, plane=2) \
+            == cb.prior_share(node, 2, plane=1)
+
+
+def test_default_plane_keeps_signature_compatible() -> None:
+    """旧调用面零漂移:不传 plane 的三函数全部等价于 plane=1。"""
+    rng_a = random.Random(23)
+    rng_b = random.Random(23)
+    for node in ('battle', 'encounter', 'boss'):
+        for rung in range(4):
+            assert cb.injected_win_p(node, rung) \
+                == cb.injected_win_p(node, rung, plane=1)
+            assert cb.prior_share(node, rung) \
+                == cb.prior_share(node, rung, plane=1)
+        for _ in range(20):
+            a = cb.sample_battle_delta(node, 1, 70, rng_a)
+            b = cb.sample_battle_delta(node, 1, 70, rng_b, plane=1)
+            assert a == b
+
+
+def test_coarse_calib_version_disclosed_in_ledger_manifest(
+        monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """版本披露锁:COARSE_CALIB_VERSION=2 且进 sim 台账 manifest。
+
+    DESIGN §验证:局终指纹核对锚——防止「结构改了、披露没跟上」的
+    跨版本对比污染;回归批脚本头部按本常量断言版本号。
+    """
+    assert cb.COARSE_CALIB_VERSION == 2
+    r = cw_sim.simulate_p1(1, pool='snapshot')
+    out = cw_sim.write_batch_ledger([r], tmp_path / 'batch')
+    manifest = json.loads((out / 'manifest.json').read_text(encoding='utf-8'))
+    assert manifest['coarse_calib_version'] == cb.COARSE_CALIB_VERSION

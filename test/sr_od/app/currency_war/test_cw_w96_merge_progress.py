@@ -170,8 +170,11 @@ def test_r7_frame_generation_guard_unchanged() -> None:
     后改用 r7 帧钉守卫基线;末窗放行行为由 test_cw_w242_star_directed
     锁。ADR-0418 gate_min_round 前移 8→6 后 r7 落进新授权窗
     {r6..r9},本锁用 replace 把 min_round 钉回 8 保住「非末窗守卫
-    不动」的原边界意图——C 臂窗内放行行为另由 新窗锁覆盖。)"""
-    reg = replace(DEFAULT_REGISTRY, handoff_gate_min_round=8)
+    不动」的原边界意图——C 臂窗内放行行为另由 新窗锁覆盖。
+    ADR-0438:copy_swap_target_exempt 开臂翻默认 True,本锁显式注入
+    关臂钉「守卫直通」基线不变。)"""
+    reg = replace(DEFAULT_REGISTRY, handoff_gate_min_round=8,
+                  copy_swap_target_exempt=False)
     sess = _sess()
     st = _state(round_num=7,
                 deployed=[_deployed(_TARGET_FILLER,

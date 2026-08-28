@@ -70,10 +70,19 @@ def test_find_tomes_accepts_true_tome(monkeypatch) -> None:
 
 
 def test_want_level_up_p2_floor_beats_comp_roll() -> None:
-    """P2 地板硬下限:comp lv6=roll 但 P2 节点 target=8 → 仍追级(r11 #3,M55 冻 lv6 死)。"""
+    """P2 地板硬下限:comp roll 只在 P1 压,P2 落后 node 地板应追级
+    (r11 #3,M55 冻 lv6 死)。
+
+    ⚠️ W370/W371 P2 损血重校后的语义更新:原帧(P2r1 lv6 g50 hp80)的
+    DP 姿态由「升级」变为「存息」——重校后弱板(b=1.6)模型内损血
+    25.8/节点,升级/找件路径与存息在值函数中无可辨识差(等值带),按
+    P2 平局保守化裁决取存息(W371 M1:不确定时不动金,堵「死→烧光」)。
+    `_want_level_up` 的地板比较机制未变(target=level → False);M55 的
+    病理防线(金 35 全烧经验)由 hp 门与 XP 单击量控承载,不在本帧。"""
     comp = get_comp('万敌单C')   # lv6 = roll(实证)
     st = GameState(level=6, plane=2, round_num=1, gold=50, hp=80)
-    assert _want_level_up(st, comp) is True, 'P2 落后 node 地板(8)应追级(comp roll 只在 P1 压)'
+    assert _want_level_up(st, comp) is False, \
+        '重校后弱板帧 DP 姿态=存息(target=level)→ 不追级(保守平局裁决)'
     st1 = GameState(level=6, plane=1, round_num=1, gold=50, hp=80)
     assert _want_level_up(st1, comp) is False, 'P1 comp roll 意图保留(不改既有行为)'
 

@@ -1188,10 +1188,14 @@ def test_economy_mode_for_maps_spend_mode() -> None:
     assert _economy_mode_for(GameState(plane=1, round_num=1, gold=2, level=3, hp=80)) == "interest_first"
     # DP:P1 早段有金 lv3 → level(便宜早升)→ rush_level(ADR-0208 的切流目的)
     assert _economy_mode_for(GameState(plane=1, round_num=1, gold=8, level=3, hp=80)) == "rush_level"
-    # DP:P2 gold 60 lv7 → level 冲 8 → rush_level
-    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=40)) == "rush_level"
+    # DP:P2 gold 60 lv7 hp40 → 存息 hold(W370/W371 重校后该带血紧:
+    # b=2.0 模型损血 15/节点,血 40≈2.5 节点 → 保守持息)→ interest_first
+    # (旧行为「level 冲 8 → rush_level」随 P2 损血重校失效,ADR 欠账)
+    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=40)) == "interest_first"
+    # DP:P2 gold 60 lv7 hp100 → +D4 找件(找件通道仍开,非存息)→ adaptive
+    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=100)) == "adaptive"
     # DP:P2 gold 51 lv7 → adaptive(d_search 先成型)→ adaptive
-    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=51, level=7, hp=40)) == "adaptive"
+    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=51, level=7, hp=40)) == "interest_first"
 
 
 # (原 test_economy_mode_for_adaptive_falls_back_to_config 已删,ADR-0204:

@@ -4,8 +4,9 @@
 锁契约(每条=一个确定输入下的确定行为;不锁分布数值):
 - ① 日程单一源 schedule_of:seen 序列=位面轮数真值(未揭晓位面回退 9);
   脏表封顶 [1,9](同 W154/ADR-0366 守卫语义);
-- ② 默认日程 ≡ 旧常量语义逐位一致(offsets/ends/difficulty_scale/
-  node_income boss 槽,全 t 域对拍旧式公式——P1 零漂移的结构面);
+- ② 默认日程 ≡ 旧常量语义逐位一致(offsets/ends/node_income boss 槽,
+  difficulty_scale P1/P3 段——P1 零漂移的结构面;P2 段已按实测损血谱
+  重校为常数 P2_LOSS_SCALE,语义锁在本文件与重校批锁文件);
 - ③ 修正日程 (9,7,9):boss 奖金落 P2 真实末轮 t=15(旧幻影 t=17);
   t=16 归 P3(P3 前移,总程 25 槽);
 - ④ slot_of 查询映射:默认日程 ≡ 旧 ``t=(p-1)*9+r-1``;修正日程
@@ -57,12 +58,14 @@ def test_default_schedule_offsets_and_ends():
 
 
 def test_default_difficulty_scale_equals_legacy_divmod():
+    # P2 段已按实测损血谱重校(常数 P2_LOSS_SCALE,推导见该常量注释);
+    # P1/P3 段仍逐位旧语义(P1 零漂移的结构面)。
     for t in range(hz.TOTAL_NODES):
         plane, node = divmod(t, 9)   # 旧式
         if plane == 0:
             old = 0.5 if node < 4 else (0.9 if node < 8 else 1.4)
         elif plane == 1:
-            old = 1.5 + 0.05 * node
+            old = hz.P2_LOSS_SCALE
         else:
             old = 1.8 + 0.05 * node
         assert hz.difficulty_scale(t) == old, t
@@ -86,7 +89,7 @@ def test_corrected_schedule_boss_at_real_p2_end():
     assert hz.node_income(15, None) == hz.node_income(14, None)  # 旧日程无差
     # t=16 归 P3 node0(修正)而非 P2 node7(旧)——P3 前移
     assert hz.difficulty_scale(16, pl) == 1.8
-    assert hz.difficulty_scale(16) == 1.5 + 0.05 * 7
+    assert hz.difficulty_scale(16) == hz.P2_LOSS_SCALE
 
 
 # ---------- ④ slot_of 查询映射 ----------
@@ -147,10 +150,16 @@ def test_dp_posture_p2_uses_session_schedule(monkeypatch):
     assert captured['session'] is sess
     expected = hz.solve_cached(None, (9, 7, 9)).posture(15, 40, 8, 60, 0.0)
     assert p.tag == expected.tag and p.refresh_budget == expected.refresh_budget
-    # 旧日程(先验)同槽动作不同(伤害实证:该帧翻转——锁翻转存在性,
-    # 具体分布数值不锁)
-    legacy = hz.solve_cached(None).posture(15, 40, 8, 60, 0.0)
-    assert legacy.tag != expected.tag or legacy.refresh_budget != expected.refresh_budget
+    # 日程分辨性:P2 段损血已摊平为常数(节点梯度移除,重校批语义)→
+    # P2 末槽(15)两日程同姿态;分辨性移到 P2/P3 边界槽(16):修正日程
+    # 归 P3 前移(难度 1.8+)vs 旧日程归 P2 node7(常数)→ 动作可不同
+    # (锁分辨性存在性,具体分布数值不锁)
+    sol_fix = hz.solve_cached(None, (9, 7, 9))
+    sol_leg = hz.solve_cached(None)
+    fix16 = sol_fix.posture(16, 40, 8, 60, 0.0)
+    leg16 = sol_leg.posture(16, 40, 8, 60, 0.0)
+    assert fix16.tag != leg16.tag \
+        or fix16.refresh_budget != leg16.refresh_budget
 
 
 # ---------- ⑦ 写入端断链修复 ----------

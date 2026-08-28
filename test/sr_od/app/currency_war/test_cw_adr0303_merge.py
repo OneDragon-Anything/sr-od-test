@@ -123,11 +123,16 @@ def test_copy_swap_exempts_onboard_target_piece() -> None:
     )
     # 镜像:v1 守卫本身会拦(target_comp=None 无保留判据)
     assert _cands._copy_swap_useless(st.shop[0], st, sess)
-    # 默认关(ADR-0304 裁决回退):守卫直通,照拦——注入关臂隔离
-    # press 豁免臂(开臂后默认注册表该臂会放行 band 内副本)
-    assert not _REG.copy_swap_target_exempt
-    assert _cands._copy_swap_blocked(st.shop[0], st, sess, _REG_NO_PRESS)
-    assert target not in _buy_names(st, sess, _REG_NO_PRESS)
+    # 回退态(旧 ADR-0304 裁决;ADR-0438 已开臂翻默认 True——历史
+    # 「默认关守卫直通」锁随语义演进改显式注入关臂;开臂依据=W436
+    # A/B:生成通道打通后本开关买率 +9.15pp 显著/守卫全净)
+    # 注入关臂隔离 press 豁免臂(默认注册表该臂会放行 band 内副本)
+    assert _REG.copy_swap_target_exempt
+    assert _cands._copy_swap_blocked(
+        st.shop[0], st, sess,
+        replace(_REG_NO_PRESS, copy_swap_target_exempt=False))
+    assert target not in _buy_names(
+        st, sess, replace(_REG_NO_PRESS, copy_swap_target_exempt=False))
     # 开关开(ADR-0303 豁免,A/B 通道):不拦 + 买候选生成
     reg_on = replace(_REG, copy_swap_target_exempt=True)
     assert not _cands._copy_swap_blocked(st.shop[0], st, sess, reg_on)

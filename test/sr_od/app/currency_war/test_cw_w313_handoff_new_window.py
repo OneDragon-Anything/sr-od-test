@@ -91,11 +91,16 @@ def test_c_arm_new_window_r7_allows_line_opportunistic_copy() -> None:
 
 
 def test_c_arm_out_of_window_r5_still_zero_drift() -> None:
-    """零漂移边界:r5(窗外)同帧 gap=0 → 不生成该买候选。"""
+    """零漂移边界:r5(窗外)同帧 gap=0 → 不生成该买候选。
+    (语义演进,ADR-0438:copy_swap_target_exempt 开臂翻默认 True,
+    deployed 目标件的第 2 份在窗外也生成——本锁改显式注入关臂,
+    钉「守卫直通基线」的原边界;豁免臂行为由 w242/adr0303 锁。)"""
+    from dataclasses import replace
     sess = _sess()
     st = _state(5)
     assert handoff_gate_gap(st, sess, _REG) == 0
-    assert not [c for c in generate_candidates(st, sess, _REG)
+    assert not [c for c in generate_candidates(
+                    st, sess, replace(_REG, copy_swap_target_exempt=False))
                 if isinstance(c.action, BuyCard)
                 and c.action.card.name == _TARGET], \
         '窗外 r5 同名副本必须仍被守卫拦(零漂移)'

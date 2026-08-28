@@ -51,12 +51,17 @@ from sr_od.application.currency_war.cw_evolution import _locked_protected_names
 _QUAL_STRATEGY = '黑塔纪元'
 _COMP = '大黑塔银河学者'
 
+#: 证据组 B 夹具(W423 起撤销出口①须异线资产证据,同 test_cw_intention):
+#: 异线「万敌单C」(v2 家族)终局件 5 张在手,核心万敌可达 → 厚度 ≥ A_min。
+EVIDENCE_BENCH = ['万敌', '千冶·刃', '长夜月', '刻律德菈', '缇宝']
 
-def _state(bench=(), plane=1, round_num=1, strategies=(), board=None) -> GameState:
+
+def _state(bench=(), plane=1, round_num=1, strategies=(), board=None,
+           level=5) -> GameState:
     s = GameState()
     s.plane = plane
     s.round_num = round_num
-    s.level = 5
+    s.level = level
     s.active_strategies = list(strategies)
     for n in bench:
         ch = CHARACTERS[n]
@@ -135,15 +140,22 @@ def test_qlock_rederive_and_clear_lifecycle() -> None:
 
 
 def test_qlock_revoke_clears_transition_pair() -> None:
-    """撤销出口①(miss-N)→ weak:副方向随之退场(scope 契约=weak 不辖)。"""
+    """撤销出口①(断供证据三条件合取,W423 起)→ weak:副方向随之
+    退场(scope 契约=weak 不辖)。夹具:lv8 使 4 费核心刷新窗开
+    (N_req=38),证据组 B=异线千冶减益终局件 5 张在手(厚度 ≥ A_min)。"""
     st = _state(bench=('三月七', '丹恒·饮月'),
                 strategies=(_QUAL_STRATEGY,))
     ist = update_intention(st, IntentionState())
     assert ist.transition_pair
-    # 推进 miss 计数到撤销(comp 核心恒不可得:窗口开但核心不在店/手)
-    for _ in range(cw_intention.CORE_MISS_N):
-        st.round_num += 1
-        ist = update_intention(st, ist)
+    # 推进 miss 计数到撤销(comp 核心恒不可得:窗口开但核心不在店/手;
+    # 证据组 B 夹具与 test_cw_intention 同款)
+    gone = _state(bench=EVIDENCE_BENCH, plane=1, level=8)
+    need = max(cw_intention.CORE_MISS_N,
+               cw_intention.core_miss_n_required(
+                   '大黑塔', 8, DEFAULT_REGISTRY.revoke_miss_tolerance_eps))
+    for _ in range(need):
+        gone.round_num += 1
+        ist = update_intention(gone, ist)
     assert ist.phase == 'weak' and ist.transition_pair == ()
 
 

@@ -75,15 +75,27 @@ def _sess() -> StrategySession:
     return s
 
 
+#: 证据组 B 夹具(W423 起撤销出口①须异线资产证据,同 test_cw_intention):
+#: 异线「万敌单C」(v2 家族)终局件 5 张在手,核心万敌可达 → 厚度 ≥ A_min。
+EVIDENCE_BENCH = ['万敌', '千冶·刃', '长夜月', '刻律德菈', '缇宝']
+
+
 def _weak_on_xianzhou(registry=None) -> tuple[IntentionState, StrategySession]:
-    """走真实状态机抵达 weak:锁希儿量子 → 核心 CORE_MISS_N 轮不可得撤销。
+    """走真实状态机抵达 weak:锁希儿量子 → 核心断供证据(三条件合取:
+    miss ≥ max(CORE_MISS_N, N_req)+ 异线在场资产)撤销。
     (门只辖真实撤销后的替代线锁定,夹具必须走全撤销路径。)"""
+    from sr_od.application.currency_war.cw_intention import (
+        core_miss_n_required,
+    )
+    reg = registry or DEFAULT_REGISTRY
     sess = _sess()
     ist = update_intention(_state(shop=['希儿']), IntentionState(),
                            sess, registry=registry)
     assert ist.locked_comp == '希儿量子', '夹具前提:③锁希儿量子'
-    gone = _state()
-    for _ in range(CORE_MISS_N):
+    gone = _state(bench=EVIDENCE_BENCH)
+    need = max(CORE_MISS_N,
+               core_miss_n_required('希儿', 5, reg.revoke_miss_tolerance_eps))
+    for _ in range(need):
         update_intention(gone, ist, sess, registry=registry)
     assert ist.phase == 'weak' and ist.weak_comp == '希儿量子', \
         '夹具前提:撤销出口①降级弱意向'

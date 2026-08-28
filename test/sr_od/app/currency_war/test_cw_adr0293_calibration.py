@@ -320,6 +320,13 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 #: ADR-0437 同名牌集中度批更新:新增 dup_concentration_enabled
 #: (=False,默认关零漂移;行为锁 test_cw_dup_concentration)
 _EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173dbed')
+# W436/ADR-0438 非正分门 merge 完成豁免批更新:新增 merge_completion_
+# exempt(行为锁 test_cw_w436_merge_exempt)与 copy_swap_target_exempt
+# 挂账注释更新——初版两开关默认关零漂移(hash 37db42bf…);A/B 兑现后
+# 开臂翻默认:merge_completion_exempt=True/copy_swap_target_exempt=True
+# (开臂判据与数字见 registry 注释+ADR-0438 验证节)——有意翻默认,
+# 锁同步更新(其余字段不变)。
+_EXPECTED_HASH = ('f0ed5f35750f97644ece286f2545d06c367a19307f8fed3be1386e9fc8829e7b')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

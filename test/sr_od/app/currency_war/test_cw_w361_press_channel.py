@@ -6,9 +6,11 @@ design.md v3 节;禁实现 v2 已废条款:V-A3 插件臂/COPY_PRIORITY_*/E08
 
 1. V-B1 守卫收拢:_copy_swap_blocked 是唯一守卫合成点(生成层内联块
    已消失),探针态下生成层与守卫逐位一致;
-2. V-B2 tag/评分路由:'copy_press' 标签进 buy_tag_priority;评分偏置
-   press_copy_unit 独立给分域(修 W231 结构性零分);V-B2.3 可观测
-   行为断言(候选产出;被拒时拒因 ∉ {copy 守卫, 非正分});
+2. V-B2 tag 路由:'copy_press' 标签进 buy_tag_priority;评分路由
+   (press_copy_unit/press_core_mirror_bonus 独立给分域)已随
+   ADR-0427 增补节定谳清理(生产默认 0.0 从未注入生产行为 ∧ 生成域
+   被上游臂截流至近空,无观测支点),本文件锁改为「标签机制面 +
+   清理卫生」——删除后评分只由通用板面维决定,与默认态逐位一致;V-B2.3 可观测行为断言(候选产出)保留;
 3. V-B3/V-B5 band 推导与停机:[30] 开域覆盖 {1,2}/REFRESH_PROB 推导/
    observed 概率条优先(轮岗盲区)/带自洽闸 plane+level 停机;
 4. V-B6 插件臂撤销:E05/E07 带外副本两臂都不产出候选;
@@ -54,9 +56,8 @@ from sr_od.application.currency_war.decision_v2.scoring import (
     score_candidate,
 )
 
-# armA 注入(V-B3:总闸+评分偏置;量级=网格中值 0.5)
-_ARMA = replace(DEFAULT_REGISTRY, press_channel_enabled=True,
-                press_copy_unit=0.5, press_core_mirror_bonus=0.5)
+# armA 注入(V-B3:总闸;量控 cap 走各自字段默认值)
+_ARMA = replace(DEFAULT_REGISTRY, press_channel_enabled=True)
 
 # 注入关臂:press 通道已正式开臂(默认 True,commit cb7688d4——W368
 # A/B R2 验收);「通道关」行为锁改为显式注入,不再依赖默认值。
@@ -182,42 +183,32 @@ def test_tag_registration_and_priority_position() -> None:
     assert _buy_tag(st.shop[0], st, s2, _ARMA) is None
 
 
-def test_press_scoring_independent_domain_and_e08() -> None:
-    """V-B2.2/V-B7:press_copy_unit 独立给分域(filller_star_unit 默认
-    值不受扰);E08 core-mirror 走评分分量;arm0 全零分域不激活。"""
+def test_press_scoring_route_cleaned_hygiene() -> None:
+    """定谳清理卫生锁(ADR-0427 增补节,策略开关生命周期第 4 态):
+    ① 评分路由两字段已删(not hasattr);② 通道价值主体健在——
+    总闸/双 cap 字段/[11] 豁免臂谓词;③ 删除后 copy_press 候选与
+    删除前默认态(press_copy_unit=0.0)行为一致——探针态下正分可达
+    (板面 depth 维自带 +2,与已删路由无关),通道行为面零漂移。"""
+    assert not hasattr(DecisionV2Registry, 'press_copy_unit')
+    assert not hasattr(DecisionV2Registry, 'press_core_mirror_bonus')
+    assert DEFAULT_REGISTRY.press_channel_enabled is True
+    assert DEFAULT_REGISTRY.press_copy_round_cap == 1
+    assert DEFAULT_REGISTRY.press_exempt_round_cap == 2
     sess = _sess()
     st = _state(shop=[_shop_card()])
     cands = [c for c in generate_candidates(st, sess, _ARMA)
              if isinstance(c.action, BuyCard)
              and c.action.card.name == _FILLER]
+    assert cands and cands[0].tag == 'copy_press'
     val, _bd = score_candidate(cands[0], st, sess, _ARMA)
-    assert val > 0, 'W231 病灶修:copy_press 必须正分过非正分门'
-    # 独立域:arm0 下 filler_star_unit 仍 0.0;A/B 通道零波及
-    assert DEFAULT_REGISTRY.filler_star_unit == 0.0
-    # E08:deployed 同名 ∈ 意向核心 → 评分多一份 core_mirror_bonus
-    # (同 session 双 registry 差分,防目标集差异混入板面维)
-    s2 = _sess()
-    s2.v3_core_names = {_FILLER}
-    st_e08 = _state(shop=[_shop_card()])
-    got_e08 = [c for c in generate_candidates(st_e08, s2, _ARMA)
-               if isinstance(c.action, BuyCard)
-               and c.action.card.name == _FILLER]
-    reg_b0 = replace(_ARMA, press_core_mirror_bonus=0.0)
-    val_on, _ = score_candidate(got_e08[0], st_e08, s2, _ARMA)
-    val_off, _ = score_candidate(got_e08[0], st_e08, s2, reg_b0)
-    assert val_on == val_off + _ARMA.press_core_mirror_bonus
-    # 非核心 session(裸 session):bonus 不激活
-    got_plain = [c for c in generate_candidates(st, sess, _ARMA)
-                 if isinstance(c.action, BuyCard)
-                 and c.action.card.name == _FILLER]
-    val_p_on, _ = score_candidate(got_plain[0], st, sess, _ARMA)
-    val_p_off, _ = score_candidate(got_plain[0], st, sess, reg_b0)
-    assert val_p_on == val_p_off
+    assert val > 0
 
 
 def test_observable_reject_reason_never_guard_or_zero_score() -> None:
     """V-B2.3 可观测行为断言:armA 探针态下该卡产生买候选;若被拒,
-    拒因 ∉ {copy_swap 守卫(候选不存在), 非正分}。"""
+    拒因 ∉ {copy_swap 守卫(候选不存在), 非正分}。评分路由删除
+    (ADR-0427 增补节)不改本面:板面 depth 维自带正分,非正分拒
+    仍是异常信号。"""
     sess = _sess()
     st = _state(shop=[_shop_card()])
     cands = generate_candidates(st, sess, _ARMA)
@@ -229,7 +220,7 @@ def test_observable_reject_reason_never_guard_or_zero_score() -> None:
     row = next(r for r in res.log if r['desc'].startswith(f'买 {_FILLER}'))
     if not row['accepted']:
         assert '非正分' not in (row['reject'] or ''), \
-            f'拒因=非正分(W231 未修): {row}'
+            f'拒因=非正分(异常,depth 维应给正分): {row}'
     assert got[0].tag == 'copy_press'
 
 
@@ -281,14 +272,13 @@ def test_channel_shutdown_conditions() -> None:
 def test_registry_press_defaults_zero_drift() -> None:
     """V-B3 默认值锁:press_channel_enabled 已正式开臂(默认 True,
     commit cb7688d4——W368 A/B R2 验收;「默认全关零漂移」旧锁随开臂
-    失效,通道关行为改由 _ARM0 注入锁);其余 6 参保持中性/关值。"""
+    失效,通道关行为改由 _ARM0 注入锁);其余参保持中性值。评分偏置
+    两字段的删除锁在 test_press_scoring_route_cleaned_hygiene。"""
     assert DEFAULT_REGISTRY.press_channel_enabled is True
     assert DEFAULT_REGISTRY.press_band_cum_threshold == 0.50
     assert DEFAULT_REGISTRY.press_channel_max_level == 6
-    assert DEFAULT_REGISTRY.press_copy_unit == 0.0
     assert DEFAULT_REGISTRY.press_copy_round_cap == 1
     assert DEFAULT_REGISTRY.press_exempt_round_cap == 2
-    assert DEFAULT_REGISTRY.press_core_mirror_bonus == 0.0
 
 
 # ------------------------------------------------- V-B6 插件臂撤销
@@ -343,22 +333,26 @@ def test_press_floor_exempt_cap_and_ruling() -> None:
 
 
 def test_press_copy_round_cap_in_arbitration() -> None:
-    """V-B8.1:press 候选逐轮采纳 ≤ press_copy_round_cap(默认 1)。"""
+    """V-B8.1:press 候选逐轮采纳 ≤ press_copy_round_cap(默认 1)。
+    评分注入 filler_star_unit>0(W232 填充件升星期权,默认 0 值不扰
+    生产)使两笔 press 候选过非正分门——cap 量控语义的独立锁不依赖
+    已删除的 press 评分路由。"""
+    reg = replace(_ARMA, filler_star_unit=1.0)
     sess = _sess()
     st = _state(deployed=[_dep(_FILLER, _FILLER_FAC),
                           _dep(_FILLER2, _FILLER2_FAC, slot=1)],
                 shop=[_shop_card(_FILLER, 1, x=1),
                       _shop_card(_FILLER2, 1, x=2)])
-    cands = [c for c in generate_candidates(st, sess, _ARMA)
+    cands = [c for c in generate_candidates(st, sess, reg)
              if isinstance(c.action, BuyCard)]
     assert len(cands) == 2, '两笔 press 候选都应生成'
-    scored = score_all(cands, st, sess, _ARMA)
-    res = arbitrate(scored, st, sess, _ARMA)
+    scored = score_all(cands, st, sess, reg)
+    res = arbitrate(scored, st, sess, reg)
     accepted = [r for r in res.log if r['tag'] == 'copy_press'
                 and r['accepted']]
     rejected = [r for r in res.log if r['tag'] == 'copy_press'
                 and not r['accepted']]
-    assert len(accepted) == _ARMA.press_copy_round_cap
+    assert len(accepted) == reg.press_copy_round_cap
     assert any('press_copy_cap' in (r['reject'] or '') for r in rejected)
 
 

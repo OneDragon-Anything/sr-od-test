@@ -3,7 +3,8 @@
 strategy_v4 点0 单一规格源,锁行为:
 - 信号分层①>②>③>④(五个触发例:env/strategy/family_bond/core_card/resource)
   + ⑤无信号兜底(绯英档);
-- 撤销析取两出口:①核心 N=6 轮不可得(只计开窗轮)/ ②更高层信号+可达性对照;
+- 撤销析取两出口:①核心断供证据(三条件合取:miss ≥ max(CORE_MISS_N,
+  N_req 闭式)∧ 异线核心可达 ∧ 异线资产厚度 ≥ A_min)/ ②更高层信号+可达性对照;
 - 窗口冻结语义:未开窗不计 miss;冻结超位面剩余节点 → 移出候选集、回⑤、不触发③;
 - 强制锁线(P3 入口):核心在手或再遇窗口≤剩余节点的资产最厚方向;全不可达 → 降格终局;
 - 锁后效果:只输出囤货目标集合(不改板上)。
@@ -196,20 +197,53 @@ def test_layer_priority_order() -> None:
 
 # ===== 撤销两出口 =====
 
-def test_revoke_exit1_core_miss_n() -> None:
-    """撤销出口①:意向核心 6 轮不可得(开窗轮)→ 降级弱意向,只囤跨线骨架。
-    (锁线场景设 P2:W145/ADR-0357 起 P1 ③不锁 comp。)"""
+#: 证据组 B 夹具:异线「万敌单C」(v2 家族)终局件 5 张在手(核心万敌
+#: 可达;厚度=5×1★ + 骨架重叠×0.5=6.5 ≥ A_min=5,W423 测量值)。
+EVIDENCE_BENCH = ['万敌', '千冶·刃', '长夜月', '刻律德菈', '缇宝']
+
+
+def _default_n_req(core: str, level: int = 5) -> int:
+    from sr_od.application.currency_war.cw_intention import (
+        core_miss_n_required,
+    )
+    from sr_od.application.currency_war.decision_v2.registry import (
+        DEFAULT_REGISTRY,
+    )
+    return core_miss_n_required(
+        core, level, DEFAULT_REGISTRY.revoke_miss_tolerance_eps)
+
+
+def test_revoke_exit1_requires_n_req_and_alt_asset_evidence() -> None:
+    """撤销出口①三条件合取(设计=`.debug/temp/currency_war/
+    w396_r2r3_design/DESIGN.md` R3.1,治 W386 BP1 门放行噪声换线):
+    - 仅 miss 达拍死计数 CORE_MISS_N 而无异线资产证据 → 不开窗,
+      计数继续累计(「核心短时缺货」的正常噪声不再进撤销);
+    - miss 达 max(CORE_MISS_N, N_req) 且存在异线(核心可达+厚度
+      ≥ A_min)→ 开窗降弱意向,事件行与证据字段携带 n_req/q/alt/thk
+      (实机判读锚:无证据字段的开窗=守卫失效)。"""
     st = _state(plane=2, shop=['希儿'])   # 锁希儿量子(3费,lv5 开窗)
     ist = update_intention(st, IntentionState())
     assert ist.locked_comp == '希儿量子'
-    gone = _state(plane=2)                # 店里/bench 无希儿,窗口仍开
-    for _ in range(CORE_MISS_N - 1):
+    gone = _state(plane=2)                # 窗口开、核心缺、无异线资产
+    for _ in range(CORE_MISS_N + 5):
         update_intention(gone, ist)
-        assert ist.phase == 'locked'      # 前 5 轮只计数
-    update_intention(gone, ist)
+        assert ist.phase == 'locked', '无证据组 B 时拍死计数不得开窗'
+    assert ist.tracks['希儿量子'].miss_count == CORE_MISS_N + 5
+    # 补证据组 B → 推进到 N_req 轮开窗
+    gone_ev = _state(plane=2, bench=EVIDENCE_BENCH)
+    total = max(CORE_MISS_N, _default_n_req('希儿'))
+    for _ in range(total - (CORE_MISS_N + 5) - 1):
+        update_intention(gone_ev, ist)
+        assert ist.phase == 'locked'
+    update_intention(gone_ev, ist)   # 第 N_req 轮:三条件齐 → 开窗
     assert ist.phase == 'weak' and ist.weak_comp == '希儿量子'
     assert ist.last_event.startswith('revoke:miss')
-    ht = hoard_target_set(gone, ist)
+    assert 'alt=万敌单C' in ist.last_event
+    ev = ist.revoke_evidence
+    assert ev['alt_comp'] == '万敌单C'
+    assert ev['asset_thickness'] >= ev['a_min'] >= 5.0
+    assert ev['n_req'] == total and ev['q'] > 0 and ev['miss_count'] == total
+    ht = hoard_target_set(gone_ev, ist)
     assert ht.mode == 'weak'
     assert set(ht.char_targets) == set(CROSS_LINE_SKELETON)
 
