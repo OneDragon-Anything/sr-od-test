@@ -37,7 +37,9 @@ def test_expect_sell_truth_table():
 
 def test_expect_deploy_move_place_vs_swap():
     """拖到部署排:空槽落位=原空+目标该角色;异名占位=互换;同名占位=
-    游戏语义未核实 → None 不评(不发明);源身份未识别 → None。"""
+    merge_mechanics.md §3 恒成立约束「场上同名同星≤1」+部署链 5.1.7
+    不变量「同角色在场只1」下不可达(游戏拒绝)→ None 不评;源身份
+    未识别 → None。"""
     exp = compute_drag_expect(DeployMove(from_slot=2, to_row='front', to_slot=1,
                                          ),
                               [_bc(2, '希儿')],

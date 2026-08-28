@@ -1,0 +1,236 @@
+"""买牌期望态对账网(期望态层·买牌通道;语义唯一源 =
+docs/game/currency_war/research/merge_mechanics.md §1 买牌落点 / §2 连锁合成 /
+§2.5 满栏例外与自动多买 / §3 恒成立约束;拖动通道先例 =
+test_cw_w530_drag_reconcile.py 同族设计)。
+
+测四类:①期望态计算真值表(普通买/触发合成-备战最左/场上吸收/两级连锁/
+满栏自动多买 k>1/满栏连升低置信子案按暂定语义锁/身份未识别不评)②定型帧
+对账判据真值表(身份未识别槽跳过;期望空槽被占=不一致;星级不符=不一致)
+③接线源码锁(意图在 shop.py 买入点记录、期望在单元尾计算暂存、对账在
+PrepDirector heavy 定型帧后仅 progressed 分支、合成落点单一源 =
+cw_state._merge_bench)④台账行形态锁(surface='bench'/kind=
+'buy_expect_mismatch'/reader_source='buy_expect_reconcile')。
+全部纯函数/tmp_path,零触网零落盘真实路径。
+"""
+import json
+from pathlib import Path
+
+from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.prep_director import (
+    BuyPurchase,
+    compare_buy_expect,
+    compute_buy_expect,
+)
+
+
+def _bc(slot: int, char_id: str, star: int = 1,
+        pref: str = 'back') -> BenchChar:
+    return BenchChar(slot=slot, char_id=char_id, star=star, position_pref=pref)
+
+
+def _bench(*chars: BenchChar) -> list[BenchChar | None]:
+    """紧凑序列 → 9 槽表(测试构造辅助;chars 的 slot 为 1-based 物理槽位)。"""
+    table: list[BenchChar | None] = [None] * 9
+    for c in chars:
+        table[c.slot - 1] = c
+    return table
+
+
+# ===== ① 期望态计算真值表(购买意图 → 期望态)=====
+
+def test_expect_plain_buy_appends_bench():
+    """普通买(§1 正常情况):期望 = 备战栏追加一张,不触发合成。"""
+    exp = compute_buy_expect(
+        [BuyPurchase(name='景元', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿')), [])
+    assert exp is not None
+    assert exp.bench_after[0].char_id == '希儿'
+    assert exp.bench_after[1].char_id == '景元' and exp.bench_after[1].star == 1
+    assert exp.changed_bench == [2]
+    assert exp.changed_deployed == []
+    assert exp.total_cost == 3 and not exp.low_confidence
+
+
+def test_expect_merge_lands_bench_leftmost():
+    """触发合成·三张全备战(§1 优先级 2):产物落在最左那张位置,其余腾槽。"""
+    exp = compute_buy_expect(
+        [BuyPurchase(name='希儿', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿'), _bc(4, '希儿')), [])
+    assert exp is not None
+    assert exp.bench_after[0] is not None and exp.bench_after[0].star == 2
+    assert exp.bench_after[3] is None
+    assert sorted(exp.changed_bench) == [1, 4]
+
+
+def test_expect_merge_absorbs_deployed():
+    """触发合成·场上有同名(§1 优先级 1):场上吸收,产物留在场上位置。"""
+    dep = [_bc(1, '希儿', pref='front')] + [None] * 9
+    exp = compute_buy_expect(
+        [BuyPurchase(name='希儿', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿')), dep)
+    assert exp is not None
+    # 场上那张升 2★(deployed 下标 0 = 前排槽 1);备战那张腾槽
+    assert exp.deployed_after[0] is not None and exp.deployed_after[0].star == 2
+    assert exp.bench_after[0] is None
+    assert sorted(exp.changed_bench) == [1]   # 买的槽 2 合并后回到空,无净变化
+    assert exp.changed_deployed == [0]
+
+
+def test_expect_chain_two_levels():
+    """连锁合成(§2):备战 2×1星 + 备战 1×2星 + 场上 1×2星,买 1×1星
+    → 1★ 合成 2★(落备战最左)→ 与两份 2★ 连锁 → 3★ 落场上位置。"""
+    dep = [_bc(1, '希儿', 2, 'front')] + [None] * 9
+    exp = compute_buy_expect(
+        [BuyPurchase(name='希儿', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿'), _bc(2, '希儿'), _bc(3, '希儿', 2)), dep)
+    assert exp is not None
+    assert exp.deployed_after[0].star == 3          # 场上吸收到 3★
+    assert all(exp.bench_after[i] is None for i in range(3))
+    assert sorted(exp.changed_bench) == [1, 2, 3]
+    assert exp.changed_deployed == [0]
+
+
+def test_expect_bench_full_multi_buy():
+    """满栏自动多买(§2.5,k=min(店内张数,3−已有数 mod 3) 由调用方算好
+    传入;此处锁纯函数侧 k 张逐张入表+合并腾槽):备战栏满 9 槽含 1×希儿,
+    买 count=2 → 合成后原位 2★,散牌不留(本例 k 恰好凑满)。"""
+    full = _bench(_bc(1, '希儿'), *[_bc(i + 2, f'其他{i}') for i in range(8)])
+    exp = compute_buy_expect(
+        [BuyPurchase(name='希儿', star=1, count=2, unit_cost=3)],
+        full, [])
+    assert exp is not None
+    assert exp.bench_after[0] is not None and exp.bench_after[0].star == 2
+    assert exp.low_confidence is True               # k>1 = §2.5 低置信子案
+    assert exp.total_cost == 6                      # 无折扣:k×单价
+
+
+def test_expect_bench_full_chain_low_confidence():
+    """满栏连升(§2.5【置信:低】,按说法实现锁暂定语义):备战满含 2×2星,
+    买 3×1星(count=3)→ 1★ 合成 2★ → 与备战 2★ 连锁 → 3★ 落备战。"""
+    full = _bench(_bc(1, '希儿', 2), _bc(2, '希儿', 2),
+                  *[_bc(i + 3, f'其他{i}') for i in range(7)])
+    exp = compute_buy_expect(
+        [BuyPurchase(name='希儿', star=1, count=3, unit_cost=1)],
+        full, [])
+    assert exp is not None
+    stars = [(c.char_id, c.star) for c in exp.bench_after[:2] if c is not None]
+    assert stars == [('希儿', 3)]                   # 左侧 2★ 作载体升 3★
+    assert exp.low_confidence is True
+    assert exp.total_cost == 3
+
+
+def test_expect_unidentified_purchase_is_none():
+    """身份未识别(OCR 空名)→ 期望不可建返 None(宁缺勿造)。"""
+    assert compute_buy_expect(
+        [BuyPurchase(name='', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿')), []) is None
+
+
+# ===== ② 定型帧对账判据真值表 =====
+
+def test_compare_buy_expect_truth_table():
+    """判据:增量槽身份+星级全符=一致;身份/星级不符或期望空槽被占=不一致;
+    实读无条目(未识别)=不评跳过。"""
+    exp = compute_buy_expect(
+        [BuyPurchase(name='景元', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿')), [])
+    # 一致:槽 2 出现景元 1★
+    assert compare_buy_expect(exp, [_bc(1, '希儿'), _bc(2, '景元')], []) == []
+    # 身份不符
+    m = compare_buy_expect(exp, [_bc(1, '希儿'), _bc(2, '花火')], [])
+    assert len(m) == 1 and m[0]['domain'] == 'bench' and m[0]['slot'] == '2'
+    # 星级不符(合成预判错/2★直出漏识别的证据形态)
+    m2 = compare_buy_expect(exp, [_bc(1, '希儿'), _bc(2, '景元', 2)], [])
+    assert len(m2) == 1
+    # 未识别槽不评
+    assert compare_buy_expect(exp, [], []) == []
+
+
+def test_compare_expected_empty_slot_occupied():
+    """期望腾槽(合成消耗)而实读仍占 = 不一致(合成未发生证据形态)。"""
+    exp = compute_buy_expect(
+        [BuyPurchase(name='希儿', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿'), _bc(4, '希儿')), [])
+    # 一致:槽 4 已腾空(实读无该槽条目)
+    got = [exp.bench_after[0]]
+    assert compare_buy_expect(exp, got, []) == []
+    # 不一致:槽 4 仍是希儿(合成未发生)
+    m = compare_buy_expect(exp, [exp.bench_after[0], _bc(4, '希儿')], [])
+    assert any(x['slot'] == '4' and '空' in x['expected'] for x in m)
+
+
+def test_compare_deployed_landing():
+    """场上吸收落点对账:deployed 增量槽按(排,排内槽)比对。"""
+    dep = [_bc(1, '希儿', pref='front')] + [None] * 9
+    exp = compute_buy_expect(
+        [BuyPurchase(name='希儿', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿')), dep)
+    assert exp.changed_deployed == [0]
+    read = [_bc(1, '希儿', 2, 'front')]
+    assert compare_buy_expect(exp, [], read) == []
+    bad = [_bc(1, '希儿', 1, 'front')]
+    m = compare_buy_expect(exp, [], bad)
+    assert len(m) == 1 and m[0]['domain'] == 'deployed.front'
+
+
+# ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
+
+def test_w536_wiring_locks():
+    """①意图在 shop.py 买入点(BuyCard 点击分支)记录、单元尾计算暂存
+    session.pending_buy_expect;含卖出/未识别牌不建;②对账在 PrepDirector
+    heavy 定型帧之后且仅 progressed 分支、消费后即清;③合成落点单一源 =
+    cw_state._merge_bench(compute_buy_expect 不自造第二套落点规则)。"""
+    shop_src = Path(
+        'src/sr_od/application/currency_war/operations/prep/shop.py'
+    ).read_text(encoding='utf-8')
+    click_at = shop_src.index('Buy click @(')
+    rec_at = shop_src.index('_buy_purchases.append(BuyPurchase(', click_at)
+    assert click_at < rec_at                       # 意图记录在买入点
+    stash_at = shop_src.index('match.session.pending_buy_expect = _buy_expect')
+    assert shop_src.index('_buy_has_sell = True') < stash_at
+    assert 'not _buy_has_sell and not _buy_unidentified' in shop_src
+    assert '_buy_pre_bench = deepcopy(match.session.tracked_bench_chars)' \
+        in shop_src
+
+    dir_src = Path(
+        'src/sr_od/application/currency_war/prep_director.py'
+    ).read_text(encoding='utf-8')
+    obs_at = dir_src.index("obs = self._observe(heavy=True)")
+    consume_at = dir_src.index("getattr(session, 'pending_buy_expect', None)")
+    assert obs_at < consume_at                     # 定型帧后才消费
+    assert dir_src.index("'pending_buy_expect', None)") \
+        < dir_src.index('self._reconcile_buy_expect(_pending_buy)')
+    compute_body = dir_src[dir_src.index('def compute_buy_expect'):]
+    compute_body = compute_body[:compute_body.index('\n\ndef ') + 1] \
+        if '\n\ndef ' in compute_body else compute_body
+    assert 'cw_merge_bench(' in compute_body       # 落点单一源委托
+    assert '_BUY_DEFECT_KIND = \'buy_expect_mismatch\'' in dir_src
+    assert 'buy_expect_reconcile' in dir_src
+
+
+# ===== ④ 台账行形态锁 =====
+
+def test_buy_defect_row_shape(tmp_path: Path, monkeypatch):
+    """不一致行落 defect_ledger:surface='bench'/kind='buy_expect_mismatch'/
+    reader_source='buy_expect_reconcile' 形态;分级语义由既有分级锁覆盖。"""
+    monkeypatch.setattr(cw_telemetry, '_RECORDER',
+                        cw_telemetry.TelemetryRecorder(enabled=True,
+                                                       replay_dir=tmp_path))
+    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
+    monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
+    monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
+    cw_telemetry.record_defect(
+        'bench', 'buy_expect_mismatch',
+        expected='buy 景元/1星×1@3 总价3',
+        observed='bench槽2 期望[景元/1星] 实读[花火/1星]',
+        plane=1, round_num=3, gap_large=True,
+        reader_source='buy_expect_reconcile')
+    rows = [ln for ln in
+            (tmp_path / 'defect_ledger.jsonl').read_text(encoding='utf-8')
+            .splitlines() if ln.strip()]
+    assert len(rows) == 1
+    row = json.loads(rows[0])
+    assert row['surface'] == 'bench'
+    assert row['kind'] == 'buy_expect_mismatch'
+    assert row['reader_source'] == 'buy_expect_reconcile'
