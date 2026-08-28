@@ -1,4 +1,8 @@
-"""分歧频率统计器测试(12 号预备;fixtures 用临时 jsonl)。"""
+"""分歧频率统计器测试(12 号预备;fixtures 用临时 jsonl)。
+
+W446 注:dp 姿态语义仅 decision_v2 决策帧携带(statistics 口径要求
+strategy_id=='decision_v2'),fixture 行均带该标记。
+"""
 import sys
 from pathlib import Path
 
@@ -13,9 +17,9 @@ from sr_od.application.currency_war.cw_divergence_stats import divergence_stats 
 def test_divergence_stats(tmp_path: Path) -> None:
     """close_call 计数/dp_modes 聚合/run 过滤。"""
     rows = [
-        {'run_id': 'r1', 'round_num': 1, 'candidate_scores': {'a': 1.0, 'b': 0.95}, 'dp_posture': {'spend_mode': 'level'}},
-        {'run_id': 'r1', 'round_num': 2, 'candidate_scores': {'a': 1.0, 'b': 0.5}, 'dp_posture': {'spend_mode': 'adaptive'}},
-        {'run_id': 'r2', 'round_num': 1, 'candidate_scores': {}, 'dp_posture': {}},
+        {'run_id': 'r1', 'round_num': 1, 'candidate_scores': {'a': 1.0, 'b': 0.95}, 'strategy_id': 'decision_v2', 'dp_posture': '升级'},
+        {'run_id': 'r1', 'round_num': 2, 'candidate_scores': {'a': 1.0, 'b': 0.5}, 'strategy_id': 'decision_v2', 'dp_posture': 'adaptive'},
+        {'run_id': 'r2', 'round_num': 1, 'candidate_scores': {}, 'strategy_id': 'decision_v2', 'dp_posture': ''},
     ]
     d = tmp_path / 'decisions.jsonl'
     d.write_text('\n'.join(json.dumps(r) for r in rows), encoding='utf-8')
@@ -24,7 +28,8 @@ def test_divergence_stats(tmp_path: Path) -> None:
     assert st['with_candidates'] == 2
     assert st['close_calls'] == 1          # r1 round1 gap 0.05
     assert st['per_run'] == {'r1': [1]}
-    assert st['dp_modes'] == {'level': 1, 'adaptive': 1}
+    assert st['dp_modes'] == {'升级': 1, 'adaptive': 1}
+    assert st['with_dp_posture'] == 2      # 空串 tag 不计
     # run 过滤
     st2 = divergence_stats(tmp_path, run_id='r2')
     assert st2['decisions_total'] == 1 and st2['close_calls'] == 0
