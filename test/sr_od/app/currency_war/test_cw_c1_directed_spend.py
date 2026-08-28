@@ -2,8 +2,9 @@
 
 设计=唯一规格:`.debug/temp/currency_war/w382_c1_design/DESIGN.md`
 §2(期望账)/§3(路线 B 辖域裁决)。辖域=P1 末窗 ∧ d=hp−boss_tax_p75
-≥ emergency_hp(与 FLIP 末窗投影臂 d<emergency_hp 按 d 一刀切互斥)
-∧ 溢余段 g>interest_floor。锁的是策略决策行为(单帧锁=回归工具):
+≥ emergency_hp(C1 自身辖域;原「与 FLIP 投影臂互斥」已随 ADR-0426
+增补 D 溢余化退场,FLIP 不再按 d 切分)∧ 溢余段 g>interest_floor。
+锁的是策略决策行为(单帧锁=回归工具):
 
 - 定向优先级锁(registry.c1_directed_spend_enabled,默认关=零漂移):
   C1 帧内零 boss 增量支出删(纯 hoard 买/盲刷/升完无件可上的 LevelUp),
@@ -11,9 +12,8 @@
   卖/上阵不辖——溢余段花金
   零息损(成本恒 0),Δp≤0 支出确定性零收益,「必花+定向」的优先级
   语义=零贡献让位有增量;
-- 辖域正交锁:d 边界(hp=58/59)上 flip_hit(FLIP 末窗投影臂)与
-  c1_directed_active 互斥不重叠(两谓词按同一 d 判据切分,合起来
-  不重不漏覆盖末窗溢余帧);
+- C1 d 门锁:hp=58/59 边界上 c1_directed_active 的 d 门语义不变;
+  FLIP 同帧行为与 hp 无关(增补 D 溢余化,见 d 门锁 docstring);
 - 零漂移锚:默认关时 C1 形帧的过滤行为逐位一致。
 - (原 C1 资产臂锁节已随定谳清理删除:开臂前置触发面实测为零,通道
   构造性恒不激活,决策 why=ADR-0444。)
@@ -102,15 +102,20 @@ def _cands(target: str, merge: bool = False) -> list[Candidate]:
 # --- 辖域正交锁:d 边界上 FLIP 与 C1 互斥不重叠 ------------------------------
 
 
-def test_c1_flip_orthogonal_at_d_boundary() -> None:
-    """d=hp−boss_tax_p75 判据一刀切:hp=58(d=24<25)归 FLIP 末窗投影臂
-    (C1 不评估);hp=59(d=25)归 C1(FLIP 投影臂不命中)——两谓词在
-    边界两侧互斥,无重叠帧(ADR-0426 正交补集的 C1 侧兑现)。"""
-    for hp, want_flip, want_c1 in ((58, True, False), (59, False, True)):
+def test_c1_d_boundary_after_flip_simplification() -> None:
+    """d=hp−boss_tax_p75 判据一刀切(增补 D 后只辖 C1 自己的辖域):
+    hp=58(d=24<25)C1 不评估;hp=59(d=25)C1 可评估——C1 的 d 门
+    语义不变。FLIP 侧已随 ADR-0426 增补 D 溢余化(血量维度退场):同帧
+    两 hp 行为逐位一致,不再按 d 与 C1 互斥(C1 是自身辖域自辖的独立
+    通道,义务=溢余判定见 ADR-0445)。"""
+    for hp in (58, 59):
         st = _c1_state(hp=hp)
         sess = _boss_session()
-        assert flip_hit(st, sess, _REG_C1, 'FORM') is want_flip
-        assert c1_directed_active(st, sess, _REG_C1) is want_c1
+        assert flip_hit(st, sess, _REG_C1, 'FORM') is True   # 溢余帧,hp 无关
+    st = _c1_state(hp=58)
+    assert c1_directed_active(st, _boss_session(), _REG_C1) is False
+    assert c1_directed_active(_c1_state(hp=59), _boss_session(),
+                              _REG_C1) is True
 
 
 def test_c1_scope_guards() -> None:

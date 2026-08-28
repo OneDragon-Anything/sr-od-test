@@ -202,7 +202,8 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'early_pace_bias': ('float', 5.0),
     'early_pace_val_max': ('float', 0.5),
     # ===== W332b 泄息通道与换线判据 =====
-    'release_enabled': ('bool', True),
+    # (release_enabled / release_spend_gate_enabled 已随 ADR-0426 增补 D
+    # 第 4 态清理删除,字段面锁同步收敛。)
     'k_alert': ('float', 3.0),
     'k_linear': ('float', 1.0),
     'k_hp_calibration_grid': ('tuple[float, ...]', [
@@ -219,7 +220,6 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'line_switch_theta': ('float', 1.0),
     'line_switch_debias_delta': ('float', 0.15),
     'line_switch_min_dwell': ('int', 2),
-    'release_spend_gate_enabled': ('bool', True),
     # ===== P2 生存批(C3/C4)=====
     'p2_node_loss_table': ('dict[str, float]', {
         'normal': 10.16, 'encounter': 12.00, 'boss': 15.50,
