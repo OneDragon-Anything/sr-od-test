@@ -15,10 +15,14 @@ cw_state._merge_bench)④台账行形态锁(surface='bench'/kind=
 import json
 from pathlib import Path
 
+import numpy as np
+
+from one_dragon.base.geometry.rectangle import Rect
 from sr_od.application.currency_war import cw_telemetry
 from sr_od.application.currency_war.cw_state import BenchChar
 from sr_od.application.currency_war.prep_director import (
     BuyPurchase,
+    _save_buy_evidence,
     compare_buy_expect,
     compute_buy_expect,
 )
@@ -127,6 +131,49 @@ def test_expect_unidentified_purchase_is_none():
         _bench(_bc(1, '希儿')), []) is None
 
 
+# ===== ①b 证据裁片随期望态携带 =====
+
+def test_expect_carries_crops():
+    """带裁片的意图 → crops 随期望态携带(像素级「买了什么」证据源);
+    无裁片 → crops=None(证据通道缺省不占内存)。"""
+    exp = compute_buy_expect(
+        [BuyPurchase(name='景元', star=1, count=1, unit_cost=3, crop='IMG1'),
+         BuyPurchase(name='希儿', star=1, count=1, unit_cost=2, crop='IMG2')],
+        _bench(), [])
+    assert exp is not None
+    assert exp.crops == [('景元', 'IMG1'), ('希儿', 'IMG2')]
+    exp2 = compute_buy_expect(
+        [BuyPurchase(name='景元', star=1, count=1, unit_cost=3)],
+        _bench(), [])
+    assert exp2 is not None and exp2.crops is None
+
+
+def test_save_buy_evidence_writes_crops_and_settle(tmp_path: Path):
+    """不一致留证:买前裁片 + 定型帧不一致备战槽裁片都落盘;无裁片只落
+    定型帧裁片;全 best-effort(坏裁片跳过不抛)。"""
+    exp = compute_buy_expect(
+        [BuyPurchase(name='景元', star=1, count=1, unit_cost=3,
+                     crop=np.zeros((4, 4, 3), dtype=np.uint8))],
+        _bench(_bc(1, '希儿')), [])
+    mism = [{'domain': 'bench', 'slot': '2', 'expected': '景元/1星',
+             'observed': '花火/1星'}]
+    frame = np.zeros((30, 30, 3), dtype=np.uint8)
+    slots = [(2, Rect(5, 5, 15, 15))]
+    paths = _save_buy_evidence(str(tmp_path), 'p1-r1', exp, mism,
+                               frame, slots)
+    assert len(paths) == 2 and all(Path(p).exists() for p in paths)
+    assert any('buy_景元' in p for p in paths)
+    assert any('settle_bench2' in p for p in paths)
+    # 无裁片:只落定型帧裁片;坏裁片对象:best-effort 跳过不抛
+    exp2 = compute_buy_expect(
+        [BuyPurchase(name='景元', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿')), [])
+    paths2 = _save_buy_evidence(str(tmp_path), 'p1-r2', exp2, mism,
+                                frame, slots)
+    assert len(paths2) == 1
+    assert _save_buy_evidence(str(tmp_path), 'p1-r3', exp, [], frame, slots) != []
+
+
 # ===== ② 定型帧对账判据真值表 =====
 
 def test_compare_buy_expect_truth_table():
@@ -207,6 +254,16 @@ def test_w536_wiring_locks():
     assert 'cw_merge_bench(' in compute_body       # 落点单一源委托
     assert '_BUY_DEFECT_KIND = \'buy_expect_mismatch\'' in dir_src
     assert 'buy_expect_reconcile' in dir_src
+    # ④ 证据裁片链:买前 crop 拷贝在点击之前;随期望态带到对账点;
+    # 不一致才落盘(_save_buy_evidence),对账完成即释放。
+    assert shop_src.index('_card_crop = None') \
+        < shop_src.index('self.ctx.controller.click(pt)')
+    assert '.copy()' in shop_src                   # 裁片必须拷贝(帧缓存复用)
+    assert 'crop=_card_crop' in shop_src
+    rec_m = dir_src[dir_src.index('def _reconcile_buy_expect'):]
+    rec_m = rec_m[:rec_m.index('\n    def ')]
+    assert '_save_buy_evidence(' in rec_m
+    assert 'expect.crops = None' in rec_m          # 对账完成释放
 
 
 # ===== ④ 台账行形态锁 =====
