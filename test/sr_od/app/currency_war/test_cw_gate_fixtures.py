@@ -44,7 +44,7 @@ def _gate(op, profile, **kw):
             self.t = 0.0
 
         def __call__(self):
-            self.t += 0.5   # 每 poll 推进 0.5s(>min_stable_s 0.8 两轮过)
+            self.t += 0.5   # 每 poll 推进 0.5s(>profile 稳定窗 0.6s 两轮过)
             return self.t
     return wait_stable_frame(op, profile=profile, clock=_Clk(), **kw)
 

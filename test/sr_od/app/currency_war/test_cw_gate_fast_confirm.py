@@ -199,16 +199,18 @@ def test_node_end_accelerator_is_fast_poll_not_trust(monkeypatch):
 
 
 def test_op_settle_waits_then_baseline_then_fast_poll(monkeypatch):
-    """终裁锁(加速器②):操作段 2s 预估等待 = 基线重置点——
-    先等 2s 再取基线,随后快 poll 确认 min_stable 窗(非单校验)。"""
+    """终裁锁(加速器②):操作段预估等待 = 基线重置点——
+    先等再取基线,随后快 poll 确认 min_stable 窗(非单校验)。
+    等待值核减锁:1.5s(买牌特效实测 0.5-1s 上限+0.5s 余量;
+    低估由指纹重置机制兜底,见 gate._OP_SETTLE_S 注)。"""
     from sr_od.application.currency_war import cw_observation_gate as gate
     _patch_anchor_hit(monkeypatch)
     op = _FakeOp([_gray(v=50)] * 4)
     out = wait_stable_frame(op, profile=_prof(), segment='op_settle',
                             clock=_TickingClock(0.3))
     assert out is not None
-    assert gate._LAST_SETTLE_WAIT == gate._OP_SETTLE_S == 2.0, \
-        '操作段必须先走 2s 预估等待(基线重置点)'
+    assert gate._LAST_SETTLE_WAIT == gate._OP_SETTLE_S == 1.5, \
+        '操作段必须先走 1.5s 预估等待(基线重置点)'
     assert op.shot_count >= 2, \
         f'须基线+至少一轮指纹确认(非单帧放行),实际 {op.shot_count}'
 
@@ -230,7 +232,7 @@ def test_op_settle_window_still_enforced(monkeypatch):
                             timeout_s=3.0,
                             clock=_TickingClock(0.3))
     assert out is None, '操作段稳定窗必须真实测量,不得单校验放行'
-    assert gate._LAST_SETTLE_WAIT == 2.0
+    assert gate._LAST_SETTLE_WAIT == 1.5
 
 
 def test_op_settle_window_graded_to_floor(monkeypatch):
@@ -286,3 +288,20 @@ def test_fast_confirm_false_restores_full_gate(monkeypatch):
     assert out is not None
     assert calls['n'] >= 2, \
         f'关 fast_confirm 时每轮 poll 必须做 OCR 锚判定,实际 {calls["n"]}'
+
+
+def test_profile_stable_window_uniform_floor():
+    """三 profile 稳定窗统一下限锁:关态/开态与弹窗态/settle 段
+    同取 0.6s——稳定的真守门是指纹变化重置机制,0.6s 首尾一致窗
+    已拒绝动画中间帧;单局 gate stable 调用 30-84 次,0.8s 档每处
+    白付 0.2s(耗时审计报告 .debug/temp/currency_war/
+    w417_duration_audit/REPORT.md「需验证」表)。"""
+    from sr_od.application.currency_war.cw_observation_gate import (
+        PROFILE_CLOSED,
+        PROFILE_OPEN,
+        PROFILE_POPUP,
+    )
+    for name, prof in (('closed', PROFILE_CLOSED), ('open', PROFILE_OPEN),
+                       ('popup', PROFILE_POPUP)):
+        assert prof['min_stable_s'] == 0.6, \
+            f'{name} profile 稳定窗必须 = 0.6s 统一下限'
