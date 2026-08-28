@@ -10,8 +10,9 @@ filler_star_unit 开关。AB 实测 gp/star 两臂该通道各 2 笔/30 局
 本文件钉两组 benchmark,防未来改评分/改 filler 项时该路径静默变号:
 - 开关正交锁:filler_star_unit 0→0.5,bond_fallback 条件帧分值不变;
 - 泄放形态锁:bond_fallback 帧(非目标集外副本、阵营 owned 已有)
-  在默认 registry 下走非正分门的分值为基准负值(结构性拒形态,
-  诊断——若未来变正,说明有人给该路径加了新评分维,须有 ADR)。
+  在默认 registry 下的分值基准为 +2.0 正分(凑档帧实测,A4 披露;
+  存在叠加评分维)——防该基准静默漂移:漂移即红,红须对照 ADR
+  判新评分维合法性。
 """
 import sys
 
