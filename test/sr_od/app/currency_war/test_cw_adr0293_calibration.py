@@ -299,7 +299,14 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # + 新增 rounds_two_state_enabled(=False,两态通道总开关,默认关=零
 # 漂移锚;消费点=cw_line_switch.rounds_alive;开臂 A/B 判据挂账见
 # registry 注释)——有意改字段面,锁同步更新(既有字段默认值不变)。
-_EXPECTED_HASH = ('e5b356e6f29c18560f72c85b449cef6840081ec7ee7b4808fa3eaa84895d358f')
+# _EXPECTED_HASH = ('e5b356e6f29c18560f72c85b449cef6840081ec7ee7b4808fa3eaa84895d358f')
+# 形态达标三方向批更新:新增 recipe_fence_enabled(默认关)/
+# form_break_sell_blocked_enabled(默认关)/below_floor_spend_gate_enabled
+# (默认关)三布尔字段(设计单一源=
+# .debug/temp/currency_war/w415_form_design/DESIGN.md;决策 why=
+# ADR-0432/0433/0434;开臂 A/B 判据挂账见 registry 字段注释)——
+# 有意加字段,锁同步更新(既有字段默认值不变)。
+_EXPECTED_HASH = ('ec44b8f3f1d537c685554c1fcaf1ca6d24fa47a861f357bc968c7c4a2d22e828')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
