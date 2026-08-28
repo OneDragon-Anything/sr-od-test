@@ -294,7 +294,12 @@ _EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
 # (12.0,待标定)五字段,设计单一源=
 # .debug/temp/currency_war/w397_s5_asset_channel/DESIGN.md §2/§3——
 # 有意加字段,锁同步更新(既有字段默认值不变)。
-_EXPECTED_HASH = ('69f9d94294efdeaee3f5a5ba44f775b2032517315106bd999986b8055cfc4900')
+# 两态底座批 A 更新:p_win_p2_by_rung 空表注入三档({0:0.016,1:0.413,
+# 2:0.657}=W346 Δ池分 rung 胜占比,口径勘误与证据等级见 registry 注释)
+# + 新增 rounds_two_state_enabled(=False,两态通道总开关,默认关=零
+# 漂移锚;消费点=cw_line_switch.rounds_alive;开臂 A/B 判据挂账见
+# registry 注释)——有意改字段面,锁同步更新(既有字段默认值不变)。
+_EXPECTED_HASH = ('e5b356e6f29c18560f72c85b449cef6840081ec7ee7b4808fa3eaa84895d358f')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
