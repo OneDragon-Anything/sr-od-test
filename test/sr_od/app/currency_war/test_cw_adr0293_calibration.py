@@ -340,6 +340,9 @@ _EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173d
 # (开关生命周期第 1 态:落码默认关,关态决策序列零漂移——同 seed sim
 # 20 局对拍逐位一致;开臂判据挂账见 registry 字段注释)——有意增字段,
 # 锁同步更新(其余字段不变,行为面无漂移)。
+# c1 系开关定谳批(ADR-0443)重锚:registry 破息分支存档注释段改写为
+# 定谳注记(filters docstring 同步指向 ADR)——注释级改动,字段面零
+# 变化,全字段 hash 重算与上一锚逐位一致,锁值不变,本条仅记重锚缘由。
 _EXPECTED_HASH = ('ea07c24bf248fdd0251a9d5ed3a4849a308cafe7a6f36d2572d727c8b9d69ff5')
 
 
