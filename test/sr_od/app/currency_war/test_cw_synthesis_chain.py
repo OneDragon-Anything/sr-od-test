@@ -100,41 +100,39 @@ class TestSynthesisMembershipGate:
         # 变异法:patch plan_syntheses 恒产 1 件成品(hook 只要被调用就
         # 会留痕),断言台账中「有合成事件的轮」全部满足意向已锁线
         # (phase=='locked'∧locked_comp)——锁线门在位且无旁路。
+        # seed 窗扫描:组件入穿戴池(ADR-0265 增补)漂移了 owned 消费
+        # → 单 seed 的锁线时点不稳定,单 seed 探针 fragile;锁语义是
+        # 「点火轮必锁线」,不是「seed N 必点火」,故扫窗找点火 seed。
         monkeypatch.setattr(
             cw_synthesis, 'plan_syntheses',
             lambda keys, owned: [('反重力皮靴', ())] if owned else [])
-        r = _run_game(4, pool=POOL, planes=2, synthesis_chain=True)
-        assert any(row['sim'].get('syntheses') for row in r.ledger), \
-            '锁线门下 0 合成事件:seed 漂移或门过严,换 seed 复查'
-        for row in r.ledger:
-            if row['sim'].get('syntheses'):
-                ist = row.get('v3_intention') or {}
-                assert ist.get('phase') == 'locked' and ist.get('locked_comp')
+        hit = None
+        for seed in range(20):
+            r = _run_game(seed, pool=POOL, planes=2, synthesis_chain=True)
+            rows = [row for row in r.ledger if row['sim'].get('syntheses')]
+            if rows:
+                hit = rows
+                break
+        assert hit, 'seed 窗 0-19 无合成事件:门过严或发放面异常,复查'
+        for row in hit:
+            ist = row.get('v3_intention') or {}
+            assert ist.get('phase') == 'locked' and ist.get('locked_comp')
 
 
-class TestWearBasicBypass:
-    """C 臂旁路:equiv_allocation.allow_basic_wear(默认关=ADR-0265 逐位
-    不变;用户裁定基础件穿着可逆=卖角色取回,不构成锁死)。"""
+class TestWearBasicP1:
+    """P1 简易件默认穿(ADR-0265 增补:穿戴可逆——用户裁决「卖角色
+    全额返还装备」,原保留过滤前提消失;旧 allow_basic_wear 旁路随
+    过滤一并删除,旁路语义升为默认)。"""
 
-    def test_default_off_unchanged(self):
+    def test_default_wears_basic_p1(self):
         from sr_od.application.currency_war.cw_comps import equip_allocation
         from sr_od.application.currency_war.cw_state import BenchChar
         dep = [BenchChar(slot=1, char_id='飞霄', position_pref='front')]
         owned = ['轮滑鞋', '光能电池', '蓄能帆']
-        alloc = equip_allocation(None, dep, owned, plane=1)
-        assert {e for _w, e in alloc} == {'蓄能帆'}, '默认关=保留池语义不变'
-
-    def test_bypass_wears_basic_p1(self):
-        from sr_od.application.currency_war.cw_comps import equip_allocation
-        from sr_od.application.currency_war.cw_state import BenchChar
-        dep = [BenchChar(slot=1, char_id='飞霄', position_pref='front')]
-        owned = ['轮滑鞋', '光能电池', '蓄能帆']
-        alloc = equip_allocation(None, dep, owned, plane=1,
-                                 allow_basic_wear=True)
+        alloc = equip_allocation(None, dep, owned)
         worn = {e for _w, e in alloc}
-        # 基础件两两互为配方(K8 闭合图):先穿的轮滑鞋会经 ADR-0391
-        # 配对守卫拦下第二件基础件光能电池(非 key 配对=误合成防护),
-        # 旁路只放开保留池过滤、不放开配对守卫——两 gate 叠加是预期语义
+        # 配对守卫(ADR-0391)仍拦危险配对:轮滑鞋+光能电池互为配方,
+        # comp=None 无豁免信息 → 只放第一件(默认穿不放松守卫)
         assert '轮滑鞋' in worn and '蓄能帆' in worn, f'得 {alloc}'
         assert '光能电池' not in worn, '配对守卫应拦第二件基础件'
 
@@ -145,10 +143,9 @@ class TestSimSynthesisHook:
     def test_hook_fires_and_advance_enters_pool(self, monkeypatch, _run_game):
         # 变异法证明 hook 在位:patch plan_syntheses 恒产 1 件成品,
         # 断言 ①台账 syntheses 行出现;②成品进池(被穿或留 owned)。
-        # 成品选反重力皮靴(进阶,非 RESERVED_COMPONENTS——P1 保留池
-        # 过滤不拦,这正是链的设计语义)。seed 4 = 探针确认有装备发放
-        # 行的最小 seed(发放面 supply 节点;发放轮可能落在 P2 段,
-        # 故全账本行扫描)。
+        # 成品选反重力皮靴(进阶,非 RESERVED_COMPONENTS)。seed 窗
+        # 扫描(组件入穿戴池后 owned 消费漂移,单 seed 探针 fragile;
+        # 锁语义=「hook 在位、成品进池」,不是「seed N 必点火」)。
         fired: list[int] = []
 
         def fake(keys, owned):
@@ -158,13 +155,18 @@ class TestSimSynthesisHook:
             return []
 
         monkeypatch.setattr(cw_synthesis, 'plan_syntheses', fake)
-        r = _run_game(4, pool=POOL, planes=2, synthesis_chain=True)
-        assert fired, 'hook 未被调用(st.equips 恒空?seed 漂移,换 seed)'
-        assert any(row['sim'].get('syntheses') for row in r.ledger)
-        have = {e for row in r.ledger
+        ledger = None
+        for seed in range(20):
+            r = _run_game(seed, pool=POOL, planes=2, synthesis_chain=True)
+            if any(row['sim'].get('syntheses') for row in r.ledger):
+                ledger = r.ledger
+                break
+        assert fired, 'hook 未被调用(st.equips 恒空?seed 窗无发放,复查)'
+        assert ledger is not None
+        have = {e for row in ledger
                 for d in row['state']['deployed']
                 for e in d.get('equips', [])}
-        have |= set(r.ledger[-1]['state']['owned_equips'])
+        have |= set(ledger[-1]['state']['owned_equips'])
         assert '反重力皮靴' in have
 
     def test_chain_on_without_actions_zero_drift(self, monkeypatch, _run_game):

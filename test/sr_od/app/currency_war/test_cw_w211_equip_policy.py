@@ -85,7 +85,7 @@ def test_pairing_guard_rejects_unintended_synthesis() -> None:
     comp = _mkcomp(['火力风暴潮'], ['飞霄'])   # 绝对热量 ∉ key_equips
     dep = [BenchChar(slot=1, char_id='飞霄', position_pref='front')]
     occ = {('front', 1): ['生命之花']}
-    alloc = equip_allocation(comp, dep, ['光能电池'], occ, plane=2)
+    alloc = equip_allocation(comp, dep, ['光能电池'], occ)
     assert ('飞霄', '光能电池') not in alloc, \
         f'非预期合成对被发到同一 core: {alloc}'
 
@@ -96,7 +96,7 @@ def test_pairing_guard_allows_wanted_synthesis() -> None:
     comp = _mkcomp(['绝对热量'], ['飞霄'])
     dep = [BenchChar(slot=1, char_id='飞霄', position_pref='front')]
     occ = {('front', 1): ['生命之花']}
-    alloc = equip_allocation(comp, dep, ['光能电池'], occ, plane=2)
+    alloc = equip_allocation(comp, dep, ['光能电池'], occ)
     assert ('飞霄', '光能电池') in alloc, \
         f'想要的配对应放行(core 快路径): {alloc}'
 
@@ -106,7 +106,7 @@ def test_pairing_guard_no_target_splits_pair() -> None:
     dep = [BenchChar(slot=1, char_id='三月七', position_pref='front'),
            BenchChar(slot=2, char_id='黑塔', position_pref='front')]
     owned = ['光能电池', '生命之花']      # 互为配方(绝对热量)
-    alloc = equip_allocation(None, dep, owned, plane=2)
+    alloc = equip_allocation(None, dep, owned)
     holders = [c for c, e in alloc if e in owned]
     assert len(holders) == len(set(holders)), \
         f'配对件必须分人: {alloc}'
@@ -119,7 +119,7 @@ def test_pairing_guard_covers_guangneng_base() -> None:
     assert len(RESERVED_COMPONENTS) == 8
 
 
-# ===== 3. 死库存回收去向(P2/P3 兜底)=====
+# ===== 3. 死库存回收去向(全 plane;P1 随 ADR-0265 增补生效)=====
 
 def test_dead_stock_routed_to_noncore() -> None:
     """P2:回收合格件(对阿雅=以太钻头/幸运星 等)优先发非 core 工具人,
@@ -127,7 +127,7 @@ def test_dead_stock_routed_to_noncore() -> None:
     comp = _mkcomp(_K_AYA, ['阿雅'])
     dep = [BenchChar(slot=1, char_id='阿雅', position_pref='back'),
            BenchChar(slot=2, char_id='三月七', position_pref='front')]
-    alloc = equip_allocation(comp, dep, ['以太钻头', '幸运星'], plane=2)
+    alloc = equip_allocation(comp, dep, ['以太钻头', '幸运星'])
     wearers = {e: c for c, e in alloc}
     assert wearers.get('以太钻头') == '三月七' \
         and wearers.get('幸运星') == '三月七', \
@@ -149,17 +149,23 @@ def test_dead_stock_allows_recycle_pair_on_tool_char() -> None:
     comp = _mkcomp(_K_AYA, ['阿雅'])
     dep = [BenchChar(slot=1, char_id='阿雅', position_pref='back'),
            BenchChar(slot=2, char_id='三月七', position_pref='front')]
-    alloc = equip_allocation(comp, dep, [a, b], plane=2)
+    alloc = equip_allocation(comp, dep, [a, b])
     got = [(c, e) for c, e in alloc if e in (a, b)]
     assert {c for c, _ in got} == {'三月七'} and len(got) == 2, \
         f'回收对应允许同穿非 core 工具人: {alloc}'
 
 
-def test_p1_unchanged_by_policy() -> None:
-    """P1 回归:基础件全保留(ADR-0265 不受本批影响),只有非基础件分配。"""
+def test_p1_dead_stock_now_routed_and_worn() -> None:
+    """P1(ADR-0265 增补:穿戴可逆,组件保留过滤已删,死库存去向全
+    plane 生效):死库存改道非 core 工具人穿着(回收线 2合1 候选),
+    core 只吃非基础件——改锁重推:旧语义「P1 基础件全保留」钉的是
+    已被「卖角色全额返还装备 → 穿戴可逆」裁决取代的保留过滤。"""
     comp = _mkcomp(_K_AYA, ['阿雅'])
     dep = [BenchChar(slot=1, char_id='阿雅', position_pref='back'),
            BenchChar(slot=2, char_id='三月七', position_pref='front')]
-    alloc = equip_allocation(comp, dep, ['以太钻头', '火力风暴潮'], plane=1)
-    worn = {e for _, e in alloc}
-    assert worn == {'火力风暴潮'}, f'P1 基础件(含死库存)不入穿戴池: {alloc}'
+    alloc = equip_allocation(comp, dep, ['以太钻头', '火力风暴潮'])
+    wearers = {e: c for c, e in alloc}
+    assert wearers.get('以太钻头') == '三月七', \
+        f'P1 死库存应改道非 core 工具人: {alloc}'
+    assert wearers.get('火力风暴潮') == '阿雅', \
+        f'非基础件照常发 core: {alloc}'

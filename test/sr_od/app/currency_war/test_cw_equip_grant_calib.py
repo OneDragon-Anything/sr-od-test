@@ -33,8 +33,12 @@ def test_fingerprint_carries_grant_version() -> None:
 
 
 def test_p1_grant_volume_matches_real_profile() -> None:
-    """n=15 出口保有粗界:每局 owned ∈ [3, 9](实机 4-8 画像 ±1 容差)
-    且进阶 ≤3(实机进阶占比 ~14% 的量级上界)。"""
+    """n=15 出口保有粗界:每局 保有+已穿 ∈ [3, 9](实机 4-8 画像 ±1 容差)
+    且进阶 ≤3(实机进阶占比 ~14% 的量级上界)。
+
+    口径修订(ADR-0265 增补:穿戴可逆,基础件默认穿):实机画像 4-8
+    采自「组件留 owned 不穿」期;简易件入穿戴池后 owned 不再含已穿件,
+    校准量改为 owned+worn 总保有(发放量不变,只是存量位置变了)。"""
     for seed in range(15):
         r = cw_sim.simulate_p1(seed, pool='snapshot', planes=1)
         p1 = [row for row in r.ledger if row['plane'] == 1]
@@ -42,9 +46,12 @@ def test_p1_grant_volume_matches_real_profile() -> None:
         owned = ex.get('owned_equips') or []
         worn = [e for d in ex.get('deployed') or []
                 for e in (d.get('equips') or [])]
-        adv = sum(1 for e in owned + worn
+        bench_worn = [e for b in ex.get('bench') or [] if b
+                      for e in (b.get('equips') or [])]
+        total = owned + worn + bench_worn
+        adv = sum(1 for e in total
                   if e not in RESERVED_COMPONENTS)
-        assert 3 <= len(owned) <= 9, f'seed={seed} owned={owned}'
+        assert 3 <= len(total) <= 9, f'seed={seed} 总保有 {total}'
         assert adv <= 3, f'seed={seed} 进阶件 {adv} 超量级'
 
 

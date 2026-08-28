@@ -85,19 +85,30 @@ def test_allocation_invariants(ci, di, oi):
                 assert cname in core_set, f'key 件 {w} 分给了非 core {cname}(core 在场)'
                 keys.remove(w)   # multiplicity 消费
     # I3 core 优先(comp 在场):通用件填满 core 剩余容量前非 core 不拿
-    # (core 容量可能已被 key 件占满——白厄 key×3 后通用容量 0,非 core 拿合法)
+    # (core 容量可能已被 key 件占满——白厄 key×3 后通用容量 0,非 core 拿合法)。
+    # 死库存豁免(ADR-0391,全 plane 生效——ADR-0265 增补后 P1 亦然):
+    # 回收合格基础件先于 core 兜底抽取、改道非 core 工具人是有意的收益
+    # 路由,不计入 I3 的「非 core 抢通用」违规面。本不变量原在 P1 保留
+    # 过滤下写成(基础件永不入池,豁免面不可达),随过滤删除补豁免。
     if comp is not None:
         core_set = set(comp.core_chars)
         field_cores = [c for c in comp.core_chars if c in on_field]
+        from sr_od.application.currency_war.cw_synthesis import (
+            recycle_qualified,
+        )
+        dead = set(recycle_qualified(list(comp.key_equips or [])))
         key_used_by_core = sum(1 for c, w in alloc
                                if c in core_set and comp.key_equips and w in comp.key_equips)
         core_generic_cap = max(0, sum(EQUIP_CAPACITY for _ in field_cores) - key_used_by_core)
         generic_n = sum(1 for w in owned
-                        if not comp.key_equips or w not in comp.key_equips)
+                        if (not comp.key_equips or w not in comp.key_equips)
+                        and w not in dead)
         core_got_generic = sum(1 for c, w in alloc if c in core_set
-                               and (not comp.key_equips or w not in comp.key_equips))
+                               and (not comp.key_equips or w not in comp.key_equips)
+                               and w not in dead)
         non_core_got = sum(1 for c, w in alloc if c not in core_set
-                           and (not comp.key_equips or w not in comp.key_equips))
+                           and (not comp.key_equips or w not in comp.key_equips)
+                           and w not in dead)
         if core_got_generic < min(generic_n, core_generic_cap) and non_core_got > 0:
             pytest.fail(f'core 通用容量未满({core_got_generic}<{min(generic_n, core_generic_cap)})'
                         f'但非 core 拿了 {non_core_got} 件')
