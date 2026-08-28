@@ -261,6 +261,34 @@ def test_third_path_not_when_cap_full() -> None:
 # --- ⑦ latch 单窗 --------------------------------------------------------------
 
 
+def test_third_path_trusted_carried_hp_frame_blocks_level() -> None:
+    """第三路径 hp 守卫放宽锁:shop 帧 hp_readable=False 但 hp_trusted=True
+    (hp=沿用的 last_hp_real 真值;帧形态=实机观察局⑤ r9:SPEND 相位/
+    boss 窗/deployed<cap/bench 有件)→ 守卫放行,slot 压制照常生效、
+    third_path 注入泄息预算——修前第三路径仍用严格 hp_readable,实机
+    100% shop 帧 readable=False 使 slot 压制结构性失效(与 FLIP 门
+    ADR-0428 同款修法,判定单一源=hp_decision_trusted)。兜底语义保持:
+    两位皆 False 的 100 兜底帧仍拒(返回 None)。"""
+    s = StrategySession()
+    st = _state(gold=60, hp=38, plane=1, r=9, node='boss',
+                deployed_n=5, bench_n=1)
+    st.hp_readable = False
+    st.hp_trusted = True
+    assert slot_guard_blocks_level(st)
+    d = release_directive(st, s, _REG, 'SPEND',
+                          Posture(save=False, level_up=True,
+                                  refresh_budget=0))
+    assert d is not None and d.third_path is True
+    assert d.budget_gold == 10 and d.rolls == 5   # 纯 level_up 帧取 g−50
+    p = wrap_posture(Posture(save=False, level_up=True, refresh_budget=0), d)
+    assert p.level_up is False and p.tag == 'release'
+    # 兜底帧(两位皆 False,hp=100 假值)仍拒:放宽不放开假值帧
+    st.hp_trusted = False
+    assert release_directive(st, s, _REG, 'SPEND',
+                             Posture(save=False, level_up=True,
+                                     refresh_budget=0)) is None
+
+
 def test_latch_within_round_no_flip_flop() -> None:
     """同轮命中后不回退(hp 抖动防姿态振荡);轮键变化自然失效。"""
     s = StrategySession()

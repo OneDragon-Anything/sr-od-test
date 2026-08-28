@@ -120,6 +120,15 @@ def test_dying_band_hp_readable_guard() -> None:
     assert not dying_band_active(st, StrategySession(), _REG_DYING)
 
 
+def test_dying_band_trusted_carried_hp_frame_evaluates() -> None:
+    """hp 决策可信位单一源锁:shop 帧 hp_readable=False 但 hp_trusted=True
+    (hp=沿用的 last_hp_real 真值)→ 守卫放行,濒死判定照常评估——与
+    posture_release.flip_hit 同源(hp_decision_trusted,ADR-0428 口径);
+    100 兜底帧(两位皆 False)仍拒见上锁。"""
+    st = _dying_state(hp_readable=False, hp_trusted=True, hp=20)
+    assert dying_band_active(st, StrategySession(), _REG_DYING)
+
+
 def test_dying_band_plane_scope() -> None:
     """辖域 plane≥2:P1 濒死帧不辖(批辖域声明)。"""
     st = _dying_state(plane=1, round_num=7)
