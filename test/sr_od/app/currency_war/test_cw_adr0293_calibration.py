@@ -1,16 +1,18 @@
-"""ADR-0293 标定批回归锁:标定参数快照 + 字段面锁 + 刷新双门 + 弱件换金偏置。
+"""ADR-0293 标定批回归锁:字段面锁 + 模块常量锁 + 刷新双门 + 弱件换金偏置。
 
-- 快照锁:标定存活参(target_hold_base/off_target_sell_bias/
-  piggy_refresh_ev)逐值锁死。
 - 字段面锁(锁法见 ADR-0293 §标定 + 0293 流程注释):registry 以
   「字段名集合 + 各字段类型注解 + 默认值语义」期望表锁死——新增
   字段=红(强迫显式登记语义与默认值)、删字段=红、改默认值=红、
   改类型=红;注释/措辞/字段顺序/空白=绿(表按名比较,不感知)。
-  值域演进的正确性由五参快照锁 + 各批自己的行为锁管辖,本锁只辖
+  标定存活参(target_hold_base/off_target_sell_bias/piggy_refresh_ev)
+  的逐值锁由本表承载(独立快照锁曾与之重复,已并入,防双源漂移);
+  值域演进的正确性由字段面锁 + 各批自己的行为锁管辖,本锁只辖
   「字段面结构」。模块级 hp 对账标定常量(HP_LOSS_CAP_* 等,与
   registry 字段同属标定面)一并入表。
 - 行为锁:刷新轮界门(无目标语境恒负分)/弱件换金偏置(0 分卖
-  翻正)/默认策略注入标定后 registry。
+  翻正)。默认策略注入标定后 registry 的断言单一源在
+  test_cw_strategy.py::test_instantiate_decision_v2_default_registry
+  (同一断言曾双文件重复,择一保留)。
 决策见 docs/develop/currency_war/decisions/0293-decision-v2-calibration.md。
 """
 from __future__ import annotations
@@ -33,9 +35,6 @@ from sr_od.application.currency_war.decision_v2.registry import (
 )
 from sr_od.application.currency_war.decision_v2.scoring import (
     score_candidate,
-)
-from sr_od.application.currency_war.decision_v2.strategy import (
-    DecisionV2Strategy,
 )
 
 #: 字段面期望表:字段名 → (类型注解串, 归一化默认值)。
@@ -94,6 +93,11 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     # ===== 成型停手纪律(ADR-0343)=====
     'formed_stop_enabled': ('bool', True),
     'formed_stop_min_round': ('int', 7),
+    # 血预算停手·停升级线(设计件 12 §6;ADR-0448):语义注释落点=
+    # registry 字段注释;默认 True=P21 数学定谳恒接线,False=A/B 对照臂
+    'blood_budget_stop_enabled': ('bool', True),
+    'blood_budget_stop_d': ('int', 1),
+    'p1_levelup_stop_rung': ('int', 2),
     # ===== 相位观测与授权(W119/ADR-0347)=====
     'phase_fallback_min_round': ('int', 5),
     'phase_fallback_min_engines': ('int', 2),
@@ -242,7 +246,8 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     # ===== 层4:预算仲裁 =====
     'constraints': ('tuple[str, ...]', [
         'gold_floor', 'interest_rule', 'bench_capacity', 'copies_cap',
-        'same_round_mutex', 'boss_levelup_ban', 'deploy_cap']),
+        'same_round_mutex', 'blood_budget_stop', 'boss_levelup_ban',
+        'deploy_cap']),
     'interest_floor': ('int', 50),
     'war_floor': ('int', 30),
     'rebirth_floor': ('int', 20),
@@ -259,9 +264,9 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
             "('bench', 'boss')": ['bench_capacity'],
             "('bench', 'emergency')": ['bench_capacity'],
             "('bench', 'mode')": ['bench_capacity'],
-            "('slot', 'boss')": ['boss_levelup_ban'],
-            "('slot', 'emergency')": ['bench_capacity'],
-            "('slot', 'mode')": ['deploy_cap'],
+            "('slot', 'boss')": ['blood_budget_stop', 'boss_levelup_ban'],
+            "('slot', 'emergency')": ['blood_budget_stop', 'bench_capacity'],
+            "('slot', 'mode')": ['blood_budget_stop', 'deploy_cap'],
             "('round_mutex', 'boss')": ['same_round_mutex'],
             "('round_mutex', 'emergency')": ['same_round_mutex'],
             "('round_mutex', 'mode')": ['same_round_mutex'],
@@ -314,21 +319,15 @@ def _norm(v):
     return v
 
 
-def test_calibration_snapshot_values() -> None:
-    """标定存活参快照(refresh 附庸闸十一参已随 W126/ADR-0349 删除;
-    改动须重标定+更新本锁)。"""
-    assert DEFAULT_REGISTRY.target_hold_base == 9
-    assert DEFAULT_REGISTRY.off_target_sell_bias == 0.5
-    assert DEFAULT_REGISTRY.piggy_refresh_ev == 2.5   # 扑满凑伤害 D 专属
-
-
 def test_calibration_registry_field_surface() -> None:
     """registry 字段面锁:字段集合 + 类型注解 + 默认值语义逐字段比对。
 
     红锁信息直接点名差异字段(新增/缺失/类型/默认值),不再报不可
     读的 hash 差。若是有意改字段面——随批更新 _EXPECTED_FIELDS 对应
     条目(新字段登记语义注释落点=registry 字段注释);若是有意改
-    默认值——重标定(ADR-0293 流程)并更新条目值。"""
+    默认值——重标定(ADR-0293 流程)并更新条目值。标定存活参
+    (target_hold_base=9/off_target_sell_bias=0.5/piggy_refresh_ev=2.5)
+    由本表逐值辖死(原独立快照锁已并入本锁)。"""
     actual = {f.name: f for f in dataclasses.fields(DecisionV2Registry)}
     expected_names = set(_EXPECTED_FIELDS)
     added = actual.keys() - expected_names
@@ -391,8 +390,6 @@ def test_off_target_sell_bias_flips_zero_score() -> None:
         f'溢出件卖分应为偏置值(实际 {val})')
 
 
-def test_strategy_default_uses_calibrated_registry() -> None:
-    """默认策略注入标定后 registry(标定参数即生产行为)。"""
-    s = DecisionV2Strategy()
-    assert s.registry is DEFAULT_REGISTRY
-    assert s.registry.target_hold_base == 9
+# 默认策略注入标定后 registry 的断言(实例缺省持 DEFAULT_REGISTRY + 标定值)
+# 单一源在 test_cw_strategy.py::test_instantiate_decision_v2_default_registry;
+# 此处原独立锁与之逐字重复,已删留指针(重复构成并/删理由,README 纪律 8)。

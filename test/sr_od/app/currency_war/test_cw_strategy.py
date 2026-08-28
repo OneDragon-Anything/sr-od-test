@@ -102,7 +102,10 @@ def test_instantiate_decision_v2_bridges_to_real_strategy() -> None:
 
 
 def test_instantiate_decision_v2_default_registry() -> None:
-    """decision_v2 实例缺省持有 DEFAULT_REGISTRY(锁 registry 注入链完好,A/B 通道前提)。"""
+    """decision_v2 实例缺省持有 DEFAULT_REGISTRY(锁 registry 注入链完好,A/B 通道前提)。
+
+    本断言为单一源:test_cw_adr0293_calibration.py 的同款注入锁已并入此处
+    (重复构成并/删理由,README 纪律 8);标定值本身由该文件的字段面锁辖。"""
     mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
     strat = mgr.instantiate("decision_v2")
     assert strat.registry is DEFAULT_REGISTRY

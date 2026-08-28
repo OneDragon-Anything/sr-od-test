@@ -178,8 +178,9 @@ def test_sample_cost_uses_refresh_prob() -> None:
 
 
 def test_phase_weights_hp_danger_reduces_economy() -> None:
-    """A3 + review agent:HP 危险才保血(economy 降权);健康时 economy 不压(snowball 到 50)。
-    原"前期 plane1 → economy 0.4"已被研究推翻(前期该 snowball 经济),改测 HP 维度。"""
+    """HP 危险才保血(economy 降权);健康时 economy 不压(snowball 到 50)。
+    原权重取值出自早期策略 review 修订(「前期 plane1 → economy 0.4」被研究推翻:
+    前期该 snowball 经济,改为 HP 维度降权);HP_DANGER 危险判据语义见 ADR-0204。"""
     cfg = _cfg()
     healthy = GameState(gold=50, round_num=3, level=5, plane=1)         # hp100 健康:economy 权重 1.0
     danger = GameState(gold=50, round_num=3, level=5, plane=1, hp=30)   # hp<HP_DANGER:economy 权重 0.4
@@ -190,7 +191,8 @@ def test_phase_weights_hp_danger_reduces_economy() -> None:
 
 
 def test_refresh_cap_dynamic() -> None:
-    """_refresh_cap 关键回合放宽(review agent + 用户:固定 2 太死)。"""
+    """_refresh_cap 关键回合放宽(用户口述:固定 2 太死;动态上限设计见
+    docs/develop/currency_war/strategy/03_tactics.md「D 牌动态上限」)。"""
     base = GameState(gold=50, round_num=3, level=5, plane=1, hp=100)     # 健康前期
     assert _refresh_cap(base) == MAX_REFRESH_PER_ROUND, "健康前期 = 基线 2"
     late = GameState(gold=50, round_num=6, level=8, plane=3, hp=100)     # plane3/升8
@@ -252,7 +254,8 @@ def test_evaluate_target_comp_applies_progress() -> None:
     base_far = evaluate(s_far, cfg, cfg.faction_priority)
     assert (evaluate(s_far, cfg, cfg.faction_priority, target_comp=飞霄)
             == pytest.approx(base_far - TARGET_PROGRESS_WEIGHT * 1.0))
-    # 已成型时 target progress 不扣分(剩余 0);T#97 step-2(tuned)target bonus(×1.5 on tier)对 target 阵营加成
+    # 已成型时 target progress 不扣分(剩余 0);target bonus(×1.5 on tier)对 target 阵营加成
+    # (comp 匹配分体系见 ADR-0134;commitment prefilter 背景见 ADR-0124)
     # → evaluate(s_close, target) > base_close(target 阵营 追击 tier ×1.5)。
     base_close = evaluate(s_close, cfg, cfg.faction_priority)
     assert (evaluate(s_close, cfg, cfg.faction_priority, target_comp=飞霄)
@@ -317,11 +320,14 @@ def test_plan_buys_synergy_push() -> None:
 
 
 def test_plan_d142_tempo_weak_board_buys_not_save() -> None:
-    """D-142 tempo(战力断档)破息:板弱(无 target)+ 板满 + 健康 + gold<50 → **破息买 reinforce**(非 buy0)。
+    """tempo(战力断档)破息:板弱(无 target)+ 板满 + 健康 + gold<50 → **破息买 reinforce**(非 buy0)。
 
-    实跑 match2 r3:board 满+散+gold11+无 target → 旧 _saving_for_interest(gold<50 + 满 + 健康)堵死全部非 target
-    买 → 无 target 全堵 → buy0 → 永不集中 → 永无 target → 死循环。D-142 加板强判据(板弱不攒息/级),
-    本测锁之:该场景 plan 应买 reinforce(击破 existing→count2→emergent target),非空。"""
+    实跑对局判读(match2 r3):board 满+散+gold11+无 target → 旧 _saving_for_interest
+    (gold<50 + 满 + 健康)堵死全部非 target 买 → 无 target 全堵 → buy0 → 永不集中 →
+    永无 target → 死循环。修=攒息门加板强判据(板弱不攒息/级;板强辖攒息门的设计依据见
+    ADR-0014「息是经济,板强才囤」),本测锁之:该场景 plan 应买 reinforce
+    (击破 existing→count2→emergent target),非空。
+    (出处备注:原引用「D-142」为会话局部编号,docs 树无持久索引,出处未考。)"""
     cfg = _cfg()
     state = GameState(
         gold=11, hp=100, round_num=1, level=9, plane=1,   # lv9:DP stable/搜牌带(ADR-0208:非冲级态)
@@ -339,12 +345,13 @@ def test_plan_d142_tempo_weak_board_buys_not_save() -> None:
 
 
 def test_plan_d79_prefilter_skips_offtarget_priority_for_target() -> None:
-    """D-79:commitment prefilter 不再豁免 character_priority 的 off-target 角色。
+    """commitment prefilter 不豁免 character_priority 的 off-target 角色(prefilter 背景见 ADR-0124)。
 
     target=DOT队(持续伤害/减益),shop 有 阿格莱雅(能量,priority 列,off-target)+ 黄泉(减益,target core),
     gold=3(够黄泉 或 阿格莱雅,非两者)→ 买 target 黄泉(深化 comp),不买 off-target 阿格莱雅。
-    旧码(D-79 前)priority 豁免 + buy delta 加 CHAR_PRIORITY_BONUS×2(+16)→ 阿格莱雅 先买 → gold 剩 2
+    旧码 priority 豁免 + buy delta 加 CHAR_PRIORITY_BONUS×2(+16)→ 阿格莱雅 先买 → gold 剩 2
     买不起黄泉 → 漏 target、买 off-target → board spread(plane1-9 实采 7 阵营零成型根因)。
+    (出处备注:priority 豁免移除的独立出处原引用「D-79」为会话局部编号,docs 树无索引,出处未考。)
     level=4=期望(1,1)避 level/saving 门,纯验 prefilter。
     """
     target = Comp(name="DOT队", factions=["持续伤害", "减益"],
@@ -363,15 +370,17 @@ def test_plan_d79_prefilter_skips_offtarget_priority_for_target() -> None:
 
 
 def test_plan_t97_committed_refuses_offtarget_when_no_target_in_shop() -> None:
-    """T#97:已 commit + shop 无 target 卡 → 拒 off-target(commit 后买散牌 = spread 根因)。
+    """已 commit + shop 无 target 卡 → 拒 off-target(commit 后买散牌 = spread 根因;
+    该 prefilter 语义即 ADR-0124 所称「commitment prefilter(T#97)」,成型后保持严格)。
 
     live 复现(plane1 r1-3,target 追击飞霄[追击]):买完唯一 target 卡(追击/赛飞儿)后 simulate 把它移出
     shop → shop 无 target → 旧 prefilter「防饿死」放行 off-target → 买 能量/持续伤害 散牌 → board spread
     → plane2 comp 弱秒死。修:已 commit 也拒 off-target(该 Refresh 找 target / 攒金;drought bail 处理
-    真不可达)。**未 commit**(round=1)同 shop 仍放行 off-target(早期 tempo,防饿死)。
+    真不可达)。**未 commit**(round=1)同 shop 仍放行 off-target(早期 tempo,防饿死;tempo 例外的
+    现行形态见 ADR-0124)。
 
     level=10 隔离 level/saving 门(无 _want_level / _saving_for_level);deployed=0 避 _saving_for_interest
-    → 唯一阻断 off-target 的是 commitment prefilter(纯验 T#97 逻辑)。
+    → 唯一阻断 off-target 的是 commitment prefilter(纯验 prefilter 逻辑)。
     """
     target = Comp(name="追击飞霄", factions=["追击"], core_chars=["飞霄", "知更鸟", "缇宝", "不死途"],
                   form_tiers={"追击": 3}, strength="B", form_difficulty="medium")
@@ -397,10 +406,13 @@ def test_plan_t97_committed_refuses_offtarget_when_no_target_in_shop() -> None:
 
 
 def test_plan_d137_buys_target_faction_despite_board_spread() -> None:
-    """D-137:target 阵营卡即使 board 已 ≥cap 阵营也该买(target 免 spread 罚)。
+    """target 阵营卡即使 board 已 ≥cap 阵营也该买(target 免 spread 罚;
+    豁免判据单一源=ADR-0103 spread 罚豁免表 `_concentration_delta`)。
 
-    复现 round3(target=DOT队,board 4 阵营,shop 有 target 卡 减益/椒丘):旧逻辑 _concentration_delta
-    对新 target 阵营 减益 也 -8 spread 罚 → buy delta 负 → 不买 → comp 永不深 → buy0 输。修:target 阵营免罚。
+    复现判读(target=DOT队,board 4 阵营,shop 有 target 卡 减益/椒丘):旧逻辑 _concentration_delta
+    对新 target 阵营 减益 也 -8 spread 罚 → buy delta 负 → 不买 → comp 永不深 → buy0 输。
+    修:target 阵营免罚(即 ADR-0103 豁免表 `card.faction in target.factions` 通道)。
+    (出处备注:本场景复现批原引用「D-137」为会话局部编号,docs 树无索引,出处未考。)
     """
     dot = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
                form_tiers={"持续伤害": 4, "减益": 3}, strength="B", form_difficulty="easy")
@@ -416,12 +428,14 @@ def test_plan_d137_buys_target_faction_despite_board_spread() -> None:
                                          rng=random.Random(0), target_comp=dot)
             if isinstance(a, BuyCard)]
     assert "减益" in buys, (
-        f"target 阵营卡(减益)board≥cap 也应买(D-137 免 spread 罚),got buys={buys}"
+        f"target 阵营卡(减益)board≥cap 也应买(ADR-0103 免 spread 罚),got buys={buys}"
     )
 
 
 def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
-    """D-107:rebuild_deployed_from_board 从 board 重建 deployed,计数=sum(board),back 先填至 back_max 再 front。"""
+    """rebuild_deployed_from_board 从 board 重建 deployed,计数=sum(board),back 先填至 back_max 再 front。
+    (出处备注:原引用「D-107」为会话局部编号,docs 树无持久索引,出处未考;
+    rebuild 后攒息门的消费语义见 ADR-0117 `_saving_for_interest` 门条件。)"""
     from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
     dep = rebuild_deployed_from_board({"能量": 2, "护盾": 6}, back_max=6)   # 总 8
     # ADR-0392:rebuild 出槽位表(定长 10 含 None)——计数/口径断言走占用序
@@ -437,12 +451,11 @@ def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
 
 
 def test_plan_t107_saves_interest_when_board_full_low_gold() -> None:
-    """D-107(RC1,治 T#97 战术层 desync):board 满 + gold<50 + hp ok → _saving_for_interest 抑制散买(攒息)。
-
-    根因(子agent 查实):read_game_state 不填 deployed → 恒 [] → deployed_count() 恒 0 →
-    _saving_for_interest(需 deployed>=max_units)永不触发 → bot 不攒息、散买 off-target(gold→0 spread 根因)。
-    修:rebuild_deployed_from_board 从 board 真值重建 deployed → 计数对齐 → 攒息门触发。
-    round=2 未 commit(隔离 saving,非 D-106 commitment);level=8 → max_units=8 = board 计数(满)。
+    """board 满 + gold<50 + hp ok → _saving_for_interest 抑制散买(攒息;门条件=gold<50+板满+HP 安全+板强,
+    设计依据见 ADR-0117 背景)。修法=read_game_state 不填 deployed 导致攒息门失效的 desync 修复:
+    rebuild_deployed_from_board 从 board 真值重建 deployed → 计数对齐 → 攒息门触发。
+    (出处备注:修复批原引用「D-107 RC1」为会话局部编号,docs 树无索引,出处未考。)
+    round=2 未 commit(隔离 commitment);level=8 → max_units=8 = board 计数(满)。
     """
     from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
     target = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
@@ -456,7 +469,7 @@ def test_plan_t107_saves_interest_when_board_full_low_gold() -> None:
     actions = plan(state, cfg, cfg.faction_priority, rng=random.Random(0), target_comp=target)
     buys = [a.card.name for a in actions if isinstance(a, BuyCard)]
     assert "阿格莱雅" not in buys, (
-        "board 满 + gold<50 + hp ok → _saving_for_interest 攒息,不散买 off-target(D-107 RC1)"
+        "board 满 + gold<50 + hp ok → _saving_for_interest 攒息,不散买 off-target"
     )
 
 
@@ -619,7 +632,7 @@ def test_plan_no_levelup_at_max() -> None:
 
 
 def test_refresh_cap_streak_marginal_account() -> None:
-    """r63 连胜刷新门(用户 2026-08-18):连胜 ≥STREAK_REFRESH_MIN(3)→ cap 放宽
+    """连胜刷新门(用户口述,连胜不对称语义见 ADR-0128):连胜 ≥STREAK_REFRESH_MIN(3)→ cap 放宽
     (连胜是正向收入流,刷保=买收入);2 连 → 不放(档金真值未核,保守等自然滚);
     连败 → 不放(落回少刷攒息 §7-2)。⚠️ 精确边际账待结算屏档金真值(见 _refresh_cap 注释)。"""
     from sr_od.application.currency_war.cw_evaluate import _refresh_cap
@@ -636,7 +649,9 @@ def test_refresh_cap_streak_marginal_account() -> None:
 
 
 def test_refresh_cap_reward_node_guards_off() -> None:
-    """r67 必胜节点守卫(用户点破「r8 是奖励,必胜的」):奖励节点无战斗 → 战斗向放宽门
+    """必胜节点守卫(用户口述「r8 是奖励,必胜的」;机制权威=口述 [16]
+    docs/game/currency_war/research/user_playstyle.md,设计落点=strategy/01_posture.md
+    「奖励节点守卫」):奖励节点无战斗 → 战斗向放宽门
     全关 —— 锁血急救(无血可扣)+ 连胜维持(连胜白拿,刷新保连胜=烧金);非战斗向门
     (comp 停留 roll,为下轮搜卡)照常。"""
     from sr_od.application.currency_war.cw_evaluate import _refresh_cap
@@ -837,7 +852,7 @@ def test_decide_encounter_formed_buff_picks_high_difficulty() -> None:
 
 
 def test_decide_encounter_reward_breaks_tie() -> None:
-    """奖励价值 tie-break(2026-08-17 用户指路):碾压局两档同难度词缀,棱彩奖励胜;
+    """奖励价值 tie-break(用户口述):碾压局两档同难度词缀,棱彩奖励胜;
     不敢难时奖励不改变保守选择。"""
     cfg = _cfg()
     comp = _comp(["燃血"])
@@ -992,7 +1007,8 @@ def test_transition_tempo_score_rewards_tempo_factions() -> None:
 
 
 def test_evaluate_transition_tempo_early_game() -> None:
-    """过渡羁绊早期(α=0)加分保血(review round-4 HIGH-2);α-fade 同 optionality(已测)。"""
+    """过渡羁绊早期(α=0)加分保血(出自早期策略 review 修订;tempo 阵营表语义见
+    ADR-0152);α-fade 同 optionality(已测)。"""
     cfg = _cfg()
     early_tempo = GameState(board={'仙舟': 2}, plane=1, round_num=1)   # α=0,有过渡羁绊
     early_empty = GameState(board={}, plane=1, round_num=1)            # α=0,无
@@ -1103,11 +1119,13 @@ def test_sample_shop_weights_target_factions() -> None:
     assert r_yes > r_no * 1.5, f"target 阵营该被加权采样:r_yes={r_yes:.3f} vs r_no={r_no:.3f}"
 
 
-# —— D-109: _board_alignment + shop_supply 收紧 ——
+# —— _board_alignment + shop_supply 收紧(梯度语义见 ADR-0105 board penalty)——
 
 
 def test_board_alignment_deep_shallow_none() -> None:
-    """D-109:_board_alignment —— board count≥2 → ×1.2(boost);count≥1 → ×1.0(neutral);全无 → ×0.3(重 penalty;review🔴 改:原0.7 压不过 acq 主导致 spread)。"""
+    """_board_alignment —— board count≥2 → ×1.2(boost);count≥1 → ×1.0(neutral);
+    全无 → ×0.3(重 penalty;×0.7→×0.3 的加深出自策略 review:原值压不过 acq 主导致
+    spread,裁决与调参记录见 ADR-0105「_board_alignment 全不匹配 ×0.3(原 ×0.7)」)。"""
     from sr_od.application.currency_war.cw_comps import _board_alignment
     comp = Comp(name="test", factions=["仙舟", "追击"], core_chars=[],
                 form_tiers={"仙舟": 5, "追击": 3}, strength="S", form_difficulty="medium")
@@ -1120,7 +1138,8 @@ def test_board_alignment_deep_shallow_none() -> None:
 
 
 def test_shop_supply_core_vs_noncore() -> None:
-    """D-109:shop_supply 收紧 —— 核心(form_tiers)阵营在 shop → 1.0;仅非核心 → 0.5。"""
+    """shop_supply 收紧(shop_supply 与 _board_alignment 同批收紧,ADR-0105 spread 修)——
+    核心(form_tiers)阵营在 shop → 1.0;仅非核心 → 0.5。"""
     from sr_od.application.currency_war.cw_comps import shop_supply
     # comp: factions=[仙舟,追击,盛会之星],form_tiers={仙舟:5,追击:3} → core={仙舟,追击},盛会之星 非核心
     target = Comp(name="test", factions=["仙舟", "追击", "盛会之星"], core_chars=[],
@@ -1435,7 +1454,8 @@ def test_economy_reclassified_fields_adr0142() -> None:
 
 # ===== ADR-0133 全量图鉴 ingest + decide_event 注册表先验 =====
 def test_strategy_registry_full_ingest() -> None:
-    """注册表全量 315(curated 19 + doc ingest 296);长尾经济抽取抽查。"""
+    """注册表全量 335(plaza API base 334,ADR-0150;+补遗 1,ADR-0133 ingest 体系);
+    长尾经济抽取抽查。"""
     from sr_od.application.currency_war.cw_investments import (
         INVESTMENT_STRATEGIES,
         get_strategy,
