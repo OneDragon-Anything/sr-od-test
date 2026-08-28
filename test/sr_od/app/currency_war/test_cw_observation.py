@@ -601,3 +601,42 @@ def test_read_level_up_cost_real_fixture(
         img = cv2_utils.read_image(str(p))
         assert read_level_up_cost(test_context, img) == 4, f'{p.name} 费用应读 4'
 
+
+# ===== 难度旗牌实帧锁(两级管线:OTSU 反转+徽记剔除为主、4x 放大为辅) =====
+def test_read_enemy_difficulty_real_fixture(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """真实备战帧锁:难度数字 stylized(白色艺术字+纹理旗底),原生直读 0/58,
+    旗牌管线应恢复读数。锁值覆盖真值分布两端与中段:39/42(低职级局,合理带
+    下限附近)+ 108(A8 基准)+ 117(高带);无旗牌帧(区域空白)锁 None。
+    模型不可用 / fixture 缺失 → skip。
+    """
+    from pathlib import Path
+
+    from one_dragon.base.matcher.ocr.ocr_service import OcrService
+    from one_dragon.utils import cv2_utils
+
+    fix_dir = Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战'
+    expects = {
+        'shop_closed.webp': 39,
+        'shop_closed_lowhp.webp': 42,
+        'char_detail.webp': 108,
+        '后排10槽-满级局.webp': 117,
+        '补给节点.webp': None,          # 无旗牌:区域空白 → None(非默认/兜底值)
+        'deployed_2star_full.webp': None,
+    }
+    frames = [fix_dir / n for n in expects]
+    if not all(p.exists() for p in frames):
+        pytest.skip('fixture 缺失')
+    try:
+        from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
+        matcher = OnnxOcrMatcher()
+        if not matcher.init_model(download_by_github=False, download_by_gitee=True):
+            pytest.skip('OCR 模型不可用')
+    except Exception:
+        pytest.skip('OCR 模型不可用')
+    monkeypatch.setattr(test_context, 'ocr_service', OcrService(ocr_matcher=matcher))
+    for p in frames:
+        img = cv2_utils.read_image(str(p))
+        assert read_enemy_difficulty(test_context, img) == expects[p.name], \
+            f'{p.name} 难度应读 {expects[p.name]}'
+
