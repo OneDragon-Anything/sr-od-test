@@ -1,56 +1,74 @@
-# -*- coding: utf-8 -*-
-"""W133:check_streak_combat_only_income(ADR-0351 断言化)自检锁。
+"""连胜金收入口径检查器自检锁(原 W133;ADR-0439 收入口径修正后重写)。
 
-W129 把该检查器收紧为断言但零测试:若账本行键名演化(如
-node→node_type),旧实现 `.get()` 静默读 None → violations 恒 0 →
-断言永久失明、全量仍绿。本文件锁三面:
-1. 合成正例(违规必报/好样本必过,双向);
-2. 缺键守卫(schema 演化 → 计入违规,不静默绿);
-3. 去守卫变异推演(monkeypatch/最小克隆,证明上述样本能杀死
-   「去收入段守卫」「去计数守卫」两种退化形态)。
+check_streak_combat_only_income 现辖三面断言(双向,少发/多发都报):
+1. 补给轮 income.streak 恒 0(实发未钉死,零发放建模挂账);
+2. 奖励轮照发 streak_gold(进轮连胜)(含 counter0=1,ADR-0351
+   「不发金」半句被全量数据推翻);
+3. 战斗轮 streak==0 且上一轮败 → LOSS_GOLD_BY_NODE[上一轮节点]
+   (败轮金路径;否则按表)。
+本文件锁:合成正例(违规必报/好样本必过)/缺键守卫(schema 演化
+不静默绿)/去守卫变异推演(样本能杀死退化形态)。
 
-分布数值不入锁(README 纪律 6);锁的是确定行为。
+分布数值不入锁(sr-od-test README 纪律);锁的是确定行为。
 """
 from __future__ import annotations
 
 from typing import Any
 
-from sr_od.application.currency_war import cw_sim_checks as chk
 from sr_od.application.currency_war import cw_economy
+from sr_od.application.currency_war import cw_sim_checks as chk
 
 
-def _row(rn: int, node: str, streak: int, delta: int = 0) -> dict:
-    """最小合成账本行(生产形状子集:cw_sim L1570 起必带 node/income)。"""
+def _row(rn: int, node: str, streak: int, delta: int = 0,
+         base: int = 5, interest: int = 0) -> dict:
+    """最小合成账本行(生产形状子集:cw_sim 收入段必带 node/income)。"""
     return {'round_num': rn,
             'sim': {'node': node, 'delta': delta,
-                    'income': {'base': 5, 'streak': streak}}}
+                    'income': {'base': base, 'interest': interest,
+                               'streak': streak}}}
 
 
 def _good_ledger() -> list[list[dict]]:
-    """好样本:run15 r3 同构(counter0 照发 table[0]=1,ADR-0351)。"""
-    # r1 战斗胜(delta>=0):进轮 streak=0 → 账本发 streak_gold(0)=1;
-    # r2 奖励轮不发连胜金(streak=0);重算口径 r1 同样 streak_gold(0)=1。
-    return [[_row(1, 'battle', streak=1, delta=0),
-             _row(2, 'reward', streak=0)]]
+    """好样本:胜轮按表 + 败轮金路径 + 奖励轮照发 + 补给轮零,全链零违规。
+
+    r1 胜(进轮 streak=0→表 1);r2 败(上一轮非败态,进轮 streak=1→表 1);
+    r3 败(上一轮 r2 败→LOSS_GOLD battle=2);r4 奖励(照发,进轮
+    streak=0→1);r5 补给(恒 0)。
+    """
+    return [[_row(1, 'battle', streak=1, delta=1),
+             _row(2, 'battle', streak=1, delta=-5),
+             _row(3, 'battle', streak=2, delta=-3),
+             _row(4, 'reward', streak=1),
+             _row(5, 'supply', streak=0, base=5, interest=2)]]
 
 
 # --- 1. 合成正例(双向) -------------------------------------------------
 
-def test_reward_streak_income_bidirectional() -> None:
-    # 坏:奖励轮账本带连胜金 → 必报(检查器能抓)
-    bad = [[_row(1, 'reward', streak=1)]]
+def test_income_caliber_bidirectional() -> None:
+    # 坏:奖励轮多发(表值 1 账本 3)/补给轮带 streak → 必报
+    bad = [[_row(1, 'reward', streak=3)],
+           [_row(1, 'supply', streak=1)]]
     r = chk.check_streak_combat_only_income(bad)
-    assert r['violations'] == 1, '奖励轮 streak 收入未报=断言失明'
+    assert r['violations'] == 2, '奖励/补给轮收入断言失明'
     assert r['missing_key_rows'] == 0
-    # 好:counter0 照发 table[0]=1(战斗轮)×奖励轮 0 → 零违规,
-    # 且账本口径与 combat-only 重算口径对拍 delta=0(W129 口径自洽)
+    # 坏:败轮金路径断(上一轮败应发 2,账本仍发表值 1)→ 必报
+    bad_loss = [[_row(1, 'battle', streak=1, delta=-5),
+                 _row(2, 'battle', streak=1, delta=-3)]]
+    r_loss = chk.check_streak_combat_only_income(bad_loss)
+    assert r_loss['violations'] == 1, '败轮金路径断言失明'
+    # 坏:战斗轮少发(胜轮应发表值 1,账本 0)→ 必报(双向)
+    bad_under = [[_row(1, 'battle', streak=0, delta=1)]]
+    assert chk.check_streak_combat_only_income(
+        bad_under)['violations'] == 1
+    # 好:全链零违规,且账本口径与精确重算对拍 delta=0
     r2 = chk.check_streak_combat_only_income(_good_ledger())
-    assert r2['violations'] == 0, '好样本误报'
+    assert r2['violations'] == 0, f'好样本误报: {r2}'
     assert r2['missing_key_rows'] == 0
-    assert r2['ledger_streak_income'] == 1
-    assert r2['combat_only_streak_income'] == 1, \
-        'counter0 照发 streak_gold(0)=1 未入 combat-only 重算'
     assert r2['delta'] == 0
+    assert r2['loss_gold_rows'] == 1   # r3 一轮命中败轮金路径
+    assert r2['supply_rows'] == 1
+    assert r2['supply_issued_extra'] == 7   # 补给多发残差披露(base+利息)
+    assert r2['combat_only_streak_income'] == 5   # 1+1+2+1+0
 
 
 # --- 2. 键名演化变异(缺键守卫) ---------------------------------------
@@ -58,7 +76,7 @@ def test_reward_streak_income_bidirectional() -> None:
 def test_missing_node_key_counts_as_violation() -> None:
     """模拟未来 schema 演化(node→node_type):缺键必须涌现违规。
 
-    旧实现此处 violations==0(静默失明)——正是 W133 要修的点。
+    旧实现此处 violations==0(静默失明)——正是本锁要修的点。
     """
     evolved = [{'round_num': 1,
                 'sim': {'node_type': 'reward', 'delta': 0,
@@ -80,57 +98,57 @@ def test_missing_node_key_counts_as_violation() -> None:
 
 # --- 3. 去守卫变异推演(不必真改生产代码) -----------------------------
 
-def _mutant_no_income_guard(ledgers: list[list[dict]]) -> dict:
-    """去收入段守卫克隆:删掉 reward/supply 断言分支的最小变异。
-
-    仅推演用:证明本文件的正/负样本能杀死该退化形态。
-    与生产实现的保真度由下方 good 样本对拍断言保证(漂移即红)。
+def _mutant_flat_table(ledgers: list[list[dict]]) -> dict:
+    """退化变异:所有行一律按 streak_gold(进轮连胜)重算——
+    丢掉「补给轮恒 0」与「败轮金路径」两个特殊分支。
     """
     from sr_od.application.currency_war.cw_economy import streak_gold
-    violations = ledger_sum = combat_sum = 0
+    violations = ledger_sum = recompute = 0
     for rows in ledgers:
         streaks = chk._combat_streak_by_round(rows)
         for row in rows:
             sim = row.get('sim') or {}
             inc_streak = (sim.get('income') or {}).get('streak', 0) or 0
             ledger_sum += inc_streak
-            combat_sum += streak_gold(
-                streaks.get(row.get('round_num') or 0, 0))
+            expect = streak_gold(streaks.get(row.get('round_num') or 0, 0))
+            recompute += expect
+            if inc_streak != expect:
+                violations += 1
     return {'violations': violations, 'ledger_streak_income': ledger_sum,
-            'combat_only_streak_income': combat_sum}
+            'combat_only_streak_income': recompute}
 
 
-def test_mutation_no_income_guard_killed() -> None:
-    """去收入段守卫(不再判 reward/supply)→ 违规样本必须涌现差异。"""
-    bad = [[_row(1, 'reward', streak=1)]]
-    real = chk.check_streak_combat_only_income(bad)
-    mutant = _mutant_no_income_guard(bad)
-    # 克隆保真:好样本上 violations 与生产一致(combat_only 必然
-    # 不同——去守卫变异把奖励轮也计入重算,正是退化形态本身)
-    good_real = chk.check_streak_combat_only_income(_good_ledger())
-    good_mut = _mutant_no_income_guard(_good_ledger())
-    assert good_mut['violations'] == good_real['violations'] == 0
-    # 杀死条件:坏样本上生产报违规、变异体静默 → 若生产真退化成
-    # 该形态,上方 test_reward_streak_income_bidirectional 必红
-    assert real['violations'] == 1 and mutant['violations'] == 0, \
-        '违规样本杀不死「去收入段守卫」变异=锁失效'
+def test_mutation_flat_table_killed() -> None:
+    """扁平表变异(丢补给零/丢败轮金)必须被本文件样本杀死。"""
+    good = _good_ledger()
+    real = chk.check_streak_combat_only_income(good)
+    assert real['violations'] == 0
+    mutant = _mutant_flat_table(good)
+    # 杀死面①:补给轮——生产恒 0,扁平表按表算 1 → 变异误报
+    # (r5 补给进轮 streak=0,表值 1 ≠ 账本 0)
+    assert mutant['violations'] >= 1, '补给零断言杀不死扁平表变异'
+    # 杀死面②:败轮金——生产发 LOSS_GOLD 2,扁平表按表算 1 → 变异误报
+    bad_loss = [[_row(1, 'battle', streak=1, delta=-5),
+                 _row(2, 'battle', streak=2, delta=-3)]]
+    assert chk.check_streak_combat_only_income(bad_loss)['violations'] == 0
+    assert _mutant_flat_table(bad_loss)['violations'] >= 1, \
+        '败轮金路径杀不死扁平表变异'
 
 
 def test_mutation_no_count_guard_killed(monkeypatch: Any) -> None:
-    """去计数守卫(combat-only 重算链断)→ 披露口径必须涌现差异。
+    """重算链断(monkeypatch streak_gold 恒 0)→ 披露口径必须涌现差异。
 
-    最小变异:monkeypatch cw_economy.streak_gold 恒 0(模拟重算
-    依赖断裂)。检查器函数体内 `from cw_economy import streak_gold`
-    每次调用现取 → monkeypatch 源模块即生效。
+    检查器函数体内 `from cw_economy import streak_gold` 每次调用现取
+    → monkeypatch 源模块即生效。
     """
     good = _good_ledger()
     real = chk.check_streak_combat_only_income(good)
-    assert real['combat_only_streak_income'] == 1, \
-        'counter0 照发 1 未入重算(生产侧先红)'
+    assert real['combat_only_streak_income'] == 5, \
+        '重算基线漂移(生产侧先红)'
     monkeypatch.setattr(cw_economy, 'streak_gold', lambda streak: 0)
     mutated = chk.check_streak_combat_only_income(good)
-    assert mutated['combat_only_streak_income'] == 0, \
-        'monkeypatch 未生效,推演无效'
+    assert mutated['combat_only_streak_income'] == 2, \
+        'monkeypatch 未生效(只剩败轮金 2),推演无效'
     assert mutated['combat_only_streak_income'] != real[
         'combat_only_streak_income'], \
-        '好样本杀不死「去计数守卫」变异=重算披露锁失效'
+        '好样本杀不死「重算链断」变异=披露锁失效'
