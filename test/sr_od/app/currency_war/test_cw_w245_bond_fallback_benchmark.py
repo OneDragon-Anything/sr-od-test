@@ -1,33 +1,31 @@
 """A4:bond_fallback 泄放路径 benchmark 锁(巡检 A4 观察收口)。
 
 背景(w241_audit5.md §A4 + 插话回应 b6918ae4):bond_fallback 条件
-(填充件阵营∈owned+cost∈[1,2]+round≥3)买入的评分**不经过
-filler_star 期权分**(期权只辖 deployed 填充件的第 2 份;候选分数里
-没有该维度时仲裁「非正分」拒)——即 bond_fallback 路径的量值独立于
-filler_star_unit 开关。AB 实测 gp/star 两臂该通道各 2 笔/30 局
-零差异、末窗 0 笔=路径在授权语义上正交。
+(填充件阵营∈owned+cost∈[1,2]+round≥3)买入的评分走 [31] 凑档
+散件的基础分,量值独立于副本期权类评分维度。AB 实测 gp/star 两臂
+该通道各 2 笔/30 局零差异、末窗 0 笔=路径在授权语义上正交。
 
-本文件钉两组 benchmark,防未来改评分/改 filler 项时该路径静默变号:
-- 开关正交锁:filler_star_unit 0→0.5,bond_fallback 条件帧分值不变;
+本文件钉泄放形态锁,防未来改评分时该路径静默变号:
 - 泄放形态锁:bond_fallback 帧(非目标集外副本、阵营 owned 已有)
   在默认 registry 下的分值基准为 +2.0 正分(凑档帧实测,A4 披露;
   存在叠加评分维)——防该基准静默漂移:漂移即红,红须对照 ADR
   判新评分维合法性。
+(filler_star 期权分开关联动正交锁已随 ADR-0402 定谳清理删除——
+该开关不复存在,基准锁的语义前提见上。)
 """
 import sys
 
 sys.path.insert(0, 'src')
 
-from dataclasses import replace
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_state import GameState, ShopCard
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.registry import (
-    DEFAULT_REGISTRY,
-)
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
+)
+from sr_od.application.currency_war.decision_v2.registry import (
+    DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.decision_v2.scoring import score_candidate
 
@@ -81,30 +79,11 @@ def _fallback_cand(st, sess):
     return cands[0]
 
 
-def test_bond_fallback_score_orthogonal_to_filler_star_unit() -> None:
-    """开关正交锁:filler_star_unit 变化不改 bond_fallback 分值。
-
-    该路径不经期权分(A4 披露)——它走 [31] 凑档散件的基础分。
-    若此锁红:有人让 filler_star 维度渗入 bond_fallback 通道,
-    需检查是否双计(期权 + 本通道重叠)。
-    """
-    st, sess = _state(), _sess()
-    cand = _fallback_cand(st, sess)
-    v_off, _ = score_candidate(cand, st, sess, DEFAULT_REGISTRY)
-
-    reg_open = replace(DEFAULT_REGISTRY, filler_star_unit=0.5)
-    v_on, _ = score_candidate(cand, st, sess, reg_open)
-    assert v_off == v_on, (
-        f'bond_fallback 分值不应随 filler_star_unit 变({v_off} vs {v_on})')
-
-
 def test_bond_fallback_default_registry_structural_reject() -> None:
     """benchmark 锁(实测 +2.0,A4 披露):bond_fallback 凑档帧
     在默认 registry 下为固定正分——「凑档+基础价差」的正分,与
-    filler_star 期权分无关(A4/审计2:该路径量值独立于开关)。若此值
-    漂移:bond_fallback 评分或其依赖(board 分桶/cost 窗口)被改,
-    需有 ADR;若未来 filler_star 维度渗入本通道导致开关联动,
-    test_..._orthogonal_to_filler_star_unit 先红。"""
+    副本期权类评分维无关(A4/审计2)。若此值漂移:bond_fallback
+    评分或其依赖(board 分桶/cost 窗口)被改,需有 ADR。"""
     st, sess = _state(), _sess()
     cand = _fallback_cand(st, sess)
     v, _ = score_candidate(cand, st, sess, DEFAULT_REGISTRY)

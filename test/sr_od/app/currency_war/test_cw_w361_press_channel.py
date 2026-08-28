@@ -135,8 +135,10 @@ def test_guard_synth_point_single_source() -> None:
 
 def test_guard_zero_drift_arms_unchanged() -> None:
     """V-B1 收拢是行为保持重构:①target 豁免臂语义不变(关=直通拦);
-    ②A 臂(filler_star_unit>0)已 deployed 名副本放行不变;
-    ③C 臂(末窗 gap>0)放行不变;通道默认关下 press 臂不参与。"""
+    ②C 臂(末窗 gap>0)放行不变;通道默认关下 press 臂不参与。
+    (原 ② A 臂=filler_star_unit>0 放行,已随 ADR-0402 定谳清理删除,
+    deployed 名副本放行现由 C 臂/press 臂承载。)
+    """
     sess = _sess()
     st = _state(shop=[_shop_card()])
     # ① target 豁免(青雀非目标件,开关无效,守卫仍拦)——注入关臂
@@ -144,10 +146,7 @@ def test_guard_zero_drift_arms_unchanged() -> None:
     assert _copy_swap_blocked(st.shop[0], st, sess,
                               replace(_ARM0,
                                       copy_swap_target_exempt=True)) is True
-    # ② A 臂:filler_star_unit>0 → 放行(与收拢前内联块同判据)
-    reg_a = replace(_ARM0, filler_star_unit=1.0)
-    assert not _copy_swap_blocked(st.shop[0], st, sess, reg_a)
-    # ③ C 臂:r≥handoff_gate_min_round 且 gap>0 → 放行(锁线帧 gap)
+    # ② C 臂:r≥handoff_gate_min_round 且 gap>0 → 放行(锁线帧 gap)
     s2 = _sess()
     st_c = _state(round_num=7, shop=[_shop_card()])
     reg_c = replace(_ARM0, handoff_gate_min_round=6)
@@ -334,10 +333,10 @@ def test_press_floor_exempt_cap_and_ruling() -> None:
 
 def test_press_copy_round_cap_in_arbitration() -> None:
     """V-B8.1:press 候选逐轮采纳 ≤ press_copy_round_cap(默认 1)。
-    评分注入 filler_star_unit>0(W232 填充件升星期权,默认 0 值不扰
-    生产)使两笔 press 候选过非正分门——cap 量控语义的独立锁不依赖
-    已删除的 press 评分路由。"""
-    reg = replace(_ARMA, filler_star_unit=1.0)
+    评分以定值正分手工注入(与评分维解耦——cap 量控语义的独立锁
+    不依赖任何评分偏置通道;原 filler_star_unit 注入已随 ADR-0402
+    定谳清理删除)。"""
+    reg = _ARMA
     sess = _sess()
     st = _state(deployed=[_dep(_FILLER, _FILLER_FAC),
                           _dep(_FILLER2, _FILLER2_FAC, slot=1)],
@@ -346,7 +345,10 @@ def test_press_copy_round_cap_in_arbitration() -> None:
     cands = [c for c in generate_candidates(st, sess, reg)
              if isinstance(c.action, BuyCard)]
     assert len(cands) == 2, '两笔 press 候选都应生成'
-    scored = score_all(cands, st, sess, reg)
+    scored = [(c, 5.0,
+               {'cost': getattr(getattr(c.action, 'card', None),
+                                'cost', 2) or 2})
+              for c in cands]
     res = arbitrate(scored, st, sess, reg)
     accepted = [r for r in res.log if r['tag'] == 'copy_press'
                 and r['accepted']]

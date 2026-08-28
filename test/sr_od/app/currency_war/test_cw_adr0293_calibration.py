@@ -136,17 +136,14 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'engine_frac_unit': ('float', 1.0),
     'core_star_unit': ('float', 3.0),
     'merge_progress_unit': ('float', 3.0),
-    'filler_star_unit': ('float', 0.0),
-    'pair_copy_direction_exempt': ('bool', False),
+    # (filler_star_unit/pair_copy_direction_exempt/goldrich_buy_bias/
+    # goldrich_min_gold/goldrich_buy_tags/early_pace_* 五字段已随
+    # ADR-0402/0305/0408 定谳清理删除,字段面锁同步收敛。)
     'off_target_sell_bias': ('float', 0.5),
     'crisis_buy_bias': ('float', 1.0),
     'crisis_buy_tags': ('frozenset[str]', frozenset({
         'line_carry', 'line_opportunistic', 'bridge_core',
         'engine_seed', 'plugin', 'carry_gate'})),
-    'goldrich_buy_bias': ('float', 0.0),
-    'goldrich_min_gold': ('int', 28),
-    'goldrich_buy_tags': ('frozenset[str]', frozenset({
-        'engine_seed', 'pair', 'copy', 'bridge_core'})),
     'forming_bias': ('float', 5.0),
     'forming_bias_val_max': ('float', 0.5),
     'engine_affinity_enabled': ('bool', True),
@@ -195,12 +192,7 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     # ===== W252/ADR-0409 M-A 定向刷新 =====
     'directed_refresh_per_round': ('int', 2),
     'directed_refresh_game_cap': ('int', 6),
-    # ===== W251/ADR-0408 投资节奏前置 =====
-    'early_pace_enabled': ('bool', False),
-    'early_pace_min_round': ('int', 3),
-    'early_pace_max_round': ('int', 4),
-    'early_pace_bias': ('float', 5.0),
-    'early_pace_val_max': ('float', 0.5),
+    # ===== (early_pace_* 五字段已随 ADR-0408 定谳清理删除)=====
     # ===== W332b 泄息通道与换线判据 =====
     # (release_enabled / release_spend_gate_enabled 已随 ADR-0426 增补 D
     # 第 4 态清理删除,字段面锁同步收敛。)

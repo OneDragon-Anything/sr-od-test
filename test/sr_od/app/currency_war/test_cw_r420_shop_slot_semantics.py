@@ -162,21 +162,21 @@ def test_pool_take_floor_hits_recorded() -> None:
 
 
 def test_endgold_dual_criterion_guard_residual() -> None:
-    """守卫残金口径:末金 50 但含 25 守卫拦截折算 → 净滞留 25
-    (ratio 2.06 总口径 vs net 1.03)→ 净口径不违规;纯策略滞留
-    (零拦截)50 → 双口径同违规。"""
+    """守卫残金口径(锚已随 economy v2 重锚为 45.1,ADR-0447):
+    末金 90 含 45 守卫拦截折算 → 净滞留 45(总口径 2.0 违规 vs 净
+    口径 ≈1.0)→ 净口径不违规;纯策略滞留(零拦截)90 → 双口径同违规。"""
     def _game(end_gold: int, skipped_gold: int) -> list[dict]:
         return [{
             'plane': 1, 'round_num': 9, 'gold': end_gold,
             'sim': {'bench_full_skipped_gold': skipped_gold},
         }]
-    rep = chk.check_sim_endgold_calib([_game(50, 25)])
-    assert rep['violations'] == 0, '净口径 25/24.3 ≤1.5,不应违规'
-    assert rep['ratio'] == 2.06, '总口径并行披露(50/24.3)'
-    assert rep['net_ratio'] == 1.03, '净口径 = (50−25)/24.3'
-    assert rep['guard_skipped_gold_avg'] == 25.0
-    rep2 = chk.check_sim_endgold_calib([_game(50, 0)])
-    assert rep2['violations'] == 1, '纯策略滞留 50 → 违规(原语义)'
+    rep = chk.check_sim_endgold_calib([_game(90, 45)])
+    assert rep['violations'] == 0, '净口径 45/45.1 ≤1.5,不应违规'
+    assert rep['ratio'] == round(90 / 45.1, 2), '总口径并行披露(90/45.1)'
+    assert rep['net_ratio'] == round(45 / 45.1, 2), '净口径 = (90−45)/45.1'
+    assert rep['guard_skipped_gold_avg'] == 45.0
+    rep2 = chk.check_sim_endgold_calib([_game(90, 0)])
+    assert rep2['violations'] == 1, '纯策略滞留 90 → 违规(漂移哨兵语义)'
 
 
 # --- 件4:A/B 分辨率底(批㉒ F4) -----------------------------------------
