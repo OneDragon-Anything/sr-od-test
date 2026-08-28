@@ -165,7 +165,7 @@ class _FakeCtx:
 def _patch_reader(monkeypatch, seq: list[int | None]):
     calls = {'n': 0}
 
-    def fake_read(ctx, screen):
+    def fake_read(ctx, screen, level=None):
         i = min(calls['n'], len(seq) - 1)
         calls['n'] += 1
         return seq[i]

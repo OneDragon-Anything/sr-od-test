@@ -212,20 +212,20 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 8)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)   # CV 不可判 → 公式
     assert cbl.select_back_layout(None, frame) == (6, '后排')      # run 26 形态:lv8 cap8
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)
     assert cbl.select_back_layout(None, frame) == (8, '后排8槽')   # diff2 → 8
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 7)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 9)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 9)
     assert cbl.select_back_layout(None, frame) == (8, '后排8槽')   # 狸猫局 lv7 cap9
     # diff==1(钻石+1):7 格已建档(佩佩局实锤)→ 直读 7 格
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 8)
     assert cbl.select_back_layout(None, frame) == (7, '后排7槽')
     # 件③:7 格留证机器已废(存在性=钻石+1 由公式回答;坐标档已建档钩子静默)
     # 读不到 cap → diff 按 0 → 6(失败安全侧;别按扩展档跑)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: None)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: None)
     assert cbl.select_back_layout(None, frame) == (6, '后排')
 
 
@@ -275,7 +275,7 @@ def test_reconcile_channels_agree(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 7)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 9)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 9)
     # 狸猫局真帧:公式 diff2 → 8,CV 实测 8 → 一致用公式值
     assert cbl.select_back_layout(None, frame) == (8, '后排8槽')
     assert not journal.exists() or 'back_layout_channel_conflict' not in \
@@ -300,7 +300,7 @@ def test_reconcile_channels_disagree_cv_wins(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)   # 公式:6
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 8)   # 公式:6
     assert cbl.select_back_layout(None, frame) == (8, '后排8槽')      # CV 8 优先
     assert journal.exists(), '不一致未留证'
     rec = _json.loads(journal.read_text(encoding='utf-8')
@@ -317,10 +317,10 @@ def test_reconcile_cv_none_formula_fallback(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
     assert cbl.select_back_layout(None, frame) == (8, '后排8槽')
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 8)
     assert cbl.select_back_layout(None, frame) == (6, '后排')
 
 
@@ -341,11 +341,11 @@ def test_read_deployed_chars_formula_driven(
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 9)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 9)
     out8 = cio.read_deployed_chars(test_context, frame, templates, level=7)
     got8 = {c.char_id for c in out8 if c.position_pref == 'back'}
     assert {'狸小虎', '狸小龙'} <= got8
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 8)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 8)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 6)   # 两通道一致 6
     out6 = cio.read_deployed_chars(test_context, frame, templates, level=8)
     got6 = {c.char_id for c in out6}
@@ -442,7 +442,7 @@ def test_layout_hook_no_stop_only_evidence(
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda c: 8)
     # 公式 8(lv8 cap10 diff2)且 CV 三读稳定 9(防抖过)→ n_raw=9 未建档
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s: 10)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, level=None: 10)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 9)
     monkeypatch.setattr(ctx, 'screenshot', lambda: frame, raising=False)
     out = cio.read_deployed_chars(ctx, frame, templates, level=8)
@@ -477,7 +477,7 @@ def test_layout_hook_silent_on_archived(
     # 6 格(run 26 形态)/ 8 格(狸猫局形态)/ 7 格(佩佩局直读)都不留证
     for lv, cap, cv in ((8, 8, 6), (7, 9, 8), (8, 9, 7)):
         monkeypatch.setattr(cio, '_session_level', lambda c, _lv=lv: _lv)
-        monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, _cap=cap: _cap)
+        monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, level=None, _cap=cap: _cap)
         monkeypatch.setattr(cbl, 'cv_back_slots', lambda s, _cv=cv: _cv)
         cio.read_deployed_chars(ctx, frame, templates, level=lv)
     # 只辖本测对象(未建档留证钩子);check_system_unit_layout 在 (8,9,7) 态
@@ -544,7 +544,7 @@ def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)  # 公式 8
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)  # 公式 8
     # 序列 stub:首帧(入参 frame)假阳 9,重读帧(真 6 格 fixture)= 6
     real_cv = cbl.cv_back_slots
 
@@ -574,7 +574,7 @@ def test_cv_stable_new_grid_confirmed(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)  # 公式 8
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)  # 公式 8
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 9)          # 三读全 9
     r = cbl.resolve_back_slots(fctx, frame, level=8, cap=10)
     assert r['n_raw'] == 9 and r['n'] == 8      # 采 CV 9 → 运行 8 超集(未建档)
@@ -598,7 +598,7 @@ def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
-    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr: 10)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)
     real_cv = cbl.cv_back_slots
 
     def _seq_cv(scr):
@@ -629,7 +629,7 @@ class _CapFakeCtx:
 def _patch_cap_reader(monkeypatch, seq):
     calls = {'n': 0}
 
-    def _fake(ctx, scr):
+    def _fake(ctx, scr, level=None):
         i = min(calls['n'], len(seq) - 1)
         calls['n'] += 1
         return seq[i]
@@ -769,9 +769,9 @@ def test_read_level_xp_backinference(test_context, monkeypatch):
     import sr_od.application.currency_war.cw_observation as cwo
     img = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
     # 等级区漏读(直读单一源 = read_level_raw_opt,patch 该缝)
-    monkeypatch.setattr(cwo, 'read_level_raw_opt', lambda ctx, scr: None)
+    monkeypatch.setattr(cwo, 'read_level_raw_opt', lambda ctx, scr, level=None: None)
     got = cwo.read_level(test_context, img, 1, 1)
     assert got == 3, f'经验条反推应为 lv3(0/4),实得 {got}'
     # 经验条也漏(全黑)→ 退期望曲线(旧行为)
-    monkeypatch.setattr(cwo, 'read_xp_progress', lambda ctx, scr: None)
+    monkeypatch.setattr(cwo, 'read_xp_progress', lambda ctx, scr, level=None: None)
     assert cwo.read_level(test_context, img, 1, 1) == cwo._expected_level(1, 1)
