@@ -340,10 +340,22 @@ _EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173d
 # (开关生命周期第 1 态:落码默认关,关态决策序列零漂移——同 seed sim
 # 20 局对拍逐位一致;开臂判据挂账见 registry 字段注释)——有意增字段,
 # 锁同步更新(其余字段不变,行为面无漂移)。
+# 过渡收敛三层贯彻批更新(ADR-0442):新增 transition_focus_enabled=False
+# + transition_focus_buy_prior=5.0 两字段(开关生命周期第 1 态:落码默认关,
+# 关态零漂移同上;全机制 A/B 判据挂账见 registry 字段注释)——有意增字段,
+# 锁重锚(其余字段不变)。
 # c1 系开关定谳批(ADR-0443)重锚:registry 破息分支存档注释段改写为
 # 定谳注记(filters docstring 同步指向 ADR)——注释级改动,字段面零
 # 变化,全字段 hash 重算与上一锚逐位一致,锁值不变,本条仅记重锚缘由。
-_EXPECTED_HASH = ('ea07c24bf248fdd0251a9d5ed3a4849a308cafe7a6f36d2572d727c8b9d69ff5')
+# _EXPECTED_HASH = ('ea07c24bf248fdd0251a9d5ed3a4849a308cafe7a6f36d2572d727c8b9d69ff5')
+# c1_asset 资产臂定谳清理批更新(ADR-0444,策略开关生命周期终态):删除
+# c1_asset_channel_enabled/c1_asset_m_min/c1_asset_p_slot/c1_asset_delta_unit/
+# c1_asset_l2_loss 五字段与 filters 资产臂谓词(_c1_asset_tables/
+# _c1_asset_m_eff)——开臂前置触发面实测为零(sim 300 局 C1 辖域 445 帧
+# 上意向从不锁线,m 表结构性无定义,通道构造性恒不激活;三「待标定」量
+# 永无标定数据源),registry 留定谳注记,行为锁 test_cw_c1_directed_spend
+# 资产臂节一并删除——有意删字段,锁同步更新(其余字段不变)。
+_EXPECTED_HASH = ('a9bb1c5544d7468f9d8d279de4c6f171a67370ef0b020fd195f0d9c5f425de80')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
