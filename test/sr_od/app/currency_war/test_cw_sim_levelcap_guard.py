@@ -92,3 +92,25 @@ def test_sim_batch_aggregate_discloses_level_cap_rejects() -> None:
     rep = simulate_p1_batch(6, pool='fallback', seed_base=600,
                             ledger=False, checks=False)
     assert rep['level_cap_rejects'] >= 0
+
+
+def test_sim_batch_cap_rejects_by_plane_consistent_with_total() -> None:
+    """按 plane 分解披露:键值合法、与总量键和恒等、plane 单调可读。
+
+    为什么按 plane:lv≥9 态在实机只见 P2/P3(实机 P1 等级上限 7),
+    总量把 P1 等级虚高噪声与 P2/P3 语义分歧混桶,分解后才能为
+    LEVEL_CAP 放开批提供干净读数。兼容判据:总量键保留不删,分解值
+    求和必须等于总量——不等即聚合端分组与总量口径漂移。
+    """
+    from sr_od.application.currency_war.cw_sim import simulate_p1_batch
+
+    rep = simulate_p1_batch(6, pool='fallback', seed_base=600,
+                            ledger=False, checks=False)
+    by_plane = rep['level_cap_rejects_by_plane']
+    assert isinstance(by_plane, dict)
+    for plane, cnt in by_plane.items():
+        assert plane in (1, 2, 3), f'非法 plane 键:{plane}'
+        assert isinstance(cnt, int) and cnt > 0
+    assert sum(by_plane.values()) == rep['level_cap_rejects'], (
+        f"分解和 {sum(by_plane.values())} ≠ 总量 "
+        f"{rep['level_cap_rejects']}(聚合口径漂移)")
