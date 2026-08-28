@@ -44,10 +44,12 @@ def test_defect_ledger_schema_field_lock(tmp_path: Path, monkeypatch):
     rows = _rows(tmp_path, 'defect_ledger.jsonl')
     assert len(rows) == 1
     r = rows[0]
+    # W512 追加可选末尾字段 confidence(§2.10;旧记录缺省 None 兼容)
     assert set(r) == {'schema_version', 'ts', 'run_id', 'plane', 'round_num',
                       'unit_seq', 'surface', 'kind', 'expected', 'observed',
                       'gap', 'severity', 'verdict', 'evidence', 'reader_source',
-                      'note'}
+                      'note', 'confidence'}
+    assert r['confidence'] is None   # 未传 → None(无置信度语义面)
     assert r['schema_version'] == cw_telemetry.SCHEMA_VERSION
     assert r['run_id'] == 'w505t'
     assert (r['plane'], r['round_num'], r['unit_seq']) == (1, 3, 2)
