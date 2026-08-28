@@ -331,7 +331,12 @@ _EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173d
 # 败面 12.77/13.33/15.50,两态决策层幅度源)与 p2_loss_calib_version=1
 # (P2 损血标定家族版本披露锚)——有意重标定+口径定稿,锁同步更新
 # (其余字段不变)。
-_EXPECTED_HASH = ('2166d50b386fd036a6b27e0f3e931ec2c5fb5cfdff499eddaf62a61d2f9e6798')
+# ADR-0437 定谳清理批更新(策略开关生命周期终态):删除
+# dup_concentration_enabled 字段与 filters.dup_concentration_active
+# (开臂前置「散买挤掉第三张」已被 ADR-0438 merge 完成豁免消除,ex_dup
+# 复测零独立行为面)——有意删字段,锁同步更新(其余字段不变;行为锁
+# test_cw_dup_concentration 一并删除)。
+_EXPECTED_HASH = ('467d40b090d9eb64de610bb5b5e75d3065af92b50fdc79e0cefd9e69e731ac59')
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:

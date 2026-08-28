@@ -102,7 +102,8 @@ def test_flip_non_boss_arm_continuous() -> None:
 
 
 def test_flip_boss_projection_arm() -> None:
-    """末窗投影臂:hp−boss_tax_p75<emergency_hp(34)→ hp<59 命中。"""
+    """末窗投影臂:hp−boss 税位面锚(by_plane[plane]=34,ADR-0441 接线)
+    <emergency_hp(25)→ hp<59 命中(现值下与旧标量逐位等价)。"""
     s = StrategySession()
     assert not flip_hit(_state(hp=45, node='battle'), s, _REG, 'FORM')
     assert flip_hit(_state(hp=45, node='boss'), s, _REG, 'FORM')

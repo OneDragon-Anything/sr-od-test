@@ -2,8 +2,9 @@
 
 结构预埋不激活:plane 1 = 现值逐位零漂移;plane 2 槽位存在但默认值
 =现值(P2 sim 观测真值只进注释,扰动未评估前不换数);消费点
-(decision_v2.filters 投影安全带)按位面取值。三锁:plane1 零漂移 /
-plane2 槽位存在(值=现值 + 注释真值锚)/ 消费点位面取数。
+(decision_v2.filters 投影安全带 + posture_release FLIP 末窗投影臂,
+ADR-0441 接线)按位面取值。锁:plane1 零漂移 / plane2 槽位存在
+(值=现值 + 注释真值锚)/ 两消费点位面取数 / 旧标量值不变底座。
 """
 
 from types import SimpleNamespace
@@ -39,6 +40,39 @@ def test_boss_tax_scalar_unchanged() -> None:
     assert DEFAULT_REGISTRY.boss_tax_p75 == _CURRENT_VALUE
 
 
+def test_flip_projection_arm_reads_plane_dim(monkeypatch) -> None:
+    """消费点锁(ADR-0441 接线):FLIP 末窗投影臂取数走位面维 dict。
+
+    手法同上锁:stub 掉 posture_release 的可信位与末窗相位门
+    (flip_hit 函数体内模块属性解析,monkeypatch 拦截),改写 plane1
+    槽位值,证明投影臂短路读的是 dict 而非旧标量——锚=0 时
+    d=hp≥emergency_hp 投影不入应急带,末窗臂不命中;默认锚 34 时
+    d=24<25 命中。plane1 行为零漂移由值锁(test_plane1_value_zero_drift,
+    锚[1]=标量现值)保证,本锁只证取数通道。
+    """
+    from dataclasses import replace
+
+    import sr_od.application.currency_war.decision_v2.posture_release as pr
+    from sr_od.application.currency_war.decision_v2.registry import (
+        DecisionV2Registry,
+    )
+
+    monkeypatch.setattr(pr, 'hp_decision_trusted', lambda state: True)
+    monkeypatch.setattr(pr, 'boss_first_buy_phase',
+                        lambda state, session, registry: True)
+    sess = SimpleNamespace()
+    state = SimpleNamespace(plane=1, hp=58, gold=60)
+
+    # plane1 槽位改写生效(消费点读 dict 的直接证据):锚=0,
+    # d=58≥25,投影臂不命中
+    registry = replace(DecisionV2Registry(),
+                       boss_tax_p75_by_plane={1: 0.0, 2: 34.0})
+    assert pr.flip_hit(state, sess, registry, 'FORM') is False
+
+    # 默认锚 34:d=24<25,战后必入应急带,末窗臂命中
+    assert pr.flip_hit(state, sess, DecisionV2Registry(), 'FORM') is True
+
+
 def test_consumption_reads_plane_dim(monkeypatch) -> None:
     """消费点锁:投影安全带取数行走位面维 dict。
 
@@ -48,9 +82,9 @@ def test_consumption_reads_plane_dim(monkeypatch) -> None:
     而非旧标量——d≥emergency 侧穿门到达 stub 返回 True,d<emergency
     侧短路返回 False。
     """
-    import sr_od.application.currency_war.decision_v2.posture_release as pr
     from dataclasses import replace
 
+    import sr_od.application.currency_war.decision_v2.posture_release as pr
     from sr_od.application.currency_war.decision_v2.registry import (
         DecisionV2Registry,
     )
