@@ -1,16 +1,21 @@
-"""ADR-0293 标定批回归锁:标定参数快照 + 刷新双门 + 弱件换金偏置。
+"""ADR-0293 标定批回归锁:标定参数快照 + 字段面锁 + 刷新双门 + 弱件换金偏置。
 
-- 快照锁:标定五参(refresh_ev/refresh_max_round/refresh_min_gold/
-  target_hold_base/off_target_sell_bias)逐值锁死 + registry 全字段
-  hash 锁(任何漂移——包括未列字段——即红,防静默改参)。
-- 行为锁:刷新轮界门(r>max 恒负分)/金保底门(金<min 不刷)/
-  溢出件卖出偏置(0 分卖翻正)。
+- 快照锁:标定存活参(target_hold_base/off_target_sell_bias/
+  piggy_refresh_ev)逐值锁死。
+- 字段面锁(锁法见 ADR-0293 §标定 + 0293 流程注释):registry 以
+  「字段名集合 + 各字段类型注解 + 默认值语义」期望表锁死——新增
+  字段=红(强迫显式登记语义与默认值)、删字段=红、改默认值=红、
+  改类型=红;注释/措辞/字段顺序/空白=绿(表按名比较,不感知)。
+  值域演进的正确性由五参快照锁 + 各批自己的行为锁管辖,本锁只辖
+  「字段面结构」。模块级 hp 对账标定常量(HP_LOSS_CAP_* 等,与
+  registry 字段同属标定面)一并入表。
+- 行为锁:刷新轮界门(无目标语境恒负分)/弱件换金偏置(0 分卖
+  翻正)/默认策略注入标定后 registry。
 决策见 docs/develop/currency_war/decisions/0293-decision-v2-calibration.md。
 """
 from __future__ import annotations
 
-import hashlib
-import json
+import dataclasses
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_state import (
@@ -18,6 +23,7 @@ from sr_od.application.currency_war.cw_state import (
     GameState,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision_v2 import registry as registry_mod
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
 )
@@ -32,330 +38,257 @@ from sr_od.application.currency_war.decision_v2.strategy import (
     DecisionV2Strategy,
 )
 
-#: ADR-0293 标定批次 registry 全字段快照 hash
-#: (n=100 终验 mean 28.26/团灭 6/配对差 -2.89 的参数组)
-#: ADR-0295 形态域结构批更新:新增 bench_form_weight/target_hold_cap_frac
-#: 两字段(标定五参值不变);新批次 hash 见下
-#: ADR-0297 并存仲裁批更新:新增 refresh_starve_discount/refresh_starve_gold
-#: /refresh_game_cap/levelup_reserve_gold 四字段 + constraints 增
-#: refresh_budget(标定五参与 0295 两参值不变)
-#: ADR-0299 买入面差异解剖批更新:buy_tag_priority 增 engine_seed
-#: + 四覆盖态放行标签集增 engine_seed(数值字段全部不变)
-#: ADR-0300 copy/pair 通道迁移批更新:buy_tag_priority 增 pair/copy
-#: + economy/war/catchup 放行标签集增 pair/copy(数值字段全部不变;
-#: emergency 集保持窄——应急态保命优先,v2 应急集设计本就窄于常态)
-#: ADR-0301 成型攻坚批更新:新增 engine_frac_unit(=1.0,双窗网格
-#: 标定)+ form_refresh_ev(=0.0,双窗否决默认关闭)/form_refresh_
-#: max_round/form_refresh_min_gold/form_refresh_engines_target 四
-#: 注册字段(既有数值字段全部不变)
-#: ADR-0302/0303 危机修复+合流批更新:emergency_tags 并入
-#: for_gold/levelup(应急集内容修正)+ 新增 crisis_hoard_gold/
-#: crisis_buy_bias/crisis_buy_tags 三字段(值=ADR-0302 暂驻 filters
-#: 的原值,纯上移;其余数值字段不变)
-#: ADR-0304 回退+战力转化批更新:新增 copy_swap_target_exempt
-#: (=False,豁免回退开关;其余字段不变)
-#: ADR-0305 金充裕不买诊断批更新:新增 goldrich_buy_bias/goldrich_
-#: min_gold/goldrich_buy_tags 三字段(默认 0=通道关,只顶 0 分
-#: 差分;既有数值字段不变)。全量清偿时发现 0305 漏更本锁
-#: (欠账随 ADR-0306 批的全量补跑暴露),按锁语义补记
-#: ADR-0309 载体批(W35)更新:四覆盖态标签集/危机买偏置辖集并入
-#: 'plugin'(层1 插件通道,定义节 class5)——纯标签集变更,数值
-#: 字段零变化(标定五参快照锁另行核)。
-#: ADR-0326 回连机制批(W52)更新:新增 remedy_buy_tags(旧
-#: LIQUIDITY_BUY_TAGS 语义迁入,含 'carry_gate')/remedy_min_score/
-#: remedy_alarm_refresh 三字段(补偿趟注册表化;既有数值字段不变)。
-#: ADR-0327 S5 批(W52)更新:新增 remeet_window_rounds/through_rate/
-#: sell_key_weight_scale 三字段(统一卖件弱序表;既有数值字段不变)。
-#: ADR-0332 成型评分活性批更新:新增 forming_bias(=5.0,成型补充偏置
-#: 顶正)/forming_bias_val_max(=0.5,顶分上沿)两字段(既有数值字段
-#: 全部不变;双窗 A/B 验证见 ADR-0332)。
-#: ADR-0333 体系集中度批(W72)更新:新增 engine_affinity_enabled(=True,
-#: 候选层 engine_seed 配方亲和过滤开关;关闭=回 W70 行为,A/B 通道;
-#: 既有数值字段全部不变,验证见 ADR-0333)。
-#: W96/ADR-0340 断买修复批更新:新增 merge_progress_unit(=3.0,3合1
-#: 中间进度项——目标件第 2 份 1★ 期权显影;未网格标定,sim A/B
-#: 方向见 deep_read/W96_报告.md)——有意改参,锁同步更新
-_EXPECTED_HASH = '8a7c4ee67326db5cb4d4007abb9ace9'
-_EXPECTED_HASH += 'e17440afac0996ec4fa7f7f9e397c22af'
-# W88/ADR-0339:新增 core_star_unit=3.0(核心升星价值项,配对 A/B 标定
-# n=150:+18/0)——有意改参,锁同步更新
-# W107/ADR-0343 成型停手批更新:新增 formed_stop_enabled(=True)/
-# formed_stop_min_round(=7)/formed_stop_min_level(=5)三字段
-# ([13] 停手线;既有数值字段全部不变)——有意改参,锁同步更新
-_EXPECTED_HASH = ('ee7a9c38ca6b9fd2799f64bbc4545ffe'
-                  '761e97528a78d075ec279d4adda9a9e3')
-# W114/ADR-0346 相位影子观测批更新:新增 phase_form_score_gate(=0.5,
-# 兜底局 form_ok 降级门,sim 校准域;影子期零消费)——有意改参,锁同步
-# 更新(既有数值字段全部不变)
-_EXPECTED_HASH = '117316f74fdbd93413f1937622a1710c6865fd35d0769b399335a74dbd045fe5'
-# W119/ADR-0347 切授权批更新:新增 form_floor(=20,Q1 四档 sim 对照
-# 待校准)/phase_fallback_min_round(=5,W118 兜底门校准判据)/
-# boss_window_fallback_round(=9,boss 窗节点图统一口径的缺读兜底)
-# 三字段;删除 formed_stop_min_level(Q2 裁决:等级不作为独立门槛)
-# 与 levelup_interest_engine_gate([12] 门收编 EV 总账,E6 latch 退场)
-# ——有意改参,锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = '837f521098a44ac0f8e81b8febf6208dd320d212f4d5975e29053ca979946679'
-# W122 F-01(W120 P8 上限接线)更新:新增 piggy_refresh_round_cap(=1,
-# 扑满节点单节点刷新豁免上限——s≤0.277R 采前保守 2 金)——有意改参,
-# 锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = '3ad13e863c742a386bbfcffcf3d75f72ea01f685fc9cd2ef27e0d1fa8312a519'
-# W126/ADR-0349 步③切调度更新:删 refresh 附庸闸十一参(refresh_ev/
-# refresh_max_round/refresh_min_gold/refresh_starve_discount/
-# refresh_starve_gold/refresh_game_cap/levelup_reserve_gold/
-# form_refresh_ev/form_refresh_max_round/form_refresh_min_gold/
-# form_refresh_engines_target)+追赶到四参(catchup_tags/
-# catchup_forbidden_tags/catchup_min_level/pop_baseline);新增
-# piggy_refresh_ev(=2.5,扑满凑伤害 D 专属);war_tags 增 refresh
-# (war 滤 refresh 废除);constraints 删 refresh_budget;审计表
-# 'catchup' 列改 'mode'——有意改参(D 是一等通道/追赶态退场),
-# 锁同步更新(target_hold_base/off_target_sell_bias 两存活标定值不变)
-_EXPECTED_HASH = 'fa157543a85e59250753dab71ced739a9cd354564647023d1fdd63f5aa87ca09'
-# W132/ADR-0353 兜底门结构判据批更新:删 phase_form_score_gate(=0.5),
-# 新增 phase_fallback_min_engines(=2,有效体系数下限——四体系两两组合=
-# 过渡成型;run15 实机散板过旧门两证);并存批同期新增
-# interest_recovery_rounds(=3.0,W131/ADR-0352 买侧回档折中)——有意
-# 改参,锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = '4d691245755180dc3ae21c8dfe075d19f941ddc8ef4603b05ac2def6dcc6e5d4'
-# W131/ADR-0352 买侧 EV 标定批更新:新增 interest_recovery_rounds(=3.0,
-# 买侧 C_interest 回档折中视界:P6 下界 1-3 金与平面 R 上界≈20-23 的
-# 折中;只辖 arbiter.interest_rule 的 BuyCard 分支,刷新/升级口径不动)
-# ——有意改参(买侧 V/C 量级错档标定),锁同步更新(其余数值不变)
-_EXPECTED_HASH = ('4d691245755180dc3ae21c8dfe075d19'
-                  'f941ddc8ef4603b05ac2def6dcc6e5d4')
-# W150/ADR-0359 买侧通道锁定目标约束批更新:新增 buy_lock_constraint_
-# enabled(=True)/off_lock_buy_tags/off_lock_buy_penalty(=3.0)/
-# off_lock_final_fence_enabled(=True)四字段(锁定帧非目标件评分降级
-# +末轮围栏;既有数值字段全部不变)——有意改参,锁同步更新
-_EXPECTED_HASH = ('a3c0989b51b467323e429e1592219198'
-                  'dfab74d94ec006cdde9bfff26cc2238c')
-# W154/ADR-0361 P2 段 V_D 修法批更新:新增 vd_p2_enabled(=True)/
-# vd_p2_loss(=16.0,P2 掉血期望保守中值)/vd_p2_recovery_rounds(=2.31,
-# P2 穿 50 段回档上界)/vd_p2_liquidity_rho(=0.0,溢余金影子价起步)
-# 四字段(P11/P12 口径;P1 分支零变化)——有意改参,锁同步更新
-_EXPECTED_HASH = ('c42f073df31bbecc215857816a7da9a'
-                  'ec4f5cd2f6c0684eaa121441aec68481c')
-# 并行批(W160/ADR-0363,在飞工作树)新增 evolve_engine_guard_enabled
-# (=True)/evolve_final_freeze_enabled(=True)两字段——hash 锁按当前
-# registry 现值重算(本批 W157 未触碰 registry;锁值追平并行批字段,
-# 该批合流时如再改默认值须随批重锁)
-_EXPECTED_HASH = ('3729d4bacdfa8edb41195c1ea386c5d1'
-                  '045e4f980db545bd52d827d6952df78d')
-# W170/ADR-0369 P1 体系对缺件找牌通道批更新:新增 vd_p1_pair_enabled
-# (=True,P1 pair 缺件找牌通道总开关;core 通道/P2 分支不受辖)——
-# 有意改参(通道默认开),锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = ('b6f56fb72b40183c42b15e81105b28b2'
-                  '17f6d162097c61d90ba4fcba52c2a1ca')
-# W174/ADR-0371 引擎补完守卫批更新:新增 evolve_engine_completion_enabled
-# (=True,own-gap 修法 A/B 通道总开关;关=回 W170 后行为)——有意改参,
-# 锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = ('b835dcbf8e0c8b9be5fc2e904b219cbe'
-                  'c380a2dd2531c9b5dec7c2e435ce849d')
-# W179/ADR-0372 P1 早期新件买入门批更新:新增 p1_early_gate_enabled
-# (=True)/p1_early_min_missing(=6)/p1_early_round_cap(=1)三字段
-# (双条件窗:缺件密度 × 息档口径;关=回 W174 后行为)——有意改参,
-# 锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = ('dbda54fec1bb165f4a18b2e0cd4dc8ea'
-                  'e5710d92a03a36c8285c0b1c697a0b77')
-# W184/ADR-0373 卖侧唯一体系引擎守卫批更新:新增 sell_sole_engine_
-# guard_enabled(=True,S2 恶化谱系 A/B 通道总开关;关=回 W179 后
-# 行为)——有意改参,锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = ('fcfa610b0496e5f58975b2a82be1b30d'
-                  'd3e11d6bd40dbca9721220f930697c35')
-# W192/ADR-0375 希儿系守卫辖域补全批更新:新增 guard_seele_scope_
-# enabled(=True,希儿系(单卡判据 tier=1)并入卖侧唯一体系引擎守卫
-# 与演进保护集辖域;关=回 W188 后行为)——有意改参,锁同步更新
-# (其余数值字段不变)
-_EXPECTED_HASH = ('1db429c1050915da537c35e6e9cc047b'
-                  '9c75144aa70eed372ea25e3e4921d07f')
-# W194/ADR-0378 P2 谱系三件批更新:新增 levelup_multihit_enabled
-# (=True,[33] 稳态 LevelUp 多击组——辖域 P2+;关=回 W193 后行为)
-# 与 p2_core_firstpiece_enabled(=True,P2 核心件首件同息档门)两
-# 字段——有意改参,锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = ('49b1c3a170e29543d1b606f610008864'
-                  '25cd004bac2f728beec703d7b2957943')
-# W197/ADR-0380 卖侧下界守卫执行点补全批更新:新增 sell_floor_exec_
-# guard_enabled(=True,arbiter 卖候选采纳点复检 + execute_replacement
-# 溢出卖出对 TT 体系件改留场;关=回 W195 后行为)——有意改参,锁同步
-# 更新(其余数值字段不变)
-_EXPECTED_HASH = ('8314847986466986c65ef285bb456647'
-                  '4ddc7e215e87eabfefe3d24c61f9fa9a')
-# W201/ADR-0381 补完修法批更新:新增 engine_complete_distinct_owned
-# (=True,补完缺口 owned 口径 distinct 名单数;关=回 W174 后全羁绊
-# 逐件计数)——有意改参,锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = ('86cf1f1d2a7c8016e776b3e90de27977'
-                  '0da77f3d22717f4944bccd8c6c9d2b97')
-# W202/ADR-0382 补完保护集分级批更新:新增 engine_complete_grade_
-# down(=True,undeploy 候选枯竭且缺口持续 ≥4 轮时按分级序降级换血;
-# 关=回 ADR-0371/0381 后「不硬拆」)——有意改参,锁同步更新
-# (其余数值字段不变)
-_EXPECTED_HASH = ('1be534f9571445ac589e4e45b751dcb2'
-                  'c2157211ee608c85c95ef52f6f8483f7')
-# W227/ADR-0400 P1 末窗承接门批更新:新增 handoff_gate_enabled(=False,
-# 承接门总开关;A/B 裁决默认关,见 ADR-0400)/handoff_gate_min_round(=8,
-# 末窗下界)/handoff_gate_tier_target(=1,承接达标总档位)/handoff_ev_
-# gap_bonus(=5.0,EV 承接缺口项单位值)四字段(设计件 08 §4.2 Phase 1;
-# 开=承接门行为)——有意改参,锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = ('576fc5520257d7ca53d3c5466677b417'
-                  '5cac946c910301fd0f752b43c5767291')
-# W232/ADR-0402 产星通道批更新:新增 filler_star_unit(=0.0,填充件
-# 升星期权分单位值;默认关=A/B 通道保留,ADR-0305 先例)/pair_copy_
-# direction_exempt(=False,同名副本豁免 pair_wants 方向门;与 A 同臂
-# 开)两字段——有意改参,锁同步更新(其余数值字段不变)
-_EXPECTED_HASH = ('9e19c00dd27a472e62f692166770752d'
-                  '449bba586450d4d1bc6a315f9a206702')
-# W238/ADR-0403 承接门 hp 维 boss 投影批更新:新增 handoff_boss_project
-# (=False,投影总开关,与 handoff_gate_enabled 正交;A/B 裁决默认关,见
-# ADR-0403)/handoff_boss_e_damage(=E[boss伤害|板深档] 常数表 {9:29.25,
-# 12:30.35,15:17.5},Δ池 plane=1 boss 桶删失剔除均值)/handoff_boss_
-# e_damage_default(=27.33,缺桶 fallback 全池未删失均值)/handoff_boss_
-# reward_bonus(=2,r8 奖励胜唯一正项)四字段(设计件 09 §3.1 第一步;
-# 开=boss 后投影 hp 喂档位切点)——有意改参,锁同步更新(其余字段不变)
-_EXPECTED_HASH = ('8aa7396660bb0b72bfc33f31a200e749'
-                  '3b2a9daa3b3f5aafce836cdc40dfc5d9')
-# W240/ADR-0404 Δ池 boss 桶键改批更新:handoff_boss_e_damage 重标定
-# (键域 {9:29.25,12:30.35,15:17.5}→{0:27.57},boss 桶键 Σboard→净星深
-# =上场件 Σ(star−1);P1 boss 语料 49 行全落桶 0,旧三桶条件性=键口径
-# 伪影)/handoff_boss_e_damage_default(27.33→27.57,全池未删失均值)
-# 两字段值变(ADR-0403 已知边界②的修复落地,键口径论证见 ADR-0404)
-# ——有意改参,锁同步更新(其余字段不变)
-# W242/ADR-0405 末窗星级定向授权批更新:新增 handoff_star_directed=
-# False(默认关,与 gate/proj 三 flag 正交;零数值常量)——有意加字段,
-# 锁同步更新(其余字段不变)
-# W244/编排者裁决批更新:handoff_boss_e_damage {0:27.57}→{0:34.0}/
-# _default 27.57→34.0——boss Δ 全分布双峰(W244:低伤簇 13.25±1.04/
-# 高伤簇 34.10±1.77,中间零观测),投影口径均值→Q3 保守(防 hp 临界局
-# tier 高估一档=重蹈 W234 缺口)——有意改参,锁同步更新
-# W251/ADR-0408 假设 A 批更新:新增 early_pace_* 五字段(enabled=False
-# 默认关/min 3/max 4/bias 5.0/val_max 0.5)——有意加字段,锁同步更新
-# (其余字段不变)
-# W252/ADR-0409 M-A 批更新:新增 handoff_refresh_directed(False)/
-# directed_refresh_per_round(2)/directed_refresh_game_cap(6)——
-# 与 W251 未提交常量**合并重算**(同一工作树口径;W251 收账若改参
-# 以其批再同步)
-# _EXPECTED_HASH = ('4aed01b80c9fc6445ff3b73cf9af632a204d274dd839cafe0f0a65c1af097443')
-# W257/ADR-0411 承接门 flag 家族清理批更新:删除 handoff_gate_enabled/
-# handoff_boss_project/handoff_star_directed/handoff_refresh_directed
-# 四布尔字段(gate/proj/star 定向/M-A 定向刷新四通道转正为无条件路径,
-# 量级常量保留:handoff_gate_min_round/tier_target/ev_gap_bonus/
-# boss_e_damage 族/directed_refresh_per_round/game_cap 不变)——有意
-# 删字段,锁同步更新(其余字段不变)
-# _EXPECTED_HASH = ('475f84c3d7e9ee0a0fadd67b7b248e4976fc08254a004d00205ed0b8cadb5af5')
-# W288/ADR-0418 gate_min_round 前移批更新:handoff_gate_min_round 8→6
-# (W275 四臂配对 AB 兑换「调常量」映射;core2≥1 进场率 +6.7pt/金面
-# 无信号;落地前置核验=回放漂移仅限 P1 r6+、提前窗买质量反升——
-# 证据链见 ADR-0418)——有意改参,锁同步更新(其余字段不变)
-# _EXPECTED_HASH = ('8233f2820f3a26ed6cfa94cc448b61c4'
-#                   '9f77c21fecece50a431be1fabe12c296')
-# W332b 未成型期姿态批更新:新增 release/换线判据参数族(release_enabled/
-# k_alert/k_linear/k_hp_calibration_grid/blood_margin_low_hp/boss_tax_p75/
-# boss_tax_anchor_group/delta_hp_normal/delta_hp_boss/line_switch_enabled/
-# line_switch_theta/line_switch_debias_delta/line_switch_min_dwell;
-# 符号不稳参数=默认值+标定接口,sim 批网格标定后锁值)——有意加字段,
-# 锁同步更新(既有字段默认值不变)
-# 连胜 EV 地板标定批更新:新增 streak_floor_loss_damage/streak_floor_
-# win_rate 两字段(discipline._streak_floor 标定账,ADR-0356 挂账项;
-# 来源=W324 语料 two_state_model/win_rate_table_injected)——有意加
-# 字段,锁同步更新(既有字段默认值不变)
-# release 活栈消费门批更新:新增 release_spend_gate_enabled 一字段(判据
-# 单一源=decision_v2.posture_release.spend_gate_active;开关语义见
-# registry 字段注释)——有意加字段,锁同步更新(既有字段默认值不变)
-# P2 生存批更新:新增濒死带期望账与存活轮数门字段;其后 C3/C4 重设计、
-# 损血表合一两次字段面重构;最终 C3 濒死带概念定谳清理(删 dying_band_
-# account_enabled;dying_band_high_cost_floor 改名 directed_refresh_high_
-# cost_floor,消费语义不变),字段演进史与裁决见 ADR-0426 增补节
-# (关联 ADR-0429=C4)。清理批有意改字段面,锁同步更新(存活数值字段
-# 不变;现字段面=p2_node_loss_table 单表 + directed_refresh_high_cost_
-# floor + C4 门字段)。
-# W300 press 通道批更新(V-B3 全量 registry 化):新增 press 七字段
-# (press_channel_enabled/press_band_cum_threshold/press_channel_max_level
-# /press_copy_unit/press_copy_round_cap/press_exempt_round_cap/
-# press_core_mirror_bonus;默认全关/中性=零漂移)+ buy_tag_priority 增
-# copy_press + economy/war 放行标签集增 copy_press。设计单一源=
-# .debug/temp/currency_war/w300_dup_ruling/design.md v3 节——有意加
-# 字段,锁同步更新(既有字段默认值不变)。后续 release_spend_gate_enabled
-# 默认值翻转(False→True,开臂,行为面=A/B 验证的 gate 生效),锁再同步。
-# 再后续 press_channel_enabled 默认翻转(False→True,W368 A/B R2 成立开臂),锁再同步。
-# 再后续 P2 损血参数重校批更新:vd_p2_loss 16.0→20.05(P12 收益侧条件败局
-# 伤害;标定源=.debug/temp/currency_war/w353_p2_survival/w354_p2_loss_calib.json
-# p2|normal 桶均值 n=19,删失 hp≤1→偏低估下界;旧值系实测带拍值无标定依据。
-# DP 侧同批重校 cw_horizon.P2_LOSS_SCALE=5.33(无条件口径=条件×(1−p̄),
-# 非 registry 字段,锁在
-# test_cw_w370_p2_loss_recalib.py)——有意改参(校准直接生效),锁同步更新
-# (其余字段不变)。
-# C1 溢余必花定向优先级批更新:新增 c1_directed_spend_enabled 一字段
-# (默认 False=现行为零漂移,A/B 基线臂;辖域=P1 末窗投影安全带
-# d≥emergency_hp 的 FLIP 正交补集,设计单一源=
-# .debug/temp/currency_war/w382_c1_design/DESIGN.md §2/§3;破息分支
-# 不实现,过账判据存档于 registry 注释)——有意加字段,锁同步更新
-# (既有字段默认值不变)。
-# C1 资产臂批更新:新增 c1_asset_channel_enabled(总开关,默认 False=
-# 现行为零漂移)/c1_asset_m_min(0.5,替班计入)/c1_asset_p_slot(0.5,
-# 待标定)/c1_asset_delta_unit(0.03,待标定·主缺口)/c1_asset_l2_loss
-# (12.0,待标定)五字段,设计单一源=
-# .debug/temp/currency_war/w397_s5_asset_channel/DESIGN.md §2/§3——
-# 有意加字段,锁同步更新(既有字段默认值不变)。
-# 两态底座批 A 更新:p_win_p2_by_rung 空表注入三档({0:0.016,1:0.413,
-# 2:0.657}=W346 Δ池分 rung 胜占比,口径勘误与证据等级见 registry 注释)
-# + 新增 rounds_two_state_enabled(=False,两态通道总开关,默认关=零
-# 漂移锚;消费点=cw_line_switch.rounds_alive;开臂 A/B 判据挂账见
-# registry 注释)——有意改字段面,锁同步更新(既有字段默认值不变)。
-# _EXPECTED_HASH = ('e5b356e6f29c18560f72c85b449cef6840081ec7ee7b4808fa3eaa84895d358f')
-# 形态达标三方向批更新:新增 recipe_fence_enabled(默认关)/
-# form_break_sell_blocked_enabled(默认关)/below_floor_spend_gate_enabled
-# (默认关)三布尔字段(设计单一源=
-# .debug/temp/currency_war/w415_form_design/DESIGN.md;决策 why=
-# ADR-0432/0433/0434;开臂 A/B 判据挂账见 registry 字段注释)——
-# 有意加字段,锁同步更新(既有字段默认值不变)。
-# copy_press 评分路由定谳清理批更新(ADR-0427 增补节,策略开关生命周期
-# 第 4 态):删除 press_copy_unit/press_core_mirror_bonus 两字段(生产
-# 默认 0.0 恒零 + 生成域被上游臂截流至近空,无观测支点);另清 war_tags
-# 重复字段定义(语义正确份保留,字段面无变化)——有意删字段,锁同步
-# 更新(其余字段不变)。
-# boss 税 p75 位面锚预埋批更新:新增 boss_tax_p75_by_plane 一字段
-# ({1: 34.0, 2: 34.0},结构预埋不激活:plane1=现值零漂移,plane2 槽位
-# 就位但默认仍取现值;P2 sim 观测真值与激活挂账见 registry 字段注释;
-# 消费点=decision_v2.filters 投影安全带取数行,锁在
-# test_cw_boss_tax_p75_by_plane.py)——有意加字段,锁同步更新
-# (既有字段默认值不变)。
-#: ADR-0437 同名牌集中度批更新:新增 dup_concentration_enabled
-#: (=False,默认关零漂移;行为锁 test_cw_dup_concentration)
-_EXPECTED_HASH = ('f77552aad2ae163d45f1ab88724093bdf836698b4ceb520c2c09f81b8173dbed')
-# W436/ADR-0438 非正分门 merge 完成豁免批更新:新增 merge_completion_
-# exempt(行为锁 test_cw_w436_merge_exempt)与 copy_swap_target_exempt
-# 挂账注释更新——初版两开关默认关零漂移(hash 37db42bf…);A/B 兑现后
-# 开臂翻默认:merge_completion_exempt=True/copy_swap_target_exempt=True
-# (开臂判据与数字见 registry 注释+ADR-0438 验证节)——有意翻默认,
-# 锁同步更新(其余字段不变)。
-# W443 批 C(W370 清偿终站/ADR-0440)更新:p2_node_loss_table 覆写 W375
-# 无条件期望三档(10.16/12.00/15.50),新增 p2_cond_loss_table(W375 条件
-# 败面 12.77/13.33/15.50,两态决策层幅度源)与 p2_loss_calib_version=1
-# (P2 损血标定家族版本披露锚)——有意重标定+口径定稿,锁同步更新
-# (其余字段不变)。
-# ADR-0437 定谳清理批更新(策略开关生命周期终态):删除
-# dup_concentration_enabled 字段与 filters.dup_concentration_active
-# (开臂前置「散买挤掉第三张」已被 ADR-0438 merge 完成豁免消除,ex_dup
-# 复测零独立行为面)——有意删字段,锁同步更新(其余字段不变;行为锁
-# test_cw_dup_concentration 一并删除)。
-# 过渡收敛链定谳删除批更新(ADR-0442 rejected,W474 审计终裁收窄范围):
-# 删除 transition_focus_enabled/transition_focus_buy_prior 两字段(收敛
-# 载体+三层贯彻删除;成本裁决措辞=功效 37.7% 效应真值未排除+输入缺失为
-# 未评估非不可实现,详见 ADR 删除裁决段);framework_startup_v2_enabled
-# 保留休眠(dv 路径 transition_framework 唯一定期写入者+复活种子基建,
-# 默认关零漂移不变);行为锁 test_cw_transition_focus 删除、
-# test_cw_fw_startup 保留——有意删两字段,锁同步更新(其余字段不变)。
-# _EXPECTED_HASH = ('a9bb1c5544d7468f9d8d279de4c6f171a67370ef0b020fd195f0d9c5f425de80')
-# c1 系开关定谳批(ADR-0443)重锚:registry 破息分支存档注释段改写为
-# 定谳注记(filters docstring 同步指向 ADR)——注释级改动,字段面零
-# 变化,全字段 hash 重算与上一锚逐位一致,锁值不变,本条仅记重锚缘由。
-# _EXPECTED_HASH = ('ea07c24bf248fdd0251a9d5ed3a4849a308cafe7a6f36d2572d727c8b9d69ff5')
-# c1_asset 资产臂定谳清理批更新(ADR-0444,策略开关生命周期终态):删除
-# c1_asset_channel_enabled/c1_asset_m_min/c1_asset_p_slot/c1_asset_delta_unit/
-# c1_asset_l2_loss 五字段与 filters 资产臂谓词(_c1_asset_tables/
-# _c1_asset_m_eff)——开臂前置触发面实测为零(sim 300 局 C1 辖域 445 帧
-# 上意向从不锁线,m 表结构性无定义,通道构造性恒不激活;三「待标定」量
-# 永无标定数据源),registry 留定谳注记,行为锁 test_cw_c1_directed_spend
-# 资产臂节一并删除——有意删字段,锁同步更新(其余字段不变)。
-_EXPECTED_HASH = ('ea0c58e50df0c21a482d85cb74c11fb8fcf7855628506e366de6b66b6f2b21f9')
+#: 字段面期望表:字段名 → (类型注解串, 归一化默认值)。
+#: 归一化口径见 _norm(集合→排序 list;tuple 保序;dict 键转 str 排序)。
+#: 生成方式:对 DEFAULT_REGISTRY 现值按本表同法归一后逐字段登记;
+#: 任何字段面变化(增/删/改默认/改类型)必须随批显式更新本表条目。
+#: 字段语义(为何是这个默认)单一源 = registry 字段注释与各批 ADR,
+#: 本表不复制注释,只钉结构与值。
+_EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
+    # ===== 层1:候选生成 =====
+    'buy_tag_priority': ('tuple[str, ...]', [
+        'line_carry', 'line_opportunistic', 'bridge_core',
+        'engine_seed', 'plugin', 'pair', 'copy', 'copy_press',
+        'bond_fallback', 'carry_gate']),
+    'sell_tag_priority': ('tuple[str, ...]', [
+        'off_target', 'for_gold', 'free_bench']),
+    'deploy_top_k': ('int', 3),
+    'deploy_sort_key': ('str', 'cw_deploy_logic_fence'),
+    'sell_top_k': ('int', 2),
+    'copies_cap': ('int', 3),
+    'copy_swap_target_exempt': ('bool', True),
+    'merge_completion_exempt': ('bool', True),
+    'bond_fallback_max_cost': ('int', 2),
+    'bond_fallback_min_round': ('int', 3),
+    'carry_gate_max_round': ('int', 7),
+    # ===== 层4 补偿趟(W52/ADR-0326)=====
+    'remedy_buy_tags': ('frozenset[str]', frozenset({
+        'line_carry', 'line_opportunistic', 'bridge_core',
+        'engine_seed', 'plugin', 'carry_gate'})),
+    'remedy_min_score': ('float', 0.5),
+    'remedy_alarm_refresh': ('bool', True),
+    # ===== S5 统一卖件弱序(W52/ADR-0327)=====
+    'remeet_window_rounds': ('dict[int, int]', {
+        '1': 11, '2': 25, '3': 40, '4': 60, '5': 120}),
+    'through_rate': ('dict[int, float]', {
+        '1': 0.2, '2': 0.2, '3': 0.15, '4': 0.12, '5': 0.1}),
+    'sell_key_weight_scale': ('float', 1.0),
+    # ===== 层2:硬过滤链 =====
+    'filter_chain_order': ('tuple[str, ...]', ['emergency', 'mode']),
+    'emergency_tags': ('frozenset[str]', frozenset({
+        'line_carry', 'line_opportunistic', 'bridge_core',
+        'engine_seed', 'plugin', 'carry_gate', 'off_target',
+        'free_bench', 'deploy', 'for_gold', 'levelup'})),
+    'economy_tags': ('frozenset[str]', frozenset({
+        'line_carry', 'line_opportunistic', 'bridge_core',
+        'engine_seed', 'plugin', 'pair', 'copy', 'copy_press',
+        'carry_gate', 'bond_fallback', 'off_target', 'for_gold',
+        'free_bench', 'levelup', 'refresh', 'deploy'})),
+    'war_tags': ('frozenset[str]', frozenset({
+        'line_carry', 'line_opportunistic', 'bridge_core',
+        'engine_seed', 'plugin', 'pair', 'copy', 'copy_press',
+        'bond_fallback', 'carry_gate', 'off_target', 'for_gold',
+        'free_bench', 'levelup', 'deploy', 'refresh'})),
+    'emergency_hp': ('int', 25),
+    'crisis_hoard_gold': ('int', 40),
+    # ===== 成型停手纪律(ADR-0343)=====
+    'formed_stop_enabled': ('bool', True),
+    'formed_stop_min_round': ('int', 7),
+    # ===== 相位观测与授权(W119/ADR-0347)=====
+    'phase_fallback_min_round': ('int', 5),
+    'phase_fallback_min_engines': ('int', 2),
+    'form_floor': ('int', 20),
+    'boss_window_fallback_round': ('int', 9),
+    'piggy_refresh_round_cap': ('int', 1),
+    # ===== 层3:板面查表评分 =====
+    'rung_value': ('dict[int, float]', {'0': 0.0, '1': 1.4, '2': 3.0}),
+    'h3_win_rate': ('dict[int, float]', {
+        '0': 0.139, '1': 0.416, '2': 0.778}),
+    'rounds_left_est': ('float', 5.0),
+    'battles_left_est': ('float', 5.0),
+    'expected_battle_loss': ('float', 10.0),
+    'hp_to_gold': ('float', 0.5),
+    'interest_cap': ('int', 5),
+    'interest_rounds': ('float', 5.0),
+    'rung_frac_per_recipe_tier': ('float', 0.3),
+    'piggy_refresh_ev': ('float', 2.5),
+    'interest_recovery_rounds': ('float', 3.0),
+    # ===== P2 段 V_D(W154/ADR-0361)=====
+    'vd_p2_enabled': ('bool', True),
+    'vd_p1_loss_intercept': ('float', 11.32),
+    'vd_p1_loss_slope_rung': ('float', -0.37),
+    'streak_floor_loss_damage': ('dict[str, tuple[float, float]]', {
+        'encounter': [24.32, -4.53], 'boss': [26.71, 0.0]}),
+    'streak_floor_win_rate': ('dict[str, dict[int, float]]', {
+        'battle': {'0': 0.009, '1': 0.356, '2': 0.315},
+        'encounter': {'0': 0.038, '1': 0.026, '2': 0.264},
+        'boss': {'0': 0.077, '1': 0.027, '2': 0.187}}),
+    'vd_p2_loss': ('float', 20.05),
+    'vd_p2_recovery_rounds': ('float', 2.31),
+    'vd_p2_liquidity_rho': ('float', 0.0),
+    'vd_p1_pair_enabled': ('bool', True),
+    'depth_unit_value': ('float', 2.0),
+    'level_unit_value': ('float', 1.0),
+    'target_hold_value': ('float', 3.0),
+    'target_hold_base': ('int', 9),
+    'bench_form_weight': ('float', 0.35),
+    'target_hold_cap_frac': ('float', 0.8),
+    'engine_frac_unit': ('float', 1.0),
+    'core_star_unit': ('float', 3.0),
+    'merge_progress_unit': ('float', 3.0),
+    'filler_star_unit': ('float', 0.0),
+    'pair_copy_direction_exempt': ('bool', False),
+    'off_target_sell_bias': ('float', 0.5),
+    'crisis_buy_bias': ('float', 1.0),
+    'crisis_buy_tags': ('frozenset[str]', frozenset({
+        'line_carry', 'line_opportunistic', 'bridge_core',
+        'engine_seed', 'plugin', 'carry_gate'})),
+    'goldrich_buy_bias': ('float', 0.0),
+    'goldrich_min_gold': ('int', 28),
+    'goldrich_buy_tags': ('frozenset[str]', frozenset({
+        'engine_seed', 'pair', 'copy', 'bridge_core'})),
+    'forming_bias': ('float', 5.0),
+    'forming_bias_val_max': ('float', 0.5),
+    'engine_affinity_enabled': ('bool', True),
+    # ===== W150/ADR-0359 买侧通道锁定目标约束 =====
+    'buy_lock_constraint_enabled': ('bool', True),
+    'off_lock_buy_tags': ('frozenset[str]', frozenset({
+        'line_opportunistic', 'bond_fallback'})),
+    'off_lock_buy_penalty': ('float', 3.0),
+    'off_lock_final_fence_enabled': ('bool', True),
+    # ===== W155/ADR-0361 evolve 换血保护 =====
+    'evolve_lock_constraint_enabled': ('bool', True),
+    'evolve_off_lock_penalty': ('float', 3.0),
+    # ===== W160/ADR-0363 引擎丢失修法 =====
+    'evolve_engine_guard_enabled': ('bool', True),
+    'evolve_final_freeze_enabled': ('bool', True),
+    # ===== W174/ADR-0371 引擎补完守卫 =====
+    'evolve_engine_completion_enabled': ('bool', True),
+    'engine_complete_distinct_owned': ('bool', True),
+    'engine_complete_grade_down': ('bool', True),
+    # ===== W179/ADR-0372 P1 早期新件买入门 =====
+    'p1_early_gate_enabled': ('bool', True),
+    'p1_early_min_missing': ('int', 6),
+    'p1_early_round_cap': ('int', 1),
+    # ===== W184/ADR-0373 卖侧唯一体系引擎守卫 =====
+    'sell_sole_engine_guard_enabled': ('bool', True),
+    # ===== W192/ADR-0375 希儿系守卫辖域 =====
+    'guard_seele_scope_enabled': ('bool', True),
+    # ===== W197/ADR-0380 卖侧下界守卫执行点 =====
+    'sell_floor_exec_guard_enabled': ('bool', True),
+    # ===== W194/ADR-0378 多击组 + P2 核心首件门 =====
+    'levelup_multihit_enabled': ('bool', True),
+    'p2_core_firstpiece_enabled': ('bool', True),
+    # ===== W300 press 通道 =====
+    'press_channel_enabled': ('bool', True),
+    'press_band_cum_threshold': ('float', 0.5),
+    'press_channel_max_level': ('int', 6),
+    'press_copy_round_cap': ('int', 1),
+    'press_exempt_round_cap': ('int', 2),
+    # ===== P1 末窗承接门(ADR-0400/0411/0418)=====
+    'handoff_gate_min_round': ('int', 6),
+    'handoff_gate_tier_target': ('int', 1),
+    'handoff_ev_gap_bonus': ('float', 5.0),
+    'handoff_boss_e_damage': ('dict[int, float]', {'0': 34.0}),
+    'handoff_boss_e_damage_default': ('float', 34.0),
+    'handoff_boss_reward_bonus': ('int', 2),
+    # ===== W252/ADR-0409 M-A 定向刷新 =====
+    'directed_refresh_per_round': ('int', 2),
+    'directed_refresh_game_cap': ('int', 6),
+    # ===== W251/ADR-0408 投资节奏前置 =====
+    'early_pace_enabled': ('bool', False),
+    'early_pace_min_round': ('int', 3),
+    'early_pace_max_round': ('int', 4),
+    'early_pace_bias': ('float', 5.0),
+    'early_pace_val_max': ('float', 0.5),
+    # ===== W332b 泄息通道与换线判据 =====
+    'release_enabled': ('bool', True),
+    'k_alert': ('float', 3.0),
+    'k_linear': ('float', 1.0),
+    'k_hp_calibration_grid': ('tuple[float, ...]', [
+        1.0, 2.0, 3.0, 5.0]),
+    'blood_margin_low_hp': ('int', 40),
+    'boss_tax_p75': ('float', 34.0),
+    'boss_tax_anchor_group': ('tuple[float, float, float]', [
+        32.0, 34.0, 36.0]),
+    'boss_tax_p75_by_plane': ('dict[int, float]', {
+        '1': 34.0, '2': 34.0}),
+    'delta_hp_normal': ('float', 1.96),
+    'delta_hp_boss': ('float', 4.3),
+    'line_switch_enabled': ('bool', True),
+    'line_switch_theta': ('float', 1.0),
+    'line_switch_debias_delta': ('float', 0.15),
+    'line_switch_min_dwell': ('int', 2),
+    'release_spend_gate_enabled': ('bool', True),
+    # ===== P2 生存批(C3/C4)=====
+    'p2_node_loss_table': ('dict[str, float]', {
+        'normal': 10.16, 'encounter': 12.00, 'boss': 15.50,
+        'reward': 0.0}),
+    'p2_cond_loss_table': ('dict[str, float]', {
+        'normal': 12.77, 'encounter': 13.33, 'boss': 15.50,
+        'reward': 0.0}),
+    'p2_loss_calib_version': ('int', 1),
+    'directed_refresh_high_cost_floor': ('int', 4),
+    'line_switch_survival_gate_enabled': ('bool', False),
+    'rounds_two_state_enabled': ('bool', False),
+    'line_switch_survival_margin': ('float', 1.0),
+    'p_win_p2_by_rung': ('dict[int, float]', {
+        '0': 0.016, '1': 0.413, '2': 0.657}),
+    'encounter_heal_est': ('float', 0.0),
+    'line_switch_boss_ci_halfwidth': ('float', 1.53),
+    # ===== R3 撤销出口①意图证据 =====
+    'revoke_miss_tolerance_eps': ('float', 0.05),
+    'revoke_evidence_min_thickness': ('float', 5.0),
+    # ===== C1 溢余必花定向优先级 =====
+    'c1_directed_spend_enabled': ('bool', False),
+    # ===== 形态达标三方向 =====
+    'recipe_fence_enabled': ('bool', False),
+    'form_break_sell_blocked_enabled': ('bool', False),
+    'below_floor_spend_gate_enabled': ('bool', False),
+    # ===== 过渡框架启动重接线(休眠保留,复活条件见 ADR-0442)=====
+    'framework_startup_v2_enabled': ('bool', False),
+    # ===== 层4:预算仲裁 =====
+    'constraints': ('tuple[str, ...]', [
+        'gold_floor', 'interest_rule', 'bench_capacity', 'copies_cap',
+        'same_round_mutex', 'boss_levelup_ban', 'deploy_cap']),
+    'interest_floor': ('int', 50),
+    'war_floor': ('int', 30),
+    'rebirth_floor': ('int', 20),
+    'boss_floor': ('int', 10),
+    'boss_round_node_types': ('frozenset[str]', frozenset({'boss'})),
+    'level_max': ('int', 10),
+    'bench_capacity': ('int', 9),
+    # ===== 完备性审计表 =====
+    'audit_matrix': (
+        'dict[tuple[str, str], tuple[str, ...] | tuple[str, str]]', {
+            "('gold', 'boss')": ['gold_floor', 'interest_rule'],
+            "('gold', 'emergency')": ['gold_floor'],
+            "('gold', 'mode')": ['gold_floor', 'interest_rule'],
+            "('bench', 'boss')": ['bench_capacity'],
+            "('bench', 'emergency')": ['bench_capacity'],
+            "('bench', 'mode')": ['bench_capacity'],
+            "('slot', 'boss')": ['boss_levelup_ban'],
+            "('slot', 'emergency')": ['bench_capacity'],
+            "('slot', 'mode')": ['deploy_cap'],
+            "('round_mutex', 'boss')": ['same_round_mutex'],
+            "('round_mutex', 'emergency')": ['same_round_mutex'],
+            "('round_mutex', 'mode')": ['same_round_mutex'],
+        }),
+    'audit_resource_dims': ('tuple[str, ...]', [
+        'gold', 'bench', 'slot', 'round_mutex']),
+    'audit_round_state_dims': ('tuple[str, ...]', [
+        'boss', 'emergency', 'mode']),
+}
+
+#: registry 模块级标定常量期望表(名字 → 归一化值;与字段同属标定面,
+#: 语义见各常量注释,消费方 cw_reconcile)。
+_EXPECTED_MODULE_CONSTANTS: dict[str, object] = {
+    'HP_LOSS_CAP_P100_BY_NODE': {
+        '普通战斗': 23, '遭遇': 42, 'boss': 39},
+    'HP_ZERO_LOSS_NODE_TYPES': frozenset({'奖励', '补给'}),
+    'HP_SUSPECT_CONFIRM_FRAMES': 2,
+    'HP_SUSPECT_WINDOW_NODES': 2,
+}
 
 
 def _card(name: str, faction: str = '仙舟罗浮', cost: int = 1) -> object:
@@ -375,6 +308,20 @@ def _state(**kw) -> GameState:
     return GameState(**base)
 
 
+def _norm(v):
+    """可比较归一(集合→排序 list;tuple 保序;dict 键转 str 后按键排序)。
+
+    期望表条目按同一口径书写,两侧经 _norm 后 == 比较。"""
+    if isinstance(v, dict):
+        return {str(k): _norm(x)
+                for k, x in sorted(v.items(), key=lambda t: str(t[0]))}
+    if isinstance(v, (set, frozenset)):
+        return sorted(map(str, v))
+    if isinstance(v, tuple):
+        return [_norm(x) for x in v]
+    return v
+
+
 def test_calibration_snapshot_values() -> None:
     """标定存活参快照(refresh 附庸闸十一参已随 W126/ADR-0349 删除;
     改动须重标定+更新本锁)。"""
@@ -383,28 +330,39 @@ def test_calibration_snapshot_values() -> None:
     assert DEFAULT_REGISTRY.piggy_refresh_ev == 2.5   # 扑满凑伤害 D 专属
 
 
-def _norm(v):
-    """可 JSON 化归一(tuple 键/集合→排序字符串;与 hash 计算同源)。"""
-    if isinstance(v, dict):
-        return {str(k): _norm(x)
-                for k, x in sorted(v.items(), key=lambda t: str(t[0]))}
-    if isinstance(v, (set, frozenset)):
-        return sorted(map(str, v))
-    if isinstance(v, tuple):
-        return list(map(_norm, v))
-    return v
+def test_calibration_registry_field_surface() -> None:
+    """registry 字段面锁:字段集合 + 类型注解 + 默认值语义逐字段比对。
+
+    红锁信息直接点名差异字段(新增/缺失/类型/默认值),不再报不可
+    读的 hash 差。若是有意改字段面——随批更新 _EXPECTED_FIELDS 对应
+    条目(新字段登记语义注释落点=registry 字段注释);若是有意改
+    默认值——重标定(ADR-0293 流程)并更新条目值。"""
+    actual = {f.name: f for f in dataclasses.fields(DecisionV2Registry)}
+    expected_names = set(_EXPECTED_FIELDS)
+    added = actual.keys() - expected_names
+    removed = expected_names - actual.keys()
+    assert not added and not removed, (
+        f'registry 字段面漂移:新增 {sorted(added)} / 删除 {sorted(removed)};'
+        '新字段须随批在 _EXPECTED_FIELDS 登记语义,删字段随批移除条目')
+    for name, (want_type, want_default) in _EXPECTED_FIELDS.items():
+        f = actual[name]
+        assert f.type == want_type, (
+            f'registry 字段类型漂移:{name}: {f.type} != {want_type}')
+        got = _norm(getattr(DEFAULT_REGISTRY, name))
+        assert got == _norm(want_default), (
+            f'registry 默认值漂移:{name}: {got!r} != {want_default!r};'
+            '有意改参须重标定并更新期望表')
 
 
-def test_calibration_registry_hash() -> None:
-    """registry 全字段 hash 锁:任何字段漂移即红(防静默改参)。"""
-    payload = {f: _norm(getattr(DEFAULT_REGISTRY, f))
-               for f in DecisionV2Registry.__dataclass_fields__}
-    digest = hashlib.sha256(
-        json.dumps(payload, sort_keys=True,
-                   ensure_ascii=False).encode('utf-8')).hexdigest()
-    assert digest == _EXPECTED_HASH, (
-        f'registry 漂移:hash {digest} != {_EXPECTED_HASH};'
-        '若是有意改参——重标定(ADR-0293 流程)并更新本锁')
+def test_calibration_module_constants() -> None:
+    """registry 模块级标定常量锁(hp 对账下行守卫标定面,消费方
+    cw_reconcile.reconcile_hp)。语义同字段面锁:增删/改值=红。"""
+    for name, want in _EXPECTED_MODULE_CONSTANTS.items():
+        assert hasattr(registry_mod, name), (
+            f'registry 模块常量缺失:{name}(cw_reconcile 消费面)')
+        got = _norm(getattr(registry_mod, name))
+        assert got == _norm(want), (
+            f'registry 模块常量漂移:{name}: {got!r} != {want!r}')
 
 
 def test_refresh_no_target_context_negative() -> None:

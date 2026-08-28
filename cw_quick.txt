@@ -135,7 +135,7 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_r404_ignition_order.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r404b_dup_dedup.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r405_component_reserve.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r409_delta_pool_starvation_guard.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_r410_bench_pop_semantics.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_r410_bench_units_conservation.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r411_pool_no_cost_truncation.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r420_shop_slot_semantics.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_review_income_slotfix_locks.py

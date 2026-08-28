@@ -1,13 +1,16 @@
-"""r410/ADR-0271 锁:sim 上阵即 pop(生产 bench 语义对齐)。
+"""r410 单位守恒与板面聚合锁(bench 表示语义演进后的现行版)。
 
-批⑦ F1(ADR-0219 第四次命中):旧代理 deployed=bench 切片不弹出,
-bench 恒含已上阵件(94.6% 轮 bench≥9 虚高、极大 25),席位/容量/
-卖出类门全读假数据。修正后锁三条:
-- 单位守恒:每轮 len(bench)+len(deployed) == 开局4 + 累计买 −
+历史:批⑦ F1(ADR-0219 第四次命中)曾修「旧代理 deployed=bench
+切片不弹出、bench 恒含已上阵件」(席位/容量/卖出类门读假数据);
+该「上阵即 pop」表示已被 **ADR-0316 槽位模型**取代——bench 定长
+9 槽、空槽 None、上阵/卖出只置槽位不伸缩列表,本锁随之按现行
+表示续锁(断言本体在槽位模型下逐位成立):
+
+- 单位守恒:每轮 len(bench)+len(deployed) == 开局基线 + 累计买 −
   累计卖 − 2×累计合并(ADR-0276 起 3合1 merge 接入,每次合并
-  净减 2 单位;旧代理双重计数,此守恒必破);
-- deployed 跨轮累积单调不减(生产跟踪态;旧代理每轮从零重算);
-- board = deployed 主阵营聚合(生产 DeployMove 口径)。
+  净减 2 单位;ADR-0336 起 tx 整档替换轮重置守恒基线);
+- deployed 跨轮累积单调不减(生产跟踪态;tx 整档替换合法缩减除外);
+- board = deployed 羁绊聚合(生产 DeployMove 口径,ADR-0312 W50)。
 """
 from __future__ import annotations
 
@@ -19,8 +22,9 @@ from sr_od.application.currency_war.cw_sim import (
 from sr_od.application.currency_war.cw_state import BenchChar
 
 
-def test_units_conservation_bench_excludes_deployed() -> None:
-    """上阵即 pop + 3合1 合并:bench+deployed+2×merges 守恒。
+def test_units_conservation_across_bench_deployed() -> None:
+    """单位守恒(bench+deployed+2×merges;ADR-0316 槽位模型下
+    bench 只含未上阵占用槽):
 
     (ADR-0336 适配:decision_v2 的 CompTransaction 整档替换事务
     内部含 fill(shop 源买新件)/ sell(卖件),账本不落 tx 明细
@@ -51,7 +55,7 @@ def test_units_conservation_bench_excludes_deployed() -> None:
             assert n_bench + n_dep == expect, (
                 f'seed{seed} r{row["round_num"]}: bench{n_bench}'
                 f'+deployed{n_dep} != {expect}'
-                f'(上阵未 pop / 双重计数 / 合并计数漂移)')
+                f'(单位守恒破坏:bench 表示 / 双重计数 / 合并计数漂移)')
 
 
 def test_deployed_accumulates_monotonic() -> None:
