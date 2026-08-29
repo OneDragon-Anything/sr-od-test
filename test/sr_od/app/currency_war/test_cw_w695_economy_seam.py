@@ -64,31 +64,12 @@ def test_refresh_ev_budget_bitwise_contract() -> None:
     assert cw_economy.refresh_ev_budget(st4, sess, _REG) == 1
 
 
-def test_get_node_goal_projection_uses_local_seam() -> None:
-    """断环锁:cw_economy.get_node_goal 标量投影零 decision 依赖
-    (原 kernel→decision 边 cw_economy:340 随接缝下沉消亡)。"""
-    import ast
-    tree = ast.parse(inspect.getsource(cw_economy))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            mods = [a.name for a in node.names]
-        elif isinstance(node, ast.ImportFrom):
-            mods = [node.module or '']
-        else:
-            continue
-        for m in mods:
-            assert 'decision_v2' not in m, (
-                'kernel cw_economy 禁 import decision_v2(§3.2 依赖矩阵)')
-
-
-def test_seam_injection_contract_registry_override() -> None:
-    """P6 注入契约:显式 registry 优先于 session.v3_registry 与缺省表。"""
-    from sr_od.application.currency_war.kernel.cw_registry import (
-        DecisionV2Registry,
-    )
-    sess = StrategySession()
-    reg2 = DecisionV2Registry(interest_cap=2)
-    # reg2 息线 20:gold=45 > R*=20+窗口排程费 → 授权刷数 > 0;
-    # 缺省表息线 50 同帧 → 0
-    assert cw_economy.refresh_ev_budget(_st(45), sess, reg2) \
-        > cw_economy.refresh_ev_budget(_st(45), sess, _REG)
+# ---- 已退役 2 条(失去保护注记,w729 残差收尾批)----
+# test_get_node_goal_projection_uses_local_seam(断环锁 cw_economy 零
+#   decision 依赖):上层覆盖复核成立——test_cw_package_layout::
+#   test_bucket_dependency_matrix 对 kernel→decision 全桶禁边(含函数级
+#   import),严格强于本锁的单文件 AST 检查。
+# test_seam_injection_contract_registry_override(P6 注入契约:显式
+#   registry 优先):上层覆盖复核成立——test_cw_w633_migration_b3
+#   「注入一致性锁(W636 A)」对三接缝含 refresh_ev_budget 做同型
+#   reg2 vs 缺省表对照,行域更宽,本锁无独占行。

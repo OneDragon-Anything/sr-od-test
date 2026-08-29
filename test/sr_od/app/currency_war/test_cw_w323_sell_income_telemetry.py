@@ -152,7 +152,12 @@ def test_economy_marks_unknown_when_delta_none(tmp_path) -> None:
 
 def test_economy_falls_back_to_action_income_legacy(tmp_path) -> None:
     """旧数据/sim 局(无 exogenous 行):回退 actions 的 SellBench.income 口径
-    (W69 锁 3 语义不回归,且不误标卖回 `?`)。"""
+    (W69 锁 3 语义不回归,且不误标卖回 `?`)。
+
+    (W707 对账瘦身·w729 收尾执行:原 test_cw_w69_sell_channel 锁 3 并入本锁
+    ——SellBench.income 序列化→decisions 行→query_economy「卖+NN」全链
+    由本锁的 record_decision(income=6) 行程覆盖,单一保留点在此。)
+    """
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     rec.start_run('w323c', 'A8')
     rec.record_decision('w323c', 'A8',

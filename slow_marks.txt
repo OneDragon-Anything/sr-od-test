@@ -35,3 +35,10 @@ test_currency_war_entry_flow.py::TestStartCurrencyWarMatchFlow::test_new_match_a
 test_cw_back_layout.py::test_cv_stable_new_grid_confirmed
 test_cw_back_layout.py::test_pepe_board_coverage_s246
 test_cw_back_layout.py::test_read_deployed_chars_formula_driven
+# —— W707 对账瘦身·清单三延期项复测准入(w729 收尾批,实测 --durations)——
+# adr0283 batch_discloses_guard_count 2.80s call;b36 mutation_kill 复测 0.01s
+# 出桶不录入;adr0286/adr0306/battle_rung 边缘项复测 0.04-1.13s 低于阈不录入;
+# capacity_guard 门槛由共享 sim 装载 setup 抬过 2s(2.36s setup+0.02s call),随批录入
+test_cw_adr0283_sim_bench_guard.py::test_sim_batch_discloses_guard_count
+test_cw_adr0283_sim_bench_guard.py::test_sim_bench_capacity_guard
+test_cw_delta_pool_snapshot.py::test_batch_report_carries_pool_fingerprint
