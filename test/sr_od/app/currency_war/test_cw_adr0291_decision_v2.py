@@ -291,9 +291,9 @@ def test_active_floor_tiered_economy() -> None:
     s2 = StrategySession()
     s2.v3_intention = IntentionState(phase='locked', locked_comp='DOT队')
     assert _active_floor(_state(gold=40, **_f), s2, _REG) == \
-        _REG.interest_floor
+        _REG.interest_floor()
     assert _active_floor(_state(gold=55, **_f), s2, _REG) == \
-        _REG.interest_floor
+        _REG.interest_floor()
 
 
 def test_audit_report_full_matrix() -> None:

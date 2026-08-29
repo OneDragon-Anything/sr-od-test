@@ -99,7 +99,9 @@ def test_assemble_projects_direction_and_budget_fields():
     turn = assemble(_snapshot(), sess)
     d, b = turn.direction, turn.budget
     # 方向投影:字段齐(蓝图 §2 清单)+ R2 读口非空
-    assert isinstance(d.committed, bool) and d.committed is True
+    # 批 2 语义换源:缺供给帧(ist 无 + plane<2)= 保守侧 False(D2)
+    assert isinstance(d.committed, bool) and d.committed is False
+    assert d.hoard_readable is True   # D1:正常帧可信位为真
     assert d.fallback_comp != ''
     assert isinstance(d.hoard, frozenset)
     assert set(d.gates) == {'P1_FINAL_LINE_GATE', 'P1_RECIPE_LOCK',
@@ -116,10 +118,28 @@ def test_assemble_projects_direction_and_budget_fields():
 # ----------------------------------------------------- 2. R1 committed 读端
 
 def test_committed_from_semantics():
+    """批 2 语义换源(方向层接管):权威 = cw_intention 派生谓词。
+
+    - 缺供给帧(ist 无 + plane<2)→ False 保守侧(D2,禁缺省 True);
+    - ist.phase=='locked' / p1_pair 非空 / plane≥2 → True(权威序);
+    - 旧 session 双轨字段写入不再影响读端(字段读点已归零)。
+    """
     sess = StrategySession()
-    assert committed_from(sess) is True          # 默认非双轨 = 已定型
-    sess.dual_track_phase = True
-    assert committed_from(sess) is False         # 双轨期 = 未定型
+    assert committed_from(sess) is False         # 缺供给 = 保守双轨
+    from sr_od.application.currency_war.cw_intention import IntentionState
+    sess.v3_intention = IntentionState()
+    assert committed_from(sess) is False         # ist 未锁,仍双轨
+    sess.v3_intention.phase = 'locked'
+    assert committed_from(sess) is True          # 锁线 → 已定型
+    sess2 = StrategySession()
+    sess2.v3_intention = IntentionState(p1_pair=('仙舟', '列车'))
+    assert committed_from(sess2) is True         # 配方锁立 → 已定型
+    st = _mk_state()
+    st.plane = 2
+    assert committed_from(StrategySession(), st) is True   # P2 恒定型
+    sess3 = StrategySession()
+    sess3.dual_track_phase = True                # 旧字段写端:不再被读
+    assert committed_from(sess3) is False
 
 
 def test_grep_guard_session_dual_track_read_points_isolated():
@@ -133,49 +153,70 @@ def test_grep_guard_session_dual_track_read_points_isolated():
       (default_strategy 写端 / cw_replay 离线恢复写端不受扰;
       state 字段读如 last_state.dual_track_phase 不属 session 读,不禁)。
     """
-    pat_getattr, pat_read = _guard_patterns()
+    pat_getattr, pat_read, pat_last_state = _guard_patterns()
     offenders: dict[str, int] = {}
     for path in _SRC.rglob('*.py'):
         text = path.read_text(encoding='utf-8')
-        hits = len(pat_getattr.findall(text)) + len(pat_read.findall(text))
+        hits = (len(pat_getattr.findall(text)) + len(pat_read.findall(text))
+                + len(pat_last_state.findall(text)))
         if hits:
             offenders[path.name] = hits
-    assert set(offenders) == {'prep_brain.py'}, offenders
+    # 批 2(R1 终局):committed_from 换源 cw_intention 权威派生后,session
+    # 侧双轨字段读点 = **全仓归零**(连唯一读端也不再读旧字段);变异
+    # 自检(test_grep_guard_mutation_self_check)钉住守卫仍抓得住历史原形。
+    assert not offenders, offenders
 
 
 def _guard_patterns():
-    """守卫模式单一源(守卫测试与变异自检共用,防两处漂移)。"""
+    """守卫模式单一源(守卫测试与变异自检共用,防两处漂移)。
+
+    W629-R1 扩口:守卫辖域从 session 直读扩至 **state/last_state 通道**
+    (equip_all L406 裸直读 last_state.dual_track_phase 曾在旧措辞之外,
+    W623 D3 活证据)——``last_state.dual_track_phase`` 读(非赋值)全禁。
+    一般 ``state.dual_track_phase`` 读仍是老栈消费面(装配边界权威回填,
+    批 4 随老栈退役归零),不在本守卫辖。
+    """
     import re
     pat_getattr = re.compile(
         r"getattr\(\s*[\w.]*sess\w*\s*,\s*'dual_track_phase'")
     pat_read = re.compile(r"\b[\w.]*sess\w*\.dual_track_phase\b(?!\s*=)")
-    return pat_getattr, pat_read
+    pat_last_state = re.compile(
+        r"\blast_state\.dual_track_phase\b(?!\s*=)")
+    return pat_getattr, pat_read, pat_last_state
 
 
 def test_grep_guard_mutation_self_check():
     """守卫变异自检(W624 F3):用改造前原形验证守卫确实锁得住。
 
-    原形取自 deploy_bench.py:269 / shop.py:492 改造前(W620 批 1 前)。
-    反例 = last_state 状态字段读与写端(守卫不得误报)。
+    原形取自 deploy_bench.py:269 / shop.py:492(W620 批 1 前)与
+    equip_all.py:406(W629-R1 扩口,改造前)。
+    反例 = 一般 state 字段读与写端(守卫不得误报)。
     """
-    pat_getattr, pat_read = _guard_patterns()
+    pat_getattr, pat_read, pat_last_state = _guard_patterns()
     historical_forms = [
         "_st_dual = getattr(_match.session, 'dual_track_phase', False)",
         "state.dual_track_phase = getattr("
         "match.session, 'dual_track_phase', False)",
         "getattr(session, 'dual_track_phase', False)",
+        # W629-R1:last_state 通道原形(equip_all L406 改造前)
+        "and _match.session.last_state.dual_track_phase) "
+        "if _match is not None else False",
+        "if sess.last_state.dual_track_phase:",
     ]
     for form in historical_forms:
-        assert (pat_getattr.search(form) or pat_read.search(form)), \
+        assert (pat_getattr.search(form) or pat_read.search(form)
+                or pat_last_state.search(form)), \
             f'守卫漏检历史原形(变异自检失败): {form}'
-    # 反例:state 字段读不误报;赋值写端放行
+    # 反例:一般 state 字段读不误报;赋值写端放行
     state_field_reads = [
-        "_dual = bool(_match.session.last_state.dual_track_phase)",
+        "_dual = bool(_match.session.last_state is not None)",
         "if getattr(state, 'dual_track_phase', False):",
         "session.dual_track_phase = state.dual_track_phase",
+        "_os.dual_track_phase = not committed_from(session, _os)",
     ]
     for form in state_field_reads:
-        assert not (pat_getattr.search(form) or pat_read.search(form)), \
+        assert not (pat_getattr.search(form) or pat_read.search(form)
+                    or pat_last_state.search(form)), \
             f'守卫误报非 session 读(变异自检失败): {form}'
 
 

@@ -363,82 +363,89 @@ def _seq_observe(seq):
     return _obs_at
 
 
-def test_loop_h1_heavy_reread_after_action(monkeypatch) -> None:
-    """H-1 回归:执行过的游戏动作后 heavy 重读(state 刷新)→ 腾席链 b 判 gate 出 LevelUp。
+def _fake_snapshot():
+    """最小 confident 快照(新环观察端口替身用;离线免真值合成)。"""
+    from sr_od.application.currency_war.decision_v2.contracts import (
+        Snapshot,
+        SubstateClassification,
+    )
+    return Snapshot(classification=SubstateClassification(
+        name='prep_shop', evidence=('test',), confident=True))
 
-    obs 序列:① 球+席满+shop 关(→ EnsureShopOpen)② shop 开 + fresh state(gold 足/落后
-    target_level)→ LevelUp ③ 出战。若执行后仍 light(旧 bug:state 恒 None),第 ② 步会
-    再出 EnsureShopOpen 永动机。
-    """
-    obs1 = _obs(spheres=[('gold', None, 40)], free_bench_slots=0, shop_open=False)
-    obs2 = _obs(spheres=[('gold', None, 40)], free_bench_slots=0, shop_open=True,
-                state=GameState(level=2, gold=50, plane=1, round_num=1,
-                                deployed=[_bc(1, 'd1', '仙舟'), _bc(2, 'd2', '列车')]),
-                state_gold_trusted=True)   # MED-1:链 b 判 trusted 位(非裸 shop_open)
-    real = DefaultCwStrategy()
-    seen: list[str] = []
 
-    def _decide(obs, session, config):
-        a = real.decide_prep_action(obs, session, config)
-        seen.append(type(a).__name__)
-        if len(seen) > 6:
+def _stub_snapshot_from_obs(monkeypatch) -> None:
+    """新环 obs→快照 替身(W620 批 1:生产路径 = DirectorV2 环)。"""
+    import sr_od.application.currency_war.decision_v2.adapter as _adapter
+    monkeypatch.setattr(_adapter, 'snapshot_from_obs',
+                        lambda obs, session: _fake_snapshot())
+
+
+class _ScriptStrategy:
+    """脚本化策略替身:按序返回动作(驱动新环管线;防永动机)。"""
+
+    def __init__(self, actions):
+        self._acts = list(actions)
+        self.seen: list[str] = []
+
+    def decide_prep_action(self, obs, session, config):
+        a = self._acts.pop(0) if self._acts else StartBattle()
+        self.seen.append(type(a).__name__)
+        if len(self.seen) > 12:
             raise RuntimeError('环未如预期推进(可能永动机)')
         return a
 
+
+def test_loop_h1_heavy_reread_after_action(monkeypatch) -> None:
+    """H-1 回归(新环管线):执行过的游戏动作后 heavy 重读(review H-1 定稿语义)。
+
+    W620 批 1 起 _run_loop = DirectorV2 环(引擎批尾 heavy 语义;旧环断言
+    「EnsureShopOpen→LevelUp 腾席链」归策略单测,此处锁环的观察分层)。
+    """
+    _stub_snapshot_from_obs(monkeypatch)
     ex = _FakeExecutor(default=(True, 'ok'))
     d = _make_director(monkeypatch, ex)
-    observe = _seq_observe([obs1, obs2, obs2])
+    observe = _seq_observe([])
     monkeypatch.setattr(d, '_observe', observe)
     monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    # ADR-0274:链 b 需真缺人口(cap=2 板满 + bench 同阵营 count≥2 应上场件)
-    match = SimpleNamespace(strategy=SimpleNamespace(decide_prep_action=_decide),
-                            session=_sess(last_level_obs=2,
-                                          last_state=GameState(level=2, plane=1, round_num=1),
-                                          tracked_bench_chars=[_bc(1, '甲', '贝洛伯格'),
-                                                               _bc(2, '乙', '贝洛伯格')],
-                                          tracked_deployed=[_bc(1, 'd1', '仙舟'),
-                                                            _bc(2, 'd2', '列车')]))
-    d._run_loop(match)
-    assert seen[0] == 'EnsureShopOpen', f'第一步应开商店(腾席链 b gold 前置),实得 {seen[0]}'
-    assert seen[1] == 'LevelUp', f'H-1 回归:shop 开+fresh state 后应出 LevelUp,实得 {seen[1]}'
-    # 动作后一律 heavy(review H-1 定稿语义)
-    assert observe.calls['heavy_calls'][0] is True   # 环入口 heavy
-    assert observe.calls['heavy_calls'][1] is True   # EnsureShopOpen 执行后 heavy(旧 bug 为 False)
+    strat = _ScriptStrategy([EnsureShopOpen(), LevelUp(), StartBattle()])
+    match = SimpleNamespace(strategy=strat, session=_sess())
+    result = d._run_loop(match)
+    assert strat.seen[:3] == ['EnsureShopOpen', 'LevelUp', 'StartBattle'], \
+        f'动作序应逐脚本推进,实得 {strat.seen}'
+    hc = observe.calls['heavy_calls']
+    assert hc[0] is True    # 环入口 heavy
+    assert hc[1] is True    # EnsureShopOpen 执行后 heavy(H-1 旧 bug 为 False)
+    assert all(hc), f'动作后一律 heavy,实得 {hc}'   # 出口在 StartBattle 落地,无后续观察
+    assert '出战' in (result.status or ''), f'出战落地应正常出口,实得 {result.status}'
 
 
 def test_loop_h2_state_failure_blocks_action(monkeypatch) -> None:
-    """H-2 回归:连败 2 → 恢复(无弹层)→ 再败 2 → 本环屏蔽;重提案被拒(不再 execute)。"""
+    """H-2 回归(新环引擎):连败 2 → 恢复(无弹层)→ 再败 2 → 屏蔽;重提案被拒。"""
     monkeypatch.setattr(pd_mod, 'try_recovery', lambda op, ctx: ('点空白兜底', False))
-    acts: list = [SellBench(slot=1)] * 8 + [StartBattle()]
-
-    def _decide(obs, session, config):
-        return acts.pop(0) if acts else StartBattle()
-
+    _stub_snapshot_from_obs(monkeypatch)
     ex = _FakeExecutor(default=(False, 'fail'))
     d = _make_director(monkeypatch, ex)
     monkeypatch.setattr(d, '_observe', _seq_observe([]))
     monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    match = SimpleNamespace(strategy=SimpleNamespace(decide_prep_action=_decide), session=_sess())
+    strat = _ScriptStrategy([SellBench(slot=1)] * 8)
+    match = SimpleNamespace(strategy=strat, session=_sess())
     d._run_loop(match)
     sells = [c for c in ex.calls if c.startswith('SellBench')]
     # 连败2 → 恢复 → 连败2 → 屏蔽:SellBench 最多执行 4 次,第 5 次提案起被拒(stall 路径)
     assert len(sells) <= 4, f'H-2 回归:屏蔽后不应继续执行,实执行 {len(sells)}: {ex.calls}'
-    assert any(c.startswith('StartBattle') for c in ex.calls)   # 最终强制/正常出战
+    assert any(c.startswith('StartBattle') for c in ex.calls)   # F5 强制出战兜底
 
 
 def test_loop_h2_stubborn_overlay_bails(monkeypatch) -> None:
-    """H-2 回归(分型):恢复关过已知弹层仍败 → BailToOuter(环让位)。"""
+    """H-2 回归·分型(新环引擎):恢复关过已知弹层仍败 → bail 让位(环出口)。"""
     monkeypatch.setattr(pd_mod, 'try_recovery', lambda op, ctx: ('ESC 关消耗品详情', True))
-    acts: list = [SellBench(slot=1)] * 6
-
-    def _decide(obs, session, config):
-        return acts.pop(0) if acts else StartBattle()
-
+    _stub_snapshot_from_obs(monkeypatch)
     ex = _FakeExecutor(default=(False, 'fail'))
     d = _make_director(monkeypatch, ex)
     monkeypatch.setattr(d, '_observe', _seq_observe([]))
     monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    match = SimpleNamespace(strategy=SimpleNamespace(decide_prep_action=_decide), session=_sess())
+    strat = _ScriptStrategy([SellBench(slot=1)] * 6)
+    match = SimpleNamespace(strategy=strat, session=_sess())
     result = d._run_loop(match)
     assert 'BailToOuter' in (result.status or ''), f'弹层顽固应 bail 让位,实得 {result.status}'
     sells = [c for c in ex.calls if c.startswith('SellBench')]
@@ -446,18 +453,18 @@ def test_loop_h2_stubborn_overlay_bails(monkeypatch) -> None:
 
 
 def test_loop_forced_battle_on_step_budget(monkeypatch) -> None:
-    """F5:步数预算耗尽 → 强制出战(DeferSpheres 计步不计 stall,靠 MAX_STEPS 兜底)。"""
+    """F5(新环引擎):步数预算耗尽 → 强制出战(Defer 计步不计 stall,靠 MAX_STEPS 兜底)。"""
+    from sr_od.application.currency_war.decision_v2.director_v2 import DirectorV2
     monkeypatch.setattr(pd_mod, 'try_recovery', lambda op, ctx: ('点空白兜底', False))
-    monkeypatch.setattr(PrepDirector, 'MAX_STEPS', 4)
-
-    def _decide(obs, session, config):
-        return DeferSpheres()
+    monkeypatch.setattr(DirectorV2, 'MAX_STEPS', 4)
+    _stub_snapshot_from_obs(monkeypatch)
 
     ex = _FakeExecutor(default=(True, 'ok'))
     d = _make_director(monkeypatch, ex)
     monkeypatch.setattr(d, '_observe', _seq_observe([]))
     monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    match = SimpleNamespace(strategy=SimpleNamespace(decide_prep_action=_decide), session=_sess())
+    strat = _ScriptStrategy([DeferSpheres()] * 10)
+    match = SimpleNamespace(strategy=strat, session=_sess())
     result = d._run_loop(match)
     assert '强制出战' in (result.status or ''), f'步数耗尽应强制出战,实得 {result.status}'
 

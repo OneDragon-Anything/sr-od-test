@@ -108,7 +108,7 @@ def _engine(snapshots: list[Snapshot] | Snapshot,
         decide=decide, observe=observe, execute=execute,
         recover=lambda: (rec.__setattr__('recover_calls', rec.recover_calls + 1)
                          or recover_closed_known),
-        force_battle=lambda: rec.__setattr__('forced_calls', rec.forced_calls + 1)
+        force_battle=lambda _why='': rec.__setattr__('forced_calls', rec.forced_calls + 1)
         or True,
         is_stopped=is_stopped,
         stop_with_evidence=lambda reason: rec.stops.append(reason),

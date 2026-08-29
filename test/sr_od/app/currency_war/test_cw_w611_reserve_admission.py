@@ -183,5 +183,5 @@ def test_reserve_floor_identical_to_interest_cap_line() -> None:
     结构性成立,不依赖两常量手工同步。"""
     st = _state()
     s = _sess(st)
-    assert _REG.interest_cap * 10 == _REG.interest_floor
+    assert _REG.interest_cap * 10 == _REG.interest_floor()
     assert reserve_cap(st, s, _REG) >= _REG.interest_cap * 10

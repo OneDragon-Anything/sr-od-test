@@ -249,16 +249,17 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'below_floor_spend_gate_enabled': ('bool', False),
     # ===== 过渡框架启动重接线(休眠保留,复活条件见 ADR-0442)=====
     'framework_startup_v2_enabled': ('bool', False),
-    # ===== DirectorV2 备战循环开关(W606 阶段2批③;语义落点 =
-    # registry 字段注释:默认关合法期=实机对拍数据未采,开臂判据挂账)=====
-    'director_v2_prep_enabled': ('bool', False),
+    # ===== DirectorV2 备战循环(W606 落件;W620 批1升正删开关,仅存影子诊断)=====
     'director_v2_shadow_compare': ('bool', False),
     # ===== 层4:预算仲裁 =====
     'constraints': ('tuple[str, ...]', [
         'gold_floor', 'interest_rule', 'bench_capacity', 'copies_cap',
         'same_round_mutex', 'blood_budget_stop', 'boss_levelup_ban',
         'deploy_cap']),
-    'interest_floor': ('int', 50),
+    # interest_floor 字段已删(W628 D3 双源清偿):息线 = interest_cap×10
+    # 派生方法,唯一取值口 registry.interest_floor();override 通道仅纪律
+    # 视图 ALL IN 注入用(非标定旋钮,入面锁默认 None)。
+    'interest_floor_override': ('int | None', None),
     'war_floor': ('int', 30),
     'rebirth_floor': ('int', 20),
     'boss_floor': ('int', 10),
@@ -286,10 +287,10 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'audit_round_state_dims': ('tuple[str, ...]', [
         'boss', 'emergency', 'mode']),
     # ===== W607 词缀消费面(ADR-0461;语义注释落点=registry W607 字段块)=====
-    'line_env_gate_enabled': ('bool', False),
+    # (line_env_gate_enabled 已删:W628 H1 行为无条件化,判据恒在)
     'line_env_lock_min_round': ('int', 1),
-    'rust_wear_release_enabled': ('bool', False),
-    'opening_hold_battle_gate_enabled': ('bool', False),
+    'rust_wear_release_enabled': ('bool', True),
+    'opening_hold_battle_gate_enabled': ('bool', True),
     'opening_hold_battle_nodes': ('frozenset[str]', frozenset(
         {'战斗', 'boss', '遭遇', '精英'})),
     # W607 第二波 H2① 数据层(无行为分支,账面单一源;ADR-0461 增补节)

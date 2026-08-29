@@ -68,34 +68,23 @@ def _wandi_visible_state(affixes: list[str]) -> GameState:
     return st
 
 
-def test_h1_gate_off_default_locks_regardless() -> None:
-    """默认关(零漂移锚):环境缺失的累积型线照旧可锁(旧行为逐位)。"""
-    assert DEFAULT_REGISTRY.line_env_gate_enabled is False
+def test_h1_unconditional_adverse_env_holds_lock() -> None:
+    """行为无条件化(W628 清偿):环境不命中 → 缓锁(判据恒在,无开关)。"""
     ist = update_intention(_wandi_visible_state(['净化身心']), IntentionState())
-    assert ist.locked_comp == _WANDI
-
-
-def test_h1_gate_on_adverse_env_holds_lock() -> None:
-    """开臂+环境不命中 → 缓锁(不进当轮锁线候选;「无环境不选」只辖主动选线)。"""
-    reg = replace(DEFAULT_REGISTRY, line_env_gate_enabled=True)
-    ist = update_intention(_wandi_visible_state(['净化身心']),
-                           IntentionState(), None, reg)
     assert ist.locked_comp == ''
 
 
-def test_h1_gate_on_strong_env_locks() -> None:
-    """开臂+强环境命中 → 照常落锁。"""
-    reg = replace(DEFAULT_REGISTRY, line_env_gate_enabled=True)
+def test_h1_strong_env_locks() -> None:
+    """强环境命中 → 照常落锁(判据恒在,无开关)。"""
     ist = update_intention(_wandi_visible_state(['正当防卫']),
-                           IntentionState(), None, reg)
+                           IntentionState())
     assert ist.locked_comp == _WANDI
 
 
-def test_h1_gate_on_missing_affixes_does_not_block() -> None:
-    """开臂+词缀空帧(None=信息缺失)→ 不拦(不猜)。"""
-    reg = replace(DEFAULT_REGISTRY, line_env_gate_enabled=True)
+def test_h1_missing_affixes_does_not_block() -> None:
+    """词缀空帧(None=信息缺失)→ 不拦(不猜)。"""
     ist = update_intention(_wandi_visible_state([]),
-                           IntentionState(), None, reg)
+                           IntentionState())
     assert ist.locked_comp == _WANDI
 
 
@@ -104,10 +93,10 @@ def test_h1_gate_on_missing_affixes_does_not_block() -> None:
 _BATTLE_NODES = frozenset({'战斗', 'boss', '遭遇', '精英'})
 
 
-def test_h3_default_gate_off_old_behavior() -> None:
-    """默认关:r≤2 一律 hold(旧行为逐位)。"""
-    assert DEFAULT_REGISTRY.opening_hold_battle_gate_enabled is False
-    assert _opening_hold_active(2, '战斗', False, _BATTLE_NODES) is True
+def test_h3_default_unconditional_gate_on() -> None:
+    """行为无条件化(W628 清偿):registry 默认恒 True,生产配置无关臂。"""
+    assert DEFAULT_REGISTRY.opening_hold_battle_gate_enabled is True
+    assert _opening_hold_active(2, '战斗', True, _BATTLE_NODES) is False
 
 
 def test_h3_gate_on_battle_node_no_hold() -> None:
@@ -139,10 +128,10 @@ def test_h3_missing_node_type_degrades_to_old_hold() -> None:
 
 # ===== H2②:_rust_release_active 真值表 =====
 
-def test_h2_default_gate_off_no_release() -> None:
-    """默认关:生锈在场也不豁免(零漂移锚)。"""
-    assert DEFAULT_REGISTRY.rust_wear_release_enabled is False
-    assert _rust_release_active(['库藏生锈'], False) is False
+def test_h2_default_unconditional_gate_on() -> None:
+    """行为无条件化(W628 清偿):registry 默认恒 True,生产配置无关臂。"""
+    assert DEFAULT_REGISTRY.rust_wear_release_enabled is True
+    assert _rust_release_active(['库藏生锈'], True) is True
 
 
 def test_h2_gate_on_rust_present_releases() -> None:

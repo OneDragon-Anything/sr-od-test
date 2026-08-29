@@ -193,7 +193,7 @@ def test_blood_alarm_semantics_allin_only_plane_last() -> None:
     assert disc2.coverage == 'blood_alarm'
     assert disc2.allin is False, '报警不得单独触发 ALL IN(点4 报警语义)'
     reg_view = disc2.arbiter_registry(_REG)
-    assert reg_view.interest_floor == _REG.interest_floor != 0
+    assert reg_view.interest_floor() == _REG.interest_floor() != 0
 
 
 def test_allin_only_plane_last_battle() -> None:
