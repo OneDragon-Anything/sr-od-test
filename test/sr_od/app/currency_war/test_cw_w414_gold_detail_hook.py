@@ -115,6 +115,10 @@ def _hook_env(tmp_path, monkeypatch):
                         lambda image, label: f'{label}__dead.png')
     import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     monkeypatch.setattr(tel, 'current_run_id', lambda: 'run_x')
+    # 分包期 4:gold_detail 的 run_id 归属键读 kernel.cw_telemetry_exit 钩子位,
+    # provider 桩随迁(自动还原)
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
+    monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider', lambda: 'run_x')
     return tmp_path
 
 
@@ -148,6 +152,9 @@ def test_hook_tolerates_run_id_failure(_hook_env, monkeypatch) -> None:
     def _boom():
         raise RuntimeError('no session')
     monkeypatch.setattr(tel, 'current_run_id', _boom)
+    # 分包期 4:provider 桩随迁出口钩子位(抛异常 → 行照落 run_id='-')
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
+    monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider', _boom)
     texts = [it.data for it in WIN_FRAME]
     collect_gold_detail_hook(None, texts, WIN_FRAME, plane=2, round_num=1,
                              node_type='普通战斗', streak_after=-1)
