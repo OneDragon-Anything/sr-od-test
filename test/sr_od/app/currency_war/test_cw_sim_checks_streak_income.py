@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from sr_od.application.currency_war.kernel import cw_economy
-from sr_od.application.currency_war import cw_sim_checks as chk
+from sr_od.application.currency_war.sim import cw_sim_checks as chk
 
 
 def _row(rn: int, node: str, streak: int, delta: int = 0,

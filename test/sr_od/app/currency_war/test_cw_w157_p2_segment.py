@@ -17,7 +17,7 @@ import logging
 import random
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.sim import cw_sim
 from sr_od.application.currency_war.data import cw_battle_tables as _tables
 
 logging.disable(logging.CRITICAL)
@@ -49,7 +49,6 @@ def test_pool_from_replay_assigns_delta_to_later_plane(tmp_path: Path) -> None:
         _out(1, 2, '普通战斗', 42),
     ]) + '\n', encoding='utf-8')
 
-    cw_sim.reset_resolved_cache()
     pool, _ = cw_sim._pool_from_replay(tmp_path)
     # P2r1 是 battle(rung 桶 = board_before{} 的 0);不挂 plane=1
     assert pool['battle'].get(2) and not pool['battle'].get(1, {}).get(0)
@@ -192,7 +191,7 @@ def test_batch_p1_metrics_scoped_to_plane1() -> None:
 
 
 def test_check_p2_gold_nonneg_unit() -> None:
-    from sr_od.application.currency_war.cw_sim_checks import (
+    from sr_od.application.currency_war.sim.cw_sim_checks import (
         check_p2_gold_nonneg,
     )
     bad = [[{'plane': 2, 'round_num': 3, 'gold': -1}]]
@@ -204,7 +203,7 @@ def test_check_p2_gold_nonneg_unit() -> None:
 
 
 def test_check_p2_segment_shape_unit() -> None:
-    from sr_od.application.currency_war.cw_sim_checks import (
+    from sr_od.application.currency_war.sim.cw_sim_checks import (
         check_p2_segment_shape,
     )
     good = [[{'ts': 1, 'plane': 1, 'round_num': 1},

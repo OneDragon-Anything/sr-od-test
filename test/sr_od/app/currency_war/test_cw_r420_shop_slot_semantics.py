@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import random
 
-from sr_od.application.currency_war import cw_sim_checks as chk
-from sr_od.application.currency_war.cw_sim import (
+from sr_od.application.currency_war.sim import cw_sim_checks as chk
+from sr_od.application.currency_war.sim.cw_sim import (
     _Pool,
     simulate_p1,
     simulate_p1_ab,

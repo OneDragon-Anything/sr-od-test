@@ -7,7 +7,7 @@ change-detector 陷阱)。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war import cw_sim_checks as chk
+from sr_od.application.currency_war.sim import cw_sim_checks as chk
 
 
 def _row(rn: int = 1, gold: int = 10, bench: list | None = None,

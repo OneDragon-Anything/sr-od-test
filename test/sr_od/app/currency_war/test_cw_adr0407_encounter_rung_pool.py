@@ -12,7 +12,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war import cw_sim as _sim
+from sr_od.application.currency_war.sim import cw_sim as _sim
 
 
 def _p1_means() -> dict[int, float]:

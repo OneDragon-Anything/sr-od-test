@@ -364,7 +364,7 @@ def test_dot_same_line_degenerates_to_deepen():
 
 def _engines(st_or_dep) -> int:
     """过渡引擎数(cw_sim._engines_count 口径,W158 strict 度量同源)。"""
-    from sr_od.application.currency_war.cw_sim import (
+    from sr_od.application.currency_war.sim.cw_sim import (
         _board_factions_of,
         _engines_count,
     )

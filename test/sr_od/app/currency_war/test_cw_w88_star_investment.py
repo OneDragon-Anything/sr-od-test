@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_coldstart_seed_squander,
     check_engine_seed_not_resold,
 )

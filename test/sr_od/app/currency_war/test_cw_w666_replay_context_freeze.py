@@ -16,7 +16,7 @@ from __future__ import annotations
 import inspect
 
 from sr_od.application.currency_war.kernel import cw_deploy_logic
-from sr_od.application.currency_war.cw_sim import simulate_p1
+from sr_od.application.currency_war.sim.cw_sim import simulate_p1
 
 # W652 取证的两帧所在局(修前 HEAD 版重放对这两局 r6 各判 lag=2)
 _SEEDS = (630027, 630035)

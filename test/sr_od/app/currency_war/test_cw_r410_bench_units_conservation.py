@@ -14,7 +14,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_sim import (
+from sr_od.application.currency_war.sim.cw_sim import (
     START_BENCH_COUNT,
     _board_counts_of,
     simulate_p1,

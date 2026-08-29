@@ -386,7 +386,7 @@ def test_checker_dup_dual_domain() -> None:
     """V-B9:deployed 同名压库副本未买 → 通道关非违规(披露
     copy_press_channel_closed);bench-only 同名 → 披露
     copy_bench_only_skipped 不进真拦;非重复散件(C-D)照报真拦。"""
-    from sr_od.application.currency_war import cw_sim_checks as chk
+    from sr_od.application.currency_war.sim import cw_sim_checks as chk
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.kernel.cw_line_defs import (
         ENGINE_FACTIONS,
@@ -418,7 +418,7 @@ def test_checker_dup_dual_domain() -> None:
 def test_transition_cost_max_single_source() -> None:
     """V-A2:检查器成本带上限 import 买家侧单一源
     press_channel_max_band()(={1,2} 的 max=2,无数值漂移)。"""
-    from sr_od.application.currency_war.cw_sim_checks import (
+    from sr_od.application.currency_war.sim.cw_sim_checks import (
         _seg_transition_cost_max,
     )
     assert _seg_transition_cost_max() == 2
@@ -432,7 +432,7 @@ def test_transition_cost_max_single_source() -> None:
 def test_supply_consistency_probe_includes_w300() -> None:
     """V-B1.3:检查网总表含 press 通道探针;供给一致性探针与
     check_w300_press_channel_probe 均零违规(现行为回归面)。"""
-    from sr_od.application.currency_war import cw_sim_checks as chk
+    from sr_od.application.currency_war.sim import cw_sim_checks as chk
     r1 = chk.check_decision_v2_supply_label_consistency()
     assert r1['violations'] == 0, r1['detail']
     r2 = chk.check_w300_press_channel_probe()

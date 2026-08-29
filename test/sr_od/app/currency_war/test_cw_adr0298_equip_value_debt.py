@@ -22,7 +22,7 @@ from sr_od.application.currency_war.kernel.cw_events import (
     _equip_value,
     decide_supply,
 )
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_equip_value_table_roster_coherence,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState

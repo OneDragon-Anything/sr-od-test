@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import logging
 
-from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_sim_invest import (
+from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim.cw_sim_invest import (
     SIM_STRATEGY_PICK_SCHEDULE,
     SimInvestProfile,
     env_freq_table,

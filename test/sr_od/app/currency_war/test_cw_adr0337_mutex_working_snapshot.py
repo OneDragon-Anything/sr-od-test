@@ -25,7 +25,7 @@ char_id ≡ state 槽(char_id),登记/补偿路径无新漂移(推演见报告 �
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_no_same_round_buy_sell,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -165,7 +165,7 @@ def test_w81_violation_seeds_replay_zero() -> None:
     """ADR-0337 回归锁:W81 全窗复验钉死的违规 seed(259/304/342)
     确定性重放(同 seed 同池 snapshot),no_same_round_buy_sell 零违规
     ——修复在真实 sim 决策链上生效(与 ADR-0328 锁⑥同式)。"""
-    from sr_od.application.currency_war.cw_sim import simulate_p1
+    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
     from sr_od.application.currency_war.decision_v2.strategy import (
         DecisionV2Strategy,
     )

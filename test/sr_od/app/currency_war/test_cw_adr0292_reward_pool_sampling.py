@@ -11,8 +11,8 @@ import json
 import random
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     REWARD_POOL_TRUTH_MEAN,
     check_reward_delta_pool_bucket_lock,
 )

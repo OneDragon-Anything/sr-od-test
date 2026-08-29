@@ -19,9 +19,9 @@ from __future__ import annotations
 import logging
 import random
 
-from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_sim import P2ReplayEntry
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim.cw_sim import P2ReplayEntry
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_p2_loss_band_anchor,
     check_p2_win_rate_band,
 )

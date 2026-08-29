@@ -24,6 +24,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_intention import serialize_intention
 from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_state import GameState
@@ -153,5 +154,5 @@ def test_new_ledger_row_with_key_preserved() -> None:
 def test_label_matches_intention_serialization_source(pair: tuple) -> None:
     """标签与 serialize_intention 全量序列化中的 p1_pair 同源同值。"""
     ist = IntentionState(phase='locked' if pair else 'unlocked', p1_pair=pair)
-    d = cw_telemetry.serialize_intention(ist)
+    d = serialize_intention(ist)
     assert cw_telemetry.p1_pair_label(ist) == '+'.join(d['p1_pair'])

@@ -25,7 +25,7 @@ import random
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_coarse_battle as cb
-from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.sim import cw_sim
 
 # 拟合产物交付口径(逐单元;粗模型参数的机器可读真值,
 # 来源 = 冻结语料拟合,禁与其它口径混写)

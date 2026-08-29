@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from sr_od.application.currency_war.data import cw_delta_pool_data
-from sr_od.application.currency_war import cw_sim as _sim
+from sr_od.application.currency_war.sim import cw_sim as _sim
 
 
 def test_snapshot_module_loads_and_fingerprint_selfconsistent() -> None:

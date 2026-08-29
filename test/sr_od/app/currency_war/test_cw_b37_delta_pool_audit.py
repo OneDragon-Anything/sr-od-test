@@ -21,11 +21,11 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.sim import cw_sim
 from sr_od.application.currency_war.data.cw_delta_pool_data import (
     META as SNAP_META,
 )
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_ab_verdict_claim,
     check_boss_rung_corpus_sample_gate,
     check_delta_pool_poverty_selfconsistency,

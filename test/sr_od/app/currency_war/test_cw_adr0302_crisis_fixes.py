@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_sim import simulate_p1
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_decision_v2_crisis_gold_hoard,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState

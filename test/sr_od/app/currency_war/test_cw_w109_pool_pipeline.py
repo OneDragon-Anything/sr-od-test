@@ -14,10 +14,10 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war import cw_delta_pool_gen
+from sr_od.application.currency_war.sim import cw_delta_pool_gen
 from sr_od.application.currency_war.telemetry import cw_telemetry
-from sr_od.application.currency_war import cw_sim_checks
-from sr_od.application.currency_war.cw_sim import pool_fingerprint
+from sr_od.application.currency_war.sim import cw_sim_checks
+from sr_od.application.currency_war.sim.cw_sim import pool_fingerprint
 
 
 def _fixture_replay(root: Path, run_id: str, *, r2_node: str = '普通战斗') -> None:

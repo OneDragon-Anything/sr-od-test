@@ -39,7 +39,7 @@ def test_live_delta_depth_conditioned() -> None:
     """
     import random
 
-    from sr_od.application.currency_war import cw_sim
+    from sr_od.application.currency_war.sim import cw_sim
     src = inspect.getsource(cw_sim.live_delta_for)
     assert '浅侧' in src and 'bucket - DEPTH_BUCKET_W' in src   # 邻桶回退只向浅侧(真锁:实现语句在)
     # ADR-0362:合成池带 plane 层
@@ -54,6 +54,6 @@ def test_live_delta_depth_conditioned() -> None:
 
 def test_sim_events_reach_node_delta() -> None:
     """r340:sim 结算走板深池优先(hp_events 记真值)。"""
-    from sr_od.application.currency_war import cw_sim
+    from sr_od.application.currency_war.sim import cw_sim
     src = inspect.getsource(cw_sim.simulate_p1)
     assert 'live_delta_for' in src

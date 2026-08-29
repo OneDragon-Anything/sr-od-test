@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import random
 
-from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_ab_depth_boundary_confound,
     check_delta_pool_bucket_min_n,
     check_depth_cliff_monotonicity,

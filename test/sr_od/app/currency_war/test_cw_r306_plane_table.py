@@ -10,7 +10,7 @@ def test_p1_typical_table_matches_stats() -> None:
     slot5/6 变异位(策略效果)。sim 骨架与统计一致。"""
     import random
 
-    from sr_od.application.currency_war.cw_sim import sample_node_sequence
+    from sr_od.application.currency_war.sim.cw_sim import sample_node_sequence
     for seed in range(50):
         seq = sample_node_sequence(random.Random(seed))
         assert len(seq) == 9

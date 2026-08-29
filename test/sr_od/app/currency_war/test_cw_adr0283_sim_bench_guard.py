@@ -23,7 +23,7 @@ class _GreedyBuyStub:
 
 def test_sim_bench_capacity_guard() -> None:
     """⑤ bench 满(BENCH_CAPACITY=9)后买被跳过:容量不变式 + 计数披露。"""
-    from sr_od.application.currency_war.cw_sim import simulate_p1
+    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
     from sr_od.application.currency_war.kernel.cw_state import BENCH_CAPACITY
     res = simulate_p1(1, pool='fallback', strategy=_GreedyBuyStub())
     skips = 0
@@ -37,7 +37,7 @@ def test_sim_bench_capacity_guard() -> None:
 
 def test_sim_batch_discloses_guard_count() -> None:
     """批量报告披露 bench_full_skipped_buys(计数口径存在且 ≥0)。"""
-    from sr_od.application.currency_war.cw_sim import simulate_p1_batch
+    from sr_od.application.currency_war.sim.cw_sim import simulate_p1_batch
     rep = simulate_p1_batch(10, pool='fallback', seed_base=500,
                             ledger=False, checks=False)
     assert rep['bench_full_skipped_buys'] >= 0

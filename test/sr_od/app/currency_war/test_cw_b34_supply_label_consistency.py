@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import sr_od.application.currency_war.decision_v2.candidates as _cands
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_decision_v2_supply_label_consistency,
 )
 

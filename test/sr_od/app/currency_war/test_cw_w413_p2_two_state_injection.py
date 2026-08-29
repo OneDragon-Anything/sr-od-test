@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.sim import cw_sim
 from sr_od.application.currency_war.kernel.cw_line_switch import (
     rounds_alive,
     survival_gate,

@@ -13,9 +13,9 @@ import random
 from pathlib import Path
 
 from sr_od.application.currency_war.data import cw_delta_pool_data
-from sr_od.application.currency_war import cw_sim as _sim
+from sr_od.application.currency_war.sim import cw_sim as _sim
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     BATTLE_RUNG_TRUTH,
     check_battle_rung_pool_bucket_lock,
 )
@@ -166,7 +166,6 @@ def test_pool_from_replay_battle_rung_keys(tmp_path: Path) -> None:
         _out(4, '遭遇', 60, {'散': 7}),                  # depth 桶6
     ]) + '\n', encoding='utf-8')
 
-    _sim.reset_resolved_cache()
     pool, meta = _sim._pool_from_replay(tmp_path)
     # ADR-0362:桶挂 plane=1 层(差分归属后行位面)
     # v11/ADR-0407:encounter 桶键=rung(board_before {'散':7} 无

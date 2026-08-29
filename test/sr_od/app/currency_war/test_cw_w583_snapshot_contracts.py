@@ -41,7 +41,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     ShopCard,
     deployed_place,
 )
-from sr_od.application.currency_war.cw_sim import synthesize_snapshot
+from sr_od.application.currency_war.sim.cw_sim import synthesize_snapshot
 from sr_od.application.currency_war.decision_v2.contracts import (
     SNAPSHOT_SCHEMA_VERSION,
     AtomOp,

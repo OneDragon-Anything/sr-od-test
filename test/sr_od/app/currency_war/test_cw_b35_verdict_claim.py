@@ -11,7 +11,7 @@ import math
 
 import pytest
 
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     AB_VERDICT_MIN_N,
     check_ab_verdict_claim,
 )

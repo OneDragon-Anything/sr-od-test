@@ -21,7 +21,7 @@ POOL = 'snapshot'
 
 @pytest.fixture()
 def _run_game():
-    from sr_od.application.currency_war.cw_sim import simulate_p1
+    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
     return simulate_p1
 
 

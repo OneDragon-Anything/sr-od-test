@@ -32,7 +32,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     seg_check_p1_blood_budget_refresh,
     seg_terminal_release_ledger,
 )
@@ -307,7 +307,7 @@ def test_seg_terminal_ledger_mismatch_both_directions() -> None:
 def test_sim_ledger_discloses_terminal_bit() -> None:
     """账本行 'terminal_release' 键存在(R4 记账面数据源;单局冒烟,
     pool='fallback' 免快照依赖)。"""
-    from sr_od.application.currency_war import cw_sim
+    from sr_od.application.currency_war.sim import cw_sim
     r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
     assert r.ledger
     for row in r.ledger:

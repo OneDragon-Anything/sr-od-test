@@ -2,7 +2,7 @@
 """r305 采集数据判读:奖励弹窗样本 × VLM(用户指路)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_sim import streak_gold
+from sr_od.application.currency_war.sim.cw_sim import streak_gold
 
 
 def test_streak_table_vlm_verified() -> None:

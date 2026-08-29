@@ -3,7 +3,7 @@
 _board_factions_of 纯函数语义)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_sim import (
+from sr_od.application.currency_war.sim.cw_sim import (
     _board_factions_of,
     _first_tier_round,
     _first_trio_round,

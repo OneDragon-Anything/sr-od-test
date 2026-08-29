@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.sim import cw_sim
 from sr_od.application.currency_war.kernel import cw_economy
 from sr_od.application.currency_war.kernel import cw_coarse_battle as cb
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_gold_dist_calib,
     check_shop_cost_curve,
 )

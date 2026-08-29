@@ -20,8 +20,8 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     intention_core,
 )
-from sr_od.application.currency_war.cw_sim import simulate_p1
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_overflow_gold_zero_buy_streak,
 )
 from sr_od.application.currency_war.kernel.cw_state import (

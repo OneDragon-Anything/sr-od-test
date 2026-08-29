@@ -10,10 +10,10 @@ import re
 from dataclasses import fields
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.sim import cw_sim
 from sr_od.application.currency_war.kernel.cw_state import GameState
 
-_DOC = (Path(cw_sim.__file__).resolve().parents[4]
+_DOC = (Path(cw_sim.__file__).resolve().parents[5]
         / 'docs' / 'develop' / 'currency_war' / 'sim-wiring.md')
 
 

@@ -86,7 +86,7 @@ def test_state_field_default_and_serialize() -> None:
 
 def test_replay_rebuild_reads_live_field() -> None:
     """cw_replay._rebuild_state 白名单含 enemy_difficulty_live(回放忠实)。"""
-    from sr_od.application.currency_war.cw_replay import _rebuild_state
+    from sr_od.application.currency_war.sim.cw_replay import _rebuild_state
     snap = {'gold': 10, 'hp': 80, 'enemy_difficulty': 125,
             'enemy_difficulty_live': True}
     st = _rebuild_state(snap)

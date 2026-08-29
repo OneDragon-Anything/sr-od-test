@@ -12,7 +12,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.sim import cw_sim
 from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENT_ROSTER
 from sr_od.application.currency_war.data.cw_synthesis import RESERVED_COMPONENTS
 

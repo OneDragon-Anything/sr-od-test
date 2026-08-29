@@ -19,14 +19,14 @@ from dataclasses import replace as _dc_replace
 
 import pytest
 
-from sr_od.application.currency_war import cw_sim as cw_sim_mod
+from sr_od.application.currency_war.sim import cw_sim as cw_sim_mod
 from sr_od.application.currency_war.kernel.cw_effect_inventory import EffectSpec
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
     EconomyEffect,
 )
-from sr_od.application.currency_war.cw_sim import simulate_p1
-from sr_od.application.currency_war.cw_sim_invest import SimInvestProfile
+from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 
 # 零漂移锚:seeds 0..5(pool='snapshot'),行为投影 = 每轮
 # (plane, round_num, gold, hp, level, actions(类型, reason, result))

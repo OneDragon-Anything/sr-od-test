@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import POOL_COPIES_PER_CARD
-from sr_od.application.currency_war.cw_sim import (
+from sr_od.application.currency_war.sim.cw_sim import (
     _Pool,
     simulate_p1,
     simulate_p1_batch,
@@ -95,7 +95,7 @@ def test_node_sequence_shape() -> None:
     slot4 supply,slot5-6 变异位,末 boss(遥测 14 帧实证)。"""
     import random
 
-    from sr_od.application.currency_war.cw_sim import sample_node_sequence
+    from sr_od.application.currency_war.sim.cw_sim import sample_node_sequence
     for seed in (1, 2, 3):
         seq = sample_node_sequence(random.Random(seed))
         assert len(seq) == 9
@@ -110,7 +110,7 @@ def test_reward_node_no_damage() -> None:
     """奖励/补给节点零战力要求 → 不掉血(r260 分层)。"""
     import random
 
-    from sr_od.application.currency_war.cw_sim import node_delta
+    from sr_od.application.currency_war.sim.cw_sim import node_delta
     rng = random.Random(7)
     for node in ('reward', 'supply'):
         for rn in (3, 5, 8):
@@ -122,7 +122,7 @@ def test_encounter_harder_than_battle() -> None:
     """遭遇轮结算强度 > 同期普通战斗(用户口述:遭遇可比 boss 难)。"""
     import random
 
-    from sr_od.application.currency_war.cw_sim import node_delta
+    from sr_od.application.currency_war.sim.cw_sim import node_delta
     losses_enc, losses_bat = [], []
     for seed in range(50):
         rng = random.Random(seed)

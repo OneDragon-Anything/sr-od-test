@@ -59,7 +59,7 @@ def test_sim_ledger_core_count_semantics() -> None:
 
     import contextlib
     import io
-    from sr_od.application.currency_war.cw_sim import simulate_p1_batch
+    from sr_od.application.currency_war.sim.cw_sim import simulate_p1_batch
     with contextlib.redirect_stderr(io.StringIO()):
         import tempfile
         from pathlib import Path as _P

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_sim import (
+from sr_od.application.currency_war.sim.cw_sim import (
     _battles_before_engines,
     _first_engines_round,
 )

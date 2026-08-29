@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_plugins import (
     W16_MAJORITY_LINES,
     cross_line_skeleton,
 )
-from sr_od.application.currency_war.cw_sim import _deployable_depth
+from sr_od.application.currency_war.sim.cw_sim import _deployable_depth
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, _recount_board
 
 
@@ -131,7 +131,7 @@ def test_unit_bond_tags_equip_grants() -> None:
 # ---------- 3. 三侧同函数(实机/派生/检查)----------
 
 def _three_sides_agree(dep: list[BenchChar]) -> None:
-    from sr_od.application.currency_war.cw_sim_checks import (
+    from sr_od.application.currency_war.sim.cw_sim_checks import (
         _board_agg_of_deployed_row,
     )
     row = {'state': {'deployed': [
@@ -182,7 +182,7 @@ def test_recount_unknown_fallback_and_deploymove_recount() -> None:
 
 def test_board_counts_of_is_recount_single_source() -> None:
     """cw_sim._board_counts_of = _recount_board(全集单一源,alias 语义)。"""
-    from sr_od.application.currency_war.cw_sim import _board_counts_of
+    from sr_od.application.currency_war.sim.cw_sim import _board_counts_of
     dep = [_char('银狼LV.999', equips=['欢愉卡带'])]
     assert _board_counts_of(dep) == _recount_board(dep)
 

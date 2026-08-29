@@ -14,11 +14,11 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_sim import (
+from sr_od.application.currency_war.sim.cw_sim import (
     _target_comp_label,
     simulate_p1,
 )
-from sr_od.application.currency_war.cw_sim_checks import (
+from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_engine_seed_not_resold,
     check_no_same_round_buy_sell,
     check_oscillation_xp_cap,
