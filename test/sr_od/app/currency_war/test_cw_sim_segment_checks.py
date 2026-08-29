@@ -78,7 +78,7 @@ def test_seg_lossless_buy_missed_bidirectional() -> None:
     """[11] 无损购买:金<20 同息档有过渡带件未买必报;跨档/成型豁免。"""
     # 注册表内找一个真实的过渡带 1 费件(阵营 ∈ ENGINE_FACTIONS),
     # 不硬编码角色名防注册表演进碎测。
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.cw_line_defs import (
         ENGINE_FACTIONS,
     )

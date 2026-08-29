@@ -21,7 +21,7 @@ from sr_od.application.currency_war.cw_bond_equips import (
     equip_bond_grants,
     unit_bond_tags,
 )
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_intention import CROSS_LINE_SKELETON
 from sr_od.application.currency_war.cw_observation import board_from_tracked
 from sr_od.application.currency_war.cw_plugins import (
@@ -61,7 +61,7 @@ def test_equip_bond_grants_registry_derived() -> None:
 
 def test_equip_bond_grants_cover_all_badges() -> None:
     """22 张星徽全解析成功(注册表 category='星徽' 逐张非空)。"""
-    from sr_od.application.currency_war.cw_equipment_data import EQUIPMENTS
+    from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
     badges = [e for e in EQUIPMENTS.values() if e.category == '星徽']
     assert len(badges) == 22
     for e in badges:

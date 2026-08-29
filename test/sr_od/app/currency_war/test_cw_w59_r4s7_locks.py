@@ -131,7 +131,7 @@ def test_deploy_bench_consumes_tuple() -> None:
 
 def _bench_char(name: str):
     """注册表真值构造 BenchChar(同 test_cw_evolution 构造法)。"""
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.cw_state import BenchChar
     c = CHARACTERS[name]
     return BenchChar(slot=0, char_id=name,

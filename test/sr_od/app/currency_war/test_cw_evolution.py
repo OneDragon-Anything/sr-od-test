@@ -12,7 +12,7 @@
 4. 中断恢复:冻结打断=三条件重校验(成立执行/破坏作废);谷底回滚=回滚
    一件最弱替换位后放缓。
 """
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_evolution import (
     EvolutionState,
     UpgradeOption,

@@ -22,7 +22,7 @@ import dataclasses
 from sr_od.application.currency_war.cw_comps import get_comp
 from sr_od.application.currency_war.cw_economy import _resolve_level_goal
 from sr_od.application.currency_war.cw_intention import IntentionState
-from sr_od.application.currency_war.cw_shop_odds import (
+from sr_od.application.currency_war.data.cw_shop_odds import (
     DISTINCT_CARDS_PER_COST,
     POOL_COPIES_PER_CARD,
     expected_refreshes,
@@ -218,7 +218,7 @@ def test_roll_window_max_of_core_and_pair() -> None:
     assert goal is None or goal.action != 'level_up', '前置:窗内帧'
     vd = vd_refresh_score(st, s, _REG)
     # core 账(2★ 批口径,P1 骨架式本地复算)
-    from sr_od.application.currency_war.cw_shop_odds import (
+    from sr_od.application.currency_war.data.cw_shop_odds import (
         expected_refreshes_for_card,
     )
     e_core = expected_refreshes_for_card(8, 2, target_star=2, owned=2)

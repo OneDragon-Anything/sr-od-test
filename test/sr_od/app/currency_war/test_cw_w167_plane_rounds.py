@@ -70,7 +70,7 @@ def test_nodes_of_plane_fallback_when_table_missing():
 
 def _freeze_frame(plane: int, r: int, table: list[str] | None) -> GameState:
     """DOT2 单引擎帧(拆板事务可发射;test_cw_evolution 同构造法)。"""
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
     from sr_od.application.currency_war.cw_state import BenchChar, _recount_board
 

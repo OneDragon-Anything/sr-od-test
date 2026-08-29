@@ -11,7 +11,7 @@ strategy_v4 点0 单一规格源,锁行为:
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_comps import get_comp
 from sr_od.application.currency_war.cw_intention import (
     CORE_MISS_N,

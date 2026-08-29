@@ -18,7 +18,7 @@ def test_recipe_guards_importable() -> None:
 def test_deploy_tracks_faction_counts() -> None:
     """r288 状态源:_deployed_fac 初始化逻辑(离线可测部分:
     CHARACTERS 查阵营并计数)。"""
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     cnt: dict[str, int] = {}
     for name in ('三月七', '姬子·启行', '星期日'):
         ch = CHARACTERS.get(name)

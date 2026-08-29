@@ -22,7 +22,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import sr_od.application.currency_war.cw_evolution as cw_evolution
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_deploy_logic import select_deployments
 from sr_od.application.currency_war.cw_evolution import (
     EvolutionState,

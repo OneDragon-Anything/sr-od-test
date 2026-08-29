@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_state import (
     BenchChar,
     GameState,

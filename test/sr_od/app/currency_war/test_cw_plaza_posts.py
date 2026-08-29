@@ -17,14 +17,14 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.cw_plaza_comps import (
+from sr_od.application.currency_war.data.cw_plaza_comps import (
     PLAZA_CARRY_CLUSTERS,
     PLAZA_GLOBAL,
     cluster_by_carry,
     default_star_goal,
     early_transition_pool,
 )
-from sr_od.application.currency_war.cw_plaza_posts import (
+from sr_od.application.currency_war.data.cw_plaza_posts import (
     PLAZA_POSTS,
     PlazaPost,
     post_by_id,

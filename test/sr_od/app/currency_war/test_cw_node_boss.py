@@ -39,7 +39,7 @@ def _load_fixture_rgb():
 
 def test_boss_templates_full_load() -> None:
     """boss 头像库 20 件全加载,命名 = BOSS_MECHANICS 规范名(20/20 对齐)。"""
-    from sr_od.application.currency_war.cw_enemy_data import BOSS_MECHANICS
+    from sr_od.application.currency_war.data.cw_enemy_data import BOSS_MECHANICS
     bt = load_boss_templates(_BOSS_TPL_DIR)
     assert set(bt.keys()) == set(BOSS_MECHANICS.keys()), \
         f'模板库与注册表不对齐: {set(bt.keys()) ^ set(BOSS_MECHANICS.keys())}'

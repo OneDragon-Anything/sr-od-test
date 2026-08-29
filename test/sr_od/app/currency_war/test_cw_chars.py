@@ -12,7 +12,7 @@ import dataclasses
 
 import pytest
 
-from sr_od.application.currency_war.cw_chars import (
+from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
     CHARACTERS,
     Character,
@@ -20,7 +20,7 @@ from sr_od.application.currency_war.cw_chars import (
     chars_by_faction,
     get_char,
 )
-from sr_od.application.currency_war.cw_factions import FACTIONS
+from sr_od.application.currency_war.data.cw_factions import FACTIONS
 
 
 def test_registry_complete_all_costs() -> None:

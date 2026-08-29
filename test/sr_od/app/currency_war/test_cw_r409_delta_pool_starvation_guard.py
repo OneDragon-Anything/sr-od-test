@@ -162,5 +162,5 @@ def test_sampler_version_bumped_and_snapshot_guarded() -> None:
     assert _BUCKET_MIN_N == 5
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'
-    from sr_od.application.currency_war import cw_delta_pool_data
+    from sr_od.application.currency_war.data import cw_delta_pool_data
     assert fp == cw_delta_pool_data.META['fingerprint']

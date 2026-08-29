@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from sr_od.application.currency_war import cw_synthesis as synth
+from sr_od.application.currency_war.data import cw_synthesis as synth
 from sr_od.application.currency_war.cw_equipment import EQUIPMENT_ROSTER
 
 
@@ -67,7 +67,7 @@ def test_all_recipe_names_in_roster() -> None:
 
 def test_all_advanced_have_recipe() -> None:
     """36 件进阶全量有配方(K8 闭合;2026-08-26 官方 API 补齐后成立)。"""
-    from sr_od.application.currency_war.cw_equipment_data import EQUIPMENTS
+    from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
     adv = [n for n, e in EQUIPMENTS.items() if e.category == '进阶']
     assert len(adv) == 36
     missing = [n for n in adv

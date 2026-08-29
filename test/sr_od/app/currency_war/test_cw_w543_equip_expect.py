@@ -18,7 +18,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war import cw_equipment, cw_telemetry, cw_synthesis
+from sr_od.application.currency_war import cw_equipment, cw_telemetry
+from sr_od.application.currency_war.data import cw_synthesis
 from sr_od.application.currency_war.cw_equipment import EquipCell
 from sr_od.application.currency_war.prep_director import (
     PrepDirector,

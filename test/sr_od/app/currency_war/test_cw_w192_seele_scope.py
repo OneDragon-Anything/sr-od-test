@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_evolution import (
     EvolutionState,
     _locked_protected_names,

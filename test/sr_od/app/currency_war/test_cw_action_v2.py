@@ -10,7 +10,7 @@
    ——去门必须涌现违规);
 4. 开关联动:显式动作发出轮围栏跳过 + skip_fence 记账(sim 集成)。
 """
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_sim import simulate_p1
 from sr_od.application.currency_war.cw_sim_checks import (
     check_comp_tx_atomicity,

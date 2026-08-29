@@ -274,8 +274,8 @@ def test_acquirability_factor_pool_aware() -> None:
     只 1/v 是该角色),且不扣持有副本(牌库有限:买掉即减)。本测试验:
     ① ÷v:特定角色 acq < 该角色费用 refresh_prob;② held 消耗:持越多越难刷;③ 空 core→1.0。
     """
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_shop_odds import (
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_shop_odds import (
         acquirability_factor,
         refresh_prob,
     )
@@ -532,7 +532,7 @@ def test_comp_library_well_formed() -> None:
 def test_comp_factions_in_FACTIONS() -> None:
     """防回归:COMP_LIBRARY 每 comp 的 factions / form_tiers 键 ⊆ FACTIONS。
     防『毁灭』(命途 destruction)/『destruction』等误当阵营(曾致反甲白厄 form_progress 恒 0 死 comp)。"""
-    from sr_od.application.currency_war.cw_factions import FACTIONS
+    from sr_od.application.currency_war.data.cw_factions import FACTIONS
     for c in COMP_LIBRARY:
         for f in c.factions:
             assert f in FACTIONS, f'{c.name}.factions 含非阵营 "{f}"(不在 FACTIONS;可能误用命途/职业)'
@@ -545,7 +545,7 @@ def test_comp_library_core_chars_canonical() -> None:
 
     用户 2026-08-03:有全量 roster 就该用它,别在代码数据里缩写。OCR/char_id 匹配靠规范名。
     """
-    from sr_od.application.currency_war.cw_chars import CHARACTER_ROSTER
+    from sr_od.application.currency_war.data.cw_chars import CHARACTER_ROSTER
     for comp in COMP_LIBRARY:
         for c in comp.core_chars:
             assert c in CHARACTER_ROSTER, (
@@ -591,7 +591,7 @@ def test_held_strategy_fit_opportunity_pivot() -> None:
 # ===== ADR-0152 plaza 方法论(flex 二分 / augment 绑定 / 骨架派生 / 枢纽路由 / 星目标费用档) =====
 def test_comp_flex_factions_subset_and_form_tiers_core_only() -> None:
     """flex_factions ⊆ FACTIONS 且与核心不重叠;form_tiers 键 ⊆ 核心 factions(成型只看核心)。"""
-    from sr_od.application.currency_war.cw_factions import FACTIONS
+    from sr_od.application.currency_war.data.cw_factions import FACTIONS
     for c in COMP_LIBRARY:
         for f in c.flex_factions:
             assert f in FACTIONS, f'{c.name}.flex_factions 含非阵营 "{f}"'
@@ -657,7 +657,7 @@ def test_pivot_overlap_semantics() -> None:
 
 def test_default_star_goal_by_cost() -> None:
     """M6 星级费用档:≤3费 → 3星;≥4费 → 2星(plaza 3星率 0.87/0.58/0.37 校准)。"""
-    from sr_od.application.currency_war.cw_plaza_comps import default_star_goal
+    from sr_od.application.currency_war.data.cw_plaza_comps import default_star_goal
     assert default_star_goal(1) == 3
     assert default_star_goal(3) == 3
     assert default_star_goal(4) == 2

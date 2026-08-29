@@ -154,7 +154,7 @@ def test_sampler_v4_and_snapshot_selfconsistent() -> None:
     assert cw_sim._SAMPLER_VERSION == 11
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'
-    from sr_od.application.currency_war import cw_delta_pool_data
+    from sr_od.application.currency_war.data import cw_delta_pool_data
     assert fp == cw_delta_pool_data.META['fingerprint']
     assert cw_delta_pool_data.META['sampler_version'] == 11
     # 池语义变更使指纹与旧版快照(…/fd48f135/bab146c6 系)可区分

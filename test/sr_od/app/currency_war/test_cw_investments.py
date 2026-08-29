@@ -120,7 +120,7 @@ def test_canon_name_lcs_with_guards() -> None:
 # ===== ADR-0150 两层架构:plaza API base × curated overlay =====
 def test_adr0150_base_layer_full() -> None:
     """base 层全量:策略 335(334 plaza + 1 补遗)/ 环境 83(官方全量,与数据银行同口径)。"""
-    from sr_od.application.currency_war.cw_invest_data import PLAZA_AUGMENTS, PLAZA_PORTALS
+    from sr_od.application.currency_war.data.cw_invest_data import PLAZA_AUGMENTS, PLAZA_PORTALS
     assert len(PLAZA_AUGMENTS) == 334
     assert len(PLAZA_PORTALS) == 83
     assert len(INVESTMENT_STRATEGIES) == 335  # + 补遗 追击星徽套组(二)
@@ -265,8 +265,8 @@ def test_w144_augment_affinity_normalized_lookup() -> None:
     assert augment_env_affinity('仙舟概念股') == ENV_COMP_AFFINITY['仙舟概念股']
 def test_adr0151_bindings_table_valid() -> None:
     """语义绑定表:键 ⊆ 注册表;值 ⊆ FACTIONS/CHARACTERS(构建层孤儿 raise + 此处显式断言)。"""
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_factions import FACTIONS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_factions import FACTIONS
     from sr_od.application.currency_war.cw_investments import STRATEGY_BINDINGS
 
     assert set(STRATEGY_BINDINGS) <= set(INVESTMENT_STRATEGIES)

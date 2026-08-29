@@ -17,7 +17,7 @@ import re
 import pytest
 
 from sr_od.application.currency_war import cw_evolution as cw_evolution_mod
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_evolution import (
     EvolutionState,
     evolution_step,

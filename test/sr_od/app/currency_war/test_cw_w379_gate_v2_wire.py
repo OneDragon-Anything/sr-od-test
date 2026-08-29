@@ -20,7 +20,7 @@ from __future__ import annotations
 import dataclasses
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_intention import (
     CORE_MISS_N,
     IntentionState,

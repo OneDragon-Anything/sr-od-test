@@ -111,7 +111,7 @@ def test_phase_score_bounds_and_fallback_gate() -> None:
     """
     assert DEFAULT_REGISTRY.phase_fallback_min_engines >= 1
     assert DEFAULT_REGISTRY.phase_fallback_min_round >= 1
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.cw_deploy_logic import (
         TRANSITION_TRAITS,
     )

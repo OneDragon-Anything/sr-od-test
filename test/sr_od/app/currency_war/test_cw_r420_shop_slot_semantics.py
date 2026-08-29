@@ -84,7 +84,7 @@ class _SyntheticCardStub:
         pass
 
     def decide_prep(self, st, sess, cfg):  # noqa: ANN001
-        from sr_od.application.currency_war.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.cw_state import BuyCard, ShopCard
         name = next(n for n in CHARACTERS if CHARACTERS[n].cost == 1)
         return [BuyCard(card=ShopCard(x=100, faction='?', name=name,

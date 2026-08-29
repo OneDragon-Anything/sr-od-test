@@ -1,7 +1,7 @@
 """开拓者形态切换(前后台命途不同)计算正确性(用户 2026-08-16 指示;ADR-0158)。"""
 import pytest
 
-from sr_od.application.currency_war.cw_chars import (
+from sr_od.application.currency_war.data.cw_chars import (
     is_trailblazer,
     trailblazer_form,
 )

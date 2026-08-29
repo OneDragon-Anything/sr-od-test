@@ -107,7 +107,7 @@ def test_formed_stop_passes_target_piece() -> None:
     state = _formed_state()
     sess = _sess_locked_with_hoard()
     # 名单外过渡件占位:从注册表取一个不在目标集/引擎件的普通件
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     sess2 = _sess_locked_with_hoard()
     from sr_od.application.currency_war.decision_v2.candidates import (
         _target_names,

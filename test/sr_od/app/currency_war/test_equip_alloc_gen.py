@@ -93,7 +93,7 @@ def test_allocation_invariants(ci, di, oi):
     if comp is not None:
         core_set = set(comp.core_chars)
         field_cores = [c for c in comp.core_chars if c in on_field]
-        from sr_od.application.currency_war.cw_synthesis import (
+        from sr_od.application.currency_war.data.cw_synthesis import (
             recycle_qualified,
         )
         dead = set(recycle_qualified(list(comp.key_equips or [])))

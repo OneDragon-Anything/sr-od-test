@@ -89,7 +89,7 @@ def test_regenerate_empty_pool_raises(tmp_path: Path,
 
 
 def _patch_pool_meta(monkeypatch: pytest.MonkeyPatch, runs: dict) -> None:
-    from sr_od.application.currency_war import cw_delta_pool_data as dpd
+    from sr_od.application.currency_war.data import cw_delta_pool_data as dpd
     monkeypatch.setattr(dpd, 'META', {'runs': runs})
 
 

@@ -10,7 +10,7 @@ arbiter 主采纳通道执行后,shop.py 的 gold 差值对拍把回金当「多
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_state import (
     BenchChar,
     SellBench,

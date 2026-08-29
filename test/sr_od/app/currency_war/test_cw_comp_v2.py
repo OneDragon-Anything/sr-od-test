@@ -21,7 +21,7 @@ from sr_od.application.currency_war.cw_comps import (
     derive_key_equips,
     get_comp,
 )
-from sr_od.application.currency_war.cw_factions import FACTIONS
+from sr_od.application.currency_war.data.cw_factions import FACTIONS
 from sr_od.application.currency_war.cw_plugins import (
     PLUGIN_DISABLE_MATRIX,
     PLUGIN_LIBRARY,
@@ -242,7 +242,7 @@ def test_plugin_library_counts_and_schema() -> None:
     # 三C 定稿 15 件全落(W55 🔴):圣杯2 在库
     assert "圣杯2" in PLUGIN_LIBRARY
     # 规范名(R2 §2):单卡 plugin_id 必须是 CHARACTERS 注册表键(买门按名匹配)
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     for p in units:
         assert p.plugin_id in CHARACTERS, f"单卡 plugin_id '{p.plugin_id}' 非注册表规范名(买门永不命中)"
 

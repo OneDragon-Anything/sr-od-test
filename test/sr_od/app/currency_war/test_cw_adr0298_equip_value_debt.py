@@ -13,7 +13,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_equipment_data import (
+from sr_od.application.currency_war.data.cw_equipment_data import (
     EQUIPMENT_ROSTER,
 )
 from sr_od.application.currency_war.cw_events import (

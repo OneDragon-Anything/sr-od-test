@@ -11,7 +11,7 @@ import math
 
 import pytest
 
-from sr_od.application.currency_war.cw_shop_odds import (
+from sr_od.application.currency_war.data.cw_shop_odds import (
     SHOP_SLOTS,
     expected_refreshes,
     expected_refreshes_for_card,

@@ -32,7 +32,7 @@ class _FullBenchStub:
         pass
 
     def decide_prep(self, st, sess, cfg):  # noqa: ANN001
-        from sr_od.application.currency_war.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.cw_state import (
             BenchChar,
             BuyCard,

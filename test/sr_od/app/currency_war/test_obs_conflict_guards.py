@@ -33,7 +33,7 @@ class _Sess:
 def test_board_from_tracked_full_known():
     """全已知身份 → 全集计数(每人贡献全部阵营)。"""
     # 瓦尔特: 列车同行+星间旅人;姬子·启行: 列车同行(以注册表为准,断言用注册表值动态算)
-    from sr_od.application.currency_war.cw_chars import get_char
+    from sr_od.application.currency_war.data.cw_chars import get_char
     chars = [BenchChar(slot=1, char_id='瓦尔特'), BenchChar(slot=2, char_id='姬子·启行')]
     board = board_from_tracked(chars)
     assert board is not None

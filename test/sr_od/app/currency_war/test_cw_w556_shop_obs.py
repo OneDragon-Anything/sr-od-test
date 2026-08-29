@@ -13,7 +13,7 @@ from sr_od.application.currency_war.cw_shop_obs import (
     check_shop_pool,
     refresh_expect,
 )
-from sr_od.application.currency_war.cw_shop_odds import REFRESH_PROB, SHOP_SLOTS
+from sr_od.application.currency_war.data.cw_shop_odds import REFRESH_PROB, SHOP_SLOTS
 
 # ---------------------------------------------------------------------------
 # 1. check_shop_pool

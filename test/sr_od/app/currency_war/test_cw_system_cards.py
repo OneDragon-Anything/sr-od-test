@@ -11,7 +11,7 @@
 4. readiness 统一维度(ADR-0311:门槛低=容易被先凑出,不是优先级特权)
    + 行为等价性四项(铁三角胜/仅 DOT 件胜/同 readiness 裁决/空窗不变)。
 """
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_state import (
     BenchChar,
     GameState,

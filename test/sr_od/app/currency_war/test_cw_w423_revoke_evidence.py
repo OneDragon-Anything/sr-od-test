@@ -20,7 +20,7 @@ from __future__ import annotations
 import dataclasses
 import math
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_intention import (
     CORE_MISS_N,
     IntentionState,
@@ -134,7 +134,7 @@ def test_c2_n_req_worked_example_cost3_lv5() -> None:
     """闭式代入例(锁定表值,表或公式漂移即碎):3 费@lv5,
     refresh_prob=0.20 → r=0.20/14,q=1−(1−r)^5≈0.0693,
     N_req=⌈ln 0.05/ln(1−q)⌉=⌈41.71⌉=42。"""
-    from sr_od.application.currency_war.cw_shop_odds import (
+    from sr_od.application.currency_war.data.cw_shop_odds import (
         DISTINCT_CARDS_PER_COST,
         refresh_prob,
     )

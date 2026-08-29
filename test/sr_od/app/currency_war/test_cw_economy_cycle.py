@@ -57,7 +57,7 @@ def _state(*, gold: int = 80, plane: int = 1, r: int = 3, level: int = 6,
 
 
 def _ch(name: str, slot: int, star: int = 1) -> BenchChar:
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     fac = (CHARACTERS[name].factions or ('?',))[0]
     return BenchChar(slot=slot, char_id=name, faction=fac, star=star)
 

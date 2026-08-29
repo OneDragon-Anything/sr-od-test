@@ -22,7 +22,7 @@ from sr_od.application.currency_war.cw_comps import (
     equip_allocation,
 )
 from sr_od.application.currency_war.cw_state import BenchChar
-from sr_od.application.currency_war.cw_synthesis import RESERVED_COMPONENTS
+from sr_od.application.currency_war.data.cw_synthesis import RESERVED_COMPONENTS
 
 
 def _dep():

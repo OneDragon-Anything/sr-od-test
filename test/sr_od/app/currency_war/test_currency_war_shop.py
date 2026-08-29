@@ -14,7 +14,7 @@ from cv2.typing import MatLike
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
 from sr_od.application.currency_war.cw_evaluate import HP_DANGER
-from sr_od.application.currency_war.cw_factions import FACTIONS
+from sr_od.application.currency_war.data.cw_factions import FACTIONS
 from sr_od.application.currency_war.cw_observation import (
     read_game_state,
     read_hp,

@@ -66,7 +66,7 @@ def _state(plane: int = 2, **kw) -> GameState:
     s.gold = kw.get('gold', 30)
     s.active_env = kw.get('env', '')
     for name in kw.get('shop', []):
-        from sr_od.application.currency_war.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.cw_state import ShopCard
         ch = CHARACTERS.get(name)
         s.shop.append(ShopCard(x=len(s.shop), name=name,
@@ -74,7 +74,7 @@ def _state(plane: int = 2, **kw) -> GameState:
                                else '?',
                                cost=ch.cost if ch else 3))
     for name in kw.get('bench', []):
-        from sr_od.application.currency_war.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         ch = CHARACTERS.get(name)
         s.bench.append(BenchChar(slot=len(s.bench), char_id=name,
                                  faction=ch.factions[0] if ch and ch.factions

@@ -13,8 +13,8 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_equipment_data import EQUIPMENT_ROSTER
-from sr_od.application.currency_war.cw_synthesis import RESERVED_COMPONENTS
+from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENT_ROSTER
+from sr_od.application.currency_war.data.cw_synthesis import RESERVED_COMPONENTS
 
 
 def test_calib_constants_shape() -> None:

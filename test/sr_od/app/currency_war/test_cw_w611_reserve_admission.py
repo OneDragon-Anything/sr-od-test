@@ -81,7 +81,7 @@ def _saving_posture() -> Posture:
 
 
 def _ch(name: str, slot: int) -> BenchChar:
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     fac = (CHARACTERS[name].factions or ('?',))[0]
     return BenchChar(slot=slot, char_id=name, faction=fac, star=1)
 

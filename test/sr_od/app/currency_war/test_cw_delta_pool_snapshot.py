@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war import cw_delta_pool_data
+from sr_od.application.currency_war.data import cw_delta_pool_data
 from sr_od.application.currency_war import cw_sim as _sim
 
 

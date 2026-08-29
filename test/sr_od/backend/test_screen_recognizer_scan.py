@@ -115,7 +115,7 @@ def test_scan_import_failure_tolerant(mock_ctx: MagicMock, monkeypatch: pytest.M
 
     def flaky_import(name: str):  # noqa: ANN202
         # currency_war/battle_prep_recognizer 不直接是顶层包名;挑一个真实存在的子模块制造失败
-        if name == 'sr_od.application.currency_war.cw_synthesis':
+        if name == 'sr_od.application.currency_war.data.cw_synthesis':
             raise RuntimeError('模拟 import 失败')
         return real_import(name)
 

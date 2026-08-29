@@ -12,7 +12,7 @@ import json
 import random
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_delta_pool_data
+from sr_od.application.currency_war.data import cw_delta_pool_data
 from sr_od.application.currency_war import cw_sim as _sim
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
 from sr_od.application.currency_war.cw_sim_checks import (

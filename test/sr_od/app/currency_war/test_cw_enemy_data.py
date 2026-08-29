@@ -2,7 +2,7 @@
 import pytest
 
 from sr_od.application.currency_war.cw_comps import COMP_LIBRARY, boss_fit, get_comp
-from sr_od.application.currency_war.cw_enemy_data import (
+from sr_od.application.currency_war.data.cw_enemy_data import (
     boss_tags,
     matchup,
     normalize_boss_name,

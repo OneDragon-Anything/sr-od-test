@@ -466,7 +466,7 @@ def test_sell_for_interest_skip_list_contract(monkeypatch) -> None:
     (对照证明跳过来自档位而非别的门)。'release' 档映射已删(预留档位
     无生产者;活栈消费门=⑨ 锁B)。"""
     from sr_od.application.currency_war import cw_plan
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     st = _state(gold=18, deployed_n=0, bench_n=1)
     _name, _ch = next((n, c) for n, c in CHARACTERS.items() if c.cost == 2)
     st.bench[0] = BenchChar(slot=1, char_id=_name,
@@ -714,7 +714,7 @@ def test_release_gate_neutralizes_vd_c_dec_interest_loss() -> None:
     对照=同 registry 无 release 态(session 判据单一源,v3_release=None)
     息损项照计,两臂分值差=息损项对拍值(测试本地复算,禁从被测函数
     借值)。"""
-    from sr_od.application.currency_war.cw_shop_odds import (
+    from sr_od.application.currency_war.data.cw_shop_odds import (
         expected_refreshes_for_card,
     )
     from sr_od.application.currency_war.decision_v2.ev import (

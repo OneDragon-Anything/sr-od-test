@@ -289,7 +289,7 @@ def test_overheat_reward_node_treated_as_battle() -> None:
     - 地板不降:连胜 EV 地板**不**因扑满节点降 5(_hard_node 不辖;
       boss/遭遇窗的下探授权对扑满全部不适用);
     - 环境名单从 cw_invest_data 效果文本派生(单一源断言)。"""
-    from sr_od.application.currency_war.cw_invest_data import PLAZA_PORTALS
+    from sr_od.application.currency_war.data.cw_invest_data import PLAZA_PORTALS
     # 名单派生:效果文本含「奖励节点替换」
     expect = {p.name for p in PLAZA_PORTALS
               if '奖励节点替换' in (p.effect or '')}

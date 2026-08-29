@@ -387,7 +387,7 @@ def test_checker_dup_dual_domain() -> None:
     copy_press_channel_closed);bench-only 同名 → 披露
     copy_bench_only_skipped 不进真拦;非重复散件(C-D)照报真拦。"""
     from sr_od.application.currency_war import cw_sim_checks as chk
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.cw_line_defs import (
         ENGINE_FACTIONS,
     )

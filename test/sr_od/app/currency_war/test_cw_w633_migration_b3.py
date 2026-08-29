@@ -100,7 +100,7 @@ def test_no_supply_frame_yields_none_shape_only_in_emergency() -> None:
 def test_schedule_pop_slot_trigger() -> None:
     """触发①[33] 人口位:cap 满 ∧ bench 有成型件(2★)→ 排程
     (最高义务;不受息引擎前置辖——当轮兑现战力)。"""
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.cw_state import deployed_occupied
 
     def _ch(name: str, slot: int, star: int) -> BenchChar:
@@ -218,7 +218,7 @@ def _starve_frame(r: int = 5):
     """配方锁帧工厂:bench 有 DOT/列车成员(支持度保 pair 重派生不脱窗),
     店空(两体系新件渠道全断——「补不进的新件」量供给渠道,到手资产
     不救供给)。"""
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 
     def _ch(name: str, slot: int) -> BenchChar:
         fac = (CHARACTERS[name].factions or ('?',))[0]
@@ -295,7 +295,7 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     from sr_od.application.currency_war.decision_v2.prep_brain import (
         _tracking_view,
     )
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 
     def _ch(name: str, slot: int) -> BenchChar:
         fac = (CHARACTERS[name].factions or ('?',))[0]

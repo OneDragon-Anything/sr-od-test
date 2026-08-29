@@ -14,7 +14,7 @@ def test_missing_core_tier_hunted() -> None:
     """①+②:core 未到 2★ 的费级入追猎(希儿 3 费缺 → 3 入集)。"""
     st = GameState(deployed=[], bench=[])
     tiers = _hunt_tier_set(st, (get_comp('希儿量子'), None))
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     expect = {int(CHARACTERS[c].cost) for c in get_comp('希儿量子').core_chars}
     assert tiers == expect
 
@@ -23,7 +23,7 @@ def test_completed_2star_core_not_hunted_for_2star() -> None:
     """core 已 2★ → 不再走「缺 2★」分支,但走「3★ 机会追猎」(同费仍在集)。"""
     st = GameState(deployed=[BenchChar(slot=1, char_id='希儿', faction='量子同频', star=2)])
     tiers = _hunt_tier_set(st, (get_comp('希儿量子'), None))
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     assert int(CHARACTERS['希儿'].cost) in tiers   # 3★ 追猎(③)
 
 
@@ -31,7 +31,7 @@ def test_field_2star_support_adds_tier() -> None:
     """③牌运:场上 2★ 辅助(非 core)费级入追猎(3费辅助 2★ → 追 3★)。"""
     st = GameState(deployed=[BenchChar(slot=1, char_id='藿藿', faction='仙舟', star=2)])
     tiers = _hunt_tier_set(st, (None, None))
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     assert int(CHARACTERS['藿藿'].cost) in tiers
 
 
@@ -39,7 +39,7 @@ def test_dual_comp_union() -> None:
     """target+stash 两边的缺 core 费级都入集(过渡与最终都有目标)。"""
     st = GameState(deployed=[], bench=[])
     tiers = _hunt_tier_set(st, (get_comp('列车同行'), get_comp('希儿量子')))
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     assert int(CHARACTERS['瓦尔特'].cost) in tiers   # 双方共有
     assert int(CHARACTERS['花火'].cost) in tiers
 
@@ -52,7 +52,7 @@ def test_two_1star_copies_still_hunted() -> None:
         deployed=[BenchChar(slot=1, char_id='希儿', faction='量子同频', star=1)],
         bench=[BenchChar(slot=1, char_id='希儿', faction='量子同频', star=1)])
     tiers = _hunt_tier_set(st, (get_comp('希儿量子'), None))
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     assert int(CHARACTERS['希儿'].cost) in tiers, '2张1★ ≠ 2★(3合1 需 3 张)→ 3 费在追'
 
 
@@ -63,7 +63,7 @@ def test_equiv_copies_one_2star_equals_three() -> None:
     # 3 张 1★ 等价(用 1张2★ 表达同一等价量)→ 不走①;板上 2★ 触发③ → 同费仍在集
     st = GameState(deployed=[BenchChar(slot=1, char_id='希儿', faction='量子同频', star=2)])
     tiers = hunt(st, (get_comp('希儿量子'), None))
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     assert int(CHARACTERS['希儿'].cost) in tiers   # ③:2★ 在场 → 3★ 机会追猎
 
 
@@ -95,7 +95,7 @@ def test_compress_tail_sweep_dualtrack_buys_cheap() -> None:
     import random
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.cw_chars import get_char
+    from sr_od.application.currency_war.data.cw_chars import get_char
     from sr_od.application.currency_war.cw_plan import plan
     from sr_od.application.currency_war.cw_state import GameState, ShopCard
 

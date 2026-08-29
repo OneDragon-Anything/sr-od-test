@@ -7,7 +7,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS, get_char
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
 from sr_od.application.currency_war.operations.prep.deploy_bench import (
     _tier_completes,
 )
@@ -52,7 +52,7 @@ def test_flow_faction_also_counts() -> None:
     """流派羁绊同样计档(击破 2→3 用 flows tag 判)。"""
     ch = next(c for c in CHARACTERS.values() if '击破' in c.flows)
     tiers_has_3 = 3 in __import__(
-        'sr_od.application.currency_war.cw_factions', fromlist=['FACTIONS']
+        'sr_od.application.currency_war.data.cw_factions', fromlist=['FACTIONS']
     ).FACTIONS['击破'].tiers
     if tiers_has_3:
         assert _tier_completes(frozenset(ch.flows), {'击破': 2}) == 1

@@ -22,7 +22,7 @@ from sr_od.application.currency_war.cw_effect_inventory import (  # noqa: E402
     EffectKind,
     TriggerKind,
 )
-from sr_od.application.currency_war.cw_invest_data import PLAZA_AUGMENTS  # noqa: E402
+from sr_od.application.currency_war.data.cw_invest_data import PLAZA_AUGMENTS  # noqa: E402
 from sr_od.application.currency_war.cw_investments import (  # noqa: E402
     INVESTMENT_STRATEGIES,
     STRATEGY_ECONOMY,

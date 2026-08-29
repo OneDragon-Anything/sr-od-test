@@ -743,7 +743,7 @@ def test_pepe_roster_and_template(templates):
     """佩佩建档三面:立绘模板在库;roster cost=0(系统召唤单位);deploy
     候选剔除(不可拖,同狸猫对)。"""
     assert '佩佩' in templates
-    from sr_od.application.currency_war.cw_chars import get_char
+    from sr_od.application.currency_war.data.cw_chars import get_char
     ch = get_char('佩佩')
     assert ch is not None and ch.cost == 0
     from sr_od.application.currency_war.cw_state import BenchChar

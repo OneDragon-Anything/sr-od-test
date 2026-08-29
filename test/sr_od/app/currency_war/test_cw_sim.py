@@ -9,8 +9,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_shop_odds import POOL_COPIES_PER_CARD
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_shop_odds import POOL_COPIES_PER_CARD
 from sr_od.application.currency_war.cw_sim import (
     _Pool,
     simulate_p1,

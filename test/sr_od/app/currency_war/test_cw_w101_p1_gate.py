@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war import cw_intention
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_intention import (
     IntentionState,
     _p1_transition_eligible,

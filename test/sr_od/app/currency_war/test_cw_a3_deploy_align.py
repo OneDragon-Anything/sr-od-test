@@ -13,7 +13,7 @@ cw_deploy_logic.ignition_gain)点火首键:探针形态 bench 姬子·启行
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.cw_deploy_logic import select_deployments
 from sr_od.application.currency_war.cw_state import BenchChar
 from sr_od.application.currency_war.operations.prep.deploy_bench import (

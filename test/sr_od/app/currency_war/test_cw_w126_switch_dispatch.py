@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.cw_comps import get_comp
 from sr_od.application.currency_war.cw_intention import IntentionState
-from sr_od.application.currency_war.cw_shop_odds import (
+from sr_od.application.currency_war.data.cw_shop_odds import (
     expected_refreshes_for_card,
 )
 from sr_od.application.currency_war.cw_state import (

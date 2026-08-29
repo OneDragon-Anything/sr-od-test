@@ -59,7 +59,7 @@ def _sc(name: str, cost: int = 2) -> ShopCard:
 
 
 def _full_bench() -> list[BenchChar]:
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 
     def _ch(name: str, slot: int) -> BenchChar:
         fac = (CHARACTERS[name].factions or ('?',))[0]
@@ -158,7 +158,7 @@ def test_bond_fallback_beats_o1_quality_order() -> None:
     sess.v3_intention = ist
     sess.v3_hoard = HoardTarget(
         frozenset({'姬子·启行'}), frozenset(), 'locked')
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     fac = (CHARACTERS['桑博'].factions or ('?',))[0]
     st = _state(gold=100, board={},
                 bench=[BenchChar(slot=0, char_id='桑博', faction=fac,

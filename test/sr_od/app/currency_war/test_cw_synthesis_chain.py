@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war import cw_synthesis
-from sr_od.application.currency_war.cw_synthesis import (
+from sr_od.application.currency_war.data import cw_synthesis
+from sr_od.application.currency_war.data.cw_synthesis import (
     plan_syntheses,
     synthesis_membership,
 )

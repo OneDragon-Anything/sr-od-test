@@ -31,7 +31,7 @@ def test_material_score_now_alive():
 
 def test_material_chain_via_recipes():
     """注册表链:以牙还牙甲.recipes 含 (量产型装甲, 幸运星)。"""
-    from sr_od.application.currency_war.cw_equipment_data import EQUIPMENTS
+    from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
     eq = EQUIPMENTS['以牙还牙甲']
     recipes = getattr(eq, 'recipes', ()) or ()
     flat = {m for r in recipes for m in r}

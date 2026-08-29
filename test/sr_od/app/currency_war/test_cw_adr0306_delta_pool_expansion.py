@@ -10,7 +10,8 @@ BOSS_WIN_P_* / _BOSS_WIN_P_EXTRAPOLATED 缓存)整体废弃,胜负面单一
 取值口 = ``node_win_p``(W31 实测节点×轮次阶梯,n=192)。
 """
 
-from sr_od.application.currency_war import cw_delta_pool_data, cw_sim
+from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.data import cw_delta_pool_data
 from sr_od.application.currency_war.data.cw_battle_tables import (
     NODE_WIN_P_BY_TYPE as tables_NODE_WIN_P_BY_TYPE,
     NODE_WIN_P_LADDER as tables_NODE_WIN_P_LADDER,

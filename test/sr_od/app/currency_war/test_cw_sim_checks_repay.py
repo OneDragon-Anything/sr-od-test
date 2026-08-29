@@ -151,7 +151,7 @@ def test_phantom_equip_no_wear_bidirectional() -> None:
     assert chk.check_phantom_equip_no_wear(bad), '幻影装备未报'
     real = next(iter(
         __import__(
-            'sr_od.application.currency_war.cw_equipment_data',
+            'sr_od.application.currency_war.data.cw_equipment_data',
             fromlist=['EQUIPMENT_ROSTER']).EQUIPMENT_ROSTER))
     good = [_row(equipped=[{'char': 'x', 'equip': real}])]
     assert not chk.check_phantom_equip_no_wear(good)

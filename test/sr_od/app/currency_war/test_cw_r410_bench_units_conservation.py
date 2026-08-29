@@ -111,7 +111,7 @@ def _ns(d: dict):
 def test_board_counts_of_fullset_caliber() -> None:
     """_board_counts_of:羁绊全集(factions+flows+independent+星徽装备
     贡献;ADR-0312 W50);未识别回退 faction 单标签(空/'?' 不计)。"""
-    from sr_od.application.currency_war.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     dep = [
         BenchChar(slot=1, char_id='希儿', faction='量子同频'),
         BenchChar(slot=2, char_id='银狼', faction='量子同频'),
