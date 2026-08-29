@@ -44,6 +44,8 @@ from sr_od.application.currency_war.decision_v2.arbiter import (
 from sr_od.application.currency_war.decision_v2.candidates import Candidate
 from sr_od.application.currency_war.decision_v2.discipline import (
     sole_engine_sell_blocked,
+)
+from sr_od.application.currency_war.kernel.cw_discipline_rules import (
     sole_engine_sell_floor_plan,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (

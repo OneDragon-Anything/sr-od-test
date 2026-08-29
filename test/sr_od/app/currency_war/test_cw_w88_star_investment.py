@@ -189,7 +189,7 @@ def test_seed_age_blocked_phantom_cnt_not_exempt() -> None:
     """幻影计数锁:cnt≥2 但真持有 <2 份(登记重复/执行层否决留痕)
     不解除种子保护(seed16 姬子·启行单买 cnt=2 被 r5 卖出的互踩根因);
     真持有 ≥2 份才走素材语境豁免。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.kernel.cw_discipline_rules import (
         seed_age_blocked,
     )
     sess = _sess()
