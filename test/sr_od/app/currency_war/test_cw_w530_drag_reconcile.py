@@ -13,8 +13,8 @@ from pathlib import Path
 
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_prep_actions import DeployMove, SellBench
-from sr_od.application.currency_war.prep_director import (
 from sr_od.application.currency_war.telemetry import defects, recorder
+from sr_od.application.currency_war.prep_director import (
     compare_drag_expect,
     compute_drag_expect,
 )

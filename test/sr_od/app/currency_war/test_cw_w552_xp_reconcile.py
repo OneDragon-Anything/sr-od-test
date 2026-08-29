@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
 )
@@ -21,7 +22,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
     xp_clicks_to_level,
 )
 from sr_od.application.currency_war.prep_director import (
-from sr_od.application.currency_war.telemetry import defects, recorder
     PrepDirector,
     XpLedger,
     _xp_compare,

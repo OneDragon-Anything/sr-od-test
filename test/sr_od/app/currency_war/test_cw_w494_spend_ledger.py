@@ -224,13 +224,15 @@ def test_record_spend_unit_appends(tmp_path: Path, monkeypatch):
 
 def test_exec_fail_predicate_mismatch_stops():
     """mismatch(计划花费>0 且金差≈0)→ 停(W489 执行未生效病灶形态)。"""
-    from sr_od.application.currency_war.prep_director import exec_fail_should_stop
+
+    from sr_od.application.currency_war.run_state import exec_fail_should_stop
     assert exec_fail_should_stop(_buy(5), 125, 125) is True
 
 
 def test_exec_fail_predicate_partial_and_quiet_and_unknown_dont_stop():
     """partial(金动了但对不上)/静默/unknown(读数缺失、半单元)一律不停。"""
-    from sr_od.application.currency_war.prep_director import exec_fail_should_stop
+
+    from sr_od.application.currency_war.run_state import exec_fail_should_stop
     assert exec_fail_should_stop(_buy(5), 50, 20) is False          # partial
     assert exec_fail_should_stop([], 50, 51) is False               # no_spend_quiet
     assert exec_fail_should_stop(_buy(5), 50, None) is False        # unknown:读数缺
@@ -242,7 +244,8 @@ def test_exec_fail_predicate_partial_and_quiet_and_unknown_dont_stop():
 def test_exec_fail_flag_content_lock(tmp_path: Path):
     """flag 三要素内容锁:HOOK-STOP 定位(run_id/轮/unit_seq/plan/gold)+
     可执行处理步骤 + 删除条件(临时捕获类)。"""
-    from sr_od.application.currency_war.prep_director import write_exec_fail_flag
+
+    from sr_od.application.currency_war.run_state import write_exec_fail_flag
     fp = tmp_path / 'flag' / 'cw_exec_fail_hook.flag'
     content = write_exec_fail_flag(
         fp, run_id='run_x', plane=2, round_num=5, unit_seq=3,
@@ -257,10 +260,8 @@ def test_exec_fail_flag_content_lock(tmp_path: Path):
 
 def test_exec_fail_flag_path_shape():
     """flag 路径契约锁:固定落在仓根 .debug/temp/cw_exec_fail_hook.flag。"""
-    from sr_od.application.currency_war.prep_director import (
-        _EXEC_FAIL_FLAG_RELPATH,
-        exec_fail_flag_path,
-    )
+
+    from sr_od.application.currency_war.run_state import _EXEC_FAIL_FLAG_RELPATH, exec_fail_flag_path
     assert str(_EXEC_FAIL_FLAG_RELPATH).replace('\\', '/') == \
         '.debug/temp/cw_exec_fail_hook.flag'
     assert exec_fail_flag_path().name == 'cw_exec_fail_hook.flag'
@@ -335,7 +336,8 @@ def test_classify_unjudgeable_board_not_treated_as_changed():
 
 def test_exec_fail_predicate_exempts_new_verdicts():
     """安灯谓词:plan_truncated / free_refresh_proc → 不停;not_effective → 停。"""
-    from sr_od.application.currency_war.prep_director import exec_fail_should_stop
+
+    from sr_od.application.currency_war.run_state import exec_fail_should_stop
     assert exec_fail_should_stop(_plan_ju22_u1(), 50, 50,
                                  executed={'plan_truncated': True,
                                            'refresh_skipped': 'max_cap'}) is False

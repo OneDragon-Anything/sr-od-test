@@ -10,6 +10,7 @@ from sr_od.application.currency_war.currency_war_config import (
 )
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.telemetry import query, recorder, state
+from sr_od.application.currency_war.telemetry import query as query
 from sr_od.application.currency_war.decision.cw_strategy_manager import (
     PluginSource,
     StrategyManager,
@@ -67,12 +68,13 @@ def test_default_session_v2_fields_none():
 
 def test_v2_extra_roundtrip(tmp_path: Path):
     """S3:遥测链端到端——record_decision(extra v2_*) → 字段落盘。"""
-    from sr_od.application.currency_war.telemetry import cw_telemetry
+    from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
+    from sr_od.application.currency_war.telemetry import state as _telstate
     from sr_od.application.currency_war.kernel.cw_state import GameState
-    cw_telemetry._RECORDER = cw_telemetry.TelemetryRecorder(
+    _telstate._RECORDER = cw_telemetry.TelemetryRecorder(
         enabled=True, replay_dir=tmp_path)
-    cw_telemetry._CURRENT_RUN_ID = 'test_v2'
-    cw_telemetry._CURRENT_DIFFICULTY = 'A8'
+    _telstate._CURRENT_RUN_ID = 'test_v2'
+    _telstate._CURRENT_DIFFICULTY = 'A8'
     st = GameState()
     st.plane, st.round_num, st.gold = 1, 1, 50
     cw_telemetry.record_decision(
@@ -85,17 +87,18 @@ def test_v2_extra_roundtrip(tmp_path: Path):
     assert rows[-1]['v2_mode'] == 'economy'
     assert rows[-1]['v2_locked_line'] == 'jizi_train'
     assert rows[-1]['v2_bridge'] == ''
-    cw_telemetry._RECORDER = None
-    cw_telemetry._CURRENT_RUN_ID = ''
+    _telstate._RECORDER = None
+    _telstate._CURRENT_RUN_ID = ''
 
 
 def test_query_rounds_shows_v2(tmp_path: Path):
     """S1:rounds 视图显示 v2 字段(schema 变更查询同步)。"""
-    from sr_od.application.currency_war.telemetry import cw_telemetry
-    cw_telemetry._RECORDER = cw_telemetry.TelemetryRecorder(
+    from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
+    from sr_od.application.currency_war.telemetry import state as _telstate
+    _telstate._RECORDER = cw_telemetry.TelemetryRecorder(
         enabled=True, replay_dir=tmp_path)
-    cw_telemetry._CURRENT_RUN_ID = 'test_v2q'
-    cw_telemetry._CURRENT_DIFFICULTY = 'A8'
+    _telstate._CURRENT_RUN_ID = 'test_v2q'
+    _telstate._CURRENT_DIFFICULTY = 'A8'
     from sr_od.application.currency_war.kernel.cw_state import GameState
     st = GameState()
     st.plane, st.round_num, st.gold = 1, 1, 50
@@ -103,7 +106,7 @@ def test_query_rounds_shows_v2(tmp_path: Path):
         st, '', {}, {}, [],
         extra={'strategy_id': 'line_v2', 'v2_mode': 'war',
                'v2_locked_line': 'jizi_train', 'v2_bridge': ''})
-    lines = cw_telemetry.query_rounds(tmp_path, 'test_v2q')
+    lines = query.query_rounds(tmp_path, 'test_v2q')
     assert any('v2=[war|jizi_train|-]' in ln for ln in lines), lines
-    cw_telemetry._RECORDER = None
-    cw_telemetry._CURRENT_RUN_ID = ''
+    _telstate._RECORDER = None
+    _telstate._CURRENT_RUN_ID = ''

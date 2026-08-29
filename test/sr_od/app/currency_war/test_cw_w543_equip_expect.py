@@ -21,13 +21,13 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.obs import cw_equipment
 from sr_od.application.currency_war.data import cw_synthesis
 from sr_od.application.currency_war.obs.cw_equipment import EquipCell
+from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.prep_director import (
     PrepDirector,
     compare_equip_expect,
     compute_equip_drag_expect,
 )
 from sr_od.application.currency_war.prep_director import (
-from sr_od.application.currency_war.telemetry import defects, recorder
     EquipDragIntent,
     EquipExpect,
 )

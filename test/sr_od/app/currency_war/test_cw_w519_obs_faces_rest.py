@@ -9,12 +9,12 @@ DESIGN.md §2.2/§2.7/§1 行11+§5-B5,观测自检框架)。
 """
 import json
 from pathlib import Path
+from sr_od.application.currency_war.telemetry import defects, recorder
 
 from sr_od.application.currency_war.operations.handlers.collect_plane_intel import (
     node_seq_cross_mismatch,
 )
 from sr_od.application.currency_war.operations.prep.shop import (
-from sr_od.application.currency_war.telemetry import defects, recorder
     bench_buy_count_ok,
     bench_buy_identity_missing,
     bench_buy_occupancy_ok,
