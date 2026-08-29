@@ -41,8 +41,13 @@ from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 # LEVEL_CAP 注入决策层,lv9 帧决策层不再发起必然被拒付的升级;行为
 # 批,位移由 .debug/temp/currency_war/w652_p4_fixes/REPORT.md 记档)
 # ——digest cdec4400…;本锚继续做 unintended drift 哨兵。
+# 分配器落码批重锚(2026-09-06):死亡窗支出分配器(ADR-0474)接入
+# decide_prep 默认路径是行为批,坐息/攥金帧出现分配器出清支出 → 行为
+# 位移由 .debug/temp/currency_war/w715_allocator_impl/REPORT.md §四
+# 记档(配对双窗 n=200 持平判定)——digest 687e5168…;本锚继续做
+# unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    'cdec440098d3d3ab92e1561ef454b0056bb52d7da4daadc0ff83d3c5059d5222')
+    '687e516831d304cd556789721b0467f8ca995d96eb0e02388149e85fba5241aa')
 
 
 def _behavior_projection(results) -> str:
