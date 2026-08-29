@@ -18,11 +18,11 @@ from sr_od.application.currency_war.decision_v2.adapter import (
     SHADOW_STATS,
     shadow_compare_step,
 )
-from sr_od.application.currency_war.prep_actions import (
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
     OpenBox,
     SellBench,
 )
-from sr_od.application.currency_war.prep_director import PrepObservation
+from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
 
 
 class _Strat:
@@ -87,7 +87,7 @@ def test_shadow_session_isolation_side_effects_not_replayed():
 
 def test_shadow_control_flow_signature_compare():
     """控制流动作(Defer/Bail 族)按 control 标记对照,与 op 不混判。"""
-    from sr_od.application.currency_war.prep_actions import DeferSpheres
+    from sr_od.application.currency_war.kernel.cw_prep_actions import DeferSpheres
     lines, _sess, before = _run(_Strat(lambda: DeferSpheres()), DeferSpheres())
     assert SHADOW_STATS['match'] == before['match'] + 1
     assert lines[-1]['old'][0] == 'control' and lines[-1]['new'][0] == 'control'

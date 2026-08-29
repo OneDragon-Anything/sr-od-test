@@ -19,7 +19,7 @@ from types import SimpleNamespace
 import sr_od.application.currency_war.obs.cw_observation_gate as gate_mod
 import sr_od.application.currency_war.prep_director as pd_mod
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.prep_actions import StartBattle
+from sr_od.application.currency_war.kernel.cw_prep_actions import StartBattle
 from sr_od.application.currency_war.prep_director import PrepDirector
 
 _FRAME = object()   # gate 稳定帧哨兵(身份断言用)
@@ -86,7 +86,7 @@ def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
     monkeypatch.setattr(d, '_try_collapse_open_shop', _fake_collapse)
 
     def _observe(heavy, screen=None):
-        from sr_od.application.currency_war.prep_director import PrepObservation
+        from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
         obs = PrepObservation()
         obs.state = GameState(plane=1, round_num=1)
         return obs

@@ -40,7 +40,7 @@ from sr_od.application.currency_war.decision_v2.turn_state import (
     DirectionView,
     TurnState,
 )
-from sr_od.application.currency_war.prep_actions import SellBench
+from sr_od.application.currency_war.kernel.cw_prep_actions import SellBench
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
         / 'currency_war')

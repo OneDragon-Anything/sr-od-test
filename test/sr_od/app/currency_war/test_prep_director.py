@@ -9,13 +9,14 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import sr_od.application.currency_war.kernel.cw_prep_actions as pv
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import prep_actions as pa_mod
 from sr_od.application.currency_war import prep_director as pd_mod
 from sr_od.application.currency_war.cw_evaluate import _card_hits_target
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.prep_actions import (
+from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
     ClickSpheres,
     DeferSpheres,
     DeployMove,
@@ -24,14 +25,15 @@ from sr_od.application.currency_war.prep_actions import (
     OpenBox,
     PickBoxCard,
     PrepAction,
+    PrepObservation,
     RunBuyPhase,
     RunDeploy,
     RunEquip,
     SellBench,
     StartBattle,
 )
-from sr_od.application.currency_war.prep_director import PrepDirector, PrepObservation
-from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.prep_director import PrepDirector
 
 if True:
     from test.conftest import SrTestContext
@@ -290,9 +292,9 @@ def test_level_up_gate() -> None:
 
 def test_action_key_param_granularity() -> None:
     """action_key 屏蔽粒度 = 类型+参数(SellBench(3) ≠ SellBench(5),§13.2)。"""
-    k3, k5 = pa_mod.action_key(SellBench(slot=3)), pa_mod.action_key(SellBench(slot=5))
+    k3, k5 = pv.action_key(SellBench(slot=3)), pv.action_key(SellBench(slot=5))
     assert k3 != k5 and 'SellBench' in k3
-    assert pa_mod.action_key(StartBattle()) == 'StartBattle'
+    assert pv.action_key(StartBattle()) == 'StartBattle'
 
 
 def test_session_counters() -> None:
@@ -317,7 +319,7 @@ class _FakeExecutor:
         return None   # 环级测试聚焦环逻辑;参数校验语义走真 PrepActionExecutor 单测
 
     def execute(self, action):
-        self.calls.append(pa_mod.action_key(action))
+        self.calls.append(pv.action_key(action))
         res = self.results.get(type(action), self.default)
         return res(action) if callable(res) else res
 
@@ -482,7 +484,7 @@ def test_executor_h3_sphere_verified_only(test_context: SrTestContext,
     spheres = [('gold', Point(100, 100), 40)] * 3
     monkeypatch.setattr(pa_mod, 'read_reward_spheres', lambda ctx, screen: list(spheres))
     monkeypatch.setattr(pa_mod, 'read_supply_boxes', lambda ctx, screen: [])
-    progressed, detail = ex.execute(pa_mod.ClickSpheres(max_k=2))
+    progressed, detail = ex.execute(pv.ClickSpheres(max_k=2))
     assert not progressed, f'H-3:球未消失应 False,实 {progressed} ({detail})'
     # 点后球减少 → True
     state = {'n': 3}
@@ -495,7 +497,7 @@ def test_executor_h3_sphere_verified_only(test_context: SrTestContext,
         return orig_click(pos, *a, **k)
 
     monkeypatch.setattr(test_context.controller, 'click', _shrinking_click)
-    progressed2, _ = ex.execute(pa_mod.ClickSpheres(max_k=2))
+    progressed2, _ = ex.execute(pv.ClickSpheres(max_k=2))
     assert progressed2, '球减少应算进展'
 
 
@@ -527,7 +529,7 @@ class _StoppedRunCtx:
 def test_executor_brake_rejects_action_when_stopped(
         test_context: SrTestContext, monkeypatch) -> None:
     """第二层锁:executor 拒绝执行任何动作(含 StartBattle),零点击落地。"""
-    from sr_od.application.currency_war.prep_actions import StartBattle
+    from sr_od.application.currency_war.kernel.cw_prep_actions import StartBattle
     op = PrepDirector(test_context)
     ex = pa_mod.PrepActionExecutor(op, test_context)
     clicked: list = []
@@ -544,7 +546,7 @@ def test_director_loop_brake_before_each_step(monkeypatch, test_context) -> None
     停后不发 StartBattle)。"""
     match = SimpleNamespace(
         strategy=SimpleNamespace(
-            decide_prep_action=lambda o, s, c: pa_mod.StartBattle()),
+            decide_prep_action=lambda o, s, c: pv.StartBattle()),
         session=_sess())
     ex = _FakeExecutor(default=(True, '不该被执行'))
     d = _make_director(monkeypatch, ex)
@@ -563,7 +565,6 @@ def test_director_loop_brake_before_each_step(monkeypatch, test_context) -> None
 def test_brake_inactive_when_running(test_context: SrTestContext, monkeypatch) -> None:
     """正常运行(last_run_result=None,idle/运行中未停)不误拦——刹车判据
     不把离线测试(ctx run_state=STOP 初始态)误判为停机。"""
-    from types import SimpleNamespace
 
     class _IdleRunCtx:
         last_run_result = None
@@ -575,7 +576,7 @@ def test_brake_inactive_when_running(test_context: SrTestContext, monkeypatch) -
     monkeypatch.setattr(test_context.controller, 'mouse_move', lambda p: True,
                         raising=False)
     # 用控制流动作(BailToOuter)验证 execute 未被刹车误拦
-    progressed, detail = ex.execute(pa_mod.BailToOuter(reason='t'))
+    progressed, detail = ex.execute(pv.BailToOuter(reason='t'))
     assert '刹车' not in detail, f'idle 态不得误拦: {detail}'
 
 
@@ -665,17 +666,16 @@ def test_observe_gold_zero_reread(monkeypatch, test_context: SrTestContext) -> N
 
 def test_levelup_raw_read_no_fallback(monkeypatch, test_context: SrTestContext) -> None:
     """MED-8:_read_level_raw 无 _expected_level 兜底(漏读返 None,不造假值)。"""
-    from sr_od.application.currency_war.prep_actions import _read_level_raw
-
     # 直读失读(_read_level_raw 委托 read_level_raw_opt,patch 该缝)→ None
     import sr_od.application.currency_war.obs.cw_observation as cwo
+    from sr_od.application.currency_war.prep_actions import _read_level_raw
     monkeypatch.setattr(cwo, 'read_level_raw_opt', lambda ctx, scr: None)
     assert _read_level_raw(test_context, None) is None
 def test_composite_reads_success_field(test_context: SrTestContext,
                                        monkeypatch) -> None:
     """live 回归(2026-08-14):_run_composite 读 OperationResult.success(非 is_success)。"""
     from sr_od.application.currency_war import prep_actions as pa
-    from sr_od.application.currency_war.prep_actions import RunBuyPhase
+    from sr_od.application.currency_war.kernel.cw_prep_actions import RunBuyPhase
 
     ex = pa.PrepActionExecutor(PrepDirector(test_context), test_context)
 
@@ -703,7 +703,7 @@ def test_composite_reads_success_field(test_context: SrTestContext,
 
 def test_rule3_shop_open_closes_shop_first() -> None:
     """live 回归(2026-08-14 1-2):商店开态奖励面板与概率表按钮重叠 → 假球误开弹窗。"""
-    from sr_od.application.currency_war.prep_actions import EnsureShopClosed
+    from sr_od.application.currency_war.kernel.cw_prep_actions import EnsureShopClosed
     obs = _obs(spheres=[('gold', None, 40)] * 2, free_bench_slots=3, shop_open=True)
     a = S.decide_prep_action(obs, _sess(), _cfg())
     assert isinstance(a, EnsureShopClosed), '商店开态须先关店再收球(防假球点击)'

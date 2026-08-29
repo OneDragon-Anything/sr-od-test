@@ -115,7 +115,7 @@ def test_hp_none_uses_session_anchor_via_gated_hp():
 
 def test_snapshot_from_obs_none_semantics():
     """实机观察 → 快照:读不到=None 禁兜底(decide 侧消费映射的逆方向)。"""
-    from sr_od.application.currency_war.prep_director import PrepObservation
+    from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
     obs = PrepObservation(state=None, state_gold_trusted=False)
     sess = _session()
     snap = snapshot_from_obs(obs, sess)

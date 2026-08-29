@@ -13,7 +13,7 @@ from pathlib import Path
 
 from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
-from sr_od.application.currency_war.prep_actions import DeployMove, SellBench
+from sr_od.application.currency_war.kernel.cw_prep_actions import DeployMove, SellBench
 from sr_od.application.currency_war.prep_director import (
     compare_drag_expect,
     compute_drag_expect,
@@ -68,7 +68,7 @@ def test_expect_deploy_move_place_vs_swap():
 
 def test_expect_non_drag_action_is_none():
     """非拖动动作(以 SellDeployed 为代表)不进期望态层。"""
-    from sr_od.application.currency_war.prep_actions import SellDeployed
+    from sr_od.application.currency_war.kernel.cw_prep_actions import SellDeployed
     assert compute_drag_expect(SellDeployed(row='front', slot=1),
                                [_bc(1, '希儿')], []) is None
 

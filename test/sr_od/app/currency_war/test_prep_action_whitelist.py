@@ -6,13 +6,14 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-import sr_od.application.currency_war.prep_actions as pa_mod  # noqa: E402
-from sr_od.application.currency_war.prep_actions import PREP_ACTION_TYPES, PrepAction  # noqa: E402
+import sr_od.application.currency_war.kernel.cw_prep_actions as pa_mod  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_prep_actions import (  # noqa: E402
+    PREP_ACTION_TYPES,
+    PrepAction,
+)
 
 
 def _all_prep_subclasses() -> set[type]:
@@ -35,5 +36,5 @@ def test_whitelist_covers_all_prep_subclasses() -> None:
 
 def test_opentome_registered() -> None:
     """OpenTome 回归锚(P0-① 直接用例)。"""
-    from sr_od.application.currency_war.prep_actions import OpenTome
+    from sr_od.application.currency_war.kernel.cw_prep_actions import OpenTome
     assert OpenTome in PREP_ACTION_TYPES

@@ -23,7 +23,7 @@ def test_director_last_state_gated() -> None:
 
 def test_substate_field_on_observation() -> None:
     """r333:PrepObservation.substate 字段(observe_full 消费端)。"""
-    from sr_od.application.currency_war.prep_director import PrepObservation
+    from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
     obs = PrepObservation()
     assert obs.substate == {}
     obs.substate = {'node_seq': True, 'shop_cards': False}
