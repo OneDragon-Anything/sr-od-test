@@ -249,6 +249,10 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'below_floor_spend_gate_enabled': ('bool', False),
     # ===== 过渡框架启动重接线(休眠保留,复活条件见 ADR-0442)=====
     'framework_startup_v2_enabled': ('bool', False),
+    # ===== DirectorV2 备战循环开关(W606 阶段2批③;语义落点 =
+    # registry 字段注释:默认关合法期=实机对拍数据未采,开臂判据挂账)=====
+    'director_v2_prep_enabled': ('bool', False),
+    'director_v2_shadow_compare': ('bool', False),
     # ===== 层4:预算仲裁 =====
     'constraints': ('tuple[str, ...]', [
         'gold_floor', 'interest_rule', 'bench_capacity', 'copies_cap',
@@ -281,6 +285,13 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
         'gold', 'bench', 'slot', 'round_mutex']),
     'audit_round_state_dims': ('tuple[str, ...]', [
         'boss', 'emergency', 'mode']),
+    # ===== W607 词缀消费面(ADR-0461;语义注释落点=registry W607 字段块)=====
+    'line_env_gate_enabled': ('bool', False),
+    'line_env_lock_min_round': ('int', 1),
+    'rust_wear_release_enabled': ('bool', False),
+    'opening_hold_battle_gate_enabled': ('bool', False),
+    'opening_hold_battle_nodes': ('frozenset[str]', frozenset(
+        {'战斗', 'boss', '遭遇', '精英'})),
 }
 
 #: registry 模块级标定常量期望表(名字 → 归一化值;与字段同属标定面,
