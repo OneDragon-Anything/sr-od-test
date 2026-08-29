@@ -126,12 +126,19 @@ def test_obligation_full_within_capacity() -> None:
 
 
 def test_capacity_excludes_option_pieces() -> None:
-    """A-1 修复锁:未跨档期权件(W469 死因同型)不计入容量;当帧跨档
-    件(买入后四体系达成数 +1,结构性判定)计入。"""
+    """A-1 修复锁(W611 重推):未跨档期权件的容量禁令辖域=满槽帧——
+    期权泵死法(W469:义务泵把死钱流向无槽可放的期权件)的防线是
+    「槽位约束」;备战有空位帧,未跨档件改按 O1 填补通道计入
+    (bench_fill_account,用户 directive:无目标也填满备战;
+    .debug/temp/currency_war/w611_econ_cycle/DESIGN.md §4 判据 6)。
+    当帧跨档件(买入后四体系达成数 +1,结构性判定)照旧计入。"""
     st = _state(board={})                       # 无体系进度:任何件不跨档
     st.shop = [_sc('桑博', 1)]
     s = _sess(st)
-    assert channel_capacity(st, s, _REG) == 0    # 期权件 → 0
+    assert channel_capacity(st, s, _REG) == 1    # 空槽帧:O1 填补通道计入
+    st.bench = [_filler(i) for i in range(BENCH_CAPACITY)]   # 满槽
+    assert channel_capacity(st, s, _REG) == 0    # A-1/A-2:满槽 → 0
+    st.bench = [None] * BENCH_CAPACITY           # 恢复空槽
     st.shop = [_sc('丹恒·饮月', 2)]              # board 仙舟=2,买入跨档
     st.board = {'仙舟': 2}
     assert channel_capacity(st, s, _REG) == 2
