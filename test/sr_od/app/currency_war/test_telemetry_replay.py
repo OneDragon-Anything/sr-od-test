@@ -24,7 +24,7 @@ sys.path.insert(0, 'src')
 from sr_od.application.currency_war.cw_plan import _should_deploy, deploy_legal
 from sr_od.application.currency_war.kernel.cw_recipe import decision_target
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORKS,
     TRANSITION_PACK,

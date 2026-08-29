@@ -16,7 +16,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SellBench,
     sell_refund,
 )
-from sr_od.application.currency_war.decision_v2.candidates import generate_candidates
+from sr_od.application.currency_war.decision.decision_v2.candidates import generate_candidates
 
 
 def _bench_with_sellable() -> list[BenchChar | None]:
@@ -34,7 +34,7 @@ def test_sell_candidates_carry_income() -> None:
     记为「未观收入」误报冲突(独立 review 实机发现)。
     """
     from sr_od.application.currency_war.kernel.cw_state import GameState
-    from sr_od.application.currency_war.cw_strategy import StrategySession
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
     from sr_od.application.currency_war.kernel.cw_registry import \
         DecisionV2Registry
 

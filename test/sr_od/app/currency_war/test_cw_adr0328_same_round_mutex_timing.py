@@ -32,14 +32,14 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SellBench,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2 import arbiter as arbiter_mod
-from sr_od.application.currency_war.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2 import arbiter as arbiter_mod
+from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     Candidate,
     generate_candidates,
 )
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     carry_gate_actions,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
@@ -260,7 +260,7 @@ def test_residual_seeds_zero_violation_v2() -> None:
     """ADR-0328 回归锁:W66 探针钉死的违规 seed(0/6/14)重放,
     no_same_round_buy_sell 归零——修复在真实 sim 决策链上生效。"""
     from sr_od.application.currency_war.sim.cw_sim import simulate_p1
-    from sr_od.application.currency_war.decision_v2.strategy import (
+    from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )
     strat = DecisionV2Strategy()

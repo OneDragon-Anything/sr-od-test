@@ -22,11 +22,11 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SwapDeploy,
     bench_occupied,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     arbitrate,
 )
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     Candidate,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
@@ -133,7 +133,7 @@ def test_s3_non_merge_buy_still_rejected_at_full() -> None:
 def test_s3_will_merge_generation_mirror_same_star() -> None:
     """S3 生成侧镜像(candidates.will_merge):2× 同 1★ + 店第 3 张 1★ →
     merge=True;1× 2★ + 店第 3 张 1★ → merge=False(旧加权判据误标例)。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         generate_candidates,
     )
     # 正向:同 1★ 已 2 份
@@ -296,7 +296,7 @@ def test_s2_alarm_refresh_compensated_when_authorized() -> None:
     """S2 正向:报警升级态(allow_refresh_in_war 授权)+refresh 被金拒+
     可卖弱件 → 产出 [Sell≥1, RefreshShop](不为常态刷新借钱——仅报警
     辖域);非报警态 refresh 金拒 → 无补偿。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         DisciplineView,
     )
     # 报警升级态:war 地板 30,金 25,refresh 2 费 → 缺 7;可卖件用
@@ -344,14 +344,14 @@ def test_s2_25_40_two_lines_documented() -> None:
     """S2 顺手:25/40 两档并存口径已成文——应急清仓线(25)与报警
     降档线(40)分别存在于 registry/discipline 常量(两线并存不是
     二选一;补偿机制只消费资源门槛事件)。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         BLOOD_MARGIN_LOW_HP,
     )
     assert _REG.emergency_hp == 25
     assert BLOOD_MARGIN_LOW_HP == 40
     import inspect
 
-    import sr_od.application.currency_war.decision_v2.discipline as m
+    import sr_od.application.currency_war.decision.decision_v2.discipline as m
     src = inspect.getsource(m)
     assert '25/40 两档并存口径' in src, '25/40 docstring 应成文(防口径漂移)'
 
@@ -363,7 +363,7 @@ def test_s5_key_orders_low_cost_net0_first() -> None:
     """S5 键序:同状态两可卖件(单 1★ 低费 vs 单 1★ 高费)→ 低费
     (净0/再遇代价小)先卖(键序断言);2★/2 份素材件 → 键 None 不入卖序
     (AD9-2-3 守卫面)。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         sell_priority_key,
     )
     sess = _sess()
@@ -692,7 +692,7 @@ def test_buy_tag_chain_lock() -> None:
     remedy_buy_tags);v3_core_names 空窗 → 落点('carry_gate'/
     'line_opportunistic')均在 remedy_buy_tags 内(金补偿路径对两种
     标签结果都稳健——路径对标签裁决序改动免疫)。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         _buy_tag,
     )
     # 锁定+cores 命中
@@ -828,8 +828,8 @@ def test_remediation_no_arbiter_import() -> None:
     正则只匹配 import 语句(文档性提及不算),防未来重构引入环。"""
     import re
 
-    import sr_od.application.currency_war.decision_v2.remediation as m
-    src = m.__loader__.get_source('sr_od.application.currency_war.'
+    import sr_od.application.currency_war.decision.decision_v2.remediation as m
+    src = m.__loader__.get_source('sr_od.application.currency_war.decision.'
                                   'decision_v2.remediation') or ''
     for line in src.splitlines():
         s = line.strip()

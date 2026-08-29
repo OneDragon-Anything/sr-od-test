@@ -10,13 +10,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_assembly import DecideAdapter
-from sr_od.application.currency_war.decision_v2.adapter import (
+from sr_od.application.currency_war.decision.decision_v2.adapter import (
     decision_state,
     snapshot_to_obs,
 )
-from sr_od.application.currency_war.decision_v2.contracts import (
+from sr_od.application.currency_war.decision.decision_v2.contracts import (
     RewardSphere,
     Snapshot,
     SubstateClassification,
@@ -32,7 +32,7 @@ def _snap(**kw) -> Snapshot:
 
 
 def _decide(snapshot: Snapshot, session: StrategySession | None = None):
-    from sr_od.application.currency_war.decision_v2.strategy import (
+    from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )
     ad = DecideAdapter(DecisionV2Strategy(), _CONFIG, executor=None)

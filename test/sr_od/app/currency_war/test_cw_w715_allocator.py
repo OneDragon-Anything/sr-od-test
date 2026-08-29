@@ -27,10 +27,10 @@ import random
 
 import pytest
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.decision_v2 import allocator
-from sr_od.application.currency_war.decision_v2.allocator import (
+from sr_od.application.currency_war.decision.decision_v2 import allocator
+from sr_od.application.currency_war.decision.decision_v2.allocator import (
     ALLOC_PARAM_SET,
     ALLOC_PARAM_SET_VERSION,
     ALLOCATOR_ENABLED,
@@ -44,7 +44,7 @@ from sr_od.application.currency_war.decision_v2.allocator import (
     allocate,
     allocator_run,
 )
-from sr_od.application.currency_war.decision_v2.ev import interest_cost
+from sr_od.application.currency_war.decision.decision_v2.ev import interest_cost
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
@@ -162,7 +162,7 @@ def test_refresh_estimator_hand_recalc(monkeypatch) -> None:
     """估计器 = P(一刷见可上场目标)×目标部署每场金当量增量(单样本
     代理;§8-2 单样本代理选项)。手算重算:p_hit=Σrefresh_prob 封顶 1,
     增量取跨档档差式。目标名集 monkeypatch(隔离意向依赖,非生产桩)。"""
-    from sr_od.application.currency_war.decision_v2 import candidates
+    from sr_od.application.currency_war.decision.decision_v2 import candidates
     st = _stop_state()
     _deploy(st, _faction_names('仙舟', 2))
     tgt = _faction_names('仙舟', 6)[5]
@@ -240,7 +240,7 @@ def test_comp_merge_atomic(monkeypatch) -> None:
     """板满帧店内目标件 × 升级闭合为 Π_comp:复合提案原子含
     [BuyCard, LevelUp]、cost 为和;单独买(无 deploy 位)不被救回面
     供给——复合账不可拆选。"""
-    from sr_od.application.currency_war.decision_v2 import candidates
+    from sr_od.application.currency_war.decision.decision_v2 import candidates
     from sr_od.application.currency_war.kernel.cw_economy import (
         xp_click_cost,
     )
@@ -370,7 +370,7 @@ def test_levelup_supply_inherits_auth_whitelist(monkeypatch) -> None:
     (辖域冲突裁决:豁免的是濒死止损,不越过白名单;seed 640516
     seg_unjustified_levelup 2 起回归)。放行臂名回写 auth_basis 观测
     字段供检查器对账。"""
-    from sr_od.application.currency_war.decision_v2 import ev as ev_mod
+    from sr_od.application.currency_war.decision.decision_v2 import ev as ev_mod
     st = _stop_state(level=8, n_dep=8)   # 板满
     from sr_od.application.currency_war.kernel.cw_state import BenchChar
     st.bench = [BenchChar(slot=1, char_id='青雀', faction='仙舟', star=1)]

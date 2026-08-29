@@ -13,7 +13,7 @@ import inspect
 
 from sr_od.application.currency_war.kernel import cw_economy
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 
 _REG = DEFAULT_REGISTRY
@@ -29,7 +29,7 @@ def _st(gold: int, hp: int = 80, level: int = 6, plane: int = 1,
 
 def test_is_emergency_single_source_identity() -> None:
     """单一源锁:filters.is_emergency 本体 = cw_economy.is_emergency。"""
-    import sr_od.application.currency_war.decision_v2.filters as _f
+    import sr_od.application.currency_war.decision.decision_v2.filters as _f
     src = inspect.getsource(_f.is_emergency)
     assert 'cw_economy import is_emergency' in src, \
         'filters 侧必须保持 kernel 重定向(禁本地复刻谓词)'

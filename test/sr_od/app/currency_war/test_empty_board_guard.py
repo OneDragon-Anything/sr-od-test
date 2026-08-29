@@ -6,7 +6,7 @@ from types import SimpleNamespace
 _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy  # noqa: E402
+from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy  # noqa: E402
 
 
 def _obs(dep=0, bench=0):

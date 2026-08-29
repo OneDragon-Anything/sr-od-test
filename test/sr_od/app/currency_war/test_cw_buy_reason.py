@@ -56,6 +56,6 @@ def test_coldstart_gate_consumes_classify() -> None:
     """r368 门消费 classify_buy 单一源(门=白名单 label 集)。"""
     import inspect
 
-    from sr_od.application.currency_war.decision_v2 import discipline
+    from sr_od.application.currency_war.decision.decision_v2 import discipline
     src = inspect.getsource(discipline.pair_wants)
     assert 'classify_buy' in src, 'r368 冷启动门应收口 classify_buy(防第二源)'

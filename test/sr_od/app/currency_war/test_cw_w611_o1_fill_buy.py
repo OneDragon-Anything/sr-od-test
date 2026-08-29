@@ -16,25 +16,25 @@ from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_plane_table import (
     level_cost,
 )
-from sr_od.application.currency_war.decision_v2.posture import Posture
+from sr_od.application.currency_war.decision.decision_v2.posture import Posture
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     _check_constraint,
 )
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     generate_candidates,
 )
-from sr_od.application.currency_war.decision_v2.ev import RoundPosture
+from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     score_candidate,
 )
 
@@ -149,7 +149,7 @@ def test_bond_fallback_beats_o1_quality_order() -> None:
         HoardTarget,
         IntentionState,
     )
-    from sr_od.application.currency_war.decision_v2.candidates import _buy_tag
+    from sr_od.application.currency_war.decision.decision_v2.candidates import _buy_tag
     sess = StrategySession()
     sess.v2_state = ('economy', False, False, 0, 0, 0, 0, 0)
     ist = IntentionState()

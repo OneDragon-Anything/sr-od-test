@@ -78,7 +78,7 @@ def test_inject_writes_session_semantic_slots() -> None:
 
 def test_inject_session_carries_fields() -> None:
     """注入后 session(生产持久宿主)携带 active_env/active_strategies。"""
-    from sr_od.application.currency_war.cw_strategy import StrategySession
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
     sess = StrategySession()
     prof = SimInvestProfile(active_env='火药味',
                             picks=((1, 1, '加油站'),))

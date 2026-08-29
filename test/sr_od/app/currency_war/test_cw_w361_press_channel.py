@@ -30,18 +30,18 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2 import candidates as _cands
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2 import candidates as _cands
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     _press_floor_exempt,
     arbitrate,
 )
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     _buy_tag,
     _copy_swap_blocked,
     generate_candidates,
 )
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     observed_probs,
     press_band,
     press_channel_max_band,
@@ -51,7 +51,7 @@ from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
     DecisionV2Registry,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     score_all,
     score_candidate,
 )

@@ -38,19 +38,19 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     _check_constraint,
 )
-from sr_od.application.currency_war.decision_v2.candidates import Candidate
-from sr_od.application.currency_war.decision_v2.filters import (
+from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
+from sr_od.application.currency_war.decision.decision_v2.filters import (
     filter_candidates,
     formed_stop_active,
 )
-from sr_od.application.currency_war.decision_v2.handoff import (
+from sr_od.application.currency_war.decision.decision_v2.handoff import (
     handoff_gate_gap,
 )
-from sr_od.application.currency_war.decision_v2.phase import form_ok
+from sr_od.application.currency_war.decision.decision_v2.phase import form_ok
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )

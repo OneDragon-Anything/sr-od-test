@@ -28,9 +28,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     RefreshShop,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision_v2.handoff import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision.decision_v2.handoff import (
     directed_refresh_budget,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
@@ -131,7 +131,7 @@ def test_arbiter_nonpositive_refresh_bounded_pass() -> None:
     不影响 gap(board 维 tier0 主罚,gap≥1 前置不变)。"""
     sess = _sess()
     st = _state(gold=55, hp=70)   # 带外非应急([18]);board 维 tier0→gap≥1
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     cand = Candidate(action=RefreshShop(cost=2), tag='refresh',
@@ -148,7 +148,7 @@ def test_refresh_stop_overrides_ma() -> None:
     """ADR-0451 接缝锁:末窗血预算不足帧(25<hp<60)血线胜——M-A
     预算虽在,刷新收尾被 blood_budget_refresh_stop 前置拒付,预算
     零消耗(独立谓词 AND,承接/定向授权不豁免停手)。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate as _C,
     )
     sess = _sess()
@@ -164,7 +164,7 @@ def test_refresh_stop_overrides_ma() -> None:
 def test_nonfinal_window_nonpositive_rejected() -> None:
     """非末窗(r5,W288/ADR-0418 前移后边界,gap=0):非正分刷新照拒
     (窗口外零行为)。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     st = _state(round_num=5, gold=55)
@@ -178,7 +178,7 @@ def test_nonfinal_window_nonpositive_rejected() -> None:
 def test_positive_vd_path_not_billed_to_budget() -> None:
     """防双计单一来源面:正分刷新(V_D 放行)不消耗 M-A 预算计数——
     预算只辖 M-A 授权面,W249 的 0.44 次/局基线不受扰动。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     sess = _sess()
@@ -198,7 +198,7 @@ def test_affordability_floor_still_governs_authorized_refresh() -> None:
     金 13 → 花后 11 达标放行(收尾的下限兜底,M-A 授权≠无限透支)。
     (ADR-0451:hp 改 70 带外——原 hp=30 帧已入血预算停手辖域,
     授权面语义迁移见 test_refresh_stop_overrides_ma。)"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     cand = Candidate(action=RefreshShop(cost=2), tag='refresh',

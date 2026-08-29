@@ -11,7 +11,7 @@ from __future__ import annotations
 
 
 def _mk_session():
-    from sr_od.application.currency_war.cw_strategy import StrategySession
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
     return StrategySession()
 
 

@@ -30,15 +30,15 @@ import dataclasses
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.ev import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.ev import (
     battles_left_p2,
     battles_left_plane,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     engine_jump_gold,
     p1_battle_loss_est,
     vd_refresh_score,

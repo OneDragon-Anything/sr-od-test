@@ -26,9 +26,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     Candidate,
     Synthesize,
 )

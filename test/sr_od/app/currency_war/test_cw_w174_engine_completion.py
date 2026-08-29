@@ -31,7 +31,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     _recount_board,
     simulate,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 
 
 def _char(name: str, star: int = 1, row: str = 'back') -> BenchChar:

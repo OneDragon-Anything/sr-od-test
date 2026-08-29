@@ -20,22 +20,22 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.operation.application.plugin_info import PluginSource
-from sr_od.application.currency_war import cw_strategy as _cw_strategy_mod
+import sr_od.application.currency_war.decision.cw_strategy as _cw_strategy_mod
 from sr_od.application.currency_war.kernel.cw_events import (
     MegastarOption,
     PartnerOption,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState, PickEvent
-from sr_od.application.currency_war.cw_strategy import (
+from sr_od.application.currency_war.decision.cw_strategy import (
     CurrencyWarMatch,
     CwStrategy,
     StrategySession,
 )
-from sr_od.application.currency_war.cw_strategy_manager import StrategyManager
+from sr_od.application.currency_war.decision.cw_strategy_manager import StrategyManager
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.strategy import (
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
 
@@ -55,7 +55,7 @@ def _cfg(**overrides) -> SimpleNamespace:
 
 def _builtin_dirs() -> list[tuple[Path, PluginSource]]:
     """BUILTIN 策略目录(src/.../currency_war/strategies/)。"""
-    builtin = Path(_cw_strategy_mod.__file__).parent / "strategies"
+    builtin = Path(_cw_strategy_mod.__file__).parents[1] / "strategies"
     return [(builtin, PluginSource.BUILTIN)]
 
 
@@ -105,7 +105,7 @@ def test_third_party_discovery() -> None:
         pkg_dir.mkdir()
         (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
         (pkg_dir / "my_strategy.py").write_text(
-            "from sr_od.application.currency_war.decision_v2.strategy "
+            "from sr_od.application.currency_war.decision.decision_v2.strategy "
             "import DecisionV2Strategy\n"
             "class MyTestStrategy(DecisionV2Strategy):\n"
             "    STRATEGY_ID = 'my_test_strategy'\n"
@@ -134,7 +134,7 @@ def test_duplicate_strategy_id_raises() -> None:
             pkg.mkdir()
             (pkg / "__init__.py").write_text("", encoding="utf-8")
             (pkg / f"{sub}.py").write_text(
-                "from sr_od.application.currency_war.decision_v2.strategy "
+                "from sr_od.application.currency_war.decision.decision_v2.strategy "
                 "import DecisionV2Strategy\n"
                 f"class S{sub}(DecisionV2Strategy):\n"
                 "    STRATEGY_ID = 'dup'\n"

@@ -90,7 +90,7 @@ def test_want_level_up_p2_floor_beats_comp_roll() -> None:
 def test_opentome_defer_gate() -> None:
     """defer 门:defer_count>=2 时策略不再提 OpenTome(走主流程)。"""
     from types import SimpleNamespace
-    from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
+    from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
     strat = DecisionV2Strategy()
     obs = SimpleNamespace(box_overlay_open=False, tomes=[(1, None)], boxes=[],
                           spheres=[], free_bench_slots=3, shop_open=False,

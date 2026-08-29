@@ -13,7 +13,7 @@ from sr_od.application.currency_war import cw_evaluate, cw_plan
 from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel import cw_comps, cw_economy, cw_plane_table
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.decision_v2.strategy import (
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
 

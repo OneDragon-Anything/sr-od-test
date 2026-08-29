@@ -32,12 +32,12 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SellBench,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.candidates import Candidate
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.remediation import (
+from sr_od.application.currency_war.decision.decision_v2.remediation import (
     RejectReason,
     Rejection,
     _compensate_bench,

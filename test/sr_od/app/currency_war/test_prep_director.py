@@ -14,8 +14,8 @@ from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import prep_actions as pa_mod
 from sr_od.application.currency_war import prep_director as pd_mod
 from sr_od.application.currency_war.cw_evaluate import _card_hits_target
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     ClickSpheres,
     DeferSpheres,
@@ -367,7 +367,7 @@ def _seq_observe(seq):
 
 def _fake_snapshot():
     """最小 confident 快照(新环观察端口替身用;离线免真值合成)。"""
-    from sr_od.application.currency_war.decision_v2.contracts import (
+    from sr_od.application.currency_war.decision.decision_v2.contracts import (
         Snapshot,
         SubstateClassification,
     )
@@ -456,7 +456,7 @@ def test_loop_h2_stubborn_overlay_bails(monkeypatch) -> None:
 
 def test_loop_forced_battle_on_step_budget(monkeypatch) -> None:
     """F5(新环引擎):步数预算耗尽 → 强制出战(Defer 计步不计 stall,靠 MAX_STEPS 兜底)。"""
-    from sr_od.application.currency_war.decision_v2.director_v2 import DirectorV2
+    from sr_od.application.currency_war.decision.decision_v2.director_v2 import DirectorV2
     monkeypatch.setattr(pd_mod, 'try_recovery', lambda op, ctx: ('点空白兜底', False))
     monkeypatch.setattr(DirectorV2, 'MAX_STEPS', 4)
     _stub_snapshot_from_obs(monkeypatch)

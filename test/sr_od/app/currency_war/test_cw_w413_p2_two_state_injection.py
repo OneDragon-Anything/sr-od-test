@@ -22,11 +22,11 @@ from sr_od.application.currency_war.kernel.cw_line_switch import (
     survival_gate,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     _engines_formed,
 )
 

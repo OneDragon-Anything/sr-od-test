@@ -22,17 +22,17 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision_v2.candidates import Candidate
-from sr_od.application.currency_war.decision_v2.ev import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
+from sr_od.application.currency_war.decision.decision_v2.ev import (
     cross_plane_remaining_nodes,
     interest_cost,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     engine_jump_gold,
     formation_gold_account,
     score_candidate,
@@ -74,7 +74,7 @@ def test_dimension_assertions() -> None:
     st = _state()
     r = cross_plane_remaining_nodes(st)
     assert r >= 10, '前置:跨位面 R 量级(P1 中段 ≈20+)'
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         p1_battle_loss_est,
     )
     dwin01 = _REG.h3_win_rate[1] - _REG.h3_win_rate[0]
@@ -113,12 +113,12 @@ def test_engine_progress_buy_passes_gate() -> None:
     cand = _cand('停云', 4)
     val, bd = score_candidate(cand, st, s, _REG)
     # 量纲断言:form_gold = Δprogress × jump(0)(deployed 域权重 1.0)
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         _engine_frac_remainder,
     )
     from sr_od.application.currency_war.kernel.cw_state import simulate
     after = simulate(st, cand.action)
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         _deploy_pipeline,
     )
     _deploy_pipeline(after, s)

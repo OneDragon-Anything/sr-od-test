@@ -11,7 +11,7 @@ from __future__ import annotations
 
 
 def _mk_session():
-    from sr_od.application.currency_war.cw_strategy import StrategySession
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
     return StrategySession()
 
 
@@ -178,7 +178,7 @@ def test_consumer_face_zero_change_anchor() -> None:
     hp_trusted)不随本批变化(ADR-0428 口径,行为锁另见 w332b/濒死带/C1)。"""
     import inspect
 
-    from sr_od.application.currency_war.decision_v2 import posture_release
+    from sr_od.application.currency_war.decision.decision_v2 import posture_release
     src = inspect.getsource(posture_release)
     assert 'state.hp_readable or state.hp_trusted' in src
 

@@ -14,13 +14,13 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_strategy import StrategySession, gated_hp
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession, gated_hp
 from sr_od.application.currency_war.decision_assembly import snapshot_from_obs
-from sr_od.application.currency_war.decision_v2.adapter import (
+from sr_od.application.currency_war.decision.decision_v2.adapter import (
     decision_state,
     snapshot_to_obs,
 )
-from sr_od.application.currency_war.decision_v2.contracts import (
+from sr_od.application.currency_war.decision.decision_v2.contracts import (
     Snapshot,
     SubstateClassification,
 )

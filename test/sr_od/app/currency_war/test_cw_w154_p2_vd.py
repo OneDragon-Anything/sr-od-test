@@ -23,15 +23,15 @@ import dataclasses
 
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_plane_table import NODES_PER_PLANE
-from sr_od.application.currency_war.decision_v2.posture import Posture
+from sr_od.application.currency_war.decision.decision_v2.posture import Posture
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.data.cw_shop_odds import (
     expected_refreshes_for_card,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2 import ev as ev_mod
-from sr_od.application.currency_war.decision_v2.ev import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2 import ev as ev_mod
+from sr_od.application.currency_war.decision.decision_v2.ev import (
     RoundPosture,
     battles_left_p2,
     cross_plane_remaining_nodes,
@@ -39,7 +39,7 @@ from sr_od.application.currency_war.decision_v2.ev import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     vd_refresh_score,
 )
 
@@ -128,7 +128,7 @@ def test_p2_window_dp_fallback_level_plan(monkeypatch) -> None:
     from sr_od.application.currency_war.kernel.cw_economy import (
         refresh_ev_budget,
     )
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         vd_refresh_score as _impl,
     )
     st = _p2_state(6, ['卡芙卡', '卡芙卡'], 100, 1)
@@ -268,7 +268,7 @@ def test_p1_branch_bitwise_unchanged() -> None:
     dwin = _REG.h3_win_rate[2] - _REG.h3_win_rate[1]
     # ADR-0425:P1 收益侧战斗项=条件掉血拟合(成型后档 rung=2)
     # ×战斗数(裸 session 无槽序表 → 骨架缺省)
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         p1_battle_loss_est,
     )
     expected = (drung * cross_plane_remaining_nodes(st8)

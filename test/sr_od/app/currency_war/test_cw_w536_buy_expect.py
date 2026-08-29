@@ -255,7 +255,7 @@ def test_w536_wiring_locks():
         < dir_src.index('self._reconcile_buy_expect(_pending_buy)')
     # 字段已正式声明(动态属性回流防线;声明含类型注解与定义注释)
     strat_src = Path(
-        'src/sr_od/application/currency_war/cw_strategy.py'
+        'src/sr_od/application/currency_war/decision/cw_strategy.py'
     ).read_text(encoding='utf-8')
     assert 'pending_buy_expect: BuyExpect | None = None' not in strat_src, (
         '期 0b 锁改判:字段声明已迁 kernel/cw_strategy_session,'

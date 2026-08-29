@@ -111,7 +111,7 @@ def test_strategy_prefers_opentome_when_gold_card_in_tomes() -> None:
     """行为面锁:tomes 非空时策略优先 OpenTome(即使 boxes 也非空)——
     金卡典籍走 OpenBox 会绕开星徽四选一接管路径,即本批修复的行为目标。"""
     from types import SimpleNamespace
-    from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
+    from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
     strat = DecisionV2Strategy()
     obs = SimpleNamespace(box_overlay_open=False, tomes=[(7, None)],
                           boxes=[(4, None)], spheres=[], free_bench_slots=3,

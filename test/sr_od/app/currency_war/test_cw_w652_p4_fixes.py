@@ -13,8 +13,8 @@ from __future__ import annotations
 from sr_od.application.currency_war.sim import cw_sim
 from sr_od.application.currency_war.sim import cw_sim_checks as chk
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     generate_candidates,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
@@ -178,7 +178,7 @@ def test_refresh_cap_checks_wired() -> None:
 def test_default_simulate_strategy_uses_sim_registry() -> None:
     """simulate_p1 默认策略的 registry.level_max == LEVEL_CAP
     (注入自定义 strategy 的调用方不受影响)。"""
-    from sr_od.application.currency_war.decision_v2.strategy import (
+    from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )
     strat = DecisionV2Strategy(registry=cw_sim.sim_decision_registry())

@@ -30,15 +30,15 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SellBench,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_system_cards import (
     engine_char_names,
 )
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     arbitrate,
 )
-from sr_od.application.currency_war.decision_v2.candidates import Candidate
-from sr_od.application.currency_war.decision_v2.filters import (
+from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
+from sr_od.application.currency_war.decision.decision_v2.filters import (
     filter_candidates,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
@@ -109,7 +109,7 @@ def test_formed_stop_passes_target_piece() -> None:
     # 名单外过渡件占位:从注册表取一个不在目标集/引擎件的普通件
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     sess2 = _sess_locked_with_hoard()
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         _target_names,
     )
     _tg = _target_names(state, sess2)

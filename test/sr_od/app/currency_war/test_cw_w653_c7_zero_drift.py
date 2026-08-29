@@ -13,7 +13,7 @@ import inspect
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_recipe import decision_target
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 
 
 def _sess() -> StrategySession:

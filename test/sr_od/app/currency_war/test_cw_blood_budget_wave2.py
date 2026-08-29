@@ -28,21 +28,21 @@ from sr_od.application.currency_war.kernel.cw_state import (
     RefreshShop,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.sim.cw_sim_checks import (
     _P1_EMERGENCY_HP,
     _P1_EXIT_BLOOD_TARGET,
     _P1_HANDOFF_GATE_MIN_ROUND,
     seg_check_p1_blood_budget_refresh,
 )
-from sr_od.application.currency_war.decision_v2 import candidates as cands_mod
-from sr_od.application.currency_war.decision_v2 import handoff as handoff_mod
-from sr_od.application.currency_war.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.decision_v2 import candidates as cands_mod
+from sr_od.application.currency_war.decision.decision_v2 import handoff as handoff_mod
+from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     Candidate,
     _buy_tag,
 )
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     blood_budget_refresh_blocked,
     p1_directed_downgrade_active,
     p1_exit_blood_short,
@@ -66,7 +66,7 @@ def _p1_state(hp: int = 40, round_num: int = 7, node: str = 'battle',
 
 def _non_target_name() -> str:
     """注册表内非引擎件名(避开 _target_names 的引擎全集)。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         engine_char_names,
     )
     engines = set(engine_char_names())
@@ -124,7 +124,7 @@ def test_terminal_frame_release_counterexample() -> None:
     boss 单链(rung1,p_boss=0.027≤ε=0.03)→ 终止分支触发,双门开帧
     刷新停付解除;同帧降格短路。hp=26>应急线,豁免来自终止分支而非
     急救面——语义取代的显形锚。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         terminal_release,
     )
     sess = _p1_allin_sess()

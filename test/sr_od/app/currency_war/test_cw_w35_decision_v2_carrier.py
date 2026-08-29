@@ -34,10 +34,10 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SellBench,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision_v2.candidates import Candidate
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     BloodAlarmTracker,
     assess_discipline,
     carry_gate_actions,
@@ -45,7 +45,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.strategy import (
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
 
@@ -99,7 +99,7 @@ def test_no_linestrategy_inheritance() -> None:
     """DecisionV2Strategy 独立实现:MRO 无 LineStrategy(旧件已随
     ADR-0336 删除)且无 DefaultCwStrategy(继承塔已解体——本体退役批后
     dv 直接继承 CwStrategy,执行性钩子平移自持)。"""
-    from sr_od.application.currency_war.cw_strategy import CwStrategy
+    from sr_od.application.currency_war.decision.cw_strategy import CwStrategy
     assert DecisionV2Strategy.__bases__ == (CwStrategy,)
     assert not any(
         c.__name__ == 'DefaultCwStrategy' for c in DecisionV2Strategy.__mro__)
@@ -111,9 +111,9 @@ def test_decision_v2_modules_do_not_import_line_strategy() -> None:
     提及不算——正则只匹配 import 语句)。"""
     import re
 
-    import sr_od.application.currency_war.decision_v2.candidates as m_cand
-    import sr_od.application.currency_war.decision_v2.discipline as m_disc
-    import sr_od.application.currency_war.decision_v2.strategy as m_strat
+    import sr_od.application.currency_war.decision.decision_v2.candidates as m_cand
+    import sr_od.application.currency_war.decision.decision_v2.discipline as m_disc
+    import sr_od.application.currency_war.decision.decision_v2.strategy as m_strat
     pat = re.compile(r'(from\s+\S*line_strategy\s+import|'
                      r'^\s*import\s+\S*line_strategy)', re.M)
     for mod in (m_strat, m_cand, m_disc):
@@ -221,7 +221,7 @@ def test_emergency_coverage_and_floor() -> None:
     sess = _sess()
     disc = assess_discipline(_state(hp=20, gold=55), sess, _REG)
     assert disc.coverage == 'emergency'
-    from sr_od.application.currency_war.decision_v2.arbiter import (
+    from sr_od.application.currency_war.decision.decision_v2.arbiter import (
         _active_floor,
     )
     assert _active_floor(_state(hp=20, gold=55), sess,
@@ -291,7 +291,7 @@ def test_blood_alarm_gradient_natural_window_then_escalate() -> None:
 def test_blood_alarm_low_hp_margin_skips_natural_window() -> None:
     """[19]② 血边际变量(W51 接):hp<BLOOD_MARGIN_LOW_HP(40)时处置
     梯度本就生效——跳过①自然补强窗直入②(war+保血通道)。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         BLOOD_MARGIN_LOW_HP,
     )
     t = BloodAlarmTracker()
@@ -635,7 +635,7 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
         seen['grade_down'] = grade_down
         return [sentinel]
 
-    import sr_od.application.currency_war.decision_v2.strategy as m
+    import sr_od.application.currency_war.decision.decision_v2.strategy as m
     monkeypatch.setattr(m, 'evolution_step', _fake_evo)
     st = _state(round_num=4, gold=30, shop=[], bench=[],
                 node_type='battle')
@@ -677,14 +677,14 @@ def test_smoke_one_sim_game_new_carrier() -> None:
 def test_dual_registration_both_strategies_discoverable() -> None:
     """唯一载体:registry 可发现 decision_v2(default 栈退役后唯一注册;
     回退路径=git revert)。"""
-    import sr_od.application.currency_war.cw_strategy as _cw_mod
+    import sr_od.application.currency_war.decision.cw_strategy as _cw_mod
     from one_dragon.base.operation.application.plugin_info import (
         PluginSource,
     )
-    from sr_od.application.currency_war.cw_strategy_manager import (
+    from sr_od.application.currency_war.decision.cw_strategy_manager import (
         StrategyManager,
     )
-    builtin = Path(_cw_mod.__file__).parent / 'strategies'
+    builtin = Path(_cw_mod.__file__).parents[1] / 'strategies'
     mgr = StrategyManager(ctx=None,
                           plugin_dirs=[(builtin, PluginSource.BUILTIN)])
     ids = [i.strategy_id for i in mgr.strategies]
@@ -789,10 +789,10 @@ def test_cross_source_index_drift_guard_arbiter_aligned() -> None:
     动作清空(置 None)时,后续候选同 idx 判定为 drift 拒绝——槽位
     语义下索引恒稳,守卫保「目标名与现槽名不一致仍拒」语义。"""
     from sr_od.application.currency_war.kernel.cw_state import SellBench
-    from sr_od.application.currency_war.decision_v2.arbiter import (
+    from sr_od.application.currency_war.decision.decision_v2.arbiter import (
         arbitrate,
     )
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     st = GameState(

@@ -27,14 +27,14 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     generate_candidates,
 )
-from sr_od.application.currency_war.decision_v2.filters import (
+from sr_od.application.currency_war.decision.decision_v2.filters import (
     formed_stop_active,
 )
-from sr_od.application.currency_war.decision_v2.handoff import (
+from sr_od.application.currency_war.decision.decision_v2.handoff import (
     boss_projected_hp,
     handoff_gate_gap,
 )

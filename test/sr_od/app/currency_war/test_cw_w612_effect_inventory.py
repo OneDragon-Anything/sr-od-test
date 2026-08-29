@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (  # noqa: E402
     STRATEGY_EFFECTS,
     EconomyEffect,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession  # noqa: E402
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession  # noqa: E402
 
 # ===== T1 · EffectSpec 构造锁 =====
 

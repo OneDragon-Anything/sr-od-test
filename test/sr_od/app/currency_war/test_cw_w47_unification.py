@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_evolution import _CARD_FACTION_TIE
 from sr_od.application.currency_war.kernel.cw_intention import FAMILY_BOND_SIGNALS
 from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_system_cards import (
     SYSTEM_CARDS,
     _card_factions,
@@ -41,9 +41,9 @@ from sr_od.application.currency_war.telemetry.cw_win_model import (
     _SEELE,
     _TRIO,
 )
-from sr_od.application.currency_war.decision_v2 import discipline
-from sr_od.application.currency_war.decision_v2.candidates import _buy_tag
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2 import discipline
+from sr_od.application.currency_war.decision.decision_v2.candidates import _buy_tag
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     _shop_has_engine_card,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (

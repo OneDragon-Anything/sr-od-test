@@ -29,14 +29,14 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
     refresh_prob,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.ev import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.ev import (
     cross_plane_remaining_nodes,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     _engines_formed,
     vd_refresh_score,
 )
@@ -88,7 +88,7 @@ def _e1(level: int, cost: int) -> float:
 def _jump(e_cur: int, st: GameState) -> float:
     """下一档引擎跳变金值本地复算(与 engine_jump_gold 同式,registry
     单一源;ADR-0424 起战斗项=条件掉血拟合×战斗数骨架缺省)。"""
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         p1_battle_loss_est,
     )
     drung = _REG.rung_value.get(e_cur + 1, 0.0) - _REG.rung_value.get(e_cur, 0.0)
@@ -180,8 +180,8 @@ def test_p2_branch_untouched_by_pair_channel() -> None:
     DP rb=6 窗开但批口径刷金 134.8 > 98 → 预算硬界拒):即便
     transition_pair 非空,pair 通道不辖(plane≠1)→ 仍 None
     (P2 分支逐位不动)。"""
-    from sr_od.application.currency_war.decision_v2.posture import Posture
-    from sr_od.application.currency_war.decision_v2.ev import RoundPosture
+    from sr_od.application.currency_war.decision.decision_v2.posture import Posture
+    from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
     s = StrategySession()
     s.v3_intention = IntentionState(
         phase='locked', locked_comp='列车同行',

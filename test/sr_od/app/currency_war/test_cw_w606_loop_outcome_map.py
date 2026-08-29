@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.decision_v2.director_v2 import (
+from sr_od.application.currency_war.decision.decision_v2.director_v2 import (
     LoopOutcome,
     LoopOutcomeKind,
 )

@@ -39,7 +39,7 @@ from sr_od.application.currency_war.kernel.cw_economy import NodeGoal
 from sr_od.application.currency_war.kernel.cw_plane_table import (
     level_cost,
 )
-from sr_od.application.currency_war.decision_v2.posture import Posture
+from sr_od.application.currency_war.decision.decision_v2.posture import Posture
 from sr_od.application.currency_war.kernel.cw_line_switch import (
     e_rounds,
     should_switch_e,
@@ -50,9 +50,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.ev import RoundPosture
-from sr_od.application.currency_war.decision_v2.posture_release import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
+from sr_od.application.currency_war.decision.decision_v2.posture_release import (
     ReleaseDirective,
     authorize_release_refresh,
     evaluate_release,
@@ -617,7 +617,7 @@ def test_release_chain_end_to_end_reachable(monkeypatch) -> None:
     生产链本体(仅把刷新预算核钉为确定性授权 6 刷,预算期望本地复算;
     排程保持默认 level=6=False,R*=50)。"""
     from sr_od.application.currency_war.kernel import cw_economy
-    from sr_od.application.currency_war.decision_v2.strategy import (
+    from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )
     monkeypatch.setattr(cw_economy, 'refresh_ev_budget',
@@ -635,7 +635,7 @@ def test_release_frame_blocks_interest_motivated_sells() -> None:
     """锁B(release 帧不卖息凑档):凑息向卖候选(off_target/for_gold)
     在 release 门开帧不生成;无 release 态同帧照产(对照证明抑制来自门
     本身)。帧取 hp=80 非应急(FLIP 帧语义由 session.v3_release 承载)。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         generate_candidates,
     )
     st = _state(gold=58, hp=80, deployed_n=6)   # 板满:free_bench 不触发
@@ -656,7 +656,7 @@ def test_release_gate_spares_free_bench_sell() -> None:
     非方向件先被 off_target 档截住(优先序),走不到腾位档;方向件用
     session.v3_hoard.char_targets 承载(体系引擎件受 sole_engine 守卫
     ≤2 份拦截,不适合本帧)。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         generate_candidates,
     )
     st = _state(gold=58, hp=80, deployed_n=6, bench_n=BENCH_CAPACITY)
@@ -673,7 +673,7 @@ def test_release_gate_neutralizes_interest_ev() -> None:
     加分/跌破平台扣分的计值原料被拆);同 registry 无 release 态照计
     (对照)。ADR-0332 息崖平滑块用同一判据 spend_gate_active 旁路
     (scoring.score_candidate),不在本锁重复搭帧断言。"""
-    from sr_od.application.currency_war.decision_v2.scoring import score_state
+    from sr_od.application.currency_war.decision.decision_v2.scoring import score_state
     st = _state(gold=60, hp=80)
     sc_on = score_state(st, _gate_reg(True), _gate_session())
     assert sc_on['interest'] == 0.0
@@ -686,7 +686,7 @@ def _vd_p2_frame():
     金 80 花 E×5 穿息档 → Δinterest≠0,V_D 的 C_dec 息损项有非零原料。"""
     from sr_od.application.currency_war.kernel.cw_comps import get_comp
     from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-    from sr_od.application.currency_war.decision_v2.ev import RoundPosture
+    from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
     s = StrategySession()
     s.v3_release = ReleaseDirective(budget_gold=8, rolls=4)
     s.v3_intention = IntentionState(phase='locked', locked_comp='DOT队')
@@ -717,10 +717,10 @@ def test_release_gate_neutralizes_vd_c_dec_interest_loss() -> None:
     from sr_od.application.currency_war.data.cw_shop_odds import (
         expected_refreshes_for_card,
     )
-    from sr_od.application.currency_war.decision_v2.ev import (
+    from sr_od.application.currency_war.decision.decision_v2.ev import (
         cross_plane_remaining_nodes,
     )
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         vd_refresh_score,
     )
     st, s_on = _vd_p2_frame()

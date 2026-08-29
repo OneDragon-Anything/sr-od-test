@@ -92,11 +92,11 @@ def test_merge_buy_k_formula() -> None:
 
 
 def _bc_verdict(st: GameState, card: ShopCard):
-    from sr_od.application.currency_war.cw_strategy import StrategySession
-    from sr_od.application.currency_war.decision_v2.arbiter import (
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+    from sr_od.application.currency_war.decision.decision_v2.arbiter import (
         _check_constraint,
     )
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     cand = Candidate(action=BuyCard(card), tag='line_opportunistic',
@@ -136,9 +136,9 @@ def test_gate_k1_case_unchanged() -> None:
 def test_cost_of_charges_k_times_unit_cost() -> None:
     """满栏合成买金校验按 k×单价(§2.5 无价格优惠);非满栏恒 1×
     (arbiter._cost_of,gold_floor/interest_rule 同源取数)。"""
-    from sr_od.application.currency_war.cw_strategy import StrategySession
-    from sr_od.application.currency_war.decision_v2.arbiter import _cost_of
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+    from sr_od.application.currency_war.decision.decision_v2.arbiter import _cost_of
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     cand = Candidate(action=BuyCard(_card('X', cost=2)),
@@ -191,7 +191,7 @@ def test_simulate_full_bench_non_merge_noop() -> None:
 
 def _locked_sess():
     from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-    from sr_od.application.currency_war.cw_strategy import StrategySession
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
     ist = IntentionState()
     ist.phase = 'locked'
     ist.locked_comp = '列车同行'
@@ -228,7 +228,7 @@ def _locked_carry_sess():
 def test_carry_gate_mergebuy_skips_forced_sell() -> None:
     """意向核心未持有、店内 3 张(own=0 → k=3 完成合成)且 bench 满 →
     不卖任何件直接买(ADR-0453;裁决=「否则被迫卖有用角色」)。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         carry_gate_actions,
     )
     sess = _locked_carry_sess()
@@ -243,7 +243,7 @@ def test_carry_gate_mergebuy_skips_forced_sell() -> None:
 def test_carry_gate_non_merge_keeps_sell_chain() -> None:
     """不满足合成条件(own=0 + 店 1 张)→ 原腾位链逐位不动(零漂移):
     [SellBench(最弱保护件), BuyCard(核心)]。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         carry_gate_actions,
     )
     sess = _locked_carry_sess()

@@ -16,12 +16,12 @@ from sr_od.application.currency_war.obs.cw_observation import (
     reset_phase_round_cache,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
-from sr_od.application.currency_war.cw_strategy import (
+from sr_od.application.currency_war.decision.cw_strategy import (
     CurrencyWarMatch,
     StrategySession,
     discard_stale_match_container,
 )
-from sr_od.application.currency_war.decision_v2.strategy import (
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
 

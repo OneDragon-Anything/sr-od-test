@@ -37,23 +37,23 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     LevelUp,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     arbitrate,
 )
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     Candidate,
 )
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     blood_budget_levelup_blocked,
 )
-from sr_od.application.currency_war.decision_v2.posture_release import (
+from sr_od.application.currency_war.decision.decision_v2.posture_release import (
     hp_decision_trusted,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.remediation import (
+from sr_od.application.currency_war.decision.decision_v2.remediation import (
     steady_state_levelup_group,
 )
 from sr_od.application.currency_war.operations.prep.shop import _apply_hp
@@ -173,7 +173,7 @@ def test_mutation_guard_removal_turns_locks_red(
     100>21 不再拒——组2 各锁在此变异下必须翻红,证明锁敏感性与守卫
     必要性(去门必须涌现违规)。"""
     monkeypatch.setattr(
-        'sr_od.application.currency_war.decision_v2.discipline.'
+        'sr_od.application.currency_war.decision.decision_v2.discipline.'
         'hp_decision_trusted', lambda state: True)
     assert blood_budget_levelup_blocked(
         _ghost_state(), StrategySession(), DEFAULT_REGISTRY) is False
@@ -225,7 +225,7 @@ def test_terminal_release_fail_closed_on_untrusted() -> None:
     """不可信 hp 帧不触发终止分支(设计 W659 v2 §5.1 改判对照用例;
     ADR-0469):幽灵帧((False,False))fail-closed——终止分支与停升级
     门同取向,证据缺失时禁令保持有效,误放代价 > 误拦。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         terminal_release,
     )
     sess = StrategySession()
@@ -241,7 +241,7 @@ def test_helper_single_source() -> None:
     禁手写双位判定的纪律锚(W393 A1.1;谓词源码含本符号引用)。"""
     import inspect
 
-    from sr_od.application.currency_war.decision_v2 import discipline
+    from sr_od.application.currency_war.decision.decision_v2 import discipline
     src = inspect.getsource(discipline.blood_budget_levelup_blocked)
     assert 'hp_decision_trusted' in src
     # 单一源语义自检:幽灵帧两位皆 False → 不可信;同节点沿用帧 → 可信
@@ -284,7 +284,7 @@ def test_sim_frames_default_trusted_gate_short_circuits() -> None:
     with_guard = blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY)
     monkey = pytest.MonkeyPatch()
     monkey.setattr(
-        'sr_od.application.currency_war.decision_v2.discipline.'
+        'sr_od.application.currency_war.decision.decision_v2.discipline.'
         'hp_decision_trusted', lambda state: True)
     try:
         without_guard = blood_budget_levelup_blocked(st.copy(), sess,

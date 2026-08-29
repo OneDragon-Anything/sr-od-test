@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.decision_v2.contracts import (
+from sr_od.application.currency_war.decision.decision_v2.contracts import (
     AtomOp,
     Bail,
     Decision,
@@ -21,7 +21,7 @@ from sr_od.application.currency_war.decision_v2.contracts import (
     Snapshot,
     SubstateClassification,
 )
-from sr_od.application.currency_war.decision_v2.director_v2 import (
+from sr_od.application.currency_war.decision.decision_v2.director_v2 import (
     DirectorV2,
     LoopOutcomeKind,
     _DirectorPorts,

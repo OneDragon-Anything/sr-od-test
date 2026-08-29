@@ -22,14 +22,14 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_economy import (
     refresh_ev_budget,
     reserve_cap,
     schedule_upgrade,
 )
-from sr_od.application.currency_war.decision_v2.ev import build_round_posture
-from sr_od.application.currency_war.decision_v2.posture_release import (
+from sr_od.application.currency_war.decision.decision_v2.ev import build_round_posture
+from sr_od.application.currency_war.decision.decision_v2.posture_release import (
     evaluate_release,
     release_directive,
 )
@@ -75,7 +75,7 @@ def test_jue23_sentinel_obligation_chain_alive() -> None:
     p = build_round_posture(st, sess)
     assert p is not None                      # 无 None 形状(D0)
     assert p.tag != '存息'                    # 溢余帧禁存息标签
-    from sr_od.application.currency_war.decision_v2.economy_cycle import (obligation,)
+    from sr_od.application.currency_war.decision.decision_v2.economy_cycle import (obligation,)
     assert obligation(st, sess, _REG) > 0
     wrapped, d = evaluate_release(st, sess, _REG, 'FORM', p)
     assert d is not None and d.reason in ('flip', 'third_path',
@@ -182,7 +182,7 @@ def test_blood_budget_stop_not_inflated_by_budget_merge() -> None:
     - 血预算带帧(hp=40,P1 末窗血预算不足):预算>0 但拒付层拦搜索型
       刷新 → 泄息/停手机制落到授权执行层,合并层无第二实现(W615 §2-R2.5
       应激通道「已是规则,引用不重复」的结构原样)。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         blood_budget_refresh_blocked,
     )
     st_emerg = _state(gold=100, hp=20, shop=[_sc('桑博', 2)], board={})
@@ -202,7 +202,7 @@ def test_blood_budget_stop_not_inflated_by_budget_merge() -> None:
     assert blood_budget_refresh_blocked(st_band, sess_b, _REG), \
         '血预算带停付防线=拒付层:搜索型刷新停付必须拦'
     # 合并层无血预算特判(单一公式):指令预算 = max(义务, 预算×刷价)
-    from sr_od.application.currency_war.decision_v2.economy_cycle import (obligation,)
+    from sr_od.application.currency_war.decision.decision_v2.economy_cycle import (obligation,)
     posture_b = build_round_posture(st_band, sess_b)
     d = release_directive(st_band, sess_b, _REG, 'FORM', posture_b)
     expect = max(obligation(st_band, sess_b, _REG), budget * 2)
@@ -298,8 +298,8 @@ def test_injection_consistency_single_registry_source() -> None:
     assert refresh_ev_budget(st2, sess, _REG) == 0
     assert refresh_ev_budget(st2, sess, reg2) > 0
     # BudgetView 装配单源:传入 reg2 的 BudgetView == 逐字段显式注入值
-    from sr_od.application.currency_war.decision_v2.economy_cycle import (obligation,)
-    from sr_od.application.currency_war.decision_v2.prep_brain import _budget
+    from sr_od.application.currency_war.decision.decision_v2.economy_cycle import (obligation,)
+    from sr_od.application.currency_war.decision.decision_v2.prep_brain import _budget
     bv = _budget(st2, sess, reg2)
     assert bv.interest_floor == 40
     assert bv.reserve_cap == reserve_cap(st2, sess, reg2)
@@ -314,7 +314,7 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     装备拼接、deploy_bench 装备覆盖的真实别名写者)不穿透视图;
     equips 在视图侧固化为 tuple。"""
     from sr_od.application.currency_war.kernel.cw_state import snapshot_copy
-    from sr_od.application.currency_war.decision_v2.prep_brain import (
+    from sr_od.application.currency_war.decision.decision_v2.prep_brain import (
         _tracking_view,
     )
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -330,7 +330,7 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     sess.tracked_bench_chars = [live_b]
     sess.tracked_deployed = [live_d]
     # 直调 _tracking_view(snapshot 传空 fresh-read 兜底面)
-    from sr_od.application.currency_war.decision_v2.contracts import Snapshot
+    from sr_od.application.currency_war.decision.decision_v2.contracts import Snapshot
     snap = Snapshot(plane=1, round_num=5)
     bench, deployed = _tracking_view(sess, snap)
     assert bench and deployed

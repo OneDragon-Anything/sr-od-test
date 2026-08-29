@@ -26,8 +26,8 @@ from sr_od.application.currency_war.kernel.cw_line_switch import (
     survival_gate,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.filters import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.filters import (
     _deploy_free,
     _deploy_free_after_merge,
     _refreshable_names,
@@ -90,7 +90,7 @@ def test_shared_loss_table_alive_for_c4() -> None:
 def test_shared_face_helpers_alive_for_c1() -> None:
     """C1 判据共享面健在锁:部署空位/合成后空位/刷新名集/hp 可信位
     守卫四组符号仍在且可执行(C1 仍处演进中,清理批只删 C3 专属)。"""
-    from sr_od.application.currency_war.decision_v2.posture_release import (
+    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
         hp_decision_trusted,
     )
     st = _dying_state()
@@ -107,7 +107,7 @@ def test_shared_face_helpers_alive_for_c1() -> None:
         deployed=[BenchChar(slot=i, char_id='件甲', faction='仙舟罗浮',
                             star=1, position_pref='front')
                   for i in range(st.max_units())])
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     from sr_od.application.currency_war.kernel.cw_state import BuyCard

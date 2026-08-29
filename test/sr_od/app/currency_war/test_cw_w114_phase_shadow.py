@@ -22,8 +22,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.phase import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.phase import (
     Phase,
     derive_phase,
     form_ok,
@@ -171,7 +171,7 @@ def test_fallback_gate_hp_charge_stack_exemption() -> None:
     豁免集不含 cost_escalation 型(银狼)。
     """
     from sr_od.application.currency_war.kernel.cw_comps import hp_charge_stack_chars
-    from sr_od.application.currency_war.decision_v2.phase import (
+    from sr_od.application.currency_war.decision.decision_v2.phase import (
         fallback_engines_count,
     )
     assert hp_charge_stack_chars() == frozenset({'万敌'})

@@ -18,15 +18,15 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     _buy_tag,
     generate_candidates,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import score_state
+from sr_od.application.currency_war.decision.decision_v2.scoring import score_state
 
 _DELETED_FIELDS = (
     'goldrich_buy_bias', 'goldrich_min_gold', 'goldrich_buy_tags',

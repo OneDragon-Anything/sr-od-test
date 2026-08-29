@@ -20,7 +20,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     _held_form_weights,
     board_rung_x,
     score_state,
@@ -84,7 +84,7 @@ def test_target_hold_ceiling_discounted() -> None:
     """持有进度项天花板折减:n≥base 时 targets = cap_frac × value。"""
     from sr_od.application.currency_war.kernel.cw_bridge_pool import BRIDGE_POOL
     from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
-    from sr_od.application.currency_war.cw_strategy import StrategySession
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
     # 目标件取桥池 fixed∪core 并作意向 hoard(ADR-0336 后裸 session
     # 只走引擎件种子;意向载体才是目标集生产形态)
     names = sorted({n for combo in BRIDGE_POOL

@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_assembly import (
     SHADOW_STATS,
     shadow_compare_step,

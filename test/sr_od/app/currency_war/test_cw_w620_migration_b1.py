@@ -14,25 +14,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_assembly import DecideAdapter
-from sr_od.application.currency_war.decision_v2.adapter import snapshot_to_obs
-from sr_od.application.currency_war.decision_v2.contracts import (
+from sr_od.application.currency_war.decision.decision_v2.adapter import snapshot_to_obs
+from sr_od.application.currency_war.decision.decision_v2.contracts import (
     AtomOp,
     Decision,
     Snapshot,
     SubstateClassification,
 )
-from sr_od.application.currency_war.decision_v2.director_v2 import (
+from sr_od.application.currency_war.decision.decision_v2.director_v2 import (
     DirectorV2,
     LoopOutcomeKind,
     _DirectorPorts,
 )
-from sr_od.application.currency_war.decision_v2.prep_brain import (
+from sr_od.application.currency_war.decision.decision_v2.prep_brain import (
     assemble,
     committed_from,
 )
-from sr_od.application.currency_war.decision_v2.turn_state import (
+from sr_od.application.currency_war.decision.decision_v2.turn_state import (
     BudgetView,
     DirectionView,
     TurnState,

@@ -29,12 +29,12 @@ from sr_od.application.currency_war.kernel.cw_plane_table import (    NODES_PER_
 )
 from sr_od.application.currency_war.kernel.cw_intention import plane_remaining_nodes
 from sr_od.application.currency_war.kernel.cw_state import CompTransaction, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     _hard_node,
     plane_last_battle,
 )
-from sr_od.application.currency_war.decision_v2.ev import battles_left_p2
+from sr_od.application.currency_war.decision.decision_v2.ev import battles_left_p2
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
@@ -155,7 +155,7 @@ def test_final_fence_p2_last_round_gate():
     直接锁轮门谓词(与 scoring._off_lock_verdict 内联条件同式):
     state.round_num >= nodes_of_plane(session) ∧ boss_window_active。
     """
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         boss_window_active,
     )
     sess2 = _sess(_P2_TABLE)

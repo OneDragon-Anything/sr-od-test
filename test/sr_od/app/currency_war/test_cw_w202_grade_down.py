@@ -28,7 +28,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     _recount_board,
     simulate,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )

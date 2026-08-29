@@ -10,7 +10,7 @@
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.decision_v2.filters import (
+from sr_od.application.currency_war.decision.decision_v2.filters import (
     c1_directed_active,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
@@ -52,7 +52,7 @@ def test_consumption_reads_plane_dim(monkeypatch) -> None:
     """
     from dataclasses import replace
 
-    import sr_od.application.currency_war.decision_v2.posture_release as pr
+    import sr_od.application.currency_war.decision.decision_v2.posture_release as pr
     from sr_od.application.currency_war.kernel.cw_registry import (
         DecisionV2Registry,
     )

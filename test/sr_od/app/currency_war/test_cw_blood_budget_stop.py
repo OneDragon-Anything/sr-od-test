@@ -26,21 +26,21 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     LevelUp,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.sim.cw_sim_checks import (
     _P1_LEVELUP_STOP_HP,
     _P2_LEVELUP_STOP_HP,
     seg_check_p1_blood_budget_levelup,
     seg_check_p2_blood_budget_levelup,
 )
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     _check_constraint,
     arbitrate,
 )
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     Candidate,
 )
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     blood_budget_levelup_blocked,
     p1_levelup_stop_hp,
     p2_levelup_stop_hp,
@@ -48,7 +48,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.remediation import (
+from sr_od.application.currency_war.decision.decision_v2.remediation import (
     steady_state_levelup_group,
 )
 
@@ -131,7 +131,7 @@ def test_terminal_frame_still_blocks_levelup() -> None:
     终止分支只释放刷新停付与末窗降格两门,停升级门**不在豁免辖内**——
     P21 数学(濒死升级 EV=−C−I 严格为负)与金是否零价值无关;防「释放
     扩散」回归的对照锚。"""
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         terminal_release,
     )
     sess = StrategySession()

@@ -20,18 +20,18 @@ from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_engine_seed_not_resold,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     generate_candidates,
 )
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     engine_char_names,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
     DecisionV2Registry,
 )
-from sr_od.application.currency_war.decision_v2.scoring import score_state
+from sr_od.application.currency_war.decision.decision_v2.scoring import score_state
 
 _REG = DEFAULT_REGISTRY
 _CARRY = '姬子·启行'          # 引擎件(恒在目标集)
@@ -165,7 +165,7 @@ def test_carry_gate_yields_to_fresh_seed() -> None:
     carry_gate 本轮不腾(旧 W51 死锁豁免=买侧见即买与卖侧腾位互踩,
     r4 买 r6 卖 r7 再买;ADR-0339 件3 裁决移除豁免)。"""
     from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         carry_gate_actions,
     )
 

@@ -22,8 +22,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.handoff import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.handoff import (
     HANDOFF_BOARD_CORE2_CUTS,
     HANDOFF_BOARD_ENGINE_CUTS,
     HANDOFF_HP_CUTS,
@@ -32,7 +32,7 @@ from sr_od.application.currency_war.decision_v2.handoff import (
     handoff_snapshot,
     handoff_tier,
 )
-from sr_od.application.currency_war.decision_v2.strategy import (
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
 

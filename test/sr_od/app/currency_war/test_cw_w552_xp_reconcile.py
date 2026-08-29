@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
 )

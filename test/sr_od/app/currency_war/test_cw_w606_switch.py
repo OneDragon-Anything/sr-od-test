@@ -33,7 +33,7 @@ def test_switch_field_deleted_from_registry():
 
 
 def test_adapter_no_longer_exports_enablement_helper():
-    import sr_od.application.currency_war.decision_v2.adapter as adapter
+    import sr_od.application.currency_war.decision.decision_v2.adapter as adapter
     assert not hasattr(adapter, 'director_v2_enabled')
 
 

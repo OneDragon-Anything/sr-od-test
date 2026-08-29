@@ -21,21 +21,21 @@ from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_decision_v2_crisis_gold_hoard,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     generate_candidates,
 )
-from sr_od.application.currency_war.decision_v2.filters import (
+from sr_od.application.currency_war.decision.decision_v2.filters import (
     crisis_hoard_active,
     filter_candidates,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     score_candidate,
 )
-from sr_od.application.currency_war.decision_v2.strategy import (
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
 

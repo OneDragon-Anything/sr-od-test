@@ -30,24 +30,24 @@ from sr_od.application.currency_war.kernel.cw_state import (
     LevelUp,
     RefreshShop,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision_v2.candidates import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
     Candidate,
     _target_names,
     generate_candidates,
 )
-from sr_od.application.currency_war.decision_v2.ev import (
+from sr_od.application.currency_war.decision.decision_v2.ev import (
     levelup_ev_authorized,
     levelup_refresh_saving,
 )
-from sr_od.application.currency_war.decision_v2.filters import (
+from sr_od.application.currency_war.decision.decision_v2.filters import (
     filter_candidates,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     score_candidate,
     vd_refresh_score,
 )
@@ -98,10 +98,10 @@ def test_vd_batch_caliber_positive_frame() -> None:
     assert val == vd, (val, vd)
     # 批成本项在分内:收益毛值(R 项+战斗项,ADR-0425 标定口径)> val
     # (净)=毛值−E×刷价
-    from sr_od.application.currency_war.decision_v2.ev import (
+    from sr_od.application.currency_war.decision.decision_v2.ev import (
         cross_plane_remaining_nodes,
     )
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         p1_battle_loss_est,
     )
     win_term = (( _REG.h3_win_rate[2] - _REG.h3_win_rate[1])
@@ -221,7 +221,7 @@ def test_catchup_retired_static() -> None:
         assert not hasattr(_REG, field), field
     assert 'catchup' not in _REG.filter_chain_order
     assert 'catchup' not in _REG.audit_round_state_dims
-    from sr_od.application.currency_war.decision_v2 import (
+    from sr_od.application.currency_war.decision.decision_v2 import (
         filters as _f,
         discipline as _d,
         arbiter as _a,

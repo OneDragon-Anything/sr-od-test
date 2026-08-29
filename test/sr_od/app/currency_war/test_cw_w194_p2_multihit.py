@@ -24,9 +24,9 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     LineTrack,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_intention import serialize_intention
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     ArbiterResult,
     _steady_levelup_pass,
     arbitrate,
@@ -34,7 +34,7 @@ from sr_od.application.currency_war.decision_v2.arbiter import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.remediation import (
+from sr_od.application.currency_war.decision.decision_v2.remediation import (
     steady_state_levelup_group,
 )
 
@@ -226,7 +226,7 @@ def _p2_state(gold: int = 8, level: int = 6) -> GameState:
 
 def _core_cand(name: str = '姬子·启行', cost: int = 3) -> object:
     from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
     return Candidate(
@@ -237,7 +237,7 @@ def _core_cand(name: str = '姬子·启行', cost: int = 3) -> object:
 
 def test_p2_core_firstpiece_exempt_passes() -> None:
     """主锁:P2 金 8 买 3费核心首件 → 同息档(8→5)放行 + auth trace。"""
-    from sr_od.application.currency_war.decision_v2.arbiter import (
+    from sr_od.application.currency_war.decision.decision_v2.arbiter import (
         _p2_core_firstpiece_exempt as ex,
     )
     sess = _p2_sess()
@@ -250,7 +250,7 @@ def test_p2_core_firstpiece_exempt_passes() -> None:
 def test_p2_core_firstpiece_guards() -> None:
     """六路挡:P1 / 非核心 / 已持有(working)/ 跨息档 / flag off /
     单轮上限耗尽 / boss 轮。"""
-    from sr_od.application.currency_war.decision_v2.arbiter import (
+    from sr_od.application.currency_war.decision.decision_v2.arbiter import (
         _p2_core_firstpiece_exempt as ex,
     )
     sess = _p2_sess()

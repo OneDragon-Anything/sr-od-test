@@ -42,7 +42,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     deployed_place,
 )
 from sr_od.application.currency_war.sim.cw_sim import synthesize_snapshot
-from sr_od.application.currency_war.decision_v2.contracts import (
+from sr_od.application.currency_war.decision.decision_v2.contracts import (
     SNAPSHOT_SCHEMA_VERSION,
     AtomOp,
     Bail,
@@ -54,7 +54,7 @@ from sr_od.application.currency_war.decision_v2.contracts import (
     SubstateClassification,
     derive_snapshot,
 )
-from sr_od.application.currency_war.decision_v2.director_v2 import (
+from sr_od.application.currency_war.decision.decision_v2.director_v2 import (
     DirectorV2,
     _DirectorPorts,
 )

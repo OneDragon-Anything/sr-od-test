@@ -28,13 +28,13 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     committed_authority,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_transition import CommitSignals
-from sr_od.application.currency_war.decision_v2.contracts import (
+from sr_od.application.currency_war.decision.decision_v2.contracts import (
     Snapshot,
     SubstateClassification,
 )
-from sr_od.application.currency_war.decision_v2.prep_brain import (
+from sr_od.application.currency_war.decision.decision_v2.prep_brain import (
     assemble,
     committed_from,
     drive_intention,
@@ -134,7 +134,7 @@ def test_r2_gates_mirror_retired_with_f5_flags():
     sess.v3_intention = IntentionState()
     turn = assemble(_snapshot(), sess)
     assert set(turn.direction.gates) == set()
-    src = (_SRC / 'decision_v2' / 'prep_brain.py').read_text(encoding='utf-8')
+    src = (_SRC / 'decision' / 'decision_v2' / 'prep_brain.py').read_text(encoding='utf-8')
     assert 'getattr(cw_intention' not in src, \
         'gates 镜像回退为 getattr 缺省形态(W629-R2 镜像雷复燃)'
 
@@ -216,9 +216,9 @@ def test_sentinel_ju23_frame_releases_on_new_stack():
     """局23 型帧哨兵(W611 锁沿用,经新栈装配复合验证):
     100 金 + 备战空 + interest 姿态 → 新栈预算投影息线供给正常 + release 帧。
     """
-    from sr_od.application.currency_war.decision_v2.posture import Posture
-    from sr_od.application.currency_war.decision_v2.ev import RoundPosture
-    from sr_od.application.currency_war.decision_v2.posture_release import (
+    from sr_od.application.currency_war.decision.decision_v2.posture import Posture
+    from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
+    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
         release_directive,
         wrap_posture,
     )

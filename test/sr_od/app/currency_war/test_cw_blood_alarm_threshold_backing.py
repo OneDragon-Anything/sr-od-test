@@ -15,8 +15,8 @@ L_c(rung)=11.32−0.37·rung(registry.vd_p1_loss_* 单一源,ADR-0425)
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     BLOOD_MARGIN_LOW_HP,
     BloodAlarmTracker,
 )

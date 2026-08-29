@@ -45,7 +45,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     RefreshShop,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import (
+from sr_od.application.currency_war.decision.cw_strategy import (
     CurrencyWarMatch,
     StrategySession,
 )

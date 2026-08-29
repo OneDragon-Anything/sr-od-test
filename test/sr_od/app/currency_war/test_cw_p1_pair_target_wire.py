@@ -19,8 +19,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
 )
 from sr_od.application.currency_war.kernel.cw_deploy_logic import select_deployments
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.strategy import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
 

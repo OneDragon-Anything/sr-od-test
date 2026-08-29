@@ -2,7 +2,7 @@
 """r306 位面节点表缓存测试(用户指路:开局帧读全)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 
 
 def test_p1_typical_table_matches_stats() -> None:

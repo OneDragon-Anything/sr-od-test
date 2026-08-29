@@ -16,11 +16,11 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     _streak_floor,
 )
-from sr_od.application.currency_war.decision_v2.ev import interest_cost
+from sr_od.application.currency_war.decision.decision_v2.ev import interest_cost
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )

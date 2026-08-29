@@ -2,7 +2,7 @@
 """r265 节点类型权威源测试(备战节点行 → session → on_round_end 消费)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 
 
 def test_session_field_default_none() -> None:

@@ -11,7 +11,7 @@ sys.path.insert(0, 'src')
 
 from sr_od.application.currency_war.kernel.cw_comps import Comp
 from sr_od.application.currency_war.kernel.cw_recipe import _RECIPES, decision_target
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_transition import TRANSITION_PACK
 
 

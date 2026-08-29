@@ -8,8 +8,8 @@ from pathlib import Path
 from sr_od.application.currency_war.currency_war_config import (
     CurrencyWarConfig,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_strategy_manager import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy_manager import (
     PluginSource,
     StrategyManager,
 )
@@ -28,7 +28,7 @@ def test_strategies_discoverable():
 
 
 def test_instantiate_line_v2():
-    from sr_od.application.currency_war.decision_v2.strategy import (
+    from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )
     mgr = _mgr()

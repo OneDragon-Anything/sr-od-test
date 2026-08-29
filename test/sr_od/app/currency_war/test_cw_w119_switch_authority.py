@@ -33,27 +33,27 @@ from sr_od.application.currency_war.kernel.cw_state import (
     LevelUp,
     ShopCard,
 )
-from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.arbiter import (
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     _active_floor,
     arbitrate,
 )
-from sr_od.application.currency_war.decision_v2.candidates import Candidate
-from sr_od.application.currency_war.decision_v2.discipline import (
+from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
     _streak_floor,
     assess_discipline,
     boss_window_active,
 )
-from sr_od.application.currency_war.decision_v2.ev import (
+from sr_od.application.currency_war.decision.decision_v2.ev import (
     REWARD_BATTLE_ENVS,
 )
-from sr_od.application.currency_war.decision_v2.filters import (
+from sr_od.application.currency_war.decision.decision_v2.filters import (
     formed_stop_active,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision_v2.scoring import (
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
     score_candidate,
 )
 
@@ -133,7 +133,7 @@ def test_int_emb_contract() -> None:
     """int_emb 单一源契约:score_candidate 的 breakdown 内嵌息分量=
     息差(after−base);无息差通道(refresh/无 after)恒 0。仲裁层
     interest_rule 的 V 剥离消费它,禁双源。"""
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         score_candidate as _sc,
     )
     # 常规买候选(bench 件,息差 0——金不变):int_emb=Δinterest
@@ -307,7 +307,7 @@ def test_overheat_reward_node_treated_as_battle() -> None:
     # 过热 → 首刷正分(轮计数 0<cap);同轮已刷 1 次(计数≥cap)→
     # 豁免失效回常规门恒负分;无环境对照恒负分(轮界门照辖)
     from sr_od.application.currency_war.kernel.cw_state import RefreshShop
-    from sr_od.application.currency_war.decision_v2.scoring import (
+    from sr_od.application.currency_war.decision.decision_v2.scoring import (
         score_candidate as _sc,
     )
     for used, env, expect_pos in ((0, '经济过热', True),
@@ -357,8 +357,8 @@ def test_w120_p6_no_per_round_special_case() -> None:
     refresh_max_round/bond_fallback_min_round/form_refresh_max_round 是
     ADR-0293/0340 既有门,非 r1/r2 特判)。"""
     import inspect
-    from sr_od.application.currency_war.decision_v2 import arbiter as _arb
-    from sr_od.application.currency_war.decision_v2 import scoring as _sc
+    from sr_od.application.currency_war.decision.decision_v2 import arbiter as _arb
+    from sr_od.application.currency_war.decision.decision_v2 import scoring as _sc
     src = inspect.getsource(_arb) + inspect.getsource(_sc)
     for pat in ('round_num <= 1', 'round_num <= 2', 'round_num < 1',
                 'round_num < 2', 'round_num == 1', 'round_num == 2',
@@ -392,13 +392,13 @@ def test_w121_g1_population_slot_trigger_direction() -> None:
     - A:deployed=cap(位满)→ 总账放行(① 人口位,花后 41≥form_floor);
     - B:deployed=cap−1(有空位)→ ① 不触发,DP 臂平台未破不过、静态账
       平台延迟损拒 →「息引擎总账拒」。"""
-    from sr_od.application.currency_war.decision_v2.candidates import (
+    from sr_od.application.currency_war.decision.decision_v2.candidates import (
         _target_names,
     )
-    from sr_od.application.currency_war.decision_v2.discipline import (
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
         engine_char_names,
     )
-    from sr_od.application.currency_war.decision_v2.ev import (
+    from sr_od.application.currency_war.decision.decision_v2.ev import (
         levelup_ev_authorized,
     )
     targets = _target_names(None, None)
@@ -431,7 +431,7 @@ def test_bypass_emergency_floor_unchanged() -> None:
     disc = assess_discipline(st, sess, _REG)
     assert disc.coverage == 'emergency'
     # interest_rule 在应急态不辖(交 gold_floor)
-    from sr_od.application.currency_war.decision_v2.arbiter import (
+    from sr_od.application.currency_war.decision.decision_v2.arbiter import (
         _check_constraint,
     )
     cand = Candidate(action=BuyCard(_card('测试件', cost=4), reason=''),
@@ -445,11 +445,11 @@ def test_hoard_phase_domain() -> None:
     (拒绝原因可见 HOARD 攒息)。"""
     sess = _sess_locked('DOT队')
     st = _formed_frame('DOT队', gold=45, round_num=7)
-    from sr_od.application.currency_war.decision_v2.phase import (
+    from sr_od.application.currency_war.decision.decision_v2.phase import (
         derive_phase,
     )
     assert derive_phase(st, sess, _REG).value == 'HOARD'
-    from sr_od.application.currency_war.decision_v2.arbiter import (
+    from sr_od.application.currency_war.decision.decision_v2.arbiter import (
         _check_constraint,
     )
     # 同档买(45→43,档 4 内):放行

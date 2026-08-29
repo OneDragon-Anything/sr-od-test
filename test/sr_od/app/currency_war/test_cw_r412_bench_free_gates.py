@@ -10,14 +10,14 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     DeferSpheres,
     LevelUp,
     SellBench,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
-from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
+from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
 
 S = DecisionV2Strategy()
 COMP = get_comp('列车同行')

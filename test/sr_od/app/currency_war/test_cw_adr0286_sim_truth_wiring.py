@@ -112,7 +112,7 @@ class _ProbsRecorder:
         self.rows: list[tuple[int, object, object, int]] = []
         self._inner = None
         if delegate:
-            from sr_od.application.currency_war.decision_v2.strategy import (
+            from sr_od.application.currency_war.decision.decision_v2.strategy import (
                 DecisionV2Strategy,
             )
             self._inner = DecisionV2Strategy()

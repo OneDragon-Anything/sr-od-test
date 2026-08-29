@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_assembly import DecideAdapter
-from sr_od.application.currency_war.decision_v2.contracts import (
+from sr_od.application.currency_war.decision.decision_v2.contracts import (
     AtomOp,
     Bail,
     Defer,
@@ -68,7 +68,7 @@ _EXPECTED_DOMAINS = {
 
 
 def _from_sr():
-    from sr_od.application.currency_war.decision_v2.adapter import (
+    from sr_od.application.currency_war.decision.decision_v2.adapter import (
         action_to_atomop,
     )
     return action_to_atomop
@@ -95,7 +95,7 @@ def test_same_family_different_params_distinct_keys():
 
 def test_control_flow_actions_do_not_produce_ops():
     """DeferSpheres/BailToOuter 走 Decision.control(框架信号不经 execute)。"""
-    from sr_od.application.currency_war.decision_v2.contracts import (
+    from sr_od.application.currency_war.decision.decision_v2.contracts import (
         SubstateClassification,
     )
 
@@ -121,7 +121,7 @@ def test_control_flow_actions_do_not_produce_ops():
 
 def test_binding_replay_executes_same_action():
     """decide 登记 op_key → execute 回放同一 PrepAction 给现役执行器。"""
-    from sr_od.application.currency_war.decision_v2.contracts import (
+    from sr_od.application.currency_war.decision.decision_v2.contracts import (
         SubstateClassification,
     )
 
