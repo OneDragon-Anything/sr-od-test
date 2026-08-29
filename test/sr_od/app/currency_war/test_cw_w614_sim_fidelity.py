@@ -5,8 +5,8 @@
 
 覆盖:
 - 零漂移锚:不含新效果(默认 invest=False)的局行为投影 digest 逐位不变;
-- G3:付费刷新产经验(淘金客 +2,注册表 cw_investments.xp_per_refresh;
-  免费刷不计),off 臂恒 0;
+- G3:付费刷新产经验(淘金客 +2;数值源单一面 = cw_investments.STRATEGY_EFFECTS
+  overlay,overlay 值变更 sim 跟随;免费刷不计),off 臂恒 0;
 - G1:装备事件计数 + 逐轮未穿滞留/生锈暴露(min(10,n),词条语义
   cw_comps.RUST_AFFIX_NAME)+ 穿戴后滞留清零 + P1 出口滞留件数;
 - G2:配方件躺 bench 轮数与上阵战力贡献代理的账本一致性。
@@ -15,10 +15,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace as _dc_replace
 
 import pytest
 
-from sr_od.application.currency_war.cw_investments import aggregate_economy
+from sr_od.application.currency_war import cw_sim as cw_sim_mod
+from sr_od.application.currency_war.cw_effect_inventory import EffectSpec
+from sr_od.application.currency_war.cw_investments import (
+    STRATEGY_EFFECTS,
+    EconomyEffect,
+)
 from sr_od.application.currency_war.cw_sim import simulate_p1
 from sr_od.application.currency_war.cw_sim_invest import SimInvestProfile
 
@@ -71,9 +77,27 @@ class TestZeroDriftAnchor:
 class TestG3XpPerRefresh:
     """G3:xp_per_refresh 合成器接入(付费刷新产经验;免费刷不计)。"""
 
-    def test_registry_source(self):
-        # 数值源 = 投资注册表(淘金客 官方文本:每次消耗金币刷新 +2 经验)
-        assert aggregate_economy(['淘金客']).xp_per_refresh == 2
+    def test_overlay_source_single_source(self):
+        """数值源单一面 = STRATEGY_EFFECTS overlay(非 STRATEGY_ECONOMY 聚合)。"""
+        spec = STRATEGY_EFFECTS['淘金客']
+        assert isinstance(spec, EffectSpec)
+        assert isinstance(spec.payload, EconomyEffect)
+        # 淘金客官方文本:每次消耗金币刷新 +2 经验;overlay 供值,sim 跟随
+        assert spec.payload.xp_per_refresh == 2
+        assert spec.pending is False   # 定谳条目直供数值,不走保守支
+
+    def test_overlay_value_change_follows(self, monkeypatch):
+        """源断言:overlay 值变更 sim 跟随(改 overlay,注册表聚合面不动)。"""
+        spec = STRATEGY_EFFECTS['淘金客']
+        patched = dict(STRATEGY_EFFECTS)
+        patched['淘金客'] = _dc_replace(
+            spec, payload=_dc_replace(spec.payload, xp_per_refresh=7))
+        monkeypatch.setattr(cw_sim_mod, 'STRATEGY_EFFECTS', patched)
+        prof = SimInvestProfile(active_env='',
+                                picks=((1, 1, '淘金客'),))
+        r = simulate_p1(0, pool='snapshot', invest=prof)
+        assert r.refreshes > 0
+        assert r.refresh_xp_total == 7 * r.refreshes
 
     def test_paid_refresh_grants_xp_on_arm(self):
         prof = SimInvestProfile(active_env='',
