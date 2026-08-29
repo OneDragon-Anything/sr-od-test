@@ -223,12 +223,27 @@ def test_grep_guard_mutation_self_check():
 # ----------------------------------------------------- 3. R2 tracking 读口
 
 def test_tracking_view_prefers_tracked_over_fresh():
+    """R2 读口语义:tracking 非空优先,元素 = ``cw_state.snapshot_copy``
+    快照拷贝(cw_state.snapshot_copy docstring / 隔离锁
+    test_cw_w633_migration_b3 定案——快照帧 equips 固化 tuple、与
+    session.tracked_* 断开别名)。
+
+    旧断言 ``bench_view == (tracked,)`` 锁的是逐位全等,隐含「视图元素
+    = 原对象」的偶然实现;快照拷贝机制落码后视图 equips 为 tuple 固化,
+    与原对象的 list 默认不再逐位相等——该旧比较非设计意图,重推为:
+    ①tracking 优先(字段值取自 tracked)②快照拷贝语义(非别名 + equips
+    tuple 固化)③tracking 空 → fresh read 补缺。"""
+    from sr_od.application.currency_war.cw_state import snapshot_copy
     sess = StrategySession()
     tracked = BenchChar(slot=1, char_id='huohuo', star=2)
     sess.tracked_bench_chars = [tracked]
     snap = _snapshot()
     turn = assemble(snap, sess)
-    assert turn.direction.bench_view == (tracked,)   # tracking 优先
+    assert turn.direction.bench_view == (snapshot_copy(tracked),)
+    # 快照拷贝语义:非别名 + equips tuple 固化
+    viewed = turn.direction.bench_view[0]
+    assert viewed is not tracked
+    assert isinstance(viewed.equips, tuple)
     # tracking 空 → fresh read 补缺(snapshot.bench 通道)
     sess2 = StrategySession()
     turn2 = assemble(snap, sess2)
