@@ -389,7 +389,12 @@ def test_checker_dup_dual_domain() -> None:
     from sr_od.application.currency_war.kernel.cw_line_defs import (
         ENGINE_FACTIONS,
     )
-    from sr_od.application.currency_war.sim import corpus, decision_v2, segments
+    # 分包期 6 八切:检查段 corpus/decision_v2/segments 归 sim.checks 子包
+    from sr_od.application.currency_war.sim.checks import (
+        corpus,
+        decision_v2,
+        segments,
+    )
     name = next(n for n, c in CHARACTERS.items()
                 if c.cost == 1
                 and set(c.factions or ()) & set(ENGINE_FACTIONS))
@@ -430,7 +435,12 @@ def test_transition_cost_max_single_source() -> None:
 def test_supply_consistency_probe_includes_w300() -> None:
     """V-B1.3:检查网总表含 press 通道探针;供给一致性探针与
     check_w300_press_channel_probe 均零违规(现行为回归面)。"""
-    from sr_od.application.currency_war.sim import corpus, decision_v2, segments
+    # 分包期 6 八切:检查段归 sim.checks 子包(同 test_checker_dup_dual_domain)
+    from sr_od.application.currency_war.sim.checks import (
+        corpus,
+        decision_v2,
+        segments,
+    )
     r1 = decision_v2.check_decision_v2_supply_label_consistency()
     assert r1['violations'] == 0, r1['detail']
     r2 = corpus.check_w300_press_channel_probe()

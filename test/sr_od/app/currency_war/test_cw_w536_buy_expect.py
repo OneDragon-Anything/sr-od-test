@@ -264,11 +264,17 @@ def test_w536_wiring_locks():
 
     from sr_od.application.currency_war.kernel import cw_strategy_session as _ss_mod
     assert 'pending_buy_expect: ' + chr(39) + 'BuyExpect | None' + chr(39) + ' = None' in inspect.getsource(_ss_mod)
-    compute_body = dir_src[dir_src.index('def compute_buy_expect'):]
+    # 分包期 6(DESIGN §4.5):compute_buy_expect 与 _BUY_DEFECT_KIND
+    # 随纯期望段迁 kernel/cw_prep_expect(prep_director 经 import 引用);
+    # 接线点(buy_expect_reconcile 对账)仍在本体。
+    expect_src = Path(
+        'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
+    ).read_text(encoding='utf-8')
+    compute_body = expect_src[expect_src.index('def compute_buy_expect'):]
     compute_body = compute_body[:compute_body.index('\n\ndef ') + 1] \
         if '\n\ndef ' in compute_body else compute_body
     assert 'cw_merge_bench(' in compute_body       # 落点单一源委托
-    assert '_BUY_DEFECT_KIND = \'buy_expect_mismatch\'' in dir_src
+    assert "_BUY_DEFECT_KIND = 'buy_expect_mismatch'" in expect_src
     assert 'buy_expect_reconcile' in dir_src
     # ④ 证据裁片链:买前 crop 拷贝在点击之前;随期望态带到对账点;
     # 不一致才落盘(_save_buy_evidence),对账完成即释放。

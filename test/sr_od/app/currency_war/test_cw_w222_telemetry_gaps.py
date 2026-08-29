@@ -65,7 +65,10 @@ def test_director_record_step_copies_owned_pool_on_state_copy() -> None:
 
 def test_record_decision_state_carries_equips(tmp_path) -> None:
     """端到端空值/非空回归:state.equips 经 serialize 落 decisions 行。"""
-    rec = recorder.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    # 分包期 6 消费面重写遗留修复:本文件 import 别名是 recorder 模块
+    # (recorder as cw_telemetry),TelemetryRecorder 类在 recorder 模块;
+    # 单例(_RECORDER 等)在 state 模块,桩点处另引 state。
+    rec = cw_telemetry.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     st = GameState(gold=50, round_num=1, plane=1)
     st.equips = ['财富宝钻', '分身墨镜', '拆装扳手']
     rec.record_decision('w222', 'A8', st, '', {}, {}, [])

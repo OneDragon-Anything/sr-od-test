@@ -8,7 +8,6 @@
 - G3:付费刷新产经验(淘金客 +2;数值源单一面 = cw_investments.STRATEGY_EFFECTS
   overlay,overlay 值变更 sim 跟随;免费刷不计),off 臂恒 0;
 - G1:装备事件计数 + 逐轮未穿滞留/生锈暴露(min(10,n),词条语义
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
   cw_comps.RUST_AFFIX_NAME)+ 穿戴后滞留清零 + P1 出口滞留件数;
 - G2:配方件躺 bench 轮数与上阵战力贡献代理的账本一致性。
 """
@@ -28,6 +27,9 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 
 from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 SimInvestProfile
+# 分包期 6 U1 双 runner 归家:P1 引擎(含 STRATEGY_EFFECTS overlay 消费面)
+# = sim/engine_p1;overlay 值跟随测桩点钉引擎模块消费址
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
 
 # 零漂移锚:seeds 0..5(pool='snapshot'),行为投影 = 每轮
 # (plane, round_num, gold, hp, level, actions(类型, reason, result))
@@ -47,8 +49,14 @@ SimInvestProfile
 # 位移由 .debug/temp/currency_war/w715_allocator_impl/REPORT.md §四
 # 记档(配对双窗 n=200 持平判定)——digest 687e5168…;本锚继续做
 # unintended drift 哨兵。
+# overlay A/B 行为批重锚(w729 残差收尾批):687e… 之后、分包期 6 之前的
+# 行为批——overlay A 通道边际排序接线(e0e4f9d8/66e2b562,ADR-0475/0476)
+# 与 overlay B 帽腿绑定面行为增量(ca320c81)——未随批重锚,欠账由本批
+# 收口。归因实证:分包期 6 前 worktree(3cd79869,含全部 overlay 行为)
+# 与期 6 后 HEAD 投影 digest 逐位一致(= 本锚,双跑确定性核验),期 6
+# 四切零漂移成立;新锚 b80e101d…,继续做 unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    '687e516831d304cd556789721b0467f8ca995d96eb0e02388149e85fba5241aa')
+    'b80e101d2e91e2095f5521f32682617d7dcd3ac575897e8e470fbc1f916c952a')
 
 
 def _behavior_projection(results) -> str:

@@ -216,10 +216,16 @@ def test_w552_wiring_locks():
     # test_cw_w536_buy_expect.test_w536_wiring_locks 改锁依据)
     consume_at = src.index('_pending_buy = session.pending_buy_expect')
     assert consume_at < obs_at                      # heavy 定型帧之后
-    assert "_XP_DEFECT_KIND = 'xp_expect_mismatch'" in src
-    assert "_XP_DEFECT_SURFACE = 'xp'" in src
+    # 分包期 6(DESIGN §4.5):xp 常量/解析形态随纯期望段迁
+    # kernel/cw_prep_expect(prep_director 经 import 引用);接线点
+    # (reader_source/record 调用)仍在本体。
+    expect_src = Path(
+        'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
+    ).read_text(encoding='utf-8')
+    assert "_XP_DEFECT_KIND = 'xp_expect_mismatch'" in expect_src
+    assert "_XP_DEFECT_SURFACE = 'xp'" in expect_src
     assert "reader_source='xp_expect_reconcile'" in src
-    assert "_XP_BUY_CLICKS_PAT = re.compile(r'升(\\d+)次')" in src
+    assert "_XP_BUY_CLICKS_PAT = re.compile(r'升(\\d+)次')" in expect_src
     # 推进算子单一源 = cw_state(sim 侧不重复建模)
     state_src = Path(
         'src/sr_od/application/currency_war/kernel/cw_state.py'

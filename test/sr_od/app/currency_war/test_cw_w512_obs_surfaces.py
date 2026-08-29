@@ -63,9 +63,12 @@ def test_obs_conflict_bypass_copies_numeric_confidence(tmp_path: Path, monkeypat
                             confidence=42.0)
     cw_observe.obs_conflict('level', 5, 6, None, verdict='采新',
                             confidence='读不到')   # 非数值 → None 不炸
-    defects = _rows(tmp_path, 'defect_ledger.jsonl')
-    assert defects[0]['confidence'] == 42.0
-    assert defects[1]['confidence'] is None
+    # 局部名改 ledger_rows:不得遮蔽模块级 defects(同函数上方
+    # monkeypatch.setattr(..., defects.bypass_obs_conflict_to_defect)
+    # 经同一名字解析,遮蔽=UnboundLocalError——纯测试侧缺陷,语义不变)
+    ledger_rows = _rows(tmp_path, 'defect_ledger.jsonl')
+    assert ledger_rows[0]['confidence'] == 42.0
+    assert ledger_rows[1]['confidence'] is None
 
 
 # ===== ② 策略激活态事件级对拍(§2.9)=====

@@ -147,9 +147,14 @@ def test_w530_wiring_locks():
     assert 'read_deployed_chars(' in method
     assert 'read_bench_chars(' not in method   # 文档提及可,调用不可
     assert 'last_screenshot' in method   # 零新增截屏:复用定型帧
-    # ④ 台账参数锁(surface/kind 常量定义 + 接线点使用)
-    assert "_DRAG_DEFECT_SURFACE = 'bench'" in src
-    assert "_DRAG_DEFECT_KIND = 'intent_state_mismatch'" in src
+    # ④ 台账参数锁(surface/kind 常量定义 + 接线点使用)。
+    # 分包期 6(DESIGN §4.5):常量定义随纯期望段迁 kernel/cw_prep_expect
+    # (prep_director 经 import 引用);接线点使用仍在本体。
+    expect_src = Path(
+        'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
+    ).read_text(encoding='utf-8')
+    assert "_DRAG_DEFECT_SURFACE = 'bench'" in expect_src
+    assert "_DRAG_DEFECT_KIND = 'intent_state_mismatch'" in expect_src
     assert 'record_defect(\n                _DRAG_DEFECT_SURFACE, _DRAG_DEFECT_KIND,' in src
     assert 'drag_expect_reconcile' in src
 

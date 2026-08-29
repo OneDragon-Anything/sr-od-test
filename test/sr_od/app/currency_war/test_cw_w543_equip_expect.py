@@ -188,14 +188,20 @@ def test_w543_wiring_locks():
     assert 'read_equip_grid(' in method
     assert 'last_screenshot' in method
     assert 'read_bench_chars(' not in method
-    # ④ 台账参数锁(常量定义 + 接线点使用)
-    assert "_EQUIP_DEFECT_SURFACE = 'equip'" in src
-    assert "_EQUIP_DEFECT_KIND = 'equip_expect_mismatch'" in src
+    # ④ 台账参数锁(常量定义 + 接线点使用)。
+    # 分包期 6(DESIGN §4.5):常量定义随纯期望段迁 kernel/cw_prep_expect;
+    # 接线点使用仍在本体。
+    expect_src = Path(
+        'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
+    ).read_text(encoding='utf-8')
+    assert "_EQUIP_DEFECT_SURFACE = 'equip'" in expect_src
+    assert "_EQUIP_DEFECT_KIND = 'equip_expect_mismatch'" in expect_src
     assert 'record_defect(\n                _EQUIP_DEFECT_SURFACE, _EQUIP_DEFECT_KIND,' in src
     assert 'equip_expect_reconcile' in src
     # ⑤ 合成单一源:_synth_pair 只转发 cw_synthesis,不自造配对逻辑
-    synth = src[src.index('def _synth_pair'):]
-    synth = synth[:synth.index('\n\n\n')]
+    # (分包期 6:_synth_pair 随纯期望段迁 kernel/cw_prep_expect)
+    synth_src = expect_src[expect_src.index('def _synth_pair'):]
+    synth = synth_src[:synth_src.index('\n\n\n')]
     assert 'synthesize_target(' in synth
     assert 'self_advance(' in synth
     assert 'CROSS_RECIPES' not in synth   # 不直接摸图谱常量(派生/判定归 cw_synthesis)

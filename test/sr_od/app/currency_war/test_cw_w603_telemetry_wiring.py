@@ -19,6 +19,9 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.kernel.cw_state import GameState
+# 分包期 6:恢复兜底族(DESIGN §4.4 hooks 行)归 sim/ledger_hooks,
+# state.start_run 经该模块属性查找调用 → 桩点随生产引用址重钉
+from sr_od.application.currency_war.sim import ledger_hooks
 from sr_od.application.currency_war.telemetry import query, recorder, state
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
@@ -173,7 +176,10 @@ def test_briefing_before_first_run_lands_in_next_run(tmp_path: Path,
     assert len(state._PENDING_BRIEFING_ROWS) == 1
     buffered_ts = state._PENDING_BRIEFING_ROWS[0]['ts']
     # 新局开局:缓冲以新 run_id 补写
-    monkeypatch.setattr(cw_telemetry, 'recover_dangling_run_summaries', lambda: None)
+    # 分包期 6:恢复兜底族归 sim/ledger_hooks(DESIGN §4.4 hooks 行),
+    # state.start_run 经 _lh. 属性查找调用 → 桩点随生产引用址重钉
+    monkeypatch.setattr(ledger_hooks, 'recover_dangling_run_summaries',
+                        lambda: None)
     new_rid = state.start_run('A8')
     assert new_rid.startswith('run_')
     rows = _rows(tmp_path, 'exogenous.jsonl')
@@ -194,7 +200,8 @@ def test_briefing_after_run_closed_lands_in_next_run(tmp_path: Path,
     recorder.record_exogenous(0, 'briefing', detail='d1')
     # 旧 run_id 不再直接吃行
     assert _rows(tmp_path, 'exogenous.jsonl') == []
-    monkeypatch.setattr(cw_telemetry, 'recover_dangling_run_summaries', lambda: None)
+    monkeypatch.setattr(ledger_hooks, 'recover_dangling_run_summaries',
+                        lambda: None)
     new_rid = state.start_run('A8')
     rows = _rows(tmp_path, 'exogenous.jsonl')
     assert len(rows) == 1 and rows[0]['run_id'] == new_rid

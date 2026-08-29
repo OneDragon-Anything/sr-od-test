@@ -37,7 +37,8 @@ from typing import Any
 
 import pytest
 
-from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
+from sr_od.application.currency_war.telemetry import recorder
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
@@ -112,10 +113,12 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     class _Watched(WatchdogOperationMixin, BuyShopCards):
         pass
 
-    # 台账隔离(不写真实 .debug;test_cw_w536 手法)
+    # 台账隔离(不写真实 .debug;test_cw_w536 手法)。
+    # 分包期 6 单例归家:_RECORDER/run_id 单例簇唯一拥有者=telemetry.state
+    # (recorder 模块不再持单例;get_recorder 走 state 属性读)
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True,
-                                                       replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True,
+                                                   replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'w591t')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')

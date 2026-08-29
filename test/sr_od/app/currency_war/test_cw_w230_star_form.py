@@ -15,7 +15,9 @@ import dataclasses
 import logging
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim.checks import runner
+# 分包期 6 双 runner 归家:批量/敏感性入口 simulate_* 归 sim/runner
+# (checks.runner 只辖检查聚合 run_batch_*/run_checks_*)
+from sr_od.application.currency_war.sim import runner
 from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
