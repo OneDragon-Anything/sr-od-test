@@ -18,7 +18,9 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.decision_v2.posture import Posture
+from sr_od.application.currency_war.cw_economy import (
+    reserve_cap,
+)
 from sr_od.application.currency_war.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
@@ -30,9 +32,9 @@ from sr_od.application.currency_war.decision_v2.economy_cycle import (
     bench_fill_account,
     channel_capacity,
     obligation,
-    reserve_cap,
 )
 from sr_od.application.currency_war.decision_v2.ev import RoundPosture
+from sr_od.application.currency_war.decision_v2.posture import Posture
 from sr_od.application.currency_war.decision_v2.posture_release import (
     authorize_release_refresh,
     release_directive,

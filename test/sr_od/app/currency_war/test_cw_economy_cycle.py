@@ -18,6 +18,9 @@ posture 锁面退役——排程语义 = 意向核心峰值级(绯英 2 费峰�
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.cw_economy import (
+    reserve_cap,
+)
 from sr_od.application.currency_war.cw_plane_table import level_cost
 from sr_od.application.currency_war.cw_state import (
     BENCH_CAPACITY,
@@ -30,7 +33,6 @@ from sr_od.application.currency_war.decision_v2.economy_cycle import (
     bench_fill_account,
     channel_capacity,
     obligation,
-    reserve_cap,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,

@@ -253,7 +253,7 @@ def test_tracking_view_prefers_tracked_over_fresh():
 # ----------------------------------------------------- 4. R4 接缝
 
 def test_r4_seam_functions_public_and_pure():
-    from sr_od.application.currency_war.decision_v2.economy_cycle import (
+    from sr_od.application.currency_war.cw_economy import (
         refresh_ev_budget,
         schedule_upgrade,
     )

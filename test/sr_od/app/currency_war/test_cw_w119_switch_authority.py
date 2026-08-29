@@ -243,8 +243,8 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
     (deployed=cap)隔离 ① 路径;金 60(花后 52≥50 平台未破)帧锁
     排程臂放行,金 49(花后 45<50)帧锁平台越界拒。
     批 3 重推:注入对象从 ev.dp_posture(DP 退役)改为排程单一址
-    economy_cycle.schedule_upgrade;producer 规则锁在 test_cw_w633_migration_b3。"""
-    from sr_od.application.currency_war.decision_v2 import economy_cycle
+    cw_economy.schedule_upgrade(kernel,期 0b 下沉);producer 规则锁在 test_cw_w633_migration_b3。"""
+    from sr_od.application.currency_war import cw_economy
 
     st = _state(round_num=6, gold=51, level=6,
                 deployed=[BenchChar(slot=i, char_id=f'杂件{i}',
@@ -257,12 +257,12 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
                   deployed=list(st.deployed), bench=[], shop=[])
     sess = StrategySession()
     sess.v3_mode = 'economy'
-    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+    monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda s, ss: True)
     res_up = arbitrate([(cand, 1.0, {})], st60, sess, _REG)
     assert any(isinstance(a, LevelUp) for a in res_up.actions), \
         '排程说升且平台未破(60-4=52≥50)→ 必须放行'
-    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+    monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda s, ss: False)
     sess2 = StrategySession()
     sess2.v3_mode = 'economy'

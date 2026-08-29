@@ -23,7 +23,7 @@ from sr_od.application.currency_war.cw_state import (
     ShopCard,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.economy_cycle import (
+from sr_od.application.currency_war.cw_economy import (
     refresh_ev_budget,
     reserve_cap,
     schedule_upgrade,
@@ -75,9 +75,7 @@ def test_jue23_sentinel_obligation_chain_alive() -> None:
     p = build_round_posture(st, sess)
     assert p is not None                      # 无 None 形状(D0)
     assert p.tag != '存息'                    # 溢余帧禁存息标签
-    from sr_od.application.currency_war.decision_v2.economy_cycle import (
-        obligation,
-    )
+    from sr_od.application.currency_war.decision_v2.economy_cycle import (obligation,)
     assert obligation(st, sess, _REG) > 0
     wrapped, d = evaluate_release(st, sess, _REG, 'FORM', p)
     assert d is not None and d.reason in ('flip', 'third_path',
@@ -204,9 +202,7 @@ def test_blood_budget_stop_not_inflated_by_budget_merge() -> None:
     assert blood_budget_refresh_blocked(st_band, sess_b, _REG), \
         '血预算带停付防线=拒付层:搜索型刷新停付必须拦'
     # 合并层无血预算特判(单一公式):指令预算 = max(义务, 预算×刷价)
-    from sr_od.application.currency_war.decision_v2.economy_cycle import (
-        obligation,
-    )
+    from sr_od.application.currency_war.decision_v2.economy_cycle import (obligation,)
     posture_b = build_round_posture(st_band, sess_b)
     d = release_directive(st_band, sess_b, _REG, 'FORM', posture_b)
     expect = max(obligation(st_band, sess_b, _REG), budget * 2)
@@ -280,9 +276,7 @@ def test_injection_consistency_single_registry_source() -> None:
     assert refresh_ev_budget(st2, sess, _REG) == 0
     assert refresh_ev_budget(st2, sess, reg2) > 0
     # BudgetView 装配单源:传入 reg2 的 BudgetView == 逐字段显式注入值
-    from sr_od.application.currency_war.decision_v2.economy_cycle import (
-        obligation,
-    )
+    from sr_od.application.currency_war.decision_v2.economy_cycle import (obligation,)
     from sr_od.application.currency_war.decision_v2.prep_brain import _budget
     bv = _budget(st2, sess, reg2)
     assert bv.interest_floor == 40

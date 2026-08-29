@@ -170,11 +170,11 @@ def test_reserve_cap_narrows_overflow_basis(monkeypatch) -> None:
     """R* 储备线锁:排程升级帧的 R*=息线+窗口内升级费,溢余基收窄——
     g 在 [息线, R*] 段是排程储蓄不是死钱,不 fire(设计 §1.3/§4 豁免行;
     升级费期望值=level_cost 常量表本地复算)。
-    批 3 预算收权:排程判据 = 确定性核(economy_cycle.schedule_upgrade
+    批 3 预算收权:排程判据 = 确定性核(cw_economy.schedule_upgrade
     单一址),本锁以 monkeypatch 钉排程真值注入消费方契约(消费方注入式
     锁语义保留,D3 处置表);生产者规则锁在 test_cw_w633_migration_b3。"""
-    from sr_od.application.currency_war.decision_v2 import economy_cycle
-    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+    from sr_od.application.currency_war import cw_economy
+    monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda *a, **k: True)
     st = _state(gold=50 + level_cost(6) + 5, r=5)
     assert flip_hit(st, _sess(st), _REG, 'FORM')   # >R* 溢余段
@@ -182,7 +182,7 @@ def test_reserve_cap_narrows_overflow_basis(monkeypatch) -> None:
     assert not flip_hit(st, _sess(st),
                         _REG, 'FORM')    # ∈[50, R*] 排程储蓄
     # 无排程(核返回 False)同帧金位不再豁免:照常溢余
-    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+    monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda *a, **k: False)
     assert flip_hit(st, _sess(st), _REG, 'FORM')
 
@@ -192,8 +192,8 @@ def test_cap_full_flip_frame_keeps_level_up_rule2(monkeypatch) -> None:
     boss 窗帧由 FLIP 命中承接——third_path=False,wrap 后 level_up 保留
     (追级与泄息并存);预算= max(义务, 排程预算 6×2=12),义务=min(溢余, C_t)。
     排程真值 monkeypatch 钉住(消费方注入式锁,同上锁面重推)。"""
-    from sr_od.application.currency_war.decision_v2 import economy_cycle
-    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+    from sr_od.application.currency_war import cw_economy
+    monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda *a, **k: True)
     st = _state(gold=67, hp=38, plane=1, r=9, node='boss', deployed_n=6)
     s = _sess(st)
@@ -263,8 +263,8 @@ def test_third_path_reserve_scope(monkeypatch) -> None:
     """第三路径溢余基=R* 锁:排程升级帧(R*=50+升级费)的 g≤R* 段无溢余
     → 不注入(储备线内的金是排程储蓄不是死钱,注入会击穿息线;
     ADR-0445 §1.3 豁免行)。排程真值 monkeypatch 钉住(同上重推)。"""
-    from sr_od.application.currency_war.decision_v2 import economy_cycle
-    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+    from sr_od.application.currency_war import cw_economy
+    monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda *a, **k: True)
     st = _state(gold=50 + level_cost(6) - 1, node='boss',
                 deployed_n=5, bench_n=1)
@@ -616,11 +616,11 @@ def test_release_chain_end_to_end_reachable(monkeypatch) -> None:
     session 通道活(tag='release' ∧ 义务预算≥溢余下界)——全程不 mock
     生产链本体(仅把刷新预算核钉为确定性授权 6 刷,预算期望本地复算;
     排程保持默认 level=6=False,R*=50)。"""
-    from sr_od.application.currency_war.decision_v2 import economy_cycle
+    from sr_od.application.currency_war import cw_economy
     from sr_od.application.currency_war.decision_v2.strategy import (
         DecisionV2Strategy,
     )
-    monkeypatch.setattr(economy_cycle, 'refresh_ev_budget',
+    monkeypatch.setattr(cw_economy, 'refresh_ev_budget',
                         lambda *a, **k: 6)
     s = StrategySession()
     st = _state(gold=58, hp=35, r=5)   # FORM ∧ g>R*=50 溢余段

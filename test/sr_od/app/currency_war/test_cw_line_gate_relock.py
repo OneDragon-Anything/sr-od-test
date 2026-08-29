@@ -195,6 +195,52 @@ def test_line_gate_v3_inf_candidate_never_locks() -> None:
     assert out.last_event == 'gate_relock:希儿量子'
 
 
+# --- W696 审计修正锁(D3/D4) ----------------------------------------------------
+
+
+def test_line_gate_v3_latch_suspends_frozen_eviction() -> None:
+    """D3 修正锁(W696 审计):闩存续期冻结驱逐挂起——驱逐会产生设计外
+    转移 locked→unlocked→同帧可无门落新线,破坏「转移冻结」吸收态
+    (DESIGN v3 §3-3)。闩下窗口关闭超限帧不再驱逐,状态恒 locked、零
+    转移事件;frozen_rounds 照常累计(位面切换清闩后恢复既有驱逐路径)。"""
+    ist, sess = _weak_on_xianzhou(_REG_GATE)
+    out1 = update_intention(_state(env='列车同行概念股', hp=20), ist,
+                            sess, registry=_REG_GATE)
+    assert out1.phase == 'locked' and sess.v3_line_gate_latch is True, \
+        '夹具前提:闩已置位'
+    # 窗口关闭帧(level=3 刷不出 5 费核心)连驱 9 帧 > 位面剩余节点 7
+    # ——修复前第 8 帧即 evict:frozen 落 unlocked
+    prev = out1
+    for i in range(9):
+        prev = update_intention(_state(level=3, hp=20, round_num=1),
+                                prev, sess, registry=_REG_GATE)
+        assert prev.phase == 'locked' and prev.locked_comp == '希儿量子', \
+            f'闩存续期第{i + 1}关闭帧:驱逐必须挂起(吸收态零转移)'
+        assert not prev.last_event.startswith('evict:frozen')
+        assert '希儿量子' not in prev.evicted
+
+
+def test_line_gate_v3_plane_switch_clears_latch_chain() -> None:
+    """D4 修正锁(W696 审计,DESIGN §6-7 清零链):位面切换清零四字段
+    逐一断言——①闩位 False ②闩位面 None ③prev_lock_layer 0
+    ④tracks miss_count 归零(帧内再自增前, prior 阈值级大值不复现)。"""
+    ist, sess = _weak_on_xianzhou(_REG_GATE)
+    out1 = update_intention(_state(env='列车同行概念股', hp=20), ist,
+                            sess, registry=_REG_GATE)
+    assert sess.v3_line_gate_latch is True, '夹具前提:闩置位'
+    assert out1.prev_lock_layer == 3, '夹具前提:暂存=原锁层'
+    pre_miss = out1.tracks['希儿量子'].miss_count
+    assert pre_miss >= 1, '夹具前提:miss 计数非零(闩内持续累计)'
+    # 位面切换 P2→P3(无信号帧:不触发出口,清零链可孤立观察)
+    out2 = update_intention(_state(plane=3, round_num=1, hp=20),
+                            out1, sess, registry=_REG_GATE)
+    assert sess.v3_line_gate_latch is False, '清零①:闩位'
+    assert sess.v3_line_gate_latch_plane is None, '清零②:闩位面'
+    assert out2.prev_lock_layer == 0, '清零③:暂存锁层'
+    assert out2.tracks['希儿量子'].miss_count < pre_miss, \
+        '清零④:陈旧 miss 不复现(本帧自增后=1,未清则 ≥ 阈值)'
+
+
 def test_line_gate_v3_plane_scope_narrowed() -> None:
     """辖域断言锁(DESIGN §6-2③④):plane=1 与 plane=3 帧门恒放行
     (v3 R-G 收窄 plane==2:P2 损血表不辖 P3,FM-12);开关关恒放行
@@ -376,6 +422,36 @@ def test_check_line_gate_starvation_anchor_v3() -> None:
     rep3 = check_line_gate_starvation_anchor([weakend], [off])
     assert rep3['on']['end_weak_rate'] == 1.0
     assert any('on 1.0 > off 0.0' in v for v in rep3['violations'])
+
+
+def test_check_line_gate_anchor_d1_d2_predicate_fixes() -> None:
+    """D1/D2 修正锁(W696 审计):
+    D1——原线 E=inf 停 weak 是合法终态,逐帧 gate_hold 复现行不入转移
+    谓词(修复前误判违规);
+    D2——判据 3 窗口收窄闩位面段(plane==2),P2→P3 后的合法转移
+    (P3 强制锁接管等)不计;对照:P2 段内转移仍违规。"""
+    holds = [{'ts': t, 'plane': 2, 'line_gate_blocked': True,
+              'target_comp': '',
+              'v3_intention': {'last_event': 'gate_hold:A->B',
+                               'phase': 'weak'}}
+             for t in (1, 2, 3)]
+    # D1:纯 gate_hold 复现(E=inf 停 weak 轨迹)→ 零违规
+    rep = check_line_gate_starvation_anchor([holds])
+    assert rep['violations'] == [], 'D1:合法终态 gate_hold 不得计违规'
+    # D2:闩后 P2 段零转移,P3 段 revoke → 不违规(窗口已收窄)
+    cross = holds + [{'ts': 4, 'plane': 3, 'line_gate_blocked': False,
+                      'target_comp': '',
+                      'v3_intention': {'last_event': 'revoke:miss6',
+                                       'phase': 'weak'}}]
+    rep2 = check_line_gate_starvation_anchor([cross])
+    assert rep2['violations'] == [], 'D2:出闩位面的合法转移不计'
+    # 对照:P2 段内转移仍被抓
+    inplane = holds[:2] + [{'ts': 3, 'plane': 2, 'line_gate_blocked': False,
+                            'target_comp': '',
+                            'v3_intention': {'last_event': 'revoke:miss6',
+                                             'phase': 'weak'}}]
+    rep3 = check_line_gate_starvation_anchor([inplane])
+    assert len(rep3['violations']) == 1 and '闩置位后出现转移' in rep3['violations'][0]
 
 
 def test_check_line_switch_midgame_bucket_v3() -> None:
