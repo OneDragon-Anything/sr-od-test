@@ -219,3 +219,4 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w620_migration_b1.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w628_migration_b2.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_economy_cycle.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_form_gates.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w653_c7_zero_drift.py
