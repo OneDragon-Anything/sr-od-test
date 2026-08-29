@@ -217,4 +217,5 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w322_deploy_cap_readchain.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w332b_release.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w336_p1_vd_benefit_calibration.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w162_invest_inject.py
-test/sr_od/app/currency_war/test_cw_w595_trial_reveal_card.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w595_trial_reveal_card.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w612_effect_inventory.py
