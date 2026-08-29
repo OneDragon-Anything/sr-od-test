@@ -138,7 +138,7 @@ def test_economy_streak_bonus() -> None:
 def test_get_node_goal_node_plan_rules() -> None:
     """r69:0126 区间表已删(单局相关≠基准,ADR-0126 三重降级)——get_node_goal 全走 DP;
     无状态传参 → _expected_level 先验 + adaptive fallback(非 0126 表值)。
-    DP 带状态查询的语义锁在 test_cw_horizon 系列;此处锁 fallback 语义。"""
+    DP 带状态查询的语义锁随原 DP 模块退役(语义归 git 历史);此处锁 fallback 语义。"""
     g = get_node_goal(1, 1)
     assert g.target_level == _expected_level(1, 1), "无状态传参 → 先验曲线(非 0126 表)"
     assert g.spend_mode == "adaptive", "fallback spend=adaptive(r69 删表)"
@@ -1207,7 +1207,7 @@ def test_distinct_factions_and_counts_include_board() -> None:
 def test_economy_mode_for_maps_spend_mode() -> None:
     """ADR-0102:_economy_mode_for 把 node spend_mode → economy_score 档位。
     批 3 预算收权重推:spend_mode 单一源 = 确定性预算核投影
-    (get_node_goal;原 DP 姿态随 cw_horizon 退役,git prior art)。"""
+    (get_node_goal;原 DP 姿态已随 DP 模块退役,git prior art)。"""
     # 极早期穷金 lv3(gold<息线)→ interest/hold → interest_first
     assert _economy_mode_for(GameState(plane=1, round_num=1, gold=2, level=3, hp=80)) == "interest_first"
     # 息引擎未立(gold 8<50)→ 不排程不刷新([12] 息引擎前置,W615 R4

@@ -13,7 +13,7 @@ ADR-0445(经济循环总模型)后 FLIP 谓词简化为溢余判定,相关锁已
   显式注入泄息预算(溢余基=R*;g≤R* 帧无溢余不注入);非末窗/满员不辖;
 - ④ spend_mode 状态机:'release' 为预留档位无生产者(负向网格锁);
   v1 _maybe_sell_for_interest 的 allin/level 跳卖契约保留(adaptive 对照);
-- ⑤ cw_horizon 合并语义:level 分支不再丢弃 DP refresh_budget(随
+- ⑤ DP 合并语义:level 分支不再丢弃 DP refresh_budget(随
   NodeGoal 下传);fallback NodeGoal refresh_budget=None(不参与合并);
 - ⑨ release 活栈消费门(端到端):锁A 生产链可达(FLIP→decide_prep→
   session.v3_release/tag);锁B release 帧凑息向卖候选抑制(free_bench
@@ -96,7 +96,7 @@ def _sess(state: GameState, *, level_up: bool = False,
 
 def _reserve(level: int, level_up: bool, plane: int = 1, r: int = 5) -> int:
     """R* 期望值本地复算(常量表:息线 50 + 窗口内排程升级费;费用表
-    单一源=cw_horizon.level_cost,不借被测函数)。"""
+    单一源=原 DP level_cost 公式,不借被测函数)。"""
     floor = 50
     h = min(3, 9 - r)
     if h <= 0 or not level_up:
@@ -346,24 +346,32 @@ def test_latch_within_round_no_flip_flop() -> None:
 
 def test_release_budget_bounded_authorization() -> None:
     """累计刷金 ≤ 预算 ∧ 花后 ≥ boss_floor ∧ g≥0 硬钳制(ADR-0445,
-    W477 执行层透支修复);预算耗尽即拒。"""
+    W477 执行层透支修复);预算耗尽即拒。
+    W645 提案 E 后 authorize 增息档截断门(花后不跨 10 的倍数档):金位
+    取档内值(62,余 2 ≥ 刷价)以隔离预算语义——旧值 60 是档界(余 0),
+    在新语义下合法被截,不再能承载「预算内放行」的断言。"""
     s = StrategySession()
     s.v3_release = ReleaseDirective(budget_gold=22, rolls=11)
     s.v3_release_spent = 0
-    assert authorize_release_refresh(s, 60, 2, _REG)
+    assert authorize_release_refresh(s, 62, 2, _REG)
     assert s.v3_release_spent == 2
     s.v3_release_spent = 21
-    assert not authorize_release_refresh(s, 60, 2, _REG)   # 21+2 > 22
+    assert not authorize_release_refresh(s, 62, 2, _REG)   # 21+2 > 22
     s.v3_release_spent = 20
-    assert authorize_release_refresh(s, 60, 2, _REG)       # 恰好贴满
+    assert authorize_release_refresh(s, 62, 2, _REG)       # 恰好贴满
     s.v3_release_spent = 0
-    assert not authorize_release_refresh(s, 11, 2, _REG)   # 花后 9 < boss_floor 10
-    # g≥0 硬钳制:即使 boss_floor 被注入为 0 也不允许金穿 0
+    # boss_floor 独立生效:抬高 boss_floor 至 20,金 13(余 3 ≥ 刷价,
+    # 不触截断门)花后 11 < 20 → 拒(旧值 11 在截断门下与地板门混叠)。
     import dataclasses as _dc
+    _reg20 = _dc.replace(_REG, boss_floor=20)
+    assert not authorize_release_refresh(s, 13, 2, _reg20)
+    # g≥0 硬钳制:截断门落地后,「金 < 刷价」帧恒被截断门先拒
+    # (gold<cost ≤10 ⇒ gold%10=gold<cost),钳制在本门成为纵深防御;
+    # 断言保留拒绝事实,拒因如实标注为截断门(E 语义叠加,钳制仍在码)。
     _reg0 = _dc.replace(_REG, boss_floor=0)
     assert not authorize_release_refresh(s, 1, 2, _reg0)
     s.v3_release = None
-    assert not authorize_release_refresh(s, 60, 2, _REG)
+    assert not authorize_release_refresh(s, 62, 2, _REG)
 
 
 # --- ⑩ 成型帧末窗投影臂义务预算消费定向化 ---------------------------------------
@@ -415,7 +423,7 @@ def test_formed_projection_find_refresh_allowed() -> None:
     assert d is not None and d.directed_only is True and d.find_ok is True
     s.v3_release = d
     s.v3_release_spent = 0
-    assert authorize_release_refresh(s, 60, 2, _REG)
+    assert authorize_release_refresh(s, 62, 2, _REG)    # 档内金位(W645 E 截断门)
     assert s.v3_release_spent == 2
 
 
@@ -431,7 +439,7 @@ def test_unformed_projection_not_directed() -> None:
     assert d is not None and d.directed_only is False and d.find_ok is True
     s.v3_release = d
     s.v3_release_spent = 0
-    assert authorize_release_refresh(s, 60, 2, _REG)
+    assert authorize_release_refresh(s, 62, 2, _REG)    # 档内金位(W645 E 截断门)
 
 
 def test_third_path_directive_not_directed() -> None:
@@ -447,10 +455,10 @@ def test_third_path_directive_not_directed() -> None:
     assert d.directed_only is False and d.find_ok is True
     s.v3_release = d
     s.v3_release_spent = 0
-    assert authorize_release_refresh(s, 60, 2, _REG)
+    assert authorize_release_refresh(s, 62, 2, _REG)    # 档内金位(W645 E 截断门)
 
 
-# --- ④⑤ spend_mode 状态机与 cw_horizon 合并语义 ---------------------------------
+# --- ④⑤ spend_mode 状态机与 DP 合并语义 ---------------------------------
 
 
 def test_sell_for_interest_skip_list_contract(monkeypatch) -> None:

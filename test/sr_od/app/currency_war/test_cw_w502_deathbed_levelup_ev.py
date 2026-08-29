@@ -34,7 +34,7 @@ P_BASE = 0.19
 
 
 def clicks_to_level(level: int) -> int:
-    """跨 1 级所需购买经验点击数(P21 ①;同 cw_horizon.clicks_to_level 公式)。"""
+    """跨 1 级所需购买经验点击数(P21 ①;同原 DP clicks_to_level 公式)。"""
     need = XP_TO_NEXT_LEVEL.get(level, 84)
     return max(1, math.ceil(need / XP_PER_BUY))
 

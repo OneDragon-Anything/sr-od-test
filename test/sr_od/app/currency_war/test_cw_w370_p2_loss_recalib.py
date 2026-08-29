@@ -1,6 +1,6 @@
 """P2 损血标定锁(W443 批 C 两态定稿的批 3 重推版)。
 
-批 3 预算收权:cw_horizon DP 世界模型(difficulty_scale/_hp_loss/solve/
+批 3 预算收权:原 DP 世界模型(difficulty_scale/_hp_loss/solve/
 平局扫描序)整模块退役,其专属锁随迁删除——两态标定的**存活消费面**=
 registry 两表 + cw_plane_table.p_win_p2 胜率映射 + cw_first_passage
 阈值层 μ 闭环,本文件只锁这些。删除锁的语义出处 = BLUEPRINT §3 DP

@@ -34,7 +34,7 @@ from sr_od.application.currency_war.decision_v2.registry import (
 
 def test_plane_loss_scale_retired() -> None:
     """位面乘数常量退役(双源合一的退役声明形态:not hasattr;
-    对向声明=cw_horizon 侧旧挂账⑥随本批一并清账)。"""
+    对向声明=原 DP 侧旧挂账⑥随本批一并清账)。"""
     assert not hasattr(fp, 'PLANE_LOSS_SCALE')
 
 
@@ -165,7 +165,7 @@ def test_two_state_consumers_never_mix_tables() -> None:
     from pathlib import Path
     base = Path(__file__).parents[5] / 'src' / 'sr_od' / 'application' \
         / 'currency_war'
-    # (批 3:DP 两态递推文件 cw_horizon.py 退役;胜率映射 cw_plane_table
+    # (批 3:DP 两态递推模块退役;胜率映射 cw_plane_table
     #  只读胜率表,不在条件败面表消费清单)
     for rel in ('cw_line_switch.py', 'cw_first_passage.py'):
         code = '\n'.join(ln.split('#', 1)[0]

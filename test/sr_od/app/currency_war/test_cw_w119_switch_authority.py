@@ -8,7 +8,7 @@
   昼神阿雅 typical=8 两例);
 - ④ boss 窗判定合一(discipline/arbiter 同帧同判:节点图为主,
   轮数只留 node_type 缺读兜底一处);
-- ⑤ DP 接线:仲裁层升级授权真实消费 cw_horizon 姿态(mock 注入
+- ⑤ DP 接线:仲裁层升级授权真实消费原 DP 姿态(mock 注入
   两姿态,行为必须随姿态翻转);
 - ⑥ 扑满守卫:「经济过热」类环境 reward 节点按战斗节点处理
   (连胜 EV 地板/保血通道 hard 判定)。

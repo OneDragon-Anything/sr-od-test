@@ -58,7 +58,7 @@ def test_boss_node_calendar() -> None:
 
 def test_ledger_buysell_wiring_semantics_retained() -> None:
     """批 3 DP 退役后的台账语义残留锁:台账构建/效果解析通道保留
-    (消费面=cw_economy 经济效果;原 DP 值函数注入断言随 cw_horizon
+    (消费面=cw_economy 经济效果;原 DP 值函数注入断言随 DP 模块
     退役删除——锁面重推出处=BLUEPRINT §3 DP 处置,git prior art)。"""
     from sr_od.application.currency_war.cw_effect_ledger import (
         build_ledger,

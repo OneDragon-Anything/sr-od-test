@@ -1,7 +1,7 @@
 """观察冲突守卫/board computed 行为测试(观察冲突审计「伴随」项,2026-08-16)。
 
 覆盖:board_from_tracked(计算为准的切换判据)、cw_reconcile.reconcile_tracking(双空读守卫/
-star 回退留证)、cw_horizon(DP 冒烟)。obs_conflict 走 best-effort 不抛,monkeypatch no-op
+star 回退留证)、DP 冒烟。obs_conflict 走 best-effort 不抛,monkeypatch no-op
 防测试落盘(AGENTS.local 钩子约定)。
 """
 import pytest
@@ -153,7 +153,7 @@ def test_reconcile_star_regression_pending_self_heals():
 
 
 def test_plane_table_smoke():
-    """cw_plane_table 冒烟(批 3:标定表模块随 cw_horizon 退役平移;
+    """cw_plane_table 冒烟(批 3:标定表模块随 DP 退役平移;
     息闭式边界锁逐位保留)。"""
     from sr_od.application.currency_war.cw_plane_table import interest
     assert interest(49) == 4
