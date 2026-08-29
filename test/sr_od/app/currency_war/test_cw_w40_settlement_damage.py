@@ -21,7 +21,7 @@ from sr_od.application.currency_war.obs.cw_settlement_obs import (
     read_round_outcome,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_telemetry import TelemetryRecorder, read_jsonl
+from sr_od.application.currency_war.telemetry.cw_telemetry import TelemetryRecorder, read_jsonl
 
 
 class _Item(SimpleNamespace):

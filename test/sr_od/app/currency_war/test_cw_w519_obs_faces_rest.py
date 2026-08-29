@@ -10,7 +10,7 @@ DESIGN.md §2.2/§2.7/§1 行11+§5-B5,观测自检框架)。
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.operations.handlers.collect_plane_intel import (
     node_seq_cross_mismatch,
 )

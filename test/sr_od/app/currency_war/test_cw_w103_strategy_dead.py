@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 
 
 def _write_rows(path: Path, rows: list[dict]) -> None:

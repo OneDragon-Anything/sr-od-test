@@ -21,12 +21,12 @@ from contextlib import contextmanager
 
 import pytest
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     SellBench,
 )
-from sr_od.application.currency_war.cw_telemetry import (
+from sr_od.application.currency_war.telemetry.cw_telemetry import (
     TelemetryRecorder,
     query_economy,
     read_jsonl,

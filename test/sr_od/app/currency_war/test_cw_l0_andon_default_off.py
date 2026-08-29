@@ -17,12 +17,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-_L0 = 'sr_od.application.currency_war.cw_telemetry'
+_L0 = 'sr_od.application.currency_war.telemetry.cw_telemetry'
 
 
 def _setup_isolated_l0(tmp_path: Path, monkeypatch) -> Path:
     """台账指向 tmp + 安灯槽/闩锁/复现账隔离(与 w505 _setup_recorder 同链)。"""
-    from sr_od.application.currency_war import cw_telemetry as ct
+    from sr_od.application.currency_war.telemetry import cw_telemetry as ct
 
     monkeypatch.setattr(ct, '_RECORDER',
                         ct.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
@@ -37,7 +37,7 @@ def test_default_handler_off_is_noop(tmp_path: Path, monkeypatch) -> None:
     """锁1:缺省(Handler=None)触发 L0 → 台账照记 L0_andon,游戏侧停线实现
     不得被触达(canary 挂在 cw_observe,被调即炸)。"""
     from sr_od.application.currency_war.kernel import cw_observe
-    from sr_od.application.currency_war import cw_telemetry as ct
+    from sr_od.application.currency_war.telemetry import cw_telemetry as ct
 
     d = _setup_isolated_l0(tmp_path, monkeypatch)
     monkeypatch.setattr(ct, '_L0_ANDON_HANDLER', None)   # 缺省态显式钉住
@@ -62,7 +62,7 @@ def test_no_lazy_wiring_in_fire_and_app_arms_handler() -> None:
     (CurrencyWarApp.__init__ 显式 set_l0_andon_handler)在场。"""
     import inspect
 
-    from sr_od.application.currency_war import cw_telemetry as ct
+    from sr_od.application.currency_war.telemetry import cw_telemetry as ct
     from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
 
     assert 'stop_for_l0_andon' not in inspect.getsource(ct._fire_l0_andon), (

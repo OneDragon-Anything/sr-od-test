@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.obs import cw_equipment
 from sr_od.application.currency_war.data import cw_synthesis
 from sr_od.application.currency_war.obs.cw_equipment import EquipCell

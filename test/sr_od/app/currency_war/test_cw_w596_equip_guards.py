@@ -17,7 +17,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_comps import (
     Comp,
     equip_alloc_empty_reason,

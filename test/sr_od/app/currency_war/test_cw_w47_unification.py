@@ -36,7 +36,7 @@ from sr_od.application.currency_war.kernel.cw_system_cards import (
     engine_char_names,
     system_judge_factions,
 )
-from sr_od.application.currency_war.cw_win_model import (
+from sr_od.application.currency_war.telemetry.cw_win_model import (
     _DOT_POOL,
     _SEELE,
     _TRIO,

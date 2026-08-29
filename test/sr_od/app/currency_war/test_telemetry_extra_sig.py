@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war import cw_telemetry as t
+from sr_od.application.currency_war.telemetry import cw_telemetry as t
 from sr_od.application.currency_war.kernel.cw_state import GameState
 
 
@@ -22,7 +22,7 @@ def test_record_decision_accepts_extra():
 def test_recorder_method_and_helper_signatures_align():
     """便捷函数签名 ⊇ recorder 方法签名(防再漂移)。"""
     import inspect
-    from sr_od.application.currency_war.cw_telemetry import TelemetryRecorder
+    from sr_od.application.currency_war.telemetry.cw_telemetry import TelemetryRecorder
     helper_params = set(inspect.signature(t.record_decision).parameters)
     method_params = set(inspect.signature(
         TelemetryRecorder.record_decision).parameters) - {'self', 'run_id', 'difficulty'}

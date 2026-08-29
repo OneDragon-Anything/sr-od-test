@@ -156,7 +156,7 @@ def test_read_displayed_factions_real_fixtures(
 def test_report_faction_reconcile_forwards_mismatches_only(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """台账转发锁:逐 mismatch 落 record_defect(kind=faction_display_mismatch)。"""
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     calls: list[tuple[tuple, dict]] = []
     monkeypatch.setattr(tel, 'record_defect',
                         lambda *a, **k: calls.append((a, k)))

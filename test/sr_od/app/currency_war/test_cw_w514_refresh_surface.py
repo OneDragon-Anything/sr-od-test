@@ -10,7 +10,7 @@ query_spend_ledger 按 SpendUnitRecord 字段解析,缺陷行会被当伪单元�
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.operations.prep.shop import refresh_effective
 
 

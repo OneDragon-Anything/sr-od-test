@@ -15,7 +15,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from sr_od.application.currency_war.cw_telemetry import (
+from sr_od.application.currency_war.telemetry.cw_telemetry import (
     append_jsonl,
     build_recovered_summary,
     check_summary_write_path_coverage,

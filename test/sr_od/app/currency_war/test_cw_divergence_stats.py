@@ -11,7 +11,7 @@ sys.path.insert(0, str(_REPO / 'src'))
 
 import json  # noqa: E402
 
-from sr_od.application.currency_war.cw_divergence_stats import divergence_stats  # noqa: E402
+from sr_od.application.currency_war.telemetry.cw_divergence_stats import divergence_stats  # noqa: E402
 
 
 def test_divergence_stats(tmp_path: Path) -> None:

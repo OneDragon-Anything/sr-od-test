@@ -7,7 +7,7 @@ import inspect
 
 def test_outcome_board_fields() -> None:
     """r339:OutcomeRecord 板深快照字段(板深模型校准源)。"""
-    from sr_od.application.currency_war.cw_telemetry import OutcomeRecord
+    from sr_od.application.currency_war.telemetry.cw_telemetry import OutcomeRecord
     rec = OutcomeRecord()
     assert rec.board_before == {}
     assert rec.bench_count == 0
@@ -15,14 +15,14 @@ def test_outcome_board_fields() -> None:
 
 def test_query_hp_view_exists() -> None:
     """r339:hp 视图(掉血分解,sim hp_events 同构)。"""
-    from sr_od.application.currency_war import cw_telemetry
+    from sr_od.application.currency_war.telemetry import cw_telemetry
     assert hasattr(cw_telemetry, 'query_hp')
     assert hasattr(cw_telemetry, 'query_economy')
 
 
 def test_set_ctx_match_ref_slot() -> None:
     """r339:set_ctx_match 弱引用注册。"""
-    from sr_od.application.currency_war import cw_telemetry
+    from sr_od.application.currency_war.telemetry import cw_telemetry
     assert hasattr(cw_telemetry, 'set_ctx_match')
     assert hasattr(cw_telemetry, '_CTX_MATCH_REF')
 

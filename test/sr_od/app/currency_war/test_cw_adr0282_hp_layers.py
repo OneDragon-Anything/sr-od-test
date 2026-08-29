@@ -116,5 +116,5 @@ def test_telemetry_records_gold_readable() -> None:
     """gold「不可信」日志升级为字段:DecisionTrace 带 gold_readable 并写入。"""
     import inspect
 
-    from sr_od.application.currency_war import cw_telemetry as tel
+    from sr_od.application.currency_war.telemetry import cw_telemetry as tel
     assert 'gold_readable' in inspect.getsource(tel.DecisionTrace)

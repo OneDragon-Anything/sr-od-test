@@ -14,7 +14,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     LevelUp,
 )
-from sr_od.application.currency_war.cw_telemetry import (
+from sr_od.application.currency_war.telemetry.cw_telemetry import (
     TelemetryRecorder,
     query_economy,
 )

@@ -10,7 +10,7 @@
 """
 import pytest
 
-from sr_od.application.currency_war.cw_win_features import features_from_deployed
+from sr_od.application.currency_war.telemetry.cw_win_features import features_from_deployed
 
 
 def _d(char_id: str, star: int = 1, equips: list | None = None) -> dict:

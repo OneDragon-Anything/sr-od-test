@@ -13,7 +13,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_telemetry import (
+from sr_od.application.currency_war.telemetry.cw_telemetry import (
     TelemetryRecorder,
     read_jsonl,
 )
@@ -88,7 +88,7 @@ def _make_stop_loop(*, summary_written: bool = False,
 
 def test_stop_path_writes_stopped_summary(monkeypatch, tmp_path) -> None:
     """stop 收口:构造 run 上下文 → stop → runs 行存在且 result='stopped'。"""
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     monkeypatch.setattr(tel, '_RECORDER', rec)
     monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_stop_1')
@@ -107,7 +107,7 @@ def test_stop_path_writes_stopped_summary(monkeypatch, tmp_path) -> None:
 
 def test_non_stop_abnormal_exit_writes_abandoned(monkeypatch, tmp_path) -> None:
     """非 stop 异常退出(超时/FAIL,is_context_stop=False)→ result='abandoned'。"""
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     monkeypatch.setattr(tel, '_RECORDER', rec)
     monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_fail_1')
@@ -122,7 +122,7 @@ def test_non_stop_abnormal_exit_writes_abandoned(monkeypatch, tmp_path) -> None:
 
 def test_stop_summary_skips_when_already_written(monkeypatch, tmp_path) -> None:
     """3c 正常终局已写(_summary_written=True)→ 收口不重复写。"""
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     monkeypatch.setattr(tel, '_RECORDER', rec)
     monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_ok_1')
@@ -133,7 +133,7 @@ def test_stop_summary_skips_when_already_written(monkeypatch, tmp_path) -> None:
 
 def test_stop_summary_skips_fake_run(monkeypatch, tmp_path) -> None:
     """假局守卫(镜像 3c):无任何 outcome 数据(开局失败/中断)→ 不写假 summary。"""
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     monkeypatch.setattr(tel, '_RECORDER', rec)
     monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_ghost_1')
@@ -144,7 +144,7 @@ def test_stop_summary_skips_fake_run(monkeypatch, tmp_path) -> None:
 
 def test_stop_summary_no_duplicate_on_second_call(monkeypatch, tmp_path) -> None:
     """幂等:同实例二次调用(收口重入/守护)不重复写行。"""
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     monkeypatch.setattr(tel, '_RECORDER', rec)
     monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_stop_2')

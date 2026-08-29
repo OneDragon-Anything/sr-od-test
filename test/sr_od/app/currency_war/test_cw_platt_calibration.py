@@ -13,7 +13,7 @@ import math
 
 import pytest
 
-from sr_od.application.currency_war.cw_win_model import (
+from sr_od.application.currency_war.telemetry.cw_win_model import (
     PlattCalibrator,
     fit_platt_scaling,
 )

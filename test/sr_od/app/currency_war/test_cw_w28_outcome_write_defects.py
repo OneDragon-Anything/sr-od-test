@@ -17,7 +17,7 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_round
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_telemetry import TelemetryRecorder, read_jsonl
+from sr_od.application.currency_war.telemetry.cw_telemetry import TelemetryRecorder, read_jsonl
 
 # ===== 缺陷①修 a:parse_settlement_round 纯函数 =====
 

@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import logging
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,

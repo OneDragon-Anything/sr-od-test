@@ -121,7 +121,7 @@ def test_verify_votes_defect_and_grace(monkeypatch: pytest.MonkeyPatch) -> None:
 
     defects: list[dict] = []
 
-    from sr_od.application.currency_war import cw_telemetry
+    from sr_od.application.currency_war.telemetry import cw_telemetry
     monkeypatch.setattr(cw_telemetry, 'record_defect',
                         lambda *a, **kw: defects.append(kw | {'kind': a[0] if a else None}))
 

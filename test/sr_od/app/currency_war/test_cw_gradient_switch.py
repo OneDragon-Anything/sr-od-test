@@ -66,7 +66,7 @@ def test_default_session_v2_fields_none():
 
 def test_v2_extra_roundtrip(tmp_path: Path):
     """S3:遥测链端到端——record_decision(extra v2_*) → 字段落盘。"""
-    from sr_od.application.currency_war import cw_telemetry
+    from sr_od.application.currency_war.telemetry import cw_telemetry
     from sr_od.application.currency_war.kernel.cw_state import GameState
     cw_telemetry._RECORDER = cw_telemetry.TelemetryRecorder(
         enabled=True, replay_dir=tmp_path)
@@ -90,7 +90,7 @@ def test_v2_extra_roundtrip(tmp_path: Path):
 
 def test_query_rounds_shows_v2(tmp_path: Path):
     """S1:rounds 视图显示 v2 字段(schema 变更查询同步)。"""
-    from sr_od.application.currency_war import cw_telemetry
+    from sr_od.application.currency_war.telemetry import cw_telemetry
     cw_telemetry._RECORDER = cw_telemetry.TelemetryRecorder(
         enabled=True, replay_dir=tmp_path)
     cw_telemetry._CURRENT_RUN_ID = 'test_v2q'

@@ -8,7 +8,7 @@
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 
 # ===== plan_gold_flow(逐项期望金流)=====
 

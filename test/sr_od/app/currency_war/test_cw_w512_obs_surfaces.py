@@ -11,7 +11,7 @@ SpendUnitRecord 字段解析,混入会被当伪单元误读)④板面动作级�
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel import cw_observe
 
 

@@ -37,7 +37,7 @@ from typing import Any
 
 import pytest
 
-from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
@@ -343,7 +343,7 @@ def test_buy_refresh_wave_real_miss_not_effective(
         f'真落空不得判「已变」(修复前此形态必误判 True):{facts}')
     # 分类器端到端:计划花费 5(买3+刷2)∧ 金差 0 ∧ 刷后读含 '' 不可判
     # → not_effective 停线(修复前被洗成 free_refresh_proc 不停+假采证)。
-    from sr_od.application.currency_war.cw_telemetry import classify_spend_unit
+    from sr_od.application.currency_war.telemetry.cw_telemetry import classify_spend_unit
     verdict = classify_spend_unit(
         [{'__type__': 'BuyCard', 'card': {'x': 0, 'name': '希儿', 'cost': 3}},
          {'__type__': 'RefreshShop', 'cost': 2}],

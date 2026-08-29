@@ -167,7 +167,7 @@ class TestCompareAgainstW600Fixture:
 
 
 def _capture_defects(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     calls: list[dict] = []
     monkeypatch.setattr(tel, 'record_defect',
                         lambda *a, **k: calls.append({'args': a, 'kwargs': k}))

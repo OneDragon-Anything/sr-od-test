@@ -8,7 +8,7 @@ sys.path.insert(0, str(_REPO / 'src'))
 
 import json  # noqa: E402
 
-from sr_od.application.currency_war.cw_replay_reader import (  # noqa: E402
+from sr_od.application.currency_war.telemetry.cw_replay_reader import (  # noqa: E402
     DecisionTrace,
     OutcomeRecord,
     from_dict,
@@ -16,7 +16,7 @@ from sr_od.application.currency_war.cw_replay_reader import (  # noqa: E402
     load_outcomes,
     posture_tag,
 )
-from sr_od.application.currency_war.cw_divergence_stats import divergence_stats  # noqa: E402
+from sr_od.application.currency_war.telemetry.cw_divergence_stats import divergence_stats  # noqa: E402
 
 
 def _write(path: Path, rows: list[dict]) -> Path:
@@ -140,7 +140,7 @@ def test_divergence_stats_on_typed_rows(tmp_path: Path) -> None:
 
 def test_from_dict_is_write_side_single_source() -> None:
     """from_dict 产物即 cw_telemetry 写端类(单一源,非平行类)。"""
-    from sr_od.application.currency_war.cw_telemetry import DecisionTrace as WT
+    from sr_od.application.currency_war.telemetry.cw_telemetry import DecisionTrace as WT
     assert DecisionTrace is WT
     f = from_dict(DecisionTrace, {'run_id': 'r', 'not_a_field': 1})
     assert isinstance(f, WT) and f.run_id == 'r'

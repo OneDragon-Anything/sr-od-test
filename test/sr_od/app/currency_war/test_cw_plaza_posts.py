@@ -29,10 +29,10 @@ from sr_od.application.currency_war.data.cw_plaza_posts import (
     PlazaPost,
     post_by_id,
 )
-from sr_od.application.currency_war.cw_win_features import (
+from sr_od.application.currency_war.telemetry.cw_win_features import (
     features_from_deployed,
 )
-from sr_od.application.currency_war.cw_win_model import (
+from sr_od.application.currency_war.telemetry.cw_win_model import (
     PLAZA_BASE_WEIGHT,
     ShadowKilledModel,
     plaza_post_features,
@@ -121,7 +121,7 @@ def test_sample_weight_log_compression_and_base() -> None:
 def test_prior_weights_face_normalized() -> None:
     """先验面归一:权重和 = PLAZA_PRIOR_FACE_N × 遥测局数;行内排序
     (use 高 → 权重高)不变;空集/零权重退化原样返回。"""
-    from sr_od.application.currency_war.cw_win_model import PLAZA_PRIOR_FACE_N
+    from sr_od.application.currency_war.telemetry.cw_win_model import PLAZA_PRIOR_FACE_N
     rows = [{'plaza_weight_raw': plaza_sample_weight(u)} for u in (0, 10, 1000)]
     w = plaza_prior_weights(rows, n_telemetry=123)
     assert sum(w) == pytest.approx(PLAZA_PRIOR_FACE_N * 123)

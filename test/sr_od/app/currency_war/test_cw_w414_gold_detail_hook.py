@@ -113,7 +113,7 @@ def _hook_env(tmp_path, monkeypatch):
     import sr_od.application.currency_war.kernel.cw_observe as obs_mod
     monkeypatch.setattr(obs_mod, 'cw_shot_unique',
                         lambda image, label: f'{label}__dead.png')
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     monkeypatch.setattr(tel, 'current_run_id', lambda: 'run_x')
     return tmp_path
 
@@ -144,7 +144,7 @@ def test_hook_dedup_same_frame(_hook_env) -> None:
 
 def test_hook_tolerates_run_id_failure(_hook_env, monkeypatch) -> None:
     """run id 源抛异常 → 行照落,run_id='-'(采集零行为影响,不炸主流程)。"""
-    import sr_od.application.currency_war.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
     def _boom():
         raise RuntimeError('no session')
     monkeypatch.setattr(tel, 'current_run_id', _boom)

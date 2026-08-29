@@ -25,7 +25,7 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_telemetry import serialize_intention
+from sr_od.application.currency_war.telemetry.cw_telemetry import serialize_intention
 from sr_od.application.currency_war.decision_v2.arbiter import (
     ArbiterResult,
     _steady_levelup_pass,
