@@ -25,7 +25,8 @@ from sr_od.application.currency_war.obs.cw_node_reader import (
     load_node_type_templates,
 )
 
-_ASSETS = Path(cw_node_reader.__file__).resolve().parents[4] / 'assets'
+# cw_node_reader.py 在 src/sr_od/application/currency_war/obs/(期 2 obs 桶归位)→ parents[5] = 仓根
+_ASSETS = Path(cw_node_reader.__file__).resolve().parents[5] / 'assets'
 _NODE_TPL_DIR = _ASSETS / 'game_data' / 'cw_node_types'
 _BOSS_TPL_DIR = _ASSETS / 'template' / 'currency_war' / 'boss_avatar'
 _FIXTURE = Path(__file__).parent / 'cw_node_row_boss.png'
