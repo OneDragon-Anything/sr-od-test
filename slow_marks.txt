@@ -1,0 +1,30 @@
+# 慢桶名单:串行实测单条 >=2s 的用例 nodeid 后缀(W650 实测 Top40 中可精确定位项)
+# 维护:`uv run pytest sr-od-test/ -q --durations=40 --durations-min=2` 巡检回填
+# 准入:>=2s 且「无断言密度增益的重操作链」;sim 锁类保留 quick 由逐条评审定
+# 命令:L1/L2 = pytest @sr-od-test/cw_quick.txt -m "not slow";慢桶点名 = -m slow
+test_cw_w546_equip_grid.py::TestEquipCount::test_count_digits_and_infinity
+test_cw_w546_equip_grid.py::TestGridClassificationFixtures::test_read_equips_default_rect_uses_grid
+test_cw_w546_equip_grid.py::TestOcclusion::test_detail_panel_cells_marked_occluded
+test_cw_w546_equip_grid.py::TestGridClassificationFixtures::test_full_occupancy_no_spurious
+test_cw_sim_cli_smoke.py::test_ci_smoke_snapshot_batch
+test_cw_w157_p2_segment.py::test_simulate_p2_ab_report_shape
+test_currency_war_shop.py::test_read_game_state_prep
+test_cw_w162_invest_inject.py::test_invest_on_activates_p1_lock
+test_cw_w213_sim_supply_two_step.py::test_sim_supply_reroll_chain_and_once_per_game
+test_cw_equip_grant_calib.py::test_p1_grant_volume_matches_real_profile
+test_cw_w193_p2_combat.py::test_mutation_probe_win_rate_explosion
+test_cw_r420_shop_slot_semantics.py::test_phantom_rebuy_and_pool_floor_zero_real_strategy
+test_cw_w193_p2_combat.py::test_batch_headline_extension_keys
+test_cw_w193_p2_combat.py::test_sensitivity_report_shape
+test_cw_b36_prefork_wave_identity.py::test_prefork_wave_identity_green
+test_cw_back_layout.py::test_layout_hook_no_stop_only_evidence
+test_prep_director.py::test_start_battle_dialog_checkbox_equipped
+test_cw_r420_shop_slot_semantics.py::test_simulate_p1_ab_report_shape
+test_cw_r331_fixture.py::test_observe_full_heavy_on_prep_fixture
+test_cw_w591_refresh_wave_op.py::test_buy_refresh_wave_real_free_proc
+test_cw_w591_refresh_wave_op.py::test_buy_refresh_wave_real_miss_not_effective
+test_cw_back_layout.py::test_layout_hook_silent_on_archived
+test_cw_w107_formed_stop.py::test_sim_formed_stop_e2e_seed_scan
+test_cw_adr0292_reward_pool_sampling.py::test_reward_deltas_sampled_from_pool
+test_cw_back_layout.py::test_cv_transient_falls_back_to_formula
+test_cw_back_layout.py::test_cv_reread_mismatch_logged_no_action
