@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.cw_comps import comp_score_breakdown, get_comp
-from sr_od.application.currency_war.cw_state import BuyCard, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_comps import comp_score_breakdown, get_comp
+from sr_od.application.currency_war.kernel.cw_state import BuyCard, GameState, ShopCard
 from sr_od.application.currency_war.cw_telemetry import (
     SCHEMA_VERSION,
     TelemetryRecorder,
@@ -80,7 +80,7 @@ def test_record_decision_schema() -> None:
 
 def test_record_outcome_schema() -> None:
     """record_outcome 写 outcomes.jsonl,双侧字段完整。"""
-    from sr_od.application.currency_war.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
     with tempfile.TemporaryDirectory(prefix="cw_telemetry_") as tmp:
         rec, tmp_path = _fresh(tmp)
         rec.record_outcome("r1", RoundOutcome(round_num=2, plane=1, node_type="boss",
@@ -123,7 +123,7 @@ def test_run_summary_accumulates_gold_and_comps() -> None:
 
 def test_join_decisions_outcomes() -> None:
     """join_decisions_outcomes 按 (run_id, round_num) 合并;无 outcome 的决策 outcome=None。"""
-    from sr_od.application.currency_war.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
     with tempfile.TemporaryDirectory(prefix="cw_telemetry_") as tmp:
         rec, tmp_path = _fresh(tmp)
         rec.record_decision("r1", "A8", GameState(round_num=1), "c", {}, {}, [])
@@ -168,7 +168,7 @@ def test_read_jsonl_missing_file() -> None:
 
 def test_breakdown_feeds_telemetry() -> None:
     """comp_score_breakdown 的 dict 直接进 record_decision.eval_breakdown(复盘路径通)。"""
-    from sr_od.application.currency_war.cw_comps import make_score_context
+    from sr_od.application.currency_war.kernel.cw_comps import make_score_context
     with tempfile.TemporaryDirectory(prefix="cw_telemetry_") as tmp:
         rec, tmp_path = _fresh(tmp)
         rec.start_run("r1", "A8")

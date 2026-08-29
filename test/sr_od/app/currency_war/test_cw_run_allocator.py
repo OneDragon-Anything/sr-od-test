@@ -1,7 +1,7 @@
 """cw_run_allocator(05 号跨局分配层 v0)测试:Thompson/先验封顶/分级奖励/salvage(ADR-0170)。"""
 import random
 
-from sr_od.application.currency_war.cw_run_allocator import (
+from sr_od.application.currency_war.kernel.cw_run_allocator import (
     PRIOR_CAP,
     StrategyArm,
     ThompsonAllocator,

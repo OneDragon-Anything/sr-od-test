@@ -19,7 +19,7 @@ def test_streak_table_vlm_verified() -> None:
 
 def test_streak_gold_table_constant() -> None:
     """ADR-0262:STREAK_GOLD_TABLE 常量与函数逐点一致守卫(防表与实现漂移)。"""
-    from sr_od.application.currency_war.cw_economy import STREAK_GOLD_TABLE
+    from sr_od.application.currency_war.kernel.cw_economy import STREAK_GOLD_TABLE
     for streak in range(0, len(STREAK_GOLD_TABLE) + 3):
         expected = STREAK_GOLD_TABLE[min(streak, len(STREAK_GOLD_TABLE) - 1)]
         assert streak_gold(streak) == expected, f'streak={streak}'
@@ -28,5 +28,5 @@ def test_streak_gold_table_constant() -> None:
 def test_base_income_varies_by_node() -> None:
     """VLM 判读:基础奖励随节点变(r2=4/r3=5)——
     sim BASE_INCOME=5 是近似,采够样本后建表。"""
-    from sr_od.application.currency_war.cw_economy import BASE_INCOME
+    from sr_od.application.currency_war.kernel.cw_economy import BASE_INCOME
     assert BASE_INCOME == 5   # 近似值,待采集成表替换

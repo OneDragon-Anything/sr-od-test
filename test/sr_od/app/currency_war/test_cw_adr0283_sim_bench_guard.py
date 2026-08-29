@@ -15,7 +15,7 @@ class _GreedyBuyStub:
 
     def decide_prep(self, st, sess, cfg):  # noqa: ANN001
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.cw_state import BuyCard, ShopCard
+        from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
         name = next(n for n in CHARACTERS if CHARACTERS[n].cost == 1)
         card = ShopCard(x=100, faction='?', name=name, cost=1)
         return [BuyCard(card=card, reason='stub') for _ in range(12)]
@@ -24,7 +24,7 @@ class _GreedyBuyStub:
 def test_sim_bench_capacity_guard() -> None:
     """⑤ bench 满(BENCH_CAPACITY=9)后买被跳过:容量不变式 + 计数披露。"""
     from sr_od.application.currency_war.cw_sim import simulate_p1
-    from sr_od.application.currency_war.cw_state import BENCH_CAPACITY
+    from sr_od.application.currency_war.kernel.cw_state import BENCH_CAPACITY
     res = simulate_p1(1, pool='fallback', strategy=_GreedyBuyStub())
     skips = 0
     for row in res.ledger:

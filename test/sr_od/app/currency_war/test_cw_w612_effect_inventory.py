@@ -13,8 +13,8 @@ import pytest
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war import cw_investments  # noqa: E402
-from sr_od.application.currency_war.cw_effect_inventory import (  # noqa: E402
+from sr_od.application.currency_war.kernel import cw_investments
+from sr_od.application.currency_war.kernel.cw_effect_inventory import (  # noqa: E402
     ActiveEffectInventory,
     BattlefieldEffect,
     CounterKey,
@@ -23,7 +23,7 @@ from sr_od.application.currency_war.cw_effect_inventory import (  # noqa: E402
     TriggerKind,
 )
 from sr_od.application.currency_war.data.cw_invest_data import PLAZA_AUGMENTS  # noqa: E402
-from sr_od.application.currency_war.cw_investments import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_investments import (  # noqa: E402
     INVESTMENT_STRATEGIES,
     STRATEGY_ECONOMY,
     STRATEGY_EFFECTS,
@@ -58,7 +58,7 @@ def test_payload_category_consistency() -> None:
         elif spec.category == EffectKind.BATTLEFIELD:
             assert isinstance(spec.payload, BattlefieldEffect), spec.name
         else:
-            from sr_od.application.currency_war.cw_effect_inventory import UnitBuffRef
+            from sr_od.application.currency_war.kernel.cw_effect_inventory import UnitBuffRef
             assert isinstance(spec.payload, UnitBuffRef), spec.name
 
 

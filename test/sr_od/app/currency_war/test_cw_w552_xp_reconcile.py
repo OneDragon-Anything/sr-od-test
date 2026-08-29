@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war import cw_telemetry
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     XP_TO_NEXT_LEVEL,
     xp_apply_clicks,
     xp_clicks_to_level,
@@ -289,7 +289,7 @@ def test_w552_wiring_locks():
     assert "_XP_BUY_CLICKS_PAT = re.compile(r'升(\\d+)次')" in src
     # 推进算子单一源 = cw_state(sim 侧不重复建模)
     state_src = Path(
-        'src/sr_od/application/currency_war/cw_state.py'
+        'src/sr_od/application/currency_war/kernel/cw_state.py'
     ).read_text(encoding='utf-8')
     assert 'def xp_apply_clicks(' in state_src
     assert 'def xp_clicks_to_level(' in state_src

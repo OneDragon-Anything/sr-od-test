@@ -21,7 +21,7 @@ from __future__ import annotations
 import itertools
 import math
 
-# —— 机制常量(cw_state 镜像;单一源 src/sr_od/application/currency_war/cw_state.py)——
+# —— 机制常量(cw_state 镜像;单一源 src/sr_od/application/currency_war/kernel/cw_state.py)——
 XP_PER_BUY = 4
 XP_TO_NEXT_LEVEL = {3: 4, 4: 6, 5: 20, 6: 40, 7: 52, 8: 72, 9: 84}
 INTEREST_FLOOR = 50

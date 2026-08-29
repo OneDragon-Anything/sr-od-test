@@ -19,7 +19,7 @@ key_fit 阈值下调 / 滞留份额双向建模 / W612 装备处置动作面落�
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_events import _EQUIP_VALUE
+from sr_od.application.currency_war.kernel.cw_events import _EQUIP_VALUE
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 
 # 装备获取评分面常数(cw_events 生产单一源)

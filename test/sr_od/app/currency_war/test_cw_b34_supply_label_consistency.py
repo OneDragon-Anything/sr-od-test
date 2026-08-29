@@ -37,7 +37,7 @@ def test_supply_label_m1_mutation_kill(monkeypatch) -> None:
 def test_supply_label_ghost_mutation_kill(monkeypatch) -> None:
     """幽灵候选变异:给本应无标签的散件塞买候选 → 必须涌现
     「无标签但存在买候选」违规(双向不变式)。"""
-    from sr_od.application.currency_war.cw_state import BuyCard
+    from sr_od.application.currency_war.kernel.cw_state import BuyCard
 
     _orig = _cands.generate_candidates
 

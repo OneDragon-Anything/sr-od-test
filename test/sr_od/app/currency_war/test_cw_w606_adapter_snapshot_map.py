@@ -14,7 +14,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_state import BENCH_CAPACITY, BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BENCH_CAPACITY, BenchChar
 from sr_od.application.currency_war.cw_strategy import StrategySession, gated_hp
 from sr_od.application.currency_war.decision_v2.adapter import (
     decision_state,
@@ -57,7 +57,7 @@ def test_w598_four_obligation_fields_injected():
     sess = _session(dual_track_phase=True,
                     active_strategies=['黑塔纪元', '运筹帷幄'],
                     last_owned_equips=['量子同频'])
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
     last = GameState()
     last.refresh_probs = {1: 0.7, 2: 0.2}
     sess.last_state = last

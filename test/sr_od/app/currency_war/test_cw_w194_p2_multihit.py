@@ -19,11 +19,11 @@ import dataclasses
 import json
 import logging
 
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     LineTrack,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.cw_telemetry import serialize_intention
 from sr_od.application.currency_war.decision_v2.arbiter import (
@@ -145,7 +145,7 @@ def test_steady_pass_transactional_abandon() -> None:
 
 def test_steady_pass_inserts_before_refresh() -> None:
     """插入位:组插在已采纳 RefreshShop 之前(旧店段语义)。"""
-    from sr_od.application.currency_war.cw_state import RefreshShop
+    from sr_od.application.currency_war.kernel.cw_state import RefreshShop
     sess = StrategySession()
     st = _steady_state()
     res = ArbiterResult()
@@ -225,7 +225,7 @@ def _p2_state(gold: int = 8, level: int = 6) -> GameState:
 
 
 def _core_cand(name: str = '姬子·启行', cost: int = 3) -> object:
-    from sr_od.application.currency_war.cw_state import BuyCard, ShopCard
+    from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
     from sr_od.application.currency_war.decision_v2.candidates import (
         Candidate,
     )

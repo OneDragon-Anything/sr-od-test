@@ -19,7 +19,7 @@ from sr_od.application.currency_war.cw_sim import (
     _board_counts_of,
     simulate_p1,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def test_units_conservation_across_bench_deployed() -> None:
@@ -83,7 +83,7 @@ def test_board_is_deployed_faction_counts() -> None:
     """state.board = deployed 羁绊全集聚合(ADR-0312 W50 口径;
     per-unit 单一源 unit_bond_tags——本锁锁「sim 维护 board ← 聚合」
     的接线,per-unit 值由 test_cw_w50_board_caliber 直锁)。"""
-    from sr_od.application.currency_war.cw_bond_equips import unit_bond_tags
+    from sr_od.application.currency_war.kernel.cw_bond_equips import unit_bond_tags
     r = simulate_p1(7, pool='fallback')
     for row in r.ledger:
         expect: dict[str, int] = {}

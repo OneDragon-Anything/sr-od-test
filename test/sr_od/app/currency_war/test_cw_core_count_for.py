@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_line_defs import core_count_for
+from sr_od.application.currency_war.kernel.cw_line_defs import core_count_for
 
 
 def test_bridge_target_counts_pool_core() -> None:
@@ -27,7 +27,7 @@ def test_p2_bridge_routed() -> None:
 def test_bridge_field_name_is_real() -> None:
     """桥字段存在性(审查#3:getattr 链死防御掩盖改名;直接属性
     访问,改名即刻 AttributeError)。"""
-    from sr_od.application.currency_war.cw_bridge_pool import (
+    from sr_od.application.currency_war.kernel.cw_bridge_pool import (
         BRIDGE_POOL,
         BRIDGE_POOL_P2,
     )
@@ -37,7 +37,7 @@ def test_bridge_field_name_is_real() -> None:
 
 def test_line_bridge_id_no_overlap() -> None:
     """桥 id 唯一性(旧线库已删;桥 id 与 COMP/角色名不撞即可)。"""
-    from sr_od.application.currency_war.cw_bridge_pool import (
+    from sr_od.application.currency_war.kernel.cw_bridge_pool import (
         BRIDGE_POOL,
         BRIDGE_POOL_P2,
     )

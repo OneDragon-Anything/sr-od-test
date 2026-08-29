@@ -16,7 +16,7 @@ import logging
 
 from sr_od.application.currency_war import cw_sim
 from sr_od.application.currency_war.cw_sim import P2ReplayEntry
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
 

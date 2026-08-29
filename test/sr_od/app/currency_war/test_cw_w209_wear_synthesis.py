@@ -18,11 +18,11 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_ROOT / 'src'))
 
-from sr_od.application.currency_war.cw_bench_equips import (
+from sr_od.application.currency_war.kernel.cw_bench_equips import (
     assert_equips_consistency,
     wear_synthesis_equivalent,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def test_run26_self_recipe_equivalent() -> None:

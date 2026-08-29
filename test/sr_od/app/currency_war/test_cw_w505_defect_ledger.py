@@ -9,7 +9,8 @@
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_observe, cw_telemetry
+from sr_od.application.currency_war import cw_telemetry
+from sr_od.application.currency_war.kernel import cw_observe
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w505t') -> None:

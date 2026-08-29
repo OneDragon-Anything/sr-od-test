@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import inspect
 
-from sr_od.application.currency_war import cw_deploy_logic
+from sr_od.application.currency_war.kernel import cw_deploy_logic
 from sr_od.application.currency_war.cw_sim import simulate_p1
 
 # W652 取证的两帧所在局(修前 HEAD 版重放对这两局 r6 各判 lag=2)

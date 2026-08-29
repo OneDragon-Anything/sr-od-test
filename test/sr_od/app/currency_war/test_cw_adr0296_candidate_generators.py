@@ -17,7 +17,7 @@ from __future__ import annotations
 from sr_od.application.currency_war.cw_sim_checks import (
     check_decision_v2_candidate_coverage,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     ShopCard,
@@ -39,7 +39,7 @@ def _sess(line: str | None = None) -> StrategySession:
     旧 locked_line 垫片已删)。"""
     s = StrategySession()
     if line:
-        from sr_od.application.currency_war.cw_intention import (
+        from sr_od.application.currency_war.kernel.cw_intention import (
             HoardTarget,
             IntentionState,
         )

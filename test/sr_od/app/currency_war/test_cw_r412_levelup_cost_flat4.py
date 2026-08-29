@@ -6,8 +6,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_economy import _want_level_up, xp_click_cost
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_economy import _want_level_up, xp_click_cost
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 
 def _st(level: int, gold: int) -> GameState:

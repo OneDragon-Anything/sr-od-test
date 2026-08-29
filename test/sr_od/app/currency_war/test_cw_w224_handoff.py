@@ -16,8 +16,8 @@ from __future__ import annotations
 import logging
 
 from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_intention import HoardTarget
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     ShopCard,
@@ -57,7 +57,7 @@ def _state(**kw) -> GameState:
 
 
 def _sess(**kw) -> StrategySession:
-    from sr_od.application.currency_war.cw_intention import IntentionState
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     s = StrategySession()
     s.v2_state = ('economy', False, False, 0, 0, 0, 0, 0)
     ist = IntentionState()

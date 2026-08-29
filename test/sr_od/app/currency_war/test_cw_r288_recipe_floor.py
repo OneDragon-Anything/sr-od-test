@@ -2,7 +2,7 @@
 """r288 配方底线仲裁测试(局23/24:锁线列车吃板挤仙舟)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_line_defs import (
+from sr_od.application.currency_war.kernel.cw_line_defs import (
     RECIPE_FACTIONS,
 )
 

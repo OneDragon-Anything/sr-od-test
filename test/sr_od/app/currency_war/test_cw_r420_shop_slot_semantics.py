@@ -59,7 +59,7 @@ class _DoubleBuyStub:
         pass
 
     def decide_prep(self, st, sess, cfg):  # noqa: ANN001
-        from sr_od.application.currency_war.cw_state import BuyCard
+        from sr_od.application.currency_war.kernel.cw_state import BuyCard
         if not st.shop:
             return []
         return [BuyCard(card=st.shop[0], reason='stub')] * 2
@@ -85,7 +85,7 @@ class _SyntheticCardStub:
 
     def decide_prep(self, st, sess, cfg):  # noqa: ANN001
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.cw_state import BuyCard, ShopCard
+        from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
         name = next(n for n in CHARACTERS if CHARACTERS[n].cost == 1)
         return [BuyCard(card=ShopCard(x=100, faction='?', name=name,
                                       cost=1), reason='stub')] * 12

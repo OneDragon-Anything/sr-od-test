@@ -20,7 +20,8 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war import cw_observe, cw_observation as obs
+from sr_od.application.currency_war import cw_observation as obs
+from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.cw_observation_gate import (
     ENTRY_OVERLAY_CLOSE,
     PHASE_BATTLE_OR_TRANSIT,
@@ -28,7 +29,7 @@ from sr_od.application.currency_war.cw_observation_gate import (
     PHASE_PREP_CLEAN,
     PHASE_PREP_SHOP_OPEN,
 )
-from sr_od.application.currency_war.cw_obs_core import UPPER_SCREENS
+from sr_od.application.currency_war.kernel.cw_obs_core import UPPER_SCREENS
 
 REPO = Path(__file__).resolve().parents[5]
 

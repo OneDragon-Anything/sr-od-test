@@ -11,7 +11,7 @@ arbiter 主采纳通道执行后,shop.py 的 gold 差值对拍把回金当「多
 from __future__ import annotations
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     SellBench,
     sell_refund,
@@ -33,7 +33,7 @@ def test_sell_candidates_carry_income() -> None:
     主采纳通道执行后 shop.py gold 对拍用它算期望回金;缺 income=回金被
     记为「未观收入」误报冲突(独立 review 实机发现)。
     """
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
     from sr_od.application.currency_war.cw_strategy import StrategySession
     from sr_od.application.currency_war.kernel.cw_registry import \
         DecisionV2Registry
@@ -63,7 +63,7 @@ def test_tracked_compact_guard_semantics() -> None:
     pad/清槽按槽位语义执行。锁核心不变量:紧凑态输入经统一后,
     SellBench(idx=2) 清的是槽位 2(砂金),不是错位的槽位 1。
     """
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         bench_from_compact,
         mutate_bench_deployed,
     )

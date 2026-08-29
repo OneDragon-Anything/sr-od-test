@@ -20,12 +20,12 @@ from __future__ import annotations
 import dataclasses
 import math
 
-from sr_od.application.currency_war.cw_line_switch import (
+from sr_od.application.currency_war.kernel.cw_line_switch import (
     rounds_alive,
     should_switch_e,
     survival_gate,
 )
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.filters import (
     _deploy_free,
@@ -101,7 +101,7 @@ def test_shared_face_helpers_alive_for_c1() -> None:
                                                         DEFAULT_REGISTRY)
     assert hp_decision_trusted(st) is True
     # 合成后空位完备式:板上 2 份同名 1★ + 买入合成 → 净腾 1 位
-    from sr_od.application.currency_war.cw_state import BenchChar, ShopCard
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar, ShopCard
     card = ShopCard(name='件甲', faction='仙舟罗浮', cost=1, x=0, star=1)
     st2 = _dying_state(
         deployed=[BenchChar(slot=i, char_id='件甲', faction='仙舟罗浮',
@@ -110,7 +110,7 @@ def test_shared_face_helpers_alive_for_c1() -> None:
     from sr_od.application.currency_war.decision_v2.candidates import (
         Candidate,
     )
-    from sr_od.application.currency_war.cw_state import BuyCard
+    from sr_od.application.currency_war.kernel.cw_state import BuyCard
     merge_c = Candidate(action=BuyCard(card, reason=''), tag='bridge_core',
                         source='shop', merge=True)
     assert _deploy_free_after_merge(merge_c, st2) == 1

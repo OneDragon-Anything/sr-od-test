@@ -19,16 +19,16 @@ from __future__ import annotations
 
 import dataclasses
 
-from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_economy import _resolve_level_goal
-from sr_od.application.currency_war.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_economy import _resolve_level_goal
+from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.data.cw_shop_odds import (
     DISTINCT_CARDS_PER_COST,
     POOL_COPIES_PER_CARD,
     expected_refreshes,
     refresh_prob,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.ev import (
     cross_plane_remaining_nodes,
@@ -40,7 +40,7 @@ from sr_od.application.currency_war.decision_v2.scoring import (
     _engines_formed,
     vd_refresh_score,
 )
-from sr_od.application.currency_war.cw_intention import _pair_members
+from sr_od.application.currency_war.kernel.cw_intention import _pair_members
 
 _REG = DEFAULT_REGISTRY
 _PAIR = ('仙舟', '列车同行')

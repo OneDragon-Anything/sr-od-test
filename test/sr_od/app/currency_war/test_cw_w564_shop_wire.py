@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 import sr_od.application.currency_war.prep_director as pd
-from sr_od.application.currency_war.cw_state import GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 from sr_od.application.currency_war.cw_shop_obs import RefreshExpect
 from sr_od.application.currency_war.prep_director import (
     PrepDirector,

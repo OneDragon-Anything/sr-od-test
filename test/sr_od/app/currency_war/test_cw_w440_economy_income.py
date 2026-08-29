@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import json
 
-from sr_od.application.currency_war import cw_economy, cw_sim
-from sr_od.application.currency_war.cw_economy import (
+from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.kernel import cw_economy
+from sr_od.application.currency_war.kernel.cw_economy import (
     BASE_INCOME,
     LOSS_GOLD_BY_NODE,
     REWARD_BASE_GOLD_BY_ROUND,

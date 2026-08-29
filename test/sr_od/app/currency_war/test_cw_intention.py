@@ -12,8 +12,8 @@ strategy_v4 点0 单一规格源,锁行为:
 from __future__ import annotations
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_intention import (
     CORE_MISS_N,
     CROSS_LINE_SKELETON,
     FALLBACK_COMP_NAME,
@@ -23,7 +23,7 @@ from sr_od.application.currency_war.cw_intention import (
     hoard_target_set,
     update_intention,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 
 
 def _state(**kw) -> GameState:
@@ -203,7 +203,7 @@ EVIDENCE_BENCH = ['万敌', '千冶·刃', '长夜月', '刻律德菈', '缇宝'
 
 
 def _default_n_req(core: str, level: int = 5) -> int:
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         core_miss_n_required,
     )
     from sr_od.application.currency_war.kernel.cw_registry import (

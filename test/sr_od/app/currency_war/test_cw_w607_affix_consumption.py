@@ -11,13 +11,13 @@ from __future__ import annotations
 from dataclasses import replace
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     _line_env_qualified,
     update_intention,
 )
-from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.operations.prep.equip_all import (
     _opening_hold_active,
@@ -149,6 +149,6 @@ def test_h2_gate_on_no_rust_no_release() -> None:
 
 def test_h1_strong_env_registry_nonempty_for_hp_charge_stack() -> None:
     """数据层守卫:hp_charge_stack 强环境集已建模且含多动/反伤两类机制 tag。"""
-    from sr_od.application.currency_war.cw_comps import STRONG_ENV_MECHS
+    from sr_od.application.currency_war.kernel.cw_comps import STRONG_ENV_MECHS
     assert {'反伤', '多段惩罚'} <= set(STRONG_ENV_MECHS['hp_charge_stack'])
     assert get_comp(_WANDI) is not None   # 判据锚:注册表存在该累积型线

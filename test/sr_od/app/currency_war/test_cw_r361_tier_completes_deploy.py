@@ -60,7 +60,7 @@ def test_flow_faction_also_counts() -> None:
 
 def test_empty_names_no_discount() -> None:
     """r361b(review A 守卫):board_names 空集(tracked miss)不折扣。"""
-    from sr_od.application.currency_war.cw_line_defs import (
+    from sr_od.application.currency_war.kernel.cw_line_defs import (
         p1_formation_target,
     )
     board = {'仙舟': 3, '列车同行': 2}   # recipe 5 档
@@ -70,7 +70,7 @@ def test_empty_names_no_discount() -> None:
 
 def test_discount_applies_with_real_names() -> None:
     """核心不在场(有名可判)→ 折扣生效(空壳档位不算数)。"""
-    from sr_od.application.currency_war.cw_line_defs import (
+    from sr_od.application.currency_war.kernel.cw_line_defs import (
         p1_formation_target,
     )
     board = {'仙舟': 3, '列车同行': 2}

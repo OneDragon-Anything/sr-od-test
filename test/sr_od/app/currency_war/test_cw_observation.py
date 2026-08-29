@@ -715,6 +715,6 @@ def test_shop_refresh_cost_base_price_model_lock() -> None:
         'read_game_state 刷价赋值必须是基价常量(徽标 OCR 禁回主链)'
     assert 'state.shop_refresh_cost = read_shop_refresh_cost' not in src, \
         '主链不得再调用 read_shop_refresh_cost(徽标退役,ADR-0456)'
-    from sr_od.application.currency_war.cw_state import REFRESH_COST_BASE
+    from sr_od.application.currency_war.kernel.cw_state import REFRESH_COST_BASE
     assert REFRESH_COST_BASE == 2
 

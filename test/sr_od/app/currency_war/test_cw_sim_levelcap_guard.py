@@ -17,7 +17,7 @@ class _LevelUpSpamStub:
         pass
 
     def decide_prep(self, st, sess, cfg):  # noqa: ANN001
-        from sr_od.application.currency_war.cw_state import LevelUp
+        from sr_od.application.currency_war.kernel.cw_state import LevelUp
         return [LevelUp(cost=4) for _ in range(3)]
 
 

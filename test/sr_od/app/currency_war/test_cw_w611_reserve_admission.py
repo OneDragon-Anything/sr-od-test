@@ -18,10 +18,10 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_economy import (
+from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     GameState,

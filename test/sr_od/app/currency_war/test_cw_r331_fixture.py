@@ -34,7 +34,7 @@ def test_gold_reread_gated_by_shop_open() -> None:
     """r334(review 第5条):gold==0 重读只在 shop 开态做——
     F2 语义(关态读空恒 0,白付 3×0.3s+3 次全量 OCR)。"""
     import sr_od.application.currency_war.cw_observe_full as of_mod
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
 
     _calls = {'gs': 0}
 

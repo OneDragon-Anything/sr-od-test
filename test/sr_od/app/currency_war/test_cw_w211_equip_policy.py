@@ -15,10 +15,10 @@ P14 = docs/game/currency_war/research/proofs/p14-equipment-acquisition-ev.md
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_comps import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     equip_allocation,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.data.cw_synthesis import (
     RESERVED_COMPONENTS,
     component_demand,
@@ -70,7 +70,7 @@ def test_hoard_gaps_offset_by_finished_advance() -> None:
 # ===== 2. 防误合成配对守卫(equip_allocation)=====
 
 def _mkcomp(key_equips: list[str], cores: list[str]):
-    from sr_od.application.currency_war.cw_comps import Comp
+    from sr_od.application.currency_war.kernel.cw_comps import Comp
     return Comp(name='伪comp', factions=['追击'], core_chars=cores,
                 form_tiers={'追击': 2}, strength='S',
                 form_difficulty='easy', key_equips=key_equips)

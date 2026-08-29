@@ -95,7 +95,7 @@ def _patch_pool_meta(monkeypatch: pytest.MonkeyPatch, runs: dict) -> None:
 
 def _unfreeze_freshness(monkeypatch: pytest.MonkeyPatch) -> None:
     """池冻结态下新鲜度检查整体跳过(停更=预期);测三态逻辑先解冻。"""
-    from sr_od.application.currency_war import cw_coarse_battle
+    from sr_od.application.currency_war.kernel import cw_coarse_battle
     monkeypatch.setattr(cw_coarse_battle, 'BATTLE_ENGINE_MODE', 'delta')
 
 

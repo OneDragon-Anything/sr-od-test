@@ -14,8 +14,8 @@ import sys
 sys.path.insert(0, 'src')
 
 from sr_od.application.currency_war.cw_plan import _should_deploy
-from sr_od.application.currency_war.cw_state import BenchChar, GameState, ShopCard
-from sr_od.application.currency_war.cw_transition import (
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_transition import (
     TRANSITION_PACK,
     pick_framework,
     transition_score,

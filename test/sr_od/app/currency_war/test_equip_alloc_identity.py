@@ -3,12 +3,12 @@ import sys
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.cw_comps import equip_allocation
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def _mk_comp():
-    from sr_od.application.currency_war.cw_comps import Comp
+    from sr_od.application.currency_war.kernel.cw_comps import Comp
     return Comp(name='反甲白厄', factions=['贝洛伯格'],
                 core_chars=['白厄', '三月七', '姬子·启行'],
                 form_tiers={}, strength=5.0, form_difficulty='hard')

@@ -17,11 +17,11 @@ from __future__ import annotations
 import dataclasses
 
 from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_line_switch import (
+from sr_od.application.currency_war.kernel.cw_line_switch import (
     rounds_alive,
     survival_gate,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,

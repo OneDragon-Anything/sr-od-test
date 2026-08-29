@@ -13,10 +13,10 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_deploy_logic import (
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     select_deployments,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def _bonds(cid: str) -> set[str]:

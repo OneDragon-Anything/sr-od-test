@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.adapter import (
     DecideAdapter,
@@ -126,7 +126,7 @@ def test_committed_from_semantics():
     """
     sess = StrategySession()
     assert committed_from(sess) is False         # 缺供给 = 保守双轨
-    from sr_od.application.currency_war.cw_intention import IntentionState
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     sess.v3_intention = IntentionState()
     assert committed_from(sess) is False         # ist 未锁,仍双轨
     sess.v3_intention.phase = 'locked'
@@ -233,7 +233,7 @@ def test_tracking_view_prefers_tracked_over_fresh():
     与原对象的 list 默认不再逐位相等——该旧比较非设计意图,重推为:
     ①tracking 优先(字段值取自 tracked)②快照拷贝语义(非别名 + equips
     tuple 固化)③tracking 空 → fresh read 补缺。"""
-    from sr_od.application.currency_war.cw_state import snapshot_copy
+    from sr_od.application.currency_war.kernel.cw_state import snapshot_copy
     sess = StrategySession()
     tracked = BenchChar(slot=1, char_id='huohuo', star=2)
     sess.tracked_bench_chars = [tracked]
@@ -253,7 +253,7 @@ def test_tracking_view_prefers_tracked_over_fresh():
 # ----------------------------------------------------- 4. R4 接缝
 
 def test_r4_seam_functions_public_and_pure():
-    from sr_od.application.currency_war.cw_economy import (
+    from sr_od.application.currency_war.kernel.cw_economy import (
         refresh_ev_budget,
         schedule_upgrade,
     )
@@ -263,7 +263,7 @@ def test_r4_seam_functions_public_and_pure():
 
 
 def _mk_state():
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
     st = GameState()
     st.plane, st.round_num, st.level, st.gold = 1, 2, 3, 40
     return st

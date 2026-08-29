@@ -1,7 +1,7 @@
 """r255 P2 装备流策略加分测试。"""
 
-from sr_od.application.currency_war.cw_events import decide_event
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_events import decide_event
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 
 class _Cfg:

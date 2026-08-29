@@ -13,15 +13,15 @@ from collections import Counter
 
 import pytest
 
-import sr_od.application.currency_war.cw_bench_equips as cw_bench_equips
-from sr_od.application.currency_war.cw_bench_equips import (
+import sr_od.application.currency_war.kernel.cw_bench_equips as cw_bench_equips
+from sr_od.application.currency_war.kernel.cw_bench_equips import (
     EquipsInconsistencyError,
     assert_equips_consistency,
     assert_ledger_conserved,
     ledger_mismatch,
     state_equips_multiset,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     CompTransaction,

@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.cw_comps import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     MECHANIC_COUNTERS,
     MECHANIC_SYNERGIES,
@@ -34,7 +34,7 @@ from sr_od.application.currency_war.cw_comps import (
     select_megastar,
     shop_supply,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 
 
 def _cfg(**overrides) -> SimpleNamespace:
@@ -97,7 +97,7 @@ def test_equip_fit_aya_two_boots_supralinear() -> None:
 
 def test_equip_fit_no_key_equips_neutral() -> None:
     """comp 无关键装备依赖 → None(ADR-0107:无数据动态剔除,非 0.5 常量地板;用局部 Comp 不污染 LIBRARY)。"""
-    from sr_od.application.currency_war.cw_comps import Comp
+    from sr_od.application.currency_war.kernel.cw_comps import Comp
     comp_no_equip = Comp(name="测试", factions=["巡海游侠"], core_chars=[], form_tiers={},
                          strength="A", form_difficulty="easy", key_equips=[])
     assert equip_fit(comp_no_equip, GameState(equips=["冷笑话引擎"])) is None, (
@@ -569,7 +569,7 @@ def test_comp_library_key_equips_canonical() -> None:
 # ===== ADR-0135 机会型 pivot(held_strategy_fit:持有策略 → comp 亲和 → select_comp 重评) =====
 def test_held_strategy_fit_opportunity_pivot() -> None:
     """持有追击套组(绑定 追击+飞霄)→ 追击 comp held_strategy_fit=1.0、无关 comp=0.5、无持有=None。"""
-    from sr_od.application.currency_war.cw_comps import (
+    from sr_od.application.currency_war.kernel.cw_comps import (
         COMP_LIBRARY,
         held_strategy_fit,
         make_score_context,
@@ -602,7 +602,7 @@ def test_comp_flex_factions_subset_and_form_tiers_core_only() -> None:
 
 def test_augment_comp_affinity_near_hardbind() -> None:
     """AUGMENT_COMP_AFFINITY:黑塔纪元 → 大黑塔银河学者 1.0(拿到即近乎硬绑);无关 comp 中性。"""
-    from sr_od.application.currency_war.cw_comps import (
+    from sr_od.application.currency_war.kernel.cw_comps import (
         AUGMENT_COMP_AFFINITY,
         held_strategy_fit,
     )
@@ -620,7 +620,7 @@ def test_augment_comp_affinity_near_hardbind() -> None:
 
 def test_env_comp_affinity_plaza_extended() -> None:
     """ADR-0152 env 亲和扩充:列车同行概念股 → 列车同行 1.0;特邀专家:桑博 → 专家桑博DOT 1.0。"""
-    from sr_od.application.currency_war.cw_comps import env_fit
+    from sr_od.application.currency_war.kernel.cw_comps import env_fit
     assert env_fit(get_comp("列车同行"), "列车同行概念股") == 1.0
     assert env_fit(get_comp("专家桑博DOT"), "特邀专家:桑博") == 1.0
     assert env_fit(get_comp("万敌单C"), "列车同行概念股") == 0.5, "无关 comp 中性"
@@ -628,7 +628,7 @@ def test_env_comp_affinity_plaza_extended() -> None:
 
 def test_skeleton_factions_derived() -> None:
     """M4 骨架派生:判据(最低档 ≤3 + ≤2费成员 ≥2)从注册表筛;含实战组合(仙舟/贝洛伯格/银河学者)。"""
-    from sr_od.application.currency_war.cw_comps import skeleton_factions
+    from sr_od.application.currency_war.kernel.cw_comps import skeleton_factions
     sk = skeleton_factions()
     for must in ("仙舟", "贝洛伯格", "银河学者", "列车同行", "星核猎手"):
         assert must in sk, f"骨架集应含 {must}(plaza 实战开局组合)"
@@ -638,7 +638,7 @@ def test_skeleton_factions_derived() -> None:
 
 def test_char_routes_hub_structure() -> None:
     """M3 枢纽路由:瓦尔特/符玄/千冶·刃 跨路线 ≥3(终局枢纽);角色→路线网络非空。"""
-    from sr_od.application.currency_war.cw_comps import char_routes
+    from sr_od.application.currency_war.kernel.cw_comps import char_routes
     routes = char_routes()
     assert routes, "路由网络非空"
     for hub in ("瓦尔特", "符玄", "千冶·刃"):
@@ -647,7 +647,7 @@ def test_char_routes_hub_structure() -> None:
 
 def test_pivot_overlap_semantics() -> None:
     """M10 转型成本:同 comp 1.0;列车→绯英(共享花火/瓦尔特)> 列车→万敌(零共享);无阵营 comp 中性。"""
-    from sr_od.application.currency_war.cw_comps import pivot_overlap
+    from sr_od.application.currency_war.kernel.cw_comps import pivot_overlap
     lt = get_comp("列车同行")
     assert pivot_overlap(lt, lt) == 1.0
     hi_overlap = pivot_overlap(lt, get_comp("绯英欢愉"))
@@ -666,7 +666,7 @@ def test_default_star_goal_by_cost() -> None:
 
 def test_transition_pool_two_tiers() -> None:
     """M3 过渡池两级:EARLY_CORE_POOL(存活≥0.8)与 TEMPO_POOL(纯打工)拆分且不重叠。"""
-    from sr_od.application.currency_war.cw_comps import EARLY_CORE_POOL, TEMPO_POOL, TRANSITION_POOL
+    from sr_od.application.currency_war.kernel.cw_comps import EARLY_CORE_POOL, TEMPO_POOL, TRANSITION_POOL
     assert "千冶·刃" in EARLY_CORE_POOL, "千冶·刃 Early→Final 0.96 → 早期核心级"
     assert "艾丝妲" in TEMPO_POOL, "艾丝妲 Early→Final 0.05 → 纯过渡级"
     assert not set(EARLY_CORE_POOL) & set(TEMPO_POOL), "两级不重叠"
@@ -679,7 +679,7 @@ def test_env_fit_t0_no_flex_inversion() -> None:
 
     仙舟概念股:景元仙舟(affinity 0.9→0.95) 必须严格 > 绯英欢愉(flex 含仙舟,旧版 faction 命中 1.0 反转)。
     """
-    from sr_od.application.currency_war.cw_comps import env_fit
+    from sr_od.application.currency_war.kernel.cw_comps import env_fit
     assert env_fit(get_comp("景元仙舟"), "仙舟概念股") == 0.95
     fy = get_comp("绯英欢愉")
     assert "仙舟" in fy.flex_factions, "前置:绯英 flex 含仙舟(反转场景成立)"
@@ -703,7 +703,7 @@ def test_maybe_pivot_defining_augment_unlocks_commit() -> None:
     s = GameState(gold=50, round_num=4, level=5, plane=1, hp=100, board={"列车同行": 2})
     s.active_strategies = ["黑塔纪元"]
     ctx = make_score_context(s)
-    from sr_od.application.currency_war.cw_comps import target_committed
+    from sr_od.application.currency_war.kernel.cw_comps import target_committed
     assert target_committed(get_comp("列车同行"), s), "前置:列车已 commit"
     result = maybe_pivot(s, ctx, _cfg(), target=get_comp("列车同行"))
     assert result is not None and result.name == "大黑塔银河学者", (

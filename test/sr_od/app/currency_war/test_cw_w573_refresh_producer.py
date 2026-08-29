@@ -26,7 +26,7 @@ from sr_od.application.currency_war.prep_director import (
     build_refresh_expect,
     refresh_reconcile_mismatches,
 )
-from sr_od.application.currency_war.cw_state import REFRESH_COST_BASE, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import REFRESH_COST_BASE, ShopCard
 
 _SHOP_PATH = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
               / 'application' / 'currency_war' / 'operations' / 'prep'

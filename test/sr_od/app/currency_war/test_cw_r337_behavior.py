@@ -8,7 +8,7 @@ from sr_od.application.currency_war.cw_observe_full import observe_full
 
 def _stub(of_mod, gold_seq: list[int]):
     """打桩 read_game_state 依序返 gold 序列;其余 reader 空。"""
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
     _i = {'n': 0}
 
     def _gs(ctx, frame):

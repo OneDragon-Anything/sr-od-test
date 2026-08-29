@@ -18,7 +18,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_sim import simulate_p1
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     RefreshShop,
@@ -73,7 +73,7 @@ def _sess(line: str | None = None, bridge: str | None = None,
     s.v2_state = (mode, False, False, 0, 0, 0, 0, 0)
     s.v3_mode = mode
     if line:
-        from sr_od.application.currency_war.cw_intention import (
+        from sr_od.application.currency_war.kernel.cw_intention import (
             HoardTarget,
             IntentionState,
         )
@@ -276,8 +276,8 @@ def test_active_floor_tiered_economy() -> None:
     assert _active_floor(_state(round_num=9, gold=55), sess, _REG) == \
         _REG.boss_floor
     # HOARD/SPEND:form_ok 真帧(锁定+三件套)金 40/55 → 50
-    from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_intention import (
         IntentionState,
         intention_core,
     )

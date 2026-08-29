@@ -8,7 +8,7 @@ active_strategies/megastar_char/partner_char)+ BenchChar.equips + current_boss �
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     _bench_char_cost,
@@ -71,7 +71,7 @@ def test_mutate_bench_deployed_buy_merge_sell_deploy() -> None:
     ADR-0316 槽位语义:bench 定长 9 空槽表——buy 落首个空槽/sell+deploy 置 None/
     占用数守恒;断言用 ``iter_occupied``/``bench_occupied``(禁 len(bench))。
     """
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         BuyCard,
         DeployMove,
         LevelUp,
@@ -153,7 +153,7 @@ def test_bench_char_cost_unknown_defaults_3() -> None:
 # ===== ADR-0129 购买经验模型(单击 +4 XP,攒门槛升级,溢出结转) =====
 def test_simulate_level_up_accumulates_xp() -> None:
     """一次 LevelUp = +4 XP(单击),不直接升级;经验条同步推进。"""
-    from sr_od.application.currency_war.cw_state import LevelUp, simulate
+    from sr_od.application.currency_war.kernel.cw_state import LevelUp, simulate
     s = GameState(level=5, gold=40, xp_progress=(0, 20), hp=100)
     s2 = simulate(s, LevelUp(cost=4))
     assert s2.level == 5, "4/20 未到门槛,不应升级"
@@ -163,7 +163,7 @@ def test_simulate_level_up_accumulates_xp() -> None:
 
 def test_simulate_level_up_crosses_threshold_with_carryover() -> None:
     """18/20 时点 1 次(22 XP)→ 升到 6 级,溢出 2 结转(2/40,用户门槛表)。"""
-    from sr_od.application.currency_war.cw_state import LevelUp, simulate
+    from sr_od.application.currency_war.kernel.cw_state import LevelUp, simulate
     s = GameState(level=5, gold=40, xp_progress=(18, 20), hp=100)
     s2 = simulate(s, LevelUp(cost=4))
     assert s2.level == 6
@@ -172,7 +172,7 @@ def test_simulate_level_up_crosses_threshold_with_carryover() -> None:
 
 def test_simulate_level_up_xp_unknown_starts_zero() -> None:
     """xp 未知(None)按 0 进度起步 —— 保守(多估所需击数,不虚报升级)。"""
-    from sr_od.application.currency_war.cw_state import LevelUp, simulate
+    from sr_od.application.currency_war.kernel.cw_state import LevelUp, simulate
     s = GameState(level=3, gold=10, xp_progress=None, hp=100)
     s2 = simulate(s, LevelUp(cost=4))
     assert s2.level == 4, "lv3 门槛 4,一击 +4 恰好升级"

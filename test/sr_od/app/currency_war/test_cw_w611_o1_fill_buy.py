@@ -13,11 +13,11 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_plane_table import (
+from sr_od.application.currency_war.kernel.cw_plane_table import (
     level_cost,
 )
 from sr_od.application.currency_war.decision_v2.posture import Posture
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     GameState,
@@ -145,7 +145,7 @@ def test_bond_fallback_beats_o1_quality_order() -> None:
     bond_fallback(凑羁绊填充,O1 前置);不同阵营非引擎件 → o1 标签
     (散件末位)。O1 只兜 bond_fallback 之后的尾。"""
     from types import SimpleNamespace
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )

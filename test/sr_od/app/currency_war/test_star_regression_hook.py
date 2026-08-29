@@ -11,7 +11,7 @@ _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / 'src'))
 sys.path.insert(0, str(_REPO / 'sr-od-test'))
 
-from sr_od.application.currency_war.cw_reconcile import reconcile_tracking  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking  # noqa: E402
 
 
 class _Ctx:
@@ -41,7 +41,7 @@ def _read(star: int):
 def test_first_regression_no_stop(tmp_path, monkeypatch) -> None:
     """首节点 2★→1★:**保旧防抖**(2026-08-18:274 存证复现 36/40 同图重读 2★,
     live 读 1★ = 3合1 合成动画窗)—— 留证 + pending 挂起,不停机不计数不毒化 tracking。"""
-    import sr_od.application.currency_war.cw_reconcile as cr
+    import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     s = _sess(True)
@@ -58,7 +58,7 @@ def test_first_regression_no_stop(tmp_path, monkeypatch) -> None:
 def test_second_regression_stops(tmp_path, monkeypatch) -> None:
     """连续第 2 帧 2★→1★(pending 已挂起):确认真回退 → 采新写回 + 计数(r17 降级:
     留证不 stop,SIFT 身份域排查中)。"""
-    import sr_od.application.currency_war.cw_reconcile as cr
+    import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     s = _sess(True)
@@ -77,7 +77,7 @@ def test_second_regression_stops(tmp_path, monkeypatch) -> None:
 
 def test_fifth_regression_leaves_evidence_no_stop(tmp_path, monkeypatch) -> None:
     """r17 降级语义:第 5 次**确认**回退留证(sentinel+截图)但不 stop。"""
-    import sr_od.application.currency_war.cw_reconcile as cr
+    import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     s = _sess(True)
@@ -94,7 +94,7 @@ def test_fifth_regression_leaves_evidence_no_stop(tmp_path, monkeypatch) -> None
 
 def test_recovered_star_resets_count(tmp_path, monkeypatch) -> None:
     """读回恢复(2★ 读回 2★):pending 与计数双清零,不累积误判。"""
-    import sr_od.application.currency_war.cw_reconcile as cr
+    import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     s = _sess(True)
@@ -113,7 +113,7 @@ def test_debounce_bumps_only_one_copy(tmp_path, monkeypatch) -> None:
     """r58 review P1 回归:同名多副本(2★+1★)动画窗误读 → 防抖保旧只抬**一个**
     副本(数量守恒);旧循环把所有 star==_s 副本集体抬到旧最大星 → 真实 1★ 副本
     变假 2★,污染 merge/卖牌决策。"""
-    import sr_od.application.currency_war.cw_reconcile as cr
+    import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     # tracking: 万敌 2★(板上)+ 万敌 1★(bench)
@@ -134,7 +134,7 @@ def test_debounce_bumps_only_one_copy(tmp_path, monkeypatch) -> None:
 def test_pending_cleared_when_char_leaves(tmp_path, monkeypatch) -> None:
     """r58 review P2① 回归:角色离场(卖出/上场后读不到)→ pending 清除,防
     「下次登场时单次动画误读被误判连续第二次确认」。"""
-    import sr_od.application.currency_war.cw_reconcile as cr
+    import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     s = _sess(True)
@@ -152,7 +152,7 @@ def test_pending_cleared_when_char_leaves(tmp_path, monkeypatch) -> None:
 
 def test_low_star_regression_never_stops(tmp_path, monkeypatch) -> None:
     """1★ 档回退不入停机范围(用户担心面 = star2/3 识别;1★ 常态噪声大)。"""
-    import sr_od.application.currency_war.cw_reconcile as cr
+    import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     try:

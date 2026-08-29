@@ -25,9 +25,9 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_intention import HoardTarget
+from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
 from sr_od.application.currency_war.cw_sim import simulate_p1
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     GameState,
@@ -80,7 +80,7 @@ def _sess(**kw) -> StrategySession:
 
 def _locked_sess() -> StrategySession:
     """意向锁定 session(锁定套=列车同行;hoard=意向线采购集子样)。"""
-    from sr_od.application.currency_war.cw_intention import IntentionState
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     ist = IntentionState()
     ist.phase = 'locked'
     ist.locked_comp = '列车同行'   # COMP_LIBRARY v2 套名(姬子列车家族)
@@ -354,7 +354,7 @@ def test_carry_gate_seed_deadlock_exemption() -> None:
     姬子·启行 r4 买 r6 卖 r7 再买,engine_seed_not_resold 0 容忍与
     设计豁免矛盾);有非种子直接可卖件时走直接通道不降保护集。"""
     # 场景 1:全 bench 为种子(保护件,2 轮窗内 cnt=1)→ 不腾(carry 让位)
-    from sr_od.application.currency_war.cw_system_cards import (
+    from sr_od.application.currency_war.kernel.cw_system_cards import (
         engine_char_names,
     )
     _names = (['花火', '花火', '三月七', '三月七', '瓦尔特', '瓦尔特']
@@ -532,7 +532,7 @@ def test_remedy_gold_sell_emission_slot_stability() -> None:
     """补偿卖件发射槽位稳定(ADR-0316;旧 liquidity 降序 hack 收编后
     语义):卖 [槽1, 槽4] → 恰这两槽 None,其余槽逐槽不变;买入落首
     个空槽;占用数守恒。"""
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         bench_occupied,
         simulate,
     )
@@ -587,7 +587,7 @@ def test_on_match_start_clears_cross_match_keys() -> None:
     assert sess.v3_intention.phase == 'locked'
     assert sess.v3_intention_key == (2, 1)
     # 行为面 2:新局首结算的掉血不入窗(prev_hp 从本局首结算起算)
-    from sr_od.application.currency_war.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
     sess2 = _sess()
     strat.on_match_start(_state(), sess2, None)
     obs = RoundOutcome(round_num=1, plane=1, node_type='普通战斗',
@@ -719,7 +719,7 @@ def test_cross_source_mixed_actions_slot_stability() -> None:
     ② 未卖槽内容逐槽不变(含紧缩模型下会被误删的对照槽);
     ③ 买入落首个空槽(= 最早被卖空的槽);占用数守恒。
     """
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         SellBench,
         bench_occupied,
         simulate,
@@ -788,7 +788,7 @@ def test_cross_source_index_drift_guard_arbiter_aligned() -> None:
     """arbiter index_drift 守卫(ADR-0316 对齐):working 态槽位被前序
     动作清空(置 None)时,后续候选同 idx 判定为 drift 拒绝——槽位
     语义下索引恒稳,守卫保「目标名与现槽名不一致仍拒」语义。"""
-    from sr_od.application.currency_war.cw_state import SellBench
+    from sr_od.application.currency_war.kernel.cw_state import SellBench
     from sr_od.application.currency_war.decision_v2.arbiter import (
         arbitrate,
     )

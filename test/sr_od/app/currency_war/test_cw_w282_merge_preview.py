@@ -19,7 +19,7 @@ from sr_od.application.currency_war.cw_identity_obs import (
     read_merge_preview,
 )
 from sr_od.application.currency_war.cw_observation import read_shop_cards
-from sr_od.application.currency_war.cw_state import ShopCard
+from sr_od.application.currency_war.kernel.cw_state import ShopCard
 
 if TYPE_CHECKING:
     from test.conftest import SrTestContext

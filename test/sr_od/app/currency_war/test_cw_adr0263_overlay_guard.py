@@ -41,7 +41,7 @@ class _FakeCtx:
 @pytest.fixture
 def anchor_env(monkeypatch):
     """mock cw_obs_core 的 area/OCR 依赖:锚 area 恒有 rect,OCR 返回锚文本。"""
-    from sr_od.application.currency_war import cw_obs_core
+    from sr_od.application.currency_war.kernel import cw_obs_core
 
     class _Item:
         data = '金币说明'
@@ -82,7 +82,7 @@ def test_gold_anchor_area_missing(anchor_env, monkeypatch) -> None:
 def test_overlay_registry_retired() -> None:
     """ADR-0263 Revision:_KNOWN_OVERLAYS / prep_areas_unobstructed 退役删除,
     全仓(src)无引用残留。"""
-    from sr_od.application.currency_war import cw_obs_core
+    from sr_od.application.currency_war.kernel import cw_obs_core
     assert not hasattr(cw_obs_core, 'prep_areas_unobstructed')
     assert not hasattr(cw_obs_core, '_KNOWN_OVERLAYS')
 
@@ -114,12 +114,8 @@ class _HookCtx(_FakeCtx):
 @pytest.fixture
 def hook_env(monkeypatch, tmp_path):
     """mock 掉 CV/OCR 依赖,只留 summon 钩子判定链(chdir tmp 防真实 .debug 落盘)。"""
-    from sr_od.application.currency_war import (
-        cw_identity_obs,
-        cw_obs_core,
-        cw_observe,
-        currency_war_cv,
-    )
+    from sr_od.application.currency_war import cw_identity_obs, currency_war_cv
+    from sr_od.application.currency_war.kernel import cw_obs_core, cw_observe
     monkeypatch.chdir(tmp_path)
     # 生产约定:.debug/temp/currency_war/ 已存在(flag/shots 落盘处);tmp 里预建,
     # 否则 flag write_text 抛错被钩子外层 best-effort except 吞掉,测不到停机分支

@@ -13,14 +13,14 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.cw_comps import ScoreContext, get_comp
-from sr_od.application.currency_war.cw_performance import (
+from sr_od.application.currency_war.kernel.cw_comps import ScoreContext, get_comp
+from sr_od.application.currency_war.kernel.cw_performance import (
     PerformanceTracker,
     RoundOutcome,
     comp_viability,
     is_run_dead,
 )
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 
 def _out(round_num: int, hp: int, node: str = "普通战斗", comp: str = "c1",
@@ -169,8 +169,8 @@ def test_comp_viability_observation_blends() -> None:
 
 def test_star_achievement_scales_with_core_star() -> None:
     """star_achievement:核心角色 star 升 → 达成度高(1星=0 / 2星=0.5 / 3星=1.0;review HIGH-1)。"""
-    from sr_od.application.currency_war.cw_performance import star_achievement
-    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_performance import star_achievement
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
     飞霄 = get_comp("追击飞霄")
     core = 飞霄.core_chars[0]
     s1 = GameState(bench=[BenchChar(slot=0, char_id=core, faction='追击', star=1)])

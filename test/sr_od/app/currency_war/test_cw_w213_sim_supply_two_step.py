@@ -20,7 +20,7 @@ simulate_p1(fallback 池)→ 断言
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war import cw_events
+from sr_od.application.currency_war.kernel import cw_events
 from sr_od.application.currency_war.cw_sim import simulate_p1
 
 

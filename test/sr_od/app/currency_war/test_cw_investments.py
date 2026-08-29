@@ -4,8 +4,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_comps import ENV_FACTION_MAP
-from sr_od.application.currency_war.cw_investments import (
+from sr_od.application.currency_war.kernel.cw_comps import ENV_FACTION_MAP
+from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
     InvestmentEnv,
@@ -139,7 +139,7 @@ def test_adr0150_overlay_no_orphans() -> None:
     构建层 import 即 raise 孤儿;此处显式断言防回归(版本更新后重跑生成器,
     overlay 键未跟改名 → 本测试红,提示修 overlay)。
     """
-    from sr_od.application.currency_war.cw_investments import (
+    from sr_od.application.currency_war.kernel.cw_investments import (
         ENV_CATEGORY,
         ENV_FACTION,
         ENV_PICK_VALUE,
@@ -202,7 +202,7 @@ def test_w144_get_strategy_bullet_variant_hits() -> None:
 
     修前:精确查 miss → handle_invest_strategy L216 假告警「数据缺口」。
     """
-    from sr_od.application.currency_war.cw_investments import get_strategy, normalize_invest_name
+    from sr_od.application.currency_war.kernel.cw_investments import get_strategy, normalize_invest_name
     s = get_strategy('全都要•彩')
     assert s is not None, 'bullet 形变名应命中注册表(归一后精确查)'
     assert s.name == '全都要·彩'          # 返回的是注册表规范形条目
@@ -212,7 +212,7 @@ def test_w144_get_strategy_bullet_variant_hits() -> None:
     assert normalize_invest_name('飞光‧传剑') == '飞光·传剑'   # U+2027 同族
     assert normalize_invest_name('开源节流') == '开源节流'
     # 环境名同口径(银·金·彩 是注册表唯一含 · 的环境名)
-    from sr_od.application.currency_war.cw_investments import get_env
+    from sr_od.application.currency_war.kernel.cw_investments import get_env
     assert get_env('银•金•彩') is not None
 
 
@@ -224,7 +224,7 @@ def test_w144_economy_aggregate_bullet_name_not_dropped() -> None:
     锚卡:采购专员·彩(含 · 名 + STRATEGY_ECONOMY 有 economy:refresh_surprise_every=5)。
     对照:规范名与 bullet 形变名聚合结果逐字段相等;真未知名仍全 0(归一不虚增)。
     """
-    from sr_od.application.currency_war.cw_investments import EconomyEffect, aggregate_economy, economy_effect_of
+    from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect, aggregate_economy, economy_effect_of
     eff_canon = economy_effect_of('采购专员·彩')
     eff_bullet = economy_effect_of('采购专员•彩')
     assert eff_canon.refresh_surprise_every == 5
@@ -244,7 +244,7 @@ def test_w144_raw_name_not_polluted_by_lookup() -> None:
     注册表与写入端」:get_strategy 归一仅作用于查询入参,INVESTMENT_STRATEGIES 键集
     不含任何 bullet 形变(注册表数据层未被规范化污染)。
     """
-    from sr_od.application.currency_war.cw_investments import INVESTMENT_ENVS, get_strategy
+    from sr_od.application.currency_war.kernel.cw_investments import INVESTMENT_ENVS, get_strategy
     # 查询 bullet 名后,注册表键集不变(无 bullet 键被写入/替换)
     _ = get_strategy('全都要•彩')
     bad = [n for n in INVESTMENT_STRATEGIES if any(c in n for c in '•‧∙・')]
@@ -255,33 +255,33 @@ def test_w144_raw_name_not_polluted_by_lookup() -> None:
 
 def test_w144_augment_affinity_normalized_lookup() -> None:
     """④dict 直查消费点走规范化入口:AUGMENT_COMP_AFFINITY(飞光·传剑 等含 · 键)bullet 形变不再 miss。"""
-    from sr_od.application.currency_war.cw_comps import augment_affinity, augment_env_affinity
+    from sr_od.application.currency_war.kernel.cw_comps import augment_affinity, augment_env_affinity
     assert augment_affinity('飞光•传剑') == {'景元仙舟': 1.0}
     assert augment_affinity('黑塔纪元') == {'大黑塔银河学者': 1.0}   # 无分隔符名不受影响
     assert augment_affinity('不存在策略') == {}
     # 环境侧同口径(ENV_COMP_AFFINITY 现键无 ·,锁守卫:未来加含 · 键时同样被归一救)
     assert augment_env_affinity('不存在环境') == {}
-    from sr_od.application.currency_war.cw_comps import ENV_COMP_AFFINITY
+    from sr_od.application.currency_war.kernel.cw_comps import ENV_COMP_AFFINITY
     assert augment_env_affinity('仙舟概念股') == ENV_COMP_AFFINITY['仙舟概念股']
 def test_adr0151_bindings_table_valid() -> None:
     """语义绑定表:键 ⊆ 注册表;值 ⊆ FACTIONS/CHARACTERS(构建层孤儿 raise + 此处显式断言)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.data.cw_factions import FACTIONS
-    from sr_od.application.currency_war.cw_investments import STRATEGY_BINDINGS
+    from sr_od.application.currency_war.kernel.cw_investments import STRATEGY_BINDINGS
 
     assert set(STRATEGY_BINDINGS) <= set(INVESTMENT_STRATEGIES)
     for name, (fs, cs) in STRATEGY_BINDINGS.items():
         assert fs <= set(FACTIONS), f"{name} 阵营值不在 FACTIONS:{sorted(fs - set(FACTIONS))}"
         assert cs <= set(CHARACTERS), f"{name} 角色值不在 CHARACTERS:{sorted(cs - set(CHARACTERS))}"
     # 未建模卡 → 空绑定(新 API 卡待 diff 提示后建模,不炸)
-    from sr_od.application.currency_war.cw_investments import get_strategy, strategy_bindings
+    from sr_od.application.currency_war.kernel.cw_investments import get_strategy, strategy_bindings
     fs, cs = strategy_bindings(get_strategy("开源节流"))
     assert fs == frozenset() and cs == frozenset()
 
 
 def test_adr0151_noise_bindings_removed() -> None:
     """文本扫描噪声清除(泛用效果顺带提及阵营 ≠ 绑定):战术义眼/祝福系不再误绑。"""
-    from sr_od.application.currency_war.cw_investments import get_strategy, strategy_bindings
+    from sr_od.application.currency_war.kernel.cw_investments import get_strategy, strategy_bindings
 
     for name in ("战术义眼", "战术义眼+", "战术义眼++", "生命之花祝福",
                  "幸运星祝福", "折叠小刀祝福", "和平手枪祝福", "量产型装甲祝福"):
@@ -291,7 +291,7 @@ def test_adr0151_noise_bindings_removed() -> None:
 
 def test_adr0151_semantic_bindings_present() -> None:
     """语义绑定抽查:套组/机制强化/赠角色 三类 + 契约环境阵营。"""
-    from sr_od.application.currency_war.cw_investments import (
+    from sr_od.application.currency_war.kernel.cw_investments import (
         STRATEGY_BINDINGS,
         env_faction,
         get_strategy,
@@ -320,6 +320,6 @@ def test_adr0151_semantic_bindings_present() -> None:
 def test_megastar_set_binding_derived_from_single() -> None:
     """套组绑定由单件条目 + 名字规则派生(共享同一元组对象):
     改单件即改套组;套组条目禁再手写(重建即漂移双源)。"""
-    from sr_od.application.currency_war.cw_investments import STRATEGY_BINDINGS
+    from sr_od.application.currency_war.kernel.cw_investments import STRATEGY_BINDINGS
     assert STRATEGY_BINDINGS["追击星徽套组"] is STRATEGY_BINDINGS["追击星徽"]
     assert STRATEGY_BINDINGS["追击星徽套组(二)"] is STRATEGY_BINDINGS["追击星徽"]

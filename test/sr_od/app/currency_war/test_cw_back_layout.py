@@ -205,7 +205,7 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
@@ -269,7 +269,7 @@ def test_reconcile_channels_agree(tmp_path, monkeypatch, frame):
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
@@ -294,7 +294,7 @@ def test_reconcile_channels_disagree_cv_wins(tmp_path, monkeypatch, frame):
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
@@ -337,7 +337,7 @@ def test_read_deployed_chars_formula_driven(
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
@@ -358,12 +358,12 @@ def test_read_deployed_chars_formula_driven(
 def test_system_unit_layout_check_ok(tmp_path, monkeypatch, frame, templates):
     """对档(8 格档,狸猫在位7/8)→ 无 layout_mismatch 留证。"""
     import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cio, '_sysunit_conflict_ts', {})
-    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
     chars = [BenchChar(slot=7, char_id='狸小虎'), BenchChar(slot=8, char_id='狸小龙')]
     cio.check_system_unit_layout(frame, chars, _slots8(), templates, source='test')
     assert not journal.exists() or 'layout_mismatch_by_system_unit' not in journal.read_text(encoding='utf-8')
@@ -372,12 +372,12 @@ def test_system_unit_layout_check_ok(tmp_path, monkeypatch, frame, templates):
 def test_system_unit_layout_check_mismatch(tmp_path, monkeypatch, frame, templates):
     """错档(狸猫实测 x≈1316/1458 vs 所选档右格 1174)→ layout_mismatch_by_system_unit 留证。"""
     import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cio, '_sysunit_conflict_ts', {})
-    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
     # 模拟「6 格截短档」(右格 1174):狸猫实测 1316/1458 与右格差 ≥142px > 40 → 冲突
     slots6 = [(i, Rect(x - 71, 600, x + 71, 739)) for i, x in enumerate(_C8[:6], 1)]
     chars = [BenchChar(slot=6, char_id='狸小虎'), BenchChar(slot=7, char_id='狸小龙')]
@@ -392,7 +392,7 @@ def test_system_unit_layout_check_mismatch(tmp_path, monkeypatch, frame, templat
 
 def test_deploy_excludes_system_units():
     """ADR-0281 件4:重排候选剔除系统单位(cost==0 不可拖);普通角色/未知保留。"""
-    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
     from sr_od.application.currency_war.operations.prep.deploy_bench import (
         exclude_system_units,
     )
@@ -422,9 +422,9 @@ def test_layout_hook_no_stop_only_evidence(
     import json as _json
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_obs_core as core
+    import sr_od.application.currency_war.kernel.cw_obs_core as core
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     ctx = test_context
 
     class _FakeRunCtx:
@@ -469,7 +469,7 @@ def test_layout_hook_silent_on_archived(
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     ctx = test_context
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
@@ -535,7 +535,7 @@ def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     # 6 格真帧(shop_closed)×2 作重读帧
     frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
     fctx = _FakeCtx([frame6, frame6])
@@ -568,7 +568,7 @@ def test_cv_stable_new_grid_confirmed(tmp_path, monkeypatch, frame):
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     fctx = _FakeCtx([frame, frame])   # 重读帧同 frame(stub 全 9)
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
@@ -590,7 +590,7 @@ def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
     import sr_od.application.currency_war.cw_back_layout as cbl
     import sr_od.application.currency_war.cw_identity_obs as cio
     import sr_od.application.currency_war.cw_observation as cwo
-    import sr_od.application.currency_war.cw_observe as cobs
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
     frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
     fctx = _FakeCtx([frame, frame6])   # 重读 1=frame(9),重读 2=frame6(6)
     journal = tmp_path / 'obs.jsonl'
@@ -746,7 +746,7 @@ def test_pepe_roster_and_template(templates):
     from sr_od.application.currency_war.data.cw_chars import get_char
     ch = get_char('佩佩')
     assert ch is not None and ch.cost == 0
-    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
     from sr_od.application.currency_war.operations.prep.deploy_bench import (
         exclude_system_units,
     )

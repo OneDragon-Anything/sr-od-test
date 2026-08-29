@@ -110,7 +110,7 @@ def _hook_env(tmp_path, monkeypatch):
     monkeypatch.setattr(cw_settlement_obs, '_GOLD_DETAIL_JOURNAL',
                         tmp_path / 'gold_detail.jsonl')
     monkeypatch.setattr(cw_settlement_obs, '_gold_last_row_key', None)
-    import sr_od.application.currency_war.cw_observe as obs_mod
+    import sr_od.application.currency_war.kernel.cw_observe as obs_mod
     monkeypatch.setattr(obs_mod, 'cw_shot_unique',
                         lambda image, label: f'{label}__dead.png')
     import sr_od.application.currency_war.cw_telemetry as tel

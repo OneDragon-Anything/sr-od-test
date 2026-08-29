@@ -11,8 +11,8 @@ identity 锁——filters.is_emergency 与 cw_economy.is_emergency 同一谓词�
 """
 import inspect
 
-from sr_od.application.currency_war import cw_economy
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel import cw_economy
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 

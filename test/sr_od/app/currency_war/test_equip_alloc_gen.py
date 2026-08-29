@@ -19,13 +19,13 @@ import pytest
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.cw_comps import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     COMMIT_FRAC,
     EQUIP_CAPACITY,
     Comp,
     equip_allocation,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def _mk_comp(cores, keys=None, carry=None):

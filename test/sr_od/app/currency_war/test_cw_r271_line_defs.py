@@ -2,7 +2,7 @@
 """r271 配方/引擎阵营单一源测试(统一审查批次一)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_line_defs import (
+from sr_od.application.currency_war.kernel.cw_line_defs import (
     ENGINE_FACTIONS,
     RECIPE_BASE,
     RECIPE_FACTIONS,

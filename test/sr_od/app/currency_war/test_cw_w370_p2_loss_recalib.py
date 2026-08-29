@@ -22,7 +22,7 @@ import dataclasses
 
 import pytest
 
-from sr_od.application.currency_war import cw_plane_table
+from sr_od.application.currency_war.kernel import cw_plane_table
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
@@ -66,7 +66,7 @@ def test_threshold_shares_calibration_with_pwin(monkeypatch) -> None:
     档同用 registry.p2_cond_loss_table——注入自定义条件档,阈值层 μ
     与 (1−p)·注入值闭环位移(改动标定面两处同步,防回植本地乘数)。"""
     from sr_od.application.currency_war.kernel import cw_registry as reg_mod
-    from sr_od.application.currency_war.cw_first_passage import _loss_dist
+    from sr_od.application.currency_war.kernel.cw_first_passage import _loss_dist
     reg = dataclasses.replace(
         reg_mod.DEFAULT_REGISTRY, p2_cond_loss_table={
             'normal': 5.0, 'encounter': 5.0, 'boss': 5.0, 'reward': 0.0})

@@ -14,13 +14,13 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     HoardTarget,
     IntentionState,
     _pair_members,
     locked_buy_scope,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     GameState,

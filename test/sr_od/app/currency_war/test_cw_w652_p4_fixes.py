@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from sr_od.application.currency_war import cw_sim
 from sr_od.application.currency_war import cw_sim_checks as chk
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,

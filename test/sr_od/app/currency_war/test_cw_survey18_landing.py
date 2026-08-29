@@ -5,12 +5,12 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_difficulty_account import DifficultyAccount  # noqa: E402
-from sr_od.application.currency_war.cw_effect_ledger import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_difficulty_account import DifficultyAccount  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_effect_ledger import (  # noqa: E402
     build_ledger,
     effects_from_strategies,
 )
-from sr_od.application.currency_war.cw_investments import get_strategy  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_investments import get_strategy  # noqa: E402
 
 
 def test_correction_great_conquest() -> None:

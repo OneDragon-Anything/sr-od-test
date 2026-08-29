@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     GameState,
@@ -66,7 +66,7 @@ def _deployed(name: str, faction: str, star: int = 1,
 
 
 def _sess() -> StrategySession:
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )
@@ -242,8 +242,8 @@ def test_gap_window_scope() -> None:
     assert handoff_gate_gap(_state(plane=2), sess, _REG) == 0
     # 达标帧(W227 锁同式 DOT 队成型帧,hp 高带):gap=0 → C 授权随之关
     # (授权强度单一源随 gap 走,gap=0 即零行为)
-    from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_intention import (
         IntentionState,
         intention_core,
     )

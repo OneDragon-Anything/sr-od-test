@@ -13,14 +13,14 @@ import math
 
 import pytest
 
-from sr_od.application.currency_war.cw_line_switch import (
+from sr_od.application.currency_war.kernel.cw_line_switch import (
     node_loss_kind,
     register_gate_block,
     rounds_alive,
     should_switch_e,
     survival_gate,
 )
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,

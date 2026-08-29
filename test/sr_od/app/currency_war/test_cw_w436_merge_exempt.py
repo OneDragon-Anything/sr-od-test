@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     GameState,
     ShopCard,
@@ -44,7 +44,7 @@ _FAC = '贝洛伯格'
 
 
 def _sess() -> StrategySession:
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )

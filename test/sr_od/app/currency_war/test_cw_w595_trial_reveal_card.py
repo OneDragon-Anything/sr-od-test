@@ -112,12 +112,8 @@ class _HookCtx:
 def test_summon_hook_skips_trial_reveal_card(monkeypatch, tmp_path) -> None:
     """发光卡形态:slot 占用 + SIFT 不识别,但 find_trial_reveal_cards 命中
     → 归已知物品,不停机不采证(免费增益不再触发停机)。"""
-    from sr_od.application.currency_war import (
-        currency_war_cv,
-        cw_identity_obs,
-        cw_obs_core,
-        cw_observe,
-    )
+    from sr_od.application.currency_war import currency_war_cv, cw_identity_obs
+    from sr_od.application.currency_war.kernel import cw_obs_core, cw_observe
     monkeypatch.chdir(tmp_path)
     (tmp_path / '.debug/temp/currency_war').mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(cw_identity_obs, 'identify_slots', lambda *a, **k: [])

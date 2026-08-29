@@ -28,7 +28,7 @@ from sr_od.application.currency_war.cw_observation import (
     node_vote_verdict,
     resolve_node_type_with_ledger,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     fill_boss_by_position,
     get_node_ledger,
     ledger_node_type,

@@ -29,14 +29,14 @@ from __future__ import annotations
 import dataclasses
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_evolution import (
+from sr_od.application.currency_war.kernel.cw_evolution import (
     EvolutionState,
     _locked_protected_names,
     evolution_step,
 )
-from sr_od.application.currency_war.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.cw_sim import _board_factions_of
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     CompTransaction,
     GameState,

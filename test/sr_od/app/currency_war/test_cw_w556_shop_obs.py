@@ -163,9 +163,9 @@ def test_shop_fixture_end_to_end(test_context) -> None:
     Lv10 五档概率全非零 → tier 查必过;池查不做(pool_state None,现状无账)。
     本测试锁「识别输出能过一致性票」的生产形态,不锁具体牌名(牌名归 SIFT 锁)。
     """
-    from sr_od.application.currency_war.cw_obs_core import SHOP_SCREEN_NAME
+    from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
     from sr_od.application.currency_war.cw_observation import read_shop_cards
-    from sr_od.application.currency_war.cw_state import card_cost
+    from sr_od.application.currency_war.kernel.cw_state import card_cost
 
     state = 'shop_open_preview_star'
     if not test_context.has_screen(SHOP_SCREEN_NAME, state):

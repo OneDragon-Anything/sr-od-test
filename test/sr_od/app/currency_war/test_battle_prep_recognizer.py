@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.recognizers.battle_prep_recognizer as mod
-from sr_od.application.currency_war.cw_obs_core import SCREEN_NAME
+from sr_od.application.currency_war.kernel.cw_obs_core import SCREEN_NAME
 from sr_od.application.currency_war.recognizers.battle_prep_recognizer import (
     BattlePrepRecognizer,
 )

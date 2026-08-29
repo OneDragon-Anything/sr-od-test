@@ -25,7 +25,7 @@ def rec(tmp_path: Path, monkeypatch):
 
 def _record(rec, plane: int, round_num: int, extra: dict,
             hp: int = 100, hp_readable: bool = True, hp_trusted: bool = True) -> None:
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
     st = GameState()
     st.plane, st.round_num, st.gold = plane, round_num, 50
     st.hp = hp

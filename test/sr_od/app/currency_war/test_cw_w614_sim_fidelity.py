@@ -20,8 +20,8 @@ from dataclasses import replace as _dc_replace
 import pytest
 
 from sr_od.application.currency_war import cw_sim as cw_sim_mod
-from sr_od.application.currency_war.cw_effect_inventory import EffectSpec
-from sr_od.application.currency_war.cw_investments import (
+from sr_od.application.currency_war.kernel.cw_effect_inventory import EffectSpec
+from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
     EconomyEffect,
 )

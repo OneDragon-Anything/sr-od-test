@@ -21,14 +21,14 @@ from __future__ import annotations
 
 import dataclasses
 
-from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_plane_table import NODES_PER_PLANE
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_plane_table import NODES_PER_PLANE
 from sr_od.application.currency_war.decision_v2.posture import Posture
-from sr_od.application.currency_war.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.data.cw_shop_odds import (
     expected_refreshes_for_card,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2 import ev as ev_mod
 from sr_od.application.currency_war.decision_v2.ev import (
@@ -125,7 +125,7 @@ def test_p2_window_dp_fallback_level_plan(monkeypatch) -> None:
     """(批 3 退役)原「DP 查询异常(None)→ 保守回退 level_plan 门」:
     确定性预算核在任意帧恒有定义,None 形状消灭(W623 D0 供给权交接);
     保守回退语义由『预算 0 → 让位』承接(上一锁对照臂)。"""
-    from sr_od.application.currency_war.cw_economy import (
+    from sr_od.application.currency_war.kernel.cw_economy import (
         refresh_ev_budget,
     )
     from sr_od.application.currency_war.decision_v2.scoring import (
@@ -135,7 +135,7 @@ def test_p2_window_dp_fallback_level_plan(monkeypatch) -> None:
     s = _locked_sess('DOT队')
     # DOT队 lv6 level_plan 说 level_up:预算 0(合法 0 帧注入,消费门
     # 判据直测)下仍让位
-    import sr_od.application.currency_war.cw_economy as ec
+    import sr_od.application.currency_war.kernel.cw_economy as ec
     monkeypatch.setattr(ec, 'refresh_ev_budget', lambda *a, **k: 0)
     assert _impl(st, s, _REG) is None, \
         '预算 0(合法 0 帧)必须走 level_plan 门(DOT队 lv6=level_up→拒)'

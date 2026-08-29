@@ -12,7 +12,7 @@ reader_source;复现分级语义由 judge_severity 既有锁覆盖,不重复断�
 from pathlib import Path
 
 from sr_od.application.currency_war import cw_telemetry
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.prep_actions import DeployMove, SellBench
 from sr_od.application.currency_war.prep_director import (
     compare_drag_expect,

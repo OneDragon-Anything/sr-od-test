@@ -13,7 +13,7 @@ from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import prep_actions as pa_mod
 from sr_od.application.currency_war import prep_director as pd_mod
 from sr_od.application.currency_war.cw_evaluate import _card_hits_target
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.prep_actions import (
     ClickSpheres,
@@ -744,7 +744,7 @@ def test_offtarget_sell_protects_core_enablers() -> None:
     """
     # 纯逻辑:_is_tgt_char 语义在 deploy_bench 闭包内 —— 用 _card_hits_target
     # 同语义对照(它已含 core 命中):花火 ∈ core_chars → True(即便阵营不交集)。
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
 
     comp = get_comp('列车同行')
     assert comp is not None and '花火' in comp.core_chars

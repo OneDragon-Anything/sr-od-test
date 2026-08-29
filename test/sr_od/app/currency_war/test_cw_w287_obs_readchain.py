@@ -23,7 +23,7 @@ from sr_od.application.currency_war.cw_observation import (
     _board_pairs,
     read_deployed_count,
 )
-from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
+from sr_od.application.currency_war.kernel.cw_state import rebuild_deployed_from_board
 
 _IMG_DIR = Path(__file__).parent
 

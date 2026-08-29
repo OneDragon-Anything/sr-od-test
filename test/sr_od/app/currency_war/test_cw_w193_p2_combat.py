@@ -25,7 +25,7 @@ from sr_od.application.currency_war.cw_sim_checks import (
     check_p2_loss_band_anchor,
     check_p2_win_rate_band,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
 

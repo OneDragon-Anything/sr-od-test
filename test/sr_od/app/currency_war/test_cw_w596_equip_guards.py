@@ -18,12 +18,12 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war import cw_telemetry
-from sr_od.application.currency_war.cw_comps import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     Comp,
     equip_alloc_empty_reason,
     equip_allocation,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.data.cw_synthesis import synthesize_target
 from sr_od.application.currency_war.operations.prep.equip_all import EquipAll
 

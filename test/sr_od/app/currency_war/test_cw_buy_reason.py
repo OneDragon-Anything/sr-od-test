@@ -7,8 +7,8 @@ board_focus/emergency/swap/plan),不预设三分法。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_line_defs import classify_buy
-from sr_od.application.currency_war.cw_state import BenchChar, BuyCard, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_line_defs import classify_buy
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, BuyCard, GameState, ShopCard
 
 
 def _st(board: dict[str, int] | None = None, bench: list[BenchChar] | None = None) -> GameState:

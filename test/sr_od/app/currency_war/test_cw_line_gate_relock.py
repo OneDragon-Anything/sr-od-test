@@ -21,18 +21,18 @@ from __future__ import annotations
 import dataclasses
 import math
 
-from sr_od.application.currency_war.cw_comps import Comp
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_comps import Comp
+from sr_od.application.currency_war.kernel.cw_intention import (
     CORE_MISS_N,
     IntentionState,
     update_intention,
 )
-from sr_od.application.currency_war.cw_line_switch import (
+from sr_od.application.currency_war.kernel.cw_line_switch import (
     gate_counterfactual,
     p_bar_faction,
     survival_gate,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
 )
@@ -67,7 +67,7 @@ def _state(plane: int = 2, **kw) -> GameState:
     s.active_env = kw.get('env', '')
     for name in kw.get('shop', []):
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.cw_state import ShopCard
+        from sr_od.application.currency_war.kernel.cw_state import ShopCard
         ch = CHARACTERS.get(name)
         s.shop.append(ShopCard(x=len(s.shop), name=name,
                                faction=ch.factions[0] if ch and ch.factions
@@ -92,7 +92,7 @@ def _sess(plane: int = 2) -> StrategySession:
 def _weak_on_xianzhou(registry=None) -> tuple[IntentionState, StrategySession]:
     """走真实状态机抵达 weak(锁希儿量子 → 核心断供证据撤销;同 W379)。
     撤销出口①同时暂存 prev_lock_layer=3(v3 R-C)。"""
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         core_miss_n_required,
     )
     reg = registry or DEFAULT_REGISTRY
@@ -150,7 +150,7 @@ def test_line_gate_v3_latch_trajectory_no_cycle() -> None:
 def test_line_gate_v3_infinite_original_line_weak_terminal() -> None:
     """对照帧①(DESIGN §6-6):原线 E=inf → 闩仍置位但状态停 weak
     (静态不可达原线的跨线骨架囤货/demoted/P3 兜底是合法终态,§3-4)。"""
-    import sr_od.application.currency_war.cw_intention as ci
+    import sr_od.application.currency_war.kernel.cw_intention as ci
     ist, sess = _weak_on_xianzhou(_REG_GATE)
     orig = ci.e_rounds
 
@@ -174,7 +174,7 @@ def test_line_gate_v3_inf_candidate_never_locks() -> None:
     """对照帧②(DESIGN §6-2⑤/R-E):E=inf 候选线信号帧 → 不落锁——
     survival_gate 对 inf 改拦 'alt_inf'(拦截归属唯一化;v2 的「上游
     已拦」假前提已勘误),闩置位帧回锁的是原线,候选线 B 全程不落锁。"""
-    import sr_od.application.currency_war.cw_intention as ci
+    import sr_od.application.currency_war.kernel.cw_intention as ci
     ist, sess = _weak_on_xianzhou(_REG_GATE)
     orig = ci.e_rounds
 
@@ -308,7 +308,7 @@ def _tabled_sess() -> StrategySession:
 
 
 def e_rounds_of(comp: Comp, state: GameState, reg) -> float:
-    from sr_od.application.currency_war.cw_line_switch import e_rounds
+    from sr_od.application.currency_war.kernel.cw_line_switch import e_rounds
     return e_rounds(comp, state, reg)
 
 

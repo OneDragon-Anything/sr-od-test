@@ -33,7 +33,7 @@ class _FullBenchStub:
 
     def decide_prep(self, st, sess, cfg):  # noqa: ANN001
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_state import (
             BenchChar,
             BuyCard,
             ShopCard,
@@ -99,7 +99,7 @@ def test_sim_fullbench_merge_buy_executes_k2() -> None:
     trig = [row for row in res.ledger
             if any(a.get('count') == 2 for a in (row.get('actions') or []))]
     assert trig and (trig[0].get('sim') or {}).get('merges', 0) >= 1
-    from sr_od.application.currency_war.cw_state import BENCH_CAPACITY
+    from sr_od.application.currency_war.kernel.cw_state import BENCH_CAPACITY
     for row in res.ledger:
         bench_n = len((row.get('state') or {}).get('bench') or [])
         assert bench_n <= BENCH_CAPACITY, '满栏合成买后 bench 超容'

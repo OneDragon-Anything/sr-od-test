@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, 'src')
 
 from sr_od.application.currency_war import cw_telemetry as t
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 
 def test_record_decision_accepts_extra():

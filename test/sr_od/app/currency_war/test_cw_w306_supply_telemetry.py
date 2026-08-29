@@ -16,8 +16,8 @@ import time
 from types import SimpleNamespace
 
 from sr_od.application.currency_war import cw_telemetry
-from sr_od.application.currency_war.cw_performance import RoundOutcome
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_telemetry import (
     TelemetryRecorder,
     consume_last_supply_pick,

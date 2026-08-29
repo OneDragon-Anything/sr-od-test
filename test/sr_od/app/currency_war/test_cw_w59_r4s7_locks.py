@@ -11,7 +11,7 @@ import inspect
 import time
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_bench_equips import (
+from sr_od.application.currency_war.kernel.cw_bench_equips import (
     EQUIPS_CONSISTENCY_ERRORS,
     EquipsInconsistencyError,
 )
@@ -132,7 +132,7 @@ def test_deploy_bench_consumes_tuple() -> None:
 def _bench_char(name: str):
     """注册表真值构造 BenchChar(同 test_cw_evolution 构造法)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
     c = CHARACTERS[name]
     return BenchChar(slot=0, char_id=name,
                      faction=(c.factions or ['?'])[0],
@@ -141,7 +141,7 @@ def _bench_char(name: str):
 
 def _fill_state(gold: int, shop_names_cost: list[tuple[str, int]]):
     """构造 gap>0 的填位场景:仙舟三人已上场(level 8)、bench 空、店给插件卡。"""
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         GameState,
         ShopCard,
         _recount_board,
@@ -161,8 +161,8 @@ def _fill_state(gold: int, shop_names_cost: list[tuple[str, int]]):
 def test_fill_skip_gold_logged_behavior_unchanged(monkeypatch) -> None:
     """金不足跳过店内插件件 → [cw][d2][fill-skip] 金不足行 + 源不足汇总行;
     填位行为不变(fills 仍为空,与无 log 时一致)。"""
-    from sr_od.application.currency_war import cw_evolution
-    from sr_od.application.currency_war.cw_state import CompTransaction
+    from sr_od.application.currency_war.kernel import cw_evolution
+    from sr_od.application.currency_war.kernel.cw_state import CompTransaction
 
     captured: list[tuple[str, object]] = []
 
@@ -184,8 +184,8 @@ def test_fill_skip_gold_logged_behavior_unchanged(monkeypatch) -> None:
 
 def test_fill_no_log_when_fully_filled(monkeypatch) -> None:
     """缺口填满(反向锁):无 fill-skip 噪声行。"""
-    from sr_od.application.currency_war import cw_evolution
-    from sr_od.application.currency_war.cw_state import CompTransaction
+    from sr_od.application.currency_war.kernel import cw_evolution
+    from sr_od.application.currency_war.kernel.cw_state import CompTransaction
 
     captured: list[str] = []
 
@@ -197,7 +197,7 @@ def test_fill_no_log_when_fully_filled(monkeypatch) -> None:
     monkeypatch.setattr(cw_evolution, 'log', _Log)
     # gap=1(level 1 空板)且 bench 有插件单卡可填 → 填满,零 fill-skip 行
     st = _fill_state(gold=10, shop_names_cost=[])
-    from sr_od.application.currency_war.cw_state import _recount_board
+    from sr_od.application.currency_war.kernel.cw_state import _recount_board
     st.level = 1
     st.deployed = []
     st.board = _recount_board([])
@@ -216,8 +216,8 @@ def test_fill_no_log_when_fully_filled(monkeypatch) -> None:
 def _rollback_state():
     """谷底回滚场景:last_deployed=新档上场名单(含最弱件)、bench 有旧档保留件
     (last_retained)→ SwapDeploy 支;无保留件 → SellDeployed 支。"""
-    from sr_od.application.currency_war.cw_evolution import EvolutionState
-    from sr_od.application.currency_war.cw_state import _recount_board
+    from sr_od.application.currency_war.kernel.cw_evolution import EvolutionState
+    from sr_od.application.currency_war.kernel.cw_state import _recount_board
 
     st = _fill_state(gold=10, shop_names_cost=[])   # level 8,仙舟 3 人在场
     st.board = _recount_board(st.deployed)
@@ -232,8 +232,8 @@ def _rollback_state():
 def test_rollback_swap_emits_expect_from_snapshot() -> None:
     """正向锁:SwapDeploy 支发射即带 expect_deployed/expect_bench=快照名
     (候选生成时 state 的 d_idx/b_idx 槽内名),且对生成快照执行正常通过。"""
-    from sr_od.application.currency_war import cw_evolution
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel import cw_evolution
+    from sr_od.application.currency_war.kernel.cw_state import (
         SwapDeploy,
         simulate,
     )
@@ -253,8 +253,8 @@ def test_rollback_swap_emits_expect_from_snapshot() -> None:
 
 def test_rollback_sell_emits_expect() -> None:
     """正向锁(退役支):无旧档保留件 → SellDeployed 带 expect=快照名。"""
-    from sr_od.application.currency_war import cw_evolution
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel import cw_evolution
+    from sr_od.application.currency_war.kernel.cw_state import (
         SellDeployed,
         simulate,
     )
@@ -271,8 +271,8 @@ def test_rollback_sell_emits_expect() -> None:
 def test_rollback_expect_stale_rejected() -> None:
     """反向锁:生成后 bench/deployed 变动(跨代际)→ 执行期 expect 不符 →
     stale_proposal 整动作拒(死防线激活实证;禁止从 working 取名的语义锚)。"""
-    from sr_od.application.currency_war import cw_evolution
-    from sr_od.application.currency_war.cw_state import simulate
+    from sr_od.application.currency_war.kernel import cw_evolution
+    from sr_od.application.currency_war.kernel.cw_state import simulate
 
     st, mem = _rollback_state()
     act = cw_evolution.rollback_weakest(st, mem)   # 对快照生成(expect 已锁名)
@@ -288,8 +288,8 @@ def test_rollback_expect_stale_rejected() -> None:
 
 def test_rollback_sell_expect_stale_rejected() -> None:
     """反向锁(退役支):expect 与场上槽内名不符 → stale_proposal 拒。"""
-    from sr_od.application.currency_war import cw_evolution
-    from sr_od.application.currency_war.cw_state import simulate
+    from sr_od.application.currency_war.kernel import cw_evolution
+    from sr_od.application.currency_war.kernel.cw_state import simulate
 
     st, mem = _rollback_state()
     mem.last_retained = []

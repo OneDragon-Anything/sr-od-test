@@ -18,7 +18,7 @@ from types import SimpleNamespace
 
 import sr_od.application.currency_war.cw_observation_gate as gate_mod
 import sr_od.application.currency_war.prep_director as pd_mod
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.prep_actions import StartBattle
 from sr_od.application.currency_war.prep_director import PrepDirector
 

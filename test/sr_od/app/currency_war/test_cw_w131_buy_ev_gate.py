@@ -16,7 +16,7 @@ boundary,刷新口径本批不动,不重复立锁。)
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     GameState,
@@ -116,7 +116,7 @@ def test_engine_progress_buy_passes_gate() -> None:
     from sr_od.application.currency_war.decision_v2.scoring import (
         _engine_frac_remainder,
     )
-    from sr_od.application.currency_war.cw_state import simulate
+    from sr_od.application.currency_war.kernel.cw_state import simulate
     after = simulate(st, cand.action)
     from sr_od.application.currency_war.decision_v2.scoring import (
         _deploy_pipeline,
@@ -148,7 +148,7 @@ def test_filler_buy_still_rejected() -> None:
                                     faction='仙舟罗浮', star=1)])
     s = _sess()
     cand = _cand('公司杂件', 4)
-    from sr_od.application.currency_war.cw_state import simulate
+    from sr_od.application.currency_war.kernel.cw_state import simulate
     after = simulate(st, cand.action)
     assert formation_gold_account(st, after, _REG) == 0.0, \
         '前置:非过渡体系件零组合跳变贡献'

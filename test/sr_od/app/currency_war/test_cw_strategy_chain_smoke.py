@@ -9,15 +9,9 @@ buy op retry 4 次失败 → 0 买出战。三个局的「钱变不成板」都�
 (default 栈退役批重写:v2 决策链冒烟——decide_prep 全链真调用四层
 候选→过滤→评分→仲裁;v1 plan/攒息门冒烟随本体退役。)
 """
-from sr_od.application.currency_war import (
-    cw_comps,
-    cw_economy,
-    cw_evaluate,
-    cw_plane_table,
-    cw_plan,
-    cw_telemetry,
-)
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war import cw_evaluate, cw_plan, cw_telemetry
+from sr_od.application.currency_war.kernel import cw_comps, cw_economy, cw_plane_table
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.decision_v2.strategy import (
     DecisionV2Strategy,
 )
@@ -37,7 +31,7 @@ def test_decide_prep_smoke():
     class _Cfg:
         faction_priority: list[str] = ['仙舟', '列车同行', '持续伤害']
     sess = strat.create_session(_Cfg())
-    from sr_od.application.currency_war.cw_state import ShopCard
+    from sr_od.application.currency_war.kernel.cw_state import ShopCard
     st = GameState(gold=30, hp=80, level=5, round_num=3, plane=1,
                    board={"仙舟": 2, "持续伤害": 1},
                    shop=[ShopCard(x=400, faction="仙舟", name="爻光", cost=1)])

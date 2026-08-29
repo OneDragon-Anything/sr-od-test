@@ -16,7 +16,7 @@ from __future__ import annotations
 from sr_od.application.currency_war.data.cw_equipment_data import (
     EQUIPMENT_ROSTER,
 )
-from sr_od.application.currency_war.cw_events import (
+from sr_od.application.currency_war.kernel.cw_events import (
     _EQUIP_VALUE,
     SupplyOption,
     _equip_value,
@@ -25,7 +25,7 @@ from sr_od.application.currency_war.cw_events import (
 from sr_od.application.currency_war.cw_sim_checks import (
     check_equip_value_table_roster_coherence,
 )
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 # ---- 方向1:价值表键 ⊆ 注册表名(死名清零) --------------------------------
 

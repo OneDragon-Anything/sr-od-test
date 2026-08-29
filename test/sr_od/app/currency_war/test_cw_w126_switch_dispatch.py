@@ -19,12 +19,12 @@ boundary,W126 复核通过,不重复立锁。)
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.data.cw_shop_odds import (
     expected_refreshes_for_card,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     LevelUp,
@@ -280,7 +280,7 @@ def test_comp_tx_shop_fill_index_drift_fixed() -> None:
     校验期解析的卡对象(``plan['shop_fill_cards']``)按身份消费。
     锁:两笔 shop fill([1]=2费,[2]=2费)后金恰扣 4、上场的是提案的
     两张(非移位后的遐蝶 4费)、店内只剩未提案的。"""
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         CompTransaction,
         FillSpec,
         ShopCard,

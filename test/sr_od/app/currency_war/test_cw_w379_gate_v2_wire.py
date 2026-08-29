@@ -21,12 +21,12 @@ import dataclasses
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     CORE_MISS_N,
     IntentionState,
     update_intention,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     ShopCard,
@@ -84,7 +84,7 @@ def _weak_on_xianzhou(registry=None) -> tuple[IntentionState, StrategySession]:
     """走真实状态机抵达 weak:锁希儿量子 → 核心断供证据(三条件合取:
     miss ≥ max(CORE_MISS_N, N_req)+ 异线在场资产)撤销。
     (门只辖真实撤销后的替代线锁定,夹具必须走全撤销路径。)"""
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         core_miss_n_required,
     )
     reg = registry or DEFAULT_REGISTRY
@@ -170,7 +170,7 @@ def test_w379_g5_strategy_threads_injected_registry(monkeypatch) -> None:
     """DecisionV2Strategy.update_target 把 self.registry 传到门:monkeypatch
     捕获 cw_intention.survival_gate 的 registry 实参必须是注入副本(W376
     C4 臂经 dataclasses.replace 构造注册表,透传断链=门恒读缺省关表)。"""
-    import sr_od.application.currency_war.cw_intention as ci
+    import sr_od.application.currency_war.kernel.cw_intention as ci
 
     captured: dict = {}
     orig = ci.survival_gate

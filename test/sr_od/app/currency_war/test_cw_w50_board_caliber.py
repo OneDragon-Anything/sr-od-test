@@ -17,20 +17,20 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_bond_equips import (
+from sr_od.application.currency_war.kernel.cw_bond_equips import (
     equip_bond_grants,
     unit_bond_tags,
 )
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_intention import CROSS_LINE_SKELETON
+from sr_od.application.currency_war.kernel.cw_intention import CROSS_LINE_SKELETON
 from sr_od.application.currency_war.cw_observation import board_from_tracked
-from sr_od.application.currency_war.cw_plugins import (
+from sr_od.application.currency_war.kernel.cw_plugins import (
     PLUGIN_LIBRARY,
     W16_MAJORITY_LINES,
     cross_line_skeleton,
 )
 from sr_od.application.currency_war.cw_sim import _deployable_depth
-from sr_od.application.currency_war.cw_state import BenchChar, GameState, _recount_board
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, _recount_board
 
 
 def _char(name: str, slot: int = 0, row: str = 'back',
@@ -168,7 +168,7 @@ def test_recount_unknown_fallback_and_deploymove_recount() -> None:
            BenchChar(slot=3, char_id='', faction='?')]
     b = _recount_board(dep)
     assert b['量子同频'] >= 2      # 希儿全集 + 未识别兜底;? 不计
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         DeployMove,
         simulate,
     )
@@ -206,7 +206,7 @@ def test_deployable_depth_is_sum_board() -> None:
 
 def test_w16_majority_lines_values() -> None:
     """W16 统计表值锁(数据搬运自 W16 报告 A2;家族键 ⊆ V2_FAMILIES)。"""
-    from sr_od.application.currency_war.cw_comps import V2_FAMILIES
+    from sr_od.application.currency_war.kernel.cw_comps import V2_FAMILIES
     for name, fams in W16_MAJORITY_LINES.items():
         assert fams and fams <= set(V2_FAMILIES), f'{name} 域外家族'
     assert W16_MAJORITY_LINES['瓦尔特'] == frozenset(
@@ -241,7 +241,7 @@ def test_plugin_majority_lines_synced_with_w16() -> None:
     assert PLUGIN_LIBRARY['瓦尔特'].majority_lines == \
         W16_MAJORITY_LINES['瓦尔特']
     # 小羁绊条目不受同步(三C 手注口径)
-    from sr_od.application.currency_war.cw_plugins import (
+    from sr_od.application.currency_war.kernel.cw_plugins import (
         PLUGIN_DISABLE_MATRIX,
     )
     assert ('护盾2', '万敌燃血') in PLUGIN_DISABLE_MATRIX

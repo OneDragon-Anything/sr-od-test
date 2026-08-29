@@ -15,12 +15,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.cw_performance import RoundOutcome
+from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.cw_settlement_obs import (
     parse_settlement_damage,
     read_round_outcome,
 )
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_telemetry import TelemetryRecorder, read_jsonl
 
 

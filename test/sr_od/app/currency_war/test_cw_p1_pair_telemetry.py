@@ -25,8 +25,8 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war import cw_telemetry
-from sr_od.application.currency_war.cw_intention import IntentionState
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_replay_reader import from_dict
 from sr_od.application.currency_war.cw_telemetry import DecisionTrace
 

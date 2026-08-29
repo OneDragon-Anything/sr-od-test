@@ -17,11 +17,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     HoardTarget,
     IntentionState,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     GameState,
@@ -109,8 +109,8 @@ def test_c_arm_out_of_window_r5_still_zero_drift() -> None:
 def test_formed_stop_new_window_gap_positive_keeps_investing() -> None:
     """承接维:r7 ∈ 新窗 ∧ gap>0 → 成型停手让位,不停手继续投资
     (买候选保留;w107 锁「窗内 gap=0 仍停手」为本锁的对偶面)。"""
-    from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_intention import intention_core
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_intention import intention_core
     comp = get_comp('DOT队')
     core = intention_core(comp)
     st = GameState(

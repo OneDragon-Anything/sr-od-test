@@ -24,7 +24,7 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
     rotation_probs,
 )
 from sr_od.application.currency_war.cw_sim import _Pool, simulate_p1
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     XP_PER_BUY,
     XP_TO_NEXT_LEVEL,
     BuyCard,

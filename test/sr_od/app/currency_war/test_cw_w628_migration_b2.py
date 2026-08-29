@@ -23,13 +23,13 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     committed_authority,
 )
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_transition import CommitSignals
+from sr_od.application.currency_war.kernel.cw_transition import CommitSignals
 from sr_od.application.currency_war.decision_v2.contracts import (
     Snapshot,
     SubstateClassification,
@@ -88,7 +88,7 @@ def test_d1_mutation_probe_projection_failure_conservative_domain():
     静默退空集 = 锁线局囤货方向消失一帧、买侧按无方向放行——本锁钉住
     「投影失败」与「真无目标」表示分离(hoard_readable 位)。
     """
-    import sr_od.application.currency_war.cw_intention as cw_intention_mod
+    import sr_od.application.currency_war.kernel.cw_intention as cw_intention_mod
 
     sess = StrategySession()
     sess.v3_intention = IntentionState()
@@ -188,7 +188,7 @@ def test_p6_registry_injection_reaches_state_machine():
     旋钮 = line_env_lock_min_round(环境判据观察期):调大 = 判据本轮不辖
     → 对抗环境帧缺省臂缓锁、注入臂落锁——两臂 ist 分歧即注入链可达证。
     """
-    from sr_od.application.currency_war.cw_intention import update_intention
+    from sr_od.application.currency_war.kernel.cw_intention import update_intention
     st = _state(plane=2, round_num=1)   # P2:comp 锁定通道(P1 配方锁区不锁 comp)
     st.enemy_affixes = ['净化身心']            # 对抗词缀(万敌强环境不命中)
     st.shop = [SimpleNamespace(name='万敌')]   # ③核心卡信号可见
@@ -244,7 +244,7 @@ def _old_committed(state: GameState, session: StrategySession) -> bool:
 
     committed = plane≥2 ∨ (signals.ready ∧ (可切换 ∨ target==领先线))。
     """
-    from sr_od.application.currency_war.cw_transition import t_of
+    from sr_od.application.currency_war.kernel.cw_transition import t_of
     if state.plane >= 2:
         return True
     sig = getattr(session, 'commit_signals', None)

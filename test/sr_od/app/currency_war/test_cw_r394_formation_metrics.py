@@ -8,7 +8,7 @@ from sr_od.application.currency_war.cw_sim import (
     _first_tier_round,
     _first_trio_round,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 class _R:

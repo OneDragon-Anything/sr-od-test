@@ -20,7 +20,7 @@ from sr_od.application.currency_war.cw_sim import simulate_p1
 from sr_od.application.currency_war.cw_sim_checks import (
     check_decision_v2_crisis_gold_hoard,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
@@ -145,8 +145,8 @@ def test_crisis_refresh_unlocked_in_hoard_state() -> None:
     val, _ = score_candidate(rc, st, sess, _REG)
     assert val < 0, '危机态无目标语境:V_D 同账判负(恒不无证刷)'
     # 危机 + 锁定核心在概率窗内 → V_D 正分(变现通道活跃)
-    from sr_od.application.currency_war.cw_intention import IntentionState
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     sess2 = _sess()
     sess2.v3_intention = IntentionState(phase='locked',
                                         locked_comp='DOT队')

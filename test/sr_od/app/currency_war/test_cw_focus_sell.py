@@ -6,8 +6,8 @@ _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
 from sr_od.application.currency_war.cw_plan import _sell_offline_for_focus  # noqa: E402
-from sr_od.application.currency_war.cw_state import BenchChar, GameState, SellBench  # noqa: E402
-from sr_od.application.currency_war.cw_comps import get_comp  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, SellBench  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_comps import get_comp  # noqa: E402
 
 
 def test_sells_offline_bench_dead_stock() -> None:

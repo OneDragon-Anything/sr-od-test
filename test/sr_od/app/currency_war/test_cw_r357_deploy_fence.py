@@ -7,7 +7,7 @@
 围栏必须 = RECIPE ∪ ENGINE(桥派生单一源)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_line_defs import (
+from sr_od.application.currency_war.kernel.cw_line_defs import (
     ENGINE_FACTIONS,
     RECIPE_FACTIONS,
 )

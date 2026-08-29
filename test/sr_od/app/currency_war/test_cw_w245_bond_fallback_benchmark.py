@@ -19,7 +19,7 @@ sys.path.insert(0, 'src')
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_state import GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
@@ -55,7 +55,7 @@ def _state(round_num: int = 5) -> GameState:
 
 def _sess() -> StrategySession:
     """与 test_cw_w242 锁同构的意向环境(锁线=h三月七仙舟,凑档判据可成立)。"""
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )

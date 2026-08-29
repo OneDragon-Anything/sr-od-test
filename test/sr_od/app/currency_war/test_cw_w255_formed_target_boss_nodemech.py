@@ -12,15 +12,15 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_comps import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     get_comp,
 )
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     HoardTarget,
     IntentionState,
     intention_core,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     DeployMove,
@@ -31,7 +31,7 @@ from sr_od.application.currency_war.cw_state import (
     ShopCard,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_system_cards import (
+from sr_od.application.currency_war.kernel.cw_system_cards import (
     engine_char_names,
 )
 from sr_od.application.currency_war.decision_v2.arbiter import (

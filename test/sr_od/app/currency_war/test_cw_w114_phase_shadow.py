@@ -12,13 +12,13 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     intention_core,
 )
 from sr_od.application.currency_war.cw_sim import simulate_p1
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
 )
@@ -112,7 +112,7 @@ def test_phase_score_bounds_and_fallback_gate() -> None:
     assert DEFAULT_REGISTRY.phase_fallback_min_engines >= 1
     assert DEFAULT_REGISTRY.phase_fallback_min_round >= 1
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_deploy_logic import (
+    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
         TRANSITION_TRAITS,
     )
     traits = dict(TRANSITION_TRAITS)
@@ -170,7 +170,7 @@ def test_fallback_gate_hp_charge_stack_exemption() -> None:
     上场(hp_charge_stack 型受击驱动全局叠层)计 1 等效体系;1★ 不豁免;
     豁免集不含 cost_escalation 型(银狼)。
     """
-    from sr_od.application.currency_war.cw_comps import hp_charge_stack_chars
+    from sr_od.application.currency_war.kernel.cw_comps import hp_charge_stack_chars
     from sr_od.application.currency_war.decision_v2.phase import (
         fallback_engines_count,
     )

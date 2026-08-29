@@ -15,7 +15,7 @@ import inspect
 from sr_od.application.currency_war.cw_observation import (
     reset_phase_round_cache,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.cw_strategy import (
     CurrencyWarMatch,
     StrategySession,

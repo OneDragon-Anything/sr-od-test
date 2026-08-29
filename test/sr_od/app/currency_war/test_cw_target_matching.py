@@ -5,9 +5,9 @@
 
 **起因**:实跑 DOT 队 P1 输 —— 艾丝妲/椒丘等持续伤害流派角色 ``card.faction``=银河学者/空(= ``Character.factions[0]``,只阵营)∉ DOT.factions([持续伤害(流派), 星核猎手(阵营)])→ commit 后被 prefilter 跳过 → 凑不出 2DOT 过渡。DOT 队为流派主派典型。
 """
-from sr_od.application.currency_war.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.cw_evaluate import _card_hits_target
-from sr_od.application.currency_war.cw_economy import _char_synergies
+from sr_od.application.currency_war.kernel.cw_economy import _char_synergies
 
 
 def test_char_synergies_includes_flows_and_independent() -> None:
@@ -55,7 +55,7 @@ def test_card_hits_target_unidentified_faction_fallback() -> None:
 def test_card_supports_target_pair_discipline() -> None:
     """flex 单张散买 = off-target(M25 实证 8 阵营各 1 spread);成对深化 + 枢纽单买放行。"""
     from sr_od.application.currency_war.cw_plan import _card_supports_target
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
 
     lt = get_comp("列车同行")
     # 大丽花(盛会之星=flex):板上无盛会之星 → 散买拒
@@ -76,7 +76,7 @@ def test_card_supports_target_pair_discipline() -> None:
 def test_skeleton_buy_ok_three_categories() -> None:
     """骨架合法买三类:枢纽池单买 / 骨架羁绊配对 / 通用填充件;散买骨架单张拒。"""
     from sr_od.application.currency_war.cw_plan import _skeleton_buy_ok
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
 
     empty = GameState()
     # ① 枢纽池(TEMPO/EARLY)单买放行(藿藿 Early 265 次;千冶·刃存活 0.96)
@@ -104,7 +104,7 @@ def test_plan_no_loss_window_skeleton_fallback_buy() -> None:
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.cw_plan import plan
-    from sr_od.application.currency_war.cw_state import GameState, ShopCard
+    from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 
     cfg = SimpleNamespace(
         faction_priority=[], character_priority=[],
@@ -127,7 +127,7 @@ def test_equip_allocation_carry_first() -> None:
     """carry 先拿 key_equips 按序(multiplicity);其余 core 次之;容量上限 3。"""
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.cw_comps import EQUIP_CAPACITY, equip_allocation
+    from sr_od.application.currency_war.kernel.cw_comps import EQUIP_CAPACITY, equip_allocation
 
     lt = get_comp("列车同行")   # key_equips: 风暴潮×1/电锯/自适应外骨骼/冷笑话(W55);carry=姬子·启行
     dep = [SimpleNamespace(char_id='三月七', position_pref='back', slot=1),
@@ -150,7 +150,7 @@ def test_equip_allocation_capacity_and_fallback() -> None:
     一圈再回头)——前排先序保留,但不再独占。"""
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.cw_comps import equip_allocation
+    from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
 
     dep = [SimpleNamespace(char_id='瓦尔特', position_pref='front', slot=1),
            SimpleNamespace(char_id='符玄', position_pref='back', slot=2)]

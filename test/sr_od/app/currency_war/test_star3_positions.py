@@ -23,7 +23,7 @@ sys.path.insert(0, str(_REPO / 'src'))
 
 from one_dragon.utils import cv2_utils  # noqa: E402
 from sr_od.application.currency_war.cw_identity_obs import read_star  # noqa: E402
-from sr_od.application.currency_war.cw_obs_core import _area_rect  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect  # noqa: E402
 from test.conftest import SrTestContext  # noqa: E402
 
 _SLOTS = [f'前排-{i}' for i in range(1, 5)] + [f'后排-{i}' for i in range(1, 7)] \

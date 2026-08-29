@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.cw_transition import transition_score
+from sr_od.application.currency_war.kernel.cw_transition import transition_score
 
 
 def test_dual_faction_char_counts_for_framework():

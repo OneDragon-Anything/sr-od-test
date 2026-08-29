@@ -9,8 +9,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_intention import HoardTarget
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     DeployMove,
@@ -64,7 +64,7 @@ def _sess(**kw) -> StrategySession:
 
 def _locked_sess(**kw) -> StrategySession:
     """意向锁定 session(锁定套=列车同行;hoard=意向线采购集子样)。"""
-    from sr_od.application.currency_war.cw_intention import IntentionState
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     ist = IntentionState()
     ist.phase = 'locked'
     ist.locked_comp = '列车同行'   # COMP_LIBRARY v2 套名(姬子列车家族)
@@ -159,7 +159,7 @@ def test_s3_will_merge_generation_mirror_same_star() -> None:
 def test_s3_merge_buy_simulates_net_minus1_at_full() -> None:
     """S3 执行侧:9/9 满员合并买入 simulate 后 bench 占用 8(净 −1),
     新卡不占槽(合成载体留原槽);非合并买在满员时仍 no-op。"""
-    from sr_od.application.currency_war.cw_state import simulate
+    from sr_od.application.currency_war.kernel.cw_state import simulate
     sess = _sess()
     sess.v2_round_key = (1, 4)
     st = _full_bench_with([('X', 1), ('X', 1)] + [(f'C{i}', 1) for i in range(7)])
@@ -203,7 +203,7 @@ def _s4_state(round_num: int = 4, gold: int = 70, level: int = 5,
 def test_s4_levelup_group_emitted_when_gold_covers_total() -> None:
     """S4 正向(H2):cap 满+bench 有 target_core 件+金足(≥n×单击总价)
     非 boss 轮 → **n 个 LevelUp** 追加(n=ceil(剩余XP/XP_PER_BUY))。"""
-    from sr_od.application.currency_war.cw_state import LevelUp
+    from sr_od.application.currency_war.kernel.cw_state import LevelUp
     sess = _locked_sess()
     sess.v2_round_key = (1, 4)
     # level 5, xp (0,20) → 剩余 20 → n=5;总价 5×4=20;金 70-20=50 过息门
@@ -274,7 +274,7 @@ def test_s4_noop_when_bench_weaker_than_deployed() -> None:
 def test_s4_partial_gold_group_abandoned() -> None:
     """S4 事务性反例:金只够部分点击(<n×总价)→ 整组不发(arbiter 逐
     动作重验失败 → abandon,零 LevelUp 追加)。"""
-    from sr_od.application.currency_war.cw_state import LevelUp
+    from sr_od.application.currency_war.kernel.cw_state import LevelUp
     sess = _locked_sess()
     sess.v2_round_key = (1, 4)
     sess.v2_ever_full_interest = True   # 过补偿器息门(ever_full)
@@ -425,7 +425,7 @@ def test_expect_remediation_sells_carry_expect_field() -> None:
     执行态一致 → 正常执行(simulate 后槽清空、金入账)。"""
     from dataclasses import replace
 
-    from sr_od.application.currency_war.cw_state import simulate
+    from sr_od.application.currency_war.kernel.cw_state import simulate
     sess = _locked_sess()
     sess.v3_mode = 'war'
     sess.v2_round_key = (1, 4)
@@ -461,7 +461,7 @@ def test_expect_mismatch_stale_proposal_rejected() -> None:
     """expect 反向:手工构造 expect 与 state 槽内名不符的 SellBench →
     断言 stale_proposal 整动作拒(防线真触发,非恒放行;simulate 与
     mutate 两执行面一致)。"""
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         mutate_bench_deployed,
         simulate,
     )

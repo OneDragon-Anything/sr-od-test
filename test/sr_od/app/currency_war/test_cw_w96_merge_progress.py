@@ -24,7 +24,7 @@ import pytest
 from sr_od.application.currency_war.cw_sim_checks import (
     check_overflow_gold_zero_buy_streak,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
@@ -62,7 +62,7 @@ def _shop_card(name: str, faction: str = '列车同行',
 
 
 def _sess() -> StrategySession:
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )

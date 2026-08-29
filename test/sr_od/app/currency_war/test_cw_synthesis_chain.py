@@ -125,8 +125,8 @@ class TestWearBasicP1:
     过滤一并删除,旁路语义升为默认)。"""
 
     def test_default_wears_basic_p1(self):
-        from sr_od.application.currency_war.cw_comps import equip_allocation
-        from sr_od.application.currency_war.cw_state import BenchChar
+        from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
+        from sr_od.application.currency_war.kernel.cw_state import BenchChar
         dep = [BenchChar(slot=1, char_id='飞霄', position_pref='front')]
         owned = ['轮滑鞋', '光能电池', '蓄能帆']
         alloc = equip_allocation(None, dep, owned)

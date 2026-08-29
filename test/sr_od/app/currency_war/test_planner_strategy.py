@@ -9,8 +9,8 @@ from pathlib import Path
 sys.path.insert(0, 'src')
 sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
 
-from sr_od.application.currency_war.cw_events import PlannerOption, decide_planner
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_events import PlannerOption, decide_planner
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
 SHOT = r'.debug\sr_od_mcp\screenshot\screenshot_20260819_220156_428969.png'
 # r104b fixtures(测试仓归档,与 .debug 解耦;局29 五态实拍)
@@ -50,7 +50,7 @@ def _ocr_cards(path: str) -> tuple[list[str], list[str]]:
 
 def test_planner_strategy_upgrade_wolf_line():
     """银狼线:升费 100+30=130 > 弱化 55 → 选升费。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     tgt = next(c for c in COMP_LIBRARY if c.name == '狼尊欢愉')
     st = GameState(hp=80)
     st.bench = [BenchChar(slot=1, char_id='银狼LV.999', faction='?', star=2, position_pref='front')]
@@ -62,7 +62,7 @@ def test_planner_strategy_upgrade_wolf_line():
 
 def test_planner_strategy_weaken_low_hp():
     """非银狼线+银狼不在场+低血:升费 100-60=40 < 弱化 55+20=75 → 弱化。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     tgt = next(c for c in COMP_LIBRARY if c.name == '反甲白厄')
     st = GameState(hp=30)
     st.bench = [BenchChar(slot=1, char_id='白厄', faction='?', star=1, position_pref='front')]

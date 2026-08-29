@@ -92,10 +92,10 @@ def test_inject_session_carries_fields() -> None:
 def test_direct_line_qualified_via_injected_env() -> None:
     """①资格通道直证:注入环境亲和 → _direct_line_qualified 为真
     (无注入语料下恒假,W161 缺口本体)。"""
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         _direct_line_qualified,
     )
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
     st = GameState()
     assert not _direct_line_qualified(st, '大黑塔银河学者')
     st.active_env = '银河学者概念股'
@@ -123,7 +123,7 @@ def test_interest_cap_override_applies() -> None:
     prof = SimInvestProfile(picks=((1, 1, '利息上调'),))
     # 直接构造:跑局后查账本中存在 interest>5 的行(金≥100 需局内累积,
     # 不保证出现)→ 改为单元层断言聚合接线:
-    from sr_od.application.currency_war.cw_investments import aggregate_economy
+    from sr_od.application.currency_war.kernel.cw_investments import aggregate_economy
     eff = aggregate_economy(['利息上调'])
     assert eff.interest_cap_override == 10
     # sim 收入层接线:注入局的 r1 利息仍按帽 5(gold=5+开局),仅验证
@@ -151,8 +151,8 @@ def test_free_refresh_per_node_zero_cost() -> None:
     隐含「每节点 ≤1 刷」分布假设(非游戏规则非 ADR 口径),粗战斗模型
     引入的多刷局误红,已废。
     """
-    from sr_od.application.currency_war.cw_economy import SHOP_REFRESH_COST
-    from sr_od.application.currency_war.cw_investments import aggregate_economy
+    from sr_od.application.currency_war.kernel.cw_economy import SHOP_REFRESH_COST
+    from sr_od.application.currency_war.kernel.cw_investments import aggregate_economy
 
     prof = SimInvestProfile(picks=((1, 1, '加油站'),))
     r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
@@ -177,7 +177,7 @@ def test_free_refresh_per_node_zero_cost() -> None:
 
 def test_freq_tables_registry_known() -> None:
     """频次表全注册表内(丢名走 freq_dropped_names 披露,不进表)。"""
-    from sr_od.application.currency_war.cw_investments import (
+    from sr_od.application.currency_war.kernel.cw_investments import (
         get_env,
         get_strategy,
     )

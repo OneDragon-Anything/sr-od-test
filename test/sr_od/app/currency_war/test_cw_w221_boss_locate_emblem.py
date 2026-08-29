@@ -67,7 +67,7 @@ def test_emblem_band_zero_false_positive() -> None:
 
 def test_emblem_detail_label_reads_boss(test_context: SrTestContext) -> None:
     """锁②:run30 帧详情条类型名 OCR 含「首领」(真实 OCR;定位验证锚)。"""
-    from sr_od.application.currency_war.cw_obs_core import _area_rect
+    from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
     from sr_od.application.currency_war.cw_observation import read_detail_node_type_label
 
     if _area_rect(test_context, '文本-节点类型名', '货币战争-位面详情') is None:
@@ -115,7 +115,7 @@ def test_battle_loop_preserves_none_positions() -> None:
 def test_boss_fit_tolerates_none_entries() -> None:
     """锁④伴生:boss_fit 跳过 None 项(保位列表下游);全 None → None(无信息,
     与空表同形,动态权重剔除)——不得把 None 传进 normalize_boss_name 崩溃。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY, boss_fit
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, boss_fit
 
     comp = COMP_LIBRARY[0]
     assert boss_fit(comp, [None, None, None]) is None

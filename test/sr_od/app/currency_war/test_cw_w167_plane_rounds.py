@@ -20,15 +20,15 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_evolution import (
+from sr_od.application.currency_war.kernel.cw_evolution import (
     EvolutionState,
     evolution_step,
 )
-from sr_od.application.currency_war.cw_plane_table import (    NODES_PER_PLANE,
+from sr_od.application.currency_war.kernel.cw_plane_table import (    NODES_PER_PLANE,
     nodes_of_plane,
 )
-from sr_od.application.currency_war.cw_intention import plane_remaining_nodes
-from sr_od.application.currency_war.cw_state import CompTransaction, GameState
+from sr_od.application.currency_war.kernel.cw_intention import plane_remaining_nodes
+from sr_od.application.currency_war.kernel.cw_state import CompTransaction, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.discipline import (
     _hard_node,
@@ -71,8 +71,8 @@ def test_nodes_of_plane_fallback_when_table_missing():
 def _freeze_frame(plane: int, r: int, table: list[str] | None) -> GameState:
     """DOT2 单引擎帧(拆板事务可发射;test_cw_evolution 同构造法)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
-    from sr_od.application.currency_war.cw_state import BenchChar, _recount_board
+    from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar, _recount_board
 
     def _c(name: str, faction: str) -> BenchChar:
         return BenchChar(slot=0, char_id=name, faction=faction,

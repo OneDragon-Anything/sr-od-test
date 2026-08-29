@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.cw_transition import FRAMEWORKS, pick_framework
+from sr_od.application.currency_war.kernel.cw_transition import FRAMEWORKS, pick_framework
 
 
 class _BC:
@@ -33,7 +33,7 @@ def test_quantum_not_early_without_cards():
 
 
 def test_recipe_quantum_registered():
-    from sr_od.application.currency_war.cw_recipe import recipe_comp
+    from sr_od.application.currency_war.kernel.cw_recipe import recipe_comp
     rc = recipe_comp('量子')
     assert rc is not None and rc.name == '过渡·量子配方'
     assert rc.form_tiers == {'量子同频': 3, '贝洛伯格': 2}
@@ -42,9 +42,9 @@ def test_recipe_quantum_registered():
 
 def test_decision_target_no_walkin_branch():
     """decision_target 双轨期只有配方/终局两分支(walkin 已删)。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
-    from sr_od.application.currency_war.cw_recipe import decision_target
-    from sr_od.application.currency_war.cw_state import BenchChar, GameState
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_recipe import decision_target
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
     class _Sess:
         transition_framework = '量子'

@@ -17,7 +17,7 @@ sys.path.insert(0, str(_REPO / 'src'))
 sys.path.insert(0, str(_REPO / 'sr-od-test'))
 
 from sr_od.application.currency_war.cw_identity_obs import is_merge_effect_frame  # noqa: E402
-from sr_od.application.currency_war.cw_reconcile import reconcile_tracking  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking  # noqa: E402
 
 
 def _banner_frame() -> np.ndarray:
@@ -67,7 +67,7 @@ def test_gate_blocks_confirm_and_freezes_pending(monkeypatch) -> None:
     """特效帧上的第 2 次回退:**保旧 + 防抖冻结**(pending 不推进、不计数、
     不采新)——star 层 2/2 采新帧全错(动画窗 ≥2 帧骗过连续确认)的
     直接回归锁。随后干净帧(screen=None)同回退 → 仍走确认采新(门冻结非清零)。"""
-    import sr_od.application.currency_war.cw_reconcile as cr
+    import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     s = _sess()
     s.star_pending_regression = {'万敌': 1}   # 上帧已防抖挂起
@@ -89,5 +89,5 @@ def test_gate_blocks_confirm_and_freezes_pending(monkeypatch) -> None:
 def test_gate_source_lock() -> None:
     """静态口径锁:采新确认分支必须先过帧态门(防未来重构绕过)。"""
     src = (_REPO / 'src' / 'sr_od' / 'application' / 'currency_war'
-           / 'cw_reconcile.py').read_text(encoding='utf-8')
+           / 'kernel' / 'cw_reconcile.py').read_text(encoding='utf-8')
     assert 'is_merge_effect_frame' in src, '采新确认前未引用合成特效帧态门'

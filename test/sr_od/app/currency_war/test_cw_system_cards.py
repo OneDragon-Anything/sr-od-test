@@ -12,13 +12,13 @@
    + 行为等价性四项(铁三角胜/仅 DOT 件胜/同 readiness 裁决/空窗不变)。
 """
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     ShopCard,
     _recount_board,
 )
-from sr_od.application.currency_war.cw_system_cards import (
+from sr_od.application.currency_war.kernel.cw_system_cards import (
     _WEIGHT_PIECE,
     _WEIGHT_READINESS,
     SYSTEM_CARDS,

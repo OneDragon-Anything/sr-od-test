@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     DeployMove,
@@ -33,7 +33,7 @@ from sr_od.application.currency_war.cw_state import (
     ShopCard,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_system_cards import engine_char_names
+from sr_od.application.currency_war.kernel.cw_system_cards import engine_char_names
 from sr_od.application.currency_war.decision_v2.candidates import Candidate
 from sr_od.application.currency_war.decision_v2.filters import (
     c1_directed_active,

@@ -21,20 +21,20 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import sr_od.application.currency_war.cw_evolution as cw_evolution
+import sr_od.application.currency_war.kernel.cw_evolution as cw_evolution
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_deploy_logic import select_deployments
-from sr_od.application.currency_war.cw_evolution import (
+from sr_od.application.currency_war.kernel.cw_deploy_logic import select_deployments
+from sr_od.application.currency_war.kernel.cw_evolution import (
     EvolutionState,
     UpgradeOption,
     UpgradeVerdict,
     execute_replacement,
 )
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     locked_faction_scope,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     simulate,

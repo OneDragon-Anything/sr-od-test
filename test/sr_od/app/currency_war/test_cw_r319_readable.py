@@ -13,7 +13,7 @@ def test_gold_opt_miss_none() -> None:
 
 def test_state_readable_fields() -> None:
     """GameState 三保真位(hp/gold/board readable)。"""
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
     st = GameState()
     assert st.gold_readable is True
     assert st.board_readable is True

@@ -6,7 +6,7 @@ from sr_od.application.currency_war.data.cw_chars import (
     trailblazer_form,
 )
 from sr_od.application.currency_war.cw_observation import board_from_tracked
-from sr_od.application.currency_war.cw_state import BenchChar, DeployMove, GameState, mutate_bench_deployed, simulate
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, DeployMove, GameState, mutate_bench_deployed, simulate
 
 
 def test_form_resolution_by_row():

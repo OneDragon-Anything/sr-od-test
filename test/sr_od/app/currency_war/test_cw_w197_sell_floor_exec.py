@@ -25,12 +25,12 @@ from __future__ import annotations
 import dataclasses
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_evolution import (
+from sr_od.application.currency_war.kernel.cw_evolution import (
     UpgradeOption,
     UpgradeVerdict,
     execute_replacement,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     GameState,

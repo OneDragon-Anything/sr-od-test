@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.cw_bundle import bundle_select
-from sr_od.application.currency_war.cw_state import BenchChar, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 
 
 def _cfg():
@@ -36,7 +36,7 @@ def test_anchor_no_affordable_returns_none():
 def test_same_name_pair_beats_singles():
     """同名升星链:已有 2 张姬子,shop 2 张同名 → 第 3 张触发 MERGE_W,束应联合买
     (或至少单买最优含合并价值),而非 None。断言宽松:束选包含同名卡。"""
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     tgt = get_comp('列车同行')
     shop = [ShopCard(x=1, faction='列车同行', name='姬子·启行', cost=3),
             ShopCard(x=2, faction='列车同行', name='姬子·启行', cost=3)]
@@ -53,7 +53,7 @@ def test_same_name_pair_beats_singles():
 def test_breakpoint_crossing_visible_in_bonus():
     """断点跳变交互项:买前 1 张列车 → 买 2 张跨 tier2,bonus > 0(单元级)。"""
     from sr_od.application.currency_war.cw_bundle import _interaction_bonus
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     tgt = get_comp('列车同行')
     bench = [BenchChar(slot=1, char_id='三月七', faction='列车同行')]
     st = _state([], bench=bench)

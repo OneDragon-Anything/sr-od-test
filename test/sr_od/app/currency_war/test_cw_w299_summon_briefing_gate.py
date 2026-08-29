@@ -54,7 +54,7 @@ def test_briefing_id_mark_hits_fixture(test_context, state: str) -> None:
 @pytest.mark.parametrize('state', _W299_FIXTURES)
 def test_prep_like_frame_rejects_briefing(test_context, state: str) -> None:
     """主锁:简报帧 is_prep_like_frame 必 False(21 张 B 族的代表 6 张)。"""
-    from sr_od.application.currency_war.cw_obs_core import is_prep_like_frame
+    from sr_od.application.currency_war.kernel.cw_obs_core import is_prep_like_frame
     frame = _load(test_context, state)
     assert is_prep_like_frame(test_context, frame) is False, (
         f'简报帧 {state} 被判 prep-like → summon 兜底会在其上跑 bench 判定'
@@ -63,7 +63,7 @@ def test_prep_like_frame_rejects_briefing(test_context, state: str) -> None:
 
 def test_prep_positive_sample_not_rejected(test_context) -> None:
     """正样本不误伤:备战帧仍 True(gate 语义改动防反向回归)。"""
-    from sr_od.application.currency_war.cw_obs_core import is_prep_like_frame
+    from sr_od.application.currency_war.kernel.cw_obs_core import is_prep_like_frame
     if not test_context.has_screen('货币战争-备战', 'r1_idle_stop'):
         pytest.skip('fixture 缺:screens/货币战争-备战/r1_idle_stop.webp')
     frame = test_context.load_screen('货币战争-备战', 'r1_idle_stop')

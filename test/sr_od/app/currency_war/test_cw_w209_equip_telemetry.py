@@ -18,8 +18,8 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_ROOT / 'src'))
 
-from sr_od.application.currency_war.cw_reconcile import _merge_equips
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_reconcile import _merge_equips
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def _bc(cid: str, slot: int = 1, row: str = 'back') -> BenchChar:

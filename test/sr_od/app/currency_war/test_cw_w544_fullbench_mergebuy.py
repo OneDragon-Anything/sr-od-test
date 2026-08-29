@@ -15,7 +15,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
@@ -160,7 +160,7 @@ def test_simulate_full_bench_multi_buy() -> None:
             _card('Y', x=3, cost=1)]
     st = _state(bench, shop, gold=50)
     st2 = GameState.copy(st)
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         bench_occupied,
         simulate,
     )
@@ -177,7 +177,7 @@ def test_simulate_full_bench_multi_buy() -> None:
 
 def test_simulate_full_bench_non_merge_noop() -> None:
     """执行层兜底:不触发合成 → 整动作 no-op(金不扣/牌不下架)。"""
-    from sr_od.application.currency_war.cw_state import simulate
+    from sr_od.application.currency_war.kernel.cw_state import simulate
     bench = _full_bench(['X'])
     shop = [_card('Z', x=1, cost=2)]
     st = _state(bench, shop, gold=50)
@@ -190,7 +190,7 @@ def test_simulate_full_bench_non_merge_noop() -> None:
 
 
 def _locked_sess():
-    from sr_od.application.currency_war.cw_intention import IntentionState
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     from sr_od.application.currency_war.cw_strategy import StrategySession
     ist = IntentionState()
     ist.phase = 'locked'
@@ -206,7 +206,7 @@ def _carry_fixture(shop_cards: list[ShopCard]) -> GameState:
     """carry_gate 可达态(引 test_cw_w35 既有夹具口径):bench 满=全保护
     件(7 互异+2 重复份,重复份加权≥2 是 3合1 素材不进卖序),意向
     核心=姬子·启行 未持有、在店。"""
-    from sr_od.application.currency_war.cw_intention import HoardTarget
+    from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
     sess_bench_names = ['三月七', '花火', '瓦尔特', '丹恒·饮月', '希儿',
                         '爻光', '藿藿', '花火', '三月七']
     bench = [BenchChar(slot=i + 1, char_id=n, faction='列车同行', star=1)
@@ -216,7 +216,7 @@ def _carry_fixture(shop_cards: list[ShopCard]) -> GameState:
 
 
 def _locked_carry_sess():
-    from sr_od.application.currency_war.cw_intention import HoardTarget
+    from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
     sess = _locked_sess()
     sess.v3_hoard = HoardTarget(frozenset({'姬子·启行', '三月七', '花火',
                                            '瓦尔特'}), frozenset(), 'locked')

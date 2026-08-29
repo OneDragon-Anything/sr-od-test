@@ -24,7 +24,7 @@ from pathlib import Path
 
 from one_dragon.utils import log_utils
 from sr_od.application.currency_war import cw_telemetry
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 _SRC_ROOT = Path('src/sr_od/application/currency_war')
 

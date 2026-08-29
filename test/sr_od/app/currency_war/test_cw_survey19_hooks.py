@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_survey19_hooks import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_survey19_hooks import (  # noqa: E402
     encounter_tier_score,
     supply_reroll_decision,
     wear_discipline_alert,

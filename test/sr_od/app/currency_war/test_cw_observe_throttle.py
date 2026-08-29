@@ -14,7 +14,7 @@ import numpy as np
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-import sr_od.application.currency_war.cw_observe as obs_mod  # noqa: E402
+import sr_od.application.currency_war.kernel.cw_observe as obs_mod  # noqa: E402
 
 
 def test_obs_conflict_shot_throttle(monkeypatch, tmp_path):

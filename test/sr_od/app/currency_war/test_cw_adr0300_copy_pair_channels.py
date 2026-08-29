@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     ShopCard,
@@ -48,7 +48,7 @@ def _sess(line: str | None = None) -> StrategySession:
     旧 locked_line 垫片已删)。"""
     s = StrategySession()
     if line:
-        from sr_od.application.currency_war.cw_intention import (
+        from sr_od.application.currency_war.kernel.cw_intention import (
             HoardTarget,
             IntentionState,
         )
@@ -165,7 +165,7 @@ def test_copy_blocked_by_useless_swap_guard() -> None:
 def test_copy_allowed_when_deployed_copy_kept() -> None:
     """r410 保留判据反例:在场副本属 target_cores(显式保留)→
     买副本合法(凑对/3合1),候选生成。"""
-    from sr_od.application.currency_war.cw_bridge_pool import BRIDGE_POOL
+    from sr_od.application.currency_war.kernel.cw_bridge_pool import BRIDGE_POOL
     core_name = next(n for c in BRIDGE_POOL for n in c.core)
     ch = CHARACTERS[core_name]
     sess = _sess()
@@ -184,7 +184,7 @@ def test_copy_allowed_when_deployed_copy_kept() -> None:
 
 def test_target_piece_takes_target_tag_not_copy() -> None:
     """目标件副本优先取目标类标签(优先序 target > copy)。"""
-    from sr_od.application.currency_war.cw_bridge_pool import BRIDGE_POOL
+    from sr_od.application.currency_war.kernel.cw_bridge_pool import BRIDGE_POOL
     fixed_name = next(n for c in BRIDGE_POOL for n in c.fixed)
     ch = CHARACTERS[fixed_name]
     sess = _sess()   # 无方向:桥 fixed∪core 全是目标

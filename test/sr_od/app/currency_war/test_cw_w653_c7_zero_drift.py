@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import inspect
 
-from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
-from sr_od.application.currency_war.cw_recipe import decision_target
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+from sr_od.application.currency_war.kernel.cw_recipe import decision_target
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 
 
@@ -61,7 +61,7 @@ def test_decision_target_no_longer_reads_dual_track_phase():
     (换源后读点归零,回滑即红)。"""
     import re
 
-    import sr_od.application.currency_war.cw_recipe as m
+    import sr_od.application.currency_war.kernel.cw_recipe as m
     src = inspect.getsource(m.decision_target)
     assert not re.search(r"state\s*\.\s*dual_track_phase|"
                          r"getattr\(\s*state\s*,\s*'dual_track_phase'", src)

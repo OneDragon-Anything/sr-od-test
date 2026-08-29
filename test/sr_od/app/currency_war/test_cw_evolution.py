@@ -13,7 +13,7 @@
    一件最弱替换位后放缓。
 """
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_evolution import (
+from sr_od.application.currency_war.kernel.cw_evolution import (
     EvolutionState,
     UpgradeOption,
     UpgradeVerdict,
@@ -25,8 +25,8 @@ from sr_od.application.currency_war.cw_evolution import (
     propose_upgrades,
     rollback_weakest,
 )
-from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     CompTransaction,
     GameState,
@@ -88,7 +88,7 @@ def test_evolution_dot2_to_xianzhou3_full_replacement():
     assert tx.sell == []   # bench 有余量 → 零卖出
     # 账本 applied + 原状态不动(simulate 纯函数)
     assert out.action_log[-1]['result'] == 'applied'
-    from sr_od.application.currency_war.cw_state import bench_occupied
+    from sr_od.application.currency_war.kernel.cw_state import bench_occupied
     assert deployed_occupied(st.deployed) == 3 \
         and bench_occupied(st.bench) == 3   # ADR-0392 占用数
     # memory 记录回滚窗锚
@@ -145,7 +145,7 @@ def test_two_swap_one_gap_window_proxy():
     """缺口 1 张 + 店里可见(再遇窗口代理)→ 触发;店里没有 → 不触发。"""
     st = _dot2_state()
     st.bench = [_char(n, '仙舟') for n in ('藿藿', '爻光')]   # 在手 2,目标 3
-    from sr_od.application.currency_war.cw_state import ShopCard
+    from sr_od.application.currency_war.kernel.cw_state import ShopCard
     st.shop = [ShopCard(x=0, faction='仙舟', name='丹恒·饮月', cost=2)]
     actions, _ = _run_evolution(st)
     assert len(actions) == 1 and isinstance(actions[0], CompTransaction)
@@ -196,7 +196,7 @@ def test_fill_gap_substitute_exception_beats_plugin():
 
 def test_fill_gap_disable_matrix_skips_shield_in_wenemy_family():
     """禁用矩阵:万敌燃血家族下盾系插件(砂金)不填位(官方:燃血无法获盾)。"""
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     st = GameState()
     st.gold = 10
     st.level = 7

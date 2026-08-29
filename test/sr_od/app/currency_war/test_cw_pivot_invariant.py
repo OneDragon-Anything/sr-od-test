@@ -6,9 +6,9 @@
 """
 from pathlib import Path
 
-from sr_od.application.currency_war import cw_comps
-from sr_od.application.currency_war.cw_comps import maybe_pivot
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel import cw_comps
+from sr_od.application.currency_war.kernel.cw_comps import maybe_pivot
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 _ROOT = Path(__file__).resolve().parents[4]
 

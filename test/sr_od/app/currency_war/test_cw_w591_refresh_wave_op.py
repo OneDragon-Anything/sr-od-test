@@ -38,8 +38,8 @@ from typing import Any
 import pytest
 
 from sr_od.application.currency_war import cw_telemetry
-from sr_od.application.currency_war.cw_obs_core import SHOP_SCREEN_NAME
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
+from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     GameState,
     RefreshShop,

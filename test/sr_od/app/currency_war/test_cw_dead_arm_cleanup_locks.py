@@ -17,7 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_state import GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
     _buy_tag,
@@ -83,7 +83,7 @@ def test_decision_v2_source_symbols_absent() -> None:
 
 
 def _sess() -> StrategySession:
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )

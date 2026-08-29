@@ -17,11 +17,11 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_comps import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     EQUIP_CAPACITY,
     equip_allocation,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.data.cw_synthesis import RESERVED_COMPONENTS
 
 
@@ -56,7 +56,7 @@ def test_pair_guard_blocks_second_basic_single_wearer() -> None:
 def test_key_equip_component_reaches_carry() -> None:
     """组件在 comp.key_equips → carry 正常拿到(角色特定意图路径,
     与旧豁免判据不同源:现在是同池分配,不再是保留过滤的放行分支)。"""
-    from sr_od.application.currency_war.cw_comps import Comp
+    from sr_od.application.currency_war.kernel.cw_comps import Comp
 
     comp = Comp(name='伪comp', factions=['追击'], core_chars=['飞霄'],
                 form_tiers={'追击': 2}, strength='S',

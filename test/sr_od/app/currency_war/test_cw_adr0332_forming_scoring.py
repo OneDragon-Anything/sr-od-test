@@ -16,7 +16,7 @@ from __future__ import annotations
 import dataclasses
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,

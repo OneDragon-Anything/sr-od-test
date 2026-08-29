@@ -6,7 +6,7 @@
   旧判 `tgt_comp is not None` 让乱穿残留的最高频窗口);
 - 非开局轮走 r70 form 门(target 在 + 0<form<COMMIT_FRAC + 非双轨)。
 """
-from sr_od.application.currency_war.cw_comps import COMMIT_FRAC
+from sr_od.application.currency_war.kernel.cw_comps import COMMIT_FRAC
 from sr_od.application.currency_war.operations.prep.equip_all import (
     _transition_hold_active,
 )

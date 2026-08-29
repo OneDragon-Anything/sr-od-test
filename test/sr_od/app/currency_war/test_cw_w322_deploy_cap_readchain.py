@@ -101,7 +101,7 @@ def test_read_xp_progress_keeps_domain_guard(test_context: SrTestContext, monkey
 
 def test_conflict_frame_lv3_xp24_readable(test_context: SrTestContext) -> None:
     """23dee97a 帧:修复前「文本-等级」与 XP 双失读(→启发式虚高 5);修复后 lv=3、xp=(2,4)。"""
-    from sr_od.application.currency_war.cw_obs_core import _area_rect
+    from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
     if _area_rect(test_context, '文本-等级') is None:
         test_context.screen_loader.reload(from_separated_files=True)
     screen = _load_fixture_rgb(_FIX_LV3)
@@ -112,7 +112,7 @@ def test_conflict_frame_lv3_xp24_readable(test_context: SrTestContext) -> None:
 
 def test_conflict_frame_lv4_xp26_readable(test_context: SrTestContext) -> None:
     """6f41536e 帧:修复前 XP 失读(lv OCR 偶读 4,XP 兜底缺位);修复后 xp=(2,6)。"""
-    from sr_od.application.currency_war.cw_obs_core import _area_rect
+    from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
     if _area_rect(test_context, '文本-等级') is None:
         test_context.screen_loader.reload(from_separated_files=True)
     screen = _load_fixture_rgb(_FIX_LV4)
@@ -123,7 +123,7 @@ def test_conflict_frame_lv4_xp26_readable(test_context: SrTestContext) -> None:
 
 def test_conflict_frame_level_resolves_in_domain(test_context: SrTestContext) -> None:
     """端到端:冲突帧三源解析后 level 与 paddle cap 自洽入域(cap≥level),域守卫不再拒信。"""
-    from sr_od.application.currency_war.cw_obs_core import _area_rect
+    from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
     from sr_od.application.currency_war.cw_observation import (
         _expected_level,
         _resolve_level,

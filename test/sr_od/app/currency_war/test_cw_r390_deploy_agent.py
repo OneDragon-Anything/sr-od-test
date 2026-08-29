@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war import cw_deploy_logic as dl
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
 
 def _bench(*pairs) -> list[BenchChar]:

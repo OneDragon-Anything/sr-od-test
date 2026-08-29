@@ -20,11 +20,11 @@ from __future__ import annotations
 
 import dataclasses
 
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     p1_early_pair,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     GameState,
@@ -153,7 +153,7 @@ def test_same_name_not_governed() -> None:
 def test_no_refresh_authorized() -> None:
     """⑤刷新金零授权:同帧(金 14)refresh 候选拒——[3] 预算前提
     (50+刷+买)结构性不满足,V_D 无对象 → 非正分;本门只辖买不辖刷。"""
-    from sr_od.application.currency_war.cw_state import RefreshShop
+    from sr_od.application.currency_war.kernel.cw_state import RefreshShop
     st = _state()
     s = _sess()
     cand = Candidate(action=RefreshShop(cost=2), tag='refresh',
@@ -229,7 +229,7 @@ def test_p1_early_pair_read_port() -> None:
     # _derive_p1_pair(返回 ())的语义差异本体
     st_empty = _state(bench=[], deployed=[])
     assert p1_early_pair(st_empty, None) != ()
-    from sr_od.application.currency_war.cw_intention import _derive_p1_pair
+    from sr_od.application.currency_war.kernel.cw_intention import _derive_p1_pair
     assert _derive_p1_pair(st_empty) == ()
     # P2 恒空
     assert p1_early_pair(_state(plane=2), None) == ()

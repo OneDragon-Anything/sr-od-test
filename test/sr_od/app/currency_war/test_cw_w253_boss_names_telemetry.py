@@ -22,8 +22,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_performance import RoundOutcome
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_telemetry import (
     OutcomeRecord,
     TelemetryRecorder,

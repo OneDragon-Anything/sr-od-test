@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     DEPLOYED_CAPACITY,
     BenchChar,
@@ -40,7 +40,7 @@ from sr_od.application.currency_war.cw_state import (
 
 _ROOT = Path(__file__).resolve().parents[5]          # 仓库根
 _SRC = _ROOT / 'src' / 'sr_od' / 'application' / 'currency_war'
-_CW_STATE = (_SRC / 'cw_state.py').read_text(encoding='utf-8')
+_CW_STATE = (_SRC / 'kernel' / 'cw_state.py').read_text(encoding='utf-8')
 
 
 def _bc(name: str, slot: int = 0, star: int = 1) -> BenchChar:
@@ -104,7 +104,7 @@ def test_bench_domain_no_left_shift_by_construction() -> None:
 # ===== B. expect 写入端静态锁(零写入=死防线)=====
 
 def _all_action_classes() -> list[type]:
-    from sr_od.application.currency_war import cw_state as m
+    from sr_od.application.currency_war.kernel import cw_state as m
     return list(getattr(m, 'Action').__args__)
 
 

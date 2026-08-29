@@ -17,7 +17,7 @@ simulate_p1(池=fallback 测试惯例;单局 ~0.2s)→ 断言 occupied
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war import cw_comps
+from sr_od.application.currency_war.kernel import cw_comps
 from sr_od.application.currency_war.cw_sim import simulate_p1
 
 

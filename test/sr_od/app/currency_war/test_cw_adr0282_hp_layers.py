@@ -19,7 +19,7 @@ def _mk_session():
 
 def test_hp_unreadable_keeps_last_real() -> None:
     """①② 读不到(shop 开态血量区空)→ 沿用 last_hp_real,不是兜底 100。"""
-    from sr_od.application.currency_war.cw_reconcile import reconcile_hp
+    from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_hp
     s = _mk_session()
     s.last_hp_real = 40
     hp, readable = reconcile_hp(s, None)
@@ -29,7 +29,7 @@ def test_hp_unreadable_keeps_last_real() -> None:
 
 def test_hp_truth_frame_updates_session() -> None:
     """真值帧(关态可读)写回 last_hp_real(=「session 更新只在关态真值帧」)。"""
-    from sr_od.application.currency_war.cw_reconcile import reconcile_hp
+    from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_hp
     s = _mk_session()
     s.last_hp_real = 50
     hp, readable = reconcile_hp(s, 35)      # 正常下行(掉血)
@@ -39,7 +39,7 @@ def test_hp_truth_frame_updates_session() -> None:
 
 def test_hp_jump_up_leaves_evidence(monkeypatch) -> None:
     """③ 新读非 None 且大幅上行(HP 只降不升)→ obs_conflict 留证(仍采新)。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     s.last_hp_real = 20
     calls: list[tuple] = []
@@ -57,7 +57,7 @@ def test_hp_jump_up_leaves_evidence(monkeypatch) -> None:
 
 def test_hp_no_truth_fallback_100() -> None:
     """④ 开局全无真值(last_hp_real=None)读不到 → 兜底 100(健康先验)。"""
-    from sr_od.application.currency_war.cw_reconcile import reconcile_hp
+    from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_hp
     s = _mk_session()
     assert s.last_hp_real is None
     hp, readable = reconcile_hp(s, None)
@@ -66,7 +66,7 @@ def test_hp_no_truth_fallback_100() -> None:
 
 def test_hp_offline_no_session_passthrough() -> None:
     """无 session(离线/测试):真值透传;读不到走开局兜底(不炸)。"""
-    from sr_od.application.currency_war.cw_reconcile import reconcile_hp
+    from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_hp
     assert reconcile_hp(None, 70) == (70, True)
     assert reconcile_hp(None, None) == (100, False)
 
@@ -108,7 +108,7 @@ def test_hp_trusted_source_level_derivation() -> None:
 def test_hp_trusted_default_false() -> None:
     """GameState 默认 False(未知帧按不可信,保守);直接构造的帧不带
     trusted=True——消费方守卫须显式依赖写入端赋值,不吃默认幸运值。"""
-    from sr_od.application.currency_war.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_state import GameState
     assert GameState().hp_trusted is False
 
 

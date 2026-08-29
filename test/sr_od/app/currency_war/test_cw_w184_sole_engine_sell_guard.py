@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
 )

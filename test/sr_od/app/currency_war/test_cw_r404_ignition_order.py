@@ -1,11 +1,11 @@
 """r404-A1 锁:点火增量排序(ignition_gain 首键+桶序修正)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_deploy_logic import (
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     ignition_gain,
     select_deployments,
 )
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def test_ignition_gain_semantics() -> None:

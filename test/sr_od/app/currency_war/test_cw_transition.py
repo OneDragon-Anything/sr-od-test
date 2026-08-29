@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_transition import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_transition import (  # noqa: E402
     COMMIT_MIN_T,
     COMMIT_SIGNAL_THRESHOLD,
     FRAMEWORK_FACTIONS,

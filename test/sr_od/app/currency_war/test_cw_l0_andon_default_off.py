@@ -36,7 +36,7 @@ def _setup_isolated_l0(tmp_path: Path, monkeypatch) -> Path:
 def test_default_handler_off_is_noop(tmp_path: Path, monkeypatch) -> None:
     """锁1:缺省(Handler=None)触发 L0 → 台账照记 L0_andon,游戏侧停线实现
     不得被触达(canary 挂在 cw_observe,被调即炸)。"""
-    from sr_od.application.currency_war import cw_observe
+    from sr_od.application.currency_war.kernel import cw_observe
     from sr_od.application.currency_war import cw_telemetry as ct
 
     d = _setup_isolated_l0(tmp_path, monkeypatch)

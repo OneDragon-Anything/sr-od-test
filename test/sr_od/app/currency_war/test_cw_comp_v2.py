@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from sr_od.application.currency_war.cw_comps import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     V2_FAMILIES,
     Comp,
@@ -22,7 +22,7 @@ from sr_od.application.currency_war.cw_comps import (
     get_comp,
 )
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.cw_plugins import (
+from sr_od.application.currency_war.kernel.cw_plugins import (
     PLUGIN_DISABLE_MATRIX,
     PLUGIN_LIBRARY,
     plugin_disabled,

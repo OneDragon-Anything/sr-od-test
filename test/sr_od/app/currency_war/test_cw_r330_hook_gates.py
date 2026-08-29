@@ -7,7 +7,7 @@ import inspect
 
 def test_is_prep_like_frame_exists() -> None:
     """共享帧态判据在 cw_obs_core(id_mark 精准判定)。"""
-    from sr_od.application.currency_war import cw_obs_core
+    from sr_od.application.currency_war.kernel import cw_obs_core
     assert hasattr(cw_obs_core, 'is_prep_like_frame')
     src = inspect.getsource(cw_obs_core.is_prep_like_frame)
     assert 'get_match_screen_name' in src   # 框架 id_mark 体系
@@ -32,6 +32,6 @@ def test_bookcard_hook_gated() -> None:
 
 def test_star_hook_gated() -> None:
     """star 回退留证钩子过帧态门(动画帧不留证)。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     src = inspect.getsource(cw_reconcile._star_stop_hook)
     assert 'is_prep_like_frame' in src

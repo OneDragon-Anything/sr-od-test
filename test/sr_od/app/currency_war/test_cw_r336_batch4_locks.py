@@ -20,7 +20,7 @@ def test_shop_collapse_single_poll_fn() -> None:
 
 def test_star_evidence_queue_pattern() -> None:
     """r336:star 留证从 reconcile 深处改队列登记,对账位统一消费。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     src = inspect.getsource(cw_reconcile.reconcile_tracking)
     assert '_pending_evidence.append' in src       # 深处只登记
     assert '_pending_evidence:' in src              # 队列初始化
@@ -31,7 +31,7 @@ def test_star_evidence_queue_pattern() -> None:
 
 def test_star_hook_none_screen_tolerant() -> None:
     """r336b:screen=None(测试/无帧)不拦留证。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     src = inspect.getsource(cw_reconcile._star_stop_hook)
     assert 'screen is not None' in src
 

@@ -18,9 +18,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import sr_od.application.currency_war.cw_intention as cw_intention
+import sr_od.application.currency_war.kernel.cw_intention as cw_intention
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     _pair_members,
     hoard_target_set,
@@ -29,8 +29,8 @@ from sr_od.application.currency_war.cw_intention import (
     locked_faction_scope,
     update_intention,
 )
-from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     GameState,
@@ -44,7 +44,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
     _direction_factions,
 )
 from sr_od.application.currency_war.decision_v2.phase import form_ok
-from sr_od.application.currency_war.cw_evolution import _locked_protected_names
+from sr_od.application.currency_war.kernel.cw_evolution import _locked_protected_names
 
 #: ①资格策略(黑塔纪元 → 大黑塔银河学者;群攻/银河学者线,采购集
 #: 不含列车/仙舟件 → 对件在旧口径下是 off-scope)。
@@ -335,7 +335,7 @@ def test_unlocked_frames_unchanged() -> None:
 
 
 def _comp_chars(comp) -> set[str]:
-    from sr_od.application.currency_war.cw_intention import _line_hoard
+    from sr_od.application.currency_war.kernel.cw_intention import _line_hoard
     chars, _eq = _line_hoard(comp)
     return chars
 
@@ -369,6 +369,6 @@ def _form_state(extra: tuple[str, ...]) -> GameState:
                              faction=(CHARACTERS[n].factions or ['?'])[0],
                              star=1))
     s.deployed = dep
-    from sr_od.application.currency_war.cw_state import _recount_board
+    from sr_od.application.currency_war.kernel.cw_state import _recount_board
     s.board = _recount_board(dep)
     return s

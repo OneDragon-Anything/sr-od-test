@@ -10,8 +10,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_intention import HoardTarget
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     ShopCard,
@@ -138,7 +138,7 @@ def test_target_names_include_hoard_and_engines() -> None:
     st = _state()
     names = _target_names(st, sess)
     assert {'飞霄', '三月七'} <= names, 'hoard 目标件漏入目标集'
-    from sr_od.application.currency_war.cw_system_cards import (
+    from sr_od.application.currency_war.kernel.cw_system_cards import (
         engine_char_names,
     )
     assert set(engine_char_names()) <= names, '体系引擎件漏入目标集'
@@ -148,7 +148,7 @@ def test_target_names_bare_session_engines() -> None:
     """裸 session(无 v3_hoard)= 引擎件全集种子(旧全桥名单派生已删)。"""
     sess = _sess()
     st = _state()
-    from sr_od.application.currency_war.cw_system_cards import (
+    from sr_od.application.currency_war.kernel.cw_system_cards import (
         engine_char_names,
     )
     assert _target_names(st, sess) == set(engine_char_names())

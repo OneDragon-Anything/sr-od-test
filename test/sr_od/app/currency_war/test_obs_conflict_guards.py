@@ -7,8 +7,8 @@ star 回退留证)、DP 冒烟。obs_conflict 走 best-effort 不抛,monkeypatch
 import pytest
 
 from sr_od.application.currency_war.cw_observation import board_from_tracked
-from sr_od.application.currency_war.cw_reconcile import reconcile_tracking
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 @pytest.fixture(autouse=True)
@@ -20,7 +20,7 @@ def _no_conflict_io(monkeypatch):
     的 TypeError 测试全绿照样漏网,实机 error-loop 卡死 30min。封装必须真实跑。
     (封装函数内延迟 import obs_conflict → 源头 patch 对其生效。)
     """
-    import sr_od.application.currency_war.cw_observe as obs_mod
+    import sr_od.application.currency_war.kernel.cw_observe as obs_mod
     monkeypatch.setattr(obs_mod, 'obs_conflict', lambda *a, **kw: None)
 
 
@@ -76,7 +76,7 @@ def test_streak_dual_source_conflict_guard(test_context, monkeypatch):
     与备战 magnitude 不等(且结算≠0)→ obs_conflict 留证;一致 → 无噪声。
     直接跑 read_game_state 不可行(需 OCR 全屏栈),此处验判定的两端行为:
     复制内联条件(streak 逻辑为纯比较,无隐藏状态)。"""
-    import sr_od.application.currency_war.cw_observe as obs_mod
+    import sr_od.application.currency_war.kernel.cw_observe as obs_mod
     calls: list[tuple] = []
     monkeypatch.setattr(obs_mod, 'obs_conflict',
                         lambda field, old, new, *a, **kw: calls.append((field, old, new)))
@@ -155,7 +155,7 @@ def test_reconcile_star_regression_pending_self_heals():
 def test_plane_table_smoke():
     """cw_plane_table 冒烟(批 3:标定表模块随 DP 退役平移;
     息闭式边界锁逐位保留)。"""
-    from sr_od.application.currency_war.cw_plane_table import interest
+    from sr_od.application.currency_war.kernel.cw_plane_table import interest
     assert interest(49) == 4
     assert interest(50) == 5
 

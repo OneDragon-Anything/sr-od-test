@@ -32,7 +32,7 @@ class _FakeMatcher:
 @pytest.fixture
 def matcher_env(monkeypatch):
     from one_dragon.base.screen import screen_utils
-    from sr_od.application.currency_war import cw_obs_core
+    from sr_od.application.currency_war.kernel import cw_obs_core
     fm = _FakeMatcher(set())
     monkeypatch.setattr(screen_utils, 'get_match_screen_name', fm)
     return cw_obs_core, fm
@@ -82,7 +82,7 @@ def test_shop_open_returns_true(matcher_env) -> None:
 def test_upper_screens_names_registered() -> None:
     """UPPER_SCREENS 的每个 screen_name 都真实存在于 screen_info yml
     (防手写错别字静默失配——名单名错 = 该上层屏永不命中)。"""
-    from sr_od.application.currency_war import cw_obs_core
+    from sr_od.application.currency_war.kernel import cw_obs_core
     repo_root = Path(__file__).resolve().parents[5]
     si_dir = repo_root / 'assets' / 'game_data' / 'screen_info'
     yml_names: set[str] = set()
@@ -98,7 +98,7 @@ def test_upper_screens_names_registered() -> None:
 
 def test_mid_interest_floor_removed() -> None:
     """ADR-0270 死门删除:src 全仓无 _MID_INTEREST_FLOOR 引用残留。"""
-    from sr_od.application.currency_war import cw_obs_core  # noqa: F401 确保导入链可用
+    from sr_od.application.currency_war.kernel import cw_obs_core
     repo_root = Path(__file__).resolve().parents[5]
     src_dir = repo_root / 'src'
     hits = [p for p in src_dir.rglob('*.py')

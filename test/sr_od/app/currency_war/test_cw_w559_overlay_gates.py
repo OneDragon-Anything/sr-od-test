@@ -43,7 +43,7 @@ def test_float_anchor_hits_fixtures(test_context, state: str) -> None:
 @pytest.mark.parametrize('state', ['equip_detail_roller', 'equip_detail_synth_target'])
 def test_prep_like_frame_rejects_equip_float(test_context, state: str) -> None:
     """浮窗帧 is_prep_like_frame 必 False(备战 readers/钩子不得在其上跑)。"""
-    from sr_od.application.currency_war.cw_obs_core import is_prep_like_frame
+    from sr_od.application.currency_war.kernel.cw_obs_core import is_prep_like_frame
     frame = _load(test_context, _FLOAT_SCREEN, state)
     assert is_prep_like_frame(test_context, frame) is False, (
         f'装备详情浮窗帧 {state} 被判 prep-like(锚失配门漏回归)')
@@ -61,7 +61,7 @@ def test_char_tooltip_anchor_hits_fixture(test_context) -> None:
 
 def test_prep_like_frame_rejects_char_tooltip(test_context) -> None:
     """tooltip 帧 is_prep_like_frame 必 False。"""
-    from sr_od.application.currency_war.cw_obs_core import is_prep_like_frame
+    from sr_od.application.currency_war.kernel.cw_obs_core import is_prep_like_frame
     frame = _load(test_context, _TIP_SCREEN, 'char_detail')
     assert is_prep_like_frame(test_context, frame) is False, (
         '角色信息提示帧被判 prep-like(锚失配门漏回归)')
@@ -69,7 +69,7 @@ def test_prep_like_frame_rejects_char_tooltip(test_context) -> None:
 
 def test_big_panel_frame_still_rejected(test_context) -> None:
     """大面板形态(信息tab,原 档锚覆盖)仍被排除——拆分不削原有覆盖。"""
-    from sr_od.application.currency_war.cw_obs_core import is_prep_like_frame
+    from sr_od.application.currency_war.kernel.cw_obs_core import is_prep_like_frame
     frame = _load(test_context, '货币战争-备战-角色详情', '信息tab')
     assert is_prep_like_frame(test_context, frame) is False, (
         '角色详情大面板帧不再被排除(拆分削了原有覆盖)')
@@ -88,7 +88,7 @@ def test_new_anchors_not_hit_clean_prep(test_context) -> None:
 
 def test_prep_positive_sample_not_rejected(test_context) -> None:
     """备战正样本帧仍 True(门语义改动防反向回归)。"""
-    from sr_od.application.currency_war.cw_obs_core import is_prep_like_frame
+    from sr_od.application.currency_war.kernel.cw_obs_core import is_prep_like_frame
     frame = _load(test_context, '货币战争-备战', 'r1_idle_stop')
     assert is_prep_like_frame(test_context, frame) is True, (
         '备战正样本帧被判非 prep-like(过度排除)')

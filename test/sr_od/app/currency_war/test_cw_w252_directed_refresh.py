@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     RefreshShop,
@@ -59,7 +59,7 @@ def _deployed(name: str, faction: str, star: int = 1,
 
 
 def _sess() -> StrategySession:
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )
@@ -231,7 +231,7 @@ def _transition_peak_state() -> GameState:
 def _sess_mode(mode: str, targets: set[str]) -> StrategySession:
     """指定意向模式的 session(phase=unlocked ∧ locked_comp 空 =
     未锁线;W263 扩展辖面)。"""
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )

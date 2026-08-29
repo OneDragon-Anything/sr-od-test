@@ -62,7 +62,7 @@ def test_core_and_target_members_protected_as_before() -> None:
 def test_fence_source_shared_with_deploy_fence() -> None:
     """熔断保留集与散牌围栏 _DEPLOY_FENCE 同源(RECIPE ∪ ENGINE)——
     deploy 不许留 bench 的集合 = 不许卖出的集合,单一源防两处漂移。"""
-    from sr_od.application.currency_war.cw_line_defs import (
+    from sr_od.application.currency_war.kernel.cw_line_defs import (
         ENGINE_FACTIONS,
         RECIPE_FACTIONS,
     )

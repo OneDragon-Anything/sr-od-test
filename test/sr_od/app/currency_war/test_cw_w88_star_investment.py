@@ -19,7 +19,7 @@ from sr_od.application.currency_war.cw_sim_checks import (
     check_coldstart_seed_squander,
     check_engine_seed_not_resold,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
@@ -49,7 +49,7 @@ def _sess(line: bool = True) -> StrategySession:
     s.v2_state = ('economy', False, False, 0, 0, 0, 0, 0)
     s.v3_mode = 'economy'
     if line:
-        from sr_od.application.currency_war.cw_intention import (
+        from sr_od.application.currency_war.kernel.cw_intention import (
             HoardTarget,
             IntentionState,
         )
@@ -164,7 +164,7 @@ def test_carry_gate_yields_to_fresh_seed() -> None:
     """seed16 回归锁:bench 满+唯一可卖=新鲜 engine_seed 种子 →
     carry_gate 本轮不腾(旧 W51 死锁豁免=买侧见即买与卖侧腾位互踩,
     r4 买 r6 卖 r7 再买;ADR-0339 件3 裁决移除豁免)。"""
-    from sr_od.application.currency_war.cw_intention import HoardTarget
+    from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
     from sr_od.application.currency_war.decision_v2.discipline import (
         carry_gate_actions,
     )

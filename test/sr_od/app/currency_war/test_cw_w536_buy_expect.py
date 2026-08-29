@@ -19,7 +19,7 @@ import numpy as np
 
 from one_dragon.base.geometry.rectangle import Rect
 from sr_od.application.currency_war import cw_telemetry
-from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.prep_director import (
     BuyPurchase,
     _save_buy_evidence,

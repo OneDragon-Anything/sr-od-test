@@ -21,11 +21,11 @@ import pytest
 
 from one_dragon.base.operation.application.plugin_info import PluginSource
 from sr_od.application.currency_war import cw_strategy as _cw_strategy_mod
-from sr_od.application.currency_war.cw_events import (
+from sr_od.application.currency_war.kernel.cw_events import (
     MegastarOption,
     PartnerOption,
 )
-from sr_od.application.currency_war.cw_state import GameState, PickEvent
+from sr_od.application.currency_war.kernel.cw_state import GameState, PickEvent
 from sr_od.application.currency_war.cw_strategy import (
     CurrencyWarMatch,
     CwStrategy,
@@ -167,7 +167,7 @@ def test_create_session() -> None:
 
 def test_on_round_end_stores_last_hp_when_confident() -> None:
     """D-94:on_round_end 达阈置信度的结算 hp_after → 存 session.last_hp(给下回合 prep state.hp)。"""
-    from sr_od.application.currency_war.cw_performance import (
+    from sr_od.application.currency_war.kernel.cw_performance import (
         RoundOutcome,
     )
 
@@ -182,7 +182,7 @@ def test_on_round_end_stores_last_hp_when_confident() -> None:
 
 def test_on_round_end_skips_low_confidence_hp() -> None:
     """D-94:低置信(hp_confidence<阈,如结算屏 OCR 失败 hp_after=0)→ 不存(防 0 污染下回合 prep)。"""
-    from sr_od.application.currency_war.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 
     strat = DecisionV2Strategy()
     sess = strat.create_session(_cfg())
@@ -250,7 +250,7 @@ def test_currency_war_match_holds_strategy_and_session() -> None:
 
 def test_on_round_end_records_performance() -> None:
     """on_round_end → session.performance.record(obs)(观测段非空;loop 每轮胜结算调用)。"""
-    from sr_od.application.currency_war.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
     strat = DecisionV2Strategy()
     session = strat.create_session(_cfg())
     obs = RoundOutcome(round_num=1, plane=1, node_type="普通战斗", comp_tag="x", hp_after=90)

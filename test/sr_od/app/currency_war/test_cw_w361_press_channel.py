@@ -24,7 +24,7 @@ from __future__ import annotations
 from dataclasses import replace
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     GameState,
@@ -81,7 +81,7 @@ def _sess() -> StrategySession:
     既有豁免通道语义先于 press 臂(V-B2.1 放序),只有方向门拦下的
     目标外副本才落 'copy_press';裸 session 冷启动会让 pair_wants
     (同阵营/冷启动副本口)先命中。"""
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )
@@ -388,7 +388,7 @@ def test_checker_dup_dual_domain() -> None:
     copy_bench_only_skipped 不进真拦;非重复散件(C-D)照报真拦。"""
     from sr_od.application.currency_war import cw_sim_checks as chk
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_line_defs import (
+    from sr_od.application.currency_war.kernel.cw_line_defs import (
         ENGINE_FACTIONS,
     )
     name = next(n for n, c in CHARACTERS.items()

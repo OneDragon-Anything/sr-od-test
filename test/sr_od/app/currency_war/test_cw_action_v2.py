@@ -16,7 +16,7 @@ from sr_od.application.currency_war.cw_sim_checks import (
     check_comp_tx_atomicity,
     check_skip_fence_pairing,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     CompTransaction,
@@ -44,7 +44,7 @@ def _char(name: str, slot: int = 0, row: str = 'back') -> BenchChar:
 
 def _xianzhou_trio() -> list[BenchChar]:
     """仙舟铁三角(= cw_line_defs._CORE_TRIO;注册表真值)。"""
-    from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
+    from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
     return [_char(n, slot=i) for i, n in enumerate(sorted(_CORE_TRIO))]
 
 
@@ -86,7 +86,7 @@ def test_comp_transaction_full_swap_no_half_state():
     out = simulate(st, tx)
     # 旧档 0 人在场:deployed 全为铁三角
     trio = {c.char_id for c in iter_occupied_deployed(out.deployed)}
-    from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
+    from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
     assert trio == set(_CORE_TRIO)
     assert deployed_occupied(out.deployed) == 3   # ADR-0392 占用数
     # 新档全员在场:仙舟 3(ADR-0312 W50 全集口径——board 另含铁三角的
@@ -95,7 +95,7 @@ def test_comp_transaction_full_swap_no_half_state():
     # 无半档:board 与 deployed 聚合一致;旧档/余料不在 bench 不在场上
     # (ADR-0316 槽位表:全空=bench_occupied==0,len(bench) 恒 9)
     assert out.board == _recount_board(out.deployed)
-    from sr_od.application.currency_war.cw_state import bench_occupied
+    from sr_od.application.currency_war.kernel.cw_state import bench_occupied
     assert bench_occupied(out.bench) == 0
     assert all(n not in {b.char_id for b in out.bench if b is not None}
                for n in old_names)
@@ -128,7 +128,7 @@ def test_comp_transaction_rejected_gold_short_no_partial_apply():
     out.action_log = []   # 唯一允许的差异 = 拒绝记录本身
     st.action_log = []
     # ADR-0316:simulate 入口 pad bench 到定长 9,原子性对照只看占用内容
-    from sr_od.application.currency_war.cw_state import bench_occupied
+    from sr_od.application.currency_war.kernel.cw_state import bench_occupied
     assert bench_occupied(out.bench) == bench_occupied(st.bench)
     assert [c.char_id for c in out.bench if c] \
         == [c.char_id for c in st.bench if c]
@@ -173,7 +173,7 @@ def test_sell_deployed_lifecycle():
     assert out2.action_log[-1]['result'] == 'rejected'
     out2.action_log = []
     st.action_log = []
-    from sr_od.application.currency_war.cw_state import bench_occupied
+    from sr_od.application.currency_war.kernel.cw_state import bench_occupied
     assert bench_occupied(out2.bench) == bench_occupied(st.bench)
     assert out2.deployed == st.deployed and out2.gold == st.gold
 
@@ -194,7 +194,7 @@ def test_swap_deploy_equips_follow_char():
 
 
 def test_mutate_bench_deployed_v2_actions():
-    from sr_od.application.currency_war.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_state import (
         bench_occupied,
         pad_bench,
     )
@@ -232,7 +232,7 @@ def _agg(dep: list[dict]) -> dict[str, int]:
     """账本行 deployed 的羁绊全集聚合(ADR-0312 W50;unit_bond_tags 同源)。"""
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.cw_bond_equips import unit_bond_tags
+    from sr_od.application.currency_war.kernel.cw_bond_equips import unit_bond_tags
     out: dict[str, int] = {}
     for d in dep:
         ns = SimpleNamespace(

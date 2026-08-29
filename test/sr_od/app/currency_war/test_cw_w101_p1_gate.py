@@ -12,9 +12,9 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war import cw_intention
+from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     _p1_transition_eligible,
     _v2_comps,
@@ -22,7 +22,7 @@ from sr_od.application.currency_war.cw_intention import (
     hoard_target_set,
     update_intention,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 
 
 def _state(**kw) -> GameState:

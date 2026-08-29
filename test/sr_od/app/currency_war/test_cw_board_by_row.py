@@ -8,12 +8,12 @@
 
 单一源反查(验收 2,grep 全仓无第二处按排聚合)是 review 项,不进测试。
 """
-from sr_od.application.currency_war.cw_board_by_row import (
+from sr_od.application.currency_war.kernel.cw_board_by_row import (
     BoardByRow,
     board_by_row,
     board_by_row_of,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
 
 def _char(name: str, slot: int = 0, row: str = 'back',

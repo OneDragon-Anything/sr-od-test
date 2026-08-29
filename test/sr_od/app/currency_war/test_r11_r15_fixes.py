@@ -10,9 +10,9 @@ _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
 from sr_od.application.currency_war import cw_identity_obs as cio  # noqa: E402
-from sr_od.application.currency_war.cw_comps import get_comp  # noqa: E402
-from sr_od.application.currency_war.cw_economy import _want_level_up  # noqa: E402
-from sr_od.application.currency_war.cw_state import GameState  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_comps import get_comp  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_economy import _want_level_up  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_state import GameState  # noqa: E402
 
 
 def _mk_tome_plug(monkeypatch, tome_scores: list[float], box_scores: list[float]) -> list[tuple]:

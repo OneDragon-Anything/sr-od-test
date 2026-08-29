@@ -1,7 +1,7 @@
 """cw_enemy_data(15 号敌情层 v0)测试:俗称归一/matchup 结构层/boss_fit 接通(ADR-0160)。"""
 import pytest
 
-from sr_od.application.currency_war.cw_comps import COMP_LIBRARY, boss_fit, get_comp
+from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, boss_fit, get_comp
 from sr_od.application.currency_war.data.cw_enemy_data import (
     boss_tags,
     matchup,

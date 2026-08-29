@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_effect_ledger import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_effect_ledger import (  # noqa: E402
     AggregateEffect,
     build_env_ledger,
     build_ledger,
@@ -60,7 +60,7 @@ def test_ledger_buysell_wiring_semantics_retained() -> None:
     """批 3 DP 退役后的台账语义残留锁:台账构建/效果解析通道保留
     (消费面=cw_economy 经济效果;原 DP 值函数注入断言随 DP 模块
     退役删除——锁面重推出处=BLUEPRINT §3 DP 处置,git prior art)。"""
-    from sr_od.application.currency_war.cw_effect_ledger import (
+    from sr_od.application.currency_war.kernel.cw_effect_ledger import (
         build_ledger,
         effects_from_strategies,
     )

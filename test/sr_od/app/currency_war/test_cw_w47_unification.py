@@ -18,19 +18,19 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_comps import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     V2_FAMILIES,
 )
-from sr_od.application.currency_war.cw_deploy_logic import (
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     TRANSITION_TRAITS,
 )
-from sr_od.application.currency_war.cw_evolution import _CARD_FACTION_TIER
-from sr_od.application.currency_war.cw_intention import FAMILY_BOND_SIGNALS
-from sr_od.application.currency_war.cw_line_defs import _CORE_TRIO
-from sr_od.application.currency_war.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_evolution import _CARD_FACTION_TIER
+from sr_od.application.currency_war.kernel.cw_intention import FAMILY_BOND_SIGNALS
+from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
+from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_system_cards import (
+from sr_od.application.currency_war.kernel.cw_system_cards import (
     SYSTEM_CARDS,
     _card_factions,
     engine_char_names,
@@ -192,7 +192,7 @@ def test_bond_fallback_tag_without_direction_unchanged() -> None:
 def test_bond_fallback_fires_with_direction() -> None:
     """有方向(v3_hoard 锁线)时 bond_fallback 正常触发(方向阵营门拒 pair
     后的独占通道——与 ADR-0291 锁线用例同口径,此处直查 _buy_tag)。"""
-    from sr_od.application.currency_war.cw_intention import (
+    from sr_od.application.currency_war.kernel.cw_intention import (
         HoardTarget,
         IntentionState,
     )

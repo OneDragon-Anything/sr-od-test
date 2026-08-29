@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sr_od.application.currency_war import cw_economy
+from sr_od.application.currency_war.kernel import cw_economy
 from sr_od.application.currency_war import cw_sim_checks as chk
 
 
@@ -102,7 +102,7 @@ def _mutant_flat_table(ledgers: list[list[dict]]) -> dict:
     """退化变异:所有行一律按 streak_gold(进轮连胜)重算——
     丢掉「补给轮恒 0」与「败轮金路径」两个特殊分支。
     """
-    from sr_od.application.currency_war.cw_economy import streak_gold
+    from sr_od.application.currency_war.kernel.cw_economy import streak_gold
     violations = ledger_sum = recompute = 0
     for rows in ledgers:
         streaks = chk._combat_streak_by_round(rows)

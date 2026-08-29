@@ -6,8 +6,8 @@ from types import SimpleNamespace
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_comps import COMP_LIBRARY, maybe_pivot  # noqa: E402
-from sr_od.application.currency_war.cw_state import GameState  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, maybe_pivot  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_state import GameState  # noqa: E402
 
 
 def test_dot_comp_has_weak_plane_tag() -> None:
@@ -22,7 +22,7 @@ def test_pivot_p2_avoids_dot_if_alternative() -> None:
     用 monkeypatch select_comp 返回受控候选(DOT队 + 一个非乏力 easy),
     断言 P2 危血时选非乏力那个;P1 时 DOT 仍可选(过滤只按位面)。
     """
-    import sr_od.application.currency_war.cw_comps as cc
+    import sr_od.application.currency_war.kernel.cw_comps as cc
     dot = next(c for c in COMP_LIBRARY if c.name == 'DOT队')
     other = next(c for c in COMP_LIBRARY
                  if c.name != 'DOT队' and c.form_difficulty == 'easy'

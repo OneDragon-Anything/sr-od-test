@@ -17,13 +17,13 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_line_defs import (
+from sr_od.application.currency_war.kernel.cw_line_defs import (
     board_max_recipe_tier,
     board_recipe_faction_count,
     board_system_tiers,
     board_total_faction_count,
 )
-from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import (
     _engine_seed_affinity,

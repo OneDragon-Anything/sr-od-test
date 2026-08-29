@@ -7,7 +7,7 @@
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.recognizers.briefing_recognizer as mod
-from sr_od.application.currency_war.cw_obs_core import BRIEFING_SCREEN
+from sr_od.application.currency_war.kernel.cw_obs_core import BRIEFING_SCREEN
 from sr_od.application.currency_war.recognizers.briefing_recognizer import (
     BriefingRecognizer,
 )

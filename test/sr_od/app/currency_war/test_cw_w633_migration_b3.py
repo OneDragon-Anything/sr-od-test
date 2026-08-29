@@ -15,15 +15,15 @@ W623 预验尸(D0-D4)+ W630 A/B 协议 + W615 R1-R4 规则集。锁契约:
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_investments import EconomyEffect
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect
+from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     GameState,
     ShopCard,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.cw_economy import (
+from sr_od.application.currency_war.kernel.cw_economy import (
     refresh_ev_budget,
     reserve_cap,
     schedule_upgrade,
@@ -36,7 +36,7 @@ from sr_od.application.currency_war.decision_v2.posture_release import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     PAIR_DROUGHT_EVICT_ROUNDS,
     pair_target_comp,
@@ -101,7 +101,7 @@ def test_schedule_pop_slot_trigger() -> None:
     """触发①[33] 人口位:cap 满 ∧ bench 有成型件(2★)→ 排程
     (最高义务;不受息引擎前置辖——当轮兑现战力)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_state import deployed_occupied
+    from sr_od.application.currency_war.kernel.cw_state import deployed_occupied
 
     def _ch(name: str, slot: int, star: int) -> BenchChar:
         fac = (CHARACTERS[name].factions or ('?',))[0]
@@ -114,7 +114,7 @@ def test_schedule_pop_slot_trigger() -> None:
     assert not schedule_upgrade(st, sess_of(st))
     st.dep = None
     # cap 满:deployed 填满 → 人口位触发
-    from sr_od.application.currency_war.cw_state import iter_occupied_deployed
+    from sr_od.application.currency_war.kernel.cw_state import iter_occupied_deployed
     st.deployed = [BenchChar(slot=20 + i, char_id=f'杂{i}', faction='公司',
                              star=1) for i in range(st.max_units())]
     assert deployed_occupied(st.deployed) >= st.max_units()
@@ -151,7 +151,7 @@ def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
     st = _state(gold=100, level=5)
     assert schedule_upgrade(st, sess_of(st))   # 前置:常态帧排程成立
     monkeypatch.setattr(
-        'sr_od.application.currency_war.cw_investments.STRATEGY_ECONOMY',
+        'sr_od.application.currency_war.kernel.cw_investments.STRATEGY_ECONOMY',
         {'淘金客': EconomyEffect(xp_per_refresh=2)})
     st.active_strategies = ['淘金客']
     assert not schedule_upgrade(st, sess_of(st))
@@ -291,7 +291,7 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     双向断开——视图侧变异不穿透 session,session 侧就地写端(shop 星级/
     装备拼接、deploy_bench 装备覆盖的真实别名写者)不穿透视图;
     equips 在视图侧固化为 tuple。"""
-    from sr_od.application.currency_war.cw_state import snapshot_copy
+    from sr_od.application.currency_war.kernel.cw_state import snapshot_copy
     from sr_od.application.currency_war.decision_v2.prep_brain import (
         _tracking_view,
     )

@@ -35,17 +35,17 @@ import dataclasses
 import math
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_economy import NodeGoal
-from sr_od.application.currency_war.cw_plane_table import (
+from sr_od.application.currency_war.kernel.cw_economy import NodeGoal
+from sr_od.application.currency_war.kernel.cw_plane_table import (
     level_cost,
 )
 from sr_od.application.currency_war.decision_v2.posture import Posture
-from sr_od.application.currency_war.cw_line_switch import (
+from sr_od.application.currency_war.kernel.cw_line_switch import (
     e_rounds,
     should_switch_e,
     switch_allowed,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     GameState,
@@ -173,7 +173,7 @@ def test_reserve_cap_narrows_overflow_basis(monkeypatch) -> None:
     批 3 预算收权:排程判据 = 确定性核(cw_economy.schedule_upgrade
     单一址),本锁以 monkeypatch 钉排程真值注入消费方契约(消费方注入式
     锁语义保留,D3 处置表);生产者规则锁在 test_cw_w633_migration_b3。"""
-    from sr_od.application.currency_war import cw_economy
+    from sr_od.application.currency_war.kernel import cw_economy
     monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda *a, **k: True)
     st = _state(gold=50 + level_cost(6) + 5, r=5)
@@ -192,7 +192,7 @@ def test_cap_full_flip_frame_keeps_level_up_rule2(monkeypatch) -> None:
     boss 窗帧由 FLIP 命中承接——third_path=False,wrap 后 level_up 保留
     (追级与泄息并存);预算= max(义务, 排程预算 6×2=12),义务=min(溢余, C_t)。
     排程真值 monkeypatch 钉住(消费方注入式锁,同上锁面重推)。"""
-    from sr_od.application.currency_war import cw_economy
+    from sr_od.application.currency_war.kernel import cw_economy
     monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda *a, **k: True)
     st = _state(gold=67, hp=38, plane=1, r=9, node='boss', deployed_n=6)
@@ -263,7 +263,7 @@ def test_third_path_reserve_scope(monkeypatch) -> None:
     """第三路径溢余基=R* 锁:排程升级帧(R*=50+升级费)的 g≤R* 段无溢余
     → 不注入(储备线内的金是排程储蓄不是死钱,注入会击穿息线;
     ADR-0445 §1.3 豁免行)。排程真值 monkeypatch 钉住(同上重推)。"""
-    from sr_od.application.currency_war import cw_economy
+    from sr_od.application.currency_war.kernel import cw_economy
     monkeypatch.setattr(cw_economy, 'schedule_upgrade',
                         lambda *a, **k: True)
     st = _state(gold=50 + level_cost(6) - 1, node='boss',
@@ -384,12 +384,12 @@ def _form_boss_state(**kw) -> GameState:
 
 
 def _shop_card(name: str) -> object:
-    from sr_od.application.currency_war.cw_state import ShopCard
+    from sr_od.application.currency_war.kernel.cw_state import ShopCard
     return ShopCard(name=name, faction='仙舟罗浮', cost=1, x=0, star=1)
 
 
 def _target_name() -> str:
-    from sr_od.application.currency_war.cw_system_cards import (
+    from sr_od.application.currency_war.kernel.cw_system_cards import (
         engine_char_names,
     )
     return sorted(engine_char_names())[0]
@@ -488,7 +488,7 @@ def test_spend_mode_release_has_no_producer() -> None:
 
     若未来有人在 horizon 层造出 release 生产者,本锁报警并把裁决拉回
     重新评估(单一源=decision_v2.posture_release 经 session 通道)。"""
-    from sr_od.application.currency_war.cw_economy import get_node_goal
+    from sr_od.application.currency_war.kernel.cw_economy import get_node_goal
     for plane in (1, 2, 3):
         for r in (1, 5, 9):
             for gold in (8, 30, 55, 80):
@@ -505,7 +505,7 @@ def test_horizon_level_branch_carries_dp_budget() -> None:
     息引擎已立(gold≥50)∧ 峰值级未达 → level 档且 refresh_budget 合法;
     息引擎未立(gold 8<50)→ interest 档([12] 息引擎前置,W615 R4 禁升①;
     旧锁钉的「DP 说升」前瞻行为随 DP 退役)。"""
-    from sr_od.application.currency_war.cw_economy import get_node_goal
+    from sr_od.application.currency_war.kernel.cw_economy import get_node_goal
     g = get_node_goal(1, 1, gold=8, level=3, hp=80)
     assert g.spend_mode == 'interest'    # 息引擎未立:不排程不刷新
     g2 = get_node_goal(1, 1, gold=60, level=3, hp=80)
@@ -515,7 +515,7 @@ def test_horizon_level_branch_carries_dp_budget() -> None:
 
 def test_fallback_node_goal_budget_none() -> None:
     """fallback NodeGoal refresh_budget=None(无 DP 信息,不参与合并)。"""
-    from sr_od.application.currency_war.cw_economy import get_node_goal
+    from sr_od.application.currency_war.kernel.cw_economy import get_node_goal
     g = get_node_goal(1, 1)   # 部分传参 → 先验 fallback
     assert g.spend_mode == 'adaptive' and g.refresh_budget is None
 
@@ -616,7 +616,7 @@ def test_release_chain_end_to_end_reachable(monkeypatch) -> None:
     session 通道活(tag='release' ∧ 义务预算≥溢余下界)——全程不 mock
     生产链本体(仅把刷新预算核钉为确定性授权 6 刷,预算期望本地复算;
     排程保持默认 level=6=False,R*=50)。"""
-    from sr_od.application.currency_war import cw_economy
+    from sr_od.application.currency_war.kernel import cw_economy
     from sr_od.application.currency_war.decision_v2.strategy import (
         DecisionV2Strategy,
     )
@@ -684,8 +684,8 @@ def test_release_gate_neutralizes_interest_ev() -> None:
 def _vd_p2_frame():
     """P2 入场 release 帧(卡芙卡 2费@lv6 j=2,金 80,刷价 5,rb=6):
     金 80 花 E×5 穿息档 → Δinterest≠0,V_D 的 C_dec 息损项有非零原料。"""
-    from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_intention import IntentionState
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     from sr_od.application.currency_war.decision_v2.ev import RoundPosture
     s = StrategySession()
     s.v3_release = ReleaseDirective(budget_gold=8, rolls=4)

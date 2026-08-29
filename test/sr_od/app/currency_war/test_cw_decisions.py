@@ -11,8 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.cw_comps import Comp
-from sr_od.application.currency_war.cw_economy import (
+from sr_od.application.currency_war.kernel.cw_comps import Comp
+from sr_od.application.currency_war.kernel.cw_economy import (
     WIN_STREAK_BREAK_INTEREST,
     _expected_level,
     _refresh_cost,
@@ -38,7 +38,7 @@ from sr_od.application.currency_war.cw_evaluate import (
     synergy_score,
     transition_tempo_score,
 )
-from sr_od.application.currency_war.cw_events import (
+from sr_od.application.currency_war.kernel.cw_events import (
     EncounterOption,
     SupplyOption,
     _option_rarity,
@@ -60,7 +60,7 @@ from sr_od.application.currency_war.cw_plan import (
     level_up_gate,
     plan,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
     DeployMove,
@@ -214,7 +214,7 @@ def test_refresh_cap_dynamic() -> None:
                                   active_strategies=['羁绊的力量'])
     assert _refresh_cap(with_non_discount) == MAX_REFRESH_PER_ROUND, "无刷新效果策略 → 不放宽"
     # 砂里淘金无刷新经济效果(电表倒转不推荐 bot 玩法,未注册经济效果)
-    from sr_od.application.currency_war.cw_investments import economy_effect_of
+    from sr_od.application.currency_war.kernel.cw_investments import economy_effect_of
     assert economy_effect_of('砂里淘金').free_refresh_per_node == 0, "砂里淘金无免费刷新效果"
 
 
@@ -241,7 +241,7 @@ def test_evaluate_target_comp_applies_progress() -> None:
     故用**晚期**状态(plane3 r6,α=1)验精确关系;早期 α=0 的灵活期权行为见
     ``test_evaluate_optionality_alpha_blend``。target_comp=None 时不扣(向后兼容)。
     """
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     cfg = _cfg()
     飞霄 = get_comp("追击飞霄")   # form_tiers {追击:3}
     # 晚期 α=1(elapsed 18 > R_CLOSE 12)→ target_progress 全罚 + optionality=0
@@ -436,7 +436,7 @@ def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
     """rebuild_deployed_from_board 从 board 重建 deployed,计数=sum(board),back 先填至 back_max 再 front。
     (出处备注:原引用「D-107」为会话局部编号,docs 树无持久索引,出处未考;
     rebuild 后攒息门的消费语义见 ADR-0117 `_saving_for_interest` 门条件。)"""
-    from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
+    from sr_od.application.currency_war.kernel.cw_state import rebuild_deployed_from_board
     dep = rebuild_deployed_from_board({"能量": 2, "护盾": 6}, back_max=6)   # 总 8
     # ADR-0392:rebuild 出槽位表(定长 10 含 None)——计数/口径断言走占用序
     assert sum(1 for d in dep if d is not None) == 8
@@ -457,7 +457,7 @@ def test_plan_t107_saves_interest_when_board_full_low_gold() -> None:
     (出处备注:修复批原引用「D-107 RC1」为会话局部编号,docs 树无索引,出处未考。)
     round=2 未 commit(隔离 commitment);level=8 → max_units=8 = board 计数(满)。
     """
-    from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
+    from sr_od.application.currency_war.kernel.cw_state import rebuild_deployed_from_board
     target = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
                   form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
     cfg = _cfg()
@@ -480,7 +480,7 @@ def test_should_save_for_interest_winning_streak_breaks_it() -> None:
     (花钱提质量维持连胜,断连胜亏 > 利息亏)。连败 fold 半已由 HP-gating 覆盖(HP 安全仍 fold 攒息)。
     streak 带符号(parse_streak:连胜 +/连败 −),magnitude 对称给金(economy_score),方向驱 plan 行为(本测)。
     """
-    from sr_od.application.currency_war.cw_state import rebuild_deployed_from_board
+    from sr_od.application.currency_war.kernel.cw_state import rebuild_deployed_from_board
     target = Comp(name="DOT队", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
                   form_tiers={"持续伤害": 4, "减益": 4}, strength="B", form_difficulty="easy")
     cfg = _cfg()
@@ -516,7 +516,7 @@ def test_plan_levels_up_when_affordable_and_planned() -> None:
     回归守卫:replay 32 局「升 0 次」bug —— 旧版 LevelUp 候选 delta 永负(花大金升级的利息损失
     压过 level_val)→ 永不选 → bot 卡 lv5-6 → 弱 comp → plane2 死。改硬 gate 强制执行 level_plan。
     """
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     列车 = get_comp("列车同行")   # level_plan[5]="level_up"
     cfg = _cfg()
     state = GameState(gold=40, round_num=4, level=5, plane=1)   # cost(5→6)=36,gold 40>=36
@@ -532,7 +532,7 @@ def test_plan_generic_curve_levels_mid_game() -> None:
     多数 comp 未填 level_plan;通用曲线(_DEFAULT_LEVEL_GOAL)保证它们也有合理经济行为(中后期推等级),
     不再依赖每 comp 手填曲线。
     """
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     dot = get_comp("DOT队")   # 无 level_plan → 退回通用曲线
     cfg = _cfg()
     state = GameState(gold=40, round_num=4, level=5, plane=1)   # 通用曲线[5]=level_up,cost36,gold40>=36
@@ -544,7 +544,7 @@ def test_plan_generic_curve_levels_mid_game() -> None:
 
 def test_plan_no_levelup_when_cannot_afford() -> None:
     """task#18:goal=level_up 但金不够升级金 → 不升级(硬 gate 的 afford 守卫,防负金)。"""
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     列车 = get_comp("列车同行")   # level_plan[5]=level_up
     cfg = _cfg()
     state = GameState(gold=10, round_num=4, level=5, plane=1)   # cost36,gold10<36
@@ -604,7 +604,7 @@ def test_plan_uses_passed_target_comp_not_reselect() -> None:
     同 state + 不同 target_comp → 买不同 target 阵营牌(证明传入 target 生效,非每轮 select_comp)。
     防 2026-08-04 实跑的 target 振荡(列车同行↔DOT队)→ churn。
     """
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     巡海击破 = get_comp("巡海击破")   # factions=['击破'](ADR-0152:击破流萤更名)
     dot队 = get_comp("DOT队")         # factions=['持续伤害','减益']
     cfg = _cfg()
@@ -674,7 +674,7 @@ def test_plan_caps_refresh_per_round() -> None:
     基线:target lv6=level_up(列车同行)非停留 roll → ≤ MAX_REFRESH_PER_ROUND;
     comp 停留 roll 级(列车 lv7=roll 3星姬子)→ 放宽到 4(人玩「停留概率级 D 核心」)。
     """
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     cfg = _cfg()
     train = next(c for c in COMP_LIBRARY if c.name == "列车同行")
     # 金 30(追级地板 20 之上、升不起整级)→ 停留 lv6 非 roll;商店无可用牌 → 刷新期望可能正,但受基线上限挡
@@ -710,7 +710,7 @@ def test_deploy_uses_position_pref() -> None:
 
 def test_compound_3merge() -> None:
     """买 3 张同名同星 → 自动合并升星(3×1星→1×2星)。"""
-    from sr_od.application.currency_war.cw_state import bench_occupied
+    from sr_od.application.currency_war.kernel.cw_state import bench_occupied
     s = GameState(gold=100)
     for _ in range(3):
         s = simulate(s, BuyCard(ShopCard(x=1, name="阿格莱雅", cost=1, star=1)))
@@ -873,7 +873,7 @@ def test_decide_encounter_reward_breaks_tie() -> None:
 
 def test_reward_value_tiers() -> None:
     """奖励文本启发分档:棱彩>进阶>简易>经验>无文本中性。"""
-    from sr_od.application.currency_war.cw_events import _reward_value
+    from sr_od.application.currency_war.kernel.cw_events import _reward_value
     assert _reward_value(['棱彩装备']) == 1.0
     assert _reward_value(['进阶武装']) == 0.8
     assert _reward_value(['简易装备']) == 0.65
@@ -953,7 +953,7 @@ def test_evaluate_optionality_alpha_blend() -> None:
     - 早(α=0):风堇 − 飞霄 == OPTIONALITY_WEIGHT(optionality 全);成型压力 0(未成型不该罚)。
     - 晚(α=1):差 == 0(optionality=0,让位 commit)。
     """
-    from sr_od.application.currency_war.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
     cfg = _cfg()
     飞霄comp = get_comp("追击飞霄")
     # 早期(plane1 r1 → α=0)
@@ -994,7 +994,7 @@ def test_transition_tempo_score_rewards_tempo_factions() -> None:
     # W126/ADR-0350 四体系封闭:巡海游侠(skeleton 派生非四体系)不再奖
     assert transition_tempo_score(GameState(board={'巡海游侠': 1})) == 0.0
     # 希儿系(第四体系):希儿在场 + 量/贝任一 ≥2 → 计一档
-    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
     _seele_dep = [BenchChar(slot=0, char_id='希儿', faction='贝洛伯格',
                             star=1)]
     assert transition_tempo_score(GameState(
@@ -1128,7 +1128,7 @@ def test_board_alignment_deep_shallow_none() -> None:
     """_board_alignment —— board count≥2 → ×1.2(boost);count≥1 → ×1.0(neutral);
     全无 → ×0.3(重 penalty;×0.7→×0.3 的加深出自策略 review:原值压不过 acq 主导致
     spread,裁决与调参记录见 ADR-0105「_board_alignment 全不匹配 ×0.3(原 ×0.7)」)。"""
-    from sr_od.application.currency_war.cw_comps import _board_alignment
+    from sr_od.application.currency_war.kernel.cw_comps import _board_alignment
     comp = Comp(name="test", factions=["仙舟", "追击"], core_chars=[],
                 form_tiers={"仙舟": 5, "追击": 3}, strength="S", form_difficulty="medium")
     # deep-stack(仙舟:2)→ boost
@@ -1142,7 +1142,7 @@ def test_board_alignment_deep_shallow_none() -> None:
 def test_shop_supply_core_vs_noncore() -> None:
     """shop_supply 收紧(shop_supply 与 _board_alignment 同批收紧,ADR-0105 spread 修)——
     核心(form_tiers)阵营在 shop → 1.0;仅非核心 → 0.5。"""
-    from sr_od.application.currency_war.cw_comps import shop_supply
+    from sr_od.application.currency_war.kernel.cw_comps import shop_supply
     # comp: factions=[仙舟,追击,盛会之星],form_tiers={仙舟:5,追击:3} → core={仙舟,追击},盛会之星 非核心
     target = Comp(name="test", factions=["仙舟", "追击", "盛会之星"], core_chars=[],
                   form_tiers={"仙舟": 5, "追击": 3}, strength="S", form_difficulty="medium")
@@ -1234,8 +1234,8 @@ def _mk_card(faction: str, cost: int, name: str = '未知卡') -> ShopCard:
 
 def test_prefilter_tempo_exception_unformed() -> None:
     """ADR-0124:未成型 commit 期,板直接增强散牌(≥2 同阵营)不被 prefilter 拒。"""
-    from sr_od.application.currency_war.cw_comps import form_progress, get_comp
-    from sr_od.application.currency_war.cw_state import BuyCard
+    from sr_od.application.currency_war.kernel.cw_comps import form_progress, get_comp
+    from sr_od.application.currency_war.kernel.cw_state import BuyCard
 
     comp = get_comp('列车同行')
     st = GameState(plane=1, round_num=4, level=6, gold=10, board={'仙舟': 2, '列车同行': 1})
@@ -1247,8 +1247,8 @@ def test_prefilter_tempo_exception_unformed() -> None:
 
 def test_prefilter_strict_when_formed() -> None:
     """ADR-0124:成型后(fp≥COMMIT_FRAC)仍严格拒 off-target 散牌(T#97 不变)。"""
-    from sr_od.application.currency_war.cw_comps import form_progress, get_comp
-    from sr_od.application.currency_war.cw_state import BuyCard
+    from sr_od.application.currency_war.kernel.cw_comps import form_progress, get_comp
+    from sr_od.application.currency_war.kernel.cw_state import BuyCard
 
     comp = get_comp('列车同行')
     st = GameState(plane=1, round_num=8, level=8, gold=10, board={'列车同行': 4})
@@ -1270,8 +1270,8 @@ def _bc_at(slot, name, star=1, faction='?') -> BenchChar:
                    strict=False)
 def test_h1_merge_window_reachable_from_shop() -> None:
     """review H1:deployed 1 + bench 1 + shop 同名 → 可买(第 3 份 = 游戏语义当场升星)。"""
-    from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_state import BuyCard
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_state import BuyCard
     comp = get_comp('列车同行')
     st = GameState(gold=20, level=6, plane=1, round_num=5,
                    deployed=[_bc_at(1, '三月七', faction='列车同行')],
@@ -1284,8 +1284,8 @@ def test_h1_merge_window_reachable_from_shop() -> None:
 
 def test_h1_copies_cap_at_3() -> None:
     """review H1:总副本 ≥3(1★)不再买(纯浪费)。"""
-    from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_state import BuyCard
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_state import BuyCard
     comp = get_comp('列车同行')
     st = GameState(gold=20, level=6, plane=1, round_num=5,
                    deployed=[_bc_at(1, '三月七', faction='列车同行')],
@@ -1299,8 +1299,8 @@ def test_h1_copies_cap_at_3() -> None:
 
 def test_m3_no_same_name_double_deploy_in_plan() -> None:
     """review M3:场上同名已 deployed → plan 不再 emit 该角色的 DeployMove(游戏 5.1.7 禁双)。"""
-    from sr_od.application.currency_war.cw_comps import get_comp
-    from sr_od.application.currency_war.cw_state import DeployMove
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_state import DeployMove
     comp = get_comp('列车同行')
     st = GameState(gold=10, level=6, plane=1, round_num=5,
                    deployed=[_bc_at(1, '三月七', faction='列车同行')],
@@ -1409,7 +1409,7 @@ def test_xp_click_cost_strategy_discount() -> None:
 
 def test_aggregate_economy_caps_take_max() -> None:
     """aggregate:利息上限取 max(开源节流 9 + 利息上调 10 → 10);免费额度求和。"""
-    from sr_od.application.currency_war.cw_investments import aggregate_economy
+    from sr_od.application.currency_war.kernel.cw_investments import aggregate_economy
     e = aggregate_economy(['开源节流', '利息上调'])
     assert e.interest_cap_override == 10
     assert e.instant_gold == 35
@@ -1419,7 +1419,7 @@ def test_aggregate_economy_caps_take_max() -> None:
 
 def test_economy_reclassified_fields_adr0142() -> None:
     """ADR-0142:9 条曾错装一次性 instant_gold 的重复性效果按原文归位。"""
-    from sr_od.application.currency_war.cw_investments import (
+    from sr_od.application.currency_war.kernel.cw_investments import (
         aggregate_economy,
         get_strategy,
     )
@@ -1457,7 +1457,7 @@ def test_economy_reclassified_fields_adr0142() -> None:
 def test_strategy_registry_full_ingest() -> None:
     """注册表全量 335(plaza API base 334,ADR-0150;+补遗 1,ADR-0133 ingest 体系);
     长尾经济抽取抽查。"""
-    from sr_od.application.currency_war.cw_investments import (
+    from sr_od.application.currency_war.kernel.cw_investments import (
         INVESTMENT_STRATEGIES,
         get_strategy,
     )
@@ -1489,7 +1489,7 @@ def test_decide_event_registry_prior() -> None:
 # ===== ADR-0134 comp 匹配分(星徽套组对齐 target 压倒品质/白名单) =====
 def test_strategy_bindings_extraction() -> None:
     """绑定派生:追击星徽套组 → (追击, 飞霄);无绑定策略 → 空集(安全回落)。"""
-    from sr_od.application.currency_war.cw_investments import (
+    from sr_od.application.currency_war.kernel.cw_investments import (
         get_strategy,
         strategy_bindings,
     )
@@ -1501,7 +1501,7 @@ def test_strategy_bindings_extraction() -> None:
 
 def test_decide_event_comp_match_wins() -> None:
     """星徽套组对齐 target(飞霄)→ 压倒白名单 T0 与棱彩品质先验;不对齐 = 裸品质。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     feixiao = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
     cfg = _cfg()
     st = GameState(board={}, hp=100)
@@ -1521,11 +1521,11 @@ def test_decide_event_comp_match_wins() -> None:
 # ===== ADR-0139 comp 特定站位覆盖命途默认(char_positions) =====
 def test_pick_deploy_row_comp_override() -> None:
     """char_positions 覆盖:绯英 comp 爻光(命途默认 front)→ back;万敌 comp 万敌 → front;无 comp 条目按默认。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     fy = next(c for c in COMP_LIBRARY if c.name == "绯英欢愉")
     wd = next(c for c in COMP_LIBRARY if c.name == "万敌单C")
     # 爻光:Character 命途默认 front(欢愉),但绯英 comp 要求 back(攻略实证)
-    from sr_od.application.currency_war.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
     yaoguang = BenchChar(slot=1, char_id="爻光", faction="欢愉", position_pref="front")
     st = GameState(hp=100, board={}, level=6)
     st.deployed = [BenchChar(slot=i, char_id=f"c{i}") for i in range(3)]
@@ -1541,7 +1541,7 @@ def test_pick_deploy_row_comp_override() -> None:
 
 def test_comp_char_positions_data() -> None:
     """三 comp 站位数据在库:绯英(爻光 back)/追击(知更鸟 front)/万敌(万敌 front)。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     by = {c.name: c.char_positions for c in COMP_LIBRARY}
     assert by["绯英欢愉"].get("爻光") == "back"
     assert by["追击飞霄"].get("知更鸟") == "front"
@@ -1552,7 +1552,7 @@ def test_comp_char_positions_data() -> None:
 # ===== ADR-0140 中期护航三套(escort_for + tempo 护航感知) =====
 def test_escort_for_serves_matching() -> None:
     """escort_for 按 target 机制属性匹配:希儿量子(量子拉条)→龙丹护航;巡海击破→灵砂护航;万敌(燃血成长型)→None。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY, escort_for
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, escort_for
     xe = next(c for c in COMP_LIBRARY if c.name == "希儿量子")
     lj = next(c for c in COMP_LIBRARY if c.name == "巡海击破")   # ADR-0152:击破流萤更名
     wd = next(c for c in COMP_LIBRARY if c.name == "万敌单C")
@@ -1563,7 +1563,7 @@ def test_escort_for_serves_matching() -> None:
 
 def test_transition_tempo_escort_bonus() -> None:
     """护航羁绊凑出(≥2)→ tempo 分加权(P1 后期窗口内);过窗口/无 target 无加。"""
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     xe = next(c for c in COMP_LIBRARY if c.name == "希儿量子")
     base = GameState(hp=100, board={"战技点": 2}, plane=1, round_num=7)   # 无过渡羁绊计数
     with_t = transition_tempo_score(base, xe)
@@ -1584,8 +1584,8 @@ def test_roll_affordable_gate_adr0147() -> None:
     """
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
-    from sr_od.application.currency_war.cw_economy import roll_affordable
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_economy import roll_affordable
     tgt = next(c for c in COMP_LIBRARY if c.name == '列车同行')
     cfg = SimpleNamespace()
     assert not roll_affordable(GameState(board={}, gold=18, level=7, plane=2, round_num=2), cfg, tgt)
@@ -1609,7 +1609,7 @@ def test_decide_event_refresh_suggestion_adr0146() -> None:
 
 def test_env_pick_value_adr0144() -> None:
     """ADR-0144 环境侧评估分:env 原恒 0 分(fallback 恒选第一张)→ 基准分 + 阵营条件分 + HP 钩子。"""
-    from sr_od.application.currency_war.cw_investments import get_env
+    from sr_od.application.currency_war.kernel.cw_investments import get_env
     cfg = _cfg()
     st = GameState(board={})
     # 基准分:彩虹时代 72 > 增发货币 48(旧:全 0 分 → 恒选第一张)

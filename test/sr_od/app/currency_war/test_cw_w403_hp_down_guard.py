@@ -16,7 +16,7 @@ def _mk_session():
 
 
 def _outcome(plane: int, round_num: int, node_type: str, killed) -> object:
-    from sr_od.application.currency_war.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
     return RoundOutcome(round_num=round_num, plane=plane, node_type=node_type,
                         comp_tag='test', hp_after=0, killed=killed)
 
@@ -30,7 +30,7 @@ def _seed_real(s, hp: int, node_t: int) -> None:
 # ===== 锁1:win 帧下行拒信(胜战不损血机制事实)=====
 
 def test_win_frame_down_rejected(monkeypatch) -> None:
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     s.performance.record(_outcome(1, 6, '普通战斗', killed=True))
@@ -45,7 +45,7 @@ def test_win_frame_down_rejected(monkeypatch) -> None:
 
 
 def test_zero_loss_node_down_rejected() -> None:
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     s.performance.record(_outcome(1, 6, '奖励', killed=None))   # 零损节点
@@ -56,7 +56,7 @@ def test_zero_loss_node_down_rejected() -> None:
 # ===== 锁2:loss 帧分档采信(p100 标定)=====
 
 def test_loss_frame_within_cap_accepted() -> None:
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     # 遭遇 Δ=40 ≤ 42 → 真掉血,毒化窗不误开
     s = _mk_session()
     _seed_real(s, 60, 5)
@@ -71,7 +71,7 @@ def test_loss_frame_within_cap_accepted() -> None:
 
 
 def test_loss_frame_over_cap_rejected() -> None:
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     # 普通战斗 Δ=40 > 23 → 拒信(毒化窗起点)
     s = _mk_session()
     _seed_real(s, 60, 5)
@@ -80,7 +80,7 @@ def test_loss_frame_over_cap_rejected() -> None:
 
 
 def test_loss_cap_boundary_exact() -> None:
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     s.performance.record(_outcome(1, 6, '遭遇', killed=False))
@@ -93,7 +93,7 @@ def test_loss_cap_boundary_exact() -> None:
 
 def test_loss_unknown_node_type_rejected_then_self_heal() -> None:
     """节点型未标定(精英)不拍值:拒信 + 复现通道 ≤2 帧自愈。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     s.performance.record(_outcome(1, 6, '精英', killed=False))
@@ -106,7 +106,7 @@ def test_loss_unknown_node_type_rejected_then_self_heal() -> None:
 # ===== 锁3:无战斗事实拒信 + 双帧复现自愈 =====
 
 def test_no_fact_down_rejected_then_confirmed() -> None:
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     assert s.performance.history == []
@@ -118,7 +118,7 @@ def test_no_fact_down_rejected_then_confirmed() -> None:
 
 def test_no_fact_down_regression_confirms_misread() -> None:
     """1 帧低位 + 1 帧回归旧值 → 误读确认,丢弃 suspect,一切如旧。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     assert cw_reconcile.reconcile_hp(s, 20, node_t=6) == (60, False)
@@ -129,7 +129,7 @@ def test_no_fact_down_regression_confirms_misread() -> None:
 
 def test_suspect_window_expiry() -> None:
     """超窗(>2 节点)未复现 → suspect 过期,下次下行重新走首拒帧。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     assert cw_reconcile.reconcile_hp(s, 20, node_t=6) == (60, False)
@@ -142,7 +142,7 @@ def test_suspect_window_expiry() -> None:
 
 def test_guard_inactive_without_node_t() -> None:
     """node_t=None(离线/旧调用方)守卫不介入,ADR-0282 行为逐位不变。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 50, None)
     assert cw_reconcile.reconcile_hp(s, 35) == (35, True)   # 无战斗事实仍采新
@@ -151,7 +151,7 @@ def test_guard_inactive_without_node_t() -> None:
 
 def test_first_truth_frame_unaffected() -> None:
     """无旧真值(开局)首真值帧不经守卫,FALLBACK 语义不变。"""
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     assert cw_reconcile.reconcile_hp(s, 88, node_t=1) == (88, True)
     assert s.last_hp_real == 88 and s.last_hp_real_node == 1
@@ -187,7 +187,7 @@ def test_reconcile_down_guard_wired() -> None:
     """源级锁:reconcile_hp 内下行守卫与复现通道接线存在。"""
     import inspect
 
-    from sr_od.application.currency_war import cw_reconcile
+    from sr_od.application.currency_war.kernel import cw_reconcile
     src = inspect.getsource(cw_reconcile.reconcile_hp)
     assert '_battle_fact_between' in src
     assert '_reject_down' in src

@@ -10,15 +10,15 @@ transition_focus 复活,方向选择不动,只物化已锁方向)。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     pair_target_comp,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
 )
-from sr_od.application.currency_war.cw_deploy_logic import select_deployments
+from sr_od.application.currency_war.kernel.cw_deploy_logic import select_deployments
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.strategy import (
     DecisionV2Strategy,
@@ -129,7 +129,7 @@ def test_seele_pair_expansion() -> None:
 def test_form_tiers_single_source_bridge_pool() -> None:
     """form_tiers 单一源=BRIDGE_POOL:列车+DOT 对整组取 train_dot 档
     (对拍单一源,不锁写死数);空对返 None。"""
-    from sr_od.application.currency_war.cw_bridge_pool import BRIDGE_POOL
+    from sr_od.application.currency_war.kernel.cw_bridge_pool import BRIDGE_POOL
 
     tc = pair_target_comp(_PAIR)
     assert tc is not None

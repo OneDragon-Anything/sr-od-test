@@ -20,12 +20,12 @@ from __future__ import annotations
 from dataclasses import replace
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_intention import (
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     intention_core,
 )
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel.cw_state import (
     Action,
     BenchChar,
     BuyCard,
@@ -141,7 +141,7 @@ def test_int_emb_contract() -> None:
                 bench=[BenchChar(slot=0, char_id='桑博',
                                  faction='仙舟罗浮', star=1)],
                 shop=[])
-    from sr_od.application.currency_war.cw_state import SellBench
+    from sr_od.application.currency_war.kernel.cw_state import SellBench
     sell = Candidate(action=SellBench(bench_idx=0, income=1),
                      tag='off_target', source='bench',
                      breakdown_hint={'name': '桑博'})
@@ -149,7 +149,7 @@ def test_int_emb_contract() -> None:
     assert bd['int_emb'] == (bd['after']['interest']
                              - bd['base']['interest'])
     # refresh 候选:int_emb=0
-    from sr_od.application.currency_war.cw_state import RefreshShop
+    from sr_od.application.currency_war.kernel.cw_state import RefreshShop
     rf = Candidate(action=RefreshShop(cost=2), tag='refresh',
                    source='shop')
     _v2, bd2 = _sc(rf, st, StrategySession(), _REG)
@@ -244,7 +244,7 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
     排程臂放行,金 49(花后 45<50)帧锁平台越界拒。
     批 3 重推:注入对象从 ev.dp_posture(DP 退役)改为排程单一址
     cw_economy.schedule_upgrade(kernel,期 0b 下沉);producer 规则锁在 test_cw_w633_migration_b3。"""
-    from sr_od.application.currency_war import cw_economy
+    from sr_od.application.currency_war.kernel import cw_economy
 
     st = _state(round_num=6, gold=51, level=6,
                 deployed=[BenchChar(slot=i, char_id=f'杂件{i}',
@@ -306,7 +306,7 @@ def test_overheat_reward_node_treated_as_battle() -> None:
     # 战斗向刷新开放×P8 上限:r7(>refresh_max_round=6)reward 节点 +
     # 过热 → 首刷正分(轮计数 0<cap);同轮已刷 1 次(计数≥cap)→
     # 豁免失效回常规门恒负分;无环境对照恒负分(轮界门照辖)
-    from sr_od.application.currency_war.cw_state import RefreshShop
+    from sr_od.application.currency_war.kernel.cw_state import RefreshShop
     from sr_od.application.currency_war.decision_v2.scoring import (
         score_candidate as _sc,
     )
@@ -336,7 +336,7 @@ def test_w120_p5_c_interest_boundary() -> None:
     金 50/51 时 D 候选被 EV 拒(跨 50 档,C_interest≥R);金 ≥52+刷价
     放行(C_interest=0,由常分决定)——「花完仍≥50」是公式的自然输出
     而非外加约束。注入 (val=0.5, int_emb=0) 锁门语义(常分口径。"""
-    from sr_od.application.currency_war.cw_state import RefreshShop
+    from sr_od.application.currency_war.kernel.cw_state import RefreshShop
     cand = Candidate(action=RefreshShop(cost=2), tag='refresh',
                      source='shop')
     for gold, expect in ((50, False), (51, False), (52, True), (53, True)):

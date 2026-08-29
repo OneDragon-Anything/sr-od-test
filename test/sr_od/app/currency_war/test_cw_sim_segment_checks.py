@@ -79,7 +79,7 @@ def test_seg_lossless_buy_missed_bidirectional() -> None:
     # 注册表内找一个真实的过渡带 1 费件(阵营 ∈ ENGINE_FACTIONS),
     # 不硬编码角色名防注册表演进碎测。
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.cw_line_defs import (
+    from sr_od.application.currency_war.kernel.cw_line_defs import (
         ENGINE_FACTIONS,
     )
     name = next(n for n, c in CHARACTERS.items()
@@ -167,7 +167,7 @@ def test_seg_formed_still_buying_transition_bidirectional() -> None:
     assert not chk.seg_check_formed_still_buying_transition(dup)
     # 目标件买入(bridge 名册内身份/目标 comp 名册)→ 豁免:用真实
     # bridge_pool 组件名查一个名单成员
-    from sr_od.application.currency_war.cw_line_defs import BRIDGE_POOL
+    from sr_od.application.currency_war.kernel.cw_line_defs import BRIDGE_POOL
     bridge_member = next(iter({n for combo in BRIDGE_POOL
                                for n in (*combo.fixed, *combo.core)}))
     target = [_row(1, **base),

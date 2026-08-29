@@ -19,8 +19,8 @@ import dataclasses
 
 import pytest
 
-from sr_od.application.currency_war import cw_first_passage as fp
-from sr_od.application.currency_war.cw_state import (
+from sr_od.application.currency_war.kernel import cw_first_passage as fp
+from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     effective_hp_threshold,
 )
@@ -51,9 +51,9 @@ def test_calibration_version_anchor() -> None:
 # (default_strategy 两点危机/生存门已随本体退役删除)
 
 _THRESHOLD_CONSUMERS: tuple[tuple[str, int], ...] = (
-    ('cw_economy.py', 1),        # 止损门
+    ('kernel/cw_economy.py', 1),        # 止损门
     ('cw_evaluate.py', 2),       # HP_DISTRESS + 保血(同链两点)
-    ('cw_comps.py', 1),          # 保命转型 0.75×
+    ('kernel/cw_comps.py', 1),          # 保命转型 0.75×
     ('cw_plan.py', 1),           # _refresh_cap
 )
 
@@ -167,7 +167,7 @@ def test_two_state_consumers_never_mix_tables() -> None:
         / 'currency_war'
     # (批 3:DP 两态递推模块退役;胜率映射 cw_plane_table
     #  只读胜率表,不在条件败面表消费清单)
-    for rel in ('cw_line_switch.py', 'cw_first_passage.py'):
+    for rel in ('kernel/cw_line_switch.py', 'kernel/cw_first_passage.py'):
         code = '\n'.join(ln.split('#', 1)[0]
                          for ln in (base / rel).read_text(encoding='utf-8')
                          .splitlines())

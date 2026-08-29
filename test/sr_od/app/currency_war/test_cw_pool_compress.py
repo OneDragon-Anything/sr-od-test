@@ -5,9 +5,9 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_comps import get_comp  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_comps import get_comp  # noqa: E402
 from sr_od.application.currency_war.cw_plan import _hunt_tier_set  # noqa: E402
-from sr_od.application.currency_war.cw_state import BenchChar, GameState  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState  # noqa: E402
 
 
 def test_missing_core_tier_hunted() -> None:
@@ -97,7 +97,7 @@ def test_compress_tail_sweep_dualtrack_buys_cheap() -> None:
 
     from sr_od.application.currency_war.data.cw_chars import get_char
     from sr_od.application.currency_war.cw_plan import plan
-    from sr_od.application.currency_war.cw_state import GameState, ShopCard
+    from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 
     def _shop() -> list[ShopCard]:
         names = ['大丽花', '黑塔', '阿格莱雅', '乱破', '远坂凛']
