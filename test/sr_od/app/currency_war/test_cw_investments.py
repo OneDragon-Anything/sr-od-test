@@ -316,3 +316,10 @@ def test_adr0151_semantic_bindings_present() -> None:
                           ("特邀专家:加拉赫", "击破")):
         assert env_faction(name) == faction, f"{name} 应绑 {faction}"
 
+
+def test_megastar_set_binding_derived_from_single() -> None:
+    """套组绑定由单件条目 + 名字规则派生(共享同一元组对象):
+    改单件即改套组;套组条目禁再手写(重建即漂移双源)。"""
+    from sr_od.application.currency_war.cw_investments import STRATEGY_BINDINGS
+    assert STRATEGY_BINDINGS["追击星徽套组"] is STRATEGY_BINDINGS["追击星徽"]
+    assert STRATEGY_BINDINGS["追击星徽套组(二)"] is STRATEGY_BINDINGS["追击星徽"]
