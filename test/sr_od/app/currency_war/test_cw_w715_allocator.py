@@ -346,6 +346,50 @@ def test_domain_predicate_current_value_ttf() -> None:
     assert alloc_domain(plain, _sess(), DEFAULT_REGISTRY) is None
 
 
+# ---------- W718 修复回归:刷新臂预算门(实锤 640564 金负值) ----------
+
+def test_budget_zero_blocks_refresh() -> None:
+    """R_t 预算约束必须门控刷新分支:budget=0(金贴储备线)帧刷新
+    不出手;cost>budget 同拒——修复前 allocate() 只比 V 值绕过
+    _feasible,26 帧/10 局 budget=0 出手、640564 金 −2(W718 §一面2)。
+    回归锁:预算 0 帧零分配器出手(含刷新臂)。"""
+    reg = DEFAULT_REGISTRY
+    st = GameState()
+    r14 = _prop('refresh', 14.0, 2)
+    assert allocate([r14], 0, 5, reg, st) == []
+    assert allocate([r14], 1, 5, reg, st) == []   # cost 2 > budget 1
+    out = allocate([r14], 2, 5, reg, st)
+    assert [p.kind for p in out] == ['refresh']   # 预算内仍放行
+
+
+# ---------- W718 修复回归:Π_up 继承 [12]/[33] 授权白名单 ----------
+
+def test_levelup_supply_inherits_auth_whitelist(monkeypatch) -> None:
+    """供给层继承上游授权白名单(ev.levelup_ev_basis,与 arbiter 升级
+    门/段级检查同谓词):白名单拒('')的帧分配器不出升级/复合提案
+    (辖域冲突裁决:豁免的是濒死止损,不越过白名单;seed 640516
+    seg_unjustified_levelup 2 起回归)。放行臂名回写 auth_basis 观测
+    字段供检查器对账。"""
+    from sr_od.application.currency_war.decision_v2 import ev as ev_mod
+    st = _stop_state(level=8, n_dep=8)   # 板满
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
+    st.bench = [BenchChar(slot=1, char_id='青雀', faction='仙舟', star=1)]
+    monkeypatch.setattr(ev_mod, 'levelup_ev_basis',
+                        lambda *a, **k: '')   # 白名单拒
+    props = _supply_impl(st, _sess(), _stop_registry(),
+                         AllocDomain.STOP_WINDOW)
+    assert not [p for p in props if p.kind in ('levelup', 'comp')], \
+        '白名单拒帧不得供给升级/复合提案'
+    monkeypatch.setattr(ev_mod, 'levelup_ev_basis',
+                        lambda *a, **k: 'static_ev')   # 白名单放行
+    props = _supply_impl(st, _sess(), _stop_registry(),
+                         AllocDomain.STOP_WINDOW)
+    lus = [p for p in props if p.kind == 'levelup']
+    assert lus and lus[0].actions[0].auth_basis == 'static_ev'
+
+
+
+
 # ---------- 记账扩展:分配器帧位(v6 §6) ----------
 
 def test_alloc_frame_bit_disclosure() -> None:
