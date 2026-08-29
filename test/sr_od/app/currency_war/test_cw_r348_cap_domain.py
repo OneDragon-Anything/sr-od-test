@@ -9,7 +9,7 @@ from __future__ import annotations
 import inspect
 
 from sr_od.application.currency_war import prep_director
-from sr_od.application.currency_war.cw_back_layout import (
+from sr_od.application.currency_war.obs.cw_back_layout import (
     back_slots_from_cap_diff,
 )
 

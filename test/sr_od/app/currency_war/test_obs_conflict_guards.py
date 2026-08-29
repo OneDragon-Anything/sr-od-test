@@ -6,7 +6,7 @@ star 回退留证)、DP 冒烟。obs_conflict 走 best-effort 不抛,monkeypatch
 """
 import pytest
 
-from sr_od.application.currency_war.cw_observation import board_from_tracked
+from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
@@ -160,7 +160,7 @@ def test_plane_table_smoke():
     assert interest(50) == 5
 
 # ===== 等级三源解析 _resolve_level(2026-08-18 治本:live 乒乓根因) =====
-from sr_od.application.currency_war.cw_observation import _resolve_level  # noqa: E402
+from sr_od.application.currency_war.obs.cw_observation import _resolve_level  # noqa: E402
 
 
 def _kinds(events) -> list[str]:

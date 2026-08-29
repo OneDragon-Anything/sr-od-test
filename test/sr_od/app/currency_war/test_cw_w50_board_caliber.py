@@ -23,7 +23,7 @@ from sr_od.application.currency_war.kernel.cw_bond_equips import (
 )
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_intention import CROSS_LINE_SKELETON
-from sr_od.application.currency_war.cw_observation import board_from_tracked
+from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
 from sr_od.application.currency_war.kernel.cw_plugins import (
     PLUGIN_LIBRARY,
     W16_MAJORITY_LINES,

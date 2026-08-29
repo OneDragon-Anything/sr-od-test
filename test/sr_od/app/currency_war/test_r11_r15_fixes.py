@@ -9,7 +9,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war import cw_identity_obs as cio  # noqa: E402
+from sr_od.application.currency_war.obs import cw_identity_obs as cio
 from sr_od.application.currency_war.kernel.cw_comps import get_comp  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_economy import _want_level_up  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_state import GameState  # noqa: E402

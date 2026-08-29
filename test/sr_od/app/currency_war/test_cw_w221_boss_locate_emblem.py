@@ -28,7 +28,7 @@ import cv2
 import numpy as np
 
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.cw_node_reader import (
+from sr_od.application.currency_war.obs.cw_node_reader import (
     classify_node_row,
     load_boss_templates,
     load_node_type_templates,
@@ -68,7 +68,7 @@ def test_emblem_band_zero_false_positive() -> None:
 def test_emblem_detail_label_reads_boss(test_context: SrTestContext) -> None:
     """锁②:run30 帧详情条类型名 OCR 含「首领」(真实 OCR;定位验证锚)。"""
     from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
-    from sr_od.application.currency_war.cw_observation import read_detail_node_type_label
+    from sr_od.application.currency_war.obs.cw_observation import read_detail_node_type_label
 
     if _area_rect(test_context, '文本-节点类型名', '货币战争-位面详情') is None:
         test_context.screen_loader.reload(from_separated_files=True)

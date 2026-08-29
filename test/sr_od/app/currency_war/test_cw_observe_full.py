@@ -7,7 +7,7 @@ import inspect
 
 def test_signature_tier_source() -> None:
     """签名含 tier/source(review C-2b:reconcile 审计归因)。"""
-    from sr_od.application.currency_war import cw_observe_full
+    from sr_od.application.currency_war.obs import cw_observe_full
     sig = inspect.signature(cw_observe_full.observe_full)
     assert 'tier' in sig.parameters
     assert 'source' in sig.parameters
@@ -18,7 +18,7 @@ def test_signature_tier_source() -> None:
 def test_light_tier_skips_sift() -> None:
     """轻档跳过 SIFT(A9:控制流步豁免全量)。"""
     src = inspect.getsource(
-        __import__('sr_od.application.currency_war.cw_observe_full',
+        __import__('sr_od.application.currency_war.obs.cw_observe_full',
                    fromlist=['observe_full']))
     assert "if tier == 'heavy':" in src
     # 轻档不进 SIFT 段(结构断言)
@@ -34,7 +34,7 @@ def test_gold_reread_is_second_gate() -> None:
     第 16 条「零效力」处置。)
     """
     src = inspect.getsource(
-        __import__('sr_od.application.currency_war.cw_observe_full',
+        __import__('sr_od.application.currency_war.obs.cw_observe_full',
                    fromlist=['observe_full']))
     assert 'gold_reread' in src
 
@@ -42,6 +42,6 @@ def test_gold_reread_is_second_gate() -> None:
 def test_substate_marks_readability() -> None:
     """子态尽力读(A5):node_seq/shop_cards 可读性显式标注。"""
     src = inspect.getsource(
-        __import__('sr_od.application.currency_war.cw_observe_full',
+        __import__('sr_od.application.currency_war.obs.cw_observe_full',
                    fromlist=['observe_full']))
     assert "'node_seq'" in src and "'shop_cards'" in src

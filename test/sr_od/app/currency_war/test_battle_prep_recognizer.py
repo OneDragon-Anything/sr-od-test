@@ -7,9 +7,9 @@ phase 走纯读(``_read_phase_round_pure``)、且**不**复用带可变状态的
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import sr_od.application.currency_war.recognizers.battle_prep_recognizer as mod
+import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as mod
 from sr_od.application.currency_war.kernel.cw_obs_core import SCREEN_NAME
-from sr_od.application.currency_war.recognizers.battle_prep_recognizer import (
+from sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer import (
     BattlePrepRecognizer,
 )
 

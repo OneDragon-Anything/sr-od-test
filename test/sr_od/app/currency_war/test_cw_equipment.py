@@ -12,7 +12,7 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import file_utils
-from sr_od.application.currency_war.cw_equipment import (
+from sr_od.application.currency_war.obs.cw_equipment import (
     EQUIPMENTS,
     Equipment,
     _owned_order_anomaly,
@@ -20,7 +20,7 @@ from sr_od.application.currency_war.cw_equipment import (
     load_equip_tm_grays,
     read_equipped_below,
 )
-from sr_od.application.currency_war.cw_identity_obs import avatar_to_below
+from sr_od.application.currency_war.obs.cw_identity_obs import avatar_to_below
 from sr_od.context.sr_context import SrContext
 from test.conftest import SrTestContext
 
@@ -301,7 +301,7 @@ def test_select_layout_no_complete_returns_empty() -> None:
     """
     import numpy as np
 
-    from sr_od.application.currency_war.cw_equipment import _select_equipped_layout
+    from sr_od.application.currency_war.obs.cw_equipment import _select_equipped_layout
     dummy = np.zeros((100, 200, 3), dtype=np.uint8)
     rect = Rect(0, 0, 200, 100)
     cx = 100

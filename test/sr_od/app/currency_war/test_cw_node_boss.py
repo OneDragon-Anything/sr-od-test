@@ -18,8 +18,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from sr_od.application.currency_war import cw_node_reader
-from sr_od.application.currency_war.cw_node_reader import (
+from sr_od.application.currency_war.obs import cw_node_reader
+from sr_od.application.currency_war.obs.cw_node_reader import (
     classify_node_row,
     load_boss_templates,
     load_node_type_templates,
@@ -120,7 +120,7 @@ def test_plane_detail_band_read_fn() -> None:
     """read_plane_detail_nodes 生产入口:yml 带(区域-节点条@位面详情屏)
     → 9 槽 + boss 巨鹿生物制药(端到端,含模板懒加载)。"""
     import pytest
-    from sr_od.application.currency_war import cw_observation
+    from sr_od.application.currency_war.obs import cw_observation
     from sr_od.context.sr_context import SrContext
     from one_dragon.utils import cv2_utils
 

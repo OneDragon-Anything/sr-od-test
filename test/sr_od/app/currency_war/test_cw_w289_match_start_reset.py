@@ -12,7 +12,7 @@
 """
 import inspect
 
-from sr_od.application.currency_war.cw_observation import (
+from sr_od.application.currency_war.obs.cw_observation import (
     reset_phase_round_cache,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
@@ -72,7 +72,7 @@ def test_discard_idempotent_when_no_container():
 def test_phase_round_cross_match_reset():
     """锁 3(phase_round 跨局重置豁免语义):last-known-good 在新局边界被清,
     单调守卫不会拿上局 [9,9] 打回新局 1-9(phase_round 抽样 2/3 ✗ 根因)。"""
-    import sr_od.application.currency_war.cw_observation as obs_mod
+    import sr_od.application.currency_war.obs.cw_observation as obs_mod
     obs_mod._last_phase_round = (3, 9)     # 模拟上局 P3-9 残留
     try:
         assert obs_mod._last_phase_round == (3, 9)

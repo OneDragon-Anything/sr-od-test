@@ -20,7 +20,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war import cw_observation
+from sr_od.application.currency_war.obs import cw_observation
 from sr_od.application.currency_war.prep_director import PrepDirector
 
 

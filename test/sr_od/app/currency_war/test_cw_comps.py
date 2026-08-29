@@ -558,7 +558,7 @@ def test_comp_library_key_equips_canonical() -> None:
 
     工程化:装备也是领域实体,有注册表;key_equips 引用规范名(与 core_chars 同纪律)。
     """
-    from sr_od.application.currency_war.cw_equipment import EQUIPMENTS
+    from sr_od.application.currency_war.obs.cw_equipment import EQUIPMENTS
     for comp in COMP_LIBRARY:
         for e in comp.key_equips:
             assert e in EQUIPMENTS, (

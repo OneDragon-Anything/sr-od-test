@@ -21,7 +21,7 @@ import pytest  # noqa: E402
 
 from one_dragon.base.geometry.rectangle import Rect  # noqa: E402
 from one_dragon.utils.cv2_utils import read_image  # noqa: E402
-from sr_od.application.currency_war import cw_identity_obs as cio  # noqa: E402
+from sr_od.application.currency_war.obs import cw_identity_obs as cio
 
 # 备战栏-1..9 pc_rect(assets/game_data/screen_info/currency_war_battle_prep.yml;
 # 与 cw_identity_obs._ctx_slots 同一坐标系的离线硬编码,同 find_supply_boxes 分层约定)

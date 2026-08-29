@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
-from sr_od.application.currency_war.cw_identity_obs import find_reward_spheres
+from sr_od.application.currency_war.obs.cw_identity_obs import find_reward_spheres
 
 if True:  # test_context fixture 类型
     from test.conftest import SrTestContext

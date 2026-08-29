@@ -5,8 +5,8 @@
 """
 from unittest.mock import MagicMock
 
-import sr_od.application.currency_war.recognizers.invest_strategy_recognizer as mod
-from sr_od.application.currency_war.recognizers.invest_strategy_recognizer import (
+import sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer as mod
+from sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer import (
     InvestStrategyRecognizer,
 )
 

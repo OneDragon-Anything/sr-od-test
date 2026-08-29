@@ -6,8 +6,8 @@
 """
 from unittest.mock import MagicMock
 
-import sr_od.application.currency_war.recognizers.settlement_recognizer as mod
-from sr_od.application.currency_war.recognizers.settlement_recognizer import (
+import sr_od.application.currency_war.obs.recognizers.settlement_recognizer as mod
+from sr_od.application.currency_war.obs.recognizers.settlement_recognizer import (
     SettlementRecognizer,
 )
 

@@ -9,8 +9,8 @@
 """
 import json
 
-import sr_od.application.currency_war.cw_briefing_obs as mod
-from sr_od.application.currency_war.cw_briefing_obs import (
+import sr_od.application.currency_war.obs.cw_briefing_obs as mod
+from sr_od.application.currency_war.obs.cw_briefing_obs import (
     _is_garbage_affix,
     load_affix_effects_from_file,
     write_affix_effects,

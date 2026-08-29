@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
-from sr_od.application.currency_war.cw_identity_obs import find_supply_boxes
+from sr_od.application.currency_war.obs.cw_identity_obs import find_supply_boxes
 
 # 实机截图(1-9 备战,槽1=补给箱,槽2-9=角色;2026-08-14 采集)
 _SHOT = r'.debug/sr_od_mcp/screenshot/screenshot_20260814_164308_173490.png'
@@ -60,7 +60,7 @@ def test_supply_box_no_false_positive_on_empty() -> None:
 
 def test_supply_box_threshold_margin() -> None:
     """分离度:箱槽 val 应超阈值,角色槽远低于(防阈值贴边脆断)。"""
-    from sr_od.application.currency_war.cw_identity_obs import (
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
         _SUPPLY_BOX_TM_THR,
         _get_supply_box_gray,
     )

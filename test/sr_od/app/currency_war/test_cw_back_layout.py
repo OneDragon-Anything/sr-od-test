@@ -30,11 +30,11 @@ sys.path.insert(0, str(_ROOT / 'src'))
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.currency_war_char_id import (
+from sr_od.application.currency_war.obs.currency_war_char_id import (
     identify_character,
     load_avatar_templates,
 )
-from sr_od.application.currency_war.cw_identity_obs import (
+from sr_od.application.currency_war.obs.cw_identity_obs import (
     identify_slots,
 )
 
@@ -158,7 +158,7 @@ def test_cap_diff_routing():
     """ADR-0385 口述公式「后台格数 = 6+(cap−level)」路由:
     diff0→6 / diff1→7(已建档,2026-08-26 佩佩局实锤)/ diff≥2→8;
     diff<0(读错族)按 0;diff>2(域外)按 2。level 单独不参与。"""
-    from sr_od.application.currency_war.cw_back_layout import (
+    from sr_od.application.currency_war.obs.cw_back_layout import (
         _LAYOUT_PREFIX,
         back_slots_from_cap_diff,
         fallback_back_slots,
@@ -202,9 +202,9 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
     run 26 反向锚:lv8 无召唤物(cap=level)→ 恒 6 格(旧模型按 level≥7 选 8 格
     = 崩坏根因①);lv7 cap9(狸猫局)→ 8 格。
     """
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
@@ -247,7 +247,7 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
     确认 = 标准 6 格正样本)→ 6:事故形态的直接回归锚。
     """
     import numpy as np
-    from sr_od.application.currency_war.cw_back_layout import cv_back_slots
+    from sr_od.application.currency_war.obs.cw_back_layout import cv_back_slots
     for fn, want in (
             ('后排8槽-狸猫局.webp', 8), ('后排8槽-全位验证.webp', 8),
             ('后排8槽-双宝钻局.webp', 8), ('后排8槽-满级局.webp', 8),
@@ -266,9 +266,9 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
 
 def test_reconcile_channels_agree(tmp_path, monkeypatch, frame):
     """对账·一致 → 公式值,无 back_layout_channel_conflict 留证。"""
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
@@ -291,9 +291,9 @@ def test_reconcile_channels_disagree_cv_wins(tmp_path, monkeypatch, frame):
     old=6(公式)/new=8(CV)供判读查 reader。
     """
     import json as _json
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
@@ -312,9 +312,9 @@ def test_reconcile_channels_disagree_cv_wins(tmp_path, monkeypatch, frame):
 
 def test_reconcile_cv_none_formula_fallback(tmp_path, monkeypatch, frame):
     """CV 不可判(锚缺失/越界/特效遮挡)→ 退公式值(公式=CV 失效的兜底)。"""
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
@@ -334,9 +334,9 @@ def test_read_deployed_chars_formula_driven(
     (6 格基线右界 1315,恰含 1316 狸小虎——两档共享 604-1316 段,差异只在
     两端扩展格)。
     """
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
@@ -357,7 +357,7 @@ def test_read_deployed_chars_formula_driven(
 
 def test_system_unit_layout_check_ok(tmp_path, monkeypatch, frame, templates):
     """对档(8 格档,狸猫在位7/8)→ 无 layout_mismatch 留证。"""
-    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
@@ -371,7 +371,7 @@ def test_system_unit_layout_check_ok(tmp_path, monkeypatch, frame, templates):
 
 def test_system_unit_layout_check_mismatch(tmp_path, monkeypatch, frame, templates):
     """错档(狸猫实测 x≈1316/1458 vs 所选档右格 1174)→ layout_mismatch_by_system_unit 留证。"""
-    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     journal = tmp_path / 'obs.jsonl'
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
@@ -420,10 +420,10 @@ def test_layout_hook_no_stop_only_evidence(
     CV/防抖序列),无 flag 文件;真实 7 格(diff==1)已建档 → 见
     test_layout_hook_silent_on_archived。"""
     import json as _json
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.kernel.cw_obs_core as core
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     ctx = test_context
 
@@ -466,9 +466,9 @@ def test_layout_hook_silent_on_archived(
 
     2026-08-26 佩佩局 7 格建档后,(8,9,7) = diff1 直读 7 的真值态,必须
     静默(旧「7 未建档刷留证」行为已废,证据垃圾)。"""
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     ctx = test_context
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
@@ -493,7 +493,7 @@ def test_layout_hook_no_stop_machinery_in_src():
     """源码级锁:read_deployed_chars 不得再调 stop_running/写停机 flag
     (停机钩子整段废弃,回流即红)。"""
     import inspect
-    from sr_od.application.currency_war import cw_identity_obs
+    from sr_od.application.currency_war.obs import cw_identity_obs
     src = inspect.getsource(cw_identity_obs.read_deployed_chars)
     assert 'stop_running' not in src and 'back_layout_stop_hook.flag' not in src, \
         '停机机制已废弃(ADR-0385 决策 12);采集走留证+人工经 MCP'
@@ -502,7 +502,7 @@ def test_layout_hook_no_stop_machinery_in_src():
 def test_pending_7slots_machinery_removed():
     """件②:旧「lv6=7 格待采」留证机器已清理(存在性由公式回答=钻石+1,
     与等级无关;缺的只是坐标档,归停机钩子管)。"""
-    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
     assert not hasattr(cbl, 'note_7slots_pending')
     assert not hasattr(cbl, '_pending_note_ts')
     assert not hasattr(cbl, '_PENDING_7SLOT_LEVELS')
@@ -532,9 +532,9 @@ def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
     (7 格已建档:CV 稳定 7 = 合法档直读,不经防抖;瞬态 7 误读的代价仅是
     多读一个空扩展窗(超集语义,无动作损失),run 27 型停机事故不再可能。)"""
     import json as _json
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     # 6 格真帧(shop_closed)×2 作重读帧
     frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
@@ -565,9 +565,9 @@ def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
 def test_cv_stable_new_grid_confirmed(tmp_path, monkeypatch, frame):
     """稳定未建档新格数(以 9 模拟):三读一致 [9,9,9] → 采 CV 值
     (n_raw=9 触发留证钩子采集流程,防抖不拦真信号;运行值退 8 超集)。"""
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     fctx = _FakeCtx([frame, frame])   # 重读帧同 frame(stub 全 9)
     monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
@@ -587,9 +587,9 @@ def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
     """重读帧间不一致(如 [9,9,6],未建档 9 模拟)= 瞬态 → 退公式 + 序列留证
     (obs_conflict 带 cv_readings 上下文),不采 CV。"""
     import json as _json
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_identity_obs as cio
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
     fctx = _FakeCtx([frame, frame6])   # 重读 1=frame(9),重读 2=frame6(6)
@@ -634,7 +634,7 @@ def _patch_cap_reader(monkeypatch, seq):
         i = min(calls['n'], len(seq) - 1)
         calls['n'] += 1
         return seq[i]
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     monkeypatch.setattr(cwo, 'read_deploy_cap', _fake)
     return calls
 
@@ -642,7 +642,7 @@ def _patch_cap_reader(monkeypatch, seq):
 def test_cap_transient_in_formula_channel_debounced(tmp_path, monkeypatch):
     """run 27 型(格数类):cap 首读瞬态 3(域外,lv6),重读回真值 8(宝钻×2)
     → 采重读值 → 公式 6+(8−6)=8 格;若无防抖 diff=−5 → 6 格错档。"""
-    import sr_od.application.currency_war.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
     calls = _patch_cap_reader(monkeypatch, [3, 8])
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
@@ -656,8 +656,8 @@ def test_cap_transient_in_formula_channel_debounced(tmp_path, monkeypatch):
 def test_cap_still_domain_rejected_falls_baseline(tmp_path, monkeypatch):
     """cap 域外且重读仍域外([3,3],lv6)→ 拒信 None → diff=0 退 6 格基线
     (失败安全侧,不在瞬态值上选档)+ deploy_cap_domain 留证。"""
-    import sr_od.application.currency_war.cw_back_layout as cbl
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     calls = _patch_cap_reader(monkeypatch, [3, 3])
     conflicts = []
     monkeypatch.setattr(cwo, 'obs_conflict', lambda *a, **k: conflicts.append(a))
@@ -770,7 +770,7 @@ def test_read_level_xp_backinference(test_context, monkeypatch):
     → 后排选 6 格档 → **佩佩@slot7 窗口未被枚举丢读**。修:漏读时
     read_xp_progress 的 xp_to_next 经 XP_TO_NEXT_LEVEL 倒查("0/4"→lv3),
     仍读不到才退期望曲线。"""
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     img = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
     # 等级区漏读(直读单一源 = read_level_raw_opt,patch 该缝)
     monkeypatch.setattr(cwo, 'read_level_raw_opt', lambda ctx, scr, level=None: None)

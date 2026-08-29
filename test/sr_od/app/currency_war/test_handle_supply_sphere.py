@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.cw_identity_obs import (
+from sr_od.application.currency_war.obs.cw_identity_obs import (
     read_reward_spheres,
     read_supply_boxes,
 )

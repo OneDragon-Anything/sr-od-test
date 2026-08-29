@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 import sr_od.application.currency_war.prep_director as pd
-from sr_od.application.currency_war.cw_faction_obs import (
+from sr_od.application.currency_war.obs.cw_faction_obs import (
     parse_panel_tokens,
     read_displayed_factions,
 )
@@ -39,7 +39,7 @@ def test_faction_wire_source_locks() -> None:
     fac_at = loop_src.index('self._reconcile_faction_display(obs)')
     assert fac_at > xp_at, '羁绊对账须与 XP 对账同一 heavy 定型帧、紧随其后'
     mod_src = Path(pd.__file__).read_text(encoding='utf-8')
-    assert 'from sr_od.application.currency_war.cw_faction_obs import' in mod_src
+    assert 'from sr_od.application.currency_war.obs.cw_faction_obs import' in mod_src
 
 
 # ===== 行为锁(假 reader/假账本,零 OCR/零游戏) =====

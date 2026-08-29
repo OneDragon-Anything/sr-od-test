@@ -10,17 +10,17 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war import cw_briefing_obs, cw_observation
-from sr_od.application.currency_war.cw_briefing_obs import (
+from sr_od.application.currency_war.obs import cw_briefing_obs, cw_observation
+from sr_od.application.currency_war.obs.cw_briefing_obs import (
     parse_enemy_difficulty,
     read_briefing_enemy_difficulty,
 )
-from sr_od.application.currency_war.cw_briefing_obs import (
+from sr_od.application.currency_war.obs.cw_briefing_obs import (
     read_affix_effect,
     read_affixes,
     read_bosses,
 )
-from sr_od.application.currency_war.cw_observation import (
+from sr_od.application.currency_war.obs.cw_observation import (
     parse_selected_difficulty,
     read_board,
     read_board_next_tier,
@@ -34,7 +34,7 @@ from sr_od.application.currency_war.cw_observation import (
     read_streak,
     read_xp_progress,
 )
-from sr_od.application.currency_war.cw_settlement_obs import parse_settlement_hp, parse_streak
+from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_hp, parse_streak
 from test.conftest import SrTestContext
 
 
@@ -42,7 +42,7 @@ from test.conftest import SrTestContext
 def _no_gold_detail_hook(monkeypatch: pytest.MonkeyPatch) -> None:
     """W414 金币明细采集钩子 no-op:本文件既有 read_round_outcome 锁不落旁路台账
     (测试不写真实 .debug;钩子自身契约在 test_cw_w414_gold_detail_hook.py)。"""
-    import sr_od.application.currency_war.cw_settlement_obs as _so
+    import sr_od.application.currency_war.obs.cw_settlement_obs as _so
     monkeypatch.setattr(_so, 'collect_gold_detail_hook', lambda *a, **k: None)
 
 # 2026-08-05 实跑结算屏 OCR(战斗后「挑战结束」屏):小队生命值=71(战前 84,本战损 13)。
@@ -115,7 +115,7 @@ def test_parse_streak_from_real_settlement_ocr() -> None:
 
 def test_parse_settlement_progress_live_forms() -> None:
     """挑战进度三 live 形态:后随 +N(赢)/ 前置 -N(输,M41 战败屏)/ 无符号累计值不取。"""
-    from sr_od.application.currency_war.cw_settlement_obs import (
+    from sr_od.application.currency_war.obs.cw_settlement_obs import (
         parse_settlement_progress,
     )
     # live 11:32 样本(遭遇赢):分离 token '+2' 跟后
@@ -133,7 +133,7 @@ def test_parse_settlement_progress_live_forms() -> None:
 
 def test_parse_settlement_won_live_forms() -> None:
     """胜负真值:挑战成功→True / 挑战失败→False / 负进度→False / 无据→None。"""
-    from sr_od.application.currency_war.cw_settlement_obs import parse_settlement_won
+    from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_won
     assert parse_settlement_won(['31', '挑战成功', '挑战进度', '46']) is True
     assert parse_settlement_won(['挑战失败', '下一步']) is False
     # 轮败屏(活着):挑战结束 + 负进度,无成功/失败字样
@@ -144,7 +144,7 @@ def test_parse_settlement_won_live_forms() -> None:
 
 def test_round_outcome_carries_killed_and_progress() -> None:
     """read_round_outcome 填 killed/progress_delta(胜负真值进 outcomes.jsonl)。"""
-    from sr_od.application.currency_war.cw_settlement_obs import read_round_outcome
+    from sr_od.application.currency_war.obs.cw_settlement_obs import read_round_outcome
 
     class _FakeOcr:
         def __init__(self, texts):
@@ -470,7 +470,7 @@ def test_read_round_outcome_failure_hp_zero(test_context: SrTestContext, monkeyp
 
     parse_settlement_hp 在失败屏读到「生命值❤!」(非数字)→ None,但「挑战失败」= hp 0 确定。
     """
-    from sr_od.application.currency_war.cw_settlement_obs import read_round_outcome
+    from sr_od.application.currency_war.obs.cw_settlement_obs import read_round_outcome
     ocr = [SimpleNamespace(data=t) for t in ['挑战失败', '小队生命值❤！', '对局评价', '下一步']]
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
     obs = read_round_outcome(test_context, None, plane=1, round_num=9, comp_tag='DOT队')
@@ -539,7 +539,7 @@ def test_parse_enemy_difficulty() -> None:
 
 def test_parse_damage_value() -> None:
     """伤害值文本 parse(万/亿/纯数字;无数字/异常 → None;3.5.4 战斗总伤害)。"""
-    from sr_od.application.currency_war.cw_observation import parse_damage_value
+    from sr_od.application.currency_war.obs.cw_observation import parse_damage_value
     assert parse_damage_value('126.5万') == 1_265_000
     assert parse_damage_value('89.8万') == 898_000
     assert parse_damage_value('83.7万') == 837_000
@@ -554,7 +554,7 @@ def test_parse_damage_value() -> None:
 # ===== ADR-0129 XP 分母反推真等级 =====
 def test_level_from_xp_inverse_table() -> None:
     """XP 条分母 = 当前级→下一级门槛(用户实测表):反查得真等级;表外值/None 安全返 None。"""
-    from sr_od.application.currency_war.cw_observation import _level_from_xp
+    from sr_od.application.currency_war.obs.cw_observation import _level_from_xp
     assert _level_from_xp((0, 4)) == 3      # 3→4 需 4
     assert _level_from_xp((18, 20)) == 5    # 5→6 需 20(M15 位面 2 真实 lv5 实锤)
     assert _level_from_xp((2, 40)) == 6
@@ -689,7 +689,7 @@ def test_shop_refresh_cost_base_price_model_lock() -> None:
     """
     from pathlib import Path
 
-    import sr_od.application.currency_war.cw_observation as obs_mod
+    import sr_od.application.currency_war.obs.cw_observation as obs_mod
     src = Path(obs_mod.__file__).read_text(encoding='utf-8')
     assert 'state.shop_refresh_cost = REFRESH_COST_BASE' in src, \
         'read_game_state 刷价赋值必须是基价常量(徽标 OCR 禁回主链)'

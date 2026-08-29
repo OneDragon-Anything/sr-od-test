@@ -114,7 +114,7 @@ class _HookCtx(_FakeCtx):
 @pytest.fixture
 def hook_env(monkeypatch, tmp_path):
     """mock 掉 CV/OCR 依赖,只留 summon 钩子判定链(chdir tmp 防真实 .debug 落盘)。"""
-    from sr_od.application.currency_war import cw_identity_obs, currency_war_cv
+    from sr_od.application.currency_war.obs import cw_identity_obs, currency_war_cv
     from sr_od.application.currency_war.kernel import cw_obs_core, cw_observe
     monkeypatch.chdir(tmp_path)
     # 生产约定:.debug/temp/currency_war/ 已存在(flag/shots 落盘处);tmp 里预建,

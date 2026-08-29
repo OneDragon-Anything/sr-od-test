@@ -14,11 +14,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from sr_od.application.currency_war.cw_identity_obs import (
+from sr_od.application.currency_war.obs.cw_identity_obs import (
     _load_preview_sparkle_tmpl,
     read_merge_preview,
 )
-from sr_od.application.currency_war.cw_observation import read_shop_cards
+from sr_od.application.currency_war.obs.cw_observation import read_shop_cards
 from sr_od.application.currency_war.kernel.cw_state import ShopCard
 
 if TYPE_CHECKING:
@@ -72,6 +72,6 @@ def test_read_merge_preview_template_missing_failsilent(
     screen = test_context.load_screen(SCREEN, STATE)
     x1, y1, x2, y2 = CARD_RECTS[4]
     monkeypatch.setattr(
-        'sr_od.application.currency_war.cw_identity_obs._load_preview_sparkle_tmpl',
+        'sr_od.application.currency_war.obs.cw_identity_obs._load_preview_sparkle_tmpl',
         lambda: None)
     assert read_merge_preview(screen[y1:y2, x1:x2]) == 0

@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_observation import read_phase_round  # noqa: E402
+from sr_od.application.currency_war.obs.cw_observation import read_phase_round  # noqa: E402
 
 
 class _FakeOcr:
@@ -24,7 +24,7 @@ class _Ctx:
 
 def test_phase_round_rejects_plane_out_of_range(monkeypatch) -> None:
     """plane=8(A8 难度泄漏)必须拒——M70 假 win 根因。"""
-    import sr_od.application.currency_war.cw_observation as obs
+    import sr_od.application.currency_war.obs.cw_observation as obs
     monkeypatch.setattr(obs, '_last_phase_round', None)
     monkeypatch.setattr(obs, 'reset_phase_round_cache', obs.reset_phase_round_cache)
     monkeypatch.setattr(obs, '_ocr', _FakeOcr('A8 8-8'))
@@ -36,7 +36,7 @@ def test_phase_round_rejects_plane_out_of_range(monkeypatch) -> None:
 
 def test_phase_round_digits_fallback_only_accepts_one(monkeypatch) -> None:
     """单数字 fallback:仅 1(开局 1-1)合法;"8" 拒。"""
-    import sr_od.application.currency_war.cw_observation as obs
+    import sr_od.application.currency_war.obs.cw_observation as obs
     monkeypatch.setattr(obs, '_last_phase_round', None)
     monkeypatch.setattr(obs, '_ocr', _FakeOcr('Lv.8'))
     monkeypatch.setattr(obs, '_area_rect', lambda ctx, name: None)
@@ -46,7 +46,7 @@ def test_phase_round_digits_fallback_only_accepts_one(monkeypatch) -> None:
 
 def test_phase_round_normal_parse_unaffected(monkeypatch) -> None:
     """正常 "1-3" 解析不受影响。"""
-    import sr_od.application.currency_war.cw_observation as obs
+    import sr_od.application.currency_war.obs.cw_observation as obs
     monkeypatch.setattr(obs, '_last_phase_round', None)
     monkeypatch.setattr(obs, '_ocr', _FakeOcr('回合 1-3'))
     monkeypatch.setattr(obs, '_area_rect', lambda ctx, name: None)

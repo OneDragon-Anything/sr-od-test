@@ -15,7 +15,7 @@ from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
 from sr_od.application.currency_war.cw_evaluate import HP_DANGER
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.cw_observation import (
+from sr_od.application.currency_war.obs.cw_observation import (
     read_game_state,
     read_hp,
     read_shop_cards,
@@ -96,7 +96,7 @@ def test_read_deploy_paddle_cap_and_count(test_context, test_image_dir: Path) ->
     read_deploy_cap 给真 cap(非 level 估,deploy_bench D-139 用)。paddle 在小 stylized 区偶 OCR 漏 →
     读不到=None 合法(调用方 fallback),故只断言「读到则 sane」+ X<=Y。打印实测值供多样本核实。
     """
-    from sr_od.application.currency_war.cw_observation import (
+    from sr_od.application.currency_war.obs.cw_observation import (
         read_deploy_cap,
         read_deployed_count,
     )

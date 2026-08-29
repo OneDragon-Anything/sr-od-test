@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.cw_observation import (
+from sr_od.application.currency_war.obs.cw_observation import (
     _level_from_xp,
     _parse_xp_pair,
     read_level_raw_opt,
@@ -124,7 +124,7 @@ def test_conflict_frame_lv4_xp26_readable(test_context: SrTestContext) -> None:
 def test_conflict_frame_level_resolves_in_domain(test_context: SrTestContext) -> None:
     """端到端:冲突帧三源解析后 level 与 paddle cap 自洽入域(cap≥level),域守卫不再拒信。"""
     from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
-    from sr_od.application.currency_war.cw_observation import (
+    from sr_od.application.currency_war.obs.cw_observation import (
         _expected_level,
         _resolve_level,
         read_deploy_cap_debounced,

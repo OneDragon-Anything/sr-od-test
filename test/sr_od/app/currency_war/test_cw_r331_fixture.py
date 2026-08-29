@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.cw_observe_full import observe_full
+from sr_od.application.currency_war.obs.cw_observe_full import observe_full
 
 
 def test_observe_full_heavy_on_prep_fixture(test_context) -> None:
@@ -33,7 +33,7 @@ def test_observe_full_light_skips_sift(test_context) -> None:
 def test_gold_reread_gated_by_shop_open() -> None:
     """r334(review 第5条):gold==0 重读只在 shop 开态做——
     F2 语义(关态读空恒 0,白付 3×0.3s+3 次全量 OCR)。"""
-    import sr_od.application.currency_war.cw_observe_full as of_mod
+    import sr_od.application.currency_war.obs.cw_observe_full as of_mod
     from sr_od.application.currency_war.kernel.cw_state import GameState
 
     _calls = {'gs': 0}

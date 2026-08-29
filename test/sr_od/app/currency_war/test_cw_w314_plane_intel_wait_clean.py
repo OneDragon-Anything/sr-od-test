@@ -71,7 +71,7 @@ def _patch_node_reader(monkeypatch, outcomes: list) -> list[int]:
 
     返回调用计数列表(经闭包记录,断言「第几次读才点击」用)。
     """
-    from sr_od.application.currency_war import cw_observation as cwo
+    from sr_od.application.currency_war.obs import cw_observation as cwo
 
     calls: list[int] = []
 

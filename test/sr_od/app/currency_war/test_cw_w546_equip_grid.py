@@ -19,7 +19,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(REPO / 'src'))
 
-from sr_od.application.currency_war.cw_equipment import (  # noqa: E402  # noqa: E402
+from sr_od.application.currency_war.obs.cw_equipment import (  # noqa: E402  # noqa: E402
     EquipCell,
     _equip_slot_centers,
     _looks_infinity,

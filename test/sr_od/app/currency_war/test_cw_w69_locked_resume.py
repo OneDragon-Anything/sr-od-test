@@ -3,7 +3,7 @@
 判定/探针/解除抽成纯函数(cw_resume_lock.py),battle_loop 只做薄接线——
 单帧锁锁纯函数(设计章1.8 测试锁设计)。
 """
-from sr_od.application.currency_war.cw_resume_lock import (
+from sr_od.application.currency_war.obs.cw_resume_lock import (
     locked_after_start_battle,
     probe_resolve,
     resume_candidate,

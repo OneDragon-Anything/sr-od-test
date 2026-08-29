@@ -103,8 +103,8 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     改为点击前现读后,该读数器被调 ≥2 次——第 1 次=点击前现读,第 2 次=
     刷后重读;落空形态两次同牌面)。
     """
-    from sr_od.application.currency_war import cw_observation as cwo
-    from sr_od.application.currency_war import cw_observation_gate as gate
+    from sr_od.application.currency_war.obs import cw_observation as cwo
+    from sr_od.application.currency_war.obs import cw_observation_gate as gate
     from sr_od.application.currency_war import prep_director as pd
     from sr_od.application.currency_war.operations.prep import shop as shop_mod
     from sr_od.application.currency_war.operations.prep.shop import BuyShopCards

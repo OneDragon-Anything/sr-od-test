@@ -157,10 +157,10 @@ def test_all_recognizers_declare_extras_doc(mock_ctx: MagicMock) -> None:
 
 
 @pytest.mark.parametrize(('recognizer_mod', 'state_cls'), [
-    ('sr_od.application.currency_war.recognizers.battle_prep_recognizer', '_BattlePrepState'),
-    ('sr_od.application.currency_war.recognizers.briefing_recognizer', '_BriefingState'),
-    ('sr_od.application.currency_war.recognizers.settlement_recognizer', '_SettlementState'),
-    ('sr_od.application.currency_war.recognizers.invest_strategy_recognizer', '_InvestStrategyState'),
+    ('sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer', '_BattlePrepState'),
+    ('sr_od.application.currency_war.obs.recognizers.briefing_recognizer', '_BriefingState'),
+    ('sr_od.application.currency_war.obs.recognizers.settlement_recognizer', '_SettlementState'),
+    ('sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer', '_InvestStrategyState'),
 ])
 def test_extras_doc_keys_match_state_fields(recognizer_mod: str, state_cls: str) -> None:
     """extras_doc 键集与领域模型字段一致(加 / 改字段时防漂移)。"""

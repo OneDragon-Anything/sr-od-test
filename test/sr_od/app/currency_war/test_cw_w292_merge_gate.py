@@ -16,7 +16,7 @@ _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / 'src'))
 sys.path.insert(0, str(_REPO / 'sr-od-test'))
 
-from sr_od.application.currency_war.cw_identity_obs import is_merge_effect_frame  # noqa: E402
+from sr_od.application.currency_war.obs.cw_identity_obs import is_merge_effect_frame  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking  # noqa: E402
 
 

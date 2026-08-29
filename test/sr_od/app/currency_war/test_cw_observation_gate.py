@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from sr_od.application.currency_war.cw_observation_gate import (
+from sr_od.application.currency_war.obs.cw_observation_gate import (
     wait_stable_frame,
 )
 
@@ -230,7 +230,7 @@ def test_profile_timeouts_cover_fullframe_ocr_poll_cost():
     """r344 预算锁:profile timeout 必须 ≥2 轮全图 OCR poll
     (~5s/轮实机)+余量——旧 4.5s<单轮成本,稳定窗结构性饿死
     (局37 ping-pong 停机根因)。防未来调回小值忘了成本模型。"""
-    from sr_od.application.currency_war.cw_observation_gate import (
+    from sr_od.application.currency_war.obs.cw_observation_gate import (
         PROFILE_CLOSED,
         PROFILE_OPEN,
         PROFILE_POPUP,

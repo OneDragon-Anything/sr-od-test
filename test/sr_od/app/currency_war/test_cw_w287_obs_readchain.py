@@ -18,8 +18,8 @@ from pathlib import Path
 import pytest
 
 from one_dragon.utils import cv2_utils
-import sr_od.application.currency_war.cw_observation as obs_mod
-from sr_od.application.currency_war.cw_observation import (
+import sr_od.application.currency_war.obs.cw_observation as obs_mod
+from sr_od.application.currency_war.obs.cw_observation import (
     _board_pairs,
     read_deployed_count,
 )

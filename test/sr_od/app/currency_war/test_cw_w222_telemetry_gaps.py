@@ -90,7 +90,7 @@ def test_briefing_modules_use_framework_logger() -> None:
 
     for mod_name in (
         'sr_od.application.currency_war.operations.handlers.handle_briefing',
-        'sr_od.application.currency_war.cw_briefing_obs',
+        'sr_od.application.currency_war.obs.cw_briefing_obs',
         'sr_od.application.currency_war.operations.entry.start_currency_war_match',
     ):
         mod = importlib.import_module(mod_name)

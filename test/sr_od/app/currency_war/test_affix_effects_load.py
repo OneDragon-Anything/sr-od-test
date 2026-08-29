@@ -10,8 +10,8 @@
 """
 import json
 
-import sr_od.application.currency_war.cw_briefing_obs as mod
-from sr_od.application.currency_war.cw_briefing_obs import load_affix_effects_from_file
+import sr_od.application.currency_war.obs.cw_briefing_obs as mod
+from sr_od.application.currency_war.obs.cw_briefing_obs import load_affix_effects_from_file
 
 
 def _write(tmp_path, content: str):

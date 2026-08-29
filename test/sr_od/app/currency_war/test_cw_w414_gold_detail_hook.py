@@ -14,8 +14,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war import cw_settlement_obs
-from sr_od.application.currency_war.cw_settlement_obs import (
+from sr_od.application.currency_war.obs import cw_settlement_obs
+from sr_od.application.currency_war.obs.cw_settlement_obs import (
     collect_gold_detail_hook,
     parse_settlement_gold_detail,
     read_round_outcome,

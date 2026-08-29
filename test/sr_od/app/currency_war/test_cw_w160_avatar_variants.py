@@ -10,7 +10,7 @@ import pytest
 from cv2.typing import MatLike
 from pathlib import Path
 
-from sr_od.application.currency_war.currency_war_char_id import (
+from sr_od.application.currency_war.obs.currency_war_char_id import (
     identify_character,
     load_avatar_templates,
 )

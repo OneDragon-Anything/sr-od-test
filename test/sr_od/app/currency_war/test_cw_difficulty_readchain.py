@@ -12,7 +12,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from sr_od.application.currency_war import cw_observation
+from sr_od.application.currency_war.obs import cw_observation
 from sr_od.application.currency_war.kernel.cw_state import GameState
 
 

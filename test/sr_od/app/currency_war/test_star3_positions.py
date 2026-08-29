@@ -22,7 +22,7 @@ _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / 'src'))
 
 from one_dragon.utils import cv2_utils  # noqa: E402
-from sr_od.application.currency_war.cw_identity_obs import read_star  # noqa: E402
+from sr_od.application.currency_war.obs.cw_identity_obs import read_star  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect  # noqa: E402
 from test.conftest import SrTestContext  # noqa: E402
 

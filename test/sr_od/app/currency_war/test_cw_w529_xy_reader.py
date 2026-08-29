@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from test.conftest import SrTestContext
-from sr_od.application.currency_war.cw_observation import (
+from sr_od.application.currency_war.obs.cw_observation import (
     _read_deploy_paddle,
     _resolve_paddle_digits,
     _validate_paddle_xy,
@@ -96,7 +96,7 @@ def _make_real_ocr_ctx(test_context: SrTestContext, monkeypatch: pytest.MonkeyPa
     """真 OCR service 注入 + obs_conflict 收集器(防测试写真实 .debug 证据)。"""
     from one_dragon.base.matcher.ocr.ocr_service import OcrService
     from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
-    import sr_od.application.currency_war.cw_observation as obs_mod
+    import sr_od.application.currency_war.obs.cw_observation as obs_mod
     try:
         matcher = OnnxOcrMatcher()
         if not matcher.init_model(download_by_github=False, download_by_gitee=True):

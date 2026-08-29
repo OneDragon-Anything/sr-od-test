@@ -85,7 +85,7 @@ def test_read_hp_opt_upscaled_fallback_recovers_small_value(
         test_context, monkeypatch: pytest.MonkeyPatch) -> None:
     """全图 det 漏检(首调返空)→ 3x 放大回退恢复「16」(局21 P2 r4
     失明帧形态);第二级二值化不触发(第一级已命中)。"""
-    from sr_od.application.currency_war.cw_observation import read_hp_opt
+    from sr_od.application.currency_war.obs.cw_observation import read_hp_opt
     calls = {'n': 0}
 
     def _miss_then_recover(**kw):
@@ -102,7 +102,7 @@ def test_read_hp_opt_upscaled_fallback_recovers_small_value(
 def test_read_hp_opt_fullres_hit_no_fallback(
         test_context, monkeypatch: pytest.MonkeyPatch) -> None:
     """常路径:全图命中 → 不走放大回退(零新增开销锁)。"""
-    from sr_od.application.currency_war.cw_observation import read_hp_opt
+    from sr_od.application.currency_war.obs.cw_observation import read_hp_opt
     calls = {'n': 0}
 
     def _hit(**kw):
@@ -116,7 +116,7 @@ def test_read_hp_opt_fullres_hit_no_fallback(
 def test_read_hp_opt_second_level_binarized_recovery(
         test_context, monkeypatch: pytest.MonkeyPatch) -> None:
     """放大仍漏(低对比)→ 第二级 OTSU 二值化兜回(两级管线完整面)。"""
-    from sr_od.application.currency_war.cw_observation import read_hp_opt
+    from sr_od.application.currency_war.obs.cw_observation import read_hp_opt
     calls = {'n': 0}
 
     def _miss_miss_hit(**kw):

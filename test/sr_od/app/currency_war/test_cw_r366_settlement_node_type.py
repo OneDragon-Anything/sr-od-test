@@ -9,7 +9,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_settlement_obs import (
+from sr_od.application.currency_war.obs.cw_settlement_obs import (
     parse_settlement_node_type,
 )
 

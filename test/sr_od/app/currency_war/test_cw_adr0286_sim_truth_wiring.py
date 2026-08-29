@@ -17,7 +17,7 @@ import types
 
 import pytest
 
-from sr_od.application.currency_war import cw_observation
+from sr_od.application.currency_war.obs import cw_observation
 from sr_od.application.currency_war.data.cw_shop_odds import (
     REFRESH_PROB,
     ROTATION_CHANCE,

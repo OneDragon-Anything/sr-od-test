@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_node_obs import (  # noqa: E402
+from sr_od.application.currency_war.obs.cw_node_obs import (  # noqa: E402
     DIAMOND_EQUIP_NAMES,
     _equip_is_diamond,
 )
@@ -42,7 +42,7 @@ def test_sift_templates_available() -> None:
 def test_sift_channel_degrades_to_text() -> None:
     """降级链:SIFT 通道异常/无模板 → 空集,has_diamond 落文本兜底(不炸流程)。
     用空 columns 直接验证(无列 → 空集,不触模板)。"""
-    from sr_od.application.currency_war.cw_node_obs import _sift_detect_diamonds
+    from sr_od.application.currency_war.obs.cw_node_obs import _sift_detect_diamonds
     class _Ctx:  # 最小 ctx(不会被触达——columns 空短路)
         pass
     assert _sift_detect_diamonds(_Ctx(), None, []) == set()

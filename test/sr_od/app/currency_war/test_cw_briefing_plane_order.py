@@ -13,7 +13,7 @@ from __future__ import annotations
 
 def test_lcs_clean_maps_abbreviations_to_canonical() -> None:
     """简称(简报卡名常见形态)归一到规范公司名;已是规范名原样返回。"""
-    from sr_od.application.currency_war.cw_briefing_obs import clean_boss_names_by_lcs
+    from sr_od.application.currency_war.obs.cw_briefing_obs import clean_boss_names_by_lcs
 
     out = clean_boss_names_by_lcs(['造梦互动', '深穹智械', '巨鹿生物制药'])
     assert out == ['造梦互动娱乐', '深穹智械科技', '巨鹿生物制药'], (
@@ -23,7 +23,7 @@ def test_lcs_clean_maps_abbreviations_to_canonical() -> None:
 
 def test_lcs_clean_unmatched_passes_through_in_order() -> None:
     """归一不过阈值的读数原名透传(不硬猜),顺序原样保留(位面序不被打乱)。"""
-    from sr_od.application.currency_war.cw_briefing_obs import clean_boss_names_by_lcs
+    from sr_od.application.currency_war.obs.cw_briefing_obs import clean_boss_names_by_lcs
 
     out = clean_boss_names_by_lcs(['XYZ', '绘师家族产业', '火线动力机甲'])
     assert out == ['XYZ', '绘师家族产业', '火线动力机甲'], f'透传/顺序被破坏:{out}'
@@ -31,7 +31,7 @@ def test_lcs_clean_unmatched_passes_through_in_order() -> None:
 
 def test_reconcile_pairs_mismatch_detectable() -> None:
     """逐位面配对:一致 True / 不可判 None / 不一致 False 三态齐全。"""
-    from sr_od.application.currency_war.cw_briefing_obs import briefing_reconcile_pairs
+    from sr_od.application.currency_war.obs.cw_briefing_obs import briefing_reconcile_pairs
 
     pairs = briefing_reconcile_pairs(
         ['造梦互动', None, '完全不同'],
@@ -43,7 +43,7 @@ def test_reconcile_pairs_mismatch_detectable() -> None:
 
 def test_reconcile_pairs_no_briefing_all_undecidable() -> None:
     """简报未读得(None)→ 全部不可判,不产生伪不一致。"""
-    from sr_od.application.currency_war.cw_briefing_obs import briefing_reconcile_pairs
+    from sr_od.application.currency_war.obs.cw_briefing_obs import briefing_reconcile_pairs
 
     pairs = briefing_reconcile_pairs(None, ['巨鹿生物制药', None, '绘师家族产业'])
     assert all(p['match'] is None for p in pairs), f'简报空读不应产生判定:{pairs}'

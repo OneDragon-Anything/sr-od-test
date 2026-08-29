@@ -607,7 +607,7 @@ def test_observe_light_reuses_heavy_cache(monkeypatch, test_context: SrTestConte
     monkeypatch.setattr(pd_mod, 'ensure_portrait_templates', lambda c: None)
     heavy_state = GameState(gold=42, level=5)
     # r331:heavy 读已上收 observe_full——打桩随迁(patch 其模块)
-    from sr_od.application.currency_war import cw_observe_full as of_mod
+    from sr_od.application.currency_war.obs import cw_observe_full as of_mod
     monkeypatch.setattr(of_mod, 'ensure_portrait_templates', lambda c: None)
     monkeypatch.setattr(of_mod, 'read_game_state', lambda c, s: heavy_state)
     monkeypatch.setattr(of_mod, 'read_node_sequence', lambda c, s: None)
@@ -647,7 +647,7 @@ def test_observe_gold_zero_reread(monkeypatch, test_context: SrTestContext) -> N
     st0 = GameState(gold=0, level=5)   # read_game_state 读到 gold=0(漏读)
     # r331:heavy 读在 observe_full——打桩随迁;gold==0 重读
     # 用 read_game_state(重截图;首帧 0,重读返真值 55)
-    from sr_od.application.currency_war import cw_observe_full as of_mod
+    from sr_od.application.currency_war.obs import cw_observe_full as of_mod
     monkeypatch.setattr(of_mod, 'ensure_portrait_templates', lambda c: None)
     _calls = {'n': 0}
 
@@ -668,7 +668,7 @@ def test_levelup_raw_read_no_fallback(monkeypatch, test_context: SrTestContext) 
     from sr_od.application.currency_war.prep_actions import _read_level_raw
 
     # 直读失读(_read_level_raw 委托 read_level_raw_opt,patch 该缝)→ None
-    import sr_od.application.currency_war.cw_observation as cwo
+    import sr_od.application.currency_war.obs.cw_observation as cwo
     monkeypatch.setattr(cwo, 'read_level_raw_opt', lambda ctx, scr: None)
     assert _read_level_raw(test_context, None) is None
 def test_composite_reads_success_field(test_context: SrTestContext,

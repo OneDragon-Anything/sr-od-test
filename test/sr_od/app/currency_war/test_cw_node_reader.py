@@ -12,15 +12,15 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from sr_od.application.currency_war import cw_node_reader
-from sr_od.application.currency_war.cw_node_reader import (
+from sr_od.application.currency_war.obs import cw_node_reader
+from sr_od.application.currency_war.obs.cw_node_reader import (
     classify_node_row,
     load_node_type_templates,
 )
-from sr_od.application.currency_war.cw_observation import _MIN_CLEAN_CIRCLES
+from sr_od.application.currency_war.obs.cw_observation import _MIN_CLEAN_CIRCLES
 
-# SR 仓 assets(cw_node_reader.py 在 src/sr_od/application/currency_war/ → parents[4] = 仓根)
-_ASSETS = Path(cw_node_reader.__file__).resolve().parents[4] / 'assets' / 'game_data' / 'cw_node_types'
+# SR 仓 assets(cw_node_reader.py 在 src/sr_od/application/currency_war/obs/ → parents[5] = 仓根)
+_ASSETS = Path(cw_node_reader.__file__).resolve().parents[5] / 'assets' / 'game_data' / 'cw_node_types'
 _FIXTURE = Path(__file__).parent / 'cw_node_row_clean.png'
 
 

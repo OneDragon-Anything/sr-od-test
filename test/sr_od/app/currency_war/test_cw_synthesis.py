@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections import Counter
 
 from sr_od.application.currency_war.data import cw_synthesis as synth
-from sr_od.application.currency_war.cw_equipment import EQUIPMENT_ROSTER
+from sr_od.application.currency_war.obs.cw_equipment import EQUIPMENT_ROSTER
 
 
 def test_cross_recipe_graph_is_complete_k7() -> None:

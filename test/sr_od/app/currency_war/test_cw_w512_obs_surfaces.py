@@ -84,7 +84,7 @@ def test_strategy_pick_consumer_wiring_lock():
     处消费暂存并对拍,不一致落 surface='strategy' 台账行(设计 §2.9 判据:
     选了 X → active_strategies 出现 X)。锁「消费点挂在既有 session 写入点」,
     防后续重构静默断链。"""
-    import sr_od.application.currency_war.cw_observation as obs_mod
+    import sr_od.application.currency_war.obs.cw_observation as obs_mod
     src = Path(obs_mod.__file__).read_text(encoding='utf-8')
     assert 'consume_pending_strategy_pick' in src
     assert "record_defect(\n                    'strategy', 'invariant_break'" in src
@@ -123,7 +123,7 @@ def test_deploy_action_audit_wiring_lock():
 def test_shop_sift_miss_confidence_wiring_lock():
     """cw_observation 接线锁(静态;设计 §2.10 判据:非空槽 SIFT miss = 读空
     事件带内点数落 confidence 面,纯留证恒 L2,不设即时告警)。"""
-    import sr_od.application.currency_war.cw_observation as obs_mod
+    import sr_od.application.currency_war.obs.cw_observation as obs_mod
     src = Path(obs_mod.__file__).read_text(encoding='utf-8')
     assert "record_defect(\n                    'confidence', 'perception_conflict'" in src
     assert "reader_source='read_shop_cards'" in src

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.cw_node_obs import read_supply_options
+from sr_od.application.currency_war.obs.cw_node_obs import read_supply_options
 
 if True:  # test_context fixture 类型
     from test.conftest import SrTestContext

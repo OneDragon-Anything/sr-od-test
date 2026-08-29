@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.cw_faction_obs import (
+from sr_od.application.currency_war.obs.cw_faction_obs import (
     FactionReconcileResult,
     _match_faction,
     compare_factions,

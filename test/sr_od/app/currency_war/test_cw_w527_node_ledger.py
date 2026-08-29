@@ -17,14 +17,14 @@ import pytest
 _ROOT = Path(__file__).resolve().parents[5]          # 仓库根(StarRailOneDragon)
 _TEST_ROOT = Path(__file__).resolve().parents[4]     # 测试仓根(sr-od-test)
 
-from sr_od.application.currency_war import cw_observation
-from sr_od.application.currency_war import cw_node_reader
-from sr_od.application.currency_war.cw_node_reader import (
+from sr_od.application.currency_war.obs import cw_observation
+from sr_od.application.currency_war.obs import cw_node_reader
+from sr_od.application.currency_war.obs.cw_node_reader import (
     classify_node_row,
     current_slot_hu_type,
     load_node_type_templates,
 )
-from sr_od.application.currency_war.cw_observation import (
+from sr_od.application.currency_war.obs.cw_observation import (
     node_vote_verdict,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -117,7 +117,7 @@ def test_verify_votes_defect_and_grace(monkeypatch: pytest.MonkeyPatch) -> None:
     """三票校验:窗外 defect 落账一次(去重);变异窗内豁免不落。"""
     import time as _time
 
-    from sr_od.application.currency_war.cw_node_reader import NodeSlot
+    from sr_od.application.currency_war.obs.cw_node_reader import NodeSlot
 
     defects: list[dict] = []
 
@@ -246,7 +246,7 @@ def test_fixture_current_hu_vote_documented(row_frames) -> None:
     **不锁类型正确性** —— 只锁「返回 (type|None, dist) 契约 + 命中门」;
     该票的噪声正是「查表优先 + ≥2 票才落账」阈值设计的实证依据。
     """
-    from sr_od.application.currency_war.cw_node_reader import CUR_HU_DIST_HIT
+    from sr_od.application.currency_war.obs.cw_node_reader import CUR_HU_DIST_HIT
     hits = 0
     for name, gt in _GT.items():
         row = row_frames[name]
@@ -265,7 +265,7 @@ def test_read_plane_detail_difficulty_truth(test_context) -> None:
     """敌人难度参考读法真值对拍:位面详情全屏 fixture,真值 = VLM 亲读 108
     (w527 批;底部明文「敌人难度 108」)。"""
     from one_dragon.utils import cv2_utils
-    from sr_od.application.currency_war.cw_observation import (
+    from sr_od.application.currency_war.obs.cw_observation import (
         read_plane_detail_difficulty,
     )
     img = cv2_utils.read_image(

@@ -5,7 +5,7 @@
 """
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.cw_node_obs import read_encounter_options
+from sr_od.application.currency_war.obs.cw_node_obs import read_encounter_options
 
 
 def _ocr_map(items: list[tuple[str, int, int]]) -> dict:
@@ -74,7 +74,7 @@ def test_read_megastar_options_parses_candidates() -> None:
 
     baseline cw_megastar OCR(2026-08-07):花火(左 822)+ 星期日(右 1061)。容错半角叹号。
     """
-    from sr_od.application.currency_war.cw_node_obs import read_megastar_options
+    from sr_od.application.currency_war.obs.cw_node_obs import read_megastar_options
 
     m = _ocr_map([
         ('盛会之星一花火女士！', 822, 333),    # 左(全角 !)
@@ -90,6 +90,6 @@ def test_read_megastar_options_parses_candidates() -> None:
 
 def test_read_megastar_options_no_candidates_empty() -> None:
     """非巨星屏(无「盛会之星一X」候选)→ [](handler 退默认 idx0)。"""
-    from sr_od.application.currency_war.cw_node_obs import read_megastar_options
+    from sr_od.application.currency_war.obs.cw_node_obs import read_megastar_options
 
     assert read_megastar_options(_FakeCtx({}), None) == []

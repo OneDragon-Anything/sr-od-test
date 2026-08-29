@@ -5,7 +5,7 @@ from sr_od.application.currency_war.data.cw_chars import (
     is_trailblazer,
     trailblazer_form,
 )
-from sr_od.application.currency_war.cw_observation import board_from_tracked
+from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, DeployMove, GameState, mutate_bench_deployed, simulate
 
 

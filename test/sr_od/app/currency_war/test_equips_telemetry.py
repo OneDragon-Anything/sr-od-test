@@ -8,7 +8,7 @@ sys.path.insert(0, 'src')
 
 def test_read_row_equipped_import_path():
     """r132 的 import 路径必须可解析(防运行时才炸)。"""
-    from sr_od.application.currency_war.cw_identity_obs import read_row_equipped
+    from sr_od.application.currency_war.obs.cw_identity_obs import read_row_equipped
     assert callable(read_row_equipped)
 
 

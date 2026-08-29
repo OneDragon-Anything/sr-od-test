@@ -13,7 +13,7 @@ import numpy as np
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-import sr_od.application.currency_war.cw_observation as observation  # noqa: E402
+import sr_od.application.currency_war.obs.cw_observation as observation  # noqa: E402
 import sr_od.application.currency_war.kernel.cw_observe as obs_mod  # noqa: E402
 
 

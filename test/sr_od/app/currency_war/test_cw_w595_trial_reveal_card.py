@@ -48,7 +48,7 @@ def _load(name: str):
 
 def test_positive_frame_slot3_hit() -> None:
     """正样本帧(建档帧 slot3 发光卡)→ 双通道命中 slot3,且不误报其他槽。"""
-    from sr_od.application.currency_war.cw_identity_obs import find_trial_reveal_cards
+    from sr_od.application.currency_war.obs.cw_identity_obs import find_trial_reveal_cards
 
     screen = _load(_POS_FIXTURE.name)
     hits = find_trial_reveal_cards(screen, _BENCH_SLOTS)
@@ -58,7 +58,7 @@ def test_positive_frame_slot3_hit() -> None:
 
 def test_negative_frames_no_false_positive() -> None:
     """既有备战 fixture(角色/箱/球/商店等)全槽零误报(双通道负样本分离度锁)。"""
-    from sr_od.application.currency_war.cw_identity_obs import find_trial_reveal_cards
+    from sr_od.application.currency_war.obs.cw_identity_obs import find_trial_reveal_cards
 
     for name in ('r1_idle_stop.webp', 'shop_closed.webp',
                  'deployed_2star_bench1.webp', 'reward_spheres_8.webp'):
@@ -71,7 +71,7 @@ def test_tm_channel_separation() -> None:
     """TM 通道单通道独立命中正样本(阈值 0.5 的余量锁:正 ≥0.9 / 负 ≤0.26 标定)。"""
     import cv2
 
-    from sr_od.application.currency_war.cw_identity_obs import (
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
         _TRIAL_REVEAL_TM_THR,
         _get_trial_reveal_gray,
     )
@@ -112,7 +112,7 @@ class _HookCtx:
 def test_summon_hook_skips_trial_reveal_card(monkeypatch, tmp_path) -> None:
     """发光卡形态:slot 占用 + SIFT 不识别,但 find_trial_reveal_cards 命中
     → 归已知物品,不停机不采证(免费增益不再触发停机)。"""
-    from sr_od.application.currency_war import currency_war_cv, cw_identity_obs
+    from sr_od.application.currency_war.obs import currency_war_cv, cw_identity_obs
     from sr_od.application.currency_war.kernel import cw_obs_core, cw_observe
     monkeypatch.chdir(tmp_path)
     (tmp_path / '.debug/temp/currency_war').mkdir(parents=True, exist_ok=True)

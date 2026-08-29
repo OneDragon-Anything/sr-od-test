@@ -28,10 +28,10 @@ sys.path.insert(0, str(_ROOT / 'src'))
 
 from one_dragon.base.geometry.rectangle import Rect  # noqa: E402
 from one_dragon.utils import cv2_utils  # noqa: E402
-from sr_od.application.currency_war.currency_war_char_id import (  # noqa: E402
+from sr_od.application.currency_war.obs.currency_war_char_id import (  # noqa: E402
     load_avatar_templates,
 )
-from sr_od.application.currency_war.cw_identity_obs import (  # noqa: E402
+from sr_od.application.currency_war.obs.cw_identity_obs import (  # noqa: E402
     identify_slots,
 )
 

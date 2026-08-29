@@ -3,7 +3,7 @@
 第16 条:st_gold_reread_semantics 空壳 return True 零效力)。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_observe_full import observe_full
+from sr_od.application.currency_war.obs.cw_observe_full import observe_full
 
 
 def _stub(of_mod, gold_seq: list[int]):
@@ -40,7 +40,7 @@ class _Shot55:
 
 def test_gold_reread_swaps_state_when_second_read_positive() -> None:
     """MED-2 行为锁:开态 gold 0 → 重读 55 → state.gold==55。"""
-    import sr_od.application.currency_war.cw_observe_full as of_mod
+    import sr_od.application.currency_war.obs.cw_observe_full as of_mod
     _orig = _stub(of_mod, [0, 55])
     try:
         out = observe_full(None, None, tier='heavy', source='test',
@@ -53,7 +53,7 @@ def test_gold_reread_swaps_state_when_second_read_positive() -> None:
 
 def test_gold_reread_keeps_zero_when_all_reads_zero() -> None:
     """MED-2 行为锁:连读 0 → 维持 0(gold_reread=False)。"""
-    import sr_od.application.currency_war.cw_observe_full as of_mod
+    import sr_od.application.currency_war.obs.cw_observe_full as of_mod
     _orig = _stub(of_mod, [0, 0, 0, 0])
     try:
         out = observe_full(None, None, tier='heavy', source='test',
@@ -66,7 +66,7 @@ def test_gold_reread_keeps_zero_when_all_reads_zero() -> None:
 
 def test_offline_op_none_skips_reread() -> None:
     """离线契约:op=None 不重读(单次 read_game_state)。"""
-    import sr_od.application.currency_war.cw_observe_full as of_mod
+    import sr_od.application.currency_war.obs.cw_observe_full as of_mod
     _orig = _stub(of_mod, [0])
     try:
         out = observe_full(None, None, tier='heavy', source='test',

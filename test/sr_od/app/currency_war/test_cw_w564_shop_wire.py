@@ -16,7 +16,7 @@ import pytest
 
 import sr_od.application.currency_war.prep_director as pd
 from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
-from sr_od.application.currency_war.cw_shop_obs import RefreshExpect
+from sr_od.application.currency_war.obs.cw_shop_obs import RefreshExpect
 from sr_od.application.currency_war.prep_director import (
     PrepDirector,
     build_refresh_expect,
@@ -31,7 +31,7 @@ def test_shop_pool_wire_source_locks() -> None:
     主环在羁绊对账同帧之后消费;禁碰面(cw_shop_obs)只 import 不本地重定义;
     compare_merge_preview 已激活(W600 评估裁定,锁归 W601 测试文件)。"""
     mod_src = Path(pd.__file__).read_text(encoding='utf-8')
-    assert 'from sr_od.application.currency_war.cw_shop_obs import' in mod_src
+    assert 'from sr_od.application.currency_war.obs.cw_shop_obs import' in mod_src
     assert "_SHOP_POOL_DEFECT_KIND = 'shop_pool_violation'" in mod_src
     assert "_SHOP_REFRESH_DEFECT_KIND = 'refresh_expect_mismatch'" in mod_src
     # None 口径:prep_director 全文禁 or-2 式刷费合并(真 0 与 None 分道)

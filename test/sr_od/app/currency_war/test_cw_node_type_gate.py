@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[5] / 'src'))
 
-from sr_od.application.currency_war.cw_observation import (
+from sr_od.application.currency_war.obs.cw_observation import (
     _BOSS_MIN_ROUND,
     _NODE_LABEL_X_TOL,
     gate_node_type,

@@ -25,7 +25,7 @@ def test_supply_options_five_column_fixture(test_context: SrTestContext) -> None
     银枝/希儿/丹恒·腾荒/飞霄/忘归人——augment 改写特例)。用户口径:补给通常 4 选 1,
     augment 动态改 3-5,列数以 read_supply_options 实际识别为准。
     """
-    from sr_od.application.currency_war.cw_node_obs import read_supply_options
+    from sr_od.application.currency_war.obs.cw_node_obs import read_supply_options
 
     if not test_context.has_screen('货币战争-补给', 'default'):
         pytest.skip('fixture 缺:screens/货币战争-补给/default.webp')

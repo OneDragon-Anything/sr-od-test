@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.cw_shop_obs import (
+from sr_od.application.currency_war.obs.cw_shop_obs import (
     compare_merge_preview,
     check_shop_pool,
     refresh_expect,
@@ -164,7 +164,7 @@ def test_shop_fixture_end_to_end(test_context) -> None:
     本测试锁「识别输出能过一致性票」的生产形态,不锁具体牌名(牌名归 SIFT 锁)。
     """
     from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
-    from sr_od.application.currency_war.cw_observation import read_shop_cards
+    from sr_od.application.currency_war.obs.cw_observation import read_shop_cards
     from sr_od.application.currency_war.kernel.cw_state import card_cost
 
     state = 'shop_open_preview_star'

@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from sr_od.application.currency_war.cw_observation_gate import (
+from sr_od.application.currency_war.obs.cw_observation_gate import (
     _PRESET_BASELINE,
     preset_stable_baseline,
     wait_stable_frame,
@@ -203,7 +203,7 @@ def test_op_settle_waits_then_baseline_then_fast_poll(monkeypatch):
     先等再取基线,随后快 poll 确认 min_stable 窗(非单校验)。
     等待值核减锁:1.5s(买牌特效实测 0.5-1s 上限+0.5s 余量;
     低估由指纹重置机制兜底,见 gate._OP_SETTLE_S 注)。"""
-    from sr_od.application.currency_war import cw_observation_gate as gate
+    from sr_od.application.currency_war.obs import cw_observation_gate as gate
     _patch_anchor_hit(monkeypatch)
     op = _FakeOp([_gray(v=50)] * 4)
     out = wait_stable_frame(op, profile=_prof(), segment='op_settle',
@@ -222,7 +222,7 @@ def test_op_settle_window_still_enforced(monkeypatch):
     操作段稳定窗已分级到地板 0.6s(_OP_SETTLE_MIN_STABLE_S),
     但「窗须真实测量、不得单校验放行」的语义不变:指纹每轮变化
     时即使窗再短也必超时(None 语义:调用方走兜底)。"""
-    from sr_od.application.currency_war import cw_observation_gate as gate
+    from sr_od.application.currency_war.obs import cw_observation_gate as gate
     _patch_anchor_hit(monkeypatch)
     op = _FakeOp([_gray(v=v) for v in
                   (10, 50, 90, 130, 170, 210, 30, 70, 110, 150,
@@ -238,7 +238,7 @@ def test_op_settle_window_still_enforced(monkeypatch):
 def test_op_settle_window_graded_to_floor(monkeypatch):
     """操作段稳定窗分级锁:profile 窗 0.8s 时,settle 段取地板
     0.6s——同场景下 settle 段确认轮数严格少于非 settle 段。"""
-    from sr_od.application.currency_war import cw_observation_gate as gate
+    from sr_od.application.currency_war.obs import cw_observation_gate as gate
     assert gate._OP_SETTLE_MIN_STABLE_S == 0.6, \
         'settle 稳定窗地板必须 = 0.6s(特效帧误读红线,实机耗时报告风险声明)'
     _patch_anchor_hit(monkeypatch)
@@ -296,7 +296,7 @@ def test_profile_stable_window_uniform_floor():
     已拒绝动画中间帧;单局 gate stable 调用 30-84 次,0.8s 档每处
     白付 0.2s(耗时审计报告 .debug/temp/currency_war/
     w417_duration_audit/REPORT.md「需验证」表)。"""
-    from sr_od.application.currency_war.cw_observation_gate import (
+    from sr_od.application.currency_war.obs.cw_observation_gate import (
         PROFILE_CLOSED,
         PROFILE_OPEN,
         PROFILE_POPUP,

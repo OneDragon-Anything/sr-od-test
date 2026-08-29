@@ -20,9 +20,9 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war import cw_observation as obs
+from sr_od.application.currency_war.obs import cw_observation as obs
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.cw_observation_gate import (
+from sr_od.application.currency_war.obs.cw_observation_gate import (
     ENTRY_OVERLAY_CLOSE,
     PHASE_BATTLE_OR_TRANSIT,
     PHASE_FIELD_SPEC,

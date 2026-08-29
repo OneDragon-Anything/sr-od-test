@@ -81,7 +81,7 @@ def test_session_collected_bosses_flow_to_state_plane_bosses() -> None:
     ——重钉为源级锁,防注入链再断。"""
     import inspect
 
-    from sr_od.application.currency_war import cw_observation
+    from sr_od.application.currency_war.obs import cw_observation
     src = inspect.getsource(cw_observation)
     assert "state.plane_bosses = list(_sess.briefing_bosses)" in src, (
         '观测层注入点丢失:session.briefing_bosses 真值不再流向 state.plane_bosses'

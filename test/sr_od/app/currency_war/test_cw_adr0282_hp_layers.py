@@ -77,7 +77,7 @@ def test_read_game_state_hp_wired_through_reconcile() -> None:
     """read_game_state 的 hp 走 reconcile_hp(ADR-0282 接线;源级锁)。"""
     import inspect
 
-    from sr_od.application.currency_war import cw_observation as obs
+    from sr_od.application.currency_war.obs import cw_observation as obs
     src = inspect.getsource(obs.read_game_state)
     assert 'reconcile_hp' in src
     assert 'read_hp_opt' in src
@@ -93,7 +93,7 @@ def test_hp_trusted_source_level_derivation() -> None:
     hp_trusted(ADR-0428 语义 + ADR-0430 帧龄门收紧的唯一接线处)。"""
     import inspect
 
-    from sr_od.application.currency_war import cw_observation as obs
+    from sr_od.application.currency_war.obs import cw_observation as obs
     src = inspect.getsource(obs.read_game_state)
     assert 'hp_trusted' in src
     # 帧龄门:真读且过守卫,或同节点内沿用(last_hp_real_node==当前节点号)

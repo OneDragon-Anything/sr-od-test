@@ -7,7 +7,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parents[5] / 'src'))
 
-from sr_od.application.currency_war.cw_identity_obs import (  # noqa: E402
+from sr_od.application.currency_war.obs.cw_identity_obs import (  # noqa: E402
     _get_crate_gray,
     find_supply_boxes,
 )

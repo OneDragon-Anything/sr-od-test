@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.cw_observation_gate import (
+from sr_od.application.currency_war.obs.cw_observation_gate import (
     PROFILE_CLOSED,
     PROFILE_OPEN,
     wait_stable_frame,

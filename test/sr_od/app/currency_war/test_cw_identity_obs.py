@@ -12,8 +12,8 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils, file_utils
-from sr_od.application.currency_war.currency_war_char_id import load_avatar_templates
-from sr_od.application.currency_war.cw_identity_obs import (
+from sr_od.application.currency_war.obs.currency_war_char_id import load_avatar_templates
+from sr_od.application.currency_war.obs.cw_identity_obs import (
     identify_slots,
     read_deployed_chars,
     read_star,
