@@ -14,12 +14,14 @@
 """
 import json
 
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_intention import (
+    IntentionState,
+    serialize_intention,
+)
 from sr_od.application.currency_war.cw_sim import simulate_p1
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.telemetry.cw_telemetry import (
     TelemetryRecorder,
-    serialize_intention,
 )
 
 
