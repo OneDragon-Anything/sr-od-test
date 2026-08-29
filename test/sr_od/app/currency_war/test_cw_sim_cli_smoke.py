@@ -13,11 +13,10 @@ from pathlib import Path
 
 from sr_od.application.currency_war.data import cw_delta_pool_data
 from sr_od.application.currency_war.telemetry import cw_telemetry as tel
-from sr_od.application.currency_war.sim.cw_sim import (
-    EQUIP_GRANT_CALIB_VERSION,
-    simulate_p1,
-    simulate_p1_batch,
-)
+
+from sr_od.application.currency_war.sim.engine_p1 import EQUIP_GRANT_CALIB_VERSION, simulate_p1
+
+from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
 
 def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:

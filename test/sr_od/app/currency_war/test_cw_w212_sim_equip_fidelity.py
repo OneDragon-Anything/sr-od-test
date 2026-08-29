@@ -18,7 +18,8 @@ simulate_p1(池=fallback 测试惯例;单局 ~0.2s)→ 断言 occupied
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel import cw_comps
-from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
 
 def test_sim_equip_allocation_call_shape_occupied_snapshot() -> None:

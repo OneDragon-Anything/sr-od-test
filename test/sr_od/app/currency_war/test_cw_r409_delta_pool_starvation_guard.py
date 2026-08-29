@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import random
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import pool as sim_pool
+from sr_od.application.currency_war.sim import runner
 from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_ab_depth_boundary_confound,
     check_delta_pool_bucket_min_n,
@@ -30,7 +32,7 @@ def test_guard_hungry_bucket_not_deterministic_cliff() -> None:
     pool = {'supply': {1: {6: [-11],
                            9: [-4, -5, -6, -7, -8, -9]}}}
     rng = random.Random(0)
-    drawn = [cw_sim.live_delta_for('supply', 7, rng, pool_map=pool)
+    drawn = [sim_pool.live_delta_for('supply', 7, rng, pool_map=pool)
              for _ in range(200)]
     assert drawn.count(-11) <= 30   # ≈1/20 权重,远非常数(旧=200)
     assert -4 in drawn and -9 in drawn   # 邻桶样本可达(非恒悬崖)
@@ -45,7 +47,7 @@ def test_guard_picks_lower_variance_candidate() -> None:
     }}}
     rng = random.Random(1)
     for _ in range(200):
-        v = cw_sim.live_delta_for('supply', 6, rng, pool_map=pool)
+        v = sim_pool.live_delta_for('supply', 6, rng, pool_map=pool)
         assert v in (-3, -4, -5, -6, -7, -8, -11) or v == -11
         assert v != -30 and v != -1   # 深邻候选(方差大)不入选
 
@@ -53,7 +55,7 @@ def test_guard_picks_lower_variance_candidate() -> None:
 def test_guard_tiny_pool_falls_back_to_bare_sample() -> None:
     """极端小池(无邻桶可合并):退回裸样本,语义不破(r340 兼容)。"""
     pool = {'battle': {1: {6: [-3, -5]}}}   # n=2,无邻桶,全池=本桶
-    v = cw_sim.live_delta_for('battle', 7, random.Random(1),
+    v = sim_pool.live_delta_for('battle', 7, random.Random(1),
                               pool_map=pool)
     assert v in (-3, -5)
 
@@ -66,9 +68,9 @@ def test_guard_preserves_missing_bucket_none() -> None:
     battle 键 0 命中池内合并样本。
     """
     pool = {'battle': {1: {6: [-11], 9: [-4] * 6}}}
-    assert cw_sim.live_delta_for('boss', 6, random.Random(1),
+    assert sim_pool.live_delta_for('boss', 6, random.Random(1),
                                  pool_map=pool) is None
-    assert cw_sim.live_delta_for('battle', 0, random.Random(1),
+    assert sim_pool.live_delta_for('battle', 0, random.Random(1),
                                  pool_map=pool) in (-11, -4)
 
 
@@ -77,7 +79,7 @@ def test_guard_healthy_bucket_unchanged() -> None:
     pool = {'battle': {1: {6: [-4, -5, -6, -7, -8]}}}
     rng = random.Random(2)
     for _ in range(50):
-        v = cw_sim.live_delta_for('battle', 7, rng, pool_map=pool)
+        v = sim_pool.live_delta_for('battle', 7, rng, pool_map=pool)
         assert v in (-4, -5, -6, -7, -8)
 
 
@@ -144,7 +146,7 @@ def test_check_ab_depth_boundary_confound() -> None:
 
 def test_batch_report_embeds_pool_checks() -> None:
     """simulate_p1_batch 内嵌池级检查(fallback 空池零违规)。"""
-    rep = cw_sim.simulate_p1_batch(3, pool='fallback', ledger=False)
+    rep = runner.simulate_p1_batch(3, pool='fallback', ledger=False)
     cv = rep['checks_violations']
     assert cv['delta_pool_bucket_min_n']['violations'] == 0
     assert cv['depth_cliff_monotonicity']['violations'] == 0
@@ -157,10 +159,12 @@ def test_sampler_version_bumped_and_snapshot_guarded() -> None:
     Σboard 全集口径 / v8(快照 note 链记 v9)=ADR-0362 Δ池
     plane 维键化 / v10=ADR-0404 boss 桶键 Σboard→净星深 /
     v11=ADR-0407 encounter 桶键 depth→rung)+ 提交快照自洽。"""
-    assert cw_sim._SAMPLER_VERSION == 11
+    assert sim_pool._SAMPLER_VERSION == 11
     from sr_od.application.currency_war.data.cw_battle_tables import BUCKET_MIN_N as _BUCKET_MIN_N  # 期 0b 锁改判(N7):单一源迁 data
     assert _BUCKET_MIN_N == 5
-    m, fp, src = cw_sim.resolve_pool('snapshot')
+    m, fp, src = sim_pool.resolve_pool('snapshot')
     assert src == 'snapshot'
     from sr_od.application.currency_war.data import cw_delta_pool_data
     assert fp == cw_delta_pool_data.META['fingerprint']
+
+

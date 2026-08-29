@@ -12,7 +12,8 @@ from pathlib import Path
 import pytest
 
 from sr_od.application.currency_war.sim import cw_sim_checks as chk
-from sr_od.application.currency_war.sim.cw_sim import write_batch_ledger
+
+from sr_od.application.currency_war.sim.runner import write_batch_ledger
 
 
 def _row(round_num: int = 1, gold: int = 10, gold_before: int = 5,

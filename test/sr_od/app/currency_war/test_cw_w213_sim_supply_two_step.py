@@ -21,7 +21,8 @@ simulate_p1(fallback 池)→ 断言
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel import cw_events
-from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
 
 def test_sim_supply_two_step_scoring_branch_reachable(

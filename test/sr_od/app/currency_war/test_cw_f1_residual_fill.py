@@ -21,10 +21,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
     bench_occupied,
     iter_occupied_deployed,
 )
-from sr_od.application.currency_war.sim.cw_sim import (
-    _residual_fill_deploy,
-    simulate_p1,
-)
+
+from sr_od.application.currency_war.sim.engine_p1 import _residual_fill_deploy, simulate_p1
 from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_deploy_fills_cap,
     check_skip_fence_pairing,

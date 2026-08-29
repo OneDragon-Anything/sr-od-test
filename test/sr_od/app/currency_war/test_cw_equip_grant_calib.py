@@ -12,7 +12,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import pool
 from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENT_ROSTER
 from sr_od.application.currency_war.data.cw_synthesis import RESERVED_COMPONENTS
 
@@ -29,7 +30,7 @@ def test_calib_constants_shape() -> None:
 def test_fingerprint_carries_grant_version() -> None:
     """局指纹 = 池指纹 + eqg 版本位(新旧供给结构不可比,显式失败)。"""
     r = cw_sim.simulate_p1(1, pool='snapshot')
-    delta_fp = cw_sim.pool_fingerprint(cw_sim.resolve_pool('snapshot')[0])
+    delta_fp = pool.pool_fingerprint(pool.resolve_pool('snapshot')[0])
     assert r.pool_fingerprint == (
         delta_fp + f'+eqg{cw_sim.EQUIP_GRANT_CALIB_VERSION}')
 
@@ -89,3 +90,4 @@ def test_grant_names_all_registered() -> None:
             stt = row.get('state') or {}
             for e in (stt.get('owned_equips') or []):
                 assert e in legal, f'seed={seed} 非注册表装备 {e}'
+

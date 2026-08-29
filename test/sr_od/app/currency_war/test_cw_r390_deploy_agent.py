@@ -50,7 +50,8 @@ def test_target_bridge_carry_channel() -> None:
 def test_depth_reads_deployed_not_bench() -> None:
     """_deployable_depth 口径=Σboard(W50 ADR-0312;空板=0,
     bench 有件不产生板深——r390「不数 bench」语义的现行形态)。"""
-    from sr_od.application.currency_war.sim.cw_sim import _deployable_depth
+
+    from sr_od.application.currency_war.kernel.cw_battle_calib import _deployable_depth
     st = GameState()
     st.level = 5
     st.bench = _bench(('三月七', '列车同行'), ('三月七', '列车同行'),

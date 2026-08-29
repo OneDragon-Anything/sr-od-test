@@ -23,7 +23,8 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import pool
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -185,7 +186,7 @@ def test_v10_pool_boss_buckets_direction() -> None:
     """v10 池方向锁:boss plane=1 深桶期望伤害 ≤ 浅桶(净星深键下
     语料方向与机制 [27] 一致;当前语料全落桶 0 → 单桶非空 + 若干桶
     则均值随桶深不增)。桶键域 ⊆ 净星深桶域 {0,3,...,15}。"""
-    pool_map, _fp, _label = cw_sim.resolve_pool('snapshot')
+    pool_map, _fp, _label = pool.resolve_pool('snapshot')
     boss_p1 = pool_map.get('boss', {}).get(1, {})
     assert boss_p1, '快照 boss plane=1 桶不应为空(标定源)'
     assert all(b % 3 == 0 and 0 <= b <= 15 for b in boss_p1), (
@@ -209,3 +210,4 @@ def test_sim_ledger_projection_disclosure() -> None:
             if row.get('plane') == 1 and row['round_num'] >= 8]
     assert any(row['handoff_hp_proj'] is not None for row in rows), (
         '末窗轮投影 hp 应披露(非 None)')
+

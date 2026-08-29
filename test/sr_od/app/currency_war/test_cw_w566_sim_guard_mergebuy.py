@@ -65,7 +65,8 @@ class _FullBenchStub:
 
 
 def _run(stub) -> object:  # noqa: ANN001
-    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     return simulate_p1(1, pool='fallback', strategy=stub)
 
 

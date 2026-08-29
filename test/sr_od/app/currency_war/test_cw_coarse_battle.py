@@ -25,8 +25,9 @@ import random
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_coarse_battle as cb
-from sr_od.application.currency_war.sim import cw_sim
-
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import pool
+from sr_od.application.currency_war.sim import runner
 # 拟合产物交付口径(逐单元;粗模型参数的机器可读真值,
 # 来源 = 冻结语料拟合,禁与其它口径混写)
 _DELIVERY_WIN_P: dict[str, dict[int, float]] = {
@@ -166,7 +167,7 @@ def test_engine_switch_dual_mode(monkeypatch: pytest.MonkeyPatch) -> None:
         cb, 'sample_battle_delta',
         lambda node, rung, hp, rng, **kw: coarse_calls.append(node) or 0)
     pool_calls: list[str] = []
-    _orig_ldf = cw_sim.live_delta_for
+    _orig_ldf = pool.live_delta_for
 
     def _spy_ldf(node: str, key: int, rng, **kw):  # type: ignore[no-untyped-def]
         pool_calls.append(node)
@@ -197,7 +198,7 @@ def test_coarse_game_smoke_snapshot_fingerprint() -> None:
     assert all(0 <= h <= 100 for h in r.hp_trail)
     # 局指纹 = 池指纹 + 装备发放结构版本位(供给重校准起)
     assert r.pool_fingerprint == (
-        cw_sim.pool_fingerprint(cw_sim.resolve_pool('snapshot')[0])
+        pool.pool_fingerprint(pool.resolve_pool('snapshot')[0])
         + f'+eqg{cw_sim.EQUIP_GRANT_CALIB_VERSION}')
 
 
@@ -283,6 +284,7 @@ def test_coarse_calib_version_disclosed_in_ledger_manifest(
     """
     assert cb.COARSE_CALIB_VERSION == 2
     r = cw_sim.simulate_p1(1, pool='snapshot')
-    out = cw_sim.write_batch_ledger([r], tmp_path / 'batch')
+    out = runner.write_batch_ledger([r], tmp_path / 'batch')
     manifest = json.loads((out / 'manifest.json').read_text(encoding='utf-8'))
     assert manifest['coarse_calib_version'] == cb.COARSE_CALIB_VERSION
+

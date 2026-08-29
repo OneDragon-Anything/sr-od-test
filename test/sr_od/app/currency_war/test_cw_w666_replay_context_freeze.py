@@ -16,7 +16,8 @@ from __future__ import annotations
 import inspect
 
 from sr_od.application.currency_war.kernel import cw_deploy_logic
-from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
 # W652 取证的两帧所在局(修前 HEAD 版重放对这两局 r6 各判 lag=2)
 _SEEDS = (630027, 630035)
@@ -54,7 +55,7 @@ def test_not_deploying_mutation_still_red(monkeypatch) -> None:
     def wrapped(bench, **kw):
         caller = inspect.currentframe().f_back
         from_cw_sim = (caller is not None
-                       and caller.f_globals.get('__name__', '').endswith('cw_sim'))
+                       and caller.f_globals.get('__name__', '').endswith('engine_p1'))
         if from_cw_sim:
             if state['replay_next']:
                 state['replay_next'] = False
@@ -68,3 +69,4 @@ def test_not_deploying_mutation_still_red(monkeypatch) -> None:
         state['replay_next'] = False
         frames = _lag_frames(seed)
         assert any(n > 0 for _, n in frames), (seed, frames)
+

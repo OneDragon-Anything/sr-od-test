@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -217,3 +217,4 @@ def test_sim_ledger_handoff_gap_zero_before_final_window() -> None:
                if row.get('plane') == 1 and row['round_num'] < 6]
         assert all((row.get('handoff_gap') or 0) == 0 for row in pre), (
             f'seed {seed}:承接门越权辖非末窗')
+

@@ -14,7 +14,7 @@ import copy
 
 import pytest
 
-from sr_od.application.currency_war.sim import cw_sim, cw_sim_checks
+from sr_od.application.currency_war.sim import cw_sim_checks, engine_p1 as cw_sim
 
 SEEDS = [0, 1, 2]
 

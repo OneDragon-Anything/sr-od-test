@@ -35,7 +35,8 @@ from sr_od.application.currency_war.kernel.cw_evolution import (
     evolution_step,
 )
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-from sr_od.application.currency_war.sim.cw_sim import _board_factions_of
+
+from sr_od.application.currency_war.kernel.cw_battle_calib import _board_factions_of
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     CompTransaction,

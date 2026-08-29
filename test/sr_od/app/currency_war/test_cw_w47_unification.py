@@ -158,7 +158,7 @@ def test_transition_traits_derived_from_system_cards() -> None:
     cw_sim._TRANSITION_TRAITS 是同一对象(alias import,常量对双源消除)。"""
     assert set(TRANSITION_TRAITS) == {
         ('仙舟', 3), ('持续伤害', 2), ('列车同行', 2)}
-    from sr_od.application.currency_war.sim import cw_sim
+    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
     assert cw_sim.__dict__.get('_TRANSITION_TRAITS') is None, ('期 0b 锁改判(N7):alias 已随聚合族下沉删除,单一源=cw_deploy_logic 本体')
 
 

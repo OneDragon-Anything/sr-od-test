@@ -11,7 +11,8 @@ from __future__ import annotations
 import random
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.sim.cw_sim import _Pool
+
+from sr_od.application.currency_war.sim.pool import _Pool
 from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_sim_pool_no_cost_truncation,
 )

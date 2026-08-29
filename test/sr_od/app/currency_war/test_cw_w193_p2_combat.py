@@ -19,8 +19,10 @@ from __future__ import annotations
 import logging
 import random
 
-from sr_od.application.currency_war.sim import cw_sim
-from sr_od.application.currency_war.sim.cw_sim import P2ReplayEntry
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.kernel import cw_battle_calib
+from sr_od.application.currency_war.sim import runner
+from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
 from sr_od.application.currency_war.sim.cw_sim_checks import (
     check_p2_loss_band_anchor,
     check_p2_win_rate_band,
@@ -81,14 +83,14 @@ def test_p2_combat_delta_distribution() -> None:
                       win_p_clip=(0.0, 1.0))   # 恒胜臂(无漂移)
     rng = random.Random(0)
     for _ in range(20):
-        d, wp = cw_sim.p2_combat_delta(_st(), 'boss', 7, rng, c)
+        d, wp = cw_battle_calib.p2_combat_delta(_st(), 'boss', 7, rng, c)
         assert d == 2 and wp == 1.0
     c0 = P2CombatCalib(p0=0.0)       # 恒负臂
     for node, rn, band in (('battle', 1, c0.band_battle_r1),
                            ('battle', 4, c0.band_battle_late),
                            ('boss', 7, c0.band_boss)):
         for _ in range(60):
-            d, wp = cw_sim.p2_combat_delta(_st(), node, rn, rng, c0)
+            d, wp = cw_battle_calib.p2_combat_delta(_st(), node, rn, rng, c0)
             assert wp == 0.0
             assert -band[1] <= d <= -band[0]
 
@@ -194,7 +196,7 @@ def test_replay_entry_rejects_invest() -> None:
 
 def test_batch_headline_extension_keys() -> None:
     """批报告 P2 判读扩展键在位(形状锁,不锁分布数值)。"""
-    rep = cw_sim.simulate_p1_batch(10, pool='snapshot', planes=2,
+    rep = runner.simulate_p1_batch(10, pool='snapshot', planes=2,
                                    ledger=False)
     for k in ('p2_combat_calibrated', 'avg_p2_gold_carried',
               'p2_carry_buys', 'avg_p2_carry_buys', 'p2_switch_rate',
@@ -278,7 +280,7 @@ def test_mutation_probe_settlement_bypass(monkeypatch) -> None:
     def _broken(st, node, round_num, rng, calib):
         return (-50, 0.11)   # 全带外(最宽带 hi=28)
     monkeypatch.setattr(cw_sim, 'p2_combat_delta', _broken)
-    rep = cw_sim.simulate_p1_batch(8, pool='snapshot', planes=2,
+    rep = runner.simulate_p1_batch(8, pool='snapshot', planes=2,
                                    ledger=False, seed_base=100)
     cv = rep['checks_violations']['p2_loss_band_anchor']
     assert cv['violations'] > 0, '变异(结算绕过参数族)未涌现违规'
@@ -289,7 +291,7 @@ def test_mutation_probe_win_rate_explosion(monkeypatch) -> None:
     def _broken(st, node, round_num, rng, calib):
         return (2, 0.9)
     monkeypatch.setattr(cw_sim, 'p2_combat_delta', _broken)
-    rep = cw_sim.simulate_p1_batch(8, pool='snapshot', planes=2,
+    rep = runner.simulate_p1_batch(8, pool='snapshot', planes=2,
                                    ledger=False, seed_base=100)
     cv = rep['checks_violations']['p2_win_rate_band']
     assert cv['violations'] > 0, '变异(胜率失控)未涌现违规'
@@ -299,7 +301,7 @@ def test_mutation_probe_win_rate_explosion(monkeypatch) -> None:
 
 def test_sensitivity_report_shape() -> None:
     """敏感性扫描入口:网格形状 + 判读 headline 键(n 取最小)。"""
-    rep = cw_sim.simulate_p2_sensitivity(
+    rep = runner.simulate_p2_sensitivity(
         3, pool='snapshot', betas=(0.0, 0.04), gammas=(0.0, 0.02),
         event_gold_arms=('p1',))
     assert rep['n'] == 3 and len(rep['grid']) == 4
@@ -309,3 +311,4 @@ def test_sensitivity_report_shape() -> None:
                   'avg_final_hp'):
             assert k in cell
     assert rep['pool_fingerprint']
+

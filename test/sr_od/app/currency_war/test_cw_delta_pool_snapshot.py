@@ -17,12 +17,12 @@ from pathlib import Path
 import pytest
 
 from sr_od.application.currency_war.data import cw_delta_pool_data
-from sr_od.application.currency_war.sim import cw_sim as _sim
-
-
+from sr_od.application.currency_war.sim import engine_p1 as _sim
+from sr_od.application.currency_war.sim import pool
+from sr_od.application.currency_war.sim import runner
 def test_snapshot_module_loads_and_fingerprint_selfconsistent() -> None:
     """提交快照可加载;META 指纹与重算一致(手改会被发现)。"""
-    fp = _sim.pool_fingerprint(cw_delta_pool_data.SNAPSHOT)
+    fp = pool.pool_fingerprint(cw_delta_pool_data.SNAPSHOT)
     assert fp == cw_delta_pool_data.META['fingerprint']
     # 可信标签口径:丢弃计数已披露(2026-08-22 retrofix 后死链
     # 历史标签置 None,不入池)
@@ -31,13 +31,13 @@ def test_snapshot_module_loads_and_fingerprint_selfconsistent() -> None:
 
 def test_resolve_pool_snapshot_and_fallback() -> None:
     """snapshot 命中提交快照(归一 int 桶键);fallback 显式空池+打标。"""
-    m, fp, src = _sim.resolve_pool('snapshot')
+    m, fp, src = pool.resolve_pool('snapshot')
     assert src == 'snapshot'
     assert fp == cw_delta_pool_data.META['fingerprint']
     # 归一化后语义等价(int 桶键;json round-trip 的 str 键会让
     # live_delta_for 的 int 查询全 miss = 快照静默失效)
     # ADR-0362:位面层同样归一 int 键
-    assert m == _sim._normalize_pool(cw_delta_pool_data.SNAPSHOT)
+    assert m == pool._normalize_pool(cw_delta_pool_data.SNAPSHOT)
     assert all(isinstance(b, int)
                for planes in m.values() for b in planes)
     assert all(isinstance(b, int)
@@ -45,16 +45,16 @@ def test_resolve_pool_snapshot_and_fallback() -> None:
                for buckets in planes.values() for b in buckets)
     assert m.get('battle')
 
-    m2, fp2, src2 = _sim.resolve_pool('fallback')
+    m2, fp2, src2 = pool.resolve_pool('fallback')
     assert src2 == 'fallback'
     assert m2 == {}
-    assert fp2 == _sim.pool_fingerprint({})
+    assert fp2 == pool.pool_fingerprint({})
 
 
 def test_resolve_pool_auto_missing_raises_loudly(tmp_path: None | Path) -> None:
     """auto 缺源 raise(不静默回退空池)——blocker 修复的核心语义。"""
-    with pytest.raises(_sim.DeltaPoolUnavailable):
-        _sim.resolve_pool('auto', auto_dir=tmp_path / 'nonexistent')
+    with pytest.raises(pool.DeltaPoolUnavailable):
+        pool.resolve_pool('auto', auto_dir=tmp_path / 'nonexistent')
 
 
 def test_resolve_pool_path_json_snapshot(tmp_path: Path) -> None:
@@ -64,10 +64,10 @@ def test_resolve_pool_path_json_snapshot(tmp_path: Path) -> None:
     p.write_text(json.dumps(
         {'meta': {}, 'snapshot': {'battle': {1: {6: [-4]}}}},
         ensure_ascii=False), encoding='utf-8')
-    m, fp, src = _sim.resolve_pool(p)
+    m, fp, src = pool.resolve_pool(p)
     assert src == f'path:{p.name}'
     assert m == {'battle': {1: {6: [-4]}}}
-    assert fp == _sim.pool_fingerprint({'battle': {1: {6: [-4]}}})
+    assert fp == pool.pool_fingerprint({'battle': {1: {6: [-4]}}})
 
 
 def test_simulate_p1_records_pool_identity() -> None:
@@ -79,7 +79,7 @@ def test_simulate_p1_records_pool_identity() -> None:
     r = _sim.simulate_p1(42, pool='fallback')
     assert r.pool_source == 'fallback'
     assert r.pool_fingerprint == (
-        _sim.pool_fingerprint({})
+        pool.pool_fingerprint({})
         + f'+eqg{_sim.EQUIP_GRANT_CALIB_VERSION}')
     r2 = _sim.simulate_p1(42, pool='snapshot')
     assert r2.pool_source == 'snapshot'
@@ -90,10 +90,10 @@ def test_simulate_p1_records_pool_identity() -> None:
 
 def test_batch_report_carries_pool_fingerprint() -> None:
     """批量结果携带池指纹(基线数字可追溯其校准地基)。"""
-    s = _sim.simulate_p1_batch(10, pool='fallback')
+    s = runner.simulate_p1_batch(10, pool='fallback')
     assert s['pool_source'] == 'fallback'
     assert s['pool_fingerprint'] == (
-        _sim.pool_fingerprint({})
+        pool.pool_fingerprint({})
         + f'+eqg{_sim.EQUIP_GRANT_CALIB_VERSION}')
 
 
@@ -106,12 +106,12 @@ def test_snapshot_pool_is_live_in_sim() -> None:
     """
     import random
 
-    m, _, _ = _sim.resolve_pool('snapshot')
+    m, _, _ = pool.resolve_pool('snapshot')
     hit = False
     # ADR-0362:桶在 plane=1 层下
     for node in ('battle', 'boss', 'encounter'):
         for bucket in (m.get(node, {}).get(1) or {}):
-            v = _sim.live_delta_for(node, bucket, random.Random(1),
+            v = pool.live_delta_for(node, bucket, random.Random(1),
                                     pool_map=m)
             if v is not None:
                 hit = True
@@ -127,3 +127,4 @@ def test_generator_data_file_discipline() -> None:
         encoding='utf-8')[:600]
     assert '勿手编' in head
     assert 'gen_delta_pool_snapshot.py' in head
+

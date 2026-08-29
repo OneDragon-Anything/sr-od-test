@@ -10,7 +10,9 @@ BOSS_WIN_P_* / _BOSS_WIN_P_EXTRAPOLATED 缓存)整体废弃,胜负面单一
 取值口 = ``node_win_p``(W31 实测节点×轮次阶梯,n=192)。
 """
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import pool
+from sr_od.application.currency_war.sim import runner
 from sr_od.application.currency_war.data import cw_delta_pool_data
 from sr_od.application.currency_war.data.cw_battle_tables import (
     NODE_WIN_P_BY_TYPE as tables_NODE_WIN_P_BY_TYPE,
@@ -116,15 +118,15 @@ def test_check_delta_pool_bucket_coverage_unit() -> None:
 def test_snapshot_coverage_zero_undisclosed() -> None:
     """提交快照:贫困披露与池内容自洽(0 未披露;ADR-0362:辖
     plane=1 视图,与批内 pool-level 检查同口径)。"""
-    pool_map, _, _ = cw_sim.resolve_pool('snapshot')
+    pool_map, _, _ = pool.resolve_pool('snapshot')
     rep = check_delta_pool_bucket_coverage(
-        cw_sim.plane_view(pool_map), meta=cw_delta_pool_data.META)
+        pool.plane_view(pool_map), meta=cw_delta_pool_data.META)
     assert rep['violations'] == 0
 
 
 def test_batch_report_embeds_coverage_check() -> None:
     """simulate_p1_batch 内嵌 delta_pool_bucket_coverage(ADR-0306 件5)。"""
-    rep = cw_sim.simulate_p1_batch(3, pool='fallback', ledger=False,
+    rep = runner.simulate_p1_batch(3, pool='fallback', ledger=False,
                                    checks=True)
     cv = rep['checks_violations']
     assert 'delta_pool_bucket_coverage' in cv
@@ -137,3 +139,4 @@ def test_boss_settle_uses_win_p_single_source() -> None:
     src = inspect.getsource(calib.boss_settle_delta)
     assert 'node_win_p' in src
     assert 'NODE_WIN_P_LADDER[' not in src
+

@@ -10,7 +10,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.sim import cw_sim_checks as chk
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
@@ -183,3 +183,4 @@ def test_default_simulate_strategy_uses_sim_registry() -> None:
     )
     strat = DecisionV2Strategy(registry=cw_sim.sim_decision_registry())
     assert strat.registry.level_max == cw_sim.LEVEL_CAP
+

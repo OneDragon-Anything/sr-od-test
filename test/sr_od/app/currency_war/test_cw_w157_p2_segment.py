@@ -17,7 +17,10 @@ import logging
 import random
 from pathlib import Path
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.kernel import cw_battle_calib
+from sr_od.application.currency_war.sim import pool
+from sr_od.application.currency_war.sim import runner
 from sr_od.application.currency_war.data import cw_battle_tables as _tables
 
 logging.disable(logging.CRITICAL)
@@ -49,7 +52,7 @@ def test_pool_from_replay_assigns_delta_to_later_plane(tmp_path: Path) -> None:
         _out(1, 2, '普通战斗', 42),
     ]) + '\n', encoding='utf-8')
 
-    pool, _ = cw_sim._pool_from_replay(tmp_path)
+    pool, _ = pool._pool_from_replay(tmp_path)
     # P2r1 是 battle(rung 桶 = board_before{} 的 0);不挂 plane=1
     assert pool['battle'].get(2) and not pool['battle'].get(1, {}).get(0)
     assert pool['battle'][2][0] == [-18]
@@ -58,10 +61,10 @@ def test_pool_from_replay_assigns_delta_to_later_plane(tmp_path: Path) -> None:
 def test_live_delta_no_cross_plane_fallback() -> None:
     """plane≥2 缺桶不跨位面借 P1 样本(口径混桶防线)。"""
     pool = {'battle': {1: {0: [-11] * 6}}}   # 只有 P1 桶
-    assert cw_sim.live_delta_for('battle', 0, random.Random(0),
+    assert pool.live_delta_for('battle', 0, random.Random(0),
                                  pool_map=pool, plane=2) is None
     # 同池 plane=1 正常采样
-    assert cw_sim.live_delta_for('battle', 0, random.Random(0),
+    assert pool.live_delta_for('battle', 0, random.Random(0),
                                  pool_map=pool, plane=1) in [-11] * 6
 
 
@@ -69,16 +72,16 @@ def test_fingerprint_covers_plane_layer() -> None:
     """指纹含位面层:同桶样本不同位面 → 不同指纹(池语义可区分)。"""
     a = {'battle': {1: {0: [-11]}}}
     b = {'battle': {2: {0: [-11]}}}
-    assert cw_sim.pool_fingerprint(a) != cw_sim.pool_fingerprint(b)
+    assert pool.pool_fingerprint(a) != pool.pool_fingerprint(b)
 
 
 def test_plane_view_is_p1_projection() -> None:
     """plane_view:单位面投影(plane=1 锚定检查的口径单一源)。"""
     pool = {'battle': {1: {0: [-11]}, 2: {0: [-16]}},
             'boss': {1: {9: [-20]}}}
-    v = cw_sim.plane_view(pool)
+    v = pool.plane_view(pool)
     assert v == {'battle': {0: [-11]}, 'boss': {9: [-20]}}
-    assert cw_sim.plane_view(pool, 2) == {'battle': {0: [-16]},
+    assert pool.plane_view(pool, 2) == {'battle': {0: [-16]},
                                           'boss': {}}
 
 
@@ -140,7 +143,7 @@ def test_p2_battle_fallback_band() -> None:
     rng = random.Random(0)
     losses, wins = [], 0
     for _ in range(400):
-        d = cw_sim.node_delta('battle', 11, 3, rng, plane=2)
+        d = cw_battle_calib.node_delta('battle', 11, 3, rng, plane=2)
         if d <= -15:                # 败带样本
             losses.append(d)
         else:                       # 胜(WIN_DELTAS ∈ {2,2,0,-4})
@@ -152,7 +155,7 @@ def test_p2_battle_fallback_band() -> None:
     # P1 分支不受影响:胜率口径不同(0.29),同 rng 序下分布应不同
     rng2 = random.Random(0)
     w1 = sum(1 for _ in range(400)
-             if cw_sim.node_delta('battle', 3, 3, rng2, plane=1) > 0)
+             if cw_battle_calib.node_delta('battle', 3, 3, rng2, plane=1) > 0)
     assert w1 != 44 or wins != 44   # 只防「两分支恒等」的结构回归
 
 
@@ -169,7 +172,7 @@ def test_p2_node_sequence_matches_corpus() -> None:
 
 def test_batch_p2_headline_quartet() -> None:
     """批报告 P2 headline 四联键在位(不锁分布数值,形状锁)。"""
-    rep = cw_sim.simulate_p1_batch(10, pool='snapshot', planes=2,
+    rep = runner.simulate_p1_batch(10, pool='snapshot', planes=2,
                                    ledger=False)
     for k in ('p2_entered_rate', 'avg_p2_rounds', 'p2_win_rate',
               'p2_hp0_rate', 'avg_p2_refreshes'):
@@ -220,7 +223,7 @@ def test_check_p2_segment_shape_unit() -> None:
 
 def test_simulate_p2_ab_report_shape() -> None:
     """simulate_p2_ab 报告形状:双臂 headline 四联 + D 方向对拍键。"""
-    rep = cw_sim.simulate_p2_ab(10, pool='snapshot', seed_base=0)
+    rep = runner.simulate_p2_ab(10, pool='snapshot', seed_base=0)
     for arm in ('headline_on', 'headline_off'):
         for k in ('p2_entered_rate', 'avg_p2_rounds', 'p2_win_rate',
                   'p2_hp0_rate', 'total_p2_refreshes'):
@@ -229,3 +232,4 @@ def test_simulate_p2_ab_report_shape() -> None:
     assert rd['on_gt_off'] + rd['off_gt_on'] + rd['tie'] == rep['n']
     assert rep['headline_on']['p2_entered_rate'] == \
         rep['headline_off']['p2_entered_rate']   # P1 段两臂零漂移
+

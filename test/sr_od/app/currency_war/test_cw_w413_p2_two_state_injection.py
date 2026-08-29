@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.kernel import cw_battle_calib as cw_sim
 from sr_od.application.currency_war.kernel.cw_line_switch import (
     rounds_alive,
     survival_gate,
@@ -143,3 +143,4 @@ def test_rung_sampling_follows_settle_rung_coordinate() -> None:
         DEFAULT_REGISTRY, rounds_two_state_enabled=True,
         p_win_p2_by_rung={0: 0.0, 1: 0.65, 2: 0.65})
     assert rounds_alive(st, _sess(), reg) == 3
+

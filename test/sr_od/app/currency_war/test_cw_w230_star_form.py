@@ -14,8 +14,9 @@ from __future__ import annotations
 import dataclasses
 import logging
 
-from sr_od.application.currency_war.sim import cw_sim
-from sr_od.application.currency_war.sim.cw_sim import P2ReplayEntry
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import runner
+from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
@@ -117,9 +118,10 @@ def test_p1_zero_drift_star_form() -> None:
 
 def test_sensitivity_grid_star_key() -> None:
     """simulate_p2_sensitivity 网格行带 form_star_weight 键(维入表)。"""
-    out = cw_sim.simulate_p2_sensitivity(
+    out = runner.simulate_p2_sensitivity(
         n=2, pool='fallback', planes=2, betas=(0.04,), gammas=(0.02,),
         event_gold_arms=('p1',), form_level_weights=(0.25,),
         form_star_weights=(0.0, 0.5))
     assert len(out['grid']) == 2
     assert {row['form_star_weight'] for row in out['grid']} == {0.0, 0.5}
+

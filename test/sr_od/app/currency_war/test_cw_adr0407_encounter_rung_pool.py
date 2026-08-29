@@ -12,12 +12,11 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim import cw_sim as _sim
-
-
+from sr_od.application.currency_war.sim import engine_p1 as _sim
+from sr_od.application.currency_war.sim import pool
 def _p1_means() -> dict[int, float]:
-    m, _, _ = _sim.resolve_pool('snapshot')
-    m = _sim.plane_view(m)
+    m, _, _ = pool.resolve_pool('snapshot')
+    m = pool.plane_view(m)
     enc = m.get('encounter') or {}
     return {int(b): sum(v) / len(v)
             for b, v in enc.items() if len(v) >= 5}
@@ -37,8 +36,8 @@ def test_v11_pool_encounter_main_buckets_monotonic() -> None:
 
 def test_v11_pool_encounter_no_depth_keys() -> None:
     """快照 encounter 桶键无 depth 域残留(键迁移完整性)。"""
-    m, _, _ = _sim.resolve_pool('snapshot')
-    m = _sim.plane_view(m)
+    m, _, _ = pool.resolve_pool('snapshot')
+    m = pool.plane_view(m)
     enc = m.get('encounter') or {}
     assert enc and all(int(b) <= 4 for b in enc), \
         f'v11 快照仍带 depth 域键: {sorted(enc)}'
@@ -50,3 +49,4 @@ def test_v11_settle_wiring_encounter_rung_source() -> None:
     import inspect
     src = inspect.getsource(_sim.simulate_p1)
     assert "live_delta_for('encounter', _settle_rung(st)" in src
+

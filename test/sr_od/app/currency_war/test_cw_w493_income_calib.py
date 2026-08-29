@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel import cw_economy
 from sr_od.application.currency_war.kernel import cw_coarse_battle as cb
 from sr_od.application.currency_war.sim.cw_sim_checks import (
@@ -98,3 +98,4 @@ def test_shop_cost_curve_disclosure() -> None:
                  'sim': {'node': 'reward'}}
     empty = check_shop_cost_curve([[empty_row]])
     assert empty['violations'] == 0 and 'note' in empty
+

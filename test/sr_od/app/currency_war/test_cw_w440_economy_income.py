@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import json
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import runner
 from sr_od.application.currency_war.kernel import cw_economy
 from sr_od.application.currency_war.kernel.cw_economy import (
     BASE_INCOME,
@@ -93,9 +94,10 @@ def test_economy_calib_version_disclosed_in_manifest(tmp_path) -> None:
     """
     assert cw_economy.ECONOMY_CALIB_VERSION == 2   # ADR-0443 事件金重整定
     r = cw_sim.simulate_p1(1, pool='fallback')
-    out = cw_sim.write_batch_ledger([r], tmp_path / 'batch')
+    out = runner.write_batch_ledger([r], tmp_path / 'batch')
     manifest = json.loads(
         (out / 'manifest.json').read_text(encoding='utf-8'))
     assert manifest['economy_calib_version'] == \
         cw_economy.ECONOMY_CALIB_VERSION
     assert 'coarse_calib_version' in manifest   # 粗模型键原样保留
+

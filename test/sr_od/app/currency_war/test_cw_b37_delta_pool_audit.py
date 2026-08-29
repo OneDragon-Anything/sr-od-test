@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import pool as cw_sim
 from sr_od.application.currency_war.data.cw_delta_pool_data import (
     META as SNAP_META,
 )
@@ -259,3 +259,4 @@ def test_prefork_first_wave_drift_still_flagged() -> None:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-q'])
+

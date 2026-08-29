@@ -165,7 +165,8 @@ def test_w81_violation_seeds_replay_zero() -> None:
     """ADR-0337 回归锁:W81 全窗复验钉死的违规 seed(259/304/342)
     确定性重放(同 seed 同池 snapshot),no_same_round_buy_sell 零违规
     ——修复在真实 sim 决策链上生效(与 ADR-0328 锁⑥同式)。"""
-    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )

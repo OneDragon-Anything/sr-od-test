@@ -23,7 +23,8 @@ class _LevelUpSpamStub:
 
 def test_sim_levelup_cap_guard_rejects_and_discloses() -> None:
     """满级后 LevelUp 拒付:金不扣、无 LevelUp 执行行、计数披露。"""
-    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
     res = simulate_p1(1, pool='fallback', strategy=_LevelUpSpamStub())
     rows = res.ledger
@@ -58,7 +59,8 @@ def test_sim_levelup_cap_guard_rejects_and_discloses() -> None:
 
 def test_sim_levelup_pre_cap_regression() -> None:
     """回归:未满级时 LevelUp 行为不变——照常执行、照常扣 4 金/击。"""
-    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
     res = simulate_p1(1, pool='fallback', strategy=_LevelUpSpamStub())
     pre_cap = [r for r in res.ledger
@@ -75,7 +77,8 @@ def test_sim_levelup_pre_cap_regression() -> None:
 
 def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
     """拒付行不破坏 flat4 台账锁(spend.levelup == 4×LevelUp 行数)。"""
-    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     from sr_od.application.currency_war.sim.cw_sim_checks import (
         check_levelup_flat4_ledger_lock,
     )
@@ -87,7 +90,8 @@ def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
 
 def test_sim_batch_aggregate_discloses_level_cap_rejects() -> None:
     """批量报告聚合披露 level_cap_rejects(键存在且 ≥0)。"""
-    from sr_od.application.currency_war.sim.cw_sim import simulate_p1_batch
+
+    from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
     rep = simulate_p1_batch(6, pool='fallback', seed_base=600,
                             ledger=False, checks=False)
@@ -102,7 +106,8 @@ def test_sim_batch_cap_rejects_by_plane_consistent_with_total() -> None:
     LEVEL_CAP 放开批提供干净读数。兼容判据:总量键保留不删,分解值
     求和必须等于总量——不等即聚合端分组与总量口径漂移。
     """
-    from sr_od.application.currency_war.sim.cw_sim import simulate_p1_batch
+
+    from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
     rep = simulate_p1_batch(6, pool='fallback', seed_base=600,
                             ledger=False, checks=False)

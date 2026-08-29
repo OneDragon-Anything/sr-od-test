@@ -12,7 +12,8 @@ from __future__ import annotations
 import pytest
 
 from sr_od.application.currency_war.sim import cw_sim_checks as chk
-from sr_od.application.currency_war.sim.cw_sim import simulate_p1_batch
+
+from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
 
 def _row(round_num: int = 1, *, plane: int = 1, gold: int = 30,

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
@@ -231,3 +231,4 @@ def test_decision_trace_handoff_field(tmp_path) -> None:
     line = (tmp_path / 'decisions.jsonl').read_text(encoding='utf-8')
     row2 = json.loads(line.strip().splitlines()[-1])
     assert row2['handoff'] is None
+

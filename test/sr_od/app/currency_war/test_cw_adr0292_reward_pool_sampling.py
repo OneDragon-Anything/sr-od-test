@@ -11,7 +11,9 @@ import json
 import random
 from pathlib import Path
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import pool as sim_pool
+from sr_od.application.currency_war.sim import runner
 from sr_od.application.currency_war.sim.cw_sim_checks import (
     REWARD_POOL_TRUTH_MEAN,
     check_reward_delta_pool_bucket_lock,
@@ -25,7 +27,7 @@ def _reward_snap(tmp_path: Path, reward_buckets: dict) -> Path:
     pool = {'battle': {1: {0: [-11] * 6, 1: [-6] * 6}},
             'reward': {1: {int(b): list(v)
                            for b, v in reward_buckets.items()}}}
-    fp = cw_sim.pool_fingerprint(pool)
+    fp = sim_pool.pool_fingerprint(pool)
     p = tmp_path / 'snap.json'
     p.write_text(json.dumps(
         {'meta': {'fingerprint': fp}, 'snapshot': {
@@ -56,13 +58,13 @@ def test_reward_full_pool_fallback_shallow_depth(tmp_path: Path) -> None:
     # (ADR-0362:合成池带 plane 层 {1: {9: [...]}})
     pool = {'reward': {1: {9: [2] * 5 + [11]}}}
     rng = random.Random(0)
-    drawn = {cw_sim.live_delta_for('reward', 4, rng, pool_map=pool)
+    drawn = {sim_pool.live_delta_for('reward', 4, rng, pool_map=pool)
              for _ in range(30)}
     assert drawn <= {2, 11} and 11 in drawn   # 全池样本可达
     # 池空 → None(调用方回退 EARLY_WIN_DELTA)
-    assert cw_sim.live_delta_for('reward', 4, random.Random(0),
+    assert sim_pool.live_delta_for('reward', 4, random.Random(0),
                                  pool_map={'reward': {1: {}}}) is None
-    assert cw_sim.live_delta_for(
+    assert sim_pool.live_delta_for(
         'supply', 4, random.Random(0), pool_map={}) is None
 
 
@@ -79,8 +81,8 @@ def test_snapshot_reward_pool_matches_corpus_truth() -> None:
     ±1hp 漂移带+伪影哨兵带断言;池每次局终自动再生,锁瞬时均值
     等值=池耦合 change-detector,再生即红)。supply 无真值锚
     (ADR-0345):合法样本(如 Δ=0)不辖,只锁伪影哨兵带。"""
-    pm, _, _ = cw_sim.resolve_pool('snapshot')
-    rep = check_reward_delta_pool_bucket_lock(cw_sim.plane_view(pm))
+    pm, _, _ = sim_pool.resolve_pool('snapshot')
+    rep = check_reward_delta_pool_bucket_lock(sim_pool.plane_view(pm))
     assert rep['violations'] == 0, rep
     assert rep['reward']['n'] >= 30
     assert abs(rep['reward']['mean'] - REWARD_POOL_TRUTH_MEAN) <= 1.0
@@ -140,7 +142,7 @@ def test_pool_build_never_mixes_runs(tmp_path: Path) -> None:
                       'node_type': '奖励', 'hp_after': 73},
                       ensure_ascii=False) + '\n',
         encoding='utf-8')
-    pool, _ = cw_sim._pool_from_replay(d)
+    pool, _ = sim_pool._pool_from_replay(d)
     # ADR-0362:差分归属后行位面——reward 行 plane=1,桶挂 plane=1 层
     assert pool.get('reward') == {1: {6: [2]}}   # 只有 r2 同 run 差分 +2
     assert 41 not in [x for v in pool['reward'][1].values() for x in v]
@@ -151,8 +153,8 @@ def test_sampler_v4_and_snapshot_selfconsistent() -> None:
     v11=ADR-0407 encounter 桶键 depth→rung;v8/v9=ADR-0362
     plane 维键化,note 链与常量错位自 v10 对齐;本锁语义=版本入指纹
     +快照自洽)。"""
-    assert cw_sim._SAMPLER_VERSION == 11
-    m, fp, src = cw_sim.resolve_pool('snapshot')
+    assert sim_pool._SAMPLER_VERSION == 11
+    m, fp, src = sim_pool.resolve_pool('snapshot')
     assert src == 'snapshot'
     from sr_od.application.currency_war.data import cw_delta_pool_data
     assert fp == cw_delta_pool_data.META['fingerprint']
@@ -164,7 +166,9 @@ def test_sampler_v4_and_snapshot_selfconsistent() -> None:
 
 def test_batch_report_embeds_reward_lock() -> None:
     """simulate_p1_batch 内嵌 reward 分布锁(fallback 空池不辖=0)。"""
-    rep = cw_sim.simulate_p1_batch(3, pool='fallback', ledger=False)
+    rep = runner.simulate_p1_batch(3, pool='fallback', ledger=False)
     cv = rep['checks_violations']
     assert 'reward_delta_pool_bucket_lock' in cv
     assert cv['reward_delta_pool_bucket_lock']['violations'] == 0
+
+

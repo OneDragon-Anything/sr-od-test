@@ -8,6 +8,7 @@
 - G3:付费刷新产经验(淘金客 +2;数值源单一面 = cw_investments.STRATEGY_EFFECTS
   overlay,overlay 值变更 sim 跟随;免费刷不计),off 臂恒 0;
 - G1:装备事件计数 + 逐轮未穿滞留/生锈暴露(min(10,n),词条语义
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
   cw_comps.RUST_AFFIX_NAME)+ 穿戴后滞留清零 + P1 出口滞留件数;
 - G2:配方件躺 bench 轮数与上阵战力贡献代理的账本一致性。
 """
@@ -19,14 +20,14 @@ from dataclasses import replace as _dc_replace
 
 import pytest
 
-from sr_od.application.currency_war.sim import cw_sim as cw_sim_mod
 from sr_od.application.currency_war.kernel.cw_effect_inventory import EffectSpec
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
     EconomyEffect,
 )
-from sr_od.application.currency_war.sim.cw_sim import simulate_p1
-from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
+
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+SimInvestProfile
 
 # 零漂移锚:seeds 0..5(pool='snapshot'),行为投影 = 每轮
 # (plane, round_num, gold, hp, level, actions(类型, reason, result))
@@ -229,3 +230,4 @@ class TestG2DeployProxy:
         for row in _p1_rows(r):
             n = len(row['state'].get('deployed') or [])
             assert row['sim']['deployed_power'] >= n
+

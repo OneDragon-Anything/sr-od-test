@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 
-from sr_od.application.currency_war.sim import cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.sim.cw_sim_invest import (
     SIM_STRATEGY_PICK_SCHEDULE,
     SimInvestProfile,
@@ -200,3 +200,4 @@ def test_plaza_names_canon_colon() -> None:
     assert '骇客专家:银狼' in table
     # 披露通道存在(即使本版零丢弃,键可达)
     assert isinstance(freq_dropped_names(), dict)
+

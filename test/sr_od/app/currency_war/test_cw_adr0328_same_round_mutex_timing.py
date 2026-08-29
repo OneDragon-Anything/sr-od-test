@@ -259,7 +259,8 @@ def test_decide_pipeline_oscillation_pair_rejected() -> None:
 def test_residual_seeds_zero_violation_v2() -> None:
     """ADR-0328 回归锁:W66 探针钉死的违规 seed(0/6/14)重放,
     no_same_round_buy_sell 归零——修复在真实 sim 决策链上生效。"""
-    from sr_od.application.currency_war.sim.cw_sim import simulate_p1
+
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )

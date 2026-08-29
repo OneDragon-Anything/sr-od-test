@@ -39,21 +39,23 @@ def test_live_delta_depth_conditioned() -> None:
     """
     import random
 
-    from sr_od.application.currency_war.sim import cw_sim
-    src = inspect.getsource(cw_sim.live_delta_for)
+    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+    from sr_od.application.currency_war.sim import pool as sim_pool
+    src = inspect.getsource(sim_pool.live_delta_for)
     assert '浅侧' in src and 'bucket - DEPTH_BUCKET_W' in src   # 邻桶回退只向浅侧(真锁:实现语句在)
     # ADR-0362:合成池带 plane 层
     pool = {'battle': {1: {6: [-3, -5]}}}
-    v = cw_sim.live_delta_for('battle', 7, random.Random(1),
+    v = sim_pool.live_delta_for('battle', 7, random.Random(1),
                               pool_map=pool)
     assert v in (-3, -5)     # rung 桶不可达 → 全池兜底命中样本
     # boss 桶缺 → None(r343 E 修:只向浅侧;节点缺 → None)
-    assert cw_sim.live_delta_for('boss', 6, random.Random(1),
+    assert sim_pool.live_delta_for('boss', 6, random.Random(1),
                                  pool_map=pool) is None
 
 
 def test_sim_events_reach_node_delta() -> None:
     """r340:sim 结算走板深池优先(hp_events 记真值)。"""
-    from sr_od.application.currency_war.sim import cw_sim
+    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+
     src = inspect.getsource(cw_sim.simulate_p1)
     assert 'live_delta_for' in src
