@@ -98,7 +98,12 @@ def test_p1_exit_blood_short_band() -> None:
 
 def test_refresh_blocked_domain_and_exemptions() -> None:
     """分型豁免:急救型保留(应急带 hp≤emergency_hp)、ALL IN 窗让位、
-    P2 标定前零辖域、开关 off=零辖域(A/B 对照臂注入面)。"""
+    P2 标定前零辖域、开关 off=零辖域(A/B 对照臂注入面)。
+
+    辖域声明(设计 W659 v2 §5.1 改判;ADR-0469):血预算带停付辖域 =
+    **非终止帧**——默认 hp=40 构造帧无节点表时全按 battle 档,L 最大
+    11.32 < 40 → K=∅ → S0=1,结构上落不进终止域,断言不翻转;终止帧
+    反例见 test_terminal_frame_release_counterexample。"""
     sess = StrategySession()
     reg = DEFAULT_REGISTRY
     assert blood_budget_refresh_blocked(_p1_state(hp=40), sess, reg)
@@ -112,6 +117,26 @@ def test_refresh_blocked_domain_and_exemptions() -> None:
     reg_off = dataclasses.replace(
         DEFAULT_REGISTRY, blood_budget_refresh_stop_enabled=False)
     assert not blood_budget_refresh_blocked(_p1_state(hp=40), sess, reg_off)
+
+
+def test_terminal_frame_release_counterexample() -> None:
+    """终止帧反例(设计 W659 v2 §2.3/§3.1;ADR-0469):hp=26 行进带
+    boss 单链(rung1,p_boss=0.027≤ε=0.03)→ 终止分支触发,双门开帧
+    刷新停付解除;同帧降格短路。hp=26>应急线,豁免来自终止分支而非
+    急救面——语义取代的显形锚。"""
+    from sr_od.application.currency_war.decision_v2.discipline import (
+        terminal_release,
+    )
+    sess = _p1_allin_sess()
+    sess.plane_node_table = ['battle'] * 7 + ['encounter', 'boss']
+    st = _p1_state(hp=26, round_num=8)
+    st.deployed = [BenchChar(slot=i + 1, char_id='艾丝妲' if i == 0
+                             else '椒丘', faction='仙舟')
+                   for i in range(2)]
+    assert terminal_release(st, sess, DEFAULT_REGISTRY)
+    assert not blood_budget_refresh_blocked(st, sess, DEFAULT_REGISTRY)
+    assert not p1_directed_downgrade_active(st, DEFAULT_REGISTRY,
+                                            session=sess)
 
 
 def test_downgrade_active_flag() -> None:
@@ -225,6 +250,23 @@ def test_seg_check_violation_and_exemptions() -> None:
         _row(1, 28, 9, 'boss', 2),      # 决策 hp=30 ∈ 带 ∧ ALL IN → 豁免
     ]
     assert seg_check_p1_blood_budget_refresh(rows_allin) == []
+
+
+def test_seg_check_terminal_bit_exemption() -> None:
+    """账本终止位豁免(设计 W659 v2 §5.1 R4;ADR-0469):同带帧
+    terminal_release=真 → 刷新为终止豁免辖内,不出事件;位假 → 照旧
+    出事件;键缺省(旧批账本)按假处理,行为兼容。"""
+    base = {'plane': 1, 'hp': 30, 'sim': {'node': 'battle'}}
+    rows = [
+        {**base, 'round_num': 7, 'terminal_release': True,
+         'actions': [{'__type__': 'RefreshShop', 'cost': 2}]},
+        {**base, 'round_num': 8, 'terminal_release': False,
+         'actions': [{'__type__': 'RefreshShop', 'cost': 2}]},
+        {**base, 'round_num': 9,
+         'actions': [{'__type__': 'RefreshShop', 'cost': 2}]},  # 缺省=假
+    ]
+    ev = seg_check_p1_blood_budget_refresh(rows)
+    assert [e['round_num'] for e in ev] == [8, 9]
 
 
 # ---------- sim 账本披露键(单局冒烟,不锁分布) ----------

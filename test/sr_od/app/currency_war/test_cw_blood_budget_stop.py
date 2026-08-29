@@ -126,6 +126,22 @@ def test_predicate_flag_off_zero_scope() -> None:
                                             StrategySession(), reg_off)
 
 
+def test_terminal_frame_still_blocks_levelup() -> None:
+    """终止帧仍拒升级(设计 W659 v2 §3.2/§5.1 改判对照用例;ADR-0469):
+    终止分支只释放刷新停付与末窗降格两门,停升级门**不在豁免辖内**——
+    P21 数学(濒死升级 EV=−C−I 严格为负)与金是否零价值无关;防「释放
+    扩散」回归的对照锚。"""
+    from sr_od.application.currency_war.decision_v2.discipline import (
+        terminal_release,
+    )
+    sess = StrategySession()
+    sess.plane_node_table = ['battle'] * 9
+    st = _p2_state(hp=10)
+    st.plane = 1
+    assert terminal_release(st, sess, DEFAULT_REGISTRY)
+    assert blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY)
+
+
 # ---------- 接线:约束拒付 / 稳态组 / 计数披露 ----------
 
 def test_constraint_rejects_with_reason_and_counter() -> None:

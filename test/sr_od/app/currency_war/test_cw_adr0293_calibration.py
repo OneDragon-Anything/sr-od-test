@@ -104,6 +104,12 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'p1_exit_blood_target': ('int', 60),
     'p1_exit_downgrade_enabled': ('bool', True),
     'blood_budget_refresh_stop_enabled': ('bool', True),
+    # 血预算停手·终止分支(设计 W659 v2;ADR-0469):True=数学定谳
+    # 恒接线(金零值引理+EV 对比式),False=A/B 对照臂;0.03=EV 反解
+    # 最悲观角 0.0283 的诚实带下沿档(重标定挂账,语义注释落点=
+    # registry 字段注释)
+    'terminal_release_enabled': ('bool', True),
+    'terminal_survival_eps': ('float', 0.03),
     # ===== 相位观测与授权(W119/ADR-0347)=====
     'phase_fallback_min_round': ('int', 5),
     'phase_fallback_min_engines': ('int', 2),

@@ -221,6 +221,21 @@ def test_allin_exempt_precedes_trust_guard() -> None:
     assert blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY) is False
 
 
+def test_terminal_release_fail_closed_on_untrusted() -> None:
+    """不可信 hp 帧不触发终止分支(设计 W659 v2 §5.1 改判对照用例;
+    ADR-0469):幽灵帧((False,False))fail-closed——终止分支与停升级
+    门同取向,证据缺失时禁令保持有效,误放代价 > 误拦。"""
+    from sr_od.application.currency_war.decision_v2.discipline import (
+        terminal_release,
+    )
+    sess = StrategySession()
+    sess.plane_node_table = ['battle'] * 9
+    st = _ghost_state(hp=9)
+    st.plane = 1
+    st.round_num = 8
+    assert terminal_release(st, sess, DEFAULT_REGISTRY) is False
+
+
 def test_helper_single_source() -> None:
     """谓词消费走单一源 helper(posture_release.hp_decision_trusted),
     禁手写双位判定的纪律锚(W393 A1.1;谓词源码含本符号引用)。"""
