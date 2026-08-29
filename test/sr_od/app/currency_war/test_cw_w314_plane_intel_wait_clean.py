@@ -130,6 +130,48 @@ def test_nonclean_waits_until_cap_then_fails(test_context: SrTestContext,
 
 
 # --------------------------------------------------------------------------- #
+# 锁③:超上限放弃采集前,尽力关位面详情(出口契约=回备战屏)
+# --------------------------------------------------------------------------- #
+
+
+def test_give_up_closes_detail_overlay(test_context: SrTestContext,
+                                       monkeypatch) -> None:
+    """锁③:在位面详情帧上门超限放弃 → round_fail 前须先点关闭键
+    (2026-08-30 判读:放弃采集时详情屏滞留画面,主循环当时无对应分支
+    → 未识别兜底自停)。备战帧场景(详情未开)不得产生点击(锁①同款)。"""
+    import cv2
+    import numpy as np
+    from pathlib import Path
+
+    from sr_od.application.currency_war.operations.handlers import (
+        collect_plane_intel as cpi_mod,
+    )
+
+    # 现帧 = 位面详情存档帧(真实 OCR:id_mark 命中,w280 锁⑦同款帧源)
+    p = (Path(__file__).parents[4] / 'screens' / '货币战争-位面详情'
+         / '位面详情-点节点直开.png')
+    img_bgr = cv2.imdecode(np.fromfile(str(p), dtype=np.uint8), cv2.IMREAD_COLOR)
+    assert img_bgr is not None, f'fixture 缺失: {p}'
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)   # 生产语义:RGB
+
+    op, fc = _make_op(test_context, monkeypatch,
+                      [{'frame': (_PREP, 'shop_closed')}])
+    monkeypatch.setattr(op, 'screenshot', lambda: img_rgb)
+    clock = _FakeClock(advance_per_sleep=10.0)
+    monkeypatch.setattr(cpi_mod, 'time', clock)
+    # 等待账预置为已超限 → 首次进门即放弃
+    op._nonclean_wait_start = clock.monotonic() - (cpi_mod._NODE_BAR_WAIT_CAP_S + 1.0)
+
+    res = op._nonclean_read_gate('切卡动画中')
+
+    assert res.is_fail, f'超限应失败,得 {res.status!r}'
+    assert '放弃采集' in str(res.status), f'应声明放弃采集,得 {res.status!r}'
+    assert len(fc.recorded_clicks) == 1, (
+        f'放弃前应恰好点一次关闭键,得 {len(fc.recorded_clicks)} 次')
+    assert 1.5 in clock.sleeps, f'关闭键点击后应有 1.5s 等待,得 {clock.sleeps}'
+
+
+# --------------------------------------------------------------------------- #
 # 锁②:动画窗过后读到 clean → 恢复采集(点击节点图标开详情)
 # --------------------------------------------------------------------------- #
 
