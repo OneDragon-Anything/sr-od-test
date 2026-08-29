@@ -42,7 +42,7 @@ from sr_od.application.currency_war.decision_v2.filters import (
 from sr_od.application.currency_war.decision_v2.posture_release import (
     flip_hit,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

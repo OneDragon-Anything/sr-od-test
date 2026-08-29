@@ -206,7 +206,7 @@ def _default_n_req(core: str, level: int = 5) -> int:
     from sr_od.application.currency_war.cw_intention import (
         core_miss_n_required,
     )
-    from sr_od.application.currency_war.decision_v2.registry import (
+    from sr_od.application.currency_war.kernel.cw_registry import (
         DEFAULT_REGISTRY,
     )
     return core_miss_n_required(

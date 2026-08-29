@@ -161,7 +161,7 @@ def test_first_truth_frame_unaffected() -> None:
 
 def test_calibration_constants_locked() -> None:
     """L_cap p100 标定值/零损节点集/确认帧数/窗长(值单一源=注册表)。"""
-    from sr_od.application.currency_war.decision_v2.registry import (
+    from sr_od.application.currency_war.kernel.cw_registry import (
         HP_LOSS_CAP_P100_BY_NODE,
         HP_SUSPECT_CONFIRM_FRAMES,
         HP_SUSPECT_WINDOW_NODES,

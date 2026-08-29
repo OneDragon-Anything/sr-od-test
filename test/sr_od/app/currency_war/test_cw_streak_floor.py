@@ -21,7 +21,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
     _streak_floor,
 )
 from sr_od.application.currency_war.decision_v2.ev import interest_cost
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

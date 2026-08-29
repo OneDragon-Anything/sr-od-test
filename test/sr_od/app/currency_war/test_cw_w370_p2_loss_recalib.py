@@ -23,7 +23,7 @@ import dataclasses
 import pytest
 
 from sr_od.application.currency_war import cw_plane_table
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

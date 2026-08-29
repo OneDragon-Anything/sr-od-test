@@ -38,7 +38,7 @@ from sr_od.application.currency_war.cw_state import (
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision_v2.candidates import Candidate
-from sr_od.application.currency_war.decision_v2.registry import DEFAULT_REGISTRY
+from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.decision_v2.scoring import _off_lock_demotion
 from sr_od.application.currency_war.decision_v2.discipline import (
     _direction_factions,

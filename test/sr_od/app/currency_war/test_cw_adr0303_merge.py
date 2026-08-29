@@ -27,7 +27,7 @@ from sr_od.application.currency_war.decision_v2 import filters as _filters
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

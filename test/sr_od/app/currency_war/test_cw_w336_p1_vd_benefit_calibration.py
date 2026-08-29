@@ -35,7 +35,7 @@ from sr_od.application.currency_war.decision_v2.ev import (
     battles_left_p2,
     battles_left_plane,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.decision_v2.scoring import (

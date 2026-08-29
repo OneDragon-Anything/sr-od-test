@@ -29,7 +29,7 @@ from sr_od.application.currency_war.cw_intention import (
 )
 from sr_od.application.currency_war.cw_state import BenchChar, GameState, ShopCard
 from sr_od.application.currency_war.cw_telemetry import serialize_intention
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

@@ -23,7 +23,7 @@ from sr_od.application.currency_war.decision_v2.arbiter import (
     arbitrate,
 )
 from sr_od.application.currency_war.decision_v2.candidates import Candidate
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

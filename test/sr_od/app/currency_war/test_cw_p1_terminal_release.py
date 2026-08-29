@@ -45,7 +45,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
     terminal_round_conversion_open,
     terminal_survival_upper_bound,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

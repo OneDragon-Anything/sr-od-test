@@ -38,7 +38,7 @@ from sr_od.application.currency_war.decision_v2.handoff import (
     boss_projected_hp,
     handoff_gate_gap,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

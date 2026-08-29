@@ -23,7 +23,7 @@ from sr_od.application.currency_war.cw_line_switch import (
 )
 from sr_od.application.currency_war.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.decision_v2.scoring import (

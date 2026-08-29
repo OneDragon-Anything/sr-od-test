@@ -30,7 +30,7 @@ from sr_od.application.currency_war.decision_v2.posture_release import (
     ReleaseDirective,
     authorize_release_refresh,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

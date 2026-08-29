@@ -40,7 +40,7 @@ from sr_od.application.currency_war.decision_v2.prep_brain import (
     drive_intention,
     hoard_consumer_domain,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY as _REG,
     DecisionV2Registry,
 )

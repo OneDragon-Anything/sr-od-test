@@ -45,7 +45,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
     p1_levelup_stop_hp,
     p2_levelup_stop_hp,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.decision_v2.remediation import (

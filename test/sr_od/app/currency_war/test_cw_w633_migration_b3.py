@@ -33,7 +33,7 @@ from sr_od.application.currency_war.decision_v2.posture_release import (
     evaluate_release,
     release_directive,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.cw_intention import (

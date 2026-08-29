@@ -30,7 +30,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
     sell_priority_key,
     sole_engine_sell_blocked,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

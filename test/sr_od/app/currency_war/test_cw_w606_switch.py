@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.decision_v2.adapter import (
     shadow_compare_enabled,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
     DecisionV2Registry,
 )

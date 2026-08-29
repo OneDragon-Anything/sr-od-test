@@ -50,7 +50,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
 from sr_od.application.currency_war.decision_v2.posture_release import (
     hp_decision_trusted,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.decision_v2.remediation import (

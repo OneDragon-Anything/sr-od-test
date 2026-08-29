@@ -46,7 +46,7 @@ from sr_od.application.currency_war.decision_v2.discipline import (
     sole_engine_sell_blocked,
     sole_engine_sell_floor_plan,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 

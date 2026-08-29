@@ -32,7 +32,7 @@ from sr_od.application.currency_war.decision_v2.filters import (
     _deploy_free_after_merge,
     _refreshable_names,
 )
-from sr_od.application.currency_war.decision_v2.registry import (
+from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 
@@ -130,16 +130,24 @@ def test_rounds_alive_projection_basic() -> None:
 
 
 def test_survival_gate_default_off_and_scope() -> None:
-    """开关关/plane<2/新线 inf → 放行(零漂移;inf 已被 should_switch_e
-    的 alt_inf 拦,门不重复裁决)。"""
+    """开关关/plane≠2 → 放行(零漂移)。改判(v3 R-E,docstring 假前提
+    勘误):e_alt=inf 原断言「上游 should_switch_e 已拦故放行」——W683
+    核实 v2 通道不调该函数,p̄=0 线曾由信号胜出直接落锁;现门自辖拦截
+    ('alt_inf')。另 v3 R-G:辖域收窄 plane==2(P3 帧消费 P2 损血表
+    门偏松,FM-12),plane=3 亦放行。"""
     sess = StrategySession()
     assert survival_gate(_dying_state(), sess, 3.0,
                          DEFAULT_REGISTRY) == (True, 'gate_off')
     st_p1 = _dying_state(plane=1)
     assert survival_gate(st_p1, sess, 99.0, _REG_GATE) == (True, 'gate_off')
+    st_p3 = _dying_state(plane=3)
+    assert survival_gate(st_p3, sess, 99.0, _REG_GATE) == (True, 'gate_off')
     st_inf = _dying_state(hp=100)
-    assert survival_gate(st_inf, sess, math.inf, _REG_GATE) == (True,
-                                                                'gate_off')
+    assert survival_gate(st_inf, sess, math.inf,
+                         _REG_GATE) == (False, 'alt_inf')
+    # 开关关时 inf 照旧放行(零漂移锚:拦截语义只在门开臂内生效)
+    assert survival_gate(st_inf, sess, math.inf,
+                         DEFAULT_REGISTRY) == (True, 'gate_off')
 
 
 def test_survival_gate_boundary() -> None:
