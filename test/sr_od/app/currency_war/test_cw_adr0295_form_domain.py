@@ -103,7 +103,7 @@ def test_target_hold_ceiling_discounted() -> None:
         '顶格不再=满形态(ADR-0295)')
 
 
-def test_form_domain_initial_values() -> None:
-    """ADR-0295 结构批初值锁(20 局诊断定;改动须重诊断+更新本锁)。"""
-    assert DEFAULT_REGISTRY.bench_form_weight == 0.35
-    assert DEFAULT_REGISTRY.target_hold_cap_frac == 0.8
+# (原 test_form_domain_initial_values 逐值断言 bench_form_weight==0.35 /
+#  target_hold_cap_frac==0.8 已并入 test_cw_adr0293_calibration 字段面锁
+# ——该表逐值辖此二字段,独立逐值锁=双源漂移风险,重复构成删并理由
+# (README 纪律 8);行为锁全数保留。)

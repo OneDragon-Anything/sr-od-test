@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
-"""r332/r333 行为锁(单文件;battle_loop streak+hp 收口)。"""
+"""r332/r333 行为锁(单文件;battle_loop streak+hp 收口)。
+
+(原 test_battle_loop_consumes_director_result 已并入
+test_cw_r337_r332_behavior::test_source_has_real_wiring——同断言逐字
+重复 + 5 连败行为锁更全;原 test_substate_field_on_observation 已并入
+test_cw_r331_fixture 真 fixture 的 substate 可读性断言。重复构成删并
+理由(README 纪律 8)。)"""
 from __future__ import annotations
 
 import inspect
-
-
-def test_battle_loop_consumes_director_result() -> None:
-    """r332:execute() 返回值被消费(连续失败→round_fail)。"""
-    from sr_od.application.currency_war.operations import battle_loop
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
-    assert '_director_fail_streak' in src
-    assert 'PrepDirector 连续失败' in src   # 告警语
 
 
 def test_director_last_state_gated() -> None:
@@ -19,12 +17,3 @@ def test_director_last_state_gated() -> None:
     src = inspect.getsource(prep_director.PrepDirector._observe)
     assert 'gated_hp as _gh' in src
     assert 'st.hp = _gh(' in src
-
-
-def test_substate_field_on_observation() -> None:
-    """r333:PrepObservation.substate 字段(observe_full 消费端)。"""
-    from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
-    obs = PrepObservation()
-    assert obs.substate == {}
-    obs.substate = {'node_seq': True, 'shop_cards': False}
-    assert obs.substate['shop_cards'] is False

@@ -350,6 +350,12 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     cp = snapshot_copy(live_b)
     assert isinstance(cp.equips, tuple) and tuple(cp.equips) == ('0', '1')
     assert cp is not live_b
+    # tracking 空 → fresh read 补缺(并自 test_cw_w620_tracking_view:
+    # 优先读+快照拷贝语义由本锁前半辖,兜底半句随迁至此)
+    sess_fresh = StrategySession()
+    bench_fresh, deployed_fresh = _tracking_view(sess_fresh, snap)
+    assert bench_fresh == tuple(snap.bench)
+    assert deployed_fresh == tuple(snap.deployed)
 
 
 def test_pair_drought_resets_when_member_visible() -> None:

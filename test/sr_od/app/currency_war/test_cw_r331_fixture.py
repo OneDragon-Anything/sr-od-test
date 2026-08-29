@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 """r331/r333 fixture 回放测试(observe_full 接线+hp 收口的
-单文件锁;用户指路:建档图做 fixture)。"""
+单文件锁;用户指路:建档图做 fixture)。
+
+(observe_full 组装层的 4 条 inspect 形状锁已并入本文件与
+test_cw_r337_behavior 的真 fixture 行为锁:签名 tier/source 由本文件
+关键字实参调用面辖、light 跳 SIFT 由 test_observe_full_light_skips_sift
+辖、gold_reread 行为由 r337 三锁辖、substate 可读性由下方断言辖——
+弱形状锁换真行为锁,重复构成删并理由(README 纪律 8)。)"""
 from __future__ import annotations
 
 import pytest

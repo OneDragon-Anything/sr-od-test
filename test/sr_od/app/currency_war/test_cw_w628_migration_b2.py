@@ -36,7 +36,6 @@ from sr_od.application.currency_war.decision.decision_v2.contracts import (
 )
 from sr_od.application.currency_war.decision.decision_v2.prep_brain import (
     assemble,
-    committed_from,
     drive_intention,
     hoard_consumer_domain,
 )
@@ -111,17 +110,10 @@ def test_d1_mutation_probe_projection_failure_conservative_domain():
 
 
 # ----------------------------------------------------- D2 缺供给保守侧
-
-def test_d2_missing_supply_falls_conservative():
-    """拔供给探针(D2):ist 与 plane 真值全缺 → committed=False 保守侧。
-
-    激进侧误判 = 攒息门/双轨买门全开;缺供给帧必须落双轨(攒息)侧。
-    """
-    sess = SimpleNamespace()   # 无 v3_intention 属性
-    assert committed_authority(_state(plane=1), sess) is False
-    assert committed_from(sess) is False
-    # plane 真值在但 ist 缺 → 仍 False(P1 段缺意向供给 = 双轨)
-    assert committed_authority(_state(plane=1), None) is False
+# (原 test_d2_missing_supply_falls_conservative 已并入
+#  test_cw_w620_migration_b1::test_committed_from_semantics——缺供给
+#  保守侧为其分支 1,committed_authority 直调两形态已随迁。重复构成
+#  删并理由(README 纪律 8)。)
 
 
 # ----------------------------------------------------- W629-R2 镜像雷锁
@@ -139,16 +131,11 @@ def test_r2_gates_mirror_retired_with_f5_flags():
         'gates 镜像回退为 getattr 缺省形态(W629-R2 镜像雷复燃)'
 
 # ----------------------------------------------------- D3 息线单一源
-
-def test_d3_interest_floor_derived_single_source():
-    """息线 = interest_cap × 10 派生(ADR-0463 恒等式);override 仅纪律通道。"""
-    assert _REG.interest_cap * 10 == 50
-    assert _REG.interest_floor() == 50
-    assert _REG.interest_floor_override is None
-    allin_view = replace(_REG, interest_floor_override=0)
-    assert allin_view.interest_floor() == 0
-    # 标定旋钮单旋:动 interest_cap → 息线随动,无第二恒值源(D3 验收)
-    assert replace(_REG, interest_cap=6).interest_floor() == 60
+# (原 test_d3_interest_floor_derived_single_source 已并入:恒等式
+#  interest_cap×10==interest_floor() 由 test_cw_w611_reserve_admission
+#  恒等式锁辖(默认 override None 已随迁);override 通道由
+#  test_cw_w606_switch 字段注入锁辖。ADR-0293 已注明 D3 双源清偿,
+#  三处重复按 README 纪律 8 择一保留。)
 
 
 def test_d3_grep_lock_no_interest_floor_attribute_reads():
@@ -211,30 +198,11 @@ def test_p4_ist_zero_residue_across_matches():
 
 
 # ----------------------------------------------------- 哨兵锁:局23 型帧
-
-def test_sentinel_ju23_frame_releases_on_new_stack():
-    """局23 型帧哨兵(W611 锁沿用,经新栈装配复合验证):
-    100 金 + 备战空 + interest 姿态 → 新栈预算投影息线供给正常 + release 帧。
-    """
-    from sr_od.application.currency_war.decision.decision_v2.posture import Posture
-    from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
-    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
-        release_directive,
-        wrap_posture,
-    )
-    sess = StrategySession()
-    st = _state(plane=1, round_num=4, gold=100)
-    st.shop = []          # 备战空(店无可买,interest 死守病灶帧)
-    sess.v3_dp_posture = RoundPosture(
-        (st.plane, st.round_num),
-        Posture(save=True, level_up=False, refresh_budget=0, tag='存息'))
-    turn = assemble(_snapshot(), sess)   # 新栈装配链自检(不抛=供给通)
-    assert turn.budget.interest_floor == 50
-    saving = Posture(save=True, level_up=False, refresh_budget=0, tag='存息')
-    d = release_directive(st, sess, _REG, 'FORM', saving)
-    # 备战空+店空帧义务=0 → 走准入通道(reserve_admission);flip=有填补件帧。
-    # 两支同为 release 族指令——W611 锁1/锁2 已分别辖,此处锁「非存息死守」。
-    assert wrap_posture(saving, d).tag == 'release'
+# (原 test_sentinel_ju23_frame_releases_on_new_stack 已并入
+#  test_cw_w633_migration_b3::test_jue23_sentinel_obligation_chain_alive
+#  ——同一哨兵 w633 版义务链+release 族更全;budget.interest_floor==50
+#  供给面由 w611 恒等式(全局)+ w633 注入一致性锁(BudgetView 透传)共辖。
+#  重复构成删并理由(README 纪律 8)。)
 
 
 # ------------------------------------------- committed 谓词逐帧对拍(P1 附)

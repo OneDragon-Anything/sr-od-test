@@ -5,6 +5,11 @@
 - 开局轮(P1 r≤2)hold 无条件——含 target 真空(R3:重启后首局,
   旧判 `tgt_comp is not None` 让乱穿残留的最高频窗口);
 - 非开局轮走 r70 form 门(target 在 + 0<form<COMMIT_FRAC + 非双轨)。
+
+(原 test_cw_r388_opening_equip_hold 2 条已并入本文件:那两条是判定链
+的测试内纯逻辑复刻——复刻实现非生产代码,弱于本文件直调
+_transition_hold_active 的全矩阵锁;同辖两事实(开局 hold/非开局
+form=0 不 hold)均已覆盖,重复构成删并理由(README 纪律 8)。)
 """
 from sr_od.application.currency_war.kernel.cw_comps import COMMIT_FRAC
 from sr_od.application.currency_war.operations.prep.equip_all import (

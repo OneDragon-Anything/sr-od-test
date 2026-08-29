@@ -23,7 +23,8 @@ def test_boot_gate_1p5():
 
 
 def test_boot_pure_shop_still_blocked():
-    """纯 shop(1.0)仍不够——防噪声启动。"""
+    """纯 shop(1.0)仍不够——防噪声启动(启动门族单一源:framework_boot
+    同断言已并入此处)。"""
     assert pick_framework([], [], [Card('三月七'), Card('姬子·启行')]) == ''
 
 
@@ -33,10 +34,10 @@ def test_hoard_score_framework_undefined():
     assert s >= 1.0, f'预囤模式 carry 应有档位分,实得 {s}'
 
 
-def test_hoard_score_scatter_zero():
-    """散件(非 TRANSITION_PACK)在预囤模式 = 0 分,不抢预算。"""
-    s = transition_score('万敌', '夜之半神', '')
-    assert s == 0.0
+# (原 test_hoard_score_scatter_zero 散件 0 分断言已并入
+#  test_hoard_no_refresh::test_scatter_ts_zero_hoard(同事实更全:万敌+
+#  远坂凛 双载体);滞后不翻转语义单一源 = 本文件 test_hysteresis_unchanged
+#  (framework_boot 同断言已并入此处)。README 纪律 8:重复构成删并理由。)
 
 
 def test_hysteresis_unchanged():

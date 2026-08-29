@@ -102,40 +102,18 @@ def _weak_on_xianzhou(registry=None) -> tuple[IntentionState, StrategySession]:
     return ist, sess
 
 
-# --- G1 接线锁:weak→换线被门拦(单帧) ----------------------------------------
+# --- G1 接线锁(已并入 test_cw_line_gate_relock 轨迹锁)------------------------
+# (原 test_w379_g1_gate_blocks_line_switch_in_v2:被拦帧拦截位/反事实位
+#  记账 + 线对拦截计数 + 回锁原线,与 test_cw_line_gate_relock::
+#  test_line_gate_v3_latch_trajectory_no_cycle 的 t1 帧断言逐字重复
+#  (docstring 自认轨迹锁在该文件);README 纪律 8 择一保留更强轨迹锁。)
 
 
-def test_w379_g1_gate_blocks_line_switch_in_v2() -> None:
-    """门开 + 低血(投影存活不足)→ 替代线锁定被门拦。
-
-    改判(v3 R-A 门感知滞回闩;本锁语义两次演进:W665 v2 曾改 N=2
-    计数回锁,被 W683 实锤周期-3 极限环后废弃;v3 终态 = 首次拦截帧
-    即置闩 + 一次性回锁原线,轨迹锁见 test_cw_line_gate_relock)。
-    本锁钉:被拦帧拦截位/反事实位记账 + 线对拦截计数 + 回锁原线。
-    """
-    ist, _ = _weak_on_xianzhou(_REG_GATE)
-    sess = _sess()
-    sw = _state(env='列车同行概念股', hp=20)
-    out = update_intention(sw, ist, sess, registry=_REG_GATE)
-    assert out.phase == 'locked' and out.locked_comp == '希儿量子'
-    assert out.last_event == 'gate_relock:希儿量子'
-    assert sess.line_switch_block_counts == {('希儿量子', '列车同行'): 1}
-    assert sess.v3_line_gate_blocked is True
-    assert sess.v3_line_gate_cf_blocked is True   # on 臂=门判定本身
-
-
-# --- G2 零漂移锁:开关关(缺省 registry)同帧照旧落锁 --------------------------
-
-
-def test_w379_g2_default_off_locks_as_before() -> None:
-    """registry 缺省(门关)→ 同一换线帧照旧锁列车同行——生产默认路径
-    零漂移的结构前提(与既有 test_cw_intention 行为锁同判)。"""
-    ist, _ = _weak_on_xianzhou(None)
-    sess = _sess()
-    out = update_intention(_state(env='列车同行概念股', hp=20), ist,
-                           sess)
-    assert out.phase == 'locked' and out.locked_comp == '列车同行'
-    assert not hasattr(sess, 'line_switch_block_counts')
+# --- G2 零漂移锁(已并入 line_gate_relock off 臂 + intention 缺省行为锁)--------
+# (原 test_w379_g2_default_off_locks_as_before:门关缺省落锁行为两处已辖
+#  ——test_cw_line_gate_relock::test_line_gate_off_arm_records_counterfactual_
+#  bit_zero_drift 与 test_cw_intention 环境锁线行为锁(docstring 自认同判);
+#  README 纪律 8。)
 
 
 # --- G3 同线重锁不辖 -----------------------------------------------------------

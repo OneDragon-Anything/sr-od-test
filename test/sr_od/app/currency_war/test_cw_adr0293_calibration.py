@@ -8,7 +8,10 @@
   的逐值锁由本表承载(独立快照锁曾与之重复,已并入,防双源漂移);
   值域演进的正确性由字段面锁 + 各批自己的行为锁管辖,本锁只辖
   「字段面结构」。模块级 hp 对账标定常量(HP_LOSS_CAP_* 等,与
-  registry 字段同属标定面)一并入表。
+  registry 字段同属标定面)一并入表。后续并入:ADR-0295 形态域二参
+  (bench_form_weight/target_hold_cap_frac)与 ADR-0303 危机三参
+  (crisis_hoard_gold/crisis_buy_bias/crisis_buy_tags)的独立逐值锁
+  亦由本表辖死(原文件留指针、逐值断言已删,防多源漂移)。
 - 行为锁:刷新轮界门(无目标语境恒负分)/弱件换金偏置(0 分卖
   翻正)。默认策略注入标定后 registry 的断言单一源在
   test_cw_strategy.py::test_instantiate_decision_v2_default_registry

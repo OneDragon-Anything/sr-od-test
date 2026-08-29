@@ -18,12 +18,10 @@ class Card:
 
 
 def test_quantum_hoard_boot_boundary():
-    """量子 1 持有 + 1 在售 = 1.5 → 启动(浮点边界)。"""
+    """量子 1 持有 + 1 在售 = 1.5 → 启动(浮点边界;纯持有态单一源=
+    test_quantum_recipe::test_quantum_selected_by_ownership,原
+    test_quantum_two_owned 同事实断言已并入)。"""
     assert pick_framework([BC('希儿')], [], [Card('缇宝')]) == '量子'
-
-
-def test_quantum_two_owned():
-    assert pick_framework([BC('希儿'), BC('缇宝')], []) == '量子'
 
 
 def test_xianzhou_beats_quantum_tie():

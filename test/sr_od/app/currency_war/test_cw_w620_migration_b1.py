@@ -35,7 +35,7 @@ from sr_od.application.currency_war.decision.decision_v2.turn_state import (
     DirectionView,
     TurnState,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
         / 'currency_war')
@@ -96,10 +96,17 @@ def test_committed_from_semantics():
 
     - 缺供给帧(ist 无 + plane<2)→ False 保守侧(D2,禁缺省 True);
     - ist.phase=='locked' / p1_pair 非空 / plane≥2 → True(权威序);
-    - 旧 session 双轨字段写入不再影响读端(字段读点已归零)。
-    """
+    - 旧 session 双轨字段写入不再影响读端(字段读点已归零);
+    - committed_authority 直调形态同判(D2 并入自 test_cw_w628:
+      SimpleNamespace 无供给/session=None 两形态一并辖)。"""
     sess = StrategySession()
     assert committed_from(sess) is False         # 缺供给 = 保守双轨
+    from types import SimpleNamespace
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        committed_authority,
+    )
+    assert committed_authority(_p1_state(), SimpleNamespace()) is False
+    assert committed_authority(_p1_state(), None) is False   # session 缺亦保守
     from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     sess.v3_intention = IntentionState()
     assert committed_from(sess) is False         # ist 未锁,仍双轨
@@ -114,6 +121,12 @@ def test_committed_from_semantics():
     sess3 = StrategySession()
     sess3.dual_track_phase = True                # 旧字段写端:不再被读
     assert committed_from(sess3) is False
+
+
+def _p1_state():
+    st = GameState()
+    st.plane, st.round_num, st.level, st.gold = 1, 2, 3, 40
+    return st
 
 
 def test_grep_guard_session_dual_track_read_points_isolated():
@@ -195,33 +208,10 @@ def test_grep_guard_mutation_self_check():
 
 
 # ----------------------------------------------------- 3. R2 tracking 读口
-
-def test_tracking_view_prefers_tracked_over_fresh():
-    """R2 读口语义:tracking 非空优先,元素 = ``cw_state.snapshot_copy``
-    快照拷贝(cw_state.snapshot_copy docstring / 隔离锁
-    test_cw_w633_migration_b3 定案——快照帧 equips 固化 tuple、与
-    session.tracked_* 断开别名)。
-
-    旧断言 ``bench_view == (tracked,)`` 锁的是逐位全等,隐含「视图元素
-    = 原对象」的偶然实现;快照拷贝机制落码后视图 equips 为 tuple 固化,
-    与原对象的 list 默认不再逐位相等——该旧比较非设计意图,重推为:
-    ①tracking 优先(字段值取自 tracked)②快照拷贝语义(非别名 + equips
-    tuple 固化)③tracking 空 → fresh read 补缺。"""
-    from sr_od.application.currency_war.kernel.cw_state import snapshot_copy
-    sess = StrategySession()
-    tracked = BenchChar(slot=1, char_id='huohuo', star=2)
-    sess.tracked_bench_chars = [tracked]
-    snap = _snapshot()
-    turn = assemble(snap, sess)
-    assert turn.direction.bench_view == (snapshot_copy(tracked),)
-    # 快照拷贝语义:非别名 + equips tuple 固化
-    viewed = turn.direction.bench_view[0]
-    assert viewed is not tracked
-    assert isinstance(viewed.equips, tuple)
-    # tracking 空 → fresh read 补缺(snapshot.bench 通道)
-    sess2 = StrategySession()
-    turn2 = assemble(snap, sess2)
-    assert turn2.direction.bench_view == tuple(snap.bench)
+# (原 test_tracking_view_prefers_tracked_over_fresh 已并入
+#  test_cw_w633_migration_b3::test_tracking_view_isolated_from_session_
+#  writers——快照拷贝语义 w633 双向隔离锁更强;「tracking 空 → fresh read
+#  兜底」半句已随迁 w633 同测试。重复构成删并理由(README 纪律 8)。)
 
 
 # ----------------------------------------------------- 4. R4 接缝

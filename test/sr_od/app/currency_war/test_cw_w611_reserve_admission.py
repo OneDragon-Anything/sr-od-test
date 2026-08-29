@@ -193,3 +193,6 @@ def test_reserve_floor_identical_to_interest_cap_line() -> None:
     s = _sess(st)
     assert _REG.interest_cap * 10 == _REG.interest_floor()
     assert reserve_cap(st, s, _REG) >= _REG.interest_cap * 10
+    # 默认无 override(并自 test_cw_w628 d3 单一源锁;override 行为面由
+    # test_cw_w606_switch 注入锁辖,D3 三处重复按 README 纪律 8 择一保留)
+    assert _REG.interest_floor_override is None

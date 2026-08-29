@@ -165,6 +165,19 @@ def test_create_session() -> None:
     assert session.performance is not None
 
 
+def test_session_node_type_current_contract() -> None:
+    """StrategySession.node_type_current 消费契约(r265 并入)。
+
+    写端 = prep 环写当前槽节点类型,读端 = 战斗环消费;
+    默认 None(未读到)→ 消费方兜底「普通战斗」,不得误判特殊节点。"""
+    s = StrategySession()
+    assert s.node_type_current is None            # 默认未读到
+    s.node_type_current = '遭遇'                  # 写端可写
+    assert s.node_type_current == '遭遇'
+    s2 = StrategySession()
+    assert (s2.node_type_current or '普通战斗') == '普通战斗'   # None 兜底语义
+
+
 def test_on_round_end_stores_last_hp_when_confident() -> None:
     """D-94:on_round_end 达阈置信度的结算 hp_after → 存 session.last_hp(给下回合 prep state.hp)。"""
     from sr_od.application.currency_war.kernel.cw_performance import (

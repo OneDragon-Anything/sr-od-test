@@ -64,17 +64,11 @@ def _buy_names(st: GameState, sess: StrategySession,
 
 # --- ① 常量上移 ---------------------------------------------------------------
 
-
-def test_crisis_constants_in_registry() -> None:
-    """危机三参在 registry 单一源(ADR-0302 值不变,ADR-0303 上移)。"""
-    assert _REG.crisis_hoard_gold == 40
-    assert _REG.crisis_buy_bias == 1.0
-    # W35 载体批语义化:crisis 战力买偏置辖的标签集并入 'plugin'
-    # (层1 插件通道,定义节 class5——危机态插件同属战力买)
-    assert _REG.crisis_buy_tags == frozenset({
-        'line_carry', 'line_opportunistic', 'bridge_core',
-        'engine_seed', 'plugin', 'carry_gate',
-    })
+# (原 test_crisis_constants_in_registry 逐值断言 crisis_hoard_gold==40 /
+#  crisis_buy_bias==1.0 / crisis_buy_tags 集合 已并入
+#  test_cw_adr0293_calibration 字段面锁——该表逐值辖危机三参(0293 明言
+#  crisis 三参入表),独立逐值锁=双源漂移风险,重复构成删并理由(README
+#  纪律 8);退场静态断言与 copy_swap 行为锁保留。)
 
 
 def test_emergency_tags_merged_content() -> None:
