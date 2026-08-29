@@ -20,10 +20,10 @@ def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w512t') -> None:
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
                         cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', run_id)
-    # 复现计数/暂存槽是进程内状态,逐测试清空防串
+    # 复现计数/暂存槽是进程内状态,逐测试清空防串(暂存槽自分包期 4 迁 kernel.cw_observe)
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    monkeypatch.setattr(cw_telemetry, '_PENDING_STRATEGY_PICK', None)
+    monkeypatch.setattr(cw_observe, '_PENDING_STRATEGY_PICK', None)
 
 
 def _rows(tmp_path: Path, name: str) -> list[dict]:
@@ -71,18 +71,22 @@ def test_obs_conflict_bypass_copies_numeric_confidence(tmp_path: Path, monkeypat
 
 def test_strategy_pick_slot_produce_consume(tmp_path: Path, monkeypatch):
     """生产:record_invest_cards('strategy') 暂存声明选中名;消费即清;
-    非strategy类 / chosen='?' 不暂存。"""
+    非strategy类 / chosen='?' 不暂存。(分包期 4:槽迁 kernel.cw_observe,
+    生产者 telemetry 写入、消费者 obs 读取,两侧零直依反向桶)"""
     _setup_recorder(monkeypatch, tmp_path)
+    from sr_od.application.currency_war.kernel.cw_observe import (
+        consume_pending_strategy_pick,
+    )
     cw_telemetry.record_invest_cards('strategy', [
         {'idx': 0, 'name': '策略甲', 'chosen': False},
         {'idx': 1, 'name': '策略乙', 'chosen': True},
     ])
-    assert cw_telemetry.consume_pending_strategy_pick() == '策略乙'
-    assert cw_telemetry.consume_pending_strategy_pick() is None   # 消费即清
+    assert consume_pending_strategy_pick() == '策略乙'
+    assert consume_pending_strategy_pick() is None   # 消费即清
     cw_telemetry.record_invest_cards('env', [{'idx': 0, 'name': '环境卡', 'chosen': True}])
-    assert cw_telemetry.consume_pending_strategy_pick() is None   # env 类不进槽
+    assert consume_pending_strategy_pick() is None   # env 类不进槽
     cw_telemetry.record_invest_cards('strategy', [{'idx': 0, 'name': '?', 'chosen': True}])
-    assert cw_telemetry.consume_pending_strategy_pick() is None   # 识别失败不暂存
+    assert consume_pending_strategy_pick() is None   # 识别失败不暂存
 
 
 def test_strategy_pick_consumer_wiring_lock():

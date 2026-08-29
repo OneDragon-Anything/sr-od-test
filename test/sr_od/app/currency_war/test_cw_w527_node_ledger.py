@@ -17,8 +17,13 @@ import pytest
 _ROOT = Path(__file__).resolve().parents[5]          # 仓库根(StarRailOneDragon)
 _TEST_ROOT = Path(__file__).resolve().parents[4]     # 测试仓根(sr-od-test)
 
-from sr_od.application.currency_war.obs import cw_observation
-from sr_od.application.currency_war.obs import cw_node_reader
+from sr_od.application.currency_war.kernel.cw_state import (
+    fill_boss_by_position,
+    get_node_ledger,
+    ledger_node_type,
+    ledger_update_plane,
+)
+from sr_od.application.currency_war.obs import cw_node_reader, cw_observation
 from sr_od.application.currency_war.obs.cw_node_reader import (
     classify_node_row,
     current_slot_hu_type,
@@ -26,12 +31,6 @@ from sr_od.application.currency_war.obs.cw_node_reader import (
 )
 from sr_od.application.currency_war.obs.cw_observation import (
     node_vote_verdict,
-)
-from sr_od.application.currency_war.kernel.cw_state import (
-    fill_boss_by_position,
-    get_node_ledger,
-    ledger_node_type,
-    ledger_update_plane,
 )
 
 _ASSETS = _ROOT / 'assets' / 'game_data' / 'cw_node_types'
@@ -121,9 +120,10 @@ def test_verify_votes_defect_and_grace(monkeypatch: pytest.MonkeyPatch) -> None:
 
     defects: list[dict] = []
 
-    from sr_od.application.currency_war.telemetry import cw_telemetry
-    monkeypatch.setattr(cw_telemetry, 'record_defect',
-                        lambda *a, **kw: defects.append(kw | {'kind': a[0] if a else None}))
+    # 分包期 4:obs 落账走 kernel.cw_telemetry_exit 出口钩子位,桩点随迁
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
+    monkeypatch.setattr(cw_telemetry_exit, '_record_defect',
+                        lambda *a, **kw: defects.append(dict(kw)))
 
     slots = [
         NodeSlot(idx=0, cx=60, cy=40, state='past', node_type=None, hu_dist=None),
@@ -152,7 +152,9 @@ def test_verify_votes_defect_and_grace(monkeypatch: pytest.MonkeyPatch) -> None:
 
     cw_observation.verify_node_type_votes(ctx, _screen, 1, 2)
     assert len(defects) == 1
-    assert defects[0]['kind'] == 'node_type'
+    # 出口钩子位逐参关键字转发:捕获行直接按形参名断言(surface=节点类型面)
+    assert defects[0]['surface'] == 'node_type'
+    assert defects[0]['kind'] == 'perception_conflict'
     assert defects[0]['reader_source'] == 'node_ledger_three_vote'
     cw_observation.verify_node_type_votes(ctx, _screen, 1, 2)
     assert len(defects) == 1   # 同 (plane, round) 去重

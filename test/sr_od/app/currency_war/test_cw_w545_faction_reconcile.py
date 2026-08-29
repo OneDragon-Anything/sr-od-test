@@ -155,10 +155,11 @@ def test_read_displayed_factions_real_fixtures(
 
 def test_report_faction_reconcile_forwards_mismatches_only(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """台账转发锁:逐 mismatch 落 record_defect(kind=faction_display_mismatch)。"""
-    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
+    """台账转发锁:逐 mismatch 落 record_defect(kind=faction_display_mismatch)。
+    分包期 4:obs 落账走 kernel.cw_telemetry_exit 出口钩子位,桩点随迁。"""
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
     calls: list[tuple[tuple, dict]] = []
-    monkeypatch.setattr(tel, 'record_defect',
+    monkeypatch.setattr(cw_telemetry_exit, '_record_defect',
                         lambda *a, **k: calls.append((a, k)))
     r = compare_factions({'仙舟': 3, '能量': 5}, [('仙舟', 3), ('能量', 4)])
     n = report_faction_reconcile(r, round_num=3)
