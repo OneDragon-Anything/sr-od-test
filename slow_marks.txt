@@ -2,6 +2,7 @@
 # 维护:`uv run pytest sr-od-test/ -q --durations=40 --durations-min=2` 巡检回填
 # 准入:>=2s 且「无断言密度增益的重操作链」;sim 锁类保留 quick 由逐条评审定
 # 命令:L1/L2 = pytest @sr-od-test/cw_quick.txt -m "not slow";慢桶点名 = -m slow
+# 注:conftest 按 nodeid 后缀匹配注入 slow marker,类内用例须带类名段
 test_cw_w546_equip_grid.py::TestEquipCount::test_count_digits_and_infinity
 test_cw_w546_equip_grid.py::TestGridClassificationFixtures::test_read_equips_default_rect_uses_grid
 test_cw_w546_equip_grid.py::TestOcclusion::test_detail_panel_cells_marked_occluded
@@ -28,3 +29,9 @@ test_cw_w107_formed_stop.py::test_sim_formed_stop_e2e_seed_scan
 test_cw_adr0292_reward_pool_sampling.py::test_reward_deltas_sampled_from_pool
 test_cw_back_layout.py::test_cv_transient_falls_back_to_formula
 test_cw_back_layout.py::test_cv_reread_mismatch_logged_no_action
+# —— W707 对账瘦身·清单三确认新增(2026-09 实测 --durations;sim/telemetry/
+# prep_director 面候选项随期 6 拆分批延期)——
+test_currency_war_entry_flow.py::TestStartCurrencyWarMatchFlow::test_new_match_a8_reaches_prep
+test_cw_back_layout.py::test_cv_stable_new_grid_confirmed
+test_cw_back_layout.py::test_pepe_board_coverage_s246
+test_cw_back_layout.py::test_read_deployed_chars_formula_driven
