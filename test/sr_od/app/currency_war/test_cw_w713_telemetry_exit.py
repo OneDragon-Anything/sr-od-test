@@ -54,8 +54,10 @@ def test_exit_install_wires_all_slots(monkeypatch):
     cw_telemetry_exit.record_defect('gold', 'k', 'e', 'o', plane=1, round_num=2,
                                     verdict='v', confidence=0.5)
     assert len(seen) == 1
-    args, kwargs = seen[0]
-    assert args == ('gold', 'k', 'e', 'o')
+    _args, kwargs = seen[0]
+    # 出口逐参关键字转发:捕获行按形参名断言
+    assert kwargs['surface'] == 'gold' and kwargs['kind'] == 'k'
+    assert kwargs['expected'] == 'e' and kwargs['observed'] == 'o'
     assert kwargs['plane'] == 1 and kwargs['round_num'] == 2
     assert kwargs['verdict'] == 'v' and kwargs['confidence'] == 0.5
 

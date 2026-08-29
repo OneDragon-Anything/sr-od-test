@@ -16,10 +16,10 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
+from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.telemetry import cw_telemetry
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w603t') -> None:
@@ -35,6 +35,11 @@ def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w603t') -> None:
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
     monkeypatch.setattr(cw_telemetry, '_L0_ANDON_HANDLER', lambda payload: True)
     monkeypatch.setattr(cw_telemetry, '_L0_ANDON_FIRED_RUNS', set())
+    # 分包期 4:obs_conflict 的 run_id 归属键读 kernel.cw_telemetry_exit 钩子位,
+    # provider 钉回本模块 current_run_id(随 _CURRENT_RUN_ID 桩值走)
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
+    monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider',
+                        cw_telemetry.current_run_id)
 
 
 def _rows(tmp_path: Path, name: str) -> list[dict]:
