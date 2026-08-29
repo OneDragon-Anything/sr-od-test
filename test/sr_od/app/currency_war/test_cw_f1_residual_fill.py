@@ -67,8 +67,7 @@ def test_residual_fill_deploys_into_vacancy() -> None:
               _bc('乙', '仙舟'), _bc('乙', '仙舟')])
     st.board = {'仙舟': 1}
     up, held, _lag = _residual_fill_deploy(
-        st, object(), {'仙舟': 1}, frozenset(), frozenset(),
-        frozenset(), frozenset())
+        st, object(), frozenset(), frozenset(), frozenset(), frozenset())
     dep_n = sum(1 for _ in iter_occupied_deployed(st.deployed))
     assert dep_n == 1 + up and up >= 2, (up, held, dep_n)
     assert st.gold == 20, '补部署零支出'
@@ -127,8 +126,7 @@ def test_reserved_pieces_not_deployed() -> None:
     st.board = {'仙舟': 1}
     sess = _sess_locked_hoard(('甲',))
     up, held, _lag = _residual_fill_deploy(
-        st, sess, {'仙舟': 1}, frozenset(), frozenset(),
-        frozenset(), frozenset())
+        st, sess, frozenset(), frozenset(), frozenset(), frozenset())
     dep_names = {d.char_id for d in iter_occupied_deployed(st.deployed)
                  if d.char_id}
     assert '乙' not in dep_names and '甲' not in dep_names, dep_names
@@ -148,8 +146,7 @@ def test_fill_dominates_forbidden_shape() -> None:
     st.board = {'仙舟': 1}
     dep_a = sum(1 for _ in iter_occupied_deployed(st.deployed))
     up, _held, _lag = _residual_fill_deploy(
-        st, object(), {'仙舟': 1}, frozenset(), frozenset(),
-        frozenset(), frozenset())
+        st, object(), frozenset(), frozenset(), frozenset(), frozenset())
     dep_b = sum(1 for _ in iter_occupied_deployed(st.deployed))
     assert dep_b - dep_a == up and up >= 0
     assert st.gold == 20, 'B 臂零支出(C=I=0)'
