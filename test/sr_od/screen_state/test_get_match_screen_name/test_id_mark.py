@@ -77,6 +77,9 @@ _ALLOWED_DUAL_HIT: dict[tuple[str, str], set[str]] = {
     ('货币战争-备战-装备详情浮窗', 'equip_detail_roller'): {'货币战争-备战'},
     ('货币战争-备战-装备详情浮窗', 'equip_detail_synth_target'): {'货币战争-备战'},
     ('货币战争-备战-角色信息提示', 'char_detail'): {'货币战争-备战'},
+    # 菜单的省略号子菜单是小型 overlay,不遮菜单 id_mark(开拓等级) → 菜单对该帧
+    # is_precise 属画面事实;上层排除由导航顺序/运行时上下文负责。
+    ('菜单-更多', '展开'): {'菜单'},
 }
 
 
