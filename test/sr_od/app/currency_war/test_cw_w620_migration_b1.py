@@ -1,0 +1,244 @@
+"""W620 批 1(重构迁移·框架一次集成接线)锁面。
+
+依据 = 蓝图 v-final.1 §7 批 1 行 + §1/§2/§3.4/§4.3:
+1. TurnState 装配:幂等(frozen 值语义,重入等值)+ 方向/预算投影字段齐;
+2. R1:committed 唯一合法读端(prep_brain.committed_from),session
+   ``dual_track_phase`` 直读点归零(源码 grep 守卫);
+3. R2:tracking 优先读口(tracking 非空优先,空退 fresh read);
+4. R4 接缝:schedule_upgrade / refresh_ev_budget 公开纯函数落地;
+5. 单帧等价锁:prep_brain 管线 decide 输出与旧通道(直调现役决策核)
+   逐位一致(批 1 行为语义 = 与旧环等价);
+6. DirectorV2 出战域 op 落地 = BATTLE 正常出口(批 1 接线补)。
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from sr_od.application.currency_war.cw_state import BenchChar
+from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision_v2.adapter import (
+    DecideAdapter,
+    snapshot_to_obs,
+)
+from sr_od.application.currency_war.decision_v2.contracts import (
+    AtomOp,
+    Decision,
+    Snapshot,
+    SubstateClassification,
+)
+from sr_od.application.currency_war.decision_v2.director_v2 import (
+    DirectorV2,
+    LoopOutcomeKind,
+    _DirectorPorts,
+)
+from sr_od.application.currency_war.decision_v2.prep_brain import (
+    assemble,
+    committed_from,
+)
+from sr_od.application.currency_war.decision_v2.turn_state import (
+    BudgetView,
+    DirectionView,
+    TurnState,
+)
+from sr_od.application.currency_war.prep_actions import SellBench
+
+_SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
+        / 'currency_war')
+
+
+def _snapshot() -> Snapshot:
+    return Snapshot(
+        classification=SubstateClassification(
+            name='prep_shop', evidence=('test',), confident=True),
+        plane=1, round_num=2, level=3, gold=40, gold_trusted=True,
+        free_bench_slots=3, deploy_vacancy=1, shop_open=False,
+    )
+
+
+class _Strat:
+    """可编程假策略(记录 obs 输入,返回固件动作——单帧等价对照用)。"""
+
+    def __init__(self):
+        self.last_obs = None
+
+    def decide_prep_action(self, obs, session, config):
+        self.last_obs = obs
+        return SellBench(3)
+
+
+class _Executor:
+    """F3 校验桩(恒合法;不执行)。"""
+
+    def validate(self, action):
+        return None
+
+    def execute(self, action):
+        return True, 'stub'
+
+
+# ----------------------------------------------------- 1. TurnState 装配
+
+def test_assemble_is_idempotent_and_frozen():
+    import dataclasses
+
+    import pytest
+
+    sess = StrategySession()
+    snap = _snapshot()
+    t1 = assemble(snap, sess)
+    t2 = assemble(snap, sess)
+    assert t1 == t2 and isinstance(t1, TurnState)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        t1.budget = BudgetView()   # type: ignore[misc]
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        t1.direction = DirectionView()   # type: ignore[misc]
+
+
+def test_assemble_projects_direction_and_budget_fields():
+    sess = StrategySession()
+    turn = assemble(_snapshot(), sess)
+    d, b = turn.direction, turn.budget
+    # 方向投影:字段齐(蓝图 §2 清单)+ R2 读口非空
+    assert isinstance(d.committed, bool) and d.committed is True
+    assert d.fallback_comp != ''
+    assert isinstance(d.hoard, frozenset)
+    assert set(d.gates) == {'P1_FINAL_LINE_GATE', 'P1_RECIPE_LOCK',
+                            'P1_LOCK_TRANSITION_PAIR'}
+    assert isinstance(d.bench_view, tuple)
+    assert isinstance(d.deployed_view, tuple)
+    # 预算投影:R* = 息线 + 排程(息线帧 → R* == floor,零漂移 I-1 前提)
+    assert b.interest_floor > 0
+    assert b.reserve_cap >= b.interest_floor
+    assert b.obligation == 0   # g=40 ≤ R* → 无义务帧
+    assert b.ev_auth >= 0 and isinstance(b.schedule, bool)
+
+
+# ----------------------------------------------------- 2. R1 committed 读端
+
+def test_committed_from_semantics():
+    sess = StrategySession()
+    assert committed_from(sess) is True          # 默认非双轨 = 已定型
+    sess.dual_track_phase = True
+    assert committed_from(sess) is False         # 双轨期 = 未定型
+
+
+def test_grep_guard_session_dual_track_read_points_isolated():
+    """session 双轨态直读点归零:唯一读端 prep_brain.committed_from。
+
+    守卫形状(只锁 session 读,state 字段读随批 2 老栈退役自然归零):
+    - getattr(session 系变量, 'dual_track_phase') — 除读端文件外全禁;
+    - ``session.dual_track_phase`` 属性**读**(非赋值)全禁
+      (default_strategy 写端 / cw_replay 离线恢复写端不受扰)。
+    """
+    import re
+    offenders: dict[str, list[str]] = {}
+    pat_getattr = re.compile(r"getattr\(\s*\w*sess\w*\s*,\s*'dual_track_phase'")
+    pat_read = re.compile(r"\b\w*sess\w*\.dual_track_phase\b(?!\s*=)")
+    for path in _SRC.rglob('*.py'):
+        text = path.read_text(encoding='utf-8')
+        hits = [ln for ln in text.splitlines()
+                if pat_getattr.search(ln) or pat_read.search(ln)]
+        if hits:
+            offenders[path.name] = hits
+    assert set(offenders) == {'prep_brain.py'}, offenders
+
+
+# ----------------------------------------------------- 3. R2 tracking 读口
+
+def test_tracking_view_prefers_tracked_over_fresh():
+    sess = StrategySession()
+    tracked = BenchChar(slot=1, char_id='huohuo', star=2)
+    sess.tracked_bench_chars = [tracked]
+    snap = _snapshot()
+    turn = assemble(snap, sess)
+    assert turn.direction.bench_view == (tracked,)   # tracking 优先
+    # tracking 空 → fresh read 补缺(snapshot.bench 通道)
+    sess2 = StrategySession()
+    turn2 = assemble(snap, sess2)
+    assert turn2.direction.bench_view == tuple(snap.bench)
+
+
+# ----------------------------------------------------- 4. R4 接缝
+
+def test_r4_seam_functions_public_and_pure():
+    from sr_od.application.currency_war.decision_v2.economy_cycle import (
+        refresh_ev_budget,
+        schedule_upgrade,
+    )
+    sess = StrategySession()
+    assert schedule_upgrade(_mk_state(), sess) in (True, False)
+    assert refresh_ev_budget(_mk_state(), sess) >= 0
+
+
+def _mk_state():
+    from sr_od.application.currency_war.cw_state import GameState
+    st = GameState()
+    st.plane, st.round_num, st.level, st.gold = 1, 2, 3, 40
+    return st
+
+
+# ----------------------------------------------------- 5. 单帧等价锁
+
+def test_single_frame_equivalence_new_pipeline_vs_old_channel():
+    """批 1 等价判据:新管线 decide 输出与旧通道(直调决策核)逐位一致。"""
+    sess = StrategySession()
+    snap = _snapshot()
+    strat_new, strat_old = _Strat(), _Strat()
+    adapter = DecideAdapter(strat_new, config=None, executor=_Executor())
+    decision = adapter.decide(snap, sess)
+    # 旧通道:同一 snapshot 经同一 obs 通道直调决策核
+    action_old = strat_old.decide_prep_action(
+        snapshot_to_obs(snap, sess), sess, None)
+    from sr_od.application.currency_war.decision_v2.adapter import action_to_atomop
+    new_sig = ('op', decision.ops[0].op_key, decision.ops[0].domain)
+    old_op = action_to_atomop(action_old)
+    old_sig = ('op', old_op.op_key, old_op.domain)
+    assert new_sig == old_sig
+    # obs 通道一致:两路决策核看到的 obs 逐字段相同(frozen 快照深拷贝语义)
+    assert strat_new.last_obs.state.gold == strat_old.last_obs.state.gold
+    assert (strat_new.last_obs.free_bench_slots
+            == strat_old.last_obs.free_bench_slots)
+
+
+# ----------------------------------------------------- 6. 出战域出口
+
+def _ports(decide, execute):
+    return _DirectorPorts(
+        decide=decide,
+        observe=lambda heavy: _snapshot(),
+        execute=execute,
+        recover=lambda: False,
+        force_battle=lambda _w='': True,
+        is_stopped=lambda: False,
+        stop_with_evidence=lambda _r: None,
+        record_defect=lambda k, d: None,
+    )
+
+
+def test_battle_domain_op_success_exits_as_battle():
+    sess = StrategySession()
+    calls = {'n': 0}
+
+    def decide(snapshot, session):
+        calls['n'] += 1
+        return Decision(ops=(AtomOp(op_key='start_battle', domain='battle'),))
+
+    def execute(op):
+        return True, 'ok'
+
+    outcome = DirectorV2(_ports(decide, execute)).run(sess)
+    assert outcome.kind is LoopOutcomeKind.BATTLE
+    assert calls['n'] == 1   # 出战落地即退环,不再重观察重决策
+
+
+def test_battle_op_failure_does_not_exit():
+    sess = StrategySession()
+
+    def decide(snapshot, session):
+        return Decision(ops=(AtomOp(op_key='start_battle', domain='battle'),))
+
+    def execute(op):
+        return False, '未落地'
+
+    outcome = DirectorV2(_ports(decide, execute)).run(sess)
+    assert outcome.kind is not LoopOutcomeKind.BATTLE
