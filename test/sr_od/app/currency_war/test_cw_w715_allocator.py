@@ -390,6 +390,65 @@ def test_levelup_supply_inherits_auth_whitelist(monkeypatch) -> None:
 
 
 
+# ---------- W733 修复①回归:血预算停付辖分配器刷新臂 ----------
+
+def test_refresh_arm_blood_budget_stop_pay() -> None:
+    """血预算停付单一址辖刷新臂供给(W733:641025 r8/641056 r7 两起
+    绕过回归):末窗血预算不足帧(p1_exit_blood_short)不出 refresh
+    提案;血预算充足对照帧照常供给。判据单一址 = discipline.
+    blood_budget_refresh_blocked(与管线刷新收尾/段级检查同谓词,
+    禁第二账)。真实谓词路径,零 monkeypatch。"""
+    ss = _sess()
+    reg = _stop_registry()
+    poor = _stop_state(gold=200, hp=40, round_num=7)   # 末窗∧血预算不足
+    props = _supply_impl(poor, ss, reg, AllocDomain.STOP_WINDOW)
+    assert not [p for p in props if p.kind == 'refresh'], \
+        '血预算停付帧不得供给刷新提案(ADR-0451 单一址)'
+    rich = _stop_state(gold=200, hp=80, round_num=7)   # 血预算充足对照
+    props = _supply_impl(rich, ss, reg, AllocDomain.STOP_WINDOW)
+    assert any(p.kind == 'refresh' for p in props), \
+        '血预算充足帧刷新臂照常供给(停付门不越权扩大)'
+
+
+# ---------- W733 ②裁决落码锁:死亡域 levelup=ALL IN 窗授权形态 ----------
+
+def test_death_domain_levelup_allin_shape(monkeypatch) -> None:
+    """裁决(P23.3+v6 §3+ADR-0448):死亡域 levelup 出手=授权形态——
+    硬闸只有 P21 硬停(blood_budget_levelup_blocked),其对位面末
+    ALL IN 窗([18])按自身设计让位;白名单 auth 由供给层继承
+    (W718 锁辖)。锁两面:P21 域内(非 ALL IN)不出 levelup;
+    ALL IN 窗+白名单放行 → levelup 供给(seed 641095 r9 形态)。"""
+    from sr_od.application.currency_war.decision.decision_v2 import ev as ev_mod
+    reg = DEFAULT_REGISTRY
+    tbl = ['battle'] * 8 + ['boss']
+
+    def full_board(st: GameState) -> None:
+        xz = _faction_names('仙舟', 8)
+        pad = [n for n in CHARACTERS if n not in xz]
+        _deploy(st, (xz + pad)[:8])
+        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        st.bench = [BenchChar(slot=1, char_id=xz[0], faction='仙舟',
+                              star=1)]
+
+    # P21 硬停域(hp5≤停线11,非 ALL IN):levelup 不得供给
+    st8 = _death_state(round_num=8)
+    full_board(st8)
+    monkeypatch.setattr(ev_mod, 'levelup_ev_basis',
+                        lambda *a, **k: 'pop_slot')
+    props = _supply_impl(st8, _sess(tbl), reg, AllocDomain.DEATH)
+    assert not [p for p in props if p.kind in ('levelup', 'comp')], \
+        'P21 硬停域(非 ALL IN)不出升级提案'
+    # ALL IN 窗(r9 位面末最后一战):P21 让位,白名单放行 → 供给
+    st9 = _death_state(round_num=9)
+    full_board(st9)
+    ss9 = _sess(tbl)
+    ss9.node_type_current = 'boss'   # 位面末 boss 节点(ALL IN 窗真值)
+    props = _supply_impl(st9, ss9, reg, AllocDomain.DEATH)
+    lus = [p for p in props if p.kind == 'levelup']
+    assert lus, 'ALL IN 窗+白名单放行=死亡域 levelup 授权形态'
+    assert lus[0].actions[0].auth_basis == 'pop_slot'
+
+
 # ---------- 记账扩展:分配器帧位(v6 §6) ----------
 
 def test_alloc_frame_bit_disclosure() -> None:
