@@ -109,6 +109,29 @@ def test_skip_round_ledger_row_and_pairing_intact() -> None:
     assert check_skip_fence_pairing(res.ledger) == []
 
 
+# ---------- 锁 2b:单趟遗留锁(W718 第五波自捕 seed 640576) ----------
+
+def test_seed_640576_no_residual_lag_after_fill() -> None:
+    """取证局锁:skip 轮补部署后不得残留「围栏认可件未上」(lag>0)。
+
+    640576 r5-r7 在单趟 fill 实现(补部署首版)下 dep 5/7 停滞、
+    lag=2 连续三轮:补部署自身上场改变 board 阵营计数后,成对/点火
+    判据对尚未上场的件翻转达标,单趟不再重判。修法=不动点循环
+    (上场后重跑围栏至 up 空)。本锁钉该形态:全部 skip 轮 lag 恒 0。
+    pool='snapshot'(池指纹 6400d5d8edeaf68d+eqg1 同 W718 跑批口径)。
+    """
+    res = simulate_p1(640576, pool='snapshot', planes=2)
+    bad = [(int(r.get('round_num') or 0),
+            int((r.get('sim') or {}).get('deploy_lag_units') or 0))
+           for r in res.ledger
+           if (r.get('sim') or {}).get('fence_skipped')]
+    assert bad, '取证形态应在该 seed 出现(否则换锁帧)'
+    assert all(n == 0 for _, n in bad), bad
+    # 补部署确实发生过(非「无事可补」的假绿)
+    assert any(int((r.get('sim') or {}).get('residual_deployed') or 0) >= 2
+               for r in res.ledger)
+
+
 # ---------- 锁 2:保留集锁 ----------
 
 def test_reserved_pieces_not_deployed() -> None:
