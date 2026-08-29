@@ -104,6 +104,12 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'p1_exit_blood_target': ('int', 60),
     'p1_exit_downgrade_enabled': ('bool', True),
     'blood_budget_refresh_stop_enabled': ('bool', True),
+    # 概率校准刷新预算(ADR-0475):ω=塌缩带归零线(标定字段,0.1 占位;
+    # 比值由 cw_shop_odds 表导出,与分配器 Π_refresh 同源)/q=有望帧帽
+    # 真分位(−ln(1−q) 闭式乘数,网格 {0.8,0.9});语义注释落点=
+    # registry 字段注释
+    'omega_collapse_ratio': ('float', 0.1),
+    'refresh_find_quantile': ('float', 0.8),
     # 血预算停手·终止分支(设计 W659 v2;ADR-0469):True=数学定谳
     # 恒接线(金零值引理+EV 对比式),False=A/B 对照臂;0.03=EV 反解
     # 最悲观角 0.0283 的诚实带下沿档(重标定挂账,语义注释落点=

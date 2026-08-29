@@ -211,6 +211,28 @@ def test_blood_budget_stop_not_inflated_by_budget_merge() -> None:
         '合并=两来源 max 单一公式,血预算防线在拒付层不在合并层'
 
 
+def test_w721_collapse_band_zero_and_fallback_exempt() -> None:
+    """0 帧契约第三类(塌缩带归零)扩类用例(ADR-0475;补在穿透锁组:
+    归零帧再多一类,max 合并结构不变):①锁定 4 费核 ∧ lv5(比值 0.05
+    < ω=0.1)→ 预算 0(合法 0 帧第三类,穿透锁口径=合法 0 不是虚标);
+    ②同一形态的未锁定帧(兜底链)不归零——空帧豁免(D1「空帧不缩供给」
+    契约优先)。公式与单一址细则=test_cw_w721_overlay_b_budget。"""
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.kernel.cw_intention import intention_core
+
+    st = _state(gold=200, level=5, hp=80, shop=[_sc('桑博', 2)], board={})
+    comp = next(c for c in COMP_LIBRARY
+                if (CHARACTERS.get(intention_core(c)) is not None
+                    and CHARACTERS[intention_core(c)].cost == 4))
+    sess_locked = StrategySession()
+    sess_locked.v3_intention = IntentionState(
+        phase='locked', locked_comp=comp.name)
+    assert refresh_ev_budget(st, sess_locked) == 0
+    assert refresh_ev_budget(st, StrategySession()) > 0
+
+
 # --- R3 · pair 断供驱逐(蓝图 §4.3-R3 推广)------------------------------------
 
 
