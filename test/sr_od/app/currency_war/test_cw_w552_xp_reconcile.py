@@ -278,7 +278,10 @@ def test_w552_wiring_locks():
     assert src.index('self._xp_apply_levelup()') > lv_at
     assert src.index("self._xp_apply_buy_clicks(detail)") > buy_at
     obs_at = src.index('self._reconcile_xp_expect(obs)')
-    consume_at = src.index("getattr(session, 'pending_buy_expect', None)")
+    # W591:pending_buy_expect 升 StrategySession 正式字段,消费端由
+    # getattr 兜底改直接字段读写(语义不变,机制被取代——见
+    # test_cw_w536_buy_expect.test_w536_wiring_locks 改锁依据)
+    consume_at = src.index('_pending_buy = session.pending_buy_expect')
     assert consume_at < obs_at                      # heavy 定型帧之后
     assert "_XP_DEFECT_KIND = 'xp_expect_mismatch'" in src
     assert "_XP_DEFECT_SURFACE = 'xp'" in src

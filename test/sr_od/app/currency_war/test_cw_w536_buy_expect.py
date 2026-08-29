@@ -224,10 +224,15 @@ def test_compare_deployed_landing():
 # ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
 
 def test_w536_wiring_locks():
-    """①意图在 shop.py 买入点(BuyCard 点击分支)记录、单元尾计算暂存
+    """①意图在 shop.py 买入点(BuyCard 点击分支)记录、单元尾计算写入
     session.pending_buy_expect;含卖出/未识别牌不建;②对账在 PrepDirector
     heavy 定型帧之后且仅 progressed 分支、消费后即清;③合成落点单一源 =
-    cw_state._merge_bench(compute_buy_expect 不自造第二套落点规则)。"""
+    cw_state._merge_bench(compute_buy_expect 不自造第二套落点规则)。
+
+    锁改写(W591,pending_buy_expect 升 StrategySession 正式字段):消费端
+    由「动态属性 + getattr 兜底」改为直接字段读写——语义不变(定型帧后
+    消费/仅 progressed/消费即清),被取代的是暂存机制而非对账时序;依据
+    = cw_strategy.StrategySession.pending_buy_expect 字段定义注释。"""
     shop_src = Path(
         'src/sr_od/application/currency_war/operations/prep/shop.py'
     ).read_text(encoding='utf-8')
@@ -244,10 +249,15 @@ def test_w536_wiring_locks():
         'src/sr_od/application/currency_war/prep_director.py'
     ).read_text(encoding='utf-8')
     obs_at = dir_src.index("obs = self._observe(heavy=True)")
-    consume_at = dir_src.index("getattr(session, 'pending_buy_expect', None)")
+    consume_at = dir_src.index("_pending_buy = session.pending_buy_expect")
     assert obs_at < consume_at                     # 定型帧后才消费
-    assert dir_src.index("'pending_buy_expect', None)") \
+    assert dir_src.index("session.pending_buy_expect = None") \
         < dir_src.index('self._reconcile_buy_expect(_pending_buy)')
+    # 字段已正式声明(动态属性回流防线;声明含类型注解与定义注释)
+    strat_src = Path(
+        'src/sr_od/application/currency_war/cw_strategy.py'
+    ).read_text(encoding='utf-8')
+    assert 'pending_buy_expect: BuyExpect | None = None' in strat_src
     compute_body = dir_src[dir_src.index('def compute_buy_expect'):]
     compute_body = compute_body[:compute_body.index('\n\ndef ') + 1] \
         if '\n\ndef ' in compute_body else compute_body
