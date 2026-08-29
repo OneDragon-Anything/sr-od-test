@@ -61,8 +61,13 @@ _FIXTURES: list[tuple[str, str]] = _discover_fixtures()
 
 # 已知错档 fixture(归档目录 ≠ 画面实属屏):strict xfail 记录该缺口,修复后转 XPASS 会响,
 # 提示移除本标记。2026-08-15 无名勋礼两张错档已迁移根治(webp 迁 screens/无名勋礼/ +
-# 独立屏建档,详见 docs/game/screens/无名勋礼.md),现为空集;机制保留,供未来错档登记。
-_KNOWN_MISFILED: set[tuple[str, str]] = set()
+# 独立屏建档,详见 docs/game/screens/无名勋礼.md)。机制保留,供未来错档登记。
+# 2026-08-29:通用「获得物品」弹窗帧错档两例(邮箱/委托领取后截到,标题被弹窗遮罩盖住,
+# 帧实属通用获得物品弹窗而非宿主画面)。邮件一张已迁 screens/获得物品/邮件领取后.webp;
+# 委托一张因被 test_assignments_app 作 mock 输入引用暂留原位,待获得物品屏建档后统一迁移。
+_KNOWN_MISFILED: set[tuple[str, str]] = {
+    ('委托', '委托领取弹窗'),
+}
 
 # 已知合法双命中(fixture 帧上父屏 id_mark 全可见):小型侧边 overlay 不遮父屏
 # 任何 id_mark 元素,父屏(货币战争-备战)对这些帧 is_precise 属画面事实,不算撞车。
