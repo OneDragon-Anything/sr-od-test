@@ -80,15 +80,11 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
     # 花钱规划侧既有边缘**(与装备发放零金语义无关)。按 ADR-0289 纪律
     # 登记待裁(裁决归策略域批:执行层是否补钳制/规划侧修复),未裁决
     # 前豁免;裁决落地后移除,回归 0 容忍。
-    # W578(P1 配方对 target 载体物化,ADR-0457 草稿):定向后
-    # seed0(n=25 snapshot)涌现 deploy_after_buy_semantics 1 例(r5
-    # lag=3)。机制:轮末 replay 围栏在**已消费子集**上重算,而围栏
-    # admit/hold 依赖 bench 构成(must_up/roomy/pair_counts)——定向
-    # target 注入后 in-round 与 replay 不再同构。真发现候选(围栏在满
-    # bench 下 held 了 tgt-admissible 件,「买对的人没上」旧病 residue)
-    # vs 判据过严候选(replay 方法论假设「围栏结果与 bench 构成无关」
-    # 破)——两候选待裁,裁决归下一批(围栏修/检查器改/维持披露),
-    # 未裁决前豁免。
+    # W666(重放语境冻结,W652 §5 处置①):deploy_after_buy_semantics
+    # 的 W578 待裁已裁决落地——重放趟成对/点火判据改用真部署趟行动前
+    # board/deployed_fac 快照,残余语义 = 行动语境下围栏认可件未上;
+    # seeds 0-19 与取证两局(seed 630027/630035)均 0,移出豁免回归
+    # 0 容忍(专项锁 = test_cw_w666_replay_context_freeze.py)。
     _PENDING_ADJUDICATION = ('ledger_consistency',
                              'coldstart_direction',
                              'degrade_recover_mutex',
@@ -96,8 +92,7 @@ def test_ci_smoke_snapshot_batch(tmp_path: Path) -> None:
                              'engine_seed_not_resold',
                              'deploy_fills_cap',
                              'decision_v2_crisis_gold_hoard',
-                             'gold_nonneg',
-                             'deploy_after_buy_semantics')
+                             'gold_nonneg')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS or name in _PENDING_ADJUDICATION:
             assert 'violations' in r, f'{name}: 缺 violations 计数'
