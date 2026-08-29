@@ -10,8 +10,8 @@
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel import cw_observe
+from sr_od.application.currency_war.telemetry import cw_telemetry
 
 
 def _setup(monkeypatch, tmp_path: Path, run_id: str = 'w515t') -> list[dict]:
@@ -155,12 +155,18 @@ class _FakeCtx:
 
 def test_game_side_executor_end_to_end(tmp_path: Path, monkeypatch):
     """cw_observe.stop_for_l0_andon 端到端(假 ctx):现场帧 → flag 落
-    tmp_path → run_context.stop_running(reason=hook:cw_l0_andon) → True。"""
+    tmp_path → run_context.stop_running(reason=hook:cw_l0_andon) → True。
+
+    分包期 4 起 flag 写入走 kernel/cw_telemetry_exit 安灯出口钩子位:
+    注入真实现(monkeypatch 槽位,自动还原)+ flag 路径钉 tmp。"""
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
     ctx = _FakeCtx()
     monkeypatch.setattr(cw_observe, 'find_running_ctx', lambda: ctx)
     monkeypatch.setattr(cw_observe, '_save_andon_frame',
                         lambda c, p: 'l0_andon_run_x_p1r3_stop_1.png')
-    monkeypatch.setattr(cw_telemetry, 'l0_andon_flag_path',
+    monkeypatch.setattr(cw_telemetry_exit, '_write_l0_andon_flag',
+                        cw_telemetry.write_l0_andon_flag)
+    monkeypatch.setattr(cw_telemetry_exit, '_l0_andon_flag_path',
                         lambda: tmp_path / 'l0_andon_hook.flag')
     ok = cw_observe.stop_for_l0_andon({
         'run_id': 'run_x', 'surface': 'gold', 'kind': 'perception_conflict',
@@ -178,8 +184,8 @@ def test_game_side_executor_no_ctx_is_no_stop(tmp_path: Path, monkeypatch):
     """找不到 ctx(离线/测试进程)→ False 不停、不写 flag
     (零误停偏置:无停线通道时不动台账以外的任何状态)。"""
     monkeypatch.setattr(cw_observe, 'find_running_ctx', lambda: None)
-    monkeypatch.setattr(cw_telemetry, 'l0_andon_flag_path',
-                        lambda: tmp_path / 'l0_andon_hook.flag')
+    # 分包期 4:安灯出口槽未注入 → 执行器在 ctx 判空即 False,不触达 flag 通道
+    # (原 cw_telemetry.l0_andon_flag_path 钉位随出口化移除,路径兜底锁由 no-stop 断言承担)。
     ok = cw_observe.stop_for_l0_andon({'run_id': 'run_x', 'surface': 'gold',
                                        'kind': 'perception_conflict',
                                        'expected': 'e', 'observed': 'o'})

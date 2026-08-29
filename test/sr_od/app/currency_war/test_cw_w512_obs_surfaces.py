@@ -11,8 +11,8 @@ SpendUnitRecord 字段解析,混入会被当伪单元误读)④板面动作级�
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel import cw_observe
+from sr_od.application.currency_war.telemetry import cw_telemetry
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w512t') -> None:
@@ -49,8 +49,14 @@ def test_record_defect_confidence_passthrough(tmp_path: Path, monkeypatch):
 
 
 def test_obs_conflict_bypass_copies_numeric_confidence(tmp_path: Path, monkeypatch):
-    """旁路:obs_conflict ctx 带数值 confidence → 台账行透传;非数值/缺省 → None。"""
+    """旁路:obs_conflict ctx 带数值 confidence → 台账行透传;非数值/缺省 → None。
+
+    分包期 4:obs_conflict 的旁路出口走 kernel/cw_telemetry_exit 钩子位,
+    本测注入真实现(monkeypatch 槽位,自动还原)。"""
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
     _setup_recorder(monkeypatch, tmp_path)
+    monkeypatch.setattr(cw_telemetry_exit, '_bypass_obs_conflict_to_defect',
+                        cw_telemetry.bypass_obs_conflict_to_defect)
     monkeypatch.setattr(cw_observe, '_CONFLICT_JOURNAL', tmp_path / 'obs_conflicts.jsonl')
     cw_observe.obs_conflict('level', 4, 5, None, verdict='采新-XP确认',
                             confidence=42.0)
