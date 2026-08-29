@@ -14,17 +14,17 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_state import BENCH_CAPACITY, BenchChar
 from sr_od.application.currency_war.cw_strategy import StrategySession, gated_hp
+from sr_od.application.currency_war.decision_assembly import snapshot_from_obs
 from sr_od.application.currency_war.decision_v2.adapter import (
     decision_state,
-    snapshot_from_obs,
     snapshot_to_obs,
 )
 from sr_od.application.currency_war.decision_v2.contracts import (
     Snapshot,
     SubstateClassification,
 )
+from sr_od.application.currency_war.kernel.cw_state import BENCH_CAPACITY, BenchChar
 
 
 def _snap(**kw) -> Snapshot:

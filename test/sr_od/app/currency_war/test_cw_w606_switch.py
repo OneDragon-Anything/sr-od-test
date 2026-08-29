@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.decision_v2.adapter import (
+from sr_od.application.currency_war.decision_assembly import (
     shadow_compare_enabled,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (

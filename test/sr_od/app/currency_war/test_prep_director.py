@@ -377,7 +377,7 @@ def _fake_snapshot():
 
 def _stub_snapshot_from_obs(monkeypatch) -> None:
     """新环 obs→快照 替身(W620 批 1:生产路径 = DirectorV2 环)。"""
-    import sr_od.application.currency_war.decision_v2.adapter as _adapter
+    import sr_od.application.currency_war.decision_assembly as _adapter
     monkeypatch.setattr(_adapter, 'snapshot_from_obs',
                         lambda obs, session: _fake_snapshot())
 

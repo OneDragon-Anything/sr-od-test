@@ -11,8 +11,8 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision_assembly import DecideAdapter
 from sr_od.application.currency_war.decision_v2.adapter import (
-    DecideAdapter,
     decision_state,
     snapshot_to_obs,
 )

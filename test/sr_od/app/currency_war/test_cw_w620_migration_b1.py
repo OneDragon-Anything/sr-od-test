@@ -14,12 +14,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2.adapter import (
-    DecideAdapter,
-    snapshot_to_obs,
-)
+from sr_od.application.currency_war.decision_assembly import DecideAdapter
+from sr_od.application.currency_war.decision_v2.adapter import snapshot_to_obs
 from sr_od.application.currency_war.decision_v2.contracts import (
     AtomOp,
     Decision,
@@ -41,6 +38,7 @@ from sr_od.application.currency_war.decision_v2.turn_state import (
     TurnState,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import SellBench
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
         / 'currency_war')
@@ -281,7 +279,7 @@ def test_single_frame_equivalence_new_pipeline_vs_old_channel():
     # 旧通道:同一 snapshot 经同一 obs 通道直调决策核
     action_old = strat_old.decide_prep_action(
         snapshot_to_obs(snap, sess), sess, None)
-    from sr_od.application.currency_war.decision_v2.adapter import action_to_atomop
+    from sr_od.application.currency_war.decision_assembly import action_to_atomop
     new_sig = ('op', decision.ops[0].op_key, decision.ops[0].domain)
     old_op = action_to_atomop(action_old)
     old_sig = ('op', old_op.op_key, old_op.domain)
