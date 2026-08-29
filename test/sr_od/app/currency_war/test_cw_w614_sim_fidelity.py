@@ -37,8 +37,12 @@ from sr_od.application.currency_war.cw_sim_invest import SimInvestProfile
 # 是行为批,digest c13c365b… = 最终基线(批 2 末 93ca26cc… 起的行为位移
 # 由 w633 A/B 判据管辖,本锚此后继续做「 unintended drift 」哨兵)。
 # 中间值 60aa8ced… 为 R3 驱逐度量修正前的过渡锚(作废,记档防二次踩)。
+# P4 小修簇重锚:sim 满级语义对齐(cw_sim.sim_decision_registry 把
+# LEVEL_CAP 注入决策层,lv9 帧决策层不再发起必然被拒付的升级;行为
+# 批,位移由 .debug/temp/currency_war/w652_p4_fixes/REPORT.md 记档)
+# ——digest cdec4400…;本锚继续做 unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    'c13c365ba768740da063287d954f502c26068146ccfd5f2fcefcebdf73f01094')
+    'cdec440098d3d3ab92e1561ef454b0056bb52d7da4daadc0ff83d3c5059d5222')
 
 
 def _behavior_projection(results) -> str:
