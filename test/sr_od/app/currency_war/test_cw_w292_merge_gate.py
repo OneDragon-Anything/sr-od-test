@@ -16,8 +16,12 @@ _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / 'src'))
 sys.path.insert(0, str(_REPO / 'sr-od-test'))
 
-from sr_od.application.currency_war.obs.cw_identity_obs import is_merge_effect_frame  # noqa: E402
-from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_reconcile import (  # noqa: E402
+    reconcile_tracking,
+)
+from sr_od.application.currency_war.obs.cw_identity_obs import (  # noqa: E402
+    is_merge_effect_frame,
+)
 
 
 def _banner_frame() -> np.ndarray:
@@ -66,9 +70,13 @@ def _read(star: int) -> list[SimpleNamespace]:
 def test_gate_blocks_confirm_and_freezes_pending(monkeypatch) -> None:
     """特效帧上的第 2 次回退:**保旧 + 防抖冻结**(pending 不推进、不计数、
     不采新)——star 层 2/2 采新帧全错(动画窗 ≥2 帧骗过连续确认)的
-    直接回归锁。随后干净帧(screen=None)同回退 → 仍走确认采新(门冻结非清零)。"""
+    直接回归锁。随后干净帧(screen=None)同回退 → 仍走确认采新(门冻结非清零)。
+
+    分包期5 补遗(§3.3-⑥ SIFT 上移)后门实现经注入槽进 kernel:
+    测试同生产装配点同语义,显式注入真 ``is_merge_effect_frame``。"""
     import sr_od.application.currency_war.kernel.cw_reconcile as cr
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
+    monkeypatch.setattr(cr, '_IS_MERGE_EFFECT_FRAME', is_merge_effect_frame)
     s = _sess()
     s.star_pending_regression = {'万敌': 1}   # 上帧已防抖挂起
     reconcile_tracking(s, _read(1), [], _burst_frame(), source='t', ctx=None)
@@ -87,7 +95,12 @@ def test_gate_blocks_confirm_and_freezes_pending(monkeypatch) -> None:
 
 
 def test_gate_source_lock() -> None:
-    """静态口径锁:采新确认分支必须先过帧态门(防未来重构绕过)。"""
+    """静态口径锁(分包期5 补遗重钉):kernel 只持注入槽不直依 obs 桶;
+    生产装配点(decision_assembly)接通真门实现,防未来重构绕过或回接直依。"""
     src = (_REPO / 'src' / 'sr_od' / 'application' / 'currency_war'
            / 'kernel' / 'cw_reconcile.py').read_text(encoding='utf-8')
-    assert 'is_merge_effect_frame' in src, '采新确认前未引用合成特效帧态门'
+    assert '_IS_MERGE_EFFECT_FRAME' in src, '采新确认前未引用合成特效帧态门注入槽'
+    assert 'cw_identity_obs' not in src, 'kernel 不得直依 obs 桶(分包矩阵)'
+    asm = (_REPO / 'src' / 'sr_od' / 'application' / 'currency_war'
+           / 'decision_assembly.py').read_text(encoding='utf-8')
+    assert 'is_merge_effect_frame' in asm, '生产装配点未接通特效帧态门'
