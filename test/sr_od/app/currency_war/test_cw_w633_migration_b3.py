@@ -260,6 +260,82 @@ def test_pair_eviction_keeps_target_chain_materialized() -> None:
     assert comp.form_tiers    # 档位账随物化(部署/评分消费面不盲)
 
 
+def test_injection_consistency_single_registry_source() -> None:
+    """注入一致性锁(W636 A):三接缝(schedule/refresh_ev_budget/
+    reserve_cap)显式注入同一非默认 registry 时行为同变,prep_brain.
+    _budget 装配的 BudgetView 与显式注入的接缝值逐字段一致——禁
+    「部分字段落 DEFAULT」的双源混用(P6 契约)。interest_cap 4→息线 40。"""
+    import dataclasses
+    reg2 = dataclasses.replace(_REG, interest_cap=4)
+    # 息线随注入移动:gold 45 → 默认(50)不排程/零预算;注入(40)排程
+    st1 = _state(gold=45, level=5, r=5)
+    sess = StrategySession()
+    assert not schedule_upgrade(st1, sess, _REG)
+    assert schedule_upgrade(st1, sess, reg2)
+    assert refresh_ev_budget(st1, sess, reg2) > refresh_ev_budget(
+        st1, sess, _REG)   # 息线下移 → 排程开+溢余面变化,预算随之
+    # gold 62:默认 R*=50+lc5=66 → 零预算;注入 R*=40+lc5=56 → 正预算
+    st2 = _state(gold=62, level=5, r=5)
+    assert reserve_cap(st2, sess, reg2) < reserve_cap(st2, sess, _REG)
+    assert refresh_ev_budget(st2, sess, _REG) == 0
+    assert refresh_ev_budget(st2, sess, reg2) > 0
+    # BudgetView 装配单源:传入 reg2 的 BudgetView == 逐字段显式注入值
+    from sr_od.application.currency_war.decision_v2.economy_cycle import (
+        obligation,
+    )
+    from sr_od.application.currency_war.decision_v2.prep_brain import _budget
+    bv = _budget(st2, sess, reg2)
+    assert bv.interest_floor == 40
+    assert bv.reserve_cap == reserve_cap(st2, sess, reg2)
+    assert bv.obligation == obligation(st2, sess, reg2)
+    assert bv.schedule == schedule_upgrade(st2, sess, reg2)
+    assert bv.ev_auth == refresh_ev_budget(st2, sess, reg2)
+
+
+def test_tracking_view_isolated_from_session_writers() -> None:
+    """隔离锁(W639 C 浅拷贝落码):TurnState 视图元素与 session.tracked_*
+    双向断开——视图侧变异不穿透 session,session 侧就地写端(shop 星级/
+    装备拼接、deploy_bench 装备覆盖的真实别名写者)不穿透视图;
+    equips 在视图侧固化为 tuple。"""
+    from sr_od.application.currency_war.cw_state import snapshot_copy
+    from sr_od.application.currency_war.decision_v2.prep_brain import (
+        _tracking_view,
+    )
+    from sr_od.application.currency_war.cw_chars import CHARACTERS
+
+    def _ch(name: str, slot: int) -> BenchChar:
+        fac = (CHARACTERS[name].factions or ('?',))[0]
+        return BenchChar(slot=slot, char_id=name, faction=fac, star=1,
+                         equips=['0'])
+
+    sess = StrategySession()
+    live_b = _ch('卡芙卡', 0)
+    live_d = _ch('姬子', 0)
+    sess.tracked_bench_chars = [live_b]
+    sess.tracked_deployed = [live_d]
+    # 直调 _tracking_view(snapshot 传空 fresh-read 兜底面)
+    from sr_od.application.currency_war.decision_v2.contracts import Snapshot
+    snap = Snapshot(plane=1, round_num=5)
+    bench, deployed = _tracking_view(sess, snap)
+    assert bench and deployed
+    # 视图侧变异 → session tracked 不受影响
+    bench[0].star = 99
+    bench[0].equips = ('x',)
+    deployed[0].equips = ('y',)
+    assert live_b.star == 1 and live_b.equips == ['0']
+    assert live_d.equips == ['0']
+    # session 侧就地写(真实别名写者形态:shop 星级/装备拼接、deploy 覆盖)
+    live_b.star = 3
+    live_b.equips = live_b.equips + ['1']
+    live_d.equips = ['2']
+    assert bench[0].star == 99 and tuple(bench[0].equips) == ('x',)
+    assert tuple(deployed[0].equips) == ('y',)
+    # snapshot_copy 自身:equips 固化 tuple
+    cp = snapshot_copy(live_b)
+    assert isinstance(cp.equips, tuple) and tuple(cp.equips) == ('0', '1')
+    assert cp is not live_b
+
+
 def test_pair_drought_resets_when_member_visible() -> None:
     """成员再现(在店/到手)→ 断供计数清零(计数语义同 LineTrack
     frozen_rounds:窗口重开即清零)。"""
