@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from sr_od.application.currency_war.telemetry import ledger_hooks, query, recorder
+from sr_od.application.currency_war.sim import ledger_hooks
+from sr_od.application.currency_war.telemetry import state
+from sr_od.application.currency_war.telemetry import query, recorder
 
 
 
@@ -40,7 +42,7 @@ def test_strategy_round_live_with_cache(tmp_path, monkeypatch) -> None:
     """mtime 缓存:写入后重查可见;不同 run 互不串。"""
     rec = recorder.TelemetryRecorder(
         replay_dir=tmp_path, enabled=True)
-    monkeypatch.setattr(cw_telemetry, '_RECORDER', rec)
+    monkeypatch.setattr(state, '_RECORDER', rec)
     query._STRATEGY_LIVE_CACHE.clear()
     f = tmp_path / 'decisions.jsonl'
     _write_rows(f, [
@@ -91,7 +93,7 @@ def test_run_checks_reports_dead_run(tmp_path, monkeypatch) -> None:
     """run_checks_on_replay 对失活局出「[策略失活]」行(不被判栈跳过)。"""
     rec = recorder.TelemetryRecorder(
         replay_dir=tmp_path, enabled=True)
-    monkeypatch.setattr(cw_telemetry, '_RECORDER', rec)
+    monkeypatch.setattr(state, '_RECORDER', rec)
     _write_rows(tmp_path / 'decisions.jsonl', [
         {'run_id': 'dead1', 'plane': 1, 'round_num': rn, 'strategy_id': '',
          'actions': [{'__type__': 'EnsureShopClosed'}]}
@@ -102,3 +104,5 @@ def test_run_checks_reports_dead_run(tmp_path, monkeypatch) -> None:
     ])
     lines = ledger_hooks.run_checks_on_replay(tmp_path, recent=5)
     assert any('[策略失活]' in x and 'dead1' in x for x in lines), lines
+
+

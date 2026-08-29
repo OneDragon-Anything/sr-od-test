@@ -33,6 +33,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     StartBattle,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+
 from sr_od.application.currency_war.prep_director import PrepDirector
 
 if True:

@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim import cw_sim_checks as chk
+from sr_od.application.currency_war.sim.checks import ledger as _led, segments as _seg
+from sr_od.application.currency_war.sim.checks import runner as _rn
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.candidates import (
@@ -82,7 +83,7 @@ def test_levelup_driven_break_not_flagged() -> None:
                        {'buys': {}, 'levelup': 32, 'refresh': 0,
                         'sell_income': 0},
                        [{'__type__': 'LevelUp', 'cost': 4, 'auth': ''}])]
-    assert chk.seg_check_break_interest_exception(rows) == []
+    assert _seg.seg_check_break_interest_exception(rows) == []
 
 
 def test_refresh_driven_break_not_flagged() -> None:
@@ -91,7 +92,7 @@ def test_refresh_driven_break_not_flagged() -> None:
                        {'buys': {}, 'levelup': 0, 'refresh': 6,
                         'sell_income': 0},
                        [{'__type__': 'RefreshShop', 'cost': 2}] * 3)]
-    assert chk.seg_check_break_interest_exception(rows) == []
+    assert _seg.seg_check_break_interest_exception(rows) == []
 
 
 def test_unexplained_buy_break_still_flagged_with_breakdown() -> None:
@@ -104,7 +105,7 @@ def test_unexplained_buy_break_still_flagged_with_breakdown() -> None:
                          'card': {'name': '某件', 'cost': 20,
                                   'faction': '仙舟罗浮'},
                          'reason': 'engine', 'channel': 'engine'}])]
-    ev = chk.seg_check_break_interest_exception(rows)
+    ev = _seg.seg_check_break_interest_exception(rows)
     assert len(ev) == 1
     assert ev[0]['spend_breakdown'] == {'levelup': 0, 'refresh': 0,
                                         'buys': {'engine': 20}}
@@ -133,7 +134,7 @@ def test_refresh_roll_cap_discloses_ordinary_over_cap() -> None:
     """普通车道 7 刷/轮 > REFRESH_ROLL_CAP(6)→ 披露 frames_over_cap
     (变异注入形态:7 连刷此前零检查命中;披露型不作归零锁——逐段
     重决策语义下账本轮级不可判,语义见检查 docstring)。"""
-    rep = chk.check_refresh_roll_cap_frame([_refresh_rows([(6, 7)])])
+    rep = _led.check_refresh_roll_cap_frame([_refresh_rows([(6, 7)])])
     assert rep['violations'] == 0
     assert rep['frames_over_cap'] == 1
     assert rep['max_ordinary_per_round'] == 7
@@ -142,7 +143,7 @@ def test_refresh_roll_cap_discloses_ordinary_over_cap() -> None:
 def test_refresh_roll_cap_deducts_directed_lane() -> None:
     """6 普通刷新 + 2 定向 = 8/轮 不计越帽:定向车道有自身授权面
     (per_round 上限),不得计入普通车道帽。"""
-    rep = chk.check_refresh_roll_cap_frame(
+    rep = _led.check_refresh_roll_cap_frame(
         [_refresh_rows([(8, 8)], [2])])
     assert rep['frames_over_cap'] == 0
     assert rep['max_ordinary_per_round'] == 6
@@ -151,18 +152,18 @@ def test_refresh_roll_cap_deducts_directed_lane() -> None:
 def test_directed_refresh_game_cap_lock() -> None:
     """定向车道全局 7 次 > 局帽 6(directed_refresh_game_cap)→ 违规;
     帽内(≤6)恒绿。"""
-    assert len(chk.check_directed_refresh_game_cap(
+    assert len(_led.check_directed_refresh_game_cap(
         _refresh_rows([(7, 2), (8, 2), (9, 1), (5, 2)], [2, 2, 1, 2]))) == 1
-    assert chk.check_directed_refresh_game_cap(
+    assert _led.check_directed_refresh_game_cap(
         _refresh_rows([(8, 2), (9, 2)], [2, 2])) == []
 
 
 def test_refresh_cap_checks_wired() -> None:
     """两检查项接线到位:硬锁在批检查表(run_checks_on_ledgers 自动
     扫),披露项在批级聚合入口(遗漏接线 = 检查静默失明)。"""
-    assert 'directed_refresh_game_cap_lock' in chk._BATCH_CHECKS
+    assert 'directed_refresh_game_cap_lock' in _rn._BATCH_CHECKS
     # 批级披露经 run_batch_level_checks 汇出(以注册名为键)
-    rep = chk.run_batch_level_checks(
+    rep = _rn.run_batch_level_checks(
         [[{'plane': 1, 'round_num': 1, 'gold': 40, 'hp': 80,
            'sim': {'node': 'encounter', 'dir_refreshes': 0,
                    'spend': {'buys': {}, 'levelup': 0, 'refresh': 0,
@@ -183,4 +184,9 @@ def test_default_simulate_strategy_uses_sim_registry() -> None:
     )
     strat = DecisionV2Strategy(registry=cw_sim.sim_decision_registry())
     assert strat.registry.level_max == cw_sim.LEVEL_CAP
+
+
+
+
+
 

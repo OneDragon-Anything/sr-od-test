@@ -90,6 +90,7 @@ def test_record_row_empty_without_extra(tmp_path) -> None:
 def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
     """P1 活路径步进行:session.v3_intention 配方对 → record extra。"""
 
+
     from sr_od.application.currency_war.prep_director import PrepDirector
 
     captured: dict = {}
@@ -114,6 +115,7 @@ def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
 
 def test_director_record_step_empty_pair_without_intention(monkeypatch) -> None:
     """session 无意向状态机(v3_intention=None)→ extra 空串。"""
+
 
     from sr_od.application.currency_war.prep_director import PrepDirector
 

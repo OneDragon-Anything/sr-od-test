@@ -17,11 +17,8 @@ import pytest
 import sr_od.application.currency_war.prep_director as pd
 from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 from sr_od.application.currency_war.obs.cw_shop_obs import RefreshExpect
-from sr_od.application.currency_war.prep_director import (
-    PrepDirector,
-    build_refresh_expect,
-    refresh_reconcile_mismatches,
-)
+
+from sr_od.application.currency_war.prep_director import PrepDirector, build_refresh_expect, refresh_reconcile_mismatches
 
 # ===== 接线源码锁(形态先例=W547 inspect.getsource 静态锁) =====
 

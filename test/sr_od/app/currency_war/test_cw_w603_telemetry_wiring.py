@@ -69,7 +69,8 @@ def test_decision_row_carries_disclosure_keys(tmp_path: Path, monkeypatch) -> No
     「末窗降格触发出现」从此有遥测门,不再依赖 session 披露键落盘)。
     """
     _setup_recorder(monkeypatch, tmp_path)
-    from sr_od.application.currency_war.prep_director import XpLedger
+
+    from sr_od.application.currency_war.kernel.cw_prep_expect import XpLedger
     monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF',
                         [_fake_match((2, 1), XpLedger(level=3, xp_cur=4,
                                                       xp_next=8, anchored=True))])

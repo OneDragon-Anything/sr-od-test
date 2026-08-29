@@ -23,10 +23,8 @@ from sr_od.application.currency_war.obs.cw_shop_obs import (
     MergePreviewCompareRow,
     compare_merge_preview,
 )
-from sr_od.application.currency_war.prep_director import (
-    PrepDirector,
-    _merge_preview_inputs,
-)
+
+from sr_od.application.currency_war.prep_director import PrepDirector, _merge_preview_inputs
 
 # ===== 接线源码锁(形态先例=W564 inspect.getsource 静态锁) =====
 

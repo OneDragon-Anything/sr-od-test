@@ -16,6 +16,7 @@ from sr_od.application.currency_war.obs.cw_faction_obs import (
     parse_panel_tokens,
     read_displayed_factions,
 )
+
 from sr_od.application.currency_war.prep_director import PrepDirector
 from test.conftest import SrTestContext
 

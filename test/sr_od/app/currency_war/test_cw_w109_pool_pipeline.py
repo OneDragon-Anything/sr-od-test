@@ -15,10 +15,11 @@ from pathlib import Path
 import pytest
 
 from sr_od.application.currency_war.sim import cw_delta_pool_gen
-from sr_od.application.currency_war.sim import cw_sim_checks
+from sr_od.application.currency_war.sim.checks import pool as cw_sim_checks
 
 from sr_od.application.currency_war.sim.pool import pool_fingerprint
-from sr_od.application.currency_war.telemetry import ledger_hooks, state
+from sr_od.application.currency_war.sim import ledger_hooks
+from sr_od.application.currency_war.telemetry import state
 
 
 def _fixture_replay(root: Path, run_id: str, *, r2_node: str = '普通战斗') -> None:
@@ -187,3 +188,5 @@ def test_record_run_summary_wires_hook(
     assert calls == ['regen']
     # 内存累积已清(防跨 run 泄漏语义保持)
     assert 'run_20990101_000009' not in rec._comms
+
+
