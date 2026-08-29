@@ -6,7 +6,7 @@
 **起因**:实跑 DOT 队 P1 输 —— 艾丝妲/椒丘等持续伤害流派角色 ``card.faction``=银河学者/空(= ``Character.factions[0]``,只阵营)∉ DOT.factions([持续伤害(流派), 星核猎手(阵营)])→ commit 后被 prefilter 跳过 → 凑不出 2DOT 过渡。DOT 队为流派主派典型。
 """
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.cw_evaluate import _card_hits_target
+from sr_od.application.currency_war.strategy_v1.cw_evaluate import _card_hits_target
 from sr_od.application.currency_war.kernel.cw_economy import _char_synergies
 
 
@@ -54,7 +54,7 @@ def test_card_hits_target_unidentified_faction_fallback() -> None:
 # ===== ADR-0152 M25 修正:flex 买牌配对纪律(_card_supports_target) =====
 def test_card_supports_target_pair_discipline() -> None:
     """flex 单张散买 = off-target(M25 实证 8 阵营各 1 spread);成对深化 + 枢纽单买放行。"""
-    from sr_od.application.currency_war.cw_plan import _card_supports_target
+    from sr_od.application.currency_war.strategy_v1.cw_plan import _card_supports_target
     from sr_od.application.currency_war.kernel.cw_state import GameState
 
     lt = get_comp("列车同行")
@@ -75,7 +75,7 @@ def test_card_supports_target_pair_discipline() -> None:
 # ===== ADR-0149 凑牌节奏(P1 骨架驱动买 + 无损窗口 + 兜底) =====
 def test_skeleton_buy_ok_three_categories() -> None:
     """骨架合法买三类:枢纽池单买 / 骨架羁绊配对 / 通用填充件;散买骨架单张拒。"""
-    from sr_od.application.currency_war.cw_plan import _skeleton_buy_ok
+    from sr_od.application.currency_war.strategy_v1.cw_plan import _skeleton_buy_ok
     from sr_od.application.currency_war.kernel.cw_state import GameState
 
     empty = GameState()
@@ -103,7 +103,7 @@ def test_plan_no_loss_window_skeleton_fallback_buy() -> None:
     import random as _random
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.cw_plan import plan
+    from sr_od.application.currency_war.strategy_v1.cw_plan import plan
     from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 
     cfg = SimpleNamespace(

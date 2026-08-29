@@ -1,10 +1,10 @@
 """cw_progress_curves(p(t) 编译器)测试 + 审判层端到端(ADR-0171 供给)。"""
-from sr_od.application.currency_war.cw_line_tribunal import (
+from sr_od.application.currency_war.strategy_v1.cw_line_tribunal import (
     LineHypothesis,
     timeline_lag_lr,
     verdict,
 )
-from sr_od.application.currency_war.cw_progress_curves import (
+from sr_od.application.currency_war.strategy_v1.cw_progress_curves import (
     dominant_tempo,
     expected_curve,
     expected_curve_for_carry,

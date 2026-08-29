@@ -51,7 +51,7 @@ def test_b_hoard_excludes_drop():
 
 def test_c_quantum_deploy_window():
     """审计C:_should_deploy 框架白名单含量子(希儿双轨期可上场)。"""
-    from sr_od.application.currency_war.cw_plan import _should_deploy
+    from sr_od.application.currency_war.strategy_v1.cw_plan import _should_deploy
     from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
     st = GameState(round_num=4, plane=1, dual_track_phase=True, level=4)
     st.deployed = []
@@ -63,7 +63,7 @@ def test_c_quantum_deploy_window():
 def test_d_no_double_count_main_faction():
     """审计D:bench 单件主阵营恰计 1(不双计)。"""
     from sr_od.application.currency_war.kernel.cw_economy import _char_synergies
-    from sr_od.application.currency_war.cw_plan import _bench_faction_counts
+    from sr_od.application.currency_war.strategy_v1.cw_plan import _bench_faction_counts
     from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
     st = GameState()
     st.bench = [BenchChar(slot=1, char_id='藿藿', faction='仙舟', star=1, position_pref='back')]

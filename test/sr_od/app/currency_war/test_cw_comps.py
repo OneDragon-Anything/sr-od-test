@@ -713,7 +713,7 @@ def test_maybe_pivot_defining_augment_unlocks_commit() -> None:
 
 def test_card_hits_target_two_tier_flex() -> None:
     """评审🔴1:flex 两档:严格(卖出/换血)只认核心;宽松(买牌/deploy)含 flex。"""
-    from sr_od.application.currency_war.cw_evaluate import _card_hits_target
+    from sr_od.application.currency_war.strategy_v1.cw_evaluate import _card_hits_target
     lt = get_comp("列车同行")
     # 大丽花(盛会之星=列车 flex):宽松 True(可买可上),严格 False(可被 core 替换)
     assert _card_hits_target("大丽花", "盛会之星", lt, include_flex=True) is True

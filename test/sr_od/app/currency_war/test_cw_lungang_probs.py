@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[5] / 'src'))
 
-from sr_od.application.currency_war.cw_plan import _sample_cost
+from sr_od.application.currency_war.strategy_v1.cw_plan import _sample_cost
 from sr_od.application.currency_war.data.cw_shop_odds import (
     REFRESH_PROB,
     boosted_cost_tier,

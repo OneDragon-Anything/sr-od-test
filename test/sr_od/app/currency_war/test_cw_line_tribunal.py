@@ -1,7 +1,7 @@
 """cw_line_tribunal(20 号战略假设审判层 v0)测试:LR/门限定价/三态/防拖延(ADR-0171)。"""
 import pytest
 
-from sr_od.application.currency_war.cw_line_tribunal import (
+from sr_od.application.currency_war.strategy_v1.cw_line_tribunal import (
     HypothesisRegistry,
     LineHypothesis,
     decision_threshold,

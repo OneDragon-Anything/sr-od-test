@@ -465,7 +465,7 @@ def test_sell_for_interest_skip_list_contract(monkeypatch) -> None:
     """v1 动作消费者跳卖契约保留:allin 档不卖息凑档;adaptive 档同帧照卖
     (对照证明跳过来自档位而非别的门)。'release' 档映射已删(预留档位
     无生产者;活栈消费门=⑨ 锁B)。"""
-    from sr_od.application.currency_war import cw_plan
+    from sr_od.application.currency_war.strategy_v1 import cw_plan
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     st = _state(gold=18, deployed_n=0, bench_n=1)
     _name, _ch = next((n, c) for n, c in CHARACTERS.items() if c.cost == 2)
@@ -522,7 +522,7 @@ def test_fallback_node_goal_budget_none() -> None:
 
 def test_plan_merges_dp_budget_into_refresh_cap(monkeypatch) -> None:
     """三方合并消费侧(许可取交):DP 预算 1 < _refresh_cap 2 → 合并后 1。"""
-    from sr_od.application.currency_war import cw_plan
+    from sr_od.application.currency_war.strategy_v1 import cw_plan
     monkeypatch.setattr(cw_plan, 'get_node_goal',
                         lambda *a, **k: NodeGoal(6, 'adaptive',
                                                  refresh_budget=1))

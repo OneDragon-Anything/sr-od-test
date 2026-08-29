@@ -21,7 +21,7 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     get_node_goal,
     xp_click_cost,
 )
-from sr_od.application.currency_war.cw_evaluate import (
+from sr_od.application.currency_war.strategy_v1.cw_evaluate import (
     MAX_REFRESH_PER_ROUND,
     OPTIONALITY_WEIGHT,
     TARGET_PROGRESS_WEIGHT,
@@ -46,7 +46,7 @@ from sr_od.application.currency_war.kernel.cw_events import (
     decide_event,
     decide_supply,
 )
-from sr_od.application.currency_war.cw_plan import (
+from sr_od.application.currency_war.strategy_v1.cw_plan import (
     REINFORCE_BONUS,
     SPREAD_PENALTY,
     _bench_faction_counts,
@@ -635,7 +635,7 @@ def test_refresh_cap_streak_marginal_account() -> None:
     """连胜刷新门(用户口述,连胜不对称语义见 ADR-0128):连胜 ≥STREAK_REFRESH_MIN(3)→ cap 放宽
     (连胜是正向收入流,刷保=买收入);2 连 → 不放(档金真值未核,保守等自然滚);
     连败 → 不放(落回少刷攒息 §7-2)。⚠️ 精确边际账待结算屏档金真值(见 _refresh_cap 注释)。"""
-    from sr_od.application.currency_war.cw_evaluate import _refresh_cap
+    from sr_od.application.currency_war.strategy_v1.cw_evaluate import _refresh_cap
 
     def _st(streak: int) -> GameState:
         return GameState(plane=1, round_num=4, level=5, hp=80, streak=streak,
@@ -654,7 +654,7 @@ def test_refresh_cap_reward_node_guards_off() -> None:
     「奖励节点守卫」):奖励节点无战斗 → 战斗向放宽门
     全关 —— 锁血急救(无血可扣)+ 连胜维持(连胜白拿,刷新保连胜=烧金);非战斗向门
     (comp 停留 roll,为下轮搜卡)照常。"""
-    from sr_od.application.currency_war.cw_evaluate import _refresh_cap
+    from sr_od.application.currency_war.strategy_v1.cw_evaluate import _refresh_cap
 
     # hp 危险 + 连胜 5 双放宽条件齐,但节点=奖励 → 全关,回基线
     st_reward = GameState(plane=1, round_num=8, level=5, hp=5, streak=5,

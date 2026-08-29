@@ -13,7 +13,7 @@ import sr_od.application.currency_war.kernel.cw_prep_actions as pv
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import prep_actions as pa_mod
 from sr_od.application.currency_war import prep_director as pd_mod
-from sr_od.application.currency_war.cw_evaluate import _card_hits_target
+from sr_od.application.currency_war.strategy_v1.cw_evaluate import _card_hits_target
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
@@ -216,7 +216,7 @@ def test_chain_c3in1_protection_none_sellable() -> None:
 
 def test_weakest_bench_idx_protects_triplicates() -> None:
     """_weakest_bench_idx 3合1 保护(直测):同名同星 2 张保护,只返回散件。"""
-    from sr_od.application.currency_war import cw_plan
+    from sr_od.application.currency_war.strategy_v1 import cw_plan
 
     bench = [_bc(1, '飞霄'), _bc(2, '飞霄'), _bc(3, '散件')]
     st = GameState(bench=bench)
@@ -277,7 +277,7 @@ def test_m6_gate_chain_c_sells_weakest_when_no_gold() -> None:
 
 def test_level_up_gate() -> None:
     """level_up_gate:level<10 + gold≥cost + (goal 说升/落后 node goal)。"""
-    from sr_od.application.currency_war import cw_plan
+    from sr_od.application.currency_war.strategy_v1 import cw_plan
 
     # level 10 封顶
     assert not cw_plan.level_up_gate(GameState(level=10, gold=999))
@@ -582,7 +582,7 @@ def test_brake_inactive_when_running(test_context: SrTestContext, monkeypatch) -
 
 def test_weakest_bench_protects_same_star_only() -> None:
     """L-5 回归:3合1 保护按 (char_id, star) —— 同名不同星不保护。"""
-    from sr_od.application.currency_war import cw_plan
+    from sr_od.application.currency_war.strategy_v1 import cw_plan
 
     bench2 = [_bc(1, '飞霄', star=1), _bc(2, '飞霄', star=1), _bc(3, '散件', star=1)]
     assert cw_plan._weakest_bench_idx(GameState(bench=bench2), []) == 2

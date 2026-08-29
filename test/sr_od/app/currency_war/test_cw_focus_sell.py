@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_plan import _sell_offline_for_focus  # noqa: E402
+from sr_od.application.currency_war.strategy_v1.cw_plan import _sell_offline_for_focus  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, SellBench  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_comps import get_comp  # noqa: E402
 

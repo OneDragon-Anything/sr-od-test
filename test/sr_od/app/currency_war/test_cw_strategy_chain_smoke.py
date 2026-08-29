@@ -9,7 +9,7 @@ buy op retry 4 次失败 → 0 买出战。三个局的「钱变不成板」都�
 (default 栈退役批重写:v2 决策链冒烟——decide_prep 全链真调用四层
 候选→过滤→评分→仲裁;v1 plan/攒息门冒烟随本体退役。)
 """
-from sr_od.application.currency_war import cw_evaluate, cw_plan
+from sr_od.application.currency_war.strategy_v1 import cw_evaluate, cw_plan
 from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel import cw_comps, cw_economy, cw_plane_table
 from sr_od.application.currency_war.kernel.cw_state import GameState

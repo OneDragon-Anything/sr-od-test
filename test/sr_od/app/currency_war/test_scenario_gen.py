@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.cw_plan import _should_deploy, deploy_legal
+from sr_od.application.currency_war.strategy_v1.cw_plan import _should_deploy, deploy_legal
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORKS,
@@ -90,7 +90,7 @@ def test_inv_same_name_never_deploys_twice(fw):
 def test_inv_interest_tier_never_drops(gold, cost):
     """买入后息档不降(除非刻意跨档——压缩语义允许金够高时;此处锁
     _compress_release 的保息门行为)。"""
-    from sr_od.application.currency_war.cw_plan import _compress_release
+    from sr_od.application.currency_war.strategy_v1.cw_plan import _compress_release
     ok = _compress_release(cost, gold, set())
     if ok:
         assert (gold - cost) // 10 == gold // 10, \

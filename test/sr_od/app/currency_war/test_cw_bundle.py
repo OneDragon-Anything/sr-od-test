@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.cw_bundle import bundle_select
+from sr_od.application.currency_war.strategy_v1.cw_bundle import bundle_select
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 
 
@@ -52,7 +52,7 @@ def test_same_name_pair_beats_singles():
 
 def test_breakpoint_crossing_visible_in_bonus():
     """断点跳变交互项:买前 1 张列车 → 买 2 张跨 tier2,bonus > 0(单元级)。"""
-    from sr_od.application.currency_war.cw_bundle import _interaction_bonus
+    from sr_od.application.currency_war.strategy_v1.cw_bundle import _interaction_bonus
     from sr_od.application.currency_war.kernel.cw_comps import get_comp
     tgt = get_comp('列车同行')
     bench = [BenchChar(slot=1, char_id='三月七', faction='列车同行')]
@@ -64,7 +64,7 @@ def test_breakpoint_crossing_visible_in_bonus():
 
 def test_seam_flag_default_off():
     """影子开关默认关(现状贪心生效;ADR-0156 灰度)。"""
-    from sr_od.application.currency_war import cw_bundle
+    from sr_od.application.currency_war.strategy_v1 import cw_bundle
     assert cw_bundle.BUNDLE_SEAM_ACTIVE is False
 
 

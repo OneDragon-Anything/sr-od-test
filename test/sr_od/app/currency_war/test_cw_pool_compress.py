@@ -6,7 +6,7 @@ _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
 from sr_od.application.currency_war.kernel.cw_comps import get_comp  # noqa: E402
-from sr_od.application.currency_war.cw_plan import _hunt_tier_set  # noqa: E402
+from sr_od.application.currency_war.strategy_v1.cw_plan import _hunt_tier_set  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState  # noqa: E402
 
 
@@ -59,7 +59,7 @@ def test_two_1star_copies_still_hunted() -> None:
 def test_equiv_copies_one_2star_equals_three() -> None:
     """等价折算量纲:1张2★(=3 张 1★ 等价)= 恰到 2★ → ①分支不再追(③的 3★
     机会追猎仍会加回同费,故断言用「①语义」:等价副本数 ≥3 不走缺 2★ 分支)。"""
-    from sr_od.application.currency_war.cw_plan import _hunt_tier_set as hunt
+    from sr_od.application.currency_war.strategy_v1.cw_plan import _hunt_tier_set as hunt
     # 3 张 1★ 等价(用 1张2★ 表达同一等价量)→ 不走①;板上 2★ 触发③ → 同费仍在集
     st = GameState(deployed=[BenchChar(slot=1, char_id='希儿', faction='量子同频', star=2)])
     tiers = hunt(st, (get_comp('希儿量子'), None))
@@ -74,7 +74,7 @@ def test_compress_release_tiers() -> None:
     """压缩放行**统一保息门**(r64 review P1 修:1 费「净0」只对买卖往返成立,持有跨
     轮末在金=10 边界损 1 金息 —— 用户「保息前提下多买」统一适用):1/2 费+追猎费级
     都要求买后利息档不降;3 费非追猎恒拒。"""
-    from sr_od.application.currency_war.cw_plan import _compress_release as rel
+    from sr_od.application.currency_war.strategy_v1.cw_plan import _compress_release as rel
     # 1 费:同守息门(r64 修,旧「恒放行」在边界损息)
     assert rel(1, 11, set()) is True       # 11→10 同 1 档
     assert rel(1, 10, set()) is False      # 10→9 降 1→0 档 = 损息 → 拒
@@ -96,7 +96,7 @@ def test_compress_tail_sweep_dualtrack_buys_cheap() -> None:
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.data.cw_chars import get_char
-    from sr_od.application.currency_war.cw_plan import plan
+    from sr_od.application.currency_war.strategy_v1.cw_plan import plan
     from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 
     def _shop() -> list[ShopCard]:

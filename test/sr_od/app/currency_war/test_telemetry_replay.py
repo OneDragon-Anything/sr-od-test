@@ -21,7 +21,7 @@ import pytest
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.cw_plan import _should_deploy, deploy_legal
+from sr_od.application.currency_war.strategy_v1.cw_plan import _should_deploy, deploy_legal
 from sr_od.application.currency_war.kernel.cw_recipe import decision_target
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
