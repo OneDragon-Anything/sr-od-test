@@ -106,21 +106,22 @@ def _weak_on_xianzhou(registry=None) -> tuple[IntentionState, StrategySession]:
 
 
 def test_w379_g1_gate_blocks_line_switch_in_v2() -> None:
-    """门开 + 低血(投影存活不足)→ 替代线锁定被拦:保持 weak、
-    locked_comp 空、last_event 记 gate_hold;同线对再拦只累加计数
-    (register_gate_block 消费侧约定=default 栈同款)。"""
+    """门开 + 低血(投影存活不足)→ 替代线锁定被门拦。
+
+    改判(v3 R-A 门感知滞回闩;本锁语义两次演进:W665 v2 曾改 N=2
+    计数回锁,被 W683 实锤周期-3 极限环后废弃;v3 终态 = 首次拦截帧
+    即置闩 + 一次性回锁原线,轨迹锁见 test_cw_line_gate_relock)。
+    本锁钉:被拦帧拦截位/反事实位记账 + 线对拦截计数 + 回锁原线。
+    """
     ist, _ = _weak_on_xianzhou(_REG_GATE)
     sess = _sess()
     sw = _state(env='列车同行概念股', hp=20)
     out = update_intention(sw, ist, sess, registry=_REG_GATE)
-    assert out.phase == 'weak' and out.locked_comp == ''
-    assert out.last_event.startswith('gate_hold:')
+    assert out.phase == 'locked' and out.locked_comp == '希儿量子'
+    assert out.last_event == 'gate_relock:希儿量子'
     assert sess.line_switch_block_counts == {('希儿量子', '列车同行'): 1}
-    # 同帧态再驱动:同线对第二次拦截只累加计数(不重复发日志的计数源)
-    out2 = update_intention(_state(env='列车同行概念股', hp=20),
-                            out, sess, registry=_REG_GATE)
-    assert out2.phase == 'weak' and out2.locked_comp == ''
-    assert sess.line_switch_block_counts == {('希儿量子', '列车同行'): 2}
+    assert sess.v3_line_gate_blocked is True
+    assert sess.v3_line_gate_cf_blocked is True   # on 臂=门判定本身
 
 
 # --- G2 零漂移锁:开关关(缺省 registry)同帧照旧落锁 --------------------------
@@ -189,4 +190,7 @@ def test_w379_g5_strategy_threads_injected_registry(monkeypatch) -> None:
     strat.update_target(_state(env='列车同行概念股', hp=20), sess,
                         SimpleNamespace())
     assert captured.get('registry') is _REG_GATE
-    assert ist.phase == 'weak' and ist.locked_comp == ''
+    # 改判(v3 R-A):门拦首帧即置闩+一次性回锁原线(原断言「保持 weak」
+    # 是 v2 修复前语义,已被闩取代)
+    assert ist.phase == 'locked' and ist.locked_comp == '希儿量子'
+    assert ist.last_event == 'gate_relock:希儿量子'
