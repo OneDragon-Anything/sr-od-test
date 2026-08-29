@@ -102,7 +102,7 @@ def test_analyze_maps_ocr_results() -> None:
     ctx.controller = controller
     ctx.ocr_service.get_ocr_result_list.return_value = [r1, r2]
     backend = SrBackendContext(ctx)
-    result = backend.analyze()
+    result = backend.analyze(include_ocr=True)
     assert result.success is True
     assert [t.text for t in result.ocr_texts] == ["体力", "设定"]
     assert result.ocr_texts[0].width == 3
@@ -342,7 +342,11 @@ def test_analyze_save_image_capture_fails_no_path() -> None:
 
 
 def test_analyze_save_image_then_ocr_fail_returns_path(monkeypatch) -> None:
-    """存盘成功但后续 OCR 异常 → success=False, screenshot_path 仍回传(排障)。"""
+    """存盘成功但后续 OCR 异常 → success=False, screenshot_path 仍回传(排障)。
+
+    include_ocr=True 才走散落 OCR 回传(include_ocr=False 时散落 OCR 不回传,
+    OCR 异常只可能来自画面匹配链路,同样兜底为 success=False)。
+    """
     import numpy as np
     import sr_od.backend.backend_context as bc
 
@@ -355,10 +359,29 @@ def test_analyze_save_image_then_ocr_fail_returns_path(monkeypatch) -> None:
     ctx.controller = controller
     ctx.ocr_service.get_ocr_result_list.side_effect = RuntimeError('ocr boom')
     backend = SrBackendContext(ctx)
-    result = backend.analyze(save_image=True)
+    result = backend.analyze(save_image=True, include_ocr=True)
     assert result.success is False
     assert result.screenshot_path == '/tmp/fake.png'
     assert result.error is not None
+
+
+def test_analyze_include_ocr_default_off(monkeypatch) -> None:
+    """include_ocr=False(默认)→ 散落 OCR 不回传(ocr_texts 恒空)。"""
+    import numpy as np
+    import sr_od.backend.backend_context as bc
+
+    monkeypatch.setattr(bc, '_save_screenshot', lambda img: '/tmp/fake.png')
+    controller = MagicMock()
+    controller.is_game_window_ready = True
+    controller.get_screenshot.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.controller = controller
+    ctx.ocr_service.get_ocr_result_list.return_value = []
+    backend = SrBackendContext(ctx)
+    result = backend.analyze()
+    assert result.success is True
+    assert result.ocr_texts == []
 
 
 # ---------- analyze extras(画面额外识别器)----------

@@ -317,14 +317,14 @@ def test_input_text_tool_delegates() -> None:
 
 
 def test_analyze_screen_tool_passes_save_image() -> None:
-    """analyze_screen tool 应把 save_image 透传给 backend.analyze,并回带 screenshot_path。"""
+    """analyze_screen tool 应把 save_image/include_ocr 透传给 backend.analyze,并回带 screenshot_path。"""
     mcp, backend = _mcp_with_backend()
     backend.analyze.return_value = AnalyzeScreenResult(
         success=True, ocr_texts=[], error=None, screenshot_path='/tmp/x.png')
     tool = mcp._tool_manager._tools['analyze_screen']
     fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
     result = fn(save_image=True)
-    backend.analyze.assert_called_once_with(None, True)
+    backend.analyze.assert_called_once_with(None, True, False)
     assert result.screenshot_path == '/tmp/x.png'
 
 
