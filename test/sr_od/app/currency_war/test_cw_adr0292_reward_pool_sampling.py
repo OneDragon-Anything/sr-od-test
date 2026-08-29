@@ -12,11 +12,11 @@ import random
 from pathlib import Path
 
 from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.data import cw_battle_tables as tables
 from sr_od.application.currency_war.cw_sim_checks import (
     REWARD_POOL_TRUTH_MEAN,
     check_reward_delta_pool_bucket_lock,
 )
+from sr_od.application.currency_war.data import cw_battle_tables as tables
 
 
 def _reward_snap(tmp_path: Path, reward_buckets: dict) -> Path:

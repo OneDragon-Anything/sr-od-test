@@ -257,7 +257,14 @@ def test_w536_wiring_locks():
     strat_src = Path(
         'src/sr_od/application/currency_war/cw_strategy.py'
     ).read_text(encoding='utf-8')
-    assert 'pending_buy_expect: BuyExpect | None = None' in strat_src
+    assert 'pending_buy_expect: BuyExpect | None = None' not in strat_src, (
+        '期 0b 锁改判:字段声明已迁 kernel/cw_strategy_session,'
+        'cw_strategy 不得残留旧声明(动态属性回流防线)')
+    # 期 0b 锁改判(N7):StrategySession 下沉 kernel/cw_strategy_session,注解改字符串(app 桶类型不进 kernel import 面)
+    import inspect
+
+    from sr_od.application.currency_war.kernel import cw_strategy_session as _ss_mod
+    assert 'pending_buy_expect: ' + chr(39) + 'BuyExpect | None' + chr(39) + ' = None' in inspect.getsource(_ss_mod)
     compute_body = dir_src[dir_src.index('def compute_buy_expect'):]
     compute_body = compute_body[:compute_body.index('\n\ndef ') + 1] \
         if '\n\ndef ' in compute_body else compute_body

@@ -151,8 +151,10 @@ def test_merge_star_depth_never_shallower() -> None:
     机制相反)。净星深=上场件 Σ(star−1):1★×3(键 0)→ 2★×1(键 1)
     ——键单调不减 ⇒ 桶 min(sd//3,5) 不变或更深 ⇒ sim 判升星后
     boss 期望伤害不升(同桶同值/深桶见池方向锁)。"""
-    from sr_od.application.currency_war.cw_sim import (
-        _DEPTH_BUCKET_W,
+    from sr_od.application.currency_war.data.cw_battle_tables import (
+        DEPTH_BUCKET_W as _DEPTH_BUCKET_W,
+    )
+    from sr_od.application.currency_war.kernel.cw_battle_calib import (
         deployed_star_depth,
     )
 

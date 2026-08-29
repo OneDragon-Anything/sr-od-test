@@ -43,11 +43,11 @@ from sr_od.application.currency_war.cw_win_model import (
 )
 from sr_od.application.currency_war.decision_v2 import discipline
 from sr_od.application.currency_war.decision_v2.candidates import _buy_tag
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
-)
 from sr_od.application.currency_war.decision_v2.scoring import (
     _shop_has_engine_card,
+)
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY,
 )
 
 # --- ① judge_factions 字段(三处重复消除的单一源) --------------------------
@@ -159,7 +159,7 @@ def test_transition_traits_derived_from_system_cards() -> None:
     assert set(TRANSITION_TRAITS) == {
         ('仙舟', 3), ('持续伤害', 2), ('列车同行', 2)}
     from sr_od.application.currency_war import cw_sim
-    assert cw_sim.__dict__.get('_TRANSITION_TRAITS') is None, 期0b锁改判_alias已删_单一源为cw_deploy_logic本体
+    assert cw_sim.__dict__.get('_TRANSITION_TRAITS') is None, ('期 0b 锁改判(N7):alias 已随聚合族下沉删除,单一源=cw_deploy_logic 本体')
 
 
 # --- ⑥ 顺手件:bond_fallback 门死条件清理(无行为变化) ---------------------

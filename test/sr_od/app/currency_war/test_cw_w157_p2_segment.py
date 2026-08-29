@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0362(W157)Δ池 plane 维键化 + sim P2 位面段锁(案 a 最小可用)。
 
 锁面:
@@ -19,6 +18,7 @@ import random
 from pathlib import Path
 
 from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.data import cw_battle_tables as _tables
 
 logging.disable(logging.CRITICAL)
 
@@ -146,7 +146,7 @@ def test_p2_battle_fallback_band() -> None:
             losses.append(d)
         else:                       # 胜(WIN_DELTAS ∈ {2,2,0,-4})
             wins += 1
-            assert d in cw_sim.WIN_DELTAS
+            assert d in _tables.WIN_DELTAS
     assert losses and all(-17 <= d <= -15 for d in losses)
     # 0.11 胜率:400 样本期望 ~44,二项带宽宽松断言
     assert 15 <= wins <= 90

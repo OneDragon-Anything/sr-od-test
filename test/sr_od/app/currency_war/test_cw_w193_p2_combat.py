@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0377(W193)P2 战斗存活层参数化校准族锁(案 a 结算层 + 案 b 臂)。
 
 锁面:
@@ -19,18 +18,16 @@ from __future__ import annotations
 
 import logging
 import random
-from pathlib import Path
 
 from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_sim import (
-    P2CombatCalib,
-    P2ReplayEntry,
-)
+from sr_od.application.currency_war.cw_sim import P2ReplayEntry
 from sr_od.application.currency_war.cw_sim_checks import (
     check_p2_loss_band_anchor,
     check_p2_win_rate_band,
 )
 from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
+from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
 
 logging.disable(logging.CRITICAL)
 
@@ -51,31 +48,31 @@ def test_p2_win_p_formula_and_clip() -> None:
     # form = engines(_settle_rung 口径)+ 0.25*(level-6);相对断言
     # (engines 绝对值由 tier 决定,formula 锁只锁折算项)
     for st in (_st(0, 6), _st(3, 6), _st(0, 8)):
-        expect = cw_sim._settle_rung(st) + 0.25 * (st.level - 6)
-        assert abs(cw_sim.p2_form_key(st, calib) - expect) < 1e-9
+        expect = _calib._settle_rung(st) + 0.25 * (st.level - 6)
+        assert abs(_calib.p2_form_key(st, calib) - expect) < 1e-9
     # 绝对锚:仙舟×3(达成仙舟体系,tier 3)→ engines=1,level 折算 0
-    assert abs(cw_sim.p2_form_key(_st(3, 6), calib) - 1.0) < 1e-9
+    assert abs(_calib.p2_form_key(_st(3, 6), calib) - 1.0) < 1e-9
     # r1 drift=0;β 正向(form 1 → +0.04)
-    assert abs(cw_sim.p2_win_p(_st(3, 6), 'battle', 1, calib) - 0.15) < 1e-9
+    assert abs(_calib.p2_win_p(_st(3, 6), 'battle', 1, calib) - 0.15) < 1e-9
     # 漂移:r4 drift=3 → −0.06
-    assert abs(cw_sim.p2_win_p(_st(3, 6), 'battle', 4, calib) - 0.09) < 1e-9
+    assert abs(_calib.p2_win_p(_st(3, 6), 'battle', 4, calib) - 0.09) < 1e-9
     # clip 上界:β 大注入不越 0.5
     big = P2CombatCalib(beta=1.0)
-    assert cw_sim.p2_win_p(_st(3, 10), 'battle', 1, big) == big.win_p_clip[1]
+    assert _calib.p2_win_p(_st(3, 10), 'battle', 1, big) == big.win_p_clip[1]
     # clip 下界:γ 大注入不为负
     neg = P2CombatCalib(gamma=1.0)
-    assert cw_sim.p2_win_p(_st(0, 5), 'boss', 7, neg) == neg.win_p_clip[0]
+    assert _calib.p2_win_p(_st(0, 5), 'boss', 7, neg) == neg.win_p_clip[0]
 
 
 def test_p2_loss_band_routing() -> None:
     """分段带路由:battle r1/r2-r3/r4+ 分段;encounter/boss 独立带。"""
     c = P2CombatCalib()
-    assert cw_sim.p2_loss_band('battle', 1, c) == c.band_battle_r1
-    assert cw_sim.p2_loss_band('battle', 2, c) == c.band_battle_early
-    assert cw_sim.p2_loss_band('battle', 3, c) == c.band_battle_early
-    assert cw_sim.p2_loss_band('battle', 4, c) == c.band_battle_late
-    assert cw_sim.p2_loss_band('encounter', 5, c) == c.band_encounter
-    assert cw_sim.p2_loss_band('boss', 7, c) == c.band_boss
+    assert _calib.p2_loss_band('battle', 1, c) == c.band_battle_r1
+    assert _calib.p2_loss_band('battle', 2, c) == c.band_battle_early
+    assert _calib.p2_loss_band('battle', 3, c) == c.band_battle_early
+    assert _calib.p2_loss_band('battle', 4, c) == c.band_battle_late
+    assert _calib.p2_loss_band('encounter', 5, c) == c.band_encounter
+    assert _calib.p2_loss_band('boss', 7, c) == c.band_boss
 
 
 def test_p2_combat_delta_distribution() -> None:
@@ -109,7 +106,7 @@ def test_calibrated_settlement_in_sim() -> None:
     for row in combat:
         s = row['sim']
         assert s['p2_win_p'] is not None
-        lo, hi = cw_sim.p2_loss_band(s['node'], row['round_num'],
+        lo, hi = _calib.p2_loss_band(s['node'], row['round_num'],
                                      P2CombatCalib())
         assert s['delta'] == P2CombatCalib().win_delta \
             or -hi <= s['delta'] <= -lo

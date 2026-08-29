@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0401form 星级分量锁。
 
 锁面:
@@ -16,8 +15,10 @@ import dataclasses
 import logging
 
 from sr_od.application.currency_war import cw_sim
-from sr_od.application.currency_war.cw_sim import P2CombatCalib, P2ReplayEntry
+from sr_od.application.currency_war.cw_sim import P2ReplayEntry
 from sr_od.application.currency_war.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
+from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
 
 logging.disable(logging.CRITICAL)
 
@@ -38,19 +39,19 @@ def _st(stars: tuple[int, ...] = (), level: int = 6) -> GameState:
 def test_form_star_component_arithmetic() -> None:
     """form = engines + w·(lv−6) + ws·Σ(star−1):星级折算 + 全量口径。"""
     calib = P2CombatCalib()          # ws=0.5 默认
-    base = cw_sim.p2_form_key(_st(), calib)          # 全 1★ → star_depth=0
+    base = _calib.p2_form_key(_st(), calib)          # 全 1★ → star_depth=0
     # 一颗 2★:star_depth=1 → form +0.5
-    assert abs(cw_sim.p2_form_key(_st((2, 1, 1)), calib)
+    assert abs(_calib.p2_form_key(_st((2, 1, 1)), calib)
                - (base + 0.5)) < 1e-9
     # 一颗 3★:star_depth=2 → form +1.0(线性,3★ 对 2★ 仍有增量)
-    assert abs(cw_sim.p2_form_key(_st((3, 1, 1)), calib)
+    assert abs(_calib.p2_form_key(_st((3, 1, 1)), calib)
                - (base + 1.0)) < 1e-9
     # 两颗 2★:star_depth=2
-    assert abs(cw_sim.p2_form_key(_st((2, 2, 1)), calib)
+    assert abs(_calib.p2_form_key(_st((2, 2, 1)), calib)
                - (base + 1.0)) < 1e-9
     # win_p 通道:星级 ↑ → 胜率 ↑(因果通道存在的最小断言)
-    wp1 = cw_sim.p2_win_p(_st((1, 1, 1)), 'battle', 1, calib)
-    wp2 = cw_sim.p2_win_p(_st((2, 2, 1)), 'battle', 1, calib)
+    wp1 = _calib.p2_win_p(_st((1, 1, 1)), 'battle', 1, calib)
+    wp2 = _calib.p2_win_p(_st((2, 2, 1)), 'battle', 1, calib)
     assert wp2 > wp1
 
 
@@ -59,9 +60,9 @@ def test_form_star_weight_zero_returns_old_form() -> None:
     old = dataclasses.replace(P2CombatCalib(), form_star_weight=0.0)
     for stars in ((), (2, 1, 1), (3, 2, 2), (3, 3, 3)):
         st = _st(stars)
-        expect = cw_sim._settle_rung(st) + old.form_level_weight * (
+        expect = _calib._settle_rung(st) + old.form_level_weight * (
             st.level - old.form_level_base)
-        assert abs(cw_sim.p2_form_key(st, old) - expect) < 1e-9
+        assert abs(_calib.p2_form_key(st, old) - expect) < 1e-9
 
 
 # ---------- 校准带内(锚 R1 统计量,ADR-0377 同门) ----------
