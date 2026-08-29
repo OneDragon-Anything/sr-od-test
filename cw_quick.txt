@@ -1,6 +1,4 @@
 sr-od-test/test/sr_od/app/currency_war/test_cw_gradient_switch.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_power_table.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_r253_bridge_pref.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r255_equip_flow.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r256_crate.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r388_opening_hold.py
@@ -220,3 +218,4 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w628_migration_b2.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_economy_cycle.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_form_gates.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w653_c7_zero_drift.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w666_replay_context_freeze.py

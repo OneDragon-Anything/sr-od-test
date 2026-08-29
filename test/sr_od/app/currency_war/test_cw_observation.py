@@ -15,14 +15,15 @@ from sr_od.application.currency_war.cw_briefing_obs import (
     parse_enemy_difficulty,
     read_briefing_enemy_difficulty,
 )
-from sr_od.application.currency_war.cw_observation import (
-    parse_selected_difficulty,
-    parse_settlement_hp,
+from sr_od.application.currency_war.cw_briefing_obs import (
     read_affix_effect,
     read_affixes,
+    read_bosses,
+)
+from sr_od.application.currency_war.cw_observation import (
+    parse_selected_difficulty,
     read_board,
     read_board_next_tier,
-    read_bosses,
     read_deploy_cap,
     read_deployed_count,
     read_enemy_difficulty,
@@ -33,7 +34,7 @@ from sr_od.application.currency_war.cw_observation import (
     read_streak,
     read_xp_progress,
 )
-from sr_od.application.currency_war.cw_settlement_obs import parse_streak
+from sr_od.application.currency_war.cw_settlement_obs import parse_settlement_hp, parse_streak
 from test.conftest import SrTestContext
 
 
@@ -469,7 +470,7 @@ def test_read_round_outcome_failure_hp_zero(test_context: SrTestContext, monkeyp
 
     parse_settlement_hp 在失败屏读到「生命值❤!」(非数字)→ None,但「挑战失败」= hp 0 确定。
     """
-    from sr_od.application.currency_war.cw_observation import read_round_outcome
+    from sr_od.application.currency_war.cw_settlement_obs import read_round_outcome
     ocr = [SimpleNamespace(data=t) for t in ['挑战失败', '小队生命值❤！', '对局评价', '下一步']]
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
     obs = read_round_outcome(test_context, None, plane=1, round_num=9, comp_tag='DOT队')
