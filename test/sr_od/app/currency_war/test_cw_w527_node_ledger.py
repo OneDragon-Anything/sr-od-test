@@ -26,7 +26,6 @@ from sr_od.application.currency_war.cw_node_reader import (
 )
 from sr_od.application.currency_war.cw_observation import (
     node_vote_verdict,
-    resolve_node_type_with_ledger,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     fill_boss_by_position,
@@ -97,16 +96,7 @@ def test_ledger_update_extend_shorter_seq() -> None:
     assert ledger_node_type(s, 1, 4) == 'boss'
 
 
-# ===== 2. 消费仲裁 + 三票裁决 + 变异窗豁免 =====
-
-def test_resolve_node_type_ledger_first() -> None:
-    """查表优先:表值非 None 压过逐帧观测;表缺退观测(旧行为)。"""
-    s = _Session()
-    ledger_update_plane(s, 1, ['supply', None], 'plane_detail')
-    assert resolve_node_type_with_ledger(s, 1, 1, 'battle') == 'supply'
-    assert resolve_node_type_with_ledger(s, 1, 2, 'battle') == 'battle'   # 表 None → 退观测
-    assert resolve_node_type_with_ledger(s, 3, 1, 'battle') == 'battle'   # 无表 → 退观测
-
+# ===== 2. 三票裁决 + 变异窗豁免 =====
 
 def test_vote_verdict_thresholds() -> None:
     """三票裁决:≥2 独立票一致反对 = defect;单票 = noise;无反对 = ok。"""

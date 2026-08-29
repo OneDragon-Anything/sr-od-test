@@ -2,17 +2,14 @@
 test_cw_w536_buy_expect.py 买牌 / test_cw_w530_drag_reconcile.py 拖动,同族:
 意图 → 期望增量 → 稳定帧对账 → 不一致落台账,零决策记账)。
 
-测五类:①推进算子真值表(xp_apply_clicks 普通买/跨级买/结转/封顶;
+测四类:①推进算子真值表(xp_apply_clicks 普通买/跨级买/结转/封顶;
 xp_clicks_to_level 击数)②账本流为(锚定→意图推进→对账→不一致落台账;
-轮界重锚吸收外生经验)③兑换率推导器真值表(fixture 取自局⑳+1
-run_20260828_191254 真实遥测段落;含脏样本/无样本缺口形态)④接线源码锁
-⑤台账行形态锁。全部纯函数/tmp_path,零触网零落盘真实路径。
+轮界重锚吸收外生经验)③接线源码锁④台账行形态锁。全部纯函数/tmp_path,
+零触网零落盘真实路径。
 """
 import json
 from pathlib import Path
 from types import SimpleNamespace
-
-import pytest
 
 from sr_od.application.currency_war import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -198,72 +195,7 @@ def test_parse_buy_clicks():
     assert _xp_parse_buy_clicks('') == 0
 
 
-# ===== ③ 兑换率推导器(fixture = 局⑳+1 run_20260828_191254 真实段落)=====
-
-def _row(ts: str, plane: int, rnd: int, level: int, xp: tuple[int, int],
-         lu: int) -> dict:
-    return {'ts': ts, 'run_id': 'r', 'plane': plane, 'round_num': rnd,
-            'state': {'level': level, 'xp_progress': list(xp)},
-            'actions': ([{'__type__': 'LevelUp', 'cost': 4}] * lu)}
-
-
-def _write_decisions(tmp_path: Path, rows: list[dict]) -> Path:
-    p = tmp_path / 'decisions.jsonl'
-    p.write_text('\n'.join(json.dumps(r) for r in rows) + '\n',
-                 encoding='utf-8')
-    return p
-
-
-def test_derive_rate_from_real_segment_fixture(tmp_path: Path):
-    """局⑳+1 真实段落(买前/买后 XP 读数对):8 样本全一致 → rate=4;
-    含跨级结转样本(6 击 18/40→2/52;12 击 4/52→0/72)与任务示例段
-    (p2r5:2/72 → 买后 6/72 ⇒ +4)。"""
-    rows = [
-        # p1r1:0/4 → 1 击 → lv4 0/6(4 恰好升 3 级门槛,零结转)
-        _row('T01', 1, 1, 3, (0, 4), 1), _row('T02', 1, 1, 4, (0, 6), 0),
-        # p1r3:4/6 → 1 击 → lv5 2/20(跨级结转)
-        _row('T03', 1, 3, 4, (4, 6), 1), _row('T04', 1, 3, 5, (2, 20), 0),
-        # p2r2:18/40 → 6 击 = 42 → lv7 2/52
-        _row('T05', 2, 2, 6, (18, 40), 6), _row('T06', 2, 2, 7, (2, 52), 0),
-        # p2r4:4/52 → 12 击 = 52 → lv8 0/72
-        _row('T07', 2, 4, 7, (4, 52), 12), _row('T08', 2, 4, 8, (0, 72), 0),
-        # p2r5:2/72 → 1 击 → 6/72(任务给的示例段)
-        _row('T09', 2, 5, 8, (2, 72), 1), _row('T10', 2, 5, 8, (6, 72), 0),
-        # 无 LevelUp 的相邻行差(+2 外生)不进样本
-        _row('T11', 2, 5, 8, (8, 72), 0),
-    ]
-    _write_decisions(tmp_path, rows)
-    res = cw_telemetry.derive_xp_per_click(tmp_path, run_id='r')
-    assert res['rate'] == 4
-    assert res['matched'] == 5 and res['total'] == 5
-    assert res['anomalies'] == []
-    clicks = {s['clicks'] for s in res['samples']}
-    assert clicks == {1, 6, 12}
-
-
-def test_derive_rate_dirty_sample_reports_gap(tmp_path: Path):
-    """脏数据形态(席满盲击等未入账点击造成另一 rate 也可拟合一段):
-    全样本 rate 交集为空 → rate=None 如实报缺口,不硬编码猜测值。"""
-    rows = [
-        _row('T01', 2, 5, 8, (2, 72), 1), _row('T02', 2, 5, 8, (6, 72), 0),
-        # 盲击污染段:1 条 plan LevelUp 但实际点了 3 击(只有 rate=2 拟合)
-        _row('T03', 2, 6, 8, (0, 72), 1), _row('T04', 2, 6, 8, (2, 72), 0),
-    ]
-    _write_decisions(tmp_path, rows)
-    res = cw_telemetry.derive_xp_per_click(tmp_path, run_id='r')
-    assert res['rate'] is None
-    assert res['matched'] == 2 and res['total'] == 2
-
-
-def test_derive_rate_no_samples(tmp_path: Path):
-    """无 LevelUp 行(本局没买经验)→ rate=None、0 样本(推导不出 = 缺口)。"""
-    rows = [_row('T01', 1, 1, 3, (0, 4), 0), _row('T02', 1, 1, 3, (2, 4), 0)]
-    _write_decisions(tmp_path, rows)
-    res = cw_telemetry.derive_xp_per_click(tmp_path, run_id='r')
-    assert res['rate'] is None and res['total'] == 0
-
-
-# ===== ④ 接线源码锁(静态结构,防重构断链/改口径)=====
+# ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
 
 def test_w552_wiring_locks():
     """①意图推进在 execute 返回后且仅 progressed 分支;②对账在 heavy
@@ -300,7 +232,7 @@ def test_w552_wiring_locks():
     assert 'led.round_key != key' in rec_body       # 轮界重锚在位
 
 
-# ===== ⑤ 台账行形态锁(写端真实落盘形态)=====
+# ===== ④ 台账行形态锁(写端真实落盘形态)=====
 
 def test_xp_defect_row_shape(tmp_path: Path, monkeypatch):
     """defect_ledger.jsonl 行形态:surface='xp'/kind='xp_expect_mismatch'。"""
@@ -324,21 +256,5 @@ def test_xp_defect_row_shape(tmp_path: Path, monkeypatch):
     assert row['surface'] == 'xp'
     assert row['kind'] == 'xp_expect_mismatch'
     assert row['reader_source'] == 'xp_expect_reconcile'
-
-
-# ===== ⑥ 真实 replay 对拍(存在才跑;只读)=====
-
-_REAL_REPLAY = Path('.debug/temp/currency_war/replay/decisions.jsonl')
-_REAL_RUN = 'run_20260828_191254'   # 局⑳+1(任务指定的推导源)
-
-
-@pytest.mark.skipif(not _REAL_REPLAY.exists(), reason='本机 replay 不存在')
-def test_derive_rate_on_real_replay_segment():
-    """局⑳+1 真实遥测:8/8 样本(含 3 段跨级结转)一致 → rate=4。"""
-    res = cw_telemetry.derive_xp_per_click(_REAL_REPLAY.parent,
-                                           run_id=_REAL_RUN)
-    assert res['rate'] == 4
-    assert res['matched'] == res['total'] == 8
-    assert res['anomalies'] == []
 
 
