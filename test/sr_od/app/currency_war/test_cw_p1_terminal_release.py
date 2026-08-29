@@ -305,7 +305,7 @@ def test_seg_terminal_ledger_mismatch_both_directions() -> None:
 def test_sim_ledger_discloses_terminal_bit() -> None:
     """账本行 'terminal_release' 键存在(R4 记账面数据源;单局冒烟,
     pool='fallback' 免快照依赖)。"""
-    from sr_od.application.currency_war.sim.engine_p1 import cw_sim as cw_sim
+    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
     r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
     assert r.ledger
     for row in r.ledger:

@@ -28,6 +28,7 @@ from sr_od.application.currency_war.prep_director import PrepDirector
 from sr_od.application.currency_war.kernel.cw_prep_expect import compare_equip_expect, compute_equip_drag_expect
 
 from sr_od.application.currency_war.kernel.cw_prep_expect import EquipDragIntent, EquipExpect
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 # 合成对取自注册表派生图谱(单一源;不硬编码具体件名,图谱更新自动跟上)
 _CROSS_ADV, (_CROSS_A, _CROSS_B) = next(iter(cw_synthesis.CROSS_RECIPES.items()))
@@ -234,7 +235,7 @@ def test_reconcile_clean_and_occluded_no_row(monkeypatch):
     exp = EquipExpect(kind='wear', summary='wear A', deltas={'A': -1},
                       owned_before={'A': 2})
     pd, captured = _stub_director(frame=object())
-    monkeypatch.setattr(cw_telemetry, 'record_defect', _cap)
+    monkeypatch.setattr(defects, 'record_defect', _cap)
     monkeypatch.setattr(cw_equipment, 'ensure_equip_sift_templates',
                         lambda ctx: {'t': object()})
     monkeypatch.setattr(cw_equipment, 'read_equip_grid',
@@ -254,7 +255,7 @@ def test_reconcile_mismatch_rows_defect(monkeypatch):
     exp = EquipExpect(kind='wear', summary='wear A', deltas={'A': -1},
                       owned_before={'A': 2}, product='')
     pd, captured = _stub_director(frame=object())
-    monkeypatch.setattr(cw_telemetry, 'record_defect',
+    monkeypatch.setattr(defects, 'record_defect',
                         lambda *a, **k: captured.append((a, k)))
     monkeypatch.setattr(cw_equipment, 'ensure_equip_sift_templates',
                         lambda ctx: {'t': object()})
@@ -277,7 +278,7 @@ def test_reconcile_best_effort_no_frame(monkeypatch):
     exp = EquipExpect(kind='wear', summary='wear A', deltas={'A': -1},
                       owned_before={'A': 2})
     pd, captured = _stub_director(frame=None)
-    monkeypatch.setattr(cw_telemetry, 'record_defect', _cap)
+    monkeypatch.setattr(defects, 'record_defect', _cap)
     pd._reconcile_equip_expect(exp)
     assert captured == []
     pd2, captured2 = _stub_director(frame=object())
@@ -314,3 +315,5 @@ def test_defect_row_shape(tmp_path: Path, monkeypatch):
 
 from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L2_RECORD
 
+
+from sr_od.application.currency_war.telemetry import state

@@ -48,7 +48,7 @@ def test_shop_record_site_copies_owned_pool_before_record() -> None:
     assert copy_line in src, 'shop record 站点缺 owned 池补拷行(W222 缺口①回归)'
     i_plan = src.index('actions = match.strategy.decide_prep')
     i_copy = src.index(copy_line)
-    i_rec = src.index('cw_telemetry.record_decision(state, target_name')
+    i_rec = src.index('recorder.record_decision(state, target_name')
     assert i_plan < i_copy < i_rec, '补拷必须在 decide_prep 之后、record 之前(行为边界)'
 
 
@@ -58,14 +58,14 @@ def test_director_record_step_copies_owned_pool_on_state_copy() -> None:
     i_step = src.index('def _record_step')
     i_copy = src.index('st = st.copy()', i_step)
     i_equips = src.index('last_owned_equips', i_step)
-    i_rec = src.index('cw_telemetry.record_decision(', i_step)
+    i_rec = src.index('recorder.record_decision(', i_step)
     assert i_step < i_copy < i_equips < i_rec, \
         '_record_step 必须先 copy 再补拷 equips 再 record(W222 缺口①回归)'
 
 
 def test_record_decision_state_carries_equips(tmp_path) -> None:
     """端到端空值/非空回归:state.equips 经 serialize 落 decisions 行。"""
-    rec = cw_telemetry.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    rec = recorder.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     st = GameState(gold=50, round_num=1, plane=1)
     st.equips = ['财富宝钻', '分身墨镜', '拆装扳手']
     rec.record_decision('w222', 'A8', st, '', {}, {}, [])

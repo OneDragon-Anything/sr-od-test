@@ -232,7 +232,7 @@ def test_seg_checks_violation_and_allin_exempt() -> None:
 def test_sim_ledger_discloses_reject_key() -> None:
     """账本行 sim.blood_budget_levelup_rejects 键存在(批量聚合的
     数据源;单局冒烟,pool='fallback' 免快照依赖)。"""
-    from sr_od.application.currency_war.sim.engine_p1 import cw_sim as cw_sim
+    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
     r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
     assert r.ledger
     for row in r.ledger:

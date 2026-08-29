@@ -6,7 +6,7 @@
 修法三段:
 ① schema:ExogenousEvent.choice 可选字段(kind='event_choice' 行携带;旧记录
   与其它 kind 恒 None——缺省兼容);
-② 共用辅助 cw_telemetry.record_event_choice(一处实现,禁 7 份复制);
+② 共用辅助 recorder.record_event_choice(一处实现,禁 7 份复制);
 ③ 七个 handler 在选项确认时点各接一行。
 
 纯逻辑/桩测试(monkeypatch 构造;TelemetryRecorder 指 tmp_path,不写真实 .debug;
@@ -18,18 +18,21 @@ import inspect
 
 import pytest
 
-from sr_od.application.currency_war.telemetry import state as cw_telemetry
+from sr_od.application.currency_war.telemetry import state
+from sr_od.application.currency_war.telemetry import recorder
+
 
 from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder, record_event_choice
 
 from sr_od.application.currency_war.telemetry.query import read_jsonl
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 @pytest.fixture(autouse=True)
 def _reset_run_ctx(monkeypatch):
     """测试卫生:run_id 与 ctx match 引用经 monkeypatch 还原(不串后续测试)。"""
-    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'w312-run')
-    monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF', [None])
+    monkeypatch.setattr(state, '_CURRENT_RUN_ID', 'w312-run')
+    monkeypatch.setattr(state, '_CTX_MATCH_REF', [None])
 
 
 # ===== ① schema:choice 字段 roundtrip + 旧记录 None 兼容 =====
@@ -68,18 +71,18 @@ def test_helper_writes_event_choice_row(tmp_path) -> None:
     monkey_match = type('M', (), {})()
     monkey_match.session = type('S', (), {})()
     monkey_match.session.last_state = GameState(round_num=5)
-    cw_telemetry.set_ctx_match(monkey_match)
+    state.set_ctx_match(monkey_match)
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     monkeypatch_rec = rec
-    origin = cw_telemetry.get_recorder
-    cw_telemetry.get_recorder = lambda: monkeypatch_rec   # noqa: ANN001  测试内注入
+    origin = state.get_recorder
+    state.get_recorder = lambda: monkeypatch_rec   # noqa: ANN001  测试内注入
     try:
         record_event_choice('encounter',
                             [{'difficulty': '难度3', 'rewards': '角色x3'},
                              {'difficulty': '难度1', 'rewards': '金币x2'}],
                             1, reason='formed→high-diff')
     finally:
-        cw_telemetry.get_recorder = origin
+        state.get_recorder = origin
     lines = read_jsonl(tmp_path / 'exogenous.jsonl')
     assert len(lines) == 1
     row = lines[0]
@@ -95,12 +98,12 @@ def test_helper_writes_event_choice_row(tmp_path) -> None:
 def test_helper_empty_options_and_no_round(tmp_path) -> None:
     """识别失败路径照记(options=[] 且 round_num=0 兜底)——留证据不断链。"""
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    origin = cw_telemetry.get_recorder
-    cw_telemetry.get_recorder = lambda: rec
+    origin = state.get_recorder
+    state.get_recorder = lambda: rec
     try:
         record_event_choice('megastar', None, 0, reason='no match')
     finally:
-        cw_telemetry.get_recorder = origin
+        state.get_recorder = origin
     row = read_jsonl(tmp_path / 'exogenous.jsonl')[0]
     assert row['choice'] == {'event': 'megastar', 'options': [], 'n_options': 0,
                              'pick_idx': 0, 'reason': 'no match'}

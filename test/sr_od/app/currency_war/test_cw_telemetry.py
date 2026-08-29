@@ -24,6 +24,7 @@ from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 
 from sr_od.application.currency_war.telemetry.query import join_decisions_outcomes, read_jsonl
 from sr_od.application.currency_war.telemetry import query, recorder, state
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def _fresh(tmp_dir: str, enabled: bool = True) -> tuple[TelemetryRecorder, Path]:

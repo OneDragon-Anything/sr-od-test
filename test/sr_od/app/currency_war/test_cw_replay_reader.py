@@ -17,6 +17,7 @@ from sr_od.application.currency_war.telemetry.cw_replay_reader import (  # noqa:
     posture_tag,
 )
 from sr_od.application.currency_war.telemetry.cw_divergence_stats import divergence_stats  # noqa: E402
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def _write(path: Path, rows: list[dict]) -> Path:

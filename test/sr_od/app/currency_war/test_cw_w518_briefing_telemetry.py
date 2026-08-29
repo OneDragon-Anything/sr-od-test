@@ -15,6 +15,7 @@ from __future__ import annotations
 import inspect
 
 from sr_od.application.currency_war.operations.handlers import handle_briefing
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def test_handle_briefing_telemetry_wiring_in_source() -> None:

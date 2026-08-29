@@ -11,6 +11,7 @@ from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.telemetry import defects, query, recorder, schema, state
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w505t') -> None:
@@ -270,3 +271,6 @@ def test_shop_close_audit_wiring_lock():
     tail = src[src.index('_final_gold = read_gold'):]
     unconditional = tail.split('if _final_gold is not None')[0]
     assert 'set_unit_gold_close' in unconditional
+
+
+from sr_od.application.currency_war.telemetry import state

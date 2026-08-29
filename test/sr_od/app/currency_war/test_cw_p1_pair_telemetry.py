@@ -8,7 +8,7 @@ target_comp 恒空、sess_framework 恒空,判读看不到 P1 锁了哪个配方
 的关键度量上游。
 
 本锁钉死:
-- ``cw_telemetry.p1_pair_label`` 派生口径(配方锁 p1_pair 优先,
+- ``schema.p1_pair_label`` 派生口径(配方锁 p1_pair 优先,
   ①锁局 transition_pair 次选;空窗/无意向 = '');
 - record 站点:extra 透传 → DecisionTrace.sess_p1_pair 落盘;
   缺 extra 时空串(纯遥测,决策行为零变化);
@@ -99,7 +99,7 @@ def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
                      actions, extra=None, gold_point=True) -> None:
         captured['extra'] = extra
 
-    monkeypatch.setattr(cw_telemetry, 'record_decision', _fake_record)
+    monkeypatch.setattr(recorder, 'record_decision', _fake_record)
     director = object.__new__(PrepDirector)   # 免 ctx(纯遥测接线测试)
     director._steps = 0
     fake_sess = SimpleNamespace(
@@ -125,7 +125,7 @@ def test_director_record_step_empty_pair_without_intention(monkeypatch) -> None:
                      actions, extra=None, gold_point=True) -> None:
         captured['extra'] = extra
 
-    monkeypatch.setattr(cw_telemetry, 'record_decision', _fake_record)
+    monkeypatch.setattr(recorder, 'record_decision', _fake_record)
     director = object.__new__(PrepDirector)
     director._steps = 0
     fake_sess = SimpleNamespace(v3_formed_stop=False, v3_intention=None,
@@ -161,3 +161,6 @@ def test_label_matches_intention_serialization_source(pair: tuple) -> None:
     ist = IntentionState(phase='locked' if pair else 'unlocked', p1_pair=pair)
     d = serialize_intention(ist)
     assert schema.p1_pair_label(ist) == '+'.join(d['p1_pair'])
+
+
+from sr_od.application.currency_war.telemetry import state

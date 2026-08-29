@@ -11,8 +11,9 @@ buy op retry 4 次失败 → 0 买出战。三个局的「钱变不成板」都�
 """
 from sr_od.application.currency_war.strategy_v1 import cw_evaluate, cw_plan
 from sr_od.application.currency_war.kernel import cw_comps, cw_economy, cw_plane_table
-from sr_od.application.currency_war.telemetry import state as cw_telemetry_state, recorder as cw_telemetry_recorder
+from sr_od.application.currency_war.telemetry import state, recorder as recorder
 from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
@@ -20,7 +21,7 @@ from sr_od.application.currency_war.decision.decision_v2.strategy import (
 
 def test_strategy_chain_importable():
     """策略链入口模块全部可导入(import 错路径在此爆,不等实跑)。"""
-    for m in (cw_comps, cw_economy, cw_evaluate, cw_plane_table, cw_plan, cw_telemetry_state, cw_telemetry_recorder,
+    for m in (cw_comps, cw_economy, cw_evaluate, cw_plane_table, cw_plan, state, recorder,
               DecisionV2Strategy):
         assert m is not None
 

@@ -16,6 +16,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import DeployMove, Se
 from sr_od.application.currency_war.telemetry import defects, recorder
 
 from sr_od.application.currency_war.kernel.cw_prep_expect import compare_drag_expect, compute_drag_expect
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def _bc(slot: int, char_id: str, pref: str = 'back') -> BenchChar:
@@ -184,3 +185,5 @@ def test_defect_row_shape(tmp_path: Path, monkeypatch):
 
 from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L1_ALERT
 
+
+from sr_od.application.currency_war.telemetry import state

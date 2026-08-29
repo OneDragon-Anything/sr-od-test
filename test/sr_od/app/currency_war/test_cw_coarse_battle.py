@@ -289,3 +289,4 @@ def test_coarse_calib_version_disclosed_in_ledger_manifest(
     assert manifest['coarse_calib_version'] == cb.COARSE_CALIB_VERSION
 
 
+from sr_od.application.currency_war.sim import runner

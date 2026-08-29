@@ -24,6 +24,7 @@ from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.kernel.cw_prep_expect import BuyPurchase, compare_buy_expect, compute_buy_expect
 
 from sr_od.application.currency_war.prep_director import _save_buy_evidence
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def _bc(slot: int, char_id: str, star: int = 1,
@@ -306,3 +307,6 @@ def test_buy_defect_row_shape(tmp_path: Path, monkeypatch):
     assert row['surface'] == 'bench'
     assert row['kind'] == 'buy_expect_mismatch'
     assert row['reader_source'] == 'buy_expect_reconcile'
+
+
+from sr_od.application.currency_war.telemetry import state

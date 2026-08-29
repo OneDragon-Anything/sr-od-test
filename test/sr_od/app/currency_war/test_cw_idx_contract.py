@@ -252,3 +252,5 @@ def test_f2_cross_source_mixed_batch_slot_stable() -> None:
     assert deployed_occupied(cur.deployed) == 1
     # bench 侧:黑塔上场腾槽 0,希儿下场落槽(装备/对象随人走)
     assert cur.bench[0].char_id == '希儿'
+
+

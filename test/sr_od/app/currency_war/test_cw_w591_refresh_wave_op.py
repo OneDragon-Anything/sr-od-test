@@ -125,7 +125,7 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
         defect_rows.append((args, kwargs))
         return None
 
-    monkeypatch.setattr(cw_telemetry, 'record_defect', _cap_defect)
+    monkeypatch.setattr(defects, 'record_defect', _cap_defect)
 
     # 顺序替身读数(逐次消耗,耗尽后恒最后一个)
     seq_idx: dict[str, int] = {}
@@ -394,3 +394,5 @@ def test_buy_refresh_wave_real_free_proc(
     assert not any(k[0][0] == 'shop_refresh' and k[0][1] == 'invariant_break'
                    for k in rows), (
         '刷新面牌面已变时不应落刷新未生效票')
+
+from sr_od.application.currency_war.telemetry import defects

@@ -13,6 +13,7 @@ from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.telemetry import defects, recorder
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w512t') -> None:
@@ -138,3 +139,6 @@ def test_shop_sift_miss_confidence_wiring_lock():
     assert "record_defect(\n                    'confidence', 'perception_conflict'" in src
     assert "reader_source='read_shop_cards'" in src
     assert 'confidence=float(_inliers)' in src
+
+
+from sr_od.application.currency_war.telemetry import state

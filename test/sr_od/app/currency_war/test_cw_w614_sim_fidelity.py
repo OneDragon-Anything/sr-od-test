@@ -231,3 +231,5 @@ class TestG2DeployProxy:
             n = len(row['state'].get('deployed') or [])
             assert row['sim']['deployed_power'] >= n
 
+
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1

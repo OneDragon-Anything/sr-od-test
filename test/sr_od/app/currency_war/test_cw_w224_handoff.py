@@ -174,26 +174,26 @@ def test_decide_prep_no_snapshot_on_plane1() -> None:
 def test_sim_p2_handoff_field() -> None:
     """SimResult.p2_handoff:planes=2 进场有快照/同 seed 确定/
     planes=1 恒 None。"""
-    r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
+    r = engine_p1.simulate_p1(0, pool='fallback', planes=2)
     if r.p2_entered:
         assert isinstance(r.p2_handoff, dict)
         assert set(r.p2_handoff) == _SNAP_KEYS
-        r2 = cw_sim.simulate_p1(0, pool='fallback', planes=2)
+        r2 = engine_p1.simulate_p1(0, pool='fallback', planes=2)
         assert r2.p2_handoff == r.p2_handoff   # 同 seed 确定性
     else:
         assert r.p2_handoff is None
-    r1 = cw_sim.simulate_p1(0, pool='fallback', planes=1)
+    r1 = engine_p1.simulate_p1(0, pool='fallback', planes=1)
     assert r1.p2_handoff is None and r1.p2_entered is False
 
 
 def test_sim_replay_entry_snapshot() -> None:
     """案 b 臂(真值进场态)同样经首轮 decide_prep 采样快照。"""
-    entry = cw_sim.P2ReplayEntry(
+    entry = engine_p2.P2ReplayEntry(
         hp=64, gold=75, level=6, board={'仙舟': 3},
         deployed=[{'char_id': '藿藿', 'faction': '仙舟', 'star': 1},
                   {'char_id': '丹恒·饮月', 'faction': '仙舟', 'star': 1},
                   {'char_id': '爻光', 'faction': '仙舟', 'star': 2}])
-    r = cw_sim.simulate_p2_replay_entry(entry, 0, pool='fallback')
+    r = engine_p2.simulate_p2_replay_entry(entry, 0, pool='fallback')
     assert r.p2_entered
     h = r.p2_handoff
     assert h['hp'] == 64 and h['deployed_n'] == 3
@@ -213,7 +213,7 @@ def test_decision_trace_handoff_field(tmp_path) -> None:
     1star_value.py);快照本体 as_dict() 键集不变(sim 同构不受影响)。
     """
     from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
-    rec = cw_telemetry.TelemetryRecorder(tmp_path, enabled=True)
+    rec = recorder.TelemetryRecorder(tmp_path, enabled=True)
     st = _state(shop=[ShopCard(x=0, name='藿藿', faction='仙舟', cost=1)])
     sess = _sess()
     snap = handoff_snapshot(st, sess)
@@ -232,3 +232,9 @@ def test_decision_trace_handoff_field(tmp_path) -> None:
     row2 = json.loads(line.strip().splitlines()[-1])
     assert row2['handoff'] is None
 
+
+from sr_od.application.currency_war.sim import engine_p1
+from sr_od.application.currency_war.sim import engine_p2
+
+
+from sr_od.application.currency_war.telemetry import recorder

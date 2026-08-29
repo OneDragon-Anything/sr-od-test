@@ -11,26 +11,27 @@ import json
 from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
+from sr_od.application.currency_war.telemetry import state as _telstate
 from sr_od.application.currency_war.telemetry import defects as cw_telemetry
 from sr_od.application.currency_war.telemetry import defects, recorder
 
 
 def _setup(monkeypatch, tmp_path: Path, run_id: str = 'w515t') -> list[dict]:
     """recorder/run_id/闩锁指向测试态;注入假执行器收集触发载荷。返回调用记录。"""
-    monkeypatch.setattr(cw_telemetry, '_RECORDER',
+    monkeypatch.setattr(_telstate, '_RECORDER',
                         recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
-    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', run_id)
+    monkeypatch.setattr(_telstate, '_CURRENT_RUN_ID', run_id)
     # 复现计数与闩锁都是进程内状态,逐测试清空防串
-    monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
-    monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    monkeypatch.setattr(cw_telemetry, '_L0_ANDON_FIRED_RUNS', set())
+    monkeypatch.setattr(_telstate, '_defect_seen', {})
+    monkeypatch.setattr(_telstate, '_defect_seen_run', '')
+    monkeypatch.setattr(_telstate, '_L0_ANDON_FIRED_RUNS', set())
     calls: list[dict] = []
 
     def _fake_handler(payload: dict) -> bool:
         calls.append(payload)
         return True
 
-    monkeypatch.setattr(cw_telemetry, '_L0_ANDON_HANDLER', _fake_handler)
+    monkeypatch.setattr(_telstate, '_L0_ANDON_HANDLER', _fake_handler)
     return calls
 
 
@@ -71,9 +72,9 @@ def test_latch_key_is_run_id_resets_next_run(tmp_path: Path, monkeypatch):
                                'x: 1', '2', gap=20.0, gap_large=True)
     assert len(calls) == 1
     # 新局:换 run_id(生产由 start_run 做;复现计数随之重置)
-    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'run_b')
-    monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
-    monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
+    monkeypatch.setattr(_telstate, '_CURRENT_RUN_ID', 'run_b')
+    monkeypatch.setattr(_telstate, '_defect_seen', {})
+    monkeypatch.setattr(_telstate, '_defect_seen_run', '')
     defects.record_defect('gold', 'perception_conflict',
                                'x: 1', '2', gap=20.0, gap_large=True)
     defects.record_defect('gold', 'perception_conflict',
@@ -199,7 +200,8 @@ def test_game_side_executor_no_ctx_is_no_stop(tmp_path: Path, monkeypatch):
 def test_wiring_existence_source_lock():
     """静态锁:模块级 record_defect 判级后必须接 _fire_l0_andon 且只认
     显式 L0_andon;防后续重构静默断链或放宽触发条件。"""
-    src = Path(cw_telemetry.__file__).read_text(encoding='utf-8')
+    src = (Path(cw_telemetry.__file__).read_text(encoding='utf-8') 
+        + Path(_telstate.__file__).read_text(encoding='utf-8'))
     assert 'if sev == SEVERITY_L0_ANDON:' in src
     assert src.count('_fire_l0_andon({') == 1   # 触发点唯一(收敛在判级后)
     assert 'def _fire_l0_andon' in src

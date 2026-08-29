@@ -20,6 +20,7 @@ from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.telemetry import query, recorder, state
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w603t') -> None:
@@ -216,3 +217,6 @@ def test_briefing_mid_run_writes_directly_other_kinds_noop(tmp_path: Path,
     recorder.record_exogenous(0, 'node_enter', detail='局外弹窗')
     assert len(_rows(tmp_path, 'exogenous.jsonl')) == 1
     assert state._PENDING_BRIEFING_ROWS == []
+
+
+from sr_od.application.currency_war.telemetry import state

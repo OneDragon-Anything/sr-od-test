@@ -10,6 +10,7 @@ DESIGN.md §2.2/§2.7/§1 行11+§5-B5,观测自检框架)。
 import json
 from pathlib import Path
 from sr_od.application.currency_war.telemetry import defects, recorder
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 from sr_od.application.currency_war.operations.handlers.collect_plane_intel import (
     node_seq_cross_mismatch,
@@ -127,3 +128,6 @@ def test_settlement_round_defect_auto_resolved_is_l2(tmp_path: Path, monkeypatch
     rows = _rows(tmp_path, 'defect_ledger.jsonl')
     assert len(rows) == 1
     assert rows[0]['severity'] == 'L2_record'
+
+
+from sr_od.application.currency_war.telemetry import state

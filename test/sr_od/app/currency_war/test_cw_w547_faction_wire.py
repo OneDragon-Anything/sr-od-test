@@ -19,6 +19,7 @@ from sr_od.application.currency_war.obs.cw_faction_obs import (
 
 from sr_od.application.currency_war.prep_director import PrepDirector
 from test.conftest import SrTestContext
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 # ===== 接线源码锁(形态先例=inspect.getsource 静态锁) =====

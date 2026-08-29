@@ -88,7 +88,7 @@ def test_calibration_anchor_r1_in_band() -> None:
     rounds_all, wt, ww = [], 0, 0
     for e in entries:
         for s in range(4):
-            r = cw_sim.simulate_p2_replay_entry(e, s, pool='snapshot')
+            r = engine_p2.simulate_p2_replay_entry(e, s, pool='snapshot')
             if r.p2_entered:
                 rounds_all.append(r.p2_rounds)
                 wt += r.p2_combat_total
@@ -105,9 +105,9 @@ def test_p1_zero_drift_star_form() -> None:
     plane=1 账本行;星级分量只进 P2 战斗结算)。"""
     old = dataclasses.replace(P2CombatCalib(), form_star_weight=0.0)
     for seed in (0, 1, 2):
-        ra = cw_sim.simulate_p1(seed, pool='fallback', planes=2,
+        ra = engine_p1.simulate_p1(seed, pool='fallback', planes=2,
                                 p2_combat=P2CombatCalib())
-        rb = cw_sim.simulate_p1(seed, pool='fallback', planes=2,
+        rb = engine_p1.simulate_p1(seed, pool='fallback', planes=2,
                                 p2_combat=old)
         pa = [row for row in ra.ledger if row.get('plane') == 1]
         pb = [row for row in rb.ledger if row.get('plane') == 1]
@@ -126,3 +126,5 @@ def test_sensitivity_grid_star_key() -> None:
     assert {row['form_star_weight'] for row in out['grid']} == {0.0, 0.5}
 
 
+from sr_od.application.currency_war.sim import engine_p1
+from sr_od.application.currency_war.sim import engine_p2

@@ -71,13 +71,13 @@ def test_v2_extra_roundtrip(tmp_path: Path):
     from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
     from sr_od.application.currency_war.telemetry import state as _telstate
     from sr_od.application.currency_war.kernel.cw_state import GameState
-    _telstate._RECORDER = cw_telemetry.TelemetryRecorder(
+    _telstate._RECORDER = recorder.TelemetryRecorder(
         enabled=True, replay_dir=tmp_path)
     _telstate._CURRENT_RUN_ID = 'test_v2'
     _telstate._CURRENT_DIFFICULTY = 'A8'
     st = GameState()
     st.plane, st.round_num, st.gold = 1, 1, 50
-    cw_telemetry.record_decision(
+    recorder.record_decision(
         st, 'tgt', {}, {}, [],
         extra={'strategy_id': 'line_v2', 'v2_mode': 'economy',
                'v2_locked_line': 'jizi_train', 'v2_bridge': ''})
@@ -95,14 +95,14 @@ def test_query_rounds_shows_v2(tmp_path: Path):
     """S1:rounds 视图显示 v2 字段(schema 变更查询同步)。"""
     from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
     from sr_od.application.currency_war.telemetry import state as _telstate
-    _telstate._RECORDER = cw_telemetry.TelemetryRecorder(
+    _telstate._RECORDER = recorder.TelemetryRecorder(
         enabled=True, replay_dir=tmp_path)
     _telstate._CURRENT_RUN_ID = 'test_v2q'
     _telstate._CURRENT_DIFFICULTY = 'A8'
     from sr_od.application.currency_war.kernel.cw_state import GameState
     st = GameState()
     st.plane, st.round_num, st.gold = 1, 1, 50
-    cw_telemetry.record_decision(
+    recorder.record_decision(
         st, '', {}, {}, [],
         extra={'strategy_id': 'line_v2', 'v2_mode': 'war',
                'v2_locked_line': 'jizi_train', 'v2_bridge': ''})

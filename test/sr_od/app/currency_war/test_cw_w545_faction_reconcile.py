@@ -20,6 +20,7 @@ from sr_od.application.currency_war.obs.cw_faction_obs import (
     report_faction_reconcile,
 )
 from test.conftest import SrTestContext
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 _FIX_DIR = Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战'
 

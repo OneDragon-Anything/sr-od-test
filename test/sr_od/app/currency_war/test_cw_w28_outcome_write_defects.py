@@ -4,7 +4,7 @@
 source='recovered' + 按屏面「X-Y」解析真实轮次(修法 a+b 都做)。
 缺陷②(补给节点无结算屏零写入):RunSupplyNode 成功完成 → 合成
 node_type='补给' 的 outcome 行(source='synthetic_supply',复用
-cw_telemetry.record_outcome 单一写入入口)。
+recorder.record_outcome 单一写入入口)。
 
 纯逻辑/桩测试(monkeypatch 构造 relaunch 首帧场景);不写真实 .debug
 (TelemetryRecorder 指向 tmp_path;loop 侧写入端 monkeypatch 捕获)。
@@ -80,7 +80,7 @@ def _make_loop(monkeypatch, *, new_match: bool, elapsed_s: float,
 
     read_phase_round 桩返 (1,1)(模拟 relaunch 后缓存已 reset 的兜底值);
     read_round_outcome 桩返高置信 RoundOutcome(hp 真值来自结算屏);
-    cw_telemetry.record_outcome / record_exogenous monkeypatch 捕获(自动还原,
+    recorder.record_outcome / record_exogenous monkeypatch 捕获(自动还原,
     不写真实 .debug)。
     """
     from sr_od.application.currency_war.operations import battle_loop as bl

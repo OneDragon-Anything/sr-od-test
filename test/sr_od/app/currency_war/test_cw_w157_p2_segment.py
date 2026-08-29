@@ -19,7 +19,7 @@ from pathlib import Path
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel import cw_battle_calib
-from sr_od.application.currency_war.sim import pool
+from sr_od.application.currency_war.sim import pool as sim_pool
 from sr_od.application.currency_war.sim.checks import runner
 from sr_od.application.currency_war.data import cw_battle_tables as _tables
 
@@ -52,7 +52,7 @@ def test_pool_from_replay_assigns_delta_to_later_plane(tmp_path: Path) -> None:
         _out(1, 2, '普通战斗', 42),
     ]) + '\n', encoding='utf-8')
 
-    pool, _ = pool._pool_from_replay(tmp_path)
+    pool, _ = sim_pool._pool_from_replay(tmp_path)
     # P2r1 是 battle(rung 桶 = board_before{} 的 0);不挂 plane=1
     assert pool['battle'].get(2) and not pool['battle'].get(1, {}).get(0)
     assert pool['battle'][2][0] == [-18]
@@ -61,10 +61,10 @@ def test_pool_from_replay_assigns_delta_to_later_plane(tmp_path: Path) -> None:
 def test_live_delta_no_cross_plane_fallback() -> None:
     """plane≥2 缺桶不跨位面借 P1 样本(口径混桶防线)。"""
     pool = {'battle': {1: {0: [-11] * 6}}}   # 只有 P1 桶
-    assert pool.live_delta_for('battle', 0, random.Random(0),
+    assert sim_pool.live_delta_for('battle', 0, random.Random(0),
                                  pool_map=pool, plane=2) is None
     # 同池 plane=1 正常采样
-    assert pool.live_delta_for('battle', 0, random.Random(0),
+    assert sim_pool.live_delta_for('battle', 0, random.Random(0),
                                  pool_map=pool, plane=1) in [-11] * 6
 
 
@@ -72,16 +72,16 @@ def test_fingerprint_covers_plane_layer() -> None:
     """指纹含位面层:同桶样本不同位面 → 不同指纹(池语义可区分)。"""
     a = {'battle': {1: {0: [-11]}}}
     b = {'battle': {2: {0: [-11]}}}
-    assert pool.pool_fingerprint(a) != pool.pool_fingerprint(b)
+    assert sim_pool.pool_fingerprint(a) != sim_pool.pool_fingerprint(b)
 
 
 def test_plane_view_is_p1_projection() -> None:
     """plane_view:单位面投影(plane=1 锚定检查的口径单一源)。"""
     pool = {'battle': {1: {0: [-11]}, 2: {0: [-16]}},
             'boss': {1: {9: [-20]}}}
-    v = pool.plane_view(pool)
+    v = sim_pool.plane_view(pool)
     assert v == {'battle': {0: [-11]}, 'boss': {9: [-20]}}
-    assert pool.plane_view(pool, 2) == {'battle': {0: [-16]},
+    assert sim_pool.plane_view(pool, 2) == {'battle': {0: [-16]},
                                           'boss': {}}
 
 
@@ -232,3 +232,4 @@ def test_simulate_p2_ab_report_shape() -> None:
         rep['headline_off']['p2_entered_rate']   # P1 段两臂零漂移
 
 
+from sr_od.application.currency_war.sim import runner

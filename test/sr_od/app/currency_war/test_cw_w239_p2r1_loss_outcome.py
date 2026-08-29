@@ -22,6 +22,7 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 class _OcrItem(SimpleNamespace):
@@ -214,3 +215,4 @@ def test_branch_wiring_in_source() -> None:
     assert '_record_round_outcome(screen)   # killed/progress_delta 由屏文本判定' in src
 
 
+from sr_od.application.currency_war.telemetry import recorder

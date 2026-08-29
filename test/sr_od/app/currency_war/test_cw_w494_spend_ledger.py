@@ -8,6 +8,7 @@
 import json
 from pathlib import Path
 from sr_od.application.currency_war.telemetry import query, recorder, schema, state
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 # ===== plan_gold_flow(逐项期望金流)=====
@@ -385,3 +386,6 @@ def test_spend_unit_row_reader_and_hook_join(tmp_path: Path):
     assert query._spend_unit_row(tmp_path, 'ju22', 1, 9, 9) is None
     assert query._spend_unit_row(tmp_path, 'other', 1, 9, 1) is None
     assert query._spend_unit_row(tmp_path, 'ju22', 2, 9, 1) is None
+
+
+from sr_od.application.currency_war.telemetry import state

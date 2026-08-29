@@ -3,7 +3,7 @@
 实证缺口(W23/cw_node_validate「P1 r5 补给行 34/34 全缺」的语义补齐):W28 已接
 合成行(节点通过/hp),但补给的**选择**(角色+装备)与**效果归因**(如治疗生效)
 在 rounds 判读时无据可查。修法三段:
-①生产者 RunSupplyNode 选定+确认 → cw_telemetry.set_last_supply_pick 暂存;
+①生产者 RunSupplyNode 选定+确认 → state.set_last_supply_pick 暂存;
 ②消费者 battle_loop._record_supply_outcome → consume_last_supply_pick 取走+
  附完成时点 gold,经 record_outcome(supply_pick=...) 落账;
 ③OutcomeRecord.supply_pick 可选字段(schema 末尾追加,None 缺省旧记录兼容)。
@@ -19,12 +19,15 @@ from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.kernel.cw_state import GameState
 
 from sr_od.application.currency_war.telemetry import recorder
+from sr_od.application.currency_war.telemetry import state
+
 from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 
 from sr_od.application.currency_war.telemetry.state import consume_last_supply_pick, set_last_supply_pick
 
 from sr_od.application.currency_war.telemetry.query import read_jsonl
 from sr_od.application.currency_war.telemetry import state
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 # ===== ③ OutcomeRecord.supply_pick(schema 锁) =====
 

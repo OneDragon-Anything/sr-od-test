@@ -165,6 +165,9 @@ def test_cli_view_mounted() -> None:
     import inspect
 
     from sr_od.application.currency_war.telemetry import cli as cw_telemetry
-    src = inspect.getsource(cw_telemetry._cli_main)
+    src = inspect.getsource(cli._cli_main)
     for name in ("exogenous", "execevents", "invest", "conflicts"):
         assert f"'{name}'" in src, f"--view {name} 未挂载"
+
+
+from sr_od.application.currency_war.telemetry import cli

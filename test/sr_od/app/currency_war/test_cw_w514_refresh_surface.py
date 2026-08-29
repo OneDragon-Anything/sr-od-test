@@ -12,6 +12,7 @@ from pathlib import Path
 
 from sr_od.application.currency_war.operations.prep.shop import refresh_effective
 from sr_od.application.currency_war.telemetry import defects, recorder
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def _rows(tmp_path: Path, name: str) -> list[dict]:
@@ -95,3 +96,6 @@ def test_record_defect_does_not_pollute_spend_ledger(tmp_path: Path, monkeypatch
     defects.record_defect('shop_refresh', 'invariant_break', 'a', 'b')
     assert len(_rows(tmp_path, 'defect_ledger.jsonl')) == 1
     assert not (tmp_path / 'spend_ledger.jsonl').exists()
+
+
+from sr_od.application.currency_war.telemetry import state

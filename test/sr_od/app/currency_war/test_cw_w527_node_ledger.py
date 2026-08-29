@@ -24,6 +24,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     ledger_update_plane,
 )
 from sr_od.application.currency_war.obs import cw_node_reader, cw_observation
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 from sr_od.application.currency_war.obs.cw_node_reader import (
     classify_node_row,
     current_slot_hu_type,

@@ -10,16 +10,18 @@ from pathlib import Path
 
 import pytest
 from sr_od.application.currency_war.telemetry import query, recorder
+from sr_od.application.currency_war.telemetry import state
+
 
 
 
 @pytest.fixture()
 def rec(tmp_path: Path, monkeypatch):
     """隔离 recorder(共享模块态一律 monkeypatch,不裸赋值)。"""
-    monkeypatch.setattr(cw_telemetry, '_RECORDER',
+    monkeypatch.setattr(state, '_RECORDER',
                         recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
-    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'w445t')
-    monkeypatch.setattr(cw_telemetry, '_CURRENT_DIFFICULTY', 'A8')
+    monkeypatch.setattr(state, '_CURRENT_RUN_ID', 'w445t')
+    monkeypatch.setattr(state, '_CURRENT_DIFFICULTY', 'A8')
     return tmp_path
 
 
@@ -95,3 +97,6 @@ def test_dp_display_normalized(rec):
     ln = _line(rec, 1, 7)
     assert 'dp=?' in ln
     assert 'spend_mode' not in ln   # 原始串不倾倒
+
+
+from sr_od.application.currency_war.telemetry import state

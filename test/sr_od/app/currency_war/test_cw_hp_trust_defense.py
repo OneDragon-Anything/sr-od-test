@@ -297,7 +297,7 @@ def test_sim_frames_default_trusted_gate_short_circuits() -> None:
 def test_sim_ledger_still_discloses_and_rejects_in_band() -> None:
     """单局 sim 冒烟:账本键仍在、停手仍在血线内发生(ADR-0448 行为零
     漂移;pool='fallback' 免快照依赖,同既有锁口径)。"""
-    from sr_od.application.currency_war.sim.engine_p1 import cw_sim as cw_sim
+    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
     r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
     assert r.ledger
     for row in r.ledger:

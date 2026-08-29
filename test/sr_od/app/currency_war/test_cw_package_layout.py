@@ -46,18 +46,19 @@ ROOT_FILES: dict[str, str] = {
     'decision_assembly': 'app',
     'prep_actions': 'app',
     'prep_director': 'app',
+    'run_state': 'app',
     'cw_node_validate': 'tools',
     'cw_plan_replay_audit': 'tools',
     'cw_weight_search': 'tools',
 }
 
-# DESIGN §3.2 目标依赖矩阵 + 唯一豁免边(§3.2 白名单单列)
+# DESIGN §3.2 目标依赖矩阵 + 豁免白名单(§3.2 单列 + 期6 §4.4 ledger_hooks 归属)
 LEGAL_EDGES: dict[str, set[str]] = {
     'data': set(),
     'kernel': {'data'},
     'decision': {'data', 'kernel', 'strategy_v1'},   # strategy_v1 = 豁免白名单
     'obs': {'data', 'kernel'},
-    'sim': {'data', 'kernel', 'decision'},
+    'sim': {'data', 'kernel', 'decision', 'telemetry'},   # telemetry = 期6 ledger_hooks 归属豁免
     'telemetry': {'data', 'kernel', 'decision', 'obs', 'sim'},
     'strategy_v1': {'data', 'kernel'},
     'app': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry',

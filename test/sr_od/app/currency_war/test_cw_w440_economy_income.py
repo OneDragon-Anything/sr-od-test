@@ -102,3 +102,4 @@ def test_economy_calib_version_disclosed_in_manifest(tmp_path) -> None:
     assert 'coarse_calib_version' in manifest   # 粗模型键原样保留
 
 
+from sr_od.application.currency_war.sim import runner

@@ -21,6 +21,7 @@ import random
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel import cw_battle_calib
+from sr_od.application.currency_war.sim import runner as sim_runner
 from sr_od.application.currency_war.sim.checks import runner
 from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
 
@@ -97,7 +98,7 @@ def test_p2_combat_delta_distribution() -> None:
 
 def test_calibrated_settlement_in_sim() -> None:
     """calibrated 批:P2 战斗行带 p2_win_p,Δ∈{win_delta}∪负带。"""
-    r = cw_sim.simulate_p1(7, pool='snapshot', planes=2)
+    r = engine_p1.simulate_p1(7, pool='snapshot', planes=2)
     assert r.p2_combat_calibrated
     p2 = [row for row in r.ledger if row['plane'] == 2]
     combat = [row for row in p2
@@ -116,8 +117,8 @@ def test_flag_off_returns_legacy_byte_identical() -> None:
     """calibrated=False:P2 结算逐位回 legacy(p2_win_p=None,
     Δ池 plane=2 优先路径),P1 段与 on 臂逐位零漂移。"""
     off = P2CombatCalib(calibrated=False)
-    r_off = cw_sim.simulate_p1(7, pool='snapshot', planes=2, p2_combat=off)
-    r_on = cw_sim.simulate_p1(7, pool='snapshot', planes=2)
+    r_off = engine_p1.simulate_p1(7, pool='snapshot', planes=2, p2_combat=off)
+    r_on = engine_p1.simulate_p1(7, pool='snapshot', planes=2)
     assert not r_off.p2_combat_calibrated
     for row in r_off.ledger:
         if row['plane'] == 2:
@@ -137,8 +138,8 @@ def test_event_gold_dual_arm_paired() -> None:
     (rng 同耗——双臂同 seed 配对可比,W186 §3 K3)。P1 对比用稳定
     字段投影(v3_intention.tracks 是活引用,P2 段会原地改 P1 行)。"""
     zero = P2CombatCalib(event_gold='zero')
-    r0 = cw_sim.simulate_p1(3, pool='snapshot', planes=2, p2_combat=zero)
-    r1 = cw_sim.simulate_p1(3, pool='snapshot', planes=2)
+    r0 = engine_p1.simulate_p1(3, pool='snapshot', planes=2, p2_combat=zero)
+    r1 = engine_p1.simulate_p1(3, pool='snapshot', planes=2)
     proj = lambda r: [  # noqa: E731
         (x['ts'], x['hp'], x['gold'], x['actions'],
          x['sim']['delta'], x['sim']['income'])
@@ -161,13 +162,13 @@ def test_replay_entry_shared_loop_and_inheritance() -> None:
                    'star': 2, 'equips': ['星徽']}],
         equips=['卡带'], xp=3, xp_progress=(3, 4), streak=1,
         locked_comp='列车同行')
-    r = cw_sim.simulate_p2_replay_entry(e, 11, pool='snapshot')
+    r = engine_p2.simulate_p2_replay_entry(e, 11, pool='snapshot')
     assert r.p2_entered and r.p2_combat_calibrated
     p2 = [row for row in r.ledger if (row.get('plane') or 1) == 2]
     assert p2 and all(row['plane'] == 2 for row in r.ledger)
     assert p2[0]['ts'] == 1                    # 无 P1 段,ts 从 1 起
     assert [row['sim']['node'] for row in p2] == \
-        list(cw_sim.P2_NODE_SEQUENCE)[:len(p2)]
+        list(engine_p1.P2_NODE_SEQUENCE)[:len(p2)]
     assert r.p2_rounds == len(p2)
     # 进场继承:首行结算前 hp = entry.hp(行 hp 为结算后,由 Δ 回推)
     assert 0 <= p2[0]['hp'] - 52 - p2[0]['sim']['delta'] <= 2 \
@@ -183,7 +184,7 @@ def test_replay_entry_rejects_invest() -> None:
     """案 b 臂不支持 invest 注入(显式拒绝,防语义混叠)。"""
     e = P2ReplayEntry(hp=50, gold=30, level=6)
     try:
-        cw_sim.simulate_p1(0, pool='fallback', invest=True, _p2_entry=e)
+        engine_p1.simulate_p1(0, pool='fallback', invest=True, _p2_entry=e)
     except ValueError as ex:
         assert '案 b' in str(ex)
     else:
@@ -194,7 +195,7 @@ def test_replay_entry_rejects_invest() -> None:
 
 def test_batch_headline_extension_keys() -> None:
     """批报告 P2 判读扩展键在位(形状锁,不锁分布数值)。"""
-    rep = runner.simulate_p1_batch(10, pool='snapshot', planes=2,
+    rep = sim_runner.simulate_p1_batch(10, pool='snapshot', planes=2,
                                    ledger=False)
     for k in ('p2_combat_calibrated', 'avg_p2_gold_carried',
               'p2_carry_buys', 'avg_p2_carry_buys', 'p2_switch_rate',
@@ -211,7 +212,7 @@ def test_batch_headline_extension_keys() -> None:
 def test_result_observation_derivation() -> None:
     """单局观测派生:价格带笔数/意向切换/lv 到达轮由账本 P2 行派生。"""
     e = P2ReplayEntry(hp=80, gold=100, level=5, board={'仙舟': 3})
-    r = cw_sim.simulate_p2_replay_entry(e, 42, pool='snapshot')
+    r = engine_p2.simulate_p2_replay_entry(e, 42, pool='snapshot')
     p2 = [row for row in r.ledger if row['plane'] == 2]
     buys = sum(r.p2_buys_by_cost.values())
     ledger_buys = sum(1 for row in p2 for a in row['actions']
@@ -278,7 +279,7 @@ def test_mutation_probe_settlement_bypass(monkeypatch) -> None:
     def _broken(st, node, round_num, rng, calib):
         return (-50, 0.11)   # 全带外(最宽带 hi=28)
     monkeypatch.setattr(cw_sim, 'p2_combat_delta', _broken)
-    rep = runner.simulate_p1_batch(8, pool='snapshot', planes=2,
+    rep = sim_runner.simulate_p1_batch(8, pool='snapshot', planes=2,
                                    ledger=False, seed_base=100)
     cv = rep['checks_violations']['p2_loss_band_anchor']
     assert cv['violations'] > 0, '变异(结算绕过参数族)未涌现违规'
@@ -289,7 +290,7 @@ def test_mutation_probe_win_rate_explosion(monkeypatch) -> None:
     def _broken(st, node, round_num, rng, calib):
         return (2, 0.9)
     monkeypatch.setattr(cw_sim, 'p2_combat_delta', _broken)
-    rep = runner.simulate_p1_batch(8, pool='snapshot', planes=2,
+    rep = sim_runner.simulate_p1_batch(8, pool='snapshot', planes=2,
                                    ledger=False, seed_base=100)
     cv = rep['checks_violations']['p2_win_rate_band']
     assert cv['violations'] > 0, '变异(胜率失控)未涌现违规'
@@ -299,7 +300,7 @@ def test_mutation_probe_win_rate_explosion(monkeypatch) -> None:
 
 def test_sensitivity_report_shape() -> None:
     """敏感性扫描入口:网格形状 + 判读 headline 键(n 取最小)。"""
-    rep = runner.simulate_p2_sensitivity(
+    rep = sim_runner.simulate_p2_sensitivity(
         3, pool='snapshot', betas=(0.0, 0.04), gammas=(0.0, 0.02),
         event_gold_arms=('p1',))
     assert rep['n'] == 3 and len(rep['grid']) == 4
@@ -311,3 +312,5 @@ def test_sensitivity_report_shape() -> None:
     assert rep['pool_fingerprint']
 
 
+from sr_od.application.currency_war.sim import engine_p1
+from sr_od.application.currency_war.sim import engine_p2

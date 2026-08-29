@@ -19,18 +19,18 @@ from pathlib import Path
 from sr_od.application.currency_war.telemetry import defects, recorder
 
 _L0 = 'sr_od.application.currency_war.telemetry.defects'
-from sr_od.application.currency_war.telemetry import defects as ct
+from sr_od.application.currency_war.telemetry import defects as ct, state
 
 
 def _setup_isolated_l0(tmp_path: Path, monkeypatch) -> Path:
     """台账指向 tmp + 安灯槽/闩锁/复现账隔离(与 w505 _setup_recorder 同链)。"""
 
-    monkeypatch.setattr(ct, '_RECORDER',
+    monkeypatch.setattr(state, '_RECORDER',
                         recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
-    monkeypatch.setattr(ct, '_CURRENT_RUN_ID', 'l0iso')
-    monkeypatch.setattr(ct, '_defect_seen', {})
-    monkeypatch.setattr(ct, '_defect_seen_run', '')
-    monkeypatch.setattr(ct, '_L0_ANDON_FIRED_RUNS', set())
+    monkeypatch.setattr(state, '_CURRENT_RUN_ID', 'l0iso')
+    monkeypatch.setattr(state, '_defect_seen', {})
+    monkeypatch.setattr(state, '_defect_seen_run', '')
+    monkeypatch.setattr(state, '_L0_ANDON_FIRED_RUNS', set())
     return tmp_path
 
 
@@ -40,7 +40,7 @@ def test_default_handler_off_is_noop(tmp_path: Path, monkeypatch) -> None:
     from sr_od.application.currency_war.kernel import cw_observe
 
     d = _setup_isolated_l0(tmp_path, monkeypatch)
-    monkeypatch.setattr(ct, '_L0_ANDON_HANDLER', None)   # 缺省态显式钉住
+    monkeypatch.setattr(state, '_L0_ANDON_HANDLER', None)   # 缺省态显式钉住
 
     def _canary(payload: dict) -> bool:
         raise AssertionError('缺省关态下停线实现被触达(惰性接线回归?)')

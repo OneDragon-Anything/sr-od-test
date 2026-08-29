@@ -25,6 +25,7 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.data.cw_synthesis import synthesize_target
 from sr_od.application.currency_war.operations.prep.equip_all import EquipAll
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 # ===== 件1:构建指纹 =====
@@ -66,7 +67,7 @@ def _mk_op(state: SimpleNamespace | None) -> EquipAll:
 def _captured_defect(monkeypatch):
     """桩化 cw_telemetry.record_defect 捕获调用(零真实副作用,不写台账)。"""
     calls: list[dict] = []
-    monkeypatch.setattr(cw_telemetry, 'record_defect',
+    monkeypatch.setattr(defects, 'record_defect',
                         lambda *a, **k: calls.append({'args': a, 'kwargs': k}))
     return calls
 
@@ -152,3 +153,8 @@ def test_reason_unknown_flags_divergence() -> None:
     """存在可行组合却询问归因 → unknown(哨兵值:分配器与诊断漂移时优先暴露)。"""
     dep = [BenchChar(slot=1, char_id='飞霄', position_pref='front')]
     assert equip_alloc_empty_reason(None, dep, ['生命之花'], None) == 'unknown'
+
+
+from sr_od.application.currency_war.telemetry import state
+
+from sr_od.application.currency_war.telemetry import defects

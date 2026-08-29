@@ -25,6 +25,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.prep_director import PrepDirector
 
 from sr_od.application.currency_war.kernel.cw_prep_expect import XpLedger, _xp_compare, _xp_parse_buy_clicks
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 # ===== ① 推进算子真值表(单一源语义 = ADR-0129;门槛表 XP_TO_NEXT_LEVEL)=====
 
@@ -93,7 +94,7 @@ def _obs(xp: tuple[int, int] | None, level: int, plane: int = 2,
 def test_ledger_anchors_then_reconciles_clean(monkeypatch):
     """锚定 → 意图推进 → 同段对账一致:不落台账;锚定前/pending=0 不评。"""
     pd, session, captured = _stub_director()
-    monkeypatch.setattr(cw_telemetry, 'record_defect', _cap)
+    monkeypatch.setattr(defects, 'record_defect', _cap)
     # 首帧:锚定(2/72 lv8),不对账
     pd._reconcile_xp_expect(_obs((2, 72), 8))
     led = session.xp_expect_ledger
@@ -114,7 +115,7 @@ def test_ledger_mismatch_lands_defect_once(monkeypatch):
     """显示与账本不一致 → 落一条 xp_expect_mismatch 台账(surface/kind/
     reader_source 形态;pending 清零后同段不重复落)。"""
     pd, session, captured = _stub_director()
-    monkeypatch.setattr(cw_telemetry, 'record_defect',
+    monkeypatch.setattr(defects, 'record_defect',
                         lambda *a, **k: captured.append((a, k)))
     pd._reconcile_xp_expect(_obs((2, 72), 8))          # 锚定
     pd._xp_apply_buy_clicks('买牌 plan 买0张 升2次 刷1次')  # 期望 10/72
@@ -135,7 +136,7 @@ def test_ledger_levelup_channel_and_level_mismatch(monkeypatch):
     """直接 LevelUp 通道(腾席链循环点至 level+1):击数 = 恰升 1 级;
     等级双源不一致同样落台账(等级 = deploy cap 输入的交叉验证面)。"""
     pd, session, captured = _stub_director()
-    monkeypatch.setattr(cw_telemetry, 'record_defect',
+    monkeypatch.setattr(defects, 'record_defect',
                         lambda *a, **k: captured.append((a, k)))
     pd._reconcile_xp_expect(_obs((18, 20), 5, plane=1, round_num=3))
     pd._xp_apply_levelup()                             # 1 击 → lv6 2/40
@@ -155,7 +156,7 @@ def test_ledger_round_rollover_reanchors(monkeypatch):
     """轮界 = 重锚点:外生经验流(轮间 +2)吸收进锚点并计入 exogenous_xp
     披露,不落台账(不硬编码外生模型,把未知变实测)。"""
     pd, session, captured = _stub_director()
-    monkeypatch.setattr(cw_telemetry, 'record_defect', _cap)
+    monkeypatch.setattr(defects, 'record_defect', _cap)
     pd._reconcile_xp_expect(_obs((2, 72), 8))
     pd._xp_apply_buy_clicks('买牌 plan 买0张 升1次 刷0次')   # 期望 6/72
     pd._reconcile_xp_expect(_obs((6, 72), 8))                # 对账一致清 pending
@@ -258,3 +259,4 @@ def test_xp_defect_row_shape(tmp_path: Path, monkeypatch):
     assert row['reader_source'] == 'xp_expect_reconcile'
 
 
+from sr_od.application.currency_war.telemetry import state
