@@ -17,6 +17,9 @@
    裸 100 不再喂决策路径。
 5. sim 零漂移锁:sim 帧恒真读(默认 hp_readable=True)→ 消费门短路,
    血预算停手既有行为逐位不变(单局 sim 血线内帧仍拒、账本键仍在)。
+6. 检查器镜像锁(seg_check_untrusted_hp_levelup,W605/W580c):checks
+   层显形面——不可信帧出现 LevelUp 账本行即命中(与消费门两层分工),
+   sim 恒真读恒零命中 + ALL IN 豁免镜像。
 
 拒收语义依据(DESIGN 防线设计):线内升级 EV=−C−I 严格负(ADR-0448),
 证据缺失时禁令保持有效=fail-closed;误放(血线内追级)与误拦(少升
@@ -293,3 +296,98 @@ def test_registry_flag_off_still_zero_scope() -> None:
                                   blood_budget_stop_enabled=False)
     assert not blood_budget_levelup_blocked(_ghost_state(), StrategySession(),
                                             reg_off)
+
+
+# ---------- 组6:检查器侧镜像锁(seg_check_untrusted_hp_levelup) ----------
+# 与组2/3 的分工:那里锁 decision 层拒付,这里锁 checks 层显形——
+# 不可信帧上出现 LevelUp 账本行即命中(门旁路/账本错位即刻显形);
+# sim 恒真读(两键缺省)恒零命中 = 纯防线验证面(DESIGN 测试计划组5)。
+
+
+def _ledger_row(plane: int, rn: int, *, hp_readable: bool | None,
+                hp_trusted: bool | None, actions: list[dict] | None = None,
+                node: str = 'battle') -> dict:
+    """合成账本行(检查器输入的最小形状;键缺省位 = 可信口径的载体)。"""
+    st: dict = {'level': 6}
+    if hp_trusted is not None:
+        st['hp_trusted'] = hp_trusted
+    row: dict = {'plane': plane, 'round_num': rn, 'hp': 100,
+                 'node': node, 'actions': actions or [],
+                 'state': st, 'sim': {'node': node}}
+    if hp_readable is not None:
+        row['hp_readable'] = hp_readable
+    return row
+
+
+def _lv_action() -> dict:
+    return {'__type__': 'LevelUp', 'auth': 'pop_slot'}
+
+
+def test_seg_untrusted_hp_levelup_hits_both_bits_false() -> None:
+    """不可信帧(两位皆 False,hp_decision_trusted 谓词镜像)上
+    LevelUp → 命中;单 False 单 True(沿用帧/真读帧)不命中。"""
+    from sr_od.application.currency_war.cw_sim_checks import (
+        seg_check_untrusted_hp_levelup,
+    )
+    rows = [_ledger_row(2, 4, hp_readable=False, hp_trusted=False,
+                        actions=[_lv_action()])]
+    evs = seg_check_untrusted_hp_levelup(rows)
+    assert len(evs) == 1
+    assert evs[0]['levelups'] == 1
+    assert evs[0]['bits']   # 违规位显形在事件里
+
+
+def test_seg_trusted_frames_zero_hit() -> None:
+    """可信面零命中:两键缺省(sim 恒真读/旧批账本)、(False, True)
+    同节点沿用帧、(True, False) 真读帧、不可信帧但无 LevelUp。"""
+    from sr_od.application.currency_war.cw_sim_checks import (
+        seg_check_untrusted_hp_levelup,
+    )
+    rows = [
+        _ledger_row(1, 3, hp_readable=None, hp_trusted=None,
+                    actions=[_lv_action()]),            # sim 形态
+        _ledger_row(1, 4, hp_readable=False, hp_trusted=True,
+                    actions=[_lv_action()]),            # 沿用真值帧(消费门放行)
+        _ledger_row(1, 5, hp_readable=True, hp_trusted=False,
+                    actions=[_lv_action()]),            # 真读帧
+        _ledger_row(1, 6, hp_readable=False, hp_trusted=False),  # 无升级
+    ]
+    assert seg_check_untrusted_hp_levelup(rows) == []
+
+
+def test_seg_allin_exempt_precedes_trust_check() -> None:
+    """ALL IN 豁免优先(消费门语义镜像):位面末 boss 不可信帧 LevelUp 不报。"""
+    from sr_od.application.currency_war.cw_sim_checks import (
+        seg_check_untrusted_hp_levelup,
+    )
+    rows = [_ledger_row(2, 7, hp_readable=False, hp_trusted=False,
+                        actions=[_lv_action()], node='boss')]
+    assert seg_check_untrusted_hp_levelup(rows) == []
+    # 非 ALL IN 的 boss 帧(轮未到位面节点数)不豁免
+    rows_early = [_ledger_row(2, 3, hp_readable=False, hp_trusted=False,
+                              actions=[_lv_action()], node='boss')]
+    assert len(seg_check_untrusted_hp_levelup(rows_early)) == 1
+
+
+def test_seg_untrusted_check_registered_and_sim_zero_hit() -> None:
+    """检查项已入段级表;run_segment_checks 批量入口对恒真读合成局
+    零命中(纯防线验证面;sim-testing §6 披露键保留纪律)。"""
+    from sr_od.application.currency_war import cw_sim_checks as chk
+    assert 'seg_untrusted_hp_levelup' in chk._SEGMENT_CHECKS
+    good = [_ledger_row(1, r, hp_readable=None, hp_trusted=None,
+                        actions=[_lv_action()]) for r in range(1, 4)]
+    rep = chk.run_segment_checks([good], seed_base=0)
+    assert rep['seg_untrusted_hp_levelup']['count'] == 0
+
+
+def test_seg_untrusted_mutation_default_trust_turns_locks_red() -> None:
+    """变异自检(DESIGN 组5「去门必须涌现违规」):把检查器的缺省位
+    语义反转成「缺省 = 不可信」的合成形态等价于旧账本键位消失时
+    命中——锁的敏感性由显式 False 单向触发保证(缺省键的旧账本
+    不虚报,真不可信帧不漏报)。"""
+    from sr_od.application.currency_war.cw_sim_checks import (
+        seg_check_untrusted_hp_levelup,
+    )
+    # 顶层缺 state 子字典(形状异常账本)也不炸、且不误报(缺省 = 可信)
+    row = {'plane': 1, 'round_num': 2, 'hp': 100, 'actions': [_lv_action()]}
+    assert seg_check_untrusted_hp_levelup([row]) == []
