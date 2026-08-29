@@ -11,8 +11,11 @@ from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
+    XP_PER_BUY,
+    XP_TO_NEXT_LEVEL,
     _bench_char_cost,
     sell_refund,
+    xp_clicks_to_level,
 )
 
 
@@ -177,4 +180,22 @@ def test_simulate_level_up_xp_unknown_starts_zero() -> None:
     s2 = simulate(s, LevelUp(cost=4))
     assert s2.level == 4, "lv3 门槛 4,一击 +4 恰好升级"
     assert s2.xp_progress == (0, 6)
+
+
+def test_levelup_clicks_ladder_matches_registry() -> None:
+    """购买经验点击数阶梯:lv5→9 = 5/10/13/18(ceil(need/XP_PER_BUY))。
+
+    并自 test_cw_w502_deathbed_levelup_ev ①(P21 批;w502 ②③④ 为
+    math_proofs P21 已证命题的镜像复算,已退役——证明单篇
+    docs/game/currency_war/research/proofs/p21-p2-deathbed-levelup-ev.md
+    + tools/cw/proofs/ 可重跑脚本承载,测试不再镜像复算)。
+    W490 ⑰ P2r2 实测帧:LevelUp×13、87→37 金、lv7→8 —— 与 c=4 的
+    C=52 吻合,作为实测锚保留。
+    """
+    assert [xp_clicks_to_level(lv, 0) for lv in (5, 6, 7, 8)] == [5, 10, 13, 18]
+    assert xp_clicks_to_level(7, 0) == 13
+    assert xp_clicks_to_level(7, 0) * XP_PER_BUY == 52
+    # 注册表面:门槛表与每击经验常量即阶梯的单一源
+    assert XP_PER_BUY == 4
+    assert XP_TO_NEXT_LEVEL[5] == 20 and XP_TO_NEXT_LEVEL[7] == 52
 

@@ -15,8 +15,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_assembly import DecideAdapter
-from sr_od.application.currency_war.decision.decision_v2.adapter import snapshot_to_obs
 from sr_od.application.currency_war.decision.decision_v2.contracts import (
     AtomOp,
     Decision,
@@ -37,8 +35,7 @@ from sr_od.application.currency_war.decision.decision_v2.turn_state import (
     DirectionView,
     TurnState,
 )
-from sr_od.application.currency_war.kernel.cw_prep_actions import SellBench
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
         / 'currency_war')
@@ -51,27 +48,6 @@ def _snapshot() -> Snapshot:
         plane=1, round_num=2, level=3, gold=40, gold_trusted=True,
         free_bench_slots=3, deploy_vacancy=1, shop_open=False,
     )
-
-
-class _Strat:
-    """可编程假策略(记录 obs 输入,返回固件动作——单帧等价对照用)。"""
-
-    def __init__(self):
-        self.last_obs = None
-
-    def decide_prep_action(self, obs, session, config):
-        self.last_obs = obs
-        return SellBench(3)
-
-
-class _Executor:
-    """F3 校验桩(恒合法;不执行)。"""
-
-    def validate(self, action):
-        return None
-
-    def execute(self, action):
-        return True, 'stub'
 
 
 # ----------------------------------------------------- 1. TurnState 装配
@@ -132,7 +108,7 @@ def test_committed_from_semantics():
     sess2 = StrategySession()
     sess2.v3_intention = IntentionState(p1_pair=('仙舟', '列车'))
     assert committed_from(sess2) is True         # 配方锁立 → 已定型
-    st = _mk_state()
+    st = GameState()
     st.plane = 2
     assert committed_from(StrategySession(), st) is True   # P2 恒定型
     sess3 = StrategySession()
@@ -249,45 +225,18 @@ def test_tracking_view_prefers_tracked_over_fresh():
 
 
 # ----------------------------------------------------- 4. R4 接缝
-
-def test_r4_seam_functions_public_and_pure():
-    from sr_od.application.currency_war.kernel.cw_economy import (
-        refresh_ev_budget,
-        schedule_upgrade,
-    )
-    sess = StrategySession()
-    assert schedule_upgrade(_mk_state(), sess) in (True, False)
-    assert refresh_ev_budget(_mk_state(), sess) >= 0
-
-
-def _mk_state():
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    st = GameState()
-    st.plane, st.round_num, st.level, st.gold = 1, 2, 3, 40
-    return st
+# (原 test_r4_seam_functions_public_and_pure 已退役:仅断「可调用/返回
+# 非负」的存在性弱锁,无独立保护——排程真规则锁在
+# test_cw_w633_migration_b3 排程四触发组,schedule/refresh_ev_budget 值域
+# 锁在 test_cw_economy_cycle / test_cw_w633 预算核契约,更强锁全覆盖;
+# 收缩三原则②。)
 
 
 # ----------------------------------------------------- 5. 单帧等价锁
-
-def test_single_frame_equivalence_new_pipeline_vs_old_channel():
-    """批 1 等价判据:新管线 decide 输出与旧通道(直调决策核)逐位一致。"""
-    sess = StrategySession()
-    snap = _snapshot()
-    strat_new, strat_old = _Strat(), _Strat()
-    adapter = DecideAdapter(strat_new, config=None, executor=_Executor())
-    decision = adapter.decide(snap, sess)
-    # 旧通道:同一 snapshot 经同一 obs 通道直调决策核
-    action_old = strat_old.decide_prep_action(
-        snapshot_to_obs(snap, sess), sess, None)
-    from sr_od.application.currency_war.decision_assembly import action_to_atomop
-    new_sig = ('op', decision.ops[0].op_key, decision.ops[0].domain)
-    old_op = action_to_atomop(action_old)
-    old_sig = ('op', old_op.op_key, old_op.domain)
-    assert new_sig == old_sig
-    # obs 通道一致:两路决策核看到的 obs 逐字段相同(frozen 快照深拷贝语义)
-    assert strat_new.last_obs.state.gold == strat_old.last_obs.state.gold
-    assert (strat_new.last_obs.free_bench_slots
-            == strat_old.last_obs.free_bench_slots)
+# (原 test_single_frame_equivalence_new_pipeline_vs_old_channel 已退役:
+# 迁移期等价判据,对照臂「直调决策核」是迁移期通道非设计意图面;
+# ADR-0464 已收口等价判据替代,决策管线现役契约由 decision_v2 各锁
+# 承担——失去的仅是新旧管线逐位对拍,收口后对照臂已无被保护对象。)
 
 
 # ----------------------------------------------------- 6. 出战域出口
