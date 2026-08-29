@@ -9,8 +9,8 @@
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel import cw_observe
+from sr_od.application.currency_war.telemetry import cw_telemetry
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w505t') -> None:
@@ -27,6 +27,13 @@ def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w505t') -> None:
     # 防 rid 残留让后续测试的 L0 判级场景静默不触发。
     monkeypatch.setattr(cw_telemetry, '_L0_ANDON_HANDLER', lambda payload: True)
     monkeypatch.setattr(cw_telemetry, '_L0_ANDON_FIRED_RUNS', set())
+    # 分包期 4:obs_conflict 的旁路/run_id 出口走 kernel.cw_telemetry_exit 钩子位,
+    # 注入真实现(monkeypatch 槽位,自动还原)
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
+    monkeypatch.setattr(cw_telemetry_exit, '_bypass_obs_conflict_to_defect',
+                        cw_telemetry.bypass_obs_conflict_to_defect)
+    monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider',
+                        cw_telemetry.current_run_id)
 
 
 def _rows(tmp_path: Path, name: str) -> list[dict]:

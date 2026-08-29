@@ -61,9 +61,10 @@ def _tok(text: str, x1: int, y1: int) -> tuple[str, int, int, int, int]:
 
 
 def _capture_defects(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
-    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
+    # 分包期 4:obs 落账走 kernel.cw_telemetry_exit 出口钩子位,桩点随迁
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
     calls: list[dict] = []
-    monkeypatch.setattr(tel, 'record_defect',
+    monkeypatch.setattr(cw_telemetry_exit, '_record_defect',
                         lambda *a, **k: calls.append({'args': a, 'kwargs': k}))
     return calls
 
