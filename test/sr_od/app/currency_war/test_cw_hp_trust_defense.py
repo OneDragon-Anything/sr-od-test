@@ -1,0 +1,295 @@
+"""hp 可信位防线锁(W580;消费门 fail-closed + 写侧值位同写)。
+
+锁面(DESIGN 测试计划 5 组;`.debug/temp/currency_war/w580_hp_trust_defense/DESIGN.md`):
+1. 失明复现锁:全图 OCR det 漏检(mock 返空)→ read_hp_opt 经两级放大
+   回退恢复读数(局21 P2 r4 画面实显 16、全图 rect 内零框、裁片放大即
+   恢复的离线实证);常路径命中时不走回退(零新增开销锁)。
+2. 幽灵帧回放锁:(100, False, False) 三位自洽假值帧(局21 P2 r4 形态:
+   shop 覆盖丢位产物)→ blood_budget_levelup_blocked 拒;arbiter 端到端
+   逐击拒付;remediation 稳态组同拒(deploy_cap 补偿臂经同一谓词,单一
+   收口)。含变异自检:守卫删除(monkeypatch 可信位恒真)→ 本组锁必须
+   翻红(幽灵 100>21 不再拒),证明锁敏感性与守卫必要性。
+3. 放行面锁:同节点沿用帧 (v, False, True) 不拦(ADR-0428 语义零回归);
+   真读帧 (v, True, False) 不拦;ALL IN 豁免在不可信帧上仍生效
+   (豁免优先于守卫:末战花光是时机不是血线判断)。
+4. 写侧位一致锁:shop._apply_hp 三覆盖形态各产出正确 (hp, readable,
+   trusted) 三元组;None(无真读且无新鲜结算真值)不覆盖 state——
+   裸 100 不再喂决策路径。
+5. sim 零漂移锁:sim 帧恒真读(默认 hp_readable=True)→ 消费门短路,
+   血预算停手既有行为逐位不变(单局 sim 血线内帧仍拒、账本键仍在)。
+
+拒收语义依据(DESIGN 防线设计):线内升级 EV=−C−I 严格负(ADR-0448),
+证据缺失时禁令保持有效=fail-closed;误放(血线内追级)与误拦(少升
+一级)代价非对称同型于 ADR-0428。
+"""
+from __future__ import annotations
+
+import dataclasses
+import logging
+
+import pytest
+
+from sr_od.application.currency_war.cw_state import (
+    BenchChar,
+    GameState,
+    LevelUp,
+)
+from sr_od.application.currency_war.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision_v2.arbiter import (
+    arbitrate,
+)
+from sr_od.application.currency_war.decision_v2.candidates import (
+    Candidate,
+)
+from sr_od.application.currency_war.decision_v2.discipline import (
+    blood_budget_levelup_blocked,
+)
+from sr_od.application.currency_war.decision_v2.posture_release import (
+    hp_decision_trusted,
+)
+from sr_od.application.currency_war.decision_v2.registry import (
+    DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.decision_v2.remediation import (
+    steady_state_levelup_group,
+)
+from sr_od.application.currency_war.operations.prep.shop import _apply_hp
+
+logging.disable(logging.CRITICAL)
+
+
+def _ghost_state(hp: int = 100) -> GameState:
+    """局21 P2 r4 幽灵帧形态:P2 备战帧,hp=100 假值、两位皆 False
+    (shop 覆盖丢位产物:值写入了、保真位留在 shop 开态 read_game_state
+    的 (False, False))。"""
+    st = GameState()
+    st.plane, st.level, st.gold, st.hp = 2, 6, 86, hp
+    st.round_num = 4
+    st.node_type = 'battle'
+    st.hp_readable = False
+    st.hp_trusted = False
+    return st
+
+
+def _lv_cand() -> Candidate:
+    return Candidate(action=LevelUp(cost=4), tag='levelup', source='shop')
+
+
+# ---------- 组1:失明复现锁(read_hp_opt 两级放大回退) ----------
+
+
+def test_read_hp_opt_upscaled_fallback_recovers_small_value(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """全图 det 漏检(首调返空)→ 3x 放大回退恢复「16」(局21 P2 r4
+    失明帧形态);第二级二值化不触发(第一级已命中)。"""
+    from sr_od.application.currency_war.cw_observation import read_hp_opt
+    calls = {'n': 0}
+
+    def _miss_then_recover(**kw):
+        calls['n'] += 1
+        if calls['n'] == 1:
+            return []            # 全图原生分辨率:rect 内零检测框(det 漏检)
+        return [SimpleOcrItem('16')]   # 裁片 3x 放大后恢复
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        _miss_then_recover)
+    assert read_hp_opt(test_context, None) == 16
+    assert calls['n'] == 2   # 恰好两级:全图 miss → 3x 放大命中
+
+
+def test_read_hp_opt_fullres_hit_no_fallback(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """常路径:全图命中 → 不走放大回退(零新增开销锁)。"""
+    from sr_od.application.currency_war.cw_observation import read_hp_opt
+    calls = {'n': 0}
+
+    def _hit(**kw):
+        calls['n'] += 1
+        return [SimpleOcrItem('45')]
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', _hit)
+    assert read_hp_opt(test_context, None) == 45
+    assert calls['n'] == 1
+
+
+def test_read_hp_opt_second_level_binarized_recovery(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """放大仍漏(低对比)→ 第二级 OTSU 二值化兜回(两级管线完整面)。"""
+    from sr_od.application.currency_war.cw_observation import read_hp_opt
+    calls = {'n': 0}
+
+    def _miss_miss_hit(**kw):
+        calls['n'] += 1
+        return [] if calls['n'] < 3 else [SimpleOcrItem('9')]
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        _miss_miss_hit)
+    assert read_hp_opt(test_context, None) == 9
+    assert calls['n'] == 3
+
+
+class SimpleOcrItem:
+    """最小 OCR 结果桩(消费面仅 .data;与仓内 SimpleNamespace 桩同型)。"""
+
+    def __init__(self, data: str) -> None:
+        self.data = data
+
+
+# ---------- 组2:幽灵帧回放锁(消费门 fail-closed) ----------
+
+def test_ghost_frame_predicate_blocks() -> None:
+    """(100, False, False) 帧:100>21 线外,但不可信 → 拒(fail-closed)。"""
+    assert blood_budget_levelup_blocked(
+        _ghost_state(), StrategySession(), DEFAULT_REGISTRY) is True
+
+
+def test_ghost_frame_arbiter_rejects_all_levelups() -> None:
+    """arbiter 端到端:12×LevelUp 计划在幽灵帧逐击拒付,计数≥12
+    (局21 r4 12×LevelUp 放行病灶的行为反转)。"""
+    sess = StrategySession()
+    st = _ghost_state()
+    res = arbitrate([(_lv_cand(), 5.0, {})] * 12, st, sess, DEFAULT_REGISTRY)
+    assert not [a for a in res.actions if isinstance(a, LevelUp)]
+    assert sess.v3_blood_budget_rejects >= 12
+
+
+def test_ghost_frame_remediation_steady_group_blocked() -> None:
+    """remediation 稳态多击组面:幽灵帧整组拒发(deploy_cap 补偿臂①
+    经同一谓词单一收口,不再单独设锁)。"""
+    sess = StrategySession()
+    st = _ghost_state()
+    st.deployed = [BenchChar(slot=i + 1, char_id=f'c{i}', faction='仙舟')
+                   for i in range(6)]
+    st.bench[0] = BenchChar(slot=1, char_id='希儿', faction='量子')
+    st.xp_progress = (16, 40)
+    assert steady_state_levelup_group(st.copy(), st, sess,
+                                      DEFAULT_REGISTRY) == []
+    assert sess.v3_blood_budget_rejects == 1
+
+
+def test_mutation_guard_removal_turns_locks_red(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """变异自检:守卫删除(可信位恒真,模拟 W580a 之前的谓词)→ 幽灵帧
+    100>21 不再拒——组2 各锁在此变异下必须翻红,证明锁敏感性与守卫
+    必要性(去门必须涌现违规)。"""
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.decision_v2.discipline.'
+        'hp_decision_trusted', lambda state: True)
+    assert blood_budget_levelup_blocked(
+        _ghost_state(), StrategySession(), DEFAULT_REGISTRY) is False
+
+
+# ---------- 组3:放行面锁(语义零回归) ----------
+
+def _state_with_bits(hp: int, readable: bool, trusted: bool) -> GameState:
+    st = GameState()
+    st.plane, st.level, st.gold, st.hp = 2, 6, 50, hp
+    st.round_num = 4
+    st.node_type = 'battle'
+    st.hp_readable = readable
+    st.hp_trusted = trusted
+    return st
+
+
+def test_same_node_inherited_frame_passes() -> None:
+    """(16, False, True) 同节点沿用帧:血线内照拒、值位形态不扩大拦截面
+    (ADR-0428 主救场景语义零回归;线外沿用帧 100 恒放)。"""
+    sess = StrategySession()
+    # 沿用值在血线内:停手照常生效(值可信,判断成立)
+    assert blood_budget_levelup_blocked(
+        _state_with_bits(16, False, True), sess, DEFAULT_REGISTRY) is True
+    # 沿用值在线外:放行(不因 readable=False 误拦)
+    assert blood_budget_levelup_blocked(
+        _state_with_bits(100, False, True), sess, DEFAULT_REGISTRY) is False
+
+
+def test_real_read_frame_passes_outside_band() -> None:
+    """真读帧 (True, False) 位形态(可读未过帧龄门):线外放行不拦。"""
+    assert blood_budget_levelup_blocked(
+        _state_with_bits(30, True, False), StrategySession(),
+        DEFAULT_REGISTRY) is False
+
+
+def test_allin_exempt_precedes_trust_guard() -> None:
+    """ALL IN 豁免优先于可信位守卫:位面末不可信帧仍让位(豁免语义=
+    末战花光是时机不是血线判断,不因证据缺失收紧)。"""
+    st = _ghost_state(hp=100)
+    st.round_num = 7
+    st.node_type = 'boss'
+    sess = StrategySession()
+    sess.plane_node_table = ['battle'] * 7
+    assert blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY) is False
+
+
+def test_helper_single_source() -> None:
+    """谓词消费走单一源 helper(posture_release.hp_decision_trusted),
+    禁手写双位判定的纪律锚(W393 A1.1;谓词源码含本符号引用)。"""
+    import inspect
+
+    from sr_od.application.currency_war.decision_v2 import discipline
+    src = inspect.getsource(discipline.blood_budget_levelup_blocked)
+    assert 'hp_decision_trusted' in src
+    # 单一源语义自检:幽灵帧两位皆 False → 不可信;同节点沿用帧 → 可信
+    assert hp_decision_trusted(_ghost_state()) is False
+    assert hp_decision_trusted(_state_with_bits(16, False, True)) is True
+
+
+# ---------- 组4:写侧位一致锁(shop._apply_hp) ----------
+
+def test_apply_hp_real_read_writes_both_bits() -> None:
+    """真读覆盖 → (v, True, True)。"""
+    st = _ghost_state()
+    _apply_hp(st, 45, True, True)
+    assert (st.hp, st.hp_readable, st.hp_trusted) == (45, True, True)
+
+
+def test_apply_hp_settlement_writes_trusted_bit() -> None:
+    """结算真值覆盖(fresh 门过)→ (v, False, True):值可信但非本帧真读。"""
+    st = _ghost_state()
+    _apply_hp(st, 16, False, True)
+    assert (st.hp, st.hp_readable, st.hp_trusted) == (16, False, True)
+
+
+def test_apply_hp_none_keeps_reconciled_value() -> None:
+    """无新鲜真值(hp_value=None)→ 不覆盖:保留 read_game_state 对账层
+    值+位——裸 100 不再喂决策路径(幽灵生产点关闭)。"""
+    st = _ghost_state()
+    before = (st.hp, st.hp_readable, st.hp_trusted)
+    _apply_hp(st, None, False, False)
+    assert (st.hp, st.hp_readable, st.hp_trusted) == before
+
+
+# ---------- 组5:sim 零漂移锁 ----------
+
+def test_sim_frames_default_trusted_gate_short_circuits() -> None:
+    """sim 帧恒真读(默认 hp_readable=True)→ 消费门短路:同帧谓词结果
+    与守卫删除版逐位一致(零漂移的源级锁)。"""
+    st = _state_with_bits(16, True, False)   # sim 决策帧形态:真读
+    sess = StrategySession()
+    with_guard = blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY)
+    monkey = pytest.MonkeyPatch()
+    monkey.setattr(
+        'sr_od.application.currency_war.decision_v2.discipline.'
+        'hp_decision_trusted', lambda state: True)
+    try:
+        without_guard = blood_budget_levelup_blocked(st.copy(), sess,
+                                                     DEFAULT_REGISTRY)
+    finally:
+        monkey.undo()
+    assert with_guard == without_guard is True
+
+
+def test_sim_ledger_still_discloses_and_rejects_in_band() -> None:
+    """单局 sim 冒烟:账本键仍在、停手仍在血线内发生(ADR-0448 行为零
+    漂移;pool='fallback' 免快照依赖,同既有锁口径)。"""
+    from sr_od.application.currency_war import cw_sim
+    r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
+    assert r.ledger
+    for row in r.ledger:
+        assert 'blood_budget_levelup_rejects' in (row.get('sim') or {})
+
+
+def test_registry_flag_off_still_zero_scope() -> None:
+    """开关 off(A/B 对照臂)在守卫之前:不可信帧同样不辖(守卫位置
+    在开关与豁免之后,不改变 A/B 注入面)。"""
+    reg_off = dataclasses.replace(DEFAULT_REGISTRY,
+                                  blood_budget_stop_enabled=False)
+    assert not blood_budget_levelup_blocked(_ghost_state(), StrategySession(),
+                                            reg_off)
