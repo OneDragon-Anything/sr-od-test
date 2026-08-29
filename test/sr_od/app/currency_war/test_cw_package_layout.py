@@ -2,7 +2,7 @@
 
 三件守卫,锁「结构」不锁「形状」(行数/行段不入断言):
 1. 桶依赖矩阵:包内全部 import 边(含根包属性式按符号解析)必须落在 §3.2 矩阵
-   合法向内;唯一豁免边 decision→strategy_v1 白名单单列(买层接管批落地即消亡)。
+   合法向内(唯一历史豁免边 decision→strategy_v1 已随买层接管批消亡,ADR-0477)。
 2. 桶成员完备:包内每个 .py 模块必须解析到已声明桶,不允许 '?' 盲区(scan_v2
    教训:盲区 = 守卫不可见,新文件落错位置时矩阵锁会假绿)。
 3. 包根顶层布局:包根只允许已声明的桶子目录 + app/tools 壳文件(结构契约;
@@ -30,7 +30,6 @@ BUCKET_DIRS: dict[str, str] = {
     'obs': 'obs',
     'sim': 'sim',
     'telemetry': 'telemetry',
-    'strategy_v1': 'strategy_v1',
     'operations': 'app',
     'strategies': 'app',
     'tools': 'tools',
@@ -48,23 +47,19 @@ ROOT_FILES: dict[str, str] = {
     'prep_director': 'app',
     'run_state': 'app',
     'cw_node_validate': 'tools',
-    'cw_plan_replay_audit': 'tools',
     'cw_weight_search': 'tools',
 }
 
-# DESIGN §3.2 目标依赖矩阵 + 豁免白名单(§3.2 单列 + 期6 §4.4 ledger_hooks 归属)
+# DESIGN §3.2 目标依赖矩阵(期6 §4.4 ledger_hooks 归属)
 LEGAL_EDGES: dict[str, set[str]] = {
     'data': set(),
     'kernel': {'data'},
-    'decision': {'data', 'kernel', 'strategy_v1'},   # strategy_v1 = 豁免白名单
+    'decision': {'data', 'kernel'},
     'obs': {'data', 'kernel'},
     'sim': {'data', 'kernel', 'decision', 'telemetry'},   # telemetry = 期6 ledger_hooks 归属豁免
     'telemetry': {'data', 'kernel', 'decision', 'obs', 'sim'},
-    'strategy_v1': {'data', 'kernel'},
-    'app': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry',
-            'strategy_v1', 'tools'},
-    'tools': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry',
-              'strategy_v1', 'app'},
+    'app': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry', 'tools'},
+    'tools': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry', 'app'},
 }
 
 
@@ -119,7 +114,7 @@ def _scan_edges() -> dict[tuple[str, str], list[str]]:
 
 
 def test_bucket_dependency_matrix() -> None:
-    """守卫 1:全部桶级 import 边落在 §3.2 矩阵(豁免:decision→strategy_v1)。"""
+    """守卫 1:全部桶级 import 边落在 §3.2 矩阵(无豁免边)。"""
     bad = []
     for (a, b), detail in _scan_edges().items():
         if a == b or a == '??' or b == '??':

@@ -278,16 +278,17 @@ def test_battle_op_failure_does_not_exit():
 def test_grep_guard_state_dual_track_reads_confined_to_exempt_files():
     """批 4(修正④/⑤):state 双轨标志读点辖域 = 挂账层豁免清单**精确匹配**。
 
-    default 栈退役后,state 侧双轨读点的唯一合法残留 = 挂账层 v1 消费面
-    (删除点 = max(买层接管批, 腾席链折叠批),ADR-0466/0469 挂账):
-    cw_plan.plan 内部(C1/C2/C3)/cw_evaluate.evaluate(C6)/
-    cw_comps 池计算(C4,getattr 形态)/cw_economy 旧口径回退(C5 面
-    committed=None 分支)。清单外任何文件出现读点(getattr 或属性读)= 红;
-    豁免文件读点随挂账批清零后,本守卫应收紧为全禁。
+    双轨读点辖域 = kernel 判据面豁免清单**精确匹配**。
+
+    default 栈与 v1 挂账层均已退役(买层接管批,ADR-0477);state 侧双轨
+    读点的合法残留 = kernel 腾席判据(_should_deploy/level_up_gate 经
+    _want_level_up)/cw_comps 池计算(C4,getattr 形态)/cw_economy 旧口径
+    回退(C5 面 committed=None 分支)。清单外任何文件出现读点(getattr
+    或属性读)= 红。
     """
     import re
 
-    exempt = {'cw_plan.py', 'cw_evaluate.py', 'cw_comps.py', 'cw_economy.py'}
+    exempt = {'cw_deploy_seat.py', 'cw_comps.py', 'cw_economy.py'}
     pat_read = re.compile(r"\bstate\.dual_track_phase\b(?!\s*=[^=])")
     pat_getattr = re.compile(r"getattr\(\s*state\s*,\s*'dual_track_phase'")
     offenders: dict[str, int] = {}

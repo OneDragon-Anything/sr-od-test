@@ -32,7 +32,7 @@ def test_fw_empty_returns_target_regardless_of_dual_flag():
 
 
 def test_fw_set_not_committed_returns_recipe():
-    """双轨语义保留(挂账层 cw_plan 仍消费):fw 已定 + 未定型 → 配方伪 comp。"""
+    """双轨语义保留(fw 已定 + 未定型 → 配方伪 comp;sim/决策链消费)。"""
     sess = _sess()
     sess.transition_framework = '仙舟'
     st = GameState(plane=1, round_num=3)

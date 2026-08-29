@@ -46,7 +46,7 @@ from sr_od.application.currency_war.decision.decision_v2.scoring import (
 
 _REG = DEFAULT_REGISTRY
 
-#: P1 众数节点模板(cw_node_validate.P1_NODE_TEMPLATE 同源词表;
+#: P1 众数节点模板(tools.cw_node_validate.P1_NODE_TEMPLATE 同源词表;
 #: 槽 0-8 = r1-r9,战斗槽 = r3/r4/r6/r7/r9)
 _P1_TABLE = ['奖励', '奖励', '普通战斗', '普通战斗', '补给',
              '普通战斗', '遭遇', '奖励', 'boss']

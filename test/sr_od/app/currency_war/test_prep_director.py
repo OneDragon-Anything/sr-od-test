@@ -13,7 +13,7 @@ import sr_od.application.currency_war.kernel.cw_prep_actions as pv
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import prep_actions as pa_mod
 from sr_od.application.currency_war import prep_director as pd_mod
-from sr_od.application.currency_war.strategy_v1.cw_evaluate import _card_hits_target
+from sr_od.application.currency_war.kernel.cw_deploy_seat import _card_hits_target
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
@@ -217,15 +217,15 @@ def test_chain_c3in1_protection_none_sellable() -> None:
 
 def test_weakest_bench_idx_protects_triplicates() -> None:
     """_weakest_bench_idx 3合1 保护(直测):同名同星 2 张保护,只返回散件。"""
-    from sr_od.application.currency_war.strategy_v1 import cw_plan
+    from sr_od.application.currency_war.kernel import cw_deploy_seat as seat
 
     bench = [_bc(1, '飞霄'), _bc(2, '飞霄'), _bc(3, '散件')]
     st = GameState(bench=bench)
-    idx = cw_plan._weakest_bench_idx(st, [])
+    idx = seat._weakest_bench_idx(st, [])
     assert idx == 2   # 前两张保护(3合1 进行),返回散件下标
     # 全保护 → None
     st2 = GameState(bench=[_bc(1, '飞霄'), _bc(2, '飞霄')])
-    assert cw_plan._weakest_bench_idx(st2, []) is None
+    assert seat._weakest_bench_idx(st2, []) is None
 
 
 # ===== §5.3 主流程(P1 组合;阶段位推进)=====
@@ -278,14 +278,14 @@ def test_m6_gate_chain_c_sells_weakest_when_no_gold() -> None:
 
 def test_level_up_gate() -> None:
     """level_up_gate:level<10 + gold≥cost + (goal 说升/落后 node goal)。"""
-    from sr_od.application.currency_war.strategy_v1 import cw_plan
+    from sr_od.application.currency_war.kernel import cw_deploy_seat as seat
 
     # level 10 封顶
-    assert not cw_plan.level_up_gate(GameState(level=10, gold=999))
+    assert not seat.level_up_gate(GameState(level=10, gold=999))
     # 不够钱
-    assert not cw_plan.level_up_gate(GameState(level=5, gold=0))
+    assert not seat.level_up_gate(GameState(level=5, gold=0))
     # 落后 node goal(早期 plane1 r1 target_level 高)+ 够钱 → 升
-    assert cw_plan.level_up_gate(GameState(level=2, gold=50, plane=1, round_num=1))
+    assert seat.level_up_gate(GameState(level=2, gold=50, plane=1, round_num=1))
 
 
 # ===== 框架杂项 =====
@@ -583,13 +583,13 @@ def test_brake_inactive_when_running(test_context: SrTestContext, monkeypatch) -
 
 def test_weakest_bench_protects_same_star_only() -> None:
     """L-5 回归:3合1 保护按 (char_id, star) —— 同名不同星不保护。"""
-    from sr_od.application.currency_war.strategy_v1 import cw_plan
+    from sr_od.application.currency_war.kernel import cw_deploy_seat as seat
 
     bench2 = [_bc(1, '飞霄', star=1), _bc(2, '飞霄', star=1), _bc(3, '散件', star=1)]
-    assert cw_plan._weakest_bench_idx(GameState(bench=bench2), []) == 2
+    assert seat._weakest_bench_idx(GameState(bench=bench2), []) == 2
     # 同名不同星:两单张不构成进度 → 都可候选(不保护)
     bench_mixed = [_bc(1, '飞霄', star=1), _bc(2, '飞霄', star=2), _bc(3, '散件', star=1)]
-    idx = cw_plan._weakest_bench_idx(GameState(bench=bench_mixed), [])
+    idx = seat._weakest_bench_idx(GameState(bench=bench_mixed), [])
     assert idx is not None and idx != -1   # 有候选(不因同名保护而 None)
 
 def test_observe_light_reuses_heavy_cache(monkeypatch, test_context: SrTestContext) -> None:

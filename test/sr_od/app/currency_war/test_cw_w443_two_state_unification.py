@@ -52,9 +52,7 @@ def test_calibration_version_anchor() -> None:
 
 _THRESHOLD_CONSUMERS: tuple[tuple[str, int], ...] = (
     ('kernel/cw_economy.py', 1),        # 止损门
-    ('cw_evaluate.py', 2),       # HP_DISTRESS + 保血(同链两点)
     ('kernel/cw_comps.py', 1),          # 保命转型 0.75×
-    ('cw_plan.py', 1),           # _refresh_cap
 )
 
 

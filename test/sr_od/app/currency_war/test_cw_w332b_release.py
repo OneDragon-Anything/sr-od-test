@@ -461,28 +461,6 @@ def test_third_path_directive_not_directed() -> None:
 # --- ④⑤ spend_mode 状态机与 DP 合并语义 ---------------------------------
 
 
-def test_sell_for_interest_skip_list_contract(monkeypatch) -> None:
-    """v1 动作消费者跳卖契约保留:allin 档不卖息凑档;adaptive 档同帧照卖
-    (对照证明跳过来自档位而非别的门)。'release' 档映射已删(预留档位
-    无生产者;活栈消费门=⑨ 锁B)。"""
-    from sr_od.application.currency_war.strategy_v1 import cw_plan
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    st = _state(gold=18, deployed_n=0, bench_n=1)
-    _name, _ch = next((n, c) for n, c in CHARACTERS.items() if c.cost == 2)
-    st.bench[0] = BenchChar(slot=1, char_id=_name,
-                            faction=(_ch.factions or ('?',))[0], star=1)
-    monkeypatch.setattr(cw_plan, 'get_node_goal',
-                        lambda *a, **k: NodeGoal(6, 'allin'))
-    actions: list = []
-    cw_plan._maybe_sell_for_interest(st, actions, [], None, None)
-    assert not [a for a in actions if type(a).__name__ == 'SellBench']
-    monkeypatch.setattr(cw_plan, 'get_node_goal',
-                        lambda *a, **k: NodeGoal(6, 'adaptive'))
-    actions2: list = []
-    cw_plan._maybe_sell_for_interest(st, actions2, [], None, None)
-    assert [a for a in actions2 if type(a).__name__ == 'SellBench']
-
-
 def test_spend_mode_release_has_no_producer() -> None:
     """锁C(负向网格):'release' 为预留档位,生产点 get_node_goal 恒不产。
 
@@ -518,19 +496,6 @@ def test_fallback_node_goal_budget_none() -> None:
     from sr_od.application.currency_war.kernel.cw_economy import get_node_goal
     g = get_node_goal(1, 1)   # 部分传参 → 先验 fallback
     assert g.spend_mode == 'adaptive' and g.refresh_budget is None
-
-
-def test_plan_merges_dp_budget_into_refresh_cap(monkeypatch) -> None:
-    """三方合并消费侧(许可取交):DP 预算 1 < _refresh_cap 2 → 合并后 1。"""
-    from sr_od.application.currency_war.strategy_v1 import cw_plan
-    monkeypatch.setattr(cw_plan, 'get_node_goal',
-                        lambda *a, **k: NodeGoal(6, 'adaptive',
-                                                 refresh_budget=1))
-    st = _state(gold=60, hp=80, deployed_n=0, bench_n=0)
-    st.bench = [None] * BENCH_CAPACITY
-    acts = cw_plan.plan(st, None, [], rng=None, target_comp=None,
-                        reactive=True)
-    assert sum(1 for a in acts if isinstance(a, cw_plan.RefreshShop)) <= 1
 
 
 # --- ⑧ 换线判据 -----------------------------------------------------------------

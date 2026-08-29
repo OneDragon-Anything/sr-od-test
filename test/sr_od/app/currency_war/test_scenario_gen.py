@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.strategy_v1.cw_plan import _should_deploy, deploy_legal
+from sr_od.application.currency_war.kernel.cw_deploy_seat import _should_deploy, deploy_legal
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORKS,
@@ -81,20 +81,6 @@ def test_inv_same_name_never_deploys_twice(fw):
     cand = _bc(carry, _fw_faction(fw), slot=1)
     assert deploy_legal(cand, {carry}) is False
     assert _should_deploy(cand, gs, None) is False
-
-
-# ===== 不变量 4:息档不降(压缩语义)跨全部费位 =====
-
-@pytest.mark.parametrize('gold,cost', itertools.product(
-    (39, 40, 41, 49, 50, 51), (1, 2, 3, 4)))
-def test_inv_interest_tier_never_drops(gold, cost):
-    """买入后息档不降(除非刻意跨档——压缩语义允许金够高时;此处锁
-    _compress_release 的保息门行为)。"""
-    from sr_od.application.currency_war.strategy_v1.cw_plan import _compress_release
-    ok = _compress_release(cost, gold, set())
-    if ok:
-        assert (gold - cost) // 10 == gold // 10, \
-            f'放行的买入降息档(gold={gold}, cost={cost})'
 
 
 # ===== 不变量 5:合并权启动门(纯 shop 不启动;持有1+在售1 启动) =====
