@@ -15,15 +15,16 @@ from __future__ import annotations
 import time
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.telemetry.cw_telemetry import (
-    TelemetryRecorder,
-    consume_last_supply_pick,
-    read_jsonl,
-    set_last_supply_pick,
-)
+
+from sr_od.application.currency_war.telemetry import recorder
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
+
+from sr_od.application.currency_war.telemetry.state import consume_last_supply_pick, set_last_supply_pick
+
+from sr_od.application.currency_war.telemetry.query import read_jsonl
+from sr_od.application.currency_war.telemetry import state
 
 # ===== ③ OutcomeRecord.supply_pick(schema 锁) =====
 
@@ -118,9 +119,9 @@ def _make_loop(monkeypatch, last_state: GameState, *, pick=None):
         captured.append({'outcome': outcome, 'source': source,
                          'supply_pick': supply_pick})
 
-    monkeypatch.setattr(bl.cw_telemetry, 'record_outcome', _fake_record_outcome)
+    monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
     # consume_last_supply_pick 注入:battle_loop 经模块属性消费(cw_telemetry.*)
-    monkeypatch.setattr(cw_telemetry, 'consume_last_supply_pick', lambda: pick)
+    monkeypatch.setattr(state, 'consume_last_supply_pick', lambda: pick)
     monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: (1, 5))
 
     class _Loop(bl.CurrencyWarRunLoop):
@@ -211,7 +212,7 @@ def _make_supply_op(monkeypatch):
 
     decision_captured: list[dict] = []
 
-    monkeypatch.setattr(cw_telemetry, 'record_decision',
+    monkeypatch.setattr(recorder, 'record_decision',
                         lambda state, target_comp='', candidate_scores=None,
                         eval_breakdown=None, actions=None, gold_point=True,
                         extra=None: decision_captured.append(
@@ -304,7 +305,7 @@ def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
     pick_calls: list = []
     monkeypatch.setattr(m, 'read_supply_options',
                         lambda ctx, screen: pick_calls.append(screen) or [])
-    monkeypatch.setattr(m.cw_telemetry, 'consume_last_supply_pick', lambda: None)
+    monkeypatch.setattr(state, 'consume_last_supply_pick', lambda: None)
     op._do_action(object())
     assert len([r for r in captured
                 if r['extra'].get('phase') == 'supply_detour']) == 1
@@ -341,5 +342,9 @@ def test_detour_semantics_lock_in_source() -> None:
     src = inspect.getsource(run_supply_node.RunSupplyNode._supply_detour_collect)
     assert "extra={'phase': 'supply_detour'}" in src
     assert 'actions=[], gold_point=True' in src
+
+
+
+
 
 

@@ -15,10 +15,10 @@ from pathlib import Path
 import pytest
 
 from sr_od.application.currency_war.sim import cw_delta_pool_gen
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.sim import cw_sim_checks
 
 from sr_od.application.currency_war.sim.pool import pool_fingerprint
+from sr_od.application.currency_war.telemetry import ledger_hooks, state
 
 
 def _fixture_replay(root: Path, run_id: str, *, r2_node: str = '普通战斗') -> None:
@@ -156,7 +156,7 @@ def test_hook_swallows_regeneration_failure(
         raise RuntimeError('sim_runs 回灌守卫误触发(构造)')
     monkeypatch.setattr(cw_delta_pool_gen, 'regenerate_snapshot', _boom)
     # 不抛即过(返回 None;warning 已由 log 记)
-    assert cw_telemetry._regenerate_delta_pool_after_run() is None
+    assert ledger_hooks._regenerate_delta_pool_after_run() is None
 
 
 def test_record_run_summary_wires_hook(
@@ -170,7 +170,7 @@ def test_record_run_summary_wires_hook(
 
     monkeypatch.setattr(cw_delta_pool_gen, 'regenerate_snapshot',
                         _fake_regenerate)
-    cls = type(cw_telemetry.get_recorder())
+    cls = type(state.get_recorder())
     rec = object.__new__(cls)
     rec._comms = {}
     rec._gold_trajectory = {}

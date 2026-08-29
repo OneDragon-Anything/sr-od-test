@@ -86,7 +86,6 @@ def gated_env(monkeypatch):
     _stub('resolve_paddle_pair', (3, 5))
     monkeypatch.setattr(cw_observe, 'bypass_noop', True, raising=False)
     # 遥测旁路/消费面全部静默(session 缺省 None 已走空路径,防御性再桩)
-    from sr_od.application.currency_war.telemetry import cw_telemetry
     monkeypatch.setattr(cw_telemetry, 'bypass_obs_conflict_to_defect',
                         lambda rec: None)
     monkeypatch.setattr(cw_telemetry, 'current_run_id', lambda: None)

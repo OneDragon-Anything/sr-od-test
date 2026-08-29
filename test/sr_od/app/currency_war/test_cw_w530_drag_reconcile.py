@@ -11,10 +11,10 @@ reader_source;复现分级语义由 judge_severity 既有锁覆盖,不重复断�
 """
 from pathlib import Path
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_prep_actions import DeployMove, SellBench
 from sr_od.application.currency_war.prep_director import (
+from sr_od.application.currency_war.telemetry import defects, recorder
     compare_drag_expect,
     compute_drag_expect,
 )
@@ -161,11 +161,11 @@ def test_defect_row_shape(tmp_path: Path, monkeypatch):
     """不一致行落 defect_ledger:surface/kind/reader_source/gap_large 形态;
     分级(bench=决策关键面:单次 L1、复现 L0 由安灯承接)由既有分级锁覆盖。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    cw_telemetry.record_defect(
+    defects.record_defect(
         'bench', 'intent_state_mismatch',
         expected='deploy_move identity=希儿 from_slot=2 target=front1/place',
         observed='bench槽2 期望[无 希儿(已离槽)] 实读[希儿]',
@@ -182,4 +182,7 @@ def test_defect_row_shape(tmp_path: Path, monkeypatch):
     assert row['reader_source'] == 'drag_expect_reconcile'
     # 分级:bench=决策关键面+大 gap 单次 → L1 初判(复现第 2 次起 L0 由安灯承接;
     # gap_large 是判级输入非落盘字段,severity 即其结果)
-    assert row['severity'] == cw_telemetry.SEVERITY_L1_ALERT
+    assert row['severity'] == SEVERITY_L1_ALERT
+
+from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L1_ALERT
+

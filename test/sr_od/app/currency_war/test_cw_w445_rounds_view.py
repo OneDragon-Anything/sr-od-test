@@ -9,15 +9,15 @@ import json
 from pathlib import Path
 
 import pytest
+from sr_od.application.currency_war.telemetry import query, recorder
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 
 
 @pytest.fixture()
 def rec(tmp_path: Path, monkeypatch):
     """隔离 recorder(共享模块态一律 monkeypatch,不裸赋值)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'w445t')
     monkeypatch.setattr(cw_telemetry, '_CURRENT_DIFFICULTY', 'A8')
     return tmp_path
@@ -31,11 +31,11 @@ def _record(rec, plane: int, round_num: int, extra: dict,
     st.hp = hp
     st.hp_readable = hp_readable
     st.hp_trusted = hp_trusted
-    cw_telemetry.record_decision(st, '', {}, {}, [], extra=extra)
+    recorder.record_decision(st, '', {}, {}, [], extra=extra)
 
 
 def _line(rec, plane: int, round_num: int) -> str:
-    lines = cw_telemetry.query_rounds(rec, 'w445t')
+    lines = query.query_rounds(rec, 'w445t')
     hits = [ln for ln in lines if ln.strip().startswith(f'p{plane}r{round_num}')]
     assert len(hits) == 1, lines
     return hits[0]

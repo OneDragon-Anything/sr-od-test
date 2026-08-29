@@ -7,8 +7,8 @@
 """
 import json
 from pathlib import Path
+from sr_od.application.currency_war.telemetry import query, recorder, schema, state
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 
 # ===== plan_gold_flow(逐项期望金流)=====
 
@@ -22,7 +22,7 @@ def test_flow_mixed_plan():
         {'__type__': 'SellBench', 'bench_idx': 2, 'income': 3},
         {'__type__': 'DeployMove', 'bench_idx': 0, 'to_row': 'front', 'to_slot': 1},
     ]
-    f = cw_telemetry.plan_gold_flow(plan)
+    f = query.plan_gold_flow(plan)
     assert f['planned_spend'] == 2 + 1 + 4 + 2
     assert f['planned_income'] == 3
     assert f['net'] == 3 - 9
@@ -35,7 +35,7 @@ def test_flow_mixed_plan():
 
 def test_flow_sell_income_unknown_flag():
     """income=None 记 0 并标 income_unknown(读数缺失不硬猜)。"""
-    f = cw_telemetry.plan_gold_flow([{'__type__': 'SellBench', 'bench_idx': 0,
+    f = query.plan_gold_flow([{'__type__': 'SellBench', 'bench_idx': 0,
                                       'income': None}])
     assert f['planned_income'] == 0
     assert f['income_unknown'] is True
@@ -43,8 +43,8 @@ def test_flow_sell_income_unknown_flag():
 
 def test_flow_refresh_explicit_cost_and_fallback():
     """RefreshShop 有 cost 用 cost;缺省退 refresh_cost 参数(=审计 or 2 口径)。"""
-    a = cw_telemetry.plan_gold_flow([{'__type__': 'RefreshShop', 'cost': 1}])
-    b = cw_telemetry.plan_gold_flow([{'__type__': 'RefreshShop', 'cost': 0}],
+    a = query.plan_gold_flow([{'__type__': 'RefreshShop', 'cost': 1}])
+    b = query.plan_gold_flow([{'__type__': 'RefreshShop', 'cost': 0}],
                                     refresh_cost=3)
     assert a['planned_spend'] == 1
     assert b['planned_spend'] == 3
@@ -58,50 +58,50 @@ def _buy(cost=5):
 
 def test_classify_effective():
     """planned_spent & 金按计划移动 = 生效。"""
-    r = cw_telemetry.classify_spend_unit(_buy(5), 50, 45)
+    r = query.classify_spend_unit(_buy(5), 50, 45)
     assert r['verdict'] == 'effective'
     assert (r['actual_delta'], r['gap']) == (-5, 0)
 
 
 def test_classify_effective_within_tolerance():
     """差值恰在 ±2 容差内(与 shop 审计同源)→ 生效。"""
-    assert cw_telemetry.classify_spend_unit(_buy(5), 50, 47)['verdict'] == 'effective'
+    assert query.classify_spend_unit(_buy(5), 50, 47)['verdict'] == 'effective'
 
 
 def test_classify_not_effective_gold_frozen():
     """planned_spent & 金零下降(W489 病灶形态)= 执行未生效。"""
-    r = cw_telemetry.classify_spend_unit(_buy(5), 125, 125)
+    r = query.classify_spend_unit(_buy(5), 125, 125)
     assert r['verdict'] == 'not_effective'
     assert r['gap'] == 5
 
 
 def test_classify_partial_mismatch():
     """金动了但对不上账(部分成交/口径差/未观收入)≠ 全灭,单列一格。"""
-    r = cw_telemetry.classify_spend_unit(_buy(5), 50, 20)
+    r = query.classify_spend_unit(_buy(5), 50, 20)
     assert r['verdict'] == 'partial_mismatch'
 
 
 def test_classify_unplanned_spend():
     """no_plan & gold_moved = 计划外花销。"""
-    r = cw_telemetry.classify_spend_unit([], 50, 30)
+    r = query.classify_spend_unit([], 50, 30)
     assert r['verdict'] == 'unplanned_spend'
 
 
 def test_classify_no_spend_quiet():
     """无计划且金未动 = 健康静默单元。"""
-    assert cw_telemetry.classify_spend_unit([], 50, 51)['verdict'] == 'no_spend_quiet'
+    assert query.classify_spend_unit([], 50, 51)['verdict'] == 'no_spend_quiet'
 
 
 def test_classify_unknown_missing_close_reading():
     """关店金读数缺失 → unknown 不猜(无冲突行 ≠ 对拍通过,read 失败也不写行)。"""
-    r = cw_telemetry.classify_spend_unit(_buy(5), 50, None)
+    r = query.classify_spend_unit(_buy(5), 50, None)
     assert r['verdict'] == 'unknown'
     assert 'gold_reading_missing' in r['reason']
 
 
 def test_classify_unknown_half_unit_boundary():
     """半单元/中断单元(aborted)即使读数齐也不判——执行链不完整。"""
-    r = cw_telemetry.classify_spend_unit(_buy(5), 50, 45, boundary='aborted')
+    r = query.classify_spend_unit(_buy(5), 50, 45, boundary='aborted')
     assert r['verdict'] == 'unknown'
     assert 'boundary' in r['reason']
 
@@ -109,7 +109,7 @@ def test_classify_unknown_half_unit_boundary():
 # ===== query_spend_ledger(读端 join)=====
 
 def _append(rec: Path, name: str, row: dict) -> None:
-    cw_telemetry.append_jsonl(rec / name, row)
+    schema.append_jsonl(rec / name, row)
 
 
 def _seed_three_stream(rec: Path) -> None:
@@ -160,7 +160,7 @@ def _seed_three_stream(rec: Path) -> None:
 
 def test_query_spend_ledger_counts_and_large_gap(tmp_path: Path):
     _seed_three_stream(tmp_path)
-    lines = cw_telemetry.query_spend_ledger(tmp_path, 'w494t')
+    lines = query.query_spend_ledger(tmp_path, 'w494t')
     text = '\n'.join(lines)
     assert '共3' in text
     assert 'effective×1' in text
@@ -175,7 +175,7 @@ def test_query_spend_ledger_counts_and_large_gap(tmp_path: Path):
 def test_query_spend_ledger_plan_row_discriminates_prep_step(tmp_path: Path):
     """同轮 shop plan 行与 director 步进行并存:plan 取无 prep_step 的行(金50 非 48)。"""
     _seed_three_stream(tmp_path)
-    lines = cw_telemetry.query_spend_ledger(tmp_path, 'w494t')
+    lines = query.query_spend_ledger(tmp_path, 'w494t')
     r1 = next(ln for ln in lines if 'u1 p1r1' in ln)
     assert '开金=50' in r1
     assert '花费=5' in r1
@@ -187,7 +187,7 @@ def test_query_spend_ledger_fallback_pseudo_units(tmp_path: Path):
         'run_id': 'old', 'ts': '2026-08-28T09:00:00', 'plane': 1, 'round_num': 5,
         'gold': 125, 'gold_readable': True, 'eval_breakdown': {},
         'actions': [{'__type__': 'BuyCard', 'card': {'x': 300, 'name': '卡芙卡', 'cost': 2}}]})
-    lines = cw_telemetry.query_spend_ledger(tmp_path, 'old')
+    lines = query.query_spend_ledger(tmp_path, 'old')
     text = '\n'.join(lines)
     assert 'unknown×1' in text
     assert '(伪单元)' in text
@@ -197,18 +197,18 @@ def test_query_spend_ledger_fallback_pseudo_units(tmp_path: Path):
 def test_record_spend_unit_noop_without_run_id(tmp_path: Path, monkeypatch):
     """run_id 空 → no-op(与 record_exogenous 同门控)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', '')
-    cw_telemetry.record_spend_unit(1, 1, 1, 'closed', True, 1.0)
+    recorder.record_spend_unit(1, 1, 1, 'closed', True, 1.0)
     assert not (tmp_path / 'spend_ledger.jsonl').exists()
 
 
 def test_record_spend_unit_appends(tmp_path: Path, monkeypatch):
     """有 run_id → 落一行且 schema 字段齐(gold_close 预留恒 None)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'w494t')
-    cw_telemetry.record_spend_unit(2, 7, 3, 'failed', False, 12.345,
+    recorder.record_spend_unit(2, 7, 3, 'failed', False, 12.345,
                                    detail='x' * 500, gold_before=88)
     row = json.loads((tmp_path / 'spend_ledger.jsonl').read_text(encoding='utf-8').splitlines()[0])
     assert row['run_id'] == 'w494t'
@@ -291,7 +291,7 @@ def test_classify_plan_truncated_hard_wall_skips():
     """①硬墙跳过(plan 有动作未尝试)→ plan_truncated,**不停**(局22 u1:
     r9 已刷 4 次达 MAX_REFRESH,plan RefreshShop 被 continue,金 50→50——
     旧分类器误判 not_effective 停线的根因形态)。"""
-    r = cw_telemetry.classify_spend_unit(
+    r = query.classify_spend_unit(
         _plan_ju22_u1(), 50, 50,
         executed={'plan_truncated': True, 'refresh_skipped': 'max_cap',
                   'refresh_attempted': False})
@@ -302,7 +302,7 @@ def test_classify_plan_truncated_hard_wall_skips():
 def test_classify_free_refresh_proc_board_changed():
     """②刷新已尝试+牌面已变+Δgold=0 → free_refresh_proc,**不停**(免费
     刷新 proc 正证据形态:点击发生、牌面变了、金没扣)。"""
-    r = cw_telemetry.classify_spend_unit(
+    r = query.classify_spend_unit(
         _plan_ju20_r9(), 68, 68,
         executed={'refresh_attempted': True, 'refresh_board_changed': True})
     assert r['verdict'] == 'free_refresh_proc'
@@ -310,7 +310,7 @@ def test_classify_free_refresh_proc_board_changed():
 
 def test_classify_not_effective_attempted_board_unchanged():
     """③刷新已尝试+牌面未变+Δgold=0 → not_effective,**停**(真点击落空)。"""
-    r = cw_telemetry.classify_spend_unit(
+    r = query.classify_spend_unit(
         _plan_ju20_r9(), 68, 68,
         executed={'refresh_attempted': True, 'refresh_board_changed': False})
     assert r['verdict'] == 'not_effective'
@@ -319,15 +319,15 @@ def test_classify_not_effective_attempted_board_unchanged():
 def test_classify_executed_none_backward_compat():
     """executed=None(历史局/未挂钩)→ 判定退回 W494 原语义(金冻结+计划
     花费>0 = not_effective),不因新参数引入行为漂移。"""
-    assert cw_telemetry.classify_spend_unit(_buy(5), 125, 125)['verdict'] == 'not_effective'
-    assert cw_telemetry.classify_spend_unit(_buy(5), 125, 125,
+    assert query.classify_spend_unit(_buy(5), 125, 125)['verdict'] == 'not_effective'
+    assert query.classify_spend_unit(_buy(5), 125, 125,
                                             executed=None)['verdict'] == 'not_effective'
 
 
 def test_classify_unjudgeable_board_not_treated_as_changed():
     """牌面不可判(None)不得当「已变」——真落空不能被洗成免费(安灯停线面
     不可静默变窄)。"""
-    r = cw_telemetry.classify_spend_unit(
+    r = query.classify_spend_unit(
         _plan_ju20_r9(), 68, 68,
         executed={'refresh_attempted': True, 'refresh_board_changed': None})
     assert r['verdict'] == 'not_effective'
@@ -350,13 +350,13 @@ def test_exec_fail_predicate_exempts_new_verdicts():
 def test_exec_facts_slot_fills_spend_ledger(tmp_path: Path, monkeypatch):
     """shop 执行事实暂存槽 → 单元落账行新字段充实;消费即清(下一单元恒缺省)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'w577t')
-    cw_telemetry.set_unit_exec_facts(
+    state.set_unit_exec_facts(
         plan_truncated=True, refresh_skipped='max_cap',
         refresh_attempted=False, refresh_board_changed=None)
-    cw_telemetry.record_spend_unit(1, 9, 1, 'closed', True, 1.0)
-    cw_telemetry.record_spend_unit(1, 10, 2, 'closed', True, 1.0)
+    recorder.record_spend_unit(1, 9, 1, 'closed', True, 1.0)
+    recorder.record_spend_unit(1, 10, 2, 'closed', True, 1.0)
     rows = [json.loads(ln) for ln in
             (tmp_path / 'spend_ledger.jsonl').read_text(encoding='utf-8').splitlines()]
     assert (rows[0]['plan_truncated'], rows[0]['refresh_skipped']) == (True, 'max_cap')
@@ -378,8 +378,8 @@ def test_spend_unit_row_reader_and_hook_join(tmp_path: Path):
         'round_num': 9, 'unit_seq': 2, 'boundary': 'closed',
         'plan_truncated': False, 'refresh_skipped': None,
         'refresh_attempted': True, 'refresh_board_changed': True})
-    row = cw_telemetry._spend_unit_row(tmp_path, 'ju22', 1, 9, 2)
+    row = query._spend_unit_row(tmp_path, 'ju22', 1, 9, 2)
     assert row is not None and row['refresh_attempted'] is True
-    assert cw_telemetry._spend_unit_row(tmp_path, 'ju22', 1, 9, 9) is None
-    assert cw_telemetry._spend_unit_row(tmp_path, 'other', 1, 9, 1) is None
-    assert cw_telemetry._spend_unit_row(tmp_path, 'ju22', 2, 9, 1) is None
+    assert query._spend_unit_row(tmp_path, 'ju22', 1, 9, 9) is None
+    assert query._spend_unit_row(tmp_path, 'other', 1, 9, 1) is None
+    assert query._spend_unit_row(tmp_path, 'ju22', 2, 9, 1) is None

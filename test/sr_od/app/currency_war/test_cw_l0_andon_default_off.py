@@ -16,16 +16,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from sr_od.application.currency_war.telemetry import defects, recorder
 
-_L0 = 'sr_od.application.currency_war.telemetry.cw_telemetry'
+_L0 = 'sr_od.application.currency_war.telemetry.defects'
 
 
 def _setup_isolated_l0(tmp_path: Path, monkeypatch) -> Path:
     """台账指向 tmp + 安灯槽/闩锁/复现账隔离(与 w505 _setup_recorder 同链)。"""
-    from sr_od.application.currency_war.telemetry import cw_telemetry as ct
 
     monkeypatch.setattr(ct, '_RECORDER',
-                        ct.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(ct, '_CURRENT_RUN_ID', 'l0iso')
     monkeypatch.setattr(ct, '_defect_seen', {})
     monkeypatch.setattr(ct, '_defect_seen_run', '')
@@ -37,7 +37,6 @@ def test_default_handler_off_is_noop(tmp_path: Path, monkeypatch) -> None:
     """锁1:缺省(Handler=None)触发 L0 → 台账照记 L0_andon,游戏侧停线实现
     不得被触达(canary 挂在 cw_observe,被调即炸)。"""
     from sr_od.application.currency_war.kernel import cw_observe
-    from sr_od.application.currency_war.telemetry import cw_telemetry as ct
 
     d = _setup_isolated_l0(tmp_path, monkeypatch)
     monkeypatch.setattr(ct, '_L0_ANDON_HANDLER', None)   # 缺省态显式钉住
@@ -48,7 +47,7 @@ def test_default_handler_off_is_noop(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(cw_observe, 'stop_for_l0_andon', _canary)
 
     for _ in range(2):   # 同特征第 2 次 = 复现 → 判级 L0
-        ct.record_defect('gold', 'perception_conflict',
+        defects.record_defect('gold', 'perception_conflict',
                          'gold_delta: 45', '20', gap=-25.0, gap_large=True)
 
     rows = [__import__('json').loads(ln) for ln in
@@ -62,10 +61,9 @@ def test_no_lazy_wiring_in_fire_and_app_arms_handler() -> None:
     (CurrencyWarApp.__init__ 显式 set_l0_andon_handler)在场。"""
     import inspect
 
-    from sr_od.application.currency_war.telemetry import cw_telemetry as ct
     from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
 
-    assert 'stop_for_l0_andon' not in inspect.getsource(ct._fire_l0_andon), (
+    assert 'stop_for_l0_andon' not in inspect.getsource(defects._fire_l0_andon), (
         '_fire_l0_andon 禁止惰性接真实现(缺省必须关,武装点在 app)')
     assert 'set_l0_andon_handler' in inspect.getsource(CurrencyWarApp.__init__), (
         'CurrencyWarApp.__init__ 缺 L0 安灯显式武装(生产停线将静默失效)')
@@ -84,3 +82,4 @@ def test_b_run_leftover_is_reset_by_guard(test_context) -> None:
     assert test_context.run_context.last_run_result is None, (
         'conftest 运行残留守卫失效:last_run_result 跨测试泄漏'
         '(后续 execute() 将撞 W209j 刹车)')
+

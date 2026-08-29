@@ -41,9 +41,8 @@ def _buy(name: str, reason: str) -> dict:
 
 def test_default_stack_skipped(tmp_path: Path) -> None:
     """default 栈(cw_plan,reason='plan')跳过 coldstart(不辖 r368)。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import (
-        run_checks_on_replay,
-    )
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
     _write_replay(tmp_path, [{
         'run_id': 'run_t1', 'strategy_id': 'default', 'round': 1,
         'actions': [_buy('翡翠', 'plan')],   # plan 开局买=生产 default 合法
@@ -54,9 +53,8 @@ def test_default_stack_skipped(tmp_path: Path) -> None:
 
 def test_v2_stack_violation_detected(tmp_path: Path) -> None:
     """v2 栈违规(开局轮 reason=off=局49 形态)被检出+run_id 溯源。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import (
-        run_checks_on_replay,
-    )
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
     _write_replay(tmp_path, [{
         'run_id': 'run_t2', 'strategy_id': 'line_v2', 'round': 1,
         'actions': [_buy('翡翠', 'off')],
@@ -67,9 +65,8 @@ def test_v2_stack_violation_detected(tmp_path: Path) -> None:
 
 def test_stack_inferred_from_reason_vocab(tmp_path: Path) -> None:
     """strategy_id 缺失时按开局 reason 词表判栈(v2 词→v2 栈跑检查)。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import (
-        run_checks_on_replay,
-    )
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
     _write_replay(tmp_path, [{
         'run_id': 'run_t3', 'strategy_id': '', 'round': 2,
         'actions': [_buy('丹恒·饮月', 'bridge_seed')],   # v2 词表=合法
@@ -108,9 +105,8 @@ def _write_multirow_replay(d: Path) -> None:
 
 def test_multiline_round_not_lossy(tmp_path: Path) -> None:
     """审查#3:开局轮逐行全检——pre-refresh 波的违规不被大行挤掉。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import (
-        run_checks_on_replay,
-    )
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
     _write_multirow_replay(tmp_path)
     out = '\n'.join(run_checks_on_replay(tmp_path))
     assert 'run_t4' in out and '⚠' in out and '翡翠' in out, \
@@ -119,9 +115,8 @@ def test_multiline_round_not_lossy(tmp_path: Path) -> None:
 
 def test_untagged_buys_report_indeterminable(tmp_path: Path) -> None:
     """审查#2:开局买 reason 缺失 → ⊘ 无法判(非伪 ✓)。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import (
-        run_checks_on_replay,
-    )
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
     _write_replay(tmp_path, [{
         'run_id': 'run_t5', 'strategy_id': 'line_v2', 'round': 1,
         'actions': [{'__type__': 'BuyCard',
@@ -133,9 +128,8 @@ def test_untagged_buys_report_indeterminable(tmp_path: Path) -> None:
 
 def test_unknown_strategy_id_skipped(tmp_path: Path) -> None:
     """审查#5:非空未知 sid(未来新栈)显式跳过,不盲跑误报。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import (
-        run_checks_on_replay,
-    )
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
     _write_replay(tmp_path, [{
         'run_id': 'run_t6', 'strategy_id': 'some_future_strategy',
         'round': 1, 'actions': [_buy('翡翠', 'pair')],
@@ -150,9 +144,8 @@ def test_decision_v2_stack_runs_coldstart(tmp_path: Path) -> None:
     违规,不得按「未知栈」跳过(注册桥观察局判读链锁)。样本:off 买
     (翡翠,局49 败坏形态)必报 ⚠;engine_seed 买(v2 合法放行词,
     ADR-0260)不误报。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import (
-        run_checks_on_replay,
-    )
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
     _write_replay(tmp_path, [{
         'run_id': 'run_t7', 'strategy_id': 'decision_v2', 'round': 1,
         'actions': [_buy('翡翠', 'off'),

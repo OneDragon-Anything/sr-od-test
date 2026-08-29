@@ -113,7 +113,7 @@ def _hook_env(tmp_path, monkeypatch):
     import sr_od.application.currency_war.kernel.cw_observe as obs_mod
     monkeypatch.setattr(obs_mod, 'cw_shot_unique',
                         lambda image, label: f'{label}__dead.png')
-    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.state as tel
     monkeypatch.setattr(tel, 'current_run_id', lambda: 'run_x')
     # 分包期 4:gold_detail 的 run_id 归属键读 kernel.cw_telemetry_exit 钩子位,
     # provider 桩随迁(自动还原)
@@ -148,7 +148,7 @@ def test_hook_dedup_same_frame(_hook_env) -> None:
 
 def test_hook_tolerates_run_id_failure(_hook_env, monkeypatch) -> None:
     """run id 源抛异常 → 行照落,run_id='-'(采集零行为影响,不炸主流程)。"""
-    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
+    import sr_od.application.currency_war.telemetry.state as tel
     def _boom():
         raise RuntimeError('no session')
     monkeypatch.setattr(tel, 'current_run_id', _boom)
@@ -200,3 +200,4 @@ def test_read_round_outcome_no_detail_frame_still_row(_hook_env) -> None:
     r = json.loads((_hook_env / 'gold_detail.jsonl')
                    .read_text(encoding='utf-8').splitlines()[0])
     assert (r['base'], r['streak'], r['interest']) == (None, None, None)
+

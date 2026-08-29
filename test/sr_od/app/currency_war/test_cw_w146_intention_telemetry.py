@@ -21,9 +21,8 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.telemetry.cw_telemetry import (
-    TelemetryRecorder,
-)
+
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 
 
 def _record_one(tmp_path, extra):

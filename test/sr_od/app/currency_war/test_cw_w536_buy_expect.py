@@ -18,9 +18,9 @@ from pathlib import Path
 import numpy as np
 
 from one_dragon.base.geometry.rectangle import Rect
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.prep_director import (
+from sr_od.application.currency_war.telemetry import defects, recorder
     BuyPurchase,
     _save_buy_evidence,
     compare_buy_expect,
@@ -289,12 +289,12 @@ def test_buy_defect_row_shape(tmp_path: Path, monkeypatch):
     """不一致行落 defect_ledger:surface='bench'/kind='buy_expect_mismatch'/
     reader_source='buy_expect_reconcile' 形态;分级语义由既有分级锁覆盖。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True,
+                        recorder.TelemetryRecorder(enabled=True,
                                                        replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    cw_telemetry.record_defect(
+    defects.record_defect(
         'bench', 'buy_expect_mismatch',
         expected='buy 景元/1星×1@3 总价3',
         observed='bench槽2 期望[景元/1星] 实读[花火/1星]',

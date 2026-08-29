@@ -10,13 +10,13 @@ import json
 from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.telemetry import cw_telemetry
+from sr_od.application.currency_war.telemetry import defects, query, recorder, schema, state
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w505t') -> None:
     """recorder/run_id 指向 tmp_path(测试纪律:不写真实 .debug/)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', run_id)
     # 复现计数是进程内状态,逐测试清空防串
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
@@ -31,9 +31,9 @@ def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w505t') -> None:
     # 注入真实现(monkeypatch 槽位,自动还原)
     from sr_od.application.currency_war.kernel import cw_telemetry_exit
     monkeypatch.setattr(cw_telemetry_exit, '_bypass_obs_conflict_to_defect',
-                        cw_telemetry.bypass_obs_conflict_to_defect)
+                        defects.bypass_obs_conflict_to_defect)
     monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider',
-                        cw_telemetry.current_run_id)
+                        state.current_run_id)
 
 
 def _rows(tmp_path: Path, name: str) -> list[dict]:
@@ -49,7 +49,7 @@ def _rows(tmp_path: Path, name: str) -> list[dict]:
 def test_defect_ledger_schema_field_lock(tmp_path: Path, monkeypatch):
     """落一行并逐字段锁 schema(字段名/形状=设计 §3.2;新字段末尾追加原则)。"""
     _setup_recorder(monkeypatch, tmp_path)
-    cw_telemetry.record_defect(
+    defects.record_defect(
         'gold', 'invariant_break', 'gold∈[0,400]', '405', gap=5.0,
         plane=1, round_num=3, unit_seq=2, verdict='待研',
         shot='obs_conflict_gold.png',
@@ -64,7 +64,7 @@ def test_defect_ledger_schema_field_lock(tmp_path: Path, monkeypatch):
                       'gap', 'severity', 'verdict', 'evidence', 'reader_source',
                       'note', 'confidence'}
     assert r['confidence'] is None   # 未传 → None(无置信度语义面)
-    assert r['schema_version'] == cw_telemetry.SCHEMA_VERSION
+    assert r['schema_version'] == schema.SCHEMA_VERSION
     assert r['run_id'] == 'w505t'
     assert (r['plane'], r['round_num'], r['unit_seq']) == (1, 3, 2)
     assert r['surface'] == 'gold' and r['kind'] == 'invariant_break'
@@ -82,7 +82,7 @@ def test_defect_ledger_noop_without_run_id(tmp_path: Path, monkeypatch):
     """run_id 空 → no-op(与其他便捷入口同门控)。"""
     _setup_recorder(monkeypatch, tmp_path)
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', '')
-    cw_telemetry.record_defect('gold', 'perception_conflict', 'a', 'b')
+    defects.record_defect('gold', 'perception_conflict', 'a', 'b')
     assert not (tmp_path / 'defect_ledger.jsonl').exists()
 
 
@@ -91,7 +91,7 @@ def test_defect_ledger_noop_without_run_id(tmp_path: Path, monkeypatch):
 def test_judge_severity_truth_table():
     """L0=关键∧大gap∧复现∧非自动;L1=关键∧大gap 单次,或中面∧大gap∧复现;
     L2=自动裁决/非关键/小 gap。"""
-    j = cw_telemetry.judge_severity
+    j = defects.judge_severity
     # 决策关键面
     assert j('gold', gap_large=True, reproduced=True) == 'L0_andon'
     assert j('gold', gap_large=True, reproduced=False) == 'L1_alert'
@@ -110,16 +110,16 @@ def test_critical_surface_domain_lock():
     """关键面/中面枚举锁(分级判据①的域;扩面必须显式改此处)。"""
     assert frozenset(
         {'gold', 'bench', 'deployed', 'level_xp', 'shop_refresh', 'phase_round'}) \
-        == cw_telemetry.DECISION_CRITICAL_SURFACES
+        == defects.DECISION_CRITICAL_SURFACES
     assert frozenset({'hp', 'equip', 'strategy', 'node_seq', 'streak'}) \
-        == cw_telemetry.MEDIUM_CRITICAL_SURFACES
+        == defects.MEDIUM_CRITICAL_SURFACES
 
 
 def test_reproduction_counter_upgrades_second_occurrence(tmp_path: Path, monkeypatch):
     """同特征第 2 次 = 复现:金面大 gap 单次 L1 → 再犯升 L0(判据③防抖)。"""
     _setup_recorder(monkeypatch, tmp_path)
     for _ in range(2):
-        cw_telemetry.record_defect('gold', 'perception_conflict',
+        defects.record_defect('gold', 'perception_conflict',
                                    'gold_delta: 45', '20', gap=-25.0,
                                    gap_large=True)
     sevs = [r['severity'] for r in _rows(tmp_path, 'defect_ledger.jsonl')]
@@ -173,7 +173,7 @@ def test_obs_conflict_bypass_auto_resolved_and_text_field(tmp_path: Path, monkey
 def test_exec_event_bypass_fail_only(tmp_path: Path, monkeypatch):
     """record_exec_event 写入 → fail 类事件台账同行出现;success 类不进台账。"""
     _setup_recorder(monkeypatch, tmp_path)
-    rec = cw_telemetry.get_recorder()
+    rec = state.get_recorder()
     rec.record_exec_event('w505t', 7, 'BuyCard', 'battle_prep',
                           'fail', reason='识别MISS', retry_count=2)
     rec.record_exec_event('w505t', 7, 'LevelUp', 'battle_prep',
@@ -192,7 +192,7 @@ def test_exec_event_bypass_fail_only(tmp_path: Path, monkeypatch):
 def test_exec_event_bypass_surface_mapping(tmp_path: Path, monkeypatch):
     """动作族 → surface 映射锁(LevelUp→level_xp / Refresh→shop_refresh)。"""
     _setup_recorder(monkeypatch, tmp_path)
-    rec = cw_telemetry.get_recorder()
+    rec = state.get_recorder()
     rec.record_exec_event('w505t', 2, 'LevelUp', 'battle_prep', 'blocked', reason='x')
     rec.record_exec_event('w505t', 3, 'RefreshShop', 'battle_prep', 'bail', reason='y')
     surfaces = [d['surface'] for d in _rows(tmp_path, 'defect_ledger.jsonl')]
@@ -205,9 +205,9 @@ def test_gold_close_slot_fills_spend_ledger(tmp_path: Path, monkeypatch):
     """shop 侧 set_unit_gold_close → 单元关闭落账行 gold_close/trusted 充实;
     消费即清(下一单元无暂存恒 None,不串)。"""
     _setup_recorder(monkeypatch, tmp_path)
-    cw_telemetry.set_unit_gold_close(45)
-    cw_telemetry.record_spend_unit(1, 1, 1, 'closed', True, 1.0)
-    cw_telemetry.record_spend_unit(1, 2, 2, 'closed', True, 1.0)
+    state.set_unit_gold_close(45)
+    recorder.record_spend_unit(1, 1, 1, 'closed', True, 1.0)
+    recorder.record_spend_unit(1, 2, 2, 'closed', True, 1.0)
     rows = _rows(tmp_path, 'spend_ledger.jsonl')
     assert (rows[0]['gold_close'], rows[0]['gold_close_trusted']) == (45, True)
     assert (rows[1]['gold_close'], rows[1]['gold_close_trusted']) == (None, False)
@@ -217,8 +217,8 @@ def test_gold_close_read_failure_recorded_not_silent(tmp_path: Path, monkeypatch
     """read_gold 失读(None)照记 trusted=False——「对拍通过」与「失读」
     离线可分,unknown 占比降到读失败率而非静默缺失。"""
     _setup_recorder(monkeypatch, tmp_path)
-    cw_telemetry.set_unit_gold_close(None)
-    cw_telemetry.record_spend_unit(1, 1, 1, 'closed', True, 1.0)
+    state.set_unit_gold_close(None)
+    recorder.record_spend_unit(1, 1, 1, 'closed', True, 1.0)
     row = _rows(tmp_path, 'spend_ledger.jsonl')[0]
     assert (row['gold_close'], row['gold_close_trusted']) == (None, False)
 
@@ -226,28 +226,28 @@ def test_gold_close_read_failure_recorded_not_silent(tmp_path: Path, monkeypatch
 def test_query_prefers_ledger_gold_close_over_conflict(tmp_path: Path):
     """读端:行内 gold_close 优先(无冲突行也判 effective——unknown 面消除);
     旧行(None)回退冲突行;两者皆缺 → unknown 不猜。"""
-    cw_telemetry.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
+    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
         'ts': '2026-08-28T12:00:00', 'run_id': 't', 'plane': 1, 'round_num': 1,
         'unit_seq': 1, 'boundary': 'closed', 'gold_close': 45,
         'gold_close_trusted': True})
-    cw_telemetry.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
+    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
         'ts': '2026-08-28T12:05:00', 'run_id': 't', 'plane': 1, 'round_num': 2,
         'unit_seq': 2, 'boundary': 'closed', 'gold_close': None,
         'gold_close_trusted': False})
-    cw_telemetry.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
+    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
         'ts': '2026-08-28T12:10:00', 'run_id': 't', 'plane': 1, 'round_num': 3,
         'unit_seq': 3, 'boundary': 'closed', 'gold_close': None,
         'gold_close_trusted': False})
     for rnd, ts in ((1, '12:00:05'), (2, '12:05:05'), (3, '12:10:05')):
-        cw_telemetry.append_jsonl(tmp_path / 'decisions.jsonl', {
+        schema.append_jsonl(tmp_path / 'decisions.jsonl', {
             'run_id': 't', 'ts': f'2026-08-28T{ts}', 'plane': 1, 'round_num': rnd,
             'gold': 50, 'gold_readable': True, 'eval_breakdown': {},
             'actions': [{'__type__': 'BuyCard', 'card': {'x': 300, 'name': 'X', 'cost': 5}}]})
     # 仅 r2 有冲突行(旧口径的唯一金源);r1/r3 无
-    cw_telemetry.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
+    schema.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
         'ts': '2026-08-28T12:05:20', 'field': 'gold_delta', 'old': 45, 'new': 45,
         'verdict': '留证', 'source': 'shop_spend_audit', 'plane': 1, 'round_num': 2})
-    lines = '\n'.join(cw_telemetry.query_spend_ledger(tmp_path, 't'))
+    lines = '\n'.join(query.query_spend_ledger(tmp_path, 't'))
     # r1:仅行内 gold_close=45 → effective(旧口径下无冲突行会记 unknown)
     r1 = next(ln for ln in lines.splitlines() if 'u1 p1r1' in ln)
     assert 'effective' in r1

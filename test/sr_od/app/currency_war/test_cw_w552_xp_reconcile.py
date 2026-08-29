@@ -21,12 +21,12 @@ from sr_od.application.currency_war.kernel.cw_state import (
     xp_clicks_to_level,
 )
 from sr_od.application.currency_war.prep_director import (
+from sr_od.application.currency_war.telemetry import defects, recorder
     PrepDirector,
     XpLedger,
     _xp_compare,
     _xp_parse_buy_clicks,
 )
-from sr_od.application.currency_war.telemetry import cw_telemetry
 
 # ===== ① 推进算子真值表(单一源语义 = ADR-0129;门槛表 XP_TO_NEXT_LEVEL)=====
 
@@ -239,12 +239,12 @@ def test_w552_wiring_locks():
 def test_xp_defect_row_shape(tmp_path: Path, monkeypatch):
     """defect_ledger.jsonl 行形态:surface='xp'/kind='xp_expect_mismatch'。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True,
+                        recorder.TelemetryRecorder(enabled=True,
                                                        replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    cw_telemetry.record_defect(
+    defects.record_defect(
         'xp', 'xp_expect_mismatch',
         expected='lv8 xp 10/72(账本;events=+buy×2击)',
         observed='lv8 xp 6/72',

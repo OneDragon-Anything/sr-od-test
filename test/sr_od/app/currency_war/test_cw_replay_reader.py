@@ -140,7 +140,8 @@ def test_divergence_stats_on_typed_rows(tmp_path: Path) -> None:
 
 def test_from_dict_is_write_side_single_source() -> None:
     """from_dict 产物即 cw_telemetry 写端类(单一源,非平行类)。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import DecisionTrace as WT
+
+    from sr_od.application.currency_war.telemetry.schema import DecisionTrace as WT
     assert DecisionTrace is WT
     f = from_dict(DecisionTrace, {'run_id': 'r', 'not_a_field': 1})
     assert isinstance(f, WT) and f.run_id == 'r'

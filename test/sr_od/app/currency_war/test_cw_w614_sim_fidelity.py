@@ -26,7 +26,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     EconomyEffect,
 )
 
-from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 SimInvestProfile
 
 # 零漂移锚:seeds 0..5(pool='snapshot'),行为投影 = 每轮

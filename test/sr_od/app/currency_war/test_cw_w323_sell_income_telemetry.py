@@ -21,17 +21,15 @@ from contextlib import contextmanager
 
 import pytest
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     SellBench,
 )
-from sr_od.application.currency_war.telemetry.cw_telemetry import (
-    TelemetryRecorder,
-    query_economy,
-    read_jsonl,
-    record_sell_income,
-)
+
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder, record_sell_income
+
+from sr_od.application.currency_war.telemetry.query import query_economy, read_jsonl
 
 
 @pytest.fixture(autouse=True)

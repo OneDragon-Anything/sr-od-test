@@ -44,8 +44,8 @@ def _make_loop(monkeypatch, *, ocr_texts: list[str], read_phase: tuple[int, int]
     def _fake_record_outcome(outcome, source: str = '') -> None:
         captured.append({'outcome': outcome, 'source': source})
 
-    monkeypatch.setattr(bl.cw_telemetry, 'record_outcome', _fake_record_outcome)
-    monkeypatch.setattr(bl.cw_telemetry, 'record_exogenous', lambda *a, **k: None)
+    monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
+    monkeypatch.setattr(recorder, 'record_exogenous', lambda *a, **k: None)
     monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: read_phase)
 
     def _fake_read_outcome(ctx, screen, *, plane, round_num, comp_tag,
@@ -212,3 +212,5 @@ def test_branch_wiring_in_source() -> None:
     # 3b 原「前往结算」输轮记录路径保留(fp 防重共用,1f miss 时兜底)
     assert "btn == '前往结算'" in src
     assert '_record_round_outcome(screen)   # killed/progress_delta 由屏文本判定' in src
+
+

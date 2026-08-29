@@ -14,10 +14,10 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     LevelUp,
 )
-from sr_od.application.currency_war.telemetry.cw_telemetry import (
-    TelemetryRecorder,
-    query_economy,
-)
+
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
+
+from sr_od.application.currency_war.telemetry.query import query_economy
 
 
 def _record_one_round(tmp: str, run_id: str, level_up_cost: int | None) -> list[str]:

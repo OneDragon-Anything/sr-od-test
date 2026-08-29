@@ -167,7 +167,7 @@ def _make_director(monkeypatch: pytest.MonkeyPatch,
 
 
 def _capture_defects(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
-    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
+    from sr_od.application.currency_war.telemetry import defects as tel
     calls: list[dict] = []
     monkeypatch.setattr(tel, 'record_defect',
                         lambda *a, **k: calls.append({'args': a, 'kwargs': k}))
@@ -224,3 +224,4 @@ def test_pool_wire_best_effort_on_error(
                         lambda *a, **k: (_ for _ in ()).throw(RuntimeError('down')))
     st = _state_with_shop([ShopCard(x=100, name='甲', cost=1)])
     d._reconcile_shop_pool(_shop_obs(st))   # 不抛即过
+

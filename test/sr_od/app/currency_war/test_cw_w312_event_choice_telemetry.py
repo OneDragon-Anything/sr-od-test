@@ -18,12 +18,11 @@ import inspect
 
 import pytest
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
-from sr_od.application.currency_war.telemetry.cw_telemetry import (
-    TelemetryRecorder,
-    record_event_choice,
-    read_jsonl,
-)
+from sr_od.application.currency_war.telemetry import state as cw_telemetry
+
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder, record_event_choice
+
+from sr_od.application.currency_war.telemetry.query import read_jsonl
 
 
 @pytest.fixture(autouse=True)
@@ -68,7 +67,7 @@ def test_helper_writes_event_choice_row(tmp_path) -> None:
     round_num 从 ctx match last_state 兜底解析。"""
     monkey_match = type('M', (), {})()
     monkey_match.session = type('S', (), {})()
-    monkey_match.session.last_state = cw_telemetry.GameState(round_num=5)
+    monkey_match.session.last_state = GameState(round_num=5)
     cw_telemetry.set_ctx_match(monkey_match)
     rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     monkeypatch_rec = rec
@@ -171,3 +170,5 @@ def test_single_helper_no_copy() -> None:
         src = inspect.getsource(obj)
         assert "record_exogenous(" not in src, \
             f'{func_qual} 应走共用 record_event_choice,不直调 record_exogenous'
+
+from sr_od.application.currency_war.kernel.cw_state import GameState

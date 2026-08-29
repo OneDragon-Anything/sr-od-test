@@ -10,8 +10,8 @@ query_spend_ledger 按 SpendUnitRecord 字段解析,缺陷行会被当伪单元�
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.operations.prep.shop import refresh_effective
+from sr_od.application.currency_war.telemetry import defects, recorder
 
 
 def _rows(tmp_path: Path, name: str) -> list[dict]:
@@ -66,13 +66,13 @@ def test_refresh_defect_debounce_l1_then_l0(tmp_path: Path, monkeypatch):
     """同特征(刷前牌名串)首见 L1、第二波再全同升 L0——「连续两次刷新全同
     才确认」的防抖由台账复现计数承载,判据函数只给单波判定。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
     names = sorted(['A', 'B', 'C', 'D', 'E'])
     for _ in range(2):
-        cw_telemetry.record_defect(
+        defects.record_defect(
             'shop_refresh', 'invariant_break',
             expected=f'刷后牌面≠刷前:{names}',
             observed=f'刷新后5牌与刷前全同:{names}',
@@ -88,10 +88,10 @@ def test_record_defect_does_not_pollute_spend_ledger(tmp_path: Path, monkeypatch
     """缺陷台账行只进 defect_ledger 一条流:spend_ledger 是原始证据层
     (消费端按单元框架字段解析),缺陷行混入会被当伪单元误读。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    cw_telemetry.record_defect('shop_refresh', 'invariant_break', 'a', 'b')
+    defects.record_defect('shop_refresh', 'invariant_break', 'a', 'b')
     assert len(_rows(tmp_path, 'defect_ledger.jsonl')) == 1
     assert not (tmp_path / 'spend_ledger.jsonl').exists()

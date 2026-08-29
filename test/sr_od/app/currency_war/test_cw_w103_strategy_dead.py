@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from sr_od.application.currency_war.telemetry import ledger_hooks, query, recorder
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 
 
 def _write_rows(path: Path, rows: list[dict]) -> None:
@@ -23,7 +23,7 @@ def _write_rows(path: Path, rows: list[dict]) -> None:
 
 def test_dead_streak_transition_state_machine() -> None:
     """同 key 重入不计数;换 key 时 live 复位 / dead 递增。"""
-    t = cw_telemetry.dead_streak_transition
+    t = query.dead_streak_transition
     # 首轮(prev None):不结算
     assert t(None, (1, 1), 0, True) == 0
     assert t(None, (1, 1), 2, False) == 2
@@ -38,26 +38,26 @@ def test_dead_streak_transition_state_machine() -> None:
 
 def test_strategy_round_live_with_cache(tmp_path, monkeypatch) -> None:
     """mtime 缓存:写入后重查可见;不同 run 互不串。"""
-    rec = cw_telemetry.TelemetryRecorder(
+    rec = recorder.TelemetryRecorder(
         replay_dir=tmp_path, enabled=True)
     monkeypatch.setattr(cw_telemetry, '_RECORDER', rec)
-    cw_telemetry._STRATEGY_LIVE_CACHE.clear()
+    query._STRATEGY_LIVE_CACHE.clear()
     f = tmp_path / 'decisions.jsonl'
     _write_rows(f, [
         {'run_id': 'r1', 'plane': 1, 'round_num': 1, 'strategy_id': ''},
         {'run_id': 'r1', 'plane': 1, 'round_num': 2, 'strategy_id': 'decision_v2'},
     ])
-    assert cw_telemetry.strategy_round_live('r1', (1, 1)) is False
-    assert cw_telemetry.strategy_round_live('r1', (1, 2)) is True
+    assert query.strategy_round_live('r1', (1, 1)) is False
+    assert query.strategy_round_live('r1', (1, 2)) is True
     # 追加(新 mtime)后缓存失效重扫:r1 r1 也变 live
     _write_rows(f, [{'run_id': 'r1', 'plane': 1, 'round_num': 1,
                      'strategy_id': 'decision_v2'}])
-    assert cw_telemetry.strategy_round_live('r1', (1, 1)) is True
+    assert query.strategy_round_live('r1', (1, 1)) is True
 
 
 def test_check_strategy_live_streak_w98_shape() -> None:
     """W98 两局形态(整局恒空)必报;健康局不报;孤立短段不报。"""
-    c = cw_telemetry.check_strategy_live_streak
+    c = query.check_strategy_live_streak
     # W98 形态:P1 全轮 strategy_id 恒空(003757: 57 行实录形状)
     dead_rows = [
         {'plane': 1, 'round_num': rn, 'strategy_id': ''}
@@ -89,7 +89,7 @@ def test_check_strategy_live_streak_w98_shape() -> None:
 
 def test_run_checks_reports_dead_run(tmp_path, monkeypatch) -> None:
     """run_checks_on_replay 对失活局出「[策略失活]」行(不被判栈跳过)。"""
-    rec = cw_telemetry.TelemetryRecorder(
+    rec = recorder.TelemetryRecorder(
         replay_dir=tmp_path, enabled=True)
     monkeypatch.setattr(cw_telemetry, '_RECORDER', rec)
     _write_rows(tmp_path / 'decisions.jsonl', [
@@ -100,5 +100,5 @@ def test_run_checks_reports_dead_run(tmp_path, monkeypatch) -> None:
     _write_rows(tmp_path / 'outcomes.jsonl', [
         {'run_id': 'dead1', 'plane': 1, 'round_num': rn} for rn in range(1, 6)
     ])
-    lines = cw_telemetry.run_checks_on_replay(tmp_path, recent=5)
+    lines = ledger_hooks.run_checks_on_replay(tmp_path, recent=5)
     assert any('[策略失活]' in x and 'dead1' in x for x in lines), lines

@@ -167,7 +167,7 @@ class TestCompareAgainstW600Fixture:
 
 
 def _capture_defects(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
-    import sr_od.application.currency_war.telemetry.cw_telemetry as tel
+    from sr_od.application.currency_war.telemetry import defects as tel
     calls: list[dict] = []
     monkeypatch.setattr(tel, 'record_defect',
                         lambda *a, **k: calls.append({'args': a, 'kwargs': k}))
@@ -249,3 +249,4 @@ def test_merge_wire_best_effort_on_error(
         [ShopCard(x=100, name='甲', merge_preview=2)],
         bench=[BenchChar(slot=0, char_id='甲', star=1)])
     d._reconcile_merge_preview(_obs(st))   # 不抛即过
+

@@ -19,13 +19,13 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.telemetry import cw_telemetry
+from sr_od.application.currency_war.telemetry import query, recorder, state
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w603t') -> None:
     """recorder/run_id 指向 tmp_path(测试纪律:不写真实 .debug/)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', run_id)
     monkeypatch.setattr(cw_telemetry, '_CURRENT_DIFFICULTY', 'A8')
     monkeypatch.setattr(cw_telemetry, '_RUN_CLOSED', False)
@@ -39,7 +39,7 @@ def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w603t') -> None:
     # provider 钉回本模块 current_run_id(随 _CURRENT_RUN_ID 桩值走)
     from sr_od.application.currency_war.kernel import cw_telemetry_exit
     monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider',
-                        cw_telemetry.current_run_id)
+                        state.current_run_id)
 
 
 def _rows(tmp_path: Path, name: str) -> list[dict]:
@@ -74,7 +74,7 @@ def test_decision_row_carries_disclosure_keys(tmp_path: Path, monkeypatch) -> No
                         [_fake_match((2, 1), XpLedger(level=3, xp_cur=4,
                                                       xp_next=8, anchored=True))])
     st = GameState(gold=30, hp=50, round_num=6, plane=1)
-    cw_telemetry.get_recorder().record_decision('w603a', 'A8', st, '', {}, {}, [])
+    state.get_recorder().record_decision('w603a', 'A8', st, '', {}, {}, [])
     rows = _rows(tmp_path, 'decisions.jsonl')
     assert len(rows) == 1
     r = rows[0]
@@ -92,14 +92,14 @@ def test_decision_row_downgrade_inactive_and_no_match(tmp_path: Path, monkeypatc
     monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF',
                         [_fake_match((0, 0), None)])
     st = GameState(gold=30, hp=90, round_num=2, plane=1)
-    cw_telemetry.get_recorder().record_decision('w603b', 'A8', st, '', {}, {}, [])
+    state.get_recorder().record_decision('w603b', 'A8', st, '', {}, {}, [])
     r = _rows(tmp_path, 'decisions.jsonl')[0]
     assert r['p1_downgrade_active'] is False
     assert r['sess_blood_budget_rejects'] == 0
     assert r['xp_expect_ledger'] is None
 
     monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF', [None])
-    cw_telemetry.get_recorder().record_decision(
+    state.get_recorder().record_decision(
         'w603b2', 'A8', GameState(gold=30, hp=50, round_num=6, plane=1),
         '', {}, {}, [])
     r2 = _rows(tmp_path, 'decisions.jsonl')[1]
@@ -149,12 +149,12 @@ def test_query_obs_conflicts_filters_by_run_id(tmp_path: Path) -> None:
                     'run_id': 'run_a'}) + '\n'
         + json.dumps({'ts': '2026-08-30T02:00:00', 'field': 'hp'}) + '\n',
         encoding='utf-8')
-    filtered = cw_telemetry.query_obs_conflicts(tmp_path, 'run_a')
+    filtered = query.query_obs_conflicts(tmp_path, 'run_a')
     assert any('[gold]' in ln for ln in filtered)
     assert not any('[hp]' in ln for ln in filtered)   # 历史行(无键)被过滤
-    assert cw_telemetry.query_obs_conflicts(tmp_path, 'run_b') == ['  (无记录)']
+    assert query.query_obs_conflicts(tmp_path, 'run_b') == ['  (无记录)']
     # 全量(空 run_id)= 历史行 + 新行都在
-    full = cw_telemetry.query_obs_conflicts(tmp_path, '')
+    full = query.query_obs_conflicts(tmp_path, '')
     assert any('[hp]' in ln for ln in full) and any('[gold]' in ln for ln in full)
 
 
@@ -165,21 +165,21 @@ def test_briefing_before_first_run_lands_in_next_run(tmp_path: Path,
     """锁③a:进程首局(无 live run)简报行不再被丢 → start_run 后以新 id 补写,
     ts 保留采集时点(归属滞后/丢失双修)。"""
     _setup_recorder(monkeypatch, tmp_path, run_id='')
-    cw_telemetry.record_exogenous(0, 'briefing', detail='affixes=[甲] bosses=[乙]')
+    recorder.record_exogenous(0, 'briefing', detail='affixes=[甲] bosses=[乙]')
     # 局前:不落盘,只缓冲
     assert _rows(tmp_path, 'exogenous.jsonl') == []
-    assert len(cw_telemetry._PENDING_BRIEFING_ROWS) == 1
-    buffered_ts = cw_telemetry._PENDING_BRIEFING_ROWS[0]['ts']
+    assert len(state._PENDING_BRIEFING_ROWS) == 1
+    buffered_ts = state._PENDING_BRIEFING_ROWS[0]['ts']
     # 新局开局:缓冲以新 run_id 补写
     monkeypatch.setattr(cw_telemetry, 'recover_dangling_run_summaries', lambda: None)
-    new_rid = cw_telemetry.start_run('A8')
+    new_rid = state.start_run('A8')
     assert new_rid.startswith('run_')
     rows = _rows(tmp_path, 'exogenous.jsonl')
     assert len(rows) == 1
     assert rows[0]['run_id'] == new_rid
     assert rows[0]['kind'] == 'briefing'
     assert rows[0]['ts'] == buffered_ts   # ts=采集时点,非补写时点
-    assert cw_telemetry._PENDING_BRIEFING_ROWS == []
+    assert state._PENDING_BRIEFING_ROWS == []
 
 
 def test_briefing_after_run_closed_lands_in_next_run(tmp_path: Path,
@@ -187,17 +187,17 @@ def test_briefing_after_run_closed_lands_in_next_run(tmp_path: Path,
     """锁③b:局终 summary 后(run 关闭位)简报行不再挂旧 run_id(W576 组5.1
     归属滞后的根因面)→ 缓冲到下一局。"""
     _setup_recorder(monkeypatch, tmp_path, run_id='run_old')
-    cw_telemetry.record_run_summary('loss', 2, 8, 3)
-    assert cw_telemetry._RUN_CLOSED is True
-    cw_telemetry.record_exogenous(0, 'briefing', detail='d1')
+    state.record_run_summary('loss', 2, 8, 3)
+    assert state._RUN_CLOSED is True
+    recorder.record_exogenous(0, 'briefing', detail='d1')
     # 旧 run_id 不再直接吃行
     assert _rows(tmp_path, 'exogenous.jsonl') == []
     monkeypatch.setattr(cw_telemetry, 'recover_dangling_run_summaries', lambda: None)
-    new_rid = cw_telemetry.start_run('A8')
+    new_rid = state.start_run('A8')
     rows = _rows(tmp_path, 'exogenous.jsonl')
     assert len(rows) == 1 and rows[0]['run_id'] == new_rid
     # 开局复位关闭位:局中简报(battle_loop 位面分支)照常直写
-    assert cw_telemetry._RUN_CLOSED is False
+    assert state._RUN_CLOSED is False
 
 
 def test_briefing_mid_run_writes_directly_other_kinds_noop(tmp_path: Path,
@@ -205,13 +205,13 @@ def test_briefing_mid_run_writes_directly_other_kinds_noop(tmp_path: Path,
     """锁③c:live run 内 briefing 直写不变;其余 kind 维持原 no-op 门
     (局外事件族不归属下一局,行为面不外溢)。"""
     _setup_recorder(monkeypatch, tmp_path, run_id='run_live')
-    cw_telemetry.record_exogenous(3, 'briefing', detail='plane2')
+    recorder.record_exogenous(3, 'briefing', detail='plane2')
     rows = _rows(tmp_path, 'exogenous.jsonl')
     assert len(rows) == 1
     assert rows[0]['run_id'] == 'run_live' and rows[0]['kind'] == 'briefing'
-    assert cw_telemetry._PENDING_BRIEFING_ROWS == []
+    assert state._PENDING_BRIEFING_ROWS == []
     # 其余 kind 维持原 no-op 门(仅局外/无 live run 时丢,不入缓冲)
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', '')
-    cw_telemetry.record_exogenous(0, 'node_enter', detail='局外弹窗')
+    recorder.record_exogenous(0, 'node_enter', detail='局外弹窗')
     assert len(_rows(tmp_path, 'exogenous.jsonl')) == 1
-    assert cw_telemetry._PENDING_BRIEFING_ROWS == []
+    assert state._PENDING_BRIEFING_ROWS == []

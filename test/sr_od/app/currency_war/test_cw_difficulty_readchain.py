@@ -78,7 +78,8 @@ def test_state_field_default_and_serialize() -> None:
     (decisions.jsonl 落盘无需白名单——serialize_state 全量语义锁)。"""
     st = _state()
     assert st.enemy_difficulty_live is False
-    from sr_od.application.currency_war.telemetry.cw_telemetry import serialize_state
+
+    from sr_od.application.currency_war.telemetry.schema import serialize_state
     d = serialize_state(st)
     assert 'enemy_difficulty_live' in d
     assert d['enemy_difficulty_live'] is False

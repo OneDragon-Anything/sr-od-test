@@ -12,7 +12,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_observe, cw_telemetry_exit
-from sr_od.application.currency_war.telemetry import cw_telemetry
+from sr_od.application.currency_war.telemetry import defects as cw_telemetry
 
 
 class _FakeRunContext:

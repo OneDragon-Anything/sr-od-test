@@ -14,11 +14,12 @@ from sr_od.application.currency_war.kernel.cw_state import (
     bench_occupied,
     mutate_bench_deployed,
 )
-from sr_od.application.currency_war.telemetry.cw_telemetry import (
-    TelemetryRecorder,
-    query_economy,
-    serialize_action,
-)
+
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
+
+from sr_od.application.currency_war.telemetry.query import query_economy
+
+from sr_od.application.currency_war.telemetry.schema import serialize_action
 from sr_od.application.currency_war.operations.prep.shop import (
     expected_gold_after_actions,
     sell_guard_ok,

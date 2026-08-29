@@ -17,7 +17,11 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_round
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.telemetry.cw_telemetry import TelemetryRecorder, read_jsonl
+
+from sr_od.application.currency_war.telemetry import recorder
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
+
+from sr_od.application.currency_war.telemetry.query import read_jsonl
 
 # ===== 缺陷①修 a:parse_settlement_round 纯函数 =====
 
@@ -87,8 +91,8 @@ def _make_loop(monkeypatch, *, new_match: bool, elapsed_s: float,
         captured.append({'outcome': outcome, 'source': source,
                          'supply_pick': supply_pick})
 
-    monkeypatch.setattr(bl.cw_telemetry, 'record_outcome', _fake_record_outcome)
-    monkeypatch.setattr(bl.cw_telemetry, 'record_exogenous',
+    monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
+    monkeypatch.setattr(recorder, 'record_exogenous',
                         lambda *a, **k: None)
     monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: (1, 1))
 
@@ -197,7 +201,7 @@ def test_supply_outcome_synthesized(monkeypatch) -> None:
         captured.append({'outcome': outcome, 'source': source,
                          'supply_pick': supply_pick})
 
-    monkeypatch.setattr(bl.cw_telemetry, 'record_outcome', _fake_record_outcome)
+    monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
     monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: (1, 5))
 
     class _Loop(bl.CurrencyWarRunLoop):
@@ -229,7 +233,7 @@ def test_supply_outcome_hp_unreadable_low_confidence(monkeypatch) -> None:
 
     captured: list[dict] = []
 
-    monkeypatch.setattr(bl.cw_telemetry, 'record_outcome',
+    monkeypatch.setattr(recorder, 'record_outcome',
                         lambda outcome, source='', supply_pick=None: captured.append(
                             {'outcome': outcome, 'source': source,
                              'supply_pick': supply_pick}))
@@ -260,3 +264,6 @@ def test_supply_branch_wiring_in_source() -> None:
     src = inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
     assert 'RunSupplyNode(self.ctx).execute()' in src
     assert '_record_supply_outcome(screen)' in src
+
+
+

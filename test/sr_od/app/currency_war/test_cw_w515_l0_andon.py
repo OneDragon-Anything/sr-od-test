@@ -11,13 +11,14 @@ import json
 from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.telemetry import cw_telemetry
+from sr_od.application.currency_war.telemetry import defects as cw_telemetry
+from sr_od.application.currency_war.telemetry import defects, recorder
 
 
 def _setup(monkeypatch, tmp_path: Path, run_id: str = 'w515t') -> list[dict]:
     """recorder/run_id/闩锁指向测试态;注入假执行器收集触发载荷。返回调用记录。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', run_id)
     # 复现计数与闩锁都是进程内状态,逐测试清空防串
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
@@ -48,7 +49,7 @@ def test_first_l0_stops_once_then_latch(tmp_path: Path, monkeypatch):
     L0 只补台账不再停(局级闩锁)。台账行数=3(停线不改记录形状)。"""
     calls = _setup(monkeypatch, tmp_path)
     for _ in range(3):
-        cw_telemetry.record_defect('gold', 'perception_conflict',
+        defects.record_defect('gold', 'perception_conflict',
                                    'gold_delta: 45', '20', gap=-25.0,
                                    gap_large=True)
     sevs = [r['severity'] for r in _rows(tmp_path)]
@@ -64,18 +65,18 @@ def test_latch_key_is_run_id_resets_next_run(tmp_path: Path, monkeypatch):
     """闩锁键 = run_id:start_run 每局重生成 run_id → 新局首见 L0 再停
     (复现计数同款按 run 切换语义,无手动清)。"""
     calls = _setup(monkeypatch, tmp_path, run_id='run_a')
-    cw_telemetry.record_defect('gold', 'perception_conflict',
+    defects.record_defect('gold', 'perception_conflict',
                                'x: 1', '2', gap=20.0, gap_large=True)
-    cw_telemetry.record_defect('gold', 'perception_conflict',
+    defects.record_defect('gold', 'perception_conflict',
                                'x: 1', '2', gap=20.0, gap_large=True)
     assert len(calls) == 1
     # 新局:换 run_id(生产由 start_run 做;复现计数随之重置)
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'run_b')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    cw_telemetry.record_defect('gold', 'perception_conflict',
+    defects.record_defect('gold', 'perception_conflict',
                                'x: 1', '2', gap=20.0, gap_large=True)
-    cw_telemetry.record_defect('gold', 'perception_conflict',
+    defects.record_defect('gold', 'perception_conflict',
                                'x: 1', '2', gap=20.0, gap_large=True)
     assert len(calls) == 2
     assert calls[1]['run_id'] == 'run_b'
@@ -86,13 +87,13 @@ def test_latch_key_is_run_id_resets_next_run(tmp_path: Path, monkeypatch):
 def test_l1_and_l2_never_stop(tmp_path: Path, monkeypatch):
     """L1(关键面大 gap 单次)/L2(非关键面)只落台账,执行器零调用。"""
     calls = _setup(monkeypatch, tmp_path)
-    cw_telemetry.record_defect('gold', 'perception_conflict',
+    defects.record_defect('gold', 'perception_conflict',
                                'gold: 200', '230', gap=30.0,
                                gap_large=False)            # 小 gap → L2(特征异于下行,防复现误并)
-    cw_telemetry.record_defect('gold', 'perception_conflict',
+    defects.record_defect('gold', 'perception_conflict',
                                'gold_delta: 45', '20', gap=-25.0,
                                gap_large=True)             # 关键面大gap首见 → L1
-    cw_telemetry.record_defect('confidence', 'perception_conflict',
+    defects.record_defect('confidence', 'perception_conflict',
                                'c: 0.9', '0.1', gap_large=True)   # 非关键面 → L2
     sevs = [r['severity'] for r in _rows(tmp_path)]
     assert sevs == ['L2_record', 'L1_alert', 'L2_record']
@@ -106,7 +107,7 @@ def test_auto_resolved_never_stops(tmp_path: Path, monkeypatch):
     (判据单一源在 judge_severity,接线处不双保险)。"""
     calls = _setup(monkeypatch, tmp_path)
     for _ in range(3):
-        cw_telemetry.record_defect('deployed', 'perception_conflict',
+        defects.record_defect('deployed', 'perception_conflict',
                                    'deployed_align: 4', '5',
                                    gap_large=True, auto_resolved=True)
     assert all(r['severity'] == 'L2_record' for r in _rows(tmp_path))
@@ -119,7 +120,7 @@ def test_flag_three_element_content_lock(tmp_path: Path):
     """flag 自描述内容锁:HOOK-STOP 特征行 + 发生了什么 + 定位/期望/观测/
     台账 refs + 处理步骤 + 删除条件,值班者不看代码即知发生了什么。"""
     fp = tmp_path / 'l0_andon_hook.flag'
-    content = cw_telemetry.write_l0_andon_flag(
+    content = defects.write_l0_andon_flag(
         fp, run_id='run_x', surface='gold', kind='perception_conflict',
         expected='gold_delta: 45', observed='20',
         plane=1, round_num=3,
@@ -165,7 +166,7 @@ def test_game_side_executor_end_to_end(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(cw_observe, '_save_andon_frame',
                         lambda c, p: 'l0_andon_run_x_p1r3_stop_1.png')
     monkeypatch.setattr(cw_telemetry_exit, '_write_l0_andon_flag',
-                        cw_telemetry.write_l0_andon_flag)
+                        defects.write_l0_andon_flag)
     monkeypatch.setattr(cw_telemetry_exit, '_l0_andon_flag_path',
                         lambda: tmp_path / 'l0_andon_hook.flag')
     ok = cw_observe.stop_for_l0_andon({
@@ -208,3 +209,4 @@ def test_wiring_existence_source_lock():
     obs_src = Path(cw_observe.__file__).read_text(encoding='utf-8')
     assert 'def stop_for_l0_andon' in obs_src
     assert "stop_running(reason='hook:cw_l0_andon')" in obs_src
+

@@ -10,6 +10,7 @@
 import inspect
 import time
 from types import SimpleNamespace
+from sr_od.application.currency_war.telemetry import state
 
 from sr_od.application.currency_war.kernel.cw_bench_equips import (
     EQUIPS_CONSISTENCY_ERRORS,
@@ -44,8 +45,8 @@ def _make_loop(monkeypatch, *, cw_match):
     monkeypatch.setattr(bl, 'CurrencyWarMatch',
                         lambda strategy, session: SimpleNamespace(
                             strategy=strategy, session=session, _stub_match=True))
-    monkeypatch.setattr(bl, 'cw_telemetry',
-                        SimpleNamespace(set_ctx_match=lambda m: None))
+    monkeypatch.setattr(state, 'set_ctx_match',
+                        lambda m: None)
 
     ctx = SimpleNamespace(
         cw_match=cw_match, current_instance_idx=1,
@@ -299,3 +300,5 @@ def test_rollback_sell_expect_stale_rejected() -> None:
     assert (out.action_log
             and out.action_log[-1].get('result') == 'rejected'
             and 'stale_proposal' in str(out.action_log[-1].get('reason', '')))
+
+

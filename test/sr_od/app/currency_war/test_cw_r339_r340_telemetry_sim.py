@@ -7,7 +7,8 @@ import inspect
 
 def test_outcome_board_fields() -> None:
     """r339:OutcomeRecord 板深快照字段(板深模型校准源)。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import OutcomeRecord
+
+    from sr_od.application.currency_war.telemetry.schema import OutcomeRecord
     rec = OutcomeRecord()
     assert rec.board_before == {}
     assert rec.bench_count == 0
@@ -15,16 +16,16 @@ def test_outcome_board_fields() -> None:
 
 def test_query_hp_view_exists() -> None:
     """r339:hp 视图(掉血分解,sim hp_events 同构)。"""
-    from sr_od.application.currency_war.telemetry import cw_telemetry
-    assert hasattr(cw_telemetry, 'query_hp')
-    assert hasattr(cw_telemetry, 'query_economy')
+    from sr_od.application.currency_war.telemetry import query as _q
+    assert hasattr(_q, 'query_hp')
+    assert hasattr(_q, 'query_economy')
 
 
 def test_set_ctx_match_ref_slot() -> None:
     """r339:set_ctx_match 弱引用注册。"""
-    from sr_od.application.currency_war.telemetry import cw_telemetry
-    assert hasattr(cw_telemetry, 'set_ctx_match')
-    assert hasattr(cw_telemetry, '_CTX_MATCH_REF')
+    from sr_od.application.currency_war.telemetry import state as _s
+    assert hasattr(_s, 'set_ctx_match')
+    assert hasattr(_s, '_CTX_MATCH_REF')
 
 
 def test_live_delta_depth_conditioned() -> None:
@@ -59,3 +60,4 @@ def test_sim_events_reach_node_delta() -> None:
 
     src = inspect.getsource(cw_sim.simulate_p1)
     assert 'live_delta_for' in src
+

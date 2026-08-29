@@ -13,12 +13,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.telemetry.cw_telemetry import (
-    query_exec_events,
-    query_exogenous,
-    query_invest_cards,
-    query_obs_conflicts,
-)
+
+from sr_od.application.currency_war.telemetry.query import query_exec_events, query_exogenous, query_invest_cards, query_obs_conflicts
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -168,7 +164,7 @@ def test_cli_view_mounted() -> None:
     是「一句 CLI」,回退裸翻文件 = 回归)。"""
     import inspect
 
-    from sr_od.application.currency_war.telemetry import cw_telemetry
+    from sr_od.application.currency_war.telemetry import cli as cw_telemetry
     src = inspect.getsource(cw_telemetry._cli_main)
     for name in ("exogenous", "execevents", "invest", "conflicts"):
         assert f"'{name}'" in src, f"--view {name} 未挂载"

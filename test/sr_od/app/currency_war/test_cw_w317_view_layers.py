@@ -8,7 +8,7 @@ record_outcome:锁的是「视图对已落盘行的渲染契约」,与写端解�
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.telemetry import cw_telemetry as tel
+from sr_od.application.currency_war.telemetry import query as tel
 
 RID = 'w317'
 

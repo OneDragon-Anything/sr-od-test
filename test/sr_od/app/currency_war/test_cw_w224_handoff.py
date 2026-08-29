@@ -212,7 +212,7 @@ def test_decision_trace_handoff_field(tmp_path) -> None:
     ``salvageable_1star_value``(计算式锁在 test_cw_w428_salvageable_
     1star_value.py);快照本体 as_dict() 键集不变(sim 同构不受影响)。
     """
-    from sr_od.application.currency_war.telemetry import cw_telemetry
+    from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
     rec = cw_telemetry.TelemetryRecorder(tmp_path, enabled=True)
     st = _state(shop=[ShopCard(x=0, name='藿藿', faction='仙舟', cost=1)])
     sess = _sess()

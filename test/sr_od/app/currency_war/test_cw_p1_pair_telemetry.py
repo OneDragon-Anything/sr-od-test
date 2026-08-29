@@ -25,11 +25,12 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_intention import serialize_intention
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.telemetry.cw_replay_reader import from_dict
-from sr_od.application.currency_war.telemetry.cw_telemetry import DecisionTrace
+
+from sr_od.application.currency_war.telemetry.schema import DecisionTrace
+from sr_od.application.currency_war.telemetry import recorder, schema
 
 
 # ===== 派生口径:p1_pair_label =====
@@ -38,26 +39,26 @@ from sr_od.application.currency_war.telemetry.cw_telemetry import DecisionTrace
 def test_label_recipe_lock_pair() -> None:
     """配方锁局:p1_pair 二元组 → 'A+B' 体系键串。"""
     ist = IntentionState(phase='locked', p1_pair=('仙舟', '列车同行'))
-    assert cw_telemetry.p1_pair_label(ist) == '仙舟+列车同行'
+    assert schema.p1_pair_label(ist) == '仙舟+列车同行'
 
 
 def test_label_transition_pair_fallback() -> None:
     """①资格锁局:p1_pair 空、transition_pair 非空 → 取副方向。"""
     ist = IntentionState(phase='locked', transition_pair=('持续伤害', '贝洛伯格'))
-    assert cw_telemetry.p1_pair_label(ist) == '持续伤害+贝洛伯格'
+    assert schema.p1_pair_label(ist) == '持续伤害+贝洛伯格'
 
 
 def test_label_empty_when_unlocked_or_absent() -> None:
     """空窗(未锁)/空意向状态机/None/非 dataclass 一律空串(纯观测不阻塞)。"""
-    assert cw_telemetry.p1_pair_label(IntentionState()) == ''
-    assert cw_telemetry.p1_pair_label(None) == ''
-    assert cw_telemetry.p1_pair_label(object()) == ''
+    assert schema.p1_pair_label(IntentionState()) == ''
+    assert schema.p1_pair_label(None) == ''
+    assert schema.p1_pair_label(object()) == ''
 
 
 # ===== record 站点:extra 透传 → decisions 行 =====
 
 
-def _write_and_read(rec: cw_telemetry.TelemetryRecorder, tmp_path: Path,
+def _write_and_read(rec: recorder.TelemetryRecorder, tmp_path: Path,
                     extra: dict | None = None) -> dict:
     rec.record_decision('p1pair', 'A8', GameState(gold=10, round_num=1, plane=1),
                         '', {}, {}, [], extra=extra)
@@ -68,7 +69,7 @@ def _write_and_read(rec: cw_telemetry.TelemetryRecorder, tmp_path: Path,
 
 def test_record_row_carries_pair_when_locked(tmp_path) -> None:
     """锁定帧:extra 透传 → 行内 sess_p1_pair 非空且值正确。"""
-    rec = cw_telemetry.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    rec = recorder.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     row = _write_and_read(rec, tmp_path,
                           extra={'sess_p1_pair': '仙舟+列车同行'})
     assert row['sess_p1_pair'] == '仙舟+列车同行'
@@ -76,7 +77,7 @@ def test_record_row_carries_pair_when_locked(tmp_path) -> None:
 
 def test_record_row_empty_without_extra(tmp_path) -> None:
     """未锁/无 extra(旧调用方):行内 sess_p1_pair 空串。"""
-    rec = cw_telemetry.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    rec = recorder.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
     row = _write_and_read(rec, tmp_path)
     assert row['sess_p1_pair'] == ''
     row = _write_and_read(rec, tmp_path, extra={'formed_stop': True})
@@ -155,4 +156,4 @@ def test_label_matches_intention_serialization_source(pair: tuple) -> None:
     """标签与 serialize_intention 全量序列化中的 p1_pair 同源同值。"""
     ist = IntentionState(phase='locked' if pair else 'unlocked', p1_pair=pair)
     d = serialize_intention(ist)
-    assert cw_telemetry.p1_pair_label(ist) == '+'.join(d['p1_pair'])
+    assert schema.p1_pair_label(ist) == '+'.join(d['p1_pair'])

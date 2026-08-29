@@ -10,11 +10,11 @@ DESIGN.md §2.2/§2.7/§1 行11+§5-B5,观测自检框架)。
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.operations.handlers.collect_plane_intel import (
     node_seq_cross_mismatch,
 )
 from sr_od.application.currency_war.operations.prep.shop import (
+from sr_od.application.currency_war.telemetry import defects, recorder
     bench_buy_count_ok,
     bench_buy_identity_missing,
     bench_buy_occupancy_ok,
@@ -115,11 +115,11 @@ def test_settlement_round_defect_auto_resolved_is_l2(tmp_path: Path, monkeypatch
     """同轮双读不等的裁决已自动(采新/单调门拒)→ 按分级标准恒 L2,
     不进 L1/L0(与 streak 双源等「裁决已自动」同族)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    cw_telemetry.record_defect(
+    defects.record_defect(
         'phase_round', 'perception_conflict',
         expected='备战缓存 1-6', observed='结算屏 1-7',
         plane=1, round_num=6,

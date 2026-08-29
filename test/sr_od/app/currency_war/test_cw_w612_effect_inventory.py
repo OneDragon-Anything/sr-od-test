@@ -241,5 +241,6 @@ def test_hook_points_exist() -> None:
     assert 'on_level_up' in prep_src
     assert "'level_up'" in prep_src
     # ④ 记录端 kind 枚举补齐(编排者裁决:record_exogenous 支持 level_up)
-    from sr_od.application.currency_war.telemetry.cw_telemetry import TelemetryRecorder
+
+    from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
     assert 'level_up' in inspect.getsource(TelemetryRecorder.record_exogenous)

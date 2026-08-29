@@ -12,13 +12,13 @@ import json
 from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.telemetry import cw_telemetry
+from sr_od.application.currency_war.telemetry import defects, recorder
 
 
 def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w512t') -> None:
     """recorder/run_id 指向 tmp_path(测试纪律:不写真实 .debug/)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', run_id)
     # 复现计数/暂存槽是进程内状态,逐测试清空防串(暂存槽自分包期 4 迁 kernel.cw_observe)
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
@@ -39,10 +39,10 @@ def _rows(tmp_path: Path, name: str) -> list[dict]:
 def test_record_defect_confidence_passthrough(tmp_path: Path, monkeypatch):
     """confidence 传入 → 台账行带数值;不传 → None(末尾可选字段,兼容)。"""
     _setup_recorder(monkeypatch, tmp_path)
-    cw_telemetry.record_defect('confidence', 'perception_conflict',
+    defects.record_defect('confidence', 'perception_conflict',
                                '商店牌1 SIFT 识别出身份', 'miss(inliers=0)',
                                confidence=0.0)
-    cw_telemetry.record_defect('deployed', 'invariant_break', 'paddle=4', 'paddle=3')
+    defects.record_defect('deployed', 'invariant_break', 'paddle=4', 'paddle=3')
     rows = _rows(tmp_path, 'defect_ledger.jsonl')
     assert rows[0]['confidence'] == 0.0   # 读空 = 内点数 0,数值面照记
     assert rows[1]['confidence'] is None
@@ -56,7 +56,7 @@ def test_obs_conflict_bypass_copies_numeric_confidence(tmp_path: Path, monkeypat
     from sr_od.application.currency_war.kernel import cw_telemetry_exit
     _setup_recorder(monkeypatch, tmp_path)
     monkeypatch.setattr(cw_telemetry_exit, '_bypass_obs_conflict_to_defect',
-                        cw_telemetry.bypass_obs_conflict_to_defect)
+                        defects.bypass_obs_conflict_to_defect)
     monkeypatch.setattr(cw_observe, '_CONFLICT_JOURNAL', tmp_path / 'obs_conflicts.jsonl')
     cw_observe.obs_conflict('level', 4, 5, None, verdict='采新-XP确认',
                             confidence=42.0)
@@ -77,15 +77,15 @@ def test_strategy_pick_slot_produce_consume(tmp_path: Path, monkeypatch):
     from sr_od.application.currency_war.kernel.cw_observe import (
         consume_pending_strategy_pick,
     )
-    cw_telemetry.record_invest_cards('strategy', [
+    recorder.record_invest_cards('strategy', [
         {'idx': 0, 'name': '策略甲', 'chosen': False},
         {'idx': 1, 'name': '策略乙', 'chosen': True},
     ])
     assert consume_pending_strategy_pick() == '策略乙'
     assert consume_pending_strategy_pick() is None   # 消费即清
-    cw_telemetry.record_invest_cards('env', [{'idx': 0, 'name': '环境卡', 'chosen': True}])
+    recorder.record_invest_cards('env', [{'idx': 0, 'name': '环境卡', 'chosen': True}])
     assert consume_pending_strategy_pick() is None   # env 类不进槽
-    cw_telemetry.record_invest_cards('strategy', [{'idx': 0, 'name': '?', 'chosen': True}])
+    recorder.record_invest_cards('strategy', [{'idx': 0, 'name': '?', 'chosen': True}])
     assert consume_pending_strategy_pick() is None   # 识别失败不暂存
 
 
@@ -110,7 +110,7 @@ def test_defect_row_not_appended_to_spend_ledger(tmp_path: Path, monkeypatch):
     原始证据层,消费端 query_spend_ledger 按 SpendUnitRecord 字段解析——缺陷行
     混入会被当伪单元误读(2e7364de 引入、当批即修的接线缺陷,本锁防回归)。"""
     _setup_recorder(monkeypatch, tmp_path)
-    cw_telemetry.record_defect('gold', 'perception_conflict', 'a', 'b')
+    defects.record_defect('gold', 'perception_conflict', 'a', 'b')
     assert len(_rows(tmp_path, 'defect_ledger.jsonl')) == 1
     assert _rows(tmp_path, 'spend_ledger.jsonl') == []
 

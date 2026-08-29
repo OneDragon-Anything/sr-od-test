@@ -18,7 +18,6 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.telemetry import cw_telemetry
 from sr_od.application.currency_war.obs import cw_equipment
 from sr_od.application.currency_war.data import cw_synthesis
 from sr_od.application.currency_war.obs.cw_equipment import EquipCell
@@ -28,6 +27,7 @@ from sr_od.application.currency_war.prep_director import (
     compute_equip_drag_expect,
 )
 from sr_od.application.currency_war.prep_director import (
+from sr_od.application.currency_war.telemetry import defects, recorder
     EquipDragIntent,
     EquipExpect,
 )
@@ -295,11 +295,11 @@ def test_defect_row_shape(tmp_path: Path, monkeypatch):
     分级:equip=中决策相关面,单次(未复现)→ L2 留证初判
     (judge_severity 既有规则,复现升 L1 由分级承接)。"""
     monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    cw_telemetry.record_defect(
+    defects.record_defect(
         'equip', 'equip_expect_mismatch',
         expected='equip wear A',
         observed='A 期望[1格] 实读[2格]',
@@ -313,4 +313,7 @@ def test_defect_row_shape(tmp_path: Path, monkeypatch):
     assert row['surface'] == 'equip'
     assert row['kind'] == 'equip_expect_mismatch'
     assert row['reader_source'] == 'equip_expect_reconcile'
-    assert row['severity'] == cw_telemetry.SEVERITY_L2_RECORD
+    assert row['severity'] == SEVERITY_L2_RECORD
+
+from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L2_RECORD
+

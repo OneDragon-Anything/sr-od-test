@@ -21,7 +21,11 @@ from sr_od.application.currency_war.obs.cw_settlement_obs import (
     read_round_outcome,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.telemetry.cw_telemetry import TelemetryRecorder, read_jsonl
+
+from sr_od.application.currency_war.telemetry import recorder
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
+
+from sr_od.application.currency_war.telemetry.query import read_jsonl
 
 
 class _Item(SimpleNamespace):
@@ -134,10 +138,10 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
     from sr_od.application.currency_war.operations import battle_loop as bl
 
     captured: list[dict] = []
-    monkeypatch.setattr(bl.cw_telemetry, 'record_outcome',
+    monkeypatch.setattr(recorder, 'record_outcome',
                         lambda outcome, source='': captured.append(
                             {'outcome': outcome, 'source': source}))
-    monkeypatch.setattr(bl.cw_telemetry, 'record_exogenous',
+    monkeypatch.setattr(recorder, 'record_exogenous',
                         lambda *a, **k: None)
     monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: (1, 8))
 
@@ -187,3 +191,6 @@ def test_branch3_records_before_continue_click() -> None:
     i_click = src.index("round_by_find_and_click_area(self.screenshot(), "
                         "'货币战争-结算', '按钮-继续挑战'")
     assert i_read < i_click
+
+
+

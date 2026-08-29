@@ -17,14 +17,13 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_comps import comp_score_breakdown, get_comp
 from sr_od.application.currency_war.kernel.cw_state import BuyCard, GameState, ShopCard
-from sr_od.application.currency_war.telemetry.cw_telemetry import (
-    SCHEMA_VERSION,
-    TelemetryRecorder,
-    join_decisions_outcomes,
-    read_jsonl,
-    serialize_action,
-    serialize_state,
-)
+
+from sr_od.application.currency_war.telemetry.schema import SCHEMA_VERSION, serialize_action, serialize_state
+
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
+
+from sr_od.application.currency_war.telemetry.query import join_decisions_outcomes, read_jsonl
+from sr_od.application.currency_war.telemetry import query, recorder, state
 
 
 def _fresh(tmp_dir: str, enabled: bool = True) -> tuple[TelemetryRecorder, Path]:
@@ -186,7 +185,8 @@ def test_breakdown_feeds_telemetry() -> None:
 # ===== ADR-0132 投资卡效果原文采集(bucket_card_texts + invest_cards.jsonl) =====
 def test_bucket_card_texts_nearest_anchor() -> None:
     """分桶:文本归 x 最近锚点卡;y 带外(标题/卡名行/底部 UI)不归;桶内 y 升序。"""
-    from sr_od.application.currency_war.telemetry.cw_telemetry import bucket_card_texts
+
+    from sr_od.application.currency_war.telemetry.schema import bucket_card_texts
     anchors = [(0, 300), (1, 920), (2, 1540)]
     items = [
         ("请选择投资策略", 960, 98),    # 标题:带外
@@ -203,22 +203,25 @@ def test_bucket_card_texts_nearest_anchor() -> None:
 
 
 def test_bucket_card_texts_empty_anchors() -> None:
-    from sr_od.application.currency_war.telemetry.cw_telemetry import bucket_card_texts
+
+    from sr_od.application.currency_war.telemetry.schema import bucket_card_texts
     assert bucket_card_texts([], [("x", 1, 2)], 0, 100) == {}
 
 
 def test_record_invest_cards_writes_jsonl(tmp_path, monkeypatch) -> None:
     """record_invest_cards:逐卡一行写 invest_cards.jsonl(带 run_id/kind/chosen);无 run 时不写。"""
-    from sr_od.application.currency_war.telemetry import cw_telemetry
-    rec = cw_telemetry.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    monkeypatch.setattr(cw_telemetry, '_RECORDER', rec)
-    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'run_test_1')
-    cw_telemetry.record_invest_cards('strategy', [
+    rec = recorder.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(state, '_RECORDER', rec)
+    monkeypatch.setattr(state, '_CURRENT_RUN_ID', 'run_test_1')
+    recorder.record_invest_cards('strategy', [
         {"idx": 0, "name": "定期福利", "x": 300, "effect_text": "立刻获得4金币 | 每次进入新节点获2金币", "chosen": True},
         {"idx": 1, "name": "数值碾压", "x": 920, "effect_text": "", "chosen": False},
     ])
-    rows = cw_telemetry.read_jsonl(tmp_path / 'invest_cards.jsonl')
+    rows = query.read_jsonl(tmp_path / 'invest_cards.jsonl')
     assert len(rows) == 2
     assert rows[0]['kind'] == 'strategy' and rows[0]['run_id'] == 'run_test_1'
     assert rows[0]['chosen'] is True and '金币' in rows[0]['effect_text']
+
+
+
 
