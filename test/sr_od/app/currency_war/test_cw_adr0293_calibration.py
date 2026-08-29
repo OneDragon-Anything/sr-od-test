@@ -25,7 +25,7 @@ from sr_od.application.currency_war.cw_state import (
     GameState,
 )
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision_v2 import registry as registry_mod
+from sr_od.application.currency_war.kernel import cw_registry as registry_mod
 from sr_od.application.currency_war.decision_v2.candidates import (
     generate_candidates,
 )

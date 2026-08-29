@@ -158,7 +158,8 @@ def test_sampler_version_bumped_and_snapshot_guarded() -> None:
     plane 维键化 / v10=ADR-0404 boss 桶键 Σboard→净星深 /
     v11=ADR-0407 encounter 桶键 depth→rung)+ 提交快照自洽。"""
     assert cw_sim._SAMPLER_VERSION == 11
-    assert cw_sim._BUCKET_MIN_N == 5
+    from sr_od.application.currency_war.data.cw_battle_tables import BUCKET_MIN_N as _BUCKET_MIN_N  # 期 0b 锁改判(N7):单一源迁 data
+    assert _BUCKET_MIN_N == 5
     m, fp, src = cw_sim.resolve_pool('snapshot')
     assert src == 'snapshot'
     from sr_od.application.currency_war import cw_delta_pool_data

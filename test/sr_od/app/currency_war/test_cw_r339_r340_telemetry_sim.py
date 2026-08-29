@@ -41,7 +41,7 @@ def test_live_delta_depth_conditioned() -> None:
 
     from sr_od.application.currency_war import cw_sim
     src = inspect.getsource(cw_sim.live_delta_for)
-    assert '浅侧' in src and 'bucket - _DEPTH_BUCKET_W' in src   # 邻桶回退只向浅侧(真锁:实现语句在)
+    assert '浅侧' in src and 'bucket - DEPTH_BUCKET_W' in src   # 邻桶回退只向浅侧(真锁:实现语句在)
     # ADR-0362:合成池带 plane 层
     pool = {'battle': {1: {6: [-3, -5]}}}
     v = cw_sim.live_delta_for('battle', 7, random.Random(1),

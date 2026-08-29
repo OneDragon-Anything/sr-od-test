@@ -11,6 +11,11 @@ BOSS_WIN_P_* / _BOSS_WIN_P_EXTRAPOLATED 缓存)整体废弃,胜负面单一
 """
 
 from sr_od.application.currency_war import cw_delta_pool_data, cw_sim
+from sr_od.application.currency_war.data.cw_battle_tables import (
+    NODE_WIN_P_BY_TYPE as tables_NODE_WIN_P_BY_TYPE,
+    NODE_WIN_P_LADDER as tables_NODE_WIN_P_LADDER,
+)
+from sr_od.application.currency_war.kernel import cw_battle_calib as calib
 from sr_od.application.currency_war.cw_sim_checks import (
     check_delta_pool_bucket_coverage,
 )
@@ -25,25 +30,25 @@ def test_node_win_p_ladder_w31_source_of_truth() -> None:
     - reward/supply 恒 1.0(零战力节点实测全胜);
     - 未知节点类型兜底 0.0(保守)。
     """
-    assert cw_sim.node_win_p('battle', 3) == 0.30
-    assert cw_sim.node_win_p('battle', 4) == 0.29
-    assert cw_sim.node_win_p('encounter', 7) == 0.04
-    assert cw_sim.node_win_p('boss', 9) == 0.05
+    assert calib.node_win_p('battle', 3) == 0.30
+    assert calib.node_win_p('battle', 4) == 0.29
+    assert calib.node_win_p('encounter', 7) == 0.04
+    assert calib.node_win_p('boss', 9) == 0.05
     # 未观测组合 → 类型边际
-    assert cw_sim.node_win_p('battle', 6) == cw_sim.NODE_WIN_P_BY_TYPE['battle']
-    assert cw_sim.node_win_p('encounter', 6) == 0.04
-    assert cw_sim.node_win_p('boss', 8) == 0.05
+    assert calib.node_win_p('battle', 6) == tables_NODE_WIN_P_BY_TYPE['battle']
+    assert calib.node_win_p('encounter', 6) == 0.04
+    assert calib.node_win_p('boss', 8) == 0.05
     for nt in ('reward', 'supply'):
         for rn in (1, 2, 5, 8):
-            assert cw_sim.node_win_p(nt, rn) == 1.0
-    assert cw_sim.node_win_p('unknown_node', 5) == 0.0
+            assert calib.node_win_p(nt, rn) == 1.0
+    assert calib.node_win_p('unknown_node', 5) == 0.0
 
 
 def test_node_win_p_values_all_valid_probabilities() -> None:
     """阶梯全体值 ∈ [0,1](胜率语义自洽)。"""
-    for (_nt, _rn), v in cw_sim.NODE_WIN_P_LADDER.items():
+    for (_nt, _rn), v in tables_NODE_WIN_P_LADDER.items():
         assert 0.0 <= v <= 1.0, (_nt, _rn, v)
-    for nt, v in cw_sim.NODE_WIN_P_BY_TYPE.items():
+    for nt, v in tables_NODE_WIN_P_BY_TYPE.items():
         assert 0.0 <= v <= 1.0, (nt, v)
 
 
@@ -128,6 +133,6 @@ def test_batch_report_embeds_coverage_check() -> None:
 def test_boss_settle_uses_win_p_single_source() -> None:
     """boss_settle_delta 掷胜走 node_win_p 单一取值口(不散落内联表)。"""
     import inspect
-    src = inspect.getsource(cw_sim.boss_settle_delta)
+    src = inspect.getsource(calib.boss_settle_delta)
     assert 'node_win_p' in src
     assert 'NODE_WIN_P_LADDER[' not in src

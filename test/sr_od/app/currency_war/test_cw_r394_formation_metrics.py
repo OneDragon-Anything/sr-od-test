@@ -52,7 +52,7 @@ def test_first_trio_round_semantics() -> None:
 
 def test_engines_count_lego_model() -> None:
     """r399 过渡四体系(仙舟3/列车2/DOT2/希儿系)计数。"""
-    from sr_od.application.currency_war.cw_sim import _engines_count
+    from sr_od.application.currency_war.kernel.cw_battle_calib import _engines_count
     assert _engines_count({'持续伤害': 2, '列车同行': 1}) == 1   # 仅 DOT2
     assert _engines_count({'持续伤害': 2, '列车同行': 2}) == 2   # DOT2+列车2
     assert _engines_count({'仙舟': 3, '欢愉': 5}) == 1           # 仙舟3(欢愉非过渡体系)
@@ -61,7 +61,7 @@ def test_engines_count_lego_model() -> None:
 
 def test_engines_count_seele_system() -> None:
     """r399 希儿系:希儿在场+量2/贝2=第四体系;无希儿不算。"""
-    from sr_od.application.currency_war.cw_sim import _engines_count
+    from sr_od.application.currency_war.kernel.cw_battle_calib import _engines_count
     assert _engines_count({'量子同频': 2}, frozenset({'希儿'})) == 1
     assert _engines_count({'贝洛伯格': 2}, frozenset({'希儿'})) == 1
     assert _engines_count({'量子同频': 2}, frozenset()) == 0, \
@@ -74,7 +74,7 @@ def test_engines_count_seele_system() -> None:
 
 def test_transition_formed_pair_of_three() -> None:
     """r399:过渡成型=四体系两两组合(通用羁绊不算)。"""
-    from sr_od.application.currency_war.cw_sim import _transition_formed
+    from sr_od.application.currency_war.kernel.cw_battle_calib import _transition_formed
     assert _transition_formed({'持续伤害': 2, '列车同行': 2})    # DOT2+列车2
     assert _transition_formed({'仙舟': 3, '持续伤害': 2})        # 仙舟+DOT(主流 84 帖)
     assert _transition_formed({'仙舟': 3, '列车同行': 2})        # 仙舟+列车
@@ -87,7 +87,7 @@ def test_transition_formed_pair_of_three() -> None:
 
 
 def test_first_engines_round() -> None:
-    from sr_od.application.currency_war.cw_sim import _first_engines_round
+    from sr_od.application.currency_war.kernel.cw_battle_calib import _first_engines_round
     rows = [
         {'round_num': 3, 'state': {'board_factions': {'持续伤害': 2}}},
         {'round_num': 5, 'state': {'board_factions':

@@ -159,7 +159,7 @@ def test_transition_traits_derived_from_system_cards() -> None:
     assert set(TRANSITION_TRAITS) == {
         ('仙舟', 3), ('持续伤害', 2), ('列车同行', 2)}
     from sr_od.application.currency_war import cw_sim
-    assert cw_sim._TRANSITION_TRAITS is TRANSITION_TRAITS
+    assert cw_sim.__dict__.get('_TRANSITION_TRAITS') is None, 期0b锁改判_alias已删_单一源为cw_deploy_logic本体
 
 
 # --- ⑥ 顺手件:bond_fallback 门死条件清理(无行为变化) ---------------------

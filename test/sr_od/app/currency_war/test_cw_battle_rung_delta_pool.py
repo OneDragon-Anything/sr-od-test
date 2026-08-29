@@ -14,6 +14,7 @@ from pathlib import Path
 
 from sr_od.application.currency_war import cw_delta_pool_data
 from sr_od.application.currency_war import cw_sim as _sim
+from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
 from sr_od.application.currency_war.cw_sim_checks import (
     BATTLE_RUNG_TRUTH,
     check_battle_rung_pool_bucket_lock,
@@ -182,7 +183,7 @@ def test_settle_wiring_battle_rung_single_source() -> None:
     src = inspect.getsource(_sim.simulate_p1)
     assert '_settle_rung' in src
     assert "live_delta_for('battle', _settle_rung(st)" in src
-    boss_src = inspect.getsource(_sim.boss_settle_delta)
+    boss_src = inspect.getsource(_calib.boss_settle_delta)
     assert 'node_win_p' in boss_src   # ADR-0308 胜负面单一取值口
     assert '_engines_count' not in boss_src   # 单一源收口,不散落内联
 

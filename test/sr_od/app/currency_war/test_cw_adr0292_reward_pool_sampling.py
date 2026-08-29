@@ -12,6 +12,7 @@ import random
 from pathlib import Path
 
 from sr_od.application.currency_war import cw_sim
+from sr_od.application.currency_war.data import cw_battle_tables as tables
 from sr_od.application.currency_war.cw_sim_checks import (
     REWARD_POOL_TRUTH_MEAN,
     check_reward_delta_pool_bucket_lock,
@@ -69,7 +70,7 @@ def test_fallback_pool_reward_delta_is_constant() -> None:
     """fallback 空池:reward/supply 回退 EARLY_WIN_DELTA(两态语义)。"""
     r = cw_sim.simulate_p1(0, pool='fallback')
     rd = [d for _, nt, d, _ in r.hp_events if nt in ('reward', 'supply')]
-    assert rd and set(rd) == {cw_sim.EARLY_WIN_DELTA}
+    assert rd and set(rd) == {tables.EARLY_WIN_DELTA}
 
 
 def test_snapshot_reward_pool_matches_corpus_truth() -> None:
