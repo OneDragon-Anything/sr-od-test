@@ -97,12 +97,12 @@ def _locked_sess() -> StrategySession:
 
 def test_no_linestrategy_inheritance() -> None:
     """DecisionV2Strategy 独立实现:MRO 无 LineStrategy(旧件已随
-    ADR-0336 删除,执行钩子继承 DefaultCwStrategy——战略/备战决策
-    自持,ADR-0309 载体批)。"""
-    from sr_od.application.currency_war.strategies.default_strategy import (
-        DefaultCwStrategy,
-    )
-    assert DefaultCwStrategy in DecisionV2Strategy.__mro__
+    ADR-0336 删除)且无 DefaultCwStrategy(继承塔已解体——本体退役批后
+    dv 直接继承 CwStrategy,执行性钩子平移自持)。"""
+    from sr_od.application.currency_war.cw_strategy import CwStrategy
+    assert DecisionV2Strategy.__bases__ == (CwStrategy,)
+    assert not any(
+        c.__name__ == 'DefaultCwStrategy' for c in DecisionV2Strategy.__mro__)
     assert DecisionV2Strategy.STRATEGY_ID == 'decision_v2'
 
 
@@ -675,8 +675,8 @@ def test_smoke_one_sim_game_new_carrier() -> None:
 
 
 def test_dual_registration_both_strategies_discoverable() -> None:
-    """唯一载体:decision_v2 与 default 同 registry 可发现
-    (旧 line_v2 随 ADR-0336 删除;回退路径=git revert)。"""
+    """唯一载体:registry 可发现 decision_v2(default 栈退役后唯一注册;
+    回退路径=git revert)。"""
     import sr_od.application.currency_war.cw_strategy as _cw_mod
     from one_dragon.base.operation.application.plugin_info import (
         PluginSource,
@@ -688,8 +688,7 @@ def test_dual_registration_both_strategies_discoverable() -> None:
     mgr = StrategyManager(ctx=None,
                           plugin_dirs=[(builtin, PluginSource.BUILTIN)])
     ids = [i.strategy_id for i in mgr.strategies]
-    assert 'decision_v2' in ids, f'新策略未注册:{ids}'
-    assert 'default' in ids, f'内置策略未注册:{ids}'
+    assert ids == ['decision_v2'], f'注册集应为唯一 decision_v2:{ids}'
     # 桥到的真身是独立实现
     strat = mgr.instantiate('decision_v2')
     assert isinstance(strat, DecisionV2Strategy)

@@ -45,15 +45,15 @@ def test_calibration_version_anchor() -> None:
     assert DEFAULT_REGISTRY.p2_loss_calib_version == 1
 
 
-# ---- 阈值链:五处消费点静态源级锁 ---------------------------------------------
-# 判据=五处消费点全部经 effective_hp_threshold(state) 单口消费,无旁路
+# ---- 阈值链:消费点静态源级锁 ---------------------------------------------
+# 判据=全部消费点经 effective_hp_threshold(state) 单口消费,无旁路
 # 裸算(裸算=绕过标定单口=双源)。路径清单即锁面:消费点增删须随批改锁。
+# (default_strategy 两点危机/生存门已随本体退役删除)
 
 _THRESHOLD_CONSUMERS: tuple[tuple[str, int], ...] = (
     ('cw_economy.py', 1),        # 止损门
     ('cw_evaluate.py', 2),       # HP_DISTRESS + 保血(同链两点)
     ('cw_comps.py', 1),          # 保命转型 0.75×
-    ('strategies/default_strategy.py', 2),  # 危机/生存 0.75× 门(两点)
     ('cw_plan.py', 1),           # _refresh_cap
 )
 

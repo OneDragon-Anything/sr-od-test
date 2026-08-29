@@ -21,8 +21,8 @@ from sr_od.application.currency_war.cw_strategy import (
     StrategySession,
     discard_stale_match_container,
 )
-from sr_od.application.currency_war.strategies.default_strategy import (
-    DefaultCwStrategy,
+from sr_od.application.currency_war.decision_v2.strategy import (
+    DecisionV2Strategy,
 )
 
 
@@ -41,7 +41,7 @@ def _polluted_match() -> CurrencyWarMatch:
     s.last_hp_real = 12           # hp 对账锚
     s.tracked_deployed = [BenchChar(slot=1, char_id='旧局角色')]
     s.active_strategies = ['旧局策略']
-    return CurrencyWarMatch(DefaultCwStrategy(), s)
+    return CurrencyWarMatch(DecisionV2Strategy(), s)
 
 
 def test_discard_stale_container_resets_for_new_match():
@@ -54,7 +54,7 @@ def test_discard_stale_container_resets_for_new_match():
 
     # 第二局 session 由 create_session 重建 —— 与 handle_init 新 match 分支同路径,
     # 锁定观察域关键字段全默认(任何字段若被改成可携带上局值,此处红)。
-    fresh = DefaultCwStrategy().create_session(None)
+    fresh = DecisionV2Strategy().create_session(None)
     assert fresh.last_level_obs == 0      # level 单调守卫不再拿上局值保旧
     assert fresh.last_streak == 0
     assert fresh.last_hp_real is None

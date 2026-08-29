@@ -75,18 +75,14 @@ def test_reconcile_wiring_in_both_collect_paths() -> None:
 
 
 def test_session_collected_bosses_flow_to_state_plane_bosses() -> None:
-    """锁⑤(原锁③保留):session.briefing_bosses(位面序真值)→ state.plane_bosses。"""
-    from sr_od.application.currency_war.cw_state import GameState
-    from sr_od.application.currency_war.cw_strategy import StrategySession
-    from sr_od.application.currency_war.strategies.default_strategy import (
-        DefaultCwStrategy,
-    )
+    """锁⑤(原锁③保留;default 栈退役批重钉):session.briefing_bosses
+    (位面序真值)→ state.plane_bosses。注入点已从 default update_target
+    平移到观测层(cw_observation.read_game_state,对 session 透传无条件注入)
+    ——重钉为源级锁,防注入链再断。"""
+    import inspect
 
-    truth = ['巨鹿', '增熵', '绘师']
-    state = GameState()
-    session = StrategySession()
-    session.briefing_bosses = list(truth)
-    DefaultCwStrategy().update_target(state, session, None)
-    assert state.plane_bosses == truth, (
-        f'真值未注入 state.plane_bosses(实际 {state.plane_bosses})'
+    from sr_od.application.currency_war import cw_observation
+    src = inspect.getsource(cw_observation)
+    assert "state.plane_bosses = list(_sess.briefing_bosses)" in src, (
+        '观测层注入点丢失:session.briefing_bosses 真值不再流向 state.plane_bosses'
     )

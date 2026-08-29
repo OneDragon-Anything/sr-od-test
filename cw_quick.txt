@@ -13,7 +13,6 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w69_sell_channel.py
 sr-od-test/test/sr_od/app/currency_war/test_affix_effects_write.py
 sr-od-test/test/sr_od/app/currency_war/test_battle_prep_recognizer.py
 sr-od-test/test/sr_od/app/currency_war/test_briefing_recognizer.py
-sr-od-test/test/sr_od/app/currency_war/test_commit_ready_gate.py
 sr-od-test/test/sr_od/app/currency_war/test_core_interest_exempt.py
 sr-od-test/test/sr_od/app/currency_war/test_crafted_scenarios.py
 sr-od-test/test/sr_od/app/currency_war/test_currency_war_char_id.py
@@ -72,8 +71,6 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_difficulty_account.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_difficulty_live_contamination.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_difficulty_readchain.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_divergence_stats.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_drought_bail.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_drought_p1_late.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_effect_ledger.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_enemy_data.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_equipment.py
@@ -218,3 +215,7 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w336_p1_vd_benefit_calibration.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w162_invest_inject.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w595_trial_reveal_card.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w612_effect_inventory.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w620_migration_b1.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w628_migration_b2.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_economy_cycle.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_form_gates.py

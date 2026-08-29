@@ -17,9 +17,9 @@ from sr_od.application.currency_war.prep_actions import (
     SellBench,
 )
 from sr_od.application.currency_war.prep_director import PrepObservation
-from sr_od.application.currency_war.strategies.default_strategy import DefaultCwStrategy
+from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
 
-S = DefaultCwStrategy()
+S = DecisionV2Strategy()
 COMP = get_comp('列车同行')
 
 

@@ -31,7 +31,7 @@ from sr_od.application.currency_war.prep_actions import (
     StartBattle,
 )
 from sr_od.application.currency_war.prep_director import PrepDirector, PrepObservation
-from sr_od.application.currency_war.strategies.default_strategy import DefaultCwStrategy
+from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
 
 if True:
     from test.conftest import SrTestContext
@@ -71,7 +71,7 @@ def _bc(slot: int, char_id: str, faction: str = '?', star: int = 1,
                      position_pref=pref)
 
 
-S = DefaultCwStrategy()
+S = DecisionV2Strategy()
 
 
 # ===== §5.1 奖励收取规则序(表驱动)=====

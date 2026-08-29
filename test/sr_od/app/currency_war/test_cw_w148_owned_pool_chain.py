@@ -17,8 +17,8 @@ from sr_od.application.currency_war.cw_strategy import StrategySession
 from sr_od.application.currency_war.operations.prep.equip_all import (
     _owned_wearable_names,
 )
-from sr_od.application.currency_war.strategies.default_strategy import (
-    DefaultCwStrategy,
+from sr_od.application.currency_war.decision_v2.strategy import (
+    DecisionV2Strategy,
 )
 
 
@@ -43,12 +43,12 @@ def test_pseudo_state_copies_owned_pool() -> None:
     """
     sess = StrategySession()
     sess.last_owned_equips = ['财富宝钻', '分身墨镜']
-    st = DefaultCwStrategy()._pseudo_state(None, sess)
+    st = DecisionV2Strategy()._pseudo_state(None, sess)
     assert st.equips == ['财富宝钻', '分身墨镜']
 
 
 def test_pseudo_state_owned_pool_empty_semantics_unchanged() -> None:
     """空快照:st.equips 为空列表(默认语义不变,不造出假持有)。"""
     sess = StrategySession()
-    st = DefaultCwStrategy()._pseudo_state(None, sess)
+    st = DecisionV2Strategy()._pseudo_state(None, sess)
     assert st.equips == []

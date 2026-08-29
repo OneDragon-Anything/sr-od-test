@@ -6,7 +6,7 @@ from types import SimpleNamespace
 _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.strategies.default_strategy import DefaultCwStrategy  # noqa: E402
+from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy  # noqa: E402
 
 
 def _obs(dep=0, bench=0):
@@ -25,7 +25,7 @@ def _cfg():
 
 def test_empty_board_guard_redirects_to_deploy() -> None:
     """板上 0 人 bench 3 人:不出战,回 RunDeploy。"""
-    strat = DefaultCwStrategy()
+    strat = DecisionV2Strategy()
     obs = _obs(dep=0, bench=3)
     sess = SimpleNamespace(defer_count=0, memory={}, target_comp=None,
                            tracked_bench_chars=[], pending_deploys=[], prep_phase=3,
@@ -37,7 +37,7 @@ def test_empty_board_guard_redirects_to_deploy() -> None:
 
 def test_empty_board_guard_gives_up_after_two() -> None:
     """重试 2 次后放行(部署持续失败交 Director stall 兜底,防 phase 死循环)。"""
-    strat = DefaultCwStrategy()
+    strat = DecisionV2Strategy()
     obs = _obs(dep=0, bench=3)
     sess = SimpleNamespace(defer_count=0, memory={}, target_comp=None,
                            tracked_bench_chars=[], pending_deploys=[], prep_phase=3,
@@ -48,7 +48,7 @@ def test_empty_board_guard_gives_up_after_two() -> None:
 
 def test_deployed_board_battles_normally() -> None:
     """板上有人不拦截(正常出战)。"""
-    strat = DefaultCwStrategy()
+    strat = DecisionV2Strategy()
     obs = _obs(dep=4, bench=2)
     sess = SimpleNamespace(defer_count=0, memory={}, target_comp=None,
                            tracked_bench_chars=[], pending_deploys=[], prep_phase=3,

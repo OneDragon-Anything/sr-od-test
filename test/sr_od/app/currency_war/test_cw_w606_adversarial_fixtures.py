@@ -1,7 +1,7 @@
 """W606 批③·对拍协议门2:逆真值 fixture(9 恒真位反事实直喂 decide)。
 
 sim 合成器 9 恒真位(W598 攻击4)逐一反事实构造 Snapshot,喂适配器
-(真 DefaultCwStrategy 决策核),断言保守臂:不崩 + 显式预期动作。
+(真 DecisionV2Strategy 决策核),断言保守臂:不崩 + 显式预期动作。
 协议总则:sim 全绿不可替代本门(边界态行为 sim 结构性测不到)。
 """
 from __future__ import annotations
@@ -32,10 +32,10 @@ def _snap(**kw) -> Snapshot:
 
 
 def _decide(snapshot: Snapshot, session: StrategySession | None = None):
-    from sr_od.application.currency_war.strategies.default_strategy import (
-        DefaultCwStrategy,
+    from sr_od.application.currency_war.decision_v2.strategy import (
+        DecisionV2Strategy,
     )
-    ad = DecideAdapter(DefaultCwStrategy(), _CONFIG, executor=None)
+    ad = DecideAdapter(DecisionV2Strategy(), _CONFIG, executor=None)
     return ad.decide(snapshot, session or StrategySession())
 
 

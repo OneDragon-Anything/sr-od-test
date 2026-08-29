@@ -24,7 +24,7 @@ def _mgr() -> StrategyManager:
 
 def test_strategies_discoverable():
     ids = [i.strategy_id for i in _mgr().discover()]
-    assert 'decision_v2' in ids and 'default' in ids
+    assert ids == ['decision_v2']   # default 栈退役后唯一内置注册
 
 
 def test_instantiate_line_v2():
@@ -36,14 +36,13 @@ def test_instantiate_line_v2():
     assert isinstance(mgr.instantiate('decision_v2'), DecisionV2Strategy)
 
 
-def test_fallback_to_default_on_unknown():
-    from sr_od.application.currency_war.strategies.default_strategy import (
-        DefaultCwStrategy,
-    )
+def test_instantiate_unknown_id_raises():
+    """未知 id 显式报错(旧「回退 default」分支已随 default 本体退役删除)。"""
     mgr = _mgr()
     mgr.discover()
-    assert isinstance(mgr.instantiate('nonexistent'),
-                      DefaultCwStrategy)
+    import pytest
+    with pytest.raises(ValueError, match='decision_v2'):
+        mgr.instantiate('nonexistent')
 
 
 def test_config_strategy_id_writable():

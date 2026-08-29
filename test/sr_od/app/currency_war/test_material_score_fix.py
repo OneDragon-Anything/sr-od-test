@@ -6,7 +6,7 @@ sys.path.insert(0, 'src')
 from sr_od.application.currency_war.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.cw_state import GameState
 from sr_od.application.currency_war.cw_strategy import StrategySession
-from sr_od.application.currency_war.strategies.default_strategy import DefaultCwStrategy
+from sr_od.application.currency_war.decision_v2.strategy import DecisionV2Strategy
 
 
 def _sess_baiyu():
@@ -18,7 +18,7 @@ def _sess_baiyu():
 def test_material_score_now_alive():
     """反甲白厄定型:幸运星(以牙还牙甲材料)应拿 +30 材料分——
     旧代码读 .materials 恒空,材料分静默失效(局33b 根因)。"""
-    st = DefaultCwStrategy()
+    st = DecisionV2Strategy()
     sess = _sess_baiyu()
     gs = GameState()
     # 幸运星 vs 无关件:幸运星应胜
