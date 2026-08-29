@@ -12,7 +12,6 @@ from sr_od.application.currency_war.cw_transition import (  # noqa: E402
     FRAMEWORKS,
     TRANSITION_PACK,
     CommitSignals,
-    in_early_phase,
     t_of,
     transition_score,
 )
@@ -48,11 +47,8 @@ def test_carry_beats_drop_same_tier_base() -> None:
     assert transition_score('藿藿', 'x', '仙舟') > transition_score('卡芙卡', 'x', '仙舟')
 
 
-def test_early_phase_gate() -> None:
-    """P1+未commit=Early;P2 或已 commit 不算。"""
-    assert in_early_phase(1, committed=False)
-    assert not in_early_phase(1, committed=True)
-    assert not in_early_phase(2, committed=False)
+# (test_early_phase_gate 已随 in_early_phase 退役删除——调用点唯一=dv 框架
+#  启动分支,ADR-0468;Early 判定语义由消费方内联,无独立函数可锁。)
 
 
 # ===== r39 定型信号管线 =====
