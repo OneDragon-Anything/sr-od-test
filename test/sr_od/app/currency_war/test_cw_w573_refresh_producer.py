@@ -60,11 +60,16 @@ class TestW573RefreshProducerSourceLocks:
             '期望构建实参必须是 cw_state.REFRESH_COST_BASE 基价常量(徽标读数禁进期望)'
 
     def test_gold_leg_uses_none_able_reader(self):
-        """期望金腿读数用 read_gold_opt(int|None),非 stylized read_gold。"""
+        """期望金腿读数用 read_gold_opt(int|None),非 stylized read_gold。
+
+        W592(ADR-0456 勘误注):点前金与刷前牌名集改为同一点击前帧现读
+        (_pre_shot),读数器不变仍 read_gold_opt——锁源码形状随帧复用跟改,
+        语义(None 可缺、点击前现读)未变。
+        """
         src = _shop_source()
         assert 'read_gold_opt' in src
         # 金腿读数行(read_gold_opt),不与花销账既有 read_gold 行混淆
-        assert '_pre_gold = read_gold_opt(self.ctx, self.screenshot())' in src
+        assert '_pre_gold = read_gold_opt(self.ctx, _pre_shot)' in src
         assert '_gold_after = read_gold_opt(self.ctx, self.screenshot())' in src
 
     def test_defect_row_kind_and_surface(self):

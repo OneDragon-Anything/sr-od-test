@@ -25,6 +25,10 @@ docstring 契约 + ADR-0456 免费刷新事后正证据通道):
 
 producer 期望在**波内**构建的契约(先例=W573 源码锁)在本文件升为行为
 验证:spy 记录 build/reconcile 调用,断言次序 build → 点击 → reconcile。
+
+W592 追加锁③④(ADR-0456 勘误注):买+刷新同波两形态——before 名集
+改为点击前现读后,真落空 → 未变(not_effective 停线面),真免费 →
+已变(free_refresh_proc 采证不停);修复前落空形态必被误判免费。
 """
 from __future__ import annotations
 
@@ -36,6 +40,7 @@ import pytest
 from sr_od.application.currency_war import cw_telemetry
 from sr_od.application.currency_war.cw_obs_core import SHOP_SCREEN_NAME
 from sr_od.application.currency_war.cw_state import (
+    BuyCard,
     GameState,
     RefreshShop,
     ShopCard,
@@ -89,11 +94,14 @@ class _StubStrategy:
 def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
              tmp_path: pathlib.Path, plans: list[list[Any]],
              states: list[GameState], gold_opts: list[int | None],
-             new_shop_names: list[str], events: list[str]) -> Any:
+             shop_reads: list[list[str]], events: list[str]) -> Any:
     """装配被测 op + 全部替身(观测输入/计划源/台账隔离/找钮判定)。
 
     返回 (op, fixture_controller, defect_rows)。``gold_opts`` 是
-    read_gold_opt 的逐次返回(耗尽后重复最后一个);``states`` 同型。
+    read_gold_opt 的逐次返回(耗尽后重复最后一个);``states`` 同型;
+    ``shop_reads`` 是 read_shop_cards 的逐次返回(名列表;W592 刷前名集
+    改为点击前现读后,该读数器被调 ≥2 次——第 1 次=点击前现读,第 2 次=
+    刷后重读;落空形态两次同牌面)。
     """
     from sr_od.application.currency_war import cw_observation as cwo
     from sr_od.application.currency_war import cw_observation_gate as gate
@@ -136,8 +144,14 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     # gold 差值对拍(关店后 stylized 读):正常链读 8 与期望一致,零冲突
     monkeypatch.setattr(shop_mod, 'read_gold',
                         lambda *a, **k: gold_opts[min(1, len(gold_opts) - 1)])
+    _shop_seq = _make_seq(shop_reads)
     monkeypatch.setattr(shop_mod, 'read_shop_cards',
-                        lambda *a, **k: _shop_cards(new_shop_names))
+                        lambda *a, **k: _shop_cards(_shop_seq()))
+    # W592:执行事实暂存槽捕获(分类器观测面 refresh_board_changed 的
+    # 执行侧真值直接在此断言,不经台账二次解析)
+    facts: list[dict] = []
+    monkeypatch.setattr(cw_telemetry, 'set_unit_exec_facts',
+                        lambda **k: facts.append(k))
     monkeypatch.setattr(cwo, 'read_hp_opt', lambda *a, **k: None)
     monkeypatch.setattr(cwo, 'read_phase_round', lambda *a, **k: (1, 5))
     # gate 替身(单帧锁另有对象;此处只求离线直过)
@@ -182,7 +196,7 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(op, 'round_by_ocr', lambda *a, **k: op.round_fail(''))
     monkeypatch.setattr(op, 'park_cursor', lambda *a, **k: None)
     monkeypatch.setattr(op, 'save_screenshot', lambda *a, **k: '<shot>')
-    return op, fc, defect_rows
+    return op, fc, defect_rows, facts
 
 
 def _execute(op) -> Any:
@@ -211,12 +225,12 @@ def test_refresh_wave_normal_chain(
     牌面已变 → 对账零票、台账零行、无免费 proc 留证。
     """
     events: list[str] = []
-    op, fc, rows = _make_op(
+    op, fc, rows, _facts = _make_op(
         test_context, monkeypatch, tmp_path,
         plans=[[RefreshShop(cost=2)], []],
         states=[_state(10, _OLD_NAMES), _state(10, _OLD_NAMES),
                 _state(8, _NEW_NAMES), _state(8, _NEW_NAMES)],
-        gold_opts=[10, 8], new_shop_names=_NEW_NAMES, events=events)
+        gold_opts=[10, 8], shop_reads=[_OLD_NAMES, _NEW_NAMES], events=events)
 
     result = _execute(op)
 
@@ -253,12 +267,12 @@ def test_refresh_wave_free_refresh_proc_chain(
 
     monkeypatch.setattr(pathlib.Path, 'write_text', _spy_write)
 
-    op, fc, rows = _make_op(
+    op, fc, rows, _facts = _make_op(
         test_context, monkeypatch, tmp_path,
         plans=[[RefreshShop(cost=2)], []],
         states=[_state(10, _OLD_NAMES), _state(10, _OLD_NAMES),
                 _state(10, _NEW_NAMES), _state(10, _NEW_NAMES)],
-        gold_opts=[10, 10], new_shop_names=_NEW_NAMES, events=events)
+        gold_opts=[10, 10], shop_reads=[_OLD_NAMES, _NEW_NAMES], events=events)
 
     result = _execute(op)
 
@@ -274,3 +288,108 @@ def test_refresh_wave_free_refresh_proc_chain(
     assert rows[0][0][0] == 'shop' and rows[0][0][1] == 'refresh_expect_mismatch'
     assert not any(k[0][1] == 'invariant_break' for k in rows), (
         '牌面已变时不应落刷新未生效票')
+
+
+# ===== W592:买+刷新波 before 名集现读锁(ADR-0456 勘误注) =====
+
+def _bought_wave_plan() -> list[list[Any]]:
+    """买+刷新同波 plan:买「希儿」(x=0, 3金)后刷新(基价 2)。"""
+    return [[BuyCard(card=ShopCard(x=0, faction='?', name='希儿',
+                                   cost=3, star=1)),
+             RefreshShop(cost=2)], []]
+
+
+# 游戏侧买后「希儿」离场:现读帧该槽为空(''),其余 4 牌不变
+_POST_BUY = ['', '景元', '布洛妮娅', '克拉拉', '杰帕德']
+
+
+def test_buy_refresh_wave_real_miss_not_effective(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path, _require_fixture,
+) -> None:
+    """锁③买+刷新波真落空 → 牌面未变 → not_effective 形态(停线面)。
+
+    W590 缺陷形态(修复前必错):state.shop(plan 读)仍含已买牌,而
+    现读画面买后即离场——刷新落空时「plan 读 vs 点击后实读」集合必不等,
+    被误判 free_refresh_proc(不停+写假采证 flag)。修复后 before 名集 =
+    点击前现读 → 落空=相对点击前未变 → False → 落刷新未生效票,执行
+    事实 refresh_board_changed=False 透传分类器(not_effective 停)。
+    """
+    events: list[str] = []
+    writes: list[str] = []
+
+    def _spy_write(self: pathlib.Path, data: Any, *args: Any, **kwargs: Any):
+        writes.append(str(data))
+        return len(data)
+
+    monkeypatch.setattr(pathlib.Path, 'write_text', _spy_write)
+    op, fc, rows, facts = _make_op(
+        test_context, monkeypatch, tmp_path,
+        plans=_bought_wave_plan(),
+        states=[_state(10, _OLD_NAMES), _state(10, _OLD_NAMES),
+                _state(10, _OLD_NAMES), _state(10, _OLD_NAMES)],
+        gold_opts=[10, 10],   # 落空:金未扣
+        shop_reads=[_POST_BUY, _POST_BUY],   # 点击前后牌面全同
+        events=events)
+
+    result = _execute(op)
+
+    assert result.success, f'落空波单元仍应正常收工(停线由安灯消费):{result.status!r}'
+    assert fc.click_hit_area(SHOP_SCREEN_NAME, '按钮-刷新')
+    assert facts and facts[0]['refresh_attempted'] is True
+    # 落空形态:已买空槽使刷后读含未识别槽('')→ 判据不可判(None,不猜
+    # ——ADR-0456 有锁禁把 None 当已变);关键在分类器不得落 free_refresh_proc。
+    assert facts[0]['refresh_board_changed'] is not True, (
+        f'真落空不得判「已变」(修复前此形态必误判 True):{facts}')
+    # 分类器端到端:计划花费 5(买3+刷2)∧ 金差 0 ∧ 刷后读含 '' 不可判
+    # → not_effective 停线(修复前被洗成 free_refresh_proc 不停+假采证)。
+    from sr_od.application.currency_war.cw_telemetry import classify_spend_unit
+    verdict = classify_spend_unit(
+        [{'__type__': 'BuyCard', 'card': {'x': 0, 'name': '希儿', 'cost': 3}},
+         {'__type__': 'RefreshShop', 'cost': 2}],
+        10, 10, executed=facts[0])
+    assert verdict['verdict'] == 'not_effective', verdict
+    # 刷新面不落「已变」系票,且不得产出免费 proc 假采证
+    assert not any(k[0][0] == 'shop_refresh' and k[0][1] == 'invariant_break'
+                   for k in rows), f'落空波不应落「已变」票: {rows}'
+    assert not any('FREE-REFRESH-PROC' in w for w in writes), (
+        '真落空不得写免费 proc 假采证')
+
+
+def test_buy_refresh_wave_real_free_proc(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path, _require_fixture,
+) -> None:
+    """锁④买+刷新波真免费 → free_refresh_proc 形态(不停+采证)。
+
+    修复后语义:牌面已变=相对点击前现读(已买槽空剔除后)——真免费时
+    刷出新牌 → changed=True ∧ 金未扣 → 免费 proc 留证不停;不落全同票。
+    """
+    events: list[str] = []
+    writes: list[str] = []
+
+    def _spy_write(self: pathlib.Path, data: Any, *args: Any, **kwargs: Any):
+        writes.append(str(data))
+        return len(data)
+
+    monkeypatch.setattr(pathlib.Path, 'write_text', _spy_write)
+    op, fc, rows, facts = _make_op(
+        test_context, monkeypatch, tmp_path,
+        plans=_bought_wave_plan(),
+        states=[_state(10, _OLD_NAMES), _state(10, _OLD_NAMES),
+                _state(10, _NEW_NAMES), _state(10, _NEW_NAMES)],
+        gold_opts=[10, 10],   # 免费:金未扣
+        shop_reads=[_POST_BUY, _NEW_NAMES],   # 点击前含已买空槽,刷后全新牌
+        events=events)
+
+    result = _execute(op)
+
+    assert result.success, f'免费刷新链不应停机:{result.status!r}'
+    assert fc.click_hit_area(SHOP_SCREEN_NAME, '按钮-刷新')
+    assert facts and facts[0]['refresh_board_changed'] is True, (
+        f'真免费应判「相对点击前已变」(空槽剔除后):{facts}')
+    assert any('FREE-REFRESH-PROC' in w for w in writes), (
+        f'免费刷新 proc 留证未产出;writes={writes[:3]}')
+    assert not any(k[0][0] == 'shop_refresh' and k[0][1] == 'invariant_break'
+                   for k in rows), (
+        '刷新面牌面已变时不应落刷新未生效票')

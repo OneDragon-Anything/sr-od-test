@@ -51,10 +51,12 @@ def test_shop_refresh_wiring_lock():
     assert 'refresh_effective(' in tail
     assert "'shop_refresh', 'invariant_break'" in tail
     assert 'gap_large=True' in tail
-    # 判据调用必须以「刷前=state.shop 牌名 / 刷后=_new_shop 牌名」为输入
-    # (W577:结果同时赋 _refresh_board_changed 作安灯三分观测面,输入不变)
+    # 判据调用必须以「刷前=点击前现读名集 _pre_shop_names / 刷后=_new_shop
+    # 牌名」为输入(W577:结果同时赋 _refresh_board_changed 作安灯三分观测面;
+    # W592 勘误:刷前源由 state.shop plan 读改为点击前现读——plan 读不摘已买
+    # 牌,买+刷新波真落空会被洗成免费生效,ADR-0456 勘误注)
     assert '_refresh_board_changed = refresh_effective(' in tail
-    assert '[c.name for c in state.shop]' in tail
+    assert '_pre_shop_names or []' in tail
     assert '[c.name for c in _new_shop]' in tail
 
 
