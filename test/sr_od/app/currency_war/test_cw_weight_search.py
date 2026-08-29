@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.cw_weight_search import (  # noqa: E402
+from sr_od.application.currency_war.tools.cw_weight_search import (  # noqa: E402
     WeightDim,
     WeightSpace,
     cem_search,

@@ -10,7 +10,7 @@
 
 import pytest
 
-from sr_od.application.currency_war.cw_node_validate import (
+from sr_od.application.currency_war.tools.cw_node_validate import (
     P1_NODE_TEMPLATE,
     validate_p1_node_sequence,
     validate_p2_node_sequence,
