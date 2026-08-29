@@ -109,3 +109,33 @@ def test_character_is_frozen() -> None:
     assert isinstance(c, Character)
     with pytest.raises(dataclasses.FrozenInstanceError):
         c.cost = 9   # frozen → FrozenInstanceError
+
+
+# ---- plaza 官方接口对拍守卫 ----
+# plaza 数据层 cw_chars_data.py 已删(2026-09 治理审计:零消费,生成器改对拍器);
+# 本守卫把「注册表 vs 官方接口」的对拍从纯口头升级为接线测试:抽查条目冻结自 plaza
+# config API V4.4(与 tools/cw/gen_plaza_chars.py 数据源同源),随机抽 5 条比
+# cost/position/traits。全量对拍跑 `uv run python tools/cw/gen_plaza_chars.py`。
+_PLAZA_SAMPLE_POOL = (  # (plaza_id, 规范名, cost, 站位, traits);站位/费用=官方字段值
+    ("1001", "三月七", 1, "Back", ("列车同行", "护盾")),
+    ("1014", "Saber", 3, "Common", ("命运圣杯", "能量")),
+    ("1202", "停云", 1, "Back", ("仙舟", "能量")),
+    ("1304", "砂金", 2, "Front", ("公司", "追击", "护盾")),
+    ("1408", "白厄", 3, "Front", ("救世主",)),
+    ("1501", "火花", 4, "Front", ("星间旅人", "战技点", "欢愉")),
+    ("15061", "银狼LV.999", 3, "Front", ("星核猎手", "欢愉", "头号玩家")),
+    ("8009", "开拓者·欢愉", 4, "Back", ("列车同行", "能量", "欢愉")),
+)
+_PLAZA_POSITION = {"Front": "front", "Back": "back", "Common": "flex"}
+
+
+def test_plaza_official_snapshot_guard() -> None:
+    """随机抽 5 条 plaza 冻结条目,断言 cost/position/traits 与 CHARACTERS 一致。"""
+    import random
+    rng = random.Random(20260815)  # 固定种子:抽查集可复现(条目池见 _PLAZA_SAMPLE_POOL 注)
+    for pid, name, cost, pos, traits in rng.sample(_PLAZA_SAMPLE_POOL, 5):
+        ch = CHARACTERS[name]
+        assert ch.cost == cost, f"{pid} {name}: cost {ch.cost} != plaza {cost}"
+        assert ch.position == _PLAZA_POSITION[pos], f"{pid} {name}: position {ch.position} != plaza {pos}"
+        reg_traits = set(ch.factions) | set(ch.flows) | ({ch.independent} if ch.independent else set())
+        assert reg_traits == set(traits), f"{pid} {name}: traits {sorted(reg_traits)} != plaza {sorted(traits)}"
