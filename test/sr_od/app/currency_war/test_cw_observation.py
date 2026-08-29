@@ -361,7 +361,7 @@ def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pyte
     """备战左上/购买经验/商店区数字字段:enemy_difficulty/level_up_cost/shop_refresh_cost/streak(D-74)。
 
     各字段 OCR 其 screen_info area → int(越界/空 → None 或默认)。shop_refresh_cost
-    放大两级管线,空 → None(读不到语义;金币图标 'G0'/'GO' 前缀归一读 0)。
+    放大两级管线,空 → None(W577:读到的是面板徽标=利息数值非刷价,函数仅旁证)。
     """
     # enemy_difficulty(文本-难度,stylized 但能读到时):"108" → 108
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
@@ -380,13 +380,14 @@ def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pyte
 
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', _two_stage)
     assert read_level_up_cost(test_context, None) == 4
-    # shop_refresh_cost(文本-刷新金币数):"2" → 2;空 → None(读不到语义,消费方 or 2 兜底)
+    # shop_refresh_cost(文本-刷新金币数):"2" → 2;空 → None(W577:函数
+    # 保留作旁证读数,读到的是面板徽标=利息数值,非刷价——见实帧锁 docstring)
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('2', 1621, 855)])
     assert read_shop_refresh_cost(test_context, None) == 2
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: [])
-    assert read_shop_refresh_cost(test_context, None) is None   # 空 → None(不再兜底默认 2)
-    # 刷价金币图标并入前缀('G0'/'GO')→ 归一后读 0(真 0 不再被兜底改 2)
+    assert read_shop_refresh_cost(test_context, None) is None   # 空 → None
+    # 刷价金币图标并入前缀('G0'/'GO')→ 归一后读 0
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('G0', 1621, 855)])
     assert read_shop_refresh_cost(test_context, None) == 0
@@ -649,14 +650,16 @@ def test_read_enemy_difficulty_real_fixture(
             f'{p.name} 难度应读 {expects[p.relative_to(fix_dir).as_posix()]}'
 
 
-# ===== 刷新费/连胜 实帧锁(放大两级管线 + 图标前缀归一;真 0 不再被兜底改 2) =====
+# ===== 刷新徽标/连胜 实帧锁(放大两级管线;W577:徽标=利息数值非刷价,ADR-0456) =====
 def test_read_refresh_cost_and_streak_real_fixture(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """真实备战帧锁:read_shop_refresh_cost / read_streak 放大管线读数。
 
-    真值(裁片拼图视觉亲读):带横幅帧(攻略已应用)刷费真 0、连胜真 1——
-    旧 native 直读 + 兜底 2 曾把真 0 静默改成 2;基线帧锁现读正确值防回归。
-    deployed_2star 连胜真值未标(不留锁);模型不可用 / fixture 缺失 → skip。
+    W577 语义翻转(ADR-0456):「文本-刷新金币数」rect 读到的是商店面板
+    「↻ N」徽标,N = min(gold//10,5) = 利息数值,**不是刷价**(实付恒基价
+    REFRESH_COST_BASE=2,多局干净对账定谳)。期望值 0,0,2,3,2 仍是该 rect
+    的正确 OCR 读数——函数保留作旁证,已退出 read_game_state 主链。
+    模型不可用 / fixture 缺失 → skip。
     """
     from pathlib import Path
 
@@ -691,4 +694,26 @@ def test_read_refresh_cost_and_streak_real_fixture(
         if exp_streak is not None:
             assert got_streak == exp_streak, \
                 f'{p.name} 连胜应读 {exp_streak},实读 {got_streak}'
+
+
+# ===== W577 刷价基价模型锁(ADR-0456:徽标退役出决策链,state 恒基价) =====
+def test_shop_refresh_cost_base_price_model_lock() -> None:
+    """read_game_state 主链不再 OCR 刷价——state.shop_refresh_cost 恒基价。
+
+    出处:W577 DESIGN 定谳 + ADR-0456(实付恒 2,rect 读数=面板徽标利息
+    数值)。两层源码锁:
+    1. cw_observation.read_game_state 里刷价赋值 = REFRESH_COST_BASE 常量,
+       read_shop_refresh_cost 调用不得出现在主链(旁证调用=显式独立);
+    2. 决策热路径少一次 OCR 是本改动的效率契约(净减少,禁加回)。
+    """
+    from pathlib import Path
+
+    import sr_od.application.currency_war.cw_observation as obs_mod
+    src = Path(obs_mod.__file__).read_text(encoding='utf-8')
+    assert 'state.shop_refresh_cost = REFRESH_COST_BASE' in src, \
+        'read_game_state 刷价赋值必须是基价常量(徽标 OCR 禁回主链)'
+    assert 'state.shop_refresh_cost = read_shop_refresh_cost' not in src, \
+        '主链不得再调用 read_shop_refresh_cost(徽标退役,ADR-0456)'
+    from sr_od.application.currency_war.cw_state import REFRESH_COST_BASE
+    assert REFRESH_COST_BASE == 2
 

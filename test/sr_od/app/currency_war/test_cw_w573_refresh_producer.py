@@ -6,8 +6,10 @@
    build_refresh_expect docstring;源码锁先例=test_cw_w564_shop_wire 的
    test_shop_pool_wire_source_locks):
    - 惰性 import 契约件(防改回模块级硬 import 触发循环依赖);
-   - 期望构建用裸 ``state.shop_refresh_cost``(None 口径;波内花销账的
-     ``or 2`` 只许存在于 _refresh_fee 花销行,不进期望);
+   - 期望构建刷价实参 = ``cw_state.REFRESH_COST_BASE`` 基价常量(W577
+     基价模型,ADR-0456:「文本-刷新金币数」rect 是面板徽标(利息数值)
+     非刷价,期望=实付基价。旧锁「裸 state.shop_refresh_cost None 口径」
+     已被取代——徽标退役出决策链,读数层不再进期望);
    - 消费段 kind=refresh_expect_mismatch 落台账(surface='shop');
    - 金腿读数用 read_gold_opt(None 口径,非 stylized read_gold)。
 2. 行为冒烟——按接线同款调用形态走一遍 纯函数链(build_refresh_expect →
@@ -24,7 +26,7 @@ from sr_od.application.currency_war.prep_director import (
     build_refresh_expect,
     refresh_reconcile_mismatches,
 )
-from sr_od.application.currency_war.cw_state import ShopCard
+from sr_od.application.currency_war.cw_state import REFRESH_COST_BASE, ShopCard
 
 _SHOP_PATH = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
               / 'application' / 'currency_war' / 'operations' / 'prep'
@@ -45,15 +47,17 @@ class TestW573RefreshProducerSourceLocks:
         assert 'build_refresh_expect' in src
         assert 'refresh_reconcile_mismatches' in src
 
-    def test_expect_uses_raw_refresh_cost(self):
-        """期望构建必须传裸 state.shop_refresh_cost(None 口径)。
+    def test_expect_uses_base_refresh_cost(self):
+        """期望构建刷价实参必须是 REFRESH_COST_BASE 基价常量(W577,ADR-0456)。
 
-        波内花销账允许 ``or 2``(既有 _refresh_fee 行),但期望调用的
-        实参必须是裸值——本锁钉住调用形参形状。
+        旧语义(裸 state.shop_refresh_cost None 口径)已被取代:该字段旧由
+        「文本-刷新金币数」OCR 填充,实测读到的是面板徽标(=min(gold//10,5)
+        利息数值)非刷价,实付恒基价 2——期望用徽标值产生过 14 条
+        refresh_expect_mismatch 假缺陷。改锁依据=DESIGN 定谳,非机械跟绿。
         """
         src = _shop_source()
-        assert 'build_refresh_expect(\n                            _pre_gold, state.shop_refresh_cost,' in src, \
-            '期望构建实参必须是裸 state.shop_refresh_cost(禁 or-2 进期望)'
+        assert 'build_refresh_expect(\n                            _pre_gold, REFRESH_COST_BASE,' in src, \
+            '期望构建实参必须是 cw_state.REFRESH_COST_BASE 基价常量(徽标读数禁进期望)'
 
     def test_gold_leg_uses_none_able_reader(self):
         """期望金腿读数用 read_gold_opt(int|None),非 stylized read_gold。"""
@@ -93,3 +97,13 @@ class TestW573WiringShapeSmoke:
         """刷费 None(面板失读)→ build 返 None = 波内跳过对账(禁 or-2)。"""
         assert build_refresh_expect(10, None, [('希儿', 1)], 1, 5) is None
         assert build_refresh_expect(None, 2, [('希儿', 1)], 1, 5) is None
+
+    def test_expect_uses_base_even_when_badge_reads_5(self):
+        """徽标读 5 时期望按基价 2 计(W577 定谳形态,局20 实证:徽标=5 时
+        实付 2,期望用徽标值产生过 14 条 refresh_expect_mismatch 假缺陷)。"""
+        built = build_refresh_expect(68, REFRESH_COST_BASE,
+                                     [('希儿', 1)], plane=1, round_num=9)
+        assert built is not None
+        expect, _, _ = built
+        assert expect.refresh_cost == REFRESH_COST_BASE == 2
+        assert expect.gold_after == 66   # 68 − 基价 2(非徽标 5)

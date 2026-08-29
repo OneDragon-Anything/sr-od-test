@@ -264,3 +264,122 @@ def test_exec_fail_flag_path_shape():
     assert str(_EXEC_FAIL_FLAG_RELPATH).replace('\\', '/') == \
         '.debug/temp/cw_exec_fail_hook.flag'
     assert exec_fail_flag_path().name == 'cw_exec_fail_hook.flag'
+
+
+# ===== W577「计划≠尝试」分流(ADR-0456:局22 误停根因——硬墙静默跳过被
+# 当「点击落空」误停;修法=执行侧可见化 + 分类器三态扩展,三新形态锁用
+# 局20 r9 / 局22 u1 真实序列作 fixture 数据)=====
+
+def _plan_ju22_u1():
+    """局22 p1r9 u1 真实 plan 形态:DeployMove(零金流)+ RefreshShop(cost
+    是旧徽标读数 5;W577 后实付恒基价,flow 按显式 cost 计)。"""
+    return [
+        {'__type__': 'DeployMove', 'bench_idx': 0, 'to_row': 'front', 'to_slot': 1},
+        {'__type__': 'RefreshShop', 'cost': 5},
+    ]
+
+
+def _plan_ju20_r9():
+    """局20 r9 刷新波真实形态:LevelUp(4)+ RefreshShop(干净对账对,实付 2)。"""
+    return [
+        {'__type__': 'LevelUp', 'cost': 4},
+        {'__type__': 'RefreshShop', 'cost': 0},
+    ]
+
+
+def test_classify_plan_truncated_hard_wall_skips():
+    """①硬墙跳过(plan 有动作未尝试)→ plan_truncated,**不停**(局22 u1:
+    r9 已刷 4 次达 MAX_REFRESH,plan RefreshShop 被 continue,金 50→50——
+    旧分类器误判 not_effective 停线的根因形态)。"""
+    r = cw_telemetry.classify_spend_unit(
+        _plan_ju22_u1(), 50, 50,
+        executed={'plan_truncated': True, 'refresh_skipped': 'max_cap',
+                  'refresh_attempted': False})
+    assert r['verdict'] == 'plan_truncated'
+    assert r['plan_truncated'] is True
+
+
+def test_classify_free_refresh_proc_board_changed():
+    """②刷新已尝试+牌面已变+Δgold=0 → free_refresh_proc,**不停**(免费
+    刷新 proc 正证据形态:点击发生、牌面变了、金没扣)。"""
+    r = cw_telemetry.classify_spend_unit(
+        _plan_ju20_r9(), 68, 68,
+        executed={'refresh_attempted': True, 'refresh_board_changed': True})
+    assert r['verdict'] == 'free_refresh_proc'
+
+
+def test_classify_not_effective_attempted_board_unchanged():
+    """③刷新已尝试+牌面未变+Δgold=0 → not_effective,**停**(真点击落空)。"""
+    r = cw_telemetry.classify_spend_unit(
+        _plan_ju20_r9(), 68, 68,
+        executed={'refresh_attempted': True, 'refresh_board_changed': False})
+    assert r['verdict'] == 'not_effective'
+
+
+def test_classify_executed_none_backward_compat():
+    """executed=None(历史局/未挂钩)→ 判定退回 W494 原语义(金冻结+计划
+    花费>0 = not_effective),不因新参数引入行为漂移。"""
+    assert cw_telemetry.classify_spend_unit(_buy(5), 125, 125)['verdict'] == 'not_effective'
+    assert cw_telemetry.classify_spend_unit(_buy(5), 125, 125,
+                                            executed=None)['verdict'] == 'not_effective'
+
+
+def test_classify_unjudgeable_board_not_treated_as_changed():
+    """牌面不可判(None)不得当「已变」——真落空不能被洗成免费(安灯停线面
+    不可静默变窄)。"""
+    r = cw_telemetry.classify_spend_unit(
+        _plan_ju20_r9(), 68, 68,
+        executed={'refresh_attempted': True, 'refresh_board_changed': None})
+    assert r['verdict'] == 'not_effective'
+
+
+def test_exec_fail_predicate_exempts_new_verdicts():
+    """安灯谓词:plan_truncated / free_refresh_proc → 不停;not_effective → 停。"""
+    from sr_od.application.currency_war.prep_director import exec_fail_should_stop
+    assert exec_fail_should_stop(_plan_ju22_u1(), 50, 50,
+                                 executed={'plan_truncated': True,
+                                           'refresh_skipped': 'max_cap'}) is False
+    assert exec_fail_should_stop(_plan_ju20_r9(), 68, 68,
+                                 executed={'refresh_attempted': True,
+                                           'refresh_board_changed': True}) is False
+    assert exec_fail_should_stop(_plan_ju20_r9(), 68, 68,
+                                 executed={'refresh_attempted': True,
+                                           'refresh_board_changed': False}) is True
+
+
+def test_exec_facts_slot_fills_spend_ledger(tmp_path: Path, monkeypatch):
+    """shop 执行事实暂存槽 → 单元落账行新字段充实;消费即清(下一单元恒缺省)。"""
+    monkeypatch.setattr(cw_telemetry, '_RECORDER',
+                        cw_telemetry.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
+    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'w577t')
+    cw_telemetry.set_unit_exec_facts(
+        plan_truncated=True, refresh_skipped='max_cap',
+        refresh_attempted=False, refresh_board_changed=None)
+    cw_telemetry.record_spend_unit(1, 9, 1, 'closed', True, 1.0)
+    cw_telemetry.record_spend_unit(1, 10, 2, 'closed', True, 1.0)
+    rows = [json.loads(ln) for ln in
+            (tmp_path / 'spend_ledger.jsonl').read_text(encoding='utf-8').splitlines()]
+    assert (rows[0]['plan_truncated'], rows[0]['refresh_skipped']) == (True, 'max_cap')
+    assert (rows[0]['refresh_attempted'], rows[0]['refresh_board_changed']) == (False, None)
+    assert (rows[1]['plan_truncated'], rows[1]['refresh_skipped'],
+            rows[1]['refresh_attempted']) == (False, None, False)
+
+
+def test_spend_unit_row_reader_and_hook_join(tmp_path: Path):
+    """_spend_unit_row 按 (run, plane, round, unit_seq) 取最新行;钩子据此
+    构造 executed 喂分类器(与 plan/gold_delta 同一 replay join 面)。"""
+    _append(tmp_path, 'spend_ledger.jsonl', {
+        'ts': '2026-08-29T05:05:30', 'run_id': 'ju22', 'plane': 1,
+        'round_num': 9, 'unit_seq': 1, 'boundary': 'closed',
+        'plan_truncated': True, 'refresh_skipped': 'max_cap',
+        'refresh_attempted': False, 'refresh_board_changed': None})
+    _append(tmp_path, 'spend_ledger.jsonl', {
+        'ts': '2026-08-29T05:06:30', 'run_id': 'ju22', 'plane': 1,
+        'round_num': 9, 'unit_seq': 2, 'boundary': 'closed',
+        'plan_truncated': False, 'refresh_skipped': None,
+        'refresh_attempted': True, 'refresh_board_changed': True})
+    row = cw_telemetry._spend_unit_row(tmp_path, 'ju22', 1, 9, 2)
+    assert row is not None and row['refresh_attempted'] is True
+    assert cw_telemetry._spend_unit_row(tmp_path, 'ju22', 1, 9, 9) is None
+    assert cw_telemetry._spend_unit_row(tmp_path, 'other', 1, 9, 1) is None
+    assert cw_telemetry._spend_unit_row(tmp_path, 'ju22', 2, 9, 1) is None

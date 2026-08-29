@@ -52,7 +52,9 @@ def test_shop_refresh_wiring_lock():
     assert "'shop_refresh', 'invariant_break'" in tail
     assert 'gap_large=True' in tail
     # 判据调用必须以「刷前=state.shop 牌名 / 刷后=_new_shop 牌名」为输入
-    assert 'refresh_effective([c.name for c in state.shop]' in tail
+    # (W577:结果同时赋 _refresh_board_changed 作安灯三分观测面,输入不变)
+    assert '_refresh_board_changed = refresh_effective(' in tail
+    assert '[c.name for c in state.shop]' in tail
     assert '[c.name for c in _new_shop]' in tail
 
 
