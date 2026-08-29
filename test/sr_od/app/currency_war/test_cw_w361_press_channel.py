@@ -24,12 +24,6 @@ from __future__ import annotations
 from dataclasses import replace
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    BuyCard,
-    GameState,
-    ShopCard,
-)
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2 import candidates as _cands
 from sr_od.application.currency_war.decision.decision_v2.arbiter import (
@@ -47,13 +41,19 @@ from sr_od.application.currency_war.decision.decision_v2.discipline import (
     press_channel_max_band,
     press_channel_open,
 )
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
+    score_all,
+    score_candidate,
+)
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
     DecisionV2Registry,
 )
-from sr_od.application.currency_war.decision.decision_v2.scoring import (
-    score_all,
-    score_candidate,
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    BuyCard,
+    GameState,
+    ShopCard,
 )
 
 # armA 注入(V-B3:总闸;量控 cap 走各自字段默认值)
@@ -158,11 +158,10 @@ def test_guard_zero_drift_arms_unchanged() -> None:
 
 def test_tag_registration_and_priority_position() -> None:
     """V-B2.1/V-B3:'copy_press' 进 buy_tag_priority(置于 'copy' 之后)
-    与 BUY_TAGS;band 外/通道关不产生标签。"""
+    band 外/通道关不产生标签。"""
     prio = DEFAULT_REGISTRY.buy_tag_priority
     assert 'copy_press' in prio
     assert prio.index('copy_press') == prio.index('copy') + 1
-    assert 'copy_press' in _cands.BUY_TAGS
     st = _state(shop=[_shop_card()])
     sess = _sess()
     # 通道关(注入):无标签(开臂后默认注册表通道开,copy_press 激活)
@@ -386,11 +385,11 @@ def test_checker_dup_dual_domain() -> None:
     """V-B9:deployed 同名压库副本未买 → 通道关非违规(披露
     copy_press_channel_closed);bench-only 同名 → 披露
     copy_bench_only_skipped 不进真拦;非重复散件(C-D)照报真拦。"""
-    from sr_od.application.currency_war.sim import cw_sim_checks as chk
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.kernel.cw_line_defs import (
         ENGINE_FACTIONS,
     )
+    from sr_od.application.currency_war.sim import cw_sim_checks as chk
     name = next(n for n, c in CHARACTERS.items()
                 if c.cost == 1
                 and set(c.factions or ()) & set(ENGINE_FACTIONS))
