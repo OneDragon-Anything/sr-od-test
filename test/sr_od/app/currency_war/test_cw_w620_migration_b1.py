@@ -125,22 +125,58 @@ def test_committed_from_semantics():
 def test_grep_guard_session_dual_track_read_points_isolated():
     """session 双轨态直读点归零:唯一读端 prep_brain.committed_from。
 
-    守卫形状(只锁 session 读,state 字段读随批 2 老栈退役自然归零):
+    守卫形状(W624 F3 修补:模式须跨点号,锁得住 ``getattr(_match.session,…)``
+    与 ``_match.session.dual_track_phase`` 形态;全文扫描不锚行,防多行
+    getattr 漏检):
     - getattr(session 系变量, 'dual_track_phase') — 除读端文件外全禁;
-    - ``session.dual_track_phase`` 属性**读**(非赋值)全禁
-      (default_strategy 写端 / cw_replay 离线恢复写端不受扰)。
+    - ``<…session…>.dual_track_phase`` 属性**读**(非赋值)全禁
+      (default_strategy 写端 / cw_replay 离线恢复写端不受扰;
+      state 字段读如 last_state.dual_track_phase 不属 session 读,不禁)。
     """
-    import re
-    offenders: dict[str, list[str]] = {}
-    pat_getattr = re.compile(r"getattr\(\s*\w*sess\w*\s*,\s*'dual_track_phase'")
-    pat_read = re.compile(r"\b\w*sess\w*\.dual_track_phase\b(?!\s*=)")
+    pat_getattr, pat_read = _guard_patterns()
+    offenders: dict[str, int] = {}
     for path in _SRC.rglob('*.py'):
         text = path.read_text(encoding='utf-8')
-        hits = [ln for ln in text.splitlines()
-                if pat_getattr.search(ln) or pat_read.search(ln)]
+        hits = len(pat_getattr.findall(text)) + len(pat_read.findall(text))
         if hits:
             offenders[path.name] = hits
     assert set(offenders) == {'prep_brain.py'}, offenders
+
+
+def _guard_patterns():
+    """守卫模式单一源(守卫测试与变异自检共用,防两处漂移)。"""
+    import re
+    pat_getattr = re.compile(
+        r"getattr\(\s*[\w.]*sess\w*\s*,\s*'dual_track_phase'")
+    pat_read = re.compile(r"\b[\w.]*sess\w*\.dual_track_phase\b(?!\s*=)")
+    return pat_getattr, pat_read
+
+
+def test_grep_guard_mutation_self_check():
+    """守卫变异自检(W624 F3):用改造前原形验证守卫确实锁得住。
+
+    原形取自 deploy_bench.py:269 / shop.py:492 改造前(W620 批 1 前)。
+    反例 = last_state 状态字段读与写端(守卫不得误报)。
+    """
+    pat_getattr, pat_read = _guard_patterns()
+    historical_forms = [
+        "_st_dual = getattr(_match.session, 'dual_track_phase', False)",
+        "state.dual_track_phase = getattr("
+        "match.session, 'dual_track_phase', False)",
+        "getattr(session, 'dual_track_phase', False)",
+    ]
+    for form in historical_forms:
+        assert (pat_getattr.search(form) or pat_read.search(form)), \
+            f'守卫漏检历史原形(变异自检失败): {form}'
+    # 反例:state 字段读不误报;赋值写端放行
+    state_field_reads = [
+        "_dual = bool(_match.session.last_state.dual_track_phase)",
+        "if getattr(state, 'dual_track_phase', False):",
+        "session.dual_track_phase = state.dual_track_phase",
+    ]
+    for form in state_field_reads:
+        assert not (pat_getattr.search(form) or pat_read.search(form)), \
+            f'守卫误报非 session 读(变异自检失败): {form}'
 
 
 # ----------------------------------------------------- 3. R2 tracking 读口
