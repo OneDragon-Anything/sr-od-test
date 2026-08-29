@@ -20,6 +20,12 @@ def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w505t') -> None:
     # 复现计数是进程内状态,逐测试清空防串
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
+    # L0 安灯副作用链隔离:handler 桩化(缺省 None 会惰性接真停线——gc 扫描命中
+    # 测试 ctx → 写真实仓根 flag + stop_running 毒 session 级 fixture 的
+    # last_run_result,全集后续 execute 全撞 W209j 刹车);闩锁同批清空,
+    # 防 rid 残留让后续测试的 L0 判级场景静默不触发。
+    monkeypatch.setattr(cw_telemetry, '_L0_ANDON_HANDLER', lambda payload: True)
+    monkeypatch.setattr(cw_telemetry, '_L0_ANDON_FIRED_RUNS', set())
 
 
 def _rows(tmp_path: Path, name: str) -> list[dict]:

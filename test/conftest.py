@@ -425,6 +425,13 @@ def test_image_dir(request) -> Path:
 #守卫的共享 ctx 属性(整对象替换 = 高危;None 表示属性原本缺失)。
 _GUARDED_CTX_ATTRS: tuple[str, ...] = ('run_context', 'controller')
 
+# 内部态守卫(w505 全集假红实证):run_context 的**运行残留**字段——生产停机
+# 路径(rc.stop_running)会写 last_run_result,monkeypatch 只还原被 patch 的
+# 模块属性,这类副作用无主残留 → 后续一切 execute() 入口撞 W209j 刹车
+# (单跑必过/全量必挂的同族假 flaky)。守卫语义:测试后遗留非 None → 警告
+# +复位(定位靠警告,不靠下游测试莫名红)。
+_RUN_LEFTOVER_ATTRS: tuple[str, ...] = ('last_run_result',)
+
 
 # --------------------------------------------------------------------------- #
 # 真实外网连接守卫(README 测试纪律 5 的机检层)
@@ -492,6 +499,17 @@ def _guard_shared_ctx(test_context: SrTestContext) -> Iterator[None]:
                 setattr(test_context, name, orig)
             else:
                 delattr(test_context, name)
+    # 运行残留守卫(见 _RUN_LEFTOVER_ATTRS 注释):生产停机路径的副作用复位。
+    rc = getattr(test_context, 'run_context', None)
+    if rc is not None:
+        for field in _RUN_LEFTOVER_ATTRS:
+            if getattr(rc, field, None) is not None:
+                warnings.warn(
+                    f'run_context.{field} 被本测试遗留(生产停机路径写入?已自动'
+                    f'复位)——残留会让后续 execute() 撞 W209j 刹车(全集假红)。',
+                    stacklevel=2,
+                )
+                setattr(rc, field, None)
 
 
 # --------------------------------------------------------------------------- #
