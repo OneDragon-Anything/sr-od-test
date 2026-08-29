@@ -19,9 +19,8 @@ from sr_od.application.currency_war.data.cw_battle_tables import (
     NODE_WIN_P_LADDER as tables_NODE_WIN_P_LADDER,
 )
 from sr_od.application.currency_war.kernel import cw_battle_calib as calib
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_delta_pool_bucket_coverage,
-)
+
+from sr_od.application.currency_war.sim.checks.pool import check_delta_pool_bucket_coverage
 
 
 def test_node_win_p_ladder_w31_source_of_truth() -> None:
@@ -139,4 +138,6 @@ def test_boss_settle_uses_win_p_single_source() -> None:
     src = inspect.getsource(calib.boss_settle_delta)
     assert 'node_win_p' in src
     assert 'NODE_WIN_P_LADDER[' not in src
+
+
 

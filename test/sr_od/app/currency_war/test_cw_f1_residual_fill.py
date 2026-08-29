@@ -23,10 +23,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 
 from sr_od.application.currency_war.sim.engine_p1 import _residual_fill_deploy, simulate_p1
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_deploy_fills_cap,
-    check_skip_fence_pairing,
-)
+
+from sr_od.application.currency_war.sim.checks.ledger import check_deploy_fills_cap, check_skip_fence_pairing
 
 
 def _st(level: int, deployed: list[BenchChar],

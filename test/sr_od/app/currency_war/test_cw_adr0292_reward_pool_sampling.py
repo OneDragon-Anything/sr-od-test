@@ -14,10 +14,7 @@ from pathlib import Path
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.sim import pool as sim_pool
 from sr_od.application.currency_war.sim import runner
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    REWARD_POOL_TRUTH_MEAN,
-    check_reward_delta_pool_bucket_lock,
-)
+from sr_od.application.currency_war.sim.checks.pool import REWARD_POOL_TRUTH_MEAN, check_reward_delta_pool_bucket_lock
 from sr_od.application.currency_war.data import cw_battle_tables as tables
 
 
@@ -170,5 +167,7 @@ def test_batch_report_embeds_reward_lock() -> None:
     cv = rep['checks_violations']
     assert 'reward_delta_pool_bucket_lock' in cv
     assert cv['reward_delta_pool_bucket_lock']['violations'] == 0
+
+
 
 

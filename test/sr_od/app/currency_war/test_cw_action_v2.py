@@ -13,10 +13,8 @@
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_comp_tx_atomicity,
-    check_skip_fence_pairing,
-)
+
+from sr_od.application.currency_war.sim.checks.ledger import check_comp_tx_atomicity, check_skip_fence_pairing
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,

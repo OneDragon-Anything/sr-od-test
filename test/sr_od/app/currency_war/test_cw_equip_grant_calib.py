@@ -91,3 +91,4 @@ def test_grant_names_all_registered() -> None:
             for e in (stt.get('owned_equips') or []):
                 assert e in legal, f'seed={seed} 非注册表装备 {e}'
 
+

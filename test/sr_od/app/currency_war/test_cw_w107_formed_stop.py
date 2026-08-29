@@ -22,9 +22,8 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 )
 
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_overflow_gold_zero_buy_streak,
-)
+
+from sr_od.application.currency_war.sim.checks.ledger import check_overflow_gold_zero_buy_streak
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,

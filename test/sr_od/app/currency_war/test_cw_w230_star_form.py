@@ -15,7 +15,7 @@ import dataclasses
 import logging
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim import runner
+from sr_od.application.currency_war.sim.checks import runner
 from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
@@ -124,4 +124,5 @@ def test_sensitivity_grid_star_key() -> None:
         form_star_weights=(0.0, 0.5))
     assert len(out['grid']) == 2
     assert {row['form_star_weight'] for row in out['grid']} == {0.0, 0.5}
+
 

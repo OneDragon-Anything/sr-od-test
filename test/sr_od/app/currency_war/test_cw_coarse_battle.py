@@ -27,7 +27,7 @@ import pytest
 from sr_od.application.currency_war.kernel import cw_coarse_battle as cb
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.sim import pool
-from sr_od.application.currency_war.sim import runner
+from sr_od.application.currency_war.sim.checks import runner
 # 拟合产物交付口径(逐单元;粗模型参数的机器可读真值,
 # 来源 = 冻结语料拟合,禁与其它口径混写)
 _DELIVERY_WIN_P: dict[str, dict[int, float]] = {
@@ -287,4 +287,5 @@ def test_coarse_calib_version_disclosed_in_ledger_manifest(
     out = runner.write_batch_ledger([r], tmp_path / 'batch')
     manifest = json.loads((out / 'manifest.json').read_text(encoding='utf-8'))
     assert manifest['coarse_calib_version'] == cb.COARSE_CALIB_VERSION
+
 

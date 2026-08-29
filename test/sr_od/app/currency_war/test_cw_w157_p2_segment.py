@@ -20,7 +20,7 @@ from pathlib import Path
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel import cw_battle_calib
 from sr_od.application.currency_war.sim import pool
-from sr_od.application.currency_war.sim import runner
+from sr_od.application.currency_war.sim.checks import runner
 from sr_od.application.currency_war.data import cw_battle_tables as _tables
 
 logging.disable(logging.CRITICAL)
@@ -194,9 +194,8 @@ def test_batch_p1_metrics_scoped_to_plane1() -> None:
 
 
 def test_check_p2_gold_nonneg_unit() -> None:
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        check_p2_gold_nonneg,
-    )
+
+    from sr_od.application.currency_war.sim.checks.calib import check_p2_gold_nonneg
     bad = [[{'plane': 2, 'round_num': 3, 'gold': -1}]]
     rep = check_p2_gold_nonneg(bad)
     assert rep['violations'] == 1 and rep['games'] == [0]
@@ -206,9 +205,8 @@ def test_check_p2_gold_nonneg_unit() -> None:
 
 
 def test_check_p2_segment_shape_unit() -> None:
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        check_p2_segment_shape,
-    )
+
+    from sr_od.application.currency_war.sim.checks.calib import check_p2_segment_shape
     good = [[{'ts': 1, 'plane': 1, 'round_num': 1},
              {'ts': 10, 'plane': 2, 'round_num': 1}]]
     assert check_p2_segment_shape(good)['violations'] == 0
@@ -232,4 +230,5 @@ def test_simulate_p2_ab_report_shape() -> None:
     assert rd['on_gt_off'] + rd['off_gt_on'] + rd['tie'] == rep['n']
     assert rep['headline_on']['p2_entered_rate'] == \
         rep['headline_off']['p2_entered_rate']   # P1 段两臂零漂移
+
 

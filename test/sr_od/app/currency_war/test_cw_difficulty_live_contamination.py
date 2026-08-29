@@ -8,9 +8,8 @@ leader 审后转锁(2026-08-24;批39 清死断言 + 补部分污染 note 锁)。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_difficulty_curve_live_contamination as chk,
-)
+
+from sr_od.application.currency_war.sim.checks.corpus import check_difficulty_curve_live_contamination as chk
 
 
 def _row(ed: int | None, live: bool | None, rnd: int = 1) -> dict:

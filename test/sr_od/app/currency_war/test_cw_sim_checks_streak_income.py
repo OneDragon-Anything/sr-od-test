@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from sr_od.application.currency_war.kernel import cw_economy
-from sr_od.application.currency_war.sim import cw_sim_checks as chk
+from sr_od.application.currency_war.sim.checks import runtime as chk
 
 
 def _row(rn: int, node: str, streak: int, delta: int = 0,
@@ -152,3 +152,5 @@ def test_mutation_no_count_guard_killed(monkeypatch: Any) -> None:
     assert mutated['combat_only_streak_income'] != real[
         'combat_only_streak_income'], \
         '好样本杀不死「重算链断」变异=披露锁失效'
+
+

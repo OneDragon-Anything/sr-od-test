@@ -29,12 +29,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
     ShopCard,
 )
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    _P1_EMERGENCY_HP,
-    _P1_EXIT_BLOOD_TARGET,
-    _P1_HANDOFF_GATE_MIN_ROUND,
-    seg_check_p1_blood_budget_refresh,
-)
+
+from sr_od.application.currency_war.sim.checks.segments import _P1_EMERGENCY_HP, _P1_EXIT_BLOOD_TARGET, _P1_HANDOFF_GATE_MIN_ROUND, seg_check_p1_blood_budget_refresh
 from sr_od.application.currency_war.decision.decision_v2 import candidates as cands_mod
 from sr_od.application.currency_war.decision.decision_v2 import handoff as handoff_mod
 from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate

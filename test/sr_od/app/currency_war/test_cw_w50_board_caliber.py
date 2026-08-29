@@ -132,9 +132,8 @@ def test_unit_bond_tags_equip_grants() -> None:
 # ---------- 3. 三侧同函数(实机/派生/检查)----------
 
 def _three_sides_agree(dep: list[BenchChar]) -> None:
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        _board_agg_of_deployed_row,
-    )
+
+    from sr_od.application.currency_war.sim.checks.ledger import _board_agg_of_deployed_row
     row = {'state': {'deployed': [
         {'char_id': d.char_id, 'faction': d.faction, 'slot': d.slot,
          'position_pref': d.position_pref, 'equips': list(d.equips)}

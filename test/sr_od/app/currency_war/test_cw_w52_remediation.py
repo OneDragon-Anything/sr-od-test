@@ -501,9 +501,8 @@ def _row(round_num: int, abandoned: int = 0, d2: bool = True) -> dict:
 
 def test_remedy_loop_fires_on_consecutive_abandons() -> None:
     """检查项正向:连续 3 轮补偿放弃 → 报警(设计容量不足信号)。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        check_decision_v2_remedy_loop,
-    )
+
+    from sr_od.application.currency_war.sim.checks.decision_v2 import check_decision_v2_remedy_loop
     r = check_decision_v2_remedy_loop([[
         _row(1), _row(2, 1), _row(3, 1), _row(4, 1), _row(5),
     ]])
@@ -518,9 +517,8 @@ def test_remedy_loop_fires_on_consecutive_abandons() -> None:
 def test_remedy_loop_clean_when_no_abandon() -> None:
     """检查项反例:无放弃/零星放弃 → 0 违规(非安慰剂:构造有放弃必报
     的对照见上;本锁钉「零放弃恒绿」)。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        check_decision_v2_remedy_loop,
-    )
+
+    from sr_od.application.currency_war.sim.checks.decision_v2 import check_decision_v2_remedy_loop
     r = check_decision_v2_remedy_loop([[
         _row(1), _row(2, 1), _row(3), _row(4), _row(5, 1), _row(6),
     ]])
@@ -531,9 +529,8 @@ def test_remedy_loop_clean_when_no_abandon() -> None:
 def test_remedy_loop_d2_batch_scoped() -> None:
     """检查项辖域:非 d2 批次(无 d2_ 前缀 reason 动作)不辖——即便
     账本有 abandon 形状也不报(补偿趟只存在于 decision_v2 载体)。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        check_decision_v2_remedy_loop,
-    )
+
+    from sr_od.application.currency_war.sim.checks.decision_v2 import check_decision_v2_remedy_loop
     r = check_decision_v2_remedy_loop([[
         _row(1, d2=False), _row(2, 1, d2=False), _row(3, 1, d2=False),
         _row(4, 1, d2=False),

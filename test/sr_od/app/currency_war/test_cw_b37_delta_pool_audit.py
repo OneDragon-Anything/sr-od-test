@@ -25,12 +25,10 @@ from sr_od.application.currency_war.sim import pool as cw_sim
 from sr_od.application.currency_war.data.cw_delta_pool_data import (
     META as SNAP_META,
 )
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_ab_verdict_claim,
-    check_boss_rung_corpus_sample_gate,
-    check_delta_pool_poverty_selfconsistency,
-    check_paired_prefork_wave_identity,
-)
+
+from sr_od.application.currency_war.sim.checks.calib import check_ab_verdict_claim
+
+from sr_od.application.currency_war.sim.checks.corpus import check_boss_rung_corpus_sample_gate, check_delta_pool_poverty_selfconsistency, check_paired_prefork_wave_identity
 
 # --------------------------------------------------------------------
 # check_delta_pool_poverty_selfconsistency

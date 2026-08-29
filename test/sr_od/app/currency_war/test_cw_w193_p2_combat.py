@@ -21,12 +21,10 @@ import random
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel import cw_battle_calib
-from sr_od.application.currency_war.sim import runner
+from sr_od.application.currency_war.sim.checks import runner
 from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_p2_loss_band_anchor,
-    check_p2_win_rate_band,
-)
+
+from sr_od.application.currency_war.sim.checks.calib import check_p2_loss_band_anchor, check_p2_win_rate_band
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
@@ -311,4 +309,5 @@ def test_sensitivity_report_shape() -> None:
                   'avg_final_hp'):
             assert k in cell
     assert rep['pool_fingerprint']
+
 

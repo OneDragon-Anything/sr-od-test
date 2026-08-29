@@ -79,9 +79,8 @@ def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
     """拒付行不破坏 flat4 台账锁(spend.levelup == 4×LevelUp 行数)。"""
 
     from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        check_levelup_flat4_ledger_lock,
-    )
+
+    from sr_od.application.currency_war.sim.checks.ledger import check_levelup_flat4_ledger_lock
 
     res = simulate_p1(1, pool='fallback', strategy=_LevelUpSpamStub())
     violations = check_levelup_flat4_ledger_lock(res.ledger)

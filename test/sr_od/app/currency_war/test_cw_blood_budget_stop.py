@@ -27,12 +27,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
     LevelUp,
 )
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    _P1_LEVELUP_STOP_HP,
-    _P2_LEVELUP_STOP_HP,
-    seg_check_p1_blood_budget_levelup,
-    seg_check_p2_blood_budget_levelup,
-)
+
+from sr_od.application.currency_war.sim.checks.segments import _P1_LEVELUP_STOP_HP, _P2_LEVELUP_STOP_HP, seg_check_p1_blood_budget_levelup, seg_check_p2_blood_budget_levelup
 from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     _check_constraint,
     arbitrate,

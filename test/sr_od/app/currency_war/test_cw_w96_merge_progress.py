@@ -21,9 +21,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_overflow_gold_zero_buy_streak,
-)
+
+from sr_od.application.currency_war.sim.checks.ledger import check_overflow_gold_zero_buy_streak
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.candidates import (
@@ -233,6 +232,7 @@ def test_checker_spend_breaks_streak() -> None:
 
 def test_checker_registered_in_batch_checks() -> None:
     """接线锁:检查器进 _BATCH_CHECKS(sim 批次 checks_violations 覆盖)。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import _BATCH_CHECKS
+
+    from sr_od.application.currency_war.sim.checks.runner import _BATCH_CHECKS
     assert _BATCH_CHECKS.get('overflow_gold_zero_buy_streak') \
         is check_overflow_gold_zero_buy_streak

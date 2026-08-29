@@ -369,10 +369,8 @@ def test_w120_p6_no_per_round_special_case() -> None:
 def test_w120_p9_hp1_dead_end_marker() -> None:
     """P9:HP=1 死局/早停候选标记(披露非违规)——check 恒空
     (violations=0),数据面 hp1_dead_end_rounds 给出轮号供早停判读。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        check_hp1_dead_end_candidate,
-        hp1_dead_end_rounds,
-    )
+
+    from sr_od.application.currency_war.sim.checks.ledger import check_hp1_dead_end_candidate, hp1_dead_end_rounds
     rows = [{'round_num': 6, 'hp': 3}, {'round_num': 7, 'hp': 1},
             {'round_num': 8, 'hp': 1}, {'round_num': 9, 'hp': 0}]
     assert check_hp1_dead_end_candidate(rows) == []   # 恒不违规

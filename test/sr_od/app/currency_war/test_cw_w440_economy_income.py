@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim import runner
+from sr_od.application.currency_war.sim.checks import runner
 from sr_od.application.currency_war.kernel import cw_economy
 from sr_od.application.currency_war.kernel.cw_economy import (
     BASE_INCOME,
@@ -100,4 +100,5 @@ def test_economy_calib_version_disclosed_in_manifest(tmp_path) -> None:
     assert manifest['economy_calib_version'] == \
         cw_economy.ECONOMY_CALIB_VERSION
     assert 'coarse_calib_version' in manifest   # 粗模型键原样保留
+
 

@@ -50,3 +50,4 @@ def test_v11_settle_wiring_encounter_rung_source() -> None:
     src = inspect.getsource(_sim.simulate_p1)
     assert "live_delta_for('encounter', _settle_rung(st)" in src
 
+

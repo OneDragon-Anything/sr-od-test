@@ -14,9 +14,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_decision_v2_candidate_coverage,
-)
+
+from sr_od.application.currency_war.sim.checks.decision_v2 import check_decision_v2_candidate_coverage
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,

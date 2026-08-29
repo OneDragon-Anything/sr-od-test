@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.sim import cw_sim_checks as chk
+from sr_od.application.currency_war.sim.checks import ledger as chk
 
 from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
@@ -107,3 +107,5 @@ def test_ledger_auth_key_wired(tmp_path: Path) -> None:
     for line in v:
         assert '无授权依据' not in line, \
             f'真实批涌现无授权依据升级(接线断裂或真违规):{line}'
+
+

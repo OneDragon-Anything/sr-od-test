@@ -17,10 +17,8 @@ from sr_od.application.currency_war.sim import engine_p1 as _sim
 from sr_od.application.currency_war.sim import pool as sim_pool
 from sr_od.application.currency_war.sim import runner
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    BATTLE_RUNG_TRUTH,
-    check_battle_rung_pool_bucket_lock,
-)
+
+from sr_od.application.currency_war.sim.checks.pool import BATTLE_RUNG_TRUTH, check_battle_rung_pool_bucket_lock
 
 
 def test_snapshot_battle_buckets_are_rung_domain() -> None:
@@ -204,5 +202,7 @@ def test_snapshot_meta_carries_battle_rung_table() -> None:
     assert {'0', '1'} <= set(table)
     for row in table.values():
         assert {'n', 'mean'} <= set(row)
+
+
 
 

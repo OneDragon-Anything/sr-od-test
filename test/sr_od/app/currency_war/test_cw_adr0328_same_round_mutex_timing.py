@@ -22,9 +22,8 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     HoardTarget,
     IntentionState,
 )
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_no_same_round_buy_sell,
-)
+
+from sr_od.application.currency_war.sim.checks.ledger import check_no_same_round_buy_sell
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,

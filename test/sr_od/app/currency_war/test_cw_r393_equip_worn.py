@@ -3,9 +3,8 @@
 2 轮零穿着;开局/无 deployed/全穿不报)。合成账本双向锁。"""
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_equip_worn_in_battle,
-)
+
+from sr_od.application.currency_war.sim.checks.ledger import check_equip_worn_in_battle
 
 
 def _row(rn: int, node: str, owned: list, equipped: list,

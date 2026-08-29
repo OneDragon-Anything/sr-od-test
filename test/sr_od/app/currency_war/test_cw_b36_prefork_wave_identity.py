@@ -14,7 +14,8 @@ import copy
 
 import pytest
 
-from sr_od.application.currency_war.sim import cw_sim_checks, engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim.checks import corpus as cw_sim_checks
 
 SEEDS = [0, 1, 2]
 
@@ -47,3 +48,4 @@ def test_prefork_wave_identity_mutation_kill(arms) -> None:
     assert r['violations'] > 0, (
         '变异未杀:分叉前首波被篡改仍 0 违规 = 检查器不消费牌面波'
         '(安慰剂)')
+

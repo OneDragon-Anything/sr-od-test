@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.sim import cw_sim_checks as chk
+from sr_od.application.currency_war.sim.checks import segments as chk
 
 from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
@@ -258,3 +258,5 @@ def test_batch_zero_drift_when_no_window(tmp_path) -> None:  # type: ignore[no-u
     cv = rep['checks_violations']
     for name, r in cv.items():
         assert 'violations' in r and 'seed_base' in r, f'{name}: {r}'
+
+

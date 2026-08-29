@@ -22,9 +22,8 @@ from sr_od.application.currency_war.kernel.cw_events import (
     _equip_value,
     decide_supply,
 )
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_equip_value_table_roster_coherence,
-)
+
+from sr_od.application.currency_war.sim.checks.ledger import check_equip_value_table_roster_coherence
 from sr_od.application.currency_war.kernel.cw_state import GameState
 
 # ---- 方向1:价值表键 ⊆ 注册表名(死名清零) --------------------------------

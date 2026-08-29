@@ -211,3 +211,4 @@ def test_sim_ledger_projection_disclosure() -> None:
     assert any(row['handoff_hp_proj'] is not None for row in rows), (
         '末窗轮投影 hp 应披露(非 None)')
 
+

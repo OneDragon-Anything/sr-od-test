@@ -11,8 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.sim import cw_sim_checks as chk
-
+from sr_od.application.currency_war.sim.checks import ledger, runner
 from sr_od.application.currency_war.sim.runner import write_batch_ledger
 
 
@@ -35,17 +34,17 @@ def _row(round_num: int = 1, gold: int = 10, gold_before: int = 5,
 def test_consistency_check_bidirectional() -> None:
     """守恒检查:坏账本报(金不守恒)/好账本过。"""
     bad = [_row(gold=99)]   # 5+6≠99
-    assert chk.check_ledger_consistency(bad), '坏账本未报警=静默失效'
+    assert ledger.check_ledger_consistency(bad), '坏账本未报警=静默失效'
     good = [_row(gold=11)]  # 5+6=11
-    assert not chk.check_ledger_consistency(good)
+    assert not ledger.check_ledger_consistency(good)
     # 卖回金计收入侧
     good2 = [_row(gold=13, spend={'buys': {'line': 2}, 'levelup': 0,
                                   'refresh': 0, 'sell_income': 4})]
-    assert not chk.check_ledger_consistency(good2)   # 5+6-2+4=13
+    assert not ledger.check_ledger_consistency(good2)   # 5+6-2+4=13
     # 缺 gold_before → 报(字段契约)
     miss = [_row()]
     del miss[0]['sim']['gold_before']
-    assert chk.check_ledger_consistency(miss)
+    assert ledger.check_ledger_consistency(miss)
 
 
 def test_coldstart_check_bidirectional() -> None:
@@ -62,33 +61,33 @@ def test_coldstart_check_bidirectional() -> None:
             'actions': [{'__type__': 'BuyCard',
                          'card': {'name': '翡翠', 'cost': 1},
                          'reason': 'off', 'channel': 'off'}]}]
-    v = chk.check_coldstart_seed_squander(bad)
+    v = ledger.check_coldstart_seed_squander(bad)
     assert v and '翡翠' in v[0]
     # 坏:局53 形态(系统 bench 带卡,同阵营线外)
     bad2 = [{'plane': 1, 'round_num': 2, 'target_comp': '',
              'actions': [{'__type__': 'BuyCard',
                           'card': {'name': '阿格莱雅', 'cost': 1},
                           'reason': 'pair', 'channel': 'pair'}]}]
-    assert chk.check_coldstart_seed_squander(bad2)
+    assert ledger.check_coldstart_seed_squander(bad2)
     # 好:pair 谓词放行的方向件(reason=身份=bridge_seed)
     good = [{'plane': 1, 'round_num': 1, 'target_comp': '',
              'actions': [{'__type__': 'BuyCard',
                           'card': {'name': '丹恒·饮月', 'cost': 1},
                           'reason': 'bridge_seed',
                           'channel': 'bridge_seed'}]}]
-    assert not chk.check_coldstart_seed_squander(good)
+    assert not ledger.check_coldstart_seed_squander(good)
     # 好:其它通道(line/emergency)不辖于门
     other = [{'plane': 1, 'round_num': 1, 'target_comp': '',
               'actions': [{'__type__': 'BuyCard',
                            'card': {'name': '翡翠', 'cost': 1},
                            'reason': 'emergency', 'channel': 'off'}]}]
-    assert not chk.check_coldstart_seed_squander(other)
+    assert not ledger.check_coldstart_seed_squander(other)
     # 好:非开局轮(r3+)pair 凑对恢复旧语义(r371b 回归点)
     late = [{'plane': 1, 'round_num': 3, 'target_comp': '',
              'actions': [{'__type__': 'BuyCard',
                           'card': {'name': '翡翠', 'cost': 1},
                           'reason': 'pair', 'channel': 'pair'}]}]
-    assert not chk.check_coldstart_seed_squander(late)
+    assert not ledger.check_coldstart_seed_squander(late)
     # decision_v2 栈:reason 带 d2_ 前缀(+'_merge' 尾,arbiter
     # _materialize)——归一化后同指纹必报(防对新栈无声失效,
     # 2026-08-24 leader 核实观察局首验)
@@ -96,31 +95,31 @@ def test_coldstart_check_bidirectional() -> None:
               'actions': [{'__type__': 'BuyCard',
                            'card': {'name': '翡翠', 'cost': 1},
                            'reason': 'd2_off', 'channel': 'off'}]}]
-    v2 = chk.check_coldstart_seed_squander(d2bad)
+    v2 = ledger.check_coldstart_seed_squander(d2bad)
     assert v2 and '翡翠' in v2[0]
     d2bad2 = [{'plane': 1, 'round_num': 2, 'target_comp': '',
                'actions': [{'__type__': 'BuyCard',
                             'card': {'name': '阿格莱雅', 'cost': 1},
                             'reason': 'd2_pair_merge',
                             'channel': 'pair'}]}]
-    assert chk.check_coldstart_seed_squander(d2bad2)
+    assert ledger.check_coldstart_seed_squander(d2bad2)
     d2good = [{'plane': 1, 'round_num': 1, 'target_comp': '',
                'actions': [{'__type__': 'BuyCard',
                             'card': {'name': '丹恒·饮月', 'cost': 1},
                             'reason': 'd2_engine_seed',
                             'channel': 'engine_seed'}]}]
-    assert not chk.check_coldstart_seed_squander(d2good)
+    assert not ledger.check_coldstart_seed_squander(d2good)
 
 
 def test_coldstart_check_in_batch_set() -> None:
     """r371b 后局49 检查进批量集(sim 批次自动扫)。"""
-    assert 'coldstart_direction' in chk._BATCH_CHECKS
+    assert 'coldstart_direction' in runner._BATCH_CHECKS
 
 
 def test_run_checks_report_shape() -> None:
     """批量检查报告形:violations 计数 + 局索引(供 seed 重放)。"""
     ledgers = [[_row(gold=11)], [_row(gold=99)], [_row(gold=11)]]
-    rep = chk.run_checks_on_ledgers(ledgers)
+    rep = runner.run_checks_on_ledgers(ledgers)
     assert rep['ledger_consistency']['violations'] == 1
     assert rep['ledger_consistency']['games'] == [1]
 
@@ -143,7 +142,7 @@ def test_checks_module_does_not_import_sim() -> None:
     import ast
     import inspect
 
-    tree = ast.parse(inspect.getsource(chk))
+    tree = ast.parse(inspect.getsource(runner))
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names = [a.name for a in node.names]
@@ -153,3 +152,5 @@ def test_checks_module_does_not_import_sim() -> None:
             continue
         for n in names:
             assert 'cw_sim' not in n, f'checks 不得 import cw_sim: {n}'
+
+

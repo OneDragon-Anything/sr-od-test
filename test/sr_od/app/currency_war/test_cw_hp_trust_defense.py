@@ -341,9 +341,8 @@ def _lv_action() -> dict:
 def test_seg_untrusted_hp_levelup_hits_both_bits_false() -> None:
     """不可信帧(两位皆 False,hp_decision_trusted 谓词镜像)上
     LevelUp → 命中;单 False 单 True(沿用帧/真读帧)不命中。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        seg_check_untrusted_hp_levelup,
-    )
+
+    from sr_od.application.currency_war.sim.checks.segments import seg_check_untrusted_hp_levelup
     rows = [_ledger_row(2, 4, hp_readable=False, hp_trusted=False,
                         actions=[_lv_action()])]
     evs = seg_check_untrusted_hp_levelup(rows)
@@ -355,9 +354,8 @@ def test_seg_untrusted_hp_levelup_hits_both_bits_false() -> None:
 def test_seg_trusted_frames_zero_hit() -> None:
     """可信面零命中:两键缺省(sim 恒真读/旧批账本)、(False, True)
     同节点沿用帧、(True, False) 真读帧、不可信帧但无 LevelUp。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        seg_check_untrusted_hp_levelup,
-    )
+
+    from sr_od.application.currency_war.sim.checks.segments import seg_check_untrusted_hp_levelup
     rows = [
         _ledger_row(1, 3, hp_readable=None, hp_trusted=None,
                     actions=[_lv_action()]),            # sim 形态
@@ -372,9 +370,8 @@ def test_seg_trusted_frames_zero_hit() -> None:
 
 def test_seg_allin_exempt_precedes_trust_check() -> None:
     """ALL IN 豁免优先(消费门语义镜像):位面末 boss 不可信帧 LevelUp 不报。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        seg_check_untrusted_hp_levelup,
-    )
+
+    from sr_od.application.currency_war.sim.checks.segments import seg_check_untrusted_hp_levelup
     rows = [_ledger_row(2, 7, hp_readable=False, hp_trusted=False,
                         actions=[_lv_action()], node='boss')]
     assert seg_check_untrusted_hp_levelup(rows) == []
@@ -387,7 +384,7 @@ def test_seg_allin_exempt_precedes_trust_check() -> None:
 def test_seg_untrusted_check_registered_and_sim_zero_hit() -> None:
     """检查项已入段级表;run_segment_checks 批量入口对恒真读合成局
     零命中(纯防线验证面;sim-testing §6 披露键保留纪律)。"""
-    from sr_od.application.currency_war.sim import cw_sim_checks as chk
+    from sr_od.application.currency_war.sim.checks.segments import chk
     assert 'seg_untrusted_hp_levelup' in chk._SEGMENT_CHECKS
     good = [_ledger_row(1, r, hp_readable=None, hp_trusted=None,
                         actions=[_lv_action()]) for r in range(1, 4)]
@@ -400,9 +397,8 @@ def test_seg_untrusted_mutation_default_trust_turns_locks_red() -> None:
     语义反转成「缺省 = 不可信」的合成形态等价于旧账本键位消失时
     命中——锁的敏感性由显式 False 单向触发保证(缺省键的旧账本
     不虚报,真不可信帧不漏报)。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        seg_check_untrusted_hp_levelup,
-    )
+
+    from sr_od.application.currency_war.sim.checks.segments import seg_check_untrusted_hp_levelup
     # 顶层缺 state 子字典(形状异常账本)也不炸、且不误报(缺省 = 可信)
     row = {'plane': 1, 'round_num': 2, 'hp': 100, 'actions': [_lv_action()]}
     assert seg_check_untrusted_hp_levelup([row]) == []

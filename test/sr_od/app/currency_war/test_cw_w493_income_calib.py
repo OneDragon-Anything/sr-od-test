@@ -16,10 +16,8 @@ import pytest
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel import cw_economy
 from sr_od.application.currency_war.kernel import cw_coarse_battle as cb
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_gold_dist_calib,
-    check_shop_cost_curve,
-)
+
+from sr_od.application.currency_war.sim.checks.calib import check_gold_dist_calib, check_shop_cost_curve
 
 
 def test_event_gold_table_v2_lock() -> None:

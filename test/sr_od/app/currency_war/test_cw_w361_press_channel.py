@@ -389,7 +389,7 @@ def test_checker_dup_dual_domain() -> None:
     from sr_od.application.currency_war.kernel.cw_line_defs import (
         ENGINE_FACTIONS,
     )
-    from sr_od.application.currency_war.sim import cw_sim_checks as chk
+    from sr_od.application.currency_war.sim import corpus, decision_v2, segments
     name = next(n for n, c in CHARACTERS.items()
                 if c.cost == 1
                 and set(c.factions or ()) & set(ENGINE_FACTIONS))
@@ -398,28 +398,27 @@ def test_checker_dup_dual_domain() -> None:
     # (通道开转正=买家被授权买;旧「通道关转披露 copy_press_channel_
     # closed」语义由 seg_copy_press_disclosure 在通道关注册表下保留)
     row_dep = _seg_row(cards, deployed=[{'char_id': name}])
-    evs_dep = chk.seg_check_lossless_buy_missed([row_dep])
+    evs_dep = segments.seg_check_lossless_buy_missed([row_dep])
     assert evs_dep and evs_dep[0]['class'] == 'C-B', evs_dep
-    assert not chk.seg_copy_press_disclosure([row_dep])
+    assert not segments.seg_copy_press_disclosure([row_dep])
     # bench-only 同名:披露不进真拦(V-B9.3)
     row_bench = _seg_row(cards, deployed=[],
                          bench=[{'char_id': name}])
-    assert not chk.seg_check_lossless_buy_missed([row_bench])
-    disc = chk.seg_copy_press_disclosure([row_bench])
+    assert not segments.seg_check_lossless_buy_missed([row_bench])
+    disc = segments.seg_copy_press_disclosure([row_bench])
     assert disc and disc[0]['kind'] == 'copy_bench_only_skipped'
     # 非重复散件(C-D):真拦语义保持
     row_plain = _seg_row(cards, deployed=[])
-    evs = chk.seg_check_lossless_buy_missed([row_plain])
+    evs = segments.seg_check_lossless_buy_missed([row_plain])
     assert evs and evs[0]['class'] == 'C-D'
-    assert not chk.seg_copy_press_disclosure([row_plain])
+    assert not segments.seg_copy_press_disclosure([row_plain])
 
 
 def test_transition_cost_max_single_source() -> None:
     """V-A2:检查器成本带上限 import 买家侧单一源
     press_channel_max_band()(={1,2} 的 max=2,无数值漂移)。"""
-    from sr_od.application.currency_war.sim.cw_sim_checks import (
-        _seg_transition_cost_max,
-    )
+
+    from sr_od.application.currency_war.sim.checks.segments import _seg_transition_cost_max
     assert _seg_transition_cost_max() == 2
     assert _seg_transition_cost_max() == max(
         press_channel_max_band(DEFAULT_REGISTRY))
@@ -431,8 +430,8 @@ def test_transition_cost_max_single_source() -> None:
 def test_supply_consistency_probe_includes_w300() -> None:
     """V-B1.3:检查网总表含 press 通道探针;供给一致性探针与
     check_w300_press_channel_probe 均零违规(现行为回归面)。"""
-    from sr_od.application.currency_war.sim import cw_sim_checks as chk
-    r1 = chk.check_decision_v2_supply_label_consistency()
+    from sr_od.application.currency_war.sim import corpus, decision_v2, segments
+    r1 = decision_v2.check_decision_v2_supply_label_consistency()
     assert r1['violations'] == 0, r1['detail']
-    r2 = chk.check_w300_press_channel_probe()
+    r2 = corpus.check_w300_press_channel_probe()
     assert r2['violations'] == 0, r2['detail']

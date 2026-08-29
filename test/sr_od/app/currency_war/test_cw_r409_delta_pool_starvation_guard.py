@@ -11,11 +11,7 @@ import random
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.sim import pool as sim_pool
 from sr_od.application.currency_war.sim import runner
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_ab_depth_boundary_confound,
-    check_delta_pool_bucket_min_n,
-    check_depth_cliff_monotonicity,
-)
+from sr_od.application.currency_war.sim.checks.pool import check_ab_depth_boundary_confound, check_delta_pool_bucket_min_n, check_depth_cliff_monotonicity
 
 
 def test_guard_hungry_bucket_not_deterministic_cliff() -> None:
@@ -166,5 +162,7 @@ def test_sampler_version_bumped_and_snapshot_guarded() -> None:
     assert src == 'snapshot'
     from sr_od.application.currency_war.data import cw_delta_pool_data
     assert fp == cw_delta_pool_data.META['fingerprint']
+
+
 
 

@@ -15,8 +15,7 @@ from __future__ import annotations
 
 import random
 
-from sr_od.application.currency_war.sim import cw_sim_checks as chk
-
+from sr_od.application.currency_war.sim.checks import calib, ledger, runner
 from sr_od.application.currency_war.sim.pool import _Pool
 
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
@@ -32,7 +31,7 @@ def test_buy_consumes_slot_waves_all_five() -> None:
     refresh 同为全 5 槽重抽——批㉒ F1 的「刷新现行?」查证锁)。"""
     for seed in (0, 1, 2):
         r = simulate_p1(seed, pool='fallback')
-        assert not chk.check_shop_slot_consumption(r.ledger), \
+        assert not ledger.check_shop_slot_consumption(r.ledger), \
             f'seed{seed}: 波内买入超供给(槽消费缺失)'
         for row in r.ledger:
             for w in (row['sim'].get('shop_waves') or []):
@@ -73,7 +72,7 @@ def test_consumed_slot_rebuy_skipped_and_disclosed() -> None:
                   for row in r.ledger)
     assert phantom > 0, '重复提案应计入幻影再买披露'
     # 守恒断言:跳过的买不产生金流(金只扣一次)
-    assert not chk.check_ledger_consistency(r.ledger), \
+    assert not ledger.check_ledger_consistency(r.ledger), \
         '已消费槽再买被跳过后金流守恒不应破'
 
 
@@ -111,9 +110,9 @@ def test_check_shop_slot_consumption_bidirectional() -> None:
     buy = lambda: {'__type__': 'BuyCard',   # noqa: E731
                    'card': {'name': 'A', 'cost': 1}, 'reason': 'line'}
     bad = _row([buy(), buy()], [{'name': 'A', 'cost': 1}])
-    assert chk.check_shop_slot_consumption([bad]), '超供给买入未报'
+    assert ledger.check_shop_slot_consumption([bad]), '超供给买入未报'
     good = _row([buy()], [{'name': 'A', 'cost': 1}])
-    assert not chk.check_shop_slot_consumption([good])
+    assert not ledger.check_shop_slot_consumption([good])
     # 刷新切波:两波各供 1 份 A,各买 1 → 合法
     two_waves = {'plane': 1, 'round_num': 5,
                  'actions': [buy(),
@@ -124,19 +123,19 @@ def test_check_shop_slot_consumption_bidirectional() -> None:
                       'cards': [{'name': 'A', 'cost': 1}]},
                      {'event': 'refresh', 'gold': 28,
                       'cards': [{'name': 'A', 'cost': 1}]}]}}
-    assert not chk.check_shop_slot_consumption([two_waves]), \
+    assert not ledger.check_shop_slot_consumption([two_waves]), \
         '刷新后供给重置,跨波同名各买 1 合法'
-    assert 'shop_slot_consumption' in chk._BATCH_CHECKS
+    assert 'shop_slot_consumption' in runner._BATCH_CHECKS
 
 
 def test_check_phantom_rebuy_disclosure_bidirectional() -> None:
     """坏:sim.phantom_rebuys>0 → 报;好:=0 → 过;登记进批量集。"""
     bad = [{'plane': 1, 'round_num': 3,
             'sim': {'phantom_rebuys': 2}}]
-    assert chk.check_phantom_rebuy_disclosure(bad)
+    assert ledger.check_phantom_rebuy_disclosure(bad)
     good = [{'plane': 1, 'round_num': 3, 'sim': {}}]
-    assert not chk.check_phantom_rebuy_disclosure(good)
-    assert 'phantom_rebuy_disclosure' in chk._BATCH_CHECKS
+    assert not ledger.check_phantom_rebuy_disclosure(good)
+    assert 'phantom_rebuy_disclosure' in runner._BATCH_CHECKS
 
 
 def test_pool_take_floor_hits_recorded() -> None:
@@ -170,12 +169,12 @@ def test_endgold_dual_criterion_guard_residual() -> None:
             'plane': 1, 'round_num': 9, 'gold': end_gold,
             'sim': {'bench_full_skipped_gold': skipped_gold},
         }]
-    rep = chk.check_sim_endgold_calib([_game(90, 45)])
+    rep = calib.check_sim_endgold_calib([_game(90, 45)])
     assert rep['violations'] == 0, '净口径 45/45.1 ≤1.5,不应违规'
     assert rep['ratio'] == round(90 / 45.1, 2), '总口径并行披露(90/45.1)'
     assert rep['net_ratio'] == round(45 / 45.1, 2), '净口径 = (90−45)/45.1'
     assert rep['guard_skipped_gold_avg'] == 45.0
-    rep2 = chk.check_sim_endgold_calib([_game(90, 0)])
+    rep2 = calib.check_sim_endgold_calib([_game(90, 0)])
     assert rep2['violations'] == 1, '纯策略滞留 90 → 违规(漂移哨兵语义)'
 
 
@@ -186,14 +185,14 @@ def test_ab_resolution_floor_noise_band() -> None:
     """差值小于 95% 底 → 噪声带内(不得叙述方向);大差值 → 可叙述。"""
     b = [30.0 for _ in range(100)]
     a = [30.0 + (5.0 if i % 2 else -5.0) for i in range(100)]
-    rep = chk.check_ab_resolution_floor(a, b)
+    rep = calib.check_ab_resolution_floor(a, b)
     assert rep['noise_band'] is True, \
         'mean 0(±5 对称抖动)必在噪声带内'
     assert rep['n'] == 100 and rep['ci95_floor'] > 0
-    big = chk.check_ab_resolution_floor([30.0] * 100, [20.0] * 100)
+    big = calib.check_ab_resolution_floor([30.0] * 100, [20.0] * 100)
     assert big['noise_band'] is False and big['ci95_floor'] == 0.0, \
         '恒定差 10(sd=0,底 0)超过底,可叙述方向'
-    tiny = chk.check_ab_resolution_floor([1.0], [2.0])
+    tiny = calib.check_ab_resolution_floor([1.0], [2.0])
     assert tiny['n'] == 1 and '不判' in (tiny.get('note') or '')
 
 
@@ -202,3 +201,4 @@ def test_simulate_p1_ab_report_shape() -> None:
     rep = simulate_p1_ab(8, pool='fallback', seed_base=0)
     assert set(rep) >= {'n', 'avg_hp_a', 'avg_hp_b', 'ab_resolution_floor'}
     assert rep['ab_resolution_floor']['n'] == 8
+

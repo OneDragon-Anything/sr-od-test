@@ -8,9 +8,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_win_train_table_feature_health as chk,
-)
+
+from sr_od.application.currency_war.sim.checks.corpus import check_win_train_table_feature_health as chk
 
 
 def _row(killed: bool, i: int = 0, equip: int | None = None,

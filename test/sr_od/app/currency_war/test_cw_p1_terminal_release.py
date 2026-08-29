@@ -32,10 +32,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
 )
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    seg_check_p1_blood_budget_refresh,
-    seg_terminal_release_ledger,
-)
+
+from sr_od.application.currency_war.sim.checks.segments import seg_check_p1_blood_budget_refresh, seg_terminal_release_ledger
 from sr_od.application.currency_war.decision.decision_v2.discipline import (
     blood_budget_levelup_blocked,
     blood_budget_refresh_blocked,

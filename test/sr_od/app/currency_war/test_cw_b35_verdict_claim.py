@@ -11,10 +11,8 @@ import math
 
 import pytest
 
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    AB_VERDICT_MIN_N,
-    check_ab_verdict_claim,
-)
+
+from sr_od.application.currency_war.sim.checks.calib import AB_VERDICT_MIN_N, check_ab_verdict_claim
 
 
 def _floor(sd: float, n: int) -> float:

@@ -40,11 +40,8 @@ from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_line_gate_decision_bits,
-    check_line_gate_starvation_anchor,
-    check_line_switch_midgame_bucket,
-)
+
+from sr_od.application.currency_war.sim.checks.decision_v2 import check_line_gate_decision_bits, check_line_gate_starvation_anchor, check_line_switch_midgame_bucket
 
 _REG_GATE = dataclasses.replace(DEFAULT_REGISTRY,
                                 line_switch_survival_gate_enabled=True)

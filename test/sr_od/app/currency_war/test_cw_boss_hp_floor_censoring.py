@@ -7,9 +7,8 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim.cw_sim_checks import (
-    check_boss_hp_floor_censoring as chk,
-)
+
+from sr_od.application.currency_war.sim.checks.corpus import check_boss_hp_floor_censoring as chk
 
 
 def _row(nt: str = 'boss', killed: bool | None = False,
