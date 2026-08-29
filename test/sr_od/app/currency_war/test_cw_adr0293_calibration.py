@@ -292,6 +292,9 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'opening_hold_battle_gate_enabled': ('bool', False),
     'opening_hold_battle_nodes': ('frozenset[str]', frozenset(
         {'战斗', 'boss', '遭遇', '精英'})),
+    # W607 第二波 H2① 数据层(无行为分支,账面单一源;ADR-0461 增补节)
+    'rust_hoard_damage_share': ('float', 0.03),
+    'rust_hoard_penalty_cap': ('int', 10),
 }
 
 #: registry 模块级标定常量期望表(名字 → 归一化值;与字段同属标定面,

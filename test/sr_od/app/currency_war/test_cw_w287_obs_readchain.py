@@ -99,8 +99,15 @@ def test_source_deployed_align_uses_paddle_not_board_sum() -> None:
     src = inspect.getsource(obs_mod.read_game_state)
     assert '_board_n' not in src, \
         'read_game_state 不得再保留 board 羁绊和对齐目标 _board_n(ADR-0417)'
-    assert '_paddle_n = read_deployed_count(ctx, screen)' in src, \
+    # ADR-0462 阶段化后:全量路径仍直读 deployed_count;阶段 gate 路径合并单读
+    # (resolve_paddle_pair 产出同一 paddle X)。锁语义=对齐基准是 paddle X 非
+    # board 羁绊和,两形态任一在源即守住了语义。
+    assert ('_paddle_n = read_deployed_count(ctx, screen)' in src
+            or '_paddle_n = _paddle_x if _spec is not None '
+               'else read_deployed_count(ctx, screen)' in src), \
         'read_game_state 部署对齐/重建应以 paddle X 为基准(ADR-0417)'
+    assert 'resolve_paddle_pair' in src, \
+        '阶段 gate 路径应使用 paddle 合并单读(ADR-0462)'
     assert 'tracked_vs_paddle' in src, '对齐留证 source 应指向 paddle 基准'
 
 

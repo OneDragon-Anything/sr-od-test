@@ -29,7 +29,7 @@ from sr_od.application.currency_war.prep_director import (
 def test_shop_pool_wire_source_locks() -> None:
     """接线锁:_reconcile_shop_pool 用 check_shop_pool 且 best-effort;
     主环在羁绊对账同帧之后消费;禁碰面(cw_shop_obs)只 import 不本地重定义;
-    compare_merge_preview 保持休眠(用户裁决:识别端不建,不接线)。"""
+    compare_merge_preview 已激活(W600 评估裁定,锁归 W601 测试文件)。"""
     mod_src = Path(pd.__file__).read_text(encoding='utf-8')
     assert 'from sr_od.application.currency_war.cw_shop_obs import' in mod_src
     assert "_SHOP_POOL_DEFECT_KIND = 'shop_pool_violation'" in mod_src
@@ -37,8 +37,9 @@ def test_shop_pool_wire_source_locks() -> None:
     # None 口径:prep_director 全文禁 or-2 式刷费合并(真 0 与 None 分道)
     assert 'shop_refresh_cost or 2' not in mod_src
     assert 'or 2)' not in mod_src
-    # compare_merge_preview 休眠:不出现在接线文件(三函数只接两个)
-    assert 'compare_merge_preview' not in mod_src
+    # compare_merge_preview 已激活接线(W600 批B 评估裁定,接线锁归
+    # test_cw_w601_merge_compare_activate.py;本锁只留单一源指针)
+    assert 'compare_merge_preview' in mod_src
     src = inspect.getsource(PrepDirector._reconcile_shop_pool)
     assert 'check_shop_pool(' in src
     assert ', None)' in src   # pool_state=None:池守恒查如实降级(无账本)

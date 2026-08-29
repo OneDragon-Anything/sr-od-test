@@ -126,29 +126,34 @@ def test_invest_cards_view_groups_and_chosen(tmp_path) -> None:
 
 
 def test_obs_conflicts_view_grouping_and_tolerant_read(tmp_path) -> None:
-    """跨局流无 run_id(--run 不生效恒全量);头部按 field 计数 + verdict
-    首词分布;截断坏行跳过不炸(best-effort journal 的历史截断行)。"""
+    """W603 起新行带 run_id:--run 给定时按键过滤(历史行无键不命中,全量
+    用空参);头部按 field 计数 + verdict 首词分布;截断坏行跳过不炸
+    (best-effort journal 的历史截断行)。"""
     rows = [
         {"ts": "2026-08-27T22:00:01", "field": "board", "old": 1, "new": 3,
-         "verdict": "采新-badge(论据很长很长)"},
+         "verdict": "采新-badge(论据很长很长)", "run_id": "run_a"},
         {"ts": "2026-08-27T22:00:02", "field": "level", "old": 5, "new": 4,
          "verdict": "保旧-单调守卫"},
         {"ts": "2026-08-27T22:00:03", "field": "board", "old": {"ocr": 1},
-         "new": "count不等", "verdict": "采新-badge"},
+         "new": "count不等", "verdict": "采新-badge", "run_id": "run_a"},
     ]
     path = tmp_path / "obs_conflicts.jsonl"
     _write_jsonl(path, rows)
     with path.open("a", encoding="utf-8") as f:
         f.write('{"ts": "截断坏行", "field": ' + "\n")   # 模拟中断截断
-    # 传任意 run_id 均全量(无 run_id 键的设计声明)
+    # run 过滤:只命中带键且相等的行(历史行 level 无 run_id 键 → 不出现)
     lines = query_obs_conflicts(tmp_path, "run_a")
     joined = "\n".join(lines)
     assert "field 计数" in lines[0]
-    assert "board×2" in lines[0] and "level×1" in lines[0]
+    assert "board×2" in lines[0] and "level" not in lines[0]
     assert "board/采新-badge: 2" in joined
-    assert "level/保旧-单调守卫: 1" in joined
+    assert "level" not in joined
     assert "最近明细" in joined
     assert lines[-1].startswith("  [board]")   # 最新优先:board 22:00:03 末行
+    # 空 run_id = 全量(含历史无键行)
+    full = "\n".join(query_obs_conflicts(tmp_path, ""))
+    assert "level/保旧-单调守卫: 1" in full
+    assert "board×2" in query_obs_conflicts(tmp_path, "")[0]
 
 
 def test_obs_conflicts_view_empty(tmp_path) -> None:

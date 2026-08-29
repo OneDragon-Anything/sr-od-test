@@ -220,8 +220,9 @@ def _make_supply_op(monkeypatch):
                              'gold_point': gold_point,
                              'extra': dict(extra or {})}))
     monkeypatch.setattr(m, 'read_game_state',
-                        lambda ctx, screen: GameState(hp=88, gold=66, plane=1,
-                                                      round_num=5))
+                        lambda ctx, screen, **kw: GameState(hp=88, gold=66,
+                                                            plane=1,
+                                                            round_num=5))
     op = m.RunSupplyNode.__new__(m.RunSupplyNode)
     fake_screen = object()
     match = SimpleNamespace(session=SimpleNamespace(target_comp=None,
