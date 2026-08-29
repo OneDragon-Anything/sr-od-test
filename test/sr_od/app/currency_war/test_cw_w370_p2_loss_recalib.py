@@ -65,7 +65,7 @@ def test_threshold_shares_calibration_with_pwin(monkeypatch) -> None:
     """④阈值层与胜率侧同标定源(双源合一不变量):_loss_dist P2 μ 的条件
     档同用 registry.p2_cond_loss_table——注入自定义条件档,阈值层 μ
     与 (1−p)·注入值闭环位移(改动标定面两处同步,防回植本地乘数)。"""
-    from sr_od.application.currency_war.decision_v2 import registry as reg_mod
+    from sr_od.application.currency_war.kernel import cw_registry as reg_mod
     from sr_od.application.currency_war.cw_first_passage import _loss_dist
     reg = dataclasses.replace(
         reg_mod.DEFAULT_REGISTRY, p2_cond_loss_table={

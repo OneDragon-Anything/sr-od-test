@@ -24,7 +24,7 @@ from sr_od.application.currency_war.cw_state import (
     GameState,
     effective_hp_threshold,
 )
-from sr_od.application.currency_war.decision_v2 import registry as reg_mod
+from sr_od.application.currency_war.kernel import cw_registry as reg_mod
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
