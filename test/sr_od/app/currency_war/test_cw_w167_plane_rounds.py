@@ -24,8 +24,7 @@ from sr_od.application.currency_war.cw_evolution import (
     EvolutionState,
     evolution_step,
 )
-from sr_od.application.currency_war.cw_horizon import (
-    NODES_PER_PLANE,
+from sr_od.application.currency_war.cw_plane_table import (    NODES_PER_PLANE,
     nodes_of_plane,
 )
 from sr_od.application.currency_war.cw_intention import plane_remaining_nodes

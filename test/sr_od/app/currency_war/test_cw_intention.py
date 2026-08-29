@@ -446,19 +446,9 @@ def test_p1_pair_exits_at_p2() -> None:
     assert hoard_target_set(_state(plane=2), ist).mode == 'fallback'
 
 
-def test_p1_recipe_lock_off_restores_baseline(monkeypatch) -> None:
-    """A/B 通道:P1_RECIPE_LOCK=False → P1 ③恢复锁终局 comp
-    (W143 锚行为,sim 基线臂)。"""
-    from sr_od.application.currency_war import cw_intention
-    monkeypatch.setattr(cw_intention, 'P1_RECIPE_LOCK', False)
-    st = _state(shop=['卡芙卡'])
-    ist = update_intention(st, IntentionState())
-    assert ist.phase == 'locked' and ist.locked_comp == 'DOT队'
-    assert ist.p1_pair == ()
-    assert hoard_target_set(st, ist).mode == 'locked'
-
-
-def test_p1_pair_serialized_to_telemetry() -> None:
+# (批 3 F5 清偿:原 test_p1_recipe_lock_off_restores_baseline 随模块级 flag
+# P1_RECIPE_LOCK 退役删除——flag=False 基线臂改由 git 冻结快照构造
+# (蓝图 §6;开臂前置因冻结令消失=第 4 态清理)。)
     """锁定目标数据形态显式可读(ADR-0357 约束基准契约):p1_pair 落
     ``serialize_intention`` 输出(decisions 行可读,后续「通道约束批」
     按此字段约束 opportunistic/bond_fallback——不隐式)。"""

@@ -18,7 +18,7 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_horizon import Posture
+from sr_od.application.currency_war.decision_v2.posture import Posture
 from sr_od.application.currency_war.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
@@ -94,14 +94,16 @@ def _full_bench() -> list[BenchChar]:
 def test_bench_fill_capacity_unlocks_obligation_in_targetless_frame() -> None:
     """锁 1·局23 型帧(comp 空+备战空):填补件计入容量 → 义务开工。
     病灶机制=无目标帧正 EV 帧空 → C_t=0 → 义务恒 0(三次复发根);
-    O1 后 g=100、店有 2 费件 → 义务=min(50, 2)=2,flip 预算=2。"""
+    O1 后 g=100、店有 2 费件 → 填补账=2;容量另含刷新预算分量
+    (批 3 预算收权:min(6,⌊50/2⌋)=6 刷×2=12)→ 容量 14;义务=min(50,14)
+    =14,flip 预算=max(义务, 排程预算×刷价)=14。"""
     st = _state(gold=100, shop=[_sc('桑博', 2)], board={})
     s = _sess(st)
     assert bench_fill_account(st, _REG) == 2
-    assert channel_capacity(st, s, _REG) == 2
-    assert obligation(st, s, _REG) == 2
+    assert channel_capacity(st, s, _REG) == 14
+    assert obligation(st, s, _REG) == 14
     d = release_directive(st, s, _REG, 'FORM', _saving_posture())
-    assert d is not None and d.reason == 'flip' and d.budget_gold == 2
+    assert d is not None and d.reason == 'flip' and d.budget_gold == 14
     assert wrap_posture(_saving_posture(), d).tag == 'release'
 
 
@@ -112,9 +114,10 @@ def test_fill_and_crossing_share_one_slot_account() -> None:
     st = _state(gold=80, board={'仙舟': 2},
                 shop=[_sc('丹恒·饮月', 2), _sc('桑博', 1)])
     s = _sess(st)
-    assert channel_capacity(st, s, _REG) == 3   # 跨档 2 + 填补 1(两空槽)
+    # 容量 15 = 刷新预算 6 刷×2 + 跨档 2 + 填补 1(两空槽;批 3 加刷新分量)
+    assert channel_capacity(st, s, _REG) == 15
     st.bench = _full_bench()[:8] + [None]       # 仅 1 空槽(bench 占用数口径)
-    assert channel_capacity(st, s, _REG) == 2   # 槽被跨档件占用,填补=0
+    assert channel_capacity(st, s, _REG) == 14  # 槽被跨档件占用,填补=0
 
 
 def test_fill_zero_when_bench_full_a1_a2_preserved() -> None:
@@ -131,8 +134,11 @@ def test_fill_zero_when_bench_full_a1_a2_preserved() -> None:
 def test_admission_zero_capacity_frame_carry_label_honest() -> None:
     """锁 4·无对象结转帧(g>R*,bench 满,店无跨档件):义务=0 但存息
     非法 → 零预算 release 指令,标签诚实(tag='release'),authorize
-    恒拒 = 容量不足的合法结转(量=溢余,遥测披露面)。"""
-    st = _state(gold=55, bench=_full_bench(), shop=[_sc('桑博', 1)],
+    恒拒 = 容量不足的合法结转(量=溢余,遥测披露面)。
+    批 3 机制口径(W623 D2):刷新预算计入容量后,溢余 ≥ 刷价的帧由
+    flip 承接(义务通道有对象);准入门的残余辖域=溢余 < 刷价且无店内
+    账的帧——gold 51(溢余 1 < 刷价 2)即此,容量真 0。"""
+    st = _state(gold=51, bench=_full_bench(), shop=[_sc('桑博', 1)],
                 board={})
     s = _sess(st)
     d = release_directive(st, s, _REG, 'FORM', _saving_posture())
@@ -140,7 +146,7 @@ def test_admission_zero_capacity_frame_carry_label_honest() -> None:
     assert d.budget_gold == 0
     assert wrap_posture(_saving_posture(), d).tag == 'release'
     s.v3_release = d
-    assert authorize_release_refresh(s, 55, 2, _REG) == ''
+    assert authorize_release_refresh(s, 51, 2, _REG) == ''
 
 
 def test_action_postures_never_get_admission_reason() -> None:

@@ -13,10 +13,10 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.cw_horizon import (
-    Posture,
+from sr_od.application.currency_war.cw_plane_table import (
     level_cost,
 )
+from sr_od.application.currency_war.decision_v2.posture import Posture
 from sr_od.application.currency_war.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
@@ -107,11 +107,11 @@ def test_o1_buy_allowed_above_reserve_cap() -> None:
 
 def test_o1_buy_rejected_below_reserve_cap() -> None:
     """逐笔可行性(拒侧):排程升级帧(R*=息线+升级费)花后吃储蓄 →
-    gold_floor 的 o1 地板加深拒(g=50+level_cost(6)+3,买 6 费 →
-    花后 <R*)。"""
-    st = _state(gold=50 + level_cost(6) + 3, r=5,
+    gold_floor 的 o1 地板加深拒(g=50+level_cost(5)+3,买 6 费 →
+    花后 <R*)。level=5 < 峰值级 6 → 排程预告态成立(批 3 确定性核)。"""
+    st = _state(gold=50 + level_cost(5) + 3, r=5, level=5,
                 shop=[_sc('乱破', 6)], board={})
-    s = _sess(st, level_up=True)
+    s = _sess(st)
     cand = _o1_cands(st, s)[0]
     reason = _check_constraint('gold_floor', cand, st.copy(), st, s,
                                _REG, val=0.0, bd={}, auth=None)

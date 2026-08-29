@@ -1027,13 +1027,15 @@ def test_phase_weights_hp_threshold_override() -> None:
 
 
 def test_plan_levels_when_behind_expected_even_if_goal_roll() -> None:
-    """D-24: 落后期望等级 + 够钱 → 升级(即使 goal=roll)。修 chicken-egg(卡 roll 等级永不升)。"""
+    """D-24: 落后峰值级 + 够钱 → 升级(即使 goal=roll)。修 chicken-egg。
+    批 3 预算收权重推:目标级=确定性核(兜底核心 2 费峰值 6);
+    息引擎前置(gold≥息线,W615 R4 禁升①)——gold 60/lv4 → 排程 → 升级。"""
     cfg = _cfg()
-    # lv4, plane1 round4 → expected=6;goal[4]=roll(非 level_up);gold 40 >= cost[5]=30
-    s = GameState(gold=40, level=4, plane=1, round_num=4)
+    # lv4, plane1 round4 → goal[4]=roll(非 level_up);gold 60 ≥ 息线
+    s = GameState(gold=60, level=4, plane=1, round_num=4)
     actions = plan(s, cfg, cfg.faction_priority)
     assert any(isinstance(a, LevelUp) for a in actions), (
-        "落后期望(lv4<6)+ 够钱 → 应升级(即使 goal[4]=roll,D-24 chicken-egg 修)"
+        "落后峰值级(4<6)+ 够钱 → 应升级(即使 goal[4]=roll,D-24 chicken-egg 修)"
     )
 
 
@@ -1204,21 +1206,19 @@ def test_distinct_factions_and_counts_include_board() -> None:
 
 def test_economy_mode_for_maps_spend_mode() -> None:
     """ADR-0102:_economy_mode_for 把 node spend_mode → economy_score 档位。
-    ADR-0208 切流后 spend_mode 单一源 = DP 姿态(HORIZON_SEAM_ACTIVE=True);
-    断言改锁 DP 语义(状态显式给出,不再隐含 GameState 默认)。"""
-    # DP:极早期穷金 lv3(gold<3)→ interest/hold → interest_first
+    批 3 预算收权重推:spend_mode 单一源 = 确定性预算核投影
+    (get_node_goal;原 DP 姿态随 cw_horizon 退役,git prior art)。"""
+    # 极早期穷金 lv3(gold<息线)→ interest/hold → interest_first
     assert _economy_mode_for(GameState(plane=1, round_num=1, gold=2, level=3, hp=80)) == "interest_first"
-    # DP:P1 早段有金 lv3 → level(便宜早升)→ rush_level(ADR-0208 的切流目的)
-    assert _economy_mode_for(GameState(plane=1, round_num=1, gold=8, level=3, hp=80)) == "rush_level"
-    # DP:P2 gold 60 lv7 hp40 → 存息 hold(W443 两态后血 40≈9 节点期望
-    # 生命(drop 4.5/节点),仍保守持息)→ interest_first
-    # (旧 6.0 折中 15/节点时代「40≈2.5 节点」的更紧语义随两态化失效)
-    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=40)) == "interest_first"
-    # DP:P2 gold 60 lv7 hp100 → 存息 hold(W443 两态化行为变化:强板
-    # 悲观消除——b=2.0 drop 4.5/节点,血 100≈22 节点>P2 剩余,满血强板
-    # 无需烧金找件,存息吃息差;旧 6.0 折中时代「+D4 找件」已失效)
-    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=100)) == "interest_first"
-    # DP:P2 gold 51 lv7 → adaptive(d_search 先成型)→ adaptive
+    # 息引擎未立(gold 8<50)→ 不排程不刷新([12] 息引擎前置,W615 R4
+    # 禁升①;旧锁钉的「DP 便宜早升」前瞻随 DP 退役)→ interest_first
+    assert _economy_mode_for(GameState(plane=1, round_num=1, gold=8, level=3, hp=80)) == "interest_first"
+    # 批 3 预算核:P2 gold 60 lv7(≥兜底峰值 6 无排程)→ 溢余 10 →
+    # 刷新预算 5 刷 → adaptive(d_search 先成型;旧「DP 存息 hold」随 DP
+    # 退役——溢余帧义务/找件通道接管,息线以内帧才是存息)
+    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=40)) == "adaptive"
+    assert _economy_mode_for(GameState(plane=2, round_num=2, gold=60, level=7, hp=100)) == "adaptive"
+    # P2 gold 51(溢余 1<刷价)→ 预算 0 → interest_first(合法存息帧)
     assert _economy_mode_for(GameState(plane=2, round_num=2, gold=51, level=7, hp=40)) == "interest_first"
 
 
@@ -1330,9 +1330,10 @@ def test_level_up_gate_floor_semantics() -> None:
     gold ≥ 50+单击价 且 花后 ≥50(息满溢出区)→ 姿态压制(_want_level_up False)
     不再拦 —— P1 末 60-70 金闲置实证的缺口。近地板(53<54)仍拦。
     """
-    # 追级期(P1r1 target 4,cur 3):扣单击价后 ≥20 才点
-    assert level_up_gate(GameState(level=3, gold=24, hp=100, plane=1, round_num=1))
-    assert not level_up_gate(GameState(level=3, gold=23, hp=100, plane=1, round_num=1))
+    # 追级期(批 3 预算收权重推):排程预告态要求息引擎已立(gold≥息线,
+    # W615 R4 禁升①);lv3 → 峰值级 6 未达 → 排程,扣单击价后 ≥20 才点
+    assert level_up_gate(GameState(level=3, gold=60, hp=100, plane=1, round_num=1))
+    assert not level_up_gate(GameState(level=3, gold=49, hp=100, plane=1, round_num=1))
     # 非追级期溢出区(r85):lv8 gold60,单击4 → 60≥54 且 56≥50 → 放行(旧语义 False=闲置病理)
     assert level_up_gate(GameState(level=8, gold=60, hp=100, plane=2, round_num=1))
     # 近地板:gold53 < 50+4 → 拦(息档地板 50 不破)

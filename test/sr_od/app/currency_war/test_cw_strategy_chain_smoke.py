@@ -10,7 +10,7 @@ from sr_od.application.currency_war import (
     cw_comps,
     cw_economy,
     cw_evaluate,
-    cw_horizon,
+    cw_plane_table,
     cw_plan,
     cw_telemetry,
 )
@@ -20,7 +20,7 @@ from sr_od.application.currency_war.strategies import default_strategy
 
 def test_strategy_chain_importable():
     """策略链入口模块全部可导入(import 错路径在此爆,不等实跑)。"""
-    for m in (cw_comps, cw_economy, cw_evaluate, cw_horizon, cw_plan, cw_telemetry,
+    for m in (cw_comps, cw_economy, cw_evaluate, cw_plane_table, cw_plan, cw_telemetry,
               default_strategy):
         assert m is not None
 

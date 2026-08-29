@@ -235,20 +235,16 @@ def test_boss_window_unified_node_graph() -> None:
     assert boss_window_active(st_n, sess, _REG) is True
 
 
-# --- ⑤ DP 接线:仲裁层消费 cw_horizon 姿态 ----------------------------------
+# --- ⑤ 排程接线:升级授权消费确定性排程核(批 3 预算收权重推)--------------
 
 
 def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
-    """⑤升级授权随 DP 姿态翻转(接线证明,非注释非遥测):金 60/lv6,
-    静态账 V 小而平台无损(C=0)本可过——对照臂用金 51(破平台)锁
-    姿态翻转:DP 说升(level_up=True)→ 放行;DP 说存息(save)→
-    息引擎总账拒。无人口位(deployed=cap)隔离 ① 路径。"""
-    import sr_od.application.currency_war.decision_v2.ev as ev_mod
-
-    def _mk(level_up: bool):
-        return SimpleNamespace(save=not level_up, level_up=level_up,
-                               refresh_budget=0, v=0.0,
-                               tag='升级' if level_up else '存息')
+    """⑤升级授权随排程核翻转(接线证明,非注释非遥测):无人口位
+    (deployed=cap)隔离 ① 路径;金 60(花后 52≥50 平台未破)帧锁
+    排程臂放行,金 49(花后 45<50)帧锁平台越界拒。
+    批 3 重推:注入对象从 ev.dp_posture(DP 退役)改为排程单一址
+    economy_cycle.schedule_upgrade;producer 规则锁在 test_cw_w633_migration_b3。"""
+    from sr_od.application.currency_war.decision_v2 import economy_cycle
 
     st = _state(round_num=6, gold=51, level=6,
                 deployed=[BenchChar(slot=i, char_id=f'杂件{i}',
@@ -257,20 +253,17 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
                 bench=[], shop=[])
     assert len(st.deployed) >= st.max_units(), '前置:无人口位'
     cand = Candidate(action=LevelUp(cost=4), tag='levelup', source='xp')
-    # DP 说升 → 放行(平台破但 DP 总账授权?否——②臂要求平台未破,
-    # 金 51-4=47<50 → DP 臂不放行;本帧锁的是静态/DP 的翻转差:
-    # 用金 60 帧(52≥50)锁 DP 臂,金 51 帧(47<50)锁 DP 臂不越平台)
     st60 = _state(round_num=6, gold=60, level=6,
                   deployed=list(st.deployed), bench=[], shop=[])
     sess = StrategySession()
     sess.v3_mode = 'economy'
-    monkeypatch.setattr(ev_mod, 'dp_posture',
-                        lambda s, ss: _mk(True))
+    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+                        lambda s, ss: True)
     res_up = arbitrate([(cand, 1.0, {})], st60, sess, _REG)
     assert any(isinstance(a, LevelUp) for a in res_up.actions), \
-        'DP 说升且平台未破(60-4=52≥50)→ 必须放行'
-    monkeypatch.setattr(ev_mod, 'dp_posture',
-                        lambda s, ss: _mk(False))
+        '排程说升且平台未破(60-4=52≥50)→ 必须放行'
+    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+                        lambda s, ss: False)
     sess2 = StrategySession()
     sess2.v3_mode = 'economy'
     res_save = arbitrate([(Candidate(action=LevelUp(cost=4),

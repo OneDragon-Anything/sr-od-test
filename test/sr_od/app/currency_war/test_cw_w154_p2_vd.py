@@ -22,8 +22,8 @@ from __future__ import annotations
 import dataclasses
 
 from sr_od.application.currency_war.cw_comps import get_comp
-from sr_od.application.currency_war.cw_horizon import NODES_PER_PLANE
-from sr_od.application.currency_war.cw_horizon import Posture
+from sr_od.application.currency_war.cw_plane_table import NODES_PER_PLANE
+from sr_od.application.currency_war.decision_v2.posture import Posture
 from sr_od.application.currency_war.cw_intention import IntentionState
 from sr_od.application.currency_war.cw_shop_odds import (
     expected_refreshes_for_card,
@@ -102,33 +102,43 @@ def _c_dec(gold: int, spend: float, st: GameState, reg=_REG) -> float:
             + reg.vd_p2_liquidity_rho * spend)
 
 
-# --- ① 窗判据:DP refresh_budget 授权消费 -------------------------------------
+# --- ① 窗判据:刷新预算授权消费(批 3 预算函数口径,W623 D2)---------------------
 
 
 def test_p2_window_consumes_dp_budget() -> None:
-    """①P2 帧等级窗二分改消费 DP refresh_budget:列车同行@lv6
-    (level_plan 说 level_up,W152 断点②形态)在「升级+D6」姿态下
-    窗开(评分继续,预算硬界/EV 裁决);refresh_budget=0(纯存/纯升)
-    仍让位。"""
+    """①P2 帧等级窗二分消费刷新预算:列车同行@lv6(锁定核心 3 费峰值
+    级 7>6 → 排程,R*=息线+升级费)。金 100:溢余>0 → 预算>0 → 窗开
+    (评分继续,预算硬界/EV 裁决);金 55(g<R*,储备段合法 0 帧)→
+    让位。批 3 重推:供给=确定性预算核(schedule_upgrade/refresh_ev_budget
+    单一址),注入式 posture 退役——「>0 即授权」即预算函数口径。"""
     # 姬子·启行 3费 j=2、金 100:预算硬界内 → 窗开后应为正分
     st = _p2_state(6, ['姬子·启行', '姬子·启行'], 100, 1)
-    s6 = _dp_sess('列车同行', 2, 1, rb=6)
-    vd = vd_refresh_score(st, s6, _REG)
+    s = _locked_sess('列车同行')
+    vd = vd_refresh_score(st, s, _REG)
     assert vd is not None and vd > 0, vd
-    # 对照:DP 无 D 预算 → 让位(旧「让一拍」语义保留在授权层)
-    s0 = _dp_sess('列车同行', 2, 1, rb=0)
-    assert vd_refresh_score(st, s0, _REG) is None
+    # 对照:储备段预算=0 → 让位(旧「让一拍」语义保留在授权层)
+    st0 = _p2_state(6, ['姬子·启行', '姬子·启行'], 55, 1)
+    assert vd_refresh_score(st0, s, _REG) is None
 
 
 def test_p2_window_dp_fallback_level_plan(monkeypatch) -> None:
-    """①DP 查询异常(姿态 None)→ 保守回退 level_plan 门:goal=level_up
-    仍拒(对局不停,保守侧)。"""
+    """(批 3 退役)原「DP 查询异常(None)→ 保守回退 level_plan 门」:
+    确定性预算核在任意帧恒有定义,None 形状消灭(W623 D0 供给权交接);
+    保守回退语义由『预算 0 → 让位』承接(上一锁对照臂)。"""
+    from sr_od.application.currency_war.decision_v2.economy_cycle import (
+        refresh_ev_budget,
+    )
+    from sr_od.application.currency_war.decision_v2.scoring import (
+        vd_refresh_score as _impl,
+    )
     st = _p2_state(6, ['卡芙卡', '卡芙卡'], 100, 1)
-    monkeypatch.setattr(ev_mod, 'round_posture',
-                        lambda *a, **k: None)
     s = _locked_sess('DOT队')
-    assert vd_refresh_score(st, s, _REG) is None, \
-        'DP 异常回退必须走 level_plan 门(DOT队 lv6=level_up→拒)'
+    # DOT队 lv6 level_plan 说 level_up:预算 0(合法 0 帧注入,消费门
+    # 判据直测)下仍让位
+    import sr_od.application.currency_war.decision_v2.economy_cycle as ec
+    monkeypatch.setattr(ec, 'refresh_ev_budget', lambda *a, **k: 0)
+    assert _impl(st, s, _REG) is None, \
+        '预算 0(合法 0 帧)必须走 level_plan 门(DOT队 lv6=level_up→拒)'
 
 
 def test_p2_ab_switch_back_to_w153(monkeypatch) -> None:

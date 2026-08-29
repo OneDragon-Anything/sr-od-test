@@ -180,7 +180,7 @@ def test_p2_branch_untouched_by_pair_channel() -> None:
     DP rb=6 窗开但批口径刷金 134.8 > 98 → 预算硬界拒):即便
     transition_pair 非空,pair 通道不辖(plane≠1)→ 仍 None
     (P2 分支逐位不动)。"""
-    from sr_od.application.currency_war.cw_horizon import Posture
+    from sr_od.application.currency_war.decision_v2.posture import Posture
     from sr_od.application.currency_war.decision_v2.ev import RoundPosture
     s = StrategySession()
     s.v3_intention = IntentionState(

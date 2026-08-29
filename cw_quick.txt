@@ -7,6 +7,7 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_r388_opening_hold.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r412_bench_free_gates.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r412_levelup_cost_flat4.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r412_runs_summary_fallback.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w633_migration_b3.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w69_locked_resume.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w69_sell_channel.py
 sr-od-test/test/sr_od/app/currency_war/test_affix_effects_write.py
@@ -71,7 +72,6 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_difficulty_account.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_difficulty_live_contamination.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_difficulty_readchain.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_divergence_stats.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_dp_cache.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_drought_bail.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_drought_p1_late.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_effect_ledger.py
@@ -86,7 +86,6 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_gate_flags.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_identity_obs.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_intention.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_investments.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_ledger_horizon_integration.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_line_tribunal.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_lungang_probs.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_megastar_binding.py

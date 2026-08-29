@@ -20,7 +20,6 @@ import dataclasses
 import pytest
 
 from sr_od.application.currency_war import cw_first_passage as fp
-from sr_od.application.currency_war import cw_horizon as hz
 from sr_od.application.currency_war.cw_state import (
     GameState,
     effective_hp_threshold,
@@ -105,9 +104,8 @@ def test_threshold_p1_untouched_by_p2_calib() -> None:
     real_registry = reg_mod.DEFAULT_REGISTRY
     reg_mod.DEFAULT_REGISTRY = reg
     try:
-        assert hz._hp_loss(3, 7, 0.0) == 1.25     # P1 中段(2.5×0.5)
-        assert hz._hp_loss(8, 7, 0.0) == 3.5      # P1 末段(2.5×1.4)
-        assert hz._hp_loss(20, 7, 0.0) == 4.75    # P3(2.5×1.9)
+        # P1/P3 先验曲线随 DP 世界模型退役(BLUEPRINT §3;P1 零漂移锚
+        # 由 first_passage P1 分布锁承担,见下)
         assert effective_hp_threshold(GameState(plane=1, level=7)) == 40
         # 对照:P2 帧吃注入(位移发生,证明 P1 恒等不是恒真断言)
         assert effective_hp_threshold(
@@ -167,7 +165,9 @@ def test_two_state_consumers_never_mix_tables() -> None:
     from pathlib import Path
     base = Path(__file__).parents[5] / 'src' / 'sr_od' / 'application' \
         / 'currency_war'
-    for rel in ('cw_line_switch.py', 'cw_horizon.py', 'cw_first_passage.py'):
+    # (批 3:DP 两态递推文件 cw_horizon.py 退役;胜率映射 cw_plane_table
+    #  只读胜率表,不在条件败面表消费清单)
+    for rel in ('cw_line_switch.py', 'cw_first_passage.py'):
         code = '\n'.join(ln.split('#', 1)[0]
                          for ln in (base / rel).read_text(encoding='utf-8')
                          .splitlines())

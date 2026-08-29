@@ -36,10 +36,10 @@ import math
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_economy import NodeGoal
-from sr_od.application.currency_war.cw_horizon import (
-    Posture,
+from sr_od.application.currency_war.cw_plane_table import (
     level_cost,
 )
+from sr_od.application.currency_war.decision_v2.posture import Posture
 from sr_od.application.currency_war.cw_line_switch import (
     e_rounds,
     should_switch_e,
@@ -121,12 +121,20 @@ def test_flip_requires_overflow_and_capacity() -> None:
     辖域已被 ADR-0445 取代——已成型 SPEND 帧是旧谓词的死钱盲区)。"""
     st = _state(gold=50)
     assert not flip_hit(st, _sess(st), _REG, 'FORM')     # 无溢余段
+    # 批 3 预算口径:溢余 1 金(< 刷价 2)→ 刷新预算 0 ∧ 店空 → C_t=0,
+    # flip 不辖(该帧由存息准入门接管:存息非法零预算指令);溢余 ≥ 刷价
+    # 帧刷新预算>0 → C_t>0,flip 辖。
     st = _state(gold=51)
-    assert flip_hit(st, _sess(st), _REG, 'FORM')         # 溢余 1 金即辖
+    assert not flip_hit(st, _sess(st), _REG, 'FORM')
+    st = _state(gold=52)
+    assert flip_hit(st, _sess(st), _REG, 'FORM')         # 溢余 2 金=刷价即辖
     assert flip_hit(st, _sess(st), _REG, 'SPEND')        # 相位无关
     st = _state(gold=90)
-    assert not flip_hit(st, _sess(st, refresh_budget=0),
-                        _REG, 'FORM')    # 无 DP 授权 ∧ 店空 → C_t=0 无义务
+    # 店空帧预算确定性:溢余 40 → 预算 6 刷帽 ×2 =12 > 0 → C_t>0,
+    # flip 辖(原锁前提「无 DP 授权 → C_t=0」随 DP 退役;预算口径下
+    # 店空帧的刷新预算仍计入容量,锁面重推出处=W615 §2-R3 预算式
+    # 只花溢余、刷新本身即合法消费形式)
+    assert flip_hit(st, _sess(st), _REG, 'FORM')
 
 
 def test_flip_hp_dimension_exited() -> None:
@@ -158,23 +166,35 @@ def test_flip_scope_p3_included() -> None:
     assert flip_hit(st, _sess(st), _REG, 'FORM')
 
 
-def test_reserve_cap_narrows_overflow_basis() -> None:
-    """R* 储备线锁:排程升级帧(DP level_up)的 R*=息线+窗口内升级费,
-    溢余基收窄——g 在 [息线, R*] 段是排程储蓄不是死钱,不 fire(设计
-    §1.3/§4 豁免行;升级费期望值=level_cost 常量表本地复算)。"""
+def test_reserve_cap_narrows_overflow_basis(monkeypatch) -> None:
+    """R* 储备线锁:排程升级帧的 R*=息线+窗口内升级费,溢余基收窄——
+    g 在 [息线, R*] 段是排程储蓄不是死钱,不 fire(设计 §1.3/§4 豁免行;
+    升级费期望值=level_cost 常量表本地复算)。
+    批 3 预算收权:排程判据 = 确定性核(economy_cycle.schedule_upgrade
+    单一址),本锁以 monkeypatch 钉排程真值注入消费方契约(消费方注入式
+    锁语义保留,D3 处置表);生产者规则锁在 test_cw_w633_migration_b3。"""
+    from sr_od.application.currency_war.decision_v2 import economy_cycle
+    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+                        lambda *a, **k: True)
     st = _state(gold=50 + level_cost(6) + 5, r=5)
-    assert flip_hit(st, _sess(st, level_up=True), _REG, 'FORM')   # >R* 溢余段
+    assert flip_hit(st, _sess(st), _REG, 'FORM')   # >R* 溢余段
     st = _state(gold=50 + level_cost(6) - 5, r=5)
-    assert not flip_hit(st, _sess(st, level_up=True),
+    assert not flip_hit(st, _sess(st),
                         _REG, 'FORM')    # ∈[50, R*] 排程储蓄
-    # 无排程(level_up=False)同帧金位不再豁免:照常溢余
-    assert flip_hit(st, _sess(st, level_up=False), _REG, 'FORM')
+    # 无排程(核返回 False)同帧金位不再豁免:照常溢余
+    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+                        lambda *a, **k: False)
+    assert flip_hit(st, _sess(st), _REG, 'FORM')
 
 
-def test_cap_full_flip_frame_keeps_level_up_rule2() -> None:
+def test_cap_full_flip_frame_keeps_level_up_rule2(monkeypatch) -> None:
     """cap 满员并存裁决(DESIGN §②规则2 保留):SPEND 相位的 cap 满员
     boss 窗帧由 FLIP 命中承接——third_path=False,wrap 后 level_up 保留
-    (追级与泄息并存);预算= max(义务, DP 6×2=12),义务=min(溢余, C_t)。"""
+    (追级与泄息并存);预算= max(义务, 排程预算 6×2=12),义务=min(溢余, C_t)。
+    排程真值 monkeypatch 钉住(消费方注入式锁,同上锁面重推)。"""
+    from sr_od.application.currency_war.decision_v2 import economy_cycle
+    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+                        lambda *a, **k: True)
     st = _state(gold=67, hp=38, plane=1, r=9, node='boss', deployed_n=6)
     s = _sess(st)
     assert not slot_guard_blocks_level(st)   # 满员:slot 守卫不触发
@@ -239,13 +259,16 @@ def test_third_path_injects_release_budget() -> None:
     assert p.level_up is False and p.tag == 'release' and p.refresh_budget == 5
 
 
-def test_third_path_reserve_scope() -> None:
-    """第三路径溢余基=R* 锁:排程升级帧(level_up=True → R*=50+升级费)
-    的 g≤R* 段无溢余 → 不注入(储备线内的金是排程储蓄不是死钱,
-    注入会击穿息线;ADR-0445 §1.3 豁免行)。"""
+def test_third_path_reserve_scope(monkeypatch) -> None:
+    """第三路径溢余基=R* 锁:排程升级帧(R*=50+升级费)的 g≤R* 段无溢余
+    → 不注入(储备线内的金是排程储蓄不是死钱,注入会击穿息线;
+    ADR-0445 §1.3 豁免行)。排程真值 monkeypatch 钉住(同上重推)。"""
+    from sr_od.application.currency_war.decision_v2 import economy_cycle
+    monkeypatch.setattr(economy_cycle, 'schedule_upgrade',
+                        lambda *a, **k: True)
     st = _state(gold=50 + level_cost(6) - 1, node='boss',
                 deployed_n=5, bench_n=1)
-    d = release_directive(st, _sess(st, level_up=True), _REG, 'SPEND',
+    d = release_directive(st, _sess(st), _REG, 'SPEND',
                           Posture(save=False, level_up=True, refresh_budget=0))
     assert d is None
 
@@ -470,11 +493,16 @@ def test_spend_mode_release_has_no_producer() -> None:
 
 
 def test_horizon_level_branch_carries_dp_budget() -> None:
-    """③生产缺陷修复:level 分支不再即席返回丢弃 DP refresh_budget。"""
+    """③生产缺陷修复(批 3 重推):level 分支不丢弃刷新预算——预算核下,
+    息引擎已立(gold≥50)∧ 峰值级未达 → level 档且 refresh_budget 合法;
+    息引擎未立(gold 8<50)→ interest 档([12] 息引擎前置,W615 R4 禁升①;
+    旧锁钉的「DP 说升」前瞻行为随 DP 退役)。"""
     from sr_od.application.currency_war.cw_economy import get_node_goal
-    g = get_node_goal(1, 1, gold=8, level=3, hp=80)   # DP 说升(P1 早段便宜)
-    assert g.spend_mode == 'level'
-    assert isinstance(g.refresh_budget, int) and 0 <= g.refresh_budget <= 6
+    g = get_node_goal(1, 1, gold=8, level=3, hp=80)
+    assert g.spend_mode == 'interest'    # 息引擎未立:不排程不刷新
+    g2 = get_node_goal(1, 1, gold=60, level=3, hp=80)
+    assert g2.spend_mode == 'level'      # 息引擎立+峰值级(6)未达 → 排程
+    assert isinstance(g2.refresh_budget, int) and 0 <= g2.refresh_budget <= 6
 
 
 def test_fallback_node_goal_budget_none() -> None:
@@ -578,15 +606,14 @@ def _gate_session() -> StrategySession:
 def test_release_chain_end_to_end_reachable(monkeypatch) -> None:
     """锁A(生产链可达性,端到端):FLIP 命中态直接驱动 decide_prep,
     session 通道活(tag='release' ∧ 义务预算≥溢余下界)——全程不 mock
-    生产链本体(仅把 DP 姿态查询钉为确定性授权,预算期望本地复算)。"""
-    from sr_od.application.currency_war.decision_v2 import ev as _ev
+    生产链本体(仅把刷新预算核钉为确定性授权 6 刷,预算期望本地复算;
+    排程保持默认 level=6=False,R*=50)。"""
+    from sr_od.application.currency_war.decision_v2 import economy_cycle
     from sr_od.application.currency_war.decision_v2.strategy import (
         DecisionV2Strategy,
     )
-    monkeypatch.setattr(
-        _ev, 'dp_posture',
-        lambda *a, **k: Posture(save=False, level_up=False,
-                                refresh_budget=6))
+    monkeypatch.setattr(economy_cycle, 'refresh_ev_budget',
+                        lambda *a, **k: 6)
     s = StrategySession()
     st = _state(gold=58, hp=35, r=5)   # FORM ∧ g>R*=50 溢余段
     DecisionV2Strategy().decide_prep(st, s, None)

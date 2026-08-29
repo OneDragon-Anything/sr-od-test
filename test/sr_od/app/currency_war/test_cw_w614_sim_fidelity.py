@@ -33,8 +33,12 @@ from sr_od.application.currency_war.cw_sim_invest import SimInvestProfile
 # + 局级 (dir_round, final_hp, level, refreshes)。改 G1-G3 前抓取
 # (2026-09-01);20 seed 全量锚见 w614_sim_fidelity/baseline_digest.md
 # (digest 93989ec7…,与改前逐位一致已验证)。
+# 批 3 重锚(2026-09-03):预算收权换核(W615 查表核替换 DP 姿态供给)
+# 是行为批,digest c13c365b… = 最终基线(批 2 末 93ca26cc… 起的行为位移
+# 由 w633 A/B 判据管辖,本锚此后继续做「 unintended drift 」哨兵)。
+# 中间值 60aa8ced… 为 R3 驱逐度量修正前的过渡锚(作废,记档防二次踩)。
 _ZERO_DRIFT_DIGEST_6 = (
-    '93ca26cce690aa58d3dccdbbb2b2c4ea911526b27a6d32ca9fe7ca26dd6ab2d9')
+    'c13c365ba768740da063287d954f502c26068146ccfd5f2fcefcebdf73f01094')
 
 
 def _behavior_projection(results) -> str:

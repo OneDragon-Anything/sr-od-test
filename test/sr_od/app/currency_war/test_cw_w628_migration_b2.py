@@ -126,36 +126,17 @@ def test_d2_missing_supply_falls_conservative():
 
 # ----------------------------------------------------- W629-R2 镜像雷锁
 
-def test_r2_gates_mirror_reads_flags_directly():
-    """三门快照直读旗标(W629-R2):禁 getattr 缺省镜像。
-
-    镜像雷:prep_brain gates 若用 ``getattr(cw_intention, name, False)``
-    镜像,F5 flag 批 3 删除时缺省 False = 三门全关**静默坍缩**。锁两点:
-    ①快照值 == 旗标真值(逐键);②源码级无 getattr 缺省镜像(变异锁:
-    直读形态在 flag 删除时 AttributeError 显式炸出,不静默)。
-    """
-    import sr_od.application.currency_war.cw_intention as cwi
+def test_r2_gates_mirror_retired_with_f5_flags():
+    """(批 3 F5 清偿重推)三门模块级旗标已删、行为无条件化,gates 快照
+    无生产面——恒空映射(字段保留=契约形状);getattr 缺省镜像禁令
+    保留(防镜像雷以任何形态复燃)。"""
     sess = StrategySession()
     sess.v3_intention = IntentionState()
     turn = assemble(_snapshot(), sess)
-    assert turn.direction.gates == {
-        'P1_FINAL_LINE_GATE': cwi.P1_FINAL_LINE_GATE,
-        'P1_RECIPE_LOCK': cwi.P1_RECIPE_LOCK,
-        'P1_LOCK_TRANSITION_PAIR': cwi.P1_LOCK_TRANSITION_PAIR,
-    }
+    assert set(turn.direction.gates) == set()
     src = (_SRC / 'decision_v2' / 'prep_brain.py').read_text(encoding='utf-8')
     assert 'getattr(cw_intention' not in src, \
         'gates 镜像回退为 getattr 缺省形态(W629-R2 镜像雷复燃)'
-    # 变异自检:直读形态在 flag 删除时炸 AttributeError(非静默 False)
-    import pytest
-    saved = cwi.P1_RECIPE_LOCK
-    try:
-        del cwi.P1_RECIPE_LOCK
-        with pytest.raises(AttributeError):
-            assemble(_snapshot(), sess)
-    finally:
-        cwi.P1_RECIPE_LOCK = saved
-
 
 # ----------------------------------------------------- D3 息线单一源
 
@@ -235,7 +216,7 @@ def test_sentinel_ju23_frame_releases_on_new_stack():
     """局23 型帧哨兵(W611 锁沿用,经新栈装配复合验证):
     100 金 + 备战空 + interest 姿态 → 新栈预算投影息线供给正常 + release 帧。
     """
-    from sr_od.application.currency_war.cw_horizon import Posture
+    from sr_od.application.currency_war.decision_v2.posture import Posture
     from sr_od.application.currency_war.decision_v2.ev import RoundPosture
     from sr_od.application.currency_war.decision_v2.posture_release import (
         release_directive,

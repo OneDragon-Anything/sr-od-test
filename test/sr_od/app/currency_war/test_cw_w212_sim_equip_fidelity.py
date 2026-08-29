@@ -26,7 +26,7 @@ def test_sim_equip_allocation_call_shape_occupied_snapshot() -> None:
     calls: list[dict] = []
     orig = cw_comps.equip_allocation
 
-    def spy(comp, deployed, owned, occupied=None):
+    def spy(comp, deployed, owned, occupied=None, directed_pairs=None):
         calls.append({'occupied': occupied,
                       'deployed_n': len(list(deployed or []))})
         return orig(comp, deployed, owned, occupied)
@@ -57,7 +57,7 @@ def test_sim_p1_still_runs_and_allocates() -> None:
     calls: list[int] = []
     orig = cw_comps.equip_allocation
 
-    def spy(comp, deployed, owned, occupied=None):
+    def spy(comp, deployed, owned, occupied=None, directed_pairs=None):
         calls.append(1)
         return orig(comp, deployed, owned, occupied)
 

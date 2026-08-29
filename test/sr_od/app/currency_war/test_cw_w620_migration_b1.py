@@ -104,8 +104,8 @@ def test_assemble_projects_direction_and_budget_fields():
     assert d.hoard_readable is True   # D1:正常帧可信位为真
     assert d.fallback_comp != ''
     assert isinstance(d.hoard, frozenset)
-    assert set(d.gates) == {'P1_FINAL_LINE_GATE', 'P1_RECIPE_LOCK',
-                            'P1_LOCK_TRANSITION_PAIR'}
+    # 批 3 F5 清偿:三门模块级旗标退役,gates 恒空(字段保留=契约形状)
+    assert set(d.gates) == set()
     assert isinstance(d.bench_view, tuple)
     assert isinstance(d.deployed_view, tuple)
     # 预算投影:R* = 息线 + 排程(息线帧 → R* == floor,零漂移 I-1 前提)

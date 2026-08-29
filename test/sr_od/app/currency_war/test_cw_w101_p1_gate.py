@@ -131,23 +131,8 @@ def test_p1_gate_resource_layer() -> None:
 
 # ===== A/B 通道:门关=旧行为 =====
 
-def test_gate_off_restores_baseline(monkeypatch) -> None:
-    """P1_FINAL_LINE_GATE=False(A/B 基线臂)→ 万敌单C ③锁恢复
-    (W97 诊断的 30.5% 病灶形态即此臂)。W145 后 P1 comp 锁定另受
-    P1_RECIPE_LOCK 辖——基线臂须双开关同关(回 W143 前完整行为)。"""
-    monkeypatch.setattr(cw_intention, 'P1_FINAL_LINE_GATE', False)
-    monkeypatch.setattr(cw_intention, 'P1_RECIPE_LOCK', False)
-    st = _state(bench=['万敌'])
-    sigs = detect_signals(st)
-    assert any(s.comp_name == '万敌单C' and s.kind == 'core_card'
-               for s in sigs if s.layer == 3)
-    ist = update_intention(st, IntentionState())
-    assert ist.locked_comp == '万敌单C' and ist.lock_layer == 3
-
-
-# ===== 派生分类快照锁 =====
-
-def test_derived_classification_snapshot() -> None:
+# (批 3 F5 清偿:原 test_gate_off_restores_baseline 随 P1_FINAL_LINE_GATE/
+# P1_RECIPE_LOCK 旗标退役删除,出处同蓝图 §6。)
     """过渡线派生分类快照(W97 §5 P0-1 分组的代码化;数据漂移静默改门=禁止,
     CROSS_LINE_SKELETON 快照锁同款判例)。FREE 集=主/副档∩三羁绊体系键
     ∪ 希儿∈core ∪ ⑤兜底;其余 v2 线为终局专属(P1 需①类资格)。"""

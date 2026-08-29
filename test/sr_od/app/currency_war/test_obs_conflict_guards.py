@@ -152,16 +152,12 @@ def test_reconcile_star_regression_pending_self_heals():
     assert not getattr(sess, 'star_pending_regression', {}).get('万敌'), '读回恢复清防抖'
 
 
-def test_horizon_dp_smoke():
-    """cw_horizon DP 冒烟:解不为空、终局边界有值、posture 查询可回退。"""
-    from sr_od.application.currency_war import cw_horizon as hz
-    sol = hz.HorizonSolution()
-    # 不全量 solve(秒级但测试要快):只验 posture 回退 + interest 规则
-    p = sol.posture(0, 33, 5, 88, 1)
-    assert p.save is True and p.tag == 'fallback'
-    assert hz.interest(49) == 4
-    assert hz.interest(50) == 5
-
+def test_plane_table_smoke():
+    """cw_plane_table 冒烟(批 3:标定表模块随 cw_horizon 退役平移;
+    息闭式边界锁逐位保留)。"""
+    from sr_od.application.currency_war.cw_plane_table import interest
+    assert interest(49) == 4
+    assert interest(50) == 5
 
 # ===== 等级三源解析 _resolve_level(2026-08-18 治本:live 乒乓根因) =====
 from sr_od.application.currency_war.cw_observation import _resolve_level  # noqa: E402

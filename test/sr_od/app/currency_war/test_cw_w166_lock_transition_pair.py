@@ -330,25 +330,8 @@ def test_unlocked_frames_unchanged() -> None:
     assert locked_buy_scope(IntentionState(demoted_endgame=True)) is None
 
 
-def test_ab_flag_off_restores_w164_behavior(monkeypatch) -> None:
-    """A/B 通道:P1_LOCK_TRANSITION_PAIR=False → ①锁局零副方向,
-    对件回 off-scope(demote 恢复)——逐位回 W164 前行为。"""
-    monkeypatch.setattr(cw_intention, 'P1_LOCK_TRANSITION_PAIR', False)
-    st = _state(bench=('三月七', '丹恒·饮月'),
-                strategies=(_QUAL_STRATEGY,))
-    ist = update_intention(st, IntentionState())
-    assert ist.phase == 'locked' and ist.transition_pair == ()
-    scope = locked_buy_scope(ist)
-    assert '三月七' not in scope
-    sess = StrategySession()
-    sess.v3_intention = ist
-    sess.v3_hoard = hoard_target_set(st, ist)
-    st7 = _state(plane=1, round_num=7, board={'群攻': 2})
-    assert _off_lock_demotion(_cand('三月七', 'line_opportunistic'),
-                              st7, sess, DEFAULT_REGISTRY) == 'demote'
-
-
-# ===== 内部 helper =====
+# (批 3 F5 清偿:原 test_ab_flag_off_restores_w164_behavior 随
+# P1_LOCK_TRANSITION_PAIR 旗标退役删除,出处同蓝图 §6。)
 
 
 def _comp_chars(comp) -> set[str]:
