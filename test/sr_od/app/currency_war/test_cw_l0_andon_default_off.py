@@ -19,6 +19,7 @@ from pathlib import Path
 from sr_od.application.currency_war.telemetry import defects, recorder
 
 _L0 = 'sr_od.application.currency_war.telemetry.defects'
+from sr_od.application.currency_war.telemetry import defects as ct
 
 
 def _setup_isolated_l0(tmp_path: Path, monkeypatch) -> Path:

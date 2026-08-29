@@ -193,7 +193,7 @@ def test_serialize_intention_json_safe() -> None:
 def test_sim_p1_rows_tracks_unpolluted() -> None:
     """sim 集成:planes=2 单局,P1 行 v3_intention 全 JSON 可序列化
     且 tracks 为快照(修复前=活引用,P2 段原地改写污染 P1 行)。"""
-    from sr_od.application.currency_war.sim.engine_p1 import cw_sim
+    from sr_od.application.currency_war.sim.engine_p1 import cw_sim as cw_sim
     r = cw_sim.simulate_p1(3, pool='fallback', planes=2)
     p1_rows = [row for row in r.ledger if row.get('plane', 1) == 1]
     assert p1_rows

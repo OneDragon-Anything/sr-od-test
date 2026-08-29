@@ -297,7 +297,7 @@ def test_sim_frames_default_trusted_gate_short_circuits() -> None:
 def test_sim_ledger_still_discloses_and_rejects_in_band() -> None:
     """单局 sim 冒烟:账本键仍在、停手仍在血线内发生(ADR-0448 行为零
     漂移;pool='fallback' 免快照依赖,同既有锁口径)。"""
-    from sr_od.application.currency_war.sim.engine_p1 import cw_sim
+    from sr_od.application.currency_war.sim.engine_p1 import cw_sim as cw_sim
     r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
     assert r.ledger
     for row in r.ledger:
@@ -384,7 +384,7 @@ def test_seg_allin_exempt_precedes_trust_check() -> None:
 def test_seg_untrusted_check_registered_and_sim_zero_hit() -> None:
     """检查项已入段级表;run_segment_checks 批量入口对恒真读合成局
     零命中(纯防线验证面;sim-testing §6 披露键保留纪律)。"""
-    from sr_od.application.currency_war.sim.checks.segments import chk
+    from sr_od.application.currency_war.sim.checks import segments as chk
     assert 'seg_untrusted_hp_levelup' in chk._SEGMENT_CHECKS
     good = [_ledger_row(1, r, hp_readable=None, hp_trusted=None,
                         actions=[_lv_action()]) for r in range(1, 4)]

@@ -30,6 +30,7 @@ from sr_od.application.currency_war.obs.cw_observation_gate import (
     PHASE_PREP_SHOP_OPEN,
 )
 from sr_od.application.currency_war.kernel.cw_obs_core import UPPER_SCREENS
+from sr_od.application.currency_war.telemetry import defects, state
 
 REPO = Path(__file__).resolve().parents[5]
 
@@ -86,9 +87,9 @@ def gated_env(monkeypatch):
     _stub('resolve_paddle_pair', (3, 5))
     monkeypatch.setattr(cw_observe, 'bypass_noop', True, raising=False)
     # 遥测旁路/消费面全部静默(session 缺省 None 已走空路径,防御性再桩)
-    monkeypatch.setattr(cw_telemetry, 'bypass_obs_conflict_to_defect',
+    monkeypatch.setattr(defects, 'bypass_obs_conflict_to_defect',
                         lambda rec: None)
-    monkeypatch.setattr(cw_telemetry, 'current_run_id', lambda: None)
+    monkeypatch.setattr(state, 'current_run_id', lambda: None)
     yield c
 
 
@@ -260,3 +261,4 @@ def test_prep_director_clear_entry_wired():
         < src_loop.index("path=new(director")
     src_clear = inspect.getsource(prep_director.PrepDirector._clear_entry_overlays)
     assert 'except Exception' in src_clear, '清场段必须 fail-open(离线契约)'
+
