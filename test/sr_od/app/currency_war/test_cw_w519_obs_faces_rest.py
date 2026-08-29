@@ -110,6 +110,55 @@ def test_w519_wiring_locks():
     assert "'node_seq', 'perception_conflict'" in intel
 
 
+# ===== ⑤ 观测时序锁:买牌动画收敛重采(w734 安灯误报修复) =====
+
+def test_bench_buy_settle_retry_semantics(monkeypatch):
+    """买牌有卡牌飞行动画:对比帧早于动画收敛采样 → pixel-diff 误判「新占槽=0」
+    (run_20260830_071711 P1r3 L0 安灯停线,定谳=观测时序误报非执行失败)。
+    锁:买≥1 张且首采无新槽 → 延迟重采一次,仍无才交破缺判定;
+    未买牌/首采已有新槽不重采不 sleep;全程零点击零决策(零行为外溢)。"""
+    from sr_od.application.currency_war.operations.prep import shop as shop_mod
+    slept: list[float] = []
+    monkeypatch.setattr(shop_mod.time, 'sleep', lambda s: slept.append(s))
+    calls = {'n': 0}
+
+    def resample() -> list[int]:
+        calls['n'] += 1
+        return [2]   # 重采命中 = 动画收敛后占位可见
+
+    slots, retried = shop_mod.bench_buy_slots_settle_retry(1, [], resample)
+    assert slots == [2]
+    assert retried is True
+    assert len(slept) == 1 and slept[0] > 0
+
+    calls['n'] = 0
+    slept.clear()
+    # 首采已有新槽 / 未买牌:不 sleep 不重采
+    assert shop_mod.bench_buy_slots_settle_retry(2, [1, 3], resample) == ([1, 3], False)
+    assert shop_mod.bench_buy_slots_settle_retry(0, [], resample) == ([], False)
+    assert calls['n'] == 0 and slept == []
+
+    # 重采仍空:原样返回空(交上游破缺判定),但发生过 sleep+重采
+    calls['n'] = 0
+    monkeypatch.setattr(shop_mod.time, 'sleep', lambda s: slept.append(s))
+    def resample_empty() -> list[int]:
+        calls['n'] += 1
+        return []
+    assert shop_mod.bench_buy_slots_settle_retry(1, [], resample_empty) == ([], True)
+    assert calls['n'] == 1 and len(slept) == 1
+
+
+def test_w734_bench_buy_settle_retry_wiring_lock():
+    """时序接线锁:动画收敛重采必须接在买后 pixel-diff 首采点与
+    占位破缺判定(record_defect)之间——动画窗口内的空首采不再直达破缺落账。"""
+    shop = Path('src/sr_od/application/currency_war'
+                '/operations/prep/shop.py').read_text(encoding='utf-8')
+    tail = shop[shop.index('new_bench_slots(self.ctx, _buy_baseline'):]
+    assert 'bench_buy_slots_settle_retry(' in tail
+    assert tail.index('bench_buy_slots_settle_retry(') \
+        < tail.index("'bench', 'invariant_break'")
+
+
 # ===== ④ §2.7 分级锁:裁决已自动恒 L2 =====
 
 def test_settlement_round_defect_auto_resolved_is_l2(tmp_path: Path, monkeypatch):
