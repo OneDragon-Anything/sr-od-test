@@ -804,3 +804,132 @@ def test_start_battle_dialog_checkbox_equipped(monkeypatch) -> None:
     i_confirm = clicks.index((1159, 653))
     assert i_check < i_confirm, "勾选必须先于确认(否则整局每次出战都弹)"
 
+
+# ===== 出战发射锁(两段式发射 + 激活重发 + 连败停机;两局同型停滞实证) =====
+# 根因:游戏只在前台处理鼠标输入(pc_controller_base Raw Input 注记),前台报告
+# "已激活"时输入也可能已断(输入静默丢 r9/r10 家族)——原实现只在 is_win_active=False
+# 时补点,实证两局(备战环「强制出战失败(stall+恢复试尽): 出战 click 未落地」×4 环,
+# ~2min/次)直到人工 click_game(入口先 active_window)解锁。修法:未落地 → 主动
+# active_window 重发;连败(跨环 session 计数)达限 → 停机留证。
+
+class _LaunchArea:
+    def __init__(self, ok: bool): self.is_success = ok
+
+
+def _make_launch_env(monkeypatch, prep_visible_rounds: int):
+    """发射锁测试环境:可编程「备战标识可见轮数」+ 点击/激活记录 + session。
+
+    prep_visible_rounds:每次发射尝试的轮询中「备战标识-购买经验」可见的次数上限
+    (消耗完 = 备战标识消失 = 出战成功)。按钮恒可找到。
+    返回 (ex, clicks, activations, session, stop_calls)。
+    """
+    import sr_od.application.currency_war.prep_actions as pa
+
+    clicks: list[str] = []
+    activations: list[bool] = []
+    stops: list[str] = []
+    rounds = {'left': prep_visible_rounds}
+
+    class _Dir:
+        def screenshot(self): return object()
+        def round_by_find_area(self, scr, screen, area, **k):
+            if area == '按钮-出战':
+                return _LaunchArea(True)
+            if area == '备战标识-购买经验':
+                if rounds['left'] > 0:
+                    rounds['left'] -= 1
+                    return _LaunchArea(True)
+                return _LaunchArea(False)   # 标识消失 = 出战成功
+            return _LaunchArea(False)   # 未达上限警告恒无
+        def save_screenshot(self, prefix=None): pass
+
+    class _Ctrl:
+        def mouse_move(self, p): pass
+        def click(self, p): clicks.append('btn')
+        def active_window(self): activations.append(True)
+
+    class _RunCtx:
+        def stop_running(self, reason=None): stops.append(reason or '')
+
+    class _Sess:
+        launch_dead_streak = 0
+
+    class _Match:
+        session = _Sess()
+
+    class _Ctx:
+        controller = _Ctrl()
+        cw_match = _Match()
+        run_context = _RunCtx()
+
+    monkeypatch.setattr(pa, 'area_center', lambda ctx, name, screen=None: None)
+    monkeypatch.setattr(pa.time, 'sleep', lambda s: None)   # 跳过轮询等待
+    ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
+    ex._op = _Dir()
+    ex._ctx = _Ctx()
+    return ex, clicks, activations, _Match.session, stops
+
+
+def test_start_battle_reactivates_and_relaunches_on_dead_click(monkeypatch) -> None:
+    """发射锁核心:第 1 次发射未落地 → active_window 一次 → 第 2 次发射成功。
+
+    竞态纪律:重发只发生在第 1 次发射完整轮询耗尽之后(点击序 = btn, btn;
+    active_window 恰 1 次夹在中间),不与正常发射时序交叠。
+    """
+    # 两段可编程:尝试0 = 备战标识恒在(轮询耗尽未落地);尝试1 = 标识消失(成功)
+    ex, clicks, activations, session, stops = _make_launch_env(monkeypatch, 0)
+    import sr_od.application.currency_war.prep_actions as pa
+    state = {'attempt': 0}
+
+    def _find_area(scr, screen, area, **k):
+        if area == '按钮-出战':
+            return _LaunchArea(True)
+        if area == '备战标识-购买经验':
+            return _LaunchArea(state['attempt'] == 0)   # 尝试0=恒在(未落地),尝试1=消失(成功)
+        return _LaunchArea(False)
+
+    monkeypatch.setattr(ex._op, 'round_by_find_area', _find_area)
+    orig_launch = pa.PrepActionExecutor._launch_attempt
+
+    def _counting_launch(self):
+        try:
+            return orig_launch(self)
+        finally:
+            state['attempt'] += 1
+
+    monkeypatch.setattr(pa.PrepActionExecutor, '_launch_attempt', _counting_launch)
+    ok, detail = pa.PrepActionExecutor._start_battle(ex)
+    assert ok, f'激活重发后应成功,实 {detail}'
+    assert '激活重发' in detail, f'成功 detail 应标注激活重发: {detail}'
+    assert activations == [True], f'恰好强制激活 1 次,实 {activations}'
+    assert clicks == ['btn', 'btn'], f'两段各点一次出战,实 {clicks}'
+    assert stops == [], '发射成功不得触发停机'
+
+
+def test_start_battle_launch_dead_escalates_to_evidence_stop(monkeypatch) -> None:
+    """两段全败 → session 连败计数 +1;达 LAUNCH_DEAD_LIMIT → 停机留证 + stop_running。"""
+    import sr_od.application.currency_war.prep_actions as pa
+    from sr_od.application.currency_war.prep_actions import PrepActionExecutor
+
+    ex, clicks, activations, session, stops = _make_launch_env(monkeypatch, 10**9)
+    session.launch_dead_streak = PrepActionExecutor.LAUNCH_DEAD_LIMIT - 1   # 差 1 次达限
+
+    ok, detail = pa.PrepActionExecutor._start_battle(ex)
+    assert not ok
+    assert '停机留证' in detail, f'达限应停机留证,实 {detail}'
+    assert session.launch_dead_streak == PrepActionExecutor.LAUNCH_DEAD_LIMIT
+    assert stops and 'launch_dead' in stops[0], f'应 stop_running(hook:cw_launch_dead),实 {stops}'
+    assert activations == [True], '失败前仍应尝试激活重发'
+
+
+def test_start_battle_success_resets_launch_dead_streak(monkeypatch) -> None:
+    """发射成功 → 清 session 连败计数(输入通道恢复的证据),不残留半程计数。"""
+    import sr_od.application.currency_war.prep_actions as pa
+
+    ex, clicks, activations, session, stops = _make_launch_env(monkeypatch, 3)   # 3 轮后标识消失 = 成功
+    session.launch_dead_streak = 2
+    ok, detail = pa.PrepActionExecutor._start_battle(ex)
+    assert ok, detail
+    assert session.launch_dead_streak == 0, '发射成功须清零连败计数'
+    assert activations == [], '首发成功不得激活重发(不与正常发射竞态)'
+
