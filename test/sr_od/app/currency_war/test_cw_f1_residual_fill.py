@@ -131,12 +131,14 @@ def test_seed_640576_no_residual_lag_after_fill() -> None:
 # ---------- 锁 2:保留集锁 ----------
 
 def test_reserved_pieces_not_deployed() -> None:
-    """显式保留集两成员均不被补部署(residual_held 计数)。
+    """显式保留集(final 买而不上件)不被补部署;素材副本交围栏 dedup。
 
-    ① 3合1 素材副本:bench 同名同星 ×2 且全场无 deployed 同名——
-    围栏 fill_mode 本会上一张,保留集必须扣下(锁 ADR-0323 修法一的
-    素材囤积语义);② final 买而不上件:v3_hoard locked 模式
-    char_targets 成员(锁 [21] 窗口语义)。同帧的成对件照常补上。
+    W748 收窄裁决(ADR-0473 增补):保留集 ① 原「同名同星全场 ≥2
+    即保留」把 bench 同名对(无在场同名)也整对扣下——3合1 合并域是
+    全场,部署一对之一不破坏合成,生产围栏 dedup 只拦「在场同名」,
+    保留 bench 对 = 过宽,642763/642795 实证 dep 停滞 4/7、5/7(本波
+    F1 重现根因)。收窄后:保留集只剩 locked/forced 持有名单([21]
+    窗口语义);与在场同名的素材副本由围栏 dedup 自然 held。
     """
     st = _st(6, [_bc('爻光', '仙舟')],
              [_bc('乙', '仙舟'), _bc('乙', '仙舟'),
@@ -148,9 +150,26 @@ def test_reserved_pieces_not_deployed() -> None:
         st, sess, frozenset(), frozenset(), frozenset(), frozenset())
     dep_names = {d.char_id for d in iter_occupied_deployed(st.deployed)
                  if d.char_id}
-    assert '乙' not in dep_names and '甲' not in dep_names, dep_names
-    assert held == 3, (up, held)
+    # W748 回归面:bench 同名对的一张照常补上(部署不破全场域合成)
+    assert '乙' in dep_names, dep_names
+    # final 买而不上件(locked 持有名单)仍被保留
+    assert '甲' not in dep_names and held == 1, (up, held)
     assert {'三月七', '停云'} <= dep_names
+
+
+def test_deployed_name_material_copies_held() -> None:
+    """与在场同名(deployed)的素材副本不被补部署(5.1.7 在场唯一,
+    围栏 dedup 自然 held)——首版保留集删去后的等价面锁。"""
+    st = _st(6, [_bc('爻光', '仙舟'), _bc('停云', '仙舟')],
+             [_bc('爻光', '仙舟'), _bc('停云', '仙舟'),
+              _bc('三月七', '仙舟'), _bc('乙', '仙舟')])
+    st.board = {'仙舟': 2}
+    up, _held, lag = _residual_fill_deploy(
+        st, object(), frozenset(), frozenset(), frozenset(), frozenset())
+    dep_names = {d.char_id for d in iter_occupied_deployed(st.deployed)
+                 if d.char_id}
+    assert dep_names == {'爻光', '停云', '三月七', '乙'}, dep_names
+    assert lag == 0
 
 
 # ---------- 锁 3:支配性形状锁 ----------
