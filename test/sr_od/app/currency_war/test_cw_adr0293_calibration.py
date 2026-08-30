@@ -264,6 +264,23 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'p2_spend_auth_reserve_floor': ('int', 20),
     'p2_spend_auth_reserve_rounds_cap': ('int', 3),
     'p2_spend_auth_line_band_floor': ('int', 45),
+    # ===== 锁线后兑现链 v2(W802 落码;第 1 态默认关零漂移,开臂判据
+    # ===== 挂 PREREG 兑现链A_B v3;占位参数不做生产决策)=====
+    'realization_chain_enabled': ('bool', False),
+    'realization_search_enabled': ('bool', False),
+    'realization_buy_enabled': ('bool', False),
+    'realization_merge_timing_enabled': ('bool', False),
+    'realization_deploy_enabled': ('bool', False),
+    'realization_direction_enabled': ('bool', False),
+    'realization_d1_enabled': ('bool', False),
+    'realization_d2_enabled': ('bool', False),
+    'realization_off_lock_kappa': ('float', 0.5),
+    'realization_delta_p_tier': ('float', 1.0),
+    'realization_p29_r_min': ('int', 3),
+    'realization_member_cost_band': ('frozenset[int]', frozenset({3, 4})),
+    'realization_merge_timing_unit': ('float', 1.0),
+    'realization_direction_gamma': ('float', 0.75),
+    'realization_direction_beta': ('float', 0.3),
     # (P1→P2 接口机制五开关+三阈值已随定谳清理删除,ADR-0487)
     # ===== 形态达标三方向 =====
     'recipe_fence_enabled': ('bool', False),
