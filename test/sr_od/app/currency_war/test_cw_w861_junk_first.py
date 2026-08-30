@@ -1,24 +1,30 @@
 # -*- coding: utf-8 -*-
 """变宝为废·牺牲合成先行锁组(策略开关生命周期第 1 态)。
 
-出处:docs/game/currency_war/research/变宝为废-首次合成垃圾化.md(用户口述
-机制:变宝为废词缀下第一次装备合成有几率垃圾化;对策=牺牲合成先行——
-高价值合成前先用次要死库存对消耗垃圾化)+ ADR-0498。
+机制真值(单一源 = data/affix_effects_data.AFFIX_EFFECTS['变宝为废'],
+游戏内词缀效果原文实采):「每个位面开始时,首次合成的进阶装备会有 50%
+的概率变成垃圾袋」——粒度 = 每位面各一次(P1/P2/P3 各自风险),产物 =
+垃圾袋。对策(用户建议,ADR-0498)= 牺牲合成先行。
 
 四面:
 1. 环境判据(state.enemy_affixes contains;读不到=无环境,安全默认不启用);
 2. 牺牲排序(sacrifice_first:牺牲对分配移到队首,先于高价值合成完成);
-3. 无牺牲对推迟一帧(deferred:高价值完成件本帧不出分配;预算上限=1,
-   耗尽后原样放行=接受垃圾化风险,防无限等);
-4. 缺环境/开关关不启用(零漂移锚)+ 主线组件不当牺牲对(P14 定理 3)。
+3. 无牺牲对推迟一帧(deferred:高价值完成件本帧不出分配;每位面预算=1,
+   耗尽后原样放行=接受该位面 50% 垃圾化风险,防无限等);
+4. 缺环境/开关关不启用(零漂移锚)+ 主线组件不当牺牲对(P14 定理 3)
+   + 位面消耗记账(每面一次,跨面重置)。
 
-缺数据项挂账:垃圾化概率/判定粒度/表现形态待实机样本(机制单一源文档
-挂账节);排序语义只依赖定性口述,不引入概率常数。
+⚠️ 验证状态:本锁组与 2026-09-11 位面粒度修正后的实现**尚未运行**
+(用户指令暂停 pytest;恢复后需跑:本文件 + adr0293 普查 + 受影响
+装备测试 8 文件 + cw_quick)。
 """
 from __future__ import annotations
 
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.data.affix_effects_data import (
+    AFFIX_EFFECTS,
+)
 from sr_od.application.currency_war.data.cw_synthesis import (
     component_demand,
     recycle_qualified,
@@ -138,8 +144,13 @@ def test_defer_budget_exhausted_releases() -> None:
     assert action == 'budget_exhausted' and new_alloc == alloc
 
 
-def test_defer_budget_constant_from_oral_source() -> None:
-    """推迟上限=口述「推迟一帧」(机制单一源文档对策节);非拍死概率类常数。"""
+def test_defer_budget_per_plane_and_mechanism_truth_in_registry() -> None:
+    """机制真值单一源锁:词缀效果在 affix_effects_data 注册表内为游戏原文
+    (每位面首次进阶合成 / 50% / 垃圾袋)——禁第二数据源;推迟预算=每位面
+    1 帧(50% × 进阶件损失 ≫ 一帧推迟成本,预算只防无限推迟)。"""
+    effect = AFFIX_EFFECTS['变宝为废']
+    assert '每个位面开始时' in effect and '首次合成' in effect
+    assert '50%' in effect and '垃圾袋' in effect
     assert JUNK_FIRST_DEFER_BUDGET == 1
 
 
@@ -154,7 +165,7 @@ def test_disabled_env_returns_base_alloc() -> None:
     """环境不在场:开关开也返回基分配(安全默认不启用)。"""
     comp = _mkcomp(_K_AYA, ['阿雅'])
     reg = SimpleNamespace(junk_first_sacrifice_enabled=True)
-    sess = SimpleNamespace(junk_first_defers_used=0)
+    sess = SimpleNamespace(junk_first_done_plane=None)
     a, b = _aya_pair()
     base = junk_first_allocation(sess, reg, comp, _dep(),
                                  [a, b, '轮滑鞋', '折叠小刀'], None, [])
@@ -169,7 +180,7 @@ def test_disabled_switch_zero_drift() -> None:
     from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
     comp = _mkcomp(_K_AYA, ['阿雅'])
     reg = SimpleNamespace(junk_first_sacrifice_enabled=False)
-    sess = SimpleNamespace(junk_first_defers_used=0)
+    sess = SimpleNamespace(junk_first_done_plane=None)
     a, b = _aya_pair()
     owned = [a, b, '轮滑鞋', '折叠小刀']
     got = junk_first_allocation(sess, reg, comp, _dep(), owned, None,
@@ -191,20 +202,49 @@ def test_registry_switch_defaults_off_lifecycle_state1() -> None:
     assert getattr(DEFAULT_REGISTRY, 'junk_first_sacrifice_enabled') is False
 
 
-def test_wrapper_defer_counter_once_per_match() -> None:
-    """推迟计数:首次推迟 +1,后续预算耗尽不再推迟(整局上限一次)。"""
+def _sess(plane: int | None) -> SimpleNamespace:
+    """带 last_state.plane 的最小 session(位面消耗记账的宿主形态)。"""
+    last = SimpleNamespace(plane=plane) if plane is not None else None
+    return SimpleNamespace(last_state=last, junk_first_done_plane=None)
+
+
+def test_wrapper_plane_consumption_once_per_plane() -> None:
+    """位面消耗记账(机制=每位面首次合成各判定一次):
+    P1 推迟一次后记账;同位面后续帧不再推迟(判定已消耗);
+    进位面 2 → 风险窗口重开,可再推迟一次并记账 P2。"""
     comp = _mkcomp(_K_AYA, ['阿雅'])
     reg = SimpleNamespace(junk_first_sacrifice_enabled=True)
-    sess = SimpleNamespace(junk_first_defers_used=0)
+    sess = _sess(1)
     got = junk_first_allocation(sess, reg, comp, _dep(), ['折叠小刀'],
                                 {('back', 1): ['轮滑鞋']},
                                 [JUNK_FIRST_AFFIX])
-    assert got == [] and sess.junk_first_defers_used == 1
+    assert got == [] and sess.junk_first_done_plane == 1
     got2 = junk_first_allocation(sess, reg, comp, _dep(), ['折叠小刀'],
                                  {('back', 1): ['轮滑鞋']},
                                  [JUNK_FIRST_AFFIX])
-    assert got2 == [('阿雅', '折叠小刀')], '预算耗尽后放行'
-    assert sess.junk_first_defers_used == 1
+    assert got2 == [('阿雅', '折叠小刀')], '同位面判定已消耗,不再推迟'
+    sess.last_state.plane = 2
+    got3 = junk_first_allocation(sess, reg, comp, _dep(), ['折叠小刀'],
+                                 {('back', 1): ['轮滑鞋']},
+                                 [JUNK_FIRST_AFFIX])
+    assert got3 == [] and sess.junk_first_done_plane == 2, \
+        'P2 首次合成风险独立,推迟预算重开'
+
+
+def test_wrapper_plane_unreadable_consumed_once() -> None:
+    """位面读不到(None):首次动作后记哨兵,后续帧按已消耗降级
+    (整局一次,防位面不可读时无限推迟)。"""
+    comp = _mkcomp(_K_AYA, ['阿雅'])
+    reg = SimpleNamespace(junk_first_sacrifice_enabled=True)
+    sess = _sess(None)
+    got = junk_first_allocation(sess, reg, comp, _dep(), ['折叠小刀'],
+                                {('back', 1): ['轮滑鞋']},
+                                [JUNK_FIRST_AFFIX])
+    assert got == [] and sess.junk_first_done_plane == -1
+    got2 = junk_first_allocation(sess, reg, comp, _dep(), ['折叠小刀'],
+                                 {('back', 1): ['轮滑鞋']},
+                                 [JUNK_FIRST_AFFIX])
+    assert got2 == [('阿雅', '折叠小刀')], '哨兵后不再推迟'
 
 
 def test_worn_basics_projection() -> None:
