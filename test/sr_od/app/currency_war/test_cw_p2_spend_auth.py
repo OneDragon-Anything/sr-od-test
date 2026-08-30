@@ -1,8 +1,9 @@
-"""W776 · 位面 2 支出授权单帧锁组 v3.2(十五锁全量;ADR-0480/0481/0483)。
+"""W783 · 位面 2 支出授权单帧锁组 v3.3(十六锁全量;ADR-0480/0481/0483)。
 
-设计出处:.debug/temp/currency_war/w757_p2_spend_auth/REPORT.md v3.2 §五
-「单帧锁清单」十五条 + 预算带对齐声明 + 双通道合并语义 + 净支出闭环闸 +
-保留金公式化;W762/W772 A/B 机制归因与 W758-v3 攻击复核语境。
+设计出处:.debug/temp/currency_war/w757_p2_spend_auth/REPORT.md v3.3 §五
+「单帧锁清单」十六条 + 预算带对齐声明 + 双通道合并语义 + 窗级水位目标 +
+保留金公式化 + XP sink 授权化;W762/W772 归因、W779 审计与 W758-v3
+攻击复核语境。
 
 锁语义不锁牌面:全部断言策略决策行为(授权/拒绝/预算带/方向辖域),
 不锁具体商店牌序。方向源梯级以 monkeypatch 注入(投影谓词本体在
@@ -12,7 +13,7 @@ cw_intention/桥池另有锁组),接管谓词以 monkeypatch 驱动(同 W760 锁
 开关 p2_spend_auth_enabled 默认关=零漂移锚(每锁带 off 臂对照或
 frame-None 等价断言)。
 
-锁语义演进声明(重推依据=设计附录 B/C/D):
+锁语义演进声明(重推依据=设计附录 B/C/D/E):
 - v3.1(相对 W760 v2 锁组):锁① 贴线带占位保守不买子句随「预算带
   对齐」废除(G1-A 破息反降的收门面)——常授权层与既有息账门同判;
   锁② 濒死 hp≤10 帧从「授权整体不触发」改写为「授权可触发但升级恒
@@ -22,7 +23,15 @@ frame-None 等价断言)。
   化下限 5×min(剩余备战轮数,3)(「放宽有界」语义不变,界随公式——
   「预算带」测试断言同步重推);新增锁⑭(净支出闸)与锁⑮(高价值
   优先/兜底层条件),空店帧旧行为=L3 兜底路径,①-⑬ 锁断言在空店帧
-  下语义不变(净支出闸只辖通道 B 帧的 L1 方向选择,非收门)。
+  下语义不变。
+- v3.3(W779 净支出可行性审计:sink 供给+判据口径双修):**锁⑭ 改写**
+  ——v3.2 单帧净支出闸废除(单帧净>0 在 P2 中后段结构性难达 rn5-7
+  ≈0-2%,W779 审计①),锁语义改「窗级水位不升出手计划」的行为可用
+  性钉:店内 L1 目标即使 Σ支出≤预期收入(旧闸必拒域)也授权放行;
+  无 L1/XP/合法 sink 帧零动作;窗级水位计入遥测披露键。锁⑮ 随闸废除
+  重述(条件从「过净支出闸」改「店内 L1 目标在场」,行为断言不变)。
+  **新增锁⑯**(XP sink 门边界:hp>停升级线 ∧ 非 P21 濒死带 ∧ 概率窗
+  未达,血预算门 AND 不动;ev.levelup_ev_basis 臂④ 'p2_auth_xp')。
 """
 from __future__ import annotations
 
@@ -394,7 +403,7 @@ def test_lock13_projection_failure_never_uses_conservative_domain(
                                           _REG_ON)
 
 
-# ===== 锁⑭/⑮ 净支出闸 + 高价值优先(v3.2;W772 分支 2 出手面修正)=====
+# ===== 锁⑭/⑮ 窗级水位目标(⑭ v3.3 改写:净支出闸废除)+ 高价值优先 =====
 
 def _core_shop() -> list:
     """三张 5 费核心卡店态(注入核心名集内;锁语义不锁牌面,取测试
@@ -403,16 +412,16 @@ def _core_shop() -> list:
             for nm in ('花火', '瓦尔特', '三月七')]
 
 
-def test_lock15_high_value_tier_gates_fallback(monkeypatch) -> None:
-    """锁⑮(§3.1 梯级重排+[22]③):店内存在 L1 目标且过净支出闸时,
-    L3 低价兜底件不获授权放行;兜底层仅在 L1 全部过闸失败(净支出闸
-    选中集为空)时出现——空店帧(L1 无供给)L3 兜底照旧(v3.1 行为,
-    ①-⑬ 锁的既有断言域)。"""
+def test_lock15_high_value_targets_gate_fallback(monkeypatch) -> None:
+    """锁⑮(§3.1 梯级+[22]③;v3.3 重述):店内存在 L1 目标时,L3 低价
+    兜底件不获授权放行;兜底层仅在店内无 L1 目标时出现——空店帧(L1
+    无供给)L3 兜底照旧(①-⑬ 锁的既有断言域)。v3.3:条件从 v3.2 的
+    「过净支出闸」改为「店内 L1 目标在场」(闸已废除,行为断言不变)。"""
     sess = _sess(locked=False)   # 通道 B 帧
     monkeypatch.setattr(p2_spend_auth, '_hoard_projection',
                         lambda s, se: (frozenset({_DIR_PIECE}), True))
-    # L1 过闸帧:g=53,收入=5+1+息5=11;三张 5 费核心按单笔支出降序
-    # 累计 5→10→15>11 → 三张全入选(选中集非空)
+    # L1 在场帧(Σ支出 15 ≤ 收入 11+——旧净支出闸按支出降序累计会给出
+    # 非空选中集;v3.3 无论收支比,L1 在场即辖域)
     st = _st(gold=53, streak=-2, shop=_core_shop())
     cand_h, _, _ = _buy('花火', gold_cost=5, score=5.0)
     cand_l3, _, _ = _buy(_DIR_PIECE, gold_cost=1, score=5.0,
@@ -420,35 +429,112 @@ def test_lock15_high_value_tier_gates_fallback(monkeypatch) -> None:
     assert p2_spend_auth_spend_authorized(cand_h, st, st, sess, _REG_ON)
     assert not p2_spend_auth_spend_authorized(cand_l3, st, st, sess,
                                               _REG_ON)
-    # 兜底条件帧:空店(L1 无供给)→ 选中集空 → L3 兜底照旧放行
+    # 兜底条件帧:空店(店内无 L1 目标)→ L3 兜底照旧放行
     st_empty = _st(gold=53, streak=-2)
     assert p2_spend_auth_spend_authorized(cand_l3, st_empty, st_empty,
                                           sess, _REG_ON)
 
 
-def test_lock14_net_expense_gate_gold_account_drops(monkeypatch) -> None:
-    """锁⑭(§3.1 净支出闭环+W772 M0b):净支出闸选中集非空的授权帧,
-    放行买序列 Σ支出 > 本轮预期收入(金账下降,W772「毛支出>0 但金账
-    不降」空转形态的反向钉);L3 兜底件不进放行序列(负分候选零动作,
-    授权不救)。"""
+def test_lock14_window_water_target_no_income_gate(monkeypatch) -> None:
+    """锁⑭(v3.3 改写;§3.1 窗级水位目标+W779 审计①):v3.2 单帧净
+    支出闸废除——店内 L1 目标即使 Σ支出 ≤ 本轮预期收入(旧闸「累计
+    支出>收入前缀才放行」的必拒域,即 W779 观测的零净出手 88.5% 帧)
+    也授权放行(出手计划目标=窗级水位不升,判据在协议 V4 不在帧闸);
+    店内无 L1/XP/合法 sink 的帧零动作回落既有裁决(不强求出手);
+    窗级水位计入遥测披露键(sess_p2_auth_water,M0b 判读数据源)。"""
     from sr_od.application.currency_war.decision.decision_v2.\
         p2_spend_auth import _expected_round_income
     sess = _sess(locked=False)
     monkeypatch.setattr(p2_spend_auth, '_hoard_projection',
                         lambda s, se: (frozenset({_DIR_PIECE}), True))
-    st = _st(gold=53, streak=-2, shop=_core_shop())
-    cands = [_buy(nm, gold_cost=5, score=5.0)
-             for nm in ('花火', '瓦尔特', '三月七')]
-    res = arbitrate(cands, st, sess, _REG_ON)
-    buys = [a for a in res.actions if isinstance(a, BuyCard)]
-    assert len(buys) == 3, res.log
-    total = sum(a.card.cost for a in buys)
-    assert total > _expected_round_income(st), (total, res.log)   # 金账下降
-    # L3 兜底件不获授权救:负分候选零动作(既有非正分门拒,授权不放行)
+    # 旧闸必拒域钉:单张 1 费 L1 名件?不——取「三张 5 费核心 Σ=15>11」
+    # 的反例:单张 3 费核心(3 ≤ 收入 11,旧闸选中集空=落 L3 不放行,
+    # v3.2 下 spend_authorized 对该名返回 False)→ v3.3 放行
+    st = _st(gold=53, streak=-2,
+             shop=[ShopCard(x=0, name='三月七', cost=3)])
+    income = _expected_round_income(st)
+    assert 3 <= income   # 旧闸必拒域成立(Σ支出 ≤ 收入)
+    cand, _, _ = _buy('三月七', gold_cost=3, score=5.0)
+    assert p2_spend_auth_spend_authorized(cand, st, st, sess, _REG_ON)
+    # L3 兜底件仍不获救:负分候选零动作(既有非正分门拒,授权不放行)
     cand_l3, _, _ = _buy(_DIR_PIECE, gold_cost=1, score=-2.0,
                          tag='off_target')
     res_l3 = arbitrate([(cand_l3, -2.0, {})], st, sess, _REG_ON)
     assert res_l3.actions == [], res_l3.log
+    # 水位观测入披露键:三帧滚动窗(窗起点金/窗终金/窗内收支)
+    from sr_od.application.currency_war.telemetry.schema import DecisionTrace
+    assert DecisionTrace().sess_p2_auth_water is None
+    p2_spend_auth.p2_spend_auth_water_note(
+        _st(gold=53, streak=-2), sess, _REG_ON)
+    p2_spend_auth.p2_spend_auth_water_note(
+        _st(gold=60, streak=-2, round_num=3), sess, _REG_ON)
+    w = p2_spend_auth.p2_spend_auth_water_note(
+        _st(gold=58, streak=-2, round_num=4), sess, _REG_ON)
+    assert w['window_start_gold'] == 53 and w['window_end_gold'] == 58
+    assert w['window_income'] == 22 and w['window_spend'] == 17, w
+    assert w['rounds'] == [2, 3, 4]
+    # 同轮 re-decide 去重(刷后段链不重复记账)
+    w2 = p2_spend_auth.p2_spend_auth_water_note(
+        _st(gold=58, streak=-2, round_num=4), sess, _REG_ON)
+    assert w2 == w
+
+
+# ===== 锁⑯ XP sink 门边界(v3.3 新增;P21/ADR-0448 门 AND 不动)=====
+
+def test_lock16_xp_sink_gate_boundaries(monkeypatch) -> None:
+    """锁⑯(§3.1 XP sink+P21/ADR-0448):授权帧内买经验仅当 hp>停升级
+    线(ADR-0448)∧ 非 P21 濒死带(hp>10)∧ 概率窗未达(carry 费档查
+    表,[3] 提概率路径);两门帧/窗内帧 XP 授权为空。升级授权裁决落
+    ev.levelup_ev_basis 臂④ 'p2_auth_xp'——授权帧 arbiter 输出含
+    LevelUp(auth_basis 记臂名),门边界帧不含;off 臂谓词恒 False
+    (零漂移)。spend_authorized 对 LevelUp 恒 False(买/升通道分离)。"""
+    from sr_od.application.currency_war.kernel import cw_economy
+    from sr_od.application.currency_war.decision.decision_v2.ev import (
+        levelup_ev_basis,
+    )
+    sess = _sess(locked=False)
+    monkeypatch.setattr(cw_economy, '_target_core_cost',
+                        lambda s: ('某核心', 4))   # 概率窗目标级 L10
+    lu = Candidate(action=LevelUp(cost=4), tag='levelup', source='xp')
+    # 门内帧(hp 80>停升级线 21>10;level 6<10;T3∧T4):授权成立
+    st_ok = _st(gold=53, streak=-2, hp=80, level=6)
+    assert p2_spend_auth.p2_spend_auth_xp_authorized(st_ok, sess, _REG_ON)
+    assert levelup_ev_basis(st_ok, sess, _REG_ON, 53, 4,
+                            set(), val=5.0) == 'p2_auth_xp'
+    # P21 濒死带(hp=10)与停升级线内(hp=21≤线):授权为空且仲裁无 LevelUp
+    for hp in (10, 21):
+        st_b = _st(gold=53, streak=-2, hp=hp, level=6)
+        assert not p2_spend_auth.p2_spend_auth_xp_authorized(
+            st_b, sess, _REG_ON)
+    st_b = _st(gold=53, streak=-2, hp=10, level=6)
+    res = arbitrate([(lu, 5.0, {})], st_b, sess, _REG_ON)
+    assert not any(isinstance(a, LevelUp) for a in res.actions), res.log
+    # 血线门内帧仲裁兜底(blood_budget_stop 独立 AND,不依赖授权谓词)
+    st_line = _st(gold=53, streak=-2, hp=21, level=6)
+    res_line = arbitrate([(lu, 5.0, {})], st_line, sess, _REG_ON)
+    assert not any(isinstance(a, LevelUp) for a in res_line.actions), \
+        res_line.log
+    # hp 不可信帧 fail-closed 不授权(ADR-0448 血线谓词同口径)
+    st_u = _st(gold=53, streak=-2, hp=80, level=6, hp_readable=False,
+               hp_trusted=False)
+    assert not p2_spend_auth.p2_spend_auth_xp_authorized(st_u, sess,
+                                                         _REG_ON)
+    # 已在概率窗内(level≥L10)→ 升级不再提概率,授权消失
+    st_w = _st(gold=53, streak=-2, hp=80, level=10)
+    assert not p2_spend_auth.p2_spend_auth_xp_authorized(st_w, sess,
+                                                         _REG_ON)
+    # 非加急帧(常授权层)与开关关:恒 False(零漂移)
+    assert not p2_spend_auth.p2_spend_auth_xp_authorized(
+        _st(hp=80, level=6), sess, _REG_ON)
+    assert not p2_spend_auth.p2_spend_auth_xp_authorized(st_ok, sess,
+                                                         _REG_OFF)
+    # 买/升通道分离:spend_authorized 对 LevelUp 恒 False(授权帧内)
+    assert not p2_spend_auth_spend_authorized(lu, st_ok, st_ok, sess,
+                                              _REG_ON)
+    # 门内帧仲裁端到端:LevelUp 放行且 auth_basis 记臂名
+    res_ok = arbitrate([(lu, 5.0, {})], st_ok, sess, _REG_ON)
+    lus = [a for a in res_ok.actions if isinstance(a, LevelUp)]
+    assert len(lus) == 1 and lus[0].auth_basis == 'p2_auth_xp', res_ok.log
 
 
 # ===== W766 附带发现核查:授权与成交之间的补偿分数门(W768 顺手修)=====
