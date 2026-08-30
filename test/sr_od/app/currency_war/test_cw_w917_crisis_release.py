@@ -9,13 +9,15 @@ tag='release'。设计出处=ADR-0503 + 本批 REPORT
 (.debug/temp/currency_war/w917_crisis_release/REPORT.md §1-§2)。
 
 锁契约(每条=一个确定输入下的确定行为;不锁分布数值):
-- ① 开关关零漂移:危机溢余帧(默认 registry)指令 None,姿态原样;
+- ① 开关关零漂移:危机溢余帧(**显式注入 False**)指令 None,姿态原样
+  (开臂后默认 registry 已为第 3 态 True,关行为锁改为显式注入,
+  开关生命周期第 3 态义务,ADR-0503);
 - ② 开臂形态:crisis 指令预算式/rolls/姿态降级(save=True→False,
   tag='release')/session 写面(v3_release 经 evaluate_release);
 - ③ 辖域边界:息线以内(无溢余)不触发;非应急帧不劫持 flip 臂
   (reason='flip' 原语义);flip_hit 在应急带仍让位(辖区结构保留);
 - ④ 放行门:危机预算内刷新放行/越预算拒/boss_floor 地板拒;
-- ⑤ registry 字段面:默认 False;
+- ⑤ registry 字段面:默认 True(开关生命周期第 3 态,开臂已判);
 - ⑥ 血预算防线(行为锁):危机 wrap 保留 level_up 时,停升级门在危机臂
   下仍生效(hp≤停升级线拒);线与应急线之间带(停升级线<hp≤25)的
   升级许可=ADR-0448 线设计(线刻意深于应急线),非 crisis 臂新开面。
@@ -45,6 +47,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 
 _REG_ON = dataclasses.replace(DEFAULT_REGISTRY, crisis_release_enabled=True)
+# 关行为锁显式注入(开臂后默认 registry=True,零漂移锚不再由缺省承载;
+# 开关生命周期第 3 态义务=关行为仍测不删,ADR-0503)。
+_REG_OFF = dataclasses.replace(DEFAULT_REGISTRY, crisis_release_enabled=False)
 
 
 def _state(*, gold: int = 90, hp: int = 1, plane: int = 1, r: int = 5,
@@ -73,10 +78,11 @@ def _sess(state: GameState, *, save: bool = True) -> StrategySession:
 
 
 def test_crisis_off_zero_drift() -> None:
-    """默认 registry(关)危机溢余帧:指令 None、姿态原样、session 无
-    release(W907 病灶行为原样保留=零漂移锚)。"""
+    """显式注入 False 的危机溢余帧:指令 None、姿态原样、session 无
+    release(W907 病灶行为原样保留=零漂移锚;开臂后关行为靠显式注入
+    测,不靠缺省——开关生命周期第 3 态义务)。"""
     st = _state()
-    wrapped, d = evaluate_release(st, _sess(st), DEFAULT_REGISTRY, 'FORM',
+    wrapped, d = evaluate_release(st, _sess(st), _REG_OFF, 'FORM',
                                   _sess(st).v3_dp_posture.posture)
     assert d is None
     assert wrapped.tag != 'release'
@@ -189,9 +195,11 @@ def test_crisis_boss_floor_guard() -> None:
 # --- ⑤ registry 字段面 --------------------------------------------------------
 
 
-def test_registry_field_default_off() -> None:
-    """字段面:crisis_release_enabled 默认 False(开关生命周期第 1 态)。"""
-    assert DEFAULT_REGISTRY.crisis_release_enabled is False
+def test_registry_field_default_on() -> None:
+    """字段面:crisis_release_enabled 默认 True(开关生命周期第 3 态:
+    sim A/B 实花面过(W917/W930)+ 首局实机病灶复现(g_20260831_032006)
+    翻默认;实机观察局 ≥2 为确认门非开臂门,挂账 ADR-0503 尾注)。"""
+    assert DEFAULT_REGISTRY.crisis_release_enabled is True
 
 
 # --- ⑥ 血预算防线(危机 wrap 保留 level_up 的兜底论证,W930 补锁) --------------

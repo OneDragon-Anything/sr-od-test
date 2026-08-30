@@ -383,9 +383,10 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'w878_slow_burn_enabled': ('bool', False),
     'w878_synth_equip_dep_enabled': ('bool', False),
     # ===== 危机金出口臂(ADR-0503;W907 病灶:应急让位使危机帧 release
-    # 恒 None)——生命周期第 1 态默认关零漂移,开臂判据挂账 registry
-    # 字段注释;语义注释落点=registry 字段块
-    'crisis_release_enabled': ('bool', False),
+    # 恒 None)——生命周期第 3 态默认 True(开臂:sim A/B 实花面过 W917/W930
+    # + 首局实机病灶复现 g_20260831_032006;实机观察局为确认门非开臂门,
+    # 挂账 ADR-0503 尾注);语义注释落点=registry 字段块
+    'crisis_release_enabled': ('bool', True),
     # ===== 巨星强化角色决策意向维度(commit e19035df)
     # 只启决策层意向输出(落 reason/遥测),执行面未接(巨星 step2 坐标
     # 未建档+机制效果无真值);默认关;语义注释落点=registry 字段块

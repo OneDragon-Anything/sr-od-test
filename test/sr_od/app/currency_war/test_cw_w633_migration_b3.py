@@ -15,6 +15,8 @@ W623 预验尸(D0-D4)+ W630 A/B 协议 + W615 R1-R4 规则集。锁契约:
 """
 from __future__ import annotations
 
+import dataclasses
+
 from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
@@ -44,6 +46,9 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 )
 
 _REG = DEFAULT_REGISTRY
+# 关行为锁显式注入(危机臂开臂后默认 registry=True,ADR-0503;让位语义
+# 锁改注入 False 仍测,不删)。
+_REG_CRISIS_OFF = dataclasses.replace(_REG, crisis_release_enabled=False)
 
 
 def _state(*, gold: int = 100, plane: int = 1, r: int = 5, level: int = 6,
@@ -86,11 +91,14 @@ def test_jue23_sentinel_obligation_chain_alive() -> None:
 
 def test_no_supply_frame_yields_none_shape_only_in_emergency() -> None:
     """供给边界:应急帧预算=合法 0(血预算域),release 让位;常态帧
-    供给恒非零定义(禁 None 兜底穿批,W623 D0 要求 3)。"""
+    供给恒非零定义(禁 None 兜底穿批,W623 D0 要求 3)。
+    注入 crisis_release_enabled=False:锁钉的是「让位结构」语义
+    (ADR-0426 辖区),危机臂(ADR-0503)开臂后默认态在应急帧产
+    crisis 指令,属另一辖域,由 w917 锁组辖。"""
     st = _state(gold=100, hp=20, shop=[_sc('桑博', 2)], board={})
     sess = StrategySession()
     assert refresh_ev_budget(st, sess) == 0   # 血预算停手 → 合法 0
-    assert release_directive(st, sess, _REG, 'FORM',
+    assert release_directive(st, sess, _REG_CRISIS_OFF, 'FORM',
                              build_round_posture(st, sess)) is None
 
 
@@ -177,7 +185,9 @@ def test_blood_budget_stop_not_inflated_by_budget_merge() -> None:
     拒付层(blood_budget_refresh_blocked / blood_budget_levelup_blocked)
     ——budget 字段本身不做血预算特判(如实契约,非虚标)。
 
-    - 应急帧(hp=20):refresh_ev_budget==0 且 release 让位——合并无从
+    - 应急帧(hp=20):refresh_ev_budget==0 且 release 让位(注入
+      crisis_release_enabled=False 锁让位结构;危机臂开臂后默认态在
+      应急帧产 crisis 指令=ADR-0503 另一辖域,w917 锁组辖)——合并无从
       发生,授权字段不可能放大刷数;
     - 血预算带帧(hp=40,P1 末窗血预算不足):预算>0 但拒付层拦搜索型
       刷新 → 泄息/停手机制落到授权执行层,合并层无第二实现(W615 §2-R2.5
@@ -190,8 +200,8 @@ def test_blood_budget_stop_not_inflated_by_budget_merge() -> None:
     assert refresh_ev_budget(st_emerg, sess_e) == 0
     posture_e = build_round_posture(st_emerg, sess_e)
     assert posture_e.refresh_budget == 0
-    assert release_directive(st_emerg, sess_e, _REG, 'FORM',
-                             posture_e) is None    # 应急帧:全让位
+    assert release_directive(st_emerg, sess_e, _REG_CRISIS_OFF, 'FORM',
+                             posture_e) is None    # 应急帧:全让位(关臂注入)
 
     # 血预算带:hp=40 ∈ (emergency 25, p1_exit_blood_target 60),P1 末窗
     st_band = _state(gold=100, hp=40, r=8, shop=[_sc('桑博', 2)], board={})
