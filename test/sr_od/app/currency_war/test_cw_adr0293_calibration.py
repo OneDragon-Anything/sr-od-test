@@ -258,7 +258,7 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'revoke_evidence_min_thickness': ('float', 5.0),
     # ===== C1 溢余必花定向优先级 =====
     'c1_directed_spend_enabled': ('bool', False),
-    # (位面 2 支出授权 p2_spend_auth_* 五键已随定谳清理删除,ADR-0489。)
+    # (位面 2 支出授权 p2_spend_auth_* 五键已随定谳清理删除,ADR-0492。)
     # ===== 锁线后兑现链 v2(W802 落码;第 1 态默认关零漂移,开臂判据
     # ===== 挂 PREREG 兑现链A_B v3;占位参数不做生产决策)=====
     'realization_chain_enabled': ('bool', False),
