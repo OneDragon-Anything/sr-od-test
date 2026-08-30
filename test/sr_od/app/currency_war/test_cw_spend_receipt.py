@@ -299,3 +299,74 @@ def test_switch_off_zero_drift_on_normal_frame() -> None:
     assert sess.v3_posture_receipt is None
     assert sess.v3_posture_unfulfilled is None
     assert sess.v3_dp_posture.posture.tag == '升级'   # 姿态零改动
+
+
+# ---------- 返修批(w943_audit5):复位/义务豁免/通道辖域/免费计数 ----------
+
+def test_unfulfilled_reset_per_frame() -> None:
+    """复位锁(P1-1):未兑现帧后随「授权被拒发殆尽」的常规段 → 声明清
+
+    None——条件写滞留(跨轮/跨帧误归属)根除,schema「None=无未兑现帧」
+    逐帧成立。
+    """
+    st1 = _st(node='supply', gold=61, bench=_BENCH_WAITING)
+    sess = _sess(Posture(level_up=True, tag='升级'), st1)
+    arbitrate([], st1, sess, _reg(True))
+    assert sess.v3_posture_unfulfilled is not None   # 未兑现声明已写
+    # 下一帧:仅刷新授权且被通道前提产出侧拒发 → 无有效授权 → 无声明
+    st2 = _st(node='supply', gold=61, bench=_BENCH_WAITING, round_num=5)
+    sess.v3_dp_posture = RoundPosture((st2.plane, st2.round_num),
+                                      Posture(refresh_budget=2, tag='+D2'))
+    arbitrate([], st2, sess, _reg(True))
+    auth = sess.v3_spend_auth
+    assert auth is not None and not auth['level_up'] \
+        and auth['refresh_budget'] == 0   # 授权被拒发殆尽
+    assert sess.v3_posture_unfulfilled is None   # 复位:不携带上帧声明
+
+
+def test_reward_frame_legal_hoarding_not_unfulfilled() -> None:
+    """奖励帧豁免锁(P2-2):授权≠义务——奖励帧 0 买(合法攒息)不记
+
+    未兑现、不触发降级;义务型标记(buy_obligation=True)才入对账。
+    """
+    st = _st(node='reward', gold=60, bench=_BENCH_WAITING)
+    sess = _sess(Posture(tag='存息'), st)
+    arbitrate([], st, sess, _reg(True))
+    assert sess.v3_spend_auth['buy_budget'] > 0   # 前置:授权面已发
+    assert 'buy_reason' not in (sess.v3_posture_receipt or {})
+    assert sess.v3_posture_unfulfilled is None    # 攒息≠病灶
+    # 义务型保留位:置 True 后 0 买恢复入对账(降级路径语义不灭)
+    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+        build_spend_receipt,
+    )
+    sess.v3_spend_auth['buy_obligation'] = True
+    receipt = build_spend_receipt(st, sess, _reg(True), [], [])
+    assert receipt is not None and receipt.buy_reason == 'no_candidate'
+
+
+def test_reward_node_has_spend_channel() -> None:
+    """reward 通道锁(P2-3):奖励节点有商店执行通道(实机复盘 r1/r2/r8
+
+    买牌执行落地为证),不在无通道集——防未来误补 token 的语义反转。"""
+    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+        spend_channel_ok,
+    )
+    assert spend_channel_ok(_st(node='reward'))
+    assert spend_channel_ok(_st(node='battle'))
+    assert not spend_channel_ok(_st(node='supply'))   # 20-5 形态保持
+
+
+def test_free_refresh_counts_fulfilled() -> None:
+    """免费计数锁(P3-2):0 金刷新(免费额度)是渠道兑现,支出=0 不虚记。"""
+    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+        build_spend_receipt,
+    )
+    from sr_od.application.currency_war.kernel.cw_state import RefreshShop
+    st = _st(node='battle', bench=_BENCH_WAITING)
+    sess = _sess(Posture(refresh_budget=2, tag='+D2'), st)
+    attach_spend_authorization(st, sess, _reg(True))
+    receipt = build_spend_receipt(st, sess, _reg(True),
+                                  [RefreshShop(cost=0)], [])
+    assert receipt is not None
+    assert receipt.refresh_spent == 0        # 实付 0 金,不按缺省虚记 2
+    assert receipt.refresh_reason == ''      # 动作发生 = 渠道已兑现
