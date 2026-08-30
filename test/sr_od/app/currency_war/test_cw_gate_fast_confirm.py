@@ -201,16 +201,16 @@ def test_node_end_accelerator_is_fast_poll_not_trust(monkeypatch):
 def test_op_settle_waits_then_baseline_then_fast_poll(monkeypatch):
     """终裁锁(加速器②):操作段预估等待 = 基线重置点——
     先等再取基线,随后快 poll 确认 min_stable 窗(非单校验)。
-    等待值核减锁:1.5s(买牌特效实测 0.5-1s 上限+0.5s 余量;
-    低估由指纹重置机制兜底,见 gate._OP_SETTLE_S 注)。"""
+    等待值核减锁:1.2s(w781 自 1.5 核减:买牌特效实测 0.5-1s
+    上限+0.2s 余量;低估由指纹重置机制兜底,见 gate._OP_SETTLE_S 注)。"""
     from sr_od.application.currency_war.obs import cw_observation_gate as gate
     _patch_anchor_hit(monkeypatch)
     op = _FakeOp([_gray(v=50)] * 4)
     out = wait_stable_frame(op, profile=_prof(), segment='op_settle',
                             clock=_TickingClock(0.3))
     assert out is not None
-    assert gate._LAST_SETTLE_WAIT == gate._OP_SETTLE_S == 1.5, \
-        '操作段必须先走 1.5s 预估等待(基线重置点)'
+    assert gate._LAST_SETTLE_WAIT == gate._OP_SETTLE_S == 1.2, \
+        '操作段必须先走 1.2s 预估等待(基线重置点)'
     assert op.shot_count >= 2, \
         f'须基线+至少一轮指纹确认(非单帧放行),实际 {op.shot_count}'
 
@@ -232,7 +232,7 @@ def test_op_settle_window_still_enforced(monkeypatch):
                             timeout_s=3.0,
                             clock=_TickingClock(0.3))
     assert out is None, '操作段稳定窗必须真实测量,不得单校验放行'
-    assert gate._LAST_SETTLE_WAIT == 1.5
+    assert gate._LAST_SETTLE_WAIT == 1.2
 
 
 def test_op_settle_window_graded_to_floor(monkeypatch):
