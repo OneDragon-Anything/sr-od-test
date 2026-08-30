@@ -72,6 +72,14 @@ def test_seg_overflow_idle_spend_bidirectional() -> None:
     # bench 满守卫拦截轮 → 想买买不了,豁免
     guard = [_row(gold=55, waves_gold=55, bench_full_skipped_buys=2)]
     assert not chk.seg_check_overflow_idle_spend(guard)
+    # 息线邻近容忍带(ADR-0478):g0=51/52 浮动态不报;≥53 仍报
+    near1 = [_row(gold=51, waves_gold=51, node='battle')]
+    near2 = [_row(gold=52, waves_gold=52, node='battle')]
+    assert not chk.seg_check_overflow_idle_spend(near1)
+    assert not chk.seg_check_overflow_idle_spend(near2)
+    evs_far = chk.seg_check_overflow_idle_spend(
+        [_row(gold=53, waves_gold=53, node='battle')])
+    assert evs_far and evs_far[0]['gold_before'] == 53
 
 
 # ---------------------------------------------------------------- [11]
@@ -141,6 +149,17 @@ def test_seg_break_interest_exception_bidirectional() -> None:
     # 不破息(gold_end≥50 或起点<50)不管(买后仍 ≥50)
     calm = [_row(gold=51, waves_gold=52, actions=[_buy()])]
     assert not chk.seg_check_break_interest_exception(calm)
+    # 例外⑥boss 窗地板授权(ADR-0478):boss 节点破息但花后 ≥ boss_floor(10)
+    # → 豁免;跌破地板 → 越权仍报(detail 带越权标注)
+    boss_ok = [_row(gold=48, waves_gold=51, node='boss',
+                    actions=[_buy('线核件', cost=3, channel='engine')])]
+    boss_ok[0]['sim']['spend']['buys'] = {'d2_line_carry': 3}
+    assert not chk.seg_check_break_interest_exception(boss_ok)
+    boss_breach = [_row(gold=6, waves_gold=51, node='boss',
+                        actions=[_buy('线核件', cost=45, channel='engine')])]
+    boss_breach[0]['sim']['spend']['buys'] = {'d2_line_carry': 45}
+    evs_boss = chk.seg_check_break_interest_exception(boss_breach)
+    assert evs_boss and '越权' in evs_boss[0]['detail']
 
 
 # --------------------------------------------------------------- [13]
