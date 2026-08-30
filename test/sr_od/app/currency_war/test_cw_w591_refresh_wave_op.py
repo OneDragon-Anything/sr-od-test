@@ -100,9 +100,13 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 
     返回 (op, fixture_controller, defect_rows)。``gold_opts`` 是
     read_gold_opt 的逐次返回(耗尽后重复最后一个);``states`` 同型;
-    ``shop_reads`` 是 read_shop_cards 的逐次返回(名列表;W592 刷前名集
-    改为点击前现读后,该读数器被调 ≥2 次——第 1 次=点击前现读,第 2 次=
-    刷后重读;落空形态两次同牌面)。
+    ``shop_reads`` 是 read_shop_cards 的逐次返回(名列表)。
+    读序语义随 W891 候选①(执行边界压缩,报告
+    .debug/temp/currency_war/w891_c1_buy_edge/REPORT.md §1.4)重推:
+    - 仅刷新波:波循环顶整帧读即点击前现读(无买卡污染),**不再有
+      独立 pre-shot 读** → read_shop_cards 第 1 次 = 刷后重读;
+    - 买+刷新波(W592 语义不变):第 1 次 = 点击前现读,第 2 次 =
+      刷后重读;read_gold_opt 第 1 次 = 点击前现读金,第 2 次 = 刷后金。
     """
     from sr_od.application.currency_war.obs import cw_observation as cwo
     from sr_od.application.currency_war.obs import cw_observation_gate as gate
@@ -226,14 +230,16 @@ def test_refresh_wave_normal_chain(
     链路语义(出处=build_refresh_expect docstring 契约):期望以
     REFRESH_COST_BASE 基价在波内构建(10−2=8)→ 点击 → 刷后实读金 8、
     牌面已变 → 对账零票、台账零行、无免费 proc 留证。
+    (W891 候选①后仅刷新波刷前现读复用波循环顶读,替身序列见
+    _make_op docstring;牌面已变 = 刷后重读相对波顶读。)
     """
     events: list[str] = []
     op, fc, rows, _facts = _make_op(
         test_context, monkeypatch, tmp_path,
         plans=[[RefreshShop(cost=2)], []],
-        states=[_state(10, _OLD_NAMES), _state(10, _OLD_NAMES),
+        states=[_state(10, _OLD_NAMES),
                 _state(8, _NEW_NAMES), _state(8, _NEW_NAMES)],
-        gold_opts=[10, 8], shop_reads=[_OLD_NAMES, _NEW_NAMES], events=events)
+        gold_opts=[8, 8], shop_reads=[_NEW_NAMES, _NEW_NAMES], events=events)
 
     result = _execute(op)
 
@@ -273,9 +279,9 @@ def test_refresh_wave_free_refresh_proc_chain(
     op, fc, rows, _facts = _make_op(
         test_context, monkeypatch, tmp_path,
         plans=[[RefreshShop(cost=2)], []],
-        states=[_state(10, _OLD_NAMES), _state(10, _OLD_NAMES),
+        states=[_state(10, _OLD_NAMES),
                 _state(10, _NEW_NAMES), _state(10, _NEW_NAMES)],
-        gold_opts=[10, 10], shop_reads=[_OLD_NAMES, _NEW_NAMES], events=events)
+        gold_opts=[10, 10], shop_reads=[_NEW_NAMES, _NEW_NAMES], events=events)
 
     result = _execute(op)
 
