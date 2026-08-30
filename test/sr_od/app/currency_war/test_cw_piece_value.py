@@ -100,12 +100,20 @@ def _plain_name(cost: int) -> str:
 # ===== 锁 0(开关组缺省态)=====
 
 def test_lock0_switch_group_defaults_off() -> None:
-    """伞+三子旗标默认全关,权重缺省 0(生命周期第 1 态)。"""
+    """伞+三子旗标默认全关(生命周期第 1 态,零漂移主保险);
+    权重缺省 = 标定定谳值(w_activation=1.0=分量值=命题值满额映射,
+    P20 满额跳变金,w852 标定批 A-only 隔离 G4 绿;w_retention=0.0=
+    标定批判明现行辖域下无可行值的结论值,非占位)。锁语义已按
+    「锁的存在性纪律」重推:旧语义「占位值缺省 0」已被标定批取代,
+    零漂移由伞旗标保证(锁 4 权重非零伞关仍零漂移同款)。"""
     for f in ('piece_value_enabled', 'piece_value_buy_enabled',
               'piece_value_keep_enabled', 'piece_value_merge_enabled'):
         assert getattr(_REG_OFF, f) is False
-    assert _REG_OFF.piece_value_w_activation == 0.0
+    assert _REG_OFF.piece_value_w_activation == 1.0
     assert _REG_OFF.piece_value_w_retention == 0.0
+    # registry 缺省 ↔ Phase 1 权重类型缺省一致(单一参数入口不漂移)
+    w = phase1_weight_from_registry(_REG_OFF)
+    assert w == PieceValueWeightPhase1(w_activation=1.0, w_retention=0.0)
 
 
 # ===== 锁 1 分量可分解性 =====
