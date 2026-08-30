@@ -21,14 +21,13 @@
 from __future__ import annotations
 
 import dataclasses
-import itertools
 import logging
 import random
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2 import allocator
 from sr_od.application.currency_war.decision.decision_v2.allocator import (
     ALLOC_PARAM_SET,
@@ -44,7 +43,6 @@ from sr_od.application.currency_war.decision.decision_v2.allocator import (
     allocate,
     allocator_run,
 )
-from sr_od.application.currency_war.decision.decision_v2.ev import interest_cost
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
@@ -186,9 +184,13 @@ def test_refresh_estimator_hand_recalc(monkeypatch) -> None:
 
 def test_two_domain_split_verdict() -> None:
     """同一提案(Δp>0,大额 C=84)两域异判:停手窗域 EV<0 拒(P23.2
-    中心负判方向),死亡域第二账式 V=m_eff×Δp_eff>0 放(P23.3)。
-    死亡域帧即 Tier-2 边界帧显式用例(S0 加权成本=参数集内替换,
-    W706 §8-5 落点)。"""
+    中心负判方向);死亡域同拒(ADR-0493 重标定后语义——旧锁「死亡域
+    第二账式放行」的依据是 S0≈0 机会成本折价(金必死前提),该前提被
+    W810 死亡域审查反事实实测证伪(携金进 P2 3/3 到达可支出语境、
+    1 局 +2 轮存活),金按面值计后大额低增量提案在死亡域同负,且视界
+    截断取真实剩余战场(非骨架 5)。放行面改由「低成本×真实板面增量」
+    对照臂承载:V>0 的提案在死亡域仍放(P23.3 攥金死锁反命题的存活
+    形态——死亡域不是禁出手,是不为无区分度渠道付面值)。"""
     reg = DEFAULT_REGISTRY
     w = 1.0   # 构造小增量(w 量级,刻意不取跨档 Δp:纯 w 大额提案在
     # 停手窗必负,是 P23.2 负判的最强稳健形态)
@@ -207,7 +209,17 @@ def test_two_domain_split_verdict() -> None:
     v_death = m_death * w - _opportunity_cost(st_death, ss_death, reg,
                                               big_death,
                                               AllocDomain.DEATH)
-    assert v_death > 0, '死亡域第二账式必须放行(P23.3 攥金死锁反命题)'
+    assert v_death < 0, ('死亡域大额纯增量提案判拒(ADR-0493:金按面值'
+                         '计,纯 w×短视界盖不住 84 金成本)')
+    # 放行对照臂:低成本(dpeff 同为 w 量级)在死亡域 V>0 仍放——
+    # 攥金死锁反命题的存活形态(m_eff=真实剩余战场;gold=195 避开
+    # 10 档边界,破息项 I=0 隔离利息维,只验面值成本下的放行方向)
+    small = AllocProposal(kind='buy', dpeff=w, m_eff=0.0, cost=1)
+    st_death_cheap = _death_state(gold=195)
+    v_small = m_death * w - _opportunity_cost(st_death_cheap, ss_death,
+                                              reg, small,
+                                              AllocDomain.DEATH)
+    assert v_small > 0, '死亡域低成本提案仍放行(P23.3 反命题存活形态)'
 
 
 # ---------- P2 破坏族重derive 锁(13-vs-7 构造反例;§4-P2) ----------
@@ -413,11 +425,15 @@ def test_refresh_arm_blood_budget_stop_pay() -> None:
 # ---------- W733 ②裁决落码锁:死亡域 levelup=ALL IN 窗授权形态 ----------
 
 def test_death_domain_levelup_allin_shape(monkeypatch) -> None:
-    """裁决(P23.3+v6 §3+ADR-0448):死亡域 levelup 出手=授权形态——
-    硬闸只有 P21 硬停(blood_budget_levelup_blocked),其对位面末
-    ALL IN 窗([18])按自身设计让位;白名单 auth 由供给层继承
-    (W718 锁辖)。锁两面:P21 域内(非 ALL IN)不出 levelup;
-    ALL IN 窗+白名单放行 → levelup 供给(seed 641095 r9 形态)。"""
+    """裁决(P23.3+v6 §3+ADR-0448;价值门=ADR-0493):死亡域 levelup
+    出手=授权形态——硬闸只有 P21 硬停(blood_budget_levelup_blocked),
+    其对位面末 ALL IN 窗([18])按自身设计让位;白名单 auth 由供给层
+    继承(W718 锁辖);ADR-0493 增补价值门:供给还要求板面分量 dwin>0
+    (W810 死亡域审查:本锁原用例帧 r9 板满 levelup 的 dwin 实测=0,
+    dpeff 纯 w——反事实三局 0 正 EV、1 局负 EV,该形态被定谳否决)。
+    锁三面:P21 域内(非 ALL IN)不出 levelup;ALL IN 窗+白名单放行
+    ∧dwin>0 → levelup 供给;ALL IN 窗+白名单放行∧dwin=0(饱和面)
+    → 不供给(W810 形态回归线)。"""
     from sr_od.application.currency_war.decision.decision_v2 import ev as ev_mod
     reg = DEFAULT_REGISTRY
     tbl = ['battle'] * 8 + ['boss']
@@ -438,15 +454,28 @@ def test_death_domain_levelup_allin_shape(monkeypatch) -> None:
     props = _supply_impl(st8, _sess(tbl), reg, AllocDomain.DEATH)
     assert not [p for p in props if p.kind in ('levelup', 'comp')], \
         'P21 硬停域(非 ALL IN)不出升级提案'
-    # ALL IN 窗(r9 位面末最后一战):P21 让位,白名单放行 → 供给
+    # ALL IN 窗(r9 位面末最后一战):P21 让位,白名单放行;板面增量
+    # >0(after 帧人口位 9>8 区分 before/after)→ 供给
     st9 = _death_state(round_num=9)
     full_board(st9)
     ss9 = _sess(tbl)
     ss9.node_type_current = 'boss'   # 位面末 boss 节点(ALL IN 窗真值)
+    _before_id = id(st9)   # 增量按对象身份区分 before/after(simulate
+    # 的 LevelUp 只加经验不保证跨档,不能拿 max_units 当判别键)
+    monkeypatch.setattr(
+        allocator, '_win_eq',
+        lambda st, rg: 0.5 if id(st) == _before_id else 0.7)
     props = _supply_impl(st9, ss9, reg, AllocDomain.DEATH)
     lus = [p for p in props if p.kind == 'levelup']
-    assert lus, 'ALL IN 窗+白名单放行=死亡域 levelup 授权形态'
+    assert lus, 'ALL IN 窗+白名单放行∧板面增量>0=死亡域 levelup 授权形态'
     assert lus[0].actions[0].auth_basis == 'pop_slot'
+    # ALL IN 窗+白名单放行∧dwin=0(饱和面,W810 实测形态)→ 不供给
+    monkeypatch.setattr(allocator, '_win_eq',
+                        lambda st, rg: 0.778)   # 恒饱和:任意动作 dwin=0
+    props = _supply_impl(st9, _sess(tbl), reg, AllocDomain.DEATH)
+    assert not [p for p in props if p.kind == 'levelup'], \
+        '饱和面(dwin=0)死亡域 levelup 不供给(ADR-0493 价值门;' \
+        'W810 反事实:纯 w levelup 0 正 EV)'
 
 
 # ---------- 记账扩展:分配器帧位(v6 §6) ----------
