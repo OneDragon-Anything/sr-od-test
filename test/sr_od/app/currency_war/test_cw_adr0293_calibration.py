@@ -258,6 +258,11 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'revoke_evidence_min_thickness': ('float', 5.0),
     # ===== C1 溢余必花定向优先级 =====
     'c1_directed_spend_enabled': ('bool', False),
+    # ===== 位面 2 支出授权(W760 落码;ADR-0480;开臂挂账见 registry 注释)=====
+    'p2_spend_auth_enabled': ('bool', False),
+    'p2_spend_auth_fail_streak_n': ('int', 2),
+    'p2_spend_auth_reserve_floor': ('int', 20),
+    'p2_spend_auth_line_band_floor': ('int', 45),
     # ===== 形态达标三方向 =====
     'recipe_fence_enabled': ('bool', False),
     'form_break_sell_blocked_enabled': ('bool', False),
