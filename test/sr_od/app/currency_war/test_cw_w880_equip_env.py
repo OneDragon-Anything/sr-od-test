@@ -144,13 +144,26 @@ def test_damage_side_order_front_first() -> None:
 
 
 def test_same_row_core_first() -> None:
-    """同位级(同排)下输出核心先于非 core(软弱无力罚输出 80% 最实)。"""
+    """同排并列时的辖域优先链(ADR-0502):可行性守卫(ADR-0391)>
+    承伤序 > core-first > 集中度——core-first 只在「该件对该候选守卫
+    可行」的候选内生效,首选 core 被守卫淘汰后改派落到可行次选是
+    约束优先于偏好的正常让位,非回归。
+
+    让位场景:阿雅(core)已穿以太钻头,幸运星 × 以太钻头合成产物
+    ∉ key 集 → 例外①不成立、例外②对 core 不成立 → 守卫拦;
+    丹恒(非 core)两件均回收合格 → 例外②放行。两候选同 2/3 同
+    gap,80% 罚差分为零,让位无实际行为损失。旧语义(无条件断言
+    core 必先凑满)把偏好序写成合法性之上的断言,未被任何设计出处
+    支撑,锁组落成即红从未对账——按锁的存在性纪律改写,语义出处 =
+    ADR-0502(让位事件经 fill3 的 pairing-guard yield debug 行披露)。"""
     dep = [BenchChar(slot=1, char_id='阿雅', position_pref='back'),
            BenchChar(slot=2, char_id='丹恒', position_pref='back')]
     occ = {('back', 1): ['以太钻头', '和平手枪'],
            ('back', 2): ['以太钻头', '和平手枪']}
     new, moved = apply_fill3([('丹恒', '幸运星')], dep, occ, _COMP)
-    assert moved == 1 and new == [('阿雅', '幸运星')]
+    assert moved == 1
+    assert new == [('丹恒', '幸运星')], \
+        'core 首选被配对守卫让位,改派落可行次选(ADR-0502)'
 
 
 # ===== 5. 保护集与成员无损 =====

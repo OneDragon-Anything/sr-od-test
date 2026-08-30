@@ -10,6 +10,9 @@
 - 案 b 臂(simulate_p2_replay_entry):共享循环体(账本 plane=2、
   节点序列、进场态继承、ts 从 1 起);
 - headline 扩展键 + 检查器(带锚/胜率锚,含变异涌现锁);
+  胜率带锚已重锚至 P2_WIN_RATE_BAND=(0.0,0.45)(sim/checks/calib.py
+  常量注:W910 确定性修复后 HEAD 实测 0.24-0.28 双窗 + headroom;
+  本文件只锁形状与涌现,带值单一源在常量注);
 - headline 观测派生(金带走量/价格带笔数/意向切换/lv 到达轮)。
 n 取断言成立最小值(README 纪律 7);结构性断言用 fallback,
 结算链路用 snapshot。
