@@ -274,45 +274,90 @@ def test_apply_hp_none_keeps_reconciled_value() -> None:
     assert (st.hp, st.hp_readable, st.hp_trusted) == before
 
 
-# ---------- 组7:r1 规则真值(开局满血 100,来源=规则非读取) ----------
-# 游戏规则保证:位面1轮次1(首战未打)备战帧 hp=100。写入点按可信真值赋
-# (100, True, True);r2+ 不适用(仍走结算真值/读取链,fail-closed 不变)。
+# ---------- 组7:r1 备战帧 hp 真值(画面读值为准,严禁 100 兜底) ----------
+# 用户修正前提:r1 血量固定但**不恒为 100**(随当局难度/词缀变)——真值源=
+# 备战画面显示值;读失败(重试后仍 miss)=诚实未知(hp=None),默认 100
+# 兜底在 r1 语境废除;r2+ 结算真值链/新鲜度门照旧。
 
 
-def test_r1_rule_pred_applicable() -> None:
-    """判据面:P1 r1 且无任何 hp 真值 → 适用;r2/已有真值/位面交接 r1/轮次未读到 → 不适用。"""
+def test_r1_retry_read_hp_retries_then_recovers() -> None:
+    """r1 重试读:miss 后重试,第 2 次命中 → 返回读数(读到的值即真读,
+    不恒为 100——如难度修正后的 80 照收)。"""
     from sr_od.application.currency_war.operations.prep.shop import (
-        _r1_rule_hp_applicable,
+        _r1_retry_read_hp,
     )
-    assert _r1_rule_hp_applicable((1, 1), None, None) is True
-    # r2+:结算真值已在,走既有链
-    assert _r1_rule_hp_applicable((1, 2), 96, None) is False
-    assert _r1_rule_hp_applicable((1, 2), None, 96) is False
-    # 位面交接 r1:hp 带过,不再恒满血
-    assert _r1_rule_hp_applicable((2, 1), None, None) is False
-    # 轮次未读到(None):判据拒绝(宁 fail-closed 不误赋)
-    assert _r1_rule_hp_applicable(None, None, None) is False
+    calls = {'n': 0}
+
+    def _miss_then_hit() -> int | None:
+        calls['n'] += 1
+        return None if calls['n'] == 1 else 80
+    assert _r1_retry_read_hp(_miss_then_hit) == 80
+    assert calls['n'] == 2
 
 
-def test_r1_rule_frame_consumable_and_outside_band_passes() -> None:
-    """r1 规则真值帧 (100, True, True) 经消费门可评估:满血 100 线外放行
-    (与真读同可信度;此前该帧两位 False 被 fail-closed 拒评估)。"""
-    st = _state_with_bits(100, True, True)
+def test_r1_retry_read_hp_persistent_miss_honest_none() -> None:
+    """r1 重试穷尽仍 miss → None(诚实未知;严禁 100 兜底)。"""
+    from sr_od.application.currency_war.operations.prep.shop import (
+        _r1_retry_read_hp,
+    )
+    calls = {'n': 0}
+
+    def _always_miss() -> int | None:
+        calls['n'] += 1
+        return None
+    assert _r1_retry_read_hp(_always_miss) is None
+    assert calls['n'] == 2   # 恰好重试上限,不无限等
+
+
+def _record_one(st: GameState, run_id: str, tmp_path) -> dict:
+    """记录一帧决策迹并读回(decisions.jsonl 单行;tmp_path 隔离零副作用)。"""
+    from sr_od.application.currency_war.telemetry.recorder import (
+        TelemetryRecorder,
+    )
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    rec.record_decision(run_id, 'A1', st, '', {}, {}, [])
+    import json
+    lines = (tmp_path / 'decisions.jsonl').read_text(
+        encoding='utf-8').strip().splitlines()
+    return json.loads(lines[-1])
+
+
+def test_r1_miss_frame_trace_hp_none_not_100(tmp_path) -> None:
+    """r1 读失败帧(两位皆 False)→ 决策迹 hp=None 诚实未知,不再把
+    对账层兜底 100 写进语料(新断言:r1 读失败不再产 100)。"""
+    st = _state_with_bits(100, False, False)   # 对账层兜底形态
     st.plane, st.round_num = 1, 1
-    st.node_type = 'battle'
-    assert hp_decision_trusted(st) is True
-    assert blood_budget_levelup_blocked(
-        st, StrategySession(), DEFAULT_REGISTRY) is False
+    row = _record_one(st, 't-r1-miss', tmp_path)
+    assert row['hp'] is None
+    assert row['hp_readable'] is False
 
 
-def test_r1_rule_frame_match_archive_trusted() -> None:
-    """遥测对账面:r1 规则真值帧在 hp 真值链显为 trusted=True
-    (此前同形态被当 miss 显影为不可信、下游降权)。"""
+def test_r1_real_read_frame_trace_keeps_value(tmp_path) -> None:
+    """r1 真读帧(读到的值即 trusted)→ trace.hp=读数值照记(非 100 也照记)。"""
+    st = _state_with_bits(80, True, True)
+    st.plane, st.round_num = 1, 1
+    row = _record_one(st, 't-r1-hit', tmp_path)
+    assert row['hp'] == 80
+    assert row['hp_readable'] is True
+
+
+def test_r2_unread_frame_trace_unchanged(tmp_path) -> None:
+    """r2+ 不变:同节点沿用帧 (16, False, True) 的 hp=16 照记(结算真值
+    链/新鲜度门口径零回归);r2 两位皆 False 帧也不强制 None(边界仅 r1)。"""
+    st = _state_with_bits(16, False, True)
+    st.plane, st.round_num = 1, 2
+    row = _record_one(st, 't-r2', tmp_path)
+    assert row['hp'] == 16
+
+
+def test_r1_rule_frame_match_archive_none_honest() -> None:
+    """遥测对账面:r1 读失败帧 hp=None → hp 真值链落 source='none'
+    trusted=False(诚实未知;不再以兜底 100 显影成候选错值)。"""
     from sr_od.application.currency_war.telemetry.match_archive import _hp_entry
-    frame = {'hp': 100, 'hp_readable': True,
-             'state': {'hp_trusted': True}}
-    assert _hp_entry(frame, None) == {'hp': 100, 'source': 'frame',
-                                      'trusted': True}
+    frame = {'hp': None, 'hp_readable': False,
+             'state': {'hp_trusted': False}}
+    assert _hp_entry(frame, None) == {'hp': None, 'source': 'none',
+                                      'trusted': False}
 
 
 # ---------- 组5:sim 零漂移锁 ----------
