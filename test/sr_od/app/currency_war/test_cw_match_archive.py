@@ -1,0 +1,184 @@
+"""按局存档(cw match archive)单元测试。
+
+覆盖:game_id 跨段继承分组 / hp 真值链可信位 / 装配产物与原子写 /
+水位线(旧数据不回填)/ 切片物化视图与源目录同源(--match ≡ --run)。
+数据全部合成在 tmp_path,零真实 .debug 副作用。
+"""
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, 'src')
+
+from sr_od.application.currency_war.telemetry import match_archive as arch
+
+
+def _write_jsonl(d: Path, name: str, rows: list[dict]) -> None:
+    d.mkdir(parents=True, exist_ok=True)
+    with (d / name).open('w', encoding='utf-8') as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + '\n')
+
+
+def _dec(run_id, plane, rnd, ts, **kw):
+    base = {'schema_version': 1, 'run_id': run_id, 'plane': plane,
+            'round_num': rnd, 'ts': ts, 'gold': 10, 'gold_readable': True,
+            'hp': 100, 'hp_readable': False, 'strategy_id': 'decision_v2',
+            'actions': [], 'state': {'node_type': '普通战斗', 'level': 3,
+                                     'hp_trusted': None, 'board': {},
+                                     'deployed': []}}
+    base.update(kw)
+    return base
+
+
+def _out(run_id, plane, rnd, ts, hp_after, conf=1.0, node_type='普通战斗'):
+    return {'schema_version': 1, 'run_id': run_id, 'plane': plane,
+            'round_num': rnd, 'ts': ts, 'node_type': node_type,
+            'hp_after': hp_after, 'hp_confidence': conf, 'killed': False,
+            'board_before': {}, 'bench_count': 0}
+
+
+@pytest.fixture()
+def replay(tmp_path: Path) -> Path:
+    """两段一局(run_A 起于 p1r1,run_B 续局起于 p1r9)+ 独立一局 run_C。"""
+    rd = tmp_path / 'replay'
+    dec, out, runs = [], [], []
+    # 局 g_A:段 A p1r1-r2(帧 hp=100 不可信,outcome 结算真值 60/52)
+    dec += [_dec('run_20260830_094811', 1, 1, '2026-08-30T09:48:11', target_comp='甲'),
+            _dec('run_20260830_094811', 1, 2, '2026-08-30T09:50:00')]
+    out += [_out('run_20260830_094811', 1, 1, '2026-08-30T09:49:00', 60),
+            _out('run_20260830_094811', 1, 2, '2026-08-30T09:51:00', 52)]
+    runs.append({'run_id': 'run_20260830_094811', 'ts': '2026-08-30T10:09:38',
+                 'result': 'stopped', 'plane_reached': 1,
+                 'rounds_survived': 2, 'final_hp': 52, 'difficulty': 'A8'})
+    # 段 B 续局:首帧 p1r9(非 (1,1))→ 继承 g_A;p2r1 掉血 52→40(败场)
+    dec += [_dec('run_20260830_101513', 1, 9, '2026-08-30T10:17:16',
+                 actions=[{'__type__': 'BuyCard', 'card': {'name': '椒丘', 'cost': 2}}]),
+            _dec('run_20260830_101513', 2, 1, '2026-08-30T10:25:00',
+                 dp_posture='release', form_score=0.5, sess_p1_pair={'a': 1})]
+    out += [_out('run_20260830_101513', 1, 9, '2026-08-30T10:20:00', 18),
+            _out('run_20260830_101513', 2, 1, '2026-08-30T10:26:00', 40, node_type='boss')]
+    runs.append({'run_id': 'run_20260830_101513', 'ts': '2026-08-30T10:31:31',
+                 'result': 'loss', 'plane_reached': 2,
+                 'rounds_survived': 1, 'final_hp': 0, 'difficulty': ''})
+    # 独立局 run_C(起于 p1r1)
+    dec += [_dec('run_20260830_110000', 1, 1, '2026-08-30T11:00:00')]
+    out += [_out('run_20260830_110000', 1, 1, '2026-08-30T11:01:00', 80)]
+    runs.append({'run_id': 'run_20260830_110000', 'ts': '2026-08-30T11:10:00',
+                 'result': 'loss', 'plane_reached': 1,
+                 'rounds_survived': 1, 'final_hp': 0})
+    _write_jsonl(rd, 'decisions.jsonl', dec)
+    _write_jsonl(rd, 'outcomes.jsonl', out)
+    _write_jsonl(rd, 'runs.jsonl', runs)
+    _write_jsonl(rd, 'shop_snapshots.jsonl', [
+        {'run_id': 'run_20260830_101513', 'plane': 1, 'round_num': 9,
+         'ts': '2026-08-30T10:18:00', 'event': 'offer', 'gold': 12, 'shop': []},
+        {'run_id': 'run_20260830_101513', 'plane': 1, 'round_num': 9,
+         'ts': '2026-08-30T10:18:30', 'event': 'refresh', 'gold': 10, 'shop': []}])
+    _write_jsonl(rd, 'invest_cards.jsonl', [
+        {'run_id': 'run_20260830_094811', 'kind': 'env', 'name': '增发货币', 'chosen': True}])
+    _write_jsonl(rd, 'exogenous.jsonl', [
+        {'run_id': 'run_20260830_094811', 'kind': 'briefing', 'round_num': 0,
+         'ts': '2026-08-30T09:47:00', 'detail': '难度A8', 'state_snapshot': {}}])
+    return rd
+
+
+def test_assign_games_cross_segment_inheritance(replay: Path):
+    """段首帧非 (p1,r1) 起 = 续局 → 继承上一段 game_id;独立局另起。"""
+    games = arch.assign_games(replay)
+    # run_B 首帧 (p1,r9) 非 (p1,r1) → 并入 run_A 所在局;run_C 自成一局
+    assert [g['game_id'] for g in games] == ['g_20260830_094811',
+                                             'g_20260830_110000']
+    g1 = games[0]
+    assert g1['segments'] == ['run_20260830_094811', 'run_20260830_101513']
+    assert g1['start_ts'] == '2026-08-30T09:48:11'
+    assert g1['end_ts'] == '2026-08-30T10:31:31'
+    assert games[1]['segments'] == ['run_20260830_110000']
+
+
+def test_archive_hp_truth_chain(replay: Path):
+    """hp 真值链:结算屏(conf≥0.9)优先;备帧 hp=100 不可信不冒充真值。"""
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
+    r11 = by_key[(1, 1)]
+    assert r11['hp'] == 60 and r11['hp_source'] == 'settlement'
+    assert r11['hp_trusted'] is True
+    # 掉血轮列表(败场节点)= hp 链上 delta<0 的轮(p1r9: 52→18)
+    assert any(n['plane'] == 1 and n['round'] == 9 and n['delta'] == -34
+               for n in a['loss_nodes'])
+    # 只有无结算行的轮才落备帧兜底(本 fixture 全有结算行)
+    assert all(r['hp_source'] == 'settlement' for r in a['rounds'])
+
+
+def test_frame_hp_fallback_marks_untrusted(replay: Path):
+    """无结算行的轮 → 备帧兜底,且 hp_readable=False 必标不可信。"""
+    games = arch.assign_games(replay)
+    # run_C 只造 decisions(删 outcome 行模拟读不到结算)
+    out_p = replay / 'outcomes.jsonl'
+    rows = [json.loads(l) for l in out_p.open(encoding='utf-8') if l.strip()]
+    rows = [r for r in rows if r.get('run_id') != 'run_20260830_110000']
+    _write_jsonl(replay, 'outcomes.jsonl', rows)
+    a = arch.build_archive(replay, games[1])
+    r = a['rounds'][0]
+    assert r['hp'] == 100 and r['hp_source'] == 'frame'
+    assert r['hp_trusted'] is False
+
+
+def test_assemble_game_writes_index_and_no_tmp(replay: Path):
+    """装配产物:match_*.json + index.jsonl 一行一局;无 .tmp 残留(原子写)。"""
+    a = arch.assemble_game(replay, 'g_20260830_094811')
+    assert a is not None and len(a['rounds']) == 4
+    assert a['endgame']['result'] == 'loss'          # 末段 loss = 全局结果
+    assert a['endgame']['abandoned'] is False
+    assert a['opening']['chosen_env'] == ['增发货币']
+    assert a['continuity_note'] == ''
+    assert not list((replay / 'matches').glob('*.tmp'))
+    idx = [json.loads(l) for l in
+           (replay / 'matches' / 'index.jsonl').open(encoding='utf-8')]
+    assert len(idx) == 1 and idx[0]['game_id'] == 'g_20260830_094811'
+    assert idx[0]['segments'] == ['run_20260830_094811', 'run_20260830_101513']
+
+
+def test_assemble_abandoned_marked(replay: Path):
+    """末段无 runs 摘要 = abandoned(ADR-0235 口径:中断局也装配)。"""
+    runs_p = replay / 'runs.jsonl'
+    rows = [json.loads(l) for l in runs_p.open(encoding='utf-8') if l.strip()]
+    _write_jsonl(replay, 'runs.jsonl', [r for r in rows
+                                        if r.get('run_id') != 'run_20260830_110000'])
+    a = arch.assemble_game(replay, 'g_20260830_110000')
+    assert a['endgame']['abandoned'] is True
+    assert a['endgame']['result'] == 'abandoned'
+
+
+def test_assemble_pending_watermark_no_backfill(replay: Path):
+    """旧数据不回填:首调只落水位线;之后只装水位线后的新局。"""
+    assert arch.assemble_pending(replay) == []
+    assert not (replay / 'matches').exists() or not list(
+        (replay / 'matches').glob('match_*.json'))
+    # 新局落库(晚于水位线)→ 下一触发只装它
+    _write_jsonl(replay, 'decisions.jsonl', (
+        [json.loads(l) for l in (replay / 'decisions.jsonl')
+         .open(encoding='utf-8') if l.strip()]
+        + [_dec('run_20260830_120000', 1, 1, '2026-08-30T12:00:00')]))
+    _write_jsonl(replay, 'outcomes.jsonl', (
+        [json.loads(l) for l in (replay / 'outcomes.jsonl')
+         .open(encoding='utf-8') if l.strip()]
+        + [_out('run_20260830_120000', 1, 1, '2026-08-30T12:01:00', 70)]))
+    done = arch.assemble_pending(replay)
+    assert done == ['g_20260830_120000']
+
+
+def test_materialized_slice_views_equal_source(replay: Path):
+    """--match 视图同源:切片物化后 query_* 输出与源目录逐字节一致。"""
+    from sr_od.application.currency_war.telemetry import query as q
+    a = arch.assemble_game(replay, 'g_20260830_094811')
+    slice_dir = arch.materialize_slice(a, replay / '_slice_tmp')
+    for seg in ('run_20260830_094811', 'run_20260830_101513'):
+        for view in (q.query_rounds, q.query_supply, q.query_anomalies,
+                     q.query_hp, q.query_economy):
+            assert view(slice_dir, seg) == view(replay, seg), \
+                f'{view.__name__}@{seg}: 档案切片视图与源目录不一致'
+    import shutil
+    shutil.rmtree(slice_dir)
