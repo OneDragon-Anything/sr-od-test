@@ -72,3 +72,38 @@ def test_preference_table_covers_and_valid() -> None:
     assert set(COMP_MEGASTAR_PREFERENCE) <= comp_names
     for stars in COMP_MEGASTAR_PREFERENCE.values():
         assert set(stars) <= set(_ALL)
+
+
+# —— select_megastar_enhance(巨星强化角色意向,绑定序锁;W889 批)——
+
+
+def _state(deployed, bench=()):
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+    s = GameState()
+    s.deployed = [BenchChar(slot=i + 1, char_id=n) for i, n in enumerate(deployed)]
+    s.bench = [BenchChar(slot=i + 1, char_id=n) for i, n in enumerate(bench)]
+    return s
+
+
+def test_enhance_binds_core_front_then_bench() -> None:
+    """绑定序:①core 前排 → ②core 后台 → ③首个前排 → ④无板 → None。
+    出处=cw_comps.select_megastar_enhance docstring(机制语义待证假设,
+    消费开关 registry.megastar_enhance_enabled 默认关)。"""
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        select_megastar_enhance,
+    )
+
+    s = _S()
+    # core 白厄在前排 → 直接绑
+    assert select_megastar_enhance(
+        _state(['素裳', '白厄']), _by_name('反甲白厄')) == '白厄'
+    # core 知更鸟只在后台 → 绑后台 core
+    assert select_megastar_enhance(
+        _state(['素裳'], ['知更鸟']), _by_name('追击飞霄')) == '知更鸟'
+    # 无 core 在板 → 首个前排兜底
+    assert select_megastar_enhance(
+        _state(['素裳', '寒鸦']), _by_name('反甲白厄')) == '素裳'
+    # 无 target → 首个前排
+    assert select_megastar_enhance(_state(['素裳']), None) == '素裳'
+    # 板上无角色 → None
+    assert select_megastar_enhance(_state([]), _by_name('反甲白厄')) is None
