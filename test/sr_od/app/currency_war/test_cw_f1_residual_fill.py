@@ -128,6 +128,29 @@ def test_seed_640576_no_residual_lag_after_fill() -> None:
                for r in res.ledger)
 
 
+def test_seed_643567_fence_held_not_flagged() -> None:
+    """W767 取证局锁:换阵重摆期补部署无残余(全部 skip 轮 lag=0)。
+
+    643567 r5-r8:演进换阵每轮把板面拆回 2 人,补部署按围栏(生产
+    同源)回填配方/核心 2 件;bench 残余 = 在场同名素材(dedup)+
+    跨线散牌(配方底线合法 held)——fill lag=0 = 围栏认可件全部
+    上完,属合法过渡形态(W755/W767 同型)。检查器「有货」口径已
+    收敛到 lag(见 check_deploy_fills_cap),本局不得再报。
+    """
+    from sr_od.application.currency_war.sim.checks.ledger import (
+        check_deploy_fills_cap,
+    )
+
+    res = simulate_p1(643567, pool='snapshot', planes=2)
+    fills = [(int(r.get('round_num') or 0),
+              int((r.get('sim') or {}).get('deploy_lag_units') or 0))
+             for r in res.ledger
+             if (r.get('sim') or {}).get('fence_skipped')]
+    assert fills, '取证形态应在该 seed 出现(否则换锁帧)'
+    assert all(n == 0 for _, n in fills), fills
+    assert check_deploy_fills_cap(res.ledger) == []
+
+
 # ---------- 锁 2:保留集锁 ----------
 
 def test_reserved_pieces_not_deployed() -> None:
@@ -196,8 +219,8 @@ def _short_row(rn: int) -> dict:
     return {
         'plane': 1, 'round_num': rn,
         'state': {'deployed': [{'char_id': f'x{k}'} for k in range(2)],
-                  'cap': 6,
-                  'bench': [{'char_id': f'y{k}'} for k in range(5)]},
+                  'cap': 6},
+        'sim': {'deploy_lag_units': 2},
     }
 
 
