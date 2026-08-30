@@ -155,6 +155,39 @@ def test_reason_unknown_flags_divergence() -> None:
     assert equip_alloc_empty_reason(None, dep, ['生命之花'], None) == 'unknown'
 
 
+def test_blocked_items_not_discarded_for_later_chars() -> None:
+    """配对守卫拦下的件必须**留在池里**轮给后面的人,不得 pop 丢弃。
+
+    出处:equip_allocation docstring ADR-0391 节「发不完留在 owned 囤着」
+    与分配体内「跳过=留 owned」注释;实机反例见复盘
+    `.debug/temp/currency_war/replay/matches/reviews/g_20260831_032006.md`
+    r7 形态(列车配方伪 comp,三月七穿以太钻头,池里 4 件全是与其互为
+    配方的基础件 → 旧实现整池被 core 循环吃光,alloc=[] 而诊断判
+    「存在可行组合」= unknown 漂移)。锁语义:
+    1. 同帧下无残留件的角色(饮月)能分到件(非空分配);
+    2. 被拦的 core(三月七)一件不取,被拦件不消失(留给他人/owned);
+    3. 分配空 ⇔ 归因非 unknown(两函数同输入同结论的契约恢复)。
+    """
+    assert synthesize_target('以太钻头', '折叠小刀') is not None, '图谱前提:池件与已穿件互为配方'
+    comp = _mkcomp([], ['三月七', '丹恒·饮月'])
+    dep = [BenchChar(slot=1, char_id='丹恒·饮月', position_pref='front'),
+           BenchChar(slot=2, char_id='三月七', position_pref='back')]
+    pool = ['折叠小刀', '轮滑鞋']
+    occ = {('back', 2): ['以太钻头']}
+    alloc = equip_allocation(comp, dep, list(pool), dict(occ))
+    assert alloc, '被拦 core 不得吃光整池:无残留件的角色应分到件'
+    got_chars = {c for c, _ in alloc}
+    assert '三月七' not in got_chars, '整池互为配方时被拦 core 一件不取(留 owned)'
+    assert all(e == '折叠小刀' or e == '轮滑鞋' for _, e in alloc)
+    # 单人整池被拦的形态:分配空,且归因必须是 pairing_guard(不再 unknown)
+    dep_only = [BenchChar(slot=1, char_id='丹恒·饮月', position_pref='front'),
+                BenchChar(slot=2, char_id='三月七', position_pref='back')]
+    occ_all_blocked = {('front', 1): ['以太钻头'], ('back', 2): ['以太钻头']}
+    assert equip_allocation(comp, dep_only, ['折叠小刀'], dict(occ_all_blocked)) == []
+    assert equip_alloc_empty_reason(comp, dep_only, ['折叠小刀'],
+                                    dict(occ_all_blocked)) == 'pairing_guard'
+
+
 from sr_od.application.currency_war.telemetry import state
 
 from sr_od.application.currency_war.telemetry import defects
