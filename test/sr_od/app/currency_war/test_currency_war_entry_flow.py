@@ -141,6 +141,40 @@ def _build_phases_residual_lobby_escape() -> list[dict]:
     ]
 
 
+def _build_phases_train_supply_popup() -> list[dict]:
+    """列车补给每日弹窗剧本(真帧锁:2026-08-31 实机建档帧)。
+
+    launch_dead 停机后游戏停在大世界+「列车补给」全屏每日领取弹窗,下一局
+    入局链被弹窗挡死 → 「推进到备战阶段」超时失败。剧本:弹窗(点中央徽章
+    领取)→ 大厅 → 模式选择 → 难度确认 A8 → 简报 → 备战(转换恢复)。
+    """
+    return [
+        {  # 弹窗:入口 op 领取分支点「按钮-领取补贴」(中央徽章,无 X 关闭钮)
+            'frame': ('货币战争-列车补给弹窗', '今日未领取'),
+            'exit': ('on_click_in', '货币战争-列车补给弹窗', '按钮-领取补贴'),
+        },
+        {
+            'frame': ('货币战争-大厅', 'lobby'),
+            'exit': ('on_click_in', '货币战争-大厅', '按钮-开始货币战争'),
+        },
+        {
+            'frame': ('货币战争-模式选择', 'default'),
+            'exit': ('on_click_in', '货币战争-模式选择', '按钮-进入标准博弈'),
+        },
+        {
+            'frame': ('货币战争-难度确认', 'a8'),
+            'exit': ('on_click_in', '货币战争-难度确认', '按钮-开始对局'),
+        },
+        {
+            'frame': ('货币战争-简报', 'default'),
+            'exit': ('on_click_in', '货币战争-简报', '按钮-下一步'),
+        },
+        {  # 备战:terminal
+            'frame': ('货币战争-备战', 'shop_closed'),
+        },
+    ]
+
+
 @pytest.fixture()
 def fixture_controller(
     test_context: SrTestContext,
@@ -296,6 +330,46 @@ class TestStartCurrencyWarMatchFlow:
         # 世界入口真按了 F(防伪绿:F 分支没跑、靠 poll 副作用推进也能 PASS)
         assert test_context.game_config.key_interact in fixture_controller.recorded_btn_taps, (
             f'世界入口应按交互键 F 重进大厅:{fixture_controller.recorded_btn_taps}'
+        )
+
+
+    def test_train_supply_popup_claimed_then_reaches_prep(
+        self,
+        test_context: SrTestContext,
+        fixture_controller: FixtureController,
+    ) -> None:
+        """列车补给每日弹窗(真帧):入口 op 领取 → 转换恢复推进到备战。
+
+        守卫锁:移除 op 的 ``_handle_train_supply_popup`` 分支 → 弹窗帧无分支可
+        推进 → 本锁红(推进无路,超时失败)。
+        """
+        phases = _build_phases_train_supply_popup()
+        _require_screens(test_context, phases)
+
+        fixture_controller.set_phases(phases)
+        op = _WatchedStartCurrencyWarMatch(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        enter_running_state(test_context)
+        try:
+            with fast_sleep():
+                result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        assert result.success, (
+            f'弹窗领取后未恢复推进到备战:status={result.status}'
+            f';phase_idx={fixture_controller.phase_idx}'
+            f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        # 领取点击必须落在中央徽章领取区(不是乱点/点提示文本)。
+        assert fixture_controller.click_hit_area(
+            '货币战争-列车补给弹窗', '按钮-领取补贴'), (
+            '未点「按钮-领取补贴」领取弹窗:'
+            f'{_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert fixture_controller.phase_idx == len(phases) - 1, (
+            f'剧本应推进到末 phase(备战):phase_idx={fixture_controller.phase_idx}'
         )
 
 
