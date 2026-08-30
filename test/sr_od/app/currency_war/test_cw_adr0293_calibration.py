@@ -264,6 +264,17 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'p2_spend_auth_reserve_floor': ('int', 20),
     'p2_spend_auth_reserve_rounds_cap': ('int', 3),
     'p2_spend_auth_line_band_floor': ('int', 45),
+    # ===== P1→P2 接口机制 v2(W780 落码;ADR-0484;五开关默认关=生命
+    # 周期第 1 态,开臂挂账=W774 协议 v2 M1-M3+R+G1-G4;三阈值占位挂
+    # M3 标定)=====
+    'p1_iface_lockline_v2_enabled': ('bool', False),
+    'p1_iface_carry_equip_enabled': ('bool', False),
+    'p1_iface_hardnode_prep_enabled': ('bool', False),
+    'p1_iface_lossstreak_flow_enabled': ('bool', False),
+    'p1_iface_blood_bands_enabled': ('bool', False),
+    'p1_iface_swing_degrade_n': ('int', 2),
+    'p1_iface_swing_loss_n': ('int', 2),
+    'p1_iface_board_match_min': ('int', 2),
     # ===== 形态达标三方向 =====
     'recipe_fence_enabled': ('bool', False),
     'form_break_sell_blocked_enabled': ('bool', False),
@@ -275,7 +286,7 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'constraints': ('tuple[str, ...]', [
         'gold_floor', 'interest_rule', 'bench_capacity', 'copies_cap',
         'same_round_mutex', 'blood_budget_stop', 'boss_levelup_ban',
-        'deploy_cap']),
+        'deploy_cap', 'p1_iface_gate']),
     # interest_floor 字段已删(W628 D3 双源清偿):息线 = interest_cap×10
     # 派生方法,唯一取值口 registry.interest_floor();override 通道仅纪律
     # 视图 ALL IN 注入用(非标定旋钮,入面锁默认 None)。
@@ -290,8 +301,11 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'audit_matrix': (
         'dict[tuple[str, str], tuple[str, ...] | tuple[str, str]]', {
             "('gold', 'boss')": ['gold_floor', 'interest_rule'],
-            "('gold', 'emergency')": ['gold_floor'],
-            "('gold', 'mode')": ['gold_floor', 'interest_rule'],
+            # ('gold','emergency'/'mode') 含 p1_iface_gate(W780/ADR-0484:
+            # 血线三带禁令辖预警带 mode 维与应急带 emergency 维;boss 维豁免)
+            "('gold', 'emergency')": ['gold_floor', 'p1_iface_gate'],
+            "('gold', 'mode')": ['gold_floor', 'interest_rule',
+                                 'p1_iface_gate'],
             "('bench', 'boss')": ['bench_capacity'],
             "('bench', 'emergency')": ['bench_capacity'],
             "('bench', 'mode')": ['bench_capacity'],
