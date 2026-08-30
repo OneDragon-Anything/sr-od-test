@@ -124,3 +124,44 @@ def test_anomalies_missing_conf_treated_trusted(tmp_path: Path):
     drop = [ln for ln in tel.query_anomalies(tmp_path, RID)
             if '战力断层' in ln]
     assert drop == ['p1r2 [boss] 单轮掉血 80→40(战力断层)']
+
+
+def test_hp_view_marks_fake_rows_and_keeps_chain_clean(tmp_path: Path):
+    """hp 视图显示层伪值过滤锁(与 anomalies 同门 HP_CONF_TRUSTED)。
+
+    病灶(g_20260830_150029):OCR miss 行 hp=0 进入 hp 视图,Δ 出 +67 荒谬值
+    (prev_hp 链被伪值污染)。显示层语义=标注优于删除:伪值行保留(证据可见)
+    行尾标「伪值」、Δ 置 -,且不推进 prev_hp 链(后续真值轮 Δ 以真值基线算)。
+    """
+    _write_jsonl(tmp_path / 'outcomes.jsonl', [
+        _outcome(1, 3, hp_after=57, hp_confidence=1.0),          # 真值基线
+        _outcome(1, 4, hp_after=0, hp_confidence=0.0, source='loss_page'),   # 伪值
+        _outcome(1, 4, hp_after=49, hp_confidence=1.0),          # 同轮真值
+        _outcome(1, 5, hp_after=20, hp_confidence=1.0, node_type='boss'),
+    ])
+    lines = tel.query_hp(tmp_path, RID)
+    assert len(lines) == 4
+    fake = [ln for ln in lines if 'p1r4 ' in ln and 'hp=0 ' in ln]
+    # 伪值行:保留显示 + 行尾标注 + Δ 置 -(伪值 Δ 无意义)
+    assert len(fake) == 1 and '伪值' in fake[0] and 'Δ=-' in fake[0]
+    # 真值行:原样,不误标
+    for ln in lines:
+        if 'hp_confidence' in ln:   # pragma: no cover - 防御,视图不回显该字段
+            raise AssertionError('视图不应回显 conf 字段')
+        if 'hp=57 ' in ln or ('hp=49 ' in ln) or ('hp=20 ' in ln):
+            assert '伪值' not in ln
+    # 链未污染:真值轮 Δ 按真值链算(视图 Δ 口径=-delta:57→49 显示 -8;49→20 显示 -29)
+    assert any('p1r4 ' in ln and 'hp=49 ' in ln and 'Δ=-8' in ln for ln in lines)
+    assert any('p1r5 ' in ln and 'Δ=-29' in ln for ln in lines)
+
+
+def test_hp_view_missing_conf_not_marked_fake(tmp_path: Path):
+    """缺 hp_confidence 字段的行(旧数据/sim 账本行)在 hp 视图按可信,不误标。"""
+    _write_jsonl(tmp_path / 'outcomes.jsonl', [
+        _outcome(1, 1, hp_after=80),
+        _outcome(1, 2, hp_after=40, node_type='boss'),
+    ])
+    lines = tel.query_hp(tmp_path, RID)
+    assert len(lines) == 2
+    assert all('伪值' not in ln for ln in lines)
+    assert any('p1r2 ' in ln and 'Δ=-40' in ln for ln in lines)
