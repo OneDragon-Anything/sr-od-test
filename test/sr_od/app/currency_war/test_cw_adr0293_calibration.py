@@ -23,21 +23,21 @@ from __future__ import annotations
 import dataclasses
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    GameState,
-)
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.kernel import cw_registry as registry_mod
 from sr_od.application.currency_war.decision.decision_v2.candidates import (
     generate_candidates,
 )
+from sr_od.application.currency_war.decision.decision_v2.scoring import (
+    score_candidate,
+)
+from sr_od.application.currency_war.kernel import cw_registry as registry_mod
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
     DecisionV2Registry,
 )
-from sr_od.application.currency_war.decision.decision_v2.scoring import (
-    score_candidate,
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
 )
 
 #: 字段面期望表:字段名 → (类型注解串, 归一化默认值)。
@@ -270,12 +270,12 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'realization_d1_enabled': ('bool', False),
     'realization_d2_enabled': ('bool', False),
     'realization_off_lock_kappa': ('float', 0.5),
-    'realization_delta_p_tier': ('float', 1.0),
-    'realization_p29_r_min': ('int', 3),
+    'realization_delta_p_tier': ('float', 0.75),
+    'realization_p29_r_min': ('int', 5),
     'realization_member_cost_band': ('frozenset[int]', frozenset({3, 4})),
-    'realization_merge_timing_unit': ('float', 1.0),
-    'realization_direction_gamma': ('float', 0.75),
-    'realization_direction_beta': ('float', 0.3),
+    'realization_merge_timing_unit': ('float', 0.75),
+    'realization_direction_gamma': ('float', 0.95),
+    'realization_direction_beta': ('float', 0.05),
     # ===== P1 档位推进目标函数(W803;伞+三子旗标默认关,占位参数组
     # 开臂前 sim 标定;决策 why=ADR-0494)=====
     'p1_tier_push_enabled': ('bool', False),
@@ -303,7 +303,12 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'constraints': ('tuple[str, ...]', [
         'gold_floor', 'interest_rule', 'bench_capacity', 'copies_cap',
         'same_round_mutex', 'blood_budget_stop', 'boss_levelup_ban',
-        'deploy_cap']),
+        'deploy_cap', 'spend_gate']),
+    # ===== 支出门·买侧收门(W829;伞+两子旗标默认关,开臂判据挂账
+    # = w829_spend_gate_design/PREREG_v4.md)=====
+    'spend_gate_enabled': ('bool', False),
+    'spend_gate_interest_enabled': ('bool', False),
+    'spend_gate_bench_enabled': ('bool', False),
     # interest_floor 字段已删(W628 D3 双源清偿):息线 = interest_cap×10
     # 派生方法,唯一取值口 registry.interest_floor();override 通道仅纪律
     # 视图 ALL IN 注入用(非标定旋钮,入面锁默认 None)。
@@ -318,13 +323,15 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'audit_matrix': (
         'dict[tuple[str, str], tuple[str, ...] | tuple[str, str]]', {
             "('gold', 'boss')": ['gold_floor', 'interest_rule'],
+            # (gold/boss 与 bench/boss 格不含 spend_gate:门在 boss 窗
+            # 让位,W774⑤ 同仲裁语义)
             # (gold emergency/mode 格的 p1_iface_gate 已随定谳清理删除,
             # ADR-0487)
-            "('gold', 'emergency')": ['gold_floor'],
-            "('gold', 'mode')": ['gold_floor', 'interest_rule'],
+            "('gold', 'emergency')": ['gold_floor', 'spend_gate'],
+            "('gold', 'mode')": ['gold_floor', 'interest_rule', 'spend_gate'],
             "('bench', 'boss')": ['bench_capacity'],
-            "('bench', 'emergency')": ['bench_capacity'],
-            "('bench', 'mode')": ['bench_capacity'],
+            "('bench', 'emergency')": ['bench_capacity', 'spend_gate'],
+            "('bench', 'mode')": ['bench_capacity', 'spend_gate'],
             "('slot', 'boss')": ['blood_budget_stop', 'boss_levelup_ban'],
             "('slot', 'emergency')": ['blood_budget_stop', 'bench_capacity'],
             "('slot', 'mode')": ['blood_budget_stop', 'deploy_cap'],
