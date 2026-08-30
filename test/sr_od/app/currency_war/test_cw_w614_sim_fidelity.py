@@ -55,8 +55,16 @@ from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
 # 收口。归因实证:分包期 6 前 worktree(3cd79869,含全部 overlay 行为)
 # 与期 6 后 HEAD 投影 digest 逐位一致(= 本锚,双跑确定性核验),期 6
 # 四切零漂移成立;新锚 b80e101d…,继续做 unintended drift 哨兵。
+# 确定性专项批重锚(w910_sim_determinism/REPORT.md):W748 F1 补部署
+# 保留集收窄(16f1f2be,bench 同名对不再保留)是 sim 行为批但未随批
+# 重锚,digest 由 b80e101d… 位移至 cabdf2893…。归因证据:worktree 钉
+# db27854c(w729 锚点 commit)复现 b80e101d…、HEAD 复现 cabdf2893…,
+# git bisect 逐 commit 定位首个位移点 = 16f1f2be(父 commit 仍 b80e);
+# 同 digest 跨 6 进程(PYTHONHASHSEED 0/42/缺省、全局 random.seed、
+# 生产 journal 隐藏各臂)逐位一致 = 确定性本身无破洞。新锚
+# cabdf2893…,继续做 unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    'b80e101d2e91e2095f5521f32682617d7dcd3ac575897e8e470fbc1f916c952a')
+    'cabdf28937be2ceafa8a7b4174c2b7a1eb1b7a76c6e24bc3bb1ad9b16462da1e')
 
 
 def _behavior_projection(results) -> str:
@@ -241,3 +249,64 @@ class TestG2DeployProxy:
 
 
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+
+
+class TestSimDeterminismAndIsolation:
+    """sim 判定路径确定性/生产态隔离锁(w910_sim_determinism/REPORT.md)。
+
+    诊断嫌疑定谳:①生产态 journal(obs_conflicts.jsonl)无读入 sim 判定
+    路径——sim 读生产 replay 只在 pool='auto' 显式臂,锚路径用
+    pool='snapshot'(主仓提交数据);②session.rng 已显式种子化(kernel
+    default 固定种子,sim 引擎从局 seed 派生,生产 run loop 按
+    strategy_seed 覆盖)。本组锁固化这两条前提防回洞。
+    """
+
+    def test_default_path_reads_no_production_replay(self):
+        """sim 默认路径(pool='snapshot')不触生产 replay 目录任何文件。"""
+        import sys
+        from pathlib import Path
+
+        from one_dragon.utils.file_utils import get_project_root
+
+        replay_dir = (get_project_root() / '.debug' / 'temp'
+                      / 'currency_war' / 'replay')
+        hits: list[str] = []
+
+        def _hook(event, args):
+            if event not in ('open', 'os.open'):
+                return
+            try:
+                path = args[0]
+                if isinstance(path, int):
+                    return
+                resolved = str(Path(path))
+                if resolved.startswith(str(replay_dir)):
+                    mode = args[1] if len(args) > 1 else ''
+                    hits.append(f'{resolved}({mode})')
+            except Exception:
+                pass    # 审计钩子内禁抛,漏记可容忍
+
+        sys.addaudithook(_hook)
+        simulate_p1(0, pool='snapshot')
+        assert not hits, f'sim 默认路径读入生产 replay 文件: {hits[:5]}'
+
+    def test_same_seed_twice_identical(self):
+        """同 seed 同进程两局投影逐位一致(确定性哨兵,进程内口径)。"""
+        proj_a = _behavior_projection([simulate_p1(3, pool='snapshot')])
+        proj_b = _behavior_projection([simulate_p1(3, pool='snapshot')])
+        assert proj_a == proj_b
+
+    def test_session_rng_default_deterministic(self):
+        """裸 StrategySession() 的 rng 默认流确定(default 固定种子,
+        禁 OS 熵回洞;消费方显式注入真实种子 = 生产 run loop / sim 引擎)。"""
+        import random
+
+        from sr_od.application.currency_war.decision.cw_strategy import (
+            StrategySession,
+        )
+
+        s1, s2 = StrategySession(), StrategySession()
+        assert isinstance(s1.rng, random.Random)
+        seq1 = [s1.rng.random() for _ in range(8)]
+        seq2 = [s2.rng.random() for _ in range(8)]
+        assert seq1 == seq2
