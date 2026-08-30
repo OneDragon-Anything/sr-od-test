@@ -8,8 +8,10 @@ REPORT.md,离线只读分析)+ W872 攻击口径(映射行须有 comp 携带 tag
 - 开关生命周期第 1 态(默认关):全关 = 基表路径零漂移(复活 tag 不参与评分求交,
   含对应词缀的局对任何 comp 恒 0.5 中性)。
 - 结构锁(值域⊆词汇表):4 个复活 tag(单属性队/成型羁绊队/慢速/依赖合成装备)的
-  基表映射行值域必须 ⊆ COMP_LIBRARY 实际携带词汇 —— 本批复活后这些基表行由死转活。
-- 判据边界:每 tag 的载体集必须符合裁决判型(单属性队=属性型羁绊主档 ≥4 的 comp;
+  基表映射行经克制/受利链查到的目标词必须被**生效携带**(静态标注 ∪ 判据性动态
+  并入)—— 本批复活后这些基表行由死转活。
+- 判据边界:每 tag 的载体集必须符合裁决判型(单属性队=属性型羁绊主档 ≥4 的 comp,
+  载体由 effective_mechanic_attributes 按 ATTRIBUTE_TYPE_FACTIONS 判据动态并入;
   慢速=DOT 载体;依赖合成装备=反甲装备流;成型羁绊队=羁绊驱动型,装备流/单核族不打)。
 - 滤除口不交集结构锁:W878 词汇集与三张直读原始属性的查表(boss_fit 兜底/护航
   serves/巨星兜底)不交集,任一侧撞车即红(w882 攻击角度5 采纳)。
@@ -159,35 +161,72 @@ def _carried_tags() -> set[str]:
     return out
 
 
-def test_w878_revived_base_rows_not_dead() -> None:
-    """4 个复活 tag 所在基表行(属性熄火/装备依赖/成型羁绊利好/冻结)值域 ⊆ 携带词汇。
+def _effective_carried_tags(reg) -> set[str]:
+    """开臂态全仓**生效**携带词汇 = 静态标注 ∪ 判据性动态并入(w882 角度1 采纳)。
 
-    复活前这些行零携带 = 恒 0.5 空转死映射;本批补载体后必须保持非死(回归防线)。
+    单属性队载体的主形态是判据性动态并入(effective_mechanic_attributes 按
+    ATTRIBUTE_TYPE_FACTIONS 判据注入),静态标注只是希儿量子基线的另一形态 ——
+    死映射判据必须数「生效携带」而非「静态标注」,否则判据性载体被误判死映射。
     """
-    carried = _carried_tags()
+    out = _carried_tags()
+    for c in COMP_LIBRARY:
+        out.update(effective_mechanic_attributes(c, reg))
+    return out
+
+
+def test_w878_revived_base_rows_not_dead() -> None:
+    """4 个复活 tag 所在基表行(属性熄火/装备依赖/成型羁绊利好/冻结)非死映射。
+
+    非死判据(W872 口径,按映射链重推):机制 tag 的克制/受利目标集非空,且目标
+    每个词都被**生效携带**(静态标注 ∪ 判据性动态并入,开臂态)。复活前这些行
+    零携带 = 恒 0.5 空转死映射;本批补载体后必须保持非死(回归防线)。
+
+    语义演进注记:原版直接断言 AFFIX_MECHANIC_MAP 值 ∈ 静态携带 —— 单属性队行
+    按此判死是误报:该行机制词「属性熄火」本就非 comp 词汇,其载体走判据性动态
+    并入(ATTRIBUTE_TYPE_FACTIONS 判据,w882 攻击角度1 采纳),静态零标注是设计
+    形态而非回归;判据改为顺映射链数「克制/受利目标词的生效携带」。
+    """
+    reg = _arm(w878_mono_attribute_enabled=True,
+               w878_formed_bond_enabled=True,
+               w878_slow_burn_enabled=True,
+               w878_synth_equip_dep_enabled=True,
+               junk_first_sacrifice_enabled=True)
+    carried = _effective_carried_tags(reg)
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        MECHANIC_COUNTERS,
+        MECHANIC_SYNERGIES,
+    )
     revived_rows = {
         "属性熄火": AFFIX_MECHANIC_MAP["风之熄火"],   # 7 条熄火词条同 tag
         "装备依赖": AFFIX_MECHANIC_MAP["变宝为废"],
         "成型羁绊利好": AFFIX_MECHANIC_MAP["形单影只"],
         "冻结": AFFIX_MECHANIC_MAP["极速制冷"],
     }
-    for affix, tag in revived_rows.items():
-        assert tag in carried, f"行 {affix}→{tag} 的 tag 无任何 comp 携带 = 死映射回归"
+    for affix, mechanic in revived_rows.items():
+        targets = set(MECHANIC_COUNTERS.get(mechanic, [])) | set(MECHANIC_SYNERGIES.get(mechanic, []))
+        assert targets, f"行 {affix}→{mechanic} 无克制/受利目标 = 空转死映射"
+        missing = targets - carried
+        assert not missing, f"行 {affix}→{mechanic} 目标 {missing} 无任何 comp 生效携带 = 死映射回归"
 
 
 # —— 判据边界锁(载体集 = 裁决判型,防标注漂移)——
 
 
 def test_w878_mono_attribute_carrier_boundary() -> None:
-    """单属性队载体判据锁(判据性,非枚举):每个载体须「属性型羁绊主档 ≥4」。
+    """单属性队载体判据锁(判据性,非枚举):每个生效载体须「属性型羁绊主档 ≥4」。
 
     w882 攻击采纳:原「唯一载体=希儿量子」枚举锁把单例钉成制度性盲区
     (final_daheita_aoe 明文冰之熄火 counter 大黑塔,但枚举锁使该克制恒中性且
     未来补载体必锁红)——改判据后,新属性 comp(如火纯色线)落档即自动入判,
     错载体(属性型羁绊非主档/档深不足)自动拦。判据载体集 = cw_comps
     .ATTRIBUTE_TYPE_FACTIONS(V4.4 仅量子同频按角色属性聚合)。
+
+    载体集口径 = 开臂态**生效携带**(静态标注 ∪ 判据性动态并入):动态载体是
+    本 tag 的主形态,只数静态标注会把判据性载体漏成空集误判「复活未落码」。
     """
-    carriers = [c for c in COMP_LIBRARY if "单属性队" in c.mechanic_attributes]
+    reg = _arm(w878_mono_attribute_enabled=True)
+    carriers = [c for c in COMP_LIBRARY
+                if "单属性队" in effective_mechanic_attributes(c, reg)]
     assert carriers, "单属性队载体为空 = 复活未落码"
     assert any(c.name == "希儿量子" for c in carriers), \
         "证据基线(final_comps README D3 明文)不得丢失"
@@ -196,6 +235,41 @@ def test_w878_mono_attribute_carrier_boundary() -> None:
                       if f in ATTRIBUTE_TYPE_FACTIONS}
         assert attr_mains and max(attr_mains.values()) >= 4, \
             f"{c.name} 单属性队载体缺属性型羁绊主档 ≥4(判据漂移: {c.form_tiers})"
+
+
+def test_w878_mono_attribute_dynamic_injection() -> None:
+    """判据性动态载体行为锁:满足判据(属性型羁绊主档 ≥4)的 comp 无需静态标注,
+    单属性队臂开启时被 effective_mechanic_attributes 动态并入「单属性队」携带,
+    端到端吃量子熄火 counter 降分;档深不足/关臂不并入(零漂移)。
+
+    出处 = w882 攻击角度1 采纳项(枚举锁改判据载体)+ ATTRIBUTE_TYPE_FACTIONS
+    消费点接线(「属性熄火」行从死映射转活的实现载体)。守卫移除验证:断开
+    effective_mechanic_attributes 的动态并入分支,本锁必红。
+    """
+    from sr_od.application.currency_war.kernel.cw_comps import current_enemy_mechanics
+
+    def _pred_comp(tier: int) -> Comp:
+        return Comp(name="判据comp", factions=["量子同频"], core_chars=[],
+                    form_tiers={"量子同频": tier}, strength="A",
+                    form_difficulty="easy", mechanic_attributes=["击破"])
+
+    off = DEFAULT_REGISTRY
+    armed = _arm(w878_mono_attribute_enabled=True)
+    # 关臂:零漂移,判据 comp 不携带
+    assert "单属性队" not in effective_mechanic_attributes(_pred_comp(4), off)
+    # 开臂 + 档深达标:动态并入,端到端吃 counter
+    assert effective_mechanic_attributes(_pred_comp(4), armed) == ["击破", "单属性队"]
+    fit = mechanics_fit(_pred_comp(4),
+                        current_enemy_mechanics(GameState(enemy_affixes=["量子熄火"]), armed),
+                        registry=armed)
+    assert fit < 0.5, "判据载体开臂后应吃量子熄火 counter 降分"
+    # 档深不足(3 < 4):不并入,恒中性(宁缺勿错)
+    assert "单属性队" not in effective_mechanic_attributes(_pred_comp(3), armed)
+    # 副羁绊宽口径不算(form_tiers 无属性羁绊主档,仅 flex 层出现不判)
+    flex_only = Comp(name="副羁绊comp", factions=[], core_chars=[],
+                     form_tiers={"贝洛伯格": 4}, strength="A",
+                     form_difficulty="easy", mechanic_attributes=["击破"])
+    assert "单属性队" not in effective_mechanic_attributes(flex_only, armed)
 
 
 def test_w878_slow_carrier_boundary() -> None:
