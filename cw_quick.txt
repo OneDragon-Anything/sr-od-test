@@ -210,3 +210,4 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w653_c7_zero_drift.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w666_replay_context_freeze.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_match_archive.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_realization_chain.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_sim_obs_keys.py

@@ -42,3 +42,5 @@ test_cw_back_layout.py::test_read_deployed_chars_formula_driven
 test_cw_adr0283_sim_bench_guard.py::test_sim_batch_discloses_guard_count
 test_cw_adr0283_sim_bench_guard.py::test_sim_bench_capacity_guard
 test_cw_delta_pool_snapshot.py::test_batch_report_carries_pool_fingerprint
+# —— W806 观测键批(40 局对偶门分布断言,6.49s call)——
+test_cw_sim_obs_keys.py::test_bench_full_flag_and_alloc_frame_not_degenerate
