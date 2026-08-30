@@ -46,8 +46,6 @@ ROOT_FILES: dict[str, str] = {
     'prep_actions': 'app',
     'prep_director': 'app',
     'run_state': 'app',
-    'cw_node_validate': 'tools',
-    'cw_weight_search': 'tools',
 }
 
 # DESIGN §3.2 目标依赖矩阵(期6 §4.4 ledger_hooks 归属)

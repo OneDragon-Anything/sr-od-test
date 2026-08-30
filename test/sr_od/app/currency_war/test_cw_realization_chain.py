@@ -203,7 +203,7 @@ def test_lock4_p29_priority_and_reverse_gate() -> None:
     # 反向锁:hp 跌破报警线 ∧ 剩余战斗轮 < R_min → 项归零(辖域门生效)
     st_low = _st(board={'列车同行': 1}, hp=30, round_num=1)
     sess_short = _sess()
-    sess_short.plane_node_table = ['战斗']   # r_rest=1 < R_min=3
+    sess_short.plane_node_table = ['战斗']   # r_rest=1 < R_min=5
     assert p29_priority_term(line_cand, st_low, sess_short, _REG_ON) == 0.0
     assert missing_members(st_low, sess_short, _REG_ON)[_CORE] > 0  # 缺件仍在,门在辖
 
