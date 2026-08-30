@@ -350,22 +350,21 @@ def test_release_budget_bounded_authorization() -> None:
     W645 提案 E 后 authorize 增息档截断门(花后不跨 10 的倍数档):金位
     取档内值(62,余 2 ≥ 刷价)以隔离预算语义——旧值 60 是档界(余 0),
     在新语义下合法被截,不再能承载「预算内放行」的断言。
-    W935 返修后钳制账=刷新专用 ``v3_release_refresh_spent``(授权门
-    独占;全渠道去向账 v3_release_spent 含买/升,不作钳制输入防行为
-    回灌,ADR-0503 确认门②口径)——锁语义(累计刷金≤预算)不变,
-    只换账面地址。"""
+    W935 返修语义重推(锁红≠改动错;编排者裁决 2026-08-31):钳制账
+    v3_release_spent 现为**全渠道共享**(买/升经 _accrue_release_frame_spend
+    入账)——预算门从失明恢复为如实执行 ADR-0503 设计预算,危机帧全部
+    渠道消费共同消耗 budget_gold;本锁的种子直接种共享账,语义
+    「累计消费 ≤ 预算」与旧「累计刷金 ≤ 预算」在纯刷新帧等值。"""
     s = StrategySession()
     s.v3_release = ReleaseDirective(budget_gold=22, rolls=11)
-    s.v3_release_refresh_spent = 0
     s.v3_release_spent = 0
     assert authorize_release_refresh(s, 62, 2, _REG)
-    assert s.v3_release_refresh_spent == 2
-    assert s.v3_release_spent == 2              # 去向账同步入账
-    s.v3_release_refresh_spent = 21
+    assert s.v3_release_spent == 2
+    s.v3_release_spent = 21
     assert not authorize_release_refresh(s, 62, 2, _REG)   # 21+2 > 22
-    s.v3_release_refresh_spent = 20
+    s.v3_release_spent = 20
     assert authorize_release_refresh(s, 62, 2, _REG)       # 恰好贴满
-    s.v3_release_refresh_spent = 0
+    s.v3_release_spent = 0
     # boss_floor 独立生效:抬高 boss_floor 至 20,金 13(余 3 ≥ 刷价,
     # 不触截断门)花后 11 < 20 → 拒(旧值 11 在截断门下与地板门混叠)。
     import dataclasses as _dc

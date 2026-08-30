@@ -61,10 +61,17 @@ from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
 # db27854c(w729 锚点 commit)复现 b80e101d…、HEAD 复现 cabdf2893…,
 # git bisect 逐 commit 定位首个位移点 = 16f1f2be(父 commit 仍 b80e);
 # 同 digest 跨 6 进程(PYTHONHASHSEED 0/42/缺省、全局 random.seed、
-# 生产 journal 隐藏各臂)逐位一致 = 确定性本身无破洞。新锚
-# cabdf2893…,继续做 unintended drift 哨兵。
+# 生产 journal 隐藏各臂)逐位一致 = 确定性本身无破洞。
+# W935 返修重锚(编排者裁决 2026-08-31;锁红≠改动错):危机臂预算门
+# 从失明恢复为执行(买/升消费经 _accrue_release_frame_spend 计入
+# v3_release_spent 钳制,ADR-0503 设计预算如实执行)——旧锚 cabdf2893…
+# 钉的是「预算门失明」的 bug 形态,digest 位移至 b01e6b80… 即预算执行
+# 生效的指纹;单变量差分归因(短路 accrual → digest 复位 cabdf)落
+# .debug/temp/currency_war/w935_budget_enforce_ab/。新锚继续做
+# unintended drift 哨兵;armed 态 A/B(w935_budget_enforce_ab/REPORT.md)
+# 实证预算执行不劣化后此锚方为有效基线。
 _ZERO_DRIFT_DIGEST_6 = (
-    'cabdf28937be2ceafa8a7b4174c2b7a1eb1b7a76c6e24bc3bb1ad9b16462da1e')
+    'b01e6b8036b97b8aad08d943f755dd1c79472f3c252bb830d0f50de20a487ba7')
 
 
 def _behavior_projection(results) -> str:

@@ -324,6 +324,7 @@ def test_rounds_terminal_vs_decision_frame_divergence(replay: Path):
                               'equips_worn': 2, 'equips_owned': 1}
     assert r9['terminal_ts'] == '2026-08-30T10:19:30'
     assert r9['terminal_source'] == 'last_decision_frame'
+    assert r9['n_decision_frames'] == 4   # fixture 基帧 + ①②③(全帧计数口径)
     assert r9['terminal']['deployed_count'] != len(r9['deployed'])
     # 收口类型(w943 P2-5):③帧 actions=[] 不含出战 → mid_prep
     #(异常出口形态:terminal 滞后一个动作,判读降权)
@@ -372,6 +373,7 @@ def test_rounds_terminal_none_for_outcome_only_round(replay: Path):
     assert r2['terminal_ts'] is None
     assert r2['terminal_source'] == 'none'
     assert r2['terminal_closure'] is None
+    assert r2['n_decision_frames'] == 0   # 零决策行缺口可见化
 
 
 # ===== v4 返修(w943 审计 P2-4 版本迁移读端 / P2-5 收口类型)=====
