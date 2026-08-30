@@ -298,6 +298,9 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'recipe_fence_enabled': ('bool', False),
     'form_break_sell_blocked_enabled': ('bool', False),
     'below_floor_spend_gate_enabled': ('bool', False),
+    # ===== 预算-回执契约(w921_rd_design DESIGN 批1;默认关=零漂移,
+    # 开臂判据挂账=registry 字段注释/.debug 预注册)=====
+    'spend_receipt_gate_enabled': ('bool', False),
     # (framework_startup_v2_enabled 已随框架启动基建退役删除,ADR-0468)
     # ===== DirectorV2 备战循环(W606 落件;W620 批1升正删开关,仅存影子诊断)=====
     'director_v2_shadow_compare': ('bool', False),
