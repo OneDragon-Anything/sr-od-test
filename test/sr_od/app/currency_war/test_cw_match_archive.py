@@ -274,6 +274,13 @@ def test_terminal_state_summary_field_lock():
         'deployed_count': 0, 'bench_count': 0,
         'equips_worn': 0, 'equips_owned': 0}
     assert terminal_state_summary({'deployed': '残缺'})['deployed_count'] == 0
+    # P3-6 硬化:元素内 equips 标量/str 不炸不计(worn 语义只认 list/dict)
+    st_bad = {'deployed': [{'name': '甲', 'equips': 7},
+                           {'name': '乙', 'equips': '火力风暴潮'},
+                           {'name': '丙', 'equips': ['高周波电锯']}]}
+    assert terminal_state_summary(st_bad) == {
+        'deployed_count': 3, 'bench_count': 0,
+        'equips_worn': 1, 'equips_owned': 0}
 
 
 def test_rounds_terminal_vs_decision_frame_divergence(replay: Path):
@@ -307,7 +314,7 @@ def test_rounds_terminal_vs_decision_frame_divergence(replay: Path):
                            'equips': ['折叠小刀']}})
     _write_jsonl(replay, 'decisions.jsonl', rows)
     a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    assert a['schema_version'] == arch.SCHEMA_VERSION == 3
+    assert a['schema_version'] == arch.SCHEMA_VERSION == 4
     r9 = next(r for r in a['rounds']
               if (r['plane'], r['round']) == (1, 9))
     # 决策帧列 = ①(actions 最多、ts 并列取晚)= 执行前板面
@@ -318,8 +325,28 @@ def test_rounds_terminal_vs_decision_frame_divergence(replay: Path):
     assert r9['terminal_ts'] == '2026-08-30T10:19:30'
     assert r9['terminal_source'] == 'last_decision_frame'
     assert r9['terminal']['deployed_count'] != len(r9['deployed'])
-    # 同 ts 并列:流内后见者胜(执行步进密集形态)
-    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:19:30'),
+    # 收口类型(w943 P2-5):③帧 actions=[] 不含出战 → mid_prep
+    #(异常出口形态:terminal 滞后一个动作,判读降权)
+    assert r9['terminal_closure'] == 'mid_prep'
+    # 出战收口形态:末帧 actions 含 StartBattle → start_battle
+    #(该帧观察 = 全部备战动作执行后的定型帧,terminal 可信)
+    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:19:40',
+                        actions=[{'__type__': 'StartBattle'}]),
+                 'state': {'node_type': '普通战斗', 'level': 4,
+                           'hp_trusted': None, 'board': {},
+                           'deployed': [{'name': '甲', 'equips': ['火力风暴潮']},
+                                        {'name': '乙', 'equips': []},
+                                        {'name': '丙', 'equips': ['高周波电锯']}],
+                           'bench': [None, {'name': '丁'}],
+                           'equips': ['折叠小刀']}})
+    _write_jsonl(replay, 'decisions.jsonl', rows)
+    r9c = next(r for r in arch.build_archive(
+        replay, arch.assign_games(replay)[0])['rounds']
+        if (r['plane'], r['round']) == (1, 9))
+    assert r9c['terminal_closure'] == 'start_battle'
+    assert r9c['terminal'] == r9['terminal']
+    # 同 ts 并列:流内后见者胜(执行步进密集形态;ts 与当前最晚帧并列)
+    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:19:40'),
                  'state': {'node_type': '普通战斗', 'level': 4,
                            'hp_trusted': None, 'board': {},
                            'deployed': [], 'bench': [], 'equips': []}})
@@ -344,3 +371,70 @@ def test_rounds_terminal_none_for_outcome_only_round(replay: Path):
     assert r2['terminal'] is None
     assert r2['terminal_ts'] is None
     assert r2['terminal_source'] == 'none'
+    assert r2['terminal_closure'] is None
+
+
+# ===== v4 返修(w943 审计 P2-4 版本迁移读端 / P2-5 收口类型)=====
+
+def _read_archive_file(replay: Path, game_id: str) -> dict:
+    with (replay / 'matches' / f'match_{game_id}.json') \
+            .open('r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def test_load_archive_auto_rebuilds_stale_version(replay: Path):
+    """P2-4:存量旧版本档案经 load_archive 读出即自动重装配(terminal 族
+    键补齐 + 版本写回),不再静默缺列。"""
+    game_id = 'g_20260830_094811'
+    a = arch.assemble_game(replay, game_id)          # 先落一份当前版本档案
+    assert a['schema_version'] == arch.SCHEMA_VERSION
+    # 把落盘档案降级模拟 v2 存量(抹 terminal 族键 + 版本号)
+    stale = _read_archive_file(replay, game_id)
+    stale['schema_version'] = 2
+    for r in stale['rounds']:
+        for k in ('terminal', 'terminal_ts', 'terminal_source',
+                  'terminal_closure'):
+            r.pop(k, None)
+    import os
+    p = replay / 'matches' / f'match_{game_id}.json'
+    with p.open('w', encoding='utf-8') as f:
+        json.dump(stale, f, ensure_ascii=False)
+    # 读端:默认自动迁移 → 版本写回 + terminal 族键补齐
+    got = arch.load_archive(replay, game_id)
+    assert got['schema_version'] == arch.SCHEMA_VERSION
+    assert all(r['terminal_closure'] in ('start_battle', 'mid_prep')
+               for r in got['rounds'])
+    assert _read_archive_file(replay, game_id)['schema_version'] \
+        == arch.SCHEMA_VERSION   # 原子写回已升级
+    # auto_rebuild=False(只读审计):返回旧档案本体,不动盘
+    stale2 = _read_archive_file(replay, game_id)
+    stale2['schema_version'] = 2
+    for r in stale2['rounds']:
+        for k in ('terminal', 'terminal_ts', 'terminal_source',
+                  'terminal_closure'):
+            r.pop(k, None)
+    with p.open('w', encoding='utf-8') as f:
+        json.dump(stale2, f, ensure_ascii=False)
+    got2 = arch.load_archive(replay, game_id, auto_rebuild=False)
+    assert got2['schema_version'] == 2
+    assert 'terminal_closure' not in got2['rounds'][0]
+
+
+def test_load_archive_stale_without_source_warns_and_returns_stale(
+        replay: Path):
+    """P2-4 边界:源 jsonl 已清 → 重装配不可行,退回旧档案不炸
+    (调用方拿到的缺列档案带 log 警告;此处验证返回行为本身)。"""
+    import shutil
+    game_id = 'g_20260830_110000'
+    arch.assemble_game(replay, game_id)
+    # 清掉全部源流(只留 matches/ 目录)
+    for name in ('decisions.jsonl', 'outcomes.jsonl', 'runs.jsonl',
+                 'shop_snapshots.jsonl', 'invest_cards.jsonl',
+                 'exogenous.jsonl', 'spend_ledger.jsonl'):
+        fp = replay / name
+        if fp.exists():
+            fp.unlink()
+    assert arch.load_archive(replay, game_id) is not None   # 退回旧档案
+    # 游戏不存在 → None(原语义不变)
+    shutil.rmtree(replay / 'matches')
+    assert arch.load_archive(replay, game_id) is None
