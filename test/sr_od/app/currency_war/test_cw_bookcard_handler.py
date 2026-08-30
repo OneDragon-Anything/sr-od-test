@@ -96,6 +96,11 @@ def test_bookcard_handler_wired() -> None:
     import inspect
 
     from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.kernel.cw_overlay_registry import (
+        derive_decision,
+    )
     from sr_od.application.currency_war.operations import battle_loop
     assert 'HandleBookcard' in inspect.getsource(battle_loop)
-    assert "'bookcard'" in inspect.getsource(prep_director)
+    # bail 扫描单一源已收拢至 registry(B 面切换):成员判定改为派生集三元组
+    assert ('货币战争-备战-专家邀请函', '标识-专家邀请函', 'bookcard') in {
+        (s.screen_name, s.anchor_area, s.bail_tag) for s in derive_decision()}

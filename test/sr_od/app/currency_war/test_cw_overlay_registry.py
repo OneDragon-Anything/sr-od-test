@@ -216,25 +216,75 @@ def test_zero_behavior_clear_table_unswitched() -> None:
     }
 
 
-def test_zero_behavior_bail_list_unswitched() -> None:
-    """B 面:director bail 清单仍是原 9 条手写元组(未改遍历 registry)。"""
+#: B 面切换前的手写 bail 清单黄金集(切换批零漂移对拍基准;单一源收拢后
+#: 本常量只存在于测试,作为历史黄金基准防接线漂移)。
+_GOLDEN_BAIL_LIST: tuple[tuple[str, str, str], ...] = (
+    ('货币战争-盛会之星', '标识-盛会之星', 'megastar'),
+    ('货币战争-选择伙伴', '标识-选择伙伴', 'partner'),
+    ('货币战争-祈愿试炼', '标识-祈愿试炼', 'wish_trial'),
+    ('货币战争-星徽秘典弹窗', '标识-星徽秘典', 'star_tome'),
+    ('货币战争-备战-专家邀请函', '标识-专家邀请函', 'bookcard'),
+    ('货币战争-遭遇节点', '标识-遭遇节点', 'encounter'),
+    ('货币战争-投资策略', '标识-请选择投资策略', 'invest_strategy'),
+    ('货币战争-投资环境', '标识-投资环境', 'invest_env'),
+    ('货币战争-补给', '标识-补给阶段', 'supply'),
+)
+
+
+def _golden_bail_set() -> set[tuple[str, str, str]]:
+    return set(_GOLDEN_BAIL_LIST)
+
+
+def test_zero_behavior_bail_list_switched_to_registry() -> None:
+    """B 面已切换:director bail 扫描消费 derive_decision(),手写 9 条清单删除。
+
+    接线锁三件:① 源码不再含手写 (screen, area, tag) 元组字面量(单一源收拢);
+    ② 源码含 derive_decision 消费;③ 派生集 (screen, anchor, bail_tag) 三元组
+    与切换前手写黄金集逐条一致(零成员/零锚名/零 tag 漂移)。
+    """
     import inspect
 
     from sr_od.application.currency_war import prep_director
-    src = inspect.getsource(prep_director.PrepDirector)
-    for _scr, _area, _tag in (
-        ('货币战争-盛会之星', '标识-盛会之星', 'megastar'),
-        ('货币战争-选择伙伴', '标识-选择伙伴', 'partner'),
-        ('货币战争-祈愿试炼', '标识-祈愿试炼', 'wish_trial'),
-        ('货币战争-星徽秘典弹窗', '标识-星徽秘典', 'star_tome'),
-        ('货币战争-备战-专家邀请函', '标识-专家邀请函', 'bookcard'),
-        ('货币战争-遭遇节点', '标识-遭遇节点', 'encounter'),
-        ('货币战争-投资策略', '标识-请选择投资策略', 'invest_strategy'),
-        ('货币战争-投资环境', '标识-投资环境', 'invest_env'),
-        ('货币战争-补给', '标识-补给阶段', 'supply'),
-    ):
-        assert f"('{_scr}', '{_area}', '{_tag}')" in src, \
-            f'bail 清单条目 {_tag} 被改动(消费面未到切换批)'
+    src = inspect.getsource(prep_director)
+    assert 'derive_decision' in src, 'bail 扫描未接线 derive_decision()'
+    for _scr, _area, _tag in _GOLDEN_BAIL_LIST:
+        assert f"('{_scr}', '{_area}', '{_tag}')" not in src, (
+            f'bail 手写清单条目 {_tag} 仍在 prep_director(单一源未收拢)')
+    derived = {(s.screen_name, s.anchor_area, s.bail_tag)
+               for s in reg.derive_decision()}
+    assert derived == _golden_bail_set(), (
+        f'派生集与切换前手写黄金集漂移: '
+        f'多={derived - _golden_bail_set()} 少={_golden_bail_set() - derived}')
+
+
+def test_zero_drift_bail_judgment_per_frame_fixture() -> None:
+    """零漂移门(fixture 帧组对拍):对 9 张「单 overlay 在场」fixture 帧,
+    手写清单序与 registry 派生序的判定(event_overlay tag)逐帧一致。
+
+    帧模型:每帧恰好一个锚命中(round_by_find_area 对该 screen 返 success)——
+    decision overlay 是全屏顶层弹窗,单帧锚互斥(历史帧组 ≤1 命中)。
+    两套判定序在同一帧上都只可能命中这唯一锚 → tag 逐帧相等;若未来出现
+    多锚帧,本测试的互斥前提破裂,须升级为显式序语义裁决(不得静默跟绿)。
+    """
+    golden_order = [tag for _s, _a, tag in _GOLDEN_BAIL_LIST]
+    derived_order = [s.bail_tag for s in reg.derive_decision()]
+
+    def _scan(order: list[tuple[str, str, str]], visible: str) -> str | None:
+        for _scr, _area, tag in order:
+            if _scr == visible:
+                return tag
+        return None
+
+    for scr, _area, tag in _GOLDEN_BAIL_LIST:
+        g = _scan(_GOLDEN_BAIL_LIST, scr)
+        d = _scan([(s.screen_name, s.anchor_area, s.bail_tag)
+                   for s in reg.derive_decision()], scr)
+        assert g == tag and d == tag, (
+            f'fixture 帧 {scr}:手写判定 {g} / 派生判定 {d} / 黄金 {tag} 漂移')
+    # 序差异显式化:两序不同是已论证的行为无关差异(见 prep_director 扫描段注释),
+    # 锁住差异事实本身,防止「以为序相同」的误读
+    assert golden_order != derived_order
+    assert set(golden_order) == set(derived_order)
 
 
 def test_zero_behavior_upper_screens_golden() -> None:

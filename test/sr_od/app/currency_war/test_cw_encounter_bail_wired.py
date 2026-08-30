@@ -22,6 +22,11 @@ def test_encounter_bail_and_handler_wired() -> None:
     import inspect
 
     from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.kernel.cw_overlay_registry import (
+        derive_decision,
+    )
     from sr_od.application.currency_war.operations import battle_loop
     assert 'HandleEncounter' in inspect.getsource(battle_loop)
-    assert "'encounter'" in inspect.getsource(prep_director)
+    # bail 扫描单一源已收拢至 registry(B 面切换):成员判定改为派生集三元组
+    assert ('货币战争-遭遇节点', '标识-遭遇节点', 'encounter') in {
+        (s.screen_name, s.anchor_area, s.bail_tag) for s in derive_decision()}
