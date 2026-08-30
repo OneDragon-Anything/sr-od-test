@@ -142,7 +142,7 @@ def test_phase_battle_transit_minimal(gated_env):
     st = obs.read_game_state(_DummyCtx(), None, phase=PHASE_BATTLE_OR_TRANSIT)
     assert set(gated_env.calls) == {'read_phase_round'}
     assert (st.plane, st.round_num) == (2, 3)
-    assert st.hp == 100 and st.hp_readable is False   # 对账沿用/兜底,零 OCR
+    assert st.hp is None and st.hp_readable is False   # 无真值即 None(ADR-0495),零 OCR 不产真值
 
 
 def test_hp_skip_single_source():
@@ -219,6 +219,10 @@ def test_read_game_state_resets_obs_phase(gated_env):
 _INTERACTIVE_OVERLAYS = (
     '货币战争-投资环境', '货币战争-投资策略', '货币战争-选择伙伴',
     '货币战争-盛会之星', '货币战争-祈愿试炼',
+    # 遭遇节点=二选一难度选择(决策语义,专属 handler=handle_encounter)——
+    # 曾被误列 ENTRY_OVERLAY_CLOSE 致选择被清场关闭、游戏拒出战停滞终局
+    # (2026-08-30 局12/13 实证);入排除列防回归。
+    '货币战争-遭遇节点',
 )
 
 
