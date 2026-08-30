@@ -15,7 +15,10 @@ tag='release'。设计出处=ADR-0503 + 本批 REPORT
 - ③ 辖域边界:息线以内(无溢余)不触发;非应急帧不劫持 flip 臂
   (reason='flip' 原语义);flip_hit 在应急带仍让位(辖区结构保留);
 - ④ 放行门:危机预算内刷新放行/越预算拒/boss_floor 地板拒;
-- ⑤ registry 字段面:默认 False。
+- ⑤ registry 字段面:默认 False;
+- ⑥ 血预算防线(行为锁):危机 wrap 保留 level_up 时,停升级门在危机臂
+  下仍生效(hp≤停升级线拒);线与应急线之间带(停升级线<hp≤25)的
+  升级许可=ADR-0448 线设计(线刻意深于应急线),非 crisis 臂新开面。
 """
 from __future__ import annotations
 
@@ -189,3 +192,49 @@ def test_crisis_boss_floor_guard() -> None:
 def test_registry_field_default_off() -> None:
     """字段面:crisis_release_enabled 默认 False(开关生命周期第 1 态)。"""
     assert DEFAULT_REGISTRY.crisis_release_enabled is False
+
+
+# --- ⑥ 血预算防线(危机 wrap 保留 level_up 的兜底论证,W930 补锁) --------------
+
+
+def test_crisis_wrap_level_up_still_blood_budget_gated() -> None:
+    """危机帧 wrap 保留 level_up(DP 追级姿态经 crisis 臂包装后
+    tag='release' ∧ level_up 仍 True——危险消费面确实存在)时,血预算
+    停升级门在同一危机帧仍拒付:门判据只读 state.hp 对停升级线,不读
+    posture tag / session.v3_release,crisis 臂不可能绕开它。
+    hp=5 ≤ P1 停升级线(≈11,W907 血预算 levelup 拒付病灶帧形)。"""
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        blood_budget_levelup_blocked,
+        p1_levelup_stop_hp,
+    )
+    st = _state(hp=5)
+    assert st.hp <= p1_levelup_stop_hp(_REG_ON)
+    sess = _sess(st)
+    wrapped, d = evaluate_release(st, sess, _REG_ON, 'FORM',
+                                  Posture(save=True, level_up=True,
+                                          refresh_budget=0))
+    assert d is not None and d.reason == 'crisis'
+    assert wrapped.tag == 'release' and wrapped.level_up is True
+    assert blood_budget_levelup_blocked(st, sess, _REG_ON) is True
+
+
+def test_crisis_level_up_band_between_lines_is_preexisting_design() -> None:
+    """线间带论证锁:停升级线 < hp ≤ 应急线(P1:11<hp≤25)的危机帧
+    停升级门不拦——该带的升级许可由 ADR-0448 停升级线设计承载(线=
+    期望预算线,设计件 12 §2.3 明言「线很深、预期触发少」,刻意不与
+    应急带同线),不是 crisis 臂新开的消费面:同一帧形在 flip 臂(溢余
+    非应急帧)许可面完全相同。锁钉住该边界语义,防后续误把「危机帧能
+    升级」读成危机臂引入的回归。"""
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        blood_budget_levelup_blocked,
+        p1_levelup_stop_hp,
+    )
+    hp_mid = p1_levelup_stop_hp(_REG_ON) + 1
+    assert hp_mid <= _REG_ON.emergency_hp    # 线间带在 P1 非空(11<hp≤25)
+    st = _state(hp=hp_mid)
+    sess = _sess(st)
+    _, d = evaluate_release(st, sess, _REG_ON, 'FORM',
+                            Posture(save=True, level_up=True,
+                                    refresh_budget=0))
+    assert d is not None and d.reason == 'crisis'
+    assert blood_budget_levelup_blocked(st, sess, _REG_ON) is False
