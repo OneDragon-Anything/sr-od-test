@@ -269,6 +269,58 @@ def test_hook_persistent_unknown_stops_with_evidence(
 
 
 # ---------------------------------------------------------------------------
+# 2c. match2 复盘候选形态锁(replay/matches/reviews/g_20260831_053546):
+#     读空帧 → 标记跳过该槽(不点空槽)→ 不误停;持续读空才停机(锁②b)
+# ---------------------------------------------------------------------------
+
+def test_hook_unknown_slot_skipped_not_stopped(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path, _require_fixture,
+) -> None:
+    """锁②c 同波含未识别槽:执行只买有身份牌(不点读空槽),重读自愈不停机。
+
+    复盘候选形态「unknown 标记跳过该槽 + 持续读空才停机」的执行半部:
+    plan 不发读空槽的 BuyCard → 执行侧零空槽点击;稳定门重读自愈 →
+    op 正常收工。「持续读空才停机」半部由锁②b 承载(预算耗尽真停)。
+    """
+    from sr_od.application.currency_war.kernel.cw_obs_core import (
+        shop_card_click_points,
+    )
+    from sr_od.application.currency_war.kernel.cw_state import (
+        BuyCard,
+        ShopCard,
+    )
+
+    writes: list[str] = []
+    op, fc, reads = _make_hook_op(
+        test_context, monkeypatch, tmp_path,
+        wave_shop=['', '景元', '布洛妮娅', '克拉拉', '杰帕德'],
+        hook_rereads=[_NAMED],
+        writes=writes)
+    # 给替身策略注入「只买有身份牌(x≈1300 → 槽5)」的 plan
+    test_context.cw_match.strategy.decide_prep = (
+        lambda state, session, config: [
+            BuyCard(card=ShopCard(x=1300, faction='?', name='杰帕德',
+                                  cost=3, star=1))])
+
+    result = _execute(op)
+
+    assert result.success, f'跳过读空槽后应正常收工:{result.status!r}'
+    assert reads['n'] == 1, f'重读自愈,实际重读 {reads["n"]} 次'
+    assert not any('HOOK-STOP' in w for w in writes), (
+        f'自愈形态不得写停机 flag:{writes[:3]}')
+    expected = min(shop_card_click_points(test_context),
+                   key=lambda p: abs(p.x - 1300))
+    buys = [c for c in fc.recorded_clicks
+            if abs(c.x - expected.x) <= 5 and c.y == expected.y]
+    assert len(buys) == 1, (
+        f'应恰好 1 次有身份牌点击@~({expected.x},{expected.y}),'
+        f'recorded={[str(p) for p in fc.recorded_clicks]}')
+    assert all(abs(c.x - expected.x) <= 5 for c in fc.recorded_clicks), (
+        f'不得点击读空槽(槽1 rect x≈250 区):{[str(p) for p in fc.recorded_clicks]}')
+
+
+# ---------------------------------------------------------------------------
 # 3. 守卫移除红检(源码锁,手法同 test_cw_w515):摘掉稳定门 → 红
 # ---------------------------------------------------------------------------
 
