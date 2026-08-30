@@ -182,3 +182,64 @@ def test_materialized_slice_views_equal_source(replay: Path):
                 f'{view.__name__}@{seg}: 档案切片视图与源目录不一致'
     import shutil
     shutil.rmtree(slice_dir)
+
+
+# ===== 二期补齐批:决策明细显形 / 策略版本戳 =====
+
+def test_rounds_decision_detail_and_bench_equips(replay: Path):
+    """二期①③⑤:逐轮表显形决策明细(v3_intention/candidate_scores/
+    eval_breakdown/dp_posture)与备战席逐张/装备栏 owned;无明细字段 = None。"""
+    # 给 p1r9 帧(段 B)补明细字段与 bench/equips 快照
+    dec_p = replay / 'decisions.jsonl'
+    rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
+    for r in rows:
+        if r.get('run_id') == 'run_20260830_101513' and r.get('round_num') == 9:
+            r['v3_intention'] = {'primary': '甲'}
+            r['candidate_scores'] = {'甲': 1.5}
+            r['eval_breakdown'] = {'form': 0.4}
+            r['dp_posture'] = '存息'
+            r['state']['bench'] = [{'name': '椒丘', 'star': 1}, None]
+            r['state']['equips'] = {'递归': 1}
+    _write_jsonl(replay, 'decisions.jsonl', rows)
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
+    d = by_key[(1, 9)]['decision_detail']
+    assert d['v3_intention'] == {'primary': '甲'}
+    assert d['candidate_scores'] == {'甲': 1.5}
+    assert d['eval_breakdown'] == {'form': 0.4}
+    assert d['dp_posture'] == '存息'
+    assert by_key[(1, 9)]['bench'] == [{'name': '椒丘', 'star': 1}, None]
+    assert by_key[(1, 9)]['equips'] == {'递归': 1}
+    # 无明细字段的帧 → 明细键全 None(不炸);有帧轮 detail 非 None
+    assert by_key[(1, 1)]['decision_detail'] is not None
+    assert by_key[(1, 1)]['decision_detail']['v3_intention'] is None
+
+
+def _rewrite_runs(replay: Path, mutate) -> None:
+    runs_p = replay / 'runs.jsonl'
+    rows = [json.loads(ln) for ln in runs_p.open(encoding='utf-8') if ln.strip()]
+    _write_jsonl(replay, 'runs.jsonl', mutate(rows))
+
+
+def test_strategy_version_stamp_propagates(replay: Path):
+    """二期②:runs 行带版本戳 → 档案顶层 strategy_version(倒查首个非空)+
+    index 列透传。"""
+    _rewrite_runs(replay, lambda rows: [
+        {**r, 'code_commit': 'abc1234', 'registry_fingerprint': 'fp001'}
+        if r.get('run_id') == 'run_20260830_101513' else r for r in rows])
+    a = arch.assemble_game(replay, 'g_20260830_094811')
+    # 只给末段(101513)打戳 → 倒查命中末段,不取首段空值
+    assert a['strategy_version'] == {'code_commit': 'abc1234',
+                                     'registry_fingerprint': 'fp001'}
+    idx = [json.loads(ln) for ln in
+           (replay / 'matches' / 'index.jsonl').open(encoding='utf-8')]
+    row = next(e for e in idx if e['game_id'] == 'g_20260830_094811')
+    assert row['code_commit'] == 'abc1234'
+    assert row['registry_fingerprint'] == 'fp001'
+
+
+def test_strategy_version_none_for_legacy(replay: Path):
+    """二期②旧数据边界:runs 行无戳 → strategy_version=None(版本未知,
+    不冒认当前 checkout 版本)。"""
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    assert a['strategy_version'] is None
