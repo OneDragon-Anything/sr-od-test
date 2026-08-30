@@ -291,21 +291,8 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'tier_push_gate_min_round': ('int', 4),
     'tier_push_press_cost_max': ('int', 2),
     'tier_push_press_round_cap': ('int', 2),
-    # ===== 件价值模型 Phase 1(W831 v2;伞+buy/keep/merge 默认关。
-    # 权重=标定定谳值(w852 标定批:A=1.0 满额映射/B=0.0 无可行值结论,
-    # 见该 REPORT 与 test_cw_piece_value 锁 0 重推);C/D/E/F 无权重字段
-    # =类型层收窄,Phase 2 随全量 weight 类型入面)=====
-    'piece_value_enabled': ('bool', False),
-    'piece_value_buy_enabled': ('bool', False),
-    'piece_value_keep_enabled': ('bool', False),
-    'piece_value_merge_enabled': ('bool', False),
-    'piece_value_w_activation': ('float', 1.0),
-    'piece_value_w_retention': ('float', 0.0),
-    # ===== 件价值·买前 bench 容量预检硬门(ADR-0497;子旗标默认关
-    # ===== 零漂移,开臂判据=W836 PREREG 同格重验挂账;reserve 推导
-    # ===== 单一源=piece_value.bench_reserve,cap 只截上限下界恒 1)=====
-    'piece_value_bench_gate_enabled': ('bool', False),
-    'piece_value_bench_reserve_cap': ('int', 2),
+    # (件价值模型 Phase 1 八字段已随整机制定谳删除,W927 删码批;
+    #  删字段须移除条目 = 面册锁文法的反向操作。ADR-0496/0497 留档。)
     # (P1→P2 接口机制五开关+三阈值已随定谳清理删除,ADR-0487)
     # ===== 形态达标三方向 =====
     'recipe_fence_enabled': ('bool', False),
@@ -318,7 +305,7 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'constraints': ('tuple[str, ...]', [
         'gold_floor', 'interest_rule', 'bench_capacity', 'copies_cap',
         'same_round_mutex', 'blood_budget_stop', 'boss_levelup_ban',
-        'deploy_cap', 'spend_gate', 'pv_bench_reserve']),
+        'deploy_cap', 'spend_gate']),
     # ===== 支出门·买侧收门(W829;伞+两子旗标默认关,开臂判据挂账
     # = w829_spend_gate_design/PREREG_v4.md)=====
     'spend_gate_enabled': ('bool', False),
@@ -338,17 +325,15 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'audit_matrix': (
         'dict[tuple[str, str], tuple[str, ...] | tuple[str, str]]', {
             "('gold', 'boss')": ['gold_floor', 'interest_rule'],
-            # (gold/boss 与 bench/boss 格不含 spend_gate/pv_bench_reserve:
-            # 两门在 boss 窗让位,W774⑤ 同仲裁语义)
+            # (gold/boss 与 bench/boss 格不含 spend_gate:支出门在 boss
+            # 窗让位,W774⑤ 同仲裁语义)
             # (gold emergency/mode 格的 p1_iface_gate 已随定谳清理删除,
-            # ADR-0487)
+            # ADR-0487;pv_bench_reserve 已随件价值整机制删除,W927/ADR-0497)
             "('gold', 'emergency')": ['gold_floor', 'spend_gate'],
             "('gold', 'mode')": ['gold_floor', 'interest_rule', 'spend_gate'],
             "('bench', 'boss')": ['bench_capacity'],
-            "('bench', 'emergency')": ['bench_capacity', 'spend_gate',
-                                       'pv_bench_reserve'],
-            "('bench', 'mode')": ['bench_capacity', 'spend_gate',
-                                  'pv_bench_reserve'],
+            "('bench', 'emergency')": ['bench_capacity', 'spend_gate'],
+            "('bench', 'mode')": ['bench_capacity', 'spend_gate'],
             "('slot', 'boss')": ['blood_budget_stop', 'boss_levelup_ban'],
             "('slot', 'emergency')": ['blood_budget_stop', 'bench_capacity'],
             "('slot', 'mode')": ['blood_budget_stop', 'deploy_cap'],

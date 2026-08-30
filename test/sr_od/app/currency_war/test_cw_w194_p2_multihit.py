@@ -19,26 +19,42 @@ import dataclasses
 import json
 import logging
 
-from sr_od.application.currency_war.kernel.cw_intention import (
-    IntentionState,
-    LineTrack,
-)
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+import pytest
+
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.kernel.cw_intention import serialize_intention
 from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     ArbiterResult,
     _steady_levelup_pass,
     arbitrate,
 )
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
-)
 from sr_od.application.currency_war.decision.decision_v2.remediation import (
     steady_state_levelup_group,
 )
+from sr_od.application.currency_war.kernel.cw_intention import (
+    IntentionState,
+    LineTrack,
+    serialize_intention,
+)
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 # 注入「press 通道关」注册表:press 通道已正式开臂(commit cb7688d4,
 # press_channel_enabled 默认 True),同档/1费买改由 press_floor_exempt
@@ -225,10 +241,10 @@ def _p2_state(gold: int = 8, level: int = 6) -> GameState:
 
 
 def _core_cand(name: str = '姬子·启行', cost: int = 3) -> object:
-    from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
     from sr_od.application.currency_war.decision.decision_v2.candidates import (
         Candidate,
     )
+    from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
     return Candidate(
         action=BuyCard(ShopCard(name=name, faction='列车同行',
                                 cost=cost, x=0, star=1), reason=''),

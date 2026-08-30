@@ -32,11 +32,6 @@ import logging
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    GameState,
-    LevelUp,
-)
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     arbitrate,
@@ -50,15 +45,34 @@ from sr_od.application.currency_war.decision.decision_v2.discipline import (
 from sr_od.application.currency_war.decision.decision_v2.posture_release import (
     hp_decision_trusted,
 )
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
-)
 from sr_od.application.currency_war.decision.decision_v2.remediation import (
     steady_state_levelup_group,
 )
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
+    LevelUp,
+)
 from sr_od.application.currency_war.operations.prep.shop import _apply_hp
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 
 def _ghost_state(hp: int = 100) -> GameState:
@@ -430,7 +444,9 @@ def test_seg_untrusted_hp_levelup_hits_both_bits_false() -> None:
     """不可信帧(两位皆 False,hp_decision_trusted 谓词镜像)上
     LevelUp → 命中;单 False 单 True(沿用帧/真读帧)不命中。"""
 
-    from sr_od.application.currency_war.sim.checks.segments import seg_check_untrusted_hp_levelup
+    from sr_od.application.currency_war.sim.checks.segments import (
+        seg_check_untrusted_hp_levelup,
+    )
     rows = [_ledger_row(2, 4, hp_readable=False, hp_trusted=False,
                         actions=[_lv_action()])]
     evs = seg_check_untrusted_hp_levelup(rows)
@@ -443,7 +459,9 @@ def test_seg_trusted_frames_zero_hit() -> None:
     """可信面零命中:两键缺省(sim 恒真读/旧批账本)、(False, True)
     同节点沿用帧、(True, False) 真读帧、不可信帧但无 LevelUp。"""
 
-    from sr_od.application.currency_war.sim.checks.segments import seg_check_untrusted_hp_levelup
+    from sr_od.application.currency_war.sim.checks.segments import (
+        seg_check_untrusted_hp_levelup,
+    )
     rows = [
         _ledger_row(1, 3, hp_readable=None, hp_trusted=None,
                     actions=[_lv_action()]),            # sim 形态
@@ -459,7 +477,9 @@ def test_seg_trusted_frames_zero_hit() -> None:
 def test_seg_allin_exempt_precedes_trust_check() -> None:
     """ALL IN 豁免优先(消费门语义镜像):位面末 boss 不可信帧 LevelUp 不报。"""
 
-    from sr_od.application.currency_war.sim.checks.segments import seg_check_untrusted_hp_levelup
+    from sr_od.application.currency_war.sim.checks.segments import (
+        seg_check_untrusted_hp_levelup,
+    )
     rows = [_ledger_row(2, 7, hp_readable=False, hp_trusted=False,
                         actions=[_lv_action()], node='boss')]
     assert seg_check_untrusted_hp_levelup(rows) == []
@@ -486,7 +506,9 @@ def test_seg_untrusted_mutation_default_trust_turns_locks_red() -> None:
     命中——锁的敏感性由显式 False 单向触发保证(缺省键的旧账本
     不虚报,真不可信帧不漏报)。"""
 
-    from sr_od.application.currency_war.sim.checks.segments import seg_check_untrusted_hp_levelup
+    from sr_od.application.currency_war.sim.checks.segments import (
+        seg_check_untrusted_hp_levelup,
+    )
     # 顶层缺 state 子字典(形状异常账本)也不炸、且不误报(缺省 = 可信)
     row = {'plane': 1, 'round_num': 2, 'hp': 100, 'actions': [_lv_action()]}
     assert seg_check_untrusted_hp_levelup([row]) == []

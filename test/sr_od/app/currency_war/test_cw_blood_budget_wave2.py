@@ -21,16 +21,10 @@ from __future__ import annotations
 import dataclasses
 import logging
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    GameState,
-    RefreshShop,
-    ShopCard,
-)
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+import pytest
 
-from sr_od.application.currency_war.sim.checks.segments import _P1_EMERGENCY_HP, _P1_EXIT_BLOOD_TARGET, _P1_HANDOFF_GATE_MIN_ROUND, seg_check_p1_blood_budget_refresh
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2 import candidates as cands_mod
 from sr_od.application.currency_war.decision.decision_v2 import handoff as handoff_mod
 from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
@@ -46,8 +40,34 @@ from sr_od.application.currency_war.decision.decision_v2.discipline import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
+    RefreshShop,
+    ShopCard,
+)
+from sr_od.application.currency_war.sim.checks.segments import (
+    _P1_EMERGENCY_HP,
+    _P1_EXIT_BLOOD_TARGET,
+    _P1_HANDOFF_GATE_MIN_ROUND,
+    seg_check_p1_blood_budget_refresh,
+)
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 
 def _p1_state(hp: int = 40, round_num: int = 7, node: str = 'battle',
@@ -208,10 +228,10 @@ def test_arbitrate_refresh_rescued_in_emergency_band() -> None:
 
 def test_mirror_constants_match_registry() -> None:
     """cw_sim_checks 镜像常量 ↔ registry 单一源双向锁(漂移即红)。"""
-    assert _P1_EXIT_BLOOD_TARGET == DEFAULT_REGISTRY.p1_exit_blood_target
-    assert (_P1_HANDOFF_GATE_MIN_ROUND
-            == DEFAULT_REGISTRY.handoff_gate_min_round)
-    assert _P1_EMERGENCY_HP == DEFAULT_REGISTRY.emergency_hp
+    assert DEFAULT_REGISTRY.p1_exit_blood_target == _P1_EXIT_BLOOD_TARGET
+    assert (DEFAULT_REGISTRY.handoff_gate_min_round
+            == _P1_HANDOFF_GATE_MIN_ROUND)
+    assert DEFAULT_REGISTRY.emergency_hp == _P1_EMERGENCY_HP
 
 
 def _row(plane: int, hp: int, rn: int, node: str,

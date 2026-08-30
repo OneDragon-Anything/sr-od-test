@@ -26,18 +26,8 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_intention import (
-    IntentionState,
-    intention_core,
-)
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    BuyCard,
-    GameState,
-    ShopCard,
-)
+import pytest
+
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     _check_constraint,
@@ -51,11 +41,37 @@ from sr_od.application.currency_war.decision.decision_v2.handoff import (
     handoff_gate_gap,
 )
 from sr_od.application.currency_war.decision.decision_v2.phase import form_ok
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_intention import (
+    IntentionState,
+    intention_core,
+)
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    BuyCard,
+    GameState,
+    ShopCard,
+)
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 #: ADR-0411:承接门无条件启用——行为臂即 DEFAULT_REGISTRY
 _REG = DEFAULT_REGISTRY

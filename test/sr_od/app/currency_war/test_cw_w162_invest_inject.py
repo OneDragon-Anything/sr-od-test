@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ADR-0364(W162)sim 投资策略/环境注入锁。
 
 锁面:
@@ -17,6 +16,8 @@ from __future__ import annotations
 
 import logging
 
+import pytest
+
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.sim.cw_sim_invest import (
     SIM_STRATEGY_PICK_SCHEDULE,
@@ -27,7 +28,21 @@ from sr_od.application.currency_war.sim.cw_sim_invest import (
     strategy_freq_table,
 )
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 _POOL = 'fallback'
 KEYS = ('final_hp', 'hp_trail', 'refreshes', 'dir_round', 'level')

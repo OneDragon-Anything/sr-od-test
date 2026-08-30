@@ -26,14 +26,7 @@ import logging
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_state import (
-    BENCH_CAPACITY,
-    BenchChar,
-    GameState,
-)
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-
-from sr_od.application.currency_war.sim.checks.segments import seg_check_p1_blood_budget_refresh, seg_terminal_release_ledger
 from sr_od.application.currency_war.decision.decision_v2.discipline import (
     blood_budget_levelup_blocked,
     blood_budget_refresh_blocked,
@@ -46,8 +39,31 @@ from sr_od.application.currency_war.decision.decision_v2.discipline import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
+from sr_od.application.currency_war.kernel.cw_state import (
+    BENCH_CAPACITY,
+    BenchChar,
+    GameState,
+)
+from sr_od.application.currency_war.sim.checks.segments import (
+    seg_check_p1_blood_budget_refresh,
+    seg_terminal_release_ledger,
+)
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 #: 闭式对拍基准值(=registry.streak_floor_win_rate 注入表直读,本表
 #: 是 p_i 单一源;此处只做乘法,禁复制数值——漂移由表本身锁辖)

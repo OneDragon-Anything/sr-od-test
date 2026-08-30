@@ -29,6 +29,23 @@ from __future__ import annotations
 
 import logging
 
+import pytest
+
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
+    Candidate,
+)
+from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
+from sr_od.application.currency_war.decision.decision_v2.posture import Posture
+from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+    ReleaseDirective,
+    channel_rank_scope,
+    rank_refresh_vs_upgrade,
+)
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY,
+)
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
@@ -36,23 +53,22 @@ from sr_od.application.currency_war.kernel.cw_state import (
     LevelUp,
     RefreshShop,
 )
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision.decision_v2.candidates import (
-    Candidate,
-)
-from sr_od.application.currency_war.decision.decision_v2.posture import Posture
-from sr_od.application.currency_war.decision.decision_v2.posture_release import (
-    ReleaseDirective,
-    channel_rank_scope,
-    rank_refresh_vs_upgrade,
-)
-from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
-)
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 _REG = DEFAULT_REGISTRY
 
@@ -125,16 +141,16 @@ def test_rank_margins_hand_recalc_from_single_addresses() -> None:
     cw_shop_odds.expected_refreshes_for_card;升级费=kernel.upgrade_plan_fee),
     锁钉「比较形状」不锁数值巧合(帧取锁定核 1★ 副本未齐的常态溢余帧)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    from sr_od.application.currency_war.kernel.cw_intention import (
-        IntentionState,
-        intention_core,
-    )
     from sr_od.application.currency_war.decision.decision_v2.ev import (
         levelup_refresh_saving,
     )
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     from sr_od.application.currency_war.kernel.cw_economy import (
         upgrade_plan_fee,
+    )
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        IntentionState,
+        intention_core,
     )
     # 锁定核 comp:bench 放 1★ 核心 1 张(saving 的 owned 输入非退化)
     comp = next(c for c in COMP_LIBRARY
@@ -192,8 +208,9 @@ def test_scope_predicate_uses_adr0445_flip_semantics() -> None:
     现语义——经生产链 release_directive 取指令:应急带帧(hp≤25)flip
     让位(指令非 flip,不辖)、息线以内(g≤R*)无 flip 指令不辖;溢余段
     flip 帧辖,且 hp 高低/可信位无关(旧血量复合谓词不得回归)。"""
-    from sr_od.application.currency_war.decision.decision_v2.posture_release \
-        import release_directive
+    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+        release_directive,
+    )
     st_low = _state(gold=80, hp=25)   # 应急辖区,flip 让位
     d = release_directive(st_low, _sess_of(st_low), _REG, 'FORM',
                           Posture(save=False, level_up=True,
@@ -257,6 +274,7 @@ def test_rank_no_second_margin_address_structure() -> None:
     kernel.upgrade_plan_fee 两个既有单一址符号,不出现任何本地概率/
     费用查表(W720 修订要点②:刷新边际单一址,禁第二账)。"""
     import inspect
+
     from sr_od.application.currency_war.decision.decision_v2 import (
         posture_release,
     )
@@ -437,6 +455,7 @@ def test_ma_collapse_single_address_no_reimplementation() -> None:
     ._omega_collapse_zeroed(ADR-0475 挂账原文指定单一址),不出现
     第二概率口径(refresh_prob 直调/本地比值)。"""
     import inspect
+
     from sr_od.application.currency_war.decision.decision_v2 import arbiter
     src = inspect.getsource(arbiter)
     assert '_omega_collapse_zeroed' in src

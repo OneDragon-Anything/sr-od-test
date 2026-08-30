@@ -27,6 +27,30 @@ def _load_marks() -> list[str]:
     ]
 
 
+def pytest_collection_finish(session):
+    """收集期全局日志守卫:拦截模块级 ``logging.disable`` 泄漏。
+
+    ``logging.disable`` 是进程全局态,而 pytest 在收集期就 import 全部测试
+    模块——任何模块级调用会对**整个测试会话**生效,静默饿死其他测试依赖
+    日志落盘的断言(判例:test_log_utils_utf8_rollover_continuity 因此
+    FileNotFoundError,单文件绿/全量红的假 flaky)。禁日志必须收口为本
+    模块的 autouse fixture(见各 CW 测试文件的 ``_quiet_logging``)。
+    检测到泄漏即整轮报错并复位,让新违例当场红,而不是遥遥挂在无关测试。
+    """
+    import logging
+
+    disable_level = logging.root.manager.disable
+    if disable_level >= logging.WARNING:
+        logging.disable(logging.NOTSET)
+        raise pytest.UsageError(
+            "收集期检测到模块级 logging.disable 泄漏(全局禁言级别 "
+            f"{disable_level} >= WARNING)。禁止在测试模块顶层调用 "
+            "logging.disable——请改为模块内 autouse fixture(参考 "
+            "test_cw_blood_budget_stop.py 的 _quiet_logging),否则会静默"
+            "破坏其他测试的日志断言。"
+        )
+
+
 def pytest_collection_modifyitems(config, items):
     """按名单打 slow 标记;并自带 not slow/slow 选摘(不依赖核心 -m 求值顺序)。"""
     marks = _load_marks()

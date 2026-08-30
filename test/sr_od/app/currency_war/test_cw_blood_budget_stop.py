@@ -21,14 +21,9 @@ from __future__ import annotations
 import dataclasses
 import logging
 
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    GameState,
-    LevelUp,
-)
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+import pytest
 
-from sr_od.application.currency_war.sim.checks.segments import _P1_LEVELUP_STOP_HP, _P2_LEVELUP_STOP_HP, seg_check_p1_blood_budget_levelup, seg_check_p2_blood_budget_levelup
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.arbiter import (
     _check_constraint,
     arbitrate,
@@ -41,14 +36,39 @@ from sr_od.application.currency_war.decision.decision_v2.discipline import (
     p1_levelup_stop_hp,
     p2_levelup_stop_hp,
 )
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
-)
 from sr_od.application.currency_war.decision.decision_v2.remediation import (
     steady_state_levelup_group,
 )
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
+    LevelUp,
+)
+from sr_od.application.currency_war.sim.checks.segments import (
+    _P1_LEVELUP_STOP_HP,
+    _P2_LEVELUP_STOP_HP,
+    seg_check_p1_blood_budget_levelup,
+    seg_check_p2_blood_budget_levelup,
+)
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 
 def _p2_state(hp: int = 16, round_num: int = 3, node: str = 'battle',
@@ -82,8 +102,8 @@ def test_stop_lines_derive_from_registry() -> None:
 
 def test_mirror_constants_match_discipline() -> None:
     """cw_sim_checks 镜像常量 ↔ discipline 单一源双向锁(漂移即红)。"""
-    assert _P2_LEVELUP_STOP_HP == p2_levelup_stop_hp(DEFAULT_REGISTRY)
-    assert _P1_LEVELUP_STOP_HP == p1_levelup_stop_hp(DEFAULT_REGISTRY)
+    assert p2_levelup_stop_hp(DEFAULT_REGISTRY) == _P2_LEVELUP_STOP_HP
+    assert p1_levelup_stop_hp(DEFAULT_REGISTRY) == _P1_LEVELUP_STOP_HP
 
 
 # ---------- 谓词辖域 ----------

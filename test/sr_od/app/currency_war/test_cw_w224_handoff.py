@@ -15,13 +15,8 @@ from __future__ import annotations
 
 import logging
 
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    GameState,
-    ShopCard,
-)
+import pytest
+
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.handoff import (
     HANDOFF_BOARD_CORE2_CUTS,
@@ -35,8 +30,28 @@ from sr_od.application.currency_war.decision.decision_v2.handoff import (
 from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
 )
+from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
+    ShopCard,
+)
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 _SNAP_KEYS = {'hp', 'engines', 'form_score', 'core2_count', 'star_sum',
               'level', 'deployed_n', 'gold', 'locked', 'locked_comp',
@@ -212,7 +227,6 @@ def test_decision_trace_handoff_field(tmp_path) -> None:
     ``salvageable_1star_value``(计算式锁在 test_cw_w428_salvageable_
     1star_value.py);快照本体 as_dict() 键集不变(sim 同构不受影响)。
     """
-    from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
     rec = recorder.TelemetryRecorder(tmp_path, enabled=True)
     st = _state(shop=[ShopCard(x=0, name='藿藿', faction='仙舟', cost=1)])
     sess = _sess()
@@ -233,8 +247,5 @@ def test_decision_trace_handoff_field(tmp_path) -> None:
     assert row2['handoff'] is None
 
 
-from sr_od.application.currency_war.sim import engine_p1
-from sr_od.application.currency_war.sim import engine_p2
-
-
+from sr_od.application.currency_war.sim import engine_p1, engine_p2
 from sr_od.application.currency_war.telemetry import recorder

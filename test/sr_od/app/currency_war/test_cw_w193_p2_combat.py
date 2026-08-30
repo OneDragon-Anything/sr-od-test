@@ -22,6 +22,8 @@ from __future__ import annotations
 import logging
 import random
 
+import pytest
+
 from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
 from sr_od.application.currency_war.kernel import cw_battle_calib
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
@@ -35,7 +37,21 @@ from sr_od.application.currency_war.sim.checks.calib import (
 )
 from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
 
-logging.disable(logging.CRITICAL)
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
 
 
 def _st(engines: int = 0, level: int = 6) -> GameState:
