@@ -11,6 +11,10 @@ REPORT.md,离线只读分析)+ W872 攻击口径(映射行须有 comp 携带 tag
   基表映射行值域必须 ⊆ COMP_LIBRARY 实际携带词汇 —— 本批复活后这些基表行由死转活。
 - 判据边界:每 tag 的载体集必须符合裁决判型(单属性队=属性型羁绊主档 ≥4 的 comp;
   慢速=DOT 载体;依赖合成装备=反甲装备流;成型羁绊队=羁绊驱动型,装备流/单核族不打)。
+- 滤除口不交集结构锁:W878 词汇集与三张直读原始属性的查表(boss_fit 兜底/护航
+  serves/巨星兜底)不交集,任一侧撞车即红(w882 攻击角度5 采纳)。
+- 两旗标禁独立开臂:synth_equip_dep(选型侧)不得脱离 junk_first(执行侧防护)
+  单独开臂,构造期校验(w882 攻击旗标交互角度采纳)。
 
 注意:W878 行为开关默认关,开臂断言用 dataclasses.replace 构造开臂 registry 注入,
 不碰 DEFAULT_REGISTRY(测试零真实副作用纪律)。
@@ -19,9 +23,14 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from sr_od.application.currency_war.data.cw_enemy_data import COMP_ATTR_TAGS
 from sr_od.application.currency_war.kernel.cw_comps import (
     AFFIX_MECHANIC_MAP,
+    ATTRIBUTE_TYPE_FACTIONS,
     COMP_LIBRARY,
+    ESCORT_COMPS,
+    MEGASTAR_BY_ATTRIBUTE,
+    W878_GATED_TAGS,
     Comp,
     effective_mechanic_attributes,
     mechanics_fit,
@@ -131,9 +140,10 @@ def test_w878_synth_equip_dep_counters_baie() -> None:
     """变宝为废(首次进阶合成 50% 垃圾袋)克依赖合成装备:反甲白厄降分。
 
     出处 = final_baie_reflect(反甲装备流,以牙还牙甲=胜利条件);合成侧已由 junk_first
-    处理,本 tag 只补选型侧(互补禁重复)。
+    处理,本 tag 只补选型侧(互补禁重复)。按两旗标禁独立开臂约束(构造期校验),
+    开选型侧必须同开 junk_first(联动评审臂),故本用例同开两侧。
     """
-    reg = _arm(w878_synth_equip_dep_enabled=True)
+    reg = _arm(w878_synth_equip_dep_enabled=True, junk_first_sacrifice_enabled=True)
     assert _fit_with(_comp_by_name("反甲白厄"), "变宝为废", reg) < 0.5
     assert _fit_with(_comp_by_name("万敌单C"), "变宝为废", reg) == 0.5
 
@@ -169,11 +179,23 @@ def test_w878_revived_base_rows_not_dead() -> None:
 
 
 def test_w878_mono_attribute_carrier_boundary() -> None:
-    """单属性队唯一载体 = 希儿量子(属性型羁绊主档 ≥4 判据;其余六属性熄火无纯色 comp)。"""
-    carriers = [c.name for c in COMP_LIBRARY if "单属性队" in c.mechanic_attributes]
-    assert carriers == ["希儿量子"], f"单属性队载体漂移: {carriers}"
-    assert _comp_by_name("希儿量子").form_tiers.get("量子同频", 0) >= 4, \
-        "判据前提:量子同频属性型羁绊主档 ≥4"
+    """单属性队载体判据锁(判据性,非枚举):每个载体须「属性型羁绊主档 ≥4」。
+
+    w882 攻击采纳:原「唯一载体=希儿量子」枚举锁把单例钉成制度性盲区
+    (final_daheita_aoe 明文冰之熄火 counter 大黑塔,但枚举锁使该克制恒中性且
+    未来补载体必锁红)——改判据后,新属性 comp(如火纯色线)落档即自动入判,
+    错载体(属性型羁绊非主档/档深不足)自动拦。判据载体集 = cw_comps
+    .ATTRIBUTE_TYPE_FACTIONS(V4.4 仅量子同频按角色属性聚合)。
+    """
+    carriers = [c for c in COMP_LIBRARY if "单属性队" in c.mechanic_attributes]
+    assert carriers, "单属性队载体为空 = 复活未落码"
+    assert any(c.name == "希儿量子" for c in carriers), \
+        "证据基线(final_comps README D3 明文)不得丢失"
+    for c in carriers:
+        attr_mains = {f: t for f, t in c.form_tiers.items()
+                      if f in ATTRIBUTE_TYPE_FACTIONS}
+        assert attr_mains and max(attr_mains.values()) >= 4, \
+            f"{c.name} 单属性队载体缺属性型羁绊主档 ≥4(判据漂移: {c.form_tiers})"
 
 
 def test_w878_slow_carrier_boundary() -> None:
@@ -202,3 +224,46 @@ def test_w878_bond_exclusions_not_tagged() -> None:
             f"{name} 属装备流/单核族(羁绊不满也有战力),不应打成型羁绊队"
     tagged = [c.name for c in COMP_LIBRARY if "成型羁绊队" in c.mechanic_attributes]
     assert len(tagged) >= 10, f"羁绊驱动型载体数异常偏少: {len(tagged)}"
+
+
+# —— 滤除口不交集结构锁(w882 攻击角度5 采纳)——
+
+
+def test_w878_gated_tags_disjoint_from_raw_attr_lookup_tables() -> None:
+    """W878 词汇集与三张直读原始 mechanic_attributes 的查表不交集(结构保证)。
+
+    effective_mechanic_attributes 是 mechanic_attributes 的唯一**评分**滤除口,
+    但另有三处直读原始属性:boss_fit 兜底 matchup(COMP_ATTR_TAGS)/护航 serves
+    匹配(ESCORT_COMPS)/巨星兜底(MEGASTAR_BY_ATTRIBUTE)——当前不泄漏靠
+    三张表恰好不含 W878 词汇,属巧合非结构:任一侧新增撞车词汇(如给巨星兜底
+    加「成型羁绊队→某巨星」)会造出绕过开关的常开行为,且默认关零漂移锁测不到
+    (现有锁只测 mechanics_fit 路径)。本锁把「碰巧不泄漏」升级为「被锁住的
+    永不泄漏」:滤除口词汇或任一查表新增撞车词即红,逼先修接线再扩词汇。
+    """
+    gated = set(W878_GATED_TAGS)
+    escort_serves = {s for ec in ESCORT_COMPS for s in ec.serves}
+    enemy_tags = set(COMP_ATTR_TAGS) | set(COMP_ATTR_TAGS.values())
+    mega_attrs = set(MEGASTAR_BY_ATTRIBUTE)
+    clash = gated & (escort_serves | enemy_tags | mega_attrs)
+    assert not clash, \
+        f"W878 词汇撞进直读原始属性的查表(绕过滤除口风险): {clash}——" \
+        "先让该消费点改走 effective_mechanic_attributes,再扩词汇"
+
+
+# —— 两旗标禁独立开臂(构造期校验锁;w882 攻击旗标交互角度采纳)——
+
+
+def test_w878_synth_flag_cannot_arm_without_junk_first() -> None:
+    """选型侧(synth_equip_dep)单独开臂 = 构造期 ValueError;junk 侧单独开/两侧同开合法。
+
+    依据:选型 -0.25 与执行侧牺牲合成防护是同一机制(变宝为废)的两面,选型惩罚叠
+    已有防护疑过反应,禁未对照单独开臂;junk_first 防护先行合法。校验落点 =
+    DecisionV2Registry.__post_init__(缺省两 False,零漂移)。
+    """
+    import pytest
+
+    with pytest.raises(ValueError, match="禁独立开臂"):
+        _arm(w878_synth_equip_dep_enabled=True)
+    _arm(junk_first_sacrifice_enabled=True)          # junk 侧单独开合法
+    _arm(w878_synth_equip_dep_enabled=True,          # 联动同开合法
+         junk_first_sacrifice_enabled=True)
