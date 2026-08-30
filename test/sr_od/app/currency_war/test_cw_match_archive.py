@@ -243,3 +243,104 @@ def test_strategy_version_none_for_legacy(replay: Path):
     不冒认当前 checkout 版本)。"""
     a = arch.build_archive(replay, arch.assign_games(replay)[0])
     assert a['strategy_version'] is None
+
+
+# ===== v3 战后终态列(w936_deploy_fill 移交①:决策帧 ≠ 执行后板面)=====
+
+def test_terminal_state_summary_field_lock():
+    """字段面锁:终态计数四键口径——deployed/bench 占用数(None 剔除)、
+    worn(Σ deployed[].equips 件数)、owned(state.equips 件数)。
+
+    口径单一源 = schema.terminal_state_summary docstring(坐标系/取值时机);
+    本锁钉键名与计数语义,分布数值不锁(测试纪律 #4)。"""
+    from sr_od.application.currency_war.telemetry.schema import (
+        terminal_state_summary,
+    )
+    st = {'deployed': [
+              {'name': '甲', 'equips': ['火力风暴潮', '高周波电锯']},
+              None,
+              {'name': '乙', 'equips': []},
+          ],
+          'bench': [{'name': '丙'}, None, {'name': '丁'}, None, None],
+          'equips': ['折叠小刀', '轮滑鞋']}
+    assert terminal_state_summary(st) == {
+        'deployed_count': 2, 'bench_count': 2,
+        'equips_worn': 2, 'equips_owned': 2}
+    # dict 形态 owned(旧语料/测试形态)按键数计;缺键/非 dict 安全退化
+    assert terminal_state_summary({'equips': {'递归': 1}}) == {
+        'deployed_count': 0, 'bench_count': 0,
+        'equips_worn': 0, 'equips_owned': 1}
+    assert terminal_state_summary(None) == {
+        'deployed_count': 0, 'bench_count': 0,
+        'equips_worn': 0, 'equips_owned': 0}
+    assert terminal_state_summary({'deployed': '残缺'})['deployed_count'] == 0
+
+
+def test_rounds_terminal_vs_decision_frame_divergence(replay: Path):
+    """端到端:同轮「决策帧列」与「终态列」并列且可分歧——决策帧取
+    actions 最多帧(执行前),终态取最晚帧(执行后);复刻 w936 误读形态
+    (决策帧 4/6 → 执行后 6/6)并断言两列不同。"""
+    dec_p = replay / 'decisions.jsonl'
+    rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
+    # 给段 B p1r9 造三帧:①决策帧(actions 最多,dep=1 无装备)→
+    # ②执行步进帧 → ③终态帧(最晚 ts,dep=3 已穿 2 件 + owned 1)
+    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:17:16',
+                        actions=[{'__type__': 'BuyCard', 'card': {'name': '甲'}},
+                                 {'__type__': 'BuyCard', 'card': {'name': '乙'}}]),
+                 'state': {'node_type': '普通战斗', 'level': 3,
+                           'hp_trusted': None, 'board': {},
+                           'deployed': [{'name': '甲', 'equips': []}],
+                           'bench': [], 'equips': []}})
+    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:18:00'),
+                 'state': {'node_type': '普通战斗', 'level': 3,
+                           'hp_trusted': None, 'board': {},
+                           'deployed': [{'name': '甲', 'equips': []},
+                                        {'name': '乙', 'equips': []}],
+                           'bench': [], 'equips': []}})
+    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:19:30'),
+                 'state': {'node_type': '普通战斗', 'level': 3,
+                           'hp_trusted': None, 'board': {},
+                           'deployed': [{'name': '甲', 'equips': ['火力风暴潮']},
+                                        {'name': '乙', 'equips': []},
+                                        {'name': '丙', 'equips': ['高周波电锯']}],
+                           'bench': [None, {'name': '丁'}],
+                           'equips': ['折叠小刀']}})
+    _write_jsonl(replay, 'decisions.jsonl', rows)
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    assert a['schema_version'] == arch.SCHEMA_VERSION == 3
+    r9 = next(r for r in a['rounds']
+              if (r['plane'], r['round']) == (1, 9))
+    # 决策帧列 = ①(actions 最多、ts 并列取晚)= 执行前板面
+    assert len(r9['deployed']) == 1
+    # 终态列 = ③(最晚帧)= 执行后板面,且与决策帧列可见分歧
+    assert r9['terminal'] == {'deployed_count': 3, 'bench_count': 1,
+                              'equips_worn': 2, 'equips_owned': 1}
+    assert r9['terminal_ts'] == '2026-08-30T10:19:30'
+    assert r9['terminal_source'] == 'last_decision_frame'
+    assert r9['terminal']['deployed_count'] != len(r9['deployed'])
+    # 同 ts 并列:流内后见者胜(执行步进密集形态)
+    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:19:30'),
+                 'state': {'node_type': '普通战斗', 'level': 4,
+                           'hp_trusted': None, 'board': {},
+                           'deployed': [], 'bench': [], 'equips': []}})
+    _write_jsonl(replay, 'decisions.jsonl', rows)
+    r9b = next(r for r in arch.build_archive(
+        replay, arch.assign_games(replay)[0])['rounds']
+        if (r['plane'], r['round']) == (1, 9))
+    assert r9b['terminal'] == {'deployed_count': 0, 'bench_count': 0,
+                               'equips_worn': 0, 'equips_owned': 0}
+
+
+def test_rounds_terminal_none_for_outcome_only_round(replay: Path):
+    """旧数据/仅结算行轮:无决策迹帧 → terminal=None、source='none'
+    (读端容忍口径,不炸不猜)。"""
+    out_p = replay / 'outcomes.jsonl'
+    rows = [json.loads(ln) for ln in out_p.open(encoding='utf-8') if ln.strip()]
+    # run_C 加一条 p1r2 结算行,但不造任何 p1r2 决策帧
+    rows.append(_out('run_20260830_110000', 1, 2, '2026-08-30T11:02:00', 66))
+    _write_jsonl(replay, 'outcomes.jsonl', rows)
+    a = arch.build_archive(replay, arch.assign_games(replay)[1])
+    r2 = next(r for r in a['rounds'] if (r['plane'], r['round']) == (1, 2))
+    assert r2['terminal'] is None
+    assert r2['terminal_ts'] is None
+    assert r2['terminal_source'] == 'none'
