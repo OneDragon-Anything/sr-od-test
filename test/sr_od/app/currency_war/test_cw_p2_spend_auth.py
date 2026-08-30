@@ -1,16 +1,25 @@
-"""W760 · 位面 2 支出授权单帧锁组(W757 v2 设计 §五判据预写落码;ADR-0480)。
+"""W768 · 位面 2 支出授权单帧锁组 v3.1(两通道版;ADR-0480/ADR-0481)。
 
-设计出处:.debug/temp/currency_war/w757_p2_spend_auth/REPORT.md v2 §五
-「单帧锁清单(事前写死)」九条 + 贴线带占位锁;W758 攻击报告 9 条修正
-语境(g≥50 边界/接管帧禁出手/P16 滞回后锁定位)。
+设计出处:.debug/temp/currency_war/w757_p2_spend_auth/REPORT.md v3.1 §五
+「单帧锁清单」十三条 + 预算带对齐声明 + 双通道合并语义;W762 A/B 机制
+归因与 W758-v3 攻击复核语境(止血通道/末窗收窄/只开门不收门/保留槽/
+投影失败帧)。
 
-锁语义不锁牌面:全部断言策略决策行为(授权/拒绝/预算带),不锁具体
-商店牌序。开关 p2_spend_auth_enabled 默认关=零漂移锚(每锁带 off 臂
-对照或 frame-None 等价断言)。
+锁语义不锁牌面:全部断言策略决策行为(授权/拒绝/预算带/方向辖域),
+不锁具体商店牌序。方向源梯级以 monkeypatch 注入(投影谓词本体在
+cw_intention/桥池另有锁组),接管谓词以 monkeypatch 驱动(同 W760 锁⑨
+先例,谓词本体锁组在 test_cw_w715)。
 
-占位期声明:P25 待证(贴线带逐点/核心卡必买 EV)——贴线带子句按设计
-占位保守=不买,贴线带占位锁断言「行为与占位判据一致」,P25 证成后随
-开臂批重推锁语义(策略开关生命周期第 3 态义务)。
+开关 p2_spend_auth_enabled 默认关=零漂移锚(每锁带 off 臂对照或
+frame-None 等价断言)。
+
+v3.1 锁语义演进声明(相对 W760 v2 锁组,重推依据=设计附录 B/C):
+- 锁① 贴线带占位保守不买子句随「预算带对齐」废除(G1-A 破息反降的
+  收门面)——常授权层与既有息账门同判,锁改断言「同判」;
+- 锁② 濒死 hp≤10 帧从「授权整体不触发」改写为「授权可触发但升级恒
+  禁」(P21 辖升级禁,通道 B 止血恰以血线恶化为触发维度);
+- 锁⑦ 「末窗整体不辖」改写为「豁免归 v6 接管帧谓词,非接管末窗帧
+  通道 B 可达」(W762:死亡多发生在末窗附近,一刀切豁免=排除病灶帧)。
 """
 from __future__ import annotations
 
@@ -21,9 +30,11 @@ from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrat
 from sr_od.application.currency_war.decision.decision_v2.candidates import (
     Candidate,
 )
+from sr_od.application.currency_war.decision.decision_v2 import p2_spend_auth
 from sr_od.application.currency_war.decision.decision_v2.p2_spend_auth import (
     p2_spend_auth_core_must_buy,
     p2_spend_auth_frame,
+    p2_spend_auth_intercept,
     p2_spend_auth_spend_authorized,
 )
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
@@ -35,11 +46,13 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     LevelUp,
     RefreshShop,
+    SellBench,
     ShopCard,
 )
 
 _CORE = '姬子·启行'          # 列车同行核心名(v3_core_names 注入)
 _COMP = '列车同行'
+_DIR_PIECE = '方向件甲'       # 通道 B 方向梯级注入名(锁语义不锁牌面)
 
 _REG_ON = dataclasses.replace(DEFAULT_REGISTRY,
                               p2_spend_auth_enabled=True)
@@ -59,7 +72,8 @@ def _sess(locked: bool = True, core: bool = True) -> StrategySession:
 
 
 def _st(**kw) -> GameState:
-    """授权辖域基帧:plane2 中段/战斗节点/常授权(g=53,无连败,hp 60)。"""
+    """授权辖域基帧:plane2 中段/战斗节点/通道 A 常授权(g=53,无连败,
+    hp 60 以上)。"""
     base = {'plane': 2, 'round_num': 2, 'node_type': '战斗', 'gold': 53,
             'hp': 80, 'hp_readable': True, 'level': 6, 'streak': None,
             'board': {}, 'bench': [], 'shop': [], 'deployed': []}
@@ -67,12 +81,17 @@ def _st(**kw) -> GameState:
     return GameState(**base)
 
 
-def _core_buy(gold_cost: int = 3, score: float = 0.0,
-              tag: str = 'line_carry') -> tuple[Candidate, float, dict]:
-    cand = Candidate(action=BuyCard(ShopCard(x=0, name=_CORE,
+def _buy(name: str, gold_cost: int = 3, score: float = 0.0,
+         tag: str = 'line_carry') -> tuple[Candidate, float, dict]:
+    cand = Candidate(action=BuyCard(ShopCard(x=0, name=name,
                                              cost=gold_cost)),
                      tag=tag, source='test')
     return cand, score, {}
+
+
+def _core_buy(gold_cost: int = 3, score: float = 0.0,
+              tag: str = 'line_carry') -> tuple[Candidate, float, dict]:
+    return _buy(_CORE, gold_cost, score, tag)
 
 
 # ===== 锁④ 守息不破 + 零漂移锚 =====
@@ -81,57 +100,81 @@ def test_lock4_below_floor_frame_is_none_and_zero_drift() -> None:
     """锁④([17]/P13):g<50 帧授权不触发;开关关逐位同(零漂移锚)。"""
     st = _st(gold=49)
     assert p2_spend_auth_frame(st, _sess(), _REG_ON) is None
-    # off 臂:授权帧恒 None(HEAD 行为)
+    assert p2_spend_auth_intercept(st, _sess(), _REG_ON) == 't4_gold'
+    # off 臂:授权帧恒 None 且枚举无语义(HEAD 行为)
     assert p2_spend_auth_frame(_st(), _sess(), _REG_OFF) is None
+    assert p2_spend_auth_intercept(_st(), _sess(), _REG_OFF) == ''
     # 决策面零漂移:g=53 负分核心买,off 臂拒(非正分门,HEAD 行为)
     res_off = arbitrate([_core_buy(score=0.0)], _st(), _sess(), _REG_OFF)
     assert res_off.actions == []
 
 
-# ===== 锁① 核心卡必买(g≥50 全息带)+ 贴线带占位锁 =====
+# ===== 锁① 核心卡必买(全息带 / g=50 加急)+ 贴线带对齐 =====
 
 def test_lock1_core_card_must_buy_spill_band() -> None:
     """锁①([31]②+P25 位):线锁定∧g≥53∧形态缺口∧核心卡在店→负分
-    候选也越过非正分门进买序列;g=53 全息带(花完仍≥50)。"""
+    候选也越过非正分门进买序列(g=53 全息带,花完仍≥息线)。"""
     sess = _sess()
-    st = _st(gold=53)
-    res = arbitrate([_core_buy(gold_cost=3, score=0.0)], st, sess, _REG_ON)
+    res = arbitrate([_core_buy(gold_cost=3, score=0.0)], _st(gold=53),
+                    sess, _REG_ON)
     buys = [a for a in res.actions if isinstance(a, BuyCard)]
     assert len(buys) == 1 and buys[0].card.name == _CORE, res.log
 
 
-def test_lock1_line_band_placeholder_conservative_no_buy() -> None:
-    """贴线带占位锁(W757 v2 §五附;P25 待证):g=50 核心买入落 [45,50)
-    →占位期保守=不买(off 臂同拒,行为一致)。P25 证成后本锁随开臂批
-    按「买/不买与凑息账结论一致」重推(不锁方向)。"""
+def test_lock1_boundary_g50_urgent_buys_and_line_band_aligned() -> None:
+    """锁① g=50 边界 + 预算带对齐(v3「只开门不收门」;W758 攻击 A
+    反例钉死):g=50 加急帧核心买入放行(通道 B 止血与通道 A 加急共
+    档,保留金带内);g=50 常授权帧核心买 = 与既有息账门同判(花完
+    47 跨档 → interest_rule EV 裁决,与 off 臂结论一致——v2 的「贴线
+    带占位保守不买」收门子句已废除,G1-A 破息反降回归钉)。"""
     sess = _sess()
-    st = _st(gold=50)
-    res = arbitrate([_core_buy(gold_cost=3, score=0.0)], st, sess, _REG_ON)
-    assert not [a for a in res.actions if isinstance(a, BuyCard)]
+    # 加急:g=50(连败 T3)核心 3 费 → 保留金带(47≥20)→ 买
+    st_u = _st(gold=50, streak=-2)
+    assert p2_spend_auth_frame(st_u, sess, _REG_ON) is not None
+    res_u = arbitrate([_core_buy(gold_cost=3, score=0.0)], st_u, sess,
+                      _REG_ON)
+    assert [a for a in res_u.actions if isinstance(a, BuyCard)], res_u.log
+    # 常授权:g=50 核心买 → 与既有门同判(不买;off 臂同结论)
+    res_on = arbitrate([_core_buy(gold_cost=3, score=0.0)], _st(gold=50),
+                       sess, _REG_ON)
+    res_off = arbitrate([_core_buy(gold_cost=3, score=0.0)], _st(gold=50),
+                        sess, _REG_OFF)
+    assert not [a for a in res_on.actions if isinstance(a, BuyCard)]
+    assert (not [a for a in res_off.actions if isinstance(a, BuyCard)])
 
 
 # ===== 锁②/⑧ 升级恒禁(濒死带 P21 + 停升级线 AND,授权不豁免)=====
 
 def test_lock2_8_authorization_never_emits_or_relaxes_levelup() -> None:
-    """锁②/⑧(P21/ADR-0448):授权通道对 LevelUp 恒不辖——升级不因
-    授权放宽;濒死 hp≤10 帧授权整体不触发(覆盖纪律态归既有族,升级
-    由血预算停手门独立拒)。"""
-    # 授权通道谓词对升级候选恒 False(两层同)
-    for urgent_kw in ({}, {'streak': -2}):
+    """锁②/⑧(P21/ADR-0448;v3.1 改写):授权通道对 LevelUp 恒不辖
+    ——升级不因授权放宽;濒死 hp≤10 帧授权可触发(通道 B 止血恰以血
+    线恶化为触发维度),但升级由血预算停手门(discipline 层,不受姿态
+    让位影响)独立拒——授权帧动作序列不含 LevelUp。"""
+    # 授权通道谓词对升级候选恒 False(加急/常授权两态同)
+    for urgent_kw in ({}, {'streak': -2}, {'hp': 10}):
         st = _st(**urgent_kw)
         assert p2_spend_auth_spend_authorized(
             Candidate(action=LevelUp(cost=4), tag='levelup',
                       source='test'),
             st, st, _sess(), _REG_ON) is False
-    # 濒死带帧:授权不触发(授权帧内零 LevelUp 的结构性保证)
-    assert p2_spend_auth_frame(_st(hp=10), _sess(), _REG_ON) is None
+    # 濒死帧:授权触发(通道 B),但仲裁输出不含 LevelUp
+    sess = _sess()
+    st = _st(hp=10, streak=-2)
+    auth = p2_spend_auth_frame(st, sess, _REG_ON)
+    assert auth is not None and auth.channel_b
+    res = arbitrate([(Candidate(action=LevelUp(cost=4), tag='levelup',
+                                source='test'), 5.0, {})], st, sess,
+                    _REG_ON)
+    assert not any(isinstance(a, LevelUp) for a in res.actions), res.log
 
 
 # ===== 锁③ j=0 负例保持(授权≠D 无条件开)=====
 
 def test_lock3_negative_score_refresh_still_rejected_in_auth_frame() -> None:
     """锁③(P12 检验点2):授权帧(含加急)内负分刷新仍拒——授权只
-    放宽预算上界,不动评分(V_D 批账 j=0 负例由既有 P12 锁组守)。"""
+    放宽预算上界,不动评分(V_D 批账 j=0 负例由既有 P12 锁组守);
+    通道 B 的 D 消费 [31]②「保血急救」合法用途,凑数羁绊 D 禁令原文
+    不变(评分不动即其机械化)。"""
     sess = _sess()
     st = _st(gold=53, streak=-2)          # 加急帧
     rc = Candidate(action=RefreshShop(cost=2), tag='refresh',
@@ -157,24 +200,42 @@ def test_lock5_deploy_passes_with_unchanged_gold() -> None:
     assert res.actions and st.gold == 53   # 金账不变(免费域)
 
 
-# ===== 锁⑥ 锁定前提(P16 滞回后位;摇摆域切分)=====
+# ===== 锁⑥ 锁定前提(通道 A 专属;通道 B 与锁定位解耦)=====
 
-def test_lock6_unlocked_frame_never_authorizes() -> None:
-    """锁⑥(§1.3 切分+P16):未锁定帧授权不触发;消费位=滞回后
-    locked 位(测试直设终态等价——生产位即 v3 状态机输出)。"""
+def test_lock6_lock_position_gates_channel_a_only() -> None:
+    """锁⑥(v3.1 改写;§1.3 切分+P16):未锁定帧通道 A 不触发;通道
+    B 照常判定(T3∧T4 即触发,锁不锁定次要)——消费位=滞回后 locked
+    位(测试直设终态等价,生产位即 v3 状态机输出)。"""
     sess = _sess(locked=False)
+    # 未锁定 ∧ 无血线恶化 → 无通道可授权(通道 A 被锁定位拦)
     assert p2_spend_auth_frame(_st(), sess, _REG_ON) is None
+    assert p2_spend_auth_intercept(_st(), sess, _REG_ON) == 't1_locked'
     res = arbitrate([_core_buy(score=0.0)], _st(), sess, _REG_ON)
     assert res.actions == []
+    # 未锁定 ∧ 血线恶化 → 通道 B 照常授权(解耦的行为钉)
+    auth = p2_spend_auth_frame(_st(streak=-2), sess, _REG_ON)
+    assert auth is not None and auth.channel_b and not auth.channel_a
 
 
-# ===== 锁⑦ 末窗不辖(boss 窗归既有族)=====
+# ===== 锁⑦ 末窗豁免收窄(v3:归 v6 接管帧谓词)=====
 
-def test_lock7_boss_window_frame_not_authorized() -> None:
-    """锁⑦(§3.3):P2 末窗(boss 节点)帧授权不触发(归 ALL IN/
-    降格既有族)。"""
-    assert p2_spend_auth_frame(_st(node_type='boss'), _sess(),
-                               _REG_ON) is None
+def test_lock7_endwindow_narrowed_to_v6_predicate(monkeypatch) -> None:
+    """锁⑦(v3.1 改写;§3.3):r7 整体豁免废除——非接管末窗帧
+    (boss 节点 r7)血线恶化∧g≥50 → 通道 B 授权可达(W762:死亡多
+    发生在末窗附近);豁免统一归接管帧谓词,v6 active 末窗帧仍禁
+    (与锁⑨合取闭合)。"""
+    sess = _sess()
+    st = _st(round_num=7, node_type='boss', streak=-2, gold=53)
+    auth = p2_spend_auth_frame(st, sess, _REG_ON)
+    assert auth is not None and auth.channel_b, auth
+    from sr_od.application.currency_war.decision.decision_v2 import allocator
+    from sr_od.application.currency_war.decision.decision_v2.allocator import (
+        AllocDomain,
+    )
+    monkeypatch.setattr(allocator, 'alloc_domain',
+                        lambda s, se, r: AllocDomain.STOP_WINDOW)
+    assert p2_spend_auth_frame(st, sess, _REG_ON) is None
+    assert p2_spend_auth_intercept(st, sess, _REG_ON) == 'v6_active'
 
 
 # ===== 锁⑨ 接管帧禁出手(分配器 v6 active 帧归属二选一)=====
@@ -199,54 +260,244 @@ def test_lock9_allocator_takeover_frame_blocks_authorization(
                         lambda s, se, r: AllocDomain.STOP_WINDOW)
     assert p2_spend_auth_frame(st, sess, _REG_ON) is None
     monkeypatch.undo()
-    # 接管帧内预算带谓词同样不放行(双保险,与门臂同源)
+    # 接管帧内加急预算谓词同样不放行(双保险,与门臂同源)
+    st_u = _st(gold=53, streak=-2)
     monkeypatch.setattr(allocator, 'alloc_domain',
                         lambda s, se, r: AllocDomain.STOP_WINDOW)
     cand, _, _ = _core_buy(gold_cost=3, score=5.0)
-    assert not p2_spend_auth_core_must_buy(cand, st, st, sess, _REG_ON)
+    assert not p2_spend_auth_core_must_buy(cand, st_u, st_u, sess, _REG_ON)
 
 
-# ===== 两层强度:常授权层预算地板 / 加急层破息下限 =====
+# ===== 锁⑩ 止血通道可达性(v3;W762 死亡窗覆盖修复的行为钉)=====
+
+def test_lock10_channel_b_reachable_decoupled_from_lock_and_form(
+        monkeypatch) -> None:
+    """锁⑩(§3.1 通道 B+W762 归因):未锁定∧形态已达标∧血线恶化∧
+    g≥50 的非接管帧 → 授权判定触发且加急预算放宽生效(与锁定/形态
+    无关);方向梯级注入名集内授权目标破息买入放行(on),off 臂同帧
+    被既有息账门拒(开门的净效应可观测)。"""
+    from sr_od.application.currency_war.decision.decision_v2 import phase
+    sess = _sess(locked=False)
+    monkeypatch.setattr(p2_spend_auth, '_hoard_projection',
+                        lambda s, se: (frozenset({_DIR_PIECE}), True))
+    monkeypatch.setattr(phase, 'form_ok',
+                        lambda s, se, r: True)   # 形态已达标(T2 不成立)
+    st = _st(gold=51, streak=-2)   # 破息刻度:51-4=47,既有门 EV 域
+    auth = p2_spend_auth_frame(st, sess, _REG_ON)
+    assert auth is not None and auth.channel_b \
+        and not auth.channel_a and not auth.notes['t1_locked']
+    assert p2_spend_auth_intercept(st, sess, _REG_ON) == 'authorized'
+    cand, _, _ = _buy(_DIR_PIECE, gold_cost=4, score=0.5,
+                      tag='off_target')
+    # on:加急带(47≥保留金 20)放行;off:既有息账门拒(EV≤0 域)
+    assert p2_spend_auth_spend_authorized(cand, st, st, sess, _REG_ON)
+    res_on = arbitrate([(cand, 0.5, {})], st, sess, _REG_ON)
+    res_off = arbitrate([(cand, 0.5, {})], st, sess, _REG_OFF)
+    assert [a for a in res_on.actions if isinstance(a, BuyCard)], res_on.log
+    assert not [a for a in res_off.actions if isinstance(a, BuyCard)]
+
+
+# ===== 锁⑪ 只开门不收门(v3 预算带对齐;G1-A 反降回归钉)=====
+
+def test_lock11_open_only_never_closes_existing_gates() -> None:
+    """锁⑪(§3.1 预算带对齐):授权帧内**常授权层**(非加急)的每笔
+    结论与既有息账门逐位一致——既有门放行的笔(同息档 [11])授权帧
+    内照常放行,既有门拒绝的笔(跨档 EV≤0 域)授权不改判;授权臂只
+    做额外放行从不拒绝。"""
+    sess = _sess()
+    # 同息档 1 费买(g=53,花完 52,零息损):on/off 同放行
+    c1, s1, b1 = _buy('插件件一', gold_cost=1, score=5.0, tag='plugin')
+    on1 = arbitrate([(c1, s1, b1)], _st(gold=53), sess, _REG_ON)
+    off1 = arbitrate([(c1, s1, b1)], _st(gold=53), sess, _REG_OFF)
+    assert bool([a for a in on1.actions if isinstance(a, BuyCard)])
+    assert bool([a for a in off1.actions if isinstance(a, BuyCard)])
+    # 跨档买(g=51 花 4 → 花完 47):常授权层不改判,on/off 同拒
+    c2, s2, b2 = _buy('插件件二', gold_cost=4, score=5.0, tag='plugin')
+    on2 = arbitrate([(c2, s2, b2)], _st(gold=51), sess, _REG_ON)
+    off2 = arbitrate([(c2, s2, b2)], _st(gold=51), sess, _REG_OFF)
+    assert (bool([a for a in on2.actions if isinstance(a, BuyCard)])
+            == bool([a for a in off2.actions if isinstance(a, BuyCard)]))
+
+
+# ===== 锁⑫ bench 保留槽(v3.1;[22]② 机械化)=====
+
+def _full_bench(cap: int, free: int = 0) -> list:
+    return [BenchChar(slot=i + 1, char_id=f'垫层{i}')
+            for i in range(cap - free)]
+
+
+def test_lock12_channel_b_bench_reserve_slot(monkeypatch) -> None:
+    """锁⑫(§3.1 通道 B+[22]②):通道 B 授权买入后备战席须保留 ≥1
+    空槽——买入后零空槽的笔授权不放行(降额,回落既有裁决);有余槽
+    帧放行。防「连续止血买入填满 bench → 线锁定后核心卡无槽可进」的
+    挤出回声。"""
+    sess = _sess(locked=False)
+    monkeypatch.setattr(p2_spend_auth, '_hoard_projection',
+                        lambda s, se: (frozenset({_DIR_PIECE}), True))
+    st = _st(gold=51, streak=-2)
+    cand, _, _ = _buy(_DIR_PIECE, gold_cost=4, score=5.0)
+    cap = DEFAULT_REGISTRY.bench_capacity
+    # 满席 → 授权不放行(腾不出降额;仲裁面 bench_capacity 亦拒)
+    st_full = _st(gold=51, streak=-2,
+                  bench=_full_bench(cap, free=0))
+    assert not p2_spend_auth_spend_authorized(cand, st_full, st_full,
+                                              sess, _REG_ON)
+    res = arbitrate([(cand, 5.0, {})], st_full, sess, _REG_ON)
+    assert not [a for a in res.actions if isinstance(a, BuyCard)], res.log
+    # 恰剩 1 空槽 → 买入后零空槽,授权不放行(保留槽条款本体)
+    st_one = _st(gold=51, streak=-2, bench=_full_bench(cap, free=1))
+    assert not p2_spend_auth_spend_authorized(cand, st_one, st_one,
+                                              sess, _REG_ON)
+    # 余槽 ≥2 → 买入后仍 ≥1 空槽,授权放行
+    st_two = _st(gold=51, streak=-2, bench=_full_bench(cap, free=2))
+    assert p2_spend_auth_spend_authorized(cand, st_two, st_two,
+                                          sess, _REG_ON)
+
+
+# ===== 锁⑬ hoard 投影失败禁整库保守域(v3.1 方向梯级)=====
+
+def test_lock13_projection_failure_never_uses_conservative_domain(
+        monkeypatch) -> None:
+    """锁⑬(§3.1 通道 B 梯级+W758-v3 面①攻击 C):hoard 投影失败帧
+    跳过 hoard 级直落桥池/[31]①,整库保守域不作方向源——纯散件
+    (无过渡体系键、不在方向名集)恒不授权;桥池方向件照常授权;
+    拦断面枚举记 hoard_invalid。"""
+    from sr_od.application.currency_war.kernel import cw_bridge_pool
+    sess = _sess(locked=False)
+    # 投影失败注入(D1 同口径:失败帧 (空集, False))
+    monkeypatch.setattr(p2_spend_auth, '_hoard_projection',
+                        lambda s, se: (frozenset(), False))
+    st = _st(gold=53, streak=-2)
+    auth = p2_spend_auth_frame(st, sess, _REG_ON)
+    assert auth is not None and auth.channel_b
+    assert p2_spend_auth_intercept(st, sess, _REG_ON) == 'hoard_invalid'
+    # 桥池级:BRIDGE_POOL_P2 方向件授权可达(P2 桥 fixed∪core∪flex;
+    # 取 core[0] 避开测试核心名集与通道 A 标签集,确保走方向名集辖域)
+    bridge_name = cw_bridge_pool.BRIDGE_POOL_P2[0].core[0]
+    cand_bridge, _, _ = _buy(bridge_name, gold_cost=3, score=5.0,
+                             tag='off_target')
+    assert p2_spend_auth_spend_authorized(cand_bridge, st, st, sess,
+                                          _REG_ON)
+    # 桥池空(注入)→ [31]① 级:过渡体系键非空可授权(希儿系哨兵键),
+    # 纯散件(无键)恒不授权——整库保守域被结构性排除
+    monkeypatch.setattr(cw_bridge_pool, 'BRIDGE_POOL_P2', [])
+    cand_scatter, _, _ = _buy('无注册散件', gold_cost=3, score=5.0,
+                              tag='off_target')
+    assert not p2_spend_auth_spend_authorized(cand_scatter, st, st, sess,
+                                              _REG_ON)
+    cand_fill, _, _ = _buy('希儿', gold_cost=3, score=5.0,
+                           tag='off_target')
+    assert p2_spend_auth_spend_authorized(cand_fill, st, st, sess,
+                                          _REG_ON)
+
+
+# ===== W766 附带发现核查:授权与成交之间的补偿分数门(W768 顺手修)=====
+
+def _sellable_fillers(n: int) -> list:
+    """可弃垫层件(真实注册名,排除引擎件保护集;board 空=无边际羁绊
+    贡献守卫不挡)——S6 卖序的真实供给形态。"""
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        engine_char_names,
+    )
+    engines = engine_char_names()
+    names = [nm for nm, ch in CHARACTERS.items()
+             if nm not in engines and ch.cost]
+    return [BenchChar(slot=i + 1, char_id=nm, faction='仙舟')
+            for i, nm in enumerate(names[:n])]
+
+
+def test_w766_authorized_core_buy_survives_bench_full_via_remediation() -> None:
+    """W766 附带发现(成交率 50-70% 的买执行层否决点之一,本批顺手修;
+    ADR-0481):授权帧核心必买候选(负分=评分零维伪影)在满栏帧被
+    bench_capacity 拒后,补偿趟 S6 的 ``remedy_min_score`` 分数门不再
+    拒绝腾位——先卖可弃垫层件、重试买成交(设计 v3.1 保留槽条款
+    「先卖可弃垫层件腾槽再买」的机械化);off 臂同帧零动作(分数门
+    恢复 + 非正分门拒,零漂移)。"""
+    sess = _sess(locked=False)   # 通道 B 帧(锁定位解耦);核心名集注入
+    filler_bench = _sellable_fillers(DEFAULT_REGISTRY.bench_capacity)
+    st = _st(gold=53, streak=-2, bench=filler_bench)
+    cand, _, _ = _core_buy(gold_cost=3, score=-2.0)   # 负分核心卡
+    res = arbitrate([(cand, -2.0, {})], st, sess, _REG_ON)
+    buys = [a for a in res.actions if isinstance(a, BuyCard)]
+    sells = [a for a in res.actions if isinstance(a, SellBench)]
+    assert any(a.card.name == _CORE for a in buys), res.log
+    assert sells, '腾位卖缺失(保留槽条款的先卖腿)' and res.log
+    # off 臂:同帧同候选 → 非正分门拒(授权豁免关),零动作
+    res_off = arbitrate([(cand, -2.0, {})], st, sess, _REG_OFF)
+    assert res_off.actions == []
+
+
+
+
+# ===== 拦断面普查枚举(设计 §3.5;协议 M0 分层消费)=====
+
+def test_intercept_enum_full_coverage(monkeypatch) -> None:
+    """拦断面普查(W757 v3 §3.5):金堆积候选帧逐帧拦截原因枚举全值
+    覆盖——t4_gold/v6_active/authorized/hoard_invalid/t1_locked/
+    t2_form/off 臂 ''。no_t3 分支在两通道取或结构下不可达(通道 A
+    不需要 T3),保留枚举兼容协议词汇表(纯防御分支,声明于报告)。"""
+    sess = _sess()
+    # t4_gold / authorized
+    assert p2_spend_auth_intercept(_st(gold=49), sess, _REG_ON) == 't4_gold'
+    assert p2_spend_auth_intercept(_st(), sess, _REG_ON) == 'authorized'
+    # v6_active(接管帧)
+    from sr_od.application.currency_war.decision.decision_v2 import (
+        allocator,
+        phase,
+    )
+    from sr_od.application.currency_war.decision.decision_v2.allocator import (
+        AllocDomain,
+    )
+    monkeypatch.setattr(allocator, 'alloc_domain',
+                        lambda s, se, r: AllocDomain.DEATH)
+    assert p2_spend_auth_intercept(_st(), sess, _REG_ON) == 'v6_active'
+    monkeypatch.undo()
+    # t1_locked(未锁定,通道 A 被拦)
+    assert p2_spend_auth_intercept(_st(), _sess(locked=False),
+                                   _REG_ON) == 't1_locked'
+    # t2_form(锁定 ∧ 形态已达标 ∧ 无血线恶化 → 通道 A 因形态不触发)
+    monkeypatch.setattr(phase, 'form_ok', lambda s, se, r: True)
+    assert p2_spend_auth_intercept(_st(), sess, _REG_ON) == 't2_form'
+    monkeypatch.undo()
+    # off 臂:枚举恒 ''(无授权语义,零漂移)
+    assert p2_spend_auth_intercept(_st(), sess, _REG_OFF) == ''
+
+
+# ===== 加急预算带(通道 A 加急 / 通道 B 共档;合并语义载体)=====
 
 def test_two_layer_budget_bands() -> None:
-    """层强度(W757 v2 §3.1):常授权层地板=花完仍≥息线(P5 推广);
-    加急层(T3 命中)允许破息至保留金占位下限([18] 止损机械化);
-    贴线带常授权保守不买、加急放行。"""
+    """层强度(v3.1 对齐后):加急层(T3)破息至保留金下限([18] 止损
+    机械化),通道 A 加急与通道 B 同档(合并语义「预算同值交集」);
+    常授权层无独立地板(既有门全权裁决,加急谓词恒 False)。"""
     sess = _sess()
-    # 常授权:g=53 买 3费 → 花完 50 ≥息线 → 预算带过
-    auth = p2_spend_auth_frame(_st(gold=53), sess, _REG_ON)
-    assert auth is not None and not auth.urgent
-    cand, _, _ = _core_buy(gold_cost=3)
-    assert p2_spend_auth_core_must_buy(cand, _st(gold=53), _st(gold=53),
-                                       sess, _REG_ON)
-    # 贴线带:g=51 买 3费 → 花完 48 ∈[45,50) → 常授权保守不买/加急放行
-    assert p2_spend_auth_frame(_st(gold=51), sess, _REG_ON).urgent is False
-    assert not p2_spend_auth_core_must_buy(cand, _st(gold=51),
-                                           _st(gold=51), sess, _REG_ON)
-    st_u = _st(gold=51, streak=-2)
-    auth_u = p2_spend_auth_frame(st_u, sess, _REG_ON)
-    assert auth_u is not None and auth_u.urgent
-    assert p2_spend_auth_core_must_buy(cand, st_u, st_u, sess, _REG_ON)
-    # 破息带:花完 <45 常授权不进,加急过保留金下限(20)
-    st_u2 = _st(gold=53, streak=-2)
-    assert p2_spend_auth_frame(st_u2, sess, _REG_ON) is not None
-    r_cand = Candidate(action=RefreshShop(cost=2), tag='refresh',
-                       source='test')
-    # 加急 D 预算带:working 金 30、刷 2 → 花完 28 ≥保留金下限 20 → 带
-    # 内(frame 用带内刻度构造:hp 80/连败 2/frame 刻度独立于 working 金,
-    # working=执行域前序花费后的金,如授权帧内已买一笔后的余金)
-    st_frame_u = _st(gold=53, streak=-2)
-    assert p2_spend_auth_spend_authorized(
-        r_cand, GameState(plane=2, gold=30, hp=80), st_frame_u, sess,
-        _REG_ON)
-    # 常授权帧同刻度:花完 28 < 息线 → 预算带拒(破息带只走加急层)
+    # 常授权帧:加急谓词恒 False(预算带对齐——与既有门同判)
     assert not p2_spend_auth_spend_authorized(
-        r_cand, GameState(plane=2, gold=30, hp=80), _st(gold=53), sess,
-        _REG_ON)
+        Candidate(action=RefreshShop(cost=2), tag='refresh',
+                  source='test'),
+        GameState(plane=2, gold=30, hp=80), _st(gold=53), sess, _REG_ON)
+    # 加急帧:破息刻度花完 28 ≥ 保留金 20 → 放行
+    assert p2_spend_auth_spend_authorized(
+        Candidate(action=RefreshShop(cost=2), tag='refresh',
+                  source='test'),
+        GameState(plane=2, gold=30, hp=80), _st(gold=53, streak=-2),
+        sess, _REG_ON)
+    # 通道 B 未锁定帧同档放行(合并语义:两通道同一放宽档)
+    assert p2_spend_auth_spend_authorized(
+        Candidate(action=RefreshShop(cost=2), tag='refresh',
+                  source='test'),
+        GameState(plane=2, gold=30, hp=80), _st(gold=53, streak=-2),
+        _sess(locked=False), _REG_ON)
+    # 保留金下限之下不放行(28-? 花完 <20 的笔仍拒——放宽有界)
+    assert not p2_spend_auth_spend_authorized(
+        Candidate(action=RefreshShop(cost=2), tag='refresh',
+                  source='test'),
+        GameState(plane=2, gold=21, hp=80), _st(gold=53, streak=-2),
+        sess, _REG_ON)
 
 
 def test_t3_blood_worsening_two_clauses() -> None:
-    """T3 报警面两子句(W757 v2 §3.1;占位值注记):连败 ≥N_fail(占位
+    """T3 血线恶化两子句(W757 §3.1;占位值注记):连败 ≥N_fail(占位
     2)或 hp≤警戒带(占位=P1 出口血目标线 60,hp 可信位守卫)。"""
     # 连败子句:streak=-2 命中,-1 不命中
     assert p2_spend_auth_frame(_st(streak=-2), _sess(), _REG_ON).urgent
@@ -255,7 +506,8 @@ def test_t3_blood_worsening_two_clauses() -> None:
     # hp 子句:hp≤警戒带(=p1_exit_blood_target 60)命中;不可信 hp
     # (沿用/兜底帧)不作报警依据(ADR-0282 口径)
     assert p2_spend_auth_frame(_st(hp=60), _sess(), _REG_ON).urgent
-    assert not p2_spend_auth_frame(_st(hp=61), _sess(), _REG_ON).urgent
+    assert not p2_spend_auth_frame(_st(hp=61), _sess(),
+                                   _REG_ON).urgent
     assert not p2_spend_auth_frame(_st(hp=61, hp_readable=False,
                                        hp_trusted=False), _sess(),
                                    _REG_ON).urgent
