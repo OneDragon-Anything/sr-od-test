@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """W880 装备穿满族 fill-to-3 量变体锁组(策略开关生命周期第 1 态)。
 
 机制真值(单一源 = data/affix_effects_data.AFFIX_EFFECTS 游戏内原文实采):
@@ -18,7 +17,9 @@
 5. 保护集(key_equips 与主线需求组件不可挪;基础件过防误合成守卫;成员无损);
 6. 门序零漂移(开关关/环境不在场/hold 在场 → 基分配原样);
 7. 死映射防线(两词缀未持 comp 携带 tag 核查前,禁入 AFFIX_MECHANIC_MAP,
-   W872/W875 范式——设计 §3.4 挂账)。
+   W872/W875 范式——设计 §3.4 挂账);
+8. 管道化迁移(设计 §2.2):生锈豁免吃 signals(门)/junk_first base_alloc
+   直收参向后兼容/管道全关零漂移/量→序顺序。
 
 ⚠️ 验证状态:本锁组**尚未运行**(离线落码批禁跑 pytest;恢复后需跑:
 本文件 + cw_quick L1 + test_cw_w861/w607 迁移邻接回归)。
@@ -76,8 +77,8 @@ def test_registry_switch_defaults_off_lifecycle_state1() -> None:
     fld = {f.name: f for f in dataclasses.fields(DecisionV2Registry)}
     assert fld['equip_env_fill3_enabled'].default is False
     assert fld['equip_fill_target'].default == 3
-    assert getattr(DEFAULT_REGISTRY, 'equip_env_fill3_enabled') is False
-    assert getattr(DEFAULT_REGISTRY, 'equip_fill_target') == 3
+    assert DEFAULT_REGISTRY.equip_env_fill3_enabled is False
+    assert DEFAULT_REGISTRY.equip_fill_target == 3
 
 
 def test_dead_mapping_guard_not_in_mechanic_map() -> None:
@@ -186,12 +187,12 @@ def test_pairing_guard_blocks_unexpected_synthesis() -> None:
     if pair is None:
         return  # 图谱无此形态则锁退化(不构造伪数据)
     a, b = pair
-    occ = {('back', 1): [a]}
-    base = [('甲', b), ('乙', '幸运星')]
-    new, _ = apply_fill3(base, [dep[0],
-                                BenchChar(slot=2, char_id='甲', position_pref='back'),
-                                BenchChar(slot=3, char_id='乙', position_pref='back')],
-                         {('back', 2): [], ('back', 3): []}, _COMP)
+    dep3 = [dep[0],
+            BenchChar(slot=2, char_id='甲', position_pref='back'),
+            BenchChar(slot=3, char_id='乙', position_pref='back')]
+    new, _ = apply_fill3([('甲', b), ('乙', '幸运星')], dep3,
+                         {('back', 1): [a], ('back', 2): [], ('back', 3): []},
+                         _COMP)
     assert ('阿雅', b) not in new, f'防误合成守卫拦截改派, got {new}'
 
 
@@ -252,3 +253,69 @@ def test_comp_none_conservative_noop() -> None:
     """comp 缺失(无身份信息,保护集不可判)→ 原样返回(保守降级)。"""
     new, moved = apply_fill3(_base(), _DEP3, _OCC3, None)
     assert moved == 0 and new == _base()
+
+
+# ===== 7. 管道化迁移(设计 §2.2 门/量/序;生锈与变宝为废行为不变归位)=====
+
+def test_rust_gate_consumes_signals() -> None:
+    """生锈豁免(门)改吃 signals 派生名单(构造点唯一,不再各自摸 state);
+    谓词语义不变(读不到=不豁免,零漂移)。"""
+    from sr_od.application.currency_war.operations.prep.equip_all import (
+        _rust_release_active,
+    )
+    assert _rust_release_active(
+        sorted(build_equip_env_signals(
+            SimpleNamespace(enemy_affixes=['库藏生锈'])).enemy_affixes), True)
+    assert not _rust_release_active(
+        sorted(build_equip_env_signals(None).enemy_affixes), True)
+    assert not _rust_release_active(['库藏生锈'], False), '开关关=不豁免'
+
+
+def test_junk_first_base_alloc_param_backward_compatible() -> None:
+    """junk_first_allocation 新增 base_alloc 直收参(W880 管道量→序接入):
+    缺省 None 自算基分配(既有调用/w861 锁行为逐位不变);直收时开关关原样。"""
+    from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
+    from sr_od.application.currency_war.kernel.cw_junk_first import (
+        junk_first_allocation,
+    )
+    reg = SimpleNamespace(equip_env_fill3_enabled=False,
+                          junk_first_sacrifice_enabled=True)
+    base = equip_allocation(_COMP, _DEP3, ['幸运星'], _OCC3)
+    got = junk_first_allocation(None, reg, _COMP, _DEP3, ['幸运星'], _OCC3,
+                                ['变宝为废'], base_alloc=base)
+    assert got == base
+    got_default = junk_first_allocation(None, reg, _COMP, _DEP3,
+                                        ['幸运星'], _OCC3, ['变宝为废'])
+    assert got_default == equip_allocation(_COMP, _DEP3, ['幸运星'], _OCC3)
+
+
+def test_pipeline_all_off_zero_drift() -> None:
+    """管道全开关默认关 = 基分配原样(零漂移锚),动作记录在案。"""
+    from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
+    from sr_od.application.currency_war.kernel.cw_equip_env import (
+        apply_equip_env_variants,
+    )
+    sess = SimpleNamespace(last_state=SimpleNamespace(plane=1),
+                           junk_first_done_plane=None)
+    out, actions = apply_equip_env_variants(
+        build_equip_env_signals(None), DEFAULT_REGISTRY, sess, _COMP,
+        _DEP3, ['幸运星'], _OCC3, hold_active=False)
+    assert out == equip_allocation(_COMP, _DEP3, ['幸运星'], _OCC3)
+    assert actions == ['fill3=inactive']
+
+
+def test_pipeline_amount_before_order() -> None:
+    """管道量→序:fill 改派产出直供序变体(junk_first 消费改派后 alloc),
+    门(hold)辖量变体;动作记录含 fill3 结果。"""
+    from sr_od.application.currency_war.kernel.cw_equip_env import (
+        apply_equip_env_variants,
+    )
+    sess = SimpleNamespace(last_state=SimpleNamespace(plane=1),
+                           junk_first_done_plane=None)
+    reg = SimpleNamespace(equip_env_fill3_enabled=True, equip_fill_target=3,
+                          junk_first_sacrifice_enabled=False)
+    out, actions = apply_equip_env_variants(
+        _sig(['软弱无力']), reg, sess, _COMP, _DEP3, ['幸运星'], _OCC3,
+        hold_active=False)
+    assert actions == ['fill3=filled:1']
+    assert out[0] == ('三月七', '幸运星'), '量变体改派经管道生效(序变体未开)'
