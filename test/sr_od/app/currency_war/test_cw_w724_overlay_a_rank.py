@@ -27,6 +27,7 @@ arbiter 接线(判据单一址=kernel.cw_economy._omega_collapse_zeroed)。
 """
 from __future__ import annotations
 
+import dataclasses
 import logging
 
 import pytest
@@ -71,6 +72,9 @@ def _quiet_logging():
 
 
 _REG = DEFAULT_REGISTRY
+# 关行为锁显式注入(危机臂开臂后默认 registry=True,ADR-0503;让位语义
+# 锁改注入 False 仍测,不删。同 w611/w633 形态)。
+_REG_CRISIS_OFF = dataclasses.replace(_REG, crisis_release_enabled=False)
 
 
 def _state(*, gold: int = 80, hp: int = 80, level: int = 6,
@@ -207,15 +211,24 @@ def test_scope_predicate_uses_adr0445_flip_semantics() -> None:
     """flip 谓词语义对照锁(ADR-0445 纯溢余判定):辖域继承 flip_hit 的
     现语义——经生产链 release_directive 取指令:应急带帧(hp≤25)flip
     让位(指令非 flip,不辖)、息线以内(g≤R*)无 flip 指令不辖;溢余段
-    flip 帧辖,且 hp 高低/可信位无关(旧血量复合谓词不得回归)。"""
+    flip 帧辖,且 hp 高低/可信位无关(旧血量复合谓词不得回归)。
+    危机臂开臂(ADR-0503)后默认 registry 在应急帧产 crisis 指令,本锁
+    的「应急帧无 flip」半边注入 crisis_release_enabled=False 重推钉护
+    (让位结构语义,同 w611/w633 形态);默认态下应急帧产 crisis 指令
+    属宽辖域另一辖域,由 w917 锁组辖——本测试同时对照两者防语义漂移。"""
     from sr_od.application.currency_war.decision.decision_v2.posture_release import (
         release_directive,
     )
     st_low = _state(gold=80, hp=25)   # 应急辖区,flip 让位
+    posture_low = Posture(save=False, level_up=True, refresh_budget=6)
     d = release_directive(st_low, _sess_of(st_low), _REG, 'FORM',
-                          Posture(save=False, level_up=True,
-                                  refresh_budget=6))
+                          posture_low)
     assert d is None or d.reason != 'flip'
+    # 关行为半边(注入 OFF):让位结构在关臂时钉死为「无任何指令」。
+    assert release_directive(st_low, _sess_of(st_low), _REG_CRISIS_OFF,
+                             'FORM', posture_low) is None
+    # 默认态对照:该帧确产 crisis 指令(宽辖域,ADR-0503 如实声明)。
+    assert d is not None and d.reason == 'crisis'
     st_hp39 = _state(gold=80, hp=39)
     st_hp100 = _state(gold=80, hp=100)
     st_hp100.hp_readable = False
