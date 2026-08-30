@@ -155,3 +155,108 @@ def test_decision_v2_stack_runs_coldstart(tmp_path: Path) -> None:
     assert 'run_t7' in out and '⚠ 1 条' in out and '翡翠' in out, \
         'decision_v2 局 coldstart 必须跑且 off 败坏买被检出'
     assert '未知栈' not in out, 'decision_v2 须判 v2 栈,不得按未知栈跳过'
+
+
+# --- 段级检查生产接线(ADR-0479:多帧/轮合并适配 + [17] 族覆盖) ---
+
+def _write_p2_replay(d: Path, p2_rounds: list[dict]) -> None:
+    """写一局带 P2 轮的合成 replay。p2_rounds=[{round, gold, hp, spent}]。
+
+    每轮两帧(镜像生产:wrapper 帧 RunBuyPhase + 决策帧),gold/hp 取
+    首帧口径(record_decision 决策时点)。
+    """
+    d.mkdir(parents=True, exist_ok=True)
+    rows: list[dict] = [{
+        'run_id': 'run_t8', 'plane': 1, 'round_num': 1, 'ts': '1',
+        'strategy_id': 'decision_v2', 'target_comp': '', 'gold': 5,
+        'hp': 100, 'state': {},
+        'actions': [_buy('丹恒·饮月', 'engine_seed')],
+    }]
+    ts = 10
+    for r in p2_rounds:
+        # 帧1:wrapper 帧(无花费动作);帧2:决策帧(按 spent 带/不带买)
+        for is_decision in (False, True):
+            actions: list[dict] = []
+            if not is_decision:
+                actions = [{'__type__': 'RunBuyPhase'}]
+            elif r.get('spent'):
+                actions = [{'__type__': 'BuyCard',
+                            'card': {'name': '某件', 'cost': 2},
+                            'reason': 'p2_core'}]
+            rows.append({
+                'run_id': 'run_t8', 'plane': 2,
+                'round_num': r['round'], 'ts': str(ts),
+                'strategy_id': 'decision_v2', 'target_comp': '希儿量子',
+                'gold': r['gold'], 'hp': r['hp'],
+                'state': {'node_type': 'battle'},
+                'actions': actions,
+            })
+            ts += 1
+    with (d / 'decisions.jsonl').open('w', encoding='utf-8') as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + '\n')
+    with (d / 'outcomes.jsonl').open('w', encoding='utf-8') as f:
+        f.write(json.dumps({'run_id': 'run_t8', 'plane': 2,
+                            'round_num': 9, 'node_type': '普通战斗',
+                            'hp_after': 0}, ensure_ascii=False) + '\n')
+    with (d / 'runs.jsonl').open('w', encoding='utf-8') as f:
+        f.write(json.dumps({'run_id': 'run_t8', 'result': 'loss',
+                            'plane_reached': 2}, ensure_ascii=False) + '\n')
+
+
+def test_p2_bleed_gold_stack_wired(tmp_path: Path) -> None:
+    """接线验收锚(跨局复盘立案A):P2 血降段金堆积在
+    run_checks_on_replay 报红——修前生产栈只跑 coldstart 零标红。"""
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
+    _write_p2_replay(tmp_path, [
+        {'round': 2, 'gold': 50, 'hp': 49},
+        {'round': 4, 'gold': 62, 'hp': 31},
+        {'round': 5, 'gold': 76, 'hp': 10},
+    ])
+    out = '\n'.join(run_checks_on_replay(tmp_path))
+    assert 'seg_p2_bleed_gold_stack' in out and '⚠' in out, \
+        'P2 带血堆金段级检查未在生产 checks 路径报红=接线失败'
+    assert 'p2r5' in out, '事件须带轮定位'
+
+
+def test_p2_bleed_gold_stack_healthy_not_fired(tmp_path: Path) -> None:
+    """对偶门:血线稳定(hp 不掉)的 P2 攒息不报(防恒触发)。"""
+
+    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
+    _write_p2_replay(tmp_path, [
+        {'round': 4, 'gold': 62, 'hp': 80},
+        {'round': 5, 'gold': 76, 'hp': 80},
+    ])
+    out = '\n'.join(run_checks_on_replay(tmp_path))
+    assert 'seg_p2_bleed_gold_stack' not in out, \
+        '血线稳定的 P2 攒息被报 = 恒触发误报'
+
+
+def test_production_round_merge_multi_frame(tmp_path: Path) -> None:
+    """多帧/轮合并:金取首帧(决策时点),花费跨帧并集——首帧 62+
+    后续帧零买不算「溢余未泄」误报(全帧有买则不报)。"""
+
+    from sr_od.application.currency_war.sim.ledger_hooks import (
+        merge_round_rows,
+    )
+    frames = [
+        {'run_id': 'r', 'plane': 2, 'round_num': 1, 'ts': '1',
+         'gold': 62, 'hp': 31, 'gold_readable': True,
+         'state': {'board': {'仙舟': 3}, 'deployed': [], 'bench': []},
+         'actions': [], 'formed_stop': False},
+        {'run_id': 'r', 'plane': 2, 'round_num': 1, 'ts': '2',
+         'gold': 58, 'hp': 31, 'gold_readable': True,
+         'state': {},
+         'actions': [{'__type__': 'BuyCard',
+                      'card': {'name': '希儿', 'cost': 4},
+                      'reason': 'p2_core'}], 'formed_stop': False},
+    ]
+    merged = merge_round_rows(frames)
+    assert len(merged) == 1
+    m = merged[0]
+    assert m['gold'] == 62, '金须取首帧(决策时点),非末帧(花销后)'
+    assert any(a['__type__'] == 'BuyCard' for a in m['actions']), \
+        '花费动作须跨帧并集'
+    assert m['state']['board_factions'] == {'仙舟': 3}, \
+        'engines 代理须吃生产 state.board 同构映射'

@@ -20,11 +20,11 @@ def _row(round_num: int = 1, *, plane: int = 1, gold: int = 30,
          node: str = 'battle', waves_gold: int | None = None,
          cards: list[dict] | None = None, actions: list | None = None,
          state: dict | None = None, formed_stop: bool = False,
-         bench_full_skipped_buys: int = 0) -> dict:
+         bench_full_skipped_buys: int = 0, hp: int = 60) -> dict:
     """合成账本行(形状对齐真 ledger;shop_waves 单波)。"""
     return {
         'plane': plane, 'round_num': round_num, 'gold': gold,
-        'hp': 60, 'formed_stop': formed_stop,
+        'hp': hp, 'formed_stop': formed_stop,
         'state': state or {'board_factions': {}, 'deployed': [],
                            'bench': [], 'cap': 3, 'level': 4},
         'target_comp': '',
@@ -80,6 +80,47 @@ def test_seg_overflow_idle_spend_bidirectional() -> None:
     evs_far = chk.seg_check_overflow_idle_spend(
         [_row(gold=53, waves_gold=53, node='battle')])
     assert evs_far and evs_far[0]['gold_before'] == 53
+
+
+# ------------------------------------------------- [17] P2 位面延伸
+def test_seg_p2_bleed_gold_stack_bidirectional() -> None:
+    """P2 血线下降段金堆积(ADR-0479):hp 掉∧金未泄∧溢余,≥2 连必报;
+    血线稳定/金在泄/单轮/P1 段/容忍带内均不报。"""
+    # 坏形态:局2/局3 型(P2 金逐轮堆积,hp 逐轮连败;首轮无上轮只
+    # 立基,第 2 连轮起报)
+    bad = [_row(1, plane=2, gold=55, hp=50),
+           _row(2, plane=2, gold=65, hp=40),
+           _row(3, plane=2, gold=75, hp=25)]
+    evs = chk.seg_check_p2_bleed_gold_stack(bad)
+    assert evs and evs[0]['streak'] == 2 and evs[0]['round_num'] == 3
+    # 血线稳定(胜局攒息合法面)→ 不报
+    stable = [_row(1, plane=2, gold=60, hp=50),
+              _row(2, plane=2, gold=70, hp=50)]
+    assert not chk.seg_check_p2_bleed_gold_stack(stable)
+    # 金在泄(买入盖过收入,溢余在消化)→ 不报
+    draining = [_row(1, plane=2, gold=70, hp=50),
+                _row(2, plane=2, gold=60, hp=35)]
+    assert not chk.seg_check_p2_bleed_gold_stack(draining)
+    # 单轮堆积即被非溢余轮打断(灰区)→ 不报
+    single = [_row(1, plane=2, gold=70, hp=50),
+              _row(2, plane=2, gold=75, hp=45),
+              _row(3, plane=2, gold=50, hp=40)]
+    assert not chk.seg_check_p2_bleed_gold_stack(single)
+    # P1 行不辖([17] P1 面归 seg_overflow_idle_spend)
+    p1 = [_row(1, plane=1, gold=60, hp=50),
+          _row(2, plane=1, gold=70, hp=35)]
+    assert not chk.seg_check_p2_bleed_gold_stack(p1)
+    # 息线邻近容忍带内(g≤52,ADR-0478 同带宽)→ 不报
+    band = [_row(1, plane=2, gold=50, hp=50),
+            _row(2, plane=2, gold=52, hp=35)]
+    assert not chk.seg_check_p2_bleed_gold_stack(band)
+    # 金不可读帧断链(不可信金不猜)
+    broken = [_row(1, plane=2, gold=60, hp=50),
+              _row(2, plane=2, gold=None, hp=35),
+              _row(3, plane=2, gold=70, hp=20)]
+    assert not chk.seg_check_p2_bleed_gold_stack(broken)
+    # 新检查已入段级表(sim 批顺路扫,回灌纪律①)
+    assert 'seg_p2_bleed_gold_stack' in chk._SEGMENT_CHECKS
 
 
 # ---------------------------------------------------------------- [11]
