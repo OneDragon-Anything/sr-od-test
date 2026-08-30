@@ -783,7 +783,7 @@ def test_start_battle_dialog_checkbox_equipped(monkeypatch) -> None:
 
     class _Ctrl:
         def mouse_move(self, p): pass
-        def click(self, p): clicks.append((p.x, p.y))
+        def click(self, p, press_time: float = 0.1): clicks.append((p.x, p.y))
 
     class _Ctx:
         controller = _Ctrl()
@@ -845,7 +845,7 @@ def _make_launch_env(monkeypatch, prep_visible_rounds: int):
 
     class _Ctrl:
         def mouse_move(self, p): pass
-        def click(self, p): clicks.append('btn')
+        def click(self, p, press_time: float = 0.1): clicks.append(press_time)
         def active_window(self): activations.append(True)
 
     class _RunCtx:
@@ -891,9 +891,9 @@ def test_start_battle_reactivates_and_relaunches_on_dead_click(monkeypatch) -> N
     monkeypatch.setattr(ex._op, 'round_by_find_area', _find_area)
     orig_launch = pa.PrepActionExecutor._launch_attempt
 
-    def _counting_launch(self):
+    def _counting_launch(self, *a, **k):
         try:
-            return orig_launch(self)
+            return orig_launch(self, *a, **k)
         finally:
             state['attempt'] += 1
 
@@ -902,7 +902,8 @@ def test_start_battle_reactivates_and_relaunches_on_dead_click(monkeypatch) -> N
     assert ok, f'激活重发后应成功,实 {detail}'
     assert '激活重发' in detail, f'成功 detail 应标注激活重发: {detail}'
     assert activations == [True], f'恰好强制激活 1 次,实 {activations}'
-    assert clicks == ['btn', 'btn'], f'两段各点一次出战,实 {clicks}'
+    # click 记录 = press_time:首发默认 0.1,重发段 0.15(人工解锁实证参数)
+    assert clicks == [0.1, 0.15], f'两段各点一次出战,重发放长按下,实 {clicks}'
     assert stops == [], '发射成功不得触发停机'
 
 
