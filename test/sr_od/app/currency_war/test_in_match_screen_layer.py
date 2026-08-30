@@ -47,6 +47,34 @@ def test_in_match_screen_names_auto_includes_new_screen() -> None:
     assert CurrencyWarApp.in_match_screen_names(infos) == ['货币战争-未来新屏']
 
 
+def test_in_match_screen_names_excludes_train_supply_popup() -> None:
+    """列车补给每日弹窗必须显式排除(白名单锁,守卫移除红检目标)。
+
+    match2 实锤(2026-08-31):弹窗屏名带 货币战争- 前缀,被前缀自动收录机制
+    收进对局屏集 → 弹窗帧被误判「已在对局中」→ 跳过 enter/start 直交
+    battle_loop → 未知态钩子 33s 停机。从白名单移除本行 = 本锁红。
+    """
+    infos = [_FakeScreenInfo('货币战争-列车补给弹窗')]
+    assert CurrencyWarApp.in_match_screen_names(infos) == [], (
+        '列车补给弹窗是非对局屏(盖在大世界上、早于 CW 入口导航),'
+        '不得进对局屏集(否则弹窗帧被误判对局中 → loop 未知态停机)'
+    )
+
+
+def test_train_supply_popup_fixture_not_in_match(test_context: SrTestContext) -> None:
+    """大世界+弹窗真帧:不得被判成对局中态(match2 误路由场景回归)。"""
+    from one_dragon.base.screen.screen_utils import get_match_screen_name
+
+    if not test_context.has_screen('货币战争-列车补给弹窗', '今日未领取'):
+        pytest.skip('fixture 缺:货币战争-列车补给弹窗/今日未领取')
+    screens = CurrencyWarApp.in_match_screen_names(test_context.screen_loader.screen_info_list)
+    img = test_context.load_screen('货币战争-列车补给弹窗', '今日未领取')
+    hit = get_match_screen_name(test_context, img, screen_name_list=screens)
+    assert hit is None, (
+        f'弹窗真帧被误判对局屏 {hit}(入局流会被误路由交 battle_loop 停机)'
+    )
+
+
 def test_in_match_fixture_states(test_context: SrTestContext) -> None:
     """实拍帧判定:挑战失败(对局终局)True;大厅 False。
 

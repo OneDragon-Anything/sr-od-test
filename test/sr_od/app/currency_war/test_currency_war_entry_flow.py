@@ -372,6 +372,61 @@ class TestStartCurrencyWarMatchFlow:
             f'剧本应推进到末 phase(备战):phase_idx={fixture_controller.phase_idx}'
         )
 
+    def test_train_supply_popup_claimed_at_app_entry_then_nav_resumes(
+        self,
+        test_context: SrTestContext,
+        fixture_controller: FixtureController,
+    ) -> None:
+        """大世界+弹窗帧(match2 实锤场景):app 首节点 `_enter_lobby` 前移挂点
+        领取 → 恢复导航(下一帧大厅锚命中 → 「已在 CW」常规分支)。
+
+        守卫锁:移除 `_enter_lobby` 的弹窗分支,或把弹窗屏收进对局屏集(误判
+        「已在对局中」跳过 enter 直交 loop)→ 本锁红。
+        """
+        from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
+
+        phases = [
+            {  # 大世界+弹窗:首节点前移挂点点「按钮-领取补贴」
+                'frame': ('货币战争-列车补给弹窗', '今日未领取'),
+                'exit': ('on_click_in', '货币战争-列车补给弹窗', '按钮-领取补贴'),
+            },
+            {  # 领取后回落大厅:app 首节点走「已在 CW」常规分支(导航恢复)
+                'frame': ('货币战争-大厅', 'lobby'),
+            },
+        ]
+        _require_screens(test_context, phases)
+        fixture_controller.set_phases(phases)
+
+        app = CurrencyWarApp(test_context)
+        enter_running_state(test_context)
+        try:
+            with fast_sleep():
+                app.screenshot()
+                # 节点方法直调语义(同 test_cw_w817_recovery_precheck):弹窗分支
+                # 返回 round_wait(WAIT)等领取动画,重跑节点才走常规分支。
+                first = app._enter_lobby()
+                app.screenshot()
+                result = app._enter_lobby()
+        finally:
+            reset_running_state(test_context, app)
+
+        assert first is not None and not first.is_success, (
+            f'弹窗帧首轮应返回 WAIT(领取分支),实:{first.status if first else None}'
+        )
+        assert result.is_success, (
+            f'弹窗领取后导航未恢复:status={result.status}'
+            f';phase_idx={fixture_controller.phase_idx}'
+            f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert fixture_controller.click_hit_area(
+            '货币战争-列车补给弹窗', '按钮-领取补贴'), (
+            'app 首节点未点「按钮-领取补贴」领取弹窗:'
+            f'{_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert fixture_controller.phase_idx == len(phases) - 1, (
+            f'领取后应恢复导航到大厅(末 phase):phase_idx={fixture_controller.phase_idx}'
+        )
+
 
 def _clicks_in_area(ctrl: FixtureController, screen_name: str, area_name: str) -> list:
     """落在指定 area 内的点击(按 recorded_clicks 顺序)。"""
