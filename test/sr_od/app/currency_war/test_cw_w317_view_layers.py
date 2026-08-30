@@ -87,3 +87,40 @@ def test_anomalies_gold_line_shows_node_type(tmp_path: Path):
     plan_ln = [ln for ln in lines if 'plan_error' in ln]
     # 无 node_type:标签段整体省略(与 rounds 视图 [_tag] 风格一致)
     assert plan_ln == ['p1r3 plan_error(决策崩溃,见 log)']
+
+
+def test_anomalies_filters_ocr_miss_fake_hp(tmp_path: Path):
+    """OCR miss 伪值过滤锁(g_20260830_150029 卫生条目)。
+
+    病灶:结算屏 OCR 解析失败行 hp_confidence=0.0、hp_after 落 0 兜底,
+    曾触发假「战力断层」并把 prev_hp 链污染成 0(后续真值轮掉血全算错)。
+    判据:hp_confidence < 0.9 的行不入断层判定链也不推进 prev_hp;
+    缺字段(旧数据/sim 账本行)按可信处理;真值行(conf≥0.9)的断层保留。
+    """
+    _write_jsonl(tmp_path / 'outcomes.jsonl', [
+        _outcome(1, 3, hp_after=57, hp_confidence=1.0),          # 真值基线
+        # 伪值行:OCR miss 兜底 hp=0(conf=0)——不得产生断层,不得污染链
+        _outcome(1, 4, hp_after=0, hp_confidence=0.0, source='loss_page'),
+        _outcome(1, 4, hp_after=49, hp_confidence=1.0),          # 同轮真值行
+        # 补给合成行(hp=快照非屏面真值,conf=0)同样不入链
+        _outcome(1, 5, hp_after=57, hp_confidence=0.0, source='synthetic_supply'),
+        _outcome(1, 6, hp_after=20, hp_confidence=1.0, node_type='boss'),
+    ])
+    lines = tel.query_anomalies(tmp_path, RID)
+    drop = [ln for ln in lines if '战力断层' in ln]
+    # 伪值不入:r4(57→0)不出现;真值保留:r6(49→20,-29≥25)出现
+    assert len(drop) == 1
+    assert 'p1r6 [boss] 单轮掉血 49→20(战力断层)' in drop[0]
+    # 链未污染:若无过滤,r5 合成行(57)与伪值行(0)会让 r6 的掉血算错
+    assert '57→20' not in ''.join(drop) and '0→' not in ''.join(drop)
+
+
+def test_anomalies_missing_conf_treated_trusted(tmp_path: Path):
+    """缺 hp_confidence 字段的行(旧数据/sim 账本行)按可信处理,不误滤。"""
+    _write_jsonl(tmp_path / 'outcomes.jsonl', [
+        _outcome(1, 1, hp_after=80),   # 旧数据:无 hp_confidence 键
+        _outcome(1, 2, hp_after=40, node_type='boss'),
+    ])
+    drop = [ln for ln in tel.query_anomalies(tmp_path, RID)
+            if '战力断层' in ln]
+    assert drop == ['p1r2 [boss] 单轮掉血 80→40(战力断层)']
