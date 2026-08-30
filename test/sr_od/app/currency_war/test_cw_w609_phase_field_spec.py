@@ -100,12 +100,14 @@ _FULL_KEYS = {
     'read_xp_progress', 'read_level_raw_opt', 'read_deploy_cap_debounced',
     'read_enemy_difficulty', 'read_level_up_cost', 'read_streak',
     '_board_pairs', 'read_deployed_count', 'read_shop_cards',
-    'read_refresh_probs', 'read_bench_full',
+    'read_refresh_probs', 'read_bench_full', 'read_hp_opt',
 }
 
 
 def test_phase_none_is_full_baseline(gated_env):
-    """phase=None = 全量路径(现行为):全量 reader 全调用,合并单读不启用。"""
+    """phase=None = 全量路径:全量 reader 全调用(含 hp 真读——全量调用方
+    director heavy/对拍帧多为关店备战帧,hp 可见必须 OCR,6fc1fd4c 旧跳过
+    只对「spec 明确不含 hp」的阶段成立);合并单读不启用。"""
     obs.read_game_state(_DummyCtx(), None)
     called = set(gated_env.calls)
     assert called == _FULL_KEYS, f'全量基线漂移: {called ^ _FULL_KEYS}'
@@ -144,11 +146,14 @@ def test_phase_battle_transit_minimal(gated_env):
 
 
 def test_hp_skip_single_source():
-    """6fc1fd4c hp 死读跳过已收编进规格:hp OCR 只在 'hp' ∈ spec 时发生。"""
+    """hp 读取门由 PHASE_FIELD_SPEC 单一来源驱动:'hp' ∈ spec 或全量路径
+    (phase=None)才 OCR;6fc1fd4c 死读跳过只收编到「spec 明确排除 hp」的
+    阶段,不再吞掉全量路径(曾致 director heavy 关店帧 hp 恒 miss)。"""
     src = inspect.getsource(obs.read_game_state)
-    assert "read_hp_opt(ctx, screen) if (_spec is not None and 'hp' in _spec) else None" \
-        in src, 'hp 读取门必须由 PHASE_FIELD_SPEC 单一来源驱动'
-    # hp 只出现在 prep_clean 规格里(真读主路径),其余阶段=对账沿用
+    assert "read_hp_opt(ctx, screen)" in src \
+        and "_spec is None or 'hp' in _spec" in src, \
+        'hp 读取门必须由 PHASE_FIELD_SPEC 单一来源驱动(全量路径同读)'
+    # spec 阶段里 hp 只出现在 prep_clean(真读主路径),其余阶段=对账沿用
     for phase, spec in PHASE_FIELD_SPEC.items():
         if phase == PHASE_PREP_CLEAN:
             assert 'hp' in spec
