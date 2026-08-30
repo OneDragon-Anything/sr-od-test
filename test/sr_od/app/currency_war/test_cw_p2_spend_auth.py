@@ -1,9 +1,8 @@
-"""W768 · 位面 2 支出授权单帧锁组 v3.1(两通道版;ADR-0480/ADR-0481)。
+"""W776 · 位面 2 支出授权单帧锁组 v3.2(十五锁全量;ADR-0480/0481/0483)。
 
-设计出处:.debug/temp/currency_war/w757_p2_spend_auth/REPORT.md v3.1 §五
-「单帧锁清单」十三条 + 预算带对齐声明 + 双通道合并语义;W762 A/B 机制
-归因与 W758-v3 攻击复核语境(止血通道/末窗收窄/只开门不收门/保留槽/
-投影失败帧)。
+设计出处:.debug/temp/currency_war/w757_p2_spend_auth/REPORT.md v3.2 §五
+「单帧锁清单」十五条 + 预算带对齐声明 + 双通道合并语义 + 净支出闭环闸 +
+保留金公式化;W762/W772 A/B 机制归因与 W758-v3 攻击复核语境。
 
 锁语义不锁牌面:全部断言策略决策行为(授权/拒绝/预算带/方向辖域),
 不锁具体商店牌序。方向源梯级以 monkeypatch 注入(投影谓词本体在
@@ -13,13 +12,17 @@ cw_intention/桥池另有锁组),接管谓词以 monkeypatch 驱动(同 W760 锁
 开关 p2_spend_auth_enabled 默认关=零漂移锚(每锁带 off 臂对照或
 frame-None 等价断言)。
 
-v3.1 锁语义演进声明(相对 W760 v2 锁组,重推依据=设计附录 B/C):
-- 锁① 贴线带占位保守不买子句随「预算带对齐」废除(G1-A 破息反降的
-  收门面)——常授权层与既有息账门同判,锁改断言「同判」;
-- 锁② 濒死 hp≤10 帧从「授权整体不触发」改写为「授权可触发但升级恒
-  禁」(P21 辖升级禁,通道 B 止血恰以血线恶化为触发维度);
-- 锁⑦ 「末窗整体不辖」改写为「豁免归 v6 接管帧谓词,非接管末窗帧
-  通道 B 可达」(W762:死亡多发生在末窗附近,一刀切豁免=排除病灶帧)。
+锁语义演进声明(重推依据=设计附录 B/C/D):
+- v3.1(相对 W760 v2 锁组):锁① 贴线带占位保守不买子句随「预算带
+  对齐」废除(G1-A 破息反降的收门面)——常授权层与既有息账门同判;
+  锁② 濒死 hp≤10 帧从「授权整体不触发」改写为「授权可触发但升级恒
+  禁」;锁⑦ 「末窗整体不辖」改写为「豁免归 v6 接管帧谓词,非接管末
+  窗帧通道 B 可达」。
+- v3.2(W772 分支 2 出手面修正):加急预算带的界从常数 20 改为公式
+  化下限 5×min(剩余备战轮数,3)(「放宽有界」语义不变,界随公式——
+  「预算带」测试断言同步重推);新增锁⑭(净支出闸)与锁⑮(高价值
+  优先/兜底层条件),空店帧旧行为=L3 兜底路径,①-⑬ 锁断言在空店帧
+  下语义不变(净支出闸只辖通道 B 帧的 L1 方向选择,非收门)。
 """
 from __future__ import annotations
 
@@ -391,6 +394,63 @@ def test_lock13_projection_failure_never_uses_conservative_domain(
                                           _REG_ON)
 
 
+# ===== 锁⑭/⑮ 净支出闸 + 高价值优先(v3.2;W772 分支 2 出手面修正)=====
+
+def _core_shop() -> list:
+    """三张 5 费核心卡店态(注入核心名集内;锁语义不锁牌面,取测试
+    核心名集任意三个)。"""
+    return [ShopCard(x=0, name=nm, cost=5)
+            for nm in ('花火', '瓦尔特', '三月七')]
+
+
+def test_lock15_high_value_tier_gates_fallback(monkeypatch) -> None:
+    """锁⑮(§3.1 梯级重排+[22]③):店内存在 L1 目标且过净支出闸时,
+    L3 低价兜底件不获授权放行;兜底层仅在 L1 全部过闸失败(净支出闸
+    选中集为空)时出现——空店帧(L1 无供给)L3 兜底照旧(v3.1 行为,
+    ①-⑬ 锁的既有断言域)。"""
+    sess = _sess(locked=False)   # 通道 B 帧
+    monkeypatch.setattr(p2_spend_auth, '_hoard_projection',
+                        lambda s, se: (frozenset({_DIR_PIECE}), True))
+    # L1 过闸帧:g=53,收入=5+1+息5=11;三张 5 费核心按单笔支出降序
+    # 累计 5→10→15>11 → 三张全入选(选中集非空)
+    st = _st(gold=53, streak=-2, shop=_core_shop())
+    cand_h, _, _ = _buy('花火', gold_cost=5, score=5.0)
+    cand_l3, _, _ = _buy(_DIR_PIECE, gold_cost=1, score=5.0,
+                         tag='off_target')
+    assert p2_spend_auth_spend_authorized(cand_h, st, st, sess, _REG_ON)
+    assert not p2_spend_auth_spend_authorized(cand_l3, st, st, sess,
+                                              _REG_ON)
+    # 兜底条件帧:空店(L1 无供给)→ 选中集空 → L3 兜底照旧放行
+    st_empty = _st(gold=53, streak=-2)
+    assert p2_spend_auth_spend_authorized(cand_l3, st_empty, st_empty,
+                                          sess, _REG_ON)
+
+
+def test_lock14_net_expense_gate_gold_account_drops(monkeypatch) -> None:
+    """锁⑭(§3.1 净支出闭环+W772 M0b):净支出闸选中集非空的授权帧,
+    放行买序列 Σ支出 > 本轮预期收入(金账下降,W772「毛支出>0 但金账
+    不降」空转形态的反向钉);L3 兜底件不进放行序列(负分候选零动作,
+    授权不救)。"""
+    from sr_od.application.currency_war.decision.decision_v2.\
+        p2_spend_auth import _expected_round_income
+    sess = _sess(locked=False)
+    monkeypatch.setattr(p2_spend_auth, '_hoard_projection',
+                        lambda s, se: (frozenset({_DIR_PIECE}), True))
+    st = _st(gold=53, streak=-2, shop=_core_shop())
+    cands = [_buy(nm, gold_cost=5, score=5.0)
+             for nm in ('花火', '瓦尔特', '三月七')]
+    res = arbitrate(cands, st, sess, _REG_ON)
+    buys = [a for a in res.actions if isinstance(a, BuyCard)]
+    assert len(buys) == 3, res.log
+    total = sum(a.card.cost for a in buys)
+    assert total > _expected_round_income(st), (total, res.log)   # 金账下降
+    # L3 兜底件不获授权救:负分候选零动作(既有非正分门拒,授权不放行)
+    cand_l3, _, _ = _buy(_DIR_PIECE, gold_cost=1, score=-2.0,
+                         tag='off_target')
+    res_l3 = arbitrate([(cand_l3, -2.0, {})], st, sess, _REG_ON)
+    assert res_l3.actions == [], res_l3.log
+
+
 # ===== W766 附带发现核查:授权与成交之间的补偿分数门(W768 顺手修)=====
 
 def _sellable_fillers(n: int) -> list:
@@ -467,16 +527,18 @@ def test_intercept_enum_full_coverage(monkeypatch) -> None:
 # ===== 加急预算带(通道 A 加急 / 通道 B 共档;合并语义载体)=====
 
 def test_two_layer_budget_bands() -> None:
-    """层强度(v3.1 对齐后):加急层(T3)破息至保留金下限([18] 止损
-    机械化),通道 A 加急与通道 B 同档(合并语义「预算同值交集」);
-    常授权层无独立地板(既有门全权裁决,加急谓词恒 False)。"""
+    """层强度:加急层(T3)破息至保留金下限([18] 止损机械化),通道 A
+    加急与通道 B 同档(合并语义「预算同值交集」);常授权层无独立地板
+    (既有门全权裁决,加急谓词恒 False)。v3.2:下限=公式化
+    5×min(剩余备战轮数,3)——测试基帧 r2/日程先验 9 → 8 轮 → 下限 15
+    (「放宽有界」语义不变,界随公式重推,常数 20 降为异常地板)。"""
     sess = _sess()
     # 常授权帧:加急谓词恒 False(预算带对齐——与既有门同判)
     assert not p2_spend_auth_spend_authorized(
         Candidate(action=RefreshShop(cost=2), tag='refresh',
                   source='test'),
         GameState(plane=2, gold=30, hp=80), _st(gold=53), sess, _REG_ON)
-    # 加急帧:破息刻度花完 28 ≥ 保留金 20 → 放行
+    # 加急帧:破息刻度花完 28 ≥ 公式下限 15 → 放行
     assert p2_spend_auth_spend_authorized(
         Candidate(action=RefreshShop(cost=2), tag='refresh',
                   source='test'),
@@ -488,11 +550,12 @@ def test_two_layer_budget_bands() -> None:
                   source='test'),
         GameState(plane=2, gold=30, hp=80), _st(gold=53, streak=-2),
         _sess(locked=False), _REG_ON)
-    # 保留金下限之下不放行(28-? 花完 <20 的笔仍拒——放宽有界)
+    # 公式下限之下不放行(花完 <15 的笔仍拒——放宽有界;常数 20 时代
+    # 的 21 金断言随公式化重推:19 ≥ 15 现为放行域)
     assert not p2_spend_auth_spend_authorized(
         Candidate(action=RefreshShop(cost=2), tag='refresh',
                   source='test'),
-        GameState(plane=2, gold=21, hp=80), _st(gold=53, streak=-2),
+        GameState(plane=2, gold=16, hp=80), _st(gold=53, streak=-2),
         sess, _REG_ON)
 
 

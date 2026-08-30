@@ -262,6 +262,7 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'p2_spend_auth_enabled': ('bool', False),
     'p2_spend_auth_fail_streak_n': ('int', 2),
     'p2_spend_auth_reserve_floor': ('int', 20),
+    'p2_spend_auth_reserve_rounds_cap': ('int', 3),
     'p2_spend_auth_line_band_floor': ('int', 45),
     # ===== 形态达标三方向 =====
     'recipe_fence_enabled': ('bool', False),
