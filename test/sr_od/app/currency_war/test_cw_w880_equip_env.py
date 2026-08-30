@@ -155,7 +155,7 @@ def test_same_row_core_first() -> None:
     gap,80% 罚差分为零,让位无实际行为损失。旧语义(无条件断言
     core 必先凑满)把偏好序写成合法性之上的断言,未被任何设计出处
     支撑,锁组落成即红从未对账——按锁的存在性纪律改写,语义出处 =
-    ADR-0502(让位事件经 fill3 的 pairing-guard yield debug 行披露)。"""
+    ADR-0502(让位事件经 fill3 的 pairing-guard yield info 行披露)。"""
     dep = [BenchChar(slot=1, char_id='阿雅', position_pref='back'),
            BenchChar(slot=2, char_id='丹恒', position_pref='back')]
     occ = {('back', 1): ['以太钻头', '和平手枪'],
