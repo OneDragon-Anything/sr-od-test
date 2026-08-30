@@ -276,6 +276,21 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'realization_merge_timing_unit': ('float', 1.0),
     'realization_direction_gamma': ('float', 0.75),
     'realization_direction_beta': ('float', 0.3),
+    # ===== P1 档位推进目标函数(W803;伞+三子旗标默认关,占位参数组
+    # 开臂前 sim 标定;决策 why=ADR-0494)=====
+    'p1_tier_push_enabled': ('bool', False),
+    'p1_tier_push_gate_enabled': ('bool', False),
+    'p1_tier_push_deadline_enabled': ('bool', False),
+    'p1_tier_push_r6_budget_enabled': ('bool', False),
+    'tier_push_w_early': ('float', 0.2),
+    'tier_push_w_r6': ('float', 1.0),
+    'tier_push_w_late': ('float', 0.1),
+    'tier_push_v_anchor': ('float', 19.0),
+    'tier_push_v_train_dot_scale': ('float', 0.5),
+    'tier_push_v_seele_scale': ('float', 0.25),
+    'tier_push_gate_min_round': ('int', 4),
+    'tier_push_press_cost_max': ('int', 2),
+    'tier_push_press_round_cap': ('int', 2),
     # (P1→P2 接口机制五开关+三阈值已随定谳清理删除,ADR-0487)
     # ===== 形态达标三方向 =====
     'recipe_fence_enabled': ('bool', False),
