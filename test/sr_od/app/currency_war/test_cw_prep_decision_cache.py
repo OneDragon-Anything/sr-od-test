@@ -215,6 +215,53 @@ def test_cache_clear_invalidates():
 
 # ===== P1 修复锁:命中臂簿记重放 =====
 
+def test_failed_action_phase_advance_forces_real_recompute():
+    """失败恢复场景锁:动作✗后相位推进 → 下一 decide 必须真实重算。
+
+    真实 decide 的 _main_flow_step 是非幂等阶段机(相位前移借此换向动作)。
+    键含 decide **前**簿记基线:命中重放使相位前进后,同条目不可再命中——
+    防「同一失败动作冻结重发无限 stall / 相位重放越界出域(4,5,…)」。
+    守卫移除验证 = 从 _decision_cache_key 删簿记基线段后本锁必红。"""
+    _decision_cache_clear('测试前置')
+    sess = SimpleNamespace(defer_count=0, prep_phase=0, prep_phase_retry=0,
+                           free_bench_gold_wait=0, v2_ever_full_interest=False)
+    snap = Snapshot(gold=30, plane=1, round_num=3)
+    strat = _strategy()
+    base = _decision_replay_begin(sess)
+    sess.prep_phase += 1   # 真实 decide 的阶段机前移(0→1,出 RunBuyPhase)
+    _decision_cache_store(snap, sess, strat, _decision_a(), 'act', base)
+    # 回滚到 decide 前基线(动作✗、板面指纹未变的形态)→ 命中一次:
+    # 重放把相位推回 1(= 真实 decide 后状态,簿记已跑)
+    sess.prep_phase = 0
+    assert _decision_cache_lookup(snap, sess, strat) is not None
+    assert sess.prep_phase == 1
+    # 相位已前进 → 键已换 → 连续多次查询全部 miss:下一 decide 必然真实重算
+    # (真实重算在相位 1 出 RunDeploy = 失败恢复机制保留;相位只经真实 decide
+    # 推进,不会重放越界出域)
+    for _ in range(3):
+        assert _decision_cache_lookup(snap, sess, strat) is None
+    _decision_cache_clear('测试清理')
+
+
+def test_zero_delta_entry_repeat_hit_is_idempotent():
+    """零增量条目可重复命中且零写面:纯分支 decide(箱/球/典籍/出战面等,
+    decide 对 session 零写)的重复命中 ≡ 真实 decide 的重复同判(键不变 =
+    会话输入不变),无害且正是缓存收益主体。"""
+    _decision_cache_clear('测试前置')
+    sess = SimpleNamespace(defer_count=0, prep_phase=3, prep_phase_retry=0,
+                           free_bench_gold_wait=0, v2_ever_full_interest=True)
+    snap = Snapshot(gold=30, plane=1, round_num=3)
+    strat = _strategy()
+    before = dict(vars(sess))
+    _decision_cache_store(snap, sess, strat, _decision_a(), 'act',
+                          _decision_replay_begin(sess))
+    for _ in range(3):
+        assert _decision_cache_lookup(snap, sess, strat) is not None
+    for k, v in before.items():
+        assert getattr(sess, k) == v
+    _decision_cache_clear('测试清理')
+
+
 def test_hit_replays_decide_bookkeeping_bitwise():
     """单帧锁:命中帧计数器状态与未命中帧(真实跑了 decide)逐位一致。
 
@@ -365,6 +412,9 @@ def test_decide_port_wiring_source_lock():
     assert '_decision_cache_lookup(snapshot, session_,\n                                                match.strategy)' in src
     assert '_decision_cache_store(snapshot, session_, match.strategy,' in src
     assert '_decision_replay_begin(session_)' in src
+    # 键含 decide 前簿记基线(相位推进即换键,失败恢复保留)——
+    # 守卫移除验证:删该段后 test_failed_action_phase_advance_forces_real_recompute 红
+    assert 'bookkeeping_base=replay_base' in src
     # 失效点在 progressed 赋值之后、同函数内(动作落地即清)
     assert "if progressed and _cache_on:" in src
     assert "_decision_cache_clear('动作落地" in src
