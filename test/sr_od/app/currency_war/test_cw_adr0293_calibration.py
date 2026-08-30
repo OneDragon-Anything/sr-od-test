@@ -370,6 +370,9 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     # W607 第二波 H2① 数据层(无行为分支,账面单一源;ADR-0461 增补节)
     'rust_hoard_damage_share': ('float', 0.03),
     'rust_hoard_penalty_cap': ('int', 10),
+    # 变宝为废牺牲合成开关(ADR-0498;生命周期第 1 态默认关,开臂判据
+    # 挂账在 registry 字段注释;语义注释落点=registry 字段块)
+    'junk_first_sacrifice_enabled': ('bool', False),
 }
 
 #: registry 模块级标定常量期望表(名字 → 归一化值;与字段同属标定面,

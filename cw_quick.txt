@@ -1,4 +1,5 @@
 sr-od-test/test/sr_od/app/currency_war/test_cw_gradient_switch.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w861_junk_first.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r255_equip_flow.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r256_crate.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_r388_opening_hold.py
