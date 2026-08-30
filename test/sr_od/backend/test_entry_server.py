@@ -48,6 +48,27 @@ def test_create_app_mounts_mcp_and_game_routes() -> None:
     assert any("mcp" in p for p in paths)
 
 
+def test_serve_configures_logging_before_context_creation() -> None:
+    """锁启动顺序:``_serve`` 里日志分流必须先于 ``SrContext()``。
+
+    上下文构造期间(地图数据/实例配置加载)就打框架日志;分流若在其后,
+    这段 init 日志走默认双写——console→main_server.log(stdout 兜底日志混入
+    框架日志)与共享 log.txt(与 GUI 的跨进程轮转竞态窗口)。静态锁用
+    ``_serve`` 函数体内的调用先后,防未来重排时回归。
+    """
+    import inspect
+
+    from sr_od.backend.entry import server
+
+    src = inspect.getsource(server._serve)
+    configure_pos = src.index('_configure_server_logging()')
+    ctx_pos = src.index('ctx = SrContext()')
+    assert configure_pos < ctx_pos, (
+        '日志分流必须在 SrContext() 之前调用,否则 init 窗口框架日志'
+        '双写进 main_server.log 与共享 log.txt'
+    )
+
+
 def test_configure_server_logging_routes_to_dedicated_file() -> None:
     """框架 logger 应被切到 ``mcp_server.log`` 专属文件且不再挂 console handler。
 
