@@ -108,13 +108,18 @@ def _bench(n: int) -> list[BenchChar]:
 # ===== 锁 0:开关组缺省态 + 链序(守卫先到先记的结构前提)=====
 
 def test_lock0_defaults_off_and_chain_order() -> None:
-    """伞+两子旗标默认全关(生命周期第 1 态);spend_gate 在约束链尾
-    (gold_floor/copies_cap/bench_capacity 之后)= 守卫先到先记。"""
+    """伞+两子旗标默认全关(生命周期第 1 态);spend_gate 在既有守卫
+    (gold_floor/copies_cap/bench_capacity)之后。锁语义重推记录
+    (ADR-0497 批):旧断言「cons[-1]=='spend_gate'」的意图是守卫
+    先到先记的链序前提,非「spend_gate 恒链尾」——件价值硬门
+    pv_bench_reserve(默认关)落码后排在 spend_gate 之后,守卫序
+    不变,本锁改断守卫序 + spend_gate < pv_bench_reserve 邻接序。"""
     for f in ('spend_gate_enabled', 'spend_gate_interest_enabled',
               'spend_gate_bench_enabled'):
         assert getattr(DEFAULT_REGISTRY, f) is False
     cons = DEFAULT_REGISTRY.constraints
-    assert cons[-1] == 'spend_gate'
+    assert cons[-1] == 'pv_bench_reserve'
+    assert cons.index('spend_gate') < cons.index('pv_bench_reserve')
     for guard in ('gold_floor', 'copies_cap', 'bench_capacity'):
         assert cons.index(guard) < cons.index('spend_gate')
 
