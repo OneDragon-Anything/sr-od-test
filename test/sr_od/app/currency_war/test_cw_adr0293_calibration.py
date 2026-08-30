@@ -373,6 +373,34 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     # 变宝为废牺牲合成开关(ADR-0498;生命周期第 1 态默认关,开臂判据
     # 挂账在 registry 字段注释;语义注释落点=registry 字段块)
     'junk_first_sacrifice_enabled': ('bool', False),
+    # ===== 装备穿满族 fill-to-3(软弱无力+额外打击合并量变体;commit b7d65870)
+    # 伞开关生命周期第 1 态默认关零漂移;fill 阈值=机制常量(游戏真值
+    # 「穿戴3件装备」的 3,非标定值);语义注释落点=registry 字段块
+    'equip_env_fill3_enabled': ('bool', False),
+    'equip_fill_target': ('int', 3),
+    # ===== W875 环境B类评分补全包 + 长线利好刷价(commit d12c3eca)
+    # 两子旗标各辖一条词缀→tag 映射准入(能量逃逸/同步行动),默认关
+    # 零漂移;刷价三件参数化 cw_invest_data id=120 真值(30 次→折后 1 金),
+    # threshold/price=机制常量,折后价生效还依赖 refresh_count 观测接线
+    # (现缺省 0 永不触发);语义注释落点=registry 字段块
+    'w875_energy_leak_enabled': ('bool', False),
+    'w875_sync_action_enabled': ('bool', False),
+    'longterm_refresh_discount_enabled': ('bool', False),
+    'longterm_refresh_threshold': ('int', 30),
+    'longterm_refresh_price': ('int', 1),
+    # ===== W878 死 tag 复活 4 批子旗标(commit 9cf35107)
+    # 各辖一个零携带死 tag 的 comp 侧载体(单属性队/成型羁绊队/慢速/
+    # 依赖合成装备);synth_equip_dep 与 junk_first_sacrifice_enabled 禁独立
+    # 开臂(__post_init__ 构造期校验),四件均默认关零漂移;语义注释落点=
+    # registry 字段块
+    'w878_mono_attribute_enabled': ('bool', False),
+    'w878_formed_bond_enabled': ('bool', False),
+    'w878_slow_burn_enabled': ('bool', False),
+    'w878_synth_equip_dep_enabled': ('bool', False),
+    # ===== 巨星强化角色决策意向维度(commit e19035df)
+    # 只启决策层意向输出(落 reason/遥测),执行面未接(巨星 step2 坐标
+    # 未建档+机制效果无真值);默认关;语义注释落点=registry 字段块
+    'megastar_enhance_enabled': ('bool', False),
 }
 
 #: registry 模块级标定常量期望表(名字 → 归一化值;与字段同属标定面,
