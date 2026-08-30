@@ -22,16 +22,18 @@ from __future__ import annotations
 import logging
 import random
 
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.kernel import cw_battle_calib
-from sr_od.application.currency_war.sim import runner as sim_runner
-from sr_od.application.currency_war.sim.checks import runner
-from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
-
-from sr_od.application.currency_war.sim.checks.calib import check_p2_loss_band_anchor, check_p2_win_rate_band
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.data.cw_battle_tables import P2CombatCalib
+from sr_od.application.currency_war.kernel import cw_battle_calib
 from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import runner as sim_runner
+from sr_od.application.currency_war.sim.checks import calib as _cw_checks
+from sr_od.application.currency_war.sim.checks.calib import (
+    check_p2_loss_band_anchor,
+    check_p2_win_rate_band,
+)
+from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
 
 logging.disable(logging.CRITICAL)
 
@@ -210,6 +212,8 @@ def test_batch_headline_extension_keys() -> None:
     cv = rep['checks_violations']
     for k in ('p2_loss_band_anchor', 'p2_win_rate_band'):
         assert k in cv and cv[k]['violations'] == 0, (k, cv.get(k))
+    # 本测试 n=10(~40 行)<P2_WIN_RATE_MIN_JUDGE_ROWS:胜率带锚在此
+    # 口径只披露不判(violations 恒 0),判读面由单元测试+变异探针辖
 
 
 def test_result_observation_derivation() -> None:
@@ -256,21 +260,25 @@ def test_check_p2_loss_band_anchor_unit() -> None:
 
 
 def test_check_p2_win_rate_band_unit() -> None:
-    """胜率锚:聚合胜率带外涌现(样本 ≥20 才判)/uncalibrated 跳过。"""
+    """胜率锚:聚合胜率带外涌现(样本 ≥P2_WIN_RATE_MIN_JUDGE_ROWS 才判,
+    小样本只披露不判)/uncalibrated 跳过。"""
     def row(w: bool) -> dict:
         return {'plane': 2, 'round_num': 1, 'sim': {
             'node': 'battle', 'p2_win_p': 0.1,
             'delta': 2 if w else -16}}
-    hot = [[row(True)] * 30]
+    hot = [[row(True)] * 120]
     rep = check_p2_win_rate_band(
         hot, report={'p2_combat_calibrated': True})
     assert rep['violations'] == 1 and rep['win_rate'] == 1.0
-    cold = [[row(False)] * 25]
+    # 判读门槛临界定:行数差 1 即「只披露不判」(violations 恒 0)——
+    # n=10 局批(~40 行)σ≈0.085,判读只挂大样本窗
+    edge = [[row(True)] * (_cw_checks.P2_WIN_RATE_MIN_JUDGE_ROWS - 1)]
+    rep_edge = check_p2_win_rate_band(
+        edge, report={'p2_combat_calibrated': True})
+    assert rep_edge['violations'] == 0 and rep_edge['win_rate'] == 1.0
+    cold = [[row(False)] * 105]
     assert check_p2_win_rate_band(
         cold, report={'p2_combat_calibrated': True})['violations'] == 0
-    few = [[row(True)] * 5]          # 样本贫困:只披露不判
-    assert check_p2_win_rate_band(
-        few, report={'p2_combat_calibrated': True})['violations'] == 0
     assert check_p2_win_rate_band(
         hot, report={'p2_combat_calibrated': False})['violations'] == 0
 
@@ -289,11 +297,13 @@ def test_mutation_probe_settlement_bypass(monkeypatch) -> None:
 
 
 def test_mutation_probe_win_rate_explosion(monkeypatch) -> None:
-    """变异探针锁:胜率模型失控(clip 被绕过)→ 胜率锚违规涌现。"""
+    """变异探针锁:胜率模型失控(clip 被绕过)→ 胜率锚违规涌现。
+    批取 n=30(~120 战斗行)以过 P2_WIN_RATE_MIN_JUDGE_ROWS 判读门槛
+    (门槛以下只披露不判,变异不会涌现)。"""
     def _broken(st, node, round_num, rng, calib):
         return (2, 0.9)
     monkeypatch.setattr(cw_sim, 'p2_combat_delta', _broken)
-    rep = sim_runner.simulate_p1_batch(8, pool='snapshot', planes=2,
+    rep = sim_runner.simulate_p1_batch(30, pool='snapshot', planes=2,
                                    ledger=False, seed_base=100)
     cv = rep['checks_violations']['p2_win_rate_band']
     assert cv['violations'] > 0, '变异(胜率失控)未涌现违规'
@@ -315,5 +325,6 @@ def test_sensitivity_report_shape() -> None:
     assert rep['pool_fingerprint']
 
 
-from sr_od.application.currency_war.sim import engine_p1
-from sr_od.application.currency_war.sim import engine_p2
+# 文件尾 import(既有模式):engine 模块以模块属性形态被 monkeypatch 锁
+# 按址引用,置于文件尾不影响语义(测试不依赖其导入时点)
+from sr_od.application.currency_war.sim import engine_p1, engine_p2  # noqa: E402
