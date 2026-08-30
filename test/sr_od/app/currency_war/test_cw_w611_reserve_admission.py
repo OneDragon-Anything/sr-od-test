@@ -18,6 +18,8 @@
 """
 from __future__ import annotations
 
+import dataclasses
+
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap,
 )
@@ -45,6 +47,10 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 )
 
 _REG = DEFAULT_REGISTRY
+
+# 关行为锁显式注入(危机臂开臂后默认 registry=True,ADR-0503;应急让位语义
+# 锁改注入 False 仍测,不删——与 test_cw_w633 同款形态)。
+_REG_CRISIS_OFF = dataclasses.replace(_REG, crisis_release_enabled=False)
 
 
 def _state(*, gold: int = 80, plane: int = 1, r: int = 3, level: int = 6,
@@ -175,11 +181,26 @@ def test_zero_drift_below_reserve_cap() -> None:
 
 def test_emergency_frame_release_yields() -> None:
     """应急帧让位(保血域,辖区不相交):hp≤25 时 flip 与准入门都不辖,
-    姿态维持原样(W516 保血域不被义务模型侵入)。"""
+    姿态维持原样(W516 保血域不被义务模型侵入)。
+    危机臂开臂(ADR-0503)后应急让位语义锁改注入 False 仍测——钉
+    ADR-0426 让位结构本身(关行为),不随第三臂消失。"""
     st = _state(gold=100, hp=20, bench=_full_bench(),
                 shop=[_sc('桑博', 2)], board={})
     s = _sess(st)
-    assert release_directive(st, s, _REG, 'FORM', _saving_posture()) is None
+    assert release_directive(st, s, _REG_CRISIS_OFF, 'FORM',
+                             _saving_posture()) is None
+
+
+def test_emergency_frame_crisis_arm_directive() -> None:
+    """危机臂 ON 对照(ADR-0503 第三臂):同帧默认 registry 下危机指令
+    开火(reason='crisis')——让位语义由本臂接管,非消失。"""
+    st = _state(gold=100, hp=20, bench=_full_bench(),
+                shop=[_sc('桑博', 2)], board={})
+    s = _sess(st)
+    d = release_directive(st, s, _REG, 'FORM', _saving_posture())
+    assert d is not None and d.reason == 'crisis'
+    assert d.budget_gold > 0
+    assert wrap_posture(_saving_posture(), d).tag == 'release'
 
 
 # --- 守息线 ≡ 封顶线(W611 §2.2 恒等式)----------------------------------
