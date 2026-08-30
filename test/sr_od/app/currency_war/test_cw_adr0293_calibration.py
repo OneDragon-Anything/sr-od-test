@@ -291,6 +291,15 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'tier_push_gate_min_round': ('int', 4),
     'tier_push_press_cost_max': ('int', 2),
     'tier_push_press_round_cap': ('int', 2),
+    # ===== 件价值模型 Phase 1(W831 v2;伞+buy/keep/merge 默认关,
+    # 开臂判据挂账 = w836_piece_value_p1/PREREG.md;权重占位,B 挂 P34。
+    # C/D/E/F 无权重字段=类型层收窄,Phase 2 随全量 weight 类型入面)=====
+    'piece_value_enabled': ('bool', False),
+    'piece_value_buy_enabled': ('bool', False),
+    'piece_value_keep_enabled': ('bool', False),
+    'piece_value_merge_enabled': ('bool', False),
+    'piece_value_w_activation': ('float', 0.0),
+    'piece_value_w_retention': ('float', 0.0),
     # (P1→P2 接口机制五开关+三阈值已随定谳清理删除,ADR-0487)
     # ===== 形态达标三方向 =====
     'recipe_fence_enabled': ('bool', False),
