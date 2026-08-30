@@ -4,7 +4,7 @@ hp 三层(用户设计 2026-08-23,run165501 hp=100 毒化案根治):
 ① shop 开态帧读不到 → 不写遥测兜底 100(hp_readable=False,hp=沿用值);
 ② 决策沿用 session.last_hp_real(真值,比假 100 安全);
 ③ 同域跳变(HP 只降不升,大幅上行)→ obs_conflict 留证;
-④ 开局全无真值 → 兜底 100;
+④ 开局全无真值 → None 诚实未知(旧「兜底 100」由 ADR-0491 废止,W823 hp None 化);
 ⑤ sim BuyCard 前置容量守卫:bench 满(≥BENCH_CAPACITY)买跳过 + 计数披露。
 """
 from __future__ import annotations
@@ -55,20 +55,24 @@ def test_hp_jump_up_leaves_evidence(monkeypatch) -> None:
     assert calls == []
 
 
-def test_hp_no_truth_fallback_100() -> None:
-    """④ 开局全无真值(last_hp_real=None)读不到 → 兜底 100(健康先验)。"""
+def test_hp_no_truth_honest_none() -> None:
+    """④ 开局全无真值(last_hp_real=None)读不到 → None(诚实未知)。
+
+    旧锁「兜底 100」已随 ADR-0491 废止(ADR-0282 ④ 被正式取代:
+    r1 开局血量随难度/词缀变不恒 100,兜底值是假值;W823 hp None 化)。
+    """
     from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_hp
     s = _mk_session()
     assert s.last_hp_real is None
     hp, readable = reconcile_hp(s, None)
-    assert (hp, readable) == (100, False)
+    assert (hp, readable) == (None, False)
 
 
 def test_hp_offline_no_session_passthrough() -> None:
-    """无 session(离线/测试):真值透传;读不到走开局兜底(不炸)。"""
+    """无 session(离线/测试):真值透传;读不到=诚实 None(不炸,不兜底)。"""
     from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_hp
     assert reconcile_hp(None, 70) == (70, True)
-    assert reconcile_hp(None, None) == (100, False)
+    assert reconcile_hp(None, None) == (None, False)
 
 
 # ===== 件3:记录层接线(写入端走 read_hp_opt + reconcile_hp) =====

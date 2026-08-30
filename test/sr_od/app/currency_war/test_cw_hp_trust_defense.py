@@ -322,12 +322,14 @@ def _record_one(st: GameState, run_id: str, tmp_path) -> dict:
     return json.loads(lines[-1])
 
 
-def test_r1_miss_frame_trace_hp_none_not_100(tmp_path) -> None:
-    """r1 读失败帧(两位皆 False)→ 决策迹 hp=None 诚实未知,不再把
-    对账层兜底 100 写进语料(新断言:r1 读失败不再产 100)。"""
-    st = _state_with_bits(100, False, False)   # 对账层兜底形态
+def test_r1_none_hp_trace_none_not_100(tmp_path) -> None:
+    """r1 无真值帧(hp=None,两位皆 False)→ 决策迹 hp=None 直通。
+
+    W823 None 化后对账层不再产 100 兜底——recorder 的 r1 特例臂退役,
+    直通写 state.hp;真值帧照记(见下一条)。"""
+    st = _state_with_bits(None, False, False)   # 诚实未知形态(None 化 producer 唯一产出)
     st.plane, st.round_num = 1, 1
-    row = _record_one(st, 't-r1-miss', tmp_path)
+    row = _record_one(st, 't-r1-none', tmp_path)
     assert row['hp'] is None
     assert row['hp_readable'] is False
 

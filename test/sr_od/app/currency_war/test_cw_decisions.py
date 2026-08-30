@@ -698,7 +698,7 @@ def test_escort_for_serves_matching() -> None:
 def test_decide_event_refresh_suggestion_adr0146() -> None:
     """ADR-0146:三张最优 < 50 → PickEvent.refresh=True(纯建议,handler 决定真刷否)。"""
     cfg = _cfg()
-    st = GameState(board={})
+    st = GameState(board={}, hp=100, hp_readable=True)   # 显式满血态(W823 None 化:默认构造=未观测,不再隐含满血)
     pick = decide_event(["赌神·银", "恢复生机", "气氛组"], cfg, st)   # 20/12/20
     assert pick.refresh is True and 'suggest-refresh' in pick.reason
     pick2 = decide_event(["彩虹时代", "恢复生机", "气氛组"], cfg, st)   # env 72
@@ -711,7 +711,7 @@ def test_env_pick_value_adr0144() -> None:
     """ADR-0144 环境侧评估分:env 原恒 0 分(fallback 恒选第一张)→ 基准分 + 阵营条件分 + HP 钩子。"""
     from sr_od.application.currency_war.kernel.cw_investments import get_env
     cfg = _cfg()
-    st = GameState(board={})
+    st = GameState(board={}, hp=100, hp_readable=True)   # 显式满血态(W823 None 化:默认构造=未观测,不再隐含满血)
     # 基准分:彩虹时代 72 > 增发货币 48(旧:全 0 分 → 恒选第一张)
     pick = decide_event(["增发货币", "彩虹时代"], cfg, st)
     assert pick.option_idx == 1
