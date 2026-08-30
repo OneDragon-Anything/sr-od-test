@@ -805,12 +805,11 @@ def test_start_battle_dialog_checkbox_equipped(monkeypatch) -> None:
     assert i_check < i_confirm, "勾选必须先于确认(否则整局每次出战都弹)"
 
 
-# ===== 出战发射锁(两段式发射 + 激活重发 + 连败停机;两局同型停滞实证) =====
-# 根因:游戏只在前台处理鼠标输入(pc_controller_base Raw Input 注记),前台报告
-# "已激活"时输入也可能已断(输入静默丢 r9/r10 家族)——原实现只在 is_win_active=False
-# 时补点,实证两局(备战环「强制出战失败(stall+恢复试尽): 出战 click 未落地」×4 环,
-# ~2min/次)直到人工 click_game(入口先 active_window)解锁。修法:未落地 → 主动
-# active_window 重发;连败(跨环 session 计数)达限 → 停机留证。
+# ===== 出战发射锁(原样重发 + 零激活策略 + 连败停机;两局同型停滞实证) =====
+# 现象:游戏只在前台处理鼠标输入,两局实证备战环 mid-game「出战 click 未落地」
+# ×4 环 ~2min/次,直到人工点击解锁。修法(用户裁定 2026-08-30):未落地 → 原样
+# 重发(长按下);**禁用 active_window 激活**(激活=抢用户桌面焦点,自主推进期
+# 不可接受);连败(跨环 session 计数)达限 → 停机留证,根因判定交人工。
 
 class _LaunchArea:
     def __init__(self, ok: bool): self.is_success = ok
@@ -870,11 +869,11 @@ def _make_launch_env(monkeypatch, prep_visible_rounds: int):
     return ex, clicks, activations, _Match.session, stops
 
 
-def test_start_battle_reactivates_and_relaunches_on_dead_click(monkeypatch) -> None:
-    """发射锁核心:第 1 次发射未落地 → active_window 一次 → 第 2 次发射成功。
+def test_start_battle_relaunches_without_activation_on_dead_click(monkeypatch) -> None:
+    """发射锁核心:第 1 次发射未落地 → 原样重发(长按下)成功;全程零激活。
 
-    竞态纪律:重发只发生在第 1 次发射完整轮询耗尽之后(点击序 = btn, btn;
-    active_window 恰 1 次夹在中间),不与正常发射时序交叠。
+    竞态纪律:重发只发生在第 1 次发射完整轮询耗尽之后(点击序 = btn, btn),
+    不与正常发射时序交叠;**激活策略锁:任何路径不得调用 active_window**。
     """
     # 两段可编程:尝试0 = 备战标识恒在(轮询耗尽未落地);尝试1 = 标识消失(成功)
     ex, clicks, activations, session, stops = _make_launch_env(monkeypatch, 0)
@@ -899,9 +898,9 @@ def test_start_battle_reactivates_and_relaunches_on_dead_click(monkeypatch) -> N
 
     monkeypatch.setattr(pa.PrepActionExecutor, '_launch_attempt', _counting_launch)
     ok, detail = pa.PrepActionExecutor._start_battle(ex)
-    assert ok, f'激活重发后应成功,实 {detail}'
-    assert '激活重发' in detail, f'成功 detail 应标注激活重发: {detail}'
-    assert activations == [True], f'恰好强制激活 1 次,实 {activations}'
+    assert ok, f'原样重发后应成功,实 {detail}'
+    assert '(重发)' in detail, f'成功 detail 应标注重发: {detail}'
+    assert activations == [], f'零激活策略:任何路径不得激活窗口,实 {activations}'
     # click 记录 = press_time:首发默认 0.1,重发段 0.15(人工解锁实证参数)
     assert clicks == [0.1, 0.15], f'两段各点一次出战,重发放长按下,实 {clicks}'
     assert stops == [], '发射成功不得触发停机'
@@ -920,7 +919,7 @@ def test_start_battle_launch_dead_escalates_to_evidence_stop(monkeypatch) -> Non
     assert '停机留证' in detail, f'达限应停机留证,实 {detail}'
     assert session.launch_dead_streak == PrepActionExecutor.LAUNCH_DEAD_LIMIT
     assert stops and 'launch_dead' in stops[0], f'应 stop_running(hook:cw_launch_dead),实 {stops}'
-    assert activations == [True], '失败前仍应尝试激活重发'
+    assert activations == [], '失败路径同样零激活(重发=原样重试,无窗口激活)'
 
 
 def test_start_battle_success_resets_launch_dead_streak(monkeypatch) -> None:
