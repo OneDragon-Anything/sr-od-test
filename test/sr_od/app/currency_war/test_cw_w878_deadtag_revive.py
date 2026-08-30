@@ -265,6 +265,17 @@ def test_w878_mono_attribute_dynamic_injection() -> None:
     assert fit < 0.5, "判据载体开臂后应吃量子熄火 counter 降分"
     # 档深不足(3 < 4):不并入,恒中性(宁缺勿错)
     assert "单属性队" not in effective_mechanic_attributes(_pred_comp(3), armed)
+    # 主档非判据集不误收(w922 审计 P2-2 反例形态):列车同行5 主档 + 量子同频4 副档
+    # —— 羁绊乘区驱动型,即使属性羁绊档深达标也不是单属性队(「主档」校验)。
+    multi_main = Comp(name="多主档comp", factions=["列车同行"], core_chars=[],
+                      form_tiers={"列车同行": 5, "量子同频": 4}, strength="A",
+                      form_difficulty="easy", mechanic_attributes=["击破"])
+    assert "单属性队" not in effective_mechanic_attributes(multi_main, armed)
+    # 并列最深档含属性羁绊判真(双主档形态,主档校验的合法边界)
+    tied_main = Comp(name="双主档comp", factions=["量子同频", "列车同行"], core_chars=[],
+                     form_tiers={"量子同频": 4, "列车同行": 4}, strength="A",
+                     form_difficulty="easy", mechanic_attributes=["击破"])
+    assert "单属性队" in effective_mechanic_attributes(tied_main, armed)
     # 副羁绊宽口径不算(form_tiers 无属性羁绊主档,仅 flex 层出现不判)
     flex_only = Comp(name="副羁绊comp", factions=[], core_chars=[],
                      form_tiers={"贝洛伯格": 4}, strength="A",
