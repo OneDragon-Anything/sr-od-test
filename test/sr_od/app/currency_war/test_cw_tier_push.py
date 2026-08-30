@@ -206,15 +206,18 @@ def test_lock2_gap_differential_ranking_and_idempotency() -> None:
 # ===== 锁 3 死线权重(PREREG #3)=====
 
 def test_lock3_deadline_weight_shape() -> None:
-    """r6 帧缺口差分权重 > r3 帧 > r8 帧(r8 残差仅 boss 分量);
-    子旗标关恒 1.0(消融归因);单调递增至 r6、r7 后坍缩。"""
+    """r6/r7 帧缺口差分权重 > r3 帧 > r8 帧(PREREG #3 判前锁 r6>r3>r8;
+    补钉 r7:设计 §3②「r7 帧后」坍缩——r7 备战帧购买直接作用于 r7
+    遭遇战,享陡升权重,残差坍缩自 r8 起,W820 边界修正的语义锚);
+    子旗标关恒 1.0(消融归因);单调递增至 r7、r8 起坍缩。"""
     sess = _sess()
     member = _line_members()[0]
     cand = _buy(member, CHARACTERS[member].cost or 1)
     w3 = deadline_weight(_st(round_num=3), _REG_ON)
     w6 = deadline_weight(_st(round_num=6), _REG_ON)
+    w7 = deadline_weight(_st(round_num=7), _REG_ON)
     w8 = deadline_weight(_st(round_num=8), _REG_ON)
-    assert w6 > w3 > w8 > 0
+    assert w6 == w7 > w3 > w8 > 0
     assert deadline_weight(_st(round_num=3), _REG_OFF) == 1.0
     # 权重作用于候选分:r6 分 > r3 分(同帧同候选)
     st3 = _st(round_num=3)
