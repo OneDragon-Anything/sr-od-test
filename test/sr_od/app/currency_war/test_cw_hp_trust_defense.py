@@ -274,6 +274,47 @@ def test_apply_hp_none_keeps_reconciled_value() -> None:
     assert (st.hp, st.hp_readable, st.hp_trusted) == before
 
 
+# ---------- 组7:r1 规则真值(开局满血 100,来源=规则非读取) ----------
+# 游戏规则保证:位面1轮次1(首战未打)备战帧 hp=100。写入点按可信真值赋
+# (100, True, True);r2+ 不适用(仍走结算真值/读取链,fail-closed 不变)。
+
+
+def test_r1_rule_pred_applicable() -> None:
+    """判据面:P1 r1 且无任何 hp 真值 → 适用;r2/已有真值/位面交接 r1/轮次未读到 → 不适用。"""
+    from sr_od.application.currency_war.operations.prep.shop import (
+        _r1_rule_hp_applicable,
+    )
+    assert _r1_rule_hp_applicable((1, 1), None, None) is True
+    # r2+:结算真值已在,走既有链
+    assert _r1_rule_hp_applicable((1, 2), 96, None) is False
+    assert _r1_rule_hp_applicable((1, 2), None, 96) is False
+    # 位面交接 r1:hp 带过,不再恒满血
+    assert _r1_rule_hp_applicable((2, 1), None, None) is False
+    # 轮次未读到(None):判据拒绝(宁 fail-closed 不误赋)
+    assert _r1_rule_hp_applicable(None, None, None) is False
+
+
+def test_r1_rule_frame_consumable_and_outside_band_passes() -> None:
+    """r1 规则真值帧 (100, True, True) 经消费门可评估:满血 100 线外放行
+    (与真读同可信度;此前该帧两位 False 被 fail-closed 拒评估)。"""
+    st = _state_with_bits(100, True, True)
+    st.plane, st.round_num = 1, 1
+    st.node_type = 'battle'
+    assert hp_decision_trusted(st) is True
+    assert blood_budget_levelup_blocked(
+        st, StrategySession(), DEFAULT_REGISTRY) is False
+
+
+def test_r1_rule_frame_match_archive_trusted() -> None:
+    """遥测对账面:r1 规则真值帧在 hp 真值链显为 trusted=True
+    (此前同形态被当 miss 显影为不可信、下游降权)。"""
+    from sr_od.application.currency_war.telemetry.match_archive import _hp_entry
+    frame = {'hp': 100, 'hp_readable': True,
+             'state': {'hp_trusted': True}}
+    assert _hp_entry(frame, None) == {'hp': 100, 'source': 'frame',
+                                      'trusted': True}
+
+
 # ---------- 组5:sim 零漂移锁 ----------
 
 def test_sim_frames_default_trusted_gate_short_circuits() -> None:
