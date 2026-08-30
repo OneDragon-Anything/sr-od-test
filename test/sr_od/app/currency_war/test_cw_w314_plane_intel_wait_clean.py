@@ -97,13 +97,20 @@ def _exec(op) -> OperationResult:
 
 def test_nonclean_waits_until_cap_then_fails(test_context: SrTestContext,
                                              monkeypatch) -> None:
-    """锁①:备战节点条持续非clean → 不在短窗失败;间隔重读;超宽上限才 round_fail。"""
+    """锁①:备战节点条持续非clean → 不在短窗失败;间隔重读;超宽上限才 round_fail。
+
+    2026-08-30 语义更新:等待门新增静止帧提前放弃(连续帧零变化=非动画)。
+    本锁验证的是**真动画**路径(帧间有变化 → 等到上限),故替身帧差判定恒
+    「有变化」;静止帧提前放弃的锁在 test_cw_w857_plane_intel_skip。
+    """
     from sr_od.application.currency_war.operations.handlers import (
         collect_plane_intel as cpi_mod,
     )
 
     # 恒非clean(read_node_sequence 恒 None),fake 墙钟每次 sleep 推进 10s
     _patch_node_reader(monkeypatch, [])
+    # fixture 帧逐轮相同(静止)——替身帧差判定为「有变化」模拟真动画
+    monkeypatch.setattr(cpi_mod, '_frames_identical', lambda a, b: False)
     clock = _FakeClock(advance_per_sleep=10.0)
     monkeypatch.setattr(cpi_mod, 'time', clock)
 
@@ -139,9 +146,10 @@ def test_give_up_closes_detail_overlay(test_context: SrTestContext,
     """锁③:在位面详情帧上门超限放弃 → round_fail 前须先点关闭键
     (2026-08-30 判读:放弃采集时详情屏滞留画面,主循环当时无对应分支
     → 未识别兜底自停)。备战帧场景(详情未开)不得产生点击(锁①同款)。"""
+    from pathlib import Path
+
     import cv2
     import numpy as np
-    from pathlib import Path
 
     from sr_od.application.currency_war.operations.handlers import (
         collect_plane_intel as cpi_mod,
@@ -185,6 +193,9 @@ def test_recovers_after_clean_frame(test_context: SrTestContext,
 
     clean_slot = SimpleNamespace(state='current', cx=100, cy=100)
     calls = _patch_node_reader(monkeypatch, [None, None, None, [clean_slot]])
+    # 场景=真动画窗(帧间有变化);替身帧差判定恒「有变化」防静止提前放弃
+    # (静止帧路径归 test_cw_w857_plane_intel_skip)
+    monkeypatch.setattr(cpi_mod, '_frames_identical', lambda a, b: False)
     clock = _FakeClock(advance_per_sleep=10.0)
     monkeypatch.setattr(cpi_mod, 'time', clock)
 

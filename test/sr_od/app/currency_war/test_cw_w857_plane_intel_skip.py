@@ -67,3 +67,81 @@ def test_observation_docstring_annotates_dimmed_state() -> None:
 
     doc = inspect.getdoc(cw_observation.read_plane_detail_nodes) or ''
     assert '变暗' in doc, '节点条读法缺过去位面变暗态注释'
+
+
+# --------------------------------------------------------------------------- #
+# clean 等待门静止帧提前放弃(2026-08-30 哨兵 20:22:36 实证治理)
+# --------------------------------------------------------------------------- #
+# 实证链:P2 采集点位面 1(变暗灰态)→ read 恒 None → 门把 None 一律归因
+# 「切卡动画中」硬等 90s 后放弃——采集从未通过此门(设计=新局 P1 一次性
+# 补采,却在 P2 反复出现即此慢性失败的漂移结果)。治本:门加帧稳定性信号
+# ——连续 2 帧零变化=静止渲染态(等不会变 clean)→ 提前放弃;
+# 真动画帧间必有变化 → 原超上限路径保持不动(w314 锁①/②锁该路)。
+
+
+def test_gate_fails_fast_on_static_frames() -> None:
+    """静止帧提前放弃:连续 2 帧零变化 → round_fail,不等 90s 上限。"""
+    import numpy as np
+
+    from test.harness.fixture_controller import fast_sleep
+
+    img = np.zeros((108, 192, 3), dtype=np.uint8)   # 静止帧(两轮同图)
+    op = _bare_op()
+    op.last_screenshot = img
+
+    with fast_sleep():
+        r1 = op._nonclean_read_gate('切卡动画中')
+        assert '间隔重读' in str(r1.status), (
+            f'第 1 帧(尚无前帧可比)应走间隔重读,得 {r1.status!r}')
+        r2 = op._nonclean_read_gate('切卡动画中')
+    assert r2.is_fail, f'连续 2 帧零变化应提前放弃,得 {r2.status!r}'
+    assert '静止' in str(r2.status), f'失败应声明静止帧根因,得 {r2.status!r}'
+    assert '动画' in str(r2.status), f'失败应声明非动画(与 90s 超限相区分),得 {r2.status!r}'
+
+
+def test_gate_keeps_waiting_on_changing_frames() -> None:
+    """帧在变(真动画)→ 不触发静止提前放弃,仍走间隔重读/超上限路径。"""
+    import numpy as np
+
+    from test.harness.fixture_controller import fast_sleep
+
+    img_a = np.zeros((108, 192, 3), dtype=np.uint8)
+    img_b = np.full((108, 192, 3), 200, dtype=np.uint8)   # 与 a 差异显著
+    op = _bare_op()
+
+    with fast_sleep():
+        op.last_screenshot = img_a
+        r1 = op._nonclean_read_gate('切卡动画中')
+        assert '间隔重读' in str(r1.status), f'第 1 帧应间隔重读,得 {r1.status!r}'
+        op.last_screenshot = img_b
+        r2 = op._nonclean_read_gate('切卡动画中')
+    assert '间隔重读' in str(r2.status), f'帧间有变化(真动画)不应提前放弃,得 {r2.status!r}'
+
+
+def test_frames_identical_tolerance() -> None:
+    """帧差判定:同图=零变化;显著差异图=有变化(容忍压缩噪声的容差语义)。"""
+    import numpy as np
+
+    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import (
+        _frames_identical,
+    )
+
+    a = np.zeros((54, 96), dtype=np.uint8)
+    assert _frames_identical(a, a.copy()) is True
+    assert _frames_identical(a, a + 1) is True          # 噪声级差异容忍
+    b = np.full((54, 96), 180, dtype=np.uint8)
+    assert _frames_identical(a, b) is False             # 显著差异=动画
+
+
+def _bare_op():
+    """免 fixture 构造最小 op(仅测门方法:跳过 SrOperation 重初始化)。"""
+    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import (
+        CollectPlaneIntel,
+    )
+
+    op = CollectPlaneIntel.__new__(CollectPlaneIntel)
+    op._nonclean_wait_start = None
+    op._gate_prev_thumb = None
+    op._gate_static_streak = 0
+    op._best_effort_close_detail = lambda: None   # 单测不触真实截图/点击
+    return op
