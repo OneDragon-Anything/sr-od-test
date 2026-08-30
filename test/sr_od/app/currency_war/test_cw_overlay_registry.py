@@ -1,6 +1,6 @@
 """overlay 注册表一致性测试(设计终版 §二 8 断言首锁;Phase 2 子批 1-2)。
 
-注册表 = ``sr_od.application.currency_war.obs.overlay_registry.OVERLAY_REGISTRY``
+注册表 = ``sr_od.application.currency_war.kernel.cw_overlay_registry.OVERLAY_REGISTRY``
 (单一枚举点)。本测试锁的是**声明层的结构一致性**,消费面(P0 清场 / bail /
 battle_loop 派发 / 退出链)尚未切换——末尾的零行为变化锁组钉住「消费面未接」
 状态,子批 3-6 逐面切换时对应锁随切换批改写。
@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-from sr_od.application.currency_war.obs import overlay_registry as reg
+from sr_od.application.currency_war.kernel import cw_overlay_registry as reg
 
 REPO = Path(__file__).resolve().parents[5]
 SCREEN_INFO_DIR = REPO / 'assets' / 'game_data' / 'screen_info'
@@ -98,6 +98,8 @@ def test_2_decision_handler_present_and_importable() -> None:
             assert spec.handler_id, f'{spec.screen_name} decision 无 handler'
         if spec.handler_id in reg.PENDING_HANDLER_IDS:
             continue   # C 面收拢挂账(当前仅 HandleStarTome),切换批清空
+        if not spec.handler_id:
+            continue   # display/system 条目 handler_id='' 是合法缺省(无专属 handler),不做 import 检查
         _import_handler(spec.handler_id)
     # 挂账集 ⊆ registry 引用集,且挂账集非空必须有事由(防静默腐化)
     assert referenced >= reg.PENDING_HANDLER_IDS, \
