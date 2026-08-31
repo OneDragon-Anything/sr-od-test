@@ -70,14 +70,24 @@ from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
 # .debug/temp/currency_war/w935_budget_enforce_ab/。新锚继续做
 # unintended drift 哨兵;armed 态 A/B(w935_budget_enforce_ab/REPORT.md)
 # 实证预算执行不劣化后此锚方为有效基线。
-# 预算-回执契约除开关批重锚(ADR-0504,用户裁定无条件生效;锁红≠改动错):
-# 产出侧拒发(前提不成立授权不发)+ 执行侧升级前提拒付 + 对账门从默认关
-# 转恒接线是行为批,digest 由 b01e6b80… 位移至 d0051d19…。机制面归因=
-# 前提拒发收窄授权面(A/B v2 渠道级 off 10.74%→on 1.89%,同帧集配对
-# 两臂逐帧一致=零损害;docs/develop/currency_war/prereg/
-# w937_spend_receipt/PREREG.md)。新锚继续做 unintended drift 哨兵。
+# 预算-回执契约除开关批重锚(ADR-0504,用户裁定无条件生效):**复合窗口
+# 位移,单变量归因未做**——b01e6b80…→d0051d19… 的重锚窗口实际含至少三个
+# 行为批(W951 危机刷新不变量无条件化 / R* 储备线降档 / 本契约无条件化),
+# 逐批单独重放定贡献的 bisect 未执行,本锚注释不对单一机制作排他归因。
+# 锚有效性前提 = 契约 A/B v2 渠道级判据(docs/develop/currency_war/prereg/
+# w937_spend_receipt/PREREG.md:未兑现占比下降+同帧集配对零损害)与各批
+# 自身 A/B;新锚继续做 unintended drift 哨兵,后续行为批重锚须按 w910
+# 先例补单变量 bisect 或同款如实声明。
+# W956 治本批复合重锚(同款如实声明:**复合窗口,单变量 bisect 未做**)
+# ——d0051d19…→297d7eb4… 窗口含至少三个行为批:①death 帧供给解锁
+# (w-only 拒供退役+刷新估计器死亡域保底,设计单一源=
+# .debug/temp/currency_war/w956_death_allocator/DESIGN.md §1-§3);
+# ②必死子带机会成本重定价(ADR-0510,hp≤L_c 带内 I 项退役);
+# ③F5 部署供给(板缺帧 deploy 候选不截断,同 DESIGN §1.4)。
+# 锚有效性前提 = 各批自身验证(REPORT §6/§6.4 与 ADR-0510);新锚继续做
+# unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    'd0051d1915ac6194f19bd858876882e8222762bb4c5ae9ba7f527d6f1c82f2f3')
+    '297d7eb4eb14127e3b32f345df83e7755b606c8194356e40453251c00231185b')
 
 
 def _behavior_projection(results) -> str:
