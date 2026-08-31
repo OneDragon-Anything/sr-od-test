@@ -1,9 +1,9 @@
 """overlay 注册表一致性测试(设计终版 §二 8 断言首锁;Phase 2 子批 1-2)。
 
 注册表 = ``sr_od.application.currency_war.kernel.cw_overlay_registry.OVERLAY_REGISTRY``
-(单一枚举点)。本测试锁的是**声明层的结构一致性**,消费面(P0 清场 / bail /
-battle_loop 派发 / 退出链)尚未切换——末尾的零行为变化锁组钉住「消费面未接」
-状态,子批 3-6 逐面切换时对应锁随切换批改写。
+(单一枚举点)。本测试锁的是**声明层的结构一致性**;A 面(P0 清场)与
+B 面(director bail)已切换为派生消费,对应锁随切换批改写为「切换后 +
+行为断言门」;C/D(battle_loop 派发 / 退出链)未切换,零行为锁仍钉住。
 
 C1 红线(断言 3):``decision ⇒ closable is False`` ∧ 派生清场集不含
 decision 条目。吸收 Phase 1 临时哨(「遭遇节点 ∉ ENTRY_OVERLAY_CLOSE」,
@@ -16,6 +16,7 @@ import importlib
 import pkgutil
 from pathlib import Path
 
+import pytest
 import yaml
 
 from sr_od.application.currency_war.kernel import cw_overlay_registry as reg
@@ -200,20 +201,103 @@ def test_residual_segment_disjoint_and_registered() -> None:
         assert name in yml_names, f'残余段屏 {name!r} 未在 screen_info 注册'
 
 
-# ══ 零行为变化锁组(消费面未接;子批 3-6 逐面切换时随批改写)══
+# ══ A 面(P0 清场)已切换锁组 ══
 
-def test_zero_behavior_clear_table_unswitched() -> None:
-    """A 面:P0 清场表仍是原 5 条自有 dict(未改遍历 registry)。"""
+#: A 面切换后的清场派生集黄金值(= derive_clearable():激活 ∧ closable,
+#: 声明序)。相对迁移前手写 5 条清场表的**两处成员收缩**:星徽秘典弹窗、
+#: 补给 decision 化(关闭即丢决策内容,设计定案 5)后退出清场,改走
+#: event_overlay bail → 0i 选卡 / RunSupplyNode 消化。
+_GOLDEN_CLEAR_MAP: dict[str, str] = {
+    '货币战争-积分奖励': '按钮-关闭',
+    '货币战争-中断挑战弹窗': '按钮-关闭',
+    '货币战争-武装箱弹窗': '按钮-关闭',
+}
+
+
+def test_aface_clear_set_switched_to_registry() -> None:
+    """A 面已切换:清场表 = 注册表派生桥接,手写 5 条 dict 删除。
+
+    接线锁三件:① gate 清场映射逐条等于派生黄金值(含两处 decision 化
+    成员收缩——星徽秘典/补给不再可被环入口一键关);② gate 源码消费
+    ``derive_clearable`` 且不再含手写清场条目字面量(单一源收拢);
+    ③ 被移出的两屏仍在 decision 派生集(退出路径=bail→handler,不是
+    裸消失)。
+    """
+    import inspect
+
     from sr_od.application.currency_war.obs.cw_observation_gate import (
         ENTRY_OVERLAY_CLOSE,
     )
-    assert ENTRY_OVERLAY_CLOSE == {
-        '货币战争-武装箱弹窗': '按钮-关闭',
-        '货币战争-补给': '按钮-返回备战界面',
-        '货币战争-积分奖励': '按钮-关闭',
-        '货币战争-星徽秘典弹窗': '按钮-关闭',
-        '货币战争-中断挑战弹窗': '按钮-关闭',
-    }
+    # ① 派生值 = 黄金(成员收缩锁)
+    assert ENTRY_OVERLAY_CLOSE == _GOLDEN_CLEAR_MAP, (
+        f'清场派生集漂移: 实际={ENTRY_OVERLAY_CLOSE} 黄金={_GOLDEN_CLEAR_MAP}')
+    # ② 接线锁:源码走 derive_clearable,手写条目不回流
+    from sr_od.application.currency_war.obs import cw_observation_gate
+    src = inspect.getsource(cw_observation_gate)
+    assert 'derive_clearable()' in src, '清场表未接线 derive_clearable()'
+    for _scr, _area in _GOLDEN_CLEAR_MAP.items():
+        assert f"'{_scr}': '{_area}'" not in src, (
+            f'清场手写条目 {_scr} 仍在 gate(单一源未收拢)')
+    # ③ 移出成员的退出路径存在性:两屏 ∈ decision 派生集(bail→handler)
+    decision_names = {s.screen_name for s in reg.derive_decision()}
+    assert '货币战争-星徽秘典弹窗' in decision_names
+    assert '货币战争-补给' in decision_names
+
+
+def test_aface_clear_judgment_per_fixture_frame() -> None:
+    """变更语义 fixture 断言锁:对「单 overlay 在场」的 mock 帧剧本,
+    环入口清场段(``PrepDirector._clear_entry_overlays``,消费循环未改、
+    判定源换成注册表派生)的点击行为逐帧锁定:
+
+    - 星徽秘典弹窗在场 → **不点**其关闭钮(A 面行为变化 1:移出清场,
+      改走 0i 选卡;旧行为会点「按钮-关闭」丢选卡内容);
+    - 补给在场 → **不点**「按钮-返回备战界面」(行为变化 2:移出清场,
+      改走 bail → RunSupplyNode 消化);
+    - 武装箱弹窗在场 → 仍点「按钮-关闭」(清场留存成员,防过度收缩)。
+
+    帧模型:monkeypatch ``screen_utils.get_match_screen_name`` 只对剧本
+    屏命中(其余屏全部 miss),点击经替身记录——纯离线,零真实 IO。
+    """
+    from types import SimpleNamespace
+
+    from one_dragon.base.screen import screen_utils
+    from sr_od.application.currency_war import prep_director
+
+    def _run_clear(visible: str) -> list[tuple[str, str]]:
+        d = prep_director.PrepDirector.__new__(prep_director.PrepDirector)
+        d.ctx = SimpleNamespace(current_instance_idx=99)
+        d.screenshot = lambda: object()   # 帧本体不被消费(锚判定全桩)
+        clicks: list[tuple[str, str]] = []
+
+        def _fake_click(_frame, screen, area, **_kw):
+            clicks.append((screen, area))
+        d.round_by_find_and_click_area = _fake_click
+
+        def _fake_match(*, ctx, screen, screen_name_list, crop_first=False):
+            return visible if visible in screen_name_list else None
+
+        mp = pytest.MonkeyPatch()
+        try:
+            mp.setattr(screen_utils, 'get_match_screen_name', _fake_match)
+            mp.setattr(prep_director.time, 'sleep', lambda _s: None)
+            d._clear_entry_overlays()
+        finally:
+            mp.undo()
+        return clicks
+
+    # 行为变化 1:星徽秘典不再被清场关闭(旧行为会点 按钮-关闭)
+    clicks = _run_clear('货币战争-星徽秘典弹窗')
+    assert clicks == [], (
+        f'星徽秘典弹窗仍被环入口清场关闭(应走 0i 选卡消化): {clicks}')
+    # 行为变化 2:补给不再被「返回备战界面」一键离场(应走 RunSupplyNode)
+    clicks = _run_clear('货币战争-补给')
+    assert clicks == [], (
+        f'补给 modal 仍被环入口一键离场(应走 bail→RunSupplyNode): {clicks}')
+    # 留存成员仍清:武装箱弹窗在场 → 点「按钮-关闭」(mock 帧不随点击变化,
+    # 每轮清场轮重复命中同屏 → 断言每次点击都是该关闭钮,无其它屏混入)
+    clicks = _run_clear('货币战争-武装箱弹窗')
+    assert clicks and set(clicks) == {('货币战争-武装箱弹窗', '按钮-关闭')}, (
+        f'武装箱弹窗清场行为漂移: {clicks}')
 
 
 #: B 面切换前的手写 bail 清单黄金集(切换批零漂移对拍基准;单一源收拢后
