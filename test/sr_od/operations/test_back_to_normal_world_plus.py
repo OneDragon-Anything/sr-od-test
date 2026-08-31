@@ -553,6 +553,40 @@ class TestBattleFailScreenBranch:
         assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
 
 
+class TestSimUniExitConfirmBranch:
+    """模拟宇宙退出确认面板分支真帧输入锁。
+
+    背景(2026-08-31 实证):上一 app 在模拟宇宙楼层内异常退出,本 op 起手点
+    「右上角返回」→ 弹出「退出模拟宇宙?」确认面板 → 只认识右上角 X →
+    关面板又见楼层退出按钮 → 无限循环 40 分钟。面板 area 早已建档
+    (sim_uni.yml 菜单-暂离),纯分发表缺条目。
+
+    真帧锁:fixture = 开拓力 FAIL 遗留现场真帧(暂离/结束并结算面板全开)。
+    不 mock 画面识别,真 OCR 照跑。
+    """
+
+    SCREEN = '模拟宇宙'
+    STATE = '退出模拟宇宙确认面板'
+
+    def test_exit_confirm_clicks_leave(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """面板真帧:命中暂离,find+click「菜单-暂离」,round_retry。"""
+        result, finds, find_clicks, bare_clicks = _run_real_frame_check_screen(
+            test_context, monkeypatch, self.SCREEN, self.STATE,
+        )
+
+        assert not result.is_success, f'面板应 round_retry,status={result.status}'
+        assert result.status == '模拟宇宙-退出确认面板'
+        assert (self.SCREEN, '菜单-暂离') in finds, f'识别命中:{finds}'
+        assert find_clicks == [(self.SCREEN, '菜单-暂离')], (
+            f'点击漂移:{find_clicks}'
+        )
+        assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
+
+
 def _patch_round_sleep(monkeypatch: pytest.MonkeyPatch) -> list[float]:
     """打桩框架轮间 sleep 并记录调用,提速测试(20 轮 × 1s 真睡太慢)+ 断言 wait 生效。
 
