@@ -223,3 +223,4 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w891_buy_edge.py
 sr-od-test/test/sr_od/docs/test_cw_adr_index_guard.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_spend_receipt.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w935_release_spend_ledger.py
+sr-od-test/test/sr_od/app/currency_war/test_cw_w119_switch_authority.py
