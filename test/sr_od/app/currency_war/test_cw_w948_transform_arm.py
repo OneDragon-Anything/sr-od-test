@@ -161,18 +161,35 @@ def test_stagnate_hp_flat_blocks_trigger() -> None:
     assert ist.phase == 'locked'
 
 
-def test_stagnate_form_ok_any_frame_blocks_trigger() -> None:
-    """on:评估窗内任一帧 form 成型 → 丧失停滞资格,不触发。"""
+def test_stagnate_form_genuine_green_frame_blocks_trigger() -> None:
+    """on:评估窗内任一帧 form 真成型(核心 2★ 当量在手)→ 丧失停滞资格。"""
     st = _state(1, hp=20)
+    st.bench[0] = BenchChar(slot=0, char_id=_CORE, faction='?', star=2)
     ist = _locked_ist()
     sess = StrategySession()
     for r in range(2, 5):
         _drive_stagnate(st, ist, sess, _REG_ON, r, hp=20 - r)
     st.round_num = 5
     st.hp = 15
-    sess.v3_form_ok = True   # 窗 2 末帧成型 → 丧失停滞资格
+    sess.v3_form_ok = True   # 窗 2 末帧真成型(核心 2★ 在手)→ 丧失停滞资格
     update_intention(st, ist, sess, registry=_REG_ON)
     assert ist.phase == 'locked'
+    assert ist.stagnate_windows_hit == 0
+
+
+def test_stagnate_form_fake_green_still_triggers() -> None:
+    """on:form 假绿形态(sim 支B:form_ok 恒 true 而核心零副本未兑现)→
+    假绿计入未成型,停滞照常触发——判据 P2 修正的靶形。"""
+    st = _state(1, hp=20)
+    ist = _locked_ist()
+    sess = StrategySession()
+    for r in range(2, 6):
+        st.round_num = r
+        st.hp = 20 - r
+        sess.v3_form_ok = True   # 假绿:form 恒绿(空板核心 0 副本)
+        update_intention(st, ist, sess, registry=_REG_ON)
+    assert ist.phase == 'weak'
+    assert ist.revoke_evidence.get('kind') == 'stagnate'
 
 
 # --- ② 触发链复用(下游零新增)--------------------------------------------------
