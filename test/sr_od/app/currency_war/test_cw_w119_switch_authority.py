@@ -258,12 +258,12 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
     sess = StrategySession()
     sess.v3_mode = 'economy'
     monkeypatch.setattr(cw_economy, 'schedule_upgrade',
-                        lambda s, ss: True)
+                        lambda s, ss, rg: True)
     res_up = arbitrate([(cand, 1.0, {})], st60, sess, _REG)
     assert any(isinstance(a, LevelUp) for a in res_up.actions), \
         '排程说升且平台未破(60-4=52≥50)→ 必须放行'
     monkeypatch.setattr(cw_economy, 'schedule_upgrade',
-                        lambda s, ss: False)
+                        lambda s, ss, rg: False)
     sess2 = StrategySession()
     sess2.v3_mode = 'economy'
     res_save = arbitrate([(Candidate(action=LevelUp(cost=4),
