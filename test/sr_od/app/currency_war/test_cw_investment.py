@@ -1,19 +1,20 @@
-"""货币战争 投资策略/环境领域模型(cw_investments)测试 —— 纯逻辑,不依赖游戏。
+# -*- coding: utf-8 -*-
+"""test_cw_investment 主题锁(结构合并批,机械拼接)。
 
-验证 InvestmentEnv(概念股/邀请带 faction)+ 派生 ENV_FACTION_MAP(单一真相源)。
+成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
+- investments: test_cw_investments.py
+- w162_invest_inject: test_cw_w162_invest_inject.py
+- test_fortune_picker: test_fortune_picker.py
+- test_invest_strategy_recognizer: test_invest_strategy_recognizer.py
+冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
 
+
+# ==================== investments ====================
+
 from sr_od.application.currency_war.kernel.cw_comps import ENV_FACTION_MAP
-from sr_od.application.currency_war.kernel.cw_investments import (
-    INVESTMENT_ENVS,
-    INVESTMENT_STRATEGIES,
-    InvestmentEnv,
-    env_faction,
-    envs_boosting_faction,
-    get_env,
-    is_known_env,
-)
+from sr_od.application.currency_war.kernel.cw_investments import  INVESTMENT_ENVS, INVESTMENT_STRATEGIES, InvestmentEnv, env_faction, envs_boosting_faction, get_env, is_known_env
 
 
 def test_concept_stocks_have_faction() -> None:
@@ -101,9 +102,7 @@ def test_is_known_env() -> None:
 # ===== ADR-0138 OCR 名归一用框架 LCS 相似匹配(非全等) =====
 def test_canon_name_lcs_with_guards() -> None:
     """_canon_name:艺术小字形变靠 find_best_match_by_lcs(th=0.5);长度差>3 拒;效果 LCS<0.5 拒。"""
-    from sr_od.application.currency_war.operations.tools.harvest_invest_codex import (
-        HarvestInvestCodex,
-    )
+    from sr_od.application.currency_war.operations.tools.harvest_invest_codex import  HarvestInvestCodex
     op = HarvestInvestCodex.__new__(HarvestInvestCodex)
     op.kind = 'strategies'
     # 形变 + 分隔符差:• vs ·,OCR 误读(狸=禄)→ LCS 命中
@@ -139,13 +138,7 @@ def test_adr0150_overlay_no_orphans() -> None:
     构建层 import 即 raise 孤儿;此处显式断言防回归(版本更新后重跑生成器,
     overlay 键未跟改名 → 本测试红,提示修 overlay)。
     """
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        ENV_CATEGORY,
-        ENV_FACTION,
-        ENV_PICK_VALUE,
-        PICK_VALUE,
-        STRATEGY_ECONOMY,
-    )
+    from sr_od.application.currency_war.kernel.cw_investments import  ENV_CATEGORY, ENV_FACTION, ENV_PICK_VALUE, PICK_VALUE, STRATEGY_ECONOMY
     assert set(STRATEGY_ECONOMY) <= set(INVESTMENT_STRATEGIES)
     assert set(PICK_VALUE) <= set(INVESTMENT_STRATEGIES)
     assert set(ENV_CATEGORY) <= set(INVESTMENT_ENVS)
@@ -291,12 +284,7 @@ def test_adr0151_noise_bindings_removed() -> None:
 
 def test_adr0151_semantic_bindings_present() -> None:
     """语义绑定抽查:套组/机制强化/赠角色 三类 + 契约环境阵营。"""
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        STRATEGY_BINDINGS,
-        env_faction,
-        get_strategy,
-        strategy_bindings,
-    )
+    from sr_od.application.currency_war.kernel.cw_investments import  STRATEGY_BINDINGS, env_faction, get_strategy, strategy_bindings
 
     # 套组:阵营+角色双绑
     assert STRATEGY_BINDINGS["追击星徽套组"] == (frozenset({"追击"}), frozenset({"飞霄"}))
@@ -323,3 +311,304 @@ def test_megastar_set_binding_derived_from_single() -> None:
     from sr_od.application.currency_war.kernel.cw_investments import STRATEGY_BINDINGS
     assert STRATEGY_BINDINGS["追击星徽套组"] is STRATEGY_BINDINGS["追击星徽"]
     assert STRATEGY_BINDINGS["追击星徽套组(二)"] is STRATEGY_BINDINGS["追击星徽"]
+
+
+# ==================== w162_invest_inject ====================
+
+import logging
+
+import pytest
+
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim.cw_sim_invest import  SIM_STRATEGY_PICK_SCHEDULE, SimInvestProfile, env_freq_table, freq_dropped_names, sample_invest_profile, strategy_freq_table
+
+
+@pytest.fixture(autouse=True)
+def _quiet_logging():
+    """本模块测试期间静音日志(测试域收口)。
+
+    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
+    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
+    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
+    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
+    """
+    prev = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(prev)
+
+
+_POOL = 'fallback'
+KEYS = ('final_hp', 'hp_trail', 'refreshes', 'dir_round', 'level')
+
+
+def _snap(seed: int, **kw):
+    r = cw_sim.simulate_p1(seed, pool=_POOL, **kw)
+    return {k: getattr(r, k) for k in KEYS} | {'n_ledger': len(r.ledger)}
+
+
+# ---------- 零漂移门 ----------
+
+def test_invest_off_is_bit_identical() -> None:
+    """默认(不传 invest)与显式 False 逐位同——主路径零漂移。"""
+    for s in range(4):
+        assert _snap(s) == _snap(s, invest=False)
+
+
+def test_empty_profile_equals_off() -> None:
+    """空剧本(无环境无选卡)= 关:注入脚手架对主 rng 零消耗。"""
+    empty = SimInvestProfile()
+    for s in range(4):
+        assert _snap(s) == _snap(s, invest=empty)
+
+
+def test_sample_profile_deterministic() -> None:
+    """同 seed 同剧本(独立 rng 流;A/B 配对可比性的基础)。"""
+    for s in (0, 7, 42):
+        assert sample_invest_profile(s) == sample_invest_profile(s)
+
+
+# ---------- 注入语义位 ----------
+
+def test_inject_writes_session_semantic_slots() -> None:
+    """环境+选卡写 session 语义位(handler 写点对齐)+ state 镜像。
+
+    用单轮剧本验证:开局环境即写;选卡轮 append 进 active_strategies
+    (去重:同名二选一只入一次);SimResult 观测字段同步。
+    """
+    prof = SimInvestProfile(
+        active_env='银河学者概念股',
+        picks=((1, 1, '黑塔纪元'), (1, 3, '黑塔纪元')),   # 重名 → 去重
+    )
+    r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
+    assert r.invest_env == '银河学者概念股'
+    assert r.invest_strategies == ('黑塔纪元',)
+
+
+def test_inject_session_carries_fields() -> None:
+    """注入后 session(生产持久宿主)携带 active_env/active_strategies。"""
+    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+    sess = StrategySession()
+    prof = SimInvestProfile(active_env='火药味',
+                            picks=((1, 1, '加油站'),))
+    cw_sim.simulate_p1(0, pool=_POOL, session=sess, invest=prof)
+    assert sess.active_env == '火药味'
+    assert '加油站' in sess.active_strategies
+
+
+# ---------- ①资格通道激活 ----------
+
+def test_direct_line_qualified_via_injected_env() -> None:
+    """①资格通道直证:注入环境亲和 → _direct_line_qualified 为真
+    (无注入语料下恒假,W161 缺口本体)。"""
+    from sr_od.application.currency_war.kernel.cw_intention import  _direct_line_qualified
+    from sr_od.application.currency_war.kernel.cw_state import GameState
+    st = GameState()
+    assert not _direct_line_qualified(st, '大黑塔银河学者')
+    st.active_env = '银河学者概念股'
+    assert _direct_line_qualified(st, '大黑塔银河学者')
+
+
+def test_invest_on_activates_p1_lock() -> None:
+    """缺口闭合直证:注入批 p1_locked_rounds 分布非零(off 恒 0)。"""
+    prof = SimInvestProfile(
+        active_env='银河学者概念股',
+        picks=((1, 1, '黑塔纪元'),),   # 策略侧亲和 → 大黑塔银河学者
+    )
+    on = [cw_sim.simulate_p1(s, pool=_POOL, invest=prof).p1_locked_rounds
+          for s in range(8)]
+    off = [cw_sim.simulate_p1(s, pool=_POOL).p1_locked_rounds
+           for s in range(8)]
+    assert all(v == 0 for v in off)       # W161 缺口:off 口径恒 0
+    assert any(v > 0 for v in on)         # 注入后锁定分布非零
+
+
+# ---------- 经济聚合子集 ----------
+
+def test_interest_cap_override_applies() -> None:
+    """利息上调(cap 10):金 ≥100 轮的利息按覆写帽(旧帽 5)。"""
+    prof = SimInvestProfile(picks=((1, 1, '利息上调'),))
+    # 直接构造:跑局后查账本中存在 interest>5 的行(金≥100 需局内累积,
+    # 不保证出现)→ 改为单元层断言聚合接线:
+    from sr_od.application.currency_war.kernel.cw_investments import aggregate_economy
+    eff = aggregate_economy(['利息上调'])
+    assert eff.interest_cap_override == 10
+    # sim 收入层接线:注入局的 r1 利息仍按帽 5(gold=5+开局),仅验证
+    # 表达式路径不炸 + off/同 seed 差异可追(宽松锁,防脆)
+    r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
+    assert r.final_hp >= 0
+
+
+def test_gold_per_node_and_instant_gold_apply() -> None:
+    """定期福利(+4 金选卡 / 每节点 +2):账本收入行出现 invest 键。"""
+    prof = SimInvestProfile(picks=((1, 1, '定期福利'),))
+    r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
+    rows = [row for row in r.ledger
+            if (row.get('sim') or {}).get('income', {}).get('invest')]
+    assert rows, 'gold_per_node 未进账本收入分解'
+
+
+def test_free_refresh_per_node_zero_cost() -> None:
+    """加油站(每节点 1 次免费刷):每轮第 i 次刷 cost == 0 if i < 额度 else 原价。
+
+    构造:use_refresh 默认开;若策略未发刷则自然宽松(无刷新 = 无逐笔
+    断言对象,故另设 any_refresh 防构造失效)。不变式 = 每节点免费额度
+    语义逐行成立(ADR-0131:额度内刷价 0,超出付 SHOP_REFRESH_COST),
+    同节点多次刷新合法——旧口径的总和上界 ``max(0, (refreshes-rounds))*2``
+    隐含「每节点 ≤1 刷」分布假设(非游戏规则非 ADR 口径),粗战斗模型
+    引入的多刷局误红,已废。
+    """
+    from sr_od.application.currency_war.kernel.cw_economy import SHOP_REFRESH_COST
+    from sr_od.application.currency_war.kernel.cw_investments import aggregate_economy
+
+    prof = SimInvestProfile(picks=((1, 1, '加油站'),))
+    r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
+    quota = aggregate_economy(['加油站']).free_refresh_per_node
+    assert quota > 0
+    any_refresh = False
+    for row in r.ledger:
+        acts = [a for a in (row.get('actions') or [])
+                if a.get('__type__') == 'RefreshShop']
+        for i, a in enumerate(acts):
+            expect = 0 if i < quota else SHOP_REFRESH_COST
+            assert a['cost'] == expect, (row.get('round_num'), i, a['cost'])
+        if acts:
+            any_refresh = True
+            # 账本自洽:轮内 spend.refresh 与 actions 逐笔成本一致
+            assert (row.get('sim') or {}).get('spend', {}).get('refresh', 0) \
+                == sum(a['cost'] for a in acts), row.get('round_num')
+    assert any_refresh, '构造失效:整局零刷新,免费额度语义未被锁到'
+
+
+# ---------- 频次表与日程 ----------
+
+def test_freq_tables_registry_known() -> None:
+    """频次表全注册表内(丢名走 freq_dropped_names 披露,不进表)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import  get_env, get_strategy
+    for name, _ in strategy_freq_table():
+        assert get_strategy(name) is not None, name
+    for name, _ in env_freq_table():
+        assert get_env(name) is not None, name
+
+
+def test_schedule_keys_unique_and_ordered() -> None:
+    """日程键 (plane, round) 唯一且按位面-轮升序。"""
+    keys = [(p, r) for p, r, _ in SIM_STRATEGY_PICK_SCHEDULE]
+    assert len(keys) == len(set(keys))
+    assert keys == sorted(keys)
+
+
+def test_plaza_names_canon_colon() -> None:
+    """全角冒号 plaza 名(如 骇客专家：银狼)归一后进表(不丢)。"""
+    table = dict(strategy_freq_table())
+    assert '骇客专家:银狼' in table
+    # 披露通道存在(即使本版零丢弃,键可达)
+    assert isinstance(freq_dropped_names(), dict)
+
+
+
+# ==================== test_fortune_picker ====================
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, 'src')
+
+FIX = Path(__file__).resolve().parents[4] / 'screens' / 'cw_fortune_picker' / 'event_three_cards.webp'
+
+
+def _ocr_cards(path) -> list[str]:
+    import cv2
+    import numpy as np
+    try:
+        from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
+        m = OnnxOcrMatcher()
+    except Exception:
+        return []
+    img = cv2.imdecode(np.fromfile(str(path), np.uint8), cv2.IMREAD_COLOR)
+    res = m.run_ocr(img)
+    XS = (510, 900, 1290)
+    buckets: dict[int, list[str]] = {x: [] for x in XS}
+    for t, mr in (res or {}).items():
+        if mr.max is None:
+            continue
+        cy, cx = mr.max.center.y, mr.max.center.x
+        if 290 <= cy <= 410:
+            nearest = min(XS, key=lambda x: abs(x - cx))
+            if abs(nearest - cx) < 190:
+                buckets[nearest].append(t)
+    return [' '.join(buckets[x]) for x in XS]
+
+
+def test_fortune_cards_ocr_on_fixture():
+    """局32 实拍:三卡应识别出 深层奥迹/原始奥迹/留白卡 关键词。"""
+    if not FIX.exists():
+        import pytest
+        pytest.skip('fixture 缺失')
+    texts = _ocr_cards(FIX)
+    if not any(texts):
+        import pytest
+        pytest.skip('OCR 模型不可用')
+    joined = ' '.join(texts)
+    assert '奥迹' in joined, f'强化卡关键词应识别: {texts}'
+    assert '留白' in joined or '黑天鹅' in joined, f'第三卡应识别: {texts}'
+
+
+def test_fortune_text_strategy_prefers_damage():
+    """文本策略:伤害倍率 > 强度提高 > 无关键词。"""
+    from sr_od.application.currency_war.operations.handlers.handle_fortune_picker import  HandleFortunePicker
+    # 复用 handle 的打分逻辑(直接构造假 ctx 会重;抽出来测不行——用类属性+内联)
+    texts = ['层数提高', '伤害倍率提高', '黑天鹅强度提高']
+    best_i, best_s = 0, -1.0
+    for i, t in enumerate(texts):
+        s = 0.0
+        for kw, w in (('伤害倍率', 3.0), ('强度提高', 2.0), ('层数提高', 2.0),
+                      ('伤害', 1.0), ('提高', 0.5)):
+            if kw in t:
+                s += w
+        if s > best_s:
+            best_i, best_s = i, s
+    assert best_i == 1, '伤害倍率应最高分'
+
+
+# ==================== test_invest_strategy_recognizer ====================
+
+from unittest.mock import MagicMock
+
+import sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer as mod
+from sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer import  InvestStrategyRecognizer
+
+
+def test_screen_name_matches_invest_strategy() -> None:
+    """recognizer 注册的 screen_name = '货币战争-投资策略'(与 screen_info 一致)。"""
+    assert InvestStrategyRecognizer.screen_name == '货币战争-投资策略'
+
+
+def _mock_ocr(monkeypatch, names: list[str]) -> None:
+    monkeypatch.setattr(mod, '_area_rect', lambda ctx, name, screen_name=None: MagicMock())
+    monkeypatch.setattr(mod, '_ocr', lambda ctx, screen, rect: [MagicMock(data=n) for n in names])
+
+
+def test_recognize_parses_three_strategies(monkeypatch) -> None:
+    """3 张策略卡 → strategies 名列表(滤数字/符号噪声)。"""
+    _mock_ocr(monkeypatch, ['乱成一锅粥', '盗用身份', '远见'])
+
+    out = InvestStrategyRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
+    assert out == {'strategies': ['乱成一锅粥', '盗用身份', '远见']}
+
+
+def test_recognize_filters_short_noise(monkeypatch) -> None:
+    """滤单字噪声 / 纯数字(只留 2-10 字中文)。"""
+    _mock_ocr(monkeypatch, ['团队力量·金', '1', '啊'])
+
+    out = InvestStrategyRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
+    assert out == {'strategies': ['团队力量·金']}   # '1'(纯数字) '啊'(单字)被滤
+
+
+def test_recognize_empty_when_unreadable(monkeypatch) -> None:
+    """读不到(area 缺 / OCR 无果)→ 空 list(不伪造)。"""
+    monkeypatch.setattr(mod, '_area_rect', lambda ctx, name, screen_name=None: None)
+    monkeypatch.setattr(mod, '_ocr', lambda ctx, screen, rect: [])
+
+    out = InvestStrategyRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
+    assert out == {'strategies': []}
