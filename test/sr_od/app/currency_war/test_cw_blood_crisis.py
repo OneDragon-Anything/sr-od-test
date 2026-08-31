@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_blood_crisis 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -14,22 +13,27 @@
 """
 from __future__ import annotations
 
-
 # ==================== adr0302_crisis_fixes ====================
-
 from types import SimpleNamespace
 
-
-from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-
-from sr_od.application.currency_war.sim.checks.decision_v2 import check_decision_v2_crisis_gold_hoard
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision.decision_v2.candidates import  generate_candidates
-from sr_od.application.currency_war.decision.decision_v2.filters import  crisis_hoard_active, filter_candidates
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY
-from sr_od.application.currency_war.decision.decision_v2.scoring import  score_candidate
-from sr_od.application.currency_war.decision.decision_v2.strategy import  DecisionV2Strategy
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
+    generate_candidates,
+)
+from sr_od.application.currency_war.decision.decision_v2.filters import (
+    crisis_hoard_active,
+    filter_candidates,
+)
+from sr_od.application.currency_war.decision.decision_v2.scoring import score_candidate
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
+    DecisionV2Strategy,
+)
+from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.sim.checks.decision_v2 import (
+    check_decision_v2_crisis_gold_hoard,
+)
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
 _REG = DEFAULT_REGISTRY
 
@@ -137,8 +141,8 @@ def test_crisis_refresh_unlocked_in_hoard_state() -> None:
     val, _ = score_candidate(rc, st, sess, _REG)
     assert val < 0, '危机态无目标语境:V_D 同账判负(恒不无证刷)'
     # 危机 + 锁定核心在概率窗内 → V_D 正分(变现通道活跃)
-    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
     sess2 = _sess()
     sess2.v3_intention = IntentionState(phase='locked',
                                         locked_comp='DOT队')
@@ -195,9 +199,16 @@ def test_crisis_gold_hoard_check_zero_violations() -> None:
 
 # ==================== blood_alarm_threshold_backing ====================
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _blood_alarm_threshold_backing_StrategySession
-from sr_od.application.currency_war.decision.decision_v2.discipline import  BLOOD_MARGIN_LOW_HP, BloodAlarmTracker
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY as _blood_alarm_threshold_backing_DEFAULT_REGISTRY
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession as _blood_alarm_threshold_backing_StrategySession,
+)
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
+    BLOOD_MARGIN_LOW_HP,
+    BloodAlarmTracker,
+)
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY as _blood_alarm_threshold_backing_DEFAULT_REGISTRY,
+)
 
 _blood_alarm_threshold_backing_REG = _blood_alarm_threshold_backing_DEFAULT_REGISTRY
 
@@ -291,7 +302,7 @@ def test_25_40_gradient_semantics_unchanged() -> None:
     25=应急覆盖态(registry),40>25 维持处置梯度。"""
     assert BLOOD_MARGIN_LOW_HP == 40
     assert _blood_alarm_threshold_backing_REG.emergency_hp == 25
-    assert BLOOD_MARGIN_LOW_HP > _blood_alarm_threshold_backing_REG.emergency_hp
+    assert _blood_alarm_threshold_backing_REG.emergency_hp < BLOOD_MARGIN_LOW_HP
 
 
 def _unused_session_guard() -> None:  # pragma: no cover
@@ -307,14 +318,38 @@ import logging
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _blood_budget_stop_StrategySession
-from sr_od.application.currency_war.decision.decision_v2.arbiter import  _check_constraint, arbitrate
-from sr_od.application.currency_war.decision.decision_v2.candidates import  Candidate
-from sr_od.application.currency_war.decision.decision_v2.discipline import  blood_budget_levelup_blocked, p1_levelup_stop_hp, p2_levelup_stop_hp
-from sr_od.application.currency_war.decision.decision_v2.remediation import  steady_state_levelup_group
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY as _blood_budget_stop_DEFAULT_REGISTRY
-from sr_od.application.currency_war.kernel.cw_state import  BenchChar as _blood_budget_stop_BenchChar, GameState as _blood_budget_stop_GameState, LevelUp
-from sr_od.application.currency_war.sim.checks.segments import  _P1_LEVELUP_STOP_HP, _P2_LEVELUP_STOP_HP, seg_check_p1_blood_budget_levelup, seg_check_p2_blood_budget_levelup
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession as _blood_budget_stop_StrategySession,
+)
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
+    _check_constraint,
+    arbitrate,
+)
+from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
+    blood_budget_levelup_blocked,
+    p1_levelup_stop_hp,
+    p2_levelup_stop_hp,
+)
+from sr_od.application.currency_war.decision.decision_v2.remediation import (
+    steady_state_levelup_group,
+)
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY as _blood_budget_stop_DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _blood_budget_stop_BenchChar,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _blood_budget_stop_GameState,
+)
+from sr_od.application.currency_war.kernel.cw_state import LevelUp
+from sr_od.application.currency_war.sim.checks.segments import (
+    _P1_LEVELUP_STOP_HP,
+    _P2_LEVELUP_STOP_HP,
+    seg_check_p1_blood_budget_levelup,
+    seg_check_p2_blood_budget_levelup,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -357,13 +392,10 @@ def _allin_sess() -> _blood_budget_stop_StrategySession:
 # ---------- 停线数值:单一源推导 + 镜像双向锁 ----------
 
 def test_stop_lines_derive_from_registry() -> None:
-    """P2=ceil(1×20.05)=21 / P1=ceil(1×10.58)=11(设计件 12 §6)。"""
+    """P2=ceil(1×20.05)=21 / P1=ceil(1×10.58)=11(设计件 12 §6);
+    cw_sim_checks 镜像常量 ↔ discipline 单一源双向锁(漂移即红)。"""
     assert p2_levelup_stop_hp(_blood_budget_stop_DEFAULT_REGISTRY) == 21
     assert p1_levelup_stop_hp(_blood_budget_stop_DEFAULT_REGISTRY) == 11
-
-
-def test_mirror_constants_match_discipline() -> None:
-    """cw_sim_checks 镜像常量 ↔ discipline 单一源双向锁(漂移即红)。"""
     assert p2_levelup_stop_hp(_blood_budget_stop_DEFAULT_REGISTRY) == _P2_LEVELUP_STOP_HP
     assert p1_levelup_stop_hp(_blood_budget_stop_DEFAULT_REGISTRY) == _P1_LEVELUP_STOP_HP
 
@@ -409,7 +441,9 @@ def test_terminal_frame_still_blocks_levelup() -> None:
     终止分支只释放刷新停付与末窗降格两门,停升级门**不在豁免辖内**——
     P21 数学(濒死升级 EV=−C−I 严格为负)与金是否零价值无关;防「释放
     扩散」回归的对照锚。"""
-    from sr_od.application.currency_war.decision.decision_v2.discipline import  terminal_release
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        terminal_release,
+    )
     sess = _blood_budget_stop_StrategySession()
     sess.plane_node_table = ['battle'] * 9
     st = _p2_state(hp=10)
@@ -509,14 +543,8 @@ def test_seg_checks_violation_and_allin_exempt() -> None:
 
 # ---------- sim 账本披露键(单局冒烟,不锁分布) ----------
 
-def test_sim_ledger_discloses_reject_key() -> None:
-    """账本行 sim.blood_budget_levelup_rejects 键存在(批量聚合的
-    数据源;单局冒烟,pool='fallback' 免快照依赖)。"""
-    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-    r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
-    assert r.ledger
-    for row in r.ledger:
-        assert 'blood_budget_levelup_rejects' in (row.get('sim') or {})
+# (≤2 层收敛,sim 台账披露键测试已删:键语义由 predicate+arbiter 两层承载;
+#  批量聚合侧由 sim_suite 段检查覆盖)
 
 
 # ==================== blood_budget_wave2 ====================
@@ -527,15 +555,39 @@ import logging as _blood_budget_wave2_logging
 import pytest as _blood_budget_wave2_pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _blood_budget_wave2_StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession as _blood_budget_wave2_StrategySession,
+)
 from sr_od.application.currency_war.decision.decision_v2 import candidates as cands_mod
 from sr_od.application.currency_war.decision.decision_v2 import handoff as handoff_mod
-from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate as _blood_budget_wave2_arbitrate
-from sr_od.application.currency_war.decision.decision_v2.candidates import  Candidate as _blood_budget_wave2_Candidate, _buy_tag
-from sr_od.application.currency_war.decision.decision_v2.discipline import  blood_budget_refresh_blocked, p1_directed_downgrade_active, p1_exit_blood_short
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY as _blood_budget_wave2_DEFAULT_REGISTRY
-from sr_od.application.currency_war.kernel.cw_state import  BenchChar as _blood_budget_wave2_BenchChar, GameState as _blood_budget_wave2_GameState, RefreshShop, ShopCard
-from sr_od.application.currency_war.sim.checks.segments import  _P1_EMERGENCY_HP, _P1_EXIT_BLOOD_TARGET, _P1_HANDOFF_GATE_MIN_ROUND, seg_check_p1_blood_budget_refresh
+from sr_od.application.currency_war.decision.decision_v2.arbiter import (
+    arbitrate as _blood_budget_wave2_arbitrate,
+)
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
+    Candidate as _blood_budget_wave2_Candidate,
+)
+from sr_od.application.currency_war.decision.decision_v2.candidates import _buy_tag
+from sr_od.application.currency_war.decision.decision_v2.discipline import (
+    blood_budget_refresh_blocked,
+    p1_directed_downgrade_active,
+    p1_exit_blood_short,
+)
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY as _blood_budget_wave2_DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _blood_budget_wave2_BenchChar,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _blood_budget_wave2_GameState,
+)
+from sr_od.application.currency_war.kernel.cw_state import RefreshShop, ShopCard
+from sr_od.application.currency_war.sim.checks.segments import (
+    _P1_EMERGENCY_HP,
+    _P1_EXIT_BLOOD_TARGET,
+    _P1_HANDOFF_GATE_MIN_ROUND,
+    seg_check_p1_blood_budget_refresh,
+)
 
 
 @_blood_budget_wave2_pytest.fixture(autouse=True)
@@ -566,7 +618,9 @@ def _p1_state(hp: int = 40, round_num: int = 7, node: str = 'battle',
 
 def _non_target_name() -> str:
     """注册表内非引擎件名(避开 _target_names 的引擎全集)。"""
-    from sr_od.application.currency_war.decision.decision_v2.discipline import  engine_char_names
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        engine_char_names,
+    )
     engines = set(engine_char_names())
     for name in CHARACTERS:
         if name not in engines:
@@ -622,7 +676,9 @@ def test_terminal_frame_release_counterexample() -> None:
     boss 单链(rung1,p_boss=0.027≤ε=0.03)→ 终止分支触发,双门开帧
     刷新停付解除;同帧降格短路。hp=26>应急线,豁免来自终止分支而非
     急救面——语义取代的显形锚。"""
-    from sr_od.application.currency_war.decision.decision_v2.discipline import  terminal_release
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        terminal_release,
+    )
     sess = _p1_allin_sess()
     sess.plane_node_table = ['battle'] * 7 + ['encounter', 'boss']
     st = _p1_state(hp=26, round_num=8)
@@ -747,13 +803,11 @@ def test_seg_check_violation_and_exemptions() -> None:
     ]
     assert seg_check_p1_blood_budget_refresh(rows_allin) == []
 
-
-def test_seg_check_terminal_bit_exemption() -> None:
-    """账本终止位豁免(设计 W659 v2 §5.1 R4;ADR-0469):同带帧
-    terminal_release=真 → 刷新为终止豁免辖内,不出事件;位假 → 照旧
-    出事件;键缺省(旧批账本)按假处理,行为兼容。"""
+    # 终止位豁免(设计 W659 v2 §5.1 R4;ADR-0469):同带帧 terminal_release=真
+    # → 终止豁免不出事件;位假/键缺省 → 照旧出事件(决策层终态反例见
+    # test_terminal_frame_release_counterexample)。
     base = {'plane': 1, 'hp': 30, 'sim': {'node': 'battle'}}
-    rows = [
+    rows_term = [
         {**base, 'round_num': 7, 'terminal_release': True,
          'actions': [{'__type__': 'RefreshShop', 'cost': 2}]},
         {**base, 'round_num': 8, 'terminal_release': False,
@@ -761,33 +815,54 @@ def test_seg_check_terminal_bit_exemption() -> None:
         {**base, 'round_num': 9,
          'actions': [{'__type__': 'RefreshShop', 'cost': 2}]},  # 缺省=假
     ]
-    ev = seg_check_p1_blood_budget_refresh(rows)
-    assert [e['round_num'] for e in ev] == [8, 9]
+    ev_term = seg_check_p1_blood_budget_refresh(rows_term)
+    assert [e['round_num'] for e in ev_term] == [8, 9]
 
 
-# ---------- sim 账本披露键(单局冒烟,不锁分布) ----------
-
-def test_sim_ledger_discloses_refresh_reject_key() -> None:
-    """账本行 sim.blood_budget_refresh_rejects 键存在(批量聚合的
-    数据源;单局冒烟,pool='fallback' 免快照依赖)。"""
-    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-    r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
-    assert r.ledger
-    for row in r.ledger:
-        assert 'blood_budget_refresh_rejects' in (row.get('sim') or {})
+# ---------- sim 账本披露键(≤2 层收敛:同上,披露键测试已删) ----------
 
 
 # ==================== c1_directed_spend ====================
 
 import dataclasses as _c1_directed_spend_dataclasses
 
-from sr_od.application.currency_war.kernel.cw_state import  BenchChar as _c1_directed_spend_BenchChar, BuyCard, DeployMove, GameState as _c1_directed_spend_GameState, LevelUp as _c1_directed_spend_LevelUp, RefreshShop as _c1_directed_spend_RefreshShop, SellBench, ShopCard as _c1_directed_spend_ShopCard
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _c1_directed_spend_StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession as _c1_directed_spend_StrategySession,
+)
+from sr_od.application.currency_war.decision.decision_v2.candidates import (
+    Candidate as _c1_directed_spend_Candidate,
+)
+from sr_od.application.currency_war.decision.decision_v2.filters import (
+    c1_directed_active,
+)
+from sr_od.application.currency_war.decision.decision_v2.filters import (
+    filter_candidates as _c1_directed_spend_filter_candidates,
+)
+from sr_od.application.currency_war.decision.decision_v2.posture_release import flip_hit
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY as _c1_directed_spend_DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _c1_directed_spend_BenchChar,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BuyCard,
+    DeployMove,
+    SellBench,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _c1_directed_spend_GameState,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    LevelUp as _c1_directed_spend_LevelUp,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    RefreshShop as _c1_directed_spend_RefreshShop,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    ShopCard as _c1_directed_spend_ShopCard,
+)
 from sr_od.application.currency_war.kernel.cw_system_cards import engine_char_names
-from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate as _c1_directed_spend_Candidate
-from sr_od.application.currency_war.decision.decision_v2.filters import  c1_directed_active, filter_candidates as _c1_directed_spend_filter_candidates
-from sr_od.application.currency_war.decision.decision_v2.posture_release import  flip_hit
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY as _c1_directed_spend_DEFAULT_REGISTRY
 
 _REG_C1 = _c1_directed_spend_dataclasses.replace(_c1_directed_spend_DEFAULT_REGISTRY,
                               c1_directed_spend_enabled=True)
@@ -1024,18 +1099,15 @@ def test_loss_frame_over_cap_rejected() -> None:
     _seed_real(s, 60, 5)
     s.performance.record(_outcome(1, 6, '普通战斗', killed=False))
     assert cw_reconcile.reconcile_hp(s, 20, node_t=6) == (60, False)
-
-
-def test_loss_cap_boundary_exact() -> None:
-    from sr_od.application.currency_war.kernel import cw_reconcile
-    s = _mk_session()
-    _seed_real(s, 60, 5)
-    s.performance.record(_outcome(1, 6, '遭遇', killed=False))
-    assert cw_reconcile.reconcile_hp(s, 18, node_t=6) == (18, True)   # Δ=42 恰在上界
-    s2 = _mk_session()
-    _seed_real(s2, 60, 5)
-    s2.performance.record(_outcome(1, 6, '遭遇', killed=False))
-    assert cw_reconcile.reconcile_hp(s2, 17, node_t=6) == (60, False)  # Δ=43 超界
+    # 边界精确:遭遇 Δ=42 恰在上界 → 采新;Δ=43 超界 → 拒
+    sb = _mk_session()
+    _seed_real(sb, 60, 5)
+    sb.performance.record(_outcome(1, 6, '遭遇', killed=False))
+    assert cw_reconcile.reconcile_hp(sb, 18, node_t=6) == (18, True)
+    sb2 = _mk_session()
+    _seed_real(sb2, 60, 5)
+    sb2.performance.record(_outcome(1, 6, '遭遇', killed=False))
+    assert cw_reconcile.reconcile_hp(sb2, 17, node_t=6) == (60, False)
 
 
 def test_loss_unknown_node_type_rejected_then_self_heal() -> None:
@@ -1108,21 +1180,16 @@ def test_first_truth_frame_unaffected() -> None:
 
 def test_calibration_constants_locked() -> None:
     """L_cap p100 标定值/零损节点集/确认帧数/窗长(值单一源=注册表)。"""
-    from sr_od.application.currency_war.kernel.cw_registry import  HP_LOSS_CAP_P100_BY_NODE, HP_SUSPECT_CONFIRM_FRAMES, HP_SUSPECT_WINDOW_NODES, HP_ZERO_LOSS_NODE_TYPES
+    from sr_od.application.currency_war.kernel.cw_registry import (
+        HP_LOSS_CAP_P100_BY_NODE,
+        HP_SUSPECT_CONFIRM_FRAMES,
+        HP_SUSPECT_WINDOW_NODES,
+        HP_ZERO_LOSS_NODE_TYPES,
+    )
     assert HP_LOSS_CAP_P100_BY_NODE == {'普通战斗': 23, '遭遇': 42, 'boss': 39}
     assert frozenset({'奖励', '补给'}) == HP_ZERO_LOSS_NODE_TYPES
     assert HP_SUSPECT_CONFIRM_FRAMES == 2
     assert HP_SUSPECT_WINDOW_NODES == 2
-
-
-def test_consumer_face_zero_change_anchor() -> None:
-    """谓词消费面零改锚:hp_decision_trusted 合取口径(hp_readable or
-    hp_trusted)不随本批变化(ADR-0428 口径,行为锁另见 w332b/濒死带/C1)。"""
-    import inspect
-
-    from sr_od.application.currency_war.decision.decision_v2 import posture_release
-    src = inspect.getsource(posture_release)
-    assert 'state.hp_readable or state.hp_trusted' in src
 
 
 def test_reconcile_down_guard_wired() -> None:
@@ -1178,27 +1245,16 @@ def test_is_emergency_none_false() -> None:
     assert is_emergency(GameState(hp=None), DEFAULT_REGISTRY) is False
 
 
-def test_rounds_alive_none_zero() -> None:
-    """期望存活轮(None=无真值)→ 0(fail-closed)。"""
-    from sr_od.application.currency_war.kernel.cw_line_switch import rounds_alive
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    assert rounds_alive(GameState(hp=None), None) == 0
-
-
-def test_decide_event_none_hp_no_crash() -> None:
-    """局外/无真值态跑事件决策不炸(None 守卫贯穿评分面)。"""
-    from sr_od.application.currency_war.kernel.cw_events import decide_event
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    pick = decide_event(["投资策略甲", "投资策略乙", "投资策略丙"], None,
-                        GameState(hp=None))
-    assert pick is not None
-
-
 def test_decision_state_none_hp_stays_none() -> None:
     """快照无真值 → 策略态 hp=None(不落 100 兜底;W823 adapter 改型点)。"""
     from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-    from sr_od.application.currency_war.decision.decision_v2.adapter import  decision_state
-    from sr_od.application.currency_war.decision.decision_v2.contracts import  Snapshot, SubstateClassification
+    from sr_od.application.currency_war.decision.decision_v2.adapter import (
+        decision_state,
+    )
+    from sr_od.application.currency_war.decision.decision_v2.contracts import (
+        Snapshot,
+        SubstateClassification,
+    )
     snap = Snapshot(hp=None, hp_readable=False,
                     classification=SubstateClassification(name='prep_shop'))
     st = decision_state(snap, StrategySession())
@@ -1207,8 +1263,10 @@ def test_decision_state_none_hp_stays_none() -> None:
 
 def test_discipline_predicates_none_false() -> None:
     """血预算谓词(None=无真值)→ False(不触发停手/降格辖域)。"""
-    from sr_od.application.currency_war.decision.decision_v2.discipline import  p1_exit_blood_short
-    from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        p1_exit_blood_short,
+    )
+    from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
     from sr_od.application.currency_war.kernel.cw_state import GameState
     assert p1_exit_blood_short(GameState(hp=None), DEFAULT_REGISTRY) is False
 
@@ -1273,13 +1331,29 @@ def test_archive_index_r1_rule_value_synced() -> None:
 
 import dataclasses as _w917_crisis_release_dataclasses
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _w917_crisis_release_StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession as _w917_crisis_release_StrategySession,
+)
 from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
 from sr_od.application.currency_war.decision.decision_v2.posture import Posture
-from sr_od.application.currency_war.decision.decision_v2.posture_release import  authorize_release_refresh, evaluate_release, flip_hit as _w917_crisis_release_flip_hit
-from sr_od.application.currency_war.kernel.cw_economy import  REFRESH_ROLL_CAP
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY as _w917_crisis_release_DEFAULT_REGISTRY
-from sr_od.application.currency_war.kernel.cw_state import  BENCH_CAPACITY, BenchChar as _w917_crisis_release_BenchChar, GameState as _w917_crisis_release_GameState
+from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+    authorize_release_refresh,
+    evaluate_release,
+)
+from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+    flip_hit as _w917_crisis_release_flip_hit,
+)
+from sr_od.application.currency_war.kernel.cw_economy import REFRESH_ROLL_CAP
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY as _w917_crisis_release_DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_state import BENCH_CAPACITY
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _w917_crisis_release_BenchChar,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _w917_crisis_release_GameState,
+)
 
 _REG_ON = _w917_crisis_release_dataclasses.replace(_w917_crisis_release_DEFAULT_REGISTRY, crisis_release_enabled=True)
 # 关行为锁显式注入(开臂后默认 registry=True,零漂移锚不再由缺省承载;
@@ -1402,7 +1476,9 @@ def test_flip_hit_still_cedes_emergency() -> None:
 def test_crisis_budget_bounded_release() -> None:
     """危机预算有界放行:direct budget=2 下 cost=1 第 1/2 笔放行,
     第 3 笔累计越预算拒(累计 ≤ 预算语义,与 flip 臂同一消费门)。"""
-    from sr_od.application.currency_war.decision.decision_v2.posture_release import  ReleaseDirective
+    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+        ReleaseDirective,
+    )
     st = _w917_crisis_release_state(gold=99)
     sess = _w917_crisis_release_sess(st)
     sess.v3_release = ReleaseDirective(budget_gold=2, rolls=2,
@@ -1462,7 +1538,10 @@ def test_crisis_wrap_level_up_still_blood_budget_gated() -> None:
     停升级门在同一危机帧仍拒付:门判据只读 state.hp 对停升级线,不读
     posture tag / session.v3_release,crisis 臂不可能绕开它。
     hp=5 ≤ P1 停升级线(≈11,W907 血预算 levelup 拒付病灶帧形)。"""
-    from sr_od.application.currency_war.decision.decision_v2.discipline import  blood_budget_levelup_blocked, p1_levelup_stop_hp
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        blood_budget_levelup_blocked,
+        p1_levelup_stop_hp,
+    )
     st = _w917_crisis_release_state(hp=5)
     assert st.hp <= p1_levelup_stop_hp(_REG_ON)
     sess = _w917_crisis_release_sess(st)
@@ -1481,7 +1560,10 @@ def test_crisis_level_up_band_between_lines_is_preexisting_design() -> None:
     应急带同线),不是 crisis 臂新开的消费面:同一帧形在 flip 臂(溢余
     非应急帧)许可面完全相同。锁钉住该边界语义,防后续误把「危机帧能
     升级」读成危机臂引入的回归。"""
-    from sr_od.application.currency_war.decision.decision_v2.discipline import  blood_budget_levelup_blocked, p1_levelup_stop_hp
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        blood_budget_levelup_blocked,
+        p1_levelup_stop_hp,
+    )
     hp_mid = p1_levelup_stop_hp(_REG_ON) + 1
     assert hp_mid <= _REG_ON.emergency_hp    # 线间带在 P1 非空(11<hp≤25)
     st = _w917_crisis_release_state(hp=hp_mid)

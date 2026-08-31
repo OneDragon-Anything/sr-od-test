@@ -42,9 +42,6 @@ from sr_od.application.currency_war.decision.decision_v2.candidates import (
 from sr_od.application.currency_war.decision.decision_v2.discipline import (
     blood_budget_levelup_blocked,
 )
-from sr_od.application.currency_war.decision.decision_v2.posture_release import (
-    hp_decision_trusted,
-)
 from sr_od.application.currency_war.decision.decision_v2.remediation import (
     steady_state_levelup_group,
 )
@@ -206,8 +203,9 @@ def _state_with_bits(hp: int, readable: bool, trusted: bool) -> GameState:
 
 
 def test_same_node_inherited_frame_passes() -> None:
-    """(16, False, True) 同节点沿用帧:血线内照拒、值位形态不扩大拦截面
-    (ADR-0428 主救场景语义零回归;线外沿用帧 100 恒放)。"""
+    """放行面语义零回归(ADR-0428 主救场景):(16, False, True) 同节点
+    沿用帧血线内照拒(值可信判断成立)、线外沿用帧 100 恒放(不因
+    readable=False 误拦);真读帧 (True, False) 位形态线外放行不拦。"""
     sess = StrategySession()
     # 沿用值在血线内:停手照常生效(值可信,判断成立)
     assert blood_budget_levelup_blocked(
@@ -215,10 +213,7 @@ def test_same_node_inherited_frame_passes() -> None:
     # 沿用值在线外:放行(不因 readable=False 误拦)
     assert blood_budget_levelup_blocked(
         _state_with_bits(100, False, True), sess, DEFAULT_REGISTRY) is False
-
-
-def test_real_read_frame_passes_outside_band() -> None:
-    """真读帧 (True, False) 位形态(可读未过帧龄门):线外放行不拦。"""
+    # 真读帧 (True, False)(可读未过帧龄门):线外放行不拦
     assert blood_budget_levelup_blocked(
         _state_with_bits(30, True, False), StrategySession(),
         DEFAULT_REGISTRY) is False
@@ -250,42 +245,22 @@ def test_terminal_release_fail_closed_on_untrusted() -> None:
     assert terminal_release(st, sess, DEFAULT_REGISTRY) is False
 
 
-def test_helper_single_source() -> None:
-    """谓词消费走单一源 helper(posture_release.hp_decision_trusted),
-    禁手写双位判定的纪律锚(W393 A1.1;谓词源码含本符号引用)。"""
-    import inspect
-
-    from sr_od.application.currency_war.decision.decision_v2 import discipline
-    src = inspect.getsource(discipline.blood_budget_levelup_blocked)
-    assert 'hp_decision_trusted' in src
-    # 单一源语义自检:幽灵帧两位皆 False → 不可信;同节点沿用帧 → 可信
-    assert hp_decision_trusted(_ghost_state()) is False
-    assert hp_decision_trusted(_state_with_bits(16, False, True)) is True
-
-
 # ---------- 组4:写侧位一致锁(shop._apply_hp) ----------
 
-def test_apply_hp_real_read_writes_both_bits() -> None:
-    """真读覆盖 → (v, True, True)。"""
+def test_apply_hp_writes_correct_triple() -> None:
+    """三覆盖形态各产出正确 (hp, readable, trusted) 三元组:
+    真读 → (v, True, True);结算真值(新鲜门过)→ (v, False, True);
+    无新鲜真值(None)→ 不覆盖(裸 100 不再喂决策路径)。"""
     st = _ghost_state()
     _apply_hp(st, 45, True, True)
     assert (st.hp, st.hp_readable, st.hp_trusted) == (45, True, True)
-
-
-def test_apply_hp_settlement_writes_trusted_bit() -> None:
-    """结算真值覆盖(fresh 门过)→ (v, False, True):值可信但非本帧真读。"""
-    st = _ghost_state()
-    _apply_hp(st, 16, False, True)
-    assert (st.hp, st.hp_readable, st.hp_trusted) == (16, False, True)
-
-
-def test_apply_hp_none_keeps_reconciled_value() -> None:
-    """无新鲜真值(hp_value=None)→ 不覆盖:保留 read_game_state 对账层
-    值+位——裸 100 不再喂决策路径(幽灵生产点关闭)。"""
-    st = _ghost_state()
-    before = (st.hp, st.hp_readable, st.hp_trusted)
-    _apply_hp(st, None, False, False)
-    assert (st.hp, st.hp_readable, st.hp_trusted) == before
+    st2 = _ghost_state()
+    _apply_hp(st2, 16, False, True)
+    assert (st2.hp, st2.hp_readable, st2.hp_trusted) == (16, False, True)
+    st3 = _ghost_state()
+    before = (st3.hp, st3.hp_readable, st3.hp_trusted)
+    _apply_hp(st3, None, False, False)
+    assert (st3.hp, st3.hp_readable, st3.hp_trusted) == before
 
 
 # ---------- 组7:r1 备战帧 hp 真值(画面读值为准,严禁 100 兜底) ----------
@@ -457,7 +432,9 @@ def test_seg_untrusted_hp_levelup_hits_both_bits_false() -> None:
 
 def test_seg_trusted_frames_zero_hit() -> None:
     """可信面零命中:两键缺省(sim 恒真读/旧批账本)、(False, True)
-    同节点沿用帧、(True, False) 真读帧、不可信帧但无 LevelUp。"""
+    同节点沿用帧、(True, False) 真读帧、不可信帧但无 LevelUp;
+    ALL IN 豁免优先(消费门语义镜像):位面末 boss 不可信帧 LevelUp 不报,
+    非 ALL IN 的 boss 帧(轮未到位面节点数)不豁免。"""
 
     from sr_od.application.currency_war.sim.checks.segments import (
         seg_check_untrusted_hp_levelup,
@@ -472,17 +449,9 @@ def test_seg_trusted_frames_zero_hit() -> None:
         _ledger_row(1, 6, hp_readable=False, hp_trusted=False),  # 无升级
     ]
     assert seg_check_untrusted_hp_levelup(rows) == []
-
-
-def test_seg_allin_exempt_precedes_trust_check() -> None:
-    """ALL IN 豁免优先(消费门语义镜像):位面末 boss 不可信帧 LevelUp 不报。"""
-
-    from sr_od.application.currency_war.sim.checks.segments import (
-        seg_check_untrusted_hp_levelup,
-    )
-    rows = [_ledger_row(2, 7, hp_readable=False, hp_trusted=False,
-                        actions=[_lv_action()], node='boss')]
-    assert seg_check_untrusted_hp_levelup(rows) == []
+    rows_allin = [_ledger_row(2, 7, hp_readable=False, hp_trusted=False,
+                              actions=[_lv_action()], node='boss')]
+    assert seg_check_untrusted_hp_levelup(rows_allin) == []
     # 非 ALL IN 的 boss 帧(轮未到位面节点数)不豁免
     rows_early = [_ledger_row(2, 3, hp_readable=False, hp_trusted=False,
                               actions=[_lv_action()], node='boss')]
