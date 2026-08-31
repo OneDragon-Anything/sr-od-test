@@ -41,6 +41,7 @@ from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
 from sr_od.application.currency_war.decision.decision_v2.posture import Posture
 from sr_od.application.currency_war.decision.decision_v2.posture_release import (
     ReleaseDirective,
+    attach_spend_authorization,
     authorize_release_refresh,
     crisis_invariant_lane,
     crisis_overflow,
@@ -162,6 +163,52 @@ def test_overflow_basis_downgraded_to_gold() -> None:
     _, d0 = evaluate_release(st0, s0, DEFAULT_REGISTRY, 'FORM',
                              s0.v3_dp_posture.posture)
     assert d0 is None    # 金 0:危机溢余基=0,臂静默(合法残余,非执行缺位)
+
+
+# --- ⑤ 路由面后果钉护(P36-a′ 意图内漂移,W958 审计;ADR-0508 §路由面后果)----
+
+
+def test_reward_frame_emergency_buy_budget_short_circuit() -> None:
+    """奖励帧应急带被 crisis 指令接管 → 常规授权包短路(buy_budget 不发):
+    g=30<R* 的应急奖励帧,降档后 crisis_release_open=True → posture 被
+    wrap 成 tag='release' → attach_spend_authorization 对 release 帧返回
+    None 且 v3_spend_auth 清空(ADR-0508 §路由面后果-路由面;意图内=
+    死亡带金零价值⇒压库买授权无意义,搜索占优)。非应急对照帧常规授权
+    照发(buy_budget=溢余段),证明短路只由危机接管面触发。"""
+    st = _state(gold=30, hp=3)
+    st.node_type = 'reward'
+    sess = _sess(st)
+    wrapped, _ = evaluate_release(st, sess, DEFAULT_REGISTRY, 'FORM',
+                                  sess.v3_dp_posture.posture)
+    sess.v3_dp_posture = RoundPosture((st.plane, st.round_num), wrapped)
+    assert wrapped.tag == 'release'
+    assert attach_spend_authorization(st, sess, DEFAULT_REGISTRY) is None
+    assert sess.v3_spend_auth is None
+    # 非应急对照(hp=62):危机臂不接管,奖励帧常规授权含 buy_budget
+    st_ok = _state(gold=60, hp=62)
+    st_ok.node_type = 'reward'
+    sess_ok = StrategySession()
+    sess_ok.v3_dp_posture = RoundPosture(
+        (st_ok.plane, st_ok.round_num),
+        Posture(save=True, level_up=False, refresh_budget=0))
+    auth = attach_spend_authorization(st_ok, sess_ok, DEFAULT_REGISTRY)
+    assert auth is not None and auth['buy_budget'] == 10    # 60−R*=10
+
+
+def test_reconcile_downgraded_band_hands_to_crisis() -> None:
+    """对账分类改道(P36-a′ 路由面后果):应急带 g<R*(降档新增接管域,
+    旧口径溢余=0 → downgrade '存息')的未兑现对账现交 crisis_release
+    只记录——crisis_release_open 是 reconcile 第二分支判据(第三消费点,
+    ADR-0508 §路由面后果-对账面)。非应急帧 downgrade 语义不变
+    (test_receipt_no_budget_table_lock 既有锁辖)。"""
+    st = _state(gold=10, hp=20)
+    assert crisis_release_open(st, StrategySession(), DEFAULT_REGISTRY) is True
+    sess = StrategySession()
+    sess.v3_dp_posture = RoundPosture((st.plane, st.round_num),
+                                      Posture(level_up=True, tag='升级'))
+    arbitrate([], st, sess, DEFAULT_REGISTRY)
+    un = sess.v3_posture_unfulfilled
+    assert un is not None and un['action'] == 'crisis_release'
 
 
 # --- ⑤ 协同核对(W944 血预算门)------------------------------------------------
