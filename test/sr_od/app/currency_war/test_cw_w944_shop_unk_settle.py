@@ -72,8 +72,55 @@ def test_stable_gate_waits_animation_then_settles() -> None:
         _wait_shop_row_stable,
     )
 
-    op = _FakeOp([_frame(False), _frame(True), _frame(True), _frame(True)])
+    op = _FakeOp([_frame(False), _frame(True), _frame(True), _frame(True),
+                  _frame(True), _frame(True), _frame(True), _frame(True)])
     assert _wait_shop_row_stable(op) is True
+
+
+def test_stable_gate_fast_path_minimum_observation() -> None:
+    """锁①d(W952 P2-1)冻结帧 fast-path 最短观察 ≥1.0s。
+
+    慢机冻结帧两次采样相同可短至 0.5s 即放行 → 非终帧误判稳定;
+    修复后指纹相同仍须观察满 min_observe_s(对齐被替换 M35 单次 1.0s)
+    才放行。实测放行耗时 ≥0.95s(0.25s 采样栅上的 1.0s 判据)。
+    """
+    import time as _t
+
+    from sr_od.application.currency_war.operations.prep.shop import (
+        _wait_shop_row_stable,
+    )
+
+    op = _FakeOp([_frame(True)])   # 恒冻结帧:修复前 0.5s 即放行
+    t0 = _t.monotonic()
+    ok = _wait_shop_row_stable(op)
+    elapsed = _t.monotonic() - t0
+    assert ok is True
+    assert elapsed >= 0.95, (
+        f'冻结帧 fast-path 放行过快({elapsed:.2f}s < 0.95s):'
+        'P2-1 回归(最短观察窗被摘)')
+
+
+def test_stable_gate_timeout_has_compensation_wait() -> None:
+    """锁①e(W952 P2-2)永变超时回退含补偿静置,不立读。
+
+    调用方契约=「等稳后读」;超时(画面永变)若立即返回即「未稳即读」。
+    修复后超时返回前静置 _SETTLE_TIMEOUT_COMPENSATE_S,实测 False 返回
+    总耗时 ≥ max_wait_s + 补偿。
+    """
+    import time as _t
+
+    from sr_od.application.currency_war.operations.prep.shop import (
+        _SETTLE_TIMEOUT_COMPENSATE_S,
+        _wait_shop_row_stable,
+    )
+
+    op = _FakeOp([_frame(i % 2 == 0) for i in range(32)])
+    t0 = _t.monotonic()
+    ok = _wait_shop_row_stable(op, max_wait_s=0.4)
+    elapsed = _t.monotonic() - t0
+    assert ok is False
+    assert elapsed >= 0.4 + _SETTLE_TIMEOUT_COMPENSATE_S - 0.05, (
+        f'超时回退无补偿静置({elapsed:.2f}s):P2-2 回归(立读形态回流)')
 
 
 def test_stable_gate_timeout_on_ever_changing_frames() -> None:
@@ -337,6 +384,11 @@ def test_guard_hook_uses_settle_gate_not_blind_sleep() -> None:
     # 稳定门存在且被钩子调用(调用形态:门 → 重读,紧邻)
     assert 'def _wait_shop_row_stable(' in src, '稳定门 helper 缺失'
     assert '_wait_shop_row_stable(self)' in src, '钩子未调用稳定门'
+    # W952 P2-1:fast-path 最短观察窗在位(指纹相同仍须观察满 min_observe_s)
+    assert 'min_observe_s' in src, 'P2-1 回归:fast-path 最短观察窗被摘'
+    # W952 P2-2:超时回退补偿静置在位(超时返回前 sleep,不立读)
+    assert 'time.sleep(_SETTLE_TIMEOUT_COMPENSATE_S)' in src, (
+        'P2-2 回归:超时回退补偿静置被摘(立读形态回流)')
     # 钩子段不得回流 blind sleep(门到位前旧码形态:先 sleep 再重读)
     assert 'time.sleep(1.0)\n                _reshop' not in src, (
         '钩子防抖回流 blind sleep(摘门回归形态)')
