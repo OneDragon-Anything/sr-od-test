@@ -16,7 +16,11 @@ from sr_od.application.currency_war.operations.handlers.handle_planner_event imp
 
 
 def test_card_point_inside_updated_area_and_avoids_detail(test_context) -> None:
-    """推导点位落在当前布局卡 rect 内、且不进详情钮避让带(双卡)。"""
+    """推导点位落在当前布局卡 rect 内、且相对避让生效(双卡)。
+
+    避让断言用 rect 相对几何(底缘上移 DETAIL_MARGIN_RATIO),非绝对 y
+    (W952 P2-1:绝对常数对多布局不成立——弹窗整体平移时相对断言仍成立)。
+    """
     op = HandlePlannerEvent(test_context)
     for idx in (0, 1):
         area = test_context.screen_loader.get_area(
@@ -27,19 +31,27 @@ def test_card_point_inside_updated_area_and_avoids_detail(test_context) -> None:
         p = op._card_point(idx)
         assert rect.x1 <= p.x <= rect.x2 and rect.y1 <= p.y <= rect.y2, (
             f'idx={idx} 点 ({p.x},{p.y}) 落在卡 rect {rect} 外(布局漂移复发形态)')
-        assert p.y < HandlePlannerEvent.DETAIL_AVOID_Y + 1, (
-            f'idx={idx} 点 y={p.y} 进入详情钮避让带(会误弹属性详情)')
+        detail_top = rect.y2 - int(rect.height * HandlePlannerEvent.DETAIL_MARGIN_RATIO)
+        assert p.y <= detail_top, (
+            f'idx={idx} 点 y={p.y} 进入详情钮相对避让带(>={detail_top})')
         assert p.y >= rect.y1 + 60, f'idx={idx} 点过于靠卡顶(上半部点击=详情面板实证)'
 
 
-def test_card_point_falls_back_to_legacy_rect_without_area(
+def test_card_point_falls_back_to_legacy_safe_band(
     test_context, monkeypatch) -> None:
-    """area 缺失 → 回退旧实证 rect(不抛异常,保守点位)。"""
+    """area 缺失 → 兜底点位=旧实证安全带(W952 P1-1 强断言,非平凡 in-rect)。
+
+    旧实证安全点 (755/1225,480) ∈ [460,480];绝对 clamp 425 曾把兜底压到
+    旧布局 51.8% 卡高——(755,400) 型详情危险带与安全点之间未验证带。
+    """
     monkeypatch.setattr(test_context.screen_loader, 'get_area', lambda *a, **k: None)
     op = HandlePlannerEvent(test_context)
-    p = op._card_point(1)
-    lx, ly, rx, ry = HandlePlannerEvent._LEGACY_CARD_RECTS[1]
-    assert lx <= p.x <= rx and ly <= p.y <= ry, f'{p} 不在旧实证 rect 内'
+    for idx in (0, 1):
+        p = op._card_point(idx)
+        lx, ly, rx, ry = HandlePlannerEvent._LEGACY_CARD_RECTS[idx]
+        assert lx <= p.x <= rx, f'idx={idx} x={p.x} 不在旧 rect 内'
+        assert 460 <= p.y <= 480, (
+            f'idx={idx} 兜底 y={p.y} 出旧实证安全带 [460,480](详情危险带发作形态)')
 
 
 def test_press_time_hardening_wired() -> None:
