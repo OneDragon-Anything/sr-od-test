@@ -1459,13 +1459,17 @@ def test_r4_form_upgrade_action_or_receipt() -> None:
     assert has_levelup or receipt.get('levelup_reason') in _FOUR_REASONS
 
 
-# ---------- 回执四枚举(D3) ----------
+# ---------- 回执四枚举(D3;三reject面合一,≤2 层收敛) ----------
 
-def test_receipt_no_channel_supply_frame() -> None:
-    """20-5 p1r5 形态:升级授权在无商店通道节点 → 回执 no_channel +
-
-    常规帧降级(tag='存息')+ posture_unfulfilled 显式声明。
+def test_receipt_reject_enums() -> None:
+    """回执 reject 枚举三面(no_channel/no_premise/no_budget):
+    - no_channel:20-5 p1r5 形态,升级授权在无商店通道节点 → 回执
+      no_channel + 常规帧降级(tag='存息')+ posture_unfulfilled 显式声明;
+    - no_premise:执行时点前提失效残余面——授权帧 premise 成立、执行侧
+      复核(板满∧bench 空)不成立 → 回执 no_premise;
+    - no_budget:授权面存在但预算 0 → 回执枚举 no_budget + 降级。
     """
+    # --- no_channel(supply 帧无通道)---
     st = _spend_receipt_st(node='supply', gold=61, bench=_BENCH_WAITING)
     sess = _spend_receipt_sess(_spend_receipt_Posture(level_up=True, tag='升级'), st)
     _spend_receipt_arbitrate([], st, sess, _spend_receipt_DEFAULT_REGISTRY)
@@ -1478,36 +1482,27 @@ def test_receipt_no_channel_supply_frame() -> None:
     assert un['action'] == 'downgrade'
     assert sess.v3_dp_posture.posture.tag == '存息'
 
-
-def test_receipt_no_premise_exec_time() -> None:
-    """执行时点前提失效残余面:授权帧 working 态板满∧bench 空 →
-
-    回执 no_premise(产出侧 premise 成立、执行侧复核不成立的纵深面)。
-    """
-    st = _spend_receipt_st(gold=60, bench=_BENCH_WAITING)   # 产出时 premise ok
-    sess = _spend_receipt_sess(_spend_receipt_Posture(level_up=True, tag='升级'), st)
-    attach_spend_authorization(st, sess, _spend_receipt_DEFAULT_REGISTRY)
-    # 执行时点前提复核直接消费 posture_release.levelup_premise_ok,
-    # 用板满态构造「授权后前提失效」的残余面
+    # --- no_premise(执行时点复核)---
+    st2 = _spend_receipt_st(gold=60, bench=_BENCH_WAITING)   # 产出时 premise ok
+    sess2 = _spend_receipt_sess(_spend_receipt_Posture(level_up=True, tag='升级'), st2)
+    attach_spend_authorization(st2, sess2, _spend_receipt_DEFAULT_REGISTRY)
     from sr_od.application.currency_war.decision.decision_v2.posture_release import  build_spend_receipt, levelup_premise_ok
     full = _board_full_state()
     assert not levelup_premise_ok(full)
-    receipt = build_spend_receipt(full, sess, _spend_receipt_DEFAULT_REGISTRY, [], [])
-    assert receipt is not None
-    assert receipt.levelup_reason == 'no_premise'
+    receipt2 = build_spend_receipt(full, sess2, _spend_receipt_DEFAULT_REGISTRY, [], [])
+    assert receipt2 is not None
+    assert receipt2.levelup_reason == 'no_premise'
 
-
-def test_receipt_no_budget_table_lock() -> None:
-    """no_budget 表锁:授权面存在但预算 0 → 回执枚举 no_budget + 降级。"""
-    st = _spend_receipt_st(gold=30, bench=_BENCH_WAITING)
-    sess = _spend_receipt_sess(_spend_receipt_Posture(tag='存息'), st)
-    sess.v3_spend_auth = {'auth_id': '1-4', 'level_up': False,
-                          'refresh_budget': 0, 'buy_budget': 0,
-                          'premises': (), 'suppressed': ()}
-    receipt = SpendReceipt(buy_reason='no_budget')
-    un = reconcile_spend(st, sess, _spend_receipt_DEFAULT_REGISTRY, receipt)
-    assert un is not None
-    assert un['reason'] == 'no_budget' and un['action'] == 'downgrade'
+    # --- no_budget(预算 0 表锁)---
+    st3 = _spend_receipt_st(gold=30, bench=_BENCH_WAITING)
+    sess3 = _spend_receipt_sess(_spend_receipt_Posture(tag='存息'), st3)
+    sess3.v3_spend_auth = {'auth_id': '1-4', 'level_up': False,
+                           'refresh_budget': 0, 'buy_budget': 0,
+                           'premises': (), 'suppressed': ()}
+    receipt3 = SpendReceipt(buy_reason='no_budget')
+    un3 = reconcile_spend(st3, sess3, _spend_receipt_DEFAULT_REGISTRY, receipt3)
+    assert un3 is not None
+    assert un3['reason'] == 'no_budget' and un3['action'] == 'downgrade'
 
 
 # ---------- 对账门三选一(D4) ----------

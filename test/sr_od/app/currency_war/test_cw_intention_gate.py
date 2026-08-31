@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_intention_gate 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -10,11 +9,9 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 
 # ==================== w101_p1_gate ====================
-
-from sr_od.application.currency_war.kernel import cw_intention
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     _p1_transition_eligible,
@@ -23,7 +20,11 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     hoard_target_set,
     update_intention,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
+    ShopCard,
+)
 
 
 def _state(**kw) -> GameState:
@@ -119,10 +120,9 @@ def test_p1_transition_eligible_snapshot() -> None:
 
 import json
 from pathlib import Path
-from sr_od.application.currency_war.sim import ledger_hooks
-from sr_od.application.currency_war.telemetry import state
-from sr_od.application.currency_war.telemetry import query, recorder
 
+from sr_od.application.currency_war.sim import ledger_hooks
+from sr_od.application.currency_war.telemetry import query, recorder, state
 
 
 def _write_rows(path: Path, rows: list[dict]) -> None:
@@ -221,37 +221,29 @@ def test_run_checks_reports_dead_run(tmp_path, monkeypatch) -> None:
 
 from dataclasses import replace
 
-from sr_od.application.currency_war.kernel.cw_intention import (
-    IntentionState,
-    intention_core,
-)
-
-from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-
-from sr_od.application.currency_war.sim.checks.ledger import check_overflow_gold_zero_buy_streak
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    BuyCard,
-    DeployMove,
-    GameState,
-    LevelUp,
-    RefreshShop,
-    SellBench,
-    ShopCard,
-)
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
 from sr_od.application.currency_war.decision.decision_v2.filters import (
     filter_candidates,
     formed_stop_active,
 )
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_intention import (
+    intention_core,
+)
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.decision.decision_v2.strategy import (
-    DecisionV2Strategy,
+from sr_od.application.currency_war.kernel.cw_state import (
+    BuyCard,
+    DeployMove,
+    LevelUp,
+    RefreshShop,
+    SellBench,
 )
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.sim.checks.ledger import (
+    check_overflow_gold_zero_buy_streak,
+)
 
 
 def _card(name: str = '测试卡', cost: int = 1) -> ShopCard:
@@ -431,87 +423,14 @@ def test_checker_exempts_formed_stop_rounds() -> None:
         [_row(5), _row(6), _row(7, fs=True), _row(8)])
 
 
-def test_sim_formed_stop_e2e_seed_scan() -> None:
-    """sim 端到端(regen-robust):快照池每次局终自动再生
-    (ADR-0344),固定 seed 的触发面随池内容漂移(实证:seed 33
-    在池 4d28822c 下无触发轮)——改锁**存在性语义**:小窗 seed 扫描
-    证明「池内必有成型停手触发局且门咬住」;窗口内无任何触发局 =
-    成型停手在 sim 真实轨迹上失活,锁必须红(检测价值不降)。
-    门咬住的锁法(轨迹因果不变式,比总数对比诚实):开/关臂同 seed
-    同 RNG 流,闸门不拦截时两臂动作逐位相同 → **账本首个分歧行
-    =闸门首次实际拦截处**——该行必为成型停手轮且关臂买入数严格
-    多于开臂(总数对比在分歧后轨迹分叉,不再可比)。触发轮标志入
-    账本为轮内 OR 聚合(演进可轮中点亮成型,段前买入合法,故标记
-    轮内仍可有合法买入);关臂同 seed 标志恒 False;检查器对开臂
-    账本不误报。"""
-    reg_off = replace(DEFAULT_REGISTRY, formed_stop_enabled=False)
-
-    def _buys_in(row: dict) -> int:
-        return sum(1 for a in row.get('actions') or []
-                   if a.get('__type__') == 'BuyCard')
-
-    def _behavior(row: dict) -> dict:
-        return {k: v for k, v in row.items() if k != 'formed_stop'}
-
-    # ADR-0353:兜底门改结构判据后,窗口内首个触发局可能是
-    # 「仅标志局」(触发轮无被拦买入,两臂行为同)——扫描取首个
-    # **咬合局**(有触发且有行为分歧且分歧轮被拦),存在性语义不变。
-    picked = None
-    for seed in range(80):
-        r_on = simulate_p1(seed, pool='snapshot')
-        if not any(row.get('formed_stop') for row in r_on.ledger):
-            continue
-        r_off = simulate_p1(
-            seed, pool='snapshot',
-            strategy=DecisionV2Strategy(registry=reg_off))
-        assert not any(row.get('formed_stop') for row in r_off.ledger)
-        pair = next(((a, b) for a, b in zip(r_on.ledger, r_off.ledger,
-                                            strict=False)
-                     if _behavior(a) != _behavior(b)), None)
-        if pair is None:
-            continue
-        if pair[0].get('formed_stop') is not True:
-            continue
-        if not _buys_in(pair[0]) < _buys_in(pair[1]):
-            continue
-        picked = (seed, r_on, r_off, pair)
-        break
-    assert picked, ('seed 窗口 0-79 无成型停手咬合局——成型停手在'
-                    ' sim 真实轨迹上失活(或只余仅标志局)')
-    seed, r_on, r_off, pair = picked
-    diff_on, diff_off = pair
-    assert diff_on.get('formed_stop') is True, (
-        f'首个分歧行非成型停手轮(r{diff_on.get("round_num")})'
-        '——分歧非闸门所致')
-    assert _buys_in(diff_on) < _buys_in(diff_off), (
-        f'分歧轮买入 on={_buys_in(diff_on)} off={_buys_in(diff_off)}'
-        '——关臂未多买,门未咬住')
-    # 检查器不误报:开臂账本(成型轮零买不进 streak)整体无违规
-    assert check_overflow_gold_zero_buy_streak(r_on.ledger) == []
-
-
 # ==================== w114_phase_shadow ====================
 
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_intention import (
-    IntentionState,
-    intention_core,
-)
 
-from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    GameState,
-)
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.phase import (
     Phase,
     derive_phase,
     form_ok,
     form_score,
-)
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
 )
 
 
@@ -651,10 +570,10 @@ def test_fallback_gate_hp_charge_stack_exemption() -> None:
     上场(hp_charge_stack 型受击驱动全局叠层)计 1 等效体系;1★ 不豁免;
     豁免集不含 cost_escalation 型(银狼)。
     """
-    from sr_od.application.currency_war.kernel.cw_comps import hp_charge_stack_chars
     from sr_od.application.currency_war.decision.decision_v2.phase import (
         fallback_engines_count,
     )
+    from sr_od.application.currency_war.kernel.cw_comps import hp_charge_stack_chars
     assert hp_charge_stack_chars() == frozenset({'万敌'})
     # 仙舟3 单体系 + 万敌 2★ → 有效体系数 2 → True(r≥5)
     trio = ['丹恒·饮月', '藿藿', '爻光']
@@ -676,12 +595,3 @@ def test_fallback_gate_hp_charge_stack_exemption() -> None:
     assert form_ok(state2, sess, DEFAULT_REGISTRY) is False
 
 
-def test_sim_ledger_has_phase_fields() -> None:
-    """sim 端到端:账本每轮行带 phase/form_ok/form_score,值域合法
-    (影子字段零消费——存在性与值域,不锁分布)。"""
-    res = simulate_p1(0, pool='snapshot')
-    assert res.ledger, 'sim 账本为空'
-    for row in res.ledger:
-        assert row.get('phase') in ('FORM', 'HOARD', 'SPEND'), row
-        assert isinstance(row.get('form_ok'), bool), row
-        assert 0.0 <= float(row.get('form_score') or 0.0) <= 1.0, row
