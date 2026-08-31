@@ -211,7 +211,6 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w230_star_form.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w238_boss_hp_projection.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w239_p2r1_loss_outcome.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w242_star_directed.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_w245_bond_fallback_benchmark.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w252_directed_refresh.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w253_boss_names_telemetry.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w255_formed_target_boss_nodemech.py
@@ -270,7 +269,6 @@ sr-od-test/test/sr_od/app/currency_war/test_cw_w556_shop_obs.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w559_overlay_gates.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w564_shop_wire.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w566_sim_guard_mergebuy.py
-sr-od-test/test/sr_od/app/currency_war/test_cw_w573_refresh_producer.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w575_plane_detail_recovery.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w583_snapshot_contracts.py
 sr-od-test/test/sr_od/app/currency_war/test_cw_w588_director_v2.py

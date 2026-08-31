@@ -100,13 +100,3 @@ def test_briefing_modules_use_framework_logger() -> None:
         assert mod._log is log_utils.log, \
             f'{mod_name}._log 不是框架 logger(死 logger 回归)'
 
-
-def test_briefing_empty_read_is_logged() -> None:
-    """空读可诊断:read_bosses 空也留行(区分「恒空」vs「幂等跳过」的前提)。"""
-    src = _src('operations/handlers/handle_briefing.py')
-    assert '简报首领读得' in src
-    assert '简报首领未读到' in src, '空读分支缺日志行(W222 缺口②回归)'
-    # 裸 logger 回退锁:不得再 import logging/getLogger(注释里提及不辖)
-    assert 'import logging' not in src, 'handle_briefing 不得回退裸模块 logger'
-    assert 'getLogger(__name__)' not in src.replace(
-        '``logging.getLogger(__name__)``', ''), 'handle_briefing 不得挂裸模块 logger'

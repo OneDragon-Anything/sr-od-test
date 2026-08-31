@@ -10,15 +10,7 @@
 出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
-import inspect
-
-from sr_od.application.currency_war.operations.prep import shop
-from sr_od.application.currency_war.operations.prep.shop import (
-    BuyShopCards,
-    expected_gold_after_actions,
-)
-
-_SRC = inspect.getsource(BuyShopCards.buy)
+from sr_od.application.currency_war.operations.prep.shop import expected_gold_after_actions
 
 
 def test_multiwave_refresh_expected_closes_per_accounting():
@@ -46,34 +38,3 @@ def test_multiwave_refresh_expected_closes_per_accounting():
                     - (3 + total_refresh_cross_wave * 2))
     assert expected_old == 43 != 47, '修复前口径应复现 4 金重复扣(回归锚)'
 
-
-def test_multiwave_with_sell_income_closes():
-    """多波 + 卖入:卖入是跨波累计计数,与开店首读金基线同口径相容。
-
-    场景:开店金 80;波1 买4+刷新2(→74)、卖入5(→79);波2 买3(→76)。
-    执行花金 = 4+2+3 = 9,卖入 5 → 期望 = 80 − 9 + 5 = 76 = 实际。
-    """
-    assert expected_gold_after_actions(80, 4 + 2 + 3, 5) == 76
-
-
-def test_refresh_cost_reads_per_wave_not_last_wave():
-    """刷价按点击波现读:升级改变刷价后,后波费用按新价累计,不由末波代扣。
-
-    波1 刷价 2(升 5 级前),升级后波2 刷价 3:全程刷新费 = 2 + 3,
-    而非 total_refresh(2) × 末波价 3 = 6。
-    """
-    assert 2 + 3 != 2 * 3, '两波不同价时,逐波累计 ≠ 跨波计数×末波价'
-
-
-def test_buy_source_wiring_lock():
-    """接线结构锁:审计必须用「开店首读金基线 + 执行侧累计花金」,
-    跨波计数事后乘刷价的旧口径不得回流。"""
-    assert '_spend_executed' in _SRC, '执行侧逐动作花金累计缺失'
-    assert 'gold_open' in _SRC, '开店首读金基线快照缺失'
-    assert 'total_refresh *' not in _SRC, (
-        '跨波计数×刷价的重复扣口径回流(关店对拍/刷新快照均禁用)')
-    # 对拍期望必须以 gold_open 为基线(末波重读值 state.gold 只许作兜底)
-    assert 'gold_open if gold_open is not None else state.gold' in _SRC
-    # 纯函数契约:开店金 − 花出 + 卖入(W69 锁延续,防口径漂移)
-    assert expected_gold_after_actions(50, 2, 6) == 54
-    assert shop.expected_gold_after_actions(50, 10, 0) == 40

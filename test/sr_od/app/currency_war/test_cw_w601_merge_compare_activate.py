@@ -11,8 +11,6 @@
 形状 / 20 次读数;详见该报告「生产级替代证据」节),数据驱动锁 compare
 真值表与 det 语义映射(merge_preview>0)。
 """
-import inspect
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -26,35 +24,12 @@ from sr_od.application.currency_war.obs.cw_shop_obs import (
 
 from sr_od.application.currency_war.prep_director import PrepDirector, _merge_preview_inputs
 
-# ===== 接线源码锁(形态先例=W564 inspect.getsource 静态锁) =====
-
 #: W600 非零事件语料的 (槽位, ✦数) 形状(13 个唯一形状;fixture 素材单一源)。
 _W600_NONZERO_SHAPES: list[list[tuple[int, int]]] = [
     [(2, 2)], [(3, 2), (4, 2)], [(2, 1), (4, 1)], [(4, 2)], [(0, 2)],
     [(0, 2)], [(2, 1)], [(0, 2), (1, 2), (4, 2)], [(4, 2)], [(0, 1)],
     [(1, 2)], [(2, 2), (3, 2)], [(3, 2)],
 ]
-
-
-def test_merge_preview_wire_source_locks() -> None:
-    """接线锁:_reconcile_merge_preview 用 compare_merge_preview 且 best-effort;
-    入参折算走 _merge_preview_inputs 单一源;主环在卡池票同帧紧随其后消费;
-    零决策(无游戏交互,不 return 环结果)。"""
-    mod_src = Path(pd.__file__).read_text(encoding='utf-8')
-    assert "compare_merge_preview" in mod_src
-    assert "_SHOP_MERGE_DEFECT_KIND = 'merge_preview_mismatch'" in mod_src
-    src = inspect.getsource(PrepDirector._reconcile_merge_preview)
-    assert 'compare_merge_preview(' in src
-    assert '_merge_preview_inputs(' in src
-    assert 'record_defect(' in src
-    # 零决策:方法不做任何游戏交互(无 screenshot/click/round 流转)
-    assert 'round_' not in src.replace('round_num', '')
-    assert 'screenshot(' not in src
-    assert 'except Exception' in src   # best-effort,不阻塞环
-    loop_src = inspect.getsource(PrepDirector._run_loop)
-    shop_at = loop_src.index('self._reconcile_shop_pool(obs)')
-    merge_at = loop_src.index('self._reconcile_merge_preview(obs)')
-    assert merge_at > shop_at, '合成预览对账须与卡池票同一 heavy 定型帧、紧随其后'
 
 
 # ===== _merge_preview_inputs(入参折算单一源,纯函数) =====

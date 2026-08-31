@@ -88,46 +88,8 @@ def _full_bench_with(names_stars: list) -> GameState:
     return st
 
 
-def test_s3_merge_buy_exempt_at_full_bench() -> None:
-    """S3 正向(H3 口径):bench 9/9 + 同名**同 1★ 已 2 份** + 店内第 3 张
-    1★ → 买被采纳(容量豁免;合并净 −1,不占新槽)。"""
-    sess = _sess()
-    sess.v2_round_key = (1, 4)
-    st = _full_bench_with([('X', 1), ('X', 1)] + [(f'C{i}', 1) for i in range(7)])
-    st.shop = [_card('X', cost=1)]
-    scored = [(Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
-                         merge=True, source='test'), 5.0, {})]
-    res = arbitrate(scored, st, sess, _REG)
-    assert [r['accepted'] for r in res.log] == [True], (
-        f'9/9+同 1★ 已 2 份+第 3 张 1★ → 合并买入应容量豁免(净−1):'
-        f'{res.log[0]["reject"] if res.log else "无 log"}')
-
-
-def test_s3_weighted2_star2_not_merge_still_rejected() -> None:
-    """S3 反例 A:bench 9/9 + **1 个 2★(加权2)** + 店内第 3 张 1★ →
-    仍拒(同星计数=1,不合成交净+1——旧加权判据的误标例)。"""
-    sess = _sess()
-    sess.v2_round_key = (1, 4)
-    st = _full_bench_with([('X', 2)] + [(f'C{i}', 1) for i in range(8)])
-    st.shop = [_card('X', cost=1)]
-    scored = [(Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
-                         merge=False, source='test'), 5.0, {})]
-    res = arbitrate(scored, st, sess, _REG)
-    assert res.log[0]['accepted'] is False, \
-        '1 个 2★(加权2)+第 3 张 1★ 不合成(同星=1)→ 满员仍拒'
-    assert 'bench 满' in (res.log[0]['reject'] or '')
-
-
-def test_s3_non_merge_buy_still_rejected_at_full() -> None:
-    """S3 反例 B:bench 9/9 + 非 merge 买 → 仍拒(容量不豁免普通买)。"""
-    sess = _sess()
-    sess.v2_round_key = (1, 4)
-    st = _full_bench_with([(f'C{i}', 1) for i in range(9)])
-    st.shop = [_card('散件', cost=1)]
-    scored = [(Candidate(action=BuyCard(st.shop[0]), tag='line_carry',
-                         merge=False, source='test'), 5.0, {})]
-    res = arbitrate(scored, st, sess, _REG)
-    assert res.log[0]['accepted'] is False
+# --- S3 满栏合成买(arbiter/simulate 面已归 test_cw_w544_fullbench_mergebuy;
+#     此处只留生成侧镜像:will_merge 判据在 candidates 层的接线) ------------
 
 
 def test_s3_will_merge_generation_mirror_same_star() -> None:
@@ -154,29 +116,6 @@ def test_s3_will_merge_generation_mirror_same_star() -> None:
           if isinstance(c.action, BuyCard) and c.action.card.name == 'X']
     assert m2 and not m2[0].merge, \
         '1× 2★(加权2)不构成同 1★ 2 份 → 非 merge(旧判据误标)'
-
-
-def test_s3_merge_buy_simulates_net_minus1_at_full() -> None:
-    """S3 执行侧:9/9 满员合并买入 simulate 后 bench 占用 8(净 −1),
-    新卡不占槽(合成载体留原槽);非合并买在满员时仍 no-op。"""
-    from sr_od.application.currency_war.kernel.cw_state import simulate
-    sess = _sess()
-    sess.v2_round_key = (1, 4)
-    st = _full_bench_with([('X', 1), ('X', 1)] + [(f'C{i}', 1) for i in range(7)])
-    st.gold = 60
-    st.shop = [_card('X', cost=1)]
-    out = simulate(st, BuyCard(st.shop[0]))
-    assert bench_occupied(out.bench) == 8, \
-        f'合并买入净 −1(期望 8,实得 {bench_occupied(out.bench)})'
-    x2 = [b for b in out.bench if b is not None and b.char_id == 'X']
-    assert len(x2) == 1 and x2[0].star == 2
-    assert out.gold == 60 - 1
-    # 非合并买满员 no-op
-    st2 = _full_bench_with([(f'C{i}', 1) for i in range(9)])
-    st2.gold = 60
-    st2.shop = [_card('散件', cost=1)]
-    out2 = simulate(st2, BuyCard(st2.shop[0]))
-    assert out2.gold == 60 and bench_occupied(out2.bench) == 9
 
 
 # --- S4 上阵补偿(H2 口径;§1.4/§7) -------------------------------------------

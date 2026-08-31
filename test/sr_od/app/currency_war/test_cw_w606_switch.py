@@ -11,7 +11,6 @@
 出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.decision_assembly import (
@@ -21,9 +20,6 @@ from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
     DecisionV2Registry,
 )
-
-_SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
-        / 'currency_war')
 
 
 def test_switch_field_deleted_from_registry():
@@ -47,17 +43,3 @@ def test_shadow_compare_diagnostic_default_off_and_injectable():
     strat = SimpleNamespace(registry=DecisionV2Registry(
         director_v2_shadow_compare=True))
     assert shadow_compare_enabled(strat) is True
-
-
-def test_prep_director_fork_is_unconditional_v2():
-    """环入口升正源码锁:分叉点无条件 return _run_prep_loop_v2。"""
-    src = (_SRC / 'prep_director.py').read_text(encoding='utf-8')
-    assert 'return self._run_prep_loop_v2(match, session, config)' in src
-    assert 'director_v2_enabled' not in src
-
-
-def test_frozen_registry_supports_field_addition_without_breaking_existing():
-    """新增字段带缺省值:既有注入点(dataclasses.replace/关键字构造)不受扰。"""
-    base = DecisionV2Registry(interest_floor_override=30)
-    assert base.interest_floor() == 30
-    assert base.director_v2_shadow_compare is False

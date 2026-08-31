@@ -39,26 +39,7 @@ def test_refresh_effective_truth_table():
     assert refresh_effective(['A'], []) is None
 
 
-# ===== ② shop.py 接线锁(静态结构)=====
-
-def test_shop_refresh_wiring_lock():
-    """对拍必须接在刷后重读点(record_shop_snapshot('refresh')之后、同
-    best-effort try 块内),且台账行锁关键参数(surface/kind/gap_large)——
-    防后续重构静默断链或改口径。"""
-    import sr_od.application.currency_war.operations.prep.shop as shop
-    src = Path(shop.__file__).read_text(encoding='utf-8')
-    # 落点:refresh 快照段之后
-    tail = src[src.index("record_shop_snapshot(\n                            'refresh'"):]
-    assert 'refresh_effective(' in tail
-    assert "'shop_refresh', 'invariant_break'" in tail
-    assert 'gap_large=True' in tail
-    # 判据调用必须以「刷前=点击前现读名集 _pre_shop_names / 刷后=_new_shop
-    # 牌名」为输入(W577:结果同时赋 _refresh_board_changed 作安灯三分观测面;
-    # W592 勘误:刷前源由 state.shop plan 读改为点击前现读——plan 读不摘已买
-    # 牌,买+刷新波真落空会被洗成免费生效,ADR-0456 勘误注)
-    assert '_refresh_board_changed = refresh_effective(' in tail
-    assert '_pre_shop_names or []' in tail
-    assert '[c.name for c in _new_shop]' in tail
+# ===== ③ 两连全同防抖(台账复现计数)=====
 
 
 # ===== ③ 两连全同防抖(台账复现计数)=====

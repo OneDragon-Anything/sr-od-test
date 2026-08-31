@@ -106,33 +106,7 @@ def test_p1_gate_free_for_transition_lines() -> None:
     assert ist_p2.locked_comp == 'DOT队'
 
 
-def test_p1_gate_free_for_seele_line() -> None:
-    """希儿系=四体系之一:③信号检测照发;P1 锁定产物=配方对
-    (希儿系进对须希儿到手,见 test_cw_intention W145 节),comp 不锁。"""
-    st = _state(shop=['希儿'])
-    sigs = detect_signals(st)
-    assert any(s.comp_name == '希儿量子' and s.kind == 'core_card'
-               for s in sigs if s.layer == 3)
-    ist = update_intention(st, IntentionState())
-    assert ist.phase == 'unlocked' and ist.locked_comp == ''
-
-
-# ===== ④资源层同门 =====
-
-def test_p1_gate_resource_layer() -> None:
-    """④升费资源证据与③同类(卡/资源到手):P1 拦狼尊欢愉(终局专属,
-    资源锚 9 级),P2 放行。"""
-    st = _state(bench=['银狼LV.999'])
-    assert not any(s.comp_name == '狼尊欢愉' for s in detect_signals(st))
-    st2 = _state(plane=2, bench=['银狼LV.999'])
-    assert any(s.comp_name == '狼尊欢愉' and s.kind == 'resource'
-               for s in detect_signals(st2) if s.layer == 4)
-
-
-# ===== A/B 通道:门关=旧行为 =====
-
-# (批 3 F5 清偿:原 test_gate_off_restores_baseline 随 P1_FINAL_LINE_GATE/
-# P1_RECIPE_LOCK 旗标退役删除,出处同蓝图 §6。)
+def test_p1_transition_eligible_snapshot() -> None:
     """过渡线派生分类快照(W97 §5 P0-1 分组的代码化;数据漂移静默改门=禁止,
     CROSS_LINE_SKELETON 快照锁同款判例)。FREE 集=主/副档∩三羁绊体系键
     ∪ 希儿∈core ∪ ⑤兜底;其余 v2 线为终局专属(P1 需①类资格)。"""

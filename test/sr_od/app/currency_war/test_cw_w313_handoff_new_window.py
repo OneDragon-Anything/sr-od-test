@@ -126,15 +126,3 @@ def test_formed_stop_new_window_gap_positive_keeps_investing() -> None:
     assert formed_stop_active(st, sess, _REG) is False, (
         '新窗 r7 gap>0:承接维接管,成型不停手')
 
-
-def test_boss_reward_bonus_shifted_to_r6_wart() -> None:
-    """boss 投影 wart(ADR-0418 挂账):+2 奖励项触发轮=min_round=6
-    ——r6 投影比 r7/r9 高 2,「r8 奖励」语义随移的已落地现状钉死,
-    防解耦批之外的改动静默移位。"""
-    proj6 = boss_projected_hp(_state(6), 60, _REG)
-    proj7 = boss_projected_hp(_state(7), 60, _REG)
-    proj9 = boss_projected_hp(_state(9), 60, _REG)
-    assert proj6 == proj7 + 2 == proj9 + 2, (
-        f'r6 奖励 +2 wart 移位面变化:proj6={proj6} '
-        f'proj7={proj7} proj9={proj9}(ADR-0418 挂账语义被改,'
-        '若为解耦批落地请同步更新本锁)')

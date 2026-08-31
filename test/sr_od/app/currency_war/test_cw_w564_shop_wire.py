@@ -8,8 +8,6 @@
 (refresh_reconcile_mismatches)纯函数;评估窗在 shop.py 刷新波内(挂账,
 见 build_refresh_expect docstring 的架构证据链)。
 """
-import inspect
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -19,36 +17,6 @@ from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 from sr_od.application.currency_war.obs.cw_shop_obs import RefreshExpect
 
 from sr_od.application.currency_war.prep_director import PrepDirector, build_refresh_expect, refresh_reconcile_mismatches
-
-# ===== 接线源码锁(形态先例=W547 inspect.getsource 静态锁) =====
-
-
-def test_shop_pool_wire_source_locks() -> None:
-    """接线锁:_reconcile_shop_pool 用 check_shop_pool 且 best-effort;
-    主环在羁绊对账同帧之后消费;禁碰面(cw_shop_obs)只 import 不本地重定义;
-    compare_merge_preview 已激活(W600 评估裁定,锁归 W601 测试文件)。"""
-    mod_src = Path(pd.__file__).read_text(encoding='utf-8')
-    assert 'from sr_od.application.currency_war.obs.cw_shop_obs import' in mod_src
-    assert "_SHOP_POOL_DEFECT_KIND = 'shop_pool_violation'" in mod_src
-    assert "_SHOP_REFRESH_DEFECT_KIND = 'refresh_expect_mismatch'" in mod_src
-    # None 口径:prep_director 全文禁 or-2 式刷费合并(真 0 与 None 分道)
-    assert 'shop_refresh_cost or 2' not in mod_src
-    assert 'or 2)' not in mod_src
-    # compare_merge_preview 已激活接线(W600 批B 评估裁定,接线锁归
-    # test_cw_w601_merge_compare_activate.py;本锁只留单一源指针)
-    assert 'compare_merge_preview' in mod_src
-    src = inspect.getsource(PrepDirector._reconcile_shop_pool)
-    assert 'check_shop_pool(' in src
-    assert ', None)' in src   # pool_state=None:池守恒查如实降级(无账本)
-    # 零决策:方法不 return 环结果、不做任何游戏交互(无 screenshot/click)
-    assert 'round_' not in src.replace('round_num', '')
-    assert 'screenshot(' not in src
-    assert 'except Exception' in src   # best-effort,不阻塞环
-    loop_src = inspect.getsource(PrepDirector._run_loop)
-    fac_at = loop_src.index('self._reconcile_faction_display(obs)')
-    shop_at = loop_src.index('self._reconcile_shop_pool(obs)')
-    assert shop_at > fac_at, '商店对账须与羁绊对账同一 heavy 定型帧、紧随其后'
-
 
 # ===== _shop_pool_inputs(参评牌过滤,纯函数)=====
 

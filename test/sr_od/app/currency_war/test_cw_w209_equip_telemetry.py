@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
-"""W209g/ADR-0387 追加:装备遥测三断点修法锁(编排者定位,用户点名
-「装备采集代码怎么会没采集到」)。
-
-断点(run 26 实锤):
-① ``cw_reconcile`` 整批替换清零 equips——decisions.jsonl 希儿装备闪烁
-   (round6 三条快照仅一条有装备):布局错乱→纠漂狂刷→快照写入的装备反复被冲;
-② ``equip_all`` 采集层过滤工具后才写 last_owned_equips——冶金炉/扳手从不
-   进决策快照(owned 恒空);
-③ 装备读槽硬编码(deploy_bench 已由 W209c 修;equip_all M7/C6 转移重读
-   原硬编码 10,与布局档自相矛盾)。
+"""装备对账合并语义锁(ADR-0387 断点①):cw_reconcile 整批替换清零
+equips 的修复——char_id 续接保留、画面真值优先、多副本逐个配对。
+(断点②采集写端/③读槽布局的行为契约由 op 层测试与 w148 搬运链锁承载。)
 """
 from __future__ import annotations
 
@@ -58,28 +51,3 @@ def test_reconcile_multi_copy_pairing_and_departure() -> None:
     assert out[1].equips == []          # 藿藿无旧账 → 空
     # 第二副本配对消耗(单副本新读只拿第一份,不多发)
 
-
-def test_equip_collect_writes_unfiltered() -> None:
-    """断点②:采集写端全量(工具不过滤)——过滤只留穿戴决策层。
-
-    源码级锁:last_owned_equips 赋值来自 hits(全量),wearable 只辖 drag。
-    """
-    import inspect
-    from sr_od.application.currency_war.operations.prep import equip_all
-    src = inspect.getsource(equip_all)
-    assert 'last_owned_equips = [n for n, _, _ in hits]' in src, \
-        '采集写端必须全量 hits(工具进快照;过滤只辖 wearable 穿戴决策)'
-    assert 'last_owned_equips = [n for n, _ in wearable]' not in src, \
-        '旧版过滤后写快照(owned 恒空断点)不得回流'
-
-
-def test_equip_row_reads_follow_layout() -> None:
-    """断点③:equip_all 后排装备读槽随布局选档(select_back_layout 单一源),
-    不再硬编码 10/6。"""
-    import inspect
-    from sr_od.application.currency_war.operations.prep import equip_all
-    src = inspect.getsource(equip_all)
-    assert 'select_back_layout' in src, \
-        'equip_all 装备读槽必须接布局双通道单一源(ADR-0385)'
-    assert '4 if row == \'front\' else 10' not in src, \
-        '旧硬编码 10 读槽(deploy 拖 8 格/装备读固定槽自相矛盾)不得回流'
