@@ -514,6 +514,45 @@ class TestCwLobbyResidualBranch:
         assert bare_clicks == [], f'不应有兜底/翻页类裸点击:{bare_clicks}'
 
 
+class TestBattleFailScreenBranch:
+    """大世界-战斗失败分支真帧输入锁:app 异常退出遗留的战败结算屏。
+
+    背景(2026-08-30 实证,开拓力 FAIL 遗留现场):战败结算屏无右上角返回按钮,
+    唯一交互是「点击空白区域继续」;起手兜底只会反复点右上角死循环至 FAIL,
+    卡死下一个应用。分支 = id_mark「标题-战斗失败」正面识别 → find+click
+    「点击空白区域继续」→ round_retry 逐帧重识别(点空白落到各副本战前画面,
+    由既有分支/兜底继续)。
+
+    真帧锁:fixture = 饰品提取战败真帧(标题-战斗失败 + 点击空白区域继续,
+    conf 0.995+,见 docs/game/screens/大世界-战斗失败.md)。不 mock 画面识别,
+    真 OCR/模板识别照跑——识别漂移时测试红,直接暴露建档漂移。
+    """
+
+    SCREEN = '大世界-战斗失败'
+    STATE = '战斗失败'
+
+    def test_battle_fail_clicks_blank(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """战败屏真帧:命中战败分支,find+click「点击空白区域继续」,round_retry。"""
+        result, finds, find_clicks, bare_clicks = _run_real_frame_check_screen(
+            test_context, monkeypatch, self.SCREEN, self.STATE,
+        )
+
+        # 分支路由:round_retry 等下一轮逐帧重识别(点空白落到战前画面)
+        assert not result.is_success, f'战败屏应 round_retry,status={result.status}'
+        assert result.status == self.SCREEN
+        # 识别事实(真 OCR):标题 id_mark 锚命中(分支入口判据)
+        assert (self.SCREEN, '标题-战斗失败') in finds, f'识别命中:{finds}'
+        # 动作:只 find+click 点空白继续;不落兜底裸点击
+        assert find_clicks == [(self.SCREEN, '点击空白区域继续')], (
+            f'点击漂移:{find_clicks}'
+        )
+        assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
+
+
 def _patch_round_sleep(monkeypatch: pytest.MonkeyPatch) -> list[float]:
     """打桩框架轮间 sleep 并记录调用,提速测试(20 轮 × 1s 真睡太慢)+ 断言 wait 生效。
 
