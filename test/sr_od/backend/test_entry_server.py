@@ -10,6 +10,7 @@
 详见 ``server.py`` ``_configure_server_logging`` 的注释。
 """
 
+import contextlib
 import logging
 from typing import Any
 from unittest.mock import MagicMock
@@ -62,11 +63,60 @@ def test_serve_configures_logging_before_context_creation() -> None:
 
     src = inspect.getsource(server._serve)
     configure_pos = src.index('_configure_server_logging()')
+    root_pos = src.index('_configure_root_logger_single_channel()')
     ctx_pos = src.index('ctx = SrContext()')
     assert configure_pos < ctx_pos, (
         '日志分流必须在 SrContext() 之前调用,否则 init 窗口框架日志'
         '双写进 main_server.log 与共享 log.txt'
     )
+    assert root_pos < ctx_pos, (
+        'root logger 单一信道修必须在 SrContext()/FastMCP 构造之前,'
+        '否则 init 窗口的 getLogger(__name__) 型日志走裸 stderr 进 main_server.log'
+    )
+
+
+def test_root_logger_single_channel_blocks_fastmcp_basicconfig() -> None:
+    """root 单一信道锁:w944 哨兵双信道漂移根因是 FastMCP.__init__ 经
+    mcp.server.fastmcp.utilities.logging.configure_logging → logging.basicConfig
+    给 root 挂裸 stderr handler,使 getLogger(__name__) 型业务 logger 的行
+    (collect_plane_intel 等)以裸格式进 main_server.log。本锁断言:
+    ①本函数先给 root 挂 mcp_server.log 文件 handler;②之后模拟 FastMCP 的
+    configure_logging(真调 mcp SDK 函数)时 root handler 集不变
+    (basicConfig no-op),不再出现 StreamHandler 漂移通道。"""
+    from sr_od.backend.entry.server import _configure_root_logger_single_channel
+
+    root = logging.getLogger()
+    saved_handlers = root.handlers[:]
+    saved_level = root.level
+    root.handlers = []          # 模拟干净生产 root(本函数有「已有 handler 不覆盖」守卫)
+    root.setLevel(logging.WARNING)
+    try:
+        _configure_root_logger_single_channel()
+        assert root.level == logging.INFO
+        assert len(root.handlers) == 1, f'root 应有且仅有一个 handler,实得 {root.handlers}'
+        h = root.handlers[0]
+        assert isinstance(h, logging.FileHandler)
+        assert h.baseFilename.endswith('mcp_server.log')
+        # FastMCP.__init__ 实际调用的 SDK 函数:root 已有 handler → no-op
+        from mcp.server.fastmcp.utilities.logging import (
+            configure_logging as mcp_configure,
+        )
+        mcp_configure('INFO')
+        assert len(root.handlers) == 1, (
+            'FastMCP configure_logging 后 root handler 集必须不变'
+            '(basicConfig no-op),否则裸 stderr handler 复活 → 双信道漂移回归'
+        )
+        assert not any(isinstance(x, logging.StreamHandler)
+                       and not isinstance(x, logging.FileHandler)
+                       for x in root.handlers)
+    finally:
+        for x in root.handlers[:]:
+            root.removeHandler(x)
+            with contextlib.suppress(Exception):
+                if isinstance(x, logging.FileHandler):
+                    x.close()
+        root.handlers = saved_handlers
+        root.setLevel(saved_level)
 
 
 def test_configure_server_logging_routes_to_dedicated_file() -> None:

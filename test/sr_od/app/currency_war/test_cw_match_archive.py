@@ -376,6 +376,31 @@ def test_rounds_terminal_none_for_outcome_only_round(replay: Path):
     assert r2['n_decision_frames'] == 0   # 零决策行缺口可见化
 
 
+def test_supply_round_has_decision_frame(replay: Path):
+    """补给轮 n_decision_frames 锁(run_supply_node 写入端,w941 判定移交):
+    选卡确认后 record_decision 一帧(extra.phase='supply_pick')→ 补给轮
+    不再结构性零决策行。锁的是「补给轮有帧」这一采集面,帧内容(合成
+    快照、actions=[])非备战决策语义,读端按 outcome.source='synthetic_supply'
+    分型。"""
+    out_p = replay / 'outcomes.jsonl'
+    dec_p = replay / 'decisions.jsonl'
+    out_rows = [json.loads(ln) for ln in out_p.open(encoding='utf-8') if ln.strip()]
+    # run_C p1r2 = 补给轮:合成结算行(source='synthetic_supply',boss 节点
+    # 补给形态)+ 对应的一帧选卡确认后快照(phase='supply_pick')
+    out_rows.append({**_out('run_20260830_110000', 1, 2, '2026-08-30T11:02:00',
+                            45, node_type='boss'),
+                     'source': 'synthetic_supply'})
+    _write_jsonl(replay, 'outcomes.jsonl', out_rows)
+    dec_rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
+    dec_rows.append({**_dec('run_20260830_110000', 1, 2, '2026-08-30T11:01:50'),
+                     'phase': 'supply_pick'})
+    _write_jsonl(replay, 'decisions.jsonl', dec_rows)
+    a = arch.build_archive(replay, arch.assign_games(replay)[1])
+    r2 = next(r for r in a['rounds'] if (r['plane'], r['round']) == (1, 2))
+    assert r2['n_decision_frames'] == 1   # 补给轮 n>=1(写入端补帧后)
+    assert r2['terminal_source'] == 'last_decision_frame'
+
+
 # ===== v4 返修(w943 审计 P2-4 版本迁移读端 / P2-5 收口类型)=====
 
 def _read_archive_file(replay: Path, game_id: str) -> dict:
