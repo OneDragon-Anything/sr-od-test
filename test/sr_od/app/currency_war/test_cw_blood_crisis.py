@@ -956,9 +956,18 @@ def test_c1_scope_guards() -> None:
 
 
 def test_c1_default_off() -> None:
-    """默认关=零漂移锚:registry 缺省下 C1 判据恒 False。"""
+    """默认关=零漂移锚:registry 缺省下 C1 判据恒 False;同一 C1 形帧
+    开关关 → 六类候选全按既有行为放行,链日志无 c1_directed 原因
+    (逐位一致)。"""
     assert not c1_directed_active(_c1_state(), _boss_session(),
                                   _c1_directed_spend_DEFAULT_REGISTRY)
+    tgt = _target_name()
+    st = _bench_full_state(shop=[_c1_directed_spend_card(tgt)])
+    sess = _boss_session()
+    kept_off, flog_off = _c1_directed_spend_filter_candidates(_cands(tgt), st, sess,
+                                           _c1_directed_spend_DEFAULT_REGISTRY)
+    assert {c.tag for c in _cands(tgt)} <= {c.tag for c in kept_off}
+    assert not any(e.get('c1_directed') for e in flog_off)
 
 
 # --- 定向优先级锁:C1 帧内的零增量支出收窄 ------------------------------------
@@ -1016,18 +1025,6 @@ def test_c1_keeps_merge_and_directed_refresh() -> None:
                                  _boss_session(), _REG_C1)
     assert any(c.merge and c.tag == 'line_carry' for c in kept3), \
         '合成候选在合成后可上帧放行(消场上份净腾上阵位)'
-
-
-def test_c1_off_zero_drift() -> None:
-    """零漂移锚:同一 C1 形帧开关关 → 六类候选全按既有行为放行,链日志
-    无 c1_directed 原因(逐位一致)。"""
-    tgt = _target_name()
-    st = _bench_full_state(shop=[_c1_directed_spend_card(tgt)])
-    sess = _boss_session()
-    kept_off, flog_off = _c1_directed_spend_filter_candidates(_cands(tgt), st, sess,
-                                           _c1_directed_spend_DEFAULT_REGISTRY)
-    assert {c.tag for c in _cands(tgt)} <= {c.tag for c in kept_off}
-    assert not any(e.get('c1_directed') for e in flog_off)
 
 
 # ==================== w403_hp_down_guard ====================
