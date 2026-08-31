@@ -394,6 +394,25 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     # 只启决策层意向输出(落 reason/遥测),执行面未接(巨星 step2 坐标
     # 未建档+机制效果无真值);默认关;语义注释落点=registry 字段块
     'megastar_enhance_enabled': ('bool', False),
+    # ===== 危机刷新不变量门(w951 P36-a 并行批;默认关零漂移)=====
+    # 同 registry 并行落码,此处代登记以保持共享面锁绿;w951 批收尾
+    # 时如自登记请去重本条。
+    'crisis_refresh_invariant_enabled': ('bool', False),
+    # ===== R-B 三信号商店件定价(W920 设计件批B;W947)=====
+    # 伞+信号常数默认值=DESIGN 建议值占位(sim A/B 内扫,prereg=
+    # docs/develop/currency_war/prereg/w947_rb_signal_pricing_prereg.md);
+    # 贯穿度=Q1 数据字段化非标定旋钮;语义注释落点=registry 字段块
+    'rb_signal_pricing_enabled': ('bool', False),
+    'rb_s3_enabled': ('bool', True),
+    'rb_s1_unit': ('float', 1.95),
+    'rb_s2_threshold': ('float', 0.85),
+    'rb_s2_unit': ('float', 1.0),
+    'rb_s3_unit': ('float', 0.5),
+    'rb_retention_q1': ('dict[str, float]', {
+        '千冶·刃': 0.95, '姬子·启行': 0.88, '花火': 0.81,
+        '三月七': 0.80, '星期日': 0.66, '藿藿': 0.44, '卡芙卡': 0.35,
+        '爻光': 0.41, '丹恒·饮月': 0.32, '椒丘': 0.26, '艾丝妲': 0.05,
+    }),
 }
 
 #: registry 模块级标定常量期望表(名字 → 归一化值;与字段同属标定面,
