@@ -1,14 +1,17 @@
-"""预算-回执契约锁(w921_rd_design DESIGN 批1 §1.1;R-D 姿态-执行断裂)。
+"""预算-回执契约锁(ADR-0504;R-D 姿态-执行断裂,无条件生效)。
 
-设计出处单一源 = ``.debug/temp/currency_war/w921_rd_design/DESIGN.md``
-(三段契约:授权包→执行回执→对账门);判前预注册 =
-同目录 ``PREREG.md``(sim A/B 主判据判前锁定)。
+设计出处单一源 = ADR-0504(决策 why)+ 判前预注册 =
+`docs/develop/currency_war/prereg/w937_spend_receipt/PREREG.md` v2。
+原开关 spend_receipt_gate_enabled 已随除开关批删除(W951 同形态:
+A/B v1+v2 两轮判正+生产写入端已接线 → 契约无条件生效,关臂零漂移锚
+随开关消亡)。
 
 锁面:
 - 授权包装配(premises/auth_id/buy_budget):前提成立的帧授权字段
-  就位(DESIGN §1.1-A);
+  就位(§1.1-A);
 - 产出侧拒发(D1):板满∧bench 空 → 升级授权不发(13-2 p2r4 形态);
-  开关关(守卫移除负控)→ 同帧授权照发 = 契约洞复现;
+  守卫移除红检 = monkeypatch 旁路 attach(旧关臂形态)→ 同帧授权照发
+  = 契约洞复现(锁敏感性证明);
 - 单帧锁(r4 形态,复盘 g_20260831_032006 p1r4):posture=升级且预算
   足够 → 升级动作必须出现,或有四枚举回执;
 - 回执四枚举:no_channel(20-5 p1r5 补给帧形态)/ no_premise /
@@ -16,7 +19,7 @@
 - 对账门三选一:分配器辖域帧只记录交 allocator(不降级)/ 危机帧
   交 crisis release / 常规帧姿态降级 tag='存息'+posture_unfulfilled
   显式声明;
-- 开关关零漂移:契约面全旁路,session 字段恒 None、姿态零改动。
+- 帧级复位/奖励帧义务豁免/reward 通道辖域/免费消费计数(返修批)。
 """
 from __future__ import annotations
 
@@ -68,12 +71,6 @@ def _quiet_logging():
     logging.disable(prev)
 
 
-def _reg(on: bool):
-    """契约开关注入臂(on=契约开 / off=零漂移基线臂)。"""
-    return dataclasses.replace(DEFAULT_REGISTRY,
-                               spend_receipt_gate_enabled=on)
-
-
 def _st(node: str = 'battle', gold: int = 52, hp: int = 62,
         plane: int = 1, round_num: int = 4,
         bench: list[BenchChar] | None = None,
@@ -100,14 +97,14 @@ def _sess(posture: Posture, st: GameState) -> StrategySession:
 _BENCH_WAITING = [BenchChar(char_id='爻光', faction='仙舟', slot=1)]
 
 
-# ---------- 授权包装配(DESIGN §1.1-A) ----------
+# ---------- 授权包装配(§1.1-A) ----------
 
 def test_auth_package_attached_when_premises_hold() -> None:
     """前提成立帧:授权包三件就位(auth_id/premises),姿态标签不变。"""
     st = _st(bench=_BENCH_WAITING)
     posture = Posture(level_up=True, refresh_budget=2, tag='升级+D2')
     sess = _sess(posture, st)
-    arbitrate([], st, sess, _reg(True))
+    arbitrate([], st, sess, DEFAULT_REGISTRY)
     cached = sess.v3_dp_posture.posture
     assert cached.auth_id == f'{st.plane}-{st.round_num}'
     assert cached.premises == ('pop_slot', 'spend_channel')
@@ -124,18 +121,18 @@ def test_reward_frame_carries_buy_budget() -> None:
     """奖励帧买侧扩张预算 = 溢余段(g−R*;D2 雏形,[1]/[15] 压库授权面)。"""
     st = _st(node='reward', gold=60, bench=_BENCH_WAITING)
     sess = _sess(Posture(tag='存息'), st)
-    arbitrate([], st, sess, _reg(True))
+    arbitrate([], st, sess, DEFAULT_REGISTRY)
     cached = sess.v3_dp_posture.posture
     # 前置自证:溢余>0 才有授权量(公式本身的健全性检查)
     from sr_od.application.currency_war.decision.decision_v2.economy_cycle import (
         overflow,
     )
-    assert overflow(st, sess, _reg(True)) > 0
+    assert overflow(st, sess, DEFAULT_REGISTRY) > 0
     assert cached.buy_budget > 0
     assert sess.v3_spend_auth['buy_budget'] == cached.buy_budget
 
 
-# ---------- 产出侧拒发(D1;13-2 形态)+ 守卫移除负控 ----------
+# ---------- 产出侧拒发(D1;13-2 形态)+ 守卫移除红检 ----------
 
 def _board_full_state() -> GameState:
     """13-2 p2r4 形态:板满 ∧ bench 空(升级无 slot 可花)。"""
@@ -148,7 +145,7 @@ def test_production_side_rejects_levelup_without_premise() -> None:
     """板满∧bench 空:升级授权产出侧拒发(level_up=False,tag 回落存息)。"""
     st = _board_full_state()
     sess = _sess(Posture(level_up=True, tag='升级'), st)
-    res = arbitrate([_lv_cand(5.0)], st, sess, _reg(True))
+    res = arbitrate([_lv_cand(5.0)], st, sess, DEFAULT_REGISTRY)
     cached = sess.v3_dp_posture.posture
     assert cached.level_up is False
     assert cached.tag == '存息'
@@ -163,16 +160,20 @@ def test_production_side_rejects_levelup_without_premise() -> None:
                for row in res.log)
 
 
-def test_guard_removed_negative_control() -> None:
-    """守卫移除负控(锁敏感性):开关关 = 同帧授权照发、契约面全旁路。
+def test_guard_bypass_negative_control(monkeypatch) -> None:
+    """守卫移除红检(锁敏感性):旁路授权包装配(旧关臂形态)→ 同帧
 
-    语义对照:off 臂姿态保持「升级」(授权悬空,13-2 病灶形态)而契约
-    不记录不降级——这就是本契约关掉的那个洞;若未来有人把产出侧拒发
-    改成无条件放行,本锁与上一锁双双变红。
+    授权照发、契约面全旁路。原 gate 判据已随开关删除;本锁以 monkeypatch
+    三函数为「契约被旁路」的等价形态——若未来有人把装配改成可被旁路
+    (或恢复条件化),本锁与上一锁双双变红。
     """
     st = _board_full_state()
     sess = _sess(Posture(level_up=True, tag='升级'), st)
-    arbitrate([_lv_cand(5.0)], st, sess, _reg(False))
+    import sr_od.application.currency_war.decision.decision_v2.arbiter as _arb
+    monkeypatch.setattr(_arb, 'attach_spend_authorization',
+                        lambda *a, **k: None)
+    monkeypatch.setattr(_arb, 'build_spend_receipt', lambda *a, **k: None)
+    arbitrate([_lv_cand(5.0)], st, sess, DEFAULT_REGISTRY)
     cached = sess.v3_dp_posture.posture
     assert cached.level_up is True          # 授权照发(授权悬空)
     assert cached.tag == '升级'
@@ -196,7 +197,7 @@ def test_r4_form_upgrade_action_or_receipt() -> None:
     """
     st = _st(gold=52, bench=_BENCH_WAITING)   # premise ok,budget 足够
     sess = _sess(Posture(level_up=True, tag='升级'), st)
-    res = arbitrate([_lv_cand(5.0)], st, sess, _reg(True))
+    res = arbitrate([_lv_cand(5.0)], st, sess, DEFAULT_REGISTRY)
     has_levelup = any(isinstance(a, LevelUp) for a in res.actions)
     receipt = sess.v3_posture_receipt or {}
     assert has_levelup or receipt.get('levelup_reason') in _FOUR_REASONS
@@ -211,7 +212,7 @@ def test_receipt_no_channel_supply_frame() -> None:
     """
     st = _st(node='supply', gold=61, bench=_BENCH_WAITING)
     sess = _sess(Posture(level_up=True, tag='升级'), st)
-    arbitrate([], st, sess, _reg(True))
+    arbitrate([], st, sess, DEFAULT_REGISTRY)
     receipt = sess.v3_posture_receipt
     assert receipt is not None
     assert receipt['levelup_reason'] == 'no_channel'
@@ -229,7 +230,7 @@ def test_receipt_no_premise_exec_time() -> None:
     """
     st = _st(gold=60, bench=_BENCH_WAITING)   # 产出时 premise ok
     sess = _sess(Posture(level_up=True, tag='升级'), st)
-    attach_spend_authorization(st, sess, _reg(True))
+    attach_spend_authorization(st, sess, DEFAULT_REGISTRY)
     # 执行时点前提复核直接消费 posture_release.levelup_premise_ok,
     # 用板满态构造「授权后前提失效」的残余面
     from sr_od.application.currency_war.decision.decision_v2.posture_release import (
@@ -238,7 +239,7 @@ def test_receipt_no_premise_exec_time() -> None:
     )
     full = _board_full_state()
     assert not levelup_premise_ok(full)
-    receipt = build_spend_receipt(full, sess, _reg(True), [], [])
+    receipt = build_spend_receipt(full, sess, DEFAULT_REGISTRY, [], [])
     assert receipt is not None
     assert receipt.levelup_reason == 'no_premise'
 
@@ -251,7 +252,7 @@ def test_receipt_no_budget_table_lock() -> None:
                           'refresh_budget': 0, 'buy_budget': 0,
                           'premises': (), 'suppressed': ()}
     receipt = SpendReceipt(buy_reason='no_budget')
-    un = reconcile_spend(st, sess, _reg(True), receipt)
+    un = reconcile_spend(st, sess, DEFAULT_REGISTRY, receipt)
     assert un is not None
     assert un['reason'] == 'no_budget' and un['action'] == 'downgrade'
 
@@ -262,9 +263,9 @@ def test_reconcile_allocator_jurisdiction_records_only() -> None:
     """死亡域帧:授权未兑现只记录交分配器(action='allocator'),不降级。"""
     st = _st(node='battle', gold=61, hp=20, round_num=1, bench=_BENCH_WAITING)
     # D2 入口帧臂默认关(realization_d2_enabled=False);测试臂显式开
-    #(谓词引用而非重造,DESIGN §3;与 alloc_domain 同源判定)
+    #(谓词引用而非重造,ADR-0504 §引用不重造;与 alloc_domain 同源判定)
     reg = dataclasses.replace(
-        _reg(True), realization_chain_enabled=True,
+        DEFAULT_REGISTRY, realization_chain_enabled=True,
         realization_d2_enabled=True)
     sess = _sess(Posture(level_up=True, tag='升级'), st)
     assert alloc_domain(st, sess, reg) is not None
@@ -279,26 +280,12 @@ def test_reconcile_allocator_jurisdiction_records_only() -> None:
 def test_reconcile_crisis_frame_hands_to_release_arm() -> None:
     """危机帧(应急带∧溢余):授权未兑现交 crisis release 既有臂,只记录。"""
     st = _st(node='battle', gold=100, hp=20, bench=_BENCH_WAITING)
-    reg = _reg(True)
     sess = _sess(Posture(level_up=True, tag='升级'), st)
     # 前置自证:危机臂辖域命中(谓词单一源引用;ADR-0503)
-    assert crisis_release_open(st, sess, reg)
-    arbitrate([], st, sess, reg)
+    assert crisis_release_open(st, sess, DEFAULT_REGISTRY)
+    arbitrate([], st, sess, DEFAULT_REGISTRY)
     un = sess.v3_posture_unfulfilled
     assert un is not None and un['action'] == 'crisis_release'
-
-
-# ---------- 开关关零漂移 ----------
-
-def test_switch_off_zero_drift_on_normal_frame() -> None:
-    """开关关:常规帧回执/对账/授权包全旁路,session 字段恒 None。"""
-    st = _st(node='supply', gold=61, bench=_BENCH_WAITING)
-    sess = _sess(Posture(level_up=True, tag='升级'), st)
-    arbitrate([], st, sess, _reg(False))
-    assert sess.v3_spend_auth is None
-    assert sess.v3_posture_receipt is None
-    assert sess.v3_posture_unfulfilled is None
-    assert sess.v3_dp_posture.posture.tag == '升级'   # 姿态零改动
 
 
 # ---------- 返修批(w943_audit5):复位/义务豁免/通道辖域/免费计数 ----------
@@ -311,13 +298,13 @@ def test_unfulfilled_reset_per_frame() -> None:
     """
     st1 = _st(node='supply', gold=61, bench=_BENCH_WAITING)
     sess = _sess(Posture(level_up=True, tag='升级'), st1)
-    arbitrate([], st1, sess, _reg(True))
+    arbitrate([], st1, sess, DEFAULT_REGISTRY)
     assert sess.v3_posture_unfulfilled is not None   # 未兑现声明已写
     # 下一帧:仅刷新授权且被通道前提产出侧拒发 → 无有效授权 → 无声明
     st2 = _st(node='supply', gold=61, bench=_BENCH_WAITING, round_num=5)
     sess.v3_dp_posture = RoundPosture((st2.plane, st2.round_num),
                                       Posture(refresh_budget=2, tag='+D2'))
-    arbitrate([], st2, sess, _reg(True))
+    arbitrate([], st2, sess, DEFAULT_REGISTRY)
     auth = sess.v3_spend_auth
     assert auth is not None and not auth['level_up'] \
         and auth['refresh_budget'] == 0   # 授权被拒发殆尽
@@ -331,7 +318,7 @@ def test_reward_frame_legal_hoarding_not_unfulfilled() -> None:
     """
     st = _st(node='reward', gold=60, bench=_BENCH_WAITING)
     sess = _sess(Posture(tag='存息'), st)
-    arbitrate([], st, sess, _reg(True))
+    arbitrate([], st, sess, DEFAULT_REGISTRY)
     assert sess.v3_spend_auth['buy_budget'] > 0   # 前置:授权面已发
     assert 'buy_reason' not in (sess.v3_posture_receipt or {})
     assert sess.v3_posture_unfulfilled is None    # 攒息≠病灶
@@ -340,7 +327,7 @@ def test_reward_frame_legal_hoarding_not_unfulfilled() -> None:
         build_spend_receipt,
     )
     sess.v3_spend_auth['buy_obligation'] = True
-    receipt = build_spend_receipt(st, sess, _reg(True), [], [])
+    receipt = build_spend_receipt(st, sess, DEFAULT_REGISTRY, [], [])
     assert receipt is not None and receipt.buy_reason == 'no_candidate'
 
 
@@ -364,8 +351,8 @@ def test_free_refresh_counts_fulfilled() -> None:
     from sr_od.application.currency_war.kernel.cw_state import RefreshShop
     st = _st(node='battle', bench=_BENCH_WAITING)
     sess = _sess(Posture(refresh_budget=2, tag='+D2'), st)
-    attach_spend_authorization(st, sess, _reg(True))
-    receipt = build_spend_receipt(st, sess, _reg(True),
+    attach_spend_authorization(st, sess, DEFAULT_REGISTRY)
+    receipt = build_spend_receipt(st, sess, DEFAULT_REGISTRY,
                                   [RefreshShop(cost=0)], [])
     assert receipt is not None
     assert receipt.refresh_spent == 0        # 实付 0 金,不按缺省虚记 2

@@ -243,27 +243,36 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
     (deployed=cap)隔离 ① 路径;金 60(花后 52≥50 平台未破)帧锁
     排程臂放行,金 49(花后 45<50)帧锁平台越界拒。
     批 3 重推:注入对象从 ev.dp_posture(DP 退役)改为排程单一址
-    cw_economy.schedule_upgrade(kernel,期 0b 下沉);producer 规则锁在 test_cw_w633_migration_b3。"""
+    cw_economy.schedule_upgrade(kernel,期 0b 下沉);producer 规则锁在 test_cw_w633_migration_b3。
+    契约时代迁移(ADR-0504 无条件生效,除开关批):bench 垫一件非目标
+    杂件使升级前提 pop_slot 成立(bench 有件∨cap 有空位)——否则执行侧
+    前提防线在排程臂之前拒付(13-2 形态);杂件不构成人口位(①臂要求
+    bench 件 ∈ 目标集),排程臂隔离意图不变。"""
     from sr_od.application.currency_war.kernel import cw_economy
 
     st = _state(round_num=6, gold=51, level=6,
                 deployed=[BenchChar(slot=i, char_id=f'杂件{i}',
                                     faction='公司', star=1)
                           for i in range(6)],
-                bench=[], shop=[])
+                bench=[BenchChar(slot=0, char_id='垫件甲',
+                                 faction='公司', star=1)],
+                shop=[])
     assert len(st.deployed) >= st.max_units(), '前置:无人口位'
     cand = Candidate(action=LevelUp(cost=4), tag='levelup', source='xp')
     st60 = _state(round_num=6, gold=60, level=6,
-                  deployed=list(st.deployed), bench=[], shop=[])
+                  deployed=list(st.deployed),
+                  bench=[BenchChar(slot=0, char_id='垫件甲',
+                                   faction='公司', star=1)],
+                  shop=[])
     sess = StrategySession()
     sess.v3_mode = 'economy'
     monkeypatch.setattr(cw_economy, 'schedule_upgrade',
-                        lambda s, ss, rg: True)
+                        lambda s, ss, rg=None: True)
     res_up = arbitrate([(cand, 1.0, {})], st60, sess, _REG)
     assert any(isinstance(a, LevelUp) for a in res_up.actions), \
         '排程说升且平台未破(60-4=52≥50)→ 必须放行'
     monkeypatch.setattr(cw_economy, 'schedule_upgrade',
-                        lambda s, ss, rg: False)
+                        lambda s, ss, rg=None: False)
     sess2 = StrategySession()
     sess2.v3_mode = 'economy'
     res_save = arbitrate([(Candidate(action=LevelUp(cost=4),
@@ -271,7 +280,9 @@ def test_dp_posture_consumed_by_arbiter(monkeypatch) -> None:
                            1.0, {})],
                          _state(round_num=6, gold=49, level=6,
                                 deployed=list(st.deployed),
-                                bench=[], shop=[]), sess2, _REG)
+                                bench=[BenchChar(slot=0, char_id='垫件甲',
+                                                 faction='公司', star=1)],
+                                shop=[]), sess2, _REG)
     row = next(r for r in res_save.log if r['tag'] == 'levelup')
     assert row['accepted'] is False and '息引擎总账拒' in row['reject'], row
 

@@ -298,9 +298,8 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'recipe_fence_enabled': ('bool', False),
     'form_break_sell_blocked_enabled': ('bool', False),
     'below_floor_spend_gate_enabled': ('bool', False),
-    # ===== 预算-回执契约(w921_rd_design DESIGN 批1;默认关=零漂移,
-    # 开臂判据挂账=registry 字段注释/.debug 预注册)=====
-    'spend_receipt_gate_enabled': ('bool', False),
+    # (spend_receipt_gate_enabled 已随除开关批删除:预算-回执契约无条件
+    # 生效,决策 why = ADR-0504——字段条目随批移除,非语义漂移。)
     # (framework_startup_v2_enabled 已随框架启动基建退役删除,ADR-0468)
     # ===== DirectorV2 备战循环(W606 落件;W620 批1升正删开关,仅存影子诊断)=====
     'director_v2_shadow_compare': ('bool', False),
@@ -405,6 +404,10 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'stagnate_window_rounds': ('int', 2),
     'salvage_deadline_nodes': ('int', 2),
     'salvage_window_rounds': ('int', 3),
+    # ===== spend_receipt_gate_enabled:除开关批在飞期删后又恢复字段,面册
+    #  缺条目致共享面锁红——按现 registry 真值(默认关)代登记占位;归属批
+    #  收尾时自登记去重(同危机刷新不变量门先例)。
+    'spend_receipt_gate_enabled': ('bool', False),
     # (R-B 三信号商店件定价七字段已随 W947 A/B 两轮判负整机制删码,
     #  删字段须移除条目 = 面册锁文法的反向操作;ADR-0507 留档。)
 }
