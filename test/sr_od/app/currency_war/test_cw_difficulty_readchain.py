@@ -39,34 +39,9 @@ def _read_ctx(monkeypatch, live_ret, session_ed):
 
 
 class TestDifficultyReadChain:
-    """读链翻转三例(cw_observation 尾段 enemy_difficulty 赋值块)。"""
-
-    def test_live_read_wins(self, monkeypatch) -> None:
-        """真读命中 → 用真值 + live=True(翻转点:session 不再压死)。"""
-        st, ctx, match = _read_ctx(monkeypatch, live_ret=125, session_ed=108)
-        # 直接调含翻转块的函数成本高(整段 read_game_state 依赖多);
-        # 等价锁:复刻翻转逻辑的判定式 + 字段语义锁。
-        # 此处锁语义:live 优先于 session。
-        _ed_session = match.session.enemy_difficulty
-        _ed_live = cw_observation.read_enemy_difficulty(ctx, None)
-        assert _ed_live == 125
-        if _ed_live is not None:
-            st.enemy_difficulty, st.enemy_difficulty_live = _ed_live, True
-        else:
-            st.enemy_difficulty, st.enemy_difficulty_live = _ed_session, False
-        assert st.enemy_difficulty == 125 and st.enemy_difficulty_live is True
-
-    def test_fallback_to_session(self, monkeypatch) -> None:
-        """真读 None(stylized OCR 常空)→ 回退 session 恒值 + live=False。"""
-        st, ctx, match = _read_ctx(monkeypatch, live_ret=None, session_ed=108)
-        _ed_session = match.session.enemy_difficulty
-        _ed_live = cw_observation.read_enemy_difficulty(ctx, None)
-        assert _ed_live is None
-        if _ed_live is not None:
-            st.enemy_difficulty, st.enemy_difficulty_live = _ed_live, True
-        else:
-            st.enemy_difficulty, st.enemy_difficulty_live = _ed_session, False
-        assert st.enemy_difficulty == 108 and st.enemy_difficulty_live is False
+    """字段默认语义(翻转逻辑本体在 read_game_state 尾段,依赖整段观测
+    环境,行为面由回放忠实锁与序列化锁承载;自抄复刻式断言已删——
+    测试体复刻被测逻辑=R2 被测代码未被调用,2026-08-31 pass2 裁决)。"""
 
     def test_both_none(self, monkeypatch) -> None:
         """双源皆无 → None + live=False(不伪造)。"""
