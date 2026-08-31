@@ -167,11 +167,15 @@ def test_crisis_budget_bounded_release() -> None:
 
 
 def test_crisis_tier_truncation_gate() -> None:
-    """息档截断门在危机臂照常辖:gold=98(档内余量 8)逐笔 2 金放行至
-    90,跨档帧拒(花后不跨息档,essential=False 车道不因危机豁免)。"""
+    """息档截断门在危机臂的**常态刷新**照常辖(ADR-0506 开臂重推):gold=98
+    (档内余量 8)逐笔 2 金放行至 90,跨档帧拒。首刷豁免面(ADR-0506)只辖
+    本帧第一刷且生产计数在 arbiter 采纳点——本锁置 v2_round_refreshes=1
+    钉「首刷已兑现后的常态截断」语义;被取代的旧表述(essential=False
+    车道不因危机豁免,隐含全域适用)随 ADR-0506 过期。"""
     st = _state(gold=98)
     sess = _sess(st)
     evaluate_release(st, sess, _REG_ON, 'FORM', sess.v3_dp_posture.posture)
+    sess.v2_round_refreshes = 1    # 首刷已兑现:豁免面之外,常态截断辖
     gold = 98
     spent = 0
     for _ in range(6):
@@ -179,6 +183,7 @@ def test_crisis_tier_truncation_gate() -> None:
             break
         gold -= 2
         spent += 2
+        sess.v2_round_refreshes += 1    # 生产计数镜像(arbiter 采纳点)
     assert spent == 8 and gold == 90
     assert authorize_release_refresh(sess, gold, 2, _REG_ON) == ''
 

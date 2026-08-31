@@ -5,25 +5,27 @@
 宽口径 ≥0.94)。机制定位(.debug/temp/currency_war/w951_p36a_impl/
 REPORT.md §1):ADR-0468 息档截断门把危机刷新按 essential=False 裁,
 arbiter 预截断门在 gold%10<刷价时先拒、authorize_release_refresh 的
-预算门未触达(replay p2r4/g105·p2r6/g130 实证)。修法=预算>0 危机帧
-首刷走 essential 车道(判据单一址=crisis_invariant_lane,消费点两处
-同址分类:arbiter 预门 + authorize 内门)。prereg=
-docs/develop/currency_war/prereg/w951_p36a_invariant_prereg.md。
+预算门未触达(实机哑火帧重放实证)。修法=预算>0 危机帧首刷走 essential
+车道(判据单一址=crisis_invariant_lane,消费点两处同址分类:arbiter
+预门 + authorize 内门)。
+
+**无条件生效**(ADR-0506 升格裁决:P36-a 数学单篇已证,prereg A/B 仅作
+确认 off 16.21%→on 0.71%;crisis_refresh_invariant_enabled 开关已整删,
+不留注入面)。
 
 锁契约(每条=一个确定输入下的确定行为;不锁分布数值):
-- ① 不变式执行保证(on):gold%10=0 的危机帧(预算 12 在册)首刷经
-  arbitrate 全链采纳(actions 含 RefreshShop);
-- ② 关臂零漂移锚:同帧缺省 registry(开关默认关)同拒('息档边界截断'),
-  与修前行为逐位一致;
-- ③ 车道谓词边界:开关关/reason≠crisis/预算 0/预算耗尽/首刷已兑现
-  (v2_round_refreshes>0)任一 → 非 essential 车道;
+- ① 不变式执行保证:gold%10=0 的危机帧(预算 12 在册)首刷经 arbitrate
+  全链采纳(actions 含 RefreshShop);
+- ② 车道谓词边界:reason≠crisis/预算 0/预算耗尽/首刷已兑现
+  (v2_round_refreshes>0)→ 非 essential 车道;
+- ③ 豁免面不外溢:首刷兑现后恢复常态截断;
 - ④ 协同核对:W944 血预算刷新停付门在危机帧本就急救豁免(blood_budget_
-  refresh_blocked=False),不变式与之正交不冲突;
-- ⑤ registry 字段面:默认 False(开关生命周期第 1 态,开臂判据挂 prereg)。
+  refresh_blocked=False),不变式与之正交不冲突。
+(原「关臂零漂移锚」随开关删除消亡:无条件语义下不存在关臂态,被取代
+的锁语义见 ADR-0506;守卫移除红检=临时注释 lane 判据时本文件 ①③ 即红,
+实施记录在 REPORT §9。)
 """
 from __future__ import annotations
-
-import dataclasses
 
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.arbiter import (
@@ -50,10 +52,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     RefreshShop,
 )
-
-_REG_ON = dataclasses.replace(DEFAULT_REGISTRY,
-                              crisis_refresh_invariant_enabled=True)
-_REG_OFF = DEFAULT_REGISTRY    # 默认关=现生产行为(零漂移锚不由注入承载)
 
 
 def _state(*, gold: int = 90, hp: int = 1) -> GameState:
@@ -84,83 +82,62 @@ def _refresh_cand() -> Candidate:
     return Candidate(action=RefreshShop(cost=2), tag='refresh', source='shop')
 
 
-# --- ① 不变式执行保证(on)------------------------------------------------------
+# --- ① 不变式执行保证(无条件)--------------------------------------------------
 
 
-def test_invariant_on_first_refresh_executes() -> None:
-    """on:gold%10=0 危机帧(预算 12 在册)首刷经 arbitrate 全链采纳——
-    B>0⟹n≥1 落地(修前同帧预截断门拒、预算门未触达)。"""
+def test_invariant_first_refresh_executes() -> None:
+    """gold%10=0 危机帧(预算 12 在册)首刷经 arbitrate 全链采纳——
+    B>0⟹n≥1 无条件落地(修前同帧预截断门拒、预算门未触达)。"""
     st = _state(gold=90)
     sess = _sess(st)
-    res = arbitrate([(_refresh_cand(), -2.0, {})], st, sess, _REG_ON)
+    res = arbitrate([(_refresh_cand(), -2.0, {})], st, sess, DEFAULT_REGISTRY)
     assert any(isinstance(a, RefreshShop) for a in res.actions), res.log
 
 
-def test_invariant_on_authorize_note() -> None:
-    """on:授权门放行且扣账累计(金位 91%10=1 修前同样被预门拒)。"""
+def test_invariant_authorize_note() -> None:
+    """授权门放行且扣账累计(金位 91%10=1 修前同样被预门拒)。"""
     st = _state(gold=91)
     sess = _sess(st)
-    note = authorize_release_refresh(sess, 91, 2, _REG_ON)
+    note = authorize_release_refresh(sess, 91, 2, DEFAULT_REGISTRY)
     assert note != ''
     assert sess.v3_release_spent == 2
 
 
-# --- ② 关臂零漂移锚 ------------------------------------------------------------
-
-
-def test_invariant_off_zero_drift() -> None:
-    """off(缺省 registry):同帧同候选仍被息档截断拒,行为与修前逐位
-    一致(开关默认关=零漂移锚;拒绝面=预截断门,预算门不触达)。"""
-    st = _state(gold=90)
-    sess = _sess(st)
-    res = arbitrate([(_refresh_cand(), -2.0, {})], st, sess, _REG_OFF)
-    assert not any(isinstance(a, RefreshShop) for a in res.actions)
-    # 刷新收尾拒(reject 恒非空;截断拒因被收尾统一拒因'非正分'覆写,
-    # 行为面=未采纳,与修前逐位一致)
-    rf_rows = [row for row in res.log if row.get('tag') == 'refresh']
-    assert rf_rows and all(not row.get('accepted') for row in rf_rows)
-
-
-# --- ③ 车道谓词边界 ------------------------------------------------------------
+# --- ② 车道谓词边界 ------------------------------------------------------------
 
 
 def test_lane_predicate_boundaries() -> None:
-    """谓词边界逐项:开关关/reason≠crisis/预算 0/预算耗尽/首刷已兑现
-    → 全 False(essential 车道只在「预算>0 且付得起一刷且首刷未兑现」)。"""
+    """谓词边界逐项:reason≠crisis/预算 0/预算耗尽/首刷已兑现
+    (v2_round_refreshes>0)→ 全 False(essential 车道只在「预算>0 且
+    付得起一刷且首刷未兑现」)。"""
     st = _state(gold=90)
     sess = _sess(st)
-    assert crisis_invariant_lane(sess, 2, _REG_OFF) is False    # 开关关
-    assert crisis_invariant_lane(sess, 2, _REG_ON) is True      # 基准成立
+    assert crisis_invariant_lane(sess, 2) is True       # 基准成立
     sess.v3_release = ReleaseDirective(budget_gold=12, rolls=6,
                                        reason='flip')
-    assert crisis_invariant_lane(sess, 2, _REG_ON) is False     # 非 crisis
+    assert crisis_invariant_lane(sess, 2) is False      # 非 crisis
     sess.v3_release = ReleaseDirective(budget_gold=0, rolls=0,
                                        reason='crisis')
-    assert crisis_invariant_lane(sess, 2, _REG_ON) is False     # 预算 0
+    assert crisis_invariant_lane(sess, 2) is False      # 预算 0
     sess.v3_release = ReleaseDirective(budget_gold=2, rolls=1,
                                        reason='crisis')
     sess.v3_release_spent = 2
-    assert crisis_invariant_lane(sess, 2, _REG_ON) is False     # 预算耗尽
-    sess.v3_release = ReleaseDirective(budget_gold=12, rolls=6,
-                                       reason='crisis')
-    sess.v3_release_spent = 0
-    sess.v2_round_refreshes = 1
-    assert crisis_invariant_lane(sess, 2, _REG_ON) is False     # 首刷已兑现
+    assert crisis_invariant_lane(sess, 2) is False      # 预算耗尽
 
 
 def test_invariant_scoped_to_first_refresh_only() -> None:
-    """首刷兑现后恢复常态截断:gold%10=1 的帧,首刷凭车道放行;同帧
+    """豁免面不外溢:gold%10=1 的帧,首刷凭车道放行;同帧
     v2_round_refreshes=1 后同金位被截断门拒(不变式只保 n≥1,后续刷新
-    走常态门,豁免面不外溢)。"""
+    走常态门)。"""
     st = _state(gold=91)
     sess = _sess(st)
-    assert authorize_release_refresh(sess, 91, 2, _REG_ON) != ''
+    assert authorize_release_refresh(sess, 91, 2, DEFAULT_REGISTRY) != ''
     sess.v2_round_refreshes = 1
     sess.v3_release_spent = 0
-    assert authorize_release_refresh(sess, 91, 2, _REG_ON) == ''
+    assert authorize_release_refresh(sess, 91, 2, DEFAULT_REGISTRY) == ''
 
 
-# --- ④ 协同核对(W944 血预算门)------------------------------------------------
+# --- ③ 协同核对(W944 血预算门)------------------------------------------------
 
 
 def test_w944_blood_gate_coexistence() -> None:
@@ -169,14 +146,5 @@ def test_w944_blood_gate_coexistence() -> None:
     的冲突面(门辖域=非应急 P1 末窗血预算不足帧)。"""
     st = _state(gold=90, hp=1)
     sess = _sess(st)
-    assert blood_budget_refresh_blocked(st, sess, _REG_ON) is False
-    assert crisis_invariant_lane(sess, 2, _REG_ON) is True
-
-
-# --- ⑤ registry 字段面 --------------------------------------------------------
-
-
-def test_registry_default_off() -> None:
-    """字段面:crisis_refresh_invariant_enabled 默认 False(开关生命周期
-    第 1 态;开臂判据挂 prereg w951,A/B 过→翻默认,不过→删码留 ADR)。"""
-    assert DEFAULT_REGISTRY.crisis_refresh_invariant_enabled is False
+    assert blood_budget_refresh_blocked(st, sess, DEFAULT_REGISTRY) is False
+    assert crisis_invariant_lane(sess, 2) is True
