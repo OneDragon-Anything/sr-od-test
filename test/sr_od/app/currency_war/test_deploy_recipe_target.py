@@ -4,7 +4,9 @@
 target=列车同行(终局),bench 有卡芙卡(仙舟框架件)。
 命题(模拟可信域内):deploy 的 target 判定在双轨期应走配方伪 comp——
 框架件是 target(不被 deploy-swap 卖、被优先部署)。
-"""
+
+
+出处:被测模块本体——现行策略锁(配方目标部署;设计总览 docs/develop/currency_war/strategy/02_comp.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 
 sys.path.insert(0, 'src')

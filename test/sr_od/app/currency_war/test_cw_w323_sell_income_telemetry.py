@@ -13,7 +13,9 @@
 
 纯逻辑/桩测试(monkeypatch 构造;TelemetryRecorder 指 tmp_path,不写真实
 .debug;_CURRENT_RUN_ID 经 monkeypatch.setattr 还原,不污染 session)。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

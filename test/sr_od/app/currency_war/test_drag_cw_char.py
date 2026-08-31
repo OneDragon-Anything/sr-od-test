@@ -3,7 +3,9 @@
 验**纯逻辑**:_src_changed 像素 diff 验 + _slot_center 槽中心解析(含 back_centers 覆盖,财富宝钻>6)。
 drag_char / drag 节点的 retry/交互(mouse_move/drag_to/中心拖+hold0)经 run_operation live 实测
 (bench→bench ✓,commit),此处不重复(交互不便单测);仅锁纯函数回归。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0120-deploy-center-drag-unified.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from types import SimpleNamespace

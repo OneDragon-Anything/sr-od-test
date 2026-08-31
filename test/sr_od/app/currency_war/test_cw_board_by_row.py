@@ -7,7 +7,9 @@
 - 全板合计视图 = front+back 之和(total 恒不丢计数)。
 
 单一源反查(验收 2,grep 全仓无第二处按排聚合)是 review 项,不进测试。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0309-board-by-row-and-bench-equip-ledger.md;docs/develop/currency_war/decisions/0392-deployed-slot-semantics.md(2026-08-31 测试瘦身批考证补记)。"""
 from sr_od.application.currency_war.kernel.cw_board_by_row import (
     BoardByRow,
     board_by_row,

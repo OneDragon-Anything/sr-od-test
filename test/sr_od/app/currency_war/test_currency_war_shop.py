@@ -2,7 +2,9 @@
 
 ``read_shop_cards`` **D-55 由 OCR 改 SIFT**(裁 商店牌-1..5 肖像区 → SIFT 立绘库 → 规范名;
 OCR 对开拓者等自定义名读不到)。``read_game_state`` 的 HUD(gold/hp/level/plane)仍 OCR。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from pathlib import Path

@@ -9,7 +9,9 @@ battle_loop 位面简报分支先例(r378b,同 kind、同 detail 风格,轮次 0
 本锁钉住:HandleBriefing.handle 源码内存在 record_exogenous 落账调用
 且 kind='briefing'——防后续重构把落账行删掉/改 kind 导致证据链再断。
 只锁接线存在性,不锁 detail 内容分布(与测试纪律「锁不锁分布数值」同判据)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

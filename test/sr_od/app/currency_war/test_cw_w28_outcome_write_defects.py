@@ -8,7 +8,9 @@ recorder.record_outcome 单一写入入口)。
 
 纯逻辑/桩测试(monkeypatch 构造 relaunch 首帧场景);不写真实 .debug
 (TelemetryRecorder 指向 tmp_path;loop 侧写入端 monkeypatch 捕获)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import time

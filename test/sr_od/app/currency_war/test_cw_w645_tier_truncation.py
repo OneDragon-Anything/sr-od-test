@@ -19,7 +19,9 @@ gold % 10 内弱占优(留金≥0、常态刷新无跨轮衰减);essential=True 
 - ⑤ 与既有刷新预算语义组合不回归:预算耗尽仍拒 / 花后 ≥ boss_floor
   仍拒 / 三门(预算→截断→地板)次序与各自独立生效;预算+档内余量均足
   → 放行且扣账累计不因截断门改变。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0468-overflow-tier-truncation.md;docs/develop/currency_war/decisions/INDEX.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession

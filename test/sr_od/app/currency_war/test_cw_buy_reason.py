@@ -4,7 +4,9 @@
 对抗审查二轮#2/#5 定谳:检查端只读 reason 不重算(第二源漂移);
 label 集合以代码分支为准(line/bridge_seed/engine/pair/p2_core/
 board_focus/emergency/swap/plan),不预设三分法。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_line_defs import classify_buy

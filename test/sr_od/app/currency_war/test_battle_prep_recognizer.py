@@ -3,7 +3,9 @@
 无备战 fixture 截图,故用 **mock 各 reader** 测组合逻辑:验证 recognizer 正确组装 dict、
 phase 走纯读(``_read_phase_round_pure``)、且**不**复用带可变状态的 ``read_phase_round`` /
 ``read_game_state``(并发安全,见 spec §6)。真实 OCR 集成待 fixture 采到后补。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0281-back-layout-level-model.md;docs/develop/currency_war/decisions/0358-owned-pool-transport-chain.md(2026-08-31 测试瘦身批考证补记)。"""
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 

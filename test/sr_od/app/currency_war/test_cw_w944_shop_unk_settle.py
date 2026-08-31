@@ -17,7 +17,9 @@ r7 刷新循环中游戏弹出模态弹窗「我来当策划/请选择一个骇�
 2. op 级行为锁(w591 手法替身):钩子重读自愈 → 不停机;持续 unknown →
    预算耗尽真停 + flag 留证;
 3. 守卫移除红检:摘掉稳定门(回退 blind sleep)→ 红。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import pathlib

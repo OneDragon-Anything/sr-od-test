@@ -3,7 +3,9 @@
 通关奖励节点后备战右侧面板出球形奖励(点球开启入账;角色/补给箱占席;席满点不动)。
 检测 = HoughCircles(**颜色分割不可行**:蓝球与背景 HSV 几乎同值,实测无分离度);
 颜色分类 = 圆心 HSV(金/灰/蓝)。fixture:8球/5球/4球/空 四态(2026-08-14 实机采集)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import pytest

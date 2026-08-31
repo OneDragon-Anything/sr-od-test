@@ -6,7 +6,9 @@
 
 剧本(指南两步用替身 op,聚焦被修节点的分流行为):
 大世界普通 →(已传送)朝露公馆入口(无「前往参与」)→ F → 货币战争大厅。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import pytest

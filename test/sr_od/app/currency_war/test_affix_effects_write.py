@@ -6,7 +6,9 @@
 用 tmp 文件 + monkeypatch ``_AFFIX_EFFECTS_PATH``,不碰真实注册表 ``affix_effects_data.py``。
 根因:简报 tooltip 未弹时 ``read_affix_effect`` 读下行(下一词缀行 / 「下一步」按钮)当效果 → garbage;
 同轮 OCR 也可能把 ``85%/60%/30%`` 坏成 ``85%160%/30%``(间歇)。详见 decisions.md D-81。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 
 import sr_od.application.currency_war.obs.cw_briefing_obs as mod

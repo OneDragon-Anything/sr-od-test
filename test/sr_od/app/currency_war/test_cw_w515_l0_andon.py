@@ -6,7 +6,9 @@
 不停 ④flag 三要素内容锁(含游戏侧执行器端到端)⑤接线存在性源码锁。
 全落盘走 tmp_path(测试纪律:不写真实 .debug/);安灯执行器逐测试注入
 假实现,不触真机。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 from pathlib import Path
 

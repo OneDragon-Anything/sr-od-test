@@ -12,7 +12,9 @@
    且 _fire_l0_andon 源码不含惰性 import(防改回);
 3. conftest 运行残留守卫:测试遗留 run_context.last_run_result → 下一
    测试看到已复位 None(跨测试序:污染测试在前,哨兵测试在后)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from pathlib import Path

@@ -2,7 +2,9 @@
 
 验证 ``read_encounter_options`` 解析:标题「遭遇其X」→ difficulty(X 漏读→1)、reward 按带 + x 归卡、
 左→右 idx。不依赖真 OCR(快);真 OCR 行为由 offline baseline probe 核实(见 process_log D-91)。
-"""
+
+
+出处:docs/develop/currency_war/strategy/05_observation.md;docs/develop/currency_war/strategy/README.md(2026-08-31 测试瘦身批考证补记)。"""
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.obs.cw_node_obs import read_encounter_options

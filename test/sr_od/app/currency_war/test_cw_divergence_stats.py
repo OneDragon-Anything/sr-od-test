@@ -2,7 +2,9 @@
 
 W446 注:dp 姿态语义仅 decision_v2 决策帧携带(statistics 口径要求
 strategy_id=='decision_v2'),fixture 行均带该标记。
-"""
+
+
+出处:docs/develop/currency_war/strategy/05_observation.md;docs/develop/currency_war/strategy/README.md(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

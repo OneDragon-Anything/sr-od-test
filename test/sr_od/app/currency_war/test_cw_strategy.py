@@ -9,7 +9,9 @@
 (default 栈 ``DefaultCwStrategy`` 已退役删除:其 v1 专属行为锁(update_target
 drought bail/emergent 选线、薄委托 plan 链)随本体退役——语义由 cw_intention
 /decision_v2 四层的对应测试接管;本文件只留仍存活的插件机制与平移钩子锁。)
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import random

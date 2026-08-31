@@ -11,7 +11,9 @@ vs 节点红框小图跨渲染态,TM 五版实证不可行;SIFT 局部特征,实
 fixture = cw_node_row_boss.png(1-1 备战节点条裁图,9 槽:1 当前奖励 +
 7 未来 + 最右 boss 巨鹿生物制药;live-verified,与 read_node_sequence
 同带同源)。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from collections import Counter
 from pathlib import Path
 

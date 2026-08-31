@@ -14,7 +14,9 @@ intention 的撤销后替代线锁定处(v2 语义下的「换线」决策位置
 - G4 初始锁线不辖:unlocked→lock 不经门(P2 首锁非换线);
 - G5 registry 注入透传:DecisionV2Strategy.update_target 把 self.registry
   传到门(A/B replace 注入臂可达;W376 C4 臂失效的直接根因面)。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import dataclasses

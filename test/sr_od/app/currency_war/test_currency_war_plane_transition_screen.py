@@ -5,7 +5,9 @@
 ② 无碰撞 — 位面过渡 fixture 不被误判模拟宇宙(撞车源:sim_uni.yml 有同名
    点击空白处继续 area,建档前两画面并列 is_precise=false)。组合 id_mark
    (位面节点2/3 位面 文字,模拟宇宙无)解决 -> 位面过渡精准,模拟宇宙不命中。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

@@ -11,7 +11,9 @@
 
 clean 判定语义不变(read_node_sequence 读出 = clean);测试用替身时钟
 (monkeypatch 模块级 ``time``)驱动,零实机、零真实等待。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from types import SimpleNamespace

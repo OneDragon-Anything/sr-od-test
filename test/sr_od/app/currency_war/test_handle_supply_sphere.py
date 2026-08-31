@@ -5,7 +5,9 @@ fixture(2026-08-14 实机采集,sr-od-test/screens/):
 - 货币战争-备战-武装箱选择/box_open:开箱 overlay(4 卡:轮滑鞋/生命之花/幸运星/光能电池)
 
 验证读路径 + 选卡逻辑(点击/弹层 mock,不真点)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import pytest

@@ -2,7 +2,9 @@
 
 存档画面:screenshot_20260819_220156(升费 vs 破解芯片态)——OCR 离线跑
 analyze 同款链路(卡文字 y 过滤 + 左右分流),验证 decide_planner 选升费。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

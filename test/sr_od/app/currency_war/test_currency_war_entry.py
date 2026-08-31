@@ -3,7 +3,9 @@
 TDD 实例(2026-08-04):锁 A8 修复(``StartCurrencyWarMatch`` 先点"返回最高职级"切最高难度)的
 **检测前提** —— A5 子态 fixture 有"返回最高职级"、A8 子态(最高)没有。改 op / fixture / OCR 后重跑,
 确保检测不回归。(op 节点的完整行为测试需序列 fixture harness,待补。)
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from pathlib import Path

@@ -11,7 +11,9 @@
   同源),非 scoring._engines_formed——夹具让两坐标分裂(deployed 2
   仙舟 + bench 3 仙舟:混合域加权过 tier=3、settle deployed 域不过),
   锁死取样侧防坐标错位复发(错位方向=p_win 偏乐观=门偏松)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import dataclasses

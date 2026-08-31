@@ -11,7 +11,9 @@
    start_run 建新 run_id 后以新 id 补写(ts 保留采集时点)。
 
 锁结构/归属语义,不锁分布数值;全部落盘走 tmp_path(测试纪律:不写真实 .debug/)。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0460-observation-wiring-disclosure-keys-run-id.md;docs/develop/currency_war/decisions/INDEX.md(2026-08-31 测试瘦身批考证补记)。"""
 import json
 from pathlib import Path
 from types import SimpleNamespace

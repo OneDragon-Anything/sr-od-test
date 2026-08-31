@@ -13,7 +13,9 @@ test_cw_w552_xp_reconcile.py 经验,同族:意图 → 期望增量 → heavy 定
 本对账)③接线源码锁(期望在动作发出点计算、对账在 heavy 定型帧后仅
 progressed 分支、台账参数锁、合成单一源锁)④台账行形态锁(equip=
 中决策相关面 → 单次 L2 初判)。全部纯函数/tmp_path,零触网零落盘真实路径。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 from pathlib import Path
 from types import SimpleNamespace

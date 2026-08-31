@@ -2,7 +2,9 @@
 
 两层:①屏名过滤纯函数(大厅态排除/前缀自动纳入);②fixture 实拍帧的
 _in_match 判定(对局屏 True / 大厅 False)。离线可跑,不碰游戏。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import sys

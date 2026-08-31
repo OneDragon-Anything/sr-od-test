@@ -4,7 +4,9 @@
 高效造数 = 组合枚举 × 不变量断言(不是逐场景手写期望值)。
 不变量来自设计文档语义(框架稳定/预囤收口/同名守卫),枚举面来自
 真实决策维度。生成器与断言分离——新不变量直接加一条 assert 系列。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0477-buylayer-takeover-strategy-v1-retirement.md(2026-08-31 测试瘦身批考证补记)。"""
 import itertools
 import sys
 

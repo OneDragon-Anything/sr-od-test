@@ -8,7 +8,9 @@
 
 背景:遭遇二选一=决策语义交互 overlay,曾被 P0 清场注册表误关(C1,commit
 4a2b3f27 修复)且 bail 清单缺遭遇节点(W835/W839 审计实锤,本锁防回归)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 
 
 def test_encounter_screen_registered_as_upper() -> None:

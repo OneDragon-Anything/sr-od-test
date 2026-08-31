@@ -8,7 +8,9 @@
 read_bench_chars 停机钩子、台账参数锁)④台账行形态锁(surface/kind/
 reader_source;复现分级语义由 judge_severity 既有锁覆盖,不重复断言)。
 全部纯函数/tmp_path,零触网零落盘真实路径。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from pathlib import Path
 
 from sr_od.application.currency_war.kernel.cw_state import BenchChar

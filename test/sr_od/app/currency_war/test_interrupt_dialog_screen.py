@@ -3,7 +3,9 @@
 - fixture 真阳性:弹窗帧 id_mark 组合(标识-中断挑战 + 按钮-放弃并结算)全命中 is_precise;
 - 不撞父屏:弹窗帧上备战屏不是 is_precise(背景压暗 OCR 全灭,天然区分);
 - 按钮 area 可命中:按钮-暂时离开 / 只读 文本-小队生命值(HP 真值快照源)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

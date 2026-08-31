@@ -9,7 +9,9 @@ shop_closed_lowhp.webp 的 slot7 金卡因此被箱模板低分接走,互斥判�
 ② 银箱槽不回退(箱命中,互斥拒典籍;备战满帧箱判定不变);
 ③ 模板尺寸收进槽内(shape 容差)+ 守卫跳过可见(记数递增,不再静默);
 ④ 策略层 tomes 非空优先 OpenTome(金卡走对路径的行为面锁)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

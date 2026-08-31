@@ -7,7 +7,9 @@
 2. **边界口径**:缺文件 / 空文件 / 语法坏 / 非字面量值(AST 内含调用/名字)/ 非 dict 字面量 /
    无 AFFIX_EFFECTS 定义 → 一律 ``{}``(与旧实现异常兜底同口径);
 3. **安全性质**:文件内夹带恶意代码(payload 后附 ``import os`` 触发语句)时 **不执行**(exec 版会执行)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 
 import sr_od.application.currency_war.obs.cw_briefing_obs as mod

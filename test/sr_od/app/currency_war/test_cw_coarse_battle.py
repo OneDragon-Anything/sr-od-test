@@ -16,7 +16,9 @@ win_rate_table_injected)。本文件锁:
 
 纪律:单点行为用脚本化 rng 桩(确定性,不锁频率分布);批量模拟
 只跑 1 局冒烟(契约锁不锁分布数值)。
-"""
+
+
+出处:docs/game/currency_war/research/proofs/p24-residual-fill-dominance.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import json

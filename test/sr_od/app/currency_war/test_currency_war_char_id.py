@@ -3,7 +3,9 @@
 覆盖 ``currency_war_char_id.identify_character``:对备战屏填充槽位裁图,SIFT 特征匹配
 ``character_avatar`` 模板库 → 识别角色。实测 bench-1 为 herta(脸部独特,高置信命中)。
 配饰/半身角色会判 None(低置信,见 design);本测只断言可靠命中的 herta。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0247-sift-two-phase-lazy-ransac.md;docs/develop/currency_war/decisions/0281-back-layout-level-model.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from pathlib import Path

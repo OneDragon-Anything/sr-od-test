@@ -5,7 +5,9 @@
 台账同行出现,调用方零改动)④gold_close 流锁(shop 暂存 → spend_ledger 行
 充实;无暂存 → unknown 不猜;读端行内优先)。契约锁形状不锁分布;
 全部落盘走 tmp_path(测试纪律:不写真实 .debug/)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 from pathlib import Path
 

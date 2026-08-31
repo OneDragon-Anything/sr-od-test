@@ -6,7 +6,9 @@
    round ≥ 8(真 boss 轮)→ 放行。
 2. 标签位置门:标签 x 与当前槽 cx 错位 > 容差 → None(张冠李戴)。
 误判代价实证:2-7 被判 boss → _boss_spend 提前花光资源 → HP17 惨胜。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

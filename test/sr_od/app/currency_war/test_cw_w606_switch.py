@@ -6,7 +6,9 @@
 2. adapter 不再暴露 ``director_v2_enabled`` 读取 helper;
 3. 影子比对开关(纯诊断)默认关、可注入,与生产行为零耦合;
 4. prep_director 环入口无条件走新环(源码锁:分叉点无条件 return)。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from pathlib import Path

@@ -4,7 +4,9 @@
 → SIFT 唯一通道,但图鉴 art 对商店卡立绘仅 5 内点(min_inliers=10)→ 停机钩子
 触发。修法=变体模板(现场裁图 raw_shop.png 同目录)+ 键 #k 剥离 + 同 cid 变体
 不构成歧义。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import numpy as np
 import pytest
 from cv2.typing import MatLike

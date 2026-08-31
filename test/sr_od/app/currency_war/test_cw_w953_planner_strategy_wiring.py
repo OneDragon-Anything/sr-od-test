@@ -10,7 +10,9 @@
    kernel 直调只允许出现在无 match 防御分支(局外独立跑)。
 2. 零行为锁:同输入下 DecisionV2Strategy.decide_planner 与 kernel 纯函数逐位一致
    (idx + reason)——委托语义不被接线破坏。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import inspect
 import sys
 

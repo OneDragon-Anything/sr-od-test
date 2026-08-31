@@ -8,7 +8,9 @@
 
 本锁=r98「改后必真调用一次」纪律的代码化:walk 全部 CW operations 模块,
 逐个 import,任何签名/语法级错误在此立即红。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import importlib
 import pkgutil
 

@@ -6,7 +6,9 @@ w507_richsim_hunt 报告 N1)。守卫语义:level ≥ LEVEL_CAP 时 LevelUp
 拒付——不扣金/不进 XP,账本记 LevelUpRejected 行(不占 LevelUp 类型,
 flat4 台账锁判据 spend.levelup == 4×LevelUp 行数才不被拒付行破坏),
 计数进 sim.level_cap_rejects。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 

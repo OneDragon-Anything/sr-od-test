@@ -1,7 +1,9 @@
 """灰度接线+遥测 v2 字段验证(Phase A Day 11;评审修正后)。
 
 Manager 构造需要 ctx+plugin_dirs——测试用内置目录构造
-(strategies/ 包目录;PluginSource.BUILTIN)。"""
+(strategies/ 包目录;PluginSource.BUILTIN)。
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 from pathlib import Path
 

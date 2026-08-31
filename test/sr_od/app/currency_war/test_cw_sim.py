@@ -6,7 +6,9 @@
 - 方向判据与策略认领一致(锁线/桥);
 - A/B 对照通道(use_refresh 剔除刷新);
 - 统计口径(HP≥60/方向建立分布)。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS

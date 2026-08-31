@@ -6,7 +6,9 @@
 验证:
 ① 真阳性 — fixture(default/card1_selected/card3_refreshed 三态)精准匹配;
 ② 无碰撞 — 独立屏无备战 id_mark 元素 → 不与 货币战争-备战 撞车。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

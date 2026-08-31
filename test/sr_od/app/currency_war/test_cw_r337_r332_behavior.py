@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """r332 行为锁:battle_loop 连续 director 失败 → round_fail
-(review 第21 条:弱锁换真行为锁)。"""
+(review 第21 条:弱锁换真行为锁)。
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from types import SimpleNamespace

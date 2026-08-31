@@ -6,7 +6,9 @@
 - 语料实锤回归:重启接管伪行(r1 普通战斗 / r1 遭遇)必须被抓——
   这正是校验器的建器动机(run_20260823_151050/151913 定因,见
   .debug/temp/currency_war/cw_dev/deep_read/W27_报告.md)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 
 import pytest
 

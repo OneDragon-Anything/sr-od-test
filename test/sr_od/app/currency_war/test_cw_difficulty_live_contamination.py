@@ -5,7 +5,9 @@
 leader 审后转锁(2026-08-24;批39 清死断言 + 补部分污染 note 锁)。
 覆盖:污染红/历史 schema 红/全 live 绿/值相交绿(note 披露)/空不
 辖/无读数不辖。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 

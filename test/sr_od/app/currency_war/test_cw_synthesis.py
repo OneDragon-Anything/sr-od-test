@@ -3,7 +3,9 @@
 2026-08-26 光能电池系配方补齐(官方 API compose_list):光能电池=第 8 件基础件,
 8 基础件 × K8 闭合 = C(8,2)=28 交叉 + 8 自配 = 36 件进阶全量。
 旧「孤立节点」语义锁已反转(GUANGNENG_ONLY 废弃 → GUANGNENG_CROSS/SELF_RECIPES)。
-"""
+
+
+出处:.dsh/skills/sr-od-currency-war-dev/references/data-collection.md;docs/develop/currency_war/decisions/0265-equip-component-reserve-p1.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from collections import Counter

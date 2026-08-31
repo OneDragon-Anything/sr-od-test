@@ -7,7 +7,9 @@
    cw_sim.sim_decision_registry)——满级帧候选零升级,实机真值不漂移;
 ③ 刷新预算帽双检查(普通车道轮帽 REFRESH_ROLL_CAP / 定向车道局帽
    directed_refresh_game_cap)。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0471-sim-level-cap-decision-alignment-and-break-interest-taxonomy.md;docs/develop/currency_war/decisions/INDEX.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim

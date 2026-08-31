@@ -4,7 +4,9 @@
 局收入在轮/位面切换后入账计数器仍在跳,单帧读金拿入账前旧值 → 开店金系统性
 偏低(息线/花金义务整体错位)。修 = ``read_gold_settled`` 多帧稳定门 + 大额
 冲突升级 warning 告警行(检索锚 ``[cw!][alarm][gold_delta]``)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

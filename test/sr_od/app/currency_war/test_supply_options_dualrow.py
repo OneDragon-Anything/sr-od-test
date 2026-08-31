@@ -4,7 +4,9 @@
 第二行 y≈748-749)。旧 `_SUPPLY_EQUIP_Y` 上界 735 使第二行整行漏读(10 选只读出
 4,decide_supply 建模残缺)。本文件用真实存档帧(``货币战争-补给/双排装备``)
 锁定:上界 780 后第二行代表性装备名必须读出、配对不退化。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 
 from __future__ import annotations
 

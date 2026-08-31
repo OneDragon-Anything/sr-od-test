@@ -9,7 +9,9 @@ C1 红线(断言 3):``decision ⇒ closable is False`` ∧ 派生清场集不含
 decision 条目。吸收 Phase 1 临时哨(「遭遇节点 ∉ ENTRY_OVERLAY_CLOSE」,
 test_cw_w609_phase_field_spec.py)后成为唯一红线锁——临时哨在其全绿的同
 commit 删除(设计定案 5)。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0505-entry-overlay-clear-single-source.md;docs/develop/currency_war/decisions/INDEX.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import importlib

@@ -5,7 +5,9 @@ clean 帧门条件(非节点行 → 圆数 < ``_MIN_CLEAN_CIRCLES``)。**回归�
 模板 / Hu 变更会触发断言)。纯 CV(无 ctx/OCR);fixture = ``cw_node_row_clean.png``(1-1 备战节点行
 裁图,8 槽,live-verified 同源)。门本身(``read_node_sequence`` len 检查)是 trivial 包装,这里验
 门条件(classify 在非节点行的圆数);``read_node_sequence`` 的 OCR 当前节点覆盖另需 ctx,不在此测。
-"""
+
+
+出处:.dsh/skills/sr-od-currency-war-dev/references/data-collection.md;docs/develop/currency_war/decisions/0348-overheat-reward-battle-guard.md(2026-08-31 测试瘦身批考证补记)。"""
 from collections import Counter
 from pathlib import Path
 

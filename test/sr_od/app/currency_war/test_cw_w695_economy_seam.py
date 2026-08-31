@@ -8,7 +8,9 @@ cw_economy(kernel 桶),refresh_ev_budget 内应急谓词 is_emergency 一并下�
 桩点契约(防「桩了旧位置、生产走新路径」全绿假象):生产桩点钉
 cw_economy 符号(消费方函数内懒 import,属性动态解析),本文件附带
 identity 锁——filters.is_emergency 与 cw_economy.is_emergency 同一谓词。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import inspect
 
 from sr_od.application.currency_war.kernel import cw_economy

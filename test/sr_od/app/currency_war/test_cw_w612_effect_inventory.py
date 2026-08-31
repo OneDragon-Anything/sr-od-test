@@ -3,7 +3,9 @@
 
 锁契约:锁结构/回显,不锁分布数值;经济数值单一源在 STRATEGY_ECONOMY(对拍锁在
 test_locks_boundary)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import dataclasses
 import sys
 from pathlib import Path

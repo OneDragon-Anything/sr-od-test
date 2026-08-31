@@ -1,4 +1,6 @@
-"""r115 命运卜者强化:OCR 三卡识别(fixture 局32 实拍)+文本策略。"""
+"""r115 命运卜者强化:OCR 三卡识别(fixture 局32 实拍)+文本策略。
+
+出处:docs/develop/currency_war/strategy/04_nodes.md(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

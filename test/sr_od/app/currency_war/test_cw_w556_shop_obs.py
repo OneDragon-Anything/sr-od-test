@@ -3,7 +3,9 @@
 零接线批:三函数均为纯函数,测试只锁「输入→输出」映射,不触任何生产行为面。
 规则出处单一源 = cw_shop_odds(REFRESH_PROB / POOL_COPIES_PER_CARD / SHOP_SLOTS)
 与 docs/game/currency_war/research/merge_mechanics.md §2.7(合成预览对账信号)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import pytest

@@ -6,7 +6,9 @@
 - 选 Platt 而非温度缩放的依据 = 失真形态是「偏移主导 + 尺度分量」,
   单参数温度缩放表达不了纯偏移(Platt 双参数严格包含温度缩放为特例);
 - 纯函数锁判据 = ``fit_platt_scaling`` 零 IO、零随机、同入参同参。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import math

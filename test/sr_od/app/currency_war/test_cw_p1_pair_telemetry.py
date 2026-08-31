@@ -15,7 +15,9 @@ target_comp 恒空、sess_framework 恒空,判读看不到 P1 锁了哪个配方
 - prep_director._record_step 接线(session.v3_intention 来源);
 - 旧台账兼容:无 sess_p1_pair 键的历史行经 cw_replay_reader 读取
   不炸(dataclass 已知字段过滤 + 缺省 '')。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import json

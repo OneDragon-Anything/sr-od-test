@@ -11,7 +11,9 @@ PrepDirector heavy 定型帧后仅 progressed 分支、合成落点单一源 =
 cw_state._merge_bench)④台账行形态锁(surface='bench'/kind=
 'buy_expect_mismatch'/reader_source='buy_expect_reconcile')。
 全部纯函数/tmp_path,零触网零落盘真实路径。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 from pathlib import Path
 

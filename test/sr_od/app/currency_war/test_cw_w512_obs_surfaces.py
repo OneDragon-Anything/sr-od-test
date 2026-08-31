@@ -7,7 +7,9 @@ spend_ledger——台账=归一索引层,spend_ledger=原始证据层,消费端�
 SpendUnitRecord 字段解析,混入会被当伪单元误读)④板面动作级对拍/置信度
 遥测的接线存在性(源码锁,契据=DESIGN 逐面判据,注释给锚点)。
 契约锁形状不锁分布;全部落盘走 tmp_path(测试纪律:不写真实 .debug/)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 from pathlib import Path
 

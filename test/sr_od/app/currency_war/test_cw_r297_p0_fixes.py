@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""r297 P0 修复测试:环入口双锚 + probe_node_type 挂点迁移。"""
+"""r297 P0 修复测试:环入口双锚 + probe_node_type 挂点迁移。
+
+出处:docs/develop/currency_war/decisions/0216-gate-old-path-removal.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

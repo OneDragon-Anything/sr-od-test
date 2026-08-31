@@ -1,4 +1,6 @@
-"""cw_difficulty_account(36 号难度账本)v0 测试:J1 恒等式对账 + 三态价值 + 溢出反转。"""
+"""cw_difficulty_account(36 号难度账本)v0 测试:J1 恒等式对账 + 三态价值 + 溢出反转。
+
+出处:docs/develop/currency_war/decisions/0199-difficulty-account-v0.md;docs/develop/currency_war/decisions/0449-difficulty-banner-two-stage-reader.md(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

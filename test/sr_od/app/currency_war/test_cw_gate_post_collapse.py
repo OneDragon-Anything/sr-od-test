@@ -10,7 +10,9 @@ stable 直接进本轮;未开走原 12s 完整门;收紧超时未达成 → 落�
 原 12s 完整门兜底(有界)。时序竞争修复:自动开商店可能晚于首探,
 首探 miss 后在有限窗内按 PRECOLLAPSE_RETRY_S 间隔重试同一探针,
 任一次探到开 → 走收紧超时路径(免 12s 死等+重进往返)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

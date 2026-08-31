@@ -6,7 +6,9 @@
 test_cw_r337_behavior 的真 fixture 行为锁:签名 tier/source 由本文件
 关键字实参调用面辖、light 跳 SIFT 由 test_observe_full_light_skips_sift
 辖、gold_reread 行为由 r337 三锁辖、substate 可读性由下方断言辖——
-弱形状锁换真行为锁,重复构成删并理由(README 纪律 8)。)"""
+弱形状锁换真行为锁,重复构成删并理由(README 纪律 8)。)
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import pytest

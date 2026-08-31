@@ -1,4 +1,6 @@
-"""cw_weight_search(24 号 CEM 权重搜索)v0 测试:J1 收敛 + J2 护栏自证。"""
+"""cw_weight_search(24 号 CEM 权重搜索)v0 测试:J1 收敛 + J2 护栏自证。
+
+出处:docs/develop/currency_war/decisions/INDEX.md;docs/develop/currency_war/strategy/05_observation.md(2026-08-31 测试瘦身批考证补记)。"""
 import math
 import random
 import sys

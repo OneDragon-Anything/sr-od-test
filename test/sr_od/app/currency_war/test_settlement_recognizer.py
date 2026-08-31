@@ -3,7 +3,9 @@
 无结算 fixture 截图,故用 **mock** ``parse_settlement_hp`` + ``ctx.ocr_service`` 测组合逻辑:验证 recognizer
 正确组装 dict、失败屏 hp→0、非失败读不到→None(不硬塞),且**只**复用纯函数 ``parse_settlement_hp``、
 不复用需 session 的 ``read_round_outcome``。真实 OCR 集成待 fixture 采到后补。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.obs.recognizers.settlement_recognizer as mod

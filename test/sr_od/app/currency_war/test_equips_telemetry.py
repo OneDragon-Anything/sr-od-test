@@ -1,6 +1,8 @@
 """r132 修正:read_row_equipped 真实 import 路径(cw_identity_obs 非
 cw_equipment——cw_type_gate 抓到 unknown symbol,测试绿是因为方法体
-只在运行时 import)。锁 import 路径防再犯。"""
+只在运行时 import)。锁 import 路径防再犯。
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 
 sys.path.insert(0, 'src')

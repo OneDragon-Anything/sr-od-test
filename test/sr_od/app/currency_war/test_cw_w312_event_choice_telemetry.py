@@ -11,7 +11,9 @@
 
 纯逻辑/桩测试(monkeypatch 构造;TelemetryRecorder 指 tmp_path,不写真实 .debug;
 _CURRENT_RUN_ID / _CTX_MATCH_REF 经 monkeypatch.setattr 还原,不污染 session)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

@@ -4,7 +4,9 @@
 → 未选中 → 确认无效 → round_retry ×5 失败(match3 07:45 两次「返回状态 失败」)。
 修复:点击点由 area rect 推导(71% 高度+详情钮避让 clamp)+ press_time 0.15 加固。
 守卫移除红检目标 = ①rect 回退旧值 ②_card_point 改回硬编码 → 本文件锁红。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

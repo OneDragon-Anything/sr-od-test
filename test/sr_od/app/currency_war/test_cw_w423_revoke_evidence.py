@@ -14,7 +14,9 @@
 - C4 零漂移锚:缺省 registry 常量=W379 off 臂逐位的结构前提(出口①
   在 sim 结构性零触发 → off 臂全分布不变);证据字段经
   serialize_intention 落遥测(实机判读锚:无证据字段的开窗=守卫失效)。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0436-revoke-exit1-intent-evidence.md;docs/develop/currency_war/decisions/INDEX.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import dataclasses

@@ -10,7 +10,9 @@
 board/deployed_fac(cw_sim 部署块 _snap_*);占位(vacancy/cap)用
 部署后真实 deployed_cids。残余语义 = 「行动语境下仍有围栏认可件
 未上」。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

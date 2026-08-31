@@ -8,7 +8,9 @@
 判据纯函数 = ``collect_plane_intel.decide_plane_skip``(设计语义见其
 docstring;边界:无会话真值不跳 / past 缺值降级补采一次 / 当前与未来
 位面正常采)。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 

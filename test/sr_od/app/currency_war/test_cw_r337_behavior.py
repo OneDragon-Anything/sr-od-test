@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """observe_full 行为锁(r337;替代旧 getsource 弱锁——review
-第16 条:st_gold_reread_semantics 空壳 return True 零效力)。"""
+第16 条:st_gold_reread_semantics 空壳 return True 零效力)。
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from sr_od.application.currency_war.obs.cw_observe_full import observe_full

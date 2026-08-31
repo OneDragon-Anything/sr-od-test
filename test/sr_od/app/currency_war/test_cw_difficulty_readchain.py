@@ -6,7 +6,9 @@
 落盘。翻转后:真读命中→真值+live=True;真读 None→回退 session 恒值
 +live=False;双源皆无→None。判读纪律:live=False 帧的值是简报恒值,
 别当「难度 vs 轮次」曲线样本。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from types import SimpleNamespace

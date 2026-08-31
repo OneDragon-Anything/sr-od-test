@@ -3,7 +3,9 @@
 无简报 fixture 截图,故用 **mock 各 reader** 测组合逻辑:验证 recognizer 正确组装 dict、且**只**复用
 纯读 reader(``read_affixes`` / ``read_bosses``,纯 OCR + 正则),不复用语义要 click 的 ``read_affix_effect``
 (并发安全 / 纯读观察,见 spec §6)。真实 OCR 集成待 fixture 采到后补。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0397-briefing-boss-plane-order-fix.md(2026-08-31 测试瘦身批考证补记)。"""
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.obs.recognizers.briefing_recognizer as mod

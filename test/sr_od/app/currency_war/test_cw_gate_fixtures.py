@@ -8,7 +8,9 @@ fixture 截图离线回放锁死——以后 gate 语义改动跑这里即知:
 2. 指纹阈值:同一 fixture 连续喂两帧=必稳定(字节恒等被
    截屏噪声否决后,阈值比较在同源图上必过);
 3. 开态帧(shop_open)——关态 profile 应拒绝(absence 锚)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import pytest

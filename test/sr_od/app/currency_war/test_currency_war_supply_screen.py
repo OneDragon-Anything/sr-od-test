@@ -5,7 +5,9 @@
    货币战争-补给。根因(bug):``BuyShopCards`` 曾把备战「返回补给阶段」按钮文本的子串「补给阶段」
    误判补给 overlay → bail → Loop 死循环;id_mark 位置区分(补给标题 [893,120,1027,230]
    ≠ 备战返回按钮 [1716,51,..])→ 备战不被误判补给。本测锁之。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

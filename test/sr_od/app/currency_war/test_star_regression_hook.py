@@ -2,7 +2,9 @@
 
 三路径:①首节点回退只留证不停(防抖,特效过渡帧);②连续 2 节点 star≥2 回退 → 停机
 (sentinel 自描述+stop_running);③读回恢复 → 计数清零(不再累积)。
-"""
+
+
+出处:被测模块本体——现行基建锁(星级回归钩子;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 from types import SimpleNamespace

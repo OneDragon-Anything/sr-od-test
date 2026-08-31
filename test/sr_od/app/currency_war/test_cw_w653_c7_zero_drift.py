@@ -5,7 +5,9 @@
 无写端),旧 `state.dual_track_phase` 分支与换源后 `committed_from`
 分支在 fw≡'' 下同返回 target_comp。本文件锁四象限语义 + 「不再读
 state.dual_track_phase」源级守卫,防回滑。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0467-batch4-dual-track-readsource-committed-from.md;docs/develop/currency_war/decisions/INDEX.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

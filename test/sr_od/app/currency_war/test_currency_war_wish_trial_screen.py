@@ -3,7 +3,9 @@
 验:真阳性 — 祈愿试炼 fixture 精准匹配 货币-祈愿试炼(id_mark ``标识-祈愿试炼`` 命中)。
 此前该屏无完整建档(doc/fixture 测缺)被停机钩子隔离;三件套补齐后钩子删除,0c 分支
 HandleWishTrial 接管。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

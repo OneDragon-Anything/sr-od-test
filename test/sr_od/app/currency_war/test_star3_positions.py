@@ -11,7 +11,9 @@ truth.json 固化;阵容会变,真值跟 fixture 走不跟时间走)。
 采集教训(存档):①「停 bot 保画面」在备战不成立(倒计时自动出战推进);②事件
 overlay 盖棋盘时拖拽静默失败,批次间必须验证落位;③VLM 看不清星数,定位用
 read_star 全帧扫描(客观优先)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 import sys
 from pathlib import Path

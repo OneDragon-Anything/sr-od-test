@@ -8,7 +8,9 @@
   (use 对数压缩 + 先验面份额配平,生存者偏差声明同处);
 - 零漂移红线 = ``ShadowKilledModel.features`` 列集不变(W47 单一源锁延续);
   ``cw_plaza_comps`` 聚合 schema 向后兼容(n>=5 生成器不变式,非数值锁)。
-"""
+
+
+出处:docs/game/currency_war/data/plaza_meta.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import sys

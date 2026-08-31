@@ -6,7 +6,9 @@
 ② 书册卡模板在位判定(文件存在 + find_bookcards 灰度 TM 自检命中);
 ③ 专家邀请函弹窗画面注册(UPPER_SCREENS → 弹窗在场 = 非备战帧);
 ④ 停机钩子 → 自动处理链的接线锁(battle_loop/prep_director)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

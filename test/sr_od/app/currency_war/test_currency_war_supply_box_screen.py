@@ -8,7 +8,9 @@
 
 建档案:OCR rect 纵向 padding 要足(原 30px 高裁切 paddle 检测不到「请选择1个」,
 放宽到 45px 后稳读;2026-08-14 建档实测)。
-"""
+
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

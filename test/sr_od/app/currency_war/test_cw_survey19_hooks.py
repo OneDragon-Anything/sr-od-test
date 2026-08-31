@@ -1,4 +1,6 @@
-"""cw_survey19_hooks(P9/P1/P8 决策件)测试。"""
+"""cw_survey19_hooks(P9/P1/P8 决策件)测试。
+
+出处:docs/develop/currency_war/strategy/04_nodes.md;docs/develop/currency_war/strategy/README.md(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from pathlib import Path
 

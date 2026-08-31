@@ -1,4 +1,6 @@
-"""遥测读端规范 loader 测试(W446;fixtures 用 tmp_path,不碰真实 .debug)。"""
+"""遥测读端规范 loader 测试(W446;fixtures 用 tmp_path,不碰真实 .debug)。
+
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 from dataclasses import is_dataclass
 from pathlib import Path

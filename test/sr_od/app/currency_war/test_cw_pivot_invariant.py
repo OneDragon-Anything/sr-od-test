@@ -7,7 +7,9 @@
 (原第 3 条「守卫单一入口源码锁」已退役:行为面由上两条不变量锁覆盖,
 源码级「无第二份检查」为形状锁——收缩三原则①;失去的仅是防守卫再分散
 的静态提示,行为面仍受保护。)
-"""
+
+
+出处:docs/develop/currency_war/decisions/0469-batch4-fw-startup-retirement-orphan-fields.md(2026-08-31 测试瘦身批考证补记)。"""
 from sr_od.application.currency_war.kernel import cw_comps
 from sr_od.application.currency_war.kernel.cw_comps import maybe_pivot
 from sr_od.application.currency_war.kernel.cw_state import GameState

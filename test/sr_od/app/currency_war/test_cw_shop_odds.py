@@ -4,7 +4,9 @@
 无精确 ground truth(原文只给方法+参数),测**单调性 + 边界**(关系正确即可):
 - p↑ → 期望↓;j(已有)↑ → 期望↓;c(牌池操纵)↑ → 期望↓。
 - 边界:p≤0/j≥k → 0;7级3费找2星有限正数;3星>2星。
-"""
+
+
+出处:.dsh/skills/sr-od-currency-war-dev/SKILL.md;.dsh/skills/sr-od-currency-war-dev/references/compo-knowledge.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import math

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""r387 锁测:配方围栏只在 cap 紧张时拦散牌(富余=填空)。"""
+"""r387 锁测:配方围栏只在 cap 紧张时拦散牌(富余=填空)。
+
+出处:docs/develop/currency_war/decisions/0251-deploy-fence-cap-roomy.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from sr_od.application.currency_war.operations.prep.deploy_bench import (

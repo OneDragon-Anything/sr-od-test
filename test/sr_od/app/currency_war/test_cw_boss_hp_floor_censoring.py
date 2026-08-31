@@ -4,7 +4,9 @@
 来源:压测官批39(报告 sim_压测_批39/报告.md);r9 boss 语料判读口径
 守卫。覆盖:删失披露 note/killed 断裂红/败局 hp 未降红/胜局不辖/
 无 boss 行不辖/显式 hp_before 键优先。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0307-boss-hp0-semantics-reversal.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 

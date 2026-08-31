@@ -5,7 +5,9 @@
 - 查询:chars_by_cost / chars_by_faction / get_char。
 - Character.position_pref:前台→front、后台→back、前后台→back。
 - CHARACTER_ROSTER 从 CHARACTERS 派生。
-"""
+
+
+出处:.dsh/skills/sr-od-currency-war-dev/SKILL.md;.dsh/skills/sr-od-currency-war-dev/references/compo-knowledge.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import dataclasses

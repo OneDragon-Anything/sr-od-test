@@ -7,7 +7,9 @@ enemy_hp_after 的最接近语义代理(0/239 未采)。W40 fixture 实锤(win/e
 
 纯函数 + read_round_outcome 集成 + battle_loop 接线桩测试;不写真实 .debug
 (TelemetryRecorder 指向 tmp_path)。
-"""
+
+
+出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import time

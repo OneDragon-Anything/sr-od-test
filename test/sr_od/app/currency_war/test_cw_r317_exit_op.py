@@ -15,7 +15,9 @@
 根修(机制层,非坐标):① 备战阶段 lcs=0.8;②/③ 投资策略分支移到
 「返回备战界面」之前 + 结算按钮 OCR 统一 lcs=0.8(battle_loop 3b 同款,
 防「继续挑战」误匹配战斗暂停屏「继续战斗」ratio=0.75)。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0331-exit-op-invest-strategy-stuck-mechanism-fix.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 import inspect

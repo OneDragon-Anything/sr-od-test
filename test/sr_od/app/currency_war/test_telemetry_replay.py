@@ -12,7 +12,9 @@ board 不演化;备份 .bak_r122);hp=100 毒化行(hp_readable=False)**保留**
 ② _should_deploy 框架 carry/partial 双轨 → True(拒因只允许同名守卫);
 ③ pick_framework fresh-read 相邻横跳率 < 12%(基线 7.5%;r114 tracking
    在实跑已零横跳,此阈值是 fresh-read 兜底路径的回归护栏)。
-"""
+
+
+出处:docs/develop/currency_war/decisions/0477-buylayer-takeover-strategy-v1-retirement.md(2026-08-31 测试瘦身批考证补记)。"""
 import json
 import sys
 from pathlib import Path

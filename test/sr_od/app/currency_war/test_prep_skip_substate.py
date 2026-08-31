@@ -5,7 +5,9 @@
 正统做法恢复:出战 id_mark(详情面板盖住它/免战替换它——一个元素解两类子态,备战帧在两者上
 都自然不精准);免战帧归独立子屏「货币战争-备战-免战」(id_mark 跳过)。loop 运行时不受影响
 (备战分支入口=单 area 购买经验判定,非 is_precise)。
-"""
+
+
+出处:画面建档子态锁——备战「跳过」子态(画面档 assets/game_data/screen_info/)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
