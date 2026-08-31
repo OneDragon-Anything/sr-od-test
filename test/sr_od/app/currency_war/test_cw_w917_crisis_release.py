@@ -107,9 +107,22 @@ def test_crisis_arm_budget_and_downgrade() -> None:
     assert sess.v3_release is d
 
 
-def test_crisis_arm_no_overflow_stays_none() -> None:
-    """息线以内(g=R*≤)危机帧:无溢余不触发(息线以内零漂移,I-1 锚同族)。"""
+def test_crisis_arm_downgraded_overflow_basis() -> None:
+    """危机臂溢余基降档(P36-a′/ADR-0506 后继;无条件):应急带内溢余基=
+    g 本身(R*_crisis≡0),g 在息线/储备线以下也开火——旧语义「息线以内
+    零漂移不触发」随储备线保护前提在应急带被 P23.4 证伪而过期(证明=
+    p36 单篇 P36-a′;病灶=match4 p2r1 hp3/金89/R*90 臂静默)。预算式
+    形态不变:min(50, 6×2)=12。"""
     st = _state(gold=50)
+    _, d = evaluate_release(st, _sess(st), _REG_ON, 'FORM',
+                            _sess(st).v3_dp_posture.posture)
+    assert d is not None and d.reason == 'crisis'
+    assert d.budget_gold == min(50, REFRESH_ROLL_CAP * 2) == 12
+
+
+def test_crisis_arm_zero_gold_stays_none() -> None:
+    """静默唯一残留=金 0(危机溢余基=g,g=0 物理无金可泄,合法残余)。"""
+    st = _state(gold=0)
     _, d = evaluate_release(st, _sess(st), _REG_ON, 'FORM',
                             _sess(st).v3_dp_posture.posture)
     assert d is None

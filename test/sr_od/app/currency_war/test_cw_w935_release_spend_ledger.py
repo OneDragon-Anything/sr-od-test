@@ -23,8 +23,9 @@ fixture 数据=match 2 真实遥测帧(actions 构造取该帧复盘记录的动
 - ② r5P2 刷+买混合轮:刷新经授权门记 2 + 回执汇总买 4 → spent=6
   (修复前记 2 的洞);刷新动作出现在 actions 不双记;
 - ③ 非 release 帧(v3_release=None)有买/升动作:不记账(零漂移);
-- ④ 回执契约开关(spend_receipt_gate_enabled)开/关两态:记账分支独立
-  于回执契约(release 帧无授权包,回执恒 None,记账照常);
+- ④ 回执契约无条件生效(原开关 spend_receipt_gate_enabled 已随除开关批
+  删除):记账分支独立于回执契约(release 帧无授权包,回执恒 None,
+  记账照常);
 - ⑤ 同轮跨段累计:两段各自汇总,spent 为轮内累计(决策帧采样语义);
 - ⑥ cost 缺失兜底与空动作;
 - ⑦ 预算门全渠道执行:买/升入账侵蚀刷新授权预算(行为修复语义钉)。
@@ -51,8 +52,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 
 _REG_ON = dataclasses.replace(DEFAULT_REGISTRY, crisis_release_enabled=True)
-_REG_GATE_ON = dataclasses.replace(
-    _REG_ON, spend_receipt_gate_enabled=True)
 
 
 def _state(*, gold: int = 90, hp: int = 25, plane: int = 2, r: int = 4,
@@ -142,12 +141,12 @@ def test_non_release_frame_not_accrued() -> None:
 
 
 def test_accrual_independent_of_receipt_gate() -> None:
-    """回执契约开关开(release 帧无授权包 → 回执恒 None)记账照常:
-    记账分支与 spend_receipt_gate_enabled 互不辖(两契约独立)。"""
+    """回执契约无条件生效(原开关已除,ADR-0504;release 帧无授权包 →
+    回执恒 None)记账照常:记账分支与回执契约互不辖(两契约独立)。"""
     st = _state()
     sess = _crisis_sess(st)
     actions = [LevelUp(cost=4), BuyCard(card=_card('艾丝妲', 1))]
-    r = build_spend_receipt(st, sess, _REG_GATE_ON, actions, [])
+    r = build_spend_receipt(st, sess, _REG_ON, actions, [])
     assert r is None                            # release 帧无授权包(既有语义)
     assert sess.v3_release_spent == 5           # 记账分支独立生效
 

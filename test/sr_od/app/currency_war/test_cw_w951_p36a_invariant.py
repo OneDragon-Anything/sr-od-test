@@ -43,6 +43,8 @@ from sr_od.application.currency_war.decision.decision_v2.posture_release import 
     ReleaseDirective,
     authorize_release_refresh,
     crisis_invariant_lane,
+    crisis_overflow,
+    crisis_release_open,
     evaluate_release,
 )
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
@@ -137,7 +139,32 @@ def test_invariant_scoped_to_first_refresh_only() -> None:
     assert authorize_release_refresh(sess, 91, 2, DEFAULT_REGISTRY) == ''
 
 
-# --- ③ 协同核对(W944 血预算门)------------------------------------------------
+# --- ④ 溢余基降档(P36-a′)----------------------------------------------------
+
+
+def test_overflow_basis_downgraded_to_gold() -> None:
+    """P36-a′:危机臂溢余基=g 本身(R*_crisis≡0),储备线高低不再辖危机臂
+    ——match4 病灶帧形(hp3/金89/排程升级费抬 R*→90)自此开火,预算
+    min(89, 6×2)=12(帽形态不变,只改可达性);金 0 仍静默(合法残余,
+    非执行缺位)。"""
+    st = _state(gold=89, hp=3)
+    assert crisis_overflow(st) == 89
+    assert crisis_release_open(st, _sess(st), DEFAULT_REGISTRY) is True
+    sess = _sess(st)
+    _, d = evaluate_release(st, sess, DEFAULT_REGISTRY, 'FORM',
+                            sess.v3_dp_posture.posture)
+    assert d is not None and d.reason == 'crisis' and d.budget_gold == 12
+    st0 = _state(gold=0, hp=3)
+    s0 = StrategySession()
+    s0.v3_dp_posture = RoundPosture(
+        (st0.plane, st0.round_num),
+        Posture(save=True, level_up=False, refresh_budget=0))
+    _, d0 = evaluate_release(st0, s0, DEFAULT_REGISTRY, 'FORM',
+                             s0.v3_dp_posture.posture)
+    assert d0 is None    # 金 0:危机溢余基=0,臂静默(合法残余,非执行缺位)
+
+
+# --- ⑤ 协同核对(W944 血预算门)------------------------------------------------
 
 
 def test_w944_blood_gate_coexistence() -> None:
