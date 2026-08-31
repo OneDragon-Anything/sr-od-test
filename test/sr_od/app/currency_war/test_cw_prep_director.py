@@ -1,11 +1,19 @@
-"""货币战争 备战决策环 测试 —— 表驱动决策单测 + 环级防护测试(doc 15 §9)。
+# -*- coding: utf-8 -*-
+"""test_cw_prep_director 主题锁(结构合并批,机械拼接)。
 
-- 决策表(纯逻辑,喂构造 obs 断言 action):奖励收取规则序/腾席链分支/主流程/M-6 门/3合1。
-- 环级(review round-1 M-6 补):mock executor + obs 序列驱动 _run_loop,断言 H-1 观察分层、
-  H-2 恢复-屏蔽-bail 分型、F5 步数预算、H-3 verified 语义、M-4 白名单。
-策略纯逻辑可离线测;换策略不改框架测试(doc 15 §6)。
+成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
+- test_prep_director: test_prep_director.py
+- test_prep_action_whitelist: test_prep_action_whitelist.py
+- test_prep_skip_substate: test_prep_skip_substate.py
+- adr0269_prep_two_stage: test_cw_adr0269_prep_two_stage.py
+- w588_director_v2: test_cw_w588_director_v2.py
+- w817_recovery_precheck: test_cw_w817_recovery_precheck.py
+冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
+
+
+# ==================== test_prep_director ====================
 
 from types import SimpleNamespace
 
@@ -16,22 +24,7 @@ from sr_od.application.currency_war import prep_director as pd_mod
 from sr_od.application.currency_war.kernel.cw_deploy_seat import _card_hits_target
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
-from sr_od.application.currency_war.kernel.cw_prep_actions import (
-    ClickSpheres,
-    DeferSpheres,
-    DeployMove,
-    EnsureShopOpen,
-    LevelUp,
-    OpenBox,
-    PickBoxCard,
-    PrepAction,
-    PrepObservation,
-    RunBuyPhase,
-    RunDeploy,
-    RunEquip,
-    SellBench,
-    StartBattle,
-)
+from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres, DeferSpheres, DeployMove, EnsureShopOpen, LevelUp, OpenBox, PickBoxCard, PrepAction, PrepObservation, RunBuyPhase, RunDeploy, RunEquip, SellBench, StartBattle
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
 from sr_od.application.currency_war.prep_director import PrepDirector
@@ -368,10 +361,7 @@ def _seq_observe(seq):
 
 def _fake_snapshot():
     """最小 confident 快照(新环观察端口替身用;离线免真值合成)。"""
-    from sr_od.application.currency_war.decision.decision_v2.contracts import (
-        Snapshot,
-        SubstateClassification,
-    )
+    from sr_od.application.currency_war.decision.decision_v2.contracts import Snapshot, SubstateClassification
     return Snapshot(classification=SubstateClassification(
         name='prep_shop', evidence=('test',), confident=True))
 
@@ -933,3 +923,706 @@ def test_start_battle_success_resets_launch_dead_streak(monkeypatch) -> None:
     assert session.launch_dead_streak == 0, '发射成功须清零连败计数'
     assert activations == [], '首发成功不得激活重发(不与正常发射竞态)'
 
+
+
+# ==================== test_prep_action_whitelist ====================
+
+import sys
+from pathlib import Path
+
+_REPO = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_REPO / 'src'))
+
+import sr_od.application.currency_war.kernel.cw_prep_actions as _test_prep_action_whitelist_pa_mod  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_prep_actions import PREP_ACTION_TYPES, PrepAction as _test_prep_action_whitelist_PrepAction
+
+
+def _all_prep_subclasses() -> set[type]:
+    """prep_actions 模块内定义的全部 PrepAction 具体子类。"""
+    return {obj for _, obj in vars(_test_prep_action_whitelist_pa_mod).items()
+            if isinstance(obj, type)
+            and issubclass(obj, _test_prep_action_whitelist_PrepAction)
+            and obj is not _test_prep_action_whitelist_PrepAction
+            and obj.__module__ == _test_prep_action_whitelist_pa_mod.__name__}
+
+
+def test_whitelist_covers_all_prep_subclasses() -> None:
+    """模块内全部 PrepAction 子类都在白名单(新动作漏登记 = 此测试红)。"""
+    subs = _all_prep_subclasses()
+    assert subs, ' PrepAction 子类发现失败(模块扫描空)'
+    missing = subs - set(PREP_ACTION_TYPES)
+    assert not missing, (
+        f'动作漏登记白名单(将 never-execute): {sorted(m.__name__ for m in missing)}')
+
+
+def test_opentome_registered() -> None:
+    """OpenTome 回归锚(P0-① 直接用例)。"""
+    from sr_od.application.currency_war.kernel.cw_prep_actions import OpenTome
+    assert OpenTome in PREP_ACTION_TYPES
+
+
+# ==================== test_prep_skip_substate ====================
+
+from typing import TYPE_CHECKING
+
+import pytest
+
+from one_dragon.base.screen.screen_utils import find_area_in_screen, get_match_screen_name
+
+if TYPE_CHECKING:
+    from test.conftest import SrTestContext
+
+
+def test_skip_substate_matches_own_screen(test_context: SrTestContext) -> None:
+    """免战跳过态 fixture:精准匹配自己的子屏(货币战争-备战-免战),不再匹配备战。"""
+    if not test_context.has_screen('货币战争-备战-免战', '跳过态'):
+        pytest.skip('fixture 缺:screens/货币战争-备战-免战/跳过态.webp')
+    img = test_context.load_screen('货币战争-备战-免战', '跳过态')
+    assert get_match_screen_name(
+        test_context, img,
+        screen_name_list=['货币战争-备战', '货币战争-备战-免战'],
+    ) == '货币战争-备战-免战', (
+        '免战跳过态应精准匹配子屏(出战 id_mark 被跳过替换 → 备战不精准,场景④语义)')
+    # 「按钮-跳过」area(备战屏,handler 点它)在子屏帧上仍可命中(跨屏正交查找)
+    si = test_context.screen_loader.get_screen('货币战争-备战')
+    skip_area = next((a for a in si.area_list if a.area_name == '按钮-跳过'), None)
+    assert skip_area is not None, '按钮-跳过 area 应已建档'
+    assert find_area_in_screen(test_context, img, skip_area).value == 1, (
+        '免战跳过态 fixture 上「按钮-跳过」应命中(OCR 跳过)')
+
+
+def test_skip_area_not_hit_in_normal_prep(test_context: SrTestContext) -> None:
+    """常态备战 fixture(无免战):「按钮-跳过」不命中(出战按钮态)。"""
+    if not test_context.has_screen('货币战争-备战', 'shop_closed'):
+        pytest.skip('fixture 缺:screens/货币战争-备战/shop_closed.webp')
+    img = test_context.load_screen('货币战争-备战', 'shop_closed')
+    si = test_context.screen_loader.get_screen('货币战争-备战')
+    skip_area = next((a for a in si.area_list if a.area_name == '按钮-跳过'), None)
+    if skip_area is None:
+        pytest.skip('按钮-跳过 area 未建')
+    assert find_area_in_screen(test_context, img, skip_area).value != 1, (
+        '常态备战(出战按钮)不应命中「按钮-跳过」')
+
+
+# ==================== adr0269_prep_two_stage ====================
+
+from pathlib import Path as _adr0269_prep_two_stage_Path
+
+import numpy as np
+import pytest as _adr0269_prep_two_stage_pytest
+
+
+class _FakeMatcher:
+    """get_match_screen_name 替身:hits 集合内的屏名命中,否则 None;记录调用序。"""
+
+    def __init__(self, hits: set[str]) -> None:
+        self.hits = hits
+        self.calls: list[list[str]] = []
+
+    def __call__(self, *, ctx, screen, screen_name_list, crop_first):  # noqa: ANN001 ANN003
+        self.calls.append(list(screen_name_list))
+        for name in screen_name_list:
+            if name in self.hits:
+                return name
+        return None
+
+
+@_adr0269_prep_two_stage_pytest.fixture
+def matcher_env(monkeypatch):
+    from one_dragon.base.screen import screen_utils
+    from sr_od.application.currency_war.kernel import cw_obs_core
+    fm = _FakeMatcher(set())
+    monkeypatch.setattr(screen_utils, 'get_match_screen_name', fm)
+    return cw_obs_core, fm
+
+
+def _run(mod):
+    ctx = object()
+    screen = np.zeros((200, 300, 3), dtype=np.uint8)
+    return mod.is_prep_like_frame(ctx, screen)
+
+
+def test_upper_hit_returns_false(matcher_env) -> None:
+    """上层屏命中(如 选择伙伴)→ False,且命中即短路(不再判备战)。"""
+    mod, fm = matcher_env
+    fm.hits = {'货币战争-选择伙伴'}
+    assert _run(mod) is False
+    assert ['货币战争-选择伙伴'] in fm.calls
+    # 第二段(备战/开商店,双元素调用)未发生——命中即短路:
+    assert not any(len(c) == 2 for c in fm.calls)
+
+
+def test_upper_miss_prep_hit_returns_true(matcher_env) -> None:
+    """上层全未命中 + 备战命中 → True。"""
+    mod, fm = matcher_env
+    fm.hits = {'货币战争-备战'}
+    assert _run(mod) is True
+    # 先逐个判完所有上层屏,再判备战双屏(两段显式分离)
+    assert len(fm.calls) == len(mod.UPPER_SCREENS) + 1
+    assert all(len(c) == 1 for c in fm.calls[:-1])
+    assert fm.calls[-1] == ['货币战争-备战', '货币战争-备战-开商店']
+
+
+def test_all_miss_returns_false(matcher_env) -> None:
+    """上层与备战/开商店全未命中(过渡/动画帧)→ False。"""
+    mod, fm = matcher_env
+    fm.hits = set()
+    assert _run(mod) is False
+
+
+def test_shop_open_returns_true(matcher_env) -> None:
+    """开商店屏(第二段子态)→ True。"""
+    mod, fm = matcher_env
+    fm.hits = {'货币战争-备战-开商店'}
+    assert _run(mod) is True
+
+
+def test_upper_screens_names_registered() -> None:
+    """UPPER_SCREENS 的每个 screen_name 都真实存在于 screen_info yml
+    (防手写错别字静默失配——名单名错 = 该上层屏永不命中)。"""
+    from sr_od.application.currency_war.kernel import cw_obs_core
+    repo_root = _adr0269_prep_two_stage_Path(__file__).resolve().parents[5]
+    si_dir = repo_root / 'assets' / 'game_data' / 'screen_info'
+    yml_names: set[str] = set()
+    for yml in si_dir.glob('*.yml'):
+        for line in yml.read_text(encoding='utf-8').splitlines():
+            line = line.strip()
+            if line.startswith('screen_name:'):
+                yml_names.add(line.split(':', 1)[1].strip())
+                break
+    for name in cw_obs_core.UPPER_SCREENS:
+        assert name in yml_names, f'UPPER_SCREENS 名 {name!r} 未在 screen_info 注册'
+
+
+def test_mid_interest_floor_removed() -> None:
+    """ADR-0270 死门删除:src 全仓无 _MID_INTEREST_FLOOR 引用残留。"""
+    from sr_od.application.currency_war.kernel import cw_obs_core
+    repo_root = _adr0269_prep_two_stage_Path(__file__).resolve().parents[5]
+    src_dir = repo_root / 'src'
+    hits = [p for p in src_dir.rglob('*.py')
+            if '_MID_INTEREST_FLOOR' in p.read_text(encoding='utf-8')]
+    assert hits == [], f'残留引用: {hits}'
+
+
+# ==================== w588_director_v2 ====================
+
+from types import SimpleNamespace as _w588_director_v2_SimpleNamespace
+
+from sr_od.application.currency_war.decision.decision_v2.contracts import AtomOp, Bail, Decision, Defer, Snapshot, SubstateClassification
+from sr_od.application.currency_war.decision.decision_v2.director_v2 import DirectorV2, LoopOutcomeKind, _DirectorPorts
+
+# ===== 桩与构造 ============================================================
+
+
+def _snap(confident: bool = True, overlay: str | None = None,
+          name: str = 'prep_shop') -> Snapshot:
+    """构造快照:仅分类与 overlay 有意义,其余字段框架不读。"""
+    return Snapshot(
+        classification=SubstateClassification(name=name, confident=confident),
+        event_overlay=overlay)
+
+
+def _ops(*keys: str, domain: str = 'shop') -> Decision:
+    """单域 op 批(op_key 即列表序执行)。"""
+    return Decision(ops=tuple(AtomOp(k, domain) for k in keys))
+
+
+class _Recorder:
+    """端口桩调用记录(heavy 序/executed 序/恢复/强制/停机/缺陷台账)。"""
+
+    def __init__(self) -> None:
+        self.heavy_flags: list[bool] = []
+        self.executed: list[str] = []
+        self.recover_calls = 0
+        self.forced_calls = 0
+        self.stops: list[str] = []
+        self.defects: list[tuple[str, str]] = []
+        self.decide_count = 0
+
+
+def _engine(snapshots: list[Snapshot] | Snapshot,
+            decisions: list[Decision] | Decision,
+            exec_results: dict[str, bool] | None = None,
+            stopped_flags: list[bool] | bool = False,
+            recover_closed_known: bool = False
+            ) -> tuple[DirectorV2, _Recorder, _w588_director_v2_SimpleNamespace]:
+    """构造引擎 + 记录桩 + 假 session。
+
+    - snapshots:观察序列,耗尽复用最后一个(恒不 confident 场景靠它);
+    - decisions:决策序列,耗尽再取 = AssertionError(防测试自身死循环,
+      decide 超发即测试脚本错);传单个 Decision = 恒同值(步数预算类用);
+    - stopped_flags:is_stopped 现读序列(耗尽复用最后一个)。
+    """
+    rec = _Recorder()
+    snaps = snapshots if isinstance(snapshots, list) else [snapshots]
+    obs_state = {'i': 0}
+
+    def observe(heavy: bool) -> Snapshot:
+        rec.heavy_flags.append(heavy)
+        i = min(obs_state['i'], len(snaps) - 1)
+        obs_state['i'] += 1
+        return snaps[i]
+
+    if isinstance(decisions, Decision):
+        def decide(_s, _sess):
+            rec.decide_count += 1
+            return decisions
+    else:
+        def decide(_s, _sess):
+            rec.decide_count += 1
+            if not decisions:
+                raise AssertionError('decide 超发(测试脚本耗尽决策序列)')
+            return decisions.pop(0)
+
+    exec_map = exec_results or {}
+
+    def execute(op):
+        rec.executed.append(op.op_key)
+        return exec_map.get(op.op_key, True), 'ok'
+
+    flags = stopped_flags if isinstance(stopped_flags, list) else [stopped_flags]
+    stop_state = {'i': 0}
+
+    def is_stopped() -> bool:
+        i = min(stop_state['i'], len(flags) - 1)
+        stop_state['i'] += 1
+        return flags[i]
+
+    ports = _DirectorPorts(
+        decide=decide, observe=observe, execute=execute,
+        recover=lambda: (rec.__setattr__('recover_calls', rec.recover_calls + 1)
+                         or recover_closed_known),
+        force_battle=lambda _why='': rec.__setattr__('forced_calls', rec.forced_calls + 1)
+        or True,
+        is_stopped=is_stopped,
+        stop_with_evidence=lambda reason: rec.stops.append(reason),
+        record_defect=lambda kind, detail: rec.defects.append((kind, detail)))
+    engine = DirectorV2(ports)
+    session = _w588_director_v2_SimpleNamespace(defer_count=0, prep_phase=0, bail_reason_counts={})
+    return engine, rec, session
+
+
+# ===== 循环行为锁 ==========================================================
+
+
+def test_normal_step_progress_clears_stall_and_heavy_tail() -> None:
+    """正常步:op progressed → stall/连败清零;批尾 heavy 观察恰一次;
+    decide 收到该批尾后快照(环推进)。"""
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        _ops('k1'), Decision(control=Bail('done'))])
+    engine._stall = 3          # 预置零进展计数:成功步必须断链清零
+    engine._fail_counts = {'k1': 1}
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert rec.executed == ['k1']
+    assert engine._stall == 0
+    assert 'k1' not in engine._fail_counts
+    assert rec.heavy_flags == [True, True]   # 环入口 heavy + 批尾 heavy
+    assert rec.forced_calls == 0
+
+
+def test_defer_counts_and_light_observe() -> None:
+    """defer 路径:框架计 defer、轻观察、不进 execute(控制流不经验证链)。"""
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        Decision(control=Defer()), Decision(control=Bail('done'))])
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert sess.defer_count == 1
+    assert rec.executed == []
+    assert rec.heavy_flags == [True, False]   # 控制流走轻观察
+
+
+def test_bail_counts_only_grows_and_pingpong_stops() -> None:
+    """bail 局级计数只增不清;同因达阈值 → 留证停机;异因不清彼因计数。"""
+    # 基础:bail 计数 +1 → BAIL 出口
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        Decision(control=Bail('ov'))])
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert sess.bail_reason_counts == {'ov': 1}
+    assert rec.stops == []
+    # 同因预置 2 次,再 bail 一次 → ≥3 → ping-pong 留证停机
+    engine2, rec2, sess2 = _engine(snapshots=[_snap()], decisions=[
+        Decision(control=Bail('ov'))])
+    sess2.bail_reason_counts = {'ov': DirectorV2.BAIL_SAME_REASON_DIAG - 1}
+    outcome2 = engine2.run(sess2)
+    assert outcome2.kind is LoopOutcomeKind.PINGPONG_STOP
+    assert len(rec2.stops) == 1
+    # 异因不清彼因:ov 已 2 次,来因 'other' → 仍 BAIL 不停
+    engine3, rec3, sess3 = _engine(snapshots=[_snap()], decisions=[
+        Decision(control=Bail('other'))])
+    sess3.bail_reason_counts = {'ov': DirectorV2.BAIL_SAME_REASON_DIAG - 1}
+    outcome3 = engine3.run(sess3)
+    assert outcome3.kind is LoopOutcomeKind.BAIL
+    assert sess3.bail_reason_counts['ov'] == DirectorV2.BAIL_SAME_REASON_DIAG - 1   # 不清
+    assert rec3.stops == []
+
+
+def test_unconfident_bounded_retry_then_evidence_stop() -> None:
+    """非 confident 不进 decide:有界重试(重观察)内恢复 → 正常推进;
+    恒不 confident → 耗尽 → 留证停机接口位恰调一次。"""
+    # a) 前 2 帧不 confident(不 decide),第 3 帧恢复 → 正常走
+    engine, rec, sess = _engine(
+        snapshots=[_snap(confident=False), _snap(confident=False), _snap()],
+        decisions=[_ops('k1'), Decision(control=Bail('done'))],
+        exec_results={'k1': True})
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert rec.decide_count == 2   # 两帧不 confident 均未到 decide
+    assert rec.executed == ['k1']
+    # b) 恒不 confident → 重试耗尽 → EVIDENCE_STOP + stop_with_evidence 一次
+    engine2, rec2, sess2 = _engine(
+        snapshots=_snap(confident=False),
+        decisions=[_ops('k1')])
+    outcome2 = engine2.run(sess2)
+    assert outcome2.kind is LoopOutcomeKind.EVIDENCE_STOP
+    assert rec2.decide_count == 0
+    assert len(rec2.stops) == 1
+    assert rec2.heavy_flags == [True] * (DirectorV2.CONF_RETRY_LIMIT + 1)   # 入口 + 3 重试
+
+
+def test_brake_top_before_any_decide() -> None:
+    """W209j 刹车·环顶查:停机标志已设 → 收口,decide/execute 零调用。"""
+    engine, rec, sess = _engine(snapshots=[_snap()],
+                                decisions=[_ops('k1')], stopped_flags=True)
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BRAKE_STOPPED
+    assert rec.decide_count == 0
+    assert rec.executed == []
+
+
+def test_brake_before_execute() -> None:
+    """W209j 刹车·执行前双查:op 已出 decide、未落地 → 停机收口不发动作。"""
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[_ops('k1')],
+                                exec_results={'k1': True},
+                                stopped_flags=[False, True])
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BRAKE_STOPPED
+    assert rec.decide_count == 1   # decide 已发生
+    assert rec.executed == []      # execute 前被刹
+
+
+def test_step_budget_exhausted_forces_battle() -> None:
+    """步数预算:DirectorV2.MAX_STEPS+1 步 → F5 强制出战端口恰调一次(恒空批驱动)。"""
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=_ops())   # 恒空批
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BATTLE_FORCED
+    assert outcome.reason == '步数预算耗尽'
+    assert rec.forced_calls == 1
+    assert rec.decide_count == DirectorV2.MAX_STEPS   # 第 MAX_STEPS+1 步过门
+
+
+def test_stall_gate_requires_recovery_tried() -> None:
+    """stall 门:stall≥阈值但恢复未试 → 不强制;恢复已试 → 强制出战。"""
+    # a) 连续零进展(空批)×DirectorV2.STALL_LIMIT,恢复未试 → 门不放行
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        _ops(), _ops(), _ops(), _ops(), _ops(),
+        Decision(control=Bail('done'))])
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL   # 门未触发,由 bail 收口
+    assert engine._stall == DirectorV2.STALL_LIMIT
+    assert rec.forced_calls == 0
+    # b) 恢复已试(经真实失败链取得)+ 连续零进展补到阈值 → 门放行强制出战。
+    # 注:引擎计数由 run() 环入口清零重建,不预设——这正是时机锁的语义。
+    engine2, rec2, sess2 = _engine(snapshots=[_snap()], decisions=[
+        _ops('k1'), _ops('k1'),          # 连败×2 → 恢复一次(recovery_tried=True)
+        _ops(), _ops(), _ops()],         # 零进展×3 → stall 5 → 过门
+        exec_results={'k1': False})
+    outcome2 = engine2.run(sess2)
+    assert outcome2.kind is LoopOutcomeKind.BATTLE_FORCED
+    assert outcome2.reason == 'stall+恢复试尽'
+    assert rec2.forced_calls == 1
+    assert rec2.recover_calls == 1
+
+
+def test_fail_chain_recover_once_then_block() -> None:
+    """连败→恢复→屏蔽链:连败 2 → 恢复原语恰一次 + 连败清零(重试窗);
+    再连败 2 → 屏蔽落定 + 连败清零(防重复触发);屏蔽后同 key 重提案被拒。"""
+    # a) 四次失败走完整链,恢复恰一次,不强制(stall 未到门)
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        _ops('k1'), _ops('k1'), _ops('k1'), _ops('k1'),
+        Decision(control=Bail('done'))],
+        exec_results={'k1': False})
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert rec.recover_calls == 1   # 恢复原语一次/实例,后续失败不再发
+    assert engine._recovered == {'k1'}
+    assert engine._blocked == {'k1'}
+    assert engine._fail_counts.get('k1', 0) == 0   # 屏蔽落定清连败计数
+    assert rec.forced_calls == 0
+    # b) 恢复关过已知弹层仍败 → 弹层顽固 → bail 交外环(分型)。
+    # 注:恢复发放清连败计数(重试窗),分型需恢复后再连败 2 次 → 共 4 决策。
+    engine2, rec2, sess2 = _engine(
+        snapshots=[_snap()],
+        decisions=[_ops('k1'), _ops('k1'), _ops('k1'), _ops('k1')],
+        exec_results={'k1': False}, recover_closed_known=True)
+    outcome2 = engine2.run(sess2)
+    assert outcome2.kind is LoopOutcomeKind.BAIL
+    assert '恢复无效-弹层' in outcome2.reason
+    assert engine2._blocked == set()   # 弹层顽固走 bail 不屏蔽
+    # c) 屏蔽后同 key 重提案:拒绝执行 + 计 stall(确定性重提案防线);
+    # 引擎计数同样不预设,屏蔽态由真实链走到(4 连败 + 第 5 次提案被拒过门)。
+    engine3, rec3, sess3 = _engine(snapshots=[_snap()], decisions=[
+        _ops('k1'), _ops('k1'), _ops('k1'), _ops('k1'), _ops('k1')],
+        exec_results={'k1': False})
+    outcome3 = engine3.run(sess3)
+    assert outcome3.kind is LoopOutcomeKind.BATTLE_FORCED   # 拒绝计 stall → 过门
+    assert rec3.executed == ['k1', 'k1', 'k1', 'k1']        # 第 5 次未落地
+
+
+def test_fail_stop_batch_drops_remaining() -> None:
+    """fail-stop 批:三 op 批第 2 个失败 → 第 3 个不执行、批中止。"""
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        _ops('k1', 'k2', 'k3'), Decision(control=Bail('done'))],
+        exec_results={'k1': True, 'k2': False, 'k3': True})
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert rec.executed == ['k1', 'k2']   # k3 丢弃
+    assert engine._blocked == set()       # k2 仅失败一次,未到连败门
+
+
+def test_cross_domain_batch_rejected() -> None:
+    """跨域批:域校验拒绝,零 execute 调用,计 stall(MED-3 拒绝路径过门)。"""
+    cross = Decision(ops=(AtomOp('k1', 'shop'), AtomOp('k2', 'bench')))
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        cross, Decision(control=Bail('done'))])
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert rec.executed == []
+    assert engine._stall == 1
+
+
+def test_empty_ops_zero_progress_stall() -> None:
+    """空批 = 合法零进展:计 stall、无 execute(空返回防线,W561 攻击1)。"""
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        _ops(), Decision(control=Bail('done'))])
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert rec.executed == []
+    assert engine._stall == 1
+
+
+# ===== 六件套时机锁(权威表 = ADR-0458;「表=代码」一致性)==================
+
+
+def test_entry_reset_table() -> None:
+    """环入口清零表:defer/prep_phase/步数/stall/连败链全清,
+    **bail 局级计数不清**(唯一清零点 = 外环 handler 成功消化)。"""
+    engine, rec, sess = _engine(snapshots=[_snap()],
+                                decisions=[Decision(control=Bail('probe'))])
+    sess.defer_count = 5
+    sess.prep_phase = 7
+    sess.bail_reason_counts = {'x': 2}          # 局级陈计数
+    engine._steps = 9
+    engine._stall = 4
+    engine._fail_counts = {'a': 1}
+    engine._blocked = {'b'}
+    engine._recovered = {'c'}
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert sess.defer_count == 0                # 件 4:环入口清
+    assert sess.prep_phase == 0
+    assert engine._steps == 1                   # 件 1:入口清零后本步已 +1
+    assert engine._stall == 0                   # 件 2:入口清(bail 路径不计 stall)
+    assert engine._fail_counts == {}            # 件 3:重建
+    assert engine._blocked == set()             # 件 3:屏蔽集生命周期 = 本环
+    assert engine._recovered == set()
+    assert sess.bail_reason_counts == {'x': 2, 'probe': 1}   # 件 5:只增不清
+
+
+def test_intra_loop_clear_points_table() -> None:
+    """环内清零表:progressed 清 stall+连败;恢复发放清连败留 recovered;
+    屏蔽落定清连败留 blocked;defer 跨步累积不被步间清零。"""
+    engine, rec, sess = _engine(snapshots=[_snap()], decisions=[
+        Decision(control=Defer()),
+        Decision(control=Defer()),
+        _ops('k1'),
+        Decision(control=Bail('done')),
+    ], exec_results={'k1': True})
+    engine._stall = 2
+    engine._fail_counts = {'k1': 1}
+    outcome = engine.run(sess)
+    assert outcome.kind is LoopOutcomeKind.BAIL
+    assert sess.defer_count == 2                # 件 4:步间不清,跨步累积
+    assert engine._stall == 0                   # 件 2:progressed 即清
+    assert 'k1' not in engine._fail_counts      # 件 3:progressed 清连败
+
+
+# ==================== w817_recovery_precheck ====================
+
+import pytest as _w817_recovery_precheck_pytest
+from cv2.typing import MatLike
+
+from sr_od.application.currency_war import currency_war_app as cw_app_module
+from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
+from sr_od.application.currency_war.operations.entry.exit_currency_war_match import ExitCurrencyWarMatch
+from test.conftest import SrTestContext
+from test.harness.fixture_controller import FixtureController, WatchdogOperationMixin, enter_running_state, fast_sleep, reset_running_state
+
+# ---------------------------------------------------------------------------
+# 识别锁(fixture 级,离线 OCR,无 controller)
+# ---------------------------------------------------------------------------
+
+
+def _rect_has_text(ctx: SrTestContext, screen: MatLike, area_screen: str,
+                   area_name: str, kw: str) -> bool:
+    """在指定 area 的 pc_rect 内做 OCR,判关键词是否出现。"""
+    area = ctx.screen_loader.get_area(area_screen, area_name)
+    assert area is not None, f'area 未建档:{area_screen}/{area_name}'
+    texts = [m.data for m in ctx.ocr_service.get_ocr_result_list(
+        image=screen, rect=area.pc_rect)]
+    return any(kw in t for t in texts)
+
+
+def test_pause_fixture_hits_mark(test_context: SrTestContext) -> None:
+    """恢复态 fixture:战斗暂停锚在画面上(预检正例)。"""
+    screen = test_context.load_screen(CurrencyWarApp.PAUSE_SCREEN, 'paused')
+    assert _rect_has_text(test_context, screen,
+                          CurrencyWarApp.PAUSE_SCREEN, CurrencyWarApp.PAUSE_MARK,
+                          '战斗暂停'), '暂停面板帧应命中「标识-战斗暂停」area'
+
+
+def test_lobby_fixture_no_pause_mark(test_context: SrTestContext) -> None:
+    """负例:大厅帧在战斗暂停锚 rect 内无该文本(正常启动不触发预检)。"""
+    screen = test_context.load_screen('货币战争-大厅', 'lobby')
+    assert not _rect_has_text(test_context, screen,
+                              CurrencyWarApp.PAUSE_SCREEN, CurrencyWarApp.PAUSE_MARK,
+                              '战斗暂停')
+
+
+def test_pause_screen_areas_onboarded() -> None:
+    """恢复链依赖的 screen_info area 齐:标识 + 三按钮(撤退/重新挑战/继续战斗)。"""
+    import yaml
+
+    with open('assets/game_data/screen_info/currency_war_battle_pause.yml',
+              encoding='utf-8') as f:
+        d = yaml.safe_load(f)
+    names = {a['area_name'] for a in d['area_list']}
+    assert {'标识-战斗暂停', '按钮-撤退', '按钮-重新挑战',
+            '按钮-继续战斗'} <= names
+
+
+# ---------------------------------------------------------------------------
+# 恢复链行为测试(FixtureController 剧本)
+# ---------------------------------------------------------------------------
+
+
+class _WatchedExitCurrencyWarMatch(WatchdogOperationMixin, ExitCurrencyWarMatch):
+    """带看门狗的退局 op(防恢复链 WAIT 死循环拖挂测试)。"""
+
+
+def _recovery_phases() -> list[dict]:
+    """暂停面板 → 撤退 → 放弃并结算 → 下一步 → 大厅(手动验证范式)。"""
+    return [
+        {
+            'frame': ('货币战争-战斗暂停', 'paused'),
+            'exit': ('on_click_in', '货币战争-战斗暂停', '按钮-撤退'),
+        },
+        {
+            'frame': ('货币战争-中断挑战弹窗', 'open'),
+            'exit': ('on_click_in', '货币战争-中断挑战弹窗', '按钮-放弃并结算'),
+        },
+        {
+            'frame': ('货币战争-挑战失败', 'failed'),
+            'exit': ('on_click_in', '货币战争-挑战失败', '按钮-下一步'),
+        },
+        {  # 大厅:恢复链终点(exit op 大厅锚命中 → success;预检后回大厅)
+            'frame': ('货币战争-大厅', 'lobby'),
+        },
+    ]
+
+
+@_w817_recovery_precheck_pytest.fixture()
+def fixture_controller(
+    test_context: SrTestContext,
+    monkeypatch: _w817_recovery_precheck_pytest.MonkeyPatch,
+) -> FixtureController:
+    ctrl = FixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+    return ctrl
+
+
+def _require_screens(test_context: SrTestContext, phases: list[dict]) -> None:
+    for phase in phases:
+        screen_name, state = phase['frame']
+        if not test_context.has_screen(screen_name, state):
+            _w817_recovery_precheck_pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
+
+
+def _patch_watched_exit(monkeypatch: _w817_recovery_precheck_pytest.MonkeyPatch) -> None:
+    """app 内构造的退局 op 换成看门狗版(防死循环)。"""
+    def _factory(ctx) -> ExitCurrencyWarMatch:
+        op = _WatchedExitCurrencyWarMatch(ctx)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        return op
+    monkeypatch.setattr(cw_app_module, 'ExitCurrencyWarMatch', _factory)
+
+
+def test_pause_panel_triggers_recovery_chain_to_lobby(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+    monkeypatch: _w817_recovery_precheck_pytest.MonkeyPatch,
+) -> None:
+    """暂停面板起跑:预检命中 → 恢复链三点击按序落地 → 回大厅。"""
+    phases = _recovery_phases()
+    _require_screens(test_context, phases)
+    _patch_watched_exit(monkeypatch)
+    fixture_controller.set_phases(phases)
+
+    app = CurrencyWarApp(test_context)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            app.screenshot()
+            result = app._enter_lobby()
+    finally:
+        reset_running_state(test_context, app)
+
+    assert result.is_success, f'恢复链未走通到大厅:status={result.status}'
+    assert fixture_controller.click_hit_area('货币战争-战斗暂停', '按钮-撤退'), (
+        f'未点「撤退」:{fixture_controller.recorded_clicks}')
+    assert fixture_controller.click_hit_area('货币战争-中断挑战弹窗', '按钮-放弃并结算'), (
+        f'未点「放弃并结算」:{fixture_controller.recorded_clicks}')
+    assert fixture_controller.click_hit_area('货币战争-挑战失败', '按钮-下一步'), (
+        f'未点「下一步」:{fixture_controller.recorded_clicks}')
+    # 恢复链终点 = 大厅(末 phase),此后正常启动流接管
+    assert fixture_controller.phase_idx == len(phases) - 1
+
+    # 回大厅后重跑入口节点:走「已在 CW」常规分支,不再触发恢复
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            app.screenshot()
+            result2 = app._enter_lobby()
+    finally:
+        reset_running_state(test_context, app)
+    assert result2.is_success and result2.status == '已在 CW(大厅/对局中),跳过 enter', (
+        f'回大厅后应走常规分支:status={result2.status}')
+
+
+def test_normal_lobby_start_zero_intervention(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """正常启动(大厅帧):预检零介入 —— 零点击、直接走「已在 CW」分支。"""
+    phases = [{'frame': ('货币战争-大厅', 'lobby')}]
+    _require_screens(test_context, phases)
+    fixture_controller.set_phases(phases)
+
+    app = CurrencyWarApp(test_context)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            app.screenshot()
+            result = app._enter_lobby()
+    finally:
+        reset_running_state(test_context, app)
+
+    assert result.is_success and result.status == '已在 CW(大厅/对局中),跳过 enter', (
+        f'大厅帧应走常规分支:status={result.status}')
+    assert fixture_controller.recorded_clicks == [], (
+        f'正常启动不应有任何恢复介入点击:{fixture_controller.recorded_clicks}')
