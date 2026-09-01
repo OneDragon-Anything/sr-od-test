@@ -19,6 +19,8 @@ False → 每轮必然落入兜底分支。断言:
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -88,6 +90,13 @@ def stuck_op(
         btnw_module.common_screen_state,
         'is_express_supply',
         lambda *args, **kwargs: False,
+    )
+    # CW 对局中画面判定:真实实现走 session 级真 OCR 画面匹配(对空白 mock 帧
+    # 既慢又不定),恒 None=判定失败退兜底,保既有「必落兜底」构造语义不变。
+    monkeypatch.setattr(
+        btnw_module.cw_screen_state,
+        'get_in_match_screen_name',
+        lambda *args, **kwargs: None,
     )
     # 对话态守卫走真实 ctx.ocr(session 级真模型,对空白 mock 帧推理既慢又不定)
     # → 恒「无对话」:守卫返回 None,每轮照旧落兜底(本测试的构造语义不变)。
@@ -408,12 +417,18 @@ def _run_real_frame_check_screen(
     monkeypatch: pytest.MonkeyPatch,
     screen_name: str,
     state: str,
+    in_match_screen_name: str | None = None,
+    exit_match_cls: type | None = None,
 ) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
     """真帧驱动单轮 check_screen,返回 (结果, find记录, find+click记录, 裸click记录)。
 
     - ``op.last_screenshot`` 直接注入归档真帧(不经截图链路);
     - 三类 round_by_* 均为**包装真实方法**(识别照跑,只加记录);
-    - 模拟宇宙状态 / 列车补给 / 对话守卫恒无(与本测试无关,防噪音)。
+    - 模拟宇宙状态 / 列车补给 / 对话守卫恒无(与本测试无关,防噪音);
+    - CW 对局中画面判定默认恒 None;``in_match_screen_name`` 非 None 时改为
+      恒返回该屏名(真帧 + 判定桩:对局画面匹配层已由 cw 侧测试单独锁定,
+      本仓真帧测试只锁 check_screen 的分支路由);
+    - ``exit_match_cls`` 非 None 时替换为该假类(不触真实退出对局 op)。
     """
     img = test_context.load_screen(screen_name, state)
     finds: list[tuple[str, str]] = []
@@ -456,6 +471,21 @@ def _run_real_frame_check_screen(
         'is_express_supply',
         lambda *args, **kw: False,
     )
+    # CW 对局中画面判定恒 None(真实实现走真 OCR 画面匹配,与被测分支无关;
+    # None=判定失败退既有行为)。真帧场景需命中时由调用方显式覆盖。
+    monkeypatch.setattr(
+        btnw_module.cw_screen_state,
+        'get_in_match_screen_name',
+        lambda *args, **kw: None,
+    )
+    if in_match_screen_name is not None:
+        monkeypatch.setattr(
+            btnw_module.cw_screen_state,
+            'get_in_match_screen_name',
+            lambda *args, **kw: in_match_screen_name,
+        )
+    if exit_match_cls is not None:
+        monkeypatch.setattr(btnw_module, 'ExitCurrencyWarMatch', exit_match_cls)
     monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
 
     op = _WatchedBackToNormal(test_context)
@@ -821,3 +851,144 @@ class TestNpcDialogGuard:
         assert all(sn == '货币战争-大厅' and an == '按钮-关闭' for sn, an in area_clicks), (
             f'点击 area 漂移:{area_clicks[:3]}'
         )
+
+
+class _RecordingFakeCwExit:
+    """记录构造/执行的 ExitCurrencyWarMatch 假类(不触真实 op 节点图)。
+
+    ``fail_after`` 之前每次 ``execute`` 返回成功(=已回大厅),之后返回失败
+    (模拟对局画面点不动)——让「成功一轮 round_wait + 失败重试有界」两条
+    路径都能在画面不变的 mock 环境里走到。
+    """
+
+    constructed: int = 0
+    executed: int = 0
+    fail_after: int = 0
+
+    def __init__(self, ctx) -> None:
+        type(self).constructed += 1
+
+    def execute(self):
+        # 真 Operation.execute() 返回 OperationResult(.success),非 round 结果;
+        # 假类只承诺 cw_exit 消费的 .success 契约。
+        type(self).executed += 1
+        ok = type(self).executed <= type(self).fail_after
+        return SimpleNamespace(success=ok, status='已返回货币战争大厅' if ok else '退出失败')
+
+
+class TestCwInMatchDelegationBranch:
+    """CW 对局中画面 → 委托 ExitCurrencyWarMatch 分支锁(2026-09-01 孤儿对局事故)。
+
+    背景:上一 CW app 被 stop 后残留对局画面(如备战),本 op 既有分支全不
+    认识 → 落兜底点「菜单-右上角返回」(CW 画面无此控件)→ 9 个一条龙应用
+    逐一 round_retry×20 速挂。修复:判定单一源 = cw_screen_state(与
+    CurrencyWarApp._in_match 第①层同源)命中即委托退出对局 op;成功回大厅
+    后下一轮由「货币战争-大厅」分支(点右上角关闭 X)接管。
+    """
+
+    def test_in_match_screen_delegates_to_cw_exit(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """判定命中:每轮委托假类并 execute;零兜底点击;守卫不被触达。"""
+        counters: dict[str, int] = {'fallback_click': 0}
+
+        def _fake_find_area(self, screen, screen_name, area_name, *args, **kwargs):
+            return self.round_wait(status=f'未找到 {area_name}')
+
+        def _fake_click_area(self, screen_name, area_name, *args, **kwargs):
+            counters['fallback_click'] += 1
+            return self.round_success(status=area_name)
+
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_area
+        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
+        monkeypatch.setattr(
+            btnw_module.sim_uni_screen_state,
+            'get_sim_uni_screen_state',
+            lambda *args, **kw: None,
+        )
+        monkeypatch.setattr(
+            btnw_module.common_screen_state,
+            'is_express_supply',
+            lambda *args, **kw: False,
+        )
+        # 判定桩:恒命中备战画面(真实画面匹配层由 cw 侧测试单独锁定)。
+        monkeypatch.setattr(
+            btnw_module.cw_screen_state,
+            'get_in_match_screen_name',
+            lambda *args, **kw: '货币战争-备战',
+        )
+        fake = _RecordingFakeCwExit
+        fake.constructed = 0
+        fake.executed = 0
+        fake.fail_after = 1  # 首轮成功(WAIT 路径),之后失败(RETRY 有界路径)
+        monkeypatch.setattr(btnw_module, 'ExitCurrencyWarMatch', fake)
+        # 守卫被触达即回归(兜底路径被对话隐藏按钮误触的事故形状)。
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'check_npc_dialog',
+            lambda self, screen: (_ for _ in ()).throw(
+                AssertionError('对局中画面应被 cw 退出分支接管,不应进入对话态守卫')),
+        )
+
+        op = _WatchedBackToNormal(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        sleeps = _patch_round_sleep(monkeypatch)
+
+        enter_running_state(test_context)
+        try:
+            result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        # 委托发生:每轮都构造并 execute 了退出对局假类(成功 1 轮 + 失败重试轮)。
+        rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
+        assert fake.constructed == rounds and fake.executed == rounds, (
+            f'委托数(构造 {fake.constructed}/执行 {fake.executed})应==轮次({rounds})'
+        )
+        # 兜底零点击:右上角返回控件在 CW 画面不存在,一次都不许点。
+        assert counters['fallback_click'] == 0, (
+            f'兜底被触达 {counters["fallback_click"]} 次,应恒 0'
+        )
+        # 有界结束:耗尽 20 次 retry 后 FAIL,而非 WAIT 永动。
+        assert not result.success, f'画面不变时应有界 FAIL,status={result.status}'
+        assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
+        # 每轮 round_wait / round_retry 都带 wait=1(防无间隔风暴)。
+        assert len(sleeps) >= rounds, (
+            f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
+        )
+
+    def test_prep_frame_real_routes_to_cw_exit(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """备战真帧:既有分支全不命中(真识别照跑)→ 命中委托分支,不落兜底。
+
+        真帧 = 测试仓归档备战帧(prep_1-6_all_positions.webp);对局中判定
+        用桩恒返「货币战争-备战」(画面匹配层由 cw 侧真帧测试单独锁定)。
+        """
+        fake = _RecordingFakeCwExit
+        fake.constructed = 0
+        fake.executed = 0
+        fake.fail_after = 99  # 单轮测试,恒成功
+
+        result, finds, find_clicks, bare_clicks = _run_real_frame_check_screen(
+            test_context, monkeypatch, '货币战争-备战', 'prep_1-6_all_positions',
+            in_match_screen_name='货币战争-备战',
+            exit_match_cls=fake,
+        )
+
+        # 分支路由:委托成功 → round_wait 等下一轮(大厅分支接管),非 success/兜底。
+        assert not result.is_success, f'应 round_wait 等大厅接管,status={result.status}'
+        # 委托发生:假类被构造并 execute 恰一次(单轮)。
+        assert fake.constructed == 1 and fake.executed == 1, (
+            f'应恰好委托一次:构造 {fake.constructed}/执行 {fake.executed}'
+        )
+        # 不落兜底:零裸点击(兜底「菜单-右上角返回」走 round_by_click_area 记录)。
+        assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
+        # 顺序判据:大厅分支(更轻的直点关闭)未抢在本分支前误吸备战帧。
+        assert ('货币战争-大厅', '标识-创业指南') not in finds, f'识别命中:{finds}'
