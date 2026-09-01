@@ -753,7 +753,8 @@ def test_post_buy_incremental_state_invariants_preserved() -> None:
     """机制不变量沿用末波读值:本单元动作(无升级)不触 plane/round/
     board/level/xp——增量构造不得回退这些面为缺省/零值。"""
     last = _st(plane=2, round_num=3, level=7, board={'列车同行': 1})
-    post = build_post_buy_incremental_state(last, 41, [], None, 80, True, True)
+    post = build_post_buy_incremental_state(
+        last, 41, _tracked(), None, 80, True, True)
     assert post is not None
     assert (post.plane, post.round_num, post.level) == (2, 3, 7)
     assert post.board == {'列车同行': 1}
@@ -765,7 +766,7 @@ def test_post_buy_incremental_state_hp_unreadable_not_overwritten() -> None:
     """hp 不产值链(hp_value=None)→ _apply_hp 不覆盖:保留垫底帧的
     值+位(对账层产物),增量构造不引入假 hp/假可信位。"""
     last = _st(hp=80, hp_readable=True)
-    post = build_post_buy_incremental_state(last, 41, [], None,
+    post = build_post_buy_incremental_state(last, 41, _tracked(), None,
                                             None, False, False)
     assert post is not None
     assert post.hp == 80
@@ -780,6 +781,16 @@ def test_post_buy_incremental_state_gold_miss_fails_closed() -> None:
         _st(), None, _tracked(), None, 80, True, True) is None
 
 
+def test_post_buy_incremental_state_empty_tracked_fails_closed() -> None:
+    """空 tracked → None(fail-closed 第二维):bench 真空与跟踪丢失在
+    构造点不可区分,垫底 state.bench 是执行前快照——沿它会拿陈旧 bench
+    当真值(误读维度造值);调用方回退全量 OCR 后两情形都得真值。"""
+    stale_bench = _tracked()
+    last = _st(gold=55, bench=stale_bench)
+    assert build_post_buy_incremental_state(
+        last, 41, [], None, 80, True, True) is None
+
+
 def test_post_buy_incremental_state_no_mutation_of_last_state() -> None:
     """垫底 state 不得被就地改写(round_success 仍消费其 gold/plane)。"""
     last = _st(gold=55, bench=[])
@@ -792,7 +803,7 @@ def test_post_buy_incremental_state_no_mutation_of_last_state() -> None:
 def test_gate_fingerprint_mechanism_constants_untouched() -> None:
     """指纹机制零触碰锚:稳定窗地板/预估等待/gate 签名本批不变
     (压缩的是 shop.py 波循环的等待与重复读,不是验证本身)。"""
-    assert cw_observation_gate._OP_SETTLE_S == 1.2
+    assert cw_observation_gate._OP_SETTLE_S == 1.0  # 2026-09-02 用户口述口径 #15 收起动画 ~1s,自 1.2 核减
     assert cw_observation_gate._OP_SETTLE_MIN_STABLE_S == 0.6
     for prof in (cw_observation_gate.PROFILE_CLOSED,
                  cw_observation_gate.PROFILE_OPEN):

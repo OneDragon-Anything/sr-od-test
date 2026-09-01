@@ -214,8 +214,8 @@ def test_op_settle_waits_then_baseline_then_fast_poll(monkeypatch):
     out = wait_stable_frame(op, profile=_prof(), segment='op_settle',
                             clock=_TickingClock(0.3))
     assert out is not None
-    assert gate._LAST_SETTLE_WAIT == gate._OP_SETTLE_S == 1.2, \
-        '操作段必须先走 1.2s 预估等待(基线重置点)'
+    assert gate._LAST_SETTLE_WAIT == gate._OP_SETTLE_S == 1.0, \
+        '操作段必须先走 1.0s 预估等待(基线重置点;2026-09-02 用户口述口径 #15 收起动画 ~1s 自 1.2 核减)'
     assert op.shot_count >= 2, \
         f'须基线+至少一轮指纹确认(非单帧放行),实际 {op.shot_count}'
 
@@ -237,7 +237,7 @@ def test_op_settle_window_still_enforced(monkeypatch):
                             timeout_s=3.0,
                             clock=_TickingClock(0.3))
     assert out is None, '操作段稳定窗必须真实测量,不得单校验放行'
-    assert gate._LAST_SETTLE_WAIT == 1.2
+    assert gate._LAST_SETTLE_WAIT == 1.0
 
 
 def test_op_settle_window_graded_to_floor(monkeypatch):
