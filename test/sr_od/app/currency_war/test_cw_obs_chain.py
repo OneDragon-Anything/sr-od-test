@@ -1502,32 +1502,57 @@ def test_decision_trace_level_readable_field() -> None:
     assert asdict(DecisionTrace())['level_readable'] is True
 
 
-# ==================== 商店牌费用徽章数字识别(2星直出缺口闭环) ====================
-# 出处:merge_mechanics §2.6(费用倍数体系:1★=原费、2★=×3)与 §2.7(2星直出
-# 识别缺口登记;2026-09-02 费用数字识别落地闭环)。徽章数字模板匹配标定:
-# 正确数字 TM ≥0.78、错误数字 ≤0.59(阈值 0.60,13 帧 65 槽离线对拍)。
+# ==================== 商店牌费用徽章数字识别(2星/3星直出缺口闭环) ====================
+# 出处:merge_mechanics §2.6(费用倍数体系:费用 = 原费用 × 3^(星级−1),数字可
+# 为两位,用户 2026-09-02 定稿:星级 = 读数 ÷ roster 原费,倍数 {1,3,9} → 1/2/3★,
+# 识别不到按原费用兜底)与 §2.7(识别缺口登记;2026-09-02 费用数字识别落地闭环)。
+# 徽章数字模板匹配标定:正确数字 TM ≥0.78、错误数字 ≤0.59(阈值 0.60,13 帧
+# 65 槽离线对拍)。
 
 def test_resolve_cost_star_semantics() -> None:
-    """resolve_cost_star 三分支:直读1★/3倍2★直出/失读与矛盾走 roster 兜底。"""
+    """resolve_cost_star 语义:倍数 {1,3,9} → star 1/2/3 直读;失读/非整倍/×27 兜底。"""
     from sr_od.application.currency_war.obs.cw_observation import (
         COST_SOURCE_ROSTER_FALLBACK,
         resolve_cost_star,
     )
     assert resolve_cost_star(1, 1) == (1, 1, 'badge')
-    assert resolve_cost_star(3, 1) == (3, 2, 'badge')     # 1费2星直出
     assert resolve_cost_star(2, 2) == (2, 1, 'badge')
-    assert resolve_cost_star(6, 2) == (6, 2, 'badge')     # 2费2星直出
-    # 失读(None)→ roster 查表兜底(旧行为,star 保守 1)
+    assert resolve_cost_star(3, 1) == (3, 2, 'badge')     # 三月七 2★
+    assert resolve_cost_star(6, 2) == (6, 2, 'badge')     # 饮月 2★(两位前单数字)
+    assert resolve_cost_star(12, 4) == (12, 2, 'badge')   # 4费 2★(两位)
+    assert resolve_cost_star(9, 1) == (9, 3, 'badge')     # 1费 3★
+    assert resolve_cost_star(18, 2) == (18, 3, 'badge')   # 2费 3★(两位)
+    assert resolve_cost_star(45, 5) == (45, 3, 'badge')   # 5费 3★
+    # 失读(None)→ roster 查表兜底(按原费用记 1★)
     assert resolve_cost_star(None, 2) == (2, 1, COST_SOURCE_ROSTER_FALLBACK)
-    # 矛盾(既非原费也非3倍,如多位徽章被单字模板误命中)→ 兜底
-    assert resolve_cost_star(1, 2) == (2, 1, COST_SOURCE_ROSTER_FALLBACK)
-    assert resolve_cost_star(5, 4) == (4, 1, COST_SOURCE_ROSTER_FALLBACK)
+    # 非整数倍 / 倍数不在集 → 兜底(用户定稿:识别不到就按原费用兜底)
+    assert resolve_cost_star(4, 2) == (2, 1, COST_SOURCE_ROSTER_FALLBACK)
+    assert resolve_cost_star(5, 2) == (2, 1, COST_SOURCE_ROSTER_FALLBACK)
+    # ×27 = 4★ 超 CW 3★ 星级域 → 兜底留证
+    assert resolve_cost_star(27, 1) == (1, 1, COST_SOURCE_ROSTER_FALLBACK)
     # 名字未识别(roster_cost=0)→ 无从对账,兜底
     assert resolve_cost_star(None, 0) == (0, 1, COST_SOURCE_ROSTER_FALLBACK)
 
 
+def test_cost_glyph_multi_digit_compose() -> None:
+    """字形分割多位数快路:模板拼合 '1'+'2' 双字形掩码 → 分类 [1,2] → 12。"""
+    import numpy as np
+
+    from sr_od.application.currency_war.obs.cw_observation import (
+        _classify_glyph_digits,
+        _load_cost_digit_templates,
+    )
+    tmpls = _load_cost_digit_templates()
+    t1, t2 = tmpls[1], tmpls[2]
+    h = max(t1.shape[0], t2.shape[0])
+    canvas = np.zeros((h + 4, t1.shape[1] + t2.shape[1] + 8), np.uint8)
+    canvas[2:2 + t1.shape[0], 2:2 + t1.shape[1]] = t1
+    canvas[2:2 + t2.shape[0], t1.shape[1] + 6:t1.shape[1] + 6 + t2.shape[1]] = t2
+    assert _classify_glyph_digits(canvas) == [1, 2]
+
+
 def test_shop_cost_badge_fixture_digits(test_context) -> None:
-    """shop_open 存档帧逐槽费用数字 = 人工核对真值 [1,2,2,1,1]。
+    """shop_open 存档帧逐槽费用读数 = 人工核对真值 [1,2,2,1,1]。
 
     (翡翠1/丹恒·腾荒2/不死途2/飞霄1/三月七1;webp 归档版白字掩码匹配
     实测与原 PNG 等价,真阳性分数见上文标定注。)
@@ -1540,6 +1565,24 @@ def test_shop_cost_badge_fixture_digits(test_context) -> None:
     screen = test_context.load_screen(SHOP_SCREEN_NAME, state)
     digits = [read_shop_card_cost(test_context, screen, i) for i in range(1, 6)]
     assert digits == [1, 2, 2, 1, 1], f'费用数字识别偏差:{digits}'
+
+
+def test_shop_cost_badge_ocr_slow_path(test_context, monkeypatch) -> None:
+    """二级 OCR 慢路行为锁:桩掉字形快路 → 黑字白底反转 OCR 同样读对真值。
+
+    慢路服务多位数徽章(6/9/12/15/18/27)与模板外数字(5-9 无样本);
+    已知单数字帧上 OCR 与模板快路同真值 = 慢路通道质量的离线锁
+    (多位数真样本待实机,采到后补逐值锁)。
+    """
+    from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
+    from sr_od.application.currency_war.obs import cw_observation as obs
+    state = 'shop_open'
+    if not test_context.has_screen(SHOP_SCREEN_NAME, state):
+        pytest.skip(f'存档截图缺失:screens/{SHOP_SCREEN_NAME}/{state}.webp')
+    screen = test_context.load_screen(SHOP_SCREEN_NAME, state)
+    monkeypatch.setattr(obs, '_classify_glyph_digits', lambda m: [])
+    digits = [obs.read_shop_card_cost(test_context, screen, i) for i in range(1, 6)]
+    assert digits == [1, 2, 2, 1, 1], f'OCR 慢路偏差:{digits}'
 
 
 def test_shop_fixture_read_shop_cards_cost_source(test_context) -> None:
