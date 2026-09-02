@@ -306,8 +306,6 @@ def test_compound_word_not_matched() -> None:
 import time
 from types import SimpleNamespace
 
-import pytest as _w40_settlement_damage_pytest
-
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.obs.cw_settlement_obs import  parse_settlement_damage, read_round_outcome
 from sr_od.application.currency_war.kernel.cw_state import GameState
@@ -320,14 +318,6 @@ from sr_od.application.currency_war.telemetry.query import read_jsonl
 
 class _Item(SimpleNamespace):
     """OCR 结果桩(data/x/y/width/height;坐标取自 fixture 实测 OCR)。"""
-
-
-@_w40_settlement_damage_pytest.fixture(autouse=True)
-def _no_gold_detail_hook(monkeypatch: _w40_settlement_damage_pytest.MonkeyPatch) -> None:
-    """W414 金币明细采集钩子 no-op:既有 read_round_outcome 锁不落旁路台账
-    (测试不写真实 .debug;钩子自身契约在 test_cw_w414_gold_detail_hook.py)。"""
-    import sr_od.application.currency_war.obs.cw_settlement_obs as _so
-    monkeypatch.setattr(_so, 'collect_gold_detail_hook', lambda *a, **k: None)
 
 
 def _items(spec: list[tuple[str, int, int, int, int]]) -> list[_Item]:

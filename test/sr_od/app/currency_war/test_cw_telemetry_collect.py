@@ -8,7 +8,7 @@
 - w239_p2r1_loss_outcome: test_cw_w239_p2r1_loss_outcome.py
 - w28_outcome_write_defects: test_cw_w28_outcome_write_defects.py
 - w280_takeover_collect: test_cw_w280_takeover_collect.py
-- w414_gold_detail_hook: test_cw_w414_gold_detail_hook.py
+- w414_gold_detail_hook: test_cw_w414_gold_detail_hook.py(采集钩子段已随生产钩子回删,纯函数口径锁保留在本文件)
 冲突改名:后来者顶层名加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
@@ -1436,19 +1436,12 @@ def test_w277_reference_frame_ids_plane_detail(test_context: SrTestContext) -> N
     assert res.is_success, 'W277 引用帧上位面详情 id_mark 应命中(真实 OCR)'
 
 
-# ==================== w414_gold_detail_hook ====================
+# ==================== w414_gold_detail(口径回归锁;采集钩子已删,纯函数保留) ====================
 
-import json
 from types import SimpleNamespace
 
-import pytest
-
-from sr_od.application.currency_war.obs import cw_settlement_obs
-from sr_od.application.currency_war.telemetry import state as cw_telemetry
 from sr_od.application.currency_war.obs.cw_settlement_obs import (
-    collect_gold_detail_hook,
     parse_settlement_gold_detail,
-    read_round_outcome,
 )
 
 
@@ -1462,7 +1455,8 @@ def _items(spec: list[tuple[str, int, int, int, int]]) -> list[_Item]:
 
 
 # win.webp 全屏 OCR 实测(与 test_cw_w40_settlement_damage.WIN_FRAME 同源;金币明细区:
-# 基础奖励(530,604)→5(1051,605);利息(527,653)→4(1057,660);连胜×0(528,702))
+# 基础奖励(530,604)→5(1051,605);利息(527,653)→4(1057,660);连胜×0(528,702,
+# 右列金额漏读;画面实况 ×0 行金额恒 1,总分 10 = 5+4+1 交叉自洽))
 WIN_FRAME = _items([
     ('挑战成功', 831, 192, 256, 73), ('1-8', 887, 270, 44, 28),
     ('奖励', 981, 269, 55, 30), ('Lv.5', 1110, 367, 85, 66),
@@ -1481,29 +1475,30 @@ WIN_FRAME = _items([
 # ===== 纯函数:parse_settlement_gold_detail =====
 
 def test_win_fixture_three_components() -> None:
-    """实锤帧:基础奖励=5 / 利息=4 / 连胜=0(总分 10 = 5+4+0 交叉自洽)。"""
+    """实锤帧:基础奖励=5 / 利息=4 / 连胜×0 右列漏读→按画面实况口径落 1(总分 10 = 5+4+1)。"""
     assert parse_settlement_gold_detail(WIN_FRAME) == {
-        'base': 5, 'streak': 0, 'interest': 4}
+        'base': 5, 'streak': 1, 'interest': 4}
 
 
 def test_attached_token_forms() -> None:
-    """同 token 粘连形态(OCR 把标签与值读进一块):'基础奖励5' / '连胜x3'。"""
+    """同 token 粘连形态:'基础奖励5'=金额直连;'连胜x3'的 3 是**计数**,金额右列
+    缺 → None(计数禁顶账;旧实现落 3 是错误 B)。"""
     items = _items([
         ('获得金币总览', 530, 553, 146, 28), ('基础奖励5', 530, 604, 120, 28),
         ('连胜x3', 528, 702, 113, 35), ('利息', 527, 653, 56, 31),
     ])
     assert parse_settlement_gold_detail(items) == {
-        'base': 5, 'streak': 3, 'interest': None}
+        'base': 5, 'streak': None, 'interest': None}
 
 
 def test_header_streak_affix_not_detail_row() -> None:
-    """头部「火热连胜×1」词缀不是明细行(锚点下方守卫)→ 连胜只取明细行值。"""
+    """头部「火热连胜×1」词缀不是明细行(锚点下方守卫)→ 连胜只认明细行。"""
     items = _items([
         ('火热连胜×1', 700, 300, 150, 30),
         ('获得金币总览', 530, 553, 146, 28),
         ('连胜×2', 528, 702, 113, 35),
     ])
-    assert parse_settlement_gold_detail(items)['streak'] == 2
+    assert parse_settlement_gold_detail(items)['streak'] is None
 
 
 def test_no_anchor_returns_all_none() -> None:
@@ -1524,7 +1519,7 @@ def test_missing_value_component_is_none() -> None:
 
 
 def test_value_out_of_range_guard() -> None:
-    """三位数/越界值不是明细分量(格式先验 0-99)→ 拒,置 None。"""
+    """三位数/越界值不是明细分量(格式先验)→ 拒,置 None。"""
     items = _items([
         ('获得金币总览', 530, 553, 146, 28), ('基础奖励', 530, 604, 98, 28),
         ('120', 1051, 605, 40, 25),
@@ -1532,102 +1527,128 @@ def test_value_out_of_range_guard() -> None:
     assert parse_settlement_gold_detail(items)['base'] is None
 
 
-# ===== 采集钩子契约(jsonl 落盘 / 去重 / 容错;全走 tmp_path) =====
+# ===== 三 bug 回归锁(期望值单一源 = 结算金币明细 10 帧视觉标注表,
+# .debug/temp/currency_war/w414_gold_detail_conclusion.md §1;盘上 shot 像素级抽检
+# 在文件尾部 _GOLD_TRUTH_FRAMES) =====
 
-@pytest.fixture()
-def _hook_env(tmp_path, monkeypatch):
-    """钩子落盘指向 tmp_path + 截图/运行号外部依赖 no-op(测试不触真实 .debug)。"""
-    monkeypatch.setattr(cw_settlement_obs, '_GOLD_DETAIL_JOURNAL',
-                        tmp_path / 'gold_detail.jsonl')
-    monkeypatch.setattr(cw_settlement_obs, '_gold_last_row_key', None)
-    import sr_od.application.currency_war.kernel.cw_observe as obs_mod
-    monkeypatch.setattr(obs_mod, 'cw_shot_unique',
-                        lambda image, label: f'{label}__dead.png')
-    import sr_od.application.currency_war.telemetry.state as tel
-    monkeypatch.setattr(tel, 'current_run_id', lambda: 'run_x')
-    # 分包期 4:gold_detail 的 run_id 归属键读 kernel.cw_telemetry_exit 钩子位,
-    # provider 桩随迁(自动还原)
-    from sr_od.application.currency_war.kernel import cw_telemetry_exit
-    monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider', lambda: 'run_x')
-    return tmp_path
+def test_streak_right_column_value_beats_count() -> None:
+    """×3 且右列金额在场(标注帧 7 实测形态)→ 金额 2,不受计数 3 干扰(错误 B 根修)。"""
+    items = _items([
+        ('获得金币总览', 530, 552, 146, 28), ('基础奖励', 530, 602, 98, 29),
+        ('5', 1052, 609, 16, 18),
+        ('利息G', 526, 651, 88, 36),
+        ('连胜×3', 526, 703, 116, 34), ('2', 1052, 711, 18, 16),
+    ])
+    assert parse_settlement_gold_detail(items) == {
+        'base': 5, 'streak': 2, 'interest': None}
 
 
-def test_hook_appends_jsonl_row(_hook_env) -> None:
-    texts = [it.data for it in WIN_FRAME]
-    collect_gold_detail_hook(object(), texts, WIN_FRAME, plane=1, round_num=8,
-                             node_type='奖励', streak_after=0)
-    rows = [json.loads(l) for l in
-            (_hook_env / 'gold_detail.jsonl').read_text(encoding='utf-8').splitlines()]
-    assert len(rows) == 1
-    r = rows[0]
-    assert (r['run_id'], r['plane'], r['round_num'], r['node_type']) == \
-        ('run_x', 1, 8, '奖励')
-    assert (r['base'], r['streak'], r['interest']) == (5, 0, 4)
-    assert r['shot'] == 'cw_settle__dead.png'
+def test_streak_count_ge2_missing_value_is_none() -> None:
+    """×3 右列金额漏读(标注帧 8)→ None;旧实现回退落计数 3(错误 B),禁复发。"""
+    items = _items([
+        ('获得金币总览', 530, 552, 146, 28), ('基础奖励', 530, 602, 98, 29),
+        ('5', 1052, 609, 16, 18),
+        ('利息G', 526, 651, 88, 36),
+        ('连胜×3', 528, 703, 114, 34),
+    ])
+    assert parse_settlement_gold_detail(items)['streak'] is None
 
 
-def test_hook_dedup_same_frame(_hook_env) -> None:
-    """结算停留期同帧重复读(同 plane/round/文本)只落一行。"""
-    texts = [it.data for it in WIN_FRAME]
-    for _ in range(3):
-        collect_gold_detail_hook(None, texts, WIN_FRAME, plane=1, round_num=8,
-                                 node_type='奖励', streak_after=0)
-    lines = (_hook_env / 'gold_detail.jsonl').read_text(encoding='utf-8').splitlines()
-    assert len(lines) == 1
+def test_streak_x0_x1_pinned_one() -> None:
+    """×0/×1 行画面金额恒 1(标注帧 1/10 ×0 4/4 帧、帧 6 ×1 实证):
+    右列读到 1 → 1;右列漏读 → 仍 1(画面实况钉死口径,旧实现落计数 0 是错误 A)。"""
+    common = [('获得金币总览', 530, 552, 146, 28),
+              ('基础奖励', 528, 602, 102, 31), ('5', 1050, 609, 20, 18),
+              ('利息G', 526, 651, 88, 36), ('5', 1052, 661, 18, 16)]
+    with_value = _items(common + [('连胜×0', 526, 699, 116, 38),
+                                  ('1', 1054, 707, 12, 16)])
+    missing = _items(common + [('连胜×0', 526, 699, 116, 38)])
+    assert parse_settlement_gold_detail(with_value)['streak'] == 1
+    assert parse_settlement_gold_detail(missing)['streak'] == 1
+    items_x1 = _items(common + [('连胜×1', 526, 703, 114, 34)])
+    assert parse_settlement_gold_detail(items_x1)['streak'] == 1
 
 
-def test_hook_tolerates_run_id_failure(_hook_env, monkeypatch) -> None:
-    """run id 源抛异常 → 行照落,run_id='-'(采集零行为影响,不炸主流程)。"""
-    import sr_od.application.currency_war.telemetry.state as tel
-    def _boom():
-        raise RuntimeError('no session')
-    monkeypatch.setattr(tel, 'current_run_id', _boom)
-    # 分包期 4:provider 桩随迁出口钩子位(抛异常 → 行照落 run_id='-')
-    from sr_od.application.currency_war.kernel import cw_telemetry_exit
-    monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider', _boom)
-    texts = [it.data for it in WIN_FRAME]
-    collect_gold_detail_hook(None, texts, WIN_FRAME, plane=2, round_num=1,
-                             node_type='普通战斗', streak_after=-1)
-    r = json.loads((_hook_env / 'gold_detail.jsonl')
-                   .read_text(encoding='utf-8').splitlines()[0])
-    assert r['run_id'] == '-'
+def test_split_count_token_never_taken_as_amount() -> None:
+    """粘连拆分形态「连胜×」+「3」:计数数字落在标签右侧计数列(x≈645),
+    金额列 x 门把它挡在门外 → None(错误 B 的第二形态:计数当金额)。"""
+    items = _items([
+        ('获得金币总览', 530, 552, 146, 28),
+        ('连胜×', 526, 703, 80, 34), ('3', 645, 710, 16, 20),
+    ])
+    assert parse_settlement_gold_detail(items)['streak'] is None
 
 
-def test_hook_swallows_journal_failure(_hook_env, monkeypatch) -> None:
-    """落盘路径不可用(父级是普通文件,mkdir 必败)→ 吞异常不抛(钩子 best-effort 纪律)。"""
-    blocker = _hook_env / 'blocker.txt'
-    blocker.write_text('x', encoding='utf-8')
-    monkeypatch.setattr(cw_settlement_obs, '_GOLD_DETAIL_JOURNAL',
-                        blocker / 'sub' / 'gold_detail.jsonl')
-    texts = [it.data for it in WIN_FRAME]
-    collect_gold_detail_hook(None, texts, WIN_FRAME, plane=1, round_num=8,
-                             node_type='奖励', streak_after=0)   # 不抛即过
+def test_interest_value_domain_guard() -> None:
+    """利息金额守卫 2-9(画面实况:208 行读取分布):17(streak OCR 误读类,
+    标注表错误 C)与 1(下界外)→ None;域内 5 → 5。"""
+    def _frame(v: str) -> list[_Item]:
+        return _items([('获得金币总览', 530, 552, 146, 28),
+                       ('利息G', 526, 651, 88, 36), (v, 1057, 660, 13, 17)])
+    assert parse_settlement_gold_detail(_frame('17'))['interest'] is None
+    assert parse_settlement_gold_detail(_frame('1'))['interest'] is None
+    assert parse_settlement_gold_detail(_frame('5'))['interest'] == 5
 
 
-# ===== read_round_outcome 接线(同帧产明细 → jsonl) =====
-
-def _ctx_with_items(items: list[_Item]) -> SimpleNamespace:
-    return SimpleNamespace(ocr_service=SimpleNamespace(
-        get_ocr_result_list=lambda image, rect=None, crop_first=False: items))
-
-
-def test_read_round_outcome_triggers_hook(_hook_env) -> None:
-    """结算帧 → RoundOutcome 照旧 + 旁路 jsonl 落一行明细(零额外 OCR 调用)。"""
-    obs = read_round_outcome(_ctx_with_items(WIN_FRAME), None,
-                             plane=1, round_num=8, comp_tag='c')
-    assert obs.hp_after == 20
-    lines = (_hook_env / 'gold_detail.jsonl').read_text(encoding='utf-8').splitlines()
-    assert len(lines) == 1
-    assert json.loads(lines[0])['base'] == 5
+def test_streak_amount_domain_guard() -> None:
+    """连胜金额守卫 1-9:右列误读两位数(如 17)→ None(错误 C 值域守卫漏放根修)。"""
+    items = _items([('获得金币总览', 530, 552, 146, 28),
+                    ('连胜×3', 526, 703, 116, 34), ('17', 1052, 711, 30, 16)])
+    assert parse_settlement_gold_detail(items)['streak'] is None
 
 
-def test_read_round_outcome_no_detail_frame_still_row(_hook_env) -> None:
-    """无明细区帧(面板被遮形态)→ 明细 None 照落行(缺行会伪装「没轮」,假 0 不许)。"""
-    items = _items([('挑战成功', 831, 192, 256, 73),
-                    ('小队生命值86i', 646, 479, 226, 43)])
-    read_round_outcome(_ctx_with_items(items), None,
-                       plane=1, round_num=3, comp_tag='c')
-    r = json.loads((_hook_env / 'gold_detail.jsonl')
-                   .read_text(encoding='utf-8').splitlines()[0])
-    assert (r['base'], r['streak'], r['interest']) == (None, None, None)
+def test_production_bbox_field_names_center_line_match() -> None:
+    """生产 items 是 OcrMatchResult(字段 w/h,非 width/height)——中心 y 行对齐
+    必须用真 bbox(旧实现 getattr('height') 恒 0,实比顶边 y,静默漏配同行金额)。"""
+    items = [_Item(data='获得金币总览', x=530, y=552, width=146, height=28),
+             _Item(data='利息G', x=526, y=647, width=92, height=41),
+             # 金额 token 顶边 680 与标签顶边差 33(>25),中心差 ~21 → 靠真中心命中
+             _Item(data='5', x=1052, y=680, width=18, height=16)]
+    assert parse_settlement_gold_detail(items)['interest'] == 5
+
+
+# ===== 像素级抽检(真 OCR 引擎 × 盘上标注帧;帧缺失则跳过,慢桶) =====
+# 期望值单一源 = 结算金币明细 10 帧视觉标注表 + 盘上 shot 离线 OCR 探针复核
+# (.debug/temp/currency_war/w414_gold_detail_conclusion.md §1)。
+
+_GOLD_TRUTH_FRAMES: list[tuple[str, dict[str, int | None]]] = [
+    # (shot 文件名, 期望 {base/streak/interest})
+    ('cw_settle__8cc5ee5f.png', {'base': 5, 'streak': 2, 'interest': None}),
+    # ×3、右列金额 2 在帧:金额列直读,计数 3 不落账
+    ('cw_settle__6492a10f.png', {'base': 5, 'streak': 1, 'interest': 5}),
+    # ×0 右列漏读 → 钉死口径 1;利息 5 在帧
+    ('cw_settle__c7a20f7a.png', {'base': 5, 'streak': None, 'interest': None}),
+    # ×3 金额漏读:宁缺勿造(None),禁回退计数 3
+]
+
+
+def test_gold_detail_pixel_truth_frames() -> None:
+    """真 OCR 引擎回放盘上结算 shot,三分量逐帧对齐视觉标注表(像素级抽检)。
+
+    解码必须走 cv2.imdecode(BGR)——生产帧即控制器 BGR 截图;cvu.read_image 的
+    RGB 序列喂 OCR 引擎会丢小字号数字(实测 8cc5ee5f 帧 19→16 token,明细金额全漏)。
+    """
+    import cv2
+    import numpy as np
+
+    from one_dragon.base.matcher.ocr.ocr_service import OcrService
+    from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
+    from one_dragon.utils.file_utils import get_project_root
+
+    svc = OcrService(ocr_matcher=OnnxOcrMatcher())
+    svc.ocr_matcher.init_model()
+    shots_dir = (get_project_root() / '.debug' / 'temp' / 'currency_war' / 'shots')
+    ran = 0
+    for name, expect in _GOLD_TRUTH_FRAMES:
+        path = shots_dir / name
+        if not path.exists():
+            continue
+        screen = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8),
+                              cv2.IMREAD_COLOR)
+        assert screen is not None, f'{name} 读取失败'
+        items = svc.get_ocr_result_list(image=screen, rect=None, crop_first=False)
+        got = parse_settlement_gold_detail(items)
+        assert got == expect, f'{name}: 解析 {got} != 标注期望 {expect}'
+        ran += 1
+    assert ran > 0, '盘上无任何标注 shot(采集产物缺失),像素抽检无法执行'
 

@@ -29,14 +29,6 @@ from sr_od.application.currency_war.obs.cw_observation import parse_selected_dif
 from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_hp, parse_streak
 from test.conftest import SrTestContext
 
-
-@pytest.fixture(autouse=True)
-def _no_gold_detail_hook(monkeypatch: pytest.MonkeyPatch) -> None:
-    """W414 金币明细采集钩子 no-op:本文件既有 read_round_outcome 锁不落旁路台账
-    (测试不写真实 .debug;钩子自身契约在 test_cw_w414_gold_detail_hook.py)。"""
-    import sr_od.application.currency_war.obs.cw_settlement_obs as _so
-    monkeypatch.setattr(_so, 'collect_gold_detail_hook', lambda *a, **k: None)
-
 # 2026-08-05 实跑结算屏 OCR(战斗后「挑战结束」屏):小队生命值=71(战前 84,本战损 13)。
 _SETTLEMENT_OCR = [
     '19', '挑战结束', '战斗', '216', '小队生命值71i', '获得金币总览', '数据统计', '基础奖励',
