@@ -764,9 +764,19 @@ from sr_od.application.currency_war.sim import ledger_hooks
 
 
 def test_regenerate_frozen_by_default() -> None:
-    """退役第一步:池冻结——regenerate_snapshot 一律 raise(管线停跑)。"""
-    with _w109_pool_pipeline_pytest.raises(cw_delta_pool_gen.DeltaPoolFrozen):
-        cw_delta_pool_gen.regenerate_snapshot(quiet=True)
+    """池再生入口可用性锁(F6 改锁,原「退役第一步冻结」语义反转)。
+
+    原锁钉 DeltaPoolFrozen raise(快照停更);F6 语料治理批(编排者
+    任务书)裁决撤销冻结——快照仍辖 reward/supply 池与 delta 对照臂,
+    含 hp=0 伪影毒行的旧快照必须可再生治理。本锁改钉:再生入口
+    正常工作且产物自洽(指纹回写 META)。
+    """
+    fp = cw_delta_pool_gen.regenerate_snapshot(quiet=True)
+    from sr_od.application.currency_war.data.cw_delta_pool_data import (
+        META,
+    )
+    assert META['fingerprint'] == fp
+    assert isinstance(fp, str) and len(fp) == 16
 
 
 def test_hook_swallows_regeneration_failure(

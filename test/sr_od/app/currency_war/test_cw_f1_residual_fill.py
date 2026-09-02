@@ -114,7 +114,9 @@ def test_seed_640576_no_residual_lag_after_fill() -> None:
     lag=2 连续三轮:补部署自身上场改变 board 阵营计数后,成对/点火
     判据对尚未上场的件翻转达标,单趟不再重判。修法=不动点循环
     (上场后重跑围栏至 up 空)。本锁钉该形态:全部 skip 轮 lag 恒 0。
-    pool='snapshot'(池指纹 6400d5d8edeaf68d+eqg1 同 W718 跑批口径)。
+    pool='snapshot'(W718 跑批时指纹 6400d5d8edeaf68d+eqg1;F6 语料
+    治理后快照随库前移,本锁钉的是围栏语义形态而非池内容——取证
+    形态消失则按锁纪律换锁帧,不机械跟绿)。
     """
     res = simulate_p1(640576, pool='snapshot', planes=2)
     bad = [(int(r.get('round_num') or 0),
