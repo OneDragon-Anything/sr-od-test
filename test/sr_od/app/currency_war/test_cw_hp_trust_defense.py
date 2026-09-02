@@ -110,9 +110,16 @@ def test_read_hp_opt_upscaled_fallback_recovers_small_value(
     assert calls['n'] == 2   # 恰好两级:全图 miss → 3x 放大命中
 
 
-def test_read_hp_opt_fullres_hit_no_fallback(
+def test_read_hp_opt_dual_pass_consistent_hit(
         test_context, monkeypatch: pytest.MonkeyPatch) -> None:
-    """常路径:全图命中 → 不走放大回退(零新增开销锁)。"""
+    """常路径双通道一致 → 静默采值。
+
+    锁语义修订(2026-09-02 掉十位 bug A):旧锁「全图命中零回退(calls==1)」
+    钉的是「原生命中即全信」——正是掉十位毒化面(分诊帧 40e3354a 离线复现:
+    原生读 4、放大读 47,真值 47)。修法 = 放大通道常开作第二读对账,一致
+    才静默;常开代价 = 每真值帧一次 90×80 小裁片放大 OCR。旧锁修复前对新
+    断言红(calls==1),按锁存在性纪律重推后改钉:一致值 + 恰 2 次调用。
+    """
     from sr_od.application.currency_war.obs.cw_observation import read_hp_opt
     calls = {'n': 0}
 
@@ -121,7 +128,34 @@ def test_read_hp_opt_fullres_hit_no_fallback(
         return [SimpleOcrItem('45')]
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', _hit)
     assert read_hp_opt(test_context, None) == 45
-    assert calls['n'] == 1
+    assert calls['n'] == 2   # 原生 + 3x 放大对账(常开)
+
+
+def test_read_hp_opt_native_dropped_tens_upscale_arbitrates(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """掉十位仲裁锁:原生通道丢十位(4),放大通道读全(47)→ 采放大值 + 留证。
+
+    形态 = 2026-09-02 分诊帧 40e3354a(真值 47)/e4746213(真值 12)离线复现:
+    hp 美术字笔画断续,原生 det/rec 截掉十位;3x CUBIC 放大笔画恢复。
+    修前「原生命中即短路」返回 4 —— 本锁修复前红。
+    """
+    from sr_od.application.currency_war.obs import cw_observation
+    from sr_od.application.currency_war.obs.cw_observation import read_hp_opt
+    calls = {'n': 0}
+
+    def _native_drops_tens(**kw):
+        calls['n'] += 1
+        if calls['n'] == 1:
+            return [SimpleOcrItem('4')]    # 原生:十位笔画断续被截(真值 47)
+        return [SimpleOcrItem('47')]       # 3x CUBIC:笔画恢复,读全
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        _native_drops_tens)
+    evid: list[tuple] = []
+    monkeypatch.setattr(cw_observation, 'obs_conflict',
+                        lambda *a, **k: evid.append((a, k)))
+    assert read_hp_opt(test_context, None) == 47
+    assert calls['n'] == 2
+    assert len(evid) == 1   # 不一致留证(obs_conflict),采新值有据可查
 
 
 def test_read_hp_opt_second_level_binarized_recovery(

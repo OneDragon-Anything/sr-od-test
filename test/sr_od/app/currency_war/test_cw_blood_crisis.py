@@ -900,47 +900,112 @@ def test_loss_frame_over_cap_rejected() -> None:
     assert cw_reconcile.reconcile_hp(sb2, 17, node_t=6) == (60, False)
 
 
-def test_loss_unknown_node_type_rejected_then_self_heal() -> None:
-    """节点型未标定(精英)不拍值:拒信 + 复现通道 ≤2 帧自愈。"""
+def test_loss_unknown_node_type_accepted_with_evidence(monkeypatch) -> None:
+    """节点型未标定(精英)不拍值:下行有 loss 背书 → 采新 + 幅度留证攒标定。
+
+    判据修订(2026-09-02 hp 守卫重推导):扣血只发生在节点结算的战败
+    (user_playstyle [27] 机制锚),loss 行已观测即下行有机制背书;「无标定
+    谱」只该留证攒标定,不应拒信——旧实现拒信把标定缺口惩罚在读数上,
+    是 hp 冲突噪声环的一臂(2026-09-02 分诊:抽样 5/6 合法下行被拒)。
+    修前本场景返回 (60, False) —— 修复前红。
+    """
     from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     s.performance.record(_outcome(1, 6, '精英', killed=False))
-    assert cw_reconcile.reconcile_hp(s, 40, node_t=6) == (60, False)
-    assert cw_reconcile.reconcile_hp(s, 40, node_t=6) == (60, False)   # 首帧复现,仍沿用
-    assert cw_reconcile.reconcile_hp(s, 40, node_t=6) == (40, True)    # 第 2 帧确认真掉血
+    calls: list[tuple] = []
+    monkeypatch.setattr(cw_reconcile, '_conflict', lambda *a, **k: calls.append((a, k)))
+    assert cw_reconcile.reconcile_hp(s, 40, node_t=6) == (40, True)
     assert s.last_hp_real == 40 and s.hp_suspect is None
+    assert len(calls) == 1
+    assert calls[0][1].get('direction') == 'down'   # 幅度留证(攒标定),不拒信
 
 
-# ===== 锁3:无战斗事实拒信 + 双帧复现自愈 =====
+# ===== 锁3:跨节点下行判据(2026-09-02 修订面)=====
 
-def test_no_fact_down_rejected_then_confirmed() -> None:
+def test_no_fact_down_accepted_with_evidence(monkeypatch) -> None:
+    """跨节点下行 + 窗内无已观测战斗(观察缺口)→ 采新 + 留证。
+
+    判据修订(2026-09-02):扣血只发生在节点结算战败(机制锚),观察缺口
+    (结算漏采/telemetry 断/shop 开态 OCR 恢复)≠ 没发生战斗;下行方向机制
+    合法,采新留证。旧实现拒信把观察回路缺口惩罚在读数上:每个合法下行
+    固化旧值 + 每帧留证直到双帧确认,是 hp post-ADR 冲突暴涨主源
+    (2026-09-02 分诊 §3-B:5/6 抽样帧合法下行被拒)。修前返回 (60, False)
+    —— 修复前红。
+    """
     from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
     assert s.performance.history == []
-    assert cw_reconcile.reconcile_hp(s, 20, node_t=6) == (60, False)   # 无幅度豁免
-    assert cw_reconcile.reconcile_hp(s, 20, node_t=7) == (60, False)   # 复现 1/2
-    assert cw_reconcile.reconcile_hp(s, 20, node_t=7) == (20, True)    # 复现 2/2 → 采新
+    calls: list[tuple] = []
+    monkeypatch.setattr(cw_reconcile, '_conflict', lambda *a, **k: calls.append((a, k)))
+    assert cw_reconcile.reconcile_hp(s, 20, node_t=6) == (20, True)
     assert s.last_hp_real == 20 and s.hp_suspect is None
+    assert len(calls) == 1
+    assert calls[0][1].get('direction') == 'down'   # 留证不拒信
 
 
-def test_no_fact_down_regression_confirms_misread() -> None:
-    """1 帧低位 + 1 帧回归旧值 → 误读确认,丢弃 suspect,一切如旧。"""
+def test_window_earlier_loss_latest_win_down_accepted(monkeypatch) -> None:
+    """真值帧跨多节点:窗内先 loss 后 win,下行背书看 loss 行(幅度对谱)。
+
+    旧实现只看窗内**最新**行(=win)→ 判「无背书」拒信,把机制合法的
+    下行误拒(shop 开态跨节点漏读的真值恢复帧即此形态)。修前返回
+    (60, False) —— 修复前红。
+    """
+    from sr_od.application.currency_war.kernel import cw_reconcile
+    s = _mk_session()
+    _seed_real(s, 60, 3)
+    s.performance.record(_outcome(1, 4, '普通战斗', killed=False))   # t=4 loss
+    s.performance.record(_outcome(1, 5, '普通战斗', killed=True))    # t=5 win(最新)
+    calls: list[tuple] = []
+    monkeypatch.setattr(cw_reconcile, '_conflict', lambda *a, **k: calls.append((a, k)))
+    # Δ=20 ≤ 普通战斗 p100=23 → 谱内静默采新,零留证
+    assert cw_reconcile.reconcile_hp(s, 40, node_t=5) == (40, True)
+    assert s.last_hp_real == 40 and s.hp_suspect is None
+    assert calls == []
+
+
+def test_same_node_down_rejected(monkeypatch) -> None:
+    """同节点下行:hp 节点内恒定是机制事实(扣血只发生在节点结算),
+    任何下行必为误读 → 拒信进复现通道(守卫最硬的机制分支)。"""
+    from sr_od.application.currency_war.kernel import cw_reconcile
+    s = _mk_session()
+    _seed_real(s, 60, 6)
+    calls: list[tuple] = []
+    monkeypatch.setattr(cw_reconcile, '_conflict', lambda *a, **k: calls.append((a, k)))
+    assert cw_reconcile.reconcile_hp(s, 20, node_t=6) == (60, False)
+    assert s.last_hp_real == 60
+    assert s.hp_suspect['value'] == 20
+    assert calls[0][1].get('direction') == 'down'
+
+
+def test_reject_class_regression_confirms_misread(monkeypatch) -> None:
+    """拒信类(胜战帧下行)1 帧低位 + 1 帧回归旧值 → 误读确认,丢弃 suspect。
+
+    复现确认通道语义自 ADR-0431 不变,只是辖域收窄到机制不可能的下行
+    (同节点/胜战零损/超谱);此处以胜战帧为宿主锁通道行为。
+    """
     from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
+    s.performance.record(_outcome(1, 6, '普通战斗', killed=True))
+    calls: list[tuple] = []
+    monkeypatch.setattr(cw_reconcile, '_conflict', lambda *a, **k: calls.append((a, k)))
     assert cw_reconcile.reconcile_hp(s, 20, node_t=6) == (60, False)
     assert cw_reconcile.reconcile_hp(s, 60, node_t=6) == (60, True)    # 回归 → 误读确认
     assert s.hp_suspect is None
     assert s.last_hp_real == 60
 
 
-def test_suspect_window_expiry() -> None:
-    """超窗(>2 节点)未复现 → suspect 过期,下次下行重新走首拒帧。"""
+def test_suspect_window_expiry(monkeypatch) -> None:
+    """超窗(>2 节点)未复现 → suspect 过期,下次下行重新走首拒帧
+    (拒信类宿主 = 胜战帧下行;复现通道语义 ADR-0431 不变)。"""
     from sr_od.application.currency_war.kernel import cw_reconcile
     s = _mk_session()
     _seed_real(s, 60, 5)
+    s.performance.record(_outcome(1, 6, '普通战斗', killed=True))
+    calls: list[tuple] = []
+    monkeypatch.setattr(cw_reconcile, '_conflict', lambda *a, **k: calls.append((a, k)))
     assert cw_reconcile.reconcile_hp(s, 20, node_t=6) == (60, False)
     assert s.hp_suspect['count'] == 0
     assert cw_reconcile.reconcile_hp(s, 20, node_t=9) == (60, False)
@@ -988,7 +1053,7 @@ def test_reconcile_down_guard_wired() -> None:
 
     from sr_od.application.currency_war.kernel import cw_reconcile
     src = inspect.getsource(cw_reconcile.reconcile_hp)
-    assert '_battle_fact_between' in src
+    assert '_battle_facts_between' in src
     assert '_reject_down' in src
 
 
