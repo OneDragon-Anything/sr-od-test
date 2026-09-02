@@ -14,6 +14,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PREP_ACTION_TYPES,
     OpenShop,
 )
+from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     enter_running_state,
     fast_sleep,
@@ -275,3 +276,96 @@ def test_loop_redispatches_after_director_return() -> None:
     assert '交回顶层分发' in src, 'director 返回后缺显式重入日志/交回点'
     assert 'return self.round_wait(wait=1.0)  # 下轮重新识别分发' in src, (
         'director 返回后的 round_wait 交回点缺失')
+
+
+# ==================== BOSS 简报 op(实机第三局走查补:06-overlays §3) ====================
+
+_FRAME = ('货币战争-BOSS简报', 'default')
+
+
+def _make_boss_op(test_context: SrTestContext, monkeypatch):
+    from sr_od.application.currency_war.operations.cw_flow.boss_briefing_op import (
+        BossBriefingOp,
+    )
+    from test.harness.fixture_controller import (
+        FixtureController,
+        WatchdogOperationMixin,
+    )
+
+    fc = FixtureController(test_context)
+    fc.set_phases([{'frame': _FRAME}])
+    monkeypatch.setattr(test_context, 'controller', fc)
+    op = type('W', (WatchdogOperationMixin, BossBriefingOp), {})(test_context)
+    op._init_watchdog()  # type: ignore[attr-defined]
+    monkeypatch.setattr(fc, 'mouse_move', lambda *a, **k: None, raising=False)
+    monkeypatch.setattr(op, 'save_screenshot', lambda *a, **k: '<shot>')
+    return op, fc
+
+
+def test_boss_briefing_op_click_blank_then_wait_shop_anchor(
+    test_context: SrTestContext, monkeypatch,
+) -> None:
+    """行为锁(06-overlays §3/§5):识别「强敌来袭」→ 点空白 → 完成承诺 =
+    轮询备战商店开锚(「按钮-收起」);锚现 → 收口交回。"""
+    op, _fc = _make_boss_op(test_context, monkeypatch)
+    # 入口锚 + 空白区命中;完成锚首帧未现、第二轮现(点击生效推进)。
+    hits = {('货币战争-BOSS简报', '标识-强敌来袭'),
+            ('货币战争-BOSS简报', '区域-空白点击')}
+    done_seen: list[int] = []
+
+    def _find(screen, screen_name, area_name, **k):
+        if (screen_name, area_name) == ('货币战争-备战-开商店', '按钮-收起'):
+            done_seen.append(1)
+            if len(done_seen) >= 2:   # 首查未现,轮询一次后现
+                return op.round_success('')
+            return op.round_fail('')
+        if (screen_name, area_name) in hits:
+            return op.round_success('')
+        return op.round_fail('')
+
+    monkeypatch.setattr(op, 'round_by_find_area', _find)
+    monkeypatch.setattr(op, 'round_by_find_and_click_area',
+                        lambda *a, **k: op.round_success(''))
+    monkeypatch.setattr(op, 'screenshot', lambda *a, **k: op.last_screenshot)
+    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert result.success, f'boss 简报应推进成功:{result.status!r}'
+    assert _fc.click_hit_area('货币战争-BOSS简报', '区域-空白点击'), (
+        f'未点空白:{_fc.recorded_clicks}')
+    assert '商店开' in (result.status or '')
+
+
+def test_boss_briefing_op_mark_miss_fails_without_click(
+    test_context: SrTestContext, monkeypatch,
+) -> None:
+    """入口识别不中(非 boss 简报帧/接管误派)→ fail 且不点。"""
+    op, fc = _make_boss_op(test_context, monkeypatch)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda s, sn, a, **k: op.round_fail(''))
+
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert not result.success
+    assert not fc.recorded_clicks, '锚不中不得点击'
+
+
+def test_boss_briefing_dispatch_before_prep_anchor() -> None:
+    """分发源锁(P1-r6 同型教训锚位):boss 简报分支必须**先于备战双锚**,
+    且横幅遮挡下双锚透出命中时帧不得直落备战分支。"""
+    src = _loop_src()
+    assert "BossBriefingOp(self.ctx)" in src, 'BOSS 简报分支未接线'
+    assert src.index("'货币战争-BOSS简报', '标识-强敌来袭'") < src.index(
+        "and self.round_by_find_area(screen, '货币战争-备战', '按钮-出战')"), (
+        'BOSS 简报分发须先于备战双锚(横幅遮挡双锚透出命中)')
