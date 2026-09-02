@@ -1291,7 +1291,7 @@ def test_sell_guard_aligns_with_simulate_semantics() -> None:
     (stale_proposal);否则卖出。执行侧(shop.sell_guard_ok):expected
     非空且 live==expected 才放行——expected 空(sim 视为不校验)在执行侧
     是拒(执行器更严:无期望名=无从对拍,不点)。两表逐对对拍。"""
-    from sr_od.application.currency_war.operations.prep.shop import  sell_guard_ok
+    from sr_od.application.currency_war.operations.prep.buy_cards import  sell_guard_ok
 
     def sim_accepts(bench_idx: int, expect: str) -> tuple[bool, str | None]:
         bench = [None] * _idx_contract_BENCH_CAPACITY

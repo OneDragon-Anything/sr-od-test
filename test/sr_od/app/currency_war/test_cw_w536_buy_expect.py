@@ -259,7 +259,7 @@ def test_compare_merge_not_happened_not_downgraded():
 # ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
 
 def test_w536_wiring_locks():
-    """①意图在 shop.py 买入点(BuyCard 点击分支)记录、单元尾计算写入
+    """①意图在买入点(BuyCard 点击分支)记录、单元尾计算写入
     session.pending_buy_expect;含卖出/未识别牌不建;②对账在 PrepDirector
     heavy 定型帧之后且仅 progressed 分支、消费后即清;③合成落点单一源 =
     cw_state._merge_bench(compute_buy_expect 不自造第二套落点规则)。
@@ -267,18 +267,26 @@ def test_w536_wiring_locks():
     锁改写(W591,pending_buy_expect 升 StrategySession 正式字段):消费端
     由「动态属性 + getattr 兜底」改为直接字段读写——语义不变(定型帧后
     消费/仅 progressed/消费即清),被取代的是暂存机制而非对账时序;依据
-    = cw_strategy.StrategySession.pending_buy_expect 字段定义注释。"""
+    = cw_strategy.StrategySession.pending_buy_expect 字段定义注释。
+    锁迁移(W970 批 A 原子化):买入点记录/crop 链随波循环迁 buy_cards.py;
+    单元尾 stash 留守编排壳 shop.py(时序锚 = 关店后)。
+    """
+    buy_src = Path(
+        'src/sr_od/application/currency_war/operations/prep/buy_cards.py'
+    ).read_text(encoding='utf-8')
     shop_src = Path(
         'src/sr_od/application/currency_war/operations/prep/shop.py'
     ).read_text(encoding='utf-8')
-    click_at = shop_src.index('Buy click @(')
-    rec_at = shop_src.index('_buy_purchases.append(BuyPurchase(', click_at)
+    click_at = buy_src.index('Buy click @(')
+    rec_at = buy_src.index('_buy_purchases.append(BuyPurchase(', click_at)
     assert click_at < rec_at                       # 意图记录在买入点
+    # 含卖出不建:卖出置位旗标随波循环在 buy_cards(跨文件次序不可 index
+    # 对拍,两侧存在性分别锁;时序语义 = 旗标先于单元尾 stash 执行)
+    assert '_buy_has_sell = True' in buy_src
     stash_at = shop_src.index('match.session.pending_buy_expect = _buy_expect')
-    assert shop_src.index('_buy_has_sell = True') < stash_at
     assert 'not _buy_has_sell and not _buy_unidentified' in shop_src
     assert '_buy_pre_bench = deepcopy(match.session.tracked_bench_chars)' \
-        in shop_src
+        in buy_src
 
     dir_src = Path(
         'src/sr_od/application/currency_war/prep_director.py'
@@ -314,10 +322,10 @@ def test_w536_wiring_locks():
     assert 'buy_expect_reconcile' in dir_src
     # ④ 证据裁片链:买前 crop 拷贝在点击之前;随期望态带到对账点;
     # 不一致才落盘(_save_buy_evidence),对账完成即释放。
-    assert shop_src.index('_card_crop = None') \
-        < shop_src.index('self.ctx.controller.click(pt)')
-    assert '.copy()' in shop_src                   # 裁片必须拷贝(帧缓存复用)
-    assert 'crop=_card_crop' in shop_src
+    assert buy_src.index('_card_crop = None') \
+        < buy_src.index('op.ctx.controller.click(pt)')
+    assert '.copy()' in buy_src                    # 裁片必须拷贝(帧缓存复用)
+    assert 'crop=_card_crop' in buy_src
     rec_m = dir_src[dir_src.index('def _reconcile_buy_expect'):]
     rec_m = rec_m[:rec_m.index('\n    def ')]
     assert '_save_buy_evidence(' in rec_m

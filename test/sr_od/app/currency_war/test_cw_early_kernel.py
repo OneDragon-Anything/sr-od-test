@@ -1624,7 +1624,7 @@ def test_operation_result_bool_pitfall_guard() -> None:
 # ==================== w69_sell_channel ====================
 
 from sr_od.application.currency_war.kernel.cw_state import BenchChar as _w69_sell_channel_BenchChar, SellBench as _w69_sell_channel_SellBench, bench_occupied as _w69_sell_channel_bench_occupied, mutate_bench_deployed as _w69_sell_channel_mutate_bench_deployed
-from sr_od.application.currency_war.operations.prep.shop import sell_guard_ok
+from sr_od.application.currency_war.operations.prep.buy_cards import sell_guard_ok
 
 
 def _mk_bench(names: list[str | None]) -> list[_w69_sell_channel_BenchChar | None]:

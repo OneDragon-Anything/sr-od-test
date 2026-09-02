@@ -199,14 +199,15 @@ def _src(rel: str) -> str:
 
 
 def test_shop_record_site_copies_owned_pool_before_record() -> None:
-    """shop.py 主 record 站点:decide_prep 之后、record_decision 之前补拷。
+    """buy_cards.py 主 record 站点(W970 批 A 随波循环自 shop.py 迁入):
+    decide_prep 之后、record_decision 之前补拷。
 
     顺序锁三点:①拷贝行存在;②在 decide_prep 之后(装备权重读 state.equips,
     提前拷=改决策行为);③在其后的 record_decision(state 调用之前)。
     """
-    src = _src('operations/prep/shop.py')
+    src = _src('operations/prep/buy_cards.py')
     copy_line = 'state.equips = list(getattr(match.session, \'last_owned_equips\', []) or [])'
-    assert copy_line in src, 'shop record 站点缺 owned 池补拷行(W222 缺口①回归)'
+    assert copy_line in src, 'buy_cards record 站点缺 owned 池补拷行(W222 缺口①回归)'
     i_plan = src.index('actions = match.strategy.decide_prep')
     i_copy = src.index(copy_line)
     i_rec = src.index('recorder.record_decision(state, target_name')
