@@ -134,6 +134,22 @@ def test_reconcile_none_side_kept():
     assert [d for d in sess.tracked_deployed if d is not None] == new_dep
 
 
+def test_reconcile_from_empty_one_side_fill_is_legal():
+    """分诊 D 反证锁:空 tracking + SIFT「bench 非空|deployed 空」单侧读 =
+    开局买牌未部署的合法态 → 采新写回,不设「单侧空守卫」。
+
+    证据:分诊 §2-D 引的 3 帧(b0153856/454e6534/83c196cc)画面逐一核对——
+    底部备战席 4 卡与 SIFT 读数逐一相符(SIFT 读=画面真值),非「空板过渡帧
+    假阳」;旧=[].[] 时单侧空新读是合法首填,加守卫会把整局 tracking 卡空。"""
+    sess = _Sess()
+    bench = [BenchChar(slot=i + 1, char_id=n)
+             for i, n in enumerate(['椒丘', '黄泉', '翡翠', '大丽花'])]
+    assert reconcile_tracking(sess, bench, [], None, source='t') is True
+    assert [b.char_id for b in sess.tracked_bench_chars if b is not None] == \
+        ['椒丘', '黄泉', '翡翠', '大丽花']
+    assert all(d is None for d in sess.tracked_deployed), 'deployed 空是画面真值(0/3)'
+
+
 def test_reconcile_star_rollback_no_crash():
     """M41 实机回归(2026-08-16):同名 star 回退(缇宝 2★→1★)走留证分支
     **不得抛异常**——旧版 _conflict 封装无 **ctx,char= 触发 TypeError → PrepDirector
@@ -502,6 +518,56 @@ def test_resolve_level_constraint_filters() -> None:
     assert _resolve_paddle_digits('103', 2, 1, 3, True)[:2] == (0, 3)   # level=3 边界内采
 
 
+# ===== level 先验修正通道(分诊 C 根修;帧证据 obs_conflict_deploy_paddle__d9f64136) =====
+# 根因实锤:真帧 4/4 字形干净(digit_n=2、slash_idx=1),旧链 candidates=[] 的唯一
+# 可能 = level 先验 ≥5 时 y≥level 约束把唯一合法候选拒空(level 来自三源解析,
+# 自身可误读/毒化)——间接先验一票否决了直接几何读。
+
+def test_parse_paddle_rescues_poisoned_level_prior(monkeypatch) -> None:
+    """level 先验毒化不锁修正:带 level 解析失败后,用绝对域(x≤y,1≤y≤13)
+    重解析一次;唯一解 y<level → 采回 + obs_conflict 留证(对照错不锁修正)。"""
+    import numpy as np
+    import sr_od.application.currency_war.obs.cw_observation as obs_mod
+
+    class _R:
+        def __init__(self, d: str) -> None:
+            self.data = d
+
+    # d9f64136 真帧字形实测(crop [210:280, 820:1150]):两个 '4'(area 754/757)+ 斜杠(357)
+    monkeypatch.setattr(obs_mod, '_paddle_glyph_strip',
+                        lambda crop: [(78, 39, 47, 754), (127, 27, 48, 357), (162, 40, 47, 757)])
+    conflicts: list[tuple] = []
+    monkeypatch.setattr(obs_mod, 'obs_conflict',
+                        lambda *a, **kw: conflicts.append((a[0], kw.get('verdict', ''))))
+    crop = np.zeros((70, 330, 3), dtype=np.uint8)
+    x, y = obs_mod._parse_paddle_positional(crop, [_R('4/4')], 5, crop)
+    assert (x, y) == (4, 4), 'level 先验毒化时合法 4/4 须经修正通道采回'
+    assert conflicts and conflicts[0][0] == 'deploy_paddle', '修正采信必须留证'
+    # 对照:level 先验正确时直接解析成功,不产冲突行
+    conflicts.clear()
+    x2, y2 = obs_mod._parse_paddle_positional(crop, [_R('4/4')], 4, crop)
+    assert (x2, y2) == (4, 4)
+    assert conflicts == [], '先验一致帧零噪声'
+
+
+def test_debounce_cap_below_level_two_frame_consistent(monkeypatch) -> None:
+    """cap<level 双帧一致采信:域判据的对照集 level 自身可能毒化,不再恒拒——
+    与 ADR-0420 上向「域外双帧一致采信」同判据的镜像;瞬时误读被两帧一致压住。"""
+    import sr_od.application.currency_war.obs.cw_observation as obs_mod
+
+    class _Ctl:
+        def screenshot(self):
+            return object()
+
+    monkeypatch.setattr(obs_mod, 'read_deploy_cap', lambda ctx, screen, level=None: 4)
+    conflicts: list[tuple] = []
+    monkeypatch.setattr(obs_mod, 'obs_conflict',
+                        lambda *a, **kw: conflicts.append((a[0], kw.get('verdict', ''))))
+    got = obs_mod._debounce_cap(type('_C', (), {'controller': _Ctl()})(), None, 4, 5)
+    assert got == 4, 'cap<level 重读一致 → 采信(旧恒拒把毒化 level 先验下的真值锁死)'
+    assert conflicts and conflicts[0][0] == 'deploy_cap_domain'
+
+
 # ===== 真帧终态锁(fixture 驱动,模型不可用 → skip) =====
 _EXPECTS = {
     'r1_idle_stop.webp': (0, 3),                # 图标前缀 '10/3' 变异(W287 同款)
@@ -561,15 +627,24 @@ def test_read_deploy_paddle_real_fixtures(
 
 def test_read_deploy_cap_level_constraint_on_real_frame(
         test_context: SrTestContext, monkeypatch: _w529_xy_reader_pytest.MonkeyPatch) -> None:
-    """level 参与解析层约束:cap 3/4 帧传 level=8(y<level)→ None 拒;level=3 → 4。"""
+    """level 先验语义锁(分诊 C 根修后按锁存在性纪律重推,非机械跟绿):
+    原锁钉「y<level 解析层一票否决 → None」,但 d9f64136 实证该否决恰是 bug 根——
+    level 先验自身可毒化,否决把合法真值锁死(cap=None 退 level 兜底 = 用毒化值)。
+    新语义:先验毒化形态(level=8 传给 3/4 帧)经修正通道仍采画面真值 4 + 留证;
+    cap↔level 一致性终审移交 _debounce_cap 双帧通道(判据同 ADR-0420)。"""
     from one_dragon.utils import cv2_utils
     p = _FIX_DIR / 'shop_closed.webp'
     if not p.exists():
         _w529_xy_reader_pytest.skip('fixture 缺失')
-    _make_real_ocr_ctx(test_context, monkeypatch)
+    conflicts = _make_real_ocr_ctx(test_context, monkeypatch)
     img = cv2_utils.read_image(str(p))
     assert read_deploy_cap(test_context, img, level=3) == 4
-    assert read_deploy_cap(test_context, img, level=8) is None
+    _n0 = len(conflicts)
+    assert read_deploy_cap(test_context, img, level=8) == 4, \
+        '先验毒化不锁修正:y<level 经绝对域修正通道采回'
+    assert len(conflicts) > _n0, '修正采信必须留证(obs_conflict)'
+    assert any('y<level' in str(k.get('verdict', ''))
+               for _a, k in conflicts[_n0:]), '留证 verdict 须标明先验疑毒化'
 
 
 def test_covered_frame_leaves_conflict_evidence(

@@ -107,6 +107,9 @@ def gated_env(monkeypatch):
     _stub('read_bench_full', None)
     _stub('read_hp_opt', 80)
     _stub('resolve_paddle_pair', (3, 5))
+    # 冲突留证 no-op(测试零真实副作用,不写 .debug 证据账本);直接 setattr
+    # 不经 _stub——留证不是 reader,不进 calls 计数面。
+    monkeypatch.setattr(obs, 'obs_conflict', lambda *a, **kw: None)
     monkeypatch.setattr(cw_observe, 'bypass_noop', True, raising=False)
     # 遥测旁路/消费面全部静默(session 缺省 None 已走空路径,防御性再桩)
     monkeypatch.setattr(defects, 'bypass_obs_conflict_to_defect',
@@ -190,9 +193,14 @@ def test_unknown_phase_fail_open(gated_env, monkeypatch):
     warned = []
     monkeypatch.setattr(obs.log, 'warning',
                         lambda msg, *a: warned.append(msg % a if a else msg))
+    set_calls = []
+    monkeypatch.setattr(cw_observe, 'set_obs_phase', lambda p: set_calls.append(p))
     obs.read_game_state(_DummyCtx(), None, phase='no_such_phase')
     assert set(gated_env.calls) == _FULL_KEYS
     assert any('no_such_phase' in w for w in warned), 'fail-open 必须显式告警'
+    # 证据行阶段标注只认注册阶段(分诊 E:282 行 obs_phase=no_such_phase 泄漏实证
+    # ——fail-open 探针置位把假阶段名打进共享冲突账本),未注册阶段不得置位。
+    assert 'no_such_phase' not in set_calls, '未注册阶段不得置位 _OBS_PHASE'
 
 
 # ------------------------------------------------- paddle 合并单读等价

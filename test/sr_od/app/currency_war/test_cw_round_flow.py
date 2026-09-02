@@ -672,6 +672,55 @@ def test_phase_round_wrong_source_digit_keeps_last_known(monkeypatch) -> None:
     assert read_phase_round(_Ctx(), None) == (2, 3)
 
 
+# ===== 回退修正确认通道(分诊 F 根修) =====
+# 根因:前帧错读(如 5→6)过单调守卫被缓存,守卫又把真值 5 每帧拒掉 = 错读固化
+# (分诊 §2:9/10 冲突帧同 [x,6]→[x,5] 模式)。守卫语义对齐 hp 下行守卫:
+# 锁「非机制性跳变」(单帧倒退=OCR 噪声,仍拒),不锁「修正」(跨帧复现的
+# 同值倒退=前值固化错读,确认后采新)。确认帧数=2 依据:hp 下行复现确认
+# (HP_SUSPECT_CONFIRM_FRAMES=2)与 star 回退防抖「连续 2 次」同族先例。
+
+def _stub_phase_round_obs(monkeypatch, blob: str) -> None:
+    import sr_od.application.currency_war.obs.cw_observation as obs
+    monkeypatch.setattr(obs, '_last_phase_round', (1, 6))
+    monkeypatch.setattr(obs, '_phase_round_suspect', None)
+    monkeypatch.setattr(obs, '_ocr', _FakeOcr(blob))
+    monkeypatch.setattr(obs, '_area_rect', lambda ctx, name: None)
+    monkeypatch.setattr(obs, 'obs_conflict', lambda *a, **kw: None)
+
+
+def test_phase_round_backward_blip_rejected(monkeypatch) -> None:
+    """倒退单帧 = OCR 噪声 → 保旧(防抖首帧不修正,守卫原语义保留)。"""
+    _stub_phase_round_obs(monkeypatch, '回合 1-5')
+    assert read_phase_round(_Ctx(), None) == (1, 6)
+
+
+def test_phase_round_backward_confirmed_two_frames(monkeypatch) -> None:
+    """连续 2 帧同值倒退 = 前值固化错读的修正 → 采新换缓存。"""
+    _stub_phase_round_obs(monkeypatch, '回合 1-5')
+    assert read_phase_round(_Ctx(), None) == (1, 6)    # 首帧:防抖保旧
+    assert read_phase_round(_Ctx(), None) == (1, 5)    # 第二帧:确认修正
+    assert read_phase_round(_Ctx(), None) == (1, 5)    # 修正后缓存已换新
+
+
+def test_phase_round_forward_read_clears_suspect(monkeypatch) -> None:
+    """倒退消失(正常前进读)→ 防抖挂起自愈清零;后续新倒退重新从首帧起算。"""
+    _stub_phase_round_obs(monkeypatch, '回合 1-5')
+    assert read_phase_round(_Ctx(), None) == (1, 6)    # 首帧倒退:防抖挂起
+    import sr_od.application.currency_war.obs.cw_observation as obs
+    monkeypatch.setattr(obs, '_ocr', _FakeOcr('回合 1-7'))
+    assert read_phase_round(_Ctx(), None) == (1, 7)    # 前进:自愈清挂起
+    monkeypatch.setattr(obs, '_ocr', _FakeOcr('回合 1-5'))
+    assert read_phase_round(_Ctx(), None) == (1, 7)    # 新单帧倒退:重新首帧防抖
+
+
+def test_phase_round_reset_clears_suspect(monkeypatch) -> None:
+    """新局 reset 同步清回退修正确认态(防跨局复用)。"""
+    import sr_od.application.currency_war.obs.cw_observation as obs
+    monkeypatch.setattr(obs, '_phase_round_suspect', {'value': (1, 5), 'count': 1})
+    obs.reset_phase_round_cache()
+    assert obs._phase_round_suspect is None
+
+
 # ==================== gold_settle_gate ====================
 
 import sys as _gold_settle_gate_sys
