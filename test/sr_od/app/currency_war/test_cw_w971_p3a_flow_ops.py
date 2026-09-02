@@ -2,7 +2,7 @@
 
 覆盖面(每 op ≥1 条行为测试;离线桩手法 = test_cw_shop_refresh 同款:
 FixtureController 假游戏 + 替身 handler + round_by_* 判定替身 + fast_sleep):
-- BriefingOp:委托现役 handler + session 局状态写入;非简报屏不委托。
+- BriefingOp:内联简报观察直写 session(P3b;P3a 委托壳已升级);非简报屏 fail。
 - PlaneTransitionOp:提示命中 → 点「区域-空白点击」+ 验提示消失;提示未现 fail。
 - WaitOneOneOp:锚命中即成功;假时钟验 ~10s 超时留证 fail。
 - OpeningSequence:首帧分流纯函数 + 壳顺序执行/从中段续走。
@@ -130,51 +130,68 @@ def test_resume_step_index_mapping() -> None:
 
 # ==================== BriefingOp ====================
 
-def test_briefing_op_delegates_and_syncs_session(
+def test_briefing_op_reads_and_writes_session(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """锁①简报委托链:入口锚命中 → 委托现役 handler 一次 → ctx 信箱写 session。"""
+    """锁①简报观察链(P3b 内联改写):入口锚命中 → 读词缀/boss/难度直写
+    session(ctx 信箱退役,唯一写点)→ 点「下一步」→ 出口验真转移成功。"""
+    from sr_od.application.currency_war.operations.cw_flow import (
+        briefing_op as briefing_mod,
+    )
     from sr_od.application.currency_war.operations.cw_flow.briefing_op import (
         BriefingOp,
     )
     op, _fc = _make_op(test_context, monkeypatch, BriefingOp)
-    _stub_find(op, monkeypatch, [('货币战争-简报', '标识-本场对局首领')])
-    fake = _FakeSubOp(ok=True)
-    op.HANDLER_FACTORY = lambda ctx: fake   # type: ignore[method-assign]
+    # 入口锚命中 1 次后全失败 = 出口「标识消失」真转移。
+    _stub_find(op, monkeypatch, [('货币战争-简报', '标识-本场对局首领')],
+               misses_after=1)
+    monkeypatch.setattr(op, 'round_by_find_and_click_area',
+                        lambda *a, **k: op.round_success(''))
+    monkeypatch.setattr(briefing_mod, 'read_affixes_with_pos',
+                        lambda ctx, screen: [('火弱点', None)])
+    monkeypatch.setattr(briefing_mod, 'read_bosses',
+                        lambda ctx, screen: ['碎星王虫'])
+    monkeypatch.setattr(briefing_mod, 'clean_boss_names_by_lcs', lambda bs: bs)
+    monkeypatch.setattr(briefing_mod, 'read_briefing_enemy_difficulty',
+                        lambda ctx, screen: 5)
+    monkeypatch.setattr(BriefingOp, '_collect_affix_effects',
+                        lambda self, aff: {})   # 采集 best-effort,本锁不覆盖
+    monkeypatch.setattr(briefing_mod, 'cw_telemetry', SimpleNamespace(
+        record_exogenous=lambda *a, **k: None))   # 遥测替身(零真实台账)
+    monkeypatch.setattr(op, 'screenshot', lambda *a, **k: op.last_screenshot)
     monkeypatch.setattr(test_context, 'cw_match',
                         CurrencyWarMatch(_StubStrategy(), StrategySession()),
                         raising=False)
-    monkeypatch.setattr(test_context, 'cw_briefing_affixes', ['火弱点'],
-                        raising=False)
-    monkeypatch.setattr(test_context, 'cw_briefing_bosses', ['碎星王虫'],
-                        raising=False)
-    monkeypatch.setattr(test_context, 'cw_enemy_difficulty', 5, raising=False)
 
     result = _run(op)
 
     assert result.success, f'简报步应成功:{result.status!r}'
-    assert fake.executed == 1, '应恰委托现役 handler 一次'
     session = test_context.cw_match.session   # type: ignore[union-attr]
     assert session.briefing_affixes == ['火弱点']
     assert session.briefing_bosses == ['碎星王虫']
     assert session.enemy_difficulty == 5
 
 
-def test_briefing_op_mark_miss_fails_without_delegate(
+def test_briefing_op_mark_miss_fails_without_read(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """锁②入口识别不中(非简报屏)→ fail 且不委托(编排壳按步分流)。"""
+    """锁②入口识别不中(非简报屏)→ fail 且不做观察/点击(编排壳按步分流)。"""
     from sr_od.application.currency_war.operations.cw_flow.briefing_op import (
         BriefingOp,
     )
     op, _fc = _make_op(test_context, monkeypatch, BriefingOp)
     _stub_find(op, monkeypatch, [])   # 锚恒不命中
-    fake = _FakeSubOp()
-    op.HANDLER_FACTORY = lambda ctx: fake   # type: ignore[method-assign]
+    clicked: list[int] = []
+
+    def _no_click(*a: Any, **k: Any) -> Any:
+        clicked.append(1)
+        return op.round_success('')
+
+    monkeypatch.setattr(op, 'round_by_find_and_click_area', _no_click)
 
     result = _run(op)
 
-    assert not result.success and fake.executed == 0
+    assert not result.success and not clicked
 
 
 # ==================== PlaneTransitionOp ====================

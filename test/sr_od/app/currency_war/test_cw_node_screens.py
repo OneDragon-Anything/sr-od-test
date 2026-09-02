@@ -838,34 +838,35 @@ def test_battle_loop_reveal_wiring_present() -> None:
 import inspect
 
 
-def test_briefing_bosses_copied_into_session() -> None:
-    """锁①(改写):简报位面序真值 copy 进 session(接线在 _absorb_ctx_mailbox)。
+def test_briefing_bosses_written_into_session() -> None:
+    """锁①(改写,W971 P3b):简报位面序真值直写 session(写者 = BriefingOp)。
 
-    W971 P2(match 建立前移,dd-014):copy 段自 handle_init 新局分支抽出为
-    _absorb_ctx_mailbox 并改无条件调用(简报读数晚于入口建立点);锁随结构
-    迁移更新,语义不变(copy 接线存在 + ctx 槽不取走清空)。
+    W971 P3(ctx 信箱退役,01-opening §1):简报唯一写点 = BriefingOp 直写
+    session,原 _absorb_ctx_mailbox copy 段随信箱退役删除。锁语义重推:
+    copy 接线消失是设计意图;锁改钉「BriefingOp 写 session 接线存在 +
+    battle_loop 信箱吸收段已退役」。
     """
     from sr_od.application.currency_war.operations import battle_loop
+    from sr_od.application.currency_war.operations.cw_flow import briefing_op
 
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
-    assert 'session.briefing_bosses = list(self.ctx.cw_briefing_bosses)' in src, (
-        '简报真值→session copy 接线消失(boss_fit 失去开局输入,ADR-0397 勘误节)'
+    src = inspect.getsource(briefing_op.BriefingOp)
+    assert 'briefing_bosses' in src and 'session' in src, (
+        'BriefingOp 未直写 session.briefing_bosses(boss_fit 失去开局输入,ADR-0397 勘误节)'
     )
-    assert '_absorb_ctx_mailbox' in src, '信箱吸收段应存在(W971 P2 双写过渡)'
-    # ctx 简报槽无「取走清空」消费:槽保留作实采对账源;跨局残留由
-    # HandleBriefing 每局重读覆写/读空清 None 兜住(该行为有专锁)。
-    assert 'self.ctx.cw_briefing_bosses = None' not in src
+    assert '_session.briefing_bosses = list(_cleaned) if _cleaned else None' in src, (
+        '读空清 None 兜底消失(跨局残留会成假真值)'
+    )
+    loop_src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
+    assert 'self._absorb_ctx_mailbox' not in loop_src, 'ctx 信箱吸收段应已退役(W971 P3)'
+    assert 'self.ctx.cw_briefing_bosses = None' not in loop_src
 
 
 def test_briefing_read_side_cleans_and_overwrites() -> None:
-    """锁②(新):读侧 LCS 清洗接线 + 每局覆写/读空清 None(防跨局残留成假真值)。"""
-    from sr_od.application.currency_war.operations.handlers import handle_briefing
+    """锁②(改写,W971 P3b):读侧 LCS 清洗接线(防简称/形变直进 boss_fit)。"""
+    from sr_od.application.currency_war.operations.cw_flow import briefing_op
 
-    src = inspect.getsource(handle_briefing)
+    src = inspect.getsource(briefing_op)
     assert 'clean_boss_names_by_lcs' in src, '简报读数未过 LCS 清洗(简称/形变直进 boss_fit)'
-    assert 'self.ctx.cw_briefing_bosses = clean_boss_names_by_lcs(_bosses) if _bosses else None' in src, (
-        '读侧覆写/清 None 兜底消失(跨局残留会被 loop copy 成假真值)'
-    )
 
 
 def test_collect_plane_intel_is_takeover_refill_channel() -> None:

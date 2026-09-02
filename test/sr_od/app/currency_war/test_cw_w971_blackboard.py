@@ -209,8 +209,9 @@ def test_establish_new_match_and_idempotent(monkeypatch) -> None:
         strategy_id='decision_v2', strategy_seed=None)) is False   # 幂等
 
 
-def test_absorb_ctx_mailbox_moves_fields() -> None:
-    """run loop 信箱吸收段:取走清空三件 + briefing_bosses 保留对账源。"""
+def test_absorb_selected_difficulty_only_after_mailbox_retirement() -> None:
+    """run loop 入口中转(P3 改写):ctx 信箱退役(01-opening §1)——吸收段
+    只剩职级难度;简报三字段唯一写点 = BriefingOp 直写 session,不再经 ctx。"""
     from sr_od.application.currency_war.decision.cw_strategy import (
         StrategySession,
     )
@@ -225,13 +226,12 @@ def test_absorb_ctx_mailbox_moves_fields() -> None:
         cw_briefing_bosses=['虫王·断壳'],
     )
     sess = StrategySession()
-    rl._absorb_ctx_mailbox(sess)
-    assert sess.briefing_affixes == ['酸性浓缩']
+    rl._absorb_selected_difficulty(sess)
+    # 只吸收职级难度(3.5.1 接线);简报字段不被吸收(信箱退役口径)
     assert sess.selected_difficulty == 'A8'
-    assert sess.enemy_difficulty == 55
-    assert sess.briefing_bosses == ['虫王·断壳']
-    # 取走清空三件;bosses 不取走(reconcile 双输入的对账源,W971 §2.1)
-    assert rl.ctx.cw_briefing_affixes is None
     assert rl.ctx.cw_selected_difficulty is None
-    assert rl.ctx.cw_enemy_difficulty is None
+    assert sess.briefing_affixes == []
+    assert sess.enemy_difficulty is None
+    assert sess.briefing_bosses == []
+    assert rl.ctx.cw_briefing_affixes == ['酸性浓缩']
     assert rl.ctx.cw_briefing_bosses == ['虫王·断壳']

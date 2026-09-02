@@ -254,14 +254,14 @@ def test_briefing_modules_use_framework_logger() -> None:
     INFO 从未落地——全日志 0 条的根因)。"""
     import importlib
 
-    for mod_name in (
-        'sr_od.application.currency_war.operations.handlers.handle_briefing',
-        'sr_od.application.currency_war.obs.cw_briefing_obs',
-        'sr_od.application.currency_war.operations.entry.start_currency_war_match',
+    for mod_name, attr in (
+        ('sr_od.application.currency_war.operations.cw_flow.briefing_op', 'log'),
+        ('sr_od.application.currency_war.obs.cw_briefing_obs', '_log'),
+        ('sr_od.application.currency_war.operations.entry.start_currency_war_match', '_log'),
     ):
         mod = importlib.import_module(mod_name)
-        assert mod._log is log_utils.log, \
-            f'{mod_name}._log 不是框架 logger(死 logger 回归)'
+        assert getattr(mod, attr) is log_utils.log, \
+            f'{mod_name}.{attr} 不是框架 logger(死 logger 回归)'
 
 
 

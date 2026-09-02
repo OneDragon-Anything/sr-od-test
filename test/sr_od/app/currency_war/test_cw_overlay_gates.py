@@ -228,6 +228,8 @@ def _import_handler(class_name: str) -> type:
     for pkg_name in (
         'sr_od.application.currency_war.operations.handlers',
         'sr_od.application.currency_war.operations.run_nodes',
+        # W971 P3b:简报执行面迁 cw_flow.BriefingOp(HandleBriefing 退役)
+        'sr_od.application.currency_war.operations.cw_flow',
     ):
         pkg = importlib.import_module(pkg_name)
         for mod in pkgutil.iter_modules(pkg.__path__):

@@ -268,17 +268,18 @@ class TestStartCurrencyWarMatchFlow:
         assert fixture_controller.phase_idx == len(phases) - 1, (
             f'剧本未推进到末 phase:phase_idx={fixture_controller.phase_idx}'
         )
-        # 简报词缀读取验证:op 简报分支 read_affixes → ctx.cw_briefing_affixes(A8 最高 4 词缀)
-        assert test_context.cw_briefing_affixes, '简报词缀未读取(简报分支没读存)'
-        assert len(test_context.cw_briefing_affixes) == 4, (
-            f'期望 4 词缀(A8),实际 {test_context.cw_briefing_affixes}'
+        # 简报词缀读取验证(W971 P3b:直写 session,ctx 信箱退役):
+        # BriefingOp read_affixes → session.briefing_affixes(A8 最高 4 词缀)
+        _sess = test_context.cw_match.session
+        assert _sess.briefing_affixes, '简报词缀未读取(简报分支没读存)'
+        assert len(_sess.briefing_affixes) == 4, (
+            f'期望 4 词缀(A8),实际 {_sess.briefing_affixes}'
         )
-        # 简报首领读取验证:op 简报分支 read_bosses + LCS 清洗 → ctx.cw_briefing_bosses
-        # (位面序真值,ADR-0397 勘误节;battle_loop __init__ copy 进 session 当
-        # plane_bosses,锁见 test_cw_w219_boss_collect_channel.py)
-        assert test_context.cw_briefing_bosses, '简报首领候选集未读取(简报分支没读存)'
-        assert len(test_context.cw_briefing_bosses) == 3, (
-            f'期望 3 boss(3 位面),实际 {test_context.cw_briefing_bosses}'
+        # 简报首领读取验证:read_bosses + LCS 清洗 → session.briefing_bosses
+        # (位面序真值,ADR-0397 勘误节;消费链 session→state.plane_bosses)
+        assert _sess.briefing_bosses, '简报首领候选集未读取(简报分支没读存)'
+        assert len(_sess.briefing_bosses) == 3, (
+            f'期望 3 boss(3 位面),实际 {_sess.briefing_bosses}'
         )
 
     def test_new_match_a5_switches_to_max_rank(
@@ -996,12 +997,15 @@ def test_tracked_bench_chars_seeds_identity() -> None:
 
 import inspect
 
-from sr_od.application.currency_war.operations.handlers import handle_briefing
+from sr_od.application.currency_war.operations.cw_flow import briefing_op
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def test_handle_briefing_telemetry_wiring_in_source() -> None:
-    """接线锁:简报 op 真调 record_exogenous(kind='briefing')(落盘点唯一源)。"""
-    src = inspect.getsource(handle_briefing.HandleBriefing.handle)
-    assert 'record_exogenous(' in src, 'HandleBriefing 未接 briefing 遥测落账(W518 断链)'
-    assert "'briefing'" in src, "落账 kind 不是 'briefing'(须与 battle_loop 位面简报先例同口径)"
+    """接线锁:简报 op 真调 record_exogenous(kind='briefing')(落盘点唯一源)。
+
+    W971 P3b:简报 op 迁至 cw_flow.BriefingOp(HandleBriefing 退役),锁随迁。
+    """
+    src = inspect.getsource(briefing_op.BriefingOp.handle)
+    assert 'record_exogenous(' in src, 'BriefingOp 未接 briefing 遥测落账(W518 断链)'
+    assert "'briefing'" in src, "落账 kind 不是 'briefing'(须与原位面简报先例同口径)"
