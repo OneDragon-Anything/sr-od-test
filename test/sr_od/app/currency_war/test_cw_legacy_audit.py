@@ -36,9 +36,17 @@ def test_loop_entry_anchor_is_stage_only() -> None:
 
 def test_no_fallthrough_blind_observe() -> None:
     """P0①:3 次不 clean → bail(交外环重进),不再 fall-through
-    盲 observe(实锤路径:16:42:35 deployed 6人读成1人)。"""
+    盲 observe(实锤路径:16:42:35 deployed 6人读成1人)。
+
+    W971 P3b 返工:环入口不 clean 先分诊(已知 overlay → 交回主循环分发
+    并重置同因计数;仅未知帧才计同因 bail,×3 停机兜底保留)——逻辑抽
+    _entry_dispatch_or_bail,锁随迁(方法在场 + 分诊常量单一源被引用)。"""
     src = inspect.getsource(prep_director.PrepDirector._run_loop)
-    assert '环入口帧不clean' in src
+    assert '_entry_dispatch_or_bail' in src, '环入口不 clean 分诊块缺失'
+    helper_src = inspect.getsource(prep_director.PrepDirector._entry_dispatch_or_bail)
+    assert 'GATE_UNCLEAN_REASON' in helper_src, (
+        '未知帧同因 bail(帧不 clean)路径缺失')
+    assert 'bail_reason_counts.pop' in helper_src, '已知 overlay 命中缺同因计数重置'
 
 
 def test_probe_node_type_after_shop_closed() -> None:
@@ -144,12 +152,17 @@ def test_director_gate_open_shop_tolerated_not_bail() -> None:
         prep_director.PrepDirector._try_collapse_open_shop)
     assert '按钮-收起' in helper_src and 'return True' in helper_src, \
         '开商店容忍 helper 必须探测收起锚并返回可重进'
+    # W971 P3b 返工:容忍/分诊/bail 三路收进 _entry_dispatch_or_bail,锁随迁
     src = _r336_batch4_locks_inspect.getsource(prep_director.PrepDirector._run_loop)
-    assert '_try_collapse_open_shop()' in src, \
+    assert '_entry_dispatch_or_bail(match, session)' in src, \
+        'gate 超时分支必须经环入口分诊(分诊承接容忍/bail 两路)'
+    disp_src = _r336_batch4_locks_inspect.getsource(
+        prep_director.PrepDirector._entry_dispatch_or_bail)
+    assert '_try_collapse_open_shop()' in disp_src, \
         'gate 超时分支必须调用开商店态容忍路径(r346)'
-    assert '环入口商店开,已收起重进' in src, \
+    assert '环入口商店开,已收起重进' in disp_src, \
         '开态路径必须收起后 round_retry 重进(非 bail)'
-    assert '环入口帧不clean' in src, \
+    assert 'prep_director.GATE_UNCLEAN_REASON' in disp_src or '_bail(match' in disp_src, \
         '真特效/overlay 的原 bail 路径必须保留(容忍不能吞掉消化门)'
 
 
