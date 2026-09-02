@@ -17,9 +17,11 @@ from one_dragon.base.matcher.match_result import MatchResult
 from sr_od.operations.menu import phone_menu_utils
 from sr_od.screen_state import common_screen_state
 
-# SupportCharacterApp 的省略号检测裁这个 area(_click_ellipsis / _click_profile)
+# SupportCharacterApp 的省略号检测裁这个 area(_click_ellipsis / _click_profile);
+# 领取奖励位走 漫游签证 area(2026-09-02 由硬编码 Point(1862,358) 迁移)
 APP_AREA_REFS: list[tuple[str, str]] = [
     ('菜单', '更多按钮'),
+    ('漫游签证', '按钮-支援奖励领取位'),
 ]
 
 
