@@ -119,3 +119,36 @@ def test_no_comp_front_first():
     dep = DEPLOYED_SETS[2]
     alloc = equip_allocation(None, dep, ['a', 'b', 'c', 'd'])
     assert alloc[0][0] == '砂金', '无 comp 时按 deployed 原序(前排先)'
+
+
+# ----- dd-015 后补:阵营星徽排除同阵营角色(复盘 g_20260902_181254 定谳) -----
+
+def _mk_dep(char_id, row='back', slot=1):
+    return BenchChar(slot=slot, char_id=char_id, faction='', star=1, position_pref=row)
+
+
+def test_emblem_not_allocated_to_same_faction():
+    """列车同行星徽不发给自报列车同行的三月七,改发非同阵营角色或留 owned。"""
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    deploy = [_mk_dep('艾丝妲', slot=1), _mk_dep('三月七', slot=2)]
+    out = equip_allocation(
+        _mk_comp(['艾丝妲']), deploy, ['列车同行星徽'],
+        {('back', 1): [], ('back', 2): []})
+    assert all(not (c == '三月七' and e == '列车同行星徽') for c, e in out), out
+
+
+def test_emblem_allowed_to_other_faction():
+    """非同阵营角色正常获得星徽(add-if-absent 授予新羁绊=星徽用途)。"""
+    deploy = [_mk_dep('艾丝妲', slot=1), _mk_dep('三月七', slot=2)]
+    out = equip_allocation(
+        _mk_comp(['艾丝妲']), deploy, ['列车同行星徽'],
+        {('back', 1): [], ('back', 2): []})
+    assert any(e == '列车同行星徽' for _, e in out), out
+
+
+def test_emblem_same_faction_left_in_pool():
+    """全员同阵营(列车同行)时星徽留 owned(不产出任何同阵营组合)。"""
+    deploy = [_mk_dep('三月七', slot=1), _mk_dep('丹恒·饮月', slot=2)]
+    out = equip_allocation(None, deploy, ['列车同行星徽', '列车同行星徽'],
+                           {('back', 1): [], ('back', 2): []})
+    assert all(e != '列车同行星徽' for _, e in out), out
