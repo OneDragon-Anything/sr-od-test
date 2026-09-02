@@ -1206,7 +1206,8 @@ def test_sim_redecide_after_shop_fill_tx_no_phantom():
         def update_target(self, st, sess, screen) -> None:   # noqa: ARG002
             pass
 
-        def decide_prep(self, st, sess, screen):   # noqa: ARG002
+        def decide_shop_screen(self, sess, screen):   # noqa: ARG002
+            st = sess.shop_state_frame
             if not self.fired and st.shop:
                 self.fired = True
                 card = st.shop[0]
@@ -1257,7 +1258,7 @@ def test_sim_ledger_target_comp_reads_v3_intention():
             sess.v3_intention = _w48_guards_SimpleNamespace(phase='locked',
                                                 locked_comp='仙舟3')
 
-        def decide_prep(self, st, sess, screen):   # noqa: ARG002
+        def decide_shop_screen(self, sess, screen):   # noqa: ARG002
             return []
 
     res = _w48_guards_simulate_p1(3, strategy=_V3Stub(), pool='fallback')

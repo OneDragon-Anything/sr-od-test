@@ -584,7 +584,8 @@ class _FullBenchStub:
     def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
         pass
 
-    def decide_prep(self, st, sess, cfg):  # noqa: ANN001
+    def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
+        st = sess.shop_state_frame
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.kernel.cw_state import (
             BenchChar,

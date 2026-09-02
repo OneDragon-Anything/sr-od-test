@@ -48,7 +48,8 @@ class _XpRecorder:
     def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
         pass
 
-    def decide_prep(self, st, sess, cfg):  # noqa: ANN001
+    def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
+        st = sess.shop_state_frame
         self.snapshots.append((st.round_num, st.xp_progress))
         if st.round_num == 1 and not self._bought and st.shop:
             self._bought = True
@@ -124,11 +125,12 @@ class _ProbsRecorder:
         if self._inner is not None:
             self._inner.update_target(st, sess, cfg)
 
-    def decide_prep(self, st, sess, cfg):  # noqa: ANN001
+    def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
+        st = sess.shop_state_frame
         self.rows.append((st.round_num, st.refresh_probs,
                           st.deploy_cap, st.level))
         if self._inner is not None:
-            return self._inner.decide_prep(st, sess, cfg)
+            return self._inner.decide_shop_screen(sess, cfg)
         return []
 
 

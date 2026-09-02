@@ -80,7 +80,8 @@ def test_skip_round_ledger_row_and_pairing_intact() -> None:
         def update_target(self, st, sess, screen) -> None:  # noqa: ARG002
             pass
 
-        def decide_prep(self, st, sess, screen):  # noqa: ARG002
+        def decide_shop_screen(self, sess, screen):  # noqa: ARG002
+            st = sess.shop_state_frame
             occ = [i for i, d in enumerate(st.deployed) if d is not None]
             if not self.fired and occ:
                 self.fired = True
