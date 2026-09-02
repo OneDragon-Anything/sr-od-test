@@ -637,22 +637,25 @@ _DELIVERY_WIN_P: dict[str, dict[int, float]] = {
 }
 
 
-# 位面维前 = 冻结语料拟合交付值(位面化 P1 层零漂移锁的逐位真值;
-# 与上方 _DELIVERY_WIN_P 同源:冻结语料 417 条战斗差分拟合产物)
+# 位面维前 = 拟合交付值(F6 语料治理批重记:伪影档剔除后口径;
+# 原值含结算瞬时 hp=0 伪读数拆出的 ±40 量级假档——对局档案真值
+# 语料 tools/cw/proofs/p15/(P1 n=290)未删失最大单轮 |Δ|=36)
 _DELIVERY_LOSS_HIST: dict[str, dict[int, int]] = {
-    'battle': {-64: 1, -43: 1, -42: 1, 1: 7, 3: 3, 4: 9, 5: 10, 6: 5,
-               7: 2, 8: 19, 9: 11, 10: 6, 11: 18, 12: 6, 13: 74, 14: 1,
-               15: 9, 17: 3, 18: 3, 19: 4, 20: 2, 21: 4, 23: 2, 46: 1,
-               84: 1, 88: 1},
+    'battle': {1: 7, 3: 3, 4: 9, 5: 10, 6: 5, 7: 2, 8: 19, 9: 11,
+               10: 6, 11: 18, 12: 6, 13: 74, 14: 1, 15: 9, 17: 3,
+               18: 3, 19: 4, 20: 2, 21: 4, 23: 2},
     'encounter': {4: 1, 5: 1, 6: 4, 7: 1, 8: 4, 9: 7, 10: 10, 15: 1,
-                  17: 1, 18: 1, 22: 1, 24: 11, 26: 7, 28: 15, 45: 2,
-                  83: 2},
+                  17: 1, 18: 1, 22: 1, 24: 11, 26: 7, 28: 15},
     'boss': {3: 1, 11: 2, 12: 1, 13: 2, 14: 4, 30: 1, 32: 5, 34: 11,
              36: 8},
 }
+# _LOSS_FIT 重拟合交付口径(dd-012:对局档案真值语料
+# tools/cw/proofs/p15/ corpus_battle_loss.jsonl 逐行最小二乘,
+# P1 非删失败局行 battle n=82 / encounter n=66;原值系已灭且污染
+# 的 w324 语料回归值,锁改理由 = 拟合依据语料不得再为已灭污染源)
 _DELIVERY_LOSS_FIT: dict[str, tuple[float, float, float]] = {
-    'battle': (11.32, -0.37, 11.07),
-    'encounter': (24.32, -4.53, 20.71),
+    'battle': (11.48, -4.21, 10.45),
+    'encounter': (15.06, -3.27, 12.18),
 }
 
 
@@ -709,15 +712,17 @@ def test_win_state_plus2() -> None:
 
 def test_loss_mean_match_and_floor() -> None:
     """败态:battle 直方采样 + rung 均值匹配取整;hp 地板 = max(1,·)。"""
-    # rung0:13 + (11.32 − 0 − 11.07) = 13.25 → 13
+    # rung0:13 + (11.48 − 0 − 10.45) = 14.03 → 14(dd-012 重拟合口径)
     assert cb.sample_battle_delta(
-        'battle', 0, 100, _ScriptRng(0.99, 13)) == -13
-    # rung3:13 + (11.32 − 1.11 − 11.07) = 12.14 → 12(rung 梯度生效)
+        'battle', 0, 100, _ScriptRng(0.99, 13)) == -14
+    # rung3:13 + (11.48 − 12.63 − 10.45) = 1.4 → 1(取整后落伤害地板;
+    # rung 梯度方向仍向下,但该档已被地板吸收)
     assert cb.sample_battle_delta(
-        'battle', 3, 100, _ScriptRng(0.99, 13)) == -12
-    # 地板:伤害越过 HP → hp_after 落吸收态 1
+        'battle', 3, 100, _ScriptRng(0.99, 13)) == -1
+    # 地板:伤害越过 HP → hp_after 落吸收态 1(取真值支持域内上限档
+    # 36——F6 剔档后直方无 84/88,原取值 = 伪影档)
     assert cb.sample_battle_delta(
-        'battle', 0, 5, _ScriptRng(0.99, 88)) == -(5 - 1)
+        'battle', 0, 5, _ScriptRng(0.99, 36)) == -(5 - 1)
     # 直方支持域:采样结果必落在合法区间(固定种子扫 200 次)
     rng = random.Random(20260901)
     for _ in range(200):
@@ -806,10 +811,13 @@ def test_coarse_game_smoke_snapshot_fingerprint() -> None:
 
 
 def test_p1_layer_zero_drift_literals() -> None:
-    """P1 层零漂移锁:三表 plane 1 逐位 = 冻结语料拟合交付值。
+    """P1 层逐位 = 拟合交付值(现口径 = F6 语料治理后)。
 
     位面化只加结构不改数:P1 层是 W346 一阶矩门 + W377 剂量曲线
-    三方一致的载体,任何 P1 数值变动必须走显式重校准批(禁止顺手调)。
+    三方一致的载体,任何 P1 数值变动必须走显式重校准批(禁止顺手调)
+    ——F6 语料治理批即该显式批:剔除结算瞬时 hp=0 伪影档(battle
+    {±42,±43,−64,+46,+84,+88}/encounter {+45,+83};真值上限锚=
+    tools/cw/proofs/p15/ 对局档案语料 P1 未删失最大单轮 |Δ|=36)。
     """
     for node, hist in _DELIVERY_LOSS_HIST.items():
         assert cb._LOSS_HIST[node][1] == hist
@@ -877,12 +885,14 @@ def test_default_plane_keeps_signature_compatible() -> None:
 
 def test_coarse_calib_version_disclosed_in_ledger_manifest(
         monkeypatch: _coarse_battle_pytest.MonkeyPatch, tmp_path) -> None:
-    """版本披露锁:COARSE_CALIB_VERSION=2 且进 sim 台账 manifest。
+    """版本披露锁:COARSE_CALIB_VERSION=4 且进 sim 台账 manifest。
 
     DESIGN §验证:局终指纹核对锚——防止「结构改了、披露没跟上」的
     跨版本对比污染;回归批脚本头部按本常量断言版本号。
+    2→3 = F6 语料治理(P1 败局直方剔伪影档,pooled_mean 重算);
+    3→4 = dd-012 重拟合(P1 _LOSS_FIT 改对局档案真值语料回归值)。
     """
-    assert cb.COARSE_CALIB_VERSION == 2
+    assert cb.COARSE_CALIB_VERSION == 4
     r = cw_sim.simulate_p1(1, pool='snapshot')
     out = _coarse_battle_runner.write_batch_ledger([r], tmp_path / 'batch')
     manifest = json.loads((out / 'manifest.json').read_text(encoding='utf-8'))

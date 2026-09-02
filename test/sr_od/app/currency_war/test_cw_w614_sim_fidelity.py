@@ -96,8 +96,20 @@ from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
 # 两批均为设计内校准/输入重锚(非 unintended drift),锚有效性前提 =
 # 各批自身验证;新锚继续做 unintended drift 哨兵,后续行为批重锚须按
 # w910 先例补单变量 bisect。
+# F6 语料治理重锚(编排者批):校准数据面两处设计内变更使 digest
+# 由 1d3b6c29… 位移至 098ea088…——①Δ池快照随 hp=0 伪影治理再生
+# (指纹 6400d5d8→bfaf1c95,reward/supply 池采样变);②粗模型败局
+# 直方剔除 hp=0 伪影伤害档(COARSE_CALIB_VERSION 2→3,战斗败态
+# 采样变)。单批内两变量,归因即本批任务书范围(校准语料治理),
+# 未触策略/决策代码。双跑确定性核验通过;新锚继续做 unintended
+# drift 哨兵。
+# p15 重拟合重锚(2026-09-02,dd-012):P1 _LOSS_FIT intercept/slope
+# 改由对局档案真值语料重估(旧值系已灭且污染的 w324 语料回归值,
+# COARSE_CALIB_VERSION 3→4,战斗败态均值匹配偏移变)→ digest
+# 由 098ea088… 位移至 3e71aaaf…。单变量批(仅 _LOSS_FIT 三元组);
+# 双跑确定性核验通过;新锚继续做 unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    '1d3b6c29bea0516b9686644bf56bdb16ccf86836fb663e7154719eae71a9c769')
+    '3e71aaaf341c8c86f49fc9b79951d4351d0d8e2292bd86fc874c41e05b47a070')
 
 
 def _behavior_projection(results) -> str:
