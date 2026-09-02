@@ -410,7 +410,8 @@ def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
     monkeypatch.setattr(cfg_mod, 'CurrencyWarConfig', lambda idx: SimpleNamespace())
     match = SimpleNamespace(
         strategy=SimpleNamespace(
-            decide_prep_action=lambda obs, session, config: StartBattle(),
+            # W971 P2 黑板接口(dd-014):生产环调 decide_prep_screen(session, config)
+            decide_prep_screen=lambda session, config: StartBattle(),
             update_target=lambda state, session, config: None),
         session=SimpleNamespace(defer_count=0, prep_phase=0,
                                 prep_phase_retry=0, bail_reason_counts={}))

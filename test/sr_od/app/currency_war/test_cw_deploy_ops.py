@@ -845,8 +845,13 @@ def test_w530_wiring_locks():
     src = _w530_drag_reconcile_Path('src/sr_od/application/currency_war/prep_director.py').read_text(
         encoding='utf-8')
     # ① 发出点:compute 在主环 execute 之前(锚主环 decide,避开破警告分支
-    #    更早的 execute——该分支无定型帧,本就不进对账)
-    loop_at = src.index('action = match.strategy.decide_prep_action(obs, session, config)')
+    #    更早的 execute——该分支无定型帧,本就不进对账)。
+    #    W971 P2 黑板接口(dd-014):decide 行已迁 decide_prep_screen(session,
+    #    config);锚改从「旧环主体」标记起找(主环同名 decide 行在破警告分支
+    #    先出现,需跳过)。
+    loop_at = src.index(
+        'action = match.strategy.decide_prep_screen(session, config)',
+        src.index('旧环主体'))
     exec_at = src.index('progressed, detail = self._executor.execute(action)', loop_at)
     emit_at = src.index('if isinstance(action, (SellBench, DeployMove)):', loop_at)
     comp_at = src.index('compute_drag_expect(', loop_at)

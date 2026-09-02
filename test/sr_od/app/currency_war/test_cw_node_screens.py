@@ -839,13 +839,19 @@ import inspect
 
 
 def test_briefing_bosses_copied_into_session() -> None:
-    """锁①(改写):简报位面序真值 copy 进 session(接线在 loop __init__)。"""
+    """锁①(改写):简报位面序真值 copy 进 session(接线在 _absorb_ctx_mailbox)。
+
+    W971 P2(match 建立前移,dd-014):copy 段自 handle_init 新局分支抽出为
+    _absorb_ctx_mailbox 并改无条件调用(简报读数晚于入口建立点);锁随结构
+    迁移更新,语义不变(copy 接线存在 + ctx 槽不取走清空)。
+    """
     from sr_od.application.currency_war.operations import battle_loop
 
     src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
-    assert '_session.briefing_bosses = list(self.ctx.cw_briefing_bosses)' in src, (
+    assert 'session.briefing_bosses = list(self.ctx.cw_briefing_bosses)' in src, (
         '简报真值→session copy 接线消失(boss_fit 失去开局输入,ADR-0397 勘误节)'
     )
+    assert '_absorb_ctx_mailbox' in src, '信箱吸收段应存在(W971 P2 双写过渡)'
     # ctx 简报槽无「取走清空」消费:槽保留作实采对账源;跨局残留由
     # HandleBriefing 每局重读覆写/读空清 None 兜住(该行为有专锁)。
     assert 'self.ctx.cw_briefing_bosses = None' not in src

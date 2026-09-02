@@ -208,7 +208,8 @@ def test_shop_record_site_copies_owned_pool_before_record() -> None:
     src = _src('operations/prep/buy_cards.py')
     copy_line = 'state.equips = list(getattr(match.session, \'last_owned_equips\', []) or [])'
     assert copy_line in src, 'buy_cards record 站点缺 owned 池补拷行(W222 缺口①回归)'
-    i_plan = src.index('actions = match.strategy.decide_prep')
+    # W971 P2 黑板接口(dd-014):decide_prep → decide_shop_screen,顺序锁随迁
+    i_plan = src.index('actions = match.strategy.decide_shop_screen')
     i_copy = src.index(copy_line)
     i_rec = src.index('recorder.record_decision(state, target_name')
     assert i_plan < i_copy < i_rec, '补拷必须在 decide_prep 之后、record 之前(行为边界)'

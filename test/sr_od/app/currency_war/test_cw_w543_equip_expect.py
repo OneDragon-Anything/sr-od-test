@@ -166,7 +166,11 @@ def test_w543_wiring_locks():
     ④台账参数锁;⑤合成规则单一源 = cw_synthesis。"""
     src = Path('src/sr_od/application/currency_war/prep_director.py').read_text(
         encoding='utf-8')
-    loop_at = src.index('action = match.strategy.decide_prep_action(obs, session, config)')
+    # W971 P2 黑板接口(dd-014):decide 行已迁 decide_prep_screen;
+    # 锚从「旧环主体」标记起找(主环同名 decide 行在破警告分支先出现)
+    loop_at = src.index(
+        'action = match.strategy.decide_prep_screen(session, config)',
+        src.index('旧环主体'))
     exec_at = src.index('progressed, detail = self._executor.execute(action)', loop_at)
     emit_at = src.index('if isinstance(action, SellDeployed):', loop_at)
     build_at = src.index('self._equip_expect_for_sell(action)', loop_at)

@@ -364,7 +364,9 @@ class _StubStrategy:
     def update_target(self, state, session, config) -> None:
         pass
 
-    def decide_prep(self, state, session, config) -> list[Any]:
+    def decide_shop_screen(self, session, config) -> list[Any]:
+        # W971 §2 黑板接口(P2):生产 buy_cards 波顶写 session.shop_state_frame
+        # 后调本入口;替身从帧读 state(与旧 decide_prep 的 state 参数同源)。
         acts = self._plans[min(self.calls, len(self._plans) - 1)]
         self.calls += 1
         return acts
@@ -976,7 +978,8 @@ class _w944_shop_unk_settle_StubStrategy:
     def update_target(self, state, session, config) -> None:
         pass
 
-    def decide_prep(self, state, session, config) -> list[Any]:
+    def decide_shop_screen(self, session, config) -> list[Any]:
+        # W971 §2 黑板接口(P2):同 _StubStrategy.decide_shop_screen。
         self.calls += 1
         return []
 
@@ -1177,8 +1180,9 @@ def test_hook_unknown_slot_skipped_not_stopped(
         hook_rereads=[_NAMED],
         writes=writes)
     # 给替身策略注入「只买有身份牌(x≈1300 → 槽5)」的 plan
-    test_context.cw_match.strategy.decide_prep = (
-        lambda state, session, config: [
+    # (W971 §2 黑板接口 P2:monkeypatch 换新入口 decide_shop_screen)
+    test_context.cw_match.strategy.decide_shop_screen = (
+        lambda session, config: [
             BuyCard(card=ShopCard(x=1300, faction='?', name='杰帕德',
                                   cost=3, star=1))])
 

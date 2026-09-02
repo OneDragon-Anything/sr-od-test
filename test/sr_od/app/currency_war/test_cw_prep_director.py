@@ -380,7 +380,9 @@ class _ScriptStrategy:
         self._acts = list(actions)
         self.seen: list[str] = []
 
-    def decide_prep_action(self, obs, session, config):
+    def decide_prep_screen(self, session, config):
+        # W971 §2 黑板接口(P2):生产 prep_director 写 session.prep_obs_frame
+        # 后调本入口(替身不消费帧,仅按脚本吐动作)。
         a = self._acts.pop(0) if self._acts else StartBattle()
         self.seen.append(type(a).__name__)
         if len(self.seen) > 12:
