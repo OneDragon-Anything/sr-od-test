@@ -66,7 +66,7 @@ def test_shop_collapse_single_poll_fn() -> None:
         '旧轮询 _legacy_poll 已删(r347),不得回流'
     assert src.count('wait_stable_frame') == 2, \
         'buy 内 gate 仅剩开商店段(局部 import + 调用;收起两处已按 DD-011 迁移为自等动画)'
-    assert '_SHOP_CLOSE_ANIM_S' in src, \
+    assert 'SHOP_CLOSE_ANIM_S' in src, \
         '收起动画时长必须由 op 显式声明并等待(DD-011)'
 
 
