@@ -1,16 +1,21 @@
-"""W546 装备区逐格识别回归锁(格几何 / 逐格分类 / 数量 / 幸运星 / 遮挡态)。
+"""W546 装备区逐格识别回归锁(格几何 / 逐格分类 / 数量 / 幸运星)。
 
 设计出处:装备区识别从全域 SIFT 升级为「实测网格几何(75px 等距三列/两列)+ 逐格 TM 分类」,
 对拍基线 = W540 真值(171 格,28 帧;基线召回 62%)。锁语义:
 - 召回/身份/零误检/数量 四指标由 fixture 帧代表锁(全量 28 帧对拍在开发批
   ``.debug/temp/currency_war/w546_equip_upgrade/gate.py``,测试只锁代表性断面防回归);
 - 幸运星 0/7 是旧 SIFT 路径的系统性失败,逐格分类下必须命中(锁存在性:该失败是本重构目标);
-- 遮挡格如实标记(不硬判空/占用),occluded 格不得出现在 read_equips 输出。
+- 非干净备战不识别(硬不变量):画面状态判定在外层建档识别(角色详情/装备详情/
+  装备浮窗各有独立建档、盖备战 id_mark),识别器纯识别、无画面守卫。
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -21,6 +26,7 @@ sys.path.insert(0, str(REPO / 'src'))
 
 from sr_od.application.currency_war.obs.cw_equipment import (  # noqa: E402  # noqa: E402
     EquipCell,
+    _detect_zone_dy,
     _equip_slot_centers,
     _looks_infinity,
     _parse_equip_count,
@@ -65,6 +71,37 @@ class TestGridGeometry:
         base = _equip_slot_centers(0)
         shifted = _equip_slot_centers(30)  # 横幅帧实测整体下移 ~25-30px
         assert all(y2 - y1 == 30 for (_r1, _c1, _x1, y1), (_r2, _c2, _x2, y2) in zip(base, shifted, strict=True))
+
+
+class TestFillOrder:
+    """栏内填充序剪枝(用户口述·权威,知识档 equipment_mechanics.md §5):
+    row1 消耗品右→左;装备区右列自上而下、再左列;首空即停。"""
+
+    def test_fill_order_slots_sequence(self) -> None:
+        from sr_od.application.currency_war.obs.cw_equipment import _fill_order_slots
+        tool_slots, equip_slots = _fill_order_slots(0)
+        # row1 消耗品带:右→左(x 降序),col 2→1→0
+        assert [s[2] for s in tool_slots] == [1843, 1768, 1693]
+        assert [s[1] for s in tool_slots] == [2, 1, 0]
+        # 装备区:右列(col2)自上而下 6 格 → 左列(col1)自上而下 6 格
+        assert len(equip_slots) == 12
+        assert [s[1] for s in equip_slots] == [2] * 6 + [1] * 6            # 列右→左
+        assert [s[0] for s in equip_slots[:6]] == [1, 2, 3, 4, 5, 6]       # 右列上→下
+        assert [s[0] for s in equip_slots[6:]] == [1, 2, 3, 4, 5, 6]       # 左列上→下
+
+    def test_prune_stops_at_first_empty(self) -> None:
+        """合成剪枝锁:遮挡左列(涂黑)后,右列满格照常识别、左列首空即停——
+        结果 = 只含右列占用格(剪枝后不产出左列空格槽位)。"""
+        rgb = _load_frame('后排8槽-满级局')
+        if rgb is None:
+            pytest.skip('存档截图缺失:后排8槽-满级局')
+        masked = rgb.copy()
+        masked[:, :1770] = 0   # 涂黑左列(col1 x1768 左侧)→ 左列全空
+        cells = read_equip_grid(masked, _templates())
+        assert all(c.col == 2 or c.row == 0 for c in cells if c.name is not None)
+        # 满级局左列有占用格(真值 12 = 右列 6 + 左列 6),涂黑后左列首空即停
+        occupied = [c for c in cells if c.name is not None]
+        assert all(not (c.row >= 1 and c.col == 1) for c in occupied)
 
 
 # ===== 数量解析(纯函数)=====
@@ -157,43 +194,128 @@ class TestGridClassificationFixtures:
         assert isinstance(hits, list)  # SIFT 路径不抛错即锁(语义回归由消费方测试覆盖)
 
 
-class TestOcclusion:
-    def test_detail_panel_cells_marked_occluded(self) -> None:
-        rgb = _load_frame('char_detail')
+class TestTwoStateZoneDy:
+    """两态候选档(「装备追踪中」标签位移几何)替代全档扫描的行为锁。
+
+    实测事实(存档帧逐帧对拍):装备区垂直位移只有两态——无标签 δ=0、有标签 δ≈24;
+    旧 14 档扫描在无标签帧给出的 -8/-4/8/20 等是 TM 平移不变性造成的分数平台噪声值。
+    对齐自验判据 = 占用格峰心垂直偏移中位(分数不能作判据:错位 28px 帧部分重叠格仍
+    0.93+,实测「攻略已应用」δ=0 档);自验失败落到下一档,两档皆败才全档扫描兜底。
+    """
+
+    def _bomb_scan(self, *_a, **_kw) -> int:
+        raise AssertionError('兜底全档扫描不应触发(候选档内应解决;若红 = 对齐自验判据失效,性能优化被静默击穿)')
+
+    def test_label_free_frame_first_candidate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """无标签帧:δ=0 首档即对齐 → 不触兜底,12 格真值不回归。"""
+        rgb = _load_frame('后排8槽-满级局')
         if rgb is None:
-            pytest.skip('存档截图缺失:char_detail(可能已归档到装备详情浮窗子目录)')
+            pytest.skip('存档截图缺失:后排8槽-满级局')
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.obs.cw_equipment._detect_zone_dy', self._bomb_scan)
         cells = read_equip_grid(rgb, _templates())
         occupied = [c for c in cells if c.name is not None]
-        assert len(occupied) == 3            # 真值 3 格(全右列)
-        assert all(c.col == 2 for c in occupied)
-        occluded = [c for c in cells if c.occluded]
-        assert len(occluded) >= 1            # 面板覆盖区格如实标遮挡
-        assert all(c.name is None for c in occluded)  # 遮挡格不硬判身份
+        assert len(occupied) == 12           # 与 TestGridClassificationFixtures 同源真值
+
+    def test_labeled_frame_second_candidate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """有标签帧:δ=0 档峰心自验失败 → δ=24 档返回,9 格真值(row1 材料带 + 尾行)不丢。"""
+        rgb = _load_frame('攻略已应用')
+        if rgb is None:
+            pytest.skip('存档截图缺失:攻略已应用')
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.obs.cw_equipment._detect_zone_dy', self._bomb_scan)
+        cells = read_equip_grid(rgb, _templates())
+        got = {(c.row, c.col, c.name) for c in cells if c.name is not None}
+        # 真值 = 旧全档扫描 δ=28 输出(两态批对拍一致);row1 两格与 5/6 行恰是
+        # 错位档(δ=0)会因图标出窗丢失的格子——本锁钉住「第二档找回它们」
+        assert got == {(0, 1, '冶金炉'), (0, 2, '拆装扳手'), (1, 1, '轮滑鞋'), (1, 2, '幸运星'),
+                       (2, 2, '量产型装甲'), (3, 2, '量产型装甲'), (4, 2, '量产型装甲'),
+                       (5, 2, '折叠小刀'), (6, 2, '和平手枪')}
+
+    def test_fallback_scan_on_unknown_layout(self, monkeypatch: pytest.MonkeyPatch,
+                                             caplog: pytest.LogCaptureFixture) -> None:
+        """未知第三位移态 → 兜底扫描找回 + [cw!] 留痕。
+
+        样本 = 合成帧(真实帧内容整体下移 12px):落在两档候选 ±8 对齐容忍域之外,
+        必触发兜底;兜底扫描(4px 步进含 12)应选回 δ=12 并完整识别。不用被面板
+        遮挡的存档帧作样本——那种帧在识别层入口就被整帧拒绝,到不了兜底。
+        """
+        rgb = _load_frame('后排8槽-满级局')
+        if rgb is None:
+            pytest.skip('存档截图缺失:后排8槽-满级局')
+        shifted = np.vstack([np.zeros((12, rgb.shape[1], 3), np.uint8), rgb[:-12]])
+        scan_calls: list[int] = []
+        real_scan = _detect_zone_dy
+
+        def _spy(screen, scaled) -> int:  # noqa: ANN001 (测试桩签名同被桩函数)
+            dy = real_scan(screen, scaled)
+            scan_calls.append(dy)
+            return dy
+
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.obs.cw_equipment._detect_zone_dy', _spy)
+        with caplog.at_level(logging.INFO):
+            cells = read_equip_grid(shifted, _templates())
+        # 不锁兜底选中的 δ 值:TM 平移不变性使相邻档(±4px)总分构成平台,选档抖动
+        # ±4px 是固有性质;裁片 ±20px 容忍内识别结果无损(实测 δ=8 与 δ=12 输出全同),
+        # 故锁「触发一次 + 结果与原帧一致」这个行为本质
+        assert len(scan_calls) == 1          # 兜底恰触发一次
+        baseline = read_equip_grid(rgb, _templates())
+        got = {(c.row, c.col, c.name) for c in cells if c.name is not None}
+        want = {(c.row, c.col, c.name) for c in baseline if c.name is not None}
+        assert got == want                   # 兜底后识别结果与原帧一致
+        assert 'dy_fallback' in caplog.text  # [cw!] 留痕:未知布局态从日志第一时间暴露
+
+
+class _ReplayCountOcr:
+    """数量 OCR 回放桩:按裁片内容哈希查 fixture,返回真引擎录制原文;未命中 = 失读(空结果)。
+
+    哈希键控保证语义不变:read_equip_count 的区域裁剪/变体管线任何改动使裁片内容变
+    → 未命中 → 失读,与真引擎面对错裁片的行为一致——锁的仍是数量判读逻辑,非 OCR 引擎。
+    """
+
+    def __init__(self, table: dict[str, list[str]]) -> None:
+        self._table = table
+
+    def get_ocr_result_list(self, image, **_kw) -> list:
+        key = hashlib.md5(np.ascontiguousarray(image).tobytes()).hexdigest()
+        return [SimpleNamespace(data=text) for text in self._table.get(key, [])]
+
+
+_COUNT_OCR_FIXTURE = Path(__file__).parent / 'fixtures' / 'w546_count_ocr_fixture.json'
+
+
+def _count_fixture() -> dict:
+    """数量锁识别结果 fixture:帧 → {cell: [cx, cy](真 read_equip_grid TM 峰心), ocr: {裁片哈希: [原文]}}。"""
+    return json.loads(_COUNT_OCR_FIXTURE.read_text(encoding='utf-8'))
 
 
 class TestEquipCount:
 
     def test_count_digits_and_infinity(self) -> None:
-        """数量锁:代表帧 row1 数字(4 档)与 ∞ 各至少一例读对;失读返 None 不硬判。"""
-        from types import SimpleNamespace
+        """数量锁:代表帧 row1 数字(4 档)与 ∞ 各至少一例读对;失读返 None 不硬判。
 
-        from one_dragon.base.matcher.ocr.ocr_service import OcrService
-        from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
-        svc = OcrService(ocr_matcher=OnnxOcrMatcher())
-        svc.ocr_matcher.init_model()
-        ocr_ctx = SimpleNamespace(ocr_service=svc)
-        # 攻略已应用 row1:拆装扳手×4(真值);shop_closed:精密拆装扳手 ∞
-        cases = [('攻略已应用', '拆装扳手', 1768, '4'), ('shop_closed', '精密拆装扳手', 1843, '∞')]
+        识别结果 fixture 解耦(原 20.3s 慢项治本;profile 实测主因 = read_equip_grid
+        逐帧 TM 全库分类 ~7s/帧 × 两帧 + OCR 引擎装载推理,非判读逻辑本身):
+        格心 = 真 read_equip_grid 的 TM 峰心一次性提取入库,OCR = 真引擎逐裁片录制
+        原文按内容哈希回放;read_equip_count 全判读管线在真帧上原样执行。
+        fixture 再生方式见同目录 fixtures/README.md。
+        """
+        fx = _count_fixture()
+        # 攻略已应用 row1:拆装扳手×4(真值,格心 x=1847;col 1768 处实为 冶金炉——
+        # 旧 case 列锚 1768 使数字支路长期静默跳过,本次按帧实况复活该支路);
+        # shop_closed:精密拆装扳手 ∞
+        cases = [('攻略已应用', '拆装扳手', 1847, '4'), ('shop_closed', '精密拆装扳手', 1843, '∞')]
         ran = 0
         for frame, eq_name, col_x, expect in cases:
-            got = _grid(frame)
-            if got is None:
+            entry = fx.get(frame)
+            rgb = _load_frame(frame) if entry is not None else None
+            if entry is None or rgb is None:
                 continue
-            rgb, cells = got
-            target = [c for c in cells if c.name == eq_name and abs(c.cx - col_x) <= 40 and c.row == 0]
-            if not target:
-                continue
+            cx, cy = entry['cell']
+            assert abs(cx - col_x) <= 40, f'{frame} 格心 ({cx},{cy}) 不在 case 声明列 {col_x} ±40 内(锚定漂移)'
             ran += 1
-            count = read_equip_count(ocr_ctx, rgb, target[0].cx, target[0].cy)
+            ctx = SimpleNamespace(ocr_service=_ReplayCountOcr(entry['ocr']))
+            count = read_equip_count(ctx, rgb, cx, cy)
             assert count == expect, f'{frame} {eq_name} 数量: expect={expect} got={count}'
-        assert ran >= 1, '代表帧全部缺失,数量锁未执行'
+        assert ran == len(cases), f'代表帧缺失,数量锁仅执行 {ran}/{len(cases)} 例(数字与 ∞ 两支路都必须实跑)'

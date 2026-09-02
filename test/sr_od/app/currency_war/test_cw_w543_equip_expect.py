@@ -9,10 +9,10 @@ test_cw_w552_xp_reconcile.py 经验,同族:意图 → 期望增量 → heavy 定
 合成规则单一源 = cw_synthesis(勿自造第二套)。
 
 测四类:①期望态计算真值表(五类拖拽×边界:不可合对/未知名/空穿戴
-不评)②定型帧对账判据真值表(遮挡格三态如实跳过不评;存量漂移不进
-本对账)③接线源码锁(期望在动作发出点计算、对账在 heavy 定型帧后仅
-progressed 分支、台账参数锁、合成单一源锁)④台账行形态锁(equip=
-中决策相关面 → 单次 L2 初判)。全部纯函数/tmp_path,零触网零落盘真实路径。
+不评)②定型帧对账判据真值表(存量漂移不进本对账)③接线源码锁(期望在动作
+发出点计算、对账在 heavy 定型帧后仅 progressed 分支、台账参数锁、合成单一源锁)
+④台账行形态锁(equip=中决策相关面 → 单次 L2 初判)。全部纯函数/tmp_path,
+零触网零落盘真实路径。
 
 
 出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
@@ -20,16 +20,18 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.obs import cw_equipment
 from sr_od.application.currency_war.data import cw_synthesis
+from sr_od.application.currency_war.kernel.cw_prep_expect import (
+    EquipDragIntent,
+    EquipExpect,
+    compare_equip_expect,
+    compute_equip_drag_expect,
+)
+from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L2_RECORD
+from sr_od.application.currency_war.obs import cw_equipment
 from sr_od.application.currency_war.obs.cw_equipment import EquipCell
-from sr_od.application.currency_war.telemetry import defects, recorder
-
 from sr_od.application.currency_war.prep_director import PrepDirector
-
-from sr_od.application.currency_war.kernel.cw_prep_expect import compare_equip_expect, compute_equip_drag_expect
-
-from sr_od.application.currency_war.kernel.cw_prep_expect import EquipDragIntent, EquipExpect
+from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 # 合成对取自注册表派生图谱(单一源;不硬编码具体件名,图谱更新自动跟上)
@@ -38,9 +40,8 @@ _SELF_BASE = next(iter(cw_synthesis.SELF_RECIPES.values()))
 _SELF_ADV = cw_synthesis.self_advance(_SELF_BASE)
 
 
-def _cell(name: str | None = None, occluded: bool = False) -> EquipCell:
-    return EquipCell(row=1, col=1, cx=0, cy=0, name=name, score=0.9,
-                     occluded=occluded)
+def _cell(name: str | None = None) -> EquipCell:
+    return EquipCell(row=1, col=1, cx=0, cy=0, name=name, score=0.9)
 
 
 # ===== ① 期望态计算真值表(五类拖拽 × 边界)=====
@@ -149,14 +150,6 @@ def test_compare_counts_consistent_and_mismatch():
     assert compare_equip_expect(exp, [_cell('B')]) != []               # A 清空过头
 
 
-def test_compare_occluded_skips_all():
-    """存在遮挡格 → 计数不可信 → 整体跳过不评(不算一致也不算不一致,
-    equipment_mechanics §1.1 不堆叠语义下遮挡格可能藏着 deltas 涉及件)。"""
-    exp = EquipExpect(kind='wear', summary='wear A', deltas={'A': -1},
-                      owned_before={'A': 2})
-    assert compare_equip_expect(exp, [_cell('A'), _cell(occluded=True)]) == []
-
-
 def test_compare_ignores_unrelated_names():
     """deltas 未涉及的名字(存量漂移)不进本对账(归 reconcile_tracking)。"""
     exp = EquipExpect(kind='unequip', summary='unequip A', deltas={'A': +1},
@@ -210,13 +203,11 @@ def test_w543_wiring_locks():
 
 
 def test_w543_sell_build_best_effort_locks():
-    """期望构建端:遮挡污染 before 快照即不评;全程 best-effort(异常吞掉
-    返 None,不阻塞动作执行)。"""
+    """期望构建端:全程 best-effort(异常吞掉返 None,不阻塞动作执行)。"""
     src = Path('src/sr_od/application/currency_war/prep_director.py').read_text(
         encoding='utf-8')
     build = src[src.index('def _equip_expect_for_sell'):]
     build = build[:build.index('\n    def ')]
-    assert 'any(c.occluded for c in cells)' in build
     assert 'except Exception' in build
     assert 'return None' in build
 
@@ -238,8 +229,8 @@ def _cap(*a, **k):
     return (a, k)
 
 
-def test_reconcile_clean_and_occluded_no_row(monkeypatch):
-    """一致 / 遮挡不评:不落台账。"""
+def test_reconcile_clean_no_row(monkeypatch):
+    """一致:不落台账。"""
     exp = EquipExpect(kind='wear', summary='wear A', deltas={'A': -1},
                       owned_before={'A': 2})
     pd, captured = _stub_director(frame=object())
@@ -248,11 +239,6 @@ def test_reconcile_clean_and_occluded_no_row(monkeypatch):
                         lambda ctx: {'t': object()})
     monkeypatch.setattr(cw_equipment, 'read_equip_grid',
                         lambda frame, templates: [_cell('A'), _cell('B')])
-    pd._reconcile_equip_expect(exp)
-    assert captured == []
-    # 遮挡 → 整体不评
-    monkeypatch.setattr(cw_equipment, 'read_equip_grid',
-                        lambda frame, templates: [_cell(occluded=True)])
     pd._reconcile_equip_expect(exp)
     assert captured == []
 
@@ -320,8 +306,3 @@ def test_defect_row_shape(tmp_path: Path, monkeypatch):
     assert row['kind'] == 'equip_expect_mismatch'
     assert row['reader_source'] == 'equip_expect_reconcile'
     assert row['severity'] == SEVERITY_L2_RECORD
-
-from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L2_RECORD
-
-
-from sr_od.application.currency_war.telemetry import state
