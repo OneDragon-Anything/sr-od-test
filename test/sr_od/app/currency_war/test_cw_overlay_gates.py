@@ -480,7 +480,7 @@ def test_aface_clear_judgment_per_fixture_frame() -> None:
 #: 本常量只存在于测试,作为历史黄金基准防接线漂移)。
 _GOLDEN_BAIL_LIST: tuple[tuple[str, str, str], ...] = (
     ('货币战争-盛会之星', '标识-盛会之星', 'megastar'),
-    ('货币战争-选择伙伴', '标识-选择伙伴', 'partner'),
+    ('货币战争-列车同行', '标识-选择伙伴', 'partner'),
     ('货币战争-祈愿试炼', '标识-祈愿试炼', 'wish_trial'),
     ('货币战争-星徽秘典弹窗', '标识-星徽秘典', 'star_tome'),
     ('货币战争-备战-专家邀请函', '标识-专家邀请函', 'bookcard'),
@@ -557,7 +557,7 @@ def test_zero_behavior_upper_screens_golden() -> None:
     """
     from sr_od.application.currency_war.kernel import cw_obs_core
     assert set(cw_obs_core.UPPER_SCREENS) == {
-        '货币战争-选择伙伴',
+        '货币战争-列车同行',
         '货币战争-祈愿试炼',
         '货币战争-遭遇节点',
         '货币战争-投资策略',

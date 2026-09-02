@@ -1048,9 +1048,9 @@ def _run(mod):
 def test_upper_hit_returns_false(matcher_env) -> None:
     """上层屏命中(如 选择伙伴)→ False,且命中即短路(不再判备战)。"""
     mod, fm = matcher_env
-    fm.hits = {'货币战争-选择伙伴'}
+    fm.hits = {'货币战争-列车同行'}
     assert _run(mod) is False
-    assert ['货币战争-选择伙伴'] in fm.calls
+    assert ['货币战争-列车同行'] in fm.calls
     # 第二段(备战/开商店,双元素调用)未发生——命中即短路:
     assert not any(len(c) == 2 for c in fm.calls)
 

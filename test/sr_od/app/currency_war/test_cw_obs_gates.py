@@ -222,14 +222,14 @@ def test_read_select_partner_candidates(test_context: SrTestContext) -> None:
     """选择伙伴 候选阵营 label 读取(HandleSelectPartner._read_candidates by 中央 x + y 行过滤)。
 
     D-60:硬编码 STAGE_PORTRAIT 落候选间隙 flat-loop → 改 OCR 定位候选。fixture
-    ``screens/货币战争-选择伙伴/default.webp``(1-7 节点 2 候选 护盾/能量)。
+    ``screens/货币战争-列车同行/default.webp``(1-7 节点 2 候选 护盾/能量)。
     **关键回归**:候选必须只在中央 overlay(x>450),不含左侧备战面板 board label
     (仙舟/列车同行/能量 在 x~106 同 y 行)—— D-60 初版漏 x 过滤会把 board label 当候选。
     """
-    if not test_context.has_screen('货币战争-选择伙伴', 'default'):
-        pytest.skip('存档截图缺失:screens/货币战争-选择伙伴/default.webp')
+    if not test_context.has_screen('货币战争-列车同行', 'default'):
+        pytest.skip('存档截图缺失:screens/货币战争-列车同行/default.webp')
     from sr_od.application.currency_war.operations.handlers.handle_select_partner import HandleSelectPartner
-    screen = test_context.load_screen('货币战争-选择伙伴', 'default')
+    screen = test_context.load_screen('货币战争-列车同行', 'default')
     op = HandleSelectPartner(test_context)
     cands = op._read_candidates(screen)
     names = [c[0] for c in cands]
