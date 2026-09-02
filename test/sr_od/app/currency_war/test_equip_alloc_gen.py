@@ -74,8 +74,9 @@ def test_allocation_invariants(ci, di, oi):
         assert cname in on_field, f'{cname} 不在场上却分得装备'
         assert n <= EQUIP_CAPACITY, f'{cname} 超 EQUIP_CAPACITY'
     # I2 key 优先:key_equips 只给 core(carry 含);**core 在场前提**——
-    # core 未上场时 key 件经兜底穿给场上人是合理行为(保战力,core 上场后
-    # C6 转移挪;分配器无「等 core」语义,转移层负责)。
+    # core 未上场时 key 件经兜底穿给场上人是合理行为(保战力)。core 上场后
+    # 的转移不由分配器/本 op 直拖完成(装备不能角色间直拖;转移=卖角色或
+    # 扳手拆,归决策器,见 equipment_mechanics「装备转移机制」节)。
     if comp is not None and comp.key_equips:
         keys = list(comp.key_equips)
         core_set = set(comp.core_chars) | ({comp.plaza_carry} if comp.plaza_carry else set())
