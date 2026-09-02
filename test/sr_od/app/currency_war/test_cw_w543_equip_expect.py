@@ -166,21 +166,20 @@ def test_w543_wiring_locks():
     ④台账参数锁;⑤合成规则单一源 = cw_synthesis。"""
     src = Path('src/sr_od/application/currency_war/prep_director.py').read_text(
         encoding='utf-8')
-    # W971 P2 黑板接口(dd-014):decide 行已迁 decide_prep_screen;
-    # 锚从「旧环主体」标记起找(主环同名 decide 行在破警告分支先出现)
+    # W971 P3b 拆内环:锚「备战单轮」节标记(单轮 run 五段)
     loop_at = src.index(
         'action = match.strategy.decide_prep_screen(session, config)',
-        src.index('旧环主体'))
+        src.index('备战单轮'))
     exec_at = src.index('progressed, detail = self._executor.execute(action)', loop_at)
     emit_at = src.index('if isinstance(action, SellDeployed):', loop_at)
     build_at = src.index('self._equip_expect_for_sell(action)', loop_at)
     assert emit_at < exec_at
     assert build_at < exec_at
-    # ② 对账点:heavy 重观察之后、仅 progressed 分支
-    obs_at = src.index('obs = self._observe(heavy=True)', exec_at)
-    rec_at = src.index('self._reconcile_equip_expect(_equip_expect)')
+    # ② 对账点:heavy 重观察之后、经 acct 消费仅 progressed 分支
+    obs_at = src.index('_post_obs = self._observe(heavy=True)', exec_at)
+    rec_at = src.index('self._v2_post_frame_accounting(_post_obs, acct, session)', obs_at)
     assert obs_at < rec_at
-    assert 'if progressed and _equip_expect is not None:' in src
+    assert "if progressed and acct.get('equip_expect') is not None:" in src
     # ③ 纯读路径
     method = src[src.index('def _reconcile_equip_expect'):]
     method = method[:method.index('\n    def ')]
@@ -195,7 +194,7 @@ def test_w543_wiring_locks():
     ).read_text(encoding='utf-8')
     assert "_EQUIP_DEFECT_SURFACE = 'equip'" in expect_src
     assert "_EQUIP_DEFECT_KIND = 'equip_expect_mismatch'" in expect_src
-    assert 'record_defect(\n                _EQUIP_DEFECT_SURFACE, _EQUIP_DEFECT_KIND,' in src
+    assert 'record_defect(' in src and '_EQUIP_DEFECT_SURFACE, _EQUIP_DEFECT_KIND' in src  # 拆内环:缩进锁降内容级
     assert 'equip_expect_reconcile' in src
     # ⑤ 合成单一源:_synth_pair 只转发 cw_synthesis,不自造配对逻辑
     # (分包期 6:_synth_pair 随纯期望段迁 kernel/cw_prep_expect)
@@ -310,3 +309,4 @@ def test_defect_row_shape(tmp_path: Path, monkeypatch):
     assert row['kind'] == 'equip_expect_mismatch'
     assert row['reader_source'] == 'equip_expect_reconcile'
     assert row['severity'] == SEVERITY_L2_RECORD
+

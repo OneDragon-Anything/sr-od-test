@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_legacy_audit 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -14,46 +13,42 @@
 """
 from __future__ import annotations
 
-
 # ==================== r297_p0_fixes ====================
-
 import inspect
 
 from sr_od.application.currency_war import prep_director
 
 
 def test_loop_entry_anchor_is_stage_only() -> None:
-    """P0①→r347(旧路径删除):原「按钮-出战」双态区分锚随 3 探针
-    旧路径删除而退役——环入口消化语义由 gate 时间稳定窗
-    (PROFILE_CLOSED 屏判定=备战关态专属)+r346 开商店容忍
-    (收起重进)承担。锁:旧锚不得回流 + gate 调用在。"""
-    src = inspect.getsource(prep_director.PrepDirector._run_loop)
+    """P0①→r347→W971 P3b 拆内环(返工定稿):旧「按钮-出战」双态区分锚
+    退役;环入口消化语义 = 外循环每轮重识别 + 单轮 op 清场/开店收起探针
+    (gate 时间稳定窗随内环拆除)。锁:旧锚不得回流 + 收起探针在。"""
+    src = inspect.getsource(prep_director.PrepDirector.run)
     assert "'按钮-出战'" not in src, \
-        '旧 3 探针锚已删(r347),环入口消化由 gate 承担'
-    assert 'wait_stable_frame' in src, \
-        '环入口必须走 gate(时间稳定窗消化门)'
+        '旧 3 探针锚已删(r347),不得回流单轮入口'
+    assert '_try_collapse_open_shop()' in src, \
+        '单轮入口必须探开商店合法态并收起(读互斥:hp 关态可读)'
+    assert 'wait_stable_frame' not in src, \
+        'gate 时间稳定窗已随内环拆除(W971 P3b 返工定稿),不得回流'
 
 
 def test_no_fallthrough_blind_observe() -> None:
-    """P0①:3 次不 clean → bail(交外环重进),不再 fall-through
-    盲 observe(实锤路径:16:42:35 deployed 6人读成1人)。
-
-    W971 P3b 返工:环入口不 clean 先分诊(已知 overlay → 交回主循环分发
-    并重置同因计数;仅未知帧才计同因 bail,×3 停机兜底保留)——逻辑抽
-    _entry_dispatch_or_bail,锁随迁(方法在场 + 分诊常量单一源被引用)。"""
-    src = inspect.getsource(prep_director.PrepDirector._run_loop)
-    assert '_entry_dispatch_or_bail' in src, '环入口不 clean 分诊块缺失'
-    helper_src = inspect.getsource(prep_director.PrepDirector._entry_dispatch_or_bail)
-    assert 'GATE_UNCLEAN_REASON' in helper_src, (
-        '未知帧同因 bail(帧不 clean)路径缺失')
-    assert 'bail_reason_counts.pop' in helper_src, '已知 overlay 命中缺同因计数重置'
+    """P0①(语义终版,W971 P3b 返工定稿):不 fall-through 盲 observe——
+    单轮观察段见 event overlay → **交回外循环分发,零计数**(原内环
+    bail/同因 ×3/ping-pong 停机机制随内环整体拆除,即 P1-r6 停机事故
+    根源机制);无进展留证归外循环 stall 防线(battle_loop)。"""
+    src = inspect.getsource(prep_director.PrepDirector.run)
+    assert 'obs.event_overlay is not None' in src, '单轮观察段缺 overlay 分诊'
+    assert '交回外循环' in src, 'overlay 帧须交回外循环'
+    assert '_bail(' not in src and 'bail_reason_counts' not in src, (
+        '内环 bail/同因计数机制不得回流(拆内环定稿)')
 
 
 def test_probe_node_type_after_shop_closed() -> None:
-    """P0③:_probe_node_type 迁至 EnsureShopClosed 后(与 reward
-    钩子同挂点);run() 入口不再直调(skip 69% 根因)。"""
-    src_loop = inspect.getsource(prep_director.PrepDirector._run_loop)
-    assert 'self._probe_node_type()' in src_loop
+    """P0③(挂点随迁,W970 批 C/拆内环):_probe_node_type 挂 OpenShop
+    编排内 CloseShopOp 完成后;单轮 run 入口不直调(skip 69% 根因)。"""
+    src_phase = inspect.getsource(prep_director.PrepDirector._open_shop_phase)
+    assert 'self._probe_node_type()' in src_phase
     src_run = inspect.getsource(prep_director.PrepDirector.run)
     assert 'self._probe_node_type()' not in src_run
 
@@ -152,18 +147,11 @@ def test_director_gate_open_shop_tolerated_not_bail() -> None:
         prep_director.PrepDirector._try_collapse_open_shop)
     assert '按钮-收起' in helper_src and 'return True' in helper_src, \
         '开商店容忍 helper 必须探测收起锚并返回可重进'
-    # W971 P3b 返工:容忍/分诊/bail 三路收进 _entry_dispatch_or_bail,锁随迁
-    src = _r336_batch4_locks_inspect.getsource(prep_director.PrepDirector._run_loop)
-    assert '_entry_dispatch_or_bail(match, session)' in src, \
-        'gate 超时分支必须经环入口分诊(分诊承接容忍/bail 两路)'
-    disp_src = _r336_batch4_locks_inspect.getsource(
-        prep_director.PrepDirector._entry_dispatch_or_bail)
-    assert '_try_collapse_open_shop()' in disp_src, \
-        'gate 超时分支必须调用开商店态容忍路径(r346)'
-    assert '环入口商店开,已收起重进' in disp_src, \
-        '开态路径必须收起后 round_retry 重进(非 bail)'
-    assert 'prep_director.GATE_UNCLEAN_REASON' in disp_src or '_bail(match' in disp_src, \
-        '真特效/overlay 的原 bail 路径必须保留(容忍不能吞掉消化门)'
+    # W971 P3b 拆内环(返工定稿):单轮 run 入口探开商店合法态 → 收起后
+    # 直接进本轮观察(r346 容忍语义保留;gate 超时/分诊/bail 路径随内环拆除)
+    src = _r336_batch4_locks_inspect.getsource(prep_director.PrepDirector.run)
+    assert '_try_collapse_open_shop()' in src, \
+        '单轮入口必须调用开商店态容忍路径(r346)'
 
 
 # ==================== r337_behavior ====================
@@ -244,7 +232,6 @@ def test_offline_op_none_skips_reread() -> None:
 
 # ==================== r337_r332_behavior ====================
 
-from types import SimpleNamespace
 
 
 def _make_op(monkeypatch, fail: bool):
@@ -293,6 +280,7 @@ def test_success_resets_streak() -> None:
 def test_source_has_real_wiring() -> None:
     """真实接线存在(弱锁保底:streak 挂长命 loop 实例)。"""
     import inspect
+
     from sr_od.application.currency_war.operations import battle_loop
     src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
     assert 'PrepDirector(self.ctx).execute()' in src
@@ -339,7 +327,6 @@ def test_live_delta_depth_conditioned() -> None:
     """
     import random
 
-    from sr_od.application.currency_war.sim import engine_p1 as cw_sim
     from sr_od.application.currency_war.sim import pool as sim_pool
     # 邻桶回退的形状断言('浅侧'/'bucket - DEPTH_BUCKET_W' 语句字面)已按
     # 源码锁瘦身删除;回退行为由下方行为断言守住(ADR-0362:合成池带 plane 层)。
@@ -365,8 +352,10 @@ def test_sim_events_reach_node_delta() -> None:
 
 import inspect as _r348_cap_domain_inspect
 
-from sr_od.application.currency_war import prep_director as _r348_cap_domain_prep_director
-from sr_od.application.currency_war.obs.cw_back_layout import  back_slots_from_cap_diff
+from sr_od.application.currency_war import (
+    prep_director as _r348_cap_domain_prep_director,
+)
+from sr_od.application.currency_war.obs.cw_back_layout import back_slots_from_cap_diff
 
 
 def test_cap_domain_check_inverted() -> None:
@@ -422,11 +411,9 @@ def test_cap_drives_selection_level_alone_does_not() -> None:
 from types import SimpleNamespace as _r363_audit_p0_SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_state import GameState
-
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
-
+from sr_od.application.currency_war.operations.battle_loop import CurrencyWarRunLoop
 from sr_od.application.currency_war.telemetry.query import read_jsonl
-from sr_od.application.currency_war.operations.battle_loop import  CurrencyWarRunLoop
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 
 
 def test_normalize_node_type_vocab() -> None:
@@ -573,13 +560,19 @@ def test_after_operation_done_wires_summary_write() -> None:
 
 # ==================== r271_line_defs ====================
 
-from sr_od.application.currency_war.kernel.cw_line_defs import  ENGINE_FACTIONS, RECIPE_BASE, RECIPE_FACTIONS, recipe_kinds_1cost, recipe_tier
+from sr_od.application.currency_war.kernel.cw_line_defs import (
+    ENGINE_FACTIONS,
+    RECIPE_BASE,
+    RECIPE_FACTIONS,
+    recipe_kinds_1cost,
+    recipe_tier,
+)
 
 
 def test_recipe_set_semantics() -> None:
     """配方集合(攻略[20]):基础(仙舟/DOT)+渐进(列车/护盾)。"""
-    assert RECIPE_FACTIONS == frozenset(
-        {'仙舟', '持续伤害', '列车同行', '护盾'})
+    assert frozenset(
+        {'仙舟', '持续伤害', '列车同行', '护盾'}) == RECIPE_FACTIONS
     # r263b 局15 锁(合并自 test_cw_r263b_recipe.py,原文件已删):
     # 散件元凶阵营不得进配方
     assert '减益' not in RECIPE_FACTIONS
@@ -597,8 +590,8 @@ def test_engine_derived_from_bridges() -> None:
     W126/ADR-0350:dot_belog/hunt3 两桥已随四体系封闭裁定删除——
     狼狩/贝洛伯格退出引擎门(贝只在希儿系判据内保留计数);存活三桥
     (xianzhou_dot/xianzhou_train/train_dot)派生出四体系三羁绊。"""
-    assert ENGINE_FACTIONS == frozenset(
-        {'仙舟', '列车同行', '持续伤害'})
+    assert frozenset(
+        {'仙舟', '列车同行', '持续伤害'}) == ENGINE_FACTIONS
 
 
 def test_recipe_tier_helper() -> None:
@@ -610,7 +603,7 @@ def test_recipe_tier_helper() -> None:
 def test_consumers_share_single_source() -> None:
     """消费方共享单源:deploy_bench 与 cw_line_defs 的名字一致
     (旧 line_strategy 局部 set 随 ADR-0336 删)。"""
-    from sr_od.application.currency_war.operations.prep import  deploy_bench
+    from sr_od.application.currency_war.operations.prep import deploy_bench
     assert deploy_bench._RECIPE is RECIPE_FACTIONS
     assert deploy_bench._RECIPE_BASE == RECIPE_BASE
 

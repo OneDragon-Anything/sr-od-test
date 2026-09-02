@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_gate_hooks 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -13,13 +12,15 @@
 """
 from __future__ import annotations
 
-
 # ==================== gate_fast_confirm ====================
-
 import numpy as np
 import pytest
 
-from sr_od.application.currency_war.obs.cw_observation_gate import  _PRESET_BASELINE, preset_stable_baseline, wait_stable_frame
+from sr_od.application.currency_war.obs.cw_observation_gate import (
+    _PRESET_BASELINE,
+    preset_stable_baseline,
+    wait_stable_frame,
+)
 
 
 class _FakeClock:
@@ -301,7 +302,11 @@ def test_profile_stable_window_uniform_floor():
     已拒绝动画中间帧;单局 gate stable 调用 30-84 次,0.8s 档每处
     白付 0.2s(耗时审计报告 .debug/temp/currency_war/
     w417_duration_audit/REPORT.md「需验证」表)。"""
-    from sr_od.application.currency_war.obs.cw_observation_gate import  PROFILE_CLOSED, PROFILE_OPEN, PROFILE_POPUP
+    from sr_od.application.currency_war.obs.cw_observation_gate import (
+        PROFILE_CLOSED,
+        PROFILE_OPEN,
+        PROFILE_POPUP,
+    )
     for name, prof in (('closed', PROFILE_CLOSED), ('open', PROFILE_OPEN),
                        ('popup', PROFILE_POPUP)):
         assert prof['min_stable_s'] == 0.6, \
@@ -310,7 +315,7 @@ def test_profile_stable_window_uniform_floor():
 
 # ==================== gate_flags ====================
 
-from sr_od.application.currency_war.currency_war_config import  CurrencyWarConfig
+from sr_od.application.currency_war.currency_war_config import CurrencyWarConfig
 
 
 def test_gate_flags_removed() -> None:
@@ -331,11 +336,16 @@ from types import SimpleNamespace
 
 import sr_od.application.currency_war.obs.cw_observation_gate as gate_mod
 import sr_od.application.currency_war.prep_director as pd_mod
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    StartBattle,
+)
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.kernel.cw_prep_actions import StartBattle
-
-
 from sr_od.application.currency_war.prep_director import PrepDirector
+from test.harness.fixture_controller import (
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
 
 _FRAME = object()   # gate 稳定帧哨兵(身份断言用)
 
@@ -362,6 +372,9 @@ def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
     d._executor = SimpleNamespace(
         validate=lambda a: None,
         execute=lambda a: (True, 'ok'))
+    # 拆内环后单轮 run() 会重建执行器 → 桩掉构造点,保注入面(离线单测)
+    monkeypatch.setattr(pd_mod, 'PrepActionExecutor',
+                        lambda op, ctx: d._executor)
     d._steps = 0
     d._stall = 0
     d._fail_counts = {}
@@ -399,7 +412,9 @@ def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
     monkeypatch.setattr(d, '_try_collapse_open_shop', _fake_collapse)
 
     def _observe(heavy, screen=None):
-        from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            PrepObservation,
+        )
         obs = PrepObservation()
         obs.state = GameState(plane=1, round_num=1)
         return obs
@@ -418,82 +433,23 @@ def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
     return d, match, collapse_calls, sleeps
 
 
-def test_open_shop_entrance_uses_tightened_gate(monkeypatch) -> None:
-    """战后开店态入口:收起后 gate 用收紧超时(≠12s 默认)且一次
-    达成 → 直接进本轮决策,不再打满 12s、不再 round_retry 重进。"""
+def test_prep_round_entry_collapse_once_no_gate(monkeypatch) -> None:
+    """拆内环定稿(替代原 gate 时序四锁):备战单轮入口 = 开店态收起探针
+    **恰一次**;gate 时间稳定窗(wait_stable_frame)随内环整体拆除,单轮
+    直接进观察(稳定性由外循环每轮重识别保证)。"""
     calls: list = []
     d, match, collapse_calls, _sleeps = _make_director(
-        monkeypatch, calls, [_FRAME], collapse_open=True)
-    result = d._run_loop(match)
-    assert collapse_calls == [True]
-    assert calls == [(gate_mod.GATE_POST_COLLAPSE_TIMEOUT_S, '货币战争-备战')], \
-        f'开店态入口应只调一次收紧超时 gate,实得 {calls}'
-    assert calls[0][0] < 12.0, '收紧超时必须小于默认 12s(否则死等未消除)'
-    assert '出战' in (result.status or ''), \
-        f'应直接进决策环并出战,实得 {result.status}'
+        monkeypatch, calls, [], collapse_open=True)
+    match.strategy.decide_prep_screen = (
+        lambda session, config: pd_mod.DeferSpheres())
+    d.ctx.cw_match = match   # 单轮 run 入口读 ctx.cw_match
 
+    result = d.run()   # 离线直调节点(SimpleNamespace ctx 无 run_context;
+    #                     等待已由 harness sleep 桩吃掉,不需要 fast_sleep)
 
-def test_closed_shop_entrance_keeps_default_gate(monkeypatch) -> None:
-    """关店态入口(新位面首环/无自动开商店):预收探针含重试窗全部
-    miss → 走原 12s 完整门,行为不变——不改超时。"""
-    calls: list = []
-    d, match, collapse_calls, sleeps = _make_director(
-        monkeypatch, calls, [_FRAME], collapse_open=False)
-    result = d._run_loop(match)
-    # 重试窗:首探 + PRECOLLAPSE_RETRIES 次重试,全 miss;每次重试前
-    # sleep 一个间隔(有界,不无界等)
-    assert collapse_calls == [False] * (1 + pd_mod.PRECOLLAPSE_RETRIES)
-    # 重试窗 sleep 断言取前缀:sleep 桩记录的是全局 time.sleep,
-    # 环后段(round_wait 等)另有无关等待,不属本锁
-    assert sleeps[:pd_mod.PRECOLLAPSE_RETRIES] == \
-        [pd_mod.PRECOLLAPSE_RETRY_S] * pd_mod.PRECOLLAPSE_RETRIES
-    assert calls == [(None, '货币战争-备战')], \
-        f'关店态入口应走默认超时 gate,实得 {calls}'
-    assert '出战' in (result.status or '')
-
-
-def test_tightened_timeout_falls_back_to_full_gate(monkeypatch) -> None:
-    """收紧超时未达成 stable(收起动画偶发拖长)→ 落回原 12s 完整门
-    兜底(有界,timeout=None=profile 默认);完整门也超时才进容忍
-    探测分支(bail 语义保留)。"""
-    calls: list = []
-    d, match, collapse_calls, _sleeps = _make_director(
-        monkeypatch, calls, [None, None], collapse_open=[True, False])
-    result = d._run_loop(match)
-    assert len(calls) == 2, f'收紧超时后应恰好落回一次完整门,实得 {calls}'
-    assert calls[0][0] == gate_mod.GATE_POST_COLLAPSE_TIMEOUT_S
-    assert calls[1][0] is None, '兜底门必须用 profile 默认超时(原 12s 语义)'
-    # 容忍分支:收起已做过(店已关,第二次探测 False)→ bail 而非 round_retry
-    assert '环入口帧不clean' in (result.status or ''), \
-        f'完整门仍超时应走原 bail 路径,实得 {result.status}'
-    assert collapse_calls == [True, False]
-
-
-def test_precollapse_retry_hits_open_state_mid_window(monkeypatch) -> None:
-    """时序竞争修复锁(单帧语义):首探 miss(商店尚未自动开)→
-    重试窗内第 2 次探到开态 → 立即走「收起→收紧超时 gate」路径,
-    不进 12s 完整门、不 round_retry 重进。"""
-    calls: list = []
-    d, match, collapse_calls, sleeps = _make_director(
-        monkeypatch, calls, [_FRAME], collapse_open=[False, True])
-    result = d._run_loop(match)
-    assert collapse_calls == [False, True], \
-        f'应首探 miss 后重试一次即命中,实得 {collapse_calls}'
-    assert sleeps[:1] == [pd_mod.PRECOLLAPSE_RETRY_S], '重试前应等待一个间隔'
-    assert calls == [(gate_mod.GATE_POST_COLLAPSE_TIMEOUT_S, '货币战争-备战')], \
-        f'命中开态应只走一次收紧超时 gate,实得 {calls}'
-    assert '出战' in (result.status or ''), '应直接进本轮决策,不重进'
-
-
-def test_precollapse_retry_window_bounds(monkeypatch) -> None:
-    """重试窗参数锁:次数 ≥1(窗必须存在)且有上限(≤5,防从不自动
-    开店的轮次无界多付探针成本);间隔 ∈ (0, 2](实测开商店在入口后
-    数秒内,窗过宽只对晚开店轮次有意义,白付成本)。"""
-    assert isinstance(pd_mod.PRECOLLAPSE_RETRIES, int)
-    assert 1 <= pd_mod.PRECOLLAPSE_RETRIES <= 5, \
-        f'重试次数须在 [1,5] 内,实得 {pd_mod.PRECOLLAPSE_RETRIES}'
-    assert 0.0 < pd_mod.PRECOLLAPSE_RETRY_S <= 2.0, \
-        f'重试间隔须在 (0,2] 内,实得 {pd_mod.PRECOLLAPSE_RETRY_S}'
+    assert collapse_calls == [True], f'收起探针应恰调一次,实得 {collapse_calls}'
+    assert calls == [], f'gate 时间稳定窗应已拆除(W971 P3b),实得 {calls}'
+    assert '交回外循环' in (result.status or ''), f'单轮须交回外循环:{result.status!r}'
 
 
 # ==================== (w379_gate_v2_wire 已随 C4 开关族删除) ====================
@@ -597,7 +553,13 @@ def test_p8_supply_reroll() -> None:
 
 import pytest as _gate_fixtures_pytest
 
-from sr_od.application.currency_war.obs.cw_observation_gate import  PROFILE_CLOSED, PROFILE_OPEN, wait_stable_frame as _gate_fixtures_wait_stable_frame
+from sr_od.application.currency_war.obs.cw_observation_gate import (
+    PROFILE_CLOSED,
+    PROFILE_OPEN,
+)
+from sr_od.application.currency_war.obs.cw_observation_gate import (
+    wait_stable_frame as _gate_fixtures_wait_stable_frame,
+)
 
 
 class _FixtureOp:

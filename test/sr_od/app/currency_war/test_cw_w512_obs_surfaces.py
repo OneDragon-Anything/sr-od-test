@@ -133,7 +133,8 @@ def test_deploy_action_audit_wiring_lock():
     assert 'isinstance(action, (DeployMove, SellDeployed))' in src
     # 后读:复用 heavy 重观察帧,reader_source 独立命名(可离线聚合)
     assert 'paddle_action_audit' in src
-    assert "record_defect(\n                            'deployed', 'invariant_break'" in src
+    # W971 P3b 拆内环:record_defect 块随方法迁移,缩进锁降为内容级
+    assert "record_defect(" in src and "'deployed', 'invariant_break'" in src
 
 
 def test_shop_sift_miss_confidence_wiring_lock():

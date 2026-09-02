@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_node_screens 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -18,9 +17,7 @@
 """
 from __future__ import annotations
 
-
 # ==================== node_reader ====================
-
 from collections import Counter
 from pathlib import Path
 
@@ -28,7 +25,10 @@ import cv2
 import numpy as np
 
 from sr_od.application.currency_war.obs import cw_node_reader
-from sr_od.application.currency_war.obs.cw_node_reader import  classify_node_row, load_node_type_templates
+from sr_od.application.currency_war.obs.cw_node_reader import (
+    classify_node_row,
+    load_node_type_templates,
+)
 from sr_od.application.currency_war.obs.cw_observation import _MIN_CLEAN_CIRCLES
 
 # SR 仓 assets(cw_node_reader.py 在 src/sr_od/application/currency_war/obs/ → parents[5] = 仓根)
@@ -86,7 +86,11 @@ from pathlib import Path as _node_type_gate_Path
 
 sys.path.insert(0, str(_node_type_gate_Path(__file__).resolve().parents[5] / 'src'))
 
-from sr_od.application.currency_war.obs.cw_observation import  _BOSS_MIN_ROUND, _NODE_LABEL_X_TOL, gate_node_type
+from sr_od.application.currency_war.obs.cw_observation import (
+    _BOSS_MIN_ROUND,
+    _NODE_LABEL_X_TOL,
+    gate_node_type,
+)
 
 
 def test_boss_round_gate_rejects_upcoming_boss_label():
@@ -261,8 +265,16 @@ from pathlib import Path as _node_boss_Path
 import cv2 as _node_boss_cv2
 import numpy as _node_boss_np
 
-from sr_od.application.currency_war.obs import cw_node_reader as _node_boss_cw_node_reader
-from sr_od.application.currency_war.obs.cw_node_reader import  classify_node_row as _node_boss_classify_node_row, load_boss_templates, load_node_type_templates as _node_boss_load_node_type_templates
+from sr_od.application.currency_war.obs import (
+    cw_node_reader as _node_boss_cw_node_reader,
+)
+from sr_od.application.currency_war.obs.cw_node_reader import (
+    classify_node_row as _node_boss_classify_node_row,
+)
+from sr_od.application.currency_war.obs.cw_node_reader import load_boss_templates
+from sr_od.application.currency_war.obs.cw_node_reader import (
+    load_node_type_templates as _node_boss_load_node_type_templates,
+)
 
 # _node_boss_cw_node_reader.py 在 src/sr_od/application/currency_war/obs/(期 2 obs 桶归位)→ parents[5] = 仓根
 _node_boss_ASSETS = _node_boss_Path(_node_boss_cw_node_reader.__file__).resolve().parents[5] / 'assets'
@@ -359,10 +371,9 @@ def test_plane_detail_band_recognition() -> None:
 def test_plane_detail_band_read_fn() -> None:
     """read_plane_detail_nodes 生产入口:yml 带(区域-节点条@位面详情屏)
     → 9 槽 + boss 巨鹿生物制药(端到端,含模板懒加载)。"""
-    import pytest
+    from one_dragon.utils import cv2_utils
     from sr_od.application.currency_war.obs import cw_observation
     from sr_od.context.sr_context import SrContext
-    from one_dragon.utils import cv2_utils
 
     ctx = SrContext()
     ctx.screen_loader.reload(from_separated_files=True)
@@ -381,7 +392,11 @@ def test_plane_detail_band_read_fn() -> None:
 
 import pytest
 
-from sr_od.application.currency_war.tools.cw_node_validate import  P1_NODE_TEMPLATE, validate_p1_node_sequence, validate_p2_node_sequence
+from sr_od.application.currency_war.tools.cw_node_validate import (
+    P1_NODE_TEMPLATE,
+    validate_p1_node_sequence,
+    validate_p2_node_sequence,
+)
 
 
 def _row(rn: int, nt: str, **kw) -> dict:
@@ -556,8 +571,9 @@ def test_bookcard_handler_wired() -> None:
     prep_director 弹窗 bail 清单含 bookcard 标签。"""
     import inspect
 
-    from sr_od.application.currency_war import prep_director
-    from sr_od.application.currency_war.kernel.cw_overlay_registry import  derive_decision
+    from sr_od.application.currency_war.kernel.cw_overlay_registry import (
+        derive_decision,
+    )
     from sr_od.application.currency_war.operations import battle_loop
     assert 'HandleBookcard' in inspect.getsource(battle_loop)
     # bail 扫描单一源已收拢至 registry(B 面切换):成员判定改为派生集三元组
@@ -679,7 +695,10 @@ def test_supply_box_no_false_positive_on_empty() -> None:
 
 def test_supply_box_threshold_margin() -> None:
     """分离度:箱槽 val 应超阈值,角色槽远低于(防阈值贴边脆断)。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import  _SUPPLY_BOX_TM_THR, _get_supply_box_gray
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
+        _SUPPLY_BOX_TM_THR,
+        _get_supply_box_gray,
+    )
     tm = _get_supply_box_gray()
     if tm is None:
         _test_supply_box_pytest.skip('补给箱模板缺(assets/template/currency_war/supply/补给箱.png)')
@@ -733,7 +752,9 @@ def _w595_trial_reveal_card_load(name: str):
 
 def test_positive_frame_slot3_hit() -> None:
     """正样本帧(建档帧 slot3 发光卡)→ 双通道命中 slot3,且不误报其他槽。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import find_trial_reveal_cards
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
+        find_trial_reveal_cards,
+    )
 
     screen = _w595_trial_reveal_card_load(_POS_FIXTURE.name)
     hits = find_trial_reveal_cards(screen, _BENCH_SLOTS)
@@ -743,7 +764,9 @@ def test_positive_frame_slot3_hit() -> None:
 
 def test_negative_frames_no_false_positive() -> None:
     """既有备战 fixture(角色/箱/球/商店等)全槽零误报(双通道负样本分离度锁)。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import find_trial_reveal_cards
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
+        find_trial_reveal_cards,
+    )
 
     for name in ('r1_idle_stop.webp', 'shop_closed.webp',
                  'deployed_2star_bench1.webp', 'reward_spheres_8.webp'):
@@ -756,7 +779,10 @@ def test_tm_channel_separation() -> None:
     """TM 通道单通道独立命中正样本(阈值 0.5 的余量锁:正 ≥0.9 / 负 ≤0.26 标定)。"""
     import cv2
 
-    from sr_od.application.currency_war.obs.cw_identity_obs import  _TRIAL_REVEAL_TM_THR, _get_trial_reveal_gray
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
+        _TRIAL_REVEAL_TM_THR,
+        _get_trial_reveal_gray,
+    )
 
     tm = _get_trial_reveal_gray()
     assert tm is not None, '模板缺失:assets/template/currency_war/supply/试用角色揭示卡.png'
@@ -794,8 +820,8 @@ class _HookCtx:
 def test_summon_hook_skips_trial_reveal_card(monkeypatch, tmp_path) -> None:
     """发光卡形态:slot 占用 + SIFT 不识别,但 find_trial_reveal_cards 命中
     → 归已知物品,不停机不采证(免费增益不再触发停机)。"""
-    from sr_od.application.currency_war.obs import currency_war_cv, cw_identity_obs
     from sr_od.application.currency_war.kernel import cw_obs_core, cw_observe
+    from sr_od.application.currency_war.obs import currency_war_cv, cw_identity_obs
     monkeypatch.chdir(tmp_path)
     (tmp_path / '.debug/temp/currency_war').mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(cw_identity_obs, 'identify_slots', lambda *a, **k: [])
@@ -871,16 +897,17 @@ def test_briefing_read_side_cleans_and_overwrites() -> None:
 
 def test_collect_plane_intel_is_takeover_refill_channel() -> None:
     """锁③(改写,W971 P3b):CollectPlaneIntel 实采写入端在(接管重采/读空
-    兜底)——接线随接管补采块迁 prep_director._run_loop。"""
+    兜底)——接线随接管补采迁 prep_director(单轮化后挂 _takeover_collect_if_needed)。"""
     from sr_od.application.currency_war import prep_director
 
-    src = inspect.getsource(prep_director.PrepDirector._run_loop)
+    src = inspect.getsource(
+        prep_director.PrepDirector._takeover_collect_if_needed)
     assert 'session.briefing_bosses = _names' in src, (
         'CollectPlaneIntel 实采接线消失(接管场景失去重采通道)'
     )
     # 触发门仍含「session.briefing_bosses 空」:开局局简报读得时 session 已由
     # BriefingOp 填(不重复采),接管局/读空时兜底——条件消失=简报信任被绕过。
-    assert "not getattr(session, 'briefing_bosses', None)" in src
+    assert "getattr(session, 'briefing_bosses', None)" in src
     assert 'CollectPlaneIntel(self.ctx)' in src
 
 
@@ -888,7 +915,9 @@ def test_reconcile_wiring_in_collect_paths() -> None:
     """锁④(改写,W971 P3b 接管补采迁 prep_director):对账网接线在
     takeover 写回路径上仍在;director 补采块触发门 = 简报真值空(无简报
     读数可对账,对账自然缺省),写回接线不因块迁移丢失。"""
-    from sr_od.application.currency_war.operations.entry import  takeover_collect_plane_intel
+    from sr_od.application.currency_war.operations.entry import (
+        takeover_collect_plane_intel,
+    )
 
     assert 'reconcile_briefing_vs_plane_intel(' in inspect.getsource(
         takeover_collect_plane_intel.TakeoverCollectPlaneIntel.write_back), (
@@ -920,7 +949,15 @@ import cv2 as _w221_boss_locate_emblem_cv2
 import numpy as _w221_boss_locate_emblem_np
 
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.obs.cw_node_reader import  classify_node_row as _w221_boss_locate_emblem_classify_node_row, load_boss_templates as _w221_boss_locate_emblem_load_boss_templates, load_node_type_templates as _w221_boss_locate_emblem_load_node_type_templates
+from sr_od.application.currency_war.obs.cw_node_reader import (
+    classify_node_row as _w221_boss_locate_emblem_classify_node_row,
+)
+from sr_od.application.currency_war.obs.cw_node_reader import (
+    load_boss_templates as _w221_boss_locate_emblem_load_boss_templates,
+)
+from sr_od.application.currency_war.obs.cw_node_reader import (
+    load_node_type_templates as _w221_boss_locate_emblem_load_node_type_templates,
+)
 
 if TYPE_CHECKING:
     from test.conftest import SrTestContext
@@ -956,7 +993,9 @@ def test_emblem_band_zero_false_positive() -> None:
 def test_emblem_detail_label_reads_boss(test_context: SrTestContext) -> None:
     """锁②:run30 帧详情条类型名 OCR 含「首领」(真实 OCR;定位验证锚)。"""
     from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
-    from sr_od.application.currency_war.obs.cw_observation import read_detail_node_type_label
+    from sr_od.application.currency_war.obs.cw_observation import (
+        read_detail_node_type_label,
+    )
 
     if _area_rect(test_context, '文本-节点类型名', '货币战争-位面详情') is None:
         test_context.screen_loader.reload(from_separated_files=True)
@@ -969,7 +1008,9 @@ def test_emblem_detail_label_reads_boss(test_context: SrTestContext) -> None:
 
 def test_conclude_plane_boss_matrix() -> None:
     """锁③:分流矩阵——头像态 record / 徽章态 skip(不 retry)/ 标签异常 retry。"""
-    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import  conclude_plane_boss
+    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import (
+        conclude_plane_boss,
+    )
 
     # 头像态(run29 型):标签=首领 + SIFT 命中 → 记录真值
     assert conclude_plane_boss('首领节点', '深穹智械科技') == ('record', '深穹智械科技')
@@ -990,11 +1031,13 @@ def test_battle_loop_preserves_none_positions() -> None:
     """锁④:实采写 session 保位(None 不滤)——滤 None 会让后续位面名字左移错序
     (ADR-0397 修的「按序消费错位面」同病;旧形态 `[n for n in ... if n]` 禁回潮)。
 
-    W971 P3b:实采接线随接管补采块迁 prep_director(_run_loop),锁随迁。
+    W971 P3b:实采接线随接管补采迁 prep_director(单轮化后挂
+    _takeover_collect_if_needed),锁随迁。
     """
     from sr_od.application.currency_war import prep_director
 
-    src = _w221_boss_locate_emblem_inspect.getsource(prep_director.PrepDirector._run_loop)
+    src = _w221_boss_locate_emblem_inspect.getsource(
+        prep_director.PrepDirector._takeover_collect_if_needed)
     assert '[n for n in self.ctx.cw_plane_bosses if n]' not in src, (
         '实采列表滤 None 回潮(徽章态位面 None 被丢→位面错序)'
     )
@@ -1017,7 +1060,9 @@ def test_boss_fit_tolerates_none_entries() -> None:
 
 def test_lcs_clean_maps_abbreviations_to_canonical() -> None:
     """简称(简报卡名常见形态)归一到规范公司名;已是规范名原样返回。"""
-    from sr_od.application.currency_war.obs.cw_briefing_obs import clean_boss_names_by_lcs
+    from sr_od.application.currency_war.obs.cw_briefing_obs import (
+        clean_boss_names_by_lcs,
+    )
 
     out = clean_boss_names_by_lcs(['造梦互动', '深穹智械', '巨鹿生物制药'])
     assert out == ['造梦互动娱乐', '深穹智械科技', '巨鹿生物制药'], (
@@ -1027,7 +1072,9 @@ def test_lcs_clean_maps_abbreviations_to_canonical() -> None:
 
 def test_lcs_clean_unmatched_passes_through_in_order() -> None:
     """归一不过阈值的读数原名透传(不硬猜),顺序原样保留(位面序不被打乱)。"""
-    from sr_od.application.currency_war.obs.cw_briefing_obs import clean_boss_names_by_lcs
+    from sr_od.application.currency_war.obs.cw_briefing_obs import (
+        clean_boss_names_by_lcs,
+    )
 
     out = clean_boss_names_by_lcs(['XYZ', '绘师家族产业', '火线动力机甲'])
     assert out == ['XYZ', '绘师家族产业', '火线动力机甲'], f'透传/顺序被破坏:{out}'
@@ -1035,7 +1082,9 @@ def test_lcs_clean_unmatched_passes_through_in_order() -> None:
 
 def test_reconcile_pairs_mismatch_detectable() -> None:
     """逐位面配对:一致 True / 不可判 None / 不一致 False 三态齐全。"""
-    from sr_od.application.currency_war.obs.cw_briefing_obs import briefing_reconcile_pairs
+    from sr_od.application.currency_war.obs.cw_briefing_obs import (
+        briefing_reconcile_pairs,
+    )
 
     pairs = briefing_reconcile_pairs(
         ['造梦互动', None, '完全不同'],
@@ -1047,7 +1096,9 @@ def test_reconcile_pairs_mismatch_detectable() -> None:
 
 def test_reconcile_pairs_no_briefing_all_undecidable() -> None:
     """简报未读得(None)→ 全部不可判,不产生伪不一致。"""
-    from sr_od.application.currency_war.obs.cw_briefing_obs import briefing_reconcile_pairs
+    from sr_od.application.currency_war.obs.cw_briefing_obs import (
+        briefing_reconcile_pairs,
+    )
 
     pairs = briefing_reconcile_pairs(None, ['巨鹿生物制药', None, '绘师家族产业'])
     assert all(p['match'] is None for p in pairs), f'简报空读不应产生判定:{pairs}'

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_deploy_ops 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -19,13 +18,13 @@
 """
 from __future__ import annotations
 
-
 # ==================== a3_deploy_align ====================
-
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_deploy_logic import select_deployments
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
-from sr_od.application.currency_war.operations.prep.deploy_bench import  _deployment_order
+from sr_od.application.currency_war.operations.prep.deploy_bench import (
+    _deployment_order,
+)
 
 
 def _bonds(cid: str) -> set[str]:
@@ -86,9 +85,15 @@ def test_op_and_pure_function_order_aligned() -> None:
 
 # ==================== a3_deploy_stock_engine ====================
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS as _a3_deploy_stock_engine_CHARACTERS
-from sr_od.application.currency_war.kernel.cw_deploy_logic import  select_deployments as _a3_deploy_stock_engine_select_deployments
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _a3_deploy_stock_engine_BenchChar
+from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTERS as _a3_deploy_stock_engine_CHARACTERS,
+)
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+    select_deployments as _a3_deploy_stock_engine_select_deployments,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _a3_deploy_stock_engine_BenchChar,
+)
 
 
 def _a3_deploy_stock_engine_bonds(cid: str) -> set[str]:
@@ -157,8 +162,11 @@ def test_r288_gate_releases_when_xianzhou_base_met() -> None:
 
 # ==================== r357_deploy_fence ====================
 
-from sr_od.application.currency_war.kernel.cw_line_defs import  ENGINE_FACTIONS, RECIPE_FACTIONS
-from sr_od.application.currency_war.operations.prep.deploy_bench import  _DEPLOY_FENCE
+from sr_od.application.currency_war.kernel.cw_line_defs import (
+    ENGINE_FACTIONS,
+    RECIPE_FACTIONS,
+)
+from sr_od.application.currency_war.operations.prep.deploy_bench import _DEPLOY_FENCE
 
 
 def test_deploy_fence_includes_bridge_factions() -> None:
@@ -166,7 +174,7 @@ def test_deploy_fence_includes_bridge_factions() -> None:
     W126/ADR-0350:狼狩/贝洛伯格已随四体系封闭裁定退出围栏
     (hunt3/dot_belog 桥删除)——已封存体系件不再有框架豁免通道;
     桥派生(存活三桥=仙舟/dot/列车)与配方四老成员保持。"""
-    assert _DEPLOY_FENCE == frozenset(RECIPE_FACTIONS | ENGINE_FACTIONS)
+    assert frozenset(RECIPE_FACTIONS | ENGINE_FACTIONS) == _DEPLOY_FENCE
     assert '狼狩' not in _DEPLOY_FENCE, 'W126:已封存体系退出围栏'
     assert '贝洛伯格' not in _DEPLOY_FENCE, 'W126:已封存体系退出围栏'
     # 配方四老成员不丢
@@ -183,7 +191,7 @@ def test_deploy_fence_still_blocks_pure_scatter() -> None:
 
 # ==================== r387_deploy_fill_vacancy ====================
 
-from sr_od.application.currency_war.operations.prep.deploy_bench import  _cap_roomy_of
+from sr_od.application.currency_war.operations.prep.deploy_bench import _cap_roomy_of
 
 
 def test_roomy_vacancy_more_than_must_up() -> None:
@@ -206,7 +214,10 @@ def test_boundary_equal() -> None:
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _r390_deploy_agent_BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _r390_deploy_agent_BenchChar,
+)
+from sr_od.application.currency_war.kernel.cw_state import GameState
 
 
 def _bench(*pairs) -> list[_r390_deploy_agent_BenchChar]:
@@ -316,10 +327,11 @@ def test_growing_deployed_not_reported() -> None:
 
 # ==================== r410_bench_units_conservation ====================
 
-from sr_od.application.currency_war.sim.engine_p1 import START_BENCH_COUNT, simulate_p1
-
 from sr_od.application.currency_war.kernel.cw_battle_calib import _board_counts_of
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _r410_bench_units_conservation_BenchChar
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _r410_bench_units_conservation_BenchChar,
+)
+from sr_od.application.currency_war.sim.engine_p1 import START_BENCH_COUNT, simulate_p1
 
 
 def test_units_conservation_across_bench_deployed() -> None:
@@ -437,12 +449,23 @@ def test_board_counts_of_fullset_caliber() -> None:
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _r412_bench_free_gates_BenchChar, GameState as _r412_bench_free_gates_GameState
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.kernel.cw_prep_actions import  DeferSpheres, LevelUp, SellBench
-from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
-from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
+    DecisionV2Strategy,
+)
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    DeferSpheres,
+    LevelUp,
+    PrepObservation,
+    SellBench,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _r412_bench_free_gates_BenchChar,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _r412_bench_free_gates_GameState,
+)
 
 S = DecisionV2Strategy()
 COMP = get_comp('列车同行')
@@ -556,8 +579,12 @@ from typing import TYPE_CHECKING
 import cv2
 import numpy as np
 
-from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.obs.cw_observation import  _level_from_xp, _parse_xp_pair, read_level_raw_opt, read_xp_progress
+from sr_od.application.currency_war.obs.cw_observation import (
+    _level_from_xp,
+    _parse_xp_pair,
+    read_level_raw_opt,
+    read_xp_progress,
+)
 
 if TYPE_CHECKING:
     from test.conftest import SrTestContext
@@ -701,7 +728,11 @@ def test_conflict_frame_lv4_xp26_readable(test_context: SrTestContext) -> None:
 def test_conflict_frame_level_resolves_in_domain(test_context: SrTestContext) -> None:
     """端到端:冲突帧三源解析后 level 与 paddle cap 自洽入域(cap≥level),域守卫不再拒信。"""
     from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
-    from sr_od.application.currency_war.obs.cw_observation import  _expected_level, _resolve_level, read_deploy_cap_debounced
+    from sr_od.application.currency_war.obs.cw_observation import (
+        _expected_level,
+        _resolve_level,
+        read_deploy_cap_debounced,
+    )
     if _area_rect(test_context, '文本-等级') is None:
         test_context.screen_loader.reload(from_separated_files=True)
     for path, truth_lv, truth_cap in ((_FIX_LV3, 3, 3), (_FIX_LV4, 4, 4)):
@@ -728,11 +759,18 @@ def test_prep_actions_level_raw_uses_shared_reader() -> None:
 
 from pathlib import Path as _w530_drag_reconcile_Path
 
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _w530_drag_reconcile_BenchChar
-from sr_od.application.currency_war.kernel.cw_prep_actions import DeployMove, SellBench as _w530_drag_reconcile_SellBench
+from sr_od.application.currency_war.kernel.cw_prep_actions import DeployMove
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    SellBench as _w530_drag_reconcile_SellBench,
+)
+from sr_od.application.currency_war.kernel.cw_prep_expect import (
+    compare_drag_expect,
+    compute_drag_expect,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _w530_drag_reconcile_BenchChar,
+)
 from sr_od.application.currency_war.telemetry import defects, recorder
-
-from sr_od.application.currency_war.kernel.cw_prep_expect import compare_drag_expect, compute_drag_expect
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
@@ -844,24 +882,21 @@ def test_w530_wiring_locks():
     不经 read_bench_chars(内置停机钩子);④台账参数锁。"""
     src = _w530_drag_reconcile_Path('src/sr_od/application/currency_war/prep_director.py').read_text(
         encoding='utf-8')
-    # ① 发出点:compute 在主环 execute 之前(锚主环 decide,避开破警告分支
-    #    更早的 execute——该分支无定型帧,本就不进对账)。
-    #    W971 P2 黑板接口(dd-014):decide 行已迁 decide_prep_screen(session,
-    #    config);锚改从「旧环主体」标记起找(主环同名 decide 行在破警告分支
-    #    先出现,需跳过)。
+    # ① 发出点:compute 在单轮 execute 之前(W971 P3b 拆内环:单轮 = run
+    #    五段;锚「备战单轮」节标记,破警告分支的 decide 在其后)。
     loop_at = src.index(
         'action = match.strategy.decide_prep_screen(session, config)',
-        src.index('旧环主体'))
+        src.index('备战单轮'))
     exec_at = src.index('progressed, detail = self._executor.execute(action)', loop_at)
     emit_at = src.index('if isinstance(action, (SellBench, DeployMove)):', loop_at)
     comp_at = src.index('compute_drag_expect(', loop_at)
     assert emit_at < exec_at
     assert comp_at < exec_at
-    # ② 对账点:heavy 重观察之后、仅 progressed 分支
-    obs_at = src.index('obs = self._observe(heavy=True)', exec_at)
-    rec_at = src.index('self._reconcile_drag_expect(_drag_expect)')
+    # ② 对账点:heavy 重观察之后、经 acct 消费仅 progressed 分支
+    obs_at = src.index('_post_obs = self._observe(heavy=True)', exec_at)
+    rec_at = src.index('self._v2_post_frame_accounting(_post_obs, acct, session)', obs_at)
     assert obs_at < rec_at
-    assert 'if progressed and _drag_expect is not None:' in src
+    assert "if progressed and acct.get('drag_expect') is not None:" in src
     # ③ 纯读路径:对账方法内用 identify_slots / read_deployed_chars,无 read_bench_chars
     method = src[src.index('def _reconcile_drag_expect'):]
     method = method[:method.index('\n    def ')]
@@ -877,7 +912,7 @@ def test_w530_wiring_locks():
     ).read_text(encoding='utf-8')
     assert "_DRAG_DEFECT_SURFACE = 'bench'" in expect_src
     assert "_DRAG_DEFECT_KIND = 'intent_state_mismatch'" in expect_src
-    assert 'record_defect(\n                _DRAG_DEFECT_SURFACE, _DRAG_DEFECT_KIND,' in src
+    assert 'record_defect(' in src and '_DRAG_DEFECT_SURFACE, _DRAG_DEFECT_KIND' in src  # 拆内环:缩进锁降内容级
     assert 'drag_expect_reconcile' in src
 
 
@@ -910,20 +945,14 @@ def test_defect_row_shape(tmp_path: _w530_drag_reconcile_Path, monkeypatch):
     # gap_large 是判级输入非落盘字段,severity 即其结果)
     assert row['severity'] == SEVERITY_L1_ALERT
 
-from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L1_ALERT
-
-
-from sr_od.application.currency_war.telemetry import state
-
-
 # ==================== test_drag_cw_char ====================
-
 from types import SimpleNamespace as _test_drag_cw_char_SimpleNamespace
 from unittest.mock import MagicMock
 
 import numpy as _test_drag_cw_char_np
 
 from one_dragon.base.geometry.point import Point
+from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L1_ALERT
 from sr_od.application.currency_war.operations.dev.drag_cw_char import DragCwChar
 
 
@@ -1000,9 +1029,11 @@ import sys
 
 sys.path.insert(0, 'src')
 
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession as _test_deploy_recipe_target_StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_comps import Comp
 from sr_od.application.currency_war.kernel.cw_recipe import _RECIPES, decision_target
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _test_deploy_recipe_target_StrategySession
 from sr_od.application.currency_war.kernel.cw_transition import TRANSITION_PACK
 
 
@@ -1081,7 +1112,9 @@ from types import SimpleNamespace as _test_empty_board_guard_SimpleNamespace
 _REPO = _test_empty_board_guard_Path(__file__).resolve().parents[5]
 _test_empty_board_guard_sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy as _test_empty_board_guard_DecisionV2Strategy  # noqa: E402
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
+    DecisionV2Strategy as _test_empty_board_guard_DecisionV2Strategy,  # noqa: E402
+)
 
 
 def _obs(dep=0, bench=0):
@@ -1130,3 +1163,4 @@ def test_deployed_board_battles_normally() -> None:
                            prep_phase_retry=0, tracked_deployed=[], bail_reason_counts={})
     act = strat.decide_prep_action(obs, sess, _test_empty_board_guard_cfg())
     assert type(act).__name__ == 'StartBattle'
+

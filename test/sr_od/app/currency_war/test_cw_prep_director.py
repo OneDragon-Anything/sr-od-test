@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_prep_director 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -12,21 +11,34 @@
 """
 from __future__ import annotations
 
-
 # ==================== test_prep_director ====================
-
 from types import SimpleNamespace
 
 import sr_od.application.currency_war.kernel.cw_prep_actions as pv
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import prep_actions as pa_mod
 from sr_od.application.currency_war import prep_director as pd_mod
-from sr_od.application.currency_war.kernel.cw_deploy_seat import _card_hits_target
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
-from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres, DeferSpheres, DeployMove, LevelUp, OpenBox, OpenShop, PickBoxCard, PrepAction, PrepObservation, RunDeploy, RunEquip, SellBench, StartBattle
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
+    DecisionV2Strategy,
+)
+from sr_od.application.currency_war.kernel.cw_deploy_seat import _card_hits_target
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    ClickSpheres,
+    DeferSpheres,
+    DeployMove,
+    LevelUp,
+    OpenBox,
+    OpenShop,
+    PickBoxCard,
+    PrepAction,
+    PrepObservation,
+    RunDeploy,
+    RunEquip,
+    SellBench,
+    StartBattle,
+)
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-
 from sr_od.application.currency_war.prep_director import PrepDirector
 
 if True:
@@ -363,7 +375,10 @@ def _seq_observe(seq):
 
 def _fake_snapshot():
     """最小 confident 快照(新环观察端口替身用;离线免真值合成)。"""
-    from sr_od.application.currency_war.decision.decision_v2.contracts import Snapshot, SubstateClassification
+    from sr_od.application.currency_war.decision.decision_v2.contracts import (
+        Snapshot,
+        SubstateClassification,
+    )
     return Snapshot(classification=SubstateClassification(
         name='prep_shop', evidence=('test',), confident=True))
 
@@ -392,78 +407,16 @@ class _ScriptStrategy:
         return a
 
 
-def test_loop_h1_heavy_reread_after_action(monkeypatch) -> None:
-    """H-1 回归(新环管线):执行过的游戏动作后 heavy 重读(review H-1 定稿语义)。
 
-    W620 批 1 起 _run_loop = DirectorV2 环(引擎批尾 heavy 语义;旧环断言
-    「EnsureShopOpen→LevelUp 腾席链」归策略单测,此处锁环的观察分层)。
-    """
-    _stub_snapshot_from_obs(monkeypatch)
-    ex = _FakeExecutor(default=(True, 'ok'))
-    d = _make_director(monkeypatch, ex)
-    observe = _seq_observe([])
-    monkeypatch.setattr(d, '_observe', observe)
-    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    strat = _ScriptStrategy([LevelUp(), LevelUp(), StartBattle()])
-    match = SimpleNamespace(strategy=strat, session=_sess())
-    result = d._run_loop(match)
-    assert strat.seen[:3] == ['LevelUp', 'LevelUp', 'StartBattle'], \
-        f'动作序应逐脚本推进,实得 {strat.seen}'
-    hc = observe.calls['heavy_calls']
-    assert hc[0] is True    # 环入口 heavy
-    assert hc[1] is True    # LevelUp 执行后 heavy(H-1 旧 bug 为 False)
-    assert all(hc), f'动作后一律 heavy,实得 {hc}'   # 出口在 StartBattle 落地,无后续观察
-    assert '出战' in (result.status or ''), f'出战落地应正常出口,实得 {result.status}'
+# (原内环机制锁 H-1/H-2×2/F5 强制出战/环顶刹车 ×5 随内环拆除删除(W971 P3b
+#  返工定稿):单轮无步数预算/屏蔽/bail;停机刹车由执行器层锁(上方)+ 外循环
+#  框架每轮 stop 检查承担;无进展留证 = 外循环 stall 防线(test_cw_w971_p3b_seg2)。)
 
 
-def test_loop_h2_state_failure_blocks_action(monkeypatch) -> None:
-    """H-2 回归(新环引擎):连败 2 → 恢复(无弹层)→ 再败 2 → 屏蔽;重提案被拒。"""
-    monkeypatch.setattr(pd_mod, 'try_recovery', lambda op, ctx: ('点空白兜底', False))
-    _stub_snapshot_from_obs(monkeypatch)
-    ex = _FakeExecutor(default=(False, 'fail'))
-    d = _make_director(monkeypatch, ex)
-    monkeypatch.setattr(d, '_observe', _seq_observe([]))
-    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    strat = _ScriptStrategy([SellBench(slot=1)] * 8)
-    match = SimpleNamespace(strategy=strat, session=_sess())
-    d._run_loop(match)
-    sells = [c for c in ex.calls if c.startswith('SellBench')]
-    # 连败2 → 恢复 → 连败2 → 屏蔽:SellBench 最多执行 4 次,第 5 次提案起被拒(stall 路径)
-    assert len(sells) <= 4, f'H-2 回归:屏蔽后不应继续执行,实执行 {len(sells)}: {ex.calls}'
-    assert any(c.startswith('StartBattle') for c in ex.calls)   # F5 强制出战兜底
 
 
-def test_loop_h2_stubborn_overlay_bails(monkeypatch) -> None:
-    """H-2 回归·分型(新环引擎):恢复关过已知弹层仍败 → bail 让位(环出口)。"""
-    monkeypatch.setattr(pd_mod, 'try_recovery', lambda op, ctx: ('ESC 关消耗品详情', True))
-    _stub_snapshot_from_obs(monkeypatch)
-    ex = _FakeExecutor(default=(False, 'fail'))
-    d = _make_director(monkeypatch, ex)
-    monkeypatch.setattr(d, '_observe', _seq_observe([]))
-    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    strat = _ScriptStrategy([SellBench(slot=1)] * 6)
-    match = SimpleNamespace(strategy=strat, session=_sess())
-    result = d._run_loop(match)
-    assert 'BailToOuter' in (result.status or ''), f'弹层顽固应 bail 让位,实得 {result.status}'
-    sells = [c for c in ex.calls if c.startswith('SellBench')]
-    assert len(sells) == 4, f'连败2+恢复+连败2 即 bail(执行 4 次),实 {len(sells)}: {ex.calls}'
 
 
-def test_loop_forced_battle_on_step_budget(monkeypatch) -> None:
-    """F5(新环引擎):步数预算耗尽 → 强制出战(Defer 计步不计 stall,靠 MAX_STEPS 兜底)。"""
-    from sr_od.application.currency_war.decision.decision_v2.director_v2 import DirectorV2
-    monkeypatch.setattr(pd_mod, 'try_recovery', lambda op, ctx: ('点空白兜底', False))
-    monkeypatch.setattr(DirectorV2, 'MAX_STEPS', 4)
-    _stub_snapshot_from_obs(monkeypatch)
-
-    ex = _FakeExecutor(default=(True, 'ok'))
-    d = _make_director(monkeypatch, ex)
-    monkeypatch.setattr(d, '_observe', _seq_observe([]))
-    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    strat = _ScriptStrategy([DeferSpheres()] * 10)
-    match = SimpleNamespace(strategy=strat, session=_sess())
-    result = d._run_loop(match)
-    assert '强制出战' in (result.status or ''), f'步数耗尽应强制出战,实得 {result.status}'
 
 
 def test_executor_h3_sphere_verified_only(test_context: SrTestContext,
@@ -536,25 +489,6 @@ def test_executor_brake_rejects_action_when_stopped(
     assert not clicked, '停机后不得有任何点击落地(W209j 刹车)'
 
 
-def test_director_loop_brake_before_each_step(monkeypatch, test_context) -> None:
-    """第一层锁:环顶查停机标志 → 不再发动作直接收口(run 27 形态:Deploy
-    停后不发 StartBattle)。"""
-    match = SimpleNamespace(
-        strategy=SimpleNamespace(
-            decide_prep_action=lambda o, s, c: pv.StartBattle()),
-        session=_sess())
-    ex = _FakeExecutor(default=(True, '不该被执行'))
-    d = _make_director(monkeypatch, ex)
-    # ctx 挂运行中被停的 run_context(_make_director 的 SimpleNamespace ctx
-    # 无该属性 → getattr None = 不拦;测试显式挂上)
-    d.ctx.run_context = _StoppedRunCtx()
-    d.ctx.controller = getattr(test_context, 'controller', None)
-    monkeypatch.setattr(d, '_observe', _seq_observe([]))
-    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    result = d._run_loop(match)
-    assert '已停止' in (result.status or ''), \
-        f'环顶刹车应收口停止态,实得 {result.status}'
-    assert not ex.calls, '停机标志已设后不得再发任何动作'
 
 
 def test_brake_inactive_when_running(test_context: SrTestContext, monkeypatch) -> None:
@@ -944,7 +878,10 @@ _REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
 import sr_od.application.currency_war.kernel.cw_prep_actions as _test_prep_action_whitelist_pa_mod  # noqa: E402
-from sr_od.application.currency_war.kernel.cw_prep_actions import PREP_ACTION_TYPES, PrepAction as _test_prep_action_whitelist_PrepAction
+from sr_od.application.currency_war.kernel.cw_prep_actions import PREP_ACTION_TYPES
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    PrepAction as _test_prep_action_whitelist_PrepAction,
+)
 
 
 def _all_prep_subclasses() -> set[type]:
@@ -977,7 +914,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from one_dragon.base.screen.screen_utils import find_area_in_screen, get_match_screen_name
+from one_dragon.base.screen.screen_utils import (
+    find_area_in_screen,
+    get_match_screen_name,
+)
 
 if TYPE_CHECKING:
     from test.conftest import SrTestContext
@@ -1106,7 +1046,6 @@ def test_upper_screens_names_registered() -> None:
 
 def test_mid_interest_floor_removed() -> None:
     """ADR-0270 死门删除:src 全仓无 _MID_INTEREST_FLOOR 引用残留。"""
-    from sr_od.application.currency_war.kernel import cw_obs_core
     repo_root = _adr0269_prep_two_stage_Path(__file__).resolve().parents[5]
     src_dir = repo_root / 'src'
     hits = [p for p in src_dir.rglob('*.py')
@@ -1118,8 +1057,19 @@ def test_mid_interest_floor_removed() -> None:
 
 from types import SimpleNamespace as _w588_director_v2_SimpleNamespace
 
-from sr_od.application.currency_war.decision.decision_v2.contracts import AtomOp, Bail, Decision, Defer, Snapshot, SubstateClassification
-from sr_od.application.currency_war.decision.decision_v2.director_v2 import DirectorV2, LoopOutcomeKind, _DirectorPorts
+from sr_od.application.currency_war.decision.decision_v2.contracts import (
+    AtomOp,
+    Bail,
+    Decision,
+    Defer,
+    Snapshot,
+    SubstateClassification,
+)
+from sr_od.application.currency_war.decision.decision_v2.director_v2 import (
+    DirectorV2,
+    LoopOutcomeKind,
+    _DirectorPorts,
+)
 
 # ===== 桩与构造 ============================================================
 
@@ -1465,9 +1415,17 @@ from cv2.typing import MatLike
 
 from sr_od.application.currency_war import currency_war_app as cw_app_module
 from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
-from sr_od.application.currency_war.operations.entry.exit_currency_war_match import ExitCurrencyWarMatch
+from sr_od.application.currency_war.operations.entry.exit_currency_war_match import (
+    ExitCurrencyWarMatch,
+)
 from test.conftest import SrTestContext
-from test.harness.fixture_controller import FixtureController, WatchdogOperationMixin, enter_running_state, fast_sleep, reset_running_state
+from test.harness.fixture_controller import (
+    FixtureController,
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
 
 # ---------------------------------------------------------------------------
 # 识别锁(fixture 级,离线 OCR,无 controller)

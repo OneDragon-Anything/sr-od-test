@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_migration_dv2 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -9,10 +8,11 @@
 """
 from __future__ import annotations
 
-
 # ==================== w606_switch ====================
-
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY, DecisionV2Registry
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY,
+    DecisionV2Registry,
+)
 
 
 def test_switch_field_deleted_from_registry():
@@ -33,6 +33,7 @@ def test_adapter_no_longer_exports_enablement_helper():
 #  函数同批删。)
 def test_shadow_compare_wiring_deleted():
     import dataclasses
+
     import sr_od.application.currency_war.decision_assembly as da
     names = {f.name for f in dataclasses.fields(DecisionV2Registry)}
     assert 'director_v2_shadow_compare' not in names
@@ -48,10 +49,16 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.obs import cw_observation as obs
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.obs.cw_observation_gate import  ENTRY_OVERLAY_CLOSE, PHASE_BATTLE_OR_TRANSIT, PHASE_FIELD_SPEC, PHASE_PREP_CLEAN, PHASE_PREP_SHOP_OPEN
 from sr_od.application.currency_war.kernel.cw_obs_core import UPPER_SCREENS
+from sr_od.application.currency_war.obs import cw_observation as obs
+from sr_od.application.currency_war.obs.cw_observation_gate import (
+    ENTRY_OVERLAY_CLOSE,
+    PHASE_BATTLE_OR_TRANSIT,
+    PHASE_FIELD_SPEC,
+    PHASE_PREP_CLEAN,
+    PHASE_PREP_SHOP_OPEN,
+)
 from sr_od.application.currency_war.telemetry import defects, state
 
 REPO = Path(__file__).resolve().parents[5]
@@ -296,13 +303,13 @@ def test_entry_overlay_close_areas_exist_in_yml():
 def test_prep_director_clear_entry_wired():
     """清场段已接进备战环入口(gate 之前),且 fail-open(异常即返回)。"""
     from sr_od.application.currency_war import prep_director
-    src_loop = inspect.getsource(prep_director.PrepDirector._run_loop)
+    src_loop = inspect.getsource(prep_director.PrepDirector.run)
     assert '_clear_entry_overlays()' in src_loop, \
         '环入口未接 P0 清场段'
-    # 清场段调用必须在 gate 调用之前(先清场、再识别);
-    # 锚=gate 入口日志行(首次 wait_stable_frame 出现在 import 块,不可作序锚)
+    # 清场段调用必须在观察之前(先清场、再识别);
+    # W971 P3b 拆内环:gate 已除,序锚 = 单轮 heavy 观察行
     assert src_loop.index('_clear_entry_overlays()') \
-        < src_loop.index("path=new(director")
+        < src_loop.index('obs = self._observe(heavy=True)')
     src_clear = inspect.getsource(prep_director.PrepDirector._clear_entry_overlays)
     assert 'except Exception' in src_clear, '清场段必须 fail-open(离线契约)'
 
@@ -319,6 +326,12 @@ import pytest as _w612_effect_inventory_pytest
 _REPO = _w612_effect_inventory_Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_REPO / 'src'))
 
+from sr_od.application.currency_war.data.cw_invest_data import (
+    PLAZA_AUGMENTS,  # noqa: E402
+)
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession,  # noqa: E402
+)
 from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (  # noqa: E402
     ActiveEffectInventory,
@@ -328,14 +341,12 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (  # noqa:
     EffectKind,
     TriggerKind,
 )
-from sr_od.application.currency_war.data.cw_invest_data import PLAZA_AUGMENTS  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_investments import (  # noqa: E402
     INVESTMENT_STRATEGIES,
     STRATEGY_ECONOMY,
     STRATEGY_EFFECTS,
     EconomyEffect,
 )
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession  # noqa: E402
 
 # ===== T1 · EffectSpec 构造锁 =====
 
@@ -364,7 +375,9 @@ def test_payload_category_consistency() -> None:
         elif spec.category == EffectKind.BATTLEFIELD:
             assert isinstance(spec.payload, BattlefieldEffect), spec.name
         else:
-            from sr_od.application.currency_war.kernel.cw_effect_inventory import UnitBuffRef
+            from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+                UnitBuffRef,
+            )
             assert isinstance(spec.payload, UnitBuffRef), spec.name
 
 
@@ -553,3 +566,4 @@ def test_hook_points_exist() -> None:
 
     from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
     assert 'level_up' in inspect.getsource(TelemetryRecorder.record_exogenous)
+

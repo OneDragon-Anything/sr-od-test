@@ -14,6 +14,11 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PREP_ACTION_TYPES,
     OpenShop,
 )
+from test.harness.fixture_controller import (
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
 
 # ==================== 决策层:动作发射改型(新旧映射对拍) ====================
 
@@ -50,12 +55,14 @@ def test_strategy_emits_open_shop_forms() -> None:
 
 
 def test_v2_engine_intercepts_open_shop_by_type() -> None:
-    """流程层拦截 = 类型分派(字符串匹配判据退役,W970 §3)。"""
+    """流程层拦截 = 类型分派(字符串匹配判据退役,W970 §3)。
+
+    W971 P3b 拆内环:拦截点自 v2 执行端口平移到备战单轮 run(五段⑤执行)。"""
     from sr_od.application.currency_war import prep_director as pd_mod
 
-    port_src = inspect.getsource(pd_mod.PrepDirector._run_prep_loop_v2)
-    assert 'isinstance(action, OpenShop)' in port_src, '执行端口缺 OpenShop 类型分派'
-    assert "if 'EnsureShopClosed' in key" not in port_src, (
+    run_src = inspect.getsource(pd_mod.PrepDirector.run)
+    assert 'isinstance(action, OpenShop)' in run_src, '单轮执行段缺 OpenShop 类型分派'
+    assert "if 'EnsureShopClosed' in key" not in run_src, (
         '探针挂点字符串匹配判据未退役(§3:改类型分派)')
 
 
@@ -112,128 +119,153 @@ def test_post_settle_auto_shop_flag_retired() -> None:
 
 def test_takeover_collect_moved_to_director() -> None:
     """接管局补采挂点迁移(01-opening §2.1):battle_loop 内联块退役,
-    由干净备战观察(prep_director 环入口 gate 后稳定帧)承担。"""
+    由备战单轮 op 观察段(_takeover_collect_if_needed)承担。"""
     assert '_cw_takeover_done' not in _loop_src(), 'loop 内联补采块未退役'
     from sr_od.application.currency_war import prep_director as pd_mod
-    src = inspect.getsource(pd_mod.PrepDirector._run_loop)
+    src = inspect.getsource(pd_mod.PrepDirector._takeover_collect_if_needed)
     assert 'cw_takeover_collect_done' in src, 'prep_director 缺接管补采块'
     assert 'briefing_bosses' in src, '补采触发门(简报真值空)缺失'
     assert 'CollectPlaneIntel' in src, '补采通道(位面详情采集 op)缺失'
+    assert '_takeover_collect_if_needed(match, session)' in inspect.getsource(
+        pd_mod.PrepDirector.run), '单轮观察段缺接管补采挂点'
 
 
-# ==================== 环入口分诊(实机 P1-r6 bail ping-pong 返工) ====================
+# ==================== 拆内环定稿:备战单轮 op + 外循环轮转(返工升级) ====================
 
-def _make_entry_director(test_context, monkeypatch, hits: list[tuple[str, str]]):
-    """分诊单测装配:环入口探针桩(收店恒失败)+ 锚命中集替身 + 副作用替身。"""
+def _make_round_director(test_context, monkeypatch, scripted_action):
+    """备战单轮单测装配:观察/清场/收店/补采/对账/破墙/遥测全替身,
+    策略脚本化(单动作),OpenShop 编排替身。"""
     from types import SimpleNamespace as _SN
 
     from sr_od.application.currency_war import prep_director as pd_mod
     from sr_od.application.currency_war.decision.cw_strategy import (
         StrategySession,
     )
-    from sr_od.application.currency_war.kernel.cw_prep_actions import (
-        DeferSpheres as _DS,
-    )
 
     class _StubStrategy:
+        def __init__(self):
+            self.calls = 0
+
         def decide_prep_screen(self, session, config):
-            return _DS()
+            self.calls += 1
+            return scripted_action
+
+        def update_target(self, state, session, config):
+            pass
 
     d = pd_mod.PrepDirector(test_context)
     session = StrategySession()
-    match = _SN(strategy=_StubStrategy(), session=session)
-    monkeypatch.setattr(d, 'screenshot', lambda *a, **k: None)
+    strat = _StubStrategy()
+    match = _SN(strategy=strat, session=session)
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    monkeypatch.setattr(d, '_clear_entry_overlays', lambda: None)
     monkeypatch.setattr(d, '_try_collapse_open_shop', lambda: False)
-    monkeypatch.setattr(d, 'save_screenshot', lambda *a, **k: '<shot>')
+    monkeypatch.setattr(d, '_takeover_collect_if_needed', lambda m, s: None)
+    monkeypatch.setattr(d, '_record_step', lambda o, a: None)   # 遥测替身
 
-    def _find(screen, screen_name, area_name, **k):
-        if (screen_name, area_name) in hits:
-            return d.round_success('')
-        return d.round_fail('')
+    class _Obs:
+        event_overlay = None
+        state = None
+        bench_chars: list = []
+        deployed_chars: list = []
+        spheres: list = []
+        boxes: list = []
+        deploy_vacancy = 0
 
-    monkeypatch.setattr(d, 'round_by_find_area', _find)
-    stops: list[str] = []
+    monkeypatch.setattr(d, '_observe', lambda heavy=True, screen=None: _Obs())
     monkeypatch.setattr(
-        test_context, 'run_context',
-        _SN(stop_running=lambda reason='': stops.append(reason)), raising=False)
-    return d, match, session, stops
+        'sr_od.application.currency_war.obs.cw_observation.read_bench_full',
+        lambda ctx, screen: False)   # 破墙分支让路
+    monkeypatch.setattr(d, '_open_shop_phase', lambda a, obs: (True, 'read_only 读牌完成'))
+    return d, match, session, strat
 
 
-def test_entry_known_overlay_hands_back_and_resets_counter(
+def test_prep_round_full_lifecycle_hands_back(
     test_context, monkeypatch,
 ) -> None:
-    """遭遇 overlay 帧在环入口 → 交回外环分发 + 帧不clean 同因计数重置
-    (实机 P1-r6:同因 ×3 停机的返工判据)。"""
-    from sr_od.application.currency_war import prep_director as pd_mod
+    """备战单轮 op 五段(观察→对账→决策→期望态→执行)→ 交回外循环:
+    单轮恰执行一个动作即交回,无内环 while(拆内环定稿)。"""
+    from sr_od.application.currency_war.kernel.cw_prep_actions import (
+        OpenShop,
+    )
 
-    d, match, session, _stops = _make_entry_director(
-        test_context, monkeypatch,
-        hits=[('货币战争-遭遇节点', '标识-遭遇节点')])
-    session.bail_reason_counts[pd_mod.GATE_UNCLEAN_REASON] = 2   # 差 1 次即停机
+    d, match, session, strat = _make_round_director(
+        test_context, monkeypatch, OpenShop(read_only=True))
 
-    result = d._entry_dispatch_or_bail(match, session)
+    with fast_sleep():
+        enter_running_state(test_context)
+        try:
+            result = d.run()
+        finally:
+            reset_running_state(test_context, d)
 
-    assert result.is_success, f'已知 overlay 应交回(success),实得 {result.status!r}'
-    assert '遭遇' in (result.status or '') and '交回' in (result.status or ''), (
-        f'交回语义缺失:{result.status!r}')
-    assert pd_mod.GATE_UNCLEAN_REASON not in session.bail_reason_counts, (
-        '同因计数未重置(仍会 ×3 停机)')
-    assert session.cw_entry_diag_streak == 1
-    assert _stops == [], '命中已知 overlay 不得触发停机'
-
-
-def test_entry_unknown_frame_still_counts_gate_bail(
-    test_context, monkeypatch, tmp_path,
-) -> None:
-    """未知帧(无任何已知 overlay 锚命中)→ 同因 bail 计数照旧(兜底语义不变)。"""
-    monkeypatch.chdir(tmp_path)   # _bail ≥3 分支的 flag 写相对路径,隔离到 tmp
-    from sr_od.application.currency_war import prep_director as pd_mod
-
-    d, match, session, _stops = _make_entry_director(
-        test_context, monkeypatch, hits=[])
-    session.bail_reason_counts[pd_mod.GATE_UNCLEAN_REASON] = 0
-
-    result = d._entry_dispatch_or_bail(match, session)
-
-    assert result.is_success   # bail = round_success 交外环(未达停机阈)
-    assert session.bail_reason_counts[pd_mod.GATE_UNCLEAN_REASON] == 1
+    assert strat.calls == 1, '单轮恰一次决策'
+    assert '交回外循环' in (result.status or ''), f'单轮须交回外循环:{result.status!r}'
+    assert 'read_only' in (result.status or ''), '执行段须消费 OpenShop 编排'
 
 
-def test_entry_diag_streak_resets_on_tag_change(
+def test_prep_round_event_overlay_hands_back_without_execute(
     test_context, monkeypatch,
 ) -> None:
-    """标签变化(遭遇→巨星)→ 已知 overlay 交回连击清零(合法多 overlay 逐个
-    消化不是 ping-pong;M11 同型教训)。"""
-    d, match, session, _stops = _make_entry_director(
-        test_context, monkeypatch,
-        hits=[('货币战争-遭遇节点', '标识-遭遇节点')])
-    r1 = d._entry_dispatch_or_bail(match, session)
-    assert r1.is_success and session.cw_entry_diag_streak == 1
+    """轮转回归锁(实机 P1-r6 场景的结构性修复):备战帧带事件 overlay →
+    单轮观察段即交回外循环(零计数、零执行)——外循环重识别后 0x 分支
+    (遭遇 op 等)接管,回备战再进单轮。bail/同因 ×3/ping-pong 停机机制
+    已随内环拆除。"""
+    from sr_od.application.currency_war.kernel.cw_prep_actions import (
+        OpenShop,
+    )
 
-    monkeypatch.setattr(
-        d, 'round_by_find_area',
-        lambda s, sn, a, **k: d.round_success('')
-        if (sn, a) == ('货币战争-盛会之星', '标识-盛会之星') else d.round_fail(''))
-    r2 = d._entry_dispatch_or_bail(match, session)
-    assert r2.is_success and session.cw_entry_diag_streak == 1, '标签变化应重置连击'
-    assert _stops == []
+    d, match, session, strat = _make_round_director(
+        test_context, monkeypatch, OpenShop(read_only=True))
+
+    class _OverlayObs:
+        event_overlay = '遭遇'
+        state = None
+        bench_chars: list = []
+        deployed_chars: list = []
+        spheres: list = []
+        boxes: list = []
+        deploy_vacancy = 0
+
+    monkeypatch.setattr(d, '_observe', lambda heavy=True, screen=None: _OverlayObs())
+
+    with fast_sleep():
+        enter_running_state(test_context)
+        try:
+            result = d.run()
+        finally:
+            reset_running_state(test_context, d)
+
+    assert strat.calls == 0, 'overlay 帧不得进入决策/执行'
+    assert '交回外循环' in (result.status or ''), f'须交回外循环:{result.status!r}'
+    assert not getattr(session, 'bail_reason_counts', None), (
+        '交回不得带任何同因计数(bail 机制已拆除)')
 
 
-def test_entry_diag_same_tag_x3_stops_with_evidence(
-    test_context, monkeypatch, tmp_path,
-) -> None:
-    """同标签 ×3 交回仍回环 = loop 分支接不住 → 停机留证(兜底换形态保留)。"""
-    monkeypatch.chdir(tmp_path)   # flag 相对路径隔离
-    d, match, session, stops = _make_entry_director(
-        test_context, monkeypatch,
-        hits=[('货币战争-遭遇节点', '标识-遭遇节点')])
+def test_outer_loop_rediscovers_between_prep_rounds() -> None:
+    """外循环轮转(单层循环定稿):备战单轮交回 → loop 顶全分支重判 →
+    遭遇 overlay 帧由 0c 遭遇分支(HandleEncounter)先于备战双锚接管
+    (P1-r6 停机场景的回归锁,源级)。"""
+    src = _loop_src()
+    # 遭遇分发在备战分支之前(源码序 = 判定优先序)
+    assert src.index("'货币战争-遭遇节点', '标识-遭遇节点'") < src.index(
+        "and self.round_by_find_area(screen, '货币战争-备战', '按钮-出战')"), (
+        '遭遇分发须先于备战双锚(overlay 帧不得直落备战分支)')
+    assert 'HandleEncounter(self.ctx)' in src, '遭遇 op 分发缺失'
+    # 单轮交回 → 外循环重识别(前锁 test_loop_redispatches_after_director_return)
+    assert '交回顶层分发' in src
 
-    for _ in range(3):
-        result = d._entry_dispatch_or_bail(match, session)
 
-    assert not result.is_success, f'连击 ≥3 应停机 fail,实得 {result.status!r}'
-    assert stops and stops[0] == 'hook:entry_overlay_pingpong'
-    assert (tmp_path / '.debug/temp/currency_war/entry_overlay_pingpong_hook.flag').exists()
+def test_prep_stall_evidence_in_outer_loop() -> None:
+    """stall 防线平移外循环(03-prep §3 规格最小集):连续 N 轮备战画面
+    session 对账字段族无变化 → 留证(log + 存图,不停机)。"""
+    from sr_od.application.currency_war.operations import battle_loop
+    src = _loop_src()
+    assert 'PREP_STALL_EVIDENCE_ROUNDS' in inspect.getsource(battle_loop), (
+        'stall 留证阈值常量缺失')
+    assert '_prep_stall_sig' in src and '_prep_stall_count' in src, (
+        'stall 签名/计数状态缺失')
+    assert 'prep_stall' in src, '留证存图缺失'
 
 
 def test_loop_redispatches_after_director_return() -> None:

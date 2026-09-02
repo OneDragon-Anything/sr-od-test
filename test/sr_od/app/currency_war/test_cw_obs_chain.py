@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_obs_chain 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -14,14 +13,12 @@
 """
 from __future__ import annotations
 
-
 # ==================== test_obs_conflict_guards ====================
-
 import pytest
 
-from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
 
 
 @pytest.fixture(autouse=True)
@@ -189,7 +186,9 @@ def test_plane_table_smoke():
     assert interest(50) == 5
 
 # ===== 等级三源解析 _resolve_level(2026-08-18 治本:live 乒乓根因) =====
-from sr_od.application.currency_war.obs.cw_observation import _resolve_level  # noqa: E402
+from sr_od.application.currency_war.obs.cw_observation import (
+    _resolve_level,  # noqa: E402
+)
 
 
 def _kinds(events) -> list[str]:
@@ -264,10 +263,13 @@ from pathlib import Path
 
 import pytest as _w287_obs_readchain_pytest
 
-from one_dragon.utils import cv2_utils
 import sr_od.application.currency_war.obs.cw_observation as obs_mod
-from sr_od.application.currency_war.obs.cw_observation import  _board_pairs, read_deployed_count
+from one_dragon.utils import cv2_utils
 from sr_od.application.currency_war.kernel.cw_state import rebuild_deployed_from_board
+from sr_od.application.currency_war.obs.cw_observation import (
+    _board_pairs,
+    read_deployed_count,
+)
 
 _IMG_DIR = Path(__file__).parent
 
@@ -366,10 +368,18 @@ def test_source_board_arbitration_prefers_badge_with_overlay_guard() -> None:
 
 import inspect as _w289_match_start_reset_inspect
 
-from sr_od.application.currency_war.obs.cw_observation import  reset_phase_round_cache
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _w289_match_start_reset_BenchChar
-from sr_od.application.currency_war.decision.cw_strategy import  CurrencyWarMatch, StrategySession, discard_stale_match_container
-from sr_od.application.currency_war.decision.decision_v2.strategy import  DecisionV2Strategy
+from sr_od.application.currency_war.decision.cw_strategy import (
+    CurrencyWarMatch,
+    StrategySession,
+    discard_stale_match_container,
+)
+from sr_od.application.currency_war.decision.decision_v2.strategy import (
+    DecisionV2Strategy,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _w289_match_start_reset_BenchChar,
+)
+from sr_od.application.currency_war.obs.cw_observation import reset_phase_round_cache
 
 
 class _FakeCtx:
@@ -431,7 +441,9 @@ def test_phase_round_cross_match_reset():
 def test_entry_discard_call_sites_are_new_match_only():
     """锁 4(静态口径:弃置只挂新局确凿三屏,不碰「继续进度」恢复同一物理局的合法续用):
     入口文件恰有 3 个调用点,理由串分别为难度确认/模式选择/简报。"""
-    from sr_od.application.currency_war.operations.entry import  start_currency_war_match as entry_mod
+    from sr_od.application.currency_war.operations.entry import (
+        start_currency_war_match as entry_mod,
+    )
     src = _w289_match_start_reset_inspect.getsource(entry_mod)
     for reason in ('到达难度确认屏=新局开始',
                    '到达模式选择屏=新局开始',
@@ -450,8 +462,13 @@ from pathlib import Path as _w529_xy_reader_Path
 
 import pytest as _w529_xy_reader_pytest
 
+from sr_od.application.currency_war.obs.cw_observation import (
+    _read_deploy_paddle,
+    _resolve_paddle_digits,
+    _validate_paddle_xy,
+    read_deploy_cap,
+)
 from test.conftest import SrTestContext
-from sr_od.application.currency_war.obs.cw_observation import  _read_deploy_paddle, _resolve_paddle_digits, _validate_paddle_xy, read_deploy_cap
 
 _FIX_DIR = _w529_xy_reader_Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战'
 # overlay 帧已按画面形态归档到独立 screen 目录(原在 备战/ 目录)
@@ -518,6 +535,7 @@ def test_parse_paddle_rescues_poisoned_level_prior(monkeypatch) -> None:
     """level 先验毒化不锁修正:带 level 解析失败后,用绝对域(x≤y,1≤y≤13)
     重解析一次;唯一解 y<level → 采回 + obs_conflict 留证(对照错不锁修正)。"""
     import numpy as np
+
     import sr_od.application.currency_war.obs.cw_observation as obs_mod
 
     class _R:
@@ -579,9 +597,9 @@ _EXPECTS = {
 
 def _make_real_ocr_ctx(test_context: SrTestContext, monkeypatch: _w529_xy_reader_pytest.MonkeyPatch) -> list:
     """真 OCR service 注入 + obs_conflict 收集器(防测试写真实 .debug 证据)。"""
+    import sr_od.application.currency_war.obs.cw_observation as obs_mod
     from one_dragon.base.matcher.ocr.ocr_service import OcrService
     from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
-    import sr_od.application.currency_war.obs.cw_observation as obs_mod
     try:
         matcher = OnnxOcrMatcher()
         if not matcher.init_model(download_by_github=False, download_by_gitee=True):
@@ -657,9 +675,15 @@ from pathlib import Path as _w545_faction_reconcile_Path
 
 import pytest as _w545_faction_reconcile_pytest
 
-from sr_od.application.currency_war.obs.cw_faction_obs import  FactionReconcileResult, _match_faction, compare_factions, parse_panel_tokens, read_displayed_factions, report_faction_reconcile
+from sr_od.application.currency_war.obs.cw_faction_obs import (
+    FactionReconcileResult,
+    _match_faction,
+    compare_factions,
+    parse_panel_tokens,
+    read_displayed_factions,
+    report_faction_reconcile,
+)
 from test.conftest import SrTestContext as _w545_faction_reconcile_SrTestContext
-from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 _w545_faction_reconcile_FIX_DIR = _w545_faction_reconcile_Path(__file__).resolve().parents[4] / 'screens' / '货币战争-备战'
 
@@ -820,11 +844,14 @@ from types import SimpleNamespace
 import pytest as _w547_faction_wire_pytest
 
 import sr_od.application.currency_war.prep_director as pd
-from sr_od.application.currency_war.obs.cw_faction_obs import  parse_panel_tokens as _w547_faction_wire_parse_panel_tokens, read_displayed_factions as _w547_faction_wire_read_displayed_factions
-
+from sr_od.application.currency_war.obs.cw_faction_obs import (
+    parse_panel_tokens as _w547_faction_wire_parse_panel_tokens,
+)
+from sr_od.application.currency_war.obs.cw_faction_obs import (
+    read_displayed_factions as _w547_faction_wire_read_displayed_factions,
+)
 from sr_od.application.currency_war.prep_director import PrepDirector
 from test.conftest import SrTestContext as _w547_faction_wire_SrTestContext
-from sr_od.application.currency_war.telemetry import state as _w547_faction_wire_cw_telemetry
 
 
 # ===== 接线源码锁(形态先例=_w547_faction_wire_inspect.getsource 静态锁) =====
@@ -841,9 +868,11 @@ def test_faction_wire_source_locks() -> None:
     assert 'screenshot(' not in src
     # best-effort:异常吞掉不阻塞环(与 _reconcile_xp_expect 同款)
     assert 'except Exception' in src
-    loop_src = _w547_faction_wire_inspect.getsource(PrepDirector._run_loop)
-    xp_at = loop_src.index('self._reconcile_xp_expect(obs)')
-    fac_at = loop_src.index('self._reconcile_faction_display(obs)')
+    # 消费序(W971 P3b 拆内环:XP/羁绊同帧消费点在 _v2_post_frame_accounting)
+    acct_src = _w547_faction_wire_inspect.getsource(
+        PrepDirector._v2_post_frame_accounting)
+    xp_at = acct_src.index('self._reconcile_xp_expect(obs)')
+    fac_at = acct_src.index('self._reconcile_faction_display(obs)')
     assert fac_at > xp_at, '羁绊对账须与 XP 对账同一 heavy 定型帧、紧随其后'
     mod_src = _w547_faction_wire_Path(pd.__file__).read_text(encoding='utf-8')
     assert 'from sr_od.application.currency_war.obs.cw_faction_obs import' in mod_src
@@ -998,15 +1027,27 @@ import json
 from pathlib import Path as _w552_xp_reconcile_Path
 from types import SimpleNamespace as _w552_xp_reconcile_SimpleNamespace
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _w552_xp_reconcile_StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession as _w552_xp_reconcile_StrategySession,
+)
+from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
+from sr_od.application.currency_war.kernel.cw_prep_expect import (
+    XpLedger,
+    _xp_compare,
+    _xp_parse_buy_clicks,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    XP_TO_NEXT_LEVEL,
+    xp_apply_clicks,
+    xp_clicks_to_level,
+)
+from sr_od.application.currency_war.prep_director import (
+    PrepDirector as _w552_xp_reconcile_PrepDirector,
+)
 from sr_od.application.currency_war.telemetry import defects, recorder
-from sr_od.application.currency_war.kernel.cw_prep_actions import  PrepObservation
-from sr_od.application.currency_war.kernel.cw_state import  XP_TO_NEXT_LEVEL, xp_apply_clicks, xp_clicks_to_level
-
-from sr_od.application.currency_war.prep_director import PrepDirector as _w552_xp_reconcile_PrepDirector
-
-from sr_od.application.currency_war.kernel.cw_prep_expect import XpLedger, _xp_compare, _xp_parse_buy_clicks
-from sr_od.application.currency_war.telemetry import state as _w552_xp_reconcile_cw_telemetry
+from sr_od.application.currency_war.telemetry import (
+    state as _w552_xp_reconcile_cw_telemetry,
+)
 
 # ===== ① 推进算子真值表(单一源语义 = ADR-0129;门槛表 XP_TO_NEXT_LEVEL)=====
 
@@ -1185,12 +1226,12 @@ def test_w552_wiring_locks():
     src = _w552_xp_reconcile_Path(
         'src/sr_od/application/currency_war/prep_director.py'
     ).read_text(encoding='utf-8')
-    log_at = src.index("log.info(f'[cw][director] step{self._steps}")
+    # W971 P3b 拆内环:XP 推账两通道随单轮 run(LevelUp 在执行器分支;
+    # 买牌单元在 OpenShop 编排分支),对账消费点在 _v2_post_frame_accounting
     lv_at = src.index('if progressed and isinstance(action, LevelUp):')
-    buy_at = src.index("elif progressed and isinstance(action, RunBuyPhase):")
-    assert log_at < lv_at < buy_at                  # 进展后才推账,两通道并列
     assert src.index('self._xp_apply_levelup()') > lv_at
-    assert src.index("self._xp_apply_buy_clicks(detail)") > buy_at
+    buy_apply_at = src.index('self._xp_apply_buy_clicks(detail)')
+    assert buy_apply_at > src.index('if isinstance(action, OpenShop):')
     obs_at = src.index('self._reconcile_xp_expect(obs)')
     # W591:pending_buy_expect 升 _w552_xp_reconcile_StrategySession 正式字段,消费端由
     # getattr 兜底改直接字段读写(语义不变,机制被取代——见
@@ -1246,15 +1287,18 @@ def test_xp_defect_row_shape(tmp_path: _w552_xp_reconcile_Path, monkeypatch):
     assert row['reader_source'] == 'xp_expect_reconcile'
 
 
-from sr_od.application.currency_war.telemetry import state
 
 
 # ==================== w556_shop_obs ====================
 
 import pytest as _w556_shop_obs_pytest
 
-from sr_od.application.currency_war.obs.cw_shop_obs import  compare_merge_preview, check_shop_pool, refresh_expect
 from sr_od.application.currency_war.data.cw_shop_odds import REFRESH_PROB, SHOP_SLOTS
+from sr_od.application.currency_war.obs.cw_shop_obs import (
+    check_shop_pool,
+    compare_merge_preview,
+    refresh_expect,
+)
 
 # ---------------------------------------------------------------------------
 # 1. check_shop_pool
@@ -1405,8 +1449,8 @@ def test_shop_fixture_end_to_end(test_context) -> None:
     本测试锁「识别输出能过一致性票」的生产形态,不锁具体牌名(牌名归 SIFT 锁)。
     """
     from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
-    from sr_od.application.currency_war.obs.cw_observation import read_shop_cards
     from sr_od.application.currency_war.kernel.cw_state import card_cost
+    from sr_od.application.currency_war.obs.cw_observation import read_shop_cards
 
     state = 'shop_open_preview_star'
     if not test_context.has_screen(SHOP_SCREEN_NAME, state):
@@ -1428,7 +1472,9 @@ def test_read_game_state_writes_level_readable(monkeypatch) -> None:
     """read_game_state 写入 level_readable:真读(OCR 或 XP 可读)=True;
     双失读(纯 _expected_level 兜底)=False。开店期 spec 最小读取面。"""
     from sr_od.application.currency_war.obs import cw_observation as obs
-    from sr_od.application.currency_war.obs.cw_observation_gate import PHASE_PREP_SHOP_OPEN
+    from sr_od.application.currency_war.obs.cw_observation_gate import (
+        PHASE_PREP_SHOP_OPEN,
+    )
     _stubs = {
         'read_gold_settled': 55, 'read_phase_round': (2, 3), 'read_node_type': None,
         'read_xp_progress': (0, 6), 'read_level_raw_opt': 5, 'read_level_up_cost': 4,
@@ -1450,6 +1496,8 @@ def test_read_game_state_writes_level_readable(monkeypatch) -> None:
 def test_decision_trace_level_readable_field() -> None:
     """DecisionTrace 新增 level_readable 缺省 True(旧档案缺省=按现有判读处理)。"""
     from dataclasses import asdict, fields
+
     from sr_od.application.currency_war.telemetry.schema import DecisionTrace
     assert 'level_readable' in {f.name for f in fields(DecisionTrace)}
     assert asdict(DecisionTrace())['level_readable'] is True
+
