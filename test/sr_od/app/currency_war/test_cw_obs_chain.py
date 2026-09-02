@@ -1501,3 +1501,79 @@ def test_decision_trace_level_readable_field() -> None:
     assert 'level_readable' in {f.name for f in fields(DecisionTrace)}
     assert asdict(DecisionTrace())['level_readable'] is True
 
+
+# ==================== 商店牌费用徽章数字识别(2星直出缺口闭环) ====================
+# 出处:merge_mechanics §2.6(费用倍数体系:1★=原费、2★=×3)与 §2.7(2星直出
+# 识别缺口登记;2026-09-02 费用数字识别落地闭环)。徽章数字模板匹配标定:
+# 正确数字 TM ≥0.78、错误数字 ≤0.59(阈值 0.60,13 帧 65 槽离线对拍)。
+
+def test_resolve_cost_star_semantics() -> None:
+    """resolve_cost_star 三分支:直读1★/3倍2★直出/失读与矛盾走 roster 兜底。"""
+    from sr_od.application.currency_war.obs.cw_observation import (
+        COST_SOURCE_ROSTER_FALLBACK,
+        resolve_cost_star,
+    )
+    assert resolve_cost_star(1, 1) == (1, 1, 'badge')
+    assert resolve_cost_star(3, 1) == (3, 2, 'badge')     # 1费2星直出
+    assert resolve_cost_star(2, 2) == (2, 1, 'badge')
+    assert resolve_cost_star(6, 2) == (6, 2, 'badge')     # 2费2星直出
+    # 失读(None)→ roster 查表兜底(旧行为,star 保守 1)
+    assert resolve_cost_star(None, 2) == (2, 1, COST_SOURCE_ROSTER_FALLBACK)
+    # 矛盾(既非原费也非3倍,如多位徽章被单字模板误命中)→ 兜底
+    assert resolve_cost_star(1, 2) == (2, 1, COST_SOURCE_ROSTER_FALLBACK)
+    assert resolve_cost_star(5, 4) == (4, 1, COST_SOURCE_ROSTER_FALLBACK)
+    # 名字未识别(roster_cost=0)→ 无从对账,兜底
+    assert resolve_cost_star(None, 0) == (0, 1, COST_SOURCE_ROSTER_FALLBACK)
+
+
+def test_shop_cost_badge_fixture_digits(test_context) -> None:
+    """shop_open 存档帧逐槽费用数字 = 人工核对真值 [1,2,2,1,1]。
+
+    (翡翠1/丹恒·腾荒2/不死途2/飞霄1/三月七1;webp 归档版白字掩码匹配
+    实测与原 PNG 等价,真阳性分数见上文标定注。)
+    """
+    from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
+    from sr_od.application.currency_war.obs.cw_observation import read_shop_card_cost
+    state = 'shop_open'
+    if not test_context.has_screen(SHOP_SCREEN_NAME, state):
+        pytest.skip(f'存档截图缺失:screens/{SHOP_SCREEN_NAME}/{state}.webp')
+    screen = test_context.load_screen(SHOP_SCREEN_NAME, state)
+    digits = [read_shop_card_cost(test_context, screen, i) for i in range(1, 6)]
+    assert digits == [1, 2, 2, 1, 1], f'费用数字识别偏差:{digits}'
+
+
+def test_shop_fixture_read_shop_cards_cost_source(test_context) -> None:
+    """read_shop_cards 端到端:徽章直读成功 → cost=徽章值 + cost_source='badge'。"""
+    from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
+    from sr_od.application.currency_war.obs.cw_observation import read_shop_cards
+    state = 'shop_open'
+    if not test_context.has_screen(SHOP_SCREEN_NAME, state):
+        pytest.skip(f'存档截图缺失:screens/{SHOP_SCREEN_NAME}/{state}.webp')
+    screen = test_context.load_screen(SHOP_SCREEN_NAME, state)
+    cards = read_shop_cards(test_context, screen)
+    assert len(cards) == 5, f'应读满 5 张牌,实际 {len(cards)}'
+    assert [c.cost for c in cards] == [1, 2, 2, 1, 1]
+    assert all(c.cost_source == 'badge' for c in cards), \
+        f'徽章直读帧不应有兜底:{[c.cost_source for c in cards]}'
+    assert all(c.star == 1 for c in cards)   # 该帧 5 张全 1星(merge_mechanics 考古)
+
+
+def test_shop_fixture_cost_fallback_roster(test_context, monkeypatch) -> None:
+    """徽章失读 → fallback 路径:cost 退 roster 查表 + cost_source='roster_fallback'。"""
+    from sr_od.application.currency_war.data.cw_chars import get_char
+    from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
+    from sr_od.application.currency_war.obs import cw_observation as obs
+    state = 'shop_open'
+    if not test_context.has_screen(SHOP_SCREEN_NAME, state):
+        pytest.skip(f'存档截图缺失:screens/{SHOP_SCREEN_NAME}/{state}.webp')
+    screen = test_context.load_screen(SHOP_SCREEN_NAME, state)
+    # 桩掉徽章读(模块属性;read_shop_cards 同模块全局查找 → 桩生效)
+    monkeypatch.setattr(obs, 'read_shop_card_cost', lambda *a, **kw: None)
+    cards = obs.read_shop_cards(test_context, screen)
+    assert len(cards) == 5
+    for c in cards:
+        ch = get_char(c.name) if c.name else None
+        assert c.cost_source == 'roster_fallback'
+        assert c.cost == (ch.cost if ch is not None else 0)
+        assert c.star == 1
+
