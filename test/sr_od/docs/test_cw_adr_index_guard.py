@@ -20,14 +20,14 @@ from pathlib import Path
 # 主仓定位:本文件 = <主仓>/sr-od-test/test/sr_od/docs/test_cw_adr_index_guard.py
 # parents[4] 即主仓根(sr-od-test 是主仓根下被 gitignore 的独立测试仓)。
 _REPO_ROOT = Path(__file__).resolve().parents[4]
-_DECISIONS_DIR = _REPO_ROOT / 'docs' / 'develop' / 'currency_war' / 'decisions'
+_DECISIONS_DIR = _REPO_ROOT / 'docs' / 'develop' / 'currency_war' / 'redesign' / 'decisions'
 _INDEX_FILE = _DECISIONS_DIR / 'INDEX.md'
 
 # INDEX 表格行形态:`| [NNNN](NNNN-slug.md) | 标题 | ...`
-_INDEX_ROW_RE = re.compile(r'^\|\s*\[(\d{4})\]\(([^)]+\.md)\)\s*\|')
-_ADR_FILE_RE = re.compile(r'^(\d{4})-.+\.md$')
+_INDEX_ROW_RE = re.compile(r'^\|\s*\[(dd-\d{3})\]\(([^)]+\.md)\)\s*\|')
+_ADR_FILE_RE = re.compile(r'^(dd-\d{3})-.+\.md$')
 # ADR 文件首行标题形态(实测多种并存):`# 0333 - ...` / `# ADR 0097 ...` / `# ADR-0114:...`
-_TITLE_RE = re.compile(r'^#\s*(?:ADR[-\s:]*)?(\d{4})\b')
+_TITLE_RE = re.compile(r'^#\s*(?:ADR[-\s:]*)?(DD-\d{3})\b', re.IGNORECASE)
 
 # 历史豁免已清(2026-08-26 主仓勘误后删除):0309/0310 撞号与孤儿已修
 # (0310 载体批正名+0309-board 补 INDEX 行,主仓 commit 见 git log),守卫全面接管。
@@ -62,7 +62,7 @@ def _collect_violations(index_text: str, decisions_dir: Path) -> list[str]:
             problems.append(f'INDEX 链接的文件不存在: {filename}')
             continue
         # 3. 行编号 == 文件名前缀编号
-        file_num = filename[:4]
+        file_num = filename[:6]
         if num != file_num:
             problems.append(f'INDEX 行编号 {num} 与文件名前缀 {file_num} 不一致: {filename}')
         # 5. 标题自洽
@@ -70,7 +70,7 @@ def _collect_violations(index_text: str, decisions_dir: Path) -> list[str]:
         tm = _TITLE_RE.match(first_line)
         if tm is None:
             problems.append(f'首行不是 `# NNNN` 标题形态: {filename} -> {first_line!r}')
-        elif tm.group(1) != file_num:
+        elif tm.group(1).lower() != file_num.lower():
             problems.append(f'标题编号 {tm.group(1)} 与文件名前缀 {file_num} 不一致: {filename}')
 
     # 4. 无孤儿:目录内 NNNN-*.md 都在 INDEX(排除 INDEX.md 等非 ADR 命名)
@@ -104,12 +104,12 @@ def _write_adr(d: Path, num: str, title_num: str | None = None) -> None:
 
 def test_mutation_duplicate_number_detected(tmp_path: Path) -> None:
     """两行同号(复刻 0353 事故形态)必须被检出。"""
-    _write_adr(tmp_path, '0353')
+    _write_adr(tmp_path, 'dd-003')
     index = (
         '| 编号 | 标题 | Status | 日期 | 一句话 |\n'
         '|------|------|--------|------|--------|\n'
-        '| [0353](0353-fake-slug.md) | a | accepted | 2026-08-26 | x |\n'
-        '| [0353](0353-fake-slug.md) | b | accepted | 2026-08-26 | x |\n'
+        '| [dd-003](dd-003-fake-slug.md) | a | accepted | 2026-08-26 | x |\n'
+        '| [dd-003](dd-003-fake-slug.md) | b | accepted | 2026-08-26 | x |\n'
     )
     problems = _collect_violations(index, tmp_path)
     assert any('撞号' in p for p in problems), problems
@@ -117,27 +117,27 @@ def test_mutation_duplicate_number_detected(tmp_path: Path) -> None:
 
 def test_mutation_missing_file_and_prefix_mismatch(tmp_path: Path) -> None:
     """断链 + 行编号/文件名前缀不一致必须被检出。"""
-    _write_adr(tmp_path, '0355')
+    _write_adr(tmp_path, 'dd-005')
     index = (
         '| 编号 | 标题 |\n'
         '|------|------|\n'
-        '| [0354](0354-not-exist.md) | a |\n'
-        '| [0356](0355-fake-slug.md) | b |\n'
+        '| [dd-004](dd-004-not-exist.md) | a |\n'
+        '| [dd-006](dd-005-fake-slug.md) | b |\n'
     )
     problems = _collect_violations(index, tmp_path)
     assert any('不存在' in p for p in problems), problems
-    assert any('0356' in p and '0355' in p and '不一致' in p for p in problems), problems
+    assert any('dd-006' in p and 'dd-005' in p and '不一致' in p for p in problems), problems
 
 
 def test_mutation_orphan_and_title_mismatch(tmp_path: Path) -> None:
     """孤儿文件 + 标题编号错位必须被检出。"""
-    _write_adr(tmp_path, '0356', title_num='0399')  # 标题编号错位
-    _write_adr(tmp_path, '0357')  # 不进 INDEX 的孤儿
+    _write_adr(tmp_path, 'dd-006', title_num='DD-099')  # 标题编号错位
+    _write_adr(tmp_path, 'dd-007')  # 不进 INDEX 的孤儿
     index = (
         '| 编号 | 标题 |\n'
         '|------|------|\n'
-        '| [0356](0356-fake-slug.md) | a |\n'
+        '| [dd-006](dd-006-fake-slug.md) | a |\n'
     )
     problems = _collect_violations(index, tmp_path)
-    assert any('孤儿' in p and '0357' in p for p in problems), problems
-    assert any('标题编号 0399' in p for p in problems), problems
+    assert any('孤儿' in p and 'dd-007' in p for p in problems), problems
+    assert any('标题编号 DD-099' in p for p in problems), problems
