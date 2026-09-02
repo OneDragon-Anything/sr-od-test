@@ -58,29 +58,26 @@ class _WatchedBackToNormal(WatchdogOperationMixin, BackToNormalWorldPlus):
 def stuck_op(
     test_context: SrTestContext,
     monkeypatch: pytest.MonkeyPatch,
-) -> tuple[_WatchedBackToNormal, dict[str, int]]:
-    """构造「兜底点击无法改变画面」的假环境,返回 (op, 计数字典)。
+) -> tuple[_WatchedBackToNormal, dict[str, int], list[bool]]:
+    """构造「兜底点击无法改变画面」的假环境,返回 (op, 计数字典, pc_alt 记录)。
 
     - find 类识别(``round_by_find_area`` / ``round_by_find_and_click_area``)恒返回
       未命中(结果仅被 ``is_success`` 检查后丢弃,用 WAIT 构造即可);
-    - 兜底点击(``round_by_click_area``)恒「点击成功」并计数(模拟点击发出去了
+    - 兜底点击 = controller.click 直点(锁光标恢复态加固后兜底不再走
+      ``round_by_click_area``),记录每次点击并恒成功(模拟点击发出去了
       但画面不变——正是事故现场的语义);
     - 模拟宇宙状态 / 列车补给恒无。
     """
     counters: dict[str, int] = {'fallback_click': 0}
+    click_alts: list[bool] = []
 
     def _fake_find_area(self, screen, screen_name, area_name, *args, **kwargs):
         return self.round_wait(status=f'未找到 {area_name}')
-
-    def _fake_click_area(self, screen_name, area_name, *args, **kwargs):
-        counters['fallback_click'] += 1
-        return self.round_success(status=area_name)
 
     monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
     monkeypatch.setattr(
         BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_area
     )
-    monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
     monkeypatch.setattr(
         btnw_module.sim_uni_screen_state,
         'get_sim_uni_screen_state',
@@ -106,7 +103,14 @@ def stuck_op(
 
     op = _WatchedBackToNormal(test_context)
     op._init_watchdog()  # type: ignore[attr-defined]
-    return op, counters
+
+    def _record_click(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
+        counters['fallback_click'] += 1
+        click_alts.append(bool(pc_alt))
+        return True
+
+    monkeypatch.setattr(op.ctx.controller, 'click', _record_click, raising=False)
+    return op, counters, click_alts
 
 
 class TestBackToNormalWorldPlusFallback:
@@ -114,11 +118,11 @@ class TestBackToNormalWorldPlusFallback:
     def test_stuck_fallback_fails_bounded(
         self,
         test_context: SrTestContext,
-        stuck_op: tuple[_WatchedBackToNormal, dict[str, int]],
+        stuck_op: tuple[_WatchedBackToNormal, dict[str, int], list[bool]],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """兜底点击无法改变画面时:op 应 FAIL 且轮次有界(修复前永远 WAIT)。"""
-        op, counters = stuck_op
+        op, counters, click_alts = stuck_op
         sleeps = _patch_round_sleep(monkeypatch)
 
         enter_running_state(test_context)
@@ -139,6 +143,12 @@ class TestBackToNormalWorldPlusFallback:
         assert counters['fallback_click'] == rounds, (
             f'兜底点击数({counters["fallback_click"]}) != 轮次({rounds})'
         )
+        # 锁光标恢复态加固锁:兜底每次点击都带 pc_alt=True(2026-09-02 恢复链
+        # 事故根修——锁光标下不带 Alt 的点击全部落空,兜底是最后出口必须按
+        # 最坏光标态点)。
+        assert len(click_alts) == rounds and all(click_alts), (
+            f'兜底点击未全部带 pc_alt=True:{click_alts}'
+        )
         # 每轮 retry 都带 wait=1(防回归为无 wait 的异常风暴式快速重试)。
         assert len(sleeps) >= rounds, (
             f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
@@ -147,7 +157,7 @@ class TestBackToNormalWorldPlusFallback:
     def test_click_fail_fails_bounded(
         self,
         test_context: SrTestContext,
-        stuck_op: tuple[_WatchedBackToNormal, dict[str, int]],
+        stuck_op: tuple[_WatchedBackToNormal, dict[str, int], list[bool]],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """兜底点击本身失败(如窗口失焦)时:同样应 FAIL 有界且每轮有 wait。
@@ -156,16 +166,16 @@ class TestBackToNormalWorldPlusFallback:
         无 wait 的异常风暴(每 ~24ms 一轮刷屏)。修复后该路径每轮 retry 带
         wait=1,20 轮后有序 FAIL,不再提供风暴式无间隔重试。
         """
-        op, counters = stuck_op
+        op, counters, _click_alts = stuck_op
         sleeps = _patch_round_sleep(monkeypatch)
 
-        # 兜底点击改为「点击失败」:round_by_click_area 失败分支返回 RETRY
-        # 且自身 retry_wait=None(无 sleep),由外层包装的 wait=1 兜住节奏。
-        def _fake_click_fail(self, screen_name, area_name, *args, **kwargs):
+        # 兜底点击改为「点击失败」(controller.click 返回 False):
+        # 外层包装的 wait=1 兜住节奏。
+        def _fake_click_fail(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
             counters['fallback_click'] += 1
-            return self.round_retry(status=f'点击失败 {area_name}')
+            return False
 
-        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_fail)
+        monkeypatch.setattr(op.ctx.controller, 'click', _fake_click_fail, raising=False)
 
         enter_running_state(test_context)
         try:
@@ -367,7 +377,7 @@ class TestVersionAnnouncementBranches:
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
         state: str,
-    ) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
+    ) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]], list[tuple[Point | None, bool]]]:
         return _run_real_frame_check_screen(
             test_context, monkeypatch, self.SCREEN, state,
         )
@@ -378,7 +388,7 @@ class TestVersionAnnouncementBranches:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """页 1 真帧:标题 id_mark 命中、无「关闭」→ 点右箭头翻页 area,不点关闭。"""
-        result, finds, find_clicks, bare_clicks = self._run_check_screen(
+        result, finds, find_clicks, bare_clicks, _ctrl = self._run_check_screen(
             test_context, monkeypatch, '贪饕侵蚀-第1页',
         )
 
@@ -398,7 +408,7 @@ class TestVersionAnnouncementBranches:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """页 2 真帧:「关闭」钮可见 → find+click 关闭 area,不再翻页。"""
-        result, finds, find_clicks, bare_clicks = self._run_check_screen(
+        result, finds, find_clicks, bare_clicks, _ctrl = self._run_check_screen(
             test_context, monkeypatch, '贪饕侵蚀-第2页',
         )
 
@@ -419,11 +429,13 @@ def _run_real_frame_check_screen(
     state: str,
     in_match_screen_name: str | None = None,
     exit_match_cls: type | None = None,
-) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
-    """真帧驱动单轮 check_screen,返回 (结果, find记录, find+click记录, 裸click记录)。
+) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]], list[tuple[Point | None, bool]]]:
+    """真帧驱动单轮 check_screen,返回 (结果, find记录, find+click记录, 裸click记录, controller点击记录)。
 
     - ``op.last_screenshot`` 直接注入归档真帧(不经截图链路);
     - 三类 round_by_* 均为**包装真实方法**(识别照跑,只加记录);
+    - controller.click 同样包装记录 ``(pos, pc_alt)``(锁光标恢复态加固后,
+      大厅/兜底分支直点 controller,须在此验证 pc_alt 语义);
     - 模拟宇宙状态 / 列车补给 / 对话守卫恒无(与本测试无关,防噪音);
     - CW 对局中画面判定默认恒 None;``in_match_screen_name`` 非 None 时改为
       恒返回该屏名(真帧 + 判定桩:对局画面匹配层已由 cw 侧测试单独锁定,
@@ -434,6 +446,7 @@ def _run_real_frame_check_screen(
     finds: list[tuple[str, str]] = []
     find_clicks: list[tuple[str, str]] = []
     bare_clicks: list[tuple[str, str]] = []
+    controller_clicks: list[tuple[Point | None, bool]] = []
 
     real_find = BackToNormalWorldPlus.round_by_find_area
     real_find_click = BackToNormalWorldPlus.round_by_find_and_click_area
@@ -492,12 +505,22 @@ def _run_real_frame_check_screen(
     op.last_screenshot = img  # 真帧注入:check_screen 每轮读它做识别
     monkeypatch.setattr(op, 'screenshot', lambda: img)
 
+    real_ctrl_click = op.ctx.controller.click
+
+    def _spy_ctrl_click(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
+        r = real_ctrl_click(pos, press_time=press_time, pc_alt=pc_alt,
+                            gamepad_key=gamepad_key)
+        controller_clicks.append((pos, bool(pc_alt)))
+        return r
+
+    monkeypatch.setattr(op.ctx.controller, 'click', _spy_ctrl_click, raising=False)
+
     enter_running_state(test_context)
     try:
         result = op.check_screen()
     finally:
         reset_running_state(test_context, op)
-    return result, finds, find_clicks, bare_clicks
+    return result, finds, find_clicks, bare_clicks, controller_clicks
 
 
 class TestCwLobbyResidualBranch:
@@ -525,23 +548,31 @@ class TestCwLobbyResidualBranch:
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """run49 残留态真帧:命中大厅分支,find+click「按钮-关闭」,round_retry。"""
-        result, finds, find_clicks, bare_clicks = _run_real_frame_check_screen(
-            test_context, monkeypatch, self.SCREEN, self.STATE,
+        """run49 残留态真帧:命中大厅分支,直点「按钮-关闭」area 中心(pc_alt=True)。"""
+        result, finds, find_clicks, bare_clicks, ctrl_clicks = (
+            _run_real_frame_check_screen(
+                test_context, monkeypatch, self.SCREEN, self.STATE,
+            )
         )
 
         # 分支路由:round_retry 等下一轮逐帧重识别露世界(非 success / 兜底)
         assert not result.is_success, f'残留态应 round_retry,status={result.status}'
         assert result.status == self.SCREEN
         # 识别事实(真 OCR):创业指南 id_mark 锚命中(分支入口判据)。
-        # 「按钮-关闭」是 template area,本分支仅经 round_by_find_and_click_area
-        # 消费(记入 find_clicks,不入 finds)——命中与否由下方点击断言锁死。
         assert (self.SCREEN, '标识-创业指南') in finds, f'识别命中:{finds}'
-        # 动作:只 find+click 关闭 area;不点开始钮、不落兜底裸点击
-        assert find_clicks == [(self.SCREEN, '按钮-关闭')], (
-            f'关闭点击漂移:{find_clicks}'
-        )
+        # 动作(锁光标恢复态加固锁,2026-09-02 事故根修):命中后直点
+        # 「按钮-关闭」area 中心,且必须带 pc_alt=True(锁光标下不带 Alt 的
+        # 点击全部落空);不再走 find_and_click,也不落兜底。
+        close_area = test_context.screen_loader.get_area(self.SCREEN, '按钮-关闭')
+        assert close_area is not None, '货币战争-大厅/按钮-关闭 area 未建档'
+        assert find_clicks == [], f'大厅分支不应再走 find_and_click:{find_clicks}'
         assert bare_clicks == [], f'不应有兜底/翻页类裸点击:{bare_clicks}'
+        # Point 无 __eq__,按坐标比较
+        assert len(ctrl_clicks) == 1, f'关闭点击应恰一次:{ctrl_clicks}'
+        pos, alt = ctrl_clicks[0]
+        assert (int(pos.x), int(pos.y)) == (int(close_area.center.x), int(close_area.center.y)) and alt, (
+            f'关闭点击应为 area 中心 + pc_alt=True:{ctrl_clicks}'
+        )
 
 
 class TestBattleFailScreenBranch:
@@ -567,7 +598,7 @@ class TestBattleFailScreenBranch:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """战败屏真帧:命中战败分支,find+click「点击空白区域继续」,round_retry。"""
-        result, finds, find_clicks, bare_clicks = _run_real_frame_check_screen(
+        result, finds, find_clicks, bare_clicks, _ctrl = _run_real_frame_check_screen(
             test_context, monkeypatch, self.SCREEN, self.STATE,
         )
 
@@ -604,7 +635,7 @@ class TestSimUniExitConfirmBranch:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """面板真帧:命中暂离,find+click「菜单-暂离」,round_retry。"""
-        result, finds, find_clicks, bare_clicks = _run_real_frame_check_screen(
+        result, finds, find_clicks, bare_clicks, _ctrl = _run_real_frame_check_screen(
             test_context, monkeypatch, self.SCREEN, self.STATE,
         )
 
@@ -785,7 +816,8 @@ class TestNpcDialogGuard:
         误判为未知对话选项 → 点空白推进 → retry 永动 → 一条龙重启再陷。
         修复=check_screen 补大厅分支(id_mark 命中 → 点右上角 X,round_retry 有界)。
         """
-        counters: dict[str, int] = {'fallback_click': 0, 'x_click': 0}
+        counters: dict[str, int] = {'fallback_click': 0}
+        ctrl_clicks: list[tuple[Point | None, bool]] = []
 
         def _fake_find_area(self, screen, screen_name, area_name, *args, **kwargs):
             if screen_name == '货币战争-大厅' and area_name == '标识-创业指南':
@@ -796,19 +828,17 @@ class TestNpcDialogGuard:
             counters['fallback_click'] += 1
             return self.round_success(status=area_name)
 
-        # 大厅关闭按钮的 area 点击(实机验证过的「按钮-关闭」,点 X 回大世界);
+        # 大厅关闭按钮的直点(锁光标恢复态加固后走 controller.click + pc_alt);
         # 其余 find_and_click 一律未命中(逐光捡金/战斗退出等分支不得误吸)。
-        area_clicks: list[tuple[str, str]] = []
-
-        def _fake_find_and_click(self, screen, screen_name, area_name, *args, **kwargs):
-            if screen_name == '货币战争-大厅' and area_name == '按钮-关闭':
-                area_clicks.append((screen_name, area_name))
-                return self.round_success(status=f'{screen_name}-{area_name}')
-            return self.round_wait(status=f'未找到 {area_name}')
+        def _record_click(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
+            ctrl_clicks.append((pos, bool(pc_alt)))
+            return True
 
         monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
         monkeypatch.setattr(
-            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_and_click
+            BackToNormalWorldPlus, 'round_by_find_and_click_area',
+            lambda self, screen, s_name, a_name, *a, **kw: self.round_wait(
+                status=f'未找到 {a_name}'),
         )
         monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
         monkeypatch.setattr(
@@ -830,6 +860,7 @@ class TestNpcDialogGuard:
 
         op = _WatchedBackToNormal(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(op.ctx.controller, 'click', _record_click, raising=False)
         sleeps = _patch_round_sleep(monkeypatch)
 
         enter_running_state(test_context)
@@ -838,18 +869,27 @@ class TestNpcDialogGuard:
         finally:
             reset_running_state(test_context, op)
 
-        # 分支每轮走「按钮-关闭」area 点击(实机验证的退出手势,点 X 回大世界),
-        # round_retry 有界:耗尽 20 次 retry 后 FAIL,而非守卫时代的 retry 永动。
+        # 分支每轮直点大厅「按钮-关闭」area 中心(实机验证的退出手势,点 X 回
+        # 大世界),round_retry 有界:耗尽 20 次 retry 后 FAIL,而非守卫时代的
+        # retry 永动。
         assert not result.success, f'画面不变时应有界 FAIL,status={result.status}'
         rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
         assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
         assert len(sleeps) >= rounds, f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
-        # 每轮点的都是大厅「按钮-关闭」area(而非守卫的空白推进位/兜底的右上角返回 area)
-        assert len(area_clicks) == rounds and counters['fallback_click'] == 0, (
-            f'area 点击数({len(area_clicks)})应==轮次,兜底({counters["fallback_click"]})应为 0'
+        # 每轮直点的都是大厅「按钮-关闭」area 中心且带 pc_alt=True(锁光标恢复态
+        # 加固锁,2026-09-02 事故根修);兜底右上角返回 area 不得被触达。
+        close_area = test_context.screen_loader.get_area('货币战争-大厅', '按钮-关闭')
+        assert close_area is not None, '货币战争-大厅/按钮-关闭 area 未建档'
+        assert len(ctrl_clicks) == rounds and counters['fallback_click'] == 0, (
+            f'关闭直点数({len(ctrl_clicks)})应==轮次,兜底({counters["fallback_click"]})应为 0'
         )
-        assert all(sn == '货币战争-大厅' and an == '按钮-关闭' for sn, an in area_clicks), (
-            f'点击 area 漂移:{area_clicks[:3]}'
+        assert all(
+            pos is not None
+            and (int(pos.x), int(pos.y)) == (int(close_area.center.x), int(close_area.center.y))
+            and alt
+            for pos, alt in ctrl_clicks
+        ), (
+            f'关闭点击应全为 area 中心 + pc_alt=True:{ctrl_clicks[:3]}'
         )
 
 
@@ -976,7 +1016,7 @@ class TestCwInMatchDelegationBranch:
         fake.executed = 0
         fake.fail_after = 99  # 单轮测试,恒成功
 
-        result, finds, find_clicks, bare_clicks = _run_real_frame_check_screen(
+        result, finds, find_clicks, bare_clicks, _ctrl = _run_real_frame_check_screen(
             test_context, monkeypatch, '货币战争-备战', 'prep_1-6_all_positions',
             in_match_screen_name='货币战争-备战',
             exit_match_cls=fake,
