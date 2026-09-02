@@ -55,11 +55,10 @@ def test_probe_node_type_after_shop_closed() -> None:
 import inspect as _r336_batch4_locks_inspect
 
 
-def test_shop_collapse_single_poll_fn() -> None:
-    """r335→r347(旧路径删除)→ DD-011(操作完成自等动画,2026-09-02):
-    shop buy 内 gate 全退役(收起两处自等动画 1.0s;开商店判稳轮询「备战阶段」
-    文本 1s 间隔 4 轮,与 EnsureShop 开向同款)——测量驱动稳定门不得回流,
-    画面状态判定在外层建档识别。_legacy_poll 轮询亦不得回流。"""
+def test_shop_open_collapse_wait_dd011() -> None:
+    """r335→r347(旧路径删除)→ DD-011 amended(2026-09-02,用户口述定值):
+    shop 开店/收起均为固定时长自等(各 1.0s,用户口述)+ 点击生效验证;
+    测量驱动稳定门与旧轮询不得回流,画面状态判定在外层建档识别层。"""
     from sr_od.application.currency_war.operations.prep import shop
     src = _r336_batch4_locks_inspect.getsource(shop.BuyShopCards.buy)
     assert 'def _legacy_poll' not in src, \
@@ -67,9 +66,9 @@ def test_shop_collapse_single_poll_fn() -> None:
     assert 'wait_stable_frame' not in src, \
         'buy 内 gate 已按 DD-011 全退役,不得回流'
     assert 'SHOP_CLOSE_ANIM_S' in src, \
-        '收起动画时长必须由 op 显式声明并等待(DD-011)'
-    assert 'SHOP_OPEN_POLL_ROUNDS' in src, \
-        '开店判稳轮询必须在场(「备战阶段」文本判稳,DD-011)'
+        '收起动画时长必须由 op 显式声明并等待(DD-011 固定时长自等)'
+    assert 'SHOP_OPEN_ANIM_S' in src, \
+        '开店动画时长必须由 op 显式声明并等待(DD-011 固定时长自等,用户口述 1.0s)'
 
 
 def test_star_evidence_queue_pattern() -> None:
