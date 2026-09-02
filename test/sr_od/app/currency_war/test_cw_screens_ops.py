@@ -260,7 +260,7 @@ from pathlib import Path as _plaza_posts_Path
 
 import pytest as _plaza_posts_pytest
 
-from sr_od.application.currency_war.data.cw_plaza_comps import  PLAZA_CARRY_CLUSTERS, PLAZA_GLOBAL, cluster_by_carry, default_star_goal, early_transition_pool
+from sr_od.application.currency_war.data.cw_plaza_comps import  PLAZA_CARRY_CLUSTERS, PLAZA_GLOBAL, cluster_by_carry, early_transition_pool
 from sr_od.application.currency_war.data.cw_plaza_posts import  PLAZA_POSTS, PlazaPost, post_by_id
 from sr_od.application.currency_war.telemetry.cw_win_features import  features_from_deployed
 from sr_od.application.currency_war.telemetry.cw_win_model import  PLAZA_BASE_WEIGHT, ShadowKilledModel, plaza_post_features, plaza_prior_weights, plaza_sample_weight
@@ -372,7 +372,7 @@ def test_shadow_features_column_set_unchanged() -> None:
 
 def test_plaza_comps_aggregate_schema_backward_compat() -> None:
     """聚合表向后兼容锁(既有消费者 cluster_by_carry /
-    early_transition_pool / default_star_goal 不因三产物化而破;
+    early_transition_pool 不因三产物化而破;
     n>=5 = 生成器 MIN_CLUSTER_N 不变式,非数值锁)。"""
     assert PLAZA_CARRY_CLUSTERS
     assert all(c.n_posts >= 5 for c in PLAZA_CARRY_CLUSTERS)
@@ -383,8 +383,6 @@ def test_plaza_comps_aggregate_schema_backward_compat() -> None:
     assert set(by_carry) == {c.carry for c in PLAZA_CARRY_CLUSTERS}
     assert early_transition_pool()
     assert PLAZA_GLOBAL['n_posts'] == len(PLAZA_POSTS)  # 聚合/逐篇同源对账
-    assert default_star_goal(3) == 3
-    assert default_star_goal(4) == 2
 
 
 # --- 生成器渲染 schema 锁(render_posts 产物可执行且结构正确) ----------------

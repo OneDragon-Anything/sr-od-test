@@ -824,11 +824,9 @@ def test_c3_thickness_boundary_around_a_min() -> None:
 
 
 def test_c4_default_registry_off_arm_structural_anchor() -> None:
-    """零漂移锚的结构前提:缺省 registry 的 C4 门默认关(W379 off 臂)
-    且新常量只收紧出口①(触发集 ⊆ 旧触发集,出口①在 sim 结构性零触发
-    → off 臂全分布与 W379 off 臂逐位相等;测量脚本 zero_drift_baseline
-    逐位比对为批级证据,此处锁常量前提)。"""
-    assert DEFAULT_REGISTRY.line_switch_survival_gate_enabled is False
+    """零漂移锚的结构前提:撤 C4 门后 revoke 常量链不动(W379 off 臂
+    语义不变;C4 开关族已随旧方案清退批删除,清查报告 OLD_MIX_AUDIT
+    §1.3,常量断言保留)。"""
     assert DEFAULT_REGISTRY.revoke_miss_tolerance_eps == 0.05
     assert dataclasses.replace(
         DEFAULT_REGISTRY, revoke_miss_tolerance_eps=0.01

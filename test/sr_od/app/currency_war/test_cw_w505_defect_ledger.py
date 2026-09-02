@@ -228,15 +228,18 @@ def test_gold_close_read_failure_recorded_not_silent(tmp_path: Path, monkeypatch
 
 def test_query_prefers_ledger_gold_close_over_conflict(tmp_path: Path):
     """读端:行内 gold_close 优先(无冲突行也判 effective——unknown 面消除);
-    旧行(None)回退冲突行;两者皆缺 → unknown 不猜。"""
+    旧行(无该字段,gold_close 槽挂上前的历史局)回退冲突行;两者皆缺 →
+    unknown 不猜。带字段读失败行(None+trusted=False)**不回退**——回退
+    = 把陈旧冲突行 join 面(同轮上一单元误吃,ADR-0514)挪进读失败路径,
+    该语义锁在 test_cw_economy resolve_gold_close 新锁。"""
     schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
         'ts': '2026-08-28T12:00:00', 'run_id': 't', 'plane': 1, 'round_num': 1,
         'unit_seq': 1, 'boundary': 'closed', 'gold_close': 45,
         'gold_close_trusted': True})
+    # r2 = legacy 行(无 gold_close 字段)——冲突行回退的唯一合法形态
     schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
         'ts': '2026-08-28T12:05:00', 'run_id': 't', 'plane': 1, 'round_num': 2,
-        'unit_seq': 2, 'boundary': 'closed', 'gold_close': None,
-        'gold_close_trusted': False})
+        'unit_seq': 2, 'boundary': 'closed'})
     schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
         'ts': '2026-08-28T12:10:00', 'run_id': 't', 'plane': 1, 'round_num': 3,
         'unit_seq': 3, 'boundary': 'closed', 'gold_close': None,

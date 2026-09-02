@@ -32,3 +32,28 @@ def test_encounter_bail_and_handler_wired() -> None:
     # bail 扫描单一源已收拢至 registry(B 面切换):成员判定改为派生集三元组
     assert ('货币战争-遭遇节点', '标识-遭遇节点', 'encounter') in {
         (s.screen_name, s.anchor_area, s.bail_tag) for s in derive_decision()}
+
+
+def test_encounter_refresh_execution_wired() -> None:
+    """分支刷新执行链接线(dd-004):decide_encounter 的 refresh 建议必须有消费端。
+
+    断链史:决策侧 refresh 字段 + 全克换批分支 + 纯逻辑测试锁(P1 起就在),
+    handler 从未消费 → 「刷新换批」策略意图被静默丢弃。四件须同时在:
+    ① handler 消费 pick.refresh;② session 单次标志(优势布局每局 1 次,跨实例);
+    ③ 刷新后 refresh_used=True 重读重决策(防建议→执行死循环);
+    ④ reader 读「剩余次数:N」(无次数不刷)。
+    """
+    import dataclasses
+    import inspect
+
+    from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
+    from sr_od.application.currency_war.obs import cw_node_obs
+    from sr_od.application.currency_war.operations.handlers import handle_encounter
+    src = inspect.getsource(handle_encounter)
+    assert 'pick.refresh' in src, 'handler 未消费 refresh 建议(断链回退)'
+    assert '_encounter_refresh_used' in src, 'session 单次标志缺失(重入反复尝试风险)'
+    assert 'refresh_used=True' in src, '刷新后未带 refresh_used 重决策(建议→执行死循环风险)'
+    assert 'read_encounter_refresh_count' in src, '剩余次数 reader 未接(无次数盲刷风险)'
+    assert '剩余次数' in inspect.getsource(cw_node_obs), 'reader 正则单一源缺失'
+    names = {f.name for f in dataclasses.fields(StrategySession)}
+    assert '_encounter_refresh_used' in names, 'session 字段未升正式(动态 setattr 面消失)'

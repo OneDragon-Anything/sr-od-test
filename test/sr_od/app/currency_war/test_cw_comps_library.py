@@ -239,19 +239,18 @@ def test_plugin_library_counts_and_schema() -> None:
 
 
 def test_plugin_disable_matrix_symmetry_shield_vs_wandi() -> None:
-    """禁用矩阵对称性:盾系插件(护盾2/砂金/腾荒/杰帕德/**三月七**)对万敌燃血**全禁**;
-    杰帕德对两个吸仇恨流(姬子列车/白厄反甲)全禁。
+    """禁用矩阵对称性:盾系插件(护盾2/砂金/腾荒/杰帕德/**三月七**)对万敌燃血**全禁**。
 
     W55(R2 §2 断言扩面):三月七入盾系断言集——注册表 flows=("护盾",) 且效果含「行动护盾」,
     按判定法她是盾系单卡,旧矩阵漏行(三B 原文「砂金/腾荒/杰帕德**等**」的「等」即留此口)。
+    行准入口径:官方机制事实留,单帖攻略行删(heuristic_ab B3)——旧断言中的
+    杰帕德×吸仇恨互斥行(攻略 #48 单帖)已删,不再锁。
     """
     shield_plugins = {"护盾2", "砂金", "丹恒·腾荒", "杰帕德", "三月七"}
     for pid in shield_plugins:
         assert plugin_disabled(pid, "万敌燃血"), f"盾系 '{pid}' 未对万敌燃血禁用(矩阵漏行)"
         assert ("护盾" in PLUGIN_DISABLE_MATRIX[(pid, "万敌燃血")]
                 or "盾" in PLUGIN_DISABLE_MATRIX[(pid, "万敌燃血")]), f"{pid} 禁用原因非盾系机制"
-    assert plugin_disabled("杰帕德", "姬子列车") is not None
-    assert plugin_disabled("杰帕德", "白厄反甲") is not None
     # 非盾件不禁用(负例)
     assert plugin_disabled("知更鸟", "万敌燃血") is None
     assert plugin_disabled("治疗2", "万敌燃血") is None   # 弱不适配不进硬矩阵

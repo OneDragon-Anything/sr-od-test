@@ -655,15 +655,6 @@ def test_pivot_overlap_semantics() -> None:
     assert hi_overlap > lo_overlap, "共享多 > 共享少(转型成本单调)"
 
 
-def test_default_star_goal_by_cost() -> None:
-    """M6 星级费用档:≤3费 → 3星;≥4费 → 2星(plaza 3星率 0.87/0.58/0.37 校准)。"""
-    from sr_od.application.currency_war.data.cw_plaza_comps import default_star_goal
-    assert default_star_goal(1) == 3
-    assert default_star_goal(3) == 3
-    assert default_star_goal(4) == 2
-    assert default_star_goal(5) == 2
-
-
 def test_transition_pool_two_tiers() -> None:
     """M3 过渡池两级:EARLY_CORE_POOL(存活≥0.8)与 TEMPO_POOL(纯打工)拆分且不重叠。"""
     from sr_od.application.currency_war.kernel.cw_comps import EARLY_CORE_POOL, TEMPO_POOL, TRANSITION_POOL

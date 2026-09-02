@@ -131,6 +131,8 @@ def test_param_set_recheck_registered() -> None:
     assert ALLOC_PARAM_SET.ev_band == (-97.0, 19.0)
     assert '0.35' in ALLOC_PARAM_SET.recheck
     assert 'Δp' in ALLOC_PARAM_SET.recheck
+    # W956 治本变更登记(估计器保底 + w-only 拒供退役随 P23.5R)
+    assert 'W956' in ALLOC_PARAM_SET.recheck
     # 开关缺省形态(策略开关生命周期第 3 态=开臂,报告附验证记录)
     assert ALLOCATOR_ENABLED is True
 

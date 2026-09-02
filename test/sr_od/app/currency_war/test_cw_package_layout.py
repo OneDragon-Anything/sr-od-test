@@ -33,6 +33,7 @@ BUCKET_DIRS: dict[str, str] = {
     'operations': 'app',
     'strategies': 'app',
     'tools': 'tools',
+    'knowledge': 'knowledge',   # 处死计划批 0 知识层符号包(redesign/03 批 0)
 }
 
 # 包根散置文件 → 桶(app/tools 壳;新增须入册)
@@ -46,18 +47,25 @@ ROOT_FILES: dict[str, str] = {
     'prep_actions': 'app',
     'prep_director': 'app',
     'run_state': 'app',
+    # 轻量画面状态判定(模块 docstring:仿 sim_uni_screen_state;只依赖
+    # one_dragon 框架原语,供上层兜底 op 复用对局中判定单一源)——归属 app 桶
+    # (与 run_state 同类:运行态/判定辅助,非 data/kernel 纯层)。
+    'cw_screen_state': 'app',
 }
 
 # DESIGN §3.2 目标依赖矩阵(期6 §4.4 ledger_hooks 归属)
 LEGAL_EDGES: dict[str, set[str]] = {
     'data': set(),
-    'kernel': {'data'},
+    'kernel': {'data', 'knowledge'},   # knowledge = 批 0 迁出符号的权威副本(数据半部)
     'decision': {'data', 'kernel'},
     'obs': {'data', 'kernel'},
     'sim': {'data', 'kernel', 'decision', 'telemetry'},   # telemetry = 期6 ledger_hooks 归属豁免
-    'telemetry': {'data', 'kernel', 'decision', 'obs', 'sim'},
+    'telemetry': {'data', 'kernel', 'decision', 'obs', 'sim', 'knowledge'},
     'app': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry', 'tools'},
     'tools': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry', 'app'},
+    # knowledge(批 0 符号包)= 数据/纯函数叶子包:自身只读 data/kernel 注册表;
+    # kernel/telemetry 保留层消费其迁出符号(消费边按批 0 实际接线登记)。
+    'knowledge': {'data', 'kernel'},
 }
 
 

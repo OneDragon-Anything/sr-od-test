@@ -266,7 +266,8 @@ def test_cwstrategy_is_abstract() -> None:
         CwStrategy()  # type: ignore[abstract]
 
 
-# —— 巨星强化角色维度(registry.megastar_enhance_enabled,默认关;W889 批)——
+# —— 巨星强化角色维度已随 megastar_enhance_enabled 开关族删除——旧方案
+# —— 清退批,清查报告 OLD_MIX_AUDIT §1.3;保留一条恒 None 行为锁 ——
 
 
 def _comp_by_name(name: str):
@@ -275,7 +276,7 @@ def _comp_by_name(name: str):
 
 
 def _state_with_units() -> GameState:
-    """前排 carry=白厄 + 后台 core=知更鸟(强化角色绑定序的判定素材)。"""
+    """前排 carry=白厄 + 后台 core=知更鸟。"""
     from sr_od.application.currency_war.kernel.cw_state import BenchChar
     s = GameState()
     s.deployed = [BenchChar(slot=1, char_id='白厄')]
@@ -283,10 +284,9 @@ def _state_with_units() -> GameState:
     return s
 
 
-def test_decide_megastar_enhance_disabled_zero_drift() -> None:
-    """行为锁(零漂移):开关默认关 → decide_megastar 输出与旧版逐位一致
-    (enhance_char_id=None、reason 无后缀)。出处=W889 批设计
-    (megastar_enhance_enabled 开关注释:决策意向维度,默认关)。"""
+def test_decide_megastar_enhance_intent_deleted() -> None:
+    """行为锁:强化角色意向维度删除后 decide_megastar 输出恒无强化意向
+    (enhance_char_id=None、reason 无后缀;候选 idx 选择不受影响)。"""
     strat = DecisionV2Strategy()
     cfg = _cfg()
     session = strat.create_session(cfg)
@@ -296,42 +296,6 @@ def test_decide_megastar_enhance_disabled_zero_drift() -> None:
     assert pick.idx == 0
     assert pick.reason == 'select_megastar 命中 星期日'
     assert pick.enhance_char_id is None
-
-
-def test_decide_megastar_enhance_enabled_appends_intent() -> None:
-    """行为锁(新维度启用):开关开 → idx 选择不变(buff 契合路径零漂移),
-    enhance_char_id 绑定前排 core、reason 带后缀。绑定序出处 =
-    cw_comps.select_megastar_enhance docstring(comp 引擎载体优先;机制语义
-    待证假设,执行面未接)。"""
-    from dataclasses import replace
-    from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
-    strat = DecisionV2Strategy(
-        registry=replace(DEFAULT_REGISTRY, megastar_enhance_enabled=True))
-    cfg = _cfg()
-    session = strat.create_session(cfg)
-    session.target_comp = _comp_by_name('反甲白厄')   # core=白厄(前排)
-    options = [MegastarOption(idx=0, char_id='星期日'), MegastarOption(idx=1, char_id='花火')]
-    pick = strat.decide_megastar(options, _state_with_units(), session, cfg)
-    assert pick.idx == 0                              # 候选选择不受强化维度影响
-    assert pick.enhance_char_id == '白厄'
-    assert pick.reason == 'select_megastar 命中 星期日; enhance=白厄'
-
-
-def test_decide_megastar_enhance_core_on_bench() -> None:
-    """core 只在后台 → 绑定后台 core(绑定序第 2 级)。"""
-    from dataclasses import replace
-    from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
-    strat = DecisionV2Strategy(
-        registry=replace(DEFAULT_REGISTRY, megastar_enhance_enabled=True))
-    cfg = _cfg()
-    session = strat.create_session(cfg)
-    session.target_comp = _comp_by_name('追击飞霄')   # core=飞霄/知更鸟;知更鸟在后台
-    state = _state_with_units()
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar
-    state.deployed = [BenchChar(slot=1, char_id='素裳')]
-    pick = strat.decide_megastar(
-        [MegastarOption(idx=0, char_id='知更鸟')], state, session, cfg)
-    assert pick.enhance_char_id == '知更鸟'
 
 
 # ==================== test_planner_strategy ====================

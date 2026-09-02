@@ -1350,3 +1350,40 @@ def test_shop_fixture_end_to_end(test_context) -> None:
     assert len(cards) == 5, f'应读满 5 张牌,实际 {len(cards)}'
     card_tuples = [(c.name, card_cost(c)) for c in cards]
     assert check_shop_pool(card_tuples, level=10) == []
+
+
+# ===== level_readable 保真位(M2 obs 根因修复:兜底帧与真读帧遥测可分) =====
+
+class _BareCtx:
+    """最小 ctx 桩:reader 全被桩,仅承载 getattr 链(无 cw_match)。"""
+
+
+def test_read_game_state_writes_level_readable(monkeypatch) -> None:
+    """read_game_state 写入 level_readable:真读(OCR 或 XP 可读)=True;
+    双失读(纯 _expected_level 兜底)=False。开店期 spec 最小读取面。"""
+    from sr_od.application.currency_war.obs import cw_observation as obs
+    from sr_od.application.currency_war.obs.cw_observation_gate import PHASE_PREP_SHOP_OPEN
+    _stubs = {
+        'read_gold_settled': 55, 'read_phase_round': (2, 3), 'read_node_type': None,
+        'read_xp_progress': (0, 6), 'read_level_raw_opt': 5, 'read_level_up_cost': 4,
+        '_board_pairs': ({}, False), 'read_shop_cards': [], 'read_refresh_probs': None,
+        'read_bench_full': None,
+    }
+    for _n, _v in _stubs.items():
+        monkeypatch.setattr(obs, _n, (lambda _v: lambda *a, **kw: _v)(_v))
+    st = obs.read_game_state(_BareCtx(), None, phase=PHASE_PREP_SHOP_OPEN)
+    # XP 分母 (0,6)→lv4 覆盖 OCR 5(ADR-0129 主权),但两源皆可读 → 保真位 True
+    assert st.level_readable is True and st.level == 4
+    # 双失读:OCR 与 XP 皆 None → 纯启发式兜底帧,保真位 False
+    monkeypatch.setattr(obs, 'read_level_raw_opt', lambda *a, **kw: None)
+    monkeypatch.setattr(obs, 'read_xp_progress', lambda *a, **kw: None)
+    st2 = obs.read_game_state(_BareCtx(), None, phase=PHASE_PREP_SHOP_OPEN)
+    assert st2.level_readable is False
+
+
+def test_decision_trace_level_readable_field() -> None:
+    """DecisionTrace 新增 level_readable 缺省 True(旧档案缺省=按现有判读处理)。"""
+    from dataclasses import asdict, fields
+    from sr_od.application.currency_war.telemetry.schema import DecisionTrace
+    assert 'level_readable' in {f.name for f in fields(DecisionTrace)}
+    assert asdict(DecisionTrace())['level_readable'] is True

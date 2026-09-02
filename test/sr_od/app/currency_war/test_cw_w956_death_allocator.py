@@ -18,7 +18,6 @@ P23.4(i) 极限形式推论 E1 + A′ 编排者指令;方案 B 归属 = 转型�
 """
 from __future__ import annotations
 
-import dataclasses
 
 import pytest
 
@@ -30,9 +29,6 @@ from sr_od.application.currency_war.decision.decision_v2.allocator import (
     _refresh_dpeff_estimate,
     must_die_band,
 )
-from sr_od.application.currency_war.decision.decision_v2.candidates import (
-    generate_candidates,
-)
 from sr_od.application.currency_war.decision.decision_v2.filters import (
     _deploy_free,
 )
@@ -41,7 +37,6 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
-    ShopCard,
 )
 
 
@@ -191,83 +186,8 @@ def test_refresh_estimator_death_floor() -> None:
                                    AllocDomain.DEATH) == pytest.approx(w)
 
 
-# ---------- 危机帧购买兜底集锁(W956 方案 B;PREREG 判据辖 A/B) ----------
-
-def _fallback_registry(enabled: bool):
-    return dataclasses.replace(DEFAULT_REGISTRY,
-                               crisis_fallback_enabled=enabled)
-
-
-def _crisis_frame(shop_cards: list[tuple[str, int]]) -> tuple[GameState,
-                                                              StrategySession]:
-    """应急带 + release 活跃帧:hp=1(应急带内,must_die 域),挂 crisis
-    指令(spend_gate_active 判据单一源 = session.v3_release 非空)。
-    店卡名单取「非已持阵营 ∧ 非引擎/目标/插件/凑档可命中的纯散件」,
-    保证常规购买集为空(互斥谓词的启用前提)。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.decision.decision_v2.discipline import (
-        engine_char_names,
-    )
-    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
-        ReleaseDirective,
-    )
-    st = _death_state(hp=1, gold=100)
-    owned = {f for f, c in (st.board or {}).items() if c > 0}
-    owned |= {b.faction for b in (st.bench or [])
-              if b is not None and b.faction and b.faction != '?'}
-    engine = engine_char_names()
-    def _outsider(cost: int) -> str:
-        for n, ch in CHARACTERS.items():
-            facs = set(ch.factions or ())
-            if (n not in engine and facs and not (facs & owned)
-                    and int(ch.cost or 3) == cost):
-                return n
-        return ''
-    pairs = [(name, c) for (n, c) in shop_cards
-             if (name := n or _outsider(c))]
-    st = _death_state(hp=1, gold=100)
-    st.shop = [ShopCard(x=i, name=n, cost=c)
-               for i, (n, c) in enumerate(pairs)]
-    ss = _sess()
-    ss.v3_release = ReleaseDirective(budget_gold=50, rolls=10,
-                                     reason='crisis')
-    return st, ss
-
-
-def test_crisis_fallback_generation() -> None:
-    """兜底集四门:①开关缺省关(策略开关生命周期第 1 态,A/B 注入辖);
-    ②应急带 + release 活跃才开火;③互斥谓词——常规购买集非空不启用;
-    ④成本上限与 merge 优先→费用升序排序。"""
-    from sr_od.application.currency_war.kernel.cw_state import BuyCard
-    st, ss = _crisis_frame([('', 1), ('', 2)])   # 纯散件(异阵营,常规集空)
-    # ① 缺省关
-    assert generate_candidates(st, ss, DEFAULT_REGISTRY) is not None
-    off_tags = [c.tag for c in generate_candidates(st, ss, DEFAULT_REGISTRY)]
-    assert 'crisis_fallback' not in off_tags, '缺省关=零漂移(A/B 注入态)'
-    # ② on:兜底生成,排序 merge 优先→费用升序
-    cands = [c for c in generate_candidates(st, ss, _fallback_registry(True))
-             if c.tag == 'crisis_fallback']
-    assert cands, '应急带 + release 活跃帧兜底集必须生成(W956 方案 B)'
-    costs = [c.action.card.cost for c in cands]
-    assert all(cost <= 2 for cost in costs), '兜底集受 crisis_fallback_max_cost 辖'
-    merges = [c.merge for c in cands]
-    assert merges == sorted(merges, reverse=True), 'merge 优先排序'
-    assert all(isinstance(c.action, BuyCard) for c in cands)
-    # ③ 互斥谓词:常规购买集非空(目标件在店)⇒ 兜底不启用
-    target = _faction_names('仙舟', 6)[5]   # 引擎/目标名集成员
-    st_t, ss_t = _crisis_frame([(target, 3)])
-    tags_t = [c.tag for c in generate_candidates(st_t, ss_t,
-                                                 _fallback_registry(True))]
-    assert 'crisis_fallback' not in tags_t, \
-        '常规合法购买集非空 ⇒ 兜底不启用(W956 §4 互斥谓词)'
-    # ② 补:非应急帧不开火(同 on 注册表)
-    st_ne = _death_state(hp=80)
-    st_ne.shop = [ShopCard(x=0, name=_faction_names('仙舟', 1)[0], cost=1)]
-    ss_ne = _sess()
-    ss_ne.v3_release = ss.v3_release
-    tags_ne = [c.tag for c in generate_candidates(st_ne, ss_ne,
-                                                  _fallback_registry(True))]
-    assert 'crisis_fallback' not in tags_ne, '非应急带不启用兜底集'
+# ---------- (危机帧购买兜底集锁已随 crisis_fallback 开关族删除——旧方案
+# ---------- 清退批,清查报告 OLD_MIX_AUDIT §1.3;生成器同批删) ----------
 
 
 # ---------- alloc 一致性断言锁(W956 P0①;W954 契约断言面) ----------

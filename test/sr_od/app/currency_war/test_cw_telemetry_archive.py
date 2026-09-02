@@ -421,7 +421,7 @@ def test_rounds_terminal_vs_decision_frame_divergence(replay: _match_archive_Pat
                            'equips': ['折叠小刀']}})
     _write_jsonl(replay, 'decisions.jsonl', rows)
     a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    assert a['schema_version'] == arch.SCHEMA_VERSION == 4
+    assert a['schema_version'] == arch.SCHEMA_VERSION == 5
     r9 = next(r for r in a['rounds']
               if (r['plane'], r['round']) == (1, 9))
     # 决策帧列 = ①(actions 最多、ts 并列取晚)= 执行前板面
@@ -506,6 +506,38 @@ def test_supply_round_has_decision_frame(replay: _match_archive_Path):
     r2 = next(r for r in a['rounds'] if (r['plane'], r['round']) == (1, 2))
     assert r2['n_decision_frames'] == 1   # 补给轮 n>=1(写入端补帧后)
     assert r2['terminal_source'] == 'last_decision_frame'
+
+
+# ===== v5(M2 遥测增强批 ③:endgame.final_snapshot 局级终局快照列)=====
+
+def test_endgame_final_snapshot(replay: _match_archive_Path):
+    """终局快照列 = 全局最晚决策迹帧的阵容/金/等级(装配端派生,纯读)。
+
+    g_A 跨两段,全局最晚帧 = run_B p2r1(10:25:00);fixture 默认
+    state 为 level=3/deployed=[]/gold=10(取自 _dec)。
+    """
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    fs = a['endgame']['final_snapshot']
+    assert fs is not None
+    assert fs['ts'] == '2026-08-30T10:25:00'   # 全局最晚(晚于段 A 各帧)
+    assert fs['source'] == 'last_decision_frame'
+    assert fs['level'] == 3 and fs['gold'] == 10
+    assert fs['gold_readable'] is True
+    assert fs['deployed'] == [] and fs['bench'] is None
+    assert fs['terminal'] == {'deployed_count': 0, 'bench_count': 0,
+                              'equips_worn': 0, 'equips_owned': 0}
+    # 单段独立局同样有终局快照
+    a2 = arch.build_archive(replay, arch.assign_games(replay)[1])
+    fs2 = a2['endgame']['final_snapshot']
+    assert fs2 is not None and fs2['ts'] == '2026-08-30T11:00:00'
+
+
+def test_endgame_final_snapshot_none_for_frameless_game(replay: _match_archive_Path):
+    """零决策迹局(仅结算行):final_snapshot=None(旧数据容忍,不炸不猜)。"""
+    # 清空 decisions 后 run_C 无任何帧 → 终局快照 None
+    _write_jsonl(replay, 'decisions.jsonl', [])
+    a = arch.build_archive(replay, arch.assign_games(replay)[1])
+    assert a['endgame']['final_snapshot'] is None
 
 
 # ===== v4 返修(w943 审计 P2-4 版本迁移读端 / P2-5 收口类型)=====
@@ -1521,3 +1553,49 @@ def test_divergence_missing_file(tmp_path: _divergence_stats_Path) -> None:
     """文件缺 → 零值不炸。"""
     st = divergence_stats(tmp_path)
     assert st['decisions_total'] == 0
+
+
+# ==================== 补给轮「0买0升」豁免(query.query_anomalies) ====================
+# 复盘跨局 3 次误报(g_20260831_082322 候选#6 / g_20260831_101653 候选#6 复发):
+# 补给节点无商店消费面,空过合法,不应计入「钱变不成板」。
+# 机制出处 = docs/game/currency_war/research/economy.md「奖励/补给节点不花钱」。
+
+from sr_od.application.currency_war.telemetry.query import query_anomalies as _qa
+
+
+def _abn_dec(node_type: str) -> dict:
+    """金 42 / 0 买 0 升 的决策行(踩 ABN_GOLD=40 门,动作面全空)。"""
+    return _dec('run_supply_fix', 1, 5, '2026-08-31T10:00:00', gold=42,
+                state={'node_type': node_type, 'level': 3,
+                       'hp_trusted': None, 'board': {}, 'deployed': []})
+
+
+def test_supply_round_zero_spend_not_flagged(tmp_path) -> None:
+    """误报场景:补给轮金42 0买0升 → 不产异常(跨局 3 次误报的回归断言)。"""
+    _write_jsonl(tmp_path, 'decisions.jsonl', [_abn_dec('supply')])
+    assert _qa(tmp_path, 'run_supply_fix') == []
+
+
+def test_battle_round_zero_spend_still_flagged(tmp_path) -> None:
+    """真违规守卫:普通战斗轮同形态(金42 0买0升)仍产异常——守卫未被移除。"""
+    _write_jsonl(tmp_path, 'decisions.jsonl', [_abn_dec('普通战斗')])
+    abn = _qa(tmp_path, 'run_supply_fix')
+    assert len(abn) == 1 and '0买0升' in abn[0] and 'p1r5' in abn[0]
+
+
+def test_supply_round_real_violation_still_flagged(tmp_path) -> None:
+    """补给轮真违规(plan_error)不受豁免影响——豁免只辖「0买0升」一条。"""
+    d = _abn_dec('supply')
+    d['eval_breakdown'] = {'plan_error': 'boom'}
+    _write_jsonl(tmp_path, 'decisions.jsonl', [d])
+    abn = _qa(tmp_path, 'run_supply_fix')
+    assert len(abn) == 1 and 'plan_error' in abn[0]
+
+
+def test_missing_node_type_zero_spend_still_flagged(tmp_path) -> None:
+    """缺 node_type(旧数据)→ 从严兜底仍查消费,豁免不扩大。"""
+    d = _abn_dec('')
+    d['state']['node_type'] = None
+    _write_jsonl(tmp_path, 'decisions.jsonl', [d])
+    abn = _qa(tmp_path, 'run_supply_fix')
+    assert len(abn) == 1 and '0买0升' in abn[0]

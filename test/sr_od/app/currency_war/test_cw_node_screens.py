@@ -132,7 +132,10 @@ def test_none_passthrough():
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.obs.cw_node_obs import read_encounter_options
+from sr_od.application.currency_war.obs.cw_node_obs import (
+    read_encounter_options,
+    read_encounter_refresh_count,
+)
 
 
 def _ocr_map(items: list[tuple[str, int, int]]) -> dict:
@@ -194,6 +197,34 @@ def test_read_encounter_options_reward_assigned_by_nearest_x() -> None:
     opts = read_encounter_options(_FakeCtx(m), None)
     assert opts[0].difficulty == 2 and opts[0].rewards == ['装备']
     assert opts[1].difficulty == 5 and opts[1].rewards == ['晶矿']
+
+
+# —— read_encounter_refresh_count(dd-004 分支刷新执行链 reader)——
+
+
+def test_read_encounter_refresh_count_baseline() -> None:
+    """归档帧形态:「剩余次数：1」(全角冒号)→ (1, 文本中心);「选择」等他行不误判。"""
+    m = _ocr_map([
+        ('遭遇其一', 655, 389),
+        ('剩余次数：1', 784, 900),
+        ('选择', 1081, 898),
+    ])
+    assert read_encounter_refresh_count(_FakeCtx(m), None) == (1, (784, 900))
+
+
+def test_read_encounter_refresh_count_halfwidth_colon_and_zero() -> None:
+    """半角冒号 OCR 变体也认;0 次如实返回(无次数的判定归调用方)。"""
+    m = _ocr_map([('剩余次数:2', 780, 900)])
+    assert read_encounter_refresh_count(_FakeCtx(m), None) == (2, (780, 900))
+    m0 = _ocr_map([('剩余次数：0', 784, 900)])
+    assert read_encounter_refresh_count(_FakeCtx(m0), None) == (0, (784, 900))
+
+
+def test_read_encounter_refresh_count_missing_returns_none() -> None:
+    """读不到(未激活分支刷新布局/非遭遇屏/OCR 漏)→ None(handler 按无刷新处理)。"""
+    m = _ocr_map([('选择', 1081, 898), ('遭遇其一', 655, 389)])
+    assert read_encounter_refresh_count(_FakeCtx(m), None) is None
+    assert read_encounter_refresh_count(_FakeCtx({}), None) is None
 
 
 def test_read_megastar_options_parses_candidates() -> None:

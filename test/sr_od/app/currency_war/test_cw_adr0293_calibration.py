@@ -51,7 +51,8 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'buy_tag_priority': ('tuple[str, ...]', [
         'line_carry', 'line_opportunistic', 'bridge_core',
         'engine_seed', 'plugin', 'pair', 'copy', 'copy_press',
-        'bond_fallback', 'carry_gate']),
+        'bond_fallback', 'carry_gate',
+    ]),
     'sell_tag_priority': ('tuple[str, ...]', [
         'off_target', 'for_gold', 'free_bench']),
     'deploy_top_k': ('int', 3),
@@ -62,10 +63,8 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'merge_completion_exempt': ('bool', True),
     'bond_fallback_max_cost': ('int', 2),
     'bond_fallback_min_round': ('int', 3),
-    # W956 危机帧购买兜底集(设计单一源=.debug/temp/currency_war/
-    # w956_death_allocator/DESIGN.md §2;开关=第 1 态默认关,A/B 注入辖)
-    'crisis_fallback_max_cost': ('int', 2),
-    'crisis_fallback_enabled': ('bool', False),
+    # (W956 危机帧购买兜底集两字段已随旧方案清退批删除,清查报告
+    #  OLD_MIX_AUDIT §1.3。)
     'carry_gate_max_round': ('int', 7),
     # ===== 层4 补偿趟(W52/ADR-0326)=====
     'remedy_buy_tags': ('frozenset[str]', frozenset({
@@ -230,7 +229,6 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'k_hp_calibration_grid': ('tuple[float, ...]', [
         1.0, 2.0, 3.0, 5.0]),
     'blood_margin_low_hp': ('int', 40),
-    'boss_tax_p75': ('float', 34.0),
     'boss_tax_anchor_group': ('tuple[float, float, float]', [
         32.0, 34.0, 36.0]),
     'boss_tax_p75_by_plane': ('dict[int, float]', {
@@ -250,73 +248,32 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
         'reward': 0.0}),
     'p2_loss_calib_version': ('int', 1),
     'directed_refresh_high_cost_floor': ('int', 4),
-    'line_switch_survival_gate_enabled': ('bool', False),
-    'rounds_two_state_enabled': ('bool', False),
-    'line_switch_survival_margin': ('float', 1.0),
     'p_win_p2_by_rung': ('dict[int, float]', {
         '0': 0.016, '1': 0.413, '2': 0.657}),
-    'encounter_heal_est': ('float', 0.0),
-    'line_switch_boss_ci_halfwidth': ('float', 1.53),
     # ===== R3 撤销出口①意图证据 =====
     'revoke_miss_tolerance_eps': ('float', 0.05),
     'revoke_evidence_min_thickness': ('float', 5.0),
-    # ===== C1 溢余必花定向优先级 =====
-    'c1_directed_spend_enabled': ('bool', False),
+    # (C1 溢余必花定向开关、锁线后兑现链 v2 字段族(W802)、P1 档位推进
+    #  目标函数字段族(W803)与形态达标三方向/支出门开关族已随旧方案
+    #  清退批删除,清查报告 OLD_MIX_AUDIT §1.3——面册条目随批移除,
+    #  非语义漂移。)
     # (位面 2 支出授权 p2_spend_auth_* 五键已随定谳清理删除,ADR-0492。)
-    # ===== 锁线后兑现链 v2(W802 落码;第 1 态默认关零漂移,开臂判据
-    # ===== 挂 PREREG 兑现链A_B v3;占位参数不做生产决策)=====
-    'realization_chain_enabled': ('bool', False),
-    'realization_search_enabled': ('bool', False),
-    'realization_buy_enabled': ('bool', False),
-    'realization_merge_timing_enabled': ('bool', False),
-    'realization_deploy_enabled': ('bool', False),
-    'realization_direction_enabled': ('bool', False),
-    'realization_d1_enabled': ('bool', False),
-    'realization_d2_enabled': ('bool', False),
-    'realization_off_lock_kappa': ('float', 0.5),
-    'realization_delta_p_tier': ('float', 0.75),
-    'realization_p29_r_min': ('int', 5),
-    'realization_member_cost_band': ('frozenset[int]', frozenset({3, 4})),
-    'realization_merge_timing_unit': ('float', 0.75),
-    'realization_direction_gamma': ('float', 0.95),
-    'realization_direction_beta': ('float', 0.05),
-    # ===== P1 档位推进目标函数(W803;伞+三子旗标默认关,占位参数组
-    # 开臂前 sim 标定;决策 why=ADR-0494)=====
-    'p1_tier_push_enabled': ('bool', False),
-    'p1_tier_push_gate_enabled': ('bool', False),
-    'p1_tier_push_deadline_enabled': ('bool', False),
-    'p1_tier_push_r6_budget_enabled': ('bool', False),
-    'tier_push_w_early': ('float', 0.2),
-    'tier_push_w_r6': ('float', 1.0),
-    'tier_push_w_late': ('float', 0.1),
-    'tier_push_v_anchor': ('float', 19.0),
-    'tier_push_v_train_dot_scale': ('float', 0.5),
-    'tier_push_v_seele_scale': ('float', 0.25),
-    'tier_push_gate_min_round': ('int', 4),
-    'tier_push_press_cost_max': ('int', 2),
-    'tier_push_press_round_cap': ('int', 2),
     # (件价值模型 Phase 1 八字段已随整机制定谳删除,W927 删码批;
     #  删字段须移除条目 = 面册锁文法的反向操作。ADR-0496/0497 留档。)
     # (P1→P2 接口机制五开关+三阈值已随定谳清理删除,ADR-0487)
-    # ===== 形态达标三方向 =====
-    'recipe_fence_enabled': ('bool', False),
-    'form_break_sell_blocked_enabled': ('bool', False),
-    'below_floor_spend_gate_enabled': ('bool', False),
     # (spend_receipt_gate_enabled 已随除开关批删除:预算-回执契约无条件
     # 生效,决策 why = ADR-0504——字段条目随批移除,非语义漂移。)
     # (framework_startup_v2_enabled 已随框架启动基建退役删除,ADR-0468)
-    # ===== DirectorV2 备战循环(W606 落件;W620 批1升正删开关,仅存影子诊断)=====
-    'director_v2_shadow_compare': ('bool', False),
+    # (影子诊断开关 director_v2_shadow_compare 已随旧方案清退批删除,
+    #  清查报告 OLD_MIX_AUDIT §1.3——仅存条目随批移除,非语义漂移。)
     # ===== 层4:预算仲裁 =====
     'constraints': ('tuple[str, ...]', [
         'gold_floor', 'interest_rule', 'bench_capacity', 'copies_cap',
         'same_round_mutex', 'blood_budget_stop', 'boss_levelup_ban',
-        'deploy_cap', 'spend_gate']),
-    # ===== 支出门·买侧收门(W829;伞+两子旗标默认关,开臂判据挂账
-    # = w829_spend_gate_design/PREREG_v4.md)=====
-    'spend_gate_enabled': ('bool', False),
-    'spend_gate_interest_enabled': ('bool', False),
-    'spend_gate_bench_enabled': ('bool', False),
+        'deploy_cap',
+    ]),
+    # (支出门·买侧收门三开关已随旧方案清退批删除,清查报告
+    #  OLD_MIX_AUDIT §1.3;'spend_gate' 约束名随批移除,非语义漂移。)
     # interest_floor 字段已删(W628 D3 双源清偿):息线 = interest_cap×10
     # 派生方法,唯一取值口 registry.interest_floor();override 通道仅纪律
     # 视图 ALL IN 注入用(非标定旋钮,入面锁默认 None)。
@@ -331,15 +288,15 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     'audit_matrix': (
         'dict[tuple[str, str], tuple[str, ...] | tuple[str, str]]', {
             "('gold', 'boss')": ['gold_floor', 'interest_rule'],
-            # (gold/boss 与 bench/boss 格不含 spend_gate:支出门在 boss
-            # 窗让位,W774⑤ 同仲裁语义)
-            # (gold emergency/mode 格的 p1_iface_gate 已随定谳清理删除,
-            # ADR-0487;pv_bench_reserve 已随件价值整机制删除,W927/ADR-0497)
-            "('gold', 'emergency')": ['gold_floor', 'spend_gate'],
-            "('gold', 'mode')": ['gold_floor', 'interest_rule', 'spend_gate'],
+            # (gold/boss 与 bench/boss 格原不含 spend_gate;支出门已随
+            # 旧方案清退批删除,各格条目随批移除,非语义漂移——
+            #  p1_iface_gate 已随定谳清理删除,ADR-0487;pv_bench_reserve
+            #  已随件价值整机制删除,W927/ADR-0497)
+            "('gold', 'emergency')": ['gold_floor'],
+            "('gold', 'mode')": ['gold_floor', 'interest_rule'],
             "('bench', 'boss')": ['bench_capacity'],
-            "('bench', 'emergency')": ['bench_capacity', 'spend_gate'],
-            "('bench', 'mode')": ['bench_capacity', 'spend_gate'],
+            "('bench', 'emergency')": ['bench_capacity'],
+            "('bench', 'mode')": ['bench_capacity'],
             "('slot', 'boss')": ['blood_budget_stop', 'boss_levelup_ban'],
             "('slot', 'emergency')": ['blood_budget_stop', 'bench_capacity'],
             "('slot', 'mode')": ['blood_budget_stop', 'deploy_cap'],
@@ -361,33 +318,10 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     # W607 第二波 H2① 数据层(无行为分支,账面单一源;ADR-0461 增补节)
     'rust_hoard_damage_share': ('float', 0.03),
     'rust_hoard_penalty_cap': ('int', 10),
-    # 变宝为废牺牲合成开关(ADR-0498;生命周期第 1 态默认关,开臂判据
-    # 挂账在 registry 字段注释;语义注释落点=registry 字段块)
-    'junk_first_sacrifice_enabled': ('bool', False),
-    # ===== 装备穿满族 fill-to-3(软弱无力+额外打击合并量变体;commit b7d65870)
-    # 伞开关生命周期第 1 态默认关零漂移;fill 阈值=机制常量(游戏真值
-    # 「穿戴3件装备」的 3,非标定值);语义注释落点=registry 字段块
-    'equip_env_fill3_enabled': ('bool', False),
-    'equip_fill_target': ('int', 3),
-    # ===== W875 环境B类评分补全包 + 长线利好刷价(commit d12c3eca)
-    # 两子旗标各辖一条词缀→tag 映射准入(能量逃逸/同步行动),默认关
-    # 零漂移;刷价三件参数化 cw_invest_data id=120 真值(30 次→折后 1 金),
-    # threshold/price=机制常量,折后价生效还依赖 refresh_count 观测接线
-    # (现缺省 0 永不触发);语义注释落点=registry 字段块
-    'w875_energy_leak_enabled': ('bool', False),
-    'w875_sync_action_enabled': ('bool', False),
-    'longterm_refresh_discount_enabled': ('bool', False),
-    'longterm_refresh_threshold': ('int', 30),
-    'longterm_refresh_price': ('int', 1),
-    # ===== W878 死 tag 复活 4 批子旗标(commit 9cf35107)
-    # 各辖一个零携带死 tag 的 comp 侧载体(单属性队/成型羁绊队/慢速/
-    # 依赖合成装备);synth_equip_dep 与 junk_first_sacrifice_enabled 禁独立
-    # 开臂(__post_init__ 构造期校验),四件均默认关零漂移;语义注释落点=
-    # registry 字段块
-    'w878_mono_attribute_enabled': ('bool', False),
-    'w878_formed_bond_enabled': ('bool', False),
-    'w878_slow_burn_enabled': ('bool', False),
-    'w878_synth_equip_dep_enabled': ('bool', False),
+    # (变宝为废牺牲合成开关、装备穿满族 fill-to-3 开关与穿满阈值、
+    #  W875 环境B类评分补全包、W878 死 tag 复活四旗标、长线利好刷价
+    #  三参数、巨星强化角色开关已随旧方案清退批删除,清查报告
+    #  OLD_MIX_AUDIT §1.3——面册条目随批移除,非语义漂移。)
     # ===== 危机金出口臂(ADR-0503;W907 病灶:应急让位使危机帧 release
     # 恒 None)——生命周期第 3 态默认 True(开臂:sim A/B 实花面过 W917/W930
     # + 首局实机病灶复现 g_20260831_032006;实机观察局为确认门非开臂门,
@@ -396,18 +330,14 @@ _EXPECTED_FIELDS: dict[str, tuple[str, object]] = {
     # ===== 巨星强化角色决策意向维度(commit e19035df)
     # 只启决策层意向输出(落 reason/遥测),执行面未接(巨星 step2 坐标
     # 未建档+机制效果无真值);默认关;语义注释落点=registry 字段块
-    'megastar_enhance_enabled': ('bool', False),
     # (危机刷新不变量门 crisis_refresh_invariant_enabled 字段已随 ADR-0506
     #  升格裁决整开关删除(不变式无条件生效),条目同步移除=面册锁文法的
     #  反向操作,ADR-0507 同款。)
     # ===== 并行批(停滞评估臂/w95x)新增字段代登记占位,保持共享面锁绿;
     #  归属批收尾时自登记并去重本组(同 crisis_refresh_invariant 先例)。
-    'intention_stagnation_arm_enabled': ('bool', False),
-    'p2_entry_weak_target_enabled': ('bool', False),
-    'stagnate_windows': ('int', 2),
-    'stagnate_window_rounds': ('int', 2),
-    'salvage_deadline_nodes': ('int', 2),
-    'salvage_window_rounds': ('int', 3),
+    # (上组及 stagnate_core_min_copies / p2_promote_enabled 已随停滞臂
+    #  sim A/B 判负整机制删码,条目移除 = 面册锁文法的反向操作;
+    #  决策 why、负结果与复活条件 = ADR-0509。)
     # (spend_receipt_gate_enabled 已随除开关批删除:预算-回执契约无条件
     #  生效,决策 why = ADR-0504——在飞期曾被并行恢复并代登记占位,本轮
     #  归属批完成删码,占位条目移除 = 面册锁文法的反向操作。)

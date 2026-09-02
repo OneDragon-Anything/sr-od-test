@@ -6,9 +6,11 @@ W810 审查反事实证据):
 - 缺陷①视界截断失效 → test_death_horizon_truncation_truth:
   plane_node_table 缺失时死亡域截断上限取保守下界(当轮本场 1.0),
   不再退骨架缺省 battles_left_est=5(m_eff 曾虚高 2-5 倍);
-- 缺陷②档顶饱和零区分度 → test_death_w_only_proposal_rejected:
-  win_eq 饱和面(dwin≡0)上死亡域不供给纯 w 支撑的非刷新提案
-  (W810 反事实:该形态三局 0 正 EV、1 局负 EV);
+- 缺陷②档顶饱和零区分度 → test_death_w_only_supply_unblocked:
+  原锁「死亡域不供给纯 w 提案」的守卫语义已随 W956 治本退役
+  (守卫锁死 death 帧出清,W933 并联缺位/W951/W955 实证);新锁
+  断言供给解锁 + 大额 w-only 在出清层仍被面值账拒(金免费伪影
+  由 V 兜底,守卫移除不劣化);
 - 缺陷③金免费谬误 → test_death_opportunity_cost_face_value:
   死亡域机会成本按面值 c+I 计(S0 折价的「金必死」前提被实测证伪:
   携金进 P2 三局 3/3 到达可支出语境、1 局转 +2 轮存活),参数集
@@ -131,16 +133,21 @@ def test_death_horizon_truncation_truth() -> None:
         == reg.battles_left_est
 
 
-# ---------- 缺陷②锁:饱和面区分度(ADR-0493;W810 缺陷②) ----------
+# ---------- 缺陷②锁:饱和面区分度(语义已随 W956 治本更替) ----------
 
-def test_death_w_only_proposal_rejected(monkeypatch) -> None:
-    """win_eq 饱和面(dwin≡0)死亡域不供给纯 w 非刷新提案:
-    饱和面用常量 win_eq 建模(钳制表顶,任意动作前后恒 0.778——
-    W810 三局死亡域帧的实测形态 engines_formed=3/frac=0)。断言:
-    - DEATH 域:白名单放行(pop_slot)+板满等待件齐备,levelup 仍
-      不被供给(dpeff 纯 w,W810 反事实 0 正 EV);
-    - STOP_WINDOW 对照:同帧同白名单 levelup 照常供给(门只辖死亡域
-      ——停手窗有真实机会成本 c+I 门控,W810 证据面仅覆盖死亡域)。"""
+def test_death_w_only_supply_unblocked(monkeypatch) -> None:
+    """win_eq 饱和面(dwin≡0)死亡域 w-only 非刷新提案的供给与出清
+    (W956 治本设计 .debug/temp/currency_war/w956_death_allocator/
+    DESIGN.md;旧锁「死亡域不供给纯 w 提案」= ADR-0493 缺陷②守卫,
+    其语义已被 W956 更替:守卫把 death 帧出清结构性锁死——W933 §3
+    「并联缺位」裁决与 W951/W955 sim chosen=[] 恒空实证,守卫移除:
+    - 必死子带:E1 = P23.4(i) 极限推论(金终端价值≈0 时任何非负
+      板面提案弱优于攥金,拒供不可能是最优);
+    - 非应急子带:编排者指令直落(A′),「金免费伪影」顾虑(W810
+      缺陷②原动机)由面值机会成本 c+I 与 m_eff 视界截断在出清层
+      兜底——大额 w-only 提案 V<0 照拒,只有小额可过。
+    断言:DEATH 域供给 levelup(dwin=0 不再拒供);大额成本在出清层
+    仍 V<0(allocate 不采纳);STOP_WINDOW 对照供给不变。"""
     from sr_od.application.currency_war.decision.decision_v2 import ev as ev_mod
     reg = DEFAULT_REGISTRY
     # hp=80:P21 血预算硬停与本题正交,控制臂需其放行位
@@ -155,22 +162,33 @@ def test_death_w_only_proposal_rejected(monkeypatch) -> None:
                         lambda state, registry: 0.778)   # 饱和面建模
     props_d = _supply_impl(st, _sess(DEATH_TABLE_R9), reg,
                            AllocDomain.DEATH)
-    assert not [p for p in props_d if p.kind != 'refresh'], \
-        '死亡域饱和面不得供给纯 w 非刷新提案(ADR-0493 缺陷②)'
+    lu = [p for p in props_d if p.kind == 'levelup']
+    assert lu, '死亡域饱和面 dwin=0 提案必须被供给(W956 E1/A′ 守卫退役)'
+    # 出清层兜底:大额 w-only(dpeff 纯 w=0 构造)m_eff×w − (c+I) < 0
+    for p in lu:
+        p.v = p.m_eff * p.dpeff - _opportunity_cost(
+            st, _sess(DEATH_TABLE_R9), reg, p, AllocDomain.DEATH)
+        assert p.v <= 0, ('大额 w-only 死亡域提案出清层仍拒(W810 金免费'
+                          '伪影由面值账兜底,非供给层)')
     props_s = _supply_impl(st, _sess(), reg, AllocDomain.STOP_WINDOW)
     assert any(p.kind == 'levelup' for p in props_s), \
-        '停手窗对照臂不受死亡域区分度门辖(门只辖死亡域)'
+        '停手窗对照臂供给行为不变(门移除只涉死亡域)'
 
 
 # ---------- 缺陷③锁:机会成本面值校准(ADR-0493;W810 缺陷③) ----------
 
 def test_death_opportunity_cost_face_value() -> None:
-    """死亡域机会成本 = 面值 c+I(与停手窗同式):手算重算对拍
+    """死亡域·**子带外**机会成本 = 面值 c+I(与停手窗同式):手算重算
     interest_cost 单一源;S0 折价退役(「金必死」前提被 W810 反事实
-    实测算证伪——修复前 opp=S0×(c+I)≈0.01 金,金被当作免费)。参数集
-    版本随重标定升 P23.4R 且 recheck 登记反事实来源(复判条款契约)。"""
+    实测算证伪——携金进 P2 三局 3/3 到达可支出语境、1 局转 +2 轮存活)。
+    帧 = hp 80(必死子带 hp≤L_c 之外;子带内 I 退役归 ADR-0510,见
+    test_cw_w956_death_allocator.test_must_die_band_opportunity_cost,
+    W810 三局 hp 形态均在子带外,本锁语义与该收窄不冲突)。参数集版本
+    随重标定升 P23.5R 且 recheck 登记来源(复判条款契约)。"""
     reg = DEFAULT_REGISTRY
-    st = _death_state(gold=153)
+    st = _death_state(gold=153, hp=80)
+    assert not allocator.must_die_band(st, _sess(), reg), \
+        '本锁锚子带外帧(面值 c+I 语义域)'
     p = allocator.AllocProposal(kind='buy', dpeff=0.0, m_eff=1.0, cost=8)
     got = _opportunity_cost(st, _sess(DEATH_TABLE_R9), reg, p,
                             AllocDomain.DEATH)
@@ -182,7 +200,9 @@ def test_death_opportunity_cost_face_value() -> None:
     got_stop = _opportunity_cost(st, _sess(), reg, p,
                                  AllocDomain.STOP_WINDOW)
     assert got == pytest.approx(got_stop)
-    # 参数集重标定登记(版本变更必须伴随来源登记,W690 §4-4 契约)
-    assert ALLOC_PARAM_SET.version == 'P23.4R'
+    # 参数集重标定登记(版本变更必须伴随来源登记,W690 §4-4 契约;
+    # W956 治本随版本升 P23.5R:估计器保底 + w-only 拒供退役)
+    assert ALLOC_PARAM_SET.version == 'P23.5R'
     assert 'W810' in ALLOC_PARAM_SET.recheck
+    assert 'W956' in ALLOC_PARAM_SET.recheck
     assert ALLOCATOR_ENABLED is True   # 开臂态不因重标定回退

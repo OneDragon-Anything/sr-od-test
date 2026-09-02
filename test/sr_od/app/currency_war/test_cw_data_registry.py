@@ -1450,7 +1450,7 @@ def test_read_level_xp_backinference(test_context, monkeypatch):
     got = cwo.read_level(test_context, img, 1, 1)
     assert got == 3, f'经验条反推应为 lv3(0/4),实得 {got}'
     # 经验条也漏(全黑)→ 退期望曲线(旧行为)
-    monkeypatch.setattr(cwo, 'read_xp_progress', lambda ctx, scr, level=None: None)
+    monkeypatch.setattr(cwo, 'read_xp_progress', lambda ctx, scr, **kw: None)
     assert cwo.read_level(test_context, img, 1, 1) == cwo._expected_level(1, 1)
 
 

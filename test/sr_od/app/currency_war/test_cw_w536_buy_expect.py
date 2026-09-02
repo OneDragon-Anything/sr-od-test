@@ -222,6 +222,40 @@ def test_compare_deployed_landing():
     assert len(m) == 1 and m[0]['domain'] == 'deployed.front'
 
 
+def test_compare_snapshot_stale_landing_downgraded():
+    """真实空槽优先降级(DD-005;安灯 p2r2 停线同形态回归,局1):购买前
+    tracked 快照缺某槽占用(模型:槽1-8 占、槽9 空)→ 期望把新牌落槽9;
+    实读槽9=快照缺读的旧牌、新牌在槽1-8 的真实空槽 → 期望实体在别处
+    出现 = 快照空槽表过期 → 降级不评,不再误判不一致。"""
+    # 模型视角:槽1-8 占用、槽9 空(快照缺「那刻夏@9」的形态)
+    pre = _bench(*[_bc(i, f'旧牌{i}') for i in range(1, 9)])
+    exp = compute_buy_expect(
+        [BuyPurchase(name='卡芙卡', star=1, count=1, unit_cost=2)],
+        pre, [])
+    assert exp.changed_bench == [9]              # 模型落点 = 槽9(首空槽)
+    # 定型帧实读:槽9=那刻夏(真实被占)、卡芙卡在槽5(真实空槽)
+    read = [_bc(i, f'旧牌{i}') for i in range(1, 9)]
+    read[4] = _bc(5, '卡芙卡')
+    read.append(_bc(9, '那刻夏'))
+    assert compare_buy_expect(exp, read, []) == []
+    # 对照:新牌全场缺席(真丢失)不降级,不一致照落(真阳性保留)
+    read_lost = [_bc(i, f'旧牌{i}') for i in range(1, 9)]
+    read_lost.append(_bc(9, '那刻夏'))
+    m = compare_buy_expect(exp, read_lost, [])
+    assert len(m) == 1 and m[0]['slot'] == '9' and '卡芙卡' in m[0]['expected']
+
+
+def test_compare_merge_not_happened_not_downgraded():
+    """降级不吞「合成腾槽未发生」证据:期望空槽实读=同名 1★(原始购买名,
+    非终态新实体)→ 不降级,照旧落不一致(DD-005 边界②的锁)。"""
+    exp = compute_buy_expect(
+        [BuyPurchase(name='希儿', star=1, count=1, unit_cost=3)],
+        _bench(_bc(1, '希儿'), _bc(4, '希儿')), [])
+    # slot1 终态实体 = 希儿/2★;slot4 期望空,实读仍是希儿/1(非终态实体)
+    m = compare_buy_expect(exp, [exp.bench_after[0], _bc(4, '希儿')], [])
+    assert any(x['slot'] == '4' and '空' in x['expected'] for x in m)
+
+
 # ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
 
 def test_w536_wiring_locks():

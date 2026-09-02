@@ -560,6 +560,7 @@ from sr_od.application.currency_war.sim import runner
 from sr_od.application.currency_war.kernel.cw_evolution import  EvolutionState, evolution_step
 from sr_od.application.currency_war.kernel.cw_plane_table import (    NODES_PER_PLANE as _w167_plane_rounds_NODES_PER_PLANE,
     nodes_of_plane,
+    schedule_of as _w167_schedule_of,
 )
 from sr_od.application.currency_war.kernel.cw_intention import plane_remaining_nodes
 from sr_od.application.currency_war.kernel.cw_state import CompTransaction, GameState as _w167_plane_rounds_GameState
@@ -593,6 +594,31 @@ def test_nodes_of_plane_fallback_when_table_missing():
     # 裸 session / None → 回退 P1 先验(零漂移的结构面)
     assert nodes_of_plane(_sess(None)) == _w167_plane_rounds_NODES_PER_PLANE == 9
     assert nodes_of_plane(None) == 9
+
+
+def test_schedule_of_fallback_priors_per_plane():
+    """schedule_of 未揭晓位面的回退先验逐面锁(统一取语料分布上端 9,R46-1 端点纪律对称化)。
+
+    真值不可判 ⇒ 回退取上端而非众数:horizon 低估通道(fallback 低于真值时
+    Δ息流̂/Φ̂ 下偏进不可逆卖面)被端点上界构造性闭合。锁存在性:
+    若回退端点被改回众数 7,horizon 低估通道复出即红。
+    """
+    # 全未揭晓(P1 期首帧前/裸 session):三面统一回退上端 9
+    assert _w167_schedule_of(_sess(None)) == (9, 9, 9)
+    assert _w167_schedule_of(None) == (9, 9, 9)
+    # 部分揭晓:已揭晓位面用 session 表真值,未揭晓位面用逐面先验
+    s = _sess(None)
+    s.plane_lengths_seen = [9]
+    assert _w167_schedule_of(s) == (9, 9, 9)
+    s.plane_lengths_seen = [9, 7]
+    # 已揭晓面用 session 表真值(P2=7 系本局实测,非回退):回退先验只辖未揭晓面
+    assert _w167_schedule_of(s) == (9, 7, 9)
+    # P3 进表自适应优先于先验
+    s.plane_lengths_seen = [9, 7, 8]
+    assert _w167_schedule_of(s) == (9, 7, 8)
+    # 脏表守卫:越界值夹 [1, 9]
+    s.plane_lengths_seen = [99, 0, 5]
+    assert _w167_schedule_of(s) == (9, 1, 5)
 
 
 # ---------- ② 冻结窗 ----------
@@ -1396,146 +1422,16 @@ def test_p2_loss_scale_constant_retired() -> None:
     assert not hasattr(_w370_p2_loss_recalib_DEFAULT_REGISTRY, 'P2_LOSS_SCALE')
 
 
-# ==================== w413_p2_two_state_injection ====================
-
-import dataclasses as _w413_p2_two_state_injection_dataclasses
-
-from sr_od.application.currency_war.kernel import cw_battle_calib as _w413_p2_two_state_injection_cw_sim
-from sr_od.application.currency_war.kernel.cw_line_switch import  rounds_alive, survival_gate
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _w413_p2_two_state_injection_BenchChar, GameState as _w413_p2_two_state_injection_GameState
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _w413_p2_two_state_injection_StrategySession
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY as _w413_p2_two_state_injection_DEFAULT_REGISTRY
-from sr_od.application.currency_war.decision.decision_v2.scoring import  _engines_formed
-
-P2_FULL_TABLE = ['battle', 'battle', 'encounter', 'reward',
-                 'encounter', 'reward', 'boss']
-
-
-def _state(**kw) -> _w413_p2_two_state_injection_GameState:
-    base = {
-        'plane': 2, 'round_num': 1, 'gold': 30, 'level': 5,
-        'hp': 20, 'hp_readable': True,
-        'board': {}, 'deployed': [], 'bench': [], 'shop': [],
-    }
-    base.update(kw)
-    return _w413_p2_two_state_injection_GameState(**base)
-
-
-def _w413_p2_two_state_injection_sess() -> _w413_p2_two_state_injection_StrategySession:
-    s = _w413_p2_two_state_injection_StrategySession()
-    s.plane_node_table = list(P2_FULL_TABLE)
-    s.plane_node_table_plane = 2
-    s.round_num = 1
-    return s
-
-
-# --- 注入值锁 ----------------------------------------------------------------
-
-
-def test_p_win_table_injection_values() -> None:
-    """三档值与单调性(两态模型前提「p 对成型度单调不减」的实例面):
-    {0: 0.016, 1: 0.413, 2: 0.657}=W346 Δ池 w346_dmg_delta.json 战斗
-    d>0 占比(k3 钳制并入 rung2)。值动=重标定,须随批重锁。"""
-    t = _w413_p2_two_state_injection_DEFAULT_REGISTRY.p_win_p2_by_rung
-    assert t == {0: 0.016, 1: 0.413, 2: 0.657}
-    assert t[0] <= t[1] <= t[2], '单调不减是两态模型的机制前提'
-    assert all(0.0 <= v <= 1.0 for v in t.values())
-
-
-def test_two_state_switch_default_off() -> None:
-    """零漂移锚:开关默认关(即使 p_win 表已注入,投影仍走条件常数)。"""
-    assert _w413_p2_two_state_injection_DEFAULT_REGISTRY.rounds_two_state_enabled is False
-
-
-# --- 零漂移锚:开关关=条件常数逐位 ---------------------------------------------
-
-
-def test_flag_off_table_injected_still_conditional_constant() -> None:
-    """开关关 + 表已注入(默认 registry 现态)→ rounds_alive 与
-    「p 表为空」的 M1a 条件常数投影逐位一致(W443 后幅度源=条件败面档
-    12.77/13.33/15.50;hp=29:12.77→16.23→3.46→遭遇死 → ra=3;
-    hp=43 → ra=5;hp=60 → ra=7,与 C4-L1 手算同数表)。"""
-    reg_empty = _w413_p2_two_state_injection_dataclasses.replace(
-        _w413_p2_two_state_injection_DEFAULT_REGISTRY, p_win_p2_by_rung={})
-    for hp, ra in ((29, 3), (43, 5), (60, 7)):
-        assert rounds_alive(_state(hp=hp), _w413_p2_two_state_injection_sess()) == ra
-        assert rounds_alive(_state(hp=hp), _w413_p2_two_state_injection_sess(), reg_empty) == ra
-    # 门链同锚:默认 registry 下门放行路径与注入前一致(开关关=放行
-    # 由 gate 总开关辖,本锁辖投影口径不被表注入漂移)。
-    assert _w413_p2_two_state_injection_DEFAULT_REGISTRY.line_switch_survival_gate_enabled is False
-
-
-# --- 两态消费锁 ---------------------------------------------------------------
-
-
-_REG_TWO = _w413_p2_two_state_injection_dataclasses.replace(
-    _w413_p2_two_state_injection_DEFAULT_REGISTRY, rounds_two_state_enabled=True,
-    line_switch_survival_gate_enabled=True,
-    p_win_p2_by_rung={0: 0.65, 1: 0.65, 2: 0.65})
-
-
-def test_flag_on_consumes_p_win() -> None:
-    """开关开 → loss=(1−p_win)·条件败面档:空板 rung=0、p=0.65、hp=29 →
-    ra=7 ≥ need → 放行(REDESIGN §3.6 两行行为的两态行;W443 后数表=
-    条件档 12.77/13.33/15.50 ×0.35,总损 23.7<29 走完全表)。开关关时
-    同帧 ra=3(上锁),闸唯一。"""
-    assert rounds_alive(_state(hp=29), _w413_p2_two_state_injection_sess(), _REG_TWO) == 7
-    ok, why = survival_gate(_state(hp=29), _w413_p2_two_state_injection_sess(), 2.0, _REG_TWO)
-    assert ok and why == 'ok'
-
-
-def test_flag_on_empty_table_degrades_to_conditional_constant() -> None:
-    """开关开但表缺档(rung 缺键)→ p_win=0 → 退化条件常数(空表=
-    缺档同路,M1a 保底不因开臂丢失;条件档下 hp=29:12.77→16.23→3.46
-    →遭遇死 → ra=3)。"""
-    reg = _w413_p2_two_state_injection_dataclasses.replace(
-        _w413_p2_two_state_injection_DEFAULT_REGISTRY, rounds_two_state_enabled=True,
-        p_win_p2_by_rung={1: 0.65, 2: 0.65})   # 缺 rung 0 键
-    assert rounds_alive(_state(hp=29), _w413_p2_two_state_injection_sess(), reg) == 3
-
-
-# --- rung 取样坐标锁 -----------------------------------------------------------
-
-
-def _mixed_domain_state() -> _w413_p2_two_state_injection_GameState:
-    """deployed 2 仙舟 + bench 3 仙舟:混合域(_engines_formed,bench
-    ×0.35 加权)仙舟计数 3.05 过 tier=3 → rung 1;settle 坐标
-    (_settle_rung,deployed 全集)计数 2 不过 → rung 0。两坐标分裂。"""
-    deployed = [_w413_p2_two_state_injection_BenchChar(slot=1, char_id='停云', faction='仙舟'),
-                _w413_p2_two_state_injection_BenchChar(slot=2, char_id='藿藿', faction='仙舟')]
-    bench = [_w413_p2_two_state_injection_BenchChar(slot=i, char_id='青雀', faction='仙舟')
-             for i in (3, 4, 5)]
-    return _state(hp=29, deployed=deployed, bench=bench)
-
-
-def test_rung_sampling_follows_settle_rung_coordinate() -> None:
-    """两态分支 rung 取样必须走 _settle_rung(与 W346 表采样键同源):
-    本夹具下若错用 _engines_formed(rung 1,p=0.65)→ ra=7;正确 settle
-    坐标(rung 0,p=0.0)→ 条件常数 ra=3。"""
-    st = _mixed_domain_state()
-    # 夹具前提自证:两坐标确已分裂
-    assert _w413_p2_two_state_injection_cw_sim._settle_rung(st) == 0
-    assert _engines_formed(st, _w413_p2_two_state_injection_DEFAULT_REGISTRY) == 1
-    reg = _w413_p2_two_state_injection_dataclasses.replace(
-        _w413_p2_two_state_injection_DEFAULT_REGISTRY, rounds_two_state_enabled=True,
-        p_win_p2_by_rung={0: 0.0, 1: 0.65, 2: 0.65})
-    assert rounds_alive(st, _w413_p2_two_state_injection_sess(), reg) == 3
-
-
-
+# ==================== (w413_p2_two_state_injection 已随 C4 开关族删除) ====================
+# (两态注入/零漂移/消费/rung 坐标锁段已随 rounds_two_state_enabled 开关族
+#  删除——旧方案清退批,清查报告 OLD_MIX_AUDIT §1.3;p_win_p2_by_rung 表
+#  保留(阈值层 cw_plane_table.p_win_p2 消费),结构锁由 adr0293 面册承载。)
 # ==================== p2_survival_band ====================
 
-import dataclasses as _p2_survival_band_dataclasses
-import math
-
-from sr_od.application.currency_war.kernel.cw_line_switch import  rounds_alive as _p2_survival_band_rounds_alive, should_switch_e, survival_gate as _p2_survival_band_survival_gate
 from sr_od.application.currency_war.kernel.cw_state import GameState as _p2_survival_band_GameState
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _p2_survival_band_StrategySession
 from sr_od.application.currency_war.decision.decision_v2.filters import  _deploy_free, _deploy_free_after_merge, _refreshable_names
 from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY as _p2_survival_band_DEFAULT_REGISTRY
-
-_REG_GATE = _p2_survival_band_dataclasses.replace(_p2_survival_band_DEFAULT_REGISTRY,
-                                line_switch_survival_gate_enabled=True)
 
 #: P2 满表投影夹具(economy.md §10.2 模板,boss@末槽)
 _p2_survival_band_P2_FULL_TABLE = ['battle', 'battle', 'encounter', 'reward',
@@ -1573,17 +1469,6 @@ def test_c3_symbols_removed_from_registry() -> None:
     assert hasattr(_p2_survival_band_DEFAULT_REGISTRY, 'directed_refresh_high_cost_floor')
 
 
-def test_shared_loss_table_alive_for_c4() -> None:
-    """共享损血表健在锁:p2_cond_loss_table(条件败面档,W443 起为 C4
-    投影幅度源)仍被 C4 投影消费(轻损表注入后 rounds_alive 位移)——
-    表是 C4 的活数据,清理不伤。"""
-    reg = _p2_survival_band_dataclasses.replace(
-        _p2_survival_band_DEFAULT_REGISTRY,
-        p2_cond_loss_table={'normal': 5.0, 'encounter': 6.0,
-                            'boss': 8.0, 'reward': 0.0})
-    assert _p2_survival_band_rounds_alive(_dying_state(hp=25, round_num=1),
-                        _tabled_session(), reg) == 7
-
 
 def test_shared_face_helpers_alive_for_c1() -> None:
     """C1 判据共享面健在锁:部署空位/合成后空位/刷新名集/hp 可信位
@@ -1610,64 +1495,8 @@ def test_shared_face_helpers_alive_for_c1() -> None:
     assert _deploy_free_after_merge(merge_c, st2) == 1
 
 
-# --- C4:存活轮数门(投影口径) ----------------------------------------------
-
-
-def test_rounds_alive_projection_basic() -> None:
-    """投影底座:默认表(W443 后=条件败面档 12.77/13.33/15.50,p 表空)
-    +P2 满表夹具,r1 起逐节点扣:hp=50 → 37.23/24.46/11.13→奖励→
-    遭遇死 → ra=5;hp=0 → 0。(旧 ceil(hp/等权均值) 口径已废除,查表锁
-    随之更新。)"""
-    sess = _tabled_session()
-    assert _p2_survival_band_rounds_alive(_dying_state(hp=50, round_num=1), sess) == 5
-    assert _p2_survival_band_rounds_alive(_dying_state(hp=0), sess) == 0
-
-
-def test_survival_gate_default_off_and_scope() -> None:
-    """开关关/plane≠2 → 放行(零漂移)。改判(v3 R-E,docstring 假前提
-    勘误):e_alt=inf 原断言「上游 should_switch_e 已拦故放行」——W683
-    核实 v2 通道不调该函数,p̄=0 线曾由信号胜出直接落锁;现门自辖拦截
-    ('alt_inf')。另 v3 R-G:辖域收窄 plane==2(P3 帧消费 P2 损血表
-    门偏松,FM-12),plane=3 亦放行。"""
-    sess = _p2_survival_band_StrategySession()
-    assert _p2_survival_band_survival_gate(_dying_state(), sess, 3.0,
-                         _p2_survival_band_DEFAULT_REGISTRY) == (True, 'gate_off')
-    st_p1 = _dying_state(plane=1)
-    assert _p2_survival_band_survival_gate(st_p1, sess, 99.0, _REG_GATE) == (True, 'gate_off')
-    st_p3 = _dying_state(plane=3)
-    assert _p2_survival_band_survival_gate(st_p3, sess, 99.0, _REG_GATE) == (True, 'gate_off')
-    st_inf = _dying_state(hp=100)
-    assert _p2_survival_band_survival_gate(st_inf, sess, math.inf,
-                         _REG_GATE) == (False, 'alt_inf')
-    # 开关关时 inf 照旧放行(零漂移锚:拦截语义只在门开臂内生效)
-    assert _p2_survival_band_survival_gate(st_inf, sess, math.inf,
-                         _p2_survival_band_DEFAULT_REGISTRY) == (True, 'gate_off')
-
-
-def test_survival_gate_boundary() -> None:
-    """门边界(含 δ 先修偏与 boss 附加费):r4 起投影路径含 boss →
-    need=E×1.15+1+1.53。hp=50 → ra=5(奖励 0 损/遭遇/战斗/boss 结算死):
-    E=1.5 → 需 4.255 放行;E=2.5 → 需 5.405 拦(边界取拦侧——估计量
-    方差大的保守方向)。"""
-    sess = _tabled_session(round_num=4)
-    st = _dying_state(hp=50)
-    ok, why = _p2_survival_band_survival_gate(st, sess, 1.5, _REG_GATE)
-    assert ok and why == 'ok'
-    ok, why = _p2_survival_band_survival_gate(st, sess, 2.5, _REG_GATE)
-    assert not ok and why.startswith('survival(')
-
-
-def test_survival_gate_serial_after_e_rounds() -> None:
-    """串联语义:第三道门——should_switch_e 判 ok 后门仍可拦;与 θ/δ/D_min
-    同族(纯函数组合;消费点=default_strategy 换线采纳前)。"""
-    sess = _tabled_session()
-    st = _dying_state(hp=50)
-    do, _ = should_switch_e(4.54, 3.0, 2, _p2_survival_band_DEFAULT_REGISTRY)
-    assert do, '夹具前提:E_rounds 主判据放行'
-    ok, _ = _p2_survival_band_survival_gate(st, sess, 5.0, _REG_GATE)
-    assert not ok, '存活轮数不足时串联门必须拦(堵转进死线)'
-
-
+# --- (C4:存活轮数门锁段已随 C4 开关族删除——旧方案清退批,清查报告
+#     OLD_MIX_AUDIT §1.3;rounds_alive/survival_gate 同批删。)
 # ==================== w857_plane_intel_skip ====================
 
 def test_decide_plane_skip_truth_table() -> None:

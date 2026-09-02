@@ -174,13 +174,15 @@ def test_synthetic_row_gold_unreadable_omitted(monkeypatch) -> None:
 
 def test_supply_producer_wiring_in_source() -> None:
     """弱锁保底:RunSupplyNode 选定分支真接线(set_last_supply_pick + 选项清单透传,
-    :options=逐列内容动态列表)。"""
+    :options=逐列内容动态列表)。锁语义重推(观察层数据移交批):选定快照改
+    为本地 ``picked`` dict 构建后同时喂暂存槽与合成决策帧 extra.supply_pick,
+    逐列内容透传语义不变,字面锁随之更新到新形状。"""
     import inspect
 
     from sr_od.application.currency_war.operations.run_nodes import run_supply_node
     src = inspect.getsource(run_supply_node.RunSupplyNode._do_action)
     assert 'set_last_supply_pick(' in src
-    assert "options=[{'char': o.char" in src   # 逐列内容透传(实际识别列数)
+    assert "'options': [{'char': o.char" in src   # 逐列内容透传(实际识别列数)
 
 
 # ===== 补给备战状态采集 detour(坐标 2026-08-27 实机实测后复实现) =====
@@ -881,8 +883,12 @@ def test_branch_wiring_in_source() -> None:
     """loop 源码弱锁:1f 分支调 _record_loss_page;3b 原输轮记录仍在。"""
     from sr_od.application.currency_war.operations import battle_loop
     src = inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
-    # 1f(失败结算页)翻页前补录
-    assert '_record_loss_page(screen)' in src
+    # 1f(失败结算页)翻页前补录。DD-006 二轮审计③后为 pre_fp 下传形态:
+    # 1f 分支一次全屏 OCR 的 items 下传 sign 判定/三项暂存/同屏指纹三处消费
+    #(消重复 OCR),指纹作为 pre_fp 传入 _record_loss_page——锁新形态调用在位
+    #(锁语义不变:1f 真接线翻页前补录,防结构回退)。
+    assert '_record_loss_page(screen, pre_fp=_pre_fp)' in src
+    assert 'settle_page1_progress_sign([r.data for r in _1f_items])' in src
     # 3b 原「前往结算」输轮记录路径保留(fp 防重共用,1f miss 时兜底)
     assert "btn == '前往结算'" in src
     assert '_record_round_outcome(screen)   # killed/progress_delta 由屏文本判定' in src

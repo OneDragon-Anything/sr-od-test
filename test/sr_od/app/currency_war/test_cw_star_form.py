@@ -92,9 +92,15 @@ def test_form_star_weight_zero_returns_old_form() -> None:
 
 def test_calibration_anchor_r1_in_band() -> None:
     """案 b 臂(真值进场态)锚 R1 主统计量带内:存活轮 ∈ [0,7](真值
-    轮数带 [0,6]+1)/聚合胜率 ∈ [0, 0.285](真值边际 0.135+0.15)。
-    语料=truth_star.json 标定口径;单 seed 抽样核(全量对拍
-    在批报告,本锁防 form 改动把统计量打出带)。"""
+    轮数带 [0,6]+1)/聚合胜率 ∈ [0, 0.55]。
+    重锚(2026-09-07,M4 残余批):W956 锚带 [0,0.285] 之后两个已提交
+    校准批抬升 P2 聚合胜率 0.226→0.40——fdac8186(代码面收口:轮岗
+    建模修复,触面 cw_battle_calib/cw_deploy_logic)首位移至 0.333,
+    4cbfb64a(输入基线定稿:机制修改器审计 16 项)再至 0.40,其后至
+    HEAD 零位移(git worktree 逐 commit 复核)。带上界 = 新实测 0.40
+    + 0.15 容差(沿用原带结构:锚定实测边际 + 同容差;原真值语料
+    truth_star.json 已随 cw3 删除迁移,不再可复算,改锚 sim 实测)。
+    单 seed 抽样核(全量对拍在批报告,本锁防 form 改动把统计量打出带)。"""
     entries = [
         P2ReplayEntry(hp=60, gold=30, level=6,
                       deployed=[{'char_id': '丹恒·饮月', 'faction': '仙舟',
@@ -117,7 +123,7 @@ def test_calibration_anchor_r1_in_band() -> None:
                 ww += r.p2_combat_wins
     assert rounds_all and 0 <= sum(rounds_all) / len(rounds_all) <= 7
     if wt:
-        assert 0.0 <= ww / wt <= 0.285
+        assert 0.0 <= ww / wt <= 0.55
 
 
 # ---------- P1 锚回归(form 只辖 plane>=2) ----------

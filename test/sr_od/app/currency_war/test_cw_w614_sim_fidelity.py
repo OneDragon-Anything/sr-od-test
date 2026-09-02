@@ -86,8 +86,18 @@ from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
 # ③F5 部署供给(板缺帧 deploy 候选不截断,同 DESIGN §1.4)。
 # 锚有效性前提 = 各批自身验证(REPORT §6/§6.4 与 ADR-0510);新锚继续做
 # unintended drift 哨兵。
+# M4 残余重锚(2026-09-07):W956 锚 297d7eb4… 之后两个已提交行为批未随批
+# 重锚,git worktree 逐 commit bisect 定谳(父 1e819f84 复现 297d7eb4…):
+# ①fdac8186(CW 代码面收口:轮岗建模修复,触面 cw_battle_calib/
+# cw_deploy_logic/cw_economy 等)首位移至 278e8401…;
+# ②4cbfb64a(输入基线定稿:机制修改器审计 16 项,触面 cw_comps/
+# cw_effect_ledger/cw_investments)再位移至 1d3b6c29…;
+# a642d28c..HEAD 对本锚三观测量(digest/胜负带/保有)零位移。
+# 两批均为设计内校准/输入重锚(非 unintended drift),锚有效性前提 =
+# 各批自身验证;新锚继续做 unintended drift 哨兵,后续行为批重锚须按
+# w910 先例补单变量 bisect。
 _ZERO_DRIFT_DIGEST_6 = (
-    '297d7eb4eb14127e3b32f345df83e7755b606c8194356e40453251c00231185b')
+    '1d3b6c29bea0516b9686644bf56bdb16ccf86836fb663e7154719eae71a9c769')
 
 
 def _behavior_projection(results) -> str:

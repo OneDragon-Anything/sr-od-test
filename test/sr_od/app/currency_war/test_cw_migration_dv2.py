@@ -12,9 +12,6 @@ from __future__ import annotations
 
 # ==================== w606_switch ====================
 
-from types import SimpleNamespace
-
-from sr_od.application.currency_war.decision_assembly import  shadow_compare_enabled
 from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY, DecisionV2Registry
 
 
@@ -31,14 +28,16 @@ def test_adapter_no_longer_exports_enablement_helper():
     assert not hasattr(adapter, 'director_v2_enabled')
 
 
-def test_shadow_compare_diagnostic_default_off_and_injectable():
-    class _PlainDefaultStrategy:   # default 栈:无 .registry 属性
-        pass
-
-    assert shadow_compare_enabled(_PlainDefaultStrategy()) is False
-    strat = SimpleNamespace(registry=DecisionV2Registry(
-        director_v2_shadow_compare=True))
-    assert shadow_compare_enabled(strat) is True
+# (影子比对诊断锁已随 shadow_compare 开关族删除——旧方案清退批,
+#  清查报告 OLD_MIX_AUDIT §1.3;decision_assembly.shadow_compare_*
+#  函数同批删。)
+def test_shadow_compare_wiring_deleted():
+    import dataclasses
+    import sr_od.application.currency_war.decision_assembly as da
+    names = {f.name for f in dataclasses.fields(DecisionV2Registry)}
+    assert 'director_v2_shadow_compare' not in names
+    assert not hasattr(da, 'shadow_compare_enabled')
+    assert not hasattr(da, 'shadow_compare_step')
 
 
 # ==================== w609_phase_field_spec ====================
@@ -497,6 +496,9 @@ def test_strategy_economy_untouched() -> None:
         '超发货币', '固定理财', '固定理财+', '经验到账', '孪生素数', '狸财经狸',
         '不等价交换', '星际和平保险', '简单模式', '难度修改器', '砂里淘金',
         '星星相印', '武力刷新', '降本增效',
+        # 修复项12(2026-08-31,机制修改器审计 F1/F2/F3):概率事件/奋斗协议/市场干预
+        # 三件「已消费却无资产」补建——锁键集随之扩(锁语义=键集对拍,新增为合法建模)
+        '概率事件', '奋斗协议', '市场干预',
     }
     assert set(STRATEGY_ECONOMY) == expected_keys
     # 本批高频件数值不变(指针引用同一实例的防线:payload 与 overlay 同源)

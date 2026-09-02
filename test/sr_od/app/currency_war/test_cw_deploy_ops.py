@@ -599,6 +599,56 @@ def test_parse_xp_pair_slash_noise_normalized() -> None:
     assert _parse_xp_pair('2/6/') == (2, 6)     # 尾部残留不干扰首个 X/Y
 
 
+# ===== 锁①b:'1' 拆分的上下文等级先验收紧(M2 obs 根因修复:lv 3↔4 乒乓潜在源) =====
+
+def test_parse_xp_pair_split_prior_consistent_accepted() -> None:
+    """先验一致:拆分照常采信(收紧不伤真读)。"""
+    assert _parse_xp_pair('214', expected_level=3) == (2, 4)    # lv3 帧 "2/4" 实读形态
+    assert _parse_xp_pair('416', expected_level=4) == (4, 6)    # lv4 帧 "4/6" 实读形态
+    assert _parse_xp_pair('416', expected_level=3) is None      # 分母 6→lv4 ≠ 先验 3 → 失读
+
+
+def test_parse_xp_pair_split_prior_mismatch_rejected() -> None:
+    """先验不一致 → 判失读(None):分母 4=lv3 独有且单数字易混,
+    真 lv4 帧斜杠误识串("3/4"→"314")被拆成 (3,4) 不再反推 lv3(乒乓潜在源根除)。"""
+    assert _parse_xp_pair('314', expected_level=4) is None      # (3,4)→lv3 ≠ 先验 4 → 拒
+    assert _parse_xp_pair('314', expected_level=3) == (3, 4)    # 先验 lv3 → 采信
+    assert _parse_xp_pair('214', expected_level=4) is None      # (2,4)→lv3 ≠ 先验 4
+
+
+def test_parse_xp_pair_split_no_prior_keeps_old_behavior() -> None:
+    """无先验(None/0,新局无 last_level_obs)→ 旧行为放行(向后兼容)。"""
+    assert _parse_xp_pair('214', expected_level=None) == (2, 4)
+    # normalize 斜杠路径不受先验收紧(XP 纠正 OCR 的主权通道,ADR-0129)
+    assert _parse_xp_pair('2l6', expected_level=3) == (2, 6)
+
+
+def test_read_xp_progress_prior_passthrough(test_context: SrTestContext, monkeypatch) -> None:
+    """read_xp_progress 透传 expected_level 到 '1' 拆分判定。"""
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [type('R', (), {'data': '214'})()])
+    assert read_xp_progress(test_context, None, expected_level=3) == (2, 4)
+    assert read_xp_progress(test_context, None, expected_level=4) is None
+    assert read_xp_progress(test_context, None) == (2, 4)       # 无先验旧行为
+
+
+def test_read_level_uses_session_prior_for_xp_split(test_context, monkeypatch) -> None:
+    """read_level 的 XP 反推先验 = session.last_level_obs(read_game_state 同源)。"""
+    from sr_od.application.currency_war.obs.cw_observation import read_level
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
+                        lambda **kw: [type('R', (), {'data': '314'})()])   # "3/4" 斜杠识成 '1';等级区 314 越界 → 直读失读
+    _sess = type('S', (), {'last_level_obs': 4})()
+    _match = type('M', (), {'session': _sess})()
+    monkeypatch.setattr(test_context, 'cw_match', _match, raising=False)
+    # 先验 lv4:"314" 拆 (3,4) 反推 lv3 与先验矛盾 → XP 失读 → 落 _expected_level(1,1)
+    lv = read_level(test_context, None, plane=1, round_num=1)
+    assert lv != 3
+    # 无先验(新局 last=0)旧行为:拆分采信 → 反推 lv3
+    _sess0 = type('S', (), {'last_level_obs': 0})()
+    monkeypatch.setattr(test_context, 'cw_match', type('M', (), {'session': _sess0})(), raising=False)
+    assert read_level(test_context, None, plane=1, round_num=1) == 3
+
+
 # ===== 锁②:read_level_raw_opt 无兜底契约 + 放大读不破坏 mock 注入 =====
 
 def test_read_level_raw_opt_contract(test_context: SrTestContext, monkeypatch) -> None:

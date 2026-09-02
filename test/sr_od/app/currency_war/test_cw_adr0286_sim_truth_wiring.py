@@ -4,8 +4,9 @@
 - 件1(批㉓ F3):xp_progress 真值化——sim 结算处维护(初始 0 / 3 买后
   cur=XP_PER_BUY×3 / 轮末升级按 XP_TO_NEXT_LEVEL 清零结转);
 - 件2(批㉓ F4):轮岗概率建模——rotation_probs 翻倍档=基线×2、其余档
-  重归一、非法档 None;sim 每备战期掷 ROTATION_CHANCE,
-  draw_shop 消费轮岗后表(轮岗帧 1 费占比 ≈ 2×基线);
+  重归一、非法档 None;**事件侧已按勘误重锁**(DESIGN_FINAL_ATTACK
+  阻断-2:轮岗=已选环境每阶段 100% 重掷,非 20% 无条件事件)——
+  缺省侧锁见本文件 test_sim_rotation_event_never_fires_without_env;
 - 件3(批㉔ F1/F5):cap 真值接线——read_deploy_cap_debounced 域防抖
   两态(域外重读一帧;仍域外 None 拒信)、max_units 真值优先/level 兜底、
   sim 宝钻通道参数化(默认 0 = None;prob=1 → cap=level+宝钻数)。
@@ -20,7 +21,6 @@ import pytest
 from sr_od.application.currency_war.obs import cw_observation
 from sr_od.application.currency_war.data.cw_shop_odds import (
     REFRESH_PROB,
-    ROTATION_CHANCE,
     rotation_probs,
 )
 
@@ -132,29 +132,16 @@ class _ProbsRecorder:
         return []
 
 
-def test_sim_rotation_event_writes_truth_shaped_probs() -> None:
-    """sim 轮岗事件:掷中帧 probs = 完整翻倍表(某档 = 该帧 level 基线×2),
-    未掷中帧 None(基线);真策略(等级升到 lv≥5 可翻倍档)下必现轮岗帧。
-
-    注:lv1-3 基线纯 1 费(p=1.0)→ 无可翻倍档,轮岗结构性不可能
-    (与生产「低级帧无轮岗」同态);掷中但无可翻倍档 → None(退基线)。"""
-    rows: list[tuple[int, object, int]] = []   # (round, probs, level)
-    for seed in range(6):
-        rec = _ProbsRecorder(delegate=True)
-        simulate_p1(seed, pool='fallback', strategy=rec)
-        rows.extend((rn, p, lv) for rn, p, _cap, lv in rec.rows)
-    lv_ge5 = [(rn, p, lv) for rn, p, lv in rows if lv >= 5]
-    rot = [(rn, p, lv) for rn, p, lv in lv_ge5 if p is not None]
-    assert rot, '真策略多局 @20%×lv≥5 帧无轮岗帧(事件未接线?)'
-    for rn, p, lv in rot:
-        base = REFRESH_PROB.get(lv, {})
-        assert any(abs(v - 2 * base.get(k, 0)) < 1e-9
-                   for k, v in p.items()), (rn, lv, p)
-        assert sum(p.values()) == pytest.approx(1.0)
-    assert any(p is None for _rn, p, _lv in lv_ge5), '未掷中帧应为 None(退基线)'
-    assert 0 < len(rot) / len(lv_ge5) < 0.5, '轮岗频率应在 20% 量级(非全帧/零帧)'
-    assert all(p is None for _rn, p, lv in rows if lv < 4), \
-        'lv<4(纯 1 费)无可翻倍档 → 恒 None'
+def test_sim_rotation_event_never_fires_without_env() -> None:
+    """锁已按勘误重推(01 §4.10 概率表族,DESIGN_FINAL_ATTACK 阻断-2):
+    旧「ROTATION_CHANCE=0.2 无条件掷事件」把 replay 观测在场频率误当机制
+    概率——机制语义 = 已选轮岗环境后每备战阶段 100% 重掷翻倍档。本锁钉
+    勘误后的**缺省侧**:无环境注入局,全部备战阶段概率条恒基线(None)。"""
+    rec = _ProbsRecorder(delegate=True)
+    simulate_p1(0, pool='fallback', strategy=rec)
+    assert rec.rows, '真策略局应有备战段'
+    for rn, p, _cap, lv in rec.rows:
+        assert p is None, f'未选轮岗环境不得翻倍(rn={rn},lv={lv})'
 
 
 # --- 件3:cap 真值接线 -----------------------------------------------------

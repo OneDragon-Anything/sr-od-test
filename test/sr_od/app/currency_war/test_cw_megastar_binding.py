@@ -32,10 +32,15 @@ def test_front_carry_binds_sunday() -> None:
 
 
 def test_crit_engine_binds_robin() -> None:
-    """暴击引擎族(群攻/欢愉/追击)→ 知更鸟(幸运一击率 +55%)。"""
+    """暴击引擎族(群攻/欢愉/追击)→ 知更鸟(幸运一击率 +55%)。
+
+    希儿量子例外(修复项1,2026-08-31):core 修正后 花火(盛会之星,63/67 第二引擎)
+    入 core —— select 序 1「core 里的盛会之星」优先于偏好序,故绑 花火(战技点引擎,
+    与量子线拉条链同构);知更鸟已移出 core(n=67 非核心组),退偏好序次选。"""
     s = _S()
-    for name in ('追击飞霄', '银枝群攻', '大黑塔银河学者', '希儿量子', '绯英欢愉', '狼尊欢愉'):
+    for name in ('追击飞霄', '银枝群攻', '大黑塔银河学者', '绯英欢愉', '狼尊欢愉'):
         assert select_megastar(s, _by_name(name), _ALL) == '知更鸟', name
+    assert select_megastar(s, _by_name('希儿量子'), _ALL) == '花火'   # core 优先(修复项1)
 
 
 def test_engine_families() -> None:
@@ -76,36 +81,6 @@ def test_preference_table_covers_and_valid() -> None:
         assert set(stars) <= set(_ALL)
 
 
-# —— select_megastar_enhance(巨星强化角色意向,绑定序锁;W889 批)——
-
-
-def _state(deployed, bench=()):
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-    s = GameState()
-    s.deployed = [BenchChar(slot=i + 1, char_id=n) for i, n in enumerate(deployed)]
-    s.bench = [BenchChar(slot=i + 1, char_id=n) for i, n in enumerate(bench)]
-    return s
-
-
-def test_enhance_binds_core_front_then_bench() -> None:
-    """绑定序:①core 前排 → ②core 后台 → ③首个前排 → ④无板 → None。
-    出处=cw_comps.select_megastar_enhance docstring(机制语义待证假设,
-    消费开关 registry.megastar_enhance_enabled 默认关)。"""
-    from sr_od.application.currency_war.kernel.cw_comps import (
-        select_megastar_enhance,
-    )
-
-    s = _S()
-    # core 白厄在前排 → 直接绑
-    assert select_megastar_enhance(
-        _state(['素裳', '白厄']), _by_name('反甲白厄')) == '白厄'
-    # core 知更鸟只在后台 → 绑后台 core
-    assert select_megastar_enhance(
-        _state(['素裳'], ['知更鸟']), _by_name('追击飞霄')) == '知更鸟'
-    # 无 core 在板 → 首个前排兜底
-    assert select_megastar_enhance(
-        _state(['素裳', '寒鸦']), _by_name('反甲白厄')) == '素裳'
-    # 无 target → 首个前排
-    assert select_megastar_enhance(_state(['素裳']), None) == '素裳'
-    # 板上无角色 → None
-    assert select_megastar_enhance(_state([]), _by_name('反甲白厄')) is None
+# (select_megastar_enhance 绑定序锁段已随 megastar_enhance_enabled 开关族
+#  删除——旧方案清退批,清查报告 OLD_MIX_AUDIT §1.3;函数与开关同批删,
+#  MegastarPick.enhance_char_id 字段保留恒 None。)

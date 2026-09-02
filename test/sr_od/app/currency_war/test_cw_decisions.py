@@ -682,16 +682,9 @@ def test_comp_char_positions_data() -> None:
 
 
 
-# ===== ADR-0140 中期护航三套(escort_for + tempo 护航感知) =====
-def test_escort_for_serves_matching() -> None:
-    """escort_for 按 target 机制属性匹配:希儿量子(量子拉条)→龙丹护航;巡海击破→灵砂护航;万敌(燃血成长型)→None。"""
-    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, escort_for
-    xe = next(c for c in COMP_LIBRARY if c.name == "希儿量子")
-    lj = next(c for c in COMP_LIBRARY if c.name == "巡海击破")   # ADR-0152:击破流萤更名
-    wd = next(c for c in COMP_LIBRARY if c.name == "万敌单C")
-    assert escort_for(xe).name == "龙丹护航"
-    assert escort_for(lj).name == "灵砂护航"
-    assert escort_for(wd) is None, "成长型(燃血)不护航"
+# ===== ADR-0140 中期护航三套:已随清退评估批删除(2026-09) =====
+# escort_for/ESCORT_COMPS/GROWTH_MECHANICS 生产消费点早已清零,清查报告
+# OLD_MIX_AUDIT §7.2 裁定整段删除,本单测同批移除(锁的是已死词汇,非设计意图)。
 
 
 # ===== ADR-0141 品质→敌难度进选卡(金+3/彩+6 的风险项) =====
