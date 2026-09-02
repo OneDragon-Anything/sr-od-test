@@ -56,19 +56,16 @@ import inspect as _r336_batch4_locks_inspect
 
 
 def test_shop_open_collapse_wait_dd011() -> None:
-    """r335→r347(旧路径删除)→ DD-011 amended(2026-09-02,用户口述定值):
-    shop 开店/收起均为固定时长自等(各 1.0s,用户口述)+ 点击生效验证;
-    测量驱动稳定门与旧轮询不得回流,画面状态判定在外层建档识别层。"""
+    """否定性回流锁(DD-011 裁决背书):shop buy 内「测量驱动稳定门」与
+    「旧轮询 _legacy_poll」均已退役,不得无意回流——两者皆有事故/裁决史
+    (gate = 测量驱动等待被 DD-011 整体退役;_legacy_poll = 40min 空转死循环)。
+    注:不设肯定性断言(常量名在场类)——那类锁只是实现的影子,无独立语义。"""
     from sr_od.application.currency_war.operations.prep import shop
     src = _r336_batch4_locks_inspect.getsource(shop.BuyShopCards.buy)
     assert 'def _legacy_poll' not in src, \
-        '旧轮询 _legacy_poll 已删(r347),不得回流'
+        '旧轮询 _legacy_poll 已删(r347 40min 空转事故),不得回流'
     assert 'wait_stable_frame' not in src, \
-        'buy 内 gate 已按 DD-011 全退役,不得回流'
-    assert 'SHOP_CLOSE_ANIM_S' in src, \
-        '收起动画时长必须由 op 显式声明并等待(DD-011 固定时长自等)'
-    assert 'SHOP_OPEN_ANIM_S' in src, \
-        '开店动画时长必须由 op 显式声明并等待(DD-011 固定时长自等,用户口述 1.0s)'
+        'buy 内 gate 已按 DD-011 全退役(测量驱动等待),不得回流'
 
 
 def test_star_evidence_queue_pattern() -> None:
