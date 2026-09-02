@@ -198,7 +198,11 @@ def test_cap_debounce_reread_recovers_then_rejects(monkeypatch) -> None:
 
 def test_cap_debounce_out_of_domain_equal_pair_accepted(monkeypatch) -> None:
     """ADR-0420:域外但**两帧一致**且 ≤ 绝对上界 13 → 采信(e4972b43
-    实拍 diff=5 真实高档,旧域拒信致 6 槽降级跑在 9 格板上)+ 留证。"""
+    实拍 diff=5 真实高档,旧域拒信致 6 槽降级跑在 9 格板上)+ 留证。
+    d2daffd6 后判据镜像上下两向:cap<level 两帧一致同样采信——cap=level+宝钻
+    机制里 cap<level 的唯一现实来源是 level 读错/毒化
+    (帧证据 obs_conflict_deploy_paddle__d9f64136:画面 4/4、level 先验 5),
+    采真值比拒信退 level 兜底更接近画面事实,不再恒拒。"""
     conflicts: list[tuple] = []
     monkeypatch.setattr(cw_observation, 'obs_conflict',
                         lambda *a, **k: conflicts.append((a, k)))
@@ -211,10 +215,13 @@ def test_cap_debounce_out_of_domain_equal_pair_accepted(monkeypatch) -> None:
     calls = _patch_reader(monkeypatch, [15, 15])
     assert cw_observation.read_deploy_cap_debounced(
         _FakeCtx(), object(), 8) is None
-    # cap<level 两帧一致仍恒拒(物理不可能)
+    # cap<level 两帧一致 → 采信(下向同判据,level 先验疑毒化;留证注明)
+    # 注:[15,15] 拒信路径同样留证,故共 3 条
     calls = _patch_reader(monkeypatch, [3, 3])
     assert cw_observation.read_deploy_cap_debounced(
-        _FakeCtx(), object(), 5) is None
+        _FakeCtx(), object(), 5) == 3
+    assert calls['n'] == 2 and len(conflicts) == 3
+    assert '采信' in str(conflicts[2][1]) and 'cap<level' in str(conflicts[2][1])
 
 
 def test_max_units_deploy_cap_priority() -> None:

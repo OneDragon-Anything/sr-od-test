@@ -685,10 +685,13 @@ def test_composite_reads_success_field(test_context: SrTestContext,
     class _FakeModule:
         BuyShopCards = _FakeOp
 
-    import importlib
-    real_import = importlib.import_module
-    monkeypatch.setattr(importlib, 'import_module',
-                        lambda path: _FakeModule if path.endswith('.shop') else real_import(path))
+    # patch 消费点:只替换被测链要导入的那一个 sys.modules 条目
+    # (importlib.import_module 命中缓存直返 _FakeModule),不动标准库
+    # importlib.import_module(全局替换会波及进程内一切 import)
+    import sys
+    monkeypatch.setitem(sys.modules,
+                        'sr_od.application.currency_war.operations.prep.shop',
+                        _FakeModule)
     ok, detail = ex.execute(RunBuyPhase())
     assert ok, f'success=True 的组合结果必须判成功(live bug:旧读 is_success 恒 False): {detail}'
 

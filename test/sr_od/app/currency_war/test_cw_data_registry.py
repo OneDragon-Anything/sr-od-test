@@ -1329,19 +1329,24 @@ def test_cap_transient_in_formula_channel_debounced(tmp_path, monkeypatch):
 
 
 def test_cap_still_domain_rejected_falls_baseline(tmp_path, monkeypatch):
-    """cap 域外且重读仍域外([3,3],lv6)→ 拒信 None → diff=0 退 6 格基线
-    (失败安全侧,不在瞬态值上选档)+ deploy_cap_domain 留证。"""
+    """cap<level 两帧一致([3,3],lv6)→ 防抖采信 cap=3(不再恒拒:d2daffd6
+    后下向同走双帧一致通道,level 先验疑毒化,见 _debounce_cap 注/ADR-0420
+    判据镜像)→ diff=−3、d=0 仍退 6 格基线(负 diff 不加格,失败安全侧不变)
+    + deploy_cap_domain 采信留证。瞬态单帧([3,8] 型)仍由上一锁覆盖。"""
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_observation as cwo
     calls = _patch_cap_reader(monkeypatch, [3, 3])
     conflicts = []
-    monkeypatch.setattr(cwo, 'obs_conflict', lambda *a, **k: conflicts.append(a))
+    monkeypatch.setattr(cwo, 'obs_conflict',
+                        lambda *a, **k: conflicts.append((a, k)))
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
     r = cbl.resolve_back_slots(_CapFakeCtx(), object(), level=6, cap=None)
     assert calls['n'] == 2 and len(conflicts) == 1
-    assert r['cap'] is None and r['n'] == 6 and r['prefix'] == '后排'
+    assert '采信' in str(conflicts[-1][1]), 'cap<level 双帧一致采信须留证'
+    assert r['cap'] == 3 and r['diff'] == -3
+    assert r['n'] == 6 and r['prefix'] == '后排'
 
 
 def test_deploy_bench_gate_wired_to_debounced_reader():
