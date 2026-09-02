@@ -660,17 +660,16 @@ def test_shop_refresh_cost_base_price_model_lock() -> None:
     """read_game_state 主链不再 OCR 刷价——state.shop_refresh_cost 恒基价。
 
     出处:W577 DESIGN 定谳 + ADR-0456(实付恒 2,rect 读数=面板徽标利息
-    数值)。两层源码锁:
-    1. cw_observation.read_game_state 里刷价赋值 = REFRESH_COST_BASE 常量,
-       read_shop_refresh_cost 调用不得出现在主链(旁证调用=显式独立);
+    数值)。源码锁:
+    1. cw_observation.read_game_state 里 read_shop_refresh_cost 调用不得
+       出现在主链(旁证调用=显式独立)——肯定半(基价赋值字面形状锁)已按
+       源码锁瘦身删除;
     2. 决策热路径少一次 OCR 是本改动的效率契约(净减少,禁加回)。
     """
     from pathlib import Path
 
     import sr_od.application.currency_war.obs.cw_observation as obs_mod
     src = Path(obs_mod.__file__).read_text(encoding='utf-8')
-    assert 'state.shop_refresh_cost = REFRESH_COST_BASE' in src, \
-        'read_game_state 刷价赋值必须是基价常量(徽标 OCR 禁回主链)'
     assert 'state.shop_refresh_cost = read_shop_refresh_cost' not in src, \
         '主链不得再调用 read_shop_refresh_cost(徽标退役,ADR-0456)'
     from sr_od.application.currency_war.kernel.cw_state import REFRESH_COST_BASE

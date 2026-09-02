@@ -661,15 +661,6 @@ def test_dual_registration_both_strategies_discoverable() -> None:
     assert isinstance(strat, DecisionV2Strategy)
 
 
-def test_config_switch_field_exists() -> None:
-    """C5 开关:CurrencyWarConfig 源码含 strategy_id 装载(切 line_v2/
-    decision_v2;默认 default 不变——切换验收归步 5)。"""
-    import inspect
-
-    from sr_od.application.currency_war.currency_war_config import CurrencyWarConfig
-    assert "strategy_id" in inspect.getsource(CurrencyWarConfig)
-
-
 # --- ⑦ F2 跨源共存锁(ADR-0316 槽位语义;W51 扩面批)--------------------------
 
 

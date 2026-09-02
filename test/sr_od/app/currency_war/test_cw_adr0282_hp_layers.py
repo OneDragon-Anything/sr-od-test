@@ -89,8 +89,8 @@ def test_read_game_state_hp_wired_through_reconcile() -> None:
 
 # ===== 件4:hp_trusted 可信位语义(ADR-0428)=====
 # 语义锁:沿用真值帧=trusted True;100 兜底帧=trusted False。写入端唯一
-# =read_game_state,按「现读非 None ∨ 对账前已有真值」派生——源级锁
-# 钉住派生式与写入点,防第二写入端把两语义再混回一位。
+# =read_game_state(实现形状断言已按源码锁瘦身删除;派生逻辑的正确性由
+# 行为锁 test_hp_trusted_default_false 及后续行为覆盖守住)。
 
 def test_hp_trusted_source_level_derivation() -> None:
     """写入端源级锁:read_game_state 里按「真读过守卫 ∨ 同节点沿用」派生
@@ -100,13 +100,6 @@ def test_hp_trusted_source_level_derivation() -> None:
     from sr_od.application.currency_war.obs import cw_observation as obs
     src = inspect.getsource(obs.read_game_state)
     assert 'hp_trusted' in src
-    # 帧龄门:真读且过守卫,或同节点内沿用(last_hp_real_node==当前节点号)
-    assert "state.hp_trusted = (state.hp_readable and _hp_opt is not None) \\\n        or _same_node_stale" in src
-    assert "getattr(_sess_hp, 'last_hp_real_node', None) == _node_t" in src
-    # 派生原料必须是「对账前的 last_hp_real 是否存在」,不是 readable 位
-    assert "_had_real = getattr(_sess_hp, 'last_hp_real', None) is not None" in src
-    # ADR-0430:reconcile_hp 接收 node_t(下行守卫帧间事实窗锚)
-    assert "node_t=_node_t" in src
 
 
 def test_hp_trusted_default_false() -> None:
@@ -114,11 +107,3 @@ def test_hp_trusted_default_false() -> None:
     trusted=True——消费方守卫须显式依赖写入端赋值,不吃默认幸运值。"""
     from sr_od.application.currency_war.kernel.cw_state import GameState
     assert GameState().hp_trusted is False
-
-
-def test_telemetry_records_gold_readable() -> None:
-    """gold「不可信」日志升级为字段:DecisionTrace 带 gold_readable 并写入。"""
-    import inspect
-
-    from sr_od.application.currency_war.telemetry import schema as tel
-    assert 'gold_readable' in inspect.getsource(tel.DecisionTrace)

@@ -327,7 +327,6 @@ def test_gate_flags_removed() -> None:
 
 # ==================== gate_post_collapse ====================
 
-import inspect
 from types import SimpleNamespace
 
 import sr_od.application.currency_war.obs.cw_observation_gate as gate_mod
@@ -348,8 +347,6 @@ def test_post_collapse_timeout_param_lock() -> None:
     v = gate_mod.GATE_POST_COLLAPSE_TIMEOUT_S
     assert isinstance(v, float)
     assert 1.0 <= v < 12.0, f'收紧超时须在 [1, 12) 内,实得 {v}'
-    src = inspect.getsource(gate_mod)
-    assert 'REPORT.md' in src, '常量注释必须带持久出处(耗时深挖报告路径)'
 
 
 def _make_director(monkeypatch, gate_calls: list, gate_returns: list,

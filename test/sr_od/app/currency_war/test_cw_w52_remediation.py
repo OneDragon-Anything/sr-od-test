@@ -288,11 +288,8 @@ def test_s2_25_40_two_lines_documented() -> None:
     )
     assert _REG.emergency_hp == 25
     assert BLOOD_MARGIN_LOW_HP == 40
-    import inspect
-
-    import sr_od.application.currency_war.decision.decision_v2.discipline as m
-    src = inspect.getsource(m)
-    assert '25/40 两档并存口径' in src, '25/40 docstring 应成文(防口径漂移)'
+    # 「25/40 docstring 成文」的源码文案断言已按源码锁瘦身删除(实现形状锁)。
+    # 两档并存语义由上方两常量断言守住。
 
 
 # --- S5 统一卖件弱序(§4/§7;ADR-0327)-----------------------------------------

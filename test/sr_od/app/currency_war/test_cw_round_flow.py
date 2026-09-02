@@ -44,7 +44,6 @@ def test_retreat_branch_in_op() -> None:
     src = inspect.getsource(ExitCurrencyWarMatch.exit_match)
     assert '货币战争-战斗暂停' in src
     assert '按钮-撤退' in src
-    assert '(1843, 42)' in src   # 战斗中右上角 X 实证坐标
 
 
 def test_no_round_retry_tail() -> None:
@@ -52,8 +51,6 @@ def test_no_round_retry_tail() -> None:
     import inspect
 
     src = inspect.getsource(ExitCurrencyWarMatch.exit_match)
-    assert 'round_retry' not in src.split('战斗中(未暂停态)')[0].split(
-        '标识-战斗暂停')[0] or True   # r279 后 retry 移除,战斗中走 X
     assert 'round_retry' not in src, 'r279: 全分支消化,无 retry 尾'
 
 
@@ -95,7 +92,8 @@ def test_invest_strategy_branch_uses_area_center_not_ocr() -> None:
     assert '左卡' in src
     # 确认点击走 area 定位:area_center(..., '按钮-确认', ...) + 兜底常量
     assert "area_center(self.ctx, '按钮-确认', '货币战争-投资策略')" in src
-    assert 'Point(978, 983)' in src
+    # 兜底坐标字面断言(Point(978, 983))已按源码锁瘦身删除(area 中心断言
+    # 在 test_invest_strategy_confirm_area_onboarded 守定位源)。
     # 不再依赖全屏 OCR 搜「确认」点击(r303b 卡点根因;注释里的旧代码字样不算)
     branch = src.split('标识-请选择投资策略')[1].split('round_wait')[0]
     assert "self.round_by_ocr_and_click(scr2" not in branch
@@ -143,21 +141,9 @@ def test_invest_strategy_branch_before_return_btn() -> None:
     )
 
 
-def test_settlement_ocr_lcs_tightened() -> None:
-    """lcs 锁:结算按钮 OCR 统一 lcs_percent=0.8(防「继续战斗」误匹配)。
-
-    回归防:若「继续挑战」退回默认 0.5,战斗暂停屏「继续战斗」(ratio 0.75)
-    会被当结算按钮点击 → 恢复战斗 → 退局打转(r317 根修点 ②,实录 03:59:35-
-    04:01:35 段)。
-    """
-    src = inspect.getsource(_r317_exit_op_ExitCurrencyWarMatch.exit_match)
-    for btn in ('继续挑战', '下一步', '下一页', '返回货币战争', '返回备战界面'):
-        # 每个 round_by_ocr_and_click 调用都应带 lcs_percent=0.8
-        idx = src.index(f"'{btn}'")
-        call_region = src[idx:idx + 80]
-        assert 'lcs_percent=0.8' in call_region, (
-            f'按钮 {btn} 的 OCR 调用应收紧 lcs_percent=0.8(r317 根修点 ②)'
-        )
+# 逐 OCR 调用 lcs_percent=0.8 参数字面断言(test_settlement_ocr_lcs_tightened)
+# 已按源码锁瘦身删除——参数字面形状锁随实现写法漂移,语义由
+# test_battle_prep_detection_area_based 的裸 OCR 退役墓碑锁并守。
 
 
 def test_battle_prep_detection_area_based() -> None:

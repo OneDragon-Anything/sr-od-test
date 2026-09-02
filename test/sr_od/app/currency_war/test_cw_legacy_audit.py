@@ -69,28 +69,18 @@ def test_shop_open_collapse_wait_dd011() -> None:
 
 
 def test_star_evidence_queue_pattern() -> None:
-    """r336:star 留证从 reconcile 深处改队列登记,对账位统一消费。"""
+    """r336:star 留证从 reconcile 深处改队列登记,对账位统一消费。
+    队列变量名的赋值字面断言已按源码锁瘦身删除(实现形状锁)。"""
     from sr_od.application.currency_war.kernel import cw_reconcile
     src = _r336_batch4_locks_inspect.getsource(cw_reconcile.reconcile_tracking)
-    assert '_pending_evidence.append' in src       # 深处只登记
-    assert '_pending_evidence:' in src              # 队列初始化
-    # 消费在函数尾部(对账&hook 位)
+    # 消费在函数尾部(对账&hook 位);顺序即语义:留证消费须在对账 return 前
     tail = src[src.index('return True') - 700:]
     assert '_star_stop_hook' in tail
 
 
-def test_star_hook_none_screen_tolerant() -> None:
-    """r336b:screen=None(测试/无帧)不拦留证。"""
-    from sr_od.application.currency_war.kernel import cw_reconcile
-    src = _r336_batch4_locks_inspect.getsource(cw_reconcile._star_stop_hook)
-    assert 'screen is not None' in src
-
-
 def test_prep_settle_attribution_declared() -> None:
-    """r336:PREP_SETTLE_S 归属声明(分发层 vs 环内 gate 正交)。"""
-    from sr_od.application.currency_war.operations import battle_loop
-    src = _r336_batch4_locks_inspect.getsource(battle_loop.CurrencyWarRunLoop)
-    assert 'r336' in src and '正交' in src
+    """r336:PREP_SETTLE_S 归属声明(分发层 vs 环内 gate 正交)。
+    源码文案断言已按源码锁瘦身删除(注释/字符串字面在场的形状锁)。"""
 
 
 def test_shop_currency_war_config_module_level() -> None:
@@ -317,9 +307,8 @@ def test_live_delta_depth_conditioned() -> None:
 
     from sr_od.application.currency_war.sim import engine_p1 as cw_sim
     from sr_od.application.currency_war.sim import pool as sim_pool
-    src = _r339_r340_telemetry_sim_inspect.getsource(sim_pool.live_delta_for)
-    assert '浅侧' in src and 'bucket - DEPTH_BUCKET_W' in src   # 邻桶回退只向浅侧(真锁:实现语句在)
-    # ADR-0362:合成池带 plane 层
+    # 邻桶回退的形状断言('浅侧'/'bucket - DEPTH_BUCKET_W' 语句字面)已按
+    # 源码锁瘦身删除;回退行为由下方行为断言守住(ADR-0362:合成池带 plane 层)。
     pool = {'battle': {1: {6: [-3, -5]}}}
     v = sim_pool.live_delta_for('battle', 7, random.Random(1),
                               pool_map=pool)

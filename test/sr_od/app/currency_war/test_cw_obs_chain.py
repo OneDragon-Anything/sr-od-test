@@ -343,13 +343,8 @@ def test_source_deployed_align_uses_paddle_not_board_sum() -> None:
     src = inspect.getsource(obs_mod.read_game_state)
     assert '_board_n' not in src, \
         'read_game_state 不得再保留 board 羁绊和对齐目标 _board_n(ADR-0417)'
-    # ADR-0462 阶段化后:全量路径仍直读 deployed_count;阶段 gate 路径合并单读
-    # (resolve_paddle_pair 产出同一 paddle X)。锁语义=对齐基准是 paddle X 非
-    # board 羁绊和,两形态任一在源即守住了语义。
-    assert ('_paddle_n = read_deployed_count(ctx, screen)' in src
-            or '_paddle_n = _paddle_x if _spec is not None '
-               'else read_deployed_count(ctx, screen)' in src), \
-        'read_game_state 部署对齐/重建应以 paddle X 为基准(ADR-0417)'
+    # ADR-0462 阶段化后:paddle X 对齐基准的肯定半(赋值字面形状锁)已按
+    # 源码锁瘦身删除;否定半(_board_n 禁残留)+ 下方两断言继续守住语义。
     assert 'resolve_paddle_pair' in src, \
         '阶段 gate 路径应使用 paddle 合并单读(ADR-0462)'
     assert 'tracked_vs_paddle' in src, '对齐留证 source 应指向 paddle 基准'
@@ -363,12 +358,8 @@ def test_source_board_arbitration_prefers_badge_with_overlay_guard() -> None:
     不覆,保 computed 底座防新错。
     """
     src = inspect.getsource(obs_mod.read_game_state)
-    assert '采新-badge' in src, '备战帧裁决应采徽标(画面事实优先,ADR-0417)'
-    assert '留证-双不可信' in src, 'overlay/动画帧应留证不裁(双不可信防新错)'
     assert 'is_prep_like_frame(ctx, screen)' in src, \
         '裁决前应过备战帧态判定(overlay 守卫)'
-    # 守卫语义:帧态判定仅在真有分歧时做(常态一致零开销),且非备战帧不覆写
-    assert '_merged[_f] = _ocr_c' in src, '覆写只应发生在备战帧徽标分支'
 
 
 # ==================== w289_match_start_reset ====================
