@@ -227,6 +227,216 @@ def test_exemption_is_thread_local():
     assert not t.is_alive()
     assert c.actions == ['click'], 'run 线程输入不得落地(线程隔离)'
 
+# ============ ④ 泛型处理器不得吞停机中断(BaseException 语义) ============
+
+
+def test_stop_interrupted_is_not_exception_subclass():
+    """StopRunInterrupted 不是 Exception 子类:玩法运行路径上的 best-effort
+    包装(suppress(Exception) / except Exception 兜底)恰好覆盖输入调用段,
+    Exception 子类会被吞掉、转化成「尝试失败 → 重试继续」——2026-09-02
+    夜间语料批局1实证:停机信号后局仍推进约 3 分钟,守卫拦了但被吞了。"""
+    assert not issubclass(StopRunInterrupted, Exception)
+    assert issubclass(StopRunInterrupted, BaseException)
+
+
+def test_handle_future_result_collects_stop_interrupted():
+    """future 携带停机守卫异常(BaseException)时,done-callback 收口不外抛。
+
+    穿透强化的调用域半径结论:泛型 except Exception 接不住 BaseException,
+    不显式接会穿透 done-callback → concurrent.futures 只捕 Exception →
+    异常落进工作线程 run() → 线程死(threading.excepthook 只留栈不留
+    「已停止」语义)。handle_future_result 是全部 run 类 future 的公共
+    回调,必须在此按名收口。"""
+    from concurrent.futures import Future
+
+    from one_dragon.utils.thread_utils import handle_future_result
+
+    future: Future = Future()
+    future.set_exception(StopRunInterrupted('停机'))
+    handle_future_result(future)  # 不抛即过(收口为信息级日志)
+
+
+def test_on_task_done_decrements_counter_on_stop_interrupted():
+    """operator._on_task_done:计数器契约 = 每个 inc 恰好一次 dec,三路统一。
+
+    覆盖三条泄漏/停摆路径:
+    - 守卫异常(BaseException,泛型 except 接不住)→ 按名收口递减;
+    - 普通异常 → 递减(原 ``pass`` 漏 dec);
+    - **_run 返回 False(stop 打断未跑完指令的正常返回,最常见路径)→
+      递减**(原 ``if result`` 在该路径漏 dec → 计数器永不清零 → 主循环
+      ``cnt > 0`` 永等、场景不再调度)。"""
+    from concurrent.futures import Future
+    from threading import Lock
+
+    from one_dragon.base.conditional_operation.operator import ConditionalOperator
+    from one_dragon.thread.atomic_int import AtomicInt
+
+    class _Probe(ConditionalOperator):
+        """免全量构造:只用到 _on_task_done 依赖的两个属性。"""
+
+        def get_atomic_op(self, op_def):
+            return None
+
+    op = _Probe.__new__(_Probe)
+    op._task_lock = Lock()
+    op.running_executor_cnt = AtomicInt()
+
+    for exc in (StopRunInterrupted('停机'), RuntimeError('普通异常')):
+        op.running_executor_cnt.set(1)
+        future: Future = Future()
+        future.set_exception(exc)
+        op._on_task_done(future)  # 不抛即过
+        assert op.running_executor_cnt.get() == 0, \
+            f'{type(exc).__name__} 路径计数器必须递减(否则主循环永等)'
+
+    # 正常返回路径:True / False(stop 打断的正常返回)都递减
+    for result in (True, False):
+        op.running_executor_cnt.set(1)
+        done = Future()
+        done.set_result(result)
+        op._on_task_done(done)
+        assert op.running_executor_cnt.get() == 0, \
+            f'_run 返回 {result} 时计数器必须递减(stop 打断是常见正常路径)'
+
+
+def test_round_wait_not_shortcircuited_in_idle_stop(test_context):
+    """idle STOP(闩未置位)不零等待:直接 op 调试路径的等待语义回归。
+
+    _interruptible_sleep 判据必须用 is_stop_interrupted 闩而非
+    is_context_stop——STOP 也是 idle 初始态,后者会把不经 start_running
+    的直接调用(debug.bat 调试/未来工具)的所有 round_wait 静默零等待。"""
+    import time as _time
+
+    op = _LongWaitOp(test_context)  # 不 enter_running_state:idle STOP、闩未置位
+    assert test_context.run_context.is_context_stop is True
+    assert test_context.run_context.is_stop_interrupted is False
+    start = _time.perf_counter()
+    op.round_wait(wait=0.6)
+    elapsed = _time.perf_counter() - start
+    assert elapsed >= 0.5, f'idle STOP 下等待被吞,实耗 {elapsed:.2f}s'
+
+
+def test_stop_interrupted_pierces_suppress_exception():
+    """contextlib.suppress(Exception) 不得吞停机中断(最常见吞点形态)。"""
+    import contextlib
+
+    def _raise_and_swallow():
+        with contextlib.suppress(Exception):
+            raise StopRunInterrupted('停机')
+
+    with pytest.raises(StopRunInterrupted):
+        _raise_and_swallow()
+
+
+def test_stop_interrupted_pierces_except_exception_fallback():
+    """``except Exception: 兜底`` 不得吞停机中断——兜底后继续跑 = 幽灵活动。"""
+    fallback_ran: list[bool] = []
+
+    def _raise_with_fallback():
+        try:
+            raise StopRunInterrupted('停机')
+        except Exception:
+            fallback_ran.append(True)
+
+    with pytest.raises(StopRunInterrupted):
+        _raise_with_fallback()
+    assert fallback_ran == []
+
+
+# ============ ⑤ 轮间等待停机切片(停机响应性) ============
+
+
+class _LongWaitOp(Operation):
+    """节点 round_wait 长 wait:复现「stop 后剩余 wait 整段睡完」形态。"""
+
+    def __init__(self, ctx):
+        Operation.__init__(self, ctx, op_name='长等待探针', need_check_game_win=False)
+
+    @operation_node(name='长等待节点', is_start_node=True)
+    def _node(self) -> OperationRoundResult:
+        return self.round_wait(status='等画面', wait=30)
+
+
+def test_round_wait_returns_early_when_already_stopped(test_context):
+    """stop 已置位时 round_wait(wait=30) 立即返回(切片睡眠入口即查停机)。"""
+    import time as _time
+
+    from test.harness.fixture_controller import (
+        enter_running_state,
+        reset_running_state,
+    )
+
+    enter_running_state(test_context)
+    op = _LongWaitOp(test_context)
+    try:
+        test_context.run_context.stop_running(reason='test:pre_stop')
+        start = _time.perf_counter()
+        op.round_wait(wait=30)
+        elapsed = _time.perf_counter() - start
+        assert elapsed < 2, f'停机后 round_wait 应立即返回,实耗 {elapsed:.2f}s'
+    finally:
+        reset_running_state(test_context, op)
+        _restore_session_run_state(test_context)
+
+
+def test_round_wait_sliced_when_stop_arrives_mid_wait(test_context):
+    """等待中途到达停机信号 → 剩余等待放弃(切片粒度 0.5s 内响应)。"""
+    import threading
+    import time as _time
+
+    from test.harness.fixture_controller import (
+        enter_running_state,
+        reset_running_state,
+    )
+
+    enter_running_state(test_context)
+    op = _LongWaitOp(test_context)
+    try:
+        timer = threading.Timer(0.2, test_context.run_context.stop_running,
+                                kwargs={'reason': 'test:mid_wait'})
+        timer.start()
+        start = _time.perf_counter()
+        op.round_wait(wait=30)
+        elapsed = _time.perf_counter() - start
+        assert 0.2 <= elapsed < 2, f'中途停机应在切片内响应,实耗 {elapsed:.2f}s'
+    finally:
+        timer.join(timeout=5)
+        reset_running_state(test_context, op)
+        _restore_session_run_state(test_context)
+
+
+def test_execute_exits_within_one_round_after_stop(test_context):
+    """核心回归锁:节点长 round_wait 中停机 → execute 一轮内收口「已停止」。
+
+    修复前形态:_after_round_wait 整段 time.sleep(30),停机信号要等睡完
+    才被循环顶看见;修复后切片睡眠提前返回,循环顶 is_context_stop 收口。
+    """
+    import threading
+    import time as _time
+
+    from test.harness.fixture_controller import (
+        enter_running_state,
+        reset_running_state,
+    )
+
+    enter_running_state(test_context)
+    op = _LongWaitOp(test_context)
+    try:
+        timer = threading.Timer(0.2, test_context.run_context.stop_running,
+                                kwargs={'reason': 'test:one_round'})
+        timer.start()
+        start = _time.perf_counter()
+        result = op.execute()
+        elapsed = _time.perf_counter() - start
+        assert result.success is False
+        assert '已停止' in result.status
+        assert elapsed < 5, f'stop 后应一轮内退出,实耗 {elapsed:.2f}s'
+    finally:
+        timer.join(timeout=5)
+        reset_running_state(test_context, op)
+        _restore_session_run_state(test_context)
+
+
 # ============ ③ 穿透语义:嵌套 op 链停机即整链中止 ============
 
 

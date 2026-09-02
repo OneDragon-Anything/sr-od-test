@@ -299,6 +299,36 @@ def test_click_game_tool_delegates() -> None:
     assert result['success'] is True
 
 
+def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
+    """停机守卫异常(BaseException)在工具层按名收口为结构化错误,不外抛。
+
+    裁决背景(2026-09-02 第二轮审计冲突):ServerErrorMiddleware/FastMCP 泛型
+    兜底只接 Exception,BaseException 穿透会变成 ASGI 层错误 + 连接断,客户端
+    拿不到结构化错误。正常路径手动端点已在 backend 层豁免不应到达此处;本
+    兜底是防御纵深(未来端点忘豁免时客户端仍拿到可读错误)。锁全部输入族
+    工具:click_game/key_tap/drag/input_text/goto_screen/close_game。
+    """
+    from one_dragon.base.controller.stop_guard import StopRunInterrupted
+
+    mcp, backend = _mcp_with_backend()
+    for name, invoke in (
+        ('click_game', lambda fn: fn(x=1, y=2)),
+        ('key_tap', lambda fn: fn(key='esc')),
+        ('drag', lambda fn: fn(x1=1, y1=2, x2=3, y2=4)),
+        ('input_text', lambda fn: fn(text='abc')),
+        ('goto_screen', lambda fn: fn(target_screen_name='邮件')),
+        ('close_game', lambda fn: fn()),
+    ):
+        backend_method = getattr(backend, name)
+        backend_method.side_effect = StopRunInterrupted('停机')
+        tool = mcp._tool_manager._tools[name]
+        fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+        result = invoke(fn)  # 不抛即过:按名收口为结构化错误
+        assert result['success'] is False, f'{name} 应返回失败结构'
+        assert '停机中断' in result['error'], f'{name} 错误文案应指明停机中断,实得 {result["error"]}'
+        backend_method.side_effect = None
+
+
 def test_input_text_tool_registered() -> None:
     mcp, _ = _mcp_with_backend()
     tools = asyncio.run(mcp.list_tools())
