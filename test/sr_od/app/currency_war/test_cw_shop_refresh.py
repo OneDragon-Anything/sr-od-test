@@ -467,14 +467,15 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     fc.set_phases([{'frame': (_PREP, 'shop_closed')}])
     monkeypatch.setattr(test_context, 'controller', fc)
 
-    # 画面判定替身:备战锚成功(防空 overlay 误判),其余失败
+    # 画面判定替身:备战锚成功(防空 overlay 误判)+ 商店开态锚「按钮-收起」成功
+    # (DD-011 开店判稳轮询的离线放行 = 判「店已开」跳过开店段;其余失败)
     op = _Watched(test_context)
     op._init_watchdog()  # type: ignore[attr-defined]
     monkeypatch.setattr(
         op, 'round_by_find_area',
         lambda screen, screen_name, area_name, **k:
         op.round_success('') if (screen_name, area_name) == _ANCHOR
-        else op.round_fail(''))
+        or area_name == '按钮-收起' else op.round_fail(''))
     monkeypatch.setattr(op, 'round_by_find_and_click_area',
                         lambda screen, screen_name, area_name, **k:
                         op.round_success(''))
@@ -1036,7 +1037,7 @@ def _make_hook_op(test_context: SrTestContext,
         op, 'round_by_find_area',
         lambda screen, screen_name, area_name, **k:
         op.round_success('') if (screen_name, area_name) == _w944_shop_unk_settle_ANCHOR
-        else op.round_fail(''))
+        or area_name == '按钮-收起' else op.round_fail(''))
     monkeypatch.setattr(op, 'round_by_find_and_click_area',
                         lambda screen, screen_name, area_name, **k:
                         op.round_success(''))
