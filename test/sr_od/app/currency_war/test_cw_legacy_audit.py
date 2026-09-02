@@ -417,8 +417,14 @@ from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 
 
 def test_normalize_node_type_vocab() -> None:
-    """三源词汇统一:英文 token/OCR 中文/旧兜底 → EXPECTED_DROP 键域中文。"""
-    n = CurrencyWarRunLoop._normalize_node_type
+    """三源词汇统一:英文 token/OCR 中文/旧兜底 → EXPECTED_DROP 键域中文。
+
+    (W971 05-battle §1 P4:词汇 normalizer 随结算链收编进 BattleWaitOp。)
+    """
+    from sr_od.application.currency_war.operations.cw_flow.battle_wait_op import (
+        BattleWaitOp,
+    )
+    n = BattleWaitOp._normalize_node_type
     assert n('battle') == '普通战斗'
     assert n('reward') == '奖励'
     assert n('encounter') == '遭遇'
@@ -465,8 +471,10 @@ def _make_stop_loop(*, summary_written: bool = False,
     class _Loop(bl.CurrencyWarRunLoop):
         def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
             self._summary_written = summary_written
-            self._last_outcome_hp = last_outcome_hp
-            self._rounds_done = rounds_done
+            # (W971 05-battle §1 P4:hp/轮计数真值源收编进 SettlementState,
+            #  收口经 self._settle 读——桩同形。)
+            self._settle = _r363_audit_p0_SimpleNamespace(
+                last_outcome_hp=last_outcome_hp, rounds_done=rounds_done)
             self.ctx = _r363_audit_p0_SimpleNamespace(
                 cw_match=_r363_audit_p0_SimpleNamespace(
                     session=_r363_audit_p0_SimpleNamespace(

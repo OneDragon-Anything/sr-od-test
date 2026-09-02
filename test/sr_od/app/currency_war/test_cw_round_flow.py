@@ -397,11 +397,12 @@ def test_outcome_record_damage_roundtrip(tmp_path) -> None:
     assert lines[1]['damage_dealt'] is None
 
 
-# ===== battle_loop 接线(结算帧 → record_outcome 携带 damage_dealt) =====
+# ===== battle_wait_op 接线(结算帧 → record_outcome 携带 damage_dealt) =====
+# (W971 05-battle §1 P4:结算链自 battle_loop 收编 BattleWaitOp,本测试随迁。)
 
 def test_loop_outcome_carries_damage(monkeypatch) -> None:
-    """分支3 路径:真实 read_round_outcome(不桩)喂 win 形帧 → 遥测行带 damage。"""
-    from sr_od.application.currency_war.operations import battle_loop as bl
+    """②段路径:真实 read_round_outcome(不桩)喂 win 形帧 → 遥测行带 damage。"""
+    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op as bwo
 
     captured: list[dict] = []
     monkeypatch.setattr(recorder, 'record_outcome',
@@ -409,17 +410,14 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
                             {'outcome': outcome, 'source': source}))
     monkeypatch.setattr(recorder, 'record_exogenous',
                         lambda *a, **k: None)
-    monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: (1, 8))
+    monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: (1, 8))
 
-    class _Loop(bl.CurrencyWarRunLoop):
+    class _Op(bwo.BattleWaitOp):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
-            self._iter = 1
-            self._summary_written = False
-            self._is_new_match = True
-            self._run_start_ts = time.monotonic() - 9999.0   # 超宽限:正常行
-            self._first_settlement_seen = False
-            self._settle_page1_progress = None
-            self._last_outcome_t = None
+            self._st = bwo.SettlementState(
+                run_start_ts=time.monotonic() - 9999.0,   # 超宽限:正常行
+                is_new_match=True)
+            self._unknown_streak = 0
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
                     session=SimpleNamespace(target_comp=None,
@@ -439,7 +437,7 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
         def round_by_find_area(self, screen, screen_name, area_name, **kw):
             return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
 
-    op = _Loop()
+    op = _Op()
     op._record_round_outcome(screen=None)
     assert len(captured) == 1
     assert captured[0]['source'] == ''
@@ -448,14 +446,15 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
 
 
 def test_branch3_records_before_continue_click() -> None:
-    """弱锁:分支3 采样点在「继续挑战」点击前(结算停留期先读后点)。"""
+    """弱锁:②段采样点在「继续挑战」点击前(结算停留期先读后点)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations import battle_loop
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
+    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op
+    src = inspect.getsource(battle_wait_op.BattleWaitOp.wait)
     i_read = src.index('_record_round_outcome(screen)')
-    i_click = src.index("round_by_find_and_click_area(self.screenshot(), "
-                        "'货币战争-结算', '按钮-继续挑战'")
+    i_click = src.index("round_by_find_and_click_area(\n"
+                        "                    self.screenshot(), '货币战争-结算', "
+                        "'按钮-继续挑战'")
     assert i_read < i_click
 
 

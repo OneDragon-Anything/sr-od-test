@@ -707,13 +707,14 @@ class _OcrItem(SimpleNamespace):
 
 def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read_phase: tuple[int, int],
                killed=None, hp_confidence: float = 0.0):
-    """构 battle_loop 桩:bypass __init__,喂 _record_round_outcome/_record_loss_page 依赖面。
+    """构 battle_wait_op 桩:bypass __init__,喂 _record_round_outcome/_record_loss_page 依赖面。
 
+    (W971 05-battle §1 P4:结算链自 battle_loop 收编 BattleWaitOp,本桩随迁。)
     read_phase_round 桩返 ``read_phase``(模拟 last-known 缓存态);read_round_outcome
     桩按入参回显 plane/round 并可控 killed/hp_confidence;cw_telemetry 写端 monkeypatch
     捕获(自动还原);strategy.on_round_end 记调用次数(telemetry-only 面断言用)。
     """
-    from sr_od.application.currency_war.operations import battle_loop as bl
+    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op as bwo
 
     captured: list[dict] = []
     on_round_end_calls: list[int] = []
@@ -723,7 +724,7 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
 
     monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
     monkeypatch.setattr(recorder, 'record_exogenous', lambda *a, **k: None)
-    monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: read_phase)
+    monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: read_phase)
 
     def _fake_read_outcome(ctx, screen, *, plane, round_num, comp_tag,
                            node_type='普通战斗'):
@@ -731,16 +732,15 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
                             comp_tag=comp_tag, hp_after=0, hp_confidence=hp_confidence,
                             killed=killed)
 
-    monkeypatch.setattr(bl, 'read_round_outcome', _fake_read_outcome)
+    monkeypatch.setattr(bwo, 'read_round_outcome', _fake_read_outcome)
 
-    class _Loop(bl.CurrencyWarRunLoop):
+    class _Op(bwo.BattleWaitOp):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
-            self._iter = 1
-            self._is_new_match = True
-            self._run_start_ts = time.monotonic() - 9999.0   # 超宽限:非残留
-            self._first_settlement_seen = False
-            self._settle_page1_progress = None
-            self._battle_ts = object()   # 哨兵值:断言 telemetry-only 不清它
+            self._st = bwo.SettlementState(
+                run_start_ts=time.monotonic() - 9999.0,   # 超宽限:非残留
+                is_new_match=True,
+                battle_ts=object())   # 哨兵值:断言 telemetry-only 不清它
+            self._unknown_streak = 0
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
                     session=SimpleNamespace(target_comp=None,
@@ -762,7 +762,7 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
         def round_by_find_area(self, screen, screen_name, area_name, **kw):
             return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
 
-    return _Loop(), captured, on_round_end_calls
+    return _Op(), captured, on_round_end_calls
 
 
 # ===== 修复②:结算屏「X-Y」屏面真值全路径(根因=last-known 缓存位面切换滞后) =====
@@ -828,7 +828,7 @@ def test_loss_page_records_row_telemetry_only(monkeypatch) -> None:
         monkeypatch, read_phase=(2, 1),
         ocr_texts=['挑战结束', '2-1', '战斗', '-22', '挑战进度', '前往结算'],
         killed=False)
-    _battle_ts_sentinel = op._battle_ts
+    _battle_ts_sentinel = op._st.battle_ts
     op._record_loss_page(screen=None)
     assert len(captured) == 1
     assert captured[0]['source'] == 'loss_page'
@@ -836,9 +836,9 @@ def test_loss_page_records_row_telemetry_only(monkeypatch) -> None:
     assert o.plane == 2 and o.round_num == 1
     assert o.killed is False
     assert on_round_end_calls == []                    # 策略面零变更
-    assert op._battle_ts is _battle_ts_sentinel        # ADR-0250 窗口语义不变
-    assert getattr(op, '_last_outcome_t', None) is None   # killed 对比链不扰动
-    assert getattr(op, '_last_outcome_hp', None) is None  # summary 真值链不扰动
+    assert op._st.battle_ts is _battle_ts_sentinel     # ADR-0250 窗口语义不变
+    assert op._st.last_outcome_t is None               # killed 对比链不扰动
+    assert op._st.last_outcome_hp is None              # summary 真值链不扰动
 
 
 def test_loss_page_fingerprint_dedupe(monkeypatch) -> None:
@@ -881,18 +881,21 @@ def test_loss_page_failures_do_not_raise(monkeypatch) -> None:
 
 
 def test_branch_wiring_in_source() -> None:
-    """loop 源码弱锁:1f 分支调 _record_loss_page;3b 原输轮记录仍在。"""
-    from sr_od.application.currency_war.operations import battle_loop
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
+    """battle_wait_op 源码弱锁:1f 分支调 _record_loss_page;3b 原输轮记录仍在。
+
+    (W971 05-battle §1 P4:1f/3b 自 battle_loop.loop 收编进 BattleWaitOp.wait,
+    本锁随迁指向新宿主;锁语义不变:1f 真接线翻页前补录,防结构回退。)
+    """
+    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op
+    src = inspect.getsource(battle_wait_op.BattleWaitOp.wait)
     # 1f(失败结算页)翻页前补录。DD-006 二轮审计③后为 pre_fp 下传形态:
     # 1f 分支一次全屏 OCR 的 items 下传 sign 判定/三项暂存/同屏指纹三处消费
-    #(消重复 OCR),指纹作为 pre_fp 传入 _record_loss_page——锁新形态调用在位
-    #(锁语义不变:1f 真接线翻页前补录,防结构回退)。
+    #(消重复 OCR),指纹作为 pre_fp 传入 _record_loss_page——锁新形态调用在位。
     assert '_record_loss_page(screen, pre_fp=_pre_fp)' in src
     assert 'settle_page1_progress_sign([r.data for r in _1f_items])' in src
     # 3b 原「前往结算」输轮记录路径保留(fp 防重共用,1f miss 时兜底)
     assert "btn == '前往结算'" in src
-    assert '_record_round_outcome(screen)   # killed/progress_delta 由屏文本判定' in src
+    assert 'self._record_round_outcome(screen)' in src
 
 
 from sr_od.application.currency_war.telemetry import recorder
@@ -965,14 +968,15 @@ class _w28_outcome_write_defects_OcrItem(SimpleNamespace):
 
 def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapsed_s: float,
                ocr_texts: list[str], first_seen: bool = False):
-    """构 battle_loop 桩:bypass __init__,只喂 _record_round_outcome 依赖面。
+    """构 battle_wait_op 桩:bypass __init__,只喂 _record_round_outcome 依赖面。
 
+    (W971 05-battle §1 P4:结算链收编 BattleWaitOp,本桩随迁。)
     read_phase_round 桩返 (1,1)(模拟 relaunch 后缓存已 reset 的兜底值);
     read_round_outcome 桩返高置信 RoundOutcome(hp 真值来自结算屏);
     recorder.record_outcome / record_exogenous monkeypatch 捕获(自动还原,
     不写真实 .debug)。
     """
-    from sr_od.application.currency_war.operations import battle_loop as bl
+    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op as bwo
 
     captured: list[dict] = []
 
@@ -983,23 +987,22 @@ def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapse
     monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
     monkeypatch.setattr(recorder, 'record_exogenous',
                         lambda *a, **k: None)
-    monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, screen: (1, 1))
+    monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: (1, 1))
 
     def _fake_read_outcome(ctx, screen, *, plane, round_num, comp_tag,
                            node_type='普通战斗'):
         return RoundOutcome(round_num=round_num, plane=plane, node_type=node_type,
                             comp_tag=comp_tag, hp_after=78, hp_confidence=1.0)
 
-    monkeypatch.setattr(bl, 'read_round_outcome', _fake_read_outcome)
+    monkeypatch.setattr(bwo, 'read_round_outcome', _fake_read_outcome)
 
-    class _Loop(bl.CurrencyWarRunLoop):
+    class _Op(bwo.BattleWaitOp):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
-            self._iter = 1
-            self._summary_written = False
-            self._is_new_match = new_match
-            self._run_start_ts = time.monotonic() - elapsed_s
-            self._first_settlement_seen = first_seen
-            self._settle_page1_progress = None
+            self._st = bwo.SettlementState(
+                run_start_ts=time.monotonic() - elapsed_s,
+                is_new_match=new_match,
+                first_settlement_seen=first_seen)
+            self._unknown_streak = 0
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
                     session=SimpleNamespace(target_comp=None,
@@ -1019,7 +1022,7 @@ def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapse
         def round_by_find_area(self, screen, screen_name, area_name, **kw):
             return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
 
-    return _Loop(), captured
+    return _Op(), captured
 
 
 def test_relaunch_residual_tagged_recovered_and_round_fixed(monkeypatch) -> None:

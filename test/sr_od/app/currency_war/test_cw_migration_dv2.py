@@ -556,7 +556,11 @@ def test_hook_points_exist() -> None:
 
     his_src = inspect.getsource(his)
     assert 'active_strategies.append' in his_src
-    loop_src = inspect.getsource(battle_loop)
+    # (W971 05-battle §1 P4:node_enter 事件与 record_outcome 写端随结算链
+    #  收编进 BattleWaitOp;补给合成行仍在 battle_loop——两宿主并查。)
+    import sr_od.application.currency_war.operations.cw_flow.battle_wait_op as bwo
+    loop_src = (inspect.getsource(battle_loop)
+                + inspect.getsource(bwo))
     assert "'node_enter'" in loop_src
     assert 'record_outcome' in loop_src
     prep_src = inspect.getsource(prep_actions)
