@@ -24,7 +24,7 @@ from sr_od.application.currency_war import prep_director as pd_mod
 from sr_od.application.currency_war.kernel.cw_deploy_seat import _card_hits_target
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.strategy import DecisionV2Strategy
-from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres, DeferSpheres, DeployMove, EnsureShopOpen, LevelUp, OpenBox, PickBoxCard, PrepAction, PrepObservation, RunBuyPhase, RunDeploy, RunEquip, SellBench, StartBattle
+from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres, DeferSpheres, DeployMove, LevelUp, OpenBox, OpenShop, PickBoxCard, PrepAction, PrepObservation, RunDeploy, RunEquip, SellBench, StartBattle
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
 from sr_od.application.currency_war.prep_director import PrepDirector
@@ -113,17 +113,18 @@ def _full_board_bench_worth() -> tuple[list, list, GameState]:
 
 
 def test_rule4_chain_b_level_up_wants_shop_open() -> None:
-    """腾席链 b:真缺人口 + level<10 + shop 关 → EnsureShopOpen(gold 关态不可信,M2)。"""
+    """腾席链 b:真缺人口 + level<10 + shop 关 → OpenShop(read_only)
+    (gold 关态不可信,M2;W970 批 C EnsureShopOpen 退役,§4.3.6)。"""
     bench, deployed, st = _full_board_bench_worth()
     a = S.decide_prep_action(_obs(spheres=[('gold', None, 40)], free_bench_slots=0),
                              _sess(last_state=st, last_level_obs=5,
                                    tracked_bench_chars=bench,
                                    tracked_deployed=deployed), _cfg())
-    assert isinstance(a, EnsureShopOpen)
+    assert isinstance(a, OpenShop) and a.read_only
 
 
 def test_chain_b_untrusted_gold_requires_heavy_reread() -> None:
-    """MED-1:shop_open=True 但 trusted=False(缓存过期)→ 仍 EnsureShopOpen(不信 gold)。"""
+    """MED-1:shop_open=True 但 trusted=False(缓存过期)→ 仍 OpenShop(read_only)(不信 gold)。"""
     bench, deployed, st = _full_board_bench_worth()
     sess = _sess(tracked_bench_chars=bench, tracked_deployed=deployed,
                  last_state=st, last_level_obs=5)
@@ -132,24 +133,25 @@ def test_chain_b_untrusted_gold_requires_heavy_reread() -> None:
                state_gold_trusted=False,   # shop 开但 state 非 fresh
                state=GameState(level=5, gold=50))
     a = S.decide_prep_action(obs, sess, _cfg())
-    assert isinstance(a, EnsureShopOpen), 'untrusted gold 不得直接判 gate(会误判有金/无金)'
+    assert isinstance(a, OpenShop) and a.read_only, 'untrusted gold 不得直接判 gate(会误判有金/无金)'
 
 
 def test_rule5_defer_gate_falls_to_main_flow() -> None:
     """defer≥2 → 球留置进主流程(不空转,§5.1 规则 4 门)。
 
-    free=1(有空席)隔离 M-6 门:主流程第一步 = RunBuyPhase。
+    free=1(有空席)隔离 M-6 门:主流程第一步 = OpenShop(买牌段显式开店意图,
+    W970 批 C RunBuyPhase 解体)。
     """
     a = S.decide_prep_action(_obs(spheres=[('gold', None, 40)],
                                   free_bench_slots=1),
                              _sess(defer_count=2), _cfg())
-    assert isinstance(a, (RunBuyPhase, RunDeploy, RunEquip, StartBattle))
+    assert isinstance(a, (OpenShop, RunDeploy, RunEquip, StartBattle))
 
 
 def test_no_spheres_no_boxes_main_flow() -> None:
     """球箱皆无 + 有空席 → 主流程买牌(free=0 走 M-6 门跳过,见下条)。"""
     a = S.decide_prep_action(_obs(free_bench_slots=9), _sess(), _cfg())
-    assert isinstance(a, RunBuyPhase)
+    assert isinstance(a, OpenShop) and not a.read_only
 
 
 # ===== §5.2 腾席链分支(表驱动)=====
@@ -170,15 +172,15 @@ def test_chain_a_deploy_vacancy() -> None:
 
 
 def test_chain_b_needs_shop_open_gold() -> None:
-    """b. shop 关态 gold 不可信 → EnsureShopOpen(开态重读,§5.2b M2;ADR-0274 后
-    需真缺人口 fixture 才可达链 b)。"""
+    """b. shop 关态 gold 不可信 → OpenShop(read_only)(开态重读,§5.2b M2/
+    §4.3.6;ADR-0274 后需真缺人口 fixture 才可达链 b)。"""
     bench, deployed, st = _full_board_bench_worth()
     sess = _sess(tracked_bench_chars=bench, tracked_deployed=deployed,
                  last_state=st, last_level_obs=5)
     obs = _obs(spheres=[('gold', None, 40)], free_bench_slots=0,
                deploy_vacancy=0, bench_chars=bench, shop_open=False)
     a = S.decide_prep_action(obs, sess, _cfg())
-    assert isinstance(a, EnsureShopOpen)
+    assert isinstance(a, OpenShop) and a.read_only
 
 
 def test_chain_c_sell_weakest() -> None:
@@ -230,7 +232,7 @@ def test_main_flow_phase_progression() -> None:
     cfg = _cfg()
     obs = _obs(free_bench_slots=1)
     a1 = S._main_flow_step(obs, sess, cfg)
-    assert isinstance(a1, RunBuyPhase) and sess.prep_phase == 1
+    assert isinstance(a1, OpenShop) and not a1.read_only and sess.prep_phase == 1
     a2 = S._main_flow_step(obs, sess, cfg)
     assert isinstance(a2, RunDeploy) and sess.prep_phase == 2
     a3 = S._main_flow_step(obs, sess, cfg)
@@ -244,12 +246,12 @@ def test_main_flow_m6_gate_skips_buy_when_free0() -> None:
 
     M24 卡死修(2026-08-16):旧逻辑直奔 RunDeploy,deploy-swap 卖拖拽失败(bug#1 变体)+ 金不够
     升级 → 警告不消死循环。新语义:满席先过腾席链(deploy/升级/卖最弱),链 d(Defer)落回部署段。
-    mock 无 gold 真值 → 链 b EnsureShopOpen(开态重读,合法破局步)。
+    mock 无 gold 真值 → 链 b OpenShop(read_only)(开态重读,合法破局步)。
     """
     sess = _sess()
     a = S._main_flow_step(_obs(free_bench_slots=0), sess, _cfg())
-    assert not isinstance(a, RunBuyPhase), "free=0 永不买牌(M-6 门)"
-    assert isinstance(a, (DeployMove, LevelUp, EnsureShopOpen, SellBench, RunDeploy))
+    assert not isinstance(a, OpenShop), "free=0 永不买牌(M-6 门)"
+    assert isinstance(a, (DeployMove, LevelUp, OpenShop, SellBench, RunDeploy))
 
 
 def test_m6_gate_chain_c_sells_weakest_when_no_gold() -> None:
@@ -402,14 +404,14 @@ def test_loop_h1_heavy_reread_after_action(monkeypatch) -> None:
     observe = _seq_observe([])
     monkeypatch.setattr(d, '_observe', observe)
     monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-    strat = _ScriptStrategy([EnsureShopOpen(), LevelUp(), StartBattle()])
+    strat = _ScriptStrategy([LevelUp(), LevelUp(), StartBattle()])
     match = SimpleNamespace(strategy=strat, session=_sess())
     result = d._run_loop(match)
-    assert strat.seen[:3] == ['EnsureShopOpen', 'LevelUp', 'StartBattle'], \
+    assert strat.seen[:3] == ['LevelUp', 'LevelUp', 'StartBattle'], \
         f'动作序应逐脚本推进,实得 {strat.seen}'
     hc = observe.calls['heavy_calls']
     assert hc[0] is True    # 环入口 heavy
-    assert hc[1] is True    # EnsureShopOpen 执行后 heavy(H-1 旧 bug 为 False)
+    assert hc[1] is True    # LevelUp 执行后 heavy(H-1 旧 bug 为 False)
     assert all(hc), f'动作后一律 heavy,实得 {hc}'   # 出口在 StartBattle 落地,无后续观察
     assert '出战' in (result.status or ''), f'出战落地应正常出口,实得 {result.status}'
 
@@ -698,11 +700,14 @@ def test_composite_reads_success_field(test_context: SrTestContext,
     assert ok, f'success=True 的组合结果必须判成功(live bug:旧读 is_success 恒 False): {detail}'
 
 def test_rule3_shop_open_closes_shop_first() -> None:
-    """live 回归(2026-08-14 1-2):商店开态奖励面板与概率表按钮重叠 → 假球误开弹窗。"""
-    from sr_od.application.currency_war.kernel.cw_prep_actions import EnsureShopClosed
+    """live 回归(2026-08-14 1-2):商店开态奖励面板与概率表按钮重叠 → 假球误开弹窗。
+
+    W970 批 C:EnsureShopClosed 退役 → OpenShop(read_only) 编排(幂等开店
+    [已开不点]→观察刷新→不调商店决策→CloseShopOp→回备战,同收清洁面板效果)。
+    """
     obs = _obs(spheres=[('gold', None, 40)] * 2, free_bench_slots=3, shop_open=True)
     a = S.decide_prep_action(obs, _sess(), _cfg())
-    assert isinstance(a, EnsureShopClosed), '商店开态须先关店再收球(防假球点击)'
+    assert isinstance(a, OpenShop) and a.read_only, '商店开态须先关店再收球(防假球点击)'
     obs2 = _obs(spheres=[('gold', None, 40)] * 2, free_bench_slots=3, shop_open=False)
     a2 = S.decide_prep_action(obs2, _sess(), _cfg())
     assert isinstance(a2, ClickSpheres) and a2.max_k == 2

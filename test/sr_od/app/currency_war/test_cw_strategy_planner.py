@@ -512,7 +512,8 @@ def test_decide_prep_action_smoke():
                           state_gold_trusted=False)
     act = strat.decide_prep_action(obs, sess, SimpleNamespace(
         faction_priority=[], character_priority=[]))
-    assert type(act).__name__ == 'RunBuyPhase'
+    # W970 批 C 改型(dd-017):主流程买牌段 RunBuyPhase → OpenShop(等价改名)
+    assert type(act).__name__ == 'OpenShop' and not act.read_only
 
 
 

@@ -870,27 +870,26 @@ def test_briefing_read_side_cleans_and_overwrites() -> None:
 
 
 def test_collect_plane_intel_is_takeover_refill_channel() -> None:
-    """锁③(语义更新):CollectPlaneIntel 实采写入端在(接管重采/读空兜底)。"""
-    from sr_od.application.currency_war.operations import battle_loop
+    """锁③(改写,W971 P3b):CollectPlaneIntel 实采写入端在(接管重采/读空
+    兜底)——接线随接管补采块迁 prep_director._run_loop。"""
+    from sr_od.application.currency_war import prep_director
 
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
-    assert '_sess.briefing_bosses = _names' in src, (
+    src = inspect.getsource(prep_director.PrepDirector._run_loop)
+    assert 'session.briefing_bosses = _names' in src, (
         'CollectPlaneIntel 实采接线消失(接管场景失去重采通道)'
     )
-    # 触发条件仍含「session.briefing_bosses 空」:开局局简报读得时 session 已由
-    # __init__ 填(不重复采),接管局/读空时兜底——条件消失=简报信任被绕过。
-    assert "not getattr(self.ctx.cw_match.session, 'briefing_bosses', None)" in src
+    # 触发门仍含「session.briefing_bosses 空」:开局局简报读得时 session 已由
+    # BriefingOp 填(不重复采),接管局/读空时兜底——条件消失=简报信任被绕过。
+    assert "not getattr(session, 'briefing_bosses', None)" in src
     assert 'CollectPlaneIntel(self.ctx)' in src
 
 
-def test_reconcile_wiring_in_both_collect_paths() -> None:
-    """锁④(新):对账网接线在两条实采完成路径上都在(loop 内联块 + takeover 写回)。"""
-    from sr_od.application.currency_war.operations import battle_loop
+def test_reconcile_wiring_in_collect_paths() -> None:
+    """锁④(改写,W971 P3b 接管补采迁 prep_director):对账网接线在
+    takeover 写回路径上仍在;director 补采块触发门 = 简报真值空(无简报
+    读数可对账,对账自然缺省),写回接线不因块迁移丢失。"""
     from sr_od.application.currency_war.operations.entry import  takeover_collect_plane_intel
 
-    assert 'reconcile_briefing_vs_plane_intel(' in inspect.getsource(battle_loop.CurrencyWarRunLoop), (
-        'loop 内联实采块缺对账接线'
-    )
     assert 'reconcile_briefing_vs_plane_intel(' in inspect.getsource(
         takeover_collect_plane_intel.TakeoverCollectPlaneIntel.write_back), (
         'takeover 写回缺对账接线'
@@ -989,14 +988,17 @@ def test_conclude_plane_boss_matrix() -> None:
 
 def test_battle_loop_preserves_none_positions() -> None:
     """锁④:实采写 session 保位(None 不滤)——滤 None 会让后续位面名字左移错序
-    (ADR-0397 修的「按序消费错位面」同病;旧形态 `[n for n in ... if n]` 禁回潮)。"""
-    from sr_od.application.currency_war.operations import battle_loop
+    (ADR-0397 修的「按序消费错位面」同病;旧形态 `[n for n in ... if n]` 禁回潮)。
 
-    src = _w221_boss_locate_emblem_inspect.getsource(battle_loop.CurrencyWarRunLoop)
+    W971 P3b:实采接线随接管补采块迁 prep_director(_run_loop),锁随迁。
+    """
+    from sr_od.application.currency_war import prep_director
+
+    src = _w221_boss_locate_emblem_inspect.getsource(prep_director.PrepDirector._run_loop)
     assert '[n for n in self.ctx.cw_plane_bosses if n]' not in src, (
         '实采列表滤 None 回潮(徽章态位面 None 被丢→位面错序)'
     )
-    assert '_names = list(self.ctx.cw_plane_bosses)' in src, '实采应保位写 3 槽(None 原样)'
+    assert '_names = list(self.ctx.cw_plane_bosses' in src, '实采应保位写 3 槽(None 原样)'
 
 
 def test_boss_fit_tolerates_none_entries() -> None:
