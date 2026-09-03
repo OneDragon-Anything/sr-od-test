@@ -113,6 +113,81 @@ def test_economy_spend_still_counts_legacy_levelup(tmp_path: Path) -> None:
     assert any('花=4' in ln for ln in lines), lines
 
 
+# ===== 备战批量升级费括号(复盘 g_20260904_010335 专项②定谳)=====
+# 根因不在读端乘法(合并流/逐实例计数均在),而在发射流:备战通道
+# mandate M3 只发 1 个裸 LevelUp,执行器 prep_actions._level_up
+# 「循环点至 level+1」批量展开,动作流 1:N 欠表达 → 旧码只入账单击
+# luc(实证 1-2 差 4 金 / 1-3 差 16 金 / 1-9 差 24 金,三处同构)。
+# 修 = 裸 LevelUp 载体帧(sid='' 单动作帧)按「载体帧 gold − 同轮下一帧
+# gold」金差括号计实点击批费;商店通道 LevelUpShop 实例保持逐击计费。
+
+
+def test_economy_prep_batch_bracket_gold_diff(tmp_path: Path) -> None:
+    """1-9 形态重放:裸 LevelUp 载体帧 gold=49,批后帧 gold=21 → 花=28(7 击)。
+
+    旧码只记 luc×1=4(差 24);括号金差 = 执行实况,与 gold 49→21 对拍一致。
+    """
+    _write_decisions(tmp_path, [
+        _frame('g9', 1, 9, '2026-09-04T01:27:07', ['ClickSpheres'], gold=49),
+        _frame('g9', 1, 9, '2026-09-04T01:27:22', ['LevelUp'], gold=49),
+        _frame('g9', 1, 9, '2026-09-04T01:27:44', ['RunDeploy'], gold=21),
+    ])
+    lines = query_economy(tmp_path, 'g9')
+    assert any('花=28' in ln for ln in lines), lines
+    assert not any('花=28?' in ln for ln in lines), lines   # 括号有效,无兜底标记
+
+
+def test_economy_prep_batch_plus_shop_channel_same_round(tmp_path: Path) -> None:
+    """1-2 形态重放:同轮商店通道 LevelUpShop×1(4)+ 备战批括号(8→0=8)
+    + BuyCard(1)→ 花=13(两通道各计各的,不互扰)。"""
+    _write_decisions(tmp_path, [
+        {'run_id': 'g2', 'plane': 1, 'round_num': 2,
+         'ts': '2026-09-04T01:05:42', 'strategy_id': 'mandate_v1',
+         'gold': 12, 'state': {'level_up_cost': 4},
+         'actions': [{'__type__': 'BuyCard', 'card': {'name': '三月七', 'cost': 1}},
+                     {'__type__': 'LevelUpShop', 'cost': 4}]},
+        _frame('g2', 1, 2, '2026-09-04T01:06:35', ['LevelUp'], gold=8),
+        _frame('g2', 1, 2, '2026-09-04T01:06:50', ['RunDeploy'], gold=0),
+        _frame('g2', 1, 2, '2026-09-04T01:07:42', ['StartBattle'], gold=2),
+    ])
+    lines = query_economy(tmp_path, 'g2')
+    assert any('花=13' in ln for ln in lines), lines
+
+
+def test_economy_consecutive_bare_carriers_grouped_as_one_batch(tmp_path: Path) -> None:
+    """连发裸载体帧并作一批(后帧也是载体 → 括号顺延),不重叠双计。"""
+    _write_decisions(tmp_path, [
+        _frame('gc', 1, 3, '2026-09-04T01:08:59', ['LevelUp'], gold=20),
+        _frame('gc', 1, 3, '2026-09-04T01:09:05', ['LevelUp'], gold=20),
+        _frame('gc', 1, 3, '2026-09-04T01:09:19', ['RunDeploy'], gold=4),
+    ])
+    lines = query_economy(tmp_path, 'gc')
+    assert any('花=16' in ln for ln in lines), lines
+
+
+def test_economy_bracket_invalid_falls_back_single_click_with_mark(tmp_path: Path) -> None:
+    """括号无效(载体帧后无帧/金差 < 单击价)→ 回退单击 luc 并标 `?`(可辨)。"""
+    _write_decisions(tmp_path, [
+        _frame('gf', 1, 3, '2026-09-04T01:08:59', ['LevelUp'], gold=20),
+    ])
+    lines = query_economy(tmp_path, 'gf')
+    assert any('花=4?' in ln for ln in lines), lines
+
+
+def test_economy_plan_bare_deduped_when_carrier_present(tmp_path: Path) -> None:
+    """计划帧裸 LevelUp 与载体帧同轮并存 → 撤计划口径(执行已被括号计费,防双计)。"""
+    _write_decisions(tmp_path, [
+        {'run_id': 'gd', 'plane': 1, 'round_num': 3,
+         'ts': '2026-09-04T01:08:50', 'strategy_id': 'mandate_v1',
+         'gold': 22, 'state': {'level_up_cost': 4},
+         'actions': [{'__type__': 'LevelUp', 'cost': 4}]},
+        _frame('gd', 1, 3, '2026-09-04T01:08:59', ['LevelUp'], gold=22),
+        _frame('gd', 1, 3, '2026-09-04T01:09:19', ['RunDeploy'], gold=6),
+    ])
+    lines = query_economy(tmp_path, 'gd')
+    assert any('花=16' in ln for ln in lines), lines   # 只括号 22→6,无 +4 双计
+
+
 def test_rounds_view_counts_levelupshop(tmp_path: Path) -> None:
     """rounds 视图升级计数吃 LevelUpShop(升4 形;旧形恒 升0)。"""
     _write_decisions(tmp_path, [
