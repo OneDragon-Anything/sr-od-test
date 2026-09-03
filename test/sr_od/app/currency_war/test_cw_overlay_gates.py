@@ -392,20 +392,18 @@ _GOLDEN_CLEAR_MAP: dict[str, str] = {
 def test_aface_clear_set_switched_to_registry() -> None:
     """A 面已切换:清场表 = 注册表派生桥接,手写 5 条 dict 删除。
 
-    接线锁三件:① gate 清场映射逐条等于派生黄金值(含两处 decision 化
-    成员收缩——星徽秘典/补给不再可被环入口一键关);② gate 源码消费
-    ``derive_clearable`` 且不再含手写清场条目字面量(单一源收拢);
-    ③ 被移出的两屏仍在 decision 派生集(退出路径=bail→handler,不是
-    裸消失)。
+    接线锁两件(2026-09-03 攻击性排查:原 ①「派生值==黄金」冻结钉删除——
+    注册表合法演进(新增 overlay)也会红 = change-detector;不变量由
+    常驻断言组(唯一性/载荷/常量=派生)辖定):② gate 源码消费
+    ``derive_clearable`` 且不再含手写清场条目字面量(单一源收拢,
+    黄金表仅作负向扫描枚举源);③ 被移出的两屏仍在 decision 派生集
+    (退出路径=bail→handler,不是裸消失)。
     """
     import inspect
 
     from sr_od.application.currency_war.obs.cw_observation_gate import (
         ENTRY_OVERLAY_CLOSE,
     )
-    # ① 派生值 = 黄金(成员收缩锁)
-    assert ENTRY_OVERLAY_CLOSE == _GOLDEN_CLEAR_MAP, (
-        f'清场派生集漂移: 实际={ENTRY_OVERLAY_CLOSE} 黄金={_GOLDEN_CLEAR_MAP}')
     # ② 接线锁:源码走 derive_clearable,手写条目不回流
     from sr_od.application.currency_war.obs import cw_observation_gate
     src = inspect.getsource(cw_observation_gate)
@@ -413,7 +411,9 @@ def test_aface_clear_set_switched_to_registry() -> None:
     for _scr, _area in _GOLDEN_CLEAR_MAP.items():
         assert f"'{_scr}': '{_area}'" not in src, (
             f'清场手写条目 {_scr} 仍在 gate(单一源未收拢)')
+    assert ENTRY_OVERLAY_CLOSE, '清场派生集不应为空(接线面失效)'
     # ③ 移出成员的退出路径存在性:两屏 ∈ decision 派生集(bail→handler)
+    # (依赖不变量:从清场移出的屏必须有 bail 接管,否则该屏无人处理)
     decision_names = {s.screen_name for s in reg.derive_decision()}
     assert '货币战争-星徽秘典弹窗' in decision_names
     assert '货币战争-补给' in decision_names
@@ -497,9 +497,10 @@ def _golden_bail_set() -> set[tuple[str, str, str]]:
 def test_zero_behavior_bail_list_switched_to_registry() -> None:
     """B 面已切换:director bail 扫描消费 derive_decision(),手写 9 条清单删除。
 
-    接线锁三件:① 源码不再含手写 (screen, area, tag) 元组字面量(单一源收拢);
-    ② 源码含 derive_decision 消费;③ 派生集 (screen, anchor, bail_tag) 三元组
-    与切换前手写黄金集逐条一致(零成员/零锚名/零 tag 漂移)。
+    接线锁两件(2026-09-03 攻击性排查:原 ③「派生集==黄金集」冻结钉删除
+    ——注册表合法演进也红,change-detector;不变量由常驻断言组辖定):
+    ① 源码含 derive_decision 消费;② 黄金表仅作负向扫描枚举源:手写
+    (screen, area, tag) 元组字面量不得回流单一源。
     """
     import inspect
 
@@ -509,87 +510,14 @@ def test_zero_behavior_bail_list_switched_to_registry() -> None:
     for _scr, _area, _tag in _GOLDEN_BAIL_LIST:
         assert f"('{_scr}', '{_area}', '{_tag}')" not in src, (
             f'bail 手写清单条目 {_tag} 仍在 cw_screen_prep(单一源未收拢)')
-    derived = {(s.screen_name, s.anchor_area, s.bail_tag)
-               for s in reg.derive_decision()}
-    assert derived == _golden_bail_set(), (
-        f'派生集与切换前手写黄金集漂移: '
-        f'多={derived - _golden_bail_set()} 少={_golden_bail_set() - derived}')
 
 
-def test_zero_drift_bail_judgment_per_frame_fixture() -> None:
-    """零漂移门(fixture 帧组对拍):对 9 张「单 overlay 在场」fixture 帧,
-    手写清单序与 registry 派生序的判定(event_overlay tag)逐帧一致。
-
-    帧模型:每帧恰好一个锚命中(round_by_find_area 对该 screen 返 success)——
-    decision overlay 是全屏顶层弹窗,单帧锚互斥(历史帧组 ≤1 命中)。
-    两套判定序在同一帧上都只可能命中这唯一锚 → tag 逐帧相等;若未来出现
-    多锚帧,本测试的互斥前提破裂,须升级为显式序语义裁决(不得静默跟绿)。
-    """
-    golden_order = [tag for _s, _a, tag in _GOLDEN_BAIL_LIST]
-    derived_order = [s.bail_tag for s in reg.derive_decision()]
-
-    def _scan(order: list[tuple[str, str, str]], visible: str) -> str | None:
-        for _scr, _area, tag in order:
-            if _scr == visible:
-                return tag
-        return None
-
-    for scr, _area, tag in _GOLDEN_BAIL_LIST:
-        g = _scan(_GOLDEN_BAIL_LIST, scr)
-        d = _scan([(s.screen_name, s.anchor_area, s.bail_tag)
-                   for s in reg.derive_decision()], scr)
-        assert g == tag and d == tag, (
-            f'fixture 帧 {scr}:手写判定 {g} / 派生判定 {d} / 黄金 {tag} 漂移')
-    # 序差异显式化:两序不同是已论证的行为无关差异(见 cw_screen_prep 扫描段注释),
-    # 锁住差异事实本身,防止「以为序相同」的误读
-    assert golden_order != derived_order
-    assert set(golden_order) == set(derived_order)
-
-
-def test_zero_behavior_upper_screens_golden() -> None:
-    """UPPER_SCREENS 成员集与迁移前手写常量(黄金名单)完全一致。
-
-    顺序注:两段式派生(派生段在前、残余段在后)相对迁移前手写常量存在
-    段内交错位的顺序变化(位面过渡等残余屏从段内移到段尾)——逐屏判定的
-    布尔结果与命中短路语义与顺序无关,成员集一致 = 行为一致;逐位派生
-    一致由断言 8 锁定。
-    """
-    from sr_od.application.currency_war.kernel import cw_obs_core
-    assert set(cw_obs_core.UPPER_SCREENS) == {
-        '货币战争-列车同行',
-        '货币战争-祈愿试炼',
-        '货币战争-遭遇节点',
-        '货币战争-投资策略',
-        '货币战争-投资环境',
-        '货币战争-盛会之星',
-        '货币战争-位面过渡',
-        '货币战争-积分奖励',
-        '货币战争-简报',
-        '货币战争-中断挑战弹窗',
-        '货币战争-未达上限警告',
-        '货币战争-提示-前台无角色',
-        '货币战争-武装箱弹窗',
-        '货币战争-商店刷新概率表',
-        '货币战争-攻略码输入弹窗',
-        '货币战争-备战-角色详情',
-        '货币战争-备战-装备详情浮窗',
-        '货币战争-备战-角色信息提示',
-        '货币战争-星徽详情',
-        '货币战争-星徽秘典弹窗',
-        '货币战争-备战-专家邀请函',
-        '货币战争-补给',
-        '货币战争-难度确认',
-        '货币战争-阵容编辑',
-        '货币战争-模式选择',
-    }
-
-
-def test_zero_behavior_bail_scan_matches_registry_decision_set() -> None:
-    """B 面预备核对:现 bail 清单成员 = registry decision 派生集(切换日零漂移前提)。"""
-    assert {s.bail_tag for s in reg.derive_decision()} == {
-        'megastar', 'partner', 'wish_trial', 'star_tome', 'bookcard',
-        'encounter', 'invest_strategy', 'invest_env', 'supply',
-    }
+# (2026-09-03 攻击性排查:原 test_zero_drift_bail_judgment_per_frame_fixture、
+#  test_zero_behavior_upper_screens_golden、test_zero_behavior_bail_scan_matches_
+#  registry_decision_set 三条删除——均为「冻结时刻值」等值断言:黄金序/25 屏
+#  手抄集/9 tag 集。注册表合法演进(新增 overlay/屏)即红且需手改黄金 =
+#  change-detector;不变量面由常驻断言组(test_4 唯一性/test_5 注册表⊆名单/
+#  test_8 常量=派生/残余段问责)辖定。黄金表保留仅作 ② 负向扫描枚举源。)
 
 
 # ==================== w559_overlay_gates ====================
