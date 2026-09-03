@@ -146,7 +146,8 @@ def _make_round_director(test_context, monkeypatch, scripted_action):
 
         def decide_prep_screen(self, session, config):
             self.calls += 1
-            return scripted_action
+            # 序列契约 v1(dd-020):生产环按 list[PrepAction] 消费(长度 1)
+            return [scripted_action]
 
         def update_target(self, state, session, config):
             pass
@@ -299,23 +300,17 @@ def _make_boss_op(test_context: SrTestContext, monkeypatch):
     return op, fc
 
 
-def test_boss_briefing_op_click_blank_then_wait_shop_anchor(
+def test_boss_briefing_op_click_blank_hands_back_to_loop(
     test_context: SrTestContext, monkeypatch,
 ) -> None:
-    """行为锁(06-overlays §3/§5):识别「强敌来袭」→ 点空白 → 完成承诺 =
-    轮询备战商店开锚(「按钮-收起」);锚现 → 收口交回。"""
+    """行为锁(15e02125 新架构):识别「强敌来袭」→ 点空白 → **直接交回外循环
+    重判**(点掉后的去向由 loop 全分支识别——boss 战自动开打/备战流转;
+    旧「轮询备战商店开」完成承诺实证错误:boss 简报点掉后商店永不开)。"""
     op, _fc = _make_boss_op(test_context, monkeypatch)
-    # 入口锚 + 空白区命中;完成锚首帧未现、第二轮现(点击生效推进)。
     hits = {('货币战争-BOSS简报', '标识-强敌来袭'),
             ('货币战争-BOSS简报', '区域-空白点击')}
-    done_seen: list[int] = []
 
     def _find(screen, screen_name, area_name, **k):
-        if (screen_name, area_name) == ('货币战争-备战-开商店', '按钮-收起'):
-            done_seen.append(1)
-            if len(done_seen) >= 2:   # 首查未现,轮询一次后现
-                return op.round_success('')
-            return op.round_fail('')
         if (screen_name, area_name) in hits:
             return op.round_success('')
         return op.round_fail('')
@@ -336,7 +331,7 @@ def test_boss_briefing_op_click_blank_then_wait_shop_anchor(
     assert result.success, f'boss 简报应推进成功:{result.status!r}'
     assert _fc.click_hit_area('货币战争-BOSS简报', '区域-空白点击'), (
         f'未点空白:{_fc.recorded_clicks}')
-    assert '商店开' in (result.status or '')
+    assert '交回外循环' in (result.status or '')
 
 
 def test_boss_briefing_op_mark_miss_fails_without_click(
