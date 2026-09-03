@@ -67,6 +67,35 @@ def test_reported_flag_reset_on_reregister() -> None:
     assert e2 is not e1 and e2.reported is False
 
 
+def test_dup_across_windows_single_report(rec) -> None:
+    """R4 场景复现锁(第九局复盘):同 expected 条目在两个覆盖窗口
+    (间隔多轮、实读更新)各 reconcile → expected_reconcile 只落一行;
+    第二窗口静默清账。"""
+    from sr_od.application.currency_war.kernel.cw_expected_state import (
+        reconcile_expected,
+        register_expected,
+        set_evidence_sink,
+    )
+    rows: list[dict] = []
+    set_evidence_sink(rows.append)
+    try:
+        session = SimpleNamespace(expected_state={})
+        register_expected(session, _entry('merge_chain[卡芙卡:2->3]', '落点=bench:2'))
+        # 窗口 1(p1-r4 备战观察):mismatch 留证(实证行 coverage_point=prep_obs)
+        d1 = reconcile_expected(session, 'prep_obs',
+                                {'merge_chain[卡芙卡:2->3]': ('落点=bench:9', True)})
+        assert len(d1) == 1
+        # ……间隔多轮(其他轮次备战观察,同条目反复 mismatch)……
+        # 窗口 2:同条目再遇同 mismatch
+        d2 = reconcile_expected(session, 'prep_obs',
+                                {'merge_chain[卡芙卡:2->3]': ('落点=bench:9', True)})
+        assert d2 == []                   # 去重:不再落第二行
+        assert 'merge_chain[卡芙卡:2->3]' not in session.expected_state
+        assert len(rows) == 1             # 落盘恰好一行(旧形态 = 两行,R4 实证)
+    finally:
+        set_evidence_sink(None)
+
+
 def test_reported_dedup_per_entry_not_global() -> None:
     """去重按条目级:同 path 的**其他未上报条目**(不同轮次登记)不受
     已报条目影响,照常留证。"""
