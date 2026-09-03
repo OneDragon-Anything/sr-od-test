@@ -222,9 +222,8 @@ def _import_handler(class_name: str) -> type:
     """
     last_err: Exception | None = None
     for pkg_name in (
-        'sr_od.application.currency_war.operations.handlers',
         'sr_od.application.currency_war.operations.cw_screen',
-        # W971 P3b:简报执行面迁 cw_flow.CwScreenBriefing(HandleBriefing 退役)
+        'sr_od.application.currency_war.operations.cw_op',
         'sr_od.application.currency_war.operations.cw_flow',
     ):
         pkg = importlib.import_module(pkg_name)
