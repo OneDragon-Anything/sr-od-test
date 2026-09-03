@@ -83,7 +83,7 @@ test_cw_r412_runs_summary_fallback.py::test_coverage_check_both_directions
 test_cw_telemetry.py::test_sim_ledger_rows_carry_same_key
 # 终验(15:08)补录:原 a8 条目类名过时失效已上修正;以下为终验实测越线者
 test_cw_r412_runs_summary_fallback.py::test_recover_dangling_idempotent
-test_cw_legacy_audit.py::test_stop_summary_no_duplicate_on_second_call
+test_cw_r363_audit_p0.py::test_stop_summary_no_duplicate_on_second_call
 test_cw4_mandate_v1.py::TestZeroDriftGate::test_baseline_self_pairing_n20
 # 步4b 商店线批:旧零漂移门测试随透传拆除改名(上行为重推后的锁);
 # 新增 sim 实跑门(基线自配对 n20 ~14s / 双臂相异 n6 ~5s)
@@ -93,12 +93,13 @@ test_cw4_shop_line.py::TestSimGates::test_arm_diff_existence_n6
 test_cw_zero_refresh_fix.py::TestZeroRefreshFixSimAcceptance::test_none_period_zero_refresh_but_levelups_alive
 test_cw_zero_refresh_fix.py::TestZeroRefreshFixSimAcceptance::test_injected_vgap_refresh_chain_alive
 
-test_cw_legacy_audit.py::test_stop_path_writes_stopped_summary
-test_cw_legacy_audit.py::test_non_stop_abnormal_exit_writes_abandoned
-test_cw_strategy_planner.py::test_briefing_after_run_closed_lands_in_next_run
+test_cw_r363_audit_p0.py::test_stop_path_writes_stopped_summary
+test_cw_r363_audit_p0.py::test_non_stop_abnormal_exit_writes_abandoned
+test_cw_w603_telemetry_wiring.py::test_briefing_after_run_closed_lands_in_next_run
 test_cw_data_registry.py::test_read_equipped_no_false_positive_empty_positions
 # 合并战役巡检(2026-09-03)准入:全 src AST 扫描守卫 4.44s(快速层唯一 ≥2s 漏网;
 # 架构裁决类守卫保留,归全量层把关;注:带 not slow 的巡检测不到桶内条目,
 # 桶内重建须另跑慢桶点名,勿用本类巡检数据下删)
 test_cw4_contracts.py::TestNoBypassDirectCalls::test_criteria_public_calls_whitelisted
 test_cw_identity_funnel.py::test_funnel_equivalence_and_tiering
+

@@ -1,14 +1,8 @@
-"""W443 批 C 单帧锁:DP 两态化 + 双源合一 + 阈值链现值。
+"""W443 阈值链共享面单帧锁:effective_hp_threshold 消费点 + 现值 + P1 零漂移。
 
-锁面:
-- PLANE_LOSS_SCALE 退役锁:cw_first_passage 不再持位面乘数自由度
-  (not hasattr;位面维全部来自 registry 标定,版本锚=
-  registry.p2_loss_calib_version);
-- effective_hp_threshold 现值链锁(该链此前无专属锁):五处生产消费
-  点全部经 effective_hp_threshold(state) 单口消费(静态源级锁)+
-  P1/P2/P3 现值单帧锁(现值锁——值动=重标定,须随批重锁);
-- P1 零漂移结构锚:DP P1/P3 损血、first_passage P1、阈值 plane1
-  逐位不变(P1 不走 P2 标定;P2 漂移=本批目的,不在此锁面)。
+(2026-09-03 拆分批:DP 两态/first_passage/损血标定面拆往
+test_cw_w443_dp_first_passage_legacy.py 打 legacy_baseline 标;本文件只留
+effective_hp_threshold 共享面——该链五处生产消费点单口 + 现值锁。)
 
 口径定稿与边界声明见 ADR-0440(标定源=W375 双源重标定,
 w375_dual_source_calib.json)。
@@ -32,17 +26,8 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 # ---- PLANE_LOSS_SCALE 退役锁 -------------------------------------------------
 
 
-def test_plane_loss_scale_retired() -> None:
-    """位面乘数常量退役(双源合一的退役声明形态:not hasattr;
-    对向声明=原 DP 侧旧挂账⑥随本批一并清账)。"""
-    assert not hasattr(fp, 'PLANE_LOSS_SCALE')
 
 
-def test_calibration_version_anchor() -> None:
-    """P2 损血标定家族版本披露锚存在且为 int(独立于 COARSE/economy
-    版本;任一标定值/消费口径变动必须递增并随批重锁)。"""
-    assert isinstance(DEFAULT_REGISTRY.p2_loss_calib_version, int)
-    assert DEFAULT_REGISTRY.p2_loss_calib_version == 1
 
 
 # ---- 阈值链:消费点静态源级锁 ---------------------------------------------
@@ -112,10 +97,6 @@ def test_threshold_p1_untouched_by_p2_calib() -> None:
         reg_mod.DEFAULT_REGISTRY = real_registry
 
 
-def test_first_passage_p1_untouched_by_p2_calib() -> None:
-    """first_passage P1 分布逐位=HP_LOSS_PRIOR 现档(P1 不走 P2 标定)。"""
-    dist = fp._loss_dist(2, 1)
-    assert dist[1][0] == 2.5   # HP_LOSS_MU[2](μ 档;σ=μ·CV)
 
 
 # ---- 三表对齐锁(p_win × 条件败面 × 无条件期望;ADR-0440 三表对齐节) ----
@@ -136,39 +117,5 @@ def test_first_passage_p1_untouched_by_p2_calib() -> None:
 # p2_cond_loss_table × p_win_p2_by_rung,无条件表不进任何行为公式。
 
 
-def test_three_table_implied_kind_survival_anchor() -> None:
-    """对齐锁:两损血表比值隐含的桶均存活率(1−无条件/条件)钉死——
-    值漂移=重标定,须随批重锁并复核本文件头部的坐标声明。"""
-    uncond = DEFAULT_REGISTRY.p2_node_loss_table
-    cond = DEFAULT_REGISTRY.p2_cond_loss_table
-    for kind, expect in (('normal', 0.204), ('encounter', 0.100),
-                         ('boss', 0.0)):
-        implied = 1.0 - uncond[kind] / cond[kind]
-        assert implied == pytest.approx(expect, abs=5e-4), kind
-    # kind 难度序:普通战斗 ≥ 遭遇 ≥ boss(桶均存活率;与 ADR-0424
-    # 伤害斜率同向——这是节点型间难度差,非 rung 阶梯)
-    def implied(k: str) -> float:
-        return 1.0 - uncond[k] / cond[k]
-    assert implied('normal') >= implied('encounter') >= implied('boss')
-    # p_win 表的 rung 阶梯方向(单调升)独立成立,两坐标不互证
-    t = DEFAULT_REGISTRY.p_win_p2_by_rung
-    assert t[0] < t[1] < t[2]
 
 
-def test_two_state_consumers_never_mix_tables() -> None:
-    """混表禁令静态锁:三处两态消费文件(rounds_alive/DP 两态/阈值 μ)
-    的**代码行**不得读 p2_node_loss_table(无条件表不进行为公式;注释
-    里的对向声明不辖);无条件表进行为公式=把桶均存活率错当 rung 胜率
-    用(坐标错位=非保守方向)。"""
-    from pathlib import Path
-    base = Path(__file__).parents[5] / 'src' / 'sr_od' / 'application' \
-        / 'currency_war'
-    # (批 3:DP 两态递推模块退役;胜率映射 cw_plane_table
-    #  只读胜率表,不在条件败面表消费清单)
-    for rel in ('kernel/cw_line_switch.py', 'kernel/cw_first_passage.py'):
-        code = '\n'.join(ln.split('#', 1)[0]
-                         for ln in (base / rel).read_text(encoding='utf-8')
-                         .splitlines())
-        assert 'p2_node_loss_table' not in code, (
-            f'{rel} 代码行读无条件表(混表禁令)')
-        assert 'p2_cond_loss_table' in code, f'{rel} 未读条件败面表'
