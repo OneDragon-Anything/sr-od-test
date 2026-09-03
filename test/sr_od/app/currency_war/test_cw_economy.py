@@ -809,21 +809,21 @@ def test_spend_unit_open_seq_round_keyed_not_run_entry_reset():
     """unit_seq 按 (plane, round) 键重计:同轮多单元恒递增(1,2),换轮重置
     1——run() 节点重入不再清序(p1r1/p2r1 双单元 seq 恒 1 撞键的修锁)。"""
     import types
-    from sr_od.application.currency_war.prep_director import PrepDirector
-    d = PrepDirector.__new__(PrepDirector)
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
+    d = CwScreenPrep.__new__(CwScreenPrep)
     d._spend_unit_seq = 0
     d._spend_unit_key = None
     d._unit_meta = None
     d._session = lambda: types.SimpleNamespace(
         last_state=types.SimpleNamespace(plane=1, round_num=1))
     obs = types.SimpleNamespace(state=None, state_gold_trusted=False)
-    PrepDirector._spend_unit_open(d, obs)
+    CwScreenPrep._spend_unit_open(d, obs)
     assert d._unit_meta['seq'] == 1
-    PrepDirector._spend_unit_open(d, obs)   # 同轮第二单元(run() 重入不清)
+    CwScreenPrep._spend_unit_open(d, obs)   # 同轮第二单元(run() 重入不清)
     assert d._unit_meta['seq'] == 2
     d._session = lambda: types.SimpleNamespace(
         last_state=types.SimpleNamespace(plane=1, round_num=2))
-    PrepDirector._spend_unit_open(d, obs)   # 换轮重置
+    CwScreenPrep._spend_unit_open(d, obs)   # 换轮重置
     assert d._unit_meta['seq'] == 1
 
 

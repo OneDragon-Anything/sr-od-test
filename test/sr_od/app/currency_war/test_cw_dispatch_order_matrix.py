@@ -80,9 +80,9 @@ def test_dissolved_opening_sequence_in_matrix() -> None:
     src = inspect.getsource(cw_loop_mod)
     assert 'OpeningSequence(self.ctx)' not in src, '开局编排壳未拆解退役(仍有实例化)'
     assert 'opening_sequence import' not in src, '开局编排壳模块仍被导入'
-    assert 'BriefingOp(self.ctx)' in src, '位面简报分支缺失(0r)'
-    assert 'HandleInvestEnv' in src, '投资环境分支缺失(0s)'
-    assert 'WaitOneOneOp' in src, '等待1-1 链缺失(退役序列终步语义承接)'
+    assert 'CwScreenBriefing(self.ctx)' in src, '位面简报分支缺失(0r)'
+    assert 'CwScreenInvestEnv' in src, '投资环境分支缺失(0s)'
+    assert 'CwScreenWaitOneOne' in src, '等待1-1 链缺失(退役序列终步语义承接)'
     matrix_anchors = {row[2] for row in ORDER_MATRIX}
     assert '标识-本场对局首领' in matrix_anchors and '标识-投资环境' in matrix_anchors, (
         '开局两屏未登记序锁矩阵')
@@ -90,15 +90,15 @@ def test_dissolved_opening_sequence_in_matrix() -> None:
 def test_boss_briefing_vs_plane_transition_exclusion_wired() -> None:
     """排他对接线锁(矩阵内两行的互斥关系,P4R3):boss 简报 ⇄ 位面过渡
     共享「点击空白处继续」——位面过渡分支必须带「强敌」片段排他,否则
-    boss 帧误分发 PlaneTransitionOp(第五局 fail 2s 无限循环实锤)。"""
+    boss 帧误分发 CwScreenPlaneTransition(第五局 fail 2s 无限循环实锤)。"""
     src = _loop_src()
     i_plane = src.find("self.round_by_ocr(screen, '点击空白处继续', lcs_percent=0.8)")
     assert i_plane >= 0
-    # 排他在位面过渡分支体内(分支判定之后、PlaneTransitionOp 分发之前)
+    # 排他在位面过渡分支体内(分支判定之后、CwScreenPlaneTransition 分发之前)
     i_excl = src.find('if _is_boss_frame(', i_plane)
-    i_dispatch = src.find('PlaneTransitionOp(self.ctx)', i_plane)
+    i_dispatch = src.find('CwScreenPlaneTransition(self.ctx)', i_plane)
     assert 0 < i_excl < i_dispatch, '位面过渡分支缺 boss 排他(或排他在分发之后)'
-    # 判别单一源 = boss_briefing_op.is_boss_briefing_texts(BattleWaitOp 白名单同源)
+    # 判别单一源 = cw_screen_boss_briefing.is_boss_briefing_texts(CwScreenBattleWait 白名单同源)
     assert 'is_boss_briefing_texts as _is_boss_frame' in src
-    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op
-    assert 'is_boss_briefing_texts' in inspect.getsource(battle_wait_op)
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
+    assert 'is_boss_briefing_texts' in inspect.getsource(cw_screen_battle_wait)

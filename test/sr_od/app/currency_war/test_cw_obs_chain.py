@@ -149,7 +149,7 @@ def test_reconcile_from_empty_one_side_fill_is_legal():
 
 def test_reconcile_star_rollback_no_crash():
     """M41 实机回归(2026-08-16):同名 star 回退(缇宝 2★→1★)走留证分支
-    **不得抛异常**——旧版 _conflict 封装无 **ctx,char= 触发 TypeError → PrepDirector
+    **不得抛异常**——旧版 _conflict 封装无 **ctx,char= 触发 TypeError → CwScreenPrep
     error-loop 卡死 30min(P3-4 实锤)。
     2026-08-18 防抖升级(274 存证离线复现:36/40 同图重读 2★,live 读 1★ =
     3合1 合成动画窗):首次回退 star **保旧**(动画窗读数不毒化 tracking),
@@ -843,14 +843,14 @@ from types import SimpleNamespace
 
 import pytest as _w547_faction_wire_pytest
 
-import sr_od.application.currency_war.prep_director as pd
+import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as pd
 from sr_od.application.currency_war.obs.cw_faction_obs import (
     parse_panel_tokens as _w547_faction_wire_parse_panel_tokens,
 )
 from sr_od.application.currency_war.obs.cw_faction_obs import (
     read_displayed_factions as _w547_faction_wire_read_displayed_factions,
 )
-from sr_od.application.currency_war.prep_director import PrepDirector
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
 from test.conftest import SrTestContext as _w547_faction_wire_SrTestContext
 
 
@@ -858,7 +858,7 @@ from test.conftest import SrTestContext as _w547_faction_wire_SrTestContext
 def test_faction_wire_source_locks() -> None:
     """接线三锁:方法用 cw_faction_obs 三件套且 best-effort;主环在 XP 对账
     同帧之后消费;禁改面(cw_faction_obs)只 import 不含本地重定义。"""
-    src = _w547_faction_wire_inspect.getsource(PrepDirector._reconcile_faction_display)
+    src = _w547_faction_wire_inspect.getsource(CwScreenPrep._reconcile_faction_display)
     assert 'board_from_tracked(' in src
     assert 'read_displayed_factions(' in src
     assert 'compare_factions(' in src
@@ -870,7 +870,7 @@ def test_faction_wire_source_locks() -> None:
     assert 'except Exception' in src
     # 消费序(W971 P3b 拆内环:XP/羁绊同帧消费点在 _v2_post_frame_accounting)
     acct_src = _w547_faction_wire_inspect.getsource(
-        PrepDirector._v2_post_frame_accounting)
+        CwScreenPrep._v2_post_frame_accounting)
     xp_at = acct_src.index('self._reconcile_xp_expect(obs)')
     fac_at = acct_src.index('self._reconcile_faction_display(obs)')
     assert fac_at > xp_at, '羁绊对账须与 XP 对账同一 heavy 定型帧、紧随其后'
@@ -879,10 +879,10 @@ def test_faction_wire_source_locks() -> None:
 
 
 # ===== 行为锁(假 reader/假账本,零 OCR/零游戏) =====
-def _make_director(monkeypatch: _w547_faction_wire_pytest.MonkeyPatch, computed, reading) -> PrepDirector:
+def _make_director(monkeypatch: _w547_faction_wire_pytest.MonkeyPatch, computed, reading) -> CwScreenPrep:
     """构造无初始化的 Director:session 挂假 tracked,ctx/cw_match 走 _session
     真路径;board_from_tracked / read_displayed_factions 注入假实现。"""
-    d = object.__new__(PrepDirector)
+    d = object.__new__(CwScreenPrep)
     session = SimpleNamespace(tracked_deployed=[])
     d.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
     d.last_screenshot = object()   # 消费帧=last_screenshot(heavy 定型帧,零新增截屏)
@@ -1041,8 +1041,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
     xp_apply_clicks,
     xp_clicks_to_level,
 )
-from sr_od.application.currency_war.prep_director import (
-    PrepDirector as _w552_xp_reconcile_PrepDirector,
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+    CwScreenPrep as _w552_xp_reconcile_PrepDirector,
 )
 from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.telemetry import (
@@ -1092,7 +1092,7 @@ def test_xp_clicks_to_level_truth_table():
 # ===== ② 账本流为(stub director;台账行经 monkeypatch 捕获)=====
 
 def _stub_director() -> tuple[_w552_xp_reconcile_PrepDirector, _w552_xp_reconcile_StrategySession, list[tuple]]:
-    """免 SrContext 构造的 PrepDirector:object.__new__ + stub ctx
+    """免 SrContext 构造的 CwScreenPrep:object.__new__ + stub ctx
     (cw_match.session = 真 StrategySession;账本动态属性挂其上)。"""
     session = _w552_xp_reconcile_StrategySession()
     pd = object.__new__(_w552_xp_reconcile_PrepDirector)
@@ -1224,7 +1224,7 @@ def test_w552_wiring_locks():
     """①意图推进在 execute 返回后且仅 progressed 分支;②对账在 heavy
     定型帧观察之后(buy_expect 消费点同区域);③台账常量与解析形态锁。"""
     src = _w552_xp_reconcile_Path(
-        'src/sr_od/application/currency_war/prep_director.py'
+        'src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py'
     ).read_text(encoding='utf-8')
     # W971 P3b 拆内环:XP 推账两通道随单轮 run(LevelUp 在执行器分支;
     # 买牌单元在 OpenShop 编排分支),对账消费点在 _v2_post_frame_accounting
@@ -1239,7 +1239,7 @@ def test_w552_wiring_locks():
     consume_at = src.index('_pending_buy = session.pending_buy_expect')
     assert consume_at < obs_at                      # heavy 定型帧之后
     # 分包期 6(DESIGN §4.5):xp 常量/解析形态随纯期望段迁
-    # kernel/cw_prep_expect(prep_director 经 import 引用);接线点
+    # kernel/cw_prep_expect(cw_screen_prep 经 import 引用);接线点
     # (reader_source/record 调用)仍在本体。
     expect_src = _w552_xp_reconcile_Path(
         'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'

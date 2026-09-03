@@ -92,7 +92,7 @@ def test_d68_nonexistent_concept_stocks_removed() -> None:
 
 
 def test_is_known_env() -> None:
-    """is_known_env:注册表内 True,外 False(识别完整性信号,供 handle_invest_env log warn)。"""
+    """is_known_env:注册表内 True,外 False(识别完整性信号,供 cw_screen_invest_env log warn)。"""
     assert is_known_env("追击概念股") is True
     assert is_known_env("命运圣杯邀请") is True
     assert is_known_env("不存在环境") is False
@@ -193,7 +193,7 @@ def test_adr0150_plaza_new_entries() -> None:
 def test_w144_get_strategy_bullet_variant_hits() -> None:
     """①`全都要•彩`(OCR 把 · 误读为 •)经 get_strategy 命中注册表条目,返回规范形。
 
-    修前:精确查 miss → handle_invest_strategy L216 假告警「数据缺口」。
+    修前:精确查 miss → cw_screen_invest_strategy L216 假告警「数据缺口」。
     """
     from sr_od.application.currency_war.kernel.cw_investments import get_strategy, normalize_invest_name
     s = get_strategy('全都要•彩')
@@ -232,7 +232,7 @@ def test_w144_economy_aggregate_bullet_name_not_dropped() -> None:
 def test_w144_raw_name_not_polluted_by_lookup() -> None:
     """③原始名保留:查找边界归一不回写——get_strategy 不改注册表键,也不改入参语义。
 
-    数据边界声明:采集/telemetry(invest_cards.jsonl)在 handle_invest_strategy 内
+    数据边界声明:采集/telemetry(invest_cards.jsonl)在 cw_screen_invest_strategy 内
     直接用 OCR 原始名落盘,不经 get_strategy → 无直接可测入口;此处锁「查找不改
     注册表与写入端」:get_strategy 归一仅作用于查询入参,INVESTMENT_STRATEGIES 键集
     不含任何 bullet 形变(注册表数据层未被规范化污染)。
@@ -556,7 +556,7 @@ def test_fortune_cards_ocr_on_fixture():
 
 def test_fortune_text_strategy_prefers_damage():
     """文本策略:伤害倍率 > 强度提高 > 无关键词。"""
-    from sr_od.application.currency_war.operations.handlers.handle_fortune_picker import  HandleFortunePicker
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_fortune import  CwScreenFortune
     # 复用 handle 的打分逻辑(直接构造假 ctx 会重;抽出来测不行——用类属性+内联)
     texts = ['层数提高', '伤害倍率提高', '黑天鹅强度提高']
     best_i, best_s = 0, -1.0

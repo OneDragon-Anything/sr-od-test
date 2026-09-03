@@ -510,6 +510,17 @@ def _guard_shared_ctx(test_context: SrTestContext) -> Iterator[None]:
                     stacklevel=2,
                 )
                 setattr(rc, field, None)
+        # 停机中断闩残留(同族:走真实生产停机路径的测试置位后无收口点清,
+        # 泄漏会让后续所有轮间等待被 _interruptible_sleep 静默短路)。此处是
+        # 防线不是许可——用 reset_running_state 的测试已在 harness 层复位,
+        # 报警的是绕过 harness 的泄漏点。
+        if getattr(rc, 'is_stop_interrupted', False):
+            warnings.warn(
+                'run_context 停机中断闩被本测试遗留置位(真实停机路径触发?'
+                '已自动复位)——泄漏会让后续测试的轮间等待被静默短路(全集假红)。',
+                stacklevel=2,
+            )
+            rc._stop_interrupted = False  # noqa: SLF001
 
 
 # --------------------------------------------------------------------------- #

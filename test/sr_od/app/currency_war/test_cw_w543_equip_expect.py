@@ -30,7 +30,7 @@ from sr_od.application.currency_war.kernel.cw_prep_expect import (
 from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L2_RECORD
 from sr_od.application.currency_war.obs import cw_equipment
 from sr_od.application.currency_war.obs.cw_equipment import EquipCell
-from sr_od.application.currency_war.prep_director import PrepDirector
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
 from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
@@ -164,7 +164,7 @@ def test_w543_wiring_locks():
     重观察(定型帧)之后、仅 progressed 分支;③对账读法 = read_equip_grid
     纯读 + 复用定型帧(last_screenshot),不经 read_bench_chars;
     ④台账参数锁;⑤合成规则单一源 = cw_synthesis。"""
-    src = Path('src/sr_od/application/currency_war/prep_director.py').read_text(
+    src = Path('src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py').read_text(
         encoding='utf-8')
     # W971 P3b 拆内环:锚「备战单轮」节标记(单轮 run 五段)
     loop_at = src.index(
@@ -207,7 +207,7 @@ def test_w543_wiring_locks():
 
 def test_w543_sell_build_best_effort_locks():
     """期望构建端:全程 best-effort(异常吞掉返 None,不阻塞动作执行)。"""
-    src = Path('src/sr_od/application/currency_war/prep_director.py').read_text(
+    src = Path('src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py').read_text(
         encoding='utf-8')
     build = src[src.index('def _equip_expect_for_sell'):]
     build = build[:build.index('\n    def ')]
@@ -217,10 +217,10 @@ def test_w543_sell_build_best_effort_locks():
 
 # ===== ④ 台账行形态 + 对账流为(stub director;台账行经 monkeypatch 捕获)=====
 
-def _stub_director(frame: object | None) -> tuple[PrepDirector, list[tuple]]:
-    """免 SrContext 构造的 PrepDirector(object.__new__ + stub ctx,
+def _stub_director(frame: object | None) -> tuple[CwScreenPrep, list[tuple]]:
+    """免 SrContext 构造的 CwScreenPrep(object.__new__ + stub ctx,
     test_cw_w552_xp_reconcile._stub_director 同款)。"""
-    pd = object.__new__(PrepDirector)
+    pd = object.__new__(CwScreenPrep)
     pd.ctx = SimpleNamespace()
     pd.last_screenshot = frame
     pd._cached_state = SimpleNamespace(plane=1, round_num=3)

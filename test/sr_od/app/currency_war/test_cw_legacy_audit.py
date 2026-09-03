@@ -16,14 +16,14 @@ from __future__ import annotations
 # ==================== r297_p0_fixes ====================
 import inspect
 
-from sr_od.application.currency_war import prep_director
+from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
 
 
 def test_loop_entry_anchor_is_stage_only() -> None:
     """P0①→r347→W971 P3b 拆内环(返工定稿):旧「按钮-出战」双态区分锚
     退役;环入口消化语义 = 外循环每轮重识别 + 单轮 op 清场/开店收起探针
     (gate 时间稳定窗随内环拆除)。锁:旧锚不得回流 + 收起探针在。"""
-    src = inspect.getsource(prep_director.PrepDirector.run)
+    src = inspect.getsource(cw_screen_prep.CwScreenPrep.run)
     assert "'按钮-出战'" not in src, \
         '旧 3 探针锚已删(r347),不得回流单轮入口'
     assert '_try_collapse_open_shop()' in src, \
@@ -37,7 +37,7 @@ def test_no_fallthrough_blind_observe() -> None:
     单轮观察段见 event overlay → **交回外循环分发,零计数**(原内环
     bail/同因 ×3/ping-pong 停机机制随内环整体拆除,即 P1-r6 停机事故
     根源机制);无进展留证归外循环 stall 防线(cw_loop)。"""
-    src = inspect.getsource(prep_director.PrepDirector.run)
+    src = inspect.getsource(cw_screen_prep.CwScreenPrep.run)
     assert 'obs.event_overlay is not None' in src, '单轮观察段缺 overlay 分诊'
     assert '交回外循环' in src, 'overlay 帧须交回外循环'
     assert '_bail(' not in src and 'bail_reason_counts' not in src, (
@@ -47,9 +47,9 @@ def test_no_fallthrough_blind_observe() -> None:
 def test_probe_node_type_after_shop_closed() -> None:
     """P0③(挂点随迁,W970 批 C/拆内环):_probe_node_type 挂 OpenShop
     编排内 CloseShopOp 完成后;单轮 run 入口不直调(skip 69% 根因)。"""
-    src_phase = inspect.getsource(prep_director.PrepDirector._open_shop_phase)
+    src_phase = inspect.getsource(cw_screen_prep.CwScreenPrep._open_shop_phase)
     assert 'self._probe_node_type()' in src_phase
-    src_run = inspect.getsource(prep_director.PrepDirector.run)
+    src_run = inspect.getsource(cw_screen_prep.CwScreenPrep.run)
     assert 'self._probe_node_type()' not in src_run
 
 
@@ -65,13 +65,13 @@ def test_shop_open_collapse_wait_dd011() -> None:
     W970 批 A 原子化后商店路径 = 编排壳 buy + 波循环 run_buy_waves +
     开/关店原子核心,四落点同锁。
     注:不设肯定性断言(常量名在场类)——那类锁只是实现的影子,无独立语义。"""
-    from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
     from sr_od.application.currency_war.operations.prep import (
         buy_cards,
         close_shop,
         open_shop,
     )
-    for fn in (prep_director.PrepDirector._open_shop_phase, buy_cards.run_buy_waves,
+    for fn in (cw_screen_prep.CwScreenPrep._open_shop_phase, buy_cards.run_buy_waves,
                open_shop.open_shop, close_shop.close_shop):
         src = _r336_batch4_locks_inspect.getsource(fn)
         assert 'def _legacy_poll' not in src, \
@@ -102,11 +102,11 @@ def test_shop_currency_war_config_module_level() -> None:
     buy 全崩。W970 批 A 原子化后 config 构造点 = run_buy_waves 顶部
     (无条件,UnboundLocalError 形态结构性消除);锁:buy_cards 模块级
     名存在 + 编排壳/波循环体内无任何局部 import。"""
-    from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
     from sr_od.application.currency_war.operations.prep import buy_cards
     assert getattr(buy_cards, 'CurrencyWarConfig', None) is not None, \
         'buy_cards.py 必须模块级 import CurrencyWarConfig'
-    for method in (prep_director.PrepDirector._open_shop_phase, buy_cards.run_buy_waves):
+    for method in (cw_screen_prep.CwScreenPrep._open_shop_phase, buy_cards.run_buy_waves):
         src = _r336_batch4_locks_inspect.getsource(method)
         assert 'currency_war_config import' not in src, \
             f'{method.__name__} 体内不得有局部 import CurrencyWarConfig(r345 局38 崩溃根因)'
@@ -120,13 +120,13 @@ def test_shop_contextlib_module_level_no_local_import() -> None:
     与遥测留证。W970 批 A 原子化后路径 = 编排壳 buy + 波循环
     run_buy_waves。锁:两模块模块级存在 + 两体内无局部 import
     contextlib + contextlib.suppress 使用点无局部 import 保护。"""
-    from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
     from sr_od.application.currency_war.operations.prep import buy_cards
-    assert getattr(prep_director, 'contextlib', None) is not None, \
-        'prep_director.py 必须模块级 import contextlib(r346 H1;编排宿主随壳退役迁移)'
+    assert getattr(cw_screen_prep, 'contextlib', None) is not None, \
+        'cw_screen_prep.py 必须模块级 import contextlib(r346 H1;编排宿主随壳退役迁移)'
     assert getattr(buy_cards, 'contextlib', None) is not None, \
         'buy_cards.py 必须模块级 import contextlib(r346 H1)'
-    for method in (prep_director.PrepDirector._open_shop_phase, buy_cards.run_buy_waves):
+    for method in (cw_screen_prep.CwScreenPrep._open_shop_phase, buy_cards.run_buy_waves):
         src = _r336_batch4_locks_inspect.getsource(method)
         assert 'import contextlib' not in src, \
             f'{method.__name__} 体内不得有局部 import contextlib(r346 H1 雷)'
@@ -138,14 +138,14 @@ def test_director_gate_open_shop_tolerated_not_bail() -> None:
     vs「真特效」——开态走收起+round_retry 重进,只有非开态才
     _bail(3-strike 停机)。锁源检:容忍 helper + 超时分支调用 +
     bail 仍保留。"""
-    from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
     helper_src = _r336_batch4_locks_inspect.getsource(
-        prep_director.PrepDirector._try_collapse_open_shop)
+        cw_screen_prep.CwScreenPrep._try_collapse_open_shop)
     assert '按钮-收起' in helper_src and 'return True' in helper_src, \
         '开商店容忍 helper 必须探测收起锚并返回可重进'
     # W971 P3b 拆内环(返工定稿):单轮 run 入口探开商店合法态 → 收起后
     # 直接进本轮观察(r346 容忍语义保留;gate 超时/分诊/bail 路径随内环拆除)
-    src = _r336_batch4_locks_inspect.getsource(prep_director.PrepDirector.run)
+    src = _r336_batch4_locks_inspect.getsource(cw_screen_prep.CwScreenPrep.run)
     assert '_try_collapse_open_shop()' in src, \
         '单轮入口必须调用开商店态容忍路径(r346)'
 
@@ -279,7 +279,7 @@ def test_source_has_real_wiring() -> None:
 
     from sr_od.application.currency_war.operations import cw_loop
     src = inspect.getsource(cw_loop.CwLoop)
-    assert 'PrepDirector(self.ctx).execute()' in src
+    assert 'CwScreenPrep(self.ctx).execute()' in src
     assert '_director_fail_streak' in src
 
 
@@ -348,8 +348,8 @@ def test_sim_events_reach_node_delta() -> None:
 
 import inspect as _r348_cap_domain_inspect
 
-from sr_od.application.currency_war import (
-    prep_director as _r348_cap_domain_prep_director,
+from sr_od.application.currency_war.operations.cw_screen import (
+    cw_screen_prep as _r348_cap_domain_prep,
 )
 from sr_od.application.currency_war.obs.cw_back_layout import back_slots_from_cap_diff
 
@@ -357,7 +357,7 @@ from sr_od.application.currency_war.obs.cw_back_layout import back_slots_from_ca
 def test_cap_domain_check_inverted() -> None:
     """旧窄域(cap∈{level,level+1})跨 5 局假警报(宝钻叠加是合法
     常态);反转后:下界违例才留证,上界超出去 debug 记宝钻数。"""
-    src = _r348_cap_domain_inspect.getsource(_r348_cap_domain_prep_director.PrepDirector._observe)
+    src = _r348_cap_domain_inspect.getsource(_r348_cap_domain_prep.CwScreenPrep._observe)
     assert 'cap < st.level' in src, \
         '真异常方向 = cap<level(不可能向,读错检测保留,ADR-0220)'
     assert 'cap应在level..level+1' not in src, \
@@ -367,8 +367,8 @@ def test_cap_domain_check_inverted() -> None:
 def test_lv6_pending_hook_retired() -> None:
     """W209/ADR-0385:旧 lv6 待采留证(note_pending_7slots)随 level 驱动模型
     作废删除——采集信号改 7 格档未建档(diff==1)留证,辖域在
-    cw_back_layout(select_back_layout/note_7slots_pending),prep_director 不再挂。"""
-    src = _r348_cap_domain_inspect.getsource(_r348_cap_domain_prep_director.PrepDirector._observe)
+    cw_back_layout(select_back_layout/note_7slots_pending),cw_screen_prep 不再挂。"""
+    src = _r348_cap_domain_inspect.getsource(_r348_cap_domain_prep.CwScreenPrep._observe)
     assert 'note_pending_7slots(' not in src and 'note_7slots_pending(' not in src, \
         'lv6 待采留证已废(ADR-0385);7 格留证辖域在 cw_back_layout'
     assert 'deploy_cap_unverified_layout' not in src, \
@@ -415,12 +415,12 @@ from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 def test_normalize_node_type_vocab() -> None:
     """三源词汇统一:英文 token/OCR 中文/旧兜底 → EXPECTED_DROP 键域中文。
 
-    (W971 05-battle §1 P4:词汇 normalizer 随结算链收编进 BattleWaitOp。)
+    (W971 05-battle §1 P4:词汇 normalizer 随结算链收编进 CwScreenBattleWait。)
     """
-    from sr_od.application.currency_war.operations.cw_flow.battle_wait_op import (
-        BattleWaitOp,
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait import (
+        CwScreenBattleWait,
     )
-    n = BattleWaitOp._normalize_node_type
+    n = CwScreenBattleWait._normalize_node_type
     assert n('battle') == '普通战斗'
     assert n('reward') == '奖励'
     assert n('encounter') == '遭遇'

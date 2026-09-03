@@ -224,7 +224,7 @@ def _import_handler(class_name: str) -> type:
     for pkg_name in (
         'sr_od.application.currency_war.operations.handlers',
         'sr_od.application.currency_war.operations.cw_screen',
-        # W971 P3b:简报执行面迁 cw_flow.BriefingOp(HandleBriefing 退役)
+        # W971 P3b:简报执行面迁 cw_flow.CwScreenBriefing(HandleBriefing 退役)
         'sr_od.application.currency_war.operations.cw_flow',
     ):
         pkg = importlib.import_module(pkg_name)
@@ -422,7 +422,7 @@ def test_aface_clear_set_switched_to_registry() -> None:
 
 def test_aface_clear_judgment_per_fixture_frame() -> None:
     """变更语义 fixture 断言锁:对「单 overlay 在场」的 mock 帧剧本,
-    环入口清场段(``PrepDirector._clear_entry_overlays``,消费循环未改、
+    环入口清场段(``CwScreenPrep._clear_entry_overlays``,消费循环未改、
     判定源换成注册表派生)的点击行为逐帧锁定:
 
     - 星徽秘典弹窗在场 → **不点**其关闭钮(A 面行为变化 1:移出清场,
@@ -437,10 +437,10 @@ def test_aface_clear_judgment_per_fixture_frame() -> None:
     from types import SimpleNamespace
 
     from one_dragon.base.screen import screen_utils
-    from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
 
     def _run_clear(visible: str) -> list[tuple[str, str]]:
-        d = prep_director.PrepDirector.__new__(prep_director.PrepDirector)
+        d = cw_screen_prep.CwScreenPrep.__new__(cw_screen_prep.CwScreenPrep)
         d.ctx = SimpleNamespace(current_instance_idx=99)
         d.screenshot = lambda: object()   # 帧本体不被消费(锚判定全桩)
         clicks: list[tuple[str, str]] = []
@@ -455,7 +455,7 @@ def test_aface_clear_judgment_per_fixture_frame() -> None:
         mp = _overlay_registry_pytest.MonkeyPatch()
         try:
             mp.setattr(screen_utils, 'get_match_screen_name', _fake_match)
-            mp.setattr(prep_director.time, 'sleep', lambda _s: None)
+            mp.setattr(cw_screen_prep.time, 'sleep', lambda _s: None)
             d._clear_entry_overlays()
         finally:
             mp.undo()
@@ -504,12 +504,12 @@ def test_zero_behavior_bail_list_switched_to_registry() -> None:
     """
     import inspect
 
-    from sr_od.application.currency_war import prep_director
-    src = inspect.getsource(prep_director)
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
+    src = inspect.getsource(cw_screen_prep)
     assert 'derive_decision' in src, 'bail 扫描未接线 derive_decision()'
     for _scr, _area, _tag in _GOLDEN_BAIL_LIST:
         assert f"('{_scr}', '{_area}', '{_tag}')" not in src, (
-            f'bail 手写清单条目 {_tag} 仍在 prep_director(单一源未收拢)')
+            f'bail 手写清单条目 {_tag} 仍在 cw_screen_prep(单一源未收拢)')
     derived = {(s.screen_name, s.anchor_area, s.bail_tag)
                for s in reg.derive_decision()}
     assert derived == _golden_bail_set(), (
@@ -541,7 +541,7 @@ def test_zero_drift_bail_judgment_per_frame_fixture() -> None:
                    for s in reg.derive_decision()], scr)
         assert g == tag and d == tag, (
             f'fixture 帧 {scr}:手写判定 {g} / 派生判定 {d} / 黄金 {tag} 漂移')
-    # 序差异显式化:两序不同是已论证的行为无关差异(见 prep_director 扫描段注释),
+    # 序差异显式化:两序不同是已论证的行为无关差异(见 cw_screen_prep 扫描段注释),
     # 锁住差异事实本身,防止「以为序相同」的误读
     assert golden_order != derived_order
     assert set(golden_order) == set(derived_order)

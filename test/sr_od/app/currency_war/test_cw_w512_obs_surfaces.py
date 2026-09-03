@@ -124,10 +124,10 @@ def test_defect_row_not_appended_to_spend_ledger(tmp_path: Path, monkeypatch):
 # ===== ④ 板面动作级对拍 + 置信度遥测接线锁(§2.3 / §2.10)=====
 
 def test_deploy_action_audit_wiring_lock():
-    """prep_director 接线锁(静态;设计 §2.3 判据:DeployMove 执行后 paddle X
+    """cw_screen_prep 接线锁(静态;设计 §2.3 判据:DeployMove 执行后 paddle X
     应 +1、SellDeployed 后应 −1,不等 → 台账 surface='deployed' 留证,
     与 deployed_align 的自动纠漂分立)。"""
-    import sr_od.application.currency_war.prep_director as pd
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as pd
     src = Path(pd.__file__).read_text(encoding='utf-8')
     # 前读:仅部署/卖出动作,执行前读 paddle
     assert 'isinstance(action, (DeployMove, SellDeployed))' in src

@@ -51,7 +51,13 @@ def test_p1_grant_volume_matches_real_profile() -> None:
        2 件尾 1%→10%)——保有分布仍锁粗界防归零/虚高。
     **移动靶边界**:实机画像采于旧码旧局(57 局 grant 语料,W477);
     economy v2 靶与缺陷清零轨道见 ADR-0447(清零后重采实机基线,
-    本锁随之重推导)。"""
+    本锁随之重推导)。
+    单 seed 下界重锚(2026-09-07,M4 残余批):2→1。seed=17 局终保有
+    1 件,行为链取证 = 供给面正常(发放轮 4、发放件 5、20 局供给量期望
+    5.27 件在画像带内),低尾来自策略 churn 卖出带装件——fdac8186
+    (轮岗建模修复)+4cbfb64a(输入基线定稿)行为批的取舍变化所致,
+    与上方「churn 增 → 保有左移」同向;供给面静默回退仍由供给量期望带
+    (4.7±20%)与均值带看守,单 seed 下界仅防归零,收到 1。"""
     totals: list[int] = []
     grant_rounds = 0
     for seed in range(20):
@@ -69,7 +75,8 @@ def test_p1_grant_volume_matches_real_profile() -> None:
         total = owned + worn + bench_worn
         adv = sum(1 for e in total
                   if e not in RESERVED_COMPONENTS)
-        assert 2 <= len(total) <= 9, f'seed={seed} 总保有 {total}'
+        # 单 seed 下界=1(重锚依据见 docstring「单 seed 下界重锚」节)
+        assert 1 <= len(total) <= 9, f'seed={seed} 总保有 {total}'
         assert adv <= 3, f'seed={seed} 进阶件 {adv} 超量级'
         totals.append(len(total))
     mean = sum(totals) / len(totals)

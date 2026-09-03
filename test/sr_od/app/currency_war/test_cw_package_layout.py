@@ -45,7 +45,7 @@ ROOT_FILES: dict[str, str] = {
     'currency_war_run_record': 'app',
     'decision_assembly': 'app',
     'prep_actions': 'app',
-    'prep_director': 'app',
+    'cw_screen_prep': 'app',
     'run_state': 'app',
     # 轻量画面状态判定(模块 docstring:仿 sim_uni_screen_state;只依赖
     # one_dragon 框架原语,供上层兜底 op 复用对局中判定单一源)——归属 app 桶

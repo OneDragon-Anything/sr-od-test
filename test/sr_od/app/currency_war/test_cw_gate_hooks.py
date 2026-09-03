@@ -335,12 +335,12 @@ def test_gate_flags_removed() -> None:
 from types import SimpleNamespace
 
 import sr_od.application.currency_war.obs.cw_observation_gate as gate_mod
-import sr_od.application.currency_war.prep_director as pd_mod
+import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as pd_mod
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     StartBattle,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.prep_director import PrepDirector
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
 from test.harness.fixture_controller import (
     enter_running_state,
     fast_sleep,
@@ -361,13 +361,13 @@ def test_post_collapse_timeout_param_lock() -> None:
 
 def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
                    collapse_open):
-    """构造绕过 __init__ 的 PrepDirector,mock gate 与开店态探测。
+    """构造绕过 __init__ 的 CwScreenPrep,mock gate 与开店态探测。
 
     gate_calls 记录每次 wait_stable_frame 的 (timeout_s, expect_screen);
     gate_returns 按序弹出返回值。collapse_open 控制 _try_collapse_open_shop
     返回值(标量=恒值;列表=按序弹出,记录实际返回到返回的 list)。
     """
-    d = PrepDirector.__new__(PrepDirector)
+    d = CwScreenPrep.__new__(CwScreenPrep)
     d.ctx = SimpleNamespace(current_instance_idx=99)
     d._executor = SimpleNamespace(
         validate=lambda a: None,
@@ -491,7 +491,7 @@ def test_bookcard_stop_hook_removed() -> None:
     assert src.count('is_prep_like_frame') >= 1   # summon 钩子帧态门仍在
     from sr_od.application.currency_war.operations import cw_loop
     loop_src = _r330_hook_gates_inspect.getsource(cw_loop)
-    assert 'HandleBookcard' in loop_src   # 处理链接线(0k 分支 + 预清场)
+    assert 'CwScreenExpertInvite' in loop_src   # 处理链接线(0k 分支 + 预清场)
 
 
 def test_star_hook_gated() -> None:

@@ -7,7 +7,7 @@ test_cw_w530_drag_reconcile.py 同族设计)。
 满栏自动多买 k>1/满栏连升低置信子案按暂定语义锁/身份未识别不评)②定型帧
 对账判据真值表(身份未识别槽跳过;期望空槽被占=不一致;星级不符=不一致)
 ③接线源码锁(意图在 shop.py 买入点记录、期望在单元尾计算暂存、对账在
-PrepDirector heavy 定型帧后仅 progressed 分支、合成落点单一源 =
+CwScreenPrep heavy 定型帧后仅 progressed 分支、合成落点单一源 =
 cw_state._merge_bench)④台账行形态锁(surface='bench'/kind=
 'buy_expect_mismatch'/reader_source='buy_expect_reconcile')。
 全部纯函数/tmp_path,零触网零落盘真实路径。
@@ -25,7 +25,7 @@ from sr_od.application.currency_war.telemetry import defects, recorder
 
 from sr_od.application.currency_war.kernel.cw_prep_expect import BuyPurchase, compare_buy_expect, compute_buy_expect
 
-from sr_od.application.currency_war.prep_director import _save_buy_evidence
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import _save_buy_evidence
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
@@ -260,7 +260,7 @@ def test_compare_merge_not_happened_not_downgraded():
 
 def test_w536_wiring_locks():
     """①意图在买入点(BuyCard 点击分支)记录、单元尾计算写入
-    session.pending_buy_expect;含卖出/未识别牌不建;②对账在 PrepDirector
+    session.pending_buy_expect;含卖出/未识别牌不建;②对账在 CwScreenPrep
     heavy 定型帧之后且仅 progressed 分支、消费后即清;③合成落点单一源 =
     cw_state._merge_bench(compute_buy_expect 不自造第二套落点规则)。
 
@@ -269,13 +269,13 @@ def test_w536_wiring_locks():
     消费/仅 progressed/消费即清),被取代的是暂存机制而非对账时序;依据
     = cw_strategy.StrategySession.pending_buy_expect 字段定义注释。
     锁迁移(W970 批 A 原子化):买入点记录/crop 链随波循环迁 buy_cards.py;
-    单元尾 stash 单一源 = prep_director.finalize_buy_phase(时序锚 = 关店后;原编排壳 shop.py 已退役)。
+    单元尾 stash 单一源 = cw_screen_prep.finalize_buy_phase(时序锚 = 关店后;原编排壳 shop.py 已退役)。
     """
     buy_src = Path(
         'src/sr_od/application/currency_war/operations/prep/buy_cards.py'
     ).read_text(encoding='utf-8')
     shop_src = Path(
-        'src/sr_od/application/currency_war/prep_director.py'
+        'src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py'
     ).read_text(encoding='utf-8')
     click_at = buy_src.index('Buy click @(')
     rec_at = buy_src.index('_buy_purchases.append(BuyPurchase(', click_at)
@@ -289,7 +289,7 @@ def test_w536_wiring_locks():
         in buy_src
 
     dir_src = Path(
-        'src/sr_od/application/currency_war/prep_director.py'
+        'src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py'
     ).read_text(encoding='utf-8')
     obs_at = dir_src.index("obs = self._observe(heavy=True)")
     consume_at = dir_src.index("_pending_buy = session.pending_buy_expect")
@@ -309,7 +309,7 @@ def test_w536_wiring_locks():
     from sr_od.application.currency_war.kernel import cw_strategy_session as _ss_mod
     assert 'pending_buy_expect: ' + chr(39) + 'BuyExpect | None' + chr(39) + ' = None' in inspect.getsource(_ss_mod)
     # 分包期 6(DESIGN §4.5):compute_buy_expect 与 _BUY_DEFECT_KIND
-    # 随纯期望段迁 kernel/cw_prep_expect(prep_director 经 import 引用);
+    # 随纯期望段迁 kernel/cw_prep_expect(cw_screen_prep 经 import 引用);
     # 接线点(buy_expect_reconcile 对账)仍在本体。
     expect_src = Path(
         'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'

@@ -1,6 +1,6 @@
 """P4R3 锚误读 / 两画面排他 / 误分发上限 单测(第五局 1-9 实锤返工)。
 
-实锤链:全帧 OCR 把「强敌来袭」读成「强敌米」→ BossBriefingOp 0p 锚
+实锤链:全帧 OCR 把「强敌来袭」读成「强敌米」→ CwScreenBossBriefing 0p 锚
 (标识-强敌来袭,area LCS)miss → boss 简报帧含共享文案「点击空白处继续」
 → 0q 位面过渡误分发 → 「提示未出现」fail 每 2s 无限循环。
 """
@@ -13,7 +13,7 @@ from types import SimpleNamespace
 def test_boss_briefing_texts_misread_forms() -> None:
     """「强敌」片段判别:误读「强敌米」/正常「强敌来袭」全命中;
     位面过渡帧(仅共享文案+boss 名)不误判。"""
-    from sr_od.application.currency_war.operations.cw_flow.boss_briefing_op import (
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing import (
         is_boss_briefing_texts,
     )
     assert is_boss_briefing_texts(['强敌米', '点击空白处继续', '云骑骁卫·彦卿'])
@@ -29,14 +29,14 @@ def test_boss_briefing_texts_misread_forms() -> None:
 def test_boss_briefing_takeover_on_misread(monkeypatch) -> None:
     """area 锚(误读)miss + OCR 片段判别命中 → handle 走点空白路径
     (0p 接管,不再漏给 0q)。"""
-    from sr_od.application.currency_war.operations.cw_flow import boss_briefing_op as bb
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_boss_briefing as bb
 
     class _FakeArea:
         def __init__(self, ok: bool): self.is_success = ok
 
     clicks: list[str] = []
 
-    class _Op(bb.BossBriefingOp):
+    class _Op(bb.CwScreenBossBriefing):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
             self._first_seen_ts = None
             self.last_screenshot = object()
@@ -85,7 +85,7 @@ def test_plane_transition_exclusion_wired() -> None:
     from sr_od.application.currency_war.operations import cw_loop
     src = inspect.getsource(cw_loop.CwLoop.loop)
     i_plane = src.find("self.round_by_ocr(screen, '点击空白处继续', lcs_percent=0.8)")
-    i_dispatch = src.find('PlaneTransitionOp(self.ctx)', i_plane)
+    i_dispatch = src.find('CwScreenPlaneTransition(self.ctx)', i_plane)
     i_excl = src.find('if _is_boss_frame(', i_plane)
     assert 0 < i_excl < i_dispatch, '0q 排他须在共享文案判定之后、分发之前'
     assert '排他,留 0p' in src
@@ -99,13 +99,13 @@ def test_plane_misdispatch_limit() -> None:
     import inspect
 
     from sr_od.application.currency_war.operations import cw_loop
-    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
     assert cw_loop.CwLoop.PLANE_MISDISPATCH_LIMIT == 3
     src = inspect.getsource(cw_loop.CwLoop.loop)
     assert '位面过渡连续 fail 超上限' in src
     assert "round_fail('位面过渡连续 fail 超上限(交兜底链)')" in src
     # 清零挂点:boss 简报接管(0p)与过渡成功两条恢复路径
     assert src.count('self._plane_mis_streak = 0') >= 2
-    # BattleWaitOp 白名单同源加固(boss 帧不误判位面过渡项)
-    bw_src = inspect.getsource(battle_wait_op.BattleWaitOp._hit_completion_anchor)
+    # CwScreenBattleWait 白名单同源加固(boss 帧不误判位面过渡项)
+    bw_src = inspect.getsource(cw_screen_battle_wait.CwScreenBattleWait._hit_completion_anchor)
     assert 'is_boss_briefing_texts' in bw_src

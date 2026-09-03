@@ -692,14 +692,14 @@ from types import SimpleNamespace
 
 import pytest
 
-import sr_od.application.currency_war.prep_director as pd
+import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as pd
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 from sr_od.application.currency_war.obs.cw_shop_obs import (
     MergePreviewCompareRow,
     compare_merge_preview,
 )
 
-from sr_od.application.currency_war.prep_director import PrepDirector, _merge_preview_inputs
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep, _merge_preview_inputs
 
 #: W600 非零事件语料的 (槽位, ✦数) 形状(13 个唯一形状;fixture 素材单一源)。
 _W600_NONZERO_SHAPES: list[list[tuple[int, int]]] = [
@@ -824,8 +824,8 @@ def _capture_defects(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
     return calls
 
 
-def _director() -> PrepDirector:
-    d = object.__new__(PrepDirector)
+def _director() -> CwScreenPrep:
+    d = object.__new__(CwScreenPrep)
     d.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=SimpleNamespace()))
     return d
 

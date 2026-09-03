@@ -216,8 +216,8 @@ def test_shop_record_site_copies_owned_pool_before_record() -> None:
 
 
 def test_director_record_step_copies_owned_pool_on_state_copy() -> None:
-    """prep_director._record_step 步进站点:copy 后补拷(防污染 obs 决策输入)。"""
-    src = _src('prep_director.py')
+    """cw_screen_prep._record_step 步进站点:copy 后补拷(防污染 obs 决策输入)。"""
+    src = _src('operations/cw_screen/cw_screen_prep.py')
     i_step = src.index('def _record_step')
     i_copy = src.index('st = st.copy()', i_step)
     i_equips = src.index('last_owned_equips', i_step)
@@ -255,7 +255,7 @@ def test_briefing_modules_use_framework_logger() -> None:
     import importlib
 
     for mod_name, attr in (
-        ('sr_od.application.currency_war.operations.cw_flow.briefing_op', 'log'),
+        ('sr_od.application.currency_war.operations.cw_screen.cw_screen_briefing', 'log'),
         ('sr_od.application.currency_war.obs.cw_briefing_obs', '_log'),
         ('sr_od.application.currency_war.operations.cw_entry.cw_entry_start', '_log'),
     ):

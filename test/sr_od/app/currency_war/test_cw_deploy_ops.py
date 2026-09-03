@@ -880,7 +880,7 @@ def test_w530_wiring_locks():
     """①期望态在动作发出点(execute 之前)从意图计算;②对账在 heavy 重观察
     (定型帧)之后且仅 progressed 分支;③身份读=identify_slots 纯读组合,
     不经 read_bench_chars(内置停机钩子);④台账参数锁。"""
-    src = _w530_drag_reconcile_Path('src/sr_od/application/currency_war/prep_director.py').read_text(
+    src = _w530_drag_reconcile_Path('src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py').read_text(
         encoding='utf-8')
     # ① 发出点:compute 在单轮 execute 之前(W971 P3b 拆内环:单轮 = run
     #    五段;锚「备战单轮」节标记,破警告分支的 decide 在其后)。
@@ -906,7 +906,7 @@ def test_w530_wiring_locks():
     assert 'last_screenshot' in method   # 零新增截屏:复用定型帧
     # ④ 台账参数锁(surface/kind 常量定义 + 接线点使用)。
     # 分包期 6(DESIGN §4.5):常量定义随纯期望段迁 kernel/cw_prep_expect
-    # (prep_director 经 import 引用);接线点使用仍在本体。
+    # (cw_screen_prep 经 import 引用);接线点使用仍在本体。
     expect_src = _w530_drag_reconcile_Path(
         'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
     ).read_text(encoding='utf-8')

@@ -204,22 +204,22 @@ def test_read_briefing_enemy_difficulty(test_context: SrTestContext) -> None:
 
 
 def test_read_invest_env_options(test_context: SrTestContext) -> None:
-    """投资环境 3 卡名读取(HandleInvestEnv._read_options by NAME_CY 行过滤)。
+    """投资环境 3 卡名读取(CwScreenInvestEnv._read_options by NAME_CY 行过滤)。
 
     fixture ``screens/货币战争-投资环境/default.webp``。NAME_CY [360,410] 容卡名 y 随立绘变
     (修前 [378,408] 漏 y<378 的卡名,实机 3 卡名 y 375-378)。
     """
     if not test_context.has_screen('货币战争-投资环境', 'default'):
         pytest.skip('存档截图缺失:screens/货币战争-投资环境/default.webp')
-    from sr_od.application.currency_war.operations.handlers.handle_invest_env import HandleInvestEnv
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_env import CwScreenInvestEnv
     screen = test_context.load_screen('货币战争-投资环境', 'default')
-    op = HandleInvestEnv(test_context)
+    op = CwScreenInvestEnv(test_context)
     opts = op._read_options(screen)
     assert len(opts) == 3, f'期望 3 卡名,实际 {opts}'
 
 
 def test_read_select_partner_candidates(test_context: SrTestContext) -> None:
-    """选择伙伴 候选阵营 label 读取(HandleSelectPartner._read_candidates by 中央 x + y 行过滤)。
+    """选择伙伴 候选阵营 label 读取(CwScreenPartner._read_candidates by 中央 x + y 行过滤)。
 
     D-60:硬编码 STAGE_PORTRAIT 落候选间隙 flat-loop → 改 OCR 定位候选。fixture
     ``screens/货币战争-列车同行/default.webp``(1-7 节点 2 候选 护盾/能量)。
@@ -228,9 +228,9 @@ def test_read_select_partner_candidates(test_context: SrTestContext) -> None:
     """
     if not test_context.has_screen('货币战争-列车同行', 'default'):
         pytest.skip('存档截图缺失:screens/货币战争-列车同行/default.webp')
-    from sr_od.application.currency_war.operations.handlers.handle_select_partner import HandleSelectPartner
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_partner import CwScreenPartner
     screen = test_context.load_screen('货币战争-列车同行', 'default')
-    op = HandleSelectPartner(test_context)
+    op = CwScreenPartner(test_context)
     cands = op._read_candidates(screen)
     names = [c[0] for c in cands]
     xs = [c[1] for c in cands]

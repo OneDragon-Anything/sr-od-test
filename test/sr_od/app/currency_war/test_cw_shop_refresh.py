@@ -128,11 +128,11 @@ from types import SimpleNamespace
 
 import pytest
 
-import sr_od.application.currency_war.prep_director as pd
+import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as pd
 from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 from sr_od.application.currency_war.obs.cw_shop_obs import RefreshExpect
-from sr_od.application.currency_war.prep_director import (
-    PrepDirector,
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+    CwScreenPrep,
     build_refresh_expect,
     refresh_reconcile_mismatches,
 )
@@ -240,9 +240,9 @@ class TestRefreshReconcileMismatches:
 
 
 def _make_director(monkeypatch: pytest.MonkeyPatch,
-                   violations: list) -> PrepDirector:
+                   violations: list) -> CwScreenPrep:
     """构造无初始化的 Director;check_shop_pool 注入假实现。"""
-    d = object.__new__(PrepDirector)
+    d = object.__new__(CwScreenPrep)
     session = SimpleNamespace()
     d.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
     monkeypatch.setattr(pd, 'check_shop_pool', lambda cards, level, pool_state:
@@ -355,7 +355,7 @@ class _BuyPhaseHostOp(SrOperation):
     """买牌单元离线宿主(prep/shop.py BuyShopCards 壳退役后的测试装配面)。
 
     编排 = 现役链同款:开店 → 波循环 → 关店 → finalize_buy_phase 单一源收尾;
-    生产编排唯一宿主 = PrepDirector._open_shop_phase,本类只作波循环/收尾
+    生产编排唯一宿主 = CwScreenPrep._open_shop_phase,本类只作波循环/收尾
     语义的离线驱动器,不承载生产逻辑。
     """
 
@@ -370,7 +370,7 @@ class _BuyPhaseHostOp(SrOperation):
         from sr_od.application.currency_war.operations.prep.close_shop import (
             close_shop,
         )
-        from sr_od.application.currency_war import prep_director as finalize_home
+        from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as finalize_home
         from sr_od.application.currency_war.operations.prep.open_shop import (
             open_shop,
         )
@@ -425,7 +425,7 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     - 买+刷新波(W592 语义不变):第 1 次 = 点击前现读,第 2 次 =
       刷后重读;read_gold_opt 第 1 次 = 点击前现读金,第 2 次 = 刷后金。
     """
-    from sr_od.application.currency_war import prep_director as pd
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd
     from sr_od.application.currency_war.obs import cw_observation as cwo
     from sr_od.application.currency_war.obs import cw_observation_gate as gate
     from sr_od.application.currency_war.operations.prep import (
@@ -1068,7 +1068,7 @@ def _make_hook_op(test_context: SrTestContext,
         return [ShopCard(x=j, faction='?', name=n, cost=3, star=1)
                 for j, n in enumerate(names)]
 
-    # 读点随波循环迁 buy_cards 模块(W970 批 A);finalize(单一源在 prep_director)经 cw_observation 函数级导入
+    # 读点随波循环迁 buy_cards 模块(W970 批 A);finalize(单一源在 cw_screen_prep)经 cw_observation 函数级导入
     for _mod in (cwo, buy_cards_mod):
         monkeypatch.setattr(_mod, 'read_game_state', lambda *a, **k: _state())
         monkeypatch.setattr(_mod, 'read_gold', lambda *a, **k: 10)

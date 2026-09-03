@@ -269,7 +269,7 @@ class TestCwEntryStartFlow:
             f'剧本未推进到末 phase:phase_idx={fixture_controller.phase_idx}'
         )
         # 简报词缀读取验证(W971 P3b:直写 session,ctx 信箱退役):
-        # BriefingOp read_affixes → session.briefing_affixes(A8 最高 4 词缀)
+        # CwScreenBriefing read_affixes → session.briefing_affixes(A8 最高 4 词缀)
         _sess = test_context.cw_match.session
         assert _sess.briefing_affixes, '简报词缀未读取(简报分支没读存)'
         assert len(_sess.briefing_affixes) == 4, (
@@ -997,15 +997,15 @@ def test_tracked_bench_chars_seeds_identity() -> None:
 
 import inspect
 
-from sr_od.application.currency_war.operations.cw_flow import briefing_op
+from sr_od.application.currency_war.operations.cw_screen import cw_screen_briefing
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 def test_handle_briefing_telemetry_wiring_in_source() -> None:
     """接线锁:简报 op 真调 record_exogenous(kind='briefing')(落盘点唯一源)。
 
-    W971 P3b:简报 op 迁至 cw_flow.BriefingOp(HandleBriefing 退役),锁随迁。
+    W971 P3b:简报 op 迁至 cw_flow.CwScreenBriefing(HandleBriefing 退役),锁随迁。
     """
-    src = inspect.getsource(briefing_op.BriefingOp.handle)
-    assert 'record_exogenous(' in src, 'BriefingOp 未接 briefing 遥测落账(W518 断链)'
+    src = inspect.getsource(cw_screen_briefing.CwScreenBriefing.handle)
+    assert 'record_exogenous(' in src, 'CwScreenBriefing 未接 briefing 遥测落账(W518 断链)'
     assert "'briefing'" in src, "落账 kind 不是 'briefing'(须与原位面简报先例同口径)"

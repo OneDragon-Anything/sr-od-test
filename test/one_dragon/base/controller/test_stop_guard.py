@@ -458,7 +458,7 @@ class _InnerOp(Operation):
 
 
 class _OuterOp(Operation):
-    """外环(模拟 PrepDirector/cw_loop 形态):节点内调子 op.execute,
+    """外环(模拟 CwScreenPrep/cw_loop 形态):节点内调子 op.execute,
     子 op 返回失败后**外环仍想继续下一节点再点一次**——守卫语义下这一次
     必须被拦,且异常穿出到外环 execute 之外。"""
 

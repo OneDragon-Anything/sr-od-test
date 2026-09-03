@@ -105,7 +105,7 @@ def test_megastar_leaves_node_success_with_settle(monkeypatch) -> None:
     from sr_od.application.currency_war.operations.cw_flow.cw_flow_const import (
         CW_OVERLAY_SETTLE_S,
     )
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay import (
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
         CwScreenMegastar,
     )
     calls = _capture_baseline(monkeypatch)
@@ -120,7 +120,7 @@ def test_megastar_leaves_node_success_with_settle(monkeypatch) -> None:
 
 def test_megastar_in_node_act_then_retry(monkeypatch) -> None:
     """巨星:仍在 overlay → 一个动作 + round_retry。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay import (
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
         CwScreenMegastar,
     )
     _capture_baseline(monkeypatch)
@@ -133,7 +133,7 @@ def test_megastar_in_node_act_then_retry(monkeypatch) -> None:
 
 def test_megastar_budget_semantics_unchanged() -> None:
     """预算语义不变:node_max_retry_times=8(原 RunNode 子类口径)。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay import (
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
         CwScreenMegastar,
     )
     node = CwScreenMegastar.handle.operation_node_annotation

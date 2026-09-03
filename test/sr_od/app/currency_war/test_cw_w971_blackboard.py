@@ -205,7 +205,7 @@ def test_establish_new_match_and_idempotent(monkeypatch) -> None:
 
 def test_absorb_selected_difficulty_only_after_mailbox_retirement() -> None:
     """run loop 入口中转(P3 改写):ctx 信箱退役(01-opening §1)——吸收段
-    只剩职级难度;简报三字段唯一写点 = BriefingOp 直写 session,不再经 ctx。"""
+    只剩职级难度;简报三字段唯一写点 = CwScreenBriefing 直写 session,不再经 ctx。"""
     from sr_od.application.currency_war.decision.cw_strategy import (
         StrategySession,
     )

@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import sr_od.application.currency_war.kernel.cw_prep_actions as pv
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war import prep_actions as pa_mod
-from sr_od.application.currency_war import prep_director as pd_mod
+from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd_mod
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.decision.decision_v2.strategy import (
     DecisionV2Strategy,
@@ -39,7 +39,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     StartBattle,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-from sr_od.application.currency_war.prep_director import PrepDirector
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
 
 if True:
     from test.conftest import SrTestContext
@@ -332,9 +332,9 @@ class _FakeExecutor:
         return res(action) if callable(res) else res
 
 
-def _make_director(monkeypatch, executor) -> PrepDirector:
-    """构造绕过 __init__ 的 PrepDirector(mock 全 IO;环逻辑单测专用)。"""
-    d = PrepDirector.__new__(PrepDirector)
+def _make_director(monkeypatch, executor) -> CwScreenPrep:
+    """构造绕过 __init__ 的 CwScreenPrep(mock 全 IO;环逻辑单测专用)。"""
+    d = CwScreenPrep.__new__(CwScreenPrep)
     d.ctx = SimpleNamespace(current_instance_idx=99)   # _run_loop 读 config 用
     d._executor = executor
     d._steps = 0
@@ -398,7 +398,7 @@ class _ScriptStrategy:
         self.seen: list[str] = []
 
     def decide_prep_screen(self, session, config):
-        # W971 §2 黑板接口(P2):生产 prep_director 写 session.prep_obs_frame
+        # W971 §2 黑板接口(P2):生产 cw_screen_prep 写 session.prep_obs_frame
         # 后调本入口(替身不消费帧,仅按脚本吐动作)。
         a = self._acts.pop(0) if self._acts else StartBattle()
         self.seen.append(type(a).__name__)
@@ -424,7 +424,7 @@ def test_executor_h3_sphere_verified_only(test_context: SrTestContext,
     """H-3 回归(executor):点击后球数不减 → progressed=False;球减少 → True。"""
     import numpy as np
 
-    op = PrepDirector(test_context)
+    op = CwScreenPrep(test_context)
     ex = pa_mod.PrepActionExecutor(op, test_context)
     monkeypatch.setattr(test_context.controller, 'mouse_move', lambda p: True, raising=False)   # MockController 缺 stub
     fake_screen = np.zeros((1080, 1920, 3), dtype=np.uint8)
@@ -451,7 +451,7 @@ def test_executor_h3_sphere_verified_only(test_context: SrTestContext,
 
 def test_validate_rejects_unknown_action_type(test_context: SrTestContext) -> None:
     """M-4 回归:未知类型走参数非法路径(validate 报错,不进 execute 的 fail 循环)。"""
-    ex = pa_mod.PrepActionExecutor(PrepDirector(test_context), test_context)
+    ex = pa_mod.PrepActionExecutor(CwScreenPrep(test_context), test_context)
 
     class RogueAction(PrepAction):
         pass
@@ -478,7 +478,7 @@ def test_executor_brake_rejects_action_when_stopped(
         test_context: SrTestContext, monkeypatch) -> None:
     """第二层锁:executor 拒绝执行任何动作(含 StartBattle),零点击落地。"""
     from sr_od.application.currency_war.kernel.cw_prep_actions import StartBattle
-    op = PrepDirector(test_context)
+    op = CwScreenPrep(test_context)
     ex = pa_mod.PrepActionExecutor(op, test_context)
     clicked: list = []
     monkeypatch.setattr(test_context.controller, 'click',
@@ -500,7 +500,7 @@ def test_brake_inactive_when_running(test_context: SrTestContext, monkeypatch) -
         is_context_stop = True   # idle 初始态也是 STOP——但未在运行,不拦
 
     monkeypatch.setattr(test_context, 'run_context', _IdleRunCtx())
-    op = PrepDirector(test_context)
+    op = CwScreenPrep(test_context)
     ex = pa_mod.PrepActionExecutor(op, test_context)
     monkeypatch.setattr(test_context.controller, 'mouse_move', lambda p: True,
                         raising=False)
@@ -610,7 +610,7 @@ def test_composite_reads_success_field(test_context: SrTestContext,
     from sr_od.application.currency_war import prep_actions as pa
     from sr_od.application.currency_war.kernel.cw_prep_actions import RunEquip
 
-    ex = pa.PrepActionExecutor(PrepDirector(test_context), test_context)
+    ex = pa.PrepActionExecutor(CwScreenPrep(test_context), test_context)
 
     class _OpResult:   # 形状对齐 one_dragon OperationResult(success 字段)
         def __init__(self) -> None:
@@ -654,7 +654,7 @@ def test_level_up_clamps_phantom_jump(test_context, monkeypatch) -> None:
 
     from sr_od.application.currency_war import prep_actions as pa_mod
 
-    op = PrepDirector(test_context)
+    op = CwScreenPrep(test_context)
     ex = pa_mod.PrepActionExecutor(op, test_context)
     monkeypatch.setattr(test_context.controller, 'mouse_move', lambda p: True, raising=False)
     fake = np.zeros((1080, 1920, 3), dtype=np.uint8)
@@ -693,7 +693,7 @@ def test_offtarget_sell_protects_core_enablers() -> None:
 
 # ===== ADR-0136 M16 死循环修复(未达上限弹窗勾选 + 备战席已满警告感知) =====
 def test_start_battle_dialog_checkbox_equipped(monkeypatch) -> None:
-    """_start_battle 弹窗处理 = 勾选(幂等)+确认(对齐 HandleDeployNotFull;M16 只确认→每次出战都弹)。"""
+    """_start_battle 弹窗处理 = 勾选(幂等)+确认(对齐 CwScreenDeployNotFull;M16 只确认→每次出战都弹)。"""
     import sr_od.application.currency_war.prep_actions as pa
 
     clicks: list[tuple[int, int]] = []

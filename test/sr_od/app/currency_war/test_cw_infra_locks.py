@@ -728,7 +728,7 @@ def test_from_dict_is_write_side_single_source() -> None:
 import inspect
 
 from sr_od.application.currency_war.operations.handlers import _overlay_confirm
-from sr_od.application.currency_war.operations.handlers.handle_planner_event import  HandlePlannerEvent
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import  CwScreenPlanner
 
 
 def test_card_point_inside_updated_area_and_avoids_detail(test_context) -> None:
@@ -737,17 +737,17 @@ def test_card_point_inside_updated_area_and_avoids_detail(test_context) -> None:
     避让断言用 rect 相对几何(底缘上移 DETAIL_MARGIN_RATIO),非绝对 y
     (W952 P2-1:绝对常数对多布局不成立——弹窗整体平移时相对断言仍成立)。
     """
-    op = HandlePlannerEvent(test_context)
+    op = CwScreenPlanner(test_context)
     for idx in (0, 1):
         area = test_context.screen_loader.get_area(
-            HandlePlannerEvent.CARD_AREA_SCREEN,
-            HandlePlannerEvent.CARD_AREAS[idx])
+            CwScreenPlanner.CARD_AREA_SCREEN,
+            CwScreenPlanner.CARD_AREAS[idx])
         assert area is not None, f'卡 area 缺失:idx={idx}'
         rect = area.pc_rect
         p = op._card_point(idx)
         assert rect.x1 <= p.x <= rect.x2 and rect.y1 <= p.y <= rect.y2, (
             f'idx={idx} 点 ({p.x},{p.y}) 落在卡 rect {rect} 外(布局漂移复发形态)')
-        detail_top = rect.y2 - int(rect.height * HandlePlannerEvent.DETAIL_MARGIN_RATIO)
+        detail_top = rect.y2 - int(rect.height * CwScreenPlanner.DETAIL_MARGIN_RATIO)
         assert p.y <= detail_top, (
             f'idx={idx} 点 y={p.y} 进入详情钮相对避让带(>={detail_top})')
         assert p.y >= rect.y1 + 60, f'idx={idx} 点过于靠卡顶(上半部点击=详情面板实证)'
@@ -761,10 +761,10 @@ def test_card_point_falls_back_to_legacy_safe_band(
     旧布局 51.8% 卡高——(755,400) 型详情危险带与安全点之间未验证带。
     """
     monkeypatch.setattr(test_context.screen_loader, 'get_area', lambda *a, **k: None)
-    op = HandlePlannerEvent(test_context)
+    op = CwScreenPlanner(test_context)
     for idx in (0, 1):
         p = op._card_point(idx)
-        lx, ly, rx, ry = HandlePlannerEvent._LEGACY_CARD_RECTS[idx]
+        lx, ly, rx, ry = CwScreenPlanner._LEGACY_CARD_RECTS[idx]
         assert lx <= p.x <= rx, f'idx={idx} x={p.x} 不在旧 rect 内'
         assert 460 <= p.y <= 480, (
             f'idx={idx} 兜底 y={p.y} 出旧实证安全带 [460,480](详情危险带发作形态)')
@@ -772,10 +772,10 @@ def test_card_point_falls_back_to_legacy_safe_band(
 
 def test_press_time_hardening_wired() -> None:
     """加固接线:点卡/确认都走 0.15 按压;共享助手默认 0.1(其它 handler 零影响)。"""
-    src = inspect.getsource(HandlePlannerEvent)
+    src = inspect.getsource(CwScreenPlanner)
     assert 'press_time=self.CLICK_PRESS_TIME' in src, '点卡未带按压加固'
     assert 'press_time=self.CLICK_PRESS_TIME)' in inspect.getsource(
-        HandlePlannerEvent.handle) or 'press_time=self.CLICK_PRESS_TIME' in src
+        CwScreenPlanner.handle) or 'press_time=self.CLICK_PRESS_TIME' in src
     assert 'press_time: float = 0.1' in inspect.getsource(_overlay_confirm), (
         'confirm_and_verify 默认值变了(会波及其它 handler)')
     assert 'press_time=press_time' in inspect.getsource(_overlay_confirm), (

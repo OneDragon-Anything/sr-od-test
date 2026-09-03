@@ -82,7 +82,7 @@ def test_invest_strategy_branch_uses_area_center_not_ocr() -> None:
     """件3 修复锁:r303b 分支确认点击改用 area 中心(非全屏 OCR 搜「确认」)。
 
     旧 round_by_ocr_and_click 对 stylized 按钮静默失配 → 点不落地 → 卡行 748s;
-    修复后与 HandleInvestStrategy 生产路径同源(area 中心 + bug#1 mouse_move)。
+    修复后与 CwScreenInvestStrategy 生产路径同源(area 中心 + bug#1 mouse_move)。
     """
     import inspect
 
@@ -397,12 +397,12 @@ def test_outcome_record_damage_roundtrip(tmp_path) -> None:
     assert lines[1]['damage_dealt'] is None
 
 
-# ===== battle_wait_op 接线(结算帧 → record_outcome 携带 damage_dealt) =====
-# (W971 05-battle §1 P4:结算链自 cw_loop 收编 BattleWaitOp,本测试随迁。)
+# ===== cw_screen_battle_wait 接线(结算帧 → record_outcome 携带 damage_dealt) =====
+# (W971 05-battle §1 P4:结算链自 cw_loop 收编 CwScreenBattleWait,本测试随迁。)
 
 def test_loop_outcome_carries_damage(monkeypatch) -> None:
     """②段路径:真实 read_round_outcome(不桩)喂 win 形帧 → 遥测行带 damage。"""
-    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op as bwo
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait as bwo
 
     captured: list[dict] = []
     monkeypatch.setattr(recorder, 'record_outcome',
@@ -412,7 +412,7 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
                         lambda *a, **k: None)
     monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: (1, 8))
 
-    class _Op(bwo.BattleWaitOp):
+    class _Op(bwo.CwScreenBattleWait):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
             self._st = bwo.SettlementState(
                 run_start_ts=time.monotonic() - 9999.0,   # 超宽限:正常行
@@ -449,8 +449,8 @@ def test_branch3_records_before_continue_click() -> None:
     """弱锁:②段采样点在「继续挑战」点击前(结算停留期先读后点)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op
-    src = inspect.getsource(battle_wait_op.BattleWaitOp.wait)
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
+    src = inspect.getsource(cw_screen_battle_wait.CwScreenBattleWait.wait)
     i_read = src.index('_record_round_outcome(screen)')
     i_click = src.index("round_by_find_and_click_area(\n"
                         "                    self.screenshot(), '货币战争-结算', "

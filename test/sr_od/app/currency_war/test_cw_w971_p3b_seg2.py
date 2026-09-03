@@ -59,9 +59,9 @@ def test_v2_engine_intercepts_open_shop_by_type() -> None:
     """流程层拦截 = 类型分派(字符串匹配判据退役,W970 §3)。
 
     W971 P3b 拆内环:拦截点自 v2 执行端口平移到备战单轮 run(五段⑤执行)。"""
-    from sr_od.application.currency_war import prep_director as pd_mod
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd_mod
 
-    run_src = inspect.getsource(pd_mod.PrepDirector.run)
+    run_src = inspect.getsource(pd_mod.CwScreenPrep.run)
     assert 'isinstance(action, OpenShop)' in run_src, '单轮执行段缺 OpenShop 类型分派'
     assert "if 'EnsureShopClosed' in key" not in run_src, (
         '探针挂点字符串匹配判据未退役(§3:改类型分派)')
@@ -69,9 +69,9 @@ def test_v2_engine_intercepts_open_shop_by_type() -> None:
 
 def test_open_shop_phase_orchestration() -> None:
     """流程层商店编排契约(read_only 与买牌两形态 + 探针挂点随迁)。"""
-    from sr_od.application.currency_war import prep_director as pd_mod
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd_mod
 
-    src = inspect.getsource(pd_mod.PrepDirector._open_shop_phase)
+    src = inspect.getsource(pd_mod.CwScreenPrep._open_shop_phase)
     # 编排序:open_shop → (read_only: 观察+关店 | 波循环+关店) → finalize → 探针
     assert src.index('open_shop(self)') < src.index('close_shop(self)'), '开店须先于关店'
     assert 'run_buy_waves' in src and 'finalize_buy_phase' in src, (
@@ -84,8 +84,8 @@ def test_open_shop_phase_orchestration() -> None:
 
 def test_buy_phase_finalize_single_source() -> None:
     """买后收尾单一源:finalize_buy_phase 模块函数(退役批:壳删除后唯一宿主
-    = 流程层 prep_director;防双份漂移的单一源语义不变)。"""
-    from sr_od.application.currency_war import prep_director as pd_mod
+    = 流程层 cw_screen_prep;防双份漂移的单一源语义不变)。"""
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd_mod
 
     assert hasattr(pd_mod, 'finalize_buy_phase'), (
         'finalize_buy_phase 未落流程层单一源')
@@ -119,13 +119,13 @@ def test_takeover_collect_moved_to_director() -> None:
     """接管局补采挂点迁移(01-opening §2.1):cw_loop 内联块退役,
     由备战单轮 op 观察段(_takeover_collect_if_needed)承担。"""
     assert '_cw_takeover_done' not in _loop_src(), 'loop 内联补采块未退役'
-    from sr_od.application.currency_war import prep_director as pd_mod
-    src = inspect.getsource(pd_mod.PrepDirector._takeover_collect_if_needed)
-    assert 'cw_takeover_collect_done' in src, 'prep_director 缺接管补采块'
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd_mod
+    src = inspect.getsource(pd_mod.CwScreenPrep._takeover_collect_if_needed)
+    assert 'cw_takeover_collect_done' in src, 'cw_screen_prep 缺接管补采块'
     assert 'briefing_bosses' in src, '补采触发门(简报真值空)缺失'
     assert 'CwScreenPlaneIntel' in src, '补采通道(位面详情采集 op)缺失'
     assert '_takeover_collect_if_needed(match, session)' in inspect.getsource(
-        pd_mod.PrepDirector.run), '单轮观察段缺接管补采挂点'
+        pd_mod.CwScreenPrep.run), '单轮观察段缺接管补采挂点'
 
 
 # ==================== 拆内环定稿:备战单轮 op + 外循环轮转(返工升级) ====================
@@ -135,7 +135,7 @@ def _make_round_director(test_context, monkeypatch, scripted_action):
     策略脚本化(单动作),OpenShop 编排替身。"""
     from types import SimpleNamespace as _SN
 
-    from sr_od.application.currency_war import prep_director as pd_mod
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd_mod
     from sr_od.application.currency_war.decision.cw_strategy import (
         StrategySession,
     )
@@ -151,7 +151,7 @@ def _make_round_director(test_context, monkeypatch, scripted_action):
         def update_target(self, state, session, config):
             pass
 
-    d = pd_mod.PrepDirector(test_context)
+    d = pd_mod.CwScreenPrep(test_context)
     session = StrategySession()
     strat = _StubStrategy()
     match = _SN(strategy=strat, session=session)
@@ -242,14 +242,14 @@ def test_prep_round_event_overlay_hands_back_without_execute(
 
 def test_outer_loop_rediscovers_between_prep_rounds() -> None:
     """外循环轮转(单层循环定稿):备战单轮交回 → loop 顶全分支重判 →
-    遭遇 overlay 帧由 0c 遭遇分支(HandleEncounter)先于备战双锚接管
+    遭遇 overlay 帧由 0c 遭遇分支(CwScreenEncounter)先于备战双锚接管
     (P1-r6 停机场景的回归锁,源级)。"""
     src = _loop_src()
     # 遭遇分发在备战分支之前(源码序 = 判定优先序)
     assert src.index("'货币战争-遭遇节点', '标识-遭遇节点'") < src.index(
         "and self.round_by_find_area(screen, '货币战争-备战', '按钮-出战')"), (
         '遭遇分发须先于备战双锚(overlay 帧不得直落备战分支)')
-    assert 'HandleEncounter(self.ctx)' in src, '遭遇 op 分发缺失'
+    assert 'CwScreenEncounter(self.ctx)' in src, '遭遇 op 分发缺失'
     # 单轮交回 → 外循环重识别(前锁 test_loop_redispatches_after_director_return)
     assert '交回顶层分发' in src
 
@@ -281,8 +281,8 @@ _FRAME = ('货币战争-BOSS简报', 'default')
 
 
 def _make_boss_op(test_context: SrTestContext, monkeypatch):
-    from sr_od.application.currency_war.operations.cw_flow.boss_briefing_op import (
-        BossBriefingOp,
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing import (
+        CwScreenBossBriefing,
     )
     from test.harness.fixture_controller import (
         FixtureController,
@@ -292,7 +292,7 @@ def _make_boss_op(test_context: SrTestContext, monkeypatch):
     fc = FixtureController(test_context)
     fc.set_phases([{'frame': _FRAME}])
     monkeypatch.setattr(test_context, 'controller', fc)
-    op = type('W', (WatchdogOperationMixin, BossBriefingOp), {})(test_context)
+    op = type('W', (WatchdogOperationMixin, CwScreenBossBriefing), {})(test_context)
     op._init_watchdog()  # type: ignore[attr-defined]
     monkeypatch.setattr(fc, 'mouse_move', lambda *a, **k: None, raising=False)
     monkeypatch.setattr(op, 'save_screenshot', lambda *a, **k: '<shot>')
@@ -362,7 +362,7 @@ def test_boss_briefing_dispatch_before_prep_anchor() -> None:
     """分发源锁(P1-r6 同型教训锚位):boss 简报分支必须**先于备战双锚**,
     且横幅遮挡下双锚透出命中时帧不得直落备战分支。"""
     src = _loop_src()
-    assert "BossBriefingOp(self.ctx)" in src, 'BOSS 简报分支未接线'
+    assert "CwScreenBossBriefing(self.ctx)" in src, 'BOSS 简报分支未接线'
     assert src.index("'货币战争-BOSS简报', '标识-强敌来袭'") < src.index(
         "and self.round_by_find_area(screen, '货币战争-备战', '按钮-出战')"), (
         'BOSS 简报分发须先于备战双锚(横幅遮挡双锚透出命中)')

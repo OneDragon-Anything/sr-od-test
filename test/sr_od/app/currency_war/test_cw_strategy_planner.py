@@ -533,7 +533,7 @@ from types import SimpleNamespace as _w953_planner_strategy_wiring_SimpleNamespa
 from sr_od.application.currency_war.decision.decision_v2.strategy import  DecisionV2Strategy as _w953_planner_strategy_wiring_DecisionV2Strategy
 from sr_od.application.currency_war.kernel.cw_events import  PlannerOption as _w953_planner_strategy_wiring_PlannerOption, decide_planner as _w953_planner_strategy_wiring_decide_planner
 from sr_od.application.currency_war.kernel.cw_state import BenchChar as _w953_planner_strategy_wiring_BenchChar, GameState as _w953_planner_strategy_wiring_GameState
-from sr_od.application.currency_war.operations.handlers.handle_planner_event import  HandlePlannerEvent
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import  CwScreenPlanner
 
 _UPGRADE = _w953_planner_strategy_wiring_PlannerOption(idx=0, text='提升费用至4费,变为1星银狼')
 _WEAKEN = _w953_planner_strategy_wiring_PlannerOption(idx=1, text='使后续节点【弱化】,降低敌人属性。')
@@ -549,7 +549,7 @@ def test_planner_handler_routes_through_strategy_layer() -> None:
 
     锁的是「调用路径」不是分布数值;改接线形态时先重推语义再改锁
     (锁的存在性纪律)。"""
-    src = inspect.getsource(HandlePlannerEvent.handle)
+    src = inspect.getsource(CwScreenPlanner.handle)
     # ① 唯一入口 = 策略对象(DESIGN §3.4 规约1)
     assert '_match.strategy.decide_planner(' in src, \
         'handle 必须经 match.strategy.decide_planner(策略层唯一入口)'
@@ -696,7 +696,7 @@ def test_decision_row_downgrade_inactive_and_no_match(tmp_path: _w603_telemetry_
 
 def test_session_field_xp_expect_ledger_declared() -> None:
     """锁①c:xp_expect_ledger 为 StrategySession 正式字段(动态属性升声明,
-    pending_buy_expect 同判例;prep_director _xp_ledger 的 getattr 读写不变)。"""
+    pending_buy_expect 同判例;cw_screen_prep _xp_ledger 的 getattr 读写不变)。"""
     import dataclasses
     names = {f.name for f in dataclasses.fields(_w603_telemetry_wiring_StrategySession)}
     assert 'xp_expect_ledger' in names

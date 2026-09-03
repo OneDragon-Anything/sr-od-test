@@ -2,7 +2,7 @@
 
 背景(W473 复盘,P1 观测盲区):决策层 P1 锁定的「配方对」产物
 (IntentionState.p1_pair / transition_pair 过渡体系键二元组)在 P1
-活路径(PrepDirector 步进行 decisions 行)不落任何平铺遥测字段——
+活路径(CwScreenPrep 步进行 decisions 行)不落任何平铺遥测字段——
 target_comp 恒空、sess_framework 恒空,判读看不到 P1 锁了哪个配方对,
 「终局线何时锁」在 P1 段不可答;该字段是后续配对完成度买牌信号 A/B
 的关键度量上游。
@@ -12,7 +12,7 @@ target_comp 恒空、sess_framework 恒空,判读看不到 P1 锁了哪个配方
   ①锁局 transition_pair 次选;空窗/无意向 = '');
 - record 站点:extra 透传 → DecisionTrace.sess_p1_pair 落盘;
   缺 extra 时空串(纯遥测,决策行为零变化);
-- prep_director._record_step 接线(session.v3_intention 来源);
+- cw_screen_prep._record_step 接线(session.v3_intention 来源);
 - 旧台账兼容:无 sess_p1_pair 键的历史行经 cw_replay_reader 读取
   不炸(dataclass 已知字段过滤 + 缺省 '')。
 
@@ -86,14 +86,14 @@ def test_record_row_empty_without_extra(tmp_path) -> None:
     assert row['sess_p1_pair'] == ''
 
 
-# ===== prep_director._record_step 接线 =====
+# ===== cw_screen_prep._record_step 接线 =====
 
 
 def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
     """P1 活路径步进行:session.v3_intention 配方对 → record extra。"""
 
 
-    from sr_od.application.currency_war.prep_director import PrepDirector
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
 
     captured: dict = {}
 
@@ -102,7 +102,7 @@ def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
         captured['extra'] = extra
 
     monkeypatch.setattr(recorder, 'record_decision', _fake_record)
-    director = object.__new__(PrepDirector)   # 免 ctx(纯遥测接线测试)
+    director = object.__new__(CwScreenPrep)   # 免 ctx(纯遥测接线测试)
     director._steps = 0
     fake_sess = SimpleNamespace(
         v3_formed_stop=False,
@@ -119,7 +119,7 @@ def test_director_record_step_empty_pair_without_intention(monkeypatch) -> None:
     """session 无意向状态机(v3_intention=None)→ extra 空串。"""
 
 
-    from sr_od.application.currency_war.prep_director import PrepDirector
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
 
     captured: dict = {}
 
@@ -128,7 +128,7 @@ def test_director_record_step_empty_pair_without_intention(monkeypatch) -> None:
         captured['extra'] = extra
 
     monkeypatch.setattr(recorder, 'record_decision', _fake_record)
-    director = object.__new__(PrepDirector)
+    director = object.__new__(CwScreenPrep)
     director._steps = 0
     fake_sess = SimpleNamespace(v3_formed_stop=False, v3_intention=None,
                                 last_owned_equips=[], target_comp=None)

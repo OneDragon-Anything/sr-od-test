@@ -469,20 +469,20 @@ def test_helper_no_run_id_noop(tmp_path) -> None:
 
 _W312_WIRING = [
     # (模块路径, 承载函数/节点方法, 事件短码)
-    ('sr_od.application.currency_war.operations.handlers.handle_encounter',
-     'HandleEncounter.handle', 'encounter'),
-    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay',
+    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_encounter',
+     'CwScreenEncounter.handle', 'encounter'),
+    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar',
      'CwScreenMegastar._do_action', 'megastar'),
-    ('sr_od.application.currency_war.operations.handlers.handle_select_partner',
-     'HandleSelectPartner.handle', 'partner'),
-    ('sr_od.application.currency_war.operations.handlers.handle_planner_event',
-     'HandlePlannerEvent.handle', 'planner_event'),
-    ('sr_od.application.currency_war.operations.handlers.handle_fortune_picker',
-     'HandleFortunePicker.handle', 'fortune_pick'),
-    ('sr_od.application.currency_war.operations.handlers.handle_equip_pick',
-     'HandleEquipPick.handle', 'equip_pick'),
-    ('sr_od.application.currency_war.operations.handlers.handle_wish_trial',
-     'HandleWishTrial.handle', 'wish_trial'),
+    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_partner',
+     'CwScreenPartner.handle', 'partner'),
+    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_planner',
+     'CwScreenPlanner.handle', 'planner_event'),
+    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_fortune',
+     'CwScreenFortune.handle', 'fortune_pick'),
+    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_equip_pick',
+     'CwScreenEquipPick.handle', 'equip_pick'),
+    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_wish_trial',
+     'CwScreenWishTrial.handle', 'wish_trial'),
 ]
 
 
@@ -688,14 +688,14 @@ class _OcrItem(SimpleNamespace):
 
 def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read_phase: tuple[int, int],
                killed=None, hp_confidence: float = 0.0):
-    """构 battle_wait_op 桩:bypass __init__,喂 _record_round_outcome/_record_loss_page 依赖面。
+    """构 cw_screen_battle_wait 桩:bypass __init__,喂 _record_round_outcome/_record_loss_page 依赖面。
 
-    (W971 05-battle §1 P4:结算链自 cw_loop 收编 BattleWaitOp,本桩随迁。)
+    (W971 05-battle §1 P4:结算链自 cw_loop 收编 CwScreenBattleWait,本桩随迁。)
     read_phase_round 桩返 ``read_phase``(模拟 last-known 缓存态);read_round_outcome
     桩按入参回显 plane/round 并可控 killed/hp_confidence;cw_telemetry 写端 monkeypatch
     捕获(自动还原);strategy.on_round_end 记调用次数(telemetry-only 面断言用)。
     """
-    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op as bwo
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait as bwo
 
     captured: list[dict] = []
     on_round_end_calls: list[int] = []
@@ -715,7 +715,7 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
 
     monkeypatch.setattr(bwo, 'read_round_outcome', _fake_read_outcome)
 
-    class _Op(bwo.BattleWaitOp):
+    class _Op(bwo.CwScreenBattleWait):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
             self._st = bwo.SettlementState(
                 run_start_ts=time.monotonic() - 9999.0,   # 超宽限:非残留
@@ -862,13 +862,13 @@ def test_loss_page_failures_do_not_raise(monkeypatch) -> None:
 
 
 def test_branch_wiring_in_source() -> None:
-    """battle_wait_op 源码弱锁:1f 分支调 _record_loss_page;3b 原输轮记录仍在。
+    """cw_screen_battle_wait 源码弱锁:1f 分支调 _record_loss_page;3b 原输轮记录仍在。
 
-    (W971 05-battle §1 P4:1f/3b 自 cw_loop.loop 收编进 BattleWaitOp.wait,
+    (W971 05-battle §1 P4:1f/3b 自 cw_loop.loop 收编进 CwScreenBattleWait.wait,
     本锁随迁指向新宿主;锁语义不变:1f 真接线翻页前补录,防结构回退。)
     """
-    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op
-    src = inspect.getsource(battle_wait_op.BattleWaitOp.wait)
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
+    src = inspect.getsource(cw_screen_battle_wait.CwScreenBattleWait.wait)
     # 1f(失败结算页)翻页前补录。DD-006 二轮审计③后为 pre_fp 下传形态:
     # 1f 分支一次全屏 OCR 的 items 下传 sign 判定/三项暂存/同屏指纹三处消费
     #(消重复 OCR),指纹作为 pre_fp 传入 _record_loss_page——锁新形态调用在位。
@@ -940,15 +940,15 @@ class _w28_outcome_write_defects_OcrItem(SimpleNamespace):
 
 def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapsed_s: float,
                ocr_texts: list[str], first_seen: bool = False):
-    """构 battle_wait_op 桩:bypass __init__,只喂 _record_round_outcome 依赖面。
+    """构 cw_screen_battle_wait 桩:bypass __init__,只喂 _record_round_outcome 依赖面。
 
-    (W971 05-battle §1 P4:结算链收编 BattleWaitOp,本桩随迁。)
+    (W971 05-battle §1 P4:结算链收编 CwScreenBattleWait,本桩随迁。)
     read_phase_round 桩返 (1,1)(模拟 relaunch 后缓存已 reset 的兜底值);
     read_round_outcome 桩返高置信 RoundOutcome(hp 真值来自结算屏);
     recorder.record_outcome / record_exogenous monkeypatch 捕获(自动还原,
     不写真实 .debug)。
     """
-    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op as bwo
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait as bwo
 
     captured: list[dict] = []
 
@@ -968,7 +968,7 @@ def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapse
 
     monkeypatch.setattr(bwo, 'read_round_outcome', _fake_read_outcome)
 
-    class _Op(bwo.BattleWaitOp):
+    class _Op(bwo.CwScreenBattleWait):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
             self._st = bwo.SettlementState(
                 run_start_ts=time.monotonic() - elapsed_s,
@@ -1222,7 +1222,7 @@ def test_gate_fail_fast_on_lobby_frame(test_context: SrTestContext, monkeypatch)
 
 def test_skip_when_session_has_truth(test_context: SrTestContext, monkeypatch) -> None:
     """锁③:briefing_bosses 非空 → 直通 success,CwScreenPlaneIntel 不被实例化。"""
-    from sr_od.application.currency_war.operations.cw_flow import (
+    from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_plane_intel as cpi_mod,
     )
 
@@ -1276,7 +1276,7 @@ class _FakeIntel:
 
 def test_success_writes_session_and_clears_pools(test_context: SrTestContext, monkeypatch) -> None:
     """锁④主链:保位 3 槽落 session、affixes 仅空时写、消费后清池。"""
-    from sr_od.application.currency_war.operations.cw_flow import (
+    from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_plane_intel as cpi_mod,
     )
 
@@ -1308,7 +1308,7 @@ def test_success_writes_session_and_clears_pools(test_context: SrTestContext, mo
 def test_success_does_not_overwrite_existing_affixes(test_context: SrTestContext, monkeypatch) -> None:
     """锁④伴生:session.briefing_affixes 已有值时随采词缀**不覆写**(与
     cw_loop 内联块「仅简报未供时」口径一致)。"""
-    from sr_od.application.currency_war.operations.cw_flow import (
+    from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_plane_intel as cpi_mod,
     )
 
@@ -1345,7 +1345,7 @@ class _EmptyIntel(_FakeIntel):
 
 def test_no_output_leaves_session_untouched(test_context: SrTestContext, monkeypatch) -> None:
     """锁⑤:子 op 称成功但中转池空 → fail,session 保持空表不被覆写成假成功。"""
-    from sr_od.application.currency_war.operations.cw_flow import (
+    from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_plane_intel as cpi_mod,
     )
 

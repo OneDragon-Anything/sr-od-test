@@ -266,6 +266,24 @@ def test_residual_seeds_zero_violation_v2() -> None:
         assert not v, f'seed {seed} 残留同轮买卖(ADR-0328): {v[:3]}'
 
 
+def test_seed181_remedy_seed_fallback_zero_violation() -> None:
+    """F5 回归锁(seed 181 确定性复现):腾位补偿的「唯一可卖=种子」
+    死锁豁免路径曾绕过同轮已买守卫——同趟 arbitrate 刚采纳 BuyCard
+    三月七(d2_engine_seed 单张)后,同趟 bench_capacity 补偿把该
+    刚买种子当最弱件卖回(r408 主守卫读 v2_round_bought 有登记,
+    但 seed_age_blocked 分支绕开 sell_priority_key,补偿组重验只查
+    资源三约束)。修后该 seed 重放零违规(ADR-0267 0 容忍)。"""
+
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+    from sr_od.application.currency_war.decision.decision_v2.strategy import (
+        DecisionV2Strategy,
+    )
+    strat = DecisionV2Strategy()
+    res = simulate_p1(181, pool='snapshot', strategy=strat, planes=1)
+    v = check_no_same_round_buy_sell(res.ledger)
+    assert not v, f'seed 181 同轮买卖复发(腾位补偿种子兜底): {v[:3]}'
+
+
 # ==================== adr0337_mutex_working_snapshot ====================
 
 from sr_od.application.currency_war.sim.checks.ledger import check_no_same_round_buy_sell

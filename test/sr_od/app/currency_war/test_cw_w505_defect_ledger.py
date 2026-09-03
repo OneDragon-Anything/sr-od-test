@@ -266,10 +266,10 @@ def test_query_prefers_ledger_gold_close_over_conflict(tmp_path: Path):
 
 
 def test_shop_close_audit_wiring_lock():
-    """买后 gold 收口对拍接线锁(静态;原 shop.py 段随壳退役迁 prep_director.finalize_buy_phase):spend_audit 点在 mismatch 分支之外
+    """买后 gold 收口对拍接线锁(静态;原 shop.py 段随壳退役迁 cw_screen_prep.finalize_buy_phase):spend_audit 点在 mismatch 分支之外
     无条件调 set_unit_gold_close(_final_gold)(失读 None 也照记);
     锁「落点在对拍段内且无条件」,防后续重构静默断链。"""
-    import sr_od.application.currency_war.prep_director as shop
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as shop
     src = Path(shop.__file__).read_text(encoding='utf-8')
     assert 'set_unit_gold_close(_final_gold)' in src
     # 无条件性:调用必须位于 read_gold 之后、mismatch 判定(if _final_gold is not None)之前

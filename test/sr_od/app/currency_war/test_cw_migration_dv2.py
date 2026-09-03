@@ -256,7 +256,7 @@ def test_read_game_state_resets_obs_phase(gated_env):
 _INTERACTIVE_OVERLAYS = (
     '货币战争-投资环境', '货币战争-投资策略', '货币战争-列车同行',
     '货币战争-盛会之星', '货币战争-祈愿试炼',
-    # 遭遇节点=二选一难度选择(决策语义,专属 handler=handle_encounter)——
+    # 遭遇节点=二选一难度选择(决策语义,专属 handler=cw_screen_encounter)——
     # 曾被误列 ENTRY_OVERLAY_CLOSE 致选择被清场关闭、游戏拒出战停滞终局
     # (2026-08-30 局12/13 实证);入排除列防回归。
     '货币战争-遭遇节点',
@@ -302,15 +302,15 @@ def test_entry_overlay_close_areas_exist_in_yml():
 
 def test_prep_director_clear_entry_wired():
     """清场段已接进备战环入口(gate 之前),且 fail-open(异常即返回)。"""
-    from sr_od.application.currency_war import prep_director
-    src_loop = inspect.getsource(prep_director.PrepDirector.run)
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
+    src_loop = inspect.getsource(cw_screen_prep.CwScreenPrep.run)
     assert '_clear_entry_overlays()' in src_loop, \
         '环入口未接 P0 清场段'
     # 清场段调用必须在观察之前(先清场、再识别);
     # W971 P3b 拆内环:gate 已除,序锚 = 单轮 heavy 观察行
     assert src_loop.index('_clear_entry_overlays()') \
         < src_loop.index('obs = self._observe(heavy=True)')
-    src_clear = inspect.getsource(prep_director.PrepDirector._clear_entry_overlays)
+    src_clear = inspect.getsource(cw_screen_prep.CwScreenPrep._clear_entry_overlays)
     assert 'except Exception' in src_clear, '清场段必须 fail-open(离线契约)'
 
 
@@ -551,14 +551,14 @@ def test_hook_points_exist() -> None:
     import inspect
 
     import sr_od.application.currency_war.operations.cw_loop as cw_loop
-    import sr_od.application.currency_war.operations.handlers.handle_invest_strategy as his
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy as his
     import sr_od.application.currency_war.prep_actions as prep_actions
 
     his_src = inspect.getsource(his)
     assert 'active_strategies.append' in his_src
     # (W971 05-battle §1 P4:node_enter 事件与 record_outcome 写端随结算链
-    #  收编进 BattleWaitOp;补给合成行仍在 cw_loop——两宿主并查。)
-    import sr_od.application.currency_war.operations.cw_flow.battle_wait_op as bwo
+    #  收编进 CwScreenBattleWait;补给合成行仍在 cw_loop——两宿主并查。)
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait as bwo
     loop_src = (inspect.getsource(cw_loop)
                 + inspect.getsource(bwo))
     assert "'node_enter'" in loop_src

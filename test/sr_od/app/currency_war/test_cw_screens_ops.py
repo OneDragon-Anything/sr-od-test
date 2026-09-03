@@ -18,7 +18,7 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_prep_expect import  material_value as _material_value
 from sr_od.application.currency_war.obs.cw_identity_obs import  read_reward_spheres, read_supply_boxes
-from sr_od.application.currency_war.operations.handlers.handle_supply_box import  HandleSupplyBox
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply import  CwScreenSupply
 
 if True:
     from test.conftest import SrTestContext
@@ -48,7 +48,7 @@ def test_fixture_reads_spheres_and_box(test_context: SrTestContext) -> None:
 
 def test_pick_card_key_equips_priority(test_context: SrTestContext) -> None:
     """选卡:target_comp.key_equips 命中优先(无 match/无 comp 时按材料通用性)。"""
-    op = HandleSupplyBox(test_context)
+    op = CwScreenSupply(test_context)
     # 无 cw_match(局外)→ 材料通用性:生命之花(7) > 轮滑鞋(6)
     assert op._pick_card(['轮滑鞋', '生命之花', '幸运星']) == '生命之花'
     assert op._pick_card([]) is None
