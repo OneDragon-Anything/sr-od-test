@@ -75,7 +75,6 @@ test_cw_screens_entry.py::TestCwEntryStartFlow::test_new_match_a5_switches_to_ma
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_train_supply_popup_claimed_then_reaches_prep
 test_enter_game_flow.py::TestEnterGameFlow::test_enter_game_switch_account
 test_enter_game_flow.py::TestEnterGameFlow::test_enter_game_input_account_password
-test_kwarg_signature_audit.py::test_kwarg_call_sites_match_signatures
 test_use_trailblaze_power_timeout.py::TestWaitBattleResultTimeout::test_cleanup_keeps_waiting_mid_battle
 test_back_to_normal_world_plus.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
 test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
@@ -85,7 +84,6 @@ test_cw_shop_refresh.py::test_hook_heals_after_settled_reread
 test_cw_r412_runs_summary_fallback.py::test_coverage_check_both_directions
 test_cw_telemetry.py::test_sim_ledger_rows_carry_same_key
 # 终验(15:08)补录:原 a8 条目类名过时失效已上修正;以下为终验实测越线者
-test_kwarg_signature_audit.py::test_whitelist_entries_still_apply
 test_cw_r412_runs_summary_fallback.py::test_recover_dangling_idempotent
 test_cw_legacy_audit.py::test_stop_summary_no_duplicate_on_second_call
 test_cw4_mandate_v1.py::TestZeroDriftGate::test_baseline_self_pairing_n20
@@ -93,3 +91,11 @@ test_cw4_mandate_v1.py::TestZeroDriftGate::test_baseline_self_pairing_n20
 # 新增 sim 实跑门(基线自配对 n20 ~14s / 双臂相异 n6 ~5s)
 test_cw4_shop_line.py::TestSimGates::test_baseline_self_pairing_zero_drift_n20
 test_cw4_shop_line.py::TestSimGates::test_arm_diff_existence_n6
+# 零刷新修复批(2026-09-03):sim 实跑验收(n5 None 期零漂移+升级活性 / n5 V_GAP 注入刷新链)
+test_cw_zero_refresh_fix.py::TestZeroRefreshFixSimAcceptance::test_none_period_zero_refresh_but_levelups_alive
+test_cw_zero_refresh_fix.py::TestZeroRefreshFixSimAcceptance::test_injected_vgap_refresh_chain_alive
+
+test_cw_legacy_audit.py::test_stop_path_writes_stopped_summary
+test_cw_legacy_audit.py::test_non_stop_abnormal_exit_writes_abandoned
+test_cw_strategy_planner.py::test_briefing_after_run_closed_lands_in_next_run
+test_cw_data_registry.py::test_read_equipped_no_false_positive_empty_positions
