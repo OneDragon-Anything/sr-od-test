@@ -205,7 +205,7 @@ class SrTestContext(SrContext):
 # --------------------------------------------------------------------------- #
 # OCR 内容哈希 memo(测试侧性能层,不动生产代码)
 # --------------------------------------------------------------------------- #
-# 背景:生产 OCR 缓存按 \id(image)\ 键控、容量 32(ocr_service;color_range
+# 背景:生产 OCR 缓存按 ``id(image)`` 键控、容量 32(ocr_service;color_range
 # 裁剪化后按 (图片,颜色,区域) 分条,单帧 heavy 4-6 条,32 防同帧自逐出),语义是
 # 「同一帧多区域查询复用」。测试里同一张 fixture webp 被多个测试文件反复
 # ``load_screen`` —— 每次都是新对象/新 id → 每个文件都对同一张图重跑
@@ -554,3 +554,31 @@ def _isolate_debug_images(
         return file_name
 
     monkeypatch.setattr(debug_utils, 'save_debug_image', _save_to_tmp)
+
+
+# --------------------------------------------------------------------------- #
+# 安灯停线通道隔离(README 测试纪律 2 的机检层:零真实副作用)
+# --------------------------------------------------------------------------- #
+# 背景:L0 安灯 handler 是 ``telemetry.state._L0_ANDON_HANDLER`` 模块级单例,
+# 生产武装点 = CurrencyWarApp.__init__ 显式 ``set_l0_andon_handler``——同进程
+# 先跑的测试只要构造过 App,真 handler 就泄漏到后续所有测试:任何测试触发
+# L0 判级(决策关键面 ∧ gap_large ∧ 复现计数 ≥2)都会经真 handler 把停机
+# flag 写进真实 ``.debug/temp/currency_war/``,被值班误判成实机停线现场。
+# 判例(2026-09-03):test_cw_prep_director 构造 App 泄漏真 handler →
+# test_cw_shop_refresh 的台账分级测试(run_id='rt',牌名 'A'-'E' 测试桩字面量)
+# 升 L0 时真写 l0_andon_hook.flag,同进程另一测试真写 launch_dead_hook.flag
+# ——两条「实机停线」均无对应台账行/决策流,纯测试侧假停线。
+# 隔离:autouse 把 handler 钉回缺省 None(缺省关语义与生产一致,见
+# test_cw_infra_locks 锁1);需要真通道语义的测试用
+# ``monkeypatch.setattr(..., '_L0_ANDON_HANDLER', ...)`` 自行显式开启,
+# 其 setattr 晚于本 fixture 执行、正常覆盖。
+
+
+@pytest.fixture(autouse=True)
+def _isolate_l0_andon_handler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """每条测试前把安灯停线 handler 钉回缺省 None(见上方注释)。"""
+    from sr_od.application.currency_war.telemetry import state as cw_telemetry_state
+
+    monkeypatch.setattr(cw_telemetry_state, '_L0_ANDON_HANDLER', None)

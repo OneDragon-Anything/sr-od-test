@@ -426,3 +426,11 @@ def test_h2o_planner_face_no_flip() -> None:
     assert equip_upper - total < _PLANNER_UPGRADE_FLOOR, (
         '装备类扣后触及升费下界 → 策划面翻转,重评')
     assert equip_upper - total < _PLANNER_WEAKEN_SCORE
+
+# —— 换核隔离桶(2026-09-03 测试分层批)——
+# 本文件属 legacy_baseline 桶:锁的是旧决策核(decision_v2)内部行为语义,
+# 随旧核退役而消亡;默认全量与快速集均不跑,仅基线冻结审计/A-B 开跑前
+# 两时点单独跑。口径见 sr-od-test/README.md「测试纪律 · legacy 桶」。
+import pytest
+
+pytestmark = pytest.mark.legacy_baseline

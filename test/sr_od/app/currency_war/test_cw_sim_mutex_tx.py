@@ -895,3 +895,13 @@ def test_not_deploying_mutation_still_red(monkeypatch) -> None:
         frames = _lag_frames(seed)
         assert any(n > 0 for _, n in frames), (seed, frames)
 
+
+# 本文件属 legacy_baseline 桶:锁的是旧决策核(decision_v2)内部行为语义
+# (arbiter 同轮互斥时序+remediation F5 修复,R189-2 免做/R189-5 修复池均未复用),
+# 随旧核退役而消亡;默认全量与快速集均不跑,仅基线冻结审计/A-B 开跑前
+# 两时点单独跑。口径见 sr-od-test/README.md「测试纪律 · legacy 桶」。
+# (2026-09-03 编排者裁定入桶:分层批边界例①,依据=test_tiering REPORT §2.3)
+import pytest
+
+pytestmark = pytest.mark.legacy_baseline
+

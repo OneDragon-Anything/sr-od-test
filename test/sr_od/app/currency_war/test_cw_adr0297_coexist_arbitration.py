@@ -74,3 +74,11 @@ def test_vassal_gates_retired() -> None:
     assert 'refresh_budget' not in DEFAULT_REGISTRY.constraints
     # D 让位语义由 V_D 承载:goal 说 level_up(窗外)→ vd_refresh_score
     # 返回 None(评分侧回负分),见 test_cw_w126_switch_dispatch
+
+# —— 换核隔离桶(2026-09-03 测试分层批)——
+# 本文件属 legacy_baseline 桶:锁的是旧决策核(decision_v2)内部行为语义,
+# 随旧核退役而消亡;默认全量与快速集均不跑,仅基线冻结审计/A-B 开跑前
+# 两时点单独跑。口径见 sr-od-test/README.md「测试纪律 · legacy 桶」。
+import pytest
+
+pytestmark = pytest.mark.legacy_baseline

@@ -154,6 +154,33 @@ class TestRow17IncidentGuard:
                     m.record_formal_ab_exemption('V_GAP', bad)
             assert not m._FORMAL_AB_EXEMPTIONS
 
+    def test_exemption_must_bind_vgap_slot(self, monkeypatch):
+        """F2 槽位绑定(V6_CLEANUP_REVIEW):对无关槽位(如 U_X)登记
+        非空批文不得解锁行 17——判前锁防蓄意误用;ab_judge 侧同判
+        (manifest 里仅含非 V_GAP 键 ⇒ 拒读)。"""
+        with _V6State() as m:
+            _land_all_other_rows(m, monkeypatch)
+            m.record_formal_ab_exemption(
+                'U_X', '无关槽位的批文:不应解锁 V_GAP 行 17')
+            rows = {r['row']: r for r in m.v6_checklist()}
+            assert rows[17]['status'] != '已落地'
+            assert 'V_GAP' not in m._FORMAL_AB_EXEMPTIONS
+
+    def test_deferred_mark_rows_do_not_block_but_stay_visible(self):
+        """deferred_mark(6/14/15/16)= R94-6 类条款镜像(2026-09-03
+        编排者裁决,A/B preflight 红行暴露的实现-设计不一致修复):
+        未申报 ⇒ 「未到期(类条款,不阻塞)」不拦 require;但 checklist
+        可见(判读侧按 PREREG 披露义务消费)。判据本体零改动——
+        mark 硬前置行为不受影响(行 2 无 evidence 仍拦)。"""
+        with _V6State() as m:
+            rows = {r['row']: r for r in m.v6_checklist()}
+            for n in (6, 14, 15, 16):
+                assert rows[n]['status'] == '未到期(类条款,不阻塞)'
+            # 行 2(mark 硬前置)无 evidence ⇒ 未落地,require 仍拦
+            assert rows[2]['status'] == '未落地'
+            with pytest.raises(RuntimeError, match='行2'):
+                m.require_v6_green_for_formal_ab()
+
     def test_liveness_exemptions_filed_and_consumed(self, monkeypatch):
         """症4 强制消费半边:活性守卫的自动豁免清单随守卫产物落档
         (_LIVENESS_EXEMPT_DISCLOSURE)并进 prereg manifest;症7:守卫

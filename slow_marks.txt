@@ -103,3 +103,5 @@ test_cw_data_registry.py::test_read_equipped_no_false_positive_empty_positions
 test_cw4_contracts.py::TestNoBypassDirectCalls::test_criteria_public_calls_whitelisted
 test_cw_identity_funnel.py::test_funnel_equivalence_and_tiering
 
+# 度量修复批(2026-09-03)准入:首条 setup 2.18s(apply_core_swap_calibration+注册表装配;call 0.02s)
+test_cw_metric_mirror_fix.py::test_new_core_mirror_family_written

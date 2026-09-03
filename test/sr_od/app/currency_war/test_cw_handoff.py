@@ -612,3 +612,11 @@ def test_locked_cleared_on_battle_success():
     """锁 3(解除,设计章1.5/1.8):StartBattle 成功 → 清锁;未落地 → 保锁重试。"""
     assert locked_after_start_battle(True) is False    # 出战成功 → 解除
     assert locked_after_start_battle(False) is True    # 未落地 → 保锁(不新增死循环)
+
+# —— 换核隔离桶(2026-09-03 测试分层批)——
+# 本文件属 legacy_baseline 桶:锁的是旧决策核(decision_v2)内部行为语义,
+# 随旧核退役而消亡;默认全量与快速集均不跑,仅基线冻结审计/A-B 开跑前
+# 两时点单独跑。口径见 sr-od-test/README.md「测试纪律 · legacy 桶」。
+import pytest
+
+pytestmark = pytest.mark.legacy_baseline

@@ -222,3 +222,11 @@ def test_w944_blood_gate_coexistence() -> None:
     sess = _sess(st)
     assert blood_budget_refresh_blocked(st, sess, DEFAULT_REGISTRY) is False
     assert crisis_invariant_lane(sess, 2) is True
+
+# —— 换核隔离桶(2026-09-03 测试分层批)——
+# 本文件属 legacy_baseline 桶:锁的是旧决策核(decision_v2)内部行为语义,
+# 随旧核退役而消亡;默认全量与快速集均不跑,仅基线冻结审计/A-B 开跑前
+# 两时点单独跑。口径见 sr-od-test/README.md「测试纪律 · legacy 桶」。
+import pytest
+
+pytestmark = pytest.mark.legacy_baseline

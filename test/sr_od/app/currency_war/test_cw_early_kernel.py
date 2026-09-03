@@ -648,19 +648,24 @@ def test_smoke_one_sim_game_new_carrier() -> None:
 
 
 def test_dual_registration_both_strategies_discoverable() -> None:
-    """唯一载体:registry 可发现 decision_v2(default 栈退役后唯一注册;
-    回退路径=git revert)。"""
+    """双现役:registry 可发现 decision_v2 与 mandate_v1(§6.4-R 换核后
+    合法值域={'decision_v2','mandate_v1'}:decision_v2=冻结基线臂,
+    mandate_v1=cw4 新核;default 栈已退役,ADR-0466)。回退路径=git revert。
+
+    锁语义变更依据:原锁钉「唯一注册 decision_v2」钉的是「registry 可发现
+    全部现役策略」——换核设计下现役扩为两臂,非放宽。"""
     import sr_od.application.currency_war.decision.cw_strategy as _cw_mod
     from one_dragon.base.operation.application.plugin_info import PluginSource
+    from sr_od.application.currency_war.decision.cw4.bridge import MandateV1Strategy
     from sr_od.application.currency_war.decision.cw_strategy_manager import StrategyManager
     builtin = Path(_cw_mod.__file__).parents[1] / 'strategies'
     mgr = StrategyManager(ctx=None,
                           plugin_dirs=[(builtin, PluginSource.BUILTIN)])
-    ids = [i.strategy_id for i in mgr.strategies]
-    assert ids == ['decision_v2'], f'注册集应为唯一 decision_v2:{ids}'
-    # 桥到的真身是独立实现
-    strat = mgr.instantiate('decision_v2')
-    assert isinstance(strat, DecisionV2Strategy)
+    ids = sorted(i.strategy_id for i in mgr.strategies)
+    assert ids == ['decision_v2', 'mandate_v1'], f'注册集应为双现役:{ids}'
+    # 桥到的真身是独立实现(两臂各自实例化可达)
+    assert isinstance(mgr.instantiate('decision_v2'), DecisionV2Strategy)
+    assert isinstance(mgr.instantiate('mandate_v1'), MandateV1Strategy)
 
 
 # --- ⑦ F2 跨源共存锁(ADR-0316 槽位语义;W51 扩面批)--------------------------
@@ -1662,3 +1667,11 @@ def test_mutate_sell_bench_slot_semantics_no_shift():
     assert [c.char_id for c in bench if c is not None] == ['万敌', '银枝', '娜塔莎', '飞霄'], (
         '其余槽位不动(无左移)')
     assert _w69_sell_channel_bench_occupied(bench) == 4
+
+# —— 换核隔离桶(2026-09-03 测试分层批)——
+# 本文件属 legacy_baseline 桶:锁的是旧决策核(decision_v2)内部行为语义,
+# 随旧核退役而消亡;默认全量与快速集均不跑,仅基线冻结审计/A-B 开跑前
+# 两时点单独跑。口径见 sr-od-test/README.md「测试纪律 · legacy 桶」。
+import pytest
+
+pytestmark = pytest.mark.legacy_baseline

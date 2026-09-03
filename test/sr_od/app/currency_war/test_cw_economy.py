@@ -1362,3 +1362,11 @@ def test_free_refresh_counts_fulfilled() -> None:
     assert receipt is not None
     assert receipt.refresh_spent == 0        # 实付 0 金,不按缺省虚记 2
     assert receipt.refresh_reason == ''      # 动作发生 = 渠道已兑现
+
+# —— 换核隔离桶(2026-09-03 测试分层批)——
+# 本文件属 legacy_baseline 桶:锁的是旧决策核(decision_v2)内部行为语义,
+# 随旧核退役而消亡;默认全量与快速集均不跑,仅基线冻结审计/A-B 开跑前
+# 两时点单独跑。口径见 sr-od-test/README.md「测试纪律 · legacy 桶」。
+import pytest
+
+pytestmark = pytest.mark.legacy_baseline

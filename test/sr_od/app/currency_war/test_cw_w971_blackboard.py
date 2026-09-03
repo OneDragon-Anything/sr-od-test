@@ -133,19 +133,28 @@ def test_prep_screen_par_old_vs_new() -> None:
     """同 obs 帧:旧 decide_prep_action vs 新 decide_prep_screen 决策全等。
 
     旧入口 = 薄委托(写 prep_obs_frame → 新入口),等价由构造保证;
-    本锁防未来两条路径漂移。
+    本锁防未来两条路径漂移。序列契约 v1(dd-020;R192 症2 包装形态)后
+    生产形态 = ``DecisionV2SeriesAdapter``(冻结基线外包一层长度 1 序列)
+    ——对拍口径 = 旧单动作 == 包装序列唯一元素。
     """
+    from sr_od.application.currency_war.decision.decision_v2.series_adapter import (
+        DecisionV2SeriesAdapter,
+    )
     from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )
     obs = _make_obs()
     strat_old = DecisionV2Strategy()
-    strat_new = DecisionV2Strategy()
+    strat_new = DecisionV2SeriesAdapter()
     sess_old = _fresh(strat_old)
     sess_new = _fresh(strat_new)
     old_act = strat_old.decide_prep_action(obs, sess_old, None)
     sess_new.prep_obs_frame = obs
-    new_act = strat_new.decide_prep_screen(sess_new, None)
+    new_acts = strat_new.decide_prep_screen(sess_new, None)
+    assert isinstance(new_acts, list) and len(new_acts) == 1, (
+        f'序列契约 v1:现役核长度 1 适配器,实得 {type(new_acts).__name__}'
+        f' len={len(new_acts) if isinstance(new_acts, list) else "-"}')
+    new_act = new_acts[0]
     assert type(old_act) is type(new_act)
     assert dataclasses.asdict(old_act) == dataclasses.asdict(new_act)
     assert type(old_act).__name__ == 'ClickSpheres'
