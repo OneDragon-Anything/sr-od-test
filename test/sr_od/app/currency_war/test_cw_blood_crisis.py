@@ -650,7 +650,11 @@ def test_p1_exit_blood_short_band() -> None:
 
 def test_refresh_blocked_domain_and_exemptions() -> None:
     """分型豁免:急救型保留(应急带 hp≤emergency_hp)、ALL IN 窗让位、
-    P2 标定前零辖域、开关 off=零辖域(A/B 对照臂注入面)。
+    开关 off=零辖域(A/B 对照臂注入面)。
+
+    旧断言「P2 标定前零辖域」已随 R2 存活面批过期:P2 危机带臂落码
+    (discipline.p2_crisis_band,hp ≤ ceil(2×vd_p2_loss) 搜索停付),
+    P2 域断言迁移至 test_cw_p2_crisis_band.py(带边界/豁免全覆盖)。
 
     辖域声明(设计 W659 v2 §5.1 改判;ADR-0469):血预算带停付辖域 =
     **非终止帧**——默认 hp=40 构造帧无节点表时全按 battle 档,L 最大
@@ -663,9 +667,6 @@ def test_refresh_blocked_domain_and_exemptions() -> None:
     assert not blood_budget_refresh_blocked(_p1_state(hp=24), sess, reg)
     allin = _p1_state(hp=40, round_num=9, node='boss')
     assert not blood_budget_refresh_blocked(allin, _p1_allin_sess(), reg)
-    p2 = _p1_state()
-    p2.plane = 2
-    assert not blood_budget_refresh_blocked(p2, sess, reg)
     reg_off = _blood_budget_wave2_dataclasses.replace(
         _blood_budget_wave2_DEFAULT_REGISTRY, blood_budget_refresh_stop_enabled=False)
     assert not blood_budget_refresh_blocked(_p1_state(hp=40), sess, reg_off)
