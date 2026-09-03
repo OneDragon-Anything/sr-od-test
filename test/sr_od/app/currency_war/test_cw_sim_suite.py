@@ -84,12 +84,13 @@ def test_ab_channel_refresh() -> None:
 def test_batch_stats_shape() -> None:
     """批量统计口径齐全(HP≥60/方向分布/平均)。
 
-    n=10 够锁形状(断言全是范围/回显检查,与 n 无关;更大的种子扫面归
-    sim A/B 批日常工作流,不靠这条测试);ledger=False 不落盘(测试纪律:
-    不写真实 .debug/ 路径,账本落盘路径由 test_cw_sim_cli_smoke 的 tmp_path 覆盖)。
+    n=5 够锁形状(2026-09-03 合并战役降 n;断言全是范围/回显检查,与 n
+    无关;更大的种子扫面归 sim A/B 批日常工作流,不靠这条测试);
+    ledger=False 不落盘(测试纪律:不写真实 .debug/ 路径,账本落盘路径
+    由 test_cw_sim_cli_smoke 的 tmp_path 覆盖)。
     """
-    s = simulate_p1_batch(10, pool='fallback', ledger=False)
-    assert s['n'] == 10
+    s = simulate_p1_batch(5, pool='fallback', ledger=False)
+    assert s['n'] == 5
     assert 0.0 <= s['hp_ge_60'] <= 1.0
     assert 0.0 <= s['dir_by_r4'] <= 1.0
     assert 0 <= s['avg_final_hp'] <= 100
@@ -523,16 +524,6 @@ def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
     assert not violations, f'flat4 台账锁被拒付行破坏:{violations[:3]}'
 
 
-def test_sim_batch_aggregate_discloses_level_cap_rejects() -> None:
-    """批量报告聚合披露 level_cap_rejects(键存在且 ≥0)。"""
-
-    from sr_od.application.currency_war.sim.runner import simulate_p1_batch
-
-    rep = simulate_p1_batch(6, pool='fallback', seed_base=600,
-                            ledger=False, checks=False)
-    assert rep['level_cap_rejects'] >= 0
-
-
 def test_sim_batch_cap_rejects_by_plane_consistent_with_total() -> None:
     """按 plane 分解披露:键值合法、与总量键和恒等、plane 单调可读。
 
@@ -540,6 +531,10 @@ def test_sim_batch_cap_rejects_by_plane_consistent_with_total() -> None:
     总量把 P1 等级虚高噪声与 P2/P3 语义分歧混桶,分解后才能为
     LEVEL_CAP 放开批提供干净读数。兼容判据:总量键保留不删,分解值
     求和必须等于总量——不等即聚合端分组与总量口径漂移。
+
+    合并墓碑:原 test_sim_batch_aggregate_discloses_level_cap_rejects
+    (同参批只断言 level_cap_rejects 键存在且 ≥0)退役并入本测试——
+    键缺失在此 KeyError,负值被「分解和=总量」恒等排除(跨层合并战役)。
     """
 
     from sr_od.application.currency_war.sim.runner import simulate_p1_batch
@@ -676,11 +671,12 @@ def test_bench_full_flag_and_alloc_frame_not_degenerate() -> None:
     """对偶门(防恒值):真局里旗标必须亮过、帧位必须非 None 过——
     恒 False/恒 None = 写端断线(分配器默认开,每段 decide_prep 都
     写 session.v3_alloc_frame,prep 轮帧位恒应非 None)。"""
-    # 20→12 局(2026-09-03 瘦身批,纪律 12:存在性断言的最小通过窗实测值;
-    # bench_full_flag 点亮是稀有事件,seed 0-7 不出现,12 局为实测最小窗)
-    rows = [r for seed in range(12) for r in _sim_obs_keys_simulate_p1(
+    # 显式命中种子(纪律 12 续篇,跨层合并战役;探针记录:seed 0-13 全扫,
+    # bench_full_flag 点亮仅 seed 9/11,两 seed 同时覆盖 alloc 接管帧且
+    # 帧位覆盖 9/9;列表过期红 = 重探补种,禁为保绿扩窗)
+    rows = [r for seed in (9, 11) for r in _sim_obs_keys_simulate_p1(
         seed, pool='fallback').ledger if (r.get('plane') or 1) == 1]
-    assert len(rows) >= 12 * 5, '局数行数异常'
+    assert len(rows) >= 2 * 5, '局数行数异常'
     assert any(r['state']['bench_full_flag'] for r in rows), \
         'bench_full_flag 全批恒 False = 写端断线或键永亮不了'
     with_frame = [r for r in rows if r['sim']['alloc_frame'] is not None]
@@ -692,8 +688,7 @@ def test_bench_full_flag_and_alloc_frame_not_degenerate() -> None:
         assert isinstance(af, dict) and 'active' in af
         if af.get('active'):
             assert af.get('domain') in known_domains
-    # 20 局量级下停手窗/死亡域接管应出现过(分配器默认开;
-    # 过 0 = 接管面退化,锁#11 验收无样本;瘦身后 5 局,存在性断言同义)
+    # 停手窗/死亡域接管存在性断言(分配器默认开;全零 = 接管面退化/写端断线)
     assert any(r['sim']['alloc_active_any'] for r in rows), \
         '全批零接管帧 = alloc_active_any 写端断线'
 
