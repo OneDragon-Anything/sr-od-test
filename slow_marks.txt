@@ -101,3 +101,4 @@ test_cw_data_registry.py::test_read_equipped_no_false_positive_empty_positions
 # 架构裁决类守卫保留,归全量层把关;注:带 not slow 的巡检测不到桶内条目,
 # 桶内重建须另跑慢桶点名,勿用本类巡检数据下删)
 test_cw4_contracts.py::TestNoBypassDirectCalls::test_criteria_public_calls_whitelisted
+test_cw_identity_funnel.py::test_funnel_equivalence_and_tiering

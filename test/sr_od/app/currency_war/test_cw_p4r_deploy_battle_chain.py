@@ -41,10 +41,13 @@ def test_wait_slot_occupied_hits_within_budget(monkeypatch) -> None:
 
 
 def test_wait_slot_occupied_timeout_false(monkeypatch) -> None:
-    """落点验证:预算耗尽仍无占用 → False(调用方判无效拖拽)。"""
+    """落点验证:预算耗尽仍无占用 → False(调用方判无效拖拽)。
+
+    预算取 0.2 而非生产默认 2.0:sleep 已桩空,超时路径纯烧墙钟,
+    「耗尽 → False」语义与预算数值无关(合并战役降 n)。"""
     from types import SimpleNamespace
     op, _ = _make_deploy_op(monkeypatch, [False])
-    assert op._wait_slot_occupied(SimpleNamespace(x=100, y=200), 2.0) is False
+    assert op._wait_slot_occupied(SimpleNamespace(x=100, y=200), 0.2) is False
 
 
 def test_deterministic_landing_verification_wired() -> None:
