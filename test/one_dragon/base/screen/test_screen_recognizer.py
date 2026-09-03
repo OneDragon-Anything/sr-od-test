@@ -97,13 +97,8 @@ def test_scan_result_defaults() -> None:
     assert result.registry.screen_names() == []
 
 
-def test_scan_result_carries_failures() -> None:
-    """failures 列表可携带扫描错误记录。"""
-    reg = ScreenRecognizerRegistry()
-    reg.register(_DummyRecognizer())
-    result = RecognizerScanResult(registry=reg, failures=['mod.x: boom'])
-    assert result.failures == ['mod.x: boom']
-    assert result.registry.get('测试画面') is not None
+# (2026-09-03 攻击性排查:原 test_scan_result_carries_failures 删除——
+#  字段赋值透传断言(dataclass 行为,纪律 18)。)
 
 
 # ---------- ScreenRecognizer 基类 ----------

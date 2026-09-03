@@ -23,32 +23,9 @@ def test_area_type_is_str_enum() -> None:
     assert isinstance(AreaType.TEXT, str)
 
 
-def test_area_match_detail_text() -> None:
-    """文本命中详情构造(text 字段、置信度)。"""
-    d = AreaMatchDetail(area_name='菜单标题', area_type=AreaType.TEXT,
-                        x=120, y=40, width=280, height=50, text='菜单', confidence=0.95)
-    assert d.area_name == '菜单标题'
-    assert d.area_type == AreaType.TEXT
-    assert d.text == '菜单'
-    assert d.confidence == 0.95
-
-
-def test_area_match_detail_template_optional_text() -> None:
-    """模板命中详情 text 默认 None。"""
-    d = AreaMatchDetail(area_name='邮箱', area_type=AreaType.TEMPLATE,
-                        x=1700, y=40, width=60, height=60, confidence=0.92)
-    assert d.text is None
-    assert d.confidence == 0.92
-
-
-def test_screen_match_construction() -> None:
-    """ScreenMatch 构造(is_precise / areas 列表)。"""
-    d = AreaMatchDetail(area_name='标题', area_type=AreaType.TEXT,
-                        x=1, y=1, width=1, height=1)
-    m = ScreenMatch(screen_name='菜单', is_precise=True, areas=[d])
-    assert m.screen_name == '菜单'
-    assert m.is_precise is True
-    assert len(m.areas) == 1
+# (2026-09-03 攻击性排查:原 AreaMatchDetail/ScreenMatch 构造透传断言 ×3
+#  删除——逐字段 assert 赋值 = dataclass 行为(纪律 18);字段契约由下方
+#  find_area 行为测的断言面超集覆盖。)
 
 
 def _text_area(text: str = '战斗') -> ScreenArea:

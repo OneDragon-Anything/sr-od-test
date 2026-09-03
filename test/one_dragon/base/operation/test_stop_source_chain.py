@@ -19,14 +19,9 @@ def _make_run_context() -> ApplicationRunContext:
     return ApplicationRunContext(MagicMock(name='OneDragonContext'))
 
 
-def test_stop_running_records_reason():
-    """① stop_running 的 reason 写入结果 stop_source。"""
-    rc = _make_run_context()
-    result = rc.stop_running(reason='mcp:stop_run')
-    assert result.finish_reason == RunFinishReason.STOPPED
-    assert result.stop_source == 'mcp:stop_run'
-    assert rc.last_run_result is result
-    assert rc.last_run_result.stop_source == 'mcp:stop_run'
+# (2026-09-03 攻击性排查:原 test_stop_running_records_reason 删除——
+#  是下方幂等测试的严格子集(幂等测额外断言 first-keep+结果同一性),
+#  纪律 7 同文件择一留超集。)
 
 
 def test_stop_running_idempotent_keeps_first_reason():
