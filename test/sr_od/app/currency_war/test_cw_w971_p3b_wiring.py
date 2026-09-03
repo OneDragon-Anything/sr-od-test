@@ -116,9 +116,12 @@ def test_entry_chain_dispatches_briefing_op() -> None:
     src = inspect.getsource(entry_mod.CwEntryStart)
     assert 'CwScreenBriefing(self.ctx)' in src
     assert 'HandleBriefing(self.ctx)' not in src
+    # handlers 包已整体退役(命名迁移终态:operations/cw_screen 承接)——
+    # find_spec 对父包不存在的子模块路径抛 ModuleNotFoundError 而非返 None,
+    # 故只断言父包(父包不在 = 子模块必不在)。
     assert importlib.util.find_spec(
-        'sr_od.application.currency_war.operations.handlers.handle_briefing') is None, (
-        'handle_briefing 模块应已删除(退役文件残留)')
+        'sr_od.application.currency_war.operations.handlers') is None, (
+        'handlers 包应已整体退役(命名迁移终态:operations/cw_screen 承接)')
     # CwScreenBriefing 为简报唯一执行面(P3a 委托壳已内联)。
     assert not hasattr(briefing_mod.CwScreenBriefing, 'HANDLER_FACTORY'), (
         'CwScreenBriefing 委托壳应已内联(HANDLER_FACTORY 退役)')
