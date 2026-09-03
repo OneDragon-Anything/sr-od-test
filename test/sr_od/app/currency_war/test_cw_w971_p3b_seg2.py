@@ -256,15 +256,25 @@ def test_outer_loop_rediscovers_between_prep_rounds() -> None:
 
 
 def test_prep_stall_evidence_in_outer_loop() -> None:
-    """stall 防线平移外循环(03-prep §3 规格最小集):连续 N 轮备战画面
-    session 对账字段族无变化 → 留证(log + 存图,不停机)。"""
+    """无进展守卫在外循环(原 03-prep §3 stall 留证线的接任者):
+    旧「state-only 连续 N 轮无变化 → 只留证不停机」语义已被
+    环级无进展守卫取代(架构反思三卡死批防线①:「同签名动作批 ∧
+    状态零推进」连续 N 环 → 存证 + stop_running,第 5 局放行硬门;
+    单一计数勿留两套,旧常量/旧签名状态须删)。语义出处 =
+    .debug/temp/currency_war/redesign/ARCH_REFLECTION_3STALLS.md
+    问三缺口 G3 / 问四防线① / 问五放行裁决。"""
     from sr_od.application.currency_war.operations import cw_loop
     src = _loop_src()
-    assert 'PREP_STALL_EVIDENCE_ROUNDS' in inspect.getsource(cw_loop), (
-        'stall 留证阈值常量缺失')
-    assert '_prep_stall_sig' in src and '_prep_stall_count' in src, (
-        'stall 签名/计数状态缺失')
-    assert 'prep_stall' in src, '留证存图缺失'
+    assert 'PREP_NO_PROGRESS_ROUNDS' in inspect.getsource(cw_loop), (
+        '无进展守卫阈值常量缺失')
+    assert 'PREP_STALL_EVIDENCE_ROUNDS' not in inspect.getsource(cw_loop), (
+        '旧留证线常量残留(两套并行计数禁止)')
+    assert '_prep_np_sig' in src and '_prep_np_count' in src, (
+        '守卫签名/计数状态缺失')
+    assert '_prep_stall_sig' not in src and '_prep_stall_count' not in src, (
+        '旧留证计数状态残留')
+    assert 'prep_no_progress' in src, '守卫存图/flag 缺失'
+    assert 'stop_running' in src, '守卫须停机(旧线只留证不停机语义已废)'
 
 
 def test_loop_redispatches_after_director_return() -> None:
