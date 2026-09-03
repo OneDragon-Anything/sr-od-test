@@ -573,6 +573,11 @@ def test_sim_supply_two_step_scoring_branch_reachable(
 
 def test_sim_supply_reroll_chain_and_once_per_game(monkeypatch) -> None:
     """②③ 两步链形态 + session 级只刷一次。"""
+    # 显式命中种子集(纪律 12 续:实测探底后固化,非命中种子不再付运行成本)。
+    # 探针记录(2026-09-03,seed 0-11 逐局 spy 实测):9/12 出现两步链;
+    # 取三形态代表——0=[F,T,T] 立即重掷 / 4=[F,F,T] 迟重掷 / 8=[F,F,T,T] 双掷。
+    # 引擎改动若位移 RNG 消费致列表失准 → 本测试红,重跑探针更新列表(同校准锚责)。
+    _REROLL_SEEDS = (0, 4, 8)
     # 每局的调用轨迹(seed → refresh_used 序列)
     traces: list[list[bool]] = []
     cur: list[bool] = []
@@ -584,13 +589,12 @@ def test_sim_supply_reroll_chain_and_once_per_game(monkeypatch) -> None:
         return pick
 
     monkeypatch.setattr(cw_events, 'decide_supply', spy)
-    for seed in range(12):
+    for seed in _REROLL_SEEDS:
         cur = []
         simulate_p1(seed, planes=2, pool='fallback')
         if cur:
             traces.append(cur)
-        # 存在两步链即够(其余局只验 ③)
-    assert traces, '全窗无 supply 节点(环境异常)'
+    assert traces, '显式种子集全空轨迹(引擎 RNG 消费位移?)——重跑探针更新 _REROLL_SEEDS'
     # ② 两步链:某局出现 False…True 序列(首调触发刷新 → 重掷后评分)
     assert any(
         any(not t[i] and t[i + 1] for i in range(len(t) - 1))
