@@ -153,3 +153,83 @@ def test_schema_field_default_empty_dict():
     """schema 追加字段缺省空 dict:旧 decisions 行(无此键)读端兼容。"""
     from sr_od.application.currency_war.telemetry.schema import DecisionTrace
     assert DecisionTrace().shop_rejects == {}
+
+
+# ===== sim 侧透传(sim 决策帧 → 账本行;实机 DecisionTrace.shop_rejects
+# 同键同值枚举,生产端同源 cw4/shop.shop_unbought_reasons)=====
+
+_REJECT_ENUM = frozenset({
+    'missing_unaffordable', 'missing_bench_full', 'missing_no_path',
+    'owned', 'merge_unaffordable', 'merge_bench_full',
+    'transition_char', 'non_line',
+})
+
+
+def test_sim_ledger_rows_carry_shop_rejects():
+    """sim 决策帧含拒因字段:每轮账本行带 shop_rejects dict。
+
+    值枚举与实机同键;键 ⊆ 本轮最后在售波牌名(拒因串只收未买牌,
+    已买件不进);逐波明细与 sim.shop_waves 对齐(每波带 rejects 键)。
+    """
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+    res = simulate_p1(42, pool='fallback', planes=2)
+    non_empty = 0
+    for row in res.ledger:
+        rej = row.get('shop_rejects')
+        assert isinstance(rej, dict)
+        assert set(rej.values()) <= _REJECT_ENUM
+        waves = (row.get('sim') or {}).get('shop_waves') or []
+        assert waves, '每轮至少一条在售波'
+        for w in waves:
+            assert 'rejects' in w, '逐波明细缺档位(对齐破坏)'
+            wr = w.get('rejects')
+            if wr is None:
+                continue   # None=本波无决策段(8 段上限截断等)
+            assert set(wr.values()) <= _REJECT_ENUM
+            assert set(wr.keys()) <= {
+                c['name'] for c in w.get('cards') or []}
+        # 顶层=末决策段 last-wins(段上限截断的尾波 rejects=None 不辖)
+        decided = [w for w in waves if w.get('rejects') is not None]
+        assert rej == (dict(decided[-1]['rejects']) if decided else {})
+        non_empty += bool(rej)
+    assert non_empty > 0, '整局全空 = 透传未生效或口径错'
+
+
+def test_sim_shop_rejects_distinguishes_supply_vs_gate():
+    """供给空缺 vs 闸门拒绝可辨:拒因串按牌分键——锁线行的线内成员键
+    落 missing_*/owned 系(闸门/持有),线外件落 non_line(供给常态)。
+
+    K 空窗行(target_comp 空 = 生产 k=None 分支)成员名如实归 non_line,
+    不辖本断言(与实机 decide_shop_wave 同语义)。真引擎跑局,face-value
+    断言,不锁分布数值。
+    """
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.decision.cw4.statefn import (
+        predicates,
+    )
+    seen_member_key = False
+    for seed in (42, 43):
+        res = simulate_p1(seed, pool='fallback', planes=2)
+        for row in res.ledger:
+            label = row.get('target_comp')
+            if not label:
+                continue
+            members = set(predicates.line_members(get_comp(label)))
+            for name, why in (row.get('shop_rejects') or {}).items():
+                if name in members:
+                    seen_member_key = True
+                    assert why not in ('non_line', 'transition_char'), \
+                        f'锁线行线内成员 {name} 拒因 {why} 越界(分类失效)'
+    assert seen_member_key, '两局未见任何锁线行线内成员键 = 键分类覆盖存疑'
+
+
+def test_sim_k_empty_window_comp_none_falls_back_non_line():
+    """K 空窗(target_comp=None)时 comp=None 分支统一归 non_line
+    (与生产端 None 语义同源;sim 引擎经 session 直读,同型)。"""
+    from sr_od.application.currency_war.decision.cw4.shop import (
+        shop_unbought_reasons,
+    )
+    st = _state(114, [_card('花火', 2)], deployed=[_dep('绯英')])
+    out = shop_unbought_reasons(st, None, (), [])
+    assert out == {'花火': 'non_line'}
