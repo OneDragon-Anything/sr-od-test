@@ -1,0 +1,79 @@
+"""主循环浮层判定序锁矩阵(P4R2 家族性返工)。
+
+背景(第四局 P2 投资策略节点实锤):「浮层叠备战」型画面的分支若排在备战
+双锚之后,浮层下的双锚透出命中 → prep bail「交回外循环」→ 外循环又落备战
+→ 分发死循环(prep 是正确的发现者,缺口在外循环判定序)。本矩阵把**全部**
+浮层分支的「先于备战双锚」序位一次性钉死(源码级 index 断言),新浮层
+分支进 loop 时必须同步登记本矩阵(防逐个事故补)。
+
+豁免项(非「叠备战」形态,不入序锁):
+- 投资环境:01-opening §2 退役——仅开场 1-1 前弹一次,由 OpeningSequence
+  编排承担,主循环无分支(锁:主循环不得出现其检测锚);
+- 位面简报:仅入场出现一次(用户裁决 2026-09-02),BriefingOp 在入口链
+  承担,主循环无分支(锁同上);
+- 开局编排分支:`_iter==1 ∧ 新 match` 双门,只在 run 首帧生效,无叠备战面。
+"""
+import inspect
+
+import pytest
+
+# 序锁矩阵:分支名 → (screen, 锚 area / OCR 词, 检测方式)
+# 检测方式:'area' = round_by_find_area 锚;'ocr' = round_by_ocr 词。
+ORDER_MATRIX: list[tuple[str, str, str, str]] = [
+    ('选择装备overlay', '货币战争-选择装备', '标识-请选择1个装备', 'area'),
+    ('列车同行(选择伙伴)', '货币战争-列车同行', '标识-选择伙伴', 'area'),
+    ('策划事件', '货币战争-骇入策划', '标识-我来当策划', 'area'),
+    ('命运卜者强化', '货币战争-命运卜者强化', '标识-命运卜者', 'area'),
+    ('位面详情overlay', '货币战争-位面详情', '标识-位面详情标题', 'area'),
+    ('巨星强化', '货币战争-盛会之星', '标识-盛会之星', 'area'),
+    ('遭遇节点', '货币战争-遭遇节点', '标识-遭遇节点', 'area'),
+    ('未达上限警告', '货币战争-未达上限警告', '标识-未达上限警告', 'area'),
+    ('投资策略', '货币战争-投资策略', '标识-请选择投资策略', 'area'),
+    ('补给阶段', '货币战争-补给', '标识-补给阶段', 'area'),
+    ('武装箱弹窗', '货币战争-武装箱弹窗', '标识-简易武装箱', 'area'),
+    ('祈愿试炼', '货币战争-祈愿试炼', '标识-祈愿试炼', 'area'),
+    ('星徽秘典', '货币战争-星徽秘典弹窗', '标识-星徽秘典', 'area'),
+    ('专家邀请函', '货币战争-备战-专家邀请函', '标识-专家邀请函', 'area'),
+    ('策略暗色锁定', '货币战争-备战-策略锁定', '按钮-返回投资策略选择', 'area'),
+    ('前台无角色提示', '货币战争-提示-前台无角色', '标识-无角色提示', 'area'),
+    ('BOSS简报', '货币战争-BOSS简报', '标识-强敌来袭', 'area'),
+    ('位面过渡', '', '点击空白处继续', 'ocr'),
+]
+
+
+def _loop_src() -> str:
+    from sr_od.application.currency_war.operations import battle_loop
+    return inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
+
+
+def _prep_anchor_index(src: str) -> int:
+    """备战双锚判定行 index(序锁基准 = 一切浮层分支必须先于此)。"""
+    i = src.find("if (self.round_by_find_area(screen, '货币战争-备战', "
+                 "'备战标识-购买经验')")
+    assert i >= 0, '备战双锚判定行未找到(源码结构变更,本矩阵须同步)'
+    return i
+
+
+@pytest.mark.parametrize('name,screen,anchor,method', ORDER_MATRIX,
+                         ids=[m[0] for m in ORDER_MATRIX])
+def test_overlay_dispatch_precedes_prep_anchor(name, screen, anchor, method) -> None:
+    """序锁:每个浮层分支的检测行必须先于备战双锚判定行。"""
+    src = _loop_src()
+    prep_i = _prep_anchor_index(src)
+    # 取该锚**首次**出现(= 分支检测处;排除性引用只会更晚)
+    i = src.find(anchor)
+    assert i >= 0, f'{name}: 检测锚 {anchor} 不在主循环(分支被删?矩阵须同步)'
+    assert i < prep_i, (
+        f'{name}: 判定序落在备战双锚之后(index {i} ≥ {prep_i})——'
+        f'浮层下双锚透出会抢分发 = 死循环形态(第四局投资策略节点实锤),'
+        f'分支必须前移到 0 系')
+
+
+def test_retired_overlays_not_in_main_loop() -> None:
+    """豁免项锁:投资环境/位面简报主循环无检测分支(由 OpeningSequence/
+    入口链 BriefingOp 承担)——若有人往主循环加回分支,必须同步入矩阵。"""
+    src = _loop_src()
+    assert '货币战争-投资环境' not in src, \
+        '投资环境已在开局序列承担(01-opening §2),主循环分支须走序锁矩阵'
+    assert '标识-位面简报' not in src, \
+        '位面简报由入口链 BriefingOp 承担(仅入场一次),主循环分支须走序锁矩阵'
