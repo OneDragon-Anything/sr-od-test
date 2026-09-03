@@ -97,3 +97,7 @@ test_cw_legacy_audit.py::test_stop_path_writes_stopped_summary
 test_cw_legacy_audit.py::test_non_stop_abnormal_exit_writes_abandoned
 test_cw_strategy_planner.py::test_briefing_after_run_closed_lands_in_next_run
 test_cw_data_registry.py::test_read_equipped_no_false_positive_empty_positions
+# 合并战役巡检(2026-09-03)准入:全 src AST 扫描守卫 4.44s(快速层唯一 ≥2s 漏网;
+# 架构裁决类守卫保留,归全量层把关;注:带 not slow 的巡检测不到桶内条目,
+# 桶内重建须另跑慢桶点名,勿用本类巡检数据下删)
+test_cw4_contracts.py::TestNoBypassDirectCalls::test_criteria_public_calls_whitelisted
