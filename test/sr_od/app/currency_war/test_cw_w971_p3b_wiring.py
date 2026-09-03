@@ -20,15 +20,11 @@ def _loop_src() -> str:
 # ==================== 开局编排接线(01-opening §2/§2.1) ====================
 
 
-def test_opening_sequence_dissolved_branches_wired() -> None:
-    """拆解退役守卫(用户裁决:OpeningSequence 抽象不成立):壳不在主循环;
-    简报/投资环境由 0r/0s 分支承接,投资环境后链等待1-1(终步语义承接)。"""
-    src = _loop_src()
-    assert 'OpeningSequence(self.ctx)' not in src, '开局编排壳未拆解退役(仍有实例化)'
-    assert 'opening_sequence import' not in src, '开局编排壳模块仍被导入'
-    assert 'CwScreenBriefing(self.ctx)' in src, '位面简报分支缺失(0r)'
-    assert 'CwScreenInvestEnv' in src, '投资环境分支缺失(0s)'
-    assert 'CwScreenWaitOneOne' in src, '等待1-1 链缺失'
+# (2026-09-03 攻击性排查:原 test_opening_sequence_dissolved_branches_wired 删除
+#  ——五条断言与 test_cw_dispatch_order_matrix.py::test_dissolved_opening_sequence_
+#  in_matrix 逐字重复,后者为超集(额外锁开局两屏登记序锁矩阵,防「删壳忘接线」),
+#  纪律 7 跨文件择一留超集。)
+
 
 def test_briefing_plane_invest_inline_branches_retired() -> None:
     """三段退役(01-opening §2):0a0b 位面简报内联、位面过渡点空白内联、
