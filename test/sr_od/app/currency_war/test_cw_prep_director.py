@@ -305,11 +305,9 @@ def test_action_key_param_granularity() -> None:
     assert pv.action_key(StartBattle()) == 'StartBattle'
 
 
-def test_session_counters() -> None:
-    """StrategySession 环级字段默认值(defer/prep_phase 环入口清零;bail 计数局级)。"""
-    s = _sess()
-    assert s.defer_count == 0 and s.prep_phase == 0
-    assert s.bail_reason_counts == {}
+# (2026-09-03 攻击性排查:原 test_session_counters 删除——只断言新构造
+#  默认值(dataclass 透传,纪律 18);docstring 声称的「环入口清零」语义
+#  由主流程测(test_main_flow_phase_progression 等)的行为断言辖定。)
 
 
 # ===== 环级测试(review M-6):mock executor + obs 序列驱动 _run_loop =====
@@ -844,8 +842,20 @@ def test_start_battle_relaunches_without_activation_on_dead_click(monkeypatch) -
 
 def test_start_battle_launch_dead_escalates_to_evidence_stop(monkeypatch) -> None:
     """两段全败 → session 连败计数 +1;达 LAUNCH_DEAD_LIMIT → 停机留证 + stop_running。"""
+    import pathlib
     import sr_od.application.currency_war.prep_actions as pa
     from sr_od.application.currency_war.prep_actions import PrepActionExecutor
+
+    # 测试纪律:零真实副作用——钩子 flag 写入(Path.write_text)被捕获替身吞掉,
+    # 只断言留证文案产出,不写真实 .debug(2026-09-03 实证:无替身时本测试经
+    # _launch_dead_escalate 真写 launch_dead_hook.flag,被误判实机停机现场)。
+    writes: list[str] = []
+
+    def _spy_write(self: pathlib.Path, data, *a, **k):
+        writes.append(str(data))
+        return len(data)
+
+    monkeypatch.setattr(pathlib.Path, 'write_text', _spy_write)
 
     ex, clicks, activations, session, stops = _make_launch_env(monkeypatch, 10**9)
     session.launch_dead_streak = PrepActionExecutor.LAUNCH_DEAD_LIMIT - 1   # 差 1 次达限
@@ -856,6 +866,8 @@ def test_start_battle_launch_dead_escalates_to_evidence_stop(monkeypatch) -> Non
     assert session.launch_dead_streak == PrepActionExecutor.LAUNCH_DEAD_LIMIT
     assert stops and 'launch_dead' in stops[0], f'应 stop_running(hook:cw_launch_dead),实 {stops}'
     assert activations == [], '失败路径同样零激活(重发=原样重试,无窗口激活)'
+    assert any('[HOOK-STOP]' in w and 'launch_dead' in w for w in writes), (
+        f'达限应产出停机留证 flag 文案:{writes[:3]}')
 
 
 def test_start_battle_success_resets_launch_dead_streak(monkeypatch) -> None:
@@ -871,8 +883,163 @@ def test_start_battle_success_resets_launch_dead_streak(monkeypatch) -> None:
 
 
 
-# ==================== test_prep_action_whitelist ====================
+# ===== 序列契约接线批(dd-020):备战消费段序列消费契约锁 =====
+# 契约 v1(2026-09-03 冻结):decide_prep_screen 返回 list[PrepAction],
+# 执行序 = 列表序;fail-stop(任一动作未落地 → 丢弃余下 → heavy 重观察)/
+# 控制流(DeferSpheres 不进 execute 链)/空批(本帧无动作,交回重观察)
+# 语义全归流程侧。等价面 = checks.check_prep_series_contract(探针语料
+# 逐帧恒等)+ 本节生产消费回归(长度 1 下与旧单动作消费零漂移)。
 
+import sr_od.application.currency_war.currency_war_config as _dd020_cfg_mod
+import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as _dd020_pd_mod
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    LevelUp as _dd020_LevelUp,
+)
+
+
+def _dd020_make_round(monkeypatch, executor, scripted_series):
+    """序列消费回归装配:绕过 __init__ 的 CwScreenPrep,观察/清场/收店/
+    补采/遥测/恢复全替身,策略脚本化(返回 list[PrepAction])。"""
+
+    class _StubStrategy:
+        calls = 0
+
+        def decide_prep_screen(self, session, config):
+            self.calls += 1
+            return list(scripted_series)
+
+        def update_target(self, state, session, config):
+            pass
+
+    d = _dd020_pd_mod.CwScreenPrep.__new__(_dd020_pd_mod.CwScreenPrep)
+    d.ctx = SimpleNamespace(current_instance_idx=99)
+    monkeypatch.setattr(_dd020_pd_mod, 'PrepActionExecutor',
+                        lambda op, ctx: executor)
+    monkeypatch.setattr(_dd020_cfg_mod, 'CurrencyWarConfig',
+                        lambda idx: _cfg())
+    monkeypatch.setattr(d, '_clear_entry_overlays', lambda: None)
+    monkeypatch.setattr(d, '_try_collapse_open_shop', lambda: False)
+    monkeypatch.setattr(d, '_takeover_collect_if_needed', lambda m, s: None)
+    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
+    monkeypatch.setattr(d, '_xp_apply_levelup', lambda: None)
+    monkeypatch.setattr(d, '_xp_apply_buy_clicks', lambda det: None)
+    monkeypatch.setattr(_dd020_pd_mod, 'try_recovery',
+                        lambda op, ctx: ('-stub', False))
+    monkeypatch.setattr(_dd020_pd_mod.time, 'sleep', lambda s: None)
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.obs.cw_observation.read_bench_full',
+        lambda ctx, screen: False)
+
+    class _Obs:
+        event_overlay = None
+        state = None
+        bench_chars: list = []
+        deployed_chars: list = []
+        spheres: list = []
+        boxes: list = []
+        deploy_vacancy = 0
+
+    monkeypatch.setattr(d, '_observe', lambda heavy=True, screen=None: _Obs())
+    sess = StrategySession()
+    match = SimpleNamespace(strategy=_StubStrategy(), session=sess)
+    d.ctx.cw_match = match
+    return d, match, sess
+
+
+def test_dd020_series_len1_consumes_same_as_single(monkeypatch) -> None:
+    """长度 1 序列:同帧同动作,消费契约与旧单动作路径零漂移——
+    单轮恰一次决策、恰执行该动作、status 语义不变(read_only 编排透出)。"""
+    ex = _FakeExecutor()
+    d, match, sess = _dd020_make_round(
+        monkeypatch, ex, [OpenShop(read_only=True)])
+    monkeypatch.setattr(d, '_open_shop_phase',
+                        lambda a, obs: (True, 'read_only 读牌完成'))
+    result = d.run()
+    assert match.strategy.calls == 1, '单轮恰一次决策'
+    assert ex.calls == [], 'OpenShop 走编排替身不经执行器'
+    assert '交回外循环' in (result.status or ''), result.status
+    assert 'read_only' in (result.status or ''), result.status
+
+
+def test_dd020_series_fail_stop_drops_remaining(monkeypatch) -> None:
+    """fail-stop(契约 §2):三动作序列第 2 个未落地 → 第 3 个不执行、
+    恢复原语一次后交回外循环(heavy 重观察由外循环下轮承担)。"""
+    _seq = {'i': 0}
+
+    def _lv(action):
+        i = _seq['i']
+        _seq['i'] += 1
+        return (True, 'ok') if i == 0 else (False, '✗ 未落地')
+
+    ex = _FakeExecutor(results={_dd020_LevelUp: _lv})
+    d, match, sess = _dd020_make_round(
+        monkeypatch, ex, [_dd020_LevelUp(), _dd020_LevelUp(), _dd020_LevelUp()])
+    result = d.run()
+    assert len(ex.calls) == 2, f'第 3 动作必须丢弃(fail-stop),实得 {ex.calls}'
+    assert '验证失败' in (result.status or '') and '已试恢复' in (result.status or ''), (
+        result.status)
+
+
+def test_dd020_series_control_flow_defer_not_executed(monkeypatch) -> None:
+    """控制流(契约 §4):DeferSpheres 不进 execute 验证链,序列首位控制流
+    → 余下动作丢弃、defer 计数归框架、交回外循环。"""
+    ex = _FakeExecutor()
+    d, match, sess = _dd020_make_round(
+        monkeypatch, ex, [DeferSpheres(), _dd020_LevelUp()])
+    result = d.run()
+    assert ex.calls == [], '控制流动作不得进执行器'
+    assert sess.defer_count == 1
+    assert '球留置' in (result.status or ''), result.status
+
+
+def test_dd020_series_empty_batch_hands_back(monkeypatch) -> None:
+    """空批(契约 §4):合法(本帧无动作)→ 交回外循环重观察,零执行。"""
+    ex = _FakeExecutor()
+    d, match, sess = _dd020_make_round(monkeypatch, ex, [])
+    result = d.run()
+    assert ex.calls == []
+    assert '空批' in (result.status or ''), result.status
+
+
+def test_dd020_production_registration_returns_series() -> None:
+    """生产接线(R192 症2 包装形态):注册壳 DecisionV2Live 继承
+    DecisionV2SeriesAdapter——match.strategy 拿到的是包装实例
+    (decide_prep_screen 返回长度 1 list),冻结基线本体零改动。"""
+    from sr_od.application.currency_war.decision.decision_v2.series_adapter import (
+        DecisionV2SeriesAdapter,
+    )
+    from sr_od.application.currency_war.strategies.decision_v2_strategy import (
+        DecisionV2Live,
+    )
+    assert issubclass(DecisionV2Live, DecisionV2SeriesAdapter)
+    assert DecisionV2Live.STRATEGY_ID == 'decision_v2'   # id 语义不变
+    strat = DecisionV2Live()
+    sess = _sess()
+    sess.prep_obs_frame = _obs(spheres=[('gold', None, 40)], free_bench_slots=2)
+    out = strat.decide_prep_screen(sess, _cfg())
+    assert isinstance(out, list) and len(out) == 1, (
+        f'生产形态 = 包装长度 1 序列,实得 {type(out).__name__} '
+        f'len={len(out) if isinstance(out, list) else "-"}')
+    assert isinstance(out[0], PrepAction)
+
+
+def test_dd020_prep_series_contract_check_clean() -> None:
+    """等价门(核心,契约锁载体):checks.check_prep_series_contract
+    探针语料逐帧恒等——适配器输出 == [旧核单动作输出],零违规。"""
+    from sr_od.application.currency_war.sim.checks.decision_v2 import (
+        check_prep_series_contract,
+    )
+    r = check_prep_series_contract()
+    assert r['violations'] == 0, r['detail']
+    assert r['frames_checked'] >= 12, r
+    # 语料覆盖门:spec 六族各 ≥2 帧(family_hits 由检查器内部断言,
+    # 此处再显式钉一次防检查器自身松脱)
+    for cls in ('OpenShop', 'DeployMove', 'SellBench', 'RunEquip',
+                'StartBattle', 'DeferSpheres'):
+        assert r['family_hits'].get(cls, 0) >= 2, (cls, r['family_hits'])
+
+
+# ==================== test_prep_action_whitelist ====================
 import sys
 from pathlib import Path
 
