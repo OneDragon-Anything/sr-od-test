@@ -625,13 +625,13 @@ def test_composite_reads_success_field(test_context: SrTestContext,
             return _OpResult()
 
     class _FakeModule:
-        EquipAllOp = _FakeOp
+        CwOpEquipAll = _FakeOp
 
     # patch 消费点:只替换被测链要导入的那一个 sys.modules 条目
     # (importlib.import_module 命中缓存直返 _FakeModule),不动标准库
     import sys
     monkeypatch.setitem(sys.modules,
-                        'sr_od.application.currency_war.operations.prep.equip_all',
+                        'sr_od.application.currency_war.operations.cw_op.cw_op_equip_all',
                         _FakeModule)
     ok, detail = ex.execute(RunEquip())
     assert ok, f'success=True 的组合结果必须判成功(live bug:旧读 is_success 恒 False): {detail}'
@@ -639,7 +639,7 @@ def test_rule3_shop_open_closes_shop_first() -> None:
     """live 回归(2026-08-14 1-2):商店开态奖励面板与概率表按钮重叠 → 假球误开弹窗。
 
     W970 批 C:EnsureShopClosed 退役 → OpenShop(read_only) 编排(幂等开店
-    [已开不点]→观察刷新→不调商店决策→CloseShopOp→回备战,同收清洁面板效果)。
+    [已开不点]→观察刷新→不调商店决策→CwOpCloseShop→回备战,同收清洁面板效果)。
     """
     obs = _obs(spheres=[('gold', None, 40)] * 2, free_bench_slots=3, shop_open=True)
     a = S.decide_prep_action(obs, _sess(), _cfg())

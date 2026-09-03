@@ -443,19 +443,19 @@ def test_below_icon_diff_detects_equip(test_context: SrTestContext) -> None:
     fixture ``equipped_front1_feixiao_0/1/2/3``(front-1 飞霄 0→3 件顺序态):加 icon 的连续态
     diff 应远 > ``BELOW_DIFF_THRESHOLD``(8.0),同态 ~0。offline 验证验穿逻辑可靠(剩 live drag 待游戏条件)。
     """
-    from sr_od.application.currency_war.operations.prep.equip_all import  EquipAllOp, _below_icon_diff
+    from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import  CwOpEquipAll, _below_icon_diff
     if not test_context.has_screen('货币战争-备战', 'equipped_front1_feixiao_0'):
         _equipment_pytest.skip('fixture equipped_front1_feixiao_0/1/2/3 未采')
     states = [test_context.load_screen('货币战争-备战', f'equipped_front1_feixiao_{i}') for i in range(4)]
-    avatar_x = EquipAllOp.FRONT_AVATARS[0].x           # front-1 avatar x=743
-    thr = EquipAllOp.BELOW_DIFF_THRESHOLD              # 8.0
+    avatar_x = CwOpEquipAll.FRONT_AVATARS[0].x           # front-1 avatar x=743
+    thr = CwOpEquipAll.BELOW_DIFF_THRESHOLD              # 8.0
     for i in range(3):                                # 连续态(加 icon)→ diff >> 阈值
         d = _below_icon_diff(states[i], states[i + 1], avatar_x,
-                             EquipAllOp.BELOW_ICON_Y, EquipAllOp.BX_HALF, EquipAllOp.BY_HALF)
+                             CwOpEquipAll.BELOW_ICON_Y, CwOpEquipAll.BX_HALF, CwOpEquipAll.BY_HALF)
         assert d > thr, f'{i}→{i + 1} 加 icon 应 diff > {thr},实际 {d:.1f}'
     # 同态 → ~0(无变化)
     assert _below_icon_diff(states[0], states[0], avatar_x,
-                            EquipAllOp.BELOW_ICON_Y, EquipAllOp.BX_HALF, EquipAllOp.BY_HALF) < thr
+                            CwOpEquipAll.BELOW_ICON_Y, CwOpEquipAll.BX_HALF, CwOpEquipAll.BY_HALF) < thr
 
 
 def test_empty_slots_skips_occupied() -> None:
@@ -465,7 +465,7 @@ def test_empty_slots_skips_occupied() -> None:
     全空 → 全槽;部分已穿 → 跳过;全已穿 → 空(op 应停)。
     修原 bug:``target=FRONT_AVATARS[equipped]`` 按已穿计数索引 → 已穿槽被覆盖。
     """
-    from sr_od.application.currency_war.operations.prep.equip_all import _empty_slots
+    from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import _empty_slots
     assert _empty_slots({}, 4) == [1, 2, 3, 4]                            # 全空 → 全槽
     assert _empty_slots({1: ['x']}, 4) == [2, 3, 4]                       # slot1 已穿 → 跳过
     assert _empty_slots({1: ['x'], 3: ['y']}, 4) == [2, 4]                # 多个已穿 → 跳过对应
@@ -496,7 +496,7 @@ def test_prioritize_wearable_comp_driven() -> None:
     替 naive ``wearable[0]``(read_equips 返回第一个)。无 target / 无 key_equips → 原序(等价旧行为)。
     key_equips 含重复(阿雅需 2 反重力皮靴)→ 按 multiplicity 消费(命中的重复件也优先,但不超额)。
     """
-    from sr_od.application.currency_war.operations.prep.equip_all import  _prioritize_wearable
+    from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import  _prioritize_wearable
     # wearable = [(name, (cx, cy)), ...](read_equips 命中顺序)
     w = [('光速螺旋桨', (1800, 900)), ('反重力皮靴', (1850, 900)), ('火力风暴潮', (1700, 900))]
     # 无 target / 无 key_equips → 原序(等价旧行为)
@@ -1070,7 +1070,7 @@ def test_system_unit_layout_check_mismatch(tmp_path, monkeypatch, frame, templat
 def test_deploy_excludes_system_units():
     """ADR-0281 件4:重排候选剔除系统单位(cost==0 不可拖);普通角色/未知保留。"""
     from sr_od.application.currency_war.kernel.cw_state import BenchChar
-    from sr_od.application.currency_war.operations.prep.deploy_bench import  exclude_system_units
+    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import  exclude_system_units
     chars = [
         BenchChar(slot=1, char_id='藿藿'),
         BenchChar(slot=7, char_id='狸小虎'),
@@ -1352,8 +1352,8 @@ def test_cap_still_domain_rejected_falls_baseline(tmp_path, monkeypatch):
 def test_deploy_bench_gate_wired_to_debounced_reader():
     """静态接线锁:deploy_bench 板满门走 read_deploy_cap_debounced,
     无裸 read_deploy_cap( 直调(收口,防回归)。"""
-    src = (_ROOT / 'src/sr_od/application/currency_war/operations/prep'
-           / 'deploy_bench.py').read_text(encoding='utf-8')
+    src = (_ROOT / 'src/sr_od/application/currency_war/operations/cw_op'
+           / 'cw_op_deploy.py').read_text(encoding='utf-8')
     assert 'read_deploy_cap_debounced' in src
     assert 'read_deploy_cap(self.ctx' not in src, \
         '板满门 cap 必须经域防抖读(ADR-0395),不得裸直读'
@@ -1427,7 +1427,7 @@ def test_pepe_roster_and_template(templates):
     ch = get_char('佩佩')
     assert ch is not None and ch.cost == 0
     from sr_od.application.currency_war.kernel.cw_state import BenchChar
-    from sr_od.application.currency_war.operations.prep.deploy_bench import  exclude_system_units
+    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import  exclude_system_units
     out = exclude_system_units([BenchChar(slot=7, char_id='佩佩'),
                                 BenchChar(slot=1, char_id='万敌')])
     assert [c.char_id for c in out] == ['万敌']

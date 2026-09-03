@@ -280,7 +280,7 @@ def test_overlay_wrapper_family_absent() -> None:
 
 def test_cw_flow_const_settle_values() -> None:
     """锁⑮完成承诺常量:DD-011 形态①固定 1.0s 两处 + 1-1 超时 10s(W971 口述值)。"""
-    from sr_od.application.currency_war.operations.cw_flow import cw_flow_const
+    from sr_od.application.currency_war.operations.cw_screen import cw_flow_const
     assert cw_flow_const.BRIEFING_SETTLE_S == 1.0
     assert cw_flow_const.CW_OVERLAY_SETTLE_S == 1.0
     assert cw_flow_const.ONE_ONE_MAX_WAIT_S == 10.0

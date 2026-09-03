@@ -77,7 +77,7 @@ def test_open_shop_phase_orchestration() -> None:
     assert 'run_buy_waves' in src and 'finalize_buy_phase' in src, (
         '买牌形态缺商店动作波循环/单元收尾(壳直调三 op 调用点须上移流程层)')
     assert src.rindex('_probe_node_type') > src.rindex('close_shop(self)'), (
-        '节点探针挂点须在 CloseShopOp 完成后(W970 §4.3.5)')
+        '节点探针挂点须在 CwOpCloseShop 完成后(W970 §4.3.5)')
     # read_only 形态:heavy 观察刷新(gold 开态真值)语义在编排内声明
     assert src.count('read_only') >= 3 and '_observe(heavy=True)' in src
 

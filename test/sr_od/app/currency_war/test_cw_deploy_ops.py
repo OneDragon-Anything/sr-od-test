@@ -22,7 +22,7 @@ from __future__ import annotations
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_deploy_logic import select_deployments
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
-from sr_od.application.currency_war.operations.prep.deploy_bench import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
     _deployment_order,
 )
 
@@ -166,7 +166,7 @@ from sr_od.application.currency_war.kernel.cw_line_defs import (
     ENGINE_FACTIONS,
     RECIPE_FACTIONS,
 )
-from sr_od.application.currency_war.operations.prep.deploy_bench import _DEPLOY_FENCE
+from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import _DEPLOY_FENCE
 
 
 def test_deploy_fence_includes_bridge_factions() -> None:
@@ -191,7 +191,7 @@ def test_deploy_fence_still_blocks_pure_scatter() -> None:
 
 # ==================== r387_deploy_fill_vacancy ====================
 
-from sr_od.application.currency_war.operations.prep.deploy_bench import _cap_roomy_of
+from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import _cap_roomy_of
 
 
 def test_roomy_vacancy_more_than_must_up() -> None:

@@ -1510,9 +1510,9 @@ def test_read_row_equipped_import_path():
 
 
 def test_deploy_equips_snapshot_method_exists():
-    """DeployBenchOp._snapshot_equips_into_tracking 在位(r132 采集钩子)。"""
-    from sr_od.application.currency_war.operations.prep.deploy_bench import DeployBenchOp
-    assert hasattr(DeployBenchOp, '_snapshot_equips_into_tracking')
+    """CwOpDeploy._snapshot_equips_into_tracking 在位(r132 采集钩子)。"""
+    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import CwOpDeploy
+    assert hasattr(CwOpDeploy, '_snapshot_equips_into_tracking')
 
 
 # ==================== divergence_stats ====================

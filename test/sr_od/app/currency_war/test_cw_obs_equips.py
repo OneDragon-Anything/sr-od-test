@@ -347,7 +347,7 @@ from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
 
 def test_sim_equip_allocation_call_shape_occupied_snapshot() -> None:
-    """sim 调用形态与生产 EquipAllOp 对齐:occupied = 已穿快照 dict。"""
+    """sim 调用形态与生产 CwOpEquipAll 对齐:occupied = 已穿快照 dict。"""
     calls: list[dict] = []
     orig = cw_comps.equip_allocation
 
@@ -406,7 +406,7 @@ import pytest as _w596_equip_guards_pytest
 from sr_od.application.currency_war.kernel.cw_comps import  Comp, equip_alloc_empty_reason, equip_allocation as _w596_equip_guards_equip_allocation
 from sr_od.application.currency_war.kernel.cw_state import BenchChar as _w596_equip_guards_BenchChar
 from sr_od.application.currency_war.data.cw_synthesis import synthesize_target as _w596_equip_guards_synthesize_target
-from sr_od.application.currency_war.operations.prep.equip_all import EquipAllOp
+from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import CwOpEquipAll
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
@@ -439,10 +439,10 @@ def test_build_fingerprint_git_repo_matches_head() -> None:
 
 # ===== 件2:零穿戴哨兵 =====
 
-def _mk_op(state: SimpleNamespace | None) -> EquipAllOp:
-    """最小 EquipAllOp(只调 _zero_wear_sentinel,不碰截图/控制器)。"""
+def _mk_op(state: SimpleNamespace | None) -> CwOpEquipAll:
+    """最小 CwOpEquipAll(只调 _zero_wear_sentinel,不碰截图/控制器)。"""
     match = None if state is None else SimpleNamespace(session=SimpleNamespace(last_state=state))
-    return EquipAllOp(SimpleNamespace(cw_match=match))
+    return CwOpEquipAll(SimpleNamespace(cw_match=match))
 
 
 @_w596_equip_guards_pytest.fixture()
@@ -589,7 +589,7 @@ from sr_od.application.currency_war.kernel.cw_equip_env import  build_equip_env_
 def test_rust_gate_consumes_signals() -> None:
     """生锈豁免(门)改吃 signals 派生名单(构造点唯一,不再各自摸 state);
     谓词语义不变(读不到=不豁免,零漂移)。"""
-    from sr_od.application.currency_war.operations.prep.equip_all import  _rust_release_active
+    from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import  _rust_release_active
     assert _rust_release_active(
         sorted(build_equip_env_signals(
             _w880_equip_env_SimpleNamespace(enemy_affixes=['库藏生锈'])).enemy_affixes), True)
@@ -1024,7 +1024,7 @@ def test_sell_guard_aligns_with_simulate_semantics() -> None:
     (stale_proposal);否则卖出。执行侧(shop.sell_guard_ok):expected
     非空且 live==expected 才放行——expected 空(sim 视为不校验)在执行侧
     是拒(执行器更严:无期望名=无从对拍,不点)。两表逐对对拍。"""
-    from sr_od.application.currency_war.operations.prep.buy_cards import  sell_guard_ok
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import  sell_guard_ok
 
     def sim_accepts(bench_idx: int, expect: str) -> tuple[bool, str | None]:
         bench = [None] * _idx_contract_BENCH_CAPACITY

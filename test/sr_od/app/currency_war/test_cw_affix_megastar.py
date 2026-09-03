@@ -247,7 +247,7 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
-from sr_od.application.currency_war.operations.prep.equip_all import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     _opening_hold_active,
     _rust_release_active,
 )

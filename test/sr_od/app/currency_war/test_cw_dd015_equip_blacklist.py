@@ -10,13 +10,13 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
-from sr_od.application.currency_war.operations.prep.equip_all import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     DRAG_FAIL_BLACKLIST_LIMIT,
     equip_drag_key,
     filter_alloc_blacklisted,
     register_equip_drag_failure,
 )
-from sr_od.application.currency_war.operations.prep.deploy_bench import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
     residual_fill_plan,
 )
 

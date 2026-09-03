@@ -46,7 +46,7 @@ def test_no_fallthrough_blind_observe() -> None:
 
 def test_probe_node_type_after_shop_closed() -> None:
     """P0③(挂点随迁,W970 批 C/拆内环):_probe_node_type 挂 OpenShop
-    编排内 CloseShopOp 完成后;单轮 run 入口不直调(skip 69% 根因)。"""
+    编排内 CwOpCloseShop 完成后;单轮 run 入口不直调(skip 69% 根因)。"""
     src_phase = inspect.getsource(cw_screen_prep.CwScreenPrep._open_shop_phase)
     assert 'self._probe_node_type()' in src_phase
     src_run = inspect.getsource(cw_screen_prep.CwScreenPrep.run)
@@ -66,10 +66,10 @@ def test_shop_open_collapse_wait_dd011() -> None:
     开/关店原子核心,四落点同锁。
     注:不设肯定性断言(常量名在场类)——那类锁只是实现的影子,无独立语义。"""
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
-    from sr_od.application.currency_war.operations.prep import (
-        buy_cards,
-        close_shop,
-        open_shop,
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_buy_cards as buy_cards,
+        cw_op_close_shop as close_shop,
+        cw_op_open_shop as open_shop,
     )
     for fn in (cw_screen_prep.CwScreenPrep._open_shop_phase, buy_cards.run_buy_waves,
                open_shop.open_shop, close_shop.close_shop):
@@ -103,7 +103,7 @@ def test_shop_currency_war_config_module_level() -> None:
     (无条件,UnboundLocalError 形态结构性消除);锁:buy_cards 模块级
     名存在 + 编排壳/波循环体内无任何局部 import。"""
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
-    from sr_od.application.currency_war.operations.prep import buy_cards
+    from sr_od.application.currency_war.operations.cw_op import cw_op_buy_cards as buy_cards
     assert getattr(buy_cards, 'CurrencyWarConfig', None) is not None, \
         'buy_cards.py 必须模块级 import CurrencyWarConfig'
     for method in (cw_screen_prep.CwScreenPrep._open_shop_phase, buy_cards.run_buy_waves):
@@ -121,7 +121,7 @@ def test_shop_contextlib_module_level_no_local_import() -> None:
     run_buy_waves。锁:两模块模块级存在 + 两体内无局部 import
     contextlib + contextlib.suppress 使用点无局部 import 保护。"""
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
-    from sr_od.application.currency_war.operations.prep import buy_cards
+    from sr_od.application.currency_war.operations.cw_op import cw_op_buy_cards as buy_cards
     assert getattr(cw_screen_prep, 'contextlib', None) is not None, \
         'cw_screen_prep.py 必须模块级 import contextlib(r346 H1;编排宿主随壳退役迁移)'
     assert getattr(buy_cards, 'contextlib', None) is not None, \
@@ -607,7 +607,7 @@ def test_recipe_tier_helper() -> None:
 def test_consumers_share_single_source() -> None:
     """消费方共享单源:deploy_bench 与 cw_line_defs 的名字一致
     (旧 line_strategy 局部 set 随 ADR-0336 删)。"""
-    from sr_od.application.currency_war.operations.prep import deploy_bench
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as deploy_bench
     assert deploy_bench._RECIPE is RECIPE_FACTIONS
     assert deploy_bench._RECIPE_BASE == RECIPE_BASE
 

@@ -9,8 +9,8 @@ import inspect
 # ==================== ① 落点验证 ====================
 
 def _make_deploy_op(monkeypatch, occupied_seq: list[bool]):
-    """构 DeployBenchOp 桩(bypass __init__),slot_occupied 按序列出票。"""
-    from sr_od.application.currency_war.operations.prep import deploy_bench as db
+    """构 CwOpDeploy 桩(bypass __init__),slot_occupied 按序列出票。"""
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
 
     calls = {'n': 0}
 
@@ -22,7 +22,7 @@ def _make_deploy_op(monkeypatch, occupied_seq: list[bool]):
     monkeypatch.setattr(db, 'slot_occupied', _fake_occ)
     monkeypatch.setattr(db.time, 'sleep', lambda s: None)
 
-    class _Op(db.DeployBenchOp):
+    class _Op(db.CwOpDeploy):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
             pass
         def screenshot(self):
@@ -50,8 +50,8 @@ def test_wait_slot_occupied_timeout_false(monkeypatch) -> None:
 def test_deterministic_landing_verification_wired() -> None:
     """源码锁:deterministic 主路径与「源槽已空(验证滞后)」路径都验落点;
     落点未验出 = 判无效拖拽(不计 placed)+ 存证。"""
-    from sr_od.application.currency_war.operations.prep import deploy_bench as db
-    src = inspect.getsource(db.DeployBenchOp._deploy_deterministic)
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    src = inspect.getsource(db.CwOpDeploy._deploy_deterministic)
     assert '_wait_slot_occupied(dst' in src          # 主路径落点验证
     assert src.count('_wait_slot_occupied(dst') >= 2  # 滞后补偿路径同样验
     assert '判无效拖拽' in src
@@ -63,8 +63,8 @@ def test_deterministic_no_silent_exits() -> None:
     for 迭代器语义——旧 `for bi in order` + remove/insert + continue 会
     静默跳过被移到已过下标的元素,1-1 事故「3-6 件无尝试日志」形态);
     ②两排皆满 break 带证据日志。"""
-    from sr_od.application.currency_war.operations.prep import deploy_bench as db
-    src = inspect.getsource(db.DeployBenchOp._deploy_deterministic)
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    src = inspect.getsource(db.CwOpDeploy._deploy_deterministic)
     assert 'while _oi < len(_pending)' in src
     assert 'for bi in order:' not in src
     assert '两排皆满,无槽可拖 → 终止' in src
@@ -142,12 +142,12 @@ def test_post_launch_blockers_registry() -> None:
 # ==================== ③ 前台无角色 → 验证重部署 → 出战链 ====================
 
 def test_frontless_recovery_chain_wired() -> None:
-    """源码锁(0j 升级):确认关闭 → DeployBenchOp 带验证重部署 → 验前排 ≥1
+    """源码锁(0j 升级):确认关闭 → CwOpDeploy 带验证重部署 → 验前排 ≥1
     → 再出战;超限 round_fail(不再无限 round_wait)。"""
     from sr_od.application.currency_war.operations import cw_loop
     src = inspect.getsource(cw_loop.CwLoop.loop)
     assert 'FRONTLESS_REDEPLOY_LIMIT' in src
-    assert 'DeployBenchOp(self.ctx).execute()' in src
+    assert 'CwOpDeploy(self.ctx).execute()' in src
     assert '_StartBattle()' in src
     assert '前台仍空' in src                       # 出口判据:前排 ≥1 验证
     assert "round_fail('前台无角色重部署超限(前台仍空)')" in src

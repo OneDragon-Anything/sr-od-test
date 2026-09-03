@@ -272,7 +272,7 @@ def test_w536_wiring_locks():
     单元尾 stash 单一源 = cw_screen_prep.finalize_buy_phase(时序锚 = 关店后;原编排壳 shop.py 已退役)。
     """
     buy_src = Path(
-        'src/sr_od/application/currency_war/operations/prep/buy_cards.py'
+        'src/sr_od/application/currency_war/operations/cw_op/cw_op_buy_cards.py'
     ).read_text(encoding='utf-8')
     shop_src = Path(
         'src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py'

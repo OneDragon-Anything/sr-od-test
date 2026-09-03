@@ -606,7 +606,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_ROOT / 'src'))
 
-from sr_od.application.currency_war.operations.prep.deploy_bench import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
     offtarget_sell_allowed,
 )
 
@@ -653,7 +653,7 @@ def test_fence_source_shared_with_deploy_fence() -> None:
         ENGINE_FACTIONS,
         RECIPE_FACTIONS,
     )
-    from sr_od.application.currency_war.operations.prep import deploy_bench
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as deploy_bench
     assert frozenset(RECIPE_FACTIONS | ENGINE_FACTIONS) == deploy_bench._DEPLOY_FENCE
     # 引擎阵营抽查:仙舟/列车同行/持续伤害成员均被熔断覆盖
     for bond in ('仙舟', '列车同行', '持续伤害'):

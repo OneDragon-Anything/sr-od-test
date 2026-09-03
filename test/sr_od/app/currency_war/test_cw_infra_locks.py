@@ -727,7 +727,7 @@ def test_from_dict_is_write_side_single_source() -> None:
 
 import inspect
 
-from sr_od.application.currency_war.operations.handlers import _overlay_confirm
+from sr_od.application.currency_war.operations.cw_screen import _overlay_confirm
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import  CwScreenPlanner
 
 

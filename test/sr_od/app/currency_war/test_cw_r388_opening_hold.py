@@ -12,7 +12,7 @@ _transition_hold_active 的全矩阵锁;同辖两事实(开局 hold/非开局
 form=0 不 hold)均已覆盖,重复构成删并理由(README 纪律 8)。)
 """
 from sr_od.application.currency_war.kernel.cw_comps import COMMIT_FRAC
-from sr_od.application.currency_war.operations.prep.equip_all import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     _transition_hold_active,
 )
 

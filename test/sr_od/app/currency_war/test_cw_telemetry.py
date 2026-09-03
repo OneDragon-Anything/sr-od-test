@@ -88,7 +88,7 @@ def test_sim_ledger_rows_carry_same_key():
 # ==================== w148_owned_pool_chain ====================
 
 from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.operations.prep.equip_all import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     _owned_wearable_names,
 )
 from sr_od.application.currency_war.decision.decision_v2.strategy import (
@@ -205,7 +205,7 @@ def test_shop_record_site_copies_owned_pool_before_record() -> None:
     顺序锁三点:①拷贝行存在;②在 decide_prep 之后(装备权重读 state.equips,
     提前拷=改决策行为);③在其后的 record_decision(state 调用之前)。
     """
-    src = _src('operations/prep/buy_cards.py')
+    src = _src('operations/cw_op/cw_op_buy_cards.py')
     copy_line = 'state.equips = list(getattr(match.session, \'last_owned_equips\', []) or [])'
     assert copy_line in src, 'buy_cards record 站点缺 owned 池补拷行(W222 缺口①回归)'
     # W971 P2 黑板接口(dd-014):decide_prep → decide_shop_screen,顺序锁随迁

@@ -102,7 +102,7 @@ def test_supply_budget_semantics_unchanged() -> None:
 def test_megastar_leaves_node_success_with_settle(monkeypatch) -> None:
     """巨星:overlay 消失 → success(完成承诺 = 固定 1.0s,原委托壳语义)
     + 关态基线预置;选中标记复位副作用随迁。"""
-    from sr_od.application.currency_war.operations.cw_flow.cw_flow_const import (
+    from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
         CW_OVERLAY_SETTLE_S,
     )
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (

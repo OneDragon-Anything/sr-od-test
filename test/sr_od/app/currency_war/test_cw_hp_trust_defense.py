@@ -53,7 +53,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     LevelUp,
 )
-from sr_od.application.currency_war.operations.prep.buy_cards import _apply_hp
+from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import _apply_hp
 
 
 @pytest.fixture(autouse=True)
@@ -306,7 +306,7 @@ def test_apply_hp_writes_correct_triple() -> None:
 def test_r1_retry_read_hp_retries_then_recovers() -> None:
     """r1 重试读:miss 后重试,第 2 次命中 → 返回读数(读到的值即真读,
     不恒为 100——如难度修正后的 80 照收)。"""
-    from sr_od.application.currency_war.operations.prep.buy_cards import (
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _r1_retry_read_hp,
     )
     calls = {'n': 0}
@@ -320,7 +320,7 @@ def test_r1_retry_read_hp_retries_then_recovers() -> None:
 
 def test_r1_retry_read_hp_persistent_miss_honest_none() -> None:
     """r1 重试穷尽仍 miss → None(诚实未知;严禁 100 兜底)。"""
-    from sr_od.application.currency_war.operations.prep.buy_cards import (
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _r1_retry_read_hp,
     )
     calls = {'n': 0}

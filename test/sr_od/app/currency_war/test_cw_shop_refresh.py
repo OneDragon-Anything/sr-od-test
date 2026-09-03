@@ -13,7 +13,7 @@ from __future__ import annotations
 
 # ==================== w510_refreshfee ====================
 from one_dragon.base.operation.operation_node import operation_node
-from sr_od.application.currency_war.operations.prep.buy_cards import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
     expected_gold_after_actions,
 )
 
@@ -50,7 +50,7 @@ def test_multiwave_refresh_expected_closes_per_accounting():
 import json
 from pathlib import Path
 
-from sr_od.application.currency_war.operations.prep.buy_cards import refresh_effective
+from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import refresh_effective
 from sr_od.operations.sr_operation import SrOperation
 from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
@@ -364,14 +364,14 @@ class _BuyPhaseHostOp(SrOperation):
 
     @operation_node(name='商店买牌', is_start_node=True)
     def buy(self):
-        from sr_od.application.currency_war.operations.prep.buy_cards import (
+        from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
             run_buy_waves,
         )
-        from sr_od.application.currency_war.operations.prep.close_shop import (
+        from sr_od.application.currency_war.operations.cw_op.cw_op_close_shop import (
             close_shop,
         )
         from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as finalize_home
-        from sr_od.application.currency_war.operations.prep.open_shop import (
+        from sr_od.application.currency_war.operations.cw_op.cw_op_open_shop import (
             open_shop,
         )
         screen = self.last_screenshot
@@ -428,8 +428,8 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd
     from sr_od.application.currency_war.obs import cw_observation as cwo
     from sr_od.application.currency_war.obs import cw_observation_gate as gate
-    from sr_od.application.currency_war.operations.prep import (
-        buy_cards as buy_cards_mod,
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_buy_cards as buy_cards_mod,
     )
 
 
@@ -519,7 +519,7 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     op = _Watched(test_context)
     op._init_watchdog()  # type: ignore[attr-defined]
     # 画面判定替身(状态化):备战锚恒成功(防空 overlay 误判);「按钮-收起」
-    # 按 shop 开合状态翻转(W970 批 A 后 OpenShopOp/CloseShopOp 以「收起
+    # 按 shop 开合状态翻转(W970 批 A 后 CwOpOpenShop/CwOpCloseShop 以「收起
     # 出现/消失」做 fail-closed 验证,离线桩须模拟真转移,否则收起验证死循环)。
     shop_open = {'v': True}
 
@@ -757,7 +757,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 from sr_od.application.currency_war.obs import cw_observation_gate
 from one_dragon.base.operation.operation_node import operation_node
-from sr_od.application.currency_war.operations.prep.buy_cards import (
+from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
     build_post_buy_incremental_state,
     refresh_wave_is_refresh_only,
 )
@@ -911,7 +911,7 @@ class _FakeOp:
 def test_stable_gate_waits_animation_then_settles() -> None:
     """锁①a 动画帧序列:A→B(变)→B→B(连续同)→ 门判稳定放行。"""
     from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.prep.buy_cards import (
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _wait_shop_row_stable,
     )
 
@@ -930,7 +930,7 @@ def test_stable_gate_fast_path_minimum_observation() -> None:
     import time as _t
 
     from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.prep.buy_cards import (
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _wait_shop_row_stable,
     )
 
@@ -954,7 +954,7 @@ def test_stable_gate_timeout_has_compensation_wait() -> None:
     import time as _t
 
     from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.prep.buy_cards import (
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _SETTLE_TIMEOUT_COMPENSATE_S,
         _wait_shop_row_stable,
     )
@@ -971,7 +971,7 @@ def test_stable_gate_timeout_has_compensation_wait() -> None:
 def test_stable_gate_timeout_on_ever_changing_frames() -> None:
     """锁①b 永变帧序列 → 超时返回 False(调用方回退,不死等)。"""
     from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.prep.buy_cards import (
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _wait_shop_row_stable,
     )
 
@@ -982,7 +982,7 @@ def test_stable_gate_timeout_on_ever_changing_frames() -> None:
 def test_stable_gate_screenshot_exception_offline_contract() -> None:
     """锁①c 离线契约:截图恒炸 → suppress 降级继续等,超时 False(不炸调用方)。"""
     from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.prep.buy_cards import (
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _wait_shop_row_stable,
     )
 
@@ -1030,8 +1030,8 @@ def _make_hook_op(test_context: SrTestContext,
     from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
     from sr_od.application.currency_war.obs import cw_observation as cwo
     from sr_od.application.currency_war.obs import cw_observation_gate as gate
-    from sr_od.application.currency_war.operations.prep import (
-        buy_cards as buy_cards_mod,
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_buy_cards as buy_cards_mod,
     )
     from sr_od.application.currency_war.telemetry import defects, recorder
     from sr_od.application.currency_war.telemetry import state as cw_telemetry
@@ -1088,7 +1088,7 @@ def _make_hook_op(test_context: SrTestContext,
     op = _Watched(test_context)
     op._init_watchdog()  # type: ignore[attr-defined]
     # 画面判定替身(状态化):收起锚按 shop 开合翻转(同 _make_op,W970 批 A
-    # Open/CloseShopOp 的 fail-closed 验证需离线模拟真转移)。
+    # Open/CwOpCloseShop 的 fail-closed 验证需离线模拟真转移)。
     shop_open = {'v': True}
 
     def _find_area(screen, screen_name, area_name, **k):
@@ -1243,7 +1243,7 @@ def test_guard_hook_uses_settle_gate_not_blind_sleep() -> None:
     本锁红,防感知自愈被静默移除。
     """
     src = pathlib.Path(
-        'src/sr_od/application/currency_war/operations/prep/buy_cards.py'
+        'src/sr_od/application/currency_war/operations/cw_op/cw_op_buy_cards.py'
     ).read_text(encoding='utf-8')
     # 稳定门存在且被钩子调用(调用形态:门 → 重读,紧邻;W970 批 A
     # 波循环迁 buy_cards,宿主参数形 self→op,调用形态同步迁移)
