@@ -63,8 +63,8 @@ def _session(comp=None):
 
 def _state(gold: int = 30, shop=None, bench=None, deployed=None,
            level: int = 3, deploy_cap: int | None = None,
-           xp: tuple[int, int] | None = None) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2)
+           xp: tuple[int, int] | None = None, hp: int = 100) -> GameState:
+    st = GameState(gold=gold, level=level, round_num=2, hp=hp)
     st.shop = shop if shop is not None else []
     st.bench = bench if bench is not None else []
     st.deployed = deployed if deployed is not None else []
@@ -215,12 +215,14 @@ class TestArm1CapSemantics:
 
     def test_m3_emits_when_board_full_at_cap(self):
         """商店波行为锁:板满于 cap(deployed=5/cap=5)+ bench 同阵营
-        等待件 + 金够整批 ⇒ M3 LevelUpShop 发射(构造板面应触发场景)。"""
+        等待件 + 金够整批 ⇒ M3 LevelUpShop 发射(构造板面应触发场景)。
+        (夹具补 hp=100:候选③批起 M3 消费血预算停升级门,hp 无真值帧
+        fail-closed 拒升级——真值帧才是本锁要钉的语义。)"""
         comp = _comp()
         deployed = [_bc('爻光', slot=i + 1) for i in range(5)]
         bench = [_bc('爻光', slot=1)]
         st = _state(gold=8, bench=bench, deployed=deployed,
-                    level=3, deploy_cap=5, xp=(0, 4))
+                    level=3, deploy_cap=5, xp=(0, 4), hp=100)
         acts = _decide(st, _session(comp))
         lv = [a for a in acts if isinstance(a, LevelUpShop)]
         assert lv and all(a.auth_basis == 'm3_batch' for a in lv)

@@ -170,3 +170,89 @@ def test_crisis_merge_completion_candidate_passes() -> None:
     res = arbitrate([(_buy_cand('希儿', cost=3, merge=True), 0.0, {})],
                     st, sess, _REG)
     assert any(isinstance(a, BuyCard) for a in res.actions)
+
+
+# ---------- 停手线通道全覆盖(sim 连刷分布对照批;ADR-0451 单一源) ----------
+#
+# 出处 = `.debug/temp/currency_war/search_refresh_stopline/REPORT.md` 定谳:
+# sim 侧「危机带 ≥4 连刷」指标的连刷帧经决策时点 hp 重新对齐后,残余
+# 波全部落在合法豁免域(带外决策帧 / 应急带急救 / 位面末 ALL IN 窗);
+# 刷新发射点中唯一不经停手线谓词的是补偿趟金拒刷新尾(S2 残余)——
+# 本组锁把「全部刷新支出通道消费同一谓词」钉成回归资产。
+
+
+def _war_frame(hp: int) -> GameState:
+    """P2 危机带/应急带 war 帧(金 25 < war 地板 30,凑金缺口可补偿)。"""
+    st = _p2_state(hp=hp, gold=25, round_num=4, node='battle')
+    return st
+
+
+def _gold_rejected_refresh() -> 'tuple':
+    """构造 refresh 候选的金资源型拒绝事件(模拟 closeout 金拒捕获)。"""
+    from sr_od.application.currency_war.decision.decision_v2.remediation import (
+        Rejection,
+        RejectReason,
+    )
+    from sr_od.application.currency_war.kernel.cw_state import RefreshShop
+    cand = Candidate(action=RefreshShop(cost=2),
+                     tag='refresh', source='test')
+    reason = RejectReason('gold_floor', 'gold', 7, '金不足(测试构造)')
+    return Rejection(reason, cand, 2.0)
+
+
+def _war_disc():
+    from sr_od.application.currency_war.decision.decision_v2.discipline import (
+        DisciplineView,
+    )
+    return DisciplineView(coverage='blood_alarm', mode='war',
+                          allow_refresh_in_war=True)
+
+
+def _sellable_bench() -> list:
+    """可卖散件 bench(各 1 份、非意向线保护集,参照 S2 正向例)。"""
+    from sr_od.application.currency_war.kernel.cw_state import BenchChar
+    names = ['卡芙卡', '千冶·刃', '绯英', '黄泉', '阿格莱雅']
+    return [BenchChar(slot=i, char_id=n, faction='公司', star=1)
+            for i, n in enumerate(names)]
+
+
+def test_refresh_stopline_covers_remediation_refresh_tail() -> None:
+    """两通道覆盖锁(补偿趟刷新尾):危机带帧的金拒刷新不再经补偿趟
+    「卖件凑刷新费」借回——停手线谓词单一源(设计件 12 §2.3-P1-c/
+    §3.2;ADR-0451),与 arbiter 刷新收尾/分配器刷新臂同址消费。
+    修复前该发射点不经谓词 = 「主通道被停手线拦、补偿趟把刷新买回」
+    的旁路形态。"""
+    from sr_od.application.currency_war.decision.decision_v2.remediation import (
+        remediation_pass,
+    )
+    sess = _sess()
+    st = _war_frame(hp=36)
+    st.bench = _sellable_bench()
+    acts, _rlog = remediation_pass(
+        st.copy(), st, sess, _REG, [_gold_rejected_refresh()],
+        disc_view=_war_disc(), floor=30)
+    assert not any(type(a).__name__ == 'RefreshShop' for a in acts), \
+        f'危机带帧补偿趟不得发刷新尾:{acts}'
+    assert not acts, '停付域刷新补偿应整体放弃(不发卖件凑费组)'
+
+
+def test_remediation_refresh_tail_exemptions_preserved() -> None:
+    """豁免保持锁:应急带(hp≤emergency_hp)帧补偿趟刷新尾照常放行
+    (急救型保留——搜牌补板当轮转化豁免面,谓词内 ALL IN/终止豁免
+    同源保持,不随本通道收口丢失)。"""
+    from sr_od.application.currency_war.decision.decision_v2.remediation import (
+        remediation_pass,
+    )
+    from sr_od.application.currency_war.kernel.cw_state import (
+        RefreshShop,
+        SellBench,
+    )
+    sess = _sess()
+    st = _war_frame(hp=20)   # 应急带:急救豁免在谓词内保持
+    st.bench = _sellable_bench()
+    acts, _rlog = remediation_pass(
+        st.copy(), st, sess, _REG, [_gold_rejected_refresh()],
+        disc_view=_war_disc(), floor=30)
+    assert any(isinstance(a, SellBench) for a in acts) \
+        and any(isinstance(a, RefreshShop) for a in acts), \
+        f'应急带急救豁免应保留刷新补偿:{acts}'

@@ -67,8 +67,9 @@ def _session(comp=None) -> StrategySession:
 
 
 def _state(gold: int = 30, shop=None, bench=None, deployed=None,
-           level: int = 3, node=None) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, node_type=node)
+           level: int = 3, node=None, hp: int = 100) -> GameState:
+    st = GameState(gold=gold, level=level, round_num=2, node_type=node,
+                   hp=hp)
     st.shop = shop if shop is not None else []
     st.bench = bench if bench is not None else []
     st.deployed = deployed if deployed is not None else []
@@ -607,9 +608,11 @@ class TestMandateArm1Wiring:
 
     def test_state_derived_cap_emits_without_violation(self):
         """正向:state.max_units() 派生链喂入 ⇒ 零违例;板满(cap=板量)
-        ⇒ M3 照发(接线不误伤)。"""
+        ⇒ M3 照发(接线不误伤)。(夹具补 hp=100:候选③批起 M3 消费
+        血预算停升级门,hp 无真值帧 fail-closed 拒升级——真值帧才是本锁
+        要钉的语义。)"""
         from sr_od.application.currency_war.decision.cw4 import mandate
-        st = _state(gold=200, level=3)
+        st = _state(gold=200, level=3, hp=100)
         st.deployed = [BenchChar(slot=1, char_id='爻光'),
                        BenchChar(slot=2, char_id='桑博'),
                        BenchChar(slot=3, char_id='丹恒·饮月')]

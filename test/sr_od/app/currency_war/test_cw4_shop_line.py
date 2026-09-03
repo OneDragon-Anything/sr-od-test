@@ -63,8 +63,9 @@ def _session(comp=None) -> StrategySession:
 
 
 def _state(gold: int = 30, shop=None, bench=None, deployed=None,
-           level: int = 3, node=None, xp=None) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, node_type=node)
+           level: int = 3, node=None, xp=None, hp: int = 100) -> GameState:
+    st = GameState(gold=gold, level=level, round_num=2, node_type=node,
+                   hp=hp)
     st.shop = shop if shop is not None else []
     st.bench = bench if bench is not None else []
     st.deployed = deployed if deployed is not None else []
@@ -164,19 +165,22 @@ class TestCriteriaShopFaces:
             assert any(isinstance(a, SellBench) for a in acts), arm
 
     def test_levelup_face_batch_discipline(self):
-        """升级面:D-BUYNOTE 整买纪律——整批够升级才放行(散买拦截)。"""
+        """升级面:D-BUYNOTE 整买纪律——整批够升级才放行(散买拦截)。
+        (夹具补 hp=100:候选③批起 M3 消费血预算停升级门,门对 hp 无真值
+        帧 fail-closed 拒升级——旧夹具在门未接线的栈上写就,真值帧才是
+        本锁要钉的语义。)"""
         # arm1_existence 需板满(10)+ bench 等待件共享阵营/流派:
         # 板/bench 同名件(爻光)必然共享 ⇒ 谓词真
         deployed = [_bc('爻光') for _ in range(10)]
         bench = [_bc('爻光')]
         # 整批不够:金 3 < clicks×cost
         st = _state(gold=3, bench=bench, deployed=deployed, level=3,
-                    xp=(0, 4))
+                    xp=(0, 4), hp=100)
         acts = _decide(st, _session(_comp()))
         assert not [a for a in acts if isinstance(a, LevelUpShop)]
         # 整批够:金 8 ≥ 1 click × 4(LEVEL up xp(0,4) → 1 click)
         st2 = _state(gold=8, bench=bench, deployed=deployed, level=3,
-                     xp=(0, 4))
+                     xp=(0, 4), hp=100)
         acts2 = _decide(st2, _session(_comp()))
         lv = [a for a in acts2 if isinstance(a, LevelUpShop)]
         assert lv and all(a.auth_basis == 'm3_batch' for a in lv)
