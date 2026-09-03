@@ -174,6 +174,10 @@ def test_p6_registry_injection_reaches_state_machine():
 
     旋钮 = line_env_lock_min_round(环境判据观察期):调大 = 判据本轮不辖
     → 对抗环境帧缺省臂缓锁、注入臂落锁——两臂 ist 分歧即注入链可达证。
+    【夹具演进(经济冻结批)】原 plane=2 unlocked 帧:旧形态缺省臂保持
+    unlocked;现 P2 unlocked 帧被强制 assignment 移交锁接管(目标不空窗
+    语义,test_cw_economic_freeze.py ①组),与旋钮无关 → 不再承载分歧。
+    改用 weak 帧(撤销机器在册态,移交不辖,「直至新信号」语义保留)。
     """
     from sr_od.application.currency_war.kernel.cw_intention import update_intention
     st = _state(plane=2, round_num=1)   # P2:comp 锁定通道(P1 配方锁区不锁 comp)
@@ -181,9 +185,11 @@ def test_p6_registry_injection_reaches_state_machine():
     st.shop = [SimpleNamespace(name='万敌')]   # ③核心卡信号可见
     reg_def = _REG
     reg_inj = replace(_REG, line_env_lock_min_round=99)
-    ist_def = update_intention(st, IntentionState(), None, registry=reg_def)
-    ist_inj = update_intention(st, IntentionState(), None, registry=reg_inj)
-    assert ist_def.locked_comp == ''            # 缺省臂:环境判据缓锁
+    ist_def = update_intention(st, IntentionState(phase='weak', weak_comp='万敌单C'),
+                               None, registry=reg_def)
+    ist_inj = update_intention(st, IntentionState(phase='weak', weak_comp='万敌单C'),
+                               None, registry=reg_inj)
+    assert ist_def.locked_comp == ''            # 缺省臂:环境判据缓锁(weak 保持)
     assert ist_inj.locked_comp != ''            # 注入臂:判据不辖 → 落锁
 
 

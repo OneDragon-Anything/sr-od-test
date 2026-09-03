@@ -80,14 +80,19 @@ def test_locked_comp_frame_takes_priority() -> None:
 
 
 def test_p2_or_empty_pair_not_materialized() -> None:
-    """辖域门:P2(p1_pair 残留)与 P1 空对均不物化——载体物化不越
-    ADR-0357(P1 配方锁)辖域,P2 终局线走 locked_comp 通道。"""
+    """辖域门:P2(p1_pair 残留)不物化——P2 终局线走 locked_comp 通道。
+    【语义演进(经济冻结批,2026-09)】P1 空对帧**改为物化**(按
+    p1_early_pair 无门槛方向):旧断言「P1 空对不物化」钉的是目标空窗
+    形态——p1r7 配方对退场帧 target=None,部署/评分/准备域全盲,
+    0 买 0 刷经济冻结(g_20260904_042657 复盘定谳);现行语义=目标
+    不空窗,见 test_cw_economic_freeze.py ①组锁。"""
     strat, sess, st = _pair_sess(_PAIR, plane=2)
     strat.update_target(st, sess, None)
     assert sess.target_comp is None
     strat2, sess2, st2 = _pair_sess(())
     strat2.update_target(st2, sess2, None)
-    assert sess2.target_comp is None
+    assert sess2.target_comp is not None, \
+        'P1 空对帧按早对方向物化(目标不空窗,经济冻结批语义)'
 
 
 def test_materialized_core_deploys_before_scatter() -> None:
