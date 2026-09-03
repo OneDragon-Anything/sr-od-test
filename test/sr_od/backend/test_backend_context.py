@@ -253,15 +253,9 @@ def test_list_applications_no_refresh(monkeypatch) -> None:
     assert called == []                          # 只读路径不刷新配置
 
 
-def test_close_game_delegates() -> None:
-    """close_game 应委托 controller.close_game()。"""
-    controller = MagicMock()
-    controller.is_game_window_ready = True
-    controller.close_game.return_value = None
-    backend = _backend(ready=True, controller=controller)
-    msg = backend.close_game()
-    controller.close_game.assert_called_once()
-    assert msg == '已发送关闭游戏信号,可用 check_game_window 验证'
+# (2026-09-03 攻击性排查:原 test_close_game_delegates 删除——与
+#  test_close_game.py::test_close_game_delegates_and_returns_text 逐字重复
+#  (纪律 7 跨文件择一;独立文件另有 not-ready 异常门更全)。)
 
 
 def test_analyze_save_image_persists_and_returns_path(monkeypatch) -> None:
