@@ -97,7 +97,9 @@ def test_draw_shop_consumes_rotation_table() -> None:
     probs = rotation_probs(6, 1)
     rng = random.Random(42)
     pool = _Pool(rng)
-    n = 4000
+    # n 4000→1000(2026-09-03 瘦身批,纪律 12):1000 抽下 ±0.05 容差
+    # 仍 ≈3σ,种子固定=确定性;语义只需「消费轮岗表」的占比分离。
+    n = 1000
     c1_rot = sum(1 for _ in range(n // 5)
                  for c in pool.draw_shop(6, probs=probs) if c.cost == 1)
     draws_rot = n // 5 * 5

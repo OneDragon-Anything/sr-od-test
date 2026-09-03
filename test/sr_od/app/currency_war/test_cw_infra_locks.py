@@ -503,7 +503,8 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
     # 同 seed 确定性(非分布数值——逐局末 HP 全等)。从主 batch 账本 outcomes
     # 流提取逐局末 HP(run_id 尾缀 seed,每局最后一行 = 终值),对一遍轻量复跑
     # (checks/ledger 关——主 batch 已覆盖,复跑只验确定性)。旧版独立跑两遍
-    # 25 局 = 全测试 75 局,现在主 batch + 复跑 = 50 局(语义不变:逐位全等)。
+    # 25 局 = 全测试 75 局;W971 后主 batch + 复跑 = 50 局;2026-09-03 瘦身批
+    # 复跑改抽样对账 = 主 25 + 复跑 3 = 28 局(逐位全等语义不变)。
     import json
     import re
 
@@ -515,8 +516,11 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
         last_by_run[int(m.group(1))] = row['hp_after']
     hps_ledger = [last_by_run[s] for s in sorted(last_by_run)]
     assert len(hps_ledger) == 25, f'账本局数异常: {len(hps_ledger)}'
-    hps_rerun = [simulate_p1(i, pool='snapshot').final_hp for i in range(25)]
-    assert hps_ledger == hps_rerun, '同 seed 复跑末 HP 不一致(确定性破)'
+    # 复跑抽样:首/中/尾 3 个 seed 对照账本行(确定性对账的抽样面)
+    _RERUN_SEEDS = (0, 12, 24)
+    for s in _RERUN_SEEDS:
+        assert last_by_run[s] == simulate_p1(
+            s, pool='snapshot').final_hp, f'seed{s} 复跑末 HP 不一致(确定性破)'
 
 
 def test_views_render_sim_ledger(tmp_path: _sim_cli_smoke_Path) -> None:

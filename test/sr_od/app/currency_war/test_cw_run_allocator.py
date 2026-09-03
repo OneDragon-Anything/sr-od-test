@@ -71,7 +71,9 @@ def test_convergence_to_best_arm():
     # 合成环境:列车真胜率 0.8,其他 0.3
     env = {'列车同行': 0.8, '万敌': 0.3, '量子': 0.3, '仙舟': 0.3}
     rng = random.Random(99)
-    for _ in range(120):
+    # 训练轮 120→30(2026-09-03 瘦身批,纪律 12:0.8-vs-0.3 分离度下
+    # 30 轮后验已集中;种子固定=确定性)
+    for _ in range(30):
         k = alloc.select()
         won = rng.random() < env[k]
         alloc.update(k, alloc.reward_graded(won, 3 if won else 2))

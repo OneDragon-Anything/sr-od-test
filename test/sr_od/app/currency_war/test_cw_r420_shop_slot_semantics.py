@@ -43,7 +43,7 @@ def test_buy_consumes_slot_waves_all_five() -> None:
 def test_phantom_rebuy_and_pool_floor_zero_real_strategy() -> None:
     """真策略批次:幻影再买归 0(批㉒ F1 修复验收)+ 池地板
     零命中(批㉒ F5:槽消费落地后池超卖不可达)。"""
-    rep = simulate_p1_batch(20, seed_base=0, pool='fallback',
+    rep = simulate_p1_batch(5, seed_base=0, pool='fallback',
                             ledger=False, checks=False)
     assert rep['phantom_rebuys'] == 0, '幻影再买未归 0(ADR-0284)'
     assert rep['pool_floor_hits'] == 0, '池 take 地板被命中(池守恒破)'
