@@ -9,24 +9,13 @@ from one_dragon.base.screen.screen_match import (
 )
 from sr_od.backend.schemas import (
     AnalyzeScreenResult,
-    OcrText,
     RunStatusResult,
     WindowStatus,
 )
 
-
-def test_ocr_text_fields() -> None:
-    """校验 OcrText 各字段的取值与默认值。"""
-    t = OcrText(text="体力", x=10, y=20, width=30, height=40)
-    assert t.text == "体力"
-    assert (t.x, t.y, t.width, t.height) == (10, 20, 30, 40)
-
-
-def test_analyze_result_default_error_none() -> None:
-    """校验 AnalyzeScreenResult 的 error 默认为 None、ocr_texts 透传。"""
-    r = AnalyzeScreenResult(success=True, ocr_texts=[])
-    assert r.error is None
-    assert r.ocr_texts == []
+# (2026-09-03 攻击性排查:OcrText 字段透传/RunStatus 默认值/error 与
+#  screenshot_path 默认值四条删除——dataclass 透传断言(纪律 18);
+#  线格式由字段集登记门 + asdict 序列化锁管辖。)
 
 
 def test_window_status_optional_rect() -> None:
@@ -88,14 +77,5 @@ def test_run_status_result_fields() -> None:
     }
 
 
-def test_run_status_result_defaults() -> None:
-    """校验 RunStatusResult 除 state 外其余字段默认为 None。"""
-    r = RunStatusResult(state='idle')
-    assert r.source is None and r.app is None
-    assert r.current_node is None and r.last_status is None and r.failed_node is None
-
-
-def test_analyze_result_default_screenshot_path_none() -> None:
-    """AnalyzeScreenResult 默认 screenshot_path=None。"""
-    r = AnalyzeScreenResult(success=True, ocr_texts=[], error=None)
-    assert r.screenshot_path is None
+# (2026-09-03 攻击性排查:test_run_status_result_defaults /
+#  test_analyze_result_default_screenshot_path_none 删除——默认值透传。)
