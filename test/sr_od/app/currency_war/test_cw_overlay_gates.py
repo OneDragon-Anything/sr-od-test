@@ -401,16 +401,17 @@ def test_aface_clear_set_switched_to_registry() -> None:
     """
     import inspect
 
-    from sr_od.application.currency_war.obs.cw_observation_gate import (
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
         ENTRY_OVERLAY_CLOSE,
     )
-    # ② 接线锁:源码走 derive_clearable,手写条目不回流
-    from sr_od.application.currency_war.obs import cw_observation_gate
-    src = inspect.getsource(cw_observation_gate)
+    # ② 接线锁(2026-09-03 gate 清尾批:清场表迁址 gate→cw_screen_prep,
+    #    锁语义平移):源码走 derive_clearable,手写条目不回流
+    src = inspect.getsource(cw_screen_prep)
     assert 'derive_clearable()' in src, '清场表未接线 derive_clearable()'
     for _scr, _area in _GOLDEN_CLEAR_MAP.items():
         assert f"'{_scr}': '{_area}'" not in src, (
-            f'清场手写条目 {_scr} 仍在 gate(单一源未收拢)')
+            f'清场手写条目 {_scr} 仍在清场表(单一源未收拢)')
     assert ENTRY_OVERLAY_CLOSE, '清场派生集不应为空(接线面失效)'
     # ③ 移出成员的退出路径存在性:两屏 ∈ decision 派生集(bail→handler)
     # (依赖不变量:从清场移出的屏必须有 bail 接管,否则该屏无人处理)

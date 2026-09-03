@@ -1470,7 +1470,7 @@ def test_read_game_state_writes_level_readable(monkeypatch) -> None:
     """read_game_state 写入 level_readable:真读(OCR 或 XP 可读)=True;
     双失读(纯 _expected_level 兜底)=False。开店期 spec 最小读取面。"""
     from sr_od.application.currency_war.obs import cw_observation as obs
-    from sr_od.application.currency_war.obs.cw_observation_gate import (
+    from sr_od.application.currency_war.obs.cw_observation import (
         PHASE_PREP_SHOP_OPEN,
     )
     _stubs = {

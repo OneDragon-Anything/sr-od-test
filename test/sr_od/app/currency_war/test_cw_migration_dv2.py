@@ -52,12 +52,14 @@ import pytest
 from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.kernel.cw_obs_core import UPPER_SCREENS
 from sr_od.application.currency_war.obs import cw_observation as obs
-from sr_od.application.currency_war.obs.cw_observation_gate import (
-    ENTRY_OVERLAY_CLOSE,
+from sr_od.application.currency_war.obs.cw_observation import (
     PHASE_BATTLE_OR_TRANSIT,
     PHASE_FIELD_SPEC,
     PHASE_PREP_CLEAN,
     PHASE_PREP_SHOP_OPEN,
+)
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+    ENTRY_OVERLAY_CLOSE,
 )
 from sr_od.application.currency_war.telemetry import defects, state
 

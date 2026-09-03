@@ -93,6 +93,11 @@ def test_refresh_defect_debounce_l1_then_l0(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
+    # 安灯 handler 是模块级单例(生产武装点=CurrencyWarApp.__init__),同进程
+    # 先跑的测试构造过 App 即泄漏真 handler → 本测试升 L0 时会真停线写真
+    # flag(2026-09-03 实证:真 flag 带 run_id=rt 落仓根)。本测试只验台账
+    # 分级,钉 None 隔离停线通道(同 test_cw_infra_locks 缺省态钉法)。
+    monkeypatch.setattr(cw_telemetry, '_L0_ANDON_HANDLER', None)
     names = sorted(['A', 'B', 'C', 'D', 'E'])
     for _ in range(2):
         defects.record_defect(
@@ -427,7 +432,6 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     """
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd
     from sr_od.application.currency_war.obs import cw_observation as cwo
-    from sr_od.application.currency_war.obs import cw_observation_gate as gate
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_buy_cards as buy_cards_mod,
     )
@@ -486,8 +490,6 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
                         lambda **k: facts.append(k))
     monkeypatch.setattr(cwo, 'read_hp_opt', lambda *a, **k: None)
     monkeypatch.setattr(cwo, 'read_phase_round', lambda *a, **k: (1, 5))
-    # gate 替身(单帧锁另有对象;此处只求离线直过)
-    monkeypatch.setattr(gate, 'wait_stable_frame', lambda *a, **k: None)
 
     # producer / reconcile spy(锁次序 build → 点击 → reconcile)
     _real_build = pd.build_refresh_expect
@@ -747,7 +749,6 @@ def test_buy_refresh_wave_real_free_proc(
 
 # ==================== w891_buy_edge ====================
 
-import inspect
 
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
@@ -755,7 +756,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SellBench,
     bench_occupied,
 )
-from sr_od.application.currency_war.obs import cw_observation_gate
 from one_dragon.base.operation.operation_node import operation_node
 from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
     build_post_buy_incremental_state,
@@ -855,20 +855,10 @@ def test_post_buy_incremental_state_no_mutation_of_last_state() -> None:
     assert last.gold == 55 and bench_occupied(last.bench) == 0
 
 
-# ===== 锁 3:gate 零触碰回归锚 =====
+# (锁 3「gate 零触碰回归锚」已随 2026-09-03 gate 清尾批删除——gate 模块退役,
+#  常量/签名不复存在;shop 稳定门 = cw_op_buy_cards._wait_shop_row_stable,锁在
+#  下方 test_stable_gate_* 组。)
 
-def test_gate_fingerprint_mechanism_constants_untouched() -> None:
-    """指纹机制零触碰锚:稳定窗地板/预估等待/gate 签名本批不变
-    (压缩的是 shop.py 波循环的等待与重复读,不是验证本身)。"""
-    assert cw_observation_gate._OP_SETTLE_S == 1.0  # 2026-09-02 用户口述口径 #15 收起动画 ~1s,自 1.2 核减
-    assert cw_observation_gate._OP_SETTLE_MIN_STABLE_S == 0.6
-    for prof in (cw_observation_gate.PROFILE_CLOSED,
-                 cw_observation_gate.PROFILE_OPEN):
-        assert prof['min_stable_s'] == 0.6
-        assert 'fingerprint_rects' in prof and prof['fingerprint_rects']
-    assert list(inspect.signature(
-        cw_observation_gate.wait_stable_frame).parameters) == [
-        'op', 'profile', 'timeout_s', 'fast_confirm', 'segment', 'clock']
 
 
 # ==================== w944_shop_unk_settle ====================
@@ -1029,7 +1019,6 @@ def _make_hook_op(test_context: SrTestContext,
     )
     from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
     from sr_od.application.currency_war.obs import cw_observation as cwo
-    from sr_od.application.currency_war.obs import cw_observation_gate as gate
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_buy_cards as buy_cards_mod,
     )
@@ -1076,7 +1065,6 @@ def _make_hook_op(test_context: SrTestContext,
     monkeypatch.setattr(buy_cards_mod, 'read_shop_cards', _read_shop)
     monkeypatch.setattr(cwo, 'read_hp_opt', lambda *a, **k: None)
     monkeypatch.setattr(cwo, 'read_phase_round', lambda *a, **k: (1, 7))
-    monkeypatch.setattr(gate, 'wait_stable_frame', lambda *a, **k: None)
 
     monkeypatch.setattr(test_context, 'cw_match',
                         CurrencyWarMatch(_w944_shop_unk_settle_StubStrategy(), StrategySession()))

@@ -1,317 +1,18 @@
 """test_cw_gate_hooks 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
-- gate_fast_confirm: test_cw_gate_fast_confirm.py
 - gate_flags: test_cw_gate_flags.py
-- gate_post_collapse: test_cw_gate_post_collapse.py
-- w379_gate_v2_wire: test_cw_w379_gate_v2_wire.py
+- gate_post_collapse(收起探针段): test_cw_gate_post_collapse.py
 - r330_hook_gates: test_cw_r330_hook_gates.py
 - survey19_hooks: test_cw_survey19_hooks.py
-- gate_fixtures: test_cw_gate_fixtures.py
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+
+2026-09-03 gate 清尾批:cw_observation_gate 模块退役(RunNode 拆除后
+wait_stable_frame 已无生产调用方,消费清零)——gate_fast_confirm /
+gate_post_collapse(gate 桩段)/ gate_fixtures 三段随模块删除;保留的
+收起探针行为锁去 gate 桩重写(行为语义不变:探针恰一次、单轮交回外循环)。
 """
 from __future__ import annotations
-
-# ==================== gate_fast_confirm ====================
-import numpy as np
-import pytest
-
-from sr_od.application.currency_war.obs.cw_observation_gate import (
-    _PRESET_BASELINE,
-    preset_stable_baseline,
-    wait_stable_frame,
-)
-
-
-class _FakeClock:
-    """可推进假时钟;作为 clock 传入时 gate 的 _sleep 也是它驱动。"""
-
-    def __init__(self):
-        self.t = 0.0
-
-    def __call__(self):
-        return self.t
-
-    def advance(self, s: float):
-        self.t += s
-
-
-class _TickingClock(_FakeClock):
-    """每次被调用推进 step——gate 的 while 轮询天然推进。"""
-
-    def __init__(self, step: float = 0.3):
-        super().__init__()
-        self._step = step
-
-    def __call__(self):
-        self.t += self._step
-        return self.t
-
-
-class _FakeOp:
-    """离线 op 桩(gate 只用 ctx 透传 + screenshot/park_cursor)。"""
-
-    def __init__(self, frames):
-        self._frames = list(frames)
-        self.park_calls = 0
-        self.shot_count = 0
-        self.ctx = _FakeCtx()
-
-    def park_cursor(self):
-        self.park_calls += 1
-
-    def screenshot(self):
-        if not self._frames:
-            raise RuntimeError('no more frames')
-        self.shot_count += 1
-        return self._frames.pop(0)
-
-
-class _FakeCtx:
-    screen_loader = None
-
-
-def _gray(w=1920, h=1080, v=128):
-    img = np.zeros((h, w, 3), dtype=np.uint8)
-    img[:, :] = v
-    return img
-
-
-@pytest.fixture(autouse=True)
-def _clear_preset():
-    """模块级基线表隔离:每条测试前后清空,防跨测试泄漏。"""
-    _PRESET_BASELINE.clear()
-    yield
-    _PRESET_BASELINE.clear()
-
-
-def _prof(min_stable_s: float = 0.5) -> dict:
-    from one_dragon.base.geometry.rectangle import Rect
-    return {
-        'screen_list': ['x'],
-        'expect_screen': 'x',
-        'fingerprint_rects': (Rect(0, 0, 64, 64),),
-        'timeout_s': 6.0,
-        'min_stable_s': min_stable_s,
-    }
-
-
-def _patch_anchor_hit(monkeypatch, seq=None):
-    """接管 get_match_screen_name;seq=None 恒命中,否则按序返回(None=miss)。"""
-    from one_dragon.base.screen import screen_utils as su
-    calls = {'n': 0}
-    if seq is None:
-        def _fake(ctx, screen, screen_name_list, crop_first=False):
-            calls['n'] += 1
-            return screen_name_list[0]
-    else:
-        def _fake(ctx, screen, screen_name_list, crop_first=False):
-            v = seq[min(calls['n'], len(seq) - 1)]
-            calls['n'] += 1
-            return v
-    monkeypatch.setattr(su, 'get_match_screen_name', _fake)
-    return calls
-
-
-def test_fast_confirm_skips_ocr_after_first_anchor(monkeypatch):
-    """方案 A:锚命中 1 次后,后续确认轮不再调全图 OCR(指纹-only)。"""
-    calls = _patch_anchor_hit(monkeypatch)
-    op = _FakeOp([_gray()] * 5)
-    out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
-    assert out is not None
-    assert calls['n'] == 1, \
-        f'fast_confirm 下 OCR 锚判定只应调 1 次,实际 {calls["n"]}'
-
-
-def test_fast_confirm_fingerprint_change_re_anchors(monkeypatch):
-    """方案 A 兜底:指纹变化(屏可能已切换)→ 回锚定模式(重做 OCR)。"""
-    calls = _patch_anchor_hit(monkeypatch)
-    frames = [_gray(v=10), _gray(v=200), _gray(v=200),
-              _gray(v=200), _gray(v=200), _gray(v=200)]
-    op = _FakeOp(frames)
-    out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
-    assert out is not None
-    assert calls['n'] >= 2, \
-        f'指纹变化后必须回锚定模式(重做 OCR),实际 OCR 调用 {calls["n"]}'
-
-
-def test_fast_confirm_false_keeps_ocr_every_poll(monkeypatch):
-    """A/B 口:fast_confirm=False 关回旧行为——每轮 poll 都做 OCR 锚判定。"""
-    calls = _patch_anchor_hit(monkeypatch)
-    op = _FakeOp([_gray()] * 5)
-    out = wait_stable_frame(op, profile=_prof(), fast_confirm=False,
-                            clock=_TickingClock(0.3))
-    assert out is not None
-    assert calls['n'] >= 2, '关 fast_confirm 时每轮 poll 必须做 OCR 锚判定'
-
-
-def test_preset_baseline_reaches_stable_in_one_poll(monkeypatch):
-    """方案 B:overlay 预置基线后,gate 首次锚命中(1 轮 poll)即返帧。
-
-    语义:仍须「锚命中 + 指纹一致」确认(不裸跳);预置时刻距今
-    ≥ min_stable_s → 稳定窗一轮达标,跳过「从零等 2 轮」。
-    """
-    calls = _patch_anchor_hit(monkeypatch)
-    frame = _gray()
-    clk = _FakeClock()
-    preset_stable_baseline(frame, profile=_prof(), clock=clk)
-    assert 'x' in _PRESET_BASELINE, '预置必须落基线表'
-    clk.advance(1.0)   # 预置时刻距今 1.0s ≥ min_stable 0.5
-    op = _FakeOp([frame])
-    out = wait_stable_frame(op, profile=_prof(), clock=clk)
-    assert out is not None, '预置基线一致 + 锚命中 → 1 轮即稳定'
-    assert op.shot_count == 1, f'应只消费 1 帧,实际 {op.shot_count}'
-    assert calls['n'] == 1
-    # 单次消费:基线已 pop,下一次 gate 不再吃到(仍须 2 轮起)
-    op2 = _FakeOp([frame, frame, frame])
-    out2 = wait_stable_frame(op2, profile=_prof(), clock=_TickingClock(0.3))
-    assert out2 is not None
-    assert op2.shot_count >= 2, '无预置时不得一轮裸跳(仍须 2 轮起)'
-
-
-def test_preset_baseline_mismatch_falls_back(monkeypatch):
-    """方案 B 边界:预置基线过期(指纹已变)→ 走正常从零稳定路径。"""
-    _patch_anchor_hit(monkeypatch)
-    clk = _FakeClock()
-    preset_stable_baseline(_gray(v=10), profile=_prof(), clock=clk)
-    clk.advance(1.0)
-    # 当前画面指纹 ≠ 预置 → 正常路径:set fp → 下一轮比对 → 稳定
-    op = _FakeOp([_gray(v=200)] * 5)
-    out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
-    assert out is not None
-    assert op.shot_count >= 2, '指纹不匹配的预置不得触发一轮返帧'
-
-
-# ===== ADR-0264 终裁:融合(指纹快 poll 骨架 + 用户流程知识加速器) =====
-
-def test_node_end_accelerator_is_fast_poll_not_trust(monkeypatch):
-    """终裁锁(加速器① + 不做纯信任放行):节点结束段 = 锚命中后立即
-    进指纹快 poll——锚命中帧设基线,后续轮纯 CV;**不是**锚命中即返。
-
-    序列 [miss, hit, same, same]:锚在第 2 帧命中,必须再经指纹双轮
-    窗(min_stable 0.5,轮进 0.3:命中帧设基线→1 轮比对→窗达成)
-    才返帧;OCR 恰 1 次(快 poll 骨架)。
-    """
-    calls = _patch_anchor_hit(monkeypatch, seq=[None, 'x', 'x', 'x'])
-    op = _FakeOp([_gray(v=10)] * 4)
-    out = wait_stable_frame(op, profile=_prof(), clock=_TickingClock(0.3))
-    assert out is not None
-    # OCR 恰 2 次 = 1 次前置锚 miss(battle 后画面未到)+ 1 次锚命中;
-    # 命中后的确认轮零 OCR(快 poll 骨架)。
-    assert calls['n'] == 2, \
-        f'锚命中后确认轮不得再调 OCR,实际 OCR {calls["n"]} 次'
-    assert op.shot_count >= 3, \
-        f'不得锚命中即返(纯信任),须指纹窗确认,实际 {op.shot_count} 帧'
-
-
-def test_op_settle_waits_then_baseline_then_fast_poll(monkeypatch):
-    """终裁锁(加速器②):操作段预估等待 = 基线重置点——
-    先等再取基线,随后快 poll 确认 min_stable 窗(非单校验)。
-    等待值核减锁:1.2s(w781 自 1.5 核减:买牌特效实测 0.5-1s
-    上限+0.2s 余量;低估由指纹重置机制兜底,见 gate._OP_SETTLE_S 注)。"""
-    from sr_od.application.currency_war.obs import cw_observation_gate as gate
-    _patch_anchor_hit(monkeypatch)
-    op = _FakeOp([_gray(v=50)] * 4)
-    out = wait_stable_frame(op, profile=_prof(), segment='op_settle',
-                            clock=_TickingClock(0.3))
-    assert out is not None
-    assert gate._LAST_SETTLE_WAIT == gate._OP_SETTLE_S == 1.0, \
-        '操作段必须先走 1.0s 预估等待(基线重置点;2026-09-02 用户口述口径 #15 收起动画 ~1s 自 1.2 核减)'
-    assert op.shot_count >= 2, \
-        f'须基线+至少一轮指纹确认(非单帧放行),实际 {op.shot_count}'
-
-
-def test_op_settle_window_still_enforced(monkeypatch):
-    """终裁锁(加速器②护栏):操作段不豁免稳定窗——画面持续变化
-    (特效尾帧)→ 指纹逐轮重置基线,窗永不达成 → None。
-
-    操作段稳定窗已分级到地板 0.6s(_OP_SETTLE_MIN_STABLE_S),
-    但「窗须真实测量、不得单校验放行」的语义不变:指纹每轮变化
-    时即使窗再短也必超时(None 语义:调用方走兜底)。"""
-    from sr_od.application.currency_war.obs import cw_observation_gate as gate
-    _patch_anchor_hit(monkeypatch)
-    op = _FakeOp([_gray(v=v) for v in
-                  (10, 50, 90, 130, 170, 210, 30, 70, 110, 150,
-                   190, 20, 60, 100, 140, 180, 40, 80, 120, 160)])
-    out = wait_stable_frame(op, profile=_prof(min_stable_s=5.0),
-                            segment='op_settle',
-                            timeout_s=3.0,
-                            clock=_TickingClock(0.3))
-    assert out is None, '操作段稳定窗必须真实测量,不得单校验放行'
-    assert gate._LAST_SETTLE_WAIT == 1.0
-
-
-def test_op_settle_window_graded_to_floor(monkeypatch):
-    """操作段稳定窗分级锁:profile 窗 0.8s 时,settle 段取地板
-    0.6s——同场景下 settle 段确认轮数严格少于非 settle 段。"""
-    from sr_od.application.currency_war.obs import cw_observation_gate as gate
-    assert gate._OP_SETTLE_MIN_STABLE_S == 0.6, \
-        'settle 稳定窗地板必须 = 0.6s(特效帧误读红线,实机耗时报告风险声明)'
-    _patch_anchor_hit(monkeypatch)
-    op_s = _FakeOp([_gray(v=50)] * 8)
-    out_s = wait_stable_frame(op_s, profile=_prof(min_stable_s=0.8),
-                              segment='op_settle',
-                              timeout_s=6.0,
-                              clock=_TickingClock(0.3))
-    assert out_s is not None
-    op_n = _FakeOp([_gray(v=50)] * 8)
-    out_n = wait_stable_frame(op_n, profile=_prof(min_stable_s=0.8),
-                              timeout_s=6.0,
-                              clock=_TickingClock(0.3))
-    assert out_n is not None
-    assert op_s.shot_count < op_n.shot_count, \
-        (f'settle 段须按 0.6s 地板更早返帧(确认轮更少),'
-         f'实际 settle={op_s.shot_count} 帧 vs 非 settle={op_n.shot_count} 帧')
-
-
-def test_non_settle_keeps_profile_window(monkeypatch):
-    """分级边界:非 settle 段(环入口/兜底门)不吃 0.6 地板——
-    profile 窗抬高时确认轮随之变多(窗仍由 profile 驱动)。"""
-    _patch_anchor_hit(monkeypatch)
-    op_lo = _FakeOp([_gray(v=50)] * 8)
-    out_lo = wait_stable_frame(op_lo, profile=_prof(min_stable_s=0.8),
-                               timeout_s=6.0,
-                               clock=_TickingClock(0.3))
-    assert out_lo is not None
-    op_hi = _FakeOp([_gray(v=50)] * 12)
-    out_hi = wait_stable_frame(op_hi, profile=_prof(min_stable_s=1.7),
-                               timeout_s=6.0,
-                               clock=_TickingClock(0.3))
-    assert out_hi is not None
-    assert op_hi.shot_count > op_lo.shot_count, \
-        (f'非 settle 段窗必须随 profile 变化(不吃 0.6 地板),'
-         f'实际 0.8s={op_lo.shot_count} 帧 vs 1.7s={op_hi.shot_count} 帧')
-
-
-def test_fast_confirm_false_restores_full_gate(monkeypatch):
-    """终裁锁(回退开关④):fast_confirm=False → 每轮 poll 都做
-    全图 OCR 锚判定的旧完整门(A/B 回退)。"""
-    calls = _patch_anchor_hit(monkeypatch)
-    prof = _prof()
-    prof['fast_confirm'] = False   # profile 键同样有效
-    op = _FakeOp([_gray()] * 5)
-    out = wait_stable_frame(op, profile=prof, clock=_TickingClock(0.3))
-    assert out is not None
-    assert calls['n'] >= 2, \
-        f'关 fast_confirm 时每轮 poll 必须做 OCR 锚判定,实际 {calls["n"]}'
-
-
-def test_profile_stable_window_uniform_floor():
-    """三 profile 稳定窗统一下限锁:关态/开态与弹窗态/settle 段
-    同取 0.6s——稳定的真守门是指纹变化重置机制,0.6s 首尾一致窗
-    已拒绝动画中间帧;单局 gate stable 调用 30-84 次,0.8s 档每处
-    白付 0.2s(耗时审计报告 .debug/temp/currency_war/
-    w417_duration_audit/REPORT.md「需验证」表)。"""
-    from sr_od.application.currency_war.obs.cw_observation_gate import (
-        PROFILE_CLOSED,
-        PROFILE_OPEN,
-        PROFILE_POPUP,
-    )
-    for name, prof in (('closed', PROFILE_CLOSED), ('open', PROFILE_OPEN),
-                       ('popup', PROFILE_POPUP)):
-        assert prof['min_stable_s'] == 0.6, \
-            f'{name} profile 稳定窗必须 = 0.6s 统一下限'
-
 
 # ==================== gate_flags ====================
 
@@ -330,42 +31,24 @@ def test_gate_flags_removed() -> None:
     assert "'gate_" not in save_src, 'save 白名单不得再写 gate flag 键'
 
 
-# ==================== gate_post_collapse ====================
+# ==================== gate_post_collapse(收起探针段,gate 桩已去) ====================
 
 from types import SimpleNamespace
 
-import sr_od.application.currency_war.obs.cw_observation_gate as gate_mod
 import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as pd_mod
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     StartBattle,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
-from test.harness.fixture_controller import (
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
-)
-
-_FRAME = object()   # gate 稳定帧哨兵(身份断言用)
 
 
-def test_post_collapse_timeout_param_lock() -> None:
-    """收紧超时常量存在且界内:≥1s(不低于单轮 poll + min_stable_s
-    成本)、<12s(必须真省掉死等;实测收起后 ~2.0-2.2s stable,
-    4.0s≈2 倍余量)。"""
-    v = gate_mod.GATE_POST_COLLAPSE_TIMEOUT_S
-    assert isinstance(v, float)
-    assert 1.0 <= v < 12.0, f'收紧超时须在 [1, 12) 内,实得 {v}'
+def _make_director(monkeypatch, collapse_open):
+    """构造绕过 __init__ 的 CwScreenPrep,mock 开店态探测(gate 桩已随
+    gate 模块退役删除;单轮入口本就无稳定门调用)。
 
-
-def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
-                   collapse_open):
-    """构造绕过 __init__ 的 CwScreenPrep,mock gate 与开店态探测。
-
-    gate_calls 记录每次 wait_stable_frame 的 (timeout_s, expect_screen);
-    gate_returns 按序弹出返回值。collapse_open 控制 _try_collapse_open_shop
-    返回值(标量=恒值;列表=按序弹出,记录实际返回到返回的 list)。
+    collapse_open 控制 _try_collapse_open_shop 返回值(标量=恒值;
+    列表=按序弹出,记录实际返回到返回的 list)。
     """
     d = CwScreenPrep.__new__(CwScreenPrep)
     d.ctx = SimpleNamespace(current_instance_idx=99)
@@ -388,13 +71,6 @@ def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
     d._cached_deployed = []
     d._cached_vacancy = 0
     d._cached_gold_trusted = False
-
-    def _fake_gate(op, *, profile, timeout_s=None, **kw):
-        gate_calls.append((timeout_s, profile['expect_screen']))
-        ret = gate_returns.pop(0) if gate_returns else None
-        return ret
-
-    monkeypatch.setattr(gate_mod, 'wait_stable_frame', _fake_gate)
 
     # 预收重试窗的 sleep 打桩(离线单测不付真实等待;记录间隔供断言)
     sleeps: list[float] = []
@@ -434,13 +110,13 @@ def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
     return d, match, collapse_calls, sleeps
 
 
-def test_prep_round_entry_collapse_once_no_gate(monkeypatch) -> None:
+def test_prep_round_entry_collapse_once(monkeypatch) -> None:
     """拆内环定稿(替代原 gate 时序四锁):备战单轮入口 = 开店态收起探针
-    **恰一次**;gate 时间稳定窗(wait_stable_frame)随内环整体拆除,单轮
-    直接进观察(稳定性由外循环每轮重识别保证)。"""
-    calls: list = []
+    **恰一次**;gate 时间稳定窗(wait_stable_frame)随内环整体拆除、模块
+    已退役(2026-09-03 清尾批),单轮直接进观察(稳定性由外循环每轮重
+    识别保证)。"""
     d, match, collapse_calls, _sleeps = _make_director(
-        monkeypatch, calls, [], collapse_open=True)
+        monkeypatch, collapse_open=True)
     match.strategy.decide_prep_screen = (
         lambda session, config: [pd_mod.DeferSpheres()])
     d.ctx.cw_match = match   # 单轮 run 入口读 ctx.cw_match
@@ -449,15 +125,9 @@ def test_prep_round_entry_collapse_once_no_gate(monkeypatch) -> None:
     #                     等待已由 harness sleep 桩吃掉,不需要 fast_sleep)
 
     assert collapse_calls == [True], f'收起探针应恰调一次,实得 {collapse_calls}'
-    assert calls == [], f'gate 时间稳定窗应已拆除(W971 P3b),实得 {calls}'
     assert '交回外循环' in (result.status or ''), f'单轮须交回外循环:{result.status!r}'
 
 
-# ==================== (w379_gate_v2_wire 已随 C4 开关族删除) ====================
-# (C4 换线存活门接线锁段(G1-G5)已随 line_switch_survival_gate_enabled
-#  开关族删除——旧方案清退批,清查报告 OLD_MIX_AUDIT §1.3;
-#  cw_intention._switch_gate_open 接线、cw_line_switch.survival_gate 族
-#  与 v3_line_gate_* 决策位/闩同批删。)
 # ==================== r330_hook_gates ====================
 # (2026-09-03 瘦身批:test_is_prep_like_frame_exists / test_layout_hook_gated /
 #  test_star_hook_gated 三条纯在场锁删除(纪律 8:hasattr/标识符在源=实现的
@@ -477,8 +147,6 @@ def test_bookcard_stop_hook_removed() -> None:
 
 
 # ==================== survey19_hooks ====================
-
-from pathlib import Path  # noqa: E402
 
 from sr_od.application.currency_war.kernel.cw_survey19_hooks import (  # noqa: E402
     encounter_tier_score,
@@ -518,108 +186,3 @@ def test_p8_supply_reroll() -> None:
     assert supply_reroll_decision(True, True) == 'pick_diamond'
     assert supply_reroll_decision(False, False) == 'reroll'
     assert supply_reroll_decision(False, True) == 'pick_best'
-
-
-# ==================== gate_fixtures ====================
-
-import pytest as _gate_fixtures_pytest
-
-from sr_od.application.currency_war.obs.cw_observation_gate import (
-    PROFILE_CLOSED,
-    PROFILE_OPEN,
-)
-from sr_od.application.currency_war.obs.cw_observation_gate import (
-    wait_stable_frame as _gate_fixtures_wait_stable_frame,
-)
-
-
-class _FixtureOp:
-    """把 fixture 截图喂给 gate 的桩 op(r324 后 gate 走
-    screen_utils.get_match_screen_name——真 ctx 建档判定,
-    fixture 场景恰好完美匹配,无需 mock 锚)。"""
-
-    def __init__(self, ctx, frame):
-        self.ctx = ctx
-        self._frame = frame
-        self.park_calls = 0
-
-    def park_cursor(self, **kw):
-        self.park_calls += 1
-
-    def screenshot(self):
-        return self._frame
-
-
-def _gate(op, profile, **kw):
-    """跑 gate(短超时,离线单帧喂两次靠 stable 窗推进)。"""
-    class _Clk:
-        def __init__(self):
-            self.t = 0.0
-
-        def __call__(self):
-            self.t += 0.5   # 每 poll 推进 0.5s(>profile 稳定窗 0.6s 两轮过)
-            return self.t
-    return _gate_fixtures_wait_stable_frame(op, profile=profile, clock=_Clk(), **kw)
-
-
-def test_gate_closed_passes_on_reward_panel_frame(test_context) -> None:
-    """局35 形态:1-1 奖励面板帧(备战+奖励展开)关态 gate 放行。
-
-    fixture「货币战争-备战/补给节点.webp」=备战屏带节点面板
-    展开形态(节点行被遮)——圆数门误杀的现场形态。
-    """
-    if not test_context.has_screen('货币战争-备战', '补给节点'):
-        _gate_fixtures_pytest.skip('fixture 缺:货币战争-备战/补给节点.webp')
-    frame = test_context.load_screen('货币战争-备战', '补给节点')
-    op = _FixtureOp(test_context, frame)
-    out = _gate(op, PROFILE_CLOSED, timeout_s=8)
-    assert out is not None, '奖励面板帧应放行(局35 误杀形态回归锁)'
-
-
-def test_gate_fingerprint_same_source_stable(test_context) -> None:
-    """同源图连续指纹必稳(阈值比较,截屏噪声容差;r324 基元
-    在 cv2_utils)。"""
-    if not test_context.has_screen('货币战争-备战', '补给节点'):
-        _gate_fixtures_pytest.skip('fixture 缺')
-    from one_dragon.base.geometry.rectangle import Rect
-    from one_dragon.utils import cv2_utils
-    frame = test_context.load_screen('货币战争-备战', '补给节点')
-    r = (Rect(1408, 23, 1498, 103), Rect(60, 895, 320, 975))
-    a = cv2_utils.fingerprint_in_rects(frame, r)
-    b = cv2_utils.fingerprint_in_rects(frame, r)   # 同一图再读=完全一致
-    assert cv2_utils.fingerprint_same(a, b), '同源图指纹必须一致(阈值语义)'
-
-
-def test_gate_closed_rejects_shop_open_frame(test_context) -> None:
-    """开商店帧:关态 profile 拒绝(absence 锚「按钮-收起」可见)。"""
-    if not test_context.has_screen('货币战争-备战-开商店', 'shop_open'):
-        _gate_fixtures_pytest.skip('fixture 缺:货币战争-备战-开商店/shop_open.webp')
-    frame = test_context.load_screen('货币战争-备战-开商店', 'shop_open')
-    op = _FixtureOp(test_context, frame)
-    out = _gate(op, PROFILE_CLOSED, timeout_s=4)
-    assert out is None, '开商店帧关态 gate 必须拒绝(absence 锚)'
-
-
-def test_gate_open_profile_passes_shop_open(test_context) -> None:
-    """开态 profile 在商店开帧放行(锚=按钮-收起 presence)。"""
-    if not test_context.has_screen('货币战争-备战-开商店', 'shop_open'):
-        _gate_fixtures_pytest.skip('fixture 缺')
-    frame = test_context.load_screen('货币战争-备战-开商店', 'shop_open')
-    op = _FixtureOp(test_context, frame)
-    out = _gate(op, PROFILE_OPEN, timeout_s=8)
-    assert out is not None, '商店开帧开态 gate 应放行'
-
-
-def test_gate_closed_passes_on_r1_stop_frame(test_context) -> None:
-    """r344 实机回归锁(局37 停机现场帧):gate 超时预算按全图
-    OCR poll 成本(~5s/轮)调 12s 后,真机 r1 备战帧上关态 gate
-    必须放行(屏判定 crop_first=False 全图 OCR,局37 diag
-    screen:0 实证 4 个 id_mark 区全中,缺的只是预算)。防
-    预算/口径回退让 ping-pong 停机复发。
-    fixture=局37 bail_pingpong 停机保全帧(hp=80/r1/gold=3)。"""
-    if not test_context.has_screen('货币战争-备战', 'r1_idle_stop'):
-        _gate_fixtures_pytest.skip('fixture 缺:货币战争-备战/r1_idle_stop.webp')
-    frame = test_context.load_screen('货币战争-备战', 'r1_idle_stop')
-    op = _FixtureOp(test_context, frame)
-    out = _gate(op, PROFILE_CLOSED, timeout_s=8)
-    assert out is not None, '局37 停机现场帧关态 gate 必须放行(r344 锁)'

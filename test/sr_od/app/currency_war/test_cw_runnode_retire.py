@@ -44,34 +44,22 @@ def _make_op(cls, *, in_node: bool, do_action_calls: list):
     return _Op()
 
 
-def _capture_baseline(monkeypatch) -> list:
-    """桩化 cw_observation_gate.preset_stable_baseline(局部 import 面捕获)。"""
-    from sr_od.application.currency_war.obs import cw_observation_gate as gate
-    calls: list = []
-    monkeypatch.setattr(gate, 'preset_stable_baseline',
-                        lambda screen, profile=None: calls.append(profile))
-    return calls
 
 
 # ==================== 补给节点流转(行为等价①②) ====================
 
-def test_supply_leaves_node_success_with_baseline(monkeypatch) -> None:
-    """验证完成才 success:离开补给屏(锚 miss)→ success(节点完成)+
-    关态稳定基线预置(ADR-0264 语义随迁)。"""
-    from sr_od.application.currency_war.obs.cw_observation_gate import (
-        PROFILE_CLOSED,
-    )
+def test_supply_leaves_node_success(monkeypatch) -> None:
+    """验证完成才 success:离开补给屏(锚 miss)→ success(节点完成)。
+    (gate 清尾批:原「+关态稳定基线预置」断言随 gate 模块退役删除。)"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
         CwScreenSupplyNode,
     )
-    calls = _capture_baseline(monkeypatch)
     actions: list = []
     op = _make_op(CwScreenSupplyNode, in_node=False, do_action_calls=actions)
     res = op.handle()
     assert res.success is True
     assert '节点完成' in res.status
     assert actions == []                       # 离开节点 = 不再发动作
-    assert calls == [PROFILE_CLOSED]           # 关态基线预置(行为等价)
 
 
 def test_supply_in_node_act_then_retry(monkeypatch) -> None:
@@ -79,7 +67,6 @@ def test_supply_in_node_act_then_retry(monkeypatch) -> None:
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
         CwScreenSupplyNode,
     )
-    _capture_baseline(monkeypatch)
     actions: list = []
     op = _make_op(CwScreenSupplyNode, in_node=True, do_action_calls=actions)
     res = op.handle()
@@ -101,21 +88,19 @@ def test_supply_budget_semantics_unchanged() -> None:
 
 def test_megastar_leaves_node_success_with_settle(monkeypatch) -> None:
     """巨星:overlay 消失 → success(完成承诺 = 固定 1.0s,原委托壳语义)
-    + 关态基线预置;选中标记复位副作用随迁。"""
+    (选中标记复位副作用随迁)。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
         CW_OVERLAY_SETTLE_S,
     )
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
         CwScreenMegastar,
     )
-    calls = _capture_baseline(monkeypatch)
     actions: list = []
     op = _make_op(CwScreenMegastar, in_node=False, do_action_calls=actions)
     res = op.handle()
     assert res.success is True
     assert res.wait == CW_OVERLAY_SETTLE_S
     assert actions == []
-    assert calls  # 基线预置已发生
 
 
 def test_megastar_in_node_act_then_retry(monkeypatch) -> None:
@@ -123,7 +108,6 @@ def test_megastar_in_node_act_then_retry(monkeypatch) -> None:
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
         CwScreenMegastar,
     )
-    _capture_baseline(monkeypatch)
     actions: list = []
     op = _make_op(CwScreenMegastar, in_node=True, do_action_calls=actions)
     res = op.handle()
