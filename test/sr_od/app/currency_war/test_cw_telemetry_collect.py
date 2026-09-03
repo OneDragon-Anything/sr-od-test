@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_telemetry_collect 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -13,25 +12,20 @@
 """
 from __future__ import annotations
 
-
 # ==================== w306_supply_telemetry ====================
-
 import time
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.kernel.cw_state import GameState
-
-from sr_od.application.currency_war.telemetry import recorder
-from sr_od.application.currency_war.telemetry import state
-
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
-
-from sr_od.application.currency_war.telemetry.state import consume_last_supply_pick, set_last_supply_pick
-
-from sr_od.application.currency_war.telemetry.query import read_jsonl
-from sr_od.application.currency_war.telemetry import state
+from sr_od.application.currency_war.telemetry import recorder, state
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
+from sr_od.application.currency_war.telemetry.query import read_jsonl
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
+from sr_od.application.currency_war.telemetry.state import (
+    consume_last_supply_pick,
+    set_last_supply_pick,
+)
 
 # ===== ③ OutcomeRecord.supply_pick(schema 锁) =====
 
@@ -173,14 +167,16 @@ def test_synthetic_row_gold_unreadable_omitted(monkeypatch) -> None:
 
 
 def test_supply_producer_wiring_in_source() -> None:
-    """弱锁保底:RunSupplyNode 选定分支真接线(set_last_supply_pick + 选项清单透传,
+    """弱锁保底:CwScreenSupplyNode 选定分支真接线(set_last_supply_pick + 选项清单透传,
     :options=逐列内容动态列表)。锁语义重推(观察层数据移交批):选定快照改
     为本地 ``picked`` dict 构建后同时喂暂存槽与合成决策帧 extra.supply_pick,
     逐列内容透传语义不变,字面锁随之更新到新形状。"""
     import inspect
 
-    from sr_od.application.currency_war.operations.run_nodes import run_supply_node
-    src = inspect.getsource(run_supply_node.RunSupplyNode._do_action)
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node,
+    )
+    src = inspect.getsource(cw_screen_supply_node.CwScreenSupplyNode._do_action)
     assert 'set_last_supply_pick(' in src
     assert "'options': [{'char': o.char" in src   # 逐列内容透传(实际识别列数)
 
@@ -209,12 +205,14 @@ class _NoSleepTime:
 
 
 def _make_supply_op(monkeypatch):
-    """构 RunSupplyNode 桩(__new__ 绕过 op __init__;只喂 detour 依赖面)。
+    """构 CwScreenSupplyNode 桩(__new__ 绕过 op __init__;只喂 detour 依赖面)。
 
     返回 (op, decision_captured)。round_by_find_and_click_area 全成功;
     截图恒为同一伪帧(离线桩);read_game_state 桩出确定值。
     """
-    from sr_od.application.currency_war.operations.run_nodes import run_supply_node as m
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node as m,
+    )
 
     # 离线桩空等消除:模块自持 import time,换 no-sleep 替身(类 docstring 详因)
     monkeypatch.setattr(m, 'time', _NoSleepTime())
@@ -233,7 +231,7 @@ def _make_supply_op(monkeypatch):
                         lambda ctx, screen, **kw: GameState(hp=88, gold=66,
                                                             plane=1,
                                                             round_num=5))
-    op = m.RunSupplyNode.__new__(m.RunSupplyNode)
+    op = m.CwScreenSupplyNode.__new__(m.CwScreenSupplyNode)
     fake_screen = object()
     match = SimpleNamespace(session=SimpleNamespace(target_comp=None,
                                                     last_state=None))
@@ -298,7 +296,9 @@ def test_detour_return_miss_no_snapshot(monkeypatch) -> None:
 
 def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
     """重进失败 → 本轮不做任何选择动作(防备战屏盲点卡身),交下轮重试 detour。"""
-    from sr_od.application.currency_war.operations.run_nodes import run_supply_node as m
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node as m,
+    )
 
     op, captured = _make_supply_op(monkeypatch)
 
@@ -347,8 +347,10 @@ def test_detour_semantics_lock_in_source() -> None:
     """弱锁:detour 快照带 phase='supply_detour' 且 actions=[](非购买轮语义)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations.run_nodes import run_supply_node
-    src = inspect.getsource(run_supply_node.RunSupplyNode._supply_detour_collect)
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node,
+    )
+    src = inspect.getsource(cw_screen_supply_node.CwScreenSupplyNode._supply_detour_collect)
     assert "extra={'phase': 'supply_detour'}" in src
     assert 'actions=[], gold_point=True' in src
 
@@ -365,14 +367,7 @@ import inspect
 
 import pytest
 
-from sr_od.application.currency_war.telemetry import state
-from sr_od.application.currency_war.telemetry import recorder
-
-
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder, record_event_choice
-
-from sr_od.application.currency_war.telemetry.query import read_jsonl
-from sr_od.application.currency_war.telemetry import state as cw_telemetry
+from sr_od.application.currency_war.telemetry.recorder import record_event_choice
 
 
 @pytest.fixture(autouse=True)
@@ -476,8 +471,8 @@ _W312_WIRING = [
     # (模块路径, 承载函数/节点方法, 事件短码)
     ('sr_od.application.currency_war.operations.handlers.handle_encounter',
      'HandleEncounter.handle', 'encounter'),
-    ('sr_od.application.currency_war.operations.run_nodes.run_megastar_node',
-     'RunMegastarNode._do_action', 'megastar'),
+    ('sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay',
+     'CwScreenMegastar._do_action', 'megastar'),
     ('sr_od.application.currency_war.operations.handlers.handle_select_partner',
      'HandleSelectPartner.handle', 'partner'),
     ('sr_od.application.currency_war.operations.handlers.handle_planner_event',
@@ -521,27 +516,19 @@ def test_single_helper_no_copy() -> None:
         assert "record_exogenous(" not in src, \
             f'{func_qual} 应走共用 record_event_choice,不直调 record_exogenous'
 
-from sr_od.application.currency_war.kernel.cw_state import GameState
 
 
 # ==================== w323_sell_income_telemetry ====================
 
-import inspect
 from contextlib import contextmanager
 
 import pytest
 
-from sr_od.application.currency_war.telemetry import state
-from sr_od.application.currency_war.telemetry import recorder
-
 from sr_od.application.currency_war.kernel.cw_state import (
-    GameState,
     SellBench,
 )
-
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder, record_sell_income
-
-from sr_od.application.currency_war.telemetry.query import query_economy, read_jsonl
+from sr_od.application.currency_war.telemetry.query import query_economy
+from sr_od.application.currency_war.telemetry.recorder import record_sell_income
 
 
 @pytest.fixture(autouse=True)
@@ -692,13 +679,7 @@ def test_economy_no_sell_round_unchanged(tmp_path) -> None:
 
 # ==================== w239_p2r1_loss_outcome ====================
 
-import inspect
-import time
-from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
 class _OcrItem(SimpleNamespace):
@@ -898,22 +879,13 @@ def test_branch_wiring_in_source() -> None:
     assert 'self._record_round_outcome(screen)' in src
 
 
-from sr_od.application.currency_war.telemetry import recorder
 
 
 # ==================== w28_outcome_write_defects ====================
 
-import time
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_round
-from sr_od.application.currency_war.kernel.cw_state import GameState
-
-from sr_od.application.currency_war.telemetry import recorder
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
-
-from sr_od.application.currency_war.telemetry.query import read_jsonl
 
 # ===== 缺陷①修 a:parse_settlement_round 纯函数 =====
 
@@ -1084,7 +1056,7 @@ def test_residual_unparseable_still_tagged(monkeypatch) -> None:
 
 
 def test_supply_outcome_synthesized(monkeypatch) -> None:
-    """RunSupplyNode 完成点 → 合成 node_type='补给' 行(source='synthetic_supply')。"""
+    """CwScreenSupplyNode 完成点 → 合成 node_type='补给' 行(source='synthetic_supply')。"""
     from sr_od.application.currency_war.operations import cw_loop as bl
 
     captured: list[dict] = []
@@ -1149,12 +1121,12 @@ def test_supply_outcome_hp_unreadable_low_confidence(monkeypatch) -> None:
 
 
 def test_supply_branch_wiring_in_source() -> None:
-    """弱锁保底:0e 分支真接线(RunSupplyNode 成功 → _record_supply_outcome)。"""
+    """弱锁保底:0e 分支真接线(CwScreenSupplyNode 成功 → _record_supply_outcome)。"""
     import inspect
 
     from sr_od.application.currency_war.operations import cw_loop
     src = inspect.getsource(cw_loop.CwLoop.loop)
-    assert 'RunSupplyNode(self.ctx).execute()' in src
+    assert 'CwScreenSupplyNode(self.ctx).execute()' in src
     assert '_record_supply_outcome(screen)' in src
 
 
@@ -1163,7 +1135,6 @@ def test_supply_branch_wiring_in_source() -> None:
 
 # ==================== w280_takeover_collect ====================
 
-import inspect
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING

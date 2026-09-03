@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_overlay_gates 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -12,13 +11,10 @@
 """
 from __future__ import annotations
 
-
 # ==================== adr0263_overlay_guard ====================
-
-from pathlib import Path
-
 import numpy as np
 import pytest
+
 from one_dragon.base.geometry.rectangle import Rect
 
 # 证据帧(034f8ef3)实测:金币说明面板标题锚 pc_rect (1000,370,1165,435),
@@ -115,8 +111,8 @@ class _HookCtx(_FakeCtx):
 @pytest.fixture
 def hook_env(monkeypatch, tmp_path):
     """mock 掉 CV/OCR 依赖,只留 summon 钩子判定链(chdir tmp 防真实 .debug 落盘)。"""
-    from sr_od.application.currency_war.obs import cw_identity_obs, currency_war_cv
     from sr_od.application.currency_war.kernel import cw_obs_core, cw_observe
+    from sr_od.application.currency_war.obs import currency_war_cv, cw_identity_obs
     monkeypatch.chdir(tmp_path)
     # 生产约定:.debug/temp/currency_war/ 已存在(flag/shots 落盘处);tmp 里预建,
     # 否则 flag write_text 抛错被钩子外层 best-effort except 吞掉,测不到停机分支
@@ -219,7 +215,7 @@ def _load_screen_areas() -> dict[str, set[str]]:
 
 
 def _import_handler(class_name: str) -> type:
-    """按类名在 handler / run_node 承载包的各子模块中 import。
+    """按类名在 handler / cw_screen 承载包的各子模块中 import。
 
     类不经包 ``__init__`` 导出(项目约定 ``__init__`` 默认不暴露模块),
     须逐子模块 getattr;两包全找不到即 AssertionError。
@@ -227,7 +223,7 @@ def _import_handler(class_name: str) -> type:
     last_err: Exception | None = None
     for pkg_name in (
         'sr_od.application.currency_war.operations.handlers',
-        'sr_od.application.currency_war.operations.run_nodes',
+        'sr_od.application.currency_war.operations.cw_screen',
         # W971 P3b:简报执行面迁 cw_flow.BriefingOp(HandleBriefing 退役)
         'sr_od.application.currency_war.operations.cw_flow',
     ):
@@ -386,7 +382,7 @@ def test_residual_segment_disjoint_and_registered() -> None:
 #: A 面切换后的清场派生集黄金值(= derive_clearable():激活 ∧ closable,
 #: 声明序)。相对迁移前手写 5 条清场表的**两处成员收缩**:星徽秘典弹窗、
 #: 补给 decision 化(关闭即丢决策内容,设计定案 5)后退出清场,改走
-#: event_overlay bail → 0i 选卡 / RunSupplyNode 消化。
+#: event_overlay bail → 0i 选卡 / CwScreenSupplyNode 消化。
 _GOLDEN_CLEAR_MAP: dict[str, str] = {
     '货币战争-积分奖励': '按钮-关闭',
     '货币战争-中断挑战弹窗': '按钮-关闭',
@@ -405,7 +401,9 @@ def test_aface_clear_set_switched_to_registry() -> None:
     """
     import inspect
 
-    from sr_od.application.currency_war.obs.cw_observation_gate import  ENTRY_OVERLAY_CLOSE
+    from sr_od.application.currency_war.obs.cw_observation_gate import (
+        ENTRY_OVERLAY_CLOSE,
+    )
     # ① 派生值 = 黄金(成员收缩锁)
     assert ENTRY_OVERLAY_CLOSE == _GOLDEN_CLEAR_MAP, (
         f'清场派生集漂移: 实际={ENTRY_OVERLAY_CLOSE} 黄金={_GOLDEN_CLEAR_MAP}')
@@ -430,7 +428,7 @@ def test_aface_clear_judgment_per_fixture_frame() -> None:
     - 星徽秘典弹窗在场 → **不点**其关闭钮(A 面行为变化 1:移出清场,
       改走 0i 选卡;旧行为会点「按钮-关闭」丢选卡内容);
     - 补给在场 → **不点**「按钮-返回备战界面」(行为变化 2:移出清场,
-      改走 bail → RunSupplyNode 消化);
+      改走 bail → CwScreenSupplyNode 消化);
     - 武装箱弹窗在场 → 仍点「按钮-关闭」(清场留存成员,防过度收缩)。
 
     帧模型:monkeypatch ``screen_utils.get_match_screen_name`` 只对剧本
@@ -467,10 +465,10 @@ def test_aface_clear_judgment_per_fixture_frame() -> None:
     clicks = _run_clear('货币战争-星徽秘典弹窗')
     assert clicks == [], (
         f'星徽秘典弹窗仍被环入口清场关闭(应走 0i 选卡消化): {clicks}')
-    # 行为变化 2:补给不再被「返回备战界面」一键离场(应走 RunSupplyNode)
+    # 行为变化 2:补给不再被「返回备战界面」一键离场(应走 CwScreenSupplyNode)
     clicks = _run_clear('货币战争-补给')
     assert clicks == [], (
-        f'补给 modal 仍被环入口一键离场(应走 bail→RunSupplyNode): {clicks}')
+        f'补给 modal 仍被环入口一键离场(应走 bail→CwScreenSupplyNode): {clicks}')
     # 留存成员仍清:武装箱弹窗在场 → 点「按钮-关闭」(mock 帧不随点击变化,
     # 每轮清场轮重复命中同屏 → 断言每次点击都是该关闭钮,无其它屏混入)
     clicks = _run_clear('货币战争-武装箱弹窗')
@@ -680,14 +678,19 @@ import dataclasses
 import inspect
 import math
 
-from sr_od.application.currency_war.kernel.cw_state import  BENCH_CAPACITY, GameState
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.kernel.cw_economy import  REFRESH_ROLL_CAP, refresh_ev_budget
-from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_intention import intention_core
+from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+from sr_od.application.currency_war.kernel.cw_economy import (
+    REFRESH_ROLL_CAP,
+    refresh_ev_budget,
+)
+from sr_od.application.currency_war.kernel.cw_intention import (
+    IntentionState,
+    intention_core,
+)
+from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
+from sr_od.application.currency_war.kernel.cw_state import BENCH_CAPACITY, GameState
 
 _REG = DEFAULT_REGISTRY
 
@@ -769,7 +772,9 @@ def test_find_cap_quantile_formula_hand_recalc() -> None:
     (对拍侧与实现侧同源,公式锁钉的是闭合形状不是数值巧合)。注入
     q=0.05 使帽腿 <6 实际参与 min(默认 q=0.8 的帽在 E_find 放大量级下
     结构性不绑定,SPECS B-v2 §3 已声明)。"""
-    from sr_od.application.currency_war.data.cw_shop_odds import  expected_refreshes_for_card
+    from sr_od.application.currency_war.data.cw_shop_odds import (
+        expected_refreshes_for_card,
+    )
     st = _state(gold=200, level=6)
     sess = StrategySession()          # 兜底链 2 费:非塌缩带
     q = 0.05
@@ -846,14 +851,32 @@ import logging
 
 import pytest as _w724_overlay_a_rank_pytest
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _w724_overlay_a_rank_StrategySession
+from sr_od.application.currency_war.decision.cw_strategy import (
+    StrategySession as _w724_overlay_a_rank_StrategySession,
+)
 from sr_od.application.currency_war.decision.decision_v2.arbiter import arbitrate
-from sr_od.application.currency_war.decision.decision_v2.candidates import  Candidate
+from sr_od.application.currency_war.decision.decision_v2.candidates import Candidate
 from sr_od.application.currency_war.decision.decision_v2.ev import RoundPosture
 from sr_od.application.currency_war.decision.decision_v2.posture import Posture
-from sr_od.application.currency_war.decision.decision_v2.posture_release import  ReleaseDirective, channel_rank_scope, rank_refresh_vs_upgrade
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY as _w724_overlay_a_rank_DEFAULT_REGISTRY
-from sr_od.application.currency_war.kernel.cw_state import  BENCH_CAPACITY as _w724_overlay_a_rank_BENCH_CAPACITY, BenchChar, GameState as _w724_overlay_a_rank_GameState, LevelUp, RefreshShop
+from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+    ReleaseDirective,
+    channel_rank_scope,
+    rank_refresh_vs_upgrade,
+)
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY as _w724_overlay_a_rank_DEFAULT_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BENCH_CAPACITY as _w724_overlay_a_rank_BENCH_CAPACITY,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    LevelUp,
+    RefreshShop,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _w724_overlay_a_rank_GameState,
+)
 
 
 @_w724_overlay_a_rank_pytest.fixture(autouse=True)
@@ -945,10 +968,15 @@ def test_rank_margins_hand_recalc_from_single_addresses() -> None:
     cw_shop_odds.expected_refreshes_for_card;升级费=kernel.upgrade_plan_fee),
     锁钉「比较形状」不锁数值巧合(帧取锁定核 1★ 副本未齐的常态溢余帧)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.decision.decision_v2.ev import  levelup_refresh_saving
+    from sr_od.application.currency_war.decision.decision_v2.ev import (
+        levelup_refresh_saving,
+    )
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    from sr_od.application.currency_war.kernel.cw_economy import  upgrade_plan_fee
-    from sr_od.application.currency_war.kernel.cw_intention import  IntentionState, intention_core
+    from sr_od.application.currency_war.kernel.cw_economy import upgrade_plan_fee
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        IntentionState,
+        intention_core,
+    )
     # 锁定核 comp:bench 放 1★ 核心 1 张(saving 的 owned 输入非退化)
     comp = next(c for c in COMP_LIBRARY
                 if CHARACTERS.get(intention_core(c)) is not None
@@ -1009,7 +1037,9 @@ def test_scope_predicate_uses_adr0445_flip_semantics() -> None:
     的「应急帧无 flip」半边注入 crisis_release_enabled=False 重推钉护
     (让位结构语义,同 w611/w633 形态);默认态下应急帧产 crisis 指令
     属宽辖域另一辖域,由 w917 锁组辖——本测试同时对照两者防语义漂移。"""
-    from sr_od.application.currency_war.decision.decision_v2.posture_release import  release_directive
+    from sr_od.application.currency_war.decision.decision_v2.posture_release import (
+        release_directive,
+    )
     st_low = _w724_overlay_a_rank_state(gold=80, hp=25)   # 应急辖区,flip 让位
     posture_low = Posture(save=False, level_up=True, refresh_budget=6)
     d = release_directive(st_low, _sess_of(st_low), _w724_overlay_a_rank_REG, 'FORM',
@@ -1048,7 +1078,10 @@ def test_rank_single_address_probability_source(monkeypatch) -> None:
     import sr_od.application.currency_war.data.cw_shop_odds as odds
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    from sr_od.application.currency_war.kernel.cw_intention import  IntentionState, intention_core
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        IntentionState,
+        intention_core,
+    )
     comp = next(c for c in COMP_LIBRARY
                 if CHARACTERS.get(intention_core(c)) is not None
                 and (CHARACTERS[intention_core(c)].cost or 0) > 0)
@@ -1076,7 +1109,7 @@ def test_rank_no_second_margin_address_structure() -> None:
     费用查表(W720 修订要点②:刷新边际单一址,禁第二账)。"""
     import inspect
 
-    from sr_od.application.currency_war.decision.decision_v2 import  posture_release
+    from sr_od.application.currency_war.decision.decision_v2 import posture_release
     src = inspect.getsource(posture_release.rank_refresh_vs_upgrade)
     assert 'levelup_refresh_saving' in src
     assert 'upgrade_plan_fee' in src
@@ -1147,7 +1180,10 @@ def test_arbiter_pop_slot_arm_not_overwritten(monkeypatch) -> None:
     升级照放行。"""
     from sr_od.application.currency_war.decision.decision_v2 import ev as _ev
     from sr_od.application.currency_war.kernel import cw_economy
-    from sr_od.application.currency_war.kernel.cw_intention import  HoardTarget, IntentionState
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        HoardTarget,
+        IntentionState,
+    )
     carry = '姬子·启行'
     st = _w724_overlay_a_rank_state(gold=80)
     st.bench = [BenchChar(slot=0, char_id=carry, faction='贝洛伯格', star=1)] \
@@ -1191,7 +1227,10 @@ def _ma_frame(level: int = 5):
                                   slot=1)],
         bench=[BenchChar(slot=0, char_id=carry, faction='击破', star=1)],
         shop=[], node_type='battle')
-    from sr_od.application.currency_war.kernel.cw_intention import  HoardTarget, IntentionState
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        HoardTarget,
+        IntentionState,
+    )
     s = _w724_overlay_a_rank_StrategySession()
     s.v2_state = ('economy', False, False, 0, 0, 0, 0, 0)
     s.v3_mode = 'economy'
@@ -1212,7 +1251,10 @@ def test_ma_lane_stops_on_collapse_frame() -> None:
     (锁定核 4 费 @lv5,refresh_prob 比值<ω)M-A 定向车道停付——
     非正分刷新拒,预算零消耗(轮/局计数不动)。"""
     st, s = _ma_frame(level=5)
-    from sr_od.application.currency_war.kernel.cw_economy import  _omega_collapse_zeroed, _target_core_cost
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        _omega_collapse_zeroed,
+        _target_core_cost,
+    )
     _, tc = _target_core_cost(s)
     assert _omega_collapse_zeroed(st, s, _w724_overlay_a_rank_REG, tc), '前置:帧须在塌缩带'
     cand = Candidate(action=RefreshShop(cost=2), tag='refresh', source='shop')
@@ -1227,7 +1269,10 @@ def test_ma_lane_zero_drift_outside_collapse_band() -> None:
     """零漂移臂:非塌缩带同级帧(M-A 授权窗开)定向刷新照常有界放行
     (ADR-0475 接线只辖塌缩带,不缩窗内正常搜索量)。"""
     st, s = _ma_frame(level=8)
-    from sr_od.application.currency_war.kernel.cw_economy import  _omega_collapse_zeroed, _target_core_cost
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        _omega_collapse_zeroed,
+        _target_core_cost,
+    )
     _, tc = _target_core_cost(s)
     assert not _omega_collapse_zeroed(st, s, _w724_overlay_a_rank_REG, tc), '前置:帧须在带外'
     cand = Candidate(action=RefreshShop(cost=2), tag='refresh', source='shop')
@@ -1257,7 +1302,10 @@ from typing import TYPE_CHECKING
 
 import pytest as _test_skip_shop_overlay_pytest
 
-from one_dragon.base.screen.screen_utils import find_area_in_screen, get_match_screen_name
+from one_dragon.base.screen.screen_utils import (
+    find_area_in_screen,
+    get_match_screen_name,
+)
 
 if TYPE_CHECKING:
     from test.conftest import SrTestContext

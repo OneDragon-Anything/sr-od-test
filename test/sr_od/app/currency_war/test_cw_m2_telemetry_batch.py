@@ -4,7 +4,7 @@
 - BuyCard 决策帧富化(serialize_action 顶层 char_id/cost;命中/未命中/
   非 BuyCard 三分型);
 - DecisionTrace.supply_pick 末尾追加字段(recorder extra 透传,缺省 None);
-- RunSupplyNode 选定快照接线(弱锁:选定分支本地拷贝 + 合成决策帧
+- CwScreenSupplyNode 选定快照接线(弱锁:选定分支本地拷贝 + 合成决策帧
   extra.supply_pick,不动暂存槽消费权);
 - economy 视图升级花费列名 luc=(防与 rounds 视图 lv=等级 同名误读)。
 
@@ -91,10 +91,10 @@ def test_run_supply_node_pick_wiring_weak_lock() -> None:
     """弱锁(接线存在性,沿 test_cw_w306 弱锁惯例):选定分支本地拷贝快照、
     合成决策帧 extra 带 supply_pick;不消费暂存槽 consume(消费权仍属
     cw_loop 合成结算行)。"""
-    from sr_od.application.currency_war.operations.run_nodes import (
-        run_supply_node,
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node,
     )
-    src = Path(run_supply_node.__file__).read_text(encoding='utf-8')
+    src = Path(cw_screen_supply_node.__file__).read_text(encoding='utf-8')
     assert "extra={'phase': 'supply_pick'}" not in src, (
         '选定快照应并入 extra 字典(空壳帧=本批改造前形态)')
     assert "'supply_pick'" in src and 'n_options' in src, (

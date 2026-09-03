@@ -6,7 +6,7 @@ FixtureController 假游戏 + 替身 handler + round_by_* 判定替身 + fast_sl
 - PlaneTransitionOp:提示命中 → 点「区域-空白点击」+ 验提示消失;提示未现 fail。
 - WaitOneOneOp:锚命中即成功;假时钟验 ~10s 超时留证 fail。
 - OpeningSequence:首帧分流纯函数 + 壳顺序执行/从中段续走。
-- 七 overlay op(六委托 + BookcardOp 直写):入口识别 + 委托执行 + 固定时长交回。
+- 七 overlay op(六委托 + CwScreenBookcard 直写):入口识别 + 委托执行 + 固定时长交回。
 
 测试纪律:零真实副作用(save_screenshot/park_cursor 替身;台账不触)、
 execute() 包 fast_sleep、运行态用 enter/reset_running_state。
@@ -22,7 +22,6 @@ from sr_od.application.currency_war.decision.cw_strategy import (
     CurrencyWarMatch,
     StrategySession,
 )
-from sr_od.context.sr_context import SrContext
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     FixtureController,
@@ -111,21 +110,6 @@ def _run(op: Any) -> Any:
             return op.execute()
     finally:
         reset_running_state(op.ctx, op)
-
-
-# ==================== resume_step_index(首帧分流纯函数) ====================
-
-def test_resume_step_index_mapping() -> None:
-    from sr_od.application.currency_war.operations.cw_flow.opening_sequence import (
-        resume_step_index,
-    )
-    assert resume_step_index('货币战争-简报') == 0
-    assert resume_step_index('货币战争-位面过渡') == 1
-    assert resume_step_index('货币战争-投资环境') == 2
-    assert resume_step_index('货币战争-备战') == 3
-    # 未知/过渡帧 → 从头走(各步自带入口识别,无独立接管分支)
-    assert resume_step_index(None) == 0
-    assert resume_step_index('货币战争-遭遇节点') == 0
 
 
 # ==================== BriefingOp ====================
@@ -274,123 +258,22 @@ def test_wait_one_one_timeout_leaves_evidence(
     assert clock['now'] >= 2.0 * 5   # 轮询至上界才退出,非首轮放弃
 
 
-# ==================== OpeningSequence(编排壳) ====================
-
-def test_opening_sequence_runs_all_steps_in_order(
-    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """锁⑦壳顺序执行:干净开局(画面不识别)四步全走,终步成功 = 序列成功。"""
-    from sr_od.application.currency_war.operations.cw_flow import (
-        opening_sequence as mod,
-    )
-    from sr_od.application.currency_war.operations.cw_flow.opening_sequence import (
-        OpeningSequence,
-    )
-    op, _fc = _make_op(test_context, monkeypatch, OpeningSequence)
-    monkeypatch.setattr(mod, 'get_in_match_screen_name',
-                        lambda ctx, screen: None)
-    called: list[str] = []
-    fakes: list[_FakeSubOp] = []
-
-    def _factory(tag: str):
-        def _make(ctx: SrContext):
-            fake = _FakeSubOp(ok=True)
-            fakes.append(fake)
-            called.append(tag)
-            return fake
-        return _make
-
-    op.steps = [(_factory('简报'), '简报'),
-                (_factory('位面过渡'), '位面过渡'),
-                (_factory('投资环境'), '投资环境'),
-                (_factory('等待1-1'), '等待1-1')]
-
-    result = _run(op)
-
-    assert result.success, f'开局序列应成功:{result.status!r}'
-    assert called == ['简报', '位面过渡', '投资环境', '等待1-1']
-
-
-def test_opening_sequence_resume_from_mid_step(
-    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """锁⑧首帧分流:首帧已是投资环境 → 跳过前两步,从该步续走(01-opening §2.1)。"""
-    from sr_od.application.currency_war.operations.cw_flow import (
-        opening_sequence as mod,
-    )
-    from sr_od.application.currency_war.operations.cw_flow.opening_sequence import (
-        OpeningSequence,
-    )
-    op, _fc = _make_op(test_context, monkeypatch, OpeningSequence)
-    monkeypatch.setattr(mod, 'get_in_match_screen_name',
-                        lambda ctx, screen: '货币战争-投资环境')
-    called: list[str] = []
-
-    def _factory(tag: str):
-        def _make(ctx: SrContext):
-            called.append(tag)
-            return _FakeSubOp(ok=True)
-        return _make
-
-    op.steps = [(_factory('简报'), '简报'),
-                (_factory('位面过渡'), '位面过渡'),
-                (_factory('投资环境'), '投资环境'),
-                (_factory('等待1-1'), '等待1-1')]
-
-    result = _run(op)
-
-    assert result.success
-    assert called == ['投资环境', '等待1-1'], f'应从中段续走:{called}'
-
-
-def test_opening_sequence_step_fail_falls_through_to_final(
-    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """锁⑨步失败不中断:中间步 fail 记录后续走,终步成败即序列成败。"""
-    from sr_od.application.currency_war.operations.cw_flow import (
-        opening_sequence as mod,
-    )
-    from sr_od.application.currency_war.operations.cw_flow.opening_sequence import (
-        OpeningSequence,
-    )
-    op, _fc = _make_op(test_context, monkeypatch, OpeningSequence)
-    monkeypatch.setattr(mod, 'get_in_match_screen_name',
-                        lambda ctx, screen: None)
-    called: list[str] = []
-
-    def _factory(tag: str, ok: bool):
-        def _make(ctx: SrContext):
-            called.append(tag)
-            return _FakeSubOp(ok=ok)
-        return _make
-
-    op.steps = [(_factory('简报', True), '简报'),
-                (_factory('位面过渡', False), '位面过渡'),   # 该步不适用/失败
-                (_factory('投资环境', False), '投资环境'),
-                (_factory('等待1-1', True), '等待1-1')]
-
-    result = _run(op)
-
-    assert result.success, f'终步成功则序列成功:{result.status!r}'
-    assert called == ['简报', '位面过渡', '投资环境', '等待1-1']
-
-
 # ==================== 七 overlay 族 ====================
 
 @pytest.mark.parametrize('op_cls,screen_name,mark_area', [
-    ('MegastarOp', '货币战争-盛会之星', '标识-盛会之星'),
-    ('PartnerOp', '货币战争-列车同行', '标识-选择伙伴'),
-    ('ArmoryBoxOp', '货币战争-备战-武装箱选择', '标识-请选择'),
-    ('WishTrialOp', '货币战争-祈愿试炼', '标识-祈愿试炼'),
-    ('PlannerEventOp', '货币战争-骇入策划', '标识-我来当策划'),
-    ('FortunePickerOp', '货币战争-命运卜者强化', '标识-命运卜者'),
+    # (RunNode 退役批:CwScreenMegastar 已内联,不再是委托形态——行为等价锁
+    #  见 test_cw_runnode_retire.py,不入本委托 parametrize。)
+    ('CwScreenPartner', '货币战争-列车同行', '标识-选择伙伴'),
+    ('CwScreenWishTrial', '货币战争-祈愿试炼', '标识-祈愿试炼'),
+    ('CwScreenPlanner', '货币战争-骇入策划', '标识-我来当策划'),
+    ('CwScreenFortune', '货币战争-命运卜者强化', '标识-命运卜者'),
 ])
 def test_overlay_op_delegates_and_settles(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     op_cls: str, screen_name: str, mark_area: str,
 ) -> None:
-    """锁⑩六委托 overlay:入口 id_mark 命中 → 委托现役 handler 一次 → 成功交回。"""
-    import sr_od.application.currency_war.operations.cw_flow.overlay_ops as overlay_mod
+    """锁⑩委托 overlay:入口 id_mark 命中 → 委托现役 handler 一次 → 成功交回。"""
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay as overlay_mod
     cls: type = getattr(overlay_mod, op_cls)
     op, _fc = _make_op(test_context, monkeypatch, cls)
     _stub_find(op, monkeypatch, [(screen_name, mark_area)])
@@ -407,10 +290,10 @@ def test_overlay_op_mark_miss_fails(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """锁⑪入口识别不中 → fail 不委托(交上层重新分流,不在错屏盲跑)。"""
-    from sr_od.application.currency_war.operations.cw_flow.overlay_ops import (
-        MegastarOp,
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay import (
+        CwScreenPartner,
     )
-    op, _fc = _make_op(test_context, monkeypatch, MegastarOp)
+    op, _fc = _make_op(test_context, monkeypatch, CwScreenPartner)
     _stub_find(op, monkeypatch, [])
     fake = _FakeSubOp()
     op.HANDLER_FACTORY = lambda ctx: fake   # type: ignore[method-assign]
@@ -424,10 +307,10 @@ def test_bookcard_op_reads_and_picks_by_strategy(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """锁⑫星徽秘典(直写):OCR 卡名 → decide_star_tome → 点近邻星徽卡 area → 弹窗关。"""
-    from sr_od.application.currency_war.operations.cw_flow.overlay_ops import (
-        BookcardOp,
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay import (
+        CwScreenBookcard,
     )
-    op, fc = _make_op(test_context, monkeypatch, BookcardOp)
+    op, fc = _make_op(test_context, monkeypatch, CwScreenBookcard)
     _stub_find(op, monkeypatch,
                [('货币战争-星徽秘典弹窗', '标识-星徽秘典')], misses_after=1)
     strategy = _StubStrategy(idx=1)   # 选第 2 张(列车同行)
@@ -453,10 +336,10 @@ def test_bookcard_op_mark_miss_fails(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """锁⑬秘典入口识别不中 → fail(交循环重新分流)。"""
-    from sr_od.application.currency_war.operations.cw_flow.overlay_ops import (
-        BookcardOp,
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay import (
+        CwScreenBookcard,
     )
-    op, fc = _make_op(test_context, monkeypatch, BookcardOp)
+    op, fc = _make_op(test_context, monkeypatch, CwScreenBookcard)
     _stub_find(op, monkeypatch, [])
 
     result = _run(op)
@@ -466,14 +349,14 @@ def test_bookcard_op_mark_miss_fails(
 
 # ==================== 结构守卫 ====================
 
-def test_overlay_ops_registry_covers_seven() -> None:
-    """锁⑭全集注册:OVERLAY_OPS = 06-overlays §4 表序七 op(P3b 分发消费面)。"""
-    from sr_od.application.currency_war.operations.cw_flow.overlay_ops import (
+def test_overlay_ops_registry_covers_six() -> None:
+    """锁⑭全集注册:OVERLAY_OPS = 06-overlays §4 表序六 op(武装箱选卡不经本族,主循环 0f 直派 HandleArmoryBoxDialog)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_overlay import (
         OVERLAY_OPS,
     )
     names = [c.__name__ for c in OVERLAY_OPS]
-    assert names == ['MegastarOp', 'PartnerOp', 'ArmoryBoxOp', 'WishTrialOp',
-                     'PlannerEventOp', 'FortunePickerOp', 'BookcardOp']
+    assert names == ['CwScreenMegastar', 'CwScreenPartner', 'CwScreenWishTrial',
+                     'CwScreenPlanner', 'CwScreenFortune', 'CwScreenBookcard']
 
 
 def test_cw_flow_const_settle_values() -> None:
