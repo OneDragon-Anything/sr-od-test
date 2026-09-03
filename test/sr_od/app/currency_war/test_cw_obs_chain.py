@@ -322,6 +322,36 @@ def test_board_pairs_reads_badge_truth(test_context) -> None:
         f'徽标「盛会之星」应读 2(画面事实),实得 {pairs.get("盛会之星")}'
 
 
+def test_board_pairs_badge_beats_tier_chain(test_context) -> None:
+    """低估修复实帧锁(f1173e2d):徽标"3"+档位链"2/4/6" → 持续伤害=3(旧链读 1~2)。
+
+    证据帧特征(离线 OCR 实测):持续伤害行徽标数字在名称列左侧(徽标=画面事实),
+    其下档位链 "2/4/6" 被 X/Y 正则误配成 count=2 或斜杠丢失兜底成 1;
+    狼狩行 "2/3" 斜杠丢失读成 "213" → 兜底 1(真值 2)。人工视觉真值:
+    持续伤害=3、狼狩=2(前台2+后台3,增益徽标即计数)。
+    """
+    screen = _load('boardfix_underestim_f1173e2d.png')
+    pairs, honest = _board_pairs(test_context, screen)
+    assert honest, '徽标帧应 honest'
+    assert pairs.get('持续伤害', (None, None))[0] == 3, \
+        f'持续伤害应读徽标 3(非档位链 2/兜底 1),实得 {pairs.get("持续伤害")}'
+    assert pairs.get('狼狩', (None, None))[0] == 2, \
+        f'狼狩应读 2(斜杠丢失容错或徽标),实得 {pairs.get("狼狩")}'
+    assert pairs.get('持续伤害', (None, 0))[1] == 4, \
+        f'持续伤害 next_tier 应=注册表 >3 的最小档 4,实得 {pairs.get("持续伤害")}'
+
+
+def test_board_pairs_badge_frame_second_sample(test_context) -> None:
+    """低估修复实帧锁(3db91784,不同局):持续伤害=3、狼狩=2(视觉真值)。"""
+    screen = _load('boardfix_underestim_3db91784.png')
+    pairs, honest = _board_pairs(test_context, screen)
+    assert honest, '徽标帧应 honest'
+    assert pairs.get('持续伤害', (None, None))[0] == 3, \
+        f'持续伤害应读徽标 3,实得 {pairs.get("持续伤害")}'
+    assert pairs.get('狼狩', (None, None))[0] == 2, \
+        f'狼狩应读 2,实得 {pairs.get("狼狩")}'
+
+
 def test_rebuild_cap_zero_blocks_phantom() -> None:
     """重建上限 0(paddle 空板)→ 0 幻影部署;上限 2 → 截到 2。
 

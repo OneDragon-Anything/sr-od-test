@@ -307,6 +307,67 @@ def test_read_board_xy_count_and_next_tier(test_context: SrTestContext, monkeypa
     assert read_board_next_tier(test_context, None) == {'能量': 3, '仙舟': 3, '贝洛伯格': 2}
 
 
+# ===== board 计数低估修复:徽标优先 + 斜杠丢失容错(mock OCR 锁语义)=====
+
+def test_read_board_badge_digit_wins_over_tier_chain(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """徽标数字优先于档位链:持续伤害行 徽标"3"(x=73,名称列左侧)+ 链"2/4/6"(x=107)
+    → count=3(旧链被 "2/4" 误配成 2 或兜底 1);next_tier 走注册表(>3 最小档=4)。"""
+    ocr = [
+        _ocr('持续伤害', 106, 143),
+        _ocr('3', 73, 177),        # 徽标(纯数字,名称列左侧 x<104)
+        _ocr('21416', 107, 177),   # 档位链 "2/4/6" 斜杠丢失,不产 count
+    ]
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
+    assert read_board(test_context, None) == {'持续伤害': 3}
+    assert read_board_next_tier(test_context, None) == {'持续伤害': 4}
+
+
+def test_read_board_slash_lost_rescue(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """斜杠丢失容错:"2/3"→"213"('/'误读'1')→ 删'1'还原 (2,3),Y∈狼狩 tiers(3,5,6,8) 校验过
+    → count=2, next_tier=3;徽标缺读(OCR 漏小字)时兜住低估。"""
+    ocr = [
+        _ocr('狼狩', 106, 227),
+        _ocr('213', 110, 261),     # "2/3" 斜杠丢失
+    ]
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
+    assert read_board(test_context, None) == {'狼狩': 2}
+    assert read_board_next_tier(test_context, None) == {'狼狩': 3}
+
+
+def test_read_board_tier_chain_not_rescued(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """档位链不参与容错还原:持续伤害链 "2/4/6"→"21416" 删单 '1' 拆不出
+    (X≤9 且 Y∈tiers 且 Y>X)的合法对 → 拒绝,兜底 count=1 且 honest=False。"""
+    from sr_od.application.currency_war.obs.cw_observation import _board_pairs
+    ocr = [
+        _ocr('持续伤害', 106, 143),
+        _ocr('21416', 107, 177),   # 无徽标 token,仅档位链
+    ]
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
+    pairs, honest = _board_pairs(test_context, None)
+    assert pairs == {'持续伤害': (1, 0)}, f'档位链不得还原成 count,实得 {pairs}'
+    assert honest is False, '全兜底帧应 honest=False'
+
+
+def test_read_board_expected_fallback_when_ocr_exhausted(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """OCR 证据穷尽(档位链阵营徽标失读)→ expected(身份 computed)兜底,非恒 1。
+
+    证据帧 86ce9fd1 形态:持续伤害/护盾 真值 2,徽标+X/Y+容错全失读;
+    旧链恒 1 = 低估最后一环。expected 兜底不翻 honest(帧 OCR 真值不明)。
+    """
+    from sr_od.application.currency_war.obs.cw_observation import _board_pairs
+    ocr = [
+        _ocr('持续伤害', 106, 143),
+        _ocr('21416', 107, 177),   # 档位链,无徽标 token
+    ]
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
+    pairs, honest = _board_pairs(test_context, None, expected={'持续伤害': 2})
+    assert pairs == {'持续伤害': (2, 4)}, f'expected 底座应兜底 2(next_tier=4),实得 {pairs}'
+    assert honest is False, 'expected 兜底不算 OCR 真解析'
+    # expected 越界 → 恒 1 兜底
+    pairs2, _ = _board_pairs(test_context, None, expected={'持续伤害': 99})
+    assert pairs2 == {'持续伤害': (1, 0)}, f'expected 越界应恒 1,实得 {pairs2}'
+
+
 def test_read_xp_progress_xy(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """购买经验下方 "X/Y" → (cur_xp, xp_to_next);越界/无 → None(D-69 备战字段采集)。"""
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
