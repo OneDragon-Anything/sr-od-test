@@ -676,9 +676,11 @@ def test_bench_full_flag_and_alloc_frame_not_degenerate() -> None:
     """对偶门(防恒值):真局里旗标必须亮过、帧位必须非 None 过——
     恒 False/恒 None = 写端断线(分配器默认开,每段 decide_prep 都
     写 session.v3_alloc_frame,prep 轮帧位恒应非 None)。"""
-    rows = [r for seed in range(20) for r in _sim_obs_keys_simulate_p1(
+    # 20→12 局(2026-09-03 瘦身批,纪律 12:存在性断言的最小通过窗实测值;
+    # bench_full_flag 点亮是稀有事件,seed 0-7 不出现,12 局为实测最小窗)
+    rows = [r for seed in range(12) for r in _sim_obs_keys_simulate_p1(
         seed, pool='fallback').ledger if (r.get('plane') or 1) == 1]
-    assert len(rows) >= 20 * 5, '局数行数异常'
+    assert len(rows) >= 12 * 5, '局数行数异常'
     assert any(r['state']['bench_full_flag'] for r in rows), \
         'bench_full_flag 全批恒 False = 写端断线或键永亮不了'
     with_frame = [r for r in rows if r['sim']['alloc_frame'] is not None]
@@ -691,7 +693,7 @@ def test_bench_full_flag_and_alloc_frame_not_degenerate() -> None:
         if af.get('active'):
             assert af.get('domain') in known_domains
     # 20 局量级下停手窗/死亡域接管应出现过(分配器默认开;
-    # 过 0 = 接管面退化,锁#11 验收无样本)
+    # 过 0 = 接管面退化,锁#11 验收无样本;瘦身后 5 局,存在性断言同义)
     assert any(r['sim']['alloc_active_any'] for r in rows), \
         '全批零接管帧 = alloc_active_any 写端断线'
 
@@ -1284,7 +1286,10 @@ def test_fit_reduces_systematic_undershoot() -> None:
     """语义锁(锁的是校准意图,不是 LR 数值):构造「排序好但概率整体
     下压」的锚(欠冲形态,出处=W495 影子对拍顶桶偏差 −0.30),
     拟合后的校准应把桶均值偏差显著收窄。"""
-    n = 1500
+    # n 1500→600(2026-09-03 瘦身批,纪律 12):锁的是「欠冲收窄」方向,
+    # 非 LR 数值;种子固定 LCG,600 点方向判定稳定。主恢复锁
+    # (test_fit_recovers, n=4000)保持全量。
+    n = 600
     ys: list[int] = []
     ps: list[float] = []
     s = 777

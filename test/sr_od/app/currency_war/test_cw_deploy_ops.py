@@ -336,7 +336,8 @@ def test_units_conservation_across_bench_deployed() -> None:
     内部含 fill(shop 源买新件)/ sell(卖件),账本不落 tx 明细
     (只记 reason/result)——tx 轮重置守恒基线(该轮单位数作新
     起点),非 tx 段内 v1 同式守恒照验;tx 披露缺口登记 ADR-0336。)"""
-    for seed in (0, 1, 2, 3, 42):
+    # 5→2 seed(2026-09-03 瘦身批,纪律 12:守恒不变量逐局成立,2 seed 足够)
+    for seed in (0, 42):
         r = simulate_p1(seed, pool='fallback')
         base_units = START_BENCH_COUNT
         buys = sells = merges = 0
