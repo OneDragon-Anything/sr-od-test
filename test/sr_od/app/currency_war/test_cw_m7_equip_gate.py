@@ -10,11 +10,20 @@ owned 快照按 ADR-0387 全量含工具件(不可穿)——工具-only 库存�
 门② 备战期闩(cw4_m7_equipped_phase)——同 (plane, round) 只发一次,
 发射时置闩、推进自动失效;与备战期开店闩(cw4_shopped_phase)同构且
 独立(键不同,互不遮蔽)。
+
+dd-027 修订(实机局 g_20260904_010335 漏发定谳,2026-09-04):同帧
+「开店意图 ∧ 可穿件」形态下,M7 末位评估的 RunEquip 落在 OpenShop
+(截断点)之后被截断器静默丢弃,闩已被消耗 ⇒ 装备滞留整个备战期
+(1-6/1-7 漏发,1-8 无开店面才首穿)。修法 = 发射序回排(RunEquip
+插到首个截断点/终点之前),TestM7EmissionOrder 锁此形态;复盘批的
+「快照依赖环」假设被帧数据证伪(1-6 决策帧 state.equips 已含轮滑鞋,
+快照经 overlay 确认链及时推进)。
 """
 from __future__ import annotations
 
 from sr_od.application.currency_war.decision.cw4 import mandate
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    OpenShop,
     RunEquip,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -124,3 +133,48 @@ class TestM7ShopLatchCoexistence:
         shop_emitted = any(
             getattr(e.action, 'read_only', True) is False for e in out)
         assert shop_emitted, f'M6 开店面被装备闩误拦: {[type(e.action).__name__ for e in out]}'
+
+
+class TestM7EmissionOrder:
+    """dd-027 修订:同帧「开店 ∧ 可穿件」的发射序回排(事故形态回归)。
+
+    事故(g_20260904_010335 1-6/1-7):M7 末位发射的 RunEquip 落在
+    OpenShop(截断点)后被 truncate_frame_stable 丢弃,闩已消耗 ⇒
+    整个备战期装备滞留。锁:回排后 RunEquip 先于截断点发射,截断后
+    两动作均保留,闩只被「真实可达截断的发射」消耗一次。
+    """
+
+    def _frame_shop_intent(self) -> mandate.MandateFrame:
+        """可穿件在场 + M2 买面意图(线成员缺,bench 空,金足)→ 同帧双意图。"""
+        return mandate.MandateFrame(
+            gold=10, level=3, bench=[], deployed=[], deploy_cap=4,
+            node_type='战斗', stop_flag=False, k_members=('希儿',),
+            round_num=3)
+
+    def test_runequip_emitted_before_truncation_point(self):
+        """事故帧:发射序 = [RunEquip, OpenShop],RunEquip 不落截断点后。"""
+        out = mandate.run_mandate(self._frame_shop_intent(), _session(_WEARABLE))
+        kinds = [type(e.action) for e in out]
+        assert RunEquip in kinds and OpenShop in kinds
+        assert kinds.index(RunEquip) < kinds.index(OpenShop)
+
+    def test_truncation_keeps_both_actions(self):
+        """端到端:经帧稳定截断器后两动作均存活(事故里 RunEquip 被丢)。"""
+        from sr_od.application.currency_war.decision.cw4.entry import (
+            truncate_frame_stable,
+        )
+        s = _session(_WEARABLE)
+        actions = [e.action for e in
+                   mandate.run_mandate(self._frame_shop_intent(), s)]
+        kept = truncate_frame_stable(actions, s)
+        assert [type(a) for a in kept] == [RunEquip, OpenShop]
+
+    def test_latch_consumed_once_by_surviving_emission(self):
+        """闩语义不回退:回排后发射真实可达截断,同期后续帧恰跳过一次。"""
+        s = _session(_WEARABLE)
+        actions = [e.action for e in
+                   mandate.run_mandate(self._frame_shop_intent(), s)]
+        assert any(isinstance(a, RunEquip) for a in actions)
+        out2 = mandate.run_mandate(self._frame_shop_intent(), s)
+        assert _m7_actions(out2) == []
+        assert s.cw4_counters['equip_latch_skip_m7'] == 1
