@@ -22,8 +22,8 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
-_PREREG = (_REPO_ROOT / '.debug/temp/currency_war/redesign/'
-           'PREREG_cw3_vs_legacy_AB.md')
+_PREREG = (_REPO_ROOT / 'docs/develop/currency_war/prereg/'
+               'PREREG_cw3_vs_legacy_AB.md')
 
 
 def _fake_sim(actions_by_seed):
