@@ -35,7 +35,12 @@ ORDER_MATRIX: list[tuple[str, str, str, str]] = [
     ('星徽秘典', '货币战争-星徽秘典弹窗', '标识-星徽秘典', 'area'),
     ('专家邀请函', '货币战争-备战-专家邀请函', '标识-专家邀请函', 'area'),
     ('策略暗色锁定', '货币战争-备战-策略锁定', '按钮-返回投资策略选择', 'area'),
+    # 排他关系(P4R3):前台无角色 → 恢复链自带重部署+验前排,不与浮层互斥。
     ('前台无角色提示', '货币战争-提示-前台无角色', '标识-无角色提示', 'area'),
+    # 排他关系(P4R3,第五局 1-9 实锤):BOSS简报 ⇄ 位面过渡 共享交互文案
+    # 「点击空白处继续」——互斥判据 = 「强敌」片段(is_boss_briefing_texts,
+    # 误读「强敌米」鲁棒):boss 帧含共享文案时不进位面过渡(留 0p),
+    # 位面过渡帧无「强敌」。两行互为排他对,删任一须同步删排他接线。
     ('BOSS简报', '货币战争-BOSS简报', '标识-强敌来袭', 'area'),
     ('位面过渡', '', '点击空白处继续', 'ocr'),
 ]
@@ -77,3 +82,20 @@ def test_retired_overlays_not_in_main_loop() -> None:
         '投资环境已在开局序列承担(01-opening §2),主循环分支须走序锁矩阵'
     assert '标识-位面简报' not in src, \
         '位面简报由入口链 BriefingOp 承担(仅入场一次),主循环分支须走序锁矩阵'
+
+
+def test_boss_briefing_vs_plane_transition_exclusion_wired() -> None:
+    """排他对接线锁(矩阵内两行的互斥关系,P4R3):boss 简报 ⇄ 位面过渡
+    共享「点击空白处继续」——位面过渡分支必须带「强敌」片段排他,否则
+    boss 帧误分发 PlaneTransitionOp(第五局 fail 2s 无限循环实锤)。"""
+    src = _loop_src()
+    i_plane = src.find("self.round_by_ocr(screen, '点击空白处继续', lcs_percent=0.8)")
+    assert i_plane >= 0
+    # 排他在位面过渡分支体内(分支判定之后、PlaneTransitionOp 分发之前)
+    i_excl = src.find('if _is_boss_frame(', i_plane)
+    i_dispatch = src.find('PlaneTransitionOp(self.ctx)', i_plane)
+    assert 0 < i_excl < i_dispatch, '位面过渡分支缺 boss 排他(或排他在分发之后)'
+    # 判别单一源 = boss_briefing_op.is_boss_briefing_texts(BattleWaitOp 白名单同源)
+    assert 'is_boss_briefing_texts as _is_boss_frame' in src
+    from sr_od.application.currency_war.operations.cw_flow import battle_wait_op
+    assert 'is_boss_briefing_texts' in inspect.getsource(battle_wait_op)
