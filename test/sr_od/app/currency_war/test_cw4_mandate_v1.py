@@ -1,0 +1,1086 @@
+"""cw4 步3+4 批测试(§6.4-R 步4 验收行全项)。
+
+覆盖:四硬约束检查点各一例 / 臂①旁路集函数级枚举对拍(§4.2.1)/
+发射器帧稳定截断契约锁(契约 v2 §3.2 逐类+§3.3 fail-closed)/
+fail-closed None 槽位(θ_unavailable 分键等)/修复池 OPEN 检查点核销
+(P7/D-lv7/F4 落点)/ mandate 行为(M2→M4 重试环/fuel_sell/stop_flag/
+D-A45 干旱重置)/ 冒烟(探针语料跑 _emit 无异常+截断判符合 v2)/
+零漂移门(商店线透传零污染,n≥20)。
+"""
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+
+import pytest
+
+from sr_od.application.currency_war.decision.cw4 import entry, mandate, proof
+from sr_od.application.currency_war.decision.cw4.audit import provisional
+from sr_od.application.currency_war.decision.cw4.bridge import (
+    MandateV1Strategy,
+)
+from sr_od.application.currency_war.decision.cw4.criteria import BYPASS_TABLE
+from sr_od.application.currency_war.decision.cw4.criteria import (
+    equipment as crit_equip,
+)
+from sr_od.application.currency_war.decision.cw4.criteria import (
+    levelup as crit_levelup,
+)
+from sr_od.application.currency_war.decision.cw4.criteria.sell import (
+    line_switch_sell,
+)
+from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    PREP_ACTION_TYPES,
+    BailToOuter,
+    ClickSpheres,
+    DeferSpheres,
+    DeployMove,
+    EnsureShopClosed,
+    EnsureShopOpen,
+    LevelUp,
+    OpenBox,
+    OpenShop,
+    OpenTome,
+    PickBoxCard,
+    PrepAction,
+    PrepObservation,
+    RunBuyPhase,
+    RunDeploy,
+    RunEquip,
+    SellBench,
+    SellDeployed,
+    StartBattle,
+)
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
+from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
+    MandateV1Live,
+)
+
+# ===== 测试基建 =====
+
+def _bench(slot: int, name: str, star: int = 1) -> BenchChar:
+    return BenchChar(slot=slot, char_id=name, star=star)
+
+
+class _Pt:
+    """探针点(spheres/boxes/tomes 元素坐标载体;snapshot_from_obs 消费)。"""
+
+    def __init__(self, x: int = 100, y: int = 100) -> None:
+        self.x, self.y = x, y
+
+
+def _frame(gold: int = 20, bench=None, deployed=None, cap: int = 4,
+           node=None, stop: bool = False, k=(), level: int = 3,
+           round_num: int = 3) -> mandate.MandateFrame:
+    return mandate.MandateFrame(
+        gold=gold, level=level, bench=bench or [], deployed=deployed or [],
+        deploy_cap=cap, node_type=node, stop_flag=stop, k_members=k,
+        round_num=round_num)
+
+
+def _session() -> StrategySession:
+    s = StrategySession()
+    s.cw4_counters = {}
+    return s
+
+
+def _obs(state: GameState | None = None, bench=None, deployed=None,
+         spheres=(), boxes=(), tomes=(), vacancy: int = 4) -> PrepObservation:
+    return PrepObservation(
+        state=state or GameState(gold=20),
+        bench_chars=bench or [], deployed_chars=deployed or [],
+        spheres=list(spheres), boxes=list(boxes), tomes=list(tomes),
+        deploy_vacancy=vacancy)
+
+# ===== ① 四硬约束检查点(§3.2 唯一合法拦截集)=====
+
+class TestHardConstraints:
+
+    def test_checkpoint1_affordable(self):
+        ok, why = mandate.check_affordable(3, 5)
+        assert not ok and 'gold' in why
+        ok, _ = mandate.check_affordable(5, 5)
+        assert ok
+        # 整批成本按 M3 批量合计
+        ok, _ = mandate.check_affordable(9, 0, batch_cost=12)
+        assert not ok
+
+    def test_checkpoint2_seats(self):
+        ok, why = mandate.check_seats(0, 2, needs_bench=True, needs_board=False,
+                                      name='', deployed_names=[])
+        assert not ok and why == 'bench_full'
+        ok, why = mandate.check_seats(2, 0, needs_bench=False, needs_board=True,
+                                      name='x', deployed_names=[])
+        assert not ok and why == 'board_full'
+        # 同名同星≤1(②对象列穷举:M1/M2/M3/M5/M6/dominance)
+        ok, why = mandate.check_seats(2, 2, needs_bench=False, needs_board=True,
+                                      name='dup_name',
+                                      deployed_names=['dup_name'])
+        assert not ok and why == 'same_name_on_board'
+
+    def test_checkpoint3_s_reserve(self):
+        # 10−4=6 ≥5 ⇒ 过;10−4=6 <7 ⇒ 拦(检查点③辖 EV 买入面+M6+dominance)
+        ok, _ = mandate.check_s_reserve(10, 4, s_reserve=5)
+        assert ok
+        ok, _ = mandate.check_s_reserve(10, 4, s_reserve=7)
+        assert not ok
+
+    def test_checkpoint4_irreversible(self):
+        ok, why = mandate.check_irreversible('线内件', ('线内件',))
+        assert not ok and why == 'line_member'
+        ok, _ = mandate.check_irreversible('燃料件', ('线内件',))
+        assert ok
+
+
+# ===== ② 臂①旁路集函数级枚举对拍(§4.2.1)=====
+
+class TestBypassEnumeration:
+    """逐函数全表对拍:criteria/* 全部公开函数位必有 BYPASS_TABLE 行
+    (二分全称成立);类别列合法;谓词/状态函数不得标旁路。"""
+
+    def test_criteria_functions_all_enumerated(self):
+        pkg_dir = Path(mandate.__file__).parent / 'criteria'
+        for py in sorted(pkg_dir.glob('*.py')):
+            if py.stem == '__init__':
+                continue
+            tree = ast.parse(py.read_text(encoding='utf-8'))
+            funcs = [n.name for n in tree.body
+                     if isinstance(n, ast.FunctionDef) and not n.name.startswith('_')]
+            for fn in funcs:
+                assert (py.stem, fn) in BYPASS_TABLE, \
+                    f'criteria/{py.stem}.{fn} 缺旁路枚举行(R9-1 缺行病)'
+
+    def test_categories_legal(self):
+        legal_cat = {'发射位', '门', '谓词', '状态函数', '发射面',
+                     '支付支撑通道', '判据/闭式', '结构不变式'}
+        legal_arm1 = {'不旁路', '旁路', '旁路=门关闭', '不旁路(两臂同开)'}
+        for key, (cat, arm1, _basis) in BYPASS_TABLE.items():
+            assert cat in legal_cat, (key, cat)
+            assert arm1 in legal_arm1, (key, arm1)
+            if cat in ('谓词', '状态函数', '判据/闭式', '结构不变式'):
+                assert arm1.startswith('不旁路'), \
+                    f'{key}:谓词/状态函数/义务侧判据不得入旁路集(R2-2/F4)'
+
+    def test_mandate_adjacent_not_bypassed(self):
+        """支配族(dominance_buy/fuel_sell)落 mandate 邻位,臂①不旁路
+        (§4.2.1 首两行)。"""
+        src = (Path(mandate.__file__).read_text(encoding='utf-8'))
+        assert 'dominance_buy_eligible' in src
+        assert 'fuel_sell_candidates' in src
+        # 臂①(skeleton_only)下 run_mandate 无条件运行(entry 不旁路骨架)
+        esrc = Path(entry.__file__).read_text(encoding='utf-8')
+        assert 'run_mandate' in esrc
+
+
+# ===== ③ 发射器帧稳定截断契约锁(契约 v2 §3.2 逐类+§3.3)=====
+
+class TestTruncateFrameStable:
+
+    def _classify(self, action) -> str:
+        return entry.classify_frame_stability(action)
+
+    def test_17_classes_each_classified(self):
+        """17 具体类逐类断言判型(§3.2 备战线域表逐行;R196 症5 对齐:
+        ClickSpheres=条件[常态可续/末批可能掉箱后截断]、BailToOuter=
+        退役·终点)。"""
+        cases = [
+            (LevelUp(), 'continue'),
+            (DeferSpheres(), 'continue'),
+            (SellBench(slot=3), 'conditional'),
+            (SellDeployed(row='front', slot=2), 'conditional'),
+            (DeployMove(from_slot=1, to_row='back', to_slot=2), 'conditional'),
+            (RunDeploy(), 'conditional'),
+            (RunEquip(), 'conditional'),
+            (StartBattle(), 'terminal'),
+            (ClickSpheres(max_k=2), 'conditional'),  # 条件:常态可续/末批截断
+            (OpenBox(slot=1), 'truncation'),
+            (OpenTome(slot=1), 'truncation'),
+            (PickBoxCard(card_idx=0), 'truncation'),
+            (EnsureShopOpen(), 'truncation'),        # 退役类兼容面保守判
+            (EnsureShopClosed(), 'truncation'),      # 退役类兼容面保守判
+            (OpenShop(), 'truncation'),
+            (RunBuyPhase(), 'truncation'),           # 退役类兼容面保守判
+            (BailToOuter(reason='x'), 'terminal'),   # 退役·终点(契约 §3.2)
+        ]
+        assert len(cases) == 17
+        for action, expect in cases:
+            assert self._classify(action) == expect, \
+                f'{type(action).__name__}: 期望 {expect}'
+
+    def test_word_list_exhaustive(self):
+        """17 具体类(PREP_ACTION_TYPES)全部有分类(§3.3「词表内但无分类」
+        不存在)。参数化动作用代表实例。"""
+        reps = {SellBench: SellBench(slot=1),
+                SellDeployed: SellDeployed(row='front', slot=1),
+                DeployMove: DeployMove(from_slot=1, to_row='back', to_slot=1),
+                ClickSpheres: ClickSpheres(max_k=1),
+                OpenBox: OpenBox(slot=1), OpenTome: OpenTome(slot=1),
+                PickBoxCard: PickBoxCard(card_idx=0),
+                BailToOuter: BailToOuter(reason='')}
+        for cls in PREP_ACTION_TYPES:
+            inst = reps[cls] if cls in reps else cls()
+            assert entry.classify_frame_stability(inst) != 'unknown', cls
+
+    def test_truncation_point_cuts_tail(self):
+        out = entry.truncate_frame_stable(
+            [LevelUp(), OpenBox(slot=1), LevelUp(), LevelUp()])
+        assert [type(a) for a in out] == [LevelUp, OpenBox]
+
+    def test_terminal_must_be_last(self):
+        out = entry.truncate_frame_stable(
+            [LevelUp(), StartBattle(), LevelUp()])
+        assert [type(a) for a in out] == [LevelUp, StartBattle]
+
+    def test_continue_keeps_tail(self):
+        out = entry.truncate_frame_stable([LevelUp(), LevelUp(),
+                                           SellBench(slot=2)])
+        assert len(out) == 3
+
+    def test_section_3_3_fail_closed_unknown(self):
+        """词表外动作:截断+计数披露(禁静默丢弃)。"""
+        class Rogue(PrepAction):
+            pass
+
+        session = _session()
+        out = entry.truncate_frame_stable(
+            [LevelUp(), Rogue(), LevelUp()], session)
+        assert [type(a) for a in out] == [LevelUp]
+        assert session.cw4_counters['emitter_unknown_action_truncated'] == 1
+
+
+# ===== ④ fail-closed None 槽位(每个【拟】槽位 None 行为)=====
+
+class TestFailClosedNoneSlots:
+
+    def setup_method(self):
+        provisional.reset()
+
+    def teardown_method(self):
+        provisional.reset()
+
+    def _state(self):
+        return GameState(gold=20)
+
+    def test_theta_none_no_evaluation_with_split_key(self):
+        """θ/D_min/δ 任一 None ⇒ should_switch 不评估 + theta_unavailable
+        分键(R24-2:禁复用 switchline_skipped / switchline_exit_blocked)。"""
+        session = _session()
+        session.target_comp = COMP_LIBRARY[0]
+        out = proof.should_switch(self._state(), session, None, None)
+        assert not out.event
+        assert out.key == 'theta_unavailable'
+        assert 'theta_unavailable' in session.cw4_counters
+        assert 'switchline_skipped' not in session.cw4_counters
+        assert 'switchline_exit_blocked' not in session.cw4_counters
+
+    def test_arm1_bypass_records_switchline_skipped(self):
+        session = _session()
+        out = proof.should_switch(self._state(), session, None, None,
+                                  skeleton_only=True)
+        assert not out.event and out.key == 'switchline_skipped'
+        assert 'switchline_skipped' in session.cw4_counters
+
+    def test_exit_blocked_when_u_vms_none(self):
+        """u/V_ms None ⇒ 出口不可用前置 ⇒ switchline_exit_blocked(K 冻结)。"""
+        provisional.inject('THETA', provisional.CalibValue(1.0))
+        provisional.inject('D_MIN', provisional.CalibValue(2))
+        provisional.inject('DELTA_HYST', provisional.CalibValue(0.15))
+        session = _session()
+        session.target_comp = COMP_LIBRARY[0]
+        out = proof.should_switch(self._state(), session, None, None)
+        assert not out.event and out.key == 'switchline_exit_blocked'
+
+    def test_t_search_none_m6_fail_closed(self):
+        frame = _frame(gold=99, stop=True, k=())
+        session = _session()
+        out = mandate.run_mandate(frame, session)
+        assert not any(e.reason == 'm6_stock' for e in out)
+        assert session.cw4_counters.get('m6_overflow_strand', 0) >= 1
+
+    def test_line_switch_sell_none_period_no_sale(self):
+        slots, key = line_switch_sell(
+            ('旧件',), ('新件',), [_bench(1, '旧件')], [], None, k_switched=True)
+        assert slots == [] and key == 'switchline_exit_blocked'
+
+    def test_ev_buy_candidates_u_none(self):
+        from sr_od.application.currency_war.decision.cw4.criteria import buy
+        out, key = buy.ev_buy_candidates(50, 0, ['fake'], ('K',))
+        assert out == [] and key == 'u_unavailable'
+
+
+# ===== ⑤ 修复池 OPEN 检查点核销(R189-5 表)=====
+
+class TestFixpoolCheckpoints:
+
+    def test_d_b_wear_release_three_states(self):
+        """D-B 三态门:简易件即穿/里程碑收窄释放/强敌节点释放。"""
+        ok, why = crit_equip.wear_release(False, None, simple_item=True)
+        assert ok and why == 'simple_item'
+        ok, why = crit_equip.wear_release(True, None, simple_item=False)
+        assert ok and why == 'opening_achieved'
+        ok, why = crit_equip.wear_release(False, 'boss', simple_item=False)
+        assert ok and why == 'hard_node'
+        ok, why = crit_equip.wear_release(False, None, simple_item=False)
+        assert not ok and why == 'saving_for_core'
+
+    def test_d_lv7_pop_slot_explicit_reasons(self):
+        """D-lv7(OPEN 检查点):pop_slot 对「满编+富金+bench 有候补」覆盖,
+        不触发须显式理由进决策迹。"""
+        ok, why = crit_levelup.pop_slot(3, 4, 99, 2, 50)
+        assert not ok and why == 'not_full'
+        ok, why = crit_levelup.pop_slot(4, 4, 99, 0, 50)
+        assert not ok and why == 'no_bench_candidate'
+        ok, why = crit_levelup.pop_slot(4, 4, 10, 2, 50)
+        assert not ok and why == 'gold_below_floor'
+        ok, why = crit_levelup.pop_slot(4, 4, 99, 2, 50)
+        assert ok and why == 'full_rich_with_candidate'
+
+    def test_d_a45_drought_reset_on_holding(self):
+        """D-A45:干旱计数器买入重置语义(存量 ≥1 ⇒ 不累计更不撤线)。"""
+        session = _session()
+        comp = COMP_LIBRARY[0]
+        k = proof.predicates.line_members(comp)
+        if not k:
+            pytest.skip('COMP_LIBRARY[0] 无成员')
+        held = [k[0]]
+        proof.update_line_state(session, comp, held, [])
+        assert session.cw4_line_state.drought == 0
+        proof.update_line_state(session, comp, [], [])
+        proof.update_line_state(session, comp, [], [])
+        assert session.cw4_line_state.drought == 2
+        proof.update_line_state(session, comp, held, [])
+        assert session.cw4_line_state.drought == 0
+
+    def test_d_dup_not_deployable(self):
+        frame = _frame(bench=[_bench(1, '场上dup')], deployed=[_bench(1, '场上dup')])
+        assert not mandate._deployable(frame)
+
+    def test_f4_metric_with_indicator_set(self):
+        """F4 度量随指标集呈报:成型判定在新核=stop_buy 位面语义(谓词),
+        非单一 form_ok 门(D-FM4 落点);本测试锁谓词形态。"""
+        comp = COMP_LIBRARY[0]
+        k = proof.predicates.line_members(comp)
+        if not k:
+            pytest.skip('COMP_LIBRARY[0] 无成员')
+        assert proof.stop_buy(comp, list(k), []) is True
+        assert proof.stop_buy(comp, list(k)[:-1], []) is False
+
+    def test_d_buynote_spend_unified(self):
+        assert crit_levelup.spend_unified(4, 12, 4) is False   # 散买拦截(整批 16>12)
+        assert crit_levelup.spend_unified(4, 16, 4) is True    # 整批放行
+
+    def test_d_c44_fresh_read_frame(self):
+        """D-C44:骨架输入=黑板全量现读(MandateFrame 每帧重建,
+        bench_free 由现读派生,含新购件)。"""
+        frame = _frame(bench=[_bench(1, 'a'), _bench(2, 'b')])
+        assert frame.bench_free == 7
+
+
+# ===== mandate 行为 =====
+
+class TestMandateBehavior:
+
+    def test_m2_m4_retry_frees_seat(self):
+        """M2→M4 重试环:bench 满 ∧ 线内缺件 ⇒ 现场腾席(燃料件卖出)
+        后再买(R8-8 单帧闭环)。"""
+        k = ('目标件',)
+        bench = [_bench(i, '燃料' + str(i)) for i in range(1, 10)]
+        frame = _frame(gold=30, bench=bench, k=k)
+        session = _session()
+        out = mandate.run_mandate(frame, session)
+        reasons = [e.reason for e in out]
+        assert 'm4_fuel_sell_for_m2' in reasons
+        assert 'm2_buy' in reasons
+        # 席满无燃料可腾(全 2★)⇒ 放弃 + m2_retry_exhausted
+        bench2 = [_bench(i, '高价', star=3) for i in range(1, 10)]
+        frame2 = _frame(gold=30, bench=bench2, k=k)
+        session2 = _session()
+        out2 = mandate.run_mandate(frame2, session2)
+        assert session2.cw4_counters.get('m2_retry_exhausted', 0) >= 1
+        assert not any(e.reason == 'm2_buy' for e in out2)
+
+    def test_fuel_sell_predicate(self):
+        k = ('线内件',)
+        bench = [_bench(1, '线内件'), _bench(2, '燃料件'),
+                 _bench(3, '高价件', star=3)]
+        cands = mandate.fuel_sell_candidates(bench, k)
+        assert [c.char_id for c in cands] == ['燃料件']
+
+    def test_stop_flag_classification_not_gate(self):
+        """R5-6:stop_flag=分类谓词非拦截门——线成型 ⇒ 非线内件落出
+        M2 序 1/2 辖域(M2 不再发射买入意图)。"""
+        k = ('目标件',)
+        frame = _frame(gold=30, bench=[_bench(1, '目标件')], k=k, stop=True)
+        session = _session()
+        out = mandate.run_mandate(frame, session)
+        assert not any(e.reason == 'm2_buy' for e in out)
+
+    def test_m1_deploy_emitted(self):
+        k = ('目标件',)
+        frame = _frame(gold=20, bench=[_bench(1, '目标件')],
+                       k=k, round_num=3)
+        session = _session()
+        out = mandate.run_mandate(frame, session)
+        assert any(e.reason == 'm1_deploy' for e in out)
+
+    def test_m5_opening_only_round1(self):
+        k = ('目标件',)
+        frame = _frame(gold=20, bench=[_bench(1, '目标件')], k=k, round_num=1)
+        session = _session()
+        out = mandate.run_mandate(frame, session)
+        assert any(e.reason == 'm5_opening_board' for e in out)
+        assert not any(e.reason == 'm1_deploy' for e in out)
+
+    def test_dominance_gate_param_gold(self):
+        """R70-1:金位阈值 g*=10×cap_resolved 参数化(字面 50 实现即红)。"""
+        assert mandate.dominance_buy_eligible(51, 1, True, cap_resolved=5)
+        assert not mandate.dominance_buy_eligible(50, 1, True, cap_resolved=5)
+        assert mandate.dominance_buy_eligible(91, 1, True, cap_resolved=9)
+
+    def test_signal_arm(self):
+        session = _session()
+        assert proof.signal_arm(session) is None
+        session.active_strategies = ['黑塔纪元']
+        assert proof.signal_arm(session) == '黑塔纪元'
+
+
+# ===== ⑥ 冒烟:探针语料跑 _emit + 零漂移门 =====
+
+class TestEmitSmoke:
+
+    def _run_emit_raw(self, ev_arm: str) -> list:
+        strat = MandateV1Strategy()
+        session = _session()
+        session.target_comp = COMP_LIBRARY[0]
+        from sr_od.application.currency_war.decision.decision_v2 import (
+            prep_brain,
+        )
+        from sr_od.application.currency_war.decision_assembly import (
+            snapshot_from_obs,
+        )
+        cases = [
+            _obs(bench=[_bench(1, '燃料件')]),
+            _obs(bench=[_bench(i, '燃料' + str(i)) for i in range(1, 10)],
+                 vacancy=0),
+            _obs(state=GameState(gold=99), bench=[_bench(1, '目标件')],
+                 vacancy=0),
+            _obs(spheres=[('red', _Pt(), 3)]),
+            _obs(boxes=[(2, _Pt())]),
+            _obs(),
+        ]
+        outs = []
+        for obs in cases:
+            session.prep_obs_frame = obs
+            turn = prep_brain.assemble(
+                snapshot_from_obs(obs, session), session,
+                registry=strat.registry)
+            outs.append(entry.emit(obs, turn, session, None, ev_arm=ev_arm,
+                                   registry=strat.registry))
+        return outs
+
+    def _run_emit(self, ev_arm: str) -> list:
+        session = _session()
+        return [entry.truncate_frame_stable([e.action for e in emitted],
+                                            session)
+                for emitted in self._run_emit_raw(ev_arm)]
+
+    def test_emit_full_no_exception_and_contract_conform(self):
+        outs = self._run_emit('full')
+        for actions in outs:
+            assert isinstance(actions, list)
+            for a in actions:
+                assert isinstance(a, PrepAction)
+            # 截断判符合 v2:若含截断点/终点,必在末位
+            for i, a in enumerate(actions):
+                kind = entry.classify_frame_stability(a)
+                assert kind != 'unknown'
+                if kind in ('truncation', 'terminal'):
+                    assert i == len(actions) - 1
+
+    def test_emit_skeleton_only_no_exception_and_bypass(self):
+        """臂①:EV 发射面旁路 ⇒ 非支撑通道的 mandate=False 发射为零
+        (L-B5(a) 哨兵核读:臂①出现 mandate=False 序 3-5 发射 ⇒ 旁路不完整)。"""
+        for emitted in self._run_emit_raw('skeleton_only'):
+            for e in emitted:
+                if not e.mandate:
+                    assert e.funding_support, \
+                        f'臂①出现非支撑通道 EV 发射:{e.reason}'
+
+    def test_bridge_decide_prep_screen_none_frame_raises(self):
+        strat = MandateV1Strategy()
+        session = _session()
+        with pytest.raises(ValueError, match='prep_obs_frame'):
+            strat.decide_prep_screen(session, None)
+
+    def test_bridge_decide_prep_screen_smoke(self):
+        strat = MandateV1Live()   # 注册桥壳:装配缝(snapshot_from_obs→assemble)注入态
+        session = _session()
+        session.target_comp = COMP_LIBRARY[0]
+
+        class _Cfg:
+            ev_arm = 'full'
+
+        obs = _obs(bench=[_bench(1, '燃料件')], vacancy=2)
+        session.prep_obs_frame = obs
+        out = strat.decide_prep_screen(session, _Cfg())
+        assert isinstance(out, list)
+        for a in out:
+            assert isinstance(a, PrepAction)
+
+    def test_bridge_pure_layer_needs_injection(self):
+        """decision 桶纯层(MandateV1Strategy)装配缝缺省=显式抛错
+        (依赖矩阵:obs→Snapshot 装配半部在 app 桶;禁 decision→app)。"""
+        strat = MandateV1Strategy()
+        session = _session()
+        session.prep_obs_frame = _obs()
+        with pytest.raises(NotImplementedError, match='装配缝'):
+            strat.decide_prep_screen(session, None)
+
+
+# ===== R196 修复批行为测试(换线活/回锁窗/冲突丢弃/截断逐类/影子键)=====
+
+class TestR196Wiring:
+    """症1:换线接线修活——alt 供给 + k_switched 实值化 + 分键遥测。"""
+
+    def setup_method(self):
+        provisional.reset()
+
+    def teardown_method(self):
+        provisional.reset()
+
+    def _inject_switch_params(self):
+        provisional.inject('THETA', provisional.CalibValue(1.0))
+        provisional.inject('D_MIN', provisional.CalibValue(2))
+        provisional.inject('DELTA_HYST', provisional.CalibValue(0.15))
+        provisional.inject('U_X', provisional.CalibValue(1.0))
+        provisional.inject('V_MS', provisional.CalibValue(1.0))
+
+    def test_should_switch_event_with_alt_supply(self, monkeypatch):
+        """换线活:参数齐备 + 候选更优 ⇒ 事件真 + alt_comp 非空(entry 不再
+        构造性恒 no_alt)。"""
+        from sr_od.application.currency_war.kernel import cw_line_switch
+        self._inject_switch_params()
+        comps = [c for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
+        session = _session()
+        session.target_comp = comps[0]
+        for _ in range(3):
+            proof.update_line_state(session, comps[0], [], [])   # dwell=2 ≥ D_min
+
+        def _fake_e(comp, state, registry=None):
+            return 20.0 if comp.name == comps[0].name else 1.0
+        monkeypatch.setattr(cw_line_switch, 'e_rounds', _fake_e)
+        out = proof.should_switch(GameState(gold=30), session, None, None)
+        assert out.event and out.alt_comp is not None
+        assert out.alt_comp.name != comps[0].name
+
+    def test_no_alt_and_no_target_split_keys(self, monkeypatch):
+        self._inject_switch_params()
+        monkeypatch.setattr(proof, 'best_alt_comp', lambda *a, **k: None)
+        session = _session()
+        session.target_comp = COMP_LIBRARY[0]
+        proof.should_switch(GameState(gold=30), session, None, None)
+        assert session.cw4_counters.get('switchline_no_alt', 0) == 1
+        session2 = _session()
+        session2.target_comp = None
+        proof.should_switch(GameState(gold=30), session2, None, None)
+        assert session2.cw4_counters.get('switchline_no_target', 0) == 1
+
+    def test_e_cur_undefined_counted(self, monkeypatch):
+        from sr_od.application.currency_war.kernel import cw_line_switch
+
+        def _boom(comp, state, registry=None):
+            raise RuntimeError('degenerate')
+        monkeypatch.setattr(cw_line_switch, 'e_rounds', _boom)
+        self._inject_switch_params()
+        session = _session()
+        session.target_comp = COMP_LIBRARY[0]
+        out = proof.should_switch(GameState(gold=30), session, None, None)
+        assert not out.event and out.key == 'e_cur_undefined'
+        assert session.cw4_counters.get('switchline_e_cur_undefined', 0) == 1
+
+    def test_relock_window_blocks_within_dmin(self, monkeypatch):
+        """D-P4 回锁窗行为锁:构造切换(撤线登记)→ 窗口内回锁请求被拒。"""
+        from sr_od.application.currency_war.kernel import cw_line_switch
+        self._inject_switch_params()
+        comps = [c for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
+        assert len(comps) >= 2
+        cur, alt = comps[0], comps[1]
+        session = _session()
+        session.target_comp = cur
+        # 驻留 ≥ D_min(dwell=2)
+        for _ in range(3):
+            proof.update_line_state(session, cur, [], [])
+        e_map = {cur.name: 20.0, alt.name: 1.0}
+
+        def _fake_e(comp, state, registry=None):
+            return e_map[comp.name]
+        monkeypatch.setattr(cw_line_switch, 'e_rounds', _fake_e)
+        # 构造切换:alt 显著更优 ⇒ 事件真
+        out = proof.should_switch(GameState(gold=30), session, None, None,
+                                  alt_comp=alt)
+        assert out.event
+        proof.register_eviction(session, cur.name)   # entry 采纳时登记
+        # K 翻到 alt 后,窗口内(dwell of evicted=0 < D_min=2)请求切回
+        # cur(=撤线线)⇒ 回锁窗拦截
+        session.target_comp = alt
+        e_map[cur.name], e_map[alt.name] = 1.0, 20.0
+        back = proof.should_switch(GameState(gold=30), session, None, None,
+                                   alt_comp=cur)
+        assert not back.event and back.key == 'relock_window'
+        assert session.cw4_counters.get('switchline_relock_window', 0) == 1
+        # 窗口步出(≥ D_min)后回锁解禁
+        for _ in range(3):
+            proof.update_line_state(session, alt, [], [])
+        back2 = proof.should_switch(GameState(gold=30), session, None, None,
+                                    alt_comp=cur)
+        assert back2.event
+
+    def test_entry_k_switched_real_value(self):
+        """k_switched 实值化 + 塌缩出口可达(R197 症1③ 重写:经组装点
+        decide_from_turn 全链含截断器,不再直调 entry.emit / 不再 monkeypatch
+        判据本体)。
+
+        换线生效帧(K 已翻为 K′、新线有缺口 ⇒ 骨架 M2 发 OpenShop 截断
+        点)的 protected_sell 发射经依赖拓扑合并插到截断点之前——不被
+        截断器静默丢弃(IMPL_ADV_R197 症1 主场景:EV pass 追加在截断点
+        之后 ⇒ 塌缩出口永久错过且零计数)。"""
+        from sr_od.application.currency_war.decision.cw4 import (
+            bridge as cw4_bridge,
+        )
+        from sr_od.application.currency_war.decision.decision_v2 import (
+            prep_brain,
+        )
+        from sr_od.application.currency_war.decision_assembly import (
+            snapshot_from_obs,
+        )
+
+        class _Cfg:
+            def __init__(self, ev_arm: str) -> None:
+                self.ev_arm = ev_arm
+
+        # U_X/V_MS 注入形态:line_switch_sell 出口开闸(k_switched 帧
+        # 塌缩出口可评估)
+        provisional.inject('U_X', provisional.CalibValue(1.0))
+        provisional.inject('V_MS', provisional.CalibValue(1.0))
+        # 选一对线:old 有独占成员(塌缩出口对象),new ≠ old
+        comps = [c for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
+        pair = None
+        for a in comps:
+            for b in comps:
+                if a is b:
+                    continue
+                old_ms = set(proof.predicates.line_members(a))
+                new_ms = set(proof.predicates.line_members(b))
+                if old_ms - new_ms:
+                    pair = (a, b, sorted(old_ms - new_ms)[0])
+                    break
+            if pair:
+                break
+        assert pair is not None, 'COMP_LIBRARY 无可构造换线对'
+        old_comp, new_comp, old_only = pair
+        strat = MandateV1Strategy()
+        session = _session()
+        session.target_comp = old_comp
+        bench = [_bench(1, old_only)]
+
+        def _decide() -> list[PrepAction]:
+            obs = _obs(state=GameState(gold=30), bench=bench, vacancy=4)
+            turn = prep_brain.assemble(
+                snapshot_from_obs(obs, session), session,
+                registry=strat.registry)
+            return cw4_bridge.decide_from_turn(
+                obs, turn, session, _Cfg('full'), registry=strat.registry)
+
+        _decide()                                 # 帧1:登记 prev 线名
+        assert session.cw4_prev_line_name == old_comp.name
+        session.target_comp = new_comp           # K 翻转(基线意向机形态)
+        out = _decide()                          # 帧2:k_switched=True
+        # 塌缩出口发射可达且先于截断点(EV 卖面依赖拓扑合并,症1 修复面)
+        sells = [a for a in out if isinstance(a, SellBench)]
+        assert [a.slot for a in sells] == [1]
+        assert out.index(sells[0]) < len(out) - 1
+        assert isinstance(out[-1], OpenShop)      # 新线缺口 ⇒ M2 开店截断点
+
+
+class TestR196EvConflictDrop:
+    """症2:EV 冲突先到先得丢弃 + ev_conflict_dropped 计数。
+    (R197 症1③ 重写:两用例均经组装点 decide_from_turn 全链含截断器,
+    构造支付支撑帧验证丢弃非重发。)"""
+
+    @staticmethod
+    def _decide_full(bench, comp, gold: int = 1) -> tuple[list, StrategySession]:
+        from sr_od.application.currency_war.decision.cw4 import (
+            bridge as cw4_bridge,
+        )
+        from sr_od.application.currency_war.decision.decision_v2 import (
+            prep_brain,
+        )
+        from sr_od.application.currency_war.decision_assembly import (
+            snapshot_from_obs,
+        )
+
+        class _Cfg:
+            ev_arm = 'skeleton_only'
+
+        strat = MandateV1Strategy()
+        session = _session()
+        session.target_comp = comp
+        obs = _obs(state=GameState(gold=gold), bench=bench, vacancy=4)
+        turn = prep_brain.assemble(
+            snapshot_from_obs(obs, session), session, registry=strat.registry)
+        out = cw4_bridge.decide_from_turn(
+            obs, turn, session, _Cfg, registry=strat.registry)
+        return out, session
+
+    def test_same_slot_dropped_not_resent(self):
+        """骨架 M4 已卖槽 vs 支付支撑同槽提案 ⇒ 丢弃 + 计数(全链):
+        bench 满 + 缺件 + 金不足 ⇒ M4 卖唯一燃料槽 ⇒ funding 同槽提案
+        被丢弃 ⇒ 输出单笔(非重发,非 fail-stop)。"""
+        from types import SimpleNamespace
+
+        comp = SimpleNamespace(name='测试线', core_chars=('目标件',),
+                               shared_chars=())
+        bench = ([_bench(2, '燃料件')]
+                 + [_bench(i, '高价', star=3)
+                    for i in (1, 3, 4, 5, 6, 7, 8, 9)])
+        out, session = self._decide_full(bench, comp)
+        sells = [a for a in out if isinstance(a, SellBench)]
+        # M4 卖槽 2(唯一燃料);funding 同槽提案丢弃 ⇒ 单笔 + 计数
+        assert [a.slot for a in sells] == [2]
+        assert session.cw4_counters.get('ev_conflict_dropped', 0) == 1
+
+    def test_distinct_slot_kept(self):
+        """同帧异槽提案保留(全链):缺件注册价 ≥4 ⇒ funding 需两件燃料
+        ——低槽与 M4 冲突丢弃,高槽保留 ⇒ 输出两笔异槽卖出。"""
+        from types import SimpleNamespace
+
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        m = next(n for n, ch in CHARACTERS.items()
+                 if ch.cost and ch.cost >= 5)   # need-金 > 单件燃料回金 3
+        comp = SimpleNamespace(name='测试线', core_chars=(m,), shared_chars=())
+        bench = ([_bench(2, '燃料件'), _bench(3, '燃料件B')]
+                 + [_bench(i, '高价', star=3)
+                    for i in (1, 4, 5, 6, 7, 8, 9)])
+        out, session = self._decide_full(bench, comp)
+        sells = [a for a in out if isinstance(a, SellBench)]
+        # M4 卖槽 2;funding 提案 [2(冲突丢弃), 3(保留)]
+        assert sorted(a.slot for a in sells) == [2, 3]
+        assert session.cw4_counters.get('ev_conflict_dropped', 0) == 1
+
+
+class TestR196TruncationBehavior:
+    """症5:截断逐类行为(ClickSpheres 条件/conditional 复检/终点)。"""
+
+    def test_click_spheres_normal_continue_and_last_batch_truncates(self):
+        # 非末批(后续还有批次)⇒ 可续
+        out = entry.truncate_frame_stable(
+            [ClickSpheres(max_k=2), ClickSpheres(max_k=3), LevelUp()])
+        assert [type(a) for a in out] == [ClickSpheres, ClickSpheres]
+        # 末批(序列内最后一个 ClickSpheres,可能掉箱)⇒ 其后截断
+        out2 = entry.truncate_frame_stable(
+            [LevelUp(), ClickSpheres(max_k=2), LevelUp()])
+        assert [type(a) for a in out2] == [LevelUp, ClickSpheres]
+
+    def test_sellbench_name_slot_recheck(self):
+        session = _session()
+        # 引用空槽(名-槽一致性复检失败)⇒ 推不出即截断 + 计数
+        out = entry.truncate_frame_stable([SellBench(slot=5)], session,
+                                          bench_slots={1, 2})
+        assert out == []
+        assert session.cw4_counters['emitter_conditional_truncated'] == 1
+
+    def test_sellbench_in_sequence_projection(self):
+        """前序累积静态推出:同序列已卖槽位不再在投影集内,二次引用截断。"""
+        session = _session()
+        out = entry.truncate_frame_stable(
+            [SellBench(slot=1), SellBench(slot=1), LevelUp()], session,
+            bench_slots={1})
+        assert [type(a) for a in out] == [SellBench]
+        assert session.cw4_counters['emitter_conditional_truncated'] == 1
+
+    def test_deploymove_from_slot_recheck(self):
+        session = _session()
+        out = entry.truncate_frame_stable(
+            [DeployMove(from_slot=9, to_row='back', to_slot=1)], session,
+            bench_slots={1})
+        assert out == []
+        assert session.cw4_counters['emitter_conditional_truncated'] == 1
+
+    def test_composite_conditional_continue(self):
+        """组合类(SellDeployed/RunDeploy/RunEquip):按计划静态推出成立可续。"""
+        out = entry.truncate_frame_stable(
+            [RunDeploy(), LevelUp(), RunEquip()])
+        assert [type(a) for a in out] == [RunDeploy, LevelUp, RunEquip]
+
+    def test_bail_to_outer_terminal(self):
+        out = entry.truncate_frame_stable(
+            [BailToOuter(reason='x'), LevelUp()])
+        assert [type(a) for a in out] == [BailToOuter]
+
+    def test_no_context_conditional_continues(self):
+        """复检语境缺省(None)⇒ 按条件成立续发(生产路径 bridge 总供给)。"""
+        out = entry.truncate_frame_stable(
+            [SellBench(slot=5), OpenShop(), LevelUp()])
+        assert [type(a) for a in out] == [SellBench, OpenShop]
+
+    def test_post_truncation_drop_counted(self):
+        """R197 症1②:截断点/终点/词表外丢弃的尾动作逐个计数
+        (``emitter_post_truncation_dropped``)——禁零计数静默;全程
+        无截断 ⇒ 键不出现。"""
+        session = _session()
+        out = entry.truncate_frame_stable(
+            [LevelUp(), OpenShop(), SellBench(slot=1), LevelUp()], session,
+            bench_slots={1})
+        assert [type(a) for a in out] == [LevelUp, OpenShop]
+        assert session.cw4_counters['emitter_post_truncation_dropped'] == 2
+        # 终点尾丢弃同计
+        session2 = _session()
+        out2 = entry.truncate_frame_stable(
+            [StartBattle(), SellBench(slot=1)], session2, bench_slots={1})
+        assert [type(a) for a in out2] == [StartBattle]
+        assert session2.cw4_counters['emitter_post_truncation_dropped'] == 1
+        # 词表外:未发射动作(含该动作自身)计入
+        session3 = _session()
+        out3 = entry.truncate_frame_stable(
+            [SellBench(slot=1), OpenShop(), LevelUp(), LevelUp()], session3,
+            bench_slots={1})
+        assert [type(a) for a in out3] == [SellBench, OpenShop]
+        assert session3.cw4_counters['emitter_post_truncation_dropped'] == 2
+        # 无截断全通过 ⇒ 零计数(键不存在)
+        session4 = _session()
+        out4 = entry.truncate_frame_stable(
+            [LevelUp(), SellBench(slot=1)], session4, bench_slots={1})
+        assert len(out4) == 2
+        assert 'emitter_post_truncation_dropped' not in session4.cw4_counters
+
+
+class TestR196ShadowKeys:
+    """症3:λ 影子=相对分位求值后计数;真键/血线影子载体落地(零新键)。"""
+
+    def setup_method(self):
+        provisional.reset()
+
+    def teardown_method(self):
+        provisional.reset()
+
+    def _top_danger_state(self) -> GameState:
+        """构造落 λ_U 降序全序首位的 PL 键帧(可消费格)。"""
+        from sr_od.application.currency_war.decision.cw4.statefn import (
+            lambda_death,
+        )
+        order = lambda_death.lambda_u_order()
+        target = order[0]
+        for key, c in lambda_death._LAMBDA_TABLE.items():
+            if c.label == '可消费' and c.ci_hi == target:
+                d, hp, _pl, node = key.split('|')
+                return GameState(
+                    gold=20,
+                    enemy_difficulty=100 if d == 'D0' else 120,
+                    hp=10 if hp == 'hp<=15' else (30 if hp == 'hp15-40' else 50),
+                    plane=1 if _pl == 'P1' else 2, node_type=node)
+        pytest.fail('无可消费格')
+
+    def test_lambda_none_period_no_keys(self):
+        sig = entry._upgrader_evaluate(_session(), self._top_danger_state(),
+                                       20, 10)
+        assert not sig.lambda_shadow_armed and not sig.lambda_armed
+
+    def test_lambda_injected_form_counts_shadow_only(self):
+        provisional.inject('P_LAMBDA_QUANTILE', provisional.CalibValue(
+            value=0.15, injected_form=True))
+        st = self._top_danger_state()
+        sig = entry._upgrader_evaluate(_session(), st, 20, st.hp)
+        assert sig.lambda_shadow_armed and not sig.lambda_armed
+        # 健康帧(高血带)不触发:谓词求值结果非 True(触发/域外不求值均合)
+        st2 = GameState(gold=20, enemy_difficulty=100, hp=50, plane=1,
+                        node_type='reward')
+        assert entry._lambda_quantile_armed(st2, 50, 0.15) is not True
+
+    def test_lambda_calibrated_counts_true_key(self):
+        provisional.inject('P_LAMBDA_QUANTILE', provisional.CalibValue(
+            value=0.15))
+        st = self._top_danger_state()
+        sig = entry._upgrader_evaluate(_session(), st, 20, st.hp)
+        assert sig.lambda_armed and not sig.lambda_shadow_armed
+
+    def test_bloodline_none_period_shadow(self):
+        """血线阈值 None 期:注入形态结构锚 hp15 照测影子键(行为无关)。"""
+        sig = entry._upgrader_evaluate(_session(), GameState(gold=20), 20, 10)
+        assert sig.bloodline_shadow_armed
+        assert not sig.neardeath_unlock and not sig.f7_ban_armed
+        sig2 = entry._upgrader_evaluate(_session(), GameState(gold=20), 20, 30)
+        assert not sig2.bloodline_shadow_armed
+
+
+class TestR196Constants:
+    """症4/症6:bench_full_buy_abandon 计数 + 常数单源。"""
+
+    def test_bench_full_buy_abandon_counted(self):
+        k = ('目标件',)
+        bench = [_bench(i, '高价', star=3) for i in range(1, 10)]
+        frame = _frame(gold=30, bench=bench, k=k)
+        session = _session()
+        mandate.run_mandate(frame, session)
+        assert session.cw4_counters.get('bench_full_buy_abandon', 0) >= 1
+        assert session.cw4_counters.get('m2_retry_exhausted', 0) >= 1
+
+    def test_bench_capacity_single_source(self):
+        from sr_od.application.currency_war.kernel.cw_state import (
+            BENCH_CAPACITY as KERNEL_BENCH_CAPACITY,
+        )
+        assert mandate.BENCH_CAPACITY == KERNEL_BENCH_CAPACITY
+        src = Path(mandate.__file__).read_text(encoding='utf-8')
+        assert 'BENCH_CAPACITY: int = 9' not in src   # 本地重定义已删
+
+    def test_cheapest_member_cost_registry_derived(self):
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        comps = [c for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
+        comp = comps[0]
+        members = proof.predicates.line_members(comp)
+        frame = _frame(k=members)
+        expect = min((CHARACTERS[m].cost for m in members
+                      if CHARACTERS.get(m) and CHARACTERS[m].cost),
+                     default=3)
+        assert mandate.cheapest_member_cost(frame) == expect
+
+    def test_s_reserve_s_line_assembly(self):
+        """S 预留 = s_line 组装(非恒 0):默认局 = 0+saturation(cap)+0+2×2。"""
+        frame = _frame()
+        session = _session()
+        assert mandate._s_reserve(frame, session) == \
+            mandate.saturation_line(mandate._cap_of(session)) + 4
+
+    def test_funding_refund_registry_derived(self):
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.decision.cw4.criteria import (
+            sell as crit_sell,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import sell_refund
+        # 注册名:sell_refund(1, 注册表 cost) 派生
+        name = next(n for n, ch in CHARACTERS.items() if ch.cost)
+        cost = CHARACTERS[name].cost
+        slots, _ = crit_sell.funding_support_sell(
+            0, sell_refund(1, cost), [_bench(1, name, star=1)], ('K',))
+        assert slots == [1]
+        # 未注册探针名:保守估 3(与旧字面量行为同构)
+        slots2, _ = crit_sell.funding_support_sell(
+            0, 3, [_bench(1, '燃料件X', star=1)], ('K',))
+        assert slots2 == [1]
+
+
+# ===== 基线臂零漂移复跑(步4b 透传拆除后;慢桶)=====
+# 旧「两臂零漂移门」(zero_drift_gate:decision_v2 vs mandate_v1 逐位相等)
+# 随步4b 商店线接线拆除而不适用——新核商店线有自有行为,臂间 diff 系设计
+# 内形态(存在性证明移 test_cw4_shop_line.py::test_arm_diff_existence_n6);
+# 「没污染基线臂」的证明改由 decision_v2 自配对承载(锁的存在性纪律:
+# 锁红≠改动错,锁语义随设计演进重推)。
+
+@pytest.mark.slow
+class TestZeroDriftGate:
+
+    def test_baseline_self_pairing_n20(self):
+        """decision_v2 自配对:同 seed 同池同注册表视图跑两遍,
+        SimResult.ledger 逐位相等——基线臂行为确定且未被步4b 共享面
+        改动污染(SIM_CONSUMPTION_MAP ③-2 同源判据,对象改自配对)。"""
+        from sr_od.application.currency_war.sim.ab_core_swap import (
+            baseline_self_pairing_gate,
+        )
+        report = baseline_self_pairing_gate(n=20, seed_base=0,
+                                            pool='snapshot')
+        assert report['n'] == 20
+        assert report['mismatches'] == [], report
+
+
+# ===== ⑦ R200 修复批:三卖面通道语境接线 + 塌缩出口保守子集(IMPL_ADV_R200)=====
+
+class TestR200BenchEffectChannels:
+    """症3:三卖面通道(fuel_sell/sell_for_interest/funding_support)统一
+    消费共享装配的语境(黑塔例外件按语境保护,语境缺场回归燃料);
+    症5③:line_switch_sell 注入态保守子集(仅燃料类放行)。"""
+
+    def test_fuel_sell_protects_herta_in_context(self):
+        """黑塔例外:语境在场(augment 局)⇒ 不入燃料集;语境缺场 ⇒
+        回归燃料(星级供强无承载对象);state=None ⇒ 缺省保守保护。"""
+        k = ('线内件',)
+        bench = [_bench(1, '黑塔'), _bench(2, '燃料件')]
+        # 语境缺场(空 state):黑塔回归燃料
+        st_off = GameState()
+        cands = mandate.fuel_sell_candidates(bench, k, state=st_off)
+        assert [c.char_id for c in cands] == ['黑塔', '燃料件']
+        # 语境在场(黑塔纪元 augment 局):黑塔受保护
+        st_on = GameState()
+        st_on.active_strategies = ['黑塔纪元']
+        cands2 = mandate.fuel_sell_candidates(bench, k, state=st_on)
+        assert [c.char_id for c in cands2] == ['燃料件']
+        # 缺读保守端:state=None ⇒ 保护(黑塔不入燃料)
+        cands3 = mandate.fuel_sell_candidates(bench, k)
+        assert [c.char_id for c in cands3] == ['燃料件']
+
+    def test_funding_support_channel_uses_context(self):
+        """支付支撑通道同资格:语境在场 ⇒ 例外件不作为筹资燃料。"""
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.decision.cw4.criteria import (
+            sell as crit_sell,
+        )
+        cost = CHARACTERS['黑塔'].cost
+        bench = [_bench(1, '黑塔'), _bench(2, '阿格莱雅')]
+        st_on = GameState(gold=0)
+        st_on.active_strategies = ['黑塔纪元']
+        slots, _ = crit_sell.funding_support_sell(
+            0, 2 + cost, bench, ('线内件',), state=st_on)
+        assert slots == [2]     # 黑塔被保护,由无载体件筹资
+        # 缺省(state=None)保守端同款保护
+        slots2, _ = crit_sell.funding_support_sell(
+            0, 2 + cost, bench, ('线内件',))
+        assert slots2 == [2]
+
+    def test_sell_for_interest_channel_uses_context(self):
+        """凑息档通道同资格(T_SEARCH 注入形态下评估;语境缺场黑塔
+        照常入桶——例外语境不在场时无承载对象)。"""
+        from sr_od.application.currency_war.decision.cw4.criteria import (
+            sell as crit_sell,
+        )
+        bench = [_bench(1, '黑塔'), _bench(2, '阿格莱雅')]
+        provisional.inject('T_SEARCH_A', provisional.CalibValue(1.0))
+        try:
+            st_on = GameState()
+            st_on.active_strategies = ['黑塔纪元']
+            slots, key = crit_sell.sell_for_interest(
+                30, bench, 5, ('线内件',), state=st_on)
+            assert key == '' and slots == [2]
+            slots2, _ = crit_sell.sell_for_interest(
+                30, bench, 5, ('线内件',), state=GameState())
+            assert slots2 == [1, 2]
+        finally:
+            provisional.reset('T_SEARCH_A')
+
+
+class TestR200LineSwitchConservativeSubset:
+    """症5③:U_X/V_MS 注入且全式未落位期间,塌缩出口返回保守子集
+    (燃料类:1★ 全额可退,p41 支配性论证「卖错代价≈0」)而非全集。"""
+
+    def test_injected_state_returns_fuel_subset_only(self):
+        provisional.inject('U_X', provisional.CalibValue(1.0))
+        provisional.inject('V_MS', provisional.CalibValue(24.7))
+        try:
+            bench = [_bench(1, '旧A', star=1),        # 1★ 全额退 → 放行
+                     _bench(2, '旧B', star=2),        # 2★ → 保留(保守)
+                     _bench(3, '新线共用'), _bench(4, '无关件')]
+            slots, key = line_switch_sell(
+                ('旧A', '旧B', '新线共用'), ('新线共用',), bench, [],
+                GameState(), k_switched=True)
+            assert key == ''
+            assert slots == [1]       # 全集悬崖已消:2★ 旧线件保留
+        finally:
+            provisional.reset('U_X')
+            provisional.reset('V_MS')
+
+    def test_none_period_still_blocked(self):
+        slots, key = line_switch_sell(
+            ('旧件',), ('新件',), [_bench(1, '旧件')], [], None,
+            k_switched=True)
+        assert slots == [] and key == 'switchline_exit_blocked'
