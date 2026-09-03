@@ -687,18 +687,22 @@ class TestR196Wiring:
         session.target_comp = old_comp
         bench = [_bench(1, old_only)]
 
-        def _decide() -> list[PrepAction]:
-            obs = _obs(state=GameState(gold=30), bench=bench, vacancy=4)
+        def _decide(round_num: int = 1) -> list[PrepAction]:
+            obs = _obs(state=GameState(gold=30, round_num=round_num),
+                       bench=bench, vacancy=4)
             turn = prep_brain.assemble(
                 snapshot_from_obs(obs, session), session,
                 registry=strat.registry)
             return cw4_bridge.decide_from_turn(
                 obs, turn, session, _Cfg('full'), registry=strat.registry)
 
-        _decide()                                 # 帧1:登记 prev 线名
+        _decide(round_num=1)                      # 帧1:登记 prev 线名
         assert session.cw4_prev_line_name == old_comp.name
         session.target_comp = new_comp           # K 翻转(基线意向机形态)
-        out = _decide()                          # 帧2:k_switched=True
+        # 帧2:换线生效帧=新备战期(R1-3:K 翻转跨备战期经 update_target
+        # 生效;备战期开店闩按 (位面,轮次) 键,新期自动失效)——夹具按此
+        # 建模 round_num+1,锁断言(塌缩出口可达+先于截断点)不变。
+        out = _decide(round_num=2)               # 帧2:k_switched=True
         # 塌缩出口发射可达且先于截断点(EV 卖面依赖拓扑合并,症1 修复面)
         sells = [a for a in out if isinstance(a, SellBench)]
         assert [a.slot for a in sells] == [1]
@@ -1084,3 +1088,56 @@ class TestR200LineSwitchConservativeSubset:
             ('旧件',), ('新件',), [_bench(1, '旧件')], [], None,
             k_switched=True)
         assert slots == [] and key == 'switchline_exit_blocked'
+
+
+# ===== 备战期开店闩(2026-09-03 实机首局 1-1 卡死回归)=====
+
+class TestShopPhaseLatch:
+    """同一备战期内开店意图只发一次(mandate.run_mandate 闩)。
+
+    卡死机制回归:M2 判据每帧重燃 OpenShop 截断点(线缺成员∧金≥最廉
+    成员价在期内恒真)→ 同帧尾部 M1 部署/终点 StartBattle 永被截断,
+    实机备战环 26 分钟零推进(sim 每回合单次决策不可见,活环只在实机
+    多帧备战环出现)。闩语义=「店内决策已完整做出并执行;输入不变重跑
+    无信息量」,非禁令:发射时才置闩/换备战期失效。
+    """
+
+    def _stuck_frame(self, round_num: int = 1) -> mandate.MandateFrame:
+        """1-1 卡死态重建:线缺成员∧金足(4≥未注册名保守价3)∧
+        板 3/4 有 vacancy ∧ bench 有可部署件。"""
+        return _frame(gold=4, level=4,
+                      bench=[_bench(4, '乱破')],
+                      deployed=[_bench(1, '甲'), _bench(2, '乙'),
+                                _bench(3, '丙')],
+                      k=('缺件一', '缺件二'), round_num=round_num)
+
+    def test_same_phase_second_frame_no_shop(self):
+        s = _session()
+        out1 = mandate.run_mandate(self._stuck_frame(), s)
+        assert any(e.reason == 'm2_buy' for e in out1)
+        # 同备战期第二帧(实机备战环重观察后的重判):无任何开店意图,
+        # M1 部署不受闩影响照常发射;M2 跳过留分站计数。
+        out2 = mandate.run_mandate(self._stuck_frame(), s)
+        assert not any(isinstance(e.action, OpenShop) for e in out2)
+        assert any(e.reason == 'm1_deploy' for e in out2)
+        assert s.cw4_counters.get('shop_latch_skip_m2_buy', 0) == 1
+
+    def test_phase_advance_reopens_shop(self):
+        """换备战期(轮次推进=新店内容)闩失效,M2 重新决策开店。"""
+        s = _session()
+        mandate.run_mandate(self._stuck_frame(round_num=1), s)
+        out = mandate.run_mandate(self._stuck_frame(round_num=2), s)
+        assert any(e.reason == 'm2_buy' for e in out)
+
+    def test_failed_visit_no_latch(self):
+        """店未开成(bench 满∧无燃料=本帧零 OpenShop 发射)不置闩,
+        同会话下帧席位可得时照常重试(决策权保留)。"""
+        s = _session()
+        bench = [_bench(i, '高价', star=3) for i in range(1, 10)]
+        out1 = mandate.run_mandate(
+            _frame(gold=30, bench=bench, k=('目标件',)), s)
+        assert not any(isinstance(e.action, OpenShop) for e in out1)
+        assert s.cw4_counters.get('m2_retry_exhausted', 0) >= 1
+        out2 = mandate.run_mandate(
+            _frame(gold=30, bench=[_bench(1, '随意件')], k=('目标件',)), s)
+        assert any(e.reason == 'm2_buy' for e in out2)
