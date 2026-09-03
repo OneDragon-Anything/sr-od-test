@@ -166,19 +166,9 @@ def test_synthetic_row_gold_unreadable_omitted(monkeypatch) -> None:
     assert captured[0]['supply_pick'] is None
 
 
-def test_supply_producer_wiring_in_source() -> None:
-    """弱锁保底:CwScreenSupplyNode 选定分支真接线(set_last_supply_pick + 选项清单透传,
-    :options=逐列内容动态列表)。锁语义重推(观察层数据移交批):选定快照改
-    为本地 ``picked`` dict 构建后同时喂暂存槽与合成决策帧 extra.supply_pick,
-    逐列内容透传语义不变,字面锁随之更新到新形状。"""
-    import inspect
-
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_supply_node,
-    )
-    src = inspect.getsource(cw_screen_supply_node.CwScreenSupplyNode._do_action)
-    assert 'set_last_supply_pick(' in src
-    assert "'options': [{'char': o.char" in src   # 逐列内容透传(实际识别列数)
+# (2026-09-03 攻击性排查:原 test_supply_producer_wiring_in_source 删除——
+#  标识符在场+缩进字面锁(纪律 8,自供「弱锁」);选定→暂存槽→合成帧的行为面
+#  由上方 supply_outcome 行为测辖定。)
 
 
 # ===== 补给备战状态采集 detour(坐标 2026-08-27 实机实测后复实现) =====
@@ -343,16 +333,9 @@ def test_detour_failure_not_marked_retry_next_round(monkeypatch) -> None:
     assert ocr_clicks == ['返回补给阶段']   # OCR 文本兜底枪已打(重试序列末位)
 
 
-def test_detour_semantics_lock_in_source() -> None:
-    """弱锁:detour 快照带 phase='supply_detour' 且 actions=[](非购买轮语义)。"""
-    import inspect
-
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_supply_node,
-    )
-    src = inspect.getsource(cw_screen_supply_node.CwScreenSupplyNode._supply_detour_collect)
-    assert "extra={'phase': 'supply_detour'}" in src
-    assert 'actions=[], gold_point=True' in src
+# (2026-09-03 攻击性排查:原 test_detour_semantics_lock_in_source 删除——
+#  字面锁(自供「弱锁」);detour 行为面由上方 detour 流程测(重试/失败不落
+#  标记/OCR 兜底枪)辖定,phase 标记值消费面由账本行测试覆盖。)
 
 
 
@@ -858,25 +841,9 @@ def test_loss_page_failures_do_not_raise(monkeypatch) -> None:
     assert captured == []
 
 
-# ===== 弱锁保底:1f 真接线、3b 原路径保留 =====
-
-
-def test_branch_wiring_in_source() -> None:
-    """cw_screen_battle_wait 源码弱锁:1f 分支调 _record_loss_page;3b 原输轮记录仍在。
-
-    (W971 05-battle §1 P4:1f/3b 自 cw_loop.loop 收编进 CwScreenBattleWait.wait,
-    本锁随迁指向新宿主;锁语义不变:1f 真接线翻页前补录,防结构回退。)
-    """
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
-    src = inspect.getsource(cw_screen_battle_wait.CwScreenBattleWait.wait)
-    # 1f(失败结算页)翻页前补录。DD-006 二轮审计③后为 pre_fp 下传形态:
-    # 1f 分支一次全屏 OCR 的 items 下传 sign 判定/三项暂存/同屏指纹三处消费
-    #(消重复 OCR),指纹作为 pre_fp 传入 _record_loss_page——锁新形态调用在位。
-    assert '_record_loss_page(screen, pre_fp=_pre_fp)' in src
-    assert 'settle_page1_progress_sign([r.data for r in _1f_items])' in src
-    # 3b 原「前往结算」输轮记录路径保留(fp 防重共用,1f miss 时兜底)
-    assert "btn == '前往结算'" in src
-    assert 'self._record_round_outcome(screen)' in src
+# (2026-09-03 攻击性排查:原 test_branch_wiring_in_source 删除——精确调用
+#  字面锁(`_record_loss_page(screen, pre_fp=_pre_fp)` 等,纪律 8);
+#  1f/3b 输轮记录的行为面由下方 w28_outcome_write_defects 行为测辖定。)
 
 
 
@@ -1371,17 +1338,10 @@ def test_no_output_leaves_session_untouched(test_context: SrTestContext, monkeyp
 # --------------------------------------------------------------------------- #
 
 
-def test_static_write_semantics_locked() -> None:
-    """锁⑥:静态锁——保位写形态在位、None 过滤禁回潮、双池取走即清。"""
-    from sr_od.application.currency_war.operations.cw_entry.cw_entry_plane_intel import (
-        CwEntryPlaneIntel,
-    )
-
-    src = inspect.getsource(CwEntryPlaneIntel.write_back)
-    assert 'list(bosses)' in src, '保位写形态消失(须 list() 原样拷贝)'
-    assert '[n for n in' not in src, '滤 None 回潮(徽章态位面名字左移错序)'
-    assert 'self.ctx.cw_plane_bosses = None' in src, 'boss 中转池未清(跨局泄漏)'
-    assert 'self.ctx.cw_plane_affixes = None' in src, '词缀中转池未清(跨局泄漏)'
+# (2026-09-03 攻击性排查:原 test_static_write_semantics_locked 删除——
+#  `list(bosses)`/`= None` 在场锁(纪律 8);write_back 语义的镜像面在
+#  test_cw_node_screens w219/w221 锁(本锁自供「双面之一」=同事实第二源,
+#  纪律 7);滤 None 墓碑语义随镜像面保留。)
 
 
 # --------------------------------------------------------------------------- #
