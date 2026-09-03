@@ -131,19 +131,27 @@ class TestR1VGapWiring:
             provisional.reset('V_GAP')
 
     def test_r1_commitment_account_binds_deep_gap(self):
-        """R1 总账约束力(标定批核心回归锁):同标定值下深缺口(lv5
-        1费 j=1 账 ≈47 > 24.7)⇒ 不刷 + ``shop_r1_account_over_vgap``
-        分键——EV 门有约束力(ZERO_REFRESH_DIAG §6.2 回归判据「注入
-        形态 0<refreshes≪反事实 C」的结构承载;旧「有值即放行」形态
-        此帧会刷,即 §6.2 呈报的张力本体)。"""
+        """R1 总账约束力:短视界(r=5,本位面末段)深缺口(lv5 1费 j=1)
+        账 ≈45 > V̄_net(5)=24.7 ⇒ 不刷 + ``shop_r1_account_over_vgap``
+        分键——EV 门有约束力(ZERO_REFRESH_DIAG §6.2 回归判据的结构
+        承载)。旧锁同型帧构造在 r≈26(裸 session 回退 9,9,9)下断言
+        恒拒,锁的是已被修 A 取代的「V_gap 静态 24.7」语义——按锁纪律
+        重推改写为视界显式控制(出处=P53-frame-horizon-vgap §3/dd-025:
+        深缺口只在短视界关,长视界 j=1 帧开门是设计内形态);视界单调
+        双面锁见 test_cw_vgap_frame_horizon.py。"""
         provisional.reset('V_GAP')
         try:
             provisional.inject('V_GAP', provisional.CalibValue(
                 value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
             comp = _comp()
-            bench = [_bc(m) for m in _members(comp)]
-            st = _state(gold=60, bench=bench, level=5)
+            ms = _members(comp)
+            bench = ([_bc(ms[0])]
+                     + [_bc(m, slot=i + 2) for i, m in enumerate(ms[1:5])])
+            st = _state(gold=61, bench=bench, level=5)
+            st.plane = 3
+            st.round_num = 1
             sess = _session(comp)
+            sess.plane_lengths_seen = [9, 9, 5]   # plane3 node1 ⇒ r=5
             acts = _decide(st, sess)
             assert not [a for a in acts if isinstance(a, RefreshShop)]
             assert sess.cw4_counters.get('shop_r1_account_over_vgap', 0) >= 1
