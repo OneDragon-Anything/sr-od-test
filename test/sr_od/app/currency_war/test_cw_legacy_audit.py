@@ -65,13 +65,13 @@ def test_shop_open_collapse_wait_dd011() -> None:
     W970 批 A 原子化后商店路径 = 编排壳 buy + 波循环 run_buy_waves +
     开/关店原子核心,四落点同锁。
     注:不设肯定性断言(常量名在场类)——那类锁只是实现的影子,无独立语义。"""
+    from sr_od.application.currency_war import prep_director
     from sr_od.application.currency_war.operations.prep import (
         buy_cards,
         close_shop,
         open_shop,
-        shop,
     )
-    for fn in (shop.BuyShopCards.buy, buy_cards.run_buy_waves,
+    for fn in (prep_director.PrepDirector._open_shop_phase, buy_cards.run_buy_waves,
                open_shop.open_shop, close_shop.close_shop):
         src = _r336_batch4_locks_inspect.getsource(fn)
         assert 'def _legacy_poll' not in src, \
@@ -102,13 +102,11 @@ def test_shop_currency_war_config_module_level() -> None:
     buy 全崩。W970 批 A 原子化后 config 构造点 = run_buy_waves 顶部
     (无条件,UnboundLocalError 形态结构性消除);锁:buy_cards 模块级
     名存在 + 编排壳/波循环体内无任何局部 import。"""
-    from sr_od.application.currency_war.operations.prep import (
-        buy_cards,
-        shop,
-    )
+    from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.operations.prep import buy_cards
     assert getattr(buy_cards, 'CurrencyWarConfig', None) is not None, \
         'buy_cards.py 必须模块级 import CurrencyWarConfig'
-    for method in (shop.BuyShopCards.buy, buy_cards.run_buy_waves):
+    for method in (prep_director.PrepDirector._open_shop_phase, buy_cards.run_buy_waves):
         src = _r336_batch4_locks_inspect.getsource(method)
         assert 'currency_war_config import' not in src, \
             f'{method.__name__} 体内不得有局部 import CurrencyWarConfig(r345 局38 崩溃根因)'
@@ -122,15 +120,13 @@ def test_shop_contextlib_module_level_no_local_import() -> None:
     与遥测留证。W970 批 A 原子化后路径 = 编排壳 buy + 波循环
     run_buy_waves。锁:两模块模块级存在 + 两体内无局部 import
     contextlib + contextlib.suppress 使用点无局部 import 保护。"""
-    from sr_od.application.currency_war.operations.prep import (
-        buy_cards,
-        shop,
-    )
-    assert getattr(shop, 'contextlib', None) is not None, \
-        'shop.py 必须模块级 import contextlib(r346 H1)'
+    from sr_od.application.currency_war import prep_director
+    from sr_od.application.currency_war.operations.prep import buy_cards
+    assert getattr(prep_director, 'contextlib', None) is not None, \
+        'prep_director.py 必须模块级 import contextlib(r346 H1;编排宿主随壳退役迁移)'
     assert getattr(buy_cards, 'contextlib', None) is not None, \
         'buy_cards.py 必须模块级 import contextlib(r346 H1)'
-    for method in (shop.BuyShopCards.buy, buy_cards.run_buy_waves):
+    for method in (prep_director.PrepDirector._open_shop_phase, buy_cards.run_buy_waves):
         src = _r336_batch4_locks_inspect.getsource(method)
         assert 'import contextlib' not in src, \
             f'{method.__name__} 体内不得有局部 import contextlib(r346 H1 雷)'

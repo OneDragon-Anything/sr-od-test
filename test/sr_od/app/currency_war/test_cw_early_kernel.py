@@ -427,14 +427,15 @@ def test_remedy_gold_sells_to_fund_priority_buy() -> None:
     已卖集(r408 对称臂)。
 
     W67/ADR-0328 构造适配:exec_state 执行域对齐后,演进事务先于
-    arbitrate 落地(见 decide_prep ⑤ 注释)——压库件须选演进不消费的
+    arbitrate 落地(见决策核 ⑤ 注释(原 decide_prep))——压库件须选演进不消费的
     件(阮·梅/星期日非体系候选,COMP 不 deploy 它们;卡芙卡/千冶·刃
     是千冶减益目标,会被演进抢先上场致补偿无可卖件)。锁语义不变:
     金不足+可卖压库件 → 补偿卖凑金买目标件。"""
     strat = DecisionV2Strategy()
     sess = _locked_sess()
     st = _comp_state(gold=13, bench_names=['阮·梅', '星期日'])
-    acts = strat.decide_prep(st, sess, None)
+    sess.shop_state_frame = st
+    acts = strat.decide_shop_screen(sess, None)
     sells = [a for a in acts if isinstance(a, SellBench)]
     buys = [a for a in acts if isinstance(a, BuyCard)]
     assert sells and buys, f'金不足应补偿 [Sell, Buy] 组:{acts}'
@@ -610,7 +611,8 @@ def test_evolution_step_wired_into_decide_prep(monkeypatch) -> None:
     monkeypatch.setattr(m, 'evolution_step', _fake_evo)
     st = _state(round_num=4, gold=30, shop=[], bench=[],
                 node_type='battle')
-    acts = strat.decide_prep(st, sess, None)
+    sess.shop_state_frame = st
+    acts = strat.decide_shop_screen(sess, None)
     assert acts and acts[0] is sentinel, '演进动作必须前置决策循环'
     assert seen['memory'] is sess.v3_evolution
     # W155:registry 的 off-lock 降级分从接线传入(默认 registry 开=3.0)

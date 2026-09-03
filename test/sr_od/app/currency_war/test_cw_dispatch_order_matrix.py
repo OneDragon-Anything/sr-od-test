@@ -6,12 +6,7 @@
 浮层分支的「先于备战双锚」序位一次性钉死(源码级 index 断言),新浮层
 分支进 loop 时必须同步登记本矩阵(防逐个事故补)。
 
-豁免项(非「叠备战」形态,不入序锁):
-- 投资环境:01-opening §2 退役——仅开场 1-1 前弹一次,由 OpeningSequence
-  编排承担,主循环无分支(锁:主循环不得出现其检测锚);
-- 位面简报:仅入场出现一次(用户裁决 2026-09-02),BriefingOp 在入口链
-  承担,主循环无分支(锁同上);
-- 开局编排分支:`_iter==1 ∧ 新 match` 双门,只在 run 首帧生效,无叠备战面。
+豁免项(非「叠备战」形态,不入序锁):\n- 无(OpeningSequence 拆解退役后,简报/投资环境已入矩阵 0r/0s 行)。
 """
 import inspect
 
@@ -43,6 +38,10 @@ ORDER_MATRIX: list[tuple[str, str, str, str]] = [
     # 位面过渡帧无「强敌」。两行互为排他对,删任一须同步删排他接线。
     ('BOSS简报', '货币战争-BOSS简报', '标识-强敌来袭', 'area'),
     ('位面过渡', '', '点击空白处继续', 'ocr'),
+    # OpeningSequence 拆解退役(用户裁决):简报/投资环境由主循环 0r/0s 分支分发,
+    # 接管局由分发器自然续走 —— 两行入矩阵钉序位(先于备战双锚)。
+    ('位面简报', '货币战争-简报', '标识-本场对局首领', 'area'),
+    ('投资环境', '货币战争-投资环境', '标识-投资环境', 'area'),
 ]
 
 
@@ -74,15 +73,19 @@ def test_overlay_dispatch_precedes_prep_anchor(name, screen, anchor, method) -> 
         f'分支必须前移到 0 系')
 
 
-def test_retired_overlays_not_in_main_loop() -> None:
-    """豁免项锁:投资环境/位面简报主循环无检测分支(由 OpeningSequence/
-    入口链 BriefingOp 承担)——若有人往主循环加回分支,必须同步入矩阵。"""
-    src = _loop_src()
-    assert '货币战争-投资环境' not in src, \
-        '投资环境已在开局序列承担(01-opening §2),主循环分支须走序锁矩阵'
-    assert '标识-位面简报' not in src, \
-        '位面简报由入口链 BriefingOp 承担(仅入场一次),主循环分支须走序锁矩阵'
-
+def test_dissolved_opening_sequence_in_matrix() -> None:
+    """退役批守卫:OpeningSequence 拆解后,开局两屏(简报/投资环境)必须
+    以主循环分支承接且登记本矩阵(防「删壳忘接线」的结构性缺口)。"""
+    from sr_od.application.currency_war.operations import cw_loop as cw_loop_mod
+    src = inspect.getsource(cw_loop_mod)
+    assert 'OpeningSequence(self.ctx)' not in src, '开局编排壳未拆解退役(仍有实例化)'
+    assert 'opening_sequence import' not in src, '开局编排壳模块仍被导入'
+    assert 'BriefingOp(self.ctx)' in src, '位面简报分支缺失(0r)'
+    assert 'HandleInvestEnv' in src, '投资环境分支缺失(0s)'
+    assert 'WaitOneOneOp' in src, '等待1-1 链缺失(退役序列终步语义承接)'
+    matrix_anchors = {row[2] for row in ORDER_MATRIX}
+    assert '标识-本场对局首领' in matrix_anchors and '标识-投资环境' in matrix_anchors, (
+        '开局两屏未登记序锁矩阵')
 
 def test_boss_briefing_vs_plane_transition_exclusion_wired() -> None:
     """排他对接线锁(矩阵内两行的互斥关系,P4R3):boss 简报 ⇄ 位面过渡

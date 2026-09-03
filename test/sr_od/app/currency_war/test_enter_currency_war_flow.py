@@ -1,4 +1,4 @@
-"""EnterCurrencyWar 入口分流测试(fixture 驱动;2026-08-17 修复回归)。
+"""CwEntryEnter 入口分流测试(fixture 驱动;2026-08-17 修复回归)。
 
 修复背景(18:29 事故):传送已落地/恢复场景下,「前往参与」节点因按钮不在画面判死
 (3 次「找不到 前往参与」→ op 失败),而画面已在朝露公馆入口只差按 F。修复后按钮
@@ -14,9 +14,9 @@ from __future__ import annotations
 import pytest
 
 from one_dragon.base.operation.operation_base import OperationResult
-from sr_od.application.currency_war.operations.entry import enter_currency_war
-from sr_od.application.currency_war.operations.entry.enter_currency_war import (
-    EnterCurrencyWar,
+from sr_od.application.currency_war.operations.cw_entry import cw_entry_enter
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_enter import (
+    CwEntryEnter,
 )
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
@@ -28,8 +28,8 @@ from test.harness.fixture_controller import (
 )
 
 
-class _WatchedEnterCurrencyWar(WatchdogOperationMixin, EnterCurrencyWar):
-    """带看门狗的 EnterCurrencyWar(防 WAIT 段死循环)。"""
+class _WatchedCwEntryEnter(WatchdogOperationMixin, CwEntryEnter):
+    """带看门狗的 CwEntryEnter(防 WAIT 段死循环)。"""
 
 
 class _FakeGuideStepOp:
@@ -54,8 +54,8 @@ def fixture_controller(
     )
     monkeypatch.setattr(test_context, 'controller', ctrl)
     # 指南两步替身(真实 GuideOpen/GuideChooseTab 需要大世界导航链 fixture,超出本测试焦点)
-    monkeypatch.setattr(enter_currency_war, 'GuideOpen', _FakeGuideStepOp)
-    monkeypatch.setattr(enter_currency_war, 'GuideChooseTab', _FakeGuideStepOp)
+    monkeypatch.setattr(cw_entry_enter, 'GuideOpen', _FakeGuideStepOp)
+    monkeypatch.setattr(cw_entry_enter, 'GuideChooseTab', _FakeGuideStepOp)
     return ctrl
 
 
@@ -82,7 +82,7 @@ def test_enter_recovers_when_transport_already_done(
             pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
 
     fixture_controller.set_phases(phases)
-    op = _WatchedEnterCurrencyWar(test_context)
+    op = _WatchedCwEntryEnter(test_context)
     op._init_watchdog()  # type: ignore[attr-defined]
 
     enter_running_state(test_context)

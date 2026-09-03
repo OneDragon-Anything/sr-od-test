@@ -66,27 +66,21 @@ def _norm_seq(actions: list) -> list[tuple[str, dict]]:
 # ===== 商店屏:新旧入口决策对拍 =====
 
 
-def test_shop_screen_par_old_vs_new() -> None:
-    """同 state 快照:旧 decide_prep vs 新 decide_shop_screen 逐字段全等。
+def test_shop_screen_probe_smoke() -> None:
+    """商店屏唯一入口冒烟(退役批:decide_prep 兼容 shim 已删,对拍锁随删)。
 
-    已知合法差(白名单):升级意图类型 LevelUpShop(新)vs LevelUp(旧)
-    ——W970 §4.1.3 拆分,子类零新字段,归一化后必须逐项相等。
+    探针态(金足/店有目标件)经黑板入口应产出采纳动作;等价性保障改由
+    结构承载(单一入口 = decide_shop_screen,无第二实现可漂移)。
     """
     from sr_od.application.currency_war.decision.decision_v2.strategy import (
         DecisionV2Strategy,
     )
-    strat_old = DecisionV2Strategy()
-    strat_new = DecisionV2Strategy()
+    strat = DecisionV2Strategy()
     state = _make_state()
-    sess_old = _fresh(strat_old)
-    sess_new = _fresh(strat_new)
-    old_acts = strat_old.decide_prep(state, sess_old, None)
-    sess_new.shop_state_frame = state
-    new_acts = strat_new.decide_shop_screen(sess_new, None)
-    assert _norm_seq(old_acts) == _norm_seq(new_acts), (
-        f'新旧商店入口决策序列不等:\nold={old_acts}\nnew={new_acts}')
-    assert len(new_acts) > 0, '探针态(金足/店有目标件)应有采纳动作'
-
+    sess = _fresh(strat)
+    sess.shop_state_frame = state
+    acts = strat.decide_shop_screen(sess, None)
+    assert len(acts) > 0, '探针态(金足/店有目标件)应有采纳动作'
 
 def test_shop_screen_emits_levelup_shop() -> None:
     """新入口升级意图 = LevelUpShop(is-a LevelUp);旧入口仍产基类 LevelUp。

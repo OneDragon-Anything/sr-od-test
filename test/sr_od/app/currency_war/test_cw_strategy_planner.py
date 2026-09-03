@@ -496,7 +496,8 @@ def test_decide_prep_smoke():
     st = _strategy_chain_smoke_GameState(gold=30, hp=80, level=5, round_num=3, plane=1,
                    board={"仙舟": 2, "持续伤害": 1},
                    shop=[ShopCard(x=400, faction="仙舟", name="爻光", cost=1)])
-    actions = strat.decide_prep(st, sess, _Cfg())
+    sess.shop_state_frame = st
+    actions = strat.decide_shop_screen(sess, _Cfg())
     assert isinstance(actions, list)
 
 

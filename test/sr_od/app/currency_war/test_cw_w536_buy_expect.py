@@ -269,13 +269,13 @@ def test_w536_wiring_locks():
     消费/仅 progressed/消费即清),被取代的是暂存机制而非对账时序;依据
     = cw_strategy.StrategySession.pending_buy_expect 字段定义注释。
     锁迁移(W970 批 A 原子化):买入点记录/crop 链随波循环迁 buy_cards.py;
-    单元尾 stash 留守编排壳 shop.py(时序锚 = 关店后)。
+    单元尾 stash 单一源 = prep_director.finalize_buy_phase(时序锚 = 关店后;原编排壳 shop.py 已退役)。
     """
     buy_src = Path(
         'src/sr_od/application/currency_war/operations/prep/buy_cards.py'
     ).read_text(encoding='utf-8')
     shop_src = Path(
-        'src/sr_od/application/currency_war/operations/prep/shop.py'
+        'src/sr_od/application/currency_war/prep_director.py'
     ).read_text(encoding='utf-8')
     click_at = buy_src.index('Buy click @(')
     rec_at = buy_src.index('_buy_purchases.append(BuyPurchase(', click_at)

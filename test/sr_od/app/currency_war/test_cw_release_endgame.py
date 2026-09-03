@@ -553,7 +553,8 @@ def test_release_chain_end_to_end_reachable(monkeypatch) -> None:
                         lambda *a, **k: 6)
     s = StrategySession()
     st = _state(gold=58, hp=35, r=5)   # FORM ∧ g>R*=50 溢余段
-    DecisionV2Strategy().decide_prep(st, s, None)
+    s.shop_state_frame = st
+    DecisionV2Strategy().decide_shop_screen(s, None)
     assert getattr(s, 'v3_dp_posture', None) is not None
     assert s.v3_dp_posture.posture.tag == 'release'
     d = getattr(s, 'v3_release', None)

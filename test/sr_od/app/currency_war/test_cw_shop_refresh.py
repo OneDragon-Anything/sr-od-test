@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_shop_refresh 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -12,10 +11,11 @@
 """
 from __future__ import annotations
 
-
 # ==================== w510_refreshfee ====================
-
-from sr_od.application.currency_war.operations.prep.buy_cards import expected_gold_after_actions
+from one_dragon.base.operation.operation_node import operation_node
+from sr_od.application.currency_war.operations.prep.buy_cards import (
+    expected_gold_after_actions,
+)
 
 
 def test_multiwave_refresh_expected_closes_per_accounting():
@@ -51,6 +51,7 @@ import json
 from pathlib import Path
 
 from sr_od.application.currency_war.operations.prep.buy_cards import refresh_effective
+from sr_od.operations.sr_operation import SrOperation
 from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
@@ -119,7 +120,6 @@ def test_record_defect_does_not_pollute_spend_ledger(tmp_path: Path, monkeypatch
     assert not (tmp_path / 'spend_ledger.jsonl').exists()
 
 
-from sr_od.application.currency_war.telemetry import state
 
 
 # ==================== w564_shop_wire ====================
@@ -131,8 +131,11 @@ import pytest
 import sr_od.application.currency_war.prep_director as pd
 from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
 from sr_od.application.currency_war.obs.cw_shop_obs import RefreshExpect
-
-from sr_od.application.currency_war.prep_director import PrepDirector, build_refresh_expect, refresh_reconcile_mismatches
+from sr_od.application.currency_war.prep_director import (
+    PrepDirector,
+    build_refresh_expect,
+    refresh_reconcile_mismatches,
+)
 
 # ===== _shop_pool_inputs(参评牌过滤,纯函数)=====
 
@@ -313,20 +316,14 @@ def test_pool_wire_best_effort_on_error(
 import pathlib
 from typing import Any
 
-import pytest
-
-from sr_od.application.currency_war.telemetry import recorder
-from sr_od.application.currency_war.telemetry import state as cw_telemetry
-from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
-from sr_od.application.currency_war.kernel.cw_state import (
-    BuyCard,
-    GameState,
-    RefreshShop,
-    ShopCard,
-)
 from sr_od.application.currency_war.decision.cw_strategy import (
     CurrencyWarMatch,
     StrategySession,
+)
+from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
+from sr_od.application.currency_war.kernel.cw_state import (
+    BuyCard,
+    RefreshShop,
 )
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
@@ -353,6 +350,46 @@ def _state(gold: int, names: list[str]) -> GameState:
     return GameState(gold=gold, plane=1, round_num=5, level=5,
                      shop=_shop_cards(names))
 
+
+class _BuyPhaseHostOp(SrOperation):
+    """买牌单元离线宿主(prep/shop.py BuyShopCards 壳退役后的测试装配面)。
+
+    编排 = 现役链同款:开店 → 波循环 → 关店 → finalize_buy_phase 单一源收尾;
+    生产编排唯一宿主 = PrepDirector._open_shop_phase,本类只作波循环/收尾
+    语义的离线驱动器,不承载生产逻辑。
+    """
+
+    def __init__(self, ctx):
+        SrOperation.__init__(self, ctx, op_name='货币战争-买牌波测试宿主')
+
+    @operation_node(name='商店买牌', is_start_node=True)
+    def buy(self):
+        from sr_od.application.currency_war.operations.prep.buy_cards import (
+            run_buy_waves,
+        )
+        from sr_od.application.currency_war.operations.prep.close_shop import (
+            close_shop,
+        )
+        from sr_od.application.currency_war import prep_director as finalize_home
+        from sr_od.application.currency_war.operations.prep.open_shop import (
+            open_shop,
+        )
+        screen = self.last_screenshot
+        if not self.round_by_find_area(screen, '货币战争-备战',
+                                       '备战标识-购买经验').is_success:
+            return self.round_fail('非备战屏(回合事件叠层?),交主循环处理')
+        _r_open = open_shop(self)
+        if not _r_open.is_success:
+            return _r_open
+        match = self.ctx.cw_match
+        _rr, outcome = run_buy_waves(self, match, None, False, False)
+        if _rr is not None or outcome is None:
+            return _rr if _rr is not None else self.round_fail('买牌波循环无产出')
+        _r_close = close_shop(self)
+        if not _r_close.is_success:
+            return _r_close
+        return self.round_success(finalize_home.finalize_buy_phase(
+            self, match, outcome, None, False, False))
 
 class _StubStrategy:
     """替身计划源:按调用次序吐剧本 plan(耗尽后重复最后一个)。"""
@@ -388,14 +425,15 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     - 买+刷新波(W592 语义不变):第 1 次 = 点击前现读,第 2 次 =
       刷后重读;read_gold_opt 第 1 次 = 点击前现读金,第 2 次 = 刷后金。
     """
+    from sr_od.application.currency_war import prep_director as pd
     from sr_od.application.currency_war.obs import cw_observation as cwo
     from sr_od.application.currency_war.obs import cw_observation_gate as gate
-    from sr_od.application.currency_war import prep_director as pd
-    from sr_od.application.currency_war.operations.prep import buy_cards as buy_cards_mod
-    from sr_od.application.currency_war.operations.prep import shop as shop_mod
-    from sr_od.application.currency_war.operations.prep.shop import BuyShopCards
+    from sr_od.application.currency_war.operations.prep import (
+        buy_cards as buy_cards_mod,
+    )
 
-    class _Watched(WatchdogOperationMixin, BuyShopCards):
+
+    class _Watched(WatchdogOperationMixin, _BuyPhaseHostOp):
         pass
 
     # 台账隔离(不写真实 .debug;test_cw_w536 手法)。
@@ -433,7 +471,7 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     _state_seq = _make_seq(states)
     _gold_opt_seq = _make_seq(gold_opts)
     _shop_seq = _make_seq(shop_reads)
-    for _mod in (shop_mod, buy_cards_mod):
+    for _mod in (cwo, buy_cards_mod):
         monkeypatch.setattr(_mod, 'read_game_state', _state_seq)
         # gold 差值对拍(关店后 stylized 读):正常链读 8 与期望一致,零冲突
         monkeypatch.setattr(_mod, 'read_gold',
@@ -705,7 +743,6 @@ def test_buy_refresh_wave_real_free_proc(
                    for k in rows), (
         '刷新面牌面已变时不应落刷新未生效票')
 
-from sr_od.application.currency_war.telemetry import defects
 
 
 # ==================== w891_buy_edge ====================
@@ -714,15 +751,12 @@ import inspect
 
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
-    BuyCard,
-    GameState,
     LevelUp,
-    RefreshShop,
     SellBench,
-    ShopCard,
     bench_occupied,
 )
 from sr_od.application.currency_war.obs import cw_observation_gate
+from one_dragon.base.operation.operation_node import operation_node
 from sr_od.application.currency_war.operations.prep.buy_cards import (
     build_post_buy_incremental_state,
     refresh_wave_is_refresh_only,
@@ -839,20 +873,9 @@ def test_gate_fingerprint_mechanism_constants_untouched() -> None:
 
 # ==================== w944_shop_unk_settle ====================
 
-import pathlib
-from typing import Any
 
 import numpy as np
 import pytest
-
-from test.conftest import SrTestContext
-from test.harness.fixture_controller import (
-    FixtureController,
-    WatchdogOperationMixin,
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
-)
 
 _w944_shop_unk_settle_PREP = '货币战争-备战'
 _w944_shop_unk_settle_ANCHOR = (_w944_shop_unk_settle_PREP, '备战标识-购买经验')
@@ -887,6 +910,7 @@ class _FakeOp:
 
 def test_stable_gate_waits_animation_then_settles() -> None:
     """锁①a 动画帧序列:A→B(变)→B→B(连续同)→ 门判稳定放行。"""
+    from one_dragon.base.operation.operation_node import operation_node
     from sr_od.application.currency_war.operations.prep.buy_cards import (
         _wait_shop_row_stable,
     )
@@ -905,6 +929,7 @@ def test_stable_gate_fast_path_minimum_observation() -> None:
     """
     import time as _t
 
+    from one_dragon.base.operation.operation_node import operation_node
     from sr_od.application.currency_war.operations.prep.buy_cards import (
         _wait_shop_row_stable,
     )
@@ -928,6 +953,7 @@ def test_stable_gate_timeout_has_compensation_wait() -> None:
     """
     import time as _t
 
+    from one_dragon.base.operation.operation_node import operation_node
     from sr_od.application.currency_war.operations.prep.buy_cards import (
         _SETTLE_TIMEOUT_COMPENSATE_S,
         _wait_shop_row_stable,
@@ -944,6 +970,7 @@ def test_stable_gate_timeout_has_compensation_wait() -> None:
 
 def test_stable_gate_timeout_on_ever_changing_frames() -> None:
     """锁①b 永变帧序列 → 超时返回 False(调用方回退,不死等)。"""
+    from one_dragon.base.operation.operation_node import operation_node
     from sr_od.application.currency_war.operations.prep.buy_cards import (
         _wait_shop_row_stable,
     )
@@ -954,6 +981,7 @@ def test_stable_gate_timeout_on_ever_changing_frames() -> None:
 
 def test_stable_gate_screenshot_exception_offline_contract() -> None:
     """锁①c 离线契约:截图恒炸 → suppress 降级继续等,超时 False(不炸调用方)。"""
+    from one_dragon.base.operation.operation_node import operation_node
     from sr_od.application.currency_war.operations.prep.buy_cards import (
         _wait_shop_row_stable,
     )
@@ -1002,13 +1030,13 @@ def _make_hook_op(test_context: SrTestContext,
     from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
     from sr_od.application.currency_war.obs import cw_observation as cwo
     from sr_od.application.currency_war.obs import cw_observation_gate as gate
-    from sr_od.application.currency_war.operations.prep import buy_cards as buy_cards_mod
-    from sr_od.application.currency_war.operations.prep import shop as shop_mod
-    from sr_od.application.currency_war.operations.prep.shop import BuyShopCards
+    from sr_od.application.currency_war.operations.prep import (
+        buy_cards as buy_cards_mod,
+    )
     from sr_od.application.currency_war.telemetry import defects, recorder
     from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
-    class _Watched(WatchdogOperationMixin, BuyShopCards):
+    class _Watched(WatchdogOperationMixin, _BuyPhaseHostOp):
         pass
 
     # 台账隔离(不写真实 .debug;test_cw_w536 手法)
@@ -1040,8 +1068,8 @@ def _make_hook_op(test_context: SrTestContext,
         return [ShopCard(x=j, faction='?', name=n, cost=3, star=1)
                 for j, n in enumerate(names)]
 
-    # 读点随波循环迁 buy_cards 模块(W970 批 A);编排壳仅保留 read_gold/read_game_state
-    for _mod in (shop_mod, buy_cards_mod):
+    # 读点随波循环迁 buy_cards 模块(W970 批 A);finalize(单一源在 prep_director)经 cw_observation 函数级导入
+    for _mod in (cwo, buy_cards_mod):
         monkeypatch.setattr(_mod, 'read_game_state', lambda *a, **k: _state())
         monkeypatch.setattr(_mod, 'read_gold', lambda *a, **k: 10)
     monkeypatch.setattr(buy_cards_mod, 'read_gold_opt', lambda *a, **k: 10)

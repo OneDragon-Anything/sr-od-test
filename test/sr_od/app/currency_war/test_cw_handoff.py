@@ -155,15 +155,16 @@ def test_board_tier_and_overall() -> None:
     assert handoff_tier(hi) == 1 and handoff_hp_tier(hi.hp) == 2
 
 
-# ---------- ③ decide_prep 挂载 ----------
+# ---------- ③ decide_shop_screen 挂场(黑板) ----------
 
-def test_decide_prep_mounts_snapshot_once_per_plane() -> None:
+def test_decide_shop_screen_mounts_snapshot_once_per_plane() -> None:
     """plane>=2 本位面首帧算一次写 session.v3_handoff;同位面不覆写。"""
     strat = DecisionV2Strategy()
     sess = _sess()
     st = _state(deployed=[_bench('藿藿', slot=0), _bench('丹恒·饮月', slot=1),
                           _bench('爻光', slot=2, star=2)])
-    strat.decide_prep(st, sess, None)
+    sess.shop_state_frame = st
+    strat.decide_shop_screen(sess, None)
     assert sess.v3_handoff is not None
     first = sess.v3_handoff
     assert first.hp == 55 and first.deployed_n == 3 and first.core2_count == 1
@@ -171,16 +172,18 @@ def test_decide_prep_mounts_snapshot_once_per_plane() -> None:
     # 同位面第二轮:不覆写(同一对象——位面首帧一次性采样)
     st2 = _state(round_num=2, hp=40, gold=30,
                  deployed=[_bench('藿藿', slot=0)])
-    strat.decide_prep(st2, sess, None)
+    sess.shop_state_frame = st2
+    strat.decide_shop_screen(sess, None)
     assert sess.v3_handoff is first
 
 
-def test_decide_prep_no_snapshot_on_plane1() -> None:
+def test_decide_shop_screen_no_snapshot_on_plane1() -> None:
     """plane=1 不触发(Phase 0 观测只辖 P2 承接;P1 零漂移的结构面)。"""
     strat = DecisionV2Strategy()
     sess = _sess()
     st = _state(plane=1, round_num=5)
-    strat.decide_prep(st, sess, None)
+    sess.shop_state_frame = st
+    strat.decide_shop_screen(sess, None)
     assert sess.v3_handoff is None
 
 

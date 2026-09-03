@@ -441,8 +441,8 @@ def test_phase_round_cross_match_reset():
 def test_entry_discard_call_sites_are_new_match_only():
     """锁 4(静态口径:弃置只挂新局确凿三屏,不碰「继续进度」恢复同一物理局的合法续用):
     入口文件恰有 3 个调用点,理由串分别为难度确认/模式选择/简报。"""
-    from sr_od.application.currency_war.operations.entry import (
-        start_currency_war_match as entry_mod,
+    from sr_od.application.currency_war.operations.cw_entry import (
+        cw_entry_start as entry_mod,
     )
     src = _w289_match_start_reset_inspect.getsource(entry_mod)
     for reason in ('到达难度确认屏=新局开始',

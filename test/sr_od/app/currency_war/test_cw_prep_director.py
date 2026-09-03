@@ -602,16 +602,20 @@ def test_levelup_raw_read_no_fallback(monkeypatch, test_context: SrTestContext) 
     assert _read_level_raw(test_context, None) is None
 def test_composite_reads_success_field(test_context: SrTestContext,
                                        monkeypatch) -> None:
-    """live 回归(2026-08-14):_run_composite 读 OperationResult.success(非 is_success)。"""
+    """live 回归(2026-08-14):_run_composite 读 OperationResult.success(非 is_success)。
+
+    退役批改锚:RunBuyPhase 组合已随 prep/shop.py 壳删除,本锁改用仍在线的
+    RunEquip 组合(同一 _run_composite 机制,success 字段读法不变)。
+    """
     from sr_od.application.currency_war import prep_actions as pa
-    from sr_od.application.currency_war.kernel.cw_prep_actions import RunBuyPhase
+    from sr_od.application.currency_war.kernel.cw_prep_actions import RunEquip
 
     ex = pa.PrepActionExecutor(PrepDirector(test_context), test_context)
 
     class _OpResult:   # 形状对齐 one_dragon OperationResult(success 字段)
         def __init__(self) -> None:
             self.success = True
-            self.status = 'plan 买2张 升1次 刷0次'
+            self.status = '穿 2 件'
 
     class _FakeOp:
         def __init__(self, ctx) -> None:
@@ -621,18 +625,16 @@ def test_composite_reads_success_field(test_context: SrTestContext,
             return _OpResult()
 
     class _FakeModule:
-        BuyShopCards = _FakeOp
+        EquipAllOp = _FakeOp
 
     # patch 消费点:只替换被测链要导入的那一个 sys.modules 条目
     # (importlib.import_module 命中缓存直返 _FakeModule),不动标准库
-    # importlib.import_module(全局替换会波及进程内一切 import)
     import sys
     monkeypatch.setitem(sys.modules,
-                        'sr_od.application.currency_war.operations.prep.shop',
+                        'sr_od.application.currency_war.operations.prep.equip_all',
                         _FakeModule)
-    ok, detail = ex.execute(RunBuyPhase())
+    ok, detail = ex.execute(RunEquip())
     assert ok, f'success=True 的组合结果必须判成功(live bug:旧读 is_success 恒 False): {detail}'
-
 def test_rule3_shop_open_closes_shop_first() -> None:
     """live 回归(2026-08-14 1-2):商店开态奖励面板与概率表按钮重叠 → 假球误开弹窗。
 

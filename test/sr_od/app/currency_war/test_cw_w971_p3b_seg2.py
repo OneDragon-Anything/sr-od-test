@@ -83,15 +83,12 @@ def test_open_shop_phase_orchestration() -> None:
 
 
 def test_buy_phase_finalize_single_source() -> None:
-    """买后收尾单一源:finalize_buy_phase 模块函数,壳与流程层共用(防双份漂移)。"""
-    from sr_od.application.currency_war.operations.prep import shop as shop_mod
+    """买后收尾单一源:finalize_buy_phase 模块函数(退役批:壳删除后唯一宿主
+    = 流程层 prep_director;防双份漂移的单一源语义不变)。"""
+    from sr_od.application.currency_war import prep_director as pd_mod
 
-    assert hasattr(shop_mod, 'finalize_buy_phase')
-    buy_src = inspect.getsource(shop_mod.BuyShopCards.buy)
-    assert 'finalize_buy_phase(' in buy_src, '壳未改用共用收尾函数'
-    assert 'pending_buy_expect' not in buy_src, (
-        '买后收尾段仍内联在壳里(应已抽入 finalize_buy_phase 单一源)')
-
+    assert hasattr(pd_mod, 'finalize_buy_phase'), (
+        'finalize_buy_phase 未落流程层单一源')
 
 # ==================== 主循环:稳定门/标志位/接管补采退役 ====================
 
