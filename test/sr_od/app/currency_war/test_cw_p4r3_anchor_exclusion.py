@@ -17,6 +17,8 @@ def test_boss_briefing_texts_misread_forms() -> None:
         is_boss_briefing_texts,
     )
     assert is_boss_briefing_texts(['强敌米', '点击空白处继续', '云骑骁卫·彦卿'])
+    # 繁首形态(第七局实锤):OCR 把「强」读成繁体「強」→ 简体单一 token 漏判
+    assert is_boss_briefing_texts(['強敌来袭', '点击空白处继续'])
     assert is_boss_briefing_texts(['强敌来袭', '点击空白处继续'])
     # 负样本:位面过渡/备战帧无「强敌」
     assert not is_boss_briefing_texts(['点击空白处继续', '位面过渡'])
