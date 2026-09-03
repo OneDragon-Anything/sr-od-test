@@ -739,6 +739,19 @@ def frame():
     return cv2_utils.read_image(str(FIXTURES / '后排8槽-狸猫局.webp'))
 
 
+@_back_layout_pytest.fixture(scope='module')
+def tanuki_ids(frame, templates):
+    """狸猫局位1/2/7/8 识别结果(name, inliers)模块内单载。
+
+    强度/定名/兄弟互斥三个锚定测消费同一帧同一批裁剪——识别只算一次,
+    断言面各自独立(合并战役:同输入只算一次,禁各测重跑识别)。"""
+    out = {}
+    for slot, cx in ((1, 464), (2, 606), (7, 1316), (8, 1458)):
+        crop = frame[600:740, cx - 71:cx + 71]
+        out[slot] = identify_character(crop, templates)
+    return out
+
+
 # ===== 1. 8 格档识别(含旧 9/10/11 触发帧回归到 8 格档) =====
 
 def test_tanuki_templates_in_library(templates):
@@ -747,30 +760,25 @@ def test_tanuki_templates_in_library(templates):
     assert '狸小龙' in templates
 
 
-def test_slot8_identification(frame, templates):
+def test_slot8_identification(tanuki_ids):
     """8 槽布局逐槽识别:位1 藿藿/位2 爻光/位7 狸小虎/位8 狸小龙(交互实锤锚)。"""
-    centers = {1: 464, 2: 606, 7: 1316, 8: 1458}
-    for slot, cx in centers.items():
-        crop = frame[600:740, cx - 71:cx + 71]
-        name, inliers = identify_character(crop, templates)
+    for slot in (1, 2, 7, 8):
+        name, inliers = tanuki_ids[slot]
         assert inliers and inliers > 15, f'位{slot} 识别强度不足: {name},{inliers}'
 
 
-def test_slot8_expected_names(frame, templates):
+def test_slot8_expected_names(tanuki_ids):
     """锚点定名:位1=藿藿,位7=狸小虎,位8=狸小龙(详情面板交互实锤,2026-08-19)。"""
-    cx_map = {1: ('藿藿', 464), 7: ('狸小虎', 1316), 8: ('狸小龙', 1458)}
-    for slot, (want, cx) in cx_map.items():
-        crop = frame[600:740, cx - 71:cx + 71]
-        name, inliers = identify_character(crop, templates)
+    want_map = {1: '藿藿', 7: '狸小虎', 8: '狸小龙'}
+    for slot, want in want_map.items():
+        name, inliers = tanuki_ids[slot]
         assert name == want, f'位{slot} 应为 {want},实识别 {name}({inliers})'
 
 
-def test_tanuki_no_cross_match(frame, templates):
+def test_tanuki_no_cross_match(tanuki_ids):
     """蓝/红狸猫互不误认(兄弟同型不同色;SIFT 形状特征区分)。"""
-    blue = frame[600:740, 1316 - 71:1316 + 71]
-    red = frame[600:740, 1458 - 71:1458 + 71]
-    assert identify_character(blue, templates)[0] == '狸小虎'
-    assert identify_character(red, templates)[0] == '狸小龙'
+    assert tanuki_ids[7][0] == '狸小虎'
+    assert tanuki_ids[8][0] == '狸小龙'
 
 
 def test_slot8_empty_slots_no_false_positive(frame, templates):
