@@ -443,19 +443,19 @@ def test_below_icon_diff_detects_equip(test_context: SrTestContext) -> None:
     fixture ``equipped_front1_feixiao_0/1/2/3``(front-1 飞霄 0→3 件顺序态):加 icon 的连续态
     diff 应远 > ``BELOW_DIFF_THRESHOLD``(8.0),同态 ~0。offline 验证验穿逻辑可靠(剩 live drag 待游戏条件)。
     """
-    from sr_od.application.currency_war.operations.prep.equip_all import  EquipAll, _below_icon_diff
+    from sr_od.application.currency_war.operations.prep.equip_all import  EquipAllOp, _below_icon_diff
     if not test_context.has_screen('货币战争-备战', 'equipped_front1_feixiao_0'):
         _equipment_pytest.skip('fixture equipped_front1_feixiao_0/1/2/3 未采')
     states = [test_context.load_screen('货币战争-备战', f'equipped_front1_feixiao_{i}') for i in range(4)]
-    avatar_x = EquipAll.FRONT_AVATARS[0].x           # front-1 avatar x=743
-    thr = EquipAll.BELOW_DIFF_THRESHOLD              # 8.0
+    avatar_x = EquipAllOp.FRONT_AVATARS[0].x           # front-1 avatar x=743
+    thr = EquipAllOp.BELOW_DIFF_THRESHOLD              # 8.0
     for i in range(3):                                # 连续态(加 icon)→ diff >> 阈值
         d = _below_icon_diff(states[i], states[i + 1], avatar_x,
-                             EquipAll.BELOW_ICON_Y, EquipAll.BX_HALF, EquipAll.BY_HALF)
+                             EquipAllOp.BELOW_ICON_Y, EquipAllOp.BX_HALF, EquipAllOp.BY_HALF)
         assert d > thr, f'{i}→{i + 1} 加 icon 应 diff > {thr},实际 {d:.1f}'
     # 同态 → ~0(无变化)
     assert _below_icon_diff(states[0], states[0], avatar_x,
-                            EquipAll.BELOW_ICON_Y, EquipAll.BX_HALF, EquipAll.BY_HALF) < thr
+                            EquipAllOp.BELOW_ICON_Y, EquipAllOp.BX_HALF, EquipAllOp.BY_HALF) < thr
 
 
 def test_empty_slots_skips_occupied() -> None:
