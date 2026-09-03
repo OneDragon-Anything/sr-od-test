@@ -908,7 +908,8 @@ def test_cw_screen_plane_intel_is_takeover_refill_channel() -> None:
     # 触发门仍含「session.briefing_bosses 空」:开局局简报读得时 session 已由
     # CwScreenBriefing 填(不重复采),接管局/读空时兜底——条件消失=简报信任被绕过。
     assert "getattr(session, 'briefing_bosses', None)" in src
-    assert 'CwScreenPlaneIntel(self.ctx)' in src
+    # start_plane 透传(2026-09-03 时序修正批:接管链备战帧先定起始位面)
+    assert 'CwScreenPlaneIntel(self.ctx, start_plane=_start_plane)' in src
 
 
 def test_reconcile_wiring_in_collect_paths() -> None:

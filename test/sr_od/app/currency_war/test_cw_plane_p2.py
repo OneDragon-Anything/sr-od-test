@@ -1500,28 +1500,22 @@ def test_shared_face_helpers_alive_for_c1() -> None:
 # ==================== w857_plane_intel_skip ====================
 
 def test_decide_plane_skip_truth_table() -> None:
-    """skip 判据真值表:过去跳过 / 当前未来采集 / 无真值不跳 / 缺值补采。"""
+    """skip 判据真值表(2026-09-03 用户裁决改写:起始位面裁剪,取代旧
+    「session 位面+台账缺值降级补采」语义——已通过位面变暗不重采)。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_plane_intel import  decide_plane_skip
 
-    # 过去位面 + 台账有值 → 跳过
-    skip, note = decide_plane_skip(1, 2, ['battle', 'reward', 'boss'])
+    # 过去位面(位面号 < start_plane)→ 跳过
+    skip, note = decide_plane_skip(1, 2)
     assert skip is True
-    assert '跳过' in note and '台账' in note
-    skip, _ = decide_plane_skip(2, 3, ['battle', 'boss'])
+    assert '跳过' in note
+    skip, _ = decide_plane_skip(2, 3)
     assert skip is True
     # 当前位面 → 采集;未来位面 → 采集
-    assert decide_plane_skip(2, 2, ['battle', 'boss']) == (False, '')
-    assert decide_plane_skip(3, 2, None) == (False, '')
-    # 会话真值未知(None)→ 不跳全量采集(无真值不发明跳过)
-    assert decide_plane_skip(1, None, ['battle', 'boss']) == (False, '')
-    # past 位面台账缺值(None/空/全 None 位)→ 降级补采(变暗态低置信标注)
-    skip, note = decide_plane_skip(1, 2, None)
-    assert skip is False
-    assert '补采' in note and '低置信' in note
-    skip, note = decide_plane_skip(1, 2, [])
-    assert skip is False and '补采' in note
-    skip, note = decide_plane_skip(1, 2, [None, None])
-    assert skip is False and '补采' in note
+    assert decide_plane_skip(2, 2) == (False, '')
+    assert decide_plane_skip(3, 2) == (False, '')
+    # 起始位面无真值(None/0)→ 不跳,全采回退(备战识别失败保底)
+    assert decide_plane_skip(1, None) == (False, '')
+    assert decide_plane_skip(1, 0) == (False, '')
 
 
 def test_collect_loop_has_skip_filter_and_per_plane_logs() -> None:
@@ -1533,7 +1527,7 @@ def test_collect_loop_has_skip_filter_and_per_plane_logs() -> None:
 
     src = inspect.getsource(cw_screen_plane_intel.CwScreenPlaneIntel)
     assert 'decide_plane_skip(' in src, '采集循环未接 skip 判据'
-    assert '跳过(已完成)' in src, '采集循环缺跳过日志(观测缺口)'
+    assert '跳过(已通过位面)' in src, '采集循环缺跳过日志(观测缺口)'
     assert '采集完成(耗时' in src, '采集循环缺逐位面耗时日志(观测缺口)'
     assert '_session_plane' in src, '采集循环缺会话位面真值读取'
     # 跳过位面不进 _detail_seqs → close_and_report 不覆写其台账值(保留语义)
@@ -1683,45 +1677,44 @@ def _load_detail_frame() -> np.ndarray:
 
 
 # --------------------------------------------------------------------------- #
-# 锁①:详情侧静止非clean → 位面级结论(记 None,推进下一位面),不整场失败
+# 锁①:详情侧节点条读不出 → **直接**位面级结论(记 None,推进下一位面),
+#      不整场失败、不经等待门间隔重试(2026-09-03 用户裁决改写:已通过节点
+#      变暗=正常态,重试等待是浪费——第六局接管实证重试烧 7s 后才放弃)
 # --------------------------------------------------------------------------- #
 
 
 def test_static_concludes_plane_and_advances(test_context: SrTestContext,
                                              monkeypatch) -> None:
-    """锁①:详情侧(conclude_plane=True)静止 2 帧 → round_wait 推进,
-    该位面记 None;op 不失败,等待账重置(下一位面从零起算)。"""
+    """锁①:详情侧读不出 → 单次调用即 round_wait 推进,该位面记 None;
+    op 不失败,等待账重置(下一位面从零起算);全程无间隔重试等待。"""
 
     op, _fc = _make_op(test_context, monkeypatch)
     # 确在位面详情(守卫通过):monkeypatch 画面判定命中
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda *a, **k: SimpleNamespace(is_success=True))
-    # 两轮同帧(静止):门比较 last_screenshot(w857 同款),真实帧差判定同图=True
-    op.last_screenshot = np.zeros((108, 192, 3), dtype=np.uint8)
+    img = np.zeros((108, 192, 3), dtype=np.uint8)
+    op.last_screenshot = img
+    op.screenshot = lambda: img
 
     with fast_sleep():
-        r1 = op._nonclean_read_gate('切卡动画中', conclude_plane=True)
-        assert '间隔重读' in str(r1.status), (
-            f'第 1 帧(尚无前帧可比)应走间隔重读,得 {r1.status!r}')
-        r2 = op._nonclean_read_gate('切卡动画中', conclude_plane=True)
+        r = op._conclude_plane_unreadable('节点条读不出(已通过节点变暗为正常态)')
 
-    assert not r2.is_fail, f'静止帧应位面级结论而非整场失败,得 {r2.status!r}'
+    assert not r.is_fail, f'读不出应位面级结论而非整场失败,得 {r.status!r}'
     assert op._cur_plane == 1, f'应推进到下一位面(0基=1),得 {op._cur_plane}'
     assert op._plane_bosses[0] is None, '该位面应记 None(情报不可得)'
-    assert '静止' in str(r2.status) or '不可得' in str(r2.status), (
-        f'状态应声明位面级结论,得 {r2.status!r}')
+    assert '不可得' in str(r.status), f'状态应声明位面级结论,得 {r.status!r}'
     # 等待账已重置:下一位面的非clean等待从零起算
     assert op._nonclean_wait_start is None, '位面结论后等待账应重置'
 
 
 # --------------------------------------------------------------------------- #
-# 锁②:静止但不在位面详情(详情没开成)→ 维持 op 级失败 + 尽力关详情
+# 锁②:读不出但不在位面详情(详情没开成)→ 维持 op 级失败 + 尽力关详情
 # --------------------------------------------------------------------------- #
 
 
 def test_static_not_in_detail_fails_op(test_context: SrTestContext,
                                        monkeypatch) -> None:
-    """锁②:守卫——静止结论仅在确在位面详情时成立;不在详情(详情未开成/
+    """锁②:守卫——位面级结论仅在确在位面详情时成立;不在详情(详情未开成/
     被弹回)维持 op 级失败,留给调用方在后续稳定帧重试(防 conclude 吞掉
     「半开备战帧点不开详情」场景)。"""
 
@@ -1729,50 +1722,22 @@ def test_static_not_in_detail_fails_op(test_context: SrTestContext,
     # 守卫判定:不在位面详情
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda *a, **k: SimpleNamespace(is_success=False))
-    op.last_screenshot = np.zeros((108, 192, 3), dtype=np.uint8)
+    img = np.zeros((108, 192, 3), dtype=np.uint8)
+    op.last_screenshot = img
+    op.screenshot = lambda: img
 
     with fast_sleep():
-        r1 = op._nonclean_read_gate('切卡动画中', conclude_plane=True)
-        assert '间隔重读' in str(r1.status)
-        r2 = op._nonclean_read_gate('切卡动画中', conclude_plane=True)
+        r = op._conclude_plane_unreadable('节点条读不出')
 
-    assert r2.is_fail, f'不在详情应维持 op 级失败,得 {r2.status!r}'
-    assert '放弃采集' in str(r2.status), f'应声明放弃采集,得 {r2.status!r}'
+    assert r.is_fail, f'不在详情应维持 op 级失败,得 {r.status!r}'
+    assert '放弃采集' in str(r.status), f'应声明放弃采集,得 {r.status!r}'
     assert op._cur_plane == 0, '失败路径不得推进位面'
-    assert op._plane_bosses[0] is not None or True   # bosses 保持初值(None),以推进位不变为准
     # 失败前尽力关详情(op 出口契约);本场景判定不在详情 → 零点击
     assert fc.recorded_clicks == [], '不在详情时不应产生点击'
 
 
-# --------------------------------------------------------------------------- #
-# 锁③:动画帧到达(帧在变)→ 间隔重读,不位面结论不上限
-# --------------------------------------------------------------------------- #
-
-
-def test_changing_frames_keeps_waiting_in_conclude_mode(
-        test_context: SrTestContext, monkeypatch) -> None:
-    """锁③(过渡期/动画帧到达场景):详情条暂读不出但帧在变(真动画)→
-    conclude 模式同样走间隔重读,不做位面结论、不失败——位面转换动画窗
-    给时间等它读完。"""
-
-    op, _fc = _make_op(test_context, monkeypatch)
-    monkeypatch.setattr(op, 'round_by_find_area',
-                        lambda *a, **k: SimpleNamespace(is_success=True))
-    # 帧间有变化(真动画):门比较的 last_screenshot 逐轮换显著差异图
-    # (w857 同款手法:门读 last_screenshot,不经 screenshot())
-    img_a = np.zeros((108, 192, 3), dtype=np.uint8)
-    img_b = np.full((108, 192, 3), 200, dtype=np.uint8)
-
-    with fast_sleep():
-        op.last_screenshot = img_a
-        r1 = op._nonclean_read_gate('切卡动画中', conclude_plane=True)
-        assert '间隔重读' in str(r1.status)
-        op.last_screenshot = img_b
-        r2 = op._nonclean_read_gate('切卡动画中', conclude_plane=True)
-
-    assert not r2.is_fail, f'动画帧不应失败,得 {r2.status!r}'
-    assert '间隔重读' in str(r2.status), f'应走间隔重读路径,得 {r2.status!r}'
-    assert op._cur_plane == 0, '动画等待期不得推进位面'
+# (锁③「动画帧到达→间隔重读不结论」已随 2026-09-03 用户裁决删除:详情侧
+#  读不出不再区分动画/静止,一律直接位面级结论——该路径不经等待门。)
 
 
 # --------------------------------------------------------------------------- #
@@ -2029,10 +1994,12 @@ def test_recovers_after_clean_frame(test_context: SrTestContext,
     # 前 3 次非clean未点击(短窗内不弃也不乱点),第 4 次 clean 才点击恢复
     assert fc.recorded_clicks, 'clean 帧后应点击节点图标开位面详情'
     assert len(calls) >= 4, f'点击前应经历 3 次非clean重读,得读数次数 {calls}'
-    # 等待期走的是间隔重读(sleep 间隔;clean 后点击的 1.5s 开屏等待也走此时钟)
+    # 等待期走的是间隔重读(sleep 间隔;clean 后点击的开屏等待也走此时钟,
+    # 2026-09-03 起开屏等待=用户定值 _DETAIL_OPEN_WAIT_S=3.0)
     assert clock.sleeps.count(cpi_mod._NODE_BAR_READ_INTERVAL_S) >= 3, (
         f'非clean重读应有 ≥3 次间隔 sleep({cpi_mod._NODE_BAR_READ_INTERVAL_S}s),得 {clock.sleeps}')
-    assert all(s in (cpi_mod._NODE_BAR_READ_INTERVAL_S, 1.5) for s in clock.sleeps), (
+    assert all(s in (cpi_mod._NODE_BAR_READ_INTERVAL_S,
+                     cpi_mod._DETAIL_OPEN_WAIT_S) for s in clock.sleeps), (
         f'不应出现忙连读(只允许重读间隔与点击后等待),得 {clock.sleeps}')
 
 
@@ -2065,3 +2032,11 @@ def test_collect_fail_paths_close_detail() -> None:
     src = inspect.getsource(cw_screen_plane_intel.CwScreenPlaneIntel)
     assert src.count('_best_effort_close_detail()') >= 2, (
         '放弃采集与位面卡缺失两条失败路径都应先尽力关详情')
+
+# —— 换核隔离桶(2026-09-03 测试分层批)——
+# 本文件属 legacy_baseline 桶:锁的是旧决策核(decision_v2)内部行为语义,
+# 随旧核退役而消亡;默认全量与快速集均不跑,仅基线冻结审计/A-B 开跑前
+# 两时点单独跑。口径见 sr-od-test/README.md「测试纪律 · legacy 桶」。
+import pytest
+
+pytestmark = pytest.mark.legacy_baseline

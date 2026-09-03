@@ -1232,8 +1232,9 @@ class _FakeIntel:
     produced_bosses: list | None = ['巨鹿', None, '绘师']
     produced_affixes: list | None = ['财富造物主', '敌人难度108']
 
-    def __init__(self, ctx) -> None:
+    def __init__(self, ctx, start_plane: int = 0) -> None:
         self.ctx = ctx
+        self.start_plane = start_plane   # 接管链接线参数(时序修正批,透传即可)
 
     def execute(self) -> OperationResult:
         self.ctx.cw_plane_bosses = list(self.produced_bosses)
