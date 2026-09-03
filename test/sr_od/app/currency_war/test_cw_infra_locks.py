@@ -542,8 +542,8 @@ def test_views_render_sim_ledger(tmp_path: _sim_cli_smoke_Path) -> None:
     assert any('[offer]' in ln for ln in sup), 'supply 读 shop_snapshots 流'
     rounds = tel.query_rounds(d, rid)
     assert any('run' not in ln and 'hp=' in ln for ln in rounds)
-    # 卖牌项(⑤):有 SellBench 的局显示 卖+N(无卖局不显示,不回归)
-    assert any(('卖+' in ln or True) for ln in eco)   # 形状锁,不锁分布
+    # (卖+N 渲染暂无锁:当前种子不保证含 SellBench 局,原断言「or True」恒真
+    #  已删(2026-09-03 攻击性排查);待构造含卖局种子后补真锁。)
     # 保真度:sim 行回退账本维度(板深恒 '-' / 档0 / (空) = 同构破洞)
     hp = tel.query_hp(d, rid)
     assert any('板深=' in ln and '板深=-' not in ln for ln in hp), \
