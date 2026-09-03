@@ -632,8 +632,9 @@ def test_skeleton_factions_derived() -> None:
     sk = skeleton_factions()
     for must in ("仙舟", "贝洛伯格", "银河学者", "列车同行", "星核猎手"):
         assert must in sk, f"骨架集应含 {must}(plaza 实战开局组合)"
-    for not_in in ("护盾", "能量", "减益", "量子同频"):
-        assert not_in not in sk or True  # 这些最低档 2 但低费成员不足 → 不强制(防误锁,信息断言)
+    # (2026-09-03 瘦身批删恒真循环:原「assert not_in not in sk or True」
+    #  永真零拦截,注释自认「防误锁,信息断言」——排除面语义若需锁定,
+    #  按登记门形态另立(点名预期成员集),不做永真断言。)
 
 
 def test_char_routes_hub_structure() -> None:

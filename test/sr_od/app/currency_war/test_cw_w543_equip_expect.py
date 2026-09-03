@@ -157,62 +157,11 @@ def test_compare_ignores_unrelated_names():
     assert compare_equip_expect(exp, [_cell('A'), _cell('X'), _cell('Y')]) == []
 
 
-# ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
-
-def test_w543_wiring_locks():
-    """①卖上阵角色期望在动作发出点(execute 之前)构建;②对账在 heavy
-    重观察(定型帧)之后、仅 progressed 分支;③对账读法 = read_equip_grid
-    纯读 + 复用定型帧(last_screenshot),不经 read_bench_chars;
-    ④台账参数锁;⑤合成规则单一源 = cw_synthesis。"""
-    src = Path('src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py').read_text(
-        encoding='utf-8')
-    # W971 P3b 拆内环:锚「备战单轮」节标记(单轮 run 五段)
-    loop_at = src.index(
-        'action = match.strategy.decide_prep_screen(session, config)',
-        src.index('备战单轮'))
-    exec_at = src.index('progressed, detail = self._executor.execute(action)', loop_at)
-    emit_at = src.index('if isinstance(action, SellDeployed):', loop_at)
-    build_at = src.index('self._equip_expect_for_sell(action)', loop_at)
-    assert emit_at < exec_at
-    assert build_at < exec_at
-    # ② 对账点:heavy 重观察之后、经 acct 消费仅 progressed 分支
-    obs_at = src.index('_post_obs = self._observe(heavy=True)', exec_at)
-    rec_at = src.index('self._v2_post_frame_accounting(_post_obs, acct, session)', obs_at)
-    assert obs_at < rec_at
-    assert "if progressed and acct.get('equip_expect') is not None:" in src
-    # ③ 纯读路径
-    method = src[src.index('def _reconcile_equip_expect'):]
-    method = method[:method.index('\n    def ')]
-    assert 'read_equip_grid(' in method
-    assert 'last_screenshot' in method
-    assert 'read_bench_chars(' not in method
-    # ④ 台账参数锁(常量定义 + 接线点使用)。
-    # 分包期 6(DESIGN §4.5):常量定义随纯期望段迁 kernel/cw_prep_expect;
-    # 接线点使用仍在本体。
-    expect_src = Path(
-        'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
-    ).read_text(encoding='utf-8')
-    assert "_EQUIP_DEFECT_SURFACE = 'equip'" in expect_src
-    assert "_EQUIP_DEFECT_KIND = 'equip_expect_mismatch'" in expect_src
-    assert 'record_defect(' in src and '_EQUIP_DEFECT_SURFACE, _EQUIP_DEFECT_KIND' in src  # 拆内环:缩进锁降内容级
-    assert 'equip_expect_reconcile' in src
-    # ⑤ 合成单一源:_synth_pair 只转发 cw_synthesis,不自造配对逻辑
-    # (分包期 6:_synth_pair 随纯期望段迁 kernel/cw_prep_expect)
-    synth_src = expect_src[expect_src.index('def _synth_pair'):]
-    synth = synth_src[:synth_src.index('\n\n\n')]
-    assert 'synthesize_target(' in synth
-    assert 'self_advance(' in synth
-    assert 'CROSS_RECIPES' not in synth   # 不直接摸图谱常量(派生/判定归 cw_synthesis)
-
-
-def test_w543_sell_build_best_effort_locks():
-    """期望构建端:全程 best-effort(异常吞掉返 None,不阻塞动作执行)。"""
-    src = Path('src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py').read_text(
-        encoding='utf-8')
-    build = src[src.index('def _equip_expect_for_sell'):]
-    build = build[:build.index('\n    def ')]
-    assert 'except Exception' in build
-    assert 'return None' in build
+# (2026-09-03 瘦身批:原 ③ 两测删除——test_w543_wiring_locks 是 index 序位/
+#  缩进字面/标识符在场的形状锁堆(纪律 8,快照锁嫌疑:红时只能 bisect);
+#  test_w543_sell_build_best_effort_locks 断言 `except Exception`/`return None`
+#  字面同判。best-effort 与对账接线的行为面由下方 ④ 对账流测(stub director +
+#  monkeypatch 捕获)辖定。)
 
 
 # ===== ④ 台账行形态 + 对账流为(stub director;台账行经 monkeypatch 捕获)=====

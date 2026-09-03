@@ -1,18 +1,21 @@
 # 慢桶名单:实测整条用例(call+setup)>=2s 的 nodeid 后缀,conftest 按后缀匹配注入 slow marker
-# 维护:uv run pytest @sr-od-test/cw_quick.txt -q --durations=300 --durations-min=1.0 巡检回填(准入:>=2s)
-# 用法:L1/L2 = pytest @sr-od-test/cw_quick.txt -m "not slow";慢桶点名 = -m slow
+# 维护:uv run pytest sr-od-test/ -q -m "not slow and not legacy_baseline" --durations=300 --durations-min=1.0 巡检回填(准入:>=2s;口径=标准桶,含非 CW)
+# 用法:快速层 = pytest sr-od-test/test/sr_od/app/currency_war -m "not slow and not legacy_baseline";慢桶点名 = -m slow
 # 注:类内用例须带类名段;条目为短后缀形态(文件名::)。
 # 2026-09-07 M4 批实测重建:quick 全量串行 3128 条/437.6s(--durations-min=1.0)。
 # 旧名单 52 条对账:45 条保留(仍 >=2s)、7 条删(test_p1_zero_drift_star_form 1.89s
 # 等回落 <2s;详见 .debug/temp/currency_war/redesign/M4_TEST_INFRA.md);新增 6 条。
 # __init__.py:: 条目按 setup 计时准入(2.91s setup,call <2s)。
+# 2026-09-03 瘦身批全仓重建:标准桶(2985 条/264.9s)巡检发现名单双向漂移——
+# 标准桶新晋 ≥2s 的 17 条未登记(多为非 CW:cal_pos/enter_game/kwarg 审计等,
+# 合计 ~70s),补录见文件尾「瘦身批补录」节。
 test_cw_infra_locks.py::test_ci_smoke_snapshot_batch
 test_cw_plane_p2.py::test_mutation_probe_win_rate_explosion
 test_cw_plane_p2.py::test_loop_partial_static_then_clean_succeeds
 test_cw_w546_equip_grid.py::TestOcclusion::test_detail_panel_cells_marked_occluded
 test_cw_w546_equip_grid.py::TestGridClassificationFixtures::test_read_equips_default_rect_uses_grid
 test_cw_plane_p2.py::test_simulate_p2_ab_report_shape
-test_cw_screens_entry.py::TestStartCurrencyWarMatchFlow::test_new_match_a8_reaches_prep
+test_cw_screens_entry.py::TestCwEntryStartFlow::test_new_match_a8_reaches_prep
 test_cw_w546_equip_grid.py::TestGridClassificationFixtures::test_full_occupancy_no_spurious
 test_cw_sim_suite.py::test_bench_full_flag_and_alloc_frame_not_degenerate
 test_cw_r420_shop_slot_semantics.py::test_phantom_rebuy_and_pool_floor_zero_real_strategy
@@ -60,3 +63,33 @@ test_cw_investment.py::test_invest_off_is_bit_identical
 test_cw_w546_equip_grid.py::TestTwoStateZoneDy::test_label_free_frame_first_candidate
 test_cw_w546_equip_grid.py::TestTwoStateZoneDy::test_labeled_frame_second_candidate
 test_cw_w546_equip_grid.py::TestTwoStateZoneDy::test_fallback_scan_on_unknown_layout
+test_cw_telemetry_collect.py::test_gold_detail_pixel_truth_frames
+
+# ==== 瘦身批补录(2026-09-03,标准桶全仓巡检 ≥2s;原名单只扫 CW 快速层,漏非 CW)====
+# 图像重推理/多阶段 fixture 识别链/全仓 AST 扫描——单条断言密度不低但重操作链
+# 无法便宜化,按 ≥2s 准入;能便宜化的(如 delta_pool 再生锁)已改造,不入桶。
+test_cal_pos_for_world_patrol.py::test_cal_pos
+test_cal_pos_for_sim_uni.py::test_cal_pos_for_sim_uni
+test_cw_screens_entry.py::TestCwEntryStartFlow::test_residual_lobby_escapes_via_close_and_world
+test_cw_screens_entry.py::TestCwEntryStartFlow::test_new_match_a5_switches_to_max_rank
+test_cw_screens_entry.py::TestCwEntryStartFlow::test_train_supply_popup_claimed_then_reaches_prep
+test_enter_game_flow.py::TestEnterGameFlow::test_enter_game_switch_account
+test_enter_game_flow.py::TestEnterGameFlow::test_enter_game_input_account_password
+test_kwarg_signature_audit.py::test_kwarg_call_sites_match_signatures
+test_use_trailblaze_power_timeout.py::TestWaitBattleResultTimeout::test_cleanup_keeps_waiting_mid_battle
+test_back_to_normal_world_plus.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
+test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
+test_back_to_normal_world_plus.py::TestSimUniExitConfirmBranch::test_exit_confirm_clicks_leave
+test_back_to_normal_world_plus.py::TestVersionAnnouncementBranches::test_page2_closes
+test_cw_shop_refresh.py::test_hook_heals_after_settled_reread
+test_cw_r412_runs_summary_fallback.py::test_coverage_check_both_directions
+test_cw_telemetry.py::test_sim_ledger_rows_carry_same_key
+# 终验(15:08)补录:原 a8 条目类名过时失效已上修正;以下为终验实测越线者
+test_kwarg_signature_audit.py::test_whitelist_entries_still_apply
+test_cw_r412_runs_summary_fallback.py::test_recover_dangling_idempotent
+test_cw_legacy_audit.py::test_stop_summary_no_duplicate_on_second_call
+test_cw4_mandate_v1.py::TestZeroDriftGate::test_baseline_self_pairing_n20
+# 步4b 商店线批:旧零漂移门测试随透传拆除改名(上行为重推后的锁);
+# 新增 sim 实跑门(基线自配对 n20 ~14s / 双臂相异 n6 ~5s)
+test_cw4_shop_line.py::TestSimGates::test_baseline_self_pairing_zero_drift_n20
+test_cw4_shop_line.py::TestSimGates::test_arm_diff_existence_n6

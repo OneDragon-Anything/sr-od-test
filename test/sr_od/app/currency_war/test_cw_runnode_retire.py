@@ -140,7 +140,7 @@ def test_megastar_budget_semantics_unchanged() -> None:
     assert node.node_max_retry_times == 8
 
 
-# ==================== 零残留 + 判据落档 ====================
+# ==================== 零残留 ====================
 
 def test_runnode_zero_residue_in_src() -> None:
     """grep 零残留:currency_war src 下无 RunNode 基类/run_nodes 包路径的
@@ -153,12 +153,3 @@ def test_runnode_zero_residue_in_src() -> None:
         text = p.read_text(encoding='utf-8', errors='ignore')
         assert 'RunNode' not in text, f'{p} 残留 RunNode'
         assert 'run_nodes' not in text, f'{p} 残留 run_nodes'
-
-
-def test_completion_model_criteria_documented() -> None:
-    """判据落档锁(NAMING.md §6):完成验证模型选型判据在档。"""
-    naming = (Path('docs/develop/currency_war/prereg/w971_flow_layer')
-              / 'NAMING.md').read_text(encoding='utf-8')
-    assert '完成验证模型选型判据' in naming
-    assert 'CwScreenSupplyNode' in naming
-    assert '依赖外循环重识别兜底' in naming

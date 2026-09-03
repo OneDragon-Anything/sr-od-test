@@ -1116,16 +1116,9 @@ def test_record_decision_accepts_extra():
     # 不 start_run → early return,不落盘;到这里 = 签名对齐,不再 TypeError
 
 
-def test_recorder_method_and_helper_signatures_align():
-    """便捷函数签名 ⊇ recorder 方法签名(防再漂移)。"""
-    import inspect
-
-    from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
-    helper_params = set(inspect.signature(t.record_decision).parameters)
-    method_params = set(inspect.signature(
-        TelemetryRecorder.record_decision).parameters) - {'self', 'run_id', 'difficulty'}
-    missing = method_params - helper_params
-    assert not missing, f'便捷函数缺参数 {missing}——与方法签名对齐防再犯'
+# (2026-09-03 瘦身批:test_recorder_method_and_helper_signatures_align 与
+#  test_deploy_equips_snapshot_method_exists 删除——inspect 签名对齐/hasattr
+#  在场锁属实现形状(纪律 8),无行为面增量。)
 
 
 # ==================== test_telemetry_replay ====================
@@ -1507,12 +1500,6 @@ def test_read_row_equipped_import_path():
     """r132 的 import 路径必须可解析(防运行时才炸)。"""
     from sr_od.application.currency_war.obs.cw_identity_obs import read_row_equipped
     assert callable(read_row_equipped)
-
-
-def test_deploy_equips_snapshot_method_exists():
-    """CwOpDeploy._snapshot_equips_into_tracking 在位(r132 采集钩子)。"""
-    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import CwOpDeploy
-    assert hasattr(CwOpDeploy, '_snapshot_equips_into_tracking')
 
 
 # ==================== divergence_stats ====================

@@ -20,11 +20,6 @@ def test_nonroster_faction_char_partial_score():
     assert s >= 0.6, f'星期日阵营命中列车应有 partial 级分,实得 {s}'
 
 
-def test_scatter_still_zero():
-    """真散件(万敌,阵营不命中任何框架)仍 0 分。"""
-    assert transition_score('万敌', '夜之半神', '列车') == 0.0
-
-
 def test_roster_carry_still_highest():
     """在册 carry(三月七)同框架仍最高(策展档位不被兜底反超)。"""
     s_roster = transition_score('三月七', '列车同行', '列车')

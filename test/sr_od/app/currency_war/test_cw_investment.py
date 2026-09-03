@@ -554,23 +554,6 @@ def test_fortune_cards_ocr_on_fixture():
     assert '留白' in joined or '黑天鹅' in joined, f'第三卡应识别: {texts}'
 
 
-def test_fortune_text_strategy_prefers_damage():
-    """文本策略:伤害倍率 > 强度提高 > 无关键词。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_fortune import  CwScreenFortune
-    # 复用 handle 的打分逻辑(直接构造假 ctx 会重;抽出来测不行——用类属性+内联)
-    texts = ['层数提高', '伤害倍率提高', '黑天鹅强度提高']
-    best_i, best_s = 0, -1.0
-    for i, t in enumerate(texts):
-        s = 0.0
-        for kw, w in (('伤害倍率', 3.0), ('强度提高', 2.0), ('层数提高', 2.0),
-                      ('伤害', 1.0), ('提高', 0.5)):
-            if kw in t:
-                s += w
-        if s > best_s:
-            best_i, best_s = i, s
-    assert best_i == 1, '伤害倍率应最高分'
-
-
 # ==================== test_invest_strategy_recognizer ====================
 
 from unittest.mock import MagicMock

@@ -106,3 +106,32 @@ def test_inv_incumbent_survives_shop_evaporation(fw):
     fw_kept = pick_framework([_bc(carry, _fw_faction(fw))], [], [],
                              current=fw)
     assert fw_kept == fw, '现任持有 1 张,shop 空时不得回退未定'
+
+
+# ===== 手工造数边界(2026-09-03 瘦身批自 test_crafted_scenarios.py 并入;
+#  同名禁双/启动门/双持有锁定/portal 偏置等重复面已由上方不变量族与
+#  test_portal_bias 辖定,原文件删除)=====
+
+def test_buy_score_third_framework_piece_beats_scatter():
+    """差一张成型时,第三张同框架件(框架已定)得分显著高于散件(0)
+    (drop 标签 0.4+同框架 0.3+阵营 0.2=0.9 vs 散件 0)——买牌优先级锚。"""
+    s_third = transition_score('卡芙卡', '仙舟', '仙舟')
+    s_scatter = transition_score('万敌', '夜之半神', '仙舟')
+    assert s_third >= 0.85 and s_scatter == 0.0
+
+
+def test_drop_not_hoarded_but_deployable_when_framework_set():
+    """drop 件(椒丘/艾丝妲=应急战力,P1 末弃):预囤不买(0 分);
+    框架已定=仙舟时仍有过渡价值(非 0 分可救急)。"""
+    assert transition_score('椒丘', '仙舟', '') == 0.0        # 未定:不囤
+    assert transition_score('椒丘', '仙舟', '仙舟') > 0        # 已定:可应急
+
+
+def test_framework_carry_deploys_in_dual_track():
+    """双轨期仙舟框架件 carry(藿藿)在场下有空位 → deploy 判 True(r120 语义)。"""
+    gs = GameState(round_num=3, plane=1, dual_track_phase=True)
+    gs.level = 4
+    gs.bench = []
+    gs.deployed = [_bc('三月七', '列车同行', 'front')]
+    cand = _bc('藿藿', '仙舟', 'back')
+    assert _should_deploy(cand, gs, None) is True

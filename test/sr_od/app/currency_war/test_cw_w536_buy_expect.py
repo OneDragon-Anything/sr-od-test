@@ -256,61 +256,21 @@ def test_compare_merge_not_happened_not_downgraded():
     assert any(x['slot'] == '4' and '空' in x['expected'] for x in m)
 
 
-# ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
+# ===== ③ 接线守卫余量(2026-09-03 瘦身批收敛)=====
 
-def test_w536_wiring_locks():
-    """①意图在买入点(BuyCard 点击分支)记录、单元尾计算写入
-    session.pending_buy_expect;含卖出/未识别牌不建;②对账在 CwScreenPrep
-    heavy 定型帧之后且仅 progressed 分支、消费后即清;③合成落点单一源 =
-    cw_state._merge_bench(compute_buy_expect 不自造第二套落点规则)。
-
-    锁改写(W591,pending_buy_expect 升 StrategySession 正式字段):消费端
-    由「动态属性 + getattr 兜底」改为直接字段读写——语义不变(定型帧后
-    消费/仅 progressed/消费即清),被取代的是暂存机制而非对账时序;依据
-    = cw_strategy.StrategySession.pending_buy_expect 字段定义注释。
-    锁迁移(W970 批 A 原子化):买入点记录/crop 链随波循环迁 buy_cards.py;
-    单元尾 stash 单一源 = cw_screen_prep.finalize_buy_phase(时序锚 = 关店后;原编排壳 shop.py 已退役)。
-    """
-    buy_src = Path(
-        'src/sr_od/application/currency_war/operations/cw_op/cw_op_buy_cards.py'
-    ).read_text(encoding='utf-8')
-    shop_src = Path(
-        'src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py'
-    ).read_text(encoding='utf-8')
-    click_at = buy_src.index('Buy click @(')
-    rec_at = buy_src.index('_buy_purchases.append(BuyPurchase(', click_at)
-    assert click_at < rec_at                       # 意图记录在买入点
-    # 含卖出不建:卖出置位旗标随波循环在 buy_cards(跨文件次序不可 index
-    # 对拍,两侧存在性分别锁;时序语义 = 旗标先于单元尾 stash 执行)
-    assert '_buy_has_sell = True' in buy_src
-    stash_at = shop_src.index('match.session.pending_buy_expect = _buy_expect')
-    assert 'not _buy_has_sell and not _buy_unidentified' in shop_src
-    assert '_buy_pre_bench = deepcopy(match.session.tracked_bench_chars)' \
-        in buy_src
-
-    dir_src = Path(
-        'src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py'
-    ).read_text(encoding='utf-8')
-    obs_at = dir_src.index("obs = self._observe(heavy=True)")
-    consume_at = dir_src.index("_pending_buy = session.pending_buy_expect")
-    assert obs_at < consume_at                     # 定型帧后才消费
-    assert dir_src.index("session.pending_buy_expect = None") \
-        < dir_src.index('self._reconcile_buy_expect(_pending_buy)')
-    # 字段已正式声明(动态属性回流防线;声明含类型注解与定义注释)
+def test_w536_single_source_and_tombstone():
+    """原 test_w536_wiring_locks 的形状锁群(index 序位/缩进字面/chr(39)
+    注解字面/crop 链字面)按纪律 8 删除,保留两角:
+    ①墓碑——cw_strategy 不得残留 pending_buy_expect 旧字段声明(期 0b 已迁
+    kernel/cw_strategy_session;否定式+退役背书=合法墓碑,动态属性回流防线);
+    ②依赖方向——compute_buy_expect 落点必须委托 cw_merge_bench 单一源,
+    不自造第二套落点规则。对账时序/消费即清的行为面由 ①② 行为测辖定。"""
     strat_src = Path(
         'src/sr_od/application/currency_war/decision/cw_strategy.py'
     ).read_text(encoding='utf-8')
     assert 'pending_buy_expect: BuyExpect | None = None' not in strat_src, (
         '期 0b 锁改判:字段声明已迁 kernel/cw_strategy_session,'
         'cw_strategy 不得残留旧声明(动态属性回流防线)')
-    # 期 0b 锁改判(N7):StrategySession 下沉 kernel/cw_strategy_session,注解改字符串(app 桶类型不进 kernel import 面)
-    import inspect
-
-    from sr_od.application.currency_war.kernel import cw_strategy_session as _ss_mod
-    assert 'pending_buy_expect: ' + chr(39) + 'BuyExpect | None' + chr(39) + ' = None' in inspect.getsource(_ss_mod)
-    # 分包期 6(DESIGN §4.5):compute_buy_expect 与 _BUY_DEFECT_KIND
-    # 随纯期望段迁 kernel/cw_prep_expect(cw_screen_prep 经 import 引用);
-    # 接线点(buy_expect_reconcile 对账)仍在本体。
     expect_src = Path(
         'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
     ).read_text(encoding='utf-8')
@@ -318,18 +278,6 @@ def test_w536_wiring_locks():
     compute_body = compute_body[:compute_body.index('\n\ndef ') + 1] \
         if '\n\ndef ' in compute_body else compute_body
     assert 'cw_merge_bench(' in compute_body       # 落点单一源委托
-    assert "_BUY_DEFECT_KIND = 'buy_expect_mismatch'" in expect_src
-    assert 'buy_expect_reconcile' in dir_src
-    # ④ 证据裁片链:买前 crop 拷贝在点击之前;随期望态带到对账点;
-    # 不一致才落盘(_save_buy_evidence),对账完成即释放。
-    assert buy_src.index('_card_crop = None') \
-        < buy_src.index('op.ctx.controller.click(pt)')
-    assert '.copy()' in buy_src                    # 裁片必须拷贝(帧缓存复用)
-    assert 'crop=_card_crop' in buy_src
-    rec_m = dir_src[dir_src.index('def _reconcile_buy_expect'):]
-    rec_m = rec_m[:rec_m.index('\n    def ')]
-    assert '_save_buy_evidence(' in rec_m
-    assert 'expect.crops = None' in rec_m          # 对账完成释放
 
 
 # ===== ④ 台账行形态锁 =====

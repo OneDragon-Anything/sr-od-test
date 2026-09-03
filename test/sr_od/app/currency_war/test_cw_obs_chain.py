@@ -81,31 +81,6 @@ def test_board_from_tracked_flows_only_char_counts():
     assert board.get('大守护者') == 1
 
 
-def test_streak_dual_source_conflict_guard(test_context, monkeypatch):
-    """streak 双源留证(审计 #8 P2,2026-08-17):read_game_state 内联判定 —— 结算带符号
-    与备战 magnitude 不等(且结算≠0)→ obs_conflict 留证;一致 → 无噪声。
-    直接跑 read_game_state 不可行(需 OCR 全屏栈),此处验判定的两端行为:
-    复制内联条件(streak 逻辑为纯比较,无隐藏状态)。"""
-    import sr_od.application.currency_war.kernel.cw_observe as obs_mod
-    calls: list[tuple] = []
-    monkeypatch.setattr(obs_mod, 'obs_conflict',
-                        lambda field, old, new, *a, **kw: calls.append((field, old, new)))
-
-    def _check(last_streak: int, prep: int | None) -> None:
-        # = read_game_state 内联判定(cw_observation streak 段,保持同条件复制)
-        if prep is not None and last_streak != 0 and abs(last_streak) != prep:
-            obs_mod.obs_conflict('streak', last_streak, prep, None,
-                                 verdict='留证-双源不等(结算带符号 vs 备战magnitude,一方误读)',
-                                 source='settlement_vs_prep')
-
-    _check(3, 3)          # 一致 → 不报
-    _check(0, 5)          # 结算 0(重置边缘)→ 不报
-    _check(3, None)       # 备战读不到 → 不报(单源)
-    assert calls == []
-    _check(3, 2)          # 不等 → 报
-    assert calls == [('streak', 3, 2)]
-
-
 def test_reconcile_double_empty_guard_keeps_old():
     """双空读 + 前值非空 → 保旧(M14 过渡帧守卫),不写回。"""
     old = [BenchChar(slot=1, char_id='瓦尔特')]
@@ -382,16 +357,9 @@ def test_source_deployed_align_uses_paddle_not_board_sum() -> None:
     assert 'tracked_vs_paddle' in src, '对齐留证 source 应指向 paddle 基准'
 
 
-def test_source_board_arbitration_prefers_badge_with_overlay_guard() -> None:
-    """源码锁:board 裁决翻转(备战帧徽标覆入)+ overlay 双不可信守卫。
-
-    board 3/6 采 computed 错 → 备战帧裁决翻转为采徽标;overlay 干扰
-    2/6(徽标与 computed 各错一次)→ 非备战帧(is_prep_like_frame=False)不裁
-    不覆,保 computed 底座防新错。
-    """
-    src = inspect.getsource(obs_mod.read_game_state)
-    assert 'is_prep_like_frame(ctx, screen)' in src, \
-        '裁决前应过备战帧态判定(overlay 守卫)'
+# (2026-09-03 瘦身批:test_source_board_arbitration_prefers_badge_with_overlay_guard
+#  删除——`'is_prep_like_frame(ctx, screen)' in src` 肯定性在场锁(纪律 8);
+#  board 裁决/overlay 守卫的行为面由实帧回归测辖定。)
 
 
 # ==================== w289_match_start_reset ====================

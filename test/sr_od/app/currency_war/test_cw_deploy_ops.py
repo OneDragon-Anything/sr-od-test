@@ -264,12 +264,6 @@ def test_depth_reads_deployed_not_bench() -> None:
     assert _deployable_depth(st) == 0
 
 
-@pytest.mark.skip(reason='批量变异探针跑 ~40s,留手动(_r390_probe.py);'
-                         '语义锁由上三条覆盖')
-def test_mutation_detectable() -> None:
-    pass
-
-
 # ==================== r391_deploy_fills_cap ====================
 
 from sr_od.application.currency_war.sim.checks.ledger import check_deploy_fills_cap
@@ -884,8 +878,10 @@ def test_w530_wiring_locks():
         encoding='utf-8')
     # ① 发出点:compute 在单轮 execute 之前(W971 P3b 拆内环:单轮 = run
     #    五段;锚「备战单轮」节标记,破警告分支的 decide 在其后)。
+    #    序列契约 v1(dd-020)后决策返回 list,逐动作消费——锚放宽到
+    #    调用面(不再钉死单动作变量名)。
     loop_at = src.index(
-        'action = match.strategy.decide_prep_screen(session, config)',
+        'match.strategy.decide_prep_screen(session, config)',
         src.index('备战单轮'))
     exec_at = src.index('progressed, detail = self._executor.execute(action)', loop_at)
     emit_at = src.index('if isinstance(action, (SellBench, DeployMove)):', loop_at)

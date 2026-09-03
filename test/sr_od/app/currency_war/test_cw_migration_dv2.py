@@ -177,20 +177,9 @@ def test_phase_battle_transit_minimal(gated_env):
     assert st.hp is None and st.hp_readable is False   # 无真值即 None(ADR-0495),零 OCR 不产真值
 
 
-def test_hp_skip_single_source():
-    """hp 读取门由 PHASE_FIELD_SPEC 单一来源驱动:'hp' ∈ spec 或全量路径
-    (phase=None)才 OCR;6fc1fd4c 死读跳过只收编到「spec 明确排除 hp」的
-    阶段,不再吞掉全量路径(曾致 director heavy 关店帧 hp 恒 miss)。"""
-    src = inspect.getsource(obs.read_game_state)
-    assert "read_hp_opt(ctx, screen)" in src \
-        and "_spec is None or 'hp' in _spec" in src, \
-        'hp 读取门必须由 PHASE_FIELD_SPEC 单一来源驱动(全量路径同读)'
-    # spec 阶段里 hp 只出现在 prep_clean(真读主路径),其余阶段=对账沿用
-    for phase, spec in PHASE_FIELD_SPEC.items():
-        if phase == PHASE_PREP_CLEAN:
-            assert 'hp' in spec
-        else:
-            assert 'hp' not in spec
+# (2026-09-03 瘦身批:test_hp_skip_single_source 删除——源码字面锁
+#  `"read_hp_opt(ctx, screen)" in src` 属实现形状(纪律 8);hp 读取门的
+#  行为面由上方 phase gate 四测 + fail-open 测辖定。)
 
 
 # ------------------------------------------------- 未知阶段 fail-open

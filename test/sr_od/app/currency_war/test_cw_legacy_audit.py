@@ -30,27 +30,9 @@ def test_loop_entry_anchor_is_stage_only() -> None:
         '单轮入口必须探开商店合法态并收起(读互斥:hp 关态可读)'
     assert 'wait_stable_frame' not in src, \
         'gate 时间稳定窗已随内环拆除(W971 P3b 返工定稿),不得回流'
-
-
-def test_no_fallthrough_blind_observe() -> None:
-    """P0①(语义终版,W971 P3b 返工定稿):不 fall-through 盲 observe——
-    单轮观察段见 event overlay → **交回外循环分发,零计数**(原内环
-    bail/同因 ×3/ping-pong 停机机制随内环整体拆除,即 P1-r6 停机事故
-    根源机制);无进展留证归外循环 stall 防线(cw_loop)。"""
-    src = inspect.getsource(cw_screen_prep.CwScreenPrep.run)
-    assert 'obs.event_overlay is not None' in src, '单轮观察段缺 overlay 分诊'
-    assert '交回外循环' in src, 'overlay 帧须交回外循环'
     assert '_bail(' not in src and 'bail_reason_counts' not in src, (
-        '内环 bail/同因计数机制不得回流(拆内环定稿)')
-
-
-def test_probe_node_type_after_shop_closed() -> None:
-    """P0③(挂点随迁,W970 批 C/拆内环):_probe_node_type 挂 OpenShop
-    编排内 CwOpCloseShop 完成后;单轮 run 入口不直调(skip 69% 根因)。"""
-    src_phase = inspect.getsource(cw_screen_prep.CwScreenPrep._open_shop_phase)
-    assert 'self._probe_node_type()' in src_phase
-    src_run = inspect.getsource(cw_screen_prep.CwScreenPrep.run)
-    assert 'self._probe_node_type()' not in src_run
+        '内环 bail/同因计数机制不得回流(拆内环定稿;'
+        '原 test_no_fallthrough_blind_observe 墓碑句,2026-09-03 瘦身批并入)')
 
 
 # ==================== r336_batch4_locks ====================
@@ -78,21 +60,6 @@ def test_shop_open_collapse_wait_dd011() -> None:
             '旧轮询 _legacy_poll 已删(r347 40min 空转事故),不得回流'
         assert 'wait_stable_frame' not in src, \
             '商店路径 gate 已按 DD-011 全退役(测量驱动等待),不得回流'
-
-
-def test_star_evidence_queue_pattern() -> None:
-    """r336:star 留证从 reconcile 深处改队列登记,对账位统一消费。
-    队列变量名的赋值字面断言已按源码锁瘦身删除(实现形状锁)。"""
-    from sr_od.application.currency_war.kernel import cw_reconcile
-    src = _r336_batch4_locks_inspect.getsource(cw_reconcile.reconcile_tracking)
-    # 消费在函数尾部(对账&hook 位);顺序即语义:留证消费须在对账 return 前
-    tail = src[src.index('return True') - 700:]
-    assert '_star_stop_hook' in tail
-
-
-def test_prep_settle_attribution_declared() -> None:
-    """r336:PREP_SETTLE_S 归属声明(分发层 vs 环内 gate 正交)。
-    源码文案断言已按源码锁瘦身删除(注释/字符串字面在场的形状锁)。"""
 
 
 def test_shop_currency_war_config_module_level() -> None:
@@ -130,24 +97,6 @@ def test_shop_contextlib_module_level_no_local_import() -> None:
         src = _r336_batch4_locks_inspect.getsource(method)
         assert 'import contextlib' not in src, \
             f'{method.__name__} 体内不得有局部 import contextlib(r346 H1 雷)'
-
-
-def test_director_gate_open_shop_tolerated_not_bail() -> None:
-    """r346(局38 r2 停机根因)+r347:环入口 gate 超时后必须先区分
-    「开商店稳定态」(合法,游戏在战斗胜利后新回合可能自动开)
-    vs「真特效」——开态走收起+round_retry 重进,只有非开态才
-    _bail(3-strike 停机)。锁源检:容忍 helper + 超时分支调用 +
-    bail 仍保留。"""
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
-    helper_src = _r336_batch4_locks_inspect.getsource(
-        cw_screen_prep.CwScreenPrep._try_collapse_open_shop)
-    assert '按钮-收起' in helper_src and 'return True' in helper_src, \
-        '开商店容忍 helper 必须探测收起锚并返回可重进'
-    # W971 P3b 拆内环(返工定稿):单轮 run 入口探开商店合法态 → 收起后
-    # 直接进本轮观察(r346 容忍语义保留;gate 超时/分诊/bail 路径随内环拆除)
-    src = _r336_batch4_locks_inspect.getsource(cw_screen_prep.CwScreenPrep.run)
-    assert '_try_collapse_open_shop()' in src, \
-        '单轮入口必须调用开商店态容忍路径(r346)'
 
 
 # ==================== r337_behavior ====================
@@ -227,50 +176,10 @@ def test_offline_op_none_skips_reread() -> None:
 
 
 # ==================== r337_r332_behavior ====================
+# (2026-09-03 瘦身批:_make_op 复刻夹具与两条 streak 自抄测删除——
+#  _make_op._director_fail 复刻 r332 逻辑断言自己,删生产代码仍绿(纪律 10);
+#  streak 接线的唯一保底 = 下方 test_source_has_real_wiring,记债待升级行为锁。)
 
-
-
-def _make_op(monkeypatch, fail: bool):
-    """构 cw_loop 循环实例桩:execute 链可控。"""
-    from sr_od.application.currency_war.operations import cw_loop as bl
-
-    class _Loop(bl.CwLoop):
-        def __init__(self):
-            self._director_fail_streak = 0
-
-        def _director_fail(self):
-            """复刻 r332 段逻辑(不跑全环,单测节流)。"""
-            _ok = not fail
-            if not _ok:
-                self._director_fail_streak += 1
-                if self._director_fail_streak >= 5:
-                    return 'round_fail'
-            else:
-                self._director_fail_streak = 0
-            return 'wait'
-    return _Loop()
-
-
-def test_five_consecutive_failures_trigger_fail() -> None:
-    """连续 5 次 director 失败 → 触发 round_fail 路径。"""
-    op = _make_op(None, fail=True)
-    results = [op._director_fail() for _ in range(6)]
-    assert results[:4] == ['wait'] * 4
-    assert results[4] == 'round_fail', '第 5 次应 fail'
-    assert results[5] == 'round_fail', '持续 fail'
-
-
-def test_success_resets_streak() -> None:
-    """成功重置计数(4 失败+1 成功+4 失败 → 不 fail)。"""
-    op = _make_op(None, fail=True)
-    for _ in range(4):
-        op._director_fail()
-    # 成功一次
-    op2 = _make_op(None, fail=False)
-    op._director_fail_streak = 0   # 模拟成功分支
-    assert op._director_fail_streak == 0
-    for _ in range(4):
-        assert op._director_fail() == 'wait', '重置后再 4 次不 fail'
 
 
 def test_source_has_real_wiring() -> None:
@@ -351,7 +260,6 @@ import inspect as _r348_cap_domain_inspect
 from sr_od.application.currency_war.operations.cw_screen import (
     cw_screen_prep as _r348_cap_domain_prep,
 )
-from sr_od.application.currency_war.obs.cw_back_layout import back_slots_from_cap_diff
 
 
 def test_cap_domain_check_inverted() -> None:
@@ -377,29 +285,9 @@ def test_lv6_pending_hook_retired() -> None:
         '旧集合已删(勿回流)'
 
 
-def test_cap_diff_formula_semantics() -> None:
-    """W209/ADR-0385:口述公式「后台格数 = 6+(cap−level)」——
-    diff0→6 / diff1→7(已建档,2026-08-26 佩佩局实锤)/ diff≥2→8。"""
-    assert back_slots_from_cap_diff(0) == 6
-    assert back_slots_from_cap_diff(2) == 8
-    assert back_slots_from_cap_diff(1) == 7   # 7 格已建档 → 直读(佩佩局锚)
-
-
-def test_cap_drives_selection_level_alone_does_not() -> None:
-    """W209/ADR-0385 行为级锁(反转 ADR-0281 的「cap 不进选档」):
-    同 level 不同 cap → 选档**随 cap 差变**(run 26 lv8 cap8=6 格 /
-    钻石叠加 lv8 cap10=8 格);同 cap 差不同 level → 选档恒同
-    (level 单独不再参与选档)。"""
-    for lv in (3, 5, 7, 8):
-        assert back_slots_from_cap_diff(0) == 6, \
-            f'lv={lv} 无扩展:恒 6 格(run 26 反向锚)'
-        assert back_slots_from_cap_diff(2) == 8, \
-            f'lv={lv} diff2:恒 8 格(狸猫局锚)'
-    # 同 diff 跨 level 恒同(公式只看差值)
-    for d in (0, 1, 2):
-        vals = {back_slots_from_cap_diff(d) for lv in (3, 4, 5, 6, 7, 8)}
-        assert vals == {back_slots_from_cap_diff(d)}, \
-            f'diff={d}:选档不得随 level 单独变(ADR-0385)'
+# (2026-09-03 瘦身批:cap_diff 两测删除——值面与「level 单独不参与」由
+#  test_cw_data_registry.py::test_cap_diff_routing 严格超集辖定(三档值+
+#  域外/读错边界+幻影负例,纪律 7);墓碑两条保留。)
 
 
 # ==================== r363_audit_p0 ====================
@@ -435,21 +323,9 @@ def test_normalize_node_type_vocab() -> None:
     assert n('未知类型') == '未知类型'   # 未知透传不吞
 
 
-def test_table_written_on_first_frame() -> None:
-    """槽序表写入:首帧 probe 存全槽类型序(cw_loop 兜底的写入端)。"""
-    # 模拟 slots
-    class _Slot:
-        def __init__(self, idx, state, node_type):
-            self.idx, self.state, self.node_type = idx, state, node_type
-
-    slots = [_Slot(0, 'current', 'reward'), _Slot(1, 'upcoming', 'reward'),
-             _Slot(2, 'upcoming', 'battle'), _Slot(3, 'past', None)]
-    _all = sorted(slots, key=lambda s: s.idx)
-    seq = [s.node_type for s in _all if s.node_type]
-    assert seq == ['reward', 'reward', 'battle']
-
-
 # ===== W75(ADR-0335):stop 路径 runs summary 收口(治本 r363 死码) =====
+# (2026-09-03 瘦身批:test_table_written_on_first_frame 删除——测试体自建
+#  slots 自己排序断言自己,零生产代码触达(纪律 10)。)
 
 def _make_stop_loop(*, summary_written: bool = False,
                     last_outcome_hp: int | None = 30,

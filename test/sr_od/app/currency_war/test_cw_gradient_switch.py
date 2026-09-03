@@ -28,7 +28,7 @@ def _mgr() -> StrategyManager:
 
 def test_strategies_discoverable():
     ids = [i.strategy_id for i in _mgr().discover()]
-    assert ids == ['decision_v2']   # default 栈退役后唯一内置注册
+    assert ids == ['decision_v2', 'mandate_v1']   # §6.4-R 换核批4 扩 mandate_v1(锁语义重推:钉注册面封闭集)
 
 
 def test_instantiate_line_v2():
@@ -68,15 +68,18 @@ def test_default_session_v2_fields_none():
     assert sess.bridge_id is None
 
 
-def test_v2_extra_roundtrip(tmp_path: Path):
-    """S3:遥测链端到端——record_decision(extra v2_*) → 字段落盘。"""
-    from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
+def test_v2_extra_roundtrip(tmp_path: Path, monkeypatch) -> None:
+    """S3:遥测链端到端——record_decision(extra v2_*) → 字段落盘。
+
+    (2026-09-03 瘦身批:遥测全局裸赋值改 monkeypatch——原写法断言失败即
+    污染后续测试文件(纪律 1 全集假红类),且 _CURRENT_DIFFICULTY 原先从不还原。)
+    """
     from sr_od.application.currency_war.telemetry import state as _telstate
     from sr_od.application.currency_war.kernel.cw_state import GameState
-    _telstate._RECORDER = recorder.TelemetryRecorder(
-        enabled=True, replay_dir=tmp_path)
-    _telstate._CURRENT_RUN_ID = 'test_v2'
-    _telstate._CURRENT_DIFFICULTY = 'A8'
+    monkeypatch.setattr(_telstate, '_RECORDER', recorder.TelemetryRecorder(
+        enabled=True, replay_dir=tmp_path))
+    monkeypatch.setattr(_telstate, '_CURRENT_RUN_ID', 'test_v2')
+    monkeypatch.setattr(_telstate, '_CURRENT_DIFFICULTY', 'A8')
     st = GameState()
     st.plane, st.round_num, st.gold = 1, 1, 50
     recorder.record_decision(
@@ -89,18 +92,15 @@ def test_v2_extra_roundtrip(tmp_path: Path):
     assert rows[-1]['v2_mode'] == 'economy'
     assert rows[-1]['v2_locked_line'] == 'jizi_train'
     assert rows[-1]['v2_bridge'] == ''
-    _telstate._RECORDER = None
-    _telstate._CURRENT_RUN_ID = ''
 
 
-def test_query_rounds_shows_v2(tmp_path: Path):
-    """S1:rounds 视图显示 v2 字段(schema 变更查询同步)。"""
-    from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
+def test_query_rounds_shows_v2(tmp_path: Path, monkeypatch) -> None:
+    """S1:rounds 视图显示 v2 字段(schema 变更查询同步;遥测全局走 monkeypatch)。"""
     from sr_od.application.currency_war.telemetry import state as _telstate
-    _telstate._RECORDER = recorder.TelemetryRecorder(
-        enabled=True, replay_dir=tmp_path)
-    _telstate._CURRENT_RUN_ID = 'test_v2q'
-    _telstate._CURRENT_DIFFICULTY = 'A8'
+    monkeypatch.setattr(_telstate, '_RECORDER', recorder.TelemetryRecorder(
+        enabled=True, replay_dir=tmp_path))
+    monkeypatch.setattr(_telstate, '_CURRENT_RUN_ID', 'test_v2q')
+    monkeypatch.setattr(_telstate, '_CURRENT_DIFFICULTY', 'A8')
     from sr_od.application.currency_war.kernel.cw_state import GameState
     st = GameState()
     st.plane, st.round_num, st.gold = 1, 1, 50
@@ -110,5 +110,3 @@ def test_query_rounds_shows_v2(tmp_path: Path):
                'v2_locked_line': 'jizi_train', 'v2_bridge': ''})
     lines = query.query_rounds(tmp_path, 'test_v2q')
     assert any('v2=[war|jizi_train|-]' in ln for ln in lines), lines
-    _telstate._RECORDER = None
-    _telstate._CURRENT_RUN_ID = ''

@@ -425,8 +425,9 @@ def _make_director(monkeypatch, gate_calls: list, gate_returns: list,
     monkeypatch.setattr(cfg_mod, 'CurrencyWarConfig', lambda idx: SimpleNamespace())
     match = SimpleNamespace(
         strategy=SimpleNamespace(
-            # W971 P2 黑板接口(dd-014):生产环调 decide_prep_screen(session, config)
-            decide_prep_screen=lambda session, config: StartBattle(),
+            # W971 P2 黑板接口(dd-014)+序列契约 v1(dd-020):
+            # 生产环按 list[PrepAction] 消费(长度 1)
+            decide_prep_screen=lambda session, config: [StartBattle()],
             update_target=lambda state, session, config: None),
         session=SimpleNamespace(defer_count=0, prep_phase=0,
                                 prep_phase_retry=0, bail_reason_counts={}))
@@ -441,7 +442,7 @@ def test_prep_round_entry_collapse_once_no_gate(monkeypatch) -> None:
     d, match, collapse_calls, _sleeps = _make_director(
         monkeypatch, calls, [], collapse_open=True)
     match.strategy.decide_prep_screen = (
-        lambda session, config: pd_mod.DeferSpheres())
+        lambda session, config: [pd_mod.DeferSpheres()])
     d.ctx.cw_match = match   # 单轮 run 入口读 ctx.cw_match
 
     result = d.run()   # 离线直调节点(SimpleNamespace ctx 无 run_context;
@@ -458,56 +459,26 @@ def test_prep_round_entry_collapse_once_no_gate(monkeypatch) -> None:
 #  cw_intention._switch_gate_open 接线、cw_line_switch.survival_gate 族
 #  与 v3_line_gate_* 决策位/闩同批删。)
 # ==================== r330_hook_gates ====================
+# (2026-09-03 瘦身批:test_is_prep_like_frame_exists / test_layout_hook_gated /
+#  test_star_hook_gated 三条纯在场锁删除(纪律 8:hasattr/标识符在源=实现的
+#  影子);钩子门控行为面由各钩子的行为测辖定。)
 
 import inspect as _r330_hook_gates_inspect
-
-
-def test_is_prep_like_frame_exists() -> None:
-    """共享帧态判据在 cw_obs_core(id_mark 精准判定)。"""
-    from sr_od.application.currency_war.kernel import cw_obs_core
-    assert hasattr(cw_obs_core, 'is_prep_like_frame')
-    src = _r330_hook_gates_inspect.getsource(cw_obs_core.is_prep_like_frame)
-    assert 'get_match_screen_name' in src   # 框架 id_mark 体系
-
-
-def test_layout_hook_gated() -> None:
-    """back_layout 停机钩子过帧态门(过渡帧跳过)。件③(W209/ADR-0385)重构:
-    触发判据从「level 对应档无档」改到双通道对账原始格数 n_raw 无档(=7,
-    钻石+1 局);帧态门(is_prep_like_frame)语义不变。"""
-    from sr_od.application.currency_war.obs import cw_identity_obs
-    src = _r330_hook_gates_inspect.getsource(cw_identity_obs.read_deployed_chars)
-    assert 'is_prep_like_frame' in src
-    assert "n_raw" in src, '触发判据应消费 resolve_back_slots 的 n_raw(双通道)'
 
 
 def test_bookcard_stop_hook_removed() -> None:
     """bookcard 确认停机钩子退役(2026-08-30 开启语义确认,自动处理链接管):
     read_bench_chars 不再有停机逻辑;处理链接线在 cw_loop + handlers。
-    (原锁 r133→r330「钩子过帧态门」钉的是停机语义,钩子删除后语义换新。)"""
+    (原锁 r133→r330「钩子过帧态门」钉的是停机语义,钩子删除后语义换新。
+    2026-09-03 瘦身批:三个肯定式在场断言删除,否定墓碑保留。)"""
     from sr_od.application.currency_war.obs import cw_identity_obs
     src = _r330_hook_gates_inspect.getsource(cw_identity_obs.read_bench_chars)
     assert 'bookcard_confirm' not in src   # 停机钩子段已删
-    assert 'find_bookcards' in src   # 书册卡仍入 _obj_slots( summon 钩子不拦)
-    assert src.count('is_prep_like_frame') >= 1   # summon 钩子帧态门仍在
-    from sr_od.application.currency_war.operations import cw_loop
-    loop_src = _r330_hook_gates_inspect.getsource(cw_loop)
-    assert 'CwScreenExpertInvite' in loop_src   # 处理链接线(0k 分支 + 预清场)
-
-
-def test_star_hook_gated() -> None:
-    """star 回退留证钩子过帧态门(动画帧不留证)。"""
-    from sr_od.application.currency_war.kernel import cw_reconcile
-    src = _r330_hook_gates_inspect.getsource(cw_reconcile._star_stop_hook)
-    assert 'is_prep_like_frame' in src
 
 
 # ==================== survey19_hooks ====================
 
-import sys
-from pathlib import Path
-
-_REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(_REPO / 'src'))
+from pathlib import Path  # noqa: E402
 
 from sr_od.application.currency_war.kernel.cw_survey19_hooks import (  # noqa: E402
     encounter_tier_score,

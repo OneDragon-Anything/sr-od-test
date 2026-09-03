@@ -1,11 +1,9 @@
 """W512:观测自检框架剩余专项观测面(观测自检设计 §2.3/§2.9/§2.10/§5-B5/B6)。
 
-测四类:①confidence 可选字段贯通(record_defect → 台账行;旁路透传数值 ctx;
+测三类行为:①confidence 可选字段贯通(record_defect → 台账行;旁路透传数值 ctx;
 非数值 → None)②策略激活态事件级对拍(record_invest_cards 暂存声明选中 →
-消费即清;消费端接线用源码锁)③defect_ledger 纯净锁(台账行不再混入
-spend_ledger——台账=归一索引层,spend_ledger=原始证据层,消费端按
-SpendUnitRecord 字段解析,混入会被当伪单元误读)④板面动作级对拍/置信度
-遥测的接线存在性(源码锁,契据=DESIGN 逐面判据,注释给锚点)。
+消费即清)③defect_ledger 纯净锁(台账行不再混入 spend_ledger——台账=归一索引层,
+spend_ledger=原始证据层)。原 ④ 接线源码锁 3 条随瘦身批删除(见文尾注)。
 契约锁形状不锁分布;全部落盘走 tmp_path(测试纪律:不写真实 .debug/)。
 
 
@@ -95,20 +93,6 @@ def test_strategy_pick_slot_produce_consume(tmp_path: Path, monkeypatch):
     assert consume_pending_strategy_pick() is None   # 识别失败不暂存
 
 
-def test_strategy_pick_consumer_wiring_lock():
-    """消费端接线锁(静态):cw_observation 构建 state 读 session.active_strategies
-    处消费暂存并对拍,不一致落 surface='strategy' 台账行(设计 §2.9 判据:
-    选了 X → active_strategies 出现 X)。锁「消费点挂在既有 session 写入点」,
-    防后续重构静默断链。"""
-    import sr_od.application.currency_war.obs.cw_observation as obs_mod
-    src = Path(obs_mod.__file__).read_text(encoding='utf-8')
-    assert 'consume_pending_strategy_pick' in src
-    assert "record_defect(\n                    'strategy', 'invariant_break'" in src
-    # 消费点必须在 active_strategies 同步点之后(同一 if _match 块内)
-    anchor = src.index('state.active_strategies = list(_match.session.active_strategies)')
-    assert src.index('consume_pending_strategy_pick', anchor) > anchor
-
-
 # ===== ③ defect_ledger 纯净锁(台账不混入 spend_ledger)=====
 
 def test_defect_row_not_appended_to_spend_ledger(tmp_path: Path, monkeypatch):
@@ -121,30 +105,8 @@ def test_defect_row_not_appended_to_spend_ledger(tmp_path: Path, monkeypatch):
     assert _rows(tmp_path, 'spend_ledger.jsonl') == []
 
 
-# ===== ④ 板面动作级对拍 + 置信度遥测接线锁(§2.3 / §2.10)=====
-
-def test_deploy_action_audit_wiring_lock():
-    """cw_screen_prep 接线锁(静态;设计 §2.3 判据:DeployMove 执行后 paddle X
-    应 +1、SellDeployed 后应 −1,不等 → 台账 surface='deployed' 留证,
-    与 deployed_align 的自动纠漂分立)。"""
-    import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as pd
-    src = Path(pd.__file__).read_text(encoding='utf-8')
-    # 前读:仅部署/卖出动作,执行前读 paddle
-    assert 'isinstance(action, (DeployMove, SellDeployed))' in src
-    # 后读:复用 heavy 重观察帧,reader_source 独立命名(可离线聚合)
-    assert 'paddle_action_audit' in src
-    # W971 P3b 拆内环:record_defect 块随方法迁移,缩进锁降为内容级
-    assert "record_defect(" in src and "'deployed', 'invariant_break'" in src
-
-
-def test_shop_sift_miss_confidence_wiring_lock():
-    """cw_observation 接线锁(静态;设计 §2.10 判据:非空槽 SIFT miss = 读空
-    事件带内点数落 confidence 面,纯留证恒 L2,不设即时告警)。"""
-    import sr_od.application.currency_war.obs.cw_observation as obs_mod
-    src = Path(obs_mod.__file__).read_text(encoding='utf-8')
-    assert "record_defect(\n                    'confidence', 'perception_conflict'" in src
-    assert "reader_source='read_shop_cards'" in src
-    assert 'confidence=float(_inliers)' in src
-
-
-from sr_od.application.currency_war.telemetry import state
+# (2026-09-03 瘦身批:原 ④ 的 3 条接线源码锁删除——
+#  test_strategy_pick_consumer_wiring_lock / test_deploy_action_audit_wiring_lock /
+#  test_shop_sift_miss_confidence_wiring_lock 断言缩进字面/index 顺序/标识符在场,
+#  均为实现形状锁(纪律 8),同文件远超「接线烟雾至多 1 条」容差;
+#  行为面由 ①②③ 行为测辖定。文尾游离 `from ... import state` 一并清理。)
