@@ -59,13 +59,13 @@ def test_difficulty_confirm_a8_no_return_max(test_context, test_image_dir: Path)
 
 import pytest
 
-from sr_od.application.currency_war.operations.entry.start_currency_war_match import  StartCurrencyWarMatch
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_start import  CwEntryStart
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import  FixtureController, WatchdogOperationMixin, enter_running_state, fast_sleep, reset_running_state
 
 
-class _WatchedStartCurrencyWarMatch(WatchdogOperationMixin, StartCurrencyWarMatch):
-    """带看门狗的 StartCurrencyWarMatch(防 WAIT 段死循环)。"""
+class _WatchedCwEntryStart(WatchdogOperationMixin, CwEntryStart):
+    """带看门狗的 CwEntryStart(防 WAIT 段死循环)。"""
 
 
 def _build_phases_new_match_a8() -> list[dict]:
@@ -229,8 +229,8 @@ def _require_screens(test_context: SrTestContext, phases: list[dict]) -> None:
             pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
 
 
-class TestStartCurrencyWarMatchFlow:
-    """StartCurrencyWarMatch 入口流程行为测试。"""
+class TestCwEntryStartFlow:
+    """CwEntryStart 入口流程行为测试。"""
 
     def test_new_match_a8_reaches_prep(
         self,
@@ -241,7 +241,7 @@ class TestStartCurrencyWarMatchFlow:
         _require_screens(test_context, phases)
 
         fixture_controller.set_phases(phases)
-        op = _WatchedStartCurrencyWarMatch(test_context)
+        op = _WatchedCwEntryStart(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
 
         enter_running_state(test_context)
@@ -291,7 +291,7 @@ class TestStartCurrencyWarMatchFlow:
         _require_screens(test_context, phases)
 
         fixture_controller.set_phases(phases)
-        op = _WatchedStartCurrencyWarMatch(test_context)
+        op = _WatchedCwEntryStart(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
 
         enter_running_state(test_context)
@@ -324,7 +324,7 @@ class TestStartCurrencyWarMatchFlow:
         _require_screens(test_context, phases)
 
         fixture_controller.set_phases(phases)
-        op = _WatchedStartCurrencyWarMatch(test_context)
+        op = _WatchedCwEntryStart(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
 
         enter_running_state(test_context)
@@ -379,7 +379,7 @@ class TestStartCurrencyWarMatchFlow:
         _require_screens(test_context, phases)
 
         fixture_controller.set_phases(phases)
-        op = _WatchedStartCurrencyWarMatch(test_context)
+        op = _WatchedCwEntryStart(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
 
         enter_running_state(test_context)

@@ -36,7 +36,7 @@ def test_no_fallthrough_blind_observe() -> None:
     """P0①(语义终版,W971 P3b 返工定稿):不 fall-through 盲 observe——
     单轮观察段见 event overlay → **交回外循环分发,零计数**(原内环
     bail/同因 ×3/ping-pong 停机机制随内环整体拆除,即 P1-r6 停机事故
-    根源机制);无进展留证归外循环 stall 防线(battle_loop)。"""
+    根源机制);无进展留证归外循环 stall 防线(cw_loop)。"""
     src = inspect.getsource(prep_director.PrepDirector.run)
     assert 'obs.event_overlay is not None' in src, '单轮观察段缺 overlay 分诊'
     assert '交回外循环' in src, 'overlay 帧须交回外循环'
@@ -235,10 +235,10 @@ def test_offline_op_none_skips_reread() -> None:
 
 
 def _make_op(monkeypatch, fail: bool):
-    """构 battle_loop 循环实例桩:execute 链可控。"""
-    from sr_od.application.currency_war.operations import battle_loop as bl
+    """构 cw_loop 循环实例桩:execute 链可控。"""
+    from sr_od.application.currency_war.operations import cw_loop as bl
 
-    class _Loop(bl.CurrencyWarRunLoop):
+    class _Loop(bl.CwLoop):
         def __init__(self):
             self._director_fail_streak = 0
 
@@ -281,8 +281,8 @@ def test_source_has_real_wiring() -> None:
     """真实接线存在(弱锁保底:streak 挂长命 loop 实例)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations import battle_loop
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
+    from sr_od.application.currency_war.operations import cw_loop
+    src = inspect.getsource(cw_loop.CwLoop)
     assert 'PrepDirector(self.ctx).execute()' in src
     assert '_director_fail_streak' in src
 
@@ -411,7 +411,7 @@ def test_cap_drives_selection_level_alone_does_not() -> None:
 from types import SimpleNamespace as _r363_audit_p0_SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.operations.battle_loop import CurrencyWarRunLoop
+from sr_od.application.currency_war.operations.cw_loop import CwLoop
 from sr_od.application.currency_war.telemetry.query import read_jsonl
 from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 
@@ -440,7 +440,7 @@ def test_normalize_node_type_vocab() -> None:
 
 
 def test_table_written_on_first_frame() -> None:
-    """槽序表写入:首帧 probe 存全槽类型序(battle_loop 兜底的写入端)。"""
+    """槽序表写入:首帧 probe 存全槽类型序(cw_loop 兜底的写入端)。"""
     # 模拟 slots
     class _Slot:
         def __init__(self, idx, state, node_type):
@@ -460,15 +460,15 @@ def _make_stop_loop(*, summary_written: bool = False,
                     rounds_done: int = 3,
                     stopped: bool = True,
                     plane: int = 2, round_num: int = 7, hp: int = 100,
-                    hp_readable: bool = False) -> CurrencyWarRunLoop:
+                    hp_readable: bool = False) -> CwLoop:
     """构造 loop 桩(bypass __init__):喂 _write_terminal_summary_if_needed 依赖面。
 
     last_state.hp=100 + hp_readable=False = 死局兜底污染面(ADR-0282 语义),
     收口应取 outcome 真值(_last_outcome_hp)而非 100。
     """
-    from sr_od.application.currency_war.operations import battle_loop as bl
+    from sr_od.application.currency_war.operations import cw_loop as bl
 
-    class _Loop(bl.CurrencyWarRunLoop):
+    class _Loop(bl.CwLoop):
         def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
             self._summary_written = summary_written
             # (W971 05-battle §1 P4:hp/轮计数真值源收编进 SettlementState,
@@ -560,8 +560,8 @@ def test_after_operation_done_wires_summary_write() -> None:
     """弱锁保底:after_operation_done 真调 _write_terminal_summary_if_needed(收口接线)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations import battle_loop
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop.after_operation_done)
+    from sr_od.application.currency_war.operations import cw_loop
+    src = inspect.getsource(cw_loop.CwLoop.after_operation_done)
     assert '_write_terminal_summary_if_needed()' in src
 
 

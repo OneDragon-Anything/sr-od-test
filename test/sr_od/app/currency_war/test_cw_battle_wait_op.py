@@ -1,6 +1,6 @@
 """BattleWaitOp 收编锁(W971 05-battle §1,P4)。
 
-结构变化:战斗/结算窗口(原 battle_loop 分支 1f/2/3/3b/5/6)收编进
+结构变化:战斗/结算窗口(原 cw_loop 分支 1f/2/3/3b/5/6)收编进
 ``cw_flow.battle_wait_op.BattleWaitOp``;本文件锁新结构的**行为语义锚**
 (源码弱锁,风格同 test_cw_telemetry_collect.test_branch_wiring_in_source):
 三段式出口/终局分叉/M39 长按/#25 读点延迟/点空白加速/委托接线/状态机随迁。
@@ -14,8 +14,8 @@ def _bwo():
 
 
 def _loop_src() -> str:
-    from sr_od.application.currency_war.operations import battle_loop
-    return inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
+    from sr_od.application.currency_war.operations import cw_loop
+    return inspect.getsource(cw_loop.CwLoop.loop)
 
 
 def test_wait_node_three_exits() -> None:
@@ -70,8 +70,8 @@ def test_loop_delegation_wiring() -> None:
     assert '_frame_in_battle_window' in src
     assert "record_run_summary(" in src   # 3c 收口仍在 loop
     assert 'match_archive' in inspect.getsource(
-        __import__('sr_od.application.currency_war.operations.battle_loop',
-                   fromlist=['x']).CurrencyWarRunLoop)
+        __import__('sr_od.application.currency_war.operations.cw_loop',
+                   fromlist=['x']).CwLoop)
     # 旧内联分支已移除(收编完成判据:不再双写)
     assert '前往结算", lcs_percent=0.8' not in src
 

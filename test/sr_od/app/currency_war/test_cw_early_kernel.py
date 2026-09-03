@@ -1611,7 +1611,7 @@ def test_reconcile_drift_detected_with_padded_tracked() -> None:
 def test_operation_result_bool_pitfall_guard() -> None:
     """W68 ②:钉死 `OperationResult` 无 __bool__ 的坑——bool(FAIL) is True。
 
-    这是battle_loop:925 守卫曾成死码的语言级根因;锁此事实防未来
+    这是cw_loop:925 守卫曾成死码的语言级根因;锁此事实防未来
     有人「简化」回 `if not result:`(同型坑在仓内 3 处正确范式都是
     `.execute().success`)。
     """

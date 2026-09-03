@@ -207,7 +207,7 @@ def test_in_match_screen_names_excludes_train_supply_popup() -> None:
 
     match2 实锤(2026-08-31):弹窗屏名带 货币战争- 前缀,被前缀自动收录机制
     收进对局屏集 → 弹窗帧被误判「已在对局中」→ 跳过 enter/start 直交
-    battle_loop → 未知态钩子 33s 停机。从白名单移除本行 = 本锁红。
+    cw_loop → 未知态钩子 33s 停机。从白名单移除本行 = 本锁红。
     """
     infos = [_FakeScreenInfo('货币战争-列车补给弹窗')]
     assert CurrencyWarApp.in_match_screen_names(infos) == [], (
@@ -226,7 +226,7 @@ def test_train_supply_popup_fixture_not_in_match(test_context: SrTestContext) ->
     img = test_context.load_screen('货币战争-列车补给弹窗', '今日未领取')
     hit = get_match_screen_name(test_context, img, screen_name_list=screens)
     assert hit is None, (
-        f'弹窗真帧被误判对局屏 {hit}(入局流会被误路由交 battle_loop 停机)'
+        f'弹窗真帧被误判对局屏 {hit}(入局流会被误路由交 cw_loop 停机)'
     )
 
 

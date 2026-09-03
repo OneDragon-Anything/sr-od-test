@@ -786,7 +786,7 @@ def test_briefing_after_run_closed_lands_in_next_run(tmp_path: _w603_telemetry_w
     new_rid = _w603_telemetry_wiring_state.start_run('A8')
     rows = _rows(tmp_path, 'exogenous.jsonl')
     assert len(rows) == 1 and rows[0]['run_id'] == new_rid
-    # 开局复位关闭位:局中简报(battle_loop 位面分支)照常直写
+    # 开局复位关闭位:局中简报(cw_loop 位面分支)照常直写
     assert _w603_telemetry_wiring_state._RUN_CLOSED is False
 
 

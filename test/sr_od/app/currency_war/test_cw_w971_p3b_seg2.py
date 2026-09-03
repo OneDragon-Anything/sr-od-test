@@ -97,8 +97,8 @@ def test_buy_phase_finalize_single_source() -> None:
 
 
 def _loop_src() -> str:
-    from sr_od.application.currency_war.operations import battle_loop
-    return inspect.getsource(battle_loop.CurrencyWarRunLoop)
+    from sr_od.application.currency_war.operations import cw_loop
+    return inspect.getsource(cw_loop.CwLoop)
 
 
 def test_prep_settle_gate_retired() -> None:
@@ -119,14 +119,14 @@ def test_post_settle_auto_shop_flag_retired() -> None:
 
 
 def test_takeover_collect_moved_to_director() -> None:
-    """接管局补采挂点迁移(01-opening §2.1):battle_loop 内联块退役,
+    """接管局补采挂点迁移(01-opening §2.1):cw_loop 内联块退役,
     由备战单轮 op 观察段(_takeover_collect_if_needed)承担。"""
     assert '_cw_takeover_done' not in _loop_src(), 'loop 内联补采块未退役'
     from sr_od.application.currency_war import prep_director as pd_mod
     src = inspect.getsource(pd_mod.PrepDirector._takeover_collect_if_needed)
     assert 'cw_takeover_collect_done' in src, 'prep_director 缺接管补采块'
     assert 'briefing_bosses' in src, '补采触发门(简报真值空)缺失'
-    assert 'CollectPlaneIntel' in src, '补采通道(位面详情采集 op)缺失'
+    assert 'CwScreenPlaneIntel' in src, '补采通道(位面详情采集 op)缺失'
     assert '_takeover_collect_if_needed(match, session)' in inspect.getsource(
         pd_mod.PrepDirector.run), '单轮观察段缺接管补采挂点'
 
@@ -260,9 +260,9 @@ def test_outer_loop_rediscovers_between_prep_rounds() -> None:
 def test_prep_stall_evidence_in_outer_loop() -> None:
     """stall 防线平移外循环(03-prep §3 规格最小集):连续 N 轮备战画面
     session 对账字段族无变化 → 留证(log + 存图,不停机)。"""
-    from sr_od.application.currency_war.operations import battle_loop
+    from sr_od.application.currency_war.operations import cw_loop
     src = _loop_src()
-    assert 'PREP_STALL_EVIDENCE_ROUNDS' in inspect.getsource(battle_loop), (
+    assert 'PREP_STALL_EVIDENCE_ROUNDS' in inspect.getsource(cw_loop), (
         'stall 留证阈值常量缺失')
     assert '_prep_stall_sig' in src and '_prep_stall_count' in src, (
         'stall 签名/计数状态缺失')

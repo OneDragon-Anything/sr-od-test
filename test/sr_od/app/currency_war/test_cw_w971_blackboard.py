@@ -215,10 +215,10 @@ def test_absorb_selected_difficulty_only_after_mailbox_retirement() -> None:
     from sr_od.application.currency_war.decision.cw_strategy import (
         StrategySession,
     )
-    from sr_od.application.currency_war.operations.battle_loop import (
-        CurrencyWarRunLoop,
+    from sr_od.application.currency_war.operations.cw_loop import (
+        CwLoop,
     )
-    rl = CurrencyWarRunLoop.__new__(CurrencyWarRunLoop)
+    rl = CwLoop.__new__(CwLoop)
     rl.ctx = SimpleNamespace(
         cw_briefing_affixes=['酸性浓缩'],
         cw_selected_difficulty='A8',

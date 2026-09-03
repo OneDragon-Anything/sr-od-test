@@ -124,7 +124,7 @@ def test_root_logger_single_channel_blocks_fastmcp_basicconfig() -> None:
     """root 单一信道锁:w944 哨兵双信道漂移根因是 FastMCP.__init__ 经
     mcp.server.fastmcp.utilities.logging.configure_logging → logging.basicConfig
     给 root 挂裸 stderr handler,使 getLogger(__name__) 型业务 logger 的行
-    (collect_plane_intel 等)以裸格式进 main_server.log。本锁断言:
+    (cw_screen_plane_intel 等)以裸格式进 main_server.log。本锁断言:
     ①本函数先给 root 挂 mcp_server.log 文件 handler;②之后模拟 FastMCP 的
     configure_logging(真调 mcp SDK 函数)时 root handler 集不变
     (basicConfig no-op),不再出现 StreamHandler 漂移通道。"""

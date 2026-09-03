@@ -2,7 +2,7 @@
 
 三防线须同时在场,缺一即回退到局 12/13 形态(遭遇屏挡 deploy/equip 致环内空转):
 ① 遭遇节点屏在 UPPER_SCREENS(弹窗在场 = 非备战帧,gate 排除链不断);
-② battle_loop 引用 HandleEncounter(专属 handler 消化二选一难度选择);
+② cw_loop 引用 HandleEncounter(专属 handler 消化二选一难度选择);
 ③ prep_director 事件 overlay bail 清单含 encounter 标签(loop 0i 判据 miss 时
    纵深防御:即刻 bail 交外环,禁环内空转)。
 
@@ -27,8 +27,8 @@ def test_encounter_bail_and_handler_wired() -> None:
     from sr_od.application.currency_war.kernel.cw_overlay_registry import (
         derive_decision,
     )
-    from sr_od.application.currency_war.operations import battle_loop
-    assert 'HandleEncounter' in inspect.getsource(battle_loop)
+    from sr_od.application.currency_war.operations import cw_loop
+    assert 'HandleEncounter' in inspect.getsource(cw_loop)
     # bail 扫描单一源已收拢至 registry(B 面切换):成员判定改为派生集三元组
     assert ('货币战争-遭遇节点', '标识-遭遇节点', 'encounter') in {
         (s.screen_name, s.anchor_area, s.bail_tag) for s in derive_decision()}

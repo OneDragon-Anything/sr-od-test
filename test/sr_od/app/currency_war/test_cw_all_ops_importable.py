@@ -1,7 +1,7 @@
 """CW 全 op 模块可导入烟雾锁。
 
 背景(2026-08-25 实锤):handle_planner_event.py 曾用 ``node_name=`` 传参而框架
-``operation_node`` 签名是 ``name=`` —— import 期即 TypeError。因 battle_loop 对
+``operation_node`` 签名是 ``name=`` —— import 期即 TypeError。因 cw_loop 对
 该 handler 是惰性 import,常规测试与全量 pytest 都不触发,地雷存活 6 天,
 直到 MCP server ``list_operations`` 扫描注册表才暴露;期间任何撞上银狼
 「我来当策划」overlay 的实机局都会 ImportError → 节点重试耗尽 → 对局失败。

@@ -17,11 +17,11 @@ from __future__ import annotations
 
 # ==================== r279_exit_op ====================
 
-from sr_od.application.currency_war.operations.entry.exit_currency_war_match import  ExitCurrencyWarMatch
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import  CwEntryExit
 
 
 def test_op_exists_and_named() -> None:
-    assert ExitCurrencyWarMatch.STATUS_AT_LOBBY == '已返回货币战争大厅'
+    assert CwEntryExit.STATUS_AT_LOBBY == '已返回货币战争大厅'
 
 
 def test_battle_pause_screen_onboarded() -> None:
@@ -41,7 +41,7 @@ def test_retreat_branch_in_op() -> None:
     """op 源码含战斗暂停→撤退分支(r279 增补)。"""
     import inspect
 
-    src = inspect.getsource(ExitCurrencyWarMatch.exit_match)
+    src = inspect.getsource(CwEntryExit.exit_match)
     assert '货币战争-战斗暂停' in src
     assert '按钮-撤退' in src
 
@@ -50,7 +50,7 @@ def test_no_round_retry_tail() -> None:
     """战斗中不再落入 retry 死循环(旧版尾分支)。"""
     import inspect
 
-    src = inspect.getsource(ExitCurrencyWarMatch.exit_match)
+    src = inspect.getsource(CwEntryExit.exit_match)
     assert 'round_retry' not in src, 'r279: 全分支消化,无 retry 尾'
 
 
@@ -86,7 +86,7 @@ def test_invest_strategy_branch_uses_area_center_not_ocr() -> None:
     """
     import inspect
 
-    src = inspect.getsource(ExitCurrencyWarMatch.exit_match)
+    src = inspect.getsource(CwEntryExit.exit_match)
     # 分支仍在(r303b 语义:左卡+确认,未删)
     assert '标识-请选择投资策略' in src
     assert '左卡' in src
@@ -107,7 +107,7 @@ import inspect
 import pytest
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.operations.entry.exit_currency_war_match import  ExitCurrencyWarMatch as _r317_exit_op_ExitCurrencyWarMatch
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import  CwEntryExit as _r317_exit_op_CwEntryExit
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import  FixtureController, WatchdogOperationMixin, enter_running_state, fast_sleep, reset_running_state
 
@@ -122,7 +122,7 @@ class _ExitFixtureController(FixtureController):
         pass
 
 
-class _WatchedExit(WatchdogOperationMixin, _r317_exit_op_ExitCurrencyWarMatch):
+class _WatchedExit(WatchdogOperationMixin, _r317_exit_op_CwEntryExit):
     """带看门狗的退局 op(防 WAIT 段死循环)。"""
 
 
@@ -132,7 +132,7 @@ def test_invest_strategy_branch_before_return_btn() -> None:
     回归防:若「返回备战界面」(全屏 OCR)被放回前面,投资策略屏会先被它命中
     并点击落空 → 死循环复现(r317 根修点 ②③)。
     """
-    src = inspect.getsource(_r317_exit_op_ExitCurrencyWarMatch.exit_match)
+    src = inspect.getsource(_r317_exit_op_CwEntryExit.exit_match)
     pos_invest = src.index("'标识-请选择投资策略'")
     pos_return = src.index("'返回备战界面'")
     assert pos_invest < pos_return, (
@@ -153,7 +153,7 @@ def test_battle_prep_detection_area_based() -> None:
     r317 曾以 lcs=0.8 收紧裸 OCR(默认 0.5 在投资策略屏误命中「返回备战界面」);
     T#103 建 positional rect 后误配面被结构性消灭,回归面 = 别再退回全屏扫。
     """
-    src = inspect.getsource(_r317_exit_op_ExitCurrencyWarMatch.exit_match)
+    src = inspect.getsource(_r317_exit_op_CwEntryExit.exit_match)
     assert "'标识-备战阶段'" in src, (
         '「备战阶段」检测应使用 screen_info 标识-备战阶段 area(T#103)'
     )
@@ -398,7 +398,7 @@ def test_outcome_record_damage_roundtrip(tmp_path) -> None:
 
 
 # ===== battle_wait_op 接线(结算帧 → record_outcome 携带 damage_dealt) =====
-# (W971 05-battle §1 P4:结算链自 battle_loop 收编 BattleWaitOp,本测试随迁。)
+# (W971 05-battle §1 P4:结算链自 cw_loop 收编 BattleWaitOp,本测试随迁。)
 
 def test_loop_outcome_carries_damage(monkeypatch) -> None:
     """②段路径:真实 read_round_outcome(不桩)喂 win 形帧 → 遥测行带 damage。"""

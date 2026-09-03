@@ -47,8 +47,8 @@ ORDER_MATRIX: list[tuple[str, str, str, str]] = [
 
 
 def _loop_src() -> str:
-    from sr_od.application.currency_war.operations import battle_loop
-    return inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
+    from sr_od.application.currency_war.operations import cw_loop
+    return inspect.getsource(cw_loop.CwLoop.loop)
 
 
 def _prep_anchor_index(src: str) -> int:

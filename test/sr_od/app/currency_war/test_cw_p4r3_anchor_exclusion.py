@@ -82,8 +82,8 @@ def test_plane_transition_exclusion_wired() -> None:
     """源码锁:0q 位面过渡分支带 boss 排他(共享文案不作跨画面判据)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations import battle_loop
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
+    from sr_od.application.currency_war.operations import cw_loop
+    src = inspect.getsource(cw_loop.CwLoop.loop)
     i_plane = src.find("self.round_by_ocr(screen, '点击空白处继续', lcs_percent=0.8)")
     i_dispatch = src.find('PlaneTransitionOp(self.ctx)', i_plane)
     i_excl = src.find('if _is_boss_frame(', i_plane)
@@ -98,10 +98,10 @@ def test_plane_misdispatch_limit() -> None:
     上限常量 = 3;0p 接管/过渡成功路径清零计数。"""
     import inspect
 
-    from sr_od.application.currency_war.operations import battle_loop
+    from sr_od.application.currency_war.operations import cw_loop
     from sr_od.application.currency_war.operations.cw_flow import battle_wait_op
-    assert battle_loop.CurrencyWarRunLoop.PLANE_MISDISPATCH_LIMIT == 3
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
+    assert cw_loop.CwLoop.PLANE_MISDISPATCH_LIMIT == 3
+    src = inspect.getsource(cw_loop.CwLoop.loop)
     assert '位面过渡连续 fail 超上限' in src
     assert "round_fail('位面过渡连续 fail 超上限(交兜底链)')" in src
     # 清零挂点:boss 简报接管(0p)与过渡成功两条恢复路径

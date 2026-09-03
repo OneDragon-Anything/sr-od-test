@@ -546,20 +546,20 @@ def test_overlay_id_set_matches_registry_ids() -> None:
 
 def test_hook_points_exist() -> None:
     """四挂点证据时效(HOOKS.md 证据过期即红):
-    ①选卡 handler append active_strategies;②battle_loop node_enter 事件;
+    ①选卡 handler append active_strategies;②cw_loop node_enter 事件;
     ③record_outcome;④升级挂点(prep_actions._level_up 内 inventory 标记 + 'level_up' 事件行)。"""
     import inspect
 
-    import sr_od.application.currency_war.operations.battle_loop as battle_loop
+    import sr_od.application.currency_war.operations.cw_loop as cw_loop
     import sr_od.application.currency_war.operations.handlers.handle_invest_strategy as his
     import sr_od.application.currency_war.prep_actions as prep_actions
 
     his_src = inspect.getsource(his)
     assert 'active_strategies.append' in his_src
     # (W971 05-battle §1 P4:node_enter 事件与 record_outcome 写端随结算链
-    #  收编进 BattleWaitOp;补给合成行仍在 battle_loop——两宿主并查。)
+    #  收编进 BattleWaitOp;补给合成行仍在 cw_loop——两宿主并查。)
     import sr_od.application.currency_war.operations.cw_flow.battle_wait_op as bwo
-    loop_src = (inspect.getsource(battle_loop)
+    loop_src = (inspect.getsource(cw_loop)
                 + inspect.getsource(bwo))
     assert "'node_enter'" in loop_src
     assert 'record_outcome' in loop_src

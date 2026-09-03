@@ -257,7 +257,7 @@ def test_briefing_modules_use_framework_logger() -> None:
     for mod_name, attr in (
         ('sr_od.application.currency_war.operations.cw_flow.briefing_op', 'log'),
         ('sr_od.application.currency_war.obs.cw_briefing_obs', '_log'),
-        ('sr_od.application.currency_war.operations.entry.start_currency_war_match', '_log'),
+        ('sr_od.application.currency_war.operations.cw_entry.cw_entry_start', '_log'),
     ):
         mod = importlib.import_module(mod_name)
         assert getattr(mod, attr) is log_utils.log, \

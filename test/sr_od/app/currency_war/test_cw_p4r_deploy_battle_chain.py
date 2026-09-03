@@ -144,13 +144,13 @@ def test_post_launch_blockers_registry() -> None:
 def test_frontless_recovery_chain_wired() -> None:
     """源码锁(0j 升级):确认关闭 → DeployBenchOp 带验证重部署 → 验前排 ≥1
     → 再出战;超限 round_fail(不再无限 round_wait)。"""
-    from sr_od.application.currency_war.operations import battle_loop
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop.loop)
+    from sr_od.application.currency_war.operations import cw_loop
+    src = inspect.getsource(cw_loop.CwLoop.loop)
     assert 'FRONTLESS_REDEPLOY_LIMIT' in src
     assert 'DeployBenchOp(self.ctx).execute()' in src
     assert '_StartBattle()' in src
     assert '前台仍空' in src                       # 出口判据:前排 ≥1 验证
     assert "round_fail('前台无角色重部署超限(前台仍空)')" in src
-    assert battle_loop.CurrencyWarRunLoop.FRONTLESS_REDEPLOY_LIMIT == 2
+    assert cw_loop.CwLoop.FRONTLESS_REDEPLOY_LIMIT == 2
     # 预算复位挂点:正常备战环成功跑完 = 部署链健康 → 复位(预算辖连续失败窗)
     assert 'self._frontless_redeploy = 0' in src

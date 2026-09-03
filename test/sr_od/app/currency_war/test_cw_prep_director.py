@@ -1415,8 +1415,8 @@ from cv2.typing import MatLike
 
 from sr_od.application.currency_war import currency_war_app as cw_app_module
 from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
-from sr_od.application.currency_war.operations.entry.exit_currency_war_match import (
-    ExitCurrencyWarMatch,
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import (
+    CwEntryExit,
 )
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
@@ -1475,7 +1475,7 @@ def test_pause_screen_areas_onboarded() -> None:
 # ---------------------------------------------------------------------------
 
 
-class _WatchedExitCurrencyWarMatch(WatchdogOperationMixin, ExitCurrencyWarMatch):
+class _WatchedCwEntryExit(WatchdogOperationMixin, CwEntryExit):
     """带看门狗的退局 op(防恢复链 WAIT 死循环拖挂测试)。"""
 
 
@@ -1523,11 +1523,11 @@ def _require_screens(test_context: SrTestContext, phases: list[dict]) -> None:
 
 def _patch_watched_exit(monkeypatch: _w817_recovery_precheck_pytest.MonkeyPatch) -> None:
     """app 内构造的退局 op 换成看门狗版(防死循环)。"""
-    def _factory(ctx) -> ExitCurrencyWarMatch:
-        op = _WatchedExitCurrencyWarMatch(ctx)
+    def _factory(ctx) -> CwEntryExit:
+        op = _WatchedCwEntryExit(ctx)
         op._init_watchdog()  # type: ignore[attr-defined]
         return op
-    monkeypatch.setattr(cw_app_module, 'ExitCurrencyWarMatch', _factory)
+    monkeypatch.setattr(cw_app_module, 'CwEntryExit', _factory)
 
 
 def test_pause_panel_triggers_recovery_chain_to_lobby(

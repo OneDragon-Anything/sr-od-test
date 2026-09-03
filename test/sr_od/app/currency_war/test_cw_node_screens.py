@@ -567,15 +567,15 @@ def test_invite_screen_registered_as_upper() -> None:
 
 
 def test_bookcard_handler_wired() -> None:
-    """停机钩子 → 自动处理链接线:battle_loop 引用 HandleBookcard,
+    """停机钩子 → 自动处理链接线:cw_loop 引用 HandleBookcard,
     prep_director 弹窗 bail 清单含 bookcard 标签。"""
     import inspect
 
     from sr_od.application.currency_war.kernel.cw_overlay_registry import (
         derive_decision,
     )
-    from sr_od.application.currency_war.operations import battle_loop
-    assert 'HandleBookcard' in inspect.getsource(battle_loop)
+    from sr_od.application.currency_war.operations import cw_loop
+    assert 'HandleBookcard' in inspect.getsource(cw_loop)
     # bail 扫描单一源已收拢至 registry(B 面切换):成员判定改为派生集三元组
     assert ('货币战争-备战-专家邀请函', '标识-专家邀请函', 'bookcard') in {
         (s.screen_name, s.anchor_area, s.bail_tag) for s in derive_decision()}
@@ -849,14 +849,14 @@ def test_summon_hook_skips_trial_reveal_card(monkeypatch, tmp_path) -> None:
     assert not (tmp_path / '.debug/temp/currency_war/summon_stop_hook.flag').exists()
 
 
-def test_battle_loop_reveal_wiring_present() -> None:
-    """行为接线锁:battle_loop 备战分支的揭示清场在场(防误删后退回停机/漏增益)。"""
+def test_cw_loop_reveal_wiring_present() -> None:
+    """行为接线锁:cw_loop 备战分支的揭示清场在场(防误删后退回停机/漏增益)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations import battle_loop
+    from sr_od.application.currency_war.operations import cw_loop
 
-    src = inspect.getsource(battle_loop)
-    assert 'find_trial_reveal_cards' in src, 'battle_loop 试用揭示卡清场接线被移除'
+    src = inspect.getsource(cw_loop)
+    assert 'find_trial_reveal_cards' in src, 'cw_loop 试用揭示卡清场接线被移除'
 
 
 # ==================== w219_boss_collect_channel ====================
@@ -870,9 +870,9 @@ def test_briefing_bosses_written_into_session() -> None:
     W971 P3(ctx 信箱退役,01-opening §1):简报唯一写点 = BriefingOp 直写
     session,原 _absorb_ctx_mailbox copy 段随信箱退役删除。锁语义重推:
     copy 接线消失是设计意图;锁改钉「BriefingOp 写 session 接线存在 +
-    battle_loop 信箱吸收段已退役」。
+    cw_loop 信箱吸收段已退役」。
     """
-    from sr_od.application.currency_war.operations import battle_loop
+    from sr_od.application.currency_war.operations import cw_loop
     from sr_od.application.currency_war.operations.cw_flow import briefing_op
 
     src = inspect.getsource(briefing_op.BriefingOp)
@@ -882,7 +882,7 @@ def test_briefing_bosses_written_into_session() -> None:
     assert '_session.briefing_bosses = list(_cleaned) if _cleaned else None' in src, (
         '读空清 None 兜底消失(跨局残留会成假真值)'
     )
-    loop_src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
+    loop_src = inspect.getsource(cw_loop.CwLoop)
     assert 'self._absorb_ctx_mailbox' not in loop_src, 'ctx 信箱吸收段应已退役(W971 P3)'
     assert 'self.ctx.cw_briefing_bosses = None' not in loop_src
 
@@ -895,32 +895,32 @@ def test_briefing_read_side_cleans_and_overwrites() -> None:
     assert 'clean_boss_names_by_lcs' in src, '简报读数未过 LCS 清洗(简称/形变直进 boss_fit)'
 
 
-def test_collect_plane_intel_is_takeover_refill_channel() -> None:
-    """锁③(改写,W971 P3b):CollectPlaneIntel 实采写入端在(接管重采/读空
+def test_cw_screen_plane_intel_is_takeover_refill_channel() -> None:
+    """锁③(改写,W971 P3b):CwScreenPlaneIntel 实采写入端在(接管重采/读空
     兜底)——接线随接管补采迁 prep_director(单轮化后挂 _takeover_collect_if_needed)。"""
     from sr_od.application.currency_war import prep_director
 
     src = inspect.getsource(
         prep_director.PrepDirector._takeover_collect_if_needed)
     assert 'session.briefing_bosses = _names' in src, (
-        'CollectPlaneIntel 实采接线消失(接管场景失去重采通道)'
+        'CwScreenPlaneIntel 实采接线消失(接管场景失去重采通道)'
     )
     # 触发门仍含「session.briefing_bosses 空」:开局局简报读得时 session 已由
     # BriefingOp 填(不重复采),接管局/读空时兜底——条件消失=简报信任被绕过。
     assert "getattr(session, 'briefing_bosses', None)" in src
-    assert 'CollectPlaneIntel(self.ctx)' in src
+    assert 'CwScreenPlaneIntel(self.ctx)' in src
 
 
 def test_reconcile_wiring_in_collect_paths() -> None:
     """锁④(改写,W971 P3b 接管补采迁 prep_director):对账网接线在
     takeover 写回路径上仍在;director 补采块触发门 = 简报真值空(无简报
     读数可对账,对账自然缺省),写回接线不因块迁移丢失。"""
-    from sr_od.application.currency_war.operations.entry import (
-        takeover_collect_plane_intel,
+    from sr_od.application.currency_war.operations.cw_entry import (
+        cw_entry_plane_intel,
     )
 
     assert 'reconcile_briefing_vs_plane_intel(' in inspect.getsource(
-        takeover_collect_plane_intel.TakeoverCollectPlaneIntel.write_back), (
+        cw_entry_plane_intel.CwEntryPlaneIntel.write_back), (
         'takeover 写回缺对账接线'
     )
 
@@ -1008,7 +1008,7 @@ def test_emblem_detail_label_reads_boss(test_context: SrTestContext) -> None:
 
 def test_conclude_plane_boss_matrix() -> None:
     """锁③:分流矩阵——头像态 record / 徽章态 skip(不 retry)/ 标签异常 retry。"""
-    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import (
+    from sr_od.application.currency_war.operations.cw_flow.cw_screen_plane_intel import (
         conclude_plane_boss,
     )
 
@@ -1027,7 +1027,7 @@ def test_conclude_plane_boss_matrix() -> None:
     assert act == 'retry'
 
 
-def test_battle_loop_preserves_none_positions() -> None:
+def test_cw_loop_preserves_none_positions() -> None:
     """锁④:实采写 session 保位(None 不滤)——滤 None 会让后续位面名字左移错序
     (ADR-0397 修的「按序消费错位面」同病;旧形态 `[n for n in ... if n]` 禁回潮)。
 

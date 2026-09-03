@@ -1501,7 +1501,7 @@ def test_shared_face_helpers_alive_for_c1() -> None:
 
 def test_decide_plane_skip_truth_table() -> None:
     """skip 判据真值表:过去跳过 / 当前未来采集 / 无真值不跳 / 缺值补采。"""
-    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import  decide_plane_skip
+    from sr_od.application.currency_war.operations.cw_flow.cw_screen_plane_intel import  decide_plane_skip
 
     # 过去位面 + 台账有值 → 跳过
     skip, note = decide_plane_skip(1, 2, ['battle', 'reward', 'boss'])
@@ -1529,9 +1529,9 @@ def test_collect_loop_has_skip_filter_and_per_plane_logs() -> None:
     (观测缺口补齐:用户观察到的停留必须能从日志诊断)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations.handlers import  collect_plane_intel
+    from sr_od.application.currency_war.operations.cw_flow import cw_screen_plane_intel
 
-    src = inspect.getsource(collect_plane_intel.CollectPlaneIntel)
+    src = inspect.getsource(cw_screen_plane_intel.CwScreenPlaneIntel)
     assert 'decide_plane_skip(' in src, '采集循环未接 skip 判据'
     assert '跳过(已完成)' in src, '采集循环缺跳过日志(观测缺口)'
     assert '采集完成(耗时' in src, '采集循环缺逐位面耗时日志(观测缺口)'
@@ -1605,7 +1605,7 @@ def test_frames_identical_tolerance() -> None:
     """帧差判定:同图=零变化;显著差异图=有变化(容忍压缩噪声的容差语义)。"""
     import numpy as np
 
-    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import  _frames_identical
+    from sr_od.application.currency_war.operations.cw_flow.cw_screen_plane_intel import  _frames_identical
 
     a = np.zeros((54, 96), dtype=np.uint8)
     assert _frames_identical(a, a.copy()) is True
@@ -1616,9 +1616,9 @@ def test_frames_identical_tolerance() -> None:
 
 def _bare_op():
     """免 fixture 构造最小 op(仅测门方法:跳过 SrOperation 重初始化)。"""
-    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import  CollectPlaneIntel
+    from sr_od.application.currency_war.operations.cw_flow.cw_screen_plane_intel import  CwScreenPlaneIntel
 
-    op = CollectPlaneIntel.__new__(CollectPlaneIntel)
+    op = CwScreenPlaneIntel.__new__(CwScreenPlaneIntel)
     op._nonclean_wait_start = None
     op._gate_prev_thumb = None
     op._gate_static_streak = 0
@@ -1647,9 +1647,9 @@ _TITLE = '标识-位面详情标题'
 
 def _make_op(test_context: SrTestContext, monkeypatch) -> tuple:
     """构造被测 op(fixture 控制器注入),返回 (op, fixture_controller)。"""
-    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import  CollectPlaneIntel
+    from sr_od.application.currency_war.operations.cw_flow.cw_screen_plane_intel import  CwScreenPlaneIntel
 
-    class _Watched(WatchdogOperationMixin, CollectPlaneIntel):
+    class _Watched(WatchdogOperationMixin, CwScreenPlaneIntel):
         pass
 
     op = _Watched(test_context)
@@ -1856,9 +1856,9 @@ _w314_plane_intel_wait_clean_PREP = '货币战争-备战'
 def _w314_plane_intel_wait_clean_make_op(test_context: SrTestContext, monkeypatch, phases: list[dict],
              watchdog_max_rounds: int = 300):
     """构造被测 op(fixture 控制器注入 + 看门狗),返回 (op, fixture_controller)。"""
-    from sr_od.application.currency_war.operations.handlers.collect_plane_intel import  CollectPlaneIntel
+    from sr_od.application.currency_war.operations.cw_flow.cw_screen_plane_intel import  CwScreenPlaneIntel
 
-    class _Watched(_w314_plane_intel_wait_clean_WatchdogOperationMixin, CollectPlaneIntel):
+    class _Watched(_w314_plane_intel_wait_clean_WatchdogOperationMixin, CwScreenPlaneIntel):
         pass
 
     op = _Watched(test_context)
@@ -1922,7 +1922,7 @@ def test_nonclean_waits_until_cap_then_fails(test_context: SrTestContext,
     本锁验证的是**真动画**路径(帧间有变化 → 等到上限),故替身帧差判定恒
     「有变化」;静止帧提前放弃的锁在 test_cw_w857_plane_intel_skip。
     """
-    from sr_od.application.currency_war.operations.handlers import  collect_plane_intel as cpi_mod
+    from sr_od.application.currency_war.operations.cw_flow import cw_screen_plane_intel as cpi_mod
 
     # 恒非clean(read_node_sequence 恒 None),fake 墙钟每次 sleep 推进 10s
     _patch_node_reader(monkeypatch, [])
@@ -1968,7 +1968,7 @@ def test_give_up_closes_detail_overlay(test_context: SrTestContext,
     import cv2
     import numpy as np
 
-    from sr_od.application.currency_war.operations.handlers import  collect_plane_intel as cpi_mod
+    from sr_od.application.currency_war.operations.cw_flow import cw_screen_plane_intel as cpi_mod
 
     # 现帧 = 位面详情存档帧(真实 OCR:id_mark 命中,w280 锁⑦同款帧源)
     p = (Path(__file__).parents[4] / 'screens' / '货币战争-位面详情'
@@ -2002,7 +2002,7 @@ def test_give_up_closes_detail_overlay(test_context: SrTestContext,
 def test_recovers_after_clean_frame(test_context: SrTestContext,
                                     monkeypatch) -> None:
     """锁②:前 3 次非clean → 第 4 次读出 clean → 立即恢复:点节点条内图标,不失败。"""
-    from sr_od.application.currency_war.operations.handlers import  collect_plane_intel as cpi_mod
+    from sr_od.application.currency_war.operations.cw_flow import cw_screen_plane_intel as cpi_mod
 
     clean_slot = _w314_plane_intel_wait_clean_SimpleNamespace(state='current', cx=100, cy=100)
     calls = _patch_node_reader(monkeypatch, [None, None, None, [clean_slot]])
@@ -2043,9 +2043,9 @@ def test_loop_has_plane_detail_overlay_branch() -> None:
     锁定分支(overlay 先消化,不污染其后的商店探针/出战判读)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations import battle_loop
+    from sr_od.application.currency_war.operations import cw_loop
 
-    src = inspect.getsource(battle_loop.CurrencyWarRunLoop)
+    src = inspect.getsource(cw_loop.CwLoop)
     assert '标识-位面详情标题' in src, '主循环缺位面详情 overlay 识别分支'
     assert "'货币战争-位面详情', '按钮-关闭位面详情'" in src, (
         '位面详情分支应点关闭键(按钮-关闭位面详情)')
@@ -2060,8 +2060,8 @@ def test_collect_fail_paths_close_detail() -> None:
     _best_effort_close_detail(出口契约=回备战屏)。"""
     import inspect
 
-    from sr_od.application.currency_war.operations.handlers import  collect_plane_intel
+    from sr_od.application.currency_war.operations.cw_flow import cw_screen_plane_intel
 
-    src = inspect.getsource(collect_plane_intel.CollectPlaneIntel)
+    src = inspect.getsource(cw_screen_plane_intel.CwScreenPlaneIntel)
     assert src.count('_best_effort_close_detail()') >= 2, (
         '放弃采集与位面卡缺失两条失败路径都应先尽力关详情')

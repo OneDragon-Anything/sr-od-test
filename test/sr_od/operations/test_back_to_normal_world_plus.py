@@ -498,7 +498,7 @@ def _run_real_frame_check_screen(
             lambda *args, **kw: in_match_screen_name,
         )
     if exit_match_cls is not None:
-        monkeypatch.setattr(btnw_module, 'ExitCurrencyWarMatch', exit_match_cls)
+        monkeypatch.setattr(btnw_module, 'CwEntryExit', exit_match_cls)
     monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
 
     op = _WatchedBackToNormal(test_context)
@@ -894,7 +894,7 @@ class TestNpcDialogGuard:
 
 
 class _RecordingFakeCwExit:
-    """记录构造/执行的 ExitCurrencyWarMatch 假类(不触真实 op 节点图)。
+    """记录构造/执行的 CwEntryExit 假类(不触真实 op 节点图)。
 
     ``fail_after`` 之前每次 ``execute`` 返回成功(=已回大厅),之后返回失败
     (模拟对局画面点不动)——让「成功一轮 round_wait + 失败重试有界」两条
@@ -917,7 +917,7 @@ class _RecordingFakeCwExit:
 
 
 class TestCwInMatchDelegationBranch:
-    """CW 对局中画面 → 委托 ExitCurrencyWarMatch 分支锁(2026-09-01 孤儿对局事故)。
+    """CW 对局中画面 → 委托 CwEntryExit 分支锁(2026-09-01 孤儿对局事故)。
 
     背景:上一 CW app 被 stop 后残留对局画面(如备战),本 op 既有分支全不
     认识 → 落兜底点「菜单-右上角返回」(CW 画面无此控件)→ 9 个一条龙应用
@@ -966,7 +966,7 @@ class TestCwInMatchDelegationBranch:
         fake.constructed = 0
         fake.executed = 0
         fake.fail_after = 1  # 首轮成功(WAIT 路径),之后失败(RETRY 有界路径)
-        monkeypatch.setattr(btnw_module, 'ExitCurrencyWarMatch', fake)
+        monkeypatch.setattr(btnw_module, 'CwEntryExit', fake)
         # 守卫被触达即回归(兜底路径被对话隐藏按钮误触的事故形状)。
         monkeypatch.setattr(
             BackToNormalWorldPlus, 'check_npc_dialog',
