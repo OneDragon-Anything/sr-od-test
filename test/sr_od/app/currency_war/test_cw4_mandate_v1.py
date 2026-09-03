@@ -1043,24 +1043,29 @@ class TestR200BenchEffectChannels:
         assert slots2 == [2]
 
     def test_sell_for_interest_channel_uses_context(self):
-        """凑息档通道同资格(T_SEARCH 注入形态下评估;语境缺场黑塔
-        照常入桶——例外语境不在场时无承载对象)。"""
+        """凑息卖 T1 语义重写(设计 13_buy_face_design §2.2;旧锁
+        「T_SEARCH_A 注入态资格全集无差别全发」语义已被取代——T1 三项:
+        金位触发+目标量止盈+布尔门退役)。资格谓词不变:语境在场
+        (黑塔纪元)⇒ 例外件受保护;语境缺场回归资格集。"""
         from sr_od.application.currency_war.decision.cw4.criteria import (
             sell as crit_sell,
         )
         bench = [_bench(1, '黑塔'), _bench(2, '阿格莱雅')]
-        provisional.inject('T_SEARCH_A', provisional.CalibValue(1.0))
-        try:
-            st_on = GameState()
-            st_on.active_strategies = ['黑塔纪元']
-            slots, key = crit_sell.sell_for_interest(
-                30, bench, 5, ('线内件',), state=st_on)
-            assert key == '' and slots == [2]
-            slots2, _ = crit_sell.sell_for_interest(
-                30, bench, 5, ('线内件',), state=GameState())
-            assert slots2 == [1, 2]
-        finally:
-            provisional.reset('T_SEARCH_A')
+        st_on = GameState()
+        st_on.active_strategies = ['黑塔纪元']
+        # 非缺口帧零发射(gold ≥ g*=saturation_line(5)=50 ⇒ 不卖)
+        slots, key = crit_sell.sell_for_interest(
+            50, bench, 5, ('线内件',), state=st_on)
+        assert key == 'not_needed' and slots == []
+        # 缺口帧:语境保护(黑塔不入),资格集内卖到缺口覆盖为止
+        # (黑塔+阿格莱雅退金合计 < 缺口 20 ⇒ 贪心尽头卖 1 张资格件)
+        slots, key = crit_sell.sell_for_interest(
+            30, bench, 5, ('线内件',), state=st_on)
+        assert key == '' and slots == [2]
+        # 缺省语境缺场:资格集全体入桶(贪心尽头,Σrefund < 缺口)
+        slots2, _ = crit_sell.sell_for_interest(
+            30, bench, 5, ('线内件',), state=GameState())
+        assert slots2 == [1, 2]
 
 
 class TestR200LineSwitchConservativeSubset:

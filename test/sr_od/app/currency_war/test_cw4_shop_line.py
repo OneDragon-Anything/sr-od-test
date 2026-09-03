@@ -200,14 +200,23 @@ class TestCriteriaShopFaces:
         assert not [a for a in _decide(st, _session(comp))
                     if isinstance(a, RefreshShop)]
 
-    def test_stockpile_face_m6_strand(self):
-        """压库面:M6 存在性成立 ∧ T_SEARCH🔴 ⇒ 不买 + 溢余滞留计数。"""
+    def test_stockpile_face_m6_opens_with_frame_window(self):
+        """压库面:T1 短路径后 M6 消费位窗口=帧级现算(vbar 链,读法②
+        缺省),T_SEARCH_A 布尔门退役(设计 13_buy_face_design §2.3)——
+        窗口非空帧正常买入。旧锁「T_SEARCH_A None ⇒ 溢余滞留」锁的是
+        布尔门语义,已被 T1 取代(改锁重推:出处=13_buy_face_design
+        §2.3「槽位布尔门退役」;滞留新语义=真无窗口帧,由
+        test_cw_p56_t1 的 stub-registry 锁承载)。店牌=线成员副本:
+        dominance 零重叠不过不抢,M6(不排线成员)独占评估。"""
         comp = _comp()
-        bench = [_bc(m) for m in _members(comp)]
-        st = _state(gold=60, shop=[_card('燃料件X', cost=1)], bench=bench)
+        members = _members(comp)
+        bench = [_bc(m) for m in members]
+        st = _state(gold=60, shop=[_card(members[0], cost=1)], bench=bench,
+                    level=4)
         sess = _session(comp)
-        _decide(st, sess)
-        assert sess.cw4_counters.get('m6_overflow_strand', 0) >= 1
+        acts = _decide(st, sess)
+        assert any(isinstance(a, BuyCard) and a.reason == 'm6_stockpile'
+                   for a in acts)
 
     def test_equipment_face_no_shop_emission(self):
         """装备面:商店线辖域申报——装备发射位在 prep 域,商店波零装备动作
@@ -474,12 +483,16 @@ class TestEvArmBypass:
                 value=1.0, injected_form=True))
             provisional.inject('V_MS', provisional.CalibValue(
                 value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
-            # 金 30 < g*(50):dominance 通道关 ⇒ 店面该件归 EV 买面独占
-            full = _decide(_state(gold=30, shop=[_card(outsider, cost=1)],
-                                  bench=[_bc(m) for m in members]),
+            # 金 50(=g*):dominance 通道关(50>50 不成立)⇒ 店面该件归
+            # EV 买面独占;P56 后 EV 金约束=可变现下界(g*−Σ活期退金),
+            # bench 带 1 张燃料件(退 3)⇒ s_reserve=47,50−1=49≥47 过
+            # (P56 批场景适配:旧 gold=30 在可变现下界下被 P56 正确拦截)
+            bench = [_bc(m) for m in members] + [_bc('燃料件Y')]
+            full = _decide(_state(gold=50, shop=[_card(outsider, cost=1)],
+                                  bench=bench),
                            _session(comp), _Cfg('full'))
-            skel = _decide(_state(gold=30, shop=[_card(outsider, cost=1)],
-                                  bench=[_bc(m) for m in members]),
+            skel = _decide(_state(gold=50, shop=[_card(outsider, cost=1)],
+                                  bench=bench),
                            _session(comp), _Cfg('skeleton_only'))
         finally:
             provisional.reset('U_X')
