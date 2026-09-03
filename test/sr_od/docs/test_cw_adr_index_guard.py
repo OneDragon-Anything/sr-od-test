@@ -20,7 +20,7 @@ from pathlib import Path
 # 主仓定位:本文件 = <主仓>/sr-od-test/test/sr_od/docs/test_cw_adr_index_guard.py
 # parents[4] 即主仓根(sr-od-test 是主仓根下被 gitignore 的独立测试仓)。
 _REPO_ROOT = Path(__file__).resolve().parents[4]
-_DECISIONS_DIR = _REPO_ROOT / 'docs' / 'develop' / 'currency_war' / 'redesign' / 'decisions'
+_DECISIONS_DIR = _REPO_ROOT / 'docs' / 'develop' / 'currency_war' / 'decisions'
 _INDEX_FILE = _DECISIONS_DIR / 'INDEX.md'
 
 # INDEX 表格行形态:`| [NNNN](NNNN-slug.md) | 标题 | ...`
