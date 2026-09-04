@@ -209,7 +209,18 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
         predicates,
     )
     seen_member_key = False
-    for seed in (42, 43):
+    # 种子集 ADR-0519 重锚:锁线门槛收紧(0.5→1.0 羁绊满员当量)后
+    # 42/43 两局全程无锁线行,改用含锁线行的种子子集(40/44/46/50),
+    # 锁语义(供给 vs 闸门可辨)不变。
+    # 双分支命中证据(逐种子真引擎直调复测;两口径分行标注,禁混用):
+    # 锁定行口径(target_comp 非空行):闸门命中 owned×1/1/2/3
+    # (种子 40/44/46/50;线内成员键全落 owned 系);该口径 non_line×0
+    # (成员键恒不落 non_line——即本测试断言面本身)。
+    # 全行口径(含 K 空窗行):供给命中 non_line×62/52/65/53;闸门
+    # 命中×7/5/8/7。
+    # 每颗种子两分支双命中,覆盖较旧种子 42/43(闸门分支 0 命中)为
+    # 增强非缩窄。
+    for seed in (40, 44, 46, 50):
         res = simulate_p1(seed, pool='fallback', planes=2)
         for row in res.ledger:
             label = row.get('target_comp')

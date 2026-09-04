@@ -21,7 +21,6 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     schedule_upgrade,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
-    PAIR_DROUGHT_EVICT_ROUNDS,
     IntentionState,
     pair_target_comp,
     update_intention,
@@ -239,28 +238,32 @@ def _starve_frame(r: int = 5):
     return _state(r=r, gold=100, bench=bench)
 
 
-def test_pair_drought_eviction_threshold_and_rederivation() -> None:
-    """断供 ≥5 轮 → 体系移出候选、pair 重派生排除;<5 轮不驱逐。
-    阈值=PAIR_DROUGHT_EVICT_ROUNDS(保守 5,DROUGHT_BAIL 同族先验;
-    探针批标定挂账=说服包 R3 断供探针)。"""
+def test_pair_drought_counters_never_evict() -> None:
+    """ADR-0519 重锚:断供驱逐已退役(未证阈值「未证即退役」)——
+    断供计数器照常累积(遥测/撤销证据输入),pair_evicted 恒空集、
+    pair 方向不因断供被移出候选。另锁锁线门槛 1.0(羁绊满员当量):
+    _starve_frame 的 0.5 支持度(各系单件)不足以锁 pair(空窗)。"""
     ist = IntentionState()
     sess = StrategySession()
     sess.v3_intention = ist
-    # 首轮:支持度(bench 卡芙卡+姬子)派生 pair;店空开始断供计数
     update_intention(_starve_frame(), ist, sess)
-    assert ist.p1_pair == ('列车同行', '持续伤害'), ist.p1_pair
-    for _ in range(PAIR_DROUGHT_EVICT_ROUNDS - 1):
-        update_intention(_starve_frame(), ist, sess)
-    assert ist.pair_evicted == set(), ist.pair_evicted
-    # 第 5 轮:两体系均断供达阈 → 同时驱逐,pair 重派生排除
-    update_intention(_starve_frame(), ist, sess)
-    assert {'列车同行', '持续伤害'} <= ist.pair_evicted
-    assert not (set(ist.p1_pair) & {'列车同行', '持续伤害'})
+    assert ist.p1_pair == (), \
+        '支持度 0.5(各系单件)< 门槛 1.0(羁绊满员)→ 空窗不锁(ADR-0519)'
+    # 显式 pair 方向在场(模拟已锁帧),断供多轮:计数累积、永不驱逐
+    ist2 = IntentionState()
+    ist2.p1_pair = ('列车同行', '持续伤害')
+    sess2 = StrategySession()
+    sess2.v3_intention = ist2
+    for _ in range(6):
+        update_intention(_starve_frame(), ist2, sess2)
+    assert ist2.pair_evicted == set(), '驱逐分支已退役(ADR-0519)'
+    assert max(ist2.pair_drought.values(), default=0) >= 1, \
+        '断供计数保留(pair 重派生随门槛收紧频繁回 (),计数窗口见注)'
 
 
 def test_pair_eviction_keeps_target_chain_materialized() -> None:
-    """W578 代理门:驱逐后 pair 重派生 → pair_target_comp(新 pair)
-    物化非空(target 链不因驱逐全盲;W622 P2 病灶防回归)。"""
+    """W578 代理门:pair 物化 → pair_target_comp(新 pair)非空
+    (target 链不盲;W622 P2 病灶防回归;驱逐退役后同样成立)。"""
     pair = ('仙舟', '持续伤害')
     comp = pair_target_comp(pair)
     assert comp is not None and comp.core_chars

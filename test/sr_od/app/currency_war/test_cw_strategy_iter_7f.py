@@ -57,46 +57,48 @@ def _state(**kw) -> GameState:
     return GameState(**base)
 
 
-# ===== 候选① 供给确认加速(线重推对在店供给证据加权)=====
+# ===== 候选① 供给计数器(ADR-0519 重锚:断供驱逐已退役)=====================
+# 旧「供给确认加速驱逐」族(驱逐门槛减半/加速触发)已随 PAIR_DROUGHT_
+# EVICT_ROUNDS 未证阈值整体退役(ADR-0519「未证即退役」);本节锁残存
+# 语义:计数器累积/冻结 + 断供永不换向(pair_evicted 恒空)。
 
-class TestSupplyConfirmAccel:
+class TestSupplyCounters:
 
     def _pair_ist(self) -> IntentionState:
         ist = IntentionState()
         ist.p1_pair = ('列车同行', '希儿系')
         return ist
 
-    def test_accel_evicts_at_half_threshold_on_supply_evidence(self) -> None:
-        """现任方向(列车同行+希儿系)断供期间,方向外体系(仙舟)连续
-        K=⌊5/2⌋=2 轮在店 ⇒ 断供证据确认,驱逐门槛减半:第 2 轮即驱逐
-        (旧形态需等满 5 轮,g_20260904_054904 r4-r6 冻结窗病灶)。
-        事件标签带 :accel 可归因。"""
+    def test_drought_never_evicts(self) -> None:
+        """断供任意多轮不驱逐(ADR-0519 保守缺省):pair 方向不因未证
+        断供阈值被移出候选;断供计数器照常累积供遥测/撤销证据链。
+
+        bench 两件列车成员 = 体系羁绊满员(支持度 1.0,ADR-0519 后锁线
+        门槛),pair 方向在场 → 断供计数辖。"""
+        ist = self._pair_ist()
+        for r in range(3, 12):
+            st = _state(round_num=r,
+                        bench=[_bc('三月七', slot=1), _bc('花火', slot=2)],
+                        shop=[SimpleNamespace(name='黑塔')])
+            ist = update_intention(st, ist)
+        assert ist.pair_evicted == set(), \
+            '断供驱逐分支已退役,pair_evicted 恒空集(ADR-0519)'
+        assert max(ist.pair_drought.values(), default=0) > 0, \
+            '断供计数器保留(遥测/撤销证据输入)'
+
+    def test_supply_streak_accumulates(self) -> None:
+        """方向外体系(仙舟)连续在店 ⇒ shop_supply_streak 逐轮 +1
+        (计数器语义保留,决策消费已退役)。"""
         ist = self._pair_ist()
         st3 = _state(round_num=3, bench=[_bc('三月七', slot=1)],
                      shop=[SimpleNamespace(name='爻光')])
         ist = update_intention(st3, ist)
-        assert '列车同行' not in ist.pair_evicted, \
-            '确认证据仅 1 轮(<K)不得加速:门槛仍为驱逐阈值'
+        n1 = ist.shop_supply_streak.get('仙舟', 0)
+        assert n1 >= 1, '在店轮 streak 累积'
         st4 = _state(round_num=4, bench=[_bc('三月七', slot=1)],
                      shop=[SimpleNamespace(name='爻光')])
         ist = update_intention(st4, ist)
-        assert '列车同行' in ist.pair_evicted, \
-            '方向外体系供给连续 K 轮 ⇒ 断供驱逐门槛减半(提前重推)'
-        # (第 4 轮即驱逐本身即加速证据:旧形态门槛 5,断供 2 轮绝不驱逐。
-        #  last_event 的 :accel 标签可能被同轮 pair 派生事件覆写——与既有
-        #  逐轮单事件语义一致,锁钉行为不钉单事件字符串。)
-        assert ist.shop_supply_streak.get('仙舟', 0) >= 2, '夹具前提'
-
-    def test_no_accel_without_supply_evidence(self) -> None:
-        """负例:店上无任何体系件在售(非四体系件占店)⇒ 无确认证据,
-        断供 2 轮不得驱逐(门槛维持原值,防噪声加速)。"""
-        ist = self._pair_ist()
-        for r in (3, 4):
-            st = _state(round_num=r, bench=[_bc('三月七', slot=1)],
-                        shop=[SimpleNamespace(name='黑塔')])
-            ist = update_intention(st, ist)
-        assert ist.pair_evicted == set(), \
-            '无供给确认证据时断供 2 轮不得驱逐(门槛=驱逐阈值)'
+        assert ist.shop_supply_streak.get('仙舟', 0) > n1
 
     def test_supply_streak_frozen_on_shopless_round(self) -> None:
         """无商店语境轮(补给绕行)供给 streak 冻结不重置——窗口未开

@@ -155,12 +155,13 @@ from sr_od.application.currency_war.kernel.cw_survey19_hooks import (  # noqa: E
 
 
 def test_p9_encounter_tier_context_dependent() -> None:
-    """遭遇档评分场合依赖:同 −4,边际局高分/大胜局≈0;P1 放大。"""
+    """遭遇档评分场合依赖:同 −4,边际局高分/大胜局≈0;位面无放大
+    (ADR-0519:P1 尖峰 ×1.5 系数未证退役,保守缺省 = 位面中性)。"""
     edge = encounter_tier_score(100, -4, gap=0, plane=2)
     blow = encounter_tier_score(100, -4, gap=-80, plane=2)
     p1 = encounter_tier_score(100, -4, gap=0, plane=1)
     assert edge > blow
-    assert p1 > edge   # P1 尖峰 ×1.5
+    assert p1 == edge   # ADR-0519:P1 尖峰放大已退役
 
 
 def test_p1_wear_discipline() -> None:

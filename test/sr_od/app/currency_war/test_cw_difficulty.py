@@ -45,11 +45,12 @@ def test_marginal_three_states() -> None:
     assert abs(v_lost) < 0.01 and abs(v_blow) < 0.01
 
 
-def test_p1_spike() -> None:
-    """P1 尖峰:同幅度压低在 plane=1 价值放大(×1.5)。"""
+def test_p1_spike_retired() -> None:
+    """ADR-0519:P1 尖峰 ×1.5 放大已按「未证即退役」删除(「一层最凶」
+    定性有实证、系数拍定)——位面不再改变降难度边际价值。"""
     v_p1 = marginal_value(100, -5, gap=0, plane=1)
     v_p2 = marginal_value(100, -5, gap=0, plane=2)
-    assert v_p1 > v_p2
+    assert v_p1 == v_p2
 
 
 def test_overflow_gambit_version_guard() -> None:

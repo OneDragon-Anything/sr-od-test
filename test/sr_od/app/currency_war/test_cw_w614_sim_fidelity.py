@@ -118,8 +118,12 @@ from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 # 逐帧重估缺口),行为位移属 ADR-0517 §与现行架构的映射预告的真语义差
 # (「帧级锁不预期保持绿」),非 unintended drift。锚值位移至 996a1f57…,
 # 继续做 unintended drift 哨兵。
+# 经验量退役重锚(ADR-0519,增量 B 组3-7 清账):事件面加减分族/刷新
+# 建议阈值/遭遇奖励阶梯/P1 尖峰系数/断供驱逐/P1 锁线门槛 0.5→1.0/
+# 通用升级曲线退役——行为位移 = 本批目标语义差(保守缺省),非
+# unintended drift。锚值位移至 b8e99328…,继续做 unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    '996a1f579845c20fff92661332534910a54b838868ee6f29a50b0632f7fd0459')
+    'b8e9932818466fa95d300600328eb531ed93e3829b7a0f3d44a962852ef66251')
 
 
 def _behavior_projection(results) -> str:

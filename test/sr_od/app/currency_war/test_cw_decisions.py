@@ -24,7 +24,6 @@ from sr_od.application.currency_war.kernel.cw_economy import (
 from sr_od.application.currency_war.kernel.cw_events import (
     EncounterOption,
     SupplyOption,
-    _option_rarity,
     decide_encounter,
     decide_event,
     decide_supply,
@@ -269,18 +268,20 @@ def test_decide_encounter_formed_buff_picks_high_difficulty() -> None:
     assert not pick.refresh, "利 comp 不刷新"
 
 
-def test_decide_encounter_reward_breaks_tie() -> None:
-    """奖励价值 tie-break(用户口述):碾压局两档同难度词缀,棱彩奖励胜;
-    不敢难时奖励不改变保守选择。"""
+def test_decide_encounter_reward_neutral_no_tiebreak() -> None:
+    """ADR-0519:奖励文本价值分恒中性(先验阶梯未证退役)——碾压局
+    两档同难度,奖励文本不再改变选择(无词缀信号时按稳定序);
+    不敢难时奖励同样不改变保守选择。"""
     cfg = _cfg()
     comp = _comp(["燃血"])
     formed = GameState(level=8, board={"燃血": 4},
                        deployed=[BenchChar(slot=i) for i in range(4)])
-    # 碾压局(form 高)敢难:高难+棱彩 vs 高难+无奖励 → 前者胜
+    # 碾压局(form 高)敢难:高难+棱彩 vs 高难+无奖励 → 奖励中性,两者
+    # 难度项相同 → 得分平,稳定序(先出现者)胜
     opts = [EncounterOption(idx=0, difficulty=3, rewards=['棱彩装备']),
             EncounterOption(idx=1, difficulty=3, rewards=[])]
     pick = decide_encounter(opts, formed, comp, cfg)
-    assert pick.idx == 0, "敢难时棱彩奖励应胜同难度"
+    assert pick.idx == 0, "奖励中性:同难度同分,稳定序"
     # 未成型:奖励再好也不选高难
     unformed = GameState(level=1, deployed=[])
     opts2 = [EncounterOption(idx=0, difficulty=1, rewards=[]),
@@ -290,12 +291,12 @@ def test_decide_encounter_reward_breaks_tie() -> None:
 
 
 def test_reward_value_tiers() -> None:
-    """奖励文本启发分档:棱彩>进阶>简易>经验>无文本中性。"""
+    """ADR-0519:奖励文本价值分恒中性 0.5(先验阶梯未证退役,保守缺省)。"""
     from sr_od.application.currency_war.kernel.cw_events import _reward_value
-    assert _reward_value(['棱彩装备']) == 1.0
-    assert _reward_value(['进阶武装']) == 0.8
-    assert _reward_value(['简易装备']) == 0.65
-    assert _reward_value(['经验']) == 0.6
+    assert _reward_value(['棱彩装备']) == 0.5
+    assert _reward_value(['进阶武装']) == 0.5
+    assert _reward_value(['简易装备']) == 0.5
+    assert _reward_value(['经验']) == 0.5
     assert _reward_value([]) == 0.5   # OCR 漏/无 → 中性不惩罚
 
 
@@ -614,17 +615,17 @@ def test_comp_char_positions_data() -> None:
 # OLD_MIX_AUDIT §7.2 裁定整段删除,本单测同批移除(锁的是已死词汇,非设计意图)。
 
 
-# ===== ADR-0141 品质→敌难度进选卡(金+3/彩+6 的风险项) =====
-def test_decide_event_refresh_suggestion_adr0146() -> None:
-    """ADR-0146:三张最优 < 50 → PickEvent.refresh=True(纯建议,handler 决定真刷否)。"""
+# ===== ADR-0141 品质→敌难度进选卡(已退役面;ADR-0519) =====
+def test_decide_event_refresh_suggestion_retired() -> None:
+    """ADR-0519:刷新建议阈值(EVENT_REFRESH_SCORE_FLOOR=50,评估分中位
+    估计)已按「未证即退役」删除——PickEvent.refresh 恒 False,烂手牌
+    不再触发建议刷新(保守缺省:不弃当前手牌)。"""
     cfg = _cfg()
-    st = GameState(board={}, hp=100, hp_readable=True)   # 显式满血态(W823 None 化:默认构造=未观测,不再隐含满血)
-    pick = decide_event(["赌神·银", "恢复生机", "气氛组"], cfg, st)   # 20/12/20
-    assert pick.refresh is True and 'suggest-refresh' in pick.reason
-    pick2 = decide_event(["彩虹时代", "恢复生机", "气氛组"], cfg, st)   # env 72
+    st = GameState(board={}, hp=100, hp_readable=True)
+    pick = decide_event(["赌神·银", "恢复生机", "气氛组"], cfg, st)   # 低分烂手牌
+    assert pick.refresh is False and 'suggest-refresh' not in pick.reason
+    pick2 = decide_event(["彩虹时代", "恢复生机", "气氛组"], cfg, st)  # env 72 高分
     assert pick2.refresh is False
-    pick3 = decide_event(["远见", "恢复生机", "气氛组"], cfg, st)      # 策略 eval 70(原白名单 90 案例已删,ADR-0204)
-    assert pick3.refresh is False
 
 
 def test_env_pick_value_adr0144() -> None:
@@ -643,12 +644,13 @@ def test_env_pick_value_adr0144() -> None:
                strength="A", form_difficulty="medium")
     pick3 = decide_event(["追击概念股", "彩虹时代"], cfg, st, target_comp=tgt)
     assert pick3.option_idx == 0 and 'env-faction' in pick3.reason, "comp 匹配:78 > 72"
-    # HP 钩子:白银时代 35 vs 增发货币 48 —— 正常增发胜;hp<40 白银 35+15=50 反超(降难度求稳)
+    # HP 钩子已退役(ADR-0519:env 生存加分未证置 0):白银时代 35 < 增发货币 48
+    # 在低血帧同样增发胜(钩子不再改变行为)
     pick_a = decide_event(["白银时代", "增发货币"], cfg, st)
     assert pick_a.option_idx == 1
     st_low = GameState(board={}, hp=20)
     pick_b = decide_event(["白银时代", "增发货币"], cfg, st_low)
-    assert pick_b.option_idx == 0, "HP危:50 > 48 —— 环境钩子改变行为"
+    assert pick_b.option_idx == 1, "ADR-0519:低血 env 生存钩子已退役(35 < 48 恒)"
     # 注册表字段实值(评估表派生):彩虹时代 72 / 追击概念股 52
     _e = get_env("彩虹时代")
     assert _e is not None and _e.pick_value == 72
@@ -668,35 +670,32 @@ def test_env_pick_value_adr0144() -> None:
     assert pick_e.option_idx == 1 and 'env-eval' in pick_e.reason
 
 
-def test_decide_event_rarity_difficulty_penalty() -> None:
-    """ADR-0143 评估分基线上:惩罚只调相对序;HP 危险加倍改变行为。"""
+def test_decide_event_rarity_penalty_retired() -> None:
+    """ADR-0519:品质难度惩罚(棱彩−12/−24、金−6/−12)已按「未证即退役」
+    置 0——选卡只按注册表评估分排序,品质不再削分(机制方向金+3/彩+6
+    仍是游戏定义知识,幅度无推导不落码)。"""
     cfg = _cfg()
     st = GameState(board={}, hp=100)
-    # 三张经济类(避开白名单,评估分:乱成一锅粥+ 45 彩 / 黄金垃圾 48 金 / 免费午餐 50 银)
+    # 评估分:免费午餐 50 银 / 黄金垃圾 48 金 / 乱成一锅粥+ 45 彩 → 银胜(分高者胜)
     pick = decide_event(["免费午餐", "黄金垃圾", "乱成一锅粥+"], cfg, st)
-    # 分:午餐 50-0 / 垃圾 48-6=42 / 锅粥+ 45-12=33 → 银胜(评估分已含品质+经济,0143 行为改变:
-    # 旧裸先验下彩 58 胜;现在「免费午餐」被评为好卡,惩罚叠加后仍压过 —— 分数为纲非品质为纲)
     assert pick.option_idx == 0
-    # 高评估彩压过惩罚:鲜血阶梯 75(彩) vs 免费午餐 50(银):75-12=63 > 50 → 彩胜
-    # (惩罚只调相对序非禁选,0143 语义不变)
+    # 高评估彩不再吃削分:鲜血阶梯 75(彩) vs 免费午餐 50(银)→ 彩胜(75 > 50)
     pick_b = decide_event(["鲜血阶梯", "免费午餐"], cfg, st)
-    assert pick_b.option_idx == 0, "高评估彩(63)仍胜银(50) —— 惩罚只调相对序"
-    # HP 危险加倍 + 评估分接近:乱成一锅粥+ 45(彩) vs 尾款交付 30(银):
-    # 正常 45-12=33 > 30 彩胜;危险 45-24=21 < 30 → **银胜**(危险期惩罚改变行为,设计意图:
-    # 低血时不再为品质赌难度;剩余价值是金不适用此例,尾款交付=银 eval 30)
+    assert pick_b.option_idx == 0
+    # 低血帧无加倍惩罚:乱成一锅粥+ 45(彩) vs 尾款交付 30(银)→ 彩胜恒成立
     pick_c = decide_event(["尾款交付", "乱成一锅粥+"], cfg, st)
-    assert pick_c.option_idx == 1, "正常期:彩(33)胜银(30)"
+    assert pick_c.option_idx == 1
     st_low = GameState(board={}, hp=20)
     pick3 = decide_event(["尾款交付", "乱成一锅粥+"], cfg, st_low)
-    assert pick3.option_idx == 0, "HP危:银(30)胜彩(21) —— 危险期惩罚改变行为"
-    # 未注册(0) vs 金经济(48-12=36) → 金胜
+    assert pick3.option_idx == 1, "ADR-0519:HP 加倍惩罚已退役,低血帧同序"
+    # 未注册(0) vs 金经济(48)→ 金胜(纯评估分)
     pick2 = decide_event(["银色无名甲", "黄金垃圾"], cfg, st_low)
     assert pick2.option_idx == 1
 
 
-def test_option_rarity_lcs_fallback() -> None:
-    """_option_rarity:精确名直查;OCR 形变名(•→·)走 LCS 兜底;未知返空。"""
-    assert _option_rarity("及时雨") == "棱彩"
-    assert _option_rarity("全都要•银") == "银"   # LCS 兜底(注册表是 ·)
-    assert _option_rarity("完全不存在的名字xyz") == ""
+def test_option_rarity_fallback_retired() -> None:
+    """ADR-0519:_option_rarity LCS 品质兜底已随品质惩罚退役(唯一消费 =
+    该惩罚),模块不再暴露该符号。"""
+    import sr_od.application.currency_war.kernel.cw_events as _ce
+    assert not hasattr(_ce, '_option_rarity')
 

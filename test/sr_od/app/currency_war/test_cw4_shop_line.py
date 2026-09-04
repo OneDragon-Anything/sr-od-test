@@ -620,14 +620,13 @@ class TestKGapFallback:
         assert sess.cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
 
     def test_non_gap_support_at_threshold_lock_band_fallback(self):
-        """②P1 锁线过渡带(FIX_REVIEW R3①,锁语义重推:原锁钉「≥门槛
-        不回退」系值域覆盖半边形态,FIX_REVIEW ②缺口2 定谳为死带,本批
-        扩域取代):bench 支持度 ≥0.5(桑博单件=DOT 1/2)⇒ 回退走
-        p1_early_pair top-2 方向(``shop_k_fallback_p1_lock_band`` 计数,
-        非 gap 键),店面方向件经 M2 发射;方向单一源对拍=与
+        """②P1 锁线过渡带(ADR-0519 重锚:锁线门槛 = 羁绊满员当量 1.0,
+        旧 0.5「单件即锁」已退役):bench 支持度 1.0(DOT 满员=桑博+卡芙卡)
+        ⇒ 回退走 p1_early_pair top-2 方向(``shop_k_fallback_p1_lock_band``
+        计数,非 gap 键),店面方向件经 M2 发射;方向单一源对拍=与
         p1_early_pair_members 独立直算一致。"""
         from sr_od.application.currency_war.kernel import cw_intention
-        st = _state(gold=30, bench=[_bc('桑博', slot=1)])
+        st = _state(gold=30, bench=[_bc('桑博', slot=1), _bc('卡芙卡', slot=2)])
         assert not cw_intention.p1_gap_window(st)
         sess = self._gap_session()
         acts = _decide(st, sess)
@@ -647,7 +646,7 @@ class TestKGapFallback:
         """过渡带单一源行为锚:回退成员集 == p1_early_pair_members
         (hoard_target_set 空窗全集仅在 pair 派生空时兜底,本帧不辖)。"""
         from sr_od.application.currency_war.kernel import cw_intention
-        st = _state(gold=30, bench=[_bc('桑博', slot=1)])
+        st = _state(gold=30, bench=[_bc('桑博', slot=1), _bc('卡芙卡', slot=2)])
         sess = self._gap_session()
         _decide(st, sess)
         assert cw_intention.p1_early_pair_members(
