@@ -48,10 +48,18 @@ def test_recipe_tier_helper() -> None:
 
 def test_consumers_share_single_source() -> None:
     """消费方共享单源:deploy_bench 与 cw_line_defs 的名字一致
-    (旧 line_strategy 局部 set 随 ADR-0336 删)。"""
+    (旧 line_strategy 局部 set 随 ADR-0336 删)。
+
+    dd-037 更新:op 的配方基础线判据(RECIPE_BASE)随选人段收敛进
+    kernel.cw_deploy_logic.select_deployments(kernel 自己 import 单一源),
+    op 模块的 _RECIPE_BASE 死别名已删——单源性改锁在 kernel 消费上,
+    op 侧围栏别名(_RECIPE)锁保持。
+    """
     from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as deploy_bench
+    import sr_od.application.currency_war.kernel.cw_deploy_logic as deploy_logic
     assert deploy_bench._RECIPE is RECIPE_FACTIONS
-    assert deploy_bench._RECIPE_BASE == RECIPE_BASE
+    assert deploy_logic.RECIPE_BASE == RECIPE_BASE
+    assert deploy_logic.select_deployments is not None
 
 
 def test_1cost_kinds_positive() -> None:

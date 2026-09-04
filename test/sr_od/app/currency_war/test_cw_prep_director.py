@@ -239,10 +239,16 @@ def test_weakest_bench_idx_protects_triplicates() -> None:
 
 
 def test_main_flow_phase_progression() -> None:
-    """主流程阶段位:买→部署→装备→出战(每步前移;阶段位环入口清零由框架)。"""
+    """主流程阶段位:买→部署→装备→出战(每步前移;阶段位环入口清零由框架)。
+
+    dd-037 更新:obs 需带 bench 件——发射门(kernel has_deployable 单一源)
+    会在计划空时收口 RunDeploy;阶段推进语义锁用非空 bench 保持原链路。
+    """
     sess = _sess()
+    sess.last_level_obs = 4   # 发射门 cap=level 链(dd-037):cap≥2 才有部署空间
     cfg = _cfg()
-    obs = _obs(free_bench_slots=1)
+    obs = _obs(free_bench_slots=1, bench_chars=[_bc(1, '姬子·启行', '列车同行')],
+               deployed_chars=[_bc(1, '三月七', '列车同行')])
     a1 = S._main_flow_step(obs, sess, cfg)
     assert isinstance(a1, OpenShop) and not a1.read_only and sess.prep_phase == 1
     a2 = S._main_flow_step(obs, sess, cfg)
@@ -259,11 +265,13 @@ def test_main_flow_m6_gate_skips_buy_when_free0() -> None:
     M24 卡死修(2026-08-16):旧逻辑直奔 RunDeploy,deploy-swap 卖拖拽失败(bug#1 变体)+ 金不够
     升级 → 警告不消死循环。新语义:满席先过腾席链(deploy/升级/卖最弱),链 d(Defer)落回部署段。
     mock 无 gold 真值 → 链 b OpenShop(read_only)(开态重读,合法破局步)。
+    dd-037 更新:obs 无 bench 身份 → 落回部署段后计划空,发射门收口 RunDeploy 直发
+    RunEquip(空计划部署本就是 no-op,发射前抑制)——断言集加入 RunEquip。
     """
     sess = _sess()
     a = S._main_flow_step(_obs(free_bench_slots=0), sess, _cfg())
     assert not isinstance(a, OpenShop), "free=0 永不买牌(M-6 门)"
-    assert isinstance(a, (DeployMove, LevelUp, OpenShop, SellBench, RunDeploy))
+    assert isinstance(a, (DeployMove, LevelUp, OpenShop, SellBench, RunDeploy, RunEquip))
 
 
 def test_m6_gate_chain_c_sells_weakest_when_no_gold() -> None:
