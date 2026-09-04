@@ -2,72 +2,28 @@
 # 维护:uv run pytest sr-od-test/ -q -m "not slow and not legacy_baseline" --durations=300 --durations-min=1.0 巡检回填(准入:>=2s;口径=标准桶,含非 CW)
 # 用法:快速层 = pytest sr-od-test/test/sr_od/app/currency_war -m "not slow and not legacy_baseline";慢桶点名 = -m slow
 # 注:类内用例须带类名段;条目为短后缀形态(文件名::)。
-# 2026-09-07 M4 批实测重建:quick 全量串行 3128 条/437.6s(--durations-min=1.0)。
-# 旧名单 52 条对账:45 条保留(仍 >=2s)、7 条删(test_p1_zero_drift_star_form 1.89s
-# 等回落 <2s;详见 .debug/temp/currency_war/redesign/M4_TEST_INFRA.md);新增 6 条。
-# __init__.py:: 条目按 setup 计时准入(2.91s setup,call <2s)。
-# 2026-09-03 瘦身批全仓重建:标准桶(2985 条/264.9s)巡检发现名单双向漂移——
-# 标准桶新晋 ≥2s 的 17 条未登记(多为非 CW:cal_pos/enter_game/kwarg 审计等,
-# 合计 ~70s),补录见文件尾「瘦身批补录」节。
+# 2026-09-03 合并战役收官重建(dd-038 v2 整删波后终态实测,-m slow 139.8s/55 条):
+# 旧名单 ~95 条对账——v2 时代重型件(plane_p2 变异探针/双 n20 零漂移门/equip_grant/
+# prep_director 实跑/economy/investment/sim_mutex/delta_pool/r420/zero_refresh 等)
+# 已随 decision_v2 整包删除消失,死条目一并清除;存活条目逐条对实测 ≥2s 保留。
+# 快速层同日巡检:2709 passed/148.7s(唯一红 w614=批裁决内接受)。
 test_cw_infra_locks.py::test_ci_smoke_snapshot_batch
-test_cw_plane_p2.py::test_mutation_probe_win_rate_explosion
-test_cw_plane_p2.py::test_loop_partial_static_then_clean_succeeds
-test_cw_w546_equip_grid.py::TestOcclusion::test_detail_panel_cells_marked_occluded
-test_cw_w546_equip_grid.py::TestGridClassificationFixtures::test_read_equips_default_rect_uses_grid
-test_cw_plane_p2.py::test_simulate_p2_ab_report_shape
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_new_match_a8_reaches_prep
-test_cw_w546_equip_grid.py::TestGridClassificationFixtures::test_full_occupancy_no_spurious
-test_cw_r420_shop_slot_semantics.py::test_phantom_rebuy_and_pool_floor_zero_real_strategy
-test_cw_equip_grant_calib.py::test_p1_grant_volume_matches_real_profile
-test_cw_sim_models.py::test_sim_supply_reroll_chain_and_once_per_game
-test_cw_r420_shop_slot_semantics.py::test_simulate_p1_ab_report_shape
-test_cw_plane_p2.py::test_sensitivity_report_shape
-test_cw_investment.py::test_invest_on_activates_p1_lock
-test_cw_plane_p2.py::test_batch_p2_headline_quartet
-test_cw_plane_p2.py::test_batch_headline_extension_keys
 test_cw_shop_refresh.py::test_hook_unknown_slot_skipped_not_stopped
-test_cw_plane_p2.py::test_gate_keeps_waiting_on_changing_frames
-test_cw_plane_p2.py::test_changing_frames_keeps_waiting_in_conclude_mode
-test_cw_prep_director.py::test_executor_h3_sphere_verified_only
-test_cw_adr0292_reward_pool_sampling.py::test_reward_deltas_sampled_from_pool
 test_cw_shop_refresh.py::test_buy_refresh_wave_real_miss_not_effective
 test_cw_shop_refresh.py::test_buy_refresh_wave_real_free_proc
-test_cw_sim_mutex_tx.py::test_sim_batch_discloses_guard_count
-test_cw_delta_pool.py::test_batch_report_carries_pool_fingerprint
-test_cw_screens_entry.py::test_read_game_state_prep
-test_cw_equip_grant_calib.py::test_grant_names_all_registered
-test_cw_economy.py::test_loss_round_income_path_in_sim_ledger
 test_cw_data_registry.py::test_layout_hook_no_stop_only_evidence
 __init__.py::test_rollover_with_foreign_open_handle[False]
-test_cw_prep_director.py::test_start_battle_dialog_checkbox_equipped
 test_cw_shop_refresh.py::test_hook_persistent_unknown_stops_with_evidence
-test_cw_merge.py::test_read_shop_cards_fills_merge_preview
 test_cw_data_registry.py::test_layout_hook_silent_on_archived
-test_cw_prep_director.py::test_pause_panel_triggers_recovery_chain_to_lobby
 test_cw_r331_fixture.py::test_observe_full_heavy_on_prep_fixture
-test_cw_economy.py::test_reward_round_pair_income_in_sim_ledger
-test_cw_plane_p2.py::test_mutation_probe_settlement_bypass
-test_cw_investment.py::test_empty_profile_equals_off
-test_cw_economy.py::test_delta_arm_fallback_routes_to_coarse
 test_cw_shop_refresh.py::test_refresh_wave_normal_chain
 test_cw_shop_refresh.py::test_refresh_wave_free_refresh_proc_chain
-test_cw_plane_p2.py::test_static_not_in_detail_fails_op
 test_cw_data_registry.py::test_cv_transient_falls_back_to_formula
 test_cw_data_registry.py::test_cv_reread_mismatch_logged_no_action
-test_cw_plane_p2.py::test_static_concludes_plane_and_advances
 test_cw_data_registry.py::test_cv_stable_new_grid_confirmed
-test_cw_plane_p2.py::test_gate_fails_fast_on_static_frames
-test_cw_investment.py::test_invest_off_is_bit_identical
-test_cw_w546_equip_grid.py::TestTwoStateZoneDy::test_label_free_frame_first_candidate
 test_cw_w546_equip_grid.py::TestTwoStateZoneDy::test_labeled_frame_second_candidate
 test_cw_w546_equip_grid.py::TestTwoStateZoneDy::test_fallback_scan_on_unknown_layout
-test_cw_telemetry_collect.py::test_gold_detail_pixel_truth_frames
-
-# ==== 瘦身批补录(2026-09-03,标准桶全仓巡检 ≥2s;原名单只扫 CW 快速层,漏非 CW)====
-# 图像重推理/多阶段 fixture 识别链/全仓 AST 扫描——单条断言密度不低但重操作链
-# 无法便宜化,按 ≥2s 准入;能便宜化的(如 delta_pool 再生锁)已改造,不入桶。
-test_cal_pos_for_world_patrol.py::test_cal_pos
-test_cal_pos_for_sim_uni.py::test_cal_pos_for_sim_uni
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_residual_lobby_escapes_via_close_and_world
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_new_match_a5_switches_to_max_rank
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_train_supply_popup_claimed_then_reaches_prep
@@ -79,29 +35,15 @@ test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobb
 test_back_to_normal_world_plus.py::TestSimUniExitConfirmBranch::test_exit_confirm_clicks_leave
 test_back_to_normal_world_plus.py::TestVersionAnnouncementBranches::test_page2_closes
 test_cw_shop_refresh.py::test_hook_heals_after_settled_reread
-test_cw_r412_runs_summary_fallback.py::test_coverage_check_both_directions
-test_cw_telemetry.py::test_sim_ledger_rows_carry_same_key
-# 终验(15:08)补录:原 a8 条目类名过时失效已上修正;以下为终验实测越线者
-test_cw_r412_runs_summary_fallback.py::test_recover_dangling_idempotent
 test_cw_r363_audit_p0.py::test_stop_summary_no_duplicate_on_second_call
-test_cw4_mandate_v1.py::TestZeroDriftGate::test_baseline_self_pairing_n20
-# 步4b 商店线批:旧零漂移门测试随透传拆除改名(上行为重推后的锁);
-# 新增 sim 实跑门(基线自配对 n20 ~14s / 双臂相异 n6 ~5s)
-test_cw4_shop_line.py::TestSimGates::test_baseline_self_pairing_zero_drift_n20
-test_cw4_shop_line.py::TestSimGates::test_arm_diff_existence_n6
-# 零刷新修复批(2026-09-03):sim 实跑验收(n5 None 期零漂移+升级活性 / n5 V_GAP 注入刷新链)
-test_cw_zero_refresh_fix.py::TestZeroRefreshFixSimAcceptance::test_none_period_zero_refresh_but_levelups_alive
-test_cw_zero_refresh_fix.py::TestZeroRefreshFixSimAcceptance::test_injected_vgap_refresh_chain_alive
-
 test_cw_r363_audit_p0.py::test_stop_path_writes_stopped_summary
-test_cw_r363_audit_p0.py::test_non_stop_abnormal_exit_writes_abandoned
 test_cw_w603_telemetry_wiring.py::test_briefing_after_run_closed_lands_in_next_run
-test_cw_data_registry.py::test_read_equipped_no_false_positive_empty_positions
-# 合并战役巡检(2026-09-03)准入:全 src AST 扫描守卫 4.44s(快速层唯一 ≥2s 漏网;
-# 架构裁决类守卫保留,归全量层把关;注:带 not slow 的巡检测不到桶内条目,
-# 桶内重建须另跑慢桶点名,勿用本类巡检数据下删)
 test_cw4_contracts.py::TestNoBypassDirectCalls::test_criteria_public_calls_whitelisted
 test_cw_identity_funnel.py::test_funnel_equivalence_and_tiering
 
 # 度量修复批(2026-09-03)准入:首条 setup 2.18s(apply_core_swap_calibration+注册表装配;call 0.02s)
 test_cw_metric_mirror_fix.py::test_new_core_mirror_family_written
+
+# 合并战役收官新准入(2026-09-03,快速层巡检实测 ≥2s 未登记)
+test_cw_identity_funnel.py::test_funnel_none_session_is_full_scan
+test_cw_r363_audit_p0.py::test_zero_outcome_but_observed_writes_row
