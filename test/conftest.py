@@ -582,3 +582,56 @@ def _isolate_l0_andon_handler(
     from sr_od.application.currency_war.telemetry import state as cw_telemetry_state
 
     monkeypatch.setattr(cw_telemetry_state, '_L0_ANDON_HANDLER', None)
+
+
+# --------------------------------------------------------------------------- #
+# 停机 flag 族 / exec_fail 族通道隔离(测试纪律 4 机检层:桩化整条副作用链)
+# --------------------------------------------------------------------------- #
+# 背景(进度账本 2026-08-31 迭代 :64 行余项):telemetry.state 的模块级单例簇
+# 是安灯/缺陷台账/暂存槽的唯一拥有者,缺省 enabled=True 且写**真实**
+# .debug/temp/currency_war/replay/。测试只桩 run_id 不桩 _RECORDER 时
+# (实证:test_cw_telemetry_collect 的 run_id='w323-run' 桩),台账行照落真实
+# defect_ledger.jsonl——单日累积 2290 行测试残渣混进实机台账,离线按 run_id
+# 聚合时把测试行当真实局读。同族通道一并钉桩:
+# - _RECORDER:重定向到 tmp(保留 enabled=True 缺省语义,只换落盘域);
+# - _CURRENT_RUN_ID:钉回空串(record_defect 等便捷入口空 run_id 门控 no-op;
+#   防某测试泄漏 run_id 后,后续测试的旁路写入带错局归属);
+# - _L0_ANDON_FIRED_RUNS(局级闩锁)/ _defect_seen+_defect_seen_run(复现
+#   计数器):进程内状态,残留会让后续测试的 L0 判级/复现升级场景静默变形;
+# - 简报缓冲与三个暂存槽(_PENDING_BRIEFING_ROWS/_LAST_SUPPLY_PICK/
+#   _PENDING_UNIT_GOLD_CLOSE/_PENDING_UNIT_EXEC):消费即清是常规路径,但
+#   异常路径的残留会串到下一个测试的落账行。
+# - flag 路径常量(defects._L0_ANDON_FLAG_RELPATH / run_state
+#   ._EXEC_FAIL_FLAG_RELPATH):两常量经 get_project_root() / relpath 求路径,
+#   pathlib 与绝对路径相接取右侧——钉成 tmp 绝对路径即把安灯/执行失败停机
+#   flag 的真实落盘域整体移出仓根 .debug/(测试触发钩子也不落真 flag)。
+# 需要真通道语义的测试照旧 monkeypatch 覆盖(setattr 晚于本 fixture 生效)。
+# 判别出处:README 测试纪律 1/2/4(模块级全局沿调用链全桩,非只桩被调物)。
+
+
+@pytest.fixture(autouse=True)
+def _isolate_cw_stop_flag_channels(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """每条测试前把 CW 停机 flag 族与 exec_fail 族的生产模块级全局钉桩(见上注释)。"""
+    from sr_od.application.currency_war import run_state
+    from sr_od.application.currency_war.telemetry import defects as cw_defects
+    from sr_od.application.currency_war.telemetry import recorder as cw_recorder
+    from sr_od.application.currency_war.telemetry import state as cw_state
+
+    monkeypatch.setattr(
+        cw_state, '_RECORDER',
+        cw_recorder.TelemetryRecorder(enabled=True,
+                                       replay_dir=tmp_path / 'replay'))
+    monkeypatch.setattr(cw_state, '_CURRENT_RUN_ID', '')
+    monkeypatch.setattr(cw_state, '_L0_ANDON_FIRED_RUNS', set())
+    monkeypatch.setattr(cw_state, '_defect_seen', {})
+    monkeypatch.setattr(cw_state, '_defect_seen_run', '')
+    monkeypatch.setattr(cw_state, '_PENDING_BRIEFING_ROWS', [])
+    monkeypatch.setattr(cw_state, '_LAST_SUPPLY_PICK', None)
+    monkeypatch.setattr(cw_state, '_PENDING_UNIT_GOLD_CLOSE', None)
+    monkeypatch.setattr(cw_state, '_PENDING_UNIT_EXEC', None)
+    monkeypatch.setattr(cw_defects, '_L0_ANDON_FLAG_RELPATH',
+                        str(tmp_path / 'l0_andon_hook.flag'))
+    monkeypatch.setattr(run_state, '_EXEC_FAIL_FLAG_RELPATH',
+                        tmp_path / 'cw_exec_fail_hook.flag')

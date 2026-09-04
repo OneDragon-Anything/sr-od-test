@@ -286,7 +286,8 @@ class TestLambdaTableGuard:
 # ==================== ④ 22 项状态量每项只实现一次(静态断言) ====================
 
 #: NMF §2 状态量 → 唯一实现符号(模块,函数)。判据模块(cw4 内 criteria/
-#: mandate/proof,随批 1 落地)禁自算——本断言辖 cw4 全包:同名 def 全包唯一。
+#: mandate/proof;mandate 面随策略器批 1 迁移落位)禁自算——本断言辖 cw4
+#: 全包:同名 def 全包唯一。
 QUANTITY_OWNERS: dict[str, tuple[str, str]] = {
     'g 存量金(黑板直读,无独立算子;实现下沉 kernel/cw_economy)': ('', 'interest'),
     'level/xp_cur(cw_state 权威,消费不重建)': ('s_line', 'b_target'),
@@ -318,7 +319,9 @@ QUANTITY_OWNERS: dict[str, tuple[str, str]] = {
     '目标线 K': ('predicates', 'line_members'),
     '零重叠': ('predicates', 'zero_overlap'),
     '挂后台效果资格谓词(半步0)': ('predicates', 'bench_effect_qualified'),
-    'D-dup 可部署战力谓词': ('vopt', 'dup_power_qualified'),
+    # D-dup 可部署战力谓词条目已删:RunDeploy 发射门重写(ADR-0517 决策2/
+    # dd-037 接线)后该独立谓词折叠进 kernel/cw_deploy_logic.has_deployable
+    # 的同源去重,不再是 statefn 独立数量(随 ADR-0519 清账批删除)。
     'resolved 息帽(实现下沉 kernel/cw_economy)': ('', 'interest_cap_resolved'),
 }
 

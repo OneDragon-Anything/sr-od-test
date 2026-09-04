@@ -84,6 +84,33 @@ def test_b_run_leftover_is_reset_by_guard(test_context) -> None:
         '(后续 execute() 将撞 W209j 刹车)')
 
 
+def test_autouse_stubs_pin_stop_flag_channels(tmp_path: Path) -> None:
+    """锁4:conftest autouse 桩在场——停机 flag 族 / exec_fail 族的模块级
+    全局在每条测试开始前被钉回隔离态(见 conftest `_isolate_cw_stop_flag_channels`)。
+    失守形态:有人删桩 → telemetry 单例回到真实 .debug/ 落盘域,测试台账行
+    混进实机 defect_ledger(实证:w323-run 2290 行残渣);flag 路径回真 →
+    测试触发钩子写真停机 flag。本锁红 = 隔离层被拆,先查桩再动断言。"""
+    from sr_od.application.currency_war import run_state
+    from sr_od.application.currency_war.telemetry import defects, state
+
+    # 落盘域已移出真实 .debug/:recorder 指向本测试的 tmp 域
+    rec = state._RECORDER
+    assert rec is not None and rec.enabled and rec.replay_dir.is_absolute()
+    assert '.debug' not in rec.replay_dir.parts, rec.replay_dir
+    # run_id 钉空串(便捷入口空 id 门控 no-op;防跨测试局归属泄漏)
+    assert state._CURRENT_RUN_ID == ''
+    # 进程内闩锁/计数器/暂存槽均为干净缺省
+    assert not state._L0_ANDON_FIRED_RUNS
+    assert not state._defect_seen and state._defect_seen_run == ''
+    assert state._PENDING_BRIEFING_ROWS == []
+    assert state._LAST_SUPPLY_PICK is None
+    assert state._PENDING_UNIT_GOLD_CLOSE is None
+    assert state._PENDING_UNIT_EXEC is None
+    # flag 路径常量钉 tmp 绝对路径(get_project_root() / 绝对路径 = 绝对路径)
+    assert defects.l0_andon_flag_path().is_relative_to(tmp_path)
+    assert run_state.exec_fail_flag_path().is_relative_to(tmp_path)
+
+
 
 # ==================== w515_l0_andon ====================
 
@@ -313,6 +340,12 @@ _SYMBOLS = ('goldrich', 'early_pace', 'filler_star',
 
 from pathlib import Path as _sim_cli_smoke_Path
 
+# (2026-09-05 污染根治批补回:a8a5739 删 import 时漏带走这三处引用,smoke 红)
+from sr_od.application.currency_war.data import cw_delta_pool_data
+from sr_od.application.currency_war.sim.engine_p1 import (
+    EQUIP_GRANT_CALIB_VERSION,
+    simulate_p1,
+)
 from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 from sr_od.application.currency_war.telemetry import query as tel
 
@@ -394,6 +427,13 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
     # ADR-0410 白名单扩为 {pop_slot, dp, static_ev}(boss 升级禁令删除
     # 后 static_ev 是末窗主授权臂;无授权依据仍计违规),seeds 0-19
     # 新判据 0 违规(旧判据 206/82 局)。回归 0 容忍。
+    # mandate_v1 换核定谳批:白名单再扩 {m3_batch}——换核批(ba1176c6)
+    # 的 M3 批量授权臂漏更检查器白名单致本锁预存红(seeds 9/16,裸跑
+    # 才暴露:本测试在快速集被 slow 过滤);m3_batch 发射前置 =
+    # arm1_existence([33] 人口位语境,与 pop_slot 同语义)∧ spend_
+    # unified(P48 整买)∧ 危机让位(dd-034),授权强度不低于旧三臂
+    # ——出处 = strategy-docs 02_mandate_layer.md §3 M3 / ADR-0518。
+    # 锁语义(低金追级须有授权依据)不变,回归 0 容忍。
     # ADR-0357(P1 配方锁):P1 锁定产物改体系对后,锁定局 form_ok
     # 从三件套(核心 2★ 质量)切 兜底门(engines≥2,星级盲)——
     # 成型停手提前触发低质量双引擎板,seed19(n=25 snapshot)涌现危机态
@@ -411,6 +451,17 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
     # board/deployed_fac 快照,残余语义 = 行动语境下围栏认可件未上;
     # seeds 0-19 与取证两局(seed 630027/630035)均 0,移出豁免回归
     # 0 容忍(专项锁 = test_cw_w666_replay_context_freeze.py)。
+    # P1 资源循环死锁登记(2026-09-05 定谳,与编排者账本「P1 资源循环
+    # 死锁/购买意图缺失」候裁行同案):overflow_gold_zero_buy_streak 与
+    # gold_dist_calib 两颗被 levelup 锁短路掩蔽的预存红,违规帧语境探针
+    # 实证同一根因——板满∧bench=0(arm1_existence 恒 False)∧金 103→236
+    # 逐轮上涨∧全通道零动作 = 线购齐后购买意图缺失的全通道静默(与
+    # C14 退役后升级授权链零输入叠加,seeds 0/1/5 streak r6-r9 直接
+    # 复现)。同案三重实证索引 =
+    # .debug/temp/currency_war/p1_econ_design_inputs.md(病灶证据 1-3
+    # 及 sim 批3 升级零授权机制发现)。两颗按 ADR-0289 纪律登记待裁
+    # (裁决归 P1 经济循环消费臂设计批),未裁决前豁免;设计批落地后
+    # 移除,回归 0 容忍。
     _PENDING_ADJUDICATION = ('ledger_consistency',
                              'coldstart_direction',
                              'degrade_recover_mutex',
@@ -418,7 +469,9 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
                              'engine_seed_not_resold',
                              'deploy_fills_cap',
                              'decision_v2_crisis_gold_hoard',
-                             'gold_nonneg')
+                             'gold_nonneg',
+                             'overflow_gold_zero_buy_streak',
+                             'gold_dist_calib')
     for name, r in rep['checks_violations'].items():
         if name in _POOL_CHECKS or name in _PENDING_ADJUDICATION:
             assert 'violations' in r, f'{name}: 缺 violations 计数'
