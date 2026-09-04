@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -37,7 +38,12 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     SellDeployed,
     StartBattle,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import (
+    BENCH_CAPACITY,
+    BenchChar,
+    CloseShop,
+    GameState,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -61,6 +67,12 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
     line_switch_sell,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
+    decide_shop_action,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
+    line_members,
 )
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
@@ -1115,20 +1127,44 @@ class TestRunDeployProposalSuppression:
         assert any(e.reason == 'm1_deploy' for e in out)
 
 
-# ===== 备战期开店闩(2026-09-03 实机首局 1-1 卡死回归)=====
+# ===== 备战期开店闩(闩置位时机=商店决策访问位;2026-09-05 实机回归)=====
+
+_COMP_LINE = next(c for c in COMP_LIBRARY if c.name == '列车同行')
+
+
+def _visit_state(round_num: int) -> GameState:
+    """商店访问帧:线成型(列车同行全员 2★ 上场 ⇒ stop_buy 成立)+ 店面空
+    ⇒ decide_shop_action 以 CloseShop 终结——构造「OpenShop 已执行成功、
+    商店域决策访问已发生」的最小真时点(与实机开店→店内决策循环同构)。"""
+    return GameState(
+        plane=1, round_num=round_num, gold=100, level=6, hp=80,
+        shop_refresh_cost=2,
+        deployed=[BenchChar(slot=20 + i, char_id=m, faction='仙舟罗浮',
+                            star=2)
+                  for i, m in enumerate(line_members(_COMP_LINE))],
+        bench=[None] * BENCH_CAPACITY,
+        shop=[],
+        node_type='battle', board={})
+
 
 class TestShopPhaseLatch:
-    """同一备战期内开店意图只发一次(mandate.run_mandate 闩)。
+    """备战期开店闩:闩置位在商店决策访问位(mandate_v1/shop.
+    decide_shop_action 入口),不在 mandate 发射位。
 
-    卡死机制回归:M2 判据每帧重燃 OpenShop 截断点(线缺成员∧金≥最廉
-    成员价在期内恒真)→ 同帧尾部 M1 部署/终点 StartBattle 永被截断,
-    实机备战环 26 分钟零推进(sim 每回合单次决策不可见,活环只在实机
-    多帧备战环出现)。闩语义=「店内决策已完整做出并执行;输入不变重跑
-    无信息量」,非禁令:发射时才置闩/换备战期失效。
+    语义演进:旧实现「发射即置闩」在单动作备战环下漏烧——同发射列表里
+    dd-027 回排后的 RunEquip(可续类)先执行即投影未建模终结本环,其后
+    的 OpenShop 意图未执行而闩已烧,后续环 mandate 重跑被闩挡死 ⇒ 空批
+    StartBattle(2026-09-05 实机局 run_20260905_024059 备战环连续三轮
+    经济冻结,诊断归档
+    .debug/temp/currency_war/20260905_noprogress_stop_diag/report.md C3)。
+    修法 = 置位时机移到访问发生位:闩未烧时发射位照常重发(下帧重试);
+    访问发生(开店动作真执行)后同期不再重发——「期内重开无信息量」的
+    防重燃论证保持不变。发射永不落地的残值活锁由 DD-030 环级无进展守卫
+    兜底,不在本闩职责内。
     """
 
     def _stuck_frame(self, round_num: int = 1) -> mandate.MandateFrame:
-        """1-1 卡死态重建:线缺成员∧金足(4≥未注册名保守价3)∧
+        """M2 开店帧:线缺成员∧金足(4≥未注册名保守价3)∧
         板 3/4 有 vacancy ∧ bench 有可部署件。"""
         return _frame(gold=4, level=4,
                       bench=[_bench(4, '乱破')],
@@ -1136,22 +1172,49 @@ class TestShopPhaseLatch:
                                 _bench(3, '丙')],
                       k=('缺件一', '缺件二'), round_num=round_num)
 
-    def test_same_phase_second_frame_no_shop(self):
+    def test_emit_does_not_set_latch_and_rerun_reemits(self):
+        """回归锁①(事故形态):同帧发射 [RunEquip, OpenShop](dd-027
+        回排序),单动作环 RunEquip 先执行终结本环、OpenShop 未执行——
+        下一环 mandate 重跑:装备闩命中不再发 RunEquip,开店闩未烧
+        ⇒ OpenShop 重新发射(旧实现此处闩已烧 ⇒ 空批)。"""
         s = _session()
-        out1 = mandate.run_mandate(self._stuck_frame(), s)
-        assert any(e.reason == 'm2_buy' for e in out1)
-        # 同备战期第二帧(实机备战环重观察后的重判):无任何开店意图,
-        # M1 部署不受闩影响照常发射;M2 跳过留分站计数。
-        out2 = mandate.run_mandate(self._stuck_frame(), s)
-        assert not any(isinstance(e.action, OpenShop) for e in out2)
-        assert any(e.reason == 'm1_deploy' for e in out2)
+        s.last_owned_equips = ['和平手枪']       # 可穿件 ⇒ 同帧 M7 发射
+        f = self._stuck_frame()
+        out1 = mandate.run_mandate(f, s)
+        kinds = [type(e.action) for e in out1]
+        assert RunEquip in kinds and OpenShop in kinds
+        assert kinds.index(RunEquip) < kinds.index(OpenShop)   # dd-027 回排
+        assert getattr(s, 'cw4_shopped_phase', None) is None   # 发射不置闩
+        out2 = mandate.run_mandate(f, s)
+        assert not any(isinstance(e.action, RunEquip) for e in out2)
+        assert any(isinstance(e.action, OpenShop)
+                   and not e.action.read_only for e in out2)
+        assert s.cw4_counters.get('shop_latch_skip_m2_buy', 0) == 0
+
+    def test_shop_visit_sets_latch(self):
+        """回归锁②:开店执行成功(商店域决策访问已发生)后闩置位——
+        同期后续帧不再发开店意图、分站计数跳过;M1 部署不受闩影响照常
+        发射。"""
+        st = _visit_state(round_num=3)
+        s = _session()
+        s.target_comp = _COMP_LINE
+        act = decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, CloseShop)          # 店面空:访问以关店终结
+        assert s.cw4_shopped_phase == (1, 3)       # 闩置位=访问位
+        f = self._stuck_frame(round_num=3)
+        out = mandate.run_mandate(f, s, state=st)
+        assert not any(isinstance(e.action, OpenShop) for e in out)
+        assert any(e.reason == 'm1_deploy' for e in out)
         assert s.cw4_counters.get('shop_latch_skip_m2_buy', 0) == 1
 
     def test_phase_advance_reopens_shop(self):
         """换备战期(轮次推进=新店内容)闩失效,M2 重新决策开店。"""
         s = _session()
-        mandate.run_mandate(self._stuck_frame(round_num=1), s)
-        out = mandate.run_mandate(self._stuck_frame(round_num=2), s)
+        s.target_comp = _COMP_LINE
+        decide_shop_action(_visit_state(round_num=1), s,
+                           SimpleNamespace(ev_arm='full'))
+        out = mandate.run_mandate(self._stuck_frame(round_num=2), s,
+                                  state=_visit_state(round_num=2))
         assert any(e.reason == 'm2_buy' for e in out)
 
     def test_failed_visit_no_latch(self):
