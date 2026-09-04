@@ -153,18 +153,20 @@ def test_frontless_recovery_chain_wired() -> None:
     assert 'self._frontless_redeploy = 0' in src
 
 
-# ==================== ④ deployed 计数双源仲裁(板满门;2026-09-05 事故)====================
-# 事故:备战 r9 后排 2 空槽幻影占用 → CV 计数 5 ≥ cap 5 → 板满假判合法化
-# no-op → RunDeploy 同签名零推进停机;paddle X 同帧真值 3(留证三连)。
+# ==================== ④ deployed 计数双源仲裁(板满门;实机停机局回归)====================
+# 事故:备战环后排空槽幻影占用 → CV 计数虚高 ≥ cap → 板满假判合法化
+# no-op → RunDeploy 同签名零推进停机(DD-030);paddle X 同帧真值 3。
 # 修法:板满门 deployed 计数走双源仲裁(取低值,规则单一源 =
-# cw_observation.arbitrate_deployed_count)。
+# cw_observation.arbitrate_deployed_count);板满谓词的全部早退分支
+# (含 CV 幻影满板的入口早退)统一经仲裁 + 留证。
 
 def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
     """构直驱 _deploy_deterministic 的桩 op:CV 占用按槽序列出票。
 
-    事故帧形态:bench 槽 1-4 占用(4 真实 bench 角色)、前排 1/4 占用、
+    默认事故帧形态:bench 槽 1-4 占用(4 真实 bench 角色)、前排 1/4 占用、
     后排 4/6 「占用」(2 真 + 2 幻影)→ CV 计数 = 1+4 = 5;
-    paddle 桩恒返 paddle_x(事故真值 3)。"""
+    paddle 桩恒返 paddle_x(事故真值 3)。
+    ``cv_front_occ``/``cv_back_occ`` = 前排/后排占用槽数(幻影满板形态传 4/6)。"""
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
@@ -176,10 +178,10 @@ def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
         calls['n'] += 1
         if i < 9:                      # bench 9 槽:1-4 占用
             return i < 4
-        if i < 13:                     # 前排 4 槽:1 占用
-            return i == 9
-        if i < 19:                     # 后排 6 槽:4 占用(含幻影)
-            return i < 17
+        if i < 13:                     # 前排 4 槽:前 cv_front_occ 个占用
+            return i - 9 < cv_front_occ
+        if i < 19:                     # 后排 6 槽:前 cv_back_occ 个占用
+            return i - 13 < cv_back_occ
         return True                    # 循环内 fresh 复查:恒占用
 
     monkeypatch.setattr(db, 'slot_occupied', _fake_occ)
@@ -193,6 +195,11 @@ def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
     drags = {'n': 0}
     monkeypatch.setattr(db.DragCwChar, 'drag_char',
                         lambda op, src, dst: drags.__setitem__('n', drags['n'] + 1) or True)
+    # 分键捕获(留证出口桩:避免真 telemetry 依赖;断言「分歧/退化必留证」)
+    notes = []
+    from sr_od.application.currency_war.telemetry import defects as _defects
+    monkeypatch.setattr(_defects, 'record_deployed_count_2src_divergence',
+                        lambda p, c, s: notes.append((p, c, s)))
 
     class _Op(db.CwOpDeploy):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
@@ -204,13 +211,14 @@ def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
 
     op = _Op()
     op.ctx = SimpleNamespace(cw_match=None)
-    return op, drags
+    return op, drags, notes
 
 
 def test_cap_gate_arbitration_opens_on_cv_phantom_inflation(monkeypatch) -> None:
     """事故帧行为锁:paddle=3 / CV=5(幻影)→ 板满门按仲裁值 3 放行 →
-    拖拽真实发射(旧代码在此帧 (0, True) 合法化 no-op = 停机根因)。"""
-    op, drags = _make_gate_op(monkeypatch, paddle_x=3)
+    拖拽真实发射(旧代码在此帧 (0, True) 合法化 no-op = 停机根因);
+    分歧必须留证分键(不得静默放行)。"""
+    op, drags, notes = _make_gate_op(monkeypatch, paddle_x=3)
     bench = [Point(100 + 30 * i, 900) for i in range(9)]
     front = [Point(500 + 30 * i, 400) for i in range(4)]
     back = [Point(500 + 30 * i, 650) for i in range(6)]
@@ -218,23 +226,49 @@ def test_cap_gate_arbitration_opens_on_cv_phantom_inflation(monkeypatch) -> None
     assert drags['n'] >= 1, '板满门应按仲裁值(3<5)放行,至少发射一次拖拽'
     assert placed >= 1
     assert plan_empty is False
+    assert notes and notes[0] == (3, 5, 'deploy_cap_gate'), \
+        f'结构性分歧必须落分键留证,实得 {notes}'
 
 
 def test_cap_gate_keeps_cv_block_when_paddle_unreadable(monkeypatch) -> None:
-    """反面:paddle 失读(None)→ 无仲裁语义,CV=5 ≥ cap=5 板满门保持
-    (不因仲裁引入「缺源即放行」的新风险面)。"""
-    op, drags = _make_gate_op(monkeypatch, paddle_x=None)
+    """退化帧语义锁(审计 P3 重推后口径):paddle 双帧失读(None)→
+    无仲裁语义、按 CV 行动 = 向「板满」侧 fail(CV=5 ≥ cap=5 板满门保持,
+    不引入「缺源即放行」新风险面)——但**不得静默**:重读一帧仍失读后
+    必须落退化申报分键(docstring/实现/测试三方一致,出处 =
+    arbitrate_deployed_count docstring「单源缺席」节)。"""
+    op, drags, notes = _make_gate_op(monkeypatch, paddle_x=None)
     bench = [Point(100 + 30 * i, 900) for i in range(9)]
     front = [Point(500 + 30 * i, 400) for i in range(4)]
     back = [Point(500 + 30 * i, 650) for i in range(6)]
     placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
     assert (placed, plan_empty) == (0, True)
     assert drags['n'] == 0
+    assert notes and notes[0][0] is None and notes[0][1] == 5, \
+        f'paddle 失读退化帧必须落分键申报,实得 {notes}'
+
+
+def test_cap_gate_phantom_full_board_early_exit_goes_through_arbitration(
+        monkeypatch) -> None:
+    """审计 P1 直测(同签名闭死):CV 幻影占满**全部**前后排槽
+    (front_empty=[] ∧ back_empty=[],比事故帧更重一档)∧ paddle=3 →
+    入口早退不得绕过仲裁——分歧必须先落分键留证,再按 fail-closed 留 bench
+    返回 (0, True)(无空槽可拖,拖拽循环必然空转;持续零推进由 DD-030 兜底)。
+    旧代码此形态在仲裁代码之前早退,零留证直接 no-op = r9 同签名复活口。"""
+    op, drags, notes = _make_gate_op(monkeypatch, paddle_x=3,
+                                     cv_front_occ=4, cv_back_occ=6)
+    bench = [Point(100 + 30 * i, 900) for i in range(9)]
+    front = [Point(500 + 30 * i, 400) for i in range(4)]
+    back = [Point(500 + 30 * i, 650) for i in range(6)]
+    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    assert (placed, plan_empty) == (0, True)
+    assert drags['n'] == 0
+    assert notes and notes[0] == (3, 10, 'deploy_cap_gate'), \
+        f'幻影满板早退前必须先落分歧分键(paddle=3 vs cv=10),实得 {notes}'
 
 
 def test_cap_gate_arbitration_wired_in_deploy_deterministic() -> None:
-    """接线烟雾(容忍档;失守事故=2026-09-05 备战停机:板满门直采 CV
-    幻影计数合法化 no-op,留证三连无人消费):_deploy_deterministic 必须
+    """接线烟雾(容忍档;失守事故=备战环 CV 幻影计数合法化 no-op 的
+    实机停机局,留证三连无人消费):_deploy_deterministic 必须
     经 arbitrate_deployed_count 仲裁 + 分歧走分键留证。"""
     from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
     src = inspect.getsource(db.CwOpDeploy._deploy_deterministic)

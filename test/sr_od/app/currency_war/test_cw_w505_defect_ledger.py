@@ -24,6 +24,8 @@ def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'w505t') -> None:
     # 复现计数是进程内状态,逐测试清空防串
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
+    # deployed 分歧分键的逐次计数器是模块级全局(按 run_id 计),逐测试清空防串
+    monkeypatch.setattr(defects, '_DEPLOYED_2SRC_RUN_COUNTS', {})
     # L0 安灯副作用链隔离:handler 桩化(缺省 None 会惰性接真停线——gc 扫描命中
     # 测试 ctx → 写真实仓根 flag + stop_running 毒 session 级 fixture 的
     # last_run_result,全集后续 execute 全撞 W209j 刹车);闩锁同批清空,
@@ -327,8 +329,8 @@ def test_deployed_count_2src_divergence_key_row(tmp_path: Path, monkeypatch):
     """分歧仲裁触发 → 台账落独立分键行(kind=deployed_count_2src_divergence):
 
     - surface=deployed(决策关键面)、gap=cv−paddle(事故帧 +2);
-    - 恒 L2(auto_resolved:仲裁已在本侧消化,不进安灯——不一致率
-      是观察量,告警升格由「同局 ≥3 次」判读侧承接,见 verdict);
+    - 逐次行恒 L2(auto_resolved:仲裁已在本侧消化,不进安灯);持续显影
+      升级由同局达阈值后的独立升级行承载(见 sustained 测试),不在逐次行;
     - 与 obs_conflicts 旁路的通用 perception_conflict 行分键,判读
       「CV 占用源漂移率」直接按 kind 计数,不下钻证据流行。
     """
@@ -353,3 +355,42 @@ def test_deployed_count_2src_divergence_key_silent_without_run_id(
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', '')
     defects.record_deployed_count_2src_divergence(3, 5, 'director_heavy')
     assert _rows(tmp_path, 'defect_ledger.jsonl') == []
+
+
+def test_deployed_count_2src_paddle_missing_degraded_row(
+        tmp_path: Path, monkeypatch):
+    """paddle 失读退化帧(paddle_n=None)同键申报(审计 P3:不得静默):
+
+    expected='paddle_x=失读'、gap 按 cv 口径落(单源无差值语义),逐次行
+    恒 L2——退化方向(向板满侧 fail)的显式申报由本行承载。
+    """
+    _setup_recorder(monkeypatch, tmp_path)
+    defects.record_deployed_count_2src_divergence(None, 5, 'deploy_cap_gate_paddle_missing')
+    rows = [r for r in _rows(tmp_path, 'defect_ledger.jsonl')
+            if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC]
+    assert len(rows) == 1
+    assert rows[0]['expected'] == 'paddle_x=失读'
+    assert rows[0]['observed'] == 'cv_occupied=5'
+    assert rows[0]['severity'] == 'L2_record'
+
+
+def test_deployed_count_2src_sustained_escalation_once_per_run(
+        tmp_path: Path, monkeypatch):
+    """审计 P8 持续显影:同局逐次分歧行达阈值(3,既有留证口径「同局
+    ≥3 次排期修」的代码化)→ 落**一条** L1 升级行
+    (kind=deployed_count_2src_sustained);第 4 次起不重复升级(每局至多一条,
+    与逐次行分键不混计)。真结构性 CV 坏死要响铃不只留痕。"""
+    _setup_recorder(monkeypatch, tmp_path)
+    for _ in range(4):
+        defects.record_deployed_count_2src_divergence(3, 5, 'director_heavy')
+    rows = _rows(tmp_path, 'defect_ledger.jsonl')
+    per = [r for r in rows
+           if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC]
+    sus = [r for r in rows
+           if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC_SUSTAINED]
+    assert len(per) == 4, '逐次行每次仲裁事件一条'
+    assert len(sus) == 1, '升级行每局至多一条'
+    assert sus[0]['severity'] == 'L1_alert'
+    assert sus[0]['surface'] == 'deployed'
+    assert 'paddle_x=3' in sus[0]['observed'] and 'cv_occupied=5' in sus[0]['observed']
+

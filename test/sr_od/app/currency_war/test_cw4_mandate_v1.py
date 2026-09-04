@@ -1175,8 +1175,10 @@ class TestShopPhaseLatch:
     def test_emit_does_not_set_latch_and_rerun_reemits(self):
         """回归锁①(事故形态):同帧发射 [RunEquip, OpenShop](dd-027
         回排序),单动作环 RunEquip 先执行终结本环、OpenShop 未执行——
-        下一环 mandate 重跑:装备闩命中不再发 RunEquip,开店闩未烧
-        ⇒ OpenShop 重新发射(旧实现此处闩已烧 ⇒ 空批)。"""
+        下一环 mandate 重跑:开店闩未烧 ⇒ OpenShop 重新发射(旧实现
+        此处闩已烧 ⇒ 空批);装备闩同为执行位、亦未烧 ⇒ RunEquip 同帧
+        重发(实机下环 RunEquip 真执行、执行位置闩,再下环 OpenShop
+        独占发射面即达商店)。"""
         s = _session()
         s.last_owned_equips = ['和平手枪']       # 可穿件 ⇒ 同帧 M7 发射
         f = self._stuck_frame()
@@ -1186,9 +1188,9 @@ class TestShopPhaseLatch:
         assert kinds.index(RunEquip) < kinds.index(OpenShop)   # dd-027 回排
         assert getattr(s, 'cw4_shopped_phase', None) is None   # 发射不置闩
         out2 = mandate.run_mandate(f, s)
-        assert not any(isinstance(e.action, RunEquip) for e in out2)
         assert any(isinstance(e.action, OpenShop)
-                   and not e.action.read_only for e in out2)
+                   and not e.action.read_only for e in out2)   # 闩未烧,重发
+        assert any(isinstance(e.action, RunEquip) for e in out2)
         assert s.cw4_counters.get('shop_latch_skip_m2_buy', 0) == 0
 
     def test_shop_visit_sets_latch(self):

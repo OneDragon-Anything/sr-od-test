@@ -7,9 +7,10 @@ owned 快照按 ADR-0387 全量含工具件(不可穿)——工具-only 库存�
 
 修法(dd-027)= 变换可能性两件套,锁钉行为语义而非实现细节:
 门① 可穿存在性(注册表已登记 ∧ 非工具类)——持有面谓词换变换面谓词;
-门② 备战期闩(cw4_m7_equipped_phase)——同 (plane, round) 只发一次,
-发射时置闩、推进自动失效;与备战期开店闩(cw4_shopped_phase)同构且
-独立(键不同,互不遮蔽)。
+门② 备战期闩(cw4_m7_equipped_phase)——同 (plane, round) 只消费一次,
+闩置位在执行位(mandate.mark_equip_pass_executed;发射位只读不写)、
+推进自动失效;与备战期开店闩(cw4_shopped_phase)同构且独立(键不同,
+互不遮蔽)。
 
 dd-027 修订(实机局 g_20260904_010335 漏发定谳,2026-09-04):同帧
 「开店意图 ∧ 可穿件」形态下,M7 末位评估的 RunEquip 落在 OpenShop
@@ -21,14 +22,16 @@ dd-027 修订(实机局 g_20260904_010335 漏发定谳,2026-09-04):同帧
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     OpenShop,
+    RunDeploy,
     RunEquip,
 )
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
 
 # 工具件/穿戴件取注册表真实规范名(锁语义不锁牌面;名字变动时改此处,
 # 谓词走 EQUIPMENTS 注册表现查,不依赖测试桩)
@@ -80,32 +83,47 @@ class TestM7WearableGate:
 
 
 class TestM7PhaseLatch:
-    """门②:备战期闩(发射后记账防重燃;非时间冷却)。"""
+    """门②:备战期闩(置位=执行位;非时间冷却)。
+
+    语义演进(C3 同型残留修复):闩置位从发射位移到 RunEquip 执行位
+    (mandate.mark_equip_pass_executed,唯一写点 = prep_actions 执行
+    入口在组合 op 成功返回时调用)——发射位只读不写。闩未置时同期
+    重发由执行成功后的闩拦下;发射永不落地的残值由 DD-030 环级守卫
+    兜底。
+    """
 
     def test_same_phase_fires_once(self):
-        """同 (plane, round) 第二帧不再发,计数 equip_latch_skip_m7=1。"""
+        """执行成功置闩后,同 (plane, round) 后续帧不再发,计数
+        equip_latch_skip_m7=1;闩未置时同帧重跑照常重发(发射不烧闩)。"""
         s = _session(_WEARABLE)
-        assert len(_m7_actions(mandate.run_mandate(_frame(), s))) == 1
-        out2 = mandate.run_mandate(_frame(), s)
-        assert _m7_actions(out2) == []
+        st = GameState(round_num=3)
+        assert len(_m7_actions(mandate.run_mandate(_frame(), s, state=st))) == 1
+        # 闩未置(发射≠执行):重跑照常发射
+        assert len(_m7_actions(mandate.run_mandate(_frame(), s, state=st))) == 1
+        # 穿戴 pass 执行成功(执行位置位)→ 同期后续帧不再发
+        mandate.mark_equip_pass_executed(s, st)
+        out3 = mandate.run_mandate(_frame(), s, state=st)
+        assert _m7_actions(out3) == []
         assert s.cw4_counters['equip_latch_skip_m7'] == 1
 
     def test_phase_advance_relatches(self):
         """位面/轮次推进 = 新键自动失效,新发放件重评(闩不是局级开关)。"""
         s = _session(_WEARABLE)
-        assert len(_m7_actions(mandate.run_mandate(_frame(3), s))) == 1
+        st3, st4 = GameState(round_num=3), GameState(round_num=4)
+        assert len(_m7_actions(mandate.run_mandate(_frame(3), s, state=st3))) == 1
+        mandate.mark_equip_pass_executed(s, st3)
+        assert _m7_actions(mandate.run_mandate(_frame(3), s, state=st3)) == []
         # 轮次推进:重新武装
-        assert len(_m7_actions(mandate.run_mandate(_frame(4), s))) == 1
-        # 位面推进(state.plane 缺席=(None, round) 键,轮次回 1 亦新键)
-        assert len(_m7_actions(mandate.run_mandate(_frame(4), s))) == 0
+        assert len(_m7_actions(mandate.run_mandate(_frame(4), s, state=st4))) == 1
 
-    def test_latch_set_on_emit_only(self):
-        """闩发射时才置(本帧无可穿件不置闩)——同开店闩边界语义。"""
-        s = _session(_TOOLS)          # 门①拦下,不置闩
+    def test_latch_not_set_without_execution(self):
+        """闩置位只在执行位:门①拦下(零发射)或发射后未执行均不置。"""
+        s = _session(_TOOLS)          # 门①拦下,零发射
         mandate.run_mandate(_frame(), s)
         assert getattr(s, 'cw4_m7_equipped_phase', None) is None
         s.last_owned_equips = list(_WEARABLE)   # 同期拿到可穿件 → 照常发射
         assert len(_m7_actions(mandate.run_mandate(_frame(), s))) == 1
+        assert getattr(s, 'cw4_m7_equipped_phase', None) is None   # 发射不置闩
 
 
 class TestM7ShopLatchCoexistence:
@@ -119,10 +137,10 @@ class TestM7ShopLatchCoexistence:
     def test_equip_latch_does_not_block_shop(self):
         """反向:装备闩置位后,M6 溢余开店面不被装备闩拦(分站键)。"""
         s = _session(_WEARABLE)
-        from sr_od.application.currency_war.kernel.cw_state import GameState
-        st = GameState(gold=60, plane=1)
-        # 同 (plane, round)=(1,3) 首帧:置装备闩
+        st = GameState(gold=60, plane=1, round_num=3)
+        # 同 (plane, round)=(1,3) 首帧:发射 RunEquip 并在执行位记账置闩
         mandate.run_mandate(_frame(), s, state=st)
+        mandate.mark_equip_pass_executed(s, st)
         # 帧:金 > 息饱和线(cap 4 → 50),stop_flag=True → M6 开店面可达
         f = mandate.MandateFrame(
             gold=60, level=3, bench=[], deployed=[], deploy_cap=4,
@@ -170,11 +188,65 @@ class TestM7EmissionOrder:
         assert [type(a) for a in kept] == [RunEquip, OpenShop]
 
     def test_latch_consumed_once_by_surviving_emission(self):
-        """闩语义不回退:回排后发射真实可达截断,同期后续帧恰跳过一次。"""
+        """闩语义:回排后发射真实可达截断;闩在执行位,发射不消耗——
+        后续帧重发 RunEquip(未执行不烧闩),执行成功后恰跳过一次。"""
         s = _session(_WEARABLE)
         actions = [e.action for e in
                    mandate.run_mandate(self._frame_shop_intent(), s)]
         assert any(isinstance(a, RunEquip) for a in actions)
         out2 = mandate.run_mandate(self._frame_shop_intent(), s)
-        assert _m7_actions(out2) == []
+        assert len(_m7_actions(out2)) == 1          # 闩未烧,重发
+        st = GameState(round_num=3)
+        mandate.mark_equip_pass_executed(s, st)     # 执行位记账
+        out3 = mandate.run_mandate(self._frame_shop_intent(), s, state=st)
+        assert _m7_actions(out3) == []
         assert s.cw4_counters['equip_latch_skip_m7'] == 1
+
+
+class TestM7LatchAtExecution:
+    """C3 同型残留回归锁:闩置位在执行位(2026-09-05 双修对抗审计 P2)。
+
+    事故形态:[RunDeploy(可续), RunEquip] 无截断点发射帧(部署空位 ∧
+    可穿件同时成立,如补给发装备 + 场上有空位)——单动作备战环第 1 环
+    执行 RunDeploy 即「投影未建模,访问终结交回外循环重观察」,
+    RunEquip 意图未执行;旧实现发射即置闩 ⇒ 第 2 环 equip_latch_skip
+    ⇒ 空批 StartBattle,装备整个备战期滞留。修法 = 置位时机移执行位,
+    与开店闩(mandate_v1/shop.decide_shop_action 入口置位)同批同型。
+    """
+
+    def _deploy_equip_frame(self, round_num: int = 3) -> mandate.MandateFrame:
+        """无开店意图的「部署空位 ∧ 可穿件」帧:金 0 压掉 M2/dominance/M6
+        开店面,stop=True;bench 1 可部署件 + 板空 ⇒ M1 发 RunDeploy。
+        闩相位键取 frame.round_num(与 run_mandate phase 同式)。"""
+        return mandate.MandateFrame(
+            gold=0, level=3,
+            bench=[BenchChar(slot=1, char_id='彦卿', star=1)],
+            deployed=[], deploy_cap=4,
+            node_type='战斗', stop_flag=True, k_members=(),
+            round_num=round_num)
+
+    def test_deploy_termination_does_not_burn_latch(self):
+        """回归锁①:同帧 [RunDeploy, RunEquip] 发射,环被 RunDeploy 先
+        终结(RunEquip 未执行)——下一环 mandate 重跑 RunEquip 重新发射
+        (闩未烧)。"""
+        s = _session(_WEARABLE)
+        out1 = mandate.run_mandate(self._deploy_equip_frame(), s)
+        kinds = [type(e.action) for e in out1]
+        assert kinds == [RunDeploy, RunEquip]       # 可续双动作,无截断点
+        assert getattr(s, 'cw4_m7_equipped_phase', None) is None  # 发射不置闩
+        out2 = mandate.run_mandate(self._deploy_equip_frame(), s)
+        assert len(_m7_actions(out2)) == 1          # 闩未烧,重发
+        assert s.cw4_counters.get('equip_latch_skip_m7', 0) == 0
+
+    def test_execution_sets_latch(self):
+        """回归锁②:装备执行成功(执行位置位)后,同期后续帧不再发,
+        skip 计数=1;轮次推进闩失效重发。"""
+        s = _session(_WEARABLE)
+        st = GameState(round_num=3)
+        mandate.run_mandate(self._deploy_equip_frame(), s, state=st)
+        mandate.mark_equip_pass_executed(s, st)     # RunEquip 执行成功记账
+        out2 = mandate.run_mandate(self._deploy_equip_frame(), s, state=st)
+        assert _m7_actions(out2) == []
+        assert s.cw4_counters.get('equip_latch_skip_m7', 0) == 1
+        out3 = mandate.run_mandate(self._deploy_equip_frame(round_num=4), s)
+        assert len(_m7_actions(out3)) == 1          # 轮次推进=新键重武装
