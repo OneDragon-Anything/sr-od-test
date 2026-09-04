@@ -87,18 +87,17 @@ def test_decision_trace_supply_pick_passthrough(tmp_path: Path) -> None:
     assert lines[1]['supply_pick'] is None   # 旧 schema 兼容(缺省 None)
 
 
-def test_run_supply_node_pick_wiring_weak_lock() -> None:
-    """弱锁(接线存在性,沿 test_cw_w306 弱锁惯例):选定分支本地拷贝快照、
-    合成决策帧 extra 带 supply_pick;不消费暂存槽 consume(消费权仍属
-    cw_loop 合成结算行)。"""
+def test_run_supply_node_pick_consumption_boundary() -> None:
+    """否定墓碑双条(肯定性 `'supply_pick' in src` 在场断言已删——弱接线
+    存在性由行为侧 record_decision 测试覆盖):①禁回退空壳帧形态
+    (`extra={'phase': 'supply_pick'}` 单键字典,选定快照丢失);②消费权
+    边界 = cw_loop 合成结算行,节点侧禁 consume 暂存槽。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_supply_node,
     )
     src = Path(cw_screen_supply_node.__file__).read_text(encoding='utf-8')
     assert "extra={'phase': 'supply_pick'}" not in src, (
         '选定快照应并入 extra 字典(空壳帧=本批改造前形态)')
-    assert "'supply_pick'" in src and 'n_options' in src, (
-        '选定分支应本地构建选定快照(决策帧单行自足)')
     assert 'tel_state.consume_last_supply_pick' not in src, (
         '节点侧禁消费暂存槽(消费权=cw_loop 合成结算行)')
 

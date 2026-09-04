@@ -28,10 +28,9 @@ def test_quantum_portal_bias():
     assert pick_framework([], [], portal='量子同频契约') == '量子'
 
 
-def test_quantum_not_early_without_cards():
-    """早期无量子件 → 不选量子(3费出得晚,计数起不来,自然走仙舟/列车)。"""
-    assert pick_framework([], [], portal='彩虹时代') == ''
-    assert pick_framework([_BC('藿藿'), _BC('丹恒·饮月')], []) == '仙舟'
+# test_quantum_not_early_without_cards 已迁出:「彩虹时代 portal 空板返 ''」
+# 由 test_portal_bias.py test_portal_unrelated_no_bias 辖定,「早期持有计数
+# 选仙舟」迁入同文件 test_early_cards_count_selects_framework,本文件不重复。
 
 
 def test_recipe_quantum_registered():

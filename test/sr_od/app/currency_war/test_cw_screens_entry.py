@@ -907,9 +907,9 @@ def test_read_shop_cards_sift(test_context) -> None:
     read_shop_cards 裁 ``商店牌-1..5`` 肖像区(VLM 定位)→ SIFT ``currency_war/portrait_plaza`` 官方立绘库
     → 规范名;faction/cost 从 roster 派生。fixture ``shop_open.webp`` GT:翡翠/丹恒·腾荒/不死途/飞霄/三月七。
     """
-    if not test_context.has_screen('货币战争-备战', 'shop_open'):
-        _test_currency_war_shop_pytest.skip('存档截图缺失:screens/货币战争-备战/shop_open.webp')
-    screen = test_context.load_screen('货币战争-备战', 'shop_open')
+    if not test_context.has_screen('货币战争-备战-开商店', 'shop_open'):
+        _test_currency_war_shop_pytest.skip('存档截图缺失:screens/货币战争-备战-开商店/shop_open.webp')
+    screen = test_context.load_screen('货币战争-备战-开商店', 'shop_open')
     cards = read_shop_cards(test_context, screen)
     gt = ['翡翠', '丹恒·腾荒', '不死途', '飞霄', '三月七']
     assert [c.name for c in cards] == gt, f'SIFT 牌名错,实际 {[c.name for c in cards]}'

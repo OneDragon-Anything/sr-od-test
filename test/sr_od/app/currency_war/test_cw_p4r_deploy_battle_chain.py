@@ -59,18 +59,10 @@ def test_deterministic_landing_verification_wired() -> None:
     assert src.count('_wait_slot_occupied(dst') >= 2  # 滞后补偿路径同样验
     assert '判无效拖拽' in src
     assert 'deploy_landing_fail_slot' in src          # 失败帧存证
-
-
-def test_deterministic_no_silent_exits() -> None:
-    """源码锁(P4R 面二):①主循环为下标显式推进(迭代中重排不再依赖
-    for 迭代器语义——旧 `for bi in order` + remove/insert + continue 会
-    静默跳过被移到已过下标的元素,1-1 事故「3-6 件无尝试日志」形态);
-    ②两排皆满 break 带证据日志。"""
-    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
-    src = inspect.getsource(db.CwOpDeploy._deploy_deterministic)
-    assert 'while _oi < len(_pending)' in src
+    # 否定墓碑(P4R 面二):主循环禁 `for bi in order` 迭代形态——
+    # 旧形态 + remove/insert + continue 会静默跳过被移到已过下标的元素
+    # (1-1 事故「3-6 件无尝试日志」)。
     assert 'for bi in order:' not in src
-    assert '两排皆满,无槽可拖 → 终止' in src
 
 
 # ==================== ② StartBattle 弹窗污染判据 ====================

@@ -206,11 +206,13 @@ def test_prep_stall_pending_expected_empty_session() -> None:
 
 
 def test_cw_loop_stall_block_consumes_pending_expected() -> None:
-    """cw_loop stall 判定段接线源码锁:签名含 pending 期望条目、留证行含
-    结构化线索字段(stall 防线本体语义不变,只加消费)。"""
+    """cw_loop stall 判定段接线烟雾(至多 1 条):prep_stall_pending_expected
+    接线在场。失守场景 = 有人摘掉 stall 判定段对 pending 期望的消费接线,
+    stall 留证退化为不带期望条目。不再加 'pending_expected' in src 之类
+    子串断言(是本断言的子串,冗余);锁口径 = 接线存在性,至多 1 条烟雾。
+    """
     import inspect
 
     from sr_od.application.currency_war.operations import cw_loop
     src = inspect.getsource(cw_loop)
     assert 'prep_stall_pending_expected' in src
-    assert 'pending_expected' in src
