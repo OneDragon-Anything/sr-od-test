@@ -108,8 +108,16 @@ from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
 # COARSE_CALIB_VERSION 3→4,战斗败态均值匹配偏移变)→ digest
 # 由 098ea088… 位移至 3e71aaaf…。单变量批(仅 _LOSS_FIT 三元组);
 # 双跑确定性核验通过;新锚继续做 unintended drift 哨兵。
+# 单臂切换重锚(2026-09-04,dd-038 检查点②/b94e9cfb):A9 裁决删
+# decision_v2 基线臂,注册面封闭集={'mandate_v1'},默认路径由
+# DecisionV2Strategy 合法换为 MandateV1Live → digest 由 3e71aaaf…
+# 位移至 f3d80127…。**复合窗口如实声明(w937 先例)**:单变量 bisect
+# 不可做——旧臂已整包删除无法复跑;位移归因=单臂切换本身(其余删除
+# 面为零消费死面,b94e9cfb 验收时的契约锁/单臂自配对门全绿为旁证);
+# 锁语义自此钉「mandate_v1 单臂默认路径零漂移」,旧 decision_v2 锚值
+# 3e71aaaf… 仅存本注释为史。重锚执行=编排者(裁决#3 认领)。
 _ZERO_DRIFT_DIGEST_6 = (
-    '3e71aaaf341c8c86f49fc9b79951d4351d0d8e2292bd86fc874c41e05b47a070')
+    'f3d801275ac56b478f9a903b641d5863128ba55d68e27a6e4a1a9a46f0b42891')
 
 
 def _behavior_projection(results) -> str:
