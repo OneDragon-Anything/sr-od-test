@@ -1,7 +1,8 @@
 """货币战争 装备合成图谱(cw_synthesis)测试 —— 纯逻辑,不依赖游戏。
 
 2026-08-26 光能电池系配方补齐(官方 API compose_list):光能电池=第 8 件基础件,
-8 基础件 × K8 闭合 = C(8,2)=28 交叉 + 8 自配 = 36 件进阶全量。
+其交叉 7 条单列 GUANGNENG_CROSS;图谱现状=7 标准基础件 K7 闭合 C(7,2)=21
+交叉 + 7 自配,进阶全量 36(K8 闭合含光能)。
 旧「孤立节点」语义锁已反转(GUANGNENG_ONLY 废弃 → GUANGNENG_CROSS/SELF_RECIPES)。
 
 

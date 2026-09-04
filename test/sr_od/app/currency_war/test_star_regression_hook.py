@@ -57,7 +57,7 @@ def test_first_regression_no_stop(tmp_path, monkeypatch) -> None:
         ctx.restore()
 
 
-def test_second_regression_stops(tmp_path, monkeypatch) -> None:
+def test_second_regression_files_evidence_without_stop(tmp_path, monkeypatch) -> None:
     """连续第 2 帧 2★→1★(pending 已挂起):确认真回退 → 采新写回 + 计数(r17 降级:
     留证不 stop,SIFT 身份域排查中)。"""
     import sr_od.application.currency_war.kernel.cw_reconcile as cr

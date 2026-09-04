@@ -9,6 +9,8 @@
 I1 容量守恒:任何角色分得数 ≤ EQUIP_CAPACITY × 该角色槽位数
 I2 key 优先:key_equips 全部分给 core(carry 先于其它 core)
 I3 core 优先:comp 在场时,通用件先填满 core 才轮非 core
+   (r134 具名样本背书——用户质询「为什么给砂金」:反甲白厄线 3 件通用
+   应由 core 白厄吃满容量 3,非 core 砂金/赛飞儿 0 件,核心换血摩擦最小)
 I4 不超发:输出总条数 ≤ owned 总数(每件至多一次)
 I5 无 comp 保持兜底序:comp=None 时前排先(deployed 原序)
 """
@@ -59,7 +61,7 @@ OWNED_SETS = [
 ]
 
 
-@pytest.mark.parametrize('ci,di,oi', itertools.product(range(4), range(3), range(4)))
+@pytest.mark.parametrize('ci,di,oi', list(itertools.product(range(4), range(3), range(4))))
 def test_allocation_invariants(ci, di, oi):
     comp, dep, owned = COMPS[ci], DEPLOYED_SETS[di], OWNED_SETS[oi]
     alloc = equip_allocation(comp, dep, owned)

@@ -59,8 +59,7 @@ LEGAL_EDGES: dict[str, set[str]] = {
     # strategies = 策略注册壳(顶层)+ impl 实现本体(纯逻辑:接口基类/
     # 主流程驱动核/mandate_v1 机器)。impl 只依 data/kernel;顶层壳依 app
     # 桶 decision_assembly(装配缝 obs→Snapshot,adapter 分拆先例)。
-    'strategies': {'data', 'kernel', 'app',
-                    'decision'},   # decision = decision_v2 注册壳(迁移期 shim,随 v2 退役批消亡)
+    'strategies': {'data', 'kernel', 'app'},   # decision 注册壳已随 v2 退役批物理删除,死许可同步清(2026-09-03)
     'obs': {'data', 'kernel'},
     'sim': {'data', 'kernel', 'telemetry', 'strategies'},
     'telemetry': {'data', 'kernel', 'obs', 'sim', 'knowledge'},
