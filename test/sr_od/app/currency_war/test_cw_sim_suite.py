@@ -1059,7 +1059,7 @@ from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel.cw_state import GameState
 
 _DOC = (_sim_wiring_doc_Path(cw_sim.__file__).resolve().parents[5]
-        / 'docs' / 'develop' / 'currency_war' / 'sim-wiring.md')
+        / 'docs' / 'develop' / 'currency_war' / 'sim' / 'sim-wiring.md')
 
 
 def _tier_rows() -> dict[str, list[str]]:
