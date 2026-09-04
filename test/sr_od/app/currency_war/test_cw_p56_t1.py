@@ -7,6 +7,13 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    BuyCard,
+    GameState,
+    SellBench,
+    ShopCard,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
@@ -20,14 +27,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     odds,
-    vbar,
-)
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    BuyCard,
-    GameState,
-    SellBench,
-    ShopCard,
 )
 
 # ===== 测试基建(与 test_cw4_shop_line 同构)=====
@@ -158,10 +157,6 @@ class TestShopWiringP56T1:
         """M6 买入金约束=P56 可变现下界:线成型帧(无活期卡 ⇒
         s_reserve=g*=50)下,cost2 件买后 49<50 ⇒ 拒 + 'm6_s_reserve_
         reject' 计数;cost1 件买后 50≥50 ⇒ 发射。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-            MandateV1Strategy,
-        )
         from sr_od.application.currency_war.kernel.cw_comps import (
             COMP_LIBRARY,
             get_comp,
@@ -171,6 +166,10 @@ class TestShopWiringP56T1:
         )
         from sr_od.application.currency_war.sim.engine_p1 import (
             sim_decision_registry,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+            MandateV1Strategy,
         )
 
         class _Cfg:
@@ -210,10 +209,6 @@ class TestShopWiringP56T1:
     def test_pullback_fires_after_spending(self):
         """回拉发射位接线:买/花后投影金 < g* ⇒ 发射凑息卖
         (reason='sell_for_interest'),分键遥测四字段落 session counters。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-            MandateV1Strategy,
-        )
         from sr_od.application.currency_war.kernel.cw_comps import (
             COMP_LIBRARY,
             get_comp,
@@ -223,6 +218,10 @@ class TestShopWiringP56T1:
         )
         from sr_od.application.currency_war.sim.engine_p1 import (
             sim_decision_registry,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+            MandateV1Strategy,
         )
         names = [c.name for c in COMP_LIBRARY
                  if getattr(c, 'core_chars', None)]
@@ -254,79 +253,43 @@ class TestShopWiringP56T1:
         assert ct.get('t1_pullback_gold_ge_gstar', 0) == 0
 
 
-class TestP57VbarReading:
-    """P57 双读法参数化:窗口门 V̄ 读法可配置,生产默认读法②。"""
+class TestWindowCollapseAnchor:
+    """窗口判据 ADR-0516 重锚(塌缩带锚;P57 读法问题随 V̄ 退役消解):
+    _frame_search_windows 帧级现算 = odds 两窗口函数在 registry.omega_
+    collapse_ratio 下的取值;无读法参数、无 V̄/V_MS 消费。"""
 
-    def _reg(self):
+    def test_frame_windows_match_odds_omega(self):
         from sr_od.application.currency_war.sim.engine_p1 import (
             sim_decision_registry,
         )
-        return sim_decision_registry()
-
-    def test_default_reading_is_frame_horizon(self):
-        assert vbar.DEFAULT_VBAR_READING == 'frame_horizon'
-        assert set(vbar.VBAR_READINGS) == {'per_step', 'frame_horizon'}
-
-    def test_two_readings_values(self):
-        reg = self._reg()
-        assert vbar.window_vbar(reg, 7, 'per_step') \
-            == vbar.v_bar_net(reg, 1, 1)
-        assert vbar.window_vbar(reg, 7, 'frame_horizon') \
-            == vbar.v_bar_net(reg, 7, 1)
-        assert vbar.window_vbar(reg, 7, 'frame_horizon') \
-            > vbar.window_vbar(reg, 7, 'per_step')
-        # 脏读法回落缺省读法②(不放大为行为分叉)
-        assert vbar.window_vbar(reg, 7, 'bogus') \
-            == vbar.window_vbar(reg, 7, 'frame_horizon')
-
-    def test_windows_differ_between_readings(self):
-        """两读法窗口集分立(P57 差异域实锚;L6 档级:读法①下全档
-        p<2/V̄₁步 被剔,读法②视界 V̄ 大 ⇒ 全正概率档入窗)。"""
-        reg = self._reg()
-        v_step = vbar.window_vbar(reg, 20, 'per_step')
-        v_frame = vbar.window_vbar(reg, 20, 'frame_horizon')
-        assert odds.tier_search_window(6, v_step) \
-            != odds.tier_search_window(6, v_frame)
-        assert odds.card_search_window(7, v_step) \
-            != odds.card_search_window(7, v_frame)
-
-    def test_frame_window_diff_fingerprint(self):
-        """P57 窗口集指纹(分键遥测):两读法窗口集不同的帧计数落键。"""
-
-        class _StubReg:
-            win_rate_dp_by_plane = {1: 1.0 / 11.59, 2: 0.0}
-            vbar_hp_value_transitional = 9.59
 
         class _Sess:
             plane_lengths_seen = [9, 9, 9]
 
         st = GameState(gold=30, level=6, round_num=1)
         st.plane = 1
+        reg = sim_decision_registry()
         ct: dict = {}
-        tier_w, card_w = shop._frame_search_windows(
-            _Sess(), st, _StubReg(), 'per_step', ct)
-        # 斜率 V̄=1 ⇒ 阈值 2.0 ⇒ L6 全档被剔(空窗);视界 V̄=1×r 大 ⇒ 非空
-        assert tier_w == frozenset()
-        assert ct.get('p57_tier_window_diff_frames') == 1
-        st2 = GameState(gold=30, level=6, round_num=1)
-        st2.plane = 1
-        ct2: dict = {}
-        tier_w2, _ = shop._frame_search_windows(
-            _Sess(), st2, _StubReg(), 'frame_horizon', ct2)
-        assert tier_w2 == odds.tier_search_window(
-            6, vbar.window_vbar(_StubReg(), 27, 'frame_horizon'))
+        tier_w, card_w = shop._frame_search_windows(_Sess(), st, reg, ct)
+        assert tier_w == odds.tier_search_window(
+            6, reg.omega_collapse_ratio)
+        assert card_w == odds.card_search_window(
+            6, reg.omega_collapse_ratio)
+        # 无读法分叉:不再落 p57 分键遥测
+        assert not [k for k in ct if k.startswith('p57_')]
 
 
 class TestOddsWindowBackcompat:
-    """窗口函数 vbar 参数化向后兼容:vbar=None 保留 V_MS 槽读旧调用面
-    (对拍锚测试语义不变;T1 后生产消费位传帧级现算值)。"""
+    """窗口函数参数面向后兼容:旧调用面 card_search_window(level)
+    (buy.py T_SEARCH_A 注入态契约路径)在 ω 锚下按缺省
+    DEFAULT_REGISTRY.omega_collapse_ratio 取值。"""
 
-    def test_vbar_none_reads_v_ms(self):
-        try:
-            assert odds.tier_search_window(7) == frozenset()
-            provisional.inject('V_MS', provisional.CalibValue(24.7))
-            assert odds.tier_search_window(7, None) == frozenset(
-                {1, 2, 3, 4})
-            assert odds.card_search_window(7, None) == frozenset({2, 3})
-        finally:
-            provisional.reset('V_MS')
+    def test_default_call_matches_registry_omega(self):
+        from sr_od.application.currency_war.kernel.cw_registry import (
+            DEFAULT_REGISTRY,
+        )
+
+        assert odds.tier_search_window(7) == odds.tier_search_window(
+            7, DEFAULT_REGISTRY.omega_collapse_ratio)
+        assert odds.card_search_window(7) == odds.card_search_window(
+            7, DEFAULT_REGISTRY.omega_collapse_ratio)

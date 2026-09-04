@@ -16,14 +16,6 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
-from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import _r2_card_reserve
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.interest import (
-    saturation_line,
-)
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     get_comp,
@@ -33,6 +25,15 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     RefreshShop,
     ShopCard,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
+    _r2_card_reserve,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.interest import (
+    saturation_line,
 )
 
 # ===== 测试基建(与 test_cw_zero_refresh_fix 同款桩)=====
@@ -49,10 +50,10 @@ def _members(comp) -> list[str]:
 
 
 def _session(comp=None):
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 
     s = StrategySession()
     s.cw4_counters = {}
@@ -93,61 +94,65 @@ class TestR2InterestFloor:
                 gold=0, level=level, round_num=2))
 
     def _frame(self, gold: int):
-        """长视界(j=1 浅缺口,lv3 1费账 ≈9)帧:R1 必过,R2 成唯一门。
-
-        出处=test_cw_zero_refresh_fix.test_injected_value_opens_r1_into_r2
-        同型帧构造(lv3、j=2 成员账 ≈9.4 ≤ V̄_net);视界回退先验
-        (9,9,9)下 r≈26,V̄_net 远超账 ⇒ r1 恒开。
+        """R1 可负担性过账帧(ADR-0516 形式二;旧 V_GAP 注入开闸语义随
+        V̄ 链退役):lv6、合格集收缩到单目标成员(其余线成员 2★ 成型
+        出域)、目标 j=2 差 1 张(账 ≈19 金)⇒ 金 ≥80 时 R1 必过,
+        R2 成唯一门。视界先验(9,5,7)。
         """
-        provisional.reset('V_GAP')
-        provisional.inject('V_GAP', provisional.CalibValue(
-            value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.data.cw_shop_odds import (
+            expected_refreshes_for_card,
+        )
+
         comp = _comp()
-        ms = _members(comp)
-        bench = [_bc(ms[0]), _bc(ms[0], slot=2)]
-        st = _state(gold)
-        st.bench = bench + [_bc(m, slot=i + 3) for i, m in enumerate(ms[2:7])]
-        return comp, st, _session(comp)
+        members = _members(comp)
+        target = min(
+            (m for m in members
+             if CHARACTERS[m].cost
+             and 0.0 < expected_refreshes_for_card(
+                 6, CHARACTERS[m].cost, 2, 2) < float('inf')),
+            key=lambda m: expected_refreshes_for_card(
+                6, CHARACTERS[m].cost, 2, 2))
+        others = [m for m in members if m != target]
+        bench = [_bc(target), _bc(target, slot=2)] \
+            + [_bc(m, star=2, slot=i + 3) for i, m in enumerate(others)]
+        st = _state(gold, level=6)
+        st.bench = bench
+        sess = _session(comp)
+        sess.plane_lengths_seen = [9, 5, 7]
+        return comp, st, sess
 
     def test_floor_respected_when_gate_opens(self):
         """floor 结构锁(帧级,P54 §③):门过帧的刷后投影金 ≥ g*+ρ
-        ——刷新通道永不掉满息档;本帧金=60 > g*+ρ+刷价 ⇒ 发射。"""
-        try:
-            comp, st, sess = self._frame(60)
-            acts = _decide(st, sess)
-            rs = [a for a in acts if isinstance(a, RefreshShop)]
-            assert rs, '门过帧应发射刷新(健康带下界 >0,P54 §④)'
-            floor = self._floor(comp, 3, st.bench)
-            assert st.gold - rs[0].cost >= floor
-        finally:
-            provisional.reset('V_GAP')
+        ——刷新通道永不掉满息档;本帧金=80(R1 总账 ≈19 ≤ 预算 30)
+        ⇒ 发射。"""
+        comp, st, sess = self._frame(80)
+        acts = _decide(st, sess)
+        rs = [a for a in acts if isinstance(a, RefreshShop)]
+        assert rs, '门过帧应发射刷新(健康带下界 >0,P54 §④)'
+        floor = self._floor(comp, 6, st.bench)
+        assert st.gold - rs[0].cost >= floor
 
     def test_just_below_floor_rejected(self):
-        """贴线拒刷(账本级):金 = g*+ρ(P40 刷窗 n_max=0)⇒ r1 过而
-        r2 关,不发射刷新——旧值 b_target(0,0,0)=0 使此帧发射
+        """贴线拒刷(账本级):金 = g*+ρ(P40 刷窗 n_max=0)⇒ r1/r2 关,
+        不发射刷新——旧值 b_target(0,0,0)=0 使此帧发射
         (gold≥2 病灶,P53 §④ 申报 1),floor 落码后为判别锁。"""
-        try:
-            comp = _comp()
-            gold_at_floor = (saturation_line(5)
-                             + _r2_card_reserve(tuple(_members(comp)),
-                                                [], [], _state(0)))
-            _c, st, sess = self._frame(gold_at_floor)
-            acts = _decide(st, sess)
-            assert not [a for a in acts if isinstance(a, RefreshShop)]
-        finally:
-            provisional.reset('V_GAP')
+        comp = _comp()
+        gold_at_floor = (saturation_line(5)
+                         + _r2_card_reserve(tuple(_members(comp)),
+                                            [], [], _state(0)))
+        _c, st, sess = self._frame(gold_at_floor)
+        acts = _decide(st, sess)
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
 
     def test_cap_resolved_parameterizes_floor(self):
         """cap 语境锁:g*=10×cap_resolved 随 session 覆写参数化——
-        cap=10(息律投资语境)下金 60 < 100+ρ ⇒ 拒(50 非域常数,
+        cap=10(息律投资语境)下金 80 < 100+ρ ⇒ 拒(50 非域常数,
         dd-026 备选 2「拍常数」禁案的判别锁)。"""
-        try:
-            comp, st, sess = self._frame(60)
-            sess.cw4_cap_override = 10
-            acts = _decide(st, sess)
-            assert not [a for a in acts if isinstance(a, RefreshShop)]
-        finally:
-            provisional.reset('V_GAP')
+        comp, st, sess = self._frame(80)
+        sess.cw4_cap_override = 10
+        acts = _decide(st, sess)
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
 
     def test_card_reserve_is_registry_derived(self):
         """ρ 注册表派生锁:= 合格集最低费卡价(CHARACTERS 现读 min),

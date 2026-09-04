@@ -195,26 +195,22 @@ class TestPrecedentPredicates:
             contracts.ContractCtx(deploy_cap=None), ct)
         assert ct['criteria_contract_violation:predicates.arm1_existence'] == 1
 
-    def test_r1_ev_input_from_slot_derivable(self):
-        """r1 接线前提(可核验派生形态,FIX_REVIEW 防线硬化):ev_slot=
-        槽位现读原始对象(None/CalibValue)放行;裸 float 字面量
-        (「回退字面量但保留声明」复发形态)弃权+计数。"""
+    def test_r1_contract_none_precedent(self):
+        """r1 承诺账前提(ADR-0516 形式二重锚):判据输入全为游戏定义量
+        (REFRESH_PROB/XP 表/息律),无标定槽位依赖 ⇒ 前提恒真(None
+        登记)——旧 ev_slot 核验(V_GAP 槽位现读)随 V̄ 链退役消解;
+        r1_start(无生产消费端的纯数函数)保留 ev_slot 核验原锁。"""
         ct: dict = {}
+        assert contracts.ensure_contract(
+            ('refresh', 'r1_commitment_account'),
+            contracts.ContractCtx(), ct)
+        assert contracts.ensure_contract(
+            ('refresh', 'r1_commitment_account'),
+            contracts.ContractCtx(ev_slot=24.7), ct)   # 恒真前提:ctx 不辖
+        assert not ct
         assert contracts.ensure_contract(
             ('refresh', 'r1_start'),
             contracts.ContractCtx(ev_slot=None), ct)
-        cv = provisional.CalibValue(value=24.7)
-        assert contracts.ensure_contract(
-            ('refresh', 'r1_commitment_account'),
-            contracts.ContractCtx(ev_slot=cv), ct)
-        assert contracts.ensure_contract(
-            ('refresh', 'r1_commitment_account'),
-            contracts.ContractCtx(ev_slot=None), ct)
-        assert not contracts.ensure_contract(
-            ('refresh', 'r1_commitment_account'),
-            contracts.ContractCtx(ev_slot=24.7), ct)
-        assert ct['criteria_contract_violation:'
-                 'refresh.r1_commitment_account'] == 1
         assert not contracts.ensure_contract(
             ('refresh', 'r1_start'),
             contracts.ContractCtx(ev_slot=10.0), ct)

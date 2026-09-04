@@ -95,36 +95,88 @@ def sess_of(state: GameState) -> StrategySession:
     return StrategySession()
 
 
+def _locked_4cost_sess() -> StrategySession:
+    """锁定 4 费核意向的 session(ADR-0516 U_L 阈值检验重锚帧):
+    4 费峰值级 9,L7→8 概率 0.10→0.22 大移位带(期望刷费省 ≈103 金
+    > U_L = 13击×4金 = 52 + 息损)⇒ ② 臂检验过——旧「裸峰值级>当前级」
+    直觉帧(2 费小移位带,benefit ≈9.9 < U_L 20)按修正①被正确收紧
+    (负向锁 = test_schedule_ul_threshold_negative_small_shift_band),
+    锁随新判据重锚(反例锚=希儿 lv7 省 28 < 升 40,ADR-0516)。"""
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_intention import intention_core
+
+    comp = next(c for c in COMP_LIBRARY
+                if (CHARACTERS.get(intention_core(c)) is not None
+                    and CHARACTERS[intention_core(c)].cost == 4))
+    sess = StrategySession()
+    sess.v3_intention = IntentionState(
+        phase='locked', locked_comp=comp.name)
+    return sess
+
+
 def test_schedule_probability_trigger_requires_engine() -> None:
     """触发②[3]+[12]:目标峰值级>当前级 ∧ 息引擎已立;禁升条件=
     息引擎未立不追级(gold<息线,False 即预告态也不发)。"""
-    st = _state(gold=60, level=5)             # 绯英 2费峰值 6>5 ∧ 60≥50
-    assert schedule_upgrade(st, sess_of(st))
-    st_low = _state(gold=49, level=5)         # 引擎未立:禁升
-    assert not schedule_upgrade(st_low, sess_of(st_low))
-    st_done = _state(gold=60, level=6)        # 峰值已达:无排程
-    assert not schedule_upgrade(st_done, sess_of(st_done))
+    # 锁定 4 费核(大移位带,U_L 检验过;ADR-0516 修正①)+ 息引擎已立
+    sess = _locked_4cost_sess()
+    st = _state(gold=60, level=7)             # 峰值 9>7 ∧ 60≥50 ∧ U_L 过
+    assert schedule_upgrade(st, sess)
+    st_low = _state(gold=49, level=7)         # 引擎未立:禁升
+    assert not schedule_upgrade(st_low, _locked_4cost_sess())
+    st_done = _state(gold=60, level=9)        # 峰值已达:无排程
+    assert not schedule_upgrade(st_done, _locked_4cost_sess())
+
+
+def test_schedule_ul_threshold_negative_small_shift_band() -> None:
+    """ADR-0516 修正①负向锁:2 费小移位带帧断言 U_L 阈值检验 False。
+
+    帧形态:锁定 2 费核(峰值级 6>当前级 5,「峰值级>当前级」合取
+    成立)、E(D|5)=28.63 / E(D|6)=23.69 ⇒ benefit = 刷价 2×4.95
+    ≈ 9.9 < U_L = 5击×4金 = 20(+息损 ≥0)——纯概率账独自不过阈
+    ⇒ ``_upgrade_ul_threshold_ok`` 返回 False。检验被删(恒 True)或
+    反向(比较项颠倒)本锁发红;正向对照 = 4 费大移位带帧(同文件
+    test_schedule_probability_trigger_requires_engine)。
+    """
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        _upgrade_ul_threshold_ok,
+    )
+    from sr_od.application.currency_war.kernel.cw_intention import intention_core
+
+    comp = next(c for c in COMP_LIBRARY
+                if (CHARACTERS.get(intention_core(c)) is not None
+                    and CHARACTERS[intention_core(c)].cost == 2))
+    sess = StrategySession()
+    sess.v3_intention = IntentionState(
+        phase='locked', locked_comp=comp.name)
+    st = _state(gold=60, level=5)      # 2 费 lv5→6:benefit≈9.9 < U_L 20
+    assert not _upgrade_ul_threshold_ok(st, sess)
+    # 行为面同帧:schedule_upgrade ② 臂同样被收紧(引擎已立 60≥息线、
+    # 峰值 6>5,唯 U_L 检验拦下)
+    assert not schedule_upgrade(st, sess)
 
 
 def test_schedule_predictive_even_when_fee_unaffordable() -> None:
     """预告态契约(W623 D1,判前锁):排程不以当帧可负担为前置——
     gold 51(远不够升级费)∧ 峰值未达 → 排程照发、R* 计入升级费;
     「付得起才排」会造 R* 塌缩 → 义务花光 → 更排不上的贫穷循环。"""
-    st = _state(gold=51, level=5)
-    assert schedule_upgrade(st, sess_of(st))
-    assert reserve_cap(st, sess_of(st), _REG) > 50
+    st = _state(gold=51, level=7)
+    assert schedule_upgrade(st, _locked_4cost_sess())
+    assert reserve_cap(st, _locked_4cost_sess(), _REG) > 50
 
 
 def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
     """淘金客姿态:升级通道退役(W621:LevelUp 退役是刷驱姿态主驱动;
     谓词单一址=cw_investments.refresh_invest_active,授权链同址关闭)。"""
-    st = _state(gold=100, level=5)
-    assert schedule_upgrade(st, sess_of(st))   # 前置:常态帧排程成立
+    st = _state(gold=100, level=7)
+    assert schedule_upgrade(st, _locked_4cost_sess())   # 前置:常态帧排程成立
     monkeypatch.setattr(
         'sr_od.application.currency_war.kernel.cw_investments.STRATEGY_ECONOMY',
         {'淘金客': EconomyEffect(xp_per_refresh=2)})
     st.active_strategies = ['淘金客']
-    assert not schedule_upgrade(st, sess_of(st))
+    assert not schedule_upgrade(st, _locked_4cost_sess())
 
 
 # --- 预算核契约锁(W623 D2)---------------------------------------------------
@@ -218,18 +270,28 @@ def test_injection_consistency_single_registry_source() -> None:
     """注入一致性锁(W636 A):三接缝(schedule/refresh_ev_budget/
     reserve_cap)显式注入同一非默认 registry 时行为同变,prep_brain.
     _budget 装配的 BudgetView 与显式注入的接缝值逐字段一致——禁
-    「部分字段落 DEFAULT」的双源混用(P6 契约)。interest_cap 4→息线 40。"""
+    「部分字段落 DEFAULT」的双源混用(P6 契约)。cap 归一重锚
+    (ADR-0516):schedule 的 ② 前置息线已归一到 session resolved 链,
+    registry 注入只辖 refresh_ev_budget/reserve_cap 预算面(见体内注)。"""
     import dataclasses
     reg2 = dataclasses.replace(_REG, interest_cap=4)
-    # 息线随注入移动:gold 45 → 默认(50)不排程/零预算;注入(40)排程
-    st1 = _state(gold=45, level=5, r=5)
-    sess = StrategySession()
+    # cap 归一(ADR-0516 cap 三源归一):schedule_upgrade ② 前置息线随
+    # session resolved 链(cap_resolved_of_session)移动,registry.
+    # interest_cap 注入不再移动它——gold 45 对 resolved cap 5(息线 50)
+    # 不排程,注入 reg2(cap 4)同样不排程;session 注入面
+    # cw4_cap_override=4 ⇒ resolved 息线 40,gold 45 排程
+    st1 = _state(gold=45, level=7, r=5)
+    sess = _locked_4cost_sess()
     assert not schedule_upgrade(st1, sess, _REG)
-    assert schedule_upgrade(st1, sess, reg2)
+    assert not schedule_upgrade(st1, sess, reg2)
+    sess_ov = _locked_4cost_sess()
+    sess_ov.cw4_cap_override = 4
+    assert schedule_upgrade(st1, sess_ov)
     assert refresh_ev_budget(st1, sess, reg2) > refresh_ev_budget(
         st1, sess, _REG)   # 息线下移 → 排程开+溢余面变化,预算随之
-    # gold 62:默认 R*=50+lc5=66 → 零预算;注入 R*=40+lc5=56 → 正预算
-    st2 = _state(gold=62, level=5, r=5)
+    # gold 96:默认 R*=50+lv7 升级金(52)=102 → 零预算;注入 R*=40+52=92
+    # → 正预算(lv5 旧帧随 U_L 重锚帧上移,数字按帧现算)
+    st2 = _state(gold=96, level=7, r=5)
     assert reserve_cap(st2, sess, reg2) < reserve_cap(st2, sess, _REG)
     assert refresh_ev_budget(st2, sess, _REG) == 0
     assert refresh_ev_budget(st2, sess, reg2) > 0

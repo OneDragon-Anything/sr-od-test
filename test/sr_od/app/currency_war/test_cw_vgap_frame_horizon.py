@@ -1,35 +1,37 @@
-"""修 A 批测试:R1 刷新门 V̄ 比较项换帧级 horizon 现算(P53/dd-025)。
+"""R1 刷新门·形式二可负担性测试(ADR-0516;V̄ 链退役重锚)。
 
-锁(出处=P53-frame-horizon-vgap.md §2/§3 + dd-025):
-- 链锚:r=5 时 V̄_net 逐位等于旧静态注入 24.7(连续性锚——修 A 是
-  horizon 口径修正不是标定更换);对 r 严格递增;r≤0 归零;
-  连胜金下界 = STREAK_GOLD_TABLE 表值(禁复制字面量);
-- 门形态:同一帧态下短视界深缺口关(shop_r1_account_over_vgap)/
-  长视界开(RefreshShop 发射)——按视界单调,与 P40 ⑤「本期刷窗
-  用尽即停」方向一致;
-- 槽位语义:V_GAP 槽位保持 fail-closed 开闸通道,槽位数值不再是比较项
-  (注入 0.0 长视界仍开/注入大值短视界仍关 = 比较项已帧级化的判别锁)。
+锁(出处=ADR-0516 裁决与形式二规格;旧 V̄_net/V_GAP 槽位比较项测试
+随链退役,本文件重锚为新判据行为锁):
+- 判据本体(criteria/refresh.r1_commitment_account 纯数面):
+  总账 ≤ 可用预算放行;非有限(无可追成员)拒 'no_chaseable_member';
+  预算 ≤ 0 恒拒 'account_over_budget'(息线双侧修正:刷新只花息线
+  g* 之上的溢余);
+- 门形态(行为面):金在息线及以下关门;大溢余 + 可追缺件开门发射
+  RefreshShop;深缺口小溢余关门 + ``shop_r1_account_over_budget`` 分键;
+  合格集空(成员全 2★)关门 + ``shop_r1_no_chaseable_member`` 分键。
 """
 from __future__ import annotations
 
-import pytest
+from types import SimpleNamespace
 
-from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import vbar
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
-from sr_od.application.currency_war.kernel.cw_economy import STREAK_GOLD_TABLE
-from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     RefreshShop,
     ShopCard,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+    shop as shop_mod,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    refresh as crit_refresh,
+)
 
-# ===== 测试基建(与 test_cw_zero_refresh_fix 同款桩)=====
+# ===== 测试基建(承旧 vgap 文件同款桩)=====
 
 
 def _comp():
@@ -43,10 +45,10 @@ def _members(comp) -> list[str]:
 
 
 def _session(comp=None, plane_lengths=None):
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 
     s = StrategySession()
     s.cw4_counters = {}
@@ -68,164 +70,136 @@ def _decide(state: GameState, session) -> list:
 
     strat = MandateV1Strategy(registry=sim_decision_registry())
     session.shop_state_frame = state
-    from types import SimpleNamespace
     return strat.decide_shop_screen(session, SimpleNamespace(ev_arm='full'))
 
 
-class TestVBarNetChain:
-    """链锚(单测纯数面;P53 §2)。"""
+class TestCriterionAffordability:
+    """判据本体(纯数面;ADR-0516 形式二)。"""
 
-    def test_p1_slope_anchor(self):
-        """P1 斜率锚(增量 B 重推导,2026-09-04):V̄_net(r=5, P1)
-        = Δp(0.450)×单战价值(9.59+2)×5 = 26.08——旧连续性锚 24.7
-        (rung 流 3.0 底座 + 旧阶梯)随 rung_value/h3_win_rate 退役作废
-        (ADR-0515;p53 修订单)。"""
-        assert abs(vbar.v_bar_net(DEFAULT_REGISTRY, 5, 1) - 26.08) < 0.05
+    def test_within_budget_opens(self):
+        assert crit_refresh.r1_commitment_account(10.0, 11) == (True, '')
 
-    def test_p2_fail_closed_zero_slope(self):
-        """P2 分位面 fail-closed:Δp 钳 0 ⇒ V̄_net 恒 0(P2 薄桶负点
-        估计禁进账;P2 追档门实质关闭,economy「P2 少刷吃息」同向)。"""
-        for r in (1, 5, 12):
-            assert vbar.v_bar_net(DEFAULT_REGISTRY, r, 2) == 0.0
+    def test_over_budget_closed(self):
+        ok, key = crit_refresh.r1_commitment_account(11.0, 10)
+        assert not ok and key == 'account_over_budget'
 
-    def test_monotone_in_horizon(self):
-        """单调性:P1 r∈[1,20] 严格递增(跨期流价值随视界线性增长)。"""
-        vals = [vbar.v_bar_net(DEFAULT_REGISTRY, r, 1) for r in range(1, 21)]
-        assert all(b > a for a, b in zip(vals, vals[1:]))
+    def test_non_finite_is_no_chaseable_member(self):
+        """合格集空(E=∅/该级不出此费)⇒ inf/NaN 拒 no_chaseable_member
+        (P40 R0-1 刷新侧特例)。"""
+        for bad in (float('inf'), float('nan')):
+            assert crit_refresh.r1_commitment_account(bad, 100) \
+                == (False, 'no_chaseable_member')
 
-    def test_formula_anchors_from_registry(self):
-        """零新自由参数:逐因子 = 注册表现读(win_rate_dp_by_plane[plane]
-        × 单战价值)× r,禁出现与注册表脱钩的第二处数值。"""
-        reg = DEFAULT_REGISTRY
-        pb = reg.vbar_hp_value_transitional + vbar.streak_floor_gold()
-        for r in (1, 5, 12, 17):
-            assert vbar.v_bar_net(reg, r, 1) == pytest.approx(
-                reg.win_rate_dp_by_plane[1] * pb * r)
-
-    def test_streak_floor_is_table_value(self):
-        """连胜金下界 = STREAK_GOLD_TABLE 连胜 2-4 档表值 min(=2)——
-        真源在 cw_economy,禁在本链复制字面量。"""
-        assert vbar.streak_floor_gold() == min(STREAK_GOLD_TABLE[2:5])
-        assert vbar.streak_floor_gold() == 2
-
-    def test_zero_horizon_is_zero(self):
-        """视界耗尽 ⇒ V̄_net=0 ⇒ 门恒关(P40 ⑤「本期刷窗用尽即停」)。"""
-        assert vbar.v_bar_net(DEFAULT_REGISTRY, 0, 1) == 0.0
+    def test_zero_budget_always_closed(self):
+        """预算 ≤ 0(金在息线 g* 及以下)恒拒——息线双侧修正由比较式
+        结构承载,不另设门(修正③:停级买牌也压金破息)。"""
+        for ledger in (0.5, 1.0, 100.0):
+            assert crit_refresh.r1_commitment_account(ledger, 0) \
+                == (False, 'account_over_budget')
+            assert crit_refresh.r1_commitment_account(ledger, -5)[0] is False
 
 
-class TestR1FrameHorizonGate:
-    """门形态(行为锁;出处=P53 §3 开门形态 + dd-025;增量 B 重锚
-    2026-09-04:帧态移 P1——P2 分位面 Δp fail-closed 钳 0 后 P2 门
-    恒关,开门形态锁改以 P1 承载,P2 关闭另立锁 test_p2_fail_closed)。
-
-    帧态构造:lv5、目标成员 1★×1(j=1)、gold=61——REFRESH_CFO_CHECKPOINT
-    arm2 seed22 r4 的同型帧(该帧旧静态门账 46.3 vs 24.7 被拦)。视界用
-    ``plane_lengths_seen`` 控制:plane=1、node=8、seen=[9,L2,L3] ⇒
-    r=2+L2+L3(L2/L3 各夹 [1,9]),覆盖 r∈[4,20]。
+class TestR1AffordabilityGate:
+    """门形态(行为锁;ADR-0516)。帧态构造:lv6、合格集收缩到单目标
+    成员(其余线成员置 2★ 成型出域,P40 A4)、目标 1★×2(j=2,差 1 张
+    到 2★ 完成档,E 取 expected_refreshes_for_card 峰值级小值)——
+    总账量级 ~20 金,跨预算 70/11/0 三档判开门/关门;视界 r=14
+    (plane_lengths=[9,5,7] 同旧桩口径)。
     """
 
     @staticmethod
-    def _frame(r_target: int) -> tuple[GameState, object]:
+    def _frame(gold: int) -> tuple[GameState, object]:
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.data.cw_shop_odds import (
+            expected_refreshes_for_card,
+        )
+
         comp = _comp()
-        m1 = _members(comp)[0]
-        bench = [_bc(m1)] + [_bc(m, slot=i + 2)
-                             for i, m in enumerate(_members(comp)[1:5])]
-        st = GameState(gold=61, level=5, round_num=8)
+        members = _members(comp)
+        # 追件目标 = 该级可追(E>0 且有限)成员中期望刷次最小者(小总账帧)
+        target = min(
+            (m for m in members
+             if CHARACTERS[m].cost
+             and 0.0 < expected_refreshes_for_card(
+                 6, CHARACTERS[m].cost, 2, 2) < float('inf')),
+            key=lambda m: expected_refreshes_for_card(
+                6, CHARACTERS[m].cost, 2, 2))
+        others = [m for m in members if m != target]
+        bench = [_bc(target), _bc(target, slot=2)] \
+            + [_bc(m, star=2, slot=i + 3) for i, m in enumerate(others)]
+        st = GameState(gold=gold, level=6, round_num=8)
         st.plane = 1
         st.shop = [ShopCard(x=100, name='垫', cost=3, star=1)]
         st.bench = bench
         st.deployed = []
-        # P1 node=8:r = (9−7) + L2 + L3 = 2+L2+L3;L2/L3 各夹 [1,9]
-        rest = r_target - 2
-        l2 = min(9, max(1, rest - 1))
-        l3 = max(1, rest - l2)
-        assert 2 + l2 + l3 == r_target
-        sess = _session(comp, plane_lengths=[9, l2, l3])
-        return st, sess
+        return st, _session(comp, plane_lengths=[9, 5, 7])
+
+    def test_at_interest_line_closed(self):
+        """金=息线 g*(50)⇒ 预算 0 ⇒ 关门(修正③:两侧都过 g* 账)。"""
+        st, sess = self._frame(50)
+        acts = _decide(st, sess)
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
+        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) >= 1
+
+    def test_large_surplus_opens(self):
+        """大溢余(gold=120,预算 70)+ 可追缺件:总账(刷费+卡费+息损)
+        ≤ 预算 ⇒ 开门发射 RefreshShop。"""
+        st, sess = self._frame(120)
+        acts = _decide(st, sess)
+        assert any(isinstance(a, RefreshShop) for a in acts)
+
+    def test_small_surplus_deep_gap_closed(self):
+        """小溢余(gold=61,预算 11)同型缺件:总账(单 2★ 完成档期望
+        刷费+卡费+息损 ≈ 20 金)⇒ 关门 + ``shop_r1_account_over_budget``
+        分键。"""
+        st, sess = self._frame(61)
+        acts = _decide(st, sess)
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
+        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) >= 1
+
+    def test_qualified_set_empty_closed(self):
+        """合格集空(成员全部 2★ 成型)⇒ 关门 +
+        ``shop_r1_no_chaseable_member`` 分键(P40 R0-1)。"""
+        comp = _comp()
+        members = _members(comp)
+        bench = [_bc(m, star=2, slot=i + 1)
+                 for i, m in enumerate(members[:5])]
+        st = GameState(gold=120, level=7, round_num=8)
+        st.plane = 1
+        st.shop = [ShopCard(x=100, name='垫', cost=3, star=1)]
+        st.bench = bench
+        st.deployed = []
+        sess = _session(comp, plane_lengths=[9, 5, 7])
+        acts = _decide(st, sess)
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
+        assert sess.cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
+
+
+class TestMixedPeakCompletionAccount:
+    """混合毒化锁(ADR-0516 完成账语义;用户裁定 2026-09-04「对整个
+    目标阵容……是不是合适的」)。
+
+    合格集含 2费(花火)+5费(流萤)成员:等级服务**整套缺件集**补齐
+    ——lv6 段 5费不出(REFRESH_PROB lv6 无 5费档)⇒ 任一成员不可追 ⇒
+    E(D|6)=∞ ⇒ T_stay 该级不可行 ⇒ R1 拒 'no_chaseable_member';lv7
+    段 5费可追(0.01)⇒ 账有限。旧「逐成员取 min」账在此帧仍开门
+    (2费成员 lv6 可追),锁钉住该差异。口径 = ``_r1_ledger_terms``
+    装配侧直接复现(j=0、c_taken=0),不经过整帧决策。
+    """
 
     @staticmethod
-    def _gate_open(r_target: int) -> bool:
-        provisional.reset('V_GAP')
-        try:
-            provisional.inject('V_GAP', provisional.CalibValue(
-                value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
-            st, sess = TestR1FrameHorizonGate._frame(r_target)
-            acts = _decide(st, sess)
-            return any(isinstance(a, RefreshShop) for a in acts)
-        finally:
-            provisional.reset('V_GAP')
+    def _terms(level: int) -> tuple[float, int]:
+        return shop_mod._r1_ledger_terms(('花火', '流萤'), [], [], level)
 
-    def test_short_horizon_deep_gap_closed(self):
-        """短视界(r=5)同型深缺口帧:承诺账 > V̄_net(5)=24.7 ⇒ 关门 +
-        ``shop_r1_account_over_vgap`` 分键——报告 §4 反例帧(账 46.3
-        被 24.7 拦)在帧级口径下的短视界对照面。"""
-        provisional.reset('V_GAP')
-        try:
-            provisional.inject('V_GAP', provisional.CalibValue(
-                value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
-            st, sess = self._frame(5)
-            acts = _decide(st, sess)
-            assert not [a for a in acts if isinstance(a, RefreshShop)]
-            assert sess.cw4_counters.get('shop_r1_account_over_vgap', 0) >= 1
-        finally:
-            provisional.reset('V_GAP')
+    def test_lv6_mixed_set_inf_r1_rejects(self):
+        """lv6:5费不可追 ⇒ E=∞ ⇒ R1 拒(完成账 fail-closed)。"""
+        e_sum, fees = self._terms(6)
+        assert e_sum == float('inf')
+        ok, key = crit_refresh.r1_commitment_account(e_sum + fees, 70)
+        assert not ok and key == 'no_chaseable_member'
 
-    def test_long_horizon_same_frame_opens(self):
-        """长视界(r=14)同一帧态:V̄_net(14,P1)=Δp×11.59×14≈73 >
-        承诺账 ⇒ 开门发射(修前静态门此帧恒拦;报告 §6「r≥14 全开」
-        分层的单帧锁;增量 B 斜率 4.94→5.22 后阈值形态不变)。"""
-        provisional.reset('V_GAP')
-        try:
-            provisional.inject('V_GAP', provisional.CalibValue(
-                value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
-            st, sess = self._frame(14)
-            acts = _decide(st, sess)
-            assert any(isinstance(a, RefreshShop) for a in acts)
-        finally:
-            provisional.reset('V_GAP')
-
-    def test_p2_fail_closed_all_horizons(self):
-        """P2 分位面 fail-closed(增量 B,2026-09-04):Δp(P2) 薄桶负
-        点估计钳 0 ⇒ V̄_net 恒 0 ⇒ 任意视界(含 r=14/17)P2 门恒关——
-        与 economy「P2 少刷吃息」共识同向;P2 语料扩量重拟后此锁随
-        win_rate_dp_by_plane[2] 一并重锚。"""
-        for r_target in (5, 14, 17):
-            provisional.reset('V_GAP')
-            try:
-                provisional.inject('V_GAP', provisional.CalibValue(
-                    value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
-                st, sess = self._frame(r_target)
-                st.plane = 2
-                assert not [a for a in _decide(st, sess)
-                            if isinstance(a, RefreshShop)]
-            finally:
-                provisional.reset('V_GAP')
-
-    def test_horizon_monotone_no_reclose(self):
-        """按视界单调:同帧态 r=5 关 → r=7 关 → r=14 开;且 r≥开门点后
-        不再回关(阈值线性增长压过饱和的息损账项)。"""
-        assert not self._gate_open(5)
-        assert not self._gate_open(7)
-        assert self._gate_open(14)
-        assert self._gate_open(17)
-
-    def test_slot_value_is_not_threshold(self):
-        """槽位数值不再是比较项(判别锁):注入 0.0 + 长视界仍开 / 注入
-        1000 + 短视界仍关——比较项=帧级 V̄_net(r),槽位只承载开闸。"""
-        provisional.reset('V_GAP')
-        try:
-            provisional.inject('V_GAP', provisional.CalibValue(
-                value=0.0, injected_form=True))
-            st, sess = self._frame(14)
-            assert any(isinstance(a, RefreshShop) for a in _decide(st, sess))
-        finally:
-            provisional.reset('V_GAP')
-        provisional.reset('V_GAP')
-        try:
-            provisional.inject('V_GAP', provisional.CalibValue(
-                value=1000.0, injected_form=True))
-            st, sess = self._frame(5)
-            assert not [a for a in _decide(st, sess)
-                        if isinstance(a, RefreshShop)]
-        finally:
-            provisional.reset('V_GAP')
+    def test_lv7_account_finite(self):
+        """lv7:5费可追 ⇒ E 有限且为正(账可求值,门回到预算比较)。"""
+        e_sum, fees = self._terms(7)
+        assert 0.0 < e_sum < float('inf')
+        assert fees > 0

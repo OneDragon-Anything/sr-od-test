@@ -14,11 +14,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
@@ -29,6 +24,11 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SellBench,
     ShopCard,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 
 # ===== 测试基建(与 test_cw4_shop_line 同款桩)=====
 
@@ -49,10 +49,10 @@ def _members(comp) -> list[str]:
 
 
 def _session(comp=None):
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 
     s = StrategySession()
     s.cw4_counters = {}
@@ -93,89 +93,87 @@ def _decide(state: GameState, session, cfg: _Cfg | None = None):
     return strat.decide_shop_screen(session, cfg or _Cfg())
 
 
-# ===== 病灶1:r1 发射位 V_GAP 槽位接线 =====
+def _afford_frame(gold: int, target_copies: int):
+    """R1 可负担性行为锁帧(lv6,列车同行):合格集收缩到单目标成员
+    (其余线成员 2★ 成型出域),目标 = 该级可追成员中期望刷次最小者;
+    target_copies 控制缺口深浅(j=2 差 1 张 = 浅,j=0 差 3 张 = 深)。"""
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_shop_odds import (
+        expected_refreshes_for_card,
+    )
+
+    comp = _comp()
+    members = _members(comp)
+    target = min(
+        (m for m in members
+         if CHARACTERS[m].cost
+         and 0.0 < expected_refreshes_for_card(
+             6, CHARACTERS[m].cost, 2, 2) < float('inf')),
+        key=lambda m: expected_refreshes_for_card(
+            6, CHARACTERS[m].cost, 2, 2))
+    others = [m for m in members if m != target]
+    bench = ([_bc(target, slot=i + 1) for i in range(target_copies)]
+             + [_bc(m, star=2, slot=i + target_copies + 1)
+                for i, m in enumerate(others)])
+    st = _state(gold=gold, bench=bench, level=6, hp=100)
+    sess = _session(comp)
+    sess.plane_lengths_seen = [9, 5, 7]
+    return st, sess
+
+
+# ===== :r1 发射位(ADR-0516 形式二可负担性重锚;V̄/V_GAP 槽位
+# 比较项退役,槽位注入不再影响行为——锁重写为预算三档行为锁) =====
 
 class TestR1VGapWiring:
 
-    def test_none_period_zero_drift_fail_closed(self):
-        """None 期零漂移:V_GAP 未注入 ⇒ 不刷 + ``shop_r1_ev_unavailable``
-        分键计数(与修复前行为逐字一致,ZERO_REFRESH_DIAG §2 口径)。"""
-        provisional.reset('V_GAP')
-        comp = _comp()
-        bench = [_bc(m) for m in _members(comp)]
-        st = _state(gold=60, bench=bench)
-        sess = _session(comp)
+    def test_near_interest_line_closed(self):
+        """息线附近帧(gold=60,预算 10)不刷:总账(期望刷费+卡费+息损)
+        > 10 ⇒ ``shop_r1_account_over_budget`` 分键(ADR-0516 修正③:
+        刷新只花息线之上的溢余;旧 V_GAP None 期 fail-closed 语义随
+        槽位比较项退役,由预算比较结构承载)。"""
+        st, sess = _afford_frame(gold=60, target_copies=2)
         acts = _decide(st, sess)
         assert not [a for a in acts if isinstance(a, RefreshShop)]
-        assert sess.cw4_counters.get('shop_r1_ev_unavailable', 0) >= 1
+        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) >= 1
 
-    def test_injected_value_opens_r1_into_r2(self):
-        """标定值开闸(总账形态):V_GAP=标定值 24.7 + 浅缺口成员(j=2,
-        lv3 1费账 ≈9.4 ≤ 24.7)⇒ r1 总账过、r2 预算门可批 ⇒ RefreshShop
-        发射。旧锁(注入 10.0 即刷)锁的是「有值即放行」过渡形态,已被
-        标定批 R1 承诺账(P40 ②;shop.py r1 总账落码)取代——按锁纪律
-        重推语义改写,出处=CALIB_REPORT「R1 门裁决」节。"""
-        provisional.reset('V_GAP')
-        try:
-            provisional.inject('V_GAP', provisional.CalibValue(
-                value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
-            comp = _comp()
-            ms = _members(comp)
-            bench = [_bc(ms[0]), _bc(ms[0])] + [_bc(m) for m in ms[1:]]
-            st = _state(gold=60, bench=bench, level=3)
-            sess = _session(comp)
-            acts = _decide(st, sess)
-            assert any(isinstance(a, RefreshShop) for a in acts)
-            assert not sess.cw4_counters.get('shop_r1_ev_unavailable')
-        finally:
-            provisional.reset('V_GAP')
+    def test_large_surplus_opens_r1_into_r2(self):
+        """大溢余开闸(gold=80,预算 30)+ 浅缺口成员(1费 j=2,lv3 账
+        ≈ 11)⇒ r1 可负担性过、r2 预算门可批 ⇒ RefreshShop 发射
+        (ADR-0516 形式二;槽位注入与否不影响行为——判据输入全为游戏
+        定义量)。"""
+        st, sess = _afford_frame(gold=80, target_copies=2)
+        acts = _decide(st, sess)
+        assert any(isinstance(a, RefreshShop) for a in acts)
 
     def test_r1_commitment_account_binds_deep_gap(self):
-        """R1 总账约束力:短视界(r=5,本位面末段)深缺口(lv5 1费 j=1)
-        账 ≈45 > V̄_net(5)=24.7 ⇒ 不刷 + ``shop_r1_account_over_vgap``
-        分键——EV 门有约束力(ZERO_REFRESH_DIAG §6.2 回归判据的结构
-        承载)。旧锁同型帧构造在 r≈26(裸 session 回退 9,9,9)下断言
-        恒拒,锁的是已被修 A 取代的「V_gap 静态 24.7」语义——按锁纪律
-        重推改写为视界显式控制(出处=P53-frame-horizon-vgap §3/dd-025:
-        深缺口只在短视界关,长视界 j=1 帧开门是设计内形态);视界单调
-        双面锁见 test_cw_vgap_frame_horizon.py。"""
-        provisional.reset('V_GAP')
-        try:
-            provisional.inject('V_GAP', provisional.CalibValue(
-                value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
-            comp = _comp()
-            ms = _members(comp)
-            bench = ([_bc(ms[0])]
-                     + [_bc(m, slot=i + 2) for i, m in enumerate(ms[1:5])])
-            st = _state(gold=61, bench=bench, level=5)
-            st.plane = 3
-            st.round_num = 1
-            sess = _session(comp)
-            sess.plane_lengths_seen = [9, 9, 5]   # plane3 node1 ⇒ r=5
-            acts = _decide(st, sess)
-            assert not [a for a in acts if isinstance(a, RefreshShop)]
-            assert sess.cw4_counters.get('shop_r1_account_over_vgap', 0) >= 1
-        finally:
-            provisional.reset('V_GAP')
+        """R1 总账约束力:深缺口帧(lv5 线成员含高费不可追件,留级账
+        inf、升级账含 U_L 与大 E)总账远超预算 11 金:不刷 +
+        `shop_r1_account_over_budget` 分键——EV 门有约束力的结构承载
+        (ADR-0516;旧 V̄_net 比较项锁随链退役重锚)。"""
+        st, sess = _afford_frame(gold=61, target_copies=0)
+        acts = _decide(st, sess)
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
+        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) >= 1
 
-    def test_injected_value_r2_budget_still_gates(self):
-        """注入形态下 r2 预算门仍有效:r1 总账放行(高 V_GAP)但金不足
-        (< 预留+刷价)⇒ 不刷(接线≠旁路预算门,防线分层保持)。"""
-        provisional.reset('V_GAP')
-        try:
-            provisional.inject('V_GAP', provisional.CalibValue(
-                value=1000.0, injected_form=True))
-            comp = _comp()
-            bench = [_bc(m) for m in _members(comp)]
-            st = _state(gold=1, bench=bench)   # 刷价 2,金 1 不足
-            acts = _decide(st, _session(comp))
-            assert not [a for a in acts if isinstance(a, RefreshShop)]
-        finally:
-            provisional.reset('V_GAP')
+    def test_r2_budget_still_gates_low_gold(self):
+        """防线分层:r2 预算门对低金帧独立拦截(金 < 预留 g*+rho + 刷价
+        则不批;行为面 gold=1 不刷)——接线不等于旁路预算门(P40 R2 原语义,
+        ADR-0516 保留声明)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+            refresh as crit_refresh,
+        )
+
+        assert not crit_refresh.r2_budget(1, 51, 2)
+        assert crit_refresh.r2_budget(60, 51, 2)
+        comp = _comp()
+        bench = [_bc(m) for m in _members(comp)]
+        st = _state(gold=1, bench=bench)   # 刷价 2,金 1 不足
+        acts = _decide(st, _session(comp))
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
 
     def test_v_bar_sealed_never_opens_r1(self):
         """封印族防线:V_BAR 类型级封印(get 恒 None/inject 拒绝)——
-        r1 开闸通道只认 V_GAP,不认 V̄(R10-2)。"""
+        V̄ 拟合族永不作闸门(R10-2;ADR-0516 后 r1 通道已无任何 V̄ 消费)。"""
         assert provisional.get('V_BAR') is None
         with pytest.raises(ValueError):
             provisional.inject('V_BAR', provisional.CalibValue(value=1.0))
@@ -491,19 +489,7 @@ class TestZeroRefreshFixSimAcceptance:
                             if k in ('LevelUp', 'LevelUpShop'))
         assert lv_total > 0
 
-    def test_injected_vgap_refresh_chain_alive(self):
-        """验收②:标定批注入(ab_core_swap.apply_core_swap_calibration,
-        V_GAP=24.7 带 CI)后刷新>0 且量级受 R1 总账约束(冒烟实测
-        n=5 总 2 次 ≪ 反事实 C 的 60+,diag §6.2 回归判据;具体逐 seed
-        量级不锁——锁分布数值违测试纪律第 4 条,只锁「>0 活性」)。"""
-        provisional.reset()
-        try:
-            from sr_od.application.currency_war.sim import ab_core_swap
-
-            ab_core_swap.apply_core_swap_calibration()
-            total = 0
-            for seed in range(5):
-                total += self._run(seed).refreshes
-            assert total > 0
-        finally:
-            provisional.reset()
+    # (test_injected_vgap_refresh_chain_alive 已随 ADR-0516 退役删除:其前提
+    #  = V_GAP 槽位注入开闸刷新链,V̄ 槽位比较项退役后注入不再影响行为;
+    #  「刷新链活性」的行为锁重锚为帧级 test_large_surplus_opens_r1_into_r2
+    #  ——大溢余 + 可追缺件 ⇒ r1 过 r2 批 ⇒ RefreshShop 发射。)

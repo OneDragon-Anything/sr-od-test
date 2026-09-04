@@ -296,12 +296,12 @@ class TestLambdaTableGuard:
 #: NMF §2 状态量 → 唯一实现符号(模块,函数)。判据模块(cw4 内 criteria/
 #: mandate/proof,随批 1 落地)禁自算——本断言辖 cw4 全包:同名 def 全包唯一。
 QUANTITY_OWNERS: dict[str, tuple[str, str]] = {
-    'g 存量金(黑板直读,无独立算子)': ('interest', 'interest'),
+    'g 存量金(黑板直读,无独立算子;实现下沉 kernel/cw_economy)': ('', 'interest'),
     'level/xp_cur(cw_state 权威,消费不重建)': ('s_line', 'b_target'),
-    'R_全局': ('horizon', 'r_global'),
-    'R_剩余': ('horizon', 'r_remaining'),
-    'Ī 净收入率': ('income', 'net_income'),
-    'L 息档损失': ('interest', 'loss_exact'),
+    'R_全局(实现下沉 kernel/cw_plane_table)': ('', 'r_global'),
+    'R_剩余(实现下沉 kernel/cw_plane_table)': ('', 'r_remaining'),
+    'Ī 净收入率(实现下沉 kernel/cw_economy)': ('', 'net_income'),
+    'L 息档损失(实现下沉 kernel/cw_economy)': ('', 'loss_exact'),
     'λ_death PL 键表': ('lambda_death', 'lambda_ci'),
     'floor_eff(arm2 守息门)': ('lambda_death', 'floor_eff'),
     '区间敞口比较(W 消费形态)': ('lambda_death', 'exposure_ge'),
@@ -327,8 +327,16 @@ QUANTITY_OWNERS: dict[str, tuple[str, str]] = {
     '零重叠': ('predicates', 'zero_overlap'),
     '挂后台效果资格谓词(半步0)': ('predicates', 'bench_effect_qualified'),
     'D-dup 可部署战力谓词': ('vopt', 'dup_power_qualified'),
-    'resolved 息帽': ('interest', 'interest_cap_resolved'),
+    'resolved 息帽(实现下沉 kernel/cw_economy)': ('', 'interest_cap_resolved'),
 }
+
+
+
+# ADR-0516 下沉批:interest/net_income/loss_exact/r_global/r_remaining/
+# interest_cap_resolved 的实现下沉 kernel(cw_economy/cw_plane_table,
+# kernel 判据消费需保持桶依赖矩阵);上表对应条目期望 owners=[]——
+# statefn 模块只剩 import 重定向(单一源在 kernel,本断言辖「cw4 内
+# 零第二实现」,kernel 侧唯一性由重定向 import + ruff F401 守)。
 
 
 class TestSingleImplementation:
@@ -344,7 +352,9 @@ class TestSingleImplementation:
                     defs.setdefault(node.name, []).append(mod)
         for quantity, (mod, func) in QUANTITY_OWNERS.items():
             owners = defs.get(func, [])
-            assert owners == [mod], \
+            expected = [mod] if mod else []   # mod='' = 实现已下沉 kernel,
+            # statefn 只剩重定向(cw4 内零第二实现;见 QUANTITY_OWNERS 注)
+            assert owners == expected, \
                 f'{quantity}: 符号 {func} 期望仅实现于 statefn/{mod},实际 {owners}'
 
     def test_registry_functions_not_reimplemented(self) -> None:
@@ -455,7 +465,9 @@ class TestAuditCarriers:
 class TestIncomeAndLookup:
 
     def test_net_income_schedule(self) -> None:
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import income
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
+            income,
+        )
         assert income.net_income(1, 0) == 3 + 1  # 1-1 轮基础 3 + streak(0)=1
         assert income.net_income(5, 3, 'battle') == 5 + 2 + 2
         assert income.net_income(3, 6) == 5 + 4  # 连胜表尾 4
@@ -530,52 +542,49 @@ class TestSlotQDenominator:
 
 
 class TestSearchWindows:
-    """症5①②:搜索窗口运行时确定性查表(出处=CALIB_REPORT_V2 §2.3
-    门式;对拍锚=calib_v2_analysis.json tier_level_gate/card_level_gate
-    e2_24.7 全表,第三方按 p ≥ 2/24.7(甲)/2/P_shop ≤ 24.7(乙)可重算)。
-    槽位 T_SEARCH_A 维持 None 豁免(消费者 is_none 门另锁);窗口本身
-    只依赖 V_MS+REFRESH_PROB,锁其推导。"""
+    """搜索窗口运行时确定性查表(ADR-0516 重锚:塌缩带锚——费档在窗内
+    ⟺ 该级命中率 ≥ ω×峰值级命中率,ω=DEFAULT_REGISTRY.
+    omega_collapse_ratio(0.1,ADR-0475 同源);档级口径=refresh_prob,
+    单卡口径=p_shop 满池。旧 V̄ 门式(P57 双读法/e2_24.7 对拍锚)随
+    V̄ 链退役作废;下表按 REFRESH_PROB 表值 + 峰值查表
+    (1费峰 lv3/2费峰 lv6/3费峰 lv7/4费峰 lv9/5费峰 lv9)第三方可重算:
+    例 lv10 1费 0.05 < 0.1×1.0 ⇒ 出窗;lv6 4费 0.05 = 0.1/2×峰值
+    0.3?否——0.05/(0.3)=0.167 ≥ 0.1 ⇒ 在窗。"""
 
-    #: calib_v2_analysis.json tier_level_gate.e2_24.7.levels(V̄=24.7)
-    TIER_E2: dict[int, frozenset[int]] = {
+    #: ω 锚全表(tier 口径;DEFAULT_REGISTRY.omega_collapse_ratio=0.1)
+    TIER_OMEGA: dict[int, frozenset[int]] = {
         1: frozenset({1}), 2: frozenset({1}), 3: frozenset({1}),
         4: frozenset({1, 2, 3}), 5: frozenset({1, 2, 3}),
-        6: frozenset({1, 2, 3}), 7: frozenset({1, 2, 3, 4}),
-        8: frozenset({1, 2, 3, 4}), 9: frozenset({1, 2, 3, 4, 5}),
+        6: frozenset({1, 2, 3, 4}), 7: frozenset({1, 2, 3, 4}),
+        8: frozenset({1, 2, 3, 4, 5}), 9: frozenset({1, 2, 3, 4, 5}),
         10: frozenset({2, 3, 4, 5}),
     }
-    #: calib_v2_analysis.json card_level_gate.e2_24.7 的 window(V̄=24.7)
-    CARD_E2: dict[int, frozenset[int]] = {
+    #: ω 锚全表(card 口径,p_shop 满池)
+    CARD_OMEGA: dict[int, frozenset[int]] = {
         1: frozenset({1}), 2: frozenset({1}), 3: frozenset({1}),
-        4: frozenset({1}), 5: frozenset({1, 2}), 6: frozenset({2, 3}),
-        7: frozenset({2, 3}), 8: frozenset({3}), 9: frozenset({3, 4}),
-        10: frozenset({4, 5}),
+        4: frozenset({1, 2, 3}), 5: frozenset({1, 2, 3}),
+        6: frozenset({1, 2, 3, 4}), 7: frozenset({1, 2, 3, 4, 5}),
+        8: frozenset({1, 2, 3, 4, 5}), 9: frozenset({1, 2, 3, 4, 5}),
+        10: frozenset({2, 3, 4, 5}),
     }
 
-    def test_l7_two_readings_contradict(self) -> None:
-        """两读法 L7 矛盾例(锁两读法分立,防收敛成单一常数窗口):
-        甲(档级){1,2,3,4} vs 乙(单卡){2,3}。"""
-        provisional.inject('V_MS', provisional.CalibValue(24.7))
-        try:
-            assert odds.tier_search_window(7) == frozenset({1, 2, 3, 4})
-            assert odds.card_search_window(7) == frozenset({2, 3})
-        finally:
-            provisional.reset('V_MS')
+    def test_full_table_omega_anchor(self) -> None:
+        """全表对拍(ω 锚 × 全等级 1-10,两口径)。"""
+        for lv in range(1, 11):
+            assert odds.tier_search_window(lv) == self.TIER_OMEGA[lv], lv
+            assert odds.card_search_window(lv) == self.CARD_OMEGA[lv], lv
 
-    def test_full_table_e2_upper_edge(self) -> None:
-        """全表对拍(带端=上沿 24.7,两读法 × 全等级 1-10)。"""
-        provisional.inject('V_MS', provisional.CalibValue(24.7))
-        try:
-            for lv in range(1, 11):
-                assert odds.tier_search_window(lv) == self.TIER_E2[lv], lv
-                assert odds.card_search_window(lv) == self.CARD_E2[lv], lv
-        finally:
-            provisional.reset('V_MS')
+    def test_collapse_excludes_far_below_peak(self) -> None:
+        """塌缩排除例:lv10 1费(0.05 < 0.1×峰值 1.0)出窗;lv4 4费
+        (p=0,该级不出)出窗。"""
+        assert 1 not in odds.tier_search_window(10)
+        assert 4 not in odds.tier_search_window(4)
 
-    def test_v_ms_none_fail_closed(self) -> None:
-        """V_MS 缺读 ⇒ 空集(禁造常数窗口,零新自由参数)。"""
-        assert odds.tier_search_window(7) == frozenset()
-        assert odds.card_search_window(7) == frozenset()
+    def test_omega_param_tightens_window(self) -> None:
+        """ω 参数化收紧:ω=1(只放峰值级自身)窗口收窄到该费档恰在
+        峰值级的行(结构性烟测,不锁分布数值)。"""
+        t1 = odds.tier_search_window(8, 1.0)
+        assert t1 <= odds.tier_search_window(8)
 
 
 class TestBenchEffectContextAssembly:

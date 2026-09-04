@@ -194,21 +194,23 @@ class TestCriteriaShopFaces:
         assert not [a for a in acts if isinstance(a, LevelUpShop)]
 
     def test_refresh_face_fail_closed(self):
-        """刷新面:r1 EV 未标定(None)⇒ fail-closed 不刷 + 分键计数。"""
+        """刷新面:r1 可负担性不过(该帧合格集空:lv3 高费线成员不可追)
+        ⇒ 不刷 + ``shop_r1_no_chaseable_member`` 分键(ADR-0516 形式二;
+        旧 V_GAP None 期 fail-closed 语义随 V̄ 链退役,由判据结构承载)。"""
         comp = _comp()
         bench = [_bc(m) for m in _members(comp)]
         st = _state(gold=60, bench=bench)
         sess = _session(comp)
         _decide(st, sess)
-        assert sess.cw4_counters.get('shop_r1_ev_unavailable', 0) >= 1
+        assert sess.cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
         assert not [a for a in _decide(st, _session(comp))
                     if isinstance(a, RefreshShop)]
 
     def test_stockpile_face_m6_opens_with_frame_window(self):
-        """压库面:T1 短路径后 M6 消费位窗口=帧级现算(vbar 链,读法②
-        缺省),T_SEARCH_A 布尔门退役(设计 13_buy_face_design §2.3)——
-        窗口非空帧正常买入。旧锁「T_SEARCH_A None ⇒ 溢余滞留」锁的是
-        布尔门语义,已被 T1 取代(改锁重推:出处=13_buy_face_design
+        """压库面:T1 短路径后 M6 消费位窗口=帧级现算(塌缩带锚,
+        ADR-0516 重锚),T_SEARCH_A 布尔门退役(设计 13_buy_face_design
+        §2.3)——窗口非空帧正常买入。旧锁「T_SEARCH_A None ⇒ 溢余滞留」
+        锁的是布尔门语义,已被 T1 取代(改锁重推:出处=13_buy_face_design
         §2.3「槽位布尔门退役」;滞留新语义=真无窗口帧,由
         test_cw_p56_t1 的 stub-registry 锁承载)。店牌=线成员副本:
         dominance 零重叠不过不抢,M6(不排线成员)独占评估。"""
