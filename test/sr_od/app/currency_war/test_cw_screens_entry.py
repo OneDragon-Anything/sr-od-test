@@ -980,17 +980,9 @@ def test_read_deploy_paddle_cap_and_count(test_context, test_image_dir: _test_cu
             assert x <= y, f'deployed({x}) > cap({y})'
 
 
-def test_tracked_bench_chars_seeds_identity() -> None:
-    """D-84:tracked_bench(buy OCR 名)→ BenchChar(跨轮 seed state.bench)。
-
-    SIFT 屏幕识别立绘不可行(主游脸库 + 图鉴立绘都不 match 备战 half-body)→ 用 buy 时
-    read_shop_cards OCR 的规范名持久化,跨轮 seed bench。锁 helper:名 → BenchChar 保身份 + roster 阵营。
-    """
-    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import _tracked_bench_chars
-    bcs = _tracked_bench_chars(['飞霄', '三月七', ''])
-    assert [bc.char_id for bc in bcs] == ['飞霄', '三月七']   # 空名跳过
-    assert all(bc.faction in FACTIONS or bc.faction == '?' for bc in bcs)   # 阵营 roster 派生 or '?'
-    assert all(bc.char_id for bc in bcs)   # 身份非空
+# (D-84 test_tracked_bench_chars_seeds_identity 已随 tracked_bench 旧名账退役删除:
+#  被锁的 _tracked_bench_chars helper 及其唯一消费点(旧回退播种)同批移除,
+#  事故帧回归锁迁至 test_cw4_shop_line.py 守卫族。)
 
 
 # ==================== w518_briefing_telemetry ====================

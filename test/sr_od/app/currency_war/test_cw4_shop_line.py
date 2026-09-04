@@ -341,6 +341,93 @@ class TestShopTerminatorContract:
         with pytest.raises(AssertionError, match='双账分离'):
             guard_expected_vs_tracked(st2, sess)
 
+    def test_guard_attribution_seed_vs_project(self):
+        """守卫两属消息分离(ADR-0517 §守卫两属 (ii) 迁移补裁):同一双账
+        分叉按出现时点归因——首动作前(stage='seed')报「播种/入口账分叉」,
+        投影后(默认 stage='project')报「project/mutate 模型分叉」。2026-09-05
+        OpenShop 事故:播种层双源分叉曾被投影消息误标,误导排查方向。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            guard_expected_vs_tracked,
+        )
+        sess = _session()
+        sess.tracked_bench_chars = [_bc('甲')]
+        st = _state(bench=[_bc('乙')])
+        with pytest.raises(AssertionError, match='播种/入口账'):
+            guard_expected_vs_tracked(st, sess, stage='seed')
+        with pytest.raises(AssertionError, match='project/mutate'):
+            guard_expected_vs_tracked(st, sess)
+
+    def test_openshop_incident_frame_seed_rebuild_semantics(self):
+        """OpenShop 事故帧锁(回归):tracked_bench_chars=[] + 残账
+        tracked_bench 含陈旧名(2026-09-05 两起同型 HIT 实录:
+        ①02:13 单笔——藿藿 02:11 买入进旧名账、RunDeploy 上场后主账被
+        入口对账纠成真空,旧名账无人清理存活到开店被回退播种复活 →
+        守卫首帧炸出 expected=[('藿藿',1)] tracked=[];
+        ②02:26 双笔——买牌-部署循环两轮累积 ['藿藿','丹恒·饮月'],
+        同签名分叉面扩大。复发频率 ≈ 每轮买牌-部署循环一次,残账
+        随循环笔数线性累积,故事故帧覆盖单笔与多笔两形态)。
+
+        锁形态选「缺席锁 + 入口重建语义锁」而非「播种后两账签名相等」:
+        退役后事故帧构造本身消失(tracked_bench 字段已从 StrategySession
+        删除),签名相等断言失去被测对象;更能拦回归的是两条——
+        ①缺席锁(下一用例):全 src 无任何 tracked_bench 符号残留,
+        回退播种在结构上不可能复活;
+        ②入口重建语义:主账真空(bench 真空=全部署的事实正确态)时,
+        播种结果必须为空、残账属性即使被人为挂回 session 也零影响,
+        守卫静默、LevelUp 投影后仍静默——若未来任何代码重新读残账
+        播种,state.bench 将出现陈旧名签名而本锁在 seed/project 两点
+        响亮炸出。
+        设计出处:docs/develop/currency_war/flow/screen_op.md §守卫两属;
+        ADR-0517 决策 8(入口观察即对账,唯一真值源=入口读屏)。
+        """
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            LevelUpOp,
+            guard_expected_vs_tracked,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import (
+            LevelUp,
+            bench_from_compact,
+        )
+        aop = LevelUpOp(LevelUp(cost=4))
+        # 两形态:单笔(02:13 HIT)与多笔累积(02:26 HIT,两轮买-部署循环)
+        for stale in (['藿藿'], ['藿藿', '丹恒·饮月']):
+            sess = _session()
+            sess.tracked_bench_chars = []      # 主账真空(入口对账纠成空=事实正确)
+            sess.tracked_bench = stale         # 残账(退役后仅属性残留;任何回退读取=回归)
+            sess.tracked_deployed = [_bc('藿藿'), _bc('艾丝妲'), _bc('银枝'), _bc('缇宝')]
+            # 入口重建语义:真空主账 → 期望态 bench 必须为空(陈旧名不复活)
+            st = _state(bench=bench_from_compact([]))
+            guard_expected_vs_tracked(st, sess, stage='seed')   # 播种期:静默
+            # 首动作 LevelUp 投影(bench 恒等变换)后:仍静默
+            proj = aop.project(st)
+            guard_expected_vs_tracked(proj, sess)               # project 期:静默
+            assert all(b is None for b in proj.bench), \
+                f'陈旧名被复活进期望态(残账={stale})'
+
+
+    def test_tracked_bench_tombstone_scan(self):
+        """缺席锁(墓碑扫描,测试纪律第 8 条合法源码扫描①):tracked_bench
+        旧名账在 src 的 currency_war 子树零**代码级读写点**(词边界排除
+        tracked_bench_chars;点号锚定属性访问,排除退役注释与同名局部变量
+        ——两者不构成回退播种载体)。带变异自检:先证正则确实能命中属性
+        访问形态,防正则失效的恒绿。事故背景 = 2026-09-05 OpenShop 双账
+        分叉(残账回退播种复活陈旧名)。
+        """
+        import re
+        from pathlib import Path
+        import sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops as _mod
+        cw_root = Path(_mod.__file__).parents[2]   # .../currency_war
+        pat = re.compile(r'\.tracked_bench\b')
+        # 变异自检:对属性访问命中;对合法同前缀名/注释/局部变量不命中
+        assert pat.search('session.tracked_bench.append')
+        assert not pat.search('session.tracked_bench_chars')
+        assert not pat.search('# 旧 tracked_bench 回退分支已退役')
+        assert not pat.search("tracked_bench = getattr(session, 'tracked_bench_chars')")
+        hits = [str(p) for p in cw_root.rglob('*.py')
+                if p.is_file() and pat.search(p.read_text(encoding='utf-8',
+                                                       errors='replace'))]
+        assert not hits, f'tracked_bench 旧名账读写点残留(回退播种载体未清):{hits}'
+
     def test_buy_and_levelup_continue_via_projection(self):
         """可续语义重锚:BuyCard/LevelUpShop 不终结循环——驱动器输出含
         后续动作且期望态推进(旧「可续不截断」的单动作继任形态:循环
