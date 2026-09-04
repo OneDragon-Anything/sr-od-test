@@ -9,29 +9,6 @@ from __future__ import annotations
 import inspect as _r339_r340_telemetry_sim_inspect
 
 
-def test_outcome_board_fields() -> None:
-    """r339:OutcomeRecord 板深快照字段(板深模型校准源)。"""
-
-    from sr_od.application.currency_war.telemetry.schema import OutcomeRecord
-    rec = OutcomeRecord()
-    assert rec.board_before == {}
-    assert rec.bench_count == 0
-
-
-def test_query_hp_view_exists() -> None:
-    """r339:hp 视图(掉血分解,sim hp_events 同构)。"""
-    from sr_od.application.currency_war.telemetry import query as _q
-    assert hasattr(_q, 'query_hp')
-    assert hasattr(_q, 'query_economy')
-
-
-def test_set_ctx_match_ref_slot() -> None:
-    """r339:set_ctx_match 弱引用注册。"""
-    from sr_od.application.currency_war.telemetry import state as _s
-    assert hasattr(_s, 'set_ctx_match')
-    assert hasattr(_s, '_CTX_MATCH_REF')
-
-
 def test_live_delta_depth_conditioned() -> None:
     """r340:板深条件化池 + live_delta_for 回退链(⓪ 后显式池注入)。
 

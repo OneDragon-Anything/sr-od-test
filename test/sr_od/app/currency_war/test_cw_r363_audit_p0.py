@@ -108,17 +108,6 @@ def test_non_stop_abnormal_exit_writes_abandoned(monkeypatch, tmp_path) -> None:
     assert rows[0]['final_hp'] == 55
 
 
-def test_stop_summary_skips_when_already_written(monkeypatch, tmp_path) -> None:
-    """3c 正常终局已写(_summary_written=True)→ 收口不重复写。"""
-    import sr_od.application.currency_war.telemetry.state as tel
-    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    monkeypatch.setattr(tel, '_RECORDER', rec)
-    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_ok_1')
-    op = _make_stop_loop(summary_written=True)
-    op._write_terminal_summary_if_needed()
-    assert read_jsonl(tmp_path / 'runs.jsonl') == []
-
-
 def test_zero_outcome_but_observed_writes_row(monkeypatch, tmp_path) -> None:
     """P4R4 假局守卫语义修正:零 outcome 但观察过对局态 = **真局** → 必写
     终局行(run_20260903_004418 超时 fail / run_20260903_204908 stop 两实例

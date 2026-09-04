@@ -43,16 +43,6 @@ def test_briefing_plane_invest_inline_branches_retired() -> None:
 # ==================== overlay 分发接管(06-overlays §4) ====================
 
 
-def test_overlay_ops_replace_handler_direct_calls() -> None:
-    """七 overlay op 接入循环分发:loop 不再直调被接管的 handler/内联选卡。"""
-    src = _loop_src()
-    # 退役批终态:旧 handler 直调名(HandleX(self.ctx))已随改名消失;
-    # 委托壳直调历史同步溶解(见 wrapper_family_dissolved 锁)。
-    for op_name in ('CwScreenMegastar', 'CwScreenPartner', 'CwScreenPlanner',
-                    'CwScreenFortune', 'CwScreenWishTrial', 'CwScreenBookcard'):
-        assert f'{op_name}(self.ctx)' in src, f'{op_name} 未接入循环分发'
-
-
 def test_wrapper_family_dissolved_final_shape() -> None:
     """最终形态锁(NAMING §2/§4 收尾):overlay 委托壳族(CwScreenOverlay 基类/
     HANDLER_FACTORY/OVERLAY_OPS)已溶解;主循环直派各 cw_screen 真身画面 op

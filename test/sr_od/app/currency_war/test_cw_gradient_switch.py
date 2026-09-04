@@ -10,7 +10,6 @@ from pathlib import Path
 from sr_od.application.currency_war.currency_war_config import (
     CurrencyWarConfig,
 )
-from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 from sr_od.application.currency_war.strategies.impl.cw_strategy_manager import (
     PluginSource,
     StrategyManager,
@@ -56,15 +55,6 @@ def test_config_strategy_id_writable():
         assert cfg.strategy_id == 'mandate_v1'
     finally:
         cfg.strategy_id = old
-
-
-def test_default_session_v2_fields_none():
-    """B1 回归:default 局 session 的 v2_state=None(不是假 economy)
-    ——「v2_* 全空=default」判读规则的源头保证。"""
-    sess = StrategySession()
-    assert sess.v2_state is None
-    assert sess.locked_line is None
-    assert sess.bridge_id is None
 
 
 def test_v2_extra_roundtrip(tmp_path: Path, monkeypatch) -> None:

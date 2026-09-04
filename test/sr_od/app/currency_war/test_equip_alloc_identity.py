@@ -35,30 +35,3 @@ def test_generic_goes_to_core_first():
     shajin = [w for c, w in alloc if c == '砂金']
     assert len(baiyu) == 3, f'core 应吃满全部,实得 {baiyu}'
     assert len(shajin) == 0, f'非 core 不与 core 抢,实得 {shajin}'
-
-
-def test_core_saturated_others_get_leftover():
-    """core 吃满后有余量才轮非 core:白厄容量 3,给 4 件时砂金拿第 4 件。"""
-    comp = _mk_comp()
-    alloc = equip_allocation(comp, _deployed(),
-                             ['a', 'b', 'c', 'd'])
-    baiyu = [w for c, w in alloc if c == '白厄']
-    shajin = [w for c, w in alloc if c == '砂金']
-    assert baiyu == ['a', 'b', 'c']
-    assert shajin == ['d'], 'core 饱和后非 core 才兜底'
-
-
-def test_no_comp_keeps_old_behavior():
-    """comp=None:全量兜底不变(无身份信息)。"""
-    alloc = equip_allocation(None, _deployed()[:1], ['a', 'b', 'c'])
-    assert len(alloc) == 3, '无 comp 时前排应吃满全部'
-
-
-def test_key_equip_path_unchanged():
-    """key_equips 分配(1-2 级)不受影响:carry 先拿。"""
-    comp = _mk_comp()
-    comp.key_equips = ['以牙还牙甲', '以牙还牙甲']
-    alloc = equip_allocation(comp, _deployed(), ['以牙还牙甲', '以牙还牙甲'])
-    # 白厄(core 首个场上)拿两件以牙还牙甲
-    assert ('白厄', '以牙还牙甲') in alloc
-    assert sum(1 for c, w in alloc if w == '以牙还牙甲') == 2

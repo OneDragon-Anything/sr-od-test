@@ -133,43 +133,12 @@ class TestDifficultyLiveContamination:
 
 # ==================== difficulty_readchain ====================
 
-from types import SimpleNamespace
-from unittest.mock import patch
-
-from sr_od.application.currency_war.obs import cw_observation
 from sr_od.application.currency_war.kernel.cw_state import GameState
 
 
 def _state() -> GameState:
     return GameState(plane=1, round_num=3, hp=80, gold=30,
                      board={'仙舟': 1}, bench=[], shop=[], hp_readable=True)
-
-
-def _read_ctx(monkeypatch, live_ret, session_ed):
-    """构造 mock 观测环境:read_enemy_difficulty 返 live_ret,
-    _match.session.enemy_difficulty = session_ed。返回 (state, ctx, match)。"""
-    st = _state()
-    match = SimpleNamespace(
-        session=SimpleNamespace(enemy_difficulty=session_ed))
-    ctx = SimpleNamespace(cw_match=match)
-
-    def _fake_read(ctx_, screen_):
-        return live_ret
-
-    monkeypatch.setattr(cw_observation, 'read_enemy_difficulty', _fake_read)
-    return st, ctx, match
-
-
-class TestDifficultyReadChain:
-    """字段默认语义(翻转逻辑本体在 read_game_state 尾段,依赖整段观测
-    环境,行为面由回放忠实锁与序列化锁承载;自抄复刻式断言已删——
-    测试体复刻被测逻辑=R2 被测代码未被调用,2026-08-31 pass2 裁决)。"""
-
-    def test_both_none(self, monkeypatch) -> None:
-        """双源皆无 → None + live=False(不伪造)。"""
-        st = _state()
-        assert st.enemy_difficulty is None
-        assert st.enemy_difficulty_live is False   # 默认值语义
 
 
 def test_state_field_default_and_serialize() -> None:

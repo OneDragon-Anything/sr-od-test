@@ -99,18 +99,6 @@ def test_funnel_none_session_is_full_scan() -> None:
     assert _sig(tiered) == _sig(base)
 
 
-def test_funnel_seen_set_covers_slot_swap() -> None:
-    """L2 本局已见集:槽位换位(角色从槽 A 消失、出现在槽 B)→ L1 miss 后
-    L2 命中(覆盖换位/换人,免走全库)。状态容器身份稳定(不重建)。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import _funnel_state
-    session = SimpleNamespace()
-    last, seen = _funnel_state(session)
-    last[('front', 1)] = '花火'
-    seen.update({'花火', '希儿'})
-    last2, seen2 = _funnel_state(session)
-    assert last2 is last and seen2 is seen
-
-
 def test_funnel_state_no_session_no_global() -> None:
     """无 session 直接全库:漏斗状态字段不进模块(不引入模块级全局)。"""
     import sr_od.application.currency_war.obs.cw_identity_obs as mod

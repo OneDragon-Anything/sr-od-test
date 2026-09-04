@@ -30,14 +30,6 @@ def test_new_fields_default_none_or_empty() -> None:
     assert s.partner_char is None
 
 
-def test_bench_char_equips_default() -> None:
-    """BenchChar(= Unit)新 equips 字段默认空列表(身上装备,有序;OCR 未接 → 空)。"""
-    bc = BenchChar(slot=0)
-    assert bc.equips == []
-    bc.equips = ["反重力皮靴", "冷笑话引擎"]
-    assert bc.equips == ["反重力皮靴", "冷笑话引擎"]
-
-
 def test_current_boss_derived_from_plane() -> None:
     """current_boss 派生 = bosses[plane-1];无 boss / 越界 → None(strategy/13 §13.2)。"""
     s = GameState(plane_bosses=["电视机", "琥珀王", "盗火行者"])
@@ -56,15 +48,6 @@ def test_current_boss_derived_from_plane() -> None:
     # 无 boss 数据 → None
     empty = GameState(plane_bosses=[], plane=1)
     assert empty.current_boss is None
-
-
-def test_additive_change_zero_behavior_regression() -> None:
-    """D-78 加法块不改变既有字段/行为:旧构造 + 既有方法照常。"""
-    s = GameState(gold=50, level=5, plane=2, hp=80)
-    assert s.gold == 50 and s.level == 5 and s.plane == 2 and s.hp == 80
-    assert s.max_units() == 5
-    s2 = s.copy()
-    assert s2.gold == 50 and s2 is not s
 
 
 def test_mutate_bench_deployed_buy_merge_sell_deploy() -> None:

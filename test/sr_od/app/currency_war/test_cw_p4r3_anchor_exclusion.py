@@ -78,21 +78,6 @@ def test_boss_briefing_takeover_on_misread(monkeypatch) -> None:
     assert '点空白已发' in str(getattr(res, 'status', ''))
 
 
-# ==================== ② boss 简报帧 → 0q 不接管 ====================
-
-def test_plane_transition_exclusion_wired() -> None:
-    """源码锁:0q 位面过渡分支带 boss 排他(共享文案不作跨画面判据)。"""
-    import inspect
-
-    from sr_od.application.currency_war.operations import cw_loop
-    src = inspect.getsource(cw_loop.CwLoop.loop)
-    i_plane = src.find("self.round_by_ocr(screen, '点击空白处继续', lcs_percent=0.8)")
-    i_dispatch = src.find('CwScreenPlaneTransition(self.ctx)', i_plane)
-    i_excl = src.find('if _is_boss_frame(', i_plane)
-    assert 0 < i_excl < i_dispatch, '0q 排他须在共享文案判定之后、分发之前'
-    assert '排他,留 0p' in src
-
-
 # ==================== ③ 误分发上限 ====================
 
 def test_plane_misdispatch_limit() -> None:

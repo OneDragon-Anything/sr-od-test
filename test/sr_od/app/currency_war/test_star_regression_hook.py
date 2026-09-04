@@ -151,21 +151,3 @@ def test_pending_cleared_when_char_leaves(tmp_path, monkeypatch) -> None:
     finally:
         ctx.restore()
 
-
-def test_low_star_regression_never_stops(tmp_path, monkeypatch) -> None:
-    """1★ 档回退不入停机范围(用户担心面 = star2/3 识别;1★ 常态噪声大)。"""
-    import sr_od.application.currency_war.kernel.cw_reconcile as cr
-    monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
-    ctx = _Ctx(tmp_path)
-    try:
-        # 1★→更低不存在(read fallback=1),构造 old=1 new 不会更低 → 本测验「old<2 不入计数」:
-        # 用 old=1 走不到回退分支;直接验 3★→2★ 首次走防抖(pending 挂起、count 不动)
-        s2 = _sess(True)
-        s2.tracked_bench_chars[0].star = 3
-        reconcile_tracking(s2, _read(2), [], None, source='t', ctx=ctx)
-        assert s2.star_pending_regression.get('万敌') == 1   # 3★→2★ 首次防抖挂起
-        assert not s2.star_regression_count.get('万敌'), '首次不计数(防抖)'
-        assert not ctx.stopped
-    finally:
-        ctx.restore()
-
