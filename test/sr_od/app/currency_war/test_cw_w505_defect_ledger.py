@@ -265,6 +265,49 @@ def test_query_prefers_ledger_gold_close_over_conflict(tmp_path: Path):
     assert 'unknown' in r3
 
 
+def test_spend_view_sim_int_ts_round_seq_disambiguation(tmp_path: Path):
+    """回归锁(sim 局 ts=轮序号 int):spend 视图查询不崩(旧版
+    `_match_conflict` 把 int ts 直传 fromisoformat 崩 TypeError),且
+    同 (plane, round) 冲突行按轮序号邻近窗消歧(取 |Δseq| 最小)。
+    跨形态不互配:int ts 与 ISO 冲突行互跳过(行为不猜)。"""
+    # legacy 行(无 gold_close)→ 回退冲突行 join,走 _match_conflict 全路径
+    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
+        'ts': 3, 'run_id': 's', 'plane': 1, 'round_num': 1,
+        'unit_seq': 1, 'boundary': 'closed'})
+    schema.append_jsonl(tmp_path / 'decisions.jsonl', {
+        'run_id': 's', 'ts': 3, 'plane': 1, 'round_num': 1,
+        'gold': 50, 'gold_readable': True, 'eval_breakdown': {},
+        'actions': [{'__type__': 'BuyCard', 'card': {'x': 300, 'name': 'X', 'cost': 5}}]})
+    # 同轮两条冲突行,seq=2 邻近(Δ1)、seq=7 远(Δ4)→ 消歧取 seq=2 行
+    schema.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
+        'ts': 7, 'field': 'gold_delta', 'old': 50, 'new': 50,
+        'verdict': '留证', 'source': 'shop_spend_audit', 'plane': 1, 'round_num': 1})
+    schema.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
+        'ts': 2, 'field': 'gold_delta', 'old': 50, 'new': 45,
+        'verdict': '留证', 'source': 'shop_spend_audit', 'plane': 1, 'round_num': 1})
+    lines = query.query_spend_ledger(tmp_path, 's')
+    r1 = next(ln for ln in lines if 'u1 p1r1' in ln)
+    assert 'effective' in r1  # 冲突行 join 成功(new=45 == plan 推算)不崩且消歧非远行
+
+
+def test_spend_view_live_str_ts_behavior_unchanged(tmp_path: Path):
+    """回归锁(实机局 ISO str ts):修复后秒窗消歧行为与旧版一致——
+    窗内就近行取值、窗外行不入;查询不崩。"""
+    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
+        'ts': '2026-08-28T12:05:00', 'run_id': 't', 'plane': 1, 'round_num': 2,
+        'unit_seq': 2, 'boundary': 'closed'})
+    schema.append_jsonl(tmp_path / 'decisions.jsonl', {
+        'run_id': 't', 'ts': '2026-08-28T12:05:05', 'plane': 1, 'round_num': 2,
+        'gold': 50, 'gold_readable': True, 'eval_breakdown': {},
+        'actions': [{'__type__': 'BuyCard', 'card': {'x': 300, 'name': 'X', 'cost': 5}}]})
+    schema.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
+        'ts': '2026-08-28T12:05:20', 'field': 'gold_delta', 'old': 50, 'new': 45,
+        'verdict': '留证', 'source': 'shop_spend_audit', 'plane': 1, 'round_num': 2})
+    lines = query.query_spend_ledger(tmp_path, 't')
+    r = next(ln for ln in lines if 'u2 p1r2' in ln)
+    assert 'effective' in r  # 20s 在 600s 秒窗内,join 到 new=45
+
+
 def test_shop_close_audit_wiring_lock():
     """买后 gold 收口对拍接线锁(静态;原 shop.py 段随壳退役迁 cw_screen_prep.finalize_buy_phase):spend_audit 点在 mismatch 分支之外
     无条件调 set_unit_gold_close(_final_gold)(失读 None 也照记);
