@@ -1086,3 +1086,86 @@ def test_deploy_target_sets_r70_dual_track() -> None:
     tgt2, carry2 = _has_dep_deploy_target_sets(None, '')
     assert tgt2 == set() and carry2 == set()
 
+
+# ==================== 换阵卖出义务臂(板满换阵死锁修复) ====================
+# 事故形态(第七局 r9 备战环,守卫三环 RunDeploy 单签名停机):线成型
+# fp=1.00、板 7/7 真满、bench 有 target 单位待进场,唯一腾位通道 = 卖
+# off-target deployed,但 W209 振荡熔断把 off-line 的引擎/配方件(艾丝妲
+# =旧线持续伤害、黑塔=银河学者引擎)按「恒不卖」护住 → sold 0/2 → 死锁。
+# 修复:线成型 ∧ 板满时 off-line fenced 件让位(换阵卖出义务臂);新线
+# core∪shared 仍保护(禁卖护栏不因换阵解除)。
+
+from sr_od.application.currency_war.data.cw_chars import get_char as _swap_get_char
+from sr_od.application.currency_war.kernel.cw_comps import get_comp as _swap_get_comp
+from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
+    fenced_swap_arm_of,
+    offtarget_sell_allowed,
+)
+
+
+def _swap_bonds(name: str) -> set[str]:
+    ch = _swap_get_char(name)
+    return set(ch.factions) | set(ch.flows)
+
+
+def test_w209_default_arm_still_fences_offline() -> None:
+    """守卫移除验证(停滞必须复现):义务臂关闭(默认形态,即修复前的
+    判据)下,事故板面(艾丝妲/停云/丹恒·饮月 deployed)逐个判卖——
+    off-line fenced 件(艾丝妲,flows=持续伤害)拒卖、target 单位照留
+    ⇒ sold=0 停滞形态复现(证明停机确由本判据承载,非其他环节)。
+    黑塔(银河学者/群攻)不在围栏键域(注册表事实:非 RECIPE∪ENGINE
+    成员),本不经熔断,不入本锁。"""
+    tf = {'仙舟', '列车同行'}
+    tc = {'花火', '瓦尔特', '姬子·启行', '三月七'}
+    for name in ('艾丝妲', '停云', '丹恒·饮月'):
+        assert offtarget_sell_allowed(name, _swap_bonds(name), tf, tc) is False, \
+            f'{name} 在义务臂关闭时须被拒卖(停滞形态复现)'
+    assert '持续伤害' in _swap_bonds('艾丝妲'), '锁前提:艾丝妲=旧线持续伤害'
+
+
+def test_w209_swap_arm_offline_fenced_sellable() -> None:
+    """事故帧锁(修复形态):线成型 + 板满 ⇒ 义务臂开启后 off-line fenced
+    件(艾丝妲=旧线持续伤害)进入可卖;target 单位(丹恒·饮月/停云/
+    忘归人)与新线 core∪shared 仍保护;非 fenced 的 off-line 件(黑塔)
+    两臂同可卖(原语义不变)。"""
+    tf = {'仙舟', '列车同行'}
+    comp = _swap_get_comp('列车同行')
+    tc = set(comp.core_chars)
+    protect = frozenset(set(comp.core_chars)
+                        | set(getattr(comp, 'shared_chars', []) or ()))
+    assert offtarget_sell_allowed(
+        '艾丝妲', _swap_bonds('艾丝妲'), tf, tc,
+        fenced_offline_sellable=True, protect_names=protect) is True
+    assert offtarget_sell_allowed(
+        '黑塔', _swap_bonds('黑塔'), tf, tc) is True   # 非 fenced:默认臂本就可卖
+    for name in ('丹恒·饮月', '停云', '忘归人'):   # target 单位两臂都留
+        assert offtarget_sell_allowed(
+            name, _swap_bonds(name), tf, tc,
+            fenced_offline_sellable=True, protect_names=protect) is False
+    for name in protect:   # 新线 core∪shared 禁卖护栏不因换阵解除
+        assert offtarget_sell_allowed(
+            name, _swap_bonds(name), tf, tc,
+            fenced_offline_sellable=True, protect_names=protect) is False
+
+
+def test_w209_swap_arm_trigger_gate() -> None:
+    """触发门真值表(纯函数 fenced_swap_arm_of):线成型(fp≥1.00)∧ 板满
+    (deployed 计 ≥ 前后排槽位总数)双条件;未成型或未满板帧不开启
+    (双轨期预囤框架件保护原语义零变化)。"""
+    assert fenced_swap_arm_of(1.0, 7, 2, 5) is True      # 事故形态:fp=1.00 ∧ 7/7
+    assert fenced_swap_arm_of(0.42, 7, 2, 5) is False    # 未成型(match3 同期对照)
+    assert fenced_swap_arm_of(1.0, 6, 2, 5) is False     # 未满板:无腾位需求
+    assert fenced_swap_arm_of(1.0, 8, 2, 5) is True      # 超满(cap 叠加)同辖
+
+
+def test_w209_swap_arm_wiring_lock() -> None:
+    """消费面源锁:_sell_offtarget_deployed 调用点必须带义务臂参数与
+    form_progress 成型度现读(禁有人在接线处静默退回恒关形态)。"""
+    from pathlib import Path
+    src = Path(
+        __import__('sr_od.application.currency_war.operations.cw_op.cw_op_deploy',
+                   fromlist=['x']).__file__).read_text(encoding='utf-8')
+    assert 'fenced_offline_sellable=_fenced_arm' in src
+    assert 'fenced_swap_arm_of(' in src
+    assert 'form_progress' in src
+
