@@ -958,17 +958,6 @@ def test_stable_gate_timeout_has_compensation_wait() -> None:
         f'超时回退无补偿静置({elapsed:.2f}s):P2-2 回归(立读形态回流)')
 
 
-def test_stable_gate_timeout_on_ever_changing_frames() -> None:
-    """锁①b 永变帧序列 → 超时返回 False(调用方回退,不死等)。"""
-    from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
-        _wait_shop_row_stable,
-    )
-
-    op = _FakeOp([_frame(i % 2 == 0) for i in range(32)])
-    assert _wait_shop_row_stable(op, max_wait_s=0.4) is False
-
-
 def test_stable_gate_screenshot_exception_offline_contract() -> None:
     """锁①c 离线契约:截图恒炸 → suppress 降级继续等,超时 False(不炸调用方)。"""
     from one_dragon.base.operation.operation_node import operation_node

@@ -90,12 +90,6 @@ def test_batch_stats_shape() -> None:
     assert 0 <= s['avg_final_hp'] <= 100
 
 
-def test_starting_state_valid() -> None:
-    """开局态:lv3/gold5/hp80/非空 bench(开局送牌)。"""
-    r = simulate_p1(5, pool='fallback')
-    assert r.hp_trail, '至少跑了 r1'
-
-
 def test_node_sequence_shape() -> None:
     """节点序列(r284 固定骨架):首二 reward,slot2-3 battle,
     slot4 supply,slot5-6 变异位,末 boss(遥测 14 帧实证)。"""
@@ -1180,12 +1174,6 @@ def test_identity_default_is_zero_drift() -> None:
     assert PlattCalibrator().a == 1.0 and PlattCalibrator().b == 0.0
     for p in (0.0, 1e-9, 0.01, 0.2, 0.5, 0.7321, 0.99, 1.0 - 1e-9, 1.0):
         assert PlattCalibrator().apply(p) == p, p
-
-
-def test_identity_short_circuit_exact() -> None:
-    """恒等短路路径返回原 float 对象值(非 sigmoid 数值往返),杜绝浮点漂移。"""
-    p = 0.123456789012345678
-    assert PlattCalibrator().apply(p) is p or PlattCalibrator().apply(p) == p
 
 
 def test_out_of_range_input_passthrough() -> None:

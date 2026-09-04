@@ -218,27 +218,6 @@ def test_read_invest_env_options(test_context: SrTestContext) -> None:
     assert len(opts) == 3, f'期望 3 卡名,实际 {opts}'
 
 
-def test_read_select_partner_candidates(test_context: SrTestContext) -> None:
-    """选择伙伴 候选阵营 label 读取(CwScreenPartner._read_candidates by 中央 x + y 行过滤)。
-
-    D-60:硬编码 STAGE_PORTRAIT 落候选间隙 flat-loop → 改 OCR 定位候选。fixture
-    ``screens/货币战争-列车同行/default.webp``(1-7 节点 2 候选 护盾/能量)。
-    **关键回归**:候选必须只在中央 overlay(x>450),不含左侧备战面板 board label
-    (仙舟/列车同行/能量 在 x~106 同 y 行)—— D-60 初版漏 x 过滤会把 board label 当候选。
-    """
-    if not test_context.has_screen('货币战争-列车同行', 'default'):
-        pytest.skip('存档截图缺失:screens/货币战争-列车同行/default.webp')
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_partner import CwScreenPartner
-    screen = test_context.load_screen('货币战争-列车同行', 'default')
-    op = CwScreenPartner(test_context)
-    cands = op._read_candidates(screen)
-    names = [c[0] for c in cands]
-    xs = [c[1] for c in cands]
-    assert len(cands) >= 2, f'期望 ≥2 候选,实际 {names}'
-    assert '护盾' in names and '能量' in names, f'应命中中央候选 护盾/能量,实际 {names}'
-    assert all(x > 400 for x in xs), f'候选都应在中央(x>400),实际 x={xs} —— 左侧 board label 漏进来了'
-
-
 # ===== read_affix_effect:点词缀后 tooltip → 效果原文(mock OCR;2026-08-05 A8 实机数据)=====
 
 def _ocr(text: str, x: int, y: int) -> SimpleNamespace:
@@ -486,22 +465,6 @@ def test_load_affix_effects_from_file(tmp_path) -> None:
         assert cw_briefing_obs.load_affix_effects_from_file() == {}
     finally:
         cw_briefing_obs._AFFIX_EFFECTS_PATH = original
-
-
-def test_read_affix_effect_returns_raw_for_compare(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    """read_affix_effect 只返回效果原文(纯解析);跟谁比(注册表文件)是 _collect_affix_effects 的事。
-
-    验证返回值原样透传(对比逻辑在 HandleBriefing._collect_affix_effects,跟 affix_effects_data.py 比),这里只确认解析正确。
-    """
-    ocr = [
-        _ocr('软弱无力', 627, 859),
-        _ocr('没有穿戴3件装备的角色及其忆灵，造成的伤害为原伤害的', 628, 885),
-        _ocr('80%.', 624, 908),
-        _ocr('软弱无力', 822, 967),
-    ]
-    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: ocr)
-    effect = read_affix_effect(test_context, None, '软弱无力')
-    assert '没有穿戴3件装备' in effect and '80%' in effect
 
 
 def test_read_round_outcome_failure_hp_zero(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:

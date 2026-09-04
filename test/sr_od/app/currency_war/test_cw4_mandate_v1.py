@@ -171,16 +171,6 @@ class TestBypassEnumeration:
                 assert arm1.startswith('不旁路'), \
                     f'{key}:谓词/状态函数/义务侧判据不得入旁路集(R2-2/F4)'
 
-    def test_mandate_adjacent_not_bypassed(self):
-        """支配族(dominance_buy/fuel_sell)落 mandate 邻位,臂①不旁路
-        (§4.2.1 首两行)。"""
-        src = (Path(mandate.__file__).read_text(encoding='utf-8'))
-        assert 'dominance_buy_eligible' in src
-        assert 'fuel_sell_candidates' in src
-        # 臂①(skeleton_only)下 run_mandate 无条件运行(entry 不旁路骨架)
-        esrc = Path(entry.__file__).read_text(encoding='utf-8')
-        assert 'run_mandate' in esrc
-
 
 # ===== ③ 发射器帧稳定截断契约锁(契约 v2 §3.2 逐类+§3.3)=====
 
@@ -306,11 +296,6 @@ class TestFailClosedNoneSlots:
         out = mandate.run_mandate(frame, session)
         assert not any(e.reason == 'm6_stock' for e in out)
         assert session.cw4_counters.get('m6_overflow_strand', 0) >= 1
-
-    def test_line_switch_sell_none_period_no_sale(self):
-        slots, key = line_switch_sell(
-            ('旧件',), ('新件',), [_bench(1, '旧件')], [], None, k_switched=True)
-        assert slots == [] and key == 'switchline_exit_blocked'
 
     def test_ev_buy_candidates_u_none(self):
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (

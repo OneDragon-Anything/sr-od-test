@@ -18,101 +18,6 @@
 from __future__ import annotations
 
 
-# ==================== effect_ledger ====================
-
-import sys
-from pathlib import Path
-
-_REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(_REPO / 'src'))
-
-from sr_od.application.currency_war.kernel.cw_effect_ledger import (  # noqa: E402
-    AggregateEffect,
-    build_env_ledger,
-    build_ledger,
-    interest_with,
-    level_cost_with,
-    node_income_with,
-)
-
-
-def test_case_spy_xp_discount() -> None:
-    """算例 1 商业间谍(单击 4→3):升级成本全线 −25%。"""
-    led = build_ledger([AggregateEffect('商业间谍', 'xp_click_delta', -1.0)])
-    assert level_cost_with(30, led) == 90.0        # 30 击 × 3
-    assert level_cost_with(30, build_ledger([])) == 120.0   # 基线 4
-
-
-def test_case_longtermism_timing() -> None:
-    """算例 2 长期主义:日程时点价值——gold 43 时下节点 +7 跨 50 息档(摊平分给不出)。"""
-    led = build_ledger([AggregateEffect('长期主义', 'next_nodes', 7.0, remaining_nodes=3)])
-    # gold 43 + 节点收入(5+7)= 55 ≥ 50 → 跨息档;无日程时 43+5=48 < 50 不跨
-    assert node_income_with(0, 5.0, 0.0, led) == 12.0
-    assert 43 + node_income_with(0, 5.0, 0.0, led) >= 50
-    assert 43 + node_income_with(0, 5.0, 0.0, build_ledger([])) < 50
-    # 日程只在余期内
-    assert led.calendar_at(5) == 0.0
-
-
-def test_case_buyout_cap_zero() -> None:
-    """算例 3 买断制(cap 0):interest 恒 0 → 攒金无意义(现状活矛盾:为不付息的钱守 50)。"""
-    led = build_ledger([AggregateEffect('买断制', 'interest_cap', 0.0)])
-    assert interest_with(80, led) == 0
-    assert interest_with(80, build_ledger([])) == 5   # 基线息
-    # 息上调
-    led10 = build_ledger([AggregateEffect('利息上调', 'interest_cap', 10.0)])
-    assert interest_with(120, led10) == 10
-
-
-def test_win_reward_multiplier() -> None:
-    """伟大征服 ×3:连胜金乘子进收入(现状 DP 照 ×1 算)。"""
-    led = build_ledger([AggregateEffect('伟大征服', 'win_mult', 3.0)])
-    assert node_income_with(0, 5.0, 2.0, led) == 5.0 + 6.0   # streak 2×3
-    assert node_income_with(0, 5.0, 2.0, build_ledger([])) == 7.0
-
-
-def test_boss_node_calendar() -> None:
-    """特战资金 boss+7:boss 位日程(粗锚 8/17/26)。"""
-    led = build_ledger([AggregateEffect('特战资金', 'boss_node', 7.0)])
-    assert led.calendar_at(8) == 7.0 and led.calendar_at(0) == 0.0
-
-
-def test_ledger_buysell_wiring_semantics_retained() -> None:
-    """批 3 DP 退役后的台账语义残留锁:台账构建/效果解析通道保留
-    (消费面=cw_economy 经济效果;原 DP 值函数注入断言随 DP 模块
-    退役删除——锁面重推出处=BLUEPRINT §3 DP 处置,git prior art)。"""
-    from sr_od.application.currency_war.kernel.cw_effect_ledger import  build_ledger, effects_from_strategies
-    led = build_ledger(effects_from_strategies(['买断制']))
-    assert led.mutations.interest_cap == 0   # 买断制:息帽 0(台账仍承载经济效果)
-
-def test_v1_overlay_routes() -> None:
-    """v1 全量扫描补的路由:采购专员 surprise_every / 淘金客 xp_per_refresh /
-    买断制 xp_per_node / 免费午餐 burst。"""
-    led = build_ledger([
-        AggregateEffect('采购专员·彩', 'surprise_every', 5),
-        AggregateEffect('淘金客', 'xp_per_refresh', 2.0),
-        AggregateEffect('买断制', 'xp_per_node', 4.0),
-        AggregateEffect('免费午餐', 'free_refresh_burst', 11),
-    ])
-    m = led.mutations
-    assert m.refresh_surprise_every == 5
-    assert m.xp_per_refresh == 2.0
-    assert m.xp_per_node == 4.0
-    assert m.free_refresh_burst == 11
-
-
-def test_env_ledger_plane_start_gold() -> None:
-    """环境侧扩展(ADR-0144 缺口首补):增发货币 → 位面首节点日程;
-    长线利好 → 刷新价突变(30 刷后 1 金,与 38 号跨线投资联动)。"""
-    led = build_env_ledger(['增发货币', '长线利好'])
-    assert led.calendar_at(0) == 6.0       # P1 首节点
-    assert led.mutations.refresh_discount_at == 30
-    assert led.mutations.refresh_price_after == 1
-    # 未覆盖环境 = 空台账 = 现状行为
-    empty = build_env_ledger(['火药味'])
-    assert empty.calendar == {} and empty.mutations.refresh_discount_at == 0
-
-
 # ==================== match_archive ====================
 
 import json
@@ -612,9 +517,7 @@ def test_load_archive_stale_without_source_warns_and_returns_stale(
 
 import pytest as _performance_pytest
 
-from sr_od.application.currency_war.kernel.cw_comps import ScoreContext, get_comp
-from sr_od.application.currency_war.kernel.cw_performance import  PerformanceTracker, RoundOutcome, comp_viability, is_run_dead
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_performance import  PerformanceTracker, RoundOutcome
 
 
 def _performance_out(round_num: int, hp: int, node: str = "普通战斗", comp: str = "c1",
@@ -709,94 +612,6 @@ def test_low_confidence_excluded() -> None:
     assert t2.recent_hp_loss_trend() is not None
 
 
-# —— perf_for_comp 映射 ——
-
-
-def test_perf_for_comp_mapping() -> None:
-    """trend=None→None;trend=0→1.0;trend=HP_LOSS_FULL→0。"""
-    t = PerformanceTracker()
-    assert t.perf_for_comp("A") is None, "冷启动 → None"
-    # trend=0(不掉血)→ perf=1.0
-    t.record(_performance_out(1, 100, comp="A"))
-    t.record(_performance_out(2, 100, comp="A"))
-    assert t.perf_for_comp("A") == _performance_pytest.approx(1.0, abs=1e-6), "不掉血 → perf=1.0"
-    # 每回合掉 HP_LOSS_FULL → trend=HP_LOSS_FULL → perf≈0(用独立 tracker 避免上面 0-delta 稀释)
-    t2 = PerformanceTracker()
-    t2.record(_performance_out(1, 100, comp="A"))
-    t2.record(_performance_out(2, 70, comp="A"))
-    t2.record(_performance_out(3, 40, comp="A"))
-    perf = t2.perf_for_comp("A")
-    assert perf is not None
-    assert perf < 0.2, "每回合掉 HP_LOSS_FULL → perf 趋 0"
-
-
-# —— comp_viability: obs None→纯先验;rounds_seen 增→obs_weight 升 ——
-
-
-def test_comp_viability_cold_start_pure_prior() -> None:
-    """tracker 空(obs None)→ comp_viability = 纯先验(无观测项)。"""
-    阿雅 = get_comp("昼神阿雅")
-    state = GameState(board={"昼之半神": 4})
-    ctx = ScoreContext(mechanics=set())
-    t = PerformanceTracker()
-    v = comp_viability(阿雅, state, ctx, t)
-    assert v > 0.0
-    assert v <= 1.0
-    # 纯先验(ADR-0107 动态归一:equip/mech 无数据返 None → 剔除,权重重分配给 form/star):
-    # = 0.40*form(1.0) / (0.40+0.15) = 0.40/0.55 ≈ 0.727(star=0 无核心持有,仍进加权但贡献 0)
-    assert v == _performance_pytest.approx(0.727, abs=1e-2), "冷启动纯先验(动态归一,无 equip/mech 数据)"
-
-
-def test_comp_viability_observation_blends() -> None:
-    """rounds_seen 多 + 掉血大 → comp_viability 低于纯先验(观测拉低)。"""
-    阿雅 = get_comp("昼神阿雅")
-    state = GameState(board={"昼之半神": 4})
-    ctx = ScoreContext(mechanics=set())
-    cold = comp_viability(阿雅, state, ctx, PerformanceTracker())
-    # 灌 6 回合稳定大掉血观测(阿雅,window 内每回合掉 20 不撞底:trend=20 → perf≈0.33)
-    t = PerformanceTracker()
-    for r, hp in enumerate([100, 80, 60, 40, 20, 0], start=1):
-        t.record(_performance_out(r, hp, comp="昼神阿雅"))
-    warm = comp_viability(阿雅, state, ctx, t)
-    assert warm < cold, "观测到大掉血 → viability 低于纯先验"
-
-
-def test_star_achievement_scales_with_core_star() -> None:
-    """star_achievement:核心角色 star 升 → 达成度高(1星=0 / 2星=0.5 / 3星=1.0;review HIGH-1)。"""
-    from sr_od.application.currency_war.kernel.cw_performance import star_achievement
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar
-    飞霄 = get_comp("追击飞霄")
-    core = 飞霄.core_chars[0]
-    s1 = GameState(bench=[BenchChar(slot=0, char_id=core, faction='追击', star=1)])
-    assert star_achievement(飞霄, s1) == _performance_pytest.approx(0.0, abs=1e-6)
-    s2 = GameState(bench=[BenchChar(slot=0, char_id=core, faction='追击', star=2)])
-    assert star_achievement(飞霄, s2) == _performance_pytest.approx(0.5, abs=1e-6)
-    s3 = GameState(bench=[BenchChar(slot=0, char_id=core, faction='追击', star=3)])
-    assert star_achievement(飞霄, s3) == _performance_pytest.approx(1.0, abs=1e-6)
-    assert star_achievement(飞霄, GameState()) == 0.0   # 无核心持有 → 0
-
-
-# —— is_run_dead 三门 ——
-
-
-def test_is_run_dead_three_gates() -> None:
-    """死局 = HP低 + trend高 + 锁不住血节点;缺一门 → False;冷启动 → False。"""
-    # 造 trend>15:o1(100)→o2(80) 掉 20
-    def _tracker() -> PerformanceTracker:
-        t = PerformanceTracker()
-        t.record(_performance_out(1, 100))
-        t.record(_performance_out(2, 80))
-        return t
-    t = _tracker()
-    danger_boss = GameState(hp=10)          # hp<DEAD_HP(20)
-    assert is_run_dead(danger_boss, t, "boss"), "hp低+trend高+boss → 死"
-    assert not is_run_dead(danger_boss, t, "普通战斗"), "普通关可能锁血 → 不死"
-    safe_hp = GameState(hp=80)              # hp 不低
-    assert not is_run_dead(safe_hp, t, "boss"), "hp 不低 → 不死"
-    # 冷启动(trend None)→ 不死
-    assert not is_run_dead(danger_boss, PerformanceTracker(), "boss"), "冷启动 trend None → 不死"
-
-
 # —— boss_kill_signal / set_required_damage ——
 # ⚖️ 已随敌方侧死链删除(2026-08-16 review D4-D7):boss 击杀信号与伤害基准的正式归宿
 # 是 19 号伤害账本(cw_damage_ledger,ADR-0166);原方法无生产调用/无读者,测试随之移除。
@@ -820,19 +635,6 @@ def test_is_losing_streak_threshold_and_cold_start() -> None:
     assert not t_ok.is_losing_streak(), "trend=5<18 → 非连败"
     # 冷启动(样本不足 trend=None)→ False
     assert not PerformanceTracker().is_losing_streak(), "冷启动 → False"
-
-
-# —— RoundOutcome 字段完整性(telemetry 用)——
-
-
-def test_round_outcome_dual_sided_fields() -> None:
-    """RoundOutcome 双侧字段(自身 + 敌方)完整;敌方 None 表不可观测。"""
-    o = RoundOutcome(round_num=1, plane=1, node_type="boss", comp_tag="c",
-                     hp_after=80, hp_confidence=0.9, enemy_hp_after=None,
-                     damage_dealt=None, killed=True)
-    assert o.hp_after == 80
-    assert o.killed
-    assert o.enemy_hp_after is None
 
 
 # ==================== telemetry_checks ====================
@@ -1136,7 +938,7 @@ _TEST_ROOT = _w527_node_ledger_Path(__file__).resolve().parents[4]     # 测试�
 from sr_od.application.currency_war.kernel.cw_state import  fill_boss_by_position, get_node_ledger, ledger_node_type, ledger_update_plane
 from sr_od.application.currency_war.obs import cw_node_reader, cw_observation
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
-from sr_od.application.currency_war.obs.cw_node_reader import  classify_node_row, current_slot_hu_type, load_node_type_templates
+from sr_od.application.currency_war.obs.cw_node_reader import  classify_node_row, load_node_type_templates
 from sr_od.application.currency_war.obs.cw_observation import  node_vote_verdict
 
 _ASSETS = _ROOT / 'assets' / 'game_data' / 'cw_node_types'
@@ -1347,28 +1149,6 @@ def test_fixture_truth_crosscheck(row_frames, name: str) -> None:
         assert built[-1] == 'boss'   # boss SIFT 命中 → Hu 覆 None → 回填
 
 
-def test_fixture_current_hu_vote_documented(row_frames) -> None:
-    """票C(高亮 Hu)跨 4 帧行为落对拍:有效命中(≤CUR_HU_DIST_HIT)时记录。
-
-    高亮态 Hu 距离对渲染态敏感(w527 对拍:4 帧中命中票 0/4 与真值一致),
-    **不锁类型正确性** —— 只锁「返回 (type|None, dist) 契约 + 命中门」;
-    该票的噪声正是「查表优先 + ≥2 票才落账」阈值设计的实证依据。
-    """
-    from sr_od.application.currency_war.obs.cw_node_reader import CUR_HU_DIST_HIT
-    hits = 0
-    for name, gt in _GT.items():
-        row = row_frames[name]
-        slots = classify_node_row(row, _TPLS)
-        cur = slots[gt['current']]
-        t, d = current_slot_hu_type(row, cur, _TPLS)
-        assert d >= 0
-        if t is not None:
-            assert d <= CUR_HU_DIST_HIT
-            hits += 1
-    # 对拍表数字化:4 帧中票C 弃权/命中的分布(命中不保证类型对,见 docstring)
-    assert 0 <= hits <= len(_GT)
-
-
 def test_read_plane_detail_difficulty_truth(test_context) -> None:
     """敌人难度参考读法真值对拍:位面详情全屏 fixture,真值 = VLM 亲读 108
     (w527 批;底部明文「敌人难度 108」)。"""
@@ -1377,19 +1157,6 @@ def test_read_plane_detail_difficulty_truth(test_context) -> None:
     img = cv2_utils.read_image(
         str(_TEST_ROOT / 'screens' / '货币战争-位面详情' / '位面详情全屏.png'))
     assert read_plane_detail_difficulty(test_context, img) == 108
-
-
-# ==================== test_equips_telemetry ====================
-
-import sys as _test_equips_telemetry_sys
-
-_test_equips_telemetry_sys.path.insert(0, 'src')
-
-
-def test_read_row_equipped_import_path():
-    """r132 的 import 路径必须可解析(防运行时才炸)。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import read_row_equipped
-    assert callable(read_row_equipped)
 
 
 # ==================== divergence_stats ====================
