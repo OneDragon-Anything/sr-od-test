@@ -9,11 +9,6 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw4 import proof, shop
-from sr_od.application.currency_war.decision.cw4.audit import provisional
-from sr_od.application.currency_war.decision.cw4.bridge import (
-    MandateV1Strategy,
-)
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
@@ -33,6 +28,11 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof, shop
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
 )
 
 # ===== 测试基建 =====
@@ -454,7 +454,7 @@ class TestFixpoolShopCheckpoints:
 
     def test_d_buynote_embedded(self):
         """D-BUYNOTE:P48 整买纪律作为常量判据内嵌(spend_unified 直测)。"""
-        from sr_od.application.currency_war.decision.cw4.criteria import (
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
             levelup as crit_levelup,
         )
         assert not crit_levelup.spend_unified(2, 4, 4)   # 散买拦截
@@ -701,29 +701,8 @@ class TestKGapFallback:
 @pytest.mark.slow
 class TestSimGates:
 
-    def test_baseline_self_pairing_zero_drift_n20(self):
-        """⑤ 基线臂零漂移复跑:decision_v2 自配对 n≥20 ledger 逐位相等
-        (透传拆除后证明本批没污染基线臂)。"""
-        from sr_od.application.currency_war.sim.ab_core_swap import (
-            baseline_self_pairing_gate,
-        )
-        report = baseline_self_pairing_gate(n=20, seed_base=0,
-                                            pool='snapshot')
-        assert report['ok'], report
-
-    def test_arm_diff_existence_n6(self):
-        """④ 双臂相异实证:小 n 配对 diff>0 且 ledger 可读
-        (A/B 有测量对象的存在性证明,非正式 A/B)。"""
-        from sr_od.application.currency_war.sim.ab_core_swap import (
-            arm_diff_probe,
-        )
-        report = arm_diff_probe(n=6, seed_base=0, pool='snapshot')
-        assert report['ok'], report
-        probe = report['ledger_probe']
-        assert probe is not None
-        assert probe['baseline']['rows'] > 0
-        assert probe['new_core']['rows'] > 0
-
+    # (基线自配对门/双臂相异探针已随基线臂退役删除——统一迁移批 ② A9;
+    #  单臂确定性自检 = 下方 new_core 自配对门。)
     def test_new_core_self_pairing_n10(self):
         """R197 症5:新臂(mandate_v1)零漂移自配对门——同工厂双臂
         同 seed 同池 ledger 逐位相等(n≥10;确定性自检,与基线门对称;

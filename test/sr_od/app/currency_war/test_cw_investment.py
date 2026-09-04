@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_investment 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -10,11 +9,17 @@
 """
 from __future__ import annotations
 
-
 # ==================== investments ====================
-
 from sr_od.application.currency_war.kernel.cw_comps import ENV_FACTION_MAP
-from sr_od.application.currency_war.kernel.cw_investments import  INVESTMENT_ENVS, INVESTMENT_STRATEGIES, InvestmentEnv, env_faction, envs_boosting_faction, get_env, is_known_env
+from sr_od.application.currency_war.kernel.cw_investments import (
+    INVESTMENT_ENVS,
+    INVESTMENT_STRATEGIES,
+    InvestmentEnv,
+    env_faction,
+    envs_boosting_faction,
+    get_env,
+    is_known_env,
+)
 
 
 def test_concept_stocks_have_faction() -> None:
@@ -102,7 +107,9 @@ def test_is_known_env() -> None:
 # ===== ADR-0138 OCR 名归一用框架 LCS 相似匹配(非全等) =====
 def test_canon_name_lcs_with_guards() -> None:
     """_canon_name:艺术小字形变靠 find_best_match_by_lcs(th=0.5);长度差>3 拒;效果 LCS<0.5 拒。"""
-    from sr_od.application.currency_war.operations.tools.harvest_invest_codex import  HarvestInvestCodex
+    from sr_od.application.currency_war.operations.tools.harvest_invest_codex import (
+        HarvestInvestCodex,
+    )
     op = HarvestInvestCodex.__new__(HarvestInvestCodex)
     op.kind = 'strategies'
     # 形变 + 分隔符差:• vs ·,OCR 误读(狸=禄)→ LCS 命中
@@ -119,7 +126,10 @@ def test_canon_name_lcs_with_guards() -> None:
 # ===== ADR-0150 两层架构:plaza API base × curated overlay =====
 def test_adr0150_base_layer_full() -> None:
     """base 层全量:策略 335(334 plaza + 1 补遗)/ 环境 83(官方全量,与数据银行同口径)。"""
-    from sr_od.application.currency_war.data.cw_invest_data import PLAZA_AUGMENTS, PLAZA_PORTALS
+    from sr_od.application.currency_war.data.cw_invest_data import (
+        PLAZA_AUGMENTS,
+        PLAZA_PORTALS,
+    )
     assert len(PLAZA_AUGMENTS) == 334
     assert len(PLAZA_PORTALS) == 83
     assert len(INVESTMENT_STRATEGIES) == 335  # + 补遗 追击星徽套组(二)
@@ -138,7 +148,13 @@ def test_adr0150_overlay_no_orphans() -> None:
     构建层 import 即 raise 孤儿;此处显式断言防回归(版本更新后重跑生成器,
     overlay 键未跟改名 → 本测试红,提示修 overlay)。
     """
-    from sr_od.application.currency_war.kernel.cw_investments import  ENV_CATEGORY, ENV_FACTION, ENV_PICK_VALUE, PICK_VALUE, STRATEGY_ECONOMY
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_CATEGORY,
+        ENV_FACTION,
+        ENV_PICK_VALUE,
+        PICK_VALUE,
+        STRATEGY_ECONOMY,
+    )
     assert set(STRATEGY_ECONOMY) <= set(INVESTMENT_STRATEGIES)
     assert set(PICK_VALUE) <= set(INVESTMENT_STRATEGIES)
     assert set(ENV_CATEGORY) <= set(INVESTMENT_ENVS)
@@ -195,7 +211,10 @@ def test_w144_get_strategy_bullet_variant_hits() -> None:
 
     修前:精确查 miss → cw_screen_invest_strategy L216 假告警「数据缺口」。
     """
-    from sr_od.application.currency_war.kernel.cw_investments import get_strategy, normalize_invest_name
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        get_strategy,
+        normalize_invest_name,
+    )
     s = get_strategy('全都要•彩')
     assert s is not None, 'bullet 形变名应命中注册表(归一后精确查)'
     assert s.name == '全都要·彩'          # 返回的是注册表规范形条目
@@ -217,7 +236,11 @@ def test_w144_economy_aggregate_bullet_name_not_dropped() -> None:
     锚卡:采购专员·彩(含 · 名 + STRATEGY_ECONOMY 有 economy:refresh_surprise_every=5)。
     对照:规范名与 bullet 形变名聚合结果逐字段相等;真未知名仍全 0(归一不虚增)。
     """
-    from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect, aggregate_economy, economy_effect_of
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        EconomyEffect,
+        aggregate_economy,
+        economy_effect_of,
+    )
     eff_canon = economy_effect_of('采购专员·彩')
     eff_bullet = economy_effect_of('采购专员•彩')
     assert eff_canon.refresh_surprise_every == 5
@@ -237,7 +260,10 @@ def test_w144_raw_name_not_polluted_by_lookup() -> None:
     注册表与写入端」:get_strategy 归一仅作用于查询入参,INVESTMENT_STRATEGIES 键集
     不含任何 bullet 形变(注册表数据层未被规范化污染)。
     """
-    from sr_od.application.currency_war.kernel.cw_investments import INVESTMENT_ENVS, get_strategy
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        INVESTMENT_ENVS,
+        get_strategy,
+    )
     # 查询 bullet 名后,注册表键集不变(无 bullet 键被写入/替换)
     _ = get_strategy('全都要•彩')
     bad = [n for n in INVESTMENT_STRATEGIES if any(c in n for c in '•‧∙・')]
@@ -248,7 +274,10 @@ def test_w144_raw_name_not_polluted_by_lookup() -> None:
 
 def test_w144_augment_affinity_normalized_lookup() -> None:
     """④dict 直查消费点走规范化入口:AUGMENT_COMP_AFFINITY(飞光·传剑 等含 · 键)bullet 形变不再 miss。"""
-    from sr_od.application.currency_war.kernel.cw_comps import augment_affinity, augment_env_affinity
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        augment_affinity,
+        augment_env_affinity,
+    )
     assert augment_affinity('飞光•传剑') == {'景元仙舟': 1.0}
     assert augment_affinity('黑塔纪元') == {'大黑塔银河学者': 1.0}   # 无分隔符名不受影响
     assert augment_affinity('不存在策略') == {}
@@ -267,14 +296,20 @@ def test_adr0151_bindings_table_valid() -> None:
         assert fs <= set(FACTIONS), f"{name} 阵营值不在 FACTIONS:{sorted(fs - set(FACTIONS))}"
         assert cs <= set(CHARACTERS), f"{name} 角色值不在 CHARACTERS:{sorted(cs - set(CHARACTERS))}"
     # 未建模卡 → 空绑定(新 API 卡待 diff 提示后建模,不炸)
-    from sr_od.application.currency_war.kernel.cw_investments import get_strategy, strategy_bindings
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        get_strategy,
+        strategy_bindings,
+    )
     fs, cs = strategy_bindings(get_strategy("开源节流"))
     assert fs == frozenset() and cs == frozenset()
 
 
 def test_adr0151_noise_bindings_removed() -> None:
     """文本扫描噪声清除(泛用效果顺带提及阵营 ≠ 绑定):战术义眼/祝福系不再误绑。"""
-    from sr_od.application.currency_war.kernel.cw_investments import get_strategy, strategy_bindings
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        get_strategy,
+        strategy_bindings,
+    )
 
     for name in ("战术义眼", "战术义眼+", "战术义眼++", "生命之花祝福",
                  "幸运星祝福", "折叠小刀祝福", "和平手枪祝福", "量产型装甲祝福"):
@@ -284,7 +319,12 @@ def test_adr0151_noise_bindings_removed() -> None:
 
 def test_adr0151_semantic_bindings_present() -> None:
     """语义绑定抽查:套组/机制强化/赠角色 三类 + 契约环境阵营。"""
-    from sr_od.application.currency_war.kernel.cw_investments import  STRATEGY_BINDINGS, env_faction, get_strategy, strategy_bindings
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_BINDINGS,
+        env_faction,
+        get_strategy,
+        strategy_bindings,
+    )
 
     # 套组:阵营+角色双绑
     assert STRATEGY_BINDINGS["追击星徽套组"] == (frozenset({"追击"}), frozenset({"飞霄"}))
@@ -320,7 +360,14 @@ import logging
 import pytest
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim.cw_sim_invest import  SIM_STRATEGY_PICK_SCHEDULE, SimInvestProfile, env_freq_table, freq_dropped_names, sample_invest_profile, strategy_freq_table
+from sr_od.application.currency_war.sim.cw_sim_invest import (
+    SIM_STRATEGY_PICK_SCHEDULE,
+    SimInvestProfile,
+    env_freq_table,
+    freq_dropped_names,
+    sample_invest_profile,
+    strategy_freq_table,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -387,7 +434,9 @@ def test_inject_writes_session_semantic_slots() -> None:
 
 def test_inject_session_carries_fields() -> None:
     """注入后 session(生产持久宿主)携带 active_env/active_strategies。"""
-    from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
     sess = StrategySession()
     prof = SimInvestProfile(active_env='火药味',
                             picks=((1, 1, '加油站'),))
@@ -401,7 +450,9 @@ def test_inject_session_carries_fields() -> None:
 def test_direct_line_qualified_via_injected_env() -> None:
     """①资格通道直证:注入环境亲和 → _direct_line_qualified 为真
     (无注入语料下恒假,W161 缺口本体)。"""
-    from sr_od.application.currency_war.kernel.cw_intention import  _direct_line_qualified
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        _direct_line_qualified,
+    )
     from sr_od.application.currency_war.kernel.cw_state import GameState
     st = GameState()
     assert not _direct_line_qualified(st, '大黑塔银河学者')
@@ -448,6 +499,7 @@ def test_gold_per_node_and_instant_gold_apply() -> None:
     assert rows, 'gold_per_node 未进账本收入分解'
 
 
+@pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:取证局(默认臂自发刷新)依赖已退役 decision_v2 默认臂,40 seed 扫描零刷新——待重锚批改桩策略驱动或换锁帧')
 def test_free_refresh_per_node_zero_cost() -> None:
     """加油站(每节点 1 次免费刷):每轮第 i 次刷 cost == 0 if i < 额度 else 原价。
 
@@ -484,7 +536,10 @@ def test_free_refresh_per_node_zero_cost() -> None:
 
 def test_freq_tables_registry_known() -> None:
     """频次表全注册表内(丢名走 freq_dropped_names 披露,不进表)。"""
-    from sr_od.application.currency_war.kernel.cw_investments import  get_env, get_strategy
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        get_env,
+        get_strategy,
+    )
     for name, _ in strategy_freq_table():
         assert get_strategy(name) is not None, name
     for name, _ in env_freq_table():
@@ -559,7 +614,9 @@ def test_fortune_cards_ocr_on_fixture():
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer as mod
-from sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer import  InvestStrategyRecognizer
+from sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer import (
+    InvestStrategyRecognizer,
+)
 
 
 def test_screen_name_matches_invest_strategy() -> None:

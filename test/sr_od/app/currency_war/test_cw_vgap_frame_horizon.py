@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw4.audit import provisional
-from sr_od.application.currency_war.decision.cw4.bridge import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
-from sr_od.application.currency_war.decision.cw4.statefn import vbar
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import vbar
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_economy import STREAK_GOLD_TABLE
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
@@ -43,7 +43,7 @@ def _members(comp) -> list[str]:
 
 
 def _session(comp=None, plane_lengths=None):
-    from sr_od.application.currency_war.decision.cw4 import proof
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )

@@ -26,22 +26,21 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     committed_authority,
-)
-from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.kernel.cw_transition import CommitSignals
-from sr_od.application.currency_war.decision.decision_v2.contracts import (
-    Snapshot,
-    SubstateClassification,
-)
-from sr_od.application.currency_war.decision.decision_v2.prep_brain import (
-    assemble,
     drive_intention,
-    hoard_consumer_domain,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY as _REG,
-    DecisionV2Registry,
+)
+from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_transition import CommitSignals
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
+from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
+    assemble,
+    hoard_consumer_domain,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
+    Snapshot,
+    SubstateClassification,
 )
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
@@ -117,25 +116,6 @@ def test_d1_mutation_probe_projection_failure_conservative_domain():
 
 
 # ----------------------------------------------------- W629-R2 镜像雷锁
-
-def test_r2_gates_mirror_retired_with_f5_flags():
-    """(批 3 F5 清偿重推)三门模块级旗标已删、行为无条件化,gates 快照
-    无生产面——恒空映射(字段保留=契约形状);getattr 缺省镜像禁令
-    保留(防镜像雷以任何形态复燃)。"""
-    sess = StrategySession()
-    sess.v3_intention = IntentionState()
-    turn = assemble(_snapshot(), sess)
-    assert set(turn.direction.gates) == set()
-    src = (_SRC / 'decision' / 'decision_v2' / 'prep_brain.py').read_text(encoding='utf-8')
-    assert 'getattr(cw_intention' not in src, \
-        'gates 镜像回退为 getattr 缺省形态(W629-R2 镜像雷复燃)'
-
-# ----------------------------------------------------- D3 息线单一源
-# (原 test_d3_interest_floor_derived_single_source 已并入:恒等式
-#  interest_cap×10==interest_floor() 由 test_cw_w611_reserve_admission
-#  恒等式锁辖(默认 override None 已随迁);override 通道由
-#  test_cw_w606_switch 字段注入锁辖。ADR-0293 已注明 D3 双源清偿,
-#  三处重复按 README 纪律 8 择一保留。)
 
 
 def test_d3_grep_lock_no_interest_floor_attribute_reads():
@@ -261,9 +241,7 @@ def test_committed_predicate_frame_by_frame_vs_old():
         old_v = _old_committed(st, sess)
         if expect == 'both_false':
             assert not new_v and not old_v
-        elif expect == 'both_true':
-            assert new_v and old_v
-        elif expect == 'both_true_p2':
+        elif expect == 'both_true' or expect == 'both_true_p2':
             assert new_v and old_v
         else:   # takeover_zone_only_old:旧翻新未翻 = 接管区唯一合法分歧形
             assert old_v and not new_v, (st.plane, st.round_num, new_v, old_v)

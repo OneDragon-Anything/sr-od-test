@@ -26,12 +26,11 @@ _PKG = 'sr_od.application.currency_war'
 BUCKET_DIRS: dict[str, str] = {
     'data': 'data',
     'kernel': 'kernel',
-    'decision': 'decision',
     'obs': 'obs',
     'sim': 'sim',
     'telemetry': 'telemetry',
     'operations': 'app',
-    'strategies': 'app',
+    'strategies': 'strategies',   # 策略注册壳+impl 实现本体(策略统一迁移批;顶层壳可注册,impl 子包 manager 扫描忽略)
     'tools': 'tools',
     'knowledge': 'knowledge',   # 处死计划批 0 知识层符号包(redesign/03 批 0)
 }
@@ -57,12 +56,17 @@ ROOT_FILES: dict[str, str] = {
 LEGAL_EDGES: dict[str, set[str]] = {
     'data': set(),
     'kernel': {'data', 'knowledge'},   # knowledge = 批 0 迁出符号的权威副本(数据半部)
-    'decision': {'data', 'kernel'},
+    # strategies = 策略注册壳(顶层)+ impl 实现本体(纯逻辑:接口基类/
+    # 主流程驱动核/mandate_v1 机器)。impl 只依 data/kernel;顶层壳依 app
+    # 桶 decision_assembly(装配缝 obs→Snapshot,adapter 分拆先例)。
+    'strategies': {'data', 'kernel', 'app',
+                    'decision'},   # decision = decision_v2 注册壳(迁移期 shim,随 v2 退役批消亡)
     'obs': {'data', 'kernel'},
-    'sim': {'data', 'kernel', 'decision', 'telemetry'},   # telemetry = 期6 ledger_hooks 归属豁免
-    'telemetry': {'data', 'kernel', 'decision', 'obs', 'sim', 'knowledge'},
-    'app': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry', 'tools'},
-    'tools': {'data', 'kernel', 'decision', 'obs', 'sim', 'telemetry', 'app'},
+    'sim': {'data', 'kernel', 'telemetry', 'strategies'},
+    'telemetry': {'data', 'kernel', 'obs', 'sim', 'knowledge'},
+    'app': {'data', 'kernel', 'obs', 'sim', 'telemetry', 'tools',
+            'strategies'},
+    'tools': {'data', 'kernel', 'obs', 'sim', 'telemetry', 'app'},
     # knowledge(批 0 符号包)= 数据/纯函数叶子包:自身只读 data/kernel 注册表;
     # kernel/telemetry 保留层消费其迁出符号(消费边按批 0 实际接线登记)。
     'knowledge': {'data', 'kernel'},

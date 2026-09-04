@@ -14,21 +14,6 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw4 import entry, mandate, proof
-from sr_od.application.currency_war.decision.cw4.audit import provisional
-from sr_od.application.currency_war.decision.cw4.bridge import (
-    MandateV1Strategy,
-)
-from sr_od.application.currency_war.decision.cw4.criteria import BYPASS_TABLE
-from sr_od.application.currency_war.decision.cw4.criteria import (
-    equipment as crit_equip,
-)
-from sr_od.application.currency_war.decision.cw4.criteria import (
-    levelup as crit_levelup,
-)
-from sr_od.application.currency_war.decision.cw4.criteria.sell import (
-    line_switch_sell,
-)
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PREP_ACTION_TYPES,
@@ -55,6 +40,27 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+    entry,
+    mandate,
+    proof,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    BYPASS_TABLE,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    equipment as crit_equip,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    levelup as crit_levelup,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
+    line_switch_sell,
 )
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
@@ -307,7 +313,9 @@ class TestFailClosedNoneSlots:
         assert slots == [] and key == 'switchline_exit_blocked'
 
     def test_ev_buy_candidates_u_none(self):
-        from sr_od.application.currency_war.decision.cw4.criteria import buy
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+            buy,
+        )
         out, key = buy.ev_buy_candidates(50, 0, ['fake'], ('K',))
         assert out == [] and key == 'u_unavailable'
 
@@ -456,11 +464,11 @@ class TestEmitSmoke:
         strat = MandateV1Strategy()
         session = _session()
         session.target_comp = COMP_LIBRARY[0]
-        from sr_od.application.currency_war.decision.decision_v2 import (
-            prep_brain,
-        )
         from sr_od.application.currency_war.decision_assembly import (
             snapshot_from_obs,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
+            assemble as _assemble_turn_fn,
         )
         cases = [
             _obs(bench=[_bench(1, '燃料件')]),
@@ -475,7 +483,7 @@ class TestEmitSmoke:
         outs = []
         for obs in cases:
             session.prep_obs_frame = obs
-            turn = prep_brain.assemble(
+            turn = _assemble_turn_fn(
                 snapshot_from_obs(obs, session), session,
                 registry=strat.registry)
             outs.append(entry.emit(obs, turn, session, None, ev_arm=ev_arm,
@@ -648,14 +656,14 @@ class TestR196Wiring:
         点)的 protected_sell 发射经依赖拓扑合并插到截断点之前——不被
         截断器静默丢弃(IMPL_ADV_R197 症1 主场景:EV pass 追加在截断点
         之后 ⇒ 塌缩出口永久错过且零计数)。"""
-        from sr_od.application.currency_war.decision.cw4 import (
-            bridge as cw4_bridge,
-        )
-        from sr_od.application.currency_war.decision.decision_v2 import (
-            prep_brain,
-        )
         from sr_od.application.currency_war.decision_assembly import (
             snapshot_from_obs,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            bridge as cw4_bridge,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
+            assemble as _assemble_turn_fn,
         )
 
         class _Cfg:
@@ -690,7 +698,7 @@ class TestR196Wiring:
         def _decide(round_num: int = 1) -> list[PrepAction]:
             obs = _obs(state=GameState(gold=30, round_num=round_num),
                        bench=bench, vacancy=4)
-            turn = prep_brain.assemble(
+            turn = _assemble_turn_fn(
                 snapshot_from_obs(obs, session), session,
                 registry=strat.registry)
             return cw4_bridge.decide_from_turn(
@@ -717,14 +725,14 @@ class TestR196EvConflictDrop:
 
     @staticmethod
     def _decide_full(bench, comp, gold: int = 1) -> tuple[list, StrategySession]:
-        from sr_od.application.currency_war.decision.cw4 import (
-            bridge as cw4_bridge,
-        )
-        from sr_od.application.currency_war.decision.decision_v2 import (
-            prep_brain,
-        )
         from sr_od.application.currency_war.decision_assembly import (
             snapshot_from_obs,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            bridge as cw4_bridge,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
+            assemble as _assemble_turn_fn,
         )
 
         class _Cfg:
@@ -734,7 +742,7 @@ class TestR196EvConflictDrop:
         session = _session()
         session.target_comp = comp
         obs = _obs(state=GameState(gold=gold), bench=bench, vacancy=4)
-        turn = prep_brain.assemble(
+        turn = _assemble_turn_fn(
             snapshot_from_obs(obs, session), session, registry=strat.registry)
         out = cw4_bridge.decide_from_turn(
             obs, turn, session, _Cfg, registry=strat.registry)
@@ -873,7 +881,7 @@ class TestR196ShadowKeys:
 
     def _top_danger_state(self) -> GameState:
         """构造落 λ_U 降序全序首位的 PL 键帧(可消费格)。"""
-        from sr_od.application.currency_war.decision.cw4.statefn import (
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
             lambda_death,
         )
         order = lambda_death.lambda_u_order()
@@ -960,10 +968,10 @@ class TestR196Constants:
 
     def test_funding_refund_registry_derived(self):
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.decision.cw4.criteria import (
+        from sr_od.application.currency_war.kernel.cw_state import sell_refund
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
             sell as crit_sell,
         )
-        from sr_od.application.currency_war.kernel.cw_state import sell_refund
         # 注册名:sell_refund(1, 注册表 cost) 派生
         name = next(n for n, ch in CHARACTERS.items() if ch.cost)
         cost = CHARACTERS[name].cost
@@ -977,27 +985,8 @@ class TestR196Constants:
 
 
 # ===== 基线臂零漂移复跑(步4b 透传拆除后;慢桶)=====
-# 旧「两臂零漂移门」(zero_drift_gate:decision_v2 vs mandate_v1 逐位相等)
-# 随步4b 商店线接线拆除而不适用——新核商店线有自有行为,臂间 diff 系设计
-# 内形态(存在性证明移 test_cw4_shop_line.py::test_arm_diff_existence_n6);
-# 「没污染基线臂」的证明改由 decision_v2 自配对承载(锁的存在性纪律:
-# 锁红≠改动错,锁语义随设计演进重推)。
-
-@pytest.mark.slow
-class TestZeroDriftGate:
-
-    def test_baseline_self_pairing_n20(self):
-        """decision_v2 自配对:同 seed 同池同注册表视图跑两遍,
-        SimResult.ledger 逐位相等——基线臂行为确定且未被步4b 共享面
-        改动污染(SIM_CONSUMPTION_MAP ③-2 同源判据,对象改自配对)。"""
-        from sr_od.application.currency_war.sim.ab_core_swap import (
-            baseline_self_pairing_gate,
-        )
-        report = baseline_self_pairing_gate(n=20, seed_base=0,
-                                            pool='snapshot')
-        assert report['n'] == 20
-        assert report['mismatches'] == [], report
-
+# (基线臂零漂移门已随基线臂退役删除——统一迁移批 ② A9:sim 被测体=
+#  mandate_v1 单臂,自配对门 = ab_core_swap.new_core_self_pairing_gate。)
 
 # ===== ⑦ R200 修复批:三卖面通道语境接线 + 塌缩出口保守子集(IMPL_ADV_R200)=====
 
@@ -1027,7 +1016,7 @@ class TestR200BenchEffectChannels:
     def test_funding_support_channel_uses_context(self):
         """支付支撑通道同资格:语境在场 ⇒ 例外件不作为筹资燃料。"""
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.decision.cw4.criteria import (
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
             sell as crit_sell,
         )
         cost = CHARACTERS['黑塔'].cost
@@ -1047,7 +1036,7 @@ class TestR200BenchEffectChannels:
         「T_SEARCH_A 注入态资格全集无差别全发」语义已被取代——T1 三项:
         金位触发+目标量止盈+布尔门退役)。资格谓词不变:语境在场
         (黑塔纪元)⇒ 例外件受保护;语境缺场回归资格集。"""
-        from sr_od.application.currency_war.decision.cw4.criteria import (
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
             sell as crit_sell,
         )
         bench = [_bench(1, '黑塔'), _bench(2, '阿格莱雅')]

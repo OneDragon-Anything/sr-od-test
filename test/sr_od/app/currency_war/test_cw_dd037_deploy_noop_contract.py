@@ -1,7 +1,7 @@
 """dd-037:部署发射×执行契约接缝修(发射方谓词单一源 + no-op 状态可区分)。
 
 根因(run 20260904_28xx 局11,G3 环级无进展守卫停机):发射方(决策核
-`DecisionV2Strategy._main_flow_step` 部署段)与执行方(CwOpDeploy)对
+`MandateV1Strategy._main_flow_step` 部署段)与执行方(CwOpDeploy)对
 「是否还有部署可做」用不同源谓词——执行方按配方底线规则(列车≥2 档 ∧
 仙舟<3 → 列车件留 bench)把候选全部留置,发射方不知道仍发射 RunDeploy;
 空计划被包装成 ✓「已部署角色」→ 连续 3 环同签名动作批 ['RunDeploy'] 零推进。
@@ -35,8 +35,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
     CwOpDeploy,
 )
-from sr_od.application.currency_war.decision.decision_v2.strategy import (
-    DecisionV2Strategy,
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
 )
 
 
@@ -118,7 +118,7 @@ def _stall_obs() -> PrepObservation:
 def test_emitter_suppresses_rundeploy_when_plan_empty() -> None:
     """发射门锁:部署段计划空(候选全被配方底线留 bench)→ 不发射
     RunDeploy,直入装备段(RunEquip),bench=1 作为合法稳态交外环。"""
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     session = StrategySession()
     session.prep_phase = 1
     step = strat._main_flow_step(_stall_obs(), session, _Cfg())
@@ -132,7 +132,7 @@ def test_emitter_suppresses_rundeploy_when_plan_empty() -> None:
 def test_emitter_emits_rundeploy_when_plan_nonempty() -> None:
     """对照锁:计划非空(板空、bench 有货)→ 照常发射 RunDeploy
     (发射门只收口空计划,不改变正常部署行为)。"""
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     session = StrategySession()
     session.prep_phase = 1
     st = GameState()

@@ -17,33 +17,28 @@ from __future__ import annotations
 
 import dataclasses
 
+from sr_od.application.currency_war.kernel.cw_economy import (
+    refresh_ev_budget,
+    reserve_cap,
+    schedule_upgrade,
+)
+from sr_od.application.currency_war.kernel.cw_intention import (
+    PAIR_DROUGHT_EVICT_ROUNDS,
+    IntentionState,
+    pair_target_comp,
+    update_intention,
+)
 from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY,
+)
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     GameState,
     ShopCard,
 )
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.kernel.cw_economy import (
-    refresh_ev_budget,
-    reserve_cap,
-    schedule_upgrade,
-)
-from sr_od.application.currency_war.decision.decision_v2.ev import build_round_posture
-from sr_od.application.currency_war.decision.decision_v2.posture_release import (
-    evaluate_release,
-    release_directive,
-)
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
-)
-from sr_od.application.currency_war.kernel.cw_intention import (
-    IntentionState,
-    PAIR_DROUGHT_EVICT_ROUNDS,
-    pair_target_comp,
-    update_intention,
-)
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 
 _REG = DEFAULT_REGISTRY
 # 关行为锁显式注入(危机臂开臂后默认 registry=True,ADR-0503;让位语义
@@ -68,38 +63,8 @@ def _sc(name: str, cost: int = 2) -> ShopCard:
     return ShopCard(name=name, faction='仙舟罗浮', cost=cost, x=0, star=1)
 
 
-# --- D0 · 局23 型帧哨兵(W623 D1/T4;否决级)---------------------------------
-
-
-def test_jue23_sentinel_obligation_chain_alive() -> None:
-    """局23 型帧(g=100、bench 空、comp 空):预算核恒有定义、义务>0、
-    release 指令/预算非空、标签≠存息——None 级联静默停摆的分布级哨兵
-    (smoke 即查;A/B 出口 12 同判据)。"""
-    st = _state(gold=100, shop=[_sc('桑博', 2)], board={})
-    sess = StrategySession()
-    p = build_round_posture(st, sess)
-    assert p is not None                      # 无 None 形状(D0)
-    assert p.tag != '存息'                    # 溢余帧禁存息标签
-    from sr_od.application.currency_war.decision.decision_v2.economy_cycle import (obligation,)
-    assert obligation(st, sess, _REG) > 0
-    wrapped, d = evaluate_release(st, sess, _REG, 'FORM', p)
-    assert d is not None and d.reason in ('flip', 'third_path',
-                                          'reserve_admission')
-    assert d.budget_gold > 0                  # 义务活性:release≠0
-    assert wrapped.tag == 'release'
-
-
-def test_no_supply_frame_yields_none_shape_only_in_emergency() -> None:
-    """供给边界:应急帧预算=合法 0(血预算域),release 让位;常态帧
-    供给恒非零定义(禁 None 兜底穿批,W623 D0 要求 3)。
-    注入 crisis_release_enabled=False:锁钉的是「让位结构」语义
-    (ADR-0426 辖区),危机臂(ADR-0503)开臂后默认态在应急帧产
-    crisis 指令,属另一辖域,由 w917 锁组辖。"""
-    st = _state(gold=100, hp=20, shop=[_sc('桑博', 2)], board={})
-    sess = StrategySession()
-    assert refresh_ev_budget(st, sess) == 0   # 血预算停手 → 合法 0
-    assert release_directive(st, sess, _REG_CRISIS_OFF, 'FORM',
-                             build_round_posture(st, sess)) is None
+# (D0 局23 帧哨兵/供给边界两测已随 DP 姿态核/泄息指令死链删除——
+#  统一迁移批 ② MAP B 类;build_round_posture/evaluate_release 随 v2 消亡。)
 
 
 # --- 排程核规则锁(W615 R4)---------------------------------------------------
@@ -122,7 +87,6 @@ def test_schedule_pop_slot_trigger() -> None:
     assert not schedule_upgrade(st, sess_of(st))
     st.dep = None
     # cap 满:deployed 填满 → 人口位触发
-    from sr_od.application.currency_war.kernel.cw_state import iter_occupied_deployed
     st.deployed = [BenchChar(slot=20 + i, char_id=f'杂{i}', faction='公司',
                              star=1) for i in range(st.max_units())]
     assert deployed_occupied(st.deployed) >= st.max_units()
@@ -179,46 +143,8 @@ def test_budget_value_domain_and_legal_zero_frames() -> None:
     assert refresh_ev_budget(st1, sess_of(st1)) == 0   # 合法 0 帧(准入门辖域)
 
 
-def test_blood_budget_stop_not_inflated_by_budget_merge() -> None:
-    """穿透锁(W623 D2 / W635 F1 修正版):预算层的合法 0 辖域=应急带
-    (hp≤25);血预算带(25<hp)预算依公式照发,停付防线在 arbiter
-    拒付层(blood_budget_refresh_blocked / blood_budget_levelup_blocked)
-    ——budget 字段本身不做血预算特判(如实契约,非虚标)。
-
-    - 应急帧(hp=20):refresh_ev_budget==0 且 release 让位(注入
-      crisis_release_enabled=False 锁让位结构;危机臂开臂后默认态在
-      应急帧产 crisis 指令=ADR-0503 另一辖域,w917 锁组辖)——合并无从
-      发生,授权字段不可能放大刷数;
-    - 血预算带帧(hp=40,P1 末窗血预算不足):预算>0 但拒付层拦搜索型
-      刷新 → 泄息/停手机制落到授权执行层,合并层无第二实现(W615 §2-R2.5
-      应激通道「已是规则,引用不重复」的结构原样)。"""
-    from sr_od.application.currency_war.decision.decision_v2.discipline import (
-        blood_budget_refresh_blocked,
-    )
-    st_emerg = _state(gold=100, hp=20, shop=[_sc('桑博', 2)], board={})
-    sess_e = StrategySession()
-    assert refresh_ev_budget(st_emerg, sess_e) == 0
-    posture_e = build_round_posture(st_emerg, sess_e)
-    assert posture_e.refresh_budget == 0
-    assert release_directive(st_emerg, sess_e, _REG_CRISIS_OFF, 'FORM',
-                             posture_e) is None    # 应急帧:全让位(关臂注入)
-
-    # 血预算带:hp=40 ∈ (emergency 25, p1_exit_blood_target 60),P1 末窗
-    st_band = _state(gold=100, hp=40, r=8, shop=[_sc('桑博', 2)], board={})
-    sess_b = StrategySession()
-    budget = refresh_ev_budget(st_band, sess_b)
-    assert budget > 0, '血预算带不在预算层辖域:预算依公式照发(如实契约)'
-    assert budget == min(6, ((100 - 50) // 2))
-    assert blood_budget_refresh_blocked(st_band, sess_b, _REG), \
-        '血预算带停付防线=拒付层:搜索型刷新停付必须拦'
-    # 合并层无血预算特判(单一公式):指令预算 = max(义务, 预算×刷价)
-    from sr_od.application.currency_war.decision.decision_v2.economy_cycle import (obligation,)
-    posture_b = build_round_posture(st_band, sess_b)
-    d = release_directive(st_band, sess_b, _REG, 'FORM', posture_b)
-    expect = max(obligation(st_band, sess_b, _REG), budget * 2)
-    assert d is not None and d.reason in ('flip', 'reserve_admission')
-    assert d.budget_gold == expect, \
-        '合并=两来源 max 单一公式,血预算防线在拒付层不在合并层'
+# (test_blood_budget_stop_not_inflated_by_budget_merge 已随 DP 姿态/泄息
+#  指令死链删除——统一迁移批 ② MAP B 类。)
 
 
 def test_w721_collapse_band_zero_and_fallback_exempt() -> None:
@@ -227,10 +153,12 @@ def test_w721_collapse_band_zero_and_fallback_exempt() -> None:
     < ω=0.1)→ 预算 0(合法 0 帧第三类,穿透锁口径=合法 0 不是虚标);
     ②同一形态的未锁定帧(兜底链)不归零——空帧豁免(D1「空帧不缩供给」
     契约优先)。公式与单一址细则=test_cw_w721_overlay_b_budget。"""
-    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_intention import intention_core
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        IntentionState,
+        intention_core,
+    )
 
     st = _state(gold=200, level=5, hp=80, shop=[_sc('桑博', 2)], board={})
     comp = next(c for c in COMP_LIBRARY
@@ -308,8 +236,12 @@ def test_injection_consistency_single_registry_source() -> None:
     assert refresh_ev_budget(st2, sess, _REG) == 0
     assert refresh_ev_budget(st2, sess, reg2) > 0
     # BudgetView 装配单源:传入 reg2 的 BudgetView == 逐字段显式注入值
-    from sr_od.application.currency_war.decision.decision_v2.economy_cycle import (obligation,)
-    from sr_od.application.currency_war.decision.decision_v2.prep_brain import _budget
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
+        _budget,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.economy_cycle import (
+        obligation,
+    )
     bv = _budget(st2, sess, reg2)
     assert bv.interest_floor == 40
     assert bv.reserve_cap == reserve_cap(st2, sess, reg2)
@@ -323,11 +255,11 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     双向断开——视图侧变异不穿透 session,session 侧就地写端(shop 星级/
     装备拼接、deploy_bench 装备覆盖的真实别名写者)不穿透视图;
     equips 在视图侧固化为 tuple。"""
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.kernel.cw_state import snapshot_copy
-    from sr_od.application.currency_war.decision.decision_v2.prep_brain import (
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
         _tracking_view,
     )
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 
     def _ch(name: str, slot: int) -> BenchChar:
         fac = (CHARACTERS[name].factions or ('?',))[0]
@@ -340,7 +272,9 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     sess.tracked_bench_chars = [live_b]
     sess.tracked_deployed = [live_d]
     # 直调 _tracking_view(snapshot 传空 fresh-read 兜底面)
-    from sr_od.application.currency_war.decision.decision_v2.contracts import Snapshot
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
+        Snapshot,
+    )
     snap = Snapshot(plane=1, round_num=5)
     bench, deployed = _tracking_view(sess, snap)
     assert bench and deployed

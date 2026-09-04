@@ -16,12 +16,12 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
-from sr_od.application.currency_war.decision.cw4.audit import provisional
-from sr_od.application.currency_war.decision.cw4.bridge import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
-from sr_od.application.currency_war.decision.cw4.shop import _r2_card_reserve
-from sr_od.application.currency_war.decision.cw4.statefn.interest import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import _r2_card_reserve
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.interest import (
     saturation_line,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -49,7 +49,7 @@ def _members(comp) -> list[str]:
 
 
 def _session(comp=None):
-    from sr_od.application.currency_war.decision.cw4 import proof
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """W971 §2 黑板模式 P2 落地测试:决策接口签名改造 + 观察写路径 + match 前移。
 
 验证口径(任务书④):同 session 快照喂新旧两接口,决策序列逐字段全等。
@@ -22,14 +21,30 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
-    BuyCard,
     GameState,
-    LevelUp,
-    LevelUpShop,
     ShopCard,
+)
+from sr_od.application.currency_war.strategies.impl.flow import (
+    CwFlowStrategy,
+)
+from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
+    MandateV1Live,
 )
 
 
+class _FlowStrategy(MandateV1Live):
+    """流程域测试具现(统一迁移批 ②):prep 决策面 = flow 规则序栈
+    (_decide_prep_action_impl,单动作语义),不经 cw4 装配缝。"""
+
+    def decide_prep_action(self, obs, session, config):
+        session.prep_obs_frame = obs
+        return CwFlowStrategy._decide_prep_action_impl(self, obs, session, config)
+
+    def decide_prep_screen(self, session, config):
+        if session.prep_obs_frame is None:
+            raise ValueError('prep_obs_frame 缺失(黑板契约:观察层失约)')
+        return CwFlowStrategy._decide_prep_action_impl(
+            self, session.prep_obs_frame, session, config)
 def _make_state() -> GameState:
     """探针态:中局常态(金足/店有目标件/bench 有件)——决策必有产出。"""
     s = GameState()
@@ -72,44 +87,20 @@ def test_shop_screen_probe_smoke() -> None:
     探针态(金足/店有目标件)经黑板入口应产出采纳动作;等价性保障改由
     结构承载(单一入口 = decide_shop_screen,无第二实现可漂移)。
     """
-    from sr_od.application.currency_war.decision.decision_v2.strategy import (
-        DecisionV2Strategy,
-    )
-    strat = DecisionV2Strategy()
+    strat = _FlowStrategy()
     state = _make_state()
     sess = _fresh(strat)
     sess.shop_state_frame = state
     acts = strat.decide_shop_screen(sess, None)
     assert len(acts) > 0, '探针态(金足/店有目标件)应有采纳动作'
 
-def test_shop_screen_emits_levelup_shop() -> None:
-    """新入口升级意图 = LevelUpShop(is-a LevelUp);旧入口仍产基类 LevelUp。
-
-    执行器/buy_cards 波循环按 isinstance(a, LevelUp) 消费 → 子类零改动兼容;
-    本锁钉住「拆分只换型不改行为」的出口映射语义。
-    """
-    from sr_od.application.currency_war.decision.decision_v2.strategy import (
-        DecisionV2Strategy,
-    )
-    strat = DecisionV2Strategy()
-    sess = _fresh(strat)
-    sess.shop_state_frame = _make_state()
-    # 出口映射单点验证(探针态不保证出 LevelUp,用决策核桩直验映射):
-    strat._decide_shop_plan = lambda state, session, config: [  # noqa: SLF001
-        LevelUp(cost=4, auth_basis='dp'), BuyCard(
-            card=ShopCard(x=1, faction='仙舟', name='丹恒·饮月', cost=2))]
-    acts = strat.decide_shop_screen(sess, None)
-    assert [type(a) for a in acts] == [LevelUpShop, BuyCard]
-    assert acts[0].cost == 4 and acts[0].auth_basis == 'dp'
-    assert isinstance(acts[0], LevelUp)   # 执行器兼容形态
+# (test_shop_screen_emits_levelup_shop 已随 v2 _decide_shop_plan 出口映射删除——
+#  统一迁移批 ②;mandate 商店线出口形态由 test_cw4_shop_line 锁组辖。)
 
 
 def test_shop_screen_missing_frame_raises() -> None:
     """黑板契约:观察帧缺失 = 观察层失约 → 抛错,禁静默按空态决策。"""
-    from sr_od.application.currency_war.decision.decision_v2.strategy import (
-        DecisionV2Strategy,
-    )
-    strat = DecisionV2Strategy()
+    strat = _FlowStrategy()
     sess = _fresh(strat)
     assert sess.shop_state_frame is None
     with pytest.raises(ValueError, match='shop_state_frame'):
@@ -129,43 +120,9 @@ def _make_obs() -> PrepObservation:
     return obs
 
 
-def test_prep_screen_par_old_vs_new() -> None:
-    """同 obs 帧:旧 decide_prep_action vs 新 decide_prep_screen 决策全等。
-
-    旧入口 = 薄委托(写 prep_obs_frame → 新入口),等价由构造保证;
-    本锁防未来两条路径漂移。序列契约 v1(dd-020;R192 症2 包装形态)后
-    生产形态 = ``DecisionV2SeriesAdapter``(冻结基线外包一层长度 1 序列)
-    ——对拍口径 = 旧单动作 == 包装序列唯一元素。
-    """
-    from sr_od.application.currency_war.decision.decision_v2.series_adapter import (
-        DecisionV2SeriesAdapter,
-    )
-    from sr_od.application.currency_war.decision.decision_v2.strategy import (
-        DecisionV2Strategy,
-    )
-    obs = _make_obs()
-    strat_old = DecisionV2Strategy()
-    strat_new = DecisionV2SeriesAdapter()
-    sess_old = _fresh(strat_old)
-    sess_new = _fresh(strat_new)
-    old_act = strat_old.decide_prep_action(obs, sess_old, None)
-    sess_new.prep_obs_frame = obs
-    new_acts = strat_new.decide_prep_screen(sess_new, None)
-    assert isinstance(new_acts, list) and len(new_acts) == 1, (
-        f'序列契约 v1:现役核长度 1 适配器,实得 {type(new_acts).__name__}'
-        f' len={len(new_acts) if isinstance(new_acts, list) else "-"}')
-    new_act = new_acts[0]
-    assert type(old_act) is type(new_act)
-    assert dataclasses.asdict(old_act) == dataclasses.asdict(new_act)
-    assert type(old_act).__name__ == 'ClickSpheres'
-
-
 def test_prep_screen_missing_frame_raises() -> None:
     """黑板契约:prep_obs_frame 缺失 → 抛错(同商店屏)。"""
-    from sr_od.application.currency_war.decision.decision_v2.strategy import (
-        DecisionV2Strategy,
-    )
-    strat = DecisionV2Strategy()
+    strat = _FlowStrategy()
     sess = _fresh(strat)
     with pytest.raises(ValueError, match='prep_obs_frame'):
         strat.decide_prep_screen(sess, None)
@@ -173,10 +130,7 @@ def test_prep_screen_missing_frame_raises() -> None:
 
 def test_prep_action_delegates_via_frame() -> None:
     """兼容薄委托:旧入口把 obs 写进 session.prep_obs_frame(写路径收编形态)。"""
-    from sr_od.application.currency_war.decision.decision_v2.strategy import (
-        DecisionV2Strategy,
-    )
-    strat = DecisionV2Strategy()
+    strat = _FlowStrategy()
     sess = _fresh(strat)
     obs = _make_obs()
     strat.decide_prep_action(obs, sess, None)
@@ -188,11 +142,8 @@ def test_prep_action_delegates_via_frame() -> None:
 
 def test_establish_new_match_and_idempotent(monkeypatch) -> None:
     """入口建立:新建 → True + 职级拷入;已存在 → False 幂等(保续跑语义)。"""
-    from sr_od.application.currency_war.decision.cw_strategy_manager import (
+    from sr_od.application.currency_war.strategies.impl.cw_strategy_manager import (
         establish_new_match,
-    )
-    from sr_od.application.currency_war.decision.decision_v2.strategy import (
-        DecisionV2Strategy,
     )
 
     ctx = SimpleNamespace(
@@ -201,25 +152,25 @@ def test_establish_new_match_and_idempotent(monkeypatch) -> None:
         cw_selected_difficulty='A5',
     )
     monkeypatch.setattr(
-        'sr_od.application.currency_war.decision.cw_strategy_manager.'
+        'sr_od.application.currency_war.strategies.impl.cw_strategy_manager.'
         'StrategyManager.instantiate',
-        lambda self, strategy_id: DecisionV2Strategy())
+        lambda self, strategy_id: _FlowStrategy())
     assert establish_new_match(ctx, SimpleNamespace(
-        strategy_id='decision_v2', strategy_seed=None)) is True
+        strategy_id='mandate_v1', strategy_seed=None)) is True
     assert ctx.cw_match is not None
     assert ctx.cw_match.session.selected_difficulty == 'A5'
     assert establish_new_match(ctx, SimpleNamespace(
-        strategy_id='decision_v2', strategy_seed=None)) is False   # 幂等
+        strategy_id='mandate_v1', strategy_seed=None)) is False   # 幂等
 
 
 def test_absorb_selected_difficulty_only_after_mailbox_retirement() -> None:
     """run loop 入口中转(P3 改写):ctx 信箱退役(01-opening §1)——吸收段
     只剩职级难度;简报三字段唯一写点 = CwScreenBriefing 直写 session,不再经 ctx。"""
-    from sr_od.application.currency_war.decision.cw_strategy import (
-        StrategySession,
-    )
     from sr_od.application.currency_war.operations.cw_loop import (
         CwLoop,
+    )
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
     )
     rl = CwLoop.__new__(CwLoop)
     rl.ctx = SimpleNamespace(

@@ -25,8 +25,28 @@ from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
     _deployment_order,
 )
+from sr_od.application.currency_war.strategies.impl.flow import (
+    CwFlowStrategy,
+)
+from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
+    MandateV1Live,
+)
 
 
+class _FlowStrategy(MandateV1Live):
+    """流程域测试具现(统一迁移批 ②):prep 决策面 = flow 规则序栈
+    (_decide_prep_action_impl),不经 cw4 装配缝——腾席链/发射门/
+    相位机测试的锁语义保持(v2 prep 流栈平移件)。"""
+
+    def decide_prep_action(self, obs, session, config):
+        session.prep_obs_frame = obs
+        return CwFlowStrategy._decide_prep_action_impl(self, obs, session, config)
+
+    def decide_prep_screen(self, session, config):
+        if session.prep_obs_frame is None:
+            raise ValueError('prep_obs_frame 缺失(黑板契约:观察层失约)')
+        return CwFlowStrategy._decide_prep_action_impl(
+            self, session.prep_obs_frame, session, config)
 def _bonds(cid: str) -> set[str]:
     ch = CHARACTERS[cid]
     return set(ch.factions) | set(ch.flows)
@@ -211,7 +231,6 @@ def test_boundary_equal() -> None:
 
 # ==================== r390_deploy_agent ====================
 
-import pytest
 
 from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -444,10 +463,6 @@ def test_board_counts_of_fullset_caliber() -> None:
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision.decision_v2.strategy import (
-    DecisionV2Strategy,
-)
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     DeferSpheres,
@@ -461,8 +476,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState as _r412_bench_free_gates_GameState,
 )
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 
-S = DecisionV2Strategy()
+S = _FlowStrategy()
 COMP = get_comp('列车同行')
 
 
@@ -1026,12 +1042,12 @@ import sys
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.decision.cw_strategy import (
-    StrategySession as _test_deploy_recipe_target_StrategySession,
-)
 from sr_od.application.currency_war.kernel.cw_comps import Comp
 from sr_od.application.currency_war.kernel.cw_recipe import _RECIPES, decision_target
 from sr_od.application.currency_war.kernel.cw_transition import TRANSITION_PACK
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+    StrategySession as _test_deploy_recipe_target_StrategySession,
+)
 
 
 class _FakeState:
@@ -1109,9 +1125,6 @@ from types import SimpleNamespace as _test_empty_board_guard_SimpleNamespace
 _REPO = _test_empty_board_guard_Path(__file__).resolve().parents[5]
 _test_empty_board_guard_sys.path.insert(0, str(_REPO / 'src'))
 
-from sr_od.application.currency_war.decision.decision_v2.strategy import (
-    DecisionV2Strategy as _test_empty_board_guard_DecisionV2Strategy,  # noqa: E402
-)
 
 
 def _obs(dep=0, bench=0):
@@ -1130,7 +1143,7 @@ def _test_empty_board_guard_cfg():
 
 def test_empty_board_guard_redirects_to_deploy() -> None:
     """板上 0 人 bench 3 人:不出战,回 RunDeploy。"""
-    strat = _test_empty_board_guard_DecisionV2Strategy()
+    strat = _FlowStrategy()
     obs = _obs(dep=0, bench=3)
     sess = _test_empty_board_guard_SimpleNamespace(defer_count=0, memory={}, target_comp=None,
                            tracked_bench_chars=[], pending_deploys=[], prep_phase=3,
@@ -1142,7 +1155,7 @@ def test_empty_board_guard_redirects_to_deploy() -> None:
 
 def test_empty_board_guard_gives_up_after_two() -> None:
     """重试 2 次后放行(部署持续失败交 Director stall 兜底,防 phase 死循环)。"""
-    strat = _test_empty_board_guard_DecisionV2Strategy()
+    strat = _FlowStrategy()
     obs = _obs(dep=0, bench=3)
     sess = _test_empty_board_guard_SimpleNamespace(defer_count=0, memory={}, target_comp=None,
                            tracked_bench_chars=[], pending_deploys=[], prep_phase=3,
@@ -1153,7 +1166,7 @@ def test_empty_board_guard_gives_up_after_two() -> None:
 
 def test_deployed_board_battles_normally() -> None:
     """板上有人不拦截(正常出战)。"""
-    strat = _test_empty_board_guard_DecisionV2Strategy()
+    strat = _FlowStrategy()
     obs = _obs(dep=4, bench=2)
     sess = _test_empty_board_guard_SimpleNamespace(defer_count=0, memory={}, target_comp=None,
                            tracked_bench_chars=[], pending_deploys=[], prep_phase=3,

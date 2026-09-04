@@ -20,12 +20,16 @@ from pathlib import Path
 import numpy as np
 
 from one_dragon.base.geometry.rectangle import Rect
+from sr_od.application.currency_war.kernel.cw_prep_expect import (
+    BuyPurchase,
+    compare_buy_expect,
+    compute_buy_expect,
+)
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+    _save_buy_evidence,
+)
 from sr_od.application.currency_war.telemetry import defects, recorder
-
-from sr_od.application.currency_war.kernel.cw_prep_expect import BuyPurchase, compare_buy_expect, compute_buy_expect
-
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import _save_buy_evidence
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
@@ -266,7 +270,7 @@ def test_w536_single_source_and_tombstone():
     ②依赖方向——compute_buy_expect 落点必须委托 cw_merge_bench 单一源,
     不自造第二套落点规则。对账时序/消费即清的行为面由 ①② 行为测辖定。"""
     strat_src = Path(
-        'src/sr_od/application/currency_war/decision/cw_strategy.py'
+        'src/sr_od/application/currency_war/strategies/impl/cw_strategy.py'
     ).read_text(encoding='utf-8')
     assert 'pending_buy_expect: BuyExpect | None = None' not in strat_src, (
         '期 0b 锁改判:字段声明已迁 kernel/cw_strategy_session,'
@@ -307,4 +311,3 @@ def test_buy_defect_row_shape(tmp_path: Path, monkeypatch):
     assert row['reader_source'] == 'buy_expect_reconcile'
 
 
-from sr_od.application.currency_war.telemetry import state

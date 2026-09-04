@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """test_cw_w953_planner_strategy_wiring 主题锁。
 
 2026-09-03 拆分归档批:自混合文件 test_cw_strategy_planner.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
 from __future__ import annotations
-
-
 
 import inspect
 import sys as _w953_planner_strategy_wiring_sys
@@ -14,15 +11,40 @@ _w953_planner_strategy_wiring_sys.stdout.reconfigure(encoding="utf-8")  # type: 
 
 from types import SimpleNamespace as _w953_planner_strategy_wiring_SimpleNamespace
 
-from sr_od.application.currency_war.decision.decision_v2.strategy import  DecisionV2Strategy as _w953_planner_strategy_wiring_DecisionV2Strategy
-from sr_od.application.currency_war.kernel.cw_events import  PlannerOption as _w953_planner_strategy_wiring_PlannerOption, decide_planner as _w953_planner_strategy_wiring_decide_planner
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _w953_planner_strategy_wiring_BenchChar, GameState as _w953_planner_strategy_wiring_GameState
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import  CwScreenPlanner
+from sr_od.application.currency_war.kernel.cw_events import (
+    PlannerOption as _w953_planner_strategy_wiring_PlannerOption,
+)
+from sr_od.application.currency_war.kernel.cw_events import (
+    decide_planner as _w953_planner_strategy_wiring_decide_planner,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _w953_planner_strategy_wiring_BenchChar,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _w953_planner_strategy_wiring_GameState,
+)
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import (
+    CwScreenPlanner,
+)
+from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
+    MandateV1Live as _w953_planner_strategy_wiring_MandateV1Strategy,
+)
 
 _UPGRADE = _w953_planner_strategy_wiring_PlannerOption(idx=0, text='提升费用至4费,变为1星银狼')
 _WEAKEN = _w953_planner_strategy_wiring_PlannerOption(idx=1, text='使后续节点【弱化】,降低敌人属性。')
 
 
+class _FlowStrategy(_w953_planner_strategy_wiring_MandateV1Strategy):
+    """流程域测试具现(统一迁移批 ②):prep 决策面 = flow 规则序栈
+    (_decide_prep_action_impl,单动作语义),不经 cw4 装配缝。"""
+
+    def decide_prep_action(self, obs, session, config):
+        session.prep_obs_frame = obs
+        return CwFlowStrategy._decide_prep_action_impl(self, obs, session, config)
+
+    def decide_prep_screen(self, session, config):
+        return CwFlowStrategy._decide_prep_action_impl(
+            self, session.prep_obs_frame, session, config)
 def _session(target_comp) -> _w953_planner_strategy_wiring_SimpleNamespace:
     """最小 session stub:decide_planner 只读 target_comp。"""
     return _w953_planner_strategy_wiring_SimpleNamespace(target_comp=target_comp)
@@ -54,7 +76,7 @@ def test_planner_strategy_delegates_kernel_bitwise() -> None:
     st.bench = [_w953_planner_strategy_wiring_BenchChar(slot=1, char_id='银狼LV.999', faction='?', star=2,
                           position_pref='front')]
     opts = [_UPGRADE, _WEAKEN]
-    strat = _w953_planner_strategy_wiring_DecisionV2Strategy()
+    strat = _FlowStrategy()
     via_strategy = strat.decide_planner(opts, st, _session(None), _w953_planner_strategy_wiring_SimpleNamespace())
     via_kernel = _w953_planner_strategy_wiring_decide_planner(opts, st, None)
     assert (via_strategy.idx, via_strategy.reason) == (via_kernel.idx, via_kernel.reason)
@@ -69,7 +91,7 @@ def test_planner_strategy_uses_session_target_comp() -> None:
     st.bench = [_w953_planner_strategy_wiring_BenchChar(slot=1, char_id='银狼LV.999', faction='?', star=2,
                           position_pref='front')]
     opts = [_UPGRADE, _WEAKEN]
-    strat = _w953_planner_strategy_wiring_DecisionV2Strategy()
+    strat = _FlowStrategy()
     via_strategy = strat.decide_planner(opts, st, _session(tgt), _w953_planner_strategy_wiring_SimpleNamespace())
     via_kernel = _w953_planner_strategy_wiring_decide_planner(opts, st, tgt)
     assert via_strategy.idx == 0 and '升费' in via_strategy.reason

@@ -111,17 +111,17 @@ def test_draw_shop_consumes_rotation_table() -> None:
 
 class _ProbsRecorder:
     """每段记录 (round, st.refresh_probs, st.deploy_cap, st.level);
-    delegate=True 时委托真 DecisionV2Strategy(让 level 升到可轮岗档;
+    delegate=True 时委托真 MandateV1Strategy(让 level 升到可轮岗档;
     LineStrategy 已随 ADR-0336 删)。"""
 
     def __init__(self, delegate: bool = False) -> None:
         self.rows: list[tuple[int, object, object, int]] = []
         self._inner = None
         if delegate:
-            from sr_od.application.currency_war.decision.decision_v2.strategy import (
-                DecisionV2Strategy,
+            from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+                MandateV1Strategy,
             )
-            self._inner = DecisionV2Strategy()
+            self._inner = MandateV1Strategy()
 
     def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
         if self._inner is not None:

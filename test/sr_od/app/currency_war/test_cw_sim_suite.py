@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_sim_suite 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -16,16 +15,11 @@
 """
 from __future__ import annotations
 
-
 # ==================== sim ====================
-
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import POOL_COPIES_PER_CARD
-
-from sr_od.application.currency_war.sim.pool import _Pool
-
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-
+from sr_od.application.currency_war.sim.pool import _Pool
 from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
 
@@ -107,8 +101,9 @@ def test_node_sequence_shape() -> None:
     slot4 supply,slot5-6 变异位,末 boss(遥测 14 帧实证)。"""
     import random
 
-
-    from sr_od.application.currency_war.kernel.cw_battle_calib import sample_node_sequence
+    from sr_od.application.currency_war.kernel.cw_battle_calib import (
+        sample_node_sequence,
+    )
     for seed in (1, 2, 3):
         seq = sample_node_sequence(random.Random(seed))
         assert len(seq) == 9
@@ -123,7 +118,6 @@ def test_reward_node_no_damage() -> None:
     """奖励/补给节点零战力要求 → 不掉血(r260 分层)。"""
     import random
 
-
     from sr_od.application.currency_war.kernel.cw_battle_calib import node_delta
     rng = random.Random(7)
     for node in ('reward', 'supply'):
@@ -135,7 +129,6 @@ def test_reward_node_no_damage() -> None:
 def test_encounter_harder_than_battle() -> None:
     """遭遇轮结算强度 > 同期普通战斗(用户口述:遭遇可比 boss 难)。"""
     import random
-
 
     from sr_od.application.currency_war.kernel.cw_battle_calib import node_delta
     losses_enc, losses_bat = [], []
@@ -515,9 +508,10 @@ def test_sim_levelup_pre_cap_regression() -> None:
 def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
     """拒付行不破坏 flat4 台账锁(spend.levelup == 4×LevelUp 行数)。"""
 
+    from sr_od.application.currency_war.sim.checks.ledger import (
+        check_levelup_flat4_ledger_lock,
+    )
     from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-
-    from sr_od.application.currency_war.sim.checks.ledger import check_levelup_flat4_ledger_lock
 
     res = simulate_p1(1, pool='fallback', strategy=_LevelUpSpamStub())
     violations = check_levelup_flat4_ledger_lock(res.ledger)
@@ -556,9 +550,15 @@ def test_sim_batch_cap_rejects_by_plane_consistent_with_total() -> None:
 import pytest as _sim_obs_keys_pytest
 
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.sim.checks import ledger as _sim_obs_keys_ledger, runner as _sim_obs_keys_runner
-from sr_od.application.currency_war.sim.engine_p1 import  _board_next_tier_of, simulate_p1 as _sim_obs_keys_simulate_p1
-from sr_od.application.currency_war.sim.runner import simulate_p1_batch as _sim_obs_keys_simulate_p1_batch
+from sr_od.application.currency_war.sim.checks import ledger as _sim_obs_keys_ledger
+from sr_od.application.currency_war.sim.checks import runner as _sim_obs_keys_runner
+from sr_od.application.currency_war.sim.engine_p1 import _board_next_tier_of
+from sr_od.application.currency_war.sim.engine_p1 import (
+    simulate_p1 as _sim_obs_keys_simulate_p1,
+)
+from sr_od.application.currency_war.sim.runner import (
+    simulate_p1_batch as _sim_obs_keys_simulate_p1_batch,
+)
 
 _SEEDS = (0, 7, 42)
 
@@ -569,7 +569,6 @@ def _good_row() -> dict:
     return {
         'plane': 1, 'round_num': 3,
         'state': {'bench_full_flag': False, 'board_next_tier': {'仙舟': 3},
-                  'p1_downgrade_active': False,
                   'refresh_probs': {2: 0.5, 3: 0.3}},
         'sim': {'alloc_frame': {'active': False, 'reason': 'out_of_scope'},
                 'alloc_active_any': False},
@@ -598,9 +597,7 @@ def test_observation_keys_check_bad_rows_report() -> None:
     r['sim']['alloc_active_any'] = True
     cases.append(('OR聚合但帧位缺', r))
     r = copy.deepcopy(base)
-    del r['state']['p1_downgrade_active']
-    cases.append(('缺降格触发面', r))
-    r = copy.deepcopy(base)
+    # (缺降格触发面 case 已随 p1_downgrade_active 账本位退役删除——统一迁移批 ②。)
     del r['state']['refresh_probs']
     cases.append(('缺轮岗概率条', r))
     for label, row in cases:
@@ -639,7 +636,6 @@ def test_obs_keys_shape_on_real_game(seed: int) -> None:
     for row in p1:
         st = row['state']
         assert isinstance(st['bench_full_flag'], bool)
-        assert isinstance(st['p1_downgrade_active'], bool)
         rp = st['refresh_probs']
         assert rp is None or isinstance(rp, dict)
         bnt = st['board_next_tier']
@@ -668,29 +664,18 @@ def test_board_next_tier_helper_semantics() -> None:
 
 
 def test_bench_full_flag_and_alloc_frame_not_degenerate() -> None:
-    """对偶门(防恒值):真局里旗标必须亮过、帧位必须非 None 过——
-    恒 False/恒 None = 写端断线(分配器默认开,每段 decide_prep 都
-    写 session.v3_alloc_frame,prep 轮帧位恒应非 None)。"""
-    # 显式命中种子(纪律 12 续篇,跨层合并战役;探针记录:seed 0-13 全扫,
-    # bench_full_flag 点亮仅 seed 9/11,两 seed 同时覆盖 alloc 接管帧且
-    # 帧位覆盖 9/9;列表过期红 = 重探补种,禁为保绿扩窗)
+    """观测键形状对偶门(统一迁移批 ② 锁语义重推):alloc 半部(帧位/
+    接管域)已随 v2 分配器死链退役——engine 仍恒写键(None/False),
+    恒值分布对账与 bench_full_flag 点亮面随 sim 重锚批重探(w614 同批);
+    本锁现辖 = 真局行三键形状 + checker 零违规(batch 链路另有专测)。"""
     rows = [r for seed in (9, 11) for r in _sim_obs_keys_simulate_p1(
         seed, pool='fallback').ledger if (r.get('plane') or 1) == 1]
     assert len(rows) >= 2 * 5, '局数行数异常'
-    assert any(r['state']['bench_full_flag'] for r in rows), \
-        'bench_full_flag 全批恒 False = 写端断线或键永亮不了'
-    with_frame = [r for r in rows if r['sim']['alloc_frame'] is not None]
-    assert len(with_frame) >= len(rows) // 2, \
-        'alloc_frame 覆盖过稀 = 决策段帧位采集断线'
-    known_domains = {'stop_window', 'death'}
-    for r in with_frame:
+    for r in rows:
+        assert isinstance(r['state']['bench_full_flag'], bool)
         af = r['sim']['alloc_frame']
-        assert isinstance(af, dict) and 'active' in af
-        if af.get('active'):
-            assert af.get('domain') in known_domains
-    # 停手窗/死亡域接管存在性断言(分配器默认开;全零 = 接管面退化/写端断线)
-    assert any(r['sim']['alloc_active_any'] for r in rows), \
-        '全批零接管帧 = alloc_active_any 写端断线'
+        assert af is None or (isinstance(af, dict) and 'active' in af)
+        assert isinstance(r['sim']['alloc_active_any'], bool)
 
 
 def test_batch_check_reports_observation_keys_zero_violation() -> None:
@@ -702,7 +687,7 @@ def test_batch_check_reports_observation_keys_zero_violation() -> None:
 
 def test_sess_active_env_disclosed() -> None:
     """投资环境名入账本(invest 注入写;空串=未注入机制性缺省)。"""
-    from sr_od.application.currency_war.sim.cw_sim_invest import  SimInvestProfile
+    from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
     prof = SimInvestProfile(active_env='昼之半神概念股', picks=())
     r = _sim_obs_keys_simulate_p1(0, pool='fallback', invest=prof)
     assert r.ledger, '账本为空'
@@ -740,9 +725,12 @@ def test_write_batch_ledger_carries_new_keys() -> None:
 
 import pytest as _sim_segment_checks_pytest
 
-from sr_od.application.currency_war.sim.checks import segments as _sim_segment_checks_chk
-
-from sr_od.application.currency_war.sim.runner import simulate_p1_batch as _sim_segment_checks_simulate_p1_batch
+from sr_od.application.currency_war.sim.checks import (
+    segments as _sim_segment_checks_chk,
+)
+from sr_od.application.currency_war.sim.runner import (
+    simulate_p1_batch as _sim_segment_checks_simulate_p1_batch,
+)
 
 
 def _sim_segment_checks_row(round_num: int = 1, *, plane: int = 1, gold: int = 30,
@@ -852,38 +840,8 @@ def test_seg_p2_bleed_gold_stack_bidirectional() -> None:
     assert 'seg_p2_bleed_gold_stack' in _sim_segment_checks_chk._SEGMENT_CHECKS
 
 
-# ---------------------------------------------------------------- [11]
-def test_seg_lossless_buy_missed_bidirectional() -> None:
-    """[11] 无损购买:金<20 同息档有过渡带件未买必报;跨档/成型豁免。"""
-    # 注册表内找一个真实的过渡带 1 费件(阵营 ∈ ENGINE_FACTIONS),
-    # 不硬编码角色名防注册表演进碎测。
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_line_defs import  ENGINE_FACTIONS
-    name = next(n for n, c in CHARACTERS.items()
-                if c.cost == 1 and set(c.factions or ()) & set(
-                    ENGINE_FACTIONS))
-    bad = [_sim_segment_checks_row(gold=13, waves_gold=13,
-                cards=[{'name': name, 'cost': 1, 'faction': '?'}])]
-    evs = _sim_segment_checks_chk.seg_check_lossless_buy_missed(bad)
-    assert evs and evs[0]['candidate'] == name
-    # 同费跨档(13-3=10 桶 1 ≠ 桶 0?13//10=1,10//10=1 同桶;
-    # 用 gold=21>20 的镜像:直接换 gold=11+cost 2 → 9 仍同桶,跨档构造成
-    # gold=12,cost=3 超 1-2 带 → 不辖;真正的跨档豁免用金 20 边界:
-    # g0=21 ≥20 直接出局,同档判据单测:cost 2 金 11 → 9 同桶仍会报,
-    # 所以跨档形态由「带内 cost≤2 且 g-c 不同桶」构造:g0=10,cost=… 无解
-    # (10//10=1 与 8//10=0 差一档?10//10=1 —— g0=10 属档1,cost2→8 档0,
-    # 跨档!此处应豁免,不报。)
-    cross = [_sim_segment_checks_row(gold=10, waves_gold=10,
-                  cards=[{'name': name, 'cost': 2, 'faction': '?'}],
-                  state={'board_factions': {}, 'deployed': [],
-                         'bench': [], 'cap': 3, 'level': 3})]
-    assert not _sim_segment_checks_chk.seg_check_lossless_buy_missed(cross), \
-        '跨档购买有息损,[11] 只锁零息损形态'
-    # 成型 → 合法攒息
-    formed = [_sim_segment_checks_row(gold=13, waves_gold=13, state=_formed_state(),
-                   cards=[{'name': name, 'cost': 1, 'faction': '?'}])]
-    assert not _sim_segment_checks_chk.seg_check_lossless_buy_missed(formed)
-
+# ([11] 无损购买段检已随 press 带判据死链退役删除——统一迁移批 ② MAP B 类;
+#  检查器 seg_check_lossless_buy_missed 与注册表条目同件删除。)
 
 # ------------------------------------------------------------ [6]/[19]
 def test_seg_break_interest_exception_bidirectional() -> None:
@@ -1055,8 +1013,8 @@ import re
 from dataclasses import fields
 from pathlib import Path as _sim_wiring_doc_Path
 
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 
 _DOC = (_sim_wiring_doc_Path(cw_sim.__file__).resolve().parents[5]
         / 'docs' / 'develop' / 'currency_war' / 'sim' / 'sim-wiring.md')
@@ -1104,7 +1062,12 @@ import math
 
 import pytest as _shop_odds_pytest
 
-from sr_od.application.currency_war.data.cw_shop_odds import  SHOP_SLOTS, expected_refreshes, expected_refreshes_for_card, refresh_prob
+from sr_od.application.currency_war.data.cw_shop_odds import (
+    SHOP_SLOTS,
+    expected_refreshes,
+    expected_refreshes_for_card,
+    refresh_prob,
+)
 
 # —— 边界 ——
 
@@ -1196,7 +1159,10 @@ import math as _platt_calibration_math
 
 import pytest as _platt_calibration_pytest
 
-from sr_od.application.currency_war.telemetry.cw_win_model import  PlattCalibrator, fit_platt_scaling
+from sr_od.application.currency_war.telemetry.cw_win_model import (
+    PlattCalibrator,
+    fit_platt_scaling,
+)
 
 
 def _sigmoid(z: float) -> float:

@@ -14,28 +14,6 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw4 import proof
-from sr_od.application.currency_war.decision.cw4.audit import provisional
-from sr_od.application.currency_war.decision.cw4.bridge import (
-    MandateV1Strategy,
-)
-from sr_od.application.currency_war.decision.cw4.criteria import buy, contracts
-from sr_od.application.currency_war.decision.cw4.criteria import (
-    equipment as crit_equipment,
-)
-from sr_od.application.currency_war.decision.cw4.criteria import (
-    levelup as crit_levelup,
-)
-from sr_od.application.currency_war.decision.cw4.criteria import (
-    refresh as crit_refresh,
-)
-from sr_od.application.currency_war.decision.cw4.criteria import (
-    sell as crit_sell,
-)
-from sr_od.application.currency_war.decision.cw4.criteria import (
-    stockpile as crit_stockpile,
-)
-from sr_od.application.currency_war.decision.cw4.statefn import predicates
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
@@ -46,6 +24,31 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    buy,
+    contracts,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    equipment as crit_equipment,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    levelup as crit_levelup,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    refresh as crit_refresh,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    sell as crit_sell,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    stockpile as crit_stockpile,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 
 
 def _comp():
@@ -341,10 +344,10 @@ class TestWiringShop:
 
     def test_skeleton_wave_zero_contract_violations(self):
         """骨架臂波同样零违例计数(entry 侧 funding 通道契约不误伤)。"""
-        from sr_od.application.currency_war.decision.cw4 import entry
         from sr_od.application.currency_war.sim.engine_p1 import (
             sim_decision_registry,
         )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
         comp = _comp()
         members = _members(comp)
 
@@ -397,17 +400,17 @@ for (_mod, _fn) in contracts.CONTRACTS:
 #: ensure_contract 门或为其辖下接线;criteria/statefn/proof 定义文件与
 #: 测试仓不在此约束面)
 _WIRED_CALLER_PATHS: frozenset[str] = frozenset({
-    'sr_od/application/currency_war/decision/cw4/shop.py',
-    'sr_od/application/currency_war/decision/cw4/entry.py',
-    'sr_od/application/currency_war/decision/cw4/mandate.py',
+    'sr_od/application/currency_war/strategies/impl/mandate_v1/shop.py',
+    'sr_od/application/currency_war/strategies/impl/mandate_v1/entry.py',
+    'sr_od/application/currency_war/strategies/impl/mandate_v1/mandate.py',
 })
 
 #: 豁免路径前缀(判据定义面:criteria 包内部互调/谓词实现/proof 实现)
 _EXEMPT_PREFIXES: tuple[str, ...] = (
-    'sr_od/application/currency_war/decision/cw4/criteria/',)
+    'sr_od/application/currency_war/strategies/impl/mandate_v1/criteria/',)
 _EXEMPT_PATHS: frozenset[str] = frozenset({
-    'sr_od/application/currency_war/decision/cw4/statefn/predicates.py',
-    'sr_od/application/currency_war/decision/cw4/proof.py',
+    'sr_od/application/currency_war/strategies/impl/mandate_v1/statefn/predicates.py',
+    'sr_od/application/currency_war/strategies/impl/mandate_v1/proof.py',
 })
 
 #: 判据函数可绑定的源模块(import 尾径,点分;绑定来自这些模块的
@@ -430,7 +433,7 @@ def _find_criteria_direct_calls(src_root: Path) -> list[str]:
       盲区②)。
     """
     offenders: list[str] = []
-    cw4_prefix = 'sr_od.application.currency_war.decision.cw4.'
+    cw4_prefix = 'sr_od.application.currency_war.strategies.impl.mandate_v1.'
     for py in sorted(src_root.rglob('*.py')):
         rel = py.relative_to(src_root).as_posix()
         if rel in _WIRED_CALLER_PATHS or rel in _EXEMPT_PATHS:
@@ -519,11 +522,13 @@ class TestNoBypassDirectCalls:
 
     @staticmethod
     def _src_root() -> Path:
-        # proof.py 位于 src/sr_od/application/currency_war/decision/cw4/
-        # 下 6 层 ⇒ parents[5] 即 src 根。【R200-F1 勘误】旧式
-        # ``parents[5] / 'src'`` 解析到 src/src(不存在)⇒ rglob 恒空、
-        # 守卫形同虚设(零 offender 恒绿)——修复后 src 根直取 parents[5]。
-        return Path(proof.__file__).resolve().parents[5]
+        # proof.py 位于 src/sr_od/application/currency_war/strategies/impl/
+        # mandate_v1/ 下 7 层 ⇒ parents[6] 即 src 根。【R200-F1 勘误】旧式
+        # ``parents[N] / 'src'`` 解析到 src/src(不存在)⇒ rglob 恒空、
+        # 守卫形同虚设(零 offender 恒绿)——修复后 src 根直取 parents[N]。
+        # (统一迁移批:proof 自 decision/cw4 迁入 strategies/impl/mandate_v1,
+        # 层深 6→7,N 随之 5→6。)
+        return Path(proof.__file__).resolve().parents[6]
 
     def test_criteria_public_calls_whitelisted(self):
         """静态守卫(AST 版):src 树内判据函数调用点只允许出现在已接线
@@ -541,7 +546,7 @@ class TestNoBypassDirectCalls:
         src = tmp_path / 'src'
         (src / 'decision').mkdir(parents=True)
         (src / 'decision' / 'new_consumer.py').write_text(
-            'from sr_od.application.currency_war.decision.cw4.criteria'
+            'from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria'
             '.levelup import lv9_stop\n'
             'def f() -> None:\n    lv9_stop(3)\n', encoding='utf-8')
         offenders = _find_criteria_direct_calls(src)
@@ -554,7 +559,7 @@ class TestNoBypassDirectCalls:
         src = tmp_path / 'src'
         (src / 'somewhere' / 'else').mkdir(parents=True)
         (src / 'somewhere' / 'else' / 'shop.py').write_text(
-            'from sr_od.application.currency_war.decision.cw4.criteria'
+            'from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria'
             ' import levelup\n'
             'def f() -> None:\n    levelup.lv9_stop(3)\n', encoding='utf-8')
         offenders = _find_criteria_direct_calls(src)
@@ -566,10 +571,10 @@ class TestNoBypassDirectCalls:
         不报(接线消费位豁免按路径精确匹配,basename 逃逸修复的另一
         半边——不同目录同名文件不再共享豁免)。"""
         src = tmp_path / 'src'
-        wired = src / 'sr_od/application/currency_war/decision/cw4'
+        wired = src / 'sr_od/application/currency_war/strategies/impl/mandate_v1'
         wired.mkdir(parents=True)
         (wired / 'shop.py').write_text(
-            'from sr_od.application.currency_war.decision.cw4.criteria'
+            'from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria'
             ' import levelup\n'
             'def f() -> None:\n    levelup.lv9_stop(3)\n', encoding='utf-8')
         assert _find_criteria_direct_calls(src) == []
@@ -580,10 +585,10 @@ class TestNoBypassDirectCalls:
 class TestMandateArm1Wiring:
 
     def _frame(self, deploy_cap):
-        from sr_od.application.currency_war.decision.cw4 import mandate
         from sr_od.application.currency_war.kernel.cw_state import (
             DEPLOYED_CAPACITY,
         )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
         bench = [BenchChar(slot=i + 1, char_id='爻光')
                  for i in range(DEPLOYED_CAPACITY)]
         board = [BenchChar(slot=i + 1, char_id='爻光')
@@ -596,10 +601,10 @@ class TestMandateArm1Wiring:
     def test_constant_cap_feed_violates_and_abstains(self):
         """对抗场景 A 复验:固定槽表常数 cap 喂入(无 state 派生链)
         ⇒ 违例计数 + M3 弃权(修复前=零计数+M3 照发,旁路实证形态)。"""
-        from sr_od.application.currency_war.decision.cw4 import mandate
         from sr_od.application.currency_war.kernel.cw_state import (
             DEPLOYED_CAPACITY,
         )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
         sess = _session(('爻光',))
         out = mandate.run_mandate(self._frame(DEPLOYED_CAPACITY), sess)
         assert sess.cw4_counters.get(
@@ -611,7 +616,7 @@ class TestMandateArm1Wiring:
         ⇒ M3 照发(接线不误伤)。(夹具补 hp=100:候选③批起 M3 消费
         血预算停升级门,hp 无真值帧 fail-closed 拒升级——真值帧才是本锁
         要钉的语义。)"""
-        from sr_od.application.currency_war.decision.cw4 import mandate
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
         st = _state(gold=200, level=3, hp=100)
         st.deployed = [BenchChar(slot=1, char_id='爻光'),
                        BenchChar(slot=2, char_id='桑博'),

@@ -321,7 +321,7 @@ def test_pool_wire_best_effort_on_error(
 import pathlib
 from typing import Any
 
-from sr_od.application.currency_war.decision.cw_strategy import (
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CurrencyWarMatch,
     StrategySession,
 )
@@ -1013,7 +1013,7 @@ def _make_hook_op(test_context: SrTestContext,
     ``wave_shop`` 是波循环顶 read_game_state 的商店名表(含 ''=未识别槽);
     ``hook_rereads`` 是停机钩子 read_shop_cards 的逐次返回(名表)。
     """
-    from sr_od.application.currency_war.decision.cw_strategy import (
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         CurrencyWarMatch,
         StrategySession,
     )

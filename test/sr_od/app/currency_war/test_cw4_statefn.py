@@ -17,19 +17,19 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw4.audit import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
     derived,
     proof_consts,
     provisional,
 )
-from sr_od.application.currency_war.decision.cw4.statefn import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     horizon,
     interest,
     odds,
     predicates,
     vopt,
 )
-from sr_od.application.currency_war.decision.cw4.statefn import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     lambda_death as ld,
 )
 
@@ -455,7 +455,7 @@ class TestAuditCarriers:
 class TestIncomeAndLookup:
 
     def test_net_income_schedule(self) -> None:
-        from sr_od.application.currency_war.decision.cw4.statefn import income
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import income
         assert income.net_income(1, 0) == 3 + 1  # 1-1 轮基础 3 + streak(0)=1
         assert income.net_income(5, 3, 'battle') == 5 + 2 + 2
         assert income.net_income(3, 6) == 5 + 4  # 连胜表尾 4

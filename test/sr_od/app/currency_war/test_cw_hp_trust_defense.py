@@ -32,28 +32,18 @@ import logging
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision.decision_v2.arbiter import (
-    arbitrate,
-)
-from sr_od.application.currency_war.decision.decision_v2.candidates import (
-    Candidate,
-)
-from sr_od.application.currency_war.decision.decision_v2.discipline import (
+from sr_od.application.currency_war.kernel.cw_discipline_rules import (
     blood_budget_levelup_blocked,
-)
-from sr_od.application.currency_war.decision.decision_v2.remediation import (
-    steady_state_levelup_group,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
     GameState,
     LevelUp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import _apply_hp
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 
 
 @pytest.fixture(autouse=True)
@@ -188,28 +178,6 @@ def test_ghost_frame_predicate_blocks() -> None:
         _ghost_state(), StrategySession(), DEFAULT_REGISTRY) is True
 
 
-def test_ghost_frame_arbiter_rejects_all_levelups() -> None:
-    """arbiter 端到端:12×LevelUp 计划在幽灵帧逐击拒付,计数≥12
-    (局21 r4 12×LevelUp 放行病灶的行为反转)。"""
-    sess = StrategySession()
-    st = _ghost_state()
-    res = arbitrate([(_lv_cand(), 5.0, {})] * 12, st, sess, DEFAULT_REGISTRY)
-    assert not [a for a in res.actions if isinstance(a, LevelUp)]
-    assert sess.v3_blood_budget_rejects >= 12
-
-
-def test_ghost_frame_remediation_steady_group_blocked() -> None:
-    """remediation 稳态多击组面:幽灵帧整组拒发(deploy_cap 补偿臂①
-    经同一谓词单一收口,不再单独设锁)。"""
-    sess = StrategySession()
-    st = _ghost_state()
-    st.deployed = [BenchChar(slot=i + 1, char_id=f'c{i}', faction='仙舟')
-                   for i in range(6)]
-    st.bench[0] = BenchChar(slot=1, char_id='希儿', faction='量子')
-    st.xp_progress = (16, 40)
-    assert steady_state_levelup_group(st.copy(), st, sess,
-                                      DEFAULT_REGISTRY) == []
-    assert sess.v3_blood_budget_rejects == 1
 
 
 def test_mutation_guard_removal_turns_locks_red(
@@ -218,7 +186,7 @@ def test_mutation_guard_removal_turns_locks_red(
     100>21 不再拒——组2 各锁在此变异下必须翻红,证明锁敏感性与守卫
     必要性(去门必须涌现违规)。"""
     monkeypatch.setattr(
-        'sr_od.application.currency_war.decision.decision_v2.discipline.'
+        'sr_od.application.currency_war.kernel.cw_discipline_rules.'
         'hp_decision_trusted', lambda state: True)
     assert blood_budget_levelup_blocked(
         _ghost_state(), StrategySession(), DEFAULT_REGISTRY) is False
@@ -264,19 +232,8 @@ def test_allin_exempt_precedes_trust_guard() -> None:
     assert blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY) is False
 
 
-def test_terminal_release_fail_closed_on_untrusted() -> None:
-    """不可信 hp 帧不触发终止分支(设计 W659 v2 §5.1 改判对照用例;
-    ADR-0469):幽灵帧((False,False))fail-closed——终止分支与停升级
-    门同取向,证据缺失时禁令保持有效,误放代价 > 误拦。"""
-    from sr_od.application.currency_war.decision.decision_v2.discipline import (
-        terminal_release,
-    )
-    sess = StrategySession()
-    sess.plane_node_table = ['battle'] * 9
-    st = _ghost_state(hp=9)
-    st.plane = 1
-    st.round_num = 8
-    assert terminal_release(st, sess, DEFAULT_REGISTRY) is False
+# (test_terminal_release_fail_closed_on_untrusted 已随 terminal_release 死链
+#  删除——统一迁移批 ② MAP B 类「terminal_release 三函数」随删。)
 
 
 # ---------- 组4:写侧位一致锁(shop._apply_hp) ----------
@@ -395,7 +352,7 @@ def test_sim_frames_default_trusted_gate_short_circuits() -> None:
     with_guard = blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY)
     monkey = pytest.MonkeyPatch()
     monkey.setattr(
-        'sr_od.application.currency_war.decision.decision_v2.discipline.'
+        'sr_od.application.currency_war.kernel.cw_discipline_rules.'
         'hp_decision_trusted', lambda state: True)
     try:
         without_guard = blood_budget_levelup_blocked(st.copy(), sess,

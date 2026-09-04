@@ -22,7 +22,7 @@ import math
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.decision.cw4.shop import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     shop_unbought_reasons,
 )
 from sr_od.application.currency_war.kernel import cw_intention as ci

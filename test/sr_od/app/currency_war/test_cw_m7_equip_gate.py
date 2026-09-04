@@ -21,7 +21,7 @@ dd-027 修订(实机局 g_20260904_010335 漏发定谳,2026-09-04):同帧
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.decision.cw4 import mandate
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     OpenShop,
     RunEquip,
@@ -160,7 +160,7 @@ class TestM7EmissionOrder:
 
     def test_truncation_keeps_both_actions(self):
         """端到端:经帧稳定截断器后两动作均存活(事故里 RunEquip 被丢)。"""
-        from sr_od.application.currency_war.decision.cw4.entry import (
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.entry import (
             truncate_frame_stable,
         )
         s = _session(_WEARABLE)

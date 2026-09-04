@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_telemetry 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -11,19 +10,15 @@
 """
 from __future__ import annotations
 
-
 # ==================== w146_intention_telemetry ====================
-
 import json
 
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     serialize_intention,
 )
-
-from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 from sr_od.application.currency_war.kernel.cw_state import GameState
-
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 
 
@@ -87,12 +82,12 @@ def test_sim_ledger_rows_carry_same_key():
 
 # ==================== w148_owned_pool_chain ====================
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
 from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     _owned_wearable_names,
 )
-from sr_od.application.currency_war.decision.decision_v2.strategy import (
-    DecisionV2Strategy,
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
 )
 
 
@@ -117,14 +112,14 @@ def test_pseudo_state_copies_owned_pool() -> None:
     """
     sess = StrategySession()
     sess.last_owned_equips = ['财富宝钻', '分身墨镜']
-    st = DecisionV2Strategy()._pseudo_state(None, sess)
+    st = MandateV1Strategy()._pseudo_state(None, sess)
     assert st.equips == ['财富宝钻', '分身墨镜']
 
 
 def test_pseudo_state_owned_pool_empty_semantics_unchanged() -> None:
     """空快照:st.equips 为空列表(默认语义不变,不造出假持有)。"""
     sess = StrategySession()
-    st = DecisionV2Strategy()._pseudo_state(None, sess)
+    st = MandateV1Strategy()._pseudo_state(None, sess)
     assert st.equips == []
 
 
@@ -180,12 +175,10 @@ def test_reconcile_multi_copy_pairing_and_departure() -> None:
 
 # ==================== w222_telemetry_gaps ====================
 
-import json
 from pathlib import Path
 
 from one_dragon.utils import log_utils
 from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
-from sr_od.application.currency_war.kernel.cw_state import GameState
 
 _SRC_ROOT = Path('src/sr_od/application/currency_war')
 
@@ -267,18 +260,11 @@ def test_briefing_modules_use_framework_logger() -> None:
 
 # ==================== w253_boss_names_telemetry ====================
 
-import json
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-from sr_od.application.currency_war.kernel.cw_state import GameState
-
-from sr_od.application.currency_war.telemetry.schema import OutcomeRecord
-
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
-
 from sr_od.application.currency_war.telemetry.query import read_jsonl
-
+from sr_od.application.currency_war.telemetry.schema import OutcomeRecord
 from sr_od.application.currency_war.telemetry.state import set_ctx_match
 
 

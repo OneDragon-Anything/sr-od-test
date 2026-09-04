@@ -203,7 +203,7 @@ def _make_round_director(test_context, monkeypatch, scripted_actions,
     """备战单轮单测装配(镜像 test_cw_w971_p3b_seg2 同名 helper 的最小集)。"""
     from types import SimpleNamespace as _SN
 
-    from sr_od.application.currency_war.decision.cw_strategy import (
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         StrategySession,
     )
     from sr_od.application.currency_war.operations.cw_screen import (

@@ -7,18 +7,18 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.decision.cw4 import shop
-from sr_od.application.currency_war.decision.cw4.audit import provisional
-from sr_od.application.currency_war.decision.cw4.criteria import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     buy as crit_buy,
 )
-from sr_od.application.currency_war.decision.cw4.criteria import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell as crit_sell,
 )
-from sr_od.application.currency_war.decision.cw4.criteria import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     stockpile as crit_stockpile,
 )
-from sr_od.application.currency_war.decision.cw4.statefn import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     odds,
     vbar,
 )
@@ -158,8 +158,8 @@ class TestShopWiringP56T1:
         """M6 买入金约束=P56 可变现下界:线成型帧(无活期卡 ⇒
         s_reserve=g*=50)下,cost2 件买后 49<50 ⇒ 拒 + 'm6_s_reserve_
         reject' 计数;cost1 件买后 50≥50 ⇒ 发射。"""
-        from sr_od.application.currency_war.decision.cw4 import proof
-        from sr_od.application.currency_war.decision.cw4.bridge import (
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )
         from sr_od.application.currency_war.kernel.cw_comps import (
@@ -210,8 +210,8 @@ class TestShopWiringP56T1:
     def test_pullback_fires_after_spending(self):
         """回拉发射位接线:买/花后投影金 < g* ⇒ 发射凑息卖
         (reason='sell_for_interest'),分键遥测四字段落 session counters。"""
-        from sr_od.application.currency_war.decision.cw4 import proof
-        from sr_od.application.currency_war.decision.cw4.bridge import (
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )
         from sr_od.application.currency_war.kernel.cw_comps import (

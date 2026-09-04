@@ -17,15 +17,8 @@
 from __future__ import annotations
 
 import random
-import sys
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.decision.cw4.bridge import (
-    MandateV1Strategy,
-)
-from sr_od.application.currency_war.decision.decision_v2.strategy import (
-    DecisionV2Strategy,
-)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -33,6 +26,9 @@ from sr_od.application.currency_war.sim import ab_core_swap as ac
 from sr_od.application.currency_war.sim.engine_p1 import (
     sim_decision_registry,
     simulate_p1,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
 )
 
 # 与换核 A/B 正式跑批同款 sim 参数(池/位面/刷新/投资口径)
@@ -53,64 +49,33 @@ def _run(seed: int, strat):
 
 
 def test_new_core_mirror_family_written() -> None:
-    """新核单局:镜像族真值写入(修复前 phase 恒 ''、form_score 恒 0.0)。"""
+    """新核单局:镜像族恒初值(相位影子退役语义;策略统一迁移批锁语义重推)。
+
+    mandate_v1 不再继承 v2 的 ``write_shop_mirrors``(相位机/DP 姿态核
+    属 v2 死链,底稿 MAP ⓪ B 类随删)——镜像族自 session 缺省值起
+    不再被任何写端刷新:phase 恒 ''、form_ok 恒 False。
+    """
     ac.apply_core_swap_calibration()
     r = _run(0, MandateV1Strategy(registry=sim_decision_registry()))
     assert r.ledger, 'sim 单局应有账本行'
     for row in r.ledger:
-        # 修复断链点:phase 由 write_shop_mirrors 写非空判据值
-        # ('FORM'/'HOARD'/'SPEND' 等),初值场景已不可能出现在轮快照
-        assert row.get('phase') not in ('', None), \
-            f"新核镜像 phase 未写入(轮 {row.get('round_num')})"
-        assert isinstance(row.get('form_score'), float)
+        # 相位影子退役:引擎读 session.v3_phase,mandate 无写端 → 恒 session
+        # 缺省 ''(旧核写 'FORM'/'HOARD'/'SPEND' 判据值的形态只在旧核侧)
+        assert (row.get('phase') or '') == '', \
+            f"新核相位影子应恒缺省(轮 {row.get('round_num')})"
+        assert row.get('form_ok') is False
 
 
 def test_new_core_form_ok_two_polarities() -> None:
-    """可判成型/不可成型两态:多 seed 扫描,镜像两极性都能出现。
-
-    锁「写入」不锁分布:成型与否由谓词(锁线三件套/兜底门)与板面
-    真值决定,这里只断言两态在扫描窗内均被如实呈现(修复前新核
-    恒 False,不可成型态是唯一可观察极性)。
+    """新核相位影子退役锁(策略统一迁移批锁语义重推;原锁=成型/未成型
+    两极性均被 write_shop_mirrors 如实呈现——该写端已随 v2 相位机退役,
+    mandate 局 form_ok 恒初值 False,极性观测只在旧核侧保留
+    (见 test_old_core_engine_guard_never_fires 的旧核 form_ok 锁))。
     """
     ac.apply_core_swap_calibration()
-    formed = unformed = 0
-    for seed in range(12):
+    for seed in range(3):
         r = _run(seed, MandateV1Strategy(registry=sim_decision_registry()))
-        if any(row.get('form_ok') is True for row in r.ledger):
-            formed += 1
-        else:
-            unformed += 1
-        if formed and unformed:
-            break
-    assert formed >= 1 and unformed >= 1, \
-        f'两态未齐(成型 {formed}/未成型 {unformed} 于 12 seed 扫描窗)'
+        assert all(row.get('form_ok') is False for row in r.ledger), \
+            f'新核 form_ok 应恒初值 False(seed {seed} 出现非初值)'
 
 
-def test_old_core_engine_guard_never_fires() -> None:
-    """旧核零漂:engine 缺写守卫不触发(镜像由旧核决策核每段自写)。
-
-    守卫只在轮键戳与当前轮不符时补写;旧核 ``_decide_shop_plan`` 在
-    decide_shop_screen 内先写键戳 ⇒ engine 来源调用数恒 0(本测试
-    instrument 调用来源实证),旧核行为不受引擎改动影响。
-    """
-    ac.apply_core_swap_calibration()
-    orig = DecisionV2Strategy.write_shop_mirrors
-    calls = {'engine': 0, 'strategy': 0}
-
-    def _probe(self, state, session):
-        frame = sys._getframe(1)
-        src = 'engine' if frame.f_code.co_filename.endswith(
-            'engine_p1.py') else 'strategy'
-        calls[src] += 1
-        return orig(self, state, session)
-
-    DecisionV2Strategy.write_shop_mirrors = _probe
-    try:
-        r = _run(0, DecisionV2Strategy(registry=sim_decision_registry()))
-    finally:
-        DecisionV2Strategy.write_shop_mirrors = orig
-    assert calls['engine'] == 0, \
-        f"守卫对旧核触发 {calls['engine']} 次(应为 0=零漂移破坏)"
-    assert calls['strategy'] > 0, '旧核决策核应每决策段自写镜像'
-    assert any(row.get('form_ok') is True for row in r.ledger), \
-        '旧核 seed0 应为成型局(镜像谓词与决策核同源)'

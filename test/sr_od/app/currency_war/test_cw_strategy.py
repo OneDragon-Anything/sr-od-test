@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """test_cw_strategy 主题锁。
 
 2026-09-03 拆分归档批:自混合文件 test_cw_strategy_planner.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
 from __future__ import annotations
-
-
 
 import random
 import tempfile
@@ -13,14 +10,25 @@ from types import SimpleNamespace
 
 import pytest
 
+import sr_od.application.currency_war.strategies.impl.cw_strategy as _cw_strategy_mod
 from one_dragon.base.operation.application.plugin_info import PluginSource
-import sr_od.application.currency_war.decision.cw_strategy as _cw_strategy_mod
-from sr_od.application.currency_war.kernel.cw_events import  MegastarOption, PartnerOption
+from sr_od.application.currency_war.kernel.cw_events import (
+    MegastarOption,
+    PartnerOption,
+)
+from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import GameState, PickEvent
-from sr_od.application.currency_war.decision.cw_strategy import  CurrencyWarMatch, CwStrategy, StrategySession
-from sr_od.application.currency_war.decision.cw_strategy_manager import StrategyManager
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY
-from sr_od.application.currency_war.decision.decision_v2.strategy import  DecisionV2Strategy
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+    CurrencyWarMatch,
+    CwStrategy,
+    StrategySession,
+)
+from sr_od.application.currency_war.strategies.impl.cw_strategy_manager import (
+    StrategyManager,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
 
 
 def _cfg(**overrides) -> SimpleNamespace:
@@ -29,7 +37,7 @@ def _cfg(**overrides) -> SimpleNamespace:
         "faction_priority": ["贝洛伯格", "仙舟", "巡海游侠"],
         "character_priority": ["阿格莱雅"],
         "character_build_around": [],
-        "strategy_id": "decision_v2",
+        "strategy_id": "mandate_v1",
         "strategy_seed": None,
     }
     base.update(overrides)
@@ -37,48 +45,52 @@ def _cfg(**overrides) -> SimpleNamespace:
 
 
 def _builtin_dirs() -> list[tuple[Path, PluginSource]]:
-    """BUILTIN 策略目录(src/.../currency_war/strategies/)。"""
-    builtin = Path(_cw_strategy_mod.__file__).parents[1] / "strategies"
+    """BUILTIN 策略目录(src/.../currency_war/strategies/)。
+
+    锚 = 接口模块(cw_strategy)上一层,即注册面目录本身(统一迁移批
+    二勘误落位:接口基类与 cw_strategy_manager 同层,均在
+    strategies/impl/;注册壳在 strategies/ 顶层)。"""
+    builtin = Path(_cw_strategy_mod.__file__).parents[1]
     return [(builtin, PluginSource.BUILTIN)]
 
 
 # —— StrategyManager 发现 / 去重 / 实例化 / 值域 ——
 
 
-def test_builtin_registry_is_decision_v2_only() -> None:
-    """BUILTIN 注册集 = decision_v2 + mandate_v1(锁语义重推:原锁钉
-    「default 栈退役后无第二内置策略」;§6.4-R 换核批4 扩 mandate_v1
-    为设计内变更——锁改钉注册面封闭集,新增策略须显式入此清单;
+def test_builtin_registry_is_mandate_v1_only() -> None:
+    """BUILTIN 注册集 = mandate_v1(统一迁移批 ②:decision_v2 注册壳删除;
+    原锁钉「default 栈退役后无第二内置策略」,换核批4 扩 mandate_v1,
+    ② 收敛为唯一活策略核——锁改钉注册面封闭集,新增策略须显式入此清单;
     未知 id 不再回退——manager.instantiate 显式报错)。"""
     mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
     ids = sorted(i.strategy_id for i in mgr.strategies)
-    assert ids == ["decision_v2", "mandate_v1"]
+    assert ids == ["mandate_v1"]
     info = mgr.strategies[0]
     assert info.source == PluginSource.BUILTIN
 
 
-def test_instantiate_decision_v2_bridges_to_real_strategy() -> None:
-    """instantiate('decision_v2') → DecisionV2Strategy 实例(锁「桥到真身」——防壳与实现脱钩)。"""
+def test_instantiate_mandate_v1_bridges_to_real_strategy() -> None:
+    """instantiate('mandate_v1') → MandateV1Strategy 实例(锁「桥到真身」——防壳与实现脱钩)。"""
     mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
-    strat = mgr.instantiate("decision_v2")
-    assert isinstance(strat, DecisionV2Strategy)
+    strat = mgr.instantiate("mandate_v1")
+    assert isinstance(strat, MandateV1Strategy)
 
 
 def test_instantiate_unknown_id_raises() -> None:
     """instantiate(不存在的 id)→ 显式 ValueError(旧「回退 default」分支已随
     default 本体退役删除——静默换栈比运行报错更危险)。"""
     mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
-    with pytest.raises(ValueError, match="decision_v2"):
+    with pytest.raises(ValueError, match="mandate_v1"):
         mgr.instantiate("totally_nonexistent_strategy")
 
 
-def test_instantiate_decision_v2_default_registry() -> None:
-    """decision_v2 实例缺省持有 DEFAULT_REGISTRY(锁 registry 注入链完好,A/B 通道前提)。
+def test_instantiate_mandate_v1_default_registry() -> None:
+    """mandate_v1 实例缺省持有 DEFAULT_REGISTRY(锁 registry 注入链完好,A/B 通道前提)。
 
     本断言为单一源:test_cw_adr0293_calibration.py 的同款注入锁已并入此处
     (重复构成并/删理由,README 纪律 8);标定值本身由该文件的字段面锁辖。"""
     mgr = StrategyManager(ctx=None, plugin_dirs=_builtin_dirs())
-    strat = mgr.instantiate("decision_v2")
+    strat = mgr.instantiate("mandate_v1")
     assert strat.registry is DEFAULT_REGISTRY
 
 
@@ -90,9 +102,9 @@ def test_third_party_discovery() -> None:
         pkg_dir.mkdir()
         (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
         (pkg_dir / "my_strategy.py").write_text(
-            "from sr_od.application.currency_war.decision.decision_v2.strategy "
-            "import DecisionV2Strategy\n"
-            "class MyTestStrategy(DecisionV2Strategy):\n"
+            "from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge "
+            "import MandateV1Strategy\n"
+            "class MyTestStrategy(MandateV1Strategy):\n"
             "    STRATEGY_ID = 'my_test_strategy'\n"
             "    STRATEGY_NAME = '测试第三方策略'\n"
             "    AUTHOR = 'tester'\n",
@@ -119,9 +131,9 @@ def test_duplicate_strategy_id_raises() -> None:
             pkg.mkdir()
             (pkg / "__init__.py").write_text("", encoding="utf-8")
             (pkg / f"{sub}.py").write_text(
-                "from sr_od.application.currency_war.decision.decision_v2.strategy "
-                "import DecisionV2Strategy\n"
-                f"class S{sub}(DecisionV2Strategy):\n"
+                "from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge "
+                "import MandateV1Strategy\n"
+                f"class S{sub}(MandateV1Strategy):\n"
                 "    STRATEGY_ID = 'dup'\n"
                 "    STRATEGY_NAME = 'dup'\n",
                 encoding="utf-8",
@@ -142,7 +154,7 @@ def test_duplicate_strategy_id_raises() -> None:
 
 def test_create_session() -> None:
     """create_session → StrategySession(rng + performance 就绪,target None)。"""
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     session = strat.create_session(_cfg())
     assert isinstance(session, StrategySession)
     assert session.target_comp is None
@@ -165,9 +177,9 @@ def test_session_node_type_current_contract() -> None:
 
 def test_on_round_end_stores_last_hp_when_confident() -> None:
     """D-94:on_round_end 达阈置信度的结算 hp_after → 存 session.last_hp(给下回合 prep state.hp)。"""
-    from sr_od.application.currency_war.kernel.cw_performance import  RoundOutcome
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     sess = strat.create_session(_cfg())
     assert sess.last_hp is None
     obs = RoundOutcome(round_num=4, plane=1, node_type='普通战斗', comp_tag='DOT队',
@@ -180,7 +192,7 @@ def test_on_round_end_skips_low_confidence_hp() -> None:
     """D-94:低置信(hp_confidence<阈,如结算屏 OCR 失败 hp_after=0)→ 不存(防 0 污染下回合 prep)。"""
     from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     sess = strat.create_session(_cfg())
     sess.last_hp = 70   # 上轮已存的可靠值
     obs = RoundOutcome(round_num=5, plane=1, node_type='普通战斗', comp_tag='DOT队',
@@ -191,7 +203,7 @@ def test_on_round_end_skips_low_confidence_hp() -> None:
 
 def test_decide_invest_delegates_decide_event() -> None:
     """decide_invest → 委托 decide_event,返回 PickEvent(白名单命中)。"""
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     cfg = _cfg()
     session = strat.create_session(cfg)
     state = GameState()
@@ -203,7 +215,7 @@ def test_decide_invest_delegates_decide_event() -> None:
 
 def test_decide_megastar_fallback_idx0_when_no_charid() -> None:
     """decide_megastar:候选 char_id 全空(OCR 未就绪)→ idx=0(今天盲点左候选)。"""
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     cfg = _cfg()
     session = strat.create_session(cfg)
     state = GameState()
@@ -214,7 +226,7 @@ def test_decide_megastar_fallback_idx0_when_no_charid() -> None:
 
 def test_decide_partner_fallback_idx0_when_no_charid() -> None:
     """decide_partner:候选 char_id 全空 → idx=0(今天盲点 stage 立绘)。"""
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     cfg = _cfg()
     session = strat.create_session(cfg)
     state = GameState()
@@ -237,7 +249,7 @@ def test_rng_seed_reproducible() -> None:
 
 def test_currency_war_match_holds_strategy_and_session() -> None:
     """CurrencyWarMatch 轻容器持有 strategy + session。"""
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     session = strat.create_session(_cfg())
     match = CurrencyWarMatch(strat, session)
     assert match.strategy is strat
@@ -247,7 +259,7 @@ def test_currency_war_match_holds_strategy_and_session() -> None:
 def test_on_round_end_records_performance() -> None:
     """on_round_end → session.performance.record(obs)(观测段非空;loop 每轮胜结算调用)。"""
     from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     session = strat.create_session(_cfg())
     obs = RoundOutcome(round_num=1, plane=1, node_type="普通战斗", comp_tag="x", hp_after=90)
     strat.on_round_end(GameState(), session, _cfg(), obs)
@@ -281,7 +293,7 @@ def _state_with_units() -> GameState:
 def test_decide_megastar_enhance_intent_deleted() -> None:
     """行为锁:强化角色意向维度删除后 decide_megastar 输出恒无强化意向
     (enhance_char_id=None、reason 无后缀;候选 idx 选择不受影响)。"""
-    strat = DecisionV2Strategy()
+    strat = MandateV1Strategy()
     cfg = _cfg()
     session = strat.create_session(cfg)
     session.target_comp = _comp_by_name('反甲白厄')

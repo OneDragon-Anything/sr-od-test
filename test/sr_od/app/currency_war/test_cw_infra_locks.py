@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_infra_locks 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -13,14 +12,13 @@
 """
 from __future__ import annotations
 
-
 # ==================== l0_andon_default_off ====================
-
 from pathlib import Path
+
 from sr_od.application.currency_war.telemetry import defects, recorder
 
 _L0 = 'sr_od.application.currency_war.telemetry.defects'
-from sr_od.application.currency_war.telemetry import defects as ct, state
+from sr_od.application.currency_war.telemetry import state
 
 
 def _setup_isolated_l0(tmp_path: Path, monkeypatch) -> Path:
@@ -93,9 +91,10 @@ import json
 from pathlib import Path as _w515_l0_andon_Path
 
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.telemetry import state as _telstate
+from sr_od.application.currency_war.telemetry import defects as _w515_l0_andon_defects
 from sr_od.application.currency_war.telemetry import defects as cw_telemetry
-from sr_od.application.currency_war.telemetry import defects as _w515_l0_andon_defects, recorder as _w515_l0_andon_recorder
+from sr_od.application.currency_war.telemetry import recorder as _w515_l0_andon_recorder
+from sr_od.application.currency_war.telemetry import state as _telstate
 
 
 def _setup(monkeypatch, tmp_path: _w515_l0_andon_Path, run_id: str = 'w515t') -> list[dict]:
@@ -282,7 +281,7 @@ def test_game_side_executor_no_ctx_is_no_stop(tmp_path: _w515_l0_andon_Path, mon
 def test_wiring_existence_source_lock():
     """静态锁:模块级 record_defect 判级后必须接 _fire_l0_andon 且只认
     显式 L0_andon;防后续重构静默断链或放宽触发条件。"""
-    src = (_w515_l0_andon_Path(cw_telemetry.__file__).read_text(encoding='utf-8') 
+    src = (_w515_l0_andon_Path(cw_telemetry.__file__).read_text(encoding='utf-8')
         + _w515_l0_andon_Path(_telstate.__file__).read_text(encoding='utf-8'))
     assert 'if sev == SEVERITY_L0_ANDON:' in src
     assert src.count('_fire_l0_andon({') == 1   # 触发点唯一(收敛在判级后)
@@ -298,14 +297,10 @@ def test_wiring_existence_source_lock():
 
 # ==================== dead_arm_cleanup_locks ====================
 
-from pathlib import Path as _dead_arm_cleanup_locks_Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.decision.decision_v2.candidates import  _buy_tag, generate_candidates
-from sr_od.application.currency_war.kernel.cw_registry import  DEFAULT_REGISTRY
-from sr_od.application.currency_war.decision.decision_v2.scoring import score_state
+from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 
 _DELETED_FIELDS = (
     'goldrich_buy_bias', 'goldrich_min_gold', 'goldrich_buy_tags',
@@ -315,12 +310,14 @@ _DELETED_FIELDS = (
 )
 _SYMBOLS = ('goldrich', 'early_pace', 'filler_star',
             'pair_copy_direction')
+# (_decision_v2_dir 已随 decision/ 整包删除——统一迁移批 ②;
+#  源码面符号守卫对象消亡,registry 字段面守卫保留。)
 
 
-def _decision_v2_dir() -> _dead_arm_cleanup_locks_Path:
-    return (_dead_arm_cleanup_locks_Path(__file__).resolve().parents[5]
-            / 'src' / 'sr_od' / 'application' / 'currency_war'
-            / 'decision_v2')
+from pathlib import Path as _sim_cli_smoke_Path
+
+from sr_od.application.currency_war.sim.runner import simulate_p1_batch
+from sr_od.application.currency_war.telemetry import query as tel
 
 
 def _strip_comments_and_docstrings(text: str) -> str:
@@ -351,18 +348,13 @@ def test_registry_dead_arm_fields_absent() -> None:
         assert not hasattr(DEFAULT_REGISTRY, f), f
 
 
-def test_decision_v2_source_symbols_absent() -> None:
-    """源码面:decision_v2 活代码不含四臂任一符号(注释/docstring 中
-    的定谳墓碑指针放行;复活须先过各自 ADR 复活条件论证)。"""
-    for py in sorted(_decision_v2_dir().glob('*.py')):
-        code = _strip_comments_and_docstrings(
-            py.read_text(encoding='utf-8'))
-        for sym in _SYMBOLS:
-            assert sym not in code, f'{py.name} 含死臂符号 {sym}'
 
 
 def _sess() -> StrategySession:
-    from sr_od.application.currency_war.kernel.cw_intention import  HoardTarget, IntentionState
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        HoardTarget,
+        IntentionState,
+    )
     s = StrategySession()
     s.v2_state = ('economy', False, False, 0, 0, 0, 0, 0)
     s.v3_mode = 'economy'
@@ -377,49 +369,6 @@ def _sess() -> StrategySession:
     s.target_comp = SimpleNamespace(factions=('列车同行',),
                                     core_chars=('姬子·启行',))
     return s
-
-
-def test_score_state_has_no_filler_star_key() -> None:
-    """行为面:score_state 分项表无 filler_star 维(死臂评分通道
-    不再有半步残迹;merge_progress/core_star 等存活维不受影响)。"""
-    st = GameState(plane=1, round_num=5, gold=30, level=5,
-                   board={'列车同行': 2}, deployed=[], bench=[],
-                   shop=[], hp=50)
-    bd = score_state(st, DEFAULT_REGISTRY, _sess())
-    assert 'filler_star' not in bd
-    assert 'merge_progress' in bd and 'core_star' in bd
-
-
-def test_direction_gate_default_behavior_kept() -> None:
-    """行为面:方向阵营门现行为保持——方向外 bench-only 同名副本在
-    默认 registry 下不生成买候选、_buy_tag 判 None(原方案B 豁免已删,
-    同域放行只由末窗承接门 gap 条件化承载,ADR-0405;锁线帧 gap=0)。"""
-    filler, fac = '娜塔莎', '贝洛伯格'
-    dep = SimpleNamespace(char_id='姬子·启行', faction='列车同行',
-                          star=1, position_pref='back', equips=(), slot=0)
-    st = GameState(plane=1, round_num=7, gold=60, level=5,
-                   board={'列车同行': 2},
-                   deployed=[dep],
-                   bench=[],
-                   shop=[ShopCard(x=1, faction=fac, name=filler, cost=3)],
-                   hp=80)
-    sess = _sess()
-    assert _buy_tag(st.shop[0], st, sess, DEFAULT_REGISTRY) is None
-    names = [getattr(getattr(c.action, 'card', None), 'name', '')
-             for c in generate_candidates(st, sess, DEFAULT_REGISTRY)]
-    assert filler not in names
-
-
-# ==================== sim_cli_smoke ====================
-
-from pathlib import Path as _sim_cli_smoke_Path
-
-from sr_od.application.currency_war.data import cw_delta_pool_data
-from sr_od.application.currency_war.telemetry import query as tel
-
-from sr_od.application.currency_war.sim.engine_p1 import EQUIP_GRANT_CALIB_VERSION, simulate_p1
-
-from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
 
 def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
@@ -587,6 +536,9 @@ sys.path.insert(0, str(_REPO / 'src'))
 
 import json as _replay_reader_json  # noqa: E402
 
+from sr_od.application.currency_war.telemetry.cw_divergence_stats import (
+    divergence_stats,  # noqa: E402
+)
 from sr_od.application.currency_war.telemetry.cw_replay_reader import (  # noqa: E402
     DecisionTrace,
     OutcomeRecord,
@@ -595,8 +547,6 @@ from sr_od.application.currency_war.telemetry.cw_replay_reader import (  # noqa:
     load_outcomes,
     posture_tag,
 )
-from sr_od.application.currency_war.telemetry.cw_divergence_stats import divergence_stats  # noqa: E402
-from sr_od.application.currency_war.telemetry import state as _replay_reader_cw_telemetry
 
 
 def _write(path: _replay_reader_Path, rows: list[dict]) -> _replay_reader_Path:
@@ -732,7 +682,9 @@ def test_from_dict_is_write_side_single_source() -> None:
 import inspect
 
 from sr_od.application.currency_war.operations.cw_screen import _overlay_confirm
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import  CwScreenPlanner
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import (
+    CwScreenPlanner,
+)
 
 
 def test_card_point_inside_updated_area_and_avoids_detail(test_context) -> None:
@@ -801,14 +753,16 @@ def test_match3_frame_regression_points(test_context) -> None:
 import pytest
 
 from sr_od.application.currency_war.data import cw_synthesis
-from sr_od.application.currency_war.data.cw_synthesis import  plan_syntheses, synthesis_membership
+from sr_od.application.currency_war.data.cw_synthesis import (
+    plan_syntheses,
+    synthesis_membership,
+)
 
 POOL = 'snapshot'
 
 
 @pytest.fixture()
 def _run_game():
-
     from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     return simulate_p1
 

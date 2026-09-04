@@ -10,13 +10,12 @@ from pathlib import Path
 from sr_od.application.currency_war.currency_war_config import (
     CurrencyWarConfig,
 )
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
-from sr_od.application.currency_war.telemetry import query, recorder, state
-from sr_od.application.currency_war.telemetry import query as query
-from sr_od.application.currency_war.decision.cw_strategy_manager import (
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
+from sr_od.application.currency_war.strategies.impl.cw_strategy_manager import (
     PluginSource,
     StrategyManager,
 )
+from sr_od.application.currency_war.telemetry import query, recorder
 
 _STRATEGIES_DIR = Path(__file__).parents[5] / 'src' / 'sr_od' \
     / 'application' / 'currency_war' / 'strategies'
@@ -28,16 +27,16 @@ def _mgr() -> StrategyManager:
 
 def test_strategies_discoverable():
     ids = [i.strategy_id for i in _mgr().discover()]
-    assert ids == ['decision_v2', 'mandate_v1']   # §6.4-R 换核批4 扩 mandate_v1(锁语义重推:钉注册面封闭集)
+    assert ids == ['mandate_v1']   # 统一迁移批 ②:decision_v2 注册壳删除,封闭集=唯一活核
 
 
-def test_instantiate_line_v2():
-    from sr_od.application.currency_war.decision.decision_v2.strategy import (
-        DecisionV2Strategy,
+def test_instantiate_mandate_v1():
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+        MandateV1Strategy,
     )
     mgr = _mgr()
     mgr.discover()
-    assert isinstance(mgr.instantiate('decision_v2'), DecisionV2Strategy)
+    assert isinstance(mgr.instantiate('mandate_v1'), MandateV1Strategy)
 
 
 def test_instantiate_unknown_id_raises():
@@ -45,7 +44,7 @@ def test_instantiate_unknown_id_raises():
     mgr = _mgr()
     mgr.discover()
     import pytest
-    with pytest.raises(ValueError, match='decision_v2'):
+    with pytest.raises(ValueError, match='mandate_v1'):
         mgr.instantiate('nonexistent')
 
 
@@ -53,8 +52,8 @@ def test_config_strategy_id_writable():
     cfg = CurrencyWarConfig()
     old = cfg.strategy_id
     try:
-        cfg.strategy_id = 'decision_v2'
-        assert cfg.strategy_id == 'decision_v2'
+        cfg.strategy_id = 'mandate_v1'
+        assert cfg.strategy_id == 'mandate_v1'
     finally:
         cfg.strategy_id = old
 
@@ -74,8 +73,8 @@ def test_v2_extra_roundtrip(tmp_path: Path, monkeypatch) -> None:
     (2026-09-03 瘦身批:遥测全局裸赋值改 monkeypatch——原写法断言失败即
     污染后续测试文件(纪律 1 全集假红类),且 _CURRENT_DIFFICULTY 原先从不还原。)
     """
-    from sr_od.application.currency_war.telemetry import state as _telstate
     from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.telemetry import state as _telstate
     monkeypatch.setattr(_telstate, '_RECORDER', recorder.TelemetryRecorder(
         enabled=True, replay_dir=tmp_path))
     monkeypatch.setattr(_telstate, '_CURRENT_RUN_ID', 'test_v2')

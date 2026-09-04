@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw_strategy import (
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CurrencyWarMatch,
     StrategySession,
 )

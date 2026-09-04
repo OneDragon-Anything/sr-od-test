@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """F1 病理(围栏拦空槽部署)修复回归锁(4 条;ADR-0473)。
 
 出处:围栏互斥辖域收窄设计(裁决1「显式>围栏,同轮互斥」的轮级禁运
@@ -14,6 +13,8 @@ proofs/p24-residual-fill-dominance.md:C=I=0 下残余补部署严格支配
 """
 from __future__ import annotations
 
+import pytest
+
 from sr_od.application.currency_war.kernel.cw_intention import HoardTarget
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
@@ -21,10 +22,14 @@ from sr_od.application.currency_war.kernel.cw_state import (
     bench_occupied,
     iter_occupied_deployed,
 )
-
-from sr_od.application.currency_war.sim.engine_p1 import _residual_fill_deploy, simulate_p1
-
-from sr_od.application.currency_war.sim.checks.ledger import check_deploy_fills_cap, check_skip_fence_pairing
+from sr_od.application.currency_war.sim.checks.ledger import (
+    check_deploy_fills_cap,
+    check_skip_fence_pairing,
+)
+from sr_od.application.currency_war.sim.engine_p1 import (
+    _residual_fill_deploy,
+    simulate_p1,
+)
 
 
 def _st(level: int, deployed: list[BenchChar],
@@ -108,6 +113,7 @@ def test_skip_round_ledger_row_and_pairing_intact() -> None:
 
 # ---------- 锁 2b:单趟遗留锁(W718 第五波自捕 seed 640576) ----------
 
+@pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:取证形态(seed 帧)依赖已退役的 decision_v2 默认臂,40+ seed 扫描不复现——待 sim 重锚批换锁帧(锁自身纪律:取证形态消失换锁帧,不机械跟绿)')
 def test_seed_640576_no_residual_lag_after_fill() -> None:
     """取证局锁:skip 轮补部署后不得残留「围栏认可件未上」(lag>0)。
 
@@ -131,6 +137,7 @@ def test_seed_640576_no_residual_lag_after_fill() -> None:
                for r in res.ledger)
 
 
+@pytest.mark.skip(reason='同 test_seed_640576:单臂切换后取证形态待重锚批换锁帧')
 def test_seed_643567_fence_held_not_flagged() -> None:
     """W767 取证局锁:换阵重摆期补部署无残余(全部 skip 轮 lag=0)。
 

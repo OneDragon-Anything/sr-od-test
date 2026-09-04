@@ -14,11 +14,11 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.decision.cw4 import shop
-from sr_od.application.currency_war.decision.cw4.bridge import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
-from sr_od.application.currency_war.decision.cw4.statefn import predicates
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
@@ -205,7 +205,7 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
     """
     from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     from sr_od.application.currency_war.kernel.cw_comps import get_comp
-    from sr_od.application.currency_war.decision.cw4.statefn import (
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
         predicates,
     )
     seen_member_key = False
@@ -227,7 +227,7 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
 def test_sim_k_empty_window_comp_none_falls_back_non_line():
     """K 空窗(target_comp=None)时 comp=None 分支统一归 non_line
     (与生产端 None 语义同源;sim 引擎经 session 直读,同型)。"""
-    from sr_od.application.currency_war.decision.cw4.shop import (
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
         shop_unbought_reasons,
     )
     st = _state(114, [_card('花火', 2)], deployed=[_dep('绯英')])

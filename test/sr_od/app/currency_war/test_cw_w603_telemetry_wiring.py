@@ -1,23 +1,33 @@
-# -*- coding: utf-8 -*-
 """test_cw_w603_telemetry_wiring 主题锁。
 
 2026-09-03 拆分归档批:自混合文件 test_cw_strategy_planner.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
 from __future__ import annotations
 
-
-
 import json
 from pathlib import Path as _w603_telemetry_wiring_Path
 from types import SimpleNamespace as _w603_telemetry_wiring_SimpleNamespace
 
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession as _w603_telemetry_wiring_StrategySession
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.kernel.cw_state import GameState as _w603_telemetry_wiring_GameState
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _w603_telemetry_wiring_GameState,
+)
+
 # 分包期 6:恢复兜底族(DESIGN §4.4 hooks 行)归 sim/ledger_hooks,
 # _w603_telemetry_wiring_state.start_run 经该模块属性查找调用 → 桩点随生产引用址重钉
 from sr_od.application.currency_war.sim import ledger_hooks
-from sr_od.application.currency_war.telemetry import query, recorder as _w603_telemetry_wiring_recorder, state as _w603_telemetry_wiring_state
-from sr_od.application.currency_war.telemetry import state as _w603_telemetry_wiring_cw_telemetry
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+    StrategySession as _w603_telemetry_wiring_StrategySession,
+)
+from sr_od.application.currency_war.telemetry import query
+from sr_od.application.currency_war.telemetry import (
+    recorder as _w603_telemetry_wiring_recorder,
+)
+from sr_od.application.currency_war.telemetry import (
+    state as _w603_telemetry_wiring_cw_telemetry,
+)
+from sr_od.application.currency_war.telemetry import (
+    state as _w603_telemetry_wiring_state,
+)
 
 
 def _setup_recorder(monkeypatch, tmp_path: _w603_telemetry_wiring_Path, run_id: str = 'w603t') -> None:
@@ -61,10 +71,10 @@ def _fake_match(counters: tuple[int, int] = (2, 1),
 
 
 def test_decision_row_carries_disclosure_keys(tmp_path: _w603_telemetry_wiring_Path, monkeypatch) -> None:
-    """锁①a:record_decision 落盘行带血预算计数/降格触发面/经验账本字段。
+    """锁①a:record_decision 落盘行带血预算计数/经验账本字段。
 
-    降格触发面现算:P1 ∧ r>=6 ∧ hp<60 → True(W576 组1.6 判读锚:
-    「末窗降格触发出现」从此有遥测门,不再依赖 session 披露键落盘)。
+    (p1_downgrade_active 写入面已随 v2 退役链退役——统一迁移批按底稿
+    MAP ⓪ A7 退役,schema 字段历史只读,新数据恒 None。)
     """
     _setup_recorder(monkeypatch, tmp_path)
 
@@ -79,21 +89,21 @@ def test_decision_row_carries_disclosure_keys(tmp_path: _w603_telemetry_wiring_P
     r = rows[0]
     assert r['sess_blood_budget_rejects'] == 2
     assert r['sess_blood_budget_refresh_rejects'] == 1
-    assert r['p1_downgrade_active'] is True
+    assert r['p1_downgrade_active'] is None   # 写入面退役,新数据恒缺省
     led = r['xp_expect_ledger']
     assert isinstance(led, dict) and led['level'] == 3 and led['anchored'] is True
 
 
 def test_decision_row_downgrade_inactive_and_no_match(tmp_path: _w603_telemetry_wiring_Path, monkeypatch) -> None:
-    """锁①b:带外帧(hp>=60)降格触发面 False;无 match 注册 → 键恒 None
-    (离线/测试缺省,旧 schema 不破坏)。"""
+    """锁①b:无 match 注册 → 键恒 None(离线/测试缺省,旧 schema 不破坏;
+    p1_downgrade_active 写入面已退役,字段恒 None)。"""
     _setup_recorder(monkeypatch, tmp_path)
     monkeypatch.setattr(_w603_telemetry_wiring_cw_telemetry, '_CTX_MATCH_REF',
                         [_fake_match((0, 0), None)])
     st = _w603_telemetry_wiring_GameState(gold=30, hp=90, round_num=2, plane=1)
     _w603_telemetry_wiring_state.get_recorder().record_decision('w603b', 'A8', st, '', {}, {}, [])
     r = _rows(tmp_path, 'decisions.jsonl')[0]
-    assert r['p1_downgrade_active'] is False
+    assert r['p1_downgrade_active'] is None   # 写入面退役,新数据恒缺省
     assert r['sess_blood_budget_rejects'] == 0
     assert r['xp_expect_ledger'] is None
 
@@ -220,4 +230,3 @@ def test_briefing_mid_run_writes_directly_other_kinds_noop(tmp_path: _w603_telem
     assert _w603_telemetry_wiring_state._PENDING_BRIEFING_ROWS == []
 
 
-from sr_od.application.currency_war.telemetry import state as _w603_telemetry_wiring_state

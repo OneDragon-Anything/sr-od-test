@@ -18,12 +18,12 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.decision.cw4 import shop as cw4_shop
-from sr_od.application.currency_war.decision.cw4.bridge import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop as cw4_shop
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
-from sr_od.application.currency_war.decision.cw4 import mandate
-from sr_od.application.currency_war.decision.cw_strategy import StrategySession
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -123,7 +123,7 @@ def _members(comp) -> list[str]:
 
 
 def _shop_session(comp) -> StrategySession:
-    from sr_od.application.currency_war.decision.cw4 import proof
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
     s = StrategySession()
     s.cw4_counters = {}
     s.target_comp = comp
@@ -263,7 +263,7 @@ class TestCrisisLevelSpendBlocked:
     def test_reconcile_declares_crisis_yield(self, monkeypatch) -> None:
         """授权面(spend_mode='level')在危机带被挂起 ⇒ 对账按
         crisis_yield 显式声明(非「未兑现故障」逐门定位)。"""
-        from sr_od.application.currency_war.decision.cw4 import entry
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
         from sr_od.application.currency_war.kernel import cw_economy
 
         monkeypatch.setattr(

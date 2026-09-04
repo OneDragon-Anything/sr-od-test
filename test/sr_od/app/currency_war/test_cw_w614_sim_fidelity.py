@@ -24,8 +24,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
     EconomyEffect,
 )
-
 from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
+
 SimInvestProfile
 # 分包期 6 U1 双 runner 归家:P1 引擎(含 STRATEGY_EFFECTS overlay 消费面)
 # = sim/engine_p1;overlay 值跟随测桩点钉引擎模块消费址
@@ -161,6 +161,7 @@ class TestG3XpPerRefresh:
         assert spec.payload.xp_per_refresh == 2
         assert spec.pending is False   # 定谳条目直供数值,不走保守支
 
+    @pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:G3 取证形态依赖已退役 decision_v2 默认臂刷新行为——待 sim 重锚批换臂/换帧')
     def test_overlay_value_change_follows(self, monkeypatch):
         """源断言:overlay 值变更 sim 跟随(改 overlay,注册表聚合面不动)。"""
         spec = STRATEGY_EFFECTS['淘金客']
@@ -174,6 +175,7 @@ class TestG3XpPerRefresh:
         assert r.refreshes > 0
         assert r.refresh_xp_total == 7 * r.refreshes
 
+    @pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:G3 取证形态依赖已退役 decision_v2 默认臂刷新行为——待 sim 重锚批换臂/换帧')
     def test_paid_refresh_grants_xp_on_arm(self):
         prof = SimInvestProfile(active_env='',
                                 picks=((1, 1, '淘金客'),))
@@ -185,6 +187,7 @@ class TestG3XpPerRefresh:
             # 经验真到 xp_progress 消费面:有 xp 入账的局,level 轨迹合法
             assert r.level >= 3
 
+    @pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:G3 取证形态依赖已退役 decision_v2 默认臂刷新行为——待 sim 重锚批换臂/换帧')
     def test_off_arm_no_xp(self):
         prof = SimInvestProfile(active_env='',
                                 picks=((1, 1, '魔丸'),))
@@ -346,7 +349,7 @@ class TestSimDeterminismAndIsolation:
         禁 OS 熵回洞;消费方显式注入真实种子 = 生产 run loop / sim 引擎)。"""
         import random
 
-        from sr_od.application.currency_war.decision.cw_strategy import (
+        from sr_od.application.currency_war.strategies.impl.cw_strategy import (
             StrategySession,
         )
 

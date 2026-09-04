@@ -19,6 +19,28 @@ import pytest
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
+from sr_od.application.currency_war.strategies.impl.flow import (
+    CwFlowStrategy,
+)
+from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
+    MandateV1Live,
+)
+
+
+class _FlowStrategy(MandateV1Live):
+    """流程域测试具现(统一迁移批 ②):prep 决策面 = flow 规则序栈
+    (_decide_prep_action_impl),不经 cw4 装配缝——腾席链/发射门/
+    相位机测试的锁语义保持(v2 prep 流栈平移件)。"""
+
+    def decide_prep_action(self, obs, session, config):
+        session.prep_obs_frame = obs
+        return CwFlowStrategy._decide_prep_action_impl(self, obs, session, config)
+
+    def decide_prep_screen(self, session, config):
+        if session.prep_obs_frame is None:
+            raise ValueError('prep_obs_frame 缺失(黑板契约:观察层失约)')
+        return CwFlowStrategy._decide_prep_action_impl(
+            self, session.prep_obs_frame, session, config)
 
 
 @pytest.fixture(autouse=True)
@@ -366,18 +388,15 @@ def test_source_deployed_align_uses_paddle_not_board_sum() -> None:
 
 import inspect as _w289_match_start_reset_inspect
 
-from sr_od.application.currency_war.decision.cw_strategy import (
-    CurrencyWarMatch,
-    StrategySession,
-    discard_stale_match_container,
-)
-from sr_od.application.currency_war.decision.decision_v2.strategy import (
-    DecisionV2Strategy,
-)
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar as _w289_match_start_reset_BenchChar,
 )
 from sr_od.application.currency_war.obs.cw_observation import reset_phase_round_cache
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+    CurrencyWarMatch,
+    StrategySession,
+    discard_stale_match_container,
+)
 
 
 class _FakeCtx:
@@ -395,7 +414,7 @@ def _polluted_match() -> CurrencyWarMatch:
     s.last_hp_real = 12           # hp 对账锚
     s.tracked_deployed = [_w289_match_start_reset_BenchChar(slot=1, char_id='旧局角色')]
     s.active_strategies = ['旧局策略']
-    return CurrencyWarMatch(DecisionV2Strategy(), s)
+    return CurrencyWarMatch(_FlowStrategy(), s)
 
 
 def test_discard_stale_container_resets_for_new_match():
@@ -408,7 +427,7 @@ def test_discard_stale_container_resets_for_new_match():
 
     # 第二局 session 由 create_session 重建 —— 与 handle_init 新 match 分支同路径,
     # 锁定观察域关键字段全默认(任何字段若被改成可携带上局值,此处红)。
-    fresh = DecisionV2Strategy().create_session(None)
+    fresh = _FlowStrategy().create_session(None)
     assert fresh.last_level_obs == 0      # level 单调守卫不再拿上局值保旧
     assert fresh.last_streak == 0
     assert fresh.last_hp_real is None
@@ -848,7 +867,9 @@ from sr_od.application.currency_war.obs.cw_faction_obs import (
 from sr_od.application.currency_war.obs.cw_faction_obs import (
     read_displayed_factions as _w547_faction_wire_read_displayed_factions,
 )
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+    CwScreenPrep,
+)
 from test.conftest import SrTestContext as _w547_faction_wire_SrTestContext
 
 
@@ -1025,9 +1046,6 @@ import json
 from pathlib import Path as _w552_xp_reconcile_Path
 from types import SimpleNamespace as _w552_xp_reconcile_SimpleNamespace
 
-from sr_od.application.currency_war.decision.cw_strategy import (
-    StrategySession as _w552_xp_reconcile_StrategySession,
-)
 from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
 from sr_od.application.currency_war.kernel.cw_prep_expect import (
     XpLedger,
@@ -1041,6 +1059,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep as _w552_xp_reconcile_PrepDirector,
+)
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+    StrategySession as _w552_xp_reconcile_StrategySession,
 )
 from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.telemetry import (
