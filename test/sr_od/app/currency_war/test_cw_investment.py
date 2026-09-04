@@ -499,37 +499,9 @@ def test_gold_per_node_and_instant_gold_apply() -> None:
     assert rows, 'gold_per_node 未进账本收入分解'
 
 
-@pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:取证局(默认臂自发刷新)依赖已退役 decision_v2 默认臂,40 seed 扫描零刷新——待重锚批改桩策略驱动或换锁帧')
-def test_free_refresh_per_node_zero_cost() -> None:
-    """加油站(每节点 1 次免费刷):每轮第 i 次刷 cost == 0 if i < 额度 else 原价。
-
-    构造:use_refresh 默认开;若策略未发刷则自然宽松(无刷新 = 无逐笔
-    断言对象,故另设 any_refresh 防构造失效)。不变式 = 每节点免费额度
-    语义逐行成立(ADR-0131:额度内刷价 0,超出付 SHOP_REFRESH_COST),
-    同节点多次刷新合法——旧口径的总和上界 ``max(0, (refreshes-rounds))*2``
-    隐含「每节点 ≤1 刷」分布假设(非游戏规则非 ADR 口径),粗战斗模型
-    引入的多刷局误红,已废。
-    """
-    from sr_od.application.currency_war.kernel.cw_economy import SHOP_REFRESH_COST
-    from sr_od.application.currency_war.kernel.cw_investments import aggregate_economy
-
-    prof = SimInvestProfile(picks=((1, 1, '加油站'),))
-    r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
-    quota = aggregate_economy(['加油站']).free_refresh_per_node
-    assert quota > 0
-    any_refresh = False
-    for row in r.ledger:
-        acts = [a for a in (row.get('actions') or [])
-                if a.get('__type__') == 'RefreshShop']
-        for i, a in enumerate(acts):
-            expect = 0 if i < quota else SHOP_REFRESH_COST
-            assert a['cost'] == expect, (row.get('round_num'), i, a['cost'])
-        if acts:
-            any_refresh = True
-            # 账本自洽:轮内 spend.refresh 与 actions 逐笔成本一致
-            assert (row.get('sim') or {}).get('spend', {}).get('refresh', 0) \
-                == sum(a['cost'] for a in acts), row.get('round_num')
-    assert any_refresh, '构造失效:整局零刷新,免费额度语义未被锁到'
+# (加油站免费刷取证局锁 test_free_refresh_per_node_zero_cost 已随
+# decision_v2 基线臂退役删除——取证形态不可复现;dd-038 检查点② /
+# commit b94e9cfb,2026-09-04 用户裁定清理;不变式语义见 ADR-0131。)
 
 
 # ---------- 频次表与日程 ----------

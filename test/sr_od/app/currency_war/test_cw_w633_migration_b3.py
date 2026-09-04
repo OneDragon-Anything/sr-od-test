@@ -15,8 +15,6 @@ W623 预验尸(D0-D4)+ W630 A/B 协议 + W615 R1-R4 规则集。锁契约:
 """
 from __future__ import annotations
 
-import dataclasses
-
 from sr_od.application.currency_war.kernel.cw_economy import (
     refresh_ev_budget,
     reserve_cap,
@@ -41,9 +39,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 
 _REG = DEFAULT_REGISTRY
-# 关行为锁显式注入(危机臂开臂后默认 registry=True,ADR-0503;让位语义
-# 锁改注入 False 仍测,不删)。
-_REG_CRISIS_OFF = dataclasses.replace(_REG, crisis_release_enabled=False)
+# (危机臂关行为锁注入 _REG_CRISIS_OFF 已随 crisis_release_enabled
+# 死旋钮删除——零消费,dd-038 统一迁移批 / commit b94e9cfb,
+# 2026-09-04 用户裁定清理。)
 
 
 def _state(*, gold: int = 100, plane: int = 1, r: int = 5, level: int = 6,

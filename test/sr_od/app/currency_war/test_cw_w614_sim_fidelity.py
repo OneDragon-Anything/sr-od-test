@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import replace as _dc_replace
 
 import pytest
 
@@ -26,10 +25,10 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 )
 from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 
-SimInvestProfile
 # 分包期 6 U1 双 runner 归家:P1 引擎(含 STRATEGY_EFFECTS overlay 消费面)
 # = sim/engine_p1;overlay 值跟随测桩点钉引擎模块消费址
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim_mod
+# (engine_p1 模块句柄导入已随 G3 取证形态三锁删除——唯一消费点为
+# 已删的 monkeypatch 测桩,2026-09-04 用户裁定清理。)
 
 # 零漂移锚:seeds 0..5(pool='snapshot'),行为投影 = 每轮
 # (plane, round_num, gold, hp, level, actions(类型, reason, result))
@@ -169,40 +168,10 @@ class TestG3XpPerRefresh:
         assert spec.payload.xp_per_refresh == 2
         assert spec.pending is False   # 定谳条目直供数值,不走保守支
 
-    @pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:G3 取证形态依赖已退役 decision_v2 默认臂刷新行为——待 sim 重锚批换臂/换帧')
-    def test_overlay_value_change_follows(self, monkeypatch):
-        """源断言:overlay 值变更 sim 跟随(改 overlay,注册表聚合面不动)。"""
-        spec = STRATEGY_EFFECTS['淘金客']
-        patched = dict(STRATEGY_EFFECTS)
-        patched['淘金客'] = _dc_replace(
-            spec, payload=_dc_replace(spec.payload, xp_per_refresh=7))
-        monkeypatch.setattr(cw_sim_mod, 'STRATEGY_EFFECTS', patched)
-        prof = SimInvestProfile(active_env='',
-                                picks=((1, 1, '淘金客'),))
-        r = simulate_p1(0, pool='snapshot', invest=prof)
-        assert r.refreshes > 0
-        assert r.refresh_xp_total == 7 * r.refreshes
-
-    @pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:G3 取证形态依赖已退役 decision_v2 默认臂刷新行为——待 sim 重锚批换臂/换帧')
-    def test_paid_refresh_grants_xp_on_arm(self):
-        prof = SimInvestProfile(active_env='',
-                                picks=((1, 1, '淘金客'),))
-        for seed in (0, 3):
-            r = simulate_p1(seed, pool='snapshot', invest=prof)
-            # 淘金客不带免费刷额度 → 全部刷新都是付费刷 → 严格 2×刷新数
-            assert r.refreshes > 0
-            assert r.refresh_xp_total == 2 * r.refreshes
-            # 经验真到 xp_progress 消费面:有 xp 入账的局,level 轨迹合法
-            assert r.level >= 3
-
-    @pytest.mark.skip(reason='统一迁移批 ② A9 单臂切换:G3 取证形态依赖已退役 decision_v2 默认臂刷新行为——待 sim 重锚批换臂/换帧')
-    def test_off_arm_no_xp(self):
-        prof = SimInvestProfile(active_env='',
-                                picks=((1, 1, '魔丸'),))
-        for seed in (0, 3):
-            r = simulate_p1(seed, pool='snapshot', invest=prof)
-            assert r.refreshes > 0
-            assert r.refresh_xp_total == 0
+    # (G3 取证形态三锁 test_overlay_value_change_follows /
+    # test_paid_refresh_grants_xp_on_arm / test_off_arm_no_xp 已随
+    # decision_v2 基线臂退役删除——取证形态不可复现;dd-038 检查点② /
+    # commit b94e9cfb,2026-09-04 用户裁定清理。)
 
     def test_ledger_round_disclosure(self):
         prof = SimInvestProfile(active_env='',
