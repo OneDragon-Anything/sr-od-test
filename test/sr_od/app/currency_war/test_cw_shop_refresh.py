@@ -19,29 +19,23 @@ from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
 
 
 def test_multiwave_refresh_expected_closes_per_accounting():
-    """多波刷新复现锁(3 波):逐波账与关店对拍闭合。
+    """多波刷新对拍闭合语义(瘦身后;原自抄复刻主体已删——旧测试体重抄
+    「逐动作累计与 op 内分支同规则」的算术再断言自己,删掉真函数它照样绿,
+    违反纪律第 10 条;波间基线/刷费去重的 op 级行为面由 w591 族 fixture
+    锁(锁①~④,单波链路)与对账消费面分担,多波端到端无现成宿主)。
 
-    场景:开店金 60。
-      波1:买 1+2=3,刷新(费2)→ 剩 55
-      波2:买 3,刷新(费2)→ 剩 50
-      波3:买 3,无刷新 → 收工,实读 47
-    执行花金合计 = 3+2+3+2+3 = 11,期望 = 60 − 11 = 47 = 实际。
-    修复前口径(末波重读金 50 当基线 + 跨波 total_refresh=2 × 2 扣)
-    = 50 − (3 + 4) = 43 ≠ 47,差 4 = 波1+波2 刷新费被重复扣。
+    波间语义(3 波场景,开店金 60;刷费 2/波,买 3/波 ×3):对拍期望 =
+    开店金 − **逐波执行侧花金合计**(每次刷新的当次刷价只计一次) =
+    60 − (3+2+3+2+3) = 47 = 实读。修复前口径(末波重读金当基线 +
+    跨波刷新费重复扣)= 43,差 4 = 波1+波2 刷费重复扣——真函数若改回
+    「以中段重读金为基线」类口径,本断言的锚值即不再闭合。
     """
     gold_open = 60
-    # 逐动作执行侧累计(与 op 内分支同规则:买价/升级费/当次刷价)
-    executed: list[int] = [1, 2, 2, 3, 2, 3]
-    spend = sum(executed)
-    # 末波重读金(修复前错误基线):60 − 3 −2 −3 −2 = 50
-    last_wave_reread_gold = 50
-    total_refresh_cross_wave = 2
-
-    expected_new = expected_gold_after_actions(gold_open, spend, 0)
-    assert expected_new == 47, '多波刷新后对拍期望应与实际闭合'
-    expected_old = (last_wave_reread_gold
-                    - (3 + total_refresh_cross_wave * 2))
-    assert expected_old == 43 != 47, '修复前口径应复现 4 金重复扣(回归锚)'
+    spend_whole_run = 3 + 2 + 3 + 2 + 3   # 买+刷×2波 + 末波买(场景参数,非复刻 op 分支)
+    assert expected_gold_after_actions(gold_open, spend_whole_run, 0) == 47, (
+        '多波花金合计口径下对拍期望应与实读闭合(刷费单次计数)')
+    # 卖入腿同式可见(对拍口径单一源:− 花出 + 卖入)
+    assert expected_gold_after_actions(gold_open, spend_whole_run, 5) == 52
 
 
 
@@ -328,6 +322,7 @@ from sr_od.application.currency_war.strategies.impl.cw_strategy import (
 from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
+    CloseShop,
     RefreshShop,
 )
 from test.conftest import SrTestContext
@@ -397,21 +392,25 @@ class _BuyPhaseHostOp(SrOperation):
             self, match, outcome, None, False, False))
 
 class _StubStrategy:
-    """替身计划源:按调用次序吐剧本 plan(耗尽后重复最后一个)。"""
+    """替身决策源(ADR-0517 单动作形态):按调用次序逐帧吐单动作。
+
+    ``plans`` 沿用旧「段 × 动作序列」入参形态,构造时拍平为动作流;
+    耗尽后恒吐 ``CloseShop``(单动作决策核「无动作可做」的终结语义,
+    决策 4/6)。生产执行侧消费口 = ``decide_shop_action``(旧
+    decide_shop_screen 序列口退役为 sim/回放兼容驱动器)。
+    """
 
     def __init__(self, plans: list[list[Any]]):
-        self._plans = plans
+        self._acts = [a for plan in plans for a in plan]
         self.calls = 0
 
     def update_target(self, state, session, config) -> None:
         pass
 
-    def decide_shop_screen(self, session, config) -> list[Any]:
-        # W971 §2 黑板接口(P2):生产 buy_cards 波顶写 session.shop_state_frame
-        # 后调本入口;替身从帧读 state(与旧 decide_prep 的 state 参数同源)。
-        acts = self._plans[min(self.calls, len(self._plans) - 1)]
+    def decide_shop_action(self, session, config) -> Any:
+        i = self.calls
         self.calls += 1
-        return acts
+        return self._acts[i] if i < len(self._acts) else CloseShop()
 
 
 def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -640,6 +639,54 @@ def test_refresh_wave_free_refresh_proc_chain(
         '牌面已变时不应落刷新未生效票')
 
 
+# ===== W593:决策循环帧帽(对抗修复批 F1 执行侧兜底)=====
+
+
+def test_segment_action_cap_raises_loud(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path: pathlib.Path, _require_fixture,
+) -> None:
+    """帧帽锁:决策循环恒收非终结动作(不收敛形态)⇒ 第
+    SHOP_SEGMENT_ACTION_CAP+1 帧触发 RuntimeError(响亮暴露,禁静默
+    续跑)+ decisions 行落 ``plan_visit_action_cap`` 分键计数。
+
+    场景替身 = 恒吐 LevelUpShop(非终结、守卫无辖面、simulate 无金
+    校验)——复现「决策器每帧重复提案同类动作」的无限循环形态;席位
+    门的收敛根因修复在决策侧(test_cw4_shop_line TestEvBuySeatGate),
+    本帽 = 执行侧最后防线。动作 sleep 经模块级替身吃掉(测试纪律:
+    不为生产加参数)。
+    """
+    from types import SimpleNamespace as _NS
+
+    import sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops as saop
+    from sr_od.application.currency_war.kernel.cw_state import LevelUpShop
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
+        SHOP_SEGMENT_ACTION_CAP,
+    )
+    monkeypatch.setattr(saop, 'time', _NS(sleep=lambda *_a: None))
+    events: list[str] = []
+    op, fc, rows, _facts = _make_op(
+        test_context, monkeypatch, tmp_path,
+        plans=[[LevelUpShop(cost=4)] * (SHOP_SEGMENT_ACTION_CAP + 4)],
+        states=[_state(60, _OLD_NAMES), _state(60, _OLD_NAMES),
+                _state(60, _OLD_NAMES), _state(60, _OLD_NAMES)],
+        gold_opts=[60, 60], shop_reads=[_NEW_NAMES, _NEW_NAMES], events=events)
+
+    # 直调循环主体(不经 op.execute 的 retry 链——框架会把异常转失败轮
+    # 并重试,掩盖「响亮暴露」形态;本锁钉循环本体行为)
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
+        run_buy_waves,
+    )
+    with pytest.raises(RuntimeError, match='超帽'):
+        run_buy_waves(op, test_context.cw_match, None, False, False)
+    # decisions 行分键计数(占位行;读取隔离台账 tmp_path)
+    dec = _rows(tmp_path, 'decisions.jsonl')
+    assert any(r.get('plan_visit_action_cap') == 1.0
+               or (isinstance(r.get('eval_breakdown'), dict)
+                   and r['eval_breakdown'].get('plan_visit_action_cap'))
+               for r in dec), f'超帽须落遥测分键:decisions={dec}'
+
+
 # ===== W592:买+刷新波 before 名集现读锁(ADR-0456 勘误注) =====
 
 def _bought_wave_plan() -> list[list[Any]]:
@@ -689,6 +736,8 @@ def test_buy_refresh_wave_real_miss_not_effective(
     assert facts and facts[0]['refresh_attempted'] is True
     # 落空形态:已买空槽使刷后读含未识别槽('')→ 判据不可判(None,不猜
     # ——ADR-0456 有锁禁把 None 当已变);关键在分类器不得落 free_refresh_proc。
+    # (锁③断言此处弱化为 `is not True`——'' 槽使判据 None 是既有申报形态;
+    #  「未误判已变」的行为面由下方 classify_spend_unit 端到端断言覆盖。)
     assert facts[0]['refresh_board_changed'] is not True, (
         f'真落空不得判「已变」(修复前此形态必误判 True):{facts}')
     # 分类器端到端:计划花费 5(买3+刷2)∧ 金差 0 ∧ 刷后读含 '' 不可判
@@ -977,7 +1026,8 @@ def test_stable_gate_screenshot_exception_offline_contract() -> None:
 # ---------------------------------------------------------------------------
 
 class _w944_shop_unk_settle_StubStrategy:
-    """替身计划源:恒空 plan(波循环零动作 → 直接进钩子判定)。"""
+    """替身决策源(ADR-0517 单动作形态):恒吐 CloseShop(零买 → 直接
+    进钩子判定;旧 decide_shop_screen 空 plan 序列口已退役)。"""
 
     def __init__(self) -> None:
         self.calls = 0
@@ -985,10 +1035,9 @@ class _w944_shop_unk_settle_StubStrategy:
     def update_target(self, state, session, config) -> None:
         pass
 
-    def decide_shop_screen(self, session, config) -> list[Any]:
-        # W971 §2 黑板接口(P2):同 _StubStrategy.decide_shop_screen。
+    def decide_shop_action(self, session, config) -> Any:
         self.calls += 1
-        return []
+        return CloseShop()
 
 
 def _make_hook_op(test_context: SrTestContext,
@@ -1184,12 +1233,16 @@ def test_hook_unknown_slot_skipped_not_stopped(
         wave_shop=['', '景元', '布洛妮娅', '克拉拉', '杰帕德'],
         hook_rereads=[_NAMED],
         writes=writes)
-    # 给替身策略注入「只买有身份牌(x≈1300 → 槽5)」的 plan
-    # (W971 §2 黑板接口 P2:monkeypatch 换新入口 decide_shop_screen)
-    test_context.cw_match.strategy.decide_shop_screen = (
-        lambda session, config: [
-            BuyCard(card=ShopCard(x=1300, faction='?', name='杰帕德',
-                                  cost=3, star=1))])
+    # 给替身策略注入「只买有身份牌(x≈1300 → 槽5)」的单动作流
+    # (ADR-0517 单动作形态:逐帧吐单动作,后续帧 CloseShop 收尾)
+    _injected = {'n': 0}
+
+    def _decide(session, config):
+        _injected['n'] += 1
+        return (BuyCard(card=ShopCard(x=1300, faction='?', name='杰帕德',
+                                      cost=3, star=1))
+                if _injected['n'] == 1 else CloseShop())
+    test_context.cw_match.strategy.decide_shop_action = _decide
 
     result = _w944_shop_unk_settle_execute(op)
 
@@ -1213,24 +1266,22 @@ def test_hook_unknown_slot_skipped_not_stopped(
 # ---------------------------------------------------------------------------
 
 def test_guard_hook_uses_settle_gate_not_blind_sleep() -> None:
-    """锁③ 钩子防抖必须走判据化稳定门;blind sleep 回流 = 红。
+    """接线烟雾:钩子防抖调用判据化稳定门 _wait_shop_row_stable;blind sleep 回流 = 红。
 
-    W944 治本点:读卡失败的防抖重读在「帧稳定」判据下进行,不是猜时长
-    的固定 sleep。摘掉 _wait_shop_row_stable 调用(或回退 sleep 等待)时,
-    本锁红,防感知自愈被静默移除。
+    W944 失守事故背书:读卡失败的防抖重读曾退化为猜时长的固定 sleep,
+    误读率回升。本函数原 4 条 `in src` 肯定断言(函数定义在场 /
+    min_observe_s / time.sleep 字面)已由本文件 L913-958 两条计时行为锁
+    更强覆盖(行为锁直接驱动真实帧序列,不依赖源码字面),故只保留
+    「钩子确实调用了稳定门」这一条接线烟雾——行为锁测不了"接线在",
+    只能测"接上后行为对"。摘掉 _wait_shop_row_stable 调用(或回退
+    sleep 等待)时,本锁红,防感知自愈被静默移除。
     """
     src = pathlib.Path(
         'src/sr_od/application/currency_war/operations/cw_op/cw_op_buy_cards.py'
     ).read_text(encoding='utf-8')
-    # 稳定门存在且被钩子调用(调用形态:门 → 重读,紧邻;W970 批 A
-    # 波循环迁 buy_cards,宿主参数形 self→op,调用形态同步迁移)
-    assert 'def _wait_shop_row_stable(' in src, '稳定门 helper 缺失'
+    # 钩子调用稳定门(调用形态:门 → 重读,紧邻;W970 批 A 波循环迁
+    # buy_cards,宿主参数形 self→op,调用形态同步迁移)
     assert '_wait_shop_row_stable(op)' in src, '钩子未调用稳定门'
-    # W952 P2-1:fast-path 最短观察窗在位(指纹相同仍须观察满 min_observe_s)
-    assert 'min_observe_s' in src, 'P2-1 回归:fast-path 最短观察窗被摘'
-    # W952 P2-2:超时回退补偿静置在位(超时返回前 sleep,不立读)
-    assert 'time.sleep(_SETTLE_TIMEOUT_COMPENSATE_S)' in src, (
-        'P2-2 回归:超时回退补偿静置被摘(立读形态回流)')
     # 钩子段不得回流 blind sleep(门到位前旧码形态:先 sleep 再重读)
     assert 'time.sleep(1.0)\n                _reshop' not in src, (
         '钩子防抖回流 blind sleep(摘门回归形态)')

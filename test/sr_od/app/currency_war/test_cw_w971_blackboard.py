@@ -32,19 +32,9 @@ from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
 )
 
 
-class _FlowStrategy(MandateV1Live):
-    """流程域测试具现(统一迁移批 ②):prep 决策面 = flow 规则序栈
-    (_decide_prep_action_impl,单动作语义),不经 cw4 装配缝。"""
-
-    def decide_prep_action(self, obs, session, config):
-        session.prep_obs_frame = obs
-        return CwFlowStrategy._decide_prep_action_impl(self, obs, session, config)
-
-    def decide_prep_screen(self, session, config):
-        if session.prep_obs_frame is None:
-            raise ValueError('prep_obs_frame 缺失(黑板契约:观察层失约)')
-        return CwFlowStrategy._decide_prep_action_impl(
-            self, session.prep_obs_frame, session, config)
+# ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
+# 直用活策略核(下述测试全部消费 live 接口)。
+_FlowStrategy = MandateV1Live
 def _make_state() -> GameState:
     """探针态:中局常态(金足/店有目标件/bench 有件)——决策必有产出。"""
     s = GameState()

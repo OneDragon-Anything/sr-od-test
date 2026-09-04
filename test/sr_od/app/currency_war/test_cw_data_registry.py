@@ -34,20 +34,9 @@ from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
 )
 
 
-class _FlowStrategy(MandateV1Live):
-    """流程域测试具现(统一迁移批 ②):prep 决策面 = flow 规则序栈
-    (_decide_prep_action_impl),不经 cw4 装配缝——腾席链/发射门/
-    相位机测试的锁语义保持(v2 prep 流栈平移件)。"""
-
-    def decide_prep_action(self, obs, session, config):
-        session.prep_obs_frame = obs
-        return CwFlowStrategy._decide_prep_action_impl(self, obs, session, config)
-
-    def decide_prep_screen(self, session, config):
-        if session.prep_obs_frame is None:
-            raise ValueError('prep_obs_frame 缺失(黑板契约:观察层失约)')
-        return CwFlowStrategy._decide_prep_action_impl(
-            self, session.prep_obs_frame, session, config)
+# ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
+# 直用活策略核(本文件其余测试全部消费注册表/观察层数据,不经该具现)。
+_FlowStrategy = MandateV1Live
 def test_registry_complete_all_costs() -> None:
     """注册表覆盖全费用 1-5;每条费用非空。"""
     for cost in range(1, 6):
@@ -730,28 +719,6 @@ def test_shape_guard_skip_is_visible(monkeypatch) -> None:
                          [(1, _tome_template_Rect(0, 0, 5, 5))])
     assert out == []
     assert cio._shape_guard_skip_count > before, '守卫跳过必须记数可见'
-
-
-def test_strategy_prefers_opentome_when_gold_card_in_tomes() -> None:
-    """行为面锁:tomes 非空时策略优先 OpenTome(即使 boxes 也非空)——
-    金卡典籍走 OpenBox 会绕开星徽四选一接管路径,即本批修复的行为目标。"""
-    from types import SimpleNamespace
-
-    strat = _FlowStrategy()
-    obs = SimpleNamespace(box_overlay_open=False, tomes=[(7, None)],
-                          boxes=[(4, None)], spheres=[], free_bench_slots=3,
-                          shop_open=False, bench_chars=[], deployed_chars=[],
-                          front_occupied=set(), back_occupied=set(),
-                          front_size=4, back_size=6, state=None,
-                          state_gold_trusted=False)
-    sess = SimpleNamespace(defer_count=0, memory={}, target_comp=None,
-                           tracked_bench_chars=[], pending_deploys=[], prep_phase=0,
-                           tracked_deployed=[], bail_reason_counts={})
-    act = strat.decide_prep_action(obs, sess, SimpleNamespace())
-    assert type(act).__name__ == 'OpenTome', \
-        f'tomes 非空应优先 OpenTome,实得 {type(act).__name__}'
-
-
 # ==================== back_layout ====================
 
 import json

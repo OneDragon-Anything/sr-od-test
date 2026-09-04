@@ -575,11 +575,14 @@ def test_record_sell_income_no_run_id_noop(tmp_path) -> None:
 
 
 def test_shop_sell_branch_wiring_in_source() -> None:
-    """接线锁:buy_cards 波循环 SellBench 执行分支真调 record_sell_income
-    (落盘点唯一源;W970 批 A 随波循环自 shop.BuyShopCards.buy 迁入)。"""
-    from sr_od.application.currency_war.operations.cw_op import cw_op_buy_cards as buy_cards
+    """接线锁:SellBench 动作 op 执行分支真调 record_sell_income(落盘
+    点唯一源;ADR-0517 迁移批自 run_buy_waves 波循环迁入
+    cw_shop_action_ops.SellBenchOp.execute)。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_shop_action_ops,
+    )
 
-    src = inspect.getsource(buy_cards.run_buy_waves)
+    src = inspect.getsource(cw_shop_action_ops.SellBenchOp.execute)
     assert 'record_sell_income(' in src, 'SellBench 执行分支未接 W323 落盘'
 
 

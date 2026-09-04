@@ -247,8 +247,12 @@ class TestShopWiringP56T1:
         pulls = [a for a in acts if isinstance(a, SellBench)]
         assert len(pulls) == 1
         ct = sess.cw4_counters
-        assert ct.get('t1_interest_emit_frames') == 1
-        assert ct.get('t1_interest_gap_total') == 10      # g*=50 − 40
+        # ADR-0517 计数粒度重锚:回拉遥测从「每波一次」改「每决策帧一次」
+        # ——帧1 缺口 10(g*50−40)发卖;帧2 卖后金 43,缺口 7 仍在但
+        # 合格集空(唯一燃料件已卖),emit 帧再计一次 ⇒ 帧数 2、缺口累计
+        # 17(10+7);卖出量恒 1(单张未注册名退 3)。
+        assert ct.get('t1_interest_emit_frames') == 2
+        assert ct.get('t1_interest_gap_total') == 17
         assert ct.get('t1_interest_sellback_total') == 3  # 单张未注册名退 3
         assert ct.get('t1_pullback_gold_ge_gstar', 0) == 0
 

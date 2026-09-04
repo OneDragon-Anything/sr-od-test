@@ -18,6 +18,7 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel.cw_state import SellBench
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop as cw4_shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
@@ -209,9 +210,19 @@ class TestMergeCompletionBuy:
                          bench=bench, deployed=deployed)
         sess = _shop_session(comp)
         acts = _decide_shop(st, sess)
-        assert not [a for a in acts if isinstance(a, BuyCard)
-                    and a.reason == 'm2_merge_completion']
+        # ADR-0517 单动作重锚:首帧 M2b 被席闸拦(merge_bench_full 计数+
+        # 静态快照拒因不变);此后凑息卖(gold 30 < g* 50)卖填充件腾席,
+        # 下一帧逐帧重判 ⇒ M2b 补发合并完成买——帧内后段动作可见前段动作
+        # 真值更新,系单动作架构的预告语义差(波批下同波不重判,买不发生)。
         assert sess.cw4_counters.get('merge_bench_full', 0) >= 1
+        merge_buys = [a for a in acts
+                      if isinstance(a, BuyCard)
+                      and a.reason == 'm2_merge_completion']
+        assert merge_buys, '凑息卖腾席后下一帧应补发合并完成买'
+        sell_idx = next(i for i, a in enumerate(acts)
+                        if isinstance(a, SellBench))
+        buy_idx = acts.index(merge_buys[0])
+        assert sell_idx < buy_idx, '腾席卖先于合并买(帧序锁)'
         rejects = cw4_shop.shop_unbought_reasons(
             st, comp, tuple(members), [])
         assert rejects.get(m) == 'merge_bench_full'

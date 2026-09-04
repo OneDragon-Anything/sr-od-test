@@ -14,6 +14,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
+    CloseShop,
     CompTransaction,
     DeployMove,
     GameState,
@@ -245,136 +246,127 @@ class TestCriteriaShopFaces:
                     and a.reason == 'dominance_buy']
 
 
-# ===== ② 词表+截断契约锁(契约 v2 §3.1 逐类 + §3.3)=====
+# ===== ② 终结 op 契约锁(ADR-0517 迁移批重锚;前身 = 截断契约锁)=====
+# 锁语义重推:旧锁钉截断器行为(可续/条件续/截断点/fail-closed 截断),
+# 截断器已随波批退役(截断点语义被终结 op 吸收,ADR-0517 §3)——本组
+# 改锁单动作架构的对应不变量:终结集成员资格 / 词表外动作 fail-closed
+# (shop_action_op_for 断言炸出)/ 合成触发买不再截断(投影承载)。
 
-class TestShopTruncationContract:
+class TestShopTerminatorContract:
 
     def test_vocab_all_classes_covered(self):
-        """词表锁:cw_state.Action 联合 9 类中商店线辖 8 类逐类有分类
-        (PickEvent=pick 返回载体,§3.1 词表源对账声明辖外)。"""
-        classified = (BuyCard, LevelUpShop, LevelUp, SellBench,
-                      SellDeployed, DeployMove, SwapDeploy, RefreshShop,
-                      CompTransaction)
-        union = (BuyCard, SellBench, LevelUp, DeployMove, RefreshShop,
-                 PickEvent, SellDeployed, SwapDeploy, CompTransaction)
-        assert (set(union) - {PickEvent}) <= set(classified)
-        assert PickEvent not in classified          # 词表外(§3.3 兜底)
+        """词表锁:商店线动作 op 词表 = {BuyCard, LevelUpShop(is-a
+        LevelUp), SellBench, RefreshShop, CloseShop, CompTransaction}
+        (ADR-0517 迁移后可执行集;SellDeployed/DeployMove/SwapDeploy
+        现行商店决策不发射——旧波批执行侧同样无分支,词表声明辖外)。
+        PickEvent = pick 决策返回载体,词表外 fail-closed。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            LevelUpOp,
+            _OP_TABLE,
+            shop_action_op_for,
+        )
+        classified = set(_OP_TABLE)
+        union = (BuyCard, LevelUp, RefreshShop, SellBench, CloseShop,
+                 CompTransaction)
+        assert set(union) <= classified
+        assert isinstance(shop_action_op_for(LevelUpShop(cost=4)), LevelUpOp)
+        assert PickEvent not in classified          # 词表外(fail-closed)
+        assert SellDeployed not in classified       # 不发射(辖外声明)
+        assert DeployMove not in classified
+        assert SwapDeploy not in classified
         assert issubclass(LevelUpShop, LevelUp)     # 升级意图商店屏子类
 
-    def test_buy_continue_and_levelup_continue(self):
-        """BuyCard/LevelUpShop = 可续(多动作序列不截断)。"""
-        st = _state()
-        seq = [BuyCard(card=_card('甲')), LevelUpShop(cost=4),
-               BuyCard(card=_card('乙'))]
-        out = shop.truncate_shop_frame_stable(seq, st)
-        assert out == seq
+    def test_terminator_set_membership(self):
+        """终结集锁(ADR-0517 决策 4/6):RefreshShop/CompTransaction/
+        CloseShop = 终结动作 op(执行即本画面访问结束);买/升/卖 = 非
+        终结(循环内投影续走)。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            BuyCardOp,
+            CloseShopOp,
+            CompTransactionOp,
+            LevelUpOp,
+            RefreshShopOp,
+            SellBenchOp,
+            shop_action_op_for,
+        )
+        assert RefreshShopOp.terminal is True
+        assert CompTransactionOp.terminal is True   # 终结邻接 fallback
+        assert CloseShopOp.terminal is True         # 恒可用终结
+        assert BuyCardOp.terminal is False
+        assert LevelUpOp.terminal is False
+        assert SellBenchOp.terminal is False
+        # 工厂对终结成员的判定与类声明一致
+        assert shop_action_op_for(RefreshShop(cost=2)).terminal
+        assert shop_action_op_for(CloseShop()).terminal
 
-    def test_drag_family_conditional_continue(self):
-        """拖拽族名-槽一致性复检(R197 症4① 重写为判据语义锁,契约
-        §3.1 行「逐动作语义防线=名-槽一致性复检;前序动作累积静态推出,
-        推不出即截断」;旧测试锁的是「无条件放行」实现回声):
+    def test_word_table_violation_fail_closed(self):
+        """词表外动作(PickEvent/任意类型)⇒ shop_action_op_for 断言炸出
+        (ADR-0517 决策 9:非法返回 = 策略器 bug 响亮暴露,禁静默跳过——
+        旧 §3.3 截断 fail-closed 的单动作继任形态)。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            shop_action_op_for,
+        )
+        with pytest.raises(AssertionError, match='词表外'):
+            shop_action_op_for(PickEvent(option_idx=0))
+        with pytest.raises(AssertionError, match='词表外'):
+            shop_action_op_for(object())   # type: ignore[arg-type]
 
-        - 名-槽一致 + 前序卖出累积投影成立 ⇒ 可续;
-        - 同槽二次引用(卖出后槽已从投影集移除)⇒ 截断 + 计数;
-        - ``expect`` 名不符(跨代际提案)⇒ 截断 + 计数;
-        - 引用越界/空槽 ⇒ 截断 + 计数。
-        """
+    def test_proposal_guard_stale_slot_raises(self):
+        """proposal-vs-expected 守卫(ADR-0517 §守卫两属 (i)):SellBench
+        提案指向空槽/越界/名不符 ⇒ 断言炸出(旧「名-槽复检截断」的
+        守卫继任形态——控制流跳过退役,防 bug 路栏保留)。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            guard_proposal_vs_expected,
+        )
         st = _state(bench=[_bc('甲'), _bc('乙')])
-        # 一致拖拽族可续(卖出 idx0 后,DeployMove 引用另一占用槽 idx1)
-        seq = [SellBench(bench_idx=0, income=3, expect='甲'),
-               DeployMove(bench_idx=1, to_row='back', faction='仙舟')]
-        out = shop.truncate_shop_frame_stable(seq, st)
-        assert out == seq
-        # 同槽二次引用:卖出后槽位从投影集移除 ⇒ 截断 + 计数
+        with pytest.raises(AssertionError, match='名-槽不一致'):
+            guard_proposal_vs_expected(
+                SellBench(bench_idx=0, income=3, expect='乙'), st)
+        with pytest.raises(AssertionError, match='空槽/越界'):
+            guard_proposal_vs_expected(
+                SellBench(bench_idx=5, income=3, expect='甲'), st)
+
+    def test_expected_vs_tracked_guard_detects_drift(self):
+        """expected-vs-tracked 双账断言(§守卫两属 (ii),投影建模 bug 的
+        唯一在环检测器):期望态 bench 与 tracked 账分叉 ⇒ 炸出;一致 ⇒
+        静默通过。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            guard_expected_vs_tracked,
+        )
         sess = _session()
-        seq2 = [SellBench(bench_idx=0, income=3, expect='甲'),
-                SellBench(bench_idx=0, income=3, expect='甲')]
-        out2 = shop.truncate_shop_frame_stable(seq2, st, sess)
-        assert len(out2) == 1
-        assert sess.cw4_counters['emitter_conditional_truncated'] == 1
-        assert sess.cw4_counters['emitter_post_truncation_dropped'] == 1
-        # 名不符(跨代际提案)⇒ 截断
-        sess2 = _session()
-        out3 = shop.truncate_shop_frame_stable(
-            [SellBench(bench_idx=0, income=3, expect='乙')], st, sess2)
-        assert out3 == []
-        assert sess2.cw4_counters['emitter_conditional_truncated'] == 1
-        # 引用越界槽 ⇒ 截断
-        sess3 = _session()
-        out4 = shop.truncate_shop_frame_stable(
-            [DeployMove(bench_idx=5, to_row='back', faction='仙舟')],
-            st, sess3)
-        assert out4 == []
-        assert sess3.cw4_counters['emitter_conditional_truncated'] == 1
+        sess.tracked_bench_chars = [_bc('甲'), _bc('乙')]
+        st = _state(bench=[_bc('甲'), _bc('乙')])
+        guard_expected_vs_tracked(st, sess)      # 一致:静默
+        st2 = _state(bench=[_bc('甲'), _bc('丙')])
+        with pytest.raises(AssertionError, match='双账分离'):
+            guard_expected_vs_tracked(st2, sess)
 
-    def test_levelup_normalized_to_levelupshop(self):
-        """R197 症4②:裸 LevelUp 发射侧归一化为 LevelUpShop(is-a
-        LevelUp,契约表既有行;字段保留)——商店波发射一律 LevelUpShop,
-        词表收紧为契约 8 类(契约正文零改动)。"""
-        st = _state()
-        seq = [LevelUp(cost=4, auth_basis='legacy'),
-               BuyCard(card=_card('甲'))]
-        out = shop.truncate_shop_frame_stable(seq, st)
-        assert [type(a) for a in out] == [LevelUpShop, BuyCard]
-        assert out[0].cost == 4 and out[0].auth_basis == 'legacy'
-        # 词表锁:可续类 = 契约 8 类口径(裸 LevelUp 不在商店词表)
-        assert (BuyCard, LevelUpShop) == shop._SHOP_CONTINUE
-        assert LevelUp not in shop._SHOP_CONTINUE
+    def test_buy_and_levelup_continue_via_projection(self):
+        """可续语义重锚:BuyCard/LevelUpShop 不终结循环——驱动器输出含
+        后续动作且期望态推进(旧「可续不截断」的单动作继任形态:循环
+        由投影续走,不存在截断点)。"""
+        comp = _comp()
+        m = _members(comp)[0]
+        st = _state(gold=30, shop=[_card(m, cost=3), _card('燃料件X')])
+        acts = _decide(st, _session(comp))
+        assert acts and isinstance(acts[0], BuyCard)
+        assert not isinstance(acts[-1], RefreshShop)   # 无截断性终结
 
-    def test_refresh_shop_truncation_point(self):
-        """RefreshShop = 截断点:其后动作丢弃,自身保留为末位。"""
-        st = _state()
-        seq = [BuyCard(card=_card('甲')), RefreshShop(cost=2),
-               BuyCard(card=_card('乙'))]
-        out = shop.truncate_shop_frame_stable(seq, st)
-        assert out == seq[:2]
-        assert isinstance(out[-1], RefreshShop)
-
-    def test_comp_transaction_truncation_point(self):
-        """CompTransaction = 截断点(fill 消费店槽 ⇒ 重决策)。"""
-        st = _state()
-        seq = [CompTransaction(deploy=[], undeploy=[], sell=[]),
-               BuyCard(card=_card('甲'))]
-        out = shop.truncate_shop_frame_stable(seq, st)
-        assert out == seq[:1]
-
-    def test_merge_trigger_truncates(self):
-        """合成触发:买同名同星第 3 张 ⇒ 该买牌后截断 + 计数披露。"""
-        st = _state(bench=[_bc('甲'), _bc('甲')])
-        seq = [BuyCard(card=_card('甲')), BuyCard(card=_card('乙'))]
-        sess = _session()
-        out = shop.truncate_shop_frame_stable(seq, st, sess)
-        assert len(out) == 1 and isinstance(out[0], BuyCard)
-        assert sess.cw4_counters['shop_merge_trigger_truncate'] == 1
-
-    def test_merge_counts_deployed_copies(self):
-        """合成保守域:场上同名同星副本并入计数(bench1+deployed1+买1=3)。"""
-        st = _state(bench=[_bc('甲')],
-                    deployed=[_bc('甲')] + [None] * 9)
-        seq = [BuyCard(card=_card('甲'))]
-        sess = _session()
-        out = shop.truncate_shop_frame_stable(seq, st, sess)
-        assert len(out) == 1
-        assert sess.cw4_counters['shop_merge_trigger_truncate'] == 1
-
-    def test_pick_event_fail_closed(self):
-        """§3.3:PickEvent(pick 返回载体,词表外)⇒ 截断 + 计数披露。"""
-        st = _state()
-        seq = [BuyCard(card=_card('甲')), PickEvent(option_idx=0),
-               BuyCard(card=_card('乙'))]
-        sess = _session()
-        out = shop.truncate_shop_frame_stable(seq, st, sess)
-        assert len(out) == 1
-        assert sess.cw4_counters['emitter_unknown_action_truncated'] == 1
-
-    def test_rogue_action_fail_closed(self):
-        """§3.3:词表外任意类型 ⇒ 截断 + 计数(禁静默丢弃)。"""
-        st = _state()
-        seq = [BuyCard(card=_card('甲')), object()]
-        sess = _session()
-        out = shop.truncate_shop_frame_stable(seq, st, sess)  # type: ignore[arg-type]
-        assert len(out) == 1
-        assert sess.cw4_counters['emitter_unknown_action_truncated'] == 1
+    def test_merge_trigger_no_longer_truncates(self):
+        """合成触发重锚:买同名同星第 3 张不再截断(旧
+        shop_merge_trigger_truncate 计数随截断器退役)——投影(simulate
+        内含合成连锁)承载期望态更新,驱动器循环继续至终结。"""
+        comp = _comp()
+        m = _members(comp)[0]
+        st = _state(gold=30, shop=[_card(m, cost=3)],
+                    bench=[_bc(m), _bc(m)])
+        sess = _session(comp)
+        acts = _decide(st, sess)
+        # M2b 合并完成买入发生,且其后循环继续(CloseShop 收尾不产生
+        # 额外动作;截断形态下该买会是末位——两者输出同形,语义差异由
+        # 「投影后无停滞」承载:合成已入 bench,owned 集含该成员)
+        assert any(isinstance(a, BuyCard) and a.card.name == m for a in acts)
+        assert 'shop_merge_trigger_truncate' not in sess.cw4_counters
 
     def test_blackboard_missing_raises(self):
         """黑板契约:shop_state_frame 缺失 ⇒ 抛错(禁静默按空态决策)。"""
@@ -384,6 +376,8 @@ class TestShopTruncationContract:
         strat = MandateV1Strategy(registry=sim_decision_registry())
         with pytest.raises(ValueError, match='shop_state_frame'):
             strat.decide_shop_screen(_session(), _Cfg())
+        with pytest.raises(ValueError, match='shop_state_frame'):
+            strat.decide_shop_action(_session(), _Cfg())
 
 
 # ===== ③ 修复池商店面检查点核销 =====
@@ -411,13 +405,15 @@ class TestFixpoolShopCheckpoints:
         assert sess.cw4_counters.get('shop_ev_u_unavailable', 0) >= 1
 
     def test_d_p2idle_idle_gold_counter(self):
-        """D-P2idle:带金零动作波计数(gold≥10 且无发射)。"""
+        """D-P2idle:带金零动作 visit 计数(gold≥10 且无发射)——键
+        ``shop_visit_idle_gold``(单动作迁移批改名;语义 = CloseShop 收尾
+        且金 ≥10 的 visit,旧 shop_wave_idle_gold 波计数不可对拍)。"""
         comp = _comp()
         bench = [_bc(m) for m in _members(comp)]   # 线成型,金低于 g*
         st = _state(gold=12, bench=bench)
         sess = _session(comp)
         _decide(st, sess)
-        assert sess.cw4_counters.get('shop_wave_idle_gold', 0) == 1
+        assert sess.cw4_counters.get('shop_visit_idle_gold', 0) == 1
 
     def test_d_hard_node_gate_consumed(self):
         """D-D:硬节点(遭遇/boss)备战补强门被消费(观察级接线+计数)。"""
@@ -547,16 +543,19 @@ class TestEvArmBypass:
             assert not hits, (py.name, hits)
 
 
-# ===== R197 修复批行为测试(商店波同槽去重防线)=====
+# ===== R197 同槽防线重锚(ADR-0517 迁移批)=====
 
 class TestR197SameSlotGuard:
-    """症3:商店波卖面同槽冲突——先到先得丢弃 + 计数(与 prep 侧
-    sold_slots/ev_conflict_dropped 同型),非 fail-stop 重发。"""
+    """症3防线语义重推:旧锁钉「波内同 bench_idx 双卖先到先得丢弃 +
+    ev_conflict_dropped 计数」——防线存在前提 = 波批多动作共享同一帧
+    快照;单动作下第一笔卖出后期望态已更新,第二笔提案自然不指向已卖
+    槽(ADR-0517 §消灭的 bug 类·同槽去重防线),发射侧丢弃通道退役。
+    继任不变量:驱动器输出对同一 bench_idx 至多一笔卖出(结构性保证,
+    非运行时丢弃);ev_conflict_dropped 键不再由商店线产生。"""
 
-    def test_same_wave_double_sell_dropped_not_failstop(self):
-        """同波同 bench_idx 双卖:M4 腾席已卖燃料槽 vs 支付支撑通道同
-        槽提案 ⇒ 丢弃 + ``ev_conflict_dropped`` 计数,输出对同一
-        bench_idx 至多一笔(执行侧 progressed=False fail-stop 不可达)。"""
+    def test_no_same_slot_double_sell_structurally(self):
+        """R197 场景(金 0 + 满席 + 缺件):驱动器全部卖出对同一
+        bench_idx 至多一笔——单动作结构保证,无丢弃计数参与。"""
         comp = _comp()
         members = _members(comp)
         m0 = members[0]
@@ -567,11 +566,10 @@ class TestR197SameSlotGuard:
         sess = _session(comp)
         acts = _decide(st, sess)
         sells = [a for a in acts if isinstance(a, SellBench)]
-        # M4 卖首个填充件(唯一最低槽燃料);funding 提案同槽被丢弃
         assert sells, 'M4 腾席卖出应存在'
         idxs = [s.bench_idx for s in sells]
         assert len(idxs) == len(set(idxs)), idxs   # 无同 idx 双卖
-        assert sess.cw4_counters.get('ev_conflict_dropped', 0) >= 1
+        assert 'ev_conflict_dropped' not in sess.cw4_counters
 
 
 # ===== K 空窗回退修复批行为锁(2026-09-03 第三病灶)=====
@@ -696,6 +694,96 @@ class TestKGapFallback:
         assert not [a for a in acts if isinstance(a, BuyCard)
                     and a.reason == 'm2_line_member']
         assert 'shop_k_fallback_p1_gap' not in sess.cw4_counters
+
+
+# ===== ⑦ 对抗修复批:F1 满栏 EV 买收敛(席位门)=====
+
+class TestEvBuySeatGate:
+    """满栏 + EV 候选在场 ⇒ EV 买不提案(shop.py EV pass 席位门,与
+    dominance_buy 的 check_seats 同款);决策循环有限步收敛。
+
+    根因形态(对抗发现):EV 候选非义务面、无 M4 腾席前置;满栏帧
+    BuyCard 的 simulate 投影走「bench_full 整动作 no-op」分支(不合成
+    即金不扣、牌不下架、bench 不减员)⇒ 下一帧同提案同候选 = 无限循环。
+    候选生成经 monkeypatch 钉非空(锁「席位门」这一控制流,不锁候选
+    生成的数值面——后者归 criteria 各自的判据锁)。
+    """
+
+    @staticmethod
+    def _full_bench(comp):
+        bench = [_bc(m) for m in _members(comp)]
+        while len(bench) < BENCH_CAPACITY:
+            bench.append(_bc(f'填充件{len(bench)}'))
+        return bench
+
+    def test_ev_buy_bench_full_not_proposed(self, monkeypatch):
+        """满栏帧 EV 买不提案 + ``shop_ev_bench_wait`` 分键计数
+        (帧级断言:满栏帧的首提案不是 ev_buy;席被其它通道腾出后
+        EV 买合法恢复,归帧级不变量测试辖)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+            buy as crit_buy,
+        )
+        comp = _comp()
+        fuel = '燃料件X'
+        st = _state(gold=30, shop=[_card(fuel, cost=1, star=1)],
+                    bench=self._full_bench(comp))
+        monkeypatch.setattr(
+            crit_buy, 'ev_buy_candidates',
+            lambda gold, s_reserve, shop_cards, k_members, **kw:
+            ([crit_buy.BuyCandidate(fuel, 1, 1, 0)], ''))
+        monkeypatch.setattr(crit_buy, 'ev_buy_veto',
+                            lambda cand, gold: (False, ''))
+        sess = _session(comp)
+        a = self._decide_one(st, sess)
+        assert not (isinstance(a, BuyCard) and a.reason == 'ev_buy')
+        assert sess.cw4_counters.get('shop_ev_bench_wait', 0) >= 1
+
+    @staticmethod
+    def _decide_one(state, session):
+        from sr_od.application.currency_war.sim.engine_p1 import (
+            sim_decision_registry,
+        )
+        strat = MandateV1Strategy(registry=sim_decision_registry())
+        session.shop_state_frame = state
+        return strat.decide_shop_action(session, _Cfg('full'))
+
+    def test_ev_buy_bench_full_segment_converges(self, monkeypatch):
+        """生产段循环同构驱动:满栏 + 恒非空 EV 候选下,单动作循环按
+        帧推进有限步到达终结(CloseShop/RefreshShop),不触发执行侧
+        帧帽(cw_op_buy_cards.SHOP_SEGMENT_ACTION_CAP);帧级不变量 =
+        EV 买提案只发生在 bench 有空席的帧(席位门语义)。"""
+        from sr_od.application.currency_war.kernel.cw_state import simulate
+        from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
+            SHOP_SEGMENT_ACTION_CAP,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+            buy as crit_buy,
+        )
+        comp = _comp()
+        fuel = '燃料件X'
+        st = _state(gold=30, shop=[_card(fuel, cost=1, star=1)],
+                    bench=self._full_bench(comp))
+        monkeypatch.setattr(
+            crit_buy, 'ev_buy_candidates',
+            lambda gold, s_reserve, shop_cards, k_members, **kw:
+            ([crit_buy.BuyCandidate(fuel, 1, 1, 0)], ''))
+        monkeypatch.setattr(crit_buy, 'ev_buy_veto',
+                            lambda cand, gold: (False, ''))
+        sess = _session(comp)
+        sess.shop_state_frame = st
+        terminated = False
+        for _frame in range(SHOP_SEGMENT_ACTION_CAP):
+            cur = sess.shop_state_frame
+            _free = BENCH_CAPACITY - len(
+                [b for b in (cur.bench or []) if b is not None])
+            a = self._decide_one(cur, sess)
+            if isinstance(a, BuyCard) and a.reason == 'ev_buy':
+                assert _free > 0, 'EV 买提案帧 bench 须有空席(席位门)'
+            if isinstance(a, (CloseShop, RefreshShop)):
+                terminated = True
+                break
+            sess.shop_state_frame = simulate(cur, a)
+        assert terminated, '满栏 + EV 候选在场:段循环须有限步到达终结'
 
 
 # ===== ⑤⑥ sim 实跑门(慢桶)=====

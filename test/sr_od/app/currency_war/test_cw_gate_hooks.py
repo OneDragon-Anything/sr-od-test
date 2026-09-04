@@ -105,8 +105,7 @@ def _make_director(monkeypatch, collapse_open):
             # 生产环按 list[PrepAction] 消费(长度 1)
             decide_prep_screen=lambda session, config: [StartBattle()],
             update_target=lambda state, session, config: None),
-        session=SimpleNamespace(defer_count=0, prep_phase=0,
-                                prep_phase_retry=0, bail_reason_counts={}))
+        session=SimpleNamespace(defer_count=0))
     return d, match, collapse_calls, sleeps
 
 

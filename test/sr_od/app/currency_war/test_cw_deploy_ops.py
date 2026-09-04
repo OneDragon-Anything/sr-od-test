@@ -33,20 +33,9 @@ from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
 )
 
 
-class _FlowStrategy(MandateV1Live):
-    """流程域测试具现(统一迁移批 ②):prep 决策面 = flow 规则序栈
-    (_decide_prep_action_impl),不经 cw4 装配缝——腾席链/发射门/
-    相位机测试的锁语义保持(v2 prep 流栈平移件)。"""
-
-    def decide_prep_action(self, obs, session, config):
-        session.prep_obs_frame = obs
-        return CwFlowStrategy._decide_prep_action_impl(self, obs, session, config)
-
-    def decide_prep_screen(self, session, config):
-        if session.prep_obs_frame is None:
-            raise ValueError('prep_obs_frame 缺失(黑板契约:观察层失约)')
-        return CwFlowStrategy._decide_prep_action_impl(
-            self, session.prep_obs_frame, session, config)
+# ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
+# 直用活策略核(下述测试全部消费 live 接口)。
+_FlowStrategy = MandateV1Live
 def _bonds(cid: str) -> set[str]:
     ch = CHARACTERS[cid]
     return set(ch.factions) | set(ch.flows)
@@ -459,129 +448,6 @@ def test_board_counts_of_fullset_caliber() -> None:
     assert _board_counts_of([]) == {}
 
 
-# ==================== r412_bench_free_gates ====================
-
-from types import SimpleNamespace
-
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_prep_actions import (
-    DeferSpheres,
-    LevelUp,
-    PrepObservation,
-    SellBench,
-)
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar as _r412_bench_free_gates_BenchChar,
-)
-from sr_od.application.currency_war.kernel.cw_state import (
-    GameState as _r412_bench_free_gates_GameState,
-)
-from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
-
-S = _FlowStrategy()
-COMP = get_comp('列车同行')
-
-
-def _cfg(**overrides) -> SimpleNamespace:
-    base = {
-        'faction_priority': ['贝洛伯格', '仙舟', '巡海游侠'],
-        'character_priority': ['阿格莱雅'],
-        'character_build_around': [],
-        'strategy_id': 'default',
-        'strategy_seed': None,
-    }
-    base.update(overrides)
-    return SimpleNamespace(**base)
-
-
-def _bc(slot: int, char_id: str, faction: str = '?', star: int = 1,
-        pref: str = 'back') -> _r412_bench_free_gates_BenchChar:
-    return _r412_bench_free_gates_BenchChar(slot=slot, char_id=char_id, faction=faction, star=star,
-                     position_pref=pref)
-
-
-def _obs_worth_bench(**state_kw) -> PrepObservation:
-    """板满(cap=lv)+ bench 应上场件(同阵营 count≥2)+ gold 可信 fresh state。"""
-    bench = [_bc(1, '甲', '贝洛伯格'), _bc(2, '乙', '贝洛伯格')]
-    deployed = [_bc(i, f'd{i}', '仙舟') for i in range(1, 6)]   # lv5 板满
-    kw = {'gold': 70, 'round_num': 3}
-    kw.update(state_kw)
-    st = _r412_bench_free_gates_GameState(level=5, plane=1, deployed=deployed, **kw)
-    o = PrepObservation()
-    o.spheres = [('gold', None, 40)]
-    o.free_bench_slots = 0
-    o.deploy_vacancy = 0
-    o.bench_chars = bench
-    o.shop_open = True
-    o.state_gold_trusted = True
-    o.state = st
-    return o
-
-
-def _sess_worth(**kw) -> StrategySession:
-    bench = [_bc(1, '甲', '贝洛伯格'), _bc(2, '乙', '贝洛伯格')]
-    deployed = [_bc(i, f'd{i}', '仙舟') for i in range(1, 6)]
-    kw.setdefault('tracked_bench_chars', bench)
-    kw.setdefault('tracked_deployed', deployed)
-    kw.setdefault('last_level_obs', 5)
-    kw.setdefault('last_state', _r412_bench_free_gates_GameState(level=5, plane=1, round_num=3))
-    return StrategySession(**kw)
-
-
-def test_boss_round_rejects_levelup() -> None:
-    """锁1:boss 轮(位面末节点)腾席链禁升级——同款 fixture 非轮可 LevelUp,
-    boss 轮(node_type 权威源)拒绝,落卖件/留置。"""
-    a = S.decide_prep_action(_obs_worth_bench(), _sess_worth(), _cfg())
-    assert isinstance(a, LevelUp), '前置自检:非 boss 轮 + 引擎立(latch)应可升级'
-    b = S.decide_prep_action(_obs_worth_bench(),
-                             _sess_worth(node_type_current='boss'), _cfg())
-    assert not isinstance(b, LevelUp), 'boss 轮一律禁升级腾席(口述[32])'
-    # r9 先验兜底(supply 例外)同禁
-    c = S.decide_prep_action(_obs_worth_bench(round_num=9),
-                             _sess_worth(node_type_current='普通战斗'), _cfg())
-    assert not isinstance(c, LevelUp), 'r9 位面末先验同禁'
-
-
-def test_bench_full_junk_sold_before_levelup() -> None:
-    """锁2:bench 满且杂件可卖 → 卖不升(a2 卖杂件优先于链 b;判据
-    off-target=_card_supports_target False)。"""
-    junk = _bc(3, '路人', '?')
-    obs = _obs_worth_bench()
-    obs.bench_chars = [junk]
-    obs.state.bench = [junk]
-    sess = _sess_worth(target_comp=COMP)
-    sess.tracked_bench_chars = [junk]
-    a = S.decide_prep_action(obs, sess, _cfg())
-    assert isinstance(a, SellBench) and a.slot == 3, \
-        'bench 满有 off-target 杂件 → 卖杂件(ADR-0274 卖件优先于升级)'
-
-
-def test_no_pop_shortfall_no_levelup() -> None:
-    """锁3:cap 缺口 0(板有空位/cap 装得下想上的件)→ 不升(连链 b 都不进,
-    不为升级空等 gold 真值)。"""
-    obs = _obs_worth_bench()
-    obs.state.deployed = [_bc(1, 'd1', '仙舟')]     # cap5 板 1 人 → 空位 4
-    sess = _sess_worth()
-    sess.tracked_deployed = [_bc(1, 'd1', '仙舟')]
-    a = S.decide_prep_action(obs, sess, _cfg())
-    assert not isinstance(a, LevelUp), 'cap-deployed 缺口 0 → 不升级(口述[32] 真缺人口前置)'
-
-
-def test_junk_sold_out_shortfall_engine_ok_allows_levelup() -> None:
-    """锁4:杂件卖尽 + 真缺人口 + 息引擎立(latch)→ 允许升级。"""
-    # bench 全 on-target(同阵营 count≥2,非杂件)→ a2 返 None
-    a = S.decide_prep_action(_obs_worth_bench(), _sess_worth(), _cfg())
-    assert isinstance(a, LevelUp), '杂件卖尽+真缺人口+引擎立(latch)→ 允许'
-
-
-def test_engine_not_established_rejects_levelup() -> None:
-    """锁5(ADR-0266 臂):lv≥5 息引擎未立(latch False 且花完 <50)→ 拒升。"""
-    obs = _obs_worth_bench(gold=30)      # 30 - 总成本 < 50,引擎未立
-    a = S.decide_prep_action(obs, _sess_worth(), _cfg())
-    assert not isinstance(a, LevelUp), '息引擎未立的追级腾席升级被拒(ADR-0266/0274)'
-    assert isinstance(a, (SellBench, DeferSpheres)), '拒升后落卖件/留置,不死等'
-
-
 # ==================== w322_deploy_cap_readchain ====================
 
 from pathlib import Path
@@ -766,6 +632,18 @@ def test_prep_actions_level_raw_uses_shared_reader() -> None:
     assert 'read_level_raw_opt' in src, '完成验证直读应委托单一源(重复裁剪 OCR 实现已删)'
 
 
+# (r412 腾席链门测试组 + 空板出战守卫测试组已随 ADR-0517 迁移批死码清理
+# 删除——被测体 = flow.py 死码簇;_bc 助手保留,w530 期望态锁组消费)
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar as _r412_bench_free_gates_BenchChar,
+)
+
+def _bc(slot: int, char_id: str, faction: str = '?', star: int = 1,
+        pref: str = 'back') -> _r412_bench_free_gates_BenchChar:
+    return _r412_bench_free_gates_BenchChar(slot=slot, char_id=char_id, faction=faction, star=star,
+                     position_pref=pref)
+
+
 # ==================== w530_drag_reconcile ====================
 
 from pathlib import Path as _w530_drag_reconcile_Path
@@ -888,15 +766,17 @@ def test_compare_swap():
 # ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
 
 def test_w530_wiring_locks():
-    """①期望态在动作发出点(execute 之前)从意图计算;②对账在 heavy 重观察
-    (定型帧)之后且仅 progressed 分支;③身份读=identify_slots 纯读组合,
-    不经 read_bench_chars(内置停机钩子);④台账参数锁。"""
+    """①期望态在动作发出点(execute 之前)从意图计算;②对账(ADR-0517
+    迁移重锚:per-action heavy 重读契约退役)——acct 在执行后暂存,下一
+    入口对账段经 _v2_post_frame_accounting 统一消费(入口观察即对账),
+    仅 progressed 分支;③身份读=identify_slots 纯读组合,不经
+    read_bench_chars(内置停机钩子);④台账参数锁。"""
     src = _w530_drag_reconcile_Path('src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py').read_text(
         encoding='utf-8')
     # ① 发出点:compute 在单轮 execute 之前(W971 P3b 拆内环:单轮 = run
     #    五段;锚「备战单轮」节标记,破警告分支的 decide 在其后)。
-    #    序列契约 v1(dd-020)后决策返回 list,逐动作消费——锚放宽到
-    #    调用面(不再钉死单动作变量名)。
+    #    ADR-0517 迁移后:单动作决策循环内逐帧决策,期望态仍在 execute
+    #    之前从意图计算(锚 = 调用面)。
     loop_at = src.index(
         'match.strategy.decide_prep_screen(session, config)',
         src.index('备战单轮'))
@@ -905,10 +785,14 @@ def test_w530_wiring_locks():
     comp_at = src.index('compute_drag_expect(', loop_at)
     assert emit_at < exec_at
     assert comp_at < exec_at
-    # ② 对账点:heavy 重观察之后、经 acct 消费仅 progressed 分支
-    obs_at = src.index('_post_obs = self._observe(heavy=True)', exec_at)
-    rec_at = src.index('self._v2_post_frame_accounting(_post_obs, acct, session)', obs_at)
-    assert obs_at < rec_at
+    # ② 对账点(ADR-0517 重锚):acct 在执行后暂存(session.
+    # cw_prep_pending_accts),消费点在下一入口对账段(决策循环之前)。
+    stash_at = src.index('session.cw_prep_pending_accts.append(acct)', exec_at)
+    drain_at = src.index(
+        'self._v2_post_frame_accounting(obs, _pend, session)',
+        src.index('def run('))
+    assert exec_at < stash_at
+    assert drain_at < loop_at   # 消费在入口段(决策循环之前)
     assert "if progressed and acct.get('drag_expect') is not None:" in src
     # ③ 纯读路径:对账方法内用 identify_slots / read_deployed_chars,无 read_bench_chars
     method = src[src.index('def _reconcile_drag_expect'):]
@@ -1139,38 +1023,4 @@ def _obs(dep=0, bench=0):
 
 def _test_empty_board_guard_cfg():
     return _test_empty_board_guard_SimpleNamespace()
-
-
-def test_empty_board_guard_redirects_to_deploy() -> None:
-    """板上 0 人 bench 3 人:不出战,回 RunDeploy。"""
-    strat = _FlowStrategy()
-    obs = _obs(dep=0, bench=3)
-    sess = _test_empty_board_guard_SimpleNamespace(defer_count=0, memory={}, target_comp=None,
-                           tracked_bench_chars=[], pending_deploys=[], prep_phase=3,
-                           prep_phase_retry=0, tracked_deployed=[], bail_reason_counts={})
-    act = strat.decide_prep_action(obs, sess, _test_empty_board_guard_cfg())
-    assert type(act).__name__ == 'RunDeploy', f'应回部署段,实得 {type(act).__name__}'
-    assert sess.prep_phase == 1
-
-
-def test_empty_board_guard_gives_up_after_two() -> None:
-    """重试 2 次后放行(部署持续失败交 Director stall 兜底,防 phase 死循环)。"""
-    strat = _FlowStrategy()
-    obs = _obs(dep=0, bench=3)
-    sess = _test_empty_board_guard_SimpleNamespace(defer_count=0, memory={}, target_comp=None,
-                           tracked_bench_chars=[], pending_deploys=[], prep_phase=3,
-                           prep_phase_retry=2, tracked_deployed=[], bail_reason_counts={})
-    act = strat.decide_prep_action(obs, sess, _test_empty_board_guard_cfg())
-    assert type(act).__name__ == 'StartBattle'
-
-
-def test_deployed_board_battles_normally() -> None:
-    """板上有人不拦截(正常出战)。"""
-    strat = _FlowStrategy()
-    obs = _obs(dep=4, bench=2)
-    sess = _test_empty_board_guard_SimpleNamespace(defer_count=0, memory={}, target_comp=None,
-                           tracked_bench_chars=[], pending_deploys=[], prep_phase=3,
-                           prep_phase_retry=0, tracked_deployed=[], bail_reason_counts={})
-    act = strat.decide_prep_action(obs, sess, _test_empty_board_guard_cfg())
-    assert type(act).__name__ == 'StartBattle'
 

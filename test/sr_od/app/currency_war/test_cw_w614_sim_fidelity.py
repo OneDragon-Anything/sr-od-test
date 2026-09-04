@@ -110,13 +110,16 @@ from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 # 单臂切换重锚(2026-09-04,dd-038 检查点②/b94e9cfb):A9 裁决删
 # decision_v2 基线臂,注册面封闭集={'mandate_v1'},默认路径由
 # DecisionV2Strategy 合法换为 MandateV1Live → digest 由 3e71aaaf…
-# 位移至 f3d80127…。**复合窗口如实声明(w937 先例)**:单变量 bisect
-# 不可做——旧臂已整包删除无法复跑;位移归因=单臂切换本身(其余删除
-# 面为零消费死面,b94e9cfb 验收时的契约锁/单臂自配对门全绿为旁证);
-# 锁语义自此钉「mandate_v1 单臂默认路径零漂移」,旧 decision_v2 锚值
-# 3e71aaaf… 仅存本注释为史。重锚执行=编排者(裁决#3 认领)。
+# 位移至 f3d80127…。锁语义自此钉「mandate_v1 单臂默认路径零漂移」,
+# 旧 decision_v2 锚值 3e71aaaf… 仅存本注释为史。
+# 单动作架构重锚(ADR-0517 迁移批,flow 实施批):波批→单动作的条件
+# 等价前提(波批投影无残差)不成立——逐帧重判使帧内后段动作可见前段
+# 动作的真值更新(实证:M2b 合并买在凑息卖腾席后的下一帧补发;凑息卖
+# 逐帧重估缺口),行为位移属 ADR-0517 §与现行架构的映射预告的真语义差
+# (「帧级锁不预期保持绿」),非 unintended drift。锚值位移至 996a1f57…,
+# 继续做 unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    'f3d801275ac56b478f9a903b641d5863128ba55d68e27a6e4a1a9a46f0b42891')
+    '996a1f579845c20fff92661332534910a54b838868ee6f29a50b0632f7fd0459')
 
 
 def _behavior_projection(results) -> str:

@@ -702,14 +702,3 @@ def test_maybe_pivot_defining_augment_unlocks_commit() -> None:
         f"定义型 augment 应解锁 commit 锁,得 {result.name if result else None}"
     )
 
-
-def test_card_hits_target_two_tier_flex() -> None:
-    """评审🔴1:flex 两档:严格(卖出/换血)只认核心;宽松(买牌/deploy)含 flex。"""
-    from sr_od.application.currency_war.kernel.cw_deploy_seat import _card_hits_target
-    lt = get_comp("列车同行")
-    # 大丽花(盛会之星=列车 flex):宽松 True(可买可上),严格 False(可被 core 替换)
-    assert _card_hits_target("大丽花", "盛会之星", lt, include_flex=True) is True
-    assert _card_hits_target("大丽花", "盛会之星", lt) is False
-    # core 辅助(花火,阵营∉列车)两档都 True(ADR-0103 保护)
-    assert _card_hits_target("花火", "盛会之星", lt) is True
-

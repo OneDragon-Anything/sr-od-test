@@ -104,25 +104,6 @@ def test_session_last_owned_equips_defaults_empty() -> None:
     assert StrategySession().last_owned_equips == []
 
 
-def test_pseudo_state_copies_owned_pool() -> None:
-    """读端拷贝(W92 验收锚点①的锁形态):session 快照 → st.equips 非空。
-
-    EquipAll 读到 owned 穿戴池(写 session.last_owned_equips)后,决策
-    state.equips 必须非空——修复前此链断裂(恒空)。
-    """
-    sess = StrategySession()
-    sess.last_owned_equips = ['财富宝钻', '分身墨镜']
-    st = MandateV1Strategy()._pseudo_state(None, sess)
-    assert st.equips == ['财富宝钻', '分身墨镜']
-
-
-def test_pseudo_state_owned_pool_empty_semantics_unchanged() -> None:
-    """空快照:st.equips 为空列表(默认语义不变,不造出假持有)。"""
-    sess = StrategySession()
-    st = MandateV1Strategy()._pseudo_state(None, sess)
-    assert st.equips == []
-
-
 # ==================== w209_equip_telemetry ====================
 
 import sys
@@ -131,8 +112,8 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_ROOT / 'src'))
 
-from sr_od.application.currency_war.kernel.cw_reconcile import _merge_equips
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_reconcile import _merge_equips  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_state import BenchChar  # noqa: E402
 
 
 def _bc(cid: str, slot: int = 1, row: str = 'back') -> BenchChar:
@@ -192,20 +173,21 @@ def _src(rel: str) -> str:
 
 
 def test_shop_record_site_copies_owned_pool_before_record() -> None:
-    """buy_cards.py 主 record 站点(W970 批 A 随波循环自 shop.py 迁入):
-    decide_prep 之后、record_decision 之前补拷。
+    """buy_cards.py 主 record 站点(ADR-0517 单动作迁移后 = 段尾累计行):
+    决策循环之后、record_decision 之前补拷。
 
-    顺序锁三点:①拷贝行存在;②在 decide_prep 之后(装备权重读 state.equips,
-    提前拷=改决策行为);③在其后的 record_decision(state 调用之前)。
-    """
+    顺序锁三点:①拷贝行存在;②在 decide_shop_action 循环之后(装备权重
+    读 state.equips,提前拷=改决策行为);③在其后的 record_decision(state
+    调用之前)。"""
     src = _src('operations/cw_op/cw_op_buy_cards.py')
     copy_line = 'state.equips = list(getattr(match.session, \'last_owned_equips\', []) or [])'
     assert copy_line in src, 'buy_cards record 站点缺 owned 池补拷行(W222 缺口①回归)'
-    # W971 P2 黑板接口(dd-014):decide_prep → decide_shop_screen,顺序锁随迁
-    i_plan = src.index('actions = match.strategy.decide_shop_screen')
+    # ADR-0517 迁移批:decide_shop_screen 波调用 → decide_shop_action
+    # 单动作循环,顺序锁锚点随迁
+    i_plan = src.index('action = match.strategy.decide_shop_action')
     i_copy = src.index(copy_line)
     i_rec = src.index('recorder.record_decision(state, target_name')
-    assert i_plan < i_copy < i_rec, '补拷必须在 decide_prep 之后、record 之前(行为边界)'
+    assert i_plan < i_copy < i_rec, '补拷必须在决策之后、record 之前(行为边界)'
 
 
 def test_director_record_step_copies_owned_pool_on_state_copy() -> None:

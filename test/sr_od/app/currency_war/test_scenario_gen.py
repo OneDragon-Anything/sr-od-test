@@ -14,7 +14,6 @@ import pytest
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.kernel.cw_deploy_seat import _should_deploy, deploy_legal
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORKS,
@@ -81,8 +80,11 @@ def test_inv_same_name_never_deploys_twice(fw):
     gs.bench = []
     gs.deployed = [_bc(carry, _fw_faction(fw)), _bc(SCATTER, '夜之半神')]
     cand = _bc(carry, _fw_faction(fw), slot=1)
-    assert deploy_legal(cand, {carry}) is False
-    assert _should_deploy(cand, gs, None) is False
+    # ADR-0517 迁移批重锚:同名禁双不变量的存活载体 = cw_state.board_unique_key
+    # (simulate/mutate 的 DeployMove 拒绝路径;旧 cw_deploy_seat.deploy_legal
+    # 随 flow.py 死码簇传递性删除)
+    from sr_od.application.currency_war.kernel.cw_state import board_unique_key
+    assert board_unique_key(cand) == board_unique_key(gs.deployed[0])
 
 
 # ===== 不变量 5:合并权启动门(纯 shop 不启动;持有1+在售1 启动) =====
@@ -134,4 +136,13 @@ def test_framework_carry_deploys_in_dual_track():
     gs.bench = []
     gs.deployed = [_bc('三月七', '列车同行', 'front')]
     cand = _bc('藿藿', '仙舟', 'back')
-    assert _should_deploy(cand, gs, None) is True
+    # ADR-0517 迁移批重锚:双轨期框架件 carry 上场判定存活载体 =
+    # cw_deploy_logic.select_deployments(fw_carry 围栏放行;旧 _should_deploy
+    # 随 flow.py 死码簇传递性删除)
+    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+        select_deployments,
+    )
+    up, _held = select_deployments(
+        [cand], deployed_cids={'三月七'}, deployed_fac={'列车同行': 1},
+        board={'列车同行': 1}, cap=4, fw_carry={'藿藿'})
+    assert 0 in up

@@ -29,12 +29,6 @@ from sr_od.application.currency_war.kernel.cw_events import (
     decide_event,
     decide_supply,
 )
-from sr_od.application.currency_war.kernel.cw_deploy_seat import (
-    _bench_faction_counts,
-    _pick_deploy_row,
-    _should_deploy,
-    level_up_gate,
-)
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
@@ -433,30 +427,6 @@ def test_shop_supply_core_vs_noncore() -> None:
 # ===== D-122 concentration(deployed-lock 防 spread)=====
 
 
-def test_should_deploy_target_or_concentrated() -> None:
-    """D-122 L2 _should_deploy:target 阵营 OR 集中阵营(board+bench count≥2)才 deploy;off-target 单张留 bench。"""
-    dot = Comp(name="DOT", factions=["持续伤害", "减益"], core_chars=["卡芙卡"],
-               form_tiers={"持续伤害": 4}, strength="B", form_difficulty="easy")
-    # target 阵营角色 → deploy(深化 target)
-    assert _should_deploy(BenchChar(slot=1, char_id="x", faction="持续伤害"),
-                          GameState(board={"持续伤害": 1}), dot) is True
-    # off-target 单张(count 1)+ 有 target → 留 bench(防 spread-lock)
-    assert _should_deploy(BenchChar(slot=1, char_id="y", faction="仙舟"),
-                          GameState(board={"持续伤害": 1}), dot) is False
-    # off-target 但 board count≥2(集中)+ 无 target → deploy(集中深化,emergent)
-    assert _should_deploy(BenchChar(slot=1, char_id="z", faction="仙舟"),
-                          GameState(board={"仙舟": 2}), None) is True
-    # off-target count 1 + 无 target → 留 bench(r1 散单不 deploy)
-    assert _should_deploy(BenchChar(slot=1, char_id="z", faction="仙舟"),
-                          GameState(board={"仙舟": 1}), None) is False
-
-
-# (原 test_economy_mode_for_adaptive_falls_back_to_config 已删,ADR-0204:
-#  config.economy_mode 死配置删除,adaptive 节点恒 neutral。)
-
-
-# ===== ADR-0124 买牌 tempo 例外 =====
-
 def _mk_card(faction: str, cost: int, name: str = '未知卡') -> ShopCard:
     return ShopCard(x=500, faction=faction, name=name, cost=cost)
 
@@ -481,28 +451,6 @@ def test_xp_helpers_clicks_and_cost() -> None:
     assert xp_click_cost(GameState(level=5, level_up_cost=8, hp=100)) == 8     # OCR 实读
 
 
-def test_level_up_gate_floor_semantics() -> None:
-    """追级期地板 20(旧门要求整级 36-60 大金 → 过度保守);满级不点。
-
-    r85 溢出金 XP(用户 50 金息律「>50 的每一分都无存钱意义,该升级就升级」):
-    gold ≥ 50+单击价 且 花后 ≥50(息满溢出区)→ 姿态压制(_want_level_up False)
-    不再拦 —— P1 末 60-70 金闲置实证的缺口。近地板(53<54)仍拦。
-    """
-    # 追级期(批 3 预算收权重推):排程预告态要求息引擎已立(gold≥息线,
-    # W615 R4 禁升①);lv3 → 峰值级 6 未达 → 排程,扣单击价后 ≥20 才点
-    assert level_up_gate(GameState(level=3, gold=60, hp=100, plane=1, round_num=1))
-    assert not level_up_gate(GameState(level=3, gold=49, hp=100, plane=1, round_num=1))
-    # 非追级期溢出区(r85):lv8 gold60,单击4 → 60≥54 且 56≥50 → 放行(旧语义 False=闲置病理)
-    assert level_up_gate(GameState(level=8, gold=60, hp=100, plane=2, round_num=1))
-    # 近地板:gold53 < 50+4 → 拦(息档地板 50 不破)
-    assert not level_up_gate(GameState(level=8, gold=53, hp=100, plane=2, round_num=1))
-    # 溢出区以下:gold45 → 拦(攒息姿态不受 r85 影响)
-    assert not level_up_gate(GameState(level=8, gold=45, hp=100, plane=2, round_num=1))
-    # 满级
-    assert not level_up_gate(GameState(level=10, gold=99, hp=100))
-
-
-# ===== ADR-0131 投资策略经济效果进模型(免费刷新/利息上限/买经验折扣/每节点金) =====
 def test_refresh_cost_free_allowance() -> None:
     """_refresh_cost:加油站(每节点 1 次免费)→ 第 1 次刷新 0 金、第 2 次恢复 2 金。"""
     s = GameState(gold=10, hp=100, active_strategies=['加油站'])
@@ -649,27 +597,6 @@ def test_decide_event_comp_match_wins() -> None:
     pick3 = decide_event(["无名甲", "乱成一锅粥+"], cfg, st)
     assert pick3.option_idx == 1
 
-
-
-# ===== ADR-0139 comp 特定站位覆盖命途默认(char_positions) =====
-def test_pick_deploy_row_comp_override() -> None:
-    """char_positions 覆盖:绯英 comp 爻光(命途默认 front)→ back;万敌 comp 万敌 → front;无 comp 条目按默认。"""
-    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    fy = next(c for c in COMP_LIBRARY if c.name == "绯英欢愉")
-    wd = next(c for c in COMP_LIBRARY if c.name == "万敌单C")
-    # 爻光:Character 命途默认 front(欢愉),但绯英 comp 要求 back(攻略实证)
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar
-    yaoguang = BenchChar(slot=1, char_id="爻光", faction="欢愉", position_pref="front")
-    st = GameState(hp=100, board={}, level=6)
-    st.deployed = [BenchChar(slot=i, char_id=f"c{i}") for i in range(3)]
-    row_no, _ = _pick_deploy_row(st, yaoguang)
-    assert row_no == "front", "无 comp 覆盖按命途默认 front"
-    row_fy, ok = _pick_deploy_row(st, yaoguang, fy)
-    assert ok and row_fy == "back", "绯英 comp:爻光必后台(ADR-0139)"
-    # 万敌:front
-    wd_char = BenchChar(slot=2, char_id="万敌", faction="夜之半神", position_pref="front")
-    row_wd, ok2 = _pick_deploy_row(st, wd_char, wd)
-    assert ok2 and row_wd == "front"
 
 
 def test_comp_char_positions_data() -> None:

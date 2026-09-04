@@ -34,17 +34,9 @@ _UPGRADE = _w953_planner_strategy_wiring_PlannerOption(idx=0, text='提升费用
 _WEAKEN = _w953_planner_strategy_wiring_PlannerOption(idx=1, text='使后续节点【弱化】,降低敌人属性。')
 
 
-class _FlowStrategy(_w953_planner_strategy_wiring_MandateV1Strategy):
-    """流程域测试具现(统一迁移批 ②):prep 决策面 = flow 规则序栈
-    (_decide_prep_action_impl,单动作语义),不经 cw4 装配缝。"""
-
-    def decide_prep_action(self, obs, session, config):
-        session.prep_obs_frame = obs
-        return CwFlowStrategy._decide_prep_action_impl(self, obs, session, config)
-
-    def decide_prep_screen(self, session, config):
-        return CwFlowStrategy._decide_prep_action_impl(
-            self, session.prep_obs_frame, session, config)
+# ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
+# 直用活策略核(下述测试全部消费 live 接口)。
+_FlowStrategy = _w953_planner_strategy_wiring_MandateV1Strategy
 def _session(target_comp) -> _w953_planner_strategy_wiring_SimpleNamespace:
     """最小 session stub:decide_planner 只读 target_comp。"""
     return _w953_planner_strategy_wiring_SimpleNamespace(target_comp=target_comp)
