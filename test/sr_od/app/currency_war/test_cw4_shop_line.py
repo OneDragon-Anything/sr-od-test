@@ -343,16 +343,18 @@ class TestShopTerminatorContract:
 
     def test_guard_attribution_seed_vs_project(self):
         """守卫两属消息分离(ADR-0517 §守卫两属 (ii) 迁移补裁):同一双账
-        分叉按出现时点归因——首动作前(stage='seed')报「播种/入口账分叉」,
-        投影后(默认 stage='project')报「project/mutate 模型分叉」。2026-09-05
-        OpenShop 事故:播种层双源分叉曾被投影消息误标,误导排查方向。"""
+        分叉按出现时点归因——首动作前(stage='seed')报「跟踪账丢件/识别
+        幻影」(对抗审计修正:seed 档唯一可达场景=tracked 主账空而屏幕
+        bench 非空,非播种错误),投影后(默认 stage='project')报
+        「project/mutate 模型分叉」。2026-09-05 OpenShop 事故:播种层
+        双源分叉曾被投影消息误标,误导排查方向。"""
         from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
             guard_expected_vs_tracked,
         )
         sess = _session()
         sess.tracked_bench_chars = [_bc('甲')]
         st = _state(bench=[_bc('乙')])
-        with pytest.raises(AssertionError, match='播种/入口账'):
+        with pytest.raises(AssertionError, match='跟踪账丢件'):
             guard_expected_vs_tracked(st, sess, stage='seed')
         with pytest.raises(AssertionError, match='project/mutate'):
             guard_expected_vs_tracked(st, sess)
@@ -370,8 +372,9 @@ class TestShopTerminatorContract:
         锁形态选「缺席锁 + 入口重建语义锁」而非「播种后两账签名相等」:
         退役后事故帧构造本身消失(tracked_bench 字段已从 StrategySession
         删除),签名相等断言失去被测对象;更能拦回归的是两条——
-        ①缺席锁(下一用例):全 src 无任何 tracked_bench 符号残留,
-        回退播种在结构上不可能复活;
+        ①缺席锁(下一用例):currency_war 子树无任何 tracked_bench 符号
+        残留(点号锚定属性访问形态;getattr 字符串形态与子树外不在
+        本锁辖域),回退播种在结构上不可能复活;
         ②入口重建语义:主账真空(bench 真空=全部署的事实正确态)时,
         播种结果必须为空、残账属性即使被人为挂回 session 也零影响,
         守卫静默、LevelUp 投影后仍静默——若未来任何代码重新读残账
