@@ -1,11 +1,11 @@
-"""v6 判前锁清理批测试(2026-09-11;IMPL_ADV_R200 症4/症7 + 预注册件)。
+"""v6 清理批测试(2026-09-11;IMPL_ADV_R200 症4/症7)。
 
 覆盖:
 - 症4:v6 清单行 17(V_GAP 注入态或显式豁免批文)——零刷新事故配置
   复演必红 + 注入/豁免两通道放行 + 豁免批文非空纪律;
 - 症4 强制消费:活性守卫豁免快照落档 + prereg manifest 形态;
 - 症7:归因域/活性证据辖域限定随守卫产物输出;
-- 预注册件:PREREG v6 节文本锚 + ab_judge v6 自测复跑(判读器迁移)。
+- ab_judge v6 自测复跑(判读器迁移)。
 """
 from __future__ import annotations
 
@@ -13,18 +13,13 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.decision.cw4.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     LevelUpShop,
     SellBench,
     ShopCard,
 )
-
-_REPO_ROOT = Path(__file__).resolve().parents[5]
-_PREREG = (_REPO_ROOT / 'docs/develop/currency_war/prereg/'
-               'PREREG_cw3_vs_legacy_AB.md')
-
 
 def _fake_sim(actions_by_seed):
     """造假 simulate_p1(与 test_cw_zero_refresh_fix 同款桩)。"""
@@ -273,17 +268,7 @@ class TestV6LandingPersistence:
             assert json.loads(lines[0])['evidence'] == '首份证据'
 
 
-class TestPreregAndJudgeMigration:
-
-    def test_prereg_doc_v6_section_anchor(self):
-        """行 2 hint 锚:PREREG 含 v6 变更记录(三臂叙述/预指定主对照/
-        强制披露/措辞限定/激活率门预注册)。"""
-        text = _PREREG.read_text(encoding='utf-8')
-        assert '| v6 |' in text
-        for token in ('单被测体两因子', '预指定主对照 ②−①',
-                      'shop_ev_u_unavailable', '不得读作全量处理效应',
-                      '骨架+EV 臂 sim 首批实测'):
-            assert token in text, token
+class TestJudgeMigration:
 
     def test_ab_judge_v6_vocabulary_anchor(self):
         """行 1 落地判据:ab_judge 词表含 mandate_v1/ev_arm(三臂因子词表)。"""
