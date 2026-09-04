@@ -1575,3 +1575,76 @@ def test_star3_full_frame_truth(test_context: _test_star3_positions_SrTestContex
                 f'{fix.stem}/{slot}: 真值 {expected} 实得 {got}(read_star 回归)')
             checked += 1
     assert checked >= 19 * 15, f'校验点异常少: {checked}(应≈361)'
+
+
+# ===== 布局档对账·占用一致性仲裁(第四次停机批:deployed 身份残缺定谳)=====
+# 事故:真板 7 格(公式 7 正确)但 CV 端点探针把「7 格档端点被占」读成
+# 8 格 → 旧规采 CV → 8 格 rect 裁切错位 → SIFT 漏认 4/6 后排 → 换阵卖出
+# 候选集残缺死锁。仲裁判别器 = paddle X − 前排占用 = 后排期望人数。
+
+_BACK7_SCREEN = '货币战争-备战'
+_BACK7_FIXTURE = 'deployed_r9_7grid'   # 停机哨兵帧入仓(真板 7/7:前台1+后排6)
+
+
+def test_occupancy_arbitration_recovers_7grid(test_context, monkeypatch):
+    """哨兵帧锁:公式 7(正确)∧ CV 8(端点占用高估)→ 占用一致性仲裁
+    采 7 格档(期望后排 6 人:7 档中心占用 6 差 0 / 8 档占用 8 差 2)。"""
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
+        pytest.skip('fixture 缺:deployed_r9_7grid.webp')
+    img = test_context.load_screen(_BACK7_SCREEN, _BACK7_FIXTURE)
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    r = cbl.resolve_back_slots(test_context, img, level=6, cap=7)
+    assert r['arb_n'] == 7 and r['n'] == 7 and r['prefix'] == '后排7槽', r
+
+
+def test_occupancy_arbitration_degrades_to_cv_when_paddle_missing(
+        test_context, monkeypatch):
+    """声明边界锁:paddle 失读 → 期望人数不可得 → 不仲裁,退「采 CV」
+    旧规(本帧 = 8 格;仲裁语义只在双读数齐时生效,docstring 同口径)。"""
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_observation as cwo
+    if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
+        pytest.skip('fixture 缺:deployed_r9_7grid.webp')
+    img = test_context.load_screen(_BACK7_SCREEN, _BACK7_FIXTURE)
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cwo, 'read_deployed_count', lambda ctx, scr: None)
+    r = cbl.resolve_back_slots(test_context, img, level=6, cap=7)
+    assert r['arb_n'] is None and r['n'] == 8, r
+
+
+def test_deployed_identity_7grid_per_slot(test_context, templates):
+    """逐槽身份锁(7 格档):定谳「档位漂移裁切错位」非「2★ 模板缺」——
+    7 格档 rect 下 6 后排全认出,含 2★ 合成体藿藿(star=2 由金星计数独立
+    读取,立绘模板与 1★ 同源即认)。槽 5 真空。"""
+    from sr_od.application.currency_war.obs.cw_identity_obs import identify_slots
+    from sr_od.application.currency_war.obs.cw_back_layout import (
+        back_row_slot_rects_ctx,
+    )
+    if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
+        pytest.skip('fixture 缺:deployed_r9_7grid.webp')
+    img = test_context.load_screen(_BACK7_SCREEN, _BACK7_FIXTURE)
+    slots = back_row_slot_rects_ctx(test_context, '后排7槽')
+    chars = identify_slots(img, templates, slots, 'back',
+                           min_inliers=15, live_only=True, center_gate=True)
+    got = {c.slot: (c.char_id, c.star) for c in chars}
+    assert got == {1: ('爻光', 1), 2: ('藿藿', 2), 3: ('星期日', 1),
+                   4: ('黑塔', 1), 6: ('停云', 1), 7: ('忘归人', 1)}, got
+
+
+def test_deployed_chars_7grid_full_recovery(test_context, templates, monkeypatch):
+    """验收判据锁:留证帧 read_deployed_chars 认出数回到 7/7(前台 1 +
+    后排 6),身份与真板一致——旧 8 格档口径此帧只认 3。"""
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
+        pytest.skip('fixture 缺:deployed_r9_7grid.webp')
+    img = test_context.load_screen(_BACK7_SCREEN, _BACK7_FIXTURE)
+    monkeypatch.setattr(cio, '_session_level', lambda ctx: 6)
+    import sr_od.application.currency_war.obs.cw_observation as cwo
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 7)
+    chars = cio.read_deployed_chars(test_context, img, templates)
+    assert len(chars) == 7, f'应 7/7,实得 {sorted(c.char_id for c in chars)}'
+    assert {c.char_id for c in chars} == {
+        '丹恒·饮月', '爻光', '藿藿', '星期日', '黑塔', '停云', '忘归人'}
