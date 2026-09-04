@@ -40,7 +40,6 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
-    LevelUp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import _apply_hp
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
@@ -73,10 +72,6 @@ def _ghost_state(hp: int = 100) -> GameState:
     st.hp_readable = False
     st.hp_trusted = False
     return st
-
-
-def _lv_cand() -> Candidate:
-    return Candidate(action=LevelUp(cost=4), tag='levelup', source='shop')
 
 
 # ---------- 组1:失明复现锁(read_hp_opt 两级放大回退) ----------

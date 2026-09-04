@@ -297,10 +297,7 @@ def test_wiring_existence_source_lock():
 
 # ==================== dead_arm_cleanup_locks ====================
 
-from types import SimpleNamespace
-
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
-from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 
 _DELETED_FIELDS = (
     'goldrich_buy_bias', 'goldrich_min_gold', 'goldrich_buy_tags',
@@ -347,28 +344,6 @@ def test_registry_dead_arm_fields_absent() -> None:
     for f in _DELETED_FIELDS:
         assert not hasattr(DEFAULT_REGISTRY, f), f
 
-
-
-
-def _sess() -> StrategySession:
-    from sr_od.application.currency_war.kernel.cw_intention import (
-        HoardTarget,
-        IntentionState,
-    )
-    s = StrategySession()
-    s.v2_state = ('economy', False, False, 0, 0, 0, 0, 0)
-    s.v3_mode = 'economy'
-    ist = IntentionState()
-    ist.phase = 'locked'
-    ist.locked_comp = '姬子列车'
-    s.v3_intention = ist
-    s.v3_hoard = HoardTarget(
-        frozenset({'姬子·启行', '三月七', '花火', '瓦尔特'}),
-        frozenset(), 'locked')
-    s.v3_core_names = {'姬子·启行'}
-    s.target_comp = SimpleNamespace(factions=('列车同行',),
-                                    core_chars=('姬子·启行',))
-    return s
 
 
 def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:

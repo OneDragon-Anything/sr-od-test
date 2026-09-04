@@ -184,11 +184,11 @@ def test_p4_ist_zero_residue_across_matches():
 
 
 # ----------------------------------------------------- 哨兵锁:局23 型帧
-# (原 test_sentinel_ju23_frame_releases_on_new_stack 已并入
-#  test_cw_w633_migration_b3::test_jue23_sentinel_obligation_chain_alive
-#  ——同一哨兵 w633 版义务链+release 族更全;budget.interest_floor==50
-#  供给面由 w611 恒等式(全局)+ w633 注入一致性锁(BudgetView 透传)共辖。
-#  重复构成删并理由(README 纪律 8)。)
+# (原 test_sentinel_ju23_frame_releases_on_new_stack 已删,当时登记的并入
+#  目标 test_cw_w633_migration_b3::test_jue23_sentinel_obligation_chain_alive
+#  经 2026-09-03 歼击战核查并不存在=指针失真,局23 哨兵释放语义现无测试覆盖
+#  ——复活待办见歼击战账本 Wave 3;budget.interest_floor==50
+#  供给面由 w611 恒等式(全局)+ w633 注入一致性锁(BudgetView 透传)共辖。)
 
 
 # ------------------------------------------- committed 谓词逐帧对拍(P1 附)

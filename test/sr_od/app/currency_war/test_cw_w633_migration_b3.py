@@ -202,7 +202,8 @@ def test_w721_collapse_band_zero_and_fallback_exempt() -> None:
     归零帧再多一类,max 合并结构不变):①锁定 4 费核 ∧ lv5(比值 0.05
     < ω=0.1)→ 预算 0(合法 0 帧第三类,穿透锁口径=合法 0 不是虚标);
     ②同一形态的未锁定帧(兜底链)不归零——空帧豁免(D1「空帧不缩供给」
-    契约优先)。公式与单一址细则=test_cw_w721_overlay_b_budget。"""
+    契约优先)。本锁为塌缩带归零语义独家覆盖(原主题文件
+    test_cw_w721_overlay_b_budget 已消亡);细则见 ADR-0475。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     from sr_od.application.currency_war.kernel.cw_intention import (
