@@ -12,7 +12,13 @@ import json
 from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.telemetry import defects, query, recorder, schema, state
+from sr_od.application.currency_war.telemetry import (
+    defects,
+    query,
+    recorder,
+    schema,
+    state,
+)
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
@@ -359,27 +365,50 @@ def test_deployed_count_2src_divergence_key_silent_without_run_id(
 
 def test_deployed_count_2src_paddle_missing_degraded_row(
         tmp_path: Path, monkeypatch):
-    """paddle 失读退化帧(paddle_n=None)同键申报(审计 P3:不得静默):
+    """paddle 失读退化帧(paddle_n=None)走独立退化分键(不得静默):
 
-    expected='paddle_x=失读'、gap 按 cv 口径落(单源无差值语义),逐次行
-    恒 L2——退化方向(向板满侧 fail)的显式申报由本行承载。
+    与真分歧分键拆分:退化帧无 paddle 真值 ⇒ gap 无差值语义(gap=None、
+    不进 gap_large 统计),且不入逐次分歧计数——真分歧率不被失读帧污染,
+    持续显影不被失读序列误触发(归因不单向指向 CV 占用源)。
     """
     _setup_recorder(monkeypatch, tmp_path)
     defects.record_deployed_count_2src_divergence(None, 5, 'deploy_cap_gate_paddle_missing')
-    rows = [r for r in _rows(tmp_path, 'defect_ledger.jsonl')
-            if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC]
-    assert len(rows) == 1
-    assert rows[0]['expected'] == 'paddle_x=失读'
-    assert rows[0]['observed'] == 'cv_occupied=5'
-    assert rows[0]['severity'] == 'L2_record'
+    deg = [r for r in _rows(tmp_path, 'defect_ledger.jsonl')
+           if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC_DEGRADED]
+    per = [r for r in _rows(tmp_path, 'defect_ledger.jsonl')
+           if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC]
+    assert len(deg) == 1 and not per
+    assert deg[0]['expected'] == 'paddle_x=失读(检测链退化,单源 CV 行动,向板满侧)'
+    assert deg[0]['observed'] == 'cv_occupied=5'
+    assert deg[0]['gap'] is None
+    assert deg[0]['severity'] == 'L2_record'
+
+
+def test_deployed_count_2src_degraded_never_triggers_sustained(
+        tmp_path: Path, monkeypatch):
+    """纯失读序列(同局 ≥阈值次退化帧)不产出真分歧升级行:
+
+    持续显影阈值只计真分歧——paddle 检测链退化(如 det 模型回归)时
+    每次部署都记退化帧,若同键计数会冤判成 CV 占用源结构性漂移
+    (归因修错方向)。"""
+    _setup_recorder(monkeypatch, tmp_path)
+    for _ in range(defects.DEPLOYED_COUNT_2SRC_SUSTAINED_N + 1):
+        defects.record_deployed_count_2src_divergence(None, 5, 'deploy_cap_gate')
+    rows = _rows(tmp_path, 'defect_ledger.jsonl')
+    assert not [r for r in rows
+                if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC_SUSTAINED]
+    assert not [r for r in rows
+                if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC]
 
 
 def test_deployed_count_2src_sustained_escalation_once_per_run(
         tmp_path: Path, monkeypatch):
-    """审计 P8 持续显影:同局逐次分歧行达阈值(3,既有留证口径「同局
-    ≥3 次排期修」的代码化)→ 落**一条** L1 升级行
-    (kind=deployed_count_2src_sustained);第 4 次起不重复升级(每局至多一条,
-    与逐次行分键不混计)。真结构性 CV 坏死要响铃不只留痕。"""
+    """持续显影:同局真分歧逐次行达阈值(3,既有留证口径「同局 ≥3 次
+    排期修」的代码化)→ 落**一条** L1 升级行
+    (kind=deployed_count_2src_sustained);第 4 次起不重复升级(每局至多
+    一条,与逐次行分键不混计)。真结构性分歧要响铃不只留痕;
+    verdict 双向归因(CV 占用源漂移 ∨ paddle 检测链退化对拍失真),
+    并指向退化行占比作分流判据。"""
     _setup_recorder(monkeypatch, tmp_path)
     for _ in range(4):
         defects.record_deployed_count_2src_divergence(3, 5, 'director_heavy')
@@ -393,4 +422,19 @@ def test_deployed_count_2src_sustained_escalation_once_per_run(
     assert sus[0]['severity'] == 'L1_alert'
     assert sus[0]['surface'] == 'deployed'
     assert 'paddle_x=3' in sus[0]['observed'] and 'cv_occupied=5' in sus[0]['observed']
+    assert 'CV 占用源' in sus[0]['verdict'] and 'paddle' in sus[0]['verdict'], \
+        'verdict 须双向归因(CV 漂移 ∨ paddle 退化),禁单向指向 CV'
+    assert 'degraded' in sus[0]['verdict'], 'verdict 须指向退化行占比作归因分流'
+
+
+def test_deployed_2src_run_counts_bounded(tmp_path: Path, monkeypatch):
+    """逐次计数器生命周期有界:新局首条且历史局积压达上限 ⇒ 清空只保
+    当前局(常驻进程跨局累积无界;历史局计数无跨局消费面,清零无损)。"""
+    _setup_recorder(monkeypatch, tmp_path)
+    stale = {f'old_run_{i}': 1 for i in range(defects._DEPLOYED_2SRC_RUN_COUNTS_MAX)}
+    monkeypatch.setattr(defects, '_DEPLOYED_2SRC_RUN_COUNTS', stale)
+    defects.record_deployed_count_2src_divergence(3, 5, 'director_heavy')
+    counts = defects._DEPLOYED_2SRC_RUN_COUNTS
+    assert set(counts) == {'w505t'}, counts
+    assert counts['w505t'] == 1
 
