@@ -368,26 +368,6 @@ def test_plane_detail_band_recognition() -> None:
     assert all(s.node_type is None for s in slots[:-1])
 
 
-def test_plane_detail_band_read_fn() -> None:
-    """read_plane_detail_nodes 生产入口:yml 带(区域-节点条@位面详情屏)
-    → 9 槽 + boss 巨鹿生物制药(端到端,含模板懒加载)。"""
-    from one_dragon.utils import cv2_utils
-    from sr_od.application.currency_war.obs import cw_observation
-    from sr_od.context.sr_context import SrContext
-
-    ctx = SrContext()
-    ctx.screen_loader.reload(from_separated_files=True)
-    # 模板缓存清零验懒加载路径(全局缓存可能被本文件其它测试预热)
-    cw_observation._NODE_TYPE_TEMPLATES = None
-    cw_observation._BOSS_TEMPLATES = None
-    img = cv2_utils.read_image(str(_node_boss_Path('.debug/sr_od_mcp/screenshot/'
-                                        'screenshot_20260826_190830_854104.png')))
-    # 全帧(函数自己按 yml 裁带)
-    slots = cw_observation.read_plane_detail_nodes(ctx, img)
-    assert slots is not None and len(slots) == 9
-    assert slots[-1].boss == '巨鹿生物制药'
-
-
 # ==================== node_validate ====================
 
 import pytest
@@ -865,23 +845,14 @@ import inspect
 
 
 def test_briefing_bosses_written_into_session() -> None:
-    """锁①(改写,W971 P3b):简报位面序真值直写 session(写者 = CwScreenBriefing)。
+    """否定墓碑(W971 P3 退役背书):cw_loop 的 ctx 信箱吸收段已退役。
 
-    W971 P3(ctx 信箱退役,01-opening §1):简报唯一写点 = CwScreenBriefing 直写
-    session,原 _absorb_ctx_mailbox copy 段随信箱退役删除。锁语义重推:
-    copy 接线消失是设计意图;锁改钉「CwScreenBriefing 写 session 接线存在 +
-    cw_loop 信箱吸收段已退役」。
+    W971 P3(ctx 信箱退役,01-opening §1)后,简报唯一写点 =
+    CwScreenBriefing 直写 session(行为侧由简报节点测试覆盖);
+    本锁只钉退役语义:信箱 copy 接线消失是设计意图,禁回流。
     """
     from sr_od.application.currency_war.operations import cw_loop
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_briefing
 
-    src = inspect.getsource(cw_screen_briefing.CwScreenBriefing)
-    assert 'briefing_bosses' in src and 'session' in src, (
-        'CwScreenBriefing 未直写 session.briefing_bosses(boss_fit 失去开局输入,ADR-0397 勘误节)'
-    )
-    assert '_session.briefing_bosses = list(_cleaned) if _cleaned else None' in src, (
-        '读空清 None 兜底消失(跨局残留会成假真值)'
-    )
     loop_src = inspect.getsource(cw_loop.CwLoop)
     assert 'self._absorb_ctx_mailbox' not in loop_src, 'ctx 信箱吸收段应已退役(W971 P3)'
     assert 'self.ctx.cw_briefing_bosses = None' not in loop_src
@@ -895,21 +866,65 @@ def test_briefing_read_side_cleans_and_overwrites() -> None:
     assert 'clean_boss_names_by_lcs' in src, '简报读数未过 LCS 清洗(简称/形变直进 boss_fit)'
 
 
-def test_cw_screen_plane_intel_is_takeover_refill_channel() -> None:
-    """锁③(改写,W971 P3b):CwScreenPlaneIntel 实采写入端在(接管重采/读空
-    兜底)——接线随接管补采迁 cw_screen_prep(单轮化后挂 _takeover_collect_if_needed)。"""
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
-
-    src = inspect.getsource(
-        cw_screen_prep.CwScreenPrep._takeover_collect_if_needed)
-    assert 'session.briefing_bosses = _names' in src, (
-        'CwScreenPlaneIntel 实采接线消失(接管场景失去重采通道)'
+def test_plane_intel_takeover_refill_channel(test_context, monkeypatch) -> None:
+    """行为锁(替代旧 3 条源码字面锁「session.briefing_bosses = _names /
+    getattr 判空 / CwScreenPlaneIntel(self.ctx, start_plane=...)」):接管重采
+    通道经真实入口 ``CwScreenPrep._takeover_collect_if_needed`` 验证——
+    ①session 简报真值空时触发采集,备战帧现读位面作为 ``start_plane`` 传入
+    子 op(2026-09-03 时序修正语义);②子 op 落中转池的实采以**保位写**
+    (None 原样占槽,ADR-0398)载入 session.briefing_bosses,中转池取走清空;
+    ③session.briefing_bosses 已有真值 → 不重复采(简报信任不被绕过)。
+    失守场景 = 接管局失去重采通道(start_plane 不传/实采不落 session/空真值
+    门失效反复重采)时本锁红;子 op 内部识别逻辑归其自身测试,不在此辖。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_plane_intel,
+        cw_screen_prep,
     )
-    # 触发门仍含「session.briefing_bosses 空」:开局局简报读得时 session 已由
-    # CwScreenBriefing 填(不重复采),接管局/读空时兜底——条件消失=简报信任被绕过。
-    assert "getattr(session, 'briefing_bosses', None)" in src
-    # start_plane 透传(2026-09-03 时序修正批:接管链备战帧先定起始位面)
-    assert 'CwScreenPlaneIntel(self.ctx, start_plane=_start_plane)' in src
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+        CwScreenPrep,
+    )
+    from test.harness.fixture_controller import fast_sleep
+
+    start_planes: list[int] = []
+
+    class _StubIntel:
+        """位面详情子 op 桩:记录 start_plane,模拟实采写 ctx 中转池。"""
+
+        def __init__(self, ctx, start_plane: int = 0) -> None:
+            start_planes.append(start_plane)
+
+        def execute(self):
+            return SimpleNamespace(success=True, status='stub')
+
+    monkeypatch.setattr(cw_screen_plane_intel, 'CwScreenPlaneIntel', _StubIntel)
+    monkeypatch.setattr(cw_screen_prep, 'read_node_sequence',
+                        lambda ctx, screen: [SimpleNamespace()])
+    monkeypatch.setattr(cw_screen_prep, 'read_phase_round',
+                        lambda ctx, screen: (2, 3))
+    monkeypatch.setattr(test_context, 'cw_plane_bosses',
+                        ['巨鹿生物制药', None, '绘师家族产业'], raising=False)
+    monkeypatch.setattr(test_context, 'cw_plane_affixes', ['词缀甲'],
+                        raising=False)
+
+    d = CwScreenPrep(test_context)
+    with fast_sleep():
+        session = SimpleNamespace()
+        res = d._takeover_collect_if_needed(SimpleNamespace(), session)
+    assert start_planes == [2], (
+        f'start_plane 须取备战帧现读位面传入子 op:{start_planes!r}')
+    assert res is not None, '空真值门应触发采集并交回外循环'
+    assert session.briefing_bosses == ['巨鹿生物制药', None, '绘师家族产业'], (
+        f'实采须保位载入 session(None 原样占槽):{session.briefing_bosses!r}')
+    assert getattr(session, 'cw_takeover_collect_done', False) is True
+    assert test_context.cw_plane_bosses is None \
+        and test_context.cw_plane_affixes is None, '中转池须取走清空(防跨局泄漏)'
+
+    # 简报真值已在 → 跳过门,不再采(开局局简报读得时不重复采)
+    with fast_sleep():
+        res_skip = d._takeover_collect_if_needed(
+            SimpleNamespace(), SimpleNamespace(briefing_bosses=['已有真值']))
+    assert res_skip is None and start_planes == [2], (
+        'session.briefing_bosses 非空时不得重复采集(简报信任被绕过)')
 
 
 def test_reconcile_wiring_in_collect_paths() -> None:
@@ -926,18 +941,52 @@ def test_reconcile_wiring_in_collect_paths() -> None:
     )
 
 
-def test_session_collected_bosses_flow_to_state_plane_bosses() -> None:
-    """锁⑤(原锁③保留;default 栈退役批重钉):session.briefing_bosses
-    (位面序真值)→ state.plane_bosses。注入点已从 default update_target
-    平移到观测层(cw_observation.read_game_state,对 session 透传无条件注入)
-    ——重钉为源级锁,防注入链再断。"""
-    import inspect
-
-    from sr_od.application.currency_war.obs import cw_observation
-    src = inspect.getsource(cw_observation)
-    assert "state.plane_bosses = list(_sess.briefing_bosses)" in src, (
-        '观测层注入点丢失:session.briefing_bosses 真值不再流向 state.plane_bosses'
+def test_session_collected_bosses_flow_to_state_plane_bosses(monkeypatch) -> None:
+    """行为锁(替代旧全句源码锁「state.plane_bosses = list(_sess.briefing_
+    bosses) in src」;default 栈退役批重钉):session 填真值 → 走
+    read_game_state 真链(观察层注入点,对 session 透传无条件注入)→
+    state.plane_bosses 收到同序列(保位,None 原样)。失守场景 = 注入链再断
+    (session 真值不再流向决策 state)时本锁红;空真值时不覆盖缺省(负面)。"""
+    from sr_od.application.currency_war.obs import cw_observation as obs
+    from sr_od.application.currency_war.obs.cw_observation import (
+        PHASE_PREP_SHOP_OPEN,
     )
+    # reader 桩面镜像 test_cw_obs_chain 同名手法:识别族全桩,零真 OCR
+    _stubs = {
+        'read_gold_settled': 55, 'read_phase_round': (2, 3), 'read_node_type': None,
+        'read_xp_progress': (0, 6), 'read_level_raw_opt': 5, 'read_level_up_cost': 4,
+        '_board_pairs': ({}, False), 'read_shop_cards': [], 'read_refresh_probs': None,
+        'read_bench_full': None,
+    }
+    for _n, _v in _stubs.items():
+        # _v 经关键字默认参绑定进 lambda(防 B023 循环变量晚绑定)
+        monkeypatch.setattr(obs, _n,
+                            (lambda _v: lambda *a, _v=_v, **kw: _v)(_v))
+
+    session = SimpleNamespace(
+        briefing_bosses=['巨鹿生物制药', None, '绘师家族产业'],
+        briefing_affixes=None,
+        active_strategies=[],
+        last_level_obs=0,
+        last_hp_real=None,
+        last_streak=0,
+        tracked_deployed=None,
+    )
+    ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
+    state = obs.read_game_state(ctx, None, phase=PHASE_PREP_SHOP_OPEN)
+    assert state.plane_bosses == ['巨鹿生物制药', None, '绘师家族产业'], (
+        f'session.briefing_bosses 须流入 state.plane_bosses(保位):'
+        f'{state.plane_bosses!r}')
+
+    # 负面:session 真值空 → 不覆盖 GameState 缺省(注入只在非空时)
+    empty_ctx = SimpleNamespace(
+        cw_match=SimpleNamespace(session=SimpleNamespace(
+            briefing_bosses=None, briefing_affixes=None,
+            active_strategies=[], last_level_obs=0, last_hp_real=None,
+            last_streak=0, tracked_deployed=None)))
+    state2 = obs.read_game_state(empty_ctx, None, phase=PHASE_PREP_SHOP_OPEN)
+    assert not state2.plane_bosses, (
+        f'空真值不得注入:{state2.plane_bosses!r}')
 
 
 # ==================== w221_boss_locate_emblem ====================

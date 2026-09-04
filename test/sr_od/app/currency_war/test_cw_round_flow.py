@@ -33,13 +33,67 @@ def test_battle_pause_screen_onboarded() -> None:
     assert '按钮-继续战斗' in names
 
 
-def test_retreat_branch_in_op() -> None:
-    """op 源码含战斗暂停→撤退分支(r279 增补)。"""
-    import inspect
+def test_retreat_branch_clicks_retreat_on_pause_frame(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """行为锁(替代旧 2 条源码字面锁「'货币战争-战斗暂停' in src /
+    '按钮-撤退' in src」,r279 增补):战斗暂停 fixture 帧 → 真 exit_match
+    链识别暂停画面 → 点击「按钮-撤退」area 中心(pc_alt)推进,不点右上角
+    X 兜底坐标、不按 esc、不误点「继续战斗」(r302/r317 误配史)。失守场景 =
+    撤退分支被删/锚失效退化为尾部点 X 死循环(r279 修复的战斗中 retry 死
+    循环形态)时本锁红。
 
-    src = inspect.getsource(CwEntryExit.exit_match)
-    assert '货币战争-战斗暂停' in src
-    assert '按钮-撤退' in src
+    撤退是退局 op 全分支里唯一无行为覆盖的出口——本锁补齐该防线;
+    画面档地基由 test_battle_pause_screen_onboarded 守。
+    """
+    frames = [
+        ('货币战争-战斗暂停', 'paused'),
+        ('货币战争-大厅', 'lobby'),
+    ]
+    for screen_name, state in frames:
+        if not test_context.has_screen(screen_name, state):
+            pytest.skip(f'fixture 缺失:screens/{screen_name}/{state}.webp')
+
+    phases = [
+        {   # 战斗暂停帧:点「按钮-撤退」area 中心才推进(错点不推进)
+            'frame': ('货币战争-战斗暂停', 'paused'),
+            'exit': ('on_click_in', '货币战争-战斗暂停', '按钮-撤退'),
+        },
+        {   # 撤退后中断挑战弹窗的「放弃并结算」由既有分支接管 → 大厅(terminal)
+            'frame': ('货币战争-大厅', 'lobby'),
+        },
+    ]
+    ctrl = _ExitFixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    ctrl.set_phases(phases)
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+
+    op = _WatchedExit(test_context)
+    op._init_watchdog()  # type: ignore[attr-defined]
+
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert result.success, (
+        f'战斗暂停帧应经撤退回大厅:status={result.status};'
+        f'phase_idx={ctrl.phase_idx}'
+    )
+    assert ctrl.click_hit_area('货币战争-战斗暂停', '按钮-撤退'), (
+        f'应点击「按钮-撤退」area 内,实际点击={ctrl.recorded_clicks}')
+    # 不走其他出口:不点右上角 X 兜底 (1843,42),不按 esc(撤退分支专用出口)
+    assert not any(abs(p.x - 1843) <= 5 and abs(p.y - 42) <= 5
+                   for p in ctrl.recorded_clicks), (
+        f'不得点右上角 X 兜底坐标(全分支 miss 形态),实际点击={ctrl.recorded_clicks}')
+    assert ctrl.recorded_btn_taps.count('esc') == 0, (
+        f'撤退分支不得按 esc,实际按键={ctrl.recorded_btn_taps}')
 
 
 def test_no_round_retry_tail() -> None:

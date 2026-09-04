@@ -283,23 +283,116 @@ def test_prep_op_overlay_handback_keeps_signature_none(
         'overlay 交回不得写签名(None 才能让外环清计数)')
 
 
-def test_loop_consumes_signature_and_stops() -> None:
-    """接线锁:cw_loop 备战分支消费 last_prep_action_sig,守卫触发走
-    stop_running(与既有停机钩子同构),存证走 write_no_progress_flag。"""
-    import inspect
+def _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                  sig=('OpenShop',)):
+    """真 loop 路径单测装配:真 CwLoop 实例 + 画面分发桩(只认备战双锚)。
 
-    from sr_od.application.currency_war.operations import cw_loop
+    桩面 = loop() 顶层分发的「画面判定与外部出口」:round_by_* 桩让全部分支
+    不命中、唯备战双锚命中;观察/识别族(find_trial_reveal_cards/find_bookcards
+    /read_node_sequence)与备战单轮(CwScreenPrep)桩为空——本锁辖「守卫消费
+    签名 → 停机」接线,不辖备战环内部(备战桩不重写签名 → 跨环冻结)。
+    遥测全局(state.start_run/get_recorder/分配器)桩化,满足「模块级全局
+    一并桩化」纪律;flag 写入重定向收集器(测试零真实 .debug/ 副作用)。
+    handle_init 不跑(重装配结算链/配置),loop() 消费但守卫路径不消费的
+    run 级属性按 False/0 显式布线。
+    """
+    session.last_prep_action_sig = sig
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
 
-    src = inspect.getsource(cw_loop.CwLoop.loop)
-    assert 'last_prep_action_sig' in src, '备战分支缺动作批签名消费'
-    assert 'prep_no_progress_state_fingerprint' in src, '缺状态指纹消费'
-    assert 'hook:prep_no_progress' in src and 'stop_running' in src, (
-        '守卫停机未接线(旧线只留证语义已废)')
-    assert 'write_no_progress_flag' in src, '缺存证 flag 写入'
-    # 全模块签名写入端唯一性:CwScreenPrep 决策出口/破墙段两处,无第三写点
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_prep as pd_mod,
-    )
-    prep_src = inspect.getsource(pd_mod)
-    assert prep_src.count('last_prep_action_sig = ') >= 2, (
-        '备战 op 缺签名写点(决策出口/破墙段)')
+    class _StubPrep:
+        def __init__(self, ctx) -> None:
+            pass
+
+        def execute(self):
+            return SimpleNamespace(success=True, status='stub')
+
+    match = SimpleNamespace(strategy=None, session=session)
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    monkeypatch.setattr(test_context, 'cw_selected_difficulty', '',
+                        raising=False)
+    monkeypatch.setattr(test_context.run_context, 'stop_running',
+                        lambda reason='': stops.append(reason))
+    monkeypatch.setattr(loop_mod, 'write_no_progress_flag',
+                        lambda count, sig, shot: flags.append((count, sig)))
+    # 遥测/分配器模块级全局:构造与守卫路径会触碰,一并桩化(测试隔离整条副作用链)
+    monkeypatch.setattr(loop_mod.state, 'start_run',
+                        lambda difficulty='': None)
+    monkeypatch.setattr(loop_mod.state, 'get_recorder',
+                        lambda: SimpleNamespace(enabled=False))
+    monkeypatch.setattr(loop_mod, '_get_or_init_allocator', lambda ctx: None)
+    monkeypatch.setattr(loop_mod, 'read_node_sequence', lambda ctx, screen: [])
+    monkeypatch.setattr(loop_mod, 'CwScreenPrep', _StubPrep)
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.obs.cw_identity_obs.'
+        'find_trial_reveal_cards', lambda screen, slots: [])
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.obs.cw_identity_obs.find_bookcards',
+        lambda screen, slots: [])
+    # 0p 分支 area 锚未命中也会跑 OCR 排他判别 → OCR 读帧桩化(零真识别)
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.operations.cw_screen.'
+        'cw_screen_boss_briefing.read_ocr_texts', lambda ctx, screen: [])
+
+    _fail = SimpleNamespace(is_success=False)
+    op = loop_mod.CwLoop(test_context)
+
+    def _find_area(screen, screen_name, area_name, **kwargs):
+        hit = (screen_name == '货币战争-备战'
+               and area_name in ('备战标识-购买经验', '按钮-出战'))
+        return SimpleNamespace(is_success=hit)
+
+    monkeypatch.setattr(op, 'round_by_find_area', _find_area)
+    monkeypatch.setattr(op, 'round_by_ocr', lambda screen, text, **k: _fail)
+    monkeypatch.setattr(op, 'round_by_ocr_and_click',
+                        lambda screen, text, **k: _fail)
+    monkeypatch.setattr(op, 'round_by_find_and_click_area',
+                        lambda screen, s, a, **k: _fail)
+    monkeypatch.setattr(op, 'save_screenshot', lambda prefix='': 'stub-shot')
+    monkeypatch.setattr(op, '_stall_watch_tick', lambda screen: None)
+    op.last_screenshot = object()   # 仅作桩入参透传,识别族全桩
+    # handle_init 布线:loop() 守卫路径不消费的 run 级属性显式置安全值
+    op._is_new_match = False
+    op._cw_resume_candidate = False
+    op._cw_locked_resume = False
+    op._cw_back_btn_count = 0
+    op._cw_strategy_dead_streak = 0
+    op._cw_dead_prev_key = None
+    return op
+
+
+def test_loop_prep_guard_stops_after_frozen_signature_rounds(
+        test_context, monkeypatch) -> None:
+    """行为锁(替代旧 cw_loop.loop 源码字面锁「last_prep_action_sig 等 5 条
+    在场断言」):3 轮「同签名动作批 ∧ 状态零推进」经真 loop 备战分支消费
+    session.last_prep_action_sig → 截图存证 + write_no_progress_flag +
+    stop_running(reason='hook:prep_no_progress')。失守场景 = 消费端脱落
+    (签名写点还在但外环不再计数/停机降级为只留证)时本锁红;纯重构
+    (改名/换行/抽取函数)不再假红。计数语义:首见签名计 0,同签名每环 +1,
+    第 4 个冻结环计数达 PREP_NO_PROGRESS_ROUNDS=3 触发。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags)
+    with fast_sleep():
+        for _ in range(4):
+            op.loop()
+    assert stops == ['hook:prep_no_progress'], (
+        f'守卫须停机一次,实得 {stops!r}')
+    assert flags and flags[0][0] == 3, (
+        f'停机前须写存证 flag(计数=3),实得 {flags!r}')
+
+
+def test_loop_prep_guard_healthy_progress_never_stops(
+        test_context, monkeypatch) -> None:
+    """真 loop 路径不误伤面:同签名动作批但状态每环推进(gold 变)→
+    指纹变 → 计数归零,不触发停机(健康多帧部署走真分发路径验证)。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags)
+    with fast_sleep():
+        for i in range(6):
+            session.last_state = SimpleNamespace(plane=1, round_num=5, gold=30 + i)
+            op.loop()
+    assert stops == [], f'状态推进中的同批动作不得停机:{stops!r}'
+    assert flags == [], '健康序列不得写存证 flag'
