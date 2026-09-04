@@ -11,8 +11,11 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
 4. P7:意向状态机驱动点契约——每 game-round 恰一次(键守卫幂等),
    registry 注入分歧探针(P6:注入臂与缺省臂必须出现受控分歧);
 5. P4:ist 跨局零残留(每局新建 StrategySession 构造性保证的行为锁);
-6. 哨兵锁:局23 型帧(100 金+备战空+interest 姿态)新栈产出 release 帧
-   (W611 锁沿用,经 assemble 预算投影复合验证);
+6. 哨兵锁:局23 型帧(100 金+备战空+息线姿态)在现行 mandate_v1 商店线
+   决策面(``decide_shop_action``)复活 5 条——息线供给恒等(g*/s_reserve
+   边界)、不死守可辨收敛(压库买/店空 CloseShop+计数)、金位不破息线
+   (0-100 金全决策面端到端)。2026-09-03 歼击战核查:本条曾登记「并入
+   w633」,并入目标不存在 = 指针失真,语义裸奔至今,本批复活;
 7. committed 翻真谓词 vs 旧 CommitSignals 判定:逐帧对拍锁(P1 段
    小帧集,分歧仅允许出现在方向层接管区并逐帧定性)。
 """
@@ -23,6 +26,11 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+from sr_od.application.currency_war.kernel.cw_economy import (
+    cap_resolved_of_session,
+    saturation_line,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     committed_authority,
@@ -31,7 +39,15 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY as _REG,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_state import (
+    BENCH_CAPACITY,
+    BenchChar,
+    BuyCard,
+    CloseShop,
+    GameState,
+    RefreshShop,
+    ShopCard,
+)
 from sr_od.application.currency_war.kernel.cw_transition import CommitSignals
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
@@ -41,6 +57,12 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
     Snapshot,
     SubstateClassification,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
+    decide_shop_action,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
+    line_members,
 )
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
@@ -184,27 +206,194 @@ def test_p4_ist_zero_residue_across_matches():
 
 
 # ----------------------------------------------------- 哨兵锁:局23 型帧
-# (原 test_sentinel_ju23_frame_releases_on_new_stack 已删,当时登记的并入
-#  目标 test_cw_w633_migration_b3::test_jue23_sentinel_obligation_chain_alive
-#  经 2026-09-03 歼击战核查并不存在=指针失真,局23 哨兵释放语义现无测试覆盖
-#  ——复活待办见歼击战账本 Wave 3;budget.interest_floor==50
-#  供给面由 w611 恒等式(全局)+ w633 注入一致性锁(BudgetView 透传)共辖。)
+# 复活说明:原 test_sentinel_ju23_frame_releases_on_new_stack 以「并入
+# w633」为名删除,并入目标经 2026-09-03 歼击战核查不存在 = 指针失真。
+# 旧「release 帧」形态随 DP 姿态核/泄息指令死链退役(w633 同批注记),
+# dp_posture='release' 遥测标签写端已死、不可锁;复活语义改锁现行
+# mandate_v1 商店线决策面的三件事:息线供给恒等 / 不死守可辨收敛 /
+# 金位不破息线。统一帧形状 = 列车同行线成型(全员 2★ 上场,stop_buy
+# 成立)+ bench 空 + level 6(4 费档在档窗内)+ P1 局中帧。
+
+_JU23_COMP = next(c for c in COMP_LIBRARY if c.name == '列车同行')
+_JU23_STOCK_COST = 4     # 压库件卡费(档窗内;与注册表 cost 解耦)
+
+
+def _sc(name: str, cost: int = _JU23_STOCK_COST, star: int = 1) -> ShopCard:
+    return ShopCard(name=name, faction='仙舟罗浮', cost=cost, x=0, star=star)
+
+
+def _ju23_frame(gold: int, shop: list[ShopCard] | None = None) -> GameState:
+    """局23 型帧:线成型(全员 2★ 上场)+ 备战空 + P1 局中。"""
+    return GameState(
+        plane=1, round_num=4, gold=gold, level=6, hp=80,
+        shop_refresh_cost=2,
+        deployed=[BenchChar(slot=20 + i, char_id=m, faction='仙舟罗浮',
+                            star=2)
+                  for i, m in enumerate(line_members(_JU23_COMP))],
+        bench=[None] * BENCH_CAPACITY,
+        shop=shop if shop is not None else [],
+        node_type='battle', board={})
+
+
+def _ju23_session() -> StrategySession:
+    sess = StrategySession()
+    sess.target_comp = _JU23_COMP
+    return sess
+
+
+def test_ju23_supply_identity_gstar_and_s_reserve_boundary():
+    """息线供给恒等(局23 帧):g*==50 且 s_reserve 供给非退化。
+
+    s_reserve = g* − Σ活期退金投影,bench 空 ⇒ s_reserve == g* == 50。
+    不直读内部量,用 M6 压库拒收边界对拍钉死:4 费件 53 金买后 49 < 50
+    拒(m6_s_reserve_reject 分键)、54 金买后 50 ≥ 50 买——两帧合取即
+    s_reserve == 50(下界 50 由拒帧、上界 50 由买帧),供给恒等式不因
+    实现细节漂移。
+    """
+    cfg = SimpleNamespace(ev_arm='full')
+    assert saturation_line(cap_resolved_of_session(StrategySession())) == 50
+    stock = [_sc('花火')]          # 线成员件:dominance 零重叠位跳过,M6 独辖
+    sess_rej = _ju23_session()
+    act = decide_shop_action(_ju23_frame(53, stock), sess_rej, cfg)
+    assert sess_rej.cw4_counters.get('m6_s_reserve_reject') == 1
+    assert not (isinstance(act, BuyCard) and act.reason == 'm6_stockpile')
+    sess_ok = _ju23_session()
+    act = decide_shop_action(_ju23_frame(54, stock), sess_ok, cfg)
+    assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile'
+    assert 54 - (act.card.cost or 3) >= 50
+
+
+def test_ju23_stock_match_buys_and_empty_shop_close_discernible():
+    """不死守可辨收敛(局23 帧):档匹配燃料件压库买;店空显式收店。
+
+    店空帧必须以 CloseShop 终结(全函数契约,禁静默死守),且带可辨
+    计数键:shop_visit_idle_gold(带金零动作帧)+ shop_r1_no_chaseable_
+    member(息账无追件、R1 关闭)——判读者从计数即知「为何不动」,
+    而非空转或 None。
+    """
+    cfg = SimpleNamespace(ev_arm='full')
+    sess = _ju23_session()
+    act = decide_shop_action(_ju23_frame(
+        100, [_sc('花火')]), sess, cfg)
+    assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile'
+    sess = _ju23_session()
+    act = decide_shop_action(_ju23_frame(100, []), sess, cfg)
+    assert isinstance(act, CloseShop)
+    assert sess.cw4_counters.get('shop_visit_idle_gold') == 1
+    assert sess.cw4_counters.get('shop_r1_no_chaseable_member') == 1
+
+
+def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
+    """局23 帧 2★ 压库件:无全额可退背书 ⇒ 端到端零支出。
+
+    stockpile_buy 与 dominance 同以 refund_full_star_ok 为背书门:
+    2★ 件两条买面都不可发射,溢余滞留(不放行)而非带病买——
+    锁「背书门在局23 帧端到端成立」,非单位锁复述。
+    """
+    cfg = SimpleNamespace(ev_arm='full')
+    sess = _ju23_session()
+    act = decide_shop_action(_ju23_frame(
+        100, [_sc('花火', star=2)]), sess, cfg)
+    assert not isinstance(act, (BuyCard, RefreshShop))
+    assert isinstance(act, CloseShop)
+
+
+def test_ju23_liquid_refund_shifts_s_reserve_down():
+    """活期退金投影进 s_reserve(P56):bench 有 2 费活期件 ⇒ 线降至 48。
+
+    51 金买 4 费件后 47 < 48 拒、52 金买后 48 ≥ 48 买——边界随活期
+    退金逐金位移,钉死 s_reserve 是「可变现息线下界」而非静态 g*。
+    """
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    fuel_name = next(n for n, ch in CHARACTERS.items()
+                     if ch.cost == 2 and n not in line_members(_JU23_COMP))
+    st = _ju23_frame(51)
+    st.bench = [BenchChar(slot=0, char_id=fuel_name,
+                          faction='仙舟罗浮', star=1)] \
+        + [None] * (BENCH_CAPACITY - 1)
+    st.shop = [_sc('花火')]
+    cfg = SimpleNamespace(ev_arm='full')
+    sess = _ju23_session()
+    act = decide_shop_action(st, sess, cfg)
+    assert sess.cw4_counters.get('m6_s_reserve_reject') == 1
+    assert not (isinstance(act, BuyCard) and act.reason == 'm6_stockpile')
+    st = _ju23_frame(52)
+    st.bench = [BenchChar(slot=0, char_id=fuel_name,
+                          faction='仙舟罗浮', star=1)] \
+        + [None] * (BENCH_CAPACITY - 1)
+    st.shop = [_sc('花火')]
+    sess = _ju23_session()
+    act = decide_shop_action(st, sess, cfg)
+    assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile'
+    assert 52 - (act.card.cost or 3) >= 48
+
+
+def test_ju23_full_surface_gold_never_breaks_interest_line():
+    """金位不破息线(端到端复合):0-100 金全决策面逐帧走真函数。
+
+    每个起始金位完整走一次店内访问(动作后真值回写再判,ADR-0517
+    §8.1 口径):任一 BuyCard/RefreshShop 花后金 ≥ s_reserve(本帧形状
+    = 50);息线下(≤50)整访问零支出(无误清);每访问都以 CloseShop
+    收束且有界迭代(无死守环)。
+    """
+    cfg = SimpleNamespace(ev_arm='full')
+    for gold0 in range(0, 101):
+        st = _ju23_frame(gold0, [_sc('花火')])
+        sess = _ju23_session()
+        for _ in range(15):
+            act = decide_shop_action(st, sess, cfg)
+            if isinstance(act, BuyCard):
+                cost = act.card.cost if act.card.cost else 3
+                assert st.gold - cost >= 50, (gold0, st.gold, cost)
+                st.gold -= cost
+                st.shop = [c for c in st.shop if c is not act.card]
+            elif isinstance(act, RefreshShop):
+                assert st.gold - act.cost >= 50, (gold0, st.gold)
+                st.gold -= act.cost
+            elif isinstance(act, CloseShop):
+                break
+            else:
+                raise AssertionError(f'局23 帧意外动作 {act!r} @ {gold0} 金')
+        else:
+            raise AssertionError(f'决策不收敛(死守嫌疑)@ {gold0} 金')
+        if gold0 <= 50:
+            assert st.gold == gold0, (gold0, st.gold)
 
 
 # ------------------------------------------- committed 谓词逐帧对拍(P1 附)
 
-def _old_committed(state: GameState, session: StrategySession) -> bool:
-    """旧语义复刻(update_target L125-132 判定式;对拍基准,非生产路径)。
+# 旧语义复刻的基准常量:生产面 t_of/ready/阈值常量已随旧定型机退役
+# (working tree 在飞批删除),此处按退役前版本原值记录,只辖本对拍
+# 基准,非生产路径。
+_COMMIT_SIGNAL_THRESHOLD: float = 5.0
+_COMMIT_MIN_T: int = 7
 
-    committed = plane≥2 ∨ (signals.ready ∧ (可切换 ∨ target==领先线))。
+
+def _old_t_of(plane: int, round_num: int) -> int:
+    """全局节点序号(plane*9 + round 的简化;与 horizon 的 t 同构)。"""
+    return (min(plane, 3) - 1) * 9 + max(1, min(round_num, 9))
+
+
+def _old_ready(sig: CommitSignals, t: int = 0) -> bool:
+    """退役版 ready 判定:领先线信号分 ≥ 阈值 且 t ≥ 轮门。"""
+    if t and t < _COMMIT_MIN_T:
+        return False
+    lead = sig.leader()
+    return lead is not None and lead[1] >= _COMMIT_SIGNAL_THRESHOLD
+
+
+def _old_committed(state: GameState, session: StrategySession) -> bool:
+    """旧语义复刻(update_target 判定式;对拍基准,非生产路径)。
+
+    committed = plane≥2 ∨ (signals.ready ∧ (可切换 ∨ target==领先线));
+    ready/t_of 消费退役前复刻(见上常量注)。
     """
-    from sr_od.application.currency_war.kernel.cw_transition import t_of
     if state.plane >= 2:
         return True
     sig = getattr(session, 'commit_signals', None)
     if sig is None:
         return False
-    ready = sig.ready(t_of(state.plane, state.round_num))
+    ready = _old_ready(sig, _old_t_of(state.plane, state.round_num))
     lead = sig.leader() if ready else None
     return bool(ready and lead is not None)
 
