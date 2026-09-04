@@ -122,8 +122,14 @@ from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 # 建议阈值/遭遇奖励阶梯/P1 尖峰系数/断供驱逐/P1 锁线门槛 0.5→1.0/
 # 通用升级曲线退役——行为位移 = 本批目标语义差(保守缺省),非
 # unintended drift。锚值位移至 b8e99328…,继续做 unintended drift 哨兵。
+# 池再生重锚(2026-09-05,编排者批):实机三局(含 P2 深潜局)经局终
+# 自动再生管线入 Δ 池,池指纹 743b10eb→5dfa8033,snapshot 供给权重随
+# 真实局数据更新 → 行为投影合法位移。单变量归因:双源仲裁批与闩批的
+# diff 均不在 sim 默认路径(执行面/策略面,不经 simulate_p1),差分
+# stash 验证红与其无关;双跑确定性核验通过。锚值位移至 30e215ff…,
+# 继续做 unintended drift 哨兵。
 _ZERO_DRIFT_DIGEST_6 = (
-    'b8e9932818466fa95d300600328eb531ed93e3829b7a0f3d44a962852ef66251')
+    '30e215ff7ccfaf81ab8dd860539338e517cffc2e82a60973685019687e393362')
 
 
 def _behavior_projection(results) -> str:
