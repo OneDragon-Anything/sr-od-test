@@ -1024,3 +1024,65 @@ def _obs(dep=0, bench=0):
 def _test_empty_board_guard_cfg():
     return _test_empty_board_guard_SimpleNamespace()
 
+
+# ==================== dd-037 发射侧同源谓词(has_deployable + 装配)====================
+
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (  # noqa: E402
+    deploy_target_sets as _has_dep_deploy_target_sets,
+)
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (  # noqa: E402
+    deployed_bond_counts as _has_dep_deployed_bond_counts,
+)
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (  # noqa: E402
+    has_deployable,
+)
+
+
+def test_has_deployable_floor_gate_plan_empty_false() -> None:
+    """计划空形态(配方底线门:列车档满 ∧ 仙舟<基础线 ⇒ 列车件留
+    bench)⇒ has_deployable False——2026-09-06 实机首局备战环无进展
+    守卫停机形态的谓词腿(发射侧不提案 RunDeploy 的判据本体)。"""
+    bench = [BenchChar(slot=1, char_id='开拓者·欢愉', faction='列车同行')]
+    up, held = select_deployments(
+        bench, deployed_cids={'三月七', '姬子'},
+        deployed_fac={'列车同行': 2, '护盾': 1, '击破': 1}, board={}, cap=8)
+    assert not up and held, '前置:select_deployments 计划空(全留 bench)'
+    assert has_deployable(
+        bench, deployed_cids={'三月七', '姬子'},
+        deployed_fac={'列车同行': 2, '护盾': 1, '击破': 1}, board={}, cap=8,
+    ) is False
+
+
+def test_has_deployable_normal_true() -> None:
+    bench = [BenchChar(slot=1, char_id='彦卿', faction='仙舟')]
+    assert has_deployable(
+        bench, deployed_cids={'三月七'}, deployed_fac={'列车同行': 1},
+        board={}, cap=8) is True
+
+
+def test_has_deployable_unidentified_fail_open() -> None:
+    """SIFT 未识别(char_id 空)fail-open 照旧上——与 select_deployments
+    语义一致(身份不可判时不激进留 bench)。"""
+    bench = [BenchChar(slot=1, char_id='', faction='?')]
+    assert has_deployable(
+        bench, deployed_cids=set(), deployed_fac={}, board={}, cap=8) is True
+
+
+def test_deployed_bond_counts_full_bond_scope() -> None:
+    """全羁绊口径(factions+flows 逐项 +1;r361b);未注册名不计。"""
+    counts = _has_dep_deployed_bond_counts({'三月七', '未注册名', ''})
+    assert counts.get('列车同行') == 1
+    assert counts.get('护盾') == 1
+
+
+def test_deploy_target_sets_r70_dual_track() -> None:
+    """r70 双轨:comp 阵营 ∪ 框架阵营;fw_carry = 框架/通用非 drop 件。"""
+    comp = _test_empty_board_guard_SimpleNamespace(
+        factions=('仙舟',), core_chars=('藿藿',))
+    tgt, carry = _has_dep_deploy_target_sets(comp, '列车')
+    assert '仙舟' in tgt and '列车同行' in tgt
+    assert '三月七' in carry and '千冶·刃' in carry
+    assert '卡芙卡' not in carry   # drop 件不入 carry
+    tgt2, carry2 = _has_dep_deploy_target_sets(None, '')
+    assert tgt2 == set() and carry2 == set()
+

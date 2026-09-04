@@ -350,7 +350,7 @@ class TestFixpoolCheckpoints:
 
     def test_d_dup_not_deployable(self):
         frame = _frame(bench=[_bench(1, '场上dup')], deployed=[_bench(1, '场上dup')])
-        assert not mandate._deployable(frame)
+        assert not mandate._deployable(frame, _session())
 
     def test_f4_metric_with_indicator_set(self):
         """F4 度量随指标集呈报:成型判定在新核=stop_buy 位面语义(谓词),
@@ -1067,6 +1067,52 @@ class TestR200LineSwitchConservativeSubset:
             ('旧件',), ('新件',), [_bench(1, '旧件')], [], None,
             k_switched=True)
         assert slots == [] and key == 'switchline_exit_blocked'
+
+
+# ===== RunDeploy 提案侧抑制谓词(ADR-0517 决策2/dd-037 接线)=====
+
+class TestRunDeployProposalSuppression:
+    """RunDeploy 计划空 ⇒ 不提案(序内下一动作)。
+
+    事件语义回归:2026-09-06 实机首局(单动作架构,ADR-0518)00:08:25
+    备战环无进展守卫以「连续 3 环同签名动作批 ['RunDeploy'] ∧ 零推进」
+    停机留证——决策核每轮提案 RunDeploy,执行方 cw_op_deploy 计划空
+    (候选全被配方底线规则留 bench)报 no-op 成功,RunDeploy 投影未
+    建模保守回退交回外循环,重进再提案,3 环零推进。修复 = 发射位
+    (M1/M1′/M5)接入 kernel.cw_deploy_logic.has_deployable 同源判空谓词。
+    """
+
+    def _floor_gate_frame(self) -> mandate.MandateFrame:
+        """计划空帧:板 2 列车同行(档满)∧ 仙舟<3 基础线 ∧ bench 第 3
+        张列车件 ⇒ kernel 配方底线门留 bench(select_deployments up 空)。
+        旧 _deployable(持有面:bench 有货非 dup)对该帧判 True。"""
+        return _frame(
+            gold=20, cap=8,
+            bench=[_bench(1, '开拓者·欢愉')],
+            deployed=[_bench(1, '三月七'), _bench(2, '姬子')],
+            k=('目标件',), round_num=3)
+
+    def test_plan_empty_frame_not_deployable(self):
+        assert not mandate._deployable(self._floor_gate_frame(), _session())
+
+    def test_plan_empty_frame_no_run_deploy_proposal(self):
+        """计划空帧 ⇒ 不提案 RunDeploy(序内下一动作 = 开店意图/终点
+        StartBattle)——旧形态每轮提案 RunDeploy 空转即守卫停机的直接
+        机制腿。"""
+        out = mandate.run_mandate(self._floor_gate_frame(), _session())
+        assert not any(isinstance(e.action, RunDeploy) for e in out)
+        if out:
+            assert not isinstance(out[0].action, RunDeploy)
+
+    def test_plan_nonempty_frame_run_deploy_emitted(self):
+        """对照:计划非空(仙舟件不受列车底线门辖)⇒ M1 照常提案。"""
+        frame = _frame(
+            gold=20, cap=8,
+            bench=[_bench(1, '彦卿')],
+            deployed=[_bench(1, '三月七'), _bench(2, '姬子')],
+            k=('目标件',), round_num=3)
+        out = mandate.run_mandate(frame, _session())
+        assert any(e.reason == 'm1_deploy' for e in out)
 
 
 # ===== 备战期开店闩(2026-09-03 实机首局 1-1 卡死回归)=====
