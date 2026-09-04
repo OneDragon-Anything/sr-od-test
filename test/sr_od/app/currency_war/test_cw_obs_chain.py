@@ -1628,3 +1628,27 @@ def test_shop_fixture_cost_fallback_roster(test_context, monkeypatch) -> None:
         assert c.cost == (ch.cost if ch is not None else 0)
         assert c.star == 1
 
+
+
+# ===== deployed 计数双源仲裁(观测仲裁批;事故=2026-09-05 备战 r9 停机)=====
+
+def test_arbitrate_deployed_count_truth_table() -> None:
+    """双源仲裁真值表(规则单一源=arbitrate_deployed_count docstring):
+
+    - 两源齐且分歧(paddle=3/CV=5,事故帧形态)→ 取低值 3 + 结构性分歧位;
+    - 两源齐且相等/±1 → 该值 + 非分歧(spread≤1 属合法读数差,不行动);
+    - 反向分歧(paddle=5/CV=3)→ 同取低值 3(规则单调,无方向拍定);
+    - 单源缺席 → 返另一源且不算分歧(无仲裁语义);双缺席 → None。
+    """
+    from sr_od.application.currency_war.obs.cw_observation import (
+        arbitrate_deployed_count,
+    )
+    arb = arbitrate_deployed_count
+    assert arb(3, 5) == (3, True)    # 事故帧:paddle 真值 3,CV 幻影 5
+    assert arb(5, 3) == (3, True)    # 对称:低值恒被采信
+    assert arb(4, 4) == (4, False)   # 一致
+    assert arb(3, 4) == (3, False)   # ±1 合法读数差:取低值但不算分歧
+    assert arb(4, 3) == (3, False)
+    assert arb(None, 5) == (5, False)   # paddle 失读 → CV 兜底(无仲裁)
+    assert arb(3, None) == (3, False)   # CV 不可算不会发生,契约仍锁对称
+    assert arb(None, None) == (None, False)

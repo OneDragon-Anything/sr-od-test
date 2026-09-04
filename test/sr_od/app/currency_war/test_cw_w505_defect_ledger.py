@@ -321,4 +321,35 @@ def test_shop_close_audit_wiring_lock():
     assert 'set_unit_gold_close' in unconditional
 
 
-from sr_od.application.currency_war.telemetry import state
+# ===== deployed 计数双源分歧独立分键(观测仲裁批;不一致率防静默)=====
+
+def test_deployed_count_2src_divergence_key_row(tmp_path: Path, monkeypatch):
+    """分歧仲裁触发 → 台账落独立分键行(kind=deployed_count_2src_divergence):
+
+    - surface=deployed(决策关键面)、gap=cv−paddle(事故帧 +2);
+    - 恒 L2(auto_resolved:仲裁已在本侧消化,不进安灯——不一致率
+      是观察量,告警升格由「同局 ≥3 次」判读侧承接,见 verdict);
+    - 与 obs_conflicts 旁路的通用 perception_conflict 行分键,判读
+      「CV 占用源漂移率」直接按 kind 计数,不下钻证据流行。
+    """
+    _setup_recorder(monkeypatch, tmp_path)
+    defects.record_deployed_count_2src_divergence(3, 5, 'deploy_cap_gate')
+    rows = [r for r in _rows(tmp_path, 'defect_ledger.jsonl')
+            if r['kind'] == defects.DEFECT_KIND_DEPLOYED_COUNT_2SRC]
+    assert len(rows) == 1
+    r = rows[0]
+    assert r['surface'] == 'deployed'
+    assert r['expected'] == 'paddle_x=3' and r['observed'] == 'cv_occupied=5'
+    assert r['gap'] == 2.0
+    assert r['severity'] == 'L2_record'
+    assert r['reader_source'] == 'deploy_cap_gate'
+    assert 'arbitrate_deployed_count' in r['verdict']
+
+
+def test_deployed_count_2src_divergence_key_silent_without_run_id(
+        tmp_path: Path, monkeypatch):
+    """run_id 缺省 → 分键 no-op(局外单跑/mock 不产生遥测;同 record_defect 门)。"""
+    _setup_recorder(monkeypatch, tmp_path)
+    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', '')
+    defects.record_deployed_count_2src_divergence(3, 5, 'director_heavy')
+    assert _rows(tmp_path, 'defect_ledger.jsonl') == []

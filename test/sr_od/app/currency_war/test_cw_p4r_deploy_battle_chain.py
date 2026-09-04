@@ -6,6 +6,8 @@
 """
 import inspect
 
+from one_dragon.base.geometry.point import Point
+
 # ==================== ① 落点验证 ====================
 
 def _make_deploy_op(monkeypatch, occupied_seq: list[bool]):
@@ -149,3 +151,92 @@ def test_frontless_recovery_chain_wired() -> None:
     assert cw_loop.CwLoop.FRONTLESS_REDEPLOY_LIMIT == 2
     # 预算复位挂点:正常备战环成功跑完 = 部署链健康 → 复位(预算辖连续失败窗)
     assert 'self._frontless_redeploy = 0' in src
+
+
+# ==================== ④ deployed 计数双源仲裁(板满门;2026-09-05 事故)====================
+# 事故:备战 r9 后排 2 空槽幻影占用 → CV 计数 5 ≥ cap 5 → 板满假判合法化
+# no-op → RunDeploy 同签名零推进停机;paddle X 同帧真值 3(留证三连)。
+# 修法:板满门 deployed 计数走双源仲裁(取低值,规则单一源 =
+# cw_observation.arbitrate_deployed_count)。
+
+def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
+    """构直驱 _deploy_deterministic 的桩 op:CV 占用按槽序列出票。
+
+    事故帧形态:bench 槽 1-4 占用(4 真实 bench 角色)、前排 1/4 占用、
+    后排 4/6 「占用」(2 真 + 2 幻影)→ CV 计数 = 1+4 = 5;
+    paddle 桩恒返 paddle_x(事故真值 3)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+
+    calls = {'n': 0}
+
+    def _fake_occ(scr, x, y):
+        i = calls['n']
+        calls['n'] += 1
+        if i < 9:                      # bench 9 槽:1-4 占用
+            return i < 4
+        if i < 13:                     # 前排 4 槽:1 占用
+            return i == 9
+        if i < 19:                     # 后排 6 槽:4 占用(含幻影)
+            return i < 17
+        return True                    # 循环内 fresh 复查:恒占用
+
+    monkeypatch.setattr(db, 'slot_occupied', _fake_occ)
+    monkeypatch.setattr(db, 'read_deploy_cap_debounced',
+                        lambda ctx, scr, level: 5)
+    monkeypatch.setattr(db, 'read_deployed_count', lambda ctx, scr: paddle_x)
+    from sr_od.application.currency_war.obs import cw_back_layout
+    monkeypatch.setattr(cw_back_layout, 'select_back_layout',
+                        lambda ctx, scr, level=None, cap=None: (6, ''))
+    monkeypatch.setattr(db.time, 'sleep', lambda s: None)
+    drags = {'n': 0}
+    monkeypatch.setattr(db.DragCwChar, 'drag_char',
+                        lambda op, src, dst: drags.__setitem__('n', drags['n'] + 1) or True)
+
+    class _Op(db.CwOpDeploy):
+        def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
+            pass
+        def screenshot(self):
+            return object()
+        def _wait_slot_occupied(self, pt, budget):
+            return True
+
+    op = _Op()
+    op.ctx = SimpleNamespace(cw_match=None)
+    return op, drags
+
+
+def test_cap_gate_arbitration_opens_on_cv_phantom_inflation(monkeypatch) -> None:
+    """事故帧行为锁:paddle=3 / CV=5(幻影)→ 板满门按仲裁值 3 放行 →
+    拖拽真实发射(旧代码在此帧 (0, True) 合法化 no-op = 停机根因)。"""
+    op, drags = _make_gate_op(monkeypatch, paddle_x=3)
+    bench = [Point(100 + 30 * i, 900) for i in range(9)]
+    front = [Point(500 + 30 * i, 400) for i in range(4)]
+    back = [Point(500 + 30 * i, 650) for i in range(6)]
+    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    assert drags['n'] >= 1, '板满门应按仲裁值(3<5)放行,至少发射一次拖拽'
+    assert placed >= 1
+    assert plan_empty is False
+
+
+def test_cap_gate_keeps_cv_block_when_paddle_unreadable(monkeypatch) -> None:
+    """反面:paddle 失读(None)→ 无仲裁语义,CV=5 ≥ cap=5 板满门保持
+    (不因仲裁引入「缺源即放行」的新风险面)。"""
+    op, drags = _make_gate_op(monkeypatch, paddle_x=None)
+    bench = [Point(100 + 30 * i, 900) for i in range(9)]
+    front = [Point(500 + 30 * i, 400) for i in range(4)]
+    back = [Point(500 + 30 * i, 650) for i in range(6)]
+    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    assert (placed, plan_empty) == (0, True)
+    assert drags['n'] == 0
+
+
+def test_cap_gate_arbitration_wired_in_deploy_deterministic() -> None:
+    """接线烟雾(容忍档;失守事故=2026-09-05 备战停机:板满门直采 CV
+    幻影计数合法化 no-op,留证三连无人消费):_deploy_deterministic 必须
+    经 arbitrate_deployed_count 仲裁 + 分歧走分键留证。"""
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    src = inspect.getsource(db.CwOpDeploy._deploy_deterministic)
+    assert 'arbitrate_deployed_count(' in src
+    assert '_note_deployed_count_divergence(' in src

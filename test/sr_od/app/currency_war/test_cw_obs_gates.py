@@ -1281,3 +1281,70 @@ def test_cooldown_release_allows_pivot(monkeypatch):
     # 放行(返回某 easy comp)——具体哪个由保命逻辑定,关键是非 None 或有明确保持理由
     # (target=None + 危机 → 应给出落点)
     assert piv is not None
+
+
+# ===== bench 读取与商店行解耦(观测仲裁批)=====
+# 语义:bench_names 的识别源 = 备战栏-1..9 槽位裁片(空间隔离);商店牌
+# 只在开商店子态(货币战争-备战-开商店,顶部 y≈70-326 带)渲染,与备战栏
+# (y≈844-980)几何不相交。商店卡混入 bench_names 的唯一通路 = 槽位区域
+# 漂移/读取改全屏 —— 两把锁分别堵这两个口。
+
+def test_bench_shop_row_geometry_isolation(test_context: _identity_obs_SrTestContext) -> None:
+    """画面几何锁:备战栏-1..9 与 商店牌-1..5(开商店子态)pc_rect 两两不相交。
+
+    bench 读取(identify_slots/_ctx_slots)只裁备战栏 rect;若 screen_info
+    漂移使两族 area 相交,商店行卡会以「bench 角色」身份进 bench_names
+    (2026-09-05 停机诊断报告指认的污染形态的结构性防线)。
+    """
+    from sr_od.application.currency_war.kernel.cw_obs_core import (
+        SHOP_SCREEN_NAME,
+        _area_rect,
+    )
+
+    def _overlap(a: Rect, b: Rect) -> bool:
+        return not (a.x2 <= b.x1 or b.x2 <= a.x1 or a.y2 <= b.y1 or b.y2 <= a.y1)
+
+    bench_rects = []
+    for i in range(1, 10):
+        r = _area_rect(test_context, f'备战栏-{i}')
+        assert r is not None, f'备战栏-{i} 未建档(screen_info 漂移?)'
+        bench_rects.append(r)
+    shop_rects = []
+    for i in range(1, 6):
+        r = _area_rect(test_context, f'商店牌-{i}', SHOP_SCREEN_NAME)
+        assert r is not None, f'商店牌-{i} 未建档'
+        shop_rects.append(r)
+    for bi, br in enumerate(bench_rects, start=1):
+        for si, sr in enumerate(shop_rects, start=1):
+            assert not _overlap(br, sr), (
+                f'备战栏-{bi} 与 商店牌-{si} rect 相交({br} vs {sr})——'
+                f'bench 读域被商店行污染,先修 screen_info 再动读取代码')
+    # 语义锚:两族整带分离(商店牌带整体在备战栏带上方)
+    assert max(r.y2 for r in shop_rects) <= min(r.y1 for r in bench_rects)
+
+
+def test_bench_read_excludes_shop_only_identities(
+        test_context: _identity_obs_SrTestContext) -> None:
+    """行为锁:开商店帧(shop_open fixture)bench 读 = 底部备战栏 8 角色,
+    不含只出现在顶部商店行的身份(翡翠/丹恒·腾荒/不死途)。
+
+    三月七/飞霄商店行与备战栏同名在场(持牌+商店上牌合法并存),名字排除
+    只能锁「商店行独有」三家;槽位空间隔离由上一把几何锁承载。
+    若 bench 读取被改成全屏 SIFT/槽位漂移,商店行独有身份会混入 → 红。
+    """
+    if not test_context.has_screen('货币战争-备战-开商店', 'shop_open'):
+        _identity_obs_pytest.skip('fixture shop_open 未采')
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
+        ensure_portrait_templates,
+        read_bench_chars,
+    )
+    templates = ensure_portrait_templates(test_context)
+    if templates is None:
+        _identity_obs_pytest.skip('portrait_plaza 模板库缺失')
+    screen = test_context.load_screen('货币战争-备战-开商店', 'shop_open')
+    chars = read_bench_chars(test_context, screen, templates)
+    got = {c.char_id for c in chars}
+    assert not ({'翡翠', '丹恒·腾荒', '不死途'} & got), (
+        f'商店行独有身份混入 bench 读:{sorted(got)}')
+    assert got == {'三月七', '卡芙卡', '爻光', '吉尔伽美什', '阿格莱雅',
+                   '飞霄', '万敌'}, f'bench 读名单漂移:{sorted(got)}'
