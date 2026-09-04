@@ -270,9 +270,9 @@ class TestP57VbarReading:
     def test_two_readings_values(self):
         reg = self._reg()
         assert vbar.window_vbar(reg, 7, 'per_step') \
-            == vbar.v_bar_net(reg, 1)
+            == vbar.v_bar_net(reg, 1, 1)
         assert vbar.window_vbar(reg, 7, 'frame_horizon') \
-            == vbar.v_bar_net(reg, 7)
+            == vbar.v_bar_net(reg, 7, 1)
         assert vbar.window_vbar(reg, 7, 'frame_horizon') \
             > vbar.window_vbar(reg, 7, 'per_step')
         # 脏读法回落缺省读法②(不放大为行为分叉)
@@ -294,10 +294,8 @@ class TestP57VbarReading:
         """P57 窗口集指纹(分键遥测):两读法窗口集不同的帧计数落键。"""
 
         class _StubReg:
-            h3_win_rate = (0.0, 0.0)
-            rung_value = (0.0, 0.0, 1.0)
-            expected_battle_loss = 0.0
-            hp_to_gold = 0.0
+            win_rate_dp_by_plane = {1: 1.0 / 11.59, 2: 0.0}
+            vbar_hp_value_transitional = 9.59
 
         class _Sess:
             plane_lengths_seen = [9, 9, 9]

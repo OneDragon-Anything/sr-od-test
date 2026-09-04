@@ -75,26 +75,32 @@ def _decide(state: GameState, session) -> list:
 class TestVBarNetChain:
     """链锚(单测纯数面;P53 §2)。"""
 
-    def test_continuity_anchor_r5_equals_old_injection(self):
-        """连续性锚:V̄_net(r=5)=24.7 = calib_vuh_v1 v_bar_e2(旧静态
-        注入值)——修 A 只换 horizon 因子,链与标定带连续。"""
-        assert abs(vbar.v_bar_net(DEFAULT_REGISTRY, 5) - 24.7) < 0.05
+    def test_p1_slope_anchor(self):
+        """P1 斜率锚(增量 B 重推导,2026-09-04):V̄_net(r=5, P1)
+        = Δp(0.450)×单战价值(9.59+2)×5 = 26.08——旧连续性锚 24.7
+        (rung 流 3.0 底座 + 旧阶梯)随 rung_value/h3_win_rate 退役作废
+        (ADR-0515;p53 修订单)。"""
+        assert abs(vbar.v_bar_net(DEFAULT_REGISTRY, 5, 1) - 26.08) < 0.05
+
+    def test_p2_fail_closed_zero_slope(self):
+        """P2 分位面 fail-closed:Δp 钳 0 ⇒ V̄_net 恒 0(P2 薄桶负点
+        估计禁进账;P2 追档门实质关闭,economy「P2 少刷吃息」同向)。"""
+        for r in (1, 5, 12):
+            assert vbar.v_bar_net(DEFAULT_REGISTRY, r, 2) == 0.0
 
     def test_monotone_in_horizon(self):
-        """单调性:r∈[1,20] 严格递增(跨期流价值随视界线性增长)。"""
-        vals = [vbar.v_bar_net(DEFAULT_REGISTRY, r) for r in range(1, 21)]
+        """单调性:P1 r∈[1,20] 严格递增(跨期流价值随视界线性增长)。"""
+        vals = [vbar.v_bar_net(DEFAULT_REGISTRY, r, 1) for r in range(1, 21)]
         assert all(b > a for a, b in zip(vals, vals[1:]))
 
     def test_formula_anchors_from_registry(self):
-        """零新自由参数:逐因子 = 注册表现读(rung_value[2] + Δp(e0→e1)
+        """零新自由参数:逐因子 = 注册表现读(win_rate_dp_by_plane[plane]
         × 单战价值)× r,禁出现与注册表脱钩的第二处数值。"""
         reg = DEFAULT_REGISTRY
-        dp = reg.h3_win_rate[1] - reg.h3_win_rate[0]
-        pb = reg.expected_battle_loss * reg.hp_to_gold \
-            + vbar.streak_floor_gold()
+        pb = reg.vbar_hp_value_transitional + vbar.streak_floor_gold()
         for r in (1, 5, 12, 17):
-            assert vbar.v_bar_net(reg, r) == pytest.approx(
-                (reg.rung_value[2] + dp * pb) * r)
+            assert vbar.v_bar_net(reg, r, 1) == pytest.approx(
+                reg.win_rate_dp_by_plane[1] * pb * r)
 
     def test_streak_floor_is_table_value(self):
         """连胜金下界 = STREAK_GOLD_TABLE 连胜 2-4 档表值 min(=2)——
@@ -104,16 +110,18 @@ class TestVBarNetChain:
 
     def test_zero_horizon_is_zero(self):
         """视界耗尽 ⇒ V̄_net=0 ⇒ 门恒关(P40 ⑤「本期刷窗用尽即停」)。"""
-        assert vbar.v_bar_net(DEFAULT_REGISTRY, 0) == 0.0
+        assert vbar.v_bar_net(DEFAULT_REGISTRY, 0, 1) == 0.0
 
 
 class TestR1FrameHorizonGate:
-    """门形态(行为锁;出处=P53 §3 开门形态 + dd-025)。
+    """门形态(行为锁;出处=P53 §3 开门形态 + dd-025;增量 B 重锚
+    2026-09-04:帧态移 P1——P2 分位面 Δp fail-closed 钳 0 后 P2 门
+    恒关,开门形态锁改以 P1 承载,P2 关闭另立锁 test_p2_fail_closed)。
 
     帧态构造:lv5、目标成员 1★×1(j=1)、gold=61——REFRESH_CFO_CHECKPOINT
     arm2 seed22 r4 的同型帧(该帧旧静态门账 46.3 vs 24.7 被拦)。视界用
-    ``plane_lengths_seen`` 控制:plane=2、node=2、seen=[9,L2,L3] ⇒
-    r=(L2−1)+L3,可覆盖 r∈[1,17]。
+    ``plane_lengths_seen`` 控制:plane=1、node=8、seen=[9,L2,L3] ⇒
+    r=2+L2+L3(L2/L3 各夹 [1,9]),覆盖 r∈[4,20]。
     """
 
     @staticmethod
@@ -122,15 +130,16 @@ class TestR1FrameHorizonGate:
         m1 = _members(comp)[0]
         bench = [_bc(m1)] + [_bc(m, slot=i + 2)
                              for i, m in enumerate(_members(comp)[1:5])]
-        st = GameState(gold=61, level=5, round_num=2)
-        st.plane = 2
+        st = GameState(gold=61, level=5, round_num=8)
+        st.plane = 1
         st.shop = [ShopCard(x=100, name='垫', cost=3, star=1)]
         st.bench = bench
         st.deployed = []
-        # r=(L2-1)+L3;L2/L3 各夹 [1,9]
-        l2 = min(9, r_target)
-        l3 = max(1, r_target - (l2 - 1))
-        assert (l2 - 1) + l3 == r_target
+        # P1 node=8:r = (9−7) + L2 + L3 = 2+L2+L3;L2/L3 各夹 [1,9]
+        rest = r_target - 2
+        l2 = min(9, max(1, rest - 1))
+        l3 = max(1, rest - l2)
+        assert 2 + l2 + l3 == r_target
         sess = _session(comp, plane_lengths=[9, l2, l3])
         return st, sess
 
@@ -162,8 +171,9 @@ class TestR1FrameHorizonGate:
             provisional.reset('V_GAP')
 
     def test_long_horizon_same_frame_opens(self):
-        """长视界(r=14)同一帧态:V̄_net(14)≈69 > 承诺账 ⇒ 开门发射
-        (修前静态门此帧恒拦;报告 §6「r≥14 全开」分层的单帧锁)。"""
+        """长视界(r=14)同一帧态:V̄_net(14,P1)=Δp×11.59×14≈73 >
+        承诺账 ⇒ 开门发射(修前静态门此帧恒拦;报告 §6「r≥14 全开」
+        分层的单帧锁;增量 B 斜率 4.94→5.22 后阈值形态不变)。"""
         provisional.reset('V_GAP')
         try:
             provisional.inject('V_GAP', provisional.CalibValue(
@@ -173,6 +183,23 @@ class TestR1FrameHorizonGate:
             assert any(isinstance(a, RefreshShop) for a in acts)
         finally:
             provisional.reset('V_GAP')
+
+    def test_p2_fail_closed_all_horizons(self):
+        """P2 分位面 fail-closed(增量 B,2026-09-04):Δp(P2) 薄桶负
+        点估计钳 0 ⇒ V̄_net 恒 0 ⇒ 任意视界(含 r=14/17)P2 门恒关——
+        与 economy「P2 少刷吃息」共识同向;P2 语料扩量重拟后此锁随
+        win_rate_dp_by_plane[2] 一并重锚。"""
+        for r_target in (5, 14, 17):
+            provisional.reset('V_GAP')
+            try:
+                provisional.inject('V_GAP', provisional.CalibValue(
+                    value=24.7, ci_lo=16.7, ci_hi=24.7, injected_form=True))
+                st, sess = self._frame(r_target)
+                st.plane = 2
+                assert not [a for a in _decide(st, sess)
+                            if isinstance(a, RefreshShop)]
+            finally:
+                provisional.reset('V_GAP')
 
     def test_horizon_monotone_no_reclose(self):
         """按视界单调:同帧态 r=5 关 → r=7 关 → r=14 开;且 r≥开门点后
