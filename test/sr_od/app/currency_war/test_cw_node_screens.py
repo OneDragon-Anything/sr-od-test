@@ -620,6 +620,115 @@ def test_reward_spheres_empty_no_false_positive(test_context: SrTestContext) -> 
     assert find_reward_spheres(img, PANEL) == []
 
 
+# ==================== 奖励域幻检交叉验证(防幻检批)====================
+# 事故:奖励面板 ×12 礼盒蝴蝶结/扣饰被 Hough 幻检为 2 球 → 点击零消失 →
+# ClickSpheres 同签名死循环至 DD-030 停机。三道修:纹理/亮度/半径门
+# (本节)+ 两帧持存 + 点击后零消失黑名单。
+
+def test_reward_giftbox_phantom_excluded(test_context: SrTestContext) -> None:
+    """礼盒帧锁(停机哨兵帧入仓 fixture):×12 礼盒帧旧代码幻检 2 球
+    (blue r56 + gray r15,即蝴蝶结/扣饰圆形)→ 新代码纹理/亮度门淘汰,
+    返回 0 球;真球 fixture 计数不回退(由上方 4/5/8 球锁并行看守)。"""
+    if not test_context.has_screen(SCREEN, 'reward_giftbox_phantom'):
+        _test_reward_sphere_pytest.skip('fixture 缺:reward_giftbox_phantom.webp')
+    img = test_context.load_screen(SCREEN, 'reward_giftbox_phantom')
+    hits = find_reward_spheres(img, PANEL)
+    assert hits == [], f'礼盒帧不得报球(幻检),实得 {[(c, p.x, p.y, r) for c, p, r in hits]}'
+
+
+def test_filter_persistent_spheres_two_frame() -> None:
+    """两帧持存真值表(纯函数):同位置同半径两帧 → 采信;仅单帧出现的
+    瞬态假圆 → 淘汰;prev=None(首帧)→ 原样采信;半径容差内浮动不误杀。"""
+    from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
+        filter_persistent_spheres,
+    )
+    stable = ('blue', Point(1400, 300), 33)
+    transient = ('gray', Point(1500, 200), 15)
+    prev = [stable]
+    cur = [stable, ('blue', Point(1402, 301), 35), transient]
+    # 同帧近重复(位置/半径在容差内)= 同一球的抖动形态,不应双计:
+    # 持存验证按「cur 中能找到 prev 匹配」逐条判,容差内两条都保留
+    # (点球侧 minDist=35 已保证单帧不双检;此处只验持存语义)。
+    out = filter_persistent_spheres(cur, prev)
+    assert transient not in out, '单帧瞬态假圆必须被持存验证淘汰'
+    assert out, '持存真球不得被误杀'
+    assert filter_persistent_spheres(cur, None) == cur, '首帧无历史 → 原样采信'
+
+
+def test_read_reward_spheres_phantom_blacklist_filter(
+        test_context: SrTestContext) -> None:
+    """读侧黑名单过滤:点击后零消失登记的幻球坐标 → 后续 read 不再返回
+    (ClickSpheres 由此获得「放弃该目标」出口,禁无限循环)。"""
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    if not test_context.has_screen(SCREEN, 'reward_spheres_4'):
+        _test_reward_sphere_pytest.skip('fixture 缺:reward_spheres_4.webp')
+    img = test_context.load_screen(SCREEN, 'reward_spheres_4')
+    base = find_reward_spheres(img, PANEL)
+    assert len(base) == 4
+    _orig_area = cio._area_rect
+    sess = type('S', (), {})()
+    sess.reward_sphere_phantom_points = [base[0][1]]
+    ctx = type('C', (), {'cw_match': type('M', (), {'session': sess})()})()
+    cio._area_rect = lambda *a, **k: PANEL   # monkeypatch 手工还原
+    try:
+        out = cio.read_reward_spheres(ctx, img)
+    finally:
+        cio._area_rect = _orig_area
+    assert len(out) == 3, f'黑名单坐标应被读侧过滤,实得 {[(c, p.x, p.y) for c, p, r in out]}'
+    assert all(p != base[0][1] for _c, p, _r in out)
+
+
+def test_click_spheres_zero_disappear_blacklists_phantom(monkeypatch) -> None:
+    """点击后零消失 → 幻球登记(会话黑名单 + 分键),detail 携带黑名单痕迹;
+    席满(无空位)时不拉黑(席满点不动 = 真球保留的既有裁定语义)。"""
+    import sr_od.application.currency_war.prep_actions as pa
+    from one_dragon.base.geometry.point import Point
+    from types import SimpleNamespace
+
+    sphere = ('blue', Point(1400, 300), 33)
+    reads = {'n': 0}
+
+    def _fake_read(ctx, screen, prev=None):
+        reads['n'] += 1
+        return [sphere]   # 点击前后恒在 = 零消失形态
+
+    monkeypatch.setattr(pa, 'read_reward_spheres', _fake_read)
+    monkeypatch.setattr(pa, 'read_supply_boxes', lambda ctx, screen: [])
+    monkeypatch.setattr(pa.time, 'sleep', lambda s: None)
+    # 备战席有空位(拉黑前置通过)
+    monkeypatch.setattr(pa, 'row_area_centers', lambda ctx, prefix: [Point(400, 900)])
+    import sr_od.application.currency_war.obs.currency_war_cv as cvmod
+    monkeypatch.setattr(cvmod, 'slot_occupied', lambda scr, x, y: False)
+
+    clicks = {'n': 0}
+
+    class _Ctrl:
+        def mouse_move(self, p): pass
+        def click(self, p): clicks['n'] += 1
+
+    class _Sess:
+        last_state = None
+        reward_sphere_phantom_points = None
+
+    class _Op:
+        def screenshot(self): return object()
+        def park_cursor(self, **k): pass
+
+    ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
+    ex._op = _Op()
+    ex._ctx = type('C', (), {'controller': _Ctrl(),
+                             'cw_match': SimpleNamespace(session=_Sess())})()
+    from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres
+    ok, detail = ex._click_spheres(ClickSpheres(max_k=3))
+    assert ok is False                       # 零消失 = 未推进
+    assert clicks['n'] == 1
+    assert '幻球' in detail and '黑名单' in detail
+    pts = ex._ctx.cw_match.session.reward_sphere_phantom_points
+    assert pts and abs(pts[0].x - 1400) <= 18 and abs(pts[0].y - 300) <= 18, \
+        f'幻球坐标必须入会话黑名单,实得 {pts}'
+
+
 # ==================== test_supply_box ====================
 
 import cv2 as _test_supply_box_cv2

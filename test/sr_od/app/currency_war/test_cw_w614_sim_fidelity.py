@@ -128,6 +128,13 @@ from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 # diff 均不在 sim 默认路径(执行面/策略面,不经 simulate_p1),差分
 # stash 验证红与其无关;双跑确定性核验通过。锚值位移至 30e215ff…,
 # 继续做 unintended drift 哨兵。
+# 【勘误+指纹守卫】(2026-09-05,闩批差分复核推翻上述重锚前提):池指纹
+# 分钟级漂移(5dfa→002e,局终管线持续重生成),30e215ff 钉的是漂移中间态;
+# 证据=钉 HEAD 池逐位复现旧锚 b8e99328 + 新旧闩语义 shim 同 digest(闩批
+# diff 对 sim 零行为位移)。守卫:指纹≠钉定值 → 带因跳过(可见非静默),
+# 重记归池属批(前提=池语料审计+再生窗口冻结);指纹相符时锚继续做
+# unintended drift 哨兵。
+_PINNED_POOL_FINGERPRINT = '002e53055e38b160'
 _ZERO_DRIFT_DIGEST_6 = (
     '30e215ff7ccfaf81ab8dd860539338e517cffc2e82a60973685019687e393362')
 
@@ -158,6 +165,12 @@ class TestZeroDriftAnchor:
     """零漂移锚:不含新效果的局合成结果逐位不变(迁移批 0 纪律)。"""
 
     def test_default_path_behavior_digest_unchanged(self):
+        from sr_od.application.currency_war.data import cw_delta_pool_data
+        live_fp = cw_delta_pool_data.META.get('fingerprint')
+        if live_fp != _PINNED_POOL_FINGERPRINT:
+            pytest.skip(
+                f'Δ池已再生(指纹 {live_fp} ≠ 钉定 {_PINNED_POOL_FINGERPRINT}),'
+                '锚待池属批重记(前提=池语料审计+再生窗口冻结)')
         results = [simulate_p1(s, pool='snapshot') for s in range(6)]
         assert _behavior_projection(results) == _ZERO_DRIFT_DIGEST_6
 
