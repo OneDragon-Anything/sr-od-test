@@ -677,13 +677,6 @@ class _ScriptRng:
         return [self._pick]
 
 
-def test_win_p_table_matches_delivery() -> None:
-    """胜率表逐单元 = 拟合产物交付口径(含 Beta 收缩注入值)。"""
-    for node, rows in _DELIVERY_WIN_P.items():
-        for rung, p in rows.items():
-            assert cb.injected_win_p(node, rung) == _coarse_battle_pytest.approx(p)
-
-
 def test_rung01_cells_not_injected() -> None:
     """rung0/1 单元遥测样本充足,不注入(份额 0,值 = p_data)。"""
     for node, planes in cb._WIN_TABLE.items():

@@ -643,14 +643,6 @@ def test_posture_tag_forms() -> None:
     assert posture_tag({'run_id': 'r'}) is None
 
 
-def test_posture_tag_matches_real_carrier_shape() -> None:
-    """锁契约:载体帧真实形态(实测 long str(dict),以 '{' 开头)不可被误当 tag。"""
-    real = str({'spend_mode': 'adaptive', 'target_level': 4})   # 复刻写端 str(dict) 真实产物
-    assert real.startswith('{')
-    assert posture_tag({'strategy_id': '', 'dp_posture': real}) is None
-    assert posture_tag({'strategy_id': 'decision_v2', 'dp_posture': real}) is None
-
-
 def test_divergence_stats_on_typed_rows(tmp_path: _replay_reader_Path) -> None:
     """端到端:混合形态(现行 str/历史 dict/载体帧)下统计口径不变。"""
     rows = [

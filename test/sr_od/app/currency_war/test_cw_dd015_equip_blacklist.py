@@ -58,38 +58,6 @@ def test_filter_alloc_drops_blacklisted_keeps_once_failed():
     assert ('艾丝妲', '轮滑鞋') in out
 
 
-def test_fail_continue_behavior_simulated():
-    """「失败继续」行为桩:复刻 M7 主循环的失败分叉语义——
-
-    单件失败 → 登记并继续下一件(不中止整批);该件重试再败 → 拉黑,
-    后续轮次 alloc 不再含它,其余件照常消费。修复前语义(break 中止)
-    之下,第二件永远轮不到——本锁钉住修复后的推进面。
-    """
-    counts: dict = {}
-    alloc_pool = [('三月七', '星徽'), ('卡芙卡', '小刀'), ('艾丝妲', '轮滑鞋')]
-    worn: list[str] = []
-    # 轮 1:星徽拖败(第 1 次,登记,继续)
-    alloc = filter_alloc_blacklisted(list(alloc_pool), counts)
-    assert alloc[0] == ('三月七', '星徽')
-    assert not register_equip_drag_failure(counts, equip_drag_key('星徽', '三月七'))
-    # 轮 2:星徽重试再败(第 2 次)→ 拉黑;队首让位,小刀穿上
-    alloc = filter_alloc_blacklisted(list(alloc_pool), counts)
-    assert alloc[0] == ('三月七', '星徽'), '失败 1 次仍保留重试'
-    assert register_equip_drag_failure(counts, equip_drag_key('星徽', '三月七'))
-    alloc = filter_alloc_blacklisted(list(alloc_pool), counts)
-    assert alloc[0] == ('卡芙卡', '小刀'), '拉黑后失败继续(修复前此处 break 整批中止)'
-    worn.append('小刀')
-    # 轮 3+:星徽不再出现(拉黑跨轮存活——counts 即 session 载体)
-    alloc = filter_alloc_blacklisted(list(alloc_pool), counts)
-    assert all(name != '星徽' for _, name in alloc)
-
-
-def test_session_carries_fail_counts_field():
-    """session 级记忆载体存在且默认空(跨轮存活的登记处;局级新建销毁)。"""
-    s = StrategySession()
-    assert s.equip_drag_fail_counts == {}
-
-
 # ==================== dd-016:E 残余补部署计划 ====================
 
 

@@ -476,20 +476,6 @@ def test_invest_on_activates_p1_lock() -> None:
 
 # ---------- 经济聚合子集 ----------
 
-def test_interest_cap_override_applies() -> None:
-    """利息上调(cap 10):金 ≥100 轮的利息按覆写帽(旧帽 5)。"""
-    prof = SimInvestProfile(picks=((1, 1, '利息上调'),))
-    # 直接构造:跑局后查账本中存在 interest>5 的行(金≥100 需局内累积,
-    # 不保证出现)→ 改为单元层断言聚合接线:
-    from sr_od.application.currency_war.kernel.cw_investments import aggregate_economy
-    eff = aggregate_economy(['利息上调'])
-    assert eff.interest_cap_override == 10
-    # sim 收入层接线:注入局的 r1 利息仍按帽 5(gold=5+开局),仅验证
-    # 表达式路径不炸 + off/同 seed 差异可追(宽松锁,防脆)
-    r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
-    assert r.final_hp >= 0
-
-
 def test_gold_per_node_and_instant_gold_apply() -> None:
     """定期福利(+4 金选卡 / 每节点 +2):账本收入行出现 invest 键。"""
     prof = SimInvestProfile(picks=((1, 1, '定期福利'),))

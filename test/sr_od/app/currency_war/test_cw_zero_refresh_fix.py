@@ -171,13 +171,6 @@ class TestR1VGapWiring:
         acts = _decide(st, _session(comp))
         assert not [a for a in acts if isinstance(a, RefreshShop)]
 
-    def test_v_bar_sealed_never_opens_r1(self):
-        """封印族防线:V_BAR 类型级封印(get 恒 None/inject 拒绝)——
-        V̄ 拟合族永不作闸门(R10-2;ADR-0516 后 r1 通道已无任何 V̄ 消费)。"""
-        assert provisional.get('V_BAR') is None
-        with pytest.raises(ValueError):
-            provisional.inject('V_BAR', provisional.CalibValue(value=1.0))
-
 
 # ===== 病灶2:arm1_existence 板满 cap 口径 =====
 

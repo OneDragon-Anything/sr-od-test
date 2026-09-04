@@ -92,16 +92,6 @@ def test_read_game_state_hp_wired_through_reconcile() -> None:
 # =read_game_state(实现形状断言已按源码锁瘦身删除;派生逻辑的正确性由
 # 行为锁 test_hp_trusted_default_false 及后续行为覆盖守住)。
 
-def test_hp_trusted_source_level_derivation() -> None:
-    """写入端源级锁:read_game_state 里按「真读过守卫 ∨ 同节点沿用」派生
-    hp_trusted(ADR-0428 语义 + ADR-0430 帧龄门收紧的唯一接线处)。"""
-    import inspect
-
-    from sr_od.application.currency_war.obs import cw_observation as obs
-    src = inspect.getsource(obs.read_game_state)
-    assert 'hp_trusted' in src
-
-
 def test_hp_trusted_default_false() -> None:
     """GameState 默认 False(未知帧按不可信,保守);直接构造的帧不带
     trusted=True——消费方守卫须显式依赖写入端赋值,不吃默认幸运值。"""

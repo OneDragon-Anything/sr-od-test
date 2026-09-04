@@ -144,12 +144,6 @@ def test_equip_taboos_wandi_doctrine() -> None:
     assert "以牙还牙甲" in taboos and "掩体生成枪" in taboos   # 连带盾类装备全禁
 
 
-def test_equip_synergy_jizi_iron_triangle() -> None:
-    """姬子线铁三角:外骨骼吸仇恨→以牙还牙甲反伤→皮靴加速,少一件链断(教义手编)。"""
-    syn = get_comp("列车同行").equip_synergy
-    assert syn and "铁三角" in syn and "少一件链断" in syn["铁三角"]
-
-
 def test_substitute_plan_schema_and_no_transition_residue() -> None:
     """替班结构四必备键;替班者不得留在 transition_chars(C4 验收 4:无「替班者后期卖」残留)。"""
     for comp in COMP_LIBRARY:

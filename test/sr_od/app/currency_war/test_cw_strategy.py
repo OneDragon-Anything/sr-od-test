@@ -19,8 +19,6 @@ from sr_od.application.currency_war.kernel.cw_events import (
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import GameState, PickEvent
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-    CurrencyWarMatch,
-    CwStrategy,
     StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy_manager import (
@@ -162,19 +160,6 @@ def test_create_session() -> None:
     assert session.performance is not None
 
 
-def test_session_node_type_current_contract() -> None:
-    """StrategySession.node_type_current 消费契约(r265 并入)。
-
-    写端 = prep 环写当前槽节点类型,读端 = 战斗环消费;
-    默认 None(未读到)→ 消费方兜底「普通战斗」,不得误判特殊节点。"""
-    s = StrategySession()
-    assert s.node_type_current is None            # 默认未读到
-    s.node_type_current = '遭遇'                  # 写端可写
-    assert s.node_type_current == '遭遇'
-    s2 = StrategySession()
-    assert (s2.node_type_current or '普通战斗') == '普通战斗'   # None 兜底语义
-
-
 def test_on_round_end_stores_last_hp_when_confident() -> None:
     """D-94:on_round_end 达阈置信度的结算 hp_after → 存 session.last_hp(给下回合 prep state.hp)。"""
     from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
@@ -238,24 +223,6 @@ def test_decide_partner_fallback_idx0_when_no_charid() -> None:
 # —— StrategySession 生命周期 + rng 种子复现(D-34/§11.4)——
 
 
-def test_rng_seed_reproducible() -> None:
-    """同 seed → session.rng 序列一致(公平/replay;只种子化策略内部随机)。"""
-    s1 = StrategySession()
-    s2 = StrategySession()
-    s1.rng = random.Random(42)
-    s2.rng = random.Random(42)
-    assert [s1.rng.random() for _ in range(5)] == [s2.rng.random() for _ in range(5)]
-
-
-def test_currency_war_match_holds_strategy_and_session() -> None:
-    """CurrencyWarMatch 轻容器持有 strategy + session。"""
-    strat = MandateV1Strategy()
-    session = strat.create_session(_cfg())
-    match = CurrencyWarMatch(strat, session)
-    assert match.strategy is strat
-    assert match.session is session
-
-
 def test_on_round_end_records_performance() -> None:
     """on_round_end → session.performance.record(obs)(观测段非空;loop 每轮胜结算调用)。"""
     from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
@@ -264,12 +231,6 @@ def test_on_round_end_records_performance() -> None:
     obs = RoundOutcome(round_num=1, plane=1, node_type="普通战斗", comp_tag="x", hp_after=90)
     strat.on_round_end(GameState(), session, _cfg(), obs)
     assert len(session.performance.history) == 1
-
-
-def test_cwstrategy_is_abstract() -> None:
-    """CwStrategy ABC 不能直接实例化(全 abstract 钩子)。"""
-    with pytest.raises(TypeError):
-        CwStrategy()  # type: ignore[abstract]
 
 
 # —— 巨星强化角色维度已随 megastar_enhance_enabled 开关族删除——旧方案

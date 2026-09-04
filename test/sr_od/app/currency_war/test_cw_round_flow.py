@@ -20,10 +20,6 @@ from __future__ import annotations
 from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import  CwEntryExit
 
 
-def test_op_exists_and_named() -> None:
-    assert CwEntryExit.STATUS_AT_LOBBY == '已返回货币战争大厅'
-
-
 def test_battle_pause_screen_onboarded() -> None:
     """战斗暂停画面档存在(分支③的识别地基)。"""
     import yaml

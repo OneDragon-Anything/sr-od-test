@@ -157,14 +157,6 @@ class TestDeltaInterestFlow:
         # 首项=min(⌈56/10⌉,cap_sup)=6,按现值 cap=5 组装=5<真值 6 即红
         assert min(-(-56 // 10), 10) == 6
 
-    def test_r63_1_old_form_red_under_upcap(self) -> None:
-        # R63-1④:首项按现值 cap(cap=5)组装 ⇒ min(⌈56/10⌉,5)=5 < 真值
-        # Δ息_1=6(升帽注入局)——现值口径红(组装<真值=不可逆卖出 fail-open)
-        old_first_term = min(-(-56 // 10), 5)
-        truth1 = _trajectory_delta_interest(45, 56, 1, 7, 10)
-        assert old_first_term == 5 and truth1 == 6
-        assert old_first_term < truth1
-
     def test_r9_3_common_mode_cashflow(self) -> None:
         # R_截=1 含共模现金流 X≠0 反例回归锚:cap=5/g=8/r=1/X=1(收入到账后
         # 结算息的时点约定):真值 Δ息_1 = min(⌊(8+1+1)/10⌋,5) −

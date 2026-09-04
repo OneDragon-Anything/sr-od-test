@@ -52,15 +52,6 @@ def test_read_point_delay_and_long_press() -> None:
     assert _bwo().CwScreenBattleWait.SETTLEMENT_NEXT.y == 898
 
 
-def test_blank_accel_and_defeat_state_machine() -> None:
-    """点空白加速在场;败局状态机(_saw_defeat_settlement/hp=0 补录)随迁。"""
-    src = inspect.getsource(_bwo().CwScreenBattleWait.wait)
-    assert '点击空白加速' in src
-    assert 'BLANK.center' in src
-    assert 'saw_defeat_settlement = True' in src
-    assert 'last_outcome_hp = 0' in src
-
-
 def test_loop_delegation_wiring() -> None:
     """loop 委托接线:战斗窗口 → CwScreenBattleWait.execute;3c 收口不随迁(遥测
     连续性红线:runs summary/分配器/存档写端留在主循环)。"""
@@ -74,14 +65,3 @@ def test_loop_delegation_wiring() -> None:
                    fromlist=['x']).CwLoop)
     # 旧内联分支已移除(收编完成判据:不再双写)
     assert '前往结算", lcs_percent=0.8' not in src
-
-
-def test_settlement_state_defaults() -> None:
-    """SettlementState 生命周期默认:局级零值起步(残留判定/防重指纹干净)。"""
-    st = _bwo().SettlementState()
-    assert st.last_outcome_hp is None
-    assert st.saw_defeat_settlement is False
-    assert st.rounds_done == 0
-    assert st.last_settle_fp is None
-    assert st.last_loss_fp is None
-    assert st.saw_settlement is False

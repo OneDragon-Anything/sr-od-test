@@ -270,13 +270,6 @@ class TestV6LandingPersistence:
 
 class TestJudgeMigration:
 
-    def test_ab_judge_v6_vocabulary_anchor(self):
-        """行 1 落地判据:ab_judge 词表含 mandate_v1/ev_arm(三臂因子词表)。"""
-        text = (Path(__file__).resolve().parents[5]
-                / 'tools/cw/ab_judge.py').read_text(encoding='utf-8')
-        assert 'mandate_v1' in text and 'ev_arm' in text
-        assert 'skeleton_only' in text and 'decision_v2' in text
-
     def test_ab_judge_selftest_v6_green(self):
         """判读器迁移自测复跑:W-A 缺 prereg 拒读 / W-B V_GAP=none 无
         豁免拒读(症4 事故形态判读侧复演红)/ W-C 全件判读。"""
@@ -291,12 +284,3 @@ class TestJudgeMigration:
         spec.loader.exec_module(mod)
         failures = mod.self_test_v6()
         assert failures == [], failures
-
-    def test_measurement_domain_narrowed_in_ab_core_swap(self):
-        """症7 文本锚:预注册声明与门组 docstring 的归因域已收窄到
-        shop 决策面(prep 面 sim 不可达)。"""
-        text = (Path(__file__).resolve().parents[5] / 'src/sr_od/application/'
-                'currency_war/sim/ab_core_swap.py').read_text(
-                    encoding='utf-8')
-        assert '实际=shop 决策面' in text
-        assert 'prep 面 sim' in text

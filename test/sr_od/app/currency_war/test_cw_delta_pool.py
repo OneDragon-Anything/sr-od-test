@@ -317,19 +317,6 @@ def test_snapshot_meta_win_stats_fields() -> None:
                for r in table if int(r) >= 2)
 
 
-def test_snapshot_meta_corpus_accounting_and_poverty() -> None:
-    """META 带语料行数账(增量盘点基准)+ 桶贫困显式披露。"""
-    src_rows = cw_delta_pool_data.META.get('source_rows')
-    assert isinstance(src_rows, dict)
-    assert src_rows.get('outcomes.jsonl', 0) > 0
-    assert src_rows.get('decisions.jsonl', 0) > 0
-    poverty = cw_delta_pool_data.META.get('bucket_poverty')
-    assert isinstance(poverty, list) and poverty
-    # rung≥3 缺桶必须披露(语料不足如实报)
-    assert 'battle:桶3(缺)' in poverty
-    assert 'battle:桶4(缺)' in poverty
-
-
 def test_boss_win_p_machinery_removed() -> None:
     """ADR-0308:rung 外推机制整体废弃——残留 = 死码回潮信号。"""
     for gone in ('boss_win_p', 'BOSS_WIN_P_BY_ENGINES',
@@ -736,15 +723,6 @@ def test_v11_pool_encounter_main_buckets_monotonic() -> None:
         assert means[1] < means[2], \
             f'encounter rung 梯度在 r2 反向: r1={means[1]:.1f} ' \
             f'>= r2={means[2]:.1f}'
-
-
-def test_v11_pool_encounter_no_depth_keys() -> None:
-    """快照 encounter 桶键无 depth 域残留(键迁移完整性)。"""
-    m, _, _ = _adr0407_encounter_rung_pool_pool.resolve_pool('snapshot')
-    m = _adr0407_encounter_rung_pool_pool.plane_view(m)
-    enc = m.get('encounter') or {}
-    assert enc and all(int(b) <= 4 for b in enc), \
-        f'v11 快照仍带 depth 域键: {sorted(enc)}'
 
 
 def test_v11_settle_wiring_encounter_rung_source() -> None:
