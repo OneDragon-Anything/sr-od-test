@@ -1,13 +1,16 @@
 """r388 开局装备 hold 纯函数锁(ADR-0257 R3 修正;18 号稿落码后迁新址)。
 
 锁行为(构造参数 → 断言 hold 门输出):
-- 开局轮(P1 r≤2)hold 无条件——含 target 真空(R3:重启后首局,
-  旧判 `tgt_comp is not None` 让乱穿残留的最高频窗口);
+- 开局轮(P1 r≤2)row1 帧域活跃(opening_hold 字段)——含 target 真空
+  (R3:重启后首局,旧判 `tgt_comp is not None` 让乱穿残留的最高频窗口);
 - 非开局轮走 r70 form 门(target 在 + 0<form<COMMIT_FRAC + committed)。
 
 18 号稿落码批(ADR-0526)把判据从执行层(cw_op_equip_all)整编迁移至
-kernel/cw_equip_env.resolve_wear_release(hold 触发权归策略侧);本文件
-随之改锁新入口,矩阵语义逐条对应旧锁(opening 行无条件 / 非开局 form 门)。
+kernel/cw_equip_env.resolve_wear_release;21 号稿落码批(ADR-0531)把
+opening 扣留收窄为逐件判定(classify_item_hold,§2.3)——旧锁「开局帧
+hold 布尔=True」的语义已被取代(帧级布尔只辖 row2 域),按锁的存在性
+纪律改写为 row1 域标记断言;逐件收窄行为由 test_cw_equip_wear_semantics_
+21.py 锁面承接。
 """
 from sr_od.application.currency_war.kernel.cw_comps import COMMIT_FRAC
 from sr_od.application.currency_war.kernel.cw_equip_env import (
@@ -19,25 +22,27 @@ _BATTLE_NODES = frozenset({'战斗', 'boss', '遭遇', '精英'})
 
 def _resolve(comp, form, committed, opening_round: bool):
     """旧 _transition_hold_active(comp, form, dual, opening_round) 等价面:
-    battle_gate 开 + 战斗节点 = 非开局支;battle_gate 关 = 开局支。"""
+    battle_gate 开 + 战斗节点 = 非开局支;battle_gate 关 = 开局支。
+    21 号稿收窄后返回 row1 域标记(opening_hold 字段,非帧级 hold 布尔)。"""
     if opening_round:
         return resolve_wear_release(
             2, '奖励', True, _BATTLE_NODES,
-            comp, form, committed, [], False).hold
+            comp, form, committed, [], False).opening_hold
     return resolve_wear_release(
         3, '战斗', True, _BATTLE_NODES,
         comp, form, committed, [], False).hold
 
 
 class TestOpeningHoldR388:
-    def test_opening_target_vacuum_holds(self):
-        """R3 核心:开局轮 target=None 也 hold(白名单为空=全 hold)。"""
+    def test_opening_target_vacuum_row1_active(self):
+        """R3 核心:开局轮 target=None row1 域仍活跃(白名单为空的历史
+        hold 面,21 号稿收窄后由逐件判定接管)。"""
         assert _resolve(None, 0.0, True, opening_round=True) is True
 
-    def test_opening_with_target_holds(self):
+    def test_opening_with_target_row1_active(self):
         assert _resolve('comp', 0.0, True, opening_round=True) is True
 
-    def test_opening_uncommitted_still_holds(self):
+    def test_opening_uncommitted_row1_active(self):
         """r388 覆盖优先于 r70 committed 豁免(开局轮无战斗,穿了零变现);
         旧锁的 dual=True 即 committed=False,等价改写。"""
         assert _resolve('comp', 0.0, False, opening_round=True) is True

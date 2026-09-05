@@ -25,6 +25,7 @@ from sr_od.application.currency_war.kernel.cw_equip_env import (
     ZERO_WEAR_EXECUTION_PENDING,
     ZERO_WEAR_STRATEGY_BY_DESIGN,
     ZERO_WEAR_STRATEGY_GAP,
+    classify_item_hold,
     classify_zero_wear_stop_reason,
     resolve_affix_priority_order,
     resolve_wear_release,
@@ -70,10 +71,19 @@ class TestWearReleaseTable:
         d2 = resolve_wear_release(5, '投资', True, _BATTLE, 'c', 0.2, True,
                                   ['软弱无力', '库藏生锈'], True)
         assert d2.hold is False           # 豁免取并集,行为一致
-        # opening 活跃时 row5 不解 opening 域
+        # opening 活跃时 row5 不解 opening 域(21 号稿 ADR-0531 收窄后:
+        # 帧级 hold 只辖 row2 域;row5 判据面照常命中但豁免辖域 = row2,
+        # opening 域消费由 classify_item_hold 承接——旧断言
+        # 「opening 帧 hold=True」随帧级布尔降格改写,锁存在性纪律)
         d3 = resolve_wear_release(2, '奖励', True, _BATTLE, None, 0.0, False,
                                   ['软弱无力'], True)
-        assert d3.opening_hold and d3.hold is True
+        assert d3.opening_hold is True
+        assert d3.output_penalty_release is True
+        assert d3.hold is False
+        # row5 豁免辖域 = row2:opening 帧内 committed 活跃时非 key 件仍扣
+        d4 = resolve_wear_release(2, '奖励', True, _BATTLE, 'c', 0.2, True,
+                                  ['软弱无力'], True)
+        assert classify_item_hold(d4, '非key自由件', _mk_comp(['a']), True) is True
 
     def test_row5_needs_structured_output_entry(self):
         """在册词缀集判定:承伤侧(额外打击)与无结构条目的散文词缀都不触发。"""
