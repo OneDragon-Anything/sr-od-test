@@ -22,7 +22,6 @@ from sr_od.application.currency_war.data.cw_synthesis import (
 )
 from sr_od.application.currency_war.kernel.cw_comps import Comp
 from sr_od.application.currency_war.kernel.cw_equip_env import (
-    TOOL_EXEC_CHANNEL_READY,
     TOOL_REJECT_COLD_START_LATER,
     TOOL_REJECT_DEST_UNREADY,
     TOOL_REJECT_G1_NOT_ADMITTED,
@@ -287,19 +286,29 @@ class TestToolCriteria:
         assert acts2['特权赋予卡'].usable is False
         assert acts2['特权赋予卡'].reason == TOOL_REJECT_IN_DEMAND
 
-    def test_g1_admission_gates_emission(self):
-        """G1 发射位准入(流程:197 常驻锁):执行通道未建档 → 判据放行
-        件也不发射(g1_not_admitted 分键;判据拒与准入拒分开可见)。"""
-        assert TOOL_EXEC_CHANNEL_READY is False, (
-            '工具拖曳 op 落码批交付时应翻 True 并随批更新本锁(开臂判据)')
+    def test_g1_admission_gates_emission(self, monkeypatch):
+        """G1 发射位准入对照锁(流程:197 常驻锁;ADR-0532 开臂批重推):
+        开臂后 usable 件原样透传(不产生准入拒)、判据拒因原样透传(两拒
+        分键分开可见);通道回关(fail-closed 形态,monkeypatch 生产常量)
+        → usable 件转 g1_not_admitted、判据拒仍保留原拒因——开臂前后
+        两态同锁对照,防实现把「拒因覆盖」写进透传支。"""
+        from sr_od.application.currency_war.kernel import cw_equip_env
+        assert cw_equip_env.TOOL_EXEC_CHANNEL_READY is True, (
+            '工具执行通道应已开臂(ADR-0532);若回关须随批重推本锁')
         comp = _mk_comp(['卡芙卡'], keys=[_UNIQUE_PRIV])
         usable = [a for a in evaluate_tool_actions(['特权赋予卡', _UNIQUE],
                                                    comp) if a.usable]
         assert usable, '前置失真:判据面应有放行件才能验准入过滤'
+        # 开臂态:usable 原样透传
+        passed = {a.tool: a for a in admitted_tool_actions(usable)}
+        assert passed['特权赋予卡'].usable is True
+        assert passed['特权赋予卡'].reason == ''
+        # 回关态(对照):usable 件转准入拒,拒因分键可见
+        monkeypatch.setattr(cw_equip_env, 'TOOL_EXEC_CHANNEL_READY', False)
         gated = {a.tool: a for a in admitted_tool_actions(usable)}
         assert gated['特权赋予卡'].usable is False
         assert gated['特权赋予卡'].reason == TOOL_REJECT_G1_NOT_ADMITTED
-        # 判据拒因原样透传(不被准入拒覆盖,拒因可观测性)
+        # 判据拒因原样透传(开臂/回关两态都不被准入拒覆盖,拒因可观测性)
         rejected = evaluate_tool_actions(['好运令牌'], comp)
         assert admitted_tool_actions(rejected)[0].reason == TOOL_REJECT_RC_MISSING
 

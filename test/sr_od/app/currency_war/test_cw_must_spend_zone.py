@@ -568,7 +568,9 @@ class TestArchiveFrameReplay:
         out = mandate.run_mandate(frame, sess, state=st)
         assert not [e for e in out if isinstance(e.action, LevelUp)]
         assert sess.cw4_counters.get('crisis_level_spend_defer') == 1
-        # ② 盲区腿:停付让位桩空后,整买拦截静默(现状语义,候选 1 对照锚)
+        # ② 盲区腿(原「钉锁现状」语义已随拒因分键批退役,锁重推):
+        # 停付让位桩空后,整买拦截不再静默——l3_reject_batch_unaffordable
+        # 分键在案(拒因不可辨盲区的治疗锚;xp 18/72、lv8 ⇒ 14击×4=56>50)。
         monkeypatch.setattr(_crit_levelup, 'level_spend_blocked',
                             lambda state, session, registry=None: False)
         sess2 = SimpleNamespace(
@@ -578,8 +580,9 @@ class TestArchiveFrameReplay:
             cw4_cap_override=None)
         out2 = mandate.run_mandate(frame, sess2, state=st)
         assert not [e for e in out2 if isinstance(e.action, LevelUp)]
+        assert sess2.cw4_counters.get('l3_reject_batch_unaffordable') == 1
         assert not [k for k in sess2.cw4_counters
-                    if 'unaffordable' in k or k.startswith('must_spend')]
+                    if k.startswith('must_spend')]
 
     def test_g20_p3r1_derived_inzone_consumes_r1_yielded(self):
         """域内对照帧(派生,声明:g50 帧金 50→54 入域带内,店/bench 摘
