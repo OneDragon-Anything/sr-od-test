@@ -68,10 +68,9 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
         return reprobe_frames[idx]
 
     monkeypatch.setattr(op, 'screenshot', _fake_screenshot)
-
-    import sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy as m
-
-    monkeypatch.setattr(m.time, 'sleep', sleeps.append)
+    # 复探等待走 op._interruptible_sleep(可停机加固),测试桩为记账不真等。
+    monkeypatch.setattr(op, '_interruptible_sleep',
+                        lambda seconds: sleeps.append(seconds))
     return op
 
 
@@ -132,8 +131,8 @@ def test_invest_entry_first_frame_hit_zero_reprobe(
         raise AssertionError('首帧命中不应再截图复探')
 
     monkeypatch.setattr(op, 'screenshot', _no_screenshot)
-    import sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy as m
-    monkeypatch.setattr(m.time, 'sleep', lambda s: shots.append(s))
+    monkeypatch.setattr(op, '_interruptible_sleep',
+                        lambda s: shots.append(s))
     assert op._ensure_entry_screen() is True
     assert not shots, '首帧命中应零复探等待/零新截图'
 
@@ -186,8 +185,8 @@ def test_invest_entry_full_flow_transition_to_stable_succeeds(
     # operation.py 模块 time,本 op 与 _overlay_confirm 各自 import time)。
     sleeps: list[float] = []
     import sr_od.application.currency_war.operations.cw_screen._overlay_confirm as oc
-    import sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy as m
-    monkeypatch.setattr(m.time, 'sleep', sleeps.append)
+    monkeypatch.setattr(op, '_interruptible_sleep',
+                        lambda s: sleeps.append(s))
     monkeypatch.setattr(oc.time, 'sleep', lambda s: None)
 
     from test.harness.fixture_controller import (
