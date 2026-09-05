@@ -700,6 +700,9 @@ def _make_prep_loop_cls(overlay_anchor: tuple[str, str] | None = None,
         def _stall_watch_tick(self, screen):
             pass
 
+        def screenshot(self):
+            return self._screen
+
         def round_by_find_area(self, screen, s1, s2, **kw):
             if s1 == '货币战争-备战' and s2 == '备战标识-购买经验':
                 self._prep_seen = True   # 时序建模:浮层在 0 系清场后弹出
@@ -897,6 +900,9 @@ class TestReadinessBattleArm:
             def _stall_watch_tick(self, screen):
                 pass
 
+            def screenshot(self):
+                return self._screen
+
             def round_by_find_area(self, screen, s1, s2, **kw):
                 ok = (s1 == '货币战争-备战'
                       and s2 in ('备战标识-购买经验', '按钮-出战'))
@@ -1007,13 +1013,25 @@ class TestReadinessBattleArm:
         assert guard['n'] == 1, '成功复位后短窗口失败保持短路'
 
     def test_readiness_holds_on_overlay_present(self, monkeypatch):
-        """浮层在场排除锁(第十五局实机雷):fp≥1.00 但投资策略浮层盖备战
-        (双锚穿透命中形态)⇒ 达标臂不发射(readiness_overlay_hold 分键),
-        流量交由浮层接管面(守卫链照常可达);无浮层帧照常发射。"""
+        """浮层在场排除锁(N5 后分层口径):投资策略浮层盖备战(双锚穿透
+        形态)→ 0e 稳定路由分发接管(CwScreenInvestStrategy),达标臂零
+        发射(盲射防);readiness_overlay_hold 分键兜 0e 双探测皆 miss 的
+        残余窗口(防御分层:分发层路由 ↔ 消费点兜底,禁合并谓词)。"""
+        from types import SimpleNamespace as _NS
+
         import sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing as _bb
         from sr_od.application.currency_war.operations import cw_loop
         launches: list[int] = []
         guard = {'n': 0}
+        handler_executes: list[int] = []
+
+        class _FakeInvest:
+            def __init__(self, ctx):
+                pass
+
+            def execute(self):
+                handler_executes.append(1)
+                return None
 
         def _spy_launch(op, ctx):
             launches.append(1)
@@ -1026,8 +1044,8 @@ class TestReadinessBattleArm:
         monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 1.0)
         monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _spy_launch)
         monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
+        monkeypatch.setattr(cw_loop, 'CwScreenInvestStrategy', _FakeInvest)
         monkeypatch.setattr(_bb, 'read_ocr_texts', lambda ctx, screen: [])
-        from types import SimpleNamespace as _NS
         cls = _make_prep_loop_cls(
             overlay_anchor=('货币战争-投资策略', '标识-请选择投资策略'))
         op = cls()
@@ -1045,8 +1063,8 @@ class TestReadinessBattleArm:
         op.ctx = _NS(cw_match=_NS(session=sess))
         op.loop()
         assert launches == [], '浮层在场帧达标臂不得发射(盲射防)'
-        assert sess.cw4_counters.get('readiness_overlay_hold', 0) >= 1
-        assert guard['n'] == 1, '浮层帧交由接管面,守卫链照常可达'
+        assert handler_executes, '浮层帧经 0e 稳定路由交投资策略接管面'
+        assert guard['n'] == 0, 'N5 后浮层帧在 0e 分发层接管并提前返回(不过守卫链)'
 
     def test_readiness_holds_on_encounter_panel(self, monkeypatch):
         """遭遇面板排除锁(切屏竞态实测病例·遭遇面板形态):遭遇选择面板是备战屏上的

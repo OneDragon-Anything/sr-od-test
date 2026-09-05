@@ -47,7 +47,10 @@ ORDER_MATRIX: list[tuple[str, str, str, str]] = [
 
 def _loop_src() -> str:
     from sr_od.application.currency_war.operations import cw_loop
-    return inspect.getsource(cw_loop.CwLoop.loop)
+    # N5 后投资策略探测判据迁至模块级 helper(_probe_invest_overlay/
+    # _invest_overlay_dispatch,helper 先于 CwLoop 类定义且在 0e 位被调用
+    # ——序语义不变:探测仍先于备战双锚),扫描面扩到整模块。
+    return inspect.getsource(cw_loop)
 
 
 def _prep_anchor_index(src: str) -> int:
@@ -100,5 +103,7 @@ def test_boss_briefing_vs_plane_transition_exclusion_wired() -> None:
     assert 0 < i_excl < i_dispatch, '位面过渡分支缺 boss 排他(或排他在分发之后)'
     # 判别单一源 = cw_screen_boss_briefing.is_boss_briefing_texts(CwScreenBattleWait 白名单同源)
     assert 'is_boss_briefing_texts as _is_boss_frame' in src
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_battle_wait,
+    )
     assert 'is_boss_briefing_texts' in inspect.getsource(cw_screen_battle_wait)
