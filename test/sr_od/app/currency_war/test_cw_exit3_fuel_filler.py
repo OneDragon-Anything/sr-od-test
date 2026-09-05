@@ -55,12 +55,12 @@ def _causal_name() -> str:
 def _stall_frame(gold: int, fuel_pieces: int = 0, extra_bench=(),
                  deployed=None, cards=None, fuel_min_cost: int = 1,
                  chaseable_starred: bool = True, refresh_probs='default',
-                 target_comp='set'):
+                 locked: bool = True):
     """Φ_stall 帧:锁线(列车同行)∧ 2★ 成件占满可追成员(合格集空)∧
     瓦尔特 cnt2=0(不可追成因)∧ bench 燃料件垫起可变现线。
     chaseable_starred=False ⇒ 可追成员不留 2★(A 支可追支成立 → fail 向);
     refresh_probs 传 None/dict 覆盖对账源(缺省 = {瓦尔特费档: 0});
-    target_comp 传 None = 未锁帧(D 支 fail 向)。"""
+    locked=False = 未锁线帧(D 支 fail 向;伪 comp 仍在场,三审 C1 形态)。"""
     comp = get_comp(_COMP)
     km = list(line_members(comp))
     chaseable = [m for m in km if m != _causal_name()]
@@ -83,9 +83,12 @@ def _stall_frame(gold: int, fuel_pieces: int = 0, extra_bench=(),
     st.deployed = deployed
     st.refresh_probs = ({(get_char(_causal_name()).cost or 5): 0}
                         if refresh_probs == 'default' else refresh_probs)
+    # 锁线布尔单一源 = v3_intention.locked_comp(D 支门;三审 C1:伪 comp
+    # 在场 ≠ 锁线——locked=False 时 target_comp 仍在,门必须关)
     sess = SimpleNamespace(
         cw4_counters={},
-        target_comp=(comp if target_comp == 'set' else target_comp))
+        target_comp=comp,
+        v3_intention=SimpleNamespace(locked_comp=(_COMP if locked else '')))
     return st, sess
 
 
@@ -155,30 +158,36 @@ class TestExit3Emission:
         assert not getattr(sess, 'cw4_fuel_filler_stall_buys', set())
 
     def test_bench_full_key(self):
-        """Φ_stall ∧ 垫件在售 ∧ bench 满(非垫件占位)⇒ bench_full 分键。"""
+        """Φ_stall ∧ 垫件在售 ∧ bench 满(采购集件占位)⇒ bench_full 分键。
+
+        帧构造:全部 bench 槽用锁定采购集成员占位(fuel_sell_candidates
+        排除 buy_members ⇒ M4 腾席候选空,免抢跑);M3 经血线硬地板
+        破息停付(hp 授权在册,出口③谓词零 hp 消费不冲突)压掉 arm0
+        升级抢先。"""
+        from sr_od.application.currency_war.kernel import cw_intention
         km = list(line_members(get_comp(_COMP)))
-        # 可追成员 2★ 进 deployed(合格集空);瓦尔特(因果支)1★ 进
-        # bench——owned 覆盖全集 ⇒ missing=∅ 不触 M4 腾席,cnt2(瓦尔特)
-        # =0 保不可追支;bench 其余线外件填满 → bench_free=0
+        ist = SimpleNamespace(locked_comp=_COMP)
+        purchase = sorted(cw_intention.locked_buy_membership(ist))
         chaseable = [m for m in km if m != _causal_name()]
         deployed = [_bc(m, star=2, slot=i + 1)
                     for i, m in enumerate(chaseable)]
-        # 瓦尔特 1★ 进 bench:owned ⇒ missing=∅ 不触 M4 腾席;cnt2=0
-        # 保不可追成因支
+        pool = [n for n in purchase if n not in chaseable
+                and n != _causal_name()]
         bench = [_bc(_causal_name(), slot=1)]
-        bench.extend(_bc(_off_line_name(exclude=tuple(km),
-                                        min_cost=(i % 5) + 1), slot=i + 2)
+        bench.extend(_bc(pool[i % len(pool)], slot=len(bench) + 1)
                      for i in range(BENCH_CAPACITY - len(bench)))
         filler = _off_line_name(exclude=tuple(km))
         pad = _off_line_name(exclude=(filler,))
-        st = GameState(gold=49, level=5, round_num=2, hp=60)
+        st = GameState(gold=51, level=5, round_num=2, hp=10)
         st.level_readable = True
-        st.plane = 2
+        st.plane = 1   # 血线硬地板域(plane 1 专属)
+        st.hp_decision_trusted = True
         st.shop = [_card(pad, cost=1)]
         st.bench = bench
         st.deployed = deployed
         st.refresh_probs = {(get_char(_causal_name()).cost or 5): 0}
-        sess = SimpleNamespace(cw4_counters={}, target_comp=get_comp(_COMP))
+        sess = SimpleNamespace(cw4_counters={}, target_comp=get_comp(_COMP),
+                               v3_intention=ist)
         _decide(st, sess)
         assert sess.cw4_counters.get('bench_full') == 1
 
@@ -227,9 +236,11 @@ class TestExit3NegativeBranches:
                                     exclude=tuple(km)), cost=1)])
         self._no_emission(st, sess)
 
-    def test_branch_D_unlocked_fails(self):
-        """D 支:未锁线(target_comp=None)⇒ fail-closed 零发射。"""
-        st, sess = _stall_frame(target_comp=None, **self._PAD_KW)
+    def test_branch_D_unlocked_pseudo_comp_fails(self):
+        """D 支(C1 阻断形态):未锁线但伪 comp 在场(locked_comp 空)
+        ⇒ fail-closed 零发射——锁线布尔单一源 = _ist.locked_comp,
+        target_comp 非 None 不构成锁线。"""
+        st, sess = _stall_frame(locked=False, **self._PAD_KW)
         self._no_emission(st, sess)
 
 
