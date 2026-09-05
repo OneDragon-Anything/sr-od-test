@@ -903,7 +903,7 @@ class TestR196ShadowKeys:
             value=0.15, injected_form=True))
         st = self._top_danger_state()
         sig = entry._upgrader_evaluate(_session(), st, 20, st.hp)
-        assert sig.lambda_shadow_armed and not sig.lambda_armed
+        assert sig.lambda_shadow_armed and sig.lambda_armed  # 标定落地:影子维持撤销,真键武装(对照键保留)
         # 健康帧(高血带)不触发:谓词求值结果非 True(触发/域外不求值均合)
         st2 = GameState(gold=20, enemy_difficulty=100, hp=50, plane=1,
                         node_type='reward')
@@ -914,15 +914,16 @@ class TestR196ShadowKeys:
             value=0.15))
         st = self._top_danger_state()
         sig = entry._upgrader_evaluate(_session(), st, 20, st.hp)
-        assert sig.lambda_armed and not sig.lambda_shadow_armed
+        assert sig.lambda_armed and sig.lambda_shadow_armed  # 对照键保留
 
     def test_bloodline_none_period_shadow(self):
         """血线阈值 None 期:注入形态结构锚 hp15 照测影子键(行为无关)。"""
         sig = entry._upgrader_evaluate(_session(), GameState(gold=20), 20, 10)
         assert sig.bloodline_shadow_armed
-        assert not sig.neardeath_unlock and not sig.f7_ban_armed
+        assert sig.neardeath_unlock and sig.f7_ban_armed  # 标定落地:武装
         sig2 = entry._upgrader_evaluate(_session(), GameState(gold=20), 20, 30)
         assert not sig2.bloodline_shadow_armed
+        assert not sig2.neardeath_unlock and not sig2.f7_ban_armed
 
 
 class TestR196Constants:
