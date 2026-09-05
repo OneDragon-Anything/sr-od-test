@@ -258,7 +258,7 @@ def test_true_dead_still_caught_alongside_flow_rounds() -> None:
     ])
     streak = 0
     keys = [(2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6)]
-    for prev, cur in zip(keys, keys[1:]):
+    for prev, cur in zip(keys, keys[1:], strict=False):
         streak = query.dead_streak_transition(
             prev, cur, streak, query.strategy_round_live('m5', prev))
     assert streak >= 2, '真哑行连续 2 轮必须仍被抓(钩子保留)'
@@ -284,6 +284,7 @@ def test_register_flow_heartbeat_writes_carrier_rows(monkeypatch) -> None:
     """登记函数行为锁:恢复局分支写真实 StartBattle 载体行(sid=''),
     补给分支写流程 sid 标记行;遥测关闭/last_state 缺席静默跳过。"""
     from types import SimpleNamespace as _NS
+
     from sr_od.application.currency_war.operations import cw_loop
 
     written: list[tuple] = []
@@ -309,3 +310,29 @@ def test_register_flow_heartbeat_writes_carrier_rows(monkeypatch) -> None:
     cw_loop.register_flow_heartbeat(_NS(cw_match=_NS(session=_NS(last_state=None))),
                                     'supply_node_divert')
     assert len(written) == n
+
+
+def test_stack_detection_ignores_flow_marker_rows(tmp_path) -> None:
+    """判栈 × 流程标记行波及面锁(策略审查十二跳打回):判栈取「第一条
+    非空 strategy_id」,若流程标记行(cw:flow:*)居 run 段首,该段曾被判
+    「[未知栈] coldstart 跳过」→ mandate_v1 局漏跑冷启动检查。
+    修复 = 判栈过滤 cw:flow: 前缀:标记行居首的 mandate 局仍正确判栈;
+    纯标记行局不冒充任何已知栈。"""
+    _write_rows(tmp_path / 'decisions.jsonl', [
+        # m6:标记行居 run 段首(恢复局/补给分支先写),随后 mandate_v1 行
+        {'run_id': 'm6', 'plane': 2, 'round_num': 3,
+         'strategy_id': 'cw:flow:supply_node_divert', 'actions': []},
+        {'run_id': 'm6', 'plane': 1, 'round_num': 1,
+         'strategy_id': 'mandate_v1', 'ev_arm': 'full', 'actions': []},
+        # m7:纯标记行(无任何策略栈行)——不得冒充已知栈
+        {'run_id': 'm7', 'plane': 2, 'round_num': 1,
+         'strategy_id': 'cw:flow:locked_resume_direct_battle', 'actions': []},
+    ])
+    _write_rows(tmp_path / 'outcomes.jsonl', [
+        {'run_id': 'm6'}, {'run_id': 'm7'},
+    ])
+    lines = ledger_hooks.run_checks_on_replay(tmp_path, recent=5)
+    assert any('m6' in x and '[mandate[full] 栈]' in x for x in lines), lines
+    assert not any('未知栈' in x and 'cw:flow' in x for x in lines), lines
+    m7 = [x for x in lines if x.startswith('m7')]
+    assert m7 and '未知栈' not in m7[0], m7
