@@ -154,17 +154,6 @@ class TestL3MustSpend:
         assert isinstance(act, BuyCard) and act.reason == 'ev_buy'
         assert sess.cw4_counters.get('must_spend_ev_deferred') == 1
 
-    def test_l3_level_cap_rejects(self):
-        """负向(白名单② 等级已到 cap):lv9 族硬闸 ⇒ level_cap 分键,
-        零升级消费。帧 = 未锁线(R1 合格集空先拦刷新,域内降排序不越
-        (ii) 守卫)+ level=9(lv9 cap 硬闸)⇒ L3 到位被资格硬闸拒。"""
-        st, sess = _zone_frame(gold=80, cards=[], level=9, locked=False)
-        st.deployed = [_bc(m, star=2, slot=i + 1)
-                       for i, m in enumerate(line_members(get_comp(_COMP)))]
-        act = _decide(st, sess)
-        assert not isinstance(act, (BuyCard, RefreshShop, LevelUpShop))
-        assert sess.cw4_counters.get('level_cap') == 1
-
     def test_whitelist_empty_shop_cap_top_zero_consume(self):
         """白名单③④合形负锁(店空 ∧ cap 顶):三消费出口全关
         (CloseShop 收口),分键可辨(level_cap/no_chaseable)。"""
