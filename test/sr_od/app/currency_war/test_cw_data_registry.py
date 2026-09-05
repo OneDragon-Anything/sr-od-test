@@ -1754,3 +1754,208 @@ def test_probe_state_symmetric_full_and_flat_none():
     assert _probe_state(_mk_probe_frame(45.0, 55.0), 464) == _PROBE_FULL
     assert _probe_state(_mk_probe_frame(2.0, 2.5), 464) == _PROBE_NONE
     assert _probe_state(_mk_probe_frame(10.0, 40.0), 464) == _PROBE_SLICE
+
+
+# ==================== 15 号稿批 C 残余三件:公式净化 + 布局未知态(T-7) ====================
+# 出处:docs/develop/currency_war/strategy-docs/
+#       15_observation_multisource_arbitration.md §3.2①/§3.2④/§6 T-7/T-8
+
+from types import SimpleNamespace  # noqa: E402
+
+
+@pytest.fixture()
+def _layout_fresh(monkeypatch):
+    """未知态模块级计数器复位(测试纪律:生产路径含模块级全局时 setup
+    一并复位)+ 选档日志/节流表复位;用例结束再清一次防泄漏。"""
+    from sr_od.application.currency_war.obs import cw_back_layout as cbl
+    cbl.reset_layout_unknown_state()
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    yield
+    cbl.reset_layout_unknown_state()
+
+
+def test_formula_abstains_on_untrusted_level(_layout_fresh, monkeypatch):
+    """§3.2① 公式输入净化:level_trusted=False(derived/启发式 level)→
+    公式通道弃权(cap/level 齐备也不算 diff),n_raw 依 CV 单源;CV 也不可
+    判 → 双弃权进未知态。「diff=0 退 6 档」的缺省化复发被本门封死。"""
+    from sr_od.application.currency_war.obs import cw_back_layout as cbl
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 7)
+    r = cbl.resolve_back_slots(None, object(), level=8, cap=10,
+                               level_trusted=False)
+    assert r['formula_n'] is None and r['diff'] is None   # 公式弃权
+    assert r['n_raw'] == 7 and r['n'] == 7                # CV 单源实测
+    assert r['unknown'] is False
+
+
+def test_level_trusted_none_keeps_legacy_behavior(_layout_fresh, monkeypatch):
+    """§3.2① 三态之 None=未声明 → 零行为变更:diff=0 退 6 档基线
+    (cap==level),formula 字段照旧产出。"""
+    from sr_od.application.currency_war.obs import cw_back_layout as cbl
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
+    r = cbl.resolve_back_slots(None, object(), level=8, cap=8)
+    assert r['diff'] == 0 and r['formula_n'] == 6 and r['n'] == 6
+    assert r['unknown'] is False
+
+
+def test_probe_residual_asymmetric_noise_absorbed():
+    """§3.2② 残余形态裁决锁(证据裁决式):单端强不对称噪声(半窗纯平 +
+    半窗强噪声 = 假 slice 形态)被**结构性吸收**——单端假 slice 与另端
+    none 组合成未覆盖形态 → cv_back_slots 返 None 退公式。假 7 需两端同时
+    slice = 两端都有的强结构证据,合成噪声单端形态不构成;三读防抖
+    (§3.2② N=3)无须为此残余引入。"""
+    from sr_od.application.currency_war.obs.cw_back_layout import (
+        _PROBE_NONE,
+        _PROBE_SLICE,
+        _probe_state,
+        cv_back_slots,
+    )
+    frame = _mk_probe_frame(2.0, 45.0)   # 左探针窗 = 极端切片形态
+    assert _probe_state(frame, 464) == _PROBE_SLICE
+    assert _probe_state(frame, 1458) == _PROBE_NONE   # 右端纯背景
+    assert cv_back_slots(frame) is None   # 混合形态 → 不可判退公式
+
+
+def test_unknown_single_frame_skip_with_jsonl_evidence(_layout_fresh,
+                                                       monkeypatch, tmp_path):
+    """T-7 单帧未知:双弃权 → n=None/prefix=''/unknown=True/frozen=False;
+    每帧 JSONL 留证(obs_conflict 行 + back_layout_unknown 分键经
+    cw_telemetry_exit 出口,缺省关→显式接桩)。"""
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit as exit_mod
+    from sr_od.application.currency_war.obs import cw_back_layout as cbl
+    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
+    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    defects: list[dict] = []
+    monkeypatch.setattr(exit_mod, '_record_defect',
+                        lambda **kw: defects.append(kw))
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
+    r = cbl.resolve_back_slots(None, object(), level=8, cap=10,
+                               level_trusted=False)
+    assert r['n'] is None and r['prefix'] == ''
+    assert r['unknown'] is True and r['frozen'] is False
+    assert r['unknown_streak'] == 1
+    # obs_conflict JSONL 证据行
+    p = tmp_path / 'obs.jsonl'
+    assert p.exists() and 'back_layout_unknown' in p.read_text(encoding='utf-8')
+    # defects 分键(出口桩;kind 单一源=kernel.cw_telemetry_exit 常量)
+    assert len(defects) == 1
+    assert defects[0]['kind'] == exit_mod.DEFECT_KIND_BACK_LAYOUT_UNKNOWN
+
+
+def test_unknown_freeze_after_three_known_frame_unfreezes(_layout_fresh,
+                                                          monkeypatch):
+    """T-7 连续 3 未知 → frozen=True(写类冻结止损,B3:N=3 与防抖同源);
+    任一已知帧(公式/CV 干净裁决)→ 计数清零=解冻。"""
+    from sr_od.application.currency_war.obs import cw_back_layout as cbl
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
+    for i in range(1, 4):
+        r = cbl.resolve_back_slots(None, object(), level=8, cap=10,
+                                   level_trusted=False)
+        assert r['unknown'] is True
+        assert r['frozen'] is (i >= cbl.UNKNOWN_FREEZE_FRAMES)
+        assert r['unknown_streak'] == i
+    # 干净裁决解冻:CV 恢复可判(CV 单源,公式仍弃权)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 6)
+    r = cbl.resolve_back_slots(None, object(), level=8, cap=10,
+                               level_trusted=False)
+    assert r['unknown'] is False and r['n'] == 6
+    assert cbl.back_layout_unknown_streak() == 0
+
+
+def test_t7_read_side_single_frame_unknown_skips_back(_layout_fresh,
+                                                      monkeypatch):
+    """T-7 读面·单帧未知:read_deployed_chars 只读前排(identify_slots 仅
+    front 一次调用);冻结帧 → 读类退 6 档基线继续读(back 按基线 6 槽)。"""
+    from sr_od.application.currency_war.obs import cw_back_layout as cbl
+    from sr_od.application.currency_war.obs import cw_identity_obs as cio
+    calls: list[tuple[str, int]] = []
+
+    def _fake_identify(screen, templates, slots, row, **kw):
+        calls.append((row, len(slots)))
+        return []
+    monkeypatch.setattr(cio, 'identify_slots', _fake_identify)
+    monkeypatch.setattr(cio, '_ctx_slots',
+                        lambda ctx, prefix, count:
+                        [(i, object()) for i in range(1, count + 1)])
+    monkeypatch.setattr(cio, 'check_system_unit_layout', lambda *a, **k: None)
+    monkeypatch.setattr(cbl, 'resolve_back_slots',
+                        lambda ctx, scr, level=None, cap=None,
+                        level_trusted=None: {
+                            'unknown': True, 'frozen': False,
+                            'n_raw': None, 'prefix': '', 'n': None,
+                            'cv_n': None, 'cv_readings': None,
+                            'cap': None, 'level': None, 'diff': None})
+    ctx = object()
+    cio.read_deployed_chars(ctx, object(), object())
+    assert calls == [('front', 4)], f'单帧未知应只读前排,实得 {calls}'
+    # 冻结帧:读类退 6 档基线
+    calls.clear()
+
+    def _frozen(ctx, scr, level=None, cap=None, level_trusted=None):
+        return {'unknown': True, 'frozen': True, 'n_raw': None,
+                'prefix': '', 'n': None, 'cv_n': None,
+                'cv_readings': None, 'cap': None, 'level': None,
+                'diff': None}
+    monkeypatch.setattr(cbl, 'resolve_back_slots', _frozen)
+    cio.read_deployed_chars(ctx, object(), object())
+    assert [c for c in calls if c[0] == 'back'] == [( 'back', 6 )]
+
+
+def test_t7_write_side_back_row_centers_unknown_empty(_layout_fresh,
+                                                      monkeypatch):
+    """T-7 写面·后排部署跳过:布局未知态(select_back_layout 返 (None,''))
+    → _back_row_centers 返 [](后排部署无坐标可拖);可信位随调用透传。"""
+    from sr_od.application.currency_war.obs import cw_back_layout as cbl
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    calls: list[tuple[object, ...]] = []
+
+    def _fake_sel(ctx, scr, level=None, cap=None, level_trusted=None):
+        calls.append((level, level_trusted))
+        return None, ''
+    monkeypatch.setattr(cbl, 'select_back_layout', _fake_sel)
+    op = type('_Op', (db.CwOpDeploy,), {
+        '__init__': lambda self: None,
+        'last_screenshot': property(lambda self: object()),
+    })()
+    op.ctx = SimpleNamespace()   # 无 session → _level_trusted = None(未声明)
+    assert op._back_row_centers() == []
+    assert calls == [(None, None)]
+
+
+def test_t7_write_side_reconcile_frozen_on_unknown(_layout_fresh,
+                                                   monkeypatch):
+    """T-7 写面·tracked 后排写入停:未知史在案(streak≥1)→
+    _reconcile_tracking 整表对账跳过(screenshot 不被调 = 读链未进;
+    防整表采新把 back 缺读写空 tracked);计数清零后恢复放行。"""
+    from sr_od.application.currency_war.obs import cw_back_layout as cbl
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    op = type('_Op', (db.CwOpDeploy,), {
+        '__init__': lambda self: None,
+        'screenshot': lambda self: (_ for _ in ()).throw(
+            AssertionError('冻结帧不得进入读链')),
+    })()
+    op.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=SimpleNamespace()))
+    monkeypatch.setattr(cbl, '_unknown_streak', 1)
+    op._reconcile_tracking(object())   # 不抛 = 门生效(screenshot 桩会炸)
+    monkeypatch.setattr(cbl, '_unknown_streak', 0)
+    with pytest.raises(AssertionError):
+        op._reconcile_tracking(object())   # 已知帧:门放行,进入读链
+
+
+def test_t8_level_single_source_readable_gate():
+    """T-8(15 号稿 §6):合一后单一源 ``cw_identity_obs._session_level``——
+    last_state.level_readable=False 时 state.level **不参与取大**
+    (锁合一后输出语义;夹具=state 毒化值 8 vs 单调链 6)。"""
+    from sr_od.application.currency_war.obs.cw_identity_obs import (
+        _level_trusted,
+        _session_level,
+    )
+    st = SimpleNamespace(level=8, level_readable=False)
+    sess = SimpleNamespace(last_level_obs=6, last_state=st)
+    ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
+    assert _session_level(ctx) == 6
+    assert _level_trusted(ctx) is False
+    st.level_readable = True
+    assert _session_level(ctx) == 8
+    assert _level_trusted(ctx) is True

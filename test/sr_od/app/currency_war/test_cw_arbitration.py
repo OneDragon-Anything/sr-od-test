@@ -211,3 +211,35 @@ def test_t6_defect_kinds_do_not_mix_streams():
               'reward_sphere_phantom',
               'back_layout_divergence', 'back_layout_unknown'}
     assert len(kinds) == len(set(kinds))
+
+
+# ==================== 批 C 检查点 1:vacancy 消费仲裁值 + divergent/stale 位 ====================
+
+def test_c1_vacancy_from_reads_truth_table():
+    """§4.1 vacancy 判据(15 号稿批 C,A5 根:同一量两条口径并存无对账):
+
+    - 双源齐:vacancy = max(0, cap − **仲裁后** deployed)(取低值;旧码用
+      未仲裁 dep_n → 发射门口径漂移);
+    - 真分歧(|Δ|>1)→ divergent=True(取低值生效,§4.2 发射门延迟载体);
+    - paddle 缺席 → CV 单源值(计数类声明的退化方向,非 stale;消费侧
+      板满门另有重读+分键契约);
+    - cap 缺(或全缺席)→ 缓存兜底 + stale=True(B5 陈旧值过门显式申报,
+      不再静默沿用)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+        vacancy_from_reads,
+    )
+    assert vacancy_from_reads(4, 3, 3, 1) == (1, False, False)   # 一致
+    assert vacancy_from_reads(4, 3, 5, 1) == (1, True, False)    # 真分歧取低
+    assert vacancy_from_reads(4, None, 3, 1) == (1, False, False)  # paddle 缺→CV 单源(声明退化)
+    assert vacancy_from_reads(None, 3, 3, 2) == (2, False, True)  # cap 缺→缓存+stale
+    assert vacancy_from_reads(None, None, 3, 2) == (2, False, True)
+
+
+def test_c1_prep_observation_carries_divergent_stale():
+    """准备面载体锁:PrepObservation 新增 divergent/stale 位(§4.2 传播链
+    首环;缺省 False——缺省关纪律,不改变既有消费面缺省行为)。"""
+    from sr_od.application.currency_war.kernel.cw_prep_actions import (
+        PrepObservation,
+    )
+    obs = PrepObservation()
+    assert obs.deploy_divergent is False and obs.deploy_stale is False

@@ -263,3 +263,76 @@ def test_decide_megastar_enhance_intent_deleted() -> None:
     assert pick.idx == 0
     assert pick.reason == 'select_megastar 命中 星期日'
     assert pick.enhance_char_id is None
+
+
+# —— supply 失活治本:on_round_end node_type 空值回落(15 号稿批 C 残余件③)——
+# 病灶:空 node_type 轮被 BloodAlarmTracker 战斗节点门整轮丢弃 → 掉血数据缺失、
+# 生死窗判读缺页(supply 失活升级线 第6/7次复现)。修法 = 台账(局内轮行序
+# 单一源,档案装配的局内对应物)按 (plane, round_num) 查同轮 node_type。
+
+def _feed_round_end(strat, sess, *, round_num: int, node_type: str,
+                    hp_after: int):
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+    sess.v3_prev_hp = 85   # 上轮结算 hp(真值链口径)
+    obs = RoundOutcome(round_num=round_num, plane=1, node_type=node_type,
+                       comp_tag='x', hp_after=hp_after, hp_confidence=1.0)
+    strat.on_round_end(GameState(), sess, _cfg(), obs)
+
+
+def test_on_round_end_node_type_fallback_recovers_loss_window(monkeypatch) -> None:
+    """supply 轮恢复计数锁:node_type 空值 + 台账该位次 = 'battle' →
+    回落「普通战斗」喂 BloodAlarmTracker → 该轮掉血 **入窗**(recent_losses
+    计数恢复,生死窗不再缺页)+ 分键留证(auto_resolved=True)。"""
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit as exit_mod
+    from sr_od.application.currency_war.kernel.cw_state import get_node_ledger
+
+    defects: list[dict] = []
+    monkeypatch.setattr(exit_mod, '_record_defect',
+                        lambda **kw: defects.append(kw))
+    strat = MandateV1Strategy()
+    sess = strat.create_session(_cfg())
+    ledger = get_node_ledger(sess)
+    ledger.seq_by_plane = {1: ['battle', 'supply', 'battle', 'reward', 'boss',
+                              'encounter', 'battle', 'reward', 'boss']}
+    _feed_round_end(strat, sess, round_num=3, node_type='', hp_after=70)
+    tracker = sess.v3_alarm
+    losses = [loss for _t, loss in tracker.recent_losses]
+    assert losses == [15], f'掉血应恢复入窗,实得 {tracker.recent_losses}'
+    assert tracker.consec_battle_fails == 1   # ≥10 = 结构性败局计数亦恢复
+    assert len(defects) == 1
+    assert defects[0]['kind'] == exit_mod.DEFECT_KIND_BLOOD_ALARM_NODE_FALLBACK
+    assert defects[0]['auto_resolved'] is True
+    assert '普通战斗' in defects[0]['observed']
+
+
+def test_on_round_end_node_type_fallback_miss_keeps_empty(monkeypatch) -> None:
+    """台账未命中(表缺)→ 照旧空串(不猜)+ 分键留证;tracker 不入窗
+    (零行为变更面),判读侧按分键可见缺口。"""
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit as exit_mod
+
+    defects: list[dict] = []
+    monkeypatch.setattr(exit_mod, '_record_defect',
+                        lambda **kw: defects.append(kw))
+    strat = MandateV1Strategy()
+    sess = strat.create_session(_cfg())   # 无台账
+    _feed_round_end(strat, sess, round_num=3, node_type='', hp_after=70)
+    assert list(sess.v3_alarm.recent_losses) == []   # 未命中=照旧不入窗
+    assert len(defects) == 1
+    assert defects[0]['auto_resolved'] is False
+    assert '空串' in defects[0]['observed']
+
+
+def test_on_round_end_supply_token_stays_non_battle(monkeypatch) -> None:
+    """词汇表语义保持:台账 'supply' 位次 → 回落「补给」(生产词表),但
+    BloodAlarmTracker 战斗节点门语义不变——非战斗节点不入窗不清臂。"""
+    from sr_od.application.currency_war.kernel.cw_state import get_node_ledger
+
+    strat = MandateV1Strategy()
+    sess = strat.create_session(_cfg())
+    ledger = get_node_ledger(sess)
+    ledger.seq_by_plane = {1: ['battle', 'supply', 'battle', 'reward', 'boss',
+                              'encounter', 'battle', 'reward', 'boss']}
+    _feed_round_end(strat, sess, round_num=2, node_type='', hp_after=85)
+    tracker = sess.v3_alarm
+    assert list(tracker.recent_losses) == []   # 补给轮不入窗(语义不变)
+    assert tracker.consec_battle_fails == 0

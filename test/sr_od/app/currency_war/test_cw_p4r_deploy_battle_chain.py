@@ -190,7 +190,8 @@ def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
     monkeypatch.setattr(db, 'read_deployed_count', lambda ctx, scr: paddle_x)
     from sr_od.application.currency_war.obs import cw_back_layout
     monkeypatch.setattr(cw_back_layout, 'select_back_layout',
-                        lambda ctx, scr, level=None, cap=None: (6, ''))
+                        lambda ctx, scr, level=None, cap=None,
+                        level_trusted=None: (6, ''))
     monkeypatch.setattr(db.time, 'sleep', lambda s: None)
     drags = {'n': 0}
     monkeypatch.setattr(db.DragCwChar, 'drag_char',

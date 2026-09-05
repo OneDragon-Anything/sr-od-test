@@ -1044,6 +1044,86 @@ class TestReadinessBattleArm:
         assert sess.cw4_counters.get('readiness_overlay_hold', 0) >= 1
         assert guard['n'] == 1, '浮层帧交由接管面,守卫链照常可达'
 
+    def _stale_probe_loop(self, prep_visible: bool):
+        """发射面新鲜屏态复验的桩环:prep_visible = 复验时备战屏锚是否
+        命中(切屏后 = False)。"""
+        base = _mk_loop()
+
+        class _Hit:
+            is_success = True
+
+        class _Miss:
+            is_success = False
+
+        class _Probe(type(base)):
+            def __init__(self):
+                super().__init__()
+                self.shots = 0
+
+            def screenshot(self):
+                self.shots += 1
+                return object()
+
+            def round_by_find_area(self, screen, s1, s2, **kw):
+                ok = (prep_visible and s1 == '货币战争-备战'
+                      and s2 in ('备战标识-购买经验', '按钮-出战'))
+                return _Hit() if ok else _Miss()
+
+        return _Probe()
+
+    def test_stale_screen_aborts_launch_zero_drag(self, monkeypatch):
+        """锁①(第十六局雷):执行时刻非备战屏(切屏后锚失)→ 放弃发射,
+        readiness_stale_screen 分键 + **零 RunDeploy/StartBattle**(9 拖
+        空挥不可再发)。"""
+        from types import SimpleNamespace as _NS
+
+        import sr_od.application.currency_war.prep_actions as _pa
+        from sr_od.application.currency_war.operations import cw_loop
+        calls: list[str] = []
+
+        class _FakeExecutor:
+            def __init__(self, op, ctx):
+                pass
+
+            def execute(self, action):
+                calls.append(type(action).__name__)
+                return True, 'ok'
+
+        monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
+        op = self._stale_probe_loop(prep_visible=False)
+        sess = _NS(cw4_counters={}, target_comp=None, last_state=None)
+        op.ctx = _NS(cw_match=_NS(session=sess))
+        ok, detail = cw_loop.readiness_battle_launch(op, op.ctx)
+        assert ok is False and detail == 'readiness_stale_screen'
+        assert calls == [], '切屏后发射请求必须零拖拽(placed=0 根修)'
+        assert sess.cw4_counters.get('readiness_stale_screen', 0) == 1
+
+    def test_prep_screen_present_launches_normally(self, monkeypatch):
+        """锁②(对照):复验备战屏在 ⇒ 照常发射(RunDeploy+StartBattle),
+        stale 分键不计数(锚命中形态零行为差)。"""
+        from types import SimpleNamespace as _NS
+
+        import sr_od.application.currency_war.prep_actions as _pa
+        from sr_od.application.currency_war.operations import cw_loop
+        calls: list[str] = []
+
+        class _FakeExecutor:
+            def __init__(self, op, ctx):
+                pass
+
+            def execute(self, action):
+                calls.append(type(action).__name__)
+                return True, 'ok'
+
+        monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
+        op = self._stale_probe_loop(prep_visible=True)
+        sess = _NS(cw4_counters={}, target_comp=None, last_state=None)
+        op.ctx = _NS(cw_match=_NS(session=sess))
+        ok, detail = cw_loop.readiness_battle_launch(op, op.ctx)
+        assert ok is True and detail == 'ok'
+        assert calls == ['RunDeploy', 'StartBattle']
+        assert 'readiness_stale_screen' not in sess.cw4_counters
+
 
 # ===== 检查点 3:G1 准入锁(§9.2 三元+victim 收口,发射面显影)=====
 
