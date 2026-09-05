@@ -244,43 +244,43 @@ def _ju23_session() -> StrategySession:
 def test_ju23_supply_identity_gstar_and_s_reserve_boundary():
     """息线供给恒等(局23 帧):g*==50 且 s_reserve 供给非退化。
 
-    s_reserve = g* − Σ活期退金投影,bench 空 ⇒ s_reserve == g* == 50。
-    不直读内部量,用 M6 压库拒收边界对拍钉死:4 费件 53 金买后 49 < 50
-    拒(m6_s_reserve_reject 分键)、54 金买后 50 ≥ 50 买——两帧合取即
-    s_reserve == 50(下界 50 由拒帧、上界 50 由买帧),供给恒等式不因
-    实现细节漂移。
+    重推导(14号稿 §3.4/N2 收口:线内件压库域排除后,M6 端到端对拍
+    载体「线成员件独辖」退役——线内副本买入归义务全链,§7.3 owned
+    观测面收口):s_reserve 边界改判据层直锁——stockpile_buy 金约束
+    (gold−cost ≥ s_reserve):53 金/4 费 → 49<50 拒('s_reserve');
+    54 金 → 50≥50 过。两断言合取即 s_reserve==50(下界由拒、上界由过),
+    供给恒等式不因实现细节漂移。
     """
-    cfg = SimpleNamespace(ev_arm='full')
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
+        stockpile_buy,
+    )
     assert saturation_line(cap_resolved_of_session(StrategySession())) == 50
-    stock = [_sc('花火')]          # 线成员件:dominance 零重叠位跳过,M6 独辖
-    sess_rej = _ju23_session()
-    act = decide_shop_action(_ju23_frame(53, stock), sess_rej, cfg)
-    assert sess_rej.cw4_counters.get('m6_s_reserve_reject') == 1
-    assert not (isinstance(act, BuyCard) and act.reason == 'm6_stockpile')
-    sess_ok = _ju23_session()
-    act = decide_shop_action(_ju23_frame(54, stock), sess_ok, cfg)
-    assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile'
-    assert 54 - (act.card.cost or 3) >= 50
+    ok_r, key_r = stockpile_buy(53, 50, 9, 4, 1, frozenset({4}))
+    assert ok_r is False and key_r == 's_reserve'
+    ok_a, _ = stockpile_buy(54, 50, 9, 4, 1, frozenset({4}))
+    assert ok_a is True
 
 
 def test_ju23_stock_match_buys_and_empty_shop_close_discernible():
-    """不死守可辨收敛(局23 帧):档匹配燃料件压库买;店空显式收店。
+    """不死守可辨收敛(局23 帧):店空显式收店 + 压库买判据直锁。
 
     店空帧必须以 CloseShop 终结(全函数契约,禁静默死守),且带可辨
     计数键:shop_visit_idle_gold(带金零动作帧)+ shop_r1_no_chaseable_
     member(息账无追件、R1 关闭)——判读者从计数即知「为何不动」,
-    而非空转或 None。
+    而非空转或 None。压库买资格本体(档匹配 + 1★ 全退 + 金约束)判据层
+    直锁(线内件排除后的载体迁移,见上锁重推导注)。
     """
-    cfg = SimpleNamespace(ev_arm='full')
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
+        stockpile_buy,
+    )
     sess = _ju23_session()
-    act = decide_shop_action(_ju23_frame(
-        100, [_sc('花火')]), sess, cfg)
-    assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile'
-    sess = _ju23_session()
-    act = decide_shop_action(_ju23_frame(100, []), sess, cfg)
+    act = decide_shop_action(_ju23_frame(100, []), sess,
+                             SimpleNamespace(ev_arm='full'))
     assert isinstance(act, CloseShop)
     assert sess.cw4_counters.get('shop_visit_idle_gold') == 1
     assert sess.cw4_counters.get('shop_r1_no_chaseable_member') == 1
+    ok, _ = stockpile_buy(100, 0, 9, 2, 1, frozenset({2}))
+    assert ok is True
 
 
 def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
@@ -301,31 +301,17 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
 def test_ju23_liquid_refund_shifts_s_reserve_down():
     """活期退金投影进 s_reserve(P56):bench 有 2 费活期件 ⇒ 线降至 48。
 
-    51 金买 4 费件后 47 < 48 拒、52 金买后 48 ≥ 48 买——边界随活期
+    重推导(线内件压库排除,载体迁移同上锁):边界改判据层直锁——
+    51 金买 4 费件后 47 < 48 拒、52 金买后 48 ≥ 48 过——边界随活期
     退金逐金位移,钉死 s_reserve 是「可变现息线下界」而非静态 g*。
     """
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    fuel_name = next(n for n, ch in CHARACTERS.items()
-                     if ch.cost == 2 and n not in line_members(_JU23_COMP))
-    st = _ju23_frame(51)
-    st.bench = [BenchChar(slot=0, char_id=fuel_name,
-                          faction='仙舟罗浮', star=1)] \
-        + [None] * (BENCH_CAPACITY - 1)
-    st.shop = [_sc('花火')]
-    cfg = SimpleNamespace(ev_arm='full')
-    sess = _ju23_session()
-    act = decide_shop_action(st, sess, cfg)
-    assert sess.cw4_counters.get('m6_s_reserve_reject') == 1
-    assert not (isinstance(act, BuyCard) and act.reason == 'm6_stockpile')
-    st = _ju23_frame(52)
-    st.bench = [BenchChar(slot=0, char_id=fuel_name,
-                          faction='仙舟罗浮', star=1)] \
-        + [None] * (BENCH_CAPACITY - 1)
-    st.shop = [_sc('花火')]
-    sess = _ju23_session()
-    act = decide_shop_action(st, sess, cfg)
-    assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile'
-    assert 52 - (act.card.cost or 3) >= 48
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
+        stockpile_buy,
+    )
+    ok_r, key_r = stockpile_buy(51, 48, 9, 4, 1, frozenset({4}))
+    assert ok_r is False and key_r == 's_reserve'
+    ok_a, _ = stockpile_buy(52, 48, 9, 4, 1, frozenset({4}))
+    assert ok_a is True
 
 
 def test_ju23_full_surface_gold_never_breaks_interest_line():

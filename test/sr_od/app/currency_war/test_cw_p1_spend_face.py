@@ -229,16 +229,31 @@ class TestM2bSeatGateAndStarFilter:
 
 class TestArm0LevelLag:
 
-    def test_need_name_star_semantics(self):
-        """Y3:need 排除谓词按 (名,星)——同名异星 bench 件计入 need,
-        同名同星 deployed 件排除。"""
-        k = ('甲', '乙', '甲2星名')
+    def test_need_name_dedup_semantics(self):
+        """排除口径 = 纯 name(与 check_seats/cw_deploy_logic
+        部署去重真实语义对齐):同名异星 bench 件**不计**(部署按 name
+        去重,同名异星永不可上阵——旧 (名,星) 口径会虚计 need);
+        bench 同名 ×2 去重计 1(双计消除)。"""
+        k = ('甲', '乙')
         deployed = [_bc('甲', star=1, slot=1)]
-        bench = [_bc('甲', star=2, slot=1),   # 同名异星:计入 need
-                 _bc('甲', star=1, slot=2),   # 同名同星:排除
+        bench = [_bc('甲', star=2, slot=1),   # 同名(bench):去重不计
+                 _bc('乙', star=1, slot=2),   # 计 1
+                 _bc('乙', star=1, slot=3),   # 同名 ×2:去重不计
                  _bc('丙', slot=3)]           # 非 k:不计
         need = arm0_need(deployed, bench, k)
-        assert need == 1 + 1, 'deployed 1 + bench(甲2★) 1'
+        assert need == 1 + 1, 'deployed 1 + bench 独名(乙) 1(双计消除)'
+        assert arm0_need([], [_bc('乙', slot=1), _bc('乙', slot=2)],
+                         ('乙',)) == 1
+
+    def test_need_no_false_trigger_for_same_name_diff_star(self):
+        """虚触发形态锁:场上已有甲,bench 仅同名异星甲′ ⇒ need 不含
+        (不可上阵的件不买等级)。"""
+        k = ('甲',)
+        deployed = [_bc('甲', star=1, slot=1)]
+        bench = [_bc('甲', star=2, slot=1)]
+        assert arm0_need(deployed, bench, k) == 1
+        trig, _ = arm0_level_lag(1, True, deployed, bench, k, 5)
+        assert trig is False, '同名异星形态不得虚触发升级'
 
     def test_level_lag_triggers(self):
         k = ('甲', '乙', '丙', '丁')
@@ -347,7 +362,7 @@ class TestP1BloodFloorPredicate:
         assert p1_blood_floor(st) is False
 
     def test_floor_plane2_excluded(self):
-        """落地审应-A:P2 帧 hp≤15 不得开 P1 解锁包(授权族 = P1 血线
+        """落地审清单应-A(20260905_cp1_landing_review/问题清单.md):P2 帧 hp≤15 不得开 P1 解锁包(授权族 = P1 血线
         硬地板;P2 深血线有在产 p2_crisis_band 更宽域介入)——判据 False
         ∧ M3 停付照常(P2 危机带 41 辖),无授权域外搭车。"""
         from sr_od.application.currency_war.kernel.cw_registry import (
@@ -483,7 +498,7 @@ def shop_ledger_terms(buy_members, bench, deployed, level):
     return shop._r1_ledger_terms(buy_members, bench, deployed, level)
 
 
-# ===== 落地审阻-1/应-2:商店栈 M3 三臂并联(arm1/arm0/pop_slot)=====
+# ===== 升级授权三臂并联(落地审清单阻-1/应-2,20260905_cp1_landing_review/问题清单.md)=====
 
 
 class TestShopM3TripleArm:
@@ -533,7 +548,7 @@ class TestShopM3TripleArm:
         assert isinstance(act, LevelUpShop), \
             'arm0 触发形态商店帧须发升级授权(应-2 双栈断层修复)'
         assert act.auth_basis.startswith('m3_batch:arm0'), \
-            'auth_basis 三臂分键(可归因,落地审三低项)'
+            'auth_basis 三臂分键(可归因,落地审清单三低项)'
 
     def test_mandate_pop_slot_wired(self, monkeypatch):
         """应-B:mandate 备战栈 M3 接入 pop_slot(满编+富金+bench 有线内
@@ -576,7 +591,8 @@ class TestShopM3TripleArm:
         assert hasattr(sess, 'cw4_pop_slot_why')
 
 
-# ===== 落地审应-1:拒因串与同帧实际动作一致 =====
+# ===== 拒因一致性(落地审清单应-1,20260905_cp1_landing_review/问题清单.md)=====
+# (下同:本节「落地审」均指该清单)
 
 
 class TestShopRejectsArm1Semantics:
@@ -608,6 +624,21 @@ class TestShopRejectsArm1Semantics:
         out = shop_rejects(st, comp=_comp())
         assert out.get(m) == 'owned'
 
+    def test_m6_stockpile_excludes_line_members(self):
+        """落地审清单存疑收口(N2/§3.7):cnt1=1∧cnt2=1 形态帧,M6 压库
+        不得买线内 1★ 副本(绕过臂① cnt2==0 守卫制造死库存)⇒
+        m6_line_member_excluded 分键;压库域收窄为非线内件。"""
+        m = _members()[0]
+        bench = [_bc(m, slot=1), _bc(m, slot=2, star=2)]
+        bench += [_bc(n, star=2, slot=i + 3) for i, n in
+                  enumerate([x for x in _members() if x != m])]
+        st = _st(gold=60, level=4, shop_cards=[_card(m, 1)], bench=bench)
+        sess = _shop_session(_comp())
+        act = _decide(st, sess)
+        assert not isinstance(act, BuyCard), \
+            'M6 不得买线内副本(死库存防守权归臂①)'
+        assert sess.cw4_counters.get('m6_line_member_excluded', 0) >= 1
+
 
 def shop_rejects(st, comp):
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
@@ -615,6 +646,286 @@ def shop_rejects(st, comp):
         line_members,
     )
     return shop.shop_unbought_reasons(st, comp, line_members(comp), [])
+
+
+# ===== 检查点 3:达标即出战臂(W2 锁组,§9.6/C1)=====
+
+
+def _mk_loop():
+    from types import SimpleNamespace as _NS
+
+    from sr_od.application.currency_war.operations import cw_loop
+
+    class _Loop(cw_loop.CwLoop):
+        def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
+            self.ctx = _NS(cw_match=_NS(session=None))
+            self._cw_locked_sync_done = True   # 恢复局闩已置位形态
+            self._cw_locked_sync_fails = 0
+
+    return _Loop()
+
+
+class TestReadinessBattleArm:
+
+    def test_launch_fires_every_readiness_frame(self, monkeypatch):
+        """锁②(C1 闩分域):达标臂发射**不读不置** _cw_locked_sync_done
+        闩——同形态连续两次达标均完整发射(RunDeploy+StartBattle),
+        不被「每锁定局恰一次」恢复局闩吞。"""
+        import sr_od.application.currency_war.prep_actions as _pa
+        from sr_od.application.currency_war.operations import cw_loop
+        calls: list[str] = []
+
+        class _FakeExecutor:
+            def __init__(self, op, ctx):
+                pass
+
+            def execute(self, action):
+                calls.append(type(action).__name__)
+                return True, 'ok'
+
+        monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
+        op = _mk_loop()
+        cw_loop.readiness_battle_launch(op, op.ctx)
+        cw_loop.readiness_battle_launch(op, op.ctx)
+        assert calls == ['RunDeploy', 'StartBattle'] * 2, calls
+        assert op._cw_locked_sync_done is True   # 闩值不被达标臂触碰
+
+    def test_resume_face_still_latched(self, monkeypatch):
+        """锁②对照面:恢复局面面(sync_once=True)闩语义不回退——闩置位
+        后只 StartBattle(C1 两调用面共用发射核、分域不同)。"""
+        import sr_od.application.currency_war.prep_actions as _pa
+        from sr_od.application.currency_war.operations import cw_loop
+        calls: list[str] = []
+
+        class _FakeExecutor:
+            def __init__(self, op, ctx):
+                pass
+
+            def execute(self, action):
+                calls.append(type(action).__name__)
+                return True, 'ok'
+
+        monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
+        op = _mk_loop()
+        cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+        calls.clear()
+        cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+        assert [c for c in calls if c != 'init'] == ['StartBattle']
+
+    def test_readiness_position_before_guard_chain(self, monkeypatch):
+        """锁①③(行为面,落地审轮二:替代 getsource 半锁):达标帧
+        (fp≥1.00)→ 达标臂发射(哨兵)且守卫计数零触达;非达标帧 →
+        守卫链照常可达(零重排,§7.3 锚③;守卫规格零改动)。"""
+        import pytest as _pt
+
+        from sr_od.application.currency_war.operations import cw_loop
+
+        class _ArmFired(Exception):
+            pass
+        state_calls = {'launch': 0, 'guard': 0}
+
+        def _fake_launch(op, ctx):
+            state_calls['launch'] += 1
+            raise _ArmFired()
+
+        def _fake_tick(prev, count, sig):
+            state_calls['guard'] += 1
+            return (prev, count)
+
+        monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 1.0)
+        monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _fake_launch)
+        monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
+        import sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing as _bb
+        # BOSS 简报 OCR 判别(分支 0p 无条件调 OCR)桩空 → False,免真 OCR
+        monkeypatch.setattr(_bb, 'read_ocr_texts', lambda ctx, screen: [])
+        from types import SimpleNamespace as _NS
+
+        class _Hit:
+            is_success = True
+
+        class _Miss:
+            is_success = False
+
+        class _Loop(cw_loop.CwLoop):
+            _iter = 2
+            _is_new_match = False
+            _cw_locked_resume = False
+            _cw_back_btn_count = 0
+            _battle_ts = None
+
+            def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
+                pass
+
+            @property
+            def last_screenshot(self):
+                return self._screen
+
+            @last_screenshot.setter
+            def last_screenshot(self, v):
+                pass
+
+            def _stall_watch_tick(self, screen):
+                pass
+
+            def round_by_find_area(self, screen, s1, s2, **kw):
+                ok = (s1 == '货币战争-备战'
+                      and s2 in ('备战标识-购买经验', '按钮-出战'))
+                return _Hit() if ok else _Miss()
+
+            def round_by_ocr_and_click(self, screen, target_cn=None, *a, **kw):
+                # 「返回投资策略选择」命中 = 非达标帧在守卫计数后干净退出
+                #(round_wait),不落入后续真画面操作
+                if target_cn == '返回投资策略选择':
+                    return _Hit()
+                return _Miss()
+
+            def round_by_ocr(self, *a, **kw):
+                return _Miss()
+
+            def round_by_find(self, *a, **kw):
+                return _Miss()
+
+            def round_by_find_and_click_area(self, *a, **kw):
+                return _Miss()
+
+            def round_wait(self, wait=1.0, status=''):
+                return ('wait', status)
+
+        comp = _comp()
+        sess = _NS(target_comp=comp,
+                   last_state=_st(gold=30, level=3),
+                   last_prep_action_sig=('m2',), cw4_counters={})
+        op = _Loop()
+        op._iter = 2
+        op._is_new_match = False
+        op._cw_locked_resume = False
+        op._cw_back_btn_count = 0
+        op._battle_ts = None
+        op.last_screenshot = object()  # type: ignore[attr-defined]
+        op._screen = object()
+        op.ctx = _NS(cw_match=_NS(session=sess))
+        with _pt.raises(_ArmFired):
+            op.loop()
+        assert state_calls['launch'] == 1
+        assert state_calls['guard'] == 0, '达标帧守卫计数零触达(锚③)'
+        # 非达标帧:守卫链照常可达(零重排)
+        monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 0.5)
+        state_calls.update(launch=0, guard=0)
+        op2 = _Loop()
+        op2._iter = 2
+        op2._is_new_match = False
+        op2._cw_locked_resume = False
+        op2._cw_back_btn_count = 0
+        op2._battle_ts = None
+        op2.last_screenshot = object()  # type: ignore[attr-defined]
+        op2._screen = object()
+        op2.ctx = _NS(cw_match=_NS(session=_NS(
+            target_comp=comp,
+            last_state=_st(gold=30, level=3),
+            last_prep_action_sig=('m2',), cw4_counters={})))
+        op2.loop()
+        assert state_calls['guard'] == 1, '非达标帧守卫链照常可达'
+        assert state_calls['launch'] == 0
+
+
+# ===== 检查点 3:G1 准入锁(§9.2 三元+victim 收口,发射面显影)=====
+
+
+class TestG1ReadinessAdmission:
+
+    def _admission(self, st, comp):
+        from sr_od.application.currency_war.operations.cw_loop import (
+            readiness_admission_report,
+        )
+        return readiness_admission_report(st, comp)
+
+    def test_admission_triple_shapes(self):
+        """准入三元:板满(deployed≥cap)/bench core 待上/victim 缺失
+        三形态可分别构造。"""
+        comp = _comp()
+        k = _members()
+        # 板满 + bench 有 core + 无 victim(deployed 全为线内件)
+        st = _st(gold=30, level=3,
+                 deployed=[_bc(n, slot=i + 1) for i, n in enumerate(k[:3])],
+                 bench=[_bc('填充件X', slot=1)])
+        rep = self._admission(st, comp)
+        assert rep['board_full'] is True
+        assert rep['bench_core_waiting'] is False
+        assert rep['victim_missing'] is True
+        # victim 存在形态:板上含 off-line ∧ fenced 的 1★ 件(艾丝妲族)
+        all_fac = set(comp.all_factions)
+        victim = next(n for n, ch in _all_chars().items()
+                      if n not in cw_intention_hoard(comp)
+                      and not (set(ch.factions) | set(ch.flows)) & all_fac)
+        st2 = _st(gold=30, level=3,
+                  deployed=[_bc(n, slot=i + 1) for i, n in
+                            enumerate(tuple(k[:2]) + (victim,))],
+                  bench=[])
+        rep2 = self._admission(st2, comp)
+        assert rep2['victim_missing'] is False
+
+    def test_g1_launch_counts_victim_missing_and_still_fires(
+            self, monkeypatch):
+        """G1 行为锁:板满∧bench core∧victim 缺失形态 → deploy_swap_no_
+        victim 分键显影 + 出战照发(准入只显影不拦截)。"""
+        from types import SimpleNamespace as _NS
+
+        import sr_od.application.currency_war.prep_actions as _pa
+        from sr_od.application.currency_war.operations import cw_loop
+        calls: list[str] = []
+
+        class _FakeExecutor:
+            def __init__(self, op, ctx):
+                pass
+
+            def execute(self, action):
+                calls.append(type(action).__name__)
+                return True, 'ok'
+
+        monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
+        comp = _comp()
+        k = _members()
+        deployed = [_bc(n, slot=i + 1) for i, n in enumerate(k[:3])]
+        st = _st(gold=30, level=3, shop_cards=[], deployed=deployed,
+                 bench=[_bc(k[3], slot=1)])   # bench core 待上(三元②)
+        sess = _NS(cw4_counters={}, target_comp=comp, last_state=st)
+        op = _mk_loop()
+        op.ctx = _NS(cw_match=_NS(session=sess))
+        cw_loop.readiness_battle_launch(op, op.ctx)
+        assert calls == ['RunDeploy', 'StartBattle'], calls
+        assert sess.cw4_counters.get('deploy_swap_no_victim', 0) >= 1
+
+    def test_g1_victim_present_no_counter(self, monkeypatch):
+        """对照:存在合格 victim(板上 off-line∧fenced 1★ 全退件)⇒
+        deploy_swap_no_victim 不计数(分键只钉缺失形态)。"""
+        from types import SimpleNamespace as _NS
+
+        import sr_od.application.currency_war.prep_actions as _pa
+        from sr_od.application.currency_war.operations import cw_loop
+        comp = _comp()
+        all_fac = set(comp.all_factions)
+        victim = next(n for n, ch in _all_chars().items()
+                      if n not in cw_intention_hoard(comp)
+                      and not (set(ch.factions) | set(ch.flows)) & all_fac)
+        k = _members()
+        st = _st(gold=30, level=3, shop_cards=[],
+                 deployed=[_bc(k[0], slot=1), _bc(k[1], slot=2),
+                           _bc(victim, slot=3)],
+                 bench=[_bc('填充件X', slot=1)])
+        sess = _NS(cw4_counters={}, target_comp=comp, last_state=st)
+        op = _mk_loop()
+        op.ctx = _NS(cw_match=_NS(session=sess))
+
+        class _FakeExecutor:
+            def __init__(self, op, ctx):
+                pass
+
+            def execute(self, action):
+                return True, 'ok'
+
+        monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
+        cw_loop.readiness_battle_launch(op, op.ctx)
+        assert 'deploy_swap_no_victim' not in sess.cw4_counters
 
 
 # ===== 辅助 =====

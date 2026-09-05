@@ -506,7 +506,9 @@ def test_rounds_terminal_vs_decision_frame_divergence(replay: _match_archive_Pat
                            'equips': ['折叠小刀']}})
     _write_jsonl(replay, 'decisions.jsonl', rows)
     a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    assert a['schema_version'] == arch.SCHEMA_VERSION == 6
+    # v7 起 schema 版本单一源在 SCHEMA_VERSION,不再钉字面值
+    # (行为观测计数落盘批:v6→v7 加法字段,历史版本语义见源注释链)
+    assert a['schema_version'] == arch.SCHEMA_VERSION
     r9 = next(r for r in a['rounds']
               if (r['plane'], r['round']) == (1, 9))
     # 决策帧列 = ①(actions 最多、ts 并列取晚)= 执行前板面
@@ -1421,3 +1423,122 @@ def test_missing_node_type_zero_spend_still_flagged(tmp_path) -> None:
     _write_jsonl(tmp_path, 'decisions.jsonl', [d])
     abn = _qa(tmp_path, 'run_supply_fix')
     assert len(abn) == 1 and '0买0升' in abn[0]
+
+# ==================== cw4_counters 落盘(行为观测计数批,v7)====================
+
+def _freeze_archive_now(monkeypatch: pytest.MonkeyPatch, iso: str) -> None:
+    """把 match_archive 写端时钟冻结到 fixture 时间窗内(写行 ts 参与归局)。"""
+    import datetime as _dt
+    frozen = _dt.datetime.fromisoformat(iso)
+
+    class _FrozenDT(_dt.datetime):
+        @classmethod
+        def now(cls) -> _dt.datetime:
+            return frozen
+
+    monkeypatch.setattr(arch, 'datetime', _FrozenDT)
+
+
+def test_cw4_counters_snapshot_into_archive(
+        replay: _match_archive_Path,
+        monkeypatch: pytest.MonkeyPatch):
+    """触发计数局 → 局终快照经 cw4_counters.jsonl 归局,档案顶层含键值。
+
+    归局时间窗契约:写行 ts 落在 g_A 的 [start_ts, end_ts] 闭区间内
+    (生产时序 = cw_loop 局终先落计数再写 runs summary)。
+    """
+    _freeze_archive_now(monkeypatch, '2026-08-30T10:31:30')   # g_A 窗内
+    arch.record_cw4_counters_snapshot(replay, {
+        'shop_churn_pair_buy': 3, 'shop_hoard_over_capacity': 1,
+        'm2_retry_exhausted': 0})
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    assert a['cw4_counters'] == {
+        'shop_churn_pair_buy': 3, 'shop_hoard_over_capacity': 1,
+        'm2_retry_exhausted': 0}
+    # 时间窗隔离:无关局(g_C)不受 g_A 计数行污染
+    a_c = arch.build_archive(replay, arch.assign_games(replay)[1])
+    assert a_c['cw4_counters'] is None
+
+
+def test_cw4_counters_zero_count_and_missing_distinct(
+        replay: _match_archive_Path,
+        monkeypatch: pytest.MonkeyPatch):
+    """形态三分锁:None=无计数流(数据缺失)≠ {}=真实零计数;窗外行不归局。"""
+    # g_C:落空快照(零计数局形态)→ 档案字段 = {}(在窗、非 None)
+    _freeze_archive_now(monkeypatch, '2026-08-30T11:09:59')   # g_C 窗内
+    got = arch.record_cw4_counters_snapshot(replay, None)
+    assert got == {}
+    a_c = arch.build_archive(replay, arch.assign_games(replay)[1])
+    assert a_c['cw4_counters'] == {}
+    # g_A:无任何计数行 → None(数据缺失,判读可区分)
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    assert a['cw4_counters'] is None
+    # 完全无计数流文件:不炸,恒 None
+    (replay / arch.COUNTERS_FILE).unlink()
+    a2 = arch.build_archive(replay, arch.assign_games(replay)[1])
+    assert a2['cw4_counters'] is None
+    # 防御性容忍:窗外晚行(掉窗形态)不归 g_C
+    _write_jsonl(replay, arch.COUNTERS_FILE, [
+        {'ts': '2026-08-30T12:00:00', 'counters': {'x': 1}}])
+    a3 = arch.build_archive(replay, arch.assign_games(replay)[1])
+    assert a3['cw4_counters'] is None
+
+
+def test_cw4_counters_from_match_extracts_session(
+        replay: _match_archive_Path,
+        monkeypatch: pytest.MonkeyPatch):
+    """match 载体提取:session.cw4_counters 全量落盘;无 session/无计数
+    → 空快照(default 栈形态,不炸)。"""
+    from types import SimpleNamespace as _NS
+    _freeze_archive_now(monkeypatch, '2026-08-30T10:31:30')
+    m = _NS(session=_NS(cw4_counters={'shop_drought_reset_on_buy': 2}))
+    got = arch.record_cw4_counters_from_match(replay, m)
+    assert got == {'shop_drought_reset_on_buy': 2}
+    # session 无 cw4_counters 属性 → 空快照
+    got2 = arch.record_cw4_counters_from_match(replay, _NS(session=_NS()))
+    assert got2 == {}
+    rows = [json.loads(ln) for ln in
+            (replay / arch.COUNTERS_FILE).open(encoding='utf-8')]
+    assert rows[0]['counters'] == {'shop_drought_reset_on_buy': 2}
+    assert rows[1]['counters'] == {}
+
+
+def test_cw_loop_counters_snapshot_wiring(
+        tmp_path: _match_archive_Path,
+        monkeypatch: pytest.MonkeyPatch):
+    """cw_loop 收口接线锁:局终助手把 ctx.cw_match.session 的计数快照
+    落进 replay 流;无 match → 不写文件;写端失败不抛(best-effort)。"""
+    # noqa: 本文件为机械拼接合并文件,函数内多处局部 import 属既有形态,
+    # 逐处与既有风格一致(不新增违规类别,仅与全文件同型)。
+    from types import SimpleNamespace as _NS  # noqa: I001
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod  # noqa: I001
+    from sr_od.application.currency_war.telemetry import state as _tel_state  # noqa: I001
+
+    class _StubRecorder:
+        def __init__(self, d: _match_archive_Path) -> None:
+            self.replay_dir = d
+
+    monkeypatch.setattr(_tel_state, 'get_recorder',
+                        lambda: _StubRecorder(tmp_path))
+    op = loop_mod.CwLoop.__new__(loop_mod.CwLoop)
+
+    # 有 match + 计数 → 落盘含键值
+    op.ctx = _NS(cw_match=_NS(session=_NS(
+        cw4_counters={'shop_churn_pair_buy': 1})))
+    op._record_cw4_counters_snapshot()
+    rows = [json.loads(ln) for ln in
+            (tmp_path / arch.COUNTERS_FILE).open(encoding='utf-8')]
+    assert rows == [{'ts': rows[0]['ts'],
+                     'counters': {'shop_churn_pair_buy': 1}}]
+    # 无 match(对局已清理)→ 不再追加
+    n_before = len(rows)
+    op.ctx = _NS(cw_match=None)
+    op._record_cw4_counters_snapshot()
+    rows2 = [json.loads(ln) for ln in
+             (tmp_path / arch.COUNTERS_FILE).open(encoding='utf-8')]
+    assert len(rows2) == n_before
+    # 写端失败 → 吞异常不抛(best-effort 契约)
+    op.ctx = _NS(cw_match=_NS(session=_NS(cw4_counters={'k': 1})))
+    monkeypatch.setattr(arch, 'record_cw4_counters_from_match',
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError('x')))
+    op._record_cw4_counters_snapshot()   # 不抛即过
