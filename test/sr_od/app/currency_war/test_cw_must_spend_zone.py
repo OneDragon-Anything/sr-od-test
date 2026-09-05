@@ -340,11 +340,12 @@ class TestR1ZoneSplit:
         assert sess.cw4_counters.get('must_spend_r1_budget_fail') == 1
 
 
-# ===== 实机档案帧单帧锁核(33 跳精化口径:未锁线入域帧出口消费语义)=====
+# ===== 实机档案帧单帧锁核(未锁线入域帧出口消费语义核)=====
+# 设计出处:20号稿 §3.1-L2(未锁线 fail-closed 设计态)+ §3.5(L3 触发源)+
+# ADR-0528(域内让位裁定)。
 # 帧源 = .debug/temp/currency_war/replay/matches/ 两局档案的
 # slices/decisions.jsonl 决策帧逐字段直读(帧定位符 = ts 字符串;测试值
-# 内联,不依赖该文件存在)。判读出处 = 进度账本 流程/进度.md「未锁线期
-# 入域零消费」行(十九局候选①)+「金出口缺失族三案」行(二十局 P3r1)。
+# 内联,不依赖该文件存在)。
 #
 # cap_resolved 实算定谳:三帧涉及策略(加油站/量子力学/榜样的力量•彩)
 # 均无 interest_cap_override ⇒ cap_resolved = DEFAULT_INTEREST_CAP = 5,
