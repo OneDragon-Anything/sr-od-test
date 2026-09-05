@@ -2,9 +2,9 @@
 
 背景:发射核(launch_prepared_battle,14号稿 §9.6 / checkpoint 3)效果落
 在 op 执行层,严格同池 A/B 的 ledger 逐位门在 sim 结构性不可见 →
-engine_p1 在战斗类节点备战环末(部署块后、结算前)建模发射事件:行内
-'launch' 键(None=未触发),触发判据 = 既有镜像 v3_form_ok(线成型,
-零新阈值),victim 形态 = 生产 readiness_admission_report 单一源直调,
+engine_p1 在战斗类节点**轮入口**(决策段循环前,同生产评估时点)建模发射事件:行内
+'launch' 键(None=未触发),触发判据 = form_progress 现读直调(≥1.0,
+零新阈值),victim 形态 = kernel ``launch_admission_report`` 单一源直调,
 ok 恒 True(sim 无屏态过期/执行失败面,建模声明见 engine_p1「达标臂
 发射事件建模」块)。设计约束:纯披露零 rng 消耗零状态写入;挂行内键
 而非增行/动 actions——一轮一行、outcomes 配对、段级检查轮键与行为投影
@@ -141,17 +141,37 @@ class TestLaunchStatsFamilyLock:
                 row['round_num'] for row in result.ledger
                 if row.get('launch') is not None)
 
-    def test_stats_survives_archive_rows_without_launch(self):
-        """档案行(无 launch 键)发射面退化为 StartBattle 行动计数。"""
+    def test_stats_survives_archive_rows_without_launch(self, tmp_path,
+                                                        monkeypatch):
+        """真调 _archive_rows:档案行 StartBattle 行动 → launch 事件转换
+        (ok 恒 True,发射核执行痕迹)+ 无发射局统计退化 0/None 不炸。"""
         mod = _load_stats_module()
-        rows = [{'plane': 1, 'round': 1, 'node_type': '普通战斗',
-                 'gold': 10, 'hp': 90, 'hp_delta': None, 'form': 0.5,
+        monkeypatch.setattr(mod, 'MATCHES', tmp_path)
+        (tmp_path / 'match_T2.json').write_text(json.dumps({
+            'game_id': 'T2',
+            'opening': {},
+            'rounds': [
+                {'plane': 1, 'round': 1, 'node_type': '普通战斗',
+                 'gold': 10, 'hp': 90, 'hp_delta': None,
+                 'form_score': 0.5, 'form_ok': False, 'level': 3,
+                 'deployed': [], 'board': {},
+                 'actions': [{'__type__': 'StartBattle'}],
+                 'shop_snapshots': []},
+                {'plane': 1, 'round': 2, 'node_type': '普通战斗',
+                 'gold': 12, 'hp': 85, 'hp_delta': -5, 'form_score': 0.6,
                  'form_ok': False, 'level': 3, 'deployed': [],
-                 'factions': {}, 'acts': [{'__type__': 'StartBattle'}],
-                 'launch': None, 'shop_waves': []}]
+                 'board': {}, 'actions': [{'__type__': 'BuyCard'}],
+                 'shop_snapshots': []},
+            ]}, ensure_ascii=False), encoding='utf-8')
+        archive = mod._archive_rows('T2')
+        assert archive['game_id'] == 'T2'
+        rows = archive['rows']
+        # StartBattle → launch 转换(档案只记「发生了」,ok 恒 True)
+        assert rows[0]['launch'] == {'__type__': 'StartBattle', 'ok': True}
+        assert rows[1]['launch'] is None
         m = mod.analyze_game(rows)
-        assert m['发射次数'] == 0
-        assert m['发射成功率'] is None
+        assert m['发射次数'] == 1
+        assert m['发射成功率'] == 1.0
 
 
 class TestZeroLaunchGameShapeLock:
