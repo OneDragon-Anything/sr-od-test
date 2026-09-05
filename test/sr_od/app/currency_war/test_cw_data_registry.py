@@ -26,13 +26,9 @@ from sr_od.application.currency_war.data.cw_chars import (
     get_char,
 )
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.strategies.impl.flow import (
-    CwFlowStrategy,
-)
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
-
 
 # ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
 # 直用活策略核(本文件其余测试全部消费注册表/观察层数据,不经该具现)。
@@ -943,21 +939,22 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
 def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模板加载惰性
     """CV 通道实测格数:占用态门三态探针(布局档对账批;真 fixture 全量标定)。
 
-    判据 = 每探针「整窗+两半窗」三段 std 对 ``_CV_SLOT_STD_MIN`` 的形态:
-    (full,full)→8 / (slice,slice)→7 / (none,none)→6 / 混合→None 退公式。
+    判据 = 每探针「整窗+两半窗」std 三段形态:none(整窗 <6)/ 擦线不可判
+    (整窗 ∈[6,12) → None 退公式)/ full(整窗 ≥12 ∧ 半窗对称比 <2.5)/
+    slice(整窗 ≥12 ∧ 对称比 ≥2.5);组合 (full,full)→8 /
+    (slice,slice)→7 / (none,none)→6 / 混合→None 退公式。
     标定数字见 ``_PROBE_*`` 常量块注释。
 
-    8 格帧(狸猫/全位验证/cap9/cap10,两端整格 min 半窗 40.8-59.3)→ 8;
-    **P3 局(cap11)左 1 空槽暗框 = 整格存在证据** → 8(旧整窗判据 38.8 落
-    不可判带退公式;占用态门消解旧不可判带,运行值不变仍 8 格);
+    8 格帧(狸猫/全位验证/cap9/cap10,两端整格 50.7-65.6,对称比 1.0-1.2)→ 8;
+    **P3 局(cap11)左 1 空槽暗框 = 整格存在证据**(整窗 38.8、对称比 1.0)
+    → 8(旧整窗判据落不可判带退公式;占用态门消解旧不可判带,运行值不变
+    仍 8 格);
     6 格帧(shop_closed/a8_start/prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;
     「后排6槽-P2开局局」→ **6**(旧「7 槽」观察实为 6 格幻影,W535 按实格数
     改名);
-    **真 7 格帧(佩佩局×2,居中重排 534..1386)→ 7**(slice,slice:左探针
-    右半片 + 右探针左半片;旧整窗判据落不可判带 → None 退公式——占用态门
-    把 ADR-0390 勘误案从「公式兜底」升级为「探针直读」);
-    deployed_r9_7grid(停机哨兵帧,背景半窗 std 11.3 超阈)→ **混合 None
-    退公式 7**(保守不猜;公式通道有防抖背书,选档终值仍 7)。
+    **真 7 格帧(佩佩局×2 + deployed_r9_7grid 停机哨兵帧)→ 7**(slice,
+    slice:不对称比 5.3-30.8 双双过分界;旧整窗判据落不可判带 → None 退
+    公式——占用态门把 ADR-0390 勘误案从「公式兜底」升级为「探针直读」)。
     非 1080p 小帧 → None(越界守卫)。
 
     run 26 崩坏现场帧(后排6槽-run26崩坏现场.png,编排者 VLM+右端位置双重
@@ -972,7 +969,7 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
             ('后排8槽-P3局.webp', 8),   # 空 1 槽暗框=整格存在(占用态门消解旧不可判带)
             ('后排7槽-佩佩局.png', 7),          # slice,slice:两端切片签名 → 直读 7
             ('后排7槽-佩佩局-拖测后.png', 7),   # 同上(拖测后帧)
-            ('deployed_r9_7grid.webp', None),   # 背景半窗 11.3 超阈 → 混合保守 None
+            ('deployed_r9_7grid.webp', 7),      # slice,slice(不对称比 5.3/28.8)→ 直读 7
             ('后排6槽-P2开局局.webp', 6), ('shop_closed.webp', 6),
             ('shop_closed_a8_start.webp', 6), ('prep_1-6_all_positions.webp', 6),
             ('deployed_p1r9.webp', 6), ('r1_idle_stop.webp', 6),
@@ -1694,3 +1691,66 @@ def test_deployed_chars_7grid_full_recovery(test_context, templates, monkeypatch
     assert len(chars) == 7, f'应 7/7,实得 {sorted(c.char_id for c in chars)}'
     assert {c.char_id for c in chars} == {
         '丹恒·饮月', '爻光', '藿藿', '星期日', '黑塔', '停云', '忘归人'}
+
+
+# ===== 探针占用态门·C1 边界锁(落地审修订:半窗判据/擦线带分离)=====
+
+def _mk_probe_frame(l_std: float, r_std: float) -> np.ndarray:
+    """构 y 带探针窗合成帧:窗内左半/std=l_std、右半/std=r_std 的高斯噪声
+    (y 带 600:739 全宽;探针只读窗内,其余填零)。三通道写**同一噪声**
+    ——RGB→GRAY 是通道加权求和,各通道独立噪声会互相抵消使灰度 std 缩水
+    (~0.67×),同噪写入保证合成 std==target。"""
+    import numpy as _np
+    frame = _np.zeros((1080, 1920, 3), dtype=_np.uint8)
+    band = frame[600:739]
+
+    def _fill(x1: int, x2: int, target: float) -> None:
+        w = x2 - x1
+        noise = _np.random.default_rng(42).normal(128, target, (139, w, 1))
+        band[:, x1:x2] = _np.clip(noise, 0, 255).astype(_np.uint8)
+
+    _fill(300, 464, l_std)
+    _fill(464, 628, r_std)
+    return frame
+
+
+def test_probe_state_ambiguous_band_returns_none_conservative():
+    """C1 边界①:整窗擦线(∈[6,12),如背景纹理帧 双半窗 std≈5)→ 不可判
+    None 保守退公式——擦线态不再被强判 none/full(等价恢复旧 12 下界
+    不可判带语义)。"""
+    from sr_od.application.currency_war.obs.cw_back_layout import _probe_state
+    # 双半窗 std≈5 → 整窗≈5 <6 → none 语义;此处锁擦线带:整窗≈8-9
+    frame = _mk_probe_frame(8.0, 9.0)          # 整窗≈8.5 ∈ [6,12)
+    assert _probe_state(frame, 464) is None
+    frame2 = _mk_probe_frame(6.5, 10.5)        # 整窗≈8.6,不对称但落擦线带
+    assert _probe_state(frame2, 464) is None
+
+
+def test_probe_state_slice_never_misjudged_full():
+    """C1 边界②:切片帧(不对称比 ≥2.5)恒判 slice 不得误 full——
+    单半窗低 std(0.5-5)∧ 另半窗高 std(≥12)的强不对称形态,
+    端点占用高估(切片→full→误 8)不可复现。"""
+    from sr_od.application.currency_war.obs.cw_back_layout import (
+        _PROBE_SLICE,
+        _probe_state,
+    )
+    for l_std, r_std in ((3.0, 40.0), (5.0, 30.0), (2.0, 45.0), (40.0, 3.0),
+                         (11.3, 60.1), (61.5, 2.1)):   # 后三项=真帧实测形态
+        frame = _mk_probe_frame(l_std, r_std)
+        got = _probe_state(frame, 464)
+        assert got == _PROBE_SLICE, f'(l={l_std},r={r_std}) → {got} ≠ slice'
+
+
+def test_probe_state_symmetric_full_and_flat_none():
+    """对称高纹理(8 格整格形态,对称比 <2.5)→ full;纯平背景(6 格)
+    → none;整窗高但极端不对称 → slice(与 full 的分界=对称比 2.5,
+    8 格实测上限 1.2 / 7 格切片下限 5.3 的对数中点)。"""
+    from sr_od.application.currency_war.obs.cw_back_layout import (
+        _PROBE_FULL,
+        _PROBE_NONE,
+        _PROBE_SLICE,
+        _probe_state,
+    )
+    assert _probe_state(_mk_probe_frame(45.0, 55.0), 464) == _PROBE_FULL
+    assert _probe_state(_mk_probe_frame(2.0, 2.5), 464) == _PROBE_NONE
+    assert _probe_state(_mk_probe_frame(10.0, 40.0), 464) == _PROBE_SLICE
