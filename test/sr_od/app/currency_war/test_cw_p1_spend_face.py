@@ -665,9 +665,11 @@ def _mk_loop():
     return _Loop()
 
 
-def _make_prep_loop_cls(overlay_anchor: tuple[str, str] | None = None):
+def _make_prep_loop_cls(overlay_anchor: tuple[str, str] | None = None,
+                        ocr_hits: tuple[str, ...] = ()):
     """备战帧行为锁的环路桩类:仅备战双锚命中,其余画面判定全不命中;
-    overlay_anchor 给定时该锚恒命中(浮层在场形态);「返回投资策略选择」
+    overlay_anchor 给定时该锚恒命中(浮层在场形态);ocr_hits = 恒命中的
+    OCR 词(遭遇面板等 OCR 锚形态);「返回投资策略选择」
     OCR 命中 = 非达标帧在守卫计数后干净退出。"""
     from sr_od.application.currency_war.operations import cw_loop
 
@@ -714,7 +716,9 @@ def _make_prep_loop_cls(overlay_anchor: tuple[str, str] | None = None):
                 return _Hit()
             return _Miss()
 
-        def round_by_ocr(self, *a, **kw):
+        def round_by_ocr(self, screen, target_cn=None, *a, **kw):
+            if ocr_hits and target_cn in ocr_hits:
+                return _Hit()
             return _Miss()
 
         def round_by_find(self, *a, **kw):
@@ -1044,6 +1048,48 @@ class TestReadinessBattleArm:
         assert sess.cw4_counters.get('readiness_overlay_hold', 0) >= 1
         assert guard['n'] == 1, '浮层帧交由接管面,守卫链照常可达'
 
+    def test_readiness_holds_on_encounter_panel(self, monkeypatch):
+        """遭遇面板排除锁(切屏竞态实测病例·遭遇面板形态):遭遇选择面板是备战屏上的
+        面板(非独立屏),双锚穿透仍合法——OCR 词「遭遇其一」在场 ⇒ 达标臂
+        不发射(readiness_overlay_hold 分键),交遭遇接管面。"""
+        from types import SimpleNamespace as _NS
+
+        import sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing as _bb
+        from sr_od.application.currency_war.operations import cw_loop
+        launches: list[int] = []
+        guard = {'n': 0}
+
+        def _spy_launch(op, ctx):
+            launches.append(1)
+            return True, 'ok'
+
+        def _fake_tick(prev, count, sig):
+            guard['n'] += 1
+            return (prev, count)
+
+        monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 1.0)
+        monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _spy_launch)
+        monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
+        monkeypatch.setattr(_bb, 'read_ocr_texts', lambda ctx, screen: [])
+        cls = _make_prep_loop_cls(ocr_hits=('遭遇其一',))
+        op = cls()
+        op._iter = 2
+        op._is_new_match = False
+        op._cw_locked_resume = False
+        op._cw_back_btn_count = 0
+        op._battle_ts = None
+        op.last_screenshot = object()  # type: ignore[attr-defined]
+        op._screen = object()
+        comp = _comp()
+        sess = _NS(target_comp=comp,
+                   last_state=_st(gold=30, level=3),
+                   last_prep_action_sig=('m2',), cw4_counters={})
+        op.ctx = _NS(cw_match=_NS(session=sess))
+        op.loop()
+        assert launches == [], '遭遇面板在场帧达标臂不得发射(双锚穿透形态)'
+        assert sess.cw4_counters.get('readiness_overlay_hold', 0) >= 1
+        assert guard['n'] == 1, '面板帧交遭遇接管面,守卫链照常可达'
+
     def _stale_probe_loop(self, prep_visible: bool):
         """发射面新鲜屏态复验的桩环:prep_visible = 复验时备战屏锚是否
         命中(切屏后 = False)。"""
@@ -1072,7 +1118,7 @@ class TestReadinessBattleArm:
         return _Probe()
 
     def test_stale_screen_aborts_launch_zero_drag(self, monkeypatch):
-        """锁①(第十六局雷):执行时刻非备战屏(切屏后锚失)→ 放弃发射,
+        """锁①(切屏竞态形态):执行时刻非备战屏(切屏后锚失)→ 放弃发射,
         readiness_stale_screen 分键 + **零 RunDeploy/StartBattle**(9 拖
         空挥不可再发)。"""
         from types import SimpleNamespace as _NS
