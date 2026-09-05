@@ -336,3 +336,58 @@ def test_stack_detection_ignores_flow_marker_rows(tmp_path) -> None:
     assert not any('未知栈' in x and 'cw:flow' in x for x in lines), lines
     m7 = [x for x in lines if x.startswith('m7')]
     assert m7 and '未知栈' not in m7[0], m7
+
+
+# ===== 恢复局首战前备战同步步(策略审查十二跳 #7)=====
+
+def test_locked_resume_sync_step_precedes_start_battle(monkeypatch) -> None:
+    """8:44 形态锁(恢复局锁定直出战,board_before 空):LockedResume 分支
+    的出战执行 = 同步步(RunDeploy 组合:deploy-swap/腾席/确定性部署)
+    **先于** StartBattle,且每锁定局恰一次(第二次调用不再同步);
+    无条件插入,零血线入参。"""
+    from types import SimpleNamespace as _NS
+
+    from sr_od.application.currency_war.operations import cw_loop
+
+    calls: list[str] = []
+
+    class _FakeExecutor:
+        def __init__(self, op, ctx):
+            calls.append('init')
+
+        def execute(self, action):
+            calls.append(type(action).__name__)
+            return True, 'ok'
+
+    import sr_od.application.currency_war.prep_actions as _pa
+    monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
+
+    class _Loop(cw_loop.CwLoop):
+        def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
+            self.ctx = _NS(cw_match=_NS(session=None))
+            self._cw_locked_sync_done = False
+
+    op = _Loop()
+    progressed, detail = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+    assert progressed is True
+    assert calls == ['init', 'RunDeploy', 'StartBattle'], calls
+    assert op._cw_locked_sync_done is True
+    # 同一锁定局第二次出战:只 StartBattle,不重复同步(init = 执行体重建,非动作)
+    calls.clear()
+    progressed2, _ = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+    assert [c for c in calls if c != 'init'] == ['StartBattle'], calls
+    assert progressed2 is True
+
+
+def test_locked_resume_sync_reset_per_lock_episode() -> None:
+    """同步步证据位按锁定局复位:锁定确认分支置 _cw_locked_sync_done=False
+    (行为面 = 新锁定局重新获得一次同步步);出战执行函数无 hp 入参
+    (血线判据禁直读,00§3 合规,挂账不落码)。"""
+    import inspect
+
+    from sr_od.application.currency_war.operations import cw_loop
+    src = inspect.getsource(cw_loop.CwLoop)
+    assert '_cw_locked_sync_done = False' in src, \
+        '锁定确认分支必须复位同步步证据位'
+    sig = inspect.signature(cw_loop.locked_resume_sync_and_battle)
+    assert list(sig.parameters) == ['op', 'ctx']
