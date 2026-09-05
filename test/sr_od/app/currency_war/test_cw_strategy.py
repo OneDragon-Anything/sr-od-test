@@ -336,3 +336,14 @@ def test_on_round_end_supply_token_stays_non_battle(monkeypatch) -> None:
     tracker = sess.v3_alarm
     assert list(tracker.recent_losses) == []   # 补给轮不入窗(语义不变)
     assert tracker.consec_battle_fails == 0
+
+
+def test_new_session_resets_layout_unknown_streak(monkeypatch) -> None:
+    """落地审 C4:跨局残留锁——上一局末未知 streak≥1 时,新局
+    create_session 必须复位布局未知态计数(否则开局 level 未 observed/
+    CV 高发不可判期会提前吃写面冻结)。"""
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    monkeypatch.setattr(cbl, '_unknown_streak', 2)
+    strat = MandateV1Strategy()
+    strat.create_session(_cfg())
+    assert cbl._unknown_streak == 0, '新局未复位布局未知态计数'
