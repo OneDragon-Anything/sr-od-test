@@ -199,6 +199,18 @@ class TestEquipAllocationPriorityOrder:
                                      priority_order=prio)
             assert all(c != '卡芙卡' for c, _ in alloc), (prio, alloc)
 
+    def test_key_binding_not_redirect_by_priority(self):
+        """key 件绑定裁决(§3.2 落码批回记):谓词层只重排候选序不改 key 件
+        绑定——非 core 置前也不得先拿 key 件(key 接收者限于 carry∪core)。"""
+        comp = _mk_comp(['卡芙卡', '三月七'],
+                        keys=['火力风暴潮'], carry='卡芙卡')
+        dep = self._dep()
+        alloc = equip_allocation(comp, dep, ['火力风暴潮', 'x'],
+                                 priority_order=['砂金', '卡芙卡', '三月七'])
+        key_owner = next(c for c, w in alloc if w == '火力风暴潮')
+        assert key_owner in ('卡芙卡', '三月七'), alloc
+        assert key_owner == '卡芙卡', 'carry 仍最先拿 key 件([9] 基序不变)'
+
     def test_comp_none_ignores_priority_order(self):
         """comp=None 强制 priority_order=None(§3.3),与缺省输出一致。"""
         dep = self._dep()
