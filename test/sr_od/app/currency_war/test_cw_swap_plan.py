@@ -415,18 +415,24 @@ def test_m1p_consumer_input_missing_not_mixed_into_plan_empty() -> None:
 # ==================== 执行侧卖出臂:义务集∪新鲜度排除接线 ====================
 
 def test_swap_sell_exclusion_single_source_verdict() -> None:
-    """执行侧排除单一判定锁(落地审阻断 #1 修复;ADR-0530 决策3):
+    """执行侧单一判定锁(落地审阻断 #1 修复;ADR-0530 决策3):
     `swap_sell_exclusion_reason` = 发射面谓词与执行侧卖出臂共用的唯一
-    义务集∪新鲜度判定——买面义务集成员 → buy_membership;轮内新鲜
-    买入件 → fresh_buy;义务集缺读 → membership_unreadable(执行面
-    fail-closed = 全候选禁卖);普通件 → ''。执行侧 `_sell_offtarget_
-    deployed` 逐候选消费本判定(禁第二份实现),P60 卖义务件↔买回环
-    在执行路径同受保护。"""
+    逐件判定——买面义务集成员 → buy_membership;轮内新鲜买入件 →
+    fresh_buy;义务集缺读 → membership_unreadable(执行面 fail-closed =
+    全候选禁卖);target 成员 → target_keep;非 target 非 fenced 普通件
+    → ''。执行侧 `_sell_offtarget_deployed` 逐候选消费本判定(禁第二份
+    实现),P60 卖义务件↔买回环在执行路径同受保护。
+    旧语义勘误(转型臂批):本函数已由「仅义务集∪新鲜度排除」扩展为
+    per-piece 完整资格判定(ADR-0534 §3 同位
+    扩展,offtarget_sell_allowed 经本函数参数化接入)——「青雀(target
+    成员)返 ''」的旧断言随扩展失效,target_keep 拒因取代;'' 样本改用
+    注册表直调的非 target 非 fenced 件(花火)。"""
     ctx = _base_ctx(deployed=[], bench=[],
                     membership=frozenset({'艾丝妲'}), fresh=frozenset({_VICTIM}))
     assert swap_sell_exclusion_reason('艾丝妲', ctx) == 'buy_membership'
     assert swap_sell_exclusion_reason(_VICTIM, ctx) == 'fresh_buy'
-    assert swap_sell_exclusion_reason('青雀', ctx) == ''
+    assert swap_sell_exclusion_reason('青雀', ctx) == 'target_keep'
+    assert swap_sell_exclusion_reason('花火', ctx) == ''
     ctx_unread = _base_ctx(deployed=[], bench=[], membership=None)
     assert swap_sell_exclusion_reason(_VICTIM, ctx_unread) \
         == 'membership_unreadable'
