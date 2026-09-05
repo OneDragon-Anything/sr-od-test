@@ -31,7 +31,6 @@ from sr_od.application.currency_war.data.cw_synthesis import (  # noqa: E402
 )
 from sr_od.application.currency_war.kernel.cw_comps import Comp  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_equip_env import (  # noqa: E402
-    ToolAction,
     admitted_tool_actions,
     evaluate_tool_actions,
 )
@@ -45,8 +44,10 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (  # noqa:
     StrategySession,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_op_tools import (  # noqa: E402
+    ToolDragPlan,
     classify_tool_consume,
     plan_tool_drags,
+    run_tool_queue,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (  # noqa: E402
     entry,
@@ -79,7 +80,9 @@ class TestPlanToolDrags:
 
     def test_furnace_targets_dead_stock_only(self):
         """炉目标 = 死库存件(recycle_qualified 同源过滤):需求向量内件
-        (留合成)禁入选——执行面宽取 = 误烧负操作,本锁钉死。"""
+        (留合成)禁入选——执行面宽取 = 误烧负操作,本锁钉死。负例并入:
+        画面无死库存 icon → 计划面目标为空(执行位跳过披露),禁落点
+        到任意件。"""
         comp = _mk_comp([_KEY])
         demand_ok = _KEY          # 在需求向量内的成品(非死库存)
         admitted = [a for a in _admit([_FURNACE, _DEAD], comp) if a.usable]
@@ -92,15 +95,9 @@ class TestPlanToolDrags:
         assert furnace[0].target == _DEAD
         assert furnace[0].target_pos == (1843, 250)
         assert furnace[0].tool_pos == (1800, 200)
-
-    def test_furnace_without_readable_target_yields_empty_plan(self):
-        """判据放行但画面无死库存 icon(现读已消/reflow miss)→ 计划面
-        目标为空(执行位跳过披露),禁落点到任意件。"""
-        comp = _mk_comp([_KEY])
-        admitted = [a for a in _admit([_FURNACE, _DEAD], comp) if a.usable]
-        hits = [(_FURNACE, (1800, 200), 0.9)]   # 画面只有炉自身
-        plans = plan_tool_drags(admitted, hits, comp)
-        assert plans and plans[0].target_pos is None
+        # 负例(并入正例):画面只有炉自身 → target_pos None
+        lone = plan_tool_drags(admitted, [(_FURNACE, (1800, 200), 0.9)], comp)
+        assert lone and lone[0].target_pos is None
 
     def test_privilege_card_targets_key_base(self):
         """特权卡目标 = key 特权件对应进阶成品(栏内拖法;21 号稿 §3.4)。"""
@@ -114,14 +111,96 @@ class TestPlanToolDrags:
                  if p.action == 'privilege_upgrade']
         assert len(plans) == 1
         assert plans[0].target == _UNIQUE_BASE
-
-    def test_non_usable_never_planned(self):
-        """判据拒/准入拒件不产计划(执行链只消费 usable,二道门缺一不发)。"""
-        comp = _mk_comp([_KEY])
-        acts = _admit([_TOKEN], comp)          # 令牌 R(c) 缺档 → 判据拒
+        # 负例(并入正例):判据拒/准入拒件不产计划(令牌 R(c) 缺档 →
+        # 判据拒;执行链只消费 usable,二道门缺一不发)
+        acts = _admit([_TOKEN], comp)
         assert all(not a.usable for a in acts)
-        hits = [(_TOKEN, (1800, 200), 0.9)]
-        assert plan_tool_drags(acts, hits, comp) == []
+        assert plan_tool_drags(acts, [(_TOKEN, (1800, 200), 0.9)], comp) == []
+
+
+# ===== 1b. 多计划执行环锁(三审定谳整改:首件消费后 reflow,剩余计划
+# 禁沿用切片快照的过期坐标——while 队列整条重建)=====
+
+class TestRunToolQueue:
+
+    def test_queue_replans_after_each_consume(self):
+        """两件 admitted(炉×死库存 + 特权卡×key 基名)同帧:首件消费后
+        重规划产物接管队列——①剩余计划坐标 = 重读后的新位置(非首读
+        快照);②重评 admitted 用 fresh owned(首件消费改变结构后旧放行
+        不沿用);③无误烧:重规划目标恒 ∈ recycle_qualified(消费的件
+        ≠ 需求向量内件)。"""
+        comp = _mk_comp([_KEY, _PRIV])
+        owned0 = [_FURNACE, _DEAD, '特权赋予卡', _UNIQUE_BASE, _KEY]
+        admitted0 = _admit(owned0, comp)
+        assert sum(1 for a in admitted0 if a.usable) == 2, \
+            '前置失真:双工具帧应有两件 usable(炉+特权卡)'
+        # 首读:炉/目标在前排,特权卡组在后排(消费炉后 reflow → 全部位移)
+        hits0 = [(_FURNACE, (1800, 200), 0.9), (_DEAD, (1843, 250), 0.9),
+                 ('特权赋予卡', (1768, 200), 0.9),
+                 (_UNIQUE_BASE, (1768, 250), 0.9), (_KEY, (1768, 300), 0.9)]
+        queue0 = [p for p in plan_tool_drags(admitted0, hits0, comp)
+                  if p.target_pos is not None and p.target]
+        assert len(queue0) == 2
+        # 模拟首件消费(炉→死库存):owned 移除炉+死库存,新增变异件
+        # (dead_burned);画面 reflow:特权卡组整体移位(模拟列收缩)
+        dead_burned = _DEAD   # 变异随机件仍可为同名基础件(multiset 语义)
+        owned1 = [n for n in owned0 if n not in (_FURNACE, _DEAD)] + [dead_burned]
+        hits1 = [('特权赋予卡', (1800, 200), 0.9),
+                 (_UNIQUE_BASE, (1843, 250), 0.9), (_KEY, (1768, 300), 0.9),
+                 (dead_burned, (1843, 300), 0.9)]
+        admitted1 = _admit(owned1, comp)
+        # 重评(fresh owned):死库存已被烧掉一份,剩余 owned 覆盖全需求
+        # +变异件在死库存域 → 炉已不在 owned,仅特权卡 usable
+        fresh_queue = [p for p in plan_tool_drags(admitted1, hits1, comp)
+                       if p.target_pos is not None and p.target]
+        assert [p.action for p in fresh_queue] == ['privilege_upgrade']
+        assert fresh_queue[0].tool_pos == (1800, 200)     # 重读后新位置
+        assert fresh_queue[0].target == _UNIQUE_BASE
+        assert fresh_queue[0].target_pos == (1843, 250)   # 重读后新位置
+        # 无误烧:重规划目标 ∉ 需求向量面(基名 _UNIQUE_BASE 是 key 对应
+        # 成品,特权卡用法即对其原地替换;炉的误烧面 = 需求向量内件,
+        # fresh_queue 中不再有任何 furnace 计划)
+        assert all(p.action != 'furnace_single' for p in fresh_queue)
+        # 队列驱动语义:首件 consumed → replan 接管(fresh_queue);次件
+        # consumed → 再 replan(空收队)。
+        exec_calls: list[str] = []
+
+        def exec_fn(plan):
+            exec_calls.append(plan.action)
+            return 'consumed'
+
+        replans: list[list] = [fresh_queue, []]
+
+        def replan_fn():
+            return replans.pop(0) if replans else []
+
+        consumed, attempts = run_tool_queue(list(queue0), exec_fn, replan_fn)
+        assert (consumed, attempts) == (2, 2)   # 双件全消,各触发一次重规划
+        assert exec_calls == ['furnace_single', 'privilege_upgrade']
+
+    def test_queue_cancel_drops_without_replan(self):
+        """cancel(重试预算耗尽)件直接丢弃:不触发重规划、不沿用旧队列
+        (防同件 cancel→replan→同件再拖的死循环)。"""
+        calls: list[str] = []
+
+        def exec_fn(plan):
+            calls.append(plan.action)
+            return 'cancel'
+
+        comp = _mk_comp([_KEY])
+        queue = [ToolDragPlan('furnace_single', _FURNACE, _DEAD,
+                              (1800, 200), (1843, 250)),
+                 ToolDragPlan('furnace_single', _FURNACE, _DEAD,
+                              (1800, 200), (1843, 250))]
+        replans: list[list] = []
+
+        def replan_fn():
+            replans.append(1)
+            return []
+
+        consumed, attempts = run_tool_queue(queue, exec_fn, replan_fn)
+        assert (consumed, attempts) == (0, 2)
+        assert len(calls) == 2 and not replans   # cancel 从不重规划
 
 
 # ===== 2. 消耗确认通道锁(21 号稿 §3.2 三分支)=====
@@ -207,10 +286,10 @@ def _session_with(owned):
 
 class TestMandateEmission:
 
-    def _frame(self, round_num: int = 3):
+    def _frame(self, round_num: int = 3, gold: int = 20, stop: bool = False):
         return mandate.MandateFrame(
-            gold=20, level=3, bench=[], deployed=[], deploy_cap=4,
-            node_type=None, stop_flag=False, k_members=(),
+            gold=gold, level=3, bench=[], deployed=[], deploy_cap=4,
+            node_type=None, stop_flag=stop, k_members=(),
             round_num=round_num)
 
     def test_admitted_emits_runtools(self):
@@ -239,16 +318,29 @@ class TestMandateEmission:
         assert any(isinstance(e.action, RunTools) for e in out3)
 
     def test_runtools_reordered_before_truncation(self):
-        """dd-027 同型回排:RunTools 与开店意图同帧时,工具先于截断点。"""
+        """dd-027 同型回排:RunTools 与开店意图同帧时,工具先于截断点。
+
+        真发射路径帧(修空锁:原 gold=20/bench 空帧无 OpenShop 发射路径,
+        断言条件恒假)= M6 溢余转压库——stop_flag + 溢余金(g999 > g*)
+        + 席位可用 + T_SEARCH_A 注入(provisional 开闸,测后复原)。"""
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             OpenShop,
         )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
+            provisional,
+        )
         s = _session_with([_FURNACE, _DEAD])
         st = GameState(plane=1, round_num=3)
-        out = mandate.run_mandate(self._frame(), s, state=st)
+        provisional.inject('T_SEARCH_A', 1)
+        try:
+            out = mandate.run_mandate(
+                self._frame(gold=999, stop=True), s, state=st)
+        finally:
+            provisional.reset('T_SEARCH_A')
         kinds = [type(e.action) for e in out]
-        if OpenShop in kinds and RunTools in kinds:
-            assert kinds.index(RunTools) < kinds.index(OpenShop)
+        assert OpenShop in kinds and RunTools in kinds, \
+            f'前置失真:同帧应发 RunTools+OpenShop,实发 {kinds}'
+        assert kinds.index(RunTools) < kinds.index(OpenShop)
 
     def test_latch_write_point_is_executor_only(self):
         """闩唯一写点在 mandate.mark_tools_pass_executed(键式 = (plane,
