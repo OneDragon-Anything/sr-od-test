@@ -8,20 +8,17 @@ box_overlay_open → PickBoxCard 发射臂(执行器/期望态投影/适配器�
 """
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_prep_actions import PickBoxCard
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    PickBoxCard,
+    PrepObservation,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
 
 
-def _obs(box_overlay_open: bool, boxes=()) -> SimpleNamespace:
-    return SimpleNamespace(
+def _obs(box_overlay_open: bool, boxes=()) -> PrepObservation:
+    return PrepObservation(
         box_overlay_open=box_overlay_open,
-        boxes=boxes,
-        tomes=(),
-        spheres=(),
-        event_overlay='',
-        bench_chars=(),
-        deployed_chars=(),
-        deploy_vacancy=0,
+        boxes=list(boxes),
         state=None)
 
 

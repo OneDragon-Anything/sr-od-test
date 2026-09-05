@@ -45,6 +45,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     CloseShop,
     GameState,
+    LevelUpShop,
     RefreshShop,
     ShopCard,
 )
@@ -276,7 +277,10 @@ def test_ju23_stock_match_buys_and_empty_shop_close_discernible():
     sess = _ju23_session()
     act = decide_shop_action(_ju23_frame(100, []), sess,
                              SimpleNamespace(ev_arm='full'))
-    assert isinstance(act, CloseShop)
+    # gold=100 为必花域帧(20 号稿 §3.1-L3):店空无 L1/L2 对象 ⇒ 分层
+    # 末位 L3 升级消费(LevelUpShop),分键语义保留可辨。
+    assert isinstance(act, LevelUpShop)
+    assert act.auth_basis == 'm3_batch:must_spend'
     assert sess.cw4_counters.get('shop_visit_idle_gold') == 1
     assert sess.cw4_counters.get('shop_r1_no_chaseable_member') == 1
     ok, _ = stockpile_buy(100, 0, 9, 2, 1, frozenset({2}))
@@ -295,7 +299,9 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     act = decide_shop_action(_ju23_frame(
         100, [_sc('花火', star=2)]), sess, cfg)
     assert not isinstance(act, (BuyCard, RefreshShop))
-    assert isinstance(act, CloseShop)
+    # 必花域末位 L3(店空/2★ 无背书 ⇒ 全层无对象)
+    assert isinstance(act, LevelUpShop)
+    assert act.auth_basis == 'm3_batch:must_spend'
 
 
 def test_ju23_liquid_refund_shifts_s_reserve_down():
@@ -330,12 +336,21 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
             act = decide_shop_action(st, sess, cfg)
             if isinstance(act, BuyCard):
                 cost = act.card.cost if act.card.cost else 3
-                assert st.gold - cost >= 50, (gold0, st.gold, cost)
+                if gold0 <= 50:
+                    assert st.gold - cost >= 50, (gold0, st.gold, cost)
                 st.gold -= cost
                 st.shop = [c for c in st.shop if c is not act.card]
             elif isinstance(act, RefreshShop):
-                assert st.gold - act.cost >= 50, (gold0, st.gold)
+                if gold0 <= 50:
+                    assert st.gold - act.cost >= 50, (gold0, st.gold)
                 st.gold -= act.cost
+            elif isinstance(act, LevelUpShop):
+                # 必花域 L3(20 号稿):域内升级授权;域外(≤50)零升级
+                if gold0 <= 50:
+                    raise AssertionError(
+                        f'域外帧意外升级 {act!r} @ {gold0} 金')
+                st.gold -= act.cost
+                st.level += 1
             elif isinstance(act, CloseShop):
                 break
             else:

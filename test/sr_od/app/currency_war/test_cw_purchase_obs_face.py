@@ -40,7 +40,11 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
 _OBS_KEYS = {'locked_b', 'overcap_frames',
-             'refresh_avail_frames', 'refreshes'}
+             'refresh_avail_frames', 'refreshes',
+             # 必花域观测三键(20 号稿 §6):zone_frames/zero_consume
+             # 为非负计数;layer_hit 为层命中 dict(L1/L2/L3),单独断言
+             'must_spend_zone_frames', 'must_spend_zero_consume',
+             'must_spend_layer_hit'}
 _CAP = BENCH_CAPACITY + DEPLOYED_CAPACITY
 
 _SEED_CACHE: dict[int, object] = {}
@@ -64,7 +68,15 @@ class TestObsRowLedgerLock:
                 assert isinstance(obs, dict), row.get('round_num')
                 assert set(obs.keys()) == _OBS_KEYS, obs
                 assert all(isinstance(v, int) and v >= 0
-                           for v in obs.values()), obs
+                           for v in obs.values()
+                           if not isinstance(v, dict)), obs
+                # 必花域三键形态:zone/zero 非负且 zero ≤ zone;
+                # layer_hit 值全非负 int(键 ⊆ {L1, L2, L3})
+                assert obs['must_spend_zero_consume'] \
+                    <= obs['must_spend_zone_frames'], obs
+                assert set(obs['must_spend_layer_hit']) <= {'L1', 'L2', 'L3'}
+                assert all(isinstance(v, int) and v >= 0 for v in
+                           obs['must_spend_layer_hit'].values()), obs
                 # 内含不变式:超容帧 > 0 ⇒ 本轮出现过 |B|>容量上界的帧
                 # (|B| 只辖锁定采购集——P1 配方锁帧 locked_comp 恒空,
                 # locked_buy_membership 返回 None,locked_b 恒 0,是
@@ -157,6 +169,16 @@ class TestPurchaseObsStatsFamilyLock:
         assert m['冷启动买次数'] == sum(
             mod.n_act(r['acts'], 'BuyCard') for r in cold)
         assert m['冷启动金花费'] == sum(mod.act_cost(r['acts']) for r in cold)
+        # I 必花域三键统计恒等(ledger obs 聚合 = analyze_game 输出)
+        assert m['必花域帧数'] == sum(
+            o.get('must_spend_zone_frames', 0) for o in obs)
+        assert m['必花域零消费帧'] == sum(
+            o.get('must_spend_zero_consume', 0) for o in obs)
+        want_layer: dict = {}
+        for o in obs:
+            for k, v in (o.get('must_spend_layer_hit') or {}).items():
+                want_layer[k] = want_layer.get(k, 0) + v
+        assert m['必花域层命中'] == want_layer
 
     def test_stats_synthetic_overcap_and_coldstart(self):
         """合成行判读锁:超容 run/触发率/冷启动聚合的确定性值。"""
@@ -194,6 +216,36 @@ class TestPurchaseObsStatsFamilyLock:
         # 金花费 = r1 买 2 + r2 刷 2(act_cost 全花费类动作口径)
         assert m['冷启动金花费'] == 4
 
+    def test_stats_synthetic_must_spend_family(self):
+        """合成行判读锁:必花域三键聚合的确定性值。"""
+        mod = _load_stats_module()
+        rows = [
+            {'plane': 1, 'round': 1, 'node_type': '普通战斗',
+             'gold': 60, 'hp': 100, 'hp_delta': None, 'form': 0.3,
+             'form_ok': False, 'level': 3, 'deployed': [],
+             'factions': {}, 'acts': [], 'launch': None,
+             'shop_waves': [],
+             'obs': {'locked_b': 0, 'overcap_frames': 0,
+                     'refresh_avail_frames': 0, 'refreshes': 0,
+                     'must_spend_zone_frames': 2,
+                     'must_spend_zero_consume': 1,
+                     'must_spend_layer_hit': {'L1': 1, 'L3': 1}}},
+            {'plane': 1, 'round': 2, 'node_type': '普通战斗',
+             'gold': 70, 'hp': 95, 'hp_delta': -5, 'form': 0.4,
+             'form_ok': False, 'level': 3, 'deployed': [],
+             'factions': {}, 'acts': [], 'launch': None,
+             'shop_waves': [],
+             'obs': {'locked_b': 0, 'overcap_frames': 0,
+                     'refresh_avail_frames': 1, 'refreshes': 1,
+                     'must_spend_zone_frames': 1,
+                     'must_spend_zero_consume': 0,
+                     'must_spend_layer_hit': {'L2': 1}}},
+        ]
+        m = mod.analyze_game(rows)
+        assert m['必花域帧数'] == 3
+        assert m['必花域零消费帧'] == 1
+        assert m['必花域层命中'] == {'L1': 1, 'L3': 1, 'L2': 1}
+
 
 class TestPurchaseObsZeroDataShapeLock:
     """锁 4:缺/零数据形态(聚合不炸、不误报)。"""
@@ -213,6 +265,9 @@ class TestPurchaseObsZeroDataShapeLock:
         assert m['刷新触发率'] is None
         assert m['冷启动买次数'] == 0
         assert m['冷启动金花费'] == 0
+        assert m['必花域帧数'] == 0
+        assert m['必花域零消费帧'] == 0
+        assert m['必花域层命中'] == {}
 
     def test_report_survives_obs_zero_batch(self):
         """report 全批零观察形态:打印面不炸(0 除法已用 max 护栏)。"""

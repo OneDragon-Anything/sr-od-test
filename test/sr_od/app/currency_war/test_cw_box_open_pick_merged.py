@@ -12,12 +12,15 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import OpenBox
 from sr_od.application.currency_war.prep_actions import PrepActionExecutor
 
 
-def _executor(monkeypatch, poll_results, pick_result):
+def _executor(monkeypatch, poll_results, pick_result, session=None):
     """构造最小 executor:读箱/轮询/选卡全桩,记录选卡调用。"""
     ex = object.__new__(PrepActionExecutor)
     ex._op = SimpleNamespace(screenshot=lambda: None)
-    ex._ctx = SimpleNamespace(controller=SimpleNamespace(
-        mouse_move=lambda p: None, click=lambda p: None))
+    ex._ctx = SimpleNamespace(
+        controller=SimpleNamespace(mouse_move=lambda p: None,
+                                   click=lambda p: None),
+        cw_match=SimpleNamespace(session=session) if session is not None
+        else None)
     monkeypatch.setattr(prep_actions, 'read_supply_boxes',
                         lambda ctx, screen: [(7, SimpleNamespace(x=100,
                                                                  y=900))])
@@ -39,6 +42,28 @@ class TestOpenBoxPickMerged:
         assert ok is True
         assert '选卡' in msg
         assert len(picks) == 1
+
+    def test_merged_pick_registers_pickbox_effect(self, monkeypatch):
+        """三审 C1:合并路径补 PickBoxCard 期望态登记 ⇒
+        last_owned_equips 含所选装备(外层 OpenBox 登记零状态变更,
+        内层不补 = 选到的装备丢失/动态权重漂移)。"""
+        sess = SimpleNamespace(last_owned_equips=[])
+        ex, _picks = _executor(monkeypatch, poll_results=[True],
+                               pick_result=(True, '选卡 修复枪'),
+                               session=sess)
+        ok, _msg = ex._open_box(OpenBox())
+        assert ok is True
+        assert sess.last_owned_equips == ['修复枪']
+
+    def test_pick_failure_registers_nothing(self, monkeypatch):
+        """选卡失败 ⇒ 不登记(失败=未执行,无逻辑后果)。"""
+        sess = SimpleNamespace(last_owned_equips=[])
+        ex, _picks = _executor(monkeypatch, poll_results=[True],
+                               pick_result=(False, 'OCR 未读到卡名'),
+                               session=sess)
+        ok, _msg = ex._open_box(OpenBox())
+        assert ok is False
+        assert sess.last_owned_equips == []
 
     def test_pick_failure_reported_explicitly(self, monkeypatch):
         """选卡失败 ⇒ OpenBox 显式回报失败(不再以开箱成功掩盖未消费)。"""

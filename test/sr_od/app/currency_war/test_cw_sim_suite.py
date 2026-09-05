@@ -949,6 +949,35 @@ def test_seg_gold_identity_bidirectional() -> None:
     assert evs and '99' in evs[0]['detail']
 
 
+def test_seg_must_spend_observation_aggregates() -> None:
+    """必花域观测三键聚合(20 号稿 §6):zone/zero 合计 + 零消费帧定位
+    + 层命中分布;无键行跳过不造零;零 zone ⇒ 零事件。"""
+    chk = _sim_segment_checks_chk
+    rows = [
+        {'plane': 1, 'round_num': 1, 'gold': 60,
+         'obs': {'must_spend_zone_frames': 2,
+                 'must_spend_zero_consume': 1,
+                 'must_spend_layer_hit': {'L1': 1, 'L3': 1}}},
+        {'plane': 1, 'round_num': 2, 'gold': 70,
+         'obs': {'must_spend_zone_frames': 1,
+                 'must_spend_zero_consume': 0,
+                 'must_spend_layer_hit': {'L2': 1}}},
+        {'plane': 1, 'round_num': 3, 'gold': 70},   # 无键行:跳过
+    ]
+    evs = chk.seg_check_must_spend_observation(rows)
+    assert len(evs) == 1
+    ev = evs[0]
+    assert ev['zone_frames'] == 3
+    assert ev['zero_consume'] == 1
+    assert ev['zero_consume_rounds'] == [1]
+    assert ev['layer_hit'] == {'L1': 1, 'L3': 1, 'L2': 1}
+    # 零 zone ⇒ 零事件(无必花域帧不造摘要)
+    assert chk.seg_check_must_spend_observation(
+        [{'plane': 1, 'round_num': 1, 'gold': 10}]) == []
+    # 已入段级检查表(批报告管线自动收账)
+    assert 'seg_must_spend_observation' in chk._SEGMENT_CHECKS
+
+
 # ------------------------------------------------------- 批入口/接线
 def test_run_segment_counts_and_caps() -> None:
     """批量入口:计数=真值、events 截断披露、seed 定位字段齐。"""

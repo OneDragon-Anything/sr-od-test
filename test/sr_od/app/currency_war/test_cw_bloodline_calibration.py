@@ -12,9 +12,6 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
-    lambda_death,
-)
 
 
 def _eval_hp(hp):
@@ -106,4 +103,3 @@ class TestLambdaShadowRevoked:
         sig = entry._upgrader_evaluate(SimpleNamespace(), st, 0, 60)
         assert sig.lambda_armed is True, '注入形态触发即真键武装'
         assert sig.lambda_shadow_armed is True, '影子键保留对照'
-        assert lambda_death.HP_BAND_NEAR_DEATH == 15   # 单一源常量在册值
