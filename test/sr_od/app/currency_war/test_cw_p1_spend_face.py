@@ -732,7 +732,16 @@ class TestReadinessBattleArm:
             state_calls['guard'] += 1
             return (prev, count)
 
-        monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 1.0)
+        def _form_progress_probe(tc, st):
+            # 诚实桩:校验 st 真是带 board 的对局态而非错绑模块(第十五局
+            # 实测:模块级 state 名遮蔽曾致生产 AttributeError,行为锁
+            # 常量桩未触 st 故漏;此桩防回归)
+            if not hasattr(st, 'board'):
+                raise AssertionError(
+                    'form_progress 收到非对局态(疑似模块级 state 错绑)')
+            return 1.0
+
+        monkeypatch.setattr(cw_loop, 'form_progress', _form_progress_probe)
         monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _fake_launch)
         monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
         import sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing as _bb
@@ -839,30 +848,45 @@ class TestG1ReadinessAdmission:
         )
         return readiness_admission_report(st, comp)
 
-    def test_admission_triple_shapes(self):
-        """准入三元:板满(deployed≥cap)/bench core 待上/victim 缺失
-        三形态可分别构造。"""
+    def _g1_frames(self):
+        """G1 帧构造(应-D 物理槽位口径):板满 = 占用部署数 ≥
+        DEPLOYED_CAPACITY 定长槽表;victim = off-line∧fenced∧非保护域。"""
+        from sr_od.application.currency_war.kernel.cw_state import (
+            DEPLOYED_CAPACITY,
+        )
         comp = _comp()
         k = _members()
-        # 板满 + bench 有 core + 无 victim(deployed 全为线内件)
-        st = _st(gold=30, level=3,
-                 deployed=[_bc(n, slot=i + 1) for i, n in enumerate(k[:3])],
+        hoard = sorted(cw_intention_hoard(comp))   # 保护域成员(非 victim)
+        all_fac = set(comp.all_factions)
+        victim = next(n for n, ch in _all_chars().items()
+                      if n not in cw_intention_hoard(comp)
+                      and not (set(ch.factions) | set(ch.flows)) & all_fac)
+        full = [_bc(n, slot=i + 1) for i, n in
+                enumerate(list(tuple(k) + tuple(hoard))[:DEPLOYED_CAPACITY])]
+        with_victim = [_bc(n, slot=i + 1) for i, n in
+                       enumerate(list(tuple(k) + (victim,)
+                                 + tuple(hoard))[:DEPLOYED_CAPACITY])]
+        return comp, k, victim, full, with_victim
+
+    def test_admission_triple_shapes(self):
+        """准入三元(应-D 对齐:板满 = 物理槽位口径;bench 待上 = 线内
+        ∨ 阵营交集;victim 无 1★ 全退门)。"""
+        comp, k, victim, full, with_victim = self._g1_frames()
+        st = _st(gold=30, level=3, deployed=full,
                  bench=[_bc('填充件X', slot=1)])
         rep = self._admission(st, comp)
         assert rep['board_full'] is True
         assert rep['bench_core_waiting'] is False
         assert rep['victim_missing'] is True
-        # victim 存在形态:板上含 off-line ∧ fenced 的 1★ 件(艾丝妲族)
-        all_fac = set(comp.all_factions)
-        victim = next(n for n, ch in _all_chars().items()
-                      if n not in cw_intention_hoard(comp)
-                      and not (set(ch.factions) | set(ch.flows)) & all_fac)
-        st2 = _st(gold=30, level=3,
-                  deployed=[_bc(n, slot=i + 1) for i, n in
-                            enumerate(tuple(k[:2]) + (victim,))],
-                  bench=[])
+        st2 = _st(gold=30, level=3, deployed=with_victim, bench=[])
         rep2 = self._admission(st2, comp)
-        assert rep2['victim_missing'] is False
+        assert rep2['board_full'] is True
+        assert rep2['victim_missing'] is False, 'victim 在板不得误显影'
+        # 未满板:三元①不成立(物理槽位口径,非 max_units/level 派生)
+        st3 = _st(gold=30, level=3,
+                  deployed=[_bc(n, slot=i + 1) for i, n in enumerate(k)],
+                  bench=[])
+        assert self._admission(st3, comp)['board_full'] is False
 
     def test_g1_launch_counts_victim_missing_and_still_fires(
             self, monkeypatch):
@@ -883,11 +907,9 @@ class TestG1ReadinessAdmission:
                 return True, 'ok'
 
         monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
-        comp = _comp()
-        k = _members()
-        deployed = [_bc(n, slot=i + 1) for i, n in enumerate(k[:3])]
-        st = _st(gold=30, level=3, shop_cards=[], deployed=deployed,
-                 bench=[_bc(k[3], slot=1)])   # bench core 待上(三元②)
+        comp, k, victim, full, with_victim = self._g1_frames()
+        st = _st(gold=30, level=3, shop_cards=[], deployed=full,
+                 bench=[_bc(k[3], slot=1)])   # bench 线内待上(三元②)
         sess = _NS(cw4_counters={}, target_comp=comp, last_state=st)
         op = _mk_loop()
         op.ctx = _NS(cw_match=_NS(session=sess))
@@ -896,8 +918,8 @@ class TestG1ReadinessAdmission:
         assert sess.cw4_counters.get('deploy_swap_no_victim', 0) >= 1
 
     def test_g1_victim_present_no_counter(self, monkeypatch):
-        """对照:存在合格 victim(板上 off-line∧fenced 1★ 全退件)⇒
-        deploy_swap_no_victim 不计数(分键只钉缺失形态)。"""
+        """对照:存在合格 victim(off-line∧fenced∧非保护域,应-D:无
+        1★ 全退门)⇒ deploy_swap_no_victim 不计数(分键只钉缺失形态)。"""
         from types import SimpleNamespace as _NS
 
         import sr_od.application.currency_war.prep_actions as _pa
@@ -907,10 +929,9 @@ class TestG1ReadinessAdmission:
         victim = next(n for n, ch in _all_chars().items()
                       if n not in cw_intention_hoard(comp)
                       and not (set(ch.factions) | set(ch.flows)) & all_fac)
-        k = _members()
+        _c2, _k2, victim, full, _wv = self._g1_frames()
         st = _st(gold=30, level=3, shop_cards=[],
-                 deployed=[_bc(k[0], slot=1), _bc(k[1], slot=2),
-                           _bc(victim, slot=3)],
+                 deployed=full[:9] + [_bc(victim, slot=10)],
                  bench=[_bc('填充件X', slot=1)])
         sess = _NS(cw4_counters={}, target_comp=comp, last_state=st)
         op = _mk_loop()
