@@ -57,8 +57,8 @@ def _setup(monkeypatch, before: np.ndarray, after: np.ndarray):
                       level_btn=None, refresh_btn=None, ledger=ledger,
                       state=GameState(bench=[]))
     rows = _capture(monkeypatch)
-    BuyCardOp(action).execute(env)
-    return ledger, rows, match
+    _ok = BuyCardOp(action).execute(env)
+    return ledger, rows, match, _ok
 
 
 class TestBuyClickIneffective:
@@ -78,8 +78,11 @@ class TestBuyClickIneffective:
 
     def test_ineffective_buy_skips_ledger_and_records(self, monkeypatch):
         """执行器接线:未生效 ⇒ 账不计入(total_buy/bought_names/spend 均零)
-        + buy_click_ineffective 分键在案。"""
-        ledger, rows, _match = _setup(monkeypatch, _frame(50), _frame(50))
+        + buy_click_ineffective 分键在案 + **返回 False**(基类契约
+        「未落地=False、两侧都不动」——调用方跳过 project()/guard,期望账
+        不得投影未发生的买入,落地审 C1)。"""
+        ledger, rows, _match, ok = _setup(monkeypatch, _frame(50), _frame(50))
+        assert ok is False
         assert ledger.total_buy == 0
         assert ledger.spend_executed == 0
         assert ledger.bought_names == []
@@ -88,8 +91,10 @@ class TestBuyClickIneffective:
         assert rows[0]['args'][1] == 'buy_click_ineffective'
 
     def test_effective_buy_keeps_ledger(self, monkeypatch):
-        """对照:卡面离场 ⇒ 既有记账零回退(total_buy/bought_names 记入)。"""
-        ledger, rows, _match = _setup(monkeypatch, _frame(50), _frame(220))
+        """对照:卡面离场 ⇒ 返回 True(投影/守卫照常)+ 既有记账零回退
+        (total_buy/bought_names 记入)。"""
+        ledger, rows, _match, ok = _setup(monkeypatch, _frame(50), _frame(220))
+        assert ok is True
         assert ledger.total_buy == 1
         assert ledger.bought_names == ['杰帕德']
         assert rows == []
