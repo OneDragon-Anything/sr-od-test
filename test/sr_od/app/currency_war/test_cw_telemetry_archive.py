@@ -186,6 +186,123 @@ def test_assemble_pending_watermark_no_backfill(replay: _match_archive_Path):
     assert done == ['g_20260830_120000']
 
 
+def test_pending_reassembles_on_resume_segment_merge(replay: _match_archive_Path):
+    """续段归并锁(活局续段数据治理批 v6①②):同一 game_id 的续段 run
+    并入既有局级档案,不丢不重;档案 watermark 跟随末段推进、不冻结。
+
+    复刻 2026-09-05 夜实证形态:档案先以两段落盘(末段 stopped),之后
+    两条续段 run 重进同一活局——修复前 assign_games 已把它们分好组,
+    但 assemble_pending 只按 schema 版本判「已入档即跳过」,续段永远
+    进不了档案,且 watermark 冻结在孤立段 end_ts(06:56:29 形态)。
+    """
+    assert arch.assemble_pending(replay) == []          # 首调只落水位线
+    wm0 = arch._read_watermark(replay)
+    assert wm0 == '2026-08-30T11:10:00'                 # 全量局最晚 end_ts
+    # 归并靶局 = 时间序最近的 g_C(续段按段序并入上一局,活局重进必然
+    # 紧随其宿主局,与生产形态一致);先以单段落盘
+    a0 = arch.assemble_game(replay, 'g_20260830_110000')
+    assert [s['run_id'] for s in a0['segments']] == ['run_20260830_110000']
+    # 活局续段:run_D 重进同一活局(首帧 p1r2 非 (p1,r1) → 并入 g_C)
+    dec = [json.loads(ln) for ln in (replay / 'decisions.jsonl')
+           .open(encoding='utf-8') if ln.strip()]
+    out = [json.loads(ln) for ln in (replay / 'outcomes.jsonl')
+           .open(encoding='utf-8') if ln.strip()]
+    runs = [json.loads(ln) for ln in (replay / 'runs.jsonl')
+            .open(encoding='utf-8') if ln.strip()]
+    dec.append(_dec('run_20260830_120000', 1, 2, '2026-08-30T12:00:00'))
+    out.append(_out('run_20260830_120000', 1, 2, '2026-08-30T12:01:00', 30))
+    runs.append({'run_id': 'run_20260830_120000', 'ts': '2026-08-30T12:05:00',
+                 'result': 'loss', 'plane_reached': 1, 'rounds_survived': 1,
+                 'final_hp': 0})
+    _write_jsonl(replay, 'decisions.jsonl', dec)
+    _write_jsonl(replay, 'outcomes.jsonl', out)
+    _write_jsonl(replay, 'runs.jsonl', runs)
+    done = arch.assemble_pending(replay)
+    # 续段归并:既有档案因段集增长被重装(不是跳过、也不是开新局)
+    assert done == ['g_20260830_110000']
+    got = arch.load_archive(replay, 'g_20260830_110000')
+    assert [s['run_id'] for s in got['segments']] == [
+        'run_20260830_110000', 'run_20260830_120000']
+    assert any((r['plane'], r['round']) == (1, 2) for r in got['rounds'])
+    assert got['endgame']['result'] == 'loss'
+    idx = [json.loads(ln) for ln in (replay / 'matches' / 'index.jsonl')
+           .open(encoding='utf-8')]
+    row = next(e for e in idx if e['game_id'] == 'g_20260830_110000')
+    assert row['segments'] == ['run_20260830_110000', 'run_20260830_120000']
+    # watermark 跟随末段:推进到续段 end_ts,不冻结在旧值
+    assert arch._read_watermark(replay) == '2026-08-30T12:05:00'
+    assert arch._read_watermark(replay) != wm0
+    # 收敛:再触发不重复写(段集无增长 → done 空)
+    assert arch.assemble_pending(replay) == []
+
+
+def test_pending_new_game_unaffected_by_resume_merge(replay: _match_archive_Path):
+    """独立新局不受影响锁(活局续段数据治理批 v6 对偶门):归并修复
+    只作用于「段集增长的既有局」;新 game_id 照旧开新档案、单独入账。"""
+    arch.assemble_pending(replay)                        # 首调落水位线
+    a0 = arch.assemble_game(replay, 'g_20260830_110000')
+    assert [s['run_id'] for s in a0['segments']] == ['run_20260830_110000']
+    # 新局 run_E(首帧 (p1,r1) → 自成一局,不并入 g_C)
+    dec = [json.loads(ln) for ln in (replay / 'decisions.jsonl')
+           .open(encoding='utf-8') if ln.strip()]
+    out = [json.loads(ln) for ln in (replay / 'outcomes.jsonl')
+           .open(encoding='utf-8') if ln.strip()]
+    dec.append(_dec('run_20260830_130000', 1, 1, '2026-08-30T13:00:00'))
+    out.append(_out('run_20260830_130000', 1, 1, '2026-08-30T13:01:00', 70))
+    _write_jsonl(replay, 'decisions.jsonl', dec)
+    _write_jsonl(replay, 'outcomes.jsonl', out)
+    done = arch.assemble_pending(replay)
+    assert done == ['g_20260830_130000']
+    got = arch.load_archive(replay, 'g_20260830_130000')
+    assert [s['run_id'] for s in got['segments']] == ['run_20260830_130000']
+    # g_C 档案不被新局波及(段集不变)
+    again = arch.load_archive(replay, 'g_20260830_110000')
+    assert [s['run_id'] for s in again['segments']] == ['run_20260830_110000']
+
+
+def test_resume_reconciliation_columns(replay: _match_archive_Path):
+    """恢复态对账列(v6③):续局段的恢复帧读数 vs 前段末帧账面逐字段
+    对账;readable=False 的恢复读数对齐判 None(不可判,不猜)。
+
+    复刻 2026-09-05 夜第八局实证:恢复帧 hp/gold 与停机前账面对不上,
+    判读需此列显影才免手工翻流对账;装配器不裁真值。
+    """
+    dec_p = replay / 'decisions.jsonl'
+    rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
+    for r in rows:
+        # 前段(run_A)末帧 p1r2:hp 不可信帧默认形态(hp=100, readable=False)
+        if r.get('run_id') == 'run_20260830_094811' and r.get('round_num') == 2:
+            r['gold'], r['gold_readable'] = 55, True
+        # 续段(run_B)恢复帧 p1r9:hp 可信但与档案账面对不上(29→18 形态)
+        if (r.get('run_id') == 'run_20260830_101513'
+                and r.get('round_num') == 9):
+            r['hp'], r['hp_readable'] = 18, True
+            r['gold'], r['gold_readable'] = 68, True
+    _write_jsonl(replay, 'decisions.jsonl', rows)
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    rec = a['resume_reconciliation']
+    assert len(rec) == 1                                 # 单续局段一条
+    e = rec[0]
+    assert e['run_id'] == 'run_20260830_101513'
+    assert e['resume_frame'] == {'plane': 1, 'round_num': 9}
+    assert e['resume_ts'] == '2026-08-30T10:17:16'
+    assert e['prev_final_ts'] == '2026-08-30T09:50:00'   # 前段末帧(run_A p1r2)
+    # hp:恢复帧 18(可信)vs 前段末帧 100(帧值)→ 不对齐,显影
+    assert e['hp'] == {'resume': 18, 'prev_final': 100, 'aligned': False}
+    # gold:68 vs 55 → 不对齐
+    assert e['gold'] == {'resume': 68, 'prev_final': 55, 'aligned': False}
+    # 单段独立局:无恢复事件 → 空列表
+    a2 = arch.build_archive(replay, arch.assign_games(replay)[1])
+    assert a2['resume_reconciliation'] == []
+    # 恢复帧 hp 不可信(readable=False)→ aligned=None 不可判,不猜
+    rows2 = [dict(r, hp_readable=False) if (
+        r.get('run_id') == 'run_20260830_101513'
+        and r.get('round_num') == 9) else r for r in rows]
+    _write_jsonl(replay, 'decisions.jsonl', rows2)
+    a3 = arch.build_archive(replay, arch.assign_games(replay)[0])
+    assert a3['resume_reconciliation'][0]['hp']['aligned'] is None
+
+
 def test_materialized_slice_views_equal_source(replay: _match_archive_Path):
     """--match 视图同源:切片物化后 query_* 输出与源目录逐字节一致。"""
     from sr_od.application.currency_war.telemetry import query as q
@@ -328,7 +445,7 @@ def test_rounds_terminal_vs_decision_frame_divergence(replay: _match_archive_Pat
                            'equips': ['折叠小刀']}})
     _write_jsonl(replay, 'decisions.jsonl', rows)
     a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    assert a['schema_version'] == arch.SCHEMA_VERSION == 5
+    assert a['schema_version'] == arch.SCHEMA_VERSION == 6
     r9 = next(r for r in a['rounds']
               if (r['plane'], r['round']) == (1, 9))
     # 决策帧列 = ①(actions 最多、ts 并列取晚)= 执行前板面
