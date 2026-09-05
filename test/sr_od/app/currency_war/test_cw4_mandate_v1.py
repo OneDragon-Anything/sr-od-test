@@ -41,8 +41,8 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
-    CloseShop,
     GameState,
+    LevelUpShop,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -1202,7 +1202,10 @@ class TestShopPhaseLatch:
         s = _session()
         s.target_comp = _COMP_LINE
         act = decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
-        assert isinstance(act, CloseShop)          # 店面空:访问以关店终结
+        # gold=100 为必花域帧(20 号稿 L3 落码):店面空 ⇒ 分层末位 L3
+        # 升级消费(LevelUpShop),不再以 CloseShop 终结;闩语义不变。
+        assert isinstance(act, LevelUpShop)
+        assert act.auth_basis == 'm3_batch:must_spend'
         assert s.cw4_shopped_phase == (1, 3)       # 闩置位=访问位
         f = self._stuck_frame(round_num=3)
         out = mandate.run_mandate(f, s, state=st)

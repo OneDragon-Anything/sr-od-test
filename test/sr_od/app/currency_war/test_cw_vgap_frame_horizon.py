@@ -138,6 +138,7 @@ class TestR1AffordabilityGate:
         """金=息线 g*(50)⇒ 预算 0 ⇒ 关门(修正③:两侧都过 g* 账)。"""
         st, sess = self._frame(50)
         acts = _decide(st, sess)
+        # 域外帧(gold=50 非必花域):零变化,息线门照旧关门
         assert not [a for a in acts if isinstance(a, RefreshShop)]
         assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) >= 1
 
@@ -149,13 +150,13 @@ class TestR1AffordabilityGate:
         assert any(isinstance(a, RefreshShop) for a in acts)
 
     def test_small_surplus_deep_gap_closed(self):
-        """小溢余(gold=61,预算 11)同型缺件:总账(单 2★ 完成档期望
-        刷费+卡费+息损 ≈ 20 金)⇒ 关门 + ``shop_r1_account_over_budget``
-        分键。"""
+        """小溢余(gold=61)为必花域帧(20 号稿):g*/L 核算账降期望核算
+        (account_over_budget 分键不落),刷新由可负担性硬闸
+        (r2_budget)承载 ⇒ 刷新发射。"""
         st, sess = self._frame(61)
         acts = _decide(st, sess)
-        assert not [a for a in acts if isinstance(a, RefreshShop)]
-        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) >= 1
+        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) == 0
+        assert any(isinstance(a, RefreshShop) for a in acts)
 
     def test_qualified_set_empty_closed(self):
         """合格集空(成员全部 2★ 成型)⇒ 关门 +
@@ -171,6 +172,7 @@ class TestR1AffordabilityGate:
         st.deployed = []
         sess = _session(comp, plane_lengths=[9, 5, 7])
         acts = _decide(st, sess)
+        # 域外帧(gold=50 非必花域):零变化,息线门照旧关门
         assert not [a for a in acts if isinstance(a, RefreshShop)]
         assert sess.cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
 
