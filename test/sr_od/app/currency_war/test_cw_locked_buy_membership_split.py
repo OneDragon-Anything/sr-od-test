@@ -220,9 +220,11 @@ class TestSellFaceAndLedgerUnswitched:
         assert act2.reason == 'm2_line_member'
 
     def test_r1_ledger_keeps_p40_target_members_semantics(self, monkeypatch):
-        """F2 锁:R1 刷新账合格集 = comp core∪shared(P40 A4 目标阵容件
-        口径)——锁定全集(hoard 数十人、含 4★ 高费件)不灌入,刷新判据
-        行为由既有证明背书,不随锁定口径翻转。"""
+        """F1 口径对齐后重推导(编排者裁定;出处 = 14号稿 §6.2 输入②):
+        R1 刷新账合格集单源 = buy_members(锁定帧 ⊇ core∪shared,禁与
+        买入义务面成员集分叉)。F2 拆分原保护的「卖免面不随采购集翻转」
+        语义不变:腾席/凑息/支付卖出通道仍 core∪shared 口径
+        (fuel_sell_candidates 排除集锁组承载)。"""
         comp = get_comp(_LOCK_COMP)
         core = set(predicates.line_members(comp))
         # 帧构造:店无任何义务面成员(燃料件不在采购集)、EV 无背书
@@ -233,16 +235,24 @@ class TestSellFaceAndLedgerUnswitched:
         captured: list[tuple[str, ...]] = []
         real = shop._r1_ledger_terms
 
-        def _spy(k_members, bench, deployed, level):
-            captured.append(tuple(k_members))
-            return real(k_members, bench, deployed, level)
+        def _spy(buy_members, bench, deployed, level):
+            captured.append(tuple(buy_members))
+            return real(buy_members, bench, deployed, level)
 
         monkeypatch.setattr(shop, '_r1_ledger_terms', _spy)
         shop.decide_shop_action(st, sess, _cfg())
         assert captured, '刷新账未达(帧构造失效)'
+        # F1 口径对齐后重推导(编排者裁定;出处 = 14号稿 §6.2 输入②):
+        # R1 刷新账合格集单源 = buy_members(锁定帧 = locked_buy_membership
+        # 采购集 ⊇ core∪shared)——臂①囤腿落地后「买满三张」费用口径与
+        # 行为(0→1→2→3 全链义务化)一致。F2 拆分原保护的「卖免面不随
+        # 采购集翻转」语义不变:腾席/凑息/支付卖出通道仍 core∪shared 口径
+        # (fuel_sell_candidates 排除集锁组承载),本锁钉「刷新账 ⊇ core
+        # ∧ 卖出面未翻转」两面。
         for km in captured:
-            assert set(km) == core
-            assert '丹恒·饮月' not in km
+            assert core <= set(km), '刷新账须含 core∪shared 全集(单源对齐)'
+            assert set(km) == set(locked_buy_membership(_locked_ist())), \
+                '刷新账成员集 = 买入义务集逐元素一致(单源,禁复制漂移)'
 
 
 # ===== transition_pair:二级囤货不升骨架义务 =====

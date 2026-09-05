@@ -184,7 +184,8 @@ class TestCriteriaShopFaces:
                      xp=(0, 4), hp=100)
         acts2 = _decide(st2, _session(_comp()))
         lv = [a for a in acts2 if isinstance(a, LevelUpShop)]
-        assert lv and all(a.auth_basis == 'm3_batch' for a in lv)
+        assert lv and all(a.auth_basis.startswith('m3_batch:')
+                          for a in lv)   # 三臂分键后带臂后缀(可归因)
 
     def test_levelup_face_lv9_stop(self):
         """升级面:满级停(lv9_stop,LEVEL_CAP)。"""
@@ -208,13 +209,16 @@ class TestCriteriaShopFaces:
                     if isinstance(a, RefreshShop)]
 
     def test_stockpile_face_m6_opens_with_frame_window(self):
-        """压库面:T1 短路径后 M6 消费位窗口=帧级现算(塌缩带锚,
-        ADR-0516 重锚),T_SEARCH_A 布尔门退役(设计 13_buy_face_design
-        §2.3)——窗口非空帧正常买入。旧锁「T_SEARCH_A None ⇒ 溢余滞留」
-        锁的是布尔门语义,已被 T1 取代(改锁重推:出处=13_buy_face_design
-        §2.3「槽位布尔门退役」;滞留新语义=真无窗口帧,由
-        test_cw_p56_t1 的 stub-registry 锁承载)。店牌=线成员副本:
-        dominance 零重叠不过不抢,M6(不排线成员)独占评估。"""
+        """压库面窗口接线锁(锁重推导,14号稿 §3 臂①落码后):旧帧
+        「1★ 线成员副本 ⇒ M6 压库」已被臂①义务囤腿取代(m2_stockpile
+        先于 M6,不走息律门)。M6 剩余可达面与 dominance 门向(stop_flag
+        同门 armed 先扫全店)的竞态 = 已登记 D0/C2(14号稿 §8,裁决后统一
+        排位次,本批不裁)。本锁钉两点:①1★ 线成员副本帧由臂①接手
+        (义务面语义);②M6 窗口接线本体在判据层直锁(stockpile_buy ×
+        帧级窗口:窗口非空且 1★ 全退 ⇒ 发射;空窗 ⇒ not_in_tier 不买)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
+            stockpile_buy,
+        )
         comp = _comp()
         members = _members(comp)
         bench = [_bc(m) for m in members]
@@ -222,8 +226,13 @@ class TestCriteriaShopFaces:
                     level=4)
         sess = _session(comp)
         acts = _decide(st, sess)
-        assert any(isinstance(a, BuyCard) and a.reason == 'm6_stockpile'
+        assert any(isinstance(a, BuyCard) and a.reason == 'm2_stockpile'
                    for a in acts)
+        # ② 窗口接线直锁(判据本体;零 shop 前序臂干扰)
+        ok, key = stockpile_buy(60, 0, 4, 1, 1, frozenset({1, 2, 3}))
+        assert ok is True and key == ''
+        ok2, key2 = stockpile_buy(60, 0, 4, 1, 1, frozenset())
+        assert ok2 is False and key2 == 'not_in_tier'
 
     def test_equipment_face_no_shop_emission(self):
         """装备面:商店线辖域申报——装备发射位在 prep 域,商店波零装备动作

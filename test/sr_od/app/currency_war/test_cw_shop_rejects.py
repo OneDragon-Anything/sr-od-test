@@ -134,11 +134,15 @@ def test_missing_bench_full_reason():
 
 
 def test_owned_member_not_missing():
-    """线内已持有件在售(合成原料再遇)⇒ 'owned',非缺口拒。"""
+    """线内已持有件在售(合成原料再遇)⇒ 锁重推导(14号稿 §3 臂①落码):
+    cnt1=1 帧不再落 'owned' 拒——副本由 m2_stockpile 义务囤腿买入
+    (§7.3:拒因 owned 命中占比大幅下降,验后趋零锚)。"""
     st = _state(114, [_card('绯英', 2)], deployed=[_dep('绯英')])
     sess = _session()
-    _decide(st, sess)
-    assert (sess.cw4_shop_rejects or {}).get('绯英') == 'owned'
+    acts = _decide(st, sess)
+    assert any(isinstance(a, BuyCard) and a.reason == 'm2_stockpile'
+               and a.card.name == '绯英' for a in acts)
+    assert (sess.cw4_shop_rejects or {}).get('绯英') is None
 
 
 def test_pure_function_matches_session_output():
@@ -160,7 +164,8 @@ def test_schema_field_default_empty_dict():
 
 _REJECT_ENUM = frozenset({
     'missing_unaffordable', 'missing_bench_full', 'missing_no_path',
-    'owned', 'merge_unaffordable', 'merge_bench_full',
+    'owned', 'merge_unaffordable', 'merge_bench_full', 'merge_ready',
+    'stockpile_bench_full', 'stockpile_unaffordable', 'stockpile_ready',
     'transition_char', 'non_line',
 })
 
@@ -212,14 +217,13 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
     # 种子集 ADR-0519 重锚:锁线门槛收紧(0.5→1.0 羁绊满员当量)后
     # 42/43 两局全程无锁线行,改用含锁线行的种子子集(40/44/46/50),
     # 锁语义(供给 vs 闸门可辨)不变。
-    # 双分支命中证据(逐种子真引擎直调复测;两口径分行标注,禁混用):
-    # 锁定行口径(target_comp 非空行):闸门命中 owned×1/1/2/3
-    # (种子 40/44/46/50;线内成员键全落 owned 系);该口径 non_line×0
-    # (成员键恒不落 non_line——即本测试断言面本身)。
-    # 全行口径(含 K 空窗行):供给命中 non_line×62/52/65/53;闸门
-    # 命中×7/5/8/7。
-    # 每颗种子两分支双命中,覆盖较旧种子 42/43(闸门分支 0 命中)为
-    # 增强非缩窄。
+    # 重推导(14号稿 §3 臂①落码):线内成员副本(cnt1=1)帧已由
+    # m2_stockpile 义务囤腿买入,拒绝行内线内成员键大幅减少(§7.3
+    # 「拒因 owned 命中占比大幅下降」的验收面)——本锁保留不变式断言
+    # (凡出现线内成员键,必不落 non_line/transition_char),覆盖前提
+    # 由纯函数映射锁(test_pure_function_matches_session_output)与
+    # missing_unaffordable/missing_bench_full 两帧锁承载。
+    saw_stockpile = False
     for seed in (40, 44, 46, 50):
         res = simulate_p1(seed, pool='fallback', planes=2)
         for row in res.ledger:
@@ -232,7 +236,15 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
                     seen_member_key = True
                     assert why not in ('non_line', 'transition_char'), \
                         f'锁线行线内成员 {name} 拒因 {why} 越界(分类失效)'
-    assert seen_member_key, '两局未见任何锁线行线内成员键 = 键分类覆盖存疑'
+        for row in res.ledger:
+            for a in row.get('actions') or []:
+                if a.get('reason') == 'm2_stockpile':
+                    saw_stockpile = True
+    # 覆盖前提(落地审低-3):键分类不变式须有真实命中面——线内成员键
+    # (拒绝侧,臂①后大幅减少)或臂①买入动作(行动侧)至少其一出现,
+    # 防断言在空转恒真下假绿;拒绝侧纯映射由 pure-function 锁承载。
+    assert seen_member_key or saw_stockpile, \
+        '种子局既无线内成员拒因键也无臂①买入 = 键分类覆盖存疑'
 
 
 def test_sim_k_empty_window_comp_none_falls_back_non_line():

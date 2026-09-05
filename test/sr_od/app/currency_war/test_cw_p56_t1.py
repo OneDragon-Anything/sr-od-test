@@ -154,9 +154,12 @@ class TestShopWiringP56T1:
     """shop 线接线锁:M6 P56 拒因计数 + 回拉发射位随帧落键。"""
 
     def test_m6_p56_reject_counter(self):
-        """M6 买入金约束=P56 可变现下界:线成型帧(无活期卡 ⇒
-        s_reserve=g*=50)下,cost2 件买后 49<50 ⇒ 拒 + 'm6_s_reserve_
-        reject' 计数;cost1 件买后 50≥50 ⇒ 发射。"""
+        """M6 买入金约束=P56 可变现下界(锁重推导,14号稿 §3 臂①落码后):
+        线成型帧下 1★ 线成员副本已归臂①义务囤腿(m2_stockpile,不走息律
+        门——P56 s_reserve 门是 M6 的,不辖 M2/M2b);本锁改两点:①副本帧
+        断言臂①接手(息律门不再辖义务买);②M6 s_reserve 消费位判据本体
+        直锁(stockpile_buy:cost+S 预留不足 ⇒ 's_reserve' 拒)。M6 剩余
+        可达面与 dominance 门向竞态 = 已登记 D0/C2(14号稿 §8)。"""
         from sr_od.application.currency_war.kernel.cw_comps import (
             COMP_LIBRARY,
             get_comp,
@@ -170,6 +173,9 @@ class TestShopWiringP56T1:
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
         from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
+            stockpile_buy,
         )
 
         class _Cfg:
@@ -196,15 +202,17 @@ class TestShopWiringP56T1:
             s.shop_state_frame = st
             return strat.decide_shop_screen(s, _Cfg()), s
 
-        # cost2:拒(51−2=49 < s_reserve=g*=50,无活期卡背书)
+        # ①副本帧:臂①义务囤腿接手(不走息律门,gold 51 ≥ cost 2)
         acts, s = _run(2)
-        assert not [a for a in acts if isinstance(a, BuyCard)]
-        assert s.cw4_counters.get('m6_s_reserve_reject', 0) == 1
-        # cost1:过(50 ≥ 50 边界),发射 M6 买入
-        acts2, s2 = _run(1)
-        assert any(isinstance(a, BuyCard) and a.reason == 'm6_stockpile'
-                   for a in acts2)
-        assert 'm6_s_reserve_reject' not in s2.cw4_counters
+        assert any(isinstance(a, BuyCard) and a.reason == 'm2_stockpile'
+                   for a in acts)
+        assert 'm6_s_reserve_reject' not in s.cw4_counters
+        # ②M6 s_reserve 消费位判据本体直锁:s_reserve=g*=50 语境,
+        # cost2 买后 49 < 50 ⇒ 拒;cost1 买后 50 ≥ 50 ⇒ 过
+        ok_r, key_r = stockpile_buy(51, 50, 4, 2, 1, frozenset({1, 2, 3}))
+        assert ok_r is False and key_r == 's_reserve'
+        ok_a, _ = stockpile_buy(51, 50, 4, 1, 1, frozenset({1, 2, 3}))
+        assert ok_a is True
 
     def test_pullback_fires_after_spending(self):
         """回拉发射位接线:买/花后投影金 < g* ⇒ 发射凑息卖

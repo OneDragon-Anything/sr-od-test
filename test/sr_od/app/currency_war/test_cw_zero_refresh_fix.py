@@ -216,7 +216,8 @@ class TestArm1CapSemantics:
                     level=3, deploy_cap=5, xp=(0, 4), hp=100)
         acts = _decide(st, _session(comp))
         lv = [a for a in acts if isinstance(a, LevelUpShop)]
-        assert lv and all(a.auth_basis == 'm3_batch' for a in lv)
+        assert lv and all(a.auth_basis.startswith('m3_batch:')
+                          for a in lv)   # 三臂分键后带臂后缀(可归因)
 
     def test_m3_silent_when_board_below_cap(self):
         """反面:板未满(deployed=3/cap=5)同 bench/金 ⇒ M3 不发射

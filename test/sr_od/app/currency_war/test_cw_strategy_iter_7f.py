@@ -18,7 +18,6 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_state import SellBench
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop as cw4_shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
@@ -32,7 +31,6 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     LevelUp,
-    OpenShop,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
@@ -196,38 +194,35 @@ class TestMergeCompletionBuy:
             f'合并完成件金不足拒因须细分,实得 {rejects.get(m)}'
 
     def test_merge_buy_bench_full_labeled(self) -> None:
-        """席满不买,拒因串给 merge_bench_full(保守不腾席:合并买入
-        非缺口义务,席满优先级归 M4 缺口面)。两份持有件放场上,
-        bench 用其余成员+填充件占满(全员持有 ⇒ M4/funding 不触发)。"""
+        """席满合并完成买(§3.6 满栏例外对齐后重推导):同名同星 1★ ×2
+        + 第三张在店 = 买入即合成帧,免 bench_free 门——满栏直发
+        m2_merge_completion,不再有 merge_bench_full 拒因键(机制对齐,
+        非行为放宽;14号稿 §3.6)。两份持有件放场上,bench 用其余成员+
+        2★ 填充件占满(全员持有 ⇒ M4/funding 不触发,隔离 M2b 单点)。"""
         comp = _comp()
         members = _members(comp)
         m = members[0]
         deployed = [_bc(m, slot=0), _bc(m, slot=1)]
-        bench = [_bc(n, slot=i) for i, n in enumerate(members[1:])]
+        bench = [_bc(n, slot=i, star=2) for i, n in enumerate(members[1:])]
         j = len(bench)
         while len(bench) < BENCH_CAPACITY:
-            bench.append(BenchChar(slot=j, char_id=f'填充件{j}', star=1))
+            bench.append(BenchChar(slot=j, char_id=f'填充件{j}', star=2))
             j += 1
         st = _shop_state(gold=30, shop=[ShopCard(x=100, name=m, cost=3)],
                          bench=bench, deployed=deployed)
         sess = _shop_session(comp)
         acts = _decide_shop(st, sess)
-        # ADR-0517 单动作重锚:首帧 M2b 被席闸拦(merge_bench_full 计数+
-        # 静态快照拒因不变);此后凑息卖(gold 30 < g* 50)卖填充件腾席,
-        # 下一帧逐帧重判 ⇒ M2b 补发合并完成买——帧内后段动作可见前段动作
-        # 真值更新,系单动作架构的预告语义差(波批下同波不重判,买不发生)。
-        assert sess.cw4_counters.get('merge_bench_full', 0) >= 1
+        assert 'merge_bench_full' not in sess.cw4_counters, \
+            '满栏例外后该键不再产生(§3.6)'
         merge_buys = [a for a in acts
                       if isinstance(a, BuyCard)
                       and a.reason == 'm2_merge_completion']
-        assert merge_buys, '凑息卖腾席后下一帧应补发合并完成买'
-        sell_idx = next(i for i, a in enumerate(acts)
-                        if isinstance(a, SellBench))
-        buy_idx = acts.index(merge_buys[0])
-        assert sell_idx < buy_idx, '腾席卖先于合并买(帧序锁)'
+        assert merge_buys, '满栏合成触发帧直发合并完成买(§3.6)'
         rejects = cw4_shop.shop_unbought_reasons(
             st, comp, tuple(members), [])
-        assert rejects.get(m) == 'merge_bench_full'
+        # 应-1:拒因与同帧实际动作一致——满栏合成帧直发合并买(§3.6),
+        # 静态拒因 = 'merge_ready'(应发语义),非退役的 merge_bench_full
+        assert rejects.get(m) == 'merge_ready'
 
 
 # ===== 候选③ 危机带经验授权让位 =====
