@@ -1,5 +1,5 @@
 """L3 备战消费链修批测试锁(必花域备战期闩 + L3 资格拒分键 + xp 现读
-透传 + form_score 实机回退源 + 实机遥测两件接线)。
+透传 + b_t 实机回退源[form_score 口径替换后延续] + 实机遥测两件接线)。
 
 病灶源 = g_20260906_021859 / g_20260906_034515 两局濒死段门链回放定谳:
 「花光」义务在必花域边界上蒸发(商店域首笔消费把金拉回域内后,同备战
@@ -134,8 +134,8 @@ class TestL3RejectKeys:
         assert sess2.cw4_counters.get('l3_reject_batch_unaffordable') == 1
 
 
-class TestFormScoreTrackedFallback:
-    """form_score 实机回退源(两局全帧 0.0 实证:商店观察帧 deployed
+class TestBoardTargetLineTrackedFallback:
+    """b_t 实机回退源(两局全帧 0.0 实证:商店观察帧 deployed
     恒空 → 写者输入缺;回退 = session.tracked_deployed)。"""
 
     def _strat(self):
@@ -148,8 +148,8 @@ class TestFormScoreTrackedFallback:
         return MandateV1Strategy(registry=sim_decision_registry())
 
     def test_empty_state_deployed_falls_back_to_tracked(self):
-        """state.deployed 空 ∧ tracked_deployed 有件 ⇒ score > 0
-        (实机商店帧形态;旧形态恒 0.0 = 写者输入缺非写点缺)。"""
+        """state.deployed 空 ∧ tracked_deployed 有件 ⇒ b_t > 0
+        (实机商店帧形态;青雀=仙舟∈线内集,3 件 = 3)。"""
         from sr_od.application.currency_war.kernel.cw_strategy_session import (
             StrategySession,
         )
@@ -159,17 +159,17 @@ class TestFormScoreTrackedFallback:
             BenchChar(slot=i + 1, char_id='青雀', star=1, faction='仙舟',
                       position_pref='back') for i in range(3)]
         self._strat().write_shop_mirrors(st, sess)
-        assert 0.0 < sess.v3_form_score <= 1.0
+        assert sess.v3_b_t == 3
 
     def test_truly_empty_board_stays_zero(self):
-        """tracked 同空(板面真空事实态)⇒ 恒 0.0 不虚构。"""
+        """tracked 同空(板面真空事实态)⇒ 恒 0 不虚构。"""
         from sr_od.application.currency_war.kernel.cw_strategy_session import (
             StrategySession,
         )
         sess = StrategySession()
         st = GameState()
         self._strat().write_shop_mirrors(st, sess)
-        assert sess.v3_form_score == 0.0
+        assert sess.v3_b_t == 0
 
 
 class TestRecorderObservationWiring:

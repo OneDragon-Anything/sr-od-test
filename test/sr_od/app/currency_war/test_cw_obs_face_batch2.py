@@ -1,5 +1,5 @@
 """sim 观测面补齐批五观察件测试(刷新触发源分键/冷启动金轨迹/theta 成因
-分桶/form_score 写者恢复/fenced 拆键)。
+分桶/b_t 写者(form_score 口径替换)/fenced 拆键)。
 
 纪律 = 先立观察再定谳,纯观测零策略语义改动;锁契约 = 结构/回显,
 不锁分布数值(README 第 8 条)。五锁与落点:
@@ -12,9 +12,9 @@
 3. theta 成因分桶(任务③):proof.switch_param_missing 缺失清单 +
    should_switch 聚合键 theta_unavailable 原样 + 成因键
    theta_unavailable_<槽位>(不同键防混淆,R24-2)。
-4. form_score 写者恢复(任务④):flow.write_shop_mirrors 按 ADR-0346
-   deployed 连续量口径写 session.v3_form_score,空板恒 0.0、有上场
-   件 >0 且 ≤1;phase/form_ok 退役缺省不受影响。
+4. b_t 写者(form_score→B_t 口径替换):flow.write_shop_mirrors 写
+   session.v3_b_t(kernel board_target_line_weight 单一源口径),
+   空板恒 0、上场线内件逐件计数;phase/form_ok 退役缺省不受影响。
 5. fenced 拆键(任务⑤):kernel can_deploy_single 拒因五键词表
    (单一源)可产生 cap/name_dup;发射位拆键透传 + 预注册裁决协议
    注释在场(源码契约锁,exit3_fence_semantics DESIGN §5-3)。
@@ -164,36 +164,44 @@ class TestThetaUnavailableCauseKeys:
         assert ct.get('theta_unavailable_delta') == 1
 
 
-# ---------- 锁 4:form_score 写者恢复(任务④) ----------
+# ---------- 锁 4:b_t 写者(form_score→B_t 口径替换) ----------
 
-class TestFormScoreWriter:
+class TestBoardTargetLineWriter:
     def test_empty_board_zero_and_stamp(self):
-        """空板 = 0.0(与旧恒缺省同形,但来源 = 写者现算非缺省残留);
-        轮键戳盖章(sim 引擎缺写守卫不重复触发)。"""
+        """空板 = 0(板面真空事实态照写不虚构);轮键戳盖章
+        (sim 引擎缺写守卫不重复触发)。"""
         sess = StrategySession()
         st = GameState()
         _mk_strat().write_shop_mirrors(st, sess)
-        assert sess.v3_form_score == 0.0
+        assert sess.v3_b_t == 0
         assert sess.v3_mirror_key == (1, 1)
 
-    def test_deployed_lifts_score_in_unit_interval(self):
-        """有上场件 → (0,1](deployed 口径;bench 囤件不计入——此处
-        只构造 deployed,单调性即口径方向锁)。char_id 用注册表真名
-        (board_factions_of 按注册表查阵营,假名不计入)。"""
+    def test_deployed_line_pieces_counted(self):
+        """有上场线内件 → 按件计数(青雀=仙舟∈线内集,3 件 = 3;
+        退役字段 v3_form_score 不再有写者)。char_id 用注册表真名
+        (B_t 按注册表查羁绊,未注册假名不计)。"""
         sess = StrategySession()
         st = GameState()
         _mk_strat().write_shop_mirrors(st, sess)
-        base = sess.v3_form_score
+        base = sess.v3_b_t
+        assert base == 0
         st.deployed = [BenchChar(slot=i, char_id='青雀', star=1,
                                  faction='仙舟', position_pref='back')
                        for i in range(3)]
         _mk_strat().write_shop_mirrors(st, sess)
-        lifted = sess.v3_form_score
-        assert 0.0 < lifted <= 1.0
-        assert lifted > base
+        assert sess.v3_b_t == 3, '三件线内上场件应逐件计 3'
+
+    def test_out_of_line_and_unregistered_not_counted(self):
+        """线外件与未注册件不计(件级承重口径:仅线内阵营集命中件计 1)。"""
+        sess = StrategySession()
+        st = GameState()
+        st.deployed = [BenchChar(slot=0, char_id='x_unregistered', star=1,
+                                 faction='', position_pref='back')]
+        _mk_strat().write_shop_mirrors(st, sess)
+        assert sess.v3_b_t == 0
 
     def test_phase_form_ok_retired_semantics_kept(self):
-        """写者只辖 form_score:phase/form_ok 退役缺省不被触碰
+        """写者只辖 b_t:phase/form_ok 退役缺省不被触碰
         (test_cw_metric_mirror_fix 同断言面的直调版)。"""
         sess = StrategySession()
         st = GameState()
