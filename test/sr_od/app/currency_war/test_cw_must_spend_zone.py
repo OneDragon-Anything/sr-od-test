@@ -19,14 +19,19 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import LevelUp
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
+    CloseShop,
     GameState,
     LevelUpShop,
     RefreshShop,
+    SellBench,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
     shop,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    levelup as _crit_levelup,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
@@ -302,7 +307,6 @@ class TestR1ZoneSplit:
         # 切分线生效:核算否决(g*/L 账)未拦 R1(域外同形帧会记该键)
         assert 'shop_r1_account_over_budget' not in sess.cw4_counters
         assert not isinstance(act, RefreshShop)   # 可负担性硬闸仍辖(金 51)
-        from sr_od.application.currency_war.kernel.cw_state import CloseShop
         assert isinstance(act, CloseShop)
 
     def test_r1_no_chaseable_guard_stays(self):
@@ -334,3 +338,296 @@ class TestR1ZoneSplit:
         act = _decide(st, sess)
         assert not isinstance(act, RefreshShop)
         assert sess.cw4_counters.get('must_spend_r1_budget_fail') == 1
+
+
+# ===== 实机档案帧单帧锁核(33 跳精化口径:未锁线入域帧出口消费语义)=====
+# 帧源 = .debug/temp/currency_war/replay/matches/ 两局档案的
+# slices/decisions.jsonl 决策帧逐字段直读(帧定位符 = ts 字符串;测试值
+# 内联,不依赖该文件存在)。判读出处 = 进度账本 流程/进度.md「未锁线期
+# 入域零消费」行(十九局候选①)+「金出口缺失族三案」行(二十局 P3r1)。
+#
+# cap_resolved 实算定谳:三帧涉及策略(加油站/量子力学/榜样的力量•彩)
+# 均无 interest_cap_override ⇒ cap_resolved = DEFAULT_INTEREST_CAP = 5,
+# G_must = 50。档案判读中的「g46/47 入域」「P3r1 g50 域内帧」按 §2.1
+# 严格大于语义均**未入域**(50 等值不出),真正入域帧 = g58/62/63/76/87。
+#
+# 重建缺口(如实声明):十九局 P1 帧档案 target_comp =「过渡配方·仙舟+
+# 持续伤害」不在 comp 注册表(P1 过渡线由 p1_pair 运行时物化,成员集
+# 不可离线重建)——未锁线帧以 k=None 重建,k 派生面(拒因/EV 买面)
+# 不在锁面,只锁必花域出口消费语义。二十局 P3r1 帧(希儿量子)全输入
+# 可重建,档案动作逐位复现。
+
+
+def _arc_bc(d: dict, i: int = 0) -> BenchChar:
+    """档案帧单位重建(bench/deployed 槽位按档案原值)。"""
+    return BenchChar(slot=d.get('slot', i + 1), char_id=d['char_id'],
+                     star=d.get('star', 1), faction=d.get('faction', ''),
+                     position_pref=d.get('position_pref', 'back'))
+
+
+def _arc_state(**kw) -> GameState:
+    """档案帧 GameState 重建(必填标量直传;可信位按档案 true)。"""
+    st = GameState(gold=kw['gold'], hp=kw['hp'], level=kw['level'],
+                   plane=kw['plane'], round_num=kw['round_num'])
+    st.node_type = kw.get('node_type', 'battle')
+    st.xp_progress = tuple(kw['xp_progress'])
+    st.level_up_cost = kw.get('level_up_cost') or 0
+    st.shop_refresh_cost = kw.get('shop_refresh_cost') or 2
+    st.deploy_cap = kw.get('deploy_cap') or 0
+    st.level_readable = True
+    st.hp_trusted = True
+    st.gold_readable = True
+    st.refresh_probs = kw.get('refresh_probs')
+    st.shop = list(kw.get('shop') or [])
+    st.bench = list(kw.get('bench') or [])
+    st.deployed = list(kw.get('deployed') or [])
+    return st
+
+
+class TestArchiveFrameReplay:
+    """两局档案真实帧在当前代码(必花域紧随批 03b145a7 载)下的出口消费
+    语义锁:触发源分键/层命中/让位显影/拒因分键各自落点(20 号稿
+    §3/§3.5)。"""
+
+    def test_zone_verdicts_by_cap_resolved(self):
+        """cap_resolved 实算判域(§2.1):g46/47/50 均未入域(50 等值
+        不出,严格大于);51 入域。三帧策略均无 cap override ⇒ 缺省
+        G_must=50——「g46/47 入域零消费」的入域判定不成立。"""
+        sess = SimpleNamespace(cw4_cap_override=None)
+        assert in_must_spend_zone(46, sess) is False
+        assert in_must_spend_zone(47, sess) is False
+        assert in_must_spend_zone(50, sess) is False
+        assert in_must_spend_zone(51, sess) is True
+
+    def test_g19_r5_g46_out_of_zone_zero_mustspend(self):
+        """十九局 r5 帧(plane1 r5 gold46 supply,ts≈23:26,策略加油站,
+        店空):域外帧 ⇒ 零消费是正确域外语义(非病灶)——无必花域出口
+        动作、无 must_spend 分键。"""
+        st = _arc_state(gold=46, hp=58, level=5, plane=1, round_num=5,
+                        node_type='supply', xp_progress=(10, 20),
+                        level_up_cost=4, deploy_cap=5)
+        sess = SimpleNamespace(cw4_counters={}, target_comp=None,
+                               v3_intention=None, cw4_cap_override=None)
+        act = _decide(st, sess)
+        assert not isinstance(act, (LevelUpShop, RefreshShop))
+        assert not [k for k in sess.cw4_counters
+                    if k.startswith('must_spend')]
+
+    def test_g19_r6_g46_offer_consumes_via_t1_not_zone(self):
+        """十九局 r6 offer 帧(ts 2026-09-05T23:24:50,gold46,店 5 张全
+        non_line):域外消费走既有经济通道(t1 凑息卖),非必花域出口——
+        分键面无 must_spend 触发。"""
+        st = _arc_state(gold=46, hp=47, level=5, plane=1, round_num=6,
+                        node_type='普通战斗', xp_progress=(10, 20),
+                        level_up_cost=4, deploy_cap=5,
+                        bench=[_arc_bc({'char_id': '卡芙卡', 'star': 1,
+                                        'slot': 2, 'faction': '星核猎手',
+                                        'position_pref': 'back'}, 1)],
+                        deployed=[_arc_bc({'char_id': '爻光', 'star': 1,
+                                           'slot': 1, 'faction': '仙舟',
+                                           'position_pref': 'front'}),
+                                  _arc_bc({'char_id': '藿藿', 'star': 1,
+                                           'slot': 1, 'faction': '仙舟',
+                                           'position_pref': 'back'}),
+                                  _arc_bc({'char_id': '卡芙卡', 'star': 1,
+                                           'slot': 2,
+                                           'faction': '星核猎手',
+                                           'position_pref': 'back'})],
+                        shop=[ShopCard(x=501, name='飞霄', cost=1, star=1),
+                              ShopCard(x=754, name='风堇', cost=2, star=1),
+                              ShopCard(x=1007, name='希儿', cost=3, star=1),
+                              ShopCard(x=1260, name='乱破', cost=1, star=1),
+                              ShopCard(x=1514, name='阮·梅', cost=2, star=1)])
+        sess = SimpleNamespace(cw4_counters={}, target_comp=None,
+                               v3_intention=None, cw4_cap_override=None)
+        act = _decide(st, sess)
+        assert isinstance(act, SellBench)
+        assert not [k for k in sess.cw4_counters
+                    if k.startswith('must_spend')]
+
+    def test_g19_inzone_unlocked_frames_consume_via_l3(self):
+        """未锁线入域帧出口消费语义(33 跳精化口径核心锁):r7 帧
+        (ts 2026-09-05T23:28:04,gold58)与 r9 帧(ts 23:33:14,gold63)
+        ——入域 ∧ 未锁线(v3_intention null)⇒ L2 垫件臂 fail-closed 不
+        触发(20 号稿 §3.1-L2 设计态,分键 absent),ladder 末位 L3 消费
+        ⇒ LevelUpShop(auth_basis='m3_batch:must_spend')。十九局「入域
+        零消费」形态(旧码形 faf09a64,第三触发源缺)在当前码形**不复现**
+        ——闭合判读见本类 docstring 判读出处行。"""
+        for gold, xp in ((58, (12, 20)), (63, (4, 40))):
+            st = _arc_state(gold=gold, hp=47 if gold == 58 else 25,
+                            level=5 if gold == 58 else 6, plane=1,
+                            round_num=7 if gold == 58 else 9,
+                            node_type='encounter' if gold == 58 else 'reward',
+                            xp_progress=xp, level_up_cost=4,
+                            refresh_probs={'1': 0.45, '2': 0.33, '3': 0.2,
+                                           '4': 0.02, '5': 0.0}
+                            if gold == 58 else None)
+            sess = SimpleNamespace(cw4_counters={}, target_comp=None,
+                                   v3_intention=None, cw4_cap_override=None)
+            act = _decide(st, sess)
+            assert isinstance(act, LevelUpShop), (gold, act)
+            assert act.auth_basis == 'm3_batch:must_spend'
+            assert 'must_spend_l2_trigger' not in sess.cw4_counters
+
+    def test_g20_p3r1_g50_locked_replays_archive_buy(self):
+        """二十局 P3r1 g50 帧(ts 2026-09-06T01:38:38,希儿量子锁定,全
+        输入可重建):档案动作 BuyCard 缇宝(reason m2_stockpile)逐位
+        复现——「域内帧被 spend_unified 拦截」的帧前提不成立:该帧未入域
+        且消费实际发生(M2 义务买入)。"""
+        km_units = [
+            {'char_id': '椒丘', 'star': 1, 'slot': 1, 'faction': '狼狩',
+             'position_pref': 'front'},
+            {'char_id': '希儿', 'star': 2, 'slot': 2, 'faction': '贝洛伯格',
+             'position_pref': 'front'},
+            {'char_id': '爻光', 'star': 1, 'slot': 1, 'faction': '仙舟',
+             'position_pref': 'back'},
+            {'char_id': '卡芙卡', 'star': 1, 'slot': 2,
+             'faction': '星核猎手', 'position_pref': 'back'},
+            {'char_id': '藿藿', 'star': 2, 'slot': 3, 'faction': '仙舟',
+             'position_pref': 'back'},
+            {'char_id': '花火', 'star': 2, 'slot': 4, 'faction': '盛会之星',
+             'position_pref': 'back'},
+            {'char_id': '刻律德菈', 'star': 1, 'slot': 5,
+             'faction': '夜之半神', 'position_pref': 'back'},
+            {'char_id': '符玄', 'star': 1, 'slot': 6, 'faction': '仙舟',
+             'position_pref': 'back'},
+        ]
+        bench_units = [
+            {'char_id': '娜塔莎', 'star': 1, 'slot': 1,
+             'faction': '贝洛伯格', 'position_pref': 'back'},
+            {'char_id': '缇宝', 'star': 1, 'slot': 2, 'faction': '昼之半神',
+             'position_pref': 'back'},
+            {'char_id': '真理医生', 'star': 2, 'slot': 3,
+             'faction': '银河学者', 'position_pref': 'front'},
+            {'char_id': 'Saber', 'star': 1, 'slot': 4,
+             'faction': '命运圣杯', 'position_pref': 'back'},
+            {'char_id': 'Saber', 'star': 1, 'slot': 5,
+             'faction': '命运圣杯', 'position_pref': 'back'},
+        ]
+        st = _arc_state(
+            gold=50, hp=14, level=8, plane=3, round_num=1,
+            node_type='battle', xp_progress=(18, 72), level_up_cost=4,
+            deploy_cap=8, refresh_probs={'1': 0.18, '2': 0.25, '3': 0.32,
+                                         '4': 0.22, '5': 0.03},
+            bench=[_arc_bc(b, i) for i, b in enumerate(bench_units)],
+            deployed=[_arc_bc(d, i) for i, d in enumerate(km_units)],
+            shop=[ShopCard(x=501, name='银枝', cost=2, star=1),
+                  ShopCard(x=754, name='星期日', cost=3, star=1),
+                  ShopCard(x=1007, name='长夜月', cost=4, star=1),
+                  ShopCard(x=1260, name='缇宝', cost=2, star=1),
+                  ShopCard(x=1514, name='银枝', cost=2, star=1)])
+        sess = SimpleNamespace(
+            cw4_counters={}, target_comp=get_comp('希儿量子'),
+            v3_intention=SimpleNamespace(phase='locked',
+                                         locked_comp='希儿量子'),
+            cw4_cap_override=None)
+        assert in_must_spend_zone(50, sess) is False
+        act = _decide(st, sess)
+        assert isinstance(act, BuyCard) and act.reason == 'm2_stockpile'
+        assert (act.card.name or '') == '缇宝'
+
+    def test_g20_p3r1_batch_intercept_scalars(self):
+        """整买纪律档案标量锁(level 8 / xp 18/72 / 单击 4 金 ⇒ 整批
+        56 金):gold 50 < 56 拦(复盘「56>50」实算复现),gold 80 ≥ 56
+        放行——P48 判据本身按档案标量逐位正确。"""
+        assert _crit_levelup.spend_unified(14, 50, 4) is False
+        assert _crit_levelup.spend_unified(14, 80, 4) is True
+
+    def test_g20_p3r1_prep_intercept_keyed_blindspot_pinned(self, monkeypatch):
+        """备战栈 P3r1 帧拦截两道分键面(候选 1 观测盲区现状钉):
+        ①真帧(hp14)第一道拦截 = 危机带停付让位,分键
+        crisis_level_spend_defer 在案可归因;
+        ②隔离停付让位(桩化 level_spend_blocked=False)后 spend_unified
+        腿拒发 = **零分键静默穿过**(mandate M3 该腿无拒因键)——本锁钉
+        现状盲区供观测面补齐批候选 1(域内 L3 整买拦截显影分键)对照,
+        修掉盲区后本断言随语义更新,禁机械保绿。"""
+        comp = get_comp('希儿量子')
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
+            line_members,
+        )
+        km = tuple(line_members(comp))
+        deployed = [_arc_bc({'char_id': c, 'star': 1, 'slot': i + 1,
+                             'faction': '?', 'position_pref': 'back'})
+                    for i, c in enumerate(
+                        ('椒丘', '希儿', '爻光', '卡芙卡', '藿藿', '花火',
+                         '刻律德菈', '符玄'))]
+        bench = [_arc_bc({'char_id': '缇宝', 'star': 1, 'slot': 1,
+                          'faction': '昼之半神', 'position_pref': 'back'})]
+        frame = mandate.MandateFrame(
+            gold=50, level=8, bench=bench, deployed=deployed,
+            deploy_cap=8, node_type='battle', stop_flag=False,
+            k_members=km, round_num=1)
+        st = _arc_state(gold=50, hp=14, level=8, plane=3, round_num=1,
+                        xp_progress=(18, 72), level_up_cost=4, deploy_cap=8)
+        sess = SimpleNamespace(
+            cw4_counters={}, target_comp=comp,
+            v3_intention=SimpleNamespace(phase='locked',
+                                         locked_comp='希儿量子'),
+            cw4_cap_override=None)
+        out = mandate.run_mandate(frame, sess, state=st)
+        assert not [e for e in out if isinstance(e.action, LevelUp)]
+        assert sess.cw4_counters.get('crisis_level_spend_defer') == 1
+        # ② 盲区腿:停付让位桩空后,整买拦截静默(现状语义,候选 1 对照锚)
+        monkeypatch.setattr(_crit_levelup, 'level_spend_blocked',
+                            lambda state, session, registry=None: False)
+        sess2 = SimpleNamespace(
+            cw4_counters={}, target_comp=comp,
+            v3_intention=SimpleNamespace(phase='locked',
+                                         locked_comp='希儿量子'),
+            cw4_cap_override=None)
+        out2 = mandate.run_mandate(frame, sess2, state=st)
+        assert not [e for e in out2 if isinstance(e.action, LevelUp)]
+        assert not [k for k in sess2.cw4_counters
+                    if 'unaffordable' in k or k.startswith('must_spend')]
+
+    def test_g20_p3r1_derived_inzone_consumes_r1_yielded(self):
+        """域内对照帧(派生,声明:g50 帧金 50→54 入域带内,店/bench 摘
+        缇宝消 M2 义务面,其余档案原值):入域帧消费路径 = R1 域内残形
+        切分线——RefreshShop(reason='must_spend_r1_yielded' 触发源记录)
+        + yielded 分键/L2 触发源分键/围栏拆键全在案,拒因逐键可辨
+        (§3.5 归因纪律,域内无静默)。"""
+        st = _arc_state(
+            gold=54, hp=14, level=8, plane=3, round_num=1,
+            xp_progress=(18, 72), level_up_cost=4, deploy_cap=8,
+            refresh_probs={'1': 0.18, '2': 0.25, '3': 0.32, '4': 0.22,
+                           '5': 0.03},
+            bench=[_arc_bc({'char_id': '娜塔莎', 'star': 1, 'slot': 1,
+                            'faction': '贝洛伯格', 'position_pref': 'back'}),
+                   _arc_bc({'char_id': '真理医生', 'star': 2, 'slot': 3,
+                            'faction': '银河学者', 'position_pref': 'front'}),
+                   _arc_bc({'char_id': 'Saber', 'star': 1, 'slot': 4,
+                            'faction': '命运圣杯', 'position_pref': 'back'})],
+            deployed=[_arc_bc(d, i) for i, d in enumerate([
+                {'char_id': '椒丘', 'star': 1, 'slot': 1, 'faction': '狼狩',
+                 'position_pref': 'front'},
+                {'char_id': '希儿', 'star': 2, 'slot': 2,
+                 'faction': '贝洛伯格', 'position_pref': 'front'},
+                {'char_id': '爻光', 'star': 1, 'slot': 1, 'faction': '仙舟',
+                 'position_pref': 'back'},
+                {'char_id': '卡芙卡', 'star': 1, 'slot': 2,
+                 'faction': '星核猎手', 'position_pref': 'back'},
+                {'char_id': '藿藿', 'star': 2, 'slot': 3, 'faction': '仙舟',
+                 'position_pref': 'back'},
+                {'char_id': '花火', 'star': 2, 'slot': 4,
+                 'faction': '盛会之星', 'position_pref': 'back'},
+                {'char_id': '刻律德菈', 'star': 1, 'slot': 5,
+                 'faction': '夜之半神', 'position_pref': 'back'},
+                {'char_id': '符玄', 'star': 1, 'slot': 6, 'faction': '仙舟',
+                 'position_pref': 'back'}])],
+            shop=[ShopCard(x=501, name='银枝', cost=2, star=1),
+                  ShopCard(x=754, name='星期日', cost=3, star=1),
+                  ShopCard(x=1007, name='长夜月', cost=4, star=1),
+                  ShopCard(x=1514, name='银枝', cost=2, star=1)])
+        sess = SimpleNamespace(
+            cw4_counters={}, target_comp=get_comp('希儿量子'),
+            v3_intention=SimpleNamespace(phase='locked',
+                                         locked_comp='希儿量子'),
+            cw4_cap_override=None)
+        act = _decide(st, sess)
+        assert isinstance(act, RefreshShop)
+        assert act.reason == 'must_spend_r1_yielded'
+        assert sess.cw4_counters.get('must_spend_r1_account_yielded') == 1
+        assert sess.cw4_counters.get('must_spend_l2_trigger') == 1
+        assert sess.cw4_counters.get('fuel_filler_stall_fenced') == 4
+        assert sess.cw4_counters.get(
+            'fuel_filler_stall_fenced_l2_cap') == 2
