@@ -44,7 +44,12 @@ _OBS_KEYS = {'locked_b', 'overcap_frames',
              # 必花域观测三键(20 号稿 §6):zone_frames/zero_consume
              # 为非负计数;layer_hit 为层命中 dict(L1/L2/L3),单独断言
              'must_spend_zone_frames', 'must_spend_zero_consume',
-             'must_spend_layer_hit'}
+             'must_spend_layer_hit',
+             # sim 观测面补齐批(sim 观测面批任务①③⑤):两键均为
+             # dict 型——refresh_trigger = 刷新触发源 → 本轮实刷次数;
+             # cw4_counters = 策略行为观测计数本轮增量(含 fenced 拆键
+             # /theta 成因分桶),零增量 = 空 dict
+             'refresh_trigger', 'cw4_counters'}
 _CAP = BENCH_CAPACITY + DEPLOYED_CAPACITY
 
 _SEED_CACHE: dict[int, object] = {}
@@ -77,6 +82,13 @@ class TestObsRowLedgerLock:
                 assert set(obs['must_spend_layer_hit']) <= {'L1', 'L2', 'L3'}
                 assert all(isinstance(v, int) and v >= 0 for v in
                            obs['must_spend_layer_hit'].values()), obs
+                # 补齐批两 dict 键形态:值全非负 int;refresh_trigger
+                # 增量 ≤ 本轮 obs.refreshes(同源差分,只述现象)
+                for _dk in ('refresh_trigger', 'cw4_counters'):
+                    assert all(isinstance(v, int) and v >= 0
+                               for v in obs[_dk].values()), obs
+                assert sum(obs['refresh_trigger'].values()) \
+                    <= obs['refreshes'], obs
                 # 内含不变式:超容帧 > 0 ⇒ 本轮出现过 |B|>容量上界的帧
                 # (|B| 只辖锁定采购集——P1 配方锁帧 locked_comp 恒空,
                 # locked_buy_membership 返回 None,locked_b 恒 0,是

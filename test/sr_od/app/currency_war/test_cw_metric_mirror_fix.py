@@ -1,11 +1,12 @@
-"""新核(mandate_v1)镜像族退役语义锁:相位影子/form_ok 恒 session 缺省。
+"""新核(mandate_v1)镜像族语义锁:phase/form_ok 恒退役缺省,form_score 有写者。
 
-现行语义:镜像族(``v3_phase``/``v3_form_ok`` 等字段)原写端
-``DecisionV2Strategy.write_shop_mirrors`` 属 v2 相位机/DP 姿态核,已随 v2
-底稿退役;mandate_v1 不继承任何镜像写端,sim 账本读到的 phase 恒 ''
-(引擎读 session 缺省)、form_ok 恒 False。极性观测(成型/未成型两态)
-只在旧核侧保留(见 test_old_core_engine_guard_never_fires 的旧核
-form_ok 锁)。锁口径 = 结构/回显,不锁分布数值。
+现行语义(sim 观测面补齐批任务④后):镜像族写端原属 v2 相位机/
+DP 姿态核,已随 v2 底稿退役;mandate_v1 的 ``write_shop_mirrors``
+恢复后**只辖 ``v3_form_score`` 一个键**(ADR-0346 deployed 连续量
+口径,纯遥测)——``v3_phase``/``v3_form_ok`` 无写端的退役语义保持
+不变:sim 账本读到的 phase 恒 ''(引擎读 session 缺省)、form_ok 恒
+False。form_score 数值面锁 = test_cw_obs_face_batch2(直调写者,
+确定性断言)。锁口径 = 结构/回显,不锁分布数值。
 """
 from __future__ import annotations
 
@@ -25,8 +26,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
 )
 
 # 与换核 A/B 正式跑批同款 sim 参数(池/位面/刷新/投资口径)
-SIM_KW = dict(pool='snapshot', planes=2, use_refresh=True, invest=False,
-              p2_combat=None, synthesis_chain=False, equip_wear_effect=0.0)
+SIM_KW = {'pool': 'snapshot', 'planes': 2, 'use_refresh': True,
+          'invest': False, 'p2_combat': None, 'synthesis_chain': False,
+          'equip_wear_effect': 0.0}
 CFG_SKEL = SimpleNamespace(ev_arm='skeleton_only')
 
 
@@ -42,12 +44,9 @@ def _run(seed: int, strat):
 
 
 def test_new_core_mirror_family_written() -> None:
-    """新核相位影子退役锁(多 seed;并入原两极性测试的断言面——该测试
-    验证 mandate 局 form_ok 恒初值 False,与本测试同断言面)。
-
-    mandate_v1 不再继承 v2 的 ``write_shop_mirrors``(相位机/DP 姿态核
-    属 v2 死链,底稿 MAP ⓪ B 类随删)——镜像族自 session 缺省值起
-    不再被任何写端刷新:phase 恒 ''、form_ok 恒 False。
+    """镜像族语义锁(多 seed):phase 恒 ''/form_ok 恒 False(退役面
+    保持);form_score 为 [0,1] 浮点(写者恢复后的结构面;数值口径
+    锁 = test_cw_obs_face_batch2 直调写者)。
     """
     ac.apply_core_swap_calibration()
     for seed in range(3):
@@ -60,5 +59,11 @@ def test_new_core_mirror_family_written() -> None:
                 f"新核相位影子应恒缺省(seed {seed} 轮 {row.get('round_num')})"
             assert row.get('form_ok') is False, \
                 f'新核 form_ok 应恒初值 False(seed {seed} 出现非初值)'
+            # form_score 写者恢复(任务④):每轮行应为 [0,1] 浮点
+            # (恒 0 = 写者又缺位的回归信号)
+            fs = row.get('form_score')
+            assert isinstance(fs, (int, float)) and 0.0 <= fs <= 1.0, \
+                f'form_score 应为 [0,1] 数值(seed {seed} 轮 ' \
+                f"{row.get('round_num')} got {fs!r})"
 
 
