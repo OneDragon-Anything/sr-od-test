@@ -391,3 +391,79 @@ def test_locked_resume_sync_reset_per_lock_episode() -> None:
         '锁定确认分支必须复位同步步证据位'
     sig = inspect.signature(cw_loop.locked_resume_sync_and_battle)
     assert list(sig.parameters) == ['op', 'ctx']
+
+
+def _mk_sync_loop():
+    from types import SimpleNamespace as _NS
+
+    from sr_od.application.currency_war.operations import cw_loop
+
+    class _Loop(cw_loop.CwLoop):
+        def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
+            self.ctx = _NS(cw_match=_NS(session=None))
+            self._cw_locked_sync_done = False
+            self._cw_locked_sync_fails = 0
+
+    return _Loop()
+
+
+def _patch_executor(monkeypatch, results: list[tuple[bool, str]],
+                    calls: list[str]):
+    import sr_od.application.currency_war.prep_actions as _pa
+
+    class _FakeExecutor:
+        def __init__(self, op, ctx):
+            calls.append('init')
+
+        def execute(self, action):
+            name = type(action).__name__
+            calls.append(name)
+            return results.pop(0) if name == 'RunDeploy' else (True, 'ok')
+
+    monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
+
+
+def test_locked_resume_sync_failure_not_marked_and_retried(monkeypatch) -> None:
+    """R1/R2 失败路径锁:RunDeploy ok=False(drag 白拖/刹车/板满门退化)
+    ⇒ 证据位不置位 + StartBattle 照常发射(本环不出席);下环重进同步
+    (RunDeploy 再次执行);重试成功后证据位置位、不再重试。"""
+    from sr_od.application.currency_war.operations import cw_loop
+    op = _mk_sync_loop()
+    calls: list[str] = []
+    _patch_executor(monkeypatch, [(False, '拖3次源槽未变'), (True, '计划空')],
+                    calls)
+    # 第 1 环:同步失败 → 证据位不置位,StartBattle 照发(本环不出席)
+    p1, _ = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+    assert p1 is True and op._cw_locked_sync_done is False
+    assert [c for c in calls if c != 'init'] == ['RunDeploy', 'StartBattle']
+    # 第 2 环:重进同步,成功 ⇒ 置位;此后不再同步
+    p2, _ = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+    assert p2 is True and op._cw_locked_sync_done is True
+    calls.clear()
+    cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+    assert [c for c in calls if c != 'init'] == ['StartBattle']
+
+
+def test_locked_resume_sync_gives_up_after_retry_limit(monkeypatch) -> None:
+    """重试上限锁:连续失败达上限(3)⇒ 放弃重试(证据位置位,防止与
+    StartBattle 重试共用 retry 池的无限消耗),StartBattle 照发——放弃侧
+    显式代价,非静默。新锁定局复位计数后重新获得完整重试预算。"""
+    from sr_od.application.currency_war.operations import cw_loop
+    op = _mk_sync_loop()
+    calls: list[str] = []
+    _patch_executor(monkeypatch, [(False, '已停止[W209j刹车]')] * 4, calls)
+    limit = 3
+    for _i in range(1, limit):
+        p, _ = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+        assert p is True   # StartBattle 每环照发
+        assert op._cw_locked_sync_done is False, '未达上限不放弃'
+    # 第 limit 次失败:达上限 ⇒ 放弃置位(此后不再重试同步)
+    cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+    assert op._cw_locked_sync_done is True
+    runs = [c for c in calls if c == 'RunDeploy']
+    assert len(runs) == limit, '放弃后不得再消耗同步重试'
+    # 新锁定局复位:证据位与失败计数归零
+    op._cw_locked_sync_done = False
+    op._cw_locked_sync_fails = 0
+    cw_loop.locked_resume_sync_and_battle(op, op.ctx)
+    assert op._cw_locked_sync_fails == 1
