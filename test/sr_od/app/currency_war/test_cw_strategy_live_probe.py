@@ -210,3 +210,102 @@ def test_run_checks_reports_dead_run(tmp_path) -> None:
     ])
     lines = ledger_hooks.run_checks_on_replay(tmp_path, recent=5)
     assert any('[策略失活]' in x and 'dead2' in x for x in lines), lines
+
+
+# ===== 流程心跳载体行修复批(策略失活误杀「恢复局+补给链」无声双轮)=====
+# 定谳(诊断档案 noprogress_stop_diag「第五次停机」节):恢复局锁定直出战
+# 分支与补给节点按设计整轮零策略决策行——「无声」是流程性合法无声,外环
+# 活着却在别的分支干活;连续 2 轮此类轮被失活连击误判「外环停转」停局。
+# 修复:两类分支消费一轮时显式登记 decisions 可见的心跳载体行——恢复局
+# 直出战 = 真实执行的 StartBattle 载体行(sid=''+actions 非空,与 mandate
+# 跳开店健康轮同构);补给节点 = 流程 sid 标记行(strategy_id='cw:flow:
+# supply_node_divert',自描述非店内决策)。钩子本体保留(真死局检测价值在)。
+
+_FLOW_ROUNDS = [
+    # r2:恢复局锁定分支消费(载体行:真实执行的出战动作)
+    {'run_id': 'm5', 'plane': 2, 'round_num': 2, 'strategy_id': '',
+     'actions': [{'__type__': 'StartBattle'}]},
+    # r3:补给节点流程标记行(sid 自描述,actions 空)
+    {'run_id': 'm5', 'plane': 2, 'round_num': 3,
+     'strategy_id': 'cw:flow:supply_node_divert', 'actions': []},
+]
+
+
+def test_flow_silent_rounds_are_live_after_fix() -> None:
+    """本局误杀形态回放:恢复局直出战载体行 + 补给节点流程标记行——
+    两轮按 _row_heartbeat 均为心跳,失活连击不再累积(修复前:两轮均
+    哑行 → streak=2 → 误杀停局)。"""
+    f = Path(str(state._RECORDER.replay_dir) + '/decisions.jsonl')
+    _write_rows(f, _FLOW_ROUNDS)
+    assert query.strategy_round_live('m5', (2, 2)) is True
+    assert query.strategy_round_live('m5', (2, 3)) is True
+    streak = 0
+    for prev, cur in (((2, 1), (2, 2)), ((2, 2), (2, 3)), ((2, 3), (2, 4))):
+        streak = query.dead_streak_transition(
+            prev, cur, streak, query.strategy_round_live('m5', prev))
+    assert streak < 2, '流程性合法无声双轮不得触发早停连击'
+
+
+def test_true_dead_still_caught_alongside_flow_rounds() -> None:
+    """真死局仍被抓(钩子保留不删):真哑行连续 2 轮(前后夹流程心跳轮,
+    证明不是流程轮被放行而是判据区分开)→ 连击达 2,停局线不变。"""
+    f = Path(str(state._RECORDER.replay_dir) + '/decisions.jsonl')
+    _write_rows(f, _FLOW_ROUNDS + [
+        {'run_id': 'm5', 'plane': 2, 'round_num': 4,
+         'strategy_id': '', 'actions': []},
+        {'run_id': 'm5', 'plane': 2, 'round_num': 5,
+         'strategy_id': '', 'actions': []},
+    ])
+    streak = 0
+    keys = [(2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6)]
+    for prev, cur in zip(keys, keys[1:]):
+        streak = query.dead_streak_transition(
+            prev, cur, streak, query.strategy_round_live('m5', prev))
+    assert streak >= 2, '真哑行连续 2 轮必须仍被抓(钩子保留)'
+
+
+def test_strategy_dead_flag_three_elements(tmp_path) -> None:
+    """钩子 flag 三要素锁(od-dev-stop-hooks 审计口径):写入文件含
+    [HOOK-STOP] 特征头 / 处理步骤 / 删除条件 + 定位(run/轮/streak/截图)。"""
+    from sr_od.application.currency_war.operations.cw_loop import (
+        write_strategy_dead_flag,
+    )
+    p = tmp_path / 'strategy_dead_early_stop.flag'
+    ret = write_strategy_dead_flag(2, (2, 3), 'run-x', 'shot.png', path=p)
+    text = p.read_text(encoding='utf-8')
+    assert ret == str(p)
+    assert '[HOOK-STOP]' in text
+    assert '处理步骤' in text and '删除条件' in text
+    assert 'run-x' in text and 'P2-r3' in text and 'streak=2' in text
+    assert 'shot.png' in text
+
+
+def test_register_flow_heartbeat_writes_carrier_rows(monkeypatch) -> None:
+    """登记函数行为锁:恢复局分支写真实 StartBattle 载体行(sid=''),
+    补给分支写流程 sid 标记行;遥测关闭/last_state 缺席静默跳过。"""
+    from types import SimpleNamespace as _NS
+    from sr_od.application.currency_war.operations import cw_loop
+
+    written: list[tuple] = []
+    monkeypatch.setattr(recorder, 'record_decision',
+                        lambda st, t, cs, eb, actions, extra=None,
+                        gold_point=True: written.append((actions, extra)))
+    _rec_enabled = _NS(enabled=True)
+    _state = _NS(get_recorder=lambda: _rec_enabled, plane=2, round_num=2,
+                 hp=1, gold=68, level=7)
+    ctx = _NS(cw_match=_NS(session=_NS(last_state=_state)))
+    cw_loop.register_flow_heartbeat(ctx, 'locked_resume_direct_battle')
+    assert written and len(written[0][0]) == 1
+    assert written[0][1] == {'strategy_id': ''}
+    cw_loop.register_flow_heartbeat(ctx, 'supply_node_divert')
+    assert written[1][0] == []
+    assert written[1][1] == {'strategy_id': 'cw:flow:supply_node_divert'}
+    # 静默面:遥测关闭 / last_state 缺席 ⇒ 不写不炸
+    _state_off = _NS(get_recorder=lambda: _NS(enabled=False), plane=2,
+                     round_num=3, hp=1, gold=68, level=7)
+    n = len(written)
+    cw_loop.register_flow_heartbeat(
+        _NS(cw_match=_NS(session=_NS(last_state=_state_off))), 'supply_node_divert')
+    cw_loop.register_flow_heartbeat(_NS(cw_match=_NS(session=_NS(last_state=None))),
+                                    'supply_node_divert')
+    assert len(written) == n
