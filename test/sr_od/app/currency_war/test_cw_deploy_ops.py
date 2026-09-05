@@ -1088,18 +1088,22 @@ def test_deploy_target_sets_r70_dual_track() -> None:
 
 
 # ==================== 换阵卖出义务臂(板满换阵死锁修复) ====================
-# 事故形态(第七局 r9 备战环,守卫三环 RunDeploy 单签名停机):线成型
+# 事故形态(线成型后板满换阵死锁:备战环守卫三环 RunDeploy 单签名停机,
+# 详见诊断档案 20260905_noprogress_stop_diag「第三次停机」节):线成型
 # fp=1.00、板 7/7 真满、bench 有 target 单位待进场,唯一腾位通道 = 卖
-# off-target deployed,但 W209 振荡熔断把 off-line 的引擎/配方件(艾丝妲
-# =旧线持续伤害、黑塔=银河学者引擎)按「恒不卖」护住 → sold 0/2 → 死锁。
-# 修复:线成型 ∧ 板满时 off-line fenced 件让位(换阵卖出义务臂);新线
-# core∪shared 仍保护(禁卖护栏不因换阵解除)。
+# off-target deployed,但 W209 振荡熔断把 off-line 的引擎/配方件按「恒
+# 不卖」护住 → sold 0/2 → 死锁。
+# 修复:线成型 ∧ 板满(真部署数,喂入单一源 swap_arm_deployed_count)时
+# off-line fenced 件让位(换阵卖出义务臂);新线 core∪shared 仍保护
+# (禁卖护栏不因换阵解除)。
 
 from sr_od.application.currency_war.data.cw_chars import get_char as _swap_get_char
 from sr_od.application.currency_war.kernel.cw_comps import get_comp as _swap_get_comp
+from sr_od.application.currency_war.kernel.cw_state import BenchChar as _swap_BenchChar
 from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
     fenced_swap_arm_of,
     offtarget_sell_allowed,
+    swap_arm_deployed_count,
 )
 
 
@@ -1149,23 +1153,33 @@ def test_w209_swap_arm_offline_fenced_sellable() -> None:
 
 
 def test_w209_swap_arm_trigger_gate() -> None:
-    """触发门真值表(纯函数 fenced_swap_arm_of):线成型(fp≥1.00)∧ 板满
-    (deployed 计 ≥ 前后排槽位总数)双条件;未成型或未满板帧不开启
-    (双轨期预囤框架件保护原语义零变化)。"""
-    assert fenced_swap_arm_of(1.0, 7, 2, 5) is True      # 事故形态:fp=1.00 ∧ 7/7
-    assert fenced_swap_arm_of(0.42, 7, 2, 5) is False    # 未成型(match3 同期对照)
+    """触发门真值表(纯函数 fenced_swap_arm_of,喂入=真部署数):线成型
+    (fp≥1.00)∧ 板满(deployed 计 ≥ 前后排槽位总数)双条件;未成型或
+    未满板帧不开启(双轨期预囤框架件保护原语义零变化)。"""
+    assert fenced_swap_arm_of(1.0, 7, 2, 5) is True      # 板满形态:fp=1.00 ∧ 7 部署
+    assert fenced_swap_arm_of(0.42, 7, 2, 5) is False    # 未成型(成型前对照)
     assert fenced_swap_arm_of(1.0, 6, 2, 5) is False     # 未满板:无腾位需求
     assert fenced_swap_arm_of(1.0, 8, 2, 5) is True      # 超满(cap 叠加)同辖
 
 
-def test_w209_swap_arm_wiring_lock() -> None:
-    """消费面源锁:_sell_offtarget_deployed 调用点必须带义务臂参数与
-    form_progress 成型度现读(禁有人在接线处静默退回恒关形态)。"""
-    from pathlib import Path
-    src = Path(
-        __import__('sr_od.application.currency_war.operations.cw_op.cw_op_deploy',
-                   fromlist=['x']).__file__).read_text(encoding='utf-8')
-    assert 'fenced_offline_sellable=_fenced_arm' in src
-    assert 'fenced_swap_arm_of(' in src
-    assert 'form_progress' in src
+def test_w209_swap_arm_feed_is_deployed_count_not_bond_sum() -> None:
+    """live 喂入语义锁(P1 阻断判别):「板满」喂入 = 真部署数
+    (deployed_occupied 槽位表计数),禁羁绊计数总和——board 语义 =
+    阵营→在场人数,一人多阵营(4 人可 11 阵营次):旧形态喂 sum(board
+    .values())=11 ≥ 7 槽 ⇒ 板未满即开臂、不可逆卖出逐环发生;修复后
+    喂 4 < 7 ⇒ 不开臂。"""
+    board = {'仙舟': 3, '治疗': 2, '列车同行': 3, '战技点': 2, '护盾': 1}
+    assert sum(board.values()) == 11, '锁前提:4 人多阵营贡献 11 阵营次'
+    tracked = [_swap_BenchChar(slot=i + 1, char_id=n, star=1)
+               for i, n in enumerate(('丹恒·饮月', '停云', '藿藿', '艾丝妲'))]
+    assert swap_arm_deployed_count(board, tracked) == 4
+    # 建模对象判别:同一形态下,喂部署数不开臂;喂羁绊总和必开臂(旧病)
+    assert fenced_swap_arm_of(1.0, swap_arm_deployed_count(board, tracked),
+                              2, 5) is False
+    assert fenced_swap_arm_of(1.0, sum(board.values()), 2, 5) is True
+    # 边界:tracked 缺失/空 ⇒ 0(缺输入保守侧,不开臂)
+    assert swap_arm_deployed_count(board, []) == 0
+    assert swap_arm_deployed_count(None, None) == 0
+    assert fenced_swap_arm_of(1.0, swap_arm_deployed_count(board, []),
+                              2, 5) is False
 

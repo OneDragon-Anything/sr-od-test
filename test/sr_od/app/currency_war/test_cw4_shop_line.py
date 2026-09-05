@@ -896,22 +896,23 @@ class TestSimGates:
         assert report['pool_fingerprint']
 
 
-# ===== 双账分离 HIT 修复批:多集等价降级 + 布局单一源重播种 =====
+# ===== 双账分离修复批:多集等价降级 + 布局单一源重播种 =====
 
 class TestDualLedgerSlotDriftReseed:
-    """双账对谈守卫的两级分型锁(第八局 OpenShop HIT 修复):
+    """双账对谈守卫的两级分型锁(OpenShop 双账槽位漂移事故的降级修复;
+    详见诊断档案 noprogress_stop_diag「双账分离 HIT」节):
 
-    事故形态(G1-G4 定谳=真投影 bug):对账 churn(卖出/合并/换位)后
+    事故形态(定谳=真投影 bug):对账 churn(卖出/合并/换位)后
     tracked/实况槽位重排,投影副本未跟随重播种——两侧落槽规则一致
     (首个空位)但 bench 布局「洞在哪」不同源,HIT 载荷 =
     expected=[符玄,阮·梅,阮·梅] vs tracked=[阮·梅,符玄,阮·梅]
     (真实 bench 阮·梅@1、阮·梅@3、洞@2,游戏填洞@2;投影副本洞@1)。
 
-    修复 = 守卫签名比较先做多集(Counter)等价:等价 ⇒ WARNING 记
-    「槽位布局漂移」另账不炸环 + 按 tracked 真值重播种投影 bench
-    (回写源选 tracked 而非 match.bench_slot_map:后者只在买组确认后
-    产出、守卫炸点在组中,且只含所购名→槽不承载 churn 重排与洞位);
-    真多集分歧仍 AssertionError。"""
+    修复 = 守卫签名比较先做多集(Counter)等价:等价 ⇒ WARNING +
+    ``bench_slot_layout_drift`` 台账分键留证不炸环 + 按 tracked 真值
+    重播种投影 bench(含槽号健康门;回写源选 tracked 而非
+    match.bench_slot_map:后者只在买组确认后产出、守卫炸点在组中,且只
+    含所购名→槽不承载 churn 重排与洞位);真多集分歧仍 AssertionError。"""
 
     @staticmethod
     def _bc_at(name: str, slot: int) -> BenchChar:
@@ -960,8 +961,9 @@ class TestDualLedgerSlotDriftReseed:
 
     def test_multiset_equal_drift_downgrades_and_reseeds(self, monkeypatch):
         """①多集等价降级锁(HIT 载荷原样,expected/tracked 互换槽序):
-        不炸 AssertionError;WARNING 记「槽位布局漂移」另账;投影 bench
-        按 tracked 真值回写(符玄归位 @2,洞随之对齐)。"""
+        不炸 AssertionError;WARNING + ``bench_slot_layout_drift`` 台账
+        分键留证(另账可被判读工具查);投影 bench 按 tracked 真值回写
+        (符玄归位 @2,洞随之对齐)。"""
         from sr_od.application.currency_war.operations.cw_op import (
             cw_shop_action_ops,
         )
@@ -970,12 +972,47 @@ class TestDualLedgerSlotDriftReseed:
             cw_shop_action_ops, 'log',
             type('W', (), {'warning': staticmethod(
                 lambda *a, **k: warnings.append(a))})())
+        defect_rows: list[tuple] = []
+        monkeypatch.setattr(
+            cw_shop_action_ops.defects, 'record_defect',
+            lambda surface, kind, expected, observed, **kw: defect_rows.append(
+                (surface, kind, expected, observed)))
         sess, proj = self._post_buy_frames()
         cw_shop_action_ops.guard_expected_vs_tracked(proj, sess)   # 不炸
         assert any('槽位布局漂移' in str(a[0]) for a in warnings), warnings
+        assert any(k == 'bench_slot_layout_drift'
+                   for _s, k, _e, _o in defect_rows), defect_rows
         assert proj.bench[0].char_id == '阮·梅'
         assert proj.bench[1].char_id == '符玄', '符玄必须随 tracked 归位 @2'
         assert proj.bench[2].char_id == '阮·梅'
+
+    def test_unhealthy_slot_numbers_block_reseed(self, monkeypatch):
+        """②b 槽号健康门锁(_reseed_bench_layout 直测):占用槽号越界/
+        重复 ⇒ 返回 False、不动投影布局 + 落 ``bench_slot_unhealthy``
+        台账分键。(守卫路径上 bench_from_compact 会把坏槽号静默规范成
+        首空位——即 G5「垃圾进先洗白」形态,守卫处不可辨;本门是重播种
+        通道口的防御纵深,直测锁定。)"""
+        from sr_od.application.currency_war.operations.cw_op import (
+            cw_shop_action_ops,
+        )
+        defect_rows: list[tuple] = []
+        monkeypatch.setattr(
+            cw_shop_action_ops.defects, 'record_defect',
+            lambda surface, kind, expected, observed, **kw: defect_rows.append(
+                (surface, kind, expected, observed)))
+        st = self._hit_state()
+        before = [b.char_id if b else None for b in st.bench]
+        bad = [self._bc_at('阮·梅', 1), self._bc_at('符玄', 99),
+               self._bc_at('阮·梅', 1)] + [None] * 6   # 越界 + 重复
+        assert cw_shop_action_ops._reseed_bench_layout(st, bad) is False
+        assert [b.char_id if b else None for b in st.bench] == before, \
+            '坏槽号不得重播种(投影布局维持)'
+        assert any(k == 'bench_slot_unhealthy'
+                   for _s, k, _e, _o in defect_rows), defect_rows
+        good = [self._bc_at('阮·梅', 1), self._bc_at('符玄', 2),
+                None] + [None] * 6
+        assert cw_shop_action_ops._reseed_bench_layout(st, good) is True
+        assert st.bench[1] is not None and st.bench[1].char_id == '符玄'
 
     def test_true_divergence_still_raises(self):
         """②真分歧仍炸锁:成员不同(非槽序互换)⇒ AssertionError
