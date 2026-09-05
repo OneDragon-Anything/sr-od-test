@@ -112,11 +112,9 @@ def test_invest_entry_persistent_miss_bounded_window_still_fails(
     sleeps: list[float] = []
     op = _make_op(test_context, monkeypatch, [prep], sleeps)
     assert op._ensure_entry_screen() is False, '持续 miss(超窗)应仍判失败'
-    assert len(sleeps) == CwScreenInvestStrategy.ENTRY_REPROBE_TIMES, (
-        f'复探次数应有界 = ENTRY_REPROBE_TIMES({CwScreenInvestStrategy.ENTRY_REPROBE_TIMES}),'
-        f'实际 {len(sleeps)}')
-    assert sleeps == [CwScreenInvestStrategy.ENTRY_REPROBE_WAIT_S] * len(sleeps), (
-        f'复探间隔应为 ENTRY_REPROBE_WAIT_S({CwScreenInvestStrategy.ENTRY_REPROBE_WAIT_S})')
+    assert sleeps == [CwScreenInvestStrategy.ENTRY_REPROBE_WAIT_S] * CwScreenInvestStrategy.ENTRY_REPROBE_TIMES, (
+        f'复探应有界且等间隔:{len(sleeps)} 次 × '
+        f'ENTRY_REPROBE_WAIT_S({CwScreenInvestStrategy.ENTRY_REPROBE_WAIT_S})')
 
 
 def test_invest_entry_first_frame_hit_zero_reprobe(
@@ -204,10 +202,32 @@ def test_invest_entry_full_flow_transition_to_stable_succeeds(
         reset_running_state(test_context, op)
     assert result.success, (
         f'过渡帧起手应经复探走完整流程成功,不得报非投资策略屏:status={result.status}')
-    assert not any('非投资策略屏' in (result.status or '') for _ in [0])
     # 走完选卡+确认(点击序 = 卡名选中 + 确认)
     assert any(abs(p.x - 460) <= 20 and abs(p.y - 480) <= 20 for p in ctrl.recorded_clicks), (
         f'应点击卡名选中,实际点击={ctrl.recorded_clicks}')
     assert any(abs(p.x - 978) <= 20 and abs(p.y - 983) <= 20 for p in ctrl.recorded_clicks), (
         f'应点击确认按钮,实际点击={ctrl.recorded_clicks}')
     assert ctrl.phase_idx == len(phases) - 1, f'应推进到 terminal phase,实际 {ctrl.phase_idx}'
+
+
+def test_invest_entry_last_reprobe_hit_consumed(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁⑤(末次采样边界):最后一次复探命中 = 判定通过。
+
+    末次采样结果必须被消费——旧实现循环退出直接 return False,锚恰在
+    窗口末拍出现的形态(本复探窗要容忍的边缘)仍被误报失败。
+    """
+    if _fixture_missing(test_context):
+        pytest.skip('fixture 缺:货币战争-备战/default 或 投资策略/default')
+    prep = test_context.load_screen('货币战争-备战', 'r1_idle_stop')
+    stable = test_context.load_screen(SCREEN, 'default')
+    reprobe_frames = (
+        [prep] * (CwScreenInvestStrategy.ENTRY_REPROBE_TIMES - 1) + [stable])
+    sleeps: list[float] = []
+    op = _make_op(test_context, monkeypatch, reprobe_frames, sleeps)
+    assert op._ensure_entry_screen() is True, (
+        '末次复探命中应判定通过(末次采样结果必须消费,防 off-by-one 回归)')
+    assert len(sleeps) == CwScreenInvestStrategy.ENTRY_REPROBE_TIMES, (
+        f'应完整消费复探窗({CwScreenInvestStrategy.ENTRY_REPROBE_TIMES} 次),'
+        f'实际 {len(sleeps)}')
