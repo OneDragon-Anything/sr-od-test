@@ -137,6 +137,22 @@ class TestN2SinglePieceQuery:
             locked_factions=frozenset())
         assert ok is True and why == ''
 
+    def test_unannotated_hold_reason_surfaces(self, monkeypatch):
+        """缺因缺省显影(策略审查二十三跳必改项):held 而拒因字典无标注
+        (未来新增 hold 路径漏标形态)⇒ 返回 'unannotated',不冒名
+        'cap'。"""
+        from sr_od.application.currency_war.kernel import cw_deploy_logic
+        monkeypatch.setattr(
+            cw_deploy_logic, 'select_deployments_reasoned',
+            lambda *a, **kw: ([], [0], {}))   # held 且零标注
+        n = _off_fence_name()
+        ok, why = can_deploy_single(
+            _bc(n, 1), bench=[],
+            deployed_cids={'d1'}, deployed_fac={}, board={}, cap=9,
+            target_factions=frozenset(), target_cores=frozenset(),
+            locked_factions=frozenset())
+        assert ok is False and why == 'unannotated'
+
 
 class TestN3HeldPostbuy:
 
