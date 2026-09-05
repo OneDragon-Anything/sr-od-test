@@ -19,11 +19,11 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
-    CwScreenInvestStrategy,
-)
 from one_dragon.base.operation.operation_round_result import (
     OperationRoundResultEnum,
+)
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
+    CwScreenInvestStrategy,
 )
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import FixtureController
