@@ -22,6 +22,9 @@ import pytest
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
     CwScreenInvestStrategy,
 )
+from one_dragon.base.operation.operation_round_result import (
+    OperationRoundResultEnum,
+)
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import FixtureController
 
@@ -244,7 +247,8 @@ def test_invest_entry_timeout_retries_not_fails(
     op = CwScreenInvestStrategy(test_context)
     monkeypatch.setattr(op, '_ensure_entry_screen', lambda: False)
     result = op.handle()
-    assert not result.success
-    assert '重试' in (result.status or ''), (
+    assert result.result == OperationRoundResultEnum.RETRY, (
         f'超窗应走 round_retry(有界自愈,不产生 ERROR 行),'
-        f'实际 status={result.status}')
+        f'实际 result={result.result} status={result.status}')
+    assert '重试' in (result.status or ''), (
+        f'status 应声明重试语义,实际 {result.status}')
