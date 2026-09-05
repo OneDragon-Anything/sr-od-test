@@ -291,16 +291,77 @@ def test_resume_reconciliation_columns(replay: _match_archive_Path):
     assert e['hp'] == {'resume': 18, 'prev_final': 100, 'aligned': False}
     # gold:68 vs 55 → 不对齐
     assert e['gold'] == {'resume': 68, 'prev_final': 55, 'aligned': False}
+    # level:两侧帧 state.level 均为默认 3 → 对齐(与 hp/gold 同构三键)
+    assert e['level'] == {'resume': 3, 'prev_final': 3, 'aligned': True}
     # 单段独立局:无恢复事件 → 空列表
     a2 = arch.build_archive(replay, arch.assign_games(replay)[1])
     assert a2['resume_reconciliation'] == []
-    # 恢复帧 hp 不可信(readable=False)→ aligned=None 不可判,不猜
-    rows2 = [dict(r, hp_readable=False) if (
-        r.get('run_id') == 'run_20260830_101513'
-        and r.get('round_num') == 9) else r for r in rows]
+    # 恢复帧 hp 不可信(readable=False)→ aligned=None 不可判,不猜;
+    # level 两侧不等(恢复帧 7 vs 前段 3)→ aligned=False
+    rows2 = []
+    for r in rows:
+        if (r.get('run_id') == 'run_20260830_101513'
+                and r.get('round_num') == 9):
+            r = dict(r, hp_readable=False)
+            r['state'] = {**r['state'], 'level': 7}
+        rows2.append(r)
     _write_jsonl(replay, 'decisions.jsonl', rows2)
     a3 = arch.build_archive(replay, arch.assign_games(replay)[0])
-    assert a3['resume_reconciliation'][0]['hp']['aligned'] is None
+    rec3 = a3['resume_reconciliation'][0]
+    assert rec3['hp']['aligned'] is None
+    assert rec3['level'] == {'resume': 7, 'prev_final': 3, 'aligned': False}
+
+
+def test_resume_reconciliation_outcome_fallback(replay: _match_archive_Path):
+    """恢复帧兜底(M2):续局段零决策帧(采集缺口形态)→ 最早结算行
+    兜底,hp_after/hp_confidence 归一为帧 hp/hp_readable 口径;结算行
+    不采金/等级 → 对应字段 aligned=None(诚实缺省,不猜)。"""
+    dec_p = replay / 'decisions.jsonl'
+    rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
+    # 清掉续段(run_B)全部决策帧,只留结算行(p1r9 hp18 conf=1.0)
+    _write_jsonl(replay, 'decisions.jsonl',
+                 [r for r in rows if r.get('run_id') != 'run_20260830_101513'])
+    a = arch.build_archive(replay, arch.assign_games(replay)[0])
+    rec = a['resume_reconciliation']
+    assert len(rec) == 1
+    e = rec[0]
+    assert e['run_id'] == 'run_20260830_101513'
+    assert e['resume_frame'] == {'plane': 1, 'round_num': 9}
+    assert e['resume_ts'] == '2026-08-30T10:20:00'       # 结算行 ts
+    assert e['hp'] == {'resume': 18, 'prev_final': 100, 'aligned': False}
+    assert e['gold'] == {'resume': None, 'prev_final': 10, 'aligned': None}
+    assert e['level']['aligned'] is None                 # 结算行无 level
+    # 低置信结算行(conf<0.9)→ hp 不可信 → aligned=None(与帧口径同判)
+    out_p = replay / 'outcomes.jsonl'
+    outs = [json.loads(ln) for ln in out_p.open(encoding='utf-8') if ln.strip()]
+    _write_jsonl(replay, 'outcomes.jsonl', [
+        dict(o, hp_confidence=0.5) if (o.get('run_id') == 'run_20260830_101513')
+        else o for o in outs])
+    a2 = arch.build_archive(replay, arch.assign_games(replay)[0])
+    assert a2['resume_reconciliation'][0]['hp']['aligned'] is None
+
+
+def test_pending_warns_behind_watermark_unarchived(
+        replay: _match_archive_Path,
+        monkeypatch: pytest.MonkeyPatch):
+    """水位线回拨显影(M1):end_ts 落后水位线(历史最大值锚)且未入档、
+    落后量在告警窗内 → WARNING 带 game_id/end_ts/wm 溯源,防时钟回拨/
+    DST 回拨段新局连续漏装无感;已入档的落后局(正常形态)不告警。"""
+    warnings: list[str] = []
+    monkeypatch.setattr(arch, 'log', type('_L', (), {
+        'warning': staticmethod(lambda msg, *a: warnings.append(msg % a
+                                                       if a else msg)),
+        'info': staticmethod(lambda *a, **k: None),
+        'debug': staticmethod(lambda *a, **k: None)})())
+    assert arch.assemble_pending(replay) == []           # 首调落水位线
+    # run_C(11:10)已入档;run_A 局(末段 end 10:31,落后 wm < 48h)未入档
+    arch.assemble_game(replay, 'g_20260830_110000')
+    warnings.clear()
+    assert arch.assemble_pending(replay) == []           # 无人入档
+    assert any('run_20260830_101513' in w or 'g_20260830_094811' in w
+               for w in warnings), f'落后未入档局未显影: {warnings}'
+    # 已入档的落后局(g_110000)不产生新告警
+    assert not any('g_20260830_110000' in w for w in warnings)
 
 
 def test_materialized_slice_views_equal_source(replay: _match_archive_Path):
