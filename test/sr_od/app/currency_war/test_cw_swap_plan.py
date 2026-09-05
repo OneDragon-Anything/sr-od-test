@@ -341,24 +341,33 @@ def _m1p_session(seam: bool | None) -> _NS:
     return s
 
 
-def test_m1p_consumer_seam_gate_keeps_emission_closed() -> None:
-    """m1p_input_seam_pending 关闭态锁(ADR-0530 决策4:装配两侧输入
-    核对通过前发射位关闭,分键显影,缺省关 = fail-closed):计划非空帧
-    不发 RunDeploy,仅计 m1p_input_seam_pending;置 seam 位后同帧形态
-    才发射(RunDeploy reason=m1_swap_redeploy + m1p_fired)。"""
+def test_m1p_consumer_seam_gate_keeps_emission_closed(
+        monkeypatch) -> None:
+    """seam 门两态锁(ADR-0530 决策4;开闸批修订:置位已兑付——两侧输入
+    对齐证据 + fresh 生产写点接线两项前置义务完成后,run_mandate 入口
+    唯一写点恒置 True)。回滚态(写点改 False)= 计划非空帧不发
+    RunDeploy、仅计 m1p_input_seam_pending(fail-closed 显影);置位态
+    (现役缺省)= 同帧形态发射(RunDeploy reason=m1_swap_redeploy +
+    m1p_fired)。"""
     dep, bench = _base_deployed(), [_bc(_TARGET_BENCH)]
     st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
-    # 关闭态(缺省,无 seam 位)
+    # 回滚态(唯一写点值源 M1P_SEAM_VERIFIED 写回 False = fail-closed
+    # 显影态;monkeypatch 模拟回滚编辑,不碰生产模块)
+    import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
+    monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', False)
     sess = _m1p_session(None)
     out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess, state=st)
+    assert sess.cw4_m1p_seam_verified is False
     assert not any(e.action.__class__.__name__ == 'RunDeploy' for e in out)
     assert sess.cw4_counters.get('m1p_input_seam_pending') == 1
     assert 'm1p_fired' not in sess.cw4_counters
-    # 显式置位(seam 核对通过后的唯一合法开闸态)
-    sess2 = _m1p_session(True)
+    # 置位态(现役缺省:入口写点自置 True,无需外部注入)
+    monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', True)
+    sess2 = _m1p_session(None)
     out2 = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess2,
                        state=st)
+    assert sess2.cw4_m1p_seam_verified is True   # 入口唯一写点自置位
     fired = [e for e in out2 if e.action.__class__.__name__ == 'RunDeploy'
              and e.reason == 'm1_swap_redeploy']
     assert len(fired) == 1
@@ -423,5 +432,47 @@ def test_swap_sell_exclusion_single_source_verdict() -> None:
         == 'membership_unreadable'
     assert swap_sell_exclusion_reason(_VICTIM, None) == ''
     assert swap_sell_exclusion_reason('', ctx) == ''
+
+
+# ==================== 开闸批:fresh 生产写点接线 ====================
+
+def test_shop_buy_emission_writes_fresh_buys() -> None:
+    """fresh 生产写点接线锁(ADR-0530 开闸批;开闸核对批需接线清单①):
+    shop 买入发射位(_emit_buy,8 处 BuyCard 返回位单一收口)在买入动作
+    被采纳(单动作契约:return 即被决策循环无条件执行)时,逐名写入
+    kernel SWAP_FRESH_BUYS_ATTR 单一载体——发射位写入 → fresh_buys_of
+    同帧可读;执行侧卖出臂经 swap_sell_exclusion_reason 消费同一载体,
+    生产 fresh_buy 排除自此全量生效(P60 防抖在执行路径复活)。"""
+    from types import SimpleNamespace as _CFG
+
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        COMP_LIBRARY,
+        get_comp,
+    )
+    from sr_od.application.currency_war.kernel.cw_state import (
+        BuyCard,
+        ShopCard,
+    )
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        proof as _proof,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
+        decide_shop_action,
+    )
+    comp = get_comp(next(c.name for c in COMP_LIBRARY
+                         if getattr(c, 'core_chars', None)))
+    m = list(comp.core_chars)[0]
+    st = GameState(gold=30, level=3, round_num=2, plane=1)
+    st.shop = [ShopCard(x=100, name=m, cost=3, star=1)]
+    sess = StrategySession()
+    sess.cw4_counters = {}
+    sess.target_comp = comp
+    sess.cw4_line_state = _proof.LineState()
+    act = decide_shop_action(st, sess, _CFG(ev_arm='full'))
+    assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
+    assert fresh_buys_of(sess, st) == frozenset({m})
 
 
