@@ -941,16 +941,24 @@ def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
 # ===== 4b. CV 通道 + 双通道对账(ADR-0385 口述双通道指令,追加) =====
 
 def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模板加载惰性
-    """CV 通道实测格数:槽位存在性 std 签名(真 fixture 全量标定)。
+    """CV 通道实测格数:占用态门三态探针(布局档对账批;真 fixture 全量标定)。
 
-    8 格帧(狸猫/全位验证/cap9/cap10,左端 std 62.5-65.6 清晰带)→ 8;
-    **P3 局(cap11)左1 空槽 std 38.8 落不可判带 [12,48] → None 退公式**;
+    判据 = 每探针「整窗+两半窗」三段 std 对 ``_CV_SLOT_STD_MIN`` 的形态:
+    (full,full)→8 / (slice,slice)→7 / (none,none)→6 / 混合→None 退公式。
+    标定数字见 ``_PROBE_*`` 常量块注释。
+
+    8 格帧(狸猫/全位验证/cap9/cap10,两端整格 min 半窗 40.8-59.3)→ 8;
+    **P3 局(cap11)左 1 空槽暗框 = 整格存在证据** → 8(旧整窗判据 38.8 落
+    不可判带退公式;占用态门消解旧不可判带,运行值不变仍 8 格);
     6 格帧(shop_closed/a8_start/prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;
     「后排6槽-P2开局局」→ **6**(旧「7 槽」观察实为 6 格幻影,W535 按实格数
-    改名;**真 7 格帧
-    (佩佩局,居中重排 534..1386)左端 464 探针=真 s1 左半覆盖 std 26-44
-    落不可判带 → None 退公式 diff=1→7**(ADR-0390 勘误:非「羁绊面板渗入」;
-    7/8 的区分靠 cap 差公式+等级经验条反推)。非 1080p 小帧 → None(越界守卫)。
+    改名);
+    **真 7 格帧(佩佩局×2,居中重排 534..1386)→ 7**(slice,slice:左探针
+    右半片 + 右探针左半片;旧整窗判据落不可判带 → None 退公式——占用态门
+    把 ADR-0390 勘误案从「公式兜底」升级为「探针直读」);
+    deployed_r9_7grid(停机哨兵帧,背景半窗 std 11.3 超阈)→ **混合 None
+    退公式 7**(保守不猜;公式通道有防抖背书,选档终值仍 7)。
+    非 1080p 小帧 → None(越界守卫)。
 
     run 26 崩坏现场帧(后排6槽-run26崩坏现场.png,编排者 VLM+右端位置双重
     确认 = 标准 6 格正样本)→ 6:事故形态的直接回归锚。
@@ -961,9 +969,10 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
     for fn, want in (
             ('后排8槽-狸猫局.webp', 8), ('后排8槽-全位验证.webp', 8),
             ('后排8槽-双宝钻局.webp', 8), ('后排8槽-满级局.webp', 8),
-            ('后排8槽-P3局.webp', None),   # 左1 空槽 38.8 ∈ 不可判带 → 退公式
-            ('后排7槽-佩佩局.png', None),       # 渗入 26.2 ∈ 不可判带 → 退公式 diff1→7
-            ('后排7槽-佩佩局-拖测后.png', None),  # 渗入 40.2 ∈ 不可判带 → 退公式 diff1→7
+            ('后排8槽-P3局.webp', 8),   # 空 1 槽暗框=整格存在(占用态门消解旧不可判带)
+            ('后排7槽-佩佩局.png', 7),          # slice,slice:两端切片签名 → 直读 7
+            ('后排7槽-佩佩局-拖测后.png', 7),   # 同上(拖测后帧)
+            ('deployed_r9_7grid.webp', None),   # 背景半窗 11.3 超阈 → 混合保守 None
             ('后排6槽-P2开局局.webp', 6), ('shop_closed.webp', 6),
             ('shop_closed_a8_start.webp', 6), ('prep_1-6_all_positions.webp', 6),
             ('deployed_p1r9.webp', 6), ('r1_idle_stop.webp', 6),
@@ -1587,8 +1596,13 @@ _BACK7_FIXTURE = 'deployed_r9_7grid'   # 停机哨兵帧入仓(真板 7/7:前台
 
 
 def test_occupancy_arbitration_recovers_7grid(test_context, monkeypatch):
-    """哨兵帧锁:公式 7(正确)∧ CV 8(端点占用高估)→ 占用一致性仲裁
-    采 7 格档(期望后排 6 人:7 档中心占用 6 差 0 / 8 档占用 8 差 2)。"""
+    """哨兵帧锁(15 号稿批 B 升级后语义):真板 7 格帧 → 选档 7 格。
+
+    机制升级说明(锁语义重推,意图不变=「本帧必须按 7 格档运行」):
+    点修批(占用一致性仲裁)依赖 paddle 读数;批 B 占用态门后本帧 CV 探针
+    判 (slice, full) 混合形态 → 保守不可判 → 退公式值 7(diff=1,已建档,
+    直读)。公式通道输入有 cap/level 防抖背书,哨兵帧由公式通道正确收口;
+    佩佩局真 7 格帧的探针直读见 test_cv_channel_grid_counts(slice,slice→7)。"""
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
         pytest.skip('fixture 缺:deployed_r9_7grid.webp')
@@ -1596,13 +1610,15 @@ def test_occupancy_arbitration_recovers_7grid(test_context, monkeypatch):
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     r = cbl.resolve_back_slots(test_context, img, level=6, cap=7)
-    assert r['arb_n'] == 7 and r['n'] == 7 and r['prefix'] == '后排7槽', r
+    assert r['n'] == 7 and r['prefix'] == '后排7槽', r
 
 
-def test_occupancy_arbitration_degrades_to_cv_when_paddle_missing(
+def test_occupancy_arbitration_paddle_missing_formula_fallback(
         test_context, monkeypatch):
-    """声明边界锁:paddle 失读 → 期望人数不可得 → 不仲裁,退「采 CV」
-    旧规(本帧 = 8 格;仲裁语义只在双读数齐时生效,docstring 同口径)。"""
+    """声明边界锁(批 B 信号②退化梯):paddle 失读 → 信号③弃权 →
+    信号②结构证据梯:cv<formula(门后 CV 低读为下界,端点切片/失明非
+    「无格」证据)→ 不否决有防抖背书的公式,采公式 7(旧点修批此帧
+    n=8 是未门控 CV 误读;门后 CV 不再给出错误高读)。"""
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_observation as cwo
     if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
@@ -1612,17 +1628,47 @@ def test_occupancy_arbitration_degrades_to_cv_when_paddle_missing(
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cwo, 'read_deployed_count', lambda ctx, scr: None)
     r = cbl.resolve_back_slots(test_context, img, level=6, cap=7)
-    assert r['arb_n'] is None and r['n'] == 8, r
+    assert r['arb_n'] is None and r['n'] == 7, r
+
+
+def test_signal2_ladder_cv_higher_wins_without_paddle(
+        test_context, monkeypatch):
+    """信号②退化梯·反向:cv>formula(两端整格存在 = (full,full) 结构证据)
+    ∧ paddle 失读 → 采 CV 高档。桩面隔离(真帧 cv 通道独立于桩)。"""
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_observation as cwo
+    img = object()   # cv 全桩,帧不参与
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 8)
+    monkeypatch.setattr(cwo, 'read_deployed_count', lambda c, s: None)
+    r = cbl.resolve_back_slots(test_context, img, level=6, cap=6)
+    assert r['arb_n'] is None and r['n'] == 8 and r['prefix'] == '后排8槽', r
+
+
+def test_signal2_ladder_cv_lower_formula_wins_without_paddle(
+        test_context, monkeypatch):
+    """信号②退化梯·下界不否决:cv<formula(端点切片/失明非「无格」证据)
+    ∧ paddle 失读 → 采公式(有 cap/level 防抖背书的一侧)。"""
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_observation as cwo
+    img = object()
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 6)
+    monkeypatch.setattr(cwo, 'read_deployed_count', lambda c, s: None)
+    r = cbl.resolve_back_slots(test_context, img, level=6, cap=7)
+    assert r['arb_n'] == 7 and r['n'] == 7 and r['prefix'] == '后排7槽', r
 
 
 def test_deployed_identity_7grid_per_slot(test_context, templates):
     """逐槽身份锁(7 格档):定谳「档位漂移裁切错位」非「2★ 模板缺」——
     7 格档 rect 下 6 后排全认出,含 2★ 合成体藿藿(star=2 由金星计数独立
     读取,立绘模板与 1★ 同源即认)。槽 5 真空。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import identify_slots
     from sr_od.application.currency_war.obs.cw_back_layout import (
         back_row_slot_rects_ctx,
     )
+    from sr_od.application.currency_war.obs.cw_identity_obs import identify_slots
     if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
         pytest.skip('fixture 缺:deployed_r9_7grid.webp')
     img = test_context.load_screen(_BACK7_SCREEN, _BACK7_FIXTURE)
