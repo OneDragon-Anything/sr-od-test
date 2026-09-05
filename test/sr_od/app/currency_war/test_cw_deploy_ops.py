@@ -1154,12 +1154,13 @@ def test_w209_swap_arm_offline_fenced_sellable() -> None:
 
 def test_w209_swap_arm_trigger_gate() -> None:
     """触发门真值表(纯函数 fenced_swap_arm_of,喂入=真部署数):线成型
-    (fp≥1.00)∧ 板满(deployed 计 ≥ 前后排槽位总数)双条件;未成型或
+    (fp≥1.00)∧ 板满(占用数 ≥ cap,占用数口径;物理槽位门旧形态
+    domain 不可达已收口,见 test_cw_swap_plan 复活锁)双条件;未成型或
     未满板帧不开启(双轨期预囤框架件保护原语义零变化)。"""
-    assert fenced_swap_arm_of(1.0, 7, 2, 5) is True      # 板满形态:fp=1.00 ∧ 7 部署
-    assert fenced_swap_arm_of(0.42, 7, 2, 5) is False    # 未成型(成型前对照)
-    assert fenced_swap_arm_of(1.0, 6, 2, 5) is False     # 未满板:无腾位需求
-    assert fenced_swap_arm_of(1.0, 8, 2, 5) is True      # 超满(cap 叠加)同辖
+    assert fenced_swap_arm_of(1.0, 7, 7) is True      # 板满形态:fp=1.00 ∧ 7 占用
+    assert fenced_swap_arm_of(0.42, 7, 7) is False    # 未成型(成型前对照)
+    assert fenced_swap_arm_of(1.0, 6, 7) is False     # 未满板:无腾位需求
+    assert fenced_swap_arm_of(1.0, 8, 7) is True      # 超满(cap 叠加)同辖
 
 
 def test_w209_swap_arm_feed_is_deployed_count_not_bond_sum() -> None:
@@ -1175,13 +1176,13 @@ def test_w209_swap_arm_feed_is_deployed_count_not_bond_sum() -> None:
     assert swap_arm_deployed_count(board, tracked) == 4
     # 建模对象判别:同一形态下,喂部署数不开臂;喂羁绊总和必开臂(旧病)
     assert fenced_swap_arm_of(1.0, swap_arm_deployed_count(board, tracked),
-                              2, 5) is False
-    assert fenced_swap_arm_of(1.0, sum(board.values()), 2, 5) is True
+                              7) is False
+    assert fenced_swap_arm_of(1.0, sum(board.values()), 7) is True
     # 边界:tracked 缺失/空 ⇒ 0(缺输入保守侧,不开臂)
     assert swap_arm_deployed_count(board, []) == 0
     assert swap_arm_deployed_count(None, None) == 0
     assert fenced_swap_arm_of(1.0, swap_arm_deployed_count(board, []),
-                              2, 5) is False
+                              7) is False
 
 
 def test_p59_substitute_protected_from_swap_arm() -> None:

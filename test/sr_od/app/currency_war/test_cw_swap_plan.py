@@ -220,15 +220,58 @@ def test_swap_plan_recipe_floor_bench_piece_not_up_candidate() -> None:
 def test_fenced_arm_single_source_identity() -> None:
     """re-export 同一性锁(ADR-0530 决策2:fenced 臂判据迁
     kernel,执行侧 re-export 兼容——operations 桶副本必须归零,双源 =
-    r271 批同型复发)。"""
+    r271 批同型复发)。真值表同 test_cw_deploy_ops 锁(占用数口径新
+    签名,防迁移改行为)。"""
     from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
     from sr_od.application.currency_war.operations.cw_op import cw_op_deploy
     assert cw_op_deploy.fenced_swap_arm_of is dl.fenced_swap_arm_of
     assert cw_op_deploy.swap_arm_deployed_count is dl.swap_arm_deployed_count
-    # 判据语义不变(真值表同 test_cw_deploy_ops 锁,防迁移改行为)
-    assert fenced_swap_arm_of(1.0, 7, 2, 5) is True
-    assert fenced_swap_arm_of(0.42, 7, 2, 5) is False
-    assert fenced_swap_arm_of(1.0, 6, 2, 5) is False
+    assert fenced_swap_arm_of(1.0, 7, 7) is True
+    assert fenced_swap_arm_of(0.42, 7, 7) is False
+    assert fenced_swap_arm_of(1.0, 6, 7) is False
+
+
+# ==================== 成型臂复活锁(占用数口径收口) ====================
+
+def test_fenced_arm_revives_on_occupancy_full_frame() -> None:
+    """成型臂复活锁(fenced成型臂物理槽位门语义 bug 修复:占用数口径
+    统一,REVISION_R2 同根双源收口):线成型 fp≥1.00 ∧ 占用数 = cap 帧
+    ⇒ fenced 臂可开。旧代码板满门 = deployed_n ≥ 前后排物理槽位总数
+    (4+6=10),而 XP_TO_NEXT_LEVEL 键域 3..9 ⇒ level≤9 ⇒ level 驱动
+    cap 全域 <10 ⇒ 旧门全域不可达、成型臂恒死——本帧旧代码恒关,
+    本锁红即回归护栏。"""
+    # 纯函数面:level 驱动可达 cap 域(3..9,XP_TO_NEXT_LEVEL 键域)
+    # 内「占用数 = cap」帧全开;cap 缺读/非法 = 臂关(fail-closed)。
+    from sr_od.application.currency_war.kernel.cw_state import (
+        XP_TO_NEXT_LEVEL,
+    )
+    caps = sorted(set(XP_TO_NEXT_LEVEL) | {max(XP_TO_NEXT_LEVEL) + 1})
+    for cap in caps:
+        assert fenced_swap_arm_of(1.0, cap, cap) is True, cap
+        assert fenced_swap_arm_of(1.0, cap - 1, cap) is False, cap
+    assert fenced_swap_arm_of(1.0, 9, None) is False
+    assert fenced_swap_arm_of(1.0, 9, 0) is False
+    # 装配面:fp=1.00 ∧ 9 占用/9 cap(state.max_units() 现算链)⇒
+    # ctx.fenced_on=True(旧物理门形态此帧恒 False)。
+    comp = _NS(all_factions=('仙舟',), core_chars=('三月七',),
+               factions=('仙舟',), form_tiers={'仙舟': 2},
+               shared_chars=(), substitute_plan=None)
+    sess = _NS(v3_intention=None, target_comp=comp,
+               transition_framework='')
+    dep = [BenchChar(slot=i, char_id=f'p{i}', star=1)
+           for i in range(1, 10)]   # 9 占用(喂入只计占用数,名不查注册表)
+    st = GameState(gold=0, level=9, deploy_cap=9, plane=1, round_num=2,
+                   board={'仙舟': 2}, deployed=list(dep), bench=[])
+    ctx = assemble_swap_plan_inputs(sess, state=st, deployed=dep,
+                                    bench=[], cap=9)
+    assert ctx is not None and ctx.fenced_on is True, '复活锁:占用数满帧臂开'
+    # 未成型对照:同板面 fp<1.00 ⇒ 臂关(熔断保护原语义零变化)。
+    st_half = GameState(gold=0, level=9, deploy_cap=9, plane=1,
+                        round_num=2, board={'仙舟': 1},
+                        deployed=list(dep), bench=[])
+    ctx_half = assemble_swap_plan_inputs(sess, state=st_half,
+                                         deployed=dep, bench=[], cap=9)
+    assert ctx_half is not None and ctx_half.fenced_on is False
 
 
 # ==================== engine M1″ 意图面:双向断言 ====================
