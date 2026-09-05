@@ -230,3 +230,21 @@ def test_invest_entry_last_reprobe_hit_consumed(
     assert len(sleeps) == CwScreenInvestStrategy.ENTRY_REPROBE_TIMES, (
         f'应完整消费复探窗({CwScreenInvestStrategy.ENTRY_REPROBE_TIMES} 次),'
         f'实际 {len(sleeps)}')
+
+
+def test_invest_entry_timeout_retries_not_fails(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁⑥(二次治本):探测超窗 → handle 走 round_retry(有界自愈),
+    不得 round_fail——fail 炸出整 op 并产生 ERROR 行触发哨兵报警退出
+    (20-22 局实证每次 fail 一次哨兵退出);retry 消耗
+    node_max_retry_times 预算,有界不无限等。"""
+    if _fixture_missing(test_context):
+        pytest.skip('fixture 缺:货币战争-备战/default 或 投资策略/default')
+    op = CwScreenInvestStrategy(test_context)
+    monkeypatch.setattr(op, '_ensure_entry_screen', lambda: False)
+    result = op.handle()
+    assert not result.success
+    assert '重试' in (result.status or ''), (
+        f'超窗应走 round_retry(有界自愈,不产生 ERROR 行),'
+        f'实际 status={result.status}')
