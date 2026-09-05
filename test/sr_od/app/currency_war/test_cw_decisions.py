@@ -558,13 +558,37 @@ def test_strategy_registry_full_ingest() -> None:
 
 
 def test_decide_event_registry_prior() -> None:
-    """先验:白名单 T0(90)仍胜棱彩经济先验(70);先验胜未注册(0)。"""
+    """评估分(知识判据定序器)> 回落字典序 > 未注册 0(ADR-0524)。"""
     cfg = _cfg()
     st = GameState(board={}, hp=100)
-    assert decide_event(["定期福利", "乱成一锅粥+"], cfg, st).option_idx == 0, "白名单 T0 > 先验"
-    assert decide_event(["无名甲", "乱成一锅粥+"], cfg, st).option_idx == 1, "棱彩经济先验 > 未注册 0"
-    # 品质梯度:棱彩无经济(50) vs 未注册(0)
+    assert decide_event(["定期福利", "乱成一锅粥+"], cfg, st).option_idx == 0, "评估分高者胜"
+    assert decide_event(["无名甲", "乱成一锅粥+"], cfg, st).option_idx == 1, "评估分(回落域之上) > 未注册 0"
+    # 未注册(0) vs 回落字典序(>0) → 回落胜
     assert decide_event(["银色无名", "及时雨"], cfg, st).option_idx == 1
+
+
+def test_decide_event_fallback_lexicographic() -> None:
+    """品质回落纯字典序(ADR-0524,16 号稿 §1.6):主键=品质序(棱彩>金>银,
+    游戏定义),次键=economy 有无;零拍值——旧 50/30/10/+economy20 序到分
+    映射无推导已删。行为翻转已申报:翻转方向 = 向游戏定义序收敛(保守化)。"""
+    cfg = _cfg()
+    st = GameState(board={}, hp=100)
+    # 主键:棱彩无经济 > 金无经济(旧制 50>30 同序,翻转面守护)
+    pick = decide_event(["不虚此行", "狸狸的早晨"], cfg, st)
+    assert pick.option_idx == 1 and 'prior' in pick.reason, "品质序主键:棱彩 > 金"
+    # 翻转锁(旧制金 30 vs 银+经济 30 平手取前者 → 新制品质序定序:金 > 银有经济)
+    pick2 = decide_event(["星星相印", "不虚此行"], cfg, st)
+    assert pick2.option_idx == 1, "翻转锁:金 > 银有经济(旧制平手,新制主键定序)"
+    # 次键:经济有无只在同品质内生效(棱彩+经济 > 棱彩无经济)
+    pick3 = decide_event(["狸狸的早晨", "狸财经狸"], cfg, st)
+    assert pick3.option_idx == 1, "次键:同品质内经济有无"
+    # 回落域整体压低于评估分域(回落=「未评估时别全盲」,评估分有知识判据依据;
+    # 翻转已申报:旧制棱彩+经济 70 曾压过评估分 12-65 段,新制一律评估分优先)
+    pick4 = decide_event(["狸财经狸", "恢复生机"], cfg, st)
+    assert pick4.option_idx == 1, "回落域 < 评估分域:评估分 12 > 回落最高档"
+    # 未注册(0)仍在回落域之下(全盲才兜底 idx0)
+    pick5 = decide_event(["狸狸的早晨", "银色无名"], cfg, st)
+    assert pick5.option_idx == 0
 
 
 
@@ -582,21 +606,56 @@ def test_strategy_bindings_extraction() -> None:
 
 
 def test_decide_event_comp_match_wins() -> None:
-    """星徽套组对齐 target(飞霄)→ 压倒白名单 T0 与棱彩品质先验;不对齐 = 裸品质。"""
+    """星徽套组对齐 target(飞霄)→ comp 命中域压过基准域;不对齐 = 回落字典序(ADR-0524)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     feixiao = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
     cfg = _cfg()
     st = GameState(board={}, hp=100)
-    # 对齐套组(追击+飞霄,65+) vs 白名单 T0 定期福利(90)—— comp 匹配 1 命中 = 65 < 90?
-    # 单命中 45+20=65 不压 T0;双命中(阵营+角色都在 target)= 110 压 T0(成型加速语义)。
+    # 对齐套组(追击+飞霄)= 双命中(45×2+20=110)压评估分与单命中;成型加速语义。
     pick = decide_event(["定期福利", "追击星徽套组"], cfg, st, target_comp=feixiao)
-    assert pick.option_idx == 1, "阵营+角色双命中(110) > 白名单 T0(90)"
-    # 不对齐:燃血套组 vs 追击 target → 无命中 = 裸棱彩品质 50 < T0 90
+    assert pick.option_idx == 1 and 'comp-hit×2' in pick.reason, "双命中 110 > 评估分"
+    # 不对齐:燃血套组 vs 追击 target → 无命中 = 回落字典序 < 评估分
     pick2 = decide_event(["定期福利", "燃血星徽套组"], cfg, st, target_comp=feixiao)
-    assert pick2.option_idx == 0, "不对齐套组 = 裸品质(50) < 白名单 T0(90)"
-    # 无 target(None)→ 行为同旧(品质先验)
+    assert pick2.option_idx == 0, "不对齐套组 = 回落域 < 评估分域"
+    # N 定序锁:N=1(65)压回落域与低评估分,但被 N=2(110)压过(N 大者优先)
+    pick_n1 = decide_event(["恢复生机", "追击星徽套组"], cfg, st, target_comp=feixiao)
+    assert pick_n1.option_idx == 1 and 'comp-hit' in pick_n1.reason, "N≥1 域压过基准域"
+    # 无 target(None)→ 无命中,回落字典序
     pick3 = decide_event(["无名甲", "乱成一锅粥+"], cfg, st)
     assert pick3.option_idx == 1
+
+
+def test_decide_event_augment_dominance() -> None:
+    """augment 定义型支配性优先序(ADR-0524,16 号稿 §1.4):定义型 > 一切常规
+    评估项(含 comp-hit 双命中 110),仅低于用户 forbid;120 = 定序实现常数。"""
+    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+    feixiao = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
+    st = GameState(board={}, hp=100)
+    # 定义型(黑塔纪元,120)压过 comp-hit 双命中(110)
+    pick = decide_event(["追击星徽套组", "黑塔纪元"], _cfg(), st, target_comp=feixiao)
+    assert pick.option_idx == 1 and pick.reason.startswith('augment-defining'), \
+        f"定义型支配:120 > comp-hit 110,实得 {pick.reason}"
+    # 仅低于 forbid:用户 forbid 的定义型让位(steering hard− 10000)
+    cfg_fb = _cfg(strategy_forbid=["黑塔纪元"])
+    pick2 = decide_event(["追击星徽套组", "黑塔纪元"], cfg_fb, st, target_comp=feixiao)
+    assert pick2.option_idx == 0, "forbid 是唯一压过定义型的家"
+
+
+def test_env_faction_floor_category_tiers() -> None:
+    """阵营匹配定序门(ADR-0524,16 号稿 §1.3):三档值 = category 定序档位
+    邀请(70)< 契约(72)< 概念股(78);匹配 ⇒ 提到本 category 档位、压过全体
+    env 裸分上界 72;禁读基数——档位序锁在 dict 本体。"""
+    from sr_od.application.currency_war.kernel.cw_investments import ENV_FACTION_MATCH_FLOOR
+    # 档位序锁(定序语义本体)
+    assert (ENV_FACTION_MATCH_FLOOR['邀请'] < ENV_FACTION_MATCH_FLOOR['契约']
+            < ENV_FACTION_MATCH_FLOOR['概念股']), "category 定序档位:邀请<契约<概念股"
+    cfg = _cfg()
+    st = GameState(board={}, hp=100, hp_readable=True)
+    tgt = Comp(name="t3", factions=["追击"], core_chars=[], form_tiers={"追击": 4},
+               strength="A", form_difficulty="medium")
+    # 匹配 ⇒ 档位压过全体 env 裸分(78 > 上界 72)
+    pick = decide_event(["追击概念股", "彩虹时代"], cfg, st, target_comp=tgt)
+    assert pick.option_idx == 0 and 'env-faction' in pick.reason, "匹配档位 > 裸分上界"
 
 
 

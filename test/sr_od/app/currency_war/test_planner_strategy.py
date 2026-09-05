@@ -52,7 +52,7 @@ def _ocr_cards(path: str) -> tuple[list[str], list[str]]:
 
 
 def test_planner_strategy_upgrade_wolf_line():
-    """银狼线:升费 100+30=130 > 弱化 55 → 选升费。"""
+    """银狼线 ⇒ 升费档内升档(100+30=130,ADR-0524 档位语义)> 弱化档 55 → 选升费。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     tgt = next(c for c in COMP_LIBRARY if c.name == '狼尊欢愉')
     st = _test_planner_strategy_GameState(hp=80)
@@ -64,7 +64,8 @@ def test_planner_strategy_upgrade_wolf_line():
 
 
 def test_planner_strategy_weaken_low_hp():
-    """非银狼线+银狼不在场+低血:升费 100-60=40 < 弱化 55+20=75 → 弱化。"""
+    """非银狼线+银狼不在场 ⇒ 升费降档(100-60=40,ADR-0524 降档语义)< 弱化档 55 → 弱化。
+    (原注释「弱化 55+20=75」的 +20 低血钩子已随 ADR-0519 C15 退役,弱化恒 55。)"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     tgt = next(c for c in COMP_LIBRARY if c.name == '反甲白厄')
     st = _test_planner_strategy_GameState(hp=30)
@@ -82,6 +83,31 @@ def test_planner_strategy_both_equipment():
             PlannerOption(idx=1, text='轮滑鞋 简易装备')]
     pick = decide_planner(opts, st, None)
     assert pick.reason.startswith('装备'), f'装备局 reason 应为装备,实得 {pick.reason}'
+
+
+def test_planner_strategy_tier_order_and_key_equip():
+    """三层档位定序锁(ADR-0524,16 号稿 §1.7):升费档 > 弱化档 > 装备档;
+    key_equip +15 = 装备域内命中优先键(域内排前,不跨域压弱化档);
+    银狼不在场降档(40)< 弱化档的层间关系即「降档」语义本体。"""
+    from sr_od.application.currency_war.kernel.cw_comps import Comp
+    st = _test_planner_strategy_GameState(hp=60)
+    # 升费档 > 弱化档(无银狼线;bench 空 = 在场信息缺失 → 不降权,保守)
+    opts = [PlannerOption(idx=0, text='使后续节点【弱化】,降低敌人属性。'),
+            PlannerOption(idx=1, text='提升费用至4费,变为1星银狼')]
+    pick = decide_planner(opts, st, None)
+    assert pick.idx == 1 and '升费' in pick.reason, '升费档 > 弱化档'
+    # key_equip 命中在装备域内排前(风暴潮 6+15 > 轮滑鞋 4)
+    tgt = Comp(name='tk', factions=[], core_chars=[], form_tiers={}, strength='A',
+               form_difficulty='medium', key_equips=['火力风暴潮'])
+    opts2 = [PlannerOption(idx=0, text='轮滑鞋 简易装备'),
+             PlannerOption(idx=1, text='火力风暴潮 进阶装备')]
+    pick2 = decide_planner(opts2, st, tgt)
+    assert pick2.idx == 1 and '+key_equip' in pick2.reason, f'key_equip 域内优先,实得 {pick2.reason}'
+    # 装备档(21)不跨域压弱化档(55)
+    opts3 = [PlannerOption(idx=0, text='火力风暴潮 进阶装备'),
+             PlannerOption(idx=1, text='使后续节点【弱化】,降低敌人属性。')]
+    pick3 = decide_planner(opts3, st, tgt)
+    assert pick3.idx == 1, '弱化档 > 装备档(key_equip 命中不跨域)'
 
 
 def test_planner_ocr_on_archive_shot():
