@@ -22,13 +22,12 @@ from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
 
 
 class _FakeAop(BuyCardOp):
+    # project 方法体由 _drive 的 monkeypatch 覆盖,仅作 setattr 属性锚。
 
     def __init__(self, action):
         super().__init__(action)
-        self.projected: list = []
 
     def project(self, state):
-        self.projected.append(state)
         return ('proj', state)
 
 
@@ -74,9 +73,4 @@ class TestCallerOutcomeGate:
         assert kinds == ['project', 'guard']
         assert match.session.cw4_visit_bought_names == ['杰帕德']
         assert ledger.refresh_first_action is False
-        assert len(visit) == 1
-
-    def test_effective_visit_records_action(self, monkeypatch):
-        """落地帧 visit_actions 记录本动作(与未落地同记——尝试面留痕)。"""
-        calls, visit, _ledger, _match = _drive(monkeypatch, ok=True)
         assert len(visit) == 1
