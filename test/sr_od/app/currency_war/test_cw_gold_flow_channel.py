@@ -6,7 +6,8 @@
 2. 查询端 query_gold_flow:模态逐笔显形、未解释残差 = economy 同口径
    收入 − Σ可信模态笔、非 0 标 ⚠;与 query_economy「收」格严格同源;
 3. 装配端 D1 收口:assemble_pending 对 schema 过期的存量档案重装配
-   (防「修复只救读端,直读 JSON 的消费端永久吃到欠列档案」)。
+   (防「修复只救读端,直读 JSON 的消费端永久吃到欠列档案」);v6 起
+   跳过条件加严为「版本最新 ∧ 段集清单吻合」,续段归并即重装。
 
 测试纪律:全部写 tmp_path,禁触真实 .debug(recorder 单例经 monkeypatch
 桩化——模块级 _telstate 是全局,按测试纪律 #1 整链桩化)。
@@ -226,19 +227,53 @@ def test_assemble_pending_rebuilds_stale_schema(replay: Path):
 
 
 def test_assemble_pending_skips_current_schema(replay: Path):
-    """对偶门:版本最新的已入档局不重复写(防每次触发全量重装)。"""
+    """对偶门(v6 活局续段治理批重推导):版本最新 ≠ 无条件跳过——
+    跳过条件 = 版本最新 **∧ 段集清单与本轮分组吻合**(防续段归并后
+    永远进不了档案);段集有增长 / 清单缺失 → 重装。
+
+    三形态:①已入档+版本最新+段集无增长 → 跳过(防每次触发全量重装);
+    ②段集有增长(续段并入)→ 重装且不丢段;③手写档案缺 segments 键
+    (= 无法证明覆盖的退化形态)→ 保守重装。
+    """
     assert arch.assemble_pending(replay) == []   # 首调:落水位线
-    g1 = 'g_g1'
-    arch.assemble_game(replay, g1)
-    # g1.end_ts == 水位线(窗口外)→ 走不到;再造一个窗口内新局 + 最新版
-    # 档案(版本号 = 当前)→ 触发时应被「版本最新 → 跳过」
+    # 形态①:窗口内新局 + 最新版档案且段集清单吻合 → 跳过
     rows = [json.loads(ln) for ln in (replay / 'decisions.jsonl')
             .open(encoding='utf-8') if ln.strip()]
+    new_run = 'run_20260906_130000'
     _write_jsonl(replay, 'decisions.jsonl', rows + [
-        _dec('run_20260906_130000', 1, 1, '2026-09-06T13:00:00', 8)])
-    p = replay / 'matches' / 'match_g_20260906_130000.json'
+        _dec(new_run, 1, 1, '2026-09-06T13:00:00', 8)])
+    g2 = 'g_20260906_130000'
+    p = replay / 'matches' / f'match_{g2}.json'
     with p.open('w', encoding='utf-8') as f:
-        json.dump({'schema_version': arch.SCHEMA_VERSION,
-                   'game_id': 'g_20260906_130000', 'rounds': []},
+        json.dump({'schema_version': arch.SCHEMA_VERSION, 'game_id': g2,
+                   'segments': [{'run_id': new_run}], 'rounds': []},
                   f, ensure_ascii=False)
     assert arch.assemble_pending(replay) == []
+    # 形态②:续段并入该局(首帧非 (p1,r1))→ 段集增长 → 重装
+    resumed = 'run_20260906_140000'
+    dec = [json.loads(ln) for ln in (replay / 'decisions.jsonl')
+           .open(encoding='utf-8') if ln.strip()]
+    _write_jsonl(replay, 'decisions.jsonl', dec + [
+        _dec(resumed, 1, 5, '2026-09-06T14:00:00', 6)])
+    done = arch.assemble_pending(replay)
+    assert done == [g2]
+    got = json.loads(p.open(encoding='utf-8').read())
+    assert [s['run_id'] for s in got['segments']] == [new_run, resumed]
+    assert got['rounds']   # 重装为全量派生,非手写空壳
+    # 收敛:段集无增长后再触发不重复写
+    assert arch.assemble_pending(replay) == []
+    # 形态③:缺 segments 键的手写档案(旧锁 fixture 形态)→ 无法证明
+    # 覆盖 → 保守重装(语义变更点:v5 无条件跳过已被取代)
+    rows = [json.loads(ln) for ln in (replay / 'decisions.jsonl')
+            .open(encoding='utf-8') if ln.strip()]
+    late_run = 'run_20260906_150000'
+    _write_jsonl(replay, 'decisions.jsonl', rows + [
+        _dec(late_run, 1, 1, '2026-09-06T15:00:00', 8)])
+    g3 = 'g_20260906_150000'
+    p3 = replay / 'matches' / f'match_{g3}.json'
+    with p3.open('w', encoding='utf-8') as f:
+        json.dump({'schema_version': arch.SCHEMA_VERSION, 'game_id': g3,
+                   'rounds': []}, f, ensure_ascii=False)
+    assert arch.assemble_pending(replay) == [g3]
+    got3 = json.loads(p3.open(encoding='utf-8').read())
+    assert [s['run_id'] for s in got3['segments']] == [late_run]
