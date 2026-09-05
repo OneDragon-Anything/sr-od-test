@@ -308,7 +308,9 @@ class TestToolCriteria:
 
 class TestSimInjectDefaults:
     def test_injection_off_by_default(self):
-        """缺省零漂移锁:pool 空 ∧ P=0,sim 发放分布与既有池指纹逐位一致;
-        开注入属显式实验配置(池指纹变化由实验批声明)。"""
+        """缺省登记门:注入池常量缺省 = 空池 ∧ P=0(登记门口径——本锁只
+        钉常量缺省值防误改,分布与池指纹逐位一致由快速集 sim 全量隐式
+        覆盖,非本锁断言面);开注入属显式实验配置(池指纹变化由实验批
+        声明)。"""
         assert TOOL_GRANT_INJECT_POOL == []
         assert TOOL_GRANT_INJECT_P == 0.0
