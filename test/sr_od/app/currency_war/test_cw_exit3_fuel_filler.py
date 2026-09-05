@@ -6,7 +6,6 @@ fenced/precheck_unavailable)、垫件买入→部署 held 闭环端到端(发射
 登记 session.cw4_fuel_filler_stall_buys → 执行侧
 record_fuel_filler_held_postbuy 计数)。
 """
-
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
@@ -60,7 +59,8 @@ def _stall_frame(gold: int, fuel_pieces: int = 0, extra_bench=(),
     瓦尔特 cnt2=0(不可追成因)∧ bench 燃料件垫起可变现线。
     chaseable_starred=False ⇒ 可追成员不留 2★(A 支可追支成立 → fail 向);
     refresh_probs 传 None/dict 覆盖对账源(缺省 = {瓦尔特费档: 0});
-    locked=False = 未锁线帧(D 支 fail 向;伪 comp 仍在场,三审 C1 形态)。"""
+    locked=False = 未锁线帧(D 支 fail 向;伪 comp 仍在场——伪 comp 在场
+    ≠ 锁线,D 支门的阻断形态)。"""
     comp = get_comp(_COMP)
     km = list(line_members(comp))
     chaseable = [m for m in km if m != _causal_name()]
@@ -83,8 +83,6 @@ def _stall_frame(gold: int, fuel_pieces: int = 0, extra_bench=(),
     st.deployed = deployed
     st.refresh_probs = ({(get_char(_causal_name()).cost or 5): 0}
                         if refresh_probs == 'default' else refresh_probs)
-    # 锁线布尔单一源 = v3_intention.locked_comp(D 支门;三审 C1:伪 comp
-    # 在场 ≠ 锁线——locked=False 时 target_comp 仍在,门必须关)
     sess = SimpleNamespace(
         cw4_counters={},
         target_comp=comp,
@@ -97,6 +95,7 @@ def _decide(st, sess):
 
 
 class TestExit3Emission:
+    """正向形态锁:Φ_stall 四支全真 → 垫件买入 + 登记闭环。"""
 
     def test_phistall_frame_buys_fuel_filler(self):
         """全形态发射锁:Φ_stall 四支 ∧ 垫件在售 ∧ bench 空位 ∧ 净成本
@@ -143,7 +142,7 @@ class TestExit3Emission:
         assert not getattr(sess, 'cw4_fuel_filler_stall_buys', set())
 
     def test_precheck_unavailable_key(self, monkeypatch):
-        """查询不可得(C1 拆分,禁混 fenced 键)⇒ precheck_unavailable
+        """查询不可得(与围栏拒分键,禁混)⇒ precheck_unavailable
         分键,不发射。"""
         def _boom(*a, **kw):
             raise RuntimeError('快照缺失')
@@ -191,9 +190,26 @@ class TestExit3Emission:
         _decide(st, sess)
         assert sess.cw4_counters.get('bench_full') == 1
 
+    def test_bench_to_held_closed_loop(self):
+        """端到端:发射位买入登记 → 执行侧 held 现读重建 → held_postbuy
+        计数(同 session 传递,消费 N3 消费口)。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
+            record_fuel_filler_held_postbuy,
+        )
+        filler = _off_line_name()
+        pad = _off_line_name(exclude=(filler,))
+        st, sess = _stall_frame(gold=46, fuel_pieces=1, fuel_min_cost=5,
+                                cards=[_card(pad, cost=1)])
+        act = _decide(st, sess)
+        assert isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
+        # 部署帧:垫件被围栏 held(kernel 单一源拒因)→ 执行侧闭环计数
+        n = record_fuel_filler_held_postbuy(sess, [(pad, 'scatter_fence')])
+        assert n == 1
+        assert sess.cw4_counters.get('fuel_filler_stall_held_postbuy') == 1
+
 
 class TestExit3NegativeBranches:
-    """负向锁批(四支 fail 向,18:20 派单):任一支不成立 ⇒ 零发射。
+    """负向形态锁:任一支不成立 ⇒ 零发射零分键。
     正向形态锁 = test_phistall_frame_buys_fuel_filler(在库回执)。"""
 
     _PAD_KW = {"gold": 46, "fuel_pieces": 1, "fuel_min_cost": 5}
@@ -237,18 +253,20 @@ class TestExit3NegativeBranches:
         self._no_emission(st, sess)
 
     def test_branch_D_unlocked_pseudo_comp_fails(self):
-        """D 支(C1 阻断形态):未锁线但伪 comp 在场(locked_comp 空)
-        ⇒ fail-closed 零发射——锁线布尔单一源 = _ist.locked_comp,
-        target_comp 非 None 不构成锁线。"""
+        """D 支:未锁线但伪 comp 在场(locked_comp 空)⇒ fail-closed
+        零发射——锁线布尔单一源 = _ist.locked_comp,target_comp 非 None
+        不构成锁线(伪 comp 形态,flow.py 物化段实证)。"""
         st, sess = _stall_frame(locked=False, **self._PAD_KW)
         self._no_emission(st, sess)
 
 
 class TestExit3ProbBarSemantics:
-    """A 支概率缺键语义统一(二十四跳;对齐 cw_economy 消费点):
+    """A 支概率缺键/零值语义统一(单一源 =
+    cw_economy.effective_refresh_prob,与 roll 可负担性门同消费语义):
     parse_prob_bar 契约 = 全 5 键或 None——None = 不可得 fail 向;
     结构内缺键 = 表值回退(因果支表值 0 ⇒ 回退即确证零,照常发射);
-    键在且 >0 = 对账不一致 fail 向。"""
+    键在且 ≤0 = 轮岗只翻倍不归零,采样不可信回退表值;键在且 >0 但与
+    表值冲突 = 对账不一致 fail 向。"""
 
     def test_missing_key_falls_back_to_table_zero(self):
         """缺键形态:对账源为空 dict(全缺)→ 表值回退(0)⇒ 照常发射
@@ -278,30 +296,22 @@ class TestExit3ProbBarSemantics:
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'fuel_filler_stall')
 
-    def test_bench_to_held_closed_loop(self, monkeypatch):
-        """端到端:发射位买入登记 → 执行侧 held 现读重建 → held_postbuy
-        计数(同 session 传递,消费 N3 消费口)。"""
-        from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
-            record_fuel_filler_held_postbuy,
-        )
-        filler = _off_line_name()
-        pad = _off_line_name(exclude=(filler,))
-        st, sess = _stall_frame(gold=46, fuel_pieces=1, fuel_min_cost=5,
-                                cards=[_card(pad, cost=1)])
+    def test_bar_zero_on_positive_table_cost_stays_chaseable(self):
+        """bar=0 ∧ 表值>0 形态:概率条 0 = 采样不可信回退表值 ⇒ 表值
+        非零继续消费(与 cw_economy 同语义),合格集非空 → 非 Φ_stall,
+        零发射。"""
+        km = list(line_members(get_comp(_COMP)))
+        chaseable3 = next(m for m in km if m != _causal_name()
+                          and (get_char(m).cost or 0) == 3)
+        # 该成员 1★ 留 bench(cnt2=0 可追),不进 2★ deployed
+        deployed = [_bc(m, star=2, slot=i + 1) for i, m in
+                    enumerate(m for m in km
+                              if m != _causal_name() and m != chaseable3)]
+        st, sess = _stall_frame(gold=46, fuel_pieces=0, fuel_min_cost=5,
+                                deployed=deployed,
+                                cards=[_card(_off_line_name(
+                                    exclude=tuple(km)), cost=1)],
+                                refresh_probs={3: 0.0})
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
-        # 部署帧:垫件被围栏 held(kernel 单一源拒因)→ 执行侧闭环计数
-        n = record_fuel_filler_held_postbuy(sess, [(pad, 'scatter_fence')])
-        assert n == 1
-        assert sess.cw4_counters.get('fuel_filler_stall_held_postbuy') == 1
-
-
-def bench_char_cost(bc):
-    from sr_od.application.currency_war.kernel.cw_state import (
-        bench_char_cost as _f,
-    )
-    return _f(bc)
-
-
-def _min_cost_ok() -> bool:
-    return True
+        assert not (isinstance(act, BuyCard)
+                    and act.reason == 'fuel_filler_stall')
