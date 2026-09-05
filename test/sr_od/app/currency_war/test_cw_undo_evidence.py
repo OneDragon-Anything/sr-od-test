@@ -5,8 +5,6 @@
 record_defect 无 run_id 时 no-op——锁经 monkeypatch defects.record_defect
 捕获行,零真实落盘(测试纪律)。
 """
-from types import SimpleNamespace
-
 from sr_od.application.currency_war.telemetry import undo_evidence
 
 
@@ -24,9 +22,8 @@ class TestSellBreakerEvidence:
         """熔断发生 → 分键在案可读回:行含谁(char_id)/为何(拒因)/
         保留了什么(expected),且 L2 留证级。"""
         rows = _capture(monkeypatch)
-        sess = SimpleNamespace(cw4_counters={})
         undo_evidence.record_sell_breaker_preserved(
-            sess, char_id='藿藿',
+            char_id='藿藿',
             reason='fence:仙舟', channel='deploy_offtarget')
         assert len(rows) == 1
         row = rows[0]
@@ -45,9 +42,8 @@ class TestDroughtNoResetEvidence:
         """买入不重置 → 分键在案可读回:成员/体系/当值摘要齐
         (干旱解锁流程审计面)。"""
         rows = _capture(monkeypatch)
-        sess = SimpleNamespace(cw4_counters={})
         undo_evidence.record_drought_buy_no_reset(
-            sess, member='三月七', system='列车同行', drought=7)
+            member='三月七', system='列车同行', drought=7)
         assert len(rows) == 1
         row = rows[0]
         assert row['args'][0] == 'economy'
@@ -60,7 +56,6 @@ class TestDroughtNoResetEvidence:
     def test_zero_drought_no_row(self, monkeypatch):
         """干旱计数为 0(无审计诉求)⇒ 不落行(零噪声)。"""
         rows = _capture(monkeypatch)
-        sess = SimpleNamespace(cw4_counters={})
         undo_evidence.record_drought_buy_no_reset(
-            sess, member='三月七', system='列车同行', drought=0)
+            member='三月七', system='列车同行', drought=0)
         assert rows == []

@@ -265,7 +265,8 @@ class TestExit3ProbBarSemantics:
     cw_economy.effective_refresh_prob,与 roll 可负担性门同消费语义):
     parse_prob_bar 契约 = 全 5 键或 None——None = 不可得 fail 向;
     结构内缺键 = 表值回退(因果支表值 0 ⇒ 回退即确证零,照常发射);
-    键在且 ≤0 = 轮岗只翻倍不归零,采样不可信回退表值;键在且 >0 但与
+    键在且 ≤0 = 轮岗只翻倍不归零,采样不可信回退表值(机制出处 =
+    注册表 cw_invest_data.py PlazaPortal 114「轮岗」);键在且 >0 但与
     表值冲突 = 对账不一致 fail 向。"""
 
     def test_missing_key_falls_back_to_table_zero(self):
