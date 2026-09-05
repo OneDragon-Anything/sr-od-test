@@ -1183,3 +1183,56 @@ def test_w209_swap_arm_feed_is_deployed_count_not_bond_sum() -> None:
     assert fenced_swap_arm_of(1.0, swap_arm_deployed_count(board, []),
                               2, 5) is False
 
+
+def test_p59_substitute_protected_from_swap_arm() -> None:
+    """P59 反例锁:黄泉减益×卡芙卡(替班者=off-line∧fenced)——替班者
+    凭 substitute_plan 直入买面义务集却无羁绊保证,修复后入保护域、
+    义务臂判不可卖(修复前臂可卖 = M2 义务买↔换阵臂卖振荡)。"""
+    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
+        protect_names_of,
+    )
+    comp = _swap_get_comp('黄泉减益')
+    protect = protect_names_of(comp)
+    assert '卡芙卡' in protect, '替班者必须入保护域(P59 反例成员)'
+    bonds = _swap_bonds('卡芙卡')
+    tf = set(comp.all_factions)
+    tc = set(comp.core_chars)
+    assert not (bonds & tf), '锁前提:卡芙卡对本 comp off-line'
+    assert offtarget_sell_allowed(
+        '卡芙卡', bonds, tf, tc,
+        fenced_offline_sellable=True, protect_names=protect) is False, \
+        'P59 反例:替班者不得被义务臂判可卖'
+
+
+def test_p59_registry_buysell_disjoint() -> None:
+    """注册表级静态断言(P59 防复发锚):全 comp 扫描——锁定采购集
+    (_line_hoard 全集)中对本 comp off-line ∧ fenced 的成员必须 ⊆
+    保护域(core∪shared∪替班者)。买面新增任何不经羁绊检查的成员腿而
+    未同步入保护域时,本锁红(替班者腿本身由保护域组装自动覆盖)。"""
+    from sr_od.application.currency_war.kernel import cw_intention as _ci
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        COMP_LIBRARY,
+    )
+    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
+        protect_names_of,
+    )
+    violations: list[str] = []
+    for comp in COMP_LIBRARY:
+        if not getattr(comp, 'core_chars', None):
+            continue
+        protect = protect_names_of(comp)
+        subs = {s.get('替班者') for s in (getattr(comp, 'substitute_plan',
+                None) or []) if isinstance(s, dict) and s.get('替班者')}
+        assert subs <= protect, \
+            f'{comp.name}: 替班者 {subs - protect} 未入保护域'
+        hoard, _eq = _ci._line_hoard(comp)
+        all_fac = set(comp.all_factions)
+        for m in hoard:
+            bonds = _swap_bonds(m)
+            offline = not (bonds & all_fac)
+            fenced = bool(bonds & _DEPLOY_FENCE)
+            if offline and fenced and m not in protect:
+                violations.append(f'{comp.name}:{m}')
+    assert not violations, \
+        f'买↔卖振荡反例(成员入买入集但不在保护域):{violations}'
+

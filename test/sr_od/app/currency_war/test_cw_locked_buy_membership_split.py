@@ -60,6 +60,19 @@ def _cfg():
     return SimpleNamespace(ev_arm='full')
 
 
+def _sell_bonds(name: str) -> set[str]:
+    """角色全羁绊(factions∪flows;注册表直读,判 off-line/fenced 用)。"""
+    from sr_od.application.currency_war.data.cw_chars import get_char
+    ch = get_char(name)
+    return set(ch.factions) | set(ch.flows)
+
+
+def hoard_all(comp) -> set[str]:
+    """comp 锁定采购集角色全集(单一源 = cw_intention._line_hoard)。"""
+    chars, _eq = cw_intention._line_hoard(comp)
+    return chars
+
+
 def _session(target_comp, ist: IntentionState | None) -> StrategySession:
     s = StrategySession()
     s.cw4_counters = {}
@@ -140,9 +153,10 @@ class TestSellFaceAndLedgerUnswitched:
     """锁定采购集不灌入卖免面与刷新账(合并审计裁决的辖域收窄)。"""
 
     def test_fuel_sell_candidates_keep_core_semantics(self):
-        """口径拆分直锁:锁定帧下 M4 燃料集判定集 = comp core∪shared——
-        bench 上的 hoard-only 1★ 成员(非 core∪shared)仍是可卖腾席燃料
-        (若灌入锁定全集则全域免卖、腾席通道空集)。"""
+        """口径拆分直锁(P60 后重推导):不注入排除集时 M4 燃料集判定集 =
+        comp core∪shared(hoard-only 1★ 成员仍是燃料——默认口径零变化,
+        与卖免面收窄前一致);注入 exclude_names=buy_members 后 hoard-only
+        成员出燃料集(P60 换手通道闭死)。"""
         comp = get_comp(_LOCK_COMP)
         core = set(predicates.line_members(comp))
         hoard_chars, _eq = cw_intention._line_hoard(comp)
@@ -150,14 +164,19 @@ class TestSellFaceAndLedgerUnswitched:
         assert hoard_only, '锁测试前提:锁定采购集须含 core∪shared 外成员'
         bench = [_bc(m, slot=i + 1) for i, m in enumerate(hoard_only)]
         st = _state(gold=30, shop_cards=[], bench=bench)
-        fuel = mandate.fuel_sell_candidates(bench, core, state=st)
-        assert {b.char_id for b in fuel} >= set(hoard_only[:2]), \
-            'hoard-only 1★ 成员须仍是腾席燃料(卖免面未吃锁定全集)'
+        fuel_default = mandate.fuel_sell_candidates(bench, core, state=st)
+        assert {b.char_id for b in fuel_default} >= set(hoard_only[:2]), \
+            '默认口径(未注入排除集)零变化:hoard-only 1★ 仍是燃料'
+        fuel_ex = mandate.fuel_sell_candidates(bench, core, state=st,
+                                               exclude_names=set(hoard_chars))
+        assert not fuel_ex, 'P60:义务集成员禁入燃料集(Fuel∩B=∅,Φ 单调)'
 
     def test_bench_full_of_hoard_members_still_frees_seat_and_buys(self):
-        """F1 事故形态锁:锁线 hoard 满集塞满 bench + 缺员核心件在店 +
-        金足 ⇒ 腾席候选非空、买入不被空集卡死(先卖 hoard 1★ 腾席,
-        下一帧 M2 义务买入核心件)。"""
+        """(P60 重推导,锁语义按证伪结论改写)bench 满且占员全为 B(锁定
+        采购集)成员 + 缺员核心件在店 ⇒ 不再有可卖腾席(卖 B 成员 = 义务
+        换手,P60 已闭死)——诚实停摆可判读:m2_retry_exhausted /
+        bench_full_buy_abandon 计数、零 BuyCard/零 SellBench。真实死锁帧
+        的 bench 占员是旧线 off-line 件(非 B),腾席由其承载(下条)。"""
         comp = get_comp(_LOCK_COMP)
         core = list(predicates.line_members(comp))
         missing_core = core[0]
@@ -165,13 +184,36 @@ class TestSellFaceAndLedgerUnswitched:
         hoard_only = sorted(set(hoard_chars) - set(core))
         bench = [_bc(m, slot=i + 1)
                  for i, m in enumerate(hoard_only[:BENCH_CAPACITY])]
+        st = _state(gold=30, shop_cards=[_card(missing_core, 3)], bench=bench)
+        sess = _session(comp, _locked_ist())
+        act = shop.decide_shop_action(st, sess, _cfg())
+        assert not isinstance(act, BuyCard), 'B 成员不得被卖出/换手'
+        assert not isinstance(act, SellBench)
+        assert sess.cw4_counters.get('m2_retry_exhausted', 0) >= 1
+        assert sess.cw4_counters.get('bench_full_buy_abandon', 0) >= 1
+
+    def test_bench_full_of_offline_fenced_members_frees_and_buys(self):
+        """真实死锁帧形态(P60 修复后的腾席保底):bench 满为 off-line
+        fenced 件(旧线成员,∉ 新线 buy_members)+ 缺员核心件在店 ⇒
+        腾席候选非空、卖出后 M2 义务买入核心件(换手通道闭死不妨碍
+        旧线件腾位)。"""
+        comp = get_comp(_LOCK_COMP)
+        core = list(predicates.line_members(comp))
+        missing_core = core[0]
+        all_fac = set(comp.all_factions)
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        offline = [n for n, ch in CHARACTERS.items()
+                   if n not in hoard_all(comp)
+                   and not _sell_bonds(n) & all_fac]
+        assert len(offline) >= 3, '锁测试前提:off-line 件不足'
+        bench = [_bc(m, slot=i + 1)
+                 for i, m in enumerate(offline[:BENCH_CAPACITY - 1])]
         while len(bench) < BENCH_CAPACITY:
             bench.append(_bc(f'填充件{len(bench)}', slot=len(bench) + 1))
         st = _state(gold=30, shop_cards=[_card(missing_core, 3)], bench=bench)
         sess = _session(comp, _locked_ist())
         act = shop.decide_shop_action(st, sess, _cfg())
-        assert isinstance(act, SellBench), 'bench 满须先腾席(候选非空)'
-        assert (act.expect or '') not in core, '腾席不得卖 core∪shared 成员'
+        assert isinstance(act, SellBench), 'off-line 件腾席候选须非空'
         st2 = simulate(st, act)
         act2 = shop.decide_shop_action(st2, sess, _cfg())
         assert isinstance(act2, BuyCard) and act2.card.name == missing_core
@@ -295,3 +337,50 @@ class TestUnlockedFrameUnchanged:
         weak = IntentionState()
         weak.phase = 'weak'
         assert locked_buy_membership(weak) is None
+
+
+# ===== P60 伪装进展观测面:换手对计数 / drought 重置分键 / 容量告警 =====
+
+class TestP60DisguisedProgressTelemetry:
+    """换手循环的观测面锁(证明 P60 ③):买回近期卖出成员 = 义务换手对,
+    drought 重置按买入来源分键——换手买动作不得与真实缺员买入共用同一
+    「进展」信号;|B|>容量上界帧级告警计数。"""
+
+    def test_churn_pair_buy_counter_and_drought_split(self):
+        """买回近期卖出成员 ⇒ shop_churn_pair_buy 计数 + drought 重置走
+        churn 分键(不走缺员买入键);无卖出记认的普通缺员买行走原键。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            proof,
+        )
+        comp = get_comp(_LOCK_COMP)
+        core = list(predicates.line_members(comp))
+        # churn 帧:符玄(core 成员)在近期卖出记认中
+        st = _state(gold=30, shop_cards=[_card(core[0], 3)])
+        sess = _session(comp, _locked_ist())
+        sess.cw4_line_state = proof.LineState()
+        sess.cw4_line_state.drought = 3
+        sess.cw4_recent_sold_names = [core[0]]
+        act = shop.decide_shop_action(st, sess, _cfg())
+        assert isinstance(act, BuyCard) and act.card.name == core[0]
+        assert sess.cw4_counters.get('shop_churn_pair_buy', 0) >= 1
+        assert sess.cw4_counters.get('shop_drought_reset_on_churn_buy', 0) >= 1
+        assert 'shop_drought_reset_on_buy' not in sess.cw4_counters
+        # 对照帧:无卖出记认 ⇒ 原键(缺员买入)
+        st2 = _state(gold=30, shop_cards=[_card(core[0], 3)])
+        sess2 = _session(comp, _locked_ist())
+        sess2.cw4_line_state = proof.LineState()
+        sess2.cw4_line_state.drought = 3
+        act2 = shop.decide_shop_action(st2, sess2, _cfg())
+        assert isinstance(act2, BuyCard)
+        assert sess2.cw4_counters.get('shop_drought_reset_on_buy', 0) >= 1
+        assert 'shop_drought_reset_on_churn_buy' not in sess2.cw4_counters
+        assert 'shop_churn_pair_buy' not in sess2.cw4_counters
+
+    def test_hoard_over_capacity_warning_counter(self):
+        """|buy_members| > bench+板容量上界 ⇒ 帧级告警计数(黄泉减益
+        |B|=20 > 16,证明 P60 ①出口不可达形态可见)。"""
+        comp = get_comp('黄泉减益')
+        st = _state(gold=30, shop_cards=[])
+        sess = _session(comp, _locked_ist('黄泉减益'))
+        shop.decide_shop_action(st, sess, _cfg())
+        assert sess.cw4_counters.get('shop_hoard_over_capacity', 0) >= 1
