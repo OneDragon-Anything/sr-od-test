@@ -143,21 +143,24 @@ class TestL3MustSpend:
     def test_ev_deferred_consume_keyed(self, monkeypatch):
         """C5 归因分键:EV veto 候选域内降排序末位消费 ⇒
         must_spend_ev_deferred 分键在案(§3.5 归因纪律)。帧 = 未锁线
-        (L2 垫件臂不劫),candidates/veto 桩化定向。"""
+        (L2 垫件臂不劫),candidates/veto 桩化定向。垫件取 2 费:未锁线
+        cost-1 零重叠帧属 T5 未锁线止血买触发域(垫底级先于 EV 消费,
+        未锁线转换通道设计稿 §4),本锁只辖 EV 降排序语义,须出 T5 域。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
             buy as crit_buy,
         )
         monkeypatch.setattr(
             crit_buy, 'ev_buy_candidates',
             lambda gold, s_reserve, shop_cards, k_members, **kw:
-            ([crit_buy.BuyCandidate('燃料件X', 1, 1, 0)], ''))
+            ([crit_buy.BuyCandidate('燃料件X', 2, 1, 0)], ''))
         monkeypatch.setattr(crit_buy, 'ev_buy_veto',
                             lambda cand, gold: (True, 'expectation'))
         st, sess = _zone_frame(gold=80, locked=False)
-        st.shop = [ShopCard(x=100, name='燃料件X', cost=1, star=1)]
+        st.shop = [ShopCard(x=100, name='燃料件X', cost=2, star=1)]
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'ev_buy'
         assert sess.cw4_counters.get('must_spend_ev_deferred') == 1
+        assert 't3_buy' not in sess.cw4_counters
 
     def test_whitelist_empty_shop_cap_top_zero_consume(self):
         """白名单③④合形负锁(店空 ∧ cap 顶):三消费出口全关
