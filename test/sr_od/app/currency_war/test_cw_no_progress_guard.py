@@ -529,18 +529,57 @@ def test_loop_exhaustion_stale_gives_up_to_guard_stop(
 
 def test_loop_exhaustion_success_resets_stale_counter(
         test_context, monkeypatch) -> None:
-    """stale 连击复位面:发射成功(或真失败)后 stale 计数清零——
-    偶发过渡帧不累积成长期 stale。"""
+    """stale 连击复位面(三审必修1重构:先造非零再断言复位,防恒真锁):
+    注入首发 stale(计数置 1)→ 次发射 success → 断言复位真发生
+    (生产复位语句被移除时本锁红:stale_n 残留 1)。"""
     session = _session()
     stops: list = []
     flags: list = []
     op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
                        sig=('RunDeploy',))
     from sr_od.application.currency_war.operations import cw_loop as loop_mod
-    monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
-                        lambda op_, ctx_: (True, 'stub-launch'))
+    calls: list = []
+
+    def _stale_then_ok(op_, ctx_):
+        calls.append(1)
+        if len(calls) == 1:
+            return False, 'readiness_stale_screen'
+        return True, 'stub-launch'
+
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch', _stale_then_ok)
     with fast_sleep():
-        for _ in range(4):
+        for _ in range(6):
             op.loop()
-    assert stops == [] and op._cw_exhaust_stale_n == 0, (
-        '发射成功须复位 stale 连击且不停机')
+    assert len(calls) >= 2, f'须先 stale 后 success,实调 {len(calls)} 次'
+    assert stops == [], f'发射成功路径不得停机:{stops!r}'
+    assert op._cw_exhaust_stale_n == 0, (
+        '发射成功必须复位 stale 连击(锁防复位语句被删:stale 已置非零)')
+
+
+def test_loop_exhaustion_stale_resets_fail_counter(
+        test_context, monkeypatch) -> None:
+    """三审必修2锁:「连续 3 次」辖同型结果——fail→stale→fail 交错序列
+    不累计 giveup(stale 环必须复位失败连击;对称面 fail 环复位 stale
+    连击已由生产代码同构,本锁辖交错不停机这一可观测语义)。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                       sig=('RunDeploy',))
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    calls: list = []
+
+    def _fail_stale_alternate(op_, ctx_):
+        calls.append(1)
+        if len(calls) % 2 == 1:
+            return False, 'stub-fail'
+        return False, 'readiness_stale_screen'
+
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
+                        _fail_stale_alternate)
+    with fast_sleep():
+        for _ in range(9):
+            op.loop()
+    assert stops == [], (
+        f'fail/stale 交错序列不得 giveup 停机(连续性被破坏):{stops!r}')
+    assert len(calls) >= 5, '交错序列须持续重试不被误停'
