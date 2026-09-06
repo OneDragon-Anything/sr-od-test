@@ -1,14 +1,14 @@
-"""T5 未锁线止血买·结构判据锁(未锁线转换通道设计稿 v3.1 §2/§6/§11-7)。
+"""T5 未锁线止血买·结构判据锁(ADR-0556 §2/§5/§8)。
 
 锁面(结构判据锁,发射位守卫移除即红):
-- 开火:P1 假帧(loss_exact 现算 == 0,锚 g=47/Ī=5/R=13 设计稿 §9 样例帧)
+- 开火:P1 假帧(loss_exact 现算 == 0,锚 g=47/Ī=5/R=13 ADR-0556 §4)
   ⇒ BuyCard('t3_unlocked_hemostat') + t3_available/t3_buy 分键;
 - 熄火:P1 真帧(锚 g=23,L=1)⇒ t3_p1_true_blocked 显影,零发射;
 - 熄火:预检拒(vacancy 不足/bench 满/fenced/precheck_unavailable)各分键;
 - 出辖:锁线帧(locked_comp 非空)T5 零分键——锁线布尔单一源 =
   cw_intention.locked_buy_membership(未锁帧返回 None);
-- 谓词单帧:t5_p1_false 现算(不按帧集清单,设计稿 §2.2 约定)。
-不锁卡名(设计稿 §11-7):垫件名均取自注册表运行时解析。
+- 谓词单帧:t5_p1_false 现算(不按帧集清单,ADR-0556 §2 约定)。
+不锁卡名(ADR-0556 §8):垫件名均取自注册表运行时解析。
 """
 from types import SimpleNamespace
 
@@ -30,10 +30,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
     t5_p1_false,
 )
 
-_ROUNDS = 13          # 病灶窗 R_全局代表值(设计稿 §2.2 网格;发射位经
+_ROUNDS = 13          # 病灶窗 R_全局代表值(ADR-0556 §4;发射位经
                       # horizon.r_remaining 现算,测试侧统一桩为此值)
-_G_OPEN = 47          # 开火锚:L(47,1,13,5)=0(实测;设计稿 §9 样例帧)
-_G_BLOCK = 23         # 熄火锚:L(23,1,13,5)=1(实测;设计稿 §9 对照帧)
+_G_OPEN = 47          # 开火锚:L(47,1,13,5)=0(实测;ADR-0556 §4)
+_G_BLOCK = 23         # 熄火锚:L(23,1,13,5)=1(实测;ADR-0556 §4)
 _COMP = '列车同行'
 
 
@@ -104,11 +104,11 @@ class TestT5StructurePredicate:
     """t5_p1_false 谓词单帧锁(现算口径,不按帧集清单)。"""
 
     def test_p1_false_open_anchor(self):
-        """开火锚 g=47:L=0 ⇒ P1 假(设计稿 §9 样例帧,实测自洽)。"""
+        """开火锚 g=47:L=0 ⇒ P1 假(ADR-0556 §4,实测自洽)。"""
         assert t5_p1_false(_G_OPEN, 1, _ROUNDS, 5, 5) is True
 
     def test_p1_true_block_anchor(self):
-        """熄火锚 g=23:L=1 ⇒ P1 真(设计稿 §9 对照帧,实测自洽)。"""
+        """熄火锚 g=23:L=1 ⇒ P1 真(ADR-0556 §4,实测自洽)。"""
         assert t5_p1_false(_G_BLOCK, 1, _ROUNDS, 5, 5) is False
 
     def test_cap_zero_all_false_safe_direction(self):
@@ -174,7 +174,7 @@ class TestT5Emission:
 
 
 class TestT5RejectionKeys:
-    """熄火/拒因分键零静默锁(设计稿 §6:分键显影全)。"""
+    """熄火/拒因分键零静默锁(ADR-0556 §5:分键显影全)。"""
 
     def test_no_cost1_filler_keyed(self):
         """店无 cost-1 垫件(仅 2 费):T5 域不开,t3_no_candidate 归因
