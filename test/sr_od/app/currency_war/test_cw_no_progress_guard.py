@@ -588,3 +588,30 @@ def test_loop_exhaustion_interleaved_capped_by_total_limit(
         f'总尝试达限后须回落守卫停机(交错不得无界自旋):{stops!r}')
     assert flags, '回落停机须写存证 flag'
     assert op._cw_exhaust_attempts == 0, '达限放弃时总尝试计数复位'
+
+
+def test_loop_exhaustion_attempts_reset_across_episodes(
+        test_context, monkeypatch) -> None:
+    """ADR-0554「总限只辖单一冻结情节」锁(三审后补必修1):冻结情节内
+    产生尝试计数(>0)后状态推进 → 守卫计数归零 → 总尝试计数必须同步
+    归零(残留计数会让新冻结情节提前总限 giveup)。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                       sig=('RunDeploy',))
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
+                        lambda op_, ctx_: (False, 'stub-fail'))
+    with fast_sleep():
+        for _ in range(4):
+            op.loop()
+    assert op._cw_exhaust_attempts == 1, (
+        f'冻结情节内须产生尝试计数,实得 {op._cw_exhaust_attempts}')
+    # 状态推进(gold 变)→ 指纹变 → 守卫计数归零 → 总尝试同步归零
+    session.last_state = SimpleNamespace(plane=1, round_num=5, gold=99)
+    with fast_sleep():
+        op.loop()
+    assert op._cw_exhaust_attempts == 0, (
+        '跨冻结情节总尝试计数必须归零(残留会让新情节提前 giveup)')
+    assert stops == [], f'状态推进环不得停机:{stops!r}'
