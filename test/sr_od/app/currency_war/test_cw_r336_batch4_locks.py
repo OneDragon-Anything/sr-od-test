@@ -42,7 +42,10 @@ def test_shop_currency_war_config_module_level() -> None:
     from sr_od.application.currency_war.operations.cw_op import cw_op_buy_cards as buy_cards
     assert getattr(buy_cards, 'CurrencyWarConfig', None) is not None, \
         'buy_cards.py 必须模块级 import CurrencyWarConfig'
-    for method in (cw_screen_prep.CwScreenPrep._open_shop_phase, buy_cards.run_buy_waves):
+    # visit_open_shop = 0n 转交与显式开店的共用尾段(ADR-0562),同辖
+    for method in (cw_screen_prep.CwScreenPrep._open_shop_phase,
+                   cw_screen_prep.CwScreenPrep.visit_open_shop,
+                   buy_cards.run_buy_waves):
         src = _r336_batch4_locks_inspect.getsource(method)
         assert 'currency_war_config import' not in src, \
             f'{method.__name__} 体内不得有局部 import CurrencyWarConfig(r345 局38 崩溃根因)'
@@ -62,7 +65,10 @@ def test_shop_contextlib_module_level_no_local_import() -> None:
         'cw_screen_prep.py 必须模块级 import contextlib(r346 H1;编排宿主随壳退役迁移)'
     assert getattr(buy_cards, 'contextlib', None) is not None, \
         'buy_cards.py 必须模块级 import contextlib(r346 H1)'
-    for method in (cw_screen_prep.CwScreenPrep._open_shop_phase, buy_cards.run_buy_waves):
+    # visit_open_shop = 0n 转交与显式开店的共用尾段(ADR-0562),同辖
+    for method in (cw_screen_prep.CwScreenPrep._open_shop_phase,
+                   cw_screen_prep.CwScreenPrep.visit_open_shop,
+                   buy_cards.run_buy_waves):
         src = _r336_batch4_locks_inspect.getsource(method)
         assert 'import contextlib' not in src, \
             f'{method.__name__} 体内不得有局部 import contextlib(r346 H1 雷)'

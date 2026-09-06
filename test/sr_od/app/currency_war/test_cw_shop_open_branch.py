@@ -1,4 +1,4 @@
-"""外循环「开商店」分支(0n,备战子态族)锁:判定/收起动作/序位。
+"""外循环「开商店」分支(0n,备战子态族)锁:判定/商店访问转交/序位。
 
 背景(实机事故,2026-09-06 进度流水「外循环开商店分支批」):商店浮层不遮
 备战双锚锚区,双锚判据在商店开着时穿透命中 → 备战分支内的达标臂发射面把
@@ -6,10 +6,17 @@
 cw_loop._shop_open_anchors_hit 三 id_mark(idmark 审计批定稿,互斥依据 =
 干净备战帧「按钮-收起」不存在)。
 
-分层声明:本文件管「0n 分支路由与动作」;序位全局矩阵(先于备战双锚)
-单一源 = test_cw_dispatch_order_matrix.py(本分支已登记其矩阵),两文件
-不重复锁同一语义——本文件只补矩阵锁不到的行为面(fixture 判定互斥/
-收起点击/分键/相邻序位)。
+锁语义重推(ADR-0562,用户裁定 2026-09-06):分支处理由「硬编码点收起交回
+重判」改为「转交商店访问路径」——委托 CwScreenPrep.visit_open_shop(入口
+观察 → 策略器逐动作决策 → CloseShop 终结收店)。「收不收」由策略器基于
+期望态决定(CloseShop = 商店画面 op 的一等终结动作),路由层不越权。行为锁
+随之由「收起点击+分键」重推为「商店访问被调用+关店终结发生」;判定互斥锁
+与序位锁语义不变。
+
+分层声明:本文件管「0n 分支路由与转交」;序位全局矩阵(先于备战双锚)
+单一源 = test_cw_dispatch_order_matrix.py(本分支已登记其矩阵);商店访问
+编排与策略器决策路径锁单一源 = test_cw_shop_open_visit.py,两文件
+不重复锁同一语义。
 """
 import inspect
 
@@ -76,7 +83,7 @@ def test_shop_open_branch_judgment_clean_on_closed_prep_frame(
 
 
 # --------------------------------------------------------------------------- #
-# 行为锁:loop 驱动 → 收起点击 + 分键 + 交回(round_wait)
+# 行为锁:loop 驱动 → 转交商店访问路径 + 命中/结果分键(ADR-0562 重推)
 # --------------------------------------------------------------------------- #
 
 class _Res:
@@ -86,15 +93,23 @@ class _Res:
 
 def _drive_loop_shop_open(monkeypatch, *, shop_hit: bool):
     """桩 loop 驱动:商店三锚按 shop_hit 命中/全 miss,备战双锚恒命中
-    (穿透形态——事故形态:商店开 ∧ 双锚透出)。返回 (clicks, counters)。"""
+    (穿透形态——事故形态:商店开 ∧ 双锚透出)。
+    返回 (clicks, counters, visits):visits = CwScreenPrep.visit_open_shop
+    的调用记录 [(返回 ok, detail)]。"""
     from sr_od.application.currency_war.operations import cw_loop
+
+    visits: list[tuple[bool, str]] = []
 
     class _FakePrep:
         def __init__(self, ctx):
             pass
 
+        def visit_open_shop(self, *a, **k):
+            visits.append((True, '买牌 测试'))
+            return visits[-1]
+
         def execute(self):
-            return None
+            return None   # 负例落穿 0 系进备战分支(与本锁无关,桩化)
 
     monkeypatch.setattr(cw_loop, 'CwScreenPrep', _FakePrep)
     # 负例路径落穿 0 系进备战分支后的节点探针(收益耗尽臂 supply 排除读)
@@ -180,26 +195,30 @@ def _drive_loop_shop_open(monkeypatch, *, shop_hit: bool):
     ctx.ocr_service.get_ocr_result_list = lambda **kw: []
     op.ctx = ctx
     op.loop()
-    return clicks, sess.cw4_counters
+    return clicks, sess.cw4_counters, visits
 
 
-def test_loop_shop_open_collapse_action_and_counter(monkeypatch) -> None:
-    """收起动作锁 + 遥测分键:商店态穿透帧 → 点「按钮-收起」+
-    branch_shop_open_collapse 分键 +1 + 备战分支(CwScreenPrep)零执行。"""
-    clicks, counters = _drive_loop_shop_open(monkeypatch, shop_hit=True)
-    assert ('货币战争-备战-开商店', '按钮-收起') in clicks, (
-        '商店态须点「按钮-收起」收店(本分支只收起不买牌)')
-    assert counters.get('branch_shop_open_collapse') == 1, (
-        '分支命中分键零静默(branch_shop_open_collapse)')
+def test_loop_shop_open_delegates_to_shop_visit(monkeypatch) -> None:
+    """转交锁(ADR-0562 重推):商店态穿透帧 → visit_open_shop 恰被调用
+    一次(商店访问被调用)+ 路由层零「按钮-收起」点击(收不收由策略器
+    决定,CloseShop 终结在访问编排内)+ 命中/结果分键零静默。"""
+    clicks, counters, visits = _drive_loop_shop_open(monkeypatch, shop_hit=True)
+    assert len(visits) == 1 and visits[0][0] is True, (
+        f'商店态须转交商店访问路径(visit_open_shop):{visits}')
+    assert ('货币战争-备战-开商店', '按钮-收起') not in clicks, (
+        '路由层禁硬编码收店点击(收不收归策略器/CloseShop 终结,ADR-0562)')
+    assert counters.get('branch_shop_open_hit') == 1, (
+        '分支命中分键零静默(branch_shop_open_hit)')
+    assert counters.get('branch_shop_open_visit_ok') == 1, (
+        '商店访问结果分键零静默(branch_shop_open_visit_ok)')
 
 
 def test_clean_prep_frame_zero_shop_branch(monkeypatch) -> None:
-    """反例行为锁:干净备战形态(商店锚全 miss ∧ 双锚命中)→ 零收店点击、
+    """反例行为锁:干净备战形态(商店锚全 miss ∧ 双锚命中)→ 零转交、
     分键零命中。fixture 帧侧互斥已由判定锁钉死,此处锁 loop 路由面。"""
-    clicks, counters = _drive_loop_shop_open(monkeypatch, shop_hit=False)
-    assert ('货币战争-备战-开商店', '按钮-收起') not in clicks, (
-        '干净备战帧不得触发收店点击')
-    assert 'branch_shop_open_collapse' not in counters, (
+    clicks, counters, visits = _drive_loop_shop_open(monkeypatch, shop_hit=False)
+    assert visits == [], '干净备战帧不得转交商店访问路径'
+    assert 'branch_shop_open_hit' not in counters, (
         '未命中不得写分键(零静默 = 分键只记真命中)')
 
 
