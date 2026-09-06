@@ -200,16 +200,18 @@ class TestBoardTargetLineWriter:
         _mk_strat().write_shop_mirrors(st, sess)
         assert sess.v3_b_t == 0
 
-    def test_phase_form_ok_retired_semantics_kept(self):
-        """写者只辖 b_t:phase/form_ok 退役缺省不被触碰
-        (test_cw_metric_mirror_fix 同断言面的直调版)。"""
+    def test_phase_retired_form_ok_present_read(self):
+        """phase 维持无写端退役缺省;form_ok 已接 readiness_form_ok
+        板面现读(sim71 批死镜像处置;GameState 空板 → 现读 False,
+        与缺省同值但路径不同——写端已接线)。正确性细锁 =
+        test_cw_obs_keys_sim71 直调写端面。"""
         sess = StrategySession()
         st = GameState()
         st.deployed = [BenchChar(slot=0, char_id='x', star=1,
                                  faction='仙舟', position_pref='back')]
         _mk_strat().write_shop_mirrors(st, sess)
         assert getattr(sess, 'v3_phase', None) in (None, '', 'FORM')
-        assert not getattr(sess, 'v3_form_ok', False)
+        assert sess.v3_form_ok is False
 
 
 # ---------- 锁 6:terminal_release 账本行键接线(增补 C1) ----------
