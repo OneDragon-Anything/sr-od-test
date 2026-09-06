@@ -502,8 +502,9 @@ def test_loop_exhaustion_not_eligible_when_prep_fails(
 
 def test_loop_exhaustion_stale_gives_up_to_guard_stop(
         test_context, monkeypatch) -> None:
-    """三审必修1锁:发射核连续 3 次 stale_screen → 放弃重试,回落守卫停机
-    (单帧 stale 不停机交回下轮;持续 stale 受上限辖,禁无界自旋)。"""
+    """ADR-0554 双限锁①(stale 同型连击):发射核连续 3 次 stale_screen →
+    放弃重试,回落守卫停机(单帧 stale 不停机交回下轮;持续 stale 受上限
+    辖,禁无界自旋)。"""
     session = _session()
     stops: list = []
     flags: list = []
@@ -529,7 +530,7 @@ def test_loop_exhaustion_stale_gives_up_to_guard_stop(
 
 def test_loop_exhaustion_success_resets_stale_counter(
         test_context, monkeypatch) -> None:
-    """stale 连击复位面(三审必修1重构:先造非零再断言复位,防恒真锁):
+    """stale 连击复位面(ADR-0554 锁重构:先造非零再断言复位,防恒真锁):
     注入首发 stale(计数置 1)→ 次发射 success → 断言复位真发生
     (生产复位语句被移除时本锁红:stale_n 残留 1)。"""
     session = _session()
@@ -554,13 +555,14 @@ def test_loop_exhaustion_success_resets_stale_counter(
     assert stops == [], f'发射成功路径不得停机:{stops!r}'
     assert op._cw_exhaust_stale_n == 0, (
         '发射成功必须复位 stale 连击(锁防复位语句被删:stale 已置非零)')
+    assert op._cw_exhaust_attempts == 0, '发射成功必须复位总尝试计数'
 
 
-def test_loop_exhaustion_stale_resets_fail_counter(
+def test_loop_exhaustion_interleaved_capped_by_total_limit(
         test_context, monkeypatch) -> None:
-    """三审必修2锁:「连续 3 次」辖同型结果——fail→stale→fail 交错序列
-    不累计 giveup(stale 环必须复位失败连击;对称面 fail 环复位 stale
-    连击已由生产代码同构,本锁辖交错不停机这一可观测语义)。"""
+    """ADR-0554 双限锁②(总尝试限):fail/stale 交错序列两同型计数器互
+    复位、同型连击永不达限——总尝试上限(2×守卫阈值=6)兜底封死无界
+    自旋:总限内(前 5 次尝试)不停机持续重试,第 6 环达限回落守卫停机。"""
     session = _session()
     stops: list = []
     flags: list = []
@@ -578,8 +580,11 @@ def test_loop_exhaustion_stale_resets_fail_counter(
     monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
                         _fail_stale_alternate)
     with fast_sleep():
-        for _ in range(9):
+        for _ in range(10):
             op.loop()
-    assert stops == [], (
-        f'fail/stale 交错序列不得 giveup 停机(连续性被破坏):{stops!r}')
-    assert len(calls) >= 5, '交错序列须持续重试不被误停'
+    assert len(calls) == 6, (
+        f'总尝试上限内恰 6 次发射(2×守卫阈值),实得 {len(calls)} 次')
+    assert stops == ['hook:prep_no_progress'], (
+        f'总尝试达限后须回落守卫停机(交错不得无界自旋):{stops!r}')
+    assert flags, '回落停机须写存证 flag'
+    assert op._cw_exhaust_attempts == 0, '达限放弃时总尝试计数复位'
