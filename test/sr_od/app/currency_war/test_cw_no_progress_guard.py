@@ -498,3 +498,49 @@ def test_loop_exhaustion_not_eligible_when_prep_fails(
     assert launches == [], '执行面失败形态不得改判出战'
     assert stops == ['hook:prep_no_progress'], (
         f'失败环形态须维持守卫停机:{stops!r}')
+
+
+def test_loop_exhaustion_stale_gives_up_to_guard_stop(
+        test_context, monkeypatch) -> None:
+    """三审必修1锁:发射核连续 3 次 stale_screen → 放弃重试,回落守卫停机
+    (单帧 stale 不停机交回下轮;持续 stale 受上限辖,禁无界自旋)。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                       sig=('RunDeploy',))
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    attempts: list = []
+
+    def _stale_launch(op_, ctx_):
+        attempts.append(1)
+        return False, 'readiness_stale_screen'
+
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch', _stale_launch)
+    with fast_sleep():
+        for _ in range(6):
+            op.loop()
+    assert len(attempts) == 3, f'stale 连击达 3 即放弃,实得 {len(attempts)} 次'
+    assert stops == ['hook:prep_no_progress'], (
+        f'持续 stale 须回落守卫停机(禁无界自旋):{stops!r}')
+    assert flags, '回落停机须写存证 flag'
+    assert op._cw_exhaust_stale_n == 0, '放弃时 stale 计数复位'
+
+
+def test_loop_exhaustion_success_resets_stale_counter(
+        test_context, monkeypatch) -> None:
+    """stale 连击复位面:发射成功(或真失败)后 stale 计数清零——
+    偶发过渡帧不累积成长期 stale。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                       sig=('RunDeploy',))
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
+                        lambda op_, ctx_: (True, 'stub-launch'))
+    with fast_sleep():
+        for _ in range(4):
+            op.loop()
+    assert stops == [] and op._cw_exhaust_stale_n == 0, (
+        '发射成功须复位 stale 连击且不停机')
