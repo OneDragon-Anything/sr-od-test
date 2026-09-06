@@ -79,11 +79,10 @@ class TestLaunchRowLedgerLock:
     def test_launch_trigger_not_mirror_bound(self):
         """触发源锁:发射事件与镜像族 v3_form_ok 解耦。
 
-        mandate_v1 单臂下 v3_form_ok 无写者(恒 False,引擎侧发射块
-        注释已声明)——触发源是 form_progress 现读直调,不依赖镜像层。
-        锁形态:发射行的 form_ok 取值不参与判据(既可有 True 也可无),
-        只要发射行存在即证明触发不经过镜像(镜像恒 False,若误绑则
-        恒零发射,落盘锁的 seen 断言已拦)。
+        sim71 批后 v3_form_ok 写端已接 readiness_form_ok 现读(死镜像
+        处置),但触发源仍是判据核 readiness_launch_decision 直调,
+        不读镜像层(engine 侧发射块注释已声明)——发射行为不随镜像
+        写端缺位回归。锁形态:发射行存在即证明触发不经过镜像层读端。
         """
         launches = [lg for seed in range(6) for _r, lg
                     in _launch_rows(_seeded_result(seed))]

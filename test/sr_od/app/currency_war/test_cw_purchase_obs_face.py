@@ -49,7 +49,11 @@ _OBS_KEYS = {'locked_b', 'overcap_frames',
              # dict 型——refresh_trigger = 刷新触发源 → 本轮实刷次数;
              # cw4_counters = 策略行为观测计数本轮增量(含 fenced 拆键
              # /theta 成因分桶),零增量 = 空 dict
-             'refresh_trigger', 'cw4_counters'}
+             'refresh_trigger', 'cw4_counters',
+             # sim71 批观测键:同轮卖→买回实例级投影(逐笔明细 list,
+             # 空 list = 本轮无回环;键语义单一源 = engine_p1.
+             # project_sell_buyback docstring)
+             'sell_buyback_loops'}
 _CAP = BENCH_CAPACITY + DEPLOYED_CAPACITY
 
 _SEED_CACHE: dict[int, object] = {}
@@ -74,7 +78,11 @@ class TestObsRowLedgerLock:
                 assert set(obs.keys()) == _OBS_KEYS, obs
                 assert all(isinstance(v, int) and v >= 0
                            for v in obs.values()
-                           if not isinstance(v, dict)), obs
+                           if not isinstance(v, (dict, list))), obs
+                # sim71 批键形态:sell_buyback_loops = 逐笔明细 list
+                # (空 list = 无回环;明细字段单一源 =
+                # project_sell_buyback,形状细锁 = test_cw_obs_keys_sim71)
+                assert isinstance(obs['sell_buyback_loops'], list), obs
                 # 必花域三键形态:zone/zero 非负且 zero ≤ zone;
                 # layer_hit 值全非负 int(键 ⊆ {L1, L2, L3})
                 assert obs['must_spend_zero_consume'] \
