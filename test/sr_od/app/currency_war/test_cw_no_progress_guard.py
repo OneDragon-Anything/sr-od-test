@@ -396,3 +396,105 @@ def test_loop_prep_guard_healthy_progress_never_stops(
             op.loop()
     assert stops == [], f'状态推进中的同批动作不得停机:{stops!r}'
     assert flags == [], '健康序列不得写存证 flag'
+
+
+# ==================== 备战收益耗尽 → 出战臂(ADR-0554) ====================
+# 机制依据(docs/game/currency_war/data/gameplay.md):备战等待零边际收益
+# (商店每节点自动刷新 1 次,金息/基础金/连胜奖励均在战斗结算发放)→
+# RunDeploy 稳态 no-op 形态判「收益耗尽」改判出战;其余形态维持停机。
+# 判据单一源 = cw_loop.prep_exhaustion_launch_eligible。
+
+
+def test_exhaustion_eligible_truth_table() -> None:
+    """判据真值表:RunDeploy 稳态(success)唯一 eligible;失败环/混合批/
+    None 批一律不 eligible(执行面失败形态保持守卫停机语义)。"""
+    from sr_od.application.currency_war.operations import cw_loop as m
+    e = m.prep_exhaustion_launch_eligible
+    assert e(('RunDeploy',), True), 'RunDeploy 稳态 no-op + 上环 success = 收益耗尽'
+    assert e(('RunDeploy', 'RunDeploy'), True), '同批多次 RunDeploy 同型'
+    assert not e(('RunDeploy',), False), '上环 fail = 执行面失败,须停机留证'
+    assert not e(('RunDeploy',), None), '无上环记录(首轮)不 eligible'
+    assert not e(None, True), 'None 批(overlay 交回)不累计不 eligible'
+    assert not e(('OpenShop',), True), 'OpenShop 批 = 重燃重发形态,须停机'
+    assert not e(('OpenShop', 'RunEquip'), True), '装备环形态,须停机'
+    assert not e(('RunDeploy', 'OpenShop'), True), '混合批不 eligible'
+
+
+def test_loop_exhaustion_launches_battle_instead_of_stop(
+        test_context, monkeypatch) -> None:
+    """行为锁(ADR-0554):3 冻结环 RunDeploy 稳态 no-op(上环 success)→
+    守卫触发位改判出战(launch 核被调、不 stop_running、不写停机 flag)。
+    失守场景 = 出战臂脱落回落停机(恢复烧对局预算的旧病)时本锁红。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                       sig=('RunDeploy',))
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    launches: list = []
+
+    def _fake_launch(op_, ctx_):
+        launches.append(1)
+        return True, 'stub-launch'
+
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch', _fake_launch)
+    with fast_sleep():
+        for _ in range(4):
+            op.loop()
+    assert launches, '收益耗尽帧必须经发射核出战'
+    assert stops == [], f'RunDeploy 稳态 no-op 不得停机:{stops!r}'
+    assert flags == [], '出战臂路径不得写停机 flag'
+    assert op._cw_exhaust_fail_n == 0, '发射成功须复位失败连击'
+
+
+def test_loop_exhaustion_launch_fail_gives_up_to_guard_stop(
+        test_context, monkeypatch) -> None:
+    """防线(与达标臂 C1 同构):发射核连续 3 次失败 → 放弃短路,回落守卫
+    停机留证(不无限自旋;停机时 flag 照写)。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                       sig=('RunDeploy',))
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    launches: list = []
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
+                        lambda op_, ctx_: (launches.append(1), (False, 'stub-fail'))[1])
+    with fast_sleep():
+        for _ in range(6):
+            op.loop()
+    assert len(launches) == 3, f'失败连击达 3 即放弃,实得 {len(launches)} 次'
+    assert stops == ['hook:prep_no_progress'], (
+        f'放弃短路后须回落守卫停机:{stops!r}')
+    assert flags, '回落停机须写存证 flag'
+    assert op._cw_exhaust_fail_n == 0, '放弃时失败计数复位'
+
+
+def test_loop_exhaustion_not_eligible_when_prep_fails(
+        test_context, monkeypatch) -> None:
+    """不误伤面(执行面失败形态保持停机):同 RunDeploy 冻结签名但备战环
+    round_fail(计划非空落地 0 = 拖拽落空类)→ 不出战,守卫照常停机。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                       sig=('RunDeploy',))
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    launches: list = []
+
+    class _FailPrep:
+        def __init__(self, ctx) -> None:
+            pass
+
+        def execute(self):
+            return SimpleNamespace(success=False, status='部署未落地')
+
+    monkeypatch.setattr(loop_mod, 'CwScreenPrep', _FailPrep)
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
+                        lambda op_, ctx_: (launches.append(1), (True, 'x'))[1])
+    with fast_sleep():
+        for _ in range(4):
+            op.loop()
+    assert launches == [], '执行面失败形态不得改判出战'
+    assert stops == ['hook:prep_no_progress'], (
+        f'失败环形态须维持守卫停机:{stops!r}')
