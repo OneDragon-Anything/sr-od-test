@@ -282,7 +282,13 @@ def test_strategy_dead_flag_three_elements(tmp_path) -> None:
 
 def test_register_flow_heartbeat_writes_carrier_rows(monkeypatch) -> None:
     """登记函数行为锁:恢复局分支写真实 StartBattle 载体行(sid=''),
-    补给分支写流程 sid 标记行;遥测关闭/last_state 缺席静默跳过。"""
+    补给分支写流程 sid 标记行;遥测关闭/last_state 缺席静默跳过。
+    (改锁重推语义,局33 复盘接线修复):recorder 单一源 = telemetry
+    state 模块单例(``cw_loop.state.get_recorder``),与 cw_loop 其余
+    消费端同源——旧锁钉在 ``last_state.get_recorder()`` 上,而 GameState
+    无该属性 → 生产路径恒 AttributeError 被 best-effort 吞掉,三类流程
+    心跳从未生效(被锁语义 = 偶然实现且自失效,非设计意图,故随接线
+    修正改写本锁)。"""
     from types import SimpleNamespace as _NS
 
     from sr_od.application.currency_war.operations import cw_loop
@@ -291,9 +297,9 @@ def test_register_flow_heartbeat_writes_carrier_rows(monkeypatch) -> None:
     monkeypatch.setattr(recorder, 'record_decision',
                         lambda st, t, cs, eb, actions, extra=None,
                         gold_point=True: written.append((actions, extra)))
-    _rec_enabled = _NS(enabled=True)
-    _state = _NS(get_recorder=lambda: _rec_enabled, plane=2, round_num=2,
-                 hp=1, gold=68, level=7)
+    monkeypatch.setattr(cw_loop.state, 'get_recorder',
+                        lambda: _NS(enabled=True))
+    _state = _NS(plane=2, round_num=2, hp=1, gold=68, level=7)
     ctx = _NS(cw_match=_NS(session=_NS(last_state=_state)))
     cw_loop.register_flow_heartbeat(ctx, 'locked_resume_direct_battle')
     assert written and len(written[0][0]) == 1
@@ -302,11 +308,12 @@ def test_register_flow_heartbeat_writes_carrier_rows(monkeypatch) -> None:
     assert written[1][0] == []
     assert written[1][1] == {'strategy_id': 'cw:flow:supply_node_divert'}
     # 静默面:遥测关闭 / last_state 缺席 ⇒ 不写不炸
-    _state_off = _NS(get_recorder=lambda: _NS(enabled=False), plane=2,
-                     round_num=3, hp=1, gold=68, level=7)
     n = len(written)
-    cw_loop.register_flow_heartbeat(
-        _NS(cw_match=_NS(session=_NS(last_state=_state_off))), 'supply_node_divert')
+    monkeypatch.setattr(cw_loop.state, 'get_recorder',
+                        lambda: _NS(enabled=False))
+    cw_loop.register_flow_heartbeat(ctx, 'supply_node_divert')
+    monkeypatch.setattr(cw_loop.state, 'get_recorder',
+                        lambda: _NS(enabled=True))
     cw_loop.register_flow_heartbeat(_NS(cw_match=_NS(session=_NS(last_state=None))),
                                     'supply_node_divert')
     assert len(written) == n
