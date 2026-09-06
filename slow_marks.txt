@@ -50,3 +50,6 @@ test_cw_r363_audit_p0.py::test_zero_outcome_but_observed_writes_row
 test_cw_round_flow.py::test_retreat_branch_clicks_retreat_on_pause_frame
 test_cw_no_progress_guard.py::test_loop_exhaustion_interleaved_capped_by_total_limit
 test_cw_no_progress_guard.py::test_loop_exhaustion_stale_gives_up_to_guard_stop
+
+# sim 决策下沉两小批(2026-09-06)准入:新锁首条 setup 2.50s(engine_p1/注册表模块装配;call 级均轻)
+test_cw_sim_launch_sink.py::TestKernelEquivalenceLock::test_armed_bitwise_equal_on_state_sweep

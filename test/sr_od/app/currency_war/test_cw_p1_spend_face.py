@@ -771,7 +771,12 @@ def _wire_prep_loop(monkeypatch, comp, launch_fn=None, fp=1.0):
                 'form_progress 收到非对局态(疑似模块级 state 错绑)')
         return fp
 
-    monkeypatch.setattr(cw_loop, 'form_progress', _form_progress_probe)
+    # 判据核单一源(两小批①):armed 判定经 kernel readiness_launch_
+    # decision 内联 form_progress(kernel.cw_comps 现读),patch 须落
+    # kernel 侧——cw_loop 消费面已无内联判据可 patch
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.kernel.cw_comps.form_progress',
+        _form_progress_probe)
     monkeypatch.setattr(cw_loop, 'readiness_battle_launch',
                         launch_fn or _default_launch)
     monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
@@ -868,7 +873,10 @@ class TestReadinessBattleArm:
                     'form_progress 收到非对局态(疑似模块级 state 错绑)')
             return 1.0
 
-        monkeypatch.setattr(cw_loop, 'form_progress', _form_progress_probe)
+        # 判据核单一源(两小批①):armed 判定经 kernel,patch 落 kernel 侧
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.kernel.cw_comps.form_progress',
+            _form_progress_probe)
         monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _fake_launch)
         monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
         import sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing as _bb
@@ -947,8 +955,10 @@ class TestReadinessBattleArm:
             op.loop()
         assert state_calls['launch'] == 1
         assert state_calls['guard'] == 0, '达标帧守卫计数零触达(锚③)'
-        # 非达标帧:守卫链照常可达(零重排)
-        monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 0.5)
+        # 非达标帧:守卫链照常可达(零重排);判据核单一源,patch 落 kernel 侧
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.kernel.cw_comps.form_progress',
+            lambda tc, st: 0.5)
         state_calls.update(launch=0, guard=0)
         op2 = _PrepLoop()
         op2._iter = 2
@@ -987,7 +997,12 @@ class TestReadinessBattleArm:
             return (prev, count)
         from types import SimpleNamespace as _NS
 
-        monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 1.0)
+        # 判据核单一源(sim 决策下沉两小批①):armed 判定经 kernel
+        # readiness_launch_decision,force 成型须 patch kernel 侧
+        # form_progress(cw_loop 已无内联判据可 patch)
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.kernel.cw_comps.form_progress',
+            lambda tc, st: 1.0)
         monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _flaky_launch)
         monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
         monkeypatch.setattr(_bb, 'read_ocr_texts', lambda ctx, screen: [])
@@ -1044,7 +1059,12 @@ class TestReadinessBattleArm:
             guard['n'] += 1
             return (prev, count)
 
-        monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 1.0)
+        # 判据核单一源(sim 决策下沉两小批①):armed 判定经 kernel
+        # readiness_launch_decision,force 成型须 patch kernel 侧
+        # form_progress(cw_loop 已无内联判据可 patch)
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.kernel.cw_comps.form_progress',
+            lambda tc, st: 1.0)
         monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _spy_launch)
         monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
         monkeypatch.setattr(cw_loop, 'CwScreenInvestStrategy', _FakeInvest)
@@ -1090,7 +1110,12 @@ class TestReadinessBattleArm:
             guard['n'] += 1
             return (prev, count)
 
-        monkeypatch.setattr(cw_loop, 'form_progress', lambda tc, st: 1.0)
+        # 判据核单一源(sim 决策下沉两小批①):armed 判定经 kernel
+        # readiness_launch_decision,force 成型须 patch kernel 侧
+        # form_progress(cw_loop 已无内联判据可 patch)
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.kernel.cw_comps.form_progress',
+            lambda tc, st: 1.0)
         monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _spy_launch)
         monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
         monkeypatch.setattr(_bb, 'read_ocr_texts', lambda ctx, screen: [])
