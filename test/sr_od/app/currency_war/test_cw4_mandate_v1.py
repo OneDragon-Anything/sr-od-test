@@ -8,6 +8,7 @@ D-A45 干旱重置)/ 冒烟(探针语料跑 _emit 无异常+截断判符合 v2)/
 零漂移门(商店线透传零污染,n≥20)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import ast
 from pathlib import Path
@@ -102,7 +103,7 @@ def _frame(gold: int = 20, bench=None, deployed=None, cap: int = 4,
 
 def _session() -> StrategySession:
     s = StrategySession()
-    s.cw4_counters = {}
+    state_of(s).cw4_counters = {}
     return s
 
 
@@ -257,7 +258,7 @@ class TestTruncateFrameStable:
         out = entry.truncate_frame_stable(
             [LevelUp(), Rogue(), LevelUp()], session)
         assert [type(a) for a in out] == [LevelUp]
-        assert session.cw4_counters['emitter_unknown_action_truncated'] == 1
+        assert state_of(session).cw4_counters['emitter_unknown_action_truncated'] == 1
 
 
 # ===== ④ fail-closed None 槽位(每个【拟】槽位 None 行为)=====
@@ -277,20 +278,20 @@ class TestFailClosedNoneSlots:
         """θ/D_min/δ 任一 None ⇒ should_switch 不评估 + theta_unavailable
         分键(R24-2:禁复用 switchline_skipped / switchline_exit_blocked)。"""
         session = _session()
-        session.target_comp = COMP_LIBRARY[0]
+        state_of(session).target_comp = COMP_LIBRARY[0]
         out = proof.should_switch(self._state(), session, None, None)
         assert not out.event
         assert out.key == 'theta_unavailable'
-        assert 'theta_unavailable' in session.cw4_counters
-        assert 'switchline_skipped' not in session.cw4_counters
-        assert 'switchline_exit_blocked' not in session.cw4_counters
+        assert 'theta_unavailable' in state_of(session).cw4_counters
+        assert 'switchline_skipped' not in state_of(session).cw4_counters
+        assert 'switchline_exit_blocked' not in state_of(session).cw4_counters
 
     def test_arm1_bypass_records_switchline_skipped(self):
         session = _session()
         out = proof.should_switch(self._state(), session, None, None,
                                   skeleton_only=True)
         assert not out.event and out.key == 'switchline_skipped'
-        assert 'switchline_skipped' in session.cw4_counters
+        assert 'switchline_skipped' in state_of(session).cw4_counters
 
     def test_exit_blocked_when_u_vms_none(self):
         """u/V_ms None ⇒ 出口不可用前置 ⇒ switchline_exit_blocked(K 冻结)。"""
@@ -298,7 +299,7 @@ class TestFailClosedNoneSlots:
         provisional.inject('D_MIN', provisional.CalibValue(2))
         provisional.inject('DELTA_HYST', provisional.CalibValue(0.15))
         session = _session()
-        session.target_comp = COMP_LIBRARY[0]
+        state_of(session).target_comp = COMP_LIBRARY[0]
         out = proof.should_switch(self._state(), session, None, None)
         assert not out.event and out.key == 'switchline_exit_blocked'
 
@@ -307,7 +308,7 @@ class TestFailClosedNoneSlots:
         session = _session()
         out = mandate.run_mandate(frame, session)
         assert not any(e.reason == 'm6_stock' for e in out)
-        assert session.cw4_counters.get('m6_overflow_strand', 0) >= 1
+        assert state_of(session).cw4_counters.get('m6_overflow_strand', 0) >= 1
 
     def test_ev_buy_candidates_u_none(self):
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
@@ -353,12 +354,12 @@ class TestFixpoolCheckpoints:
             pytest.skip('COMP_LIBRARY[0] 无成员')
         held = [k[0]]
         proof.update_line_state(session, comp, held, [])
-        assert session.cw4_line_state.drought == 0
+        assert state_of(session).cw4_line_state.drought == 0
         proof.update_line_state(session, comp, [], [])
         proof.update_line_state(session, comp, [], [])
-        assert session.cw4_line_state.drought == 2
+        assert state_of(session).cw4_line_state.drought == 2
         proof.update_line_state(session, comp, held, [])
-        assert session.cw4_line_state.drought == 0
+        assert state_of(session).cw4_line_state.drought == 0
 
     def test_d_dup_not_deployable(self):
         frame = _frame(bench=[_bench(1, '场上dup')], deployed=[_bench(1, '场上dup')])
@@ -405,7 +406,7 @@ class TestMandateBehavior:
         frame2 = _frame(gold=30, bench=bench2, k=k)
         session2 = _session()
         out2 = mandate.run_mandate(frame2, session2)
-        assert session2.cw4_counters.get('m2_retry_exhausted', 0) >= 1
+        assert state_of(session2).cw4_counters.get('m2_retry_exhausted', 0) >= 1
         assert not any(e.reason == 'm2_buy' for e in out2)
 
     def test_fuel_sell_predicate(self):
@@ -460,7 +461,7 @@ class TestEmitSmoke:
     def _run_emit_raw(self, ev_arm: str) -> list:
         strat = MandateV1Strategy()
         session = _session()
-        session.target_comp = COMP_LIBRARY[0]
+        state_of(session).target_comp = COMP_LIBRARY[0]
         from sr_od.application.currency_war.decision_assembly import (
             snapshot_from_obs,
         )
@@ -524,7 +525,7 @@ class TestEmitSmoke:
     def test_bridge_decide_prep_screen_smoke(self):
         strat = MandateV1Live()   # 注册桥壳:装配缝(snapshot_from_obs→assemble)注入态
         session = _session()
-        session.target_comp = COMP_LIBRARY[0]
+        state_of(session).target_comp = COMP_LIBRARY[0]
 
         class _Cfg:
             ev_arm = 'full'
@@ -571,7 +572,7 @@ class TestR196Wiring:
         self._inject_switch_params()
         comps = [c for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
         session = _session()
-        session.target_comp = comps[0]
+        state_of(session).target_comp = comps[0]
         for _ in range(3):
             proof.update_line_state(session, comps[0], [], [])   # dwell=2 ≥ D_min
 
@@ -586,13 +587,13 @@ class TestR196Wiring:
         self._inject_switch_params()
         monkeypatch.setattr(proof, 'best_alt_comp', lambda *a, **k: None)
         session = _session()
-        session.target_comp = COMP_LIBRARY[0]
+        state_of(session).target_comp = COMP_LIBRARY[0]
         proof.should_switch(GameState(gold=30), session, None, None)
-        assert session.cw4_counters.get('switchline_no_alt', 0) == 1
+        assert state_of(session).cw4_counters.get('switchline_no_alt', 0) == 1
         session2 = _session()
-        session2.target_comp = None
+        state_of(session2).target_comp = None
         proof.should_switch(GameState(gold=30), session2, None, None)
-        assert session2.cw4_counters.get('switchline_no_target', 0) == 1
+        assert state_of(session2).cw4_counters.get('switchline_no_target', 0) == 1
 
     def test_e_cur_undefined_counted(self, monkeypatch):
         from sr_od.application.currency_war.kernel import cw_line_switch
@@ -602,10 +603,10 @@ class TestR196Wiring:
         monkeypatch.setattr(cw_line_switch, 'e_rounds', _boom)
         self._inject_switch_params()
         session = _session()
-        session.target_comp = COMP_LIBRARY[0]
+        state_of(session).target_comp = COMP_LIBRARY[0]
         out = proof.should_switch(GameState(gold=30), session, None, None)
         assert not out.event and out.key == 'e_cur_undefined'
-        assert session.cw4_counters.get('switchline_e_cur_undefined', 0) == 1
+        assert state_of(session).cw4_counters.get('switchline_e_cur_undefined', 0) == 1
 
     def test_relock_window_blocks_within_dmin(self, monkeypatch):
         """D-P4 回锁窗行为锁:构造切换(撤线登记)→ 窗口内回锁请求被拒。"""
@@ -615,7 +616,7 @@ class TestR196Wiring:
         assert len(comps) >= 2
         cur, alt = comps[0], comps[1]
         session = _session()
-        session.target_comp = cur
+        state_of(session).target_comp = cur
         # 驻留 ≥ D_min(dwell=2)
         for _ in range(3):
             proof.update_line_state(session, cur, [], [])
@@ -631,12 +632,12 @@ class TestR196Wiring:
         proof.register_eviction(session, cur.name)   # entry 采纳时登记
         # K 翻到 alt 后,窗口内(dwell of evicted=0 < D_min=2)请求切回
         # cur(=撤线线)⇒ 回锁窗拦截
-        session.target_comp = alt
+        state_of(session).target_comp = alt
         e_map[cur.name], e_map[alt.name] = 1.0, 20.0
         back = proof.should_switch(GameState(gold=30), session, None, None,
                                    alt_comp=cur)
         assert not back.event and back.key == 'relock_window'
-        assert session.cw4_counters.get('switchline_relock_window', 0) == 1
+        assert state_of(session).cw4_counters.get('switchline_relock_window', 0) == 1
         # 窗口步出(≥ D_min)后回锁解禁
         for _ in range(3):
             proof.update_line_state(session, alt, [], [])
@@ -689,7 +690,7 @@ class TestR196Wiring:
         old_comp, new_comp, old_only = pair
         strat = MandateV1Strategy()
         session = _session()
-        session.target_comp = old_comp
+        state_of(session).target_comp = old_comp
         bench = [_bench(1, old_only)]
 
         def _decide(round_num: int = 1) -> list[PrepAction]:
@@ -702,8 +703,8 @@ class TestR196Wiring:
                 obs, turn, session, _Cfg('full'), registry=strat.registry)
 
         _decide(round_num=1)                      # 帧1:登记 prev 线名
-        assert session.cw4_prev_line_name == old_comp.name
-        session.target_comp = new_comp           # K 翻转(基线意向机形态)
+        assert state_of(session).cw4_prev_line_name == old_comp.name
+        state_of(session).target_comp = new_comp           # K 翻转(基线意向机形态)
         # 帧2:换线生效帧=新备战期(R1-3:K 翻转跨备战期经 update_target
         # 生效;备战期开店闩按 (位面,轮次) 键,新期自动失效)——夹具按此
         # 建模 round_num+1,锁断言(塌缩出口可达+先于截断点)不变。
@@ -737,7 +738,7 @@ class TestR196EvConflictDrop:
 
         strat = MandateV1Strategy()
         session = _session()
-        session.target_comp = comp
+        state_of(session).target_comp = comp
         obs = _obs(state=GameState(gold=gold), bench=bench, vacancy=4)
         turn = _assemble_turn_fn(
             snapshot_from_obs(obs, session), session, registry=strat.registry)
@@ -760,7 +761,7 @@ class TestR196EvConflictDrop:
         sells = [a for a in out if isinstance(a, SellBench)]
         # M4 卖槽 2(唯一燃料);funding 同槽提案丢弃 ⇒ 单笔 + 计数
         assert [a.slot for a in sells] == [2]
-        assert session.cw4_counters.get('ev_conflict_dropped', 0) == 1
+        assert state_of(session).cw4_counters.get('ev_conflict_dropped', 0) == 1
 
     def test_distinct_slot_kept(self):
         """同帧异槽提案保留(全链):缺件注册价 ≥4 ⇒ funding 需两件燃料
@@ -778,7 +779,7 @@ class TestR196EvConflictDrop:
         sells = [a for a in out if isinstance(a, SellBench)]
         # M4 卖槽 2;funding 提案 [2(冲突丢弃), 3(保留)]
         assert sorted(a.slot for a in sells) == [2, 3]
-        assert session.cw4_counters.get('ev_conflict_dropped', 0) == 1
+        assert state_of(session).cw4_counters.get('ev_conflict_dropped', 0) == 1
 
 
 class TestR196TruncationBehavior:
@@ -800,7 +801,7 @@ class TestR196TruncationBehavior:
         out = entry.truncate_frame_stable([SellBench(slot=5)], session,
                                           bench_slots={1, 2})
         assert out == []
-        assert session.cw4_counters['emitter_conditional_truncated'] == 1
+        assert state_of(session).cw4_counters['emitter_conditional_truncated'] == 1
 
     def test_sellbench_in_sequence_projection(self):
         """前序累积静态推出:同序列已卖槽位不再在投影集内,二次引用截断。"""
@@ -809,7 +810,7 @@ class TestR196TruncationBehavior:
             [SellBench(slot=1), SellBench(slot=1), LevelUp()], session,
             bench_slots={1})
         assert [type(a) for a in out] == [SellBench]
-        assert session.cw4_counters['emitter_conditional_truncated'] == 1
+        assert state_of(session).cw4_counters['emitter_conditional_truncated'] == 1
 
     def test_deploymove_from_slot_recheck(self):
         session = _session()
@@ -817,7 +818,7 @@ class TestR196TruncationBehavior:
             [DeployMove(from_slot=9, to_row='back', to_slot=1)], session,
             bench_slots={1})
         assert out == []
-        assert session.cw4_counters['emitter_conditional_truncated'] == 1
+        assert state_of(session).cw4_counters['emitter_conditional_truncated'] == 1
 
     def test_composite_conditional_continue(self):
         """组合类(SellDeployed/RunDeploy/RunEquip):按计划静态推出成立可续。"""
@@ -845,26 +846,26 @@ class TestR196TruncationBehavior:
             [LevelUp(), OpenShop(), SellBench(slot=1), LevelUp()], session,
             bench_slots={1})
         assert [type(a) for a in out] == [LevelUp, OpenShop]
-        assert session.cw4_counters['emitter_post_truncation_dropped'] == 2
+        assert state_of(session).cw4_counters['emitter_post_truncation_dropped'] == 2
         # 终点尾丢弃同计
         session2 = _session()
         out2 = entry.truncate_frame_stable(
             [StartBattle(), SellBench(slot=1)], session2, bench_slots={1})
         assert [type(a) for a in out2] == [StartBattle]
-        assert session2.cw4_counters['emitter_post_truncation_dropped'] == 1
+        assert state_of(session2).cw4_counters['emitter_post_truncation_dropped'] == 1
         # 词表外:未发射动作(含该动作自身)计入
         session3 = _session()
         out3 = entry.truncate_frame_stable(
             [SellBench(slot=1), OpenShop(), LevelUp(), LevelUp()], session3,
             bench_slots={1})
         assert [type(a) for a in out3] == [SellBench, OpenShop]
-        assert session3.cw4_counters['emitter_post_truncation_dropped'] == 2
+        assert state_of(session3).cw4_counters['emitter_post_truncation_dropped'] == 2
         # 无截断全通过 ⇒ 零计数(键不存在)
         session4 = _session()
         out4 = entry.truncate_frame_stable(
             [LevelUp(), SellBench(slot=1)], session4, bench_slots={1})
         assert len(out4) == 2
-        assert 'emitter_post_truncation_dropped' not in session4.cw4_counters
+        assert 'emitter_post_truncation_dropped' not in state_of(session4).cw4_counters
 
 
 class TestR196ShadowKeys:
@@ -935,8 +936,8 @@ class TestR196Constants:
         frame = _frame(gold=30, bench=bench, k=k)
         session = _session()
         mandate.run_mandate(frame, session)
-        assert session.cw4_counters.get('bench_full_buy_abandon', 0) >= 1
-        assert session.cw4_counters.get('m2_retry_exhausted', 0) >= 1
+        assert state_of(session).cw4_counters.get('bench_full_buy_abandon', 0) >= 1
+        assert state_of(session).cw4_counters.get('m2_retry_exhausted', 0) >= 1
 
     def test_bench_capacity_single_source(self):
         from sr_od.application.currency_war.kernel.cw_state import (
@@ -1192,7 +1193,7 @@ class TestShopPhaseLatch:
         assert any(isinstance(e.action, OpenShop)
                    and not e.action.read_only for e in out2)   # 闩未烧,重发
         assert any(isinstance(e.action, RunEquip) for e in out2)
-        assert s.cw4_counters.get('shop_latch_skip_m2_buy', 0) == 0
+        assert state_of(s).cw4_counters.get('shop_latch_skip_m2_buy', 0) == 0
 
     def test_shop_visit_sets_latch(self):
         """回归锁②:开店执行成功(商店域决策访问已发生)后闩置位——
@@ -1200,23 +1201,23 @@ class TestShopPhaseLatch:
         发射。"""
         st = _visit_state(round_num=3)
         s = _session()
-        s.target_comp = _COMP_LINE
+        state_of(s).target_comp = _COMP_LINE
         act = decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
         # gold=100 为必花域帧(20 号稿 L3 落码):店面空 ⇒ 分层末位 L3
         # 升级消费(LevelUpShop),不再以 CloseShop 终结;闩语义不变。
         assert isinstance(act, LevelUpShop)
         assert act.auth_basis == 'm3_batch:must_spend'
-        assert s.cw4_shopped_phase == (1, 3)       # 闩置位=访问位
+        assert state_of(s).cw4_shopped_phase == (1, 3)       # 闩置位=访问位
         f = self._stuck_frame(round_num=3)
         out = mandate.run_mandate(f, s, state=st)
         assert not any(isinstance(e.action, OpenShop) for e in out)
         assert any(e.reason == 'm1_deploy' for e in out)
-        assert s.cw4_counters.get('shop_latch_skip_m2_buy', 0) == 1
+        assert state_of(s).cw4_counters.get('shop_latch_skip_m2_buy', 0) == 1
 
     def test_phase_advance_reopens_shop(self):
         """换备战期(轮次推进=新店内容)闩失效,M2 重新决策开店。"""
         s = _session()
-        s.target_comp = _COMP_LINE
+        state_of(s).target_comp = _COMP_LINE
         decide_shop_action(_visit_state(round_num=1), s,
                            SimpleNamespace(ev_arm='full'))
         out = mandate.run_mandate(self._stuck_frame(round_num=2), s,
@@ -1231,7 +1232,7 @@ class TestShopPhaseLatch:
         out1 = mandate.run_mandate(
             _frame(gold=30, bench=bench, k=('目标件',)), s)
         assert not any(isinstance(e.action, OpenShop) for e in out1)
-        assert s.cw4_counters.get('m2_retry_exhausted', 0) >= 1
+        assert state_of(s).cw4_counters.get('m2_retry_exhausted', 0) >= 1
         out2 = mandate.run_mandate(
             _frame(gold=30, bench=[_bench(1, '随意件')], k=('目标件',)), s)
         assert any(e.reason == 'm2_buy' for e in out2)

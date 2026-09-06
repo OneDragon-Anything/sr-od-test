@@ -11,6 +11,7 @@ test_cw_board_target_line_weight(kernel 计数正确性);form_ok 正确性
 细锁 = test_cw_obs_keys_sim71。锁口径 = 结构/回显,不锁分布数值。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import random
 from types import SimpleNamespace
@@ -56,7 +57,7 @@ def test_new_core_mirror_family_written() -> None:
         r = _run(seed, MandateV1Strategy(registry=sim_decision_registry()))
         assert r.ledger, 'sim 单局应有账本行'
         for row in r.ledger:
-            # 相位影子退役:引擎读 session.v3_phase,mandate 无写端 → 恒 session
+            # 相位影子退役:引擎读 state_of(session).v3_phase,mandate 无写端 → 恒 session
             # 缺省 ''(旧核写 'FORM'/'HOARD'/'SPEND' 判据值的形态只在旧核侧)
             assert (row.get('phase') or '') == '', \
                 f"新核相位影子应恒缺省(seed {seed} 轮 {row.get('round_num')})"

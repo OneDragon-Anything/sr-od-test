@@ -14,6 +14,7 @@
 不作目标值(42 跳对照警示:有锁对照批 hp 中位反而 0.0)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import copy
 from dataclasses import is_dataclass
@@ -91,7 +92,7 @@ def test_g5_weakplane_cull_fail_thickness_branch(monkeypatch):
                                                    't', 1.0)])
     sess = _counting_session()
     out = update_intention(_state(plane=2), IntentionState(), sess, None)
-    ct = sess.cw4_counters
+    ct = state_of(sess).cw4_counters
     assert ct.get('weakplane_exempt_eval') == 1
     assert ct.get('weakplane_exempt_eval_fail_thickness') == 1
     assert 'weakplane_exempt_eval_hit' not in ct
@@ -112,7 +113,7 @@ def test_g5_weakplane_cull_hit_branch(monkeypatch):
                 for i, n in enumerate(comp.core_chars[:5])]
     sess = _counting_session()
     out = update_intention(st, IntentionState(), sess, None)
-    ct = sess.cw4_counters
+    ct = state_of(sess).cw4_counters
     assert ct.get('weakplane_exempt_eval') == 1
     assert ct.get('weakplane_exempt_eval_hit') == 1
     # 零行为守卫:hit 支不产生豁免——弱面线不会被锁
@@ -135,7 +136,7 @@ def test_g6_supply_gate_cull_neardeath_and_not(monkeypatch):
     for hp, expect_nd in ((10, True), (40, False)):
         sess = _counting_session()
         update_intention(_state(plane=2, hp=hp), IntentionState(), sess, None)
-        ct = sess.cw4_counters
+        ct = state_of(sess).cw4_counters
         assert ct.get('p2_supply_gate_cull') == 1
         assert ct.get('neardeath_direction_obs_frame') == (1 if expect_nd else None)
         assert ct.get('neardeath_direction_obs_supply_cull') == (1 if expect_nd else None)
@@ -151,16 +152,16 @@ def test_g7_handoff_empty_frame_count(monkeypatch):
     sess = _counting_session()
     out = update_intention(_state(plane=2), IntentionState(), sess, None)
     assert out.phase == 'unlocked'   # 零候选保持 unlocked(既有语义)
-    assert sess.cw4_counters.get('p2_handoff_frame') == 1
-    assert sess.cw4_counters.get('p2_handoff_cand_empty') == 1
+    assert state_of(sess).cw4_counters.get('p2_handoff_frame') == 1
+    assert state_of(sess).cw4_counters.get('p2_handoff_cand_empty') == 1
     # 对照:候选非空 → 移交重锁,cand_empty 不计(恢复可行 G)
     monkeypatch.setattr(ci, 'line_completion_feasibility',
                         lambda *a, **k: 0.5)
     sess2 = _counting_session()
     out2 = update_intention(_state(plane=2), IntentionState(), sess2, None)
     assert out2.phase == 'locked' and out2.last_event.startswith('handoff_lock:')
-    assert sess2.cw4_counters.get('p2_handoff_frame') == 1
-    assert 'p2_handoff_cand_empty' not in sess2.cw4_counters
+    assert state_of(sess2).cw4_counters.get('p2_handoff_frame') == 1
+    assert 'p2_handoff_cand_empty' not in state_of(sess2).cw4_counters
 
 
 def test_g7_neardeath_handoff_empty(monkeypatch):
@@ -170,7 +171,7 @@ def test_g7_neardeath_handoff_empty(monkeypatch):
                         lambda *a, **k: 0.0)
     sess = _counting_session()
     update_intention(_state(plane=2, hp=10), IntentionState(), sess, None)
-    ct = sess.cw4_counters
+    ct = state_of(sess).cw4_counters
     assert ct.get('neardeath_direction_obs_handoff_frame') == 1
     assert ct.get('neardeath_direction_obs_handoff_empty') == 1
 
@@ -232,7 +233,7 @@ def test_g8_promote_nonempty_obs_at_handoff(monkeypatch):
     ist.p1_pair_frozen_obs = pair
     sess = _counting_session()
     out = update_intention(st, ist, sess, None)
-    ct = sess.cw4_counters
+    ct = state_of(sess).cw4_counters
     assert ct.get('promote_candidate_frame') == 1
     assert ct.get('promote_candidate_nonempty') == 1
     assert out.last_event.startswith('handoff_lock:')   # 发射语义零变更
@@ -266,7 +267,7 @@ def test_lock_rate_frame_counters(monkeypatch):
     update_intention(_state(plane=2, round_num=1), ist, sess, None)   # 移交帧 → 锁
     update_intention(_state(plane=2, round_num=2), ist, sess, None)   # 保持锁
     update_intention(_state(plane=1, round_num=1), IntentionState(), sess, None)
-    ct = sess.cw4_counters
+    ct = state_of(sess).cw4_counters
     assert ct.get('intention_frame_p2') == 2
     assert ct.get('intention_locked_frame_p2') == 2
     assert ct.get('intention_frame_p1') == 1
@@ -299,7 +300,7 @@ def test_default_session_counter_container_lazily_created():
     全部键落在登记前缀族内(与既有键族零交集,设计稿 §4 条款③)。"""
     sess = _plain_session()
     update_intention(_state(plane=2), IntentionState(), sess, None)
-    ct = getattr(sess, 'cw4_counters', None)
+    ct = getattr(state_of(sess), 'cw4_counters', None)
     assert isinstance(ct, dict) and ct
     for k in ct:
         assert k.startswith(ci.LOCK_PATH_OBS_KEY_PREFIXES), f'未登记键:{k}'

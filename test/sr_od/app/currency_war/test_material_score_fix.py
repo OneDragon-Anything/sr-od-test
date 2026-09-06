@@ -1,6 +1,7 @@
 """r130 合成材料分修复测试(字段名 recipes;局33b 获取侧根因)。
 
 出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 import sys
 
 sys.path.insert(0, 'src')
@@ -13,7 +14,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import Man
 
 def _sess_baiyu():
     s = StrategySession()
-    s.target_comp = next(c for c in COMP_LIBRARY if c.name == '反甲白厄')
+    state_of(s).target_comp = next(c for c in COMP_LIBRARY if c.name == '反甲白厄')
     return s
 
 

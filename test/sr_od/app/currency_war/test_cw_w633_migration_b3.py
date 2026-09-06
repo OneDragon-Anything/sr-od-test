@@ -14,6 +14,8 @@ W623 预验尸(D0-D4)+ W630 A/B 协议 + W615 R1-R4 规则集。锁契约:
   pair 重派生;W578 代理门:驱逐后 pair_target_comp 物化非空。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from sr_od.application.currency_war.kernel.cw_economy import (
     refresh_ev_budget,
@@ -109,7 +111,7 @@ def _locked_4cost_sess() -> StrategySession:
                 if (CHARACTERS.get(intention_core(c)) is not None
                     and CHARACTERS[intention_core(c)].cost == 4))
     sess = StrategySession()
-    sess.v3_intention = IntentionState(
+    state_of(sess).v3_intention = IntentionState(
         phase='locked', locked_comp=comp.name)
     return sess
 
@@ -148,7 +150,7 @@ def test_schedule_ul_threshold_negative_small_shift_band() -> None:
                 if (CHARACTERS.get(intention_core(c)) is not None
                     and CHARACTERS[intention_core(c)].cost == 2))
     sess = StrategySession()
-    sess.v3_intention = IntentionState(
+    state_of(sess).v3_intention = IntentionState(
         phase='locked', locked_comp=comp.name)
     st = _state(gold=60, level=5)      # 2 费 lv5→6:benefit≈9.9 < U_L 20
     assert not _upgrade_ul_threshold_ok(st, sess)
@@ -215,7 +217,7 @@ def test_w721_collapse_band_zero_and_fallback_exempt() -> None:
                 if (CHARACTERS.get(intention_core(c)) is not None
                     and CHARACTERS[intention_core(c)].cost == 4))
     sess_locked = StrategySession()
-    sess_locked.v3_intention = IntentionState(
+    state_of(sess_locked).v3_intention = IntentionState(
         phase='locked', locked_comp=comp.name)
     assert refresh_ev_budget(st, sess_locked) == 0
     assert refresh_ev_budget(st, StrategySession()) > 0
@@ -245,7 +247,7 @@ def test_pair_drought_counters_never_evict() -> None:
     _starve_frame 的 0.5 支持度(各系单件)不足以锁 pair(空窗)。"""
     ist = IntentionState()
     sess = StrategySession()
-    sess.v3_intention = ist
+    state_of(sess).v3_intention = ist
     update_intention(_starve_frame(), ist, sess)
     assert ist.p1_pair == (), \
         '支持度 0.5(各系单件)< 门槛 1.0(羁绊满员)→ 空窗不锁(ADR-0519)'
@@ -253,7 +255,7 @@ def test_pair_drought_counters_never_evict() -> None:
     ist2 = IntentionState()
     ist2.p1_pair = ('列车同行', '持续伤害')
     sess2 = StrategySession()
-    sess2.v3_intention = ist2
+    state_of(sess2).v3_intention = ist2
     for _ in range(6):
         update_intention(_starve_frame(), ist2, sess2)
     assert ist2.pair_evicted == set(), '驱逐分支已退役(ADR-0519)'
@@ -289,7 +291,7 @@ def test_injection_consistency_single_registry_source() -> None:
     assert not schedule_upgrade(st1, sess, _REG)
     assert not schedule_upgrade(st1, sess, reg2)
     sess_ov = _locked_4cost_sess()
-    sess_ov.cw4_cap_override = 4
+    state_of(sess_ov).cw4_cap_override = 4   # 注入面迁 MandateState
     assert schedule_upgrade(st1, sess_ov)
     assert refresh_ev_budget(st1, sess, reg2) > refresh_ev_budget(
         st1, sess, _REG)   # 息线下移 → 排程开+溢余面变化,预算随之
@@ -333,8 +335,8 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     sess = StrategySession()
     live_b = _ch('卡芙卡', 0)
     live_d = _ch('姬子', 0)
-    sess.tracked_bench_chars = [live_b]
-    sess.tracked_deployed = [live_d]
+    exec_state_of(sess).tracked_bench_chars = [live_b]
+    exec_state_of(sess).tracked_deployed = [live_d]
     # 直调 _tracking_view(snapshot 传空 fresh-read 兜底面)
     from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
         Snapshot,
@@ -372,7 +374,7 @@ def test_pair_drought_resets_when_member_visible() -> None:
     ist = IntentionState()
     ist.p1_pair = ('持续伤害', '仙舟')
     sess = StrategySession()
-    sess.v3_intention = ist
+    state_of(sess).v3_intention = ist
     st = _state(r=5, gold=100,
                 shop=[_sc('卡芙卡', 4)], board={})   # 卡芙卡=DOT 系成员
     update_intention(st, ist, sess)

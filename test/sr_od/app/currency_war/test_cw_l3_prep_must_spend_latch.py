@@ -9,6 +9,8 @@
 锁契约 = 结构/回显,不锁分布数值(sr-od-test README 第 8 条)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -76,13 +78,13 @@ class TestPrepMustSpendLatch:
         fa, sess, sta = _mk(56)
         out_a = mandate.run_mandate(fa, sess, state=sta)
         assert not _lvls(out_a), '入域帧穿线批:预算闸整批推迟'
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'must_spend_zone_defer_overridden') == 1   # 停付让位显影面仍在
-        assert sess.cw4_counters.get('levelup_budget_gate_blocked') == 1
+        assert state_of(sess).cw4_counters.get('levelup_budget_gate_blocked') == 1
         fb, _, stb = _mk(43)   # 商店域消费 13 金后的残金帧
         out_b = mandate.run_mandate(fb, sess, state=stb)
         assert _lvls(out_b), '闩延命残金帧(≤g*)闸不辖,发射语义保持'
-        assert sess.cw4_counters.get('must_spend_zone_latch_extend') == 1
+        assert state_of(sess).cw4_counters.get('must_spend_zone_latch_extend') == 1
 
     def test_fresh_session_still_defers(self):
         """负向:无闩的新备战期帧(g43 域外)⇒ 危机带常态挂起照旧
@@ -90,8 +92,8 @@ class TestPrepMustSpendLatch:
         fb, sess, stb = _mk(43)
         out = mandate.run_mandate(fb, sess, state=stb)
         assert not _lvls(out)
-        assert sess.cw4_counters.get('crisis_level_spend_defer') == 1
-        assert 'must_spend_zone_latch_extend' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer') == 1
+        assert 'must_spend_zone_latch_extend' not in state_of(sess).cw4_counters
 
     def test_latch_expires_next_round(self):
         """闩相位键式 = (plane, round):下一备战期(新键)不继承,
@@ -101,8 +103,8 @@ class TestPrepMustSpendLatch:
         fn, _, stn = _mk(43, round_num=6)
         out = mandate.run_mandate(fn, sess, state=stn)
         assert not _lvls(out)
-        assert sess.cw4_counters.get('crisis_level_spend_defer') == 1
-        assert 'must_spend_zone_latch_extend' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer') == 1
+        assert 'must_spend_zone_latch_extend' not in state_of(sess).cw4_counters
 
 
 class TestL3RejectKeys:
@@ -113,7 +115,7 @@ class TestL3RejectKeys:
         f, sess, st = _mk(56, level=9)
         out = mandate.run_mandate(f, sess, state=st)
         assert not _lvls(out)
-        assert sess.cw4_counters.get('l3_reject_level_cap') == 1
+        assert state_of(sess).cw4_counters.get('l3_reject_level_cap') == 1
 
     def test_batch_unaffordable_keyed(self):
         """域内整批买不齐(单击价 13 金 ×13 击 > 51)⇒ 零发射 +
@@ -121,7 +123,7 @@ class TestL3RejectKeys:
         f, sess, st = _mk(51, hp=80, xp=(0, 52), click_cost=13)
         out = mandate.run_mandate(f, sess, state=st)
         assert not _lvls(out)
-        assert sess.cw4_counters.get('l3_reject_batch_unaffordable') == 1
+        assert state_of(sess).cw4_counters.get('l3_reject_batch_unaffordable') == 1
 
     def test_xp_readthrough_rescues_residual_band(self):
         """xp 现读透传(第二静默拒因面修复):闩延命残金帧 43 金属
@@ -136,12 +138,12 @@ class TestL3RejectKeys:
         fc, _, stc = _mk(43, xp=None)
         out2 = mandate.run_mandate(fc, sess2, state=stc)
         assert not _lvls(out2)
-        assert sess2.cw4_counters.get('l3_reject_batch_unaffordable') == 1
+        assert state_of(sess2).cw4_counters.get('l3_reject_batch_unaffordable') == 1
 
 
 class TestBoardTargetLineTrackedFallback:
     """b_t 实机回退源(两局全帧 0.0 实证:商店观察帧 deployed
-    恒空 → 写者输入缺;回退 = session.tracked_deployed)。"""
+    恒空 → 写者输入缺;回退 = exec_state_of(session).tracked_deployed)。"""
 
     def _strat(self):
         from sr_od.application.currency_war.sim.engine_p1 import (
@@ -160,11 +162,11 @@ class TestBoardTargetLineTrackedFallback:
         )
         sess = StrategySession()
         st = GameState()
-        sess.tracked_deployed = [
+        exec_state_of(sess).tracked_deployed = [
             BenchChar(slot=i + 1, char_id='青雀', star=1, faction='仙舟',
                       position_pref='back') for i in range(3)]
         self._strat().write_shop_mirrors(st, sess)
-        assert sess.v3_b_t == 3
+        assert state_of(sess).v3_b_t == 3
 
     def test_truly_empty_board_stays_zero(self):
         """tracked 同空(板面真空事实态)⇒ 恒 0 不虚构。"""
@@ -174,7 +176,7 @@ class TestBoardTargetLineTrackedFallback:
         sess = StrategySession()
         st = GameState()
         self._strat().write_shop_mirrors(st, sess)
-        assert sess.v3_b_t == 0
+        assert state_of(sess).v3_b_t == 0
 
 
 class TestRecorderObservationWiring:

@@ -20,6 +20,7 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
    小帧集,分歧仅允许出现在方向层接管区并逐帧定性)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import re
 from dataclasses import replace
@@ -97,7 +98,7 @@ def test_d1_hoard_readable_normal_frame():
     与真空集),失败帧才 False——消费侧语义不因实现细节抖动。
     """
     sess = StrategySession()
-    sess.v3_intention = IntentionState()
+    state_of(sess).v3_intention = IntentionState()
     turn = assemble(_snapshot(), sess)
     assert turn.direction.hoard_readable is True
     assert isinstance(turn.direction.hoard, frozenset)
@@ -112,7 +113,7 @@ def test_d1_mutation_probe_projection_failure_conservative_domain():
     import sr_od.application.currency_war.kernel.cw_intention as cw_intention_mod
 
     sess = StrategySession()
-    sess.v3_intention = IntentionState()
+    state_of(sess).v3_intention = IntentionState()
     orig = cw_intention_mod.hoard_target_set
 
     def _boom(_state, _ist):
@@ -163,13 +164,13 @@ def test_p7_drive_intention_idempotent_per_round():
     sess = StrategySession()
     st = _state(plane=1, round_num=2)
     drive_intention(st, sess)
-    assert sess.v3_intention_key == (1, 2)
-    ev1 = sess.v3_intention.last_event
+    assert state_of(sess).v3_intention_key == (1, 2)
+    ev1 = state_of(sess).v3_intention.last_event
     drive_intention(st, sess)                     # 同轮重入:不重复驱动
-    assert sess.v3_intention_key == (1, 2)
-    assert sess.v3_intention.last_event == ev1
+    assert state_of(sess).v3_intention_key == (1, 2)
+    assert state_of(sess).v3_intention.last_event == ev1
     drive_intention(_state(plane=1, round_num=3), sess)   # 跨轮:推进
-    assert sess.v3_intention_key == (1, 3)
+    assert state_of(sess).v3_intention_key == (1, 3)
 
 
 def test_p6_registry_injection_reaches_state_machine():
@@ -200,10 +201,10 @@ def test_p4_ist_zero_residue_across_matches():
     """P4:跨局 ist 零残留——每局新建 StrategySession,ist/驱动键从零开始。"""
     sess = StrategySession()
     drive_intention(_state(), sess)
-    assert sess.v3_intention is not None and sess.v3_intention.evicted == set()
+    assert state_of(sess).v3_intention is not None and state_of(sess).v3_intention.evicted == set()
     fresh = StrategySession()   # 新局(构造性重置)
-    assert fresh.v3_intention is None
-    assert fresh.v3_intention_key is None
+    assert state_of(fresh).v3_intention is None      # 策略器字段迁 MandateState
+    assert state_of(fresh).v3_intention_key is None
 
 
 # ----------------------------------------------------- 哨兵锁:局23 型帧
@@ -238,7 +239,7 @@ def _ju23_frame(gold: int, shop: list[ShopCard] | None = None) -> GameState:
 
 def _ju23_session() -> StrategySession:
     sess = StrategySession()
-    sess.target_comp = _JU23_COMP
+    state_of(sess).target_comp = _JU23_COMP
     return sess
 
 
@@ -281,8 +282,8 @@ def test_ju23_stock_match_buys_and_empty_shop_close_discernible():
     # 末位 L3 升级消费(LevelUpShop),分键语义保留可辨。
     assert isinstance(act, LevelUpShop)
     assert act.auth_basis == 'm3_batch:must_spend'
-    assert sess.cw4_counters.get('shop_visit_idle_gold') == 1
-    assert sess.cw4_counters.get('shop_r1_no_chaseable_member') == 1
+    assert state_of(sess).cw4_counters.get('shop_visit_idle_gold') == 1
+    assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member') == 1
     ok, _ = stockpile_buy(100, 0, 9, 2, 1, frozenset({2}))
     assert ok is True
 
@@ -391,7 +392,7 @@ def _old_committed(state: GameState, session: StrategySession) -> bool:
     """
     if state.plane >= 2:
         return True
-    sig = getattr(session, 'commit_signals', None)
+    sig = getattr(state_of(session), 'commit_signals', None)
     if sig is None:
         return False
     ready = _old_ready(sig, _old_t_of(state.plane, state.round_num))
@@ -414,14 +415,14 @@ def test_committed_predicate_frame_by_frame_vs_old():
     # 帧3:P1 信号 ready(分超阈+过轮门)但 ist 未锁 → 预期分歧(接管区,
     # 新谓词保守)
     s3 = StrategySession()
-    s3.commit_signals = CommitSignals()
-    s3.commit_signals.scores = {'万敌燃血': 99.0}
+    state_of(s3).commit_signals = CommitSignals()
+    state_of(s3).commit_signals.scores = {'万敌燃血': 99.0}
     frames.append((_state(plane=1, round_num=8), s3, 'takeover_zone_only_old'))
     # 帧4:ist 已锁 → 双 True
     s4 = StrategySession()
-    s4.v3_intention = IntentionState(phase='locked', locked_comp='万敌燃血')
-    s4.commit_signals = CommitSignals()
-    s4.commit_signals.scores = {'万敌燃血': 99.0}
+    state_of(s4).v3_intention = IntentionState(phase='locked', locked_comp='万敌燃血')
+    state_of(s4).commit_signals = CommitSignals()
+    state_of(s4).commit_signals.scores = {'万敌燃血': 99.0}
     frames.append((_state(plane=1, round_num=8), s4, 'both_true'))
     # 帧5:P2 → 双 True(语义边界保留)
     frames.append((_state(plane=2, round_num=1), StrategySession(),

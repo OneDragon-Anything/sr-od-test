@@ -46,6 +46,7 @@ def test_encounter_refresh_execution_wired() -> None:
     import dataclasses
     import inspect
 
+    from sr_od.application.currency_war.kernel.cw_exec_state import ExecState
     from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
     from sr_od.application.currency_war.obs import cw_node_obs
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_encounter
@@ -55,5 +56,6 @@ def test_encounter_refresh_execution_wired() -> None:
     assert 'refresh_used=True' in src, '刷新后未带 refresh_used 重决策(建议→执行死循环风险)'
     assert 'read_encounter_refresh_count' in src, '剩余次数 reader 未接(无次数盲刷风险)'
     assert '剩余次数' in inspect.getsource(cw_node_obs), 'reader 正则单一源缺失'
-    names = {f.name for f in dataclasses.fields(StrategySession)}
-    assert '_encounter_refresh_used' in names, 'session 字段未升正式(动态 setattr 面消失)'
+    # 单次标志迁 ExecState(session 职责分离批):声明面 = ExecState 正式字段
+    names = {f.name for f in dataclasses.fields(ExecState)}
+    assert '_encounter_refresh_used' in names, '执行层字段未升正式(动态 setattr 面消失)'

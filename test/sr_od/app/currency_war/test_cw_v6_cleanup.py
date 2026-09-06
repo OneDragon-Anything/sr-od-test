@@ -203,11 +203,16 @@ class TestRow17IncidentGuard:
         from types import SimpleNamespace
 
         from sr_od.application.currency_war.sim import ab_core_swap
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+            state_of,
+        )
 
-        sess = SimpleNamespace(cw4_counters={
+        # 策略器状态迁 MandateState:cw4_counters 经 state_of 附着(桩同效)
+        sess = SimpleNamespace()
+        state_of(sess).cw4_counters = {
             'shop_ev_u_unavailable': 3, 'm6_overflow_strand': 1,
             'shop_r1_ev_unavailable': 7, 'shop_r1_account_over_vgap': 2,
-            'shop_wave_idle_gold': 99, 'emitter_conditional_truncated': 5})
+            'shop_wave_idle_gold': 99, 'emitter_conditional_truncated': 5}
         out = ab_core_swap.cw4_disclosure_from_session(sess)
         assert out == {'shop_ev_u_unavailable': 3, 'm6_overflow_strand': 1,
                        'shop_r1_ev_unavailable': 7,

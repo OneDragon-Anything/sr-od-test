@@ -6,6 +6,7 @@
 # 三月七 2★ + 姬子·启行 bench 成型,deployed 恒 6 过渡件、3 备战轮未
 # 上板)。锁的存在性纪律:每条锁 docstring 引出处;守卫均为「移除即红」
 # 属性(删守卫代码 = 本文件对应锁必红)。
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace as _NS
 
 import pytest
@@ -258,11 +259,15 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
                factions=('列车同行',), form_tiers={'列车同行': 2},
                shared_chars=(), substitute_plan=None)
-    sess = _NS(cw4_counters={},
-               v3_intention=_NS(locked_comp='列车同行', p1_pair=(),
-                                phase='locked', transition_pair=()),
-               target_comp=comp, transition_framework='',
-               last_owned_equips=None)
+    # 策略器字段经 state_of 载体(session 职责分离迁移后生产唯一读面);
+    # last_owned_equips 是观察数据字段,仍在 session 上。
+    sess = _NS(last_owned_equips=None)
+    _st = state_of(sess)
+    _st.cw4_counters = {}
+    _st.v3_intention = _NS(locked_comp='列车同行', p1_pair=(),
+                           phase='locked', transition_pair=())
+    _st.target_comp = comp
+    _st.transition_framework = ''
     dep, bench = _lesion_frame_deployed(), [_bc('三月七', 1, star=2)]
     st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
@@ -270,13 +275,13 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     fired = [e for e in out if e.action.__class__.__name__ == 'RunDeploy'
              and e.reason == 'm1_swap_redeploy']
     assert len(fired) == 1
-    assert sess.cw4_counters.get('m1p_fired') == 1
-    assert sess.cw4_counters.get('swap_arm_transition_trigger') == 1
-    assert 'swap_arm_formed_trigger' not in sess.cw4_counters
-    assert sess.cw4_counters.get('engines_guard') == 1   # 帧级显影
+    assert state_of(sess).cw4_counters.get('m1p_fired') == 1
+    assert state_of(sess).cw4_counters.get('swap_arm_transition_trigger') == 1
+    assert 'swap_arm_formed_trigger' not in state_of(sess).cw4_counters
+    assert state_of(sess).cw4_counters.get('engines_guard') == 1   # 帧级显影
     # 执行侧透传(39 跳登记:执行侧卖出 m1p 驱动不可辨):发射帧 pending
     # = plan.arm,消费点 = CwOpDeploy.deploy 卖出臂读后即清
-    assert sess.cw4_m1p_arm_pending == 'transition'
+    assert state_of(sess).cw4_m1p_arm_pending == 'transition'
 
 
 def test_mandate_formed_arm_keyed_separately(monkeypatch) -> None:
@@ -297,19 +302,23 @@ def test_mandate_formed_arm_keyed_separately(monkeypatch) -> None:
     comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
                factions=('列车同行',), form_tiers={'列车同行': 2},
                shared_chars=(), substitute_plan=None)
-    sess = _NS(cw4_counters={},
-               v3_intention=_NS(locked_comp='列车同行', p1_pair=(),
-                                phase='locked', transition_pair=()),
-               target_comp=comp, transition_framework='',
-               last_owned_equips=None)
+    # 策略器字段经 state_of 载体(session 职责分离迁移后生产唯一读面);
+    # last_owned_equips 是观察数据字段,仍在 session 上。
+    sess = _NS(last_owned_equips=None)
+    _st = state_of(sess)
+    _st.cw4_counters = {}
+    _st.v3_intention = _NS(locked_comp='列车同行', p1_pair=(),
+                           phase='locked', transition_pair=())
+    _st.target_comp = comp
+    _st.transition_framework = ''
     dep, bench = _lesion_frame_deployed(), [_bc('三月七', 1, star=2)]
     st = GameState(gold=0, level=6, plane=1, round_num=2,
                    board={'列车同行': 2}, deployed=list(dep),
                    bench=list(bench))
     run_mandate(_m1p_frame(dep, bench), sess, state=st)
-    assert sess.cw4_counters.get('swap_arm_formed_trigger') == 1
-    assert 'swap_arm_transition_trigger' not in sess.cw4_counters
-    assert sess.cw4_m1p_arm_pending == 'formed'
+    assert state_of(sess).cw4_counters.get('swap_arm_formed_trigger') == 1
+    assert 'swap_arm_transition_trigger' not in state_of(sess).cw4_counters
+    assert state_of(sess).cw4_m1p_arm_pending == 'formed'
 
 
 def test_m1p_pending_arm_none_without_fire(monkeypatch) -> None:
@@ -330,19 +339,23 @@ def test_m1p_pending_arm_none_without_fire(monkeypatch) -> None:
     comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
                factions=('列车同行',), form_tiers={'列车同行': 2},
                shared_chars=(), substitute_plan=None)
-    sess = _NS(cw4_counters={},
-               v3_intention=_NS(locked_comp='列车同行', p1_pair=(),
-                                phase='locked', transition_pair=()),
-               target_comp=comp, transition_framework='',
-               last_owned_equips=None)
+    # 策略器字段经 state_of 载体(session 职责分离迁移后生产唯一读面);
+    # last_owned_equips 是观察数据字段,仍在 session 上。
+    sess = _NS(last_owned_equips=None)
+    _st = state_of(sess)
+    _st.cw4_counters = {}
+    _st.v3_intention = _NS(locked_comp='列车同行', p1_pair=(),
+                           phase='locked', transition_pair=())
+    _st.target_comp = comp
+    _st.transition_framework = ''
     # 无 bench target 帧:swap 计划空(m1p_plan_empty)⇒ 不发射
     dep = _lesion_frame_deployed()
     st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=[])
     run_mandate(_m1p_frame(dep, []), sess, state=st)
-    assert sess.cw4_counters.get('m1p_plan_empty') == 1
-    assert 'm1p_fired' not in sess.cw4_counters
-    assert sess.cw4_m1p_arm_pending is None
+    assert state_of(sess).cw4_counters.get('m1p_plan_empty') == 1
+    assert 'm1p_fired' not in state_of(sess).cw4_counters
+    assert state_of(sess).cw4_m1p_arm_pending is None
 
 
 def test_guard_set_covers_deploy_fence() -> None:

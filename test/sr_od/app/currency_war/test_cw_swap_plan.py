@@ -6,6 +6,7 @@
 # 不锁发射行为——sim 探针实证靶场景频率 0(0/2700 帧;sim 部署代理
 # 消解板满形态,效果判定挂实机),发射位由 m1p_input_seam_pending 门
 # 维持关闭。
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -256,8 +257,9 @@ def test_fenced_arm_revives_on_occupancy_full_frame() -> None:
     comp = _NS(all_factions=('仙舟',), core_chars=('三月七',),
                factions=('仙舟',), form_tiers={'仙舟': 2},
                shared_chars=(), substitute_plan=None)
-    sess = _NS(v3_intention=None, target_comp=comp,
-               transition_framework='')
+    sess = _NS()
+    state_of(sess).target_comp = comp
+    state_of(sess).transition_framework = ''
     dep = [BenchChar(slot=i, char_id=f'p{i}', star=1)
            for i in range(1, 10)]   # 9 占用(喂入只计占用数,名不查注册表)
     st = GameState(gold=0, level=9, deploy_cap=9, plane=1, round_num=2,
@@ -290,10 +292,11 @@ def test_m1p_intent_face_bidirectional() -> None:
     from sr_od.application.currency_war.sim.engine_p1 import (
         m1p_intent_record,
     )
-    sess = _NS(target_comp=None,
-               v3_intention=_NS(locked_comp='', p1_pair=(), phase='',
-                                transition_pair=()),
-               transition_framework='')
+    sess = _NS()
+    state_of(sess).target_comp = None
+    state_of(sess).v3_intention = _NS(locked_comp='', p1_pair=(), phase='',
+                                      transition_pair=())
+    state_of(sess).transition_framework = ''
     # 非空帧:板满(cap=6,6 占用)+ bench 线内件 + 非 fenced victim
     rec = m1p_intent_record(_m1p_state(deployed=_base_deployed(),
                                        bench=[_bc(_TARGET_BENCH)]), sess)
@@ -331,13 +334,17 @@ def _m1p_frame(*, deployed: list[BenchChar], bench: list[BenchChar],
 
 
 def _m1p_session(seam: bool | None) -> _NS:
-    s = _NS(cw4_counters={},
-            v3_intention=_NS(locked_comp='', p1_pair=(), phase='',
-                             transition_pair=()),
-            target_comp=None, transition_framework='',
-            last_owned_equips=None)
+    # 策略器字段经 state_of 载体(session 职责分离迁移后生产唯一读面);
+    # last_owned_equips 是观察数据字段,仍在 session 上。
+    s = _NS(last_owned_equips=None)
+    st = state_of(s)
+    st.cw4_counters = {}
+    st.v3_intention = _NS(locked_comp='', p1_pair=(), phase='',
+                          transition_pair=())
+    st.target_comp = None
+    st.transition_framework = ''
     if seam is not None:
-        s.cw4_m1p_seam_verified = seam
+        st.cw4_m1p_seam_verified = seam
     return s
 
 
@@ -358,21 +365,21 @@ def test_m1p_consumer_seam_gate_keeps_emission_closed(
     monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', False)
     sess = _m1p_session(None)
     out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess, state=st)
-    assert sess.cw4_m1p_seam_verified is False
+    assert state_of(sess).cw4_m1p_seam_verified is False
     assert not any(e.action.__class__.__name__ == 'RunDeploy' for e in out)
-    assert sess.cw4_counters.get('m1p_input_seam_pending') == 1
-    assert 'm1p_fired' not in sess.cw4_counters
+    assert state_of(sess).cw4_counters.get('m1p_input_seam_pending') == 1
+    assert 'm1p_fired' not in state_of(sess).cw4_counters
     # 置位态(现役缺省:入口写点自置 True,无需外部注入)
     monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', True)
     sess2 = _m1p_session(None)
     out2 = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess2,
                        state=st)
-    assert sess2.cw4_m1p_seam_verified is True   # 入口唯一写点自置位
+    assert state_of(sess2).cw4_m1p_seam_verified is True   # 入口唯一写点自置位
     fired = [e for e in out2 if e.action.__class__.__name__ == 'RunDeploy'
              and e.reason == 'm1_swap_redeploy']
     assert len(fired) == 1
-    assert sess2.cw4_counters.get('m1p_fired') == 1
-    assert 'm1p_input_seam_pending' not in sess2.cw4_counters
+    assert state_of(sess2).cw4_counters.get('m1p_fired') == 1
+    assert 'm1p_input_seam_pending' not in state_of(sess2).cw4_counters
 
 
 def test_m1p_consumer_counts_plan_empty_and_cap_unreadable() -> None:
@@ -390,12 +397,12 @@ def test_m1p_consumer_counts_plan_empty_and_cap_unreadable() -> None:
                        deployed=list(dep_dup), bench=list(bench))
     run_mandate(_m1p_frame(deployed=dep_dup, bench=bench), sess,
                 state=st_dup)
-    assert sess.cw4_counters.get('m1p_plan_empty') == 1
+    assert state_of(sess).cw4_counters.get('m1p_plan_empty') == 1
     # cap 缺读帧:frame.deploy_cap=None → 弃权键
     sess2 = _m1p_session(None)
     run_mandate(_m1p_frame(deployed=dep, bench=bench, cap=None), sess2,
                 state=st)
-    assert sess2.cw4_counters.get('m1p_cap_unreadable') == 1
+    assert state_of(sess2).cw4_counters.get('m1p_cap_unreadable') == 1
 
 
 def test_m1p_consumer_input_missing_not_mixed_into_plan_empty() -> None:
@@ -407,9 +414,9 @@ def test_m1p_consumer_input_missing_not_mixed_into_plan_empty() -> None:
     sess = _m1p_session(None)
     run_mandate(_m1p_frame(deployed=dep, bench=bench, cap=None), sess,
                 state=None)
-    assert sess.cw4_counters.get('m1p_input_missing') == 1
-    assert 'm1p_plan_empty' not in sess.cw4_counters
-    assert 'm1p_cap_unreadable' not in sess.cw4_counters
+    assert state_of(sess).cw4_counters.get('m1p_input_missing') == 1
+    assert 'm1p_plan_empty' not in state_of(sess).cw4_counters
+    assert 'm1p_cap_unreadable' not in state_of(sess).cw4_counters
 
 
 # ==================== 执行侧卖出臂:义务集∪新鲜度排除接线 ====================
@@ -474,9 +481,9 @@ def test_shop_buy_emission_writes_fresh_buys() -> None:
     st = GameState(gold=30, level=3, round_num=2, plane=1)
     st.shop = [ShopCard(x=100, name=m, cost=3, star=1)]
     sess = StrategySession()
-    sess.cw4_counters = {}
-    sess.target_comp = comp
-    sess.cw4_line_state = _proof.LineState()
+    state_of(sess).cw4_counters = {}
+    state_of(sess).target_comp = comp
+    state_of(sess).cw4_line_state = _proof.LineState()
     act = decide_shop_action(st, sess, _CFG(ev_arm='full'))
     assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
     assert fresh_buys_of(sess, st) == frozenset({m})

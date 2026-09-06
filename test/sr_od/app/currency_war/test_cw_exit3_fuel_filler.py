@@ -3,9 +3,10 @@
 覆盖:Φ_stall 全形态发射(授权条件四支+垫件在售+bench_free+净成本界+
 围栏预检)、各分键拒因(fuel_not_on_sale/bench_full/below_reserve/
 fenced/precheck_unavailable)、垫件买入→部署 held 闭环端到端(发射位
-登记 session.cw4_fuel_filler_stall_buys → 执行侧
+登记 state_of(session).cw4_fuel_filler_stall_buys → 执行侧
 record_fuel_filler_held_postbuy 计数)。
 """
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
@@ -25,6 +26,16 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 )
 
 _COMP = '列车同行'
+
+
+def _ns_with_state(**state_fields) -> SimpleNamespace:
+    """桩 session:策略器字段经 state_of 载体设置(session 职责分离迁移后
+    生产唯一读面;对 SimpleNamespace 桩同样生效)。"""
+    s = SimpleNamespace()
+    st = state_of(s)
+    for k, v in state_fields.items():
+        setattr(st, k, v)
+    return s
 
 
 def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
@@ -83,7 +94,7 @@ def _stall_frame(gold: int, fuel_pieces: int = 0, extra_bench=(),
     st.deployed = deployed
     st.refresh_probs = ({(get_char(_causal_name()).cost or 5): 0}
                         if refresh_probs == 'default' else refresh_probs)
-    sess = SimpleNamespace(
+    sess = _ns_with_state(
         cw4_counters={},
         target_comp=comp,
         v3_intention=SimpleNamespace(locked_comp=(_COMP if locked else '')))
@@ -109,15 +120,15 @@ class TestExit3Emission:
                                 cards=[_card(pad, cost=1)])
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
-        assert sess.cw4_counters.get('fuel_filler_stall_buy') == 1
-        assert pad in getattr(sess, 'cw4_fuel_filler_stall_buys', set())
+        assert state_of(sess).cw4_counters.get('fuel_filler_stall_buy') == 1
+        assert pad in state_of(sess).cw4_fuel_filler_stall_buys
 
     def test_fuel_not_on_sale(self):
         """Φ_stall 成立而店内无垫件(仅线内卡)⇒ fuel_not_on_sale 分键。"""
         km = list(line_members(get_comp(_COMP)))
         st, sess = _stall_frame(gold=55, cards=[_card(km[0], cost=1)])
         _decide(st, sess)
-        assert sess.cw4_counters.get('fuel_not_on_sale') == 1
+        assert state_of(sess).cw4_counters.get('fuel_not_on_sale') == 1
 
     def test_below_reserve_rejects(self):
         """金位 fail 向:gold − cost < s_reserve ⇒ below_reserve 分键,
@@ -126,7 +137,7 @@ class TestExit3Emission:
         st, sess = _stall_frame(gold=46, fuel_pieces=1, fuel_min_cost=5,
                                 cards=[_card(pad, cost=3)])
         _decide(st, sess)
-        assert sess.cw4_counters.get('below_reserve') == 1
+        assert state_of(sess).cw4_counters.get('below_reserve') == 1
 
     def test_fenced_reject_key(self, monkeypatch):
         """预检围栏拒(kernel 单一源返回拒因)⇒ fuel_filler_stall_fenced
@@ -138,8 +149,8 @@ class TestExit3Emission:
         st, sess = _stall_frame(gold=46, fuel_pieces=1, fuel_min_cost=5,
                                 cards=[_card(pad, cost=1)])
         _decide(st, sess)
-        assert sess.cw4_counters.get('fuel_filler_stall_fenced') == 1
-        assert not getattr(sess, 'cw4_fuel_filler_stall_buys', set())
+        assert state_of(sess).cw4_counters.get('fuel_filler_stall_fenced') == 1
+        assert not state_of(sess).cw4_fuel_filler_stall_buys
 
     def test_precheck_unavailable_key(self, monkeypatch):
         """查询不可得(与围栏拒分键,禁混)⇒ precheck_unavailable
@@ -152,9 +163,9 @@ class TestExit3Emission:
         st, sess = _stall_frame(gold=46, fuel_pieces=1, fuel_min_cost=5,
                                 cards=[_card(pad, cost=1)])
         _decide(st, sess)
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'fuel_filler_stall_precheck_unavailable') == 1
-        assert not getattr(sess, 'cw4_fuel_filler_stall_buys', set())
+        assert not state_of(sess).cw4_fuel_filler_stall_buys
 
     def test_bench_full_key(self):
         """Φ_stall ∧ 垫件在售 ∧ bench 满(采购集件占位)⇒ bench_full 分键。
@@ -185,10 +196,10 @@ class TestExit3Emission:
         st.bench = bench
         st.deployed = deployed
         st.refresh_probs = {(get_char(_causal_name()).cost or 5): 0}
-        sess = SimpleNamespace(cw4_counters={}, target_comp=get_comp(_COMP),
-                               v3_intention=ist)
+        sess = _ns_with_state(cw4_counters={}, target_comp=get_comp(_COMP),
+                              v3_intention=ist)
         _decide(st, sess)
-        assert sess.cw4_counters.get('bench_full') == 1
+        assert state_of(sess).cw4_counters.get('bench_full') == 1
 
     def test_bench_to_held_closed_loop(self):
         """端到端:发射位买入登记 → 执行侧 held 现读重建 → held_postbuy
@@ -205,7 +216,7 @@ class TestExit3Emission:
         # 部署帧:垫件被围栏 held(kernel 单一源拒因)→ 执行侧闭环计数
         n = record_fuel_filler_held_postbuy(sess, [(pad, 'scatter_fence')])
         assert n == 1
-        assert sess.cw4_counters.get('fuel_filler_stall_held_postbuy') == 1
+        assert state_of(sess).cw4_counters.get('fuel_filler_stall_held_postbuy') == 1
 
 
 class TestExit3NegativeBranches:
@@ -218,8 +229,8 @@ class TestExit3NegativeBranches:
         act = _decide(st, sess)
         is_ff = isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
         assert not is_ff
-        assert 'fuel_filler_stall_buy' not in sess.cw4_counters
-        assert not getattr(sess, 'cw4_fuel_filler_stall_buys', set())
+        assert 'fuel_filler_stall_buy' not in state_of(sess).cw4_counters
+        assert not state_of(sess).cw4_fuel_filler_stall_buys
 
     def test_branch_A_chaseable_present_fails(self):
         """A 支可追支:可追成员无 2★ 成件(cnt2=0 ∧ 表概率>0)⇒ 合格集
@@ -235,7 +246,7 @@ class TestExit3NegativeBranches:
                                 cards=[_card(_off_line_name(min_cost=1),
                                              cost=1)])
         self._no_emission(st, sess)
-        assert 'below_reserve' not in sess.cw4_counters
+        assert 'below_reserve' not in state_of(sess).cw4_counters
 
     def test_branch_C_no_board_deficit_fails(self):
         """C 支:deployed == level(δ_board=0)⇒ 板深赤字不成立,零发射。"""
@@ -286,7 +297,7 @@ class TestExit3ProbBarSemantics:
         act = _decide(st, sess)
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'fuel_filler_stall')
-        assert 'fuel_filler_stall_buy' not in sess.cw4_counters
+        assert 'fuel_filler_stall_buy' not in state_of(sess).cw4_counters
 
     def test_bar_conflicting_with_table_fails(self):
         """对账不一致:表 0 而概率条 >0 ⇒ fail 向不判 A,零发射。"""

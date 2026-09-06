@@ -5,6 +5,8 @@
 
 
 出处:被测模块本体——现行基建锁(星级回归钩子;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -31,9 +33,13 @@ class _Ctx:
 
 def _sess(tracked_2star: bool):
     bench = [SimpleNamespace(char_id='万敌', star=2, slot=1, position_pref='back')] if tracked_2star else []
-    return SimpleNamespace(
-        tracked_bench_chars=bench, tracked_deployed=[],
-        star_regression_count={}, star_pending_regression={})
+    s = SimpleNamespace(star_pending_regression={})
+    # tracking 字段已迁执行侧载体 ExecState(经 exec_state_of 惰性建,桩同效)
+    ex = exec_state_of(s)
+    ex.tracked_bench_chars = bench
+    ex.tracked_deployed = []
+    ex.star_regression_count = {}
+    return s
 
 
 def _read(star: int):
@@ -51,8 +57,8 @@ def test_first_regression_no_stop(tmp_path, monkeypatch) -> None:
         reconcile_tracking(s, _read(1), [], None, source='t', ctx=ctx)
         assert not ctx.stopped
         assert s.star_pending_regression.get('万敌') == 1, 'pending 挂起(下帧确认)'
-        assert not s.star_regression_count.get('万敌'), '首次不计数(防抖)'
-        assert s.tracked_bench_chars[0].star == 2, '首次回退 star 保旧(动画窗不毒化)'
+        assert not exec_state_of(s).star_regression_count.get('万敌'), '首次不计数(防抖)'
+        assert exec_state_of(s).tracked_bench_chars[0].star == 2, '首次回退 star 保旧(动画窗不毒化)'
     finally:
         ctx.restore()
 
@@ -64,15 +70,15 @@ def test_second_regression_files_evidence_without_stop(tmp_path, monkeypatch) ->
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     s = _sess(True)
-    s.star_regression_count = {'万敌': 1}   # 上一节点已确认过一次
+    exec_state_of(s).star_regression_count = {'万敌': 1}   # 上一节点已确认过一次
     s.star_pending_regression = {'万敌': 1}   # 上帧已防抖挂起 → 本帧第二次
     try:
         reconcile_tracking(s, _read(1), [], None, source='t', ctx=ctx)
         # r17 降级:确认回退只留证不停机(每 5 次才留证一次);
         assert not ctx.stopped, 'r17 降级:star 回退留证不停机'
         # 计数持续累积
-        assert s.star_regression_count.get('万敌', 0) >= 2
-        assert s.tracked_bench_chars[0].star == 1, '连续 2 次确认采新'
+        assert exec_state_of(s).star_regression_count.get('万敌', 0) >= 2
+        assert exec_state_of(s).tracked_bench_chars[0].star == 1, '连续 2 次确认采新'
     finally:
         ctx.restore()
 
@@ -83,7 +89,7 @@ def test_fifth_regression_leaves_evidence_no_stop(tmp_path, monkeypatch) -> None
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     s = _sess(True)
-    s.star_regression_count = {'万敌': 4}
+    exec_state_of(s).star_regression_count = {'万敌': 4}
     s.star_pending_regression = {'万敌': 1}   # 本帧 = 第 5 次确认
     try:
         reconcile_tracking(s, _read(1), [], None, source='t', ctx=ctx)
@@ -100,12 +106,12 @@ def test_recovered_star_resets_count(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(cr, '_conflict', lambda *a, **k: None)
     ctx = _Ctx(tmp_path)
     s = _sess(True)
-    s.star_regression_count = {'万敌': 1}
+    exec_state_of(s).star_regression_count = {'万敌': 1}
     s.star_pending_regression = {'万敌': 1}
     try:
         reconcile_tracking(s, _read(2), [], None, source='t', ctx=ctx)
         assert not ctx.stopped
-        assert '万敌' not in s.star_regression_count
+        assert '万敌' not in exec_state_of(s).star_regression_count
         assert '万敌' not in s.star_pending_regression
     finally:
         ctx.restore()
@@ -120,14 +126,14 @@ def test_debounce_bumps_only_one_copy(tmp_path, monkeypatch) -> None:
     ctx = _Ctx(tmp_path)
     # tracking: 万敌 2★(板上)+ 万敌 1★(bench)
     s = _sess(True)
-    s.tracked_bench_chars.append(SimpleNamespace(char_id='万敌', star=1, slot=2,
+    exec_state_of(s).tracked_bench_chars.append(SimpleNamespace(char_id='万敌', star=1, slot=2,
                                                  position_pref='back'))
     # 读回:两副本都被动画窗读成 1★
     read = [SimpleNamespace(char_id='万敌', star=1, slot=1, position_pref='back'),
             SimpleNamespace(char_id='万敌', star=1, slot=2, position_pref='back')]
     try:
         reconcile_tracking(s, read, [], None, source='t', ctx=ctx)
-        stars = sorted(bc.star for bc in s.tracked_bench_chars)
+        stars = sorted(bc.star for bc in exec_state_of(s).tracked_bench_chars)
         assert stars == [1, 2], f'只抬一个副本(数量守恒),got {stars}'
     finally:
         ctx.restore()

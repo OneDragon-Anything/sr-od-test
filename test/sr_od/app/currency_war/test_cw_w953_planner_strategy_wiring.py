@@ -2,6 +2,7 @@
 
 2026-09-03 拆分归档批:自混合文件 test_cw_strategy_planner.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import inspect
 import sys as _w953_planner_strategy_wiring_sys
@@ -38,8 +39,12 @@ _WEAKEN = _w953_planner_strategy_wiring_PlannerOption(idx=1, text='使后续节�
 # 直用活策略核(下述测试全部消费 live 接口)。
 _FlowStrategy = _w953_planner_strategy_wiring_MandateV1Strategy
 def _session(target_comp) -> _w953_planner_strategy_wiring_SimpleNamespace:
-    """最小 session stub:decide_planner 只读 target_comp。"""
-    return _w953_planner_strategy_wiring_SimpleNamespace(target_comp=target_comp)
+    """最小 session stub:decide_planner 只读 state_of(session).target_comp
+    (target_comp 已迁 MandateState;state_of 对 SimpleNamespace 桩惰性冷建)。"""
+    s = _w953_planner_strategy_wiring_SimpleNamespace()
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
+    state_of(s).target_comp = target_comp
+    return s
 
 
 def test_planner_handler_routes_through_strategy_layer() -> None:
@@ -75,7 +80,7 @@ def test_planner_strategy_delegates_kernel_bitwise() -> None:
 
 
 def test_planner_strategy_uses_session_target_comp() -> None:
-    """零行为锁:策略对象把 session.target_comp 喂给 kernel 判定(银狼线加成),
+    """零行为锁:策略对象把 state_of(session).target_comp 喂给 kernel 判定(银狼线加成),
     与旧 handler 直传 target_comp 的行为一致(接线不丢参)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     tgt = next(c for c in COMP_LIBRARY if c.name == '狼尊欢愉')

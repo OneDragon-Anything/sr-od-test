@@ -62,12 +62,15 @@ def test_decision_row_carries_pending_summaries(rec) -> None:
     from sr_od.application.currency_war.kernel.cw_expected_state import (
         ExpectedEntry,
     )
+    from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
     from sr_od.application.currency_war.telemetry.state import set_ctx_match
-    sess = SimpleNamespace(expected_state={
+    # expected_state 迁 ExecState:经 exec_state_of 附着(session 职责分离批)
+    sess = SimpleNamespace()
+    exec_state_of(sess).expected_state = {
         'tracked_bench_chars[2].star': ExpectedEntry(
             path='tracked_bench_chars[2].star', value=2,
             produced_by='BuyCard', at_round='p2-r3', kind='merge_group'),
-    })
+    }
     set_ctx_match(SimpleNamespace(session=sess))
     try:
         rec.start_run('r1', '')
@@ -86,12 +89,15 @@ def test_expected_paths_non_scalar_value_stringified(rec) -> None:
     from sr_od.application.currency_war.kernel.cw_expected_state import (
         ExpectedEntry,
     )
+    from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
     from sr_od.application.currency_war.telemetry.state import set_ctx_match
-    sess = SimpleNamespace(expected_state={
+    # expected_state 迁 ExecState:经 exec_state_of 附着(session 职责分离批)
+    sess = SimpleNamespace()
+    exec_state_of(sess).expected_state = {
         'buy_expect': ExpectedEntry(path='buy_expect', value=object(),
                                     produced_by='PrepActionExecutor',
                                     at_round='p1-r2', kind='buy_expect'),
-    })
+    }
     set_ctx_match(SimpleNamespace(session=sess))
     try:
         rec.start_run('r1', '')

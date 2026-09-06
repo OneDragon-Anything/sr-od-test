@@ -11,6 +11,7 @@
   合格集空(成员全 2★)关门 + ``shop_r1_no_chaseable_member`` 分键。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -51,9 +52,9 @@ def _session(comp=None, plane_lengths=None):
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 
     s = StrategySession()
-    s.cw4_counters = {}
-    s.target_comp = comp
-    s.cw4_line_state = proof.LineState()
+    state_of(s).cw4_counters = {}
+    state_of(s).target_comp = comp
+    state_of(s).cw4_line_state = proof.LineState()
     if plane_lengths is not None:
         s.plane_lengths_seen = list(plane_lengths)
     return s
@@ -140,7 +141,7 @@ class TestR1AffordabilityGate:
         acts = _decide(st, sess)
         # 域外帧(gold=50 非必花域):零变化,息线门照旧关门
         assert not [a for a in acts if isinstance(a, RefreshShop)]
-        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_r1_account_over_budget', 0) >= 1
 
     def test_large_surplus_opens(self):
         """大溢余(gold=120,预算 70)+ 可追缺件:总账(刷费+卡费+息损)
@@ -155,7 +156,7 @@ class TestR1AffordabilityGate:
         (r2_budget)承载 ⇒ 刷新发射。"""
         st, sess = self._frame(61)
         acts = _decide(st, sess)
-        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) == 0
+        assert state_of(sess).cw4_counters.get('shop_r1_account_over_budget', 0) == 0
         assert any(isinstance(a, RefreshShop) for a in acts)
 
     def test_qualified_set_empty_closed(self):
@@ -174,7 +175,7 @@ class TestR1AffordabilityGate:
         acts = _decide(st, sess)
         # 域外帧(gold=50 非必花域):零变化,息线门照旧关门
         assert not [a for a in acts if isinstance(a, RefreshShop)]
-        assert sess.cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
 
 
 class TestMixedPeakCompletionAccount:

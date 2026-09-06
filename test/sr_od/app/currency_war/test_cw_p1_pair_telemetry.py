@@ -12,13 +12,14 @@ target_comp 恒空、sess_framework 恒空,判读看不到 P1 锁了哪个配方
   ①锁局 transition_pair 次选;空窗/无意向 = '');
 - record 站点:extra 透传 → DecisionTrace.sess_p1_pair 落盘;
   缺 extra 时空串(纯遥测,决策行为零变化);
-- cw_screen_prep._record_step 接线(session.v3_intention 来源);
+- cw_screen_prep._record_step 接线(state_of(session).v3_intention 来源);
 - 旧台账兼容:无 sess_p1_pair 键的历史行经 cw_replay_reader 读取
   不炸(dataclass 已知字段过滤 + 缺省 '')。
 
 
 出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import json
 from pathlib import Path
@@ -90,7 +91,7 @@ def test_record_row_empty_without_extra(tmp_path) -> None:
 
 
 def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
-    """P1 活路径步进行:session.v3_intention 配方对 → record extra。"""
+    """P1 活路径步进行:state_of(session).v3_intention 配方对 → record extra。"""
 
 
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
@@ -104,10 +105,11 @@ def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
     monkeypatch.setattr(recorder, 'record_decision', _fake_record)
     director = object.__new__(CwScreenPrep)   # 免 ctx(纯遥测接线测试)
     director._steps = 0
-    fake_sess = SimpleNamespace(
-        v3_formed_stop=False,
-        v3_intention=IntentionState(phase='locked', p1_pair=('仙舟', '列车同行')),
-        last_owned_equips=[], target_comp=None)
+    # 策略器状态迁 MandateState:v3_* 经 state_of 附着(桩同效)
+    fake_sess = SimpleNamespace(last_owned_equips=[])
+    _ms = state_of(fake_sess)
+    _ms.v3_formed_stop = False
+    _ms.v3_intention = IntentionState(phase='locked', p1_pair=('仙舟', '列车同行'))
     director._session = lambda: fake_sess   # 实例属性遮蔽方法
     obs = SimpleNamespace(state=GameState())
     director._record_step(obs, action=None)  # type: ignore[arg-type]
@@ -130,8 +132,11 @@ def test_director_record_step_empty_pair_without_intention(monkeypatch) -> None:
     monkeypatch.setattr(recorder, 'record_decision', _fake_record)
     director = object.__new__(CwScreenPrep)
     director._steps = 0
-    fake_sess = SimpleNamespace(v3_formed_stop=False, v3_intention=None,
-                                last_owned_equips=[], target_comp=None)
+    # 策略器状态迁 MandateState:v3_* 经 state_of 附着(桩同效)
+    fake_sess = SimpleNamespace(last_owned_equips=[])
+    _ms = state_of(fake_sess)
+    _ms.v3_formed_stop = False
+    _ms.v3_intention = None
     director._session = lambda: fake_sess
     director._record_step(SimpleNamespace(state=GameState()), action=None)  # type: ignore[arg-type]
     assert captured['extra']['sess_p1_pair'] == ''

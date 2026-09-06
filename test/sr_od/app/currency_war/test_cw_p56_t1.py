@@ -6,6 +6,7 @@
 退役 + P57 双读法)/§3.2(分键遥测四字段 R3-R5)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
@@ -195,9 +196,9 @@ class TestShopWiringP56T1:
             st.bench = list(bench)
             st.deployed = []
             s = StrategySession()
-            s.cw4_counters = {}
-            s.target_comp = comp
-            s.cw4_line_state = proof.LineState()
+            state_of(s).cw4_counters = {}
+            state_of(s).target_comp = comp
+            state_of(s).cw4_line_state = proof.LineState()
             strat = MandateV1Strategy(registry=sim_decision_registry())
             s.shop_state_frame = st
             return strat.decide_shop_screen(s, _Cfg()), s
@@ -206,7 +207,7 @@ class TestShopWiringP56T1:
         acts, s = _run(2)
         assert any(isinstance(a, BuyCard) and a.reason == 'm2_stockpile'
                    for a in acts)
-        assert 'm6_s_reserve_reject' not in s.cw4_counters
+        assert 'm6_s_reserve_reject' not in state_of(s).cw4_counters
         # ②M6 s_reserve 消费位判据本体直锁:s_reserve=g*=50 语境,
         # cost2 买后 49 < 50 ⇒ 拒;cost1 买后 50 ≥ 50 ⇒ 过
         ok_r, key_r = stockpile_buy(51, 50, 4, 2, 1, frozenset({1, 2, 3}))
@@ -244,9 +245,9 @@ class TestShopWiringP56T1:
         st.bench = bench
         st.deployed = []
         sess = StrategySession()
-        sess.cw4_counters = {}
-        sess.target_comp = comp
-        sess.cw4_line_state = proof.LineState()
+        state_of(sess).cw4_counters = {}
+        state_of(sess).target_comp = comp
+        state_of(sess).cw4_line_state = proof.LineState()
         strat = MandateV1Strategy(registry=sim_decision_registry())
         sess.shop_state_frame = st
         acts = strat.decide_shop_screen(sess, object())
@@ -254,7 +255,7 @@ class TestShopWiringP56T1:
         # 路径 ⇒ SellBench 唯一来源=回拉发射位
         pulls = [a for a in acts if isinstance(a, SellBench)]
         assert len(pulls) == 1
-        ct = sess.cw4_counters
+        ct = state_of(sess).cw4_counters
         # ADR-0517 计数粒度重锚:回拉遥测从「每波一次」改「每决策帧一次」
         # ——帧1 缺口 10(g*50−40)发卖;帧2 卖后金 43,缺口 7 仍在但
         # 合格集空(唯一燃料件已卖),emit 帧再计一次 ⇒ 帧数 2、缺口累计

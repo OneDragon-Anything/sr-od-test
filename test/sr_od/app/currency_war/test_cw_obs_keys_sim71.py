@@ -12,6 +12,7 @@
 锁口径 = 各键正确性 + 缺省零漂移(容器/comp 缺席静默,不炸不虚构)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -71,12 +72,12 @@ class TestFormOkPresentReadWriter:
             readiness_form_ok,
         )
         sess = StrategySession()
-        sess.target_comp = comp
+        state_of(sess).target_comp = comp
         # 每轮初值由 on_match_start 写(flow.py);直调语境先补初值
-        sess.v3_form_ok = False
+        state_of(sess).v3_form_ok = False
         st = SimpleNamespace(board=board, bench=[None] * 9,
                              deployed=[None] * 10, plane=1, round_num=1)
-        assert sess.v3_form_ok is False
+        assert state_of(sess).v3_form_ok is False
         _fake_strat().write_shop_mirrors(st, sess)
         return sess, readiness_form_ok(st, comp)
 
@@ -84,14 +85,14 @@ class TestFormOkPresentReadWriter:
         """写端输出 ≡ readiness_form_ok 直调(同式同源锁;满/缺两侧)。"""
         comp3 = _FakeComp({'仙舟': 3})
         sess, expected = self._write({'仙舟': 3}, comp3)
-        assert sess.v3_form_ok is True and expected is True
+        assert state_of(sess).v3_form_ok is True and expected is True
         sess, expected = self._write({'仙舟': 2}, comp3)
-        assert sess.v3_form_ok is False and expected is False
+        assert state_of(sess).v3_form_ok is False and expected is False
 
     def test_writer_none_comp_default_false(self):
         """缺省零漂移:target_comp None(未锁线)→ 现读 False,不炸。"""
         sess, expected = self._write({'仙舟': 3}, None)
-        assert sess.v3_form_ok is False and expected is False
+        assert state_of(sess).v3_form_ok is False and expected is False
 
 
 class TestLaunchFrameIdleGold:
@@ -125,12 +126,12 @@ class TestLaunchFrameIdleGold:
         monkeypatch.setattr(cw_launch_admission,
                             'readiness_launch_decision', _force_armed)
         sess = StrategySession()
-        sess.cw4_counters = {}
+        state_of(sess).cw4_counters = {}
         r = _run(0, sess)
         launch_gold = sum((row.get('launch') or {}).get('idle_gold', 0)
                           for row in r.ledger if row.get('launch'))
         assert launch_gold > 0, '强制武装后零发射金(接线断)'
-        assert sess.cw4_counters.get('launch_frame_idle_gold') == launch_gold
+        assert state_of(sess).cw4_counters.get('launch_frame_idle_gold') == launch_gold
 
     def test_no_counters_container_no_crash(self):
         """缺省零漂移:引擎守卫对容器缺席静默(默认路径无 mandate 桥

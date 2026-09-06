@@ -3,7 +3,7 @@
 设计出处 = .debug/temp/currency_war/redesign/ARCH_REFLECTION_3STALLS.md
 问三缺口 G3(prep 环无通用无进展守卫)/ 问四防线①(同签名动作批 +
 状态零推进连续 N 环 → 存证 + stop_running)/ 问五放行裁决(守卫是
-放行硬门)。触发语义:签名 = 动作类型序列(session.last_prep_action_sig,
+放行硬门)。触发语义:签名 = 动作类型序列(exec_state_of(session).last_prep_action_sig,
 CwScreenPrep 决策出口写)+ 状态指纹(prep_no_progress_state_fingerprint,
 只读 observe 现成字段);连续 PREP_NO_PROGRESS_ROUNDS=3 环同签名 ∧
 零推进 → 截图 + flag + stop_running。取代旧 PREP_STALL_EVIDENCE_ROUNDS
@@ -15,6 +15,7 @@ CwScreenPrep 决策出口写)+ 状态指纹(prep_no_progress_state_fingerprint,
 ③闩跳过帧:动作批不同 → 签名变 → 归零。
 """
 
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from types import SimpleNamespace
 
 from test.harness.fixture_controller import (
@@ -245,7 +246,7 @@ def _make_round_director(test_context, monkeypatch, scripted_actions,
 
 
 def test_prep_op_records_action_signature(test_context, monkeypatch) -> None:
-    """备战单轮决策出口把动作类型序列写 session.last_prep_action_sig
+    """备战单轮决策出口把动作类型序列写 exec_state_of(session).last_prep_action_sig
     (守卫动作腿的唯一写点)。"""
     from sr_od.application.currency_war.kernel.cw_prep_actions import (
         OpenShop,
@@ -259,8 +260,8 @@ def test_prep_op_records_action_signature(test_context, monkeypatch) -> None:
             d.run()
         finally:
             reset_running_state(test_context, d)
-    assert session.last_prep_action_sig == ('OpenShop',), (
-        f'决策出口须写动作批签名:{session.last_prep_action_sig!r}')
+    assert exec_state_of(session).last_prep_action_sig == ('OpenShop',), (
+        f'决策出口须写动作批签名:{exec_state_of(session).last_prep_action_sig!r}')
 
 
 def test_prep_op_overlay_handback_keeps_signature_none(
@@ -279,7 +280,7 @@ def test_prep_op_overlay_handback_keeps_signature_none(
             d.run()
         finally:
             reset_running_state(test_context, d)
-    assert session.last_prep_action_sig is None, (
+    assert exec_state_of(session).last_prep_action_sig is None, (
         'overlay 交回不得写签名(None 才能让外环清计数)')
 
 
@@ -296,7 +297,7 @@ def _make_loop_op(test_context, monkeypatch, session, stops, flags,
     handle_init 不跑(重装配结算链/配置),loop() 消费但守卫路径不消费的
     run 级属性按 False/0 显式布线。
     """
-    session.last_prep_action_sig = sig
+    exec_state_of(session).last_prep_action_sig = sig
     from sr_od.application.currency_war.operations import cw_loop as loop_mod
 
     class _StubPrep:
@@ -364,7 +365,7 @@ def test_loop_prep_guard_stops_after_frozen_signature_rounds(
         test_context, monkeypatch) -> None:
     """行为锁(替代旧 cw_loop.loop 源码字面锁「last_prep_action_sig 等 5 条
     在场断言」):3 轮「同签名动作批 ∧ 状态零推进」经真 loop 备战分支消费
-    session.last_prep_action_sig → 截图存证 + write_no_progress_flag +
+    exec_state_of(session).last_prep_action_sig → 截图存证 + write_no_progress_flag +
     stop_running(reason='hook:prep_no_progress')。失守场景 = 消费端脱落
     (签名写点还在但外环不再计数/停机降级为只留证)时本锁红;纯重构
     (改名/换行/抽取函数)不再假红。计数语义:首见签名计 0,同签名每环 +1,

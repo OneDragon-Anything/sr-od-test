@@ -14,6 +14,7 @@ docs/develop/currency_war/proofs/p71-levelup-channel-budget-gate.md;
 锁结构/回显,不锁分布数值(sr-od-test README 第 8 条)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -186,7 +187,7 @@ class TestPrepDefer:
         sess = _sess()
         out = mandate.run_mandate(frame, sess, state=st)
         assert not [e for e in out if isinstance(e.action, LevelUp)]
-        assert sess.cw4_counters.get('levelup_budget_gate_blocked') == 1
+        assert state_of(sess).cw4_counters.get('levelup_budget_gate_blocked') == 1
 
     def test_prep_openshop_then_shop_regate(self):
         """链路锁(v2 确认点 A):prep 闸拒帧「M6」= emit OpenShop 可发,
@@ -216,7 +217,7 @@ class TestPrepDefer:
         act = shop.decide_shop_action(st2, sess2,
                                       SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, LevelUpShop)
-        assert sess2.cw4_counters.get('budget_gate_must_spend_defer') == 1
+        assert state_of(sess2).cw4_counters.get('budget_gate_must_spend_defer') == 1
 
 
 class TestShopM3M6:
@@ -233,12 +234,17 @@ class TestShopM3M6:
         bench = [_bc('瓦尔特', star=1, slot=1)]
         st = _state(60, 5, xp=(0, 20), bench=bench, deployed=deployed)
         sess = _sess()
+        # 策略器状态迁 MandateState:target_comp/v3_intention 经 state_of
+        # 附着(与旧 session 直挂语义等价;stop_flag 推导依赖 target_comp)
+        _ms = state_of(sess)
+        _ms.target_comp = _comp()
+        _ms.v3_intention = IntentionState()
         act = shop.decide_shop_action(st, sess,
                                       SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, LevelUpShop)
         assert not isinstance(act, BuyCard)
-        assert sess.cw4_counters.get('levelup_budget_gate_blocked') == 1
-        assert sess.cw4_counters.get('m6_budget_gate_suspend') == 1
+        assert state_of(sess).cw4_counters.get('levelup_budget_gate_blocked') == 1
+        assert state_of(sess).cw4_counters.get('m6_budget_gate_suspend') == 1
 
 
 class TestMustSpendGate:
@@ -253,8 +259,8 @@ class TestMustSpendGate:
         act = shop.decide_shop_action(st, sess,
                                       SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, LevelUpShop)
-        assert sess.cw4_counters.get('budget_gate_must_spend_defer') == 1
-        assert 'levelup_budget_gate_blocked' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('budget_gate_must_spend_defer') == 1
+        assert 'levelup_budget_gate_blocked' not in state_of(sess).cw4_counters
 
     def test_zone_gate_deadend_observed(self):
         """金滞留死角观测:闸拒 ∧ bench 无空席(义务无处安放)⇒
@@ -269,8 +275,8 @@ class TestMustSpendGate:
         act = shop.decide_shop_action(st, sess,
                                       SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, LevelUpShop)
-        assert sess.cw4_counters.get('budget_gate_must_spend_defer') == 1
-        assert sess.cw4_counters.get('budget_gate_must_spend_deadend') == 1
+        assert state_of(sess).cw4_counters.get('budget_gate_must_spend_defer') == 1
+        assert state_of(sess).cw4_counters.get('budget_gate_must_spend_deadend') == 1
 
 
 class TestPostureMirror:
@@ -302,7 +308,7 @@ class TestPostureMirror:
         assert un is not None
         assert un['reason'] == 'levelup_budget_gate_blocked'
         assert un['reason'] != 'contract_other'
-        assert sess.cw4_counters.get('posture_unfulfilled_level') == 1
+        assert state_of(sess).cw4_counters.get('posture_unfulfilled_level') == 1
 
 
 class TestSimChecker:

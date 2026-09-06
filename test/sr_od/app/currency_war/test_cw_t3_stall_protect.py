@@ -8,6 +8,7 @@
 ⑦同轮买卖检查豁免面按分键收敛(禁全开)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import inspect
 from types import SimpleNamespace
@@ -108,33 +109,36 @@ class Test2FuelDemotion:
         reason 分键。9 个互异线外名(同名副本会触素材守卫,改用异名
         全保集隔离守卫面——守卫交互由锁④专测)。"""
         names = _distinct_fillers(9)
-        sess = SimpleNamespace(cw4_counters={},
-                               target_comp=_comp(),
-                               cw4_fuel_filler_stall_buys=dict.fromkeys(
-                                   names, 2))
+        # 策略器字段经 state_of 载体;cw4_fuel_filler_stall_buys 是执行侧
+        # session 属性(N3 登记契约),保持在 session 上。
+        sess = SimpleNamespace()
+        state_of(sess).cw4_fuel_filler_stall_buys = dict.fromkeys(
+            names, 2)
+        state_of(sess).cw4_counters = {}
+        state_of(sess).target_comp = _comp()
         st = _m4_frame(bench=[_bc(n, slot=i + 1)
                               for i, n in enumerate(names)])
         act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
         assert act.expect == names[0]
         assert act.reason == 'fuel_victim_protect_demoted'
-        assert sess.cw4_counters.get('fuel_victim_protect_demoted') == 1
-        assert names[0] not in sess.cw4_fuel_filler_stall_buys   # 卖出销
+        assert state_of(sess).cw4_counters.get('fuel_victim_protect_demoted') == 1
+        assert names[0] not in state_of(sess).cw4_fuel_filler_stall_buys   # 卖出销
 
     def test_non_protected_victim_preferred(self):
         """非保燃料在场 ⇒ victim 恒非保件(被保件零成本存活)。"""
         other = '燃料G'
         sess = SimpleNamespace(cw4_counters={},
-                               target_comp=_comp(),
-                               cw4_fuel_filler_stall_buys={_PROT: 2})
+                               target_comp=_comp())
+        state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 2}
         st = _m4_frame(bench=[_bc(_PROT, slot=1), _bc(other, slot=2)]
                        + [_bc(f'垫子{i}', slot=i + 3) for i in range(7)])
         act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
         assert act.expect == other
         assert act.reason == ''
-        assert 'fuel_victim_protect_demoted' not in sess.cw4_counters
-        assert sess.cw4_fuel_filler_stall_buys.get(_PROT) == 2   # 未销
+        assert 'fuel_victim_protect_demoted' not in state_of(sess).cw4_counters
+        assert state_of(sess).cw4_fuel_filler_stall_buys.get(_PROT) == 2   # 未销
 
     def test_funding_convert_demote_not_ban(self):
         """支付变现通道:被保件仅降序放行(转化类,非禁卖)。"""
@@ -154,37 +158,42 @@ class Test3Lifecycle:
 
     def test_deploy_prune(self):
         sess = SimpleNamespace(
-            cw4_fuel_filler_stall_buys={_PROT: 2, _FUEL: 2})
+        )
+        state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 2, _FUEL: 2}
         n = mandate.stall_buys_prune_deployed(sess, {_PROT})
-        assert n == 1 and dict(sess.cw4_fuel_filler_stall_buys) == {_FUEL: 2}
+        assert n == 1 and dict(state_of(sess).cw4_fuel_filler_stall_buys) == {_FUEL: 2}
 
     def test_deploy_prune_op_side_helper(self):
         """op 侧接线函数(部署帧属性契约级消费)同语义。"""
         from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
             prune_fuel_filler_deployed,
         )
-        sess = SimpleNamespace(cw4_fuel_filler_stall_buys={_PROT: 2})
+        sess = SimpleNamespace()
+        state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 2}
         assert prune_fuel_filler_deployed(sess, {_PROT}) == 1
-        assert sess.cw4_fuel_filler_stall_buys == {}
+        assert state_of(sess).cw4_fuel_filler_stall_buys == {}
         assert prune_fuel_filler_deployed(sess, {_PROT}) == 0   # 幂等
 
     def test_sell_consume(self):
-        sess = SimpleNamespace(cw4_fuel_filler_stall_buys={_PROT: 2})
+        sess = SimpleNamespace()
+        state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 2}
         mandate.stall_buys_consume(sess, _PROT)
-        assert sess.cw4_fuel_filler_stall_buys == {}
+        assert state_of(sess).cw4_fuel_filler_stall_buys == {}
         mandate.stall_buys_consume(sess, _PROT)   # 未知名/空集 no-op
 
     def test_round_boundary_prune(self):
-        sess = SimpleNamespace(cw4_fuel_filler_stall_buys={_PROT: 2, 'X': 3})
+        sess = SimpleNamespace()
+        state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 2, 'X': 3}
         ct: dict = {}
         active = mandate.stall_protect_active(sess, 3, counters=ct)
         assert active == {'X'}
-        assert sess.cw4_fuel_filler_stall_buys == {'X': 3}   # 过期就地销
+        assert state_of(sess).cw4_fuel_filler_stall_buys == {'X': 3}   # 过期就地销
         assert ct.get('t3_protect_expired_round') == 1
 
     def test_round_boundary_none_is_fail_closed(self):
         """轮号不可得 = 保守端:全集过期(禁缺读放大保护面)。"""
-        sess = SimpleNamespace(cw4_fuel_filler_stall_buys={_PROT: 2})
+        sess = SimpleNamespace()
+        state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 2}
         ct: dict = {}
         assert mandate.stall_protect_active(sess, None, counters=ct) \
             == frozenset()
@@ -192,21 +201,22 @@ class Test3Lifecycle:
 
     def test_legacy_set_carrier_hard_expired(self):
         """旧裸 set 载体(轮戳缺失)= 轮界硬兜底整集失效并升级 dict。"""
-        sess = SimpleNamespace(cw4_fuel_filler_stall_buys={_PROT, 'Y'})
+        sess = SimpleNamespace()
+        state_of(sess).cw4_fuel_filler_stall_buys = {_PROT, 'Y'}
         ct: dict = {}
         assert mandate.stall_protect_active(sess, 2, counters=ct) \
             == frozenset()
-        assert sess.cw4_fuel_filler_stall_buys == {}
+        assert state_of(sess).cw4_fuel_filler_stall_buys == {}
         assert ct.get('t3_protect_expired_round') == 2
 
     def test_stale_entry_pruned_by_shop_read_end(self):
         """shop 读端接线:过期登记在商店帧被就地销账(轮界兜底经读端)。"""
-        sess = SimpleNamespace(cw4_counters={}, target_comp=_comp(),
-                               cw4_fuel_filler_stall_buys={_PROT: 99})
+        sess = SimpleNamespace(cw4_counters={}, target_comp=_comp())
+        state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 99}
         st = _m4_frame(bench=[_bc(_PROT, slot=i + 1) for i in range(9)])
         shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
-        assert sess.cw4_fuel_filler_stall_buys == {}
-        assert sess.cw4_counters.get('t3_protect_expired_round') == 1
+        assert state_of(sess).cw4_fuel_filler_stall_buys == {}
+        assert state_of(sess).cw4_counters.get('t3_protect_expired_round') == 1
 
 
 class Test4GuardInteraction:
@@ -239,7 +249,7 @@ class Test5ZeroDrift:
     def test_read_end_empty_no_attr_created(self):
         sess = SimpleNamespace()
         assert mandate.stall_protect_active(sess, 2) == frozenset()
-        assert not hasattr(sess, 'cw4_fuel_filler_stall_buys')
+        assert not state_of(sess).cw4_fuel_filler_stall_buys
 
     def test_fuel_candidates_identical_without_defer(self):
         bench = [_bc(_PROT, slot=2), _bc(_FUEL, slot=1)]
@@ -351,8 +361,8 @@ class Test8EntryFundingFace:
         # entry EV pass 发射的是 prep 族 SellBench(cw_prep_actions,物理
         # 槽位 1-9),≠ cw_state.SellBench(动作族)——断言按 prep 族判型
         self._PrepSell = PrepSellBench
-        sess = SimpleNamespace(cw4_counters={},
-                               cw4_fuel_filler_stall_buys=dict(registry))
+        sess = SimpleNamespace(cw4_counters={})
+        state_of(sess).cw4_fuel_filler_stall_buys = dict(registry)
         frame = _mandate.MandateFrame(
             gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('线内件X',),
@@ -374,16 +384,16 @@ class Test8EntryFundingFace:
         sells = self._sells(out)
         assert len(sells) == 1
         assert sells[0].slot == 2   # 非保件 F
-        assert sess.cw4_fuel_filler_stall_buys == {_PROT: 2}   # 未销
-        assert 'funding_support_stall_convert' not in sess.cw4_counters
+        assert state_of(sess).cw4_fuel_filler_stall_buys == {_PROT: 2}   # 未销
+        assert 'funding_support_stall_convert' not in state_of(sess).cw4_counters
 
     def test_only_fuel_protected_convert_consume(self):
         """唯一燃料 = 被保件 ⇒ 放行卖出(转化类):分键计数 + 卖出销账。"""
         out, sess = self._run([_bc(_PROT, slot=1)], {_PROT: 2})
         sells = self._sells(out)
         assert len(sells) == 1 and sells[0].slot == 1
-        assert sess.cw4_counters.get('funding_support_stall_convert') == 1
-        assert sess.cw4_fuel_filler_stall_buys == {}   # 卖出销账
+        assert state_of(sess).cw4_counters.get('funding_support_stall_convert') == 1
+        assert state_of(sess).cw4_fuel_filler_stall_buys == {}   # 卖出销账
 
 
 # ===== 复用脚手架 =====

@@ -17,6 +17,8 @@
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 # ==================== a3_deploy_align ====================
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -787,7 +789,7 @@ def test_w530_wiring_locks():
     assert comp_at < exec_at
     # ② 对账点(ADR-0517 重锚):acct 在执行后暂存(session.
     # cw_prep_pending_accts),消费点在下一入口对账段(决策循环之前)。
-    stash_at = src.index('session.cw_prep_pending_accts.append(acct)', exec_at)
+    stash_at = src.index('exec_state_of(session).cw_prep_pending_accts.append(acct)', exec_at)
     drain_at = src.index(
         'self._v2_post_frame_accounting(obs, _pend, session)',
         src.index('def run('))
@@ -950,8 +952,8 @@ def _mk_comp(name: str, factions: list[str], cores: list[str]) -> Comp:
 def test_decision_target_dual_track_returns_recipe():
     """双轨期 + 框架已定 → 配方伪 comp(不是终局 comp)。"""
     sess = _test_deploy_recipe_target_StrategySession()
-    sess.transition_framework = '仙舟'
-    sess.target_comp = _mk_comp('列车同行', ['列车同行'], ['三月七'])
+    state_of(sess).transition_framework = '仙舟'
+    state_of(sess).target_comp = _mk_comp('列车同行', ['列车同行'], ['三月七'])
     st = _FakeState()
     dt = decision_target(sess, st)
     assert dt is not None and dt.name == _RECIPES['仙舟'].name, \
@@ -974,9 +976,9 @@ def test_deploy_no_longer_sells_framework_char_dual_track():
     卡芙卡(仙舟框架件,drop 档)按旧逻辑(off-target)会被卖;新逻辑下
     decision_target=仙舟配方 → deploy_bench._tgt_comp=配方 → 不在卖集。"""
     sess = _test_deploy_recipe_target_StrategySession()
-    sess.transition_framework = '仙舟'
+    state_of(sess).transition_framework = '仙舟'
     sess.dual_track_phase = True
-    sess.target_comp = _mk_comp('列车同行', ['列车同行'], ['三月七'])
+    state_of(sess).target_comp = _mk_comp('列车同行', ['列车同行'], ['三月七'])
     st = _FakeState()
     dt = decision_target(sess, st)
     # deploy_bench 的 _is_tgt_char 同款判定:阵营/流派交集 or core
@@ -990,10 +992,10 @@ def test_deploy_no_longer_sells_framework_char_dual_track():
 def test_nondual_track_keeps_final_comp():
     """定型后(P2)deploy 仍用终局 comp(语义不回归)。"""
     sess = _test_deploy_recipe_target_StrategySession()
-    sess.transition_framework = ''
+    state_of(sess).transition_framework = ''
     sess.dual_track_phase = False
     final = _mk_comp('反甲白厄', ['贝洛伯格'], ['白厄'])
-    sess.target_comp = final
+    state_of(sess).target_comp = final
     st = _FakeState()
     st.dual_track_phase = False
     dt = decision_target(sess, st)

@@ -12,6 +12,7 @@
    「12>8 ⇒ 高难更优」结论不会在 G_gold 定带前产出(ADR-0536 §3)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import pytest
 
@@ -52,7 +53,7 @@ def _table(d0: lambda_death.LambdaCell,
 
 def _session() -> StrategySession:
     s = StrategySession()
-    s.cw4_counters = {}
+    state_of(s).cw4_counters = {}
     return s
 
 
@@ -115,7 +116,7 @@ class TestE3DecisionTree:
         assert not pick.refresh
         assert 'reward_unmodeled' in pick.reason
         assert 'gold' in pick.reason
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'encounter_ev_fail_low_reward_unmodeled') == 1
 
     def test_dstat_only_injection_interlock(self, monkeypatch):
@@ -161,7 +162,7 @@ class TestE3DecisionTree:
         sess = _session()
         pick = encounter.decide_encounter_ev([_LOW, _HIGH], _state(), sess)
         assert pick.idx == _LOW.idx
-        assert sess.cw4_counters.get('encounter_ev_lambda_direction_note') == 1
+        assert state_of(sess).cw4_counters.get('encounter_ev_lambda_direction_note') == 1
 
     def test_ev_argmax_robust_picks_high(self, ev_slots, monkeypatch):
         """双支 λ 可消费且比较稳健(保守端与乐观端同胜者)⇒ EV argmax
@@ -173,7 +174,7 @@ class TestE3DecisionTree:
                                              sess)
         assert pick.idx == _HIGH.idx
         assert pick.reason.startswith('e3_pick:ev_argmax')
-        assert sess.cw4_counters.get('encounter_ev_pick') == 1
+        assert state_of(sess).cw4_counters.get('encounter_ev_pick') == 1
 
     def test_real_lambda_table_flip_band_fails_low(self, ev_slots,
                                                    monkeypatch):
@@ -197,8 +198,8 @@ class TestE3DecisionTree:
                                              sess)
         assert pick.idx == _LOW.idx
         assert pick.refresh is True
-        assert sess.cw4_counters.get('encounter_ev_undecidable_band_flip') == 1
-        assert sess.cw4_counters.get('encounter_ev_refresh_suggested') == 1
+        assert state_of(sess).cw4_counters.get('encounter_ev_undecidable_band_flip') == 1
+        assert state_of(sess).cw4_counters.get('encounter_ev_refresh_suggested') == 1
         # 真实表源(先复原启动必载真表,再默认敞口即 flip)
         monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE',
                             lambda_death._load_table())
@@ -207,7 +208,7 @@ class TestE3DecisionTree:
         assert lambda_death.cell('D0|hp>40|P1|encounter') is not None
         assert pick2.idx == _LOW.idx
         assert pick2.refresh is True
-        assert sess2.cw4_counters.get('encounter_ev_undecidable_band_flip') == 1
+        assert state_of(sess2).cw4_counters.get('encounter_ev_undecidable_band_flip') == 1
 
     def test_ev_exact_tie_fails_low_no_refresh(self, ev_slots, monkeypatch):
         """EV 精确并列锁(三审必修-1):双支 V_r 与复合项全等(典型 =
@@ -231,9 +232,9 @@ class TestE3DecisionTree:
             assert pick.idx == tie_low.idx
             assert pick.refresh is False
             assert 'ev_tie' in pick.reason
-            assert 'encounter_ev_fail_low_tie' in sess.cw4_counters
-            assert 'encounter_ev_undecidable_band_flip' not in sess.cw4_counters
-            assert 'encounter_ev_refresh_suggested' not in sess.cw4_counters
+            assert 'encounter_ev_fail_low_tie' in state_of(sess).cw4_counters
+            assert 'encounter_ev_undecidable_band_flip' not in state_of(sess).cw4_counters
+            assert 'encounter_ev_refresh_suggested' not in state_of(sess).cw4_counters
         finally:
             provisional.reset('ENCOUNTER_DSTAT_MAP')
 
@@ -250,7 +251,7 @@ class TestE3DecisionTree:
         assert pick.idx == _LOW.idx
         assert not pick.refresh
         assert 'gold_unreadable' in pick.reason
-        assert 'encounter_ev_undecidable_band_flip' not in sess.cw4_counters
+        assert 'encounter_ev_undecidable_band_flip' not in state_of(sess).cw4_counters
 
     def test_refresh_not_free_option_wording_and_gate(self, ev_slots,
                                                       monkeypatch):

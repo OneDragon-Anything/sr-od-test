@@ -13,6 +13,7 @@
 锁契约:docstring 引本篇章节为设计出处;不锁分布数值(测试纪律第 8 条)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -61,7 +62,12 @@ def _members() -> list[str]:
 
 
 def _shop_session(comp) -> SimpleNamespace:
-    s = SimpleNamespace(cw4_counters={}, target_comp=comp)
+    # 策略器字段(target_comp/cw4_counters)经 state_of 载体(session 职责
+    # 分离迁移后生产唯一读面;对 SimpleNamespace 桩同样生效)。
+    s = SimpleNamespace()
+    st = state_of(s)
+    st.cw4_counters = {}
+    st.target_comp = comp
     return s
 
 
@@ -136,8 +142,8 @@ class TestM2StockpileArm1:
         sess = _shop_session(_comp())
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
-        assert sess.cw4_counters.get('m2_stockpile_star_mismatch', 0) >= 1
-        assert 'm2b_star_mismatch' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('m2_stockpile_star_mismatch', 0) >= 1
+        assert 'm2b_star_mismatch' not in state_of(sess).cw4_counters
 
     def test_bench_full_m4_frees_seat_then_buys(self):
         """Y5:bench 满时先 M4 腾席(非 B 燃料件)再买入——满栏例外只辖
@@ -180,8 +186,8 @@ class TestM2StockpileArm1:
         sess = _shop_session(_comp())
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
-        assert sess.cw4_counters.get('bench_full', 0) >= 1
-        assert 'merge_bench_full' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('bench_full', 0) >= 1
+        assert 'merge_bench_full' not in state_of(sess).cw4_counters
 
     def test_unaffordable_counted(self):
         """金不足 ⇒ stockpile_unaffordable 分键(义务面拒因零静默)。"""
@@ -190,7 +196,7 @@ class TestM2StockpileArm1:
         sess = _shop_session(_comp())
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
-        assert sess.cw4_counters.get('stockpile_unaffordable', 0) >= 1
+        assert state_of(sess).cw4_counters.get('stockpile_unaffordable', 0) >= 1
 
 
 # ===== M2b:Y4 星过滤 + §3.6 满栏例外 =====
@@ -220,8 +226,8 @@ class TestM2bSeatGateAndStarFilter:
         sess = _shop_session(_comp())
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
-        assert sess.cw4_counters.get('m2b_star_mismatch', 0) >= 1
-        assert 'm2_stockpile_star_mismatch' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('m2b_star_mismatch', 0) >= 1
+        assert 'm2_stockpile_star_mismatch' not in state_of(sess).cw4_counters
 
 
 # ===== arm0 v2(§4.2 Y3/C4/W6)=====
@@ -298,18 +304,18 @@ class TestArm0LevelLag:
         state.level_readable = True
         state.deploy_cap = 5   # 宝钻叠加口径(max_units=5),arm0 非满级
         sess = StrategySession()
-        sess.cw4_counters = {}
+        state_of(sess).cw4_counters = {}
         out = mandate.run_mandate(frame, sess, state=state)
         assert any(e.reason.startswith('m3_levelup_batch') for e in out), \
             'arm0 触发须经 M3 判据链发射批经验授权'
         # C4/W6:不可信帧 fail 向
         state.level_readable = False
         sess2 = StrategySession()
-        sess2.cw4_counters = {}
+        state_of(sess2).cw4_counters = {}
         out2 = mandate.run_mandate(frame, sess2, state=state)
         assert not any(e.reason.startswith('m3_levelup_batch')
                        for e in out2)
-        assert sess2.cw4_counters.get('arm0_level_unreadable', 0) >= 1
+        assert state_of(sess2).cw4_counters.get('arm0_level_unreadable', 0) >= 1
 
 
 # ===== pop_slot 前置放宽(§4.3)=====
@@ -448,7 +454,7 @@ class TestP1BloodFloorPredicate:
         state.deploy_cap = 5
         state.plane = 1
         sess = StrategySession()
-        sess.cw4_counters = {}
+        state_of(sess).cw4_counters = {}
         out = mandate.run_mandate(frame, sess, state=state)
         assert any(e.reason.startswith('m3_levelup_batch') for e in out)
 
@@ -489,8 +495,8 @@ class TestF1LedgerBuyMembersAlignment:
         sess = _shop_session(comp)
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
-        assert sess.cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
-        assert sess.cw4_counters.get('r1_idle_gold_no_chaseable', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
+        assert state_of(sess).cw4_counters.get('r1_idle_gold_no_chaseable', 0) >= 1
 
 
 def shop_ledger_terms(buy_members, bench, deployed, level):
@@ -508,8 +514,8 @@ class TestShopM3TripleArm:
             StrategySession,
         )
         s = StrategySession()
-        s.cw4_counters = {}
-        s.target_comp = comp
+        state_of(s).cw4_counters = {}
+        state_of(s).target_comp = comp
         return s
 
     def test_full_board_empty_bench_rich_gold_gets_levelup(self):
@@ -553,7 +559,7 @@ class TestShopM3TripleArm:
     def test_mandate_pop_slot_wired(self, monkeypatch):
         """应-B:mandate 备战栈 M3 接入 pop_slot(满编+富金+bench 有线内
         候补 = 备战帧触发域;备战帧店面不可读 ⇒ buyable 腿只在商店栈,
-        双栈分域声明);否向理由留决策迹(session.cw4_pop_slot_why)。"""
+        双栈分域声明);否向理由留决策迹(state_of(session).cw4_pop_slot_why)。"""
         from sr_od.application.currency_war.strategies.impl.cw_strategy import (
             StrategySession,
         )
@@ -581,14 +587,14 @@ class TestShopM3TripleArm:
         state.hp_readable = True
         state.level_readable = True
         sess = StrategySession()
-        sess.cw4_counters = {}
+        state_of(sess).cw4_counters = {}
         out = mandate.run_mandate(frame, sess, state=state)
         assert calls, 'mandate 栈 pop_slot 必须被消费(阻-1 同型,禁假活)'
         args, kwargs = calls[0]
         assert len(args) == 5 and not kwargs.get('buyable_candidate'), \
             '备战帧店面不可读:buyable 腿不传/恒 False(分域)'
         assert any(e.reason.startswith('m3_levelup_batch') for e in out)
-        assert hasattr(sess, 'cw4_pop_slot_why')
+        assert state_of(sess).cw4_pop_slot_why
 
 
 # ===== 拒因一致性(P1消费臂批落地审应-1)=====
@@ -637,7 +643,7 @@ class TestShopRejectsArm1Semantics:
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard), \
             'M6 不得买线内副本(死库存防守权归臂①)'
-        assert sess.cw4_counters.get('m6_line_member_excluded', 0) >= 1
+        assert state_of(sess).cw4_counters.get('m6_line_member_excluded', 0) >= 1
 
 
 def shop_rejects(st, comp):
@@ -790,9 +796,10 @@ def _wire_prep_loop(monkeypatch, comp, launch_fn=None, fp=1.0):
     op._battle_ts = None
     op.last_screenshot = object()  # type: ignore[attr-defined]
     op._screen = object()
-    sess = _NS(target_comp=comp,
-               last_state=_st(gold=30, level=3),
-               last_prep_action_sig=('m2',), cw4_counters={})
+    sess = _NS(               last_state=_st(gold=30, level=3),
+               last_prep_action_sig=('m2',))
+    state_of(sess).cw4_counters = {}
+    state_of(sess).target_comp = comp
     op.ctx = _NS(cw_match=_NS(session=sess))
     return op, sess, launch_calls, guard_calls
 
@@ -939,9 +946,13 @@ class TestReadinessBattleArm:
                 return ('wait', status)
 
         comp = _comp()
-        sess = _NS(target_comp=comp,
-                   last_state=_st(gold=30, level=3),
-                   last_prep_action_sig=('m2',), cw4_counters={})
+        from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+        sess = _NS(last_state=_st(gold=30, level=3))
+        state_of(sess).cw4_counters = {}
+        state_of(sess).target_comp = comp
+        # last_prep_action_sig 迁 ExecState(session 职责分离批):经
+        # exec_state_of 附着——裸 session 直挂 attr 已不被 cw_loop 读
+        exec_state_of(sess).last_prep_action_sig = ('m2',)
         op = _PrepLoop()
         op._iter = 2
         op._is_new_match = False
@@ -969,9 +980,9 @@ class TestReadinessBattleArm:
         op2.last_screenshot = object()  # type: ignore[attr-defined]
         op2._screen = object()
         op2.ctx = _NS(cw_match=_NS(session=_NS(
-            target_comp=comp,
-            last_state=_st(gold=30, level=3),
-            last_prep_action_sig=('m2',), cw4_counters={})))
+                last_state=_st(gold=30, level=3))))
+        # 非达标帧的签名同迁 ExecState(经 exec_state_of 附着)
+        exec_state_of(op2.ctx.cw_match.session).last_prep_action_sig = ('m2',)
         op2.loop()
         assert state_calls['guard'] == 1, '非达标帧守卫链照常可达'
         assert state_calls['launch'] == 0
@@ -1016,18 +1027,22 @@ class TestReadinessBattleArm:
         op.last_screenshot = object()  # type: ignore[attr-defined]
         op._screen = object()
         comp = _comp()
-        sess = _NS(target_comp=comp,
-                   last_state=_st(gold=30, level=3),
-                   last_prep_action_sig=('m2',), cw4_counters={})
+        from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+        sess = _NS(last_state=_st(gold=30, level=3))
+        state_of(sess).cw4_counters = {}
+        state_of(sess).target_comp = comp
+        # last_prep_action_sig 迁 ExecState(session 职责分离批):经
+        # exec_state_of 附着——裸 session 直挂 attr 已不被 cw_loop 读
+        exec_state_of(sess).last_prep_action_sig = ('m2',)
         op.ctx = _NS(cw_match=_NS(session=sess))
         for _ in range(3):   # 连续 3 次发射失败
             op.loop()
-        assert sess.cw4_counters.get('readiness_launch_giveup', 0) == 1
+        assert state_of(sess).cw4_counters.get('readiness_launch_giveup', 0) == 1
         assert guard['n'] == 1, '第 3 次失败放弃短路,守卫链触达(防线 C1)'
         # 成功复位:随后的 2 次失败仍在窗口内,保持短路(不回落)
         for _ in range(2):
             op.loop()
-        assert sess.cw4_counters.get('readiness_launch_giveup', 0) == 1
+        assert state_of(sess).cw4_counters.get('readiness_launch_giveup', 0) == 1
         assert guard['n'] == 1, '成功复位后短窗口失败保持短路'
 
     def test_readiness_holds_on_overlay_present(self, monkeypatch):
@@ -1080,9 +1095,10 @@ class TestReadinessBattleArm:
         op.last_screenshot = object()  # type: ignore[attr-defined]
         op._screen = object()
         comp = _comp()
-        sess = _NS(target_comp=comp,
-                   last_state=_st(gold=30, level=3),
-                   last_prep_action_sig=('m2',), cw4_counters={})
+        sess = _NS(                   last_state=_st(gold=30, level=3),
+                   last_prep_action_sig=('m2',))
+        state_of(sess).cw4_counters = {}
+        state_of(sess).target_comp = comp
         op.ctx = _NS(cw_match=_NS(session=sess))
         op.loop()
         assert launches == [], '浮层在场帧达标臂不得发射(盲射防)'
@@ -1129,13 +1145,17 @@ class TestReadinessBattleArm:
         op.last_screenshot = object()  # type: ignore[attr-defined]
         op._screen = object()
         comp = _comp()
-        sess = _NS(target_comp=comp,
-                   last_state=_st(gold=30, level=3),
-                   last_prep_action_sig=('m2',), cw4_counters={})
+        from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+        sess = _NS(last_state=_st(gold=30, level=3))
+        state_of(sess).cw4_counters = {}
+        state_of(sess).target_comp = comp
+        # last_prep_action_sig 迁 ExecState(session 职责分离批):经
+        # exec_state_of 附着——裸 session 直挂 attr 已不被 cw_loop 读
+        exec_state_of(sess).last_prep_action_sig = ('m2',)
         op.ctx = _NS(cw_match=_NS(session=sess))
         op.loop()
         assert launches == [], '遭遇面板在场帧达标臂不得发射(双锚穿透形态)'
-        assert sess.cw4_counters.get('readiness_overlay_hold', 0) >= 1
+        assert state_of(sess).cw4_counters.get('readiness_overlay_hold', 0) >= 1
         assert guard['n'] == 1, '面板帧交遭遇接管面,守卫链照常可达'
 
     def _stale_probe_loop(self, prep_visible: bool):
@@ -1185,12 +1205,14 @@ class TestReadinessBattleArm:
 
         monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
         op = self._stale_probe_loop(prep_visible=False)
-        sess = _NS(cw4_counters={}, target_comp=None, last_state=None)
+        sess = _NS(last_state=None)
+        state_of(sess).cw4_counters = {}
+        state_of(sess).target_comp = None
         op.ctx = _NS(cw_match=_NS(session=sess))
         ok, detail = cw_loop.readiness_battle_launch(op, op.ctx)
         assert ok is False and detail == 'readiness_stale_screen'
         assert calls == [], '切屏后发射请求必须零拖拽(placed=0 根修)'
-        assert sess.cw4_counters.get('readiness_stale_screen', 0) == 1
+        assert state_of(sess).cw4_counters.get('readiness_stale_screen', 0) == 1
 
     def test_prep_screen_present_launches_normally(self, monkeypatch):
         """锁②(对照):复验备战屏在 ⇒ 照常发射(RunDeploy+StartBattle),
@@ -1211,12 +1233,14 @@ class TestReadinessBattleArm:
 
         monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
         op = self._stale_probe_loop(prep_visible=True)
-        sess = _NS(cw4_counters={}, target_comp=None, last_state=None)
+        sess = _NS(last_state=None)
+        state_of(sess).cw4_counters = {}
+        state_of(sess).target_comp = None
         op.ctx = _NS(cw_match=_NS(session=sess))
         ok, detail = cw_loop.readiness_battle_launch(op, op.ctx)
         assert ok is True and detail == 'ok'
         assert calls == ['RunDeploy', 'StartBattle']
-        assert 'readiness_stale_screen' not in sess.cw4_counters
+        assert 'readiness_stale_screen' not in state_of(sess).cw4_counters
 
 
 # ===== 检查点 3:G1 准入锁(§9.2 三元+victim 收口,发射面显影)=====
@@ -1292,12 +1316,15 @@ class TestG1ReadinessAdmission:
         comp, k, victim, full, with_victim = self._g1_frames()
         st = _st(gold=30, level=3, shop_cards=[], deployed=full,
                  bench=[_bc(k[3], slot=1)])   # bench 线内待上(三元②)
-        sess = _NS(cw4_counters={}, target_comp=comp, last_state=st)
+        sess = _NS(target_comp=comp, last_state=st)
+        _gst = state_of(sess)
+        _gst.cw4_counters = {}
+        _gst.target_comp = comp
         op = _mk_loop()
         op.ctx = _NS(cw_match=_NS(session=sess))
         cw_loop.readiness_battle_launch(op, op.ctx)
         assert calls == ['RunDeploy', 'StartBattle'], calls
-        assert sess.cw4_counters.get('deploy_swap_no_victim', 0) >= 1
+        assert state_of(sess).cw4_counters.get('deploy_swap_no_victim', 0) >= 1
 
     def test_g1_victim_present_no_counter(self, monkeypatch):
         """对照:存在合格 victim(off-line∧fenced∧非保护域,应-D:无
@@ -1315,7 +1342,10 @@ class TestG1ReadinessAdmission:
         st = _st(gold=30, level=3, shop_cards=[],
                  deployed=full[:9] + [_bc(victim, slot=10)],
                  bench=[_bc('填充件X', slot=1)])
-        sess = _NS(cw4_counters={}, target_comp=comp, last_state=st)
+        sess = _NS(target_comp=comp, last_state=st)
+        _gst = state_of(sess)
+        _gst.cw4_counters = {}
+        _gst.target_comp = comp
         op = _mk_loop()
         op.ctx = _NS(cw_match=_NS(session=sess))
 
@@ -1328,7 +1358,7 @@ class TestG1ReadinessAdmission:
 
         monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
         cw_loop.readiness_battle_launch(op, op.ctx)
-        assert 'deploy_swap_no_victim' not in sess.cw4_counters
+        assert 'deploy_swap_no_victim' not in state_of(sess).cw4_counters
 
 
 # ===== 辅助 =====

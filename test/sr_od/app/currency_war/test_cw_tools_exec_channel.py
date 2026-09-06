@@ -14,6 +14,7 @@
 5. 词表锁:RunTools 入 PREP_ACTION_TYPES 白名单 + entry 条件续分类。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import sys
 from pathlib import Path
@@ -277,9 +278,9 @@ class TestFixtureInteraction:
 
 def _session_with(owned):
     s = StrategySession()
-    s.cw4_counters = {}
+    state_of(s).cw4_counters = {}
     s.last_owned_equips = list(owned)
-    s.target_comp = _mk_comp([_KEY])
+    state_of(s).target_comp = _mk_comp([_KEY])
     return s
 
 
@@ -309,20 +310,20 @@ class TestMandateEmission:
         st = GameState(plane=1, round_num=3)
         s2 = _session_with([_TOKEN])   # 令牌 R(c) 缺档 → 判据全拒
         out2 = mandate.run_mandate(self._frame(), s2, state=st)
-        assert s2.cw4_counters.get('m7_5_evaluated') == 1
-        assert s2.cw4_counters.get('m7_5_reject_lucky_token_pick') == 1
+        assert state_of(s2).cw4_counters.get('m7_5_evaluated') == 1
+        assert state_of(s2).cw4_counters.get('m7_5_reject_lucky_token_pick') == 1
         assert not any(isinstance(e.action, RunTools) for e in out2)
         s3 = _session_with(['轮滑鞋'])   # owned 在场但无工具条目产出
         mandate.run_mandate(self._frame(), s3, state=st)
-        assert s3.cw4_counters.get('m7_5_evaluated') == 1
-        assert s3.cw4_counters.get('m7_5_reject_none') == 1
+        assert state_of(s3).cw4_counters.get('m7_5_evaluated') == 1
+        assert state_of(s3).cw4_counters.get('m7_5_reject_none') == 1
         # 未评估帧(owned 快照空)不计 evaluated(评估帧与未评估帧可辨)
         s4 = StrategySession()
-        s4.cw4_counters = {}
+        state_of(s4).cw4_counters = {}
         s4.last_owned_equips = None
-        s4.target_comp = _mk_comp([_KEY])
+        state_of(s4).target_comp = _mk_comp([_KEY])
         mandate.run_mandate(self._frame(), s4, state=st)
-        assert 'm7_5_evaluated' not in s4.cw4_counters
+        assert 'm7_5_evaluated' not in state_of(s4).cw4_counters
 
     def test_exec_latch_blocks_reemission_same_phase(self):
         """执行位闩:mark_tools_pass_executed 置位后同 phase 不再发
@@ -334,7 +335,7 @@ class TestMandateEmission:
         mandate.mark_tools_pass_executed(s, st)
         out2 = mandate.run_mandate(self._frame(), s, state=st)
         assert not any(isinstance(e.action, RunTools) for e in out2)
-        assert s.cw4_counters.get('tools_latch_skip', 0) == 1
+        assert state_of(s).cw4_counters.get('tools_latch_skip', 0) == 1
         st2 = GameState(plane=1, round_num=4)   # 轮次推进 → 键失效重评
         out3 = mandate.run_mandate(self._frame(round_num=4), s, state=st2)
         assert any(isinstance(e.action, RunTools) for e in out3)
@@ -371,7 +372,7 @@ class TestMandateEmission:
         src = Path(mandate.__file__).read_text(encoding='utf-8')
         # 读点(getattr)+ 写点(赋值)= 恰两处;再多 = 第二写点病灶
         assert src.count("'cw4_tools_phase'") == 1   # getattr 读点
-        assert src.count('session.cw4_tools_phase') == 1   # 唯一写点
+        assert src.count('state_of(session).cw4_tools_phase') == 1   # 唯一写点
 
 
 # ===== 5. 词表锁 =====

@@ -13,13 +13,14 @@
    should_switch 聚合键 theta_unavailable 原样 + 成因键
    theta_unavailable_<槽位>(不同键防混淆,R24-2)。
 4. b_t 写者(form_score→B_t 口径替换):flow.write_shop_mirrors 写
-   session.v3_b_t(kernel board_target_line_weight 单一源口径),
+   state_of(session).v3_b_t(kernel board_target_line_weight 单一源口径),
    空板恒 0、上场线内件逐件计数;phase/form_ok 退役缺省不受影响。
 5. fenced 拆键(任务⑤):kernel can_deploy_single 拒因五键词表
    (单一源)可产生 cap/name_dup;发射位拆键透传 + 预注册裁决协议
    注释在场(源码契约锁,exit3_fence_semantics DESIGN §5-3)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import importlib.util
 import inspect
@@ -154,10 +155,10 @@ class TestThetaUnavailableCauseKeys:
         """聚合键 theta_unavailable 原样 + 三成因键各计一次(不同键
         防混淆;判返回值不变 = SwitchOutcome(False,'theta_unavailable'))。"""
         sess = StrategySession()
-        sess.cw4_counters = {}   # 计数载体(entry 每局创建;直调需预置)
+        state_of(sess).cw4_counters = {}   # 计数载体(entry 每局创建;直调需预置)
         out = proof.should_switch(GameState(), sess, None, None)
         assert out.event is False and out.key == 'theta_unavailable'
-        ct = sess.cw4_counters
+        ct = state_of(sess).cw4_counters
         assert ct.get('theta_unavailable') == 1
         assert ct.get('theta_unavailable_theta') == 1
         assert ct.get('theta_unavailable_d_min') == 1
@@ -173,8 +174,8 @@ class TestBoardTargetLineWriter:
         sess = StrategySession()
         st = GameState()
         _mk_strat().write_shop_mirrors(st, sess)
-        assert sess.v3_b_t == 0
-        assert sess.v3_mirror_key == (1, 1)
+        assert state_of(sess).v3_b_t == 0
+        assert state_of(sess).v3_mirror_key == (1, 1)
 
     def test_deployed_line_pieces_counted(self):
         """有上场线内件 → 按件计数(青雀=仙舟∈线内集,3 件 = 3;
@@ -183,13 +184,13 @@ class TestBoardTargetLineWriter:
         sess = StrategySession()
         st = GameState()
         _mk_strat().write_shop_mirrors(st, sess)
-        base = sess.v3_b_t
+        base = state_of(sess).v3_b_t
         assert base == 0
         st.deployed = [BenchChar(slot=i, char_id='青雀', star=1,
                                  faction='仙舟', position_pref='back')
                        for i in range(3)]
         _mk_strat().write_shop_mirrors(st, sess)
-        assert sess.v3_b_t == 3, '三件线内上场件应逐件计 3'
+        assert state_of(sess).v3_b_t == 3, '三件线内上场件应逐件计 3'
 
     def test_out_of_line_and_unregistered_not_counted(self):
         """线外件与未注册件不计(件级承重口径:仅线内阵营集命中件计 1)。"""
@@ -198,7 +199,7 @@ class TestBoardTargetLineWriter:
         st.deployed = [BenchChar(slot=0, char_id='x_unregistered', star=1,
                                  faction='', position_pref='back')]
         _mk_strat().write_shop_mirrors(st, sess)
-        assert sess.v3_b_t == 0
+        assert state_of(sess).v3_b_t == 0
 
     def test_phase_retired_form_ok_present_read(self):
         """phase 维持无写端退役缺省;form_ok 已接 readiness_form_ok
@@ -210,8 +211,8 @@ class TestBoardTargetLineWriter:
         st.deployed = [BenchChar(slot=0, char_id='x', star=1,
                                  faction='仙舟', position_pref='back')]
         _mk_strat().write_shop_mirrors(st, sess)
-        assert getattr(sess, 'v3_phase', None) in (None, '', 'FORM')
-        assert sess.v3_form_ok is False
+        assert getattr(state_of(sess), 'v3_phase', None) in (None, '', 'FORM')
+        assert state_of(sess).v3_form_ok is False
 
 
 # ---------- 锁 6:terminal_release 账本行键接线(增补 C1) ----------

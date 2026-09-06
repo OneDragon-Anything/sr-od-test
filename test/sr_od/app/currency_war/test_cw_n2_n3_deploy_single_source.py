@@ -7,6 +7,7 @@
 - N4:授权定性 docstring 写死(「有界成本结构改善」,禁回退旧措辞)。
 """
 
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -161,12 +162,14 @@ class TestN3HeldPostbuy:
         from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
             record_fuel_filler_held_postbuy,
         )
-        sess = _NS(cw4_counters={},
-                   cw4_fuel_filler_stall_buys={'垫件A'})
+        # 计数载体迁 MandateState:cw4_counters 经 state_of(桩同效);
+        # 买入登记名集同迁 MandateState(N3 登记写端 = 策略层)
+        sess = _NS()
+        state_of(sess).cw4_fuel_filler_stall_buys = {'垫件A'}
         n = record_fuel_filler_held_postbuy(
             sess, [('垫件A', 'scatter_fence'), ('垫件B', 'cap')])
         assert n == 1
-        assert sess.cw4_counters.get('fuel_filler_stall_held_postbuy') == 1
+        assert state_of(sess).cw4_counters.get('fuel_filler_stall_held_postbuy') == 1
 
     def test_zero_when_registry_absent_or_empty(self):
         """未登记(发射位未接线/无出口③买入)⇒ 零计数零异常。"""
@@ -176,7 +179,7 @@ class TestN3HeldPostbuy:
         sess = _NS(cw4_counters={})
         assert record_fuel_filler_held_postbuy(
             sess, [('垫件A', 'scatter_fence')]) == 0
-        assert 'fuel_filler_stall_held_postbuy' not in sess.cw4_counters
+        assert 'fuel_filler_stall_held_postbuy' not in state_of(sess).cw4_counters
 
 
 class TestN4AuthorityWording:

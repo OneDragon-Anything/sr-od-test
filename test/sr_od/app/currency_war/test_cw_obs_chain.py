@@ -12,6 +12,8 @@
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 # ==================== test_obs_conflict_guards ====================
 import pytest
@@ -47,8 +49,10 @@ def _no_conflict_io(monkeypatch):
 
 class _Sess:
     def __init__(self, bench=None, deployed=None):
-        self.tracked_bench_chars = bench or []
-        self.tracked_deployed = deployed or []
+        # tracking 字段已迁执行侧载体 ExecState(经 exec_state_of 写入)
+        ex = exec_state_of(self)
+        ex.tracked_bench_chars = bench or []
+        ex.tracked_deployed = deployed or []
 
 
 def test_board_from_tracked_full_known():
@@ -97,14 +101,14 @@ def test_reconcile_double_empty_guard_keeps_old():
     old = [BenchChar(slot=1, char_id='瓦尔特')]
     sess = _Sess(bench=old, deployed=[])
     assert reconcile_tracking(sess, [], [], None, source='t') is False
-    assert sess.tracked_bench_chars == old
+    assert exec_state_of(sess).tracked_bench_chars == old
 
 
 def test_reconcile_double_empty_with_empty_prev_ok():
     """双空读但前值也空 → 正常写回(空板开局,非读失败)。"""
     sess = _Sess()
     assert reconcile_tracking(sess, [], [], None, source='t') is True
-    assert sess.tracked_bench_chars == []
+    assert exec_state_of(sess).tracked_bench_chars == []
 
 
 def test_reconcile_none_side_kept():
@@ -112,9 +116,9 @@ def test_reconcile_none_side_kept():
     sess = _Sess(deployed=[BenchChar(slot=1, char_id='瓦尔特')])
     new_dep = [BenchChar(slot=1, char_id='姬子·启行')]
     assert reconcile_tracking(sess, None, new_dep, None, source='t') is True
-    assert sess.tracked_bench_chars == []
+    assert exec_state_of(sess).tracked_bench_chars == []
     # ADR-0392:tracked_deployed 槽位表——按占用序对拍(紧缩视图)
-    assert [d for d in sess.tracked_deployed if d is not None] == new_dep
+    assert [d for d in exec_state_of(sess).tracked_deployed if d is not None] == new_dep
 
 
 def test_reconcile_from_empty_one_side_fill_is_legal():
@@ -128,9 +132,9 @@ def test_reconcile_from_empty_one_side_fill_is_legal():
     bench = [BenchChar(slot=i + 1, char_id=n)
              for i, n in enumerate(['椒丘', '黄泉', '翡翠', '大丽花'])]
     assert reconcile_tracking(sess, bench, [], None, source='t') is True
-    assert [b.char_id for b in sess.tracked_bench_chars if b is not None] == \
+    assert [b.char_id for b in exec_state_of(sess).tracked_bench_chars if b is not None] == \
         ['椒丘', '黄泉', '翡翠', '大丽花']
-    assert all(d is None for d in sess.tracked_deployed), 'deployed 空是画面真值(0/3)'
+    assert all(d is None for d in exec_state_of(sess).tracked_deployed), 'deployed 空是画面真值(0/3)'
 
 
 def test_reconcile_star_rollback_no_crash():
@@ -144,11 +148,11 @@ def test_reconcile_star_rollback_no_crash():
     # 首次:防抖保旧(不写回 1★)
     assert reconcile_tracking(
         sess, [BenchChar(slot=1, char_id='缇宝', star=1)], [], None, source='t') is True
-    assert sess.tracked_bench_chars[0].star == 2, '首次回退保旧(疑合成动画窗)'
+    assert exec_state_of(sess).tracked_bench_chars[0].star == 2, '首次回退保旧(疑合成动画窗)'
     # 连续第二次(独立新读对象——防抖会原地改 star,复用同对象会假自愈):确认真回退 → 采新
     assert reconcile_tracking(
         sess, [BenchChar(slot=1, char_id='缇宝', star=1)], [], None, source='t') is True
-    assert sess.tracked_bench_chars[0].star == 1, '连续 2 次回退确认采新'
+    assert exec_state_of(sess).tracked_bench_chars[0].star == 1, '连续 2 次回退确认采新'
 
 
 def test_reconcile_star_regression_pending_self_heals():
@@ -157,10 +161,10 @@ def test_reconcile_star_regression_pending_self_heals():
     sess = _Sess(bench=[BenchChar(slot=1, char_id='万敌', star=2)])
     # 首帧:动画窗读 1★ → 保旧
     reconcile_tracking(sess, [BenchChar(slot=1, char_id='万敌', star=1)], [], None, source='t')
-    assert sess.tracked_bench_chars[0].star == 2
+    assert exec_state_of(sess).tracked_bench_chars[0].star == 2
     # 下帧:动画结束读回 2★(=旧值,非回退)→ 自愈,防抖挂起清零
     reconcile_tracking(sess, [BenchChar(slot=1, char_id='万敌', star=2)], [], None, source='t')
-    assert sess.tracked_bench_chars[0].star == 2
+    assert exec_state_of(sess).tracked_bench_chars[0].star == 2
     assert not getattr(sess, 'star_pending_regression', {}).get('万敌'), '读回恢复清防抖'
 
 
@@ -401,7 +405,7 @@ def _polluted_match() -> CurrencyWarMatch:
     s.last_level_obs = 5          # 上局等级(cap_vs_level 抽样 4/4 的旧 level=5)
     s.last_streak = -7            # 上局连败(economy fold 门输入)
     s.last_hp_real = 12           # hp 对账锚
-    s.tracked_deployed = [_w289_match_start_reset_BenchChar(slot=1, char_id='旧局角色')]
+    exec_state_of(s).tracked_deployed = [_w289_match_start_reset_BenchChar(slot=1, char_id='旧局角色')]
     s.active_strategies = ['旧局策略']
     return CurrencyWarMatch(_FlowStrategy(), s)
 
@@ -420,7 +424,7 @@ def test_discard_stale_container_resets_for_new_match():
     assert fresh.last_level_obs == 0      # level 单调守卫不再拿上局值保旧
     assert fresh.last_streak == 0
     assert fresh.last_hp_real is None
-    assert fresh.tracked_deployed == []
+    assert exec_state_of(fresh).tracked_deployed == []   # tracked 宿主迁 ExecState
     assert fresh.active_strategies == []
 
 
@@ -1127,7 +1131,7 @@ def test_ledger_anchors_then_reconciles_clean(monkeypatch):
     monkeypatch.setattr(defects, 'record_defect', _cap)
     # 首帧:锚定(2/72 lv8),不对账
     pd._reconcile_xp_expect(_obs((2, 72), 8))
-    led = session.xp_expect_ledger
+    led = exec_state_of(session).xp_expect_ledger
     assert led.anchored and (led.level, led.xp_cur, led.xp_next) == (8, 2, 72)
     assert led.round_key == (2, 5)
     assert captured == []
@@ -1170,7 +1174,7 @@ def test_ledger_levelup_channel_and_level_mismatch(monkeypatch):
                         lambda *a, **k: captured.append((a, k)))
     pd._reconcile_xp_expect(_obs((18, 20), 5, plane=1, round_num=3))
     pd._xp_apply_levelup()                             # 1 击 → lv6 2/40
-    led = session.xp_expect_ledger
+    led = exec_state_of(session).xp_expect_ledger
     assert (led.level, led.xp_cur, led.xp_next) == (6, 2, 40)
     pd._reconcile_xp_expect(_obs((2, 40), 6, plane=1, round_num=3))  # 一致
     assert captured == []
@@ -1192,7 +1196,7 @@ def test_ledger_round_rollover_reanchors(monkeypatch):
     pd._reconcile_xp_expect(_obs((6, 72), 8))                # 对账一致清 pending
     # 轮界:显示 8/72(本轮 +2 外生)→ 重锚,不评不落账
     pd._reconcile_xp_expect(_obs((8, 72), 8, round_num=6))
-    led = session.xp_expect_ledger
+    led = exec_state_of(session).xp_expect_ledger
     assert led.round_key == (2, 6) and (led.level, led.xp_cur) == (8, 8)
     assert led.exogenous_xp == 2 and captured == []
 
@@ -1244,7 +1248,7 @@ def test_w552_wiring_locks():
     # W591:pending_buy_expect 升 _w552_xp_reconcile_StrategySession 正式字段,消费端由
     # getattr 兜底改直接字段读写(语义不变,机制被取代——见
     # test_cw_w536_buy_expect.test_w536_wiring_locks 改锁依据)
-    consume_at = src.index('_pending_buy = session.pending_buy_expect')
+    consume_at = src.index('_pending_buy = exec_state_of(session).pending_buy_expect')
     assert consume_at < obs_at                      # heavy 定型帧之后
     # 分包期 6(DESIGN §4.5):xp 常量/解析形态随纯期望段迁
     # kernel/cw_prep_expect(cw_screen_prep 经 import 引用);接线点

@@ -3,13 +3,18 @@
 结构变化:战斗/结算窗口(原 cw_loop 分支 1f/2/3/3b/5/6)收编进
 ``cw_screen.cw_screen_battle_wait.CwScreenBattleWait``;本文件锁新结构的**行为语义锚**
 (源码弱锁,风格同 test_cw_telemetry_collect.test_branch_wiring_in_source):
-三段式出口/终局分叉/M39 长按/#25 读点延迟/点空白加速/委托接线/状态机随迁。
+三段式出口/终局分叉/M39 长按/#25 读点延迟/点空白加速/委托接线/状态机随迁
++ 结算点 defer 复位宿主(执行侧载体,session 职责分离批)。
 """
 import inspect
+import time
+from types import SimpleNamespace
 
 
 def _bwo():
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_battle_wait,
+    )
     return cw_screen_battle_wait
 
 
@@ -65,3 +70,66 @@ def test_loop_delegation_wiring() -> None:
                    fromlist=['x']).CwLoop)
     # 旧内联分支已移除(收编完成判据:不再双写)
     assert '前往结算", lcs_percent=0.8' not in src
+
+
+def test_settle_defer_reset_reads_exec_state(monkeypatch) -> None:
+    """结算点 defer 复位宿主 = 执行侧载体 ExecState(session 职责分离批锁)。
+
+    defer_count 已随 ADR-0563 迁 ExecState(session 上无该字段);复位端若
+    仍读 session 形态 = 「继续挑战」点击后必 AttributeError,备战 defer
+    复位防线(结算点 = 新备战轮入口)每次触发即失效。本锁走**真实 wait()
+    结算分支**(只桩截图/画面判定/框架返回;依赖面桩法同
+    test_cw_round_flow.test_loop_outcome_carries_damage),锁「复位生效于
+    ctx.cw_match.exec_state」。"""
+    monkeypatch.setattr(time, 'sleep', lambda *_: None)   # #25 读点延迟/步进等待不实等
+
+    from sr_od.application.currency_war.kernel.cw_exec_state import ExecState
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+
+    class _Op(_bwo().CwScreenBattleWait):
+        def __init__(self, exec_state: ExecState):  # noqa: D107  桩:bypass SrOperation.__init__
+            self._st = _bwo().SettlementState(
+                run_start_ts=time.monotonic(), is_new_match=True)
+            self._unknown_streak = 0
+            self._cw_config = None
+            self._es = exec_state
+            self.ctx = SimpleNamespace(
+                cw_match=SimpleNamespace(
+                    session=StrategySession(),
+                    exec_state=exec_state,
+                    strategy=SimpleNamespace(
+                        on_round_end=lambda *a, **k: None),
+                ),
+                ocr_service=SimpleNamespace(
+                    get_ocr_result_list=lambda image, rect=None,
+                    color_range=None, crop_first=False: []),
+            )
+
+        def screenshot(self, *a, **k):
+            return None
+
+        def round_by_find_area(self, screen, screen_name, area_name, **kw):
+            # 只有「继续挑战」命中 → 走 ②段结算分支;大厅/白名单锚全不命中
+            return SimpleNamespace(is_success=(
+                screen_name == '货币战争-结算' and area_name == '按钮-继续挑战'))
+
+        def round_by_find_and_click_area(self, screen, screen_name, area_name, **kw):
+            return SimpleNamespace(is_success=True)   # 「继续挑战」点击成功 → 复位段
+
+        def round_by_ocr(self, *a, **k):
+            return SimpleNamespace(is_success=False)
+
+        def _record_round_outcome(self, screen, telemetry_only=False):
+            pass   # 结算遥测链另有专锁(test_cw_round_flow),本锁只辖 defer 复位
+
+    es = ExecState()
+    es.defer_count = 2   # 门=2 防空转环在途:结算点应复位归零
+    op = _Op(es)
+    op.last_screenshot = None
+    op.wait()
+
+    assert es.defer_count == 0, '结算点 defer 计数须复位(宿主 = cw_match.exec_state)'
+    assert op._st.settle_stay == 1, '复位段后续流程(停留计数)应继续执行到 round_wait'
+    assert op._st.rounds_done == 1, 'C-1 新结算帧计数应正常累加(复位段在结算链内)'

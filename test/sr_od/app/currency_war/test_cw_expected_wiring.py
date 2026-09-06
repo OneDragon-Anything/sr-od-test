@@ -7,6 +7,8 @@
 纯函数 + StrategySession 直构,零 IO 零识别。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -49,7 +51,7 @@ def _obs(gold_trusted: bool = False, spheres: bool = False) -> SimpleNamespace:
 def _build_and_reconcile(s: StrategySession) -> list[dict]:
     """按生产 prep_obs 覆盖点同式(过滤+逐条目构造)reconcile,返 diff 行。"""
     act: dict = {}
-    for p, e in list((getattr(s, 'expected_state', None) or {}).items()):
+    for p, e in list((getattr(exec_state_of(s), 'expected_state', None) or {}).items()):
         if e.confirm_point != 'prep_obs':
             continue
         r = prep_obs_actual_for(s, e, s.last_state, _obs(), '', '')
@@ -66,10 +68,10 @@ def test_confirm_box_arrival_owned_registered_and_cleared() -> None:
     s = _session()
     register_confirm_arrival(s, 'ConfirmBox', '和平手枪', produced_by='t')
     assert '和平手枪' in s.last_owned_equips
-    entry = s.expected_state['owned[和平手枪]']
+    entry = exec_state_of(s).expected_state['owned[和平手枪]']
     assert entry.kind == 'owned'
     assert _build_and_reconcile(s) == []
-    assert 'owned[和平手枪]' not in s.expected_state
+    assert 'owned[和平手枪]' not in exec_state_of(s).expected_state
 
 
 def test_confirm_supply_arrival_owned_registered() -> None:
@@ -77,7 +79,7 @@ def test_confirm_supply_arrival_owned_registered() -> None:
     s = _session()
     register_confirm_arrival(s, 'ConfirmSupply', '轮滑鞋', produced_by='t')
     assert '轮滑鞋' in s.last_owned_equips
-    assert 'owned[轮滑鞋]' in s.expected_state
+    assert 'owned[轮滑鞋]' in exec_state_of(s).expected_state
 
 
 def test_confirm_tome_arrival_star_badge_named() -> None:
@@ -85,7 +87,7 @@ def test_confirm_tome_arrival_star_badge_named() -> None:
     s = _session()
     register_confirm_arrival(s, 'ConfirmTome', '仙舟星徽', produced_by='t')
     assert '仙舟星徽' in s.last_owned_equips
-    assert 'owned[仙舟星徽]' in s.expected_state
+    assert 'owned[仙舟星徽]' in exec_state_of(s).expected_state
 
 
 def test_confirm_strategy_arrival_cleared_via_body() -> None:
@@ -94,10 +96,10 @@ def test_confirm_strategy_arrival_cleared_via_body() -> None:
     s = _session()
     s.active_strategies.append('利息上调')
     register_confirm_arrival(s, 'ConfirmStrategy', '利息上调', produced_by='t')
-    entry = s.expected_state['active_strategies[利息上调]']
+    entry = exec_state_of(s).expected_state['active_strategies[利息上调]']
     assert entry.kind == 'strategy'
     assert _build_and_reconcile(s) == []
-    assert 'active_strategies[利息上调]' not in s.expected_state
+    assert 'active_strategies[利息上调]' not in exec_state_of(s).expected_state
 
 
 def test_confirm_chosen_partner_megastar_registered() -> None:
@@ -106,14 +108,14 @@ def test_confirm_chosen_partner_megastar_registered() -> None:
     s = _session()
     s.chosen_partner = '丹恒'
     register_confirm_arrival(s, 'ConfirmPartner', '丹恒', produced_by='t')
-    assert s.expected_state['chosen_partner'].kind == 'strategy'
+    assert exec_state_of(s).expected_state['chosen_partner'].kind == 'strategy'
     assert _build_and_reconcile(s) == []
-    assert 'chosen_partner' not in s.expected_state
+    assert 'chosen_partner' not in exec_state_of(s).expected_state
 
     s2 = _session()
     s2.chosen_megastar = '花火'
     register_confirm_arrival(s2, 'ConfirmMegastar', '花火', produced_by='t')
-    assert 'chosen_megastar' in s2.expected_state
+    assert 'chosen_megastar' in exec_state_of(s2).expected_state
 
 
 def test_confirm_expert_cash_gold_binds_shop_wave_top() -> None:
@@ -121,13 +123,13 @@ def test_confirm_expert_cash_gold_binds_shop_wave_top() -> None:
     透传不清账(F7);gold 可信源覆盖点清账不 diff(kind=gold 口径)。"""
     s = _session()
     register_confirm_arrival(s, 'ConfirmExpertCash', '现金为王', produced_by='t')
-    entry = s.expected_state['gold']
+    entry = exec_state_of(s).expected_state['gold']
     assert entry.kind == 'gold'
     assert entry.confirm_point == 'shop_wave_top'
     assert reconcile_expected(s, 'prep_obs', {}) == []
-    assert 'gold' in s.expected_state
+    assert 'gold' in exec_state_of(s).expected_state
     assert reconcile_expected(s, 'shop_wave_top', {'gold': (54, True)}) == []
-    assert 'gold' not in s.expected_state
+    assert 'gold' not in exec_state_of(s).expected_state
 
 
 def test_confirm_arrival_no_item_or_session_noop() -> None:
@@ -135,7 +137,7 @@ def test_confirm_arrival_no_item_or_session_noop() -> None:
     register_confirm_arrival(None, 'ConfirmBox', '和平手枪')
     s = _session()
     register_confirm_arrival(s, 'ConfirmBox', '')
-    assert not s.expected_state
+    assert not exec_state_of(s).expected_state
 
 
 # ==================== 件2:装备分布期望态(M7 穿装备) ====================
@@ -147,7 +149,7 @@ def _session_with_deployed() -> StrategySession:
                       position_pref='front', equips=[])
     back = BenchChar(slot=1, char_id='卡芙卡', star=2,
                      position_pref='back', equips=[])
-    s.tracked_deployed = [front] + [None] * (DEPLOYED_FRONT_CAPACITY - 1) \
+    exec_state_of(s).tracked_deployed = [front] + [None] * (DEPLOYED_FRONT_CAPACITY - 1) \
         + [back] + [None] * (10 - DEPLOYED_FRONT_CAPACITY - 1)
     return s
 
@@ -158,12 +160,12 @@ def test_register_equip_worn_front_advances_distribution() -> None:
     s = _session_with_deployed()
     register_equip_worn(s, '轮滑鞋', '飞霄', 'front', 1, produced_by='t')
     assert s.last_owned_equips == ['幸运星']
-    assert s.tracked_deployed[0].equips == ['轮滑鞋']
-    assert 'owned[轮滑鞋]' in s.expected_state
-    assert 'tracked_deployed[0]' in s.expected_state
+    assert exec_state_of(s).tracked_deployed[0].equips == ['轮滑鞋']
+    assert 'owned[轮滑鞋]' in exec_state_of(s).expected_state
+    assert 'tracked_deployed[0]' in exec_state_of(s).expected_state
     assert _build_and_reconcile(s) == []
-    assert 'owned[轮滑鞋]' not in s.expected_state
-    assert 'tracked_deployed[0]' not in s.expected_state
+    assert 'owned[轮滑鞋]' not in exec_state_of(s).expected_state
+    assert 'tracked_deployed[0]' not in exec_state_of(s).expected_state
 
 
 def test_register_equip_worn_back_slot_index() -> None:
@@ -171,8 +173,8 @@ def test_register_equip_worn_back_slot_index() -> None:
     (与 apply_op_effect SellDeployed 同式)。"""
     s = _session_with_deployed()
     register_equip_worn(s, '幸运星', '卡芙卡', 'back', 1, produced_by='t')
-    assert s.tracked_deployed[DEPLOYED_FRONT_CAPACITY].equips == ['幸运星']
-    assert f'tracked_deployed[{DEPLOYED_FRONT_CAPACITY}]' in s.expected_state
+    assert exec_state_of(s).tracked_deployed[DEPLOYED_FRONT_CAPACITY].equips == ['幸运星']
+    assert f'tracked_deployed[{DEPLOYED_FRONT_CAPACITY}]' in exec_state_of(s).expected_state
 
 
 def test_register_equip_worn_none_session_safe() -> None:

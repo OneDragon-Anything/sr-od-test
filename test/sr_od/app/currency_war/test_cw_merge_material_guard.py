@@ -21,6 +21,7 @@ bench 1★ + 板上 1★ 并存被 2g 卖断)/ g_20260906_095111 P2r1 hp7
 先例同构)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from pathlib import Path
 
@@ -397,7 +398,7 @@ class TestMaterialStaleKeys:
         count_material_stale(ct, sess, [_bc('卡芙卡', star=2, slot=1)],
                              [], round_num=5)
         assert ct['merge_material_stale'] == 2
-        assert sess.cw4_stale_seen_rounds == {}
+        assert state_of(sess).cw4_stale_seen_rounds == {}
         # 轮6 重新组对:新滞留段,首见帧不记跨轮
         ct2 = ct
         count_material_stale(ct2, sess, pair, [], round_num=6)

@@ -20,6 +20,7 @@ R1/R2 刷新账合格集(P40 A4「目标阵容件」口径,无数学重推不翻
 必须与声明口径同源;不锁具体买入数与经济面数值。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from pathlib import Path
 from types import SimpleNamespace
@@ -75,10 +76,10 @@ def hoard_all(comp) -> set[str]:
 
 def _session(target_comp, ist: IntentionState | None) -> StrategySession:
     s = StrategySession()
-    s.cw4_counters = {}
-    s.target_comp = target_comp
+    state_of(s).cw4_counters = {}
+    state_of(s).target_comp = target_comp
     if ist is not None:
-        s.v3_intention = ist
+        state_of(s).v3_intention = ist
     return s
 
 
@@ -156,7 +157,7 @@ class TestLockedBuyFace:
             _card('丹恒·饮月', 2), _card('开拓者·欢愉', 4, star=4)])
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
         shop.decide_shop_action(st, sess, _cfg())
-        rejects = getattr(sess, 'cw4_shop_rejects', {}) or {}
+        rejects = getattr(state_of(sess), 'cw4_shop_rejects', {}) or {}
         assert rejects.get('开拓者·欢愉', '').startswith('missing_')
 
     def test_membership_single_source_matches_locked_buy_scope(self):
@@ -212,8 +213,8 @@ class TestSellFaceAndLedgerUnswitched:
         act = shop.decide_shop_action(st, sess, _cfg())
         assert not isinstance(act, BuyCard), 'B 成员不得被卖出/换手'
         assert not isinstance(act, SellBench)
-        assert sess.cw4_counters.get('m2_retry_exhausted', 0) >= 1
-        assert sess.cw4_counters.get('bench_full_buy_abandon', 0) >= 1
+        assert state_of(sess).cw4_counters.get('m2_retry_exhausted', 0) >= 1
+        assert state_of(sess).cw4_counters.get('bench_full_buy_abandon', 0) >= 1
 
     def test_bench_full_of_offline_fenced_members_frees_and_buys(self):
         """真实死锁帧形态(P60 修复后的腾席保底):bench 满为 off-line
@@ -311,7 +312,7 @@ class TestTransitionPairNotObligated:
         act = shop.decide_shop_action(st, sess, _cfg())
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm2_line_member')
-        rejects = getattr(sess, 'cw4_shop_rejects', {}) or {}
+        rejects = getattr(state_of(sess), 'cw4_shop_rejects', {}) or {}
         assert rejects.get(pair_only[0]) == 'non_line'
 
 
@@ -331,7 +332,7 @@ class TestUnlockedFrameUnchanged:
         act = shop.decide_shop_action(st, sess, _cfg())
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm2_line_member')
-        rejects = getattr(sess, 'cw4_shop_rejects', {}) or {}
+        rejects = getattr(state_of(sess), 'cw4_shop_rejects', {}) or {}
         assert rejects.get('丹恒·饮月') == 'non_line'
 
     def test_p1_recipe_lock_frame_faction_member_still_non_line(self):
@@ -349,7 +350,7 @@ class TestUnlockedFrameUnchanged:
         act = shop.decide_shop_action(st, sess, _cfg())
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm2_line_member')
-        rejects = getattr(sess, 'cw4_shop_rejects', {}) or {}
+        rejects = getattr(state_of(sess), 'cw4_shop_rejects', {}) or {}
         assert rejects.get('丹恒·饮月') == 'non_line'
 
     def test_shop_consumes_membership_not_scope_direct(self):
@@ -390,24 +391,24 @@ class TestP60DisguisedProgressTelemetry:
         # churn 帧:符玄(core 成员)在近期卖出记认中
         st = _state(gold=30, shop_cards=[_card(core[0], 3)])
         sess = _session(comp, _locked_ist())
-        sess.cw4_line_state = proof.LineState()
-        sess.cw4_line_state.drought = 3
-        sess.cw4_recent_sold_names = [core[0]]
+        state_of(sess).cw4_line_state = proof.LineState()
+        state_of(sess).cw4_line_state.drought = 3
+        state_of(sess).cw4_recent_sold_names = [core[0]]
         act = shop.decide_shop_action(st, sess, _cfg())
         assert isinstance(act, BuyCard) and act.card.name == core[0]
-        assert sess.cw4_counters.get('shop_churn_pair_buy', 0) >= 1
-        assert sess.cw4_counters.get('shop_drought_reset_on_churn_buy', 0) >= 1
-        assert 'shop_drought_reset_on_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('shop_churn_pair_buy', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_drought_reset_on_churn_buy', 0) >= 1
+        assert 'shop_drought_reset_on_buy' not in state_of(sess).cw4_counters
         # 对照帧:无卖出记认 ⇒ 原键(缺员买入)
         st2 = _state(gold=30, shop_cards=[_card(core[0], 3)])
         sess2 = _session(comp, _locked_ist())
-        sess2.cw4_line_state = proof.LineState()
-        sess2.cw4_line_state.drought = 3
+        state_of(sess2).cw4_line_state = proof.LineState()
+        state_of(sess2).cw4_line_state.drought = 3
         act2 = shop.decide_shop_action(st2, sess2, _cfg())
         assert isinstance(act2, BuyCard)
-        assert sess2.cw4_counters.get('shop_drought_reset_on_buy', 0) >= 1
-        assert 'shop_drought_reset_on_churn_buy' not in sess2.cw4_counters
-        assert 'shop_churn_pair_buy' not in sess2.cw4_counters
+        assert state_of(sess2).cw4_counters.get('shop_drought_reset_on_buy', 0) >= 1
+        assert 'shop_drought_reset_on_churn_buy' not in state_of(sess2).cw4_counters
+        assert 'shop_churn_pair_buy' not in state_of(sess2).cw4_counters
 
     def test_hoard_over_capacity_warning_counter(self):
         """|buy_members| > bench+板容量上界 ⇒ 帧级告警计数(黄泉减益
@@ -416,4 +417,4 @@ class TestP60DisguisedProgressTelemetry:
         st = _state(gold=30, shop_cards=[])
         sess = _session(comp, _locked_ist('黄泉减益'))
         shop.decide_shop_action(st, sess, _cfg())
-        assert sess.cw4_counters.get('shop_hoard_over_capacity', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_hoard_over_capacity', 0) >= 1

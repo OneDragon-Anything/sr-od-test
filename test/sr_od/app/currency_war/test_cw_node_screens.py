@@ -24,6 +24,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.obs import cw_node_reader
 from sr_od.application.currency_war.obs.cw_node_reader import (
     classify_node_row,
@@ -682,9 +683,10 @@ def test_read_reward_spheres_phantom_blacklist_filter(
 def test_click_spheres_zero_disappear_blacklists_phantom(monkeypatch) -> None:
     """点击后零消失 → 幻球登记(会话黑名单 + 分键),detail 携带黑名单痕迹;
     席满(无空位)时不拉黑(席满点不动 = 真球保留的既有裁定语义)。"""
+    from types import SimpleNamespace
+
     import sr_od.application.currency_war.prep_actions as pa
     from one_dragon.base.geometry.point import Point
-    from types import SimpleNamespace
 
     sphere = ('blue', Point(1400, 300), 33)
     reads = {'n': 0}
@@ -1024,7 +1026,7 @@ def test_plane_intel_takeover_refill_channel(test_context, monkeypatch) -> None:
     assert res is not None, '空真值门应触发采集并交回外循环'
     assert session.briefing_bosses == ['巨鹿生物制药', None, '绘师家族产业'], (
         f'实采须保位载入 session(None 原样占槽):{session.briefing_bosses!r}')
-    assert getattr(session, 'cw_takeover_collect_done', False) is True
+    assert getattr(exec_state_of(session), 'cw_takeover_collect_done', False) is True
     assert test_context.cw_plane_bosses is None \
         and test_context.cw_plane_affixes is None, '中转池须取走清空(防跨局泄漏)'
 

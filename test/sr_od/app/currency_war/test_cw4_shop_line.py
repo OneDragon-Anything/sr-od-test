@@ -6,6 +6,8 @@
 差异锚)/ 基线臂零漂移复跑 + 双臂相异实证(慢桶,sim 实跑)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import pytest
 
@@ -57,9 +59,9 @@ def _members(comp) -> list[str]:
 
 def _session(comp=None) -> StrategySession:
     s = StrategySession()
-    s.cw4_counters = {}
-    s.target_comp = comp
-    s.cw4_line_state = proof.LineState()
+    state_of(s).cw4_counters = {}
+    state_of(s).target_comp = comp
+    state_of(s).cw4_line_state = proof.LineState()
     return s
 
 
@@ -204,7 +206,7 @@ class TestCriteriaShopFaces:
         st = _state(gold=60, bench=bench)
         sess = _session(comp)
         _decide(st, sess)
-        assert sess.cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
         assert not [a for a in _decide(st, _session(comp))
                     if isinstance(a, RefreshShop)]
 
@@ -343,7 +345,7 @@ class TestShopTerminatorContract:
             guard_expected_vs_tracked,
         )
         sess = _session()
-        sess.tracked_bench_chars = [_bc('甲'), _bc('乙')]
+        exec_state_of(sess).tracked_bench_chars = [_bc('甲'), _bc('乙')]
         st = _state(bench=[_bc('甲'), _bc('乙')])
         guard_expected_vs_tracked(st, sess)      # 一致:静默
         st2 = _state(bench=[_bc('甲'), _bc('丙')])
@@ -361,7 +363,7 @@ class TestShopTerminatorContract:
             guard_expected_vs_tracked,
         )
         sess = _session()
-        sess.tracked_bench_chars = [_bc('甲')]
+        exec_state_of(sess).tracked_bench_chars = [_bc('甲')]
         st = _state(bench=[_bc('乙')])
         with pytest.raises(AssertionError, match='跟踪账丢件'):
             guard_expected_vs_tracked(st, sess, stage='seed')
@@ -404,9 +406,9 @@ class TestShopTerminatorContract:
         # 两形态:单笔(02:13 HIT)与多笔累积(02:26 HIT,两轮买-部署循环)
         for stale in (['藿藿'], ['藿藿', '丹恒·饮月']):
             sess = _session()
-            sess.tracked_bench_chars = []      # 主账真空(入口对账纠成空=事实正确)
+            exec_state_of(sess).tracked_bench_chars = []      # 主账真空(入口对账纠成空=事实正确)
             sess.tracked_bench = stale         # 残账(退役后仅属性残留;任何回退读取=回归)
-            sess.tracked_deployed = [_bc('藿藿'), _bc('艾丝妲'), _bc('银枝'), _bc('缇宝')]
+            exec_state_of(sess).tracked_deployed = [_bc('藿藿'), _bc('艾丝妲'), _bc('银枝'), _bc('缇宝')]
             # 入口重建语义:真空主账 → 期望态 bench 必须为空(陈旧名不复活)
             st = _state(bench=bench_from_compact([]))
             guard_expected_vs_tracked(st, sess, stage='seed')   # 播种期:静默
@@ -432,9 +434,9 @@ class TestShopTerminatorContract:
         pat = re.compile(r'\.tracked_bench\b')
         # 变异自检:对属性访问命中;对合法同前缀名/注释/局部变量不命中
         assert pat.search('session.tracked_bench.append')
-        assert not pat.search('session.tracked_bench_chars')
+        assert not pat.search('exec_state_of(session).tracked_bench_chars')
         assert not pat.search('# 旧 tracked_bench 回退分支已退役')
-        assert not pat.search("tracked_bench = getattr(session, 'tracked_bench_chars')")
+        assert not pat.search("tracked_bench = getattr(exec_state_of(session), 'tracked_bench_chars')")
         hits = [str(p) for p in cw_root.rglob('*.py')
                 if p.is_file() and pat.search(p.read_text(encoding='utf-8',
                                                        errors='replace'))]
@@ -465,7 +467,7 @@ class TestShopTerminatorContract:
         # 额外动作;截断形态下该买会是末位——两者输出同形,语义差异由
         # 「投影后无停滞」承载:合成已入 bench,owned 集含该成员)
         assert any(isinstance(a, BuyCard) and a.card.name == m for a in acts)
-        assert 'shop_merge_trigger_truncate' not in sess.cw4_counters
+        assert 'shop_merge_trigger_truncate' not in state_of(sess).cw4_counters
 
     def test_blackboard_missing_raises(self):
         """黑板契约:shop_state_frame 缺失 ⇒ 抛错(禁静默按空态决策)。"""
@@ -501,7 +503,7 @@ class TestFixpoolShopCheckpoints:
         _decide(st, sess)
         # None 期:U_X🔴 ⇒ 候选生成 fail-closed(u_unavailable 分键;
         # 店面非空才进 u 判,空店=shop_domain 分键)
-        assert sess.cw4_counters.get('shop_ev_u_unavailable', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_ev_u_unavailable', 0) >= 1
 
     def test_d_p2idle_idle_gold_counter(self):
         """D-P2idle:带金零动作 visit 计数(gold≥10 且无发射)——键
@@ -512,7 +514,7 @@ class TestFixpoolShopCheckpoints:
         st = _state(gold=12, bench=bench)
         sess = _session(comp)
         _decide(st, sess)
-        assert sess.cw4_counters.get('shop_visit_idle_gold', 0) == 1
+        assert state_of(sess).cw4_counters.get('shop_visit_idle_gold', 0) == 1
 
     def test_d_hard_node_gate_consumed(self):
         """D-D:硬节点(遭遇/boss)备战补强门被消费(观察级接线+计数)。"""
@@ -521,33 +523,33 @@ class TestFixpoolShopCheckpoints:
         st = _state(gold=60, bench=bench, node='boss')
         sess = _session(comp)
         _decide(st, sess)
-        assert sess.cw4_counters.get('shop_hard_node_gate_open', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_hard_node_gate_open', 0) >= 1
         # 非硬节点不触发
         st2 = _state(gold=60, bench=bench, node='reward')
         sess2 = _session(comp)
         _decide(st2, sess2)
-        assert sess2.cw4_counters.get('shop_hard_node_gate_open', 0) == 0
+        assert state_of(sess2).cw4_counters.get('shop_hard_node_gate_open', 0) == 0
 
     def test_d_a45_drought_reset_on_target_buy(self):
         """D-A45 商店侧半边:买入目标件 ⇒ 干旱计数器重置 + 事件计数。"""
         comp = _comp()
         m = _members(comp)[0]
         sess = _session(comp)
-        sess.cw4_line_state.drought = 4
+        state_of(sess).cw4_line_state.drought = 4
         st = _state(gold=30, shop=[_card(m, cost=3)])
         _decide(st, sess)
-        assert sess.cw4_line_state.drought == 0
-        assert sess.cw4_counters.get('shop_drought_reset_on_buy', 0) == 1
+        assert state_of(sess).cw4_line_state.drought == 0
+        assert state_of(sess).cw4_counters.get('shop_drought_reset_on_buy', 0) == 1
 
     def test_d_f9_drought_no_reset_without_target_buy(self):
         """D-F9/D-A45 反例:未买目标件 ⇒ 干旱不重置(计数器事件语义)。"""
         comp = _comp()
         sess = _session(comp)
-        sess.cw4_line_state.drought = 3
+        state_of(sess).cw4_line_state.drought = 3
         st = _state(gold=30, shop=[])         # 店面无目标件
         _decide(st, sess)
-        assert sess.cw4_line_state.drought == 3
-        assert sess.cw4_counters.get('shop_drought_reset_on_buy', 0) == 0
+        assert state_of(sess).cw4_line_state.drought == 3
+        assert state_of(sess).cw4_counters.get('shop_drought_reset_on_buy', 0) == 0
 
     def test_d_buynote_embedded(self):
         """D-BUYNOTE:P48 整买纪律作为常量判据内嵌(spend_unified 直测)。"""
@@ -668,7 +670,7 @@ class TestR197SameSlotGuard:
         assert sells, 'M4 腾席卖出应存在'
         idxs = [s.bench_idx for s in sells]
         assert len(idxs) == len(set(idxs)), idxs   # 无同 idx 双卖
-        assert 'ev_conflict_dropped' not in sess.cw4_counters
+        assert 'ev_conflict_dropped' not in state_of(sess).cw4_counters
 
 
 # ===== K 空窗回退修复批行为锁(2026-09-03 第三病灶)=====
@@ -686,7 +688,7 @@ class TestKGapFallback:
             IntentionState,
         )
         s = _session(None)
-        s.v3_intention = IntentionState()
+        state_of(s).v3_intention = IntentionState()
         return s
 
     def test_gap_window_fallback_nonempty_and_m2_emits(self):
@@ -704,7 +706,7 @@ class TestKGapFallback:
         buys = [a for a in acts if isinstance(a, BuyCard)]
         assert any(b.card.name == engine_piece
                    and b.reason == 'm2_line_member' for b in buys)
-        assert sess.cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
 
     def test_gap_fallback_matches_hoard_single_source(self):
         """回退单一源:空窗帧 K 投影 == hoard_target_set().char_targets
@@ -714,9 +716,9 @@ class TestKGapFallback:
         sess = self._gap_session()
         _decide(st, sess)
         expect = cw_intention.hoard_target_set(
-            st, sess.v3_intention).char_targets
+            st, state_of(sess).v3_intention).char_targets
         assert expect                       # 空窗回退非空(四体系引擎件全集)
-        assert sess.cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
 
     def test_non_gap_support_at_threshold_lock_band_fallback(self):
         """②P1 锁线过渡带(ADR-0519 重锚:锁线门槛 = 羁绊满员当量 1.0,
@@ -729,11 +731,11 @@ class TestKGapFallback:
         assert not cw_intention.p1_gap_window(st)
         sess = self._gap_session()
         acts = _decide(st, sess)
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'shop_k_fallback_p1_lock_band', 0) >= 1
-        assert 'shop_k_fallback_p1_gap' not in sess.cw4_counters
+        assert 'shop_k_fallback_p1_gap' not in state_of(sess).cw4_counters
         expect = cw_intention.p1_early_pair_members(
-            st, sess.v3_intention)
+            st, state_of(sess).v3_intention)
         assert expect            # 过渡带方向非空(支持度 ≥门槛)
         bought = {a.card.name for a in acts
                   if isinstance(a, BuyCard)
@@ -749,8 +751,8 @@ class TestKGapFallback:
         sess = self._gap_session()
         _decide(st, sess)
         assert cw_intention.p1_early_pair_members(
-            st, sess.v3_intention) != cw_intention.hoard_target_set(
-            st, sess.v3_intention).char_targets   # 两带集合确异(锁锚有效)
+            st, state_of(sess).v3_intention) != cw_intention.hoard_target_set(
+            st, state_of(sess).v3_intention).char_targets   # 两带集合确异(锁锚有效)
 
     def test_p2plus_unlocked_fallback_hoard_fifth(self):
         """③P2+ 带(FIX_REVIEW R3②,场景 D 复验):plane=2、
@@ -762,10 +764,10 @@ class TestKGapFallback:
         st.plane = 2
         st.shop = [_card('爻光', cost=3)]
         sess = self._gap_session()
-        sess.v3_intention.phase = 'unlocked'
+        state_of(sess).v3_intention.phase = 'unlocked'
         acts = _decide(st, sess)
-        assert sess.cw4_counters.get('shop_k_fallback_p2plus', 0) >= 1
-        assert 'shop_k_fallback_p1_gap' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('shop_k_fallback_p2plus', 0) >= 1
+        assert 'shop_k_fallback_p1_gap' not in state_of(sess).cw4_counters
         assert any(isinstance(a, BuyCard) and a.card.name == '爻光'
                    and a.reason == 'm2_line_member' for a in acts)
 
@@ -777,7 +779,7 @@ class TestKGapFallback:
         m = _members(comp)[0]
         sess = _session(comp)
         _decide(_state(gold=30, shop=[_card(m, cost=3)]), sess)
-        assert 'shop_k_fallback_p1_gap' not in sess.cw4_counters
+        assert 'shop_k_fallback_p1_gap' not in state_of(sess).cw4_counters
 
     def test_missing_intention_supply_no_fallback(self):
         """边界:v3_intention 缺失(意向供给缺帧)⇒ 保守侧不回退
@@ -791,7 +793,7 @@ class TestKGapFallback:
         acts = _decide(st, sess)
         assert not [a for a in acts if isinstance(a, BuyCard)
                     and a.reason == 'm2_line_member']
-        assert 'shop_k_fallback_p1_gap' not in sess.cw4_counters
+        assert 'shop_k_fallback_p1_gap' not in state_of(sess).cw4_counters
 
 
 # ===== ⑦ 对抗修复批:F1 满栏 EV 买收敛(席位门)=====
@@ -834,7 +836,7 @@ class TestEvBuySeatGate:
         sess = _session(comp)
         a = self._decide_one(st, sess)
         assert not (isinstance(a, BuyCard) and a.reason == 'ev_buy')
-        assert sess.cw4_counters.get('shop_ev_bench_wait', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_ev_bench_wait', 0) >= 1
 
     @staticmethod
     def _decide_one(state, session):
@@ -932,7 +934,7 @@ class TestDualLedgerSlotDriftReseed:
     def _hit_session():
         """tracked 侧(重排后真值,买前):阮·梅@1、洞@2、阮·梅@3。"""
         sess = _session()
-        sess.tracked_bench_chars = [
+        exec_state_of(sess).tracked_bench_chars = [
             TestDualLedgerSlotDriftReseed._bc_at('阮·梅', 1),
             None,
             TestDualLedgerSlotDriftReseed._bc_at('阮·梅', 3),
@@ -964,8 +966,8 @@ class TestDualLedgerSlotDriftReseed:
         )
         action = BuyCard(card=ShopCard(x=0, name='符玄', cost=4, star=1))
         proj = simulate(st, action)              # 落投影旧洞 @1
-        mutate_bench_deployed(sess.tracked_bench_chars,
-                              sess.tracked_deployed, action)   # 实况填真洞 @2
+        mutate_bench_deployed(exec_state_of(sess).tracked_bench_chars,
+                              exec_state_of(sess).tracked_deployed, action)   # 实况填真洞 @2
         return sess, proj
 
     def test_multiset_equal_drift_downgrades_and_reseeds(self, monkeypatch):
@@ -1030,7 +1032,7 @@ class TestDualLedgerSlotDriftReseed:
             guard_expected_vs_tracked,
         )
         sess = _session()
-        sess.tracked_bench_chars = [_bc('甲')]
+        exec_state_of(sess).tracked_bench_chars = [_bc('甲')]
         st = _state(bench=[_bc('乙')])
         with pytest.raises(AssertionError, match='双账分离'):
             guard_expected_vs_tracked(st, sess)

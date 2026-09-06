@@ -21,6 +21,7 @@ dd-027 修订(实机局 g_20260904_010335 漏发定谳,2026-09-04):同帧
 快照经 overlay 确认链及时推进)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     OpenShop,
@@ -49,7 +50,7 @@ def _frame(round_num: int = 3, stop: bool = True) -> mandate.MandateFrame:
 
 def _session(owned: list[str]) -> StrategySession:
     s = StrategySession()
-    s.cw4_counters = {}
+    state_of(s).cw4_counters = {}
     s.last_owned_equips = list(owned)
     return s
 
@@ -104,7 +105,7 @@ class TestM7PhaseLatch:
         mandate.mark_equip_pass_executed(s, st)
         out3 = mandate.run_mandate(_frame(), s, state=st)
         assert _m7_actions(out3) == []
-        assert s.cw4_counters['equip_latch_skip_m7'] == 1
+        assert state_of(s).cw4_counters['equip_latch_skip_m7'] == 1
 
     def test_phase_advance_relatches(self):
         """位面/轮次推进 = 新键自动失效,新发放件重评(闩不是局级开关)。"""
@@ -131,7 +132,7 @@ class TestM7ShopLatchCoexistence:
 
     def test_shop_latch_does_not_block_m7(self):
         s = _session(_WEARABLE)
-        s.cw4_shopped_phase = (None, 3)      # 开店闩已置(同期已开过店)
+        state_of(s).cw4_shopped_phase = (None, 3)      # 开店闩已置(同期已开过店)
         assert len(_m7_actions(mandate.run_mandate(_frame(), s))) == 1
 
     def test_equip_latch_does_not_block_shop(self):
@@ -200,7 +201,7 @@ class TestM7EmissionOrder:
         mandate.mark_equip_pass_executed(s, st)     # 执行位记账
         out3 = mandate.run_mandate(self._frame_shop_intent(), s, state=st)
         assert _m7_actions(out3) == []
-        assert s.cw4_counters['equip_latch_skip_m7'] == 1
+        assert state_of(s).cw4_counters['equip_latch_skip_m7'] == 1
 
 
 class TestM7LatchAtExecution:
@@ -236,7 +237,7 @@ class TestM7LatchAtExecution:
         assert getattr(s, 'cw4_m7_equipped_phase', None) is None  # 发射不置闩
         out2 = mandate.run_mandate(self._deploy_equip_frame(), s)
         assert len(_m7_actions(out2)) == 1          # 闩未烧,重发
-        assert s.cw4_counters.get('equip_latch_skip_m7', 0) == 0
+        assert state_of(s).cw4_counters.get('equip_latch_skip_m7', 0) == 0
 
     def test_execution_sets_latch(self):
         """回归锁②:装备执行成功(执行位置位)后,同期后续帧不再发,
@@ -247,6 +248,6 @@ class TestM7LatchAtExecution:
         mandate.mark_equip_pass_executed(s, st)     # RunEquip 执行成功记账
         out2 = mandate.run_mandate(self._deploy_equip_frame(), s, state=st)
         assert _m7_actions(out2) == []
-        assert s.cw4_counters.get('equip_latch_skip_m7', 0) == 1
+        assert state_of(s).cw4_counters.get('equip_latch_skip_m7', 0) == 1
         out3 = mandate.run_mandate(self._deploy_equip_frame(round_num=4), s)
         assert len(_m7_actions(out3)) == 1          # 轮次推进=新键重武装

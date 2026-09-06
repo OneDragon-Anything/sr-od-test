@@ -14,6 +14,7 @@ F6 P6' 计数消费仅阈值比较的守卫断言(中间值等价性锁住)
 F7 P6 应急冻结性质(除 E3/E8 外一切事件不变)
 F8 死代码清理(76-78 的 pass / 64 的恒等 return)"""
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import itertools
 
@@ -46,7 +47,7 @@ CONTRACTS = {
     },
     'degrade_noop': {
         '判定': '降级目标 == 当前线 → 不触发 E2_degrade(直接 return)',
-        '真值来源': 'session.locked_line vs line.degrade_to',
+        '真值来源': 'state_of(session).locked_line vs line.degrade_to',
         '单测锚点': 'test_contract_degrade_noop',
     },
     'e6_exit': {

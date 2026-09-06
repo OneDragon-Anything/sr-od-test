@@ -47,11 +47,20 @@ def test_decision_target_no_walkin_branch():
     from sr_od.application.currency_war.kernel.cw_recipe import decision_target
     from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of,
+    )
+
     class _Sess:
-        transition_framework = '量子'
-        target_comp = next(c for c in COMP_LIBRARY if c.name == '希儿量子')
+        pass
+
+    # 策略器字段已迁 MandateState(transition_framework/target_comp)
+    sess = _Sess()
+    st_s = state_of(sess)
+    st_s.transition_framework = '量子'
+    st_s.target_comp = next(c for c in COMP_LIBRARY if c.name == '希儿量子')
 
     st = GameState(round_num=3, plane=1, dual_track_phase=True)
     st.bench = [BenchChar(slot=1, char_id='希儿', faction='?', star=1, position_pref='back')]
-    got = decision_target(_Sess(), st)
+    got = decision_target(sess, st)
     assert got.name == '过渡·量子配方', '双轨期量子框架 → 配方伪 comp(不是终局)'

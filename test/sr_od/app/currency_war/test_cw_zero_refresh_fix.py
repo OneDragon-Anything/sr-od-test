@@ -9,6 +9,7 @@
   判前锁 v6 检查单(未全绿 raise / 全绿放行 / 类条款行不阻塞)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -55,9 +56,9 @@ def _session(comp=None):
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 
     s = StrategySession()
-    s.cw4_counters = {}
-    s.target_comp = comp
-    s.cw4_line_state = proof.LineState()
+    state_of(s).cw4_counters = {}
+    state_of(s).target_comp = comp
+    state_of(s).cw4_line_state = proof.LineState()
     return s
 
 
@@ -134,7 +135,7 @@ class TestR1VGapWiring:
         st, sess = _afford_frame(gold=60, target_copies=2)
         _decide(st, sess)
         # 必花域内 (iii) 核算否决降排序(20 号稿):刷新由可负担性硬闸承载
-        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) == 0
+        assert state_of(sess).cw4_counters.get('shop_r1_account_over_budget', 0) == 0
 
     def test_large_surplus_opens_r1_into_r2(self):
         """大溢余开闸(gold=80,预算 30)+ 浅缺口成员(1费 j=2,lv3 账
@@ -153,7 +154,7 @@ class TestR1VGapWiring:
         st, sess = _afford_frame(gold=61, target_copies=0)
         _decide(st, sess)
         # 必花域内 (iii) 核算否决降排序(20 号稿):刷新由可负担性硬闸承载
-        assert sess.cw4_counters.get('shop_r1_account_over_budget', 0) == 0
+        assert state_of(sess).cw4_counters.get('shop_r1_account_over_budget', 0) == 0
 
     def test_r2_budget_still_gates_low_gold(self):
         """防线分层:r2 预算门对低金帧独立拦截(金 < 预留 g*+rho + 刷价

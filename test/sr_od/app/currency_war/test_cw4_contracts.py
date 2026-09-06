@@ -7,6 +7,7 @@ proof 判据位 + 三先例非 criteria 消费位,漏登记=红);②三先例前
 本帧弃权零发射 + 计数;正常帧零违例计数=契约层零误伤锚)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import ast
 import inspect
@@ -63,9 +64,9 @@ def _members(comp) -> list[str]:
 
 def _session(comp=None) -> StrategySession:
     s = StrategySession()
-    s.cw4_counters = {}
-    s.target_comp = comp
-    s.cw4_line_state = proof.LineState()
+    state_of(s).cw4_counters = {}
+    state_of(s).target_comp = comp
+    state_of(s).cw4_line_state = proof.LineState()
     return s
 
 
@@ -125,14 +126,26 @@ class TestRegistryCompleteness:
                         missing.append((mod_name, attr_name))
         assert not missing, f'判据漏登记契约: {missing}'
 
+    #: 零调用面墓碑键(函数已物理删除、登记行保留枚举完备性;先例 =
+    #: criteria/__init__.py BYPASS_TABLE refresh.r1_start 墓碑注)。
+    #: 唯一在册成员 = equipment.affix_allocation:判据出处纠错批删除
+    #: (孤儿第二实现+死键,生产单一源 = cw_equip_env
+    #: .resolve_affix_priority_order),禁为保绿恢复死代码。
+    _TOMBSTONED_KEYS: frozenset[tuple[str, str]] = frozenset({
+        ('equipment', 'affix_allocation'),
+    })
+
     def test_contract_entries_reference_existing_functions(self):
-        """在册键(除三先例非 criteria 消费位)必须对应真实判据函数。"""
+        """在册键(除三先例非 criteria 消费位)必须对应真实判据函数;
+        零调用面墓碑键豁免(函数已删、登记行保留,docstring 记删除原因)。"""
         sources = dict(_FACE_MODULES)
         sources.update({'proof': proof, 'predicates': predicates})
         for (mod_name, fn_name) in contracts.CONTRACTS:
             mod = sources.get(mod_name)
             if mod is None:
                 continue        # mandate 邻接位(先例① dominance 消费位)
+            if (mod_name, fn_name) in self._TOMBSTONED_KEYS:
+                continue
             assert hasattr(mod, fn_name), \
                 f'契约键 ({mod_name}, {fn_name}) 无对应函数'
 
@@ -285,7 +298,7 @@ class TestWiringShop:
                 value=1.0, injected_form=True))
             _decide(st, sess)
             # 线外件是否入选属判据域不在此锁;锁的是契约层零违例
-            assert not [k for k in sess.cw4_counters
+            assert not [k for k in state_of(sess).cw4_counters
                         if k.startswith('criteria_contract_violation')]
             # 反向:同一店面,target_comp=None(目标线未成型)
             sess2 = _session(None)
@@ -294,7 +307,7 @@ class TestWiringShop:
                             sess2)
             assert not [a for a in acts2 if isinstance(a, BuyCard)
                         and a.reason == 'ev_buy']
-            assert sess2.cw4_counters.get(
+            assert state_of(sess2).cw4_counters.get(
                 'criteria_contract_violation:buy.ev_buy_candidates', 0) >= 1
         finally:
             provisional.reset('U_X')
@@ -309,11 +322,11 @@ class TestWiringShop:
         )
         st = _state(gold=30, bench=[_bc('注册表外散件Z', slot=1)])
         sess = _session(None)
-        sess.v3_intention = IntentionState()
+        state_of(sess).v3_intention = IntentionState()
         _decide(st, sess)
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'criteria_contract_violation:shop.k_projection', 0) == 0
-        assert sess.cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
+        assert state_of(sess).cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
         assert cw_intention.p1_gap_window(st)
 
     def test_arm1_wiring_positive_no_violation(self):
@@ -324,7 +337,7 @@ class TestWiringShop:
                               _bc(_members(comp)[2], slot=2)])
         sess = _session(comp)
         _decide(st, sess)
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'criteria_contract_violation:predicates.arm1_existence', 0) == 0
 
     def test_normal_wave_zero_contract_violations(self):
@@ -335,7 +348,7 @@ class TestWiringShop:
         sess = _session(comp)
         acts = _decide(st, sess)
         assert any(isinstance(a, BuyCard) for a in acts)
-        assert not [k for k in sess.cw4_counters
+        assert not [k for k in state_of(sess).cw4_counters
                     if k.startswith('criteria_contract_violation')]
 
     def test_skeleton_wave_zero_contract_violations(self):
@@ -369,7 +382,7 @@ class TestWiringShop:
                                                             'skeleton_only'})(),
                          registry=sim_decision_registry())
         assert isinstance(out, list)
-        assert not [k for k in sess.cw4_counters
+        assert not [k for k in state_of(sess).cw4_counters
                     if k.startswith('criteria_contract_violation')]
 
 
@@ -603,7 +616,7 @@ class TestMandateArm1Wiring:
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
         sess = _session(('爻光',))
         out = mandate.run_mandate(self._frame(DEPLOYED_CAPACITY), sess)
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'criteria_contract_violation:predicates.arm1_existence', 0) >= 1
         assert not any(type(e.action).__name__ == 'LevelUp' for e in out)
 
@@ -625,7 +638,7 @@ class TestMandateArm1Wiring:
             k_members=('爻光',), round_num=2)
         sess = _session(('爻光',))
         out = mandate.run_mandate(frame, sess, state=st)
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'criteria_contract_violation:predicates.arm1_existence', 0) == 0
         assert any(type(e.action).__name__ == 'LevelUp' for e in out)
 

@@ -8,6 +8,7 @@
 负向锁(物理残量白名单形态,§3.2):店空无垫件 ⇒ fuel_not_on_sale
 零消费;等级 cap ⇒ level_cap 零消费;域外帧零变化。
 """
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
@@ -40,6 +41,16 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 _COMP = '列车同行'
 
 
+def _ns_with_state(**state_fields) -> SimpleNamespace:
+    """桩 session:策略器字段经 state_of 载体设置(session 职责分离迁移后
+    生产唯一读面;对 SimpleNamespace 桩同样生效)。"""
+    s = SimpleNamespace()
+    st = state_of(s)
+    for k, v in state_fields.items():
+        setattr(st, k, v)
+    return s
+
+
 def _bc(name: str, star: int = 2, slot: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
 
@@ -60,7 +71,7 @@ def _zone_frame(gold: int, *, cards=None, level: int = 5,
     st.bench = []
     st.deployed = deployed
     st.refresh_probs = {5: 0}
-    sess = SimpleNamespace(
+    sess = _ns_with_state(
         cw4_counters={},
         target_comp=comp,
         v3_intention=SimpleNamespace(
@@ -77,12 +88,12 @@ class TestZonePredicate:
     def test_zone_predicate_bounds(self):
         """G_must = 10×cap_resolved:g 越线 True/等值 False;买断制
         (cap=0)出辖恒 False。"""
-        sess = SimpleNamespace(cw4_cap_override=None)
+        sess = _ns_with_state(cw4_cap_override=None)
         assert in_must_spend_zone(51, sess) is True
         assert in_must_spend_zone(50, sess) is False
-        buyout = SimpleNamespace(cw4_cap_override=0)
+        buyout = _ns_with_state(cw4_cap_override=0)
         assert in_must_spend_zone(999, buyout) is False
-        rich = SimpleNamespace(cw4_cap_override=10)
+        rich = _ns_with_state(cw4_cap_override=10)
         assert in_must_spend_zone(101, rich) is True
         assert in_must_spend_zone(100, rich) is False
 
@@ -101,8 +112,8 @@ class TestL2SecondTrigger:
             gold=80, cards=[ShopCard(x=100, name=pad, cost=1, star=1)])
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
-        assert sess.cw4_counters.get('must_spend_l2_trigger') == 1
-        assert 'fuel_filler_stall_buy' in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('must_spend_l2_trigger') == 1
+        assert 'fuel_filler_stall_buy' in state_of(sess).cw4_counters
 
     def test_outside_zone_no_l2(self):
         """负向对照:域外同形态(A 支不成立)⇒ 零发射(域外逐位零变化)。"""
@@ -110,13 +121,13 @@ class TestL2SecondTrigger:
         act = _decide(st, sess)
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'fuel_filler_stall')
-        assert 'must_spend_l2_trigger' not in sess.cw4_counters
+        assert 'must_spend_l2_trigger' not in state_of(sess).cw4_counters
 
     def test_whitelist_empty_shop_no_consume(self):
         """白名单①:店空无垫件 ⇒ fuel_not_on_sale 分键零消费(不炸)。"""
         st, sess = _zone_frame(gold=80, cards=[])
         act = _decide(st, sess)
-        assert sess.cw4_counters.get('fuel_not_on_sale') == 1
+        assert state_of(sess).cw4_counters.get('fuel_not_on_sale') == 1
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'fuel_filler_stall')
 
@@ -159,8 +170,8 @@ class TestL3MustSpend:
         st.shop = [ShopCard(x=100, name='燃料件X', cost=2, star=1)]
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'ev_buy'
-        assert sess.cw4_counters.get('must_spend_ev_deferred') == 1
-        assert 't3_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('must_spend_ev_deferred') == 1
+        assert 't3_buy' not in state_of(sess).cw4_counters
 
     def test_whitelist_empty_shop_cap_top_zero_consume(self):
         """白名单③④合形负锁(店空 ∧ cap 顶):三消费出口全关
@@ -170,8 +181,8 @@ class TestL3MustSpend:
                        for i, m in enumerate(line_members(get_comp(_COMP)))]
         act = _decide(st, sess)
         assert not isinstance(act, (BuyCard, RefreshShop, LevelUpShop))
-        assert sess.cw4_counters.get('level_cap') == 1
-        assert sess.cw4_counters.get('shop_r1_no_chaseable_member') == 1
+        assert state_of(sess).cw4_counters.get('level_cap') == 1
+        assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member') == 1
 
 
 class TestPrepL3Zone:
@@ -197,8 +208,8 @@ class TestPrepL3Zone:
         lv = [e for e in out if isinstance(e.action, LevelUp)]
         assert lv, '备战必花帧停付线让位:LevelUp 仍发射'
         assert lv[0].reason == 'm3_levelup_batch:must_spend'
-        assert sess.cw4_counters.get('must_spend_l3_prep_trigger') == 1
-        assert sess.cw4_counters.get('crisis_level_spend_defer') is None
+        assert state_of(sess).cw4_counters.get('must_spend_l3_prep_trigger') == 1
+        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer') is None
 
     def test_prep_zone_defer_overridden_keyed_on_arm1(self):
         """域内停付让位显影(与 shop 侧 must_spend_r1_account_yielded
@@ -227,9 +238,9 @@ class TestPrepL3Zone:
         lv = [e for e in out if isinstance(e.action, LevelUp)]
         assert lv, '域内停付让位:LevelUp 仍发射(停付被域裁压掉)'
         assert lv[0].reason == 'm3_levelup_batch:arm1'
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'must_spend_zone_defer_overridden') == 1
-        assert sess.cw4_counters.get('crisis_level_spend_defer') is None
+        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer') is None
 
     def test_prep_level_unreadable_fails_closed(self):
         """fail 向锁(资格硬闸,mandate getattr 链):等级不可信帧
@@ -251,9 +262,9 @@ class TestPrepL3Zone:
                                cw4_cap_override=None)
         out = mandate.run_mandate(frame, sess, state=st)
         assert not [e for e in out if isinstance(e.action, LevelUp)]
-        assert sess.cw4_counters.get('arm0_level_unreadable') == 1
-        assert 'must_spend_l3_prep_trigger' not in sess.cw4_counters
-        assert 'must_spend_zone_defer_overridden' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('arm0_level_unreadable') == 1
+        assert 'must_spend_l3_prep_trigger' not in state_of(sess).cw4_counters
+        assert 'must_spend_zone_defer_overridden' not in state_of(sess).cw4_counters
 
     def test_prep_outside_zone_arms_idle_zero_consume(self):
         """域外对照:同形态 gold=40(出域)且三臂空闲 ⇒ 域外零变化——
@@ -274,8 +285,8 @@ class TestPrepL3Zone:
                                cw4_cap_override=None)
         out = mandate.run_mandate(frame, sess, state=st)
         assert not [e for e in out if isinstance(e.action, LevelUp)]
-        assert sess.cw4_counters.get('crisis_level_spend_defer') is None
-        assert 'must_spend_l3_prep_trigger' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer') is None
+        assert 'must_spend_l3_prep_trigger' not in state_of(sess).cw4_counters
 
 
 class TestR1ZoneSplit:
@@ -298,17 +309,17 @@ class TestR1ZoneSplit:
         st.deployed = deployed
         st.refresh_probs = {}
         st.shop_refresh_cost = 2
-        sess = SimpleNamespace(cw4_counters={}, target_comp=get_comp(_COMP),
-                               v3_intention=SimpleNamespace(
-                                   locked_comp=_COMP))
+        sess = _ns_with_state(cw4_counters={}, target_comp=get_comp(_COMP),
+                              v3_intention=SimpleNamespace(
+                                  locked_comp=_COMP))
         act = _decide(st, sess)
         # ladder 显影:L2 垫件缺 + L3 等级 cap(vl9 族硬闸)均零消费
-        assert sess.cw4_counters.get('fuel_not_on_sale') == 1
-        assert sess.cw4_counters.get('level_cap') == 1
+        assert state_of(sess).cw4_counters.get('fuel_not_on_sale') == 1
+        assert state_of(sess).cw4_counters.get('level_cap') == 1
         # 应-A 零静默:切分线让位发生 ⇒ yielded 分键在案
-        assert sess.cw4_counters.get('must_spend_r1_account_yielded') == 1
+        assert state_of(sess).cw4_counters.get('must_spend_r1_account_yielded') == 1
         # 切分线生效:核算否决(g*/L 账)未拦 R1(域外同形帧会记该键)
-        assert 'shop_r1_account_over_budget' not in sess.cw4_counters
+        assert 'shop_r1_account_over_budget' not in state_of(sess).cw4_counters
         assert not isinstance(act, RefreshShop)   # 可负担性硬闸仍辖(金 51)
         assert isinstance(act, CloseShop)
 
@@ -330,7 +341,7 @@ class TestR1ZoneSplit:
         sess = SimpleNamespace(cw4_counters={}, target_comp=get_comp(_COMP))
         act = _decide(st, sess)
         assert not isinstance(act, RefreshShop)
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'shop_r1_no_chaseable_member') == 1
 
     def test_r1_budget_fail_liveness_key(self):
@@ -340,7 +351,7 @@ class TestR1ZoneSplit:
         st, sess = _zone_frame(gold=51, level=9, cards=[])
         act = _decide(st, sess)
         assert not isinstance(act, RefreshShop)
-        assert sess.cw4_counters.get('must_spend_r1_budget_fail') == 1
+        assert state_of(sess).cw4_counters.get('must_spend_r1_budget_fail') == 1
 
 
 # ===== 实机档案帧单帧锁核(未锁线入域帧出口消费语义核)=====
@@ -414,7 +425,7 @@ class TestArchiveFrameReplay:
                                v3_intention=None, cw4_cap_override=None)
         act = _decide(st, sess)
         assert not isinstance(act, (LevelUpShop, RefreshShop))
-        assert not [k for k in sess.cw4_counters
+        assert not [k for k in state_of(sess).cw4_counters
                     if k.startswith('must_spend')]
 
     def test_g19_r6_g46_offer_consumes_via_t1_not_zone(self):
@@ -452,7 +463,7 @@ class TestArchiveFrameReplay:
                                v3_intention=None, cw4_cap_override=None)
         act = _decide(st, sess)
         assert isinstance(act, SellBench)
-        assert not [k for k in sess.cw4_counters
+        assert not [k for k in state_of(sess).cw4_counters
                     if k.startswith('must_spend')]
 
     def test_g19_inzone_unlocked_frames_consume_via_l3(self):
@@ -476,7 +487,7 @@ class TestArchiveFrameReplay:
         act = _decide(st, sess)
         assert isinstance(act, LevelUpShop), (gold, act)
         assert act.auth_basis == 'm3_batch:must_spend'
-        assert 'must_spend_l2_trigger' not in sess.cw4_counters
+        assert 'must_spend_l2_trigger' not in state_of(sess).cw4_counters
         # r9 帧:预算闸整批推迟(域内拒因独立分键)
         st9 = _arc_state(gold=63, hp=25, level=6, plane=1,
                          round_num=9, node_type='reward',
@@ -485,7 +496,7 @@ class TestArchiveFrameReplay:
                                 v3_intention=None, cw4_cap_override=None)
         act9 = _decide(st9, sess9)
         assert not isinstance(act9, LevelUpShop), (act9,)
-        assert sess9.cw4_counters.get('budget_gate_must_spend_defer') == 1
+        assert state_of(sess9).cw4_counters.get('budget_gate_must_spend_defer') == 1
 
     def test_g20_p3r1_g50_locked_replays_archive_buy(self):
         """二十局 P3r1 g50 帧(ts 2026-09-06T01:38:38,希儿量子锁定,全
@@ -534,7 +545,7 @@ class TestArchiveFrameReplay:
                   ShopCard(x=1007, name='长夜月', cost=4, star=1),
                   ShopCard(x=1260, name='缇宝', cost=2, star=1),
                   ShopCard(x=1514, name='银枝', cost=2, star=1)])
-        sess = SimpleNamespace(
+        sess = _ns_with_state(
             cw4_counters={}, target_comp=get_comp('希儿量子'),
             v3_intention=SimpleNamespace(phase='locked',
                                          locked_comp='希儿量子'),
@@ -584,7 +595,7 @@ class TestArchiveFrameReplay:
             cw4_cap_override=None)
         out = mandate.run_mandate(frame, sess, state=st)
         assert not [e for e in out if isinstance(e.action, LevelUp)]
-        assert sess.cw4_counters.get('crisis_level_spend_defer') == 1
+        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer') == 1
         # ② 盲区腿(原「钉锁现状」语义已随拒因分键批退役,锁重推):
         # 停付让位桩空后,整买拦截不再静默——l3_reject_batch_unaffordable
         # 分键在案(拒因不可辨盲区的治疗锚;xp 18/72、lv8 ⇒ 14击×4=56>50)。
@@ -597,8 +608,8 @@ class TestArchiveFrameReplay:
             cw4_cap_override=None)
         out2 = mandate.run_mandate(frame, sess2, state=st)
         assert not [e for e in out2 if isinstance(e.action, LevelUp)]
-        assert sess2.cw4_counters.get('l3_reject_batch_unaffordable') == 1
-        assert not [k for k in sess2.cw4_counters
+        assert state_of(sess2).cw4_counters.get('l3_reject_batch_unaffordable') == 1
+        assert not [k for k in state_of(sess2).cw4_counters
                     if k.startswith('must_spend')]
 
     def test_g20_p3r1_derived_inzone_consumes_r1_yielded(self):
@@ -639,7 +650,7 @@ class TestArchiveFrameReplay:
                   ShopCard(x=754, name='星期日', cost=3, star=1),
                   ShopCard(x=1007, name='长夜月', cost=4, star=1),
                   ShopCard(x=1514, name='银枝', cost=2, star=1)])
-        sess = SimpleNamespace(
+        sess = _ns_with_state(
             cw4_counters={}, target_comp=get_comp('希儿量子'),
             v3_intention=SimpleNamespace(phase='locked',
                                          locked_comp='希儿量子'),
@@ -647,8 +658,8 @@ class TestArchiveFrameReplay:
         act = _decide(st, sess)
         assert isinstance(act, RefreshShop)
         assert act.reason == 'must_spend_r1_yielded'
-        assert sess.cw4_counters.get('must_spend_r1_account_yielded') == 1
-        assert sess.cw4_counters.get('must_spend_l2_trigger') == 1
-        assert sess.cw4_counters.get('fuel_filler_stall_fenced') == 4
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get('must_spend_r1_account_yielded') == 1
+        assert state_of(sess).cw4_counters.get('must_spend_l2_trigger') == 1
+        assert state_of(sess).cw4_counters.get('fuel_filler_stall_fenced') == 4
+        assert state_of(sess).cw4_counters.get(
             'fuel_filler_stall_fenced_l2_cap') == 2

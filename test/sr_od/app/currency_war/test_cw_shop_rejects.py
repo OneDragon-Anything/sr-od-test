@@ -13,6 +13,7 @@
 3. 线内缺口件未买的门序可辨:金不足/席满/异常态三分键。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
@@ -43,8 +44,8 @@ class _Cfg:
 
 def _session() -> StrategySession:
     s = StrategySession()
-    s.cw4_counters = {}
-    s.target_comp = _COMP
+    state_of(s).cw4_counters = {}
+    state_of(s).target_comp = _COMP
     return s
 
 
@@ -90,7 +91,7 @@ def test_line_member_on_sale_gold_ample_must_buy():
     assert len(buys) == 1
     assert buys[0].reason == 'm2_line_member'
     # 已买件不进拒因串(拒因串只收未买牌)
-    assert '火花' not in (sess.cw4_shop_rejects or {})
+    assert '火花' not in (state_of(sess).cw4_shop_rejects or {})
 
 
 def test_transition_char_rejected_with_reason_g20260904_replay():
@@ -109,7 +110,7 @@ def test_transition_char_rejected_with_reason_g20260904_replay():
     acts = _decide(st, sess)
     assert not [a for a in acts if isinstance(a, BuyCard)
                 and a.card.name == '花火']
-    rej = sess.cw4_shop_rejects or {}
+    rej = state_of(sess).cw4_shop_rejects or {}
     assert rej.get('花火') == 'transition_char'
     assert rej.get('银枝') == 'non_line'
 
@@ -119,7 +120,7 @@ def test_missing_unaffordable_reason():
     st = _state(2, [_card('火花', 4)], deployed=[_dep('绯英')])
     sess = _session()
     _decide(st, sess)
-    assert (sess.cw4_shop_rejects or {}).get('火花') == 'missing_unaffordable'
+    assert (state_of(sess).cw4_shop_rejects or {}).get('火花') == 'missing_unaffordable'
 
 
 def test_missing_bench_full_reason():
@@ -130,7 +131,7 @@ def test_missing_bench_full_reason():
                 deployed=[_dep('绯英')])
     sess = _session()
     _decide(st, sess)
-    assert (sess.cw4_shop_rejects or {}).get('火花') == 'missing_bench_full'
+    assert (state_of(sess).cw4_shop_rejects or {}).get('火花') == 'missing_bench_full'
 
 
 def test_owned_member_not_missing():
@@ -142,7 +143,7 @@ def test_owned_member_not_missing():
     acts = _decide(st, sess)
     assert any(isinstance(a, BuyCard) and a.reason == 'm2_stockpile'
                and a.card.name == '绯英' for a in acts)
-    assert (sess.cw4_shop_rejects or {}).get('绯英') is None
+    assert (state_of(sess).cw4_shop_rejects or {}).get('绯英') is None
 
 
 def test_pure_function_matches_session_output():

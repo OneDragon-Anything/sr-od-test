@@ -16,6 +16,7 @@
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 
 # ==================== match_archive ====================
@@ -1487,11 +1488,13 @@ def test_cw4_counters_zero_count_and_missing_distinct(
 def test_cw4_counters_from_match_extracts_session(
         replay: _match_archive_Path,
         monkeypatch: pytest.MonkeyPatch):
-    """match 载体提取:session.cw4_counters 全量落盘;无 session/无计数
+    """match 载体提取:state_of(session).cw4_counters 全量落盘;无 session/无计数
     → 空快照(default 栈形态,不炸)。"""
     from types import SimpleNamespace as _NS
     _freeze_archive_now(monkeypatch, '2026-08-30T10:31:30')
-    m = _NS(session=_NS(cw4_counters={'shop_drought_reset_on_buy': 2}))
+    # 策略器状态迁 MandateState:cw4_counters 经 state_of 附着(桩同效)
+    m = _NS(session=_NS())
+    state_of(m.session).cw4_counters = {'shop_drought_reset_on_buy': 2}
     got = arch.record_cw4_counters_from_match(replay, m)
     assert got == {'shop_drought_reset_on_buy': 2}
     # session 无 cw4_counters 属性 → 空快照
@@ -1522,9 +1525,10 @@ def test_cw_loop_counters_snapshot_wiring(
                         lambda: _StubRecorder(tmp_path))
     op = loop_mod.CwLoop.__new__(loop_mod.CwLoop)
 
-    # 有 match + 计数 → 落盘含键值
-    op.ctx = _NS(cw_match=_NS(session=_NS(
-        cw4_counters={'shop_churn_pair_buy': 1})))
+    # 有 match + 计数 → 落盘含键值(cw4_counters 经 state_of 附着,桩同效)
+    _sess = _NS()
+    state_of(_sess).cw4_counters = {'shop_churn_pair_buy': 1}
+    op.ctx = _NS(cw_match=_NS(session=_sess))
     op._record_cw4_counters_snapshot()
     rows = [json.loads(ln) for ln in
             (tmp_path / arch.COUNTERS_FILE).open(encoding='utf-8')]

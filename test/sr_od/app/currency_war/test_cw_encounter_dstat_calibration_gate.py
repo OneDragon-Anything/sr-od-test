@@ -16,6 +16,7 @@ dict[旗牌→stat] 标定域 = ∅——机制公式 stat=B+q+L+s(−m) 的自�
    复原纪律的状态机面)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import pytest
 
@@ -43,7 +44,7 @@ def _cell() -> lambda_death.LambdaCell:
 
 def _session() -> StrategySession:
     s = StrategySession()
-    s.cw4_counters = {}
+    state_of(s).cw4_counters = {}
     return s
 
 
@@ -76,9 +77,9 @@ class TestDstatCalibrationGate:
         assert pick.idx == _FEE_L.idx
         assert not pick.refresh
         assert 'dstat_map_none' in pick.reason
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'encounter_ev_fail_low_lambda_undecidable') == 1
-        assert 'encounter_ev_pick' not in sess.cw4_counters
+        assert 'encounter_ev_pick' not in state_of(sess).cw4_counters
 
     def test_dstat_partial_map_missing_key_fail_closed(self, dstat_slot,
                                                         monkeypatch):

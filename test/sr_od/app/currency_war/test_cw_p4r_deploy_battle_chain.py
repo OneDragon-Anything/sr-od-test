@@ -275,3 +275,146 @@ def test_cap_gate_arbitration_wired_in_deploy_deterministic() -> None:
     src = inspect.getsource(db.CwOpDeploy._deploy_deterministic)
     assert 'arbitrate_deployed_count(' in src
     assert '_note_deployed_count_divergence(' in src
+
+
+# ==================== ⑤ P24 残余补部署 fill 输入重采样(1-1 事故回归)====================
+# 事故:1-1 备战主循环排满 cap 后,P24 残余补部署把 kernel 明确留 bench 的
+# 留置件(拒因 'cap')反复往满员板面拖,游戏以人口上限不足拒收。根因 =
+# residual_fill_plan 收到的 deployed_count 是入口仲裁快照(_deployed=0)而
+# 非主循环后真值(_deployed+placed);连带面 = 主循环「源槽已变+落点未验出」
+# 的 insert 回收会把实际已落位槽记成空(幻影空槽)。修法 = 计数传
+# _deployed+placed + fill 段前 fresh 帧重采两排真空槽。
+# 测试纪律(方案审 ④):必须走调用侧 harness 直驱 _deploy_deterministic
+# (纯函数层对本 bug 恒绿=假覆盖);断言行为观测量(拖拽计数/拖拽目标);
+# 「真空槽」判据对有状态真值模型断言——对喂入 fe/be 列表断言旧代码也过
+# =假锁;覆盖主循环自然排尽与 cap-stop break 两条退出路径。
+
+class _BoardTruth:
+    """有状态占用真值模型:按槽位坐标记录占用;拖拽改真值、验证读真值。
+
+    模拟游戏侧真相:拖成 = 源槽清空 + 落点槽占用(与验证是否读出无关)——
+    「落点验证漏判 → 幻影空槽」只有靠真值与验证分离才构造得出来。"""
+
+    def __init__(self) -> None:
+        self.occ: dict[tuple[int, int], bool] = {}
+
+    def set(self, pts, occupied: bool) -> None:
+        for p in pts:
+            self.occ[(int(p.x), int(p.y))] = occupied
+
+    def is_occ(self, p) -> bool:
+        return self.occ.get((int(p.x), int(p.y)), False)
+
+
+def _make_fill_op(monkeypatch, *, paddle_x: int, cap: int, bench_n: int = 4,
+                  front_occ: int = 0, miss_drag_index: int | None = None):
+    """直驱 _deploy_deterministic 的真值模型桩 op(仿 _make_gate_op,
+    序列出票改为坐标键真值模型——幻影空槽回归需要「拖成后目标槽真翻
+    占用」的有状态语义)。
+
+    场景骨架:bench 9 槽前 bench_n 个有角色、前/后排全空(front_occ 个
+    前置占用可选);drag 桩真改真值(源空+落占)并记录拖拽序列
+    ``[(src, dst, dst_drag 前是否真空)]``(主循环拖拽在前、fill 在后)。
+    ``miss_drag_index`` = 第 N 次(0-based)拖拽「落点验证漏判」:真值已
+    落位但 _wait_slot_occupied 返 False(特效/时间窗漏判形态)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+
+    truth = _BoardTruth()
+    bench = [Point(100 + 30 * i, 900) for i in range(9)]
+    front = [Point(500 + 30 * i, 400) for i in range(4)]
+    back = [Point(500 + 30 * i, 650) for i in range(6)]
+    truth.set(bench[:bench_n], True)
+    truth.set(bench[bench_n:], False)
+    truth.set(front[:front_occ], True)
+    truth.set(front[front_occ:], False)
+    truth.set(back, False)
+
+    monkeypatch.setattr(db, 'slot_occupied',
+                        lambda scr, x, y: truth.occ.get((int(x), int(y)), False))
+    monkeypatch.setattr(db, 'read_deploy_cap_debounced',
+                        lambda ctx, scr, level: cap)
+    monkeypatch.setattr(db, 'read_deployed_count', lambda ctx, scr: paddle_x)
+    from sr_od.application.currency_war.obs import cw_back_layout
+    monkeypatch.setattr(cw_back_layout, 'select_back_layout',
+                        lambda ctx, scr, level=None, cap=None,
+                        level_trusted=None: (6, ''))
+    monkeypatch.setattr(db.time, 'sleep', lambda s: None)
+
+    drags: list = []      # [(src, dst, dst_drag 前是否真空)]
+    waits = {'n': 0}
+
+    def _fake_drag(op, src, dst):
+        drags.append((src, dst, not truth.is_occ(dst)))
+        truth.set([src], False)   # 源槽变(drag_char 内部验证语义)
+        truth.set([dst], True)    # 单位实际落位(游戏侧真值,与验证无关)
+        return True
+
+    monkeypatch.setattr(db.DragCwChar, 'drag_char', _fake_drag)
+    from sr_od.application.currency_war.telemetry import defects as _defects
+    monkeypatch.setattr(_defects, 'record_deployed_count_2src_divergence',
+                        lambda p, c, s: None)
+
+    class _Op(db.CwOpDeploy):
+        def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
+            pass
+        def screenshot(self):
+            return object()
+        def save_screenshot(self, prefix=None):
+            pass   # 失败存证桩化(零真实落盘)
+        def _wait_slot_occupied(self, pt, budget):
+            i = waits['n']
+            waits['n'] += 1
+            if i == miss_drag_index:
+                return False   # 验证漏判:真值已落位,验证窗未验出
+            return truth.is_occ(pt)
+
+    op = _Op()
+    op.ctx = SimpleNamespace(cw_match=None)
+    return op, truth, drags, bench, front, back
+
+
+def test_p24_fill_skipped_when_order_exhausted_at_cap(monkeypatch) -> None:
+    """事故形态·自然排尽路径(行为观测锁):board 空 + paddle=0 + cap=3 +
+    bench 4 人 → kernel cap 截断 3 上 1 留(拒因 'cap')→ 主循环拖 3 次
+    自然排尽 → fill 段零拖拽(整场总拖拽==3),留置件不得被拖出。
+    旧代码 fill 门按入口快照 0 恒开 → 总拖拽 4(往满员板白拖)。"""
+    op, truth, drags, bench, front, back = _make_fill_op(
+        monkeypatch, paddle_x=0, cap=3)
+    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    assert (placed, plan_empty) == (3, False)
+    assert len(drags) == 3, f'fill 阶段应零拖拽(整场 3),实得 {len(drags)}'
+    assert all(src is not bench[3] for src, _, _ in drags), \
+        'kernel 留置件(bench 第 4 槽)不得被往满员板拖出'
+
+
+def test_p24_fill_skipped_on_cap_stop_break(monkeypatch) -> None:
+    """事故形态·cap-stop break 路径(行为观测锁):板面已有 1 人(paddle=1
+    与 CV 一致)+ cap=3 + bench 4 人 → kernel cap 基(SIFT 集=0)与仲裁基
+    (=1)分歧 → order=3 但主循环拖 2 次后动态板满门 break → fill 段零
+    拖拽(总拖拽==2)。旧代码 fill 门按入口仲裁快照 1(1+0>=3)恒开 →
+    总拖拽 3。"""
+    op, truth, drags, bench, front, back = _make_fill_op(
+        monkeypatch, paddle_x=1, cap=3, front_occ=1)
+    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    assert (placed, plan_empty) == (2, False)
+    assert len(drags) == 2, f'cap-stop 后 fill 应零拖拽(整场 2),实得 {len(drags)}'
+
+
+def test_p24_fill_targets_truth_empty_slots_after_landing_miss(
+        monkeypatch) -> None:
+    """「真空槽」判据锁(幻影空槽治愈):主循环末件落点验证漏判(真值已
+    落位、验证 False → insert 回收成幻影空槽)后,fill 拖拽目标在拖拽
+    时刻必须是真值模型真空槽——对真值断言,不对喂入 fe/be 断言(旧代码
+    喂别名列表含幻影槽,fill 拖向已占槽=白烧)。cap=4 + bench 5 人:
+    主循环 3 验证落地 + 第 4 件真落位但漏判,fill 补第 5 件至真空槽。"""
+    op, truth, drags, bench, front, back = _make_fill_op(
+        monkeypatch, paddle_x=0, cap=4, bench_n=5, miss_drag_index=3)
+    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    assert (placed, plan_empty) == (4, False)
+    assert len(drags) == 5, f'主循环 4 + fill 1,实得 {len(drags)}'
+    (_, fill_dst, dst_was_truth_empty), = drags[4:]
+    assert dst_was_truth_empty, \
+        f'fill 拖拽目标必须是真值真空槽,实得 {fill_dst}(拖前已占用=幻影槽)'
+    assert fill_dst is not back[2], '漏判回收的幻影槽不得成为 fill 目标'

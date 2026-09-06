@@ -5,6 +5,7 @@
 消费位已收编):未落地 ⇒ 两侧都不动(不投影/不守卫/不入「已买」集);
 落地 ⇒ 投影 + guard_expected_vs_tracked。
 """
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -47,7 +48,8 @@ def _drive(monkeypatch, ok: bool):
         lambda st: calls.append(('project', st)) or ('proj', st))
     ledger = SimpleNamespace(refresh_first_action=True)
     match = SimpleNamespace(session=SimpleNamespace(
-        shop_state_frame=None, cw4_visit_bought_names=[]))
+        shop_state_frame=None))
+    state_of(match.session).cw4_visit_bought_names = []
     state = GameState(bench=[])
     visit_actions: list = []
     cw_op_buy_cards.apply_action_outcome(
@@ -62,7 +64,7 @@ class TestCallerOutcomeGate:
         (期望账不得投影未发生的买入,调用环级)。"""
         calls, visit, ledger, match = _drive(monkeypatch, ok=False)
         assert calls == []                       # project/guard 双不触
-        assert match.session.cw4_visit_bought_names == []   # 不入已买集
+        assert state_of(match.session).cw4_visit_bought_names == []   # 不入已买集
         assert [type(a).__name__ for a in visit] == ['BuyCard']
         assert ledger.refresh_first_action is True   # 未落地不置位
 
@@ -71,6 +73,6 @@ class TestCallerOutcomeGate:
         calls, visit, ledger, match = _drive(monkeypatch, ok=True)
         kinds = [k for k, _ in calls]
         assert kinds == ['project', 'guard']
-        assert match.session.cw4_visit_bought_names == ['杰帕德']
+        assert state_of(match.session).cw4_visit_bought_names == ['杰帕德']
         assert ledger.refresh_first_action is False
         assert len(visit) == 1

@@ -10,6 +10,7 @@
 冲突改名:后来者顶层名加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 
 # ==================== sim_checks_repay ====================
@@ -363,7 +364,7 @@ def _char(name: str, star: int = 1, row: str = 'back') -> BenchChar:
 def _sess(pair: tuple[str, ...]) -> StrategySession:
     """p1_pair 配方锁定帧的 session(v3_intention 挂体系对)。"""
     sess = StrategySession()
-    sess.v3_intention = IntentionState(p1_pair=pair)
+    state_of(sess).v3_intention = IntentionState(p1_pair=pair)
     return sess
 
 

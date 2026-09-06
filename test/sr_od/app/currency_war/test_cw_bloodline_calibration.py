@@ -8,6 +8,7 @@
 - λ 顾问:标定前置影子维持声明撤销——注入形态触发即真键武装,
   lambda_shadow 保留对照。
 """
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
@@ -79,8 +80,8 @@ class TestBloodlineCalibration:
             deploy_vacancy=0, state=st)
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
         entry.emit(obs, SimpleNamespace(), sess, None)
-        assert sess.cw4_counters.get('advisor_bloodline_armed') == 1
-        assert sess.cw4_counters.get('neardeath_unlock') == 1
+        assert state_of(sess).cw4_counters.get('advisor_bloodline_armed') == 1
+        assert state_of(sess).cw4_counters.get('neardeath_unlock') == 1
 
 
 class TestLambdaShadowRevoked:

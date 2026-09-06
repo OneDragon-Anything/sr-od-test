@@ -10,6 +10,7 @@
 - 谓词单帧:t5_p1_false 现算(不按帧集清单,ADR-0556 §2 约定)。
 不锁卡名(ADR-0556 §8):垫件名均取自注册表运行时解析。
 """
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 import pytest
@@ -35,6 +36,16 @@ _ROUNDS = 13          # 病灶窗 R_全局代表值(ADR-0556 §4;发射位经
 _G_OPEN = 47          # 开火锚:L(47,1,13,5)=0(实测;ADR-0556 §4)
 _G_BLOCK = 23         # 熄火锚:L(23,1,13,5)=1(实测;ADR-0556 §4)
 _COMP = '列车同行'
+
+
+def _ns_with_state(**state_fields) -> SimpleNamespace:
+    """桩 session:策略器字段经 state_of 载体设置(session 职责分离迁移后
+    生产唯一读面;对 SimpleNamespace 桩同样生效)。"""
+    s = SimpleNamespace()
+    st = state_of(s)
+    for k, v in state_fields.items():
+        setattr(st, k, v)
+    return s
 
 
 def _fuel_name(exclude: tuple[str, ...] = (), min_cost: int = 5) -> str:
@@ -80,7 +91,7 @@ def _frame(gold: int, *, fuel_pieces: int = 1, fuel_cost: int = 5,
     st.shop = list(cards) if cards is not None else []
     st.bench = bench
     st.deployed = list(deployed)
-    sess = SimpleNamespace(
+    sess = _ns_with_state(
         cw4_counters={},
         target_comp=(get_comp(_COMP) if target_comp else None),
         v3_intention=SimpleNamespace(
@@ -128,11 +139,11 @@ class TestT5Emission:
         act = _decide(st, sess)
         assert isinstance(act, BuyCard)
         assert act.reason == 't3_unlocked_hemostat'
-        assert sess.cw4_counters.get('t3_available') == 1
-        assert sess.cw4_counters.get('t3_buy') == 1
+        assert state_of(sess).cw4_counters.get('t3_available') == 1
+        assert state_of(sess).cw4_counters.get('t3_buy') == 1
         # N3 闭环登记(出口③同款单一载体;登记守卫移除 = 名集缺,
         # 下一条部署侧 held 显影锁随之红)
-        assert filler in getattr(sess, 'cw4_fuel_filler_stall_buys', set())
+        assert filler in state_of(sess).cw4_fuel_filler_stall_buys
 
     def test_held_postbuy_closed_loop(self):
         """部署侧 held 显影锁(阻-1 方案①:N3 登记 → 执行侧现读重建 →
@@ -148,7 +159,7 @@ class TestT5Emission:
         assert act.reason == 't3_unlocked_hemostat'
         n = record_fuel_filler_held_postbuy(sess, [(filler, 'scatter_fence')])
         assert n == 1
-        assert sess.cw4_counters.get(
+        assert state_of(sess).cw4_counters.get(
             'fuel_filler_stall_held_postbuy') == 1
 
     def test_p1_true_frame_blocked_visible(self):
@@ -156,8 +167,8 @@ class TestT5Emission:
         filler = _filler_name()
         st, sess = _frame(_G_BLOCK, cards=[_card(filler, cost=1)])
         act = _decide(st, sess)
-        assert sess.cw4_counters.get('t3_p1_true_blocked') == 1
-        assert 't3_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('t3_p1_true_blocked') == 1
+        assert 't3_buy' not in state_of(sess).cw4_counters
         assert not (isinstance(act, BuyCard)
                     and act.reason == 't3_unlocked_hemostat')
 
@@ -182,8 +193,8 @@ class TestT5RejectionKeys:
         pad = _fuel_name(min_cost=2, exclude=(_filler_name(),))
         st, sess = _frame(_G_OPEN, cards=[_card(pad, cost=2)])
         _decide(st, sess)
-        assert sess.cw4_counters.get('t3_no_candidate') == 1
-        assert 't3_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('t3_no_candidate') == 1
+        assert 't3_buy' not in state_of(sess).cw4_counters
 
     def test_bench_full_key(self):
         """bench 满 ⇒ t3_precheck_bench_full,零发射。
@@ -207,8 +218,8 @@ class TestT5RejectionKeys:
                           cards=[_card(filler, cost=1)],
                           target_comp=True)
         act = _decide(st, sess)
-        assert sess.cw4_counters.get('t3_precheck_bench_full') == 1
-        assert 't3_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('t3_precheck_bench_full') == 1
+        assert 't3_buy' not in state_of(sess).cw4_counters
         assert not (isinstance(act, BuyCard)
                     and act.reason == 't3_unlocked_hemostat')
 
@@ -228,9 +239,9 @@ class TestT5RejectionKeys:
                           cards=[_card(filler, cost=1)],
                           target_comp=True)
         act = _decide(st, sess)
-        assert sess.cw4_counters.get('t3_precheck_no_vacancy') == 1
-        assert sess.cw4_counters.get('t3_precheck_bench_full') is None
-        assert 't3_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('t3_precheck_no_vacancy') == 1
+        assert state_of(sess).cw4_counters.get('t3_precheck_bench_full') is None
+        assert 't3_buy' not in state_of(sess).cw4_counters
         assert not (isinstance(act, BuyCard)
                     and act.reason == 't3_unlocked_hemostat')
 
@@ -240,8 +251,8 @@ class TestT5RejectionKeys:
         filler = _filler_name()
         st, sess = _frame(46, fuel_pieces=0, cards=[_card(filler, cost=1)])
         act = _decide(st, sess)
-        assert sess.cw4_counters.get('t3_below_reserve') == 1
-        assert 't3_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('t3_below_reserve') == 1
+        assert 't3_buy' not in state_of(sess).cw4_counters
         assert not (isinstance(act, BuyCard)
                     and act.reason == 't3_unlocked_hemostat')
 
@@ -252,9 +263,9 @@ class TestT5RejectionKeys:
         filler = _filler_name()
         st, sess = _frame(_G_OPEN, cards=[_card(filler, cost=1)])
         act = _decide(st, sess)
-        assert sess.cw4_counters.get('t3_fenced') == 1
-        assert sess.cw4_counters.get('t3_fenced_scatter_fence') == 1
-        assert 't3_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('t3_fenced') == 1
+        assert state_of(sess).cw4_counters.get('t3_fenced_scatter_fence') == 1
+        assert 't3_buy' not in state_of(sess).cw4_counters
         assert not (isinstance(act, BuyCard)
                     and act.reason == 't3_unlocked_hemostat')
 
@@ -266,8 +277,8 @@ class TestT5RejectionKeys:
         filler = _filler_name()
         st, sess = _frame(_G_OPEN, cards=[_card(filler, cost=1)])
         act = _decide(st, sess)
-        assert sess.cw4_counters.get('t3_precheck_unavailable') == 1
-        assert 't3_buy' not in sess.cw4_counters
+        assert state_of(sess).cw4_counters.get('t3_precheck_unavailable') == 1
+        assert 't3_buy' not in state_of(sess).cw4_counters
         assert not (isinstance(act, BuyCard)
                     and act.reason == 't3_unlocked_hemostat')
 
@@ -280,6 +291,6 @@ class TestT5OutOfScope:
         st, sess = _frame(_G_OPEN, cards=[_card(filler, cost=1)],
                           locked=True)
         act = _decide(st, sess)
-        assert not any(k.startswith('t3_') for k in sess.cw4_counters)
+        assert not any(k.startswith('t3_') for k in state_of(sess).cw4_counters)
         assert not (isinstance(act, BuyCard)
                     and act.reason == 't3_unlocked_hemostat')

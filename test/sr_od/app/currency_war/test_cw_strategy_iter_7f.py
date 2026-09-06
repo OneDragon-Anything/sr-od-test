@@ -12,6 +12,7 @@
 经验),不锁具体发牌。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -126,9 +127,9 @@ def _members(comp) -> list[str]:
 def _shop_session(comp) -> StrategySession:
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
     s = StrategySession()
-    s.cw4_counters = {}
-    s.target_comp = comp
-    s.cw4_line_state = proof.LineState()
+    state_of(s).cw4_counters = {}
+    state_of(s).target_comp = comp
+    state_of(s).cw4_line_state = proof.LineState()
     return s
 
 
@@ -212,7 +213,7 @@ class TestMergeCompletionBuy:
                          bench=bench, deployed=deployed)
         sess = _shop_session(comp)
         acts = _decide_shop(st, sess)
-        assert 'merge_bench_full' not in sess.cw4_counters, \
+        assert 'merge_bench_full' not in state_of(sess).cw4_counters, \
             '满栏例外后该键不再产生(§3.6)'
         merge_buys = [a for a in acts
                       if isinstance(a, BuyCard)
@@ -239,7 +240,7 @@ def _m3_state(plane: int, hp: int) -> GameState:
 
 def _run_mandate(plane: int, hp: int):
     sess = StrategySession()
-    sess.cw4_counters = {}
+    state_of(sess).cw4_counters = {}
     st = _m3_state(plane, hp)
     frame = mandate.MandateFrame(
         gold=st.gold, level=st.level, bench=list(st.bench),
@@ -260,13 +261,13 @@ class TestCrisisLevelSpendBlocked:
         assert not [e for e in out
                     if isinstance(e.action, LevelUp)], \
             '危机带内不得发射整批经验(让位保命转化面)'
-        assert sess.cw4_counters.get('crisis_level_spend_defer', 0) >= 1
+        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer', 0) >= 1
 
     def test_zero_drift_outside_crisis_band(self) -> None:
         """带外(hp=100)零漂移:M3 照常发射(本批只挂危机带)。"""
         out, sess = _run_mandate(2, 100)
         assert any(isinstance(e.action, LevelUp) for e in out)
-        assert sess.cw4_counters.get('crisis_level_spend_defer', 0) == 0
+        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer', 0) == 0
 
     def test_reconcile_declares_crisis_yield(self, monkeypatch) -> None:
         """授权面(spend_mode='level')在危机带被挂起 ⇒ 对账按
@@ -285,10 +286,10 @@ class TestCrisisLevelSpendBlocked:
             deployed_chars=tuple(d for d in st.deployed if d is not None),
             deploy_vacancy=0, state=st)
         sess = StrategySession()
-        sess.cw4_counters = {}
-        sess.v3_intention = IntentionState()
+        state_of(sess).cw4_counters = {}
+        state_of(sess).v3_intention = IntentionState()
         out = entry.emit(obs, SimpleNamespace(), sess, None)
-        un = sess.v3_posture_unfulfilled
+        un = state_of(sess).v3_posture_unfulfilled
         assert un is not None and un['reason'] == 'crisis_level_spend_blocked'
         assert un['action'] == 'crisis_yield'
         assert not any(isinstance(e.action, LevelUp) for e in out)

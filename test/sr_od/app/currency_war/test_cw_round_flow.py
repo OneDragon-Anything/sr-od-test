@@ -13,6 +13,7 @@
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 
 # ==================== r279_exit_op ====================
@@ -468,11 +469,12 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
                 run_start_ts=time.monotonic() - 9999.0,   # 超宽限:正常行
                 is_new_match=True)
             self._unknown_streak = 0
+            # 策略器状态迁 MandateState:target_comp 经 state_of 附着(桩同效)
+            _sess = SimpleNamespace(last_state=GameState(), last_hp=None)
+            state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
-                    session=SimpleNamespace(target_comp=None,
-                                            last_state=GameState(),
-                                            last_hp=None),
+                    session=_sess,
                     strategy=SimpleNamespace(on_round_end=lambda *a, **k: None),
                 ),
                 ocr_service=SimpleNamespace(
@@ -605,12 +607,12 @@ def test_commit_boundary_plane_gate_only() -> None:
 
     # P1 无意向供给:保守 False;信号分再高也不定型(门已退役)
     s = StrategySession()
-    s.commit_signals = CommitSignals()
-    s.commit_signals.scores = {'万敌燃血': 99.0}
+    state_of(s).commit_signals = CommitSignals()
+    state_of(s).commit_signals.scores = {'万敌燃血': 99.0}
     assert not cw_intention.committed_authority(_st(1), s)
     # P1 意向锁:True
     s2 = StrategySession()
-    s2.v3_intention = cw_intention.IntentionState(
+    state_of(s2).v3_intention = cw_intention.IntentionState(
         phase='locked', locked_comp='万敌燃血')
     assert cw_intention.committed_authority(_st(1), s2)
     # P2+:恒 True

@@ -11,6 +11,7 @@
 冲突改名:后来者顶层名加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 
 # ==================== w306_supply_telemetry ====================
 import time
@@ -18,6 +19,9 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 from sr_od.application.currency_war.telemetry import recorder, state
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 from sr_od.application.currency_war.telemetry.query import read_jsonl
@@ -127,11 +131,11 @@ def _make_loop(monkeypatch, last_state: GameState, *, pick=None):
 
     class _Loop(bl.CwLoop):
         def __init__(self):  # noqa: D107  桩
+            # 策略器状态迁 MandateState:target_comp 等经 state_of 附着(桩同效)
+            _sess = SimpleNamespace(last_state=last_state)
+            state_of(_sess)
             self.ctx = SimpleNamespace(
-                cw_match=SimpleNamespace(
-                    session=SimpleNamespace(
-                        target_comp=None, last_state=last_state),
-                ),
+                cw_match=SimpleNamespace(session=_sess),
             )
 
     return _Loop(), captured
@@ -256,7 +260,7 @@ def test_detour_records_non_buy_snapshot(monkeypatch) -> None:
     assert row['target_comp'] == ''             # 无 target=非购买轮决策
     assert ('货币战争-补给', '按钮-返回备战界面') in op._click_log
     assert ('货币战争-备战', '按钮-返回补给阶段') in op._click_log
-    assert match.session._supply_detour_done is True
+    assert exec_state_of(match.session)._supply_detour_done is True
 
 
 def test_detour_once_per_node(monkeypatch) -> None:
@@ -708,11 +712,13 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
                 is_new_match=True,
                 battle_ts=object())   # 哨兵值:断言 telemetry-only 不清它
             self._unknown_streak = 0
+            # 策略器状态迁 MandateState:target_comp 经 state_of 附着(桩同效)
+            _sess = SimpleNamespace(last_state=GameState(),
+                                    last_hp=None, last_hp_t=None)
+            state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
-                    session=SimpleNamespace(target_comp=None,
-                                            last_state=GameState(),
-                                            last_hp=None, last_hp_t=None),
+                    session=_sess,
                     strategy=SimpleNamespace(
                         on_round_end=lambda *a, **k: on_round_end_calls.append(1)),
                 ),
@@ -945,11 +951,12 @@ def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapse
                 is_new_match=new_match,
                 first_settlement_seen=first_seen)
             self._unknown_streak = 0
+            # 策略器状态迁 MandateState:target_comp 经 state_of 附着(桩同效)
+            _sess = SimpleNamespace(last_state=GameState(), last_hp=None)
+            state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
-                    session=SimpleNamespace(target_comp=None,
-                                            last_state=GameState(),
-                                            last_hp=None),
+                    session=_sess,
                     strategy=SimpleNamespace(on_round_end=lambda *a, **k: None),
                 ),
                 ocr_service=SimpleNamespace(
@@ -1041,13 +1048,12 @@ def test_supply_outcome_synthesized(monkeypatch) -> None:
     class _Loop(bl.CwLoop):
         def __init__(self):  # noqa: D107  桩
             _tgt = SimpleNamespace(name='仙舟3')
+            _sess = SimpleNamespace(
+                last_state=GameState(hp=77, hp_readable=True,
+                                     plane=1, round_num=5))
+            state_of(_sess).target_comp = _tgt
             self.ctx = SimpleNamespace(
-                cw_match=SimpleNamespace(
-                    session=SimpleNamespace(
-                        target_comp=_tgt,
-                        last_state=GameState(hp=77, hp_readable=True,
-                                             plane=1, round_num=5)),
-                ),
+                cw_match=SimpleNamespace(session=_sess),
             )
 
     op = _Loop()
@@ -1075,13 +1081,12 @@ def test_supply_outcome_hp_unreadable_low_confidence(monkeypatch) -> None:
 
     class _Loop(bl.CwLoop):
         def __init__(self):  # noqa: D107  桩
+            _sess = SimpleNamespace(
+                last_state=GameState(hp=100, hp_readable=False,
+                                     plane=2, round_num=5))
+            state_of(_sess)
             self.ctx = SimpleNamespace(
-                cw_match=SimpleNamespace(
-                    session=SimpleNamespace(
-                        target_comp=None,
-                        last_state=GameState(hp=100, hp_readable=False,
-                                             plane=2, round_num=5)),
-                ),
+                cw_match=SimpleNamespace(session=_sess),
             )
 
     op = _Loop()

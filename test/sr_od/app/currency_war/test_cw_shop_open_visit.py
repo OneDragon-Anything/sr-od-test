@@ -19,6 +19,8 @@ test_cw_shop_open_branch.py;run_buy_waves 循环内部语义(刷新终结/帧帽
 test_cw_shop_refresh._make_op 同款,不跨文件 import 测试私有夹具。
 """
 from __future__ import annotations
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import pathlib
 from typing import Any
@@ -187,7 +189,7 @@ def test_visit_open_shop_buys_then_closes(
         f'CloseShop 收尾应编排恰一次关店:close_calls={close_calls}')
     assert len(clicks) >= 1, '买入点击未发生(策略器提案未落地)'
     sess = test_context.cw_match.session
-    bought = [c.char_id for c in sess.tracked_bench_chars if c is not None]
+    bought = [c.char_id for c in exec_state_of(sess).tracked_bench_chars if c is not None]
     assert '希儿' in bought, (
         f'买入未入 tracked 账(落地门/记账面破缺):{bought}')
 
@@ -205,7 +207,10 @@ def test_visit_open_shop_no_buyable_closes_directly(
     assert len(close_calls) == 1, (
         f'CloseShop 应直接收尾(恰一次关店):{close_calls}')
     assert clicks == [], '零买入面不得有点击(决策循环直落终结)'
-    assert not [c for c in test_context.cw_match.session.tracked_bench_chars
+    # tracked 账迁 ExecState(session 职责分离批):经 exec_state_of 抽读
+    from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+    assert not [c for c in exec_state_of(
+                    test_context.cw_match.session).tracked_bench_chars
                 if c is not None], '零买入面 tracked 账不得有进账'
 
 

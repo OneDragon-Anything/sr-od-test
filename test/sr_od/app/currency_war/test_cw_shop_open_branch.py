@@ -18,6 +18,7 @@ cw_loop._shop_open_anchors_hit 三 id_mark(idmark 审计批定稿,互斥依据 =
 编排与策略器决策路径锁单一源 = test_cw_shop_open_visit.py,两文件
 不重复锁同一语义。
 """
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 import inspect
 
 import pytest
@@ -182,10 +183,10 @@ def _drive_loop_shop_open(monkeypatch, *, shop_hit: bool):
     op = _Loop()
     op._screen = object()
     sess = type('S', (), {})()
-    sess.target_comp = None
+    state_of(sess).target_comp = None
     sess.last_state = None
     sess.last_prep_action_sig = None
-    sess.cw4_counters = {}
+    state_of(sess).cw4_counters = {}
     match = type('M', (), {})()
     match.session = sess
     ctx = type('C', (), {})()
@@ -195,7 +196,7 @@ def _drive_loop_shop_open(monkeypatch, *, shop_hit: bool):
     ctx.ocr_service.get_ocr_result_list = lambda **kw: []
     op.ctx = ctx
     op.loop()
-    return clicks, sess.cw4_counters, visits
+    return clicks, state_of(sess).cw4_counters, visits
 
 
 def test_loop_shop_open_delegates_to_shop_visit(monkeypatch) -> None:

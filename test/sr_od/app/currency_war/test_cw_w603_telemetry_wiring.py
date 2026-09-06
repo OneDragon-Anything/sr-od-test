@@ -8,6 +8,7 @@ from pathlib import Path as _w603_telemetry_wiring_Path
 from types import SimpleNamespace as _w603_telemetry_wiring_SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_observe
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState as _w603_telemetry_wiring_GameState,
 )
@@ -17,6 +18,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.sim import ledger_hooks
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     StrategySession as _w603_telemetry_wiring_StrategySession,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.telemetry import query
 from sr_od.application.currency_war.telemetry import (
@@ -64,9 +68,9 @@ def _fake_match(counters: tuple[int, int] = (2, 1),
                 ledger: object | None = None):
     """fake ctx.cw_match 容器(session 带披露键;record_outcome 板深快照同款槽)。"""
     sess = _w603_telemetry_wiring_StrategySession()
-    sess.v3_blood_budget_rejects = counters[0]
-    sess.v3_blood_budget_refresh_rejects = counters[1]
-    sess.xp_expect_ledger = ledger
+    state_of(sess).v3_blood_budget_rejects = counters[0]
+    state_of(sess).v3_blood_budget_refresh_rejects = counters[1]
+    exec_state_of(sess).xp_expect_ledger = ledger
     return _w603_telemetry_wiring_SimpleNamespace(session=sess)
 
 
@@ -117,13 +121,48 @@ def test_decision_row_downgrade_inactive_and_no_match(tmp_path: _w603_telemetry_
 
 
 def test_session_field_xp_expect_ledger_declared() -> None:
-    """锁①c:xp_expect_ledger 为 StrategySession 正式字段(动态属性升声明,
-    pending_buy_expect 同判例;cw_screen_prep _xp_ledger 的 getattr 读写不变)。"""
+    """锁①c:xp_expect_ledger 为 ExecState 正式字段(session 职责分离批:
+    执行层期望账迁 kernel/cw_exec_state.py,读端 getattr 读写不变)。"""
     import dataclasses
-    names = {f.name for f in dataclasses.fields(_w603_telemetry_wiring_StrategySession)}
+
+    from sr_od.application.currency_war.kernel.cw_exec_state import ExecState
+    names = {f.name for f in dataclasses.fields(ExecState)}
     assert 'xp_expect_ledger' in names
     sess = _w603_telemetry_wiring_StrategySession()
-    assert sess.xp_expect_ledger is None   # 新建 session 缺省未锚定
+    assert exec_state_of(sess).xp_expect_ledger is None   # 新建 session 缺省未锚定
+
+
+def test_w611_reserve_release_carry_via_recorder(tmp_path: _w603_telemetry_wiring_Path,
+                                                 monkeypatch) -> None:
+    """锁①d:w611 储备/义务披露四字段经 recorder 生产链路透传(阻断-1 锁)。
+
+    写端 = MandateState.v3_reserve_cap / v3_reserve_overflow /
+    v3_release_budget / v3_release_spent;recorder._w611_int 若退回读
+    session 动态属性(职责分离迁移前形态)= 四字段恒 None 静默断流
+    (session.md §7.2-2 点名风险形态)——本锁走真实 record_decision 落盘
+    行验证读口在位(生产供给字段的锁必经生产链路)。"""
+    _setup_recorder(monkeypatch, tmp_path)
+    sess = _w603_telemetry_wiring_StrategySession()
+    _ms = state_of(sess)
+    _ms.v3_reserve_cap = 33
+    _ms.v3_reserve_overflow = 4
+    _ms.v3_release_budget = 21
+    _ms.v3_release_spent = 12
+    monkeypatch.setattr(_w603_telemetry_wiring_cw_telemetry, '_CTX_MATCH_REF',
+                        [_fake_match_with(sess)])
+    st = _w603_telemetry_wiring_GameState(gold=30, hp=50, round_num=6, plane=1)
+    _w603_telemetry_wiring_state.get_recorder().record_decision(
+        'w603w611', 'A8', st, '', {}, {}, [])
+    r = _rows(tmp_path, 'decisions.jsonl')[0]
+    assert r['sess_reserve_cap'] == 33
+    assert r['sess_reserve_overflow'] == 4
+    assert r['sess_release_budget'] == 21
+    assert r['sess_release_spent'] == 12
+
+
+def _fake_match_with(sess) -> _w603_telemetry_wiring_SimpleNamespace:
+    """带既构 session 的 fake ctx.cw_match 容器(锁①d 专用装配)。"""
+    return _w603_telemetry_wiring_SimpleNamespace(session=sess)
 
 
 # ===== ② obs_conflicts 补 run_id =====

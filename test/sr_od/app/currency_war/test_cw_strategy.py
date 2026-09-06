@@ -2,6 +2,7 @@
 
 2026-09-03 拆分归档批:自混合文件 test_cw_strategy_planner.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
 from __future__ import annotations
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import random
 import tempfile
@@ -155,7 +156,7 @@ def test_create_session() -> None:
     strat = MandateV1Strategy()
     session = strat.create_session(_cfg())
     assert isinstance(session, StrategySession)
-    assert session.target_comp is None
+    assert state_of(session).target_comp is None
     assert isinstance(session.rng, random.Random)
     assert session.performance is not None
 
@@ -257,7 +258,7 @@ def test_decide_megastar_enhance_intent_deleted() -> None:
     strat = MandateV1Strategy()
     cfg = _cfg()
     session = strat.create_session(cfg)
-    session.target_comp = _comp_by_name('反甲白厄')
+    state_of(session).target_comp = _comp_by_name('反甲白厄')
     options = [MegastarOption(idx=0, char_id='星期日'), MegastarOption(idx=1, char_id='花火')]
     pick = strat.decide_megastar(options, _state_with_units(), session, cfg)
     assert pick.idx == 0
@@ -273,7 +274,7 @@ def test_decide_megastar_enhance_intent_deleted() -> None:
 def _feed_round_end(strat, sess, *, round_num: int, node_type: str,
                     hp_after: int):
     from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-    sess.v3_prev_hp = 85   # 上轮结算 hp(真值链口径)
+    state_of(sess).v3_prev_hp = 85   # 上轮结算 hp(真值链口径)
     obs = RoundOutcome(round_num=round_num, plane=1, node_type=node_type,
                        comp_tag='x', hp_after=hp_after, hp_confidence=1.0)
     strat.on_round_end(GameState(), sess, _cfg(), obs)
@@ -295,7 +296,7 @@ def test_on_round_end_node_type_fallback_recovers_loss_window(monkeypatch) -> No
     ledger.seq_by_plane = {1: ['battle', 'supply', 'battle', 'reward', 'boss',
                               'encounter', 'battle', 'reward', 'boss']}
     _feed_round_end(strat, sess, round_num=3, node_type='', hp_after=70)
-    tracker = sess.v3_alarm
+    tracker = state_of(sess).v3_alarm
     losses = [loss for _t, loss in tracker.recent_losses]
     assert losses == [15], f'掉血应恢复入窗,实得 {tracker.recent_losses}'
     assert tracker.consec_battle_fails == 1   # ≥10 = 结构性败局计数亦恢复
@@ -316,7 +317,7 @@ def test_on_round_end_node_type_fallback_miss_keeps_empty(monkeypatch) -> None:
     strat = MandateV1Strategy()
     sess = strat.create_session(_cfg())   # 无台账
     _feed_round_end(strat, sess, round_num=3, node_type='', hp_after=70)
-    assert list(sess.v3_alarm.recent_losses) == []   # 未命中=照旧不入窗
+    assert list(state_of(sess).v3_alarm.recent_losses) == []   # 未命中=照旧不入窗
     assert len(defects) == 1
     assert defects[0]['auto_resolved'] is False
     assert '空串' in defects[0]['observed']
@@ -333,7 +334,7 @@ def test_on_round_end_supply_token_stays_non_battle(monkeypatch) -> None:
     ledger.seq_by_plane = {1: ['battle', 'supply', 'battle', 'reward', 'boss',
                               'encounter', 'battle', 'reward', 'boss']}
     _feed_round_end(strat, sess, round_num=2, node_type='', hp_after=85)
-    tracker = sess.v3_alarm
+    tracker = state_of(sess).v3_alarm
     assert list(tracker.recent_losses) == []   # 补给轮不入窗(语义不变)
     assert tracker.consec_battle_fails == 0
 
