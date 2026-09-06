@@ -283,7 +283,11 @@ class TestShortCircuitBehaviorLock:
         seen = False
         overflow_seen = False
         for seed in range(6):
-            for row in _launch_rows(_seeded_result(seed)):
+            launch_rows = _launch_rows(_seeded_result(seed))
+            # 每采样 seed 逐局非空前置(落地审 F7):空账本 = 循环体不执行
+            # = 锁空洞绿,防「质量闸把发射帧推迟到视野外」的假绿形态。
+            assert launch_rows, f'seed {seed} 零发射事件(采样缺陷,需换 seed)'
+            for row in launch_rows:
                 seen = True
                 _assert_launch_row_legal(row)
                 if row['launch']['arbitrage']['zone'] == 'overflow':

@@ -11,7 +11,6 @@
   合格集空(成员全 2★)关门 + ``shop_r1_no_chaseable_member`` 分键。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -30,6 +29,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     refresh as crit_refresh,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 
 # ===== 测试基建(承旧 vgap 文件同款桩)=====
@@ -179,30 +181,40 @@ class TestR1AffordabilityGate:
 
 
 class TestMixedPeakCompletionAccount:
-    """混合毒化锁(ADR-0516 完成账语义;用户裁定 2026-09-04「对整个
-    目标阵容……是不是合适的」)。
+    """完成账整套求和口径锁(用户裁定 2026-09-04「对整个目标阵容……
+    是不是合适的」;装配承载修正 = ADR-0571)。
 
-    合格集含 2费(花火)+5费(流萤)成员:等级服务**整套缺件集**补齐
-    ——lv6 段 5费不出(REFRESH_PROB lv6 无 5费档)⇒ 任一成员不可追 ⇒
-    E(D|6)=∞ ⇒ T_stay 该级不可行 ⇒ R1 拒 'no_chaseable_member';lv7
-    段 5费可追(0.01)⇒ 账有限。旧「逐成员取 min」账在此帧仍开门
-    (2费成员 lv6 可追),锁钉住该差异。口径 = ``_r1_ledger_terms``
-    装配侧直接复现(j=0、c_taken=0),不经过整帧决策。
+    合格集含 2费(花火)+5费(流萤):lv6 段 5费不出(REFRESH_PROB
+    lv6 无 5费档)⇒ 流萤剔出本级合格集、账 = 花火单成员贡献(有限);
+    lv7 段 5费可追(0.01)⇒ 两成员同入合格集、账为整套求和(与「逐
+    成员取 min」账的差异锚 = 双成员卡费逐位)。旧锁钉「任一成员不可追
+    ⇒ E=∞ ⇒ R1 拒 no_chaseable_member」——那是 inf 污染缺陷的病理
+    形态(部分不可追被错判全空,刷新臂 3-6 级结构性恒关,
+    g_20260907_021326 实证 9 评估帧 0 刷店),ADR-0571 勘误;完成账的
+    「整套补齐」读法本身保留,修正的只是装配承载。口径 =
+    ``_r1_ledger_terms`` 装配侧直接复现(j=0、c_taken=0),不经过整帧
+    决策。
     """
 
     @staticmethod
     def _terms(level: int) -> tuple[float, int]:
         return shop_mod._r1_ledger_terms(('花火', '流萤'), [], [], level)
 
-    def test_lv6_mixed_set_inf_r1_rejects(self):
-        """lv6:5费不可追 ⇒ E=∞ ⇒ R1 拒(完成账 fail-closed)。"""
+    def test_lv6_mixed_set_filters_unchaseable(self):
+        """lv6:5费(流萤)不可追 ⇒ 剔出本级合格集(禁打 inf):账 =
+        花火单成员贡献,有限且卡费为正——「部分不可追 ≠ 合格集空」;
+        小预算帧 R1 拒因归真(account_over_budget,预算比较承载
+        fail-closed),非「合格集空」伪拒因。"""
         e_sum, fees = self._terms(6)
-        assert e_sum == float('inf')
-        ok, key = crit_refresh.r1_commitment_account(e_sum + fees, 70)
-        assert not ok and key == 'no_chaseable_member'
+        assert 0.0 < e_sum < float('inf')
+        assert fees == (3 - 0) * 2   # 仅花火入集合:(k−j)×cost,k=3,j=0
+        ok, key = crit_refresh.r1_commitment_account(e_sum + fees, 10)
+        assert not ok and key == 'account_over_budget'
 
     def test_lv7_account_finite(self):
-        """lv7:5费可追 ⇒ E 有限且为正(账可求值,门回到预算比较)。"""
+        """lv7:5费可追 ⇒ 双成员同入合格集,整套求和账有限且为正;
+        Σ卡费 = 花火 3×2 + 流萤 3×5(两成员都贡献 = 非 min 账的
+        结构锚,k=3/j=0 为 fixture 结构常数,cost 为注册表真值)。"""
         e_sum, fees = self._terms(7)
         assert 0.0 < e_sum < float('inf')
-        assert fees > 0
+        assert fees == 3 * 2 + 3 * 5

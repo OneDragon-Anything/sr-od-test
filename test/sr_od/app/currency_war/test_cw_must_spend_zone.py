@@ -8,7 +8,6 @@
 负向锁(物理残量白名单形态,§3.2):店空无垫件 ⇒ fuel_not_on_sale
 零消费;等级 cap ⇒ level_cap 零消费;域外帧零变化。
 """
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
@@ -33,6 +32,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     levelup as _crit_levelup,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
@@ -136,8 +138,18 @@ class TestL3MustSpend:
 
     def test_zone_l3_consumes_when_arms_idle(self):
         """L3:必花域 ∧ M3 三臂空闲 ⇒ LevelUpShop(触发源分键
-        auth_basis='m3_batch:must_spend')。"""
-        st, sess = _zone_frame(gold=80, cards=[])
+        auth_basis='m3_batch:must_spend')。
+
+        锁语义重推(ADR-0571):帧改未锁线(locked=False,本文件
+        test_ev_deferred_consume_keyed 同款先例)——锁线帧的 R1 买入
+        义务集 = 锁定采购集(阵营∪流派 15 名,多数 lv5 可追),根修后
+        合格集非空 ⇒ 域内 yield + r2_budget 过 ⇒ R1 刷新(终结动作,
+        选择序先于分层序末位的 L3)先行消费,L3 按设计让位;旧帧绿
+        恰依赖 inf 污染把 R1 错判全空。未锁帧 buy_members = 核心 4 名,
+        瓦尔特(5费,lv6 无档)剔除后合格集真空 ⇒ R1 以
+        no_chaseable_member 拒 → 链达 L3 ⇒ 升级消费(L1 R1 未命中时
+        L3 消费的载体位语义,11_shop_decisions §3 决策规则)。"""
+        st, sess = _zone_frame(gold=80, cards=[], locked=False)
         act = _decide(st, sess)
         assert isinstance(act, LevelUpShop)
         assert act.auth_basis == 'm3_batch:must_spend'
