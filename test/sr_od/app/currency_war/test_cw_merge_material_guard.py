@@ -35,6 +35,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     bench_char_cost,
     merge_material_reject_reason,
+    merge_material_stale_names,
     sell_refund,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -45,6 +46,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell as crit_sell,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
+    count_material_stale,
 )
 
 _REPO = Path(__file__).resolve().parents[5]   # 仓库根(currency_war←app←sr_od←test←sr-od-test←根)
@@ -333,6 +337,202 @@ class TestReplayCaseFrames:
         k = _fallback_k(st)
         assert [b.slot for b in mandate.fuel_sell_candidates(
             bench, k, state=st)] == [2]
+
+
+# ===== 锁5:滞留素材显影官方键(ADR-0558 §4 G-B1 第四级)=====
+
+class _SessionStub:
+    """决策 session 最小桩:count_material_stale 只挂
+    ``cw4_stale_seen_rounds`` 一个属性,普通对象即够(零副作用)。"""
+
+
+class TestMaterialStaleKeys:
+    """锁5:``merge_material_stale`` / ``merge_material_stale_ge2``
+    官方分键直跑(取代 sim71 验收批「重复对在场行数」代理口径):
+    素材对在场逐决策帧计名×帧;跨轮仍滞留加计轮级显影键;合成/卖出
+    后键停止增长(轮差分归零);拆对后再组不误计跨轮(记忆离场即清)。
+    纯观测键:断言只涉 counters/session 记忆,零行为面。"""
+
+    def test_stale_names_semantics(self):
+        # 判定单一源:同名同 1★ 全场计数 ≥2 才滞留;2★ 不辖;字母序去重
+        bench = [_bc('卡芙卡', slot=1), _bc('燃料A', slot=2),
+                 _bc('卡芙卡', star=2, slot=3)]
+        assert merge_material_stale_names(
+            bench, [_bc('卡芙卡')]) == ('卡芙卡',)
+        assert merge_material_stale_names(
+            [_bc('卡芙卡', slot=1)], [_bc('燃料A')]) == ()
+        # bench 域内对同样命中(全场域,与守卫同口径)
+        assert merge_material_stale_names(
+            [_bc('藿藿', slot=1), _bc('藿藿', slot=2)], []) == ('藿藿',)
+
+    def test_fresh_pair_counts_frame_not_cross_round(self):
+        sess = _SessionStub()
+        ct: dict = {}
+        bench = [_bc('卡芙卡', slot=1), _bc('卡芙卡', slot=2)]
+        count_material_stale(ct, sess, bench, [], round_num=4)
+        assert ct['merge_material_stale'] == 1
+        assert 'merge_material_stale_ge2' not in ct   # 首见帧不记跨轮
+
+    def test_pair_persisting_next_round_counts_ge2(self):
+        sess = _SessionStub()
+        ct: dict = {}
+        bench = [_bc('卡芙卡', slot=1), _bc('卡芙卡', slot=2)]
+        count_material_stale(ct, sess, bench, [], round_num=4)
+        count_material_stale(ct, sess, bench, [], round_num=4)  # 同轮多帧
+        count_material_stale(ct, sess, bench, [], round_num=5)
+        # 名×帧口径:轮4 两帧 + 轮5 一帧 = 3;跨轮键只在轮5 记 1
+        assert ct['merge_material_stale'] == 3
+        assert ct['merge_material_stale_ge2'] == 1
+
+    def test_resolved_pair_stops_and_memory_clears(self):
+        """合成/卖出后键停止增长;拆对后再组不误计跨轮(记忆离场即清)
+        ——滞留时长 = 键差分判读的口径前提。"""
+        sess = _SessionStub()
+        ct: dict = {}
+        pair = [_bc('卡芙卡', slot=1), _bc('卡芙卡', slot=2)]
+        count_material_stale(ct, sess, pair, [], round_num=3)
+        count_material_stale(ct, sess, pair, [], round_num=4)
+        assert ct['merge_material_stale_ge2'] == 1
+        # 轮5 对消失(合成 2★):两键零增长,记忆清
+        count_material_stale(ct, sess, [_bc('卡芙卡', star=2, slot=1)],
+                             [], round_num=5)
+        assert ct['merge_material_stale'] == 2
+        assert sess.cw4_stale_seen_rounds == {}
+        # 轮6 重新组对:新滞留段,首见帧不记跨轮
+        ct2 = ct
+        count_material_stale(ct2, sess, pair, [], round_num=6)
+        assert ct2['merge_material_stale'] == 3
+        assert ct2['merge_material_stale_ge2'] == 1   # 未增长
+
+    def test_two_stale_names_count_individually(self):
+        sess = _SessionStub()
+        ct: dict = {}
+        bench = [_bc('卡芙卡', slot=1), _bc('卡芙卡', slot=2),
+                 _bc('藿藿', slot=3), _bc('藿藿', slot=4)]
+        count_material_stale(ct, sess, bench, [], round_num=2)
+        assert ct['merge_material_stale'] == 2        # 名×帧粒度
+
+    def test_single_source_lock_counting_via_names_fn(self):
+        """分键判定单一源:count_material_stale 必经
+        merge_material_stale_names(禁手搓同式);判定函数在 cw_state
+        唯一定义。"""
+        import inspect
+        src = inspect.getsource(count_material_stale)
+        assert 'merge_material_stale_names(' in src
+        kernel = (_REPO / 'src/sr_od/application/currency_war/kernel'
+                  '/cw_state.py').read_text(encoding='utf-8')
+        assert kernel.count('def merge_material_stale_names') == 1
+
+
+# ===== 锁6:拦截事件口径(C1)+ 换线位接线(D1,三审整改)=====
+
+class TestBlockedKeyEventSemantics:
+    """锁6:C1 = ``merge_material_guard_blocked`` 是**拦截事件**计数
+    (同帧同素材名只计 1,去重载体 = 帧级 ``dedup_names`` 集,单一源 =
+    ``cw_state.count_merge_material_blocked``)——同帧重复评估(P56
+    liquid_refund 投影读 + M4 真卖评估、腾席环 while 重试)不得重复 +1;
+    D1 = 换线塌缩位拒因分键接线(ADR-0558 §3「全发射位显影」按实装
+    口径兑现:本位曾静默 continue 无计数)。"""
+
+    BENCH = [_bc('卡芙卡', slot=1), _bc('燃料A', slot=2)]
+    DEPLOYED = [_bc('卡芙卡')]
+    K = ('线内件',)
+
+    def test_same_frame_repeat_evaluation_counts_once(self):
+        st = _state(self.BENCH, self.DEPLOYED)
+        ct: dict = {}
+        dedup: set[str] = set()
+        # 同帧两次触达:投影读(P56)→ 真卖评估(M4)——事件只计 1
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+                                     counters=ct, dedup_names=dedup)
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+                                     counters=ct, dedup_names=dedup)
+        assert ct['merge_material_guard_blocked'] == 1
+        # 对照:无去重(旧评估次数口径)= 2,证明去重载体生效
+        ct2: dict = {}
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+                                     counters=ct2)
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+                                     counters=ct2)
+        assert ct2['merge_material_guard_blocked'] == 2
+
+    def test_tengxi_retry_loop_counts_once_per_material(self):
+        """腾席环 while 重试形态:同一滞留素材每轮重试被重复评估,
+        事件计数不涨(共享帧级去重集)。"""
+        st = _state(self.BENCH, self.DEPLOYED)
+        ct: dict = {}
+        dedup: set[str] = set()
+        for _ in range(3):   # 模拟重试环反复评估同一素材
+            cands = mandate.fuel_sell_candidates(
+                self.BENCH, self.K, state=st, counters=ct,
+                dedup_names=dedup)
+            assert [b.slot for b in cands] == [2]   # 素材恒被拒(行为不变)
+        assert ct['merge_material_guard_blocked'] == 1
+
+    def test_event_semantics_shared_across_channels(self):
+        """同帧跨通道共享去重集:M4 触达后凑息/支付/换线同素材不重复计。"""
+        st = _state(self.BENCH, self.DEPLOYED)
+        ct: dict = {}
+        dedup: set[str] = set()
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+                                     counters=ct, dedup_names=dedup)
+        crit_sell.sell_for_interest(44, self.BENCH, 5, self.K, state=st,
+                                    counters=ct, dedup_names=dedup)
+        crit_sell.funding_support_sell(0, 4, self.BENCH, self.K, state=st,
+                                       counters=ct, dedup_names=dedup)
+        provisional.inject('U_X', provisional.CalibValue(
+            value=1.0, injected_form=True))
+        provisional.inject('V_MS', provisional.CalibValue(
+            value=1.0, injected_form=True))
+        try:
+            crit_sell.line_switch_sell(
+                ('卡芙卡', '燃料A'), self.K, self.BENCH, self.DEPLOYED,
+                st, k_switched=True, counters=ct, dedup_names=dedup)
+        finally:
+            provisional.reset('U_X')
+            provisional.reset('V_MS')
+        assert ct['merge_material_guard_blocked'] == 1
+
+    def test_line_switch_wiring_counts_blocked(self):
+        """D1:换线位拒因分键接线——素材被拒时计数显影(曾静默)。"""
+        st = _state(self.BENCH, self.DEPLOYED)
+        ct: dict = {}
+        provisional.inject('U_X', provisional.CalibValue(
+            value=1.0, injected_form=True))
+        provisional.inject('V_MS', provisional.CalibValue(
+            value=1.0, injected_form=True))
+        try:
+            slots, key = crit_sell.line_switch_sell(
+                ('卡芙卡', '燃料A'), self.K, self.BENCH, self.DEPLOYED,
+                st, k_switched=True, counters=ct, dedup_names=set())
+        finally:
+            provisional.reset('U_X')
+            provisional.reset('V_MS')
+        assert key == '' and slots == [2]     # 行为零漂移:仅垫件入塌缩集
+        assert ct['merge_material_guard_blocked'] == 1   # 拦截事件显影
+
+    def test_line_switch_wiring_in_entry_pass(self):
+        """接线锁:EV pass 的换线调用必须传 counters(生产接线位)。"""
+        src = (_REPO / 'src/sr_od/application/currency_war/strategies/impl'
+               '/mandate_v1/entry.py').read_text(encoding='utf-8')
+        call = src.split('crit_sell.line_switch_sell(', 1)[1]
+        assert 'counters=counters' in call.split(')', 1)[0]
+
+    def test_count_helper_single_source(self):
+        """计数单一源:四通道计数点全部经
+        ``count_merge_material_blocked``,kernel 唯一定义。"""
+        import inspect
+        ksrc = (_REPO / 'src/sr_od/application/currency_war/kernel'
+                '/cw_state.py').read_text(encoding='utf-8')
+        assert ksrc.count('def count_merge_material_blocked') == 1
+        for rel in ('src/sr_od/application/currency_war/strategies/impl'
+                    '/mandate_v1/mandate.py',
+                    'src/sr_od/application/currency_war/strategies/impl'
+                    '/mandate_v1/criteria/sell.py'):
+            body = (_REPO / rel).read_text(encoding='utf-8')
+            assert 'count_merge_material_blocked(' in body
+            # 旧手搓计数式已清(禁双源回潮)
+            assert "counters['merge_material_guard_blocked'] =" not in body
 
 
 if __name__ == '__main__':
