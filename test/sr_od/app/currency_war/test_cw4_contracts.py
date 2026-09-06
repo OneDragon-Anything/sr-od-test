@@ -7,7 +7,6 @@ proof 判据位 + 三先例非 criteria 消费位,漏登记=红);②三先例前
 本帧弃权零发射 + 计数;正常帧零违例计数=契约层零误伤锚)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import ast
 import inspect
@@ -48,6 +47,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     stockpile as crit_stockpile,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 
@@ -155,6 +157,7 @@ class TestRegistryCompleteness:
         for key in (('proof', 'stop_buy'), ('proof', 'should_switch'),
                     ('proof', 'signal_arm'),
                     ('mandate', 'dominance_buy'),
+                    ('mandate', 'core_single_card_buy_eligible'),
                     ('predicates', 'arm1_existence'),
                     ('shop', 'k_projection')):
             assert key in contracts.CONTRACTS, f'{key} 未登记'
@@ -265,16 +268,18 @@ class TestPrecedentPredicates:
         def _boom(_ctx: contracts.ContractCtx) -> bool:
             raise RuntimeError('predicate crash')
 
-        fake = {('buy', 'p2_lock_buy'): contracts.Contract(
+        # 注入 fixture 键 = 现存契约键(P25 占位接管批,ADR-0569:旧键
+        # ('buy','p2_lock_buy') 随生产行删除成死语义锚,不测死对象)。
+        fake = {('sell', 'sell_for_interest'): contracts.Contract(
             _boom, '测试注入位', '测试')}
         original = contracts.CONTRACTS
         contracts.CONTRACTS = fake
         try:
             assert not contracts.ensure_contract(
-                ('buy', 'p2_lock_buy'), contracts.ContractCtx(), ct)
+                ('sell', 'sell_for_interest'), contracts.ContractCtx(), ct)
         finally:
             contracts.CONTRACTS = original
-        assert ct['criteria_contract_violation:buy.p2_lock_buy'] == 1
+        assert ct['criteria_contract_violation:sell.sell_for_interest'] == 1
 
 
 # ===== ③ 接线核验点正反测(shop/entry 消费位)=====
@@ -407,11 +412,14 @@ for (_mod, _fn) in contracts.CONTRACTS:
 
 #: 已接线消费位白名单(路径全限定,相对 src 根;三文件的判据调用均经
 #: ensure_contract 门或为其辖下接线;criteria/statefn/proof 定义文件与
-#: 测试仓不在此约束面)
+#: 测试仓不在此约束面)。sim/checks/ledger.py = 离线回放对账消费位:
+#: 对历史对局档案按同一判据函数复算做对拍,属回放对拍防线本体,
+#: 与生产旁路禁令不同域。
 _WIRED_CALLER_PATHS: frozenset[str] = frozenset({
     'sr_od/application/currency_war/strategies/impl/mandate_v1/shop.py',
     'sr_od/application/currency_war/strategies/impl/mandate_v1/entry.py',
     'sr_od/application/currency_war/strategies/impl/mandate_v1/mandate.py',
+    'sr_od/application/currency_war/sim/checks/ledger.py',
 })
 
 #: 豁免路径前缀(判据定义面:criteria 包内部互调/谓词实现/proof 实现)

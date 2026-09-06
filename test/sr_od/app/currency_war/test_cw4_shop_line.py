@@ -12,6 +12,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
+from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
@@ -86,11 +87,16 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
 
 
 def _decide(state: GameState, session: StrategySession,
-            cfg: _Cfg | None = None):
+            cfg: _Cfg | None = None, *, registry=None):
+    """商店决策驱动;``registry=None`` = sim 注入视图(本文件历史缺省,
+    sim 冻结语义锁的面),传 ``DEFAULT_REGISTRY`` = live 真值表
+    (等级帽单一源锁的双表对拍面,ADR-0565)。"""
     from sr_od.application.currency_war.sim.engine_p1 import (
         sim_decision_registry,
     )
-    strat = MandateV1Strategy(registry=sim_decision_registry())
+    strat = MandateV1Strategy(
+        registry=(sim_decision_registry() if registry is None
+                  else registry))
     session.shop_state_frame = state
     return strat.decide_shop_screen(session, cfg or _Cfg())
 
@@ -189,20 +195,56 @@ class TestCriteriaShopFaces:
         assert lv and all(a.auth_basis.startswith('m3_batch:')
                           for a in lv)   # 三臂分键后带臂后缀(可归因)
 
-    def test_levelup_face_lv9_stop(self):
-        """升级面:满级停(lv9_stop,LEVEL_CAP)。"""
-        deployed = [_bc(f'板件{i}') for i in range(10)]
-        bench = [_bc('等待件W')]
-        st = _state(gold=50, bench=bench, deployed=deployed, level=9)
-        acts = _decide(st, _session(_comp()))
+    def test_levelup_face_level_cap_single_source(self):
+        """升级面:等级帽单一源(lv9_stop 收注册表 level_max,ADR-0565)。
+        旧锁「level=9 帧恒零 LevelUp」钉 LEVEL_CAP=9 旧语义,已被注册表
+        真值证伪(kernel/cw_registry ``level_max=10`` = live 封顶,
+        cw_state.xp_apply_clicks「封顶 10」同源)——锁红≠改动错,判改不
+        判回退:lv9 是 live 正常付费档,资格闸按注册表现读逐帧判,非
+        恒拒。三帧同形异表钉单一源接线(值来自注入注册表,禁任何模块
+        常数第二源):
+        - level=9 + sim 注入视图(=9)⇒ 零 LevelUpShop(sim 建模冻结经
+          注入视图生效,消费位接线锁;sim 零漂移的面);
+        - level=9 + live 缺省表(=10)⇒ 发射 m3_batch(过 arm1/P21/P48/
+          P71-b 闸;本修复行为变化本体:lv9→10 档 84 金批通道打开);
+        - level=10 + live 缺省表 ⇒ 零 LevelUpShop(live cap 停;旧锁
+          「满级停」语义在注册表真值下的正确形态)。"""
+        # sim 注入视图:lv9 帧冻结语义不变(板满 cap=9 + bench 等待件
+        # = arm1 命中形;金/批均够,唯一拦的是等级帽)
+        st9 = _state(gold=200, bench=[_bc('爻光')],
+                     deployed=[_bc('爻光') for _ in range(9)],
+                     level=9, xp=(0, 84), hp=100)
+        acts = _decide(st9, _session(_comp()))
         assert not [a for a in acts if isinstance(a, LevelUpShop)]
+        # live 缺省表:同形 lv9 帧放行(整批 84 金 ≤ 200,预算闸余量足)
+        acts_lv = _decide(_state(gold=200, bench=[_bc('爻光')],
+                                 deployed=[_bc('爻光') for _ in range(9)],
+                                 level=9, xp=(0, 84), hp=100),
+                          _session(_comp()), registry=DEFAULT_REGISTRY)
+        lv = [a for a in acts_lv if isinstance(a, LevelUpShop)]
+        assert lv and all(a.auth_basis.startswith('m3_batch:')
+                          for a in lv)
+        # live 缺省表:lv10 = 真满级,等级帽停(零发射)
+        st10 = _state(gold=200, bench=[_bc('爻光')],
+                      deployed=[_bc('爻光') for _ in range(10)],
+                      level=10, xp=(0, 84), hp=100)
+        acts10 = _decide(st10, _session(_comp()), registry=DEFAULT_REGISTRY)
+        assert not [a for a in acts10 if isinstance(a, LevelUpShop)]
 
     def test_refresh_face_fail_closed(self):
-        """刷新面:r1 可负担性不过(该帧合格集空:lv3 高费线成员不可追)
-        ⇒ 不刷 + ``shop_r1_no_chaseable_member`` 分键(ADR-0516 形式二;
-        旧 V_GAP None 期 fail-closed 语义随 V̄ 链退役,由判据结构承载)。"""
+        """刷新面 fail-closed(真空合格集):全体线成员 2★ 成型 ⇒ 合格
+        集空 ⇒ 不刷 + ``shop_r1_no_chaseable_member`` 分键(P40 R0-1;
+        ADR-0516 形式二)。
+
+        锁语义重推(ADR-0571):旧帧(全体 1★、lv3、金 60)钉的
+        「高费成员不可追 ⇒ no_chaseable_member」是 inf 污染缺陷的病理
+        形态——部分不可追被错判全空;修复后该帧合格集非空,落必花域
+        切分线发射刷新(行为变化本体,档案帧锁 =
+        test_cw_t88_r1_qualified_set)。本锁意图 = 「合格集空 ⇒ 不刷」,
+        修正后「空」只剩真空来源,帧改全 2★ 成型(真空三来源之一,
+        注册表无关)钉面。"""
         comp = _comp()
-        bench = [_bc(m) for m in _members(comp)]
+        bench = [_bc(m, star=2) for m in _members(comp)]
         st = _state(gold=60, bench=bench)
         sess = _session(comp)
         _decide(st, sess)
@@ -517,15 +559,24 @@ class TestFixpoolShopCheckpoints:
         assert state_of(sess).cw4_counters.get('shop_visit_idle_gold', 0) == 1
 
     def test_d_hard_node_gate_consumed(self):
-        """D-D:硬节点(遭遇/boss)备战补强门被消费(观察级接线+计数)。"""
+        """D-D:硬节点(遭遇/boss)备战补强门被消费(观察级接线+计数)。
+
+        锁语义重推(ADR-0571):金位从 60 收到 50(= 息线 g*)——旧帧
+        金 60 修复后落必花域 R1 yield 发射刷新(终结动作,决策链在门
+        消费位之前返回,门计数自然为 0);门的接线活性辖「R1 未发射」
+        帧,金 = g* 帧域外判定成立(g > g* 假)且预算账拒刷新
+        (account_over_budget 非污染拒因),链可达门位,金 ≥ g* 门开。
+        非硬节点不触发的反例腿同帧形同金位。"""
         comp = _comp()
         bench = [_bc(m) for m in _members(comp)]
-        st = _state(gold=60, bench=bench, node='boss')
+        st = _state(gold=50, bench=bench, node='boss')
         sess = _session(comp)
         _decide(st, sess)
         assert state_of(sess).cw4_counters.get('shop_hard_node_gate_open', 0) >= 1
+        assert not [a for a in _decide(st, sess)
+                    if isinstance(a, RefreshShop)]
         # 非硬节点不触发
-        st2 = _state(gold=60, bench=bench, node='reward')
+        st2 = _state(gold=50, bench=bench, node='reward')
         sess2 = _session(comp)
         _decide(st2, sess2)
         assert state_of(sess2).cw4_counters.get('shop_hard_node_gate_open', 0) == 0

@@ -111,11 +111,21 @@ class TestL3RejectKeys:
     """L3 资格拒分键(拒因落盘缺口治疗:「拒因不可辨」复盘主项)。"""
 
     def test_level_cap_keyed(self):
-        """域内满级帧 ⇒ 零发射 + l3_reject_level_cap 分键在案。"""
-        f, sess, st = _mk(56, level=9)
+        """域内满级帧 ⇒ 零发射 + l3_reject_level_cap 分键在案。
+        帧等级语义重推(ADR-0565):旧锁 _mk(56, level=9) 钉
+        LEVEL_CAP=9 旧语义,已被注册表真值证伪(live cap=10,lv9 是
+        正常付费档)——满级帧改 lv10;lv9 帧改由分键否定面钉(不再
+        因等级帽拒)。"""
+        f, sess, st = _mk(56, level=10)
         out = mandate.run_mandate(f, sess, state=st)
         assert not _lvls(out)
         assert state_of(sess).cw4_counters.get('l3_reject_level_cap') == 1
+        # lv9 帧:等级帽过(非 live cap)⇒ l3_reject_level_cap 不产生
+        # (该帧后续由 P71-b 预算闸接手,闸语义归 ADR-0560 锁辖)
+        f9, sess9, st9 = _mk(56, level=9)
+        out9 = mandate.run_mandate(f9, sess9, state=st9)
+        assert 'l3_reject_level_cap' not in state_of(sess9).cw4_counters
+        assert not _lvls(out9)
 
     def test_batch_unaffordable_keyed(self):
         """域内整批买不齐(单击价 13 金 ×13 击 > 51)⇒ 零发射 +

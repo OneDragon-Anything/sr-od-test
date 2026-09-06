@@ -50,11 +50,14 @@ def _dec(run_id, plane, rnd, ts, **kw):
     return base
 
 
-def _out(run_id, plane, rnd, ts, hp_after, conf=1.0, node_type='普通战斗'):
+def _out(run_id, plane, rnd, ts, hp_after, conf=1.0, node_type='普通战斗',
+         source=''):
+    # source(v8):结算行来源标记(''=屏面真值;'synthetic_supply'=合成行),
+    # loss_nodes 条目 outcome_source 加法键的取值来源
     return {'schema_version': 1, 'run_id': run_id, 'plane': plane,
             'round_num': rnd, 'ts': ts, 'node_type': node_type,
             'hp_after': hp_after, 'hp_confidence': conf, 'killed': False,
-            'board_before': {}, 'bench_count': 0}
+            'board_before': {}, 'bench_count': 0, 'source': source}
 
 
 @pytest.fixture()
@@ -692,6 +695,189 @@ def test_load_archive_stale_without_source_warns_and_returns_stale(
     # 游戏不存在 → None(原语义不变)
     shutil.rmtree(replay / 'matches')
     assert arch.load_archive(replay, game_id) is None
+
+
+# ===== v8(C8 遥测缺陷批):loss_nodes 逐结算行化 =====
+# 缺陷:同轮「补给回血+战斗掉血」时 loss_nodes 走轮级净额,掉血幅度被回血
+# 抵减(净额 −19 vs 战斗腿 −33),净额≥0 时整条漏记。实证 g_20260906_182456
+# p2r4;方案/方案审见 .debug/temp/currency_war/c8_loss_nodes/(决策记录 =
+# ADR-0567)。修复语义:loss_nodes 一条目对一个掉血结算行(战斗腿口径),
+# rounds 逐轮表保持单槽净额零变化。
+
+def _replay_c8(tmp_path: _match_archive_Path,
+               p2r4_outs: list[dict]) -> _match_archive_Path:
+    """最小单段局:p2r3 单结算行 hp=31 + p2r4 给定结算行组(同轮多结算)。"""
+    rd = tmp_path / 'replay_c8'
+    rid = 'run_20260906_182456'
+    _write_jsonl(rd, 'outcomes.jsonl',
+                 [_out(rid, 2, 3, '2026-09-06T18:55:00', 31)] + p2r4_outs)
+    _write_jsonl(rd, 'decisions.jsonl', [])
+    _write_jsonl(rd, 'runs.jsonl', [
+        {'run_id': rid, 'ts': '2026-09-06T19:10:00', 'result': 'loss',
+         'plane_reached': 2, 'rounds_survived': 4, 'final_hp': 12,
+         'difficulty': ''}])
+    return rd
+
+
+def _ln_at(archive: dict, plane: int, rnd: int) -> list[dict]:
+    return [n for n in archive['loss_nodes']
+            if n['plane'] == plane and n['round'] == rnd]
+
+
+def test_loss_nodes_per_settlement_row_supply_plus_battle(
+        tmp_path: _match_archive_Path):
+    """T1(修复主用例,修前红):同轮补给回血+战斗掉血 → loss_nodes 出
+    战斗腿条目(−33),rounds 仍单槽净额(−19)。
+
+    修复前 loss_nodes 走轮级净额推导,delta=−19 ≠ 断言 −33 → 红,
+    证明用例钉住缺陷本体(g_20260906_182456 p2r4 同构)。
+    """
+    rd = _replay_c8(tmp_path, [
+        _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 45,
+             node_type='补给', source='synthetic_supply'),
+        _out('run_20260906_182456', 2, 4, '2026-09-06T19:02:23', 12)])
+    a = arch.build_archive(rd, arch.assign_games(rd)[0])
+    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
+    r4 = by_key[(2, 4)]
+    # rounds 链不变锁:单槽净额,槽位 = ts 末结算行(战斗行)
+    assert r4['hp'] == 12 and r4['hp_source'] == 'settlement'
+    assert r4['hp_delta'] == -19
+    # loss_nodes:恰一条 (2,4) 战斗腿条目;补给 +14 非掉血不入
+    ln4 = _ln_at(a, 2, 4)
+    assert len(ln4) == 1
+    n = ln4[0]
+    assert n['delta'] == -33 and n['hp'] == 12
+    assert n['node_type'] == '普通战斗' and n['hp_source'] == 'settlement'
+    # 加法键:战斗屏真值行 outcome_source=''(非合成行),ts=结算行时间戳
+    assert n['outcome_source'] == '' and n['ts'] == '2026-09-06T19:02:23'
+
+
+def test_loss_nodes_net_nonnegative_round_still_recorded(
+        tmp_path: _match_archive_Path):
+    """T2(修前红):补给 +14、战斗 −10、净额 +4 → loss_nodes 仍出战斗腿
+    条目(−10)。修复前按轮级 hp_delta<0 过滤 → 0 条目 → 红(「净额≥0
+    整条漏记」形态,缺陷的补充面)。"""
+    rd = _replay_c8(tmp_path, [
+        _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 45,
+             node_type='补给', source='synthetic_supply'),
+        _out('run_20260906_182456', 2, 4, '2026-09-06T19:02:23', 35)])
+    a = arch.build_archive(rd, arch.assign_games(rd)[0])
+    r4 = {(r['plane'], r['round']): r for r in a['rounds']}[(2, 4)]
+    assert r4['hp'] == 35 and r4['hp_delta'] == 4   # 净额不设防地如实记账
+    ln4 = _ln_at(a, 2, 4)
+    assert len(ln4) == 1 and ln4[0]['delta'] == -10
+
+
+def test_loss_nodes_untrusted_supply_row_no_poison(
+        tmp_path: _match_archive_Path):
+    """T3(防过度修复守卫,方案审定谳:修前修后同绿):补给行
+    hp_after=0/conf=0.0(cw_loop 写端 hp 不可读兜底形态)不得伪造「−31」
+    条目或把游标打穿到 0 毒化后续;战斗条目 delta = 可达最佳值 12−31=−19
+    (0 值锚不可信不配当锚)。"""
+    rd = _replay_c8(tmp_path, [
+        _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 0,
+             conf=0.0, node_type='补给', source='synthetic_supply'),
+        _out('run_20260906_182456', 2, 4, '2026-09-06T19:02:23', 12)])
+    a = arch.build_archive(rd, arch.assign_games(rd)[0])
+    ln4 = _ln_at(a, 2, 4)
+    assert len(ln4) == 1
+    assert ln4[0]['delta'] == -19 and ln4[0]['hp'] == 12
+    # 全档无 0 值锚条目(伪造「补给掉血 −31」不存在)
+    assert all(n['hp'] not in (0, None) for n in a['loss_nodes'])
+    r4 = {(r['plane'], r['round']): r for r in a['rounds']}[(2, 4)]
+    assert r4['hp'] == 12 and r4['hp_delta'] == -19   # rounds 链照旧
+
+
+def test_loss_nodes_mixed_trust_round_two_chain_divergence(
+        tmp_path: _match_archive_Path):
+    """M1 形态分叉(方案审必修:等价声明的限定形态):同轮「可信行在前 +
+    不可信行在后」→ 步进游标停可信行(45),轮槽取不可信末行(12),两链
+    自该轮分叉;下一单结算可信轮条目 delta=5−45=−40(旧实现=5−12=−7)。
+
+    新行为 = 「伪值不推进链」纪律(与 query_hp 同款),方向正确非回归;
+    ADR-0567 §分歧形态声明在案,判读不得按旧不变量当回归误报。
+    """
+    rd = _replay_c8(tmp_path, [
+        _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 45,
+             conf=1.0),
+        _out('run_20260906_182456', 2, 4, '2026-09-06T19:02:23', 12,
+             conf=0.5),
+        _out('run_20260906_182456', 2, 5, '2026-09-06T19:06:00', 5)])
+    a = arch.build_archive(rd, arch.assign_games(rd)[0])
+    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
+    # rounds 链照旧:轮槽=不可信末行 12,净额游标也走 12(r5 净额=5−12)
+    assert by_key[(2, 4)]['hp'] == 12
+    assert by_key[(2, 4)]['hp_delta'] == -19
+    assert by_key[(2, 5)]['hp_delta'] == -7
+    # 步进链:可信 45 步(+14 非掉血)→ (2,4) 无条目;游标未回落不可信 12
+    assert _ln_at(a, 2, 4) == []
+    ln5 = _ln_at(a, 2, 5)
+    assert len(ln5) == 1 and ln5[0]['delta'] == -40 and ln5[0]['hp'] == 5
+
+
+def test_loss_nodes_v8_migration_auto_rebuild_and_stale_fallback(
+        tmp_path: _match_archive_Path, monkeypatch: pytest.MonkeyPatch):
+    """T4(v8 迁移,复用既有 bump+读端 auto-rebuild 机制,零新增迁移代码):
+    - T4a:盘上 v7 形态存量(净额 −19;用既有 v4 迁移用例同款「降级抹键」
+      手法构造)经 load_archive 读出即重装配为 v8(战斗腿 −33)并原子写回;
+    - T4b:auto_rebuild=False 原样返回 v7 旧形态(条目 .get 可读,纯只读
+      审计场景契约);
+    - T4c:源 jsonl 已清 → 重装配不可行,退回 v7 档案 + 警告,不抛不猜。
+    """
+    rid = 'run_20260906_182456'
+    rd = _replay_c8(tmp_path, [
+        _out(rid, 2, 4, '2026-09-06T18:58:00', 45,
+             node_type='补给', source='synthetic_supply'),
+        _out(rid, 2, 4, '2026-09-06T19:02:23', 12)])
+    game_id = arch.assign_games(rd)[0]['game_id']
+    assert arch.SCHEMA_VERSION == 8
+    # 构造盘上 v7 形态存量:当前装配后降级——条目 delta 回轮级净额、抹
+    # 加法键、版本号回 7(真实 v7 档案即此形态;monkeypatch 版本号造不出
+    # 旧装配语义,故用既有 v4 迁移用例的抹键手法)
+    a8 = arch.assemble_game(rd, game_id)
+    assert a8['schema_version'] == 8
+    assert _ln_at(a8, 2, 4)[0]['delta'] == -33
+    v7_snapshot = _read_archive_file(rd, game_id)
+    rdelta = {(r['plane'], r['round']): r['hp_delta']
+              for r in v7_snapshot['rounds']}
+    for n in v7_snapshot['loss_nodes']:
+        n['delta'] = rdelta[(n['plane'], n['round'])]
+        n.pop('outcome_source', None)
+        n.pop('ts', None)
+    v7_snapshot['schema_version'] = 7
+    p = rd / 'matches' / f'match_{game_id}.json'
+    with p.open('w', encoding='utf-8') as f:
+        json.dump(v7_snapshot, f, ensure_ascii=False)
+    # —— T4a:默认读 → 自动重装配 v8 并写回 ——
+    got = arch.load_archive(rd, game_id)
+    assert got['schema_version'] == 8
+    ln8 = _ln_at(got, 2, 4)
+    assert len(ln8) == 1 and ln8[0]['delta'] == -33   # 重装配=战斗腿
+    assert _read_archive_file(rd, game_id)['schema_version'] == 8   # 写回
+    # —— T4b:auto_rebuild=False → 原样返回 v7 本体(只读审计,不动盘)——
+    with p.open('w', encoding='utf-8') as f:
+        json.dump(v7_snapshot, f, ensure_ascii=False)
+    got2 = arch.load_archive(rd, game_id, auto_rebuild=False)
+    assert got2['schema_version'] == 7
+    e = got2['loss_nodes'][0]
+    assert e.get('delta') == -19
+    assert e.get('outcome_source') is None   # 旧形态条目 .get 可读,无加法键
+    # —— T4c ——
+    for name in ('decisions.jsonl', 'outcomes.jsonl', 'runs.jsonl'):
+        (rd / name).unlink()
+    warned: list[str] = []
+
+    class _WarnSpy:
+        """OneDragon logger propagate=False,caplog 捕不到 → 桩记录 warning。"""
+
+        def warning(self, msg: str, *args: object) -> None:
+            warned.append(msg % args if args else str(msg))
+
+    monkeypatch.setattr(arch, 'log', _WarnSpy())
+    got3 = arch.load_archive(rd, game_id)
+    assert got3 is not None and got3['schema_version'] == 7
+    assert any('重装配' in w for w in warned)
+    assert arch.load_archive(rd, 'g_missing') is None   # 不存在 → None 语义不变
 
 
 # ==================== performance ====================

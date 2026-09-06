@@ -168,6 +168,9 @@ _REJECT_ENUM = frozenset({
     'owned', 'merge_unaffordable', 'merge_bench_full', 'merge_ready',
     'stockpile_bench_full', 'stockpile_unaffordable', 'stockpile_ready',
     'transition_char', 'non_line',
+    # C1 拒因拆键(ADR-0569):registry 核心卡在售未买帧,与真 non_line
+    # 可辨(设计《直通核心卡信号层入口》§4 意向状态机行)。
+    'core_candidate_rejected',
 })
 
 

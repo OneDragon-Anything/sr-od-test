@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """test_cw_r271_line_defs 主题锁。
 
-2026-09-03 拆分归档批:自混合文件 test_cw_legacy_audit.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
+2026-09-03 拆分归档批:自混合文件 test_cw_legacy_audit.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。
+2026-09-07 ADR-0564/O1 批:重写 test_consumers_share_single_source(op 侧 _RECIPE 别名退役 → 墓碑式,非纯移动变更;详见该函数 docstring)。"""
 from __future__ import annotations
-
-
 
 from sr_od.application.currency_war.kernel.cw_line_defs import (
     ENGINE_FACTIONS,
@@ -52,14 +50,23 @@ def test_consumers_share_single_source() -> None:
 
     dd-037 更新:op 的配方基础线判据(RECIPE_BASE)随选人段收敛进
     kernel.cw_deploy_logic.select_deployments(kernel 自己 import 单一源),
-    op 模块的 _RECIPE_BASE 死别名已删——单源性改锁在 kernel 消费上,
-    op 侧围栏别名(_RECIPE)锁保持。
+    op 模块的 _RECIPE_BASE 死别名已删——单源性改锁在 kernel 消费上。
+
+    ADR-0564/O1 更新:op 主循环 r288 门改走 kernel.recipe_floor_holds
+    后,op 侧围栏别名 _RECIPE 唯一消费(vestigial 恒真判定)消亡,
+    import 随批删除——op 不再直接消费 RECIPE_FACTIONS,单源性 =
+    kernel 判定函数(recipe_floor_holds);本锁改墓碑式(别名退役 +
+    kernel 判定在位),防死别名回流。
     """
-    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as deploy_bench
     import sr_od.application.currency_war.kernel.cw_deploy_logic as deploy_logic
-    assert deploy_bench._RECIPE is RECIPE_FACTIONS
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_deploy as deploy_bench,
+    )
+    assert not hasattr(deploy_bench, '_RECIPE'), (
+        '_RECIPE 死别名已随 ADR-0564/O1 退役(op 零直接消费),禁回流')
     assert deploy_logic.RECIPE_BASE == RECIPE_BASE
     assert deploy_logic.select_deployments is not None
+    assert deploy_logic.recipe_floor_holds is not None
 
 
 def test_1cost_kinds_positive() -> None:

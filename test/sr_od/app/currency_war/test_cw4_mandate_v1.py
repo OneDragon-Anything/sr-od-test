@@ -184,6 +184,36 @@ class TestBypassEnumeration:
                 assert arm1.startswith('不旁路'), \
                     f'{key}:谓词/状态函数/义务侧判据不得入旁路集(R2-2/F4)'
 
+    #: 零调用面墓碑行(函数已物理删除、登记行保留枚举完备性)。唯一在册
+    #: 成员 = equipment.affix_allocation(判据出处纠错批删除的孤儿第二
+    #: 实现,生产单一源 = cw_equip_env.resolve_affix_priority_order),
+    #: 口径同 test_cw4_contracts.TestRegistryCompleteness._TOMBSTONED_KEYS,
+    #: 禁为保绿恢复死代码。
+    _TOMBSTONED_KEYS: frozenset[tuple[str, str]] = frozenset({
+        ('equipment', 'affix_allocation'),
+    })
+
+    def test_bypass_rows_reference_existing_functions(self):
+        """反向对拍(行→函数;P25 占位接管批补齐,ADR-0569):BYPASS_TABLE
+        每行(墓碑豁免)必须对应 criteria 包内现存公开函数——删函数不删行
+        = 红。出处 = 设计《直通核心卡信号层入口》§6 P25 行「全表对拍双向
+        强制」+ spotcheck δ1 勘误(原稿声称的双向强制在落码前实为单向,
+        本测试把设计声称的不变量落成真)。"""
+        pkg_dir = Path(mandate.__file__).parent / 'criteria'
+        present: dict[str, set[str]] = {}
+        for py in sorted(pkg_dir.glob('*.py')):
+            if py.stem == '__init__':
+                continue
+            tree = ast.parse(py.read_text(encoding='utf-8'))
+            present[py.stem] = {
+                n.name for n in tree.body
+                if isinstance(n, ast.FunctionDef)
+                and not n.name.startswith('_')}
+        orphan = [key for key in BYPASS_TABLE
+                  if key not in self._TOMBSTONED_KEYS
+                  and key[1] not in present.get(key[0], ())]
+        assert not orphan, f'旁路枚举行无对应函数(孤儿行): {orphan}'
+
 
 # ===== ③ 发射器帧稳定截断契约锁(契约 v2 §3.2 逐类+§3.3)=====
 

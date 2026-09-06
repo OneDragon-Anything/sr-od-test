@@ -174,14 +174,21 @@ class TestL3MustSpend:
         assert 't3_buy' not in state_of(sess).cw4_counters
 
     def test_whitelist_empty_shop_cap_top_zero_consume(self):
-        """白名单③④合形负锁(店空 ∧ cap 顶):三消费出口全关
-        (CloseShop 收口),分键可辨(level_cap/no_chaseable)。"""
+        """白名单③④合形负锁(店空 ∧ 等级帽拦):三消费出口全关
+        (CloseShop 收口),分键可辨(no_chaseable)。帧等级语义重推
+        (ADR-0565):旧帧 lv9 在 LEVEL_CAP=9 旧语义下即 cap 顶,现
+        live 真值 cap=10、lv9 是正常付费档 ⇒ 等级帽过、L3 拒因改落
+        P48 整买拦截(批 84 金 > 80),``level_cap`` 分键不再产生——
+        真满级帧的 level_cap 显影归 prep 侧锁
+        (test_cw_l3_prep_must_spend_latch)与商店单一源三帧锁
+        (test_cw4_shop_line)承载。"""
         st, sess = _zone_frame(gold=80, cards=[], level=9, locked=False)
         st.deployed = [_bc(m, star=2, slot=i + 1)
                        for i, m in enumerate(line_members(get_comp(_COMP)))]
         act = _decide(st, sess)
         assert not isinstance(act, (BuyCard, RefreshShop, LevelUpShop))
-        assert state_of(sess).cw4_counters.get('level_cap') == 1
+        assert state_of(sess).cw4_counters.get('batch_unaffordable') == 1
+        assert 'level_cap' not in state_of(sess).cw4_counters
         assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member') == 1
 
 
@@ -313,9 +320,12 @@ class TestR1ZoneSplit:
                               v3_intention=SimpleNamespace(
                                   locked_comp=_COMP))
         act = _decide(st, sess)
-        # ladder 显影:L2 垫件缺 + L3 等级 cap(vl9 族硬闸)均零消费
+        # ladder 显影:L2 垫件缺 + L3 整批拒均零消费——L3 拒因语义重推
+        # (ADR-0565):lv9 非 live cap(cap=10),等级帽过、批 84 金 > 51
+        # ⇒ 拒因落 batch_unaffordable(P48 整买拦截),level_cap 不再产生
         assert state_of(sess).cw4_counters.get('fuel_not_on_sale') == 1
-        assert state_of(sess).cw4_counters.get('level_cap') == 1
+        assert state_of(sess).cw4_counters.get('batch_unaffordable') == 1
+        assert 'level_cap' not in state_of(sess).cw4_counters
         # 应-A 零静默:切分线让位发生 ⇒ yielded 分键在案
         assert state_of(sess).cw4_counters.get('must_spend_r1_account_yielded') == 1
         # 切分线生效:核算否决(g*/L 账)未拦 R1(域外同形帧会记该键)
