@@ -1,7 +1,7 @@
 """sim 决策下沉两小批锁面(判据核上收 + 发射短路行为消费 + 反假阴性哨兵)。
 
-背景(sim 决策下沉选型批,裁决 = 方案三混合,.debug/temp/currency_war/
-sim_sink_adjudication/选型建议.md):生产达标臂判据(线成型 fp≥1.0 ∧
+背景(裁决 = ADR-0557,docs/develop/currency_war/decisions/
+0557-sim-sink-launch-criteria-kernel.md):生产达标臂判据(线成型 fp≥1.0 ∧
 战斗就绪)原散在 cw_loop 备战分支与 engine_p1 发射观测块两处内联 = 双
 消费面双实现漂移面;发射帧的「短路备战动作链」语义 sim 原先不消费 ⇒
 金出口族改动在严格同池 A/B 上 pre/post 逐位一致 = 结构性假阴性
@@ -17,7 +17,10 @@ sim_sink_adjudication/选型建议.md):生产达标臂判据(线成型 fp≥1.0 
 3. 短路行为锁(小批②):真 sim 账本发射帧 short_circuited=True、
    actions 空、spend 全零(金不花 = 生产短路语义对齐);
 4. 哨兵锁(小批②):check_sim_launch_short_circuit 对「分键缺位/发射
-   帧决策照常/金照花」三形态逐个红,真账本绿——守卫移除即红。
+   帧决策照常/金照花」三形态逐个红,真账本绿——守卫移除即红;
+5. armed 单键锁(三审整改):admission 异常吞 None 时发射帧仍短路
+   (victim=None 观测位不拦门——admission 缺失也拦会留「生产短路金不
+   花、sim 决策照常」的假阴性残留,ADR-0557 §4)。
 """
 from __future__ import annotations
 
@@ -169,6 +172,25 @@ class TestConsumerSingleSourceLock:
         for row in launch_rows:
             assert row['launch']['short_circuited'] is True
             assert row['actions'] == []
+
+    def test_admission_none_does_not_block_short_circuit(self, monkeypatch):
+        """armed 单键锁(三审整改,ADR-0557 §4):admission 预估异常吞
+        None 时发射帧仍短路(victim=None 只作观测位)——若 None 拦门,
+        该帧族留「生产短路金不花、sim 决策照常」假阴性残留。"""
+        def _boom(*a, **kw):
+            raise RuntimeError('准入预估不可得(注入异常)')
+
+        monkeypatch.setattr(cw_launch_admission,
+                            'launch_admission_report', _boom)
+        result = simulate_p1(0, pool='snapshot')
+        launch_rows = _launch_rows(result)
+        assert launch_rows, 'admission 全异常时零发射帧(None 拦门残留)'
+        for row in launch_rows:
+            assert row['launch']['victim'] is None
+            assert row['launch']['short_circuited'] is True
+            assert row['actions'] == []
+            spend = (row.get('sim') or {}).get('spend') or {}
+            assert all(int(v or 0) == 0 for v in spend.values())
 
 
 class TestShortCircuitBehaviorLock:

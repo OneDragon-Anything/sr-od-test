@@ -59,10 +59,13 @@ class TestLaunchRowLedgerLock:
                 assert isinstance(launch.get('auth_basis'), str)
                 assert launch['auth_basis']
                 # victim 形态 = G1 准入三元,键集恰等、全 bool(生产
-                # readiness_admission_report 单一源,禁第二实现漂移)
-                victim = launch.get('victim') or {}
-                assert set(victim.keys()) == _VICTIM_KEYS, victim
-                assert all(isinstance(v, bool) for v in victim.values())
+                # readiness_admission_report 单一源,禁第二实现漂移);
+                # None = 准入预估异常吞(仅观测位不拦短路门,ADR-0557 §4)
+                victim = launch.get('victim')
+                if victim is not None:
+                    assert set(victim.keys()) == _VICTIM_KEYS, victim
+                    assert all(isinstance(v, bool)
+                               for v in victim.values())
                 # 成功布尔:sim 发射核必然执行(建模声明,恒 True)
                 assert launch.get('ok') is True
         assert seen, '采样 6 seed 零发射事件(采样缺陷,需换 seed 窗口)'
