@@ -406,9 +406,9 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
     # (ADR-0296:sell/synthesize 生成器补完 + 探针判据修正)——
     # 移出豁免,回归 0 容忍。
     # 批㉜ F4 价值表覆盖披露(ADR-0303 合流批登记):key_equips ≥3
-    # 引用但 _EQUIP_VALUE 缺值——docstring 明示「裁决归策略域,裁决前
-    # 恒红」,与 dead_system_second_pivot 同款待裁豁免;策略域补值/
-    # 裁决后移除,回归 0 容忍。
+    # 引用但 _EQUIP_VALUE 缺值——已由 ADR-0555 补值批清偿(15 名全量
+    # 入表 + 检查项扩全量披露),移出豁免回归 0 容忍;专项锁 =
+    # test_cw_equip_value_table.py。
     # ADR-0336:dead_system_second_pivot 等 v1 检查器已删(见下方注释);
     # ledger_consistency / coldstart_direction 是 v2 已知债(W66 §4 条件
     # 3:12/400 与 79/400,d2 行为面批清)——sim 默认策略切 decision_v2
@@ -465,7 +465,6 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
     _PENDING_ADJUDICATION = ('ledger_consistency',
                              'coldstart_direction',
                              'degrade_recover_mutex',
-                             'equip_value_strategy_key_coverage',
                              'engine_seed_not_resold',
                              'deploy_fills_cap',
                              'decision_v2_crisis_gold_hoard',
