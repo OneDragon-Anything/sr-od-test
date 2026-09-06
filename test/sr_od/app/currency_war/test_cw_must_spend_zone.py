@@ -420,12 +420,18 @@ class TestArchiveFrameReplay:
     def test_g19_r6_g46_offer_consumes_via_t1_not_zone(self):
         """十九局 r6 offer 帧(ts 2026-09-05T23:24:50,gold46,店 5 张全
         non_line):域外消费走既有经济通道(t1 凑息卖),非必花域出口——
-        分键面无 must_spend 触发。"""
+        分键面无 must_spend 触发。
+        锁语义重推(合成素材拒入守卫批):档案原帧 bench=卡芙卡 1★ ∧
+        deployed 卡芙卡 1★ 并存——该帧的凑息卖对象本身是 2/3 合成进度
+        素材,与新守卫(拒因键 merge_material_guard,与部署侧同键)恰为
+        同一病灶类;本锁语义 =「域外帧经 t1 消费且无 must_spend 分键」,
+        不辖「素材可卖」——bench 单位改用非素材垫件(椒丘,deployed 无
+        同名)保锁意图,素材拒入语义归 test_cw_merge_material_guard。"""
         st = _arc_state(gold=46, hp=47, level=5, plane=1, round_num=6,
                         node_type='普通战斗', xp_progress=(10, 20),
                         level_up_cost=4, deploy_cap=5,
-                        bench=[_arc_bc({'char_id': '卡芙卡', 'star': 1,
-                                        'slot': 2, 'faction': '星核猎手',
+                        bench=[_arc_bc({'char_id': '椒丘', 'star': 1,
+                                        'slot': 2, 'faction': '狼狩',
                                         'position_pref': 'back'}, 1)],
                         deployed=[_arc_bc({'char_id': '爻光', 'star': 1,
                                            'slot': 1, 'faction': '仙舟',
