@@ -274,6 +274,9 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     assert sess.cw4_counters.get('swap_arm_transition_trigger') == 1
     assert 'swap_arm_formed_trigger' not in sess.cw4_counters
     assert sess.cw4_counters.get('engines_guard') == 1   # 帧级显影
+    # 执行侧透传(39 跳登记:执行侧卖出 m1p 驱动不可辨):发射帧 pending
+    # = plan.arm,消费点 = CwOpDeploy.deploy 卖出臂读后即清
+    assert sess.cw4_m1p_arm_pending == 'transition'
 
 
 def test_mandate_formed_arm_keyed_separately(monkeypatch) -> None:
@@ -306,6 +309,40 @@ def test_mandate_formed_arm_keyed_separately(monkeypatch) -> None:
     run_mandate(_m1p_frame(dep, bench), sess, state=st)
     assert sess.cw4_counters.get('swap_arm_formed_trigger') == 1
     assert 'swap_arm_transition_trigger' not in sess.cw4_counters
+    assert sess.cw4_m1p_arm_pending == 'formed'
+
+
+def test_m1p_pending_arm_none_without_fire(monkeypatch) -> None:
+    """执行侧透传零漂移锁:非 m1p 发射帧(plan 空)⇒ pending 恒 None
+    (执行侧卖出计 sell_offtarget_regular 的前提);观测面零策略语义,
+    不改任何发射/卖出行为。"""
+    import sr_od.application.currency_war.kernel.cw_intention as _int_mod
+    import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
+    from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
+        run_mandate,
+    )
+    monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', True)
+    monkeypatch.setattr(_int_mod, 'committed_from',
+                        lambda session, state=None: True)
+    monkeypatch.setattr(_int_mod, 'locked_buy_membership',
+                        lambda ist: frozenset())
+    comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
+               factions=('列车同行',), form_tiers={'列车同行': 2},
+               shared_chars=(), substitute_plan=None)
+    sess = _NS(cw4_counters={},
+               v3_intention=_NS(locked_comp='列车同行', p1_pair=(),
+                                phase='locked', transition_pair=()),
+               target_comp=comp, transition_framework='',
+               last_owned_equips=None)
+    # 无 bench target 帧:swap 计划空(m1p_plan_empty)⇒ 不发射
+    dep = _lesion_frame_deployed()
+    st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
+                   deployed=list(dep), bench=[])
+    run_mandate(_m1p_frame(dep, []), sess, state=st)
+    assert sess.cw4_counters.get('m1p_plan_empty') == 1
+    assert 'm1p_fired' not in sess.cw4_counters
+    assert sess.cw4_m1p_arm_pending is None
 
 
 def test_guard_set_covers_deploy_fence() -> None:

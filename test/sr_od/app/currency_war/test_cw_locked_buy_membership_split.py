@@ -115,15 +115,38 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
 class TestLockedBuyFace:
     """锁定帧买入义务面消费锁定采购集(事故形态回归锁)。"""
 
-    def test_incident_frame_faction_member_bought_as_line_member(self):
+    def test_incident_frame_faction_member_bought_as_locked_member(self):
         """事故形态直译(P2 锁「列车同行」+ 在售丹恒·饮月 2 金):丹恒·饮月
         属列车同行阵营但非该 comp core∪shared——修复前被判 non_line 跳过,
-        修复后经 M2 义务买入(不落 non_line 拒因)。"""
+        修复后经 M2 义务买入(不落 non_line 拒因)。买因分键(局21 复盘
+        候选3,g_20260906_021859:锁定采购集扩展成员曾与真线成员共用
+        m2_line_member,同名异源买因不可辨)→ 扩展成员记
+        m2_locked_member,与线成员键分离。"""
         st = _state(gold=30, shop_cards=[_card('丹恒·饮月', 2)])
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
         act = shop.decide_shop_action(st, sess, _cfg())
         assert isinstance(act, BuyCard), act
         assert act.card.name == '丹恒·饮月'
+        assert act.reason == 'm2_locked_member'
+
+    def test_true_line_member_keeps_m2_line_member_key(self):
+        """线成员键保持锁(局21 候选3 对照面):锁线帧缺员 core∪shared
+        成员买入仍记 m2_line_member(分键只拆扩展成员,不污染原键)。"""
+        comp = get_comp(_LOCK_COMP)
+        core = list(predicates.line_members(comp))
+        st = _state(gold=30, shop_cards=[_card(core[0], 3)])
+        sess = _session(comp, _locked_ist())
+        act = shop.decide_shop_action(st, sess, _cfg())
+        assert isinstance(act, BuyCard) and act.card.name == core[0]
+        assert act.reason == 'm2_line_member'
+
+    def test_unlocked_frames_never_emit_locked_member_key(self):
+        """未锁帧零漂移锁:buy_members == k_members ⇒ M2 买入恒
+        m2_line_member,m2_locked_member 不出现(缺省零漂移)。"""
+        st = _state(gold=30, shop_cards=[_card('三月七', 2)])
+        sess = _session(get_comp(_LOCK_COMP), IntentionState())
+        act = shop.decide_shop_action(st, sess, _cfg())
+        assert isinstance(act, BuyCard)
         assert act.reason == 'm2_line_member'
 
     def test_locked_faction_member_not_non_line_in_rejects(self):

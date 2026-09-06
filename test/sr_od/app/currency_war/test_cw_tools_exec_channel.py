@@ -187,7 +187,6 @@ class TestRunToolQueue:
             calls.append(plan.action)
             return 'cancel'
 
-        comp = _mk_comp([_KEY])
         queue = [ToolDragPlan('furnace_single', _FURNACE, _DEAD,
                               (1800, 200), (1843, 250)),
                  ToolDragPlan('furnace_single', _FURNACE, _DEAD,
@@ -301,6 +300,29 @@ class TestMandateEmission:
         s2 = _session_with([_TOKEN])   # 令牌 R(c) 缺档 → 全拒 → 不发
         out2 = mandate.run_mandate(self._frame(), s2, state=st)
         assert not any(isinstance(e.action, RunTools) for e in out2)
+
+    def test_m75_evaluated_trace_and_reject_keys(self):
+        """M7.5 评估即留痕锁(二十四局复盘候选⑤:评估过但拒与未评估
+        不可辨):owned 快照在场 ⇒ m7_5_evaluated 计数;判据全拒帧按拟
+        执行动作分键(m7_5_reject_lucky_token_pick);零条目产出帧计
+        m7_5_reject_none。发射门行为不变(全拒仍不发 RunTools)。"""
+        st = GameState(plane=1, round_num=3)
+        s2 = _session_with([_TOKEN])   # 令牌 R(c) 缺档 → 判据全拒
+        out2 = mandate.run_mandate(self._frame(), s2, state=st)
+        assert s2.cw4_counters.get('m7_5_evaluated') == 1
+        assert s2.cw4_counters.get('m7_5_reject_lucky_token_pick') == 1
+        assert not any(isinstance(e.action, RunTools) for e in out2)
+        s3 = _session_with(['轮滑鞋'])   # owned 在场但无工具条目产出
+        mandate.run_mandate(self._frame(), s3, state=st)
+        assert s3.cw4_counters.get('m7_5_evaluated') == 1
+        assert s3.cw4_counters.get('m7_5_reject_none') == 1
+        # 未评估帧(owned 快照空)不计 evaluated(评估帧与未评估帧可辨)
+        s4 = StrategySession()
+        s4.cw4_counters = {}
+        s4.last_owned_equips = None
+        s4.target_comp = _mk_comp([_KEY])
+        mandate.run_mandate(self._frame(), s4, state=st)
+        assert 'm7_5_evaluated' not in s4.cw4_counters
 
     def test_exec_latch_blocks_reemission_same_phase(self):
         """执行位闩:mark_tools_pass_executed 置位后同 phase 不再发
