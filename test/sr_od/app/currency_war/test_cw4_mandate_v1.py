@@ -197,7 +197,8 @@ class TestBypassEnumeration:
         """反向对拍(行→函数;P25 占位接管批补齐,ADR-0569):BYPASS_TABLE
         每行(墓碑豁免)必须对应 criteria 包内现存公开函数——删函数不删行
         = 红。出处 = 设计《直通核心卡信号层入口》§6 P25 行「全表对拍双向
-        强制」+ spotcheck δ1 勘误(原稿声称的双向强制在落码前实为单向,
+        强制」(docs/develop/currency_war/design/设计-C1直通核心入口.md)
+        + spotcheck δ1 勘误(原稿声称的双向强制在落码前实为单向,
         本测试把设计声称的不变量落成真)。"""
         pkg_dir = Path(mandate.__file__).parent / 'criteria'
         present: dict[str, set[str]] = {}

@@ -103,14 +103,21 @@ def _fake_state(board: dict[str, int], deployed: list = (),
                 bench: list = ()):
     """最小 GameState 形状(form_progress 只读 board;准入/质量维读
     bench/deployed 定长表与 max_units——缺省空表 = 无 victim/bench、
-    cap 兜底 10**6,合法输入)。"""
+    cap 兜底 10**6,合法输入)。
+
+    slot 统一 1 基物理槽位范式(容器占位由列表下标承载,slot 字段只
+    表物理槽位):生产单一源 = cw_state.bench_place 放置归一
+    ``slot = 下标+1``(物理槽位 1-9,与 live 读链 read_bench_chars 同
+    坐标系);范式参照同仓 test_cw_core_single_card_channel._bc。
+    禁 0 基/表基失真——质量维或放置计划按生产归一语义读 slot 时,
+    失真帧会静默误判(测试帧不再反映生产形态)。"""
     dep = [None] * 10
     for i, name in enumerate(deployed):
-        dep[i] = BenchChar(slot=i, char_id=name, star=1,
+        dep[i] = BenchChar(slot=i + 1, char_id=name, star=1,
                            position_pref='back')
     b = [None] * 9
     for i, name in enumerate(bench):
-        b[i] = BenchChar(slot=i + 10, char_id=name, star=1,
+        b[i] = BenchChar(slot=i + 1, char_id=name, star=1,
                          position_pref='back')
     return SimpleNamespace(board=board, bench=b, deployed=dep,
                            level=6, deploy_cap=6, max_units=lambda: 6)

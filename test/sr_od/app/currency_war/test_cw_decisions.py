@@ -438,9 +438,6 @@ def _bc_at(slot, name, star=1, faction='?') -> BenchChar:
     return BenchChar(slot=slot, char_id=name, faction=faction, star=star)
 
 
-@pytest.mark.xfail(reason='r17 已知缺口:全场 3合1 落地后 eval 缺 star-aware 战力计价'
-                   '(人数-2 vs 星级+1 在当前 eval 框架恒负);修法=synergy/comp_strength 星级敏感化,挂策略批',
-                   strict=False)
 # ===== ADR-0129 购买经验决策(单击价模型替整级大金;升级滞后 live 实锤修复) =====
 def test_xp_helpers_clicks_and_cost() -> None:
     """clicks_to_next_level 向上取整;xp_click_cost 用 OCR 实读优先。"""

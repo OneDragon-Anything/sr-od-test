@@ -1,6 +1,7 @@
 """C1 直通核心卡支配性支通道单帧锁(ADR-0569)。
 
-出处 = 设计《直通核心卡信号层入口》(设计-C1直通核心入口.md v3):
+出处 = 设计《直通核心卡信号层入口》
+(docs/develop/currency_war/design/设计-C1直通核心入口.md,持久正本):
 - §2 案A:并列支配通道挂 dominance 邻位(既有 dominance_buy 之后、M3
   之前);发射判据 = registry 名单核心卡 ∧ 1★ 全额退(refund_full_star_ok
   共享单一源)∧ 不破息带(t5_p1_false,L 项零损)∧ bench 空槽
@@ -14,16 +15,20 @@
 ⇒ L=0 放行;gold=50 买 3 金跨息档 ⇒ L≥1 拒),锚定零参数语义本体。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import (
+    COMP_LIBRARY,
     CORE_SINGLE_CARD_REGISTRY,
+    V2_FAMILIES,
     get_comp,
 )
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_intention import (
+    IntentionState,
+    intention_core,
+)
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
@@ -37,6 +42,9 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     contracts,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 
 # ===== 基建(idiom 同 test_cw_locked_buy_membership_split)=====
@@ -233,6 +241,41 @@ def test_core_single_card_registry_entries():
     for name in excluded:
         assert name not in CORE_SINGLE_CARD_REGISTRY, \
             f'{name} 应被 B3 谓词排除,禁误扩'
+
+
+def test_registry_names_are_intention_core_of_some_v2_comp():
+    """registry ↔ 意向核心派生对齐锁(单一源交点的可执行对账)。
+
+    断言:每个在册核心卡 = 至少一条 v2 家族套(c.family ∈ V2_FAMILIES)
+    的意向核心——cw_intention.intention_core(c) == name(派生序:
+    plaza_carry ∈ core_chars 优先,否则 core_chars 首位)且 name 在该套
+    core_chars 内。失配即红。
+
+    依据(持久索引):
+    - 设计《直通核心卡信号层入口》§2 案B 否决理由③(粒度错配:见到核心卡
+      的第一反应是囤,换线归换线机器第三触发辖)——通道不改换线语义,
+      两机器仅共用名单,互不代管;
+    - 同文 §4 合取表「换线状态机」行:唯一交点 = 共用
+      CORE_SINGLE_CARD_REGISTRY 单一源(防「入口说它是核心、换线机器
+      说它不是」的双源漂移);
+    - R197 影子面判例的豁免依据(先例 = ADR-0518 表 R197 同槽防线的
+      发射侧影子通道退役):登记面无人消费即成影子面;本登记的豁免 =
+      双消费交点(C1 通道候选身份 ∧ 换线机器意向核心派生)真实存在,
+      由本锁持续证明——registry 名一旦无任何 v2 套意向认领,交点断裂,
+      名单退化为 C1 通道单边影子面。
+    """
+    for name in CORE_SINGLE_CARD_REGISTRY:
+        claim = [
+            c for c in COMP_LIBRARY
+            if c.family in V2_FAMILIES
+            and intention_core(c) == name
+            and name in c.core_chars
+        ]
+        assert claim, (
+            f'在册核心卡 {name!r} 无任何 v2 家族套以它为意向核心'
+            f'(intention_core ∧ core_chars 双条件)——registry ↔ 换线'
+            f'机器单一源交点断裂(设计 §4 交点表行);先核名单与 '
+            f'COMP_LIBRARY core_chars/plaza_carry 数据,禁为保绿改锁')
 
 
 if __name__ == '__main__':

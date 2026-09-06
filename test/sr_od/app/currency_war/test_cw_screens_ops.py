@@ -216,6 +216,45 @@ def test_in_match_screen_names_excludes_train_supply_popup() -> None:
     )
 
 
+def test_in_match_screen_names_excludes_jade_detail_popup() -> None:
+    """星琼详情弹窗必须显式排除(白名单锁,T-98 事故;ADR-0574)。
+
+    模态详情弹窗屏名带 货币战争- 前缀,被前缀自动收录机制收进对局屏集 →
+    弹窗帧被误判「已在对局中」→ 跳过 enter/start 直交 cw_loop → 卡死换姿势
+    复发。从白名单移除本行 = 本锁红。
+    """
+    infos = [_FakeScreenInfo('货币战争-星琼详情')]
+    assert CurrencyWarApp.in_match_screen_names(infos) == [], (
+        '星琼详情弹窗是非对局屏(模态盖场,守卫=入口链共享助手),'
+        '不得进对局屏集(否则弹窗帧被误判对局中 → 卡死换姿势复发)'
+    )
+
+
+def test_in_match_screen_names_excludes_star_badge_detail() -> None:
+    """星徽详情弹窗必须显式排除(白名单补漏,方案审 F3;ADR-0574)。
+
+    已建档同族「标题+X」详情弹窗(currency_war_star_badge_detail.yml),处理
+    分支属同族泛化待办;带前缀会被自动收屏,在场即误判对局中——与 match2
+    误路由同型,先行入清单防复发。
+    """
+    infos = [_FakeScreenInfo('货币战争-星徽详情')]
+    assert CurrencyWarApp.in_match_screen_names(infos) == [], (
+        '星徽详情弹窗是非对局屏(同族详情弹窗),不得进对局屏集'
+    )
+
+
+def test_in_match_screen_names_excludes_score_rewards() -> None:
+    """积分奖励页必须显式排除(白名单补漏,方案审 F3;ADR-0574)。
+
+    入口链 3b 分支处理的局末奖励页(cw_entry_start 承接:一键领取+关闭),
+    语义非对局屏;带前缀会被自动收屏,在场即误判对局中跳过 enter。
+    """
+    infos = [_FakeScreenInfo('货币战争-积分奖励')]
+    assert CurrencyWarApp.in_match_screen_names(infos) == [], (
+        '积分奖励页是非对局屏(入口链奖励页),不得进对局屏集'
+    )
+
+
 def test_train_supply_popup_fixture_not_in_match(test_context: SrTestContext) -> None:
     """大世界+弹窗真帧:不得被判成对局中态(match2 误路由场景回归)。"""
     from one_dragon.base.screen.screen_utils import get_match_screen_name
@@ -227,6 +266,20 @@ def test_train_supply_popup_fixture_not_in_match(test_context: SrTestContext) ->
     hit = get_match_screen_name(test_context, img, screen_name_list=screens)
     assert hit is None, (
         f'弹窗真帧被误判对局屏 {hit}(入局流会被误路由交 cw_loop 停机)'
+    )
+
+
+def test_jade_detail_popup_fixture_not_in_match(test_context: SrTestContext) -> None:
+    """大世界+星琼详情弹窗真帧:不得被判成对局中态(T-98 误路由场景回归)。"""
+    from one_dragon.base.screen.screen_utils import get_match_screen_name
+
+    if not test_context.has_screen('货币战争-星琼详情', 'default'):
+        _test_in_match_screen_layer_pytest.skip('fixture 缺:货币战争-星琼详情/default')
+    screens = CurrencyWarApp.in_match_screen_names(test_context.screen_loader.screen_info_list)
+    img = test_context.load_screen('货币战争-星琼详情', 'default')
+    hit = get_match_screen_name(test_context, img, screen_name_list=screens)
+    assert hit is None, (
+        f'星琼详情弹窗真帧被误判对局屏 {hit}(T-98 卡死换姿势复发)'
     )
 
 

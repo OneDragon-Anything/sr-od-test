@@ -10,7 +10,6 @@
 - 谓词单帧:t5_p1_false 现算(不按帧集清单,ADR-0556 §2 约定)。
 不锁卡名(ADR-0556 §8):垫件名均取自注册表运行时解析。
 """
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 import pytest
@@ -26,6 +25,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
     t5_p1_false,
@@ -294,3 +296,67 @@ class TestT5OutOfScope:
         assert not any(k.startswith('t3_') for k in state_of(sess).cw4_counters)
         assert not (isinstance(act, BuyCard)
                     and act.reason == 't3_unlocked_hemostat')
+
+
+class TestT5RecipeFloorExemptWiring:
+    """豁免武装布尔接线锁(ADR-0564 候补批;T5 can_deploy_single 调用位):
+    帧属性同帧同值契约——预检实参必须携带 recipe_floor_lock_exempt 且
+    与 cw_intention.locked_line_recipe_floor_conflict(同一 _ist)同值;
+    去掉豁免参 = spy 缺键 = 红。
+
+    辖域边界:武装帧 T5 结构性出辖(armed ⇒ locked_buy_membership 非空
+    ⇒ T5 门关),故本锁在「未锁线开火帧」钉 helper(空 locked_comp)
+    = False 同值、在「边缘双开帧」(ADR-0556 §3:locked_comp 脏名致
+    采购集解析为空,T5 照常开火)钉 helper(不可解析)= False 同值;
+    armed=True 的行为语义锁在 kernel 侧(test_cw_recipe_floor_lock_
+    exempt 家族穿参)与出口③接线锁。
+    """
+
+    def _spy_can_deploy(self, monkeypatch) -> list[dict]:
+        recorded: list[dict] = []
+        real = shop.can_deploy_single
+
+        def _spy(*a, **kw):
+            recorded.append(kw)
+            return real(*a, **kw)
+
+        monkeypatch.setattr(shop, 'can_deploy_single', _spy)
+        return recorded
+
+    def test_unlocked_frame_carries_frame_value(self, monkeypatch):
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            locked_line_recipe_floor_conflict,
+        )
+        recorded = self._spy_can_deploy(monkeypatch)
+        filler = _filler_name()
+        st, sess = _frame(_G_OPEN, cards=[_card(filler, cost=1)])
+        act = _decide(st, sess)
+        # 接线不破坏既有发射语义(预检放行路径回归)
+        assert isinstance(act, BuyCard)
+        assert act.reason == 't3_unlocked_hemostat'
+        assert len(recorded) == 1, f'预检调用数漂移:{len(recorded)}'
+        assert 'recipe_floor_lock_exempt' in recorded[0], \
+            '豁免实参缺失(接线缺失形态)'
+        assert locked_line_recipe_floor_conflict(
+            state_of(sess).v3_intention) is False
+        assert recorded[0]['recipe_floor_lock_exempt'] is False
+
+    def test_dual_open_frame_carries_helper_value(self, monkeypatch):
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            locked_line_recipe_floor_conflict,
+        )
+        recorded = self._spy_can_deploy(monkeypatch)
+        filler = _filler_name()
+        st, sess = _frame(_G_OPEN, cards=[_card(filler, cost=1)])
+        # 边缘双开形态(ADR-0556 §3):locked_comp 非空而采购集解析为空
+        # (get_comp 注册表缺项脏态)⇒ T5 照常开火;helper 对不可解析
+        # 脏名 = False(fail-closed)
+        state_of(sess).v3_intention = SimpleNamespace(
+            locked_comp='未注册comp脏名')
+        act = _decide(st, sess)
+        assert isinstance(act, BuyCard)
+        assert act.reason == 't3_unlocked_hemostat'
+        assert len(recorded) == 1
+        assert locked_line_recipe_floor_conflict(
+            state_of(sess).v3_intention) is False
+        assert recorded[0]['recipe_floor_lock_exempt'] is False

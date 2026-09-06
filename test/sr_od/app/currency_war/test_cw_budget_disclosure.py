@@ -6,9 +6,13 @@ recorder/engine_p1 有读端,但全库零写点——预算投影(assembly._budg
 每 prep 帧现算后算完即丢。实机局 g_20260907_021326 的 52 行 decisions
 切片四字段全 ``(0, 0, 0, 0, '')``,含升级窗口与滞留金轮,真值应非零。
 
-修复 = 写点两处 + 键戳轮界:
+修复 = 写点 + 键戳轮界(prep 装配帧 + 店开观察帧双写,ADR-0571 §2.2):
 - ``assembly._disclose_budget``(装配点):三预算字段幂等覆写 +
   ``v3_disclosure_key`` (plane, round) 键戳(变更 ⇒ spent/reason 清零);
+  prep 关店帧 gold 过 F2 门不可得 ⇒ overflow/budget 恒 0 =「金未采」
+  已知语义(实机首局 g_20260907_025608 锚⑤定谳);
+- ``assembly.disclose_budget_at_shop_frame``(店开观察帧,经
+  ``cw_op_buy_cards`` 段顶调用):overflow/budget 覆写为帧现值;
 - ``cw_op_buy_cards.accrue_release_spent``(执行回执位):spent 只计
   刷新实花(首版「宁窄勿虚」收窄口径,ADR-0571)。
 
@@ -44,6 +48,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.adapter import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
     assemble,
+    disclose_budget_at_shop_frame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
     Snapshot,
@@ -146,6 +151,60 @@ class TestBudgetDisclosureWriteRead:
         assert all(row.get(k) is not None for k in (
             'sess_reserve_cap', 'sess_reserve_overflow',
             'sess_release_budget', 'sess_release_spent'))
+
+
+# ===== 锁 F:店开帧双写(实机锚⑤补遗)=====
+
+class TestShopOpenFrameDualWrite:
+
+    @staticmethod
+    def _closed_snap(plane: int, round_num: int, gold: int) -> Snapshot:
+        """prep 关店帧形态:gold 可读但 F2 门 untrusted(gold 仅店开态
+        可信,cw_screen_prep;decision_state 不采纳 ⇒ 装配态 gold 缺省
+        0)——live prep 装配的真实帧型。"""
+        return Snapshot(plane=plane, round_num=round_num, level=5,
+                        gold=gold, gold_trusted=False, hp=100,
+                        hp_readable=True,
+                        classification=SubstateClassification(
+                            name='test', confident=True))
+
+    def test_prep_closed_frame_keeps_zero_semantics(self):
+        """prep 关店帧 ⇒ overflow/budget 恒 0 =「金未采」已知语义(非
+        真 0;实机首局 g_20260907_025608 锚⑤定谳),reserve_cap 不受
+        影响(gold 无关)——修复不改变关店 0 语义,只增店开帧第二写点。"""
+        sess = StrategySession()
+        turn = assemble(self._closed_snap(1, 8, 64), sess)
+        st = state_of(sess)
+        assert st.v3_reserve_cap == turn.budget.reserve_cap
+        assert st.v3_reserve_overflow == 0
+        assert st.v3_release_budget == 0
+
+    def test_shop_open_frame_overwrites_with_frame_values(self):
+        """店开观察帧覆写:overflow/budget 变帧现值(gold 64 > cap ⇒
+        溢余 14/义务 >0);同轮重复覆写不清 spent(轮界清零归 prep 键戳
+        独占);下轮 prep 关店帧 ⇒ 键戳翻轮清零 + 关店 0 语义恢复
+        (decisions 行 sess_* = 最近一次写点值语义)。"""
+        sess = StrategySession()
+        # ① prep 关店帧(轮入口装配)
+        assemble(self._closed_snap(1, 8, 64), sess)
+        st = state_of(sess)
+        assert st.v3_reserve_overflow == 0
+        # ② 店开帧覆写(帧现值)
+        shop_state = GameState(gold=64, level=5, plane=1, round_num=8,
+                               hp=100)
+        disclose_budget_at_shop_frame(shop_state, sess)
+        assert st.v3_reserve_overflow == 64 - st.v3_reserve_cap
+        assert st.v3_reserve_overflow > 0
+        assert st.v3_release_budget > 0
+        # ③ 同轮重复覆写不清 spent
+        st.v3_release_spent = 4
+        disclose_budget_at_shop_frame(shop_state, sess)
+        assert st.v3_release_spent == 4
+        # ④ 下轮 prep 关店帧:键戳翻轮清零 + 关店 0 语义恢复
+        assemble(self._closed_snap(1, 9, 64), sess)
+        assert st.v3_release_spent == 0
+        assert st.v3_disclosure_key == (1, 9)
+        assert st.v3_reserve_overflow == 0
 
 
 # ===== 锁 D:轮界清零锁 =====

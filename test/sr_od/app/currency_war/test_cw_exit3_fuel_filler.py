@@ -6,7 +6,6 @@ fenced/precheck_unavailable)、垫件买入→部署 held 闭环端到端(发射
 登记 state_of(session).cw4_fuel_filler_stall_buys → 执行侧
 record_fuel_filler_held_postbuy 计数)。
 """
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
@@ -20,6 +19,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     shop,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
@@ -327,3 +329,44 @@ class TestExit3ProbBarSemantics:
         act = _decide(st, sess)
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'fuel_filler_stall')
+
+
+class TestExit3RecipeFloorExemptWiring:
+    """豁免武装布尔接线锁(ADR-0564 候补批;出口③ can_deploy_single
+    调用位):spy 按调用实参归因——武装帧(locked_comp='列车同行')
+    预检实参必须携带 recipe_floor_lock_exempt 且与
+    cw_intention.locked_line_recipe_floor_conflict(同一 _ist)同帧
+    同值;去掉豁免参 = spy 缺键 = 红。
+
+    辖域边界:武装帧垫件资格排除集 ≡ locked_buy_membership(⊃ 列车
+    同行键全成员)⇒ 列车主籍垫件结构性缺席,豁免参当前不可达行为面
+    ——本锁钉「帧属性同帧同值」接线契约;豁免 armed 的行为语义锁在
+    kernel 侧(test_cw_recipe_floor_lock_exempt 家族穿参)。
+    """
+
+    def test_armed_frame_precheck_carries_frame_exemption(
+            self, monkeypatch):
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            locked_line_recipe_floor_conflict,
+        )
+        recorded: list[dict] = []
+        real = shop.can_deploy_single
+
+        def _spy(*a, **kw):
+            recorded.append(kw)
+            return real(*a, **kw)
+
+        monkeypatch.setattr(shop, 'can_deploy_single', _spy)
+        filler = _off_line_name()
+        pad = _off_line_name(exclude=(filler,))
+        st, sess = _stall_frame(gold=46, fuel_pieces=1, fuel_min_cost=5,
+                                cards=[_card(pad, cost=1)])
+        act = _decide(st, sess)
+        # 接线不破坏既有发射语义(预检放行路径回归)
+        assert isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
+        assert len(recorded) == 1, f'预检调用数漂移:{len(recorded)}'
+        _ist = state_of(sess).v3_intention
+        assert locked_line_recipe_floor_conflict(_ist) is True, \
+            '锁前提失效:本帧应为武装帧'
+        assert recorded[0].get('recipe_floor_lock_exempt') is True, (
+            f'豁免实参缺失或非同帧武装值: {recorded[0]}')

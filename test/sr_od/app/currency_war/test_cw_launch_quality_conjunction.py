@@ -19,6 +19,8 @@
    回归防线)+ 四体系线 comp 披露对账锁;
 2b. 自家核准集(core∪shared)并入承重判定——反甲白厄空羁绊单卡/
     视图外 shared 件回归锁(落地审 F1 防线,ADR-0570 §判据);
+2c. 质量评估异常显影旗(quality_eval_error,残量禁静默,三审07轮
+    C1)+ 分键名单一源 grep 守卫(三审07轮 C2);
 3. B5 推迟上界:推迟帧换血翻真序列 + 收益耗尽臂判据与质量闸零耦合
    (判据签名结构锁)。
 """
@@ -58,14 +60,14 @@ def _state(names: list, *, bench: list = (), max_units: int = 6):
     board: dict[str, int] = {}
     dep: list = [None] * 10
     for i, name in enumerate(names):
-        dep[i] = BenchChar(slot=i, char_id=name, star=1,
+        dep[i] = BenchChar(slot=i + 1, char_id=name, star=1,
                            position_pref='back')
         ch = CHARACTERS.get(name)
         for f in ((set(ch.factions) | set(ch.flows)) if ch else set()):
             board[f] = board.get(f, 0) + 1
     b: list = [None] * 9
     for i, name in enumerate(bench):
-        b[i] = BenchChar(slot=i + 10, char_id=name, star=1,
+        b[i] = BenchChar(slot=i + 1, char_id=name, star=1,
                          position_pref='back')
     return SimpleNamespace(board=board, deployed=dep, bench=b,
                            level=max_units, deploy_cap=max_units,
@@ -137,8 +139,10 @@ class TestArmedConjunctionTruthTable:
         assert core['armed'] is True                 # 计划不可得 fail-open
 
     def test_quality_evaluation_exception_fails_open(self, monkeypatch):
-        """质量评估异常 → armed 维持配方腿结果、quality=None 显影
-        (C3 §6:算不出不关闸,宁可不修不加未证闸的防死锁教义)。"""
+        """质量评估异常 → armed 维持配方腿结果、quality=None + 显影旗
+        quality_eval_error=True(算不出不关闸的防死锁教义 + 残量禁静默:
+        异常帧与「配方不完备」常态帧单义区分,三审07轮 C1);正常帧
+        旗恒 False(双态不混载)。"""
 
         def _boom(*a, **kw):
             raise RuntimeError('质量报告不可得(注入异常)')
@@ -148,13 +152,38 @@ class TestArmedConjunctionTruthTable:
         core = _decide(_state(list(_XZ3)), _COMP_XZ)
         assert core['armed'] is True
         assert core['quality'] is None
+        assert core['quality_eval_error'] is True
+        monkeypatch.undo()
+        normal = _decide(_state(list(_XZ3)), _COMP_XZ)
+        assert normal['quality'] is not None
+        assert normal['quality_eval_error'] is False
+
+
+class TestConsumerKeySingleSource:
+    """锁 2c:质量闸分键名单一源(三审07轮 C2 守卫锁,F8 族 grep 守卫
+    扩展)——两消费面写点禁字面量散写,键名改 kernel 常量即全链跟随。"""
+
+    def test_counter_keys_not_inlined_in_consumers(self):
+        """engine_p1/cw_loop 源内不得出现 ``launch_quality_defer_frames``
+        /``launch_quality_eval_error`` 字面量(单一源 = kernel 常量
+        LAUNCH_QUALITY_*_KEY;字面量散写 = 双源,红)。"""
+        from one_dragon.utils.file_utils import get_project_root
+        root = get_project_root()
+        for rel in ('src/sr_od/application/currency_war/sim/engine_p1.py',
+                    'src/sr_od/application/currency_war/operations/'
+                    'cw_loop.py'):
+            src = (root / rel).read_text(encoding='utf-8')
+            assert 'launch_quality_defer_frames' not in src, (
+                f'{rel} 分键名字面量散写(经 kernel 常量消费)')
+            assert 'launch_quality_eval_error' not in src, (
+                f'{rel} 分键名字面量散写(经 kernel 常量消费)')
 
 
 class TestQualityViewFollowsTargetLine:
     """锁 2:质量维视图 = comp.all_factions(随目标线),非四体系披露
     视图(ADR-0570 Considered 否决 3 的回归防线:注册表实证 20 套
-    comp 中 16 套 form_tiers 含四体系外阵营,四体系视图会令这些线的
-    达标板面永久关闸)。"""
+    comp 中 15 套 form_tiers 非空且含四体系外阵营,四体系视图会令这些
+    线的达标板面永久关闸)。"""
 
     def test_non_transition_comp_arms_on_own_view(self):
         """真实四体系外线(千冶减益,form={减益:4,星核猎手:2}):达标

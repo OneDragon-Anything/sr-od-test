@@ -48,15 +48,12 @@ def test_consumers_share_single_source() -> None:
     """消费方共享单源:deploy_bench 与 cw_line_defs 的名字一致
     (旧 line_strategy 局部 set 随 ADR-0336 删)。
 
-    dd-037 更新:op 的配方基础线判据(RECIPE_BASE)随选人段收敛进
-    kernel.cw_deploy_logic.select_deployments(kernel 自己 import 单一源),
-    op 模块的 _RECIPE_BASE 死别名已删——单源性改锁在 kernel 消费上。
-
-    ADR-0564/O1 更新:op 主循环 r288 门改走 kernel.recipe_floor_holds
-    后,op 侧围栏别名 _RECIPE 唯一消费(vestigial 恒真判定)消亡,
-    import 随批删除——op 不再直接消费 RECIPE_FACTIONS,单源性 =
-    kernel 判定函数(recipe_floor_holds);本锁改墓碑式(别名退役 +
-    kernel 判定在位),防死别名回流。
+    当前语义(ADR-0564/O1):op 主循环 r288 门改走
+    kernel.recipe_floor_holds 后,op 侧围栏别名 _RECIPE 唯一消费
+    (vestigial 恒真判定)与死别名 _RECIPE_BASE 均已退役,import 随批
+    删除——op 不再直接消费 RECIPE_FACTIONS,单源性 = kernel 判定函数
+    (recipe_floor_holds);本锁墓碑式(_RECIPE 退役 + kernel 判定在位),
+    防死别名回流。
     """
     import sr_od.application.currency_war.kernel.cw_deploy_logic as deploy_logic
     from sr_od.application.currency_war.operations.cw_op import (

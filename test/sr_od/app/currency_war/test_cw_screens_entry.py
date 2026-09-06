@@ -206,6 +206,40 @@ def _build_phases_train_supply_popup() -> list[dict]:
     ]
 
 
+def _build_phases_jade_detail_popup() -> list[dict]:
+    """星琼详情弹窗剧本(真帧锁:2026-09-07 实机卡死事故帧;ADR-0574)。
+
+    列车补给领取点击命中弹窗中央星琼图标 → 货币详情弹窗模态盖场,入口链全部
+    背景锚点失明 → 推进循环空烧 60 步超时(修复前事故)。剧本:弹窗(守卫点
+    「按钮-关闭X」)→ 大厅 → 模式选择 → 难度确认 A8 → 简报 → 备战(转换恢复)。
+    """
+    return [
+        {  # 弹窗:守卫点「按钮-关闭X」关闭(双锚识别,纯坐标点击)
+            'frame': ('货币战争-星琼详情', 'default'),
+            'exit': ('on_click_in', '货币战争-星琼详情', '按钮-关闭X'),
+        },
+        {
+            'frame': ('货币战争-大厅', 'lobby'),
+            'exit': ('on_click_in', '货币战争-大厅', '按钮-开始货币战争'),
+        },
+        {
+            'frame': ('货币战争-模式选择', 'default'),
+            'exit': ('on_click_in', '货币战争-模式选择', '按钮-进入标准博弈'),
+        },
+        {
+            'frame': ('货币战争-难度确认', 'a8'),
+            'exit': ('on_click_in', '货币战争-难度确认', '按钮-开始对局'),
+        },
+        {
+            'frame': ('货币战争-简报', 'default'),
+            'exit': ('on_click_in', '货币战争-简报', '按钮-下一步'),
+        },
+        {  # 备战:terminal
+            'frame': ('货币战争-备战', 'shop_closed'),
+        },
+    ]
+
+
 @pytest.fixture()
 def fixture_controller(
     test_context: SrTestContext,
@@ -404,6 +438,100 @@ class TestCwEntryStartFlow:
             f'剧本应推进到末 phase(备战):phase_idx={fixture_controller.phase_idx}'
         )
 
+    def test_jade_detail_popup_closed_then_reaches_prep(
+        self,
+        test_context: SrTestContext,
+        fixture_controller: FixtureController,
+    ) -> None:
+        """星琼详情弹窗(真帧):守卫点「按钮-关闭X」→ 转换恢复推进到备战。
+
+        守卫锁:移除 op 的 ``_handle_jade_detail_popup`` 分支 → 弹窗帧无分支可
+        推进 → 本锁红(推进无路,超时失败;ADR-0574)。
+        """
+        phases = _build_phases_jade_detail_popup()
+        _require_screens(test_context, phases)
+
+        fixture_controller.set_phases(phases)
+        op = _WatchedCwEntryStart(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        enter_running_state(test_context)
+        try:
+            with fast_sleep():
+                result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        assert result.success, (
+            f'弹窗关闭后未恢复推进到备战:status={result.status}'
+            f';phase_idx={fixture_controller.phase_idx}'
+            f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        # 关闭点击必须落在弹窗右上角 X 钮区(不是乱点/误点中央内容)。
+        assert fixture_controller.click_hit_area(
+            '货币战争-星琼详情', '按钮-关闭X'), (
+            '未点「按钮-关闭X」关闭星琼详情弹窗:'
+            f'{_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert fixture_controller.phase_idx == len(phases) - 1, (
+            f'剧本应推进到末 phase(备战):phase_idx={fixture_controller.phase_idx}'
+        )
+
+    def test_jade_detail_popup_closed_at_app_entry_then_nav_resumes(
+        self,
+        test_context: SrTestContext,
+        fixture_controller: FixtureController,
+    ) -> None:
+        """大世界+星琼详情弹窗帧(T-98 事故场景):app 首节点 `_enter_lobby`
+        守卫分支点 X 关闭 → 重跑节点走「已在 CW」常规分支导航恢复。
+
+        守卫锁:移除 `_enter_lobby` 的星琼弹窗分支,或把弹窗屏收进对局屏集(误判
+        「已在对局中」跳过 enter 直交 loop)→ 本锁红。
+        """
+        from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
+
+        phases = [
+            {  # 大世界+弹窗:首节点守卫分支点「按钮-关闭X」
+                'frame': ('货币战争-星琼详情', 'default'),
+                'exit': ('on_click_in', '货币战争-星琼详情', '按钮-关闭X'),
+            },
+            {  # 关闭后回落大厅:app 首节点走「已在 CW」常规分支(导航恢复)
+                'frame': ('货币战争-大厅', 'lobby'),
+            },
+        ]
+        _require_screens(test_context, phases)
+        fixture_controller.set_phases(phases)
+
+        app = CurrencyWarApp(test_context)
+        enter_running_state(test_context)
+        try:
+            with fast_sleep():
+                app.screenshot()
+                # 节点方法直调语义(同下方列车补给锁):守卫分支返回 round_retry
+                # (计入节点预算,ADR-0574),重跑节点才走常规分支。
+                first = app._enter_lobby()
+                app.screenshot()
+                result = app._enter_lobby()
+        finally:
+            reset_running_state(test_context, app)
+
+        assert first is not None and not first.is_success, (
+            f'弹窗帧首轮应返回非成功(守卫分支),实:{first.status if first else None}'
+        )
+        assert fixture_controller.click_hit_area(
+            '货币战争-星琼详情', '按钮-关闭X'), (
+            'app 首节点未点「按钮-关闭X」关闭星琼详情弹窗:'
+            f'{_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert result.is_success, (
+            f'弹窗关闭后导航未恢复:status={result.status}'
+            f';phase_idx={fixture_controller.phase_idx}'
+            f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert fixture_controller.phase_idx == len(phases) - 1, (
+            f'关闭后应恢复导航到大厅(末 phase):phase_idx={fixture_controller.phase_idx}'
+        )
+
     def test_train_supply_popup_claimed_at_app_entry_then_nav_resumes(
         self,
         test_context: SrTestContext,
@@ -435,7 +563,8 @@ class TestCwEntryStartFlow:
             with fast_sleep():
                 app.screenshot()
                 # 节点方法直调语义(同 test_cw_w817_recovery_precheck):弹窗分支
-                # 返回 round_wait(WAIT)等领取动画,重跑节点才走常规分支。
+                # 返回 round_retry(ADR-0574 改形:RETRY 计节点预算,领取点击永不
+                # 落地时有界具名 FAIL;原 WAIT 语义不计 retry 会无界空转)。
                 first = app._enter_lobby()
                 app.screenshot()
                 result = app._enter_lobby()
@@ -443,7 +572,7 @@ class TestCwEntryStartFlow:
             reset_running_state(test_context, app)
 
         assert first is not None and not first.is_success, (
-            f'弹窗帧首轮应返回 WAIT(领取分支),实:{first.status if first else None}'
+            f'弹窗帧首轮应返回非成功(领取分支 round_retry),实:{first.status if first else None}'
         )
         assert result.is_success, (
             f'弹窗领取后导航未恢复:status={result.status}'
@@ -715,6 +844,40 @@ def test_invest_strategy_not_misread_as_battle_prep(test_context: SrTestContext)
         _test_currency_war_invest_strategy_screen_pytest.skip('fixture 缺:default.webp')
     img = test_context.load_screen(SCREEN, 'default')
     assert get_match_screen_name(test_context, img, screen_name_list=['货币战争-备战']) is None
+
+
+# ==================== test_currency_war_jade_detail_screen ====================
+
+def test_jade_detail_id_mark_true_positive(test_context: SrTestContext) -> None:
+    """真阳性:星琼详情弹窗 fixture(2026-09-07 事故帧)→ 精准匹配 货币战争-星琼详情。
+
+    双 id_mark(标识-星琼标题 @0.5 + 标识-稀有货币 @0.75)全中才算精准;
+    建档坐标 = 方案 §5 实测,MCP analyze_screen 当场验证 is_precise=True。
+    """
+    if not test_context.has_screen('货币战争-星琼详情', 'default'):
+        _test_currency_war_invest_strategy_screen_pytest.skip('fixture 缺:screens/货币战争-星琼详情/default.webp')
+    img = test_context.load_screen('货币战争-星琼详情', 'default')
+    assert get_match_screen_name(test_context, img, screen_name_list=['货币战争-星琼详情']) == '货币战争-星琼详情', (
+        '星琼详情 fixture 应精准匹配(id_mark 星琼标题+稀有货币 双锚全中)'
+    )
+
+
+def test_jade_detail_not_misread_as_sibling_screens(test_context: SrTestContext) -> None:
+    """无碰撞:星琼详情帧不被误判同族弹窗/宿主屏(双锚位置约束区分)。
+
+    候选撞车源:列车补给弹窗(同为入口链大世界弹窗,标题区不同屏)与 大厅
+    (模态压暗背景下的宿主)。双锚的矩形约束使既有屏凑不齐自家 id_mark → 不精准。
+    全屏库双向碰撞由 test_id_mark.py 自动发现机制另行覆盖,此处锁高危邻屏。
+    """
+    if not test_context.has_screen('货币战争-星琼详情', 'default'):
+        _test_currency_war_invest_strategy_screen_pytest.skip('fixture 缺:screens/货币战争-星琼详情/default.webp')
+    img = test_context.load_screen('货币战争-星琼详情', 'default')
+    assert get_match_screen_name(test_context, img, screen_name_list=['货币战争-列车补给弹窗']) is None, (
+        '星琼详情帧不应被误判 货币战争-列车补给弹窗'
+    )
+    assert get_match_screen_name(test_context, img, screen_name_list=['货币战争-大厅']) is None, (
+        '星琼详情帧(背景压暗)不应被误判 货币战争-大厅'
+    )
 
 
 # ==================== test_currency_war_plane_transition_screen ====================
