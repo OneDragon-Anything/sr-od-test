@@ -1285,3 +1285,192 @@ def test_guard_hook_uses_settle_gate_not_blind_sleep() -> None:
     # 钩子段不得回流 blind sleep(门到位前旧码形态:先 sleep 再重读)
     assert 'time.sleep(1.0)\n                _reshop' not in src, (
         '钩子防抖回流 blind sleep(摘门回归形态)')
+
+
+# ==================== 终结 op 循环退出(终结 op 语义 review V1/V2 修复批)====
+#
+# 设计出处 = ADR-0517 决策 4/7(screen_op.md §3「终结 op 是一等动作」/
+# 「刷新 = 唯一引入新事实的动作,期望态必须在新事实处重建」)。修复前缺陷
+# (review 报告 V1,`.debug/temp/currency_war/terminal_op_review/报告.md`):
+# 决策循环对 `_aop.terminal` 零消费——RefreshShop execute 后控制流回循环顶,
+# 黑板保持刷前旧牌面,策略器(期望态的确定性纯函数)连发 RefreshShop 至
+# 硬墙(P35 实证 plan=Refresh×4),且旧牌面 BuyCard 提案可点在新牌面槽位
+# (错买)。修复 = execute 后按 `_aop.terminal` 统一 break,新事实由段循环
+# 下一次迭代的入口观察重建。
+#
+# w614 哨兵锚推演(锁纪律重推记录):本批只改 live 执行侧控制流,sim
+# (engine_p1)与桥接器零触碰;sim 侧本就按「刷→break→重采样→重决策」
+# 建模(r270/r273),digest 锚不含 live 执行路径 → w614 锚预期零漂移,
+# 无重锚义务(实测见本批 journal)。
+
+
+def _wrap_decide_and_observe(test_context: SrTestContext,
+                             monkeypatch: pytest.MonkeyPatch,
+                             ev: list[str]) -> None:
+    """给替身策略与读点挂事件序探针(ev 记 'decide'/'observe')。
+
+    observe 探针包在 _make_op 已 monkeypatch 的 buy_cards_mod.read_game_state
+    之上(再 setattr 即包装前序替身);decide 探针包在替身策略实例上。
+    """
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_buy_cards as _bcm,
+    )
+    _strat = test_context.cw_match.strategy
+    _real_decide = _strat.decide_shop_action
+
+    def _decide(session, config):
+        ev.append('decide')
+        return _real_decide(session, config)
+    _strat.decide_shop_action = _decide
+    _real_read = _bcm.read_game_state
+
+    def _read(*args: Any, **kwargs: Any):
+        ev.append('observe')
+        return _real_read(*args, **kwargs)
+    monkeypatch.setattr(_bcm, 'read_game_state', _read)
+
+
+def test_refresh_terminal_breaks_segment(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path, _require_fixture,
+) -> None:
+    """锁⑤刷新后循环退出:RefreshShop execute 后本段立即 break,下一条
+    decide 必须发生在重新观察(新事实入口重建)之后。
+
+    修复前形态:段内 decide 连发至 CloseShop/硬墙,两次 decide 之间无
+    observe(P35 判据全程失明的代码级机制)。锁断言:①decide 恰 2 次
+    (刷新终结 + 段2 重观察后 CloseShop 收工;修复前 = 3 次);②两次
+    decide 之间恰一次 observe。出处 = ADR-0517 决策 4/7。
+    """
+    ev: list[str] = []
+    op, fc, _cap, _facts = _make_op(
+        test_context, monkeypatch, tmp_path,
+        plans=[[RefreshShop(cost=2)], [CloseShop()]],
+        states=[_state(10, _OLD_NAMES),
+                _state(8, _NEW_NAMES), _state(8, _NEW_NAMES)],
+        gold_opts=[8, 8], shop_reads=[_NEW_NAMES, _NEW_NAMES], events=[])
+    _wrap_decide_and_observe(test_context, monkeypatch, ev)
+
+    result = _execute(op)
+
+    assert result.success, f'刷新终结链应正常收工:{result.status!r}'
+    assert ev.count('decide') == 2, (
+        f'decide 应恰 2 次(刷新终结 break;修复前段内连发=3):{ev}')
+    _d = [i for i, e in enumerate(ev) if e == 'decide']
+    _between = ev[_d[0] + 1:_d[1]]
+    assert _between.count('observe') == 1, (
+        f'两次 decide 之间必须重新观察一次(新事实重建):{ev}')
+    assert fc.click_hit_area(SHOP_SCREEN_NAME, '按钮-刷新')
+    # plan 行形态契约:CloseShop 终结不入行(ADR-0518 §decisions 遥测行)
+    dec = _rows(tmp_path, 'decisions.jsonl')
+    _types = [[a.get('__type__') for a in r.get('actions', [])] for r in dec]
+    assert all('CloseShop' not in t for t in _types), f'CloseShop 入行回流:{_types}'
+
+
+def test_stale_frame_buy_not_executed_after_refresh(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path, _require_fixture,
+) -> None:
+    """锁⑥旧牌面错买分支消灭:刷新后同段的 BuyCard 提案不得在重新观察
+    前执行——修复后刷新即终结 break,买点击只发生在段2 重观察之后,
+    且「刷新段」decisions 行只含 RefreshShop。
+
+    修复前形态(P35 潜伏更险分支):刷新 execute 后循环回顶,旧牌面上的
+    BuyCard 守卫对拍同一张陈旧期望态(牌名在场 → 通过),点击落在刷新后
+    新牌面的对应槽位 = 错买随机卡,plan 行 = [Refresh, Buy] 同段共行。
+    场景:两段牌面都含「希儿」(守卫在两代际均可对),区分靠执行序与
+    行粒度。出处 = ADR-0517 决策 7 + review V1 后果 3。
+    """
+    _new_with_xier = ['希儿', '彦卿', '姬子', '瓦尔特', '三月七']
+    ev: list[str] = []
+    op, fc, _cap, _facts = _make_op(
+        test_context, monkeypatch, tmp_path,
+        plans=[[RefreshShop(cost=2),
+                BuyCard(card=ShopCard(x=0, faction='?', name='希儿',
+                                      cost=3, star=1))],
+               [CloseShop()]],
+        states=[_state(10, _OLD_NAMES),
+                _state(8, _new_with_xier), _state(8, _new_with_xier)],
+        gold_opts=[8, 8],
+        shop_reads=[_new_with_xier, _new_with_xier], events=[])
+    _wrap_decide_and_observe(test_context, monkeypatch, ev)
+
+    result = _execute(op)
+
+    assert result.success, f'刷后买链应正常收工:{result.status!r}'
+    _d = [i for i, e in enumerate(ev) if e == 'decide']
+    assert len(_d) == 3, f'decide 应恰 3 次(刷/买/关):{ev}'
+    # 买提案(第 2 次 decide)前必须有段2 的重新观察——旧牌面提案不跨代际执行
+    assert 'observe' in ev[_d[0] + 1:_d[1]], (
+        f'刷后买必须发生在重新观察之后(旧牌面错买分支回流):{ev}')
+    # 行粒度:刷新独占一行,买入归段2 行(修复前同段共行 [Refresh, Buy])
+    dec = _rows(tmp_path, 'decisions.jsonl')
+    _types = [[a.get('__type__') for a in r.get('actions', [])] for r in dec]
+    assert ['RefreshShop'] in _types, f'刷新应独占一行:{_types}'
+    assert ['BuyCard'] in _types, f'买入应归重观察后的段行:{_types}'
+    assert not any(t == ['RefreshShop', 'BuyCard'] for t in _types), (
+        f'刷新+买同段共行回流(V1 形态):{_types}')
+
+
+def test_refresh_hardwall_cap_semantics_unchanged(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path, _require_fixture,
+) -> None:
+    """锁⑦硬墙计数语义重推(MAX_REFRESH 与终结 break 的交互):策略器
+    每段都提刷新时,仍恰刷 4 次(visit 级计数跨段累计),第 5 次提案被
+    硬墙拦截(plan_truncated + refresh_skipped='max_cap'),且每次刷新
+    独立成段 = 独立 decisions 行(每刷一行,ADR-0517 §3.1 候选 (a))。
+
+    语义重推(docstring 记):终结 break 落地后,「连刷至硬墙」的旧形态
+    不复存在——硬墙职责从『封顶段内连刷』变为『封顶跨段刷新提案』,防的
+    仍是同一结构风险(终结→重进→再刷新,外循环无进展),计数器
+    (ledger.total_refresh)与拦截点(提案侧、execute 前)均不变;硬墙
+    仍然可达且触发后果不变(可见化不停,当未刷新收工)。
+    """
+    op, fc, _cap, facts = _make_op(
+        test_context, monkeypatch, tmp_path,
+        plans=[[RefreshShop(cost=2)] * 6],
+        states=[_state(60, _OLD_NAMES), _state(58, _NEW_NAMES),
+                _state(56, _OLD_NAMES), _state(54, _NEW_NAMES),
+                _state(52, _OLD_NAMES)],
+        gold_opts=[58, 58],
+        shop_reads=[_NEW_NAMES, _OLD_NAMES], events=[])
+
+    result = _execute(op)
+
+    assert result.success, f'硬墙链应正常收工(可见化不停):{result.status!r}'
+    assert facts and facts[0]['plan_truncated'] is True, facts
+    assert facts[0]['refresh_skipped'] == 'max_cap', facts
+    # 每刷一行(修复前 4 连刷共一行 = P35 形态)
+    dec = _rows(tmp_path, 'decisions.jsonl')
+    _refresh_rows = [r for r in dec
+                     if any(a.get('__type__') == 'RefreshShop'
+                            for a in r.get('actions', []))]
+    assert len(_refresh_rows) == 4, (
+        f'每次刷新应独立成段成行(4 行):'
+        f'{[[a.get("__type__") for a in r.get("actions", [])] for r in dec]}')
+
+
+def test_close_shop_terminal_regression(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path, _require_fixture,
+) -> None:
+    """锁⑧CloseShop 终结路径回归:零动作帧 CloseShop 收工,不点击任何
+    按钮,decisions 行 actions 为空(CloseShop 不入行契约),外层段循环
+    即收(did_refresh=False → break)。
+    """
+    op, fc, _cap, _facts = _make_op(
+        test_context, monkeypatch, tmp_path,
+        plans=[[CloseShop()]],
+        states=[_state(10, _OLD_NAMES)],
+        gold_opts=[10], shop_reads=[_OLD_NAMES], events=[])
+
+    result = _execute(op)
+
+    assert result.success, f'关店收工应成功:{result.status!r}'
+    assert fc.recorded_clicks == [], (
+        f'零动作关店不得产生点击:{[str(p) for p in fc.recorded_clicks]}')
+    dec = _rows(tmp_path, 'decisions.jsonl')
+    assert len(dec) == 1, f'恰一段一行:{len(dec)}'
+    assert dec[0].get('actions') == [], (
+        f'CloseShop 终结不入行(行形态契约):{dec[0].get("actions")}')

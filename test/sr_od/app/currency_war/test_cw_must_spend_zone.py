@@ -457,27 +457,35 @@ class TestArchiveFrameReplay:
 
     def test_g19_inzone_unlocked_frames_consume_via_l3(self):
         """未锁线入域帧出口消费语义(33 跳精化口径核心锁):r7 帧
-        (ts 2026-09-05T23:28:04,gold58)与 r9 帧(ts 23:33:14,gold63)
-        ——入域 ∧ 未锁线(v3_intention null)⇒ L2 垫件臂 fail-closed 不
-        触发(20 号稿 §3.1-L2 设计态,分键 absent),ladder 末位 L3 消费
-        ⇒ LevelUpShop(auth_basis='m3_batch:must_spend')。十九局「入域
-        零消费」形态(旧码形 faf09a64,第三触发源缺)在当前码形**不复现**
-        ——闭合判读见本类 docstring 判读出处行。"""
-        for gold, xp in ((58, (12, 20)), (63, (4, 40))):
-            st = _arc_state(gold=gold, hp=47 if gold == 58 else 25,
-                            level=5 if gold == 58 else 6, plane=1,
-                            round_num=7 if gold == 58 else 9,
-                            node_type='encounter' if gold == 58 else 'reward',
-                            xp_progress=xp, level_up_cost=4,
-                            refresh_probs={'1': 0.45, '2': 0.33, '3': 0.2,
-                                           '4': 0.02, '5': 0.0}
-                            if gold == 58 else None)
-            sess = SimpleNamespace(cw4_counters={}, target_comp=None,
-                                   v3_intention=None, cw4_cap_override=None)
-            act = _decide(st, sess)
-            assert isinstance(act, LevelUpShop), (gold, act)
-            assert act.auth_basis == 'm3_batch:must_spend'
-            assert 'must_spend_l2_trigger' not in sess.cw4_counters
+        (ts 2026-09-05T23:28:04,gold58,xp 12/20 ⇒ 批 s=8,花后 50 贴
+        g* 闸过)经 ladder 末位 L3 消费 ⇒ LevelUpShop(auth_basis=
+        'm3_batch:must_spend')——十九局「入域零消费」形态(旧码形
+        faf09a64,第三触发源缺)在当前码形不复现,闸上线后由本帧承载
+        L3 消费语义锁。r9 帧(ts 23:33:14,gold63,lv6,xp 4/40 ⇒ 批
+        s=36 > 溢余段 13)在 ADR-0560 溢余段预算闸下整批推迟,拒因
+        budget_gate_must_spend_defer 独立分键(原发射语义锁随
+        ADR-0560 重推:该帧即 P71-c 穿线倾泻形态)。"""
+        gold, xp = 58, (12, 20)
+        st = _arc_state(gold=gold, hp=47, level=5, plane=1,
+                        round_num=7, node_type='encounter',
+                        xp_progress=xp, level_up_cost=4,
+                        refresh_probs={'1': 0.45, '2': 0.33, '3': 0.2,
+                                       '4': 0.02, '5': 0.0})
+        sess = SimpleNamespace(cw4_counters={}, target_comp=None,
+                               v3_intention=None, cw4_cap_override=None)
+        act = _decide(st, sess)
+        assert isinstance(act, LevelUpShop), (gold, act)
+        assert act.auth_basis == 'm3_batch:must_spend'
+        assert 'must_spend_l2_trigger' not in sess.cw4_counters
+        # r9 帧:预算闸整批推迟(域内拒因独立分键)
+        st9 = _arc_state(gold=63, hp=25, level=6, plane=1,
+                         round_num=9, node_type='reward',
+                         xp_progress=(4, 40), level_up_cost=4)
+        sess9 = SimpleNamespace(cw4_counters={}, target_comp=None,
+                                v3_intention=None, cw4_cap_override=None)
+        act9 = _decide(st9, sess9)
+        assert not isinstance(act9, LevelUpShop), (act9,)
+        assert sess9.cw4_counters.get('budget_gate_must_spend_defer') == 1
 
     def test_g20_p3r1_g50_locked_replays_archive_buy(self):
         """二十局 P3r1 g50 帧(ts 2026-09-06T01:38:38,希儿量子锁定,全

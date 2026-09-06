@@ -67,17 +67,21 @@ class TestPrepMustSpendLatch:
     """必花域备战期闩(g_20260906_034515 濒死段形态逐帧回放锁)。"""
 
     def test_latch_extends_zone_after_shop_consume(self):
-        """帧A(g56 域内)发射后,同备战期帧B(g43 域外残金)经闩延命
-        仍发射 LevelUp + must_spend_zone_latch_extend 分键在案——
-        「花光」义务不再在域边界上蒸发。"""
+        """域内停付让位显影面与闩延命计数面保持(ADR-0528 机制不变),
+        与 ADR-0560 预算闸的分域交互:帧A(g56 入域,批 s=32,溢余段
+        6−2ρ 不容)被预算闸整批推迟(闸在域内生效,v2 采纳 3);帧B
+        (闩延命残金 43 ≤ g*)属闸的非溢余段辖域外(ADR-0560 §4:负
+        闸值 = 预算不存在,禁读恒拒)——ADR-0528 的残金帧发射语义
+        原样保持,must_spend_zone_latch_extend 分键在案。"""
         fa, sess, sta = _mk(56)
         out_a = mandate.run_mandate(fa, sess, state=sta)
-        assert _lvls(out_a), '帧A 域内应发射'
+        assert not _lvls(out_a), '入域帧穿线批:预算闸整批推迟'
         assert sess.cw4_counters.get(
-            'must_spend_zone_defer_overridden') == 1
+            'must_spend_zone_defer_overridden') == 1   # 停付让位显影面仍在
+        assert sess.cw4_counters.get('levelup_budget_gate_blocked') == 1
         fb, _, stb = _mk(43)   # 商店域消费 13 金后的残金帧
         out_b = mandate.run_mandate(fb, sess, state=stb)
-        assert _lvls(out_b), '闩延命帧应保持域豁免并发射'
+        assert _lvls(out_b), '闩延命残金帧(≤g*)闸不辖,发射语义保持'
         assert sess.cw4_counters.get('must_spend_zone_latch_extend') == 1
 
     def test_fresh_session_still_defers(self):
@@ -120,9 +124,10 @@ class TestL3RejectKeys:
         assert sess.cw4_counters.get('l3_reject_batch_unaffordable') == 1
 
     def test_xp_readthrough_rescues_residual_band(self):
-        """xp 现读透传(第二静默拒因面修复):闩延命残金帧 43 金,
-        xp 22/52 现读(真 8击×4=32≤43)⇒ 发射;xp 缺读(旧 0 进度
-        兜底,虚 13击×4=52>43)⇒ 整批拒分键可辨——两形态判决相反
+        """xp 现读透传(第二静默拒因面修复):闩延命残金帧 43 金属
+        ADR-0560 闸的非溢余段辖域外(43 ≤ g*),xp 22/52 现读(真
+        8击×4=32≤43)⇒ 发射保持(ADR-0528 原语义);xp 缺读(旧 0
+        进度兜底,虚 13击×4=52>43)⇒ 整批拒分键可辨——两形态判决相反
         且拒因侧均可归因。"""
         fa, sess2, sta = _mk(56)       # 先以域内帧置闩(同备战期)
         mandate.run_mandate(fa, sess2, state=sta)
