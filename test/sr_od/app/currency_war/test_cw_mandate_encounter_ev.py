@@ -85,13 +85,22 @@ class TestE3DecisionTree:
 
         「负项置零继续 argmax」(12>8 ⇒ 选高难)是禁止实现——本锁在双槽
         注入但 λ 格全域外(表空)形态下断言 pick=低难支:fail 向不依赖
-        任何 λ 数值授权,且不附刷新建议(不可判帧不赌重掷)。"""
+        任何 λ 数值授权。**不可判帧不刷新**(fail 向已知安全选项,重掷
+        可能更差不赌——不可判出口零刷新断言并入本锁,双锁合一)。"""
         monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE', {})
         pick = encounter.decide_encounter_ev([_LOW, _HIGH], _state(),
                                              _session())
         assert pick.idx == _LOW.idx
         assert not pick.refresh
         assert 'lambda_undecidable' in pick.reason
+        # λ 格非可消费(禁用)形态同判:整体不可判 fail 向 + 零刷新
+        monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE', _table(
+            _cell(label='禁用', lo=None, hi=None), _cell()))
+        pick2 = encounter.decide_encounter_ev([_LOW, _HIGH], _state(),
+                                              _session())
+        assert pick2.idx == _LOW.idx
+        assert pick2.refresh is False
+        assert 'label禁用' in pick2.reason
 
     def test_production_state_both_slots_none(self):
         """生产现态锁(ADR-0536 §4):双槽 None 期(旗牌→stat 映射与金币
@@ -166,26 +175,21 @@ class TestE3DecisionTree:
         assert pick.reason.startswith('e3_pick:ev_argmax')
         assert sess.cw4_counters.get('encounter_ev_pick') == 1
 
-    def test_real_lambda_table_flip_band_fails_low(self, ev_slots):
-        """真实 P51 表锁(注入后形态,非生产现态):双槽注入时,真表双带
-        encounter 格均「可消费」(D0 0.354-0.623 / D1 0.48-0.889,d̂ 宽
-        0.269/0.409),默认局敞口(g=20,Ī=4,R=26)下 λ 惩罚差覆盖 12−8
-        奖励增量 ⇒ EV 差落入不可判带 → fail 向选低难 + 探索性刷新建议。
+    def test_real_lambda_table_flip_band_fails_low(self, ev_slots,
+                                                   monkeypatch):
+        """flip 不可判带锁(双锁合一:构表格 + 真实 P51 表两来源;双锁
+        合一前为两条独立锁,语义同源故并)——EV 差在 CI 宽度下不稳健 ⇒
+        fail 向选低难 + 探索性刷新建议(注入后窄域条件触发观察位,
+        非生产现态预期)。
 
-        ⚠️ 低-1 注记:本锁是「λ 表当前分布形态锁」——λ 表按退役条件可
-        重标,重标致红 = 表态变化信号(可消费格/d̂ 宽度变了),**先判表
-        再判码**,禁为保绿机械回退判据改动。"""
-        sess = _session()
-        pick = encounter.decide_encounter_ev([_LOW, _HIGH], _state(), sess)
-        assert lambda_death.cell('D0|hp>40|P1|encounter') is not None
-        assert pick.idx == _LOW.idx
-        assert pick.refresh is True
-        assert sess.cw4_counters.get('encounter_ev_undecidable_band_flip') == 1
-
-    def test_flip_band_fails_low_and_suggests_refresh(self, ev_slots,
-                                                      monkeypatch):
-        """flip 不可判带(EV 差在 CI 宽度下不稳健)⇒ fail 向选低难 +
-        探索性刷新建议(注入后窄域条件触发观察位,非生产现态预期)。"""
+        构表格源:可控 d̂/gold 精确落 flip 带(注入形态)。
+        真实表源:双槽注入时真表双带 encounter 格均「可消费」(D0
+        0.354-0.623 / D1 0.48-0.889,d̂ 宽 0.269/0.409),默认局敞口
+        (g=20,Ī=4,R=26)下 λ 惩罚差覆盖 12−8 奖励增量 ⇒ flip。
+        ⚠️ 低-1 注记(真实表源):本锁是「λ 表当前分布形态锁」——λ 表
+        按退役条件可重标,重标致红 = 表态变化信号(可消费格/d̂ 宽度
+        变了),**先判表再判码**,禁为保绿机械回退判据改动。"""
+        # 构表格源(gold=500 精确落 flip 带)
         monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE', _table(
             _cell(lo=0.30, hi=0.31), _cell(lo=0.40, hi=0.42)))
         sess = _session()
@@ -195,6 +199,58 @@ class TestE3DecisionTree:
         assert pick.refresh is True
         assert sess.cw4_counters.get('encounter_ev_undecidable_band_flip') == 1
         assert sess.cw4_counters.get('encounter_ev_refresh_suggested') == 1
+        # 真实表源(先复原启动必载真表,再默认敞口即 flip)
+        monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE',
+                            lambda_death._load_table())
+        sess2 = _session()
+        pick2 = encounter.decide_encounter_ev([_LOW, _HIGH], _state(), sess2)
+        assert lambda_death.cell('D0|hp>40|P1|encounter') is not None
+        assert pick2.idx == _LOW.idx
+        assert pick2.refresh is True
+        assert sess2.cw4_counters.get('encounter_ev_undecidable_band_flip') == 1
+
+    def test_ev_exact_tie_fails_low_no_refresh(self, ev_slots, monkeypatch):
+        """EV 精确并列锁(三审必修-1):双支 V_r 与复合项全等(典型 =
+        标定后同难度双卡帧,两支解析到同 λ 格)⇒ 并列出口 fail 向低难
+        (决策树第 5 肢)——不记 band_flip、不给刷新。守卫移除即红:
+        并列误入翻转支时 refresh=True + flip 计数双双击穿本锁。"""
+        monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE', _table(
+            _cell(lo=0.30, hi=0.31), _cell(lo=0.40, hi=0.42)))
+        # dstat 两旗牌同 stat ⇒ 两支同 λ 格,复合项全等;双支同 4 费 ⇒ V_r 全等
+        provisional.reset('ENCOUNTER_DSTAT_MAP')
+        provisional.inject('ENCOUNTER_DSTAT_MAP', provisional.CalibValue(
+            value={1: 100, 3: 100}, injected_form=True))
+        try:
+            tie_low = EncounterOption(idx=0, difficulty=1,
+                                      rewards=['随机4费角色×3'])
+            tie_high = EncounterOption(idx=1, difficulty=3,
+                                       rewards=['随机4费角色×3'])
+            sess = _session()
+            pick = encounter.decide_encounter_ev([tie_low, tie_high],
+                                                 _state(), sess)
+            assert pick.idx == tie_low.idx
+            assert pick.refresh is False
+            assert 'ev_tie' in pick.reason
+            assert 'encounter_ev_fail_low_tie' in sess.cw4_counters
+            assert 'encounter_ev_undecidable_band_flip' not in sess.cw4_counters
+            assert 'encounter_ev_refresh_suggested' not in sess.cw4_counters
+        finally:
+            provisional.reset('ENCOUNTER_DSTAT_MAP')
+
+    def test_gold_unreadable_fail_closed(self, ev_slots, monkeypatch):
+        """金缺读 fail-closed 锁(三审应修-5):gold_readable False 帧
+        λ 敞口缺真值金 ⇒ 整体不可判 fail 向(缺读兜底 0 非真值,进敞口
+        会压薄 λ 项,方向与保守相反)。"""
+        monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE', _table(
+            _cell(lo=0.30, hi=0.31), _cell(lo=0.40, hi=0.42)))
+        st = _state(gold=20)
+        st.gold_readable = False
+        sess = _session()
+        pick = encounter.decide_encounter_ev([_LOW, _HIGH], st, sess)
+        assert pick.idx == _LOW.idx
+        assert not pick.refresh
+        assert 'gold_unreadable' in pick.reason
+        assert 'encounter_ev_undecidable_band_flip' not in sess.cw4_counters
 
     def test_refresh_not_free_option_wording_and_gate(self, ev_slots,
                                                       monkeypatch):
@@ -211,14 +267,6 @@ class TestE3DecisionTree:
         pick2 = encounter.decide_encounter_ev([_LOW, _HIGH],
                                               _state(gold=500), sess)
         assert '原对弃用' in pick2.reason and '可为负' in pick2.reason
-
-    def test_no_refresh_on_lambda_undecidable(self, ev_slots, monkeypatch):
-        """λ 整体不可判帧不刷新(fail 向已知安全选项,重掷可能更差不赌)。"""
-        monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE', _table(
-            _cell(label='禁用', lo=None, hi=None), _cell()))
-        pick = encounter.decide_encounter_ev([_LOW, _HIGH], _state(),
-                                             _session())
-        assert pick.refresh is False
 
     def test_reward_unmodeled_fails_low(self, ev_slots, monkeypatch):
         """未建模子型(5费在册实录未立/读空帧)⇒ fail 向(未立 ≠ 0)。"""
