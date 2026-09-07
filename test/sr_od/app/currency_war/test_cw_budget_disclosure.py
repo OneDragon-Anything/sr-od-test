@@ -299,6 +299,38 @@ class TestReleaseSpentAccrual:
         assert strategy_state_of(sess) is st
 
 
+def test_shop_frame_disclosure_wired_into_run_buy_waves():
+    """接线锁(结构形态,先例 = test_cw_r336_batch4_locks 模块级/体内
+    断言):``run_buy_waves`` 段顶必须调用店开帧披露写点——删调用块 =
+    本锁红(锁 F 行为腿直调薄壳只证「函数对」,本锁证「接到商店循环」,
+    二者合取才是完整接线证明)。钉四件事:①调用在位;②实参形态 =
+    state 真值帧 + match.session(防换成无金替身帧);③位次 = 店开帧
+    落黑板(shop_state_frame 写点)之后;④降级留痕 = 失败走 log.warning
+    非静默 no-op(锚⑤缺陷无声复发防线,P2-1①)。"""
+    import inspect
+    import re
+
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_buy_cards,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        assembly,
+    )
+
+    assert hasattr(assembly, 'disclose_budget_at_shop_frame'), \
+        '薄壳符号不存在(被改名/拆除)'
+    src = inspect.getsource(cw_op_buy_cards.run_buy_waves)
+    call = 'disclose_budget_at_shop_frame('
+    assert call in src, 'run_buy_waves 未调用店开帧披露写点(接线断裂)'
+    assert re.search(
+        r'disclose_budget_at_shop_frame\(\s*state\s*,\s*match\.session',
+        src), '实参形态漂移:应为 (state 真值帧, match.session)'
+    assert src.index('match.session.shop_state_frame = state') \
+        < src.index(call), '调用位次漂移:应在店开帧落黑板之后'
+    assert '店开帧预算披露覆写失败' in src, \
+        '降级留痕缺失:覆写失败须 log.warning 非静默 no-op'
+
+
 # ===== F8 守卫锁:披露面字段禁决策面消费 =====
 
 #: 披露面字段 + 键戳(守卫集;v3_release_reason 不辖——shop.py 必花域段
