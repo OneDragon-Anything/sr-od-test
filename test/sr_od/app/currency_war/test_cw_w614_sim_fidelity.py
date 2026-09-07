@@ -313,14 +313,15 @@ class TestSimDeterminismAndIsolation:
     """
 
     def test_default_path_reads_no_production_replay(self):
-        """sim 默认路径(pool='snapshot')不触生产 replay 目录任何文件。"""
+        """sim 默认路径(pool='snapshot')不触生产 live 流目录任何文件。"""
         import sys
         from pathlib import Path
 
-        from one_dragon.utils.file_utils import get_project_root
+        from sr_od.application.currency_war.kernel.cw_observe import (
+            DEFAULT_REPLAY_DIR,
+        )
 
-        replay_dir = (get_project_root() / '.debug' / 'temp'
-                      / 'currency_war' / 'replay')
+        replay_dir = DEFAULT_REPLAY_DIR   # 单一源直调(曾硬抄旧路径字面量)
         hits: list[str] = []
 
         def _hook(event, args):

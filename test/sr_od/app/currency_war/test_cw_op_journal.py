@@ -3,7 +3,8 @@
 锁面与方案对齐(.debug/temp/currency_war/t112_deep_telemetry/方案.md):
 - flatten_diff 全量叶级 diff 零漏报(投影外真实变化必现)+ 对称差/列表整替/截断分型;
 - record_action_journal 行形态(seq/frame_seq/gold/exec_ok/expected_delta);
-- run_id 门控(局外零行)+ 每局软上限停写 + 行帽截断 _trunc;
+- run_id 门控(局外零行)+ 行帽截断 _trunc;行数不设上限
+  (原每局 500 行软上限已由用户裁定 2026-09-07 删除,墓碑锁钉退役面);
 - 非决策 op enter/exit 成对 + 装配端孤儿 enter 行 outcome='orphan' 容缺;
 - 守卫:①_telemetry_last_candidate_scores 命中点计数锁(src 树恰 3 文件,
   声明/写点/读点,第 4 文件=红);②op_journal 键族禁入 decisions 写路径。
@@ -27,7 +28,6 @@ def journal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """journal 落盘重定向 tmp_path + 局外态复位(测试纪律 1/2)。"""
     out = tmp_path / 'op_journal.jsonl'
     monkeypatch.setattr(op_journal, '_JOURNAL', out)
-    monkeypatch.setattr(op_journal, '_row_counts', {})
     monkeypatch.setattr(op_journal, '_frame_seq_by_run', {})
     monkeypatch.setattr(op_journal, 'current_run_id', lambda: 'run_test')
     return out
@@ -78,7 +78,6 @@ def test_no_run_id_writes_nothing(tmp_path: Path, monkeypatch):
     """局外门控:run_id 空 → 零行(obs_conflict 同规,不写假键)。"""
     out = tmp_path / 'op_journal.jsonl'
     monkeypatch.setattr(op_journal, '_JOURNAL', out)
-    monkeypatch.setattr(op_journal, '_row_counts', {})
     monkeypatch.setattr(op_journal, '_frame_seq_by_run', {})
     monkeypatch.setattr(op_journal, 'current_run_id', lambda: '')
     op_journal.record_action_journal(None, LevelUp(cost=4), 1, True,
@@ -87,13 +86,16 @@ def test_no_run_id_writes_nothing(tmp_path: Path, monkeypatch):
     assert not out.exists()
 
 
-def test_soft_cap_stops_writing(journal: Path, monkeypatch):
-    """每局 500 行软上限:超限停写(病态循环炸盘保险丝)。"""
-    monkeypatch.setattr(op_journal, '_MATCH_ROWS_SOFT_CAP', 3)
-    for _ in range(5):
-        op_journal.record_action_journal(None, LevelUp(cost=4), 1, True,
-                                         GameState(), GameState())
-    assert len(_rows(journal)) == 3
+def test_row_count_soft_cap_retired():
+    """墓碑(退役背书):每局行数软上限已整条删除(用户裁定 2026-09-07)。
+
+    为什么删:病态决策循环的停线防护由哨兵层 STALL/LOOP 承接;journal
+    静默触顶停写 = 长局尾段 op 行无感丢失,复盘盲区代价(T-121 深局
+    实测单 run 690 行越旧顶)远大于流体积风险。删除面 = 模块常量
+    _MATCH_ROWS_SOFT_CAP 与 _row_counts 计数表;复活任一 = 红。
+    """
+    assert not hasattr(op_journal, '_MATCH_ROWS_SOFT_CAP')
+    assert not hasattr(op_journal, '_row_counts')
 
 
 def test_row_cap_truncates(journal: Path, monkeypatch):

@@ -589,7 +589,8 @@ def _isolate_l0_andon_handler(
 # --------------------------------------------------------------------------- #
 # 背景(进度账本 2026-08-31 迭代 :64 行余项):telemetry.state 的模块级单例簇
 # 是安灯/缺陷台账/暂存槽的唯一拥有者,缺省 enabled=True 且写**真实**
-# .debug/temp/currency_war/replay/。测试只桩 run_id 不桩 _RECORDER 时
+# .debug/currency_war/telemetry/live/(2026-09-07 布局裁定前的旧根
+# .debug/temp/currency_war/replay 已退役)。测试只桩 run_id 不桩 _RECORDER 时
 # (实证:test_cw_telemetry_collect 的 run_id='w323-run' 桩),台账行照落真实
 # defect_ledger.jsonl——单日累积 2290 行测试残渣混进实机台账,离线按 run_id
 # 聚合时把测试行当真实局读。同族通道一并钉桩:

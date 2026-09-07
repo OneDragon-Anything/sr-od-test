@@ -4,8 +4,8 @@
 经 importlib 按路径装载(先例:test_cw_v6_cleanup.py 装载 ab_judge.py)。
 
 锁面五件(渲染缺口清偿 = 084421 复盘完整性审计的渲染缺 R1-R12 逐条销项;
-审计出处 = ``.debug/temp/currency_war/replay/matches/reviews/
-g_20260907_084421.md`` §C2,编号以该审计为准):
+审计出处 = ``.debug/currency_war/deep_review/g_20260907_084421.md`` §C2,
+编号以该审计为准):
 1. **真档 smoke**:渲染 075840 实机档案不断言数值,只锁结构(四大节 +
    op 记录密度 = 重建 op 数、判定槽密度 = 决策承载 op 数 ×3)。真档是
    本地易失产物:存在性门槛 + 结构断言,数据缺失即 skip,不锁任何会随
@@ -34,8 +34,12 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _TOOL_PATH = _REPO_ROOT / 'tools' / 'cw' / 'replay_to_md.py'
-#: 实机档案位置(工具的缺省 replay 目录;本地易失,缺席 skip)
-_REAL_REPLAY_DIR = _REPO_ROOT / '.debug' / 'temp' / 'currency_war' / 'replay'
+#: 实机 live 流根与按局档案根(工具的缺省数据源;2026-09-07 布局裁定
+#: .debug/currency_war/telemetry/{live,matches}。本地易失,缺席 skip)
+_REAL_REPLAY_DIR = (_REPO_ROOT / '.debug' / 'currency_war' / 'telemetry'
+                    / 'live')
+_REAL_MATCHES_DIR = (_REPO_ROOT / '.debug' / 'currency_war' / 'telemetry'
+                     / 'matches')
 _REAL_GAME_ID = 'g_20260907_075840'
 
 _MODULE_NAME = 'cw_replay_to_md_tool'
@@ -178,7 +182,7 @@ class TestSmokeRealArchive:
 
     def test_render_real_archive_structure(self, tmp_path: Path) -> None:
         mod = _load_tool()
-        archive_path = _REAL_REPLAY_DIR / 'matches' / f'match_{_REAL_GAME_ID}.json'
+        archive_path = _REAL_MATCHES_DIR / f'match_{_REAL_GAME_ID}.json'
         if not archive_path.exists():
             pytest.skip(f'本地易失档案不存在: {archive_path}')
         archive = json.loads(archive_path.read_text(encoding='utf-8'))

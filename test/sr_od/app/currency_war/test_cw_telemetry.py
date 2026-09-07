@@ -67,8 +67,19 @@ def test_unlocked_row_has_explicit_empty_state(tmp_path):
 
 
 def test_sim_ledger_rows_carry_same_key():
-    """③sim 账本同构:每轮行有 v3_intention 键(形状锁,不锁锁定分布)。"""
-    res = simulate_p1(seed=20260827, use_refresh=False)
+    """③sim 账本同构:每轮行有 v3_intention 键(形状锁,不锁锁定分布)。
+
+    默认 pool='auto' 依赖本机生产语料(遥测根 live 流);语料被治理
+    清理/新机 checkout 时 auto 池不可用 → 诚实 skip,不是代码红
+    (判据 = test_cw_replay_to_md 真档 smoke 同款「本地易失缺席 skip」)。
+    """
+    import pytest as _pytest
+
+    from sr_od.application.currency_war.sim.pool import DeltaPoolUnavailable
+    try:
+        res = simulate_p1(seed=20260827, use_refresh=False)
+    except DeltaPoolUnavailable as e:
+        _pytest.skip(f'本机无生产语料(auto 池不可用): {e}')
     assert res.ledger, 'sim 账本非空前提'
     for r in res.ledger:
         ist = r.get('v3_intention')

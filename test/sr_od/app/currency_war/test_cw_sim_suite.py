@@ -12,6 +12,8 @@
 - platt_calibration: test_cw_platt_calibration.py
 - weight_search: test_cw_weight_search.py
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+(瘦身批 F11 归位成员:test_sim_ledger_core_count_semantics ← test_cw_data_registry.py,
+落 sim_ledger_checks 节。)
 """
 from __future__ import annotations
 
@@ -401,9 +403,84 @@ def test_run_checks_report_shape() -> None:
 
 
 def test_write_batch_ledger_guard() -> None:
-    """写入器守卫:sim 账本禁写生产 replay 目录(自中毒防线)。"""
+    """写入器守卫:sim 账本禁写生产 live 流目录(自中毒防线)。
+
+    禁写对象 = 生产流根(kernel/cw_observe.DEFAULT_REPLAY_DIR,单一源直调;
+    曾硬抄旧路径字面量——根常量迁移即假绿,现随单一源走)。
+    """
+    from sr_od.application.currency_war.kernel.cw_observe import DEFAULT_REPLAY_DIR
     with pytest.raises(RuntimeError):
-        write_batch_ledger([], Path('.debug/temp/currency_war/replay'))
+        write_batch_ledger([], DEFAULT_REPLAY_DIR)
+
+
+def test_write_batch_ledger_guard_retired_roots(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """写入器守卫补充面:退役旧根(sim 批根/旧流根)同样禁写(红测)。
+
+    出处 = 2026-09-07 22:20:52 空批以旧 replay 根为 out_dir 把历史三流
+    整份截断的事故(落地审 t125_telemetry_relocation/落地审.md §5):
+    旧守卫只锚当前生产根,根切换过渡窗口内旧根失保护。修法裁决 =
+    守卫同时锁退役根字面量(kernel/cw_observe.RETIRED_* 单一源),
+    不选「out_dir 限定 SIM_ROOT 子树」——A/B 对照等合法调用方写显式
+    独立目录(docstring 契约「或显式独立目录」),子树限定会破契约。
+    安全网:被测对象是守卫不是清理,`_prune_sim_runs` 桩化 no-op;
+    事前登记旧根三流文件的存在/字节,finally 复原——守卫若失守,
+    本测试的 'w' 截断不得烧掉旧根封存物或去重成果。
+    """
+    from sr_od.application.currency_war.kernel.cw_observe import (  # noqa: I001  (函数内分组导入,保持 kernel/sim 两簇)
+        RETIRED_SIM_ROOT,
+        RETIRED_STREAMS_ROOT,
+    )
+    # 本文件多段合流,`runner` 名在其段落绑 checks.runner——清理函数的
+    # 归属模块显式指认,防桩错对象
+    from sr_od.application.currency_war.sim import runner as ledger_runner  # noqa: I001
+
+    monkeypatch.setattr(ledger_runner, '_prune_sim_runs', lambda: None)
+    _stream_names = ('decisions.jsonl', 'outcomes.jsonl',
+                     'shop_snapshots.jsonl', 'manifest.json')
+
+    class _Restore:
+        """out_dir 内受 'w' 威胁的文件:事前登记,事后断言未被写。"""
+
+        def __init__(self, root: Path) -> None:
+            self.root = root
+            self.before: dict[str, bytes | None] = {
+                n: (root / n).read_bytes() if (root / n).exists() else None
+                for n in _stream_names}
+
+        def verify(self) -> None:
+            """守卫生效判据 = 所有受威胁文件未被创建/未被改动。"""
+            for name, old in self.before.items():
+                p = self.root / name
+                now = p.read_bytes() if p.exists() else None
+                assert now == old, f'守卫失守,{name} 被截断模式写(旧根)'
+
+    for retired_root in (RETIRED_STREAMS_ROOT, RETIRED_SIM_ROOT):
+        restore = _Restore(retired_root)
+        try:
+            with pytest.raises(RuntimeError):
+                write_batch_ledger([], retired_root)
+        finally:
+            restore.verify()
+
+
+def test_sim_ledger_core_count_semantics() -> None:
+    """sim 账本 core_count 语义标记(core_routed;含 None 序列化)。
+
+    (瘦身批 F11 自 test_cw_data_registry.py 归位本文件:机制=sim 账本契约,
+    属 sim_ledger_checks 主题;断言零改动。)
+    """
+    import contextlib
+    import io
+    import json
+    import tempfile
+
+    with contextlib.redirect_stderr(io.StringIO()), tempfile.TemporaryDirectory() as td:
+        rep = simulate_p1_batch(3, pool='snapshot',
+                                ledger=Path(td) / 'sem')
+        mf = json.loads((Path(rep['ledger_dir'])
+                         / 'manifest.json').read_text(encoding='utf-8'))
+        assert mf['ledger_semantics'] == 'core_routed'
 
 
 def test_checks_module_does_not_import_sim() -> None:

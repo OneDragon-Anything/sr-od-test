@@ -8,18 +8,111 @@
 - replay_reader: test_cw_replay_reader.py
 - w944b_planner_click_fix: test_cw_w944b_planner_click_fix.py
 - synthesis_chain: test_cw_synthesis_chain.py
+- telemetry_roots(2026-09-07 遥测/深评布局裁定,T-125): 根常量单一源守卫
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
 
-# ==================== l0_andon_default_off ====================
+# ==================== telemetry_roots(布局单一源守卫)====================
 from pathlib import Path
+
+from one_dragon.utils.file_utils import get_project_root
 
 from sr_od.application.currency_war.telemetry import defects, recorder
 
 _L0 = 'sr_od.application.currency_war.telemetry.defects'
 from sr_od.application.currency_war.telemetry import state
 
+
+def test_telemetry_roots_single_source() -> None:
+    """布局单一源守卫(T-125,2026-09-07 用户裁定):telemetry/live、
+    telemetry/matches、telemetry/sim、deep_review 四根只在
+    ``kernel/cw_observe`` 根常量块声明一次,消费方(写端 op_journal/
+    obs_conflict、装配端 match_archive、sim 侧 pool/runner/生成器)
+    一律经 import 取用,禁第二份字面量。
+
+    出处 = 用户裁定「遥测固定 .debug/currency_war/telemetry/{live,matches,sim}
+    + 深评固定 .debug/currency_war/deep_review」;旧根
+    .debug/temp/currency_war/{replay,sim_runs} 同日退役,存量已迁
+    (tools/cw/migrate_telemetry_tree.py,可重跑补迁)。红时先查:
+    谁又在本地重声明了根字面量 → 收拢到 cw_observe import,而不是改值。"""
+    from sr_od.application.currency_war.kernel import cw_observe as obs
+    from sr_od.application.currency_war.sim import cw_delta_pool_gen as _gen
+    from sr_od.application.currency_war.sim import pool as _pool
+    from sr_od.application.currency_war.sim import runner as _runner
+    from sr_od.application.currency_war.telemetry import match_archive as _arch
+    from sr_od.application.currency_war.telemetry import op_journal as _oj
+
+    root = get_project_root()
+    # ① 根常量块本体:四根一源,值 = 裁定字面
+    assert root / '.debug' / 'currency_war' / 'telemetry' == obs.TELEMETRY_ROOT
+    assert obs.LIVE_DIR == obs.TELEMETRY_ROOT / 'live'
+    assert obs.MATCHES_ROOT == obs.TELEMETRY_ROOT / 'matches'
+    assert obs.SIM_ROOT == obs.TELEMETRY_ROOT / 'sim'
+    assert root / '.debug' / 'currency_war' / 'deep_review' == obs.DEEP_REVIEW_ROOT
+    # ② 写端/读端全走 import(同值断言:与根常量块同一目录,非第二份字面量)
+    assert _oj._JOURNAL.parent == obs.LIVE_DIR
+    assert obs._CONFLICT_JOURNAL.parent == obs.LIVE_DIR
+    assert obs.DEFAULT_REPLAY_DIR == obs.LIVE_DIR
+    # ③ 装配端:生产 live 根 → 兄弟 matches 根;其他目录(测试合成流)→ 子目录
+    assert _arch.matches_dir(obs.LIVE_DIR) == obs.MATCHES_ROOT
+    assert _arch.matches_dir(Path('some_tmp') / 'replay') == (
+        Path('some_tmp') / 'replay' / 'matches')
+    # ④ sim 侧:批根与 auto 池源同源 import(禁镜像字面量)
+    assert _runner.SIM_RUNS_DIR == obs.SIM_ROOT
+    assert _pool._AUTO_REPLAY_DIR == obs.DEFAULT_REPLAY_DIR
+    assert _gen.REPLAY_DIR == obs.DEFAULT_REPLAY_DIR
+    assert _gen.SIM_RUNS_DIR == obs.SIM_ROOT
+    # ⑤ 消费端契约:sim 批根与生产 live 根必须是两个不同目录
+    # (write_batch_ledger 的禁写守卫比对对象 = 生产 live 根,守卫若失明,
+    # sim 账本可静默写进 live 流 —— 自中毒回路,守卫报错文案引用 SIM_ROOT)
+    assert obs.SIM_ROOT != obs.LIVE_DIR
+
+
+def test_telemetry_old_root_tombstone() -> None:
+    """墓碑扫描(退役背书):旧根路径字面量在活代码面零残留。
+
+    退役对象 = ``.debug/temp/currency_war/replay`` 与
+    ``.debug/temp/currency_war/sim_runs``(2026-09-07 布局裁定,T-125)。
+    扫描面 = src 的 currency_war 包 + tools/cw + skill scripts(默认根的
+    消费面);显式豁免两类:①迁移工具 migrate_telemetry_tree.py(其职责
+    就是定位旧根搬运存量,旧根字面量是它的输入契约);②tools/cw/proofs/
+    证明语料读端(历史冻结件,数据出处注记按写作时点记录旧根,禁随批
+    改写——下次重跑证明时再顺带迁移)。出现新命中 = 有人把
+    旧根写回活代码,按退役裁定驳回;文档/测试注释提及旧根不在此列
+    (历史出处引用合法,本扫描只辖会执行的路径字面量)。"""
+    import re
+
+    pattern = re.compile(r'temp[/\\]+currency_war[/\\]+(replay|sim_runs)')
+    scan_roots = [
+        get_project_root() / 'src' / 'sr_od' / 'application' / 'currency_war',
+        get_project_root() / 'tools' / 'cw',
+        get_project_root() / 'skills' / 'sr-od-currency-war-dev' / 'scripts',
+    ]
+    exempt_files = {'migrate_telemetry_tree.py'}
+    exempt_dirs = {'proofs'}
+    # 生成器产物:META.source_dir 记录生成时点的池源目录(数据出处快照,
+    # 非活跃写点),Δ池再生自新根跑一遍即自动跟上,不在墓碑辖域
+    exempt_files.add('cw_delta_pool_data.py')
+    hits: list[str] = []
+    for base in scan_roots:
+        for p in base.rglob('*.py'):
+            if (p.name in exempt_files
+                    or exempt_dirs & set(p.parts)
+                    or '__pycache__' in p.parts):
+                continue
+            try:
+                text = p.read_text(encoding='utf-8')
+            except (OSError, UnicodeDecodeError):
+                continue
+            for i, line in enumerate(text.splitlines(), 1):
+                if pattern.search(line):
+                    hits.append(f'{p.relative_to(get_project_root())}:{i}')
+    assert not hits, ('旧根路径字面量回流活代码(布局已退役,T-125): '
+                      f'{hits[:10]}')
+
+
+# ==================== l0_andon_default_off ====================
 
 def _setup_isolated_l0(tmp_path: Path, monkeypatch) -> Path:
     """台账指向 tmp + 安灯槽/闩锁/复现账隔离(与 w505 _setup_recorder 同链)。"""
@@ -37,7 +130,6 @@ def test_default_handler_off_is_noop(tmp_path: Path, monkeypatch) -> None:
     """锁1:缺省(Handler=None)触发 L0 → 台账照记 L0_andon,游戏侧停线实现
     不得被触达(canary 挂在 cw_observe,被调即炸)。"""
     from sr_od.application.currency_war.kernel import cw_observe
-
     d = _setup_isolated_l0(tmp_path, monkeypatch)
     monkeypatch.setattr(state, '_L0_ANDON_HANDLER', None)   # 缺省态显式钉住
 
