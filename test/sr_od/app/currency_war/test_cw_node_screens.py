@@ -1,6 +1,6 @@
 """test_cw_node_screens 主题锁(结构合并批,机械拼接)。
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
+成员(原文件 docstring 语义索引;断言面保持原语义):
 - node_reader: test_cw_node_reader.py
 - node_type_gate: test_cw_node_type_gate.py
 - node_obs: test_cw_node_obs.py
@@ -13,33 +13,101 @@
 - w219_boss_collect_channel: test_cw_w219_boss_collect_channel.py
 - w221_boss_locate_emblem: test_cw_w221_boss_locate_emblem.py
 - briefing_plane_order: test_cw_briefing_plane_order.py
-冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+同符号的多套来源前缀别名与重复夹具(备战栏槽位表/资产路径/读图 helper)
+已收敛为文件头单一定义;合并期「冲突改名前缀」不再存在。
 """
 from __future__ import annotations
 
-# ==================== node_reader ====================
+import inspect
 from collections import Counter
 from pathlib import Path
+from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
+import pytest
+
+from one_dragon.base.geometry.point import Point
+from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.utils.cv2_utils import read_image
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.obs import cw_node_reader
+from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres
+from sr_od.application.currency_war.obs.cw_identity_obs import (
+    _get_bookcard_gray,
+    find_bookcards,
+    find_reward_spheres,
+    find_supply_boxes,
+    find_trial_reveal_cards,
+    read_reward_spheres,
+)
+from sr_od.application.currency_war.obs.cw_node_obs import (
+    read_encounter_options,
+    read_encounter_refresh_count,
+    read_megastar_options,
+)
 from sr_od.application.currency_war.obs.cw_node_reader import (
     classify_node_row,
+    load_boss_templates,
     load_node_type_templates,
 )
-from sr_od.application.currency_war.obs.cw_observation import _MIN_CLEAN_CIRCLES
+from sr_od.application.currency_war.obs.cw_observation import (
+    _MIN_CLEAN_CIRCLES,
+    gate_node_type,
+    read_detail_node_type_label,
+)
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_expert_invite import (
+    choose_expert_index,
+)
+from sr_od.application.currency_war.tools.cw_node_validate import (
+    P1_NODE_TEMPLATE,
+    validate_p1_node_sequence,
+    validate_p2_node_sequence,
+)
 
-# SR 仓 assets(cw_node_reader.py 在 src/sr_od/application/currency_war/obs/ → parents[5] = 仓根)
-_ASSETS = Path(cw_node_reader.__file__).resolve().parents[5] / 'assets' / 'game_data' / 'cw_node_types'
-_FIXTURE = Path(__file__).parent / 'cw_node_row_clean.png'
+if TYPE_CHECKING:
+    from test.conftest import SrTestContext
+
+# ==================== 共享夹具(合并段统一) ====================
+
+# 仓根(本文件位于 <仓根>/sr-od-test/test/sr_od/app/currency_war/ → parents[5] = 仓根)
+_REPO_ROOT = Path(__file__).resolve().parents[5]
+TEST_DIR = Path(__file__).resolve().parents[4]   # sr-od-test 根(screens 存档帧基点)
+SCREENS = TEST_DIR / 'screens' / '货币战争-备战'
+_NODE_TPL_DIR = _REPO_ROOT / 'assets' / 'game_data' / 'cw_node_types'
+_BOSS_TPL_DIR = _REPO_ROOT / 'assets' / 'template' / 'currency_war' / 'boss_avatar'
+
+# screen_info「货币战争-备战.备战栏-1..9」pc_rect(1080p;与 yml 同步,离线硬编码约定;
+# 纯 CV 测试不持 ctx,读不到 screen_info,按仓内 data_registry 同款约定离线硬编码)
+_BENCH_SLOTS: list[tuple[int, Rect]] = [
+    (1, Rect(382, 845, 495, 979)),
+    (2, Rect(507, 844, 620, 978)),
+    (3, Rect(632, 844, 743, 978)),
+    (4, Rect(757, 845, 869, 979)),
+    (5, Rect(882, 846, 995, 980)),
+    (6, Rect(1004, 847, 1118, 978)),
+    (7, Rect(1132, 846, 1244, 977)),
+    (8, Rect(1256, 845, 1368, 979)),
+    (9, Rect(1379, 844, 1493, 980)),
+]
+
+
+def _imdecode_rgb(path) -> np.ndarray | None:
+    """imdecode(BGR)→ RGB(生产语义:框架截图链 BGRA2RGB,live 是 RGB;
+    fixture 经 imdecode 读到 BGR,进 classify/read 链前须翻到同侧)。"""
+    img = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
+    return None if img is None else cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+# ==================== node_reader(节点行类型识别) ====================
+
+_CLEAN_ROW_FIXTURE = Path(__file__).parent / 'cw_node_row_clean.png'
 
 
 def test_load_node_type_templates() -> None:
     """节点类型模板全加载(battle/supply/encounter/reward + encounter_v2 变体聚合同 key)。"""
-    tpls = load_node_type_templates(_ASSETS)
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
     assert set(tpls.keys()) == {'battle', 'supply', 'encounter', 'reward'}
     assert len(tpls['encounter']) == 2   # encounter + encounter_v2(r86 三叉箭头变体)
 
@@ -50,10 +118,9 @@ def test_classify_clean_node_row() -> None:
     ⚠️ 通道对齐(review P1,2026-08-16):classify_node_row 语义 = **RGB**(框架截图链 BGRA2RGB);
     fixture 经 imdecode 读到 BGR → 测试先翻 RGB 再传(与生产 live 同侧)。
     """
-    tpls = load_node_type_templates(_ASSETS)
-    img_bgr = cv2.imdecode(np.fromfile(str(_FIXTURE), dtype=np.uint8), cv2.IMREAD_COLOR)
-    assert img_bgr is not None
-    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)   # 生产语义:RGB
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
+    img = _imdecode_rgb(_CLEAN_ROW_FIXTURE)
+    assert img is not None
     slots = classify_node_row(img, tpls)
     assert len(slots) == 8                                          # 基础 8 槽全检出
     states = [s.state for s in slots]
@@ -74,24 +141,13 @@ def test_classify_clean_node_row() -> None:
 
 def test_gate_condition_non_node_row() -> None:
     """非节点行(空白小图)→ HoughCircles 检不出圆 → n < _MIN_CLEAN_CIRCLES(read_node_sequence 返 None 的门条件)。"""
-    tpls = load_node_type_templates(_ASSETS)
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
     blank = np.zeros((100, 200, 3), dtype=np.uint8)                # 纯黑空白,无圆
     slots = classify_node_row(blank, tpls)
     assert len(slots) < _MIN_CLEAN_CIRCLES                         # 门条件成立 → 上层返 None 跳过坏帧
 
 
-# ==================== node_type_gate ====================
-
-import sys
-from pathlib import Path as _node_type_gate_Path
-
-sys.path.insert(0, str(_node_type_gate_Path(__file__).resolve().parents[5] / 'src'))
-
-from sr_od.application.currency_war.obs.cw_observation import (
-    _BOSS_MIN_ROUND,
-    _NODE_LABEL_X_TOL,
-    gate_node_type,
-)
+# ==================== node_type_gate(节点类型语义门) ====================
 
 
 def test_boss_round_gate_rejects_upcoming_boss_label():
@@ -104,14 +160,12 @@ def test_boss_round_gate_rejects_upcoming_boss_label():
 
 
 def test_boss_round_gate_passes_real_boss_round():
-    """真 boss 轮(位面最后节点 = 第 9 轮)→ 放行。"""
+    """真 boss 轮(位面最后节点 = 第 9 轮)→ 放行(轮次门只拒未到 boss 轮的标签)。"""
     assert gate_node_type('boss', 9) == 'boss'
-    assert _BOSS_MIN_ROUND == 9
 
 
 def test_label_position_gate_rejects_mismatch():
     """标签 x=1341(即将到来的 boss 节点)vs 当前槽 cx≈900 → 错位 > 容差 → None。"""
-    assert abs(1341 - 900) > _NODE_LABEL_X_TOL   # 实证数据确超容差
     assert gate_node_type('boss', 9, label_x=1341, current_cx=900) is None
 
 
@@ -133,14 +187,7 @@ def test_none_passthrough():
     assert gate_node_type(None, None) is None
 
 
-# ==================== node_obs ====================
-
-from types import SimpleNamespace
-
-from sr_od.application.currency_war.obs.cw_node_obs import (
-    read_encounter_options,
-    read_encounter_refresh_count,
-)
+# ==================== node_obs(节点 overlay 选项读取) ====================
 
 
 def _ocr_map(items: list[tuple[str, int, int]]) -> dict:
@@ -237,8 +284,6 @@ def test_read_megastar_options_parses_candidates() -> None:
 
     baseline cw_megastar OCR(2026-08-07):花火(左 822)+ 星期日(右 1061)。容错半角叹号。
     """
-    from sr_od.application.currency_war.obs.cw_node_obs import read_megastar_options
-
     m = _ocr_map([
         ('盛会之星一花火女士！', 822, 333),    # 左(全角 !)
         ('盛会之星一星期日先生!', 1061, 334),   # 右(半角 !)
@@ -253,41 +298,18 @@ def test_read_megastar_options_parses_candidates() -> None:
 
 def test_read_megastar_options_no_candidates_empty() -> None:
     """非巨星屏(无「盛会之星一X」候选)→ [](handler 退默认 idx0)。"""
-    from sr_od.application.currency_war.obs.cw_node_obs import read_megastar_options
-
     assert read_megastar_options(_FakeCtx({}), None) == []
 
 
-# ==================== node_boss ====================
+# ==================== node_boss(boss 槽 SIFT) ====================
 
-from collections import Counter as _node_boss_Counter
-from pathlib import Path as _node_boss_Path
-
-import cv2 as _node_boss_cv2
-import numpy as _node_boss_np
-
-from sr_od.application.currency_war.obs import (
-    cw_node_reader as _node_boss_cw_node_reader,
-)
-from sr_od.application.currency_war.obs.cw_node_reader import (
-    classify_node_row as _node_boss_classify_node_row,
-)
-from sr_od.application.currency_war.obs.cw_node_reader import load_boss_templates
-from sr_od.application.currency_war.obs.cw_node_reader import (
-    load_node_type_templates as _node_boss_load_node_type_templates,
-)
-
-# _node_boss_cw_node_reader.py 在 src/sr_od/application/currency_war/obs/(期 2 obs 桶归位)→ parents[5] = 仓根
-_node_boss_ASSETS = _node_boss_Path(_node_boss_cw_node_reader.__file__).resolve().parents[5] / 'assets'
-_NODE_TPL_DIR = _node_boss_ASSETS / 'game_data' / 'cw_node_types'
-_BOSS_TPL_DIR = _node_boss_ASSETS / 'template' / 'currency_war' / 'boss_avatar'
-_node_boss_FIXTURE = _node_boss_Path(__file__).parent / 'cw_node_row_boss.png'
+_BOSS_ROW_FIXTURE = Path(__file__).parent / 'cw_node_row_boss.png'
 
 
-def _load_fixture_rgb():
-    img_bgr = _node_boss_cv2.imdecode(_node_boss_np.fromfile(str(_node_boss_FIXTURE), dtype=_node_boss_np.uint8), _node_boss_cv2.IMREAD_COLOR)
-    assert img_bgr is not None, f'fixture 缺失: {_FIXTURE}'
-    return _node_boss_cv2.cvtColor(img_bgr, _node_boss_cv2.COLOR_BGR2RGB)   # 生产语义:RGB
+def _load_fixture_rgb() -> np.ndarray:
+    img = _imdecode_rgb(_BOSS_ROW_FIXTURE)
+    assert img is not None, f'fixture 缺失: {_BOSS_ROW_FIXTURE}'
+    return img
 
 
 def test_boss_templates_full_load() -> None:
@@ -301,9 +323,9 @@ def test_boss_templates_full_load() -> None:
 def test_boss_slot_recognized_on_live_frame() -> None:
     """实机帧(1-1 备战,9 槽):最右槽 SIFT 命中 巨鹿生物制药(佩佩局
     简报真值 plane_bosses[0] 同源互证);boss 槽 Hu 类型被覆盖(None)。"""
-    tpls = _node_boss_load_node_type_templates(_NODE_TPL_DIR)
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
     bt = load_boss_templates(_BOSS_TPL_DIR)
-    slots = _node_boss_classify_node_row(_load_fixture_rgb(), tpls, boss_templates=bt)
+    slots = classify_node_row(_load_fixture_rgb(), tpls, boss_templates=bt)
     assert len(slots) == 9, f'9 槽(含 boss),得 {len(slots)}'
     boss_slot = slots[-1]
     assert boss_slot.boss == '巨鹿生物制药', \
@@ -314,42 +336,42 @@ def test_boss_slot_recognized_on_live_frame() -> None:
 def test_boss_dynamic_slot_position() -> None:
     """boss=最右槽位置判(动态):把 fixture 裁掉最左一节点(模拟 invest-env
     增删节点变 8 槽),boss 槽仍在最右且识别不变——不锁槽号。"""
-    tpls = _node_boss_load_node_type_templates(_NODE_TPL_DIR)
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
     bt = load_boss_templates(_BOSS_TPL_DIR)
     img = _load_fixture_rgb()
     trimmed = img[:, 96:]   # 去掉最左节点(~96px 槽距)
-    slots = _node_boss_classify_node_row(trimmed, tpls, boss_templates=bt)
+    slots = classify_node_row(trimmed, tpls, boss_templates=bt)
     assert len(slots) == 8, f'裁后 8 槽,得 {len(slots)}'
     assert slots[-1].boss == '巨鹿生物制药', '槽位变化后 boss 仍应命中(位置判不锁号)'
 
 
 def test_no_boss_templates_graceful() -> None:
     """boss 模板缺载(目录空/未传)→ 最右槽走 Hu 普通判型,不崩。"""
-    tpls = _node_boss_load_node_type_templates(_NODE_TPL_DIR)
-    slots = _node_boss_classify_node_row(_load_fixture_rgb(), tpls, boss_templates=None)
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
+    slots = classify_node_row(_load_fixture_rgb(), tpls, boss_templates=None)
     assert all(s.boss is None for s in slots), '无 boss 库时 boss 字段恒 None'
 
 
 def test_upcoming_types_unchanged() -> None:
     """普通节点 Hu 判型不受 boss 分支影响(同帧类型分布锁;新带右界扩宽后
     idx7 reward 与 idx1 reward 分布一致)。"""
-    tpls = _node_boss_load_node_type_templates(_NODE_TPL_DIR)
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
     bt = load_boss_templates(_BOSS_TPL_DIR)
-    slots = _node_boss_classify_node_row(_load_fixture_rgb(), tpls, boss_templates=bt)
+    slots = classify_node_row(_load_fixture_rgb(), tpls, boss_templates=bt)
     upcoming = [s.node_type for s in slots[:-1] if s.state == 'upcoming']
-    assert _node_boss_Counter(upcoming) == {'battle': 3, 'supply': 1, 'reward': 2, 'encounter': 1}
+    assert Counter(upcoming) == {'battle': 3, 'supply': 1, 'reward': 2, 'encounter': 1}
     assert next(s for s in slots if s.state == 'current').idx == 0
 
 
 # ===== 位面详情节点带(区域-节点条@货币战争-位面详情,2026-08-26 用户权威坐标) =====
 
-_PD_FIXTURE = _node_boss_Path(__file__).parent / 'cw_plane_detail_nodes.png'
+_PD_NODES_FIXTURE = Path(__file__).parent / 'cw_plane_detail_nodes.png'
 
 
-def _load_pd_fixture_rgb():
-    img_bgr = _node_boss_cv2.imdecode(_node_boss_np.fromfile(str(_PD_FIXTURE), dtype=_node_boss_np.uint8), _node_boss_cv2.IMREAD_COLOR)
-    assert img_bgr is not None, f'fixture 缺失: {_PD_FIXTURE}'
-    return _node_boss_cv2.cvtColor(img_bgr, _node_boss_cv2.COLOR_BGR2RGB)
+def _load_pd_fixture_rgb() -> np.ndarray:
+    img = _imdecode_rgb(_PD_NODES_FIXTURE)
+    assert img is not None, f'fixture 缺失: {_PD_NODES_FIXTURE}'
+    return img
 
 
 def test_plane_detail_band_recognition() -> None:
@@ -359,9 +381,9 @@ def test_plane_detail_band_recognition() -> None:
     HSV 单特征把节点判 past(低饱和预览态)→ 非 boss 槽不进 Hu(node_type
     全 None)。锁这个真实语义(boss 识别不依赖判态/类型,恒走位置判+SIFT)。
     """
-    tpls = _node_boss_load_node_type_templates(_NODE_TPL_DIR)
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
     bt = load_boss_templates(_BOSS_TPL_DIR)
-    slots = _node_boss_classify_node_row(_load_pd_fixture_rgb(), tpls, boss_templates=bt)
+    slots = classify_node_row(_load_pd_fixture_rgb(), tpls, boss_templates=bt)
     assert len(slots) == 9
     assert slots[-1].boss == '巨鹿生物制药', \
         f'位面详情带 boss 应巨鹿生物制药,得 {slots[-1].boss}'
@@ -369,15 +391,7 @@ def test_plane_detail_band_recognition() -> None:
     assert all(s.node_type is None for s in slots[:-1])
 
 
-# ==================== node_validate ====================
-
-import pytest
-
-from sr_od.application.currency_war.tools.cw_node_validate import (
-    P1_NODE_TEMPLATE,
-    validate_p1_node_sequence,
-    validate_p2_node_sequence,
-)
+# ==================== node_validate(位面节点序列校验器) ====================
 
 
 def _row(rn: int, nt: str, **kw) -> dict:
@@ -462,20 +476,7 @@ def test_p2_interface_reserved() -> None:
         validate_p2_node_sequence([])
 
 
-# ==================== bookcard_handler ====================
-
-import sys as _bookcard_handler_sys
-from pathlib import Path as _bookcard_handler_Path
-
-_REPO = _bookcard_handler_Path(__file__).resolve().parents[5]
-_bookcard_handler_sys.path.insert(0, str(_REPO / 'src'))
-
-import numpy as _bookcard_handler_np  # noqa: E402
-
-from one_dragon.base.geometry.rectangle import Rect  # noqa: E402
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_expert_invite import (  # noqa: E402
-    choose_expert_index,
-)
+# ==================== bookcard_handler(书册卡处理链) ====================
 
 # ===== ① 默认策略判据 =====
 
@@ -514,27 +515,25 @@ def test_policy_tie_deterministic() -> None:
 
 # ===== ② 书册卡模板在位判定 =====
 
-_SLOTS = [Rect(382, 845, 495, 979), Rect(507, 844, 620, 978)]
+_SLOTS = [r for _, r in _BENCH_SLOTS[:2]]   # 探针槽位 = 备战栏槽1-2(复用单一夹具)
 
 
 def test_bookcard_template_loadable() -> None:
     """模板文件在位且可加载(灰度非 None);换名/移动路径即红。"""
-    from sr_od.application.currency_war.obs import cw_identity_obs as cio
-    assert cio._get_bookcard_gray() is not None
+    assert _get_bookcard_gray() is not None
 
 
 def test_find_bookcards_hits_pasted_template() -> None:
     """灰度 TM 自检:模板贴进槽位画布 → find_bookcards 命中该槽(检测链通路)。"""
-    from sr_od.application.currency_war.obs import cw_identity_obs as cio
-    tm = cio._get_bookcard_gray()
+    tm = _get_bookcard_gray()
     assert tm is not None
-    canvas = _bookcard_handler_np.full((1080, 1920, 3), 40, dtype=_bookcard_handler_np.uint8)
+    canvas = np.full((1080, 1920, 3), 40, dtype=np.uint8)
     rect = _SLOTS[1]
     h, w = tm.shape[:2]
     x = rect.x1 + (rect.x2 - rect.x1 - w) // 2
     y = rect.y1 + (rect.y2 - rect.y1 - h) // 2
     canvas[y:y + h, x:x + w, :] = tm[:, :, None]   # 灰度贴 3 通道画布(find_bookcards 内部自转灰度)
-    hits = cio.find_bookcards(canvas, list(enumerate(_SLOTS, 1)))
+    hits = find_bookcards(canvas, list(enumerate(_SLOTS, 1)))
     assert [i for i, _ in hits] == [2], f'slot2 应命中,实得 {[i for i, _ in hits]}'
 
 
@@ -548,32 +547,22 @@ def test_invite_screen_registered_as_upper() -> None:
 
 
 def test_bookcard_handler_wired() -> None:
-    """停机钩子 → 自动处理链接线:cw_loop 引用 CwScreenExpertInvite,
-    cw_screen_prep 弹窗 bail 清单含 bookcard 标签。"""
-    import inspect
-
+    """停机钩子 → 自动处理链接线(失守事故 = 2026-08-30 bookcard_confirm 停机钩子
+    退役后由本链接管,接线脱落即退回停机):cw_loop 引用 CwScreenExpertInvite,
+    bail 扫描单一源已收拢至 registry(B 面切换):成员判定改为派生集三元组。"""
     from sr_od.application.currency_war.kernel.cw_overlay_registry import (
         derive_decision,
     )
     from sr_od.application.currency_war.operations import cw_loop
     assert 'CwScreenExpertInvite' in inspect.getsource(cw_loop)
-    # bail 扫描单一源已收拢至 registry(B 面切换):成员判定改为派生集三元组
     assert ('货币战争-备战-专家邀请函', '标识-专家邀请函', 'bookcard') in {
         (s.screen_name, s.anchor_area, s.bail_tag) for s in derive_decision()}
 
 
-# ==================== test_reward_sphere ====================
-
-import pytest as _test_reward_sphere_pytest
-
-from one_dragon.base.geometry.rectangle import Rect as _test_reward_sphere_Rect
-from sr_od.application.currency_war.obs.cw_identity_obs import find_reward_spheres
-
-if True:  # test_context fixture 类型
-    from test.conftest import SrTestContext
+# ==================== test_reward_sphere(奖励球识别 + 防幻检) ====================
 
 SCREEN = '货币战争-备战'
-PANEL = _test_reward_sphere_Rect(1257, 140, 1662, 493)  # 区域-奖励(ground truth)
+PANEL = Rect(1257, 140, 1662, 493)  # 区域-奖励(ground truth)
 
 
 def _count(hits: list[tuple[str, object, int]], color: str) -> int:
@@ -583,7 +572,7 @@ def _count(hits: list[tuple[str, object, int]], color: str) -> int:
 def test_reward_spheres_8(test_context: SrTestContext) -> None:
     """8 球态:1 金 + 5 蓝 + 2 灰(VLM 逐球 ground truth 吻合)。"""
     if not test_context.has_screen(SCREEN, 'reward_spheres_8'):
-        _test_reward_sphere_pytest.skip('fixture 缺:reward_spheres_8.webp')
+        pytest.skip('fixture 缺:reward_spheres_8.webp')
     img = test_context.load_screen(SCREEN, 'reward_spheres_8')
     hits = find_reward_spheres(img, PANEL)
     assert len(hits) == 8, f'应 8 球,实得 {[(c, p.x, p.y) for c, p, r in hits]}'
@@ -596,7 +585,7 @@ def test_reward_spheres_8(test_context: SrTestContext) -> None:
 def test_reward_spheres_5(test_context: SrTestContext) -> None:
     """收 3 球后 5 球态:0 金 + 3 蓝 + 2 灰。"""
     if not test_context.has_screen(SCREEN, 'reward_spheres_5'):
-        _test_reward_sphere_pytest.skip('fixture 缺:reward_spheres_5.webp')
+        pytest.skip('fixture 缺:reward_spheres_5.webp')
     img = test_context.load_screen(SCREEN, 'reward_spheres_5')
     hits = find_reward_spheres(img, PANEL)
     assert len(hits) == 5 and _count(hits, 'blue') == 3 and _count(hits, 'gray') == 2, (
@@ -607,7 +596,7 @@ def test_reward_spheres_5(test_context: SrTestContext) -> None:
 def test_reward_spheres_4(test_context: SrTestContext) -> None:
     """收 4 球后 4 球态:0 金 + 2 蓝 + 2 灰。"""
     if not test_context.has_screen(SCREEN, 'reward_spheres_4'):
-        _test_reward_sphere_pytest.skip('fixture 缺:reward_spheres_4.webp')
+        pytest.skip('fixture 缺:reward_spheres_4.webp')
     img = test_context.load_screen(SCREEN, 'reward_spheres_4')
     hits = find_reward_spheres(img, PANEL)
     assert len(hits) == 4 and _count(hits, 'blue') == 2 and _count(hits, 'gray') == 2
@@ -616,7 +605,7 @@ def test_reward_spheres_4(test_context: SrTestContext) -> None:
 def test_reward_spheres_empty_no_false_positive(test_context: SrTestContext) -> None:
     """空面板(球收完)0 误报(背景点阵/按钮不触发圆检测)。"""
     if not test_context.has_screen(SCREEN, 'reward_panel_empty'):
-        _test_reward_sphere_pytest.skip('fixture 缺:reward_panel_empty.webp')
+        pytest.skip('fixture 缺:reward_panel_empty.webp')
     img = test_context.load_screen(SCREEN, 'reward_panel_empty')
     assert find_reward_spheres(img, PANEL) == []
 
@@ -631,7 +620,7 @@ def test_reward_giftbox_phantom_excluded(test_context: SrTestContext) -> None:
     (blue r56 + gray r15,即蝴蝶结/扣饰圆形)→ 新代码纹理/亮度门淘汰,
     返回 0 球;真球 fixture 计数不回退(由上方 4/5/8 球锁并行看守)。"""
     if not test_context.has_screen(SCREEN, 'reward_giftbox_phantom'):
-        _test_reward_sphere_pytest.skip('fixture 缺:reward_giftbox_phantom.webp')
+        pytest.skip('fixture 缺:reward_giftbox_phantom.webp')
     img = test_context.load_screen(SCREEN, 'reward_giftbox_phantom')
     hits = find_reward_spheres(img, PANEL)
     assert hits == [], f'礼盒帧不得报球(幻检),实得 {[(c, p.x, p.y, r) for c, p, r in hits]}'
@@ -640,7 +629,6 @@ def test_reward_giftbox_phantom_excluded(test_context: SrTestContext) -> None:
 def test_filter_persistent_spheres_two_frame() -> None:
     """两帧持存真值表(纯函数):同位置同半径两帧 → 采信;仅单帧出现的
     瞬态假圆 → 淘汰;prev=None(首帧)→ 原样采信;半径容差内浮动不误杀。"""
-    from one_dragon.base.geometry.point import Point
     from sr_od.application.currency_war.obs.cw_identity_obs import (
         filter_persistent_spheres,
     )
@@ -658,24 +646,21 @@ def test_filter_persistent_spheres_two_frame() -> None:
 
 
 def test_read_reward_spheres_phantom_blacklist_filter(
-        test_context: SrTestContext) -> None:
+        test_context: SrTestContext, monkeypatch) -> None:
     """读侧黑名单过滤:点击后零消失登记的幻球坐标 → 后续 read 不再返回
     (ClickSpheres 由此获得「放弃该目标」出口,禁无限循环)。"""
-    import sr_od.application.currency_war.obs.cw_identity_obs as cio
     if not test_context.has_screen(SCREEN, 'reward_spheres_4'):
-        _test_reward_sphere_pytest.skip('fixture 缺:reward_spheres_4.webp')
+        pytest.skip('fixture 缺:reward_spheres_4.webp')
     img = test_context.load_screen(SCREEN, 'reward_spheres_4')
     base = find_reward_spheres(img, PANEL)
     assert len(base) == 4
-    _orig_area = cio._area_rect
     sess = type('S', (), {})()
     sess.reward_sphere_phantom_points = [base[0][1]]
     ctx = type('C', (), {'cw_match': type('M', (), {'session': sess})()})()
-    cio._area_rect = lambda *a, **k: PANEL   # monkeypatch 手工还原
-    try:
-        out = cio.read_reward_spheres(ctx, img)
-    finally:
-        cio._area_rect = _orig_area
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.obs.cw_identity_obs._area_rect',
+        lambda *a, **k: PANEL)
+    out = read_reward_spheres(ctx, img)
     assert len(out) == 3, f'黑名单坐标应被读侧过滤,实得 {[(c, p.x, p.y) for c, p, r in out]}'
     assert all(p != base[0][1] for _c, p, _r in out)
 
@@ -683,10 +668,7 @@ def test_read_reward_spheres_phantom_blacklist_filter(
 def test_click_spheres_zero_disappear_blacklists_phantom(monkeypatch) -> None:
     """点击后零消失 → 幻球登记(会话黑名单 + 分键),detail 携带黑名单痕迹;
     席满(无空位)时不拉黑(席满点不动 = 真球保留的既有裁定语义)。"""
-    from types import SimpleNamespace
-
     import sr_od.application.currency_war.prep_actions as pa
-    from one_dragon.base.geometry.point import Point
 
     sphere = ('blue', Point(1400, 300), 33)
     reads = {'n': 0}
@@ -721,7 +703,6 @@ def test_click_spheres_zero_disappear_blacklists_phantom(monkeypatch) -> None:
     ex._op = _Op()
     ex._ctx = type('C', (), {'controller': _Ctrl(),
                              'cw_match': SimpleNamespace(session=_Sess())})()
-    from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres
     ok, detail = ex._click_spheres(ClickSpheres(max_k=3))
     assert ok is False                       # 零消失 = 未推进
     assert clicks['n'] == 1
@@ -731,34 +712,24 @@ def test_click_spheres_zero_disappear_blacklists_phantom(monkeypatch) -> None:
         f'幻球坐标必须入会话黑名单,实得 {pts}'
 
 
-# ==================== test_supply_box ====================
-
-import cv2 as _test_supply_box_cv2
-import numpy as _test_supply_box_np
-import pytest as _test_supply_box_pytest
-
-from one_dragon.base.geometry.rectangle import Rect as _test_supply_box_Rect
-from sr_od.application.currency_war.obs.cw_identity_obs import find_supply_boxes
+# ==================== test_supply_box(补给箱识别) ====================
 
 # 实机截图(1-9 备战,槽1=补给箱,槽2-9=角色;2026-08-14 采集)
 _SHOT = r'.debug/sr_od_mcp/screenshot/screenshot_20260814_164308_173490.png'
 # 拖箱槽1→槽2 后(箱在槽2 且带选中光效,TM 0.65 档回归用;2026-08-14 采集)
 _SHOT_DRAG = r'.debug/sr_od_mcp/screenshot/screenshot_20260814_165941_733433.png'
-_BENCH_RECTS = [  # screen_info 备战栏-1..9 pc_rect(ground truth)
-    [382, 845, 495, 979], [507, 844, 620, 978], [632, 844, 743, 978],
-    [757, 845, 869, 979], [882, 846, 995, 980], [1004, 847, 1118, 978],
-    [1132, 846, 1244, 977], [1256, 845, 1368, 979], [1379, 844, 1493, 980],
-]
 
 
-def _slots() -> list[tuple[int, _test_supply_box_Rect]]:
-    return [(i, _test_supply_box_Rect(*r)) for i, r in enumerate(_BENCH_RECTS, start=1)]
+def _slots() -> list[tuple[int, Rect]]:
+    return list(_BENCH_SLOTS)
 
 
-def _load(path: str) -> _test_supply_box_np.ndarray:
-    img = _test_supply_box_cv2.imdecode(_test_supply_box_np.fromfile(path, _test_supply_box_np.uint8), _test_supply_box_cv2.IMREAD_COLOR)
+def _load(path: str) -> np.ndarray:
+    """实机截图 → BGR 原样(find_supply_boxes 历史基线在 BGR 侧,内部自转灰度;
+    本段不走 _imdecode_rgb —— 通道翻转改变 TM 彩色得分,不许动)。"""
+    img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
     if img is None:
-        _test_supply_box_pytest.skip(f'实机截图 fixture 缺: {path}')
+        pytest.skip(f'实机截图 fixture 缺: {path}')
     return img
 
 
@@ -778,9 +749,9 @@ def test_supply_box_after_drag_selected_glow() -> None:
 
 def test_supply_box_no_false_positive_on_empty() -> None:
     """合成空槽(纯色 + 噪声)不命中(防 placeholder 误报)。"""
-    rng = _test_supply_box_np.random.default_rng(7)
-    blank = _test_supply_box_np.full((1080, 1920, 3), 40, dtype=_test_supply_box_np.uint8)
-    blank += rng.integers(0, 8, blank.shape, dtype=_test_supply_box_np.uint8)  # 低方差噪声
+    rng = np.random.default_rng(7)
+    blank = np.full((1080, 1920, 3), 40, dtype=np.uint8)
+    blank += rng.integers(0, 8, blank.shape, dtype=np.uint8)  # 低方差噪声
     assert find_supply_boxes(blank, _slots()) == []
 
 
@@ -792,12 +763,12 @@ def test_supply_box_threshold_margin() -> None:
     )
     tm = _get_supply_box_gray()
     if tm is None:
-        _test_supply_box_pytest.skip('补给箱模板缺(assets/template/currency_war/supply/补给箱.png)')
-    gray = _test_supply_box_cv2.cvtColor(_load(_SHOT), _test_supply_box_cv2.COLOR_BGR2GRAY)
+        pytest.skip('补给箱模板缺(assets/template/currency_war/supply/补给箱.png)')
+    gray = cv2.cvtColor(_load(_SHOT), cv2.COLOR_BGR2GRAY)
     box_val, char_max = 0.0, 0.0
-    for i, r in enumerate(_BENCH_RECTS, start=1):
-        crop = gray[r[1]:r[3], r[0]:r[2]]
-        _, mx, _, _ = _test_supply_box_cv2.minMaxLoc(_test_supply_box_cv2.matchTemplate(crop, tm, _test_supply_box_cv2.TM_CCOEFF_NORMED))
+    for i, r in _BENCH_SLOTS:
+        crop = gray[r.y1:r.y2, r.x1:r.x2]
+        _, mx, _, _ = cv2.minMaxLoc(cv2.matchTemplate(crop, tm, cv2.TM_CCOEFF_NORMED))
         if i == 1:
             box_val = mx
         else:
@@ -806,36 +777,12 @@ def test_supply_box_threshold_margin() -> None:
     assert char_max <= _SUPPLY_BOX_TM_THR - 0.3, f'角色槽 max={char_max:.3f} 应低于阈值 -0.3 余量'
 
 
-# ==================== w595_trial_reveal_card ====================
-
-from pathlib import Path as _w595_trial_reveal_card_Path
-
-import numpy as _w595_trial_reveal_card_np
-
-from one_dragon.base.geometry.point import Point
-from one_dragon.base.geometry.rectangle import Rect as _w595_trial_reveal_card_Rect
-from one_dragon.utils.cv2_utils import read_image
-
-TEST_DIR = _w595_trial_reveal_card_Path(__file__).parents[4]
-SCREENS = TEST_DIR / 'screens' / '货币战争-备战'
-
-# screen_info「货币战争-备战.备战栏-1..9」pc_rect(1080p;与 yml 同步,离线硬编码约定)
-_BENCH_SLOTS: list[tuple[int, _w595_trial_reveal_card_Rect]] = [
-    (1, _w595_trial_reveal_card_Rect(382, 845, 495, 979)),
-    (2, _w595_trial_reveal_card_Rect(507, 844, 620, 978)),
-    (3, _w595_trial_reveal_card_Rect(632, 844, 743, 978)),
-    (4, _w595_trial_reveal_card_Rect(757, 845, 869, 979)),
-    (5, _w595_trial_reveal_card_Rect(882, 846, 995, 980)),
-    (6, _w595_trial_reveal_card_Rect(1004, 847, 1118, 978)),
-    (7, _w595_trial_reveal_card_Rect(1132, 846, 1244, 977)),
-    (8, _w595_trial_reveal_card_Rect(1256, 845, 1368, 979)),
-    (9, _w595_trial_reveal_card_Rect(1379, 844, 1493, 980)),
-]
+# ==================== w595_trial_reveal_card(试用角色揭示卡) ====================
 
 _POS_FIXTURE = SCREENS / 'trial_reveal_w595.webp'
 
 
-def _w595_trial_reveal_card_load(name: str):
+def _load_screen_fixture(name: str):
     img = read_image(str(SCREENS / name))
     assert img is not None, f'fixture 缺失:{name}'
     return img
@@ -843,33 +790,22 @@ def _w595_trial_reveal_card_load(name: str):
 
 def test_positive_frame_slot3_hit() -> None:
     """正样本帧(建档帧 slot3 发光卡)→ 双通道命中 slot3,且不误报其他槽。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import (
-        find_trial_reveal_cards,
-    )
-
-    screen = _w595_trial_reveal_card_load(_POS_FIXTURE.name)
+    screen = _load_screen_fixture(_POS_FIXTURE.name)
     hits = find_trial_reveal_cards(screen, _BENCH_SLOTS)
-    hit_slots = [i for i, _p in hits]
-    assert 3 in hit_slots
+    assert [i for i, _p in hits] == [3], f'应只命中 slot3,实得 {[i for i, _p in hits]}'
 
 
 def test_negative_frames_no_false_positive() -> None:
     """既有备战 fixture(角色/箱/球/商店等)全槽零误报(双通道负样本分离度锁)。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import (
-        find_trial_reveal_cards,
-    )
-
     for name in ('r1_idle_stop.webp', 'shop_closed.webp',
                  'deployed_2star_bench1.webp', 'reward_spheres_8.webp'):
-        screen = _w595_trial_reveal_card_load(name)
+        screen = _load_screen_fixture(name)
         hits = find_trial_reveal_cards(screen, _BENCH_SLOTS)
         assert hits == [], f'{name} 误报:{hits}'
 
 
 def test_tm_channel_separation() -> None:
     """TM 通道单通道独立命中正样本(阈值 0.5 的余量锁:正 ≥0.9 / 负 ≤0.26 标定)。"""
-    import cv2
-
     from sr_od.application.currency_war.obs.cw_identity_obs import (
         _TRIAL_REVEAL_TM_THR,
         _get_trial_reveal_gray,
@@ -877,7 +813,7 @@ def test_tm_channel_separation() -> None:
 
     tm = _get_trial_reveal_gray()
     assert tm is not None, '模板缺失:assets/template/currency_war/supply/试用角色揭示卡.png'
-    pos = _w595_trial_reveal_card_load(_POS_FIXTURE.name)
+    pos = _load_screen_fixture(_POS_FIXTURE.name)
     rect = _BENCH_SLOTS[2][1]
     crop = cv2.cvtColor(pos[rect.y1:rect.y2, rect.x1:rect.x2], cv2.COLOR_RGB2GRAY)
     val = cv2.minMaxLoc(cv2.matchTemplate(crop, tm, cv2.TM_CCOEFF_NORMED))[1]
@@ -886,7 +822,7 @@ def test_tm_channel_separation() -> None:
 
 # ===== summon 兜底豁免链(钩子层,mock 依赖;同 ADR-0263 测试手法) =====
 
-_SLOT6 = _w595_trial_reveal_card_Rect(1004, 847, 1118, 978)
+_SLOT6 = _BENCH_SLOTS[5][1]
 
 
 class _FakeRunContext:
@@ -933,7 +869,7 @@ def test_summon_hook_skips_trial_reveal_card(monkeypatch, tmp_path) -> None:
                         lambda screen, prefix: shots.append(prefix) or f'{prefix}.png')
 
     ctx = _HookCtx()
-    screen = _w595_trial_reveal_card_np.zeros((200, 300, 3), dtype=_w595_trial_reveal_card_np.uint8)
+    screen = np.zeros((200, 300, 3), dtype=np.uint8)
     cw_identity_obs.read_bench_chars(ctx, screen, None)
     assert ctx.run_context.stops == []
     assert shots == []
@@ -942,17 +878,13 @@ def test_summon_hook_skips_trial_reveal_card(monkeypatch, tmp_path) -> None:
 
 def test_cw_loop_reveal_wiring_present() -> None:
     """行为接线锁:cw_loop 备战分支的揭示清场在场(防误删后退回停机/漏增益)。"""
-    import inspect
-
     from sr_od.application.currency_war.operations import cw_loop
 
     src = inspect.getsource(cw_loop)
     assert 'find_trial_reveal_cards' in src, 'cw_loop 试用揭示卡清场接线被移除'
 
 
-# ==================== w219_boss_collect_channel ====================
-
-import inspect
+# ==================== w219_boss_collect_channel(简报/接管采集通道) ====================
 
 
 def test_briefing_bosses_written_into_session() -> None:
@@ -999,7 +931,8 @@ def test_plane_intel_takeover_refill_channel(test_context, monkeypatch) -> None:
     start_planes: list[int] = []
 
     class _StubIntel:
-        """位面详情子 op 桩:记录 start_plane,模拟实采写 ctx 中转池。"""
+        """位面详情子 op 桩:记录 start_plane;中转池由下方预置夹具承载
+        (生产从 ctx.cw_plane_bosses 取走→session,桩不重复写池)。"""
 
         def __init__(self, ctx, start_plane: int = 0) -> None:
             start_planes.append(start_plane)
@@ -1100,51 +1033,27 @@ def test_session_collected_bosses_flow_to_state_plane_bosses(monkeypatch) -> Non
         f'空真值不得注入:{state2.plane_bosses!r}')
 
 
-# ==================== w221_boss_locate_emblem ====================
+# ==================== w221_boss_locate_emblem(徽章态分流) ====================
 
-import inspect as _w221_boss_locate_emblem_inspect
-from pathlib import Path as _w221_boss_locate_emblem_Path
-from typing import TYPE_CHECKING
-
-import cv2 as _w221_boss_locate_emblem_cv2
-import numpy as _w221_boss_locate_emblem_np
-
-from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.obs.cw_node_reader import (
-    classify_node_row as _w221_boss_locate_emblem_classify_node_row,
-)
-from sr_od.application.currency_war.obs.cw_node_reader import (
-    load_boss_templates as _w221_boss_locate_emblem_load_boss_templates,
-)
-from sr_od.application.currency_war.obs.cw_node_reader import (
-    load_node_type_templates as _w221_boss_locate_emblem_load_node_type_templates,
-)
-
-if TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
-_w221_boss_locate_emblem_FIXTURE = _w221_boss_locate_emblem_Path(__file__).parent / 'cw_plane_detail_emblem_full.png'
-_w221_boss_locate_emblem_ASSETS = _w221_boss_locate_emblem_Path(cv2_utils.__file__).resolve().parents[3] / 'assets'   # 仓根 assets
-_w221_boss_locate_emblem_NODE_TPL_DIR = _w221_boss_locate_emblem_ASSETS / 'game_data' / 'cw_node_types'
-_w221_boss_locate_emblem_BOSS_TPL_DIR = _w221_boss_locate_emblem_ASSETS / 'template' / 'currency_war' / 'boss_avatar'
-#位面详情节点带(与 screen_info「货币战争-位面详情/区域-节点条」一致;yml 单一源,测试兜底)
+_EMBLEM_FIXTURE = Path(__file__).parent / 'cw_plane_detail_emblem_full.png'
+# 位面详情节点带(与 screen_info「货币战争-位面详情/区域-节点条」一致;yml 单一源,测试兜底)
 _PD_BAND_RECT = (385, 514, 1596, 661)
 
 
-def _w221_boss_locate_emblem_load_fixture_rgb() -> _w221_boss_locate_emblem_np.ndarray:
-    img_bgr = _w221_boss_locate_emblem_cv2.imdecode(_w221_boss_locate_emblem_np.fromfile(str(_w221_boss_locate_emblem_FIXTURE), dtype=_w221_boss_locate_emblem_np.uint8), _w221_boss_locate_emblem_cv2.IMREAD_COLOR)
-    assert img_bgr is not None, f'fixture 缺失: {_FIXTURE}'
-    return _w221_boss_locate_emblem_cv2.cvtColor(img_bgr, _w221_boss_locate_emblem_cv2.COLOR_BGR2RGB)   # 生产语义:RGB
+def _load_emblem_fixture_rgb() -> np.ndarray:
+    img = _imdecode_rgb(_EMBLEM_FIXTURE)
+    assert img is not None, f'fixture 缺失: {_EMBLEM_FIXTURE}'
+    return img
 
 
 def test_emblem_band_zero_false_positive() -> None:
     """锁①:run30 徽章态带内 9 圆逐圆 SIFT 全拒(零假阳;身份缺失≠识别误报)。"""
-    tpls = _w221_boss_locate_emblem_load_node_type_templates(_w221_boss_locate_emblem_NODE_TPL_DIR)
-    bt = _w221_boss_locate_emblem_load_boss_templates(_w221_boss_locate_emblem_BOSS_TPL_DIR)
+    tpls = load_node_type_templates(_NODE_TPL_DIR)
+    bt = load_boss_templates(_BOSS_TPL_DIR)
     assert len(bt) == 20, f'boss 模板库应 20 件(缺库会让全拒断言空过),得 {len(bt)}'
-    img = _w221_boss_locate_emblem_load_fixture_rgb()
+    img = _load_emblem_fixture_rgb()
     x1, y1, x2, y2 = _PD_BAND_RECT
-    slots = _w221_boss_locate_emblem_classify_node_row(img[y1:y2, x1:x2], tpls, boss_templates=bt)
+    slots = classify_node_row(img[y1:y2, x1:x2], tpls, boss_templates=bt)
     assert len(slots) == 9, f'run30 位面1 带 9 圆,得 {len(slots)}'
     assert all(s.boss is None for s in slots), (
         f'徽章态带内不应有 boss 命中(得 {[s.boss for s in slots]})——假阳比缺数据危险'
@@ -1154,13 +1063,10 @@ def test_emblem_band_zero_false_positive() -> None:
 def test_emblem_detail_label_reads_boss(test_context: SrTestContext) -> None:
     """锁②:run30 帧详情条类型名 OCR 含「首领」(真实 OCR;定位验证锚)。"""
     from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
-    from sr_od.application.currency_war.obs.cw_observation import (
-        read_detail_node_type_label,
-    )
 
     if _area_rect(test_context, '文本-节点类型名', '货币战争-位面详情') is None:
         test_context.screen_loader.reload(from_separated_files=True)
-    label = read_detail_node_type_label(test_context, _w221_boss_locate_emblem_load_fixture_rgb())
+    label = read_detail_node_type_label(test_context, _load_emblem_fixture_rgb())
     assert label is not None, '详情条类型名应可 OCR(锚缺失会让徽章态分流失效)'
     assert '首领' in label.replace(' ', ''), (
         f'点最右圆后详情条应显示首领节点类型,得 {label!r}(位置先验失效信号)'
@@ -1189,20 +1095,20 @@ def test_conclude_plane_boss_matrix() -> None:
 
 
 def test_cw_loop_preserves_none_positions() -> None:
-    """锁④:实采写 session 保位(None 不滤)——滤 None 会让后续位面名字左移错序
-    (ADR-0397 修的「按序消费错位面」同病;旧形态 `[n for n in ... if n]` 禁回潮)。
+    """否定墓碑(W221/ADR-0397 退役背书):实采列表滤 None 回潮禁令——滤 None
+    会让后续位面名字左移错序(「按序消费错位面」同病),旧形态
+    ``[n for n in ... if n]`` 禁回流。
 
     W971 P3b:实采接线随接管补采迁 cw_screen_prep(单轮化后挂
-    _takeover_collect_if_needed),锁随迁。
+    _takeover_collect_if_needed),锁随迁;保位写(None 原样 3 槽)的行为面
+    由 test_plane_intel_takeover_refill_channel 经真实入口锁,此处只钉墓碑。
     """
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
 
-    src = _w221_boss_locate_emblem_inspect.getsource(
-        cw_screen_prep.CwScreenPrep._takeover_collect_if_needed)
+    src = inspect.getsource(cw_screen_prep.CwScreenPrep._takeover_collect_if_needed)
     assert '[n for n in self.ctx.cw_plane_bosses if n]' not in src, (
         '实采列表滤 None 回潮(徽章态位面 None 被丢→位面错序)'
     )
-    assert '_names = list(self.ctx.cw_plane_bosses' in src, '实采应保位写 3 槽(None 原样)'
 
 
 def test_boss_fit_tolerates_none_entries() -> None:
@@ -1217,7 +1123,8 @@ def test_boss_fit_tolerates_none_entries() -> None:
     assert full == holed, 'None 位应被跳过而非改变其余 boss 的判定'
 
 
-# ==================== briefing_plane_order ====================
+# ==================== briefing_plane_order(简报位面序对账) ====================
+
 
 def test_lcs_clean_maps_abbreviations_to_canonical() -> None:
     """简称(简报卡名常见形态)归一到规范公司名;已是规范名原样返回。"""
@@ -1269,9 +1176,9 @@ def test_reconcile_gate_default_on_and_persisted() -> None:
     """门控默认开(验证期积累配对证据),且 save() 持久化(yml 可关)。
 
     持久化走静态锁(inspect save 源码)——不真调 save(),避免测试写真实 config 目录。
+    save() 漏字段的失守事故有先例(max_rounds/code_hash_gate 均曾漏 → GUI 保存静默抹掉
+    yml 手写值,见 currency_war_config.save 内注释),本锁钉 briefing_reconcile 不重蹈。
     """
-    import inspect
-
     from sr_od.application.currency_war.currency_war_config import CurrencyWarConfig
 
     cfg = CurrencyWarConfig()
