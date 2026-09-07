@@ -457,7 +457,7 @@ def test_check_battle_rung_pool_bucket_lock_unit() -> None:
     # 缺 rung0 主桶 → 报
     miss = {'battle': {1: [-6] * 10}}
     assert check_battle_rung_pool_bucket_lock(miss)['violations'] == 1
-    # 均值漂移>3hp → 报(r0 真值 -11.5,给 -5)
+    # 均值漂移>3hp → 报(r0 真值 -9.73;旧值 -11.5 系含毒语料锚,给 -5)
     drift = {'battle': {0: [-5] * 10, 1: [-6] * 10}}
     rep_d = check_battle_rung_pool_bucket_lock(drift)
     assert any('漂移' in i for i in rep_d['issues'])
