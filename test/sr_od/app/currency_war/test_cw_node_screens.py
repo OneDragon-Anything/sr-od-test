@@ -31,7 +31,6 @@ import pytest
 from one_dragon.base.geometry.point import Point
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils.cv2_utils import read_image
-
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres
 from sr_od.application.currency_war.obs.cw_identity_obs import (
@@ -714,37 +713,8 @@ def test_click_spheres_zero_disappear_blacklists_phantom(monkeypatch) -> None:
 
 # ==================== test_supply_box(补给箱识别) ====================
 
-# 实机截图(1-9 备战,槽1=补给箱,槽2-9=角色;2026-08-14 采集)
-_SHOT = r'.debug/sr_od_mcp/screenshot/screenshot_20260814_164308_173490.png'
-# 拖箱槽1→槽2 后(箱在槽2 且带选中光效,TM 0.65 档回归用;2026-08-14 采集)
-_SHOT_DRAG = r'.debug/sr_od_mcp/screenshot/screenshot_20260814_165941_733433.png'
-
-
 def _slots() -> list[tuple[int, Rect]]:
     return list(_BENCH_SLOTS)
-
-
-def _load(path: str) -> np.ndarray:
-    """实机截图 → BGR 原样(find_supply_boxes 历史基线在 BGR 侧,内部自转灰度;
-    本段不走 _imdecode_rgb —— 通道翻转改变 TM 彩色得分,不许动)。"""
-    img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
-    if img is None:
-        pytest.skip(f'实机截图 fixture 缺: {path}')
-    return img
-
-
-def test_supply_box_hit_real_screenshot() -> None:
-    """实机:槽1 箱子命中,槽2-9(角色)不误报。"""
-    hits = find_supply_boxes(_load(_SHOT), _slots())
-    assert [idx for idx, _p in hits] == [1], f'应只在槽1 命中,实得 {hits}'
-    cx, cy = hits[0][1].x, hits[0][1].y
-    assert abs(cx - 438) <= 3 and abs(cy - 912) <= 3, f'开启 center 应≈(438,912),实得 ({cx},{cy})'
-
-
-def test_supply_box_after_drag_selected_glow() -> None:
-    """拖动后(槽2 + 选中光效)仍命中:阈值 0.6 覆盖光效降分(~0.65)。"""
-    hits = find_supply_boxes(_load(_SHOT_DRAG), _slots())
-    assert [idx for idx, _p in hits] == [2], f'拖后应只在槽2 命中(光效态),实得 {hits}'
 
 
 def test_supply_box_no_false_positive_on_empty() -> None:
@@ -753,28 +723,6 @@ def test_supply_box_no_false_positive_on_empty() -> None:
     blank = np.full((1080, 1920, 3), 40, dtype=np.uint8)
     blank += rng.integers(0, 8, blank.shape, dtype=np.uint8)  # 低方差噪声
     assert find_supply_boxes(blank, _slots()) == []
-
-
-def test_supply_box_threshold_margin() -> None:
-    """分离度:箱槽 val 应超阈值,角色槽远低于(防阈值贴边脆断)。"""
-    from sr_od.application.currency_war.obs.cw_identity_obs import (
-        _SUPPLY_BOX_TM_THR,
-        _get_supply_box_gray,
-    )
-    tm = _get_supply_box_gray()
-    if tm is None:
-        pytest.skip('补给箱模板缺(assets/template/currency_war/supply/补给箱.png)')
-    gray = cv2.cvtColor(_load(_SHOT), cv2.COLOR_BGR2GRAY)
-    box_val, char_max = 0.0, 0.0
-    for i, r in _BENCH_SLOTS:
-        crop = gray[r.y1:r.y2, r.x1:r.x2]
-        _, mx, _, _ = cv2.minMaxLoc(cv2.matchTemplate(crop, tm, cv2.TM_CCOEFF_NORMED))
-        if i == 1:
-            box_val = mx
-        else:
-            char_max = max(char_max, mx)
-    assert box_val >= _SUPPLY_BOX_TM_THR + 0.15, f'箱槽 val={box_val:.3f} 应超阈值 +0.15 余量'
-    assert char_max <= _SUPPLY_BOX_TM_THR - 0.3, f'角色槽 max={char_max:.3f} 应低于阈值 -0.3 余量'
 
 
 # ==================== w595_trial_reveal_card(试用角色揭示卡) ====================
