@@ -92,8 +92,10 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
 
 
 def _core_buys(actions) -> list[BuyCard]:
+    """核心卡买入(锁线 core_single_card_buy ∧ 未锁线恒买 :unlocked)。"""
     return [a for a in actions if isinstance(a, BuyCard)
-            and a.reason == 'core_single_card_buy']
+            and (a.reason == 'core_single_card_buy'
+                 or a.reason == 'core_single_card_buy:unlocked')]
 
 
 def _counters(sess) -> dict:
@@ -120,14 +122,47 @@ class TestCoreChannelLaunch:
         assert ct.get('core_dominance_buy_hit') == 1
         assert 'core_numeric_fail_closed' not in ct
 
-    def test_unlocked_frame_channel_inert(self):
-        """前件守卫(设计 §2 判据式):未锁帧 locked_buy_membership 返回
-        None ⇒ 通道不评估,连候补支触发键都不落(未锁帧行为零漂移)。"""
+    def test_unlocked_frame_always_buy_release(self):
+        """T-115 规则③ 恒买放行(ADR-0580;用户裁定 410):未锁线帧
+        registry 核心卡在售 ⇒ 恒买入,席/金物理硬闸继承,息纪律/星级
+        不继承;auth_basis unlocked 形态 + 独立计数键与锁线路径不混桶。
+        旧锁「未锁帧行为零漂移」钉的锁线前置语义已被裁定 410 取代——
+        「C1 锁线前置使 1-3 未锁线不触发」即本裁定病灶本体。"""
         st = _state(gold=45, shop_cards=[_card('希儿', 3)])
         sess = _session(get_comp(_LOCK_COMP), IntentionState())
         act = shop.decide_shop_action(st, sess, _cfg())
-        assert not _core_buys([act])
-        assert 'core_candidate_seen' not in _counters(sess)
+        buys = _core_buys([act])
+        assert len(buys) == 1 and buys[0].card.name == '希儿'
+        assert buys[0].reason == 'core_single_card_buy:unlocked'
+        ct = _counters(sess)
+        assert ct.get('core_candidate_seen') == 1
+        assert ct.get('core_unlocked_buy_hit') == 1
+        assert 'core_dominance_buy_hit' not in ct
+
+    def test_unlocked_frame_star2_also_bought(self):
+        """规则③ 负向锁:恒买不限星级——未锁线 2★ 核心直出卡照放行
+        (refund_full_star_ok 不继承;2★ 买入价按店面现价过金闸,
+        可逆性是 dominance 族语义、恒买语义 = 持有价值,ADR-0580)。"""
+        st = _state(gold=45, shop_cards=[_card('希儿', 9, star=2)])
+        sess = _session(get_comp(_LOCK_COMP), IntentionState())
+        act = shop.decide_shop_action(st, sess, _cfg())
+        buys = _core_buys([act])
+        assert len(buys) == 1 and buys[0].card.name == '希儿'
+        assert _counters(sess).get('core_unlocked_buy_hit') == 1
+
+    def test_p1_early_form_core_bought(self):
+        """1-3 形态(P1 未锁线,希儿在售、不在目标线)⇒ 恒买 BuyCard
+        (裁定 410 病灶帧形:「现 C1 通道锁线前置条件使 1-3 未锁线时
+        不触发」;红证 = 移除恒买旁路 → 帧落 core_candidate_rejected
+        拒因——旧锁 test_unlocked_frame_channel_inert 的语义,其失效
+        即病灶复现,ADR-0580)。"""
+        st = _state(gold=45, shop_cards=[_card('希儿', 3)])
+        st.plane = 1
+        sess = _session(get_comp(_LOCK_COMP), IntentionState())
+        act = shop.decide_shop_action(st, sess, _cfg())
+        buys = _core_buys([act])
+        assert len(buys) == 1 and buys[0].card.name == '希儿'
+        assert buys[0].reason == 'core_single_card_buy:unlocked'
 
     def test_membership_member_not_candidate(self):
         """候补前件(c ∉ locked_buy_membership):锁「希儿量子」帧希儿属

@@ -323,24 +323,34 @@ class TestUnlockedFrameUnchanged:
     """未锁帧(locked_comp 空,含 P1 配方锁帧):口径维持
     line_members(target_comp),零变化。"""
 
-    def test_p1_unlocked_faction_member_still_non_line(self):
+    def test_p1_unlocked_faction_member_released_by_transition_rule(self):
         """同 comp(列车同行)、仅锁标志不同(ist unlocked/locked_comp 空
-        = P1 配方锁帧形态):丹恒·饮月不进买入义务集——拒因维持
-        non_line,且无 m2_line_member 义务买入(口径锁,非全行为冻结)。"""
+        = P1 配方锁帧形态):丹恒·饮月不进买入义务集——无 m2_line_member
+        义务买入(口径锁,非全行为冻结)。
+        T-115 重推(ADR-0580;用户裁定 408②):丹恒·饮月 ∈ TRANSITION_
+        PACK carry = ④放行件——「线外件维持 non_line 拒买」对④放行件
+        已被取代:未锁双轨帧(P1 + ist 空窗)改由 ④转线放行臂买入
+        (本测试件恰为裁定病灶「藿藿=仙舟件被 non_line 一刀切」同型);
+        M2 义务口径不变(④买入 reason=transition_component_buy,非义务)。"""
         st = _state(gold=30, shop_cards=[_card('丹恒·饮月', 2)], plane=1)
         sess = _session(get_comp(_LOCK_COMP), IntentionState())
         act = shop.decide_shop_action(st, sess, _cfg())
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm2_line_member')
-        rejects = getattr(state_of(sess), 'cw4_shop_rejects', {}) or {}
-        assert rejects.get('丹恒·饮月') == 'non_line'
+        assert isinstance(act, BuyCard) and act.reason == 'transition_component_buy' \
+            and act.card.name == '丹恒·饮月'
+        assert state_of(sess).cw4_counters.get('transition_component_buy_hit') == 1
 
-    def test_p1_recipe_lock_frame_faction_member_still_non_line(self):
+    def test_p1_recipe_lock_frame_committed_narrows_transition_release(self):
         """F9 消费面形态锁:P1 配方锁帧(p1_pair 非空 ∧ locked_comp 空,
         ADR-0357 后者的恒空形态)——若消费点被换成 locked_buy_scope 直调,
         p1_pair 成员会进买入义务集(行为翻转),本锁抓红。丹恒·饮月属
         配方对两体系(仙舟+列车同行)成员、非 comp core∪shared:
-        正确行为 = 仍 non_line / 无义务买入。"""
+        正确行为 = 无 M2 义务买入。
+        T-115 重推(ADR-0580):p1_pair 非空 = committed(定型权威③)
+        ⇒ ④放行收窄不放行,丹恒·饮月不被买入;拒因按 D7 键序 =
+        'transition_component'(④放行件身份与 comp 无关,可辨「④件因
+        定型辖域未买」,判读价值即在此;旧 'non_line' 一刀切键已废)。"""
         ist = IntentionState()
         ist.p1_pair = ('列车同行', '仙舟')
         assert locked_buy_membership(ist) is None   # kernel 边界:membership=None
@@ -350,8 +360,10 @@ class TestUnlockedFrameUnchanged:
         act = shop.decide_shop_action(st, sess, _cfg())
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm2_line_member')
+        assert not isinstance(act, BuyCard), \
+            '定型帧(p1_pair 非空)④放行收窄:丹恒·饮月不买'
         rejects = getattr(state_of(sess), 'cw4_shop_rejects', {}) or {}
-        assert rejects.get('丹恒·饮月') == 'non_line'
+        assert rejects.get('丹恒·饮月') == 'transition_component'
 
     def test_shop_consumes_membership_not_scope_direct(self):
         """F9 等效源锁:shop 消费点必须经 locked_buy_membership(含

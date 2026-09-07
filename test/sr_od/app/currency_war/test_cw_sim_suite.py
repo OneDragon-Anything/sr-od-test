@@ -839,7 +839,8 @@ def test_seg_p2_bleed_gold_stack_bidirectional() -> None:
 
 # ------------------------------------------------------------ [6]/[19]
 def test_seg_break_interest_exception_bidirectional() -> None:
-    """破息记账:无依据破息必报;三例面(店全想要/连胜保/奖励节点)放行。"""
+    """破息记账:无依据破息必报;例面(店全想要/连胜保/授权通道
+    花费/boss 窗地板)放行;奖励帧 LevelUp 由授权通道口径豁免(ADR-0580)。"""
     # 违规:破息买 1 笔 off、无连胜、战斗节点
     bad = [_sim_segment_checks_row(gold=40, waves_gold=55, node='battle',
                 actions=[_buy('杂件', channel='off')]),
@@ -861,7 +862,8 @@ def test_seg_break_interest_exception_bidirectional() -> None:
              actions=[_buy('保连件', channel='pair')]),
     ]
     assert not _sim_segment_checks_chk.seg_check_break_interest_exception(streak_rows)
-    # 例外③奖励节点升级买经验([16]②)
+    # 奖励帧 LevelUp 支出仍豁免(T-115 对齐:原节点型例外③已退役,
+    # 豁免依据 = ④ levelup_spend 通道口径,ADR-0471/ADR-0580)
     reward_lv = [{**_sim_segment_checks_row(gold=45, waves_gold=52, node='reward'),
                   'actions': [{'__type__': 'LevelUp', 'cost': 4}]}]
     reward_lv[0]['sim']['spend']['levelup'] = 4
@@ -918,8 +920,10 @@ def test_seg_formed_still_buying_transition_bidirectional() -> None:
 
 # ---------------------------------------------------------- [12]/[33]
 def test_seg_unjustified_levelup_bidirectional() -> None:
-    """凭空追级:lv≥5 金<50 无授权必报;pop_slot/dp/static_ev 与奖励
-    节点豁免。"""
+    """凭空追级:lv≥5 金<50 无授权必报;pop_slot/dp/static_ev 放行。
+    T-115 对齐(ADR-0580;锁重推):奖励节点节点型豁免已随 [16]② 删除
+    退役——奖励节点 = 升级抑制对象,无授权升级在奖励帧 = 违规可见
+    (授权判定回归 ADR-0471 节点无关通道分类)。"""
     pre = {'board_factions': {}, 'deployed': [], 'bench': [],
            'cap': 5, 'level': 5}
     post = {**pre, 'level': 6}
@@ -933,10 +937,17 @@ def test_seg_unjustified_levelup_bidirectional() -> None:
                         'actions': [{'__type__': 'LevelUp', 'cost': 4,
                                      'auth': 'pop_slot'}]}]
     assert not _sim_segment_checks_chk.seg_check_unjustified_levelup(ok_auth)
-    # 奖励节点买经验([16]②)→ 放行
-    ok_reward = [bad[0], {**bad[1], 'sim':
-                          {**bad[1]['sim'], 'node': 'reward'}}]
-    assert not _sim_segment_checks_chk.seg_check_unjustified_levelup(ok_reward)
+    # 奖励帧无授权升级 → 违规可见(T-115 对齐:原「[16]② 放行」语义退役)
+    reward_unauth = [bad[0], {**bad[1], 'sim':
+                              {**bad[1]['sim'], 'node': 'reward'}}]
+    evs_r = _sim_segment_checks_chk.seg_check_unjustified_levelup(reward_unauth)
+    assert len(evs_r) == 1 and evs_r[0]['round_num'] == 2
+    # 奖励帧带白名单授权(扑满环境帧经 M3 闸链形态)→ 放行
+    reward_auth = [bad[0], {**bad[1], 'sim':
+                            {**bad[1]['sim'], 'node': 'reward'},
+                            'actions': [{'__type__': 'LevelUp', 'cost': 4,
+                                         'auth': 'm3_batch:arm1'}]}]
+    assert not _sim_segment_checks_chk.seg_check_unjustified_levelup(reward_auth)
 
 
 # ------------------------------------------------------------ 恒等式

@@ -328,10 +328,15 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     §8.1 口径):任一 BuyCard/RefreshShop 花后金 ≥ s_reserve(本帧形状
     = 50);息线下(≤50)整访问零支出(无误清);每访问都以 CloseShop
     收束且有界迭代(无死守环)。
-    """
+    T-115 适配(ADR-0580):店卡改用真无关件(局23杂件,非④放行集/
+    registry 核心)——原探针花火 ∈ TRANSITION_PACK carry,未锁双轨
+    P1 帧会被 ④转线放行臂在息线下买入(1★ 全额退 = 可逆资产,裁定
+    408② 的有意取舍);「息线下零支出」不变式对④放行件域已被裁定
+    取代,④例外语义由 test_cw_locked_buy_membership_split 重推锁
+    承载,本锁在真无关件域保持。"""
     cfg = SimpleNamespace(ev_arm='full')
     for gold0 in range(0, 101):
-        st = _ju23_frame(gold0, [_sc('花火')])
+        st = _ju23_frame(gold0, [_sc('局23杂件')])
         sess = _ju23_session()
         for _ in range(15):
             act = decide_shop_action(st, sess, cfg)

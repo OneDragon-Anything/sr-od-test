@@ -361,10 +361,13 @@ class TestPrepStallCache:
         assert c.get('m2_stall_cache_hit', 0) == 0
 
     def test_t7_prep_merge_material_key_event_granularity_mirror(self):
-        """T7 prep 域镜像(三审 C1):含合成素材件的席满停摆帧——prep 域
-        该键唯一触达 = 腾席环内 fuel_sell_candidates(mandate.py,无商店域
-        P56 式独立承载),命中帧跳过环 ⇒ 素材键随事件粒度(零增量),
-        与两事件键同粒度,禁「事件键事件粒度+素材键帧粒度」混计形态。"""
+        """T7 prep 域镜像(三审 C1):含合成素材件的席满停摆帧——腾席环
+        命中帧跳过 ⇒ 腾席环域素材键零增量(m2_stall_cache_hit=1 钉缓存
+        生效);T-115 ②(a) 凑息接线(ADR-0580)新增的每帧资格评估位为
+        独立触达点:同帧与腾席环共享 _mm_dedup(每帧每素材至多 1),
+        跨帧按帧粒度各计 1(C1 口径 = 拦截事件可见性,凑息臂每帧重新
+        评估、拒绝真实发生)。原「素材键全帧零增量」断言随新触达点
+        语义升级为「缓存域零增量 + 凑息臂帧粒度可辨」。"""
         comp = get_comp(_LOCK_COMP)
         core = set(predicates.line_members(comp))
         hoard_chars, _eq = cw_intention._line_hoard(comp)
@@ -384,15 +387,16 @@ class TestPrepStallCache:
         state_of(sess).cw4_counters = {}
         mandate.run_mandate(frame, sess, state)         # 帧1:重推导
         c = state_of(sess).cw4_counters
-        assert c.get('merge_material_guard_blocked', 0) == 1, '首推导素材触达 +1'
+        assert c.get('merge_material_guard_blocked', 0) == 1, \
+            '首推导:凑息臂首计,腾席环同帧去重不重复计'
         assert c.get('m2_retry_exhausted', 0) == 1
         assert state_of(sess).cw4_m2_stall_latch is not None
         _arm_shop_token(sess, 'LevelUp')
         mandate.run_mandate(frame, sess, state)         # 帧2:命中跳过环
         c = state_of(sess).cw4_counters
         assert c.get('m2_stall_cache_hit', 0) == 1, '帧2 须走缓存路径(锁有效前提)'
-        assert c.get('merge_material_guard_blocked', 0) == 1, \
-            '命中帧跳过腾席环,素材键随事件粒度零增量'
+        assert c.get('merge_material_guard_blocked', 0) == 2, \
+            '帧2 = 凑息臂帧粒度再触达 +1;腾席环缓存域零增量(1+1=2)'
 
 
 # ===== 写点活性锁(三审 T4):删对应写点 ⇒ 锁红 =====

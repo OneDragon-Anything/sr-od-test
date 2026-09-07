@@ -625,9 +625,13 @@ class TestEvArmBypass:
         comp = _comp()
         members = _members(comp)
         bench = [_bc(m) for m in members]
-        outsider = '爻光'                # 非线内件(线成员外)
+        # T-115 适配(ADR-0580):线外件固定用真无关件(银枝)——原探针
+        # '爻光' ∈ ④放行集(TRANSITION_PACK partial),未锁双轨帧会被
+        # ④转线放行臂先手买走(EV 独占前提对该类件已被规则④取代);
+        # EV 买面独占语义在真无关件域保持。
+        outsider = '银枝'
         if outsider in members:
-            outsider = '银枝'
+            outsider = '乱破'
         _state(gold=30, shop=[_card(outsider, cost=1)],
                     bench=bench)
         try:
@@ -1106,3 +1110,107 @@ class TestDualLedgerSlotDriftReseed:
         # 未重播种时 proj.bench[1]='阮·梅',同提案会炸名-槽不一致(卖错对象)
         guard_proposal_vs_expected(
             SellBench(bench_idx=1, income=1, expect='符玄'), proj)   # 静默
+
+
+
+
+# ===== T-115 规则④:转线前瞻放行臂(ADR-0580)=====
+
+class TestTransitionReleaseArm:
+    """④放行臂行为锁(裁定 408②「非当前目标线但属转线路径的组件应
+    纳入购入评估——禁仅按当前线成员一刀切」;藿藿=仙舟件被 non_line
+    一刀切即病灶本体)。判据单一源 = kernel.cw_card_identity(④放行集 =
+    TRANSITION_PACK carry/partial);时间辖域 = 未定型期(定型权威 =
+    cw_intention.committed_from);硬闸 = 席/金/1★ 全额退。
+    帧形 = 方案 1-3 fixture(目标 = 持续伤害+列车同行,藿藿非其成员;
+    target 缺省 None 会走 K 空窗回退带使 M2 先手,非本机制辖域)。"""
+
+    @staticmethod
+    def _pair_sess(ist=None, pair=('持续伤害', '列车同行'),
+                   probe='藿藿'):
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            pair_target_comp,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
+            predicates,
+        )
+        comp = pair_target_comp(pair)
+        members = predicates.line_members(comp)
+        assert probe not in members, \
+            '锁前提:④探针件须非目标线成员(M2 义务域)'
+        sess = _session(comp)
+        if ist is not None:
+            state_of(sess).v3_intention = ist
+        return sess
+
+    def test_p1_unlocked_release_buys_transition_component(self):
+        """1-3 形态直译:P1 未锁双轨帧,藿藿(仙舟件,非当前线成员)
+        在售 1★ ⇒ 买入放行,reason/count 独立分键可辨。"""
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+        )
+        from sr_od.application.currency_war.knowledge.cw_line_facts import (
+            TRANSITION_PACK,
+        )
+        assert TRANSITION_PACK['藿藿'][1] == 'carry'
+        st = _state(gold=30, shop=[_card('藿藿', cost=3)])
+        sess = self._pair_sess(IntentionState())
+        acts = _decide(st, sess)
+        buys = [a for a in acts if isinstance(a, BuyCard)]
+        assert len(buys) == 1 and buys[0].card.name == '藿藿'
+        assert buys[0].reason == 'transition_component_buy'
+        assert state_of(sess).cw4_counters.get(
+            'transition_component_buy_hit') == 1
+
+    def test_true_unrelated_card_stays_rejected(self):
+        """真无关件(非 registry 核心 ∉ 放行集)维持拒买——④不是全开
+        (v1 边界的放行侧兑现)。"""
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+        )
+        st = _state(gold=30, shop=[_card('银枝', cost=3)])
+        acts = _decide(st, self._pair_sess(IntentionState()))
+        assert not [a for a in acts if isinstance(a, BuyCard)
+                    and a.card.name == '银枝']
+
+    def test_committed_frame_narrows_release(self):
+        """定型后不放行(辖域负向锁):p1_pair 非空 = committed(定型
+        权威③)⇒ ④放行收窄,藿藿不被买——定型后金应集中目标线
+        (TRANSITION_PACK「P1 过渡包」语义直接推论)。"""
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+        )
+        ist = IntentionState()
+        ist.p1_pair = ('持续伤害', '列车同行')
+        st = _state(gold=30, shop=[_card('藿藿', cost=3)])
+        acts = _decide(st, self._pair_sess(ist))
+        assert not [a for a in acts if isinstance(a, BuyCard)
+                    and a.card.name == '藿藿']
+
+    def test_drop_tier_not_released(self):
+        """drop 档不放行(椒丘 = P1 末弃应急件,买入价值低):档位过滤
+        与 transition_score「预囤不囤 drop」取向一致。"""
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+        )
+        from sr_od.application.currency_war.knowledge.cw_line_facts import (
+            TRANSITION_PACK,
+        )
+        assert TRANSITION_PACK['椒丘'][1] == 'drop'
+        st = _state(gold=30, shop=[_card('椒丘', cost=3)])
+        acts = _decide(st, self._pair_sess(
+            IntentionState(), pair=('量子', '列车同行'), probe='椒丘'))
+        assert not [a for a in acts if isinstance(a, BuyCard)
+                    and a.card.name == '椒丘']
+
+    def test_star2_transition_card_not_released(self):
+        """2★ 转线件不放开(硬闸 1★ 全额退):2★ 买入价值未证,本批
+        不放开(ADR-0580 申报)。"""
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+        )
+        st = _state(gold=60, shop=[_card('藿藿', cost=8, star=2)])
+        acts = _decide(st, self._pair_sess(IntentionState()))
+        assert not [a for a in acts if isinstance(a, BuyCard)
+                    and a.card.name == '藿藿']
+

@@ -8,8 +8,9 @@
 
 锁的语义(设计出处=本批 REPORT + predicates.line_members 单一源):
 1. 在售线内缺口件 + 金充足 ⇒ M2 义务必买(义务通道回归锁);
-2. 在售 transition 件(花火形态)⇒ 不买 + 拒因 'transition_char'
-   (归属语义锁,g_20260904_031925 p2r2/p2r4 重放形态);
+2. 在售 transition 件(花火形态)⇒ 不买 + 归属拒因可辨(T-115 D7
+   键序后交集卡键 = 'transition_component',ADR-0580;纯 trans 件仍
+   'transition_char');
 3. 线内缺口件未买的门序可辨:金不足/席满/异常态三分键。
 """
 from __future__ import annotations
@@ -98,8 +99,13 @@ def test_transition_char_rejected_with_reason_g20260904_replay():
     """花火形态重放锁(=g_20260904_031925 p2r2 实录形态):
 
     在售=花火(transition 打工件)+金 114+线缺口在线 ⇒ 不买,
-    拒因串带 'transition_char'——「未买」在决策帧内可辨归属,
-    判读者不再需要猜。同波线外件(银枝)归 'non_line'。
+    拒因带归属键——「未买」在决策帧内可辨归属,判读者不再需要猜。
+    同波线外件(银枝)归 'non_line'。T-115 D7 键序重推(ADR-0580):
+    花火 ∈ ④放行集(TRANSITION_PACK carry)∧ _COMP.transition_chars
+    (交集卡),键序 = ④放行集先于 trans 分支 ⇒ 键 = 'transition_
+    component'(④件被拒才是要盯的信号;旧 'transition_char' 键对交集
+    卡不可达,正是 D7 诊断的键序缺陷)。行为面不变:plane=2 已定型,
+    ④放行收窄,花火仍不买。
     """
     assert '花火' in (_COMP.transition_chars or [])
     assert '火花' in predicates.line_members(_COMP)
@@ -111,7 +117,7 @@ def test_transition_char_rejected_with_reason_g20260904_replay():
     assert not [a for a in acts if isinstance(a, BuyCard)
                 and a.card.name == '花火']
     rej = state_of(sess).cw4_shop_rejects or {}
-    assert rej.get('花火') == 'transition_char'
+    assert rej.get('花火') == 'transition_component'
     assert rej.get('银枝') == 'non_line'
 
 
@@ -147,11 +153,14 @@ def test_owned_member_not_missing():
 
 
 def test_pure_function_matches_session_output():
-    """生产端函数与 decide 落盘口径一致(同一输入同一映射)。"""
+    """生产端函数与 decide 落盘口径一致(同一输入同一映射)。
+
+    花火 = ④放行集 ∩ _COMP.transition_chars 交集卡,D7 键序
+    (ADR-0580)⇒ 'transition_component'(与 decide 链同键)。"""
     st = _state(114, [_card('花火', 2)], deployed=[_dep('绯英')])
     out = shop.shop_unbought_reasons(st, _COMP,
                                      predicates.line_members(_COMP), [])
-    assert out == {'花火': 'transition_char'}
+    assert out == {'花火': 'transition_component'}
 
 
 def test_schema_field_default_empty_dict():
@@ -172,6 +181,9 @@ _REJECT_ENUM = frozenset({
     # 可辨(设计《直通核心卡信号层入口》§4 意向状态机行;设计稿 =
     # docs/develop/currency_war/design/设计-C1直通核心入口.md)。
     'core_candidate_rejected',
+    # T-115 规则④ 拒因键(ADR-0580,D7 键序 = ④放行集先于 trans):
+    # ④放行件在售未买帧可辨(交集卡不再落 transition_char)。
+    'transition_component',
 })
 
 
@@ -253,11 +265,16 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
 
 
 def test_sim_k_empty_window_comp_none_falls_back_non_line():
-    """K 空窗(target_comp=None)时 comp=None 分支统一归 non_line
-    (与生产端 None 语义同源;sim 引擎经 session 直读,同型)。"""
+    """K 空窗(target_comp=None)时 comp 相关分支不可得:comp 派生的
+    transition 分类不可得,真无关件统一归 non_line(与生产端 None 语义
+    同源;sim 引擎经 session 直读,同型)。T-115 D7 键序(ADR-0580):
+    ④放行集 = 身份分层单一源,knowledge 表对表、与 comp 无关——花火
+    在 comp=None 帧仍可辨 'transition_component'(Early 空窗带正是 ④
+    活跃域,判读价值即在此)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
         shop_unbought_reasons,
     )
-    st = _state(114, [_card('花火', 2)], deployed=[_dep('绯英')])
+    st = _state(114, [_card('花火', 2), _card('银枝', 2)],
+                deployed=[_dep('绯英')])
     out = shop_unbought_reasons(st, None, (), [])
-    assert out == {'花火': 'non_line'}
+    assert out == {'花火': 'transition_component', '银枝': 'non_line'}

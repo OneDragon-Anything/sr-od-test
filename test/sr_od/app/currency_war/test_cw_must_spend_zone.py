@@ -23,7 +23,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     LevelUpShop,
     RefreshShop,
-    SellBench,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -452,14 +451,12 @@ class TestArchiveFrameReplay:
 
     def test_g19_r6_g46_offer_consumes_via_t1_not_zone(self):
         """十九局 r6 offer 帧(ts 2026-09-05T23:24:50,gold46,店 5 张全
-        non_line):域外消费走既有经济通道(t1 凑息卖),非必花域出口——
-        分键面无 must_spend 触发。
-        锁语义重推(合成素材拒入守卫批):档案原帧 bench=卡芙卡 1★ ∧
-        deployed 卡芙卡 1★ 并存——该帧的凑息卖对象本身是 2/3 合成进度
-        素材,与新守卫(拒因键 merge_material_guard,与部署侧同键)恰为
-        同一病灶类;本锁语义 =「域外帧经 t1 消费且无 must_spend 分键」,
-        不辖「素材可卖」——bench 单位改用非素材垫件(椒丘,deployed 无
-        同名)保锁意图,素材拒入语义归 test_cw_merge_material_guard。"""
+        non_line):域外帧无必花域出口——分键面无 must_spend 触发。
+        锁语义重推(T-115 规则③,ADR-0580):店中希儿 = registry 核心
+        卡,未锁线恒买放行(裁定 410:「1-3 未锁线不触发」即病灶本体)
+        ⇒ 本帧出口从「t1 凑息卖」改为「core_single_card_buy:unlocked」
+        ——单动作契约下凑息卖下帧再评,域外无 must_spend 分键的锁意图
+        不变;t1 消费语义由 test_cw_p56_t1 锁组与 r5 帧锁承载。"""
         st = _arc_state(gold=46, hp=47, level=5, plane=1, round_num=6,
                         node_type='普通战斗', xp_progress=(10, 20),
                         level_up_cost=4, deploy_cap=5,
@@ -484,7 +481,8 @@ class TestArchiveFrameReplay:
         sess = SimpleNamespace(cw4_counters={}, target_comp=None,
                                v3_intention=None, cw4_cap_override=None)
         act = _decide(st, sess)
-        assert isinstance(act, SellBench)
+        assert isinstance(act, BuyCard) and act.card.name == '希儿'
+        assert act.reason == 'core_single_card_buy:unlocked'
         assert not [k for k in state_of(sess).cw4_counters
                     if k.startswith('must_spend')]
 
@@ -510,7 +508,12 @@ class TestArchiveFrameReplay:
         assert isinstance(act, LevelUpShop), (gold, act)
         assert act.auth_basis == 'm3_batch:must_spend'
         assert 'must_spend_l2_trigger' not in state_of(sess).cw4_counters
-        # r9 帧:预算闸整批推迟(域内拒因独立分键)
+        # r9 帧(node=reward)锁语义重推(T-115 规则①,ADR-0580;裁定
+        # 408「奖励关不需要战力:升级抑制」):该帧原经必花域 L3 预算闸
+        # 整批推迟(budget_gate_must_spend_defer),现奖励帧抑制在授权链
+        # 更早位短路——域内 L3 变体不再求值,分键 = reward_node_defer
+        #(抑制先行)+ reward_node_must_spend_defer(必花域变体绕行面
+        # 补守卫),预算闸拒因不再产生。零发射结论不变,拒因可辨性升级。
         st9 = _arc_state(gold=63, hp=25, level=6, plane=1,
                          round_num=9, node_type='reward',
                          xp_progress=(4, 40), level_up_cost=4)
@@ -518,7 +521,10 @@ class TestArchiveFrameReplay:
                                 v3_intention=None, cw4_cap_override=None)
         act9 = _decide(st9, sess9)
         assert not isinstance(act9, LevelUpShop), (act9,)
-        assert state_of(sess9).cw4_counters.get('budget_gate_must_spend_defer') == 1
+        c9 = state_of(sess9).cw4_counters
+        assert c9.get('reward_node_defer') == 1
+        assert c9.get('reward_node_must_spend_defer') == 1
+        assert 'budget_gate_must_spend_defer' not in c9
 
     def test_g20_p3r1_g50_locked_replays_archive_buy(self):
         """二十局 P3r1 g50 帧(ts 2026-09-06T01:38:38,希儿量子锁定,全

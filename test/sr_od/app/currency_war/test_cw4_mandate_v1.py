@@ -780,12 +780,17 @@ class TestR196EvConflictDrop:
     def test_same_slot_dropped_not_resent(self):
         """骨架 M4 已卖槽 vs 支付支撑同槽提案 ⇒ 丢弃 + 计数(全链):
         bench 满 + 缺件 + 金不足 ⇒ M4 卖唯一燃料槽 ⇒ funding 同槽提案
-        被丢弃 ⇒ 输出单笔(非重发,非 fail-stop)。"""
+        被丢弃 ⇒ 输出单笔(非重发,非 fail-stop)。
+        T-115 适配(ADR-0580):燃料件改用 ④静态持有件(藿藿,TRANSITION_
+        PACK carry)——②(a) 凑息臂排除集辖静态持有两集(gold 1 < g* 帧
+        凑息臂资格空、不抢跑),M4/funding 排除集不含(义务腾席/筹资
+        对价域),既保留全链冲突机制验证,又钉住「(a) 与 M4/funding
+        排除集分域」设计事实。"""
         from types import SimpleNamespace
 
         comp = SimpleNamespace(name='测试线', core_chars=('目标件',),
                                shared_chars=())
-        bench = ([_bench(2, '燃料件')]
+        bench = ([_bench(2, '藿藿')]
                  + [_bench(i, '高价', star=3)
                     for i in (1, 3, 4, 5, 6, 7, 8, 9)])
         out, session = self._decide_full(bench, comp)
@@ -796,14 +801,17 @@ class TestR196EvConflictDrop:
 
     def test_distinct_slot_kept(self):
         """同帧异槽提案保留(全链):缺件注册价 ≥4 ⇒ funding 需两件燃料
-        ——低槽与 M4 冲突丢弃,高槽保留 ⇒ 输出两笔异槽卖出。"""
+        ——低槽与 M4 冲突丢弃,高槽保留 ⇒ 输出两笔异槽卖出。
+        T-115 适配(ADR-0580):燃料件改用 ④静态持有件(藿藿/缇宝,②(a)
+        排除、M4/funding 不辖,分域理由同上锁)——凑息臂资格空不抢跑,
+        funding 异槽提案机制原样可验。"""
         from types import SimpleNamespace
 
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         m = next(n for n, ch in CHARACTERS.items()
                  if ch.cost and ch.cost >= 5)   # need-金 > 单件燃料回金 3
         comp = SimpleNamespace(name='测试线', core_chars=(m,), shared_chars=())
-        bench = ([_bench(2, '燃料件'), _bench(3, '燃料件B')]
+        bench = ([_bench(2, '藿藿'), _bench(3, '缇宝')]
                  + [_bench(i, '高价', star=3)
                     for i in (1, 4, 5, 6, 7, 8, 9)])
         out, session = self._decide_full(bench, comp)
@@ -1267,3 +1275,208 @@ class TestShopPhaseLatch:
         out2 = mandate.run_mandate(
             _frame(gold=30, bench=[_bench(1, '随意件')], k=('目标件',)), s)
         assert any(e.reason == 'm2_buy' for e in out2)
+
+
+
+
+# ===== T-115 规则① 奖励帧升级抑制(ADR-0580;四消费位 + 扑满守卫)=====
+
+def _m3_shop_state(gold, node, sess_unused=None):
+    """M3 消费位帧构造:cap7 板满 + bench 仙舟候补(arm1 形态)/ 或空板
+    (三臂未触发形态,必花域变体辖);xp 贴线 1 击保预算闸可过。"""
+    from sr_od.application.currency_war.kernel.cw_state import GameState
+    st = GameState(gold=gold, level=7, hp=80, plane=1, round_num=3)
+    st.node_type = node
+    st.xp_progress = (48, 52)
+    st.level_up_cost = 4
+    st.deployed = []
+    st.bench = []
+    st.shop = []
+    return st
+
+
+def _arm1_board():
+    """arm1 命中板面:cap7 板满(丹恒·饮月=仙舟供羁绊,花火 2★ 压 ρ
+    合格集)+ bench 仙舟候补藿藿;不抑制时必发 m3_batch:arm1。"""
+    deployed = [_bench(1, '丹恒·饮月', star=1), _bench(2, '花火', star=2)]
+    deployed += [_bench(i, '高价', star=3) for i in range(3, 8)]
+    return deployed, [_bench(1, '藿藿', star=1)]
+
+
+class TestRewardNodeSuppress:
+    """奖励帧抑制四消费位锁(判据单一源 = kernel.cw_reward_node)。
+
+    裁定权威 = 用户账本 408 行(「1-1/1-2 等奖励关不需要战力:升级抑制、
+    买卡压牌库优先」)。分键判读契约:reward_node_defer(奖励帧抑制)≠
+    blood_xp_gate_defer(血闸拒)≠ crisis_level_spend_defer(停付线拒),
+    抑制先行 = 结构性无授权时支付能力检查不求值,同帧不混桶。
+    """
+
+    def test_shop_m3_suppressed_on_reward_frame(self):
+        """消费位1(shop M3):奖励帧三臂被抑制短路 ⇒ 零 LevelUpShop +
+        reward_node_defer 分键;红证 = 同帧形 combat 节点照发
+        m3_batch:arm1(发射缺席的承载原因 = 抑制,非闸链拒)。"""
+        from sr_od.application.currency_war.kernel.cw_state import (
+            GameState,
+            LevelUpShop,
+        )
+        deployed, bench = _arm1_board()
+        s = _session()
+        st = GameState(gold=70, level=7, hp=80, plane=1, round_num=3)
+        st.node_type = 'reward'
+        st.xp_progress = (48, 52)
+        st.level_up_cost = 4
+        st.deployed = deployed
+        st.bench = bench
+        st.shop = []
+        act = decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
+        assert not isinstance(act, LevelUpShop)
+        assert state_of(s).cw4_counters.get('reward_node_defer') == 1
+        s2 = _session()
+        st2 = GameState(gold=70, level=7, hp=80, plane=1, round_num=3)
+        st2.node_type = 'battle'
+        st2.xp_progress = (48, 52)
+        st2.level_up_cost = 4
+        st2.deployed = deployed
+        st2.bench = bench
+        st2.shop = []
+        act2 = decide_shop_action(st2, s2, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act2, LevelUpShop)
+        assert act2.auth_basis == 'm3_batch:arm1'
+
+    def test_shop_must_spend_variant_suppressed(self):
+        """消费位2(shop 必花域变体):大金奖励帧(gold>G_must,三臂未
+        触发)⇒ 变体显式拒,分键 reward_node_must_spend_defer;红证 =
+        combat 帧同形照发 m3_batch:must_spend(绕行面补守卫的承载)。"""
+        from sr_od.application.currency_war.kernel.cw_state import (
+            LevelUpShop,
+        )
+        s = _session()
+        st = _m3_shop_state(60, 'reward')
+        act = decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
+        assert not isinstance(act, LevelUpShop)
+        ct = state_of(s).cw4_counters
+        assert ct.get('reward_node_must_spend_defer') == 1
+        assert ct.get('reward_node_defer') == 1   # 帧级抑制判据恒触达
+        s2 = _session()
+        st2 = _m3_shop_state(60, 'battle')
+        act2 = decide_shop_action(st2, s2, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act2, LevelUpShop)
+        assert act2.auth_basis == 'm3_batch:must_spend'
+
+    def test_prep_m3_suppressed_before_blood_gate(self):
+        """消费位3(mandate M3):hp=1 濒死奖励帧——抑制先于危机/血闸
+        求值:仅 reward_node_defer,crisis/blood 分键零产生(同帧双闸
+        不混桶);红证 = 同帧形 encounter 节点走危机带挂起分键。"""
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            LevelUp,
+        )
+        f, sess, st = _mk_prep_reward_frame('reward')
+        out = mandate.run_mandate(f, sess, state=st)
+        assert not [e for e in out if isinstance(e.action, LevelUp)]
+        ct = state_of(sess).cw4_counters
+        assert ct.get('reward_node_defer') == 1
+        assert 'crisis_level_spend_defer' not in ct
+        assert 'blood_xp_gate_defer' not in ct
+        f2, sess2, st2 = _mk_prep_reward_frame('encounter')
+        out2 = mandate.run_mandate(f2, sess2, state=st2)
+        assert not [e for e in out2 if isinstance(e.action, LevelUp)]
+        assert state_of(sess2).cw4_counters.get(
+            'crisis_level_spend_defer') == 1
+
+    def test_entry_posture_yield_first_in_chain(self, monkeypatch):
+        """消费位4(entry posture):奖励帧授权面让位 = reward_node_yield
+        (分键 posture_reward_node_defer);D2 位次钉死:奖励帧在血闸拒
+        语境(金本位闸恒直通,patch 闸拒载体钉位次)下 reason 仍是奖励
+        让位而非 blood_xp_gate_blocked——让位居授权链首位,置于血闸
+        之后则本分键永不可达。"""
+        from sr_od.application.currency_war.kernel.cw_state import GameState
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            entry,
+        )
+        un = _posture_unfulfilled_for(
+            GameState(gold=60, level=7, hp=80, plane=1, round_num=3,
+                      node_type='reward'), monkeypatch)
+        assert un is not None
+        assert un['reason'] == 'reward_node_no_power_need'
+        assert un['action'] == 'reward_node_yield'
+        monkeypatch.setattr(entry, 'blood_xp_gate_for',
+                            lambda state, session: False)
+        un_blood = _posture_unfulfilled_for(
+            GameState(gold=8, level=7, hp=5, plane=1, round_num=3,
+                      node_type='battle', hp_readable=True, hp_trusted=True),
+            monkeypatch)
+        assert un_blood is not None
+        assert un_blood['reason'] == 'blood_xp_gate_blocked'
+        un_reward_blood = _posture_unfulfilled_for(
+            GameState(gold=8, level=7, hp=5, plane=1, round_num=3,
+                      node_type='reward', hp_readable=True, hp_trusted=True),
+            monkeypatch)
+        assert un_reward_blood is not None
+        assert un_reward_blood['reason'] == 'reward_node_no_power_need'
+
+    def test_piggy_env_lifts_suppression_and_revives_telemetry(self):
+        """扑满守卫(环境名单判据):过热环境帧(经济过热,PLAZA_PORTALS
+        id105 派生名单)抑制解除,M3 照常评估;v3_piggy_reward 死字段
+        复活为真写点(ADR-0348 ↺)。非过热奖励帧标记保持 False。"""
+        s = _session()
+        st = _m3_shop_state(60, 'reward')
+        st.active_env = '经济过热'
+        decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
+        assert state_of(s).cw4_counters.get('reward_node_defer') is None
+        assert state_of(s).v3_piggy_reward is True
+        s2 = _session()
+        st2 = _m3_shop_state(60, 'reward')
+        decide_shop_action(st2, s2, SimpleNamespace(ev_arm='full'))
+        assert state_of(s2).cw4_counters.get('reward_node_defer') == 1
+        assert state_of(s2).v3_piggy_reward is False
+
+    def test_node_type_none_fail_open(self):
+        """None fail-open(失效方向①):节点行被遮帧不抑制
+        (reward_node_defer 零产生),与规则① None 方向声明一致。"""
+        s = _session()
+        st = _m3_shop_state(60, None)
+        decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
+        assert state_of(s).cw4_counters.get('reward_node_defer') is None
+
+
+def _mk_prep_reward_frame(node):
+    """消费位3 共用帧形(hp=1 濒死 arm1 帧;形态同
+    test_cw_l3_prep_must_spend_latch harness,最小独立构造防跨文件夹具
+    漂移)。"""
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        IntentionState,
+    )
+    from sr_od.application.currency_war.kernel.cw_state import GameState
+    deployed = [_bench(i + 1, n, star=2 if n == '椒丘' else 1)
+                for i, n in enumerate(['藿藿', '艾丝妲', '丹恒·饮月',
+                                       '风堇', '爻光', '彦卿', '椒丘'])]
+    bench = [_bench(i + 1, n, star=1)
+             for i, n in enumerate(['千冶·刃', '银狼LV.999', '卡芙卡'])]
+    frame = mandate.MandateFrame(
+        gold=43, level=7, bench=bench, deployed=deployed,
+        deploy_cap=7, node_type=node, stop_flag=False,
+        k_members=('卡芙卡', '千冶·刃', '银狼LV.999'), round_num=5)
+    st = GameState(gold=43, level=7, hp=1, plane=2, round_num=5)
+    st.level_readable = True
+    st.node_type = node
+    st.xp_progress = (22, 52)
+    st.level_up_cost = 4
+    sess = SimpleNamespace(cw4_counters={}, target_comp=None,
+                           v3_intention=IntentionState(),
+                           cw4_cap_override=None)
+    return frame, sess, st
+
+
+def _posture_unfulfilled_for(state, monkeypatch):
+    """entry 授权面让位求值(monkeypatch get_node_goal 恒 level 授权)。"""
+    from sr_od.application.currency_war.kernel import cw_economy
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        entry,
+    )
+    monkeypatch.setattr(
+        cw_economy, 'get_node_goal',
+        lambda *a, **k: SimpleNamespace(spend_mode='level'))
+    sess = _session()
+    state_of(sess).cw4_counters = {}
+    return entry._reconcile_posture_authorization(sess, state, [], ())

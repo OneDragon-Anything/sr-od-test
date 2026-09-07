@@ -8,6 +8,8 @@
 from __future__ import annotations
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
+from types import SimpleNamespace
+
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
@@ -306,3 +308,240 @@ class TestOddsWindowBackcompat:
             7, DEFAULT_REGISTRY.omega_collapse_ratio)
         assert odds.card_search_window(7) == odds.card_search_window(
             7, DEFAULT_REGISTRY.omega_collapse_ratio)
+
+
+# ===== T-115 规则②:凑息卖 prep 接线 + 死金压库买入 + Z1 卖回切除 =====
+
+def _prep_session():
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    s = StrategySession()
+    state_of(s).cw4_counters = {}
+    return s
+
+
+def _prep_frame(gold, bench, *, node=None, k=(), round_num=2):
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        mandate,
+    )
+    return mandate.MandateFrame(
+        gold=gold, level=3, bench=bench, deployed=[], deploy_cap=4,
+        node_type=node, stop_flag=False, k_members=k, round_num=round_num)
+
+
+def _prep_state(gold):
+    from sr_od.application.currency_war.kernel.cw_state import GameState
+    return GameState(gold=gold, level=3, hp=80, plane=1, round_num=2)
+
+
+class TestT115PrepInterestEmit:
+    """规则②(a) prep 凑息接线(D5)+ Z1 卖回切除(ADR-0580)。"""
+
+    def test_prep_gap_frame_emits_fuel_sell(self):
+        """备战帧 gold 9 < g* ∧ bench 有 1★ 燃料 ⇒ 发射 SellBench
+        (Emitted 分键 = t1_interest_prep_emit,载体 = prep 域无 reason
+        字段的既有边界);同帧凑息臂与腾席环共享素材去重(每帧每素材
+        至多 1)。state 必传(N1):漏传 = 血线地板 fail-closed 结构性
+        哑火,本帧形 SellBench 断言即红。"""
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            SellBench,
+        )
+        bench = [_bc('燃料件A', slot=1)]
+        out = mandate_run(_prep_frame(9, bench), _prep_session(),
+                          _prep_state(9))
+        assert [e.action.slot for e in out
+                if isinstance(e.action, SellBench)] == [1]
+
+    def test_hold_class_excluded_from_sellback_with_red_proof(self):
+        """Z1 静态排除:bench 唯一 ④放行件(藿藿,carry 档,1★ 零重叠
+        无后台效果)⇒ 凑息臂资格空,零卖出发射。红证(断言翻红路径):
+        直接调 sell_for_interest 不带 Z1 排除扩展 ⇒ 藿藿恰入卖出槽集
+        ——「移除 exclude 扩展 → ④件被卖回」的机制复现(1★ 全额退金回
+        原位,机械抵消裁定③④持有语义)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+            sell as crit_sell,
+        )
+        bench = [_bc('藿藿', slot=1)]
+        sess = _prep_session()
+        out = mandate_run(_prep_frame(9, bench), sess, _prep_state(9))
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            SellBench,
+        )
+        assert not [e for e in out if isinstance(e.action, SellBench)]
+        # 红证:无 Z1 排除扩展(仅义务集,此处 k=())→ 藿藿资格成立
+        slots, key = crit_sell.sell_for_interest(
+            9, bench, 5, (), state=_prep_state(9), exclude_names=())
+        assert key == '' and slots == [1]
+
+    def test_hold_class_exclusion_covers_in_sale_unbought(self):
+        """Z1 覆盖「在售未买」态:registry 核心卡(希儿)在 bench(已买
+        待持有形态)同不入凑息资格(静态两集对状态无歧义)。"""
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            SellBench,
+        )
+        bench = [_bc('希儿', slot=1)]
+        out = mandate_run(_prep_frame(9, bench), _prep_session(),
+                          _prep_state(9))
+        assert not [e for e in out if isinstance(e.action, SellBench)]
+
+    def test_buyout_cap_disables_prep_arm(self):
+        """息帽维度(B2):买断制局 cap_resolved=0 ⇒ g*=0,gold<g* 恒假
+        ⇒ (a) 备战臂零发射(帧凑息零收益卖件不做得 = 正确形态)。"""
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            SellBench,
+        )
+        sess = _prep_session()
+        state_of(sess).cw4_cap_override = 0
+        out = mandate_run(_prep_frame(9, [_bc('燃料件A', slot=1)]), sess,
+                          _prep_state(9))
+        assert not [e for e in out if isinstance(e.action, SellBench)]
+
+    def test_locked_frame_wide_member_excluded_from_sellback(self):
+        """Z1 锁线域残留红证(落地审低-1 修复,与 Z1 红证同构):锁线帧
+        采购集宽成员(locked_buy_membership ⊋ line_members 的阵营/流派
+        扩展成员)在 bench ⇒ prep 凑息臂不卖——排除集义务基座与 shop
+        消费位同源(锁线宽集解析收在 sell_hold_exclusions 函数体内,
+        两处调用只传各自 k_members)。红证 = 按窄集(line_members)装配
+        排除时该成员恰入卖出槽集(宽−窄成员被卖 → shop 域 M2 重买 =
+        Z1 锁线域病理复现)。"""
+        from sr_od.application.currency_war.kernel.cw_comps import get_comp
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+            locked_buy_membership,
+        )
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            SellBench,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+            sell as crit_sell,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
+            predicates,
+        )
+        comp = get_comp('列车同行')
+        ist = IntentionState()
+        ist.phase = 'locked'
+        ist.locked_comp = '列车同行'
+        wide = set(locked_buy_membership(ist))
+        narrow = set(predicates.line_members(comp))
+        # 锁前提:宽集须真 ⊋ 窄集,且宽−窄成员存在(否则本锁空转)
+        extra = wide - narrow
+        assert extra, '锁前提失效:该 comp 锁定采购集无窄集外成员'
+        member = sorted(extra)[0]
+        bench = [_bc(member, slot=1)]
+        k = tuple(sorted(narrow))
+        sess = _prep_session()
+        state_of(sess).v3_intention = ist
+        out = mandate_run(_prep_frame(9, bench, k=k), sess, _prep_state(9))
+        assert not [e for e in out if isinstance(e.action, SellBench)], \
+            f'锁线宽集成员 {member} 被凑息臂卖出 = Z1 锁线域残留'
+        # 红证:窄集排除(修复前 prep 位基座形态)→ 成员恰入卖出槽集
+        slots, key = crit_sell.sell_for_interest(
+            9, bench, 5, k, state=_prep_state(9), exclude_names=k)
+        assert key == '' and slots == [1], \
+            f'红证失效:{member} 未穿过窄集排除外的全部资格谓词'
+
+
+def mandate_run(frame, sess, state):
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        mandate,
+    )
+    return mandate.run_mandate(frame, sess, state=state)
+
+
+class TestT115DeadGoldPressBuy:
+    """规则②(b) 死金压库买入(B2 地板 + 诚实空转 + 买断制出辖)。"""
+
+    @staticmethod
+    def _shop_frame(gold, cards, *, node='reward'):
+        from sr_od.application.currency_war.kernel.cw_state import GameState
+        st = GameState(gold=gold, level=7, hp=80, plane=1, round_num=3)
+        st.node_type = node
+        st.shop = list(cards)
+        return st
+
+    @staticmethod
+    def _shop_sess():
+        from sr_od.application.currency_war.kernel.cw_strategy_session import (
+            StrategySession,
+        )
+        s = StrategySession()
+        state_of(s).cw4_counters = {}
+        return s
+
+    def test_floor_blocks_cost5_releases_cost1_on_gold11(self):
+        """gold 11 帧地板判据(方案回归帧):死金 = 11−10×1 = 1 ——
+        5 费候选被地板拦、1 费候选放行;买入即登记名入会话级集合
+        (Z1 动态排除载体)。"""
+        from sr_od.application.currency_war.kernel.cw_state import BuyCard
+        st = self._shop_frame(11, [_card('高价杂件', cost=5),
+                                   _card('廉价杂件', cost=1)])
+        sess = self._shop_sess()
+        act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, BuyCard) and act.card.name == '廉价杂件'
+        assert act.reason == 'dead_gold_press_buy'
+        assert state_of(sess).cw4_counters.get('dead_gold_press_buy_hit') == 1
+        assert '廉价杂件' in state_of(sess).cw4_dead_gold_bought_names
+
+    def test_honest_idle_when_no_candidate_fits_floor(self):
+        """全不可达 = 诚实空转允许囤(禁为花而买垃圾):仅 5 费候选帧
+        地板全拦 ⇒ CloseShop 收尾。"""
+        from sr_od.application.currency_war.kernel.cw_state import CloseShop
+        st = self._shop_frame(11, [_card('高价杂件', cost=5)])
+        sess = self._shop_sess()
+        act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, CloseShop)
+
+    def test_buyout_cap_disables_shop_arm(self):
+        """买断制局 g*=0 ⇒ (b) 触发带关闭(与 (a) 同 B2 语义);帧的
+        其余既有买面(如 T5 止血买,自有息纪律)不在本锁辖域。"""
+        st = self._shop_frame(11, [_card('廉价杂件', cost=1)])
+        sess = self._shop_sess()
+        state_of(sess).cw4_cap_override = 0
+        act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        if isinstance(act, BuyCard):
+            assert act.reason != 'dead_gold_press_buy'
+        assert 'dead_gold_press_buy_hit' not in state_of(sess).cw4_counters
+
+    def test_pullback_success_closes_press_arm(self):
+        """双臂互斥·臂序(Z1):(a) 凑息回拉达标(gold ≥ g*)⇒ 后续
+        商店帧 (b) 触发带自然关闭——「(a) 卖出后 (b) 买回」被金位切除
+        (帧面其余既有买面如 T5 非本锁辖域)。"""
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            SellBench as PrepSellBench,
+        )
+        bench = [_bc('燃料件A', slot=1), _bc('燃料件B', slot=2)]
+        sess = _prep_session()
+        out = mandate_run(_prep_frame(45, bench), sess, _prep_state(45))
+        sells = [e.action.slot for e in out
+                 if isinstance(e.action, PrepSellBench)]
+        assert sorted(sells) == [1, 2]   # 凑息臂卖两件:45+6 ≥ g*=50
+        st = self._shop_frame(51, [_card('廉价杂件', cost=1)])
+        act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        if isinstance(act, BuyCard):
+            assert act.reason != 'dead_gold_press_buy'
+        assert 'dead_gold_press_buy_hit' not in state_of(sess).cw4_counters
+
+    def test_press_buy_registration_blocks_sellback_cross_frame(self):
+        """Z1 动态排除·跨轮形态:前帧 (b) 买入登记件(廉价杂件)后续
+        备战帧不入凑息资格;红证 = 无登记时该件恰入卖出槽集(移除
+        排除扩展即「买回→卖回」零和对冲复现)。"""
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            SellBench,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+            sell as crit_sell,
+        )
+        sess = self._shop_sess()
+        st = self._shop_frame(11, [_card('廉价杂件', cost=1)])
+        from sr_od.application.currency_war.kernel.cw_state import BuyCard
+        act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, BuyCard)
+        bench = [_bc('廉价杂件', slot=1)]
+        out = mandate_run(_prep_frame(9, bench), sess, _prep_state(9))
+        assert not [e for e in out if isinstance(e.action, SellBench)]
+        # 红证:无登记(排除扩展缺位)→ 廉价杂件入卖出槽集
+        slots, key = crit_sell.sell_for_interest(
+            9, bench, 5, (), state=_prep_state(9), exclude_names=())
+        assert key == '' and slots == [1]

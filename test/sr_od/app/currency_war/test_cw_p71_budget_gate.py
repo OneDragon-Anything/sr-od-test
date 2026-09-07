@@ -461,8 +461,11 @@ class TestSimChecker:
         assert len(out) == 1
         assert '绕闸' in out[0] and '36' in out[0]
 
-    def test_reward_node_exempt_and_non_m3_ignored(self):
-        """奖励节点豁免([16]② 同款)+ 非 m3_batch 授权不辖。"""
+    def test_reward_node_bypass_flagged_non_m3_ignored(self):
+        """T-115 对齐(ADR-0580;锁重推):奖励节点豁免([16]②)已随
+        [16]② 删除退役——奖励节点 = 升级抑制对象,其 m3_batch 绕闸形态
+        = 违规可见(生产闸判据节点无关,镜像删除 skip 后更忠实);非
+        m3_batch 授权照旧不辖(白名单外或非 m3 批与本镜像无关)。"""
         from sr_od.application.currency_war.sim.checks.ledger import (
             check_levelup_budget_gate,
         )
@@ -470,7 +473,9 @@ class TestSimChecker:
                 self._row(6, 6, gold0=60, s=36, auth='m3_batch:pop',
                           node='reward'),
                 self._row(7, 7, gold0=60, s=36, auth='pop_slot')]
-        assert check_levelup_budget_gate(rows) == []
+        out = check_levelup_budget_gate(rows)
+        assert len(out) == 1
+        assert '绕闸' in out[0] and '36' in out[0]
 
     def test_early_game_low_gold_zero_violation(self):
         """开局低金合法批零违规(锁重推:旧「g ≤ g* skip」辖域镜像已
