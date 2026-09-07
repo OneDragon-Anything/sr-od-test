@@ -1,4 +1,4 @@
-"""T-126 卖出通道排除仲裁·装配 A 身份段覆盖(单帧锁;批 2)。
+"""T-126 卖出通道排除仲裁·装配 A 身份段覆盖(单帧锁;批 2 建,批 3 扩)。
 
 出处(锁纪律:新锁必引设计出处):
 - ADR-0585(卖出通道排除仲裁单一源;Z1 吸收 / F2 拆三块修订 /
@@ -10,11 +10,13 @@
 - 双攻击报告案号:shop_sell W4(M4 腾席可卖③④持有件)、prep_loop F1
   (prep M4 漏 P60 注入 + ④件两域无豁免)。
 
-批 2 辖域声明:本文件只锁身份段(义务基座 ∪ 静态持有两集);窗口段
-(press/垫保发射登记)、funding 兜底豁免(P78-5)、projection 全资格
-视图(T3 活跃集并入)归批 3,对应格(W1/W3)锁随批 3 落地。funding
-空手率指标依赖批 4 plain 分键,批 4 前不可测、不得引用(方案 v3 §5.4
-可用性次序)——本文件只以装配形态占位(见 TestSellGateIdentity)。
+批 3 适配申报(ADR-0585 §6 分批;锁语义重推非机械跟绿):①F1 锁线
+清空语义已废除(P78-3 证其为错误),原平移兼容锁改锁 W3 轮界过期语义
+(窗口段锁 = test_cw_sell_window_launch.py,本文件只留凑息出口形态);
+②funding 兜底豁免(P78-5)落地,原「④件 funding 零发射」中介窗口
+(ADR-0585 Status 申报「③④件 funding 变现出口批 2→3 缺席」)按四
+条件重开——新格 A 锁改锁兜底豁免形态。窗口段/发射登记/五键/W1/W3/W5
+场景锁在 test_cw_sell_window_launch.py(批 3 新建主题文件)。
 """
 from __future__ import annotations
 
@@ -146,9 +148,10 @@ class TestSellGateIdentity:
         assert wide <= excl
 
     def test_batch2_all_channels_share_identity_segment(self):
-        """批 2 通道无关性:通道闭集全集逐通道 == 同一身份段(窗口段/
-        对价段批 3 才分叉)。通道参数为定形位,枚举外值拒收
-        (单一入口防线,防第五通道绕 A 手搓排除复发)。"""
+        """通道视图构成锁:空登记簿帧各通道 == 同一身份段(通道差异面
+        只来自窗口段/projection 并集——空簿帧窗口段与 T3 视图皆空,故
+        全通道同构)。通道参数为定形位,枚举外值拒收(单一入口防线,
+        防第五通道绕 A 手搓排除复发)。"""
         import pytest
 
         k = _core()
@@ -156,7 +159,7 @@ class TestSellGateIdentity:
         want = frozenset(sell_gate.identity_exclusions(sess, k))
         for ch in sorted(sell_gate.SELL_CHANNELS):
             got = sell_gate.sell_exclusions(sess, k, channel=ch)
-            assert got == want, f'通道 {ch} 批 2 应返回同一身份段'
+            assert got == want, f'通道 {ch} 空登记簿帧应返回同一身份段'
         with pytest.raises(ValueError):
             sell_gate.sell_exclusions(sess, k, channel='unknown_channel')
 
@@ -165,33 +168,47 @@ class TestSellGateIdentity:
         = 身份段(含静态持有两集)——③④ 件退出 funding 主路径资格,
         「空手」形态的装配前提在位。指标本身(funding 空手率)依赖批 4
         plain 分键,批 4 前不可测、不得引用(方案 v3 §5.4;ADR-0585 §6)。
-        兜底豁免(P78-5)批 3 接线后,本格由矩阵测试对角格(持有×funding)
-        扩展承载。"""
+        兜底豁免(P78-5)已批 3 接线:对角格(持有×funding)行为锁 =
+        test_cw_sell_window_launch.py TestFundingHoldFallback。"""
         k = _core()
         sess = _unlocked_sess()
         funding_excl = sell_gate.sell_exclusions(sess, k, channel='funding')
         assert set(k) <= funding_excl
         assert set(sell_hold_exclusion_names()) <= funding_excl
 
-    def test_hold_exclusions_moved_lifecycle_preserved(self):
-        """平移兼容锁:sell_hold_exclusions 本体在 sell_gate(mandate 为
-        再出口),②(b) 动态登记与 F1 锁线清空语义逐位保留(批 2 平移零
-        行为变更,B3;P78-3 证其错误但修法随批 3,ADR-0585 消费限制)。
-        反向格:sell_exclusions(身份段入口)**不含**动态登记名——窗口段
-        未落地,批边界防提前渗漏。"""
+    def test_window_round_lifecycle_replaces_f1(self):
+        """W3 修法锁(P78-3;shop_sell 报告 W3):F1 锁线清空废除改轮界
+        过期——press 登记活跃轮(登记轮==当前轮)入凑息排除面,轮进即
+        回池(禁卖面有界性反向锁);锁线帧不清空登记(锁线定型不是任何
+        买因类的账闭合事件,锁线帧买入由登记轮==当前轮天然覆盖)。原批 2
+        平移锁钉 F1 旧语义,P78-3 证其错误,本锁为批 3 语义重推非跟绿。"""
         sess = _unlocked_sess()
-        state_of(sess).cw4_dead_gold_bought_names.add('燃料件Z')
-        excl = mandate.sell_hold_exclusions(sess, ())
-        assert '燃料件Z' in excl, '动态登记未入凑息排除集 = 平移改行为'
+        sell_gate.register_launch(sess, '燃料件Z', cause='press', round_num=2)
+        assert '燃料件Z' in sell_gate.sell_exclusions(
+            sess, (), channel='interest', current_round=2), \
+            '登记轮活跃帧不入凑息排除 = W1 同 visit 卖回未闭死'
         assert '燃料件Z' not in sell_gate.sell_exclusions(
-            sess, (), channel='interest'), \
-            '身份段入口不得含动态登记(窗口段归批 3)'
-        # F1:锁线帧读点清空动态集(与平移前逐位一致)
+            sess, (), channel='interest', current_round=3), \
+            '轮界过期未回池 = 过度禁卖无界(P78-2b τ=同轮违例)'
+        # 锁线帧不清空(F1 废除;锁线帧活跃覆盖见窗口段锁 W3 格)
         locked = _locked_sess()
-        state_of(locked).cw4_dead_gold_bought_names.add('燃料件Z')
-        mandate.sell_hold_exclusions(locked, ())
-        assert not state_of(locked).cw4_dead_gold_bought_names, \
-            'F1 定型清空语义在平移后必须原样保留(批 3 才改轮界过期)'
+        sell_gate.register_launch(locked, '燃料件Z', cause='press',
+                                  round_num=2)
+        sell_gate.sell_exclusions(locked, (), channel='interest',
+                                  current_round=2)
+        assert state_of(locked).cw4_fuel_filler_stall_buys, \
+            '锁线帧清空登记 = F1 错误语义回流(P78-3)'
+
+    def test_hold_exclusions_compat_shim_identity_only(self):
+        """兼容再出口锁:sell_hold_exclusions 语义 = 身份段(生产消费位
+        已批 3 全量迁移 sell_exclusions;本名保留测试/外部引用零断链,
+        ADR-0585 渐进迁移申报)——不含动态登记、不再清空旧载体。"""
+        sess = _unlocked_sess()
+        sell_gate.register_launch(sess, '燃料件Z', cause='press', round_num=2)
+        excl = mandate.sell_hold_exclusions(sess, ())
+        assert '燃料件Z' not in excl, \
+            '兼容出口含窗口段 = 无轮号帧放大禁卖面(V2-09 放行向违例)'
+        assert excl == sell_gate.identity_exclusions(sess, ())
 
 
 # ===== W4:M4 腾席对 ③④ 持有件禁卖(shop 域,方案 v3 §2.9)=====
@@ -286,46 +303,65 @@ class TestBeiZhanF1PrepM4:
         assert '藿藿' in {b.char_id for b in base_only}, '红证②失效'
 
 
-# ===== 新格 A:entry 两处 funding 空排除接线(方案 v3 §2.9)=====
+# ===== 新格 A:entry 两处 funding 空排除接线(方案 v3 §2.9;批 3 兜底
+#      豁免 P78-5 重开 ④件变现出口,ADR-0585 Status 中介窗口收口)=====
 
 
 class TestEntryFundingCells:
-    """entry funding 消费位锁(新格 A):两处旧**空排除**装配改为消费
-    统一装配 A 身份段——锁线宽集成员不再可被 prep funding 卖(→ shop
-    M2 重买换手),③④ 持有件同禁(P78-4)。"""
+    """entry funding 消费位锁(新格 A + P78-5 兜底形态):两处旧**空
+    排除**装配消费统一装配 A——义务基座/③④ 持有件退出 funding 主路径
+    (空排除 = 锁线宽集成员可被 prep funding 卖 → shop M2 重买换手,
+    病理格);主路径空 ∧ 仍需筹资时经兜底豁免(P78-5 四条件:非持有
+    资格面耗尽顺序豁免)单笔变现 ④件。批 2 锁「④件零发射」钉的是
+    中介窗口形态(ADR-0585 Status 申报批 2→3 缺席),批 3 兜底重开为
+    设计语义,本锁按 P78-5 重推非跟绿。"""
 
-    def test_criteria_pass_funding_excludes_hold(self):
+    def test_criteria_pass_funding_fallback_liquidates_hold(self):
         """格④(_criteria_pass funding,方案锚 entry.py:769-802):
-        bench 唯一 ④件 ⇒ funding 零发射。红证:判据直调不带排除集 ⇒
-        该件恰入卖出槽集;活性伴随:普通燃料件照常卖出(分支非空转)。"""
+        bench 唯一 ④件 ⇒ 主路径空 → 兜底豁免单笔卖出 + 分键计数。
+        红证:判据直调不带排除集 ⇒ 该件恰入卖出槽集;活性伴随:普通
+        燃料件走主路径(零兜底分键)。"""
         st = GameState(gold=1, level=5, round_num=2, hp=40)
-        sess = SimpleNamespace(cw4_counters={})
+        sess = SimpleNamespace()
 
-        def _run(bench: list[BenchChar]) -> list:
+        def _run(bench: list[BenchChar]) -> tuple[list, dict]:
+            state_of(sess).cw4_counters = {}
             frame = mandate.MandateFrame(
                 gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
                 node_type=None, stop_flag=True, k_members=('线内件X',),
                 round_num=2)
-            return entry._criteria_pass(
+            out = entry._criteria_pass(
                 frame, sess, st, ('线内件X',),
                 k_switched=False, old_line_members=())
+            return out, state_of(sess).cw4_counters
 
-        out = _run([_bc('藿藿', slot=1)])
-        assert not [e for e in out if isinstance(e.action, PrepSellBench)], \
-            '新格A④:④件被 EV funding 卖出 = 空排除未接身份段'
+        out, ct = _run([_bc('希儿', slot=1)])
+        sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]
+        assert [s.slot for s in sells] == [1], \
+            '新格A④:④件兜底豁免未接线 = 变现出口缺席(中介窗口未收口)'
+        assert ct.get('funding_hold_liquidated') == 1, \
+            '兜底卖出缺分键显影(P78-5 条④)'
         slots, key = crit_sell.funding_support_sell(
-            1, 9, [_bc('藿藿', slot=1)], ('线内件X',), state=st)
-        assert key == '' and slots == [1], '红证失效:藿藿未穿过排除外谓词'
-        out2 = _run([_bc('填充燃料F', slot=1)])
+            1, 9, [_bc('希儿', slot=1)], ('线内件X',), state=st)
+        assert key == '' and slots == [1], '红证失效:希儿未穿过排除外谓词'
+        # 达成量化(P78-5 条③):藿藿退金 1 < 缺口 2(need 3 − gold 1)
+        # ⇒ 不放行——期权损失(P01)已付而义务未达成 = 严格有害
+        out3, ct3 = _run([_bc('藿藿', slot=1)])
+        assert not [e for e in out3 if isinstance(e.action, PrepSellBench)], \
+            '兜底卖出退金不达缺口 = 达成量化(P78-5 条③)违例'
+        assert 'funding_hold_liquidated' not in ct3
+        out2, ct2 = _run([_bc('填充燃料F', slot=1)])
         assert [e.action.slot for e in out2
                 if isinstance(e.action, PrepSellBench)] == [1], \
             '活性伴随失效:funding 分支未卖出普通燃料件(锁空转)'
+        assert 'funding_hold_liquidated' not in ct2, \
+            '主路径可卖时走了兜底 = 顺序豁免(P78-5 条③)违例'
 
-    def test_skeleton_only_funding_excludes_hold(self):
+    def test_skeleton_only_funding_fallback_liquidates_hold(self):
         """格③(skeleton_only funding,方案锚 entry.py:492-506):全
-        emit 链 skeleton_only 臂下,bench 唯一 ④件 ⇒ funding 零发射
-        (骨架 M4 同帧亦不卖——同帧双通道一致)。红证:判据直调不带
-        排除集 ⇒ 该件恰入卖出槽集。"""
+        emit 链 skeleton_only 臂下,bench 唯一 ④件 ⇒ 主路径空 → 兜底
+        豁免单笔卖出(骨架 M4 同帧不卖——同帧双通道一致,席未满)。红证:
+        判据直调不带排除集 ⇒ 该件恰入卖出槽集。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )
@@ -340,8 +376,9 @@ class TestEntryFundingCells:
         out = entry.emit(obs, SimpleNamespace(), sess, None,
                          ev_arm='skeleton_only', registry=strat.registry)
         sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]
-        assert not sells, \
-            f'新格A③:skeleton_only funding 卖出 {sells} = 空排除未接身份段'
+        assert [s.slot for s in sells] == [1], \
+            f'新格A③:skeleton_only funding 兜底未卖出 {sells} = 出口缺席'
+        assert state_of(sess).cw4_counters.get('funding_hold_liquidated') == 1
         slots, key = crit_sell.funding_support_sell(
             0, 9, [_bc('藿藿', slot=1)], _core(), state=st)
         assert key == '' and slots == [1], '红证失效:藿藿未穿过排除外谓词'

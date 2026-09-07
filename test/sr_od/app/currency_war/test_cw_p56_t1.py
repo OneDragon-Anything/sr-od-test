@@ -472,8 +472,9 @@ class TestT115DeadGoldPressBuy:
 
     def test_floor_blocks_cost5_releases_cost1_on_gold11(self):
         """gold 11 帧地板判据(方案回归帧):死金 = 11−10×1 = 1 ——
-        5 费候选被地板拦、1 费候选放行;买入即登记名入会话级集合
-        (Z1 动态排除载体)。"""
+        5 费候选被地板拦、1 费候选放行;买入即按买因登记入统一发射
+        登记簿(T-126 批 3:press 类,登记轮 = 当前轮;旧
+        cw4_dead_gold_bought_names 载体退役并入,ADR-0585 §2)。"""
         from sr_od.application.currency_war.kernel.cw_state import BuyCard
         st = self._shop_frame(11, [_card('高价杂件', cost=5),
                                    _card('廉价杂件', cost=1)])
@@ -482,7 +483,8 @@ class TestT115DeadGoldPressBuy:
         assert isinstance(act, BuyCard) and act.card.name == '廉价杂件'
         assert act.reason == 'dead_gold_press_buy'
         assert state_of(sess).cw4_counters.get('dead_gold_press_buy_hit') == 1
-        assert '廉价杂件' in state_of(sess).cw4_dead_gold_bought_names
+        assert state_of(sess).cw4_fuel_filler_stall_buys == {
+            '廉价杂件': ('press', 3)}
 
     def test_honest_idle_when_no_candidate_fits_floor(self):
         """全不可达 = 诚实空转允许囤(禁为花而买垃圾):仅 5 费候选帧
@@ -523,10 +525,13 @@ class TestT115DeadGoldPressBuy:
             assert act.reason != 'dead_gold_press_buy'
         assert 'dead_gold_press_buy_hit' not in state_of(sess).cw4_counters
 
-    def test_press_buy_registration_blocks_sellback_cross_frame(self):
-        """Z1 动态排除·跨轮形态:前帧 (b) 买入登记件(廉价杂件)后续
-        备战帧不入凑息资格;红证 = 无登记时该件恰入卖出槽集(移除
-        排除扩展即「买回→卖回」零和对冲复现)。"""
+    def test_press_buy_registration_blocks_sellback_same_round_only(self):
+        """Z1 动态排除·批 3 轮界形态(W3 修法,P78-3):(b) 买入登记
+        (press,登记轮 3)在**同轮**备战/装配面禁卖回(同 visit 卖回
+        = P78-1 定义性抵消);轮进即回池(τ=同轮,过度禁卖上界 ≤1 轮
+        有界可判读)。旧「按名永久至锁线清空」语义废除——原跨轮禁卖
+        断言钉的是 F1 过度保护形态,本锁为语义重推非跟绿。红证 = 无
+        登记时该件恰入卖出槽集(买回→卖回零和对冲复现)。"""
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             SellBench,
         )
@@ -539,8 +544,17 @@ class TestT115DeadGoldPressBuy:
         act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard)
         bench = [_bc('廉价杂件', slot=1)]
-        out = mandate_run(_prep_frame(9, bench), sess, _prep_state(9))
-        assert not [e for e in out if isinstance(e.action, SellBench)]
+        # 同轮备战帧(prep round 3):凑息臂不卖(窗口段活跃)
+        out = mandate_run(_prep_frame(9, bench, round_num=3), sess,
+                          _prep_state(9))
+        assert not [e for e in out if isinstance(e.action, SellBench)], \
+            '同轮凑息卖回 press 登记件 = W1 同 visit 卖回未闭死'
+        # 轮进(下一备战期 round 4):回池,凑息臂照常可卖(P78-2b)
+        out2 = mandate_run(_prep_frame(9, bench, round_num=4), sess,
+                           _prep_state(9))
+        assert [e.action.slot for e in out2
+                if isinstance(e.action, SellBench)] == [1], \
+            '轮界过期未回池 = 过度禁卖无界(P78-3 修法违例)'
         # 红证:无登记(排除扩展缺位)→ 廉价杂件入卖出槽集
         slots, key = crit_sell.sell_for_interest(
             9, bench, 5, (), state=_prep_state(9), exclude_names=())

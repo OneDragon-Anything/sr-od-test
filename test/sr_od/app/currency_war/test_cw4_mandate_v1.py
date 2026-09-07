@@ -731,14 +731,23 @@ class TestR196EvConflictDrop:
 
     @staticmethod
     def _decide_full(bench, comp, gold: int = 1,
-                     dead_gold_names: tuple = ()) -> tuple[list, StrategySession]:
+                     stall_names: tuple = ()) -> tuple[list, StrategySession]:
         class _Cfg:
             ev_arm = 'skeleton_only'
 
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            mandate as _mandate,
+        )
         strat = MandateV1Strategy()
         session = _session()
         state_of(session).target_comp = comp
-        state_of(session).cw4_dead_gold_bought_names.update(dead_gold_names)
+        # 差分承载(T-126 批 3 重推,ADR-0585;P78-5′ 四关系表):垫保
+        # 登记(T3 单类视图)在凑息是绝对跳过(defer)、在 M4/funding 是
+        # 降序放行(转化类)——批 2 用的 ②(b) press 登记随窗口段落地后
+        # 全通道硬禁,差分格消失,改 T3 登记承载同款差分。登记轮 1 =
+        # obs 帧轮(GameState 缺省 round_num=1),活跃判据 = 登记轮==当前轮。
+        for _n in stall_names:
+            _mandate.stall_buys_register(session, _n, 1)
         obs = _obs(state=GameState(gold=gold), bench=bench, vacancy=4)
         turn = assemble_turn(
             snapshot_from_obs(obs, session), session, registry=strat.registry)
@@ -750,14 +759,10 @@ class TestR196EvConflictDrop:
         """骨架 M4 已卖槽 vs 支付支撑同槽提案 ⇒ 丢弃 + 计数(全链):
         bench 满 + 缺件 + 金不足 ⇒ M4 卖唯一燃料槽 ⇒ funding 同槽提案
         被丢弃 ⇒ 输出单笔(非重发,非 fail-stop)。
-        T-126 批 2 适配(ADR-0585;P78-4):燃料件用**②(b) 动态登记名**
-        (登记入 cw4_dead_gold_bought_names 的普通 1★ 燃料)——排除装配
-        收拢单一入口后,身份段(义务基座∪静态持有两集)为 ②(a)/M4/
-        funding 共同辖域,原 T-115 适配「④静态持有件 = ②(a) 排而
-        M4/funding 不排」的差分格已被 P78-4 取代;现行差分 = ②(b)
-        动态登记(②(a) 排除集 = 身份段∪动态登记,M4/funding = 身份段,
-        窗口段批 3 落地后差分收窄,本适配随批 3 重推)。凑息臂资格空
-        不抢跑、冲突机制原样可验两面不变。"""
+        差分承载(ADR-0585 批 3 重推):凑息臂不抢跑 = T3 垫保登记件
+        被凑息绝对跳过(defer);M4/funding 降序放行(转化类,P78-5′
+        四关系表「放行(在册语义保持)」)——批 2 的 ②(b) press 登记差分
+        随窗口段落地消失(P78 INV 全通道硬禁),本适配按新语义重推。"""
         from types import SimpleNamespace
 
         comp = SimpleNamespace(name='测试线', core_chars=('目标件',),
@@ -766,7 +771,7 @@ class TestR196EvConflictDrop:
                  + [_bench(i, '高价', star=3)
                     for i in (1, 3, 4, 5, 6, 7, 8, 9)])
         out, session = self._decide_full(bench, comp,
-                                         dead_gold_names=('燃料件X',))
+                                         stall_names=('燃料件X',))
         sells = [a for a in out if isinstance(a, SellBench)]
         # M4 卖槽 2(唯一燃料);funding 同槽提案丢弃 ⇒ 单笔 + 计数
         assert [a.slot for a in sells] == [2]
@@ -775,9 +780,9 @@ class TestR196EvConflictDrop:
     def test_distinct_slot_kept(self):
         """同帧异槽提案保留(全链):缺件注册价 ≥4 ⇒ funding 需两件燃料
         ——低槽与 M4 冲突丢弃,高槽保留 ⇒ 输出两笔异槽卖出。
-        T-126 批 2 适配(ADR-0585;差分承载与上锁同源):两燃料件均为
-        ②(b) 动态登记名(凑息臂不抢跑;M4/funding 排除集 = 身份段,
-        动态登记名可卖)。"""
+        差分承载(ADR-0585 批 3 重推,与上锁同源):两燃料件均为 T3 垫保
+        登记名(凑息臂绝对跳过不抢跑;M4/funding defer 降序放行,P78-5′
+        四关系表)。"""
         from types import SimpleNamespace
 
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -788,7 +793,7 @@ class TestR196EvConflictDrop:
                  + [_bench(i, '高价', star=3)
                     for i in (1, 4, 5, 6, 7, 8, 9)])
         out, session = self._decide_full(
-            bench, comp, dead_gold_names=('燃料件X', '燃料件Y'))
+            bench, comp, stall_names=('燃料件X', '燃料件Y'))
         sells = [a for a in out if isinstance(a, SellBench)]
         # M4 卖槽 2;funding 提案 [2(冲突丢弃), 3(保留)]
         assert sorted(a.slot for a in sells) == [2, 3]

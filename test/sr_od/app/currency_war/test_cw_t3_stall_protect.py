@@ -301,9 +301,13 @@ class Test6SingleSource:
         assert 'stall_buys_consume' in engine_src
         assert ledger_src.count('SELL_BENCH_CONVERT_REASONS') >= 1
         assert "frozenset({'fuel_victim_protect_demoted'" not in ledger_src
-        # 键集内容钉死(扩键 = 设计变更,须过方案审)
+        # 键集内容钉死(扩键 = 设计变更,须过方案审)。三键形态 =
+        # ADR-0585 批 3(N7:funding_hold_liquidated 豁免面与分键同批,
+        # 辖「持有件变现」非 T3 垫件转化,豁免理由同为非自旋;两键 →
+        # 三键为申报过的语义变更,非机械跟绿)。
         assert frozenset({
-            'fuel_victim_protect_demoted', 'funding_support_stall_convert'}) == SELL_BENCH_CONVERT_REASONS
+            'fuel_victim_protect_demoted', 'funding_support_stall_convert',
+            'funding_hold_liquidated'}) == SELL_BENCH_CONVERT_REASONS
 
 
 class Test7CheckerExemption:
