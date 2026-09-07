@@ -540,8 +540,9 @@ def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
     装配序 = 方案 §3.3 装配纪律:构建 ctx 后、跑 op 前 install;
     档案根 = ``tmp_path/<archive_dir_name>/``(recorder 原生流 +
     op_journal.jsonl 同根——写端隔离,假局行零触 live 根)。
-    teardown = 端口卸载 + 两根槽复位(进程全局槽残留防线,teardown
-    必达,不依赖 monkeypatch 覆盖所有槽)。
+    teardown = 端口卸载 + run 态簇复位(``tel_state.reset_run_state``)
+    + 两根槽复位(进程全局槽残留防线,teardown 必达,不依赖
+    monkeypatch 覆盖所有槽)。
     """
     root = tmp_path / archive_dir_name
     run = FakeP1Run(ctx, seed, node_sequence=node_sequence,
@@ -555,5 +556,11 @@ def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
         yield run
     finally:
         cw_game_ports.uninstall_game_ports()
+        # run 态簇复位(出处:.debug/temp/currency_war/attacks/
+        # three_review_20260908/三审报告-第二波.md F1,易失产物待 ADR
+        # 回填;ensure 门语义见 ADR-0588)——局终 record_run_summary 裸写
+        # _RUN_CLOSED=True 不在任何 monkeypatch 清单内,散点补桩随簇扩员
+        # 会再漏,统一走 state 正规复位入口(teardown 必达档,同两根槽)。
+        tel_state.reset_run_state()
         tel_state.set_recorder_replay_dir(None)
         op_journal.set_journal_dir(None)

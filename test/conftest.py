@@ -628,6 +628,13 @@ def _isolate_cw_stop_flag_channels(
     # ADR-0588:run 铸造 token 与 _CURRENT_RUN_ID 同簇——mint 路径会模块级
     # 赋值,不钉桩会跨测试残留(下一测试换容器判定被上局容器污染)。
     monkeypatch.setattr(cw_state, '_RUN_MATCH', None)
+    # _RUN_CLOSED 是同簇第三件(record_run_summary 局终置位/start_run 铸造
+    # 复位,均为模块级裸写;ensure 门与 recorder 简报缓冲分流都消费该位):
+    # 残留 True 会把后续测试的 open run 误判「上局已收口」走重铸假分支
+    # (出处:.debug/temp/currency_war/attacks/three_review_20260908/
+    # 三审报告-第二波.md F1,易失产物待 ADR 回填;正规复位入口 =
+    # cw_state.reset_run_state,本钉桩是会话级兜底,两道防线不同层)。
+    monkeypatch.setattr(cw_state, '_RUN_CLOSED', False)
     monkeypatch.setattr(cw_state, '_L0_ANDON_FIRED_RUNS', set())
     monkeypatch.setattr(cw_state, '_defect_seen', {})
     monkeypatch.setattr(cw_state, '_defect_seen_run', '')
