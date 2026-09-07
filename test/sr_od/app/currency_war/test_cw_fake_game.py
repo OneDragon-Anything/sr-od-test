@@ -132,11 +132,12 @@ class TestDeterminism:
 
     def test_env_fingerprint_carries_version_and_pool(self) -> None:
         """环境指纹 = 规则层版本 + Δ池指纹(跨版本对照禁裸串比的载体;
-        池指纹值 = 主仓快照在案锚 a0722904dea13294,方案 §0-5)。"""
+        池指纹值 = 主仓快照在案锚 460e6031e2f4ae06(T-119 提交触发 Δ池
+        快照再生,前值 a0722904dea13294 为 ADR-0582 时代历史出处))。"""
         m = FakeMatch(seed=7)
         fp = m.env_fingerprint()
         assert fp['env_version'] == FAKE_GAME_ENV_VERSION
-        assert fp['delta_pool'] == 'a0722904dea13294'
+        assert fp['delta_pool'] == '460e6031e2f4ae06'
 
 
 class TestActionTransitionSingleSource:
