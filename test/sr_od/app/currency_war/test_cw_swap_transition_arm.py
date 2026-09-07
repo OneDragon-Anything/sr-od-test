@@ -129,9 +129,12 @@ def test_formed_arm_wins_when_fp_above_100() -> None:
 
 
 def test_winner_order_first_transactable_no_reorder() -> None:
-    """胜出序锁(ADR-0534 §5:现行 victim 序取首个可成交者,禁新排序
-    键、禁 fenced 提权):1★ 转型 victim(爻光)先于 2★ 基座合格
-    victim(黑塔)成交——1★ 优先首键不被臂资格改写,arm 随胜出者。"""
+    """胜出序锁(ADR-0534 §5 + ADR-0590 决策2/5 修订:转型域序 =
+    P79-4 让渡序,本帧合格 victim 全 1★ 且贡献并列 0——仙舟 4→3 均
+    achieved 无倒退——让渡序退化为星级键,与旧 1★ 优先同判):1★
+    victim(爻光)胜出,序稳定不被臂资格改写,arm 随胜出者;2★ 释放件
+    (黑塔)经统一资格族 star_guard 持有(行 #5:非 fenced 释放件同吃
+    资格族,基座臂无星级检查的旧路径封堵),非排序 runner-up。"""
     deployed = [_bc('爻光', 1), _bc('艾丝妲', 2, star=2),
                 _bc('黑塔', 3, star=2), _bc('藿藿', 4),
                 _bc('忘归人', 5), _bc('符玄', 6)]
@@ -143,16 +146,21 @@ def test_winner_order_first_transactable_no_reorder() -> None:
 
 
 def test_base_victim_wins_over_transition_when_first() -> None:
-    """arm 随胜出者标注锁(ADR-0534 §5:'transition' 当且仅当胜出者经
-    转型臂放行):现行序首位的基座合格 victim(黑塔 1★,非 fenced)
-    胜出 ⇒ arm='base',转型 victim(爻光)不提权顶前。"""
+    """胜出序锁(ADR-0534 §5 + ADR-0590 决策2/5 修订):现行序首位 victim
+    (黑塔 1★)胜出,转型 victim(爻光)不提权顶前——「禁 fenced 提权」
+    语义保留。arm 标注按 T-127 行 #5/三轮 N5 重推(ADR-0534 §5 的
+    「基座合格 ⇒ arm='base'」在锁线转型域被取代):非 fenced 释放件经
+    基座臂封堵落资格族,胜出 arm 恒 'transition'(swap_arm_transition_
+    trigger 分键归因依赖);'base' 标注自此外溢到未锁帧域
+    (test_cw_deploy_transition 锁面)。旧断言 arm='base' 系语义过期,
+    非机械跟绿(出处 = ADR-0590 Considered「释放件资格路径」)。"""
     deployed = [_bc('黑塔', 1), _bc('艾丝妲', 2), _bc('椒丘', 3),
                 _bc('爻光', 4), _bc('藿藿', 5), _bc('忘归人', 6)]
     bench = [_bc('三月七', 1, star=2)]
     plan = select_swap_plan(_locked_ctx(deployed=deployed, bench=bench))
     assert plan.nonempty
     assert plan.sell_names == ['黑塔']
-    assert plan.arm == 'base'
+    assert plan.arm == 'transition'   # 释放件统一资格族,arm 恒 transition
 
 
 # ============ 逐件守卫(守卫移除即红) ============
@@ -244,7 +252,10 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     """发射分键锁(ADR-0534 §7 键集):转型帧发射 ⇒ m1p_fired +
     swap_arm_transition_trigger(plan.arm 消费面分键);守恒拒帧 ⇒
     engines_guard 分键显影。装配侧意向供给(monkeypatch 桩化,零真实
-    派生依赖):committed=True + 义务集空集。"""
+    派生依赖):committed=True + 义务集 = {'三月七'}——T-127 执行条件
+    发射门(ADR-0590 决策4)要求压席锁线成员存在,bench 三月七经义务
+    桩入压席面(面板 board={} 列车 0<2,部署推进 form = 档关键件,
+    保守形态放行);deployed 六件非成员,victim 资格面不受桩影响。"""
     import sr_od.application.currency_war.kernel.cw_intention as _int_mod
     import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
     from sr_od.application.currency_war.kernel.cw_state import GameState
@@ -255,7 +266,7 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     monkeypatch.setattr(_int_mod, 'committed_from',
                         lambda session, state=None: True)
     monkeypatch.setattr(_int_mod, 'locked_buy_membership',
-                        lambda ist: frozenset())
+                        lambda ist: frozenset({'三月七'}))
     comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
                factions=('列车同行',), form_tiers={'列车同行': 2},
                shared_chars=(), substitute_plan=None)

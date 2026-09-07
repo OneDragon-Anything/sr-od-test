@@ -1074,8 +1074,10 @@ class TestG1ReadinessAdmission:
         return readiness_admission_report(st, comp)
 
     def _g1_frames(self):
-        """G1 帧构造(应-D 物理槽位口径):板满 = 占用部署数 ≥
-        DEPLOYED_CAPACITY 定长槽表;victim = off-line∧fenced∧非保护域。"""
+        """G1 帧构造(ADR-0590 决策8 口径:板满 = 占用部署数 ≥
+        state.max_units(),与 swap 臂同裁决禁物理门;victim =
+        off-line∧fenced∧非保护域)。full 帧 10 占用 ≥ 任意 level 驱动
+        cap ⇒ 板满恒真(构造性,不依赖具体 level)。"""
         from sr_od.application.currency_war.kernel.cw_state import (
             DEPLOYED_CAPACITY,
         )
@@ -1094,8 +1096,10 @@ class TestG1ReadinessAdmission:
         return comp, k, victim, full, with_victim
 
     def test_admission_triple_shapes(self):
-        """准入三元(应-D 对齐:板满 = 物理槽位口径;bench 待上 = 线内
-        ∨ 阵营交集;victim 无 1★ 全退门)。"""
+        """准入三元(ADR-0590 决策8 口径对齐:板满 = 占用数 vs
+        max_units——旧物理槽位口径下 level 驱动 cap<10 ⇒ 分键结构性
+        不显影,方案 v3.1 §2.2/§7 #11 顺手修;bench 待上 = 线内 ∨
+        阵营交集;victim 无 1★ 全退门)。"""
         comp, k, victim, full, with_victim = self._g1_frames()
         st = _st(gold=30, level=3, deployed=full,
                  bench=[_bc('填充件X', slot=1)])
@@ -1107,8 +1111,8 @@ class TestG1ReadinessAdmission:
         rep2 = self._admission(st2, comp)
         assert rep2['board_full'] is True
         assert rep2['victim_missing'] is False, 'victim 在板不得误显影'
-        # 未满板:三元①不成立(物理槽位口径,非 max_units/level 派生)
-        st3 = _st(gold=30, level=3,
+        # 未满板:三元①不成立(占用 4 < max_units(7)=7,占用数口径)
+        st3 = _st(gold=30, level=7,
                   deployed=[_bc(n, slot=i + 1) for i, n in enumerate(k)],
                   bench=[])
         assert self._admission(st3, comp)['board_full'] is False
