@@ -736,8 +736,8 @@ class TestR196Wiring:
         _decide(round_num=1)                      # 帧1:登记 prev 线名
         assert state_of(session).cw4_prev_line_name == old_comp.name
         state_of(session).target_comp = new_comp           # K 翻转(基线意向机形态)
-        # 帧2:换线生效帧=新备战期(R1-3:K 翻转跨备战期经 update_target
-        # 生效;备战期开店闩按 (位面,轮次) 键,新期自动失效)——夹具按此
+        # 帧2:换线生效帧=新备战期(R1-3:K 翻转跨备战期经方向重估
+        # 生效,ADR-0583;备战期开店闩按 (位面,轮次) 键,新期自动失效)——夹具按此
         # 建模 round_num+1,锁断言(塌缩出口可达+先于截断点)不变。
         out = _decide(round_num=2)               # 帧2:k_switched=True
         # 塌缩出口发射可达且先于截断点(EV 卖面依赖拓扑合并,症1 修复面)

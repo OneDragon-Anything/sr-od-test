@@ -54,9 +54,6 @@ class _DoubleBuyStub:
     """同段重复提案同一店内卡:第 2 笔应命中已消费槽 → 跳过 +
     披露计数(金/池不消费)。"""
 
-    def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
-        pass
-
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
         st = sess.shop_state_frame
         from sr_od.application.currency_war.kernel.cw_state import BuyCard
@@ -79,9 +76,6 @@ def test_consumed_slot_rebuy_skipped_and_disclosed() -> None:
 
 class _SyntheticCardStub:
     """店外构造卡(x=100):legacy 执行路径(ADR-0283 桩兼容)+ 披露。"""
-
-    def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
-        pass
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS

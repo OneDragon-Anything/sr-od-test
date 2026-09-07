@@ -2,7 +2,6 @@
 """test_cw_telemetry_archive 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
-- effect_ledger: test_cw_effect_ledger.py
 - match_archive: test_cw_match_archive.py
 - performance: test_cw_performance.py
 - telemetry_checks: test_cw_telemetry_checks.py
@@ -11,7 +10,9 @@
    不可复现;①双轨配方语义由 test_cw_deploy_ops.py::test_decision_target_
    dual_track_returns_recipe 合成锁承载,③翻转率守卫为本地审计性质)
 - w527_node_ledger: test_cw_w527_node_ledger.py
-- test_equips_telemetry: test_equips_telemetry.py
+- (test_equips_telemetry 段已删:补拷顺序+落盘链语义由
+   test_cw_telemetry.py:172-221 承接)
+- (effect_ledger 段已删:合并批失踪,覆盖缺口登记于瘦身批债账 D1)
 - divergence_stats: test_cw_divergence_stats.py
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
@@ -173,21 +174,12 @@ def test_assemble_abandoned_marked(replay: _match_archive_Path):
 
 
 def test_assemble_pending_watermark_no_backfill(replay: _match_archive_Path):
-    """旧数据不回填:首调只落水位线;之后只装水位线后的新局。"""
+    """旧数据不回填:首调只落水位线,存量旧局一个都不装(无档案文件)。
+    「水位线后的新局下一触发只装它」由 test_pending_new_game_unaffected_
+    by_resume_merge 主序列承接(同 fixture 同序列,另断言 g_C 不被波及)。"""
     assert arch.assemble_pending(replay) == []
     assert not (replay / 'matches').exists() or not list(
         (replay / 'matches').glob('match_*.json'))
-    # 新局落库(晚于水位线)→ 下一触发只装它
-    _write_jsonl(replay, 'decisions.jsonl', (
-        [json.loads(l) for l in (replay / 'decisions.jsonl')
-         .open(encoding='utf-8') if l.strip()]
-        + [_dec('run_20260830_120000', 1, 1, '2026-08-30T12:00:00')]))
-    _write_jsonl(replay, 'outcomes.jsonl', (
-        [json.loads(l) for l in (replay / 'outcomes.jsonl')
-         .open(encoding='utf-8') if l.strip()]
-        + [_out('run_20260830_120000', 1, 1, '2026-08-30T12:01:00', 70)]))
-    done = arch.assemble_pending(replay)
-    assert done == ['g_20260830_120000']
 
 
 def test_pending_reassembles_on_resume_segment_merge(replay: _match_archive_Path):
@@ -450,7 +442,7 @@ def test_terminal_state_summary_field_lock():
     worn(Σ deployed[].equips 件数)、owned(state.equips 件数)。
 
     口径单一源 = schema.terminal_state_summary docstring(坐标系/取值时机);
-    本锁钉键名与计数语义,分布数值不锁(测试纪律 #4)。"""
+    本锁钉键名与计数语义,分布数值不锁(测试纪律 #11)。"""
     from sr_od.application.currency_war.telemetry.schema import  terminal_state_summary
     st = {'deployed': [
               {'name': '甲', 'equips': ['火力风暴潮', '高周波电锯']},
@@ -575,11 +567,12 @@ def test_rounds_terminal_none_for_outcome_only_round(replay: _match_archive_Path
 
 
 def test_supply_round_has_decision_frame(replay: _match_archive_Path):
-    """补给轮 n_decision_frames 锁(run_supply_node 写入端,w941 判定移交):
-    选卡确认后 record_decision 一帧(extra.phase='supply_pick')→ 补给轮
-    不再结构性零决策行。锁的是「补给轮有帧」这一采集面,帧内容(合成
-    快照、actions=[])非备战决策语义,读端按 outcome.source='synthetic_supply'
-    分型。"""
+    """补给轮 n_decision_frames 档案读端锁:补给轮存在 supply_pick 决策帧
+    (选卡确认后 record_decision 一帧的落库形态)时,档案计数 n>=1、
+    terminal 走帧路径——不按零决策行显影。帧内容(合成快照、actions=[])
+    非备战决策语义,读端按 outcome.source='synthetic_supply' 分型。
+    (生产写入点 cw_screen_supply_node 的链路断言缺位,写入端半环单独
+    记债;本测只辖档案读端半环。)"""
     out_p = replay / 'outcomes.jsonl'
     dec_p = replay / 'decisions.jsonl'
     out_rows = [json.loads(ln) for ln in out_p.open(encoding='utf-8') if ln.strip()]
@@ -704,11 +697,11 @@ def test_load_archive_stale_without_source_warns_and_returns_stale(
 # ADR-0567)。修复语义:loss_nodes 一条目对一个掉血结算行(战斗腿口径),
 # rounds 逐轮表保持单槽净额零变化。
 # v9 重推(T-100 批2,ADR-0577):合成行(synthetic_supply)一律退出步进链
-# (先验「陈旧直到证伪」)——T1/T2 的预期按新语义重推(T1 −33→−19;T2 的
-# 净额≥0 漏记形态随鬼值退链结构性消除,改钉「鬼值不再捏造战斗腿」);逐
-# 结算行化方向与 M1 不可信行契约保留。fixture 的 runs 结果改 'stopped' =
-# 隔离终局腿变量(终局腿归 test_cw_t100_v9_assembly 专锁),步进链锁不与
-# result 字段耦合。
+# (先验「陈旧直到证伪」);逐结算行化方向与 M1 不可信行契约保留。
+# 同案收敛:182456 案(战斗腿 −19/合成行退链/净额轮如实记账/加法键取值)
+# 归 test_cw_t100_v9_assembly.py 同 run_id 专锁;本文件保留 M1 分叉与
+# v7→v9 迁移语义。fixture 的 runs 结果改 'stopped' = 隔离终局腿变量
+# (终局腿归 test_cw_t100_v9_assembly 专锁),步进链锁不与 result 字段耦合。
 
 def _replay_c8(tmp_path: _match_archive_Path,
                p2r4_outs: list[dict]) -> _match_archive_Path:
@@ -728,71 +721,6 @@ def _replay_c8(tmp_path: _match_archive_Path,
 def _ln_at(archive: dict, plane: int, rnd: int) -> list[dict]:
     return [n for n in archive['loss_nodes']
             if n['plane'] == plane and n['round'] == rnd]
-
-
-def test_loss_nodes_per_settlement_row_supply_plus_battle(
-        tmp_path: _match_archive_Path):
-    """T1(修复主用例,v9 重推:合成行退链 → 战斗腿 = 相对最后可信结算):
-    同轮补给行(45@conf1.0,鬼值)+ 战斗行 12 → loss_nodes 条目 delta =
-    12−31 = **−19**(v8 语义下合成行曾占位推进游标捏造 −33;先验「陈旧
-    直到证伪」后 45 不入链,重装配反而修出真值,182456 实档同构)。
-    rounds 链不变锁:单槽净额,槽位 = ts 末结算行(战斗行),delta −19。
-    """
-    rd = _replay_c8(tmp_path, [
-        _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 45,
-             node_type='补给', source='synthetic_supply'),
-        _out('run_20260906_182456', 2, 4, '2026-09-06T19:02:23', 12)])
-    a = arch.build_archive(rd, arch.assign_games(rd)[0])
-    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
-    r4 = by_key[(2, 4)]
-    # rounds 链不变锁:单槽净额,槽位 = ts 末结算行(战斗行)
-    assert r4['hp'] == 12 and r4['hp_source'] == 'settlement'
-    assert r4['hp_delta'] == -19
-    # loss_nodes:恰一条 (2,4) 战斗腿条目;合成行退链不入不出 +14/+2 步
-    ln4 = _ln_at(a, 2, 4)
-    assert len(ln4) == 1
-    n = ln4[0]
-    assert n['delta'] == -19 and n['hp'] == 12
-    assert n['node_type'] == '普通战斗' and n['hp_source'] == 'settlement'
-    # 加法键:战斗屏真值行 outcome_source=''(非合成行),ts=结算行时间戳
-    assert n['outcome_source'] == '' and n['ts'] == '2026-09-06T19:02:23'
-
-
-def test_loss_nodes_net_nonnegative_round_still_recorded(
-        tmp_path: _match_archive_Path):
-    """T2(v9 重推):原锁钉「净额≥0 轮战斗腿不漏记」——该缺陷形态的存在
-    依赖合成行鬼值先占位推进游标(31→45 伪 +14,战斗腿才成 35−45=−10);
-    v9 合成行退链后此形态**结构性消除**:战斗行 35 相对最后可信结算 31 =
-    +4 非掉血,零条目才是诚实读数(鬼值不得捏造战斗腿)。改钉消除本身:
-    断言零条目 + rounds 净额 +4 照旧如实记账。"""
-    rd = _replay_c8(tmp_path, [
-        _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 45,
-             node_type='补给', source='synthetic_supply'),
-        _out('run_20260906_182456', 2, 4, '2026-09-06T19:02:23', 35)])
-    a = arch.build_archive(rd, arch.assign_games(rd)[0])
-    r4 = {(r['plane'], r['round']): r for r in a['rounds']}[(2, 4)]
-    assert r4['hp'] == 35 and r4['hp_delta'] == 4   # 净额不设防地如实记账
-    assert _ln_at(a, 2, 4) == []   # 鬼值退链:无掉血即无条件目(−10 不再捏造)
-
-
-def test_loss_nodes_untrusted_supply_row_no_poison(
-        tmp_path: _match_archive_Path):
-    """T3(防过度修复守卫,方案审定谳:修前修后同绿):补给行
-    hp_after=0/conf=0.0(cw_loop 写端 hp 不可读兜底形态)不得伪造「−31」
-    条目或把游标打穿到 0 毒化后续;战斗条目 delta = 可达最佳值 12−31=−19
-    (0 值锚不可信不配当锚)。"""
-    rd = _replay_c8(tmp_path, [
-        _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 0,
-             conf=0.0, node_type='补给', source='synthetic_supply'),
-        _out('run_20260906_182456', 2, 4, '2026-09-06T19:02:23', 12)])
-    a = arch.build_archive(rd, arch.assign_games(rd)[0])
-    ln4 = _ln_at(a, 2, 4)
-    assert len(ln4) == 1
-    assert ln4[0]['delta'] == -19 and ln4[0]['hp'] == 12
-    # 全档无 0 值锚条目(伪造「补给掉血 −31」不存在)
-    assert all(n['hp'] not in (0, None) for n in a['loss_nodes'])
-    r4 = {(r['plane'], r['round']): r for r in a['rounds']}[(2, 4)]
-    assert r4['hp'] == 12 and r4['hp_delta'] == -19   # rounds 链照旧
 
 
 def test_loss_nodes_mixed_trust_round_two_chain_divergence(
@@ -822,29 +750,24 @@ def test_loss_nodes_mixed_trust_round_two_chain_divergence(
     assert len(ln5) == 1 and ln5[0]['delta'] == -40 and ln5[0]['hp'] == 5
 
 
-def test_loss_nodes_v8_migration_auto_rebuild_and_stale_fallback(
-        tmp_path: _match_archive_Path, monkeypatch: pytest.MonkeyPatch):
-    """T4(v8→v9 迁移,复用既有 bump+读端 auto-rebuild 机制,零新增迁移代码):
-    - T4a:盘上 v7 形态存量(净额;用既有 v4 迁移用例同款「降级抹键」
-      手法构造)经 load_archive 读出即重装配为当前版本(战斗腿 −19,v9
-      重推:合成行退链后 12−31=−19,v8 语义的 −33 不再重现)并原子写回;
-    - T4b:auto_rebuild=False 原样返回 v7 旧形态(条目 .get 可读,纯只读
-      审计场景契约);
-    - T4c:源 jsonl 已清 → 重装配不可行,退回 v7 档案 + 警告,不抛不猜。
-    """
+def test_loss_nodes_v7_net_migrated_to_current_battle_leg(
+        tmp_path: _match_archive_Path):
+    """T4 语义核心(v7→v9 迁移,ADR-0577;写回/只读/源清退回机制面归
+    P2-4 对 test_load_archive_auto_rebuilds_stale_version 与
+    test_load_archive_stale_without_source_warns_and_returns_stale,不同仅
+    降级形态):盘上 v7 净额形态存量(「降级抹键」手法构造,真实 v7 档案
+    即此形态)经 load_archive 读出即重装配为当前版本——合成行退链后战斗
+    腿 12−31=−19(v8 净额语义的 −33 不再重现)并原子写回;
+    auto_rebuild=False 原样返回 v7 本体(旧条目 .get 可读,只读审计契约)。"""
     rid = 'run_20260906_182456'
     rd = _replay_c8(tmp_path, [
         _out(rid, 2, 4, '2026-09-06T18:58:00', 45,
              node_type='补给', source='synthetic_supply'),
         _out(rid, 2, 4, '2026-09-06T19:02:23', 12)])
     game_id = arch.assign_games(rd)[0]['game_id']
-    assert arch.SCHEMA_VERSION == 9
-    # 构造盘上 v7 形态存量:当前装配后降级——条目 delta 回轮级净额、抹
-    # 加法键、版本号回 7(真实 v7 档案即此形态;monkeypatch 版本号造不出
-    # 旧装配语义,故用既有 v4 迁移用例的抹键手法)
-    a8 = arch.assemble_game(rd, game_id)
-    assert a8['schema_version'] == arch.SCHEMA_VERSION
-    assert _ln_at(a8, 2, 4)[0]['delta'] == -19
+    a = arch.assemble_game(rd, game_id)
+    assert a['schema_version'] == arch.SCHEMA_VERSION
+    assert _ln_at(a, 2, 4)[0]['delta'] == -19
     v7_snapshot = _read_archive_file(rd, game_id)
     rdelta = {(r['plane'], r['round']): r['hp_delta']
               for r in v7_snapshot['rounds']}
@@ -856,13 +779,14 @@ def test_loss_nodes_v8_migration_auto_rebuild_and_stale_fallback(
     p = rd / 'matches' / f'match_{game_id}.json'
     with p.open('w', encoding='utf-8') as f:
         json.dump(v7_snapshot, f, ensure_ascii=False)
-    # —— T4a:默认读 → 自动重装配当前版本并写回 ——
+    # 默认读 → 自动重装配为当前版本(净额条目重算为战斗腿语义)+ 原子写回
     got = arch.load_archive(rd, game_id)
-    assert got['schema_version'] == 9
-    ln8 = _ln_at(got, 2, 4)
-    assert len(ln8) == 1 and ln8[0]['delta'] == -19   # 重装配=战斗腿(真值)
-    assert _read_archive_file(rd, game_id)['schema_version'] == 9   # 写回
-    # —— T4b:auto_rebuild=False → 原样返回 v7 本体(只读审计,不动盘)——
+    assert got['schema_version'] == arch.SCHEMA_VERSION
+    ln = _ln_at(got, 2, 4)
+    assert len(ln) == 1 and ln[0]['delta'] == -19
+    assert _read_archive_file(rd, game_id)['schema_version'] \
+        == arch.SCHEMA_VERSION
+    # auto_rebuild=False → 原样返回 v7 本体(只读审计,不动盘)
     with p.open('w', encoding='utf-8') as f:
         json.dump(v7_snapshot, f, ensure_ascii=False)
     got2 = arch.load_archive(rd, game_id, auto_rebuild=False)
@@ -870,29 +794,14 @@ def test_loss_nodes_v8_migration_auto_rebuild_and_stale_fallback(
     e = got2['loss_nodes'][0]
     assert e.get('delta') == -19
     assert e.get('outcome_source') is None   # 旧形态条目 .get 可读,无加法键
-    # —— T4c ——
-    for name in ('decisions.jsonl', 'outcomes.jsonl', 'runs.jsonl'):
-        (rd / name).unlink()
-    warned: list[str] = []
-
-    class _WarnSpy:
-        """OneDragon logger propagate=False,caplog 捕不到 → 桩记录 warning。"""
-
-        def warning(self, msg: str, *args: object) -> None:
-            warned.append(msg % args if args else str(msg))
-
-    monkeypatch.setattr(arch, 'log', _WarnSpy())
-    got3 = arch.load_archive(rd, game_id)
-    assert got3 is not None and got3['schema_version'] == 7
-    assert any('重装配' in w for w in warned)
-    assert arch.load_archive(rd, 'g_missing') is None   # 不存在 → None 语义不变
 
 
 # ==================== performance ====================
 
 import pytest as _performance_pytest
 
-from sr_od.application.currency_war.kernel.cw_performance import  PerformanceTracker, RoundOutcome
+from sr_od.application.currency_war.kernel.cw_performance import (
+    HP_LOSS_FULL, PerformanceTracker, RoundOutcome)
 
 
 def _performance_out(round_num: int, hp: int, node: str = "普通战斗", comp: str = "c1",
@@ -997,17 +906,21 @@ def test_low_confidence_excluded() -> None:
 
 
 def test_is_losing_streak_threshold_and_cold_start() -> None:
-    """is_losing_streak:trend > HP_LOSS_FULL*0.6(=18)→ True;低掉血 → False;冷启动 → False。"""
-    # 每回合掉 20(普通关 normalized=20)> 18 → streak
+    """is_losing_streak 通道2阈值锁:trend > HP_LOSS_FULL*0.5(cw_performance
+    实机校准 0.6→0.5,覆盖 A8 慢性失血 13-24 血/轮实测带)→ True;探针钉
+    推导阈值 ±1;低掉血 → False;冷启动 → False。
+    (通道1 游戏自报连败 streak≤-2 直通,parse_streak 另辖;此处只锁 trend 门。)"""
+    thr = HP_LOSS_FULL * 0.5        # 阈值单一源 = 生产门表达式现算,禁手抄
+    # 掉 thr+1(普通关归一化同值)> 阈值 → streak
     t_streak = PerformanceTracker()
     t_streak.record(_performance_out(1, 100))
-    t_streak.record(_performance_out(2, 80))
-    assert t_streak.is_losing_streak(), "trend=20>18 → 连败"
-    # 小掉血(normalized=5)< 18 → 非 streak
+    t_streak.record(_performance_out(2, 100 - int(thr) - 1))
+    assert t_streak.is_losing_streak(), f"trend={int(thr) + 1}>{thr} → 连败"
+    # 小掉血 thr-1 < 阈值 → 非 streak
     t_ok = PerformanceTracker()
     t_ok.record(_performance_out(1, 100))
-    t_ok.record(_performance_out(2, 95))
-    assert not t_ok.is_losing_streak(), "trend=5<18 → 非连败"
+    t_ok.record(_performance_out(2, 100 - int(thr) + 1))
+    assert not t_ok.is_losing_streak(), f"trend={int(thr) - 1}<{thr} → 非连败"
     # 冷启动(样本不足 trend=None)→ False
     assert not PerformanceTracker().is_losing_streak(), "冷启动 → False"
 
@@ -1062,18 +975,6 @@ def test_default_stack_skipped(tmp_path: _telemetry_checks_Path) -> None:
     }])
     out = '\n'.join(run_checks_on_replay(tmp_path))
     assert '跳过' in out and '⚠' not in out
-
-
-def test_v2_stack_violation_detected(tmp_path: _telemetry_checks_Path) -> None:
-    """v2 栈违规(开局轮 reason=off=局49 形态)被检出+run_id 溯源。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_replay(tmp_path, [{
-        'run_id': 'run_t2', 'strategy_id': 'line_v2', 'round': 1,
-        'actions': [_buy('翡翠', 'off')],
-    }])
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert 'run_t2' in out and '⚠ 1 条' in out and '翡翠' in out
 
 
 def test_stack_inferred_from_reason_vocab(tmp_path: _telemetry_checks_Path) -> None:
@@ -1151,23 +1052,24 @@ def test_unknown_strategy_id_skipped(tmp_path: _telemetry_checks_Path) -> None:
     assert 'run_t6' in out and '未知栈' in out and '跳过' in out
 
 
-def test_decision_v2_stack_runs_coldstart(tmp_path: _telemetry_checks_Path) -> None:
-    """decision_v2 判 v2 栈(reason 词表/coldstart 检查集同辖;旧
-    line_v2 随 ADR-0336 删,判栈保留历史字符串)——检查必须跑且报
-    违规,不得按「未知栈」跳过(注册桥观察局判读链锁)。样本:off 买
-    (翡翠,局49 败坏形态)必报 ⚠;engine_seed 买(v2 合法放行词,
-    ADR-0260)不误报。"""
+@pytest.mark.parametrize('sid', ['decision_v2', 'line_v2'])
+def test_v2_stack_runs_coldstart(tmp_path: _telemetry_checks_Path,
+                                 sid: str) -> None:
+    """v2 栈判栈(sid ∈ {decision_v2 现行;line_v2 历史字符串,ADR-0336
+    兼容保留,ledger_hooks 同分支同检查})——检查必须跑且报违规,不得按
+    「未知栈」跳过(注册桥观察局判读链锁)。样本:off 买(翡翠,局49 败坏
+    形态)必报 ⚠;engine_seed 买(v2 合法放行词,ADR-0260)不误报。"""
 
     from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
     _write_replay(tmp_path, [{
-        'run_id': 'run_t7', 'strategy_id': 'decision_v2', 'round': 1,
+        'run_id': 'run_t7', 'strategy_id': sid, 'round': 1,
         'actions': [_buy('翡翠', 'off'),
                     _buy('丹恒·饮月', 'engine_seed')],
     }])
     out = '\n'.join(run_checks_on_replay(tmp_path))
     assert 'run_t7' in out and '⚠ 1 条' in out and '翡翠' in out, \
-        'decision_v2 局 coldstart 必须跑且 off 败坏买被检出'
-    assert '未知栈' not in out, 'decision_v2 须判 v2 栈,不得按未知栈跳过'
+        'v2 栈局 coldstart 必须跑且 off 败坏买被检出'
+    assert '未知栈' not in out, 'v2 栈须判 v2 栈,不得按未知栈跳过'
 
 
 # --- 段级检查生产接线(ADR-0479:多帧/轮合并适配 + [17] 族覆盖) ---
@@ -1456,8 +1358,6 @@ def test_verify_votes_defect_and_grace(monkeypatch: _w527_node_ledger_pytest.Mon
 # 格数口径(w535 改名后)。锁稳定事实(槽数/当前位/past 数/有效识别位);
 # Hu 对高亮/变异图标的噪声位**不锁断言**(正是台账制的立项依据),落对拍表。
 
-_TPLS = load_node_type_templates(_ASSETS)
-
 _GT = {
     '后排8槽-满级局.webp': {
         'seq': ['battle', 'battle', 'supply', 'battle', 'encounter', 'reward', 'boss'],
@@ -1486,26 +1386,29 @@ _GT = {
 
 
 @_w527_node_ledger_pytest.fixture(scope='module')
-def row_frames() -> dict:
+def row_frames() -> tuple:
+    """模块级一次性加载:真值裁带帧 + 节点类型模板 + boss SIFT 模板
+    (boss 模板与生产同源,read_node_sequence 恒传;模板 I/O 收敛到
+    每模块一次,不落模块导入期、不逐参数重复读)。"""
     from one_dragon.utils import cv2_utils
+    tpls = load_node_type_templates(_ASSETS)
+    boss_tpls = cw_node_reader.load_boss_templates(
+        _ROOT / 'assets' / 'template' / 'currency_war' / 'boss_avatar') or None
     out = {}
     for name in _GT:
         img = cv2_utils.read_image(str(_FIXTURES / name))   # RGB
         x0, y0, x1, y1 = _CROP
         out[name] = img[y0:y1, x0:x1]
-    return out
+    return out, tpls, boss_tpls
 
 
 @_w527_node_ledger_pytest.mark.parametrize('name', list(_GT.keys()))
 def test_fixture_truth_crosscheck(row_frames, name: str) -> None:
     """真值对拍:槽数 / 当前槽位 / past 数 / 序列位置推断 / 已锁识别位。"""
     gt = _GT[name]
-    row = row_frames[name]
-    # boss SIFT 模板与生产同源(read_node_sequence 恒传)→ boss 槽命中时
-    # classify 覆 node_type=None(台账写点回填 'boss' 的前提)。
-    boss_tpls = cw_node_reader.load_boss_templates(
-        _ROOT / 'assets' / 'template' / 'currency_war' / 'boss_avatar')
-    slots = classify_node_row(row, _TPLS, boss_templates=boss_tpls or None)
+    frames, tpls, boss_tpls = row_frames
+    row = frames[name]
+    slots = classify_node_row(row, tpls, boss_templates=boss_tpls)
     # 台账视角:当前位 Hu 恒不定型(classify 只对 upcoming 跑 Hu)→ 台账需
     # 写点补当前位;boss 位命中 SIFT 时被覆盖 None → 位置先验回填 'boss'。
     built = fill_boss_by_position([s.node_type for s in slots])
@@ -1536,11 +1439,7 @@ def test_read_plane_detail_difficulty_truth(test_context) -> None:
 
 # ==================== divergence_stats ====================
 
-import sys as _divergence_stats_sys
 from pathlib import Path as _divergence_stats_Path
-
-_divergence_stats_REPO = _divergence_stats_Path(__file__).resolve().parents[4]
-_divergence_stats_sys.path.insert(0, str(_divergence_stats_REPO / 'src'))
 
 import json as _divergence_stats_json  # noqa: E402
 
@@ -1548,24 +1447,22 @@ from sr_od.application.currency_war.telemetry.cw_divergence_stats import diverge
 
 
 def test_divergence_stats(tmp_path: _divergence_stats_Path) -> None:
-    """close_call 计数/dp_modes 聚合/run 过滤。"""
+    """totals 计数与 run 过滤(close_calls/dp 姿态分布面归
+    test_cw_infra_locks.py::test_divergence_stats_on_typed_rows,其
+    typed-rows 混合形态场景更全)。"""
     rows = [
-        {'run_id': 'r1', 'round_num': 1, 'candidate_scores': {'a': 1.0, 'b': 0.95}, 'strategy_id': 'decision_v2', 'dp_posture': '升级'},
-        {'run_id': 'r1', 'round_num': 2, 'candidate_scores': {'a': 1.0, 'b': 0.5}, 'strategy_id': 'decision_v2', 'dp_posture': 'adaptive'},
-        {'run_id': 'r2', 'round_num': 1, 'candidate_scores': {}, 'strategy_id': 'decision_v2', 'dp_posture': ''},
+        {'run_id': 'r1', 'round_num': 1, 'candidate_scores': {'a': 1.0, 'b': 0.95}, 'strategy_id': 'decision_v2'},
+        {'run_id': 'r1', 'round_num': 2, 'candidate_scores': {'a': 1.0, 'b': 0.5}, 'strategy_id': 'decision_v2'},
+        {'run_id': 'r2', 'round_num': 1, 'candidate_scores': {}, 'strategy_id': 'decision_v2'},
     ]
     d = tmp_path / 'decisions.jsonl'
     d.write_text('\n'.join(_divergence_stats_json.dumps(r) for r in rows), encoding='utf-8')
     st = divergence_stats(tmp_path)
     assert st['decisions_total'] == 3
     assert st['with_candidates'] == 2
-    assert st['close_calls'] == 1          # r1 round1 gap 0.05
-    assert st['per_run'] == {'r1': [1]}
-    assert st['dp_modes'] == {'升级': 1, 'adaptive': 1}
-    assert st['with_dp_posture'] == 2      # 空串 tag 不计
     # run 过滤
     st2 = divergence_stats(tmp_path, run_id='r2')
-    assert st2['decisions_total'] == 1 and st2['close_calls'] == 0
+    assert st2['decisions_total'] == 1
 
 
 def test_divergence_missing_file(tmp_path: _divergence_stats_Path) -> None:

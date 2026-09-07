@@ -103,8 +103,7 @@ def _make_director(monkeypatch, collapse_open):
         strategy=SimpleNamespace(
             # W971 P2 黑板接口(dd-014)+序列契约 v1(dd-020):
             # 生产环按 list[PrepAction] 消费(长度 1)
-            decide_prep_screen=lambda session, config: [StartBattle()],
-            update_target=lambda state, session, config: None),
+            decide_prep_screen=lambda session, config: [StartBattle()]),
         session=SimpleNamespace(defer_count=0))
     return d, match, collapse_calls, sleeps
 

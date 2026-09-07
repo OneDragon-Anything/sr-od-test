@@ -150,7 +150,68 @@ def test_duplicate_strategy_id_raises() -> None:
                    for _f, msg in mgr.scan_failures)
 
 
-# —— 平移自持钩子:生命周期 / 事件 / prep 步级(default 本体退役批平移进 dv)——
+# —— 结算拆两半(ADR-0583 §2.5):观察半 = battle_wait 结算点即时直写;
+# —— 策略半 = pending 槽经决策入口惰性 drain ——
+
+
+def test_settlement_observation_stores_last_hp_when_confident() -> None:
+    """D-94:达阈置信度的结算 hp_after → 观察半即时存 session.last_hp
+    (给下回合 prep state.hp;gated_hp 真值源)。出处 = ADR-0583 §2.5,
+    写点单一源 = cw_screen_battle_wait._write_settlement_observation。"""
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait import (
+        _write_settlement_observation,
+    )
+
+    sess = MandateV1Strategy().create_session(_cfg())
+    assert sess.last_hp is None
+    obs = RoundOutcome(round_num=4, plane=1, node_type='普通战斗', comp_tag='DOT队',
+                       hp_after=58, hp_confidence=1.0)   # 结算屏读对(高置信)
+    _write_settlement_observation(sess, obs, 4)
+    assert sess.last_hp == 58
+    assert sess.last_hp_t == 4   # 时间锚同门写入(gated_hp gap 计算基准)
+
+
+def test_settlement_observation_skips_low_confidence_hp() -> None:
+    """D-94:低置信(hp_confidence<阈,如结算屏 OCR 失败 hp_after=0)→ 不存
+    (防 0 污染下回合 prep;门随迁义务,ADR-0583 D2)。"""
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait import (
+        _write_settlement_observation,
+    )
+
+    sess = MandateV1Strategy().create_session(_cfg())
+    sess.last_hp = 70   # 上轮已存的可靠值
+    obs = RoundOutcome(round_num=5, plane=1, node_type='普通战斗', comp_tag='DOT队',
+                       hp_after=0, hp_confidence=0.0)   # OCR 失败(conf 0)
+    _write_settlement_observation(sess, obs, 5)
+    assert sess.last_hp == 70, "低置信结算不应覆盖已存的可靠 HP"
+    assert sess.last_hp_t is None   # 时间锚同门,低置信不写
+
+
+def test_settlement_observation_records_history_at_settle_point() -> None:
+    """L5 收口断言(方案 §5.4-L5,D1 消解):死亡局最后一战的 outcome 行
+    在 performance.history 中——观察半在结算点即时直写,**无缺行窗口**
+    (不依赖任何决策入口事后消费)。"""
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait import (
+        _write_settlement_observation,
+    )
+
+    sess = MandateV1Strategy().create_session(_cfg())
+    obs = RoundOutcome(round_num=9, plane=3, node_type='首领', comp_tag='x',
+                       hp_after=0, hp_confidence=1.0)
+    _write_settlement_observation(sess, obs, 25)   # 死亡局最后一战:无后续入口
+    assert len(sess.performance.history) == 1
+    assert sess.performance.history[-1] is obs or \
+        sess.performance.history[-1].round_num == 9
+
+
+def _drain_via_pick_entry(strat, sess) -> None:
+    """生产链路触发策略半 drain:任一决策入口都先 drain(ADR-0583 §2.5)。
+    用 decide_invest(轻量 pick 入口)承载。"""
+    sess.prep_frame_class = 'none'
+    strat.decide_invest('strategy', ['定期福利'], GameState(), sess, _cfg())
 
 
 def test_create_session() -> None:
@@ -161,32 +222,6 @@ def test_create_session() -> None:
     assert state_of(session).target_comp is None
     assert isinstance(session.rng, random.Random)
     assert session.performance is not None
-
-
-def test_on_round_end_stores_last_hp_when_confident() -> None:
-    """D-94:on_round_end 达阈置信度的结算 hp_after → 存 session.last_hp(给下回合 prep state.hp)。"""
-    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-
-    strat = MandateV1Strategy()
-    sess = strat.create_session(_cfg())
-    assert sess.last_hp is None
-    obs = RoundOutcome(round_num=4, plane=1, node_type='普通战斗', comp_tag='DOT队',
-                       hp_after=58, hp_confidence=1.0)   # 结算屏读对(高置信)
-    strat.on_round_end(GameState(), sess, _cfg(), obs)
-    assert sess.last_hp == 58
-
-
-def test_on_round_end_skips_low_confidence_hp() -> None:
-    """D-94:低置信(hp_confidence<阈,如结算屏 OCR 失败 hp_after=0)→ 不存(防 0 污染下回合 prep)。"""
-    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-
-    strat = MandateV1Strategy()
-    sess = strat.create_session(_cfg())
-    sess.last_hp = 70   # 上轮已存的可靠值
-    obs = RoundOutcome(round_num=5, plane=1, node_type='普通战斗', comp_tag='DOT队',
-                       hp_after=0, hp_confidence=0.0)   # OCR 失败(conf 0)
-    strat.on_round_end(GameState(), sess, _cfg(), obs)
-    assert sess.last_hp == 70, "低置信结算不应覆盖已存的可靠 HP"
 
 
 def test_decide_invest_delegates_decide_event() -> None:
@@ -243,17 +278,6 @@ def test_decide_partner_fallback_idx0_when_no_charid() -> None:
 
 # —— StrategySession 生命周期 + rng 种子复现(D-34/§11.4)——
 
-
-def test_on_round_end_records_performance() -> None:
-    """on_round_end → session.performance.record(obs)(观测段非空;loop 每轮胜结算调用)。"""
-    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-    strat = MandateV1Strategy()
-    session = strat.create_session(_cfg())
-    obs = RoundOutcome(round_num=1, plane=1, node_type="普通战斗", comp_tag="x", hp_after=90)
-    strat.on_round_end(GameState(), session, _cfg(), obs)
-    assert len(session.performance.history) == 1
-
-
 # —— 巨星强化角色维度已随 megastar_enhance_enabled 开关族删除——旧方案
 # —— 清退批,清查报告 OLD_MIX_AUDIT §1.3;保留一条恒 None 行为锁 ——
 
@@ -286,24 +310,29 @@ def test_decide_megastar_enhance_intent_deleted() -> None:
     assert pick.enhance_char_id is None
 
 
-# —— supply 失活治本:on_round_end node_type 空值回落(15 号稿批 C 残余件③)——
+# —— supply 失活治本:结算策略半 node_type 空值回落(15 号稿批 C 残余件③;
+# ADR-0583 后经 pending 槽惰性 drain 承载)——
 # 病灶:空 node_type 轮被 BloodAlarmTracker 战斗节点门整轮丢弃 → 掉血数据缺失、
 # 生死窗判读缺页(supply 失活升级线 第6/7次复现)。修法 = 台账(局内轮行序
 # 单一源,档案装配的局内对应物)按 (plane, round_num) 查同轮 node_type。
 
-def _feed_round_end(strat, sess, *, round_num: int, node_type: str,
-                    hp_after: int):
+def _feed_settlement(strat, sess, *, round_num: int, node_type: str,
+                     hp_after: int):
+    """观察半入槽(结算点写 pending,ADR-0583)+ 决策入口 drain(生产链路)。"""
     from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
     state_of(sess).v3_prev_hp = 85   # 上轮结算 hp(真值链口径)
     obs = RoundOutcome(round_num=round_num, plane=1, node_type=node_type,
                        comp_tag='x', hp_after=hp_after, hp_confidence=1.0)
-    strat.on_round_end(GameState(), sess, _cfg(), obs)
+    sess.pending_round_outcomes.append(obs)
+    _drain_via_pick_entry(strat, sess)
+    assert sess.pending_round_outcomes == [], '处理即清槽(drain 语义)'
 
 
-def test_on_round_end_node_type_fallback_recovers_loss_window(monkeypatch) -> None:
+def test_settlement_drain_node_type_fallback_recovers_loss_window(monkeypatch) -> None:
     """supply 轮恢复计数锁:node_type 空值 + 台账该位次 = 'battle' →
     回落「普通战斗」喂 BloodAlarmTracker → 该轮掉血 **入窗**(recent_losses
-    计数恢复,生死窗不再缺页)+ 分键留证(auto_resolved=True)。"""
+    计数恢复,生死窗不再缺页)+ 分键留证(auto_resolved=True)。
+    (原 on_round_end 锁随 ADR-0583 拆分迁至 pending 槽 drain,语义零变。)"""
     from sr_od.application.currency_war.kernel import cw_telemetry_exit as exit_mod
     from sr_od.application.currency_war.kernel.cw_state import get_node_ledger
 
@@ -315,7 +344,7 @@ def test_on_round_end_node_type_fallback_recovers_loss_window(monkeypatch) -> No
     ledger = get_node_ledger(sess)
     ledger.seq_by_plane = {1: ['battle', 'supply', 'battle', 'reward', 'boss',
                               'encounter', 'battle', 'reward', 'boss']}
-    _feed_round_end(strat, sess, round_num=3, node_type='', hp_after=70)
+    _feed_settlement(strat, sess, round_num=3, node_type='', hp_after=70)
     tracker = state_of(sess).v3_alarm
     losses = [loss for _t, loss in tracker.recent_losses]
     assert losses == [15], f'掉血应恢复入窗,实得 {tracker.recent_losses}'
@@ -326,7 +355,7 @@ def test_on_round_end_node_type_fallback_recovers_loss_window(monkeypatch) -> No
     assert '普通战斗' in defects[0]['observed']
 
 
-def test_on_round_end_node_type_fallback_miss_keeps_empty(monkeypatch) -> None:
+def test_settlement_drain_node_type_fallback_miss_keeps_empty(monkeypatch) -> None:
     """台账未命中(表缺)→ 照旧空串(不猜)+ 分键留证;tracker 不入窗
     (零行为变更面),判读侧按分键可见缺口。"""
     from sr_od.application.currency_war.kernel import cw_telemetry_exit as exit_mod
@@ -336,14 +365,14 @@ def test_on_round_end_node_type_fallback_miss_keeps_empty(monkeypatch) -> None:
                         lambda **kw: defects.append(kw))
     strat = MandateV1Strategy()
     sess = strat.create_session(_cfg())   # 无台账
-    _feed_round_end(strat, sess, round_num=3, node_type='', hp_after=70)
+    _feed_settlement(strat, sess, round_num=3, node_type='', hp_after=70)
     assert list(state_of(sess).v3_alarm.recent_losses) == []   # 未命中=照旧不入窗
     assert len(defects) == 1
     assert defects[0]['auto_resolved'] is False
     assert '空串' in defects[0]['observed']
 
 
-def test_on_round_end_supply_token_stays_non_battle(monkeypatch) -> None:
+def test_settlement_drain_supply_token_stays_non_battle(monkeypatch) -> None:
     """词汇表语义保持:台账 'supply' 位次 → 回落「补给」(生产词表),但
     BloodAlarmTracker 战斗节点门语义不变——非战斗节点不入窗不清臂。"""
     from sr_od.application.currency_war.kernel.cw_state import get_node_ledger
@@ -353,10 +382,33 @@ def test_on_round_end_supply_token_stays_non_battle(monkeypatch) -> None:
     ledger = get_node_ledger(sess)
     ledger.seq_by_plane = {1: ['battle', 'supply', 'battle', 'reward', 'boss',
                               'encounter', 'battle', 'reward', 'boss']}
-    _feed_round_end(strat, sess, round_num=2, node_type='', hp_after=85)
+    _feed_settlement(strat, sess, round_num=2, node_type='', hp_after=85)
     tracker = state_of(sess).v3_alarm
     assert list(tracker.recent_losses) == []   # 补给轮不入窗(语义不变)
     assert tracker.consec_battle_fails == 0
+
+
+def test_settlement_drain_idempotent_clears_slot_once() -> None:
+    """L5 幂等锁(方案 §5.4-L5):pending 槽同两行只加工一次、处理即清——
+    二次决策入口(槽已空)零重复加工(tracker 计数不膨胀);partially
+    存活的零读端面(v3_alarm)以计数恒等断言承载。"""
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+
+    strat = MandateV1Strategy()
+    sess = strat.create_session(_cfg())
+    state_of(sess).v3_prev_hp = 85
+    for hp in (70, 60):   # 两行:连续掉血各 15
+        sess.pending_round_outcomes.append(RoundOutcome(
+            round_num=3, plane=1, node_type='普通战斗',
+            comp_tag='x', hp_after=hp, hp_confidence=1.0))
+    _drain_via_pick_entry(strat, sess)
+    tracker = state_of(sess).v3_alarm
+    assert len(tracker.recent_losses) == 2
+    assert state_of(sess).v3_prev_hp == 60
+    # 二次入口:槽已空 → 零重复加工(幂等)
+    _drain_via_pick_entry(strat, sess)
+    assert len(state_of(sess).v3_alarm.recent_losses) == 2, (
+        '同两行不得重复加工(处理即清)')
 
 
 def test_new_session_resets_layout_unknown_streak(monkeypatch) -> None:

@@ -65,9 +65,6 @@ class _StubStrategy:
         self._acts = list(actions)
         self.calls = 0
 
-    def update_target(self, state, session, config) -> None:
-        pass
-
     def decide_shop_action(self, session, config) -> Any:
         i = self.calls
         self.calls += 1

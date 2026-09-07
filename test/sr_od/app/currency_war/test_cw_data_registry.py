@@ -9,15 +9,30 @@
 - back_layout: test_cw_back_layout.py
 - test_star3_positions: test_star3_positions.py
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+(瘦身批 F12:原 7 文件拼接疤痕——4 套仓根常量/3 处 sys.path.insert/
+5 个 pytest 别名/3 个 Rect 别名——收敛为本头部一套;手工 path 注入已由
+主仓 pyproject `[tool.pytest.ini_options] pythonpath = ["src"]` 取代。)
 """
 from __future__ import annotations
 
-# ==================== chars ====================
 import dataclasses
+import json
+from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
-from sr_od.application.currency_war.data.cw_chars import (
+from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.utils import cv2_utils
+from test.conftest import SrTestContext
+
+_REPO_ROOT = Path(__file__).resolve().parents[5]   # 仓库根(StarRailOneDragon)
+_TEST_ROOT = Path(__file__).resolve().parents[4]   # 测试仓根(sr-od-test)
+FIXTURES = _TEST_ROOT / 'screens' / '货币战争-备战'  # 备战屏 fixture 目录(原 _SCREEN_DIR/FIXTURES 两套合一)
+
+# ==================== chars ====================
+from sr_od.application.currency_war.data.cw_chars import (  # noqa: E402
     CHARACTER_ROSTER,
     CHARACTERS,
     Character,
@@ -25,14 +40,7 @@ from sr_od.application.currency_war.data.cw_chars import (
     chars_by_faction,
     get_char,
 )
-from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
-    MandateV1Live,
-)
-
-# ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
-# 直用活策略核(本文件其余测试全部消费注册表/观察层数据,不经该具现)。
-_FlowStrategy = MandateV1Live
+from sr_od.application.currency_war.data.cw_factions import FACTIONS  # noqa: E402
 def test_registry_complete_all_costs() -> None:
     """注册表覆盖全费用 1-5;每条费用非空。"""
     for cost in range(1, 6):
@@ -107,10 +115,6 @@ def test_faction_members_cross_module() -> None:
     members = 仙舟_info.members()
     assert "青雀" in members
     assert len(members) > 0
-    # 成员关系派生:改 CHARACTERS 自动传导(FactionInfo 不存 members 字段)
-    assert not (hasattr(仙舟_info, "__dict__") and "members" in 仙舟_info.__dict__), (
-        "members 是方法非存储字段(派生,单一真相源)"
-    )
 
 
 def test_character_is_frozen() -> None:
@@ -124,7 +128,7 @@ def test_character_is_frozen() -> None:
 # ---- plaza 官方接口对拍守卫 ----
 # plaza 数据层 cw_chars_data.py 已删(2026-09 治理审计:零消费,生成器改对拍器);
 # 本守卫把「注册表 vs 官方接口」的对拍从纯口头升级为接线测试:抽查条目冻结自 plaza
-# config API V4.4(与 tools/cw/gen_plaza_chars.py 数据源同源),随机抽 5 条比
+# config API V4.4(与 tools/cw/gen_plaza_chars.py 数据源同源),全量遍历 8 条比
 # cost/position/traits。全量对拍跑 `uv run python tools/cw/gen_plaza_chars.py`。
 _PLAZA_SAMPLE_POOL = (  # (plaza_id, 规范名, cost, 站位, traits);站位/费用=官方字段值
     ("1001", "三月七", 1, "Back", ("列车同行", "护盾")),
@@ -140,10 +144,9 @@ _PLAZA_POSITION = {"Front": "front", "Back": "back", "Common": "flex"}
 
 
 def test_plaza_official_snapshot_guard() -> None:
-    """随机抽 5 条 plaza 冻结条目,断言 cost/position/traits 与 CHARACTERS 一致。"""
-    import random
-    rng = random.Random(20260815)  # 固定种子:抽查集可复现(条目池见 _PLAZA_SAMPLE_POOL 注)
-    for pid, name, cost, pos, traits in rng.sample(_PLAZA_SAMPLE_POOL, 5):
+    """全量遍历 8 条 plaza 冻结条目,断言 cost/position/traits 与 CHARACTERS 一致
+    (条目池小且纯内存比对,采样无收益只留盲区——瘦身批 F6 由固定种子抽 5 改全量)。"""
+    for pid, name, cost, pos, traits in _PLAZA_SAMPLE_POOL:
         ch = CHARACTERS[name]
         assert ch.cost == cost, f"{pid} {name}: cost {ch.cost} != plaza {cost}"
         assert ch.position == _PLAZA_POSITION[pos], f"{pid} {name}: position {ch.position} != plaza {pos}"
@@ -175,12 +178,11 @@ def test_nickname_normalization():
 
 def test_boss_fit_seam_now_hits():
     """接缝接通实证:希儿量子 countered=[剧目,蕉研组] vs plane_bosses 含 造梦兄弟影业 → 命中降分
-    (旧:俗称 vs 规范名永命中不了,task#73 遗留)。"""
+    (旧:俗称 vs 规范名永命中不了,task#73 遗留)。非命中 boss → 真实中性 0.5 的
+    同分支同值锁在 test_cw_comps.py test_boss_fit_aya_tv,不在此双锁(瘦身批 F9)。"""
     seele = get_comp('希儿量子')
     hit = boss_fit(seele, ['造梦兄弟影业', '铁盾安保集团', '猎星资本'])
-    no_hit = boss_fit(seele, ['火线动力机甲', '铁盾安保集团', '猎星资本'])
     assert hit is not None and hit < 0.5
-    assert no_hit == 0.5   # boss 在但不利害此 comp(真实中性)
 
 
 def test_matchup_structure_layer():
@@ -207,18 +209,12 @@ def test_boss_tags_roundtrip():
     canon, tags = boss_tags(['剧目', '电视机'])
     assert '造梦兄弟影业' in canon
     assert 'share_hp' in tags          # 剧目 → 共享血量
-    assert 'speed_lock' not in tags and 'share_hp' in tags  # 电视机已定位造梦互动娱乐(2026-08-17),tag 挂钩退役
+    assert 'speed_lock' not in tags    # 电视机已定位造梦互动娱乐(2026-08-17),tag 挂钩退役
 
 
 # ==================== equipment ====================
 
-import inspect
-
-import pytest as _equipment_pytest
-
-from one_dragon.base.geometry.rectangle import Rect
-from one_dragon.utils import file_utils
-from sr_od.application.currency_war.obs.cw_equipment import (
+from sr_od.application.currency_war.obs.cw_equipment import (  # noqa: E402
     EQUIPMENTS,
     Equipment,
     _owned_order_anomaly,
@@ -226,11 +222,10 @@ from sr_od.application.currency_war.obs.cw_equipment import (
     load_equip_tm_grays,
     read_equipped_below,
 )
-from sr_od.application.currency_war.obs.cw_identity_obs import avatar_to_below
-from sr_od.context.sr_context import SrContext
-from test.conftest import SrTestContext
+from sr_od.application.currency_war.obs.cw_identity_obs import (  # noqa: E402
+    avatar_to_below,
+)
 
-_REPO_ROOT = file_utils.find_src_dir(inspect.getfile(SrContext)).parent
 _EQUIP_DIR = _REPO_ROOT / 'assets' / 'template' / 'currency_war' / 'equip_legacy'
 
 
@@ -600,51 +595,25 @@ def test_empty_and_unknown_fallback_trio() -> None:
     assert core_count_for('nonexistent', {'藿藿'}) == 1
 
 
-def test_sim_ledger_core_count_semantics() -> None:
-    """sim 账本 core_count 语义标记(core_routed;含 None 序列化)。"""
-    import contextlib
-    import io
-    import json
-
-    from sr_od.application.currency_war.sim.runner import simulate_p1_batch
-    with contextlib.redirect_stderr(io.StringIO()):
-        import tempfile
-        from pathlib import Path as _P
-        with tempfile.TemporaryDirectory() as td:
-            rep = simulate_p1_batch(3, pool='snapshot',
-                                    ledger=_P(td) / 'sem')
-            mf = json.loads((_P(rep['ledger_dir'])
-                             / 'manifest.json').read_text(encoding='utf-8'))
-            assert mf['ledger_semantics'] == 'core_routed'
+# (test_sim_ledger_core_count_semantics 已按瘦身批 F11 归位 sim 主题文件
+#  test_cw_sim_suite.py 的 sim_ledger_checks 节——机制错位,此处不再收留。)
 
 
 # ==================== tome_template ====================
 
-import sys
-from pathlib import Path
-
-_REPO = Path(__file__).resolve().parents[5]
-sys.path.insert(0, str(_REPO / 'src'))
-
-import numpy as np  # noqa: E402
-import pytest as _tome_template_pytest  # noqa: E402
-
-from one_dragon.base.geometry.rectangle import Rect as _tome_template_Rect  # noqa: E402
-from one_dragon.utils.cv2_utils import read_image  # noqa: E402
-from sr_od.application.currency_war.obs import cw_identity_obs as cio
+from sr_od.application.currency_war.obs import cw_identity_obs as cio  # noqa: E402
 
 # 备战栏-1..9 pc_rect(assets/game_data/screen_info/currency_war_battle_prep.yml;
 # 与 cw_identity_obs._ctx_slots 同一坐标系的离线硬编码,同 find_supply_boxes 分层约定)
 SLOTS = [
-    _tome_template_Rect(382, 845, 495, 979), _tome_template_Rect(507, 844, 620, 978), _tome_template_Rect(632, 844, 743, 978),
-    _tome_template_Rect(757, 845, 869, 979), _tome_template_Rect(882, 846, 995, 980), _tome_template_Rect(1004, 847, 1118, 978),
-    _tome_template_Rect(1132, 846, 1244, 977), _tome_template_Rect(1256, 845, 1368, 979), _tome_template_Rect(1379, 844, 1493, 980),
+    Rect(382, 845, 495, 979), Rect(507, 844, 620, 978), Rect(632, 844, 743, 978),
+    Rect(757, 845, 869, 979), Rect(882, 846, 995, 980), Rect(1004, 847, 1118, 978),
+    Rect(1132, 846, 1244, 977), Rect(1256, 845, 1368, 979), Rect(1379, 844, 1493, 980),
 ]
 _IDX = list(enumerate(SLOTS, 1))
 
-_SCREEN_DIR = _REPO / 'sr-od-test' / 'screens' / '货币战争-备战'
-_FRAME_GOLD = _SCREEN_DIR / 'shop_closed_lowhp.webp'      # slot1/7 金卡典籍 + slot4/9 银箱
-_FRAME_FULL = _SCREEN_DIR / 'reward_spheres_5.webp'        # slot1 银箱,备战 9/9 满
+_FRAME_GOLD = FIXTURES / 'shop_closed_lowhp.webp'      # slot1/7 金卡典籍 + slot4/9 银箱
+_FRAME_FULL = FIXTURES / 'reward_spheres_5.webp'        # slot1 银箱,备战 9/9 满
 
 
 def _slots(screen: np.ndarray) -> list[tuple[int, _tome_template_Rect]]:

@@ -683,12 +683,15 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
     (W971 05-battle §1 P4:结算链自 cw_loop 收编 CwScreenBattleWait,本桩随迁。)
     read_phase_round 桩返 ``read_phase``(模拟 last-known 缓存态);read_round_outcome
     桩按入参回显 plane/round 并可控 killed/hp_confidence;cw_telemetry 写端 monkeypatch
-    捕获(自动还原);strategy.on_round_end 记调用次数(telemetry-only 面断言用)。
+    捕获(自动还原);观察半写入面(ADR-0583 拆两半)以真实 StrategySession 承载,
+    断言 telemetry-only 面零写入(performance.history/pending 槽均空)。
     """
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait as bwo
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
 
     captured: list[dict] = []
-    on_round_end_calls: list[int] = []
 
     def _fake_record_outcome(outcome, source: str = '') -> None:
         captured.append({'outcome': outcome, 'source': source})
@@ -712,15 +715,15 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
                 is_new_match=True,
                 battle_ts=object())   # 哨兵值:断言 telemetry-only 不清它
             self._unknown_streak = 0
-            # 策略器状态迁 MandateState:target_comp 经 state_of 附着(桩同效)
-            _sess = SimpleNamespace(last_state=GameState(),
-                                    last_hp=None, last_hp_t=None)
+            # 观察半直写面(ADR-0583):真实 StrategySession 承载
+            #(performance/pending_round_outcomes 等字段齐备,零桩面特判)
+            _sess = StrategySession()
+            _sess.last_state = GameState()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
                     session=_sess,
-                    strategy=SimpleNamespace(
-                        on_round_end=lambda *a, **k: on_round_end_calls.append(1)),
+                    strategy=SimpleNamespace(),
                 ),
                 ocr_service=SimpleNamespace(
                     get_ocr_result_list=lambda image, rect=None, color_range=None,
@@ -735,7 +738,7 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
         def round_by_find_area(self, screen, screen_name, area_name, **kw):
             return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
 
-    return _Op(), captured, on_round_end_calls
+    return _Op(), captured
 
 
 # ===== 修复②:结算屏「X-Y」屏面真值全路径(根因=last-known 缓存位面切换滞后) =====
@@ -747,7 +750,7 @@ def test_win_settlement_screen_truth_overrides_stale_p1_cache(monkeypatch) -> No
     即 replay 实锤的错归属形态(run_20260825_145641:node_type=普通战斗 落在 (1,9),
     P1r9 恒为 boss 不可能)——屏面真值在读时点,不依赖过场后是否有帧读到「2-1」。
     """
-    op, captured, _ = _w239_p2r1_loss_outcome_make_loop(
+    op, captured = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(1, 9),
         ocr_texts=['挑战成功', '2-1', '战斗', '小队生命值78i', '继续挑战'],
         hp_confidence=1.0)
@@ -758,7 +761,7 @@ def test_win_settlement_screen_truth_overrides_stale_p1_cache(monkeypatch) -> No
 
 def test_screen_truth_equal_to_cache_no_op(monkeypatch) -> None:
     """屏面真值与 last-known 一致(位面内常规轮)→ 原值原样,不引入新行为。"""
-    op, captured, _ = _w239_p2r1_loss_outcome_make_loop(
+    op, captured = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(1, 6),
         ocr_texts=['挑战成功', '1-6', '战斗'], hp_confidence=1.0)
     op._record_round_outcome(screen=None)
@@ -771,7 +774,7 @@ def test_screen_truth_behind_cache_rejected(monkeypatch) -> None:
     单调门镜像 read_phase_round 的单调守卫;位面前进 (1,9)→(2,1) 合法不受影响
     (t 序 (2-1)*9+1=10 > 9,见 test_win_settlement_screen_truth_overrides_stale_p1_cache)。
     """
-    op, captured, _ = _w239_p2r1_loss_outcome_make_loop(
+    op, captured = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(1, 6),
         ocr_texts=['挑战成功', '1-4', '战斗'], hp_confidence=1.0)
     op._record_round_outcome(screen=None)
@@ -780,7 +783,7 @@ def test_screen_truth_behind_cache_rejected(monkeypatch) -> None:
 
 def test_screen_unparseable_keeps_last_known(monkeypatch) -> None:
     """屏面解析不出(无头部词/噪声)→ last-known 兜底,零回归。"""
-    op, captured, _ = _w239_p2r1_loss_outcome_make_loop(
+    op, captured = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(2, 1),
         ocr_texts=['??', 'xx'], hp_confidence=1.0)
     op._record_round_outcome(screen=None)
@@ -793,11 +796,13 @@ def test_screen_unparseable_keeps_last_known(monkeypatch) -> None:
 def test_loss_page_records_row_telemetry_only(monkeypatch) -> None:
     """败局页(killed=False)→ 落一行 source='loss_page';零策略/循环状态面。
 
-    断言面:on_round_end 不被调(不喂 performance/last_hp → prep 行为面零变更)、
-    _battle_ts 不清(ADR-0250 战斗窗口维持 1f 原语义)、_last_outcome_t 不写
-    (killed 兜底对比链不受新路径扰动)。
+    断言面(ADR-0583 拆两半语义重推):telemetry-only 不写观察半
+    (performance.history 空/last_streak 不动/last_hp 不写)也不写策略半
+    (pending 槽空)→ prep 行为面零变更;_battle_ts 不清(ADR-0250 战斗
+    窗口维持 1f 原语义)、_last_outcome_t 不写(killed 兜底对比链不受新
+    路径扰动)。
     """
-    op, captured, on_round_end_calls = _w239_p2r1_loss_outcome_make_loop(
+    op, captured = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(2, 1),
         ocr_texts=['挑战结束', '2-1', '战斗', '-22', '挑战进度', '前往结算'],
         killed=False)
@@ -808,7 +813,11 @@ def test_loss_page_records_row_telemetry_only(monkeypatch) -> None:
     o = captured[0]['outcome']
     assert o.plane == 2 and o.round_num == 1
     assert o.killed is False
-    assert on_round_end_calls == []                    # 策略面零变更
+    _sess = op.ctx.cw_match.session
+    assert len(_sess.performance.history) == 0         # 观察半零写入
+    assert _sess.last_streak == 0                      # streak 不动(缺省)
+    assert _sess.last_hp is None
+    assert _sess.pending_round_outcomes == []          # 策略半不入槽
     assert op._st.battle_ts is _battle_ts_sentinel     # ADR-0250 窗口语义不变
     assert op._st.last_outcome_t is None               # killed 对比链不扰动
     assert op._st.last_outcome_hp is None              # summary 真值链不扰动
@@ -816,7 +825,7 @@ def test_loss_page_records_row_telemetry_only(monkeypatch) -> None:
 
 def test_loss_page_fingerprint_dedupe(monkeypatch) -> None:
     """同屏指纹防重:同帧重入只记一次(与 3b 共用 _last_loss_fp);换帧再记。"""
-    op, captured, _ = _w239_p2r1_loss_outcome_make_loop(
+    op, captured = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(2, 1),
         ocr_texts=['挑战结束', '2-1', '战斗', '-22'], killed=False)
     op._record_loss_page(screen=None)
@@ -832,7 +841,7 @@ def test_loss_page_fingerprint_dedupe(monkeypatch) -> None:
 
 def test_loss_page_non_defeat_killed_gate(monkeypatch) -> None:
     """killed 非 False(位面通关过渡页误入 1f 门/OCR 未判)→ 不落行,防伪行进语料。"""
-    op, captured, _ = _w239_p2r1_loss_outcome_make_loop(
+    op, captured = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(1, 9),
         ocr_texts=['挑战结束', '1-9首领', '战斗'], killed=None)
     op._record_loss_page(screen=None)
@@ -841,7 +850,7 @@ def test_loss_page_non_defeat_killed_gate(monkeypatch) -> None:
 
 def test_loss_page_failures_do_not_raise(monkeypatch) -> None:
     """OCR 服务抛错 → 补录吞异常不阻塞对局(观测为辅)。"""
-    op, captured, _ = _w239_p2r1_loss_outcome_make_loop(
+    op, captured = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(2, 1), ocr_texts=[], killed=False)
     def _boom(**kw):
         raise RuntimeError('ocr down')
@@ -951,13 +960,17 @@ def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapse
                 is_new_match=new_match,
                 first_settlement_seen=first_seen)
             self._unknown_streak = 0
-            # 策略器状态迁 MandateState:target_comp 经 state_of 附着(桩同效)
-            _sess = SimpleNamespace(last_state=GameState(), last_hp=None)
+            # 观察半直写面(ADR-0583):真实 StrategySession 承载(字段齐备)
+            from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+                StrategySession as _SS,
+            )
+            _sess = _SS()
+            _sess.last_state = GameState()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
                     session=_sess,
-                    strategy=SimpleNamespace(on_round_end=lambda *a, **k: None),
+                    strategy=SimpleNamespace(),
                 ),
                 ocr_service=SimpleNamespace(
                     get_ocr_result_list=lambda image, rect=None, color_range=None,

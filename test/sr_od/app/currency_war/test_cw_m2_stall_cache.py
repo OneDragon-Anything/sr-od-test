@@ -466,9 +466,6 @@ class TestTokenWritePointLiveness:
             def decide_prep_screen(self, session, config):
                 return [OpenShop(read_only=True)]
 
-            def update_target(self, state, session, config):
-                pass
-
         d = pd_mod.CwScreenPrep(test_context)
         session = StrategySession()
         state_of(session)   # 冷建 MandateState 并挂 session(写点消费面)

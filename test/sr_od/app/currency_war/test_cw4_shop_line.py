@@ -737,7 +737,7 @@ class TestKGapFallback:
 
     def _gap_session(self) -> StrategySession:
         """空窗语境 session:target_comp=None + 意向供给在(v3_intention
-        缺省态,update_target 未跑的首帧同款保守语义由 K 回退消费位
+        缺省态,方向刷新未跑的首帧同款保守语义由 K 回退消费位
         gate 承载——本用例给齐供给帧,锁回退本体)。"""
         from sr_od.application.currency_war.kernel.cw_intention import (
             IntentionState,

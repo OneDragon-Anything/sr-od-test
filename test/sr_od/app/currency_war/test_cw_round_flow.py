@@ -469,13 +469,17 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
                 run_start_ts=time.monotonic() - 9999.0,   # 超宽限:正常行
                 is_new_match=True)
             self._unknown_streak = 0
-            # 策略器状态迁 MandateState:target_comp 经 state_of 附着(桩同效)
-            _sess = SimpleNamespace(last_state=GameState(), last_hp=None)
+            # 观察半直写面(ADR-0583):真实 StrategySession 承载(字段齐备)
+            from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+                StrategySession as _SS,
+            )
+            _sess = _SS()
+            _sess.last_state = GameState()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
                     session=_sess,
-                    strategy=SimpleNamespace(on_round_end=lambda *a, **k: None),
+                    strategy=SimpleNamespace(),
                 ),
                 ocr_service=SimpleNamespace(
                     get_ocr_result_list=lambda image, rect=None,
@@ -495,6 +499,15 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
     assert captured[0]['source'] == ''
     assert captured[0]['outcome'].damage_dealt == 4_027_000
     assert captured[0]['outcome'].round_num == 8
+    # 结算观察半供给半环锁(ADR-0583 拆两半;落地审低2,纪律 13):
+    # 真实 op 回路走完 → 观察半经生产调用线已写(performance.history 增行 +
+    # last_streak 直写)+ 策略半已入 pending 槽——删 op 内调用线全集即红。
+    _sess = op.ctx.cw_match.session
+    assert len(_sess.performance.history) == 1, (
+        'op 回路必须触发结算观察半直写(供给半环;删调用线 = 红)')
+    assert _sess.last_streak == captured[0]['outcome'].streak
+    assert len(_sess.pending_round_outcomes) == 1, (
+        '策略半必须同点入 pending 槽(决策入口 drain 的供给前提)')
 
 
 def test_branch3_records_before_continue_click() -> None:

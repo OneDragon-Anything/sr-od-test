@@ -390,7 +390,7 @@ def _old_ready(sig: CommitSignals, t: int = 0) -> bool:
 
 
 def _old_committed(state: GameState, session: StrategySession) -> bool:
-    """旧语义复刻(update_target 判定式;对拍基准,非生产路径)。
+    """旧语义复刻(退役战略层判定式;对拍基准,非生产路径)。
 
     committed = plane≥2 ∨ (signals.ready ∧ (可切换 ∨ target==领先线));
     ready/t_of 消费退役前复刻(见上常量注)。

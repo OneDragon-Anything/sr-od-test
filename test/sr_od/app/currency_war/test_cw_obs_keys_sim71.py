@@ -73,7 +73,7 @@ class TestFormOkPresentReadWriter:
         )
         sess = StrategySession()
         state_of(sess).target_comp = comp
-        # 每轮初值由 on_match_start 写(flow.py);直调语境先补初值
+        # 镜像键缺省恒 False(ADR-0583 后无生命周期钩子写初值;直调语境先补)
         state_of(sess).v3_form_ok = False
         st = SimpleNamespace(board=board, bench=[None] * 9,
                              deployed=[None] * 10, plane=1, round_num=1)

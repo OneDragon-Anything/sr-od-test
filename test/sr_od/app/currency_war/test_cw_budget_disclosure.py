@@ -364,9 +364,6 @@ def test_shop_frame_disclosure_failure_degrades_with_warning(
     class _CloseShopStrategy:
         """替身决策源:首动作即 CloseShop 终结(段顶接线段后立即收工)。"""
 
-        def update_target(self, state, session, config) -> None:
-            pass
-
         def decide_shop_action(self, session, config) -> CloseShop:
             return CloseShop()
 

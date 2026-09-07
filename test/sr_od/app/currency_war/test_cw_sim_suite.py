@@ -437,9 +437,6 @@ def test_checks_module_does_not_import_sim() -> None:
 class _LevelUpSpamStub:
     """升级桩:每段恒发 3 个 LevelUp——未满级时合法执行,满级后逼出守卫。"""
 
-    def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
-        pass
-
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
         from sr_od.application.currency_war.kernel.cw_state import LevelUp
         return [LevelUp(cost=4) for _ in range(3)]
@@ -916,6 +913,48 @@ def test_seg_formed_still_buying_transition_bidirectional() -> None:
               _sim_segment_checks_row(2, gold=30, waves_gold=30, state=_formed_state(),
                    actions=[_buy(bridge_member, channel='engine')])]
     assert not _sim_segment_checks_chk.seg_check_formed_still_buying_transition(target)
+
+
+def test_seg_formed_still_buying_transition_release_arm() -> None:
+    """[13] ④ 放行臂例外(两形态构造帧锁):成型后经 ④ 转线前瞻放行臂
+    (买因 ``transition_component_buy``)买入 TRANSITION_PACK carry/partial
+    成员**不报**(未定型期转型前瞻例外;出处 = 策略文档
+    12_line_and_intention.md §2,用户裁定 2026-09-07;ADR-0580 §3 规则④
+    + §7 检查器对齐申报);纯过渡件仍报,两形态:
+    - drop 档带 ④ 买因(写侧误挂形态)照报 = 放行集成员资格闸——
+      drop 档在 transition_release_names 数据源处即不入集,负空间
+      排除,无需独立 drop 判定;
+    - 放行集成员不经 ④ 买因(常规通道买入)照报 = 买因闸——例外
+      只辖 ④ 臂买入,不经该臂的过渡件买入仍在 [13] 辖域。
+    夹具选名(亲核注册表):姬子·启行 = carry 档、非 BRIDGE_POOL、
+    列车同行阵营(engine 身份档);卡芙卡 = drop 档、非 BRIDGE_POOL、
+    engine 身份档——都避开桥池/目标名册既有豁免,防既有豁免先行
+    吞掉新分支(锁假绿)。
+    """
+    chk = _sim_segment_checks_chk
+    formed_r2 = {'gold': 30, 'waves_gold': 30, 'state': _formed_state()}
+
+    def _frame(buy: dict) -> list[dict]:
+        return [_sim_segment_checks_row(1, state=_formed_state()),
+                _sim_segment_checks_row(2, **formed_r2, actions=[buy])]
+
+    def _buy4(name: str) -> dict:
+        return {'__type__': 'BuyCard', 'card': {'name': name, 'cost': 3},
+                'reason': 'transition_component_buy', 'channel': 'engine'}
+
+    # ④ 件放行:carry 成员 + ④ 买因 → 不报
+    assert not chk.seg_check_formed_still_buying_transition(
+        _frame(_buy4('姬子·启行')))
+    # drop 档 + ④ 买因(误挂形态)→ 仍报,事件点名声与买因
+    evs_drop = chk.seg_check_formed_still_buying_transition(
+        _frame(_buy4('卡芙卡')))
+    assert evs_drop and evs_drop[0]['bought'] == '卡芙卡' \
+        and evs_drop[0]['reason'] == 'transition_component_buy'
+    # 放行集成员非 ④ 买因(常规 engine 通道)→ 仍报
+    evs_non4 = chk.seg_check_formed_still_buying_transition(
+        _frame(_buy('姬子·启行', cost=3, channel='engine')))
+    assert evs_non4 and evs_non4[0]['bought'] == '姬子·启行' \
+        and evs_non4[0]['reason'] == 'd2_engine'
 
 
 # ---------------------------------------------------------- [12]/[33]

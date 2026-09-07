@@ -404,9 +404,6 @@ class _StubStrategy:
         self._acts = [a for plan in plans for a in plan]
         self.calls = 0
 
-    def update_target(self, state, session, config) -> None:
-        pass
-
     def decide_shop_action(self, session, config) -> Any:
         i = self.calls
         self.calls += 1
@@ -1050,9 +1047,6 @@ class _w944_shop_unk_settle_StubStrategy:
 
     def __init__(self) -> None:
         self.calls = 0
-
-    def update_target(self, state, session, config) -> None:
-        pass
 
     def decide_shop_action(self, session, config) -> Any:
         self.calls += 1

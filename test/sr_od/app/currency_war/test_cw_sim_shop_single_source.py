@@ -59,9 +59,6 @@ class _SellEquippedStub:
     def __init__(self) -> None:
         self.done = False
 
-    def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
-        pass
-
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
         from sr_od.application.currency_war.kernel.cw_state import SellBench
         st = sess.shop_state_frame

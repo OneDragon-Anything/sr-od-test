@@ -215,9 +215,6 @@ def _make_round_director(test_context, monkeypatch, scripted_actions,
         def decide_prep_screen(self, session, config):
             return list(scripted_actions)
 
-        def update_target(self, state, session, config):
-            pass
-
     d = pd_mod.CwScreenPrep(test_context)
     session = StrategySession()
     match = _SN(strategy=_StubStrategy(), session=session)

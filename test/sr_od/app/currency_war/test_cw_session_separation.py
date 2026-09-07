@@ -14,7 +14,8 @@
 - ADR-0563 决策-2:mandate_v1 create_state 覆写在位,create_session
   接线产出当局 MandateState(manager/sim/replay/直调全路径同源);工厂
   契约 = 容忍 config=None(sim 注入桩面);工厂不携带 live 初值
-  (v3_phase='FORM' 归 on_match_start,sim 路径读数保真)。
+  (v3_phase='FORM' 由 create_session 唯一冷建口写入,ADR-0583;
+  sim 直构 session 读数保真 '')。
 """
 from __future__ import annotations
 
@@ -99,8 +100,8 @@ def test_none_session_returns_throwaway_no_cache() -> None:
 def test_mandate_v1_create_state_override() -> None:
     """mandate_v1 覆写 create_state 返回 MandateState(决策-2 申报面):
     工厂容忍 config=None(sim 注入桩面),且不携带 live 初值
-    (v3_phase FORM 归 on_match_start;sim 不调该钩子 → 工厂产物恒 ''
-    保 sim 旧读数)。"""
+    (v3_phase FORM 由 create_session 唯一冷建口写入,ADR-0583;
+    sim 直调工厂产物恒 '' 保 sim 旧读数)。"""
     from sr_od.application.currency_war.strategies.impl.flow import CwFlowStrategy
     from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
         MandateV1Strategy,
@@ -110,10 +111,43 @@ def test_mandate_v1_create_state_override() -> None:
     )
     ms = MandateV1Strategy().create_state(None)
     assert isinstance(ms, MandateState)
-    assert ms.v3_phase == '', '工厂产物不得携带 live 初值 FORM(归 on_match_start)'
+    assert ms.v3_phase == '', '工厂产物不得携带 live 初值 FORM(归冷建口)'
     # 覆写落点 = CwFlowStrategy(流程核;本类留 abstract,经类直调验实现)
     assert isinstance(
         CwFlowStrategy.create_state(SimpleNamespace(), None), MandateState)
+
+
+def test_create_session_sole_cold_build_entry_l4() -> None:
+    """L4 冷建唯一口锁(出处 = ADR-0583 §2.3/§1.3 双冷建重叠消除):
+    create_session 后 strategy_state 为 MandateState 且 v3_phase='FORM'
+    (live 初值随唯一冷建口落位);二次 create_session 全量重建(新对象、
+    新状态,工厂恰走一次);生命周期钩子 on_match_start/on_match_end 已删
+    (残留调用点 = 墓碑锁辖,test_cw_w971_blackboard L6 空间守卫)。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+        MandateV1Strategy,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        MandateState,
+    )
+    strat = MandateV1Strategy()
+    sess1 = strat.create_session(None)
+    assert isinstance(sess1.strategy_state, MandateState)
+    assert sess1.strategy_state.v3_phase == 'FORM', (
+        'live 相位初值必须随唯一冷建口(旧 on_match_start 写点语义收编)')
+    calls: list[object] = []
+    real_create_state = strat.create_state
+
+    def _counting(config):
+        calls.append(object())
+        return real_create_state(config)
+
+    strat.create_state = _counting   # 局部实例计数,不入 session
+    sess2 = strat.create_session(None)
+    assert sess2 is not sess1
+    assert sess2.strategy_state is not sess1.strategy_state, (
+        '二次 create_session = 全量重建(不复用上局引用)')
+    assert sess2.strategy_state.v3_phase == 'FORM'
+    assert len(calls) == 1, '每局状态冷建恰经工厂一次(双冷建重叠消除)'
 
 
 def test_base_create_state_default_none() -> None:

@@ -99,8 +99,7 @@ def test_settle_defer_reset_reads_exec_state(monkeypatch) -> None:
                 cw_match=SimpleNamespace(
                     session=StrategySession(),
                     exec_state=exec_state,
-                    strategy=SimpleNamespace(
-                        on_round_end=lambda *a, **k: None),
+                    strategy=SimpleNamespace(),
                 ),
                 ocr_service=SimpleNamespace(
                     get_ocr_result_list=lambda image, rect=None,

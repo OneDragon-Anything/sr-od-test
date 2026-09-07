@@ -45,9 +45,6 @@ class _XpRecorder:
         self.snapshots: list[tuple[int, tuple[int, int]]] = []
         self._bought = False
 
-    def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
-        pass
-
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
         st = sess.shop_state_frame
         self.snapshots.append((st.round_num, st.xp_progress))
@@ -122,10 +119,6 @@ class _ProbsRecorder:
                 MandateV1Strategy,
             )
             self._inner = MandateV1Strategy()
-
-    def update_target(self, st, sess, cfg) -> None:  # noqa: ANN001
-        if self._inner is not None:
-            self._inner.update_target(st, sess, cfg)
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
         st = sess.shop_state_frame
