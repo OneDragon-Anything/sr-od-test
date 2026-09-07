@@ -9,27 +9,16 @@ StarRail-OneDragon 主仓的**独立测试仓**(主仓 gitignore,单独提交)�
 从**主仓根目录**运行(测试内的 `sys.path` 定位依赖仓根相对关系):
 
 ```shell
-uv run pytest sr-od-test/ -m "not slow and not legacy_baseline"   # 全量(标准,串行;排除慢桶+legacy 桶)
-uv run pytest sr-od-test/test/sr_od/app/currency_war -m "not slow and not legacy_baseline"  # 快速层=CW 域目录直跑
-uv run pytest sr-od-test/ -m "legacy_baseline"                    # legacy 桶(仅审计时点)
+uv run pytest sr-od-test/ -m "not slow"   # 全量(标准,串行;排除慢桶)
+uv run pytest sr-od-test/test/sr_od/app/currency_war -m "not slow"  # 快速层=CW 域目录直跑
 uv run pytest sr-od-test/test/sr_od/app/currency_war/test_cw_merge.py  # 单文件
 ```
 
 - **慢桶**:`slow_marks.txt` 登记单条实测 ≥2s 的用例;快速层用 `-m "not slow"` 跳过,
   全量不过滤。新增慢用例须同步登记。
-- **legacy 桶(换核隔离,2026-09-03)**:文件级标记 `pytestmark = pytest.mark.legacy_baseline`
-  (标记注册在 `sr-od-test/conftest.py`)。入桶判据 = 被测语义为**旧决策核(decision_v2)
-  内部行为锁**(scoring/arbiter/candidates/intention 状态机/economy_cycle/posture/
-  decide_prep_screen·decide_shop_screen 输出锁、旧核专属判据权重/候选序),随旧核退役而
-  消亡。**默认全量与快速集均不跑**;仅两个审计时点单独跑(基线冻结审计、sim A/B 开跑前)。
-  分层命令:
-  - 默认全量(标准):`uv run pytest sr-od-test/ -m "not slow and not legacy_baseline"`
-  - 快速层:`uv run pytest sr-od-test/test/sr_od/app/currency_war -m "not slow and not legacy_baseline"`
-  - legacy 审计:`uv run pytest sr-od-test/ -m "legacy_baseline"`(可含 slow,即
-    `-m "legacy_baseline or slow"` 需要时另用)
 - **快速层 = CW 域目录直跑**(2026-09-03 起,废手工清单 `cw_quick.txt`):目录即磁盘真相,
   零维护零漂移。教训:手工清单与磁盘漂移 44 文件(新文件漏登记)才废除;新增测试放对
-  目录即自动入层,不再维护任何文件清单。legacy 桶靠 marker 排除,不靠清单。
+  目录即自动入层,不再维护任何文件清单。
 
 ## 环境要求
 
@@ -174,15 +163,15 @@ sr-od-test/
     fixture)先便宜化再考虑入桶。准入问句并入「写锁/评审三问」(见下):
     **「这条锁值多少毫秒?」**——说不清拦截价值就撑不起它的运行成本。
 16. **运行口径**(2026-09-03 瘦身批后实测;并行 cw4 批持续增删测试,数字会再漂):
-    - 标准全量:`uv run pytest sr-od-test/ -m "not slow and not legacy_baseline"`
+    - 标准全量:`uv run pytest sr-od-test/ -m "not slow"`
       2825 过 / 3:21(基线 2985 条 / 4:24,含 1 条既有红已修);
     - 快速层(CW 域目录):2303 过 / 2:28(基线约 3:35);
-    - 慢桶:71 条登记(含 legacy∩slow;`-m slow` 点名跑,全量不过滤口径同);
+    - 慢桶:71 条登记(`-m slow` 点名跑,全量不过滤口径同);
     - 尾部约 2800 条均值 <0.1s,提速空间在头部:新 ≥2s 用例按第 15 条
       先便宜化、无法便宜化再入桶。
 17. **文件组织**:主题文件按机制归并(第 14 条);round/工作项命名文件
     (wNNN/rNNN/adrNNNN/批次号)是历史存量,处置=按簇归并进主题文件后删除,
-    禁新增。legacy 桶文件冻结不投入(不归并、不修饰),随旧核退役整体删除。
+    禁新增。旧核基线桶(legacy)文件已随旧核退役整体删除,不再作为组织类别。
 
 ### 死锁形态与输入密闭(2026-09-03 瘦身批沉淀)
 
@@ -255,8 +244,8 @@ sr-od-test/
    不入 git,用完即弃)。
 6. **批号/桶标 ≠ 锁龄,处置前按语义重推**(2026-09-03 歼击战判例):
    r420/r363 批号审计文件重推后锁对象仍是现行设计=判留;w443 整文件被
-   错挂 legacy_baseline 标而锁对象现役三处消费=守卫哑火。冻结桶
-   (legacy_baseline/慢桶)巡检时必须核对锁对象活性——打标前 grep 消费方,
+   错挂旧核基线标记(该标记已废止)而锁对象现役三处消费=守卫哑火。冻结桶
+   (旧核基线桶[已废止]/慢桶)巡检时必须核对锁对象活性——打标前 grep 消费方,
    已挂标的定期重验;错挂=摘标复活而非删除(复活判例:w443 双口径 5 passed)。
 7. **死指针=覆盖缺口哨**:docstring/注释指向不存在的测试文件时,必须
    核查该语义现由谁辖——可能是独家覆盖裸奔(判例:w633 塌缩带归零锁

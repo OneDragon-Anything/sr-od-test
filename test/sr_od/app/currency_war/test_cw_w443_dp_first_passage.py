@@ -3,7 +3,7 @@
 锁对象为 P2 损血标定/首过分布面:`cw_first_passage._loss_dist`、
 `p2_node_loss_table`/`p2_cond_loss_table`/`p_win_p2_by_rung`——现役消费方
 =cw_state/cw_line_switch/cw_plane_table(2026-09-03 歼击战 grep 复核)。
-本文件曾于 2026-09-03 拆分批被误挂 legacy_baseline 标致守卫哑火,同批整改摘标。
+本文件曾于 2026-09-03 拆分批被误挂旧核基线标记致被默认过滤,同批摘标(教训:打标前 grep 消费方)。
 
 口径定稿与边界声明见 ADR-0440(标定源=W375 双源重标定,
 w375_dual_source_calib.json)。effective_hp_threshold 共享面在

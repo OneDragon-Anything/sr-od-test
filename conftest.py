@@ -18,18 +18,7 @@ MARKS_FILE = Path(__file__).parent / "slow_marks.txt"
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """注册 legacy_baseline 标记(换核隔离桶,2026-09-03 测试分层批)。
-
-    语义:被测对象为旧决策核(decision_v2)内部行为语义(scoring/arbiter/
-    candidates/intention 状态机/economy_cycle/posture/decide 输出锁等),
-    随旧核退役而消亡。打标文件默认全量与快速集均不跑,仅两个审计时点跑
-    (基线冻结审计、A/B 开跑前)。口径见 sr-od-test/README.md 测试纪律节。
-    """
-    config.addinivalue_line(
-        "markers",
-        "legacy_baseline: 旧决策核(decision_v2)内部行为锁——随旧核退役而消亡;"
-        "默认命令 -m \"not slow and not legacy_baseline\" 跳过,仅审计时点 -m legacy_baseline 单跑",
-    )
+    """注册 slow 标记(慢桶隔离,口径见模块 docstring 与 sr-od-test/README.md)。"""
     # slow 由 pytest_collection_modifyitems 按 slow_marks.txt 注入,此处注册
     # 是为消 PytestUnknownMarkWarning(每次运行刷屏)并允许 --strict-markers
     config.addinivalue_line(
@@ -67,7 +56,8 @@ def pytest_collection_finish(session):
             "收集期检测到模块级 logging.disable 泄漏(全局禁言级别 "
             f"{disable_level} >= WARNING)。禁止在测试模块顶层调用 "
             "logging.disable——请改为模块内 autouse fixture(参考 "
-            "test_cw_blood_budget_stop.py 的 _quiet_logging),否则会静默"
+            "test_cw_hp_trust_defense.py / test_cw_investment.py 的 "
+            "_quiet_logging),否则会静默"
             "破坏其他测试的日志断言。"
         )
 
