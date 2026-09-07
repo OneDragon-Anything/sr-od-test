@@ -313,8 +313,10 @@ def _make_loop_op(test_context, monkeypatch, session, stops, flags,
     monkeypatch.setattr(loop_mod, 'write_no_progress_flag',
                         lambda count, sig, shot: flags.append((count, sig)))
     # 遥测/分配器模块级全局:构造与守卫路径会触碰,一并桩化(测试隔离整条副作用链)
-    monkeypatch.setattr(loop_mod.state, 'start_run',
-                        lambda difficulty='': None)
+    # ADR-0588:生产铸造单点前移,构造调用从 state.start_run 换成 ensure_run_started
+    # (桩点随调用点迁移;本 helper 意图不变 = 「CwLoop 构造不触真实遥测」)
+    monkeypatch.setattr(loop_mod.state, 'ensure_run_started',
+                        lambda match=None, difficulty='': None)
     monkeypatch.setattr(loop_mod.state, 'get_recorder',
                         lambda: SimpleNamespace(enabled=False))
     monkeypatch.setattr(loop_mod, '_get_or_init_allocator', lambda ctx: None)

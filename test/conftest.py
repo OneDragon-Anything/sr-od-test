@@ -625,6 +625,9 @@ def _isolate_cw_stop_flag_channels(
         cw_recorder.TelemetryRecorder(enabled=True,
                                        replay_dir=tmp_path / 'replay'))
     monkeypatch.setattr(cw_state, '_CURRENT_RUN_ID', '')
+    # ADR-0588:run 铸造 token 与 _CURRENT_RUN_ID 同簇——mint 路径会模块级
+    # 赋值,不钉桩会跨测试残留(下一测试换容器判定被上局容器污染)。
+    monkeypatch.setattr(cw_state, '_RUN_MATCH', None)
     monkeypatch.setattr(cw_state, '_L0_ANDON_FIRED_RUNS', set())
     monkeypatch.setattr(cw_state, '_defect_seen', {})
     monkeypatch.setattr(cw_state, '_defect_seen_run', '')
