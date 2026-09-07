@@ -2,7 +2,8 @@
 
 锁三件:①输出文件名格式(ts 前缀可对齐 decisions.jsonl 行 ts);
 ②滚动删除逻辑(每挂点保留最近 KEEP_PER_TAG 帧,旧的被删);
-③挂点调用存在(源码级:4 类挂点在宿主文件中有 save_decision_frame 调用)。
+③挂点调用存在(源码级:cw_op 两挂点内联字面 + cw_loop 经 dispatch 包装
+统一落帧、调用点声明 frame_tag,ADR-0584)。
 """
 import re
 from pathlib import Path
@@ -62,7 +63,13 @@ def test_rolling_delete_keeps_recent(frame_env):
 
 
 def test_hook_call_sites_exist():
-    """锁挂点存在(源码级):4 类决策依据帧各有 save_decision_frame 调用。"""
+    """锁挂点存在(源码级;ADR-0584 改写为 dispatch 包装形)。
+
+    锁语义重推(T-121 方案审 N2,按锁的存在性纪律):原锁钉「各分支体内联
+    save_decision_frame 字面调用形」;包装上收后挂点单一化,新语义 =
+    「①包装定义内统一落帧 + ②各调用点声明 frame_tag 实参」——红时登记的
+    语义 = 分发点丢了留证帧声明(挂点存在性不变)。
+    """
     src_root = Path(__file__).parents[5] / 'src' / 'sr_od' / 'application' \
         / 'currency_war'
     buy = (src_root / 'operations' / 'cw_op' / 'cw_op_buy_cards.py').read_text(
@@ -74,9 +81,15 @@ def test_hook_call_sites_exist():
     assert "save_decision_frame(op, 'shop_entry'" in buy
     # 挂点 3:部署决策帧
     assert "save_decision_frame(self, 'deploy'" in deploy
-    # 挂点 4:0 系 overlay 分支命中(抽样锚 + 全量下限:分支数 ≥ 20)
+    # 挂点 4:分发包装统一落帧(_dispatch_screen_op 定义内唯一字面形挂点)
+    assert 'save_decision_frame(self, frame_tag' in loop
+    # 抽样调用点 frame_tag 实参字面存在(五 tag:决策 op ×3 + 0n/0j;
+    # 原「内联 save_decision_frame(self, '<tag>'」形断言随包装上收改写)
     for tag in ('overlay_partner', 'overlay_invest_strategy', 'overlay_shop_open',
                 'overlay_wish_trial', 'overlay_frontless'):
-        assert f"save_decision_frame(self, '{tag}'" in loop, tag
-    n_overlay = loop.count('save_decision_frame(self, ')
-    assert n_overlay >= 20, n_overlay
+        assert f"frame_tag='{tag}'" in loop, tag
+    # 计数断言 = 包装调用计数(定稿覆盖面实测 34 = 33 调用点 + 包装定义 1:
+    # 决策 op 13 + 0n/0j/0p/0q/0r/0s×2/1 备战/战斗窗/3c + 推进族 10;
+    # 下限 30 容纳合理增删,批量移除分发点即红)
+    n_dispatch = loop.count('_dispatch_screen_op(')
+    assert n_dispatch >= 30, n_dispatch

@@ -1109,12 +1109,18 @@ def test_supply_outcome_hp_unreadable_low_confidence(monkeypatch) -> None:
 
 
 def test_supply_branch_wiring_in_source() -> None:
-    """弱锁保底:0e 分支真接线(CwScreenSupplyNode 成功 → _record_supply_outcome)。"""
+    """弱锁保底:0e 分支真接线(CwScreenSupplyNode 成功 → _record_supply_outcome)。
+
+    ADR-0584 改写:补给分支经 dispatch 包装分发(原字面
+    ``CwScreenSupplyNode(self.ctx).execute()`` 随包装上收);合成 outcome 行
+    挂点语义不变——仅成功记,在 on_result 回调内联于 loop 源。
+    """
     import inspect
 
     from sr_od.application.currency_war.operations import cw_loop
     src = inspect.getsource(cw_loop.CwLoop.loop)
-    assert 'CwScreenSupplyNode(self.ctx).execute()' in src
+    assert '_dispatch_screen_op(' in src
+    assert 'CwScreenSupplyNode(self.ctx)' in src
     assert '_record_supply_outcome(screen)' in src
 
 

@@ -58,10 +58,12 @@ def test_read_point_delay_and_long_press() -> None:
 
 
 def test_loop_delegation_wiring() -> None:
-    """loop 委托接线:战斗窗口 → CwScreenBattleWait.execute;3c 收口不随迁(遥测
-    连续性红线:runs summary/分配器/存档写端留在主循环)。"""
+    """loop 委托接线:战斗窗口 → CwScreenBattleWait(经 dispatch 包装,
+    ADR-0584 改写:原字面 ``_battle_wait.execute()`` 随包装上收);3c 收口
+    不随迁(遥测连续性红线:runs summary/分配器/存档写端留在主循环)。"""
     src = _loop_src()
-    assert '_battle_wait.execute()' in src
+    assert '_dispatch_screen_op(' in src
+    assert 'self._battle_wait,' in src   # 战斗窗经包装分发(journal=战斗等待)
     assert '_battle_wait_active' in src
     assert '_frame_in_battle_window' in src
     assert "record_run_summary(" in src   # 3c 收口仍在 loop
