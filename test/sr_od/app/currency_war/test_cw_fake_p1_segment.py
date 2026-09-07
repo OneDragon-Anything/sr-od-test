@@ -238,6 +238,37 @@ def test_fake_match_rules_streak_and_income() -> None:
     assert rules.settle_streak(st, -3, 'reward') == (4, False)
 
 
+def test_income_event_component_stays_zero() -> None:
+    """收入事件金分量恒 0 登记门(防残差闸回潮;保真校准裁定,出处 =
+    ``.debug/temp/currency_war/t120_sim_redesign/保真度校准.md``)。
+
+    机制真值 = 结算金币明细弹窗三分量全集(基础+利息+连胜,
+    docs/game/currency_war/research/economy.md §11)——无「事件金」
+    第四分量;奖励球金是备战期收球动作(prep 编排域,假环境观察面
+    spheres 结构性为零,归批 2)。引擎 ``EVENT_GOLD_BY_ROUND`` 是
+    ADR-0447 残差补偿闸(该表 docstring 明文「策略面修复后不得以此表
+    回填」),非节点事件金真值。
+
+    锁红时该登记的语义:有人把事件金分量接回非机制真值源(残差闸
+    回潮),或批 2 球金建模提前走了旧表——处理 = 按球真值另行建模,
+    禁回指残差表(错误信息已指名,非裸 assert)。"""
+    from fixtures.cw_fake_game import rules
+
+    m = FakeMatch(seed=7, node_sequence=['battle', 'reward', 'supply'])
+    st = m.state
+    st.gold = 100
+    st.streak = 3
+    for node, rn in (('battle', 3), ('reward', 8), ('supply', 5)):
+        st.node_type = node
+        st.round_num = rn
+        inc = rules.income_for_round(st, m._rng_grant, None, False)
+        assert 'event' in inc, '收入分解缺 event 键(账本口径面变)'
+        assert inc['event'] == 0, (
+            f'{node} 轮事件金非 0(残差闸回潮/球金未按真值建模):'
+            f'{inc["event"]}——处理 = 按球真值另行建模,禁回指 '
+            f'EVENT_GOLD_BY_ROUND 残差闸')
+
+
 class TestPrepEntryObserveViaPorts:
     """备战入口 heavy 观察改道锁(方案 §2.3 表消费点;批 1 改道清单)。
 
