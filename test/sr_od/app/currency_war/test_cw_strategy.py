@@ -2,7 +2,6 @@
 
 2026-09-03 拆分归档批:自混合文件 test_cw_strategy_planner.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import random
 import tempfile
@@ -27,6 +26,9 @@ from sr_od.application.currency_war.strategies.impl.cw_strategy_manager import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 
 
@@ -197,6 +199,24 @@ def test_decide_invest_delegates_decide_event() -> None:
     assert isinstance(pick, PickEvent)
     # 白名单「定期福利」=90 > 「未知策略」→ 选 idx=0
     assert pick.option_idx == 0
+
+
+def test_decide_invest_blood_avoid_via_delegate() -> None:
+    """T4(T-99①;ADR-0578):E1 生产路径端到端——decide_invest 纯委托
+    decide_event(flow.py decide_invest),委托链不吃掉血本位候选排除:
+    委托入口与直调同 idx,reason 观测锚随链落盘。"""
+    from sr_od.application.currency_war.kernel.cw_events import decide_event
+
+    strat = MandateV1Strategy()
+    cfg = _cfg()
+    session = strat.create_session(cfg)
+    state = GameState()
+    options = ["奋斗协议", "乱成一锅粥", "着眼当下"]
+    via_delegate = strat.decide_invest("strategy", options, state, session, cfg)
+    direct = decide_event(options, cfg, state)
+    assert via_delegate.option_idx == direct.option_idx, '委托链须与直调同判'
+    assert via_delegate.option_idx != 0, '血本位卡经委托入口同样被排除'
+    assert 'blood-avoided' in via_delegate.reason
 
 
 def test_decide_megastar_fallback_idx0_when_no_charid() -> None:

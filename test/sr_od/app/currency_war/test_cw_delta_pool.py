@@ -406,7 +406,9 @@ def test_snapshot_battle_buckets_are_rung_domain() -> None:
 
 
 def test_snapshot_battle_rung_means_match_b13_truth() -> None:
-    """双主桶均值符合批⑬量级(r0≈-11.5 / r1≈-6.3,漂移 ≤3hp;
+    """双主桶均值符合真值表(真值锚=v13/ADR-0582 过滤后语料重推:
+    r0 -9.73/r1 -3.24;漂移 ≤3hp。旧锚 -11.5/-6.3 是含毒语料——
+    合成行入配对——的产物,治理随批重推,非机械跟绿;
     ADR-0362:plane=1 视图口径)。"""
     m, _, _ = sim_pool.resolve_pool('snapshot')
     m = sim_pool.plane_view(m)
@@ -414,7 +416,7 @@ def test_snapshot_battle_rung_means_match_b13_truth() -> None:
         v = m['battle'][rg]
         mean = sum(v) / len(v)
         assert abs(mean - truth) <= 3.0, \
-            f'battle rung{rg} 均值 {mean:+.1f} 距批⑬真值 {truth:+.1f} 漂移>3hp'
+            f'battle rung{rg} 均值 {mean:+.1f} 距真值 {truth:+.1f} 漂移>3hp'
 
 
 def test_snapshot_encounter_rung_keyed_v11() -> None:
@@ -1015,3 +1017,170 @@ def test_check_fires_on_truncated_pool() -> None:
     rep = check_sim_pool_no_cost_truncation(truncated)
     assert rep['violations'] == 2
     assert rep['missing_costs'] == [4, 5]
+
+
+# ==================== adr0582_synthetic_supply_pairing_filter ====================
+# Δ池生成器治理(ADR-0582):合成行(source='synthetic_supply',hp 为
+# last_state 战前快照)与低可信行(hp_confidence<0.9)不作 hp 差分
+# 端点——移行桥接重配对。锁形态依据方案审前置清单 4:fixture 注入
+# 锁为主(镜像律是配对过程性质,池条目不含配对信息,快照层不可
+# 检验;判例 = test_pool_build_never_mixes_runs)、快照级**缺席型**
+# 断言为辅(禁快照值锁——池随局终自动再生,值锁=change-detector,
+# ADR-0292 判例 test_cw_adr0292_reward_pool_sampling.py 注)。
+
+import json as _adr0582_json
+from pathlib import Path as _adr0582_Path
+
+
+def _adr0582_replay(tmp_path: _adr0582_Path,
+                    outcomes: list[dict]) -> _adr0582_Path:
+    """最小 replay 目录:decisions 行按 outcomes 的 (run,plane,round)
+    全集合生成(Σboard join 物料必须覆盖每个配对后继键,否则
+    dep None 静默跳对——锁会假绿);outcomes 行原样落盘。"""
+    d = tmp_path / 'replay'
+    d.mkdir()
+    keys = sorted({(o.get('run_id') or 'r1', o.get('plane') or 1,
+                    o.get('round_num') or 0) for o in outcomes})
+    dec = [_adr0582_json.dumps(
+        {'run_id': run, 'plane': plane, 'round_num': rn,
+         'state': {'board': {'散': 6}, 'deployed': []}},
+        ensure_ascii=False) for run, plane, rn in keys]
+    (d / 'decisions.jsonl').write_text(
+        '\n'.join(dec) + '\n', encoding='utf-8')
+    (d / 'outcomes.jsonl').write_text(
+        '\n'.join(_adr0582_json.dumps(o, ensure_ascii=False)
+                  for o in outcomes) + '\n', encoding='utf-8')
+    return d
+
+
+def test_pool_build_synthetic_row_never_endpoint(tmp_path: _adr0582_Path
+                                                 ) -> None:
+    """镜像律消失锁(毒形态 fixture,ADR-0582):合成行不入配对端点。
+
+    形态 = g_20260907_025608 p1 实案(ADR-0577 §3.3 旁证):r4 战斗
+    44 → 合成补给行 66(战前快照鬼值)→ r6 战斗 46。含毒口径产出
+    幻影配对 +22(supply)并顶替真实 +2 为 −20(battle)——镜像律
+    「supply 增益=上一轮战败取反」的直接来源;过滤后 supply 域无
+    此对、battle 桥接恢复真实 +2。双消费面(快照生成器/auto 池)
+    同断言——共享配对件的两侧接线都要在。
+    """
+    outcomes = [
+        {'run_id': 'r1', 'plane': 1, 'round_num': 1,
+         'node_type': '普通战斗', 'hp_after': 44, 'hp_confidence': 1.0,
+         'board_before': {'散': 1}},
+        {'run_id': 'r1', 'plane': 1, 'round_num': 2,
+         'node_type': '补给', 'hp_after': 66, 'hp_confidence': 0.0,
+         'source': 'synthetic_supply', 'board_before': {}},
+        {'run_id': 'r1', 'plane': 1, 'round_num': 3,
+         'node_type': '普通战斗', 'hp_after': 46, 'hp_confidence': 1.0,
+         'board_before': {'散': 1}},
+    ]
+    d = _adr0582_replay(tmp_path, outcomes)
+    pool_auto, meta_auto = sim_pool._pool_from_replay(d)
+    pool_gen, meta_gen = cw_delta_pool_gen.build_pool(d, None)
+    for p_map, m_map in ((pool_auto, meta_auto), (pool_gen, meta_gen)):
+        # 合成行不入端点:supply 域整体缺席(+22 幻影不存在)
+        assert 'supply' not in p_map, p_map.get('supply')
+        # 桥接重配对:跨合成行的真实战斗差分 46−44=+2 恢复
+        # (断链实现会丢真实对、留 −20 型错值——两形态都不在)
+        assert p_map.get('battle') == {1: {0: [2]}}, p_map.get('battle')
+        all_vals = [x for planes in p_map.values()
+                    for bks in planes.values()
+                    for v in bks.values() for x in v]
+        assert -20 not in all_vals and 22 not in all_vals
+        # 剔除计数如实披露(不静默)
+        assert m_map['synthetic_supply_dropped'] == 1
+        assert m_map['hp_conf_dropped'] == 0
+    # auto/snapshot 指纹收敛判据(pool.py 无标签行案先例):同一语料
+    # 两消费面必须同池——单侧过滤即破坏指纹相等性用途。
+    assert pool_auto == pool_gen
+    assert sim_pool.pool_fingerprint(pool_auto) \
+        == sim_pool.pool_fingerprint(pool_gen)
+
+
+def test_pool_build_conf_gate_drops_untrusted_with_bridge(
+        tmp_path: _adr0582_Path) -> None:
+    """conf 门剔除计数锁(ADR-0582):低可信行不作端点+移行桥接。
+
+    两个真实毒形态一起钉:①非终局低可信行(语料实测 0 条,机制
+    形态锁)——剔除后邻行桥接,真实量级 −13 不被伪值顶替;②终局
+    loss_page hp=0 死亡腿(本语料 101 条,conf 门剔除主体)——
+    hp=0 终局行保留至资格过滤(v12 hp0 瞬态只剔非终局),被 conf
+    门剔出、不再产出任何配对(伪掉血对消失,也不会被节点兜底
+    误标成假『补给』样本)。
+    """
+    outcomes = [
+        # r1:84 →(低可信 50,conf 0.3,剔除+桥接)→ 71 = −13
+        {'run_id': 'r1', 'plane': 1, 'round_num': 1,
+         'node_type': '普通战斗', 'hp_after': 84, 'hp_confidence': 1.0,
+         'board_before': {'散': 1}},
+        {'run_id': 'r1', 'plane': 1, 'round_num': 2,
+         'node_type': '遭遇', 'hp_after': 50, 'hp_confidence': 0.3,
+         'board_before': {'散': 1}},
+        {'run_id': 'r1', 'plane': 1, 'round_num': 3,
+         'node_type': '普通战斗', 'hp_after': 71, 'hp_confidence': 1.0,
+         'board_before': {'散': 1}},
+        # r2:100 →(终局 loss_page hp=0 conf 0.0,死亡腿,零配对)
+        {'run_id': 'r2', 'plane': 1, 'round_num': 1,
+         'node_type': '普通战斗', 'hp_after': 100, 'hp_confidence': 1.0,
+         'board_before': {'散': 1}},
+        {'run_id': 'r2', 'plane': 1, 'round_num': 2,
+         'node_type': '遭遇', 'hp_after': 0, 'hp_confidence': 0.0,
+         'source': 'loss_page', 'board_before': {'散': 1}},
+    ]
+    d = _adr0582_replay(tmp_path, outcomes)
+    pool, meta = sim_pool._pool_from_replay(d)
+    # 桥接恢复真实差分;低可信中间行的『遭遇』标签不入桶
+    assert pool.get('battle') == {1: {0: [-13]}}, pool.get('battle')
+    assert 'encounter' not in pool
+    all_vals = [x for planes in pool.values() for bks in planes.values()
+                for v in bks.values() for x in v]
+    assert 50 not in all_vals and 0 not in all_vals and -34 not in all_vals \
+        and 21 not in all_vals and -100 not in all_vals
+    # 经伪值中转的错差分(84→50=−34 / 50→71=+21 / 100→0=−100)都不在
+    assert meta['hp_conf_dropped'] == 2   # 低可信中间行 + 终局死亡腿
+    assert meta['synthetic_supply_dropped'] == 0
+    assert meta['hp0_transient_dropped'] == 0   # 终局 hp0 不归 v12 瞬态
+
+
+def test_pool_build_keeps_real_settlement_rows(tmp_path: _adr0582_Path
+                                               ) -> None:
+    """真实样本保留锁(ADR-0582 误杀防线):source 三形态(''/缺键/
+    recovered,结算屏当时读取)全部照常入池——过滤只针对合成行族
+    (telemetry.recorder 枚举精确匹配),禁「扩大化到非合成来源」。
+
+    若此锁红:过滤谓词被改宽(如按 source 在场性误杀历史无键行
+    239 条,或 recovered 残留结算屏行)——先重推 ADR-0582 谓词
+    边界再动,禁机械跟绿。
+    """
+    outcomes = [
+        {'run_id': 'r1', 'plane': 1, 'round_num': 1,
+         'node_type': '奖励', 'hp_after': 100, 'hp_confidence': 1.0,
+         'source': '', 'board_before': {}},
+        {'run_id': 'r1', 'plane': 1, 'round_num': 2,
+         'node_type': '普通战斗', 'hp_after': 90, 'hp_confidence': 1.0,
+         'board_before': {'散': 1}},   # 无 source 键(历史行形态)
+        {'run_id': 'r1', 'plane': 1, 'round_num': 3,
+         'node_type': '遭遇', 'hp_after': 60, 'hp_confidence': 1.0,
+         'source': 'recovered', 'board_before': {'散': 1}},
+    ]
+    d = _adr0582_replay(tmp_path, outcomes)
+    pool, meta = sim_pool._pool_from_replay(d)
+    assert pool.get('battle') == {1: {0: [-10]}}
+    assert pool.get('encounter') == {1: {0: [-30]}}
+    assert meta['synthetic_supply_dropped'] == 0
+    assert meta['hp_conf_dropped'] == 0
+
+
+def test_snapshot_supply_domain_free_of_large_artifacts() -> None:
+    """快照级缺席断言(ADR-0582 唯一允许的快照层形态):supply 域
+    不含 |Δ|>20 样本——合成行镜像律(+22/+47 型)与跨 run 大跳变
+    一旦在再生后涌现即红。缺席型≠值锁:不断言 n/均值(池随实机
+    局终自动再生,值锁=池耦合 change-detector,ADR-0292 判例)。
+    """
+    pm, _, _ = sim_pool.resolve_pool('snapshot')
+    for plane in (1, 2):
+        vals = [d for v in ((pm.get('supply') or {}).get(plane) or {}).values()
+                for d in v]
+        offenders = [d for d in vals if abs(d) > 20]
+        assert not offenders, f'supply P{plane} 含 |Δ|>20 样本: {offenders}'

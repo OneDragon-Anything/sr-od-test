@@ -6,14 +6,12 @@ economy_mode、boss 克制。用 mock config(SimpleNamespace)避免 config IO。
 """
 from __future__ import annotations
 
-import random
 from types import SimpleNamespace
 
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_comps import Comp
 from sr_od.application.currency_war.kernel.cw_economy import (
-    WIN_STREAK_BREAK_INTEREST,
     _expected_level,
     _refresh_cost,
     clicks_to_next_level,
@@ -31,11 +29,7 @@ from sr_od.application.currency_war.kernel.cw_events import (
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
-    DeployMove,
     GameState,
-    LevelUp,
-    RefreshShop,
-    SellBench,
     ShopCard,
     effective_hp_threshold,
     simulate,
@@ -131,7 +125,9 @@ def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
     """rebuild_deployed_from_board 从 board 重建 deployed,计数=sum(board),back 先填至 back_max 再 front。
     (出处备注:原引用「D-107」为会话局部编号,docs 树无持久索引,出处未考;
     rebuild 后攒息门的消费语义见 ADR-0117 `_saving_for_interest` 门条件。)"""
-    from sr_od.application.currency_war.kernel.cw_state import rebuild_deployed_from_board
+    from sr_od.application.currency_war.kernel.cw_state import (
+        rebuild_deployed_from_board,
+    )
     dep = rebuild_deployed_from_board({"能量": 2, "护盾": 6}, back_max=6)   # 总 8
     # ADR-0392:rebuild 出槽位表(定长 10 含 None)——计数/口径断言走占用序
     assert sum(1 for d in dep if d is not None) == 8
@@ -642,7 +638,9 @@ def test_env_faction_floor_category_tiers() -> None:
     """阵营匹配定序门(ADR-0524,16 号稿 §1.3):三档值 = category 定序档位
     邀请(70)< 契约(72)< 概念股(78);匹配 ⇒ 提到本 category 档位、压过全体
     env 裸分上界 72;禁读基数——档位序锁在 dict 本体。"""
-    from sr_od.application.currency_war.kernel.cw_investments import ENV_FACTION_MATCH_FLOOR
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_MATCH_FLOOR,
+    )
     # 档位序锁(定序语义本体)
     assert (ENV_FACTION_MATCH_FLOOR['邀请'] < ENV_FACTION_MATCH_FLOOR['契约']
             < ENV_FACTION_MATCH_FLOOR['概念股']), "category 定序档位:邀请<契约<概念股"
@@ -754,4 +752,120 @@ def test_option_rarity_fallback_retired() -> None:
     该惩罚),模块不再暴露该符号。"""
     import sr_od.application.currency_war.kernel.cw_events as _ce
     assert not hasattr(_ce, '_option_rarity')
+
+
+# ===== [40]① 选择层血本位回避(T-99①;ADR-0578;裁定 = 2026-08-31 OPEN-6
+# ===== 「主动选择=回避」,user_playstyle.md L272-276)=====
+
+
+def test_decide_event_blood_economy_avoided() -> None:
+    """T1 主红证锁:血本位卡当帧基线 argmax(奋斗协议 45 > 42/42),排除支移除
+    → 它以 45 分入选、本锁即红——锁钉在回避规则本身。三态触发序 L1:可入选
+    非血集非空 → 其 argmax,winner reason 附 '+blood-avoided'(观测锚)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import pick_value_of
+    cfg = _cfg()
+    st = GameState(board={}, hp=100)
+    assert pick_value_of('奋斗协议') > pick_value_of('乱成一锅粥'), \
+        'premise:血卡确为基线 argmax(45 > 42)'
+    pick = decide_event(['奋斗协议', '乱成一锅粥', '着眼当下'], cfg, st)
+    assert pick.option_idx in (1, 2), f'血本位卡不得入选,实得 {pick}'
+    assert 'blood-avoided' in pick.reason, f'观测锚缺失,实得 {pick.reason}'
+
+
+def test_decide_event_priority_cannot_rescue_blood() -> None:
+    """T1b(F1 补声明面):strategy_priority +30 是分值族内软加分,血本位排除是
+    集合级结构规则(ADR-0578)——血卡无论加多少分都进不了可入选非血分区,
+    winner reason 不携带 user-priority 归因。"""
+    cfg = _cfg(strategy_priority=['奋斗协议'])
+    st = GameState(board={}, hp=100)
+    pick = decide_event(['奋斗协议', '乱成一锅粥', '爆晶矿·金'], cfg, st)
+    assert pick.option_idx != 0, 'priority 不得把血卡救回可入选分区'
+    assert 'blood-avoided' in pick.reason and 'user-priority' not in pick.reason, \
+        f'实得 {pick.reason}'
+
+
+def test_decide_event_blood_forced_when_no_alternative() -> None:
+    """T2 三态触发序 L2 兜底支(F4e 前提锁):可入选非血集空(唯一非血卡被禁)
+    → 血卡间常规评估序 argmax、reason 显影 blood-forced;user-forbid「有替代
+    永不选」的替代语义兑现——被禁非血卡让位于非禁血卡。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        get_strategy,
+        is_blood_economy,
+    )
+    # 前提锁:两血卡确经谓词判血(兜底支语义才成立)
+    assert is_blood_economy(get_strategy('奋斗协议').economy)
+    assert is_blood_economy(get_strategy('不等价交换').economy)
+    cfg = _cfg(strategy_forbid=['乱成一锅粥'])
+    st = GameState(board={}, hp=100)
+    pick = decide_event(['奋斗协议', '不等价交换', '乱成一锅粥'], cfg, st)
+    assert pick.option_idx in (0, 1), f'被禁非血卡不得入选,实得 {pick}'
+    assert 'blood-forced' in pick.reason, f'兜底支显影缺失,实得 {pick.reason}'
+
+
+def test_is_blood_economy_family_lock() -> None:
+    """T3 族边界锁(ADR-0578):当前族集 = {奋斗协议, 不等价交换},与 [40] 裁定
+    原文点名完全一致。反向钉死两类陷阱:①名字陷阱——鲜血阶梯(75 分顶分卡)
+    名带血实为战力卡(effect 无 HP 经济字段,economy=None);②补偿型字段——
+    保险/星际和平保险的按损血给金不改支付币种,不入族。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_ECONOMY,
+        EconomyEffect,
+        get_strategy,
+        is_blood_economy,
+    )
+    family = {n for n, e in STRATEGY_ECONOMY.items() if is_blood_economy(e)}
+    assert family == {'奋斗协议', '不等价交换'}, f'族集漂移:{family}'
+    assert get_strategy('鲜血阶梯') is not None
+    assert get_strategy('鲜血阶梯').economy is None
+    assert is_blood_economy(get_strategy('鲜血阶梯').economy) is False
+    assert is_blood_economy(EconomyEffect(gold_per_20hp_lost=5)) is False
+    assert is_blood_economy(EconomyEffect(gold_per_hp_lost_now=True)) is False
+    assert is_blood_economy(None) is False
+
+
+def test_decide_event_lcs_path_blood_resolved() -> None:
+    """T5 帧①(F3 修复面):已评估血卡 × OCR 形变名——LCS 解析名经谓词判血 →
+    排除,病灶帧(奋斗协议形变名 45 分入选)不复发;非血形变名裸分行为不变
+    (eval-lcs 语义保持,解析单一源 = resolve_strategy_canonical)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        pick_value_of,
+        resolve_strategy_canonical,
+    )
+    cfg = _cfg()
+    st = GameState(board={}, hp=100)
+    assert resolve_strategy_canonical('奋斗协讉') == '奋斗协议'
+    assert pick_value_of('着眼当丅') == 42, '非血形变名 LCS 裸分前提'
+    # 帧①:形变血卡(45)被排除,真卡着眼当下(42)入选;红证:无分类时形变名
+    # 45 分 argmax 入选
+    pick = decide_event(['奋斗协讉', '着眼当下'], cfg, st)
+    assert pick.option_idx == 1, f'形变血卡不得入选,实得 {pick}'
+    assert 'blood-avoided' in pick.reason
+    # 非血形变名:eval-lcs 裸分行为零漂移(仍按解析分竞争并可选)
+    pick2 = decide_event(['奋斗协议', '着眼当丅'], cfg, st)
+    assert pick2.option_idx == 1 and 'eval-lcs' in pick2.reason
+
+
+def test_decide_event_unevaluated_blood_candidate_level(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T5 帧②(N2 候选级挂点):未评估血卡 × OCR 形变名——解析分类不依赖
+    PICK_VALUE 命中(eval-lcs 分支对未评估卡不可达:分值支内挂点会漏,全弱帧
+    0 分入选)。红证:无候选级分类时形变血卡 0 分 argmax 入选、本锁红。
+    注入条目 teardown 自动恢复(monkeypatch.setitem)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        INVESTMENT_STRATEGIES,
+        EconomyEffect,
+        InvestmentStrategy,
+        resolve_strategy_canonical,
+    )
+    monkeypatch.setitem(
+        INVESTMENT_STRATEGIES, '血契协议',
+        InvestmentStrategy(name='血契协议', rarity='棱彩',
+                           effect='购买经验值消耗6点小队生命值而非金币(测试注入,未评估)',
+                           economy=EconomyEffect(xp_buy_hp_cost=6)))
+    assert resolve_strategy_canonical('血契协讉') == '血契协议'
+    cfg = _cfg()
+    st = GameState(board={}, hp=100)
+    # 全弱帧:未评估血卡(形变名,0 分)vs 未注册名(0 分)——无分类时 idx0 入选
+    pick = decide_event(['血契协讉', '银色无名'], cfg, st)
+    assert pick.option_idx == 1, f'未评估血卡不得经形变名入选,实得 {pick}'
+    assert 'blood-avoided' in pick.reason
 

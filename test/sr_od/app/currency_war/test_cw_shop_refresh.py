@@ -423,11 +423,17 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     read_gold_opt 的逐次返回(耗尽后重复最后一个);``states`` 同型;
     ``shop_reads`` 是 read_shop_cards 的逐次返回(名列表)。
     读序语义随 W891 候选①(执行边界压缩,报告
-    .debug/temp/currency_war/w891_c1_buy_edge/REPORT.md §1.4)重推:
+    .debug/temp/currency_war/w891_c1_buy_edge/REPORT.md §1.4)与 09-05
+    落地门契约(1f2b7d6b/badf887e/faf09a64:像素检出未生效买 return
+    False 零入账、不投影、不置 refresh_first_action)重推;恒定帧夹具
+    下买必判未生效 → 刷新恒为段首动作:
     - 仅刷新波:波循环顶整帧读即点击前现读(无买卡污染),**不再有
       独立 pre-shot 读** → read_shop_cards 第 1 次 = 刷后重读;
-    - 买+刷新波(W592 语义不变):第 1 次 = 点击前现读,第 2 次 =
-      刷后重读;read_gold_opt 第 1 次 = 点击前现读金,第 2 次 = 刷后金。
+    - 买+刷新波(恒定帧夹具):刷前名集复用段顶读(买未落地,板面
+      =段顶读,W592 失效条件「波内买卡离场」不成立)→ read_shop_cards
+      仅消费 1 次 = 刷后重读;read_gold_opt 第 1 次 = 刷后金。
+      (「第 1 次 = 点击前现读」的 2 读序只在买生效形态存在——需替身帧
+      支持买后像素变化,本夹具无此形态。)
     """
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd
     from sr_od.application.currency_war.obs import cw_observation as cwo
@@ -708,9 +714,11 @@ def test_buy_refresh_wave_real_miss_not_effective(
 
     W590 缺陷形态(修复前必错):state.shop(plan 读)仍含已买牌,而
     现读画面买后即离场——刷新落空时「plan 读 vs 点击后实读」集合必不等,
-    被误判 free_refresh_proc(不停+写假采证 flag)。修复后 before 名集 =
-    点击前现读 → 落空=相对点击前未变 → False → 落刷新未生效票,执行
-    事实 refresh_board_changed=False 透传分类器(not_effective 停)。
+    被误判 free_refresh_proc(不停+写假采证 flag)。新契约(落地门
+    1f2b7d6b/badf887e/faf09a64:恒定帧下买判未生效零入账)下刷新仍是
+    段首动作,before 名集复用段顶读;真落空时刷后读含未识别槽('')
+    → 判据 None 不可判,执行事实 refresh_board_changed=None 透传
+    分类器(not_effective 停,不得洗成 free_refresh_proc)。
     """
     events: list[str] = []
     writes: list[str] = []
@@ -726,7 +734,7 @@ def test_buy_refresh_wave_real_miss_not_effective(
         states=[_state(10, _OLD_NAMES), _state(10, _OLD_NAMES),
                 _state(10, _OLD_NAMES), _state(10, _OLD_NAMES)],
         gold_opts=[10, 10],   # 落空:金未扣
-        shop_reads=[_POST_BUY, _POST_BUY],   # 点击前后牌面全同
+        shop_reads=[_POST_BUY],   # 刷后唯一现读(段首动作无独立 pre-shot 读;含未识别槽 → 判据 None)
         events=events)
 
     result = _execute(op)
@@ -762,8 +770,14 @@ def test_buy_refresh_wave_real_free_proc(
 ) -> None:
     """锁④买+刷新波真免费 → free_refresh_proc 形态(不停+采证)。
 
-    修复后语义:牌面已变=相对点击前现读(已买槽空剔除后)——真免费时
-    刷出新牌 → changed=True ∧ 金未扣 → 免费 proc 留证不停;不落全同票。
+    新契约语义(落地门 1f2b7d6b/badf887e/faf09a64:像素检出未生效买
+    return False 零入账、不投影、不置 refresh_first_action):恒定帧下
+    买判未生效(落地门留证在案,断言锚定)→ 刷新仍按段首动作执行,
+    刷前名集复用段顶整帧读(买未落地 → 板面=段顶读,现读未被污染)
+    ——刷后唯一一次现读与之对拍:真免费时刷出新牌 → changed=True ∧
+    金未扣 → 免费 proc 留证不停;不落全同票。替身读序钉 1 读形态:若
+    生产在段首分支误加独立 pre-shot 读、或落地门回归「未生效也入账」
+    (刷新被挤出段首),替身读序即错位 → changed=False 本锁红。
     """
     events: list[str] = []
     writes: list[str] = []
@@ -779,15 +793,20 @@ def test_buy_refresh_wave_real_free_proc(
         states=[_state(10, _OLD_NAMES), _state(10, _OLD_NAMES),
                 _state(10, _NEW_NAMES), _state(10, _NEW_NAMES)],
         gold_opts=[10, 10],   # 免费:金未扣
-        shop_reads=[_POST_BUY, _NEW_NAMES],   # 点击前含已买空槽,刷后全新牌
+        shop_reads=[_NEW_NAMES],   # 刷后唯一现读(段首动作无独立 pre-shot 读)
         events=events)
 
     result = _execute(op)
 
     assert result.success, f'免费刷新链不应停机:{result.status!r}'
     assert fc.click_hit_area(SHOP_SCREEN_NAME, '按钮-刷新')
+    # 场景前提在案:恒定帧下买被落地门像素检出判未生效(留证行)——
+    # 本锁钉的是「未生效买不把刷新挤出段首」形态,前提消失即场景漂移。
+    assert any(k[0][1] == 'buy_click_ineffective' for k in rows), (
+        f'恒定帧下买应被落地门判未生效(场景前提):'
+        f'{[k[0][1] for k in rows]}')
     assert facts and facts[0]['refresh_board_changed'] is True, (
-        f'真免费应判「相对点击前已变」(空槽剔除后):{facts}')
+        f'真免费应判「相对段顶读已变」(买未入账,基线=段顶牌面):{facts}')
     assert any('FREE-REFRESH-PROC' in w for w in writes), (
         f'免费刷新 proc 留证未产出;writes={writes[:3]}')
     assert not any(k[0][0] == 'shop_refresh' and k[0][1] == 'invariant_break'
