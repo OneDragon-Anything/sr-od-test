@@ -275,7 +275,7 @@ def test_synthetic_row_no_cursor_advance_182456_case(tmp_path: _P):
     → 战斗腿 = 12−31 = −19(v8 语义重装配将捏造 −33);前位 p1r6 同构
     合成行(86)同样不入链 → 不捏造 v8 幻影 −2 条目。兼承 telemetry_
     archive 瘦身收敛搬入的两面:战斗真值行加法键取值(outcome_source/ts)
-    与净额≥0 轮 rounds 槽 +4 如实记账(p1r6:90−88)。"""
+    与净额≥0 轮 rounds 槽 +2 如实记账(p1r6:90−88)。"""
     rd = tmp_path / 'replay'
     rid = 'run_20260906_182456'
     _write_jsonl(rd, 'outcomes.jsonl', [
@@ -304,8 +304,8 @@ def test_synthetic_row_no_cursor_advance_182456_case(tmp_path: _P):
     # rounds 槽照旧:合成行为 ts 末行的槽取其值显示(降权只及链)
     by_key = {(r['plane'], r['round']): r for r in a['rounds']}
     assert by_key[(2, 4)]['hp'] == 12 and by_key[(2, 4)]['hp_delta'] == -19
-    # 净额≥0 轮如实记账:p1r6 战斗行 90 相对可信结算 88 = +4,照记不漏
-    assert by_key[(1, 6)]['hp'] == 90 and by_key[(1, 6)]['hp_delta'] == 4
+    # 净额≥0 轮如实记账:p1r6 战斗行 90 相对上一可信结算 88 = +2,照记不漏
+    assert by_key[(1, 6)]['hp'] == 90 and by_key[(1, 6)]['hp_delta'] == 2
 
 
 def test_pure_supply_round_synthetic_only_fallback_guarded(tmp_path: _P):

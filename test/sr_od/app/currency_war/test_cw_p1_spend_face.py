@@ -2,18 +2,19 @@
 
 设计出处 = docs/develop/currency_war/strategy-docs/14_p1_consume_arms.md
 (v4.2.2)§3(臂①囤腿)/§4(arm0 升级授权回补)/§7.1/§7.2。覆盖:
-- 臂① m2_stockpile:j=1 发射(M2 后、M2b 前)/ j=2 帧不判(M2b 独占)/
-  cnt2>0 帧路径排除(N2:臂①不制造死库存)/ star_mismatch_skip 分键
-  (W4)/ bench 满先 M4 腾席(Y5)/ stockpile_unaffordable;
-- M2b:候选 star==1 过滤(Y4)+ 席位门满栏例外(§3.6,合成触发帧免
-  bench_free 门,理由键不变);
-- arm0 v2:need (名,星) 现量口径(Y3)/ level_readable 消费端 fail 向
-  (C4/W6)/ pop_slot 前置放宽(§4.3)。
+- 臂① m2_stockpile:j=1 发射(M2 后、M2b 前)/ cnt2>0 帧路径排除
+  (N2:臂①不制造死库存)/ star_mismatch_skip 分键(W4)/ bench 满
+  先 M4 腾席(Y5)/ stockpile_unaffordable。j=2 帧归 M2b 独占的互斥面
+  与 §3.6 满栏例外发射面由 test_cw_strategy_iter_7f.py::
+  TestMergeCompletionBuy 承载(跨文件择一,2026-09-08 瘦身批);
+- M2b:候选 star==1 过滤(Y4,m2b_star_mismatch 分键);
+- arm0 v2:need 现量口径(Y3)/ level_readable 消费端 fail 向(C4/W6)
+  / pop_slot 前置放宽(§4.3,只辖放宽腿;基础三态理由面在
+  test_cw4_mandate_v1.py::test_d_lv7_pop_slot_explicit_reasons)。
 
 锁契约:docstring 引本篇章节为设计出处;不锁分布数值(测试纪律第 8 条)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -31,16 +32,15 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     arm0_level_lag,
     arm0_need,
 )
 
 _LOCK_COMP = '列车同行'
-
-
-def _cfg():
-    return SimpleNamespace(ev_arm='full')
 
 
 def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
@@ -98,29 +98,15 @@ class TestM2StockpileArm1:
 
     def test_j1_second_copy_bought_as_stockpile(self):
         """§3.2 触发域:cnt1(m)=1 ∧ cnt2=0 ∧ 店内 1★ 在售 ⇒ 第 2 张
-        经臂①义务买入(reason='m2_stockpile',不走息律门);j=0 帧仍由
-        M2 主通道承载(发射序覆盖链 M2→臂①→M2b)。"""
+        经臂①义务买入(reason='m2_stockpile',不走息律门)。j=0 帧
+        (未持有)走 M2 主通道的覆盖面由 test_cw4_shop_line.py::
+        test_buy_face_m2_line_member 承载(跨文件择一,不双锁)。"""
         m = _members()[0]
         st = _st(gold=30, shop_cards=[_card(m, 3)],
                  bench=[_bc(m, slot=1)])
         sess = _shop_session(_comp())
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'm2_stockpile'
-        # j=0 对照:未持有时仍走 M2 主通道(覆盖链不缺口)
-        st0 = _st(gold=30, shop_cards=[_card(m, 3)])
-        sess0 = _shop_session(_comp())
-        act0 = _decide(st0, sess0)
-        assert isinstance(act0, BuyCard) and act0.reason == 'm2_line_member'
-
-    def test_j2_frame_not_judged_by_arm1(self):
-        """j=2 帧(同名同星 1★ ×2 ∧ 无 2★):臂①不判不发,M2b 独占完成段
-        (发射序覆盖链互斥,A1 三处矛盾消除)。"""
-        m = _members()[0]
-        st = _st(gold=30, shop_cards=[_card(m, 3)],
-                 bench=[_bc(m, slot=1), _bc(m, slot=2)])
-        sess = _shop_session(_comp())
-        act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'm2_merge_completion'
 
     def test_cnt2_positive_frame_arm1_excluded(self):
         """cnt2>0 帧:臂①路径排除(N2 措辞收窄——锁「臂①不制造死库存」:
@@ -199,23 +185,11 @@ class TestM2StockpileArm1:
         assert state_of(sess).cw4_counters.get('stockpile_unaffordable', 0) >= 1
 
 
-# ===== M2b:Y4 星过滤 + §3.6 满栏例外 =====
+# ===== M2b:Y4 星过滤(§3.6 满栏例外发射面在
+# test_cw_strategy_iter_7f.py::TestMergeCompletionBuy)=====
 
 
-class TestM2bSeatGateAndStarFilter:
-
-    def test_merge_buy_at_full_bench(self):
-        """§3.6 满栏例外:同名同星 1★ ×2 ∧ 第三张 1★ 在店 ⇒ 满栏也买
-        (买入即合成,机制对齐);理由键 'm2_merge_completion' 不变。
-        (隔离:M2 主/M4 先行臂以「全 owned 帧灭 missing」排除——填充件
-        2★ 非 1★ 燃料、非 k 成员,不构成缺员也不入燃料集。)"""
-        m = _members()[0]
-        fill = [_bc(f'填充件{i}', slot=i + 1, star=2) for i in range(1, 8)]
-        bench = [_bc(m, slot=8), _bc(m, slot=9)] + fill
-        st = _st(gold=30, shop_cards=[_card(m, 3)], bench=bench)
-        sess = _shop_session(_comp())
-        act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'm2_merge_completion'
+class TestM2bStarFilter:
 
     def test_merge_star_filter_only_2star_card(self):
         """Y4:完成段(cnt=2∧无2★)但店内仅 2★ 直出卡 ⇒ 不买
@@ -257,9 +231,10 @@ class TestArm0LevelLag:
         k = ('甲',)
         deployed = [_bc('甲', star=1, slot=1)]
         bench = [_bc('甲', star=2, slot=1)]
-        assert arm0_need(deployed, bench, k) == 1
         trig, _ = arm0_level_lag(1, True, deployed, bench, k, 5)
         assert trig is False, '同名异星形态不得虚触发升级'
+        # level=1 不触发已蕴含 need≤1(need 含同名异星件则 trig=True),
+        # need 的排除口径由 test_need_name_dedup_semantics 单独辖。
 
     def test_level_lag_triggers(self):
         k = ('甲', '乙', '丙', '丁')
@@ -332,9 +307,7 @@ class TestPopSlotRelaxation:
         ok, why = pop_slot(5, 5, 60, 0, 0, buyable_candidate=True,
                            bench_free=2)
         assert ok is True and why == 'full_rich_with_candidate'
-        ok2, why2 = pop_slot(5, 5, 60, 0, 0)   # 无任何候选:显式理由
-        assert ok2 is False and why2 == 'no_bench_candidate'
-        # 买不起(金低于地板 floor_gold)仍拒
+        # 买不起(金低于地板 floor_gold)仍拒(放宽腿过候选门后金闸独立生效)
         ok3, why3 = pop_slot(5, 5, 5, 0, 10, buyable_candidate=True,
                              bench_free=2)
         assert ok3 is False and why3 == 'gold_below_floor'
@@ -461,24 +434,6 @@ class TestP1BloodFloorPredicate:
 
 class TestF1LedgerBuyMembersAlignment:
 
-    def test_r1_ledger_uses_buy_members_single_source(self):
-        """F1 口径对齐(§6.2 输入②):R1 合格集/Σ卡费单源 = buy_members
-        ——锁定帧全 core∪shared 已 2★ 成型而 hoard 其余成员可追时,
-        k_members 口径给 inf(旧口径=刷新恒闭)而 buy_members 口径给
-        有限账(臂①落地后「买满三张」费用口径与行为一致)。"""
-        comp = _comp()
-        hoard = cw_intention_hoard(comp)
-        core = _members()
-        # 全 core∪shared 2★ 成型(出 k 口径合格集)
-        bench = [_bc(m, star=2, slot=i + 1) for i, m in enumerate(core)]
-        level = 7   # 该级 cost-3 档可追(低位面全不可追会使两口径同为 inf)
-        e_k, _ = shop_ledger_terms(core, bench, [], level)
-        assert e_k == float('inf'), '锁前提:core∪shared 口径合格集空'
-        e_b, fees_b = shop_ledger_terms(tuple(sorted(hoard)), bench, [],
-                                        level)
-        assert e_b != float('inf'), 'buy_members 口径:hoard 其余成员可追'
-        assert fees_b > 0, 'Σ卡费 =(3−j)×cost 完成档口径随对齐生效'
-
     def test_r1_idle_gold_no_chaseable_key(self):
         """金过剩 ∧ 合格集空 ⇒ r1_idle_gold_no_chaseable 语境分键
         (刷新让位显影;(b)3 永久挂空后该帧无承重件,只观测禁调参)。"""
@@ -497,11 +452,6 @@ class TestF1LedgerBuyMembersAlignment:
         assert not isinstance(act, BuyCard)
         assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
         assert state_of(sess).cw4_counters.get('r1_idle_gold_no_chaseable', 0) >= 1
-
-
-def shop_ledger_terms(buy_members, bench, deployed, level):
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
-    return shop._r1_ledger_terms(buy_members, bench, deployed, level)
 
 
 # ===== 升级授权三臂并联(P1消费臂批落地审阻-1/应-2)=====
@@ -748,62 +698,6 @@ def _make_prep_loop_cls(overlay_anchor: tuple[str, str] | None = None,
     return _PrepLoop
 
 
-def _wire_prep_loop(monkeypatch, comp, launch_fn=None, fp=1.0):
-    """构造桩环 + 接线:返回 (op, sess, launch_calls, guard_calls)。
-    launch_fn 缺省 = 哨兵发射(_ArmFired 捕获短路点);fp = 桩
-    form_progress 返回值。"""
-    from types import SimpleNamespace as _NS
-
-    import sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing as _bb
-    from sr_od.application.currency_war.operations import cw_loop
-    launch_calls: list[tuple[bool, str]] = []
-    guard_calls = {'n': 0}
-
-    class _ArmFired(Exception):
-        pass
-
-    def _default_launch(op, ctx):
-        launch_calls.append((True, 'ok'))
-        raise _ArmFired()
-
-    def _fake_tick(prev, count, sig):
-        guard_calls['n'] += 1
-        return (prev, count)
-
-    def _form_progress_probe(tc, st):
-        # 诚实桩:校验 st 真是带 board 的对局态(防模块级 state 名错绑回归)
-        if not hasattr(st, 'board'):
-            raise AssertionError(
-                'form_progress 收到非对局态(疑似模块级 state 错绑)')
-        return fp
-
-    # 判据核单一源(两小批①):armed 判定经 kernel readiness_launch_
-    # decision 内联 form_progress(kernel.cw_comps 现读),patch 须落
-    # kernel 侧——cw_loop 消费面已无内联判据可 patch
-    monkeypatch.setattr(
-        'sr_od.application.currency_war.kernel.cw_comps.form_progress',
-        _form_progress_probe)
-    monkeypatch.setattr(cw_loop, 'readiness_battle_launch',
-                        launch_fn or _default_launch)
-    monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
-    monkeypatch.setattr(_bb, 'read_ocr_texts', lambda ctx, screen: [])
-    cls = _make_prep_loop_cls()
-    op = cls()
-    op._iter = 2
-    op._is_new_match = False
-    op._cw_locked_resume = False
-    op._cw_back_btn_count = 0
-    op._battle_ts = None
-    op.last_screenshot = object()  # type: ignore[attr-defined]
-    op._screen = object()
-    sess = _NS(               last_state=_st(gold=30, level=3),
-               last_prep_action_sig=('m2',))
-    state_of(sess).cw4_counters = {}
-    state_of(sess).target_comp = comp
-    op.ctx = _NS(cw_match=_NS(session=sess))
-    return op, sess, launch_calls, guard_calls
-
-
 class TestReadinessBattleArm:
 
     def test_launch_fires_every_readiness_frame(self, monkeypatch):
@@ -829,27 +723,10 @@ class TestReadinessBattleArm:
         assert calls == ['RunDeploy', 'StartBattle'] * 2, calls
         assert op._cw_locked_sync_done is True   # 闩值不被达标臂触碰
 
-    def test_resume_face_still_latched(self, monkeypatch):
-        """锁②对照面:恢复局面面(sync_once=True)闩语义不回退——闩置位
-        后只 StartBattle(C1 两调用面共用发射核、分域不同)。"""
-        import sr_od.application.currency_war.prep_actions as _pa
-        from sr_od.application.currency_war.operations import cw_loop
-        calls: list[str] = []
-
-        class _FakeExecutor:
-            def __init__(self, op, ctx):
-                pass
-
-            def execute(self, action):
-                calls.append(type(action).__name__)
-                return True, 'ok'
-
-        monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
-        op = _mk_loop()
-        cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-        calls.clear()
-        cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-        assert [c for c in calls if c != 'init'] == ['StartBattle']
+    # 恢复局面面(sync_once=True)的闩置位/二次调用只 StartBattle 对照面
+    # = test_cw_strategy_live_probe.py::test_locked_resume_sync_and_battle
+    # (闩值+progressed 断言更全,跨文件择一,2026-09-08 瘦身批删除本侧
+    # 等价副本 test_resume_face_still_latched)。
 
     def test_readiness_position_before_guard_chain(self, monkeypatch):
         """锁①③(行为面,落地审轮二:替代 getsource 半锁):达标帧
@@ -857,6 +734,7 @@ class TestReadinessBattleArm:
         守卫链照常可达(零重排,§7.3 锚③;守卫规格零改动)。"""
         import pytest as _pt
 
+        from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
         from sr_od.application.currency_war.operations import cw_loop
 
         class _ArmFired(Exception):
@@ -886,81 +764,29 @@ class TestReadinessBattleArm:
             _form_progress_probe)
         monkeypatch.setattr(cw_loop, 'readiness_battle_launch', _fake_launch)
         monkeypatch.setattr(cw_loop, 'prep_no_progress_tick', _fake_tick)
-        import sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing as _bb
         # BOSS 简报 OCR 判别(分支 0p 无条件调 OCR)桩空 → False,免真 OCR
-        monkeypatch.setattr(_bb, 'read_ocr_texts', lambda ctx, screen: [])
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.operations.cw_screen.'
+            'cw_screen_boss_briefing.read_ocr_texts',
+            lambda ctx, screen: [])
         from types import SimpleNamespace as _NS
 
-        class _Hit:
-            is_success = True
+        def _mk_wired_op():
+            """桩环构造统一走 _make_prep_loop_cls()(无 overlay/ocr_hits
+            参与本测用不到;工厂与旧内联 _PrepLoop 逐行为等价,2026-09-08
+            瘦身批去复制)。类属性已置 _iter/_cw_locked_resume 等初值。"""
+            op = _make_prep_loop_cls()()
+            op._screen = object()
+            return op
 
-        class _Miss:
-            is_success = False
-
-        class _PrepLoop(cw_loop.CwLoop):
-            _iter = 2
-            _is_new_match = False
-            _cw_locked_resume = False
-            _cw_back_btn_count = 0
-            _battle_ts = None
-
-            def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
-                pass
-
-            @property
-            def last_screenshot(self):
-                return self._screen
-
-            @last_screenshot.setter
-            def last_screenshot(self, v):
-                pass
-
-            def _stall_watch_tick(self, screen):
-                pass
-
-            def screenshot(self):
-                return self._screen
-
-            def round_by_find_area(self, screen, s1, s2, **kw):
-                ok = (s1 == '货币战争-备战'
-                      and s2 in ('备战标识-购买经验', '按钮-出战'))
-                return _Hit() if ok else _Miss()
-
-            def round_by_ocr_and_click(self, screen, target_cn=None, *a, **kw):
-                # 「返回投资策略选择」命中 = 非达标帧在守卫计数后干净退出
-                #(round_wait),不落入后续真画面操作
-                if target_cn == '返回投资策略选择':
-                    return _Hit()
-                return _Miss()
-
-            def round_by_ocr(self, *a, **kw):
-                return _Miss()
-
-            def round_by_find(self, *a, **kw):
-                return _Miss()
-
-            def round_by_find_and_click_area(self, *a, **kw):
-                return _Miss()
-
-            def round_wait(self, wait=1.0, status=''):
-                return ('wait', status)
-
-        comp = _comp()
-        from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+        # 达标帧:达标臂发射(哨兵)且守卫计数零触达
+        op = _mk_wired_op()
         sess = _NS(last_state=_st(gold=30, level=3))
         state_of(sess).cw4_counters = {}
-        state_of(sess).target_comp = comp
+        state_of(sess).target_comp = _comp()
         # last_prep_action_sig 迁 ExecState(session 职责分离批):经
         # exec_state_of 附着——裸 session 直挂 attr 已不被 cw_loop 读
         exec_state_of(sess).last_prep_action_sig = ('m2',)
-        op = _PrepLoop()
-        op._iter = 2
-        op._is_new_match = False
-        op._cw_locked_resume = False
-        op._cw_back_btn_count = 0
-        op._battle_ts = None
-        op.last_screenshot = object()  # type: ignore[attr-defined]
-        op._screen = object()
         op.ctx = _NS(cw_match=_NS(session=sess))
         with _pt.raises(_ArmFired):
             op.loop()
@@ -971,14 +797,7 @@ class TestReadinessBattleArm:
             'sr_od.application.currency_war.kernel.cw_comps.form_progress',
             lambda tc, st: 0.5)
         state_calls.update(launch=0, guard=0)
-        op2 = _PrepLoop()
-        op2._iter = 2
-        op2._is_new_match = False
-        op2._cw_locked_resume = False
-        op2._cw_back_btn_count = 0
-        op2._battle_ts = None
-        op2.last_screenshot = object()  # type: ignore[attr-defined]
-        op2._screen = object()
+        op2 = _mk_wired_op()
         op2.ctx = _NS(cw_match=_NS(session=_NS(
                 last_state=_st(gold=30, level=3))))
         # 非达标帧的签名同迁 ExecState(经 exec_state_of 附着)

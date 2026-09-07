@@ -1,6 +1,6 @@
 # 慢桶名单:实测整条用例(call+setup)>=2s 的 nodeid 后缀,conftest 按后缀匹配注入 slow marker
-# 维护:uv run pytest sr-od-test/ -q -m "not slow and not legacy_baseline" --durations=300 --durations-min=1.0 巡检回填(准入:>=2s;口径=标准桶,含非 CW)
-# 用法:快速层 = pytest sr-od-test/test/sr_od/app/currency_war -m "not slow and not legacy_baseline";慢桶点名 = -m slow
+# 维护:uv run pytest sr-od-test/ -q -m "not slow" --durations=300 --durations-min=1.0 巡检回填(准入:>=2s;口径=标准桶,含非 CW)
+# 用法:快速层 = pytest sr-od-test/test/sr_od/app/currency_war -m "not slow";慢桶点名 = -m slow
 # 注:类内用例须带类名段;条目为短后缀形态(文件名::)。
 # 2026-09-03 合并战役收官重建(dd-038 v2 整删波后终态实测,-m slow 139.8s/55 条):
 # 旧名单 ~95 条对账——v2 时代重型件(plane_p2 变异探针/双 n20 零漂移门/equip_grant/
@@ -10,15 +10,11 @@
 test_cw_infra_locks.py::test_ci_smoke_snapshot_batch
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_new_match_a8_reaches_prep
 test_cw_shop_refresh.py::test_hook_unknown_slot_skipped_not_stopped
-test_cw_shop_refresh.py::test_buy_refresh_wave_real_miss_not_effective
-test_cw_shop_refresh.py::test_buy_refresh_wave_real_free_proc
 test_cw_data_registry.py::test_layout_hook_no_stop_only_evidence
 __init__.py::test_rollover_with_foreign_open_handle[False]
 test_cw_shop_refresh.py::test_hook_persistent_unknown_stops_with_evidence
 test_cw_data_registry.py::test_layout_hook_silent_on_archived
 test_cw_r331_fixture.py::test_observe_full_heavy_on_prep_fixture
-test_cw_shop_refresh.py::test_refresh_wave_normal_chain
-test_cw_shop_refresh.py::test_refresh_wave_free_refresh_proc_chain
 test_cw_data_registry.py::test_cv_transient_falls_back_to_formula
 test_cw_data_registry.py::test_cv_reread_mismatch_logged_no_action
 test_cw_data_registry.py::test_cv_stable_new_grid_confirmed

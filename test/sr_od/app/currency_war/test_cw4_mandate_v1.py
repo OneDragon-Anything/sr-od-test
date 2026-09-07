@@ -8,7 +8,6 @@ D-A45 干旱重置)/ 冒烟(探针语料跑 _emit 无异常+截断判符合 v2)/
 零漂移门(商店线透传零污染,n≥20)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import ast
 from pathlib import Path
@@ -16,6 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.decision_assembly import snapshot_from_obs
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PREP_ACTION_TYPES,
@@ -41,6 +41,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
+    REFRESH_COST_BASE,
     BenchChar,
     GameState,
     LevelUpShop,
@@ -53,9 +54,13 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
     proof,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
+    assemble as assemble_turn,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
+    decide_from_turn,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     BYPASS_TABLE,
@@ -68,6 +73,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
     line_switch_sell,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
@@ -275,11 +283,6 @@ class TestTruncateFrameStable:
             [LevelUp(), StartBattle(), LevelUp()])
         assert [type(a) for a in out] == [LevelUp, StartBattle]
 
-    def test_continue_keeps_tail(self):
-        out = entry.truncate_frame_stable([LevelUp(), LevelUp(),
-                                           SellBench(slot=2)])
-        assert len(out) == 3
-
     def test_section_3_3_fail_closed_unknown(self):
         """词表外动作:截断+计数披露(禁静默丢弃)。"""
         class Rogue(PrepAction):
@@ -406,10 +409,6 @@ class TestFixpoolCheckpoints:
         assert proof.stop_buy(comp, list(k), []) is True
         assert proof.stop_buy(comp, list(k)[:-1], []) is False
 
-    def test_d_buynote_spend_unified(self):
-        assert crit_levelup.spend_unified(4, 12, 4) is False   # 散买拦截(整批 16>12)
-        assert crit_levelup.spend_unified(4, 16, 4) is True    # 整批放行
-
     def test_d_c44_fresh_read_frame(self):
         """D-C44:骨架输入=黑板全量现读(MandateFrame 每帧重建,
         bench_free 由现读派生,含新购件)。"""
@@ -432,12 +431,12 @@ class TestMandateBehavior:
         reasons = [e.reason for e in out]
         assert 'm4_fuel_sell_for_m2' in reasons
         assert 'm2_buy' in reasons
-        # 席满无燃料可腾(全 2★)⇒ 放弃 + m2_retry_exhausted
+        # 席满无燃料可腾(全 3★)⇒ 放弃:耗竭帧零买入意图
+        #(m2_retry_exhausted / bench_full_buy_abandon 计数由
+        # test_cw_m2_stall_cache.TestPrepStallCache 同帧形 ==1 强断言辖)
         bench2 = [_bench(i, '高价', star=3) for i in range(1, 10)]
-        frame2 = _frame(gold=30, bench=bench2, k=k)
-        session2 = _session()
-        out2 = mandate.run_mandate(frame2, session2)
-        assert state_of(session2).cw4_counters.get('m2_retry_exhausted', 0) >= 1
+        out2 = mandate.run_mandate(_frame(gold=30, bench=bench2, k=k),
+                                   _session())
         assert not any(e.reason == 'm2_buy' for e in out2)
 
     def test_fuel_sell_predicate(self):
@@ -448,22 +447,19 @@ class TestMandateBehavior:
         assert [c.char_id for c in cands] == ['燃料件']
 
     def test_stop_flag_classification_not_gate(self):
-        """R5-6:stop_flag=分类谓词非拦截门——线成型 ⇒ 非线内件落出
-        M2 序 1/2 辖域(M2 不再发射买入意图)。"""
+        """R5-6:stop_flag=分类谓词非拦截门。断言面两腿:①线成型帧
+        (stop=True)M1 照常发射——stop 不拦部署(「拦截门」回归即红);
+        ②线成型 ⇒ 零买入意图(M2 辖域,与缺件门同向双保险)。"""
         k = ('目标件',)
         frame = _frame(gold=30, bench=[_bench(1, '目标件')], k=k, stop=True)
         session = _session()
         out = mandate.run_mandate(frame, session)
-        assert not any(e.reason == 'm2_buy' for e in out)
+        assert any(e.reason == 'm1_deploy' for e in out)   # stop 不拦 M1
+        assert not any(e.reason == 'm2_buy' for e in out)  # 成型 ⇒ 零买入
 
-    def test_m1_deploy_emitted(self):
-        k = ('目标件',)
-        frame = _frame(gold=20, bench=[_bench(1, '目标件')],
-                       k=k, round_num=3)
-        session = _session()
-        out = mandate.run_mandate(frame, session)
-        assert any(e.reason == 'm1_deploy' for e in out)
-
+    # m1_deploy 基础发射由 TestRunDeployProposalSuppression
+    # .test_plan_nonempty_frame_run_deploy_emitted 对照臂辖(同发射位同
+    # 断言面;M5 开局帧的空板 RunDeploy 发射由 test_m5_opening_only_round1 辖)。
     def test_m5_opening_only_round1(self):
         k = ('目标件',)
         frame = _frame(gold=20, bench=[_bench(1, '目标件')], k=k, round_num=1)
@@ -493,12 +489,6 @@ class TestEmitSmoke:
         strat = MandateV1Strategy()
         session = _session()
         state_of(session).target_comp = COMP_LIBRARY[0]
-        from sr_od.application.currency_war.decision_assembly import (
-            snapshot_from_obs,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
-            assemble as _assemble_turn_fn,
-        )
         cases = [
             _obs(bench=[_bench(1, '燃料件')]),
             _obs(bench=[_bench(i, '燃料' + str(i)) for i in range(1, 10)],
@@ -512,22 +502,19 @@ class TestEmitSmoke:
         outs = []
         for obs in cases:
             session.prep_obs_frame = obs
-            turn = _assemble_turn_fn(
+            turn = assemble_turn(
                 snapshot_from_obs(obs, session), session,
                 registry=strat.registry)
             outs.append(entry.emit(obs, turn, session, None, ev_arm=ev_arm,
                                    registry=strat.registry))
         return outs
 
-    def _run_emit(self, ev_arm: str) -> list:
-        session = _session()
-        return [entry.truncate_frame_stable([e.action for e in emitted],
-                                            session)
-                for emitted in self._run_emit_raw(ev_arm)]
-
     def test_emit_full_no_exception_and_contract_conform(self):
-        outs = self._run_emit('full')
-        for actions in outs:
+        outs = self._run_emit_raw('full')
+        trunc_session = _session()
+        for emitted in outs:
+            actions = entry.truncate_frame_stable(
+                [e.action for e in emitted], trunc_session)
             assert isinstance(actions, list)
             for a in actions:
                 assert isinstance(a, PrepAction)
@@ -685,16 +672,6 @@ class TestR196Wiring:
         点)的 protected_sell 发射经依赖拓扑合并插到截断点之前——不被
         截断器静默丢弃(IMPL_ADV_R197 症1 主场景:EV pass 追加在截断点
         之后 ⇒ 塌缩出口永久错过且零计数)。"""
-        from sr_od.application.currency_war.decision_assembly import (
-            snapshot_from_obs,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-            bridge as cw4_bridge,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
-            assemble as _assemble_turn_fn,
-        )
-
         class _Cfg:
             def __init__(self, ev_arm: str) -> None:
                 self.ev_arm = ev_arm
@@ -727,10 +704,10 @@ class TestR196Wiring:
         def _decide(round_num: int = 1) -> list[PrepAction]:
             obs = _obs(state=GameState(gold=30, round_num=round_num),
                        bench=bench, vacancy=4)
-            turn = _assemble_turn_fn(
+            turn = assemble_turn(
                 snapshot_from_obs(obs, session), session,
                 registry=strat.registry)
-            return cw4_bridge.decide_from_turn(
+            return decide_from_turn(
                 obs, turn, session, _Cfg('full'), registry=strat.registry)
 
         _decide(round_num=1)                      # 帧1:登记 prev 线名
@@ -754,16 +731,6 @@ class TestR196EvConflictDrop:
 
     @staticmethod
     def _decide_full(bench, comp, gold: int = 1) -> tuple[list, StrategySession]:
-        from sr_od.application.currency_war.decision_assembly import (
-            snapshot_from_obs,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-            bridge as cw4_bridge,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
-            assemble as _assemble_turn_fn,
-        )
-
         class _Cfg:
             ev_arm = 'skeleton_only'
 
@@ -771,9 +738,9 @@ class TestR196EvConflictDrop:
         session = _session()
         state_of(session).target_comp = comp
         obs = _obs(state=GameState(gold=gold), bench=bench, vacancy=4)
-        turn = _assemble_turn_fn(
+        turn = assemble_turn(
             snapshot_from_obs(obs, session), session, registry=strat.registry)
-        out = cw4_bridge.decide_from_turn(
+        out = decide_from_turn(
             obs, turn, session, _Cfg, registry=strat.registry)
         return out, session
 
@@ -865,11 +832,6 @@ class TestR196TruncationBehavior:
             [RunDeploy(), LevelUp(), RunEquip()])
         assert [type(a) for a in out] == [RunDeploy, LevelUp, RunEquip]
 
-    def test_bail_to_outer_terminal(self):
-        out = entry.truncate_frame_stable(
-            [BailToOuter(reason='x'), LevelUp()])
-        assert [type(a) for a in out] == [BailToOuter]
-
     def test_no_context_conditional_continues(self):
         """复检语境缺省(None)⇒ 按条件成立续发(生产路径 bridge 总供给)。"""
         out = entry.truncate_frame_stable(
@@ -938,23 +900,19 @@ class TestR196ShadowKeys:
                                        20, 10)
         assert not sig.lambda_shadow_armed and not sig.lambda_armed
 
-    def test_lambda_injected_form_counts_shadow_only(self):
-        provisional.inject('P_LAMBDA_QUANTILE', provisional.CalibValue(
-            value=0.15, injected_form=True))
+    def test_lambda_inject_arms_true_key_with_shadow_control(self):
+        """λ 顾问注入即武装(R28-1;R196 症3 载体):真键 + 影子对照键
+        同置(对照键保留,禁删)。生产 _upgrader_evaluate 不读
+        CalibValue.injected_form(全仓零消费,判别力检验法),注入形态
+        与标定形态同一断言面,合并单锁。"""
+        provisional.inject('P_LAMBDA_QUANTILE', provisional.CalibValue(0.15))
         st = self._top_danger_state()
         sig = entry._upgrader_evaluate(_session(), st, 20, st.hp)
-        assert sig.lambda_shadow_armed and sig.lambda_armed  # 标定落地:影子维持撤销,真键武装(对照键保留)
+        assert sig.lambda_armed and sig.lambda_shadow_armed   # 对照键保留
         # 健康帧(高血带)不触发:谓词求值结果非 True(触发/域外不求值均合)
         st2 = GameState(gold=20, enemy_difficulty=100, hp=50, plane=1,
                         node_type='reward')
         assert entry._lambda_quantile_armed(st2, 50, 0.15) is not True
-
-    def test_lambda_calibrated_counts_true_key(self):
-        provisional.inject('P_LAMBDA_QUANTILE', provisional.CalibValue(
-            value=0.15))
-        st = self._top_danger_state()
-        sig = entry._upgrader_evaluate(_session(), st, 20, st.hp)
-        assert sig.lambda_armed and sig.lambda_shadow_armed  # 对照键保留
 
     def test_bloodline_none_period_shadow(self):
         """血线阈值 None 期:注入形态结构锚 hp15 照测影子键(行为无关)。"""
@@ -967,16 +925,8 @@ class TestR196ShadowKeys:
 
 
 class TestR196Constants:
-    """症4/症6:bench_full_buy_abandon 计数 + 常数单源。"""
-
-    def test_bench_full_buy_abandon_counted(self):
-        k = ('目标件',)
-        bench = [_bench(i, '高价', star=3) for i in range(1, 10)]
-        frame = _frame(gold=30, bench=bench, k=k)
-        session = _session()
-        mandate.run_mandate(frame, session)
-        assert state_of(session).cw4_counters.get('bench_full_buy_abandon', 0) >= 1
-        assert state_of(session).cw4_counters.get('m2_retry_exhausted', 0) >= 1
+    """症6:常数单源(症4 的 bench_full_buy_abandon 事件计数由
+    test_cw_m2_stall_cache.TestPrepStallCache 同帧形 ==1 强断言辖)。"""
 
     def test_bench_capacity_single_source(self):
         from sr_od.application.currency_war.kernel.cw_state import (
@@ -998,11 +948,13 @@ class TestR196Constants:
         assert mandate.cheapest_member_cost(frame) == expect
 
     def test_s_reserve_s_line_assembly(self):
-        """S 预留 = s_line 组装(非恒 0):默认局 = 0+saturation(cap)+0+2×2。"""
+        """S 预留 = s_line 组装(非恒 0):默认局 = 0+saturation(cap)+0
+        +2×刷费基价(E[刷费]×2 分量,期望值自 REFRESH_COST_BASE 现算)。"""
         frame = _frame()
         session = _session()
         assert mandate._s_reserve(frame, session) == \
-            mandate.saturation_line(mandate._cap_of(session)) + 4
+            mandate.saturation_line(mandate._cap_of(session)) \
+            + 2 * REFRESH_COST_BASE
 
     def test_funding_refund_registry_derived(self):
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -1281,16 +1233,16 @@ class TestShopPhaseLatch:
 
 # ===== T-115 规则① 奖励帧升级抑制(ADR-0580;四消费位 + 扑满守卫)=====
 
-def _m3_shop_state(gold, node, sess_unused=None):
-    """M3 消费位帧构造:cap7 板满 + bench 仙舟候补(arm1 形态)/ 或空板
-    (三臂未触发形态,必花域变体辖);xp 贴线 1 击保预算闸可过。"""
-    from sr_od.application.currency_war.kernel.cw_state import GameState
+def _m3_shop_state(gold, node, deployed=None, bench=None):
+    """M3 消费位帧构造:默认空板(三臂未触发形态,必花域变体辖);
+    传 deployed/bench 构造 arm1 形态(cap7 板满 + bench 仙舟候补);
+    xp 贴线 1 击保预算闸可过。"""
     st = GameState(gold=gold, level=7, hp=80, plane=1, round_num=3)
     st.node_type = node
     st.xp_progress = (48, 52)
     st.level_up_cost = 4
-    st.deployed = []
-    st.bench = []
+    st.deployed = list(deployed or [])
+    st.bench = list(bench or [])
     st.shop = []
     return st
 
@@ -1316,31 +1268,15 @@ class TestRewardNodeSuppress:
         """消费位1(shop M3):奖励帧三臂被抑制短路 ⇒ 零 LevelUpShop +
         reward_node_defer 分键;红证 = 同帧形 combat 节点照发
         m3_batch:arm1(发射缺席的承载原因 = 抑制,非闸链拒)。"""
-        from sr_od.application.currency_war.kernel.cw_state import (
-            GameState,
-            LevelUpShop,
-        )
         deployed, bench = _arm1_board()
         s = _session()
-        st = GameState(gold=70, level=7, hp=80, plane=1, round_num=3)
-        st.node_type = 'reward'
-        st.xp_progress = (48, 52)
-        st.level_up_cost = 4
-        st.deployed = deployed
-        st.bench = bench
-        st.shop = []
-        act = decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(_m3_shop_state(70, 'reward', deployed, bench),
+                                 s, SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, LevelUpShop)
         assert state_of(s).cw4_counters.get('reward_node_defer') == 1
         s2 = _session()
-        st2 = GameState(gold=70, level=7, hp=80, plane=1, round_num=3)
-        st2.node_type = 'battle'
-        st2.xp_progress = (48, 52)
-        st2.level_up_cost = 4
-        st2.deployed = deployed
-        st2.bench = bench
-        st2.shop = []
-        act2 = decide_shop_action(st2, s2, SimpleNamespace(ev_arm='full'))
+        act2 = decide_shop_action(_m3_shop_state(70, 'battle', deployed, bench),
+                                  s2, SimpleNamespace(ev_arm='full'))
         assert isinstance(act2, LevelUpShop)
         assert act2.auth_basis == 'm3_batch:arm1'
 

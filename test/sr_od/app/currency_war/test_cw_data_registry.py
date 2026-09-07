@@ -25,14 +25,7 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from test.conftest import SrTestContext
-
-_REPO_ROOT = Path(__file__).resolve().parents[5]   # 仓库根(StarRailOneDragon)
-_TEST_ROOT = Path(__file__).resolve().parents[4]   # 测试仓根(sr-od-test)
-FIXTURES = _TEST_ROOT / 'screens' / '货币战争-备战'  # 备战屏 fixture 目录(原 _SCREEN_DIR/FIXTURES 两套合一)
-
-# ==================== chars ====================
-from sr_od.application.currency_war.data.cw_chars import (  # noqa: E402
+from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
     CHARACTERS,
     Character,
@@ -40,7 +33,14 @@ from sr_od.application.currency_war.data.cw_chars import (  # noqa: E402
     chars_by_faction,
     get_char,
 )
-from sr_od.application.currency_war.data.cw_factions import FACTIONS  # noqa: E402
+from sr_od.application.currency_war.data.cw_factions import FACTIONS
+from test.conftest import SrTestContext
+
+_REPO_ROOT = Path(__file__).resolve().parents[5]   # 仓库根(StarRailOneDragon)
+_TEST_ROOT = Path(__file__).resolve().parents[4]   # 测试仓根(sr-od-test)
+FIXTURES = _TEST_ROOT / 'screens' / '货币战争-备战'  # 备战屏 fixture 目录(原 _SCREEN_DIR/FIXTURES 两套合一)
+
+# ==================== chars ====================
 def test_registry_complete_all_costs() -> None:
     """注册表覆盖全费用 1-5;每条费用非空。"""
     for cost in range(1, 6):
@@ -288,7 +288,7 @@ def test_owned_order_too_few_or_dense_none() -> None:
 _BACK1 = Rect(534, 600, 675, 739)   # screen_info 后排-1 avatar rect
 
 
-@_equipment_pytest.fixture(scope='module')
+@pytest.fixture(scope='module')
 def equip_grays():
     """98px TM 模板(全装备);模块内复用。"""
     return load_equip_tm_grays(_EQUIP_DIR)
@@ -301,7 +301,7 @@ def test_read_equipped_front_feixiao_3(test_context: SrTestContext, equip_grays)
     half_w=70 覆盖3件横排(cx±43),55 会切边缘 icon(步步生花漏)。
     """
     if not test_context.has_screen('货币战争-备战', 'equipped_front1_feixiao_3'):
-        _equipment_pytest.skip('fixture equipped_front1_feixiao_3 未采')
+        pytest.skip('fixture equipped_front1_feixiao_3 未采')
     screen = test_context.load_screen('货币战争-备战', 'equipped_front1_feixiao_3')
     out = read_equipped_below(screen, equip_grays, [(1, avatar_to_below(_FRONT1))])
     assert set(out.get(1, [])) == _GT_FEIXIAO_3
@@ -310,7 +310,7 @@ def test_read_equipped_front_feixiao_3(test_context: SrTestContext, equip_grays)
 def test_read_equipped_front_feixiao_2(test_context: SrTestContext, equip_grays) -> None:
     """飞霄前排-1(2件态):read_equipped_below = {步步生花,折叠小刀}。"""
     if not test_context.has_screen('货币战争-备战', 'equipped_front1_feixiao_2'):
-        _equipment_pytest.skip('fixture equipped_front1_feixiao_2 未采')
+        pytest.skip('fixture equipped_front1_feixiao_2 未采')
     screen = test_context.load_screen('货币战争-备战', 'equipped_front1_feixiao_2')
     out = read_equipped_below(screen, equip_grays, [(1, avatar_to_below(_FRONT1))])
     assert set(out.get(1, [])) == _GT_FEIXIAO_2
@@ -322,13 +322,13 @@ def test_read_equipped_back_feixiao_2(test_context: SrTestContext, equip_grays) 
     验证穿戴装备 icon 随角色位置移动,识别跨前排/后排一致(用户核心需求:不同位置识别一致)。
     """
     if not test_context.has_screen('货币战争-备战', 'equipped_back1_feixiao_2'):
-        _equipment_pytest.skip('fixture equipped_back1_feixiao_2 未采')
+        pytest.skip('fixture equipped_back1_feixiao_2 未采')
     screen = test_context.load_screen('货币战争-备战', 'equipped_back1_feixiao_2')
     out = read_equipped_below(screen, equip_grays, [(1, avatar_to_below(_BACK1))])
     assert set(out.get(1, [])) == _GT_FEIXIAO_2
 
 
-@_equipment_pytest.mark.parametrize('fixture, rect', [
+@pytest.mark.parametrize('fixture, rect', [
     ('equipped_back1_feixiao_3', _BACK1),                       # 后排-1 cx604
     ('equipped_back4_feixiao_3', Rect(967, 600, 1097, 739)),     # 后排-4 cx1032(跨度证)
 ])
@@ -339,7 +339,7 @@ def test_read_equipped_back_feixiao_3(test_context: SrTestContext, equip_grays, 
     CW 备战屏支持 drag 角色换位(前排↔后排、后排内),装备跟随角色。
     """
     if not test_context.has_screen('货币战争-备战', fixture):
-        _equipment_pytest.skip(f'fixture {fixture} 未采')
+        pytest.skip(f'fixture {fixture} 未采')
     screen = test_context.load_screen('货币战争-备战', fixture)
     out = read_equipped_below(screen, equip_grays, [(1, avatar_to_below(rect))])
     assert set(out.get(1, [])) == _GT_FEIXIAO_3
@@ -351,7 +351,7 @@ def test_read_equipped_front_feixiao_1(test_context: SrTestContext, equip_grays)
     1件 icon 居中(cx);验证 1/2/3件 icon 固定 ~32px,识别一致(D-49)。
     """
     if not test_context.has_screen('货币战争-备战', 'equipped_front1_feixiao_1'):
-        _equipment_pytest.skip('fixture equipped_front1_feixiao_1 未采')
+        pytest.skip('fixture equipped_front1_feixiao_1 未采')
     screen = test_context.load_screen('货币战争-备战', 'equipped_front1_feixiao_1')
     out = read_equipped_below(screen, equip_grays, [(1, avatar_to_below(_FRONT1))])
     assert set(out.get(1, [])) == {'步步生花'}
@@ -363,7 +363,7 @@ def test_read_equipped_front_feixiao_0(test_context: SrTestContext, equip_grays)
     验证空装备槽 below-avatar 无 icon → 不误识别(防 VLM 误判空槽有装备;D-38/D-45 教训:以 CV 为准)。
     """
     if not test_context.has_screen('货币战争-备战', 'equipped_front1_feixiao_0'):
-        _equipment_pytest.skip('fixture equipped_front1_feixiao_0 未采')
+        pytest.skip('fixture equipped_front1_feixiao_0 未采')
     screen = test_context.load_screen('货币战争-备战', 'equipped_front1_feixiao_0')
     out = read_equipped_below(screen, equip_grays, [(1, avatar_to_below(_FRONT1))])
     assert out.get(1, []) == []  # 裸装:无装备 icon,不误识别
@@ -376,7 +376,7 @@ def test_read_equipped_back_multi_positions(test_context: SrTestContext, equip_g
     与 test_read_equipped_back_feixiao_3(后排-1/4)合证后排 1-5 各 cx 通用(D-49)。
     """
     if not test_context.has_screen('货币战争-备战', 'equipped_back_235'):
-        _equipment_pytest.skip('fixture equipped_back_235 未采')
+        pytest.skip('fixture equipped_back_235 未采')
     screen = test_context.load_screen('货币战争-备战', 'equipped_back_235')
     below = [
         (2, avatar_to_below(Rect(679, 600, 814, 739))),   # 后排-2 cx747
@@ -396,7 +396,7 @@ def test_read_equipped_back6_feixiao_3(test_context: SrTestContext, equip_grays)
     val0.601,step 0.03 漏 0.35(0.36=0.481)致漏检;scales 加 0.35 后全中。非裁切/遮挡(pi+用户确认无遮挡)。
     """
     if not test_context.has_screen('货币战争-备战', 'equipped_back6_feixiao_3'):
-        _equipment_pytest.skip('fixture equipped_back6_feixiao_3 未采')
+        pytest.skip('fixture equipped_back6_feixiao_3 未采')
     screen = test_context.load_screen('货币战争-备战', 'equipped_back6_feixiao_3')
     out = read_equipped_below(screen, equip_grays, [(6, avatar_to_below(Rect(1245, 600, 1386, 739)))])
     assert set(out.get(6, [])) == _GT_FEIXIAO_3
@@ -430,7 +430,7 @@ def test_read_equipped_front_all_positions(test_context: SrTestContext, equip_gr
     验证不同 cx 的 below 区都覆盖 icon(D-49:icon 固定 32px,half_w=70 覆盖3件横排)。
     """
     if not test_context.has_screen('货币战争-备战', 'prep_1-6_all_positions'):
-        _equipment_pytest.skip('fixture prep_1-6_all_positions 未采')
+        pytest.skip('fixture prep_1-6_all_positions 未采')
     screen = test_context.load_screen('货币战争-备战', 'prep_1-6_all_positions')
     below = [(idx, avatar_to_below(r)) for _, idx, r in _SLOTS_ALL[:4]]
     out = read_equipped_below(screen, equip_grays, below)
@@ -447,7 +447,7 @@ def test_read_equipped_no_false_positive_empty_positions(test_context: SrTestCon
     故后排(当前无角色)+ 备战栏(5角色无icon)read_equipped_below 全空,不误识别。
     """
     if not test_context.has_screen('货币战争-备战', 'prep_1-6_all_positions'):
-        _equipment_pytest.skip('fixture prep_1-6_all_positions 未采')
+        pytest.skip('fixture prep_1-6_all_positions 未采')
     screen = test_context.load_screen('货币战争-备战', 'prep_1-6_all_positions')
     below = [(idx, avatar_to_below(r)) for _, idx, r in _SLOTS_ALL[4:]]  # 后排6 + 备战5
     out = read_equipped_below(screen, equip_grays, below)
@@ -466,7 +466,7 @@ def test_below_icon_diff_detects_equip(test_context: SrTestContext) -> None:
         _below_icon_diff,
     )
     if not test_context.has_screen('货币战争-备战', 'equipped_front1_feixiao_0'):
-        _equipment_pytest.skip('fixture equipped_front1_feixiao_0/1/2/3 未采')
+        pytest.skip('fixture equipped_front1_feixiao_0/1/2/3 未采')
     states = [test_context.load_screen('货币战争-备战', f'equipped_front1_feixiao_{i}') for i in range(4)]
     avatar_x = CwOpEquipAll.FRONT_AVATARS[0].x           # front-1 avatar x=743
     thr = CwOpEquipAll.BELOW_DIFF_THRESHOLD              # 8.0
@@ -616,22 +616,22 @@ _FRAME_GOLD = FIXTURES / 'shop_closed_lowhp.webp'      # slot1/7 金卡典籍 + 
 _FRAME_FULL = FIXTURES / 'reward_spheres_5.webp'        # slot1 银箱,备战 9/9 满
 
 
-def _slots(screen: np.ndarray) -> list[tuple[int, _tome_template_Rect]]:
+def _slots(screen: np.ndarray) -> list[tuple[int, Rect]]:
     """1080p 整帧校验 + 带槽号 rect 对(防 fixture 尺寸漂移静默错位)。"""
     assert screen.shape[:2] == (1080, 1920), f'真值帧应为 1080p,实得 {screen.shape}'
     return _IDX
 
 
-@_tome_template_pytest.fixture(scope='module')
+@pytest.fixture(scope='module')
 def gold_frame() -> np.ndarray:
-    img = read_image(str(_FRAME_GOLD))
+    img = cv2_utils.read_image(str(_FRAME_GOLD))
     assert img is not None, f'真值帧缺失:{_FRAME_GOLD}'
     return img
 
 
-@_tome_template_pytest.fixture(scope='module')
+@pytest.fixture(scope='module')
 def full_frame() -> np.ndarray:
-    img = read_image(str(_FRAME_FULL))
+    img = cv2_utils.read_image(str(_FRAME_FULL))
     assert img is not None, f'真值帧缺失:{_FRAME_FULL}'
     return img
 
@@ -665,9 +665,9 @@ def test_full_bench_box_frame_unregressed(full_frame) -> None:
 def test_templates_fit_smallest_slot_crop() -> None:
     """shape 容差锁:supply 目录全部模板必须不大于最小槽裁片(宽 111 x 高 131),
     否则该槽被 shape 守卫跳过 = 对此物品判盲(典籍旧模板 113x134 的病根)。"""
-    tpl_dir = _REPO / 'assets' / 'template' / 'currency_war' / 'supply'
+    tpl_dir = _REPO_ROOT / 'assets' / 'template' / 'currency_war' / 'supply'
     for p in tpl_dir.glob('*.png'):
-        img = read_image(str(p))
+        img = cv2_utils.read_image(str(p))
         assert img is not None, f'模板读取失败:{p.name}'
         h, w = img.shape[:2]
         assert w <= 111 and h <= 131, \
@@ -681,50 +681,39 @@ def test_shape_guard_skip_is_visible(monkeypatch) -> None:
     before = cio._shape_guard_skip_count
     # 槽 rect 5x5 < 任何 supply 模板 → 全部走守卫跳过
     out = cio.find_tomes(np.full((20, 20, 3), 200, dtype=np.uint8),
-                         [(1, _tome_template_Rect(0, 0, 5, 5))])
+                         [(1, Rect(0, 0, 5, 5))])
     assert out == []
     assert cio._shape_guard_skip_count > before, '守卫跳过必须记数可见'
 # ==================== back_layout ====================
 
-import json
-import sys as _back_layout_sys
-from pathlib import Path as _back_layout_Path
-
-import pytest as _back_layout_pytest
-
-_ROOT = _back_layout_Path(__file__).resolve().parents[5]          # 仓库根(StarRailOneDragon)
-_TEST_ROOT = _back_layout_Path(__file__).resolve().parents[4]    # 测试仓根(sr-od-test)
-_back_layout_sys.path.insert(0, str(_ROOT / 'src'))
-
-from one_dragon.base.geometry.rectangle import Rect as _back_layout_Rect
-from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.obs.currency_war_char_id import (
+from sr_od.application.currency_war.obs.currency_war_char_id import (  # noqa: E402
     identify_character,
     load_avatar_templates,
 )
-from sr_od.application.currency_war.obs.cw_identity_obs import identify_slots
+from sr_od.application.currency_war.obs.cw_identity_obs import (  # noqa: E402
+    identify_slots,
+)
 
-FIXTURES = _TEST_ROOT / 'screens' / '货币战争-备战'
-TPL_DIR = _ROOT / 'assets/template/currency_war/portrait_plaza'
+TPL_DIR = _REPO_ROOT / 'assets/template/currency_war/portrait_plaza'
 # 8 格档槽位中心(狸猫局交互实拍;ADR-0281 真值布局)
 _C8 = (464, 606, 748, 889, 1031, 1174, 1316, 1458)
 
 
 def _slots8():
-    return [(i, _back_layout_Rect(x - 71, 600, x + 71, 739)) for i, x in enumerate(_C8, 1)]
+    return [(i, Rect(x - 71, 600, x + 71, 739)) for i, x in enumerate(_C8, 1)]
 
 
-@_back_layout_pytest.fixture(scope='module')
+@pytest.fixture(scope='module')
 def templates():
     return load_avatar_templates(TPL_DIR)
 
 
-@_back_layout_pytest.fixture(scope='module')
+@pytest.fixture(scope='module')
 def frame():
     return cv2_utils.read_image(str(FIXTURES / '后排8槽-狸猫局.webp'))
 
 
-@_back_layout_pytest.fixture(scope='module')
+@pytest.fixture(scope='module')
 def tanuki_ids(frame, templates):
     """狸猫局位1/2/7/8 识别结果(name, inliers)模块内单载。
 
@@ -758,17 +747,13 @@ def test_slot8_expected_names(tanuki_ids):
     for slot, want in want_map.items():
         name, inliers = tanuki_ids[slot]
         assert name == want, f'位{slot} 应为 {want},实识别 {name}({inliers})'
-
-
-def test_tanuki_no_cross_match(tanuki_ids):
-    """蓝/红狸猫互不误认(兄弟同型不同色;SIFT 形状特征区分)。"""
-    assert tanuki_ids[7][0] == '狸小虎'
-    assert tanuki_ids[8][0] == '狸小龙'
+    # (瘦身批 F2:原 test_tanuki_no_cross_match(蓝/红狸猫互不误认)断言面
+    #  = 本表 7/8 两项的严格子集,已并入此锁,不再单测。)
 
 
 def test_slot8_empty_slots_no_false_positive(frame, templates):
     """空槽位3-6 不得出假识别(用户终局事实:位3-6 空)。"""
-    slots = [(i, _back_layout_Rect(x - 71, 600, x + 71, 739))
+    slots = [(i, Rect(x - 71, 600, x + 71, 739))
              for i, x in ((3, 748), (4, 889), (5, 1031), (6, 1174))]
     out = identify_slots(frame, templates, slots, 'back')
     assert not out, f'空槽出假识别: {[(c.slot, c.char_id) for c in out]}'
@@ -794,36 +779,27 @@ def test_yinzhi_trial_template(templates):
     assert '银枝' in templates
 
 
-# ===== 旧 9/10/11 档触发帧 → 按 8 格档锁(ADR-0281 核心证据) =====
+# ===== 旧 9/10/11 档触发帧 → 按 8 格档锁(ADR-0281 核心证据;F7 参数化合一) =====
 
-def test_cap9_frame_is_8grid(templates):
-    """双宝钻局(cap9/lv7)帧按 8 格档识别(旧「9槽」档是幻影)。
+@pytest.mark.parametrize('fn, want', [
+    ('后排8槽-双宝钻局.webp', {1: '藿藿', 2: '爻光', 6: '开拓者·欢愉',
+                               7: '狸小虎', 8: '狸小龙'}),   # cap9/lv7
+    ('后排8槽-满级局.webp', {1: '爻光', 2: '三月七', 3: '藿藿', 6: '开拓者·欢愉',
+                             7: '狸小虎', 8: '狸小龙'}),      # cap10/lv8
+    ('后排8槽-P3局.webp', {3: '藿藿', 6: '开拓者·欢愉',
+                           7: '狸小虎', 8: '狸小龙'}),         # cap11/lv8
+])
+def test_cap_frame_is_8grid(templates, fn, want):
+    """旧 9/10/11 档触发帧按 8 格档识别(旧「9/10/11 槽」档全是幻影)。
 
     旧 9 槽格点前 8 格与 8 格档完全同位(464..1458)——即旧「9 槽实证」的
-    全部命中本就落在 8 格布局内,第 9 格(1600)是背景(空槽签名终判)。
-    """
-    fix = cv2_utils.read_image(str(FIXTURES / '后排8槽-双宝钻局.webp'))
-    got = {c.slot: c.char_id for c in identify_slots(fix, templates, _slots8(), 'back')}
-    assert got == {1: '藿藿', 2: '爻光', 6: '开拓者·欢愉', 7: '狸小虎', 8: '狸小龙'}, got
-
-
-def test_cap10_frame_is_8grid(templates):
-    """满级局(cap10/lv8)帧按 8 格档识别(旧「10槽」档是幻影)。"""
-    fix = cv2_utils.read_image(str(FIXTURES / '后排8槽-满级局.webp'))
-    got = {c.slot: c.char_id for c in identify_slots(fix, templates, _slots8(), 'back')}
-    assert got == {1: '爻光', 2: '三月七', 3: '藿藿', 6: '开拓者·欢愉',
-                   7: '狸小虎', 8: '狸小龙'}, got
-
-
-def test_cap11_frame_is_8grid(templates):
-    """P3 局(cap11/lv8)帧按 8 格档识别(旧「11槽」档是幻影)。
-
+    全部命中本就落在 8 格布局内,第 9 格(1600)是背景(空槽签名终判);
     三触发帧狸猫恒在 1316/1458(=8 格档位7/8,恒最右模型)——与「7/9/10/11
     全是幻影」双源交叉实证(cap 与布局无关)。
     """
-    fix = cv2_utils.read_image(str(FIXTURES / '后排8槽-P3局.webp'))
+    fix = cv2_utils.read_image(str(FIXTURES / fn))
     got = {c.slot: c.char_id for c in identify_slots(fix, templates, _slots8(), 'back')}
-    assert got == {3: '藿藿', 6: '开拓者·欢愉', 7: '狸小虎', 8: '狸小龙'}, got
+    assert got == want, got
 
 
 # ===== 2/3. cap 差公式路由 + 幻影档不存在 =====
@@ -861,7 +837,7 @@ def test_phantom_layouts_absent_from_yml():
     的 _LAYOUT_PREFIX 断言辖,不在此双锁)。"""
     for rel in ('assets/game_data/screen_info/currency_war_battle_prep.yml',
                 'assets/game_data/screen_info/_od_merged.yml'):
-        txt = (_ROOT / rel).read_text(encoding='utf-8')
+        txt = (_REPO_ROOT / rel).read_text(encoding='utf-8')
         for pfx in ('后排9槽', '后排10槽', '后排11槽'):
             assert pfx not in txt, f'{rel} 残留幻影档 {pfx}'
         assert '后排8槽-1' in txt and '后排-1' in txt, f'{rel} 缺 6/8 真值档'
@@ -869,22 +845,37 @@ def test_phantom_layouts_absent_from_yml():
 
 # ===== 4. select_back_layout 选档入口 + 7 格待采留证 =====
 
-def test_select_back_layout_formula(tmp_path, monkeypatch, frame):
+@pytest.fixture()
+def _layout_fresh(monkeypatch, tmp_path):
+    """布局选档家族共享桩前导(F8:原 17 处复制 monkeypatch 前导收敛于此,
+    以此为范,防桩面漂移):
+    ①模块级全局复位——未知态计数器/通道冲突节流表/选档日志(测试纪律 4:
+    生产路径含模块级全局时 setup 一并桩化),用例结束再清一次防泄漏;
+    ②冲突日志重定向 tmp_path + 截图采集桩(测试纪律 2:不写真实 .debug/;
+    附带修好原 test_unknown_freeze 未桩 journal 直写生产路径的卫生缺口)。
+    yield 出 journal 路径,留证断言直接读它。"""
+    import sr_od.application.currency_war.kernel.cw_observe as cobs
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    journal = tmp_path / 'obs.jsonl'
+    cbl.reset_layout_unknown_state()
+    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
+    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
+    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    yield journal
+    cbl.reset_layout_unknown_state()
+
+
+def test_select_back_layout_formula(_layout_fresh, monkeypatch, frame):
     """选档单一入口·公式通道(cv 通道 stub 掉隔离;双通道对账见下方专项锁):
     cap/level 两读数按口述公式合流;读不到 → 6(失败安全侧)。
 
     run 26 反向锚:lv8 无召唤物(cap=level)→ 恒 6 格(旧模型按 level≥7 选 8 格
     = 崩坏根因①);lv7 cap9(狸猫局)→ 8 格。
     """
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
-    journal = tmp_path / 'obs.jsonl'
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 8)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)   # CV 不可判 → 公式
@@ -949,17 +940,12 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
     assert cv_back_slots(np.zeros((600, 900, 3), dtype=np.uint8)) is None
 
 
-def test_reconcile_channels_agree(tmp_path, monkeypatch, frame):
+def test_reconcile_channels_agree(_layout_fresh, monkeypatch, frame):
     """对账·一致 → 公式值,无 back_layout_channel_conflict 留证。"""
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
-    journal = tmp_path / 'obs.jsonl'
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    journal = _layout_fresh
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 7)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 9)
     # 狸猫局真帧:公式 diff2 → 8,CV 实测 8 → 一致用公式值
@@ -968,7 +954,7 @@ def test_reconcile_channels_agree(tmp_path, monkeypatch, frame):
         journal.read_text(encoding='utf-8')
 
 
-def test_reconcile_channels_disagree_cv_wins(tmp_path, monkeypatch, frame):
+def test_reconcile_channels_disagree_cv_wins(_layout_fresh, monkeypatch, frame):
     """对账·不一致 → **CV 实测值** + obs_conflict 留证带两值(画面事实>推导)。
 
     场景=run 26 事故族的反向:公式说 6(两个 OCR 读数错成 cap=level)但画面
@@ -977,15 +963,10 @@ def test_reconcile_channels_disagree_cv_wins(tmp_path, monkeypatch, frame):
     """
     import json as _json
 
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
-    journal = tmp_path / 'obs.jsonl'
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    journal = _layout_fresh
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 8)   # 公式:6
     assert cbl.select_back_layout(None, frame) == (8, '后排8槽')      # CV 8 优先
@@ -996,13 +977,11 @@ def test_reconcile_channels_disagree_cv_wins(tmp_path, monkeypatch, frame):
     assert rec['old'] == 6 and rec['new'] == 8   # 两值齐报(公式/CV)
 
 
-def test_reconcile_cv_none_formula_fallback(tmp_path, monkeypatch, frame):
+def test_reconcile_cv_none_formula_fallback(_layout_fresh, monkeypatch, frame):
     """CV 不可判(锚缺失/越界/特效遮挡)→ 退公式值(公式=CV 失效的兜底)。"""
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
@@ -1012,7 +991,7 @@ def test_reconcile_cv_none_formula_fallback(tmp_path, monkeypatch, frame):
 
 
 def test_read_deployed_chars_formula_driven(
-        test_context, templates, monkeypatch, tmp_path, frame):
+        test_context, templates, _layout_fresh, monkeypatch, frame):
     """read_deployed_chars 布局选档经 select_back_layout(双通道合流)。
 
     狸猫局 fixture + monkeypatch cap:diff2(与 CV 一致)→ 8 格档读到位7/8 狸猫;
@@ -1020,14 +999,9 @@ def test_read_deployed_chars_formula_driven(
     (6 格基线右界 1315,恰含 1316 狸小虎——两档共享 604-1316 段,差异只在
     两端扩展格)。
     """
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 9)
     out8 = cio.read_deployed_chars(test_context, frame, templates, level=7)
     got8 = {c.char_id for c in out8 if c.position_pref == 'back'}
@@ -1041,13 +1015,10 @@ def test_read_deployed_chars_formula_driven(
 
 # ===== 5. 系统单位恒最右布局自检 =====
 
-def test_system_unit_layout_check_ok(tmp_path, monkeypatch, frame, templates):
+def test_system_unit_layout_check_ok(_layout_fresh, monkeypatch, frame, templates):
     """对档(8 格档,狸猫在位7/8)→ 无 layout_mismatch 留证。"""
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
-    journal = tmp_path / 'obs.jsonl'
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    journal = _layout_fresh
     monkeypatch.setattr(cio, '_sysunit_conflict_ts', {})
     from sr_od.application.currency_war.kernel.cw_state import BenchChar
     chars = [BenchChar(slot=7, char_id='狸小虎'), BenchChar(slot=8, char_id='狸小龙')]
@@ -1055,17 +1026,14 @@ def test_system_unit_layout_check_ok(tmp_path, monkeypatch, frame, templates):
     assert not journal.exists() or 'layout_mismatch_by_system_unit' not in journal.read_text(encoding='utf-8')
 
 
-def test_system_unit_layout_check_mismatch(tmp_path, monkeypatch, frame, templates):
+def test_system_unit_layout_check_mismatch(_layout_fresh, monkeypatch, frame, templates):
     """错档(狸猫实测 x≈1316/1458 vs 所选档右格 1174)→ layout_mismatch_by_system_unit 留证。"""
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
-    journal = tmp_path / 'obs.jsonl'
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    journal = _layout_fresh
     monkeypatch.setattr(cio, '_sysunit_conflict_ts', {})
     from sr_od.application.currency_war.kernel.cw_state import BenchChar
     # 模拟「6 格截短档」(右格 1174):狸猫实测 1316/1458 与右格差 ≥142px > 40 → 冲突
-    slots6 = [(i, _back_layout_Rect(x - 71, 600, x + 71, 739)) for i, x in enumerate(_C8[:6], 1)]
+    slots6 = [(i, Rect(x - 71, 600, x + 71, 739)) for i, x in enumerate(_C8[:6], 1)]
     chars = [BenchChar(slot=6, char_id='狸小虎'), BenchChar(slot=7, char_id='狸小龙')]
     cio.check_system_unit_layout(frame, chars, slots6, templates, source='test')
     assert journal.exists(), '错档未留证'
@@ -1100,7 +1068,7 @@ def test_deploy_excludes_system_units():
 # 7 格坐标由 CV 持续留证 + 人工在场经 MCP 交互采集。
 
 def test_layout_hook_no_stop_only_evidence(
-        test_context, templates, monkeypatch, tmp_path, frame):
+        test_context, templates, _layout_fresh, monkeypatch, frame):
     """降级锁(7 格建档后语义):n_raw 未建档(用 9 模拟未来新档,
     CV 三读稳定)→ **不停机**,落 back_layout_unarchived_grid 留证(带公式/
     CV/防抖序列),无 flag 文件;真实 7 格(diff==1)已建档 → 见
@@ -1108,7 +1076,6 @@ def test_layout_hook_no_stop_only_evidence(
     import json as _json
 
     import sr_od.application.currency_war.kernel.cw_obs_core as core
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
@@ -1124,10 +1091,6 @@ def test_layout_hook_no_stop_only_evidence(
 
     monkeypatch.setattr(ctx, 'run_context', _FakeRunCtx())
     monkeypatch.setattr(core, 'is_prep_like_frame', lambda c, s: True)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda c: 8)
     # 公式 8(lv8 cap10 diff2)且 CV 三读稳定 9(防抖过)→ n_raw=9 未建档
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, level=None: 10)
@@ -1137,31 +1100,26 @@ def test_layout_hook_no_stop_only_evidence(
     assert isinstance(out, list) and out                    # 读板照常不抛
     assert not ctx.run_context.stopped and not ctx.run_context.stop_calls, \
         'W209i:未建档档不得停机(实时制游戏停 bot 不停游戏,run 27 实证)'
-    journal = tmp_path / 'obs.jsonl'
+    journal = _layout_fresh
     assert journal.exists(), '降级后必须留证'
     rec = _json.loads(journal.read_text(encoding='utf-8').strip().splitlines()[-1])
     assert rec['field'] == 'back_layout_unarchived_grid'
     assert rec['old'] == 9 and rec['cv_readings'] == [9, 9, 9]
     assert '不停机' in rec['verdict']                        # 如实声明画面可能推进
-    assert not (tmp_path / '.debug/temp/currency_war/back_layout_stop_hook.flag').exists(), \
+    assert not (journal.parent / '.debug/temp/currency_war/back_layout_stop_hook.flag').exists(), \
         '停机 flag 机制已废弃不得回流'
 
 
 def test_layout_hook_silent_on_archived(
-        test_context, templates, monkeypatch, tmp_path, frame):
+        test_context, templates, _layout_fresh, monkeypatch, frame):
     """6/8/7 已建档(含超集运行态、对账一致态与 7 格直读态)→ 无留证无副作用。
 
     2026-08-26 佩佩局 7 格建档后,(8,9,7) = diff1 直读 7 的真值态,必须
     静默(旧「7 未建档刷留证」行为已废,证据垃圾)。"""
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
     ctx = test_context
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     # 6 格(run 26 形态)/ 8 格(狸猫局形态)/ 7 格(佩佩局直读)都不留证
     for lv, cap, cv in ((8, 8, 6), (7, 9, 8), (8, 9, 7)):
         monkeypatch.setattr(cio, '_session_level', lambda c, _lv=lv: _lv)
@@ -1170,8 +1128,9 @@ def test_layout_hook_silent_on_archived(
         cio.read_deployed_chars(ctx, frame, templates, level=lv)
     # 只辖本测对象(未建档留证钩子);check_system_unit_layout 在 (8,9,7) 态
     # 对 8 格狸猫帧按 7 格选档正确报 layout_mismatch(自检职责,另锁辖)
-    if (tmp_path / 'obs.jsonl').exists():
-        txt = (tmp_path / 'obs.jsonl').read_text(encoding='utf-8')
+    journal = _layout_fresh
+    if journal.exists():
+        txt = journal.read_text(encoding='utf-8')
         assert 'back_layout_unarchived_grid' not in txt, \
             '已建档档位(6/7/8)不得落未建档留证'
 
@@ -1213,25 +1172,20 @@ class _FakeCtx:
         return self._frames[min(self.shots - 1, len(self._frames) - 1)]
 
 
-def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
+def test_cv_transient_falls_back_to_formula(_layout_fresh, monkeypatch, frame):
     """run 27 事故形态(以未建档 9 模拟新格数瞬态):首读假阳 9,重读回到
     真值 6(序列 [9,6,6])→ 退公式 8,不停机;瞬态留证 obs_conflict。
 
     (7 格已建档:CV 稳定 7 = 合法档直读,不经防抖;瞬态 7 误读的代价仅是
     多读一个空扩展窗(超集语义,无动作损失),run 27 型停机事故不再可能。)"""
 
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
     # 6 格真帧(shop_closed)×2 作重读帧
     frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
     fctx = _FakeCtx([frame6, frame6])
-    journal = tmp_path / 'obs.jsonl'
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    journal = _layout_fresh
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)  # 公式 8
     # 序列 stub:首帧(入参 frame)假阳 9,重读帧(真 6 格 fixture)= 6
@@ -1250,18 +1204,13 @@ def test_cv_transient_falls_back_to_formula(tmp_path, monkeypatch, frame):
     assert fctx.shots == 2                      # 重读恰好 2 次
 
 
-def test_cv_stable_new_grid_confirmed(tmp_path, monkeypatch, frame):
+def test_cv_stable_new_grid_confirmed(_layout_fresh, monkeypatch, frame):
     """稳定未建档新格数(以 9 模拟):三读一致 [9,9,9] → 采 CV 值
     (n_raw=9 触发留证钩子采集流程,防抖不拦真信号;运行值退 8 超集)。"""
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
     fctx = _FakeCtx([frame, frame])   # 重读帧同 frame(stub 全 9)
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)  # 公式 8
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: 9)          # 三读全 9
@@ -1271,21 +1220,16 @@ def test_cv_stable_new_grid_confirmed(tmp_path, monkeypatch, frame):
     assert fctx.shots == 2
 
 
-def test_cv_reread_mismatch_logged_no_action(tmp_path, monkeypatch, frame):
+def test_cv_reread_mismatch_logged_no_action(_layout_fresh, monkeypatch, frame):
     """重读帧间不一致(如 [9,9,6],未建档 9 模拟)= 瞬态 → 退公式 + 序列留证
     (obs_conflict 带 cv_readings 上下文),不采 CV。"""
 
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_identity_obs as cio
     import sr_od.application.currency_war.obs.cw_observation as cwo
     frame6 = cv2_utils.read_image(str(FIXTURES / 'shop_closed.webp'))
     fctx = _FakeCtx([frame, frame6])   # 重读 1=frame(9),重读 2=frame6(6)
-    journal = tmp_path / 'obs.jsonl'
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
+    journal = _layout_fresh
     monkeypatch.setattr(cio, '_session_level', lambda ctx: 8)
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda ctx, scr, level=None: 10)
     real_cv = cbl.cv_back_slots
@@ -1327,13 +1271,11 @@ def _patch_cap_reader(monkeypatch, seq):
     return calls
 
 
-def test_cap_transient_in_formula_channel_debounced(tmp_path, monkeypatch):
+def test_cap_transient_in_formula_channel_debounced(_layout_fresh, monkeypatch):
     """run 27 型(格数类):cap 首读瞬态 3(域外,lv6),重读回真值 8(宝钻×2)
     → 采重读值 → 公式 6+(8−6)=8 格;若无防抖 diff=−5 → 6 格错档。"""
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     calls = _patch_cap_reader(monkeypatch, [3, 8])
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)  # CV 不可判
     r = cbl.resolve_back_slots(_CapFakeCtx(), object(), level=6, cap=None)
     assert calls['n'] == 2, '域外首读应触发重读'
@@ -1341,7 +1283,7 @@ def test_cap_transient_in_formula_channel_debounced(tmp_path, monkeypatch):
     assert r['n'] == 8 and r['prefix'] == '后排8槽'
 
 
-def test_cap_still_domain_rejected_falls_baseline(tmp_path, monkeypatch):
+def test_cap_still_domain_rejected_falls_baseline(_layout_fresh, monkeypatch):
     """cap<level 两帧一致([3,3],lv6)→ 防抖采信 cap=3(不再恒拒:d2daffd6
     后下向同走双帧一致通道,level 先验疑毒化,见 _debounce_cap 注/ADR-0420
     判据镜像)→ diff=−3、d=0 仍退 6 格基线(负 diff 不加格,失败安全侧不变)
@@ -1352,8 +1294,6 @@ def test_cap_still_domain_rejected_falls_baseline(tmp_path, monkeypatch):
     conflicts = []
     monkeypatch.setattr(cwo, 'obs_conflict',
                         lambda *a, **k: conflicts.append((a, k)))
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda scr: None)
     r = cbl.resolve_back_slots(_CapFakeCtx(), object(), level=6, cap=None)
     assert calls['n'] == 2 and len(conflicts) == 1
@@ -1362,12 +1302,15 @@ def test_cap_still_domain_rejected_falls_baseline(tmp_path, monkeypatch):
     assert r['n'] == 6 and r['prefix'] == '后排'
 
 
-def test_deploy_bench_gate_wired_to_debounced_reader():
-    """静态接线锁:deploy_bench 板满门走 read_deploy_cap_debounced,
-    无裸 read_deploy_cap( 直调(收口,防回归)。"""
-    src = (_ROOT / 'src/sr_od/application/currency_war/operations/cw_op'
+def test_deploy_bench_gate_no_raw_cap_read():
+    """源码墓碑(ADR-0395):deploy_bench 板满门禁裸 read_deploy_cap( 直调——
+    cap 必须经域防抖读(域外重读一帧,run 27 型瞬态读数不得直驱行动)。
+    墓碑 = 否定式 + 退役背书(README 第 8 条合法形态);肯定式在场锁已按
+    混合锁拆解删除。接线行为面(生产真调 debounced)由
+    test_cw_p4r_deploy_battle_chain.py 的桩驱动断言辖(stub
+    read_deploy_cap_debounced 后 notes 分键必含 deploy_cap_gate)。"""
+    src = (_REPO_ROOT / 'src/sr_od/application/currency_war/operations/cw_op'
            / 'cw_op_deploy.py').read_text(encoding='utf-8')
-    assert 'read_deploy_cap_debounced' in src
     assert 'read_deploy_cap(self.ctx' not in src, \
         '板满门 cap 必须经域防抖读(ADR-0395),不得裸直读'
 
@@ -1383,7 +1326,7 @@ _C7 = (534, 676, 818, 960, 1102, 1244, 1386)   # 居中重排(ADR-0390;排中心
 
 
 def _slots7():
-    return [(i, _back_layout_Rect(x - 71, 600, x + 71, 739)) for i, x in enumerate(_C7, 1)]
+    return [(i, Rect(x - 71, 600, x + 71, 739)) for i, x in enumerate(_C7, 1)]
 
 
 def test_pepe_board_truth_current(templates):
@@ -1476,55 +1419,28 @@ def test_read_level_xp_backinference(test_context, monkeypatch):
 
 # ==================== test_star3_positions ====================
 
-import json as _test_star3_positions_json
-import sys as _test_star3_positions_sys
-from pathlib import Path as _test_star3_positions_Path
-
-import pytest as _test_star3_positions_pytest
-
-_test_star3_positions_REPO = _test_star3_positions_Path(__file__).resolve().parents[5]
-_test_star3_positions_sys.path.insert(0, str(_test_star3_positions_REPO / 'src'))
-
-from one_dragon.utils import cv2_utils as _test_star3_positions_cv2_utils  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect  # noqa: E402
 from sr_od.application.currency_war.obs.cw_identity_obs import read_star  # noqa: E402
-from test.conftest import (
-    SrTestContext as _test_star3_positions_SrTestContext,  # noqa: E402
-)
 
 _SLOTS = [f'前排-{i}' for i in range(1, 5)] + [f'后排-{i}' for i in range(1, 7)] \
     + [f'备战栏-{i}' for i in range(1, 10)]
-_FIX_DIR = _test_star3_positions_REPO / 'sr-od-test' / 'screens' / 'star3_slots'
+_FIX_DIR = _TEST_ROOT / 'screens' / 'star3_slots'
 
 
 def _load_truth() -> dict[str, dict[str, int]] | None:
     p = _FIX_DIR / 'truth.json'
     if not p.exists():
         return None
-    return _test_star3_positions_json.loads(p.read_text(encoding='utf-8'))
+    return json.loads(p.read_text(encoding='utf-8'))
 
 
-def test_star3_all_positions_read_3(test_context: _test_star3_positions_SrTestContext) -> None:
-    """层1:19 张 fixture 目标位全读 3。
-
-    (2026-08 精简审计:改用 session 级 test_context fixture,
-    避免自建 SrContext 重复 init——全量跑时 ctx 只初始化一次。)
-    """
-    sr_ctx = test_context
-    fixes = sorted(_FIX_DIR.glob('*.webp'))
-    if not fixes:
-        _test_star3_positions_pytest.skip('star3_slots/ fixture 缺')
-    rects = {s: _area_rect(sr_ctx, s, '货币战争-备战') for s in _SLOTS}
-    for fix in fixes:
-        img = _test_star3_positions_cv2_utils.read_image(str(fix))
-        expect = fix.stem.replace('备战-', '备战栏-')
-        rect = rects[expect]
-        assert rect is not None, f'{expect} area 缺'
-        got = read_star(img[rect.y1:rect.y2, rect.x1:rect.x2])
-        assert got == 3, f'{fix.stem}: 目标位 3星应读 3,实得 {got}'
+# (瘦身批 F1:原层1 test_star3_all_positions_read_3(19 张 fixture 目标位读 3)
+#  是下层 test_star3_full_frame_truth 的严格真子集——同批 fixture、truth.json
+#  含目标位真值(前排-1=3 等),层2 全 19 槽断言面 + 密度门完整辖定,已删,
+#  省 19 次 webp 解码 + 19 次 read_star 的每全量重复支付。)
 
 
-def test_star3_full_frame_truth(test_context: _test_star3_positions_SrTestContext) -> None:
+def test_star3_full_frame_truth(test_context: SrTestContext) -> None:
     """层2(全帧校验):每张 fixture 全部 19 槽位与真值表一致(361 校验点)。
 
     真值 = 采集时同帧其余槽位的真实星级(2星占位角色/1星/空槽 fallback=1)。
@@ -1533,7 +1449,7 @@ def test_star3_full_frame_truth(test_context: _test_star3_positions_SrTestContex
     sr_ctx = test_context
     truth = _load_truth()
     if truth is None:
-        _test_star3_positions_pytest.skip('truth.json 缺(先跑 star3_truth_gen.py)')
+        pytest.skip('truth.json 缺(先跑 star3_truth_gen.py)')
     fixes = sorted(_FIX_DIR.glob('*.webp'))
     assert fixes, 'star3_slots/ fixture 缺'
     rects = {s: _area_rect(sr_ctx, s, '货币战争-备战') for s in _SLOTS}
@@ -1541,7 +1457,7 @@ def test_star3_full_frame_truth(test_context: _test_star3_positions_SrTestContex
     for fix in fixes:
         row = truth.get(fix.stem)
         assert row is not None, f'{fix.stem} 不在 truth.json'
-        img = _test_star3_positions_cv2_utils.read_image(str(fix))
+        img = cv2_utils.read_image(str(fix))
         for slot, expected in row.items():
             rect = rects.get(slot)
             assert rect is not None, f'{slot} area 缺'
@@ -1561,7 +1477,7 @@ _BACK7_SCREEN = '货币战争-备战'
 _BACK7_FIXTURE = 'deployed_r9_7grid'   # 停机哨兵帧入仓(真板 7/7:前台1+后排6)
 
 
-def test_occupancy_arbitration_recovers_7grid(test_context, monkeypatch):
+def test_occupancy_arbitration_recovers_7grid(test_context, _layout_fresh, monkeypatch):
     """哨兵帧锁(15 号稿批 B 升级后语义):真板 7 格帧 → 选档 7 格。
 
     机制升级说明(锁语义重推,意图不变=「本帧必须按 7 格档运行」):
@@ -1573,14 +1489,12 @@ def test_occupancy_arbitration_recovers_7grid(test_context, monkeypatch):
     if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
         pytest.skip('fixture 缺:deployed_r9_7grid.webp')
     img = test_context.load_screen(_BACK7_SCREEN, _BACK7_FIXTURE)
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     r = cbl.resolve_back_slots(test_context, img, level=6, cap=7)
     assert r['n'] == 7 and r['prefix'] == '后排7槽', r
 
 
 def test_occupancy_arbitration_paddle_missing_formula_fallback(
-        test_context, monkeypatch):
+        test_context, _layout_fresh, monkeypatch):
     """声明边界锁(批 B 信号②退化梯):paddle 失读 → 信号③弃权 →
     信号②结构证据梯:cv<formula(门后 CV 低读为下界,端点切片/失明非
     「无格」证据)→ 不否决有防抖背书的公式,采公式 7(旧点修批此帧
@@ -1590,22 +1504,18 @@ def test_occupancy_arbitration_paddle_missing_formula_fallback(
     if not test_context.has_screen(_BACK7_SCREEN, _BACK7_FIXTURE):
         pytest.skip('fixture 缺:deployed_r9_7grid.webp')
     img = test_context.load_screen(_BACK7_SCREEN, _BACK7_FIXTURE)
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cwo, 'read_deployed_count', lambda ctx, scr: None)
     r = cbl.resolve_back_slots(test_context, img, level=6, cap=7)
     assert r['arb_n'] is None and r['n'] == 7, r
 
 
 def test_signal2_ladder_cv_higher_wins_without_paddle(
-        test_context, monkeypatch):
+        test_context, _layout_fresh, monkeypatch):
     """信号②退化梯·反向:cv>formula(两端整格存在 = (full,full) 结构证据)
     ∧ paddle 失读 → 采 CV 高档。桩面隔离(真帧 cv 通道独立于桩)。"""
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_observation as cwo
     img = object()   # cv 全桩,帧不参与
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 8)
     monkeypatch.setattr(cwo, 'read_deployed_count', lambda c, s: None)
     r = cbl.resolve_back_slots(test_context, img, level=6, cap=6)
@@ -1613,14 +1523,12 @@ def test_signal2_ladder_cv_higher_wins_without_paddle(
 
 
 def test_signal2_ladder_cv_lower_formula_wins_without_paddle(
-        test_context, monkeypatch):
+        test_context, _layout_fresh, monkeypatch):
     """信号②退化梯·下界不否决:cv<formula(端点切片/失明非「无格」证据)
     ∧ paddle 失读 → 采公式(有 cap/level 防抖背书的一侧)。"""
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     import sr_od.application.currency_war.obs.cw_observation as cwo
     img = object()
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
     monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 6)
     monkeypatch.setattr(cwo, 'read_deployed_count', lambda c, s: None)
     r = cbl.resolve_back_slots(test_context, img, level=6, cap=7)
@@ -1728,20 +1636,7 @@ def test_probe_state_symmetric_full_and_flat_none():
 # ==================== 15 号稿批 C 残余三件:公式净化 + 布局未知态(T-7) ====================
 # 出处:docs/develop/currency_war/strategy-docs/
 #       15_observation_multisource_arbitration.md §3.2①/§3.2④/§6 T-7/T-8
-
-from types import SimpleNamespace  # noqa: E402
-
-
-@pytest.fixture()
-def _layout_fresh(monkeypatch):
-    """未知态模块级计数器复位(测试纪律:生产路径含模块级全局时 setup
-    一并复位)+ 选档日志/节流表复位;用例结束再清一次防泄漏。"""
-    from sr_od.application.currency_war.obs import cw_back_layout as cbl
-    cbl.reset_layout_unknown_state()
-    monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
-    monkeypatch.setattr(cbl, '_last_sel_log', None)
-    yield
-    cbl.reset_layout_unknown_state()
+# (_layout_fresh 共享桩前导已上移至「select_back_layout 选档入口」节头,全家族共用。)
 
 
 def test_formula_abstains_on_untrusted_level(_layout_fresh, monkeypatch):
@@ -1786,15 +1681,12 @@ def test_probe_residual_asymmetric_noise_absorbed():
 
 
 def test_unknown_single_frame_skip_with_jsonl_evidence(_layout_fresh,
-                                                       monkeypatch, tmp_path):
+                                                       monkeypatch):
     """T-7 单帧未知:双弃权 → n=None/prefix=''/unknown=True/frozen=False;
     每帧 JSONL 留证(obs_conflict 行 + back_layout_unknown 分键经
     cw_telemetry_exit 出口,缺省关→显式接桩)。"""
-    import sr_od.application.currency_war.kernel.cw_observe as cobs
     from sr_od.application.currency_war.kernel import cw_telemetry_exit as exit_mod
     from sr_od.application.currency_war.obs import cw_back_layout as cbl
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
-    monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     defects: list[dict] = []
     monkeypatch.setattr(exit_mod, '_record_defect',
                         lambda **kw: defects.append(kw))
@@ -1804,8 +1696,8 @@ def test_unknown_single_frame_skip_with_jsonl_evidence(_layout_fresh,
     assert r['n'] is None and r['prefix'] == ''
     assert r['unknown'] is True and r['frozen'] is False
     assert r['unknown_streak'] == 1
-    # obs_conflict JSONL 证据行
-    p = tmp_path / 'obs.jsonl'
+    # obs_conflict JSONL 证据行(p = _layout_fresh 提供的 tmp journal 路径)
+    p = _layout_fresh
     assert p.exists() and 'back_layout_unknown' in p.read_text(encoding='utf-8')
     # defects 分键(出口桩;kind 单一源=kernel.cw_telemetry_exit 常量)
     assert len(defects) == 1

@@ -645,7 +645,6 @@ def test_load_archive_auto_rebuilds_stale_version(replay: _match_archive_Path):
         for k in ('terminal', 'terminal_ts', 'terminal_source',
                   'terminal_closure'):
             r.pop(k, None)
-    import os
     p = replay / 'matches' / f'match_{game_id}.json'
     with p.open('w', encoding='utf-8') as f:
         json.dump(stale, f, ensure_ascii=False)
@@ -1214,7 +1213,6 @@ _TEST_ROOT = _w527_node_ledger_Path(__file__).resolve().parents[4]     # 测试�
 
 from sr_od.application.currency_war.kernel.cw_state import  fill_boss_by_position, get_node_ledger, ledger_node_type, ledger_update_plane
 from sr_od.application.currency_war.obs import cw_node_reader, cw_observation
-from sr_od.application.currency_war.telemetry import state as cw_telemetry
 from sr_od.application.currency_war.obs.cw_node_reader import  classify_node_row, load_node_type_templates
 from sr_od.application.currency_war.obs.cw_observation import  node_vote_verdict
 

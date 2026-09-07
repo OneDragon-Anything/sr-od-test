@@ -1,13 +1,13 @@
-"""test_cw_shop_refresh 主题锁(结构合并批,机械拼接)。
+"""test_cw_shop_refresh 主题锁(结构合并批,机械拼接;瘦身批 2026-09-07 去重)。
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
+成员(原文件 docstring 语义索引;断言面经覆盖对账后有删减,删处留指针注释):
 - w510_refreshfee: test_cw_w510_refreshfee.py
-- w514_refresh_surface: test_cw_w514_refresh_surface.py
+- w514_refresh_surface: test_cw_w514_refresh_surface.py(防抖/流纯净两测删除,
+  单一源 = test_cw_w505_defect_ledger.py / test_cw_w512_obs_surfaces.py)
 - w564_shop_wire: test_cw_w564_shop_wire.py
 - w591_refresh_wave_op: test_cw_w591_refresh_wave_op.py
 - w891_buy_edge: test_cw_w891_buy_edge.py
-- w944_shop_unk_settle: test_cw_w944_shop_unk_settle.py
-冲突改名:后来者顶层名加来源前缀(_<tag>_原名)。
+- w944_shop_unk_settle: test_cw_w944_shop_unk_settle.py(冲突改名前缀族已去重)
 """
 from __future__ import annotations
 
@@ -73,50 +73,13 @@ def test_refresh_effective_truth_table():
     assert refresh_effective([], ['A', 'B']) is None               # 空读不可判
     assert refresh_effective(['A'], []) is None
 
-
-# ===== ③ 两连全同防抖(台账复现计数)=====
-
-
-# ===== ③ 两连全同防抖(台账复现计数)=====
-
-def test_refresh_defect_debounce_l1_then_l0(tmp_path: Path, monkeypatch):
-    """同特征(刷前牌名串)首见 L1、第二波再全同升 L0——「连续两次刷新全同
-    才确认」的防抖由台账复现计数承载,判据函数只给单波判定。"""
-    monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
-    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
-    monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
-    monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    # 安灯 handler 是模块级单例(生产武装点=CurrencyWarApp.__init__),同进程
-    # 先跑的测试构造过 App 即泄漏真 handler → 本测试升 L0 时会真停线写真
-    # flag(2026-09-03 实证:真 flag 带 run_id=rt 落仓根)。本测试只验台账
-    # 分级,钉 None 隔离停线通道(同 test_cw_infra_locks 缺省态钉法)。
-    monkeypatch.setattr(cw_telemetry, '_L0_ANDON_HANDLER', None)
-    names = sorted(['A', 'B', 'C', 'D', 'E'])
-    for _ in range(2):
-        defects.record_defect(
-            'shop_refresh', 'invariant_break',
-            expected=f'刷后牌面≠刷前:{names}',
-            observed=f'刷新后5牌与刷前全同:{names}',
-            plane=1, round_num=3, gap_large=True,
-            reader_source='refresh_set_compare')
-    sevs = [r['severity'] for r in _rows(tmp_path, 'defect_ledger.jsonl')]
-    assert sevs == ['L1_alert', 'L0_andon']
-
-
-# ===== ④ 流纯净锁 =====
-
-def test_record_defect_does_not_pollute_spend_ledger(tmp_path: Path, monkeypatch):
-    """缺陷台账行只进 defect_ledger 一条流:spend_ledger 是原始证据层
-    (消费端按单元框架字段解析),缺陷行混入会被当伪单元误读。"""
-    monkeypatch.setattr(cw_telemetry, '_RECORDER',
-                        recorder.TelemetryRecorder(enabled=True, replay_dir=tmp_path))
-    monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', 'rt')
-    monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
-    monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
-    defects.record_defect('shop_refresh', 'invariant_break', 'a', 'b')
-    assert len(_rows(tmp_path, 'defect_ledger.jsonl')) == 1
-    assert not (tmp_path / 'spend_ledger.jsonl').exists()
+# (原 ③「两连全同防抖 L1→L0」与 ④「流纯净」两测已删——跨文件等价双锁:
+#  防抖机制单一源 = test_cw_w505_defect_ledger.py::test_reproduction_counter_
+#  upgrades_second_occurrence + shop_refresh 关键面成员域锁同文件
+#  test_critical_surface_domain_lock;流纯净单一源 = test_cw_w512_obs_surfaces.
+#  py::test_defect_row_not_appended_to_spend_ledger(带 2e7364de 失守事故引证)。
+#  判别力检验法:surface/kind 味差异落在生产无分支通路上(_mark_defect_
+#  reproduced 键泛型),保留超集。)
 
 
 
@@ -187,17 +150,9 @@ class TestBuildRefreshExpect:
         assert expect.insufficient is False
         assert (plane, round_num) == (1, 1)
 
-    def test_normal_and_insufficient(self) -> None:
-        """正常扣费与金不足(算术差如实为负,判归调用方)。"""
-        r = build_refresh_expect(10, 3, [], 2, 5)
-        assert r is not None and r[0].gold_after == 7
-        r = build_refresh_expect(1, 2, [], 2, 5)
-        assert r is not None and r[0].gold_after == -1 and r[0].insufficient
-
-    def test_cards_old_pooling(self) -> None:
-        """旧五张回池账经 cw_shop_obs.refresh_expect 按名合并计数。"""
-        r = build_refresh_expect(8, 2, [('甲', 1), ('甲', 1), ('乙', 2)], 1, 1)
-        assert r is not None and r[0].pool_returned == {'甲': 2, '乙': 1}
+    # (金差/不足/回池合并的数学面单一源 = test_cw_obs_chain.py TestRefreshExpect
+    #  ——refresh_expect 直测超集;本类只留包装层 None 口径与 0/None 分道,
+    #  后两者删 normal_and_insufficient / cards_old_pooling 两条子集测。)
 
 
 # ===== refresh_reconcile_mismatches(消费判据,纯函数)=====
@@ -319,7 +274,10 @@ from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CurrencyWarMatch,
     StrategySession,
 )
-from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
+from sr_od.application.currency_war.kernel.cw_obs_core import (
+    SHOP_SCREEN_NAME,
+    shop_card_click_points,
+)
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     CloseShop,
@@ -432,12 +390,17 @@ def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
       (「第 1 次 = 点击前现读」的 2 读序只在买生效形态存在——需替身帧
       支持买后像素变化,本夹具无此形态。)
     """
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep as pd
     from sr_od.application.currency_war.obs import cw_observation as cwo
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_buy_cards as buy_cards_mod,
     )
 
+    # 波链的真实秒耗全在 cw 各模块直用的 stdlib time.sleep(段顶 settle 0.3/
+    # r325 稳定门 0.25×2/关店动画等;fast_sleep 只换 op 框架模块的 time)。
+    # 替身帧恒同,稳定门两帧即过,这些等待零信息量 → 桩 sleep 后波链毫秒级
+    # (手法先例 = 本文件 W593 帧帽测试替身 saop.time;测试纪律:不为生产加
+    # 参数)。_make_op 各用例板面全实名,hook 稳定门(monotonic 计时)不触发。
+    monkeypatch.setattr(buy_cards_mod.time, 'sleep', lambda *_a: None)
 
     class _Watched(WatchdogOperationMixin, _BuyPhaseHostOp):
         pass
@@ -659,14 +622,8 @@ def test_segment_action_cap_raises_loud(
     本帽 = 执行侧最后防线。动作 sleep 经模块级替身吃掉(测试纪律:
     不为生产加参数)。
     """
-    from types import SimpleNamespace as _NS
-
     import sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops as saop
-    from sr_od.application.currency_war.kernel.cw_state import LevelUpShop
-    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
-        SHOP_SEGMENT_ACTION_CAP,
-    )
-    monkeypatch.setattr(saop, 'time', _NS(sleep=lambda *_a: None))
+    monkeypatch.setattr(saop, 'time', SimpleNamespace(sleep=lambda *_a: None))
     events: list[str] = []
     op, fc, rows, _facts = _make_op(
         test_context, monkeypatch, tmp_path,
@@ -677,9 +634,6 @@ def test_segment_action_cap_raises_loud(
 
     # 直调循环主体(不经 op.execute 的 retry 链——框架会把异常转失败轮
     # 并重试,掩盖「响亮暴露」形态;本锁钉循环本体行为)
-    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
-        run_buy_waves,
-    )
     with pytest.raises(RuntimeError, match='超帽'):
         run_buy_waves(op, test_context.cw_match, None, False, False)
     # decisions 行分键计数(占位行;读取隔离台账 tmp_path)
@@ -818,13 +772,17 @@ def test_buy_refresh_wave_real_free_proc(
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     LevelUp,
+    LevelUpShop,
     SellBench,
     bench_occupied,
 )
-from one_dragon.base.operation.operation_node import operation_node
 from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
+    _SETTLE_TIMEOUT_COMPENSATE_S,
+    _wait_shop_row_stable,
+    SHOP_SEGMENT_ACTION_CAP,
     build_post_buy_incremental_state,
     refresh_wave_is_refresh_only,
+    run_buy_waves,
 )
 
 
@@ -927,15 +885,11 @@ def test_post_buy_incremental_state_no_mutation_of_last_state() -> None:
 
 
 # ==================== w944_shop_unk_settle ====================
-
+# (结构合并批的冲突改名前缀已去重:_PREP/_ANCHOR/_OLD_NAMES/替身策略/
+#  _execute/require_fixture 与 w591 段共用同一顶层助手,语义逐字等价——
+#  两段 fixture 的差异只在被测读点(wave_shop/hook_rereads),在 _make_hook_op 内。)
 
 import numpy as np
-import pytest
-
-_w944_shop_unk_settle_PREP = '货币战争-备战'
-_w944_shop_unk_settle_ANCHOR = (_w944_shop_unk_settle_PREP, '备战标识-购买经验')
-
-_NAMED = ['希儿', '景元', '布洛妮娅', '克拉拉', '杰帕德']
 
 
 def _frame(changed: bool = False) -> Any:
@@ -965,11 +919,6 @@ class _FakeOp:
 
 def test_stable_gate_waits_animation_then_settles() -> None:
     """锁①a 动画帧序列:A→B(变)→B→B(连续同)→ 门判稳定放行。"""
-    from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
-        _wait_shop_row_stable,
-    )
-
     op = _FakeOp([_frame(False), _frame(True), _frame(True), _frame(True),
                   _frame(True), _frame(True), _frame(True), _frame(True)])
     assert _wait_shop_row_stable(op) is True
@@ -983,11 +932,6 @@ def test_stable_gate_fast_path_minimum_observation() -> None:
     才放行。实测放行耗时 ≥0.95s(0.25s 采样栅上的 1.0s 判据)。
     """
     import time as _t
-
-    from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
-        _wait_shop_row_stable,
-    )
 
     op = _FakeOp([_frame(True)])   # 恒冻结帧:修复前 0.5s 即放行
     t0 = _t.monotonic()
@@ -1008,12 +952,6 @@ def test_stable_gate_timeout_has_compensation_wait() -> None:
     """
     import time as _t
 
-    from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
-        _SETTLE_TIMEOUT_COMPENSATE_S,
-        _wait_shop_row_stable,
-    )
-
     op = _FakeOp([_frame(i % 2 == 0) for i in range(32)])
     t0 = _t.monotonic()
     ok = _wait_shop_row_stable(op, max_wait_s=0.4)
@@ -1025,10 +963,6 @@ def test_stable_gate_timeout_has_compensation_wait() -> None:
 
 def test_stable_gate_screenshot_exception_offline_contract() -> None:
     """锁①c 离线契约:截图恒炸 → suppress 降级继续等,超时 False(不炸调用方)。"""
-    from one_dragon.base.operation.operation_node import operation_node
-    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
-        _wait_shop_row_stable,
-    )
 
     class _BoomOp:
         def screenshot(self) -> Any:
@@ -1041,18 +975,6 @@ def test_stable_gate_screenshot_exception_offline_contract() -> None:
 # 2. op 级行为锁(w591 替身手法:替身观测输入 + 替身计划源 + 台账隔离)
 # ---------------------------------------------------------------------------
 
-class _w944_shop_unk_settle_StubStrategy:
-    """替身决策源(ADR-0517 单动作形态):恒吐 CloseShop(零买 → 直接
-    进钩子判定;旧 decide_shop_screen 空 plan 序列口已退役)。"""
-
-    def __init__(self) -> None:
-        self.calls = 0
-
-    def decide_shop_action(self, session, config) -> Any:
-        self.calls += 1
-        return CloseShop()
-
-
 def _make_hook_op(test_context: SrTestContext,
                   monkeypatch: pytest.MonkeyPatch,
                   tmp_path: pathlib.Path,
@@ -1064,17 +986,10 @@ def _make_hook_op(test_context: SrTestContext,
     ``wave_shop`` 是波循环顶 read_game_state 的商店名表(含 ''=未识别槽);
     ``hook_rereads`` 是停机钩子 read_shop_cards 的逐次返回(名表)。
     """
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        CurrencyWarMatch,
-        StrategySession,
-    )
-    from sr_od.application.currency_war.kernel.cw_state import GameState, ShopCard
     from sr_od.application.currency_war.obs import cw_observation as cwo
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_buy_cards as buy_cards_mod,
     )
-    from sr_od.application.currency_war.telemetry import defects, recorder
-    from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
     class _Watched(WatchdogOperationMixin, _BuyPhaseHostOp):
         pass
@@ -1118,10 +1033,10 @@ def _make_hook_op(test_context: SrTestContext,
     monkeypatch.setattr(cwo, 'read_phase_round', lambda *a, **k: (1, 7))
 
     monkeypatch.setattr(test_context, 'cw_match',
-                        CurrencyWarMatch(_w944_shop_unk_settle_StubStrategy(), StrategySession()))
+                        CurrencyWarMatch(_StubStrategy([]), StrategySession()))
 
     fc = FixtureController(test_context)
-    fc.set_phases([{'frame': (_w944_shop_unk_settle_PREP, 'shop_closed')}])
+    fc.set_phases([{'frame': (_PREP, 'shop_closed')}])
     monkeypatch.setattr(test_context, 'controller', fc)
 
     op = _Watched(test_context)
@@ -1131,7 +1046,7 @@ def _make_hook_op(test_context: SrTestContext,
     shop_open = {'v': True}
 
     def _find_area(screen, screen_name, area_name, **k):
-        if (screen_name, area_name) == _w944_shop_unk_settle_ANCHOR:
+        if (screen_name, area_name) == _ANCHOR:
             return op.round_success('')
         if area_name == '按钮-收起':
             return op.round_success('') if shop_open['v'] else op.round_fail('')
@@ -1152,24 +1067,9 @@ def _make_hook_op(test_context: SrTestContext,
     return op, fc, reads
 
 
-def _w944_shop_unk_settle_execute(op) -> Any:
-    enter_running_state(op.ctx)
-    try:
-        with fast_sleep():
-            return op.execute()
-    finally:
-        reset_running_state(op.ctx, op)
-
-
-@pytest.fixture()
-def _w944_shop_unk_settle_require_fixture(test_context: SrTestContext) -> None:
-    if not test_context.has_screen(_w944_shop_unk_settle_PREP, 'shop_closed'):
-        pytest.skip(f'存档截图缺失:screens/{_w944_shop_unk_settle_PREP}/shop_closed.webp')
-
-
 def test_hook_heals_after_settled_reread(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-    tmp_path: pathlib.Path, _w944_shop_unk_settle_require_fixture,
+    tmp_path: pathlib.Path, _require_fixture,
 ) -> None:
     """锁②a 瞬态帧形态:波顶读含未识别槽 → 稳定门后重读全识别 → 不停机。
 
@@ -1180,10 +1080,10 @@ def test_hook_heals_after_settled_reread(
     op, _fc, reads = _make_hook_op(
         test_context, monkeypatch, tmp_path,
         wave_shop=['', '景元', '', '克拉拉', '杰帕德'],
-        hook_rereads=[_NAMED],
+        hook_rereads=[_OLD_NAMES],
         writes=writes)
 
-    result = _w944_shop_unk_settle_execute(op)
+    result = _execute(op)
 
     assert result.success, f'自愈后应正常收工:status={result.status!r}'
     assert reads['n'] == 1, f'第 1 次重读即自愈,实际重读 {reads["n"]} 次'
@@ -1193,7 +1093,7 @@ def test_hook_heals_after_settled_reread(
 
 def test_hook_persistent_unknown_stops_with_evidence(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-    tmp_path: pathlib.Path, _w944_shop_unk_settle_require_fixture,
+    tmp_path: pathlib.Path, _require_fixture,
 ) -> None:
     """锁②b 模态弹窗压暗形态:预算 2 次重读仍 unknown → 真停 + flag 留证。
 
@@ -1208,7 +1108,7 @@ def test_hook_persistent_unknown_stops_with_evidence(
         hook_rereads=[unk, unk],
         writes=writes)
 
-    result = _w944_shop_unk_settle_execute(op)
+    result = _execute(op)
 
     assert not result.success, f'持续 unknown 应真停:{result.status!r}'
     assert '未识别卡槽' in (result.status or ''), result.status
@@ -1224,7 +1124,7 @@ def test_hook_persistent_unknown_stops_with_evidence(
 
 def test_hook_unknown_slot_skipped_not_stopped(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-    tmp_path: pathlib.Path, _w944_shop_unk_settle_require_fixture,
+    tmp_path: pathlib.Path, _require_fixture,
 ) -> None:
     """锁②c 同波含未识别槽:执行只买有身份牌(不点读空槽),重读自愈不停机。
 
@@ -1232,19 +1132,11 @@ def test_hook_unknown_slot_skipped_not_stopped(
     plan 不发读空槽的 BuyCard → 执行侧零空槽点击;稳定门重读自愈 →
     op 正常收工。「持续读空才停机」半部由锁②b 承载(预算耗尽真停)。
     """
-    from sr_od.application.currency_war.kernel.cw_obs_core import (
-        shop_card_click_points,
-    )
-    from sr_od.application.currency_war.kernel.cw_state import (
-        BuyCard,
-        ShopCard,
-    )
-
     writes: list[str] = []
     op, fc, reads = _make_hook_op(
         test_context, monkeypatch, tmp_path,
         wave_shop=['', '景元', '布洛妮娅', '克拉拉', '杰帕德'],
-        hook_rereads=[_NAMED],
+        hook_rereads=[_OLD_NAMES],
         writes=writes)
     # 给替身策略注入「只买有身份牌(x≈1300 → 槽5)」的单动作流
     # (ADR-0517 单动作形态:逐帧吐单动作,后续帧 CloseShop 收尾)
@@ -1257,7 +1149,7 @@ def test_hook_unknown_slot_skipped_not_stopped(
                 if _injected['n'] == 1 else CloseShop())
     test_context.cw_match.strategy.decide_shop_action = _decide
 
-    result = _w944_shop_unk_settle_execute(op)
+    result = _execute(op)
 
     assert result.success, f'跳过读空槽后应正常收工:{result.status!r}'
     assert reads['n'] == 1, f'重读自愈,实际重读 {reads["n"]} 次'
