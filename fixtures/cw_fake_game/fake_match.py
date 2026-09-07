@@ -1,16 +1,20 @@
-"""假游戏状态机骨架(T-120 批 0;方案 §2.2 的 FakeMatch 单一对象)。
+"""假游戏状态机(T-120 批 0 骨架 + 批 1 环境规则补全;方案 §2.2)。
 
-**骨架范围(批 1 补全)**:状态容器(真 GameState + 画面身份 + 浮层栈)
-+ 动作转移唯一入口 ``apply``(直调 ``cw_state.simulate`` 单一源)+
-战斗结算直调(coarse 主路径 + Δ池)+ 四股随机流与确定性契约。
-收入/装备发放/位面继承的规则模块、真 op 跑通归批 1+(方案 §6.2)。
+**状态容器 + 转移单一源 + 战斗结算 + 回合规则**(批 1 补全面):在批 0
+骨架(状态容器/``apply`` 直调 simulate/coarse+Δ池结算/四股随机流)之上,
+补全 P1 全段可跑所需的回合域规则——收入分解(:mod:`rules`,ADR-0439
+口径)、连胜/败轮状态迁移、hp 结算上界钳制(ADR-0287,批 0 申报的
+「上界钳制缺位」归本批)、商店开关店画面身份规则(``open_shop``/
+``close_shop``;落地审登记的「终结动作 phase 转移语义」批 1 边界的
+承接形)。prep 编排动作(收球/开箱/装备穿戴)与位面继承仍归批 2/3
+(方案 §6.2 分批表)。
 
 **单一源纪律(本文件的存在理由)**:动作转移**只经**
 ``cw_state.simulate`` 直调——假游戏不内联任何动作转移(sim-design §2.1
 双源禁令在假游戏侧同样生效;方案 §2.2 商店动作结算行)。刷新重抽、
-牌池 take/ret 属「规则外效应」,是假游戏规则层职责(RefreshShop 在
-simulate 侧只扣金不模拟牌,``cw_state.simulate`` 的 RefreshShop 分支
-注释在案)。
+牌池 take/ret、回合域收入属「规则外效应」,是假游戏规则层职责
+(RefreshShop 在 simulate 侧只扣金不模拟牌,``cw_state.simulate`` 的
+RefreshShop 分支注释在案)。
 
 **确定性契约**:同 seed + 同环境指纹 → 逐位可复现(方案 §2.2 确定性行;
 sim-testing「重放 = seed + 池指纹」契约的假游戏侧扩形)。随机流 = 主
@@ -29,6 +33,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
+from fixtures.cw_fake_game import rules
 from sr_od.application.currency_war.cw_game_ports import ExecResult
 from sr_od.application.currency_war.kernel import cw_state
 from sr_od.application.currency_war.kernel.cw_battle_calib import (
@@ -46,6 +51,10 @@ from sr_od.application.currency_war.kernel.cw_opening_hp import (
 from sr_od.application.currency_war.kernel.cw_state import (
     Action,
     GameState,
+)
+from sr_od.application.currency_war.sim.engine_p1 import (
+    EVENT_GOLD_BY_ROUND,  # noqa: F401  再出口:确定性锁的消费面(表随迁申报见 rules)
+    HP_UPPER_BOUND,
 )
 from sr_od.application.currency_war.sim.pool import (
     _Pool,
@@ -155,6 +164,10 @@ class FakeMatch:
         self.observation_log: list[ObservationRecord] = []
         self.clock: int = 0
         self.phase: str = PHASE_PREP
+        # 败轮金判定跨轮状态(engine_p1 :2128-2130 同构:prev_node 每
+        # 节点更新,prev_combat_lost 只由战斗类节点置位;初值 = 无前轮)
+        self._prev_node: str | None = None
+        self._prev_combat_lost: bool = False
         self.state: GameState = GameState(
             plane=1,
             round_num=1,
@@ -280,8 +293,10 @@ class FakeMatch:
         - 采样键单一源直调(``_settle_rung``/``_deployable_depth``,
           cw_battle_calib;同 engine_p1 先例)。
 
-        结算把 hpΔ 直接落到 ``state.hp``(下钳 0 = 死亡态;上界钳制/
-        streak 结算观测回路归批 1 随遥测同构补全——骨架申报面)。
+        结算把 hpΔ 落到 ``state.hp``(下钳 0 = 死亡态;上界钳
+        HP_UPPER_BOUND = ADR-0287,engine_p1:2112 同式——批 0 申报的
+        「上界钳制缺位」批 1 补全)。战斗类节点随结算迁移连胜/败轮状态
+        (:func:`rules.settle_streak`,engine_p1 :2117-2130 带符号口径)。
         """
         self.clock += 1
         _node = node or self.state.node_type or 'battle'
@@ -304,9 +319,53 @@ class FakeMatch:
         else:
             delta = node_delta(_node, st.round_num, st.round_num,
                                self._rng_battle, plane=st.plane)
-        hp_after = max(0, (st.hp if st.hp is not None else 0) + delta)
+        hp_after = max(0, min(HP_UPPER_BOUND,
+                              (st.hp if st.hp is not None else 0) + delta))
         st.hp = hp_after
+        # 连胜/败轮状态迁移(奖励/补给不动 streak;败态跨奖励轮保留——
+        # engine_p1 :2125-2130 注记口径,_prev_node 每节点更新)
+        st.streak, self._prev_combat_lost = rules.settle_streak(
+            st, delta, _node)
+        self._prev_node = _node
         return BattleSettlement(node=_node, delta=delta, hp_after=hp_after)
+
+    # ---- 回合域规则(批 1;方案 §2.2 收入/商店身份行)----
+
+    def apply_income(self) -> dict[str, int]:
+        """每备战期收入入账(规则 = :func:`rules.income_for_round`,单一
+        源分解;金一次落定,分解 dict 返还调用方留证/对拍用)。
+
+        调用时机 = 备战期开始、商店访问前(游戏语义:收入在备战期入账,
+        开店决策消费的是含收入金)。rng 消费归发放股(事件金抖动)。
+        """
+        self.clock += 1
+        inc = rules.income_for_round(self.state, self._rng_grant,
+                                     self._prev_node, self._prev_combat_lost)
+        self.state.gold += sum(inc.values())
+        return inc
+
+    def open_shop(self) -> None:
+        """开店:画面身份切「备战-开商店」并按当前等级发牌一帧店。
+
+        牌面真值 = ``_Pool.draw_shop`` 单一源(概率表经 ``refresh_probs``
+        条——骨架未建模轮岗翻倍时恒 None = 基线概率,与批 0 口径一致);
+        调用时机 = harness 编排备战访问前(环境对「开店动作」的承接,
+        真环境的开店点击在假环境由本规则表达)。
+        """
+        self.clock += 1
+        self.phase = PHASE_PREP_SHOP_OPEN
+        self.state.shop = list(self.shop_pool.draw_shop(
+            self.state.level, probs=self.state.refresh_probs))
+
+    def close_shop(self) -> None:
+        """收店:画面身份回「备战」(CloseShop 终结动作的环境承接)。
+
+        生产链 = run_buy_waves 对 CloseShop 环侧截停(决策后不执行)→
+        编排壳 close_shop 点击收起——假环境由本规则表达收起结果;
+        牌面保留(下次 open_shop 重发,与真机「重开重发」同形)。
+        """
+        self.clock += 1
+        self.phase = PHASE_PREP
 
     # ---- 日程推进(骨架最小实现)----
 

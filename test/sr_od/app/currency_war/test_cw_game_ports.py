@@ -1,20 +1,20 @@
-"""cw_game_ports 端口协议契约锁 + 零生产消费守卫(T-120 sim 重设计 批 0)。
+"""cw_game_ports 端口协议契约锁 + 改道集封闭守卫(T-120 sim 重设计
+批 0 落地,批 1 按预写跟绿条件改写消费面锁)。
 
 出处 = T-120 方案 v2(``.debug/temp/currency_war/t120_sim_redesign/方案.md``,
-**易失产物**)§6.2 批 0 行「端口协议定稿并落地…零消费点、不被生产 import」
-+ §3.2 端口协议形状 + §3.3 装配纪律;ADR 落点待 T-120 退役批分配,
-后续批回填编号(测试纪律「批报告类出处」同判)。
+**易失产物**)§6.2 批 0 行(批 0「零消费点」)+ §3.3 装配纪律与守卫锁①
+(批 1 起消费面 = 改道调用点封闭集)+ §6.2 批 1 行;ADR 落点待 T-120
+退役批分配,后续批回填编号(测试纪律「批报告类出处」同判)。
 
 锁面三件:
 ① 安装槽语义 —— 缺省 None = 生产真实读屏(生产全程不安装,行为逐位
    不变);进程内单装配;卸载复位 None 且幂等;
 ② 协议 conform —— 假实现(FakeCwObserver/FakeActionSink)结构化满足
-   两个 runtime_checkable Protocol(批 1 生产实现落地时同锁辖它);
-③ 零生产消费守卫 —— src/sr_od 全树唯一引用 cw_game_ports 的文件 = 协议
-   文件自身。这是本批「生产零行为改动」的机器可判形:任何生产文件提前
-   消费端口 = 红。合法源码扫描(测试纪律 8②依赖方向/单一源守卫);
-   盲区自检 = tmp_path 合成树上验证扫描器能抓新建违规文件(测试纪律 20
-   「新文件落错位置时守卫必须能起诉,禁假绿」)。
+   两个 runtime_checkable Protocol + 签名级形状锁(批 0 落地审 L4 修后
+   口径,isinstance 的方法名盲区由 inspect.signature 补);
+③ 改道集封闭守卫 —— 生产树消费 cw_game_ports 的文件 = 协议 + 批 1
+   改道调用点封闭集(合法源码扫描,测试纪律 8②依赖方向/单一源守卫;
+   盲区自检 = tmp_path 合成树验证扫描器能起诉,测试纪律 20)。
 """
 from __future__ import annotations
 
@@ -35,12 +35,9 @@ from sr_od.application.currency_war.cw_game_ports import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]   # 仓库根(currency_war 测试 ← app ← sr_od ← test ← sr-od-test ← 根)
 _SRC_ROOT = _REPO_ROOT / 'src' / 'sr_od'
-_PORT_FILE = (_SRC_ROOT / 'application' / 'currency_war'
-              / 'cw_game_ports.py')
 
 #: 扫描目标子串 = 模块名本体(import 语句/字符串引用/文档提及一律算
-#: 消费嫌疑——「零消费点」的宽松口径,人工分类由命中集合的封闭性承担:
-#: 唯一合法命中 = 协议文件自身)。
+#: 消费嫌疑——宽松口径,分类由命中集合与封闭集的比对承担)。
 _PORT_NEEDLE: str = 'cw_game_ports'
 
 
@@ -114,7 +111,18 @@ class TestInstallSlot:
 
 
 class TestProtocolConformance:
-    """协议 conform 锁(runtime_checkable 结构化满足)。"""
+    """协议 conform 锁(runtime_checkable 结构化满足 + 签名级断言)。
+
+    签名级断言 = 批 0 落地审 L4 修后口径:isinstance 检查只验方法名
+    在场,``execute_action`` 漏 ``action``/``env`` 参或参数改名时结构化
+    conform 仍绿——批 1 起两端口实现与改道调用点都以签名为承重面
+    (env 语境承载账本位随动),用 inspect.signature 形状锁补盲区。
+    """
+
+    @staticmethod
+    def _param_names(func) -> list[str]:
+        import inspect
+        return list(inspect.signature(func).parameters)
 
     def test_fake_observer_satisfies_observation_source(self) -> None:
         assert isinstance(FakeCwObserver(FakeMatch(seed=6)),
@@ -123,9 +131,60 @@ class TestProtocolConformance:
     def test_fake_sink_satisfies_action_sink(self) -> None:
         assert isinstance(FakeActionSink(FakeMatch(seed=6)), CwActionSink)
 
+    def test_sink_signature_matches_protocol_shape(self) -> None:
+        """execute_action 形状锁:协议 (ctx, action, env) 三参;env 缺省
+        None = 生产语境可缺省(方案 §3.3 改道点批 1 起 env 恒传,fake
+        保留缺省 = 独立可驱动)。"""
+        from sr_od.application.currency_war.cw_game_ports import CwActionSink
+        proto_params = self._param_names(CwActionSink.execute_action)
+        assert proto_params == ['self', 'ctx', 'action', 'env']
+        fake_params = self._param_names(FakeActionSink.execute_action)
+        assert fake_params == proto_params, (
+            f'FakeActionSink.execute_action 签名与协议漂移:'
+            f'{fake_params} != {proto_params}')
+
+    def test_observer_methods_signature_match(self) -> None:
+        """观察源四方法签名锁(同 L4 口径;observe_prep 的 phase 键、
+        overlay_options 的 kind 键是改道调用点的承重参数)。"""
+        for name, params in (
+                ('screen_identity', ['self', 'ctx']),
+                ('observe_prep', ['self', 'ctx', 'phase']),
+                ('observe_shop_cards', ['self', 'ctx']),
+                ('overlay_options', ['self', 'ctx', 'kind'])):
+            proto = getattr(CwObservationSource, name)
+            fake = getattr(FakeCwObserver, name)
+            assert self._param_names(proto) == params, f'协议漂移:{name}'
+            assert self._param_names(fake) == params, (
+                f'FakeCwObserver.{name} 签名与协议漂移')
+
 
 class TestZeroProductionConsumption:
-    """零生产消费守卫(本批「生产零行为改动」的机器可判形)。"""
+    """改道集封闭守卫(方案 §3.3 守卫锁①的「改道集封闭」半边)。
+
+    批 0 锁「零消费」;批 1 起按批 0 预写的跟绿条件改写:生产树对
+    cw_game_ports 的引用面 = 协议文件 + 改道调用点**封闭集**——集合外
+    新增消费 = 旁路改道(未登记的读屏/执行新缝),红。当前封闭集
+    (批 1 改道清单,方案 §6.2 批 1 行 + §7.1 文件面):
+
+    - cw_game_ports.py —— 协议本体(槽与两 Protocol);
+    - operations/cw_op/cw_op_buy_cards.py —— 商店入口观察改道 +
+      动作执行步改道(§3.3 执行面);
+    - operations/cw_screen/cw_screen_prep.py —— 备战入口 heavy 观察
+      改道(§2.3 表消费点);
+    - operations/decision_frame_hooks.py —— 留证面改形(§2.3 契约
+      三则:假环境落结构化观察 JSON)。
+    """
+
+    #: 封闭集(相对 src/sr_od 的路径尾;新改道点必须同批登记本表)
+    _CLOSED_SUFFIXES: tuple[str, ...] = (
+        str(Path('application') / 'currency_war' / 'cw_game_ports.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_op'
+            / 'cw_op_buy_cards.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_prep.py'),
+        str(Path('application') / 'currency_war' / 'operations'
+            / 'decision_frame_hooks.py'),
+    )
 
     def test_scanner_catches_new_violations(self, tmp_path: Path) -> None:
         """盲区自检:合成树上的新建违规文件必须被起诉(禁假绿)。"""
@@ -139,13 +198,17 @@ class TestZeroProductionConsumption:
         hits = _scan_port_references(tmp_path)
         assert hits == [guilty]
 
-    def test_only_protocol_file_references_itself(self) -> None:
-        """src/sr_od 全树唯一命中 = 协议文件自身。
+    def test_redirect_set_is_closed(self) -> None:
+        """生产树命中集 = 封闭集逐一对上(多/少/错位皆红)。
 
-        红 = 有生产文件提前消费端口(方案 §6.2 批 0「零消费点、不被生产
-        import」失守)。批 1 观察改道落地时本锁**按计划同批改写**:
-        命中集 = 协议文件 + 改道调用点封闭集(方案 §3.3 守卫锁①的
-        「改道集封闭」半边)——跟绿须携批 1 方案指针,不是机械放行。"""
+        红 = 集合外生产文件消费端口(旁路改道)——处理 = 审其改道
+        合法性:合法 → 同批登记本封闭集并携方案指针;不合法 → 改道
+        收敛到已登记点。禁机械跟绿。"""
         hits = _scan_port_references(_SRC_ROOT)
-        assert hits == [_PORT_FILE], (
-            f'生产树出现 {_PORT_NEEDLE} 消费点(零消费判据失守): {hits}')
+        hit_suffixes = sorted(
+            str(h.relative_to(_SRC_ROOT)).replace('\\', '/')
+            for h in hits)
+        expected = sorted(s.replace('\\', '/') for s in self._CLOSED_SUFFIXES)
+        assert hit_suffixes == expected, (
+            f'cw_game_ports 生产消费面越出封闭集:\n'
+            f'  实际 = {hit_suffixes}\n  封闭集 = {expected}')
