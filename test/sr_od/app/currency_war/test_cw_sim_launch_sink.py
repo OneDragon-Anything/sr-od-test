@@ -47,6 +47,15 @@ from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
 _SEED_CACHE: dict[int, object] = {}
 
+# 发射锚种子(README 纪律#12:显式命中代表集+探针记录)。
+# 探针背景:奖励帧抑制生效(2026-09-08 奖励帧策略审查·可见性批,sim
+# 决策帧填充 node_type)使早期局经济/意向轨迹改变、发射时点位移——
+# 旧隐式锚 seed 0-5 中的 0/2/3 零发射事件,锁红为采样缺陷非机制回归。
+# 探针窗口 seed 0-39 命中 23/40(全含溢出帧);代表集形态:少发射行
+# (1:3 行 r6/7/9;4:2 行)~单发射行(15/23/39)~多发射行含 r3 早发射(5/16/29)。列表失准的红 = 重跑探针更新。
+_LAUNCH_SEEDS: tuple[int, ...] = (1, 4, 5, 16, 29)
+_LAUNCH_SEED: int = 5   # 单锚:发射行 5(轮 3/4/6/7/9)、溢出帧 4
+
 
 def _seeded_result(seed: int):
     """同 seed 单局结果同次运行只算一次(昂贵计算共享,README 纪律)。"""
@@ -275,7 +284,7 @@ class TestConsumerSingleSourceLock:
 
         monkeypatch.setattr(cw_launch_admission,
                             'launch_admission_report', _boom)
-        result = simulate_p1(0, pool='snapshot')
+        result = simulate_p1(_LAUNCH_SEED, pool='snapshot')
         launch_rows = _launch_rows(result)
         assert launch_rows, 'admission 全异常时零发射帧(None 拦门残留)'
         for row in launch_rows:
@@ -289,20 +298,21 @@ class TestShortCircuitBehaviorLock:
     def test_launch_frames_short_circuited_in_real_ledger(self):
         seen = False
         overflow_seen = False
-        for seed in range(6):
+        for seed in _LAUNCH_SEEDS:
             launch_rows = _launch_rows(_seeded_result(seed))
             # 每采样 seed 逐局非空前置(落地审 F7):空账本 = 循环体不执行
             # = 锁空洞绿,防「质量闸把发射帧推迟到视野外」的假绿形态。
-            assert launch_rows, f'seed {seed} 零发射事件(采样缺陷,需换 seed)'
+            assert launch_rows, (f'seed {seed} 零发射事件'
+                                 '(发射锚漂移,重跑探针更新 _LAUNCH_SEEDS)')
             for row in launch_rows:
                 seen = True
                 _assert_launch_row_legal(row)
                 if row['launch']['arbitrage']['zone'] == 'overflow':
                     overflow_seen = True
                     assert row['launch']['arbitrage']['gold_before'] > 0
-        assert seen, '采样 6 seed 零发射事件(采样缺陷,需换 seed 窗口)'
-        assert overflow_seen, '采样 6 seed 零溢出发射帧(仲裁段无行为样本,' \
-                              '锁覆盖缺陷,需换 seed 窗口)'
+        assert seen, '采样种子集零发射事件(重跑探针更新 _LAUNCH_SEEDS)'
+        assert overflow_seen, '采样种子集零溢出发射帧(仲裁段无行为样本,' \
+                              '重跑探针更新 _LAUNCH_SEEDS)'
 
 
 class TestAntiFalseNegativeSentinel:

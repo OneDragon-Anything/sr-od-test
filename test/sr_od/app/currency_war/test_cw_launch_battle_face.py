@@ -31,6 +31,11 @@ _VICTIM_KEYS = {'board_full', 'bench_core_waiting', 'victim_missing'}
 
 _SEED_CACHE: dict[int, object] = {}
 
+# 发射单锚(README 纪律#12):奖励帧抑制生效(2026-09-08 奖励帧策略审查
+# ·可见性批)后旧锚 seed 0 零发射事件(发射时点位移,采样缺陷非机制
+# 回归)。探针窗口 seed 0-39 命中 23/40;取 seed 5(发射行 5、溢出帧 4)。
+_LAUNCH_SEED: int = 5
+
 
 def _seeded_result(seed: int):
     """同 seed 单局结果同次运行只算一次(昂贵计算共享,README 纪律)。"""
@@ -93,7 +98,7 @@ class TestLaunchRowLedgerLock:
         from sr_od.application.currency_war.sim.runner import (
             write_batch_ledger,
         )
-        result = _seeded_result(0)
+        result = _seeded_result(_LAUNCH_SEED)
         out = write_batch_ledger([result], tmp_path / 'batch',
                                  pool_fp=result.pool_fingerprint)
         lines = [json.loads(line)
@@ -103,7 +108,7 @@ class TestLaunchRowLedgerLock:
         persisted = [(i, row.get('launch')) for i, row in enumerate(lines)]
         assert persisted == memory
         assert any(lg is not None for _i, lg in persisted), (
-            'seed 0 零发射事件(采样缺陷,需换 seed)')
+            '发射单锚零发射事件(发射锚漂移,重跑探针更新 _LAUNCH_SEED)')
 
 
 def _load_stats_module():

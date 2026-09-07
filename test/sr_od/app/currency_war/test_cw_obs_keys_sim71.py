@@ -37,6 +37,11 @@ CFG_SKEL = SimpleNamespace(ev_arm='skeleton_only')
 
 _SEED_CACHE: dict[int, object] = {}
 
+# 发射单锚(README 纪律#12):奖励帧抑制生效(2026-09-08 奖励帧策略审查
+# ·可见性批)后旧锚 seed 0 零发射事件(发射时点位移,采样缺陷非机制
+# 回归)。探针窗口 seed 0-39 命中 23/40;取 seed 5(发射行 5、溢出帧 4)。
+_LAUNCH_SEED: int = 5
+
 
 def _seeded_result(seed: int):
     if seed not in _SEED_CACHE:
@@ -136,9 +141,9 @@ class TestLaunchFrameIdleGold:
     def test_no_counters_container_no_crash(self):
         """缺省零漂移:引擎守卫对容器缺席静默(默认路径无 mandate 桥
         建容器,发射观测块不炸、账本正常产出)。"""
-        r = simulate_p1(0, pool='snapshot')
+        r = simulate_p1(_LAUNCH_SEED, pool='snapshot')
         assert any(row.get('launch') for row in r.ledger), \
-            '默认路径零发射帧(采样缺陷)'
+            '默认路径零发射帧(发射锚漂移,重跑探针更新 _LAUNCH_SEED)'
         for row in r.ledger:
             assert isinstance(
                 (row.get('launch') or {}).get('idle_gold', 0), int)
