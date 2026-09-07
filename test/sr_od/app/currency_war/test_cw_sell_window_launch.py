@@ -406,10 +406,64 @@ class TestEmitRegistration:
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
         assert _registry(sess) == {_FUEL: ('press', 3)}
 
+    def test_m2_obligation_buy_registers_obligation(self):
+        """义务类登记写点补全(T-141;ADR-0585 §6「写点随矩阵批落」
+        提前落):M2 线成员买入落 (obligation, 当轮) 登记账——义务件
+        自此有账可闭,线账闭合读点真实运转。行为零面:义务类不入窗口段
+        (active_window 过滤面不变,登记轮==当前轮也不入面),身份段由
+        基座独立承载。"""
+        sess = _sess()
+        st = _state(60, [], node='battle')
+        st.shop = [_card('目标件', cost=3)]
+        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
+        assert _registry(sess) == {'目标件': ('obligation', 3)}
+        assert sell_gate.active_window(sess, 3) == frozenset(), \
+            '义务账误入窗口段 = 排除面扩权(行为面回归)'
+
+    def test_line_switch_orphan_interest_sell_marked(self):
+        """线账闭合孤儿清算证明打标正格(T-141 方案审乙′;ADR-0591;
+        P78-2a):本轮义务买入 → 次帧 K 收窄(成员出基座)→ 凑息回拉
+        清算 ⇒ reason='line_switch_collapse'(键带登记簿线账闭合证明,
+        供同轮买卖检查豁免面分键;买入帧与卖出帧跨帧,证明由镜像簿
+        轮戳跨帧存活)。"""
+        sess = _sess()
+        st = _state(60, [], node='battle')
+        st.shop = [_card('目标件', cost=3)]
+        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
+        # 下一帧:K 收窄('目标件' 出基座)∧ 金<g* 触发凑息回拉。
+        state_of(sess).target_comp = SimpleNamespace(
+            name='测试线二', core_chars=('新目标',), shared_chars=())
+        st2 = _state(1, [_bc('目标件', slot=1)], node='reward')
+        act2 = decide_shop_action(st2, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act2, SellBench), \
+            f'凑息回拉未发射(夹具失准,重推场景): {act2}'
+        assert act2.expect == '目标件'
+        assert act2.reason == 'line_switch_collapse'
+
+    def test_stale_obligation_buy_not_marked_next_round(self):
+        """防洗白反格:上一轮义务登记跨轮剪枝——同形态下一轮卖出非同轮
+        买卖(检查器本就不辖),证明不得打标,reason 保持通道名。"""
+        sess = _sess()
+        st = _state(60, [], node='battle', round_num=3)
+        st.shop = [_card('目标件', cost=3)]
+        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, BuyCard)
+        state_of(sess).target_comp = SimpleNamespace(
+            name='测试线二', core_chars=('新目标',), shared_chars=())
+        st2 = _state(1, [_bc('目标件', slot=1)], node='reward', round_num=4)
+        act2 = decide_shop_action(st2, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act2, SellBench)
+        assert act2.reason == 'interest_pullback', \
+            '跨轮陈旧证明误打标 = 豁免面自由扩边(防洗白边界破)'
+
     def test_emit_merge_detection_closes_and_skips_registration(self):
         """合成销检出(V2-05):本笔 1★ 买入补齐同名 1★ 三张 ⇒ 旧登记
         销账(close_on_merge)且不为本笔开账(1★ 即刻合成离场,press 账
-        资产对象不存在;接线位与理想位的差异申报见 shop._emit_buy)。"""
+        资产对象不存在;接线位与理想位的差异申报见 shop._emit_buy)。
+        本锁直调生产单动作契约面;sim/replay 序列驱动形态下该契约的
+        作废通道缺口与有界性(≤1 轮,轮界销兜底)申报见 ADR-0585 §6。"""
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
         st = _state(11, [_bc(_FUEL, slot=1), _bc(_FUEL, slot=2)],
@@ -529,8 +583,9 @@ class TestFundingHoldFallback:
         assert 'funding_hold_liquidated' not in state_of(sess).cw4_counters
 
     def test_entry_ev_fallback_liquidates_prep_carrier(self):
-        """消费位②(entry EV pass):兜底经 prep 载体发射(SellBench 无
-        reason 字段 ⇒ 分键只落计数,与 T3 转化同口径申报)。"""
+        """消费位②(entry EV pass):兜底经 prep 载体发射(reason 兜底
+        分键入载体 = 三审三波 F6 回填后与 shop 兜底位同口径;计数分键
+        同步显影)。"""
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             SellBench as PrepSellBench,
         )

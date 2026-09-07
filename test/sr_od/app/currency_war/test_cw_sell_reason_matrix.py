@@ -118,15 +118,18 @@ class TestReasonEnumRegistry:
             'm4_fuel_victim', 'line_switch_collapse',
         }
 
-    def test_convert_set_disjoint_and_three_keys(self):
-        """转化特化集(同轮买卖检查豁免面单一源)与通道枚举不相交;
-        豁免面收敛 = 仅特化集,plain 通道值恒不豁免(检查器镜像锁见
-        TestSerializationEquivalence)。"""
+    def test_convert_set_four_keys_and_intersection_carve_out(self):
+        """转化特化集(同轮买卖检查豁免面单一源)钉死四键;与通道枚举
+        不相交的唯一例外 = line_switch_collapse(T-141/ADR-0591:该键
+        双重身份 = entry 换线塌缩出口通道名 + 商店发射位线账闭合孤儿
+        证明标记,两语义同为 P78-2a 账闭合事件)。其余 plain 通道值恒
+        不豁免(检查器镜像锁见 TestSerializationEquivalence)。"""
         assert set(SELL_BENCH_CONVERT_REASONS) == {
             'fuel_victim_protect_demoted', 'funding_support_stall_convert',
-            'funding_hold_liquidated',
+            'funding_hold_liquidated', 'line_switch_collapse',
         }
-        assert not (SELL_BENCH_REASONS & SELL_BENCH_CONVERT_REASONS)
+        assert (SELL_BENCH_REASONS & SELL_BENCH_CONVERT_REASONS) == \
+            {'line_switch_collapse'}
 
 
 # ===== 序列化等值(方案 v3 §3.4 V2-02 两判定口径的锁面)=====
@@ -324,9 +327,9 @@ class TestNineEmissionSites:
 
     def test_prep_skeleton_funding_fallback_channel_reason(self):
         """prep funding 兜底位(骨架-only 臂):唯一 ④件主路径空 → 兜底
-        变现;reason = 通道枚举值,兜底分键走计数不入载体(与 shop 兜底
-        位 'funding_hold_liquidated' 的差异 = 豁免面结构不可达,申报见
-        ADR-0585 §5/发射位注释)。"""
+        变现;reason = 兜底分键入载体(三审三波 F6 修订:批 3 旧申报
+        「走计数不入载体」废止,批 4 载体已带 reason 字段,归因一致性
+        面与 shop 兜底位对齐;tag==reason 双写)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )
@@ -340,8 +343,8 @@ class TestNineEmissionSites:
                          ev_arm='skeleton_only', registry=strat.registry)
         sells = _prep_emit_out(out)
         assert [s.action.slot for s in sells] == [1]
-        assert sells[0].action.reason == 'funding_support'
-        assert sells[0].reason == 'funding_support'
+        assert sells[0].action.reason == 'funding_hold_liquidated'
+        assert sells[0].reason == 'funding_hold_liquidated'
         assert state_of(sess).cw4_counters.get('funding_hold_liquidated') == 1
 
     def test_prep_ev_funding_plain_and_t3_specialized(self):
@@ -375,8 +378,8 @@ class TestNineEmissionSites:
         assert ct2.get('funding_support_stall_convert') == 1
 
     def test_prep_ev_funding_fallback_channel_reason(self):
-        """prep funding EV 兜底位:reason = 通道枚举值,分键走计数
-        (与骨架-only 兜底位同口径)。"""
+        """prep funding EV 兜底位:reason = 兜底分键入载体(F6 修订,
+        与骨架-only 兜底位同口径双写)。"""
         sess = _sess()
         st = GameState(gold=1, level=5, round_num=2, hp=40)
         bench = [_bc(_TRANS_HOLD, slot=1)]
@@ -388,8 +391,8 @@ class TestNineEmissionSites:
                                    k_switched=False, old_line_members=())
         sells = _prep_emit_out(out)
         assert [s.action.slot for s in sells] == [1]
-        assert sells[0].action.reason == 'funding_support'
-        assert sells[0].reason == 'funding_support'
+        assert sells[0].action.reason == 'funding_hold_liquidated'
+        assert sells[0].reason == 'funding_hold_liquidated'
         assert state_of(sess).cw4_counters.get('funding_hold_liquidated') == 1
 
     def test_prep_line_switch_collapse_dual_write(self):
@@ -417,6 +420,34 @@ class TestNineEmissionSites:
         assert [s.action.slot for s in sells] == [1]
         assert sells[0].action.reason == 'line_switch_collapse'
         assert sells[0].reason == 'line_switch_collapse'
+
+
+# ===== seed18 p1r1 端到端首发点锁(T-141;ADR-0591)=====
+
+
+class TestLineSwitchOrphanSeed18:
+    """ci_smoke 慢锁 no_same_round_buy_sell 预存红(seed18 p1r1)的发射侧
+    闭合证据:义务买入(青雀,m2_line_member)当轮 K 支持度重排致成员出
+    基座 = P78-2a 线账闭合,其后的凑息回拉清算行带
+    sell_reason='line_switch_collapse'(引擎转录面),检查器豁免面据此
+    分键;决策轨迹逐位不变(reason 不进决策输入,渲染面免疫 =
+    TestSerializationEquivalence.test_replay_diff_rendering_ignores_
+    reason)。种子锚同责(README 纪律 12):策略行为位移致形态消失时,
+    红 = 重选探针种子,非机械跟绿。"""
+
+    def test_seed18_p1r1_orphan_sell_marked(self):
+        from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+        res = simulate_p1(18, pool='snapshot')
+        sells = [a for row in res.ledger
+                 if row.get('plane') == 1 and row.get('round_num') == 1
+                 for a in (row.get('actions') or [])
+                 if a.get('__type__') == 'SellBench']
+        marked = [a for a in sells
+                  if a.get('sell_reason') == 'line_switch_collapse']
+        assert marked, \
+            f'p1r1 卖出行未见孤儿标记(形态消失则重选探针种子): {sells}'
+        # 证明随行可辨:卖出名带字段(转录面),豁免键不离证明。
+        assert any(a.get('name') for a in marked), '卖出行缺名字段'
 
 
 # ===== 任意买因类×任意卖出通道矩阵(方案 v3 §5.3;P78 INV)=====

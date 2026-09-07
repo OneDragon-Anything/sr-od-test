@@ -311,9 +311,15 @@ class Test6SingleSource:
         # ADR-0585 批 3(N7:funding_hold_liquidated 豁免面与分键同批,
         # 辖「持有件变现」非 T3 垫件转化,豁免理由同为非自旋;两键 →
         # 三键为申报过的语义变更,非机械跟绿)。
+        # 三键 → 四键(+line_switch_collapse)= 2026-09-08 同轮交互
+        # 方案审(T-141,零阻断放行)+ ADR-0591:线账闭合孤儿清算
+        # (P78-2a 账闭合事件;P78-1 前提被闭合事件破坏不辖此形态)。
+        # 键的授予必须伴随登记簿线账闭合证明(shop 发射位证明打标制,
+        # ADR-0591 §4),防窗口段回归洗白,非自由豁免。
         assert frozenset({
             'fuel_victim_protect_demoted', 'funding_support_stall_convert',
-            'funding_hold_liquidated'}) == SELL_BENCH_CONVERT_REASONS
+            'funding_hold_liquidated', 'line_switch_collapse',
+        }) == SELL_BENCH_CONVERT_REASONS
 
 
 class Test7CheckerExemption:
