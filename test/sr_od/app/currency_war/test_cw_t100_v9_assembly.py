@@ -238,10 +238,12 @@ def test_single_segment_degradation_v8_parity(tmp_path: _P):
 # ===== ④ 合成行一律退出步进链(§3.4 测试4,双实证案各一锁) =====
 
 def test_synthetic_conf1_stale_row_excluded_025608_case(tmp_path: _P):
-    """025608 p2r4 案(§3.4 测试1 合并):陈旧合成行 18@conf=1.0 一律不入
-    链 → key(2,4) 无可信步进行 → 单步回落产出死亡条目 −1(游标保真 1);
-    终局腿被「游标已到 0」守卫跳过不冒领(恰一条目,无 endgame_final);
-    rounds 槽显示行为不变(槽 hp 仍取 ts 末结算行 0,降权只及链)。"""
+    """025608 p2r4 案(§3.4 测试1 合并;C1 回落守卫落地后重推):陈旧合成行
+    18@conf=1.0 不入链,同轮 ts 末行 loss_page 0@conf=0.0 作回落源行同守卫
+    (conf 门)→ 该轮零回落条目,游标保真 1;死亡由 runs.final_hp=0 结构
+    真值出终局腿(delta=−1,osrc=runs.final_hp,ts=None)——死亡不被吞,
+    来源从不可信回落值换结构保证。rounds 槽显示行为不变(槽 hp 仍取 ts
+    末结算行 0,降权只及链)。"""
     rd = tmp_path / 'replay'
     rid = 'run_20260907_025608'
     _write_jsonl(rd, 'outcomes.jsonl', [
@@ -259,12 +261,11 @@ def test_synthetic_conf1_stale_row_excluded_025608_case(tmp_path: _P):
     _write_jsonl(rd, 'invest_cards.jsonl', [])
     a = _build(rd)
     ln4 = _ln_at(a, 2, 4)
-    assert len(ln4) == 1                    # 回落 −1,终局腿守卫不重复
+    assert len(ln4) == 1                    # 恰终局腿一条(回落被守卫挡下)
     assert ln4[0] == {
         'plane': 2, 'round': 4, 'node_type': '遭遇', 'hp': 0, 'delta': -1,
-        'hp_source': 'settlement', 'outcome_source': 'loss_page',
-        'ts': '2026-09-07T06:09:19'}
-    assert all(n['hp_source'] != 'endgame_final' for n in a['loss_nodes'])
+        'hp_source': 'endgame_final', 'outcome_source': 'runs.final_hp',
+        'ts': None}
     by_key = {(r['plane'], r['round']): r for r in a['rounds']}
     assert by_key[(2, 4)]['hp'] == 0        # rounds 槽显示行为不变
 
@@ -298,6 +299,45 @@ def test_synthetic_row_no_cursor_advance_182456_case(tmp_path: _P):
     # rounds 槽照旧:合成行为 ts 末行的槽取其值显示(降权只及链)
     by_key = {(r['plane'], r['round']): r for r in a['rounds']}
     assert by_key[(2, 4)]['hp'] == 12 and by_key[(2, 4)]['hp_delta'] == -19
+
+
+def test_pure_supply_round_synthetic_only_fallback_guarded(tmp_path: _P):
+    """T2 形态锁(纯补给轮:唯一 outcome=合成行,ADR-0577 §3.2 声明在
+    C1 回落守卫落地后的补执):补给节点天然无结算屏,某轮唯一结算行是
+    合成行(零决策帧)→ 修前回落路以快照鬼值出幻影条目并推进游标(与
+    v8 逐字节同形的缝隙);修后同守卫不进链——该轮 loss_nodes 零新条目 +
+    游标不动(后继战斗腿 = 相对最后可信结算的全额)。兜底形态(hp=0/
+    conf=1.0,写端 _st is None 分支可产)同守卫,不再伪造死亡条目;
+    hp_pay_defects 不受扰 + rounds 槽如实显影快照值(降权只及步进链)。"""
+    rd = tmp_path / 'replay'
+    rid = 'run_20260908_170000'
+    _write_jsonl(rd, 'outcomes.jsonl', [
+        _out(rid, 1, 1, '2026-09-08T17:01:00', 60),
+        _out(rid, 1, 2, '2026-09-08T17:03:00', 58,
+             node_type='补给', source='synthetic_supply'),
+        _out(rid, 1, 3, '2026-09-08T17:05:00', 50),
+        _out(rid, 1, 4, '2026-09-08T17:07:00', 0,
+             node_type='补给', source='synthetic_supply'),
+        _out(rid, 1, 5, '2026-09-08T17:09:00', 30)])
+    _write_jsonl(rd, 'decisions.jsonl', [])
+    _write_jsonl(rd, 'runs.jsonl', [
+        {'run_id': rid, 'ts': '2026-09-08T17:10:00', 'result': 'win',
+         'final_hp': 30}])
+    _write_jsonl(rd, 'exogenous.jsonl', [])
+    _write_jsonl(rd, 'shop_snapshots.jsonl', [])
+    _write_jsonl(rd, 'invest_cards.jsonl', [])
+    a = _build(rd)
+    # 两纯补给轮零条目:守卫移除变异下 58@conf1.0 出幻影 −2、0@conf1.0
+    # 伪造死亡 −50,本断言双红
+    assert _ln_at(a, 1, 2) == []
+    assert _ln_at(a, 1, 4) == []
+    # 游标不动:战斗腿 = 相对最后可信结算全额(50−60、30−50)
+    assert [(n['plane'], n['round'], n['delta'])
+            for n in a['loss_nodes']] == [(1, 3, -10), (1, 5, -20)]
+    assert a['hp_pay_defects'] == []        # 守卫不产/不受扰 defect
+    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
+    assert by_key[(1, 2)]['hp'] == 58       # rounds 槽照旧显影(披露如实)
+    assert by_key[(1, 4)]['hp'] == 0
 
 
 # ===== ⑤ ts 三边界(F5) =====
