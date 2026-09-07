@@ -418,14 +418,18 @@ def test_write_batch_ledger_guard_retired_roots(
     """写入器守卫补充面:退役旧根(sim 批根/旧流根)同样禁写(红测)。
 
     出处 = 2026-09-07 22:20:52 空批以旧 replay 根为 out_dir 把历史三流
-    整份截断的事故(落地审 t125_telemetry_relocation/落地审.md §5):
+    整份截断的事故(ADR-0586「单一源与守卫」节载同一事故):
     旧守卫只锚当前生产根,根切换过渡窗口内旧根失保护。修法裁决 =
     守卫同时锁退役根字面量(kernel/cw_observe.RETIRED_* 单一源),
     不选「out_dir 限定 SIM_ROOT 子树」——A/B 对照等合法调用方写显式
     独立目录(docstring 契约「或显式独立目录」),子树限定会破契约。
-    安全网:被测对象是守卫不是清理,`_prune_sim_runs` 桩化 no-op;
-    事前登记旧根三流文件的存在/字节,finally 复原——守卫若失守,
-    本测试的 'w' 截断不得烧掉旧根封存物或去重成果。
+    安全网 = 检测网,非复原网(2026-09-08 最近改动三审 M4 申报修正:
+    原文「finally 复原/不得烧掉封存物」与实现不符——实现只有登记与
+    事后断言,无任何备份-回写代码,故按实申报):被测对象是守卫不是
+    清理,`_prune_sim_runs` 桩化 no-op;事前登记旧根流文件的存在/字节,
+    守卫失守时 'w' 截断会真实发生,本测试的职责是让失守在事后断言处
+    现形(红),不是阻止它。现旧根流已全部迁移(ADR-0586),失守的
+    实际危害 = 旧根新建空文件污染,无封存物可烧。
     """
     from sr_od.application.currency_war.kernel.cw_observe import (  # noqa: I001  (函数内分组导入,保持 kernel/sim 两簇)
         RETIRED_SIM_ROOT,
