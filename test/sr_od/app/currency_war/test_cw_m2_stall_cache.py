@@ -359,3 +359,146 @@ class TestPrepStallCache:
         assert c.get('m2_retry_exhausted', 0) == 2, '跨域闩失效 ⇒ prep 帧重推导计数'
         assert c.get('m2_stall_cache_rederive', 0) == 2
         assert c.get('m2_stall_cache_hit', 0) == 0
+
+    def test_t7_prep_merge_material_key_event_granularity_mirror(self):
+        """T7 prep 域镜像(三审 C1):含合成素材件的席满停摆帧——prep 域
+        该键唯一触达 = 腾席环内 fuel_sell_candidates(mandate.py,无商店域
+        P56 式独立承载),命中帧跳过环 ⇒ 素材键随事件粒度(零增量),
+        与两事件键同粒度,禁「事件键事件粒度+素材键帧粒度」混计形态。"""
+        comp = get_comp(_LOCK_COMP)
+        core = set(predicates.line_members(comp))
+        hoard_chars, _eq = cw_intention._line_hoard(comp)
+        material = next(n for n in CHARACTERS
+                        if n not in hoard_chars and n not in core)
+        bench = [_bc(f'高价{i}', star=3, slot=i) for i in range(1, 9)]
+        bench.append(_bc(material, slot=9))
+        frame = mandate.MandateFrame(
+            gold=30, level=3, bench=bench,
+            deployed=[_bc(material, slot=1)], deploy_cap=4, node_type=None,
+            stop_flag=False, k_members=('目标件',), round_num=3)
+        # 守卫的 deployed 域查经 run_mandate 的 state 参数现读,必须携带
+        # 同名同星副本(与商店域 P56 位同款守卫输入)。
+        state = GameState()
+        state.deployed = [_bc(material, slot=1)]
+        sess = StrategySession()
+        state_of(sess).cw4_counters = {}
+        mandate.run_mandate(frame, sess, state)         # 帧1:重推导
+        c = state_of(sess).cw4_counters
+        assert c.get('merge_material_guard_blocked', 0) == 1, '首推导素材触达 +1'
+        assert c.get('m2_retry_exhausted', 0) == 1
+        assert state_of(sess).cw4_m2_stall_latch is not None
+        _arm_shop_token(sess, 'LevelUp')
+        mandate.run_mandate(frame, sess, state)         # 帧2:命中跳过环
+        c = state_of(sess).cw4_counters
+        assert c.get('m2_stall_cache_hit', 0) == 1, '帧2 须走缓存路径(锁有效前提)'
+        assert c.get('merge_material_guard_blocked', 0) == 1, \
+            '命中帧跳过腾席环,素材键随事件粒度零增量'
+
+
+# ===== 写点活性锁(三审 T4):删对应写点 ⇒ 锁红 =====
+
+
+class TestTokenWritePointLiveness:
+    """生产 token 写点活性(删写点 → 载体残留 None → 缓存全失效 = 静默
+    丢收益,行为面零漂移故无既有锁可红,本组锁承载活性)。覆盖可便宜
+    行为化的两处:bridge 驱动器写点(sim/replay 通道)/ prep 主环写点
+    (cw_screen_prep 合流位);run_buy_waves 写点与破墙段写点因执行环境
+    mock 成本未立行为锁,挂账申报见 ADR-0573 §5(两处与已锁写点同批
+    同形三行,主环锁红时同文件同形写点同步暴露)。"""
+
+    def test_shop_driver_write_point_sets_token(self, monkeypatch):
+        """bridge 写点活性:decide_shop_screen 循环采纳动作后 token 载体
+        置位 (末动作型名, 当前段序号);写点被删 ⇒ 载体 None ⇒ 红。
+        决策首帧桩化为 RefreshShop(终结动作:写点在终结 return 前,token
+        保留可断言;真实 CloseShop 终结的序列会被下一帧入口读清=协议
+        行为,不适用本断言面)。"""
+        from sr_od.application.currency_war.kernel import cw_state
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+            MandateV1Strategy,
+        )
+        strat = MandateV1Strategy()
+
+        def _stub_first_refresh(session, config):
+            if not _stub_first_refresh.fired:
+                _stub_first_refresh.fired = True
+                return cw_state.RefreshShop(reason='anchor_stub')
+            return cw_state.CloseShop()
+
+        _stub_first_refresh.fired = False
+        monkeypatch.setattr(strat, 'decide_shop_action', _stub_first_refresh)
+        st = GameState(gold=30, level=7, round_num=2, hp=60)
+        st.plane = 2
+        st.shop = []
+        st.bench = []
+        st.deployed = []
+        sess = _locked_session()
+        sess.shop_state_frame = st
+        acts = strat.decide_shop_screen(sess, _cfg())
+        assert len(acts) == 1 and isinstance(acts[0], cw_state.RefreshShop), \
+            '桩化首帧刷新终结(前提)'
+        tok = state_of(sess).cw4_frame_action_record
+        assert tok is not None, '驱动器采纳动作后须写 token(写点活性)'
+        assert tok[0] == 'RefreshShop'
+        assert tok[1] == state_of(sess).cw4_segment_serial
+
+    def test_prep_op_write_point_sets_token(self, test_context, monkeypatch):
+        """prep 主环写点活性:备战单轮 op 执行成功后 token 载体置位;
+        写点被删 ⇒ 载体 None ⇒ 红。harness 最小集镜像
+        test_cw_no_progress_guard._make_round_director(同域既有模式)。"""
+        from types import SimpleNamespace as _SN
+
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            OpenShop,
+        )
+        from sr_od.application.currency_war.operations.cw_screen import (
+            cw_screen_prep as pd_mod,
+        )
+        from test.harness.fixture_controller import (
+            enter_running_state,
+            fast_sleep,
+        )
+
+        class _StubStrategy:
+            def decide_prep_screen(self, session, config):
+                return [OpenShop(read_only=True)]
+
+            def update_target(self, state, session, config):
+                pass
+
+        d = pd_mod.CwScreenPrep(test_context)
+        session = StrategySession()
+        state_of(session)   # 冷建 MandateState 并挂 session(写点消费面)
+        match = _SN(strategy=_StubStrategy(), session=session)
+        monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+        monkeypatch.setattr(d, '_clear_entry_overlays', lambda: None)
+        monkeypatch.setattr(d, '_try_collapse_open_shop', lambda: False)
+        monkeypatch.setattr(d, '_takeover_collect_if_needed', lambda m, s: None)
+        monkeypatch.setattr(d, '_record_step', lambda o, a: None)
+
+        class _Obs:
+            event_overlay = None
+            state = None
+            bench_chars: list = []
+            deployed_chars: list = []
+            spheres: list = []
+            boxes: list = []
+            deploy_vacancy = 0
+
+        monkeypatch.setattr(d, '_observe', lambda heavy=True, screen=None: _Obs())
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.obs.cw_observation.read_bench_full',
+            lambda ctx, screen: False)
+        monkeypatch.setattr(d, '_open_shop_phase',
+                            lambda a, obs: (True, 'read_only 读牌完成'))
+        with fast_sleep():
+            enter_running_state(test_context)
+            try:
+                d.run()
+            finally:
+                pass
+        st = state_of(session)
+        assert st.cw4_segment_serial == 1, '备战期入口段序号置位活性'
+        assert st.cw4_frame_action_record is not None, \
+            '主环执行成功后须写 token(写点活性)'
+        assert st.cw4_frame_action_record[0] == 'OpenShop'
+        assert st.cw4_frame_action_record[1] == st.cw4_segment_serial

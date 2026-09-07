@@ -703,6 +703,12 @@ def test_load_archive_stale_without_source_warns_and_returns_stale(
 # p2r4;方案/方案审见 .debug/temp/currency_war/c8_loss_nodes/(决策记录 =
 # ADR-0567)。修复语义:loss_nodes 一条目对一个掉血结算行(战斗腿口径),
 # rounds 逐轮表保持单槽净额零变化。
+# v9 重推(T-100 批2,ADR-0577):合成行(synthetic_supply)一律退出步进链
+# (先验「陈旧直到证伪」)——T1/T2 的预期按新语义重推(T1 −33→−19;T2 的
+# 净额≥0 漏记形态随鬼值退链结构性消除,改钉「鬼值不再捏造战斗腿」);逐
+# 结算行化方向与 M1 不可信行契约保留。fixture 的 runs 结果改 'stopped' =
+# 隔离终局腿变量(终局腿归 test_cw_t100_v9_assembly 专锁),步进链锁不与
+# result 字段耦合。
 
 def _replay_c8(tmp_path: _match_archive_Path,
                p2r4_outs: list[dict]) -> _match_archive_Path:
@@ -713,7 +719,7 @@ def _replay_c8(tmp_path: _match_archive_Path,
                  [_out(rid, 2, 3, '2026-09-06T18:55:00', 31)] + p2r4_outs)
     _write_jsonl(rd, 'decisions.jsonl', [])
     _write_jsonl(rd, 'runs.jsonl', [
-        {'run_id': rid, 'ts': '2026-09-06T19:10:00', 'result': 'loss',
+        {'run_id': rid, 'ts': '2026-09-06T19:10:00', 'result': 'stopped',
          'plane_reached': 2, 'rounds_survived': 4, 'final_hp': 12,
          'difficulty': ''}])
     return rd
@@ -726,11 +732,11 @@ def _ln_at(archive: dict, plane: int, rnd: int) -> list[dict]:
 
 def test_loss_nodes_per_settlement_row_supply_plus_battle(
         tmp_path: _match_archive_Path):
-    """T1(修复主用例,修前红):同轮补给回血+战斗掉血 → loss_nodes 出
-    战斗腿条目(−33),rounds 仍单槽净额(−19)。
-
-    修复前 loss_nodes 走轮级净额推导,delta=−19 ≠ 断言 −33 → 红,
-    证明用例钉住缺陷本体(g_20260906_182456 p2r4 同构)。
+    """T1(修复主用例,v9 重推:合成行退链 → 战斗腿 = 相对最后可信结算):
+    同轮补给行(45@conf1.0,鬼值)+ 战斗行 12 → loss_nodes 条目 delta =
+    12−31 = **−19**(v8 语义下合成行曾占位推进游标捏造 −33;先验「陈旧
+    直到证伪」后 45 不入链,重装配反而修出真值,182456 实档同构)。
+    rounds 链不变锁:单槽净额,槽位 = ts 末结算行(战斗行),delta −19。
     """
     rd = _replay_c8(tmp_path, [
         _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 45,
@@ -742,11 +748,11 @@ def test_loss_nodes_per_settlement_row_supply_plus_battle(
     # rounds 链不变锁:单槽净额,槽位 = ts 末结算行(战斗行)
     assert r4['hp'] == 12 and r4['hp_source'] == 'settlement'
     assert r4['hp_delta'] == -19
-    # loss_nodes:恰一条 (2,4) 战斗腿条目;补给 +14 非掉血不入
+    # loss_nodes:恰一条 (2,4) 战斗腿条目;合成行退链不入不出 +14/+2 步
     ln4 = _ln_at(a, 2, 4)
     assert len(ln4) == 1
     n = ln4[0]
-    assert n['delta'] == -33 and n['hp'] == 12
+    assert n['delta'] == -19 and n['hp'] == 12
     assert n['node_type'] == '普通战斗' and n['hp_source'] == 'settlement'
     # 加法键:战斗屏真值行 outcome_source=''(非合成行),ts=结算行时间戳
     assert n['outcome_source'] == '' and n['ts'] == '2026-09-06T19:02:23'
@@ -754,9 +760,11 @@ def test_loss_nodes_per_settlement_row_supply_plus_battle(
 
 def test_loss_nodes_net_nonnegative_round_still_recorded(
         tmp_path: _match_archive_Path):
-    """T2(修前红):补给 +14、战斗 −10、净额 +4 → loss_nodes 仍出战斗腿
-    条目(−10)。修复前按轮级 hp_delta<0 过滤 → 0 条目 → 红(「净额≥0
-    整条漏记」形态,缺陷的补充面)。"""
+    """T2(v9 重推):原锁钉「净额≥0 轮战斗腿不漏记」——该缺陷形态的存在
+    依赖合成行鬼值先占位推进游标(31→45 伪 +14,战斗腿才成 35−45=−10);
+    v9 合成行退链后此形态**结构性消除**:战斗行 35 相对最后可信结算 31 =
+    +4 非掉血,零条目才是诚实读数(鬼值不得捏造战斗腿)。改钉消除本身:
+    断言零条目 + rounds 净额 +4 照旧如实记账。"""
     rd = _replay_c8(tmp_path, [
         _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 45,
              node_type='补给', source='synthetic_supply'),
@@ -764,8 +772,7 @@ def test_loss_nodes_net_nonnegative_round_still_recorded(
     a = arch.build_archive(rd, arch.assign_games(rd)[0])
     r4 = {(r['plane'], r['round']): r for r in a['rounds']}[(2, 4)]
     assert r4['hp'] == 35 and r4['hp_delta'] == 4   # 净额不设防地如实记账
-    ln4 = _ln_at(a, 2, 4)
-    assert len(ln4) == 1 and ln4[0]['delta'] == -10
+    assert _ln_at(a, 2, 4) == []   # 鬼值退链:无掉血即无条件目(−10 不再捏造)
 
 
 def test_loss_nodes_untrusted_supply_row_no_poison(
@@ -817,9 +824,10 @@ def test_loss_nodes_mixed_trust_round_two_chain_divergence(
 
 def test_loss_nodes_v8_migration_auto_rebuild_and_stale_fallback(
         tmp_path: _match_archive_Path, monkeypatch: pytest.MonkeyPatch):
-    """T4(v8 迁移,复用既有 bump+读端 auto-rebuild 机制,零新增迁移代码):
-    - T4a:盘上 v7 形态存量(净额 −19;用既有 v4 迁移用例同款「降级抹键」
-      手法构造)经 load_archive 读出即重装配为 v8(战斗腿 −33)并原子写回;
+    """T4(v8→v9 迁移,复用既有 bump+读端 auto-rebuild 机制,零新增迁移代码):
+    - T4a:盘上 v7 形态存量(净额;用既有 v4 迁移用例同款「降级抹键」
+      手法构造)经 load_archive 读出即重装配为当前版本(战斗腿 −19,v9
+      重推:合成行退链后 12−31=−19,v8 语义的 −33 不再重现)并原子写回;
     - T4b:auto_rebuild=False 原样返回 v7 旧形态(条目 .get 可读,纯只读
       审计场景契约);
     - T4c:源 jsonl 已清 → 重装配不可行,退回 v7 档案 + 警告,不抛不猜。
@@ -830,13 +838,13 @@ def test_loss_nodes_v8_migration_auto_rebuild_and_stale_fallback(
              node_type='补给', source='synthetic_supply'),
         _out(rid, 2, 4, '2026-09-06T19:02:23', 12)])
     game_id = arch.assign_games(rd)[0]['game_id']
-    assert arch.SCHEMA_VERSION == 8
+    assert arch.SCHEMA_VERSION == 9
     # 构造盘上 v7 形态存量:当前装配后降级——条目 delta 回轮级净额、抹
     # 加法键、版本号回 7(真实 v7 档案即此形态;monkeypatch 版本号造不出
     # 旧装配语义,故用既有 v4 迁移用例的抹键手法)
     a8 = arch.assemble_game(rd, game_id)
-    assert a8['schema_version'] == 8
-    assert _ln_at(a8, 2, 4)[0]['delta'] == -33
+    assert a8['schema_version'] == arch.SCHEMA_VERSION
+    assert _ln_at(a8, 2, 4)[0]['delta'] == -19
     v7_snapshot = _read_archive_file(rd, game_id)
     rdelta = {(r['plane'], r['round']): r['hp_delta']
               for r in v7_snapshot['rounds']}
@@ -848,12 +856,12 @@ def test_loss_nodes_v8_migration_auto_rebuild_and_stale_fallback(
     p = rd / 'matches' / f'match_{game_id}.json'
     with p.open('w', encoding='utf-8') as f:
         json.dump(v7_snapshot, f, ensure_ascii=False)
-    # —— T4a:默认读 → 自动重装配 v8 并写回 ——
+    # —— T4a:默认读 → 自动重装配当前版本并写回 ——
     got = arch.load_archive(rd, game_id)
-    assert got['schema_version'] == 8
+    assert got['schema_version'] == 9
     ln8 = _ln_at(got, 2, 4)
-    assert len(ln8) == 1 and ln8[0]['delta'] == -33   # 重装配=战斗腿
-    assert _read_archive_file(rd, game_id)['schema_version'] == 8   # 写回
+    assert len(ln8) == 1 and ln8[0]['delta'] == -19   # 重装配=战斗腿(真值)
+    assert _read_archive_file(rd, game_id)['schema_version'] == 9   # 写回
     # —— T4b:auto_rebuild=False → 原样返回 v7 本体(只读审计,不动盘)——
     with p.open('w', encoding='utf-8') as f:
         json.dump(v7_snapshot, f, ensure_ascii=False)

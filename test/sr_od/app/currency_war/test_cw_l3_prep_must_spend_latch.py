@@ -70,11 +70,13 @@ class TestPrepMustSpendLatch:
 
     def test_latch_extends_zone_after_shop_consume(self):
         """域内停付让位显影面与闩延命计数面保持(ADR-0528 机制不变),
-        与 ADR-0560 预算闸的分域交互:帧A(g56 入域,批 s=32,溢余段
-        6−2ρ 不容)被预算闸整批推迟(闸在域内生效,v2 采纳 3);帧B
-        (闩延命残金 43 ≤ g*)属闸的非溢余段辖域外(ADR-0560 §4:负
-        闸值 = 预算不存在,禁读恒拒)——ADR-0528 的残金帧发射语义
-        原样保持,must_spend_zone_latch_extend 分键在案。"""
+        与 P72 全段预算闸(ADR-0576)的分域交互:帧A(g56 入域,批
+        s=32,τ=5 花后 24 不容)被预算闸整批推迟(闸在域内生效);
+        帧B(闩延命残金 43 ≤ g*)——旧锁此处钉 ADR-0560 §4「非溢余段
+        vacuous 放行 ⇒ 残金帧发射保持」,该辖域语义已被 P72 全段化
+        **取代**(锁重推:τ(43)=4,floor=40+2ρ,批 32 花后 11 = 息损
+        3 档,恰是签名 A 潜行形态,闸拒=整批推迟);闩延命显影分键
+        (帧绑定,非发射绑定)原样在案。"""
         fa, sess, sta = _mk(56)
         out_a = mandate.run_mandate(fa, sess, state=sta)
         assert not _lvls(out_a), '入域帧穿线批:预算闸整批推迟'
@@ -83,8 +85,9 @@ class TestPrepMustSpendLatch:
         assert state_of(sess).cw4_counters.get('levelup_budget_gate_blocked') == 1
         fb, _, stb = _mk(43)   # 商店域消费 13 金后的残金帧
         out_b = mandate.run_mandate(fb, sess, state=stb)
-        assert _lvls(out_b), '闩延命残金帧(≤g*)闸不辖,发射语义保持'
+        assert not _lvls(out_b), '残金帧中间段由 P72 全段闸管账(拒=推迟)'
         assert state_of(sess).cw4_counters.get('must_spend_zone_latch_extend') == 1
+        assert state_of(sess).cw4_counters.get('levelup_budget_gate_blocked') == 2
 
     def test_fresh_session_still_defers(self):
         """负向:无闩的新备战期帧(g43 域外)⇒ 危机带常态挂起照旧
@@ -136,15 +139,21 @@ class TestL3RejectKeys:
         assert state_of(sess).cw4_counters.get('l3_reject_batch_unaffordable') == 1
 
     def test_xp_readthrough_rescues_residual_band(self):
-        """xp 现读透传(第二静默拒因面修复):闩延命残金帧 43 金属
-        ADR-0560 闸的非溢余段辖域外(43 ≤ g*),xp 22/52 现读(真
-        8击×4=32≤43)⇒ 发射保持(ADR-0528 原语义);xp 缺读(旧 0
-        进度兜底,虚 13击×4=52>43)⇒ 整批拒分键可辨——两形态判决相反
-        且拒因侧均可归因。"""
+        """xp 现读透传(第二静默拒因面修复)——拒因可辨面保持,发射面
+        随 P72 全段化重推(ADR-0576):旧锁「xp 现读 ⇒ 残金帧发射保持
+        (ADR-0528 原语义)」钉的空过辖域已取代;现两形态**都拒但拒因
+        分键可辨**——xp 22/52 现读(真 8击×4=32 ≤ 43)⇒ 过 spend_
+        unified 后落在闸的中间段辖域(τ(43)=4,花后 11 < floor)⇒
+        levelup_budget_gate_blocked;xp 缺读(虚 13击×4=52>43)⇒
+        spend_unified 拒 l3_reject_batch_unaffordable——判决不同源、
+        归因不混桶(xp 透传的治疗目标就是拒因可辨)。"""
         fa, sess2, sta = _mk(56)       # 先以域内帧置闩(同备战期)
         mandate.run_mandate(fa, sess2, state=sta)
         fb, _, stb = _mk(43)
-        assert _lvls(mandate.run_mandate(fb, sess2, state=stb))
+        out_b = mandate.run_mandate(fb, sess2, state=stb)
+        assert not _lvls(out_b)
+        assert state_of(sess2).cw4_counters.get(
+            'levelup_budget_gate_blocked') == 2
         fc, _, stc = _mk(43, xp=None)
         out2 = mandate.run_mandate(fc, sess2, state=stc)
         assert not _lvls(out2)
