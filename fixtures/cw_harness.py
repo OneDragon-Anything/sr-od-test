@@ -150,8 +150,9 @@ class FakeP1Run:
             kw['initial_hp'] = initial_hp
         self.match: FakeMatch = FakeMatch(**kw)
         # 剧本注金(场景注入,同 sim 投资剧本的注入语义:环境事实由
-        # 测试编排给定,非策略可见的特殊通道);None = 状态机缺省 0 金
-        #(P1 r1 首收入由 apply_income 规则承载)
+        # 测试编排给定,非策略可见的特殊通道);None = 环境开局金缺省
+        # (DEFAULT_OPENING_GOLD=5,保真校准后的机制真值,锚注见
+        # fake_match 模块)
         if initial_gold is not None:
             self.match.state.gold = initial_gold
         # 真策略对局(与生产 run_buy_waves 的 match=None 冷建分支同源;
@@ -160,6 +161,29 @@ class FakeP1Run:
         _def = MandateV1Strategy()
         self.cw_match: CurrencyWarMatch = CurrencyWarMatch(
             _def, _def.create_session(config))
+        # 节点序列供给(实机信息通道的假环境对位;缺它 = 策略器节点感知
+        # 判据族在假环境恒盲——M3 节点感知升级②(b) fail-open 不发射、
+        # 保连胜门读 node_type_current 恒空、r_remaining/schedule_of
+        # 储蓄视界退先验,属「环境结构性无机会」面,保真校准申报):四通道
+        # 各对位实机写点——①节点台账 ledger(cw_state.ledger_node_type
+        #   消费;实机写点 = 位面详情采集,source 同名通道)②plane_node_table
+        #   (cw_plane_table.r_remaining 消费;实机写点 = 备战开局帧槽序)
+        #   ③逐轮 node_type_current 在 run_p1 决策前写(引擎对位 = engine_p1
+        #   决策前写 session.node_type_current,engine_p1.py:827 同位)
+        #   ④plane_lengths_seen(schedule_of 消费,见下)。
+        _session = self.cw_match.session
+        from sr_od.application.currency_war.kernel.cw_state import (
+            ledger_update_plane,
+        )
+        ledger_update_plane(_session, 1, list(self.match.node_sequence),
+                            source='plane_detail')
+        _session.plane_node_table = list(self.match.node_sequence)
+        _session.plane_node_table_plane = 1
+        # ④位面长度序列(schedule_of 视界消费面;实机写点 = cw_screen_prep
+        # 每位面首帧 append(len(seq)),引擎对位 = engine_p1 进场补记同形)
+        if _session.plane_lengths_seen is None:
+            _session.plane_lengths_seen = []
+        _session.plane_lengths_seen.append(len(self.match.node_sequence))
         # 真被测 op 壳(run_buy_waves 的宿主;动作执行不点真坐标——
         # 执行步经端口改道,sink 承接)
         from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
@@ -259,6 +283,98 @@ class FakeP1Run:
         return {b.slot: (b.char_id, b.star)
                 for b in iter_occupied(self.match.state.bench)}
 
+    # ---- 部署围栏代理(保真校准面)----
+
+    def _seed_tracked_from_truth(self) -> None:
+        """tracked 账真值播种(实机「入口 heavy 读屏重建 tracked」的假环境
+        对位,每轮开店前同节拍):实机每节点备战环入口重读重建跟踪账
+        (ADR-0517 决策 8「入口观察即对账」);假环境零读图,tracked 若停
+        在冷建空账,守卫 guard_expected_vs_tracked 会把观察帧真值 bench
+        误判「识别幻影」拒发首动作。真值直拨零识别(观察 = 状态机快照,
+        与端口同语义),形状经 pad 单一源归一。"""
+        from dataclasses import replace
+
+        from sr_od.application.currency_war.kernel.cw_exec_state import (
+            exec_state_of,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import (
+            pad_bench,
+            pad_deployed,
+        )
+        st = self.match.state
+        ex = exec_state_of(self.cw_match.session)
+        ex.tracked_bench_chars[:] = [
+            replace(b) if b is not None else None for b in st.bench]
+        pad_bench(ex.tracked_bench_chars)
+        ex.tracked_deployed[:] = [
+            replace(d) if d is not None else None for d in st.deployed]
+        pad_deployed(ex.tracked_deployed)
+
+    def _deploy_fence_pass(self) -> int:
+        """备战期部署的环境承接代理(与引擎 sim 同款:围栏纯函数单一源)。
+
+        **为什么环境层代跑部署**:实机部署 = 策略器在备战期发 RunDeploy
+        (prep 域 op,方案 §6.2 归批 2 完整实体化);批 1 假环境只有商店域
+        编排 → deployed 恒空,连锁 = 板深 0(Δ池最凶掉血桶,假局 hp 比
+        实机崩得快的主因)+ M3 升级触发信号 arm1_existence(板满∧bench
+        有候补)构造性不可达(策略器停升的「环境结构性无机会」面)。
+        引擎对同一缺口的对位 = sim 层围栏代理(engine_p1 围栏趟注释
+        「deployed 代理 = deploy_bench 真实围栏逻辑,与 CwOpDeploy op
+        生产语义对齐」)——本代理与其同构:同一纯函数
+        ``cw_deploy_logic.select_deployments`` 直调,零平行围栏语义。
+        target 语境参数传空(意向驱动优先归批 2 部署域;围栏的 cap 填空/
+        成对点火/板空保底主干不依赖 target)。
+
+        调用时机 = 商店访问后、战斗结算前(本备战期部署当轮生效)。
+        返回上场件数(对拍留证用)。
+        """
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.kernel import cw_deploy_logic
+        from sr_od.application.currency_war.kernel.cw_battle_calib import (
+            _board_counts_of,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import (
+            deployed_place,
+            iter_occupied_deployed,
+        )
+        st = self.match.state
+        occ_idx = [i for i, b in enumerate(st.bench) if b is not None]
+        if not occ_idx:
+            return 0
+        cap = st.max_units()
+        if cap is None:
+            return 0
+        dep_occ = list(iter_occupied_deployed(st.deployed))
+        dep_fac: dict[str, int] = {}
+        for d in dep_occ:
+            ch = CHARACTERS.get(d.char_id)
+            if ch is not None and ch.factions:
+                dep_fac[ch.factions[0]] = dep_fac.get(ch.factions[0], 0) + 1
+        up_idx, _held = cw_deploy_logic.select_deployments(
+            [b for b in st.bench if b is not None],
+            deployed_cids={d.char_id for d in dep_occ if d.char_id},
+            deployed_fac=dep_fac,
+            board=dict(st.board or {}),
+            cap=cap,
+        )
+        n_up = 0
+        # up_idx 是紧缩占用序下标 → 回映射物理槽(引擎围栏趟同构;
+        # ADR-0316 槽位表,ADR-0271 上阵即出 bench)
+        for i in up_idx:
+            if i < len(occ_idx):
+                bc = st.bench[occ_idx[i]]
+                if bc is not None:
+                    deployed_place(st.deployed, bc)
+                    st.bench[occ_idx[i]] = None
+                    n_up += 1
+        if n_up:
+            st.board = _board_counts_of(st.deployed)
+            # 跟踪账随动(实机对位 = 执行器 _track_move_deployed 的
+            # tracked 同步;漏同步 = 期望态 vs tracked 双账守卫炸出
+            # 「投影建模 bug」假象)——真值重播,与 sink 账本位随动同语义
+            self._seed_tracked_from_truth()
+        return n_up
+
     # ---- P1 段驱动 ----
 
     def run_p1(self, *, settle: bool = True) -> FakeP1Result:
@@ -280,8 +396,18 @@ class FakeP1Run:
         result = FakeP1Result(seed=self.seed)
         for r, node in enumerate(list(self.match.node_sequence), start=1):
             self._bench_pre_slots = dict(self._bench_identity())
+            # 节点类型供给(决策前写,引擎同位 engine_p1.py:827;消费 =
+            # 保连胜门/节点感知判据,见 __init__ 节点序列供给注)
+            self.cw_match.session.node_type_current = node
+            # tracked 真值播种(实机入口 heavy 读屏重建的同节拍对位,
+            # 见方法注;先于开店,防首动作守卫误判)
+            self._seed_tracked_from_truth()
             inc = self.match.apply_income()
             gold_after_income = self.match.state.gold
+            # 备战期部署趟(决策前;实机 actions 序 RunDeploy 先于
+            # OpenShop——决策帧须携带板满态,M3 升级的 arm1 判据
+            # 「板满∧bench 有候补」才可达)
+            row_deployed_up = self._deploy_fence_pass()
             self.match.open_shop()
             _rr, outcome = run_buy_waves(self.op, self.cw_match,
                                          None, False, False)
@@ -302,9 +428,13 @@ class FakeP1Run:
                 'total_sell': outcome.total_sell,
                 'total_sell_income': outcome.total_sell_income,
                 'spend_executed': outcome.spend_executed,
+                'deployed_up': row_deployed_up,
             }
             settlement = None
             if settle:
+                # 买后补部署趟(引擎围栏主趟在动作循环后的同位;当轮
+                # 买的牌同备战期上板,战斗结算消费)
+                row['deployed_up'] += self._deploy_fence_pass()
                 settlement = self.match.settle_battle(node)
                 rec.record_outcome(FakeRoundOutcome(
                     round_num=r, plane=self.match.state.plane,
@@ -341,6 +471,9 @@ class FakeP1Run:
         )
 
         self._bench_pre_slots = dict(self._bench_identity())
+        # tracked 真值播种(run_p1 同款,见方法注;开局 bench 非空后,
+        # 冷建空 tracked 会被首动作守卫误判「识别幻影」)
+        self._seed_tracked_from_truth()
         self.match.apply_income()
         self.match.open_shop()
         prep = CwScreenPrep(self.ctx)

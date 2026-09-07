@@ -12,10 +12,19 @@
 - 收入分量:``kernel/cw_economy``(BASE_INCOME / REWARD_BASE_GOLD_BY_ROUND /
   LOSS_GOLD_BY_NODE / streak_gold / interest),口径 = ADR-0439 收入模型
   (108 局/767 轮 gold 差分实证:败轮金替换旧 streak_gold(0)=1;奖励轮
-  streak 分量照发 + base 查表);
-- 事件金表:``sim/engine_p1`` EVENT_GOLD_BY_ROUND(ADR-0447 校准总闸,
-  ±2 抖动)——引擎退役批(方案 §6.2 批 4)该表随引擎体迁移,届时本
-  import 改指新落点(申报在案,防静默双源);
+  streak 分量照发 + base 查表);三分量全集 = 结算金币明细弹窗
+  (docs/game/currency_war/research/economy.md §11:基础+连胜+利息,
+  无第四分量);
+- 事件金分量恒 0(保真度校准裁定,出处 =
+  ``.debug/temp/currency_war/t120_sim_redesign/保真度校准.md``):奖励球
+  是备战期收球动作(方案 §2.2 prep 编排面,归批 2),假环境观察面
+  spheres 结构性为零 → 收入侧如实不发球金。引擎 ``EVENT_GOLD_BY_ROUND``
+  **不继承**——该表是 ADR-0447 残差补偿闸(按「实机帧金均值 − 引擎帧
+  金均值」整定,吸收执行缺陷时代的全部金流缺口,r9 分量含泄金补偿;
+  表 docstring 明文「策略面修复后不得以此表回填」),语义非节点事件金
+  机制真值,直继承会把补偿量当收入发给正常花销的策略器(校准前假局
+  r9 期初金 220+ vs 实机 48-73 的主因);批 2 接球域时按球真值另行
+  建模,禁回指本表;
 - 胜负判定:``kernel/cw_coarse_battle`` WIN_CAP(coarse 主路径胜态交付值,
   F7 主从口径随迁)。
 
@@ -35,20 +44,9 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     streak_gold,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.sim.engine_p1 import EVENT_GOLD_BY_ROUND
 
 #: 战斗类节点(连胜/连败与败轮金的判定域;奖励/补给不结连胜)
 _COMBAT_NODES: tuple[str, ...] = ('battle', 'encounter', 'boss')
-
-
-def event_gold(round_num: int, rng: random.Random) -> int:
-    """节点事件金(规则知识自 engine_p1 ``_event_gold`` 重述,ADR-0447)。
-
-    基值查表 + ±2 均匀抖动、下钳 0——公式与缺省 (4,) 回退逐位同源,
-    表本体不复制(引擎退役批随迁改指,见模块头申报)。
-    """
-    base = EVENT_GOLD_BY_ROUND.get(round_num, (4,))[0]
-    return max(0, int(base + rng.uniform(-2, 2)))
 
 
 def income_for_round(st: GameState, rng: random.Random,
@@ -57,7 +55,8 @@ def income_for_round(st: GameState, rng: random.Random,
     :829-878 重述一次,ADR-0439/0233 锚随迁——旧载体退役后本函数是
     该规则知识的存活处,非第二实现)。
 
-    分量语义(键 = 收入分解账本口径):
+    分量语义(键 = 收入分解账本口径;三分量全集 = 结算金币明细弹窗,
+    economy.md §11):
 
     - ``base``:BASE_INCOME;奖励轮查 REWARD_BASE_GOLD_BY_ROUND(成对
       改口径:奖励轮 streak 分量照发,base 查表补位,ADR-0439);
@@ -67,10 +66,12 @@ def income_for_round(st: GameState, rng: random.Random,
       升级挂账同源);奖励轮照发 streak_gold;连胜==0 且上一轮是败掉的
       战斗类节点 → 发 LOSS_GOLD_BY_NODE[prev_node](败轮金);其余 =
       streak_gold(streak);
-    - ``event``:事件金(见 :func:`event_gold`)。
+    - ``event``:恒 0(奖励球金归批 2 收球域,机制申报见模块头——
+      引擎 EVENT_GOLD_BY_ROUND 为残差补偿闸,非机制真值,不继承)。
 
     ``rng`` 消费归发放股(调用方传入 FakeMatch._rng_grant):收入域加
-    消费不位移日程/抽店/战斗三股的流位置(重放对账的分流前提)。
+    消费不位移日程/抽店/战斗三股的流位置(重放对账的分流前提)。本批
+    收入域暂无 rng 消费者(球金批 2 回填时启用),参数保留占股约定。
     返回分解 dict(不落金——入账由调用方对 ``state.gold`` 一次落定)。
     """
     node = st.node_type or 'battle'
@@ -92,7 +93,7 @@ def income_for_round(st: GameState, rng: random.Random,
                  if node == 'reward' else BASE_INCOME),
         'interest': interest(st.gold, DEFAULT_INTEREST_CAP),
         'streak': streak_amt,
-        'event': event_gold(rn, rng),
+        'event': 0,
     }
 
 

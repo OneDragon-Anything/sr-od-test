@@ -1,4 +1,4 @@
-"""假游戏状态机(T-120 批 0 骨架 + 批 1 环境规则补全;方案 §2.2)。
+"""假游戏状态机(T-120 批 0 骨架 + 批 1 环境规则补全 + 开局态保真校准)。
 
 **状态容器 + 转移单一源 + 战斗结算 + 回合规则**(批 1 补全面):在批 0
 骨架(状态容器/``apply`` 直调 simulate/coarse+Δ池结算/四股随机流)之上,
@@ -8,6 +8,12 @@
 ``close_shop``;落地审登记的「终结动作 phase 转移语义」批 1 边界的
 承接形)。prep 编排动作(收球/开箱/装备穿戴)与位面继承仍归批 2/3
 (方案 §6.2 分批表)。
+
+**开局态保真校准**(env_version v2):开局等级/金库按实机机制真值建模
+(lv3/金 5,三源互证锚见 ``_OPENING_LEVEL``/``DEFAULT_OPENING_GOLD`` 注)
+——校准前 lv1 开局使 XP 表外态卡死升级链、注金 30 放大囤金假象,假局
+金/等级/花销三指标全面偏离实机分布(对账 =
+``.debug/temp/currency_war/t120_sim_redesign/保真度校准.md``)。
 
 **单一源纪律(本文件的存在理由)**:动作转移**只经**
 ``cw_state.simulate`` 直调——假游戏不内联任何动作转移(sim-design §2.1
@@ -49,12 +55,15 @@ from sr_od.application.currency_war.kernel.cw_opening_hp import (
     OPENING_HP_BASE,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
+    XP_TO_NEXT_LEVEL,
     Action,
     GameState,
+    bench_place,
 )
 from sr_od.application.currency_war.sim.engine_p1 import (
-    EVENT_GOLD_BY_ROUND,  # noqa: F401  再出口:确定性锁的消费面(表随迁申报见 rules)
     HP_UPPER_BOUND,
+    START_BENCH_COST_WEIGHTS,
+    START_BENCH_COUNT,
 )
 from sr_od.application.currency_war.sim.pool import (
     _Pool,
@@ -66,7 +75,22 @@ from sr_od.application.currency_war.sim.pool import (
 #: 按游戏真值(lv10 禁购)建模,不继承 engine_p1 ``LEVEL_CAP=9`` sim-only
 #: 冻结——lv10 真值封顶由 simulate 自带(cw_state.py:1512 ``s.level < 10``),
 #: 本骨架直调即继承。环境指纹含本位,跨版本对照禁裸串比(与池指纹同纪律)。
-FAKE_GAME_ENV_VERSION: int = 1
+#: v2 = 开局态校准(开局等级/金对齐实机机制) + 收入事件金分量归零,
+#: 出处 = ``.debug/temp/currency_war/t120_sim_redesign/保真度校准.md``;
+#: v1 批次(批 1 保真度基线)与本版不可比。
+FAKE_GAME_ENV_VERSION: int = 2
+
+#: 开局等级 = 3(重述 engine_p1 开局真值 ``st.level = 3``——引擎行是裸
+#: 字面量无符号名,故本骨架按值重述+锚注,非 import)。三源互证:
+#: ①引擎 P1 开局态(engine_p1.py:692);②``XP_TO_NEXT_LEVEL`` 键域从 3
+#: 起(cw_state.py:44)——lv1/lv2 是真游戏不存在的表外态(校准前假局
+#: 开局 lv1 使升级链落入表外回退:lv2 的 need 回退 0 = 假满级,策略器
+#: 停升、等级停滞 lv1-2);③实机 13 局近期档案 P1 r1 帧等级恒 3。
+_OPENING_LEVEL: int = 3
+
+#: 开局金库 = 5(同款重述 engine_p1 ``st.gold = 5``;实机 13 局 r1 决策
+#: 帧金中位 5|p90 7 互证——校准前剧本注金 30 放大「只进不出」假象)。
+DEFAULT_OPENING_GOLD: int = 5
 
 # ---- 画面身份词表(方案 §2.2:词表 = screen_info 画面档名,外循环
 # ---- dispatch 消费同名;骨架只列核心推进档,浮层档随批 2/3 词汇扩展。
@@ -83,10 +107,6 @@ PHASE_LOBBY: str = '货币战争-大厅'
 #: 初值表重校准自动跟随,落地审 L1 修后口径)。仅免「hp=None 无法结算」
 #: 的样板,非环境保真申报面——开局词缀/难度对 hp 的影响归批 1 规则模块。
 DEFAULT_OPENING_HP: int = OPENING_HP_BASE
-
-#: 开局 xp 进度缺省:level 1 无门槛表键,回退缺省门槛 4(同 simulate 的
-#: ``XP_TO_NEXT_LEVEL.get(level, 4)`` 回退口径,单一源 = cw_state)。
-_DEFAULT_XP_NEED: int = 4
 
 
 @dataclass
@@ -172,11 +192,42 @@ class FakeMatch:
             plane=1,
             round_num=1,
             node_type=self.node_sequence[0],
-            gold=0,
-            level=1,
-            xp_progress=(0, _DEFAULT_XP_NEED),
+            gold=DEFAULT_OPENING_GOLD,
+            level=_OPENING_LEVEL,
+            # xp 进度 = 当前级门槛表现算(单一源 XP_TO_NEXT_LEVEL,禁手抄;
+            # 开局等级在表键域内——lv1/lv2 表外态禁再现,见 _OPENING_LEVEL 注)
+            xp_progress=(0, XP_TO_NEXT_LEVEL[_OPENING_LEVEL]),
             hp=initial_hp,
         )
+        self._deal_opening_bench()
+
+    def _deal_opening_bench(self) -> None:
+        """开局补给 bench(校准面:真游戏开局给初始角色——机制锚 =
+        screen_flow_timing.md #5「开局补给:给开局角色 + 奖励球,开局每局
+        必经」;构成真值 = engine_p1 ``START_BENCH_COUNT``/
+        ``START_BENCH_COST_WEIGHTS`` 直调,该常量注记「遥测校准:开局 4 张,
+        1 费主导」,抽取序与引擎开局段同构)。校准前 bench 空开局的连锁:
+        部署围栏无件可上 → deployed 恒空 → 板深 0(Δ池最凶掉血桶)+
+        M3 升级触发信号 arm1_existence(板满∧bench 有候补)构造性不可达。
+        rng 消费归发放股(开局补给 = 发放域;不位移日程/抽店/战斗三股)。
+        牌从牌池 take(池守恒:开局牌占用副本计数)。
+        """
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        costs = [c for c, _ in START_BENCH_COST_WEIGHTS]
+        weights = [w for _, w in START_BENCH_COST_WEIGHTS]
+        for _ in range(START_BENCH_COUNT):
+            cost = self._rng_grant.choices(costs, weights=weights, k=1)[0]
+            names = [n for n in self.shop_pool.copies
+                     if CHARACTERS[n].cost == cost
+                     and self.shop_pool.copies[n] > 0]
+            if not names:
+                continue
+            name = self._rng_grant.choice(names)
+            self.shop_pool.take(name)
+            bench_place(self.state.bench, BenchChar(
+                slot=0, char_id=name,
+                faction=(CHARACTERS[name].factions or ['散'])[0]))
 
     # ---- 观察留痕(契约二则:读屏次数语义保留)----
 
