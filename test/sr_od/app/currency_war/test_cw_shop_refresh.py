@@ -818,15 +818,17 @@ def test_refresh_only_wave_predicate() -> None:
 
 def test_post_buy_incremental_state_gold_truth_and_bench_replay() -> None:
     """gold=关店帧真读覆盖(末波垫底值是执行前快照,必须换真值);
-    bench 重播 tracked(执行侧 mutate 逐动作同步的权威源,垫底值过期)。"""
+    bench 重播 tracked(执行侧 mutate 逐动作同步的权威源,垫底值过期);
+    node_type 随 deepcopy 透传垫底帧(生产垫底帧值 = 店开帧组装的台账值,
+    ADR-0587;构造点禁接会话滞后标量覆盖——锁语义按收编去参重推)。"""
     last = _st(gold=55, bench=[])   # 末波垫底:买前金/买前 bench
     post = build_post_buy_incremental_state(
-        last, 41, _tracked(), '战斗', 80, True, True)
+        last, 41, _tracked(), 80, True, True)
     assert post is not None
     assert post.gold == 41
     assert bench_occupied(post.bench) == 2
     assert post.hp == 80 and post.hp_readable and post.hp_trusted
-    assert post.node_type == '战斗'
+    assert post.node_type == last.node_type   # deepcopy 透传(生产垫底帧=店开帧台账值,ADR-0587)
 
 
 def test_post_buy_incremental_state_invariants_preserved() -> None:
@@ -834,7 +836,7 @@ def test_post_buy_incremental_state_invariants_preserved() -> None:
     board/level/xp——增量构造不得回退这些面为缺省/零值。"""
     last = _st(plane=2, round_num=3, level=7, board={'列车同行': 1})
     post = build_post_buy_incremental_state(
-        last, 41, _tracked(), None, 80, True, True)
+        last, 41, _tracked(), 80, True, True)
     assert post is not None
     assert (post.plane, post.round_num, post.level) == (2, 3, 7)
     assert post.board == {'列车同行': 1}
@@ -846,7 +848,7 @@ def test_post_buy_incremental_state_hp_unreadable_not_overwritten() -> None:
     """hp 不产值链(hp_value=None)→ _apply_hp 不覆盖:保留垫底帧的
     值+位(对账层产物),增量构造不引入假 hp/假可信位。"""
     last = _st(hp=80, hp_readable=True)
-    post = build_post_buy_incremental_state(last, 41, _tracked(), None,
+    post = build_post_buy_incremental_state(last, 41, _tracked(),
                                             None, False, False)
     assert post is not None
     assert post.hp == 80
@@ -858,7 +860,7 @@ def test_post_buy_incremental_state_hp_unreadable_not_overwritten() -> None:
 def test_post_buy_incremental_state_gold_miss_fails_closed() -> None:
     """金失读 → None(调用方回退全量 read_game_state):宁全量不造值。"""
     assert build_post_buy_incremental_state(
-        _st(), None, _tracked(), None, 80, True, True) is None
+        _st(), None, _tracked(), 80, True, True) is None
 
 
 def test_post_buy_incremental_state_empty_tracked_fails_closed() -> None:
@@ -868,13 +870,13 @@ def test_post_buy_incremental_state_empty_tracked_fails_closed() -> None:
     stale_bench = _tracked()
     last = _st(gold=55, bench=stale_bench)
     assert build_post_buy_incremental_state(
-        last, 41, [], None, 80, True, True) is None
+        last, 41, [], 80, True, True) is None
 
 
 def test_post_buy_incremental_state_no_mutation_of_last_state() -> None:
     """垫底 state 不得被就地改写(round_success 仍消费其 gold/plane)。"""
     last = _st(gold=55, bench=[])
-    build_post_buy_incremental_state(last, 41, _tracked(), None, 80, True, True)
+    build_post_buy_incremental_state(last, 41, _tracked(), 80, True, True)
     assert last.gold == 55 and bench_occupied(last.bench) == 0
 
 
