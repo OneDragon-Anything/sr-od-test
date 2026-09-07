@@ -1,0 +1,146 @@
+"""T-113(ADR-0579)op_journal 薄流测试:逐动作回执行/非决策 op 行/守卫族。
+
+锁面与方案对齐(.debug/temp/currency_war/t112_deep_telemetry/方案.md):
+- flatten_diff 全量叶级 diff 零漏报(投影外真实变化必现)+ 对称差/列表整替/截断分型;
+- record_action_journal 行形态(seq/frame_seq/gold/exec_ok/expected_delta);
+- run_id 门控(局外零行)+ 每局软上限停写 + 行帽截断 _trunc;
+- 非决策 op enter/exit 成对 + 装配端孤儿 enter 行 outcome='orphan' 容缺;
+- 守卫:①_telemetry_last_candidate_scores 命中点计数锁(src 树恰 3 文件,
+  声明/写点/读点,第 4 文件=红);②op_journal 键族禁入 decisions 写路径。
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from sr_od.application.currency_war.kernel.cw_state import GameState, LevelUp
+from sr_od.application.currency_war.telemetry import op_journal
+from sr_od.application.currency_war.telemetry.match_archive import (
+    _annotate_orphan_op_rows,
+)
+
+
+@pytest.fixture()
+def journal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """journal 落盘重定向 tmp_path + 局外态复位(测试纪律 1/2)。"""
+    out = tmp_path / 'op_journal.jsonl'
+    monkeypatch.setattr(op_journal, '_JOURNAL', out)
+    monkeypatch.setattr(op_journal, '_row_counts', {})
+    monkeypatch.setattr(op_journal, '_frame_seq_by_run', {})
+    monkeypatch.setattr(op_journal, 'current_run_id', lambda: 'run_test')
+    return out
+
+
+def _rows(path: Path) -> list[dict]:
+    return [json.loads(x) for x in path.read_text(encoding='utf-8').splitlines()]
+
+
+def test_flatten_diff_full_leaf_coverage():
+    """全量展平叶级 diff 零漏报:投影外真实变化(任意叶)必现 delta。"""
+    before = {'gold': 10, 'deployed': [{'slot': 1}], 'nested': {'a': 1, 'b': 2}}
+    after = {'gold': 14, 'deployed': [{'slot': 1}], 'nested': {'a': 1, 'b': 9}}
+    delta = op_journal.flatten_diff(before, after, cap=12)
+    assert delta == {'~gold': 14, '~nested.b': 9}
+
+
+def test_flatten_diff_symmetric_and_trunc():
+    """对称差(-/+)语义 + 超帽截断置 _trunc(读端分型依据)。"""
+    delta = op_journal.flatten_diff({'gone': 1, 'keep': 2},
+                                    {'new': 3, 'keep': 2}, cap=1)
+    assert '_trunc' in delta
+    full = op_journal.flatten_diff({'gone': 1}, {'new': 3}, cap=100)
+    assert full == {'-gone': 1, '+new': 3}
+    # 列表叶 = 整列表替换计一条(不逐元素对位)
+    lst = op_journal.flatten_diff({'l': [1, 2]}, {'l': [1, 3]}, cap=10)
+    assert lst == {'~l': [1, 3]}
+
+
+def test_action_row_shape_and_frame_seq(journal: Path):
+    """动作行:seq/frame_seq/exec_ok/gold/expected_delta 全落;段序推进生效。"""
+    assert op_journal.advance_frame_seq() == 1
+    pre = GameState(plane=2, round_num=3, gold=10)
+    post = GameState(plane=2, round_num=3, gold=6)
+    op_journal.record_action_journal(
+        match=None, action=LevelUp(cost=4), seq=2, exec_ok=True,
+        pre_frame=pre, post_frame=post)
+    rows = _rows(journal)
+    assert len(rows) == 1
+    r = rows[0]
+    assert r['kind'] == 'action' and r['seq'] == 2
+    assert r['frame_seq'] == 1 and r['exec_ok'] is True
+    assert r['gold'] == 6 and r['run_id'] == 'run_test'
+    assert any(k.startswith('~') for k in r['expected_delta'])
+
+
+def test_no_run_id_writes_nothing(tmp_path: Path, monkeypatch):
+    """局外门控:run_id 空 → 零行(obs_conflict 同规,不写假键)。"""
+    out = tmp_path / 'op_journal.jsonl'
+    monkeypatch.setattr(op_journal, '_JOURNAL', out)
+    monkeypatch.setattr(op_journal, '_row_counts', {})
+    monkeypatch.setattr(op_journal, '_frame_seq_by_run', {})
+    monkeypatch.setattr(op_journal, 'current_run_id', lambda: '')
+    op_journal.record_action_journal(None, LevelUp(cost=4), 1, True,
+                                     GameState(), GameState())
+    assert op_journal.record_op_enter('战斗等待', 1, 1) is None
+    assert not out.exists()
+
+
+def test_soft_cap_stops_writing(journal: Path, monkeypatch):
+    """每局 500 行软上限:超限停写(病态循环炸盘保险丝)。"""
+    monkeypatch.setattr(op_journal, '_MATCH_ROWS_SOFT_CAP', 3)
+    for _ in range(5):
+        op_journal.record_action_journal(None, LevelUp(cost=4), 1, True,
+                                         GameState(), GameState())
+    assert len(_rows(journal)) == 3
+
+
+def test_row_cap_truncates(journal: Path, monkeypatch):
+    """行帽截断:delta 超 12 条 → 精简行 + _trunc 分型标记。"""
+    monkeypatch.setattr(op_journal, '_ROW_CAP', 200)
+    pre = GameState()
+    post = GameState(plane=1, round_num=1, gold=5, hp=90, level=3)
+    op_journal.record_action_journal(None, LevelUp(cost=4), 1, True,
+                                     pre, post)
+    rows = _rows(journal)
+    assert len(rows) == 1 and rows[0].get('_trunc') is True
+    assert 'expected_delta' not in rows[0]
+
+
+def test_op_enter_exit_pair_and_orphan(journal: Path):
+    """非决策 op 成对行;装配端孤儿 enter 行 outcome='orphan' 容缺。"""
+    tok = op_journal.record_op_enter('位面过渡', 2, 5)
+    op_journal.record_op_exit(tok, outcome='ok')
+    tok2 = op_journal.record_op_enter('战斗等待', 2, 6)
+    rows = _rows(journal)
+    assert [r['event'] for r in rows if r['kind'] == 'op'] == \
+        ['enter', 'exit', 'enter']
+    # 装配端:无 exit 配对的 enter 行 → orphan;已配对行不动
+    _annotate_orphan_op_rows(rows)
+    by_event = [(r['event'], r.get('outcome')) for r in rows
+                if r['kind'] == 'op']
+    assert by_event == [('enter', None), ('exit', 'ok'), ('enter', 'orphan')]
+    assert tok2 is not None
+
+
+# ===== 守卫族(ADR-0571 §2.3 范式)=====
+
+_SRC = Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
+
+
+def test_telemetry_field_hit_count_lock():
+    """命中点计数锁:基名 `_telemetry_last_candidate_scores` 在 src 生产树
+    恰 3 文件(声明/写点/读点);第 4 文件出现 = 决策消费嫌疑,锁红。"""
+    hits = {p.name for p in _SRC.rglob('*.py')
+            if '_telemetry_last_candidate_scores' in p.read_text(encoding='utf-8')}
+    assert hits == {'mandate_state.py', 'flow.py', 'cw_op_buy_cards.py'}
+
+
+def test_op_journal_keys_confined():
+    """键族禁入 decisions 写路径:'expected_delta' 在 src 只允许出现在
+    op_journal 模块本体与 match_archive 装配/切片;出现他处 = 红线破。"""
+    allowed = {'op_journal.py', 'match_archive.py'}
+    leaks = {p.name for p in _SRC.rglob('*.py')
+             if 'expected_delta' in p.read_text(encoding='utf-8')}
+    assert leaks <= allowed
