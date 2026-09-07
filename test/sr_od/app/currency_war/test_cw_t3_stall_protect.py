@@ -8,7 +8,6 @@
 ⑦同轮买卖检查豁免面按分键收敛(禁全开)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import inspect
 from types import SimpleNamespace
@@ -25,6 +24,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell as crit_sell,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
@@ -126,7 +128,11 @@ class Test2FuelDemotion:
         assert names[0] not in state_of(sess).cw4_fuel_filler_stall_buys   # 卖出销
 
     def test_non_protected_victim_preferred(self):
-        """非保燃料在场 ⇒ victim 恒非保件(被保件零成本存活)。"""
+        """非保燃料在场 ⇒ 被保件零成本存活、非保件先卖。批 4 归因填充
+        实证(ADR-0585 §3):本端到端帧(SimpleNamespace 会话,k 派生为
+        空)实际由凑息臂先卖(绝对跳过被保件,reason='interest_pullback'
+        ——旧断言 reason='' 恰好掩盖了臂归属);M4 臂级「被保件降末位」
+        排序语义由 test_deferred_demoted_to_tail 承载,两臂语义同构。"""
         other = '燃料G'
         sess = SimpleNamespace(cw4_counters={},
                                target_comp=_comp())
@@ -136,7 +142,7 @@ class Test2FuelDemotion:
         act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
         assert act.expect == other
-        assert act.reason == ''
+        assert act.reason == 'interest_pullback'
         assert 'fuel_victim_protect_demoted' not in state_of(sess).cw4_counters
         assert state_of(sess).cw4_fuel_filler_stall_buys.get(_PROT) == 2   # 未销
 

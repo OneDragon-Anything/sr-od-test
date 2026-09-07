@@ -422,14 +422,16 @@ class TestMandateBehavior:
 
     def test_m2_m4_retry_frees_seat(self):
         """M2→M4 重试环:bench 满 ∧ 线内缺件 ⇒ 现场腾席(燃料件卖出)
-        后再买(R8-8 单帧闭环)。"""
+        后再买(R8-8 单帧闭环)。发射标记随批 4 tag==reason 双写对齐改
+        归因枚举 'm4_fuel_victim'(ADR-0585 §3;旧标记
+        'm4_fuel_sell_for_m2' 退役——发射位归因面统一,非行为变更)。"""
         k = ('目标件',)
         bench = [_bench(i, '燃料' + str(i)) for i in range(1, 10)]
         frame = _frame(gold=30, bench=bench, k=k)
         session = _session()
         out = mandate.run_mandate(frame, session)
         reasons = [e.reason for e in out]
-        assert 'm4_fuel_sell_for_m2' in reasons
+        assert 'm4_fuel_victim' in reasons
         assert 'm2_buy' in reasons
         # 席满无燃料可腾(全 3★)⇒ 放弃:耗竭帧零买入意图
         #(m2_retry_exhausted / bench_full_buy_abandon 计数由

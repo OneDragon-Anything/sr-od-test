@@ -6,7 +6,6 @@
 退役 + P57 双读法)/§3.2(分键遥测四字段 R3-R5)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -27,6 +26,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     stockpile as crit_stockpile,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     odds,
@@ -340,10 +342,11 @@ class TestT115PrepInterestEmit:
 
     def test_prep_gap_frame_emits_fuel_sell(self):
         """备战帧 gold 9 < g* ∧ bench 有 1★ 燃料 ⇒ 发射 SellBench
-        (Emitted 分键 = t1_interest_prep_emit,载体 = prep 域无 reason
-        字段的既有边界);同帧凑息臂与腾席环共享素材去重(每帧每素材
-        至多 1)。state 必传(N1):漏传 = 血线地板 fail-closed 结构性
-        哑火,本帧形 SellBench 断言即红。"""
+        (发射标记/载体归因随批 4 双写对齐 = 'interest_pullback_prep',
+        ADR-0585 §3;旧形态「载体无 reason 字段、标记
+        t1_interest_prep_emit」已退役);同帧凑息臂与腾席环共享素材
+        去重(每帧每素材至多 1)。state 必传(N1):漏传 = 血线地板
+        fail-closed 结构性哑火,本帧形 SellBench 断言即红。"""
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             SellBench,
         )
