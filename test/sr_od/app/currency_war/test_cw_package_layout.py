@@ -50,6 +50,14 @@ ROOT_FILES: dict[str, str] = {
     # one_dragon 框架原语,供上层兜底 op 复用对局中判定单一源)——归属 app 桶
     # (与 run_state 同类:运行态/判定辅助,非 data/kernel 纯层)。
     'cw_screen_state': 'app',
+    # 假环境注入口协议(T-120 批 0;惰性纯协议:当前零生产消费点、不被生产
+    # import——守卫锁 = test_cw_game_ports 的零生产消费扫描)。物理住包根,
+    # 桶归属 = kernel:三侧共享词表(obs 桶生产实现[批 1]/app 桶 ops 消费
+    # [批 1]/测试仓假实现),本体只引用 kernel 类型——与 cw_prep_actions
+    # 「共享词表归 kernel 是唯一同时满足两侧的方向」同判据;归 app 会把
+    # 批 1 的 obs→协议 实现边堵死(obs 合法依赖 = {data, kernel}),
+    # 归 kernel 则全部未来消费边落在 §3.2 矩阵内。
+    'cw_game_ports': 'kernel',
 }
 
 # DESIGN §3.2 目标依赖矩阵(期6 §4.4 ledger_hooks 归属)
