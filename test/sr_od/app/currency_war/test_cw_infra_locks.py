@@ -591,6 +591,30 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
             s, pool='snapshot').final_hp, f'seed{s} 复跑末 HP 不一致(确定性破)'
 
 
+def test_levelup_budget_gate_dec_disclosure_write_end() -> None:
+    """支A 谓词输入披露·写端在位锁(T-135;供给半环,README 纪律 13)。
+
+    budget-gate 检查器支A 镜像的决策帧真值源 = 引擎在 LevelUp 执行点
+    披露的 dec_board_full/dec_bench_2star(写端 = engine_p1 LevelUp
+    分支;假阳定谳 = ADR-0589,谓词设计 = ADR-0576 §2.5)。写端
+    断线时检查器静默回退行末近似 → t133 假阳(误报绕闸)复现,要等
+    slow 锁 test_ci_smoke_snapshot_batch 才红;本锁在快速层直接钉
+    写端:探针种子(seed 18,基线 17 击 m3_batch,2026-09-08 现树实测
+    ——T-136 可见性行为位移后重探值)每击必携双 bool 键;
+    无发射 = 探针失准,报错指向重选探针种子(存在性断言的种子锚
+    同责,README 纪律 12:失准的红必须可行动)。
+    """
+    res = simulate_p1(18, pool='snapshot')
+    gated = [a for row in res.ledger for a in row.get('actions') or []
+             if a.get('__type__') == 'LevelUp'
+             and str(a.get('auth', '') or '').startswith('m3_batch')]
+    assert gated, '探针种子无 m3_batch 升级击(策略行为位移,重选探针种子)'
+    for a in gated:
+        assert isinstance(a.get('dec_board_full'), bool) \
+            and isinstance(a.get('dec_bench_2star'), bool), \
+            f'写端披露断线(检查器将静默回退行末近似): {a}'
+
+
 def test_views_render_sim_ledger(tmp_path: _sim_cli_smoke_Path) -> None:
     """同构接线:rounds/economy/supply/hp/tiers 视图直接渲染 sim 批次目录。
 

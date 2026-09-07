@@ -541,7 +541,9 @@ class TestSimChecker:
 
     def test_realize_chain_exempt(self):
         """支A 镜像锁:板满(cap 回退后)∧ bench 2★ ⇒ 豁免;bench 无
-        2★ 同帧照报(镜像与生产同步锚对谓词一致)。"""
+        2★ 同帧照报(镜像与生产同步锚对谓词一致)。T-135 起本锁 rows
+        不携披露键 = 辖**无披露键账本的回退分支**(携键按击判据另见
+        test_realize_chain_disclosure_branch)。"""
         from sr_od.application.currency_war.sim.checks.ledger import (
             check_levelup_budget_gate,
         )
@@ -556,6 +558,31 @@ class TestSimChecker:
                              cap=4, deployed=dep,
                              bench=[{'char_id': '三月七', 'star': 1}])]
         assert len(check_levelup_budget_gate(rows_b1)) == 1
+
+    def test_realize_chain_disclosure_branch(self):
+        """支A 披露键消费分支锁(T-135):携键账本按击读披露真值,行末
+        近似不参与——行末 bench 无 2★(当帧上板形态,即 t133 假阳形态)
+        + 披露 ready ⇒ 豁免;披露 not-ready ⇒ 照报(键存在不放宽豁免)。"""
+        from sr_od.application.currency_war.sim.checks.ledger import (
+            check_levelup_budget_gate,
+        )
+        dep = [{'char_id': m, 'star': 2} for m in _km()[:4]]
+
+        def _lv(full: bool, two: bool) -> dict:
+            return {'__type__': 'LevelUp', 'cost': 8,
+                    'auth': 'm3_batch:arm1',
+                    'dec_board_full': full, 'dec_bench_2star': two}
+
+        ready = [self._row(5, 4),
+                 self._row(6, 4, gold0=40, s=8, cap=4, deployed=dep,
+                           bench=[{'char_id': '三月七', 'star': 1}],
+                           actions=[_lv(True, True)])]
+        assert check_levelup_budget_gate(ready) == []
+        shut = [self._row(5, 4),
+                self._row(6, 4, gold0=40, s=8, cap=4, deployed=dep,
+                          bench=[{'char_id': '阮·梅', 'star': 2}],
+                          actions=[_lv(False, True)])]
+        assert len(check_levelup_budget_gate(shut)) == 1
 
     def test_transition_pair_roster_resolved(self):
         """ρ 名册 D3 锁:过渡配方标签经 pair_target_comp + line_members
