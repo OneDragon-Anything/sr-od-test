@@ -1,9 +1,11 @@
 """cw4 步4b 商店线批测试(decide_shop_screen 接线验收全项)。
 
-覆盖:criteria 七面商店形态单测(每面判据式行为锚)/ 词表+截断契约锁
-(契约 v2 §3.1 逐类+§3.3 fail-closed)/ 修复池商店面检查点核销
-(D-FM1/D-D/D-P2idle/D-F9·A45/D-BUYNOTE)/ ev_arm 臂形态(注入形态开闸
-差异锚)/ 基线臂零漂移复跑 + 双臂相异实证(慢桶,sim 实跑)。
+覆盖:criteria 七面商店形态单测(每面判据式行为锚)/ 终结 op 契约锁
+(ADR-0517 词表/终结集/守卫两属/fail-closed)/ 修复池商店面检查点核销
+(D-D/D-P2idle/D-F9·A45/D-BUYNOTE;D-FM1 由 ① dominance_sink 承载)/
+ev_arm 臂形态(注入形态开闸差异锚)/ 满栏 EV 席位门 + 段循环收敛 /
+K 空窗回退 / 双账槽位漂移重播种 / T-115 转线臂 /
+新核零漂移自配对门(慢桶,sim 实跑)。
 """
 from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
@@ -247,32 +249,21 @@ class TestCriteriaShopFaces:
         bench = [_bc(m, star=2) for m in _members(comp)]
         st = _state(gold=60, bench=bench)
         sess = _session(comp)
-        _decide(st, sess)
+        acts = _decide(st, sess)
         assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
-        assert not [a for a in _decide(st, _session(comp))
-                    if isinstance(a, RefreshShop)]
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
 
     def test_stockpile_face_m6_opens_with_frame_window(self):
-        """压库面窗口接线锁(锁重推导,14号稿 §3 臂①落码后):旧帧
-        「1★ 线成员副本 ⇒ M6 压库」已被臂①义务囤腿取代(m2_stockpile
-        先于 M6,不走息律门)。M6 剩余可达面与 dominance 门向(stop_flag
-        同门 armed 先扫全店)的竞态 = 已登记 D0/C2(14号稿 §8,裁决后统一
-        排位次,本批不裁)。本锁钉两点:①1★ 线成员副本帧由臂①接手
-        (义务面语义);②M6 窗口接线本体在判据层直锁(stockpile_buy ×
-        帧级窗口:窗口非空且 1★ 全退 ⇒ 发射;空窗 ⇒ not_in_tier 不买)。"""
+        """M6 窗口接线直锁(判据本体,帧级窗口二态对比):窗口非空且
+        1★ 全退 ⇒ 放行;空窗 ⇒ 'not_in_tier' 不买(该分支全仓唯一直锁)。
+        (锁重推导收窄,14号稿 §3 臂①落码后:旧帧级腿「1★ 线成员副本帧
+        由臂①接手」与 pass 分支直调已并——臂①接手 + M6 拒因负腿 =
+        test_cw_p56_t1::test_m6_p56_reject_counter,s_reserve/放行边界 =
+        同文件 TestP56RealizableFloor;本文件保留空窗分支与二态对比。
+        M6 剩余可达面与 dominance 门向竞态 = 已登记 D0/C2(14号稿 §8)。)"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
             stockpile_buy,
         )
-        comp = _comp()
-        members = _members(comp)
-        bench = [_bc(m) for m in members]
-        st = _state(gold=60, shop=[_card(members[0], cost=1)], bench=bench,
-                    level=4)
-        sess = _session(comp)
-        acts = _decide(st, sess)
-        assert any(isinstance(a, BuyCard) and a.reason == 'm2_stockpile'
-                   for a in acts)
-        # ② 窗口接线直锁(判据本体;零 shop 前序臂干扰)
         ok, key = stockpile_buy(60, 0, 4, 1, 1, frozenset({1, 2, 3}))
         assert ok is True and key == ''
         ok2, key2 = stockpile_buy(60, 0, 4, 1, 1, frozenset())
@@ -485,15 +476,20 @@ class TestShopTerminatorContract:
         assert not hits, f'tracked_bench 旧名账读写点残留(回退播种载体未清):{hits}'
 
     def test_buy_and_levelup_continue_via_projection(self):
-        """可续语义重锚:BuyCard/LevelUpShop 不终结循环——驱动器输出含
-        后续动作且期望态推进(旧「可续不截断」的单动作继任形态:循环
-        由投影续走,不存在截断点)。"""
+        """可续语义重锚:BuyCard 不终结循环——首买后循环必须继续产出
+        后续动作(两件线成员帧第二件也被买入;截断回归 = 首买即止、
+        输出退化为单笔,本断言必红。CloseShop 收尾不入序列,旧「末位
+        判刷新终结」断言对本故障零判别力,删)。"""
         comp = _comp()
-        m = _members(comp)[0]
-        st = _state(gold=30, shop=[_card(m, cost=3), _card('燃料件X')])
+        m1, m2 = _members(comp)[:2]
+        # 两卡异 x(生产 simulate 按 x 摘牌,同 x = 同店面位置身份)
+        st = _state(gold=30,
+                    shop=[_card(m1, cost=3, x=100),
+                          _card(m2, cost=3, x=200)])
         acts = _decide(st, _session(comp))
-        assert acts and isinstance(acts[0], BuyCard)
-        assert not isinstance(acts[-1], RefreshShop)   # 无截断性终结
+        assert isinstance(acts[0], BuyCard)
+        buys = {a.card.name for a in acts if isinstance(a, BuyCard)}
+        assert buys == {m1, m2}   # 首买后循环继续:第二件也经 M2 买入
 
     def test_merge_trigger_no_longer_truncates(self):
         """合成触发重锚:买同名同星第 3 张不再截断(旧
@@ -511,29 +507,26 @@ class TestShopTerminatorContract:
         assert any(isinstance(a, BuyCard) and a.card.name == m for a in acts)
         assert 'shop_merge_trigger_truncate' not in state_of(sess).cw4_counters
 
-    def test_blackboard_missing_raises(self):
-        """黑板契约:shop_state_frame 缺失 ⇒ 抛错(禁静默按空态决策)。"""
+    def test_blackboard_missing_raises_action_level(self):
+        """黑板契约(单动作核):shop_state_frame 缺失 ⇒ 抛错(禁静默
+        按空态决策;flow 基类守卫,生产执行侧入口)。屏驱动器同款守卫
+        由 test_cw_w971_blackboard::test_shop_screen_missing_frame_raises
+        承载(同一实现 MandateV1Strategy.decide_shop_screen,不双锁)。"""
         from sr_od.application.currency_war.sim.engine_p1 import (
             sim_decision_registry,
         )
         strat = MandateV1Strategy(registry=sim_decision_registry())
         with pytest.raises(ValueError, match='shop_state_frame'):
-            strat.decide_shop_screen(_session(), _Cfg())
-        with pytest.raises(ValueError, match='shop_state_frame'):
             strat.decide_shop_action(_session(), _Cfg())
 
 
-# ===== ③ 修复池商店面检查点核销 =====
+# ===== ③ 修复池商店面检查点核销(D-FM1 由 ① dominance_sink 承载)=====
 
 class TestFixpoolShopCheckpoints:
 
-    def test_d_fm1_sink_channel_open(self):
-        """D-FM1:金>g* ∧ 线成型 ⇒ 存在可达战力投资出口(支配买通道)。"""
-        comp = _comp()
-        bench = [_bc(m) for m in _members(comp)]
-        st = _state(gold=60, shop=[_card('燃料件X', cost=1)], bench=bench)
-        acts = _decide(st, _session(comp))
-        assert any(isinstance(a, BuyCard) for a in acts)
+    # (D-FM1 检查点核销由 ① test_buy_face_dominance_sink 承载——同帧
+    #  (金60/线成型/燃料件X cost1)断言面更强制 reason='dominance_buy',
+    #  本组原 test_d_fm1_sink_channel_open 为其真子集,2026-09-08 瘦身删。)
 
     def test_d_p2idle_no_candidate_vs_all_vetoed(self):
         """D-P2idle:「无候选」vs「全拒」分键可辨(u_unavailable 独立分键)。"""
@@ -571,10 +564,9 @@ class TestFixpoolShopCheckpoints:
         bench = [_bc(m) for m in _members(comp)]
         st = _state(gold=50, bench=bench, node='boss')
         sess = _session(comp)
-        _decide(st, sess)
+        acts = _decide(st, sess)
         assert state_of(sess).cw4_counters.get('shop_hard_node_gate_open', 0) >= 1
-        assert not [a for a in _decide(st, sess)
-                    if isinstance(a, RefreshShop)]
+        assert not [a for a in acts if isinstance(a, RefreshShop)]
         # 非硬节点不触发
         st2 = _state(gold=50, bench=bench, node='reward')
         sess2 = _session(comp)
@@ -603,12 +595,16 @@ class TestFixpoolShopCheckpoints:
         assert state_of(sess).cw4_counters.get('shop_drought_reset_on_buy', 0) == 0
 
     def test_d_buynote_embedded(self):
-        """D-BUYNOTE:P48 整买纪律作为常量判据内嵌(spend_unified 直测)。"""
+        """D-BUYNOTE:P48 整买纪律作为常量判据内嵌(spend_unified 直测;
+        must_spend_zone 侧等价锁删后本文件为全仓唯一载体,D7 消费)。
+        三分支:散买拦截/整批放行/零剩余 click 守卫(clicks_to_next≤0
+        ⇒ False,防 0×cost=0 恒过把「无级可升」当「可整批支付」)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
             levelup as crit_levelup,
         )
         assert not crit_levelup.spend_unified(2, 4, 4)   # 散买拦截
         assert crit_levelup.spend_unified(2, 8, 4)       # 整批放行
+        assert not crit_levelup.spend_unified(0, 8, 4)   # 零剩余 click 守卫
 
 
 # ===== ④ ev_arm 臂形态(注入形态开闸差异锚)=====
@@ -624,7 +620,6 @@ class TestEvArmBypass:
         V_MS=24.7 并取 cost=1@L3(读法乙窗口 {1})为发射对象。)"""
         comp = _comp()
         members = _members(comp)
-        bench = [_bc(m) for m in members]
         # T-115 适配(ADR-0580):线外件固定用真无关件(银枝)——原探针
         # '爻光' ∈ ④放行集(TRANSITION_PACK partial),未锁双轨帧会被
         # ④转线放行臂先手买走(EV 独占前提对该类件已被规则④取代);
@@ -632,8 +627,6 @@ class TestEvArmBypass:
         outsider = '银枝'
         if outsider in members:
             outsider = '乱破'
-        _state(gold=30, shop=[_card(outsider, cost=1)],
-                    bench=bench)
         try:
             provisional.inject('U_X', provisional.CalibValue(
                 value=1.0, injected_form=True))
@@ -871,28 +864,6 @@ class TestEvBuySeatGate:
             bench.append(_bc(f'填充件{len(bench)}'))
         return bench
 
-    def test_ev_buy_bench_full_not_proposed(self, monkeypatch):
-        """满栏帧 EV 买不提案 + ``shop_ev_bench_wait`` 分键计数
-        (帧级断言:满栏帧的首提案不是 ev_buy;席被其它通道腾出后
-        EV 买合法恢复,归帧级不变量测试辖)。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-            buy as crit_buy,
-        )
-        comp = _comp()
-        fuel = '燃料件X'
-        st = _state(gold=30, shop=[_card(fuel, cost=1, star=1)],
-                    bench=self._full_bench(comp))
-        monkeypatch.setattr(
-            crit_buy, 'ev_buy_candidates',
-            lambda gold, s_reserve, shop_cards, k_members, **kw:
-            ([crit_buy.BuyCandidate(fuel, 1, 1, 0)], ''))
-        monkeypatch.setattr(crit_buy, 'ev_buy_veto',
-                            lambda cand, gold: (False, ''))
-        sess = _session(comp)
-        a = self._decide_one(st, sess)
-        assert not (isinstance(a, BuyCard) and a.reason == 'ev_buy')
-        assert state_of(sess).cw4_counters.get('shop_ev_bench_wait', 0) >= 1
-
     @staticmethod
     def _decide_one(state, session):
         from sr_od.application.currency_war.sim.engine_p1 import (
@@ -906,7 +877,8 @@ class TestEvBuySeatGate:
         """生产段循环同构驱动:满栏 + 恒非空 EV 候选下,单动作循环按
         帧推进有限步到达终结(CloseShop/RefreshShop),不触发执行侧
         帧帽(cw_op_buy_cards.SHOP_SEGMENT_ACTION_CAP);帧级不变量 =
-        EV 买提案只发生在 bench 有空席的帧(席位门语义)。"""
+        EV 买提案只发生在 bench 有空席的帧(席位门语义;满栏首帧不提案
+        由循环首迭代覆盖,``shop_ev_bench_wait`` 分键计数并入本锁)。"""
         from sr_od.application.currency_war.kernel.cw_state import simulate
         from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
             SHOP_SEGMENT_ACTION_CAP,
@@ -939,6 +911,8 @@ class TestEvBuySeatGate:
                 break
             sess.shop_state_frame = simulate(cur, a)
         assert terminated, '满栏 + EV 候选在场:段循环须有限步到达终结'
+        # 分键计数留证:满栏帧 EV 候选被席位门拦下的事故形态确实发生
+        assert state_of(sess).cw4_counters.get('shop_ev_bench_wait', 0) >= 1
 
 
 # ===== ⑤⑥ sim 实跑门(慢桶)=====
@@ -978,7 +952,9 @@ class TestDualLedgerSlotDriftReseed:
     ``bench_slot_layout_drift`` 台账分键留证不炸环 + 按 tracked 真值
     重播种投影 bench(含槽号健康门;回写源选 tracked 而非
     match.bench_slot_map:后者只在买组确认后产出、守卫炸点在组中,且只
-    含所购名→槽不承载 churn 重排与洞位);真多集分歧仍 AssertionError。"""
+    含所购名→槽不承载 churn 重排与洞位);真多集分歧仍 AssertionError
+    (行为锁 = 本文件 TestShopTerminatorContract.
+    test_expected_vs_tracked_guard_detects_drift)。"""
 
     @staticmethod
     def _bc_at(name: str, slot: int) -> BenchChar:
@@ -1080,17 +1056,9 @@ class TestDualLedgerSlotDriftReseed:
         assert cw_shop_action_ops._reseed_bench_layout(st, good) is True
         assert st.bench[1] is not None and st.bench[1].char_id == '符玄'
 
-    def test_true_divergence_still_raises(self):
-        """②真分歧仍炸锁:成员不同(非槽序互换)⇒ AssertionError
-        (多集等价豁免不得稀释真投影 bug 的响亮暴露)。"""
-        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
-            guard_expected_vs_tracked,
-        )
-        sess = _session()
-        exec_state_of(sess).tracked_bench_chars = [_bc('甲')]
-        st = _state(bench=[_bc('乙')])
-        with pytest.raises(AssertionError, match='双账分离'):
-            guard_expected_vs_tracked(st, sess)
+    # (②「真分歧仍炸」腿不另立锁:成员不同 ⇒ '双账分离' 炸出由
+    #  test_expected_vs_tracked_guard_detects_drift 承载(同产线分支、
+    #  同匹配串的 2 元分歧帧);此处原 1 元帧为其真子集,2026-09-08 瘦身删。)
 
     def test_churn_reseed_makes_buy_land_like_reality(self):
         """③churn 后重播种锁(决策循环镜像):买后守卫触发降级+重播种,
@@ -1143,24 +1111,11 @@ class TestTransitionReleaseArm:
             state_of(sess).v3_intention = ist
         return sess
 
-    def test_p1_unlocked_release_buys_transition_component(self):
-        """1-3 形态直译:P1 未锁双轨帧,藿藿(仙舟件,非当前线成员)
-        在售 1★ ⇒ 买入放行,reason/count 独立分键可辨。"""
-        from sr_od.application.currency_war.kernel.cw_intention import (
-            IntentionState,
-        )
-        from sr_od.application.currency_war.knowledge.cw_line_facts import (
-            TRANSITION_PACK,
-        )
-        assert TRANSITION_PACK['藿藿'][1] == 'carry'
-        st = _state(gold=30, shop=[_card('藿藿', cost=3)])
-        sess = self._pair_sess(IntentionState())
-        acts = _decide(st, sess)
-        buys = [a for a in acts if isinstance(a, BuyCard)]
-        assert len(buys) == 1 and buys[0].card.name == '藿藿'
-        assert buys[0].reason == 'transition_component_buy'
-        assert state_of(sess).cw4_counters.get(
-            'transition_component_buy_hit') == 1
+    # (放行正向腿归并:未锁双轨帧 ④ 买入 + reason + hit 计数由主题文件
+    #  test_cw_locked_buy_membership_split.py::TestUnlockedFrameUnchanged.
+    #  test_p1_unlocked_faction_member_released_by_transition_rule 承载
+    #  (同产线同断言面,探针件不同;跨文件等价择一,2026-09-08 瘦身删)。
+    #  本类保留 ④ 的辖域负向四锁。)
 
     def test_true_unrelated_card_stays_rejected(self):
         """真无关件(非 registry 核心 ∉ 放行集)维持拒买——④不是全开
