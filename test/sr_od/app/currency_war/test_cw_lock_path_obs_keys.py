@@ -14,7 +14,6 @@
 不作目标值(42 跳对照警示:有锁对照批 hp 中位反而 0.0)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import copy
 from dataclasses import is_dataclass
@@ -32,6 +31,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
     ShopCard,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 
 #: P2 位面轮数真值(ADR-0366 语料:P2=7;与 test_cw_line_feasibility 同构)。
@@ -243,9 +245,16 @@ def test_g8_promote_nonempty_obs_at_handoff(monkeypatch):
 
 def test_frozen_pair_snapshot_lifecycle():
     """P1 派生非空对随帧冻结;进 P2 后 p1_pair 清空而快照保留
-    (退场前的冻结副本语义,设计稿 §2.1 观测载体)。"""
+    (退场前的冻结副本语义,设计稿 §2.1 观测载体)。
+    锁红重推(T-171 支持度端口降档):原 fixture 希儿单卡即锁(支持度
+    在手二元 1.0)语义已被分级公式取代——希儿单卡 = 0.5 开线候选不再
+    即锁(出处 = T-171 设计方案 §5.1/§6.3-4,取代 ADR-0519 C2 的
+    post-state 条款),锁红 ≠ 改动错,故按新口径重推 fixture:希儿+1
+    去重放大器(桑博,贝腿 2 成员)= 1.0 满支持构造锁帧;生命周期
+    断言本体(冻结/清空/快照保留)不变。"""
     st1 = _state(plane=1, round_num=1)
-    st1.bench = [_bench_char('希儿', 0)]   # 希儿系支持度 1.0 ≥ 锁门槛 → 派生非空
+    st1.bench = [_bench_char('希儿', 0), _bench_char('桑博', 1)]
+    # 希儿+桑博:去重后贝腿 2 成员 = 1.0 ≥ 锁门槛 → 派生非空(T-171 §5.1)
     ist = IntentionState()
     out1 = update_intention(st1, ist, None, None)
     assert out1.p1_pair                       # P1 配方对已锁帧
