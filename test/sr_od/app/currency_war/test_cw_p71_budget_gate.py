@@ -15,7 +15,7 @@ docs/develop/currency_war/proofs/p72-full-band-budget-gate.md;
   合法批零违规双向;
 - 三发射位同步:prep/shop(M3+必花域)/posture 镜像全链拒因与
   豁免一致(单点判据本体,分键面逐位锁)。
-锁结构/回显,不锁分布数值(sr-od-test README 第 8 条)。
+锁结构/回显,不锁分布数值(sr-od-test README 第 11 条)。
 """
 from __future__ import annotations
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
@@ -33,6 +33,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     GameState,
     LevelUpShop,
+)
+from sr_od.application.currency_war.sim.checks.ledger import (
+    check_levelup_budget_gate,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
@@ -96,21 +99,36 @@ class TestRhoPublicSource:
     证据 = test_cw_r2_interest_floor.py 直跑,本类锁别名/注册面)。"""
 
     def test_shop_alias_same_value_as_single_source(self):
-        """shop._r2_card_reserve 别名与 criteria/refresh.r2_card_reserve
-        同参同值(测试面既有私名 import 不断链 + 零漂移)。"""
+        """shop._r2_card_reserve 接线烟雾(本文件唯一 1 条,README 第 8
+        条容忍档):别名 = 单一源 criteria/refresh.r2_card_reserve 的
+        重导出委托(生产别名保留使 test_cw_r2_interest_floor 私名
+        直引与调用点零漂移)。对比帧扫(2★ 出集经 bench/deployed 两
+        路 + level 显式传参)防委托走样成第二实现——单点同值对包装
+        漂移零判别力。ρ 值语义(注册表派生/过滤面)由
+        test_cw_r2_interest_floor.test_card_reserve_is_registry_derived
+        经同一别名辖,此处不重复锁值。"""
         km = tuple(_km())
-        bench = [_bc('瓦尔特', star=1, slot=1)]
+        assert '三月七' in km   # 1费 min-cost 成员(注册表现读,下扫面对比锚)
         st = _state(0, 3)
-        assert shop._r2_card_reserve(km, bench, [], st) == \
-            crit_refresh.r2_card_reserve(km, bench, [], st)
-        assert shop._r2_card_reserve(km, bench, [], st) > 0   # 1★ 瓦尔特在集
+        cases = [([], []),
+                 ([_bc('三月七', star=2, slot=1)], []),
+                 ([], [_bc('三月七', star=2, slot=1)]),
+                 ([_bc('三月七', star=1, slot=1)], [])]
+        for bench, deployed in cases:
+            assert shop._r2_card_reserve(km, bench, deployed, st) == \
+                crit_refresh.r2_card_reserve(km, bench, deployed, st)
+        # level 过滤口径转发(包装签名/默认参漂移即断)
+        assert shop._r2_card_reserve(km, [], [], st, level=6) == \
+            crit_refresh.r2_card_reserve(km, [], [], st, level=6)
 
     def test_contracts_registered(self):
-        """契约注册完备:P72 全段闸契约锚已更新(键存在 + 锚指 P72
-        证明与 ADR-0576——锚文本是契约登记结构,漂移即闸出处断链)。"""
-        key = ('levelup', 'levelup_budget_gate')
-        assert key in contracts.CONTRACTS
-        anchor = contracts.CONTRACTS[key].anchor
+        """闸契约锚文本登记门:P72 全段闸契约锚必须指向 P72 证明与
+        ADR-0576——锚漂移即闸出处断链,红时登记新出处。键存在性
+        (criteria 全公开函数注册完备性)由 test_cw4_contracts
+        .test_covers_all_criteria_public_functions 辖(亲读复核:
+        各守边界成立),此处缺键经 KeyError 自然红,不重复断言。"""
+        anchor = contracts.CONTRACTS[
+            ('levelup', 'levelup_budget_gate')].anchor
         assert 'p72-full-band-budget-gate' in anchor
         assert 'ADR-0576' in anchor
 
@@ -442,9 +460,6 @@ class TestSimChecker:
 
     def test_legal_batch_zero_violation(self):
         """闸过批(决策帧金 200,批 20,息档充裕)⇒ 零违规。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         rows = [self._row(5, 5),
                 self._row(6, 6, gold0=200, s=20, auth='m3_batch:arm1')]
         assert check_levelup_budget_gate(rows) == []
@@ -452,9 +467,6 @@ class TestSimChecker:
     def test_bypass_flagged(self):
         """绕闸形态(决策帧金 60,批 36 穿线:τ(60)=5,floor ≥ 50,
         花后 24)⇒ 违规在案,回显携批金额与闸值分量。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         rows = [self._row(5, 5),
                 self._row(6, 6, gold0=60, s=36, auth='m3_batch:arm0')]
         out = check_levelup_budget_gate(rows)
@@ -466,9 +478,6 @@ class TestSimChecker:
         [16]② 删除退役——奖励节点 = 升级抑制对象,其 m3_batch 绕闸形态
         = 违规可见(生产闸判据节点无关,镜像删除 skip 后更忠实);非
         m3_batch 授权照旧不辖(白名单外或非 m3 批与本镜像无关)。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         rows = [self._row(5, 5),
                 self._row(6, 6, gold0=60, s=36, auth='m3_batch:pop',
                           node='reward'),
@@ -481,9 +490,6 @@ class TestSimChecker:
         """开局低金合法批零违规(锁重推:旧「g ≤ g* skip」辖域镜像已
         随全段化作废,开局结论由 (3a) 本身承载——lv3/g0=8/批 4 金,
         τ(8)=0,floor=0+2ρ ≤ 2,花后 4 ≥ floor 零违规)。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         rows = [self._row(5, 3),
                 self._row(6, 3, gold0=8, s=4, auth='m3_batch:arm1')]
         assert check_levelup_budget_gate(rows) == []
@@ -493,9 +499,6 @@ class TestSimChecker:
         买牌 3 金 → 决策帧金 50 → 2 击×4=8 批潜到 42——g0 口径下
         53−8=45 贴线可漏,重放后 τ(50)=5,floor ≥ 50,42 < floor
         ⇒ 违规在案(先花后潜形态结构性不再漏报)。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         rows = [self._row(5, 5),
                 self._row(6, 6, gold0=53, cap=6,
                           actions=[{'__type__': 'BuyCard',
@@ -515,9 +518,6 @@ class TestSimChecker:
         异义),禁当息帽推 g*=70——g0=75/批 20,息帽口径 τ(75)=5
         floor=50+2ρ ≤ 52,花后 55 ≥ floor 零违规(旧读 state.cap
         口径 g*=70 会误报)。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         rows = [self._row(5, 5),
                 self._row(6, 6, gold0=75, s=20, auth='m3_batch:arm1',
                           cap=7)]
@@ -526,9 +526,6 @@ class TestSimChecker:
     def test_allin_boss_exempt(self):
         """ALL IN 镜像锁(P72 §2.5):位面末 boss 节(本 run rows 现推
         位面长 9,P1 r9 boss)豁免;同量批在位面中段照报。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         rows = [self._row(r, 5) for r in range(1, 9)]
         rows.append(self._row(9, 5, gold0=60, s=36, auth='m3_batch:arm0',
                               node='boss'))
@@ -544,9 +541,6 @@ class TestSimChecker:
         2★ 同帧照报(镜像与生产同步锚对谓词一致)。T-135 起本锁 rows
         不携披露键 = 辖**无披露键账本的回退分支**(携键按击判据另见
         test_realize_chain_disclosure_branch)。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         dep = [{'char_id': m, 'star': 2} for m in _km()[:4]]
         rows = [self._row(5, 4),
                 self._row(6, 4, gold0=40, s=8, auth='m3_batch:arm1',
@@ -563,9 +557,6 @@ class TestSimChecker:
         """支A 披露键消费分支锁(T-135):携键账本按击读披露真值,行末
         近似不参与——行末 bench 无 2★(当帧上板形态,即 t133 假阳形态)
         + 披露 ready ⇒ 豁免;披露 not-ready ⇒ 照报(键存在不放宽豁免)。"""
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         dep = [{'char_id': m, 'star': 2} for m in _km()[:4]]
 
         def _lv(full: bool, two: bool) -> dict:
@@ -591,14 +582,8 @@ class TestSimChecker:
         from sr_od.application.currency_war.kernel.cw_intention import (
             pair_target_comp,
         )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
-            line_members as _lm,
-        )
-        km = _lm(pair_target_comp(('仙舟', '持续伤害')))
+        km = line_members(pair_target_comp(('仙舟', '持续伤害')))
         assert len(km) > 0, '过渡配方体系对名册解析不得为空'
-        from sr_od.application.currency_war.sim.checks.ledger import (
-            check_levelup_budget_gate,
-        )
         rows = [self._row(5, 7),
                 self._row(6, 7, gold0=60, s=36, auth='m3_batch:arm0',
                           target='过渡配方·仙舟+持续伤害')]
