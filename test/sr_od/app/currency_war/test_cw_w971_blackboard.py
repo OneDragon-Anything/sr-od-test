@@ -1,21 +1,22 @@
 """W971 §2 黑板模式 + ADR-0583 策略契约形状锁。
 
 覆盖:
-- 黑板决策接口(备战 prep_obs_frame / 商店 shop_state_frame)冒烟与
-  缺帧契约(decide_prep 兼容 shim、decide_prep_action 薄委托已随
-  ADR-0517/ADR-0583 退役,对拍锁随删);
+- 黑板决策接口缺帧契约(商店屏驱动器decide_shop_screen;备战屏同款
+  守卫已归并 test_cw4_mandate_v1.test_bridge_decide_prep_screen_none_
+  frame_raises——同一实现同一抛点,等价双锁不双留,2026-09-09 覆盖
+  对账,见 reports/_cluster_P.md);
 - ADR-0583 契约形状(L6):CwStrategy abstract 面全集 = 冷建 1 + 分画面
   决策入口 11(抽象 12)+ 非 abstract 工厂 create_state;update_target/
   生命周期钩子/decide_prep_action/decide_shop_screen 出契约面的墓碑;
   v3_intention_key 与帧类槽的写点空间守卫;
 - 方向节拍内化(L1/L2/L3/L7):full 帧键守卫贵段每 game-round 恰一次;
   view 帧(破墙/finalize 买后暂存)只刷派生视图、驱动延迟到下一 full 帧;
-  商店 visit 首段 full/续段 none;驱动输入 hp 同门(gated)。
+  商店 visit 首段 full/续段 none;驱动输入吃帧 state hp 原样(门在观察
+  段上游,gated_hp 门语义直锁于同测)。
 全部离线纯逻辑,零 IO。
 """
 from __future__ import annotations
 
-import dataclasses
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -26,7 +27,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     CloseShop,
     GameState,
-    ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CwStrategy,
@@ -38,55 +38,12 @@ from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
 # ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
 # 直用活策略核(下述测试全部消费 live 接口)。
 _FlowStrategy = MandateV1Live
-def _make_state() -> GameState:
-    """探针态:中局常态(金足/店有目标件/bench 有件)——决策必有产出。"""
-    s = GameState()
-    s.plane, s.round_num, s.level, s.gold, s.hp = 1, 5, 5, 60, 80
-    s.board = {'仙舟': 2, '持续伤害': 1}
-    s.deployed = [BenchChar(slot=0, char_id='藿藿', faction='仙舟'),
-                  BenchChar(slot=1, char_id='爻光', faction='仙舟')]
-    s.bench = [BenchChar(slot=0, char_id='丹恒·饮月', faction='仙舟'),
-               BenchChar(slot=1, char_id='青雀', faction='仙舟'),
-               None, None, None, None, None, None, None]   # ADR-0316 pad
-    s.shop = [ShopCard(x=1, faction='仙舟', name='丹恒·饮月', cost=2),
-              ShopCard(x=2, faction='护盾', name='三月七', cost=1)]
-    return s
-
-
 def _fresh(strategy) -> SimpleNamespace:
     """同源 session(create_session 唯一冷建口,ADR-0583;两臂输入完全一致的对拍前提)。"""
     return strategy.create_session(None)
 
 
-def _norm_seq(actions: list) -> list[tuple[str, dict]]:
-    """动作序列归一化:类型名(LevelUpShop≡LevelUp)+ 字段 dict(对拍口径)。"""
-    out = []
-    for a in actions:
-        name = type(a).__name__
-        if name == 'LevelUpShop':
-            name = 'LevelUp'
-        out.append((name, dict(dataclasses.asdict(a))))
-    return out
-
-
-# ===== 商店屏:新旧入口决策对拍 =====
-
-
-def test_shop_screen_probe_smoke() -> None:
-    """商店屏唯一入口冒烟(退役批:decide_prep 兼容 shim 已删,对拍锁随删)。
-
-    探针态(金足/店有目标件)经黑板入口应产出采纳动作;等价性保障改由
-    结构承载(单一入口 = decide_shop_screen,无第二实现可漂移)。
-    """
-    strat = _FlowStrategy()
-    state = _make_state()
-    sess = _fresh(strat)
-    sess.shop_state_frame = state
-    acts = strat.decide_shop_screen(sess, None)
-    assert len(acts) > 0, '探针态(金足/店有目标件)应有采纳动作'
-
-# (test_shop_screen_emits_levelup_shop 已随 v2 _decide_shop_plan 出口映射删除——
-#  统一迁移批 ②;mandate 商店线出口形态由 test_cw4_shop_line 锁组辖。)
+# ===== 商店屏:缺帧契约 =====
 
 
 def test_shop_screen_missing_frame_raises() -> None:
@@ -98,17 +55,9 @@ def test_shop_screen_missing_frame_raises() -> None:
         strat.decide_shop_screen(sess, None)
 
 
-# ===== 备战屏:黑板缺帧契约 =====
-
-
-def test_prep_screen_missing_frame_raises() -> None:
-    """黑板契约:prep_obs_frame 缺失 → 抛错(同商店屏)。"""
-    strat = _FlowStrategy()
-    sess = _fresh(strat)
-    with pytest.raises(ValueError, match='prep_obs_frame'):
-        strat.decide_prep_screen(sess, None)
-
-
+# (备战屏缺帧契约同款守卫 = test_cw4_mandate_v1::
+#  test_bridge_decide_prep_screen_none_frame_raises,同一实现同一抛点,
+#  等价双锁不双留;本文件不再持有。)
 # (test_prep_action_delegates_via_frame 已随 ADR-0583 删除:deprecated 薄委托
 #  decide_prep_action 出契约面并删实现(P5 挂账兑现,方案 §4-#9),旧入口
 #  「写 prep_obs_frame」路径由画面 op 观察段直接承担。)
@@ -388,29 +337,39 @@ class TestDirectionRhythmL1L2L3L7:
         assert state_of(sess).target_comp.name == first_name, (
             '续段 none 帧不刷新(视图保持首段值,_target_seeded 语义等价)')
 
-    def test_l7_drive_input_hp_is_gated_not_raw(
+    def test_l7_drive_input_hp_is_frame_state_verbatim(
             self, strat_and_sess, monkeypatch) -> None:
-        """L7 驱动输入门锁(出处 = ADR-0583 §5.5-戊 行为收敛申报,r68 同门
-        教训):决策入口刷新中 update_intention 的 hp 输入 = gated 后值
-        (session.last_hp 链)而非血条现读——钉住方向驱动并入结算新鲜度门
-        的新行为,防实施批无意识回退到 pre-gated 输入。"""
+        """L7 驱动输入契约锁(出处 = ADR-0583 §5.5-戊「同吃帧 state 的 hp」,
+        flow.py _refresh_direction→update_intention 逐字透传):update_intention
+        的 hp 输入 = 帧 state 原样,策略层零二次改写——hp 门(gated_hp)的
+        收口点在观察段上游(cw_screen_prep 观察终饰 / adapter.decision_state),
+        门脱落的回归由上游写点辖,不属本锁语义。
+
+        判别力构造(2026-09-09 重写,原形态零判别力):帧带**未过门** hp=80
+        + session.last_hp=50(结算真值)——若 flow 层内联改写 hp(改吃门后值),
+        spy 见 50 即红。原形态先手工 gated_hp 覆写帧再断言 spy 见门后值,
+        两通道值恒等,断言无失败通道(rule 18)。
+
+        gated_hp 门语义(gap 门内结算真值覆盖现读)同测直锁一行,门本体
+        不失覆盖。"""
         strat, sess = strat_and_sess
         seen = self._spy_update_intention(monkeypatch)
-        # 结算真值链:上一结算 hp=50,t=10;备战帧现读 hp=80(OCR 误读形态)
+        # gated_hp 门语义直锁(单一源 = cw_strategy.gated_hp):上一结算
+        # hp=50,t=10,现读 80,gap==1 门内 → 结算真值覆盖
         sess.last_hp = 50
         sess.last_hp_t = 10
-        frame_state = _st(round_num=1)
-        frame_state.hp = 80
-        frame_state.hp_readable = True
-        # 生产观察终饰(原 cw_screen_prep :1411 同式调用):gated_hp 覆写
         from sr_od.application.currency_war.strategies.impl.cw_strategy import (
             gated_hp,
         )
-        frame_state.hp = gated_hp(frame_state.hp, sess, 11, current_readable=True)
-        assert frame_state.hp == 50, 'gap==1 门内:结算真值覆盖现读(门语义前提)'
+        assert gated_hp(80, sess, 11, current_readable=True) == 50
+        # 驱动输入 = 帧 state 原样:帧带未过门 hp=80,门在观察段不在策略层
+        frame_state = _st(round_num=1)
+        frame_state.hp = 80
+        frame_state.hp_readable = True
         self._write_prep_frame(sess, frame_state, 'full')
         strat.decide_invest('strategy', ['定期福利'], frame_state, sess,
                             _pick_cfg())
         assert len(seen) == 1
-        assert seen[0].hp == 50, (
-            '驱动输入 hp 必须为 gated 后值(结算门),不得回退血条现读 80')
+        assert seen[0].hp == 80, (
+            '驱动输入必须吃帧 state hp 原样(门在观察段上游);'
+            '若见 50 = flow 层内联了 hp 改写,违反 ADR-0583 §5.5-戊')

@@ -15,15 +15,14 @@ arbitrage-batch1.md)**:发射帧仲裁段(出口 B,P70 已证)落地后,发射�
 溢出帧预算不变量(gold_after ≥ g*)、仲裁披露缺位红(接线被拆=批 0 假
 阴性形态回归)。
 
-本批锁:
-1. armed 合取语义锁(原「上收逐位等价锁」改写——旧锁锁的「armed ≡
-   form_progress≥1.0 单键」已被 C3 成型质量维取代: armed = 配方完备
-   ∧〔承重满额 ∨ 部署计划不可得 fail-open〕,命题 = ADR-0570;旧等价
-   锁的用途是证明 ADR-0557 上收零语义变化,该用途随质量合取入核而
-   过期,按锁的存在性纪律改写重推非机械跟绿);
+本文件锁(2026-09-09 瘦身批重整;armed 合取语义/配方腿阈值/推迟支
+本体已归并主题文件 test_cw_launch_quality_conjunction.py,此处不再
+重复持有——覆盖对账见 reports/_cluster_P.md):
+1. armed 判据核边界锁:None 输入保守 False;admission 位 =
+   launch_admission_report 同输入直调逐位一致(核内禁第二套三元);
 2. 消费面单一源锁(小批①):两消费面(cw_loop/engine_p1)源内均无
-   ``form_progress(`` 内联调用、均经判据核单一函数;engine 行为随判据
-   核注入翻转(消费证明,非仅 import 面);
+   ``form_progress(`` 内联调用;engine 行为随判据核注入翻转(消费
+   证明,非仅 import 面;engine 侧接线由本行为锁辖,不另立在场烟雾);
 3. 短路+仲裁行为锁(批 1 重推):真 sim 账本发射帧 short_circuited=True
    ∧ 仲裁披露在位;带内帧零消费(fail-closed);溢出帧预算不变量;
 4. 哨兵锁(批 1 重推):check_sim_launch_short_circuit 对「分键缺位/
@@ -38,7 +37,6 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_launch_admission
-from sr_od.application.currency_war.kernel.cw_comps import form_progress
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.sim.checks.launch import (
     check_sim_launch_short_circuit,
@@ -132,13 +130,6 @@ def _fake_state(board: dict[str, int], deployed: list = (),
                            level=6, deploy_cap=6, max_units=lambda: 6)
 
 
-def _recipe_ok(state, comp) -> bool:
-    """配方腿参照实现(readiness_form_ok 同式):输入齐备 ∧
-    form_progress >= 1.0——armed 的配方腿唯一面。"""
-    return (comp is not None and state is not None
-            and form_progress(comp, state) >= 1.0)
-
-
 def _line_members(comp):
     from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
         line_members,
@@ -146,61 +137,18 @@ def _line_members(comp):
     return line_members(comp)
 
 
-class TestKernelArmedConjunctionLock:
-    """锁 1(重推;ADR-0570):armed 合取语义锁。
+class TestKernelArmedCoreBoundaries:
+    """armed 判据核边界锁(合取语义本体已归并主题文件
+    test_cw_launch_quality_conjunction.py——真值表/推迟支/配方腿阈值
+    由其 TestArmedConjunctionTruthTable 五测承载,亲读证实超集,本类
+    只留主题文件所无的两面)。
 
-    旧形态说明(为什么旧锁过期):本类原名 TestKernelEquivalenceLock,
-    锁「armed ≡ form_progress≥1.0 单键逐位一致」——那是 ADR-0557 判据
-    上收批的零语义变化证明。C3 成型质量维落码(ADR-0570)后该语义被
-    设计性取代:armed = 配方完备 ∧〔承重满额 ∨ 部署计划不可得〕。按
-    锁的存在性纪律改写重推:新锁钉合取语义本体(真值表,期望值显式
-    编码不回调生产函数),配方腿边界保留。
+    历史注(锁的存在性纪律):本类原名 TestKernelEquivalenceLock→
+    TestKernelArmedConjunctionLock,先后锁过「armed ≡ form_progress
+    单键逐位一致」(ADR-0557 零语义变化证明)与 30 帧合取真值表
+    (ADR-0570)——两个用途分别随质量合取入核、随主题文件建立而
+    由更超集的载体接管,按覆盖对账纪律移归,非判锁对象退役。
     """
-
-    # 夹具面(注册表直调核实):'藿藿/停云/爻光' = 仙舟系(视图内);
-    # '卡芙卡' = {持续伤害,星核猎手}(仙舟单阵营视图的线外件);
-    # '丹恒·饮月' = 仙舟系 bench 可部署件(计划可得腿)。
-    _BOARDS = [{}, {'仙舟': 0}, {'仙舟': 1}, {'仙舟': 3},
-               {'仙舟': 3, '贝洛伯格': 1}, {'仙舟': 9}]
-    _COMPS = [None, _FakeComp({}), _FakeComp({'仙舟': 0}),
-              _FakeComp({'仙舟': 3}), _FakeComp({'仙舟': 4})]
-
-    def test_armed_conjunction_truth_table(self):
-        """合取真值表(期望值显式编码):配方腿不满足恒假;配方腿满足
-        时——deployed 空表(平凡承重)开闸、线外件+无 bench 计划
-        fail-open 开闸;旧单键语义在本表上已不可复现(线外件+计划帧
-        armed=False = 本批行为变更本体,红证见交付报告)。"""
-        checked = 0
-        for board in self._BOARDS:
-            st = _fake_state(board)
-            for comp in self._COMPS:
-                core = cw_launch_admission.readiness_launch_decision(
-                    st, comp, line_members=_line_members)
-                recipe = _recipe_ok(st, comp)
-                # 空表平凡承重:armed ≡ 配方腿(该域上承重闸惰性);
-                # quality 报告位随配方腿在位/缺席
-                assert core['armed'] is recipe, (board, comp)
-                if recipe:
-                    assert core['quality'] is not None, (board, comp)
-                else:
-                    assert core['quality'] is None, (board, comp)
-                checked += 1
-        assert checked == 30
-
-    def test_armed_offline_with_plan_defers(self):
-        """质量闸本体帧(红证锚):fp=1.0 ∧ 板面含线外件 ∧ bench 有
-        可部署件 → armed False(旧单键语义在此帧族恒 True——本断言
-        对旧形态必红,红证记录于交付报告)。"""
-        st = _fake_state({'仙舟': 3},
-                         deployed=['藿藿', '停云', '爻光', '卡芙卡'],
-                         bench=['丹恒·饮月'])
-        core = cw_launch_admission.readiness_launch_decision(
-            st, _FakeComp({'仙舟': 3}), line_members=_line_members)
-        assert core['armed'] is False
-        q = core['quality']
-        assert q['load_bearing_full'] is False
-        assert q['deploy_plan_available'] is True
-        assert q['defer_by_quality'] is True
 
     def test_armed_none_input_short_circuits(self):
         """None 输入边界:comp/state 任一 None ⇒ armed False(旧式短路序
@@ -211,17 +159,6 @@ class TestKernelArmedConjunctionLock:
         assert cw_launch_admission.readiness_launch_decision(
             _fake_state({'仙舟': 3}), None,
             line_members=_line_members)['armed'] is False
-
-    def test_boundary_fp_exactly_1_and_below(self):
-        """配方腿阈值边界:fp 恰 1.0 武装、0.999… 不武装(阈值唯一面 =
-        form_progress 语义,ADR-0570 零改申报)。"""
-        full = _fake_state({'仙舟': 3})           # 3/3 = 1.0
-        comp3 = _FakeComp({'仙舟': 3})
-        below = _fake_state({'仙舟': 2})          # 2/3 < 1.0
-        assert cw_launch_admission.readiness_launch_decision(
-            full, comp3, line_members=_line_members)['armed'] is True
-        assert cw_launch_admission.readiness_launch_decision(
-            below, comp3, line_members=_line_members)['armed'] is False
 
     def test_admission_equals_direct_report_when_armed(self):
         """admission 位 = launch_admission_report 同输入直调逐位一致
@@ -243,7 +180,11 @@ class TestConsumerSingleSourceLock:
 
     def test_consumers_reference_kernel_core_only(self):
         """cw_loop/engine_p1 源内均无 ``form_progress(`` 直调(判据唯一
-        实现 = kernel),且均经 readiness_launch_decision 消费。"""
+        实现 = kernel,单一源守卫);cw_loop 侧另留一条经核消费在场烟雾
+        ——engine 侧接线不再立在场断言:同文件
+        test_engine_behavior_follows_kernel_core 已以「判据核注入翻转 ⇒
+        engine 行为翻转」行为锁辖(在场断言只会早红且零增量判别力,
+        README 纪律 8 烟雾至多 1 条)。"""
         from one_dragon.utils.file_utils import get_project_root
         root = get_project_root()
         for rel in ('src/sr_od/application/currency_war/operations/cw_loop.py',
@@ -251,8 +192,10 @@ class TestConsumerSingleSourceLock:
             src = (root / rel).read_text(encoding='utf-8')
             assert 'form_progress(' not in src, (
                 f'{rel} 残留内联成型判据(判据核单一源锁)')
-            assert 'readiness_launch_decision' in src, (
-                f'{rel} 未消费判据核单一源')
+        loop_src = (root / 'src/sr_od/application/currency_war/operations/'
+                    'cw_loop.py').read_text(encoding='utf-8')
+        assert 'readiness_launch_decision' in loop_src, (
+            'cw_loop 未消费判据核单一源')
 
     def test_engine_behavior_follows_kernel_core(self, monkeypatch):
         """消费证明(行为面,非 import 面):判据核强制武装 ⇒ sim 发射帧
@@ -408,13 +351,6 @@ class TestAntiFalseNegativeSentinel:
         legacy_all = [self._row({'__type__': 'LaunchBattle'})] * 2
         out2 = check_sim_launch_short_circuit([legacy_all, legacy_all])
         assert out2['violations'] == 2   # 全批零短路帧 → 全红
-
-    def test_real_seeded_batch_sentinel_green(self):
-        """真账本哨兵绿:有发射帧且全部短路(与锁 3 同源对账)。"""
-        ledgers = [_seeded_result(seed).ledger for seed in range(3)]
-        out = check_sim_launch_short_circuit(ledgers)
-        assert out['launch_frames'] > 0, '零发射帧(采样缺陷,需换 seed)'
-        assert out['violations'] == 0
 
 
 if __name__ == '__main__':
