@@ -5,7 +5,9 @@
   id() 旁表只作不可弱引用且属性不可写对象(__slots__ 族)的最后兜底,
   兜底条目进程内驻留、随测试会话(进程)结束消亡;桩 GC 后 id 复用串号
   通道在主路径消除,兜底分支收窄非消除(ADR-0563 决策-3 收敛口径,
-  声明+残留风险如实)。
+  声明+残留风险如实)。机制锁锁存储形状
+  (test_stub_exec_state_stored_on_object 等),行为锁锁事故后果
+  (test_id_reuse_after_gc_returns_fresh_state:桩回收+id 复用最小场景)。
 - 策略状态工厂注入槽(_STATE_FACTORY 模块级全局,测试纪律第 4 条:
   setup 一并 monkeypatch 桩化防跨测试串染):未注册 → None 不代建 /
   注册 → 惰性冷建写回、幂等复用与覆盖语义。
@@ -19,6 +21,7 @@
 """
 from __future__ import annotations
 
+import gc
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -67,6 +70,59 @@ def test_stub_states_isolated_and_bind_override() -> None:
     assert es_mod.bind_exec_state(a, fresh) is fresh
     assert es_mod.exec_state_of(a) is fresh, '显式绑定后访问口须解析到绑定实例'
     assert es_mod._EXEC_BY_SESSION_ID == {}
+
+
+def test_id_reuse_after_gc_returns_fresh_state() -> None:
+    """行为锁:桩回收 + id 复用的最小场景下,新桩必须拿全新 ExecState。
+
+    复现的是 T-25 定谳的「换人抽签红」事故链(全量第 4 红):id 键旁表
+    形态下条目永不清理 → 桩 session 带 detour 毒标记后回收 → id 被新桩
+    复用 → 新桩读走死会话载体 → ``_should_supply_detour`` 误判 detour
+    已完成 → detour 家族随机成员假红(单跑/整文件跑分配节奏撞不上所以
+    绿,全量规模必现——本锁用猎取循环把「几乎必现」变「必现」)。
+
+    出处 = ADR-0563 决策-3(挂对象属性后「桩 GC 后 id 复用串号」通道在
+    主路径消除;T-25 定谳报告为易失产物,其机理语义已回填该 ADR)。
+    断言面取事故同款读形 ``getattr(exec_state_of(session),
+    '_supply_detour_done', False)``(cw_screen_supply_node
+    _should_supply_detour 的判据形态)。前置两条机制锁
+    (test_stub_exec_state_stored_on_object 等)锁存储形状,本锁锁行为
+    后果,不互为重复。"""
+    es_mod = _es_mod()
+    # ① 毒源:T-25 事故中 detour 系测试对桩 session 执行态的写入形态。
+    dead = SimpleNamespace()
+    ex_dead = es_mod.exec_state_of(dead)
+    ex_dead._supply_detour_done = True
+    # ② 回收桩对象:死会话载体是否随葬,是新旧实现的分水岭。
+    dead_id = id(dead)
+    del dead
+    gc.collect()
+    # ③ 构造 id 复用:CPython 同尺寸对象走自由表,回收块的 id 几乎必被
+    #    后续同型对象复用。持活已分配对象逼分配器持续消耗自由块——裸
+    #    循环里上一对象在下一轮重绑时才释放,自由表 LIFO 使 id 在同一块
+    #    上乒乓,永远撞不到死桩块(首跑实证)。上限内未复用 = 场景构造
+    #    失败,显式红交人工核查,禁静默跳过(静默跳过 = 锁形同虚设)。
+    probe = None
+    keep: list[SimpleNamespace] = []
+    for _ in range(200_000):
+        candidate = SimpleNamespace()
+        keep.append(candidate)
+        if id(candidate) == dead_id:
+            probe = candidate
+            break
+    del keep
+    assert probe is not None, (
+        f'20 万次分配未复现 id 复用(dead_id={dead_id}),'
+        'id 复用场景构造失败,分配器行为前提破缺需人工核查')
+    # ④ 行为断言:复用 id 的新桩拿到全新载体、毒标记不泄入
+    #    (变异打红锚点:回退 id 旁表形态时此断言红,失败信息即事故形态)。
+    ex_probe = es_mod.exec_state_of(probe)
+    assert ex_probe is not ex_dead, (
+        'id 复用的新 session 解析到死会话 ExecState(T-25 串号形态复现:'
+        '新桩拿到的载体携带前局写入)')
+    assert getattr(ex_probe, '_supply_detour_done', False) is False, (
+        '死会话的 detour 毒标记泄入 id 复用的新 session'
+        '(生产读形误判 detour 已完成 → 抽签红根因)')
 
 
 def test_real_session_uses_weak_table_not_attr() -> None:
