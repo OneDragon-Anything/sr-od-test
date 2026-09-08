@@ -157,9 +157,12 @@ class TestSerializationEquivalence:
     def test_decisions_transcription_carries_reason(self):
         """decisions 行动作转录(既有转录面,全字段平铺):reason 键加法
         出现且随值透传;旧读端 .get 容忍缺键(schema 纪律「新字段末尾
-        追加且可选」)。"""
+        追加且可选」)。T-159 登记行:PrepAction.route_tag(发射臂路线
+        标签,kw_only 载体)同入转录——决策/遥测消费端均为 dict .get
+        容忍面,加法增益零判定面。"""
         d0 = serialize_action(PrepSellBench(slot=1))
-        assert d0 == {'slot': 1, 'reason': '', '__type__': 'SellBench'}
+        assert d0 == {'route_tag': '', 'slot': 1, 'reason': '',
+                      '__type__': 'SellBench'}
         d1 = serialize_action(
             PrepSellBench(slot=1, reason='line_switch_collapse'))
         assert d1['reason'] == 'line_switch_collapse'
@@ -249,8 +252,11 @@ class TestEmissionFace:
         assert 'funding_support_stall_convert' not in ct
 
     def test_prep_interest_emit_unmarked(self):
-        """prep 凑息位(mandate ②(a) 接线):卖出发射行为不变,载体
-        reason/标记缺省 ''(归因枚举填充已拆);发射计数键零断链。"""
+        """prep 凑息位(mandate ②(a) 接线):卖出发射行为不变,载体字段
+        reason(归因面)缺省 ''(归因枚举填充已拆);发射计数键零断链。
+        T-159 登记行:Emitted.reason 改载 route_tag = 'interest_prep'
+        (发射臂构造事实,S1 清键路由消费,非归因遥测——治理立场 =
+        内部路由键非放行证据,§3.3)。"""
         sess = _sess()
         bench = [_bc(_FUEL, slot=1)]
         frame = mandate.MandateFrame(
@@ -263,14 +269,16 @@ class TestEmissionFace:
         sells = _prep_emit_out(out)
         assert len(sells) == 1
         assert sells[0].action.reason == ''
-        assert sells[0].reason == ''
+        assert sells[0].reason == 'interest_prep'
         assert state_of(sess).cw4_counters.get('t1_interest_prep_emit') == 1
 
     def test_prep_m4_frees_seat_unmarked(self):
         """prep M4 腾席位(mandate M2 重试环):plain/T3 两形态卖出发射
-        不变,载体 reason 缺省 '';T3 帧销账行为保留(出口①)。
-        买断制覆写关凑息臂(裸 session g* 高,gold<g* 会让 ②(a) 先于
-        M2 清空燃料面,隔离本位的发射臂)。"""
+        不变,载体字段 reason(归因面)缺省 '';T3 帧销账行为保留(出口
+        ①)。买断制覆写关凑息臂(裸 session g* 高,gold<g* 会让 ②(a)
+        先于 M2 清空燃料面,隔离本位的发射臂)。T-159 登记行:Emitted.
+        reason 改载 route_tag = 'm4_fuel_sell'(白名单内,落地经路径
+        (i) 清 S1 开店闩)。"""
         k = ('目标件',)
         # plain:9 个互异线外 1★ 燃料,victim = 序首。
         sess = _sess()
@@ -285,7 +293,7 @@ class TestEmissionFace:
         sells = _prep_emit_out(out)
         assert len(sells) == 1
         assert sells[0].action.reason == ''
-        assert sells[0].reason == ''
+        assert sells[0].reason == 'm4_fuel_sell'
         # T3 特化:8 张 3★ 非燃料 + 唯一被保垫件 ⇒ victim = 垫件。
         sess2 = _sess()
         state_of(sess2).cw4_cap_override = 0
@@ -302,7 +310,7 @@ class TestEmissionFace:
         sells2 = _prep_emit_out(out2)
         assert len(sells2) == 1
         assert sells2[0].action.reason == ''
-        assert sells2[0].reason == ''
+        assert sells2[0].reason == 'm4_fuel_sell'
         ct2 = state_of(sess2).cw4_counters
         assert ct2.get('close_on_sell') == 1   # 出口①卖出销(转化类)
 
@@ -628,7 +636,11 @@ class TestConsumptionSiteManifest:
     未登记,处置 = 清单加行 + 确认其排除集出自 sell_exclusions/
     funding_hold_fallback,非机械跟绿。"""
 
-    _MANIFEST: dict[str, int] = {'entry.py': 2, 'mandate.py': 2, 'shop.py': 5}
+    _MANIFEST: dict[str, int] = {'entry.py': 3, 'mandate.py': 3, 'shop.py': 5}
+    # T-159 加行登记:entry.py +1 = 迁移 B 席满前置谓词的腾席卖(①位
+    # spheres 分支,装配 A channel='m4_fuel' 同源);mandate.py +1 =
+    # 迁移 A wanted 消费臂腿 2(M4 卖角色,同源候选)。两新消费位排除
+    # 集均出自 sell_exclusions 单一入口,非手搓。
 
     def _counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}

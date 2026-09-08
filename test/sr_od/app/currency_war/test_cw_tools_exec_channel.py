@@ -9,17 +9,21 @@
 2. 消耗确认通道锁:classify_tool_consume 三分支 + 多副本 multiset diff;
 3. 建档画面 fixture 交互锁:存档备战帧(「攻略已应用」,含冶金炉/
    轮滑鞋真值,W546 批实证)→ read_equips → 计划端到端;
-4. 发射位锁:run_mandate admitted 非空才发 RunTools + 执行位闩
+4. 发射位锁(T-159 迁移 C 后 = entry.emit ②③之间;原 run_mandate M7.5
+   块已删,dd-027 回排特例消除):admitted 非空才发 RunTools + 执行位闩
    (mark_tools_pass_executed,发射位只读不写,与 M7 闩同型);
 5. 词表锁:RunTools 入 PREP_ACTION_TYPES 白名单 + entry 条件续分类。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import sys
 from pathlib import Path
 
 import pytest
+
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 
 REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(REPO / 'src'))
@@ -285,21 +289,38 @@ def _session_with(owned):
 
 
 class TestMandateEmission:
+    """T-159 迁移 C 改写(锁语义重推,非机械跟绿):发射位自 run_mandate
+    M7.5 块物理移出至 entry.emit ②证明 pass 与③升档器求值位之间(审 A1
+    主案:dd-027 回排使 run_mandate 内任何 RunTools 必被重排到 LevelUp
+    之后 ⇒ 同帧常态下本帧从未执行)——原「run_mandate 发射」断言面随
+    设计出处失效,本组改锚 emit 链;admitted 门/评估留痕/执行位闩语义
+    零变更。位置/执行序行为细锁 = test_cw_prep_flag_machine。"""
 
-    def _frame(self, round_num: int = 3, gold: int = 20, stop: bool = False):
-        return mandate.MandateFrame(
-            gold=gold, level=3, bench=[], deployed=[], deploy_cap=4,
-            node_type=None, stop_flag=stop, k_members=(),
-            round_num=round_num)
+    def _emit(self, s, st):
+        from types import SimpleNamespace
+
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            PrepObservation,
+        )
+        # 黑板契约 = 紧缩型(仅已识别件;snapshot_from_obs 同款过滤),
+        # GameState.bench 是 pad 态,禁原样传入决策面。
+        obs = PrepObservation(
+            state=st,
+            bench_chars=[b for b in getattr(st, 'bench', [])
+                         if b is not None],
+            deployed_chars=[d for d in getattr(st, 'deployed', [])
+                            if d is not None],
+            free_bench_slots=9)
+        return entry.emit(obs, SimpleNamespace(), s, None)
 
     def test_admitted_emits_runtools(self):
         """admitted 非空(炉+死库存)→ 发射 RunTools;判据全拒时不发。"""
         s = _session_with([_FURNACE, _DEAD])
         st = GameState(plane=1, round_num=3)
-        out = mandate.run_mandate(self._frame(), s, state=st)
+        out = self._emit(s, st)
         assert any(isinstance(e.action, RunTools) for e in out)
         s2 = _session_with([_TOKEN])   # 令牌 R(c) 缺档 → 全拒 → 不发
-        out2 = mandate.run_mandate(self._frame(), s2, state=st)
+        out2 = self._emit(s2, st)
         assert not any(isinstance(e.action, RunTools) for e in out2)
 
     def test_m75_evaluated_trace_and_reject_keys(self):
@@ -309,12 +330,12 @@ class TestMandateEmission:
         m7_5_reject_none。发射门行为不变(全拒仍不发 RunTools)。"""
         st = GameState(plane=1, round_num=3)
         s2 = _session_with([_TOKEN])   # 令牌 R(c) 缺档 → 判据全拒
-        out2 = mandate.run_mandate(self._frame(), s2, state=st)
+        out2 = self._emit(s2, st)
         assert state_of(s2).cw4_counters.get('m7_5_evaluated') == 1
         assert state_of(s2).cw4_counters.get('m7_5_reject_lucky_token_pick') == 1
         assert not any(isinstance(e.action, RunTools) for e in out2)
         s3 = _session_with(['轮滑鞋'])   # owned 在场但无工具条目产出
-        mandate.run_mandate(self._frame(), s3, state=st)
+        self._emit(s3, st)
         assert state_of(s3).cw4_counters.get('m7_5_evaluated') == 1
         assert state_of(s3).cw4_counters.get('m7_5_reject_none') == 1
         # 未评估帧(owned 快照空)不计 evaluated(评估帧与未评估帧可辨)
@@ -322,7 +343,7 @@ class TestMandateEmission:
         state_of(s4).cw4_counters = {}
         s4.last_owned_equips = None
         state_of(s4).target_comp = _mk_comp([_KEY])
-        mandate.run_mandate(self._frame(), s4, state=st)
+        self._emit(s4, st)
         assert 'm7_5_evaluated' not in state_of(s4).cw4_counters
 
     def test_exec_latch_blocks_reemission_same_phase(self):
@@ -330,49 +351,27 @@ class TestMandateEmission:
         (发射位只读不写,与 M7 装备闩同型);位面推进 = 新键自动失效。"""
         s = _session_with([_FURNACE, _DEAD])
         st = GameState(plane=1, round_num=3)
-        out1 = mandate.run_mandate(self._frame(), s, state=st)
+        out1 = self._emit(s, st)
         assert any(isinstance(e.action, RunTools) for e in out1)
         mandate.mark_tools_pass_executed(s, st)
-        out2 = mandate.run_mandate(self._frame(), s, state=st)
+        out2 = self._emit(s, st)
         assert not any(isinstance(e.action, RunTools) for e in out2)
         assert state_of(s).cw4_counters.get('tools_latch_skip', 0) == 1
         st2 = GameState(plane=1, round_num=4)   # 轮次推进 → 键失效重评
-        out3 = mandate.run_mandate(self._frame(round_num=4), s, state=st2)
+        out3 = self._emit(s, st2)
         assert any(isinstance(e.action, RunTools) for e in out3)
-
-    def test_runtools_reordered_before_truncation(self):
-        """dd-027 同型回排:RunTools 与开店意图同帧时,工具先于截断点。
-
-        真发射路径帧(修空锁:原 gold=20/bench 空帧无 OpenShop 发射路径,
-        断言条件恒假)= M6 溢余转压库——stop_flag + 溢余金(g999 > g*)
-        + 席位可用 + T_SEARCH_A 注入(provisional 开闸,测后复原)。"""
-        from sr_od.application.currency_war.kernel.cw_prep_actions import (
-            OpenShop,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
-            provisional,
-        )
-        s = _session_with([_FURNACE, _DEAD])
-        st = GameState(plane=1, round_num=3)
-        provisional.inject('T_SEARCH_A', 1)
-        try:
-            out = mandate.run_mandate(
-                self._frame(gold=999, stop=True), s, state=st)
-        finally:
-            provisional.reset('T_SEARCH_A')
-        kinds = [type(e.action) for e in out]
-        assert OpenShop in kinds and RunTools in kinds, \
-            f'前置失真:同帧应发 RunTools+OpenShop,实发 {kinds}'
-        assert kinds.index(RunTools) < kinds.index(OpenShop)
 
     def test_latch_write_point_is_executor_only(self):
         """闩唯一写点在 mandate.mark_tools_pass_executed(键式 = (plane,
-        round),与 run_mandate phase 同构);发射位无写点(静态锁:
-        cw4_tools_phase 只允许出现在 mandate.py 两处——写点与读点)。"""
-        src = Path(mandate.__file__).read_text(encoding='utf-8')
-        # 读点(getattr)+ 写点(赋值)= 恰两处;再多 = 第二写点病灶
-        assert src.count("'cw4_tools_phase'") == 1   # getattr 读点
-        assert src.count('state_of(session).cw4_tools_phase') == 1   # 唯一写点
+        round),与 run_mandate phase 同构);发射位无写点(T-159 迁移 C
+        后读点随发射位迁 entry.emit,单一源守卫按新布局登记:mandate.py
+        恰一写点零读点,entry.py 恰一读点零写点)。"""
+        src_mandate = Path(mandate.__file__).read_text(encoding='utf-8')
+        src_entry = Path(entry.__file__).read_text(encoding='utf-8')
+        assert src_mandate.count('state_of(session).cw4_tools_phase') == 1
+        assert src_mandate.count("'cw4_tools_phase'") == 0
+        assert src_entry.count("'cw4_tools_phase'") == 1   # getattr 读点
+        assert 'state_of(session).cw4_tools_phase =' not in src_entry
 
 
 # ===== 5. 词表锁 =====
