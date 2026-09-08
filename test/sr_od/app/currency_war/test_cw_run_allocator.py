@@ -3,7 +3,6 @@ import random
 
 from sr_od.application.currency_war.kernel.cw_run_allocator import (
     PRIOR_CAP,
-    StrategyArm,
     ThompsonAllocator,
 )
 
@@ -56,11 +55,13 @@ def test_salvage_triggers_on_dead_runs_only():
     """必死局回收:P(win)≥ε 不触发;<ε 触发并选方差最大臂 + 审计留证。"""
     alloc = _alloc(seed=2)
     assert alloc.dead_run_salvage(0.30) is None      # 还有救
-    # 拉开方差:列车加自家样本(方差收窄),量子保持宽
+    # 拉开方差:列车加自家样本(方差收窄);封顶先验下未动臂方差序
+    # = 万敌(α=β=4,均值 0.5) > 量子(3.2/4.8) > 仙舟,列车收窄后
+    # 远低于三者——salvage 为纯 argmax(无采样),钉具体臂是确定性的。
     for _ in range(15):
         alloc.update('列车同行', 1.0)
     k = alloc.dead_run_salvage(0.02)
-    assert k is not None and k != '列车同行'          # 选宽方差臂(量子/仙舟/万敌)
+    assert k == '万敌'   # 精确钉方差最大臂:argmax 换向(min/max 对调)/方差式破坏时红
     assert len(alloc.salvage_log) == 1
     assert alloc.salvage_log[0]['p_win'] == 0.02
 

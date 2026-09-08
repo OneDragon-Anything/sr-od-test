@@ -5,7 +5,6 @@
 消费位已收编):未落地 ⇒ 两侧都不动(不投影/不守卫/不入「已买」集);
 落地 ⇒ 投影 + guard_expected_vs_tracked。
 """
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -20,16 +19,9 @@ from sr_od.application.currency_war.operations.cw_op import (
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     BuyCardOp,
 )
-
-
-class _FakeAop(BuyCardOp):
-    # project 方法体由 _drive 的 monkeypatch 覆盖,仅作 setattr 属性锚。
-
-    def __init__(self, action):
-        super().__init__(action)
-
-    def project(self, state):
-        return ('proj', state)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 
 
 def _action() -> BuyCard:
@@ -42,7 +34,9 @@ def _drive(monkeypatch, ok: bool):
     monkeypatch.setattr(cw_shop_action_ops, 'guard_expected_vs_tracked',
                         lambda proj, session: calls.append(
                             ('guard', proj)))
-    aop = _FakeAop(_action())
+    # BuyCardOp 本体即可:project 经 monkeypatch 逐实例覆盖(类上
+    # ShopActionOp.project 满足 setattr 存在性,无需再造子类壳)。
+    aop = BuyCardOp(_action())
     monkeypatch.setattr(
         aop, 'project',
         lambda st: calls.append(('project', st)) or ('proj', st))
