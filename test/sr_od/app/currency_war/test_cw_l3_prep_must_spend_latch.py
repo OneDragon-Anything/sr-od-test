@@ -89,14 +89,10 @@ class TestPrepMustSpendLatch:
         assert state_of(sess).cw4_counters.get('must_spend_zone_latch_extend') == 1
         assert state_of(sess).cw4_counters.get('levelup_budget_gate_blocked') == 2
 
-    def test_fresh_session_still_defers(self):
-        """负向:无闩的新备战期帧(g43 域外)⇒ 危机带常态挂起照旧
-        (crisis_level_spend_defer),域外语义零变化。"""
-        fb, sess, stb = _mk(43)
-        out = mandate.run_mandate(fb, sess, state=stb)
-        assert not _lvls(out)
-        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer') == 1
-        assert 'must_spend_zone_latch_extend' not in state_of(sess).cw4_counters
+    # 「无闩帧危机带常态挂起」对照面由 test_latch_expires_next_round 承载
+    # (过帧同走 _zone_latched=False 同一生产分支,断言对逐位相同:
+    # crisis_level_spend_defer==1 ∧ 无 latch_extend;过期测多钉键式
+    # (plane, round) 不继承语义,为超集,不另立 virgin 副本)。
 
     def test_latch_expires_next_round(self):
         """闩相位键式 = (plane, round):下一备战期(新键)不继承,
@@ -162,7 +158,12 @@ class TestL3RejectKeys:
 
 class TestBoardTargetLineTrackedFallback:
     """b_t 实机回退源(两局全帧 0.0 实证:商店观察帧 deployed
-    恒空 → 写者输入缺;回退 = exec_state_of(session).tracked_deployed)。"""
+    恒空 → 写者输入缺;回退 = exec_state_of(session).tracked_deployed)。
+
+    空板 = 0 面由 test_cw_obs_face_batch2.py::TestBoardTargetLineWriter::
+    test_empty_board_zero_and_stamp 承载(同输入 GameState() 直调同一
+    写者,超集另锁轮键戳章),此处只留回退路径独家面。
+    """
 
     def _strat(self):
         from sr_od.application.currency_war.sim.engine_p1 import (
@@ -186,16 +187,6 @@ class TestBoardTargetLineTrackedFallback:
                       position_pref='back') for i in range(3)]
         self._strat().write_shop_mirrors(st, sess)
         assert state_of(sess).v3_b_t == 3
-
-    def test_truly_empty_board_stays_zero(self):
-        """tracked 同空(板面真空事实态)⇒ 恒 0 不虚构。"""
-        from sr_od.application.currency_war.kernel.cw_strategy_session import (
-            StrategySession,
-        )
-        sess = StrategySession()
-        st = GameState()
-        self._strat().write_shop_mirrors(st, sess)
-        assert state_of(sess).v3_b_t == 0
 
 
 class TestRecorderObservationWiring:
