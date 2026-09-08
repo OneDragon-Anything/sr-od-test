@@ -799,6 +799,211 @@ def test_hook_swallows_regeneration_failure(
     assert ledger_hooks._regenerate_delta_pool_after_run() is None
 
 
+# ==================== pool_data_defense(池数据防线)====================
+# 生成器两道数据防线(2026-09-08 事故实证):①run 级隔离——前缀规则
+# (fake_/sim_,类别级)+ 显式名单(个例级)统一判据,拦「进错目录的
+# run」(假游戏局 fake_20260908 混进 live 生产流,目录守卫对 run 粒度
+# 失明);②塌缩守卫——源行数账较现快照行数账 < 50% 拒绝再生覆写、
+# 保留现快照(微型语料当日三次静默覆盖全量快照;对账正本 =
+# ADR-0595 与编排者台账 T-126 note, 2026-09-08)。出处:生成器隔离机制块头与
+# SNAPSHOT_COLLAPSE_MIN_RATIO 常量注(持久语义锚)。防线自检三态:
+# 假语料源 → 拒绝;正常增量 → 放行;塌缩源 → 拒绝。
+# fixture 全部 tmp_path 合成语料 + 写目标指 tmp(测试纪律 2/19:
+# 零真实副作用、不碰生产快照)。
+
+import json as _defense_json
+from pathlib import Path as _defense_Path
+
+
+def _defense_delta_row(run_id: str, hp_from: float,
+                       hp_to: float) -> tuple[dict, dict, dict]:
+    """单差分 run 的最小行组:1 decisions 行 + 2 outcomes 行(奖励腿)。
+
+    形态照搬本文件既有合成语料先例(test_regenerate_frozen_by_default:
+    Σboard join 物料须覆盖配对后继键,否则 dep None 静默跳对——锁会
+    假绿);各 run 的 hp 值错开,凭值即可证明「谁在池里、谁被隔离」。
+    """
+    dec = {'run_id': run_id, 'plane': 1, 'round_num': 2,
+           'state': {'board': {'散': 4}, 'deployed': []}}
+    out1 = {'run_id': run_id, 'plane': 1, 'round_num': 1,
+            'node_type': '奖励', 'hp_after': hp_from,
+            'hp_confidence': 1.0, 'board_before': {}}
+    out2 = {'run_id': run_id, 'plane': 1, 'round_num': 2,
+            'node_type': '奖励', 'hp_after': hp_to,
+            'hp_confidence': 1.0, 'board_before': {'散': 1}}
+    return dec, out1, out2
+
+
+def _defense_write_corpus(src: _defense_Path,
+                          row_groups: list[tuple[dict, dict, dict]]) -> None:
+    """把行组落成 replay 目录(decisions/outcomes 各一份 jsonl,整写)。"""
+    src.mkdir(parents=True, exist_ok=True)
+    (src / 'decisions.jsonl').write_text(
+        '\n'.join(_defense_json.dumps(d, ensure_ascii=False)
+                  for d, _, _ in row_groups) + '\n', encoding='utf-8')
+    (src / 'outcomes.jsonl').write_text(
+        '\n'.join(_defense_json.dumps(o, ensure_ascii=False)
+                  for _, o1, o2 in row_groups for o in (o1, o2)) + '\n',
+        encoding='utf-8')
+
+
+def test_quarantine_reason_single_source() -> None:
+    """隔离判据单一源(防线①):前缀规则(类别级)与显式名单(个例级)
+    都只经 _run_quarantine_reason 出;正常生产 run 与空值放行。
+
+    事故局显式名单保留语义 = 机制化并入(2026-08-22 双进程写竞争
+    两局行为不变:仍隔离),不是删名单。
+    """
+    q = cw_delta_pool_gen._run_quarantine_reason
+    assert q('fake_20260908') is not None \
+        and '假游戏' in (q('fake_20260908') or '')
+    sim_id = 'sim_20260908_120001_n3_s0_aabbccdd_s7'
+    assert q(sim_id) is not None and 'sim 批' in (q(sim_id) or '')
+    assert q('run_20260822_185613') is not None   # 历史事故局并入机制
+    assert q('run_20260822_191028') is not None
+    assert q('run_20260907_214130') is None       # 正常生产 run 放行
+    assert q(None) is None and q('') is None
+
+
+def test_fake_and_sim_runs_isolated_from_snapshot(
+        tmp_path: _defense_Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """防线① 行为锁(混入形态):fake_/sim_ run 混在语料里时物理
+    不入池,正常 run 照常入池,quarantined_hits 如实披露。
+
+    若此锁红:隔离判据被绕开或收窄——假游戏/sim 批行会随下次再生
+    流回提交快照(只「作废信任」不排池的旧病,QUARANTINED_RUNS
+    机制注释所述)。禁为保绿收窄断言。
+    """
+    real_id = 'run_20260908_074522'
+    groups = [
+        _defense_delta_row('fake_20260908', 84, 47),   # 实证同款假游戏前缀
+        _defense_delta_row(
+            'sim_20260908_120001_n1_s0_aabbccdd_s1', 90, 37),
+        _defense_delta_row(real_id, 100, 88),          # Δ=-12 唯一入池值
+    ]
+    src = tmp_path / 'replay'
+    _defense_write_corpus(src, groups)
+    target = tmp_path / 'cw_delta_pool_data.py'
+    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', target)
+    fp = cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
+    ns: dict = {}
+    exec(target.read_text(encoding='utf-8'), ns)
+    snap, meta = ns['SNAPSHOT'], ns['META']
+    vals = [x for planes in snap.values() for bks in planes.values()
+            for v in bks.values() for x in v]
+    assert vals == [-12], vals          # -37/-53(假/sim 腿)不得出现
+    assert set(meta['quarantined_hits']) == {
+        'fake_20260908', 'sim_20260908_120001_n1_s0_aabbccdd_s1'}
+    assert real_id in meta['runs'] and meta['fingerprint'] == fp
+
+
+def test_fake_only_source_rejected_target_untouched(
+        tmp_path: _defense_Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """防线自检·拒绝态①:语料源只有 fake_ run → 隔离后无样本可配对,
+    再生拒绝(池为空)且写目标零落盘——「拒绝」= 不产任何新快照,
+    不是写了坏数据再报警。"""
+    src = tmp_path / 'replay'
+    _defense_write_corpus(
+        src, [_defense_delta_row('fake_20260908', 84, 47)])
+    target = tmp_path / 'cw_delta_pool_data.py'
+    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', target)
+    with pytest.raises(RuntimeError, match='池为空'):
+        cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
+    assert not target.exists()
+
+
+def test_normal_incremental_regeneration_passes(
+        tmp_path: _defense_Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """防线自检·放行态:正常 live 源增量(append-only,行数账只升)
+    再生照常覆写——塌缩守卫只拦「缩」,不拦「长」。"""
+    src = tmp_path / 'replay'
+    target = tmp_path / 'cw_delta_pool_data.py'
+    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', target)
+    groups = [_defense_delta_row(f'run_20260908_{i:04d}', 100 - i, 88 - i)
+              for i in range(4)]
+    _defense_write_corpus(src, groups)
+    cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
+    ns1: dict = {}
+    exec(target.read_text(encoding='utf-8'), ns1)
+    assert sum(ns1['META']['source_rows'].values()) == 12  # 4 run×(1+2)行
+    groups += [_defense_delta_row(f'run_20260909_{i:04d}', 100 - i, 90 - i)
+               for i in range(4)]
+    _defense_write_corpus(src, groups)                     # 行数账翻倍
+    fp2 = cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
+    ns2: dict = {}
+    exec(target.read_text(encoding='utf-8'), ns2)
+    assert sum(ns2['META']['source_rows'].values()) == 24
+    assert ns2['META']['fingerprint'] == fp2
+
+
+def test_collapsed_source_rejected_snapshot_preserved(
+        tmp_path: _defense_Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """防线自检·拒绝态②(塌缩守卫):源行数账 < 现快照行数账 × 50% →
+    SourceCorpusCollapse,且「将被覆写的文件」字节原样保留——保留
+    现快照是本防线的行为本体,不是副作用;异常文案自含两侧行数账
+    (申报差异,局终钩子的 best-effort 警告即告警通道)。"""
+    src = tmp_path / 'replay'
+    target = tmp_path / 'cw_delta_pool_data.py'
+    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', target)
+    groups = [_defense_delta_row(f'run_20260907_{i:04d}', 100 - i, 88 - i)
+              for i in range(4)]
+    _defense_write_corpus(src, groups)
+    cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)  # 建基线
+    before = target.read_text(encoding='utf-8')
+    _defense_write_corpus(src, groups[:1])   # 塌缩:3/12 行 = 25% < 50%
+    with pytest.raises(
+            cw_delta_pool_gen.SourceCorpusCollapse, match='塌缩') as ei:
+        cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
+    msg = str(ei.value)
+    assert '保留现快照' in msg
+    assert '12' in msg and '3' in msg       # 两侧行数账进文案(申报差异)
+    assert target.read_text(encoding='utf-8') == before   # 零覆写
+
+
+def test_auto_pool_quarantine_same_judgment(tmp_path: _defense_Path) -> None:
+    """auto 池同判据锁(ADR-0595 适用范围含 auto 池):_pool_from_replay
+    消费同一 _run_quarantine_reason——fake_/sim_ run 不入缺省校准池,
+    正常 run_ 照常入池(防过滤扩大化),quarantined_hits 同名披露。
+
+    若此锁红:auto 池隔离被拆除——resolve_pool('auto') 是
+    simulate_p1 的缺省池,假局行会持续被配对进缺省校准路径
+    (ADR-0582 方案审阻断-1 同型反模式「默认路径继续吃毒」,
+    ADR-0595 适用范围在案),禁为保绿拆除。"""
+    real_id = 'run_20260908_074522'
+    groups = [
+        _defense_delta_row('fake_20260908', 84, 47),
+        _defense_delta_row('sim_20260908_120001_n1_s0_aabbccdd_s1', 90, 37),
+        _defense_delta_row(real_id, 100, 88),          # Δ=-12 唯一入池值
+    ]
+    d = tmp_path / 'replay'
+    _defense_write_corpus(d, groups)
+    pool, meta = sim_pool._pool_from_replay(d)
+    vals = [x for planes in pool.values() for bks in planes.values()
+            for v in bks.values() for x in v]
+    assert vals == [-12], vals          # -37/-53(假/sim 腿)不得出现
+    assert set(meta['quarantined_hits']) == {
+        'fake_20260908', 'sim_20260908_120001_n1_s0_aabbccdd_s1'}
+    assert real_id in meta['runs']
+
+
+def test_auto_pool_normal_run_source_taken(tmp_path: _defense_Path) -> None:
+    """auto 池放行锁(F1 反向):纯正常 run_ 源在 _pool_from_replay
+    照常配对入池——隔离只辖 fake_/sim_ 前缀与显式名单,禁扩大化
+    误伤生产局(run_ 前缀是生产局唯一历史形态,注册表核实)。"""
+    groups = [_defense_delta_row('run_20260908_074522', 100, 88)]
+    d = tmp_path / 'replay'
+    _defense_write_corpus(d, groups)
+    pool, meta = sim_pool._pool_from_replay(d)
+    vals = [x for planes in pool.values() for bks in planes.values()
+            for v in bks.values() for x in v]
+    assert vals == [-12], vals
+    assert meta['quarantined_hits'] == []
+
+
 # ==================== r409_delta_pool_starvation_guard ====================
 # (2026-09-03 瘦身批自 test_cw_r409_delta_pool_starvation_guard.py 原文并入;
 # 断言零改动;sim_pool/runner/random 复用前述成员既有绑定)
