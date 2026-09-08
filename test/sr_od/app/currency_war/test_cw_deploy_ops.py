@@ -15,144 +15,43 @@
 - test_deploy_recipe_target: test_deploy_recipe_target.py
 - test_empty_board_guard: test_empty_board_guard.py
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+
+2026-09-07 瘦身批处置注记(判据=sr-od-test/README 测试纪律,报告=
+.debug/temp/cw_test_slim_audit/reports/test_cw_deploy_ops.py.md):
+- a3_deploy_align 段(3 条 _deployment_order 对账锁)已删:被测函数为
+  生产零消费的 op 侧副本,点火排序语义由活单一源 select_deployments
+  承载(test_cw_round_flow.py:953-981);src 退役债登记债账。
+- game64 拦截形态锁已删:与 test_cw_recipe_floor_lock_exempt.py:184-190
+  等价,超集留彼处。
+- check_deploy_fills_cap 正向报面已删:与 test_cw_f1_residual_fill.py
+  :153-160 等价;lag=0 负向锁已并入 test_lag_one(同分支)。
+- fenced_swap_arm_of 真值表已删:与 test_cw_swap_plan.py:221-254 等价。
+- read_xp_progress 域守卫锁已删:与 test_cw_obs_gates.py:350-362 重复。
+- r120 恒真断言(卡芙卡卖判)已删:自抄复刻+恒真(纪律 10/18)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
-# ==================== a3_deploy_align ====================
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_deploy_logic import select_deployments
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
-from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
-    _deployment_order,
-)
-from sr_od.application.currency_war.strategies.impl.flow import (
-    CwFlowStrategy,
-)
-from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
-    MandateV1Live,
-)
-
-
-# ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
-# 直用活策略核(下述测试全部消费 live 接口)。
-_FlowStrategy = MandateV1Live
-def _bonds(cid: str) -> set[str]:
-    ch = CHARACTERS[cid]
-    return set(ch.factions) | set(ch.flows)
-
-
-def _fac(cid: str) -> str:
-    return CHARACTERS[cid].factions[0]
-
-
-def test_op_order_ignition_first_key_probe_form() -> None:
-    """裁决选项1 探针形态:bench 姬子(点火)+ 非引擎 tgt 件,deployed
-    含三月七(列车1)+非引擎 → 姬子优先上(点火首键+桶序修正)。"""
-    bench_id = {0: _bonds('姬子·启行'), 1: _bonds('大丽花')}
-    bench_fac = {0: _fac('姬子·启行'), 1: _fac('大丽花')}
-    deployed_fac = {'列车同行': 1, '盛会之星': 1}
-    order = _deployment_order(
-        tgt_idx=[1], rest=[0], bench_id=bench_id,
-        bench_fac=bench_fac, deployed_fac=deployed_fac)
-    assert order[0] == 0, (
-        '点火引擎件(姬子,列车1→2)应先于 ignition=0 的非引擎 tgt 件'
-        '(旧序 tgt 全体压 rest = 局64 引擎件躺 bench 的排序侧机制)')
-
-
-def test_op_order_tgt_internal_ignition_first() -> None:
-    """tgt 内部:点火 tgt 件(三月七,列车1→2)先于冗余 tgt 件
-    (彦卿,仙舟已3 的第4人)。"""
-    bench_id = {0: _bonds('彦卿'), 1: _bonds('三月七')}
-    bench_fac = {0: _fac('彦卿'), 1: _fac('三月七')}
-    deployed_fac = {'仙舟': 3, '列车同行': 1}
-    order = _deployment_order(
-        tgt_idx=[0, 1], rest=[], bench_id=bench_id,
-        bench_fac=bench_fac, deployed_fac=deployed_fac)
-    assert order[0] == 1, 'tgt 序点火首键:点火件(三月七)应排首'
-
-
-def test_op_and_pure_function_order_aligned() -> None:
-    """对齐锁(裁决③):同输入下 op 排序与纯函数上场序一致——
-    bench=[冗余 tgt 彦卿, 点火 rest 三月七],deployed 仙舟3+列车1,
-    target={仙舟}。两侧都应把三月七排第一。"""
-    bench = [BenchChar(slot=1, char_id='彦卿', faction=_fac('彦卿')),
-             BenchChar(slot=2, char_id='三月七', faction=_fac('三月七'))]
-    deployed_fac = {'仙舟': 3, '列车同行': 1, '减益': 1}
-    up, held = select_deployments(
-        bench, deployed_cids={'藿藿', '丹恒·饮月', '爻光'},
-        deployed_fac=deployed_fac, board=dict(deployed_fac), cap=6,
-        target_factions=frozenset({'仙舟'}))
-    assert up and bench[up[0]].char_id == '三月七', '纯函数:点火件先上'
-    op_order = _deployment_order(
-        tgt_idx=[0], rest=[1],
-        bench_id={0: _bonds('彦卿'), 1: _bonds('三月七')},
-        bench_fac={0: _fac('彦卿'), 1: _fac('三月七')},
-        deployed_fac=deployed_fac)
-    assert op_order[0] == up[0] == 1, (
-        'op 排序与纯函数上场序对齐(ADR-0261 裁决:差异只剩读屏 vs 内存态)')
-
-
 # ==================== a3_deploy_stock_engine ====================
-
-from sr_od.application.currency_war.data.cw_chars import (
-    CHARACTERS as _a3_deploy_stock_engine_CHARACTERS,
-)
+# (成员 a3_deploy_align 段已删,见头部处置注记;game64 拦截形态等价锁
+#  在 test_cw_recipe_floor_lock_exempt.py:184-190。本段保留 2 条:
+#  r288 门两个「不拦」析取支在 select_deployments 集成面的唯一锁。)
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
-    select_deployments as _a3_deploy_stock_engine_select_deployments,
+    deployed_bond_counts,
+    select_deployments,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar as _a3_deploy_stock_engine_BenchChar,
-)
-
-
-def _a3_deploy_stock_engine_bonds(cid: str) -> set[str]:
-    ch = _a3_deploy_stock_engine_CHARACTERS[cid]
-    return set(ch.factions) | set(ch.flows)
-
-
-def _a3_deploy_stock_engine_fac(cid: str) -> str:
-    return _a3_deploy_stock_engine_CHARACTERS[cid].factions[0]
-
-
-def _deployed_fac(names: list[str]) -> dict[str, int]:
-    fac: dict[str, int] = {}
-    for c in names:
-        for f in _a3_deploy_stock_engine_bonds(c):
-            fac[f] = fac.get(f, 0) + 1
-    return fac
-
-
-def test_stock_engine_piece_deploys_game64_form() -> None:
-    """局64 精确形态:deployed 饮月+三月七+3 非引擎(列车2 已达,仙舟 1<3),
-    bench 姬子·启行×2,cap=7 → r288 配方底线门拦(ADR-0261 裁决选项3;
-    原诊断锁断言「纯函数让姬子上场」,对齐后按新语义更新——op/sim
-    在该形态一致拦截,sim 盲区消除)。"""
-    dep = ['丹恒·饮月', '三月七', '阿格莱雅', '乱破', '大丽花']
-    bench = [_a3_deploy_stock_engine_BenchChar(slot=i, char_id='姬子·启行',
-                       faction=_a3_deploy_stock_engine_fac('姬子·启行'), star=1)
-             for i in range(2)]
-    up, held = _a3_deploy_stock_engine_select_deployments(
-        bench, set(dep), _deployed_fac(dep), _deployed_fac(dep),
-        cap=7)
-    up_names = [bench[i].char_id for i in up]
-    assert '姬子·启行' not in up_names, (
-        '列车≥2 且仙舟<3 时列车件应被 r288 配方底线门拦下(与 op 对齐)')
-    # 两张全部让位留 bench(仙舟基础线优先)
-    assert len(held) == 2
-    assert all(bench[h].char_id == '姬子·启行' for h in held)
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def test_engine_piece_ignition_priority_with_vacancy() -> None:
     """点火形态:deployed 三月七(列车1)+3 非引擎,cap 宽 →
     r288 门不触发(列车<2),姬子(列车 1→2 恰点火)上场。"""
     dep = ['三月七', '阿格莱雅', '乱破', '大丽花']
-    bench = [_a3_deploy_stock_engine_BenchChar(slot=0, char_id='姬子·启行',
-                       faction=_a3_deploy_stock_engine_fac('姬子·启行'), star=1)]
-    up, held = _a3_deploy_stock_engine_select_deployments(
-        bench, set(dep), _deployed_fac(dep), _deployed_fac(dep),
-        cap=8)
+    bench = [BenchChar(slot=0, char_id='姬子·启行',
+                       faction=CHARACTERS['姬子·启行'].factions[0], star=1)]
+    fac = deployed_bond_counts(set(dep))
+    up, held = select_deployments(bench, set(dep), fac, fac, cap=8)
     assert [bench[i].char_id for i in up] == ['姬子·启行']
     assert not held
 
@@ -162,11 +61,10 @@ def test_r288_gate_releases_when_xianzhou_base_met() -> None:
     「仙舟基础线未满」时拦,基础线满足后列车第 3 人照常上(门语义,
     非永久封顶)。"""
     dep = ['丹恒·饮月', '三月七', '藿藿', '爻光', '大丽花']
-    bench = [_a3_deploy_stock_engine_BenchChar(slot=0, char_id='姬子·启行',
-                       faction=_a3_deploy_stock_engine_fac('姬子·启行'), star=1)]
-    up, held = _a3_deploy_stock_engine_select_deployments(
-        bench, set(dep), _deployed_fac(dep), _deployed_fac(dep),
-        cap=7)
+    bench = [BenchChar(slot=0, char_id='姬子·启行',
+                       faction=CHARACTERS['姬子·启行'].factions[0], star=1)]
+    fac = deployed_bond_counts(set(dep))
+    up, held = select_deployments(bench, set(dep), fac, fac, cap=7)
     assert [bench[i].char_id for i in up] == ['姬子·启行']
     assert not held
 
@@ -202,22 +100,25 @@ def test_deploy_fence_still_blocks_pure_scatter() -> None:
 
 # ==================== r387_deploy_fill_vacancy ====================
 
-from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import _cap_roomy_of
+# (2026-09-07 瘦身批改写:原锁指 op 侧副本 _cap_roomy_of(生产零消费,
+# 活单一源 = kernel cap_roomy_of,select_deployments 消费位)——副本
+# 锁升级为活码锁;副本退役债登记瘦身债账。)
+from sr_od.application.currency_war.kernel.cw_deploy_logic import cap_roomy_of
 
 
 def test_roomy_vacancy_more_than_must_up() -> None:
     """vacancy 6 > 必上 2(1 target+1 对)→ 富余,散牌放行填空。"""
-    assert _cap_roomy_of(front_empty=3, back_empty=3, must_up=2) is True
+    assert cap_roomy_of(front_empty=3, back_empty=3, must_up=2) is True
 
 
-def testtight_vacancy_le_must_up() -> None:
+def test_tight_vacancy_le_must_up() -> None:
     """vacancy 2 ≤ 必上 3 → 紧张,配方围栏生效(散牌留 bench)。"""
-    assert _cap_roomy_of(front_empty=1, back_empty=1, must_up=3) is False
+    assert cap_roomy_of(front_empty=1, back_empty=1, must_up=3) is False
 
 
 def test_boundary_equal() -> None:
     """vacancy == must_up → 紧张(恰好够必上件,无富余)。"""
-    assert _cap_roomy_of(front_empty=2, back_empty=1, must_up=3) is False
+    assert cap_roomy_of(front_empty=2, back_empty=1, must_up=3) is False
 
 
 # ==================== r390_deploy_agent ====================
@@ -257,8 +158,9 @@ def test_target_bridge_carry_channel() -> None:
         board={}, cap=5,
         fw_carry={'藿藿', '丹恒·饮月'})
     assert 0 in up            # 藿藿(桥 carry)上
-    assert 1 in up            # 飞霄:狼狩在 DEPLOY_FENCE(引擎桥派生)
-    # 万敌:非 fence 非对,但 vacancy>2 fill_mode → 上
+    # 飞霄:狼狩已随 W126 退出围栏(r357)——本腿锁的是 fill_mode 散牌放行
+    assert 1 in up
+    # 万敌:非 fence 非对,同 fill_mode → 上
 
 
 def test_depth_reads_deployed_not_bench() -> None:
@@ -290,18 +192,9 @@ def _row(rn: int, deployed: int, cap: int, lag: int) -> dict:
     }
 
 
-def test_no_lag_not_reported() -> None:
-    """lag=0(bench 有货但围栏合法 held:在场同名素材/跨线散牌)→ 不报
-    (W767 643567 r5-r8 形态:旧口径误报,lag 口径不报)。"""
-    rows = [_row(5, 4, 7, 0), _row(6, 4, 7, 0)]
-    assert not check_deploy_fills_cap(rows)
-
-
-def test_persistent_gap_reported() -> None:
-    """连续 2 轮 deployed≤cap-2 且 lag≥2 → 报(r387 指纹)。"""
-    rows = [_row(2, 1, 3, 2), _row(3, 1, 3, 2)]
-    assert check_deploy_fills_cap(rows), '连续短缺应报'
-
+# (2026-09-07 瘦身批删 2 条:test_no_lag_not_reported 与 test_lag_one
+#  同辖 lag<2 分支(W767 锚随迁彼处);test_persistent_gap_reported 正向
+#  报面与 test_cw_f1_residual_fill.py:153-160 等价,超集留彼处。)
 
 def test_transient_gap_not_reported() -> None:
     """单轮短缺(下一轮补满)→ 不报(代理时序过渡态,game14)。"""
@@ -316,7 +209,9 @@ def test_near_cap_not_reported() -> None:
 
 
 def test_lag_one_not_reported() -> None:
-    """lag=1(单件围栏认可未上)→ 不报(≥2 才成「系统性拦截」量级)。"""
+    """lag=1(单件围栏认可未上)→ 不报(≥2 才成「系统性拦截」量级;
+    W767 643567 r5-r8 锚:bench 有货但围栏合法 held 不报,lag = 本检查
+    「有货」口径单一输入)。"""
     rows = [_row(2, 1, 3, 1), _row(3, 1, 3, 1)]
     assert not check_deploy_fills_cap(rows)
 
@@ -399,7 +294,9 @@ def test_deployed_accumulates_monotonic() -> None:
 def test_board_is_deployed_faction_counts() -> None:
     """state.board = deployed 羁绊全集聚合(ADR-0312 W50 口径;
     per-unit 单一源 unit_bond_tags——本锁锁「sim 维护 board ← 聚合」
-    的接线,per-unit 值由 test_cw_w50_board_caliber 直锁)。"""
+    的接线。原注「per-unit 值由 test_cw_w50_board_caliber 直锁」为死
+    指针(该文件不存在;unit_bond_tags per-unit 直锁全仓缺位),覆盖
+    缺口登记瘦身债账)。"""
     from sr_od.application.currency_war.kernel.cw_bond_equips import unit_bond_tags
     r = simulate_p1(7, pool='fallback')
     for row in r.ledger:
@@ -570,14 +467,9 @@ def test_read_level_raw_opt_contract(test_context: SrTestContext, monkeypatch) -
     assert read_level_raw_opt(test_context, None) is None   # LEVEL_MAX=10 域外按失读
 
 
-def test_read_xp_progress_keeps_domain_guard(test_context: SrTestContext, monkeypatch) -> None:
-    """read_xp_progress sanity 不放松:cur>next / 无 X/Y 仍 None(既有契约,修法不放宽)。"""
-    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
-                        lambda **kw: [type('R', (), {'data': '20/4'})()])
-    assert read_xp_progress(test_context, None) is None
-    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
-                        lambda **kw: [type('R', (), {'data': '购买经验'})()])
-    assert read_xp_progress(test_context, None) is None
+# (test_read_xp_progress_keeps_domain_guard 已删,2026-09-07 瘦身批:
+#  '20/4'/'购买经验'→None 两断言与 test_cw_obs_gates.py:350-362
+#  test_read_xp_progress_xy 逐字重复(彼处另有正向 '4/20' 断言,超集)。)
 
 
 # ===== 锁③:今日冲突帧真实 OCR 回归(修复前 lv_raw/xp 双 None;修复后全可读) =====
@@ -803,14 +695,9 @@ def test_w530_wiring_locks():
     assert 'read_deployed_chars(' in method
     assert 'read_bench_chars(' not in method   # 文档提及可,调用不可
     assert 'last_screenshot' in method   # 零新增截屏:复用定型帧
-    # ④ 台账参数锁(surface/kind 常量定义 + 接线点使用)。
-    # 分包期 6(DESIGN §4.5):常量定义随纯期望段迁 kernel/cw_prep_expect
-    # (cw_screen_prep 经 import 引用);接线点使用仍在本体。
-    expect_src = _w530_drag_reconcile_Path(
-        'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
-    ).read_text(encoding='utf-8')
-    assert "_DRAG_DEFECT_SURFACE = 'bench'" in expect_src
-    assert "_DRAG_DEFECT_KIND = 'intent_state_mismatch'" in expect_src
+    # ④ 台账参数锁(接线点使用;surface/kind 常量值的行为锁在
+    #    test_defect_row_shape 经 record_defect 真写承载——2026-09-07
+    #    瘦身批删常量定义源码断言(实现形状重复锁,纪律 7/8))。
     assert 'record_defect(' in src and '_DRAG_DEFECT_SURFACE, _DRAG_DEFECT_KIND' in src  # 拆内环:缩进锁降内容级
     assert 'drag_expect_reconcile' in src
 
@@ -866,12 +753,18 @@ def test_src_changed_detects_pixel_diff() -> None:
 
 
 def test_src_changed_empty_crop_safe() -> None:
-    """_src_changed:crop 越界(空)→ 不崩,返 False。"""
-    src = Point(0, 0)   # 中心 0,0 → crop [-20:20,...] 部分越界
+    """_src_changed:crop 完全越界(空)→ False 且不落 nan 均值路径。
+
+    2026-09-07 判别力升级(原形态构造正确但零断言):src=(0,0) 的 crop
+    窗 [-20:20] 经 numpy 负起点回绕成 [30:20] = 空,守卫缺失时该输入走
+    np.mean(空) = nan + RuntimeWarning——warn 转错即红,杀「守卫被删」。"""
+    import warnings
+
     before = _test_drag_cw_char_np.zeros((50, 50, 3), _test_drag_cw_char_np.uint8)
     after = _test_drag_cw_char_np.full((50, 50, 3), 200, _test_drag_cw_char_np.uint8)
-    # 不应崩(越界切片→空或部分,diff 计算安全)
-    DragCwChar._src_changed(before, after, src)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', RuntimeWarning)
+        assert DragCwChar._src_changed(before, after, Point(0, 0)) is False
 
 
 def _mock_area(name: str, cx: int, cy: int) -> _test_drag_cw_char_SimpleNamespace:
@@ -971,22 +864,10 @@ def test_framework_char_is_recipe_core():
     assert '丹恒·饮月' in rc.core_chars
 
 
-def test_deploy_no_longer_sells_framework_char_dual_track():
-    """r120 语义:双轨期 deploy-swap 的 target 判定用配方——
-    卡芙卡(仙舟框架件,drop 档)按旧逻辑(off-target)会被卖;新逻辑下
-    decision_target=仙舟配方 → deploy_bench._tgt_comp=配方 → 不在卖集。"""
-    sess = _test_deploy_recipe_target_StrategySession()
-    state_of(sess).transition_framework = '仙舟'
-    sess.dual_track_phase = True
-    state_of(sess).target_comp = _mk_comp('列车同行', ['列车同行'], ['三月七'])
-    st = _FakeState()
-    dt = decision_target(sess, st)
-    # deploy_bench 的 _is_tgt_char 同款判定:阵营/流派交集 or core
-    _c_factions = {'仙舟'}
-    _c_flows = {'持续伤害'}
-    is_tgt = bool((_c_factions | _c_flows) & set(dt.all_factions)) or '卡芙卡' in dt.core_chars
-    assert is_tgt or '卡芙卡' not in dt.core_chars, \
-        '卡芙卡在配方 target 下应判 target(或至少不被当 off-target 卖)'
+# (test_deploy_no_longer_sells_framework_char_dual_track 已删,
+# 2026-09-07 瘦身批:自抄复刻 _is_tgt_char 判定 + 断言恒真
+# (仙舟 ∈ 配方 all_factions ⇒ is_tgt 恒 True,纪律 10/18);
+# r120 双轨语义由上方 test_decision_target_dual_track_returns_recipe 承载。)
 
 
 def test_nondual_track_keeps_final_comp():
@@ -1154,15 +1035,10 @@ def test_w209_swap_arm_offline_fenced_sellable() -> None:
             fenced_offline_sellable=True, protect_names=protect) is False
 
 
-def test_w209_swap_arm_trigger_gate() -> None:
-    """触发门真值表(纯函数 fenced_swap_arm_of,喂入=真部署数):线成型
-    (fp≥1.00)∧ 板满(占用数 ≥ cap,占用数口径;物理槽位门旧形态
-    domain 不可达已收口,见 test_cw_swap_plan 复活锁)双条件;未成型或
-    未满板帧不开启(双轨期预囤框架件保护原语义零变化)。"""
-    assert fenced_swap_arm_of(1.0, 7, 7) is True      # 板满形态:fp=1.00 ∧ 7 占用
-    assert fenced_swap_arm_of(0.42, 7, 7) is False    # 未成型(成型前对照)
-    assert fenced_swap_arm_of(1.0, 6, 7) is False     # 未满板:无腾位需求
-    assert fenced_swap_arm_of(1.0, 8, 7) is True      # 超满(cap 叠加)同辖
+# (test_w209_swap_arm_trigger_gate 已删,2026-09-07 瘦身批:真值表与
+#  test_cw_swap_plan.py:221-254 等价(彼处另带 re-export 同一性 + cap 全域
+#  扫 + cap 缺读 fail-closed + 装配面,为超集);唯一增量行 (1.0,8,7) 超满
+#  与 (cap,cap) 同辖 >= 分支,零判别力。)
 
 
 def test_w209_swap_arm_feed_is_deployed_count_not_bond_sum() -> None:
