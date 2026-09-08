@@ -964,6 +964,49 @@ def test_collapsed_source_rejected_snapshot_preserved(
     assert target.read_text(encoding='utf-8') == before   # 零覆写
 
 
+def test_collapse_baseline_reads_committed_head_not_disk(
+        tmp_path: _defense_Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """塌缩守卫基线来源锁(2026-09-09 穿透定谳,ADR-0612):基线必须
+    取 git HEAD 提交版,不是盘面文件——盘面被一次未提交的塌缩再生
+    改写后,以盘面为基线的守卫对提交真值失明,微语料 vs 微语料永
+    过闸,塌缩自我延续(2026-09-08 三次静默覆写后,286/48 微语料
+    再生在守卫在场下持续放行,工作树伪影即实证)。
+
+    构造(不依赖真实 git 态):盘面基线=已塌缩快照(行数账 6),
+    HEAD 版=全量(行数账 24,经 _head_data_py_text 桩注入);微源
+    6 行 ≥ 盘面基线×50%(旧实现放行=穿透)但 < HEAD 基线×50% →
+    必须 SourceCorpusCollapse 且盘面字节原样保留。若此锁红:基线
+    来源退回盘面 = 塌缩自我延续复发,禁为保绿收窄。
+    """
+    head_src = tmp_path / 'head_corpus'
+    disk_src = tmp_path / 'disk_corpus'
+    head_groups = [_defense_delta_row(f'run_20260901_{i:04d}', 100 - i, 88 - i)
+                   for i in range(8)]          # 8 run × 3 行 = 24 行(全量)
+    disk_groups = head_groups[:2]              # 2 run × 3 行 = 6 行(塌缩)
+    _defense_write_corpus(head_src, head_groups)
+    _defense_write_corpus(disk_src, disk_groups)
+    head_file = tmp_path / 'head_version_data.py'
+    disk_file = tmp_path / 'cw_delta_pool_data.py'
+    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', head_file)
+    cw_delta_pool_gen.regenerate_snapshot(src_dir=head_src, quiet=True)
+    head_text = head_file.read_text(encoding='utf-8')
+    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', disk_file)
+    cw_delta_pool_gen.regenerate_snapshot(src_dir=disk_src, quiet=True)
+    disk_text = disk_file.read_text(encoding='utf-8')
+
+    # 桩点 = 模块单函数(生产真实路径 = git show HEAD;仓外写目标
+    # 自动走盘面兜底,既有 tmp 锁不受影响)。
+    monkeypatch.setattr(cw_delta_pool_gen, '_head_data_py_text',
+                        lambda _p: head_text)
+    with pytest.raises(
+            cw_delta_pool_gen.SourceCorpusCollapse, match='塌缩') as ei:
+        cw_delta_pool_gen.regenerate_snapshot(src_dir=disk_src, quiet=True)
+    msg = str(ei.value)
+    assert '24' in msg and '6' in msg       # HEAD 基线 24 vs 微源 6 进文案
+    assert disk_file.read_text(encoding='utf-8') == disk_text   # 盘面零覆写
+
+
 def test_auto_pool_quarantine_same_judgment(tmp_path: _defense_Path) -> None:
     """auto 池同判据锁(ADR-0595 适用范围含 auto 池):_pool_from_replay
     消费同一 _run_quarantine_reason——fake_/sim_ run 不入缺省校准池,
