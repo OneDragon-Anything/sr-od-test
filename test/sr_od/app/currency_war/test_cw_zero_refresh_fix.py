@@ -1,15 +1,24 @@
-"""零刷新修复批测试(2026-09-03,ZERO_REFRESH_DIAG 两病灶+A/B 量具加固)。
+"""零刷新修复批测试(2026-09-03 立档;2026-09-08 瘦身批覆盖对账后重锚)。
 
-覆盖:
-- 病灶1:r1 发射位 V_GAP 槽位接线——None 期零漂移 fail-closed(计数键
-  ``shop_r1_ev_unavailable`` 不变)+ 注入形态刷新链通(r1→r2);
-- 病灶2:arm1_existence 板满 cap 口径(等级驱动 max_units,非固定槽表
-  常数 10)——谓词单测 + 商店波 M3 发射行为锁;
-- A/B 量具:动作族活性下限守卫正反测(饥饿 raise / 豁免过)+
-  判前锁 v6 检查单(未全绿 raise / 全绿放行 / 类条款行不阻塞)。
+原批主治零刷新两病灶 + A/B 量具加固。瘦身批对账后本文件保留:
+- r2_budget 纯数锁(全仓唯一直调;P40 R2 原语义,ADR-0516 保留声明)
+  ——r1 门行为面(判据本体/门形态/必花域切分线/档案帧)归
+  test_cw_vgap_frame_horizon、test_cw_must_spend_zone、
+  test_cw_r1_refresh_ledger(亲读证实同断言面覆盖);
+- 病灶2 arm1_existence 板满 cap 口径:谓词数学正反锁(全仓唯一直调)
+  + M3「板未满不发射」反面锁——M3 发射正形归 test_cw4_shop_line
+  (升级面主题文件)与 test_cw4_contracts(cap 喂入契约,prep/shop 两栈);
+- A/B 量具:活性守卫饥饿 raise / 升级扫描(救低频活 / 耗尽仍 raise)/
+  注入解豁免——豁免正形与 v6 缺省拦截 / 全绿放行归 test_cw_v6_cleanup;
+  本文件另留 v6 类条款行(order)序锁与 mark 行证据硬化锁;
+- 真引擎 sim 验收(慢桶):levelup 族活性端到端烟测。
+
+退役指针(ADR-0516):V̄ 槽位比较项退役后注入不再影响行为——原
+test_injected_vgap_refresh_chain_alive 已删,「刷新链活性」行为锁由
+test_cw_vgap_frame_horizon::test_large_surplus_opens 承载;旧 V_GAP
+None 期 fail-closed 语义由预算比较结构 + 必花域切分线(20 号稿)承载。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -29,6 +38,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import prov
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 
 # ===== 测试基建(与 test_cw4_shop_line 同款桩)=====
@@ -42,11 +54,6 @@ class _Cfg:
 def _comp():
     names = [c.name for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
     return get_comp(names[0])
-
-
-def _members(comp) -> list[str]:
-    ms = list(comp.core_chars) + list(getattr(comp, 'shared_chars', []) or [])
-    return list(dict.fromkeys(ms))
 
 
 def _session(comp=None):
@@ -76,10 +83,6 @@ def _state(gold: int = 30, shop=None, bench=None, deployed=None,
     return st
 
 
-def _card(name: str, cost: int = 3, star: int = 1) -> ShopCard:
-    return ShopCard(x=100, name=name, cost=cost, star=star)
-
-
 def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
 
@@ -94,86 +97,23 @@ def _decide(state: GameState, session, cfg: _Cfg | None = None):
     return strat.decide_shop_screen(session, cfg or _Cfg())
 
 
-def _afford_frame(gold: int, target_copies: int):
-    """R1 可负担性行为锁帧(lv6,列车同行):合格集收缩到单目标成员
-    (其余线成员 2★ 成型出域),目标 = 该级可追成员中期望刷次最小者;
-    target_copies 控制缺口深浅(j=2 差 1 张 = 浅,j=0 差 3 张 = 深)。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.data.cw_shop_odds import (
-        expected_refreshes_for_card,
-    )
+# ===== r2 预算门纯数锁(P40 R2 原语义,ADR-0516 保留声明)=====
 
-    comp = _comp()
-    members = _members(comp)
-    target = min(
-        (m for m in members
-         if CHARACTERS[m].cost
-         and 0.0 < expected_refreshes_for_card(
-             6, CHARACTERS[m].cost, 2, 2) < float('inf')),
-        key=lambda m: expected_refreshes_for_card(
-            6, CHARACTERS[m].cost, 2, 2))
-    others = [m for m in members if m != target]
-    bench = ([_bc(target, slot=i + 1) for i in range(target_copies)]
-             + [_bc(m, star=2, slot=i + target_copies + 1)
-                for i, m in enumerate(others)])
-    st = _state(gold=gold, bench=bench, level=6, hp=100)
-    sess = _session(comp)
-    sess.plane_lengths_seen = [9, 5, 7]
-    return st, sess
+class TestR2BudgetGate:
 
-
-# ===== :r1 发射位(ADR-0516 形式二可负担性重锚;V̄/V_GAP 槽位
-# 比较项退役,槽位注入不再影响行为——锁重写为预算三档行为锁) =====
-
-class TestR1VGapWiring:
-
-    def test_near_interest_line_closed(self):
-        """息线附近帧(gold=60,预算 10)不刷:总账(期望刷费+卡费+息损)
-        > 10 ⇒ ``shop_r1_account_over_budget`` 分键(ADR-0516 修正③:
-        刷新只花息线之上的溢余;旧 V_GAP None 期 fail-closed 语义随
-        槽位比较项退役,由预算比较结构承载)。"""
-        st, sess = _afford_frame(gold=60, target_copies=2)
-        _decide(st, sess)
-        # 必花域内 (iii) 核算否决降排序(20 号稿):刷新由可负担性硬闸承载
-        assert state_of(sess).cw4_counters.get('shop_r1_account_over_budget', 0) == 0
-
-    def test_large_surplus_opens_r1_into_r2(self):
-        """大溢余开闸(gold=80,预算 30)+ 浅缺口成员(1费 j=2,lv3 账
-        ≈ 11)⇒ r1 可负担性过、r2 预算门可批 ⇒ RefreshShop 发射
-        (ADR-0516 形式二;槽位注入与否不影响行为——判据输入全为游戏
-        定义量)。"""
-        st, sess = _afford_frame(gold=80, target_copies=2)
-        acts = _decide(st, sess)
-        assert any(isinstance(a, RefreshShop) for a in acts)
-
-    def test_r1_commitment_account_binds_deep_gap(self):
-        """R1 总账约束力:深缺口帧(lv5 线成员含高费不可追件,留级账
-        inf、升级账含 U_L 与大 E)总账远超预算 11 金:不刷 +
-        `shop_r1_account_over_budget` 分键——EV 门有约束力的结构承载
-        (ADR-0516;旧 V̄_net 比较项锁随链退役重锚)。"""
-        st, sess = _afford_frame(gold=61, target_copies=0)
-        _decide(st, sess)
-        # 必花域内 (iii) 核算否决降排序(20 号稿):刷新由可负担性硬闸承载
-        assert state_of(sess).cw4_counters.get('shop_r1_account_over_budget', 0) == 0
-
-    def test_r2_budget_still_gates_low_gold(self):
-        """防线分层:r2 预算门对低金帧独立拦截(金 < 预留 g*+rho + 刷价
-        则不批;行为面 gold=1 不刷)——接线不等于旁路预算门(P40 R2 原语义,
-        ADR-0516 保留声明)。"""
+    def test_gold_minus_reserve_gates_refresh_cost(self):
+        """r2 预算门两向:金−预留 ≥ 刷价才批(全仓唯一直调锁)。
+        门形态端到端面归 test_cw_vgap_frame_horizon(gold=40/50 关门)
+        与 test_cw_must_spend_zone(域内可负担性硬闸仍辖)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
             refresh as crit_refresh,
         )
 
         assert not crit_refresh.r2_budget(1, 51, 2)
         assert crit_refresh.r2_budget(60, 51, 2)
-        comp = _comp()
-        bench = [_bc(m) for m in _members(comp)]
-        st = _state(gold=1, bench=bench)   # 刷价 2,金 1 不足
-        acts = _decide(st, _session(comp))
-        assert not [a for a in acts if isinstance(a, RefreshShop)]
 
 
-# ===== 病灶2:arm1_existence 板满 cap 口径 =====
+# ===== 病灶2:arm1_existence 板满 cap 口径(谓词数学;全仓唯一直调)=====
 
 class TestArm1CapSemantics:
 
@@ -194,32 +134,6 @@ class TestArm1CapSemantics:
             3, [b.char_id for b in bench],
             [d.char_id for d in board], deploy_cap=5) is False
 
-    def test_cap_none_falls_back_to_fixed_capacity(self):
-        """cap 缺读兜底固定槽表常数(保守端:宁漏不多)。"""
-        board = [_bc('爻光') for _ in range(10)]
-        bench = [_bc('爻光')]
-        assert predicates.arm1_existence(
-            10, [b.char_id for b in bench],
-            [d.char_id for d in board], deploy_cap=None) is True
-        assert predicates.arm1_existence(
-            5, [b.char_id for b in bench],
-            [d.char_id for d in board], deploy_cap=None) is False
-
-    def test_m3_emits_when_board_full_at_cap(self):
-        """商店波行为锁:板满于 cap(deployed=5/cap=5)+ bench 同阵营
-        等待件 + 金够整批 ⇒ M3 LevelUpShop 发射(构造板面应触发场景)。
-        (夹具补 hp=100:候选③批起 M3 消费血预算停升级门,hp 无真值帧
-        fail-closed 拒升级——真值帧才是本锁要钉的语义。)"""
-        comp = _comp()
-        deployed = [_bc('爻光', slot=i + 1) for i in range(5)]
-        bench = [_bc('爻光', slot=1)]
-        st = _state(gold=8, bench=bench, deployed=deployed,
-                    level=3, deploy_cap=5, xp=(0, 4), hp=100)
-        acts = _decide(st, _session(comp))
-        lv = [a for a in acts if isinstance(a, LevelUpShop)]
-        assert lv and all(a.auth_basis.startswith('m3_batch:')
-                          for a in lv)   # 三臂分键后带臂后缀(可归因)
-
     def test_m3_silent_when_board_below_cap(self):
         """反面:板未满(deployed=3/cap=5)同 bench/金 ⇒ M3 不发射
         (升级价值以「有等待件上不了场」为前提)。"""
@@ -232,7 +146,8 @@ class TestArm1CapSemantics:
         assert not [a for a in acts if isinstance(a, LevelUpShop)]
 
 
-# ===== A/B 量具:动作族活性下限守卫 + 判前锁 v6 检查单 =====
+# ===== A/B 量具:动作族活性下限守卫(豁免正形/缺省拦截归
+# test_cw_v6_cleanup)+ 判前锁 v6 检查单(order 序锁/证据硬化)=====
 
 def _fake_sim(actions_by_seed):
     """造假 simulate_p1(返回 SimpleNamespace ledger/pool_fingerprint)。
@@ -296,24 +211,6 @@ class TestLivenessGate:
         with pytest.raises(RuntimeError, match='结构性饥饿'):
             ab_core_swap.action_family_liveness_gate(n=10, seed_base=0)
 
-    def test_failclosed_family_exempt_passes(self, monkeypatch):
-        """正例:V_GAP None 期刷新族零发射 ⇒ 豁免(fail-closed 降级)
-        + 其余族齐全 ⇒ 守卫过。"""
-        from sr_od.application.currency_war.sim import ab_core_swap
-
-        provisional.reset('V_GAP')
-        acts = [BuyCard(card=ShopCard(x=1, name='x', cost=1), reason='t'),
-                LevelUpShop(cost=4), SellBench(bench_idx=0, income=1,
-                                               expect='x')]
-        monkeypatch.setattr(
-            ab_core_swap, 'simulate_p1',
-            _fake_sim(dict.fromkeys(range(10), acts)))
-        report = ab_core_swap.action_family_liveness_gate(n=10, seed_base=0)
-        assert report['ok']
-        for arm in report['arms'].values():
-            assert 'refresh' in arm['exempt']
-            assert not arm['starved']
-
     def test_opened_slot_removes_exemption(self, monkeypatch):
         """V_GAP 注入后豁免失效:刷新族零发射 ⇒ raise(开闸路径存在
         却零发射=饥饿,豁免只覆盖 fail-closed 降级态)。"""
@@ -355,21 +252,6 @@ class TestV6Checklist:
             monkeypatch.setattr(ab_core_swap, '_V6_LANDING_FILE_OVERRIDE',
                                 tmp_path / 'v6_landing.jsonl')
 
-    def test_default_state_blocks_formal_ab(self, monkeypatch, tmp_path):
-        """缺省态(词表/schema/申报全缺)⇒ 检查单未全绿,正式 A/B raise
-        ——2026-09-03 零刷新事故的排程层防线(硬前置代码化)。"""
-        from sr_od.application.currency_war.sim import ab_core_swap
-
-        self._clear_registries(monkeypatch, tmp_path)
-        provisional.reset('V_GAP')
-        rows = ab_core_swap.v6_checklist()
-        # 锁值 16→17(v6 判前锁清理批):行 17=V_GAP 事故防护
-        # (IMPL_ADV_R200 症4 落地,清单单一源=IMPL_DESIGN §5.1 表+行 17);
-        # 按锁纪律重推:清单新增判据行属设计演进,锁值随行数更新。
-        assert len(rows) == 17
-        with pytest.raises(RuntimeError, match='v6 检查单未全绿'):
-            ab_core_swap.require_v6_green_for_formal_ab()
-
     def test_class_clause_rows_do_not_block(self, monkeypatch, tmp_path):
         """类条款行(R94-6:行 3/8/9/12 等):批事件未到期 ⇒ 「未到期」
         不阻塞;到期且序合 ⇒ 已落地。"""
@@ -407,36 +289,11 @@ class TestV6Checklist:
         assert rows[4]['status'] == '已落地'
         assert rows[4]['evidence'].startswith('锚批/判读批')
 
-    def test_green_path_releases_formal_ab(self, monkeypatch, tmp_path):
-        """全绿放行:文本锚(monkeypatch 仓库读)+ 全部 mark 行申报后
-        ``require_v6_green_for_formal_ab`` 不 raise(类条款行已到期)。"""
-        from sr_od.application.currency_war.sim import ab_core_swap
 
-        self._clear_registries(monkeypatch, tmp_path)
-        monkeypatch.setattr(
-            ab_core_swap, '_text_of',
-            lambda rel: 'mandate_v1 ev_arm v6 f7_contingency_armed '
-                        'depsilon_advisor_violation f7_exempt_emission')
-        for row in (2, 4, 5, 6, 10, 14, 15, 16):
-            ab_core_swap.record_v6_landing(row, f'测试申报:{row}')
-        # 行 17(症4,V_GAP 事故防护):走显式豁免批文通道放行——
-        # 本测试的对象是「其余行全绿后 require 放行」的机械形态,
-        # 注入通道的覆盖归 test_cw_v6_cleanup.py。
-        ab_core_swap.record_formal_ab_exemption(
-            'V_GAP', '测试豁免批文:v6 清理批锁值更新配套')
-        ab_core_swap.record_batch_event('theta_calib')
-        ab_core_swap.record_batch_event('eta_theta_calib')
-        ab_core_swap.record_batch_event('chi_calib')
-        ab_core_swap.record_batch_event('bandwidth_calib')
-        ab_core_swap.record_batch_event('p_open')
-        ab_core_swap.record_batch_event('switchline_anchor_batch')
-        report = ab_core_swap.require_v6_green_for_formal_ab()
-        assert report['ok']
+# ===== 真引擎 sim 验收(levelup 族活性端到端烟测;2026-09-08 实测
+# call≈0.35s,原类级 slow 标记已摘——远低于 2s 桶线,快速层回收;
+# 引擎后续演进若实测超 2s 再按纪律复测入桶)=====
 
-
-# ===== sim 实跑验收(慢桶;全实测验收 ①②)=====
-
-@pytest.mark.slow
 class TestZeroRefreshFixSimAcceptance:
 
     SIM_KW = {'pool': 'snapshot', 'planes': 1, 'use_refresh': True, 'invest': False,
@@ -471,21 +328,17 @@ class TestZeroRefreshFixSimAcceptance:
                 c[t] = c.get(t, 0) + 1
         return c
 
-    def test_none_period_zero_refresh_but_levelups_alive(self):
-        """验收①:V_GAP=None 期刷新仍零(零漂移)+ arm1 修复后升级>0
-        (池化口径;逐 seed 量级不对齐旧臂——seeds1-3 新核 ledger 空系
-        修复前既有形态,见修复批报告的呈报项)。"""
+    def test_none_period_levelups_alive(self):
+        """真引擎端到端烟测(慢桶;全仓唯一真跑 mandate_v1 的动作族
+        活性断言):V_GAP=None 缺省态真跑 5 seed,levelup 族合计发射
+        >0(病灶2 arm1 修复的整合面回归锁;frame 级发射锁归
+        test_cw4_shop_line)。刷新面按 20 号稿/ADR-0516 已合法化
+        (必花域内 r2 硬闸承载),原「验收①零漂移」断言随设计退役,
+        不再断言零刷新。"""
         provisional.reset('V_GAP')
         lv_total = 0
         for seed in range(5):
             res = self._run(seed)
-            # 必花域落码:金位越 G_must 的 seed 刷新合法(息线门域内降排序)
-            assert res.refreshes >= 0, seed
             lv_total += sum(v for k, v in self._counts(res).items()
                             if k in ('LevelUp', 'LevelUpShop'))
         assert lv_total > 0
-
-    # (test_injected_vgap_refresh_chain_alive 已随 ADR-0516 退役删除:其前提
-    #  = V_GAP 槽位注入开闸刷新链,V̄ 槽位比较项退役后注入不再影响行为;
-    #  「刷新链活性」的行为锁重锚为帧级 test_large_surplus_opens_r1_into_r2
-    #  ——大溢余 + 可追缺件 ⇒ r1 过 r2 批 ⇒ RefreshShop 发射。)
