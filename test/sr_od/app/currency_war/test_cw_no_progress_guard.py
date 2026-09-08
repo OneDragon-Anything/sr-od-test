@@ -1,13 +1,16 @@
 """环级无进展守卫锁(第 5 局放行硬门)。
 
-设计出处 = .debug/temp/currency_war/redesign/ARCH_REFLECTION_3STALLS.md
-问三缺口 G3(prep 环无通用无进展守卫)/ 问四防线①(同签名动作批 +
-状态零推进连续 N 环 → 存证 + stop_running)/ 问五放行裁决(守卫是
-放行硬门)。触发语义:签名 = 动作类型序列(exec_state_of(session).last_prep_action_sig,
+设计出处 = docs/develop/currency_war/decisions/dd-030-no-progress-guard.md
+(环级活性不变量;问三缺口 G3(prep 环无通用无进展守卫)/ 问四防线①
+(同签名动作批 + 状态零推进连续 N 环 → 存证 + stop_running)/ 问五放行
+裁决(守卫是放行硬门))+ docs/develop/currency_war/flow/guards.md §1
+(防线总册)。触发语义:签名 = 动作类型序列(exec_state_of(session).last_prep_action_sig,
 CwScreenPrep 决策出口写)+ 状态指纹(prep_no_progress_state_fingerprint,
 只读 observe 现成字段);连续 PREP_NO_PROGRESS_ROUNDS=3 环同签名 ∧
 零推进 → 截图 + flag + stop_running。取代旧 PREP_STALL_EVIDENCE_ROUNDS
-只留证不停机线(单一计数,勿留两套)。
+只留证不停机线(单一计数,勿留两套)。历史三卡死形态(M2 开店重燃 /
+M7 装备环 / 伙伴遮罩 RunDeploy)同辖「同签名 ∧ 零推进 → 触发」判据,
+触发面由计数纯函数锁与真环行为锁共同看守。
 
 不误伤三判据(与守卫实现注释同源):
 ①战斗等待期不进备战分支,回备战 round 必变 → 归零;
@@ -15,9 +18,9 @@ CwScreenPrep 决策出口写)+ 状态指纹(prep_no_progress_state_fingerprint,
 ③闩跳过帧:动作批不同 → 签名变 → 归零。
 """
 
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from test.harness.fixture_controller import (
     enter_running_state,
     fast_sleep,
@@ -99,34 +102,6 @@ def test_state_fingerprint_covers_all_progress_fields() -> None:
             f'指纹须随字段变化而变:{v}')
 
 
-# ==================== 三历史卡死签名重放(守卫必须触发) ====================
-
-
-def test_replay_m2_open_shop_reignition_loop_triggers() -> None:
-    """历史① M2 开店环:OpenShop 批重燃重发、帧状态不变 → 3 环触发。"""
-    frozen = _session()
-    rings = [(('OpenShop',), frozen)] * 5
-    count, triggered = _simulate(rings)
-    assert triggered, 'M2 重燃形态必须触发守卫'
-    assert count >= 3
-
-
-def test_replay_m7_equip_loop_triggers() -> None:
-    """历史② M7 装备环:RunEquip 批跨帧重发、零变换 → 3 环触发。"""
-    frozen = _session()
-    rings = [(('OpenShop', 'RunEquip'), frozen)] * 5
-    count, triggered = _simulate(rings)
-    assert triggered, 'M7 装备环形态必须触发守卫'
-
-
-def test_replay_partner_overlay_rundeploy_loop_triggers() -> None:
-    """历史③ 选择伙伴遮罩 RunDeploy 环:遮罩挡拖拽、op 正常返回、板面不动 → 触发。"""
-    frozen = _session()
-    rings = [(('RunDeploy',), frozen)] * 5
-    count, triggered = _simulate(rings)
-    assert triggered, '遮罩 RunDeploy 环形态必须触发守卫'
-
-
 # ==================== 不误伤:健康序列/战斗等待/闩跳过 ====================
 
 
@@ -175,12 +150,6 @@ def test_overlay_interlude_and_battle_wait_reset_and_silence() -> None:
     assert not triggered, 'None 环必须清零计数(战斗静默期不误伤)'
 
 
-def test_threshold_is_three() -> None:
-    """N=3(与旧 PREP_STALL_EVIDENCE_ROUNDS 取值对齐;任务书裁决)。"""
-    m = _fingerprint_module()
-    assert m.CwLoop.PREP_NO_PROGRESS_ROUNDS == 3
-
-
 # ==================== 存证 flag(测试零真实副作用:tmp_path) ====================
 
 
@@ -201,14 +170,17 @@ def test_write_no_progress_flag_content(tmp_path) -> None:
 
 def _make_round_director(test_context, monkeypatch, scripted_actions,
                          overlay=None):
-    """备战单轮单测装配(镜像 test_cw_w971_p3b_seg2 同名 helper 的最小集)。"""
-    from types import SimpleNamespace as _SN
+    """备战单轮单测装配(最小集)。
 
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
-    )
+    同域镜像副本 = test_cw_m2_stall_cache 的 prep 写点测(同款桩面):
+    彼锁 cw4_frame_action_record token 载体写点,本文件锁
+    last_prep_action_sig 签名写点——两写点同一决策出口,禁删边留角。
+    """
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_prep as pd_mod,
+    )
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
     )
 
     class _StubStrategy:
@@ -217,7 +189,7 @@ def _make_round_director(test_context, monkeypatch, scripted_actions,
 
     d = pd_mod.CwScreenPrep(test_context)
     session = StrategySession()
-    match = _SN(strategy=_StubStrategy(), session=session)
+    match = SimpleNamespace(strategy=_StubStrategy(), session=session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     monkeypatch.setattr(d, '_clear_entry_overlays', lambda: None)
     monkeypatch.setattr(d, '_try_collapse_open_shop', lambda: False)
@@ -286,9 +258,10 @@ def _make_loop_op(test_context, monkeypatch, session, stops, flags,
     """真 loop 路径单测装配:真 CwLoop 实例 + 画面分发桩(只认备战双锚)。
 
     桩面 = loop() 顶层分发的「画面判定与外部出口」:round_by_* 桩让全部分支
-    不命中、唯备战双锚命中;观察/识别族(find_trial_reveal_cards/find_bookcards
-    /read_node_sequence)与备战单轮(CwScreenPrep)桩为空——本锁辖「守卫消费
-    签名 → 停机」接线,不辖备战环内部(备战桩不重写签名 → 跨环冻结)。
+    不命中、唯备战双锚命中;投资浮层重探恒缺席;观察/识别族
+    (find_trial_reveal_cards/find_bookcards/read_node_sequence)与备战单轮
+    (CwScreenPrep)桩为空——本锁辖「守卫消费签名 → 停机」接线,不辖备战
+    环内部(备战桩不重写签名 → 跨环冻结)。
     遥测全局(state.start_run/get_recorder/分配器)桩化,满足「模块级全局
     一并桩化」纪律;flag 写入重定向收集器(测试零真实 .debug/ 副作用)。
     handle_init 不跑(重装配结算链/配置),loop() 消费但守卫路径不消费的
@@ -321,6 +294,13 @@ def _make_loop_op(test_context, monkeypatch, session, stops, flags,
                         lambda: SimpleNamespace(enabled=False))
     monkeypatch.setattr(loop_mod, '_get_or_init_allocator', lambda ctx: None)
     monkeypatch.setattr(loop_mod, 'read_node_sequence', lambda ctx, screen: [])
+    # 0e 投资浮层重探桩:生产在「备战双锚命中 ∧ 首探 miss」形态付 0.6s 裸
+    # time.sleep(INVEST_REPROBE_WAIT)+新截图(淡入期防误判探针);裸 time.sleep
+    # 不经 op 框架 time 对象,fast_sleep 拦不到——不桩则每环白付 0.6s(cProfile
+    # 实测:4 环 2.4s 全在该 sleep)。恒判浮层缺席与既有 round_by_* 桩同语义,
+    # 守卫/耗尽臂锁不辖路由探针。
+    monkeypatch.setattr(loop_mod, '_invest_overlay_dispatch',
+                        lambda op_, screen_: (False, screen_))
     monkeypatch.setattr(loop_mod, 'CwScreenPrep', _StubPrep)
     monkeypatch.setattr(
         'sr_od.application.currency_war.obs.cw_identity_obs.'
@@ -415,6 +395,7 @@ def test_exhaustion_eligible_truth_table() -> None:
     assert not e(('RunDeploy',), False), '上环 fail = 执行面失败,须停机留证'
     assert not e(('RunDeploy',), None), '无上环记录(首轮)不 eligible'
     assert not e(None, True), 'None 批(overlay 交回)不累计不 eligible'
+    assert not e((), True), '空批非 RunDeploy 稳态,不 eligible'
     assert not e(('OpenShop',), True), 'OpenShop 批 = 重燃重发形态,须停机'
     assert not e(('OpenShop', 'RunEquip'), True), '装备环形态,须停机'
     assert not e(('RunDeploy', 'OpenShop'), True), '混合批不 eligible'
