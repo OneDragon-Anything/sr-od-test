@@ -1,24 +1,79 @@
-# -*- coding: utf-8 -*-
-"""test_cw_round_flow 主题锁(结构合并批,机械拼接)。
+"""test_cw_round_flow 主题锁(轮流程族:退局 op / 结算观测 / 过渡定型 / 位面轮读 / 金稳定门 / 部署点火)。
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
-- r279_exit_op: test_cw_r279_exit_op.py
-- r317_exit_op: test_cw_r317_exit_op.py
-- r366_settlement_node_type: test_cw_r366_settlement_node_type.py
-- w40_settlement_damage: test_cw_w40_settlement_damage.py
-- transition: test_cw_transition.py
-- test_false_win_guard: test_false_win_guard.py
-- gold_settle_gate: test_cw_gold_settle_gate.py
-- r404_ignition_order: test_cw_r404_ignition_order.py
-冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+按机制归并的主题文件,成员来自 8 个已删除的 round/工作项命名历史文件
+(r279_exit_op / r317_exit_op / r366_settlement_node_type / w40_settlement_damage /
+transition / false_win_guard / gold_settle_gate / r404_ignition_order,出处见 git 历史)。
+结构合并批曾机械拼接(来源前缀别名 / 重复 sys.path 块),瘦身批已按覆盖关系对账收敛并清疤。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
+
+import inspect
+import time
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+import sr_od.application.currency_war.kernel.cw_observe as obs_mod
+import sr_od.application.currency_war.obs.cw_observation as observation
+from one_dragon.base.geometry.point import Point
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+    ignition_gain,
+    select_deployments,
+)
+from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_transition import (
+    FRAMEWORK_FACTIONS,
+    FRAMEWORKS,
+    TRANSITION_PACK,
+    CommitSignals,
+    transition_score,
+)
+from sr_od.application.currency_war.obs.cw_observation import read_phase_round
+from sr_od.application.currency_war.obs.cw_settlement_obs import (
+    parse_settlement_damage,
+    parse_settlement_node_type,
+    read_round_outcome,
+)
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import CwEntryExit
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
+from sr_od.application.currency_war.telemetry import recorder
+from sr_od.application.currency_war.telemetry.query import read_jsonl
+from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
+from test.conftest import SrTestContext
+from test.harness.fixture_controller import (
+    FixtureController,
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
+
+# 仓根锚定:fixture 图(_TEST_REPO)与生产源码墓碑扫描(_MAIN_REPO)用。
+# sr_od 的导入路径由主仓 pyproject [tool.pytest.ini_options] pythonpath=['src']
+# 装载,本文件不再自插 sys.path(结构合并批遗留的三处 sys.path 块已清)。
+_TEST_REPO = Path(__file__).resolve().parents[4]   # sr-od-test/
+_MAIN_REPO = Path(__file__).resolve().parents[5]   # 主仓根(src/ 所在)
 
 
-# ==================== r279_exit_op ====================
+# ==================== 退局 op(r279/r302/r303b/r317)====================
 
-from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import  CwEntryExit
+
+class _ExitFixtureController(FixtureController):
+    """补真机控制器才有的 stub:btn_tap/mouse_move(纯 op 流程测试用)。"""
+
+    def btn_tap(self, key: str) -> None:
+        pass
+
+    def mouse_move(self, game_pos: Point) -> None:
+        pass
+
+
+class _WatchedExit(WatchdogOperationMixin, CwEntryExit):
+    """带看门狗的退局 op(防 WAIT 段死循环)。"""
 
 
 def test_battle_pause_screen_onboarded() -> None:
@@ -98,9 +153,7 @@ def test_retreat_branch_clicks_retreat_on_pause_frame(
 
 
 def test_no_round_retry_tail() -> None:
-    """战斗中不再落入 retry 死循环(旧版尾分支)。"""
-    import inspect
-
+    """战斗中不再落入 retry 死循环(旧版尾分支;否定墓碑,r279 退役背书)。"""
     src = inspect.getsource(CwEntryExit.exit_match)
     assert 'round_retry' not in src, 'r279: 全分支消化,无 retry 尾'
 
@@ -130,60 +183,33 @@ def test_invest_strategy_confirm_area_onboarded() -> None:
 
 
 def test_invest_strategy_branch_uses_area_center_not_ocr() -> None:
-    """件3 修复锁:r303b 分支确认点击改用 area 中心(非全屏 OCR 搜「确认」)。
+    """墓碑锁(r303b 卡点根因 / W62 件3,ADR-0329):投资策略分支不得回退
+    全屏 OCR 搜「确认」点击。
 
-    旧 round_by_ocr_and_click 对 stylized 按钮静默失配 → 点不落地 → 卡行 748s;
-    修复后与 CwScreenInvestStrategy 生产路径同源(area 中心 + bug#1 mouse_move)。
+    旧 round_by_ocr_and_click 对 stylized 按钮静默失配 → 点不落地 → 卡行
+    748s;修后走 area 中心(area_center + 兜底 Point(978,983))。分支的
+    行为面(选卡+确认点击序列、不点「返回备战界面」)由
+    test_invest_strategy_screen_takes_select_confirm_path 端到端守,
+    定位源(screen_info「按钮-确认」area 中心)由
+    test_invest_strategy_confirm_area_onboarded 守——本锁只辖「OCR 点击
+    通道退役」墓碑(肯定式在场断言已按源码锁三档判据删除)。
     """
-    import inspect
-
     src = inspect.getsource(CwEntryExit.exit_match)
-    # 分支仍在(r303b 语义:左卡+确认,未删)
-    assert '标识-请选择投资策略' in src
-    assert '左卡' in src
-    # 确认点击走 area 定位:area_center(..., '按钮-确认', ...) + 兜底常量
-    assert "area_center(self.ctx, '按钮-确认', '货币战争-投资策略')" in src
-    # 兜底坐标字面断言(Point(978, 983))已按源码锁瘦身删除(area 中心断言
-    # 在 test_invest_strategy_confirm_area_onboarded 守定位源)。
-    # 不再依赖全屏 OCR 搜「确认」点击(r303b 卡点根因;注释里的旧代码字样不算)
     branch = src.split('标识-请选择投资策略')[1].split('round_wait')[0]
-    assert "self.round_by_ocr_and_click(scr2" not in branch
     assert "self.round_by_ocr_and_click(" not in branch
 
 
-# ==================== r317_exit_op ====================
-
-import inspect
-
-import pytest
-
-from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import  CwEntryExit as _r317_exit_op_CwEntryExit
-from test.conftest import SrTestContext
-from test.harness.fixture_controller import  FixtureController, WatchdogOperationMixin, enter_running_state, fast_sleep, reset_running_state
-
-
-class _ExitFixtureController(FixtureController):
-    """补真机控制器才有的 stub:btn_tap/mouse_move(纯 op 流程测试用)。"""
-
-    def btn_tap(self, key: str) -> None:
-        pass
-
-    def mouse_move(self, game_pos: Point) -> None:
-        pass
-
-
-class _WatchedExit(WatchdogOperationMixin, _r317_exit_op_CwEntryExit):
-    """带看门狗的退局 op(防 WAIT 段死循环)。"""
+# ==================== r317_exit_op(投资策略屏退局顺序/area 化)====================
 
 
 def test_invest_strategy_branch_before_return_btn() -> None:
     """顺序锁:投资策略分支(选卡+确认)必须在「返回备战界面」分支之前。
 
     回归防:若「返回备战界面」(全屏 OCR)被放回前面,投资策略屏会先被它命中
-    并点击落空 → 死循环复现(r317 根修点 ②③)。
+    并点击落空 → 死循环复现(r317 根修点 ②③)。顺序即语义(README 纪律 8
+    容忍档,记债:分支派发次序本身就是行为,无更便宜观测点)。
     """
-    src = inspect.getsource(_r317_exit_op_CwEntryExit.exit_match)
+    src = inspect.getsource(CwEntryExit.exit_match)
     pos_invest = src.index("'标识-请选择投资策略'")
     pos_return = src.index("'返回备战界面'")
     assert pos_invest < pos_return, (
@@ -204,7 +230,7 @@ def test_battle_prep_detection_area_based() -> None:
     r317 曾以 lcs=0.8 收紧裸 OCR(默认 0.5 在投资策略屏误命中「返回备战界面」);
     T#103 建 positional rect 后误配面被结构性消灭,回归面 = 别再退回全屏扫。
     """
-    src = inspect.getsource(_r317_exit_op_CwEntryExit.exit_match)
+    src = inspect.getsource(CwEntryExit.exit_match)
     assert "'标识-备战阶段'" in src, (
         '「备战阶段」检测应使用 screen_info 标识-备战阶段 area(T#103)'
     )
@@ -238,7 +264,7 @@ def test_invest_strategy_screen_takes_select_confirm_path(
     ]
     for screen_name, state in (p['frame'] for p in phases):
         if not test_context.has_screen(screen_name, state):
-            return  # fixture 缺失则跳过(非失败)
+            pytest.skip(f'fixture 缺失:screens/{screen_name}/{state}.webp')
 
     ctrl = _ExitFixtureController(
         ctx=test_context,
@@ -278,8 +304,6 @@ def test_invest_strategy_screen_takes_select_confirm_path(
 
 # ==================== r366_settlement_node_type ====================
 
-from sr_od.application.currency_war.obs.cw_settlement_obs import  parse_settlement_node_type
-
 # 局48 实拍(逐 token 原样,含 OCR 噪声)
 R1_REWARD = ['挑战成功', '奖励', 'Lv.3', '214', '小队生命值82i',
              '获得金币总览', '数据统计', '基础奖励', '6.5万', '连胜×0',
@@ -309,14 +333,13 @@ def test_boss_header_layout() -> None:
     assert parse_settlement_node_type(BOSS_HDR) == '普通战斗'
 
 
-def test_base_reward_no_false_hit() -> None:
-    """「基础奖励」≠「奖励」(精确 token 匹配,r260 旧顾虑根除)。"""
-    texts = ['挑战成功', '基础奖励', '5', '利息']   # 头部无裸「奖励」
-    assert parse_settlement_node_type(texts) is None
-
-
 def test_no_header_returns_none() -> None:
     assert parse_settlement_node_type(['备战阶段', '1-6', '战斗']) is None
+
+
+# (test_base_reward_no_false_hit 已删:与 test_compound_word_not_matched
+#  输入与断言面逐字等价(['挑战成功','基础奖励','5','利息'] → None)——
+#  r366b 前缀白名单机制下两者走同一路径,等价择一(README 纪律 7)。)
 
 
 # r361b(review A 守卫)形态锁;r366b 追加粘着/emoji/复合词三测
@@ -333,24 +356,15 @@ def test_emoji_prefixed_boss() -> None:
 
 
 def test_compound_word_not_matched() -> None:
-    """'基础奖励'是长复合词,后缀长度门拒——不误中。"""
+    """「基础奖励」后缀命中「奖励」但前缀「基础」不在白名单 → 拒。
+
+    r260 全屏搜「奖励」误中金币区的旧顾虑,由邻位窗口 + 精确匹配根除;
+    r366b 起拒绝机制 = 前缀白名单(修饰词前缀不匹配,非长度门)。"""
     texts = ['挑战成功', '基础奖励', '5', '利息']
     assert parse_settlement_node_type(texts) is None
 
 
 # ==================== w40_settlement_damage ====================
-
-import time
-from types import SimpleNamespace
-
-from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-from sr_od.application.currency_war.obs.cw_settlement_obs import  parse_settlement_damage, read_round_outcome
-from sr_od.application.currency_war.kernel.cw_state import GameState
-
-from sr_od.application.currency_war.telemetry import recorder
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
-
-from sr_od.application.currency_war.telemetry.query import read_jsonl
 
 
 class _Item(SimpleNamespace):
@@ -453,7 +467,9 @@ def test_outcome_record_damage_roundtrip(tmp_path) -> None:
 
 def test_loop_outcome_carries_damage(monkeypatch) -> None:
     """②段路径:真实 read_round_outcome(不桩)喂 win 形帧 → 遥测行带 damage。"""
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait as bwo
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_battle_wait as bwo,
+    )
 
     captured: list[dict] = []
     monkeypatch.setattr(recorder, 'record_outcome',
@@ -511,15 +527,17 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
 
 
 def test_branch3_records_before_continue_click() -> None:
-    """弱锁:②段采样点在「继续挑战」点击前(结算停留期先读后点)。"""
-    import inspect
+    """顺序锁:②段采样点在「继续挑战」点击前(结算停留期先读后点)。
 
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
+    顺序即语义(README 纪律 8 容忍档,记债):读点先于点击 = 读的是点击前
+    同帧,无更便宜观测点(经 wait() 全链重放需整套结算 fixture)。锚取
+    wait() 内单次出现的调用名,不锚缩进/换行形状(合法重排不假红)。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_battle_wait,
+    )
     src = inspect.getsource(cw_screen_battle_wait.CwScreenBattleWait.wait)
     i_read = src.index('_record_round_outcome(screen)')
-    i_click = src.index("round_by_find_and_click_area(\n"
-                        "                    self.screenshot(), '货币战争-结算', "
-                        "'按钮-继续挑战'")
+    i_click = src.index('round_by_find_and_click_area')
     assert i_read < i_click
 
 
@@ -527,20 +545,6 @@ def test_branch3_records_before_continue_click() -> None:
 
 
 # ==================== transition ====================
-
-import sys
-from pathlib import Path
-
-_REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(_REPO / 'src'))
-
-from sr_od.application.currency_war.kernel.cw_transition import (  # noqa: E402
-    FRAMEWORK_FACTIONS,
-    FRAMEWORKS,
-    TRANSITION_PACK,
-    CommitSignals,
-    transition_score,
-)
 
 
 def test_pack_covers_data_driven_cards() -> None:
@@ -605,44 +609,14 @@ def test_commit_signals_has_no_decision_interface() -> None:
     assert not hasattr(_ct, 'COMMIT_MIN_T')
 
 
-def test_commit_boundary_plane_gate_only() -> None:
-    """定型边界(2026-08-18 收口 + ADR-0519 重锚):定型权威 =
-    cw_intention.committed_authority——plane>=2 / 意向状态机 locked /
-    p1_pair 非空;信号门已退役,不存在「信号分达阈值即定型」路径。"""
-    from sr_od.application.currency_war.kernel import cw_intention
-    from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
-
-    def _st(plane: int):
-        st = GameState()
-        st.plane = plane
-        st.round_num = 1
-        return st
-
-    # P1 无意向供给:保守 False;信号分再高也不定型(门已退役)
-    s = StrategySession()
-    state_of(s).commit_signals = CommitSignals()
-    state_of(s).commit_signals.scores = {'万敌燃血': 99.0}
-    assert not cw_intention.committed_authority(_st(1), s)
-    # P1 意向锁:True
-    s2 = StrategySession()
-    state_of(s2).v3_intention = cw_intention.IntentionState(
-        phase='locked', locked_comp='万敌燃血')
-    assert cw_intention.committed_authority(_st(1), s2)
-    # P2+:恒 True
-    assert cw_intention.committed_authority(_st(2), StrategySession())
+# (test_commit_boundary_plane_gate_only 已删:committed_authority 的三断言
+#  (P1 高分未锁 False / P1 意向锁 True / P2 恒 True)是
+#  test_cw_w628_migration_b2.py::test_committed_predicate_frame_by_frame_
+#  vs_old(帧 3/4/5 同构造)的真子集——对拍锁为超集(另辖 both_false 帧 +
+#  旧谓词镜像),跨文件等价择一保留超集(README 纪律 7)。)
 
 
 # ==================== test_false_win_guard ====================
-
-import sys as _test_false_win_guard_sys
-from pathlib import Path as _test_false_win_guard_Path
-
-_test_false_win_guard_REPO = _test_false_win_guard_Path(__file__).resolve().parents[5]
-_test_false_win_guard_sys.path.insert(0, str(_test_false_win_guard_REPO / 'src'))
-
-from sr_od.application.currency_war.obs.cw_observation import (  # noqa: E402
-    read_phase_round,
-)
 
 
 class _FakeOcr:
@@ -663,7 +637,6 @@ def test_phase_round_rejects_plane_out_of_range(monkeypatch) -> None:
     """plane=8(A8 难度泄漏)必须拒——M70 假 win 根因。"""
     import sr_od.application.currency_war.obs.cw_observation as obs
     monkeypatch.setattr(obs, '_last_phase_round', None)
-    monkeypatch.setattr(obs, 'reset_phase_round_cache', obs.reset_phase_round_cache)
     monkeypatch.setattr(obs, '_ocr', _FakeOcr('A8 8-8'))
     monkeypatch.setattr(obs, '_area_rect', lambda ctx, name: None)
     # OCR blob 抓 "8-8" → 值域守卫拒(不进缓存)
@@ -700,8 +673,7 @@ def test_phase_round_digits_fallback_branch_removed() -> None:
 
     出处:w891 延迟审计候选③——该分支结构零信息(唯一合法产出与默认兜底
     重合),近两日 868 次被拒全为纯浪费;治本 = 删段,不留在证面。"""
-    from pathlib import Path as _test_false_win_guard_Path
-    src = (_test_false_win_guard_Path(__file__).resolve().parents[5] / 'src' / 'sr_od' / 'application'
+    src = (_MAIN_REPO / 'src' / 'sr_od' / 'application'
            / 'currency_war' / 'obs' / 'cw_observation.py').read_text(encoding='utf-8')
     assert 'ocr_digits_fallback' not in src
 
@@ -731,10 +703,9 @@ def _stub_phase_round_obs(monkeypatch, blob: str) -> None:
     monkeypatch.setattr(obs, 'obs_conflict', lambda *a, **kw: None)
 
 
-def test_phase_round_backward_blip_rejected(monkeypatch) -> None:
-    """倒退单帧 = OCR 噪声 → 保旧(防抖首帧不修正,守卫原语义保留)。"""
-    _stub_phase_round_obs(monkeypatch, '回合 1-5')
-    assert read_phase_round(_Ctx(), None) == (1, 6)
+# (test_phase_round_backward_blip_rejected 已删:同一桩下「首帧防抖保旧」
+#  断言是 test_phase_round_backward_confirmed_two_frames 首行的真子集
+#  (README 纪律 18 子集断言),确认测的超集断言面(防抖→确认→缓存换新)保留。)
 
 
 def test_phase_round_backward_confirmed_two_frames(monkeypatch) -> None:
@@ -766,17 +737,6 @@ def test_phase_round_reset_clears_suspect(monkeypatch) -> None:
 
 # ==================== gold_settle_gate ====================
 
-import sys as _gold_settle_gate_sys
-from pathlib import Path as _gold_settle_gate_Path
-
-import numpy as np
-
-_gold_settle_gate_REPO = _gold_settle_gate_Path(__file__).resolve().parents[4]
-_gold_settle_gate_sys.path.insert(0, str(_gold_settle_gate_REPO / 'src'))
-
-import sr_od.application.currency_war.obs.cw_observation as observation  # noqa: E402
-import sr_od.application.currency_war.kernel.cw_observe as obs_mod  # noqa: E402
-
 
 class _RecordingLog:
     """替身 logger:记录 warning 调用(真实 log_utils 写全局文件,不便断言)。"""
@@ -801,7 +761,7 @@ class _FakeController:
         return self.frames.pop(0) if self.frames else self.frames[-1] if self.frames else None
 
 
-class _gold_settle_gate_Ctx:
+class _GoldCtx:
     def __init__(self, controller=None):
         self.controller = controller
 
@@ -813,7 +773,7 @@ def test_gold_settled_no_controller_single_read(monkeypatch):
     """无控制器(离线/单测)→ 单帧读原值,不轮询(行为与修前一致)。"""
     reads = iter([75])
     monkeypatch.setattr(observation, 'read_gold_opt', lambda ctx, screen: next(reads))
-    assert observation.read_gold_settled(_gold_settle_gate_Ctx(controller=None), None) == 75
+    assert observation.read_gold_settled(_GoldCtx(controller=None), None) == 75
 
 
 def test_gold_settled_static_two_frames_agree(monkeypatch):
@@ -822,7 +782,7 @@ def test_gold_settled_static_two_frames_agree(monkeypatch):
     conflicts: list[tuple] = []
     monkeypatch.setattr(observation, 'obs_conflict', lambda *a, **kw: conflicts.append(a))
     monkeypatch.setattr(observation, 'time', type('T', (), {'sleep': staticmethod(lambda s: None)}))
-    ctx = _gold_settle_gate_Ctx(controller=_FakeController([None, None, None]))
+    ctx = _GoldCtx(controller=_FakeController([None, None, None]))
     assert observation.read_gold_settled(ctx, None) == 60
     assert conflicts == []
 
@@ -837,7 +797,7 @@ def test_gold_settled_ticking_takes_last_and_conflicts(monkeypatch):
     conflicts: list[tuple] = []
     monkeypatch.setattr(observation, 'obs_conflict', lambda *a, **kw: conflicts.append(a))
     monkeypatch.setattr(observation, 'time', type('T', (), {'sleep': staticmethod(lambda s: None)}))
-    ctx = _gold_settle_gate_Ctx(controller=_FakeController([75, 115, 115]))
+    ctx = _GoldCtx(controller=_FakeController([75, 115, 115]))
     assert observation.read_gold_settled(ctx, None) == 115, '计数器在跳时取末帧(入账后真值)'
     assert len(conflicts) == 1
     assert conflicts[0][0] == 'gold' and conflicts[0][1] == 75 and conflicts[0][2] == 115
@@ -850,7 +810,7 @@ def test_gold_settled_ticking_timeout_still_takes_last(monkeypatch):
     conflicts: list[tuple] = []
     monkeypatch.setattr(observation, 'obs_conflict', lambda *a, **kw: conflicts.append(a))
     monkeypatch.setattr(observation, 'time', type('T', (), {'sleep': staticmethod(lambda s: None)}))
-    ctx = _gold_settle_gate_Ctx(controller=_FakeController([]))
+    ctx = _GoldCtx(controller=_FakeController([]))
     assert observation.read_gold_settled(ctx, None) == 110
     assert len(conflicts) == 1
 
@@ -904,7 +864,7 @@ def test_gold_opt_reads_3_digit_value():
     from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
     from one_dragon.utils import cv2_utils as cvu
 
-    screen = cvu.read_image(str(_gold_settle_gate_REPO / 'screens/currency_war/gold_3digit_prep.png'))
+    screen = cvu.read_image(str(_TEST_REPO / 'screens/currency_war/gold_3digit_prep.png'))
     assert screen is not None
 
     class _A:
@@ -919,22 +879,18 @@ def test_gold_opt_reads_3_digit_value():
         def get_screen(self, screen_name):
             return _SI()
 
-    class _gold_settle_gate_Ctx:
+    class _Ctx:
         def __init__(self):
             self.ocr_service = OcrService(OnnxOcrMatcher())
             self.screen_loader = _Loader()
 
-    ctx = _gold_settle_gate_Ctx()
+    ctx = _Ctx()
     ctx.ocr_service.ocr_matcher.init_model()
     v = observation.read_gold_opt(ctx, screen)
     assert v == 201, f'3 位数金被误读为 {v}(裁首位/OCR 回归)'
-    assert np is not None
 
 
 # ==================== r404_ignition_order ====================
-
-from sr_od.application.currency_war.kernel.cw_deploy_logic import  ignition_gain, select_deployments
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def test_ignition_gain_semantics() -> None:
