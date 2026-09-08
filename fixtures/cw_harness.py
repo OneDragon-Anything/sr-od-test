@@ -4,17 +4,19 @@
 
 - **端口安装**:构建 ``FakeMatch`` + ``FakeCwObserver``/``FakeActionSink``
   后 ``install_game_ports`` 显式接通(方案 §3.3 装配纪律;teardown 卸载);
-- **档案根接通**:recorder 落盘根槽(``telemetry.state.
-  set_recorder_replay_dir``,F4)+ journal 根槽(``op_journal.
-  set_journal_dir``,T-129/T-130 混流注记的写端隔离)同点接指假局档案
-  根(tmp_path 下)——假局遥测全链落生产 schema、零触真实 .debug 根;
+- **档案根接通**:遥测写根三槽同点接指假局档案根(tmp_path 下)——
+  recorder 落盘根槽(``telemetry.state.set_recorder_replay_dir``,F4)
+  + journal 根槽(``op_journal.set_journal_dir``,T-129/T-130 混流注记
+  的写端隔离)+ 决策帧落盘根槽(``decision_frame_hooks.
+  set_decision_frame_dir``,三审二波 F2:原为无槽第三根,靠私函数
+  monkeypatch 兜)——假局遥测全链落生产 schema、零触真实 .debug 根;
 - **真策略对局**:`MandateV1Strategy().create_session` 冷建(与生产
   run_buy_waves match=None 分支同源,ADR-0583 唯一冷建口)——被测对象
   含真策略器,决策非桩;
 - **读图域桩**(识别/执行缺陷面结构性为零的申报面,方案 §4-6):截图
   旋转亮度帧、``new_bench_slots`` pixel-diff 读数按假局 bench 真值差分、
-  决策帧留证目录重定向 tmp_path、stdlib sleep 桩(段顶 settle/刷新稳定
-  门等待零信息量,先例 = test_cw_shop_refresh 同款);
+  stdlib sleep 桩(段顶 settle/刷新稳定门等待零信息量,先例 =
+  test_cw_shop_refresh 同款);
 - **局终收口**:逐节点 outcome 行(生产 ``record_outcome`` schema 形状,
   真值位恒真)+ 局终 run summary(经生产 ``state.record_run_summary``;
   Δ池局终再生钩在 harness 内桩化——它是读实机档案并重写池快照的
@@ -36,6 +38,7 @@ from fixtures.cw_fake_game.fake_match import FakeMatch
 from fixtures.cw_fake_game.fake_ports import FakeActionSink, FakeCwObserver
 from sr_od.application.currency_war import cw_game_ports
 from sr_od.application.currency_war.cw_game_ports import install_game_ports
+from sr_od.application.currency_war.operations import decision_frame_hooks as dfh
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CurrencyWarMatch,
 )
@@ -203,11 +206,14 @@ class FakeP1Run:
 
     # ---- 桩面(读图域;方案 §4-6「识别/执行缺陷面结构性为零」)----
 
-    def _install_stubs(self, monkeypatch: Any, tmp_path: Path) -> None:
-        """读图域桩集合(全部 monkeypatch,teardown 自动还原)。"""
-        from sr_od.application.currency_war.operations import (
-            decision_frame_hooks as dfh,
-        )
+    def _install_stubs(self, monkeypatch: Any) -> None:
+        """读图域桩集合(全部 monkeypatch,teardown 自动还原)。
+
+        决策帧留证目录不在此列:落盘根走三槽接线(fake_p1_run 同点
+        ``set_decision_frame_dir``),不再 monkeypatch 私函数 ``_out_dir``
+        (三审二波 F2:私函数改道是不经机制的调用侧自觉,正式槽接线
+        后该补桩形态退役)。
+        """
         from sr_od.application.currency_war.operations.cw_op import (
             cw_op_buy_cards as buy_mod,
         )
@@ -259,10 +265,6 @@ class FakeP1Run:
             real_record_defect(*a, **k)
 
         monkeypatch.setattr(defects, 'record_defect', _filtered_defect)
-        # 决策帧留证目录 → tmp_path(假环境本就落结构化 JSON,见
-        # decision_frame_hooks 端口分支;目录也不得触真实 .debug)
-        monkeypatch.setattr(dfh, '_out_dir',
-                            lambda run_id: tmp_path / 'dframes' / run_id)
         # Δ池局终再生钩桩化:它读实机档案并重写池快照数据文件(真实
         # 副作用;recorder.record_run_summary 尾部无条件调用)——测试
         # 零副作用纪律要求沿调用链整链桩化,不是「我没调 summary」式回避
@@ -541,18 +543,21 @@ def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
     档案根 = ``tmp_path/<archive_dir_name>/``(recorder 原生流 +
     op_journal.jsonl 同根——写端隔离,假局行零触 live 根)。
     teardown = 端口卸载 + run 态簇复位(``tel_state.reset_run_state``)
-    + 两根槽复位(进程全局槽残留防线,teardown 必达,不依赖
+    + 三根槽复位(进程全局槽残留防线,teardown 必达,不依赖
     monkeypatch 覆盖所有槽)。
     """
     root = tmp_path / archive_dir_name
     run = FakeP1Run(ctx, seed, node_sequence=node_sequence,
                     initial_hp=initial_hp, initial_gold=initial_gold)
-    # 根槽接通(生产形 API;先于任何 recorder 构造/写点)
+    # 根槽接通(生产形 API;先于任何 recorder 构造/写点)。三写根同点
+    # 接指同一档案根(recorder/journal/决策帧;第三槽 = 三审二波 F2
+    # 修复,漏接一件即部分隔离)。
     tel_state.set_recorder_replay_dir(root)
     op_journal.set_journal_dir(root)
+    dfh.set_decision_frame_dir(root)
     install_game_ports(FakeCwObserver(run.match), FakeActionSink(run.match))
     try:
-        run._install_stubs(monkeypatch, tmp_path)
+        run._install_stubs(monkeypatch)
         yield run
     finally:
         cw_game_ports.uninstall_game_ports()
@@ -560,7 +565,8 @@ def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
         # three_review_20260908/三审报告-第二波.md F1,易失产物待 ADR
         # 回填;ensure 门语义见 ADR-0588)——局终 record_run_summary 裸写
         # _RUN_CLOSED=True 不在任何 monkeypatch 清单内,散点补桩随簇扩员
-        # 会再漏,统一走 state 正规复位入口(teardown 必达档,同两根槽)。
+        # 会再漏,统一走 state 正规复位入口(teardown 必达档,同三根槽)。
         tel_state.reset_run_state()
         tel_state.set_recorder_replay_dir(None)
         op_journal.set_journal_dir(None)
+        dfh.set_decision_frame_dir(None)

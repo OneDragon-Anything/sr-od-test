@@ -1,9 +1,10 @@
 """决策帧截图留证钩子锁(decision_frame_hooks)。
 
-锁三件:①输出文件名格式(ts 前缀可对齐 decisions.jsonl 行 ts);
-②滚动删除逻辑(每挂点保留最近 KEEP_PER_TAG 帧,旧的被删);
-③挂点调用存在(源码级:cw_op 两挂点内联字面 + cw_loop 经 dispatch 包装
-统一落帧、调用点声明 frame_tag,ADR-0584)。
+锁四件:①输出文件名格式(ts 前缀可对齐 decisions.jsonl 行 ts);
+②滚动删除逻辑(每挂点保留最近 KEEP_PER_TAG 帧,旧的被删;PNG 与
+观察证据 JSON 两分支都辖);③挂点调用存在(源码级:cw_op 两挂点内联
+字面 + cw_loop 经 dispatch 包装统一落帧、调用点声明 frame_tag,
+ADR-0584);④观察证据 JSON 分支的滚动治理(suffix 路由)。
 """
 import re
 from pathlib import Path
@@ -60,6 +61,48 @@ def test_rolling_delete_keeps_recent(frame_env):
     other.write_bytes(b'other-tag')
     dfh.save_decision_frame(_FakeOp(), 'deploy', _img())
     assert other.is_file()
+
+
+def test_json_evidence_rolling_prune(tmp_path, monkeypatch):
+    """观察证据 JSON 分支按 tag 滚动治理(_prune_old 的 suffix 路由)。
+
+    独立失败模式:丢 suffix='.json' 实参 → PNG 删式(`_<tag>.png`)匹配
+    不到 .json,假局长局/批量驱动下证据无限累积——PNG 桶滚动锁(上条)
+    不辖 JSON 分支;分支语义见 decision_frame_hooks.save_decision_frame
+    docstring「留证面改形」。槽+端口装配 = JSON 分支的运行前提(未接槽
+    走拒写守卫),teardown 复位槽(进程全局,测试纪律 4)。
+    """
+    from sr_od.application.currency_war import cw_game_ports
+    from sr_od.application.currency_war.telemetry import state as tel_state
+
+    class _Src:
+        def evidence_snapshot(self, tag):
+            return {'probe': tag}
+
+    class _Op:
+        def screenshot(self):
+            return None
+
+    monkeypatch.setattr(dfh, 'get_project_root', lambda: tmp_path / 'prod')
+    monkeypatch.setattr(tel_state, 'current_run_id', lambda: 'run_jp')
+    monkeypatch.setattr(cw_game_ports, 'observation_source', lambda: _Src())
+    dfh.set_decision_frame_dir(tmp_path / 'archive')
+    try:
+        out = tmp_path / 'archive' / 'decision_frames' / 'run_jp'
+        # 先铺 KEEP_PER_TAG + 3 个旧 json(文件名 ts 递增保字典序=时间序)
+        out.mkdir(parents=True, exist_ok=True)
+        for i in range(dfh.KEEP_PER_TAG + 3):
+            name = f'20260101_0000{i // 10:02d}_{i % 10:03d}_probe.json'
+            (out / name).write_text('{}', encoding='utf-8')
+        fn = dfh.save_decision_frame(_Op(), 'probe')
+        assert fn is not None and fn.endswith('.json')
+        mine = sorted(out.glob('*_probe.json'))
+        assert len(mine) == dfh.KEEP_PER_TAG
+        assert (out / fn) in mine
+        # 最旧的被删(含新帧共 44 → 保留最近 40)
+        assert not (out / '20260101_000000_000_probe.json').exists()
+    finally:
+        dfh.set_decision_frame_dir(None)
 
 
 def test_hook_call_sites_exist():

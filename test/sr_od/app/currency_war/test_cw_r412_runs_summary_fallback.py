@@ -15,12 +15,27 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
 
+from sr_od.application.currency_war.sim import ledger_hooks
+from sr_od.application.currency_war.sim.ledger_hooks import (
+    build_recovered_summary,
+    check_summary_write_path_coverage,
+    recover_dangling_run_summaries,
+)
+from sr_od.application.currency_war.telemetry.query import read_jsonl
 from sr_od.application.currency_war.telemetry.schema import append_jsonl
 
-from sr_od.application.currency_war.sim.ledger_hooks import build_recovered_summary, check_summary_write_path_coverage, recover_dangling_run_summaries
 
-from sr_od.application.currency_war.telemetry.query import read_jsonl
+@pytest.fixture(autouse=True)
+def _no_pool_regen(monkeypatch: pytest.MonkeyPatch) -> None:
+    """桩掉局终 Δ池再生钩(recover 补行成功即触发,ledger_hooks 模块内
+    自持引用;它读生产 live 根并重写跟踪中的 data/cw_delta_pool_data.py
+    ——测试零真实副作用,纪律 2:2026-09-08 快层实测本文件每次运行都
+    重写该文件)。快照内容红归池锚重推批(语料推进 vs 提交锚),与本
+    文件锁语义无关。"""
+    monkeypatch.setattr(ledger_hooks,
+                        '_regenerate_delta_pool_after_run', lambda: None)
 
 
 def _write(path: Path, rows: list[dict]) -> None:
