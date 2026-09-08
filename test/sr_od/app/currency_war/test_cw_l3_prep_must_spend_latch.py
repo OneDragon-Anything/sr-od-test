@@ -9,13 +9,14 @@
 锁契约 = 结构/回显,不锁分布数值(sr-od-test README 第 8 条)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
+from dataclasses import replace
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_prep_actions import LevelUp
+from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
@@ -23,6 +24,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 
 
@@ -154,6 +158,60 @@ class TestL3RejectKeys:
         out2 = mandate.run_mandate(fc, sess2, state=stc)
         assert not _lvls(out2)
         assert state_of(sess2).cw4_counters.get('l3_reject_batch_unaffordable') == 1
+
+
+class TestL3RegistryInjection:
+    """注册表注入变异锁(ADR-0565 第 4 消费位挂账收口 = ADR-0606):
+    备战 M3 链的等级帽/停付让位消费位必须消费**注入注册表**。锁的
+    形态 = 同帧换注入表判定必翻转(拆接线回读缺省表 → 判定落回缺省
+    口径 → 本组红),锁行为不锁回显。
+
+    帧态基座 = 本文件 ``_mk``(arm1 命中 = 进块前提,既有键测同源):
+    gold=56(> G_must=50,域内)/gold=40(域外)两档分流让位与判据链。"""
+
+    def test_level_cap_follows_injected_registry(self):
+        """等级帽注入变异锁:注入 level_max=9 视图 ⇒ lv9 帧因等级帽拒
+        (l3_reject_level_cap 分键);换 level_max=11 同帧过帽(分键不落,
+        链条到预算闸接手证明非静默)。拆接线回读缺省表(=10)⇒ lv9 帧
+        过帽 ⇒ 首断言红。"""
+        cap9 = replace(DEFAULT_REGISTRY, level_max=9)
+        f9, sess9, st9 = _mk(56, level=9)
+        out9 = mandate.run_mandate(f9, sess9, state=st9, registry=cap9)
+        assert not _lvls(out9)
+        assert state_of(sess9).cw4_counters.get('l3_reject_level_cap') == 1
+        assert 'l3_reject_batch_unaffordable' not in \
+            state_of(sess9).cw4_counters
+        cap11 = replace(DEFAULT_REGISTRY, level_max=11)
+        f11, sess11, st11 = _mk(56, level=9)
+        out11 = mandate.run_mandate(f11, sess11, state=st11, registry=cap11)
+        assert not _lvls(out11)
+        assert 'l3_reject_level_cap' not in state_of(sess11).cw4_counters
+        # 过帽后续门接手:xp 22/52 现读真 8 击×4=32 ≤ 56 整买过,落在
+        # P72 全段闸中间段 ⇒ levelup_budget_gate_blocked(与既有 lv9
+        # 否定面锁同口径:帽外帧由预算闸接手,分键翻转源于注入表)。
+        assert state_of(sess11).cw4_counters.get(
+            'levelup_budget_gate_blocked') == 1
+
+    def test_level_spend_blocked_follows_injected_registry(self):
+        """停付让位注入变异锁:注入 vd_p2_loss=30(P2 危机带线 41→60,
+        ``p2_crisis_stop_hp`` 同源派生)⇒ hp=50 帧落 crisis_level_spend_
+        defer;缺省表(线 41)同帧不停付,链条到预算闸接手。拆接线回读
+        缺省表 ⇒ 首断言红。"""
+        wide = replace(DEFAULT_REGISTRY, vd_p2_loss=30.0)
+        fw, sessw, stw = _mk(40, hp=50)
+        outw = mandate.run_mandate(fw, sessw, state=stw, registry=wide)
+        assert not _lvls(outw)
+        assert state_of(sessw).cw4_counters.get(
+            'crisis_level_spend_defer') == 1
+        fd, sessd, std = _mk(40, hp=50)
+        outd = mandate.run_mandate(fd, sessd, state=std,
+                                   registry=DEFAULT_REGISTRY)
+        assert not _lvls(outd)
+        assert 'crisis_level_spend_defer' not in state_of(sessd).cw4_counters
+        # 停付未触发面:整买 8 击×4=32 ≤ 40 过,预算闸中间段接手(同帧
+        # 异表分键翻转,证明停付判定消费的是注入表)。
+        assert state_of(sessd).cw4_counters.get(
+            'levelup_budget_gate_blocked') == 1
 
 
 class TestBoardTargetLineTrackedFallback:
