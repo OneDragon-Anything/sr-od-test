@@ -3,7 +3,7 @@
 背景:sim 找问题轮定位三形态(超容→买冻结 / 刷新全批零用 / 冷启动
 r1-r4 零买)但纪律要求「先立观察面再定谳,禁直接立病灶」。先例 =
 达标臂发射面批(test_cw_launch_battle_face.py / commit 2ea5ea8c):
-engine_p1 行内观测键 + cw_batch_stats 统计族 + 形态锁。
+engine_p1 行内观测键 + 形态锁。
 
 建模口径(engine_p1「采购面三观察计数」块):
 - 超容观察:每决策帧 |locked_buy_membership| vs BENCH_CAPACITY+
@@ -20,15 +20,14 @@ engine_p1 行内观测键 + cw_batch_stats 统计族 + 形态锁。
 零策略行为改动;挂行内 'obs' 键而非增行/动 actions——一轮一行、
 outcomes 配对、段级检查轮键、行为投影 digest 四不变式不被观测面挤占。
 
-本批四锁:
-1. 行形态:每轮行都带 'obs' 键(四键恰等、非负 int、内含不变式);
-2. 落盘:decisions.jsonl 行内 obs 与内存账本逐位一致;
-3. 统计族:cw_batch_stats 采购观察族对账本行聚合恒等 + 合成行判读锁;
-4. 零/缺数据形态:obs 缺键(旧批/档案)聚合不炸(0/None),不误报。
+本批两锁(原统计族/零数据形态两锁随 cw_batch_stats 四指标裁定移除
+——2026-09-08 用户规格只留四指标,采购观察统计族属其余指标,测试随
+指标走;生产 obs 键面锁不经统计脚本,直接断言账本行):
+1. 行形态:每轮行都带 'obs' 键(键集恰等、非负 int、内含不变式);
+2. 落盘:decisions.jsonl 行内 obs 与内存账本逐位一致。
 """
 from __future__ import annotations
 
-import importlib.util
 import json
 
 import pytest
@@ -131,175 +130,6 @@ def test_decisions_jsonl_persist_obs_rows(tmp_path):
              if line.strip()]
     assert [r.get('obs') for r in lines] == \
         [r.get('obs') for r in result.ledger]
-
-
-def _load_stats_module():
-    """cw_batch_stats(skill 脚本,非包成员)按路径加载。"""
-    from one_dragon.utils.file_utils import get_project_root
-    path = (get_project_root() / 'skills' / 'sr-od-currency-war-dev'
-            / 'scripts' / 'cw_batch_stats.py')
-    spec = importlib.util.spec_from_file_location('cw_batch_stats', path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def _row_from_ledger(row: dict) -> dict:
-    """账本行 → 统计行(同 launch 面锁的装配形状)。"""
-    return {'plane': row['plane'], 'round': row['round_num'],
-            'node_type': (row.get('sim') or {}).get('node'),
-            'gold': row['gold'], 'hp': row['hp'], 'hp_delta': None,
-            'form': row.get('form_score'), 'form_ok': row.get('form_ok'),
-            'level': (row.get('state') or {}).get('level'),
-            'deployed': (row.get('state') or {}).get('deployed') or [],
-            'factions': dict((row.get('state') or {})
-                             .get('board_factions') or {}),
-            'acts': row.get('actions') or [],
-            'launch': row.get('launch'),
-            'obs': row.get('obs') or {},
-            'shop_waves': []}
-
-
-class TestPurchaseObsStatsFamilyLock:
-    """锁 3:统计族对接(cw_batch_stats 采购观察族)。"""
-
-    def test_stats_family_matches_ledger(self):
-        mod = _load_stats_module()
-        result = _seeded_result(0)
-        rows = [_row_from_ledger(r) for r in result.ledger]
-        m = mod.analyze_game(rows)
-        obs = [r['obs'] for r in result.ledger]
-        assert m['超容帧数'] == sum(o.get('overcap_frames', 0) for o in obs)
-        # 持续轮数 = 连续轮 overcap_frames>0 的最长 run(统计端聚合口径)
-        run = best = 0
-        for o in obs:
-            run = run + 1 if o.get('overcap_frames') else 0
-            best = max(best, run)
-        assert m['超容最长连续轮'] == best
-        avail = sum(o.get('refresh_avail_frames', 0) for o in obs)
-        refs = sum(o.get('refreshes', 0) for o in obs)
-        assert m['刷新可得帧'] == avail
-        assert m['刷新触发率'] == (round(refs / avail, 2) if avail else None)
-        # 触发率值域:实际刷新不可能超过可得帧(每帧至多对应若干刷,
-        # 但比率必须落在 [0, ∞) 且分母为零时 None——非 None 必 > 0 帧)
-        if m['刷新触发率'] is not None:
-            assert m['刷新触发率'] >= 0.0
-        # 冷启动 = plane1 r1-r4 actions 聚合(引擎零新键)
-        cold = [r for r in rows if r['plane'] == 1 and r['round'] <= 4]
-        assert m['冷启动买次数'] == sum(
-            mod.n_act(r['acts'], 'BuyCard') for r in cold)
-        assert m['冷启动金花费'] == sum(mod.act_cost(r['acts']) for r in cold)
-        # I 必花域三键统计恒等(ledger obs 聚合 = analyze_game 输出)
-        assert m['必花域帧数'] == sum(
-            o.get('must_spend_zone_frames', 0) for o in obs)
-        assert m['必花域零消费帧'] == sum(
-            o.get('must_spend_zero_consume', 0) for o in obs)
-        want_layer: dict = {}
-        for o in obs:
-            for k, v in (o.get('must_spend_layer_hit') or {}).items():
-                want_layer[k] = want_layer.get(k, 0) + v
-        assert m['必花域层命中'] == want_layer
-
-    def test_stats_synthetic_overcap_and_coldstart(self):
-        """合成行判读锁:超容 run/触发率/冷启动聚合的确定性值。"""
-        mod = _load_stats_module()
-        rows = [
-            {'plane': 1, 'round': 1, 'node_type': '普通战斗', 'gold': 12,
-             'hp': 100, 'hp_delta': None, 'form': 0.3, 'form_ok': False,
-             'level': 2, 'deployed': [], 'factions': {},
-             'acts': [{'__type__': 'BuyCard',
-                       'card': {'name': 'a', 'cost': 2}}],
-             'launch': None, 'shop_waves': [],
-             'obs': {'locked_b': 0, 'overcap_frames': 0,
-                     'refresh_avail_frames': 2, 'refreshes': 0}},
-            {'plane': 1, 'round': 2, 'node_type': '普通战斗', 'gold': 30,
-             'hp': 90, 'hp_delta': -10, 'form': 0.4, 'form_ok': False,
-             'level': 3, 'deployed': [], 'factions': {},
-             'acts': [{'__type__': 'RefreshShop'}],
-             'launch': None, 'shop_waves': [],
-             'obs': {'locked_b': _CAP + 1, 'overcap_frames': 1,
-                     'refresh_avail_frames': 3, 'refreshes': 1}},
-            {'plane': 1, 'round': 3, 'node_type': '奖励', 'gold': 40,
-             'hp': 90, 'hp_delta': 0, 'form': 0.4, 'form_ok': False,
-             'level': 3, 'deployed': [], 'factions': {},
-             'acts': [], 'launch': None, 'shop_waves': [],
-             'obs': {'locked_b': _CAP + 1, 'overcap_frames': 2,
-                     'refresh_avail_frames': 1, 'refreshes': 0}},
-        ]
-        m = mod.analyze_game(rows)
-        assert m['超容帧数'] == 3
-        assert m['超容最长连续轮'] == 2      # r2-r3 连续
-        assert m['超容峰值|B|'] == _CAP + 1
-        assert m['刷新可得帧'] == 6
-        assert m['刷新触发率'] == round(1 / 6, 2)
-        assert m['冷启动买次数'] == 1
-        # 金花费 = r1 买 2 + r2 刷 2(act_cost 全花费类动作口径)
-        assert m['冷启动金花费'] == 4
-
-    def test_stats_synthetic_must_spend_family(self):
-        """合成行判读锁:必花域三键聚合的确定性值。"""
-        mod = _load_stats_module()
-        rows = [
-            {'plane': 1, 'round': 1, 'node_type': '普通战斗',
-             'gold': 60, 'hp': 100, 'hp_delta': None, 'form': 0.3,
-             'form_ok': False, 'level': 3, 'deployed': [],
-             'factions': {}, 'acts': [], 'launch': None,
-             'shop_waves': [],
-             'obs': {'locked_b': 0, 'overcap_frames': 0,
-                     'refresh_avail_frames': 0, 'refreshes': 0,
-                     'must_spend_zone_frames': 2,
-                     'must_spend_zero_consume': 1,
-                     'must_spend_layer_hit': {'L1': 1, 'L3': 1}}},
-            {'plane': 1, 'round': 2, 'node_type': '普通战斗',
-             'gold': 70, 'hp': 95, 'hp_delta': -5, 'form': 0.4,
-             'form_ok': False, 'level': 3, 'deployed': [],
-             'factions': {}, 'acts': [], 'launch': None,
-             'shop_waves': [],
-             'obs': {'locked_b': 0, 'overcap_frames': 0,
-                     'refresh_avail_frames': 1, 'refreshes': 1,
-                     'must_spend_zone_frames': 1,
-                     'must_spend_zero_consume': 0,
-                     'must_spend_layer_hit': {'L2': 1}}},
-        ]
-        m = mod.analyze_game(rows)
-        assert m['必花域帧数'] == 3
-        assert m['必花域零消费帧'] == 1
-        assert m['必花域层命中'] == {'L1': 1, 'L3': 1, 'L2': 1}
-
-
-class TestPurchaseObsZeroDataShapeLock:
-    """锁 4:缺/零数据形态(聚合不炸、不误报)。"""
-
-    def test_rows_without_obs_key_degrade_to_zero(self):
-        """档案行/旧批(无 obs 键)→ 0/None,不炸不误报。"""
-        mod = _load_stats_module()
-        rows = [{'plane': 1, 'round': 1, 'node_type': '普通战斗',
-                 'gold': 10, 'hp': 90, 'hp_delta': None, 'form': 0.5,
-                 'form_ok': False, 'level': 3, 'deployed': [],
-                 'factions': {}, 'acts': [], 'launch': None,
-                 'shop_waves': []}]
-        m = mod.analyze_game(rows)
-        assert m['超容帧数'] == 0
-        assert m['超容最长连续轮'] == 0
-        assert m['刷新可得帧'] == 0
-        assert m['刷新触发率'] is None
-        assert m['冷启动买次数'] == 0
-        assert m['冷启动金花费'] == 0
-        assert m['必花域帧数'] == 0
-        assert m['必花域零消费帧'] == 0
-        assert m['必花域层命中'] == {}
-
-    def test_report_survives_obs_zero_batch(self):
-        """report 全批零观察形态:打印面不炸(0 除法已用 max 护栏)。"""
-        mod = _load_stats_module()
-        rows = [{'plane': 1, 'round': 1, 'node_type': '普通战斗',
-                 'gold': 10, 'hp': 90, 'hp_delta': None, 'form': 0.5,
-                 'form_ok': False, 'level': 3, 'deployed': [],
-                 'factions': {}, 'acts': [], 'launch': None,
-                 'obs': {'locked_b': 0, 'overcap_frames': 0,
-                         'refresh_avail_frames': 0, 'refreshes': 0},
-                 'shop_waves': []}]
-        mod.report({'g0': rows}, 'zero-obs-smoke')
 
 
 if __name__ == '__main__':

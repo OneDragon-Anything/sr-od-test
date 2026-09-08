@@ -1,28 +1,26 @@
-"""sim 观测面补齐批五观察件测试(刷新触发源分键/冷启动金轨迹/theta 成因
-分桶/b_t 写者(form_score 口径替换)/fenced 拆键)。
+"""sim 观测面补齐批观察件测试(刷新触发源分键/theta 成因分桶/b_t 写者
+(form_score 口径替换)/fenced 拆键/terminal_release 账本行键)。
 
 纪律 = 先立观察再定谳,纯观测零策略语义改动;锁契约 = 结构/回显,
-不锁分布数值(README 第 8 条)。五锁与落点:
+不锁分布数值(README 第 8 条)。五锁与落点(原冷启动金轨迹统计族锁
+随 cw_batch_stats 四指标裁定移除——2026-09-08 用户规格只留四指标,
+冷启动金轨迹属其余指标,测试随指标走):
 1. 刷新触发源(任务①):sim 账本 RefreshShop 动作带 reason 记录字段
    (kernel/cw_state.RefreshShop,先例 = LevelUp.auth_basis「记录不是
    指令」);行内 obs.refresh_trigger 分键与 actions 逐项对账。
-2. 冷启动金轨迹(任务②):cw_batch_stats analyze_game 冷启动金轨迹
-   = P1 r1-r4 逐轮轮末金(口径 = decisions 行 gold,对照
-   20260906-0145-simfind 报告问题 1 的轨迹形态口径)。
-3. theta 成因分桶(任务③):proof.switch_param_missing 缺失清单 +
+2. theta 成因分桶(任务③):proof.switch_param_missing 缺失清单 +
    should_switch 聚合键 theta_unavailable 原样 + 成因键
    theta_unavailable_<槽位>(不同键防混淆,R24-2)。
-4. b_t 写者(form_score→B_t 口径替换):flow.write_shop_mirrors 写
+3. b_t 写者(form_score→B_t 口径替换):flow.write_shop_mirrors 写
    state_of(session).v3_b_t(kernel board_target_line_weight 单一源口径),
    空板恒 0、上场线内件逐件计数;phase/form_ok 退役缺省不受影响。
-5. fenced 拆键(任务⑤):kernel can_deploy_single 拒因五键词表
+4. fenced 拆键(任务⑤):kernel can_deploy_single 拒因五键词表
    (单一源)可产生 cap/name_dup;发射位拆键透传 + 预注册裁决协议
    注释在场(源码契约锁,exit3_fence_semantics DESIGN §5-3)。
+5. terminal_release 账本行键接线(增补 C1)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
-import importlib.util
 import inspect
 
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
@@ -46,20 +44,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
-
-
-def _load_stats_module():
-    """cw_batch_stats(skill 脚本,非包成员)按路径加载(同采购面批)。"""
-    from one_dragon.utils.file_utils import get_project_root
-    path = (get_project_root() / 'skills' / 'sr-od-currency-war-dev'
-            / 'scripts' / 'cw_batch_stats.py')
-    spec = importlib.util.spec_from_file_location('cw_batch_stats_b2', path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-mod = _load_stats_module()
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 
 _SEED_CACHE: dict[int, object] = {}
 
@@ -107,36 +94,7 @@ class TestRefreshTriggerSource:
                 assert got == want, (row.get('round_num'), got, want)
 
 
-# ---------- 锁 2:冷启动金轨迹统计族(任务②) ----------
-
-class TestColdGoldTrajectory:
-    def test_cold_track_identity(self):
-        """冷启动金轨迹 = P1 r1-r4 逐轮轮末金(合成行回显锁)。"""
-        rows = [{'plane': 1, 'round': rr, 'gold': g, 'hp': None,
-                 'hp_delta': None, 'node_type': None, 'form': None,
-                 'form_ok': False, 'level': 3, 'deployed': [],
-                 'factions': {}, 'acts': [], 'launch': None,
-                 'shop_waves': [], 'obs': {}}
-                for rr, g in ((1, 10), (2, 24), (3, 47), (4, 41))]
-        rows.append({'plane': 1, 'round': 5, 'gold': 3, 'hp': None,
-                     'hp_delta': None, 'node_type': None, 'form': None,
-                     'form_ok': False, 'level': 3, 'deployed': [],
-                     'factions': {}, 'acts': [], 'launch': None,
-                     'shop_waves': [], 'obs': {}})
-        m = mod.analyze_game(rows)
-        assert m['冷启动金轨迹'] == [10, 24, 47, 41]
-
-    def test_report_prints_trajectory_section(self):
-        """J 族打印面不炸(零观测局 = 无数据退化,不误报)。"""
-        rows = [{'plane': 1, 'round': 1, 'gold': 5, 'hp': None,
-                 'hp_delta': None, 'node_type': None, 'form': None,
-                 'form_ok': False, 'level': 3, 'deployed': [],
-                 'factions': {}, 'acts': [], 'launch': None,
-                 'shop_waves': [], 'obs': {}}]
-        mod.report({'g0': rows}, 'cold-track-smoke')   # 不抛即过
-
-
-# ---------- 锁 3:theta_unavailable 成因分桶(任务③) ----------
+# ---------- 锁 2:theta_unavailable 成因分桶(任务③) ----------
 
 class TestThetaUnavailableCauseKeys:
     def setup_method(self):
@@ -165,7 +123,7 @@ class TestThetaUnavailableCauseKeys:
         assert ct.get('theta_unavailable_delta') == 1
 
 
-# ---------- 锁 4:b_t 写者(form_score→B_t 口径替换) ----------
+# ---------- 锁 3:b_t 写者(form_score→B_t 口径替换) ----------
 
 class TestBoardTargetLineWriter:
     def test_empty_board_zero_and_stamp(self):
@@ -215,7 +173,7 @@ class TestBoardTargetLineWriter:
         assert state_of(sess).v3_form_ok is False
 
 
-# ---------- 锁 6:terminal_release 账本行键接线(增补 C1) ----------
+# ---------- 锁 4:terminal_release 账本行键接线(增补 C1) ----------
 
 class TestTerminalReleaseLedgerKey:
     def test_row_key_present_and_bool(self):
