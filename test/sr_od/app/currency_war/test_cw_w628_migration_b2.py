@@ -5,22 +5,30 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
 
 1. D1:hoard 可信位——投影失败帧 ``hoard_readable=False``,消费域走保守域,
    变异探针(投影抛错)下买侧行为 ≠ 空集放行;
-2. D2:committed 缺供给帧 = 保守侧 False(拔供给探针),禁缺省激进侧;
+2. D2:committed 缺供给帧 = 保守侧 False——本文件不再持测;保守侧直锁
+   = test_cw_session_separation::test_none_state_criterion_faces_
+   return_defaults(``committed_authority(None, bare) is False``)+ 本
+   文件对拍锁帧 1-2(P1 帧ist 缺席 → False);原并入目标
+   test_cw_w620_migration_b1 本体已随 dd-038 批删除,指针收口重锚;
 3. D3:息线单一源 = ``registry.interest_floor()`` 派生(interest_cap×10),
    全仓属性读点 = 0(grep 锁)+ ALL IN override 通道;
 4. P7:意向状态机驱动点契约——每 game-round 恰一次(键守卫幂等),
    registry 注入分歧探针(P6:注入臂与缺省臂必须出现受控分歧);
 5. P4:ist 跨局零残留(每局新建 StrategySession 构造性保证的行为锁);
 6. 哨兵锁:局23 型帧(100 金+备战空+息线姿态)在现行 mandate_v1 商店线
-   决策面(``decide_shop_action``)复活 5 条——息线供给恒等(g*/s_reserve
-   边界)、不死守可辨收敛(压库买/店空 CloseShop+计数)、金位不破息线
-   (0-100 金全决策面端到端)。2026-09-03 歼击战核查:本条曾登记「并入
-   w633」,并入目标不存在 = 指针失真,语义裸奔至今,本批复活;
+   决策面(``decide_shop_action``)。2026-09-08 覆盖对账后收敛为两面:
+   2★ 压库件无退金背书 ⇒ 端到端零支出 + 必花域 L3 终结;金位不破息线
+   (0-100 金全决策面端到端,主题文件无此扫面)。原「息线供给恒等」
+   「不死守可辨收敛」两面经亲读对账由主题文件承载(test_cw_p56_t1/
+   test_cw4_statefn + test_cw_session_separation;test_cw4_mandate_v1::
+   test_shop_visit_sets_latch / test_cw4_shop_line::
+   test_d_p2idle_idle_gold_counter / test_cw_must_spend_zone::
+   test_whitelist_empty_shop_cap_top_zero_consume),重复锁已删
+   (README 纪律 7 跨文件择一);复活史见哨兵节注;
 7. committed 翻真谓词 vs 旧 CommitSignals 判定:逐帧对拍锁(P1 段
    小帧集,分歧仅允许出现在方向层接管区并逐帧定性)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import re
 from dataclasses import replace
@@ -28,10 +36,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-from sr_od.application.currency_war.kernel.cw_economy import (
-    cap_resolved_of_session,
-    saturation_line,
-)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     committed_authority,
@@ -59,6 +63,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
     Snapshot,
     SubstateClassification,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
@@ -104,7 +111,7 @@ def test_d1_hoard_readable_normal_frame():
     assert isinstance(turn.direction.hoard, frozenset)
 
 
-def test_d1_mutation_probe_projection_failure_conservative_domain():
+def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
     """变异探针(D1 验收判据):hoard_target_set 抛错 → 消费域 = 保守域。
 
     静默退空集 = 锁线局囤货方向消失一帧、买侧按无方向放行——本锁钉住
@@ -114,16 +121,12 @@ def test_d1_mutation_probe_projection_failure_conservative_domain():
 
     sess = StrategySession()
     state_of(sess).v3_intention = IntentionState()
-    orig = cw_intention_mod.hoard_target_set
 
     def _boom(_state, _ist):
         raise RuntimeError('注入:投影失败')
 
-    try:
-        cw_intention_mod.hoard_target_set = _boom
-        turn = assemble(_snapshot(), sess)
-    finally:
-        cw_intention_mod.hoard_target_set = orig
+    monkeypatch.setattr(cw_intention_mod, 'hoard_target_set', _boom)
+    turn = assemble(_snapshot(), sess)
     d = turn.direction
     assert d.hoard_readable is False          # 失败帧显式暴露
     full = frozenset({'任意件A', '任意件B'})
@@ -133,10 +136,11 @@ def test_d1_mutation_probe_projection_failure_conservative_domain():
 
 
 # ----------------------------------------------------- D2 缺供给保守侧
-# (原 test_d2_missing_supply_falls_conservative 已并入
-#  test_cw_w620_migration_b1::test_committed_from_semantics——缺供给
-#  保守侧为其分支 1,committed_authority 直调两形态已随迁。重复构成
-#  删并理由(README 纪律 8)。)
+# (原 test_d2_missing_supply_falls_conservative 删并:缺供给保守侧现由
+#  test_cw_session_separation::test_none_state_criterion_faces_return_
+#  defaults 直锁(committed_authority(None, bare) is False)+ 本文件
+#  对拍锁帧 1-2 承载。原并入目标 test_cw_w620_migration_b1 本体已随
+#  dd-038 批删除,死指针收口重锚。重复构成删并理由(README 纪律 8)。)
 
 
 # ----------------------------------------------------- W629-R2 镜像雷锁
@@ -179,9 +183,10 @@ def test_p6_registry_injection_reaches_state_machine():
     旋钮 = line_env_lock_min_round(环境判据观察期):调大 = 判据本轮不辖
     → 对抗环境帧缺省臂缓锁、注入臂落锁——两臂 ist 分歧即注入链可达证。
     【夹具演进(经济冻结批)】原 plane=2 unlocked 帧:旧形态缺省臂保持
-    unlocked;现 P2 unlocked 帧被强制 assignment 移交锁接管(目标不空窗
-    语义,test_cw_economic_freeze.py ①组),与旋钮无关 → 不再承载分歧。
-    改用 weak 帧(撤销机器在册态,移交不辖,「直至新信号」语义保留)。
+    unlocked;现 P2 unlocked 帧被强制移交重锁域接管(目标不空窗
+    语义,载体 = test_cw_line_feasibility.py P2 移交组),与旋钮无关
+    → 不再承载分歧。改用 weak 帧(撤销机器在册态,移交不辖,「直至
+    新信号」语义保留)。
     """
     from sr_od.application.currency_war.kernel.cw_intention import update_intention
     st = _state(plane=2, round_num=1)   # P2:comp 锁定通道(P1 配方锁区不锁 comp)
@@ -243,49 +248,24 @@ def _ju23_session() -> StrategySession:
     return sess
 
 
-def test_ju23_supply_identity_gstar_and_s_reserve_boundary():
-    """息线供给恒等(局23 帧):g*==50 且 s_reserve 供给非退化。
-
-    重推导(14号稿 §3.4/N2 收口:线内件压库域排除后,M6 端到端对拍
-    载体「线成员件独辖」退役——线内副本买入归义务全链,§7.3 owned
-    观测面收口):s_reserve 边界改判据层直锁——stockpile_buy 金约束
-    (gold−cost ≥ s_reserve):53 金/4 费 → 49<50 拒('s_reserve');
-    54 金 → 50≥50 过。两断言合取即 s_reserve==50(下界由拒、上界由过),
-    供给恒等式不因实现细节漂移。
-    """
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
-        stockpile_buy,
-    )
-    assert saturation_line(cap_resolved_of_session(StrategySession())) == 50
-    ok_r, key_r = stockpile_buy(53, 50, 9, 4, 1, frozenset({4}))
-    assert ok_r is False and key_r == 's_reserve'
-    ok_a, _ = stockpile_buy(54, 50, 9, 4, 1, frozenset({4}))
-    assert ok_a is True
+# (test_ju23_supply_identity_gstar_and_s_reserve_boundary 已删 2026-09-08
+#  覆盖对账:息线供给恒等两面均由主题文件承载——g*==50 = saturation_line(5)
+#  ==50(test_cw4_statefn)× cap_resolved_of_session(裸真 session)==DEFAULT
+#  (test_cw_session_separation),组合面另经 test_cw_launch_arbitrage 全域
+#  等价扫现算;s_reserve==50 金约束边界(49 拒/50 过)= test_cw_p56_t1::
+#  test_m6_p56_reject_counter 同边界对 + test_stockpile_s_reserve_boundary
+#  位移面超集。README 纪律 7 跨文件等价择一。)
 
 
-def test_ju23_stock_match_buys_and_empty_shop_close_discernible():
-    """不死守可辨收敛(局23 帧):店空显式收店 + 压库买判据直锁。
-
-    店空帧必须以 CloseShop 终结(全函数契约,禁静默死守),且带可辨
-    计数键:shop_visit_idle_gold(带金零动作帧)+ shop_r1_no_chaseable_
-    member(息账无追件、R1 关闭)——判读者从计数即知「为何不动」,
-    而非空转或 None。压库买资格本体(档匹配 + 1★ 全退 + 金约束)判据层
-    直锁(线内件排除后的载体迁移,见上锁重推导注)。
-    """
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
-        stockpile_buy,
-    )
-    sess = _ju23_session()
-    act = decide_shop_action(_ju23_frame(100, []), sess,
-                             SimpleNamespace(ev_arm='full'))
-    # gold=100 为必花域帧(20 号稿 §3.1-L3):店空无 L1/L2 对象 ⇒ 分层
-    # 末位 L3 升级消费(LevelUpShop),分键语义保留可辨。
-    assert isinstance(act, LevelUpShop)
-    assert act.auth_basis == 'm3_batch:must_spend'
-    assert state_of(sess).cw4_counters.get('shop_visit_idle_gold') == 1
-    assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member') == 1
-    ok, _ = stockpile_buy(100, 0, 9, 2, 1, frozenset({2}))
-    assert ok is True
+# (test_ju23_stock_match_buys_and_empty_shop_close_discernible 已删
+#  2026-09-08 覆盖对账:店空必花域帧 → LevelUpShop(m3_batch:must_spend)
+#  终结面 = test_cw4_mandate_v1::test_shop_visit_sets_latch 同构造帧
+#  (_visit_state ≡ 本文件 _ju23_frame(100, []),gold/level/deployed 逐字段
+#  一致)同断言;shop_visit_idle_gold==1 = test_cw4_shop_line::
+#  test_d_p2idle_idle_gold_counter,shop_r1_no_chaseable_member==1 =
+#  test_cw_must_spend_zone::test_whitelist_empty_shop_cap_top_zero_consume;
+#  stockpile_buy 放行面 = test_cw4_shop_line::test_stockpile_face_m6_
+#  opens_with_frame_window。README 纪律 7 跨文件择一。)
 
 
 def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
@@ -305,20 +285,14 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     assert act.auth_basis == 'm3_batch:must_spend'
 
 
-def test_ju23_liquid_refund_shifts_s_reserve_down():
-    """活期退金投影进 s_reserve(P56):bench 有 2 费活期件 ⇒ 线降至 48。
-
-    重推导(线内件压库排除,载体迁移同上锁):边界改判据层直锁——
-    51 金买 4 费件后 47 < 48 拒、52 金买后 48 ≥ 48 过——边界随活期
-    退金逐金位移,钉死 s_reserve 是「可变现息线下界」而非静态 g*。
-    """
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
-        stockpile_buy,
-    )
-    ok_r, key_r = stockpile_buy(51, 48, 9, 4, 1, frozenset({4}))
-    assert ok_r is False and key_r == 's_reserve'
-    ok_a, _ = stockpile_buy(52, 48, 9, 4, 1, frozenset({4}))
-    assert ok_a is True
+# (test_ju23_liquid_refund_shifts_s_reserve_down 已删 2026-09-08 覆盖对账:
+#  断言面 = stockpile_buy 金约束边界在 s_reserve=48 的实例,与
+#  test_cw_p56_t1::test_stockpile_s_reserve_boundary(s_reserve=47,差 1 拒/
+#  边界过/差 2 过)同谓词等价,常量差异零新语义;docstring 所称「活期退金
+#  投影进 s_reserve」的算术不在断言路径(s_reserve 是测试手抄入参,
+#  stockpile_buy 不算投影)——与 DEBTS D21 删 test_liquid_refund_excludes_
+#  material 同判据(rule 18 docstring≠断言面)。投影值收缩的 decide 级
+#  真锁缺口维持 D21 记账。)
 
 
 def test_ju23_full_surface_gold_never_breaks_interest_line():
@@ -377,7 +351,7 @@ _COMMIT_MIN_T: int = 7
 
 
 def _old_t_of(plane: int, round_num: int) -> int:
-    """全局节点序号(plane*9 + round 的简化;与 horizon 的 t 同构)。"""
+    """全局节点序号((plane−1)*9 + round,round 1-9 截断;与 horizon 的 t 同构)。"""
     return (min(plane, 3) - 1) * 9 + max(1, min(round_num, 9))
 
 
