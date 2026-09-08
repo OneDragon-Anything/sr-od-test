@@ -158,8 +158,13 @@ def _make_rf_op(monkeypatch, *, sess: SimpleNamespace,
 
 
 def _drive(op, bench_pts, front_pts, back_pts):
-    return op._deploy_deterministic(bench_pts, front_pts, back_pts,
-                                    object())   # templates 哨兵:非 None 走身份读
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench_pts, front_pts, back_pts,
+        object())   # templates 哨兵:非 None 走身份读
+    # T-164 批A 契约扩 3 元组:本文件锁面不辖 D2 失配闸,剥第三元返回;
+    # 守护断言防场景漂移后静默吞掉失配闸命中(命中 = 本文件场景失真)。
+    assert gate_fail is None, f'本文件场景不应命中 D2 失配闸,实得 {gate_fail!r}'
+    return placed, plan_empty
 
 
 def _identity(bench_names: list[str], deployed_names: list[str]):

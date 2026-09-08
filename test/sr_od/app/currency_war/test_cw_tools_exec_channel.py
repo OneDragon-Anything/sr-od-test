@@ -123,69 +123,51 @@ class TestPlanToolDrags:
         assert plan_tool_drags(acts, [(_TOKEN, (1800, 200), 0.9)], comp) == []
 
 
-# ===== 1b. 多计划执行环锁(三审定谳整改:首件消费后 reflow,剩余计划
-# 禁沿用切片快照的过期坐标——while 队列整条重建)=====
+# ===== 1b. 多计划执行环锁(T-164 批A/C3 语义重推:op 内 replan 删除——
+# 首件消费后 reflow 剩余计划坐标作废,如实上报交回分发层重算,禁 op 内
+# 重评准入自建队列;cancel 件丢弃不消费、无 reflow,队列余件继续)=====
 
 class TestRunToolQueue:
 
-    def test_queue_replans_after_each_consume(self):
-        """两件 admitted(炉×死库存 + 特权卡×key 基名)同帧:首件消费后
-        重规划产物接管队列——①剩余计划坐标 = 重读后的新位置(非首读
-        快照);②重评 admitted 用 fresh owned(首件消费改变结构后旧放行
-        不沿用);③无误烧:重规划目标恒 ∈ recycle_qualified(消费的件
-        ≠ 需求向量内件)。"""
-        comp = _mk_comp([_KEY, _PRIV])
-        owned0 = [_FURNACE, _DEAD, '特权赋予卡', _UNIQUE_BASE, _KEY]
-        admitted0 = _admit(owned0, comp)
-        assert sum(1 for a in admitted0 if a.usable) == 2, \
-            '前置失真:双工具帧应有两件 usable(炉+特权卡)'
-        # 首读:炉/目标在前排,特权卡组在后排(消费炉后 reflow → 全部位移)
-        hits0 = [(_FURNACE, (1800, 200), 0.9), (_DEAD, (1843, 250), 0.9),
-                 ('特权赋予卡', (1768, 200), 0.9),
-                 (_UNIQUE_BASE, (1768, 250), 0.9), (_KEY, (1768, 300), 0.9)]
-        queue0 = [p for p in plan_tool_drags(admitted0, hits0, comp)
-                  if p.target_pos is not None and p.target]
-        assert len(queue0) == 2
-        # 模拟首件消费(炉→死库存):owned 移除炉+死库存,新增变异件
-        # (dead_burned);画面 reflow:特权卡组整体移位(模拟列收缩)
-        dead_burned = _DEAD   # 变异随机件仍可为同名基础件(multiset 语义)
-        owned1 = [n for n in owned0 if n not in (_FURNACE, _DEAD)] + [dead_burned]
-        hits1 = [('特权赋予卡', (1800, 200), 0.9),
-                 (_UNIQUE_BASE, (1843, 250), 0.9), (_KEY, (1768, 300), 0.9),
-                 (dead_burned, (1843, 300), 0.9)]
-        admitted1 = _admit(owned1, comp)
-        # 重评(fresh owned):死库存已被烧掉一份,剩余 owned 覆盖全需求
-        # +变异件在死库存域 → 炉已不在 owned,仅特权卡 usable
-        fresh_queue = [p for p in plan_tool_drags(admitted1, hits1, comp)
-                       if p.target_pos is not None and p.target]
-        assert [p.action for p in fresh_queue] == ['privilege_upgrade']
-        assert fresh_queue[0].tool_pos == (1800, 200)     # 重读后新位置
-        assert fresh_queue[0].target == _UNIQUE_BASE
-        assert fresh_queue[0].target_pos == (1843, 250)   # 重读后新位置
-        # 无误烧:重规划目标 ∉ 需求向量面(基名 _UNIQUE_BASE 是 key 对应
-        # 成品,特权卡用法即对其原地替换;炉的误烧面 = 需求向量内件,
-        # fresh_queue 中不再有任何 furnace 计划)
-        assert all(p.action != 'furnace_single' for p in fresh_queue)
-        # 队列驱动语义:首件 consumed → replan 接管(fresh_queue);次件
-        # consumed → 再 replan(空收队)。
-        exec_calls: list[str] = []
+    def test_queue_stops_after_first_consume_with_remaining(self):
+        """消费后剩余计划作废(行为锁):双件队列首件 consumed → 停,
+        返回 (1, 1, plan_stale=True)——第二件**不执行**(过期坐标拖曳 =
+        误烧负操作),plan_stale 供节点 round_fail 上报(旧 replan 接管
+        语义已随 C3 删除)。"""
+        calls: list[str] = []
 
         def exec_fn(plan):
-            exec_calls.append(plan.action)
+            calls.append(plan.action)
             return 'consumed'
 
-        replans: list[list] = [fresh_queue, []]
+        queue = [ToolDragPlan('furnace_single', _FURNACE, _DEAD,
+                              (1800, 200), (1843, 250)),
+                 ToolDragPlan('privilege_upgrade', '特权赋予卡', _UNIQUE_BASE,
+                              (1768, 200), (1768, 250))]
+        consumed, attempts, plan_stale = run_tool_queue(queue, exec_fn)
+        assert (consumed, attempts, plan_stale) == (1, 1, True)
+        assert calls == ['furnace_single'], \
+            f'首件消费后剩余计划禁执行,实得 {calls}'
 
-        def replan_fn():
-            return replans.pop(0) if replans else []
+    def test_queue_completes_when_last_item_consumed(self):
+        """末件消费 = 计划完整走完:plan_stale False(无剩余件作废)→
+        节点按正常成功收口,不误报计划失效。"""
+        calls: list[str] = []
 
-        consumed, attempts = run_tool_queue(list(queue0), exec_fn, replan_fn)
-        assert (consumed, attempts) == (2, 2)   # 双件全消,各触发一次重规划
-        assert exec_calls == ['furnace_single', 'privilege_upgrade']
+        def exec_fn(plan):
+            calls.append(plan.action)
+            return 'consumed'
 
-    def test_queue_cancel_drops_without_replan(self):
-        """cancel(重试预算耗尽)件直接丢弃:不触发重规划、不沿用旧队列
-        (防同件 cancel→replan→同件再拖的死循环)。"""
+        queue = [ToolDragPlan('furnace_single', _FURNACE, _DEAD,
+                              (1800, 200), (1843, 250))]
+        result = run_tool_queue(queue, exec_fn)
+        assert result == (1, 1, False)
+        assert calls == ['furnace_single']
+
+    def test_queue_cancel_drops_without_blocking_rest(self):
+        """cancel(重试预算耗尽)件直接丢弃:画面未消费 = 无 reflow,
+        队列其余坐标仍有效,继续下一件(T-164 批A 语义:cancel 不触发
+        计划失效;防同件原地重拖死循环的旧语义保留)。"""
         calls: list[str] = []
 
         def exec_fn(plan):
@@ -194,17 +176,40 @@ class TestRunToolQueue:
 
         queue = [ToolDragPlan('furnace_single', _FURNACE, _DEAD,
                               (1800, 200), (1843, 250)),
-                 ToolDragPlan('furnace_single', _FURNACE, _DEAD,
-                              (1800, 200), (1843, 250))]
-        replans: list[list] = []
+                 ToolDragPlan('privilege_upgrade', '特权赋予卡', _UNIQUE_BASE,
+                              (1768, 200), (1768, 250))]
+        consumed, attempts, plan_stale = run_tool_queue(queue, exec_fn)
+        assert (consumed, attempts, plan_stale) == (0, 2, False)
+        assert len(calls) == 2
 
-        def replan_fn():
-            replans.append(1)
-            return []
+    def test_queue_partial_also_invalidates_remaining(self):
+        """partial(部分消费)同样触发 reflow:剩余计划作废
+        (plan_stale=True),禁把部分消费当无变化继续拖过期坐标。"""
+        def exec_fn(plan):
+            return 'partial'
 
-        consumed, attempts = run_tool_queue(queue, exec_fn, replan_fn)
-        assert (consumed, attempts) == (0, 2)
-        assert len(calls) == 2 and not replans   # cancel 从不重规划
+        queue = [ToolDragPlan('furnace_single', _FURNACE, _DEAD,
+                              (1800, 200), (1843, 250)),
+                 ToolDragPlan('privilege_upgrade', '特权赋予卡', _UNIQUE_BASE,
+                              (1768, 200), (1768, 250))]
+        consumed, attempts, plan_stale = run_tool_queue(queue, exec_fn)
+        assert (consumed, attempts, plan_stale) == (0, 1, True)
+
+    def test_replan_removed_from_queue_driver(self):
+        """C3 结构锁:run_tool_queue 签名无 replan_fn 参数、节点源内无
+        admitted 重评调用——「重评 admitted」是策略判据在 op 内第二次
+        触发,防旧 replan 形态回归。"""
+        import inspect
+
+        from sr_od.application.currency_war.operations.cw_op import (
+            cw_op_tools,
+        )
+        sig = inspect.signature(run_tool_queue)
+        assert 'replan_fn' not in sig.parameters, \
+            'replan_fn 参数回归(C3 已删,计划失效改上报)'
+        node_src = inspect.getsource(cw_op_tools.CwOpTools.tools_consume)
+        assert 'evaluate_tool_actions(fresh_names' not in node_src, \
+            '节点内 fresh owned 重评准入回归(C3 已删)'
 
 
 # ===== 2. 消耗确认通道锁(21 号稿 §3.2 三分支)=====

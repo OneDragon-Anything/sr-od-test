@@ -218,50 +218,66 @@ def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
 def test_cap_gate_arbitration_opens_on_cv_phantom_inflation(monkeypatch) -> None:
     """事故帧行为锁:paddle=3 / CV=5(幻影)→ 板满门按仲裁值 3 放行 →
     拖拽真实发射(旧代码在此帧 (0, True) 合法化 no-op = 停机根因);
-    分歧必须留证分键(不得静默放行)。"""
+    分歧必须留证分键(不得静默放行)。T-164 批A 契约扩 3 元组:
+    本帧不命中失配闸(gate_fail None)。"""
     op, drags, notes = _make_gate_op(monkeypatch, paddle_x=3)
     bench = [Point(100 + 30 * i, 900) for i in range(9)]
     front = [Point(500 + 30 * i, 400) for i in range(4)]
     back = [Point(500 + 30 * i, 650) for i in range(6)]
-    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
     assert drags['n'] >= 1, '板满门应按仲裁值(3<5)放行,至少发射一次拖拽'
     assert placed >= 1
     assert plan_empty is False
+    assert gate_fail is None
     assert notes and notes[0] == (3, 5, 'deploy_cap_gate'), \
         f'结构性分歧必须落分键留证,实得 {notes}'
 
 
-def test_cap_gate_keeps_cv_block_when_paddle_unreadable(monkeypatch) -> None:
-    """退化帧语义锁(审计 P3 重推后口径):paddle 双帧失读(None)→
-    无仲裁语义、按 CV 行动 = 向「板满」侧 fail(CV=5 ≥ cap=5 板满门保持,
-    不引入「缺源即放行」新风险面)——但**不得静默**:重读一帧仍失读后
-    必须落退化申报分键(docstring/实现/测试三方一致,出处 =
-    arbitrate_deployed_count docstring「单源缺席」节)。"""
+def test_cap_gate_full_board_mismatch_fails_not_noop(monkeypatch) -> None:
+    """失配执行断言锁(T-164 批A/D2,锁语义重推:旧锁钉「退化帧按 CV
+    向板满侧行动 = 合法 no-op」,新 norm 下计划-现读失配禁伪装 plan_empty
+    合法稳态):paddle 双帧失读(None)→ 仲裁语义失效单源 CV(5 ≥ cap=5)
+    → 入口板满门命中 = 失配暴露(发射位谓词正常时此门不可达)→ 返回
+    (0, False, STATUS_BOARD_FULL_MISMATCH),零拖拽;退化申报分键保留。"""
+    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
+        CwOpDeploy,
+    )
     op, drags, notes = _make_gate_op(monkeypatch, paddle_x=None)
     bench = [Point(100 + 30 * i, 900) for i in range(9)]
     front = [Point(500 + 30 * i, 400) for i in range(4)]
     back = [Point(500 + 30 * i, 650) for i in range(6)]
-    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
-    assert (placed, plan_empty) == (0, True)
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
+    assert (placed, plan_empty) == (0, False)
+    assert gate_fail == CwOpDeploy.STATUS_BOARD_FULL_MISMATCH, \
+        f'板满失配必须以具名状态 fail 暴露,实得 {gate_fail!r}'
     assert drags['n'] == 0
     assert notes and notes[0][0] is None and notes[0][1] == 5, \
         f'paddle 失读退化帧必须落分键申报,实得 {notes}'
 
 
-def test_cap_gate_phantom_full_board_early_exit_goes_through_arbitration(
-        monkeypatch) -> None:
-    """审计 P1 直测(同签名闭死):CV 幻影占满**全部**前后排槽
-    (front_empty=[] ∧ back_empty=[],比事故帧更重一档)∧ paddle=3 →
-    入口早退不得绕过仲裁——分歧必须先落分键留证,再按 fail-closed 留 bench
-    返回 (0, True)(无空槽可拖,拖拽循环必然空转;持续零推进由 DD-030 兜底)。
-    旧代码此形态在仲裁代码之前早退,零留证直接 no-op = r9 同签名复活口。"""
+def test_cap_gate_phantom_full_board_fails_not_noop(monkeypatch) -> None:
+    """矛盾帧失配断言锁(T-164 批A/D2,锁语义重推:旧锁钉「留证后合法
+    no-op」;新 norm 下矛盾帧禁伪装 plan_empty):CV 幻影占满**全部**
+    前后排槽(front_empty=[] ∧ back_empty=[],比事故帧更重一档)∧
+    paddle=3 → 仲裁分歧先落分键留证,再以 (0, False,
+    STATUS_PHANTOM_FULL_BOARD) fail 暴露(零拖拽;持续无进展由分发层
+    prep_no_progress 停机留证兜底)。旧代码在此形态零留证直接 no-op =
+    r9 同签名复活口。"""
+    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
+        CwOpDeploy,
+    )
     op, drags, notes = _make_gate_op(monkeypatch, paddle_x=3,
                                      cv_front_occ=4, cv_back_occ=6)
     bench = [Point(100 + 30 * i, 900) for i in range(9)]
     front = [Point(500 + 30 * i, 400) for i in range(4)]
     back = [Point(500 + 30 * i, 650) for i in range(6)]
-    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
-    assert (placed, plan_empty) == (0, True)
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
+    assert (placed, plan_empty) == (0, False)
+    assert gate_fail == CwOpDeploy.STATUS_PHANTOM_FULL_BOARD, \
+        f'幻影满板矛盾帧必须以具名状态 fail 暴露,实得 {gate_fail!r}'
     assert drags['n'] == 0
     assert notes and notes[0] == (3, 10, 'deploy_cap_gate'), \
         f'幻影满板早退前必须先落分歧分键(paddle=3 vs cv=10),实得 {notes}'
@@ -382,8 +398,10 @@ def test_p24_fill_skipped_when_order_exhausted_at_cap(monkeypatch) -> None:
     旧代码 fill 门按入口快照 0 恒开 → 总拖拽 4(往满员板白拖)。"""
     op, truth, drags, bench, front, back = _make_fill_op(
         monkeypatch, paddle_x=0, cap=3)
-    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
     assert (placed, plan_empty) == (3, False)
+    assert gate_fail is None
     assert len(drags) == 3, f'fill 阶段应零拖拽(整场 3),实得 {len(drags)}'
     assert all(src is not bench[3] for src, _, _ in drags), \
         'kernel 留置件(bench 第 4 槽)不得被往满员板拖出'
@@ -397,8 +415,10 @@ def test_p24_fill_skipped_on_cap_stop_break(monkeypatch) -> None:
     总拖拽 3。"""
     op, truth, drags, bench, front, back = _make_fill_op(
         monkeypatch, paddle_x=1, cap=3, front_occ=1)
-    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
     assert (placed, plan_empty) == (2, False)
+    assert gate_fail is None
     assert len(drags) == 2, f'cap-stop 后 fill 应零拖拽(整场 2),实得 {len(drags)}'
 
 
@@ -411,8 +431,10 @@ def test_p24_fill_targets_truth_empty_slots_after_landing_miss(
     主循环 3 验证落地 + 第 4 件真落位但漏判,fill 补第 5 件至真空槽。"""
     op, truth, drags, bench, front, back = _make_fill_op(
         monkeypatch, paddle_x=0, cap=4, bench_n=5, miss_drag_index=3)
-    placed, plan_empty = op._deploy_deterministic(bench, front, back, None)
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
     assert (placed, plan_empty) == (4, False)
+    assert gate_fail is None
     assert len(drags) == 5, f'主循环 4 + fill 1,实得 {len(drags)}'
     (_, fill_dst, dst_was_truth_empty), = drags[4:]
     assert dst_was_truth_empty, \

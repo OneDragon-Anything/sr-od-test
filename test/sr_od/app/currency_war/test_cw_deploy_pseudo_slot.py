@@ -1,5 +1,6 @@
 """占槽物品排除双源缺口修复批 锁集(方案 = .debug/temp/currency_war/
-deploy_pseudo_slot/方案.md;三件 ①单一源双置信档 ②kernel 防线 ③熔断)。
+deploy_pseudo_slot/方案.md;三件 ①单一源双置信档 ②kernel 防线 ③熔断
+——③熔断已随 T-164 批A 下线,现锁面 = 前两件 + 熔断下线锁)。
 
 - 单一源 grep 锁:bench_item_slots 定义点唯一,钩子/部署两消费点各自引用,
   禁第三方手搓 find_* 拼集;
@@ -10,15 +11,15 @@ deploy_pseudo_slot/方案.md;三件 ①单一源双置信档 ②kernel 防线 �
   候选恒 held、计划为空,P24 补部署不绕回;
 - kernel 防线锁 + 「照旧上」语义锁(A2):is_item_slot=True 恒 held 拒因
   'item_slot';char_id='' 非伪槽照旧上(SIFT 漏读真角色不被关死 bench);
-- 熔断锁:同签名连续 2 次触发;签名变化计数重置;异签名不累积;无 session
-  惰性禁用;成功/合法空计划重置。
+- 熔断下线锁(T-164 批A/D3:placed=0 同签名熔断跳槽删除,失败记忆单一源
+  = 分发层 cw_loop prep_no_progress 同签名计数;本组 grep 锁防熔断形态
+  回归复活)。
 """
 from __future__ import annotations
 
 import inspect
 import re
 from pathlib import Path
-from types import SimpleNamespace as _NS
 
 import pytest
 
@@ -33,9 +34,6 @@ from sr_od.application.currency_war.obs import cw_identity_obs as cio
 from sr_od.application.currency_war.operations.cw_op import cw_op_deploy
 from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
     assemble_bench_list,
-    zero_place_breaker_record,
-    zero_place_breaker_should_trip,
-    zero_place_sig,
 )
 
 _REPO = Path(__file__).resolve().parents[5]
@@ -223,56 +221,23 @@ def test_empty_char_id_still_deploys_deploy_lock() -> None:
     assert 0 not in held and reasons.get(0) is None
 
 
-# ==================== 熔断锁(签名/计数/禁用/重置) ====================
+# ==================== 熔断下线锁(T-164 批A/D3) ====================
+# 旧「同签名 placed=0 熔断跳槽」五锁随机制删除而退役(锁钉的是已被新
+# 设计取代的旧语义):失败记忆单一源收敛到分发层 cw_loop prep_no_progress
+# (同签名计数 + 停机留证,锁面在 test_cw_no_progress_guard.py);op 侧
+# placed=0 且计划非空 = round_fail 如实上报(行为锁在
+# test_cw_t164_action_op_compliance.py)。本组 grep 锁防熔断形态复活。
 
-_SIG_A = ((0,), (0,), ('',))
-_SIG_B = ((0, 1), (0,), ('', ''))
-
-
-def test_breaker_trips_on_second_consecutive_same_signature() -> None:
-    """同签名连续 2 次:首次失败只记数不熔(让位瞬态重试);第二次触发。"""
-    sess = _NS()
-    zero_place_breaker_record(sess, _SIG_A, placed=0, plan_non_empty=True)
-    assert zero_place_breaker_should_trip(sess, _SIG_A) is False
-    zero_place_breaker_record(sess, _SIG_A, placed=0, plan_non_empty=True)
-    assert zero_place_breaker_should_trip(sess, _SIG_A) is True
-
-
-def test_breaker_counts_isolated_per_signature() -> None:
-    """签名隔离:异签名不互相累积;签名变化即重置(真重试场景必变
-    bench_occ,不误熔)。"""
-    sess = _NS()
-    zero_place_breaker_record(sess, _SIG_A, 0, True)
-    zero_place_breaker_record(sess, _SIG_A, 0, True)
-    assert sess.cw_deploy_zeroplace_cnt == 2
-    # 换签名:计数归 1 重计,旧签名残留不触发新签名
-    zero_place_breaker_record(sess, _SIG_B, 0, True)
-    assert sess.cw_deploy_zeroplace_cnt == 1
-    assert zero_place_breaker_should_trip(sess, _SIG_B) is False
-    assert zero_place_breaker_should_trip(sess, _SIG_A) is False
-
-
-def test_breaker_reset_on_success_and_on_legal_noop() -> None:
-    """重置路径:placed>0(结构性拒绝解除)与 placed=0 且计划空(合法
-    稳态 no-op,dd-037)都不算拒拖失败,计数清零。"""
-    sess = _NS()
-    zero_place_breaker_record(sess, _SIG_A, 0, True)
-    zero_place_breaker_record(sess, _SIG_A, placed=2, plan_non_empty=True)
-    assert sess.cw_deploy_zeroplace_cnt == 0
-    assert zero_place_breaker_should_trip(sess, _SIG_A) is False
-    zero_place_breaker_record(sess, _SIG_A, placed=0, plan_non_empty=False)
-    assert sess.cw_deploy_zeroplace_cnt == 0
-
-
-def test_breaker_disabled_without_session() -> None:
-    """无 session(测试/离线)→ 熔断惰性禁用,行为等价旧路径。"""
-    assert zero_place_breaker_should_trip(None, _SIG_A) is False
-    zero_place_breaker_record(None, _SIG_A, 0, True)   # 不抛即过
-
-
-def test_zero_place_sig_excludes_round_dimensions() -> None:
-    """签名 = 计划结构(bench_occ/order/char_id),不含 plane/round_num——
-    外循环换轮重试时签名不变,熔断才可能触发(A4)。"""
-    assert zero_place_sig([0, 2], [2], {0: '姬子', 2: ''}) \
-        == ((0, 2), (2,), ('姬子', ''))
-    assert zero_place_sig([0], [0], {0: ''}) == zero_place_sig([0], [0], {})
+def test_zero_place_breaker_symbols_eradicated() -> None:
+    """下线锁:熔断签名/计数/跳槽符号在 src 全树零残留——复活即红
+    (防「省白耗」动机把 op 内第二份失败记忆加回来)。"""
+    banned = ('zero_place_sig', 'zero_place_breaker_should_trip',
+              'zero_place_breaker_record', 'note_zero_place_breaker',
+              'ZERO_PLACE_BREAKER_THRESHOLD', 'cw_deploy_zeroplace')
+    offenders: list[str] = []
+    for p in (_REPO / 'src').rglob('*.py'):
+        text = p.read_text(encoding='utf-8', errors='ignore')
+        for sym in banned:
+            if sym in text:
+                offenders.append(f'{p.relative_to(_REPO)}:{sym}')
+    assert not offenders, f'熔断符号残留(下线机制复活): {sorted(offenders)}'
