@@ -31,6 +31,7 @@ from sr_od.application.currency_war.operations.cw_screen import (
     cw_screen_prep_locked_return,
     cw_screen_refresh_odds_popup,
     cw_screen_role_detail_overlay,
+    cw_screen_shop_card_detail,
 )
 from sr_od.application.currency_war.telemetry import recorder as cw_recorder
 from test.conftest import SrTestContext
@@ -130,6 +131,7 @@ def test_progression_ops_single_attempt() -> None:
             cw_screen_refresh_odds_popup, cw_screen_item_detail_popup,
             cw_screen_consumable_overlay, cw_screen_aha_equip_pick,
             cw_screen_prep_locked_return, cw_screen_role_detail_overlay,
+            cw_screen_shop_card_detail,
             cw_screen_emblem_detail_popup, cw_screen_interrupt_dialog,
             cw_screen_next_button]
     for mod in mods:
@@ -285,25 +287,115 @@ def test_consumable_overlay_clicks_family_close(
     assert not result2.success and taps2 == []
 
 
-def test_role_detail_overlay_either_ocr_blank_close(
+def test_role_detail_overlay_anchor_entry_blank_close_verify(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """锁:「可合成列表」∨「角色详情」其一命中即接管 → 点面板外空白关
-    (ESC 正形化清点批:关闭机制经建档 live 验,坐标 = 备战「区域-空白关闭」
-    建档中心,见 op 模块头;∨ 语义不变)。"""
+    """锁(T-163 锚化+验效;落地审 F1):「装备推荐」锚命中即接管 → 经
+    find_and_click 点面板外空白(区域-空白关闭 纯定位区,success_wait=1.5
+    等关闭动画再进验效,同 0a4/0t 家族口径)→ 验「装备推荐」消失 = 成功;
+    全程零 ESC(锚化后旧「∨ 角色详情」全屏 OCR 判据退役,防与商店卡牌
+    详情弹窗底部同名按钮全等撞车)。"""
     op, fc = _make_op(test_context, monkeypatch,
                       cw_screen_role_detail_overlay.CwScreenRoleDetailOverlay)
-    _stub_ocr(op, monkeypatch, {'可合成列表': False, '角色详情': True})
+    # 入口锚命中(第 1 次 find)后验效帧锚消失(第 2 次起 miss)
+    _stub_find(op, monkeypatch,
+               [('货币战争-备战-角色详情', '按钮-装备推荐')], misses_after=1)
+    click_calls: list[dict] = []
+
+    def _click(screen, screen_name: str, area_name: str, **k: Any) -> Any:
+        click_calls.append({'screen': screen_name, 'area': area_name, **k})
+        return op.round_success('')
+
+    monkeypatch.setattr(op, 'round_by_find_and_click_area', _click)
     taps: list[str] = []
     monkeypatch.setattr(fc, 'btn_tap', lambda k: taps.append(k), raising=False)
 
     result = _run(op)
 
     assert result.success, f'详情弹窗点空白关应成功:{result.status!r}'
-    assert fc.click_hit_area('货币战争-备战', '区域-空白关闭')
-    hit = [p for p in fc.recorded_clicks if (p.x, p.y) == (960, 530)]
-    assert hit, f'点击落点应 = 空白关闭建档中心:{[str(p) for p in fc.recorded_clicks]}'
+    assert click_calls == [{'screen': '货币战争-备战', 'area': '区域-空白关闭',
+                            'success_wait': 1.5}], \
+        f'推进点击应走 find_and_click(区域-空白关闭,等待 1.5s):{click_calls}'
     assert taps == [], '详情弹窗禁 ESC'
+
+
+def test_role_detail_overlay_verify_fail_fails(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁(T-163 D3「点了≠成了」):点空白后「装备推荐」仍在(点击零效果)
+    → fail 交外循环 retry 池(F2 后经 on_fail_retry 映射 round_retry,
+    消费 retry 预算)——替代旧无验效恒成功形态(26min 死循环放大器)。"""
+    op, _fc = _make_op(test_context, monkeypatch,
+                       cw_screen_role_detail_overlay.CwScreenRoleDetailOverlay)
+    _stub_find(op, monkeypatch,
+               [('货币战争-备战-角色详情', '按钮-装备推荐')])   # 恒命中 = 未消失
+    _stub_find_and_click(op, monkeypatch, ok=True)
+    result = _run(op)
+    assert not result.success
+
+
+# ==================== 0t 商店卡牌详情弹窗(T-163) ====================
+
+
+def test_shop_card_detail_clicks_x_and_verifies(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁(T-163 D1/D3):双 id_mark 锚(购买∧角色详情)命中 → 点 X
+    (建档「按钮-关闭」,cw_lobby_close 同族模板)→ 验 X 消失 = 成功;
+    **绝不点购买**(买不买归商店域,关闭动作不代替购买决策);零 ESC。"""
+    op, fc = _make_op(test_context, monkeypatch,
+                      cw_screen_shop_card_detail.CwScreenShopCardDetailPopup)
+    # 入口两次探锚(购买+角色详情)命中后,验效帧 X 消失(第 3 次 find 起 miss)
+    _stub_find(op, monkeypatch,
+               [('货币战争-商店卡牌详情', '按钮-购买'),
+                ('货币战争-商店卡牌详情', '按钮-角色详情')], misses_after=2)
+    clicks = _stub_find_and_click(op, monkeypatch, ok=True)
+    taps: list[str] = []
+    monkeypatch.setattr(fc, 'btn_tap', lambda k: taps.append(k), raising=False)
+
+    result = _run(op)
+
+    assert result.success, f'商店卡牌详情点X关应成功:{result.status!r}'
+    assert clicks == [('货币战争-商店卡牌详情', '按钮-关闭')], \
+        f'只许点 X 关闭:{clicks}'
+    assert taps == [], '商店卡牌详情禁 ESC'
+
+
+def test_shop_card_detail_verify_fail_fails(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁(T-163 事故机理回归):X 点击后 X 仍在(点击零效果)→ fail 交
+    外循环 retry 池——旧形态(无验效报 success → 外循环重分发 → 死循环)
+    26min 不可见,锚在即红。"""
+    op, _fc = _make_op(test_context, monkeypatch,
+                       cw_screen_shop_card_detail.CwScreenShopCardDetailPopup)
+    # 全锚恒命中(含验效锚 按钮-关闭)= 点 X 后 X 仍在(点击零效果形态)
+    _stub_find(op, monkeypatch,
+               [('货币战争-商店卡牌详情', '按钮-购买'),
+                ('货币战争-商店卡牌详情', '按钮-角色详情'),
+                ('货币战争-商店卡牌详情', '按钮-关闭')])
+    _stub_find_and_click(op, monkeypatch, ok=True)
+
+    result = _run(op)
+
+    assert not result.success
+
+
+def test_shop_card_detail_single_anchor_entry_fails_without_click(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁:单锚形态(仅「购买」命中,如其他带购买按钮的弹窗)→ 入口 fail
+    不点击(双锚全中才接管,防误吞同族弹窗)。"""
+    op, fc = _make_op(test_context, monkeypatch,
+                      cw_screen_shop_card_detail.CwScreenShopCardDetailPopup)
+    _stub_find(op, monkeypatch,
+               [('货币战争-商店卡牌详情', '按钮-购买')])
+    clicks = _stub_find_and_click(op, monkeypatch, ok=True)
+
+    result = _run(op)
+
+    assert not result.success
+    assert clicks == [] and fc.recorded_clicks == []
 
 
 # ==================== A5 阿哈装备(固定策略申报) ====================

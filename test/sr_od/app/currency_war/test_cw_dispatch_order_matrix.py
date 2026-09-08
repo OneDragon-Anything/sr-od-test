@@ -48,6 +48,9 @@ ORDER_MATRIX: list[tuple[str, str, str, str]] = [
     ('祈愿试炼', '货币战争-祈愿试炼', '标识-祈愿试炼', 'area'),
     ('星徽秘典', '货币战争-星徽秘典弹窗', '标识-星徽秘典', 'area'),
     ('专家邀请函', '货币战争-备战-专家邀请函', '标识-专家邀请函', 'area'),
+    # 0t 商店卡牌详情(T-163):判据走 helper(_shop_card_detail_anchor_hit,
+    # 双 id_mark),序位锚 = 分发调用文本(0e 同口径)。
+    ('商店卡牌详情弹窗', '_shop_card_detail_anchor_hit(self, screen)', '', 'raw'),
     # 0m 暗色锁定:判据 = 元组循环内调用,序位锚 = 循环头独有文本。
     ('策略暗色锁定', 'for _lock_screen, _lock_area in (', '', 'raw'),
     # 排他关系(P4R3):前台无角色 → 恢复链自带重部署+验前排,不与浮层互斥。
