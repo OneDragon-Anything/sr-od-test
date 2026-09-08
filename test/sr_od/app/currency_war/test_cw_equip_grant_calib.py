@@ -13,13 +13,16 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim import pool
 from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENT_ROSTER
 from sr_od.application.currency_war.data.cw_synthesis import RESERVED_COMPONENTS
 
 
 def test_calib_constants_shape() -> None:
-    """常量在位:版本 ≥1;概率常量在 (0,1);基础池 = 8 件且 ⊆ 注册表。"""
+    """常量在位:版本 ≥1;概率常量在 (0,1);基础池 = 8 件且 ⊆ 注册表。
+
+    登记门语义:池成员/版本位/概率面任一变更 = 供给结构变更,须走
+    显式重校准批(engine_p1 供给校准注:结构变更 = 有意行为变更,
+    旧基线作废、指纹 +eqg 位递进)。"""
     assert cw_sim.EQUIP_GRANT_CALIB_VERSION >= 1
     assert 0.0 < cw_sim.EQUIP_GRANT_BONUS_P < 1.0
     assert 0.0 < cw_sim.EQUIP_GRANT_BONUS_ADV_SHARE < 1.0
@@ -27,12 +30,15 @@ def test_calib_constants_shape() -> None:
     assert all(n in EQUIPMENT_ROSTER for n in RESERVED_COMPONENTS)
 
 
-def test_fingerprint_carries_grant_version() -> None:
-    """局指纹 = 池指纹 + eqg 版本位(新旧供给结构不可比,显式失败)。"""
-    r = cw_sim.simulate_p1(1, pool='snapshot')
-    delta_fp = pool.pool_fingerprint(pool.resolve_pool('snapshot')[0])
-    assert r.pool_fingerprint == (
-        delta_fp + f'+eqg{cw_sim.EQUIP_GRANT_CALIB_VERSION}')
+# (局指纹 = 池指纹 + eqg 版本位的组合锁由
+#  test_cw_delta_pool.py::test_simulate_p1_records_pool_identity 承载
+#  ——彼处为超集:fallback+snapshot 双模式 + pool_source 字段;
+#  infra_locks/sim_models 的 smoke 同款行各随其专属断言面保留。)
+#
+# (两 sim 测不共享同一批局结果:供给量画像测已入慢桶(slow_marks
+#  补登 2026-09-09),发放名测须在快速集内以自有的 10 局最小 n
+#  (纪律 12 存在性断言取最小值)独立成测——共享缓存会让快速集
+#  替慢桶测付 20 局全量成本。)
 
 
 def test_p1_grant_volume_matches_real_profile() -> None:
@@ -89,7 +95,10 @@ def test_p1_grant_volume_matches_real_profile() -> None:
 
 
 def test_grant_names_all_registered() -> None:
-    """发放名全在注册表(ADR-0294 件2 池纪律;重校准不得引入死名)。"""
+    """发放名全在注册表(ADR-0294 件2 池纪律;重校准不得引入死名)。
+
+    独立 10 局最小 n(纪律 12):与慢桶的供给量画像测不共享 sim,
+    保快速集预算(理由见上方注释)。"""
     legal = set(RESERVED_COMPONENTS) | set(EQUIPMENT_ROSTER)
     for seed in range(10):
         r = cw_sim.simulate_p1(seed, pool='snapshot', planes=1)

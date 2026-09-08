@@ -48,9 +48,7 @@ def _setup(monkeypatch, before: np.ndarray, after: np.ndarray):
     action = BuyCard(card=card, reason='m2_stockpile')
     ledger = SimpleNamespace(
         total_buy=0, spend_executed=0, bought_names=[], buy_purchases=[],
-        buy_unidentified=False, total_sell=0, total_level=0, total_refresh=0,
-        refresh_skipped=0, refresh_attempted=0, refresh_board_changed=0,
-        plan_truncated=False)
+        buy_unidentified=False)
     match = SimpleNamespace(session=SimpleNamespace(
         tracked_bench_chars=[], tracked_deployed=[], v3_intention=None))
     env = ShopExecEnv(op=op, match=match, config=None, click_pts=[],

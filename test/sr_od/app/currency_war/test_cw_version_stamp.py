@@ -63,12 +63,18 @@ def test_normalize_set_of_dataclass() -> None:
         x, sort_keys=True, ensure_ascii=False))
 
 
-def test_normalize_set_order_stable() -> None:
-    """同元素集合(不同构造插入序)→ 规范化输出逐位相等(set 无序,
-    指纹对构造序不敏感是 hash 口径的隐含契约)。"""
-    a = _normalize({3, 1, 2})
-    b = _normalize({2, 3, 1})
-    assert a == b
+def test_normalize_set_scalar_native_order() -> None:
+    """纯标量集合走原生数值序(非 JSON 串序),且对构造序不敏感。
+
+    判别力锚 = 跨位数元素 {2,10}:JSON 串序给 ['10','2'],原生序
+    [2,10]。生产集合分支「先试原生排序」的连续性契约 = 存量注册表
+    纯标量集合的指纹与旧口径逐位一致(version_stamp 模块注:指纹值
+    不因排序修复跳变)——排序策略换成 JSON 串序即指纹跳变,本锁红,
+    须按指纹口径变更显式登记,禁静默换序。"""
+    a = _normalize({2, 10})
+    b = _normalize({10, 2})
+    assert a == [2, 10], f'标量集合须原生数值序(非 JSON 串序): {a}'
+    assert a == b   # set 无序,指纹对构造序不敏感
 
 
 # ===== 锁 3:对外契约不回归 =====
