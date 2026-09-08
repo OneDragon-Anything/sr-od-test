@@ -79,9 +79,9 @@ AGG_EXCLUDED: dict[str, str] = {
     'hp_gold_swap': 'bool 行为条件流(33 号 λ_hp 消费)',
     'gold_per_hp_lost_now': 'bool 行为条件流(选卡时点结算)',
     'xp_instant': 'oneshot:选卡时点单次入账(engine_p1 economy_effect_of 逐卡),禁并入每节点 flow 双计',
-    'gold_per_2star2cost_merge': '合成触发族,cw_effect_ledger 逐策略路由',
-    'gold_per_3star_merge': '合成触发族,cw_effect_ledger 逐策略路由',
-    'refresh_per_compose': '合成触发族,cw_effect_ledger 逐策略路由',
+    'gold_per_2star2cost_merge': '合成触发族:注册表按名直查(economy_effect_of)供选卡评估,合成时点结算未建模',
+    'gold_per_3star_merge': '合成触发族:注册表按名直查(economy_effect_of)供选卡评估,合成时点结算未建模',
+    'refresh_per_compose': '合成触发族:注册表按名直查(economy_effect_of)供选卡评估,合成时点结算未建模',
     'sell_price_mult': '出售动作面逐策略消费(乘子族,无聚合通道)',
 }
 

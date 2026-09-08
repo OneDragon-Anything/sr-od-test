@@ -77,14 +77,67 @@ def test_hp_offline_no_session_passthrough() -> None:
 
 # ===== 件3:记录层接线(写入端走 read_hp_opt + reconcile_hp) =====
 
-def test_read_game_state_hp_wired_through_reconcile() -> None:
-    """read_game_state 的 hp 走 reconcile_hp(ADR-0282 接线;源级锁)。"""
-    import inspect
+def _wired_read_env(monkeypatch, tmp_path, hp_opt):
+    """read_game_state 真链最小桩面(reader 全桩,只留 hp 现读可变)。
 
-    from sr_od.application.currency_war.obs import cw_observation as obs
-    src = inspect.getsource(obs.read_game_state)
-    assert 'reconcile_hp' in src
-    assert 'read_hp_opt' in src
+    手法镜像 test_cw_arbitration._stub_read_game_state(reader 桩按模块属性
+    打);冲突账本重定向 tmp_path(真值下行帧经 ADR-0431「观察缺口」臂留证,
+    落 tmp 不写真实 .debug/)。返回 (obs 模块, session, ctx)。
+    """
+    from types import SimpleNamespace
+
+    import sr_od.application.currency_war.kernel.cw_observe as core_obs
+    import sr_od.application.currency_war.obs.cw_observation as obs
+    monkeypatch.setattr(core_obs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
+    monkeypatch.setattr(core_obs, 'cw_shot_unique', lambda img, label: f'{label}.png')
+    monkeypatch.setattr(obs, 'is_prep_like_frame', lambda c, s: True)
+    monkeypatch.setattr(obs, '_board_pairs',
+                        lambda c, s, level=None, expected=None: ({}, True))
+    monkeypatch.setattr(obs, 'board_from_tracked', lambda tracked: None)
+    monkeypatch.setattr(obs, 'ledger_node_type',
+                        lambda session, plane, round_num: None)
+    monkeypatch.setattr(obs, 'resolve_paddle_pair',
+                        lambda c, s, level: (None, None))
+    monkeypatch.setattr(obs, 'read_hp_opt', hp_opt)   # 被测面:直接挂可调用桩
+    for _n, _v in {
+        'read_gold_settled': 55, 'read_phase_round': (2, 3), 'read_node_type': None,
+        'read_xp_progress': (0, 6), 'read_level_raw_opt': 5, 'read_level_up_cost': 4,
+        'read_enemy_difficulty': None, 'read_streak': None,
+        'read_shop_cards': [], 'read_refresh_probs': None, 'read_bench_full': None,
+    }.items():
+        monkeypatch.setattr(obs, _n,
+                            (lambda _v: lambda *a, _v=_v, **kw: _v)(_v))
+    session = SimpleNamespace(
+        active_strategies=[], last_level_obs=0, last_hp_real=40,
+        last_hp_real_node=None, last_streak=0,
+        briefing_bosses=None, briefing_affixes=None, active_env='',
+        chosen_megastar=None, chosen_partner=None, enemy_difficulty=None)
+    ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
+    return obs, session, ctx
+
+
+def test_read_game_state_hp_wired_through_reconcile(monkeypatch, tmp_path) -> None:
+    """read_game_state 的 hp 段经 reconcile_hp 对账(ADR-0282 三层接线)。
+
+    行为锁(替代原 inspect.getsource 在场锁,纪律 8:肯定性在场锁同族=禁):
+    ①读不到帧(shop 开态 read_hp_opt→None)→ 沿用 session.last_hp_real=40、
+      readable=False、保旧不写——对账层脱落时该帧 state.hp 直落 None,红;
+    ②真值帧(现读 35)→ 采新 (35, True) 并写回 session(真值帧锚推进
+      node_t=(plane-1)*9+round=12)——写回脱落时 session 滞留旧值,红。
+    """
+    from sr_od.application.currency_war.obs.cw_observation import PHASE_PREP_CLEAN
+    obs, session, ctx = _wired_read_env(monkeypatch, tmp_path,
+                                        lambda *a, **kw: None)
+    state = obs.read_game_state(ctx, None, phase=PHASE_PREP_CLEAN)
+    assert (state.hp, state.hp_readable) == (40, False)   # 沿用真值,非兜底/None
+    assert session.last_hp_real == 40                      # 保旧不写
+    assert session.last_hp_real_node is None               # 沿用帧不推节点锚
+
+    obs, session, ctx = _wired_read_env(monkeypatch, tmp_path,
+                                        lambda *a, **kw: 35)
+    state = obs.read_game_state(ctx, None, phase=PHASE_PREP_CLEAN)
+    assert (state.hp, state.hp_readable) == (35, True)     # 真值帧采新
+    assert (session.last_hp_real, session.last_hp_real_node) == (35, 12)
 
 
 # ===== 件4:hp_trusted 可信位语义(ADR-0428)=====
