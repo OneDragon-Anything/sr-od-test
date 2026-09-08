@@ -218,7 +218,7 @@ def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
 def test_cap_gate_arbitration_opens_on_cv_phantom_inflation(monkeypatch) -> None:
     """事故帧行为锁:paddle=3 / CV=5(幻影)→ 板满门按仲裁值 3 放行 →
     拖拽真实发射(旧代码在此帧 (0, True) 合法化 no-op = 停机根因);
-    分歧必须留证分键(不得静默放行)。T-164 批A 契约扩 3 元组:
+    分歧必须留证分键(不得静默放行)。ADR-0601 §4 契约扩 3 元组:
     本帧不命中失配闸(gate_fail None)。"""
     op, drags, notes = _make_gate_op(monkeypatch, paddle_x=3)
     bench = [Point(100 + 30 * i, 900) for i in range(9)]
@@ -235,7 +235,7 @@ def test_cap_gate_arbitration_opens_on_cv_phantom_inflation(monkeypatch) -> None
 
 
 def test_cap_gate_full_board_mismatch_fails_not_noop(monkeypatch) -> None:
-    """失配执行断言锁(T-164 批A/D2,锁语义重推:旧锁钉「退化帧按 CV
+    """失配执行断言锁(ADR-0601 §3 D2,锁语义重推:旧锁钉「退化帧按 CV
     向板满侧行动 = 合法 no-op」,新 norm 下计划-现读失配禁伪装 plan_empty
     合法稳态):paddle 双帧失读(None)→ 仲裁语义失效单源 CV(5 ≥ cap=5)
     → 入口板满门命中 = 失配暴露(发射位谓词正常时此门不可达)→ 返回
@@ -258,7 +258,7 @@ def test_cap_gate_full_board_mismatch_fails_not_noop(monkeypatch) -> None:
 
 
 def test_cap_gate_phantom_full_board_fails_not_noop(monkeypatch) -> None:
-    """矛盾帧失配断言锁(T-164 批A/D2,锁语义重推:旧锁钉「留证后合法
+    """矛盾帧失配断言锁(ADR-0601 §3 D2,锁语义重推:旧锁钉「留证后合法
     no-op」;新 norm 下矛盾帧禁伪装 plan_empty):CV 幻影占满**全部**
     前后排槽(front_empty=[] ∧ back_empty=[],比事故帧更重一档)∧
     paddle=3 → 仲裁分歧先落分键留证,再以 (0, False,

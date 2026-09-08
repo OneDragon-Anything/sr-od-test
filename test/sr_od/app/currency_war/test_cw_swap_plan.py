@@ -1,11 +1,14 @@
 # 板满换阵补部署(M1″)基础设施锁——select_swap_plan 谓词 / 共享装配 /
-# 卖出通道统一排除 / 消费方分键 / engine 意图面。
+# 卖出通道统一排除 / 消费方分键 / engine 意图面 / engine 执行面。
 # 语义出处:ADR-0530(board-full swap redeploy)+ dd-037(留 bench
 # 合法稳态,fail-closed 不对称口径)。锁的存在性纪律:每条锁 docstring
-# 引出处;本批锁的是**基础设施语义**(谓词判定/装配契约/分键显影),
-# 不锁 sim 帧分布上的发射行为——探针实证靶场景频率 0(0/2700 帧;sim
-# 部署代理消解板满形态,效果判定挂实机);发射门已开闸(ADR-0530 开闸
-# 批:M1P_SEAM_VERIFIED 缺省 True),seam 门两态与 m1p_fired 发射面由
+# 引出处;本批锁的是**基础设施语义**(谓词判定/装配契约/分键显影/
+# 执行转录),不锁 sim 帧分布上的发射频率(行为分布归批判读,频次
+# 探针=批统计)。执行面(T-169,总图设计 R2 §2 sim 边界行)接入后
+# 换血行为 sim 可见:计划非空帧卖 victim(cw_state.simulate 单一源)
+# + 轮末残余补部署补上——执行转录锁由 test_m1p_execution_face_*
+# 承载;发射门已开闸(ADR-0530 开闸批:M1P_SEAM_VERIFIED 缺省 True),
+# seam 门两态与 m1p_fired 发射面由
 # test_m1p_consumer_seam_gate_keeps_emission_closed 承载。
 from types import SimpleNamespace as _NS
 
@@ -279,9 +282,13 @@ def _m1p_state(*, deployed: list[BenchChar], bench: list[BenchChar],
 
 def test_m1p_intent_face_bidirectional() -> None:
     """M1″ 意图面双向断言锁(ADR-0530 决策6:sim 只建模发射意图,不建模
-    执行语义):计划非空 ⇒ 意图记录 nonempty=True 且带卖序;计划空 ⇒
-    nonempty=False 无卖序——两向都可红,谓词在 sim 帧分布上的正确性
-    覆盖不依赖执行建模。"""
+    执行语义)。F1 用例预期更新(T-167,ADR-0534 修订节):无方向帧
+    (target 视图空 = 事故形态)从「计划非空」变「弃权 no_direction +
+    计划空」——sim 镜像经 select_swap_plan 自动继承谓词,零第二份;
+    定向帧(有 comp ∧ bench 线内件 ∧ 板满)保持计划非空 + 卖序双向可红。"""
+    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+        swap_realizable,
+    )
     from sr_od.application.currency_war.sim.engine_p1 import (
         m1p_intent_record,
     )
@@ -290,15 +297,31 @@ def test_m1p_intent_face_bidirectional() -> None:
     state_of(sess).v3_intention = _NS(locked_comp='', p1_pair=(), phase='',
                                       transition_pair=())
     state_of(sess).transition_framework = ''
-    # 非空帧:板满(cap=6,6 占用)+ bench 线内件 + 非 fenced victim
+    # 无方向帧(事故同态:板满 + bench 有件 + target 视图空)→ 弃权
+    rec_nd = m1p_intent_record(_m1p_state(
+        deployed=_base_deployed(), bench=[_bc(_TARGET_BENCH)]), sess)
+    assert rec_nd['nonempty'] is False
+    assert rec_nd['abstain'] == 'no_direction'
+    assert swap_realizable(assemble_swap_plan_inputs(
+        sess, state=_m1p_state(deployed=_base_deployed(),
+                               bench=[_bc(_TARGET_BENCH)]),
+        deployed=_base_deployed(),
+        bench=[_bc(_TARGET_BENCH)],
+        cap=6)) == (False, 'no_direction'), 'sim 镜像与生产谓词同源同值'
+    # 定向帧:计划非空(卖序非空 + up 非空)
+    sess_d = _NS()
+    state_of(sess_d).target_comp = _DIRECTED_COMP
+    state_of(sess_d).v3_intention = _NS(locked_comp='', p1_pair=(), phase='',
+                                        transition_pair=())
+    state_of(sess_d).transition_framework = ''
     rec = m1p_intent_record(_m1p_state(deployed=_base_deployed(),
-                                       bench=[_bc(_TARGET_BENCH)]), sess)
+                                       bench=[_bc(_TARGET_BENCH)]), sess_d)
     assert rec['nonempty'] is True and rec['sell'] == [_VICTIM]
     assert rec['up'] >= 1 and rec['abstain'] == ''
     # 空帧:cap 不满(3 占用)⇒ 板满门关 ⇒ 无意图
     rec0 = m1p_intent_record(_m1p_state(
         deployed=_base_deployed()[:3],
-        bench=[_bc(_TARGET_BENCH)]), sess)
+        bench=[_bc(_TARGET_BENCH)]), sess_d)
     assert rec0['nonempty'] is False and rec0['sell'] == []
     assert rec0['abstain'] == ''
 
@@ -317,6 +340,83 @@ def test_m1p_intent_face_records_abstain() -> None:
     assert rec['abstain'] == 'membership_unreadable'
 
 
+# ==================== engine M1″ 执行面:卖出转录(T-169) ====================
+
+def _m1p_directed_session() -> _NS:
+    """定向帧 session(与意图面双向锁的 sess_d 同构装配)。"""
+    sess = _NS()
+    state_of(sess).target_comp = _DIRECTED_COMP
+    state_of(sess).v3_intention = _NS(locked_comp='', p1_pair=(), phase='',
+                                      transition_pair=())
+    state_of(sess).transition_framework = ''
+    return sess
+
+
+class _RetPool:
+    """有限牌池 ret 探针(只记回池名;执行面只消费 ret 一面)。"""
+
+    def __init__(self) -> None:
+        self.retired: list[str] = []
+
+    def ret(self, name: str) -> None:
+        self.retired.append(name)
+
+
+def test_m1p_execution_face_sells_victim_with_ledger_row() -> None:
+    """执行面锁(T-169 最小执行面;总图设计 R2 §2 sim 边界行,修订
+    ADR-0530「sim 不建模执行侧」申报):定向板满帧计划非空 ⇒ 逐件卖
+    victim 经 cw_state.simulate 单一源——victim 下场(槽位置 None)、
+    金回充(卖出回金)、牌池回填、账本转录行(name+reason=
+    m1_swap_redeploy,换血可见性判读锚;既有显式动作行无名,本行加键
+    不破消费)。补上(腾位后残余补部署)在引擎轮末部署块,集成面归
+    重锚批判读,不在本单测辖域。"""
+    from sr_od.application.currency_war.sim.engine_p1 import (
+        _m1p_plan_and_record,
+        m1p_swap_execute,
+    )
+    st = _m1p_state(deployed=_base_deployed(),
+                    bench=[_bc(_TARGET_BENCH)])
+    plan, rec = _m1p_plan_and_record(st, _m1p_directed_session())
+    assert plan.nonempty and rec['sell'] == [_VICTIM]
+    acts: list[dict] = []
+    spend: dict = {'buys': {}, 'levelup': 0, 'refresh': 0, 'sell_income': 0}
+    pool = _RetPool()
+    st2, sold = m1p_swap_execute(st, plan, acts=acts, spend=spend,
+                                 pool=pool)
+    assert sold is True
+    # victim 下场(卖出槽位 None 不移位;其余件不动)
+    assert all(d is None or d.char_id != _VICTIM for d in st2.deployed)
+    assert sum(d is not None for d in st2.deployed) == len(_base_deployed()) - 1
+    # 金回充(单一源卖出回金)+ 账本转录行 + 池守恒
+    assert st2.gold > st.gold
+    assert len(acts) == 1
+    row = acts[0]
+    assert row['__type__'] == 'SellDeployed' and row['result'] == 'applied'
+    assert row['name'] == _VICTIM
+    assert row['reason'] == 'm1_swap_redeploy'
+    assert row['income'] == spend['sell_income'] > 0
+    assert pool.retired == [_VICTIM]
+
+
+def test_m1p_execution_face_noop_when_plan_empty() -> None:
+    """执行面零行为锁:计划空帧(板不满)⇒ 零卖出/零转录/零金流动
+    (「计划空帧纯读」语义,引擎注释申报面的锁面)。"""
+    from sr_od.application.currency_war.sim.engine_p1 import (
+        _m1p_plan_and_record,
+        m1p_swap_execute,
+    )
+    st = _m1p_state(deployed=_base_deployed()[:3],
+                    bench=[_bc(_TARGET_BENCH)])
+    plan, rec = _m1p_plan_and_record(st, _m1p_directed_session())
+    assert not plan.nonempty and rec['sell'] == []
+    acts: list[dict] = []
+    spend: dict = {'buys': {}, 'levelup': 0, 'refresh': 0, 'sell_income': 0}
+    st2, sold = m1p_swap_execute(st, plan, acts=acts, spend=spend,
+                                 pool=_RetPool())
+    assert sold is False and st2.gold == st.gold and acts == []
+    assert spend['sell_income'] == 0
+
+
 # ==================== mandate M1″ 消费方:seam 门关闭态 ====================
 
 def _m1p_frame(*, deployed: list[BenchChar], bench: list[BenchChar],
@@ -326,7 +426,15 @@ def _m1p_frame(*, deployed: list[BenchChar], bench: list[BenchChar],
                         k_members=(), round_num=2)
 
 
-def _m1p_session(seam: bool | None) -> _NS:
+#: 有向 comp(T-167 F1 夹具升级):无方向帧自 F1 起在 select_swap_plan
+#: 弃权 no_direction,原「计划非空」夹具(target 视图空)须升级为定向
+#: 才能测 seam 门/计划空分键的原辖面(ADR-0534 修订节用例预期更新)。
+_DIRECTED_COMP = _NS(all_factions=('仙舟',), core_chars=('三月七',),
+                     factions=('仙舟',), form_tiers={'仙舟': 2},
+                     shared_chars=(), substitute_plan=None)
+
+
+def _m1p_session(seam: bool | None, *, directed: bool = False) -> _NS:
     # 策略器字段经 state_of 载体(session 职责分离迁移后生产唯一读面);
     # last_owned_equips 是观察数据字段,仍在 session 上。
     s = _NS(last_owned_equips=None)
@@ -334,7 +442,7 @@ def _m1p_session(seam: bool | None) -> _NS:
     st.cw4_counters = {}
     st.v3_intention = _NS(locked_comp='', p1_pair=(), phase='',
                           transition_pair=())
-    st.target_comp = None
+    st.target_comp = _DIRECTED_COMP if directed else None
     st.transition_framework = ''
     if seam is not None:
         st.cw4_m1p_seam_verified = seam
@@ -356,7 +464,7 @@ def test_m1p_consumer_seam_gate_keeps_emission_closed(
     # 显影态;monkeypatch 模拟回滚编辑,不碰生产模块)
     import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
     monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', False)
-    sess = _m1p_session(None)
+    sess = _m1p_session(None, directed=True)
     out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess, state=st)
     assert state_of(sess).cw4_m1p_seam_verified is False
     assert not any(e.action.__class__.__name__ == 'RunDeploy' for e in out)
@@ -364,7 +472,7 @@ def test_m1p_consumer_seam_gate_keeps_emission_closed(
     assert 'm1p_fired' not in state_of(sess).cw4_counters
     # 置位态(现役缺省:入口写点自置 True,无需外部注入)
     monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', True)
-    sess2 = _m1p_session(None)
+    sess2 = _m1p_session(None, directed=True)
     out2 = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess2,
                        state=st)
     assert state_of(sess2).cw4_m1p_seam_verified is True   # 入口唯一写点自置位
@@ -381,7 +489,7 @@ def test_m1p_consumer_counts_plan_empty_and_cap_unreadable() -> None:
     dep, bench = _base_deployed(), [_bc(_TARGET_BENCH)]
     st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
-    sess = _m1p_session(None)
+    sess = _m1p_session(None, directed=True)
     # cap 满帧但上序空(bench 候选与在场件同名,M1/M1′ 因 vacancy=0 不发,
     # M1″ 计划空分键显影)
     dep_dup = [_bc(_VICTIM, 1), _bc('青雀', 2), _bc('停云', 3),
@@ -392,7 +500,7 @@ def test_m1p_consumer_counts_plan_empty_and_cap_unreadable() -> None:
                 state=st_dup)
     assert state_of(sess).cw4_counters.get('m1p_plan_empty') == 1
     # cap 缺读帧:frame.deploy_cap=None → 弃权键
-    sess2 = _m1p_session(None)
+    sess2 = _m1p_session(None, directed=True)
     run_mandate(_m1p_frame(deployed=dep, bench=bench, cap=None), sess2,
                 state=st)
     assert state_of(sess2).cw4_counters.get('m1p_cap_unreadable') == 1
@@ -438,6 +546,148 @@ def test_swap_sell_exclusion_single_source_verdict() -> None:
         == 'membership_unreadable'
     assert swap_sell_exclusion_reason(_VICTIM, None) == ''
     assert swap_sell_exclusion_reason('', ctx) == ''
+
+
+# ==================== F1 换阵可兑现谓词锁(T-167)====================
+
+def test_swap_plan_no_direction_frame_abstains() -> None:
+    """三合取①锁(事故同态帧):target 视图空(target_comp=None 链)
+    → 弃权 no_direction + plan 级拒因显影——M1″ 幻影部署的发射面根除位
+    (run_20260908_210431:无方向态发射 53 次执行 0 次的接缝断裂本体)。"""
+    reasons: dict[str, str] = {}
+    plan = select_swap_plan(_base_ctx(deployed=_base_deployed(),
+                                      bench=[_bc(_TARGET_BENCH)]),
+                            reasons_out=reasons)
+    # _base_ctx 目标视图 = _TF 非空,须显式造无方向帧
+    ctx_nd = SwapPlanContext(
+        target_factions=frozenset(), target_cores=frozenset(),
+        fw_carry=frozenset(), locked_factions=frozenset(),
+        protect_names=frozenset(), membership=frozenset(),
+        fresh_buys=frozenset(), board={}, deployed=_base_deployed(),
+        bench=[_bc(_TARGET_BENCH)], cap=6)
+    plan = select_swap_plan(ctx_nd, reasons_out=reasons)
+    assert plan.abstain == 'no_direction' and not plan.nonempty
+    assert reasons.get('(plan)') == 'no_direction'
+    # 弃权键闭集登记(kernel SWAP_REALIZABLE_WHY 单一源)
+    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+        SWAP_REALIZABLE_WHY,
+    )
+    assert 'no_direction' in SWAP_REALIZABLE_WHY
+
+
+def test_swap_plan_no_bench_target_frame_abstains() -> None:
+    """三合取②锁(F-1① 幻影形态根除):有向帧但 bench 无目标视图件
+    (旧 base/formed 臂「非目标件填空上序」= 执行面必然空转)→ 弃权
+    no_bench_target——「发射→执行 no-op」变「弃权→空批出战」(F-2
+    如实申报的行为变化,ADR-0534 修订节)。"""
+    ctx_nbt = SwapPlanContext(
+        target_factions=_TF, target_cores=_CORES, fw_carry=frozenset(),
+        locked_factions=frozenset(), protect_names=frozenset(),
+        membership=frozenset(), fresh_buys=frozenset(), board={},
+        deployed=_base_deployed(),   # 板满 + 黑塔可卖 victim 在场
+        bench=[_bc(_VICTIM)],        # bench 无目标视图件(唯一候选即 victim)
+        cap=6)
+    plan = select_swap_plan(ctx_nbt)
+    assert plan.abstain == 'no_bench_target' and not plan.nonempty
+
+
+def test_swap_plan_no_sellable_victim_keeps_per_piece_reasons() -> None:
+    """三合取③ = victim 扫描自然承载锁(ADR-0534「修订(T-167)」节的显影保留面):
+    有向帧 ∧ bench 有目标件 ∧ 板上无可卖 off-target(全 fenced 且臂关)
+    → 计划空但逐件拒因 fenced_arm_closed 保留显影——合取③不预判成
+    plan 级单键,拒因显影不丢失。"""
+    second = _pick_fenced_offtarget({_VICTIM, '艾丝妲'})
+    deployed = [_bc('艾丝妲', 1), _bc(second, 2),
+                _bc('青雀', 3), _bc('停云', 4), _bc('藿藿', 5), _bc('爻光', 6)]
+    plan = select_swap_plan(_base_ctx(deployed=deployed,
+                                      bench=[_bc(_TARGET_BENCH)],
+                                      fenced=False))
+    assert not plan.nonempty
+    assert plan.reasons.get('艾丝妲') == 'fenced_arm_closed'
+    assert plan.reasons.get(second) == 'fenced_arm_closed'
+
+
+def test_swap_realizable_why_closed_set() -> None:
+    """swap_realizable 拒因闭集锁(F-8:plan 级弃权键闭集,发射面分键
+    消费同一闭集):三合取各假帧的 why 值一一对应;真帧返 ''。"""
+    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+        swap_realizable,
+    )
+    ok_ctx = _base_ctx(deployed=_base_deployed(),
+                       bench=[_bc(_TARGET_BENCH)])
+    assert swap_realizable(ok_ctx) == (True, '')
+    assert swap_realizable(None)[0] is False, 'ctx None fail-closed'
+    nbt_ctx = _base_ctx(deployed=_base_deployed(), bench=[_bc(_VICTIM)])
+    assert swap_realizable(nbt_ctx) == (False, 'no_bench_target')
+    # 无可卖 off-target 帧构造 = 全 fenced 臂关帧(注册表直调取 fenced
+    # off-target 样本,与其余 target 件组成板面;构造同 fenced_arm_closed 锁)
+    second = _pick_fenced_offtarget({_VICTIM, '艾丝妲'})
+    nso_ctx = _base_ctx(
+        deployed=[_bc('艾丝妲', 1), _bc(second, 2),
+                  _bc('青雀', 3), _bc('停云', 4), _bc('藿藿', 5), _bc('爻光', 6)],
+        bench=[_bc(_TARGET_BENCH)], fenced=False)
+    assert swap_realizable(nso_ctx)[1] == 'no_sellable_offtarget'
+
+
+def test_target_view_char_single_source_includes_fw_carry() -> None:
+    """fw_carry 口径收口锁(F-1③,择 kernel 含):单件判定单一源 =
+    target_view_char_is(fw_carry 命中即目标视图件),发射面 _bench_is_
+    target 与 kernel bench_target_count 同吃;执行面旧局部 _is_tgt_char
+    (不含 fw_carry)拆除(源级断言)。"""
+    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+        bench_target_count,
+        target_view_char_is,
+    )
+    ctx = _base_ctx(deployed=[], bench=[])
+    assert target_view_char_is(ctx, _TARGET_BENCH), (
+        '阵营交集件 = 目标视图件(基本腿)')
+    assert target_view_char_is(ctx, '三月七'), 'core 件 = 目标视图件'
+    ctx_fw = SwapPlanContext(
+        target_factions=_TF, target_cores=_CORES,
+        fw_carry=frozenset({'花火'}),   # 花火 bonds∉TF 的 fw_carry 样本
+        locked_factions=frozenset(), protect_names=frozenset(),
+        membership=frozenset(), fresh_buys=frozenset(), board={},
+        deployed=[], bench=[], cap=6)
+    ch = CHARACTERS['花火']
+    assert not (set(ch.factions) | set(ch.flows)) & _TF, '锁前提:样本∉视图'
+    assert target_view_char_is(ctx_fw, '花火'), 'fw_carry 命中即目标视图件'
+    assert bench_target_count(ctx_fw, bench=[_bc('花火')]) == 1, (
+        'bench_target_count 计 fw_carry 件(执行面 max_sell 同吃)')
+    import inspect
+
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy
+    src = inspect.getsource(cw_op_deploy)
+    assert 'def _is_tgt_char' not in src, (
+        '执行面局部第二份口径必须拆除(fw_carry 收口后禁双实现)')
+    assert 'bench_target_count(' in src and 'swap_realizable(' in src, (
+        '执行面两门必须消费 kernel 合取支(F1 单一源)')
+
+
+def test_m1p_no_direction_incident_frame_no_emission(monkeypatch) -> None:
+    """F1 核心单帧锁(诊断验收1修订):事故同态帧(P2r6、target 视图空、
+    板满 8/8、bench 有件、gold=31)闩闭帧 → 发射序列空(entry ⑥ StartBattle
+    的前件,空批出战出口恢复可达)∧ m1p_no_direction plan 级弃权键显影
+    (F-8)∧ 无 RunDeploy。"""
+    sess = _m1p_session(None)
+    # 板满 8/8:注册表真名(无方向帧在门①即弃权,件名羁绊不入判定)
+    _full = [_bc('艾丝妲', 1), _bc('黑塔', 2), _bc('椒丘', 3), _bc('青雀', 4),
+             _bc('停云', 5), _bc('藿藿', 6), _bc('爻光', 7), _bc('花火', 8)]
+    st = GameState(gold=31, level=8, plane=2, round_num=6, board={},
+                   deployed=_full,
+                   bench=[_bc(_VICTIM, 1), _bc('花火', 2)])
+    st2 = state_of(sess)
+    st2.cw4_shopped_phase = (2, 6)   # 闩闭(事故的部署帧相位)
+    out = run_mandate(
+        MandateFrame(gold=31, level=8, bench=[b for b in st.bench if b],
+                     deployed=[d for d in st.deployed if d], deploy_cap=8,
+                     node_type='battle', stop_flag=False, k_members=(),
+                     round_num=6),
+        sess, state=st)
+    assert not any(e.action.__class__.__name__ == 'RunDeploy' for e in out), (
+        f'闩闭帧不得再发射幻影 RunDeploy:{[e.reason for e in out]}')
+    assert out == [], f'闩闭帧序列空(entry ⑥ 出战可达),实得 {[e.reason for e in out]}'
+    assert st2.cw4_counters.get('m1p_no_direction') == 1, (
+        'no_direction plan 级弃权键必须显影(F-8 层位)')
 
 
 # ==================== 开闸批:fresh 生产写点接线 ====================

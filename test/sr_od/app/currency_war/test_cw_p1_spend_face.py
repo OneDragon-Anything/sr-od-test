@@ -745,9 +745,9 @@ class TestReadinessBattleArm:
             state_calls['launch'] += 1
             raise _ArmFired()
 
-        def _fake_tick(prev, count, sig):
+        def _fake_tick(prev, count, prev_actions, sig, actions):
             state_calls['guard'] += 1
-            return (prev, count)
+            return (prev, count, prev_actions or frozenset())
 
         def _form_progress_probe(tc, st):
             # 诚实桩:校验 st 真是带 board 的对局态而非错绑模块(第十五局
@@ -822,9 +822,9 @@ class TestReadinessBattleArm:
 
         guard = {'n': 0}
 
-        def _fake_tick(prev, count, sig):
+        def _fake_tick(prev, count, prev_actions, sig, actions):
             guard['n'] += 1
-            return (prev, count)
+            return (prev, count, prev_actions or frozenset())
         from types import SimpleNamespace as _NS
 
         # 判据核单一源(sim 决策下沉两小批①):armed 判定经 kernel
@@ -889,9 +889,9 @@ class TestReadinessBattleArm:
             launches.append(1)
             return True, 'ok'
 
-        def _fake_tick(prev, count, sig):
+        def _fake_tick(prev, count, prev_actions, sig, actions):
             guard['n'] += 1
-            return (prev, count)
+            return (prev, count, prev_actions or frozenset())
 
         # 判据核单一源(sim 决策下沉两小批①):armed 判定经 kernel
         # readiness_launch_decision,force 成型须 patch kernel 侧
@@ -941,9 +941,9 @@ class TestReadinessBattleArm:
             launches.append(1)
             return True, 'ok'
 
-        def _fake_tick(prev, count, sig):
+        def _fake_tick(prev, count, prev_actions, sig, actions):
             guard['n'] += 1
-            return (prev, count)
+            return (prev, count, prev_actions or frozenset())
 
         # 判据核单一源(sim 决策下沉两小批①):armed 判定经 kernel
         # readiness_launch_decision,force 成型须 patch kernel 侧

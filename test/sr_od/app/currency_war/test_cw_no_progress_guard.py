@@ -1,21 +1,22 @@
-"""环级无进展守卫锁(第 5 局放行硬门)。
+"""环级无进展守卫锁(第 5 局放行硬门;F2 单键计数,T-167 迁移)。
 
 设计出处 = docs/develop/currency_war/decisions/dd-030-no-progress-guard.md
-(环级活性不变量;问三缺口 G3(prep 环无通用无进展守卫)/ 问四防线①
-(同签名动作批 + 状态零推进连续 N 环 → 存证 + stop_running)/ 问五放行
-裁决(守卫是放行硬门))+ docs/develop/currency_war/flow/guards.md §1
-(防线总册)。触发语义:签名 = 动作类型序列(exec_state_of(session).last_prep_action_sig,
-CwScreenPrep 决策出口写)+ 状态指纹(prep_no_progress_state_fingerprint,
-只读 observe 现成字段);连续 PREP_NO_PROGRESS_ROUNDS=3 环同签名 ∧
-零推进 → 截图 + flag + stop_running。取代旧 PREP_STALL_EVIDENCE_ROUNDS
-只留证不停机线(单一计数,勿留两套)。历史三卡死形态(M2 开店重燃 /
-M7 装备环 / 伙伴遮罩 RunDeploy)同辖「同签名 ∧ 零推进 → 触发」判据,
-触发面由计数纯函数锁与真环行为锁共同看守。
+(环级活性不变量)+ docs/develop/currency_war/flow/guards.md §1(防线总册)
++ docs/develop/currency_war/decisions/0554-prep-exhaustion-battle-launch.md
+(ADR-0554 + T-167 修订节)。触发语义(F2):计数键 = 状态指纹单键
+(prep_no_progress_state_fingerprint,只读 observe 现成字段;gold 分量
+按开态可信帧钉死);连续 PREP_NO_PROGRESS_ROUNDS=3 环指纹零推进 →
+出战臂或截图 + flag + stop_running。动作批 = 窗口并集累积器留证 + 臂
+判别(EXHAUSTION_WINDOW_ACTIONS ⊆ 约束 ∧ 末批 RunDeploy)。旧键
+(动作批, 指纹) 被签名振荡穿透的缺口 = T-167 事故结构根,本文件头至尾
+按新键重推(锁的存在性纪律:锁红 ≠ 改动错,先重推语义再跟改)。
 
-不误伤三判据(与守卫实现注释同源):
+不误伤判据(F2 后重述):
 ①战斗等待期不进备战分支,回备战 round 必变 → 归零;
-②正常多帧部署:每次成功动作改变身份/金 → 指纹变 → 归零;
-③闩跳过帧:动作批不同 → 签名变 → 归零。
+②正常多帧部署:每次成功动作改变身份/金(真购必经开店帧,gold 可信位
+  单源钉死)→ 指纹变 → 归零;
+③动作批振荡不再归零(F2 语义变更)——恒指纹下的振荡 = 忙而无功,
+  恰是本守卫要捕的形态;第三类动作入窗口则出战臂店闭,落停机留证。
 """
 
 from types import SimpleNamespace
@@ -48,41 +49,52 @@ def _session(plane=1, round_num=5, gold=30, node='battle',
     )
 
 
-def _simulate(rings: list[tuple[tuple[str, ...], object]]) -> tuple[int, bool]:
-    """重放备战环序列:(动作批, session 或指纹差异),返回 (末次计数, 是否触发)。
+def _simulate(rings: list[tuple[tuple[str, ...] | None, object]],
+              ) -> tuple[int, bool, frozenset[str]]:
+    """重放备战环序列:(动作批, session 或指纹元组),返回 (末次计数, 是否
+    触发, 末次窗口动作批并集)。
 
-    每环 = cw_loop 备战分支一次守卫判定(动作批 None 模拟 overlay 交回环)。
+    每环 = cw_loop 备战分支一次守卫判定(F2 单键:计数键 = 状态指纹,
+    动作批入窗口并集累积器;动作批 None 模拟 overlay 交回环 = 共同出口
+    归零)。
     """
     m = _fingerprint_module()
     sig_state = None
     count = 0
+    union: frozenset[str] = frozenset()
     triggered = False
     for actions, sess in rings:
         if actions is None:
             sig_state = None
             count = 0
+            union = frozenset()
             continue
         fp = sess if isinstance(sess, tuple) else \
             m.prep_no_progress_state_fingerprint(sess)
-        sig_state, count = m.prep_no_progress_tick(sig_state, count,
-                                                   (actions, fp))
+        sig_state, count, union = m.prep_no_progress_tick(
+            sig_state, count, union, fp, actions)
         if count >= m.CwLoop.PREP_NO_PROGRESS_ROUNDS:
             triggered = True
-    return count, triggered
+    return count, triggered, union
 
 
-def test_tick_accumulates_same_sig_and_resets_on_change() -> None:
-    """同签名累加 / 异签名归零(计数器核心语义)。"""
+def test_tick_accumulates_same_fingerprint_and_resets_on_change() -> None:
+    """同指纹累加 / 异指纹归零(F2 单键核心语义;三历史重放锁随迁)。
+
+    语义变更(T-167):计数键由 (动作批, 指纹) 改为指纹单键——动作批
+    变化不再归零(振荡签名 + 恒指纹 = 忙而无功,恰是守卫要捕的形态);
+    并集累积器同指纹逐环并入、指纹变化归零重开(F-6②)。"""
     m = _fingerprint_module()
-    s, c = m.prep_no_progress_tick(None, 0, (('A',), (1,)))
-    assert (s, c) == ((('A',), (1,)), 0), '首见签名计数从 0 起'
-    _, c = m.prep_no_progress_tick(s, c, (('A',), (1,)))
-    _, c = m.prep_no_progress_tick(s, c, (('A',), (1,)))
-    assert c == 2, '同签名两次重复后计数=2'
-    _, c = m.prep_no_progress_tick(s, c, (('A',), (2,)))
+    s, c, u = m.prep_no_progress_tick(None, 0, frozenset(), (1,), ('OpenShop',))
+    assert (s, c) == ((1,), 0), '首见指纹计数从 0 起'
+    assert u == {'OpenShop'}, '首环并集 = 本环动作批'
+    _, c, u = m.prep_no_progress_tick(s, c, u, (1,), ('RunDeploy',))
+    _, c, u = m.prep_no_progress_tick(s, c, u, (1,), ('OpenShop',))
+    assert c == 2, '同指纹两次重复后计数=2(动作批振荡不归零,F2)'
+    assert u == {'OpenShop', 'RunDeploy'}, '并集逐环并入'
+    _, c, u = m.prep_no_progress_tick(s, c, u, (2,), ('RunDeploy',))
     assert c == 0, '指纹变化(状态推进)必须归零'
-    _, c = m.prep_no_progress_tick((('A',), (2,)), c, (('B',), (2,)))
-    assert c == 0, '动作批变化必须归零'
+    assert u == {'RunDeploy'}, '并集随指纹变化归零重开(F-6②)'
 
 
 def test_state_fingerprint_covers_all_progress_fields() -> None:
@@ -102,6 +114,36 @@ def test_state_fingerprint_covers_all_progress_fields() -> None:
             f'指纹须随字段变化而变:{v}')
 
 
+def test_fingerprint_gold_pinned_to_trusted_frames() -> None:
+    """gold 分量钉死(F-5,T-167):仅开态可信帧(prep_obs_frame.state_
+    gold_trusted)更新可信陈值,其余帧沿用陈值——店店帧 gold 噪声
+    (0 兜底/OCR 抖动)不构成假推进也不毒化陈值。陈值载体 = session
+    属性(PREP_GOLD_TRUSTED_ATTR),同一 session 跨帧存活;无陈值的新
+    session 回退 raw 读数(开局首店前,噪声至多延迟出口)。"""
+    m = _fingerprint_module()
+    # 开态可信帧:陈值写入,gold 进指纹
+    sess = _session(gold=31)
+    sess.prep_obs_frame.state_gold_trusted = True
+    fp_t = m.prep_no_progress_state_fingerprint(sess)
+    assert fp_t[3] == 31
+    # 店店帧(raw 29 = 事故局实测噪声形态):沿用陈值 31,指纹不变
+    sess.prep_obs_frame.state_gold_trusted = False
+    sess.last_state.gold = 29
+    assert m.prep_no_progress_state_fingerprint(sess)[3] == 31, (
+        '店店帧噪声不得改写 gold 分量(沿用陈值)')
+    # 店店失读兜底 0 形态:同样沿用陈值(wholesale raw 写入链,方案审 F-5)
+    sess.last_state.gold = 0
+    assert m.prep_no_progress_state_fingerprint(sess)[3] == 31
+    # 新可信帧推进 gold → 指纹变(真买入必经开店帧,进展检测无损)
+    sess.prep_obs_frame.state_gold_trusted = True
+    sess.last_state.gold = 28
+    assert m.prep_no_progress_state_fingerprint(sess)[3] == 28
+    # 无陈值的新 session(开局首店前)回退 raw 读数
+    sess_fresh = _session(gold=17)
+    sess_fresh.prep_obs_frame.state_gold_trusted = False
+    assert m.prep_no_progress_state_fingerprint(sess_fresh)[3] == 17
+
+
 # ==================== 不误伤:健康序列/战斗等待/闩跳过 ====================
 
 
@@ -112,30 +154,56 @@ def test_healthy_rotation_never_triggers() -> None:
         sess = _session(round_num=5 + r // 3, gold=30 + r,
                         deployed=('c',) if r % 2 == 0 else ('c', 'd'))
         rings.append((('OpenShop',), sess))
-    _, triggered = _simulate(rings)
+    _, triggered, _u = _simulate(rings)
     assert not triggered, '状态推进中的同批动作不得触发'
 
 
-def test_action_variance_with_frozen_state_never_triggers() -> None:
-    """状态冻结但动作批在变(闩跳过帧/异构重试)→ 签名变 → 归零,不触发。"""
+def test_action_oscillation_with_frozen_state_reaches_threshold() -> None:
+    """T-167 事故形态核心锁(旧「动作批变化归零」语义的反转,先例 =
+    2026-09-08 实机交替活锁:闩驱动的 OpenShop/RunDeploy 振荡 + 恒指纹
+    每帧归零,相位出口全灭 15 分钟):状态冻结但动作批振荡 → F2 单键
+    下计数照常累加,3 环达阈值——守卫不再被振荡穿透。"""
     frozen = _session()
     rings = [
         (('OpenShop',), frozen),
+        (('RunDeploy',), frozen),   # 闩驱动交替(事故形态)
         (('OpenShop',), frozen),
-        (('StartBattle',), frozen),   # 闩抑制后改发出战
-        (('OpenShop',), frozen),
-        (('OpenShop',), frozen),
-        (('OpenShop', 'RunEquip'), frozen),
+        (('RunDeploy',), frozen),
     ]
-    _, triggered = _simulate(rings)
-    assert not triggered, '动作批变化 = 签名变化,不得累计触发'
+    count, triggered, union = _simulate(rings)
+    assert count == 3, f'振荡签名在恒指纹下必须累加,实得 {count}'
+    assert triggered, '事故形态必须触达阈值(旧键每帧归零 = 缺口本体)'
+    assert union == {'OpenShop', 'RunDeploy'}, '振荡动作批全量入窗口并集'
+
+
+def test_third_action_in_window_blocks_launch_but_still_counts() -> None:
+    """第三类动作入窗口(DeferSpheres 等)= 语义未核实形态:计数照常
+    累加(忙而无功),但出战臂被并集约束店闭 → 落守卫停机留证(F2
+    边界:不代打)。"""
+    frozen = _session()
+    rings = [
+        (('OpenShop',), frozen),
+        (('DeferSpheres',), frozen),
+        (('OpenShop',), frozen),
+        (('DeferSpheres',), frozen),
+    ]
+    count, _t, union = _simulate(rings)
+    assert count == 3, '恒指纹下第三类动作窗口照常计数'
+    assert not ('RunDeploy' in union and
+                union <= _fingerprint_module().EXHAUSTION_WINDOW_ACTIONS), (
+        '窗口含白名单外动作,出战臂必须店闭')
+    m = _fingerprint_module()
+    assert not m.prep_exhaustion_launch_eligible(
+        ('DeferSpheres',), True, frozenset({'OpenShop', 'DeferSpheres'})), (
+        '第三类动作窗口不得 eligible')
 
 
 def test_overlay_interlude_and_battle_wait_reset_and_silence() -> None:
     """战斗等待期/overlay 交回环(动作批 None)不累计且中断已累计连击:
-    ①纯 None 环长序列不触发;②卡死中插入 None(战斗)后计数清零。"""
+    ①纯 None 环长序列不触发;②卡死中插入 None(战斗)后计数与并集
+    清零(F-6①②:overlay 垄断形态维持哨兵档,并集一并归零)。"""
     rings = [(None, None)] * 20
-    _, triggered = _simulate(rings)
+    _, triggered, _u = _simulate(rings)
     assert not triggered, '战斗等待/overlay 环必须静默'
 
     frozen = _session()
@@ -146,22 +214,24 @@ def test_overlay_interlude_and_battle_wait_reset_and_silence() -> None:
         (('RunDeploy',), frozen),
         (('RunDeploy',), frozen),
     ]
-    count, triggered = _simulate(rings)
+    count, triggered, union = _simulate(rings)
     assert not triggered, 'None 环必须清零计数(战斗静默期不误伤)'
+    assert union == {'RunDeploy'}, (
+        f'None 环后并集只含 None 环后的动作批,实得 {union!r}')
 
 
 # ==================== 存证 flag(测试零真实副作用:tmp_path) ====================
 
 
 def test_write_no_progress_flag_content(tmp_path) -> None:
-    """flag 三要素:计数 + 签名 + 截图路径,处理流程可执行。"""
+    """flag 三要素:计数 + 状态指纹(F2 单键)+ 截图路径,处理流程可执行。"""
     m = _fingerprint_module()
     p = tmp_path / 'prep_no_progress.flag'
-    out = m.write_no_progress_flag(3, (('RunDeploy',), (1, 5, 'battle', 30, ('a',), ('c',))),
+    out = m.write_no_progress_flag(3, (1, 5, 'battle', 30, ('a',), ('c',)),
                                    '<shot>', path=p)
     assert out == str(p)
     text = p.read_text(encoding='utf-8')
-    assert '3' in text and 'RunDeploy' in text and '<shot>' in text
+    assert '3' in text and '30' in text and '<shot>' in text
     assert '[HOOK-STOP]' in text and '处理流程' in text
 
 
@@ -386,19 +456,105 @@ def test_loop_prep_guard_healthy_progress_never_stops(
 
 
 def test_exhaustion_eligible_truth_table() -> None:
-    """判据真值表:RunDeploy 稳态(success)唯一 eligible;失败环/混合批/
-    None 批一律不 eligible(执行面失败形态保持守卫停机语义)。"""
+    """判据真值表(F2 放宽版;ADR-0554 T-167 修订节):窗口并集 ⊆
+    {OpenShop, RunDeploy} ∧ 末批 RunDeploy ∧ 上环 success 唯一 eligible;
+    末批 OpenShop/失败环/None 批/白名单外动作一律不 eligible。"""
     from sr_od.application.currency_war.operations import cw_loop as m
     e = m.prep_exhaustion_launch_eligible
-    assert e(('RunDeploy',), True), 'RunDeploy 稳态 no-op + 上环 success = 收益耗尽'
-    assert e(('RunDeploy', 'RunDeploy'), True), '同批多次 RunDeploy 同型'
-    assert not e(('RunDeploy',), False), '上环 fail = 执行面失败,须停机留证'
-    assert not e(('RunDeploy',), None), '无上环记录(首轮)不 eligible'
-    assert not e(None, True), 'None 批(overlay 交回)不累计不 eligible'
-    assert not e((), True), '空批非 RunDeploy 稳态,不 eligible'
-    assert not e(('OpenShop',), True), 'OpenShop 批 = 重燃重发形态,须停机'
-    assert not e(('OpenShop', 'RunEquip'), True), '装备环形态,须停机'
-    assert not e(('RunDeploy', 'OpenShop'), True), '混合批不 eligible'
+    assert e(('RunDeploy',), True, frozenset({'RunDeploy'})), (
+        'RunDeploy 稳态 no-op + 上环 success = 收益耗尽')
+    assert e(('OpenShop', 'RunDeploy'), True,
+             frozenset({'OpenShop', 'RunDeploy'})), (
+        '振荡窗口(RunDeploy 末批)= F2 放宽核心,旧判据 set=={RD} 恒假'
+        '即事故缺口本体')
+    assert not e(('RunDeploy',), False, frozenset({'RunDeploy'})), (
+        '上环 fail = 执行面失败,须停机留证')
+    assert not e(('RunDeploy',), None, frozenset({'RunDeploy'})), (
+        '无上环记录(首轮)不 eligible')
+    assert not e(None, True, frozenset()), 'None 批(overlay 交回)不累计不 eligible'
+    assert not e((), True, frozenset()), '空批非 RunDeploy 末批,不 eligible'
+    assert not e(('OpenShop',), True, frozenset({'OpenShop'})), (
+        '末批 = OpenShop 的第 3 恒指纹环:F-4  parity B,判据假 → 落停机'
+        '(3 环内必有出口的确定性不变)')
+    assert not e(('OpenShop', 'RunEquip'), True,
+                 frozenset({'OpenShop', 'RunEquip'})), '装备环形态,须停机'
+    assert not e(('RunDeploy', 'OpenShop'), True,
+                 frozenset({'OpenShop', 'RunDeploy'})), (
+        '混合批末批非 RunDeploy 不 eligible')
+    assert not e(('RunDeploy',), True,
+                 frozenset({'RunDeploy', 'StartBattle'})), (
+        '窗口含白名单外动作(StartBattle)不 eligible')
+
+
+def _make_loop_op_altsig(test_context, monkeypatch, session, stops, flags,
+                         sigs):
+    """振荡签名版 loop 装配(基于 _make_loop_op,CwScreenPrep 桩逐环改写
+    exec_state 签名;恒指纹 session 由调用方保证)——T-167 事故形态的
+    真环重放载体(F-4 parity 双形态锁用)。"""
+    op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
+                       sig=sigs[0])
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    # 桩写序从 sigs[1] 起:守卫在 loop 内先读后派发,本环写值由下环守卫
+    # 读到——初值 sigs[0] 已被 _make_loop_op 置入,占读序第 1 位,桩从
+    # 读序第 2 位开始续写,保证守卫读到的签名序列恰为 sigs 的循环。
+    _it = {'i': 1}
+
+    class _AltPrep:
+        def __init__(self, ctx) -> None:
+            pass
+
+        def execute(self):
+            sig = sigs[_it['i'] % len(sigs)]
+            _it['i'] += 1
+            exec_state_of(session).last_prep_action_sig = sig
+            return SimpleNamespace(success=True, status='stub')
+
+    monkeypatch.setattr(loop_mod, 'CwScreenPrep', _AltPrep)
+    return op
+
+
+def test_loop_incident_parity_a_alternation_launches_battle(
+        test_context, monkeypatch) -> None:
+    """F-4 parity A(真环行为锁):恒指纹 + OpenShop/RunDeploy 交替签名,
+    第 3 恒指纹环末批 = RunDeploy → 收益耗尽臂出战(T-167 事故形态的
+    出口恢复;旧键下此形态计数每帧归零永不可达)。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op_altsig(test_context, monkeypatch, session, stops,
+                              flags, sigs=[('OpenShop',), ('RunDeploy',)])
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    launches: list = []
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
+                        lambda op_, ctx_: (launches.append(1), (True, 'x'))[1])
+    with fast_sleep():
+        for _ in range(5):
+            op.loop()
+    assert launches, '末批 RunDeploy 相位必须出战(F-4 parity A)'
+    assert stops == [], f'eligible 相位不得停机:{stops!r}'
+
+
+def test_loop_incident_parity_b_openshop_last_stops_with_evidence(
+        test_context, monkeypatch) -> None:
+    """F-4 parity B(真环行为锁):同振荡形态但第 3 恒指纹环末批 =
+    OpenShop → 判据假 → 落守卫停机留证(不出战、不发射)——3 环内必有
+    出口的确定性闭合,「必出战」只对 parity A 成立(任务书钉死口径)。"""
+    session = _session()
+    stops: list = []
+    flags: list = []
+    op = _make_loop_op_altsig(test_context, monkeypatch, session, stops,
+                              flags, sigs=[('RunDeploy',), ('OpenShop',)])
+    from sr_od.application.currency_war.operations import cw_loop as loop_mod
+    launches: list = []
+    monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
+                        lambda op_, ctx_: (launches.append(1), (True, 'x'))[1])
+    with fast_sleep():
+        for _ in range(4):
+            op.loop()
+    assert launches == [], '末批 OpenShop 相位不得出战(F-4 parity B)'
+    assert stops == ['hook:prep_no_progress'], (
+        f'parity B 须落守卫停机留证:{stops!r}')
+    assert flags, 'parity B 停机须写存证 flag'
 
 
 def test_loop_exhaustion_launches_battle_instead_of_stop(
@@ -631,3 +787,57 @@ def test_loop_exhaustion_success_registers_flow_heartbeat(
     assert kwargs.get('extra', {}).get('strategy_id') == \
         'cw:flow:exhaustion_battle_launch', (
         f'心跳行 strategy_id 接线错误:{kwargs!r}')
+
+
+# ==================== F2 排除族(F2 边界;单一源 = prep_exhaustion_exclusion_reason)====================
+
+def test_exhaustion_exclusion_family(monkeypatch) -> None:
+    """排除族锁(可扩展形态):补给节点 → exhaustion_supply(出战不推进,
+    正确出口是补流程);奖励节点 ∧ 球在场 → exhaustion_reward_sphere
+    (实机观测项标注,离线不可判);奖励节点球已收清 → 不排除(合取
+    防误排除,方案审 F2 §5);非上述节点 → ''(可出战)。"""
+    from sr_od.application.currency_war.operations import cw_loop as m
+
+    class _Slot:
+        def __init__(self, node_type: str) -> None:
+            self.state = 'current'
+            self.node_type = node_type
+
+    ctx = SimpleNamespace()
+    cases: list[tuple[str, str, list, list, str]] = [
+        # (用例名, node_type, node_sequence 返回, spheres 返回, 期望)
+        ('补给节点', 'supply', [_Slot('supply')], [], 'exhaustion_supply'),
+        ('奖励节点球在场', 'reward', [_Slot('reward')], [('gold',)],
+         'exhaustion_reward_sphere'),
+        ('奖励节点球已收清', 'reward', [_Slot('reward')], [], ''),
+        ('战斗节点有球不辖', 'battle', [_Slot('battle')], [('gold',)], ''),
+        ('boss 无节点序', 'boss', [], [('gold',)], ''),
+    ]
+    for name, _nt, seq, spheres, want in cases:
+        monkeypatch.setattr(m, 'read_node_sequence',
+                            lambda ctx_, screen, _seq=seq: _seq)
+        import sr_od.application.currency_war.obs.cw_identity_obs as ident
+        monkeypatch.setattr(ident, 'read_reward_spheres',
+                            lambda ctx_, screen, _s=spheres: _s)
+        got = m.prep_exhaustion_exclusion_reason(ctx, object())
+        assert got == want, f'{name}: 期望 {want!r} 实得 {got!r}'
+
+
+def test_exhaustion_exclusion_sphere_detect_error_opens_arm(monkeypatch) -> None:
+    """检测退化方向锁:球识别异常 → 不排除(出战优先,同前置引入前的
+    现行为;排除腿失效方向显式钉死防将来误改)。"""
+    from sr_od.application.currency_war.operations import cw_loop as m
+
+    class _Slot:
+        state = 'current'
+        node_type = 'reward'
+
+    monkeypatch.setattr(m, 'read_node_sequence',
+                        lambda ctx_, screen: [_Slot()])
+
+    def _boom(ctx_, screen):
+        raise RuntimeError('识别退化')
+
+    import sr_od.application.currency_war.obs.cw_identity_obs as ident
+    monkeypatch.setattr(ident, 'read_reward_spheres', _boom)
+    assert m.prep_exhaustion_exclusion_reason(SimpleNamespace(), object()) == ''

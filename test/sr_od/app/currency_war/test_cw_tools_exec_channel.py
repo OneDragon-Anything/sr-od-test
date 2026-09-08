@@ -123,7 +123,7 @@ class TestPlanToolDrags:
         assert plan_tool_drags(acts, [(_TOKEN, (1800, 200), 0.9)], comp) == []
 
 
-# ===== 1b. 多计划执行环锁(T-164 批A/C3 语义重推:op 内 replan 删除——
+# ===== 1b. 多计划执行环锁(ADR-0601 §3 C3 语义重推:op 内 replan 删除——
 # 首件消费后 reflow 剩余计划坐标作废,如实上报交回分发层重算,禁 op 内
 # 重评准入自建队列;cancel 件丢弃不消费、无 reflow,队列余件继续)=====
 
@@ -166,7 +166,7 @@ class TestRunToolQueue:
 
     def test_queue_cancel_drops_without_blocking_rest(self):
         """cancel(重试预算耗尽)件直接丢弃:画面未消费 = 无 reflow,
-        队列其余坐标仍有效,继续下一件(T-164 批A 语义:cancel 不触发
+        队列其余坐标仍有效,继续下一件(ADR-0601 §3 语义:cancel 不触发
         计划失效;防同件原地重拖死循环的旧语义保留)。"""
         calls: list[str] = []
 

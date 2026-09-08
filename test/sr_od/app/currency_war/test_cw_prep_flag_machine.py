@@ -137,9 +137,24 @@ class TestS1ResetWhitelist:
         s1_reset_by_deploy_launch(route 类由动作类型承载,§5.1 M1 行)。"""
         sess, st = self._mk()
         mandate.mark_s1_route_check(sess, _state(), RunDeploy(),
-                                    pre_bench_count=9, post_bench_count=8)
+                                    pre_bench_count=9, post_bench_count=8,
+                                    landed=True)
         assert self.cleared(st)
         assert st.cw4_counters.get('s1_reset_by_deploy_launch') == 1
+
+    def test_i_deploy_noop_landing_keeps_latch(self):
+        """F1b(T-167):RunDeploy progressed 但零落地(landed=False,执行器
+        对 STATUS_NOOP 合法稳态的结构化判定)→ 不清闩、零遥测——no-op
+        部署清闩 = 凭空再武装一次开店意图,交替活锁引擎本体(事故实证:
+        25 次无信息量重开店)。landed 必传(落地审低②:删缺省防静默
+        沿用旧「progressed 即落地」口径)。"""
+        sess, st = self._mk()
+        mandate.mark_s1_route_check(sess, _state(), RunDeploy(),
+                                    pre_bench_count=9, post_bench_count=8,
+                                    landed=False)
+        assert not self.cleared(st), 'no-op RunDeploy 必须保持开店闩(F1b)'
+        assert not [k for k in st.cw4_counters
+                    if k.startswith('s1_reset_by')], '零落地形态零清键遥测'
 
     def test_i_m4_fuel_sell_landing_clears(self):
         """(i) 卖出类:m4_fuel_sell 落地 → 清键(腾席臂/wanted 卖腿
@@ -148,7 +163,8 @@ class TestS1ResetWhitelist:
         act = SellBench(slot=1)
         act.route_tag = 'm4_fuel_sell'
         mandate.mark_s1_route_check(sess, _state(), act,
-                                    pre_bench_count=9, post_bench_count=8)
+                                    pre_bench_count=9, post_bench_count=8,
+                                    landed=True)
         assert self.cleared(st)
         assert st.cw4_counters.get('s1_reset_by_m4_fuel_sell') == 1
 
@@ -159,7 +175,8 @@ class TestS1ResetWhitelist:
         act = SellBench(slot=1)
         act.route_tag = 'interest_prep'
         mandate.mark_s1_route_check(sess, _state(), act,
-                                    pre_bench_count=9, post_bench_count=8)
+                                    pre_bench_count=9, post_bench_count=8,
+                                    landed=True)
         assert self.cleared(st)
         assert st.cw4_counters.get(
             's1_reset_by_bench_flip_interest_prep') == 1
@@ -171,19 +188,25 @@ class TestS1ResetWhitelist:
         act = SellBench(slot=1)
         act.route_tag = 'interest_prep'
         mandate.mark_s1_route_check(sess, _state(), act,
-                                    pre_bench_count=9, post_bench_count=8)
+                                    pre_bench_count=9, post_bench_count=8,
+                                    landed=True)
         assert not self.cleared(st)
         assert not [k for k in st.cw4_counters
                     if k.startswith('s1_reset_by')]
 
     def test_ii_interest_sell_without_flip_keeps(self):
         """(ii) 负例:S2 在册但落地未腾席(9→9,纯金型)→ 不清
-        (约束未解除,重开无信息量,B3 理由①)。"""
+        (约束未解除,重开无信息量,B3 理由①)。landed=True = 新契约
+        (F1b 分派位结构化比对)下卖出类 progressed 即落地——卖出类
+        完成验证 = 源槽变,fail-closed 无 no-op success 形态,本负例的
+        不清来自席位未翻正,与落地位正交(登记 = ADR-0534「修订
+        (T-167)」节 + mark_s1_route_check docstring F1b 段)。"""
         sess, st = self._mk()
         act = SellBench(slot=1)
         act.route_tag = 'interest_prep'
         mandate.mark_s1_route_check(sess, _state(), act,
-                                    pre_bench_count=9, post_bench_count=9)
+                                    pre_bench_count=9, post_bench_count=9,
+                                    landed=True)
         assert not self.cleared(st)
 
     def test_ii_untagged_flip_with_s2_clears(self):
@@ -191,7 +214,8 @@ class TestS1ResetWhitelist:
         S2 在册 → 清键(封闭枚举不限 tag 词面)。"""
         sess, st = self._mk()
         mandate.mark_s1_route_check(sess, _state(), SellBench(slot=2),
-                                    pre_bench_count=9, post_bench_count=8)
+                                    pre_bench_count=9, post_bench_count=8,
+                                    landed=True)
         assert self.cleared(st)
         assert st.cw4_counters.get(
             's1_reset_by_bench_flip_untagged') == 1
@@ -202,7 +226,8 @@ class TestS1ResetWhitelist:
         for s2 in (True, False):
             sess, st = self._mk(s2=s2)
             mandate.mark_s1_route_check(sess, _state(), LevelUp(),
-                                        pre_bench_count=5, post_bench_count=5)
+                                        pre_bench_count=5, post_bench_count=5,
+                                        landed=True)
             assert not self.cleared(st), f'S2 在册={s2} 形态被误清'
 
     def test_iii_arm_gate1_state_clears(self):
@@ -222,7 +247,8 @@ class TestS1ResetWhitelist:
         只消费「本节点闩实清」事件,跨节点零污染(§3.2 键式推论)。"""
         sess, st = self._mk(s1=False)
         mandate.mark_s1_route_check(sess, _state(), RunDeploy(),
-                                    pre_bench_count=9, post_bench_count=8)
+                                    pre_bench_count=9, post_bench_count=8,
+                                    landed=True)
         assert not [k for k in st.cw4_counters
                     if k.startswith('s1_reset_by')]
 
@@ -752,3 +778,63 @@ class TestS3NoVariable:
             4, ['丹恒·饮月'],
             ['三月七', '三月七', '三月七', '三月七'], 5)
         assert board_full is True and cap_expanded is False
+
+
+# ===== 9. F1b 分派位结构化落地判定(T-167)=====
+
+def test_run_deploy_dispatch_landing_is_structural(monkeypatch):
+    """F1b 锁(T-167 事故修法;真执行器分派位):部署组合的 landed 由
+    执行器具名常量 STATUS_DEPLOYED **结构化比对**产生——STATUS_NOOP
+    (计划空合法稳态)→ landed=False;STATUS_DEPLOYED(真部署)→
+    landed=True。修法红线:禁由 detail 字符串反推(detail =
+    f'{name} {status}' 带前缀显影文本,裸比对恒 False 会让 landed 恒
+    True、修复静默失效)——本锁用真 _run_composite 返回形态构造,复辟
+    字符串比对时本锁红。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_deploy as deploy_mod,
+    )
+    from sr_od.application.currency_war.prep_actions import PrepActionExecutor
+
+    statuses = {'next': deploy_mod.CwOpDeploy.STATUS_NOOP}
+
+    class _StubDeploy:
+        STATUS_DEPLOYED = deploy_mod.CwOpDeploy.STATUS_DEPLOYED
+        STATUS_NOOP = deploy_mod.CwOpDeploy.STATUS_NOOP
+
+        def __init__(self, ctx) -> None:
+            pass
+
+        def execute(self):
+            return SimpleNamespace(success=True,
+                                   status=statuses['next'])
+
+    monkeypatch.setattr(deploy_mod, 'CwOpDeploy', _StubDeploy)
+    ctx = SimpleNamespace(
+        screen_loader=SimpleNamespace(get_screen=lambda name: None),
+        run_context=None, cw_match=None)
+    ex = PrepActionExecutor(SimpleNamespace(screenshot=lambda: object()), ctx)
+    # no-op 稳态:progressed=True 但零落地
+    ok, detail, landed = ex._execute_dispatch(RunDeploy())
+    assert ok is True and landed is False, (
+        f'STATUS_NOOP 必须 landed=False(零落地),实得 ok={ok} landed={landed}')
+    assert '部署' in detail and _StubDeploy.STATUS_NOOP in detail, (
+        f'detail 仍为带前缀显影文本(禁改语义):{detail!r}')
+    # 真部署:landed=True
+    statuses['next'] = deploy_mod.CwOpDeploy.STATUS_DEPLOYED
+    ok2, _detail2, landed2 = ex._execute_dispatch(RunDeploy())
+    assert ok2 is True and landed2 is True, '真部署落地 landed=True'
+    # 执行器具名常量缺失 = fail-closed 按未落地(宁该清不清,不乱清)
+    class _BrokenDeploy:
+        STATUS_NOOP = deploy_mod.CwOpDeploy.STATUS_NOOP
+
+        def __init__(self, ctx) -> None:
+            pass
+
+        def execute(self):
+            return SimpleNamespace(success=True,
+                                   status=statuses['next'])
+
+    monkeypatch.setattr(deploy_mod, 'CwOpDeploy', _BrokenDeploy)
+    statuses['next'] = '任意状态'
+    _ok3, _d3, landed3 = ex._execute_dispatch(RunDeploy())
+    assert landed3 is False, '常量解析缺失必须 fail-closed 按未落地'

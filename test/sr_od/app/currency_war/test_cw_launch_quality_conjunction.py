@@ -227,22 +227,24 @@ class TestDeferBoundB5:
         assert _decide(purified, comp)['armed'] is True
 
     def test_exhaustion_arm_independent_of_quality_gate(self):
-        """金尽上界出路零耦合:收益耗尽臂判据(ADR-0554)签名不含
-        armed/质量位(结构锁)∧ RunDeploy 稳态在推迟形态语境下仍合格
-        ——质量闸不延伸进金尽出路辖域。"""
+        """金尽上界出路零耦合:收益耗尽臂判据(ADR-0554;T-167 修订版)
+        签名不含 armed/质量位(结构锁)∧ RunDeploy 稳态在推迟形态语境下
+        仍合格——质量闸不延伸进金尽出路辖域。签名含 actions_union =
+        F2 窗口动作批并集(非质量维,判据放宽的输入)。"""
         from sr_od.application.currency_war.operations.cw_loop import (
             prep_exhaustion_launch_eligible,
         )
         params = set(inspect.signature(
             prep_exhaustion_launch_eligible).parameters)
-        assert params == {'action_sig', 'last_prep_success'}, (
+        assert params == {'action_sig', 'last_prep_success', 'actions_union'}, (
             f'收益耗尽臂判据签名漂移(不得引入 armed/质量位):{params}')
         # 推迟形态语境(armed=False 的板面)下,RunDeploy 稳态照旧判合格:
         _decide(_state(list(_XZ3) + ['卡芙卡'], bench=['丹恒·饮月']),
                 _COMP_XZ)
-        assert prep_exhaustion_launch_eligible(('RunDeploy',), True) is True
         assert prep_exhaustion_launch_eligible(
-            (), True) is False   # 空批非 RunDeploy 稳态(守卫语义不变)
+            ('RunDeploy',), True, frozenset({'RunDeploy'})) is True
+        assert prep_exhaustion_launch_eligible(
+            (), True, frozenset()) is False   # 空批非 RunDeploy 末批(守卫语义不变)
 
 
 class TestSanctionedRosterView:

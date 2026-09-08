@@ -183,7 +183,7 @@ def test_run_composite_guard_blocks_dispatch(monkeypatch) -> None:
     host = SimpleNamespace(screenshot=lambda: object(),
                            check_and_update_current_screen=_check)
     ex = _executor_with(host)
-    ok, detail = ex._run_composite(
+    ok, detail, _landed = ex._run_composite(   # F1b 三元组(第三位=结构化落地位)
         '装备', 'nonexistent_module_t163.NoSuchOp',
         guard_screen='货币战争-备战')
     assert ok is False

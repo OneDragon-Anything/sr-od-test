@@ -486,14 +486,18 @@ def test_emission_gate_critical_member_fires_conservative(
 def test_formed_frame_victim_order_star_key_unchanged() -> None:
     """成型臂域外序照旧锁(ADR-0590 决策5:P79-4 让渡序辖域 = 锁线转型
     域;fp≥1.00 成型臂 victim 序 = 旧 1★ 优先,ADR-0530/0534 语义不动):
-    成型帧(fenced_on)双 victim——三月七 1★(结构贡献 Δ1,列车同行
-    2→1)与忘归人 2★(贡献 Δ0,仙舟 1→0 未达档)——若贡献首键误外溢
-    到成型臂域,贡献 0 的 2★ 会顶掉 1★;锁定旧星级序胜出(三月七)。
-    差分构造:两档贡献 × 两档星级交叉,序判据可区分两种语义。"""
+    成型帧(fenced_on)双 victim——三月七 1★ 与忘归人 2★(仙舟)——
+    若贡献首键误外溢到成型臂域,2★ 会顶掉 1★;锁定旧星级序胜出
+    (三月七)。差分构造:两档星级交叉,序判据可区分两种语义。
+    夹具升级(T-167 F1/F-2 用例预期更新):bench 换丹恒·饮月(仙舟
+    目标视图件)∧ target={'仙舟'}——原希儿(非目标视图件)夹具自 F1
+    三合取谓词起落 no_bench_target 弃权(执行面本就跳过该形态,旧计划
+    非空 = 幻影),序判据改在可兑现形态上锁;原形态新预期由本文件
+    下方对照臂锁承载。"""
     deployed = [_bc('三月七', 1), _bc('忘归人', 2)]
-    bench = [_bc('希儿', 1)]
+    bench = [_bc('丹恒·饮月', 1)]
     ctx = SwapPlanContext(
-        target_factions=frozenset({'欢愉'}),
+        target_factions=frozenset({'仙舟'}),
         target_cores=frozenset(), fw_carry=frozenset(),
         locked_factions=frozenset(), protect_names=frozenset(),
         membership=frozenset(), fresh_buys=frozenset(), board={},
@@ -503,6 +507,26 @@ def test_formed_frame_victim_order_star_key_unchanged() -> None:
     assert plan.nonempty
     assert plan.sell_names == ['三月七']   # 1★ 优先(旧序),非贡献重排
     assert plan.arm == 'formed'
+
+
+def test_formed_frame_bench_no_target_piece_abstains() -> None:
+    """F1 合取②新语义对照臂锁(T-167;ADR-0534 修订节用例预期更新):
+    成型帧 ∧ bench 无目标视图件(希儿)→ 弃权 no_bench_target——旧
+    形态「计划非空(卖 1★ 腾位上非目标件)→ 执行面 _bench_tgt_n=0 跳过
+    卖出 → no-op」正是 T-167 幻影部署族;修后发射⇔执行同谓词,该形态
+    出口 = 空批出战(F2 收益耗尽臂兜底推进)。"""
+    deployed = [_bc('三月七', 1), _bc('忘归人', 2)]
+    bench = [_bc('希儿', 1)]   # 希儿系 ∈ DEPLOY_FENCE,∉ 欢愉视图
+    ctx = SwapPlanContext(
+        target_factions=frozenset({'欢愉'}),
+        target_cores=frozenset(), fw_carry=frozenset(),
+        locked_factions=frozenset(), protect_names=frozenset(),
+        membership=frozenset(), fresh_buys=frozenset(), board={},
+        deployed=deployed, bench=bench, cap=2, fenced_on=True, fp=1.0,
+        locked=True, board_full=True)
+    plan = select_swap_plan(ctx)
+    assert not plan.nonempty
+    assert plan.abstain == 'no_bench_target'
 
 
 if __name__ == '__main__':
