@@ -256,10 +256,12 @@ def test_item_detail_clicks_registered_close_area(
 # ==================== A4/A7 ESC 族 ====================
 
 
-def test_consumable_overlay_esc(
+def test_consumable_overlay_clicks_family_close(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """锁:双 OCR 条件入口命中 → ESC;入口不齐(缺「拖动到」)→ 不按键。"""
+    """锁:双 OCR 条件入口命中 → 点同族「道具详情弹窗/按钮-关闭」(×)
+    (ESC 正形化清点批:ESC 在 modal 已自关时落备战误弹中断挑战,见 op 模块头);
+    入口不齐(缺「拖动到」)→ 不点击不按键。"""
     op, fc = _make_op(test_context, monkeypatch,
                       cw_screen_consumable_overlay.CwScreenConsumableOverlay)
     _stub_ocr(op, monkeypatch, {'消耗品': True, '拖动到': True})
@@ -268,7 +270,11 @@ def test_consumable_overlay_esc(
 
     result = _run(op)
 
-    assert result.success and taps == ['esc']
+    assert result.success, f'消耗品浮层点×应成功:{result.status!r}'
+    assert fc.click_hit_area('货币战争-道具详情弹窗', '按钮-关闭')
+    hit = [p for p in fc.recorded_clicks if (p.x, p.y) == (1862, 65)]
+    assert hit, f'点击落点应 = 同族×建档中心:{[str(p) for p in fc.recorded_clicks]}'
+    assert taps == [], '消耗品浮层禁 ESC'
 
     op2, _fc2 = _make_op(test_context, monkeypatch,
                          cw_screen_consumable_overlay.CwScreenConsumableOverlay)
@@ -279,10 +285,12 @@ def test_consumable_overlay_esc(
     assert not result2.success and taps2 == []
 
 
-def test_role_detail_overlay_either_ocr_esc(
+def test_role_detail_overlay_either_ocr_blank_close(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """锁:「可合成列表」∨「角色详情」其一命中即接管 → ESC(∨ 语义)。"""
+    """锁:「可合成列表」∨「角色详情」其一命中即接管 → 点面板外空白关
+    (ESC 正形化清点批:关闭机制经建档 live 验,坐标 = 备战「区域-空白关闭」
+    建档中心,见 op 模块头;∨ 语义不变)。"""
     op, fc = _make_op(test_context, monkeypatch,
                       cw_screen_role_detail_overlay.CwScreenRoleDetailOverlay)
     _stub_ocr(op, monkeypatch, {'可合成列表': False, '角色详情': True})
@@ -291,7 +299,11 @@ def test_role_detail_overlay_either_ocr_esc(
 
     result = _run(op)
 
-    assert result.success and taps == ['esc']
+    assert result.success, f'详情弹窗点空白关应成功:{result.status!r}'
+    assert fc.click_hit_area('货币战争-备战', '区域-空白关闭')
+    hit = [p for p in fc.recorded_clicks if (p.x, p.y) == (960, 530)]
+    assert hit, f'点击落点应 = 空白关闭建档中心:{[str(p) for p in fc.recorded_clicks]}'
+    assert taps == [], '详情弹窗禁 ESC'
 
 
 # ==================== A5 阿哈装备(固定策略申报) ====================
@@ -392,14 +404,16 @@ def test_interrupt_dialog_clicks_close_records_popup(
     assert exog and exog[0][1] == 'popup'
 
 
-def test_interrupt_dialog_esc_fallback(
+def test_interrupt_dialog_x_retry_then_bounded_fail(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """锁:X 点击失败 → ESC 兜底(实测无副作用),仍算消费完成。"""
+    """锁:X 点击失败 → 新帧重试同一点击(ESC 正形化清点批:替代旧 ESC
+    兜底,关闭同一弹窗结果等价);重试仍不落地 = 有界 fail 交外循环,
+    不再静默兜过,全程零 ESC。"""
     op, fc = _make_op(test_context, monkeypatch,
                       cw_screen_interrupt_dialog.CwScreenInterruptDialog)
     _stub_find(op, monkeypatch, [('货币战争-中断挑战弹窗', '标识-中断挑战')])
-    _stub_find_and_click(op, monkeypatch, ok=False)
+    clicks = _stub_find_and_click(op, monkeypatch, ok=False)
     taps: list[str] = []
     monkeypatch.setattr(fc, 'btn_tap', lambda k: taps.append(k), raising=False)
     monkeypatch.setattr(fc, 'esc', lambda: taps.append('esc'), raising=False)
@@ -408,8 +422,9 @@ def test_interrupt_dialog_esc_fallback(
 
     result = _run(op)
 
-    assert result.success
-    assert taps == ['esc']
+    assert not result.success   # 有界 fail(节点单尝试合同),非静默成功
+    assert len(clicks) == 2, f'应恰一次新帧重试:{clicks}'   # 首击 + 新帧重试
+    assert taps == [], '中断挑战弹窗禁 ESC'
 
 
 # ==================== A10 前进按钮 ====================

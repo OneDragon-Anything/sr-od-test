@@ -468,7 +468,7 @@ def test_below_icon_diff_detects_equip(test_context: SrTestContext) -> None:
     if not test_context.has_screen('货币战争-备战', 'equipped_front1_feixiao_0'):
         pytest.skip('fixture equipped_front1_feixiao_0/1/2/3 未采')
     states = [test_context.load_screen('货币战争-备战', f'equipped_front1_feixiao_{i}') for i in range(4)]
-    avatar_x = CwOpEquipAll.FRONT_AVATARS[0].x           # front-1 avatar x=743
+    avatar_x = CwOpEquipAll.FRONT_AVATAR_FALLBACK[0].x    # front-1 avatar x=743(坐标单一源整改:主源=screen_info 前排-N 派生,常量为兜底)
     thr = CwOpEquipAll.BELOW_DIFF_THRESHOLD              # 8.0
     for i in range(3):                                # 连续态(加 icon)→ diff >> 阈值
         d = _below_icon_diff(states[i], states[i + 1], avatar_x,
