@@ -27,17 +27,16 @@ def _loop_src() -> str:
 
 
 def test_briefing_plane_invest_inline_branches_retired() -> None:
-    """三段退役(01-opening §2):0a0b 位面简报内联、位面过渡点空白内联、
-    开局投资环境段不再出现在主循环。"""
+    """位面简报内联退役(01-opening §2):简报只在入场出现(用户裁决 §2.2),
+    loop 不再有简报采集+点「下一步」内联分支。"""
     src = _loop_src()
-    # 位面简报只在入场出现(用户裁决,01-opening §2.2)→ 简报分发点归
-    # OpeningSequence/CwScreenBriefing,loop 不再有简报采集+点「下一步」内联分支。
     assert "'货币战争-简报', '按钮-下一步'" not in src, '位面简报内联分支未退役'
-    # 投资环境分支已随拆解退役批接线(0s,见 opening_sequence_dissolved 守卫)。\n    # 位面过渡内联点空白退役 → 交 CwScreenPlaneTransition。
-    assert 'CwScreenPlaneTransition(self.ctx)' in src, '位面过渡未接 CwScreenPlaneTransition'
-    assert "self.round_by_ocr(screen, '点击空白处继续')" not in src, (
-        '位面过渡仍走分支2 内联点空白(应改 CwScreenPlaneTransition 分发)'
-    )
+    # (2026-09-08 瘦身批:原「CwScreenPlaneTransition 分发在场」与「内联点空白
+    #  退役」两断言删除——前者是 test_cw_dispatch_order_matrix.py::
+    #  test_boss_briefing_vs_plane_transition_exclusion_wired 的真子集(该锁把
+    #  分发行钉在 boss 排他判定之后,缺行即红);后者锁的是历史无 kwarg 字面形态,
+    #  生产现态的探测调用本就含 lcs_percent=0.8(同矩阵锁反向断言其在场),
+    #  其真实失效模式 boss 帧误分发由该排他锁辖,此墓碑只剩快照锁形态。)
 
 
 # ==================== overlay 分发接管(06-overlays §4) ====================
@@ -63,18 +62,23 @@ def test_wrapper_family_dissolved_final_shape() -> None:
                      (cw_screen_fortune, 'CwScreenFortune'),
                      (cw_screen_wish_trial, 'CwScreenWishTrial'),
                      (cw_screen_bookcard, 'CwScreenBookcard')):
-        assert hasattr(mod, cls), f'{cls} 画面 op 缺失(NAMING §2 迁移未完成)'
         assert f'{cls}(self.ctx)' in src, f'{cls} 未接入主循环分发'
+    # (2026-09-08 瘦身批:原逐类 `hasattr(mod, cls)` 删除——类存在性在 import 时
+    #  已被本文件与 test_cw_w971_p3a_flow_ops 的 harness 构造双重验证,改名/删类
+    #  在 import 处即红;残留 hasattr 只会以「迁移未完成」的失实语义红。本循环
+    #  保留 = loop→op 分发接线的独家守卫(矩阵锁判定调用位在场,不锁分发行)。)
 
 def test_interference_popup_branches_retained() -> None:
-    """干扰弹窗分支保留(06-overlays §4:死循环修复史分支不退役)。"""
+    """干扰弹窗分支保留(06-overlays §4:死循环修复史分支不退役)。
+
+    只留矩阵未辖的两锚(概率表/简易装备);其余四锚(祈愿试炼/专家邀请函/
+    未达上限警告/位面详情标题)的「判定调用位在场+先于备战双锚」已由
+    test_cw_dispatch_order_matrix.py 序锁矩阵同名行以更强形态锁定
+    (调用位+序位,分支被删/被挪后置均红),裸串在场是其弱化重复
+    (2026-09-08 瘦身批删除)。"""
     src = _loop_src()
     for anchor in ('标识-刷新概率表',  # 0e2 概率表
-                   '标识-祈愿试炼',      # 0e3 道具详情的祈愿让路排除
                    '标识-简易装备',      # 0g 阿哈装备选择
-                   '标识-专家邀请函',    # 0k 专家邀请函
-                   '标识-未达上限警告',  # 0d
-                   '标识-位面详情标题',  # 0a4 位面详情兜底
                    ):
         assert anchor in src, f'干扰/兜底分支锚 {anchor} 消失(静默丢弃退避停机风险)'
 

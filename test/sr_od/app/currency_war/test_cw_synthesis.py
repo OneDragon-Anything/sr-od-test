@@ -78,15 +78,6 @@ def test_all_advanced_have_recipe() -> None:
     assert missing == [], f"进阶无配方: {missing}"
 
 
-def test_recipe_groups_disjoint() -> None:
-    """四组配方结果互不重叠(无歧义归属)。"""
-    groups = [set(synth.CROSS_RECIPES), set(synth.SELF_RECIPES),
-              set(synth.GUANGNENG_CROSS_RECIPES), set(synth.GUANGNENG_SELF_RECIPES)]
-    for i in range(len(groups)):
-        for j in range(i + 1, len(groups)):
-            assert not (groups[i] & groups[j]), f"组 {i}/{j} 重叠: {groups[i] & groups[j]}"
-
-
 def test_reachability_helpers() -> None:
     """可达性查询:synthesize_target 顺序无关且不含自配;self_advance/self_base 双向(含光能电池系)。"""
     assert synth.synthesize_target("以太钻头", "轮滑鞋") == "光速螺旋桨"
@@ -108,6 +99,7 @@ def test_guangneng_not_isolated() -> None:
     """光能电池系已由官方 API 补齐配方(旧「孤立节点」语义反转,2026-08-26)。"""
     assert not hasattr(synth, 'GUANGNENG_ONLY'), "旧 GUANGNENG_ONLY 常量已废弃"
     assert "光能电池" not in synth.SYNTHESIS_BASES  # 仍不作标准基础件(8 基础件分两组管理)
-    for adv in synth.GUANGNENG_CROSS_RECIPES:
-        assert adv not in synth.CROSS_RECIPES
-        assert adv not in synth.SELF_RECIPES
+    # (2026-09-08 瘦身批:原「光能系进阶不与 CROSS/SELF 重叠」循环断言删除——
+    #  CROSS/GUANGNENG_CROSS 由生产互补谓词切分(cw_synthesis.py:65-66 vs 73-74,
+    #  构造性互斥);与 SELF 的互斥由槽位论证兜住:组槽位 21+7+7+1=36 = 进阶全量,
+    #  覆盖锁强制并集 ≥36,和=36 ⇒ 不相交,重叠时 len/覆盖锁必先红。)
