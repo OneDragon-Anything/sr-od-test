@@ -124,7 +124,10 @@ def test_overlay_action_ladder_exact_max_then_fail(
         f' off-by-one 核验口径),实际文案={fail_status!r}')
 
     # 键隔离:按 overlay 子态键独立计数,耗尽的键不吞别的子态预算
-    r_other = op._overlay_branch('遭遇其一', _act)
+    # (必须同入 fast_sleep 窗口:本轮 round_wait(wait=2) 在加速窗外走真睡,
+    # 实测 4×0.5s 切片 = 恰 2s/call,白付慢桶成本)
+    with fast_sleep():
+        r_other = op._overlay_branch('遭遇其一', _act)
     assert r_other.result == OperationRoundResultEnum.WAIT, (
         f'另一子态键首轮应 WAIT(独立预算),实际={r_other.result}')
     assert len(act_calls) == max_actions + 1, (

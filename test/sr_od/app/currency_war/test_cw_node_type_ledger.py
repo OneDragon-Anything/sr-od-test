@@ -30,7 +30,6 @@ from sr_od.application.currency_war.kernel.cw_reward_node import (
     reward_node_suppressed,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
     BuyCard,
     CloseShop,
     GameState,
@@ -185,23 +184,17 @@ def test_ledger_hit_enters_shop_frame_and_rewards_press_buy_legally(
     assert state_of(session).cw4_counters.get('dead_gold_press_buy_hit') == 1
 
 
-# ===== 锁 3:单帧锁·None 帧形态(②(b) 沉默 + ②(a) 照常)=====
+# ===== 锁 3:单帧锁·None 帧形态(②(b) 沉默;②(a) 义务臂存活面在 p56 主题位)=====
 
 
-def test_none_frame_press_buy_silent_and_prep_interest_sell_alive() -> None:
-    """帧 node_type=None 的两向语义(ADR-0587;None 语义权威 = ADR-0580)。
+def test_none_frame_press_buy_silent() -> None:
+    """None 帧上 ②(b) 沉默(ADR-0587 fail-open;None 语义权威 = ADR-0580)。
 
-    腿1(②(b) 沉默):None 帧直调决策核 → ``reward_node_suppressed``
-    取 False → 压库臂关门,零命中计数。腿2(②(a) 照常):同一 None 帧型
-    上备战凑息臂照常发射(触发 = gold<g*,节点无关)——None 帧的死金域
-    「禁死囤」义务由 ②(a) 承载,关门不缺义务(义务臂并存声明)。"""
-    from sr_od.application.currency_war.kernel.cw_prep_actions import (
-        SellBench,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        mandate,
-    )
-    # 腿1:None 帧直调(组装段在锁 1 已证其产出 None 帧,此处锁帧语义面)
+    None 帧直调决策核 → ``reward_node_suppressed`` 取 False → 压库臂
+    关门,零命中计数。None 帧的死金域「禁死囤」义务仍由 ②(a) 备战凑息
+    承载——该存活面的等价断言单点承载于 test_cw_p56_t1::
+    test_pullback_success_closes_press_arm 前半(同输入帧型 + 同
+    sorted(sells)==[1,2] 断言,跨文件等价择一,本侧原重复腿已删)。"""
     st = GameState(gold=11, level=7, hp=80, plane=1, round_num=3)
     st.shop = [_card()]
     sess = StrategySession()
@@ -210,15 +203,3 @@ def test_none_frame_press_buy_silent_and_prep_interest_sell_alive() -> None:
                 and act.reason == 'dead_gold_press_buy'), \
         'None 帧上 ②(b) 发射(fail-open 失守)'
     assert 'dead_gold_press_buy_hit' not in state_of(sess).cw4_counters
-    # 腿2:None 帧 prep 域凑息卖(gold 45 + 缺口 5,两件 1★ 全额退 6 ≥ 5)
-    bench = [BenchChar(slot=1, char_id='燃料件A', star=1),
-             BenchChar(slot=2, char_id='燃料件B', star=1)]
-    frame = mandate.MandateFrame(gold=45, level=3, bench=bench, deployed=[],
-                                 deploy_cap=4, node_type=None, stop_flag=False,
-                                 k_members=(), round_num=2)
-    prep_sess = StrategySession()
-    state_of(prep_sess).cw4_counters = {}
-    prep_state = GameState(gold=45, level=3, hp=80, plane=1, round_num=2)
-    out = mandate.run_mandate(frame, prep_sess, state=prep_state)
-    sells = [e.action.slot for e in out if isinstance(e.action, SellBench)]
-    assert sorted(sells) == [1, 2], 'None 帧上 ②(a) 备战凑息未发射(义务臂断)'
