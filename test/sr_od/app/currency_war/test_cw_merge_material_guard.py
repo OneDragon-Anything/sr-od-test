@@ -1,5 +1,6 @@
-"""合成素材拒入守卫(G-S1)锁:单帧锁×4通道 / 单一源 grep 锁 /
-P60 收敛性质保持锁 / 两局案发帧回放锁。
+"""合成素材拒入守卫(G-S1)锁:守卫谓词单帧语义 / 四通道拒入+对照
+零漂移 / 单一源守卫(grep+墓碑)/ 案发帧回放 / 滞留显影分键 /
+拦截事件口径+接线。
 
 出处(锁纪律:新锁必引设计出处)= ADR-0558(合成素材拒入守卫,与部署侧
 ``cw_deploy_logic.merge_material_guard`` 同键单一源):bench 四卖出
@@ -21,7 +22,6 @@ bench 1★ + 板上 1★ 并存被 2g 卖断)/ g_20260906_095111 P2r1 hp7
 先例同构)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from pathlib import Path
 
@@ -34,10 +34,8 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
-    bench_char_cost,
     merge_material_reject_reason,
     merge_material_stale_names,
-    sell_refund,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
@@ -47,6 +45,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell as crit_sell,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     count_material_stale,
@@ -190,9 +191,12 @@ class TestGuardBlocksAllSellChannels:
 # ===== 锁2:单一源 grep 锁 =====
 
 class TestSingleSourceLock:
-    """锁2:素材子谓词单一定义点 + 各发射位各自引用(R2-6:共享的是
+    """锁2:素材子谓词单一定义点 + 消费点禁手搓同式(R2-6:共享的是
     子谓词,非整段资格谓词——各通道原资格谓词不动,禁整段谓词上提
-    共享给 line_switch 改变现行行为)。"""
+    共享给 line_switch 改变现行行为)。四发射位的守卫接线由锁1 各通道
+    行为锁覆盖(守卫调用脱落即红),不再保留重复的函数体 grep 烟雾;
+    唯一无行为覆盖的接线点 = entry.py EV pass 传参,由锁6 的
+    test_line_switch_wiring_in_entry_pass 单点看守。"""
 
     GUARD_DEF = 'def merge_material_reject_reason'
 
@@ -202,22 +206,6 @@ class TestSingleSourceLock:
     def test_single_definition_point(self):
         kernel = self._src('src/sr_od/application/currency_war/kernel/cw_state.py')
         assert kernel.count(self.GUARD_DEF) == 1
-
-    def test_each_emission_site_calls_guard(self):
-        mandate_src = self._src(
-            'src/sr_od/application/currency_war/strategies/impl/mandate_v1'
-            '/mandate.py')
-        sell_src = self._src(
-            'src/sr_od/application/currency_war/strategies/impl/mandate_v1'
-            '/criteria/sell.py')
-        # M4 燃料通道(mandate.fuel_sell_candidates 函数体内)
-        fn = mandate_src.split('def fuel_sell_candidates', 1)[1]
-        assert 'merge_material_reject_reason(' in fn.split('\ndef ', 1)[0]
-        # 凑息/支付/换线三通道(criteria/sell.py 各函数体内)
-        for fn_name in ('line_switch_sell', 'sell_for_interest',
-                        'funding_support_sell'):
-            body = sell_src.split(f'def {fn_name}', 1)[1]
-            assert 'merge_material_reject_reason(' in body.split('\ndef ', 1)[0]
 
     def test_no_hand_rolled_counter_outside_single_source(self):
         """守卫消费点禁手搓 same_star_count 同式(same_star_count
@@ -229,79 +217,22 @@ class TestSingleSourceLock:
             assert 'same_star_count(' not in self._src(rel)
 
 
-# ===== 锁3:P60 收敛性质保持锁 =====
+# 删测注记(瘦身批):原「锁3 P60 收敛性质保持锁」与「锁4′ P56 投影面」
+# 两类已删——P60 锁的断言面(守卫拔除对照)不辖其声明的收敛故障,且
+# 素材拒入断言与锁1 重复,accepted-loss 推理由 ADR-0558「配对一致性」
+# 节持久承载;P56 锁以测试体自拼投影表达式,生产投影(shop.py 预算段)
+# 绕开守卫时该测不红 = 锁不住声明故障,投影值收缩的 decide 级链路锁
+# 缺口记 DEBTS.md D21。
 
-class TestP60ConvergencePropertyPreserved:
-    """锁3:P60 现有性质「排除后 Fuel∩B=∅ ⇒ 换手收敛 Φ=|owned∩B|
-    单调不减」在新守卫下保持——守卫只扩大排除集(候选集单调收缩),
-    收敛证明的辖域前提不弱化。推理边界(锁语):守卫只护 bench 侧,
-    deployed 侧 swap 路径存在不经过 merge_material_guard 的出口
-    (cw_deploy_logic offtarget_sell_allowed 放行早退先于守卫)——
-    本批声明 accepted loss:deployed 副本经该出口被卖则 c_excl 归 0,
-    bench 守卫下帧放行,素材保护实际强度 = 两侧保护窗交集、退化形态
-    = 延迟一帧;deployed 侧同辖收口归 cw_launch_admission 决策下沉面
-    另批,不在本批辖域。"""
-
-    def test_guard_only_shrinks_candidate_set(self, monkeypatch):
-        bench = [_bc('卡芙卡', slot=1), _bc('燃料A', slot=2),
-                 _bc('燃料B', slot=3)]
-        st = _state(bench, [_bc('卡芙卡')])
-        guarded = [b.slot for b in mandate.fuel_sell_candidates(
-            bench, (), state=st)]
-        # 拔掉守卫(模拟守卫删除):候选集只能变大
-        monkeypatch.setattr(mandate, 'merge_material_reject_reason',
-                            lambda *a, **k: '')
-        unguarded = [b.slot for b in mandate.fuel_sell_candidates(
-            bench, (), state=st)]
-        assert set(guarded) <= set(unguarded)
-        assert 1 in unguarded and 1 not in guarded
-
-
-# ===== 锁4′:P56 活期投影第五消费面(F-2 显式钉方向)=====
-
-class TestP56LiquidProjectionFace:
-    """F-2 申报锁:fuel_sell_candidates 同时是 P56 活期投影单一源
-    (s_reserve := g* − Σ活期退金投影,dd-032)——守卫使投影收缩:
-    素材在场帧 liquid_refund 不含素材退款 ⇒ s_reserve↑ ⇒ 买面判据
-    变保守。方向正确(投影口径 = 可执行卖出集,守卫后更真),锁其
-    显式性防后人把收缩误读为回归。"""
-
-    def test_liquid_refund_excludes_material(self):
-        bench = [_bc('卡芙卡', slot=1), _bc('燃料A', slot=2)]
-
-        def _liquid(b: list[BenchChar], deployed: list[BenchChar]) -> int:
-            st2 = _state(b, deployed)
-            return sum(sell_refund(1, bench_char_cost(x))
-                       for x in mandate.fuel_sell_candidates(
-                           b, (), state=st2))
-
-        assert _liquid(bench, [_bc('卡芙卡')]) == 3    # 仅垫件入投影
-        assert _liquid(bench, [_bc('万敌')]) == 5      # 无守卫帧两张全入(2+3)
-
-
-# ===== 锁4:两局案发帧回放锁(离线构造,档案口径)=====
+# ===== 锁4:案发帧回放锁(离线构造,档案口径)=====
 
 class TestReplayCaseFrames:
-    """锁4:二十四局(卡芙卡)/ 三十局(藿藿)P2r1 案发帧注入离线决策,
-    断言 SellBench 不再指向素材件。案发帧 k_members = K 空窗回退后的
-    非空集(R2-1:禁 k_members=() 假设构造,否则测的不是案发机制)
-    ——经单一源 k_empty_window_fallback P2+ 带派生。"""
-
-    def test_game24_kafka_p2r1_no_material_sell(self):
-        # 案发局 g_20260906_081836 P2r1 resume:bench 卡芙卡 1★ +
-        # 板上卡芙卡 1★ 并存(复盘逐节点表「板上卡芙卡+bench 卡芙卡
-        # 应合成 2★」帧);tgt 空 → K 空窗回退集,卡芙卡不在集内。
-        bench = [_bc('卡芙卡', slot=1)]
-        deployed = [_bc('卡芙卡', slot=1), _bc('砂金', slot=2),
-                    _bc('椒丘', slot=3)]
-        st = _state(bench, deployed)
-        k = _fallback_k(st)
-        assert k and '卡芙卡' not in k
-        assert mandate.fuel_sell_candidates(bench, k, state=st) == []
-        slots, _ = crit_sell.sell_for_interest(44, bench, 5, k, state=st)
-        assert slots == []
-        fslots, _ = crit_sell.funding_support_sell(0, 9, bench, k, state=st)
-        assert fslots == []
+    """锁4:三十局(藿藿)P2r1 案发帧注入离线决策,断言 SellBench 不再
+    指向素材件。案发帧 k_members = K 空窗回退后的非空集(R2-1:禁
+    k_members=() 假设构造,否则测的不是案发机制)——经单一源
+    k_empty_window_fallback P2+ 带派生。二十四局(卡芙卡)回放测与本测
+    断言面等价(三通道空 + 素材∉k,亲读对账),择一取超集已并删,
+    两局案发对账记录见 ADR-0558。"""
 
     def test_game30_huohuo_p2r1_no_material_sell(self):
         # 案发局 g_20260906_095111 P2r1(档案 match_g_20260906_095111
@@ -399,11 +330,10 @@ class TestMaterialStaleKeys:
                              [], round_num=5)
         assert ct['merge_material_stale'] == 2
         assert state_of(sess).cw4_stale_seen_rounds == {}
-        # 轮6 重新组对:新滞留段,首见帧不记跨轮
-        ct2 = ct
-        count_material_stale(ct2, sess, pair, [], round_num=6)
-        assert ct2['merge_material_stale'] == 3
-        assert ct2['merge_material_stale_ge2'] == 1   # 未增长
+        # 轮6 重新组对:新滞留段,首见帧不记跨轮(同一 counters 累计)
+        count_material_stale(ct, sess, pair, [], round_num=6)
+        assert ct['merge_material_stale'] == 3
+        assert ct['merge_material_stale_ge2'] == 1   # 未增长
 
     def test_two_stale_names_count_individually(self):
         sess = _SessionStub()
@@ -457,19 +387,6 @@ class TestBlockedKeyEventSemantics:
                                      counters=ct2)
         assert ct2['merge_material_guard_blocked'] == 2
 
-    def test_tengxi_retry_loop_counts_once_per_material(self):
-        """腾席环 while 重试形态:同一滞留素材每轮重试被重复评估,
-        事件计数不涨(共享帧级去重集)。"""
-        st = _state(self.BENCH, self.DEPLOYED)
-        ct: dict = {}
-        dedup: set[str] = set()
-        for _ in range(3):   # 模拟重试环反复评估同一素材
-            cands = mandate.fuel_sell_candidates(
-                self.BENCH, self.K, state=st, counters=ct,
-                dedup_names=dedup)
-            assert [b.slot for b in cands] == [2]   # 素材恒被拒(行为不变)
-        assert ct['merge_material_guard_blocked'] == 1
-
     def test_event_semantics_shared_across_channels(self):
         """同帧跨通道共享去重集:M4 触达后凑息/支付/换线同素材不重复计。"""
         st = _state(self.BENCH, self.DEPLOYED)
@@ -522,7 +439,6 @@ class TestBlockedKeyEventSemantics:
     def test_count_helper_single_source(self):
         """计数单一源:四通道计数点全部经
         ``count_merge_material_blocked``,kernel 唯一定义。"""
-        import inspect
         ksrc = (_REPO / 'src/sr_od/application/currency_war/kernel'
                 '/cw_state.py').read_text(encoding='utf-8')
         assert ksrc.count('def count_merge_material_blocked') == 1
