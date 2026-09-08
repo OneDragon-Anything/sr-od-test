@@ -22,6 +22,9 @@ S3 = 升级检查逻辑旗标不立变量(单向上位,本文件墓碑行看守)
    2026-09-02 席满球裁定 screen_flow_timing #16 覆盖留痕见猎点 13);
 7. test_s3_no_variable——不存在独立 S3 变量字段(墓碑,防双源回归)
    + M3 判据纯函数输入翻转(§1.4)。
+8. test_wanted_precondition——S2 门 0′ 前件五态(T-161 F2:不在店/
+   不可负担 hold 保留、∃在店∧可负担照常开环、late-flip 翻真、节点
+   推进过期不变;出处 = ADR-0599 + T161方案审.md §1.2/§1.4/§4)。
 """
 from __future__ import annotations
 
@@ -90,10 +93,22 @@ def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
 
 
 def _set_s2(sess: StrategySession, state: GameState,
-            missing: tuple[str, ...] = ('目标件',)) -> None:
+            missing: tuple[str, ...] = ('目标件',),
+            in_shop: tuple[tuple[str, int], ...] | None = None) -> None:
     """经生产唯一写点 mandate.shop_wanted_defer 置 S2(禁直写字段:
-    供给半环锁面纪律,README 测试纪律 13)。"""
-    mandate.shop_wanted_defer(sess, state, list(missing))
+    供给半环锁面纪律,README 测试纪律 13)。
+
+    T-161 F2 起写点要求在店快照(「在店缺员 (名, 费用)」子集;T-161
+    方案审 F2-1/F2-6,ADR-0599):缺省种「缺员在店且可负担」形态
+    (名, 1)——cost 1 ≤ 缺省帧 gold 2,前件放行,既有用例聚焦各自
+    原锁面。旧用例不种快照时被门 0′ 前件 hold 拦截属预期锁红(方案审
+    §3 波及预估),按锁纪律改 helper 种快照,禁绕过前件保绿;前件拦截
+    形态的锁面见 TestWantedPrecondition(显式传 in_shop=()/高费用)。
+    """
+    mandate.shop_wanted_defer(
+        sess, state, list(missing),
+        in_shop_snapshot=in_shop if in_shop is not None
+        else tuple((m, 1) for m in missing if m))
 
 
 # ===== 1. S1 清键三路径封闭枚举(§3.3,审 D1)=====
@@ -232,9 +247,13 @@ class TestS2Lifecycle:
     def test_registration_at_shop_residual(self):
         """置位经生产链:decide_shop_action 席满残差点(m2_retry_exhausted/
         bench_full_buy_abandon 同点,猎点 10)→ S2 = (phase, obligation,
-        残差名单) + shop_wanted_deferred 计数。bench 满用 2★ 填充件
-        (非燃料 ⇒ 腾席候选空,诚实停摆形态)。"""
+        残差名单, 在店快照) + shop_wanted_deferred 计数。bench 满用 2★
+        填充件(非燃料 ⇒ 腾席候选空,诚实停摆形态)。T-161 F2 起 S2 扩
+        四元(ADR-0599):快照由写点同帧经 _shop_candidates 同源闭包计算
+        (方案审 F2-6),本锁经生产链钉快照内容 = 在店缺员最便宜卡费用。"""
         from types import SimpleNamespace as _NS
+
+        from sr_od.application.currency_war.kernel.cw_state import ShopCard
         comp = self._comp()
         missing = self._members(comp)[0]
         bench = [_bc(f'填充件{i}', slot=i, star=2)
@@ -242,6 +261,10 @@ class TestS2Lifecycle:
         st = _state()
         st.gold = 2
         st.bench = bench
+        # 店面播缺员 1★ 卡(cost 2)+ 一张无关卡:快照应只收缺员且取
+        # 同名最便宜卡(M2 语义,不滤星)。
+        st.shop = [ShopCard(x=1, faction='?', name=missing, cost=2, star=1),
+                   ShopCard(x=2, faction='?', name='填充件1', cost=1, star=1)]
         sess = _sess()
         state_of(sess).target_comp = comp
         sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移
@@ -250,6 +273,9 @@ class TestS2Lifecycle:
         assert s2 is not None and s2[0] == (st.plane, st.round_num) \
             and s2[1] == 'obligation' and missing in s2[2], \
             f'席满残差未置 S2:{s2}'
+        assert len(s2) == 4, f'S2 载体形态漂移(应为四元):{s2}'
+        assert s2[3] == ((missing, 2),), \
+            f'在店快照与店面牌面不符(F2-6 同源口径):{s2[3]}'
         assert state_of(sess).cw4_counters.get('shop_wanted_deferred', 0) >= 1
 
     def test_gate0_missing_satisfied_clears_without_emission(self):
@@ -373,6 +399,97 @@ class TestS2Lifecycle:
                                           bench, [], 0, 4)
         assert out == []
         assert state_of(sess).cw4_counters.get('wanted_abandon') == 1
+
+
+# ===== 2′. S2 门 0′ 前件五态(T-161 F2,ADR-0599)=====
+
+class TestWantedPrecondition:
+    """前件 = ∃m∈still_missing:m 在店快照 ∧ check_affordable(①号本体,
+    金臂时点现读;方案审 T-161 §1.2/§1.3)。五态 = 方案审 §4 F2 验收
+    件 1 逐件:hold 形态(①②)零发射且 S2 保留(禁早清——可负担腿可
+    随节点内金入账翻真,§1.4)、放行形态腿序不变(③)、同节点 late-flip
+    (④)、节点推进过期语义不受前件影响(⑤)。快照经 _set_s2 显式传
+    in_shop 构造拦截/放行两形态,禁为保绿绕过前件。"""
+
+    def _bench_full(self, star: int = 1) -> list[BenchChar]:
+        return [_bc(f'填充件{i}', slot=i, star=star)
+                for i in range(1, 10)]
+
+    def test_not_in_shop_holds_and_keeps_s2(self):
+        """① 不在店(空快照)→ hold:零发射(腾席腿不再为买不成的买入
+        付出不可逆代价 = F2 缺陷关闭面)、S2 保留、不置放弃态、
+        wanted_precond_hold 计 1。"""
+        sess = _sess()
+        state = _state()
+        _set_s2(sess, state, in_shop=())
+        out = mandate.wanted_closure_emit(sess, state, self._bench_full(),
+                                          [], 0, 3)
+        assert out == []
+        st = state_of(sess)
+        assert st.cw4_shop_wanted_pending is not None, '前件 hold 不得早清 S2'
+        assert st.cw4_wanted_abandon_phase is None, 'hold 非放弃态'
+        assert st.cw4_counters.get('wanted_precond_hold') == 1
+        assert st.cw4_counters.get('wanted_leg_fuel_sell') is None
+
+    def test_in_shop_unaffordable_holds(self):
+        """② 在店但金不足(gold 2 < cost 5)→ hold:S2 保留等金,零发射。"""
+        sess = _sess()
+        state = _state()   # 缺省 gold=2
+        _set_s2(sess, state, in_shop=(('目标件', 5),))
+        out = mandate.wanted_closure_emit(sess, state, self._bench_full(),
+                                          [], 0, 3)
+        assert out == []
+        st = state_of(sess)
+        assert st.cw4_shop_wanted_pending is not None
+        assert st.cw4_counters.get('wanted_precond_hold') == 1
+
+    def test_affordable_member_activates_legs_unchanged(self):
+        """③ ∃在店∧可负担(成员粒度:集内高费用件不拖累,目标件 cost 2
+        ≤ gold 2)→ 照常开环,腿序不变(板有空位先部署),不计 hold。"""
+        sess = _sess()
+        state = _state()
+        _set_s2(sess, state,
+                in_shop=(('目标件', 2), ('不在集成员', 9)))
+        out = mandate.wanted_closure_emit(sess, state, self._bench_full(),
+                                          [], 4, 3)
+        assert [type(e.action) for e in out] == [RunDeploy]
+        st = state_of(sess)
+        assert st.cw4_counters.get('wanted_leg_deploy') == 1
+        assert st.cw4_counters.get('wanted_precond_hold') is None
+
+    def test_gold_inflow_late_flip_activates_next_frame(self):
+        """④ late-flip:帧 1 金不足 hold(S2 保留);同节点金入账(gold
+        2→9,奖励球/他臂退金形态)后帧 2 翻真激活——快照只钉费用不钉
+        金,金必须臂时点现读(方案审 §1.2 修正级 F2-2 的行为面)。"""
+        sess = _sess()
+        state = _state()   # gold=2
+        _set_s2(sess, state, in_shop=(('目标件', 5),))
+        bench = self._bench_full()
+        out1 = mandate.wanted_closure_emit(sess, state, bench, [], 0, 3)
+        assert out1 == []
+        st = state_of(sess)
+        assert st.cw4_counters.get('wanted_precond_hold') == 1
+        assert st.cw4_shop_wanted_pending is not None, 'late-flip 前提:S2 未被早清'
+        state.gold = 9   # 同节点金入账
+        out2 = mandate.wanted_closure_emit(sess, state, bench, [], 4, 3)
+        assert [type(e.action) for e in out2] == [RunDeploy]
+        assert st.cw4_counters.get('wanted_precond_hold') == 1   # 翻真帧不计
+
+    def test_node_advance_expiry_unaffected_by_precondition(self):
+        """⑤ 节点推进键失配 → 过期不变:前件 hold 形态置场后推进节点,
+        照常键失配零动作,hold 不跨节点累计、放弃态不受前件影响(过期
+        规则单一 = 键失配,§3.2 既有语义;方案审 §4 ⑤)。"""
+        sess = _sess()
+        state3 = _state(round_num=3)
+        _set_s2(sess, state3, in_shop=())
+        bench = self._bench_full(star=2)
+        assert mandate.wanted_closure_emit(sess, state3, bench, [], 0, 3) == []
+        out = mandate.wanted_closure_emit(sess, _state(round_num=4),
+                                          bench, [], 0, 4)
+        assert out == []
+        st = state_of(sess)
+        assert st.cw4_counters.get('wanted_precond_hold') == 1   # 失配帧不计数
+        assert st.cw4_wanted_abandon_phase is None
 
 
 # ===== 3. route_tag 映射表与桥透传(§3.3 通道载体)=====
