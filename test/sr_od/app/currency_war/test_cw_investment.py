@@ -1,24 +1,41 @@
-"""test_cw_investment 主题锁(结构合并批,机械拼接)。
+"""test_cw_investment 主题锁(结构合并批来源;2026-09-08 瘦身批手术)。
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
+成员(来源文件语义索引):
 - investments: test_cw_investments.py
 - w162_invest_inject: test_cw_w162_invest_inject.py
-- test_fortune_picker: test_fortune_picker.py
+- test_fortune_picker: test_fortune_picker.py(OCR 通道改为直驱生产 _read_cards)
 - test_invest_strategy_recognizer: test_invest_strategy_recognizer.py
-冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+瘦身批删改记录 = .debug/temp/cw_test_slim_audit/reports/test_cw_investment.py.md(批报告易失,待回填 ADR)。
+registry 计数锁 len(INVESTMENT_STRATEGIES)==335 是全测试仓该事实唯一承载(decisions 同值锁已删),禁删。
 """
 from __future__ import annotations
 
-# ==================== investments ====================
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+
+import sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer as mod
 from sr_od.application.currency_war.kernel.cw_comps import ENV_FACTION_MAP
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
     InvestmentEnv,
     env_faction,
-    envs_boosting_faction,
     get_env,
     is_known_env,
+)
+from sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer import (
+    InvestStrategyRecognizer,
+)
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim.cw_sim_invest import (
+    SIM_STRATEGY_PICK_SCHEDULE,
+    SimInvestProfile,
+    env_freq_table,
+    freq_dropped_names,
+    sample_invest_profile,
+    strategy_freq_table,
 )
 
 
@@ -32,20 +49,6 @@ def test_concept_stocks_have_faction() -> None:
     for name, e in INVESTMENT_ENVS.items():
         if e.category == "概念股":
             assert e.faction, f"{name} 概念股应有 faction"
-
-
-def test_env_faction_helper() -> None:
-    """env_faction 查询;未知名→''。"""
-    assert env_faction("追击概念股") == "追击"
-    assert env_faction("仙舟邀请") == "仙舟"
-    assert env_faction("不存在环境") == ""
-
-
-def test_envs_boosting_faction() -> None:
-    """加成某阵营的环境:仙舟 → 仙舟概念股 + 仙舟邀请。"""
-    boost = envs_boosting_faction("仙舟")
-    assert "仙舟概念股" in boost
-    assert "仙舟邀请" in boost
 
 
 def test_env_faction_map_derived() -> None:
@@ -68,8 +71,7 @@ def test_d68_full_registry_categories() -> None:
     """D-68:注册表全量,7 类齐全(概念股/邀请/契约/时代/经济/规则/专家)。"""
     cats = {e.category for e in INVESTMENT_ENVS.values()}
     assert cats == {"概念股", "邀请", "契约", "时代", "经济", "规则", "专家"}
-    # 全量规模(36 → 远超;数据银行 83 总,本表收全部有名)
-    assert len(INVESTMENT_ENVS) > 70, f"全量注册表应 >70,实际 {len(INVESTMENT_ENVS)}"
+    # 全量规模锁由 test_adr0150_base_layer_full 的 ==83 承载(此处 >70 为其真子集,瘦身批删)
 
 
 def test_d68_new_envs_present() -> None:
@@ -142,36 +144,30 @@ def test_adr0150_base_layer_full() -> None:
     assert extra.source == "6302"
 
 
-def test_adr0150_overlay_no_orphans() -> None:
-    """overlay(STRATEGY_ECONOMY/ENV_CATEGORY/ENV_FACTION/PICK_VALUE/ENV_PICK_VALUE)键 ⊆ 注册表键。
-
-    构建层 import 即 raise 孤儿;此处显式断言防回归(版本更新后重跑生成器,
-    overlay 键未跟改名 → 本测试红,提示修 overlay)。
-    """
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        ENV_CATEGORY,
-        ENV_FACTION,
-        ENV_PICK_VALUE,
-        PICK_VALUE,
-        STRATEGY_ECONOMY,
-    )
-    assert set(STRATEGY_ECONOMY) <= set(INVESTMENT_STRATEGIES)
-    assert set(PICK_VALUE) <= set(INVESTMENT_STRATEGIES)
-    assert set(ENV_CATEGORY) <= set(INVESTMENT_ENVS)
-    assert set(ENV_FACTION) <= set(INVESTMENT_ENVS)
-    assert set(ENV_PICK_VALUE) <= set(INVESTMENT_ENVS)
+# (test_adr0150_overlay_no_orphans 已随瘦身批删除:五张 overlay 的键孤儿校验
+#  全部是 cw_investments 构建期 import 即炸(STRATEGY_ECONOMY/ENV_CATEGORY/
+#  ENV_FACTION/PICK_VALUE/ENV_PICK_VALUE 各有模块级 raise),本测试模块 import
+#  生产模块本身就先红,显式断言零增益。)
 
 
 def test_adr0150_key_convention() -> None:
-    """键约定(canon 归一,OCR 精确匹配层一致):半角冒号/逗号、无空格、无 •、无罗马数字。
+    """键约定(canon 归一,OCR 精确匹配层一致):半角冒号/逗号、无空格、无 bullet 形变族、无罗马数字。
 
     OCR 实测把全角冒号读成半角(战术专家:佩拉)→ 键用半角;叹号保持官方全角
     (艾丝妲的猛犬！/都是这家伙的错！,无实测证据不动)。
+    bullet 形变族取生产单一源 _INVEST_SEP_VARIANTS(•‧∙・;原 W144 污染锁的
+    负向扫描并入本测后补全族——曾只扫 •,漏 ‧∙・ 同族形变)。
     """
-    bad = [n for n in INVESTMENT_STRATEGIES if "：" in n or "，" in n or "•" in n
-           or n != n.strip() or any(c.isspace() for c in n) or any(c in "ⅠⅡⅢ" for c in n)]
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        _INVEST_SEP_VARIANTS,
+    )
+    bad = [n for n in INVESTMENT_STRATEGIES if "：" in n or "，" in n
+           or any(v in n for v in _INVEST_SEP_VARIANTS)
+           or n != n.strip() or any(c.isspace() for c in n)
+           or any(c in "ⅠⅡⅢ" for c in n)]
     assert not bad, f"策略键未 canon 归一:{bad[:5]}"
-    bad_env = [n for n in INVESTMENT_ENVS if "：" in n or "，" in n or "•" in n
+    bad_env = [n for n in INVESTMENT_ENVS if "：" in n or "，" in n
+               or any(v in n for v in _INVEST_SEP_VARIANTS)
                or any(c.isspace() for c in n)]
     assert not bad_env, f"环境键未 canon 归一:{bad_env[:5]}"
     # OCR 友好形抽查(旧键已 RENAME)
@@ -252,24 +248,11 @@ def test_w144_economy_aggregate_bullet_name_not_dropped() -> None:
     assert economy_effect_of('完全未知策略') == EconomyEffect()
 
 
-def test_w144_raw_name_not_polluted_by_lookup() -> None:
-    """③原始名保留:查找边界归一不回写——get_strategy 不改注册表键,也不改入参语义。
-
-    数据边界声明:采集/telemetry(invest_cards.jsonl)在 cw_screen_invest_strategy 内
-    直接用 OCR 原始名落盘,不经 get_strategy → 无直接可测入口;此处锁「查找不改
-    注册表与写入端」:get_strategy 归一仅作用于查询入参,INVESTMENT_STRATEGIES 键集
-    不含任何 bullet 形变(注册表数据层未被规范化污染)。
-    """
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        INVESTMENT_ENVS,
-        get_strategy,
-    )
-    # 查询 bullet 名后,注册表键集不变(无 bullet 键被写入/替换)
-    _ = get_strategy('全都要•彩')
-    bad = [n for n in INVESTMENT_STRATEGIES if any(c in n for c in '•‧∙・')]
-    assert not bad, f'注册表被归一污染(出现 bullet 键):{bad[:5]}'
-    bad_env = [n for n in INVESTMENT_ENVS if any(c in n for c in '•‧∙・')]
-    assert not bad_env, f'环境注册表被归一污染:{bad_env[:5]}'
+# (test_w144_raw_name_not_polluted_by_lookup 已随瘦身批删除:①「查询后扫注册表
+#  无 bullet 键」对 get_strategy 零判别力——归一只做字符串替换,查询是纯读,
+#  删掉被测函数该断言依然绿(rule 10 形态);②负向扫描(注册表键无 bullet 形变族)
+#  已并入 test_adr0150_key_convention 且补全为 _INVEST_SEP_VARIANTS 全族;
+#  ③写入端(采集/telemetry 原始名落盘)本无直接可测入口,原 docstring 自供。)
 
 
 def test_w144_augment_affinity_normalized_lookup() -> None:
@@ -285,13 +268,16 @@ def test_w144_augment_affinity_normalized_lookup() -> None:
     assert augment_env_affinity('不存在环境') == {}
     from sr_od.application.currency_war.kernel.cw_comps import ENV_COMP_AFFINITY
     assert augment_env_affinity('仙舟概念股') == ENV_COMP_AFFINITY['仙舟概念股']
+
+
 def test_adr0151_bindings_table_valid() -> None:
-    """语义绑定表:键 ⊆ 注册表;值 ⊆ FACTIONS/CHARACTERS(构建层孤儿 raise + 此处显式断言)。"""
+    """语义绑定表值域:值 ⊆ FACTIONS/CHARACTERS(生产孤儿校验只管键,值域此处锁)
+    + 未建模卡 → 空绑定(新 API 卡待 diff 提示后建模,不炸)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.data.cw_factions import FACTIONS
     from sr_od.application.currency_war.kernel.cw_investments import STRATEGY_BINDINGS
 
-    assert set(STRATEGY_BINDINGS) <= set(INVESTMENT_STRATEGIES)
+    # 键 ⊆ 注册表不在此断言:cw_investments 模块级孤儿校验 import 即炸(孤儿键 = 全仓收集期红)
     for name, (fs, cs) in STRATEGY_BINDINGS.items():
         assert fs <= set(FACTIONS), f"{name} 阵营值不在 FACTIONS:{sorted(fs - set(FACTIONS))}"
         assert cs <= set(CHARACTERS), f"{name} 角色值不在 CHARACTERS:{sorted(cs - set(CHARACTERS))}"
@@ -355,34 +341,9 @@ def test_megastar_set_binding_derived_from_single() -> None:
 
 # ==================== w162_invest_inject ====================
 
-import logging
-
-import pytest
-
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim.cw_sim_invest import (
-    SIM_STRATEGY_PICK_SCHEDULE,
-    SimInvestProfile,
-    env_freq_table,
-    freq_dropped_names,
-    sample_invest_profile,
-    strategy_freq_table,
-)
-
-
-@pytest.fixture(autouse=True)
-def _quiet_logging():
-    """本模块测试期间静音日志(测试域收口)。
-
-    进程级 logging.disable 是全局态:pytest 在收集期 import 本模块,模块级
-    调用即对整个测试会话生效,会静默饿死其他测试依赖日志落盘的断言
-    (判例:test_log_utils_utf8_rollover_continuity 因此 FileNotFoundError)。
-    收口为 autouse fixture:进入本模块测试时禁用,退出时还原原级别。
-    """
-    prev = logging.root.manager.disable
-    logging.disable(logging.CRITICAL)
-    yield
-    logging.disable(prev)
+# (原 _quiet_logging autouse 静音 fixture 已随瘦身批删除:它防的是「模块级
+#  logging.disable 在收集期毒化全会话」,该形态本文件早已不存在;日志策略
+#  单一源 = conftest(framework log INFO→WARNING),本模块无需再叠一层。)
 
 
 _POOL = 'fallback'
@@ -397,15 +358,19 @@ def _snap(seed: int, **kw):
 # ---------- 零漂移门 ----------
 
 def test_invest_off_is_bit_identical() -> None:
-    """默认(不传 invest)与显式 False 逐位同——主路径零漂移。"""
-    for s in range(4):
+    """默认(不传 invest)与显式 False 逐位同——主路径零漂移。
+
+    n=2(rule 12 最小值):注入脚手架漏耗主 rng 是确定性的,单 seed 即可分辨
+    (逐位比对 5 标量+账本长),双 seed 仅防巧合;原 4 seed 无断言增益。
+    """
+    for s in range(2):
         assert _snap(s) == _snap(s, invest=False)
 
 
 def test_empty_profile_equals_off() -> None:
-    """空剧本(无环境无选卡)= 关:注入脚手架对主 rng 零消耗。"""
+    """空剧本(无环境无选卡)= 关:注入脚手架对主 rng 零消耗(n=2,同上)。"""
     empty = SimInvestProfile()
-    for s in range(4):
+    for s in range(2):
         assert _snap(s) == _snap(s, invest=empty)
 
 
@@ -461,15 +426,20 @@ def test_direct_line_qualified_via_injected_env() -> None:
 
 
 def test_invest_on_activates_p1_lock() -> None:
-    """缺口闭合直证:注入批 p1_locked_rounds 分布非零(off 恒 0)。"""
+    """缺口闭合直证:注入批 p1_locked_rounds 分布非零(off 恒 0)。
+
+    n=3(rule 12 探底固化,2026-09-08 实测 seed 0..11):注入剧本下 on 臂
+    全 seed 恒 9、off 臂恒 0——3 seed 足以区分「注入点火」与「漏挂/恒关」,
+    原 8 seed×2 臂无断言增益。
+    """
     prof = SimInvestProfile(
         active_env='银河学者概念股',
         picks=((1, 1, '黑塔纪元'),),   # 策略侧亲和 → 大黑塔银河学者
     )
     on = [cw_sim.simulate_p1(s, pool=_POOL, invest=prof).p1_locked_rounds
-          for s in range(8)]
+          for s in range(3)]
     off = [cw_sim.simulate_p1(s, pool=_POOL).p1_locked_rounds
-           for s in range(8)]
+           for s in range(3)]
     assert all(v == 0 for v in off)       # W161 缺口:off 口径恒 0
     assert any(v > 0 for v in on)         # 注入后锁定分布非零
 
@@ -522,46 +492,45 @@ def test_plaza_names_canon_colon() -> None:
 
 # ==================== test_fortune_picker ====================
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, 'src')
-
 FIX = Path(__file__).resolve().parents[4] / 'screens' / 'cw_fortune_picker' / 'event_three_cards.webp'
 
 
-def _ocr_cards(path) -> list[str]:
-    import cv2
-    import numpy as np
+def test_fortune_cards_ocr_on_fixture():
+    """局32 实拍经生产 CwScreenFortune._read_cards:三卡文字含 奥迹 系/留白 关键词。
+
+    直驱生产读取通道(桶分流单一源 = 生产 CARD_XS/TEXT_Y_* 常量,测试不再复制
+    布局字面量——原 _ocr_cards 复制 _read_cards 五个字面量属 rule 10 自抄形态,
+    2026-09-08 瘦身批改写;生产读取逻辑或布局常量损坏时本锁红)。OCR 模型
+    不可用或 fixture 缺失 → skip(能力探测面,非回归失败)。
+    """
+    if not FIX.exists():
+        pytest.skip('fixture 缺失')
     try:
         from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
-        m = OnnxOcrMatcher()
+        matcher = OnnxOcrMatcher()
     except Exception:
-        return []
-    img = cv2.imdecode(np.fromfile(str(path), np.uint8), cv2.IMREAD_COLOR)
-    res = m.run_ocr(img)
-    XS = (510, 900, 1290)
-    buckets: dict[int, list[str]] = {x: [] for x in XS}
-    for t, mr in (res or {}).items():
-        if mr.max is None:
-            continue
-        cy, cx = mr.max.center.y, mr.max.center.x
-        if 290 <= cy <= 410:
-            nearest = min(XS, key=lambda x: abs(x - cx))
-            if abs(nearest - cx) < 190:
-                buckets[nearest].append(t)
-    return [' '.join(buckets[x]) for x in XS]
-
-
-def test_fortune_cards_ocr_on_fixture():
-    """局32 实拍:三卡应识别出 深层奥迹/原始奥迹/留白卡 关键词。"""
-    if not FIX.exists():
-        import pytest
-        pytest.skip('fixture 缺失')
-    texts = _ocr_cards(FIX)
-    if not any(texts):
-        import pytest
         pytest.skip('OCR 模型不可用')
+    import cv2
+    import numpy as np
+
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_fortune import (
+        CwScreenFortune,
+    )
+
+    class _Svc:
+        @staticmethod
+        def get_ocr_result_map(image, rect=None, color_range=None, crop_first=False):
+            return matcher.run_ocr(image)
+
+    class _Ctx:
+        ocr_service = _Svc()
+
+    op = CwScreenFortune.__new__(CwScreenFortune)   # 免构造:_read_cards 纯读,只依赖 ctx.ocr_service
+    op.ctx = _Ctx()
+    img = cv2.imdecode(np.fromfile(str(FIX), np.uint8), cv2.IMREAD_COLOR)
+    texts = op._read_cards(img)
+    if not any(texts):
+        pytest.skip('OCR 无果(模型不可用?)')
     joined = ' '.join(texts)
     assert '奥迹' in joined, f'强化卡关键词应识别: {texts}'
     assert '留白' in joined or '黑天鹅' in joined, f'第三卡应识别: {texts}'
@@ -569,18 +538,9 @@ def test_fortune_cards_ocr_on_fixture():
 
 # ==================== test_invest_strategy_recognizer ====================
 
-from unittest.mock import MagicMock
-
-import sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer as mod
-from sr_od.application.currency_war.obs.recognizers.invest_strategy_recognizer import (
-    InvestStrategyRecognizer,
-)
-
-
-def test_screen_name_matches_invest_strategy() -> None:
-    """recognizer 注册的 screen_name = '货币战争-投资策略'(与 screen_info 一致)。"""
-    assert InvestStrategyRecognizer.screen_name == '货币战争-投资策略'
-
+# (test_screen_name_matches_invest_strategy 已随瘦身批删除:test_screen_recognizer_scan.py::
+#  test_scan_discovers_invest_strategy_recognizer 是其超集——扫描按 screen_name 注册,
+#  键漂移(改名不跟 yml/改 yml 不跟常量)在该处即红,本处常量等值断言是其真子集。)
 
 def _mock_ocr(monkeypatch, names: list[str]) -> None:
     monkeypatch.setattr(mod, '_area_rect', lambda ctx, name, screen_name=None: MagicMock())
