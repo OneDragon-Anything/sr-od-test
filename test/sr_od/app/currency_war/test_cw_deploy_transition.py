@@ -97,7 +97,16 @@ def test_lesion_frame_replay_fires_victim_yuanguiren(monkeypatch) -> None:
     (4×target_keep+2×buy_membership+star_guard+engines_guard)计划空 =
     病灶本体;收窄回退则忘归人复被 target_keep 锁死 = 本锁红。
     分键闭集扩展同锁显影(buy_membership/target_keep 进入逐件拒因
-    分键,T-127 方案 §2.3——旧闭集下「臂武装而计划空」不可归因)。"""
+    分键,T-127 方案 §2.3——旧闭集下「臂武装而计划空」不可归因)。
+    演进降级换血臂伴生显影(T-168,语义更新出处 = ADR-0382 分级语义
+    接入换血机器 + 进度账本 T-168):本帧 = 武装帧(锁线转型域 ∧ 板满
+    ∧ bench 在册线件待上),艾丝妲 2★ 不再被 star_guard 一票拒,进入
+    结构守卫评估——其卖出不掉任何已达成档(持续伤害 board 1<2 未达档)
+    ⇒ 结构守卫放行、让渡序居后(1★ 忘归人先于 2★),计划胜出者不变
+    (旧语义锁 star_guard==1 已随臂激活被取代,非机械跟绿:被锁行为
+    「2★ fail-closed 不可卖」在武装帧域已非设计意图,非武装域仍由
+    test_cw_swap_transition_arm::test_star_guard_blocks_2star_victim
+    持有)。"""
     import sr_od.application.currency_war.kernel.cw_intention as _int_mod
     import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
     from sr_od.application.currency_war.kernel.cw_state import GameState
@@ -136,7 +145,7 @@ def test_lesion_frame_replay_fires_victim_yuanguiren(monkeypatch) -> None:
     # 逐件拒因闭集扩展显影(T-127 §2.3):义务集拒因与弹性保护拒因可归因
     assert c.get('buy_membership') == 1      # 火花/绯英
     assert c.get('target_keep') == 1         # 缇宝(量子同频达成留保护域)
-    assert c.get('star_guard') == 1          # 艾丝妲(2★,P41② fail-closed)
+    assert 'star_guard' not in c             # 艾丝妲 2★:臂武装帧进结构守卫(T-168,见 docstring)
     assert c.get('engines_guard') == 1       # 三月七(列车同行 2→1)
     assert state_of(sess).cw4_m1p_arm_pending == 'transition'
 
