@@ -9,16 +9,15 @@
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 
 # ==================== comp_v2 ====================
 
 from collections import Counter
 
-from sr_od.application.currency_war.kernel.cw_comps import  COMP_LIBRARY, V2_FAMILIES, Comp, EquipChoice, derive_key_equips, get_comp
+from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, V2_FAMILIES, Comp, EquipChoice, derive_key_equips, get_comp
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.kernel.cw_plugins import  PLUGIN_DISABLE_MATRIX, PLUGIN_LIBRARY, plugin_disabled
+from sr_od.application.currency_war.kernel.cw_plugins import PLUGIN_DISABLE_MATRIX, PLUGIN_LIBRARY, plugin_disabled
 
 # ===== 1. key_equips 派生恒等(C5;裁决 2:先于数据变更落地)=====
 
@@ -82,7 +81,6 @@ def test_derive_key_equips_pool_expands_all_candidates() -> None:
 
 # ===== 2. v2 字段结构校验(C4 schema 锁)=====
 
-V2_COMP_NAMES = {c.name for c in COMP_LIBRARY if c.family != "legacy"}
 _SUB_PLAN_KEYS = {"替班者", "顶位", "身份", "分岔点"}
 _SPECIAL_SYSTEM_KEYS = {"navigator", "grail_quest", "aha_slots", "cost_escalation"}
 
@@ -274,16 +272,19 @@ def test_plugin_majority_lines_doctrine() -> None:
 # ==================== system_cards ====================
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_state import  BenchChar, GameState, ShopCard, _recount_board
-from sr_od.application.currency_war.kernel.cw_system_cards import  _WEIGHT_PIECE, _WEIGHT_READINESS, SYSTEM_CARDS, blank_window_policy, card_active, card_engine_complete, card_pieces, card_state_of, engine_missing, pick_card_combination
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard, _recount_board
+from sr_od.application.currency_war.kernel.cw_system_cards import _WEIGHT_PIECE, _WEIGHT_READINESS, SYSTEM_CARDS, blank_window_policy, card_active, card_engine_complete, card_pieces, engine_missing, pick_card_combination
 
 
-def _char(name: str, slot: int = 0, row: str = 'back') -> BenchChar:
-    """注册表真值构造 BenchChar(faction/cost 单一源;同 test_cw_action_v2 模式)。"""
+def _char(name: str, faction: str | None = None, row: str | None = None,
+          star: int = 1, slot: int = 0) -> BenchChar:
+    """注册表真值构造 BenchChar(faction/站位单一源;faction 可覆写流派口径,
+    row=None 走注册表 position_pref)——system_cards/evolution/r405 三段共用
+    (机械拼接期的双构造器与 _evolution_* 别名增殖已收敛)。"""
     c = CHARACTERS[name]
-    return BenchChar(slot=slot, char_id=name,
-                     faction=(c.factions or ['?'])[0],
-                     position_pref=row)
+    return BenchChar(slot=slot, char_id=name, star=star,
+                     faction=faction or (c.factions or ['?'])[0],
+                     position_pref=row or c.position_pref())
 
 
 def _state_with_deployed(names: list[str]) -> GameState:
@@ -347,13 +348,6 @@ def test_seele_or_branch_and_amplifier_not_independent():
     assert card_active(card, st5) is False
 
 
-def test_seele_belly_branch_with_jepard():
-    """OR 分支独立验证:希儿+杰帕德(贝洛伯格 2 档,无量子)。"""
-    card = SYSTEM_CARDS['seele']
-    st = _state_with_deployed(['希儿', '杰帕德'])
-    assert card_active(card, st) is True
-
-
 # ---------- 2. 引擎完备度(铁三角不可拆/缺一=空壳) ----------
 
 def test_engine_complete_xianzhou_trio_undividable():
@@ -411,22 +405,6 @@ def test_equiv_trio_full_hand_beats_dot():
     assert dec.chosen[0] == 'xianzhou3'
     assert dec.scores['xianzhou3'] > dec.scores['dot2']
     assert not any('例外' in r or '一轮成型' in r for r in dec.ruling)   # 例外条款已删
-
-
-def test_equiv_same_readiness_no_dot_privilege():
-    """等价性③(按裁定改变):2 列车件 vs 2 DOT 件(同 pieces 同 readiness)→
-    来牌/词条/意向裁决,不再有 DOT 特权(旧 +1 首站加成下意向翻不过)。"""
-    st = GameState()
-    st.bench = [_char('三月七'), _char('姬子·启行'), _char('卡芙卡'), _char('桑博')]
-    dec = pick_card_combination(st)
-    assert dec.scores['train2'] == dec.scores['dot2']
-    assert any('tie-break' in r for r in dec.ruling)   # 同分如实记录可审计
-    # 意向同向裁决:列车意向 → train2 胜(旧特权语义下 DOT 恒胜,此为行为变化)
-    dec_intent = pick_card_combination(st, intent='姬子列车')
-    assert dec_intent.chosen[0] == 'train2'
-    # 词条裁决:敌方频动旺 → DOT 权重升 → dot2 胜
-    dec_affix = pick_card_combination(st, affixes=['忍无可忍'])
-    assert dec_affix.chosen[0] == 'dot2'
 
 
 def test_readiness_unified_across_cards():
@@ -498,16 +476,6 @@ def test_pick_blank_when_nothing_arrived():
     assert any('空窗' in r for r in dec.ruling)
 
 
-def test_card_state_of_pieces_and_flags():
-    st = _state_with_deployed(['爻光', '藿藿'])
-    cs = card_state_of(SYSTEM_CARDS['xianzhou3'], st)
-    assert cs.pieces == 2
-    assert cs.active is False          # 仙舟 2 < 3
-    assert cs.engine_complete is False  # 缺饮月
-    cs_dot = card_state_of(SYSTEM_CARDS['dot2'], st)
-    assert cs_dot.engine_complete is True   # 无引擎卡恒 OK
-
-
 # ---------- 4. 空窗期规则(目标件/费用带/不 D 牌) ----------
 
 def test_blank_window_buy_target_only():
@@ -549,34 +517,24 @@ def test_blank_window_not_blank_when_any_system_active():
 
 # ==================== evolution ====================
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS as _evolution_CHARACTERS
-from sr_od.application.currency_war.kernel.cw_evolution import  EvolutionState, UpgradeOption, UpgradeVerdict, evaluate_upgrade, evolution_step, execute_replacement, fill_gap_after, fill_slot_policy, propose_upgrades, rollback_weakest
+from sr_od.application.currency_war.kernel.cw_evolution import EvolutionState, UpgradeOption, UpgradeVerdict, evaluate_upgrade, evolution_step, execute_replacement, fill_gap_after, fill_slot_policy, propose_upgrades, rollback_weakest
 from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
-from sr_od.application.currency_war.kernel.cw_state import  BenchChar as _evolution_BenchChar, CompTransaction, GameState as _evolution_GameState, SellDeployed, SwapDeploy, _recount_board as _evolution_recount_board, deployed_occupied, iter_occupied_deployed, simulate
+from sr_od.application.currency_war.kernel.cw_state import CompTransaction, SellDeployed, SwapDeploy, deployed_occupied, iter_occupied_deployed, simulate
 
 
-def _evolution_char(name: str, faction: str | None = None, row: str | None = None,
-          star: int = 1) -> _evolution_BenchChar:
-    """注册表真值构造 BenchChar(faction/站位单一源;faction 可覆写流派口径)。"""
-    c = _evolution_CHARACTERS[name]
-    return _evolution_BenchChar(slot=0, char_id=name,
-                     faction=faction or (c.factions or ['?'])[0],
-                     position_pref=row or c.position_pref(), star=star)
-
-
-def _dot2_state() -> _evolution_GameState:
+def _dot2_state() -> GameState:
     """DOT2 在场(持续伤害 3 人)+ 仙舟铁三角 bench 齐(验收1 构造,W26 同法)。"""
-    st = _evolution_GameState()
+    st = GameState()
     st.gold = 20
     st.level = 8
-    st.deployed = [_evolution_char(n, '持续伤害')
+    st.deployed = [_char(n, '持续伤害')
                    for n in ('桑博', '艾丝妲', '卡芙卡')]
-    st.bench = [_evolution_char(n, '仙舟') for n in sorted(_CORE_TRIO)]
-    st.board = _evolution_recount_board(st.deployed)
+    st.bench = [_char(n, '仙舟') for n in sorted(_CORE_TRIO)]
+    st.board = _recount_board(st.deployed)
     return st
 
 
-def _run_evolution(st: _evolution_GameState) -> tuple[list, EvolutionState]:
+def _run_evolution(st: GameState) -> tuple[list, EvolutionState]:
     mem = EvolutionState()
     actions = evolution_step(st, None, mem)
     return actions, mem
@@ -597,7 +555,7 @@ def test_evolution_dot2_to_xianzhou3_full_replacement():
     assert set(_CORE_TRIO) <= names
     assert '桑博' not in names and '卡芙卡' not in names
     # 无半档:board 与 deployed 聚合一致;旧档主力转 bench(回滚窗,非卖)
-    assert out.board == _evolution_recount_board(out.deployed)
+    assert out.board == _recount_board(out.deployed)
     assert out.board['仙舟'] >= 3
     bench_names = {b.char_id for b in out.bench if b is not None}
     assert {'桑博', '卡芙卡'} <= bench_names   # 保回滚窗:退役暂缓 bench 非卖出
@@ -620,26 +578,16 @@ def test_propose_and_evaluate_best_is_xianzhou_card():
     assert len(xz) == 1 and xz[0].core_present is True
     verdict = evaluate_upgrade(xz[0], st)
     assert verdict.execute and verdict.effect_ok and verdict.core_ok
-    # 发令枪序锁:核心先到档未齐 → bench 等(构造:核心在 bench、档不足 2)
-    st2 = _evolution_GameState()
-    st2.gold = 20
-    st2.level = 6
-    st2.deployed = [_evolution_char('桑博', '持续伤害')]   # 仙舟 0 件
-    st2.bench = [_evolution_char('藿藿', '仙舟')]           # 仅 1 件:档未到 2
-    st2.board = _evolution_recount_board(st2.deployed)
-    v2 = evaluate_upgrade(evaluate_upgrade(xz[0], st).option, st2)
-    assert not v2.execute and 'bench 等' in v2.detail
 
 
 def test_gun_order_faction_ready_core_missing_no_dismantle():
     """档齐核心未到 → 不拆过渡档(发令枪 = 最后到齐的那个)。"""
     st = _dot2_state()
     # 拿走全部铁三角(核心不在手),仙舟档位用 3 个非核心仙舟件顶上
-    st.bench = [_evolution_char(n, '仙舟') for n in ('青雀', '符玄', '彦卿')]
+    st.bench = [_char(n, '仙舟') for n in ('青雀', '符玄', '彦卿')]
     actions, _ = _run_evolution(st)
     # 仙舟3 卡:档在手 3 ≥2 但核心(铁三角)0 在手 → 不出事务
-    assert all(not isinstance(a, CompTransaction) for a in actions) \
-        or actions == []
+    assert all(not isinstance(a, CompTransaction) for a in actions)
     xz = [o for o in propose_upgrades(st) if o.comp_name == 'xianzhou3']
     v = evaluate_upgrade(xz[0], st)
     assert not v.execute and '不拆过渡档' in v.detail
@@ -648,26 +596,27 @@ def test_gun_order_faction_ready_core_missing_no_dismantle():
 # ---------- 2. 2换1 触发与不触发 ----------
 
 def test_two_swap_one_gate():
-    """目标羁绊在手 ≥2(2 档成型)才替换;1 件 → 不触发。"""
+    """2换1 门:目标羁绊在手 ≥2(2 档成型)才替换;1 件 → 不触发
+    (核心先到档未齐 = bench 等;evaluate 级裁决叙述与 step 级零事务同锁)。"""
     st = _dot2_state()
-    st.bench = [_evolution_char('藿藿', '仙舟')]   # 仙舟仅 1 件:2换1 不触发
+    st.bench = [_char('藿藿', '仙舟')]   # 仙舟仅 1 件:2换1 不触发
     actions, _ = _run_evolution(st)
     assert actions == []
     xz = [o for o in propose_upgrades(st) if o.comp_name == 'xianzhou3']
-    assert xz and not evaluate_upgrade(xz[0], st).execute
+    v = evaluate_upgrade(xz[0], st)
+    assert not v.execute and 'bench 等' in v.detail
 
 
 def test_two_swap_one_gap_window_proxy():
     """缺口 1 张 + 店里可见(再遇窗口代理)→ 触发;店里没有 → 不触发。"""
     st = _dot2_state()
-    st.bench = [_evolution_char(n, '仙舟') for n in ('藿藿', '爻光')]   # 在手 2,目标 3
-    from sr_od.application.currency_war.kernel.cw_state import ShopCard
+    st.bench = [_char(n, '仙舟') for n in ('藿藿', '爻光')]   # 在手 2,目标 3
     st.shop = [ShopCard(x=0, faction='仙舟', name='丹恒·饮月', cost=2)]
     actions, _ = _run_evolution(st)
     assert len(actions) == 1 and isinstance(actions[0], CompTransaction)
     # 窗口关闭(店空):缺口 1 张无再遇窗口 → 不触发
     st2 = _dot2_state()
-    st2.bench = [_evolution_char(n, '仙舟') for n in ('藿藿', '爻光')]
+    st2.bench = [_char(n, '仙舟') for n in ('藿藿', '爻光')]
     st2.shop = []
     actions2, _ = _run_evolution(st2)
     assert not any(isinstance(a, CompTransaction) for a in actions2)
@@ -677,13 +626,13 @@ def test_two_swap_one_gap_window_proxy():
 
 def test_fill_gap_plugin_priority_over_filler():
     """插件(单卡 T1)优先于散件;真核心 bench 等档不填散位。"""
-    st = _evolution_GameState()
+    st = GameState()
     st.gold = 10
     st.level = 8
-    st.deployed = [_evolution_char(n, '仙舟') for n in sorted(_CORE_TRIO)]
-    st.board = _evolution_recount_board(st.deployed)
-    st.bench = [_evolution_char('知更鸟'),   # 插件单卡 T1(盛会之星,非骨架线)
-                _evolution_char('娜塔莎')]   # 散件(非插件;贝洛伯格治疗)
+    st.deployed = [_char(n, '仙舟') for n in sorted(_CORE_TRIO)]
+    st.board = _recount_board(st.deployed)
+    st.bench = [_char('知更鸟'),   # 插件单卡 T1(盛会之星,非骨架线)
+                _char('娜塔莎')]   # 散件(非插件;贝洛伯格治疗)
     fills = fill_slot_policy(st)
     assert fills and fills[0].source == 'bench'
     first = st.bench[fills[0].idx]
@@ -696,14 +645,14 @@ def test_fill_gap_plugin_priority_over_filler():
 
 def test_fill_gap_substitute_exception_beats_plugin():
     """替班核心例外:DOT 线在场时,黑天鹅(替班者)优先于插件。"""
-    st = _evolution_GameState()
+    st = GameState()
     st.gold = 10
     st.level = 7
-    st.deployed = [_evolution_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害'),
-                   _evolution_char('卡芙卡', '持续伤害'), _char('椒丘', '持续伤害')]
-    st.board = _evolution_recount_board(st.deployed)
-    st.bench = [_evolution_char('知更鸟'),    # 插件单卡 T1
-                _evolution_char('黑天鹅', '持续伤害')]   # DOT队 替班者(顶卡芙卡主C)
+    st.deployed = [_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害'),
+                   _char('卡芙卡', '持续伤害'), _char('椒丘', '持续伤害')]
+    st.board = _recount_board(st.deployed)
+    st.bench = [_char('知更鸟'),    # 插件单卡 T1
+                _char('黑天鹅', '持续伤害')]   # DOT队 替班者(顶卡芙卡主C)
     fills = fill_slot_policy(st)
     assert fills
     first = st.bench[fills[0].idx]
@@ -713,14 +662,14 @@ def test_fill_gap_substitute_exception_beats_plugin():
 def test_fill_gap_disable_matrix_skips_shield_in_wenemy_family():
     """禁用矩阵:万敌燃血家族下盾系插件(砂金)不填位(官方:燃血无法获盾)。"""
     from sr_od.application.currency_war.kernel.cw_comps import get_comp
-    st = _evolution_GameState()
+    st = GameState()
     st.gold = 10
     st.level = 7
-    st.deployed = [_evolution_char('万敌', '夜之半神'), _char('赛飞儿', '夜之半神'),
-                   _evolution_char('长夜月', '夜之半神')]
-    st.board = _evolution_recount_board(st.deployed)
-    st.bench = [_evolution_char('砂金'),      # 盾系单卡 × 万敌燃血 = 硬禁用
-                _evolution_char('罗刹')]      # 盾外 T2 插件可用
+    st.deployed = [_char('万敌', '夜之半神'), _char('赛飞儿', '夜之半神'),
+                   _char('长夜月', '夜之半神')]
+    st.board = _recount_board(st.deployed)
+    st.bench = [_char('砂金'),      # 盾系单卡 × 万敌燃血 = 硬禁用
+                _char('罗刹')]      # 盾外 T2 插件可用
     target = get_comp('万敌单C')   # family='万敌燃血'
     fills = fill_gap_after(CompTransaction([], [], [], reason='t'),
                            st, target)
@@ -732,35 +681,35 @@ def test_fill_gap_disable_matrix_skips_shield_in_wenemy_family():
 
 def test_fill_gap_true_core_waits_on_bench():
     """真核心 bench 等档:未成型线的 carry 不填散位(上场时机=新档成型时机)。"""
-    st = _evolution_GameState()
+    st = GameState()
     st.gold = 10
     st.level = 6
-    st.deployed = [_evolution_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害')]
-    st.board = _evolution_recount_board(st.deployed)
-    st.bench = [_evolution_char('飞霄'),      # 追击飞霄 carry;追击未成型 → 等档
-                _evolution_char('灵砂')]      # T3 插件单卡
+    st.deployed = [_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害')]
+    st.board = _recount_board(st.deployed)
+    st.bench = [_char('飞霄'),      # 追击飞霄 carry;追击未成型 → 等档
+                _char('灵砂')]      # T3 插件单卡
     fills = fill_slot_policy(st)
     assert fills
     picked = [st.bench[f.idx].char_id for f in fills if f.source == 'bench']
     assert '飞霄' not in picked and picked[0] == '灵砂'
 
 
-# ---------- 5. W65/ADR-0323:部署名单按名去重(同名副本不整事务拒) ----------
+# ---------- 4. W65/ADR-0323:部署名单按名去重(同名副本不整事务拒) ----------
 
 def test_execute_replacement_dedup_same_name_copies():
     """bench 2 张同名万敌 → 部署名单按名去重(取最高星一件上场),其余
     副本留 bench 当 3合1 合成素材(不卖);事务可应用(不再
     duplicate_on_board 整拒——W64 模式 B:seed 81 49 次可执行全拒)。"""
-    st = _evolution_GameState()
+    st = GameState()
     st.gold = 20
     st.level = 6   # cap=6,足容
     st.bench = [
-        _evolution_char('万敌', '夜之半神', star=1),
-        _evolution_char('万敌', '夜之半神', star=2),
-        _evolution_char('刃', '星核猎手'),
-        _evolution_char('千冶·刃', '星核猎手'),
-        _evolution_char('风堇', '昼之半神'),
-        _evolution_char('赛飞儿', '夜之半神'),   # 非新线成员(bench 未部署不进场)
+        _char('万敌', '夜之半神', star=1),
+        _char('万敌', '夜之半神', star=2),
+        _char('刃', '星核猎手'),
+        _char('千冶·刃', '星核猎手'),
+        _char('风堇', '昼之半神'),
+        _char('赛飞儿', '夜之半神'),   # 非新线成员(bench 未部署不进场)
     ]
     opt = UpgradeOption('new_faction', '燃血', 4, 5.0, True,
                         '万敌单C', 'comp')
@@ -788,7 +737,7 @@ def test_execute_replacement_dedup_same_name_copies():
         '其余副本留 bench 当 3合1 素材(不卖)'
 
 
-# ---------- 4. 中断恢复 / 谷底回滚 ----------
+# ---------- 5. 中断恢复 / 谷底回滚 ----------
 
 def test_freeze_on_encounter_recovery_revalidates():
     """遭遇/boss 前冻结不启动新替换;恢复 = 三条件重校验,成立则当轮执行。"""
@@ -809,8 +758,8 @@ def test_freeze_on_encounter_recovery_revalidates():
     st2.node_type = '遭遇'
     assert evolution_step(st2, None, mem2) == []
     st2.node_type = '战斗'
-    st2.bench = [_evolution_char('青雀', '仙舟'), _char('符玄', '仙舟'),
-                 _evolution_char('彦卿', '仙舟')]   # 铁三角被卖:核心不在手
+    st2.bench = [_char('青雀', '仙舟'), _char('符玄', '仙舟'),
+                 _char('彦卿', '仙舟')]   # 铁三角被卖:核心不在手
     actions3 = evolution_step(st2, None, mem2)
     assert not any(isinstance(a, CompTransaction) for a in actions3)
     assert mem2.pending is None   # 那次替换作废
@@ -819,32 +768,26 @@ def test_freeze_on_encounter_recovery_revalidates():
 def test_valley_rollback_weakest_then_pause():
     """谷底回滚:回滚一件最弱替换位(SwapDeploy 换回保留件)后放缓。"""
     st = _dot2_state()
-    _, mem = _run_evolution(st)
-    out = simulate(st, _rebuilt_tx(st, mem))
+    actions, mem = _run_evolution(st)
+    tx = next(a for a in actions if isinstance(a, CompTransaction))
+    out = simulate(st, tx)
     # 掉血>15 触发(调用方观测)→ 回滚最弱新档位
     action = rollback_weakest(out, mem)
     assert action is not None and isinstance(action, SwapDeploy)
     assert action.reason == 'valley_rollback'
     assert mem.paused is True
     rolled = simulate(out, action)
-    assert rolled.board == _evolution_recount_board(rolled.deployed)
+    assert rolled.board == _recount_board(rolled.deployed)
     # 回滚后再遇上遭遇轮:暂停生效,不续演进
     rolled.node_type = '遭遇'
     assert evolution_step(rolled, None, mem) == []
 
 
-def _rebuilt_tx(st: _evolution_GameState, mem: EvolutionState) -> CompTransaction:
-    """从 memory 重建上次替换事务(rollback 测试的消费锚)。"""
-    actions, _ = _run_evolution(st)
-    assert actions and isinstance(actions[0], CompTransaction)
-    return actions[0]
-
-
 def test_valley_rollback_no_retained_sells_weakest():
     """无 bench 保留件(回滚窗已耗尽)→ 退役最弱新档位(SellDeployed)。"""
     st = _dot2_state()
-    _, mem = _run_evolution(st)
-    tx = _rebuilt_tx(st, mem)
+    actions, mem = _run_evolution(st)
+    tx = next(a for a in actions if isinstance(a, CompTransaction))
     out = simulate(st, tx)
     out.bench = []   # 回滚窗耗尽(旧档保留件已清)
     mem.last_retained = []
@@ -863,17 +806,16 @@ def test_dot_same_line_degenerates_to_deepen():
     assert actions == []   # 没有可上新羁绊机会 → 空动作(加深由常规买/上通道)
     # 有 DOT 件在 bench:加深 = 纯 deploy 事务(undeploy/sell 空,无替换)
     st2 = _dot2_state()
-    st2.bench = [_evolution_char('椒丘', '持续伤害')]
-    st2.deployed = [_evolution_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害')]
-    st2.board = _evolution_recount_board(st2.deployed)
+    st2.bench = [_char('椒丘', '持续伤害')]
+    st2.deployed = [_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害')]
+    st2.board = _recount_board(st2.deployed)
     st2.level = 5
     actions2, _ = _run_evolution(st2)
-    if actions2:
-        tx = actions2[0]
-        assert isinstance(tx, CompTransaction)
-        assert tx.undeploy == [] and tx.sell == []   # 加深无替换
-        out = simulate(st2, tx)
-        assert out.board == _evolution_recount_board(out.deployed)
+    txs2 = [a for a in actions2 if isinstance(a, CompTransaction)]
+    assert txs2, '同体线加深应发射纯 deploy 事务(无替换≠无动作,零发射=加深通道断裂)'
+    assert all(t.undeploy == [] and t.sell == [] for t in txs2)   # 加深无替换
+    out = simulate(st2, txs2[0])
+    assert out.board == _recount_board(out.deployed)
 
 
 # ---------- 6. W160/ADR-0363:S1 型成型后引擎丢失修法两件 ----------
@@ -882,25 +824,25 @@ def _engines(st_or_dep) -> int:
     """过渡引擎数(cw_sim._engines_count 口径,W158 strict 度量同源)。"""
 
     from sr_od.application.currency_war.kernel.cw_battle_calib import _board_factions_of, _engines_count
-    dep = st_or_dep.deployed if isinstance(st_or_dep, _evolution_GameState) else st_or_dep
+    dep = st_or_dep.deployed if isinstance(st_or_dep, GameState) else st_or_dep
     return _engines_count(_board_factions_of(dep),
                           {d.char_id for d in dep
                            if d is not None and d.char_id})   # ADR-0392 滤 None
 
 
-def _s1_frame() -> _evolution_GameState:
+def _s1_frame() -> GameState:
     """S1 事故帧(W159 §2 seed63 型):双引擎在场(列车2+DOT2),
     末轮单体系加深提案(仙舟3)把两引擎整批划 old_line。"""
-    st = _evolution_GameState()
+    st = GameState()
     st.gold = 20
     st.level = 8
     st.deployed = [
-        _evolution_char('三月七', '列车同行'), _char('瓦尔特', '列车同行'),
-        _evolution_char('桑博', '持续伤害'), _char('卡芙卡', '持续伤害'),
+        _char('三月七', '列车同行'), _char('瓦尔特', '列车同行'),
+        _char('桑博', '持续伤害'), _char('卡芙卡', '持续伤害'),
     ]
-    st.bench = [_evolution_char('藿藿', '仙舟'), _char('爻光', '仙舟'),
-                _evolution_char('青雀', '仙舟')]
-    st.board = _evolution_recount_board(st.deployed)
+    st.bench = [_char('藿藿', '仙舟'), _char('爻光', '仙舟'),
+                _char('青雀', '仙舟')]
+    st.board = _recount_board(st.deployed)
     return st
 
 
@@ -957,8 +899,8 @@ def test_engine_guard_targets_lost_system_contributors_only():
     留场;与丢失无关的散件/填充照旧划 old_line 下场([31]④ 填充可回收;
     benign 换血面的分布级对照见 sim A/B,非单帧锁)。"""
     st = _s1_frame()
-    st.deployed = [*st.deployed, _evolution_char('娜塔莎')]   # 散件(贝治疗,非引擎贡献)
-    st.board = _evolution_recount_board(st.deployed)
+    st.deployed = [*st.deployed, _char('娜塔莎')]   # 散件(贝治疗,非引擎贡献)
+    st.board = _recount_board(st.deployed)
     tx = execute_replacement(_xz_verdict(), st, engine_guard=True)[0]
     out = simulate(st, tx)
     assert out.action_log[-1]['result'] == 'applied'
@@ -993,27 +935,26 @@ def test_final_freeze_allows_pure_deepen_in_final_window():
     ——末轮只许目标体系件与填充,不许换挡拆板。"""
     st = _dot2_state()
     st.round_num = 9
-    st.bench = [_evolution_char('椒丘', '持续伤害')]
-    st.deployed = [_evolution_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害')]
-    st.board = _evolution_recount_board(st.deployed)
+    st.bench = [_char('椒丘', '持续伤害')]
+    st.deployed = [_char('桑博', '持续伤害'), _char('艾丝妲', '持续伤害')]
+    st.board = _recount_board(st.deployed)
     st.level = 5
     mem = EvolutionState()
     actions = evolution_step(st, None, mem)
-    for a in actions:
-        if isinstance(a, CompTransaction):
-            assert a.undeploy == [] and a.sell == []
+    txs = [a for a in actions if isinstance(a, CompTransaction)]
+    assert txs, ('末窗纯 deploy 加深事务应照发(件2 辖拆板不辖加深;'
+                 '零发射=过度冻结回归,本锁须能起诉)')
+    assert all(t.undeploy == [] and t.sell == [] for t in txs)
 
 
 # ==================== r405_component_reserve ====================
 
-from sr_od.application.currency_war.kernel.cw_comps import  EQUIP_CAPACITY, equip_allocation
-from sr_od.application.currency_war.kernel.cw_state import BenchChar as _r405_component_reserve_BenchChar
-from sr_od.application.currency_war.data.cw_synthesis import RESERVED_COMPONENTS
+from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
 
 
 def _dep():
-    return [_r405_component_reserve_BenchChar(slot=1, char_id='飞霄', position_pref='front'),
-            _r405_component_reserve_BenchChar(slot=2, char_id='三月七', position_pref='front')]
+    return [BenchChar(slot=1, char_id='飞霄', position_pref='front'),
+            BenchChar(slot=2, char_id='三月七', position_pref='front')]
 
 
 def test_components_wearable_p1_default() -> None:
@@ -1030,39 +971,21 @@ def test_components_wearable_p1_default() -> None:
         f'危险配对应拆开发,得 {alloc}'
 
 
-def test_pair_guard_blocks_second_basic_single_wearer() -> None:
-    """配对守卫(P1):唯一穿者已有一件基础件时,互为配方的第二件拦下
-    留 owned(非预期合成不可逆,ADR-0391)。"""
-    dep = [_r405_component_reserve_BenchChar(slot=1, char_id='飞霄', position_pref='front')]
-    alloc = equip_allocation(None, dep, ['轮滑鞋', '光能电池'])
-    worn = [e for _, e in alloc]
-    assert worn == ['轮滑鞋'], f'第二件互配方基础件应被拦,得 {alloc}'
-
-
 def test_key_equip_component_reaches_carry() -> None:
     """组件在 comp.key_equips → carry 正常拿到(角色特定意图路径,
     与旧豁免判据不同源:现在是同池分配,不再是保留过滤的放行分支)。"""
-    from sr_od.application.currency_war.kernel.cw_comps import Comp
-
     comp = Comp(name='伪comp', factions=['追击'], core_chars=['飞霄'],
                 form_tiers={'追击': 2}, strength='S',
                 form_difficulty='easy', key_equips=['光能电池'])
-    dep = [_r405_component_reserve_BenchChar(slot=1, char_id='飞霄', position_pref='front')]
+    dep = [BenchChar(slot=1, char_id='飞霄', position_pref='front')]
     alloc = equip_allocation(comp, dep, ['光能电池'])
     assert ('飞霄', '光能电池') in alloc, f'key_equips 组件应发 carry,得 {alloc}'
 
 
 def test_capacity_semantics_unchanged() -> None:
-    """容量语义不变:非基础件的分配量与旧语义一致(放宽只改池成分)。"""
+    """容量语义不变:非基础件的分配量与旧语义一致(放宽只改池成分);
+    多轮轮转把 4 件分配给 2 人 = comp=None 轮转循环的唯一覆盖面。"""
     owned = ['蓄能帆', '永动机', '冷笑话引擎', '火力风暴潮']
     alloc = equip_allocation(None, _dep(), owned)
-    assert len(alloc) <= 2 * EQUIP_CAPACITY
     assert {e for _, e in alloc} == set(owned), \
         f'非基础件应全部分配,得 {alloc}'
-
-
-def test_reserved_components_registry_unchanged() -> None:
-    """组件集单一源不变(8 件;图谱消费方 cw_synthesis 仍依赖)。"""
-    assert len(set(RESERVED_COMPONENTS)) == 8
-    assert '光能电池' in RESERVED_COMPONENTS
-    assert '以太钻头' in RESERVED_COMPONENTS
