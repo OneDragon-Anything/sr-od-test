@@ -1,14 +1,15 @@
-"""货币战争包布局守卫(分包重构 DESIGN §3.2/§2;期5 补遗 T3)。
+"""货币战争包布局守卫(桶依赖矩阵沿革见 ADR-0477;豁免边已随其段 1 消亡)。
 
 三件守卫,锁「结构」不锁「形状」(行数/行段不入断言):
-1. 桶依赖矩阵:包内全部 import 边(含根包属性式按符号解析)必须落在 §3.2 矩阵
+1. 桶依赖矩阵:包内全部 import 边(含根包属性式按符号解析)必须落在矩阵
    合法向内(唯一历史豁免边 decision→strategy_v1 已随买层接管批消亡,ADR-0477)。
 2. 桶成员完备:包内每个 .py 模块必须解析到已声明桶,不允许 '?' 盲区(scan_v2
    教训:盲区 = 守卫不可见,新文件落错位置时矩阵锁会假绿)。
 3. 包根顶层布局:包根只允许已声明的桶子目录 + app/tools 壳文件(结构契约;
    新增顶层文件 = 改本守卫的清单并说明归属,防根包再堆积)。
 
-桶清单 = DESIGN §2 归类表(单一源);改动归类须同改本文件三张表。
+桶清单与合法矩阵 = 本文件三张表(单一源,架构裁决自持;原分包设计稿未入
+docs 树已失存,退役/豁免边沿革的持久锚 = ADR-0477);改动归类须同改三张表。
 """
 from __future__ import annotations
 
@@ -30,9 +31,9 @@ BUCKET_DIRS: dict[str, str] = {
     'sim': 'sim',
     'telemetry': 'telemetry',
     'operations': 'app',
-    'strategies': 'strategies',   # 策略注册壳+impl 实现本体(策略统一迁移批;顶层壳可注册,impl 子包 manager 扫描忽略)
+    'strategies': 'strategies',   # 策略注册壳+impl 实现本体(顶层壳可注册,impl 子包 manager 扫描忽略)
     'tools': 'tools',
-    'knowledge': 'knowledge',   # 处死计划批 0 知识层符号包(redesign/03 批 0)
+    'knowledge': 'knowledge',   # 知识层符号包(数据/纯函数叶子)
 }
 
 # 包根散置文件 → 桶(app/tools 壳;新增须入册)
@@ -44,7 +45,6 @@ ROOT_FILES: dict[str, str] = {
     'currency_war_run_record': 'app',
     'decision_assembly': 'app',
     'prep_actions': 'app',
-    'cw_screen_prep': 'app',
     'run_state': 'app',
     # 轻量画面状态判定(模块 docstring:仿 sim_uni_screen_state;只依赖
     # one_dragon 框架原语,供上层兜底 op 复用对局中判定单一源)——归属 app 桶
@@ -60,14 +60,14 @@ ROOT_FILES: dict[str, str] = {
     'cw_game_ports': 'kernel',
 }
 
-# DESIGN §3.2 目标依赖矩阵(期6 §4.4 ledger_hooks 归属)
+# 目标依赖矩阵(telemetry 含 ledger_hooks 归属;strategy_v1 待删桶退役沿革 = ADR-0477)
 LEGAL_EDGES: dict[str, set[str]] = {
     'data': set(),
-    'kernel': {'data', 'knowledge'},   # knowledge = 批 0 迁出符号的权威副本(数据半部)
+    'kernel': {'data', 'knowledge'},   # knowledge = 迁出符号的权威副本(数据半部)
     # strategies = 策略注册壳(顶层)+ impl 实现本体(纯逻辑:接口基类/
     # 主流程驱动核/mandate_v1 机器)。impl 只依 data/kernel;顶层壳依 app
     # 桶 decision_assembly(装配缝 obs→Snapshot,adapter 分拆先例)。
-    'strategies': {'data', 'kernel', 'app'},   # decision 注册壳已随 v2 退役批物理删除,死许可同步清(2026-09-03)
+    'strategies': {'data', 'kernel', 'app'},   # decision 注册壳已随 v2 退役物理删除,死许可同步清(ADR-0477)
     'obs': {'data', 'kernel'},
     'sim': {'data', 'kernel', 'telemetry', 'strategies'},
     'telemetry': {'data', 'kernel', 'obs', 'sim', 'knowledge'},

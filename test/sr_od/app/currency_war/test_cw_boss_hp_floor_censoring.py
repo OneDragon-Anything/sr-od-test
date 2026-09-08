@@ -2,8 +2,9 @@
 """批39 新检查 check_boss_hp_floor_censoring 的 sr-od-test 锁。
 
 来源:压测官批39(报告 sim_压测_批39/报告.md);r9 boss 语料判读口径
-守卫。覆盖:删失披露 note/killed 断裂红/败局 hp 未降红/胜局不辖/
-无 boss 行不辖/显式 hp_before 键优先。
+守卫。覆盖:删失披露 note(hp∈{0,1})/killed 断裂红/败局 hp 未降红/
+hp_after 缺失红(批40)/胜局不辖/无 boss 行不辖/显式 hp_before 键优先/
+跨 run 不回填、同 run 回填照常(批41)。
 
 
 出处:docs/develop/currency_war/decisions/0307-boss-hp0-semantics-reversal.md(2026-08-31 测试瘦身批考证补记)。"""
@@ -26,7 +27,6 @@ def _row(nt: str = 'boss', killed: bool | None = False,
 class TestBossHpFloorCensoring:
     def test_censored_disclosure(self) -> None:
         """killed=False 且 hp_after==1 → 不红但 censor_note 披露行号。"""
-        rows = [_row(hp_after=1)]  # 上一行缺省,i=0 无 hp_before
         rows = [{'run_id': 'run_x', 'round_num': 8, 'node_type': '普通战斗',
                  'killed': False, 'hp_after': 20}, _row(hp_after=1)]
         r = chk(rows)

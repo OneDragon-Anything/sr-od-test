@@ -12,7 +12,8 @@ I3 core 优先:comp 在场时,通用件先填满 core 才轮非 core
    (r134 具名样本背书——用户质询「为什么给砂金」:反甲白厄线 3 件通用
    应由 core 白厄吃满容量 3,非 core 砂金/赛飞儿 0 件,核心换血摩擦最小)
 I4 不超发:输出总条数 ≤ owned 总数(每件至多一次)
-I5 无 comp 保持兜底序:comp=None 时前排先(deployed 原序)
+I5 无 comp 轮转保序:comp=None 按 deployed 原序轮转(r232 改轮转,
+   前排先入序;全序断言判别「deployed 原序」与「按行排序」两种实现)
 """
 import itertools
 import sys
@@ -22,7 +23,6 @@ import pytest
 sys.path.insert(0, 'src')
 
 from sr_od.application.currency_war.kernel.cw_comps import (
-    COMMIT_FRAC,
     EQUIP_CAPACITY,
     Comp,
     equip_allocation,
@@ -117,11 +117,16 @@ def test_allocation_invariants(ci, di, oi):
                         f'但非 core 拿了 {non_core_got} 件')
 
 
-def test_no_comp_front_first():
-    """I5:comp=None 保持 deployed 序(前排先)。"""
+def test_no_comp_rotation_keeps_deployed_order():
+    """I5:comp=None 轮转按 deployed 原序(前排先入序;r232 轮转不改序)。
+
+    4 人 front/back 交错帧:deployed 原序 ≠ 前排排序(翡翠 front 但序 4)
+    ——只断首元素的旧形态对「按行排序」实现不红,全序断言才有判别力。
+    2 人轮转 + 容量扣减面由 test_cw_target_matching
+    ::test_equip_allocation_capacity_and_fallback 承载,两帧互补。"""
     dep = DEPLOYED_SETS[2]
     alloc = equip_allocation(None, dep, ['a', 'b', 'c', 'd'])
-    assert alloc[0][0] == '砂金', '无 comp 时按 deployed 原序(前排先)'
+    assert alloc == [(d.char_id, e) for d, e in zip(dep, 'abcd')], alloc
 
 
 # ----- dd-015 后补:阵营星徽排除同阵营角色(复盘 g_20260902_181254 定谳) -----
@@ -131,13 +136,18 @@ def _mk_dep(char_id, row='back', slot=1):
 
 
 def test_emblem_not_allocated_to_same_faction():
-    """列车同行星徽不发给自报列车同行的三月七,改发非同阵营角色或留 owned。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    """列车同行星徽不发同阵营三月七(复盘 g_20260902_181254 定谳)。
+
+    core 艾丝妲 occupied 穿满 3 件容量归零,星徽落到非 core 兜底位——
+    无守卫时三月七(注册表自报列车同行)必得件,守卫在位则星徽无人可穿
+    留 owned(原帧 core 容量未满、星徽必被非同阵营 core 先拿,守卫删除
+    后该断言仍绿 = 零判别力,故改穿满帧)。"""
     deploy = [_mk_dep('艾丝妲', slot=1), _mk_dep('三月七', slot=2)]
     out = equip_allocation(
         _mk_comp(['艾丝妲']), deploy, ['列车同行星徽'],
-        {('back', 1): [], ('back', 2): []})
+        {('back', 1): ['x', 'y', 'z'], ('back', 2): []})
     assert all(not (c == '三月七' and e == '列车同行星徽') for c, e in out), out
+    assert all(e != '列车同行星徽' for _, e in out), '守卫在位:同阵营无人可穿,星徽留 owned'
 
 
 def test_emblem_allowed_to_other_faction():
