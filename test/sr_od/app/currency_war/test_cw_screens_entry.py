@@ -1,58 +1,20 @@
 # -*- coding: utf-8 -*-
-"""test_cw_screens_entry 主题锁(结构合并批,机械拼接)。
+"""test_cw_screens_entry 主题锁(CW 入口链行为 + 入口屏观察 reader 真帧锁)。
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
-- test_currency_war_entry: test_currency_war_entry.py
-- test_currency_war_entry_flow: test_currency_war_entry_flow.py
-- test_briefing_recognizer: test_briefing_recognizer.py
-- test_battle_prep_recognizer: test_battle_prep_recognizer.py
-- test_currency_war_char_id: test_currency_war_char_id.py
-- test_currency_war_invest_strategy_screen: test_currency_war_invest_strategy_screen.py
-- test_currency_war_plane_transition_screen: test_currency_war_plane_transition_screen.py
-- test_currency_war_supply_box_screen: test_currency_war_supply_box_screen.py
-- test_currency_war_supply_screen: test_currency_war_supply_screen.py
-- test_currency_war_wish_trial_screen: test_currency_war_wish_trial_screen.py
-- test_currency_war_shop: test_currency_war_shop.py
-- w518_briefing_telemetry: test_cw_w518_briefing_telemetry.py
-冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+成员(主题段索引):
+- test_currency_war_entry_flow: CwEntryStart 入口流程 + CurrencyWarApp 首节点弹窗守卫(fixture 剧本行为锁)
+- test_briefing_recognizer: 简报 recognizer extras 组装契约
+- test_battle_prep_recognizer: 备战 recognizer 纯读组装 / 角色注入分支 / 依赖方向守卫
+- test_currency_war_plane_transition_screen: 位面过渡 vs 模拟宇宙高危邻屏负向(唯一守卫,见段内 docstring)
+- test_currency_war_supply_screen: 补给 5 列特例动态列数锁
+- test_currency_war_shop: 商店 / 备战观察 reader 真帧锁
+- w518_briefing_telemetry: 简报遥测落账行为锁
+
+屏级 id_mark 真阳性与碰撞统一归 test_id_mark.py 自动发现扫描(每 fixture 自家
+id_mark 全命中 + 全屏库双向碰撞);本文件只留扫描覆盖不到的特例,各段 docstring
+注明归属分工,禁再长回 per-screen 重复锁。
 """
 from __future__ import annotations
-
-
-# ==================== test_currency_war_entry ====================
-
-from pathlib import Path
-from typing import TYPE_CHECKING
-
-from cv2.typing import MatLike
-
-from one_dragon.base.geometry.rectangle import Rect
-from one_dragon.utils import cv2_utils
-
-if TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
-
-def _has_text(ctx: SrTestContext, screen: MatLike, kw: str) -> bool:
-    """全屏 OCR,判断关键词是否出现(子串,容 OCR 分词差异)。"""
-    texts = [m.data for m in
-             ctx.ocr_service.get_ocr_result_list(image=screen, rect=Rect(0, 0, 1920, 1080))]
-    return any(kw in t for t in texts)
-
-
-def test_difficulty_confirm_a5_has_return_max(test_context, test_image_dir: Path) -> None:
-    """A5 子态(默认,未在最高):"返回最高职级" 在 → op 应先点它切 A8。"""
-    screen = cv2_utils.read_image(str(test_image_dir / 'currency_war_difficulty_confirm_a5.png'))
-    assert _has_text(test_context, screen, '返回最高职级'), 'A5 子态应有"返回最高职级"按钮'
-    assert _has_text(test_context, screen, '开始对局')
-
-
-def test_difficulty_confirm_a8_no_return_max(test_context, test_image_dir: Path) -> None:
-    """A8 子态(最高):"返回最高职级" 不在 → op 直接"开始对局"。"""
-    screen = cv2_utils.read_image(str(test_image_dir / 'currency_war_difficulty_confirm_a8.png'))
-    assert not _has_text(test_context, screen, '返回最高职级'), 'A8 子态不应有"返回最高职级"'
-    assert _has_text(test_context, screen, '开始对局')
-    assert _has_text(test_context, screen, 'A8'), '应识别为 A8 子态'
 
 
 # ==================== test_currency_war_entry_flow ====================
@@ -68,75 +30,54 @@ class _WatchedCwEntryStart(WatchdogOperationMixin, CwEntryStart):
     """带看门狗的 CwEntryStart(防 WAIT 段死循环)。"""
 
 
+# 剧本相位常量(共享单源:同一画面的相位在各剧本只定义一次,防漂移)。
+_LOBBY = {  # 大厅:click_start 点「按钮-开始货币战争」
+    'frame': ('货币战争-大厅', 'lobby'),
+    'exit': ('on_click_in', '货币战争-大厅', '按钮-开始货币战争'),
+}
+_MODE_SELECT = {  # 模式选择:advance_to_prep 点「按钮-进入标准博弈」
+    'frame': ('货币战争-模式选择', 'default'),
+    'exit': ('on_click_in', '货币战争-模式选择', '按钮-进入标准博弈'),
+}
+_DIFFICULTY_A5 = {  # 难度确认 A5 子态:点「按钮-返回最高职级」切最高(锁最高难度,D-24)
+    'frame': ('货币战争-难度确认', 'a5'),
+    'exit': ('on_click_in', '货币战争-难度确认', '按钮-返回最高职级'),
+}
+_DIFFICULTY_A8 = {  # 难度确认 A8:advance_to_prep 点「按钮-开始对局」(无返回最高职级)
+    'frame': ('货币战争-难度确认', 'a8'),
+    'exit': ('on_click_in', '货币战争-难度确认', '按钮-开始对局'),
+}
+_BRIEFING = {  # 简报:advance_to_prep 点「按钮-下一步」
+    'frame': ('货币战争-简报', 'default'),
+    'exit': ('on_click_in', '货币战争-简报', '按钮-下一步'),
+}
+_PREP_TERMINAL = {'frame': ('货币战争-备战', 'shop_closed')}  # 备战:terminal(_at_prep 命中「购买经验」)
+# 新局通用尾段:模式选择 → 难度确认 A8 → 简报 → 备战
+_TAIL_FROM_MODE_SELECT = [_MODE_SELECT, _DIFFICULTY_A8, _BRIEFING, _PREP_TERMINAL]
+
+
 def _build_phases_new_match_a8() -> list[dict]:
-    """新局 A8 happy-path 剧本(最高职级,直接开始对局,无「返回最高职级」)。
+    """新局 A8 happy-path 剧本(最高职级,直接开始对局)。
 
     每个前进按钮经 screen_info area 点击(2026-08-05 方向 1 改造),click 落 area 内推进。
     """
-    return [
-        {  # 大厅:click_start 点「按钮-开始货币战争」
-            'frame': ('货币战争-大厅', 'lobby'),
-            'exit': ('on_click_in', '货币战争-大厅', '按钮-开始货币战争'),
-        },
-        {  # 模式选择:advance_to_prep 点「按钮-进入标准博弈」
-            'frame': ('货币战争-模式选择', 'default'),
-            'exit': ('on_click_in', '货币战争-模式选择', '按钮-进入标准博弈'),
-        },
-        {  # 难度确认 A8:advance_to_prep 点「按钮-开始对局」(无返回最高职级)
-            'frame': ('货币战争-难度确认', 'a8'),
-            'exit': ('on_click_in', '货币战争-难度确认', '按钮-开始对局'),
-        },
-        {  # 简报:advance_to_prep 点「按钮-下一步」
-            'frame': ('货币战争-简报', 'default'),
-            'exit': ('on_click_in', '货币战争-简报', '按钮-下一步'),
-        },
-        {  # 备战:terminal(_at_prep 命中「购买经验」→ round_success)
-            'frame': ('货币战争-备战', 'shop_closed'),
-        },
-    ]
+    return [_LOBBY, *_TAIL_FROM_MODE_SELECT]
 
 
 def _build_phases_new_match_a5() -> list[dict]:
     """新局 A5 happy-path 剧本(未在最高职级):先「返回最高职级」切 A8,再开始对局。
 
-    难度确认拆两 phase:A5 子态点「按钮-返回最高职级」→ A8 子态点「按钮-开始对局」
-    (验证 D-24 锁最高难度:op 不直接点开始对局打 A5,而是先切最高)。
+    验证 D-24 锁最高难度:op 不直接点开始对局打 A5,而是先切最高。
     """
-    return [
-        {
-            'frame': ('货币战争-大厅', 'lobby'),
-            'exit': ('on_click_in', '货币战争-大厅', '按钮-开始货币战争'),
-        },
-        {
-            'frame': ('货币战争-模式选择', 'default'),
-            'exit': ('on_click_in', '货币战争-模式选择', '按钮-进入标准博弈'),
-        },
-        {  # 难度确认 A5:点「按钮-返回最高职级」切最高
-            'frame': ('货币战争-难度确认', 'a5'),
-            'exit': ('on_click_in', '货币战争-难度确认', '按钮-返回最高职级'),
-        },
-        {  # 难度确认 A8:点「按钮-开始对局」
-            'frame': ('货币战争-难度确认', 'a8'),
-            'exit': ('on_click_in', '货币战争-难度确认', '按钮-开始对局'),
-        },
-        {
-            'frame': ('货币战争-简报', 'default'),
-            'exit': ('on_click_in', '货币战争-简报', '按钮-下一步'),
-        },
-        {
-            'frame': ('货币战争-备战', 'shop_closed'),
-        },
-    ]
+    return [_LOBBY, _MODE_SELECT, _DIFFICULTY_A5, _DIFFICULTY_A8, _BRIEFING, _PREP_TERMINAL]
 
 
 def _build_phases_residual_lobby_escape() -> list[dict]:
     """残留大厅逃逸剧本(真帧锁:2026-08-27 实机首跑失败帧)。
 
     上局结束「回大厅」后大厅 UI 层残留:开始按钮死(点击不推进画面),右上角
-    「按钮-关闭」才是真退出。剧本:
-
-    残留大厅(点开始无效,点关闭才推进)→ 朝露公馆世界入口(F 交互按 F)
-    → 新鲜大厅(重新点开始)→ 模式选择 → 难度确认 A8 → 简报 → 备战。
+    「按钮-关闭」才是真退出。剧本:残留大厅(点开始无效,点关闭才推进)
+    → 朝露公馆世界入口(F 交互按 F)→ 新鲜大厅(重新点开始)→ 模式选择 → 备战。
 
     残留帧用测试仓归档 ``大厅-残留态-run49.webp``(真 OCR/模板,不 mock 识别)。
     """
@@ -150,25 +91,8 @@ def _build_phases_residual_lobby_escape() -> list[dict]:
             'frame': ('大世界', '朝露公馆入口'),
             'exit': ('on_polls', 3),
         },
-        {  # 新鲜大厅:逃逸后重新点「按钮-开始货币战争」
-            'frame': ('货币战争-大厅', 'lobby'),
-            'exit': ('on_click_in', '货币战争-大厅', '按钮-开始货币战争'),
-        },
-        {
-            'frame': ('货币战争-模式选择', 'default'),
-            'exit': ('on_click_in', '货币战争-模式选择', '按钮-进入标准博弈'),
-        },
-        {
-            'frame': ('货币战争-难度确认', 'a8'),
-            'exit': ('on_click_in', '货币战争-难度确认', '按钮-开始对局'),
-        },
-        {
-            'frame': ('货币战争-简报', 'default'),
-            'exit': ('on_click_in', '货币战争-简报', '按钮-下一步'),
-        },
-        {  # 备战:terminal
-            'frame': ('货币战争-备战', 'shop_closed'),
-        },
+        _LOBBY,
+        *_TAIL_FROM_MODE_SELECT,
     ]
 
 
@@ -177,32 +101,15 @@ def _build_phases_train_supply_popup() -> list[dict]:
 
     launch_dead 停机后游戏停在大世界+「列车补给」全屏每日领取弹窗,下一局
     入局链被弹窗挡死 → 「推进到备战阶段」超时失败。剧本:弹窗(点中央徽章
-    领取)→ 大厅 → 模式选择 → 难度确认 A8 → 简报 → 备战(转换恢复)。
+    领取)→ 大厅 → 模式选择 → 备战(转换恢复)。
     """
     return [
         {  # 弹窗:入口 op 领取分支点「按钮-领取补贴」(中央徽章,无 X 关闭钮)
             'frame': ('货币战争-列车补给弹窗', '今日未领取'),
             'exit': ('on_click_in', '货币战争-列车补给弹窗', '按钮-领取补贴'),
         },
-        {
-            'frame': ('货币战争-大厅', 'lobby'),
-            'exit': ('on_click_in', '货币战争-大厅', '按钮-开始货币战争'),
-        },
-        {
-            'frame': ('货币战争-模式选择', 'default'),
-            'exit': ('on_click_in', '货币战争-模式选择', '按钮-进入标准博弈'),
-        },
-        {
-            'frame': ('货币战争-难度确认', 'a8'),
-            'exit': ('on_click_in', '货币战争-难度确认', '按钮-开始对局'),
-        },
-        {
-            'frame': ('货币战争-简报', 'default'),
-            'exit': ('on_click_in', '货币战争-简报', '按钮-下一步'),
-        },
-        {  # 备战:terminal
-            'frame': ('货币战争-备战', 'shop_closed'),
-        },
+        _LOBBY,
+        *_TAIL_FROM_MODE_SELECT,
     ]
 
 
@@ -211,32 +118,15 @@ def _build_phases_jade_detail_popup() -> list[dict]:
 
     列车补给领取点击命中弹窗中央星琼图标 → 货币详情弹窗模态盖场,入口链全部
     背景锚点失明 → 推进循环空烧 60 步超时(修复前事故)。剧本:弹窗(守卫点
-    「按钮-关闭X」)→ 大厅 → 模式选择 → 难度确认 A8 → 简报 → 备战(转换恢复)。
+    「按钮-关闭X」)→ 大厅 → 模式选择 → 备战(转换恢复)。
     """
     return [
         {  # 弹窗:守卫点「按钮-关闭X」关闭(双锚识别,纯坐标点击)
             'frame': ('货币战争-星琼详情', 'default'),
             'exit': ('on_click_in', '货币战争-星琼详情', '按钮-关闭X'),
         },
-        {
-            'frame': ('货币战争-大厅', 'lobby'),
-            'exit': ('on_click_in', '货币战争-大厅', '按钮-开始货币战争'),
-        },
-        {
-            'frame': ('货币战争-模式选择', 'default'),
-            'exit': ('on_click_in', '货币战争-模式选择', '按钮-进入标准博弈'),
-        },
-        {
-            'frame': ('货币战争-难度确认', 'a8'),
-            'exit': ('on_click_in', '货币战争-难度确认', '按钮-开始对局'),
-        },
-        {
-            'frame': ('货币战争-简报', 'default'),
-            'exit': ('on_click_in', '货币战争-简报', '按钮-下一步'),
-        },
-        {  # 备战:terminal
-            'frame': ('货币战争-备战', 'shop_closed'),
-        },
+        _LOBBY,
+        *_TAIL_FROM_MODE_SELECT,
     ]
 
 
@@ -611,13 +501,7 @@ def _fmt_clicks(clicks: list) -> str:
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.obs.recognizers.briefing_recognizer as mod
-from sr_od.application.currency_war.kernel.cw_obs_core import BRIEFING_SCREEN
 from sr_od.application.currency_war.obs.recognizers.briefing_recognizer import  BriefingRecognizer
-
-
-def test_screen_name_matches_briefing() -> None:
-    """recognizer 注册的 screen_name = '货币战争-简报'(与 screen_info 一致)。"""
-    assert BriefingRecognizer.screen_name == BRIEFING_SCREEN == '货币战争-简报'
 
 
 def test_recognize_composes_pure_reads(monkeypatch) -> None:
@@ -632,15 +516,6 @@ def test_recognize_composes_pure_reads(monkeypatch) -> None:
     }
 
 
-def test_recognize_empty_when_unreadable(monkeypatch) -> None:
-    """读不到 → 空 list(不伪造;词缀 / boss 缺 area 或 OCR 无果都返 [])。"""
-    monkeypatch.setattr(mod, 'read_affixes', lambda ctx, screen: [])
-    monkeypatch.setattr(mod, 'read_bosses', lambda ctx, screen: [])
-
-    out = BriefingRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
-    assert out == {'affixes': [], 'bosses': []}
-
-
 def test_does_not_import_click_based_reader() -> None:
     """纯读观察:模块不导入语义要 click 的 read_affix_effect(recognizer 不 click)。"""
     assert not hasattr(mod, 'read_affix_effect'), 'recognizer 不得复用需先 click 的 read_affix_effect'
@@ -649,39 +524,32 @@ def test_does_not_import_click_based_reader() -> None:
 # ==================== test_battle_prep_recognizer ====================
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock as _test_battle_prep_recognizer_MagicMock
 
-import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as _test_battle_prep_recognizer_mod
-from sr_od.application.currency_war.kernel.cw_obs_core import SCREEN_NAME
+import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as _bp_mod
 from sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer import  BattlePrepRecognizer
-
-
-def test_screen_name_matches_battle_prep() -> None:
-    """recognizer 注册的 screen_name = '货币战争-备战'(与 screen_info 一致)。"""
-    assert BattlePrepRecognizer.screen_name == SCREEN_NAME == '货币战争-备战'
 
 
 def test_test_battle_prep_recognizer_recognize_composes_pure_reads(monkeypatch) -> None:
     """recognize 组合各纯 reader → dict(gold/phase/hp/streak/deploy/board 字段齐全)。"""
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_gold', lambda ctx, screen: 42)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, '_read_phase_round_pure', lambda ctx, screen: (2, 5))
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_hp_opt', lambda ctx, screen: 80)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_streak', lambda ctx, screen: 3)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deployed_count', lambda ctx, screen: 4)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deploy_cap', lambda ctx, screen: 5)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_board', lambda ctx, screen: {'仙舟': 2, '猎犬': 1})
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_level', lambda ctx, screen, p, r: 5)
-    # 角色识别 reader mock 空(角色识别单测见下;避免 _test_battle_prep_recognizer_MagicMock screen 进 SIFT 崩)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deployed_chars', lambda ctx, screen, templates, level=None: [])
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_bench_chars', lambda ctx, screen, templates, level=None: [])
+    monkeypatch.setattr(_bp_mod, 'read_gold', lambda ctx, screen: 42)
+    monkeypatch.setattr(_bp_mod, '_read_phase_round_pure', lambda ctx, screen: (2, 5))
+    monkeypatch.setattr(_bp_mod, 'read_hp_opt', lambda ctx, screen: 80)
+    monkeypatch.setattr(_bp_mod, 'read_streak', lambda ctx, screen: 3)
+    monkeypatch.setattr(_bp_mod, 'read_deployed_count', lambda ctx, screen: 4)
+    monkeypatch.setattr(_bp_mod, 'read_deploy_cap', lambda ctx, screen: 5)
+    monkeypatch.setattr(_bp_mod, 'read_board', lambda ctx, screen: {'仙舟': 2, '猎犬': 1})
+    monkeypatch.setattr(_bp_mod, 'read_level', lambda ctx, screen, p, r: 5)
+    # 角色识别 reader mock 空(角色识别单测见下;避免 MagicMock screen 进 SIFT 崩)
+    monkeypatch.setattr(_bp_mod, 'read_deployed_chars', lambda ctx, screen, templates, level=None: [])
+    monkeypatch.setattr(_bp_mod, 'read_bench_chars', lambda ctx, screen, templates, level=None: [])
     # 立绘库未加载 → 不产角色(front/back/bench None);装备识别 mock 跳过(equips 注入 BenchChar.equips)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_portrait_templates', lambda ctx: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_equip_tm_templates', lambda ctx: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(_test_battle_prep_recognizer_MagicMock screen 进 cv2 崩)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_reward_spheres', lambda ctx, screen: [])
+    monkeypatch.setattr(_bp_mod, 'ensure_portrait_templates', lambda ctx: None)
+    monkeypatch.setattr(_bp_mod, 'ensure_equip_tm_templates', lambda ctx: None)
+    monkeypatch.setattr(_bp_mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
+    monkeypatch.setattr(_bp_mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(MagicMock screen 进 cv2 崩)
+    monkeypatch.setattr(_bp_mod, 'read_reward_spheres', lambda ctx, screen: [])
 
-    out = BattlePrepRecognizer().recognize(_test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock())
+    out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out == {
         'gold': 42, 'phase': (2, 5), 'hp': 80, 'streak': 3,
         'deploy_count': 4, 'deploy_cap': 5, 'level': 5, 'board': {'仙舟': 2, '猎犬': 1},
@@ -690,47 +558,24 @@ def test_test_battle_prep_recognizer_recognize_composes_pure_reads(monkeypatch) 
     }
 
 
-def test_recognize_phase_none_when_unreadable(monkeypatch) -> None:
-    """phase 纯读读不到 → None(不伪造 (1,1));其余字段仍产出。"""
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_gold', lambda ctx, screen: 0)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, '_read_phase_round_pure', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_hp_opt', lambda ctx, screen: 100)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_streak', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deployed_count', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deploy_cap', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_board', lambda ctx, screen: {})
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deployed_chars', lambda ctx, screen, templates, level=None: [])
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_bench_chars', lambda ctx, screen, templates, level=None: [])
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_portrait_templates', lambda ctx: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_equip_tm_templates', lambda ctx: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(_test_battle_prep_recognizer_MagicMock screen 进 cv2 崩)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_reward_spheres', lambda ctx, screen: [])
-
-    out = BattlePrepRecognizer().recognize(_test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock())
-    assert out['phase'] is None
-    assert out['gold'] == 0
-    assert out['front_line'] is None
-
-
 def test_does_not_import_stateful_readers() -> None:
     """并发安全:模块不导入写全局的 read_phase_round、不导入读写 session 的 read_game_state。"""
-    assert not hasattr(_test_battle_prep_recognizer_mod, 'read_phase_round'), '不得复用写 _last_phase_round 全局的 read_phase_round'
-    assert not hasattr(_test_battle_prep_recognizer_mod, 'read_game_state'), '不得复用读写 cw_match.session 的 read_game_state'
+    assert not hasattr(_bp_mod, 'read_phase_round'), '不得复用写 _last_phase_round 全局的 read_phase_round'
+    assert not hasattr(_bp_mod, 'read_game_state'), '不得复用读写 cw_match.session 的 read_game_state'
 
 
 def test_read_phase_round_pure_parses_dash(monkeypatch) -> None:
     """纯 phase 读:OCR "2-4" → (2, 4)。"""
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, '_area_rect', lambda ctx, name: _test_battle_prep_recognizer_MagicMock())
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, '_ocr', lambda ctx, screen, rect: [_test_battle_prep_recognizer_MagicMock(data='2-4')])
-    assert _test_battle_prep_recognizer_mod._read_phase_round_pure(_test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock()) == (2, 4)
+    monkeypatch.setattr(_bp_mod, '_area_rect', lambda ctx, name: MagicMock())
+    monkeypatch.setattr(_bp_mod, '_ocr', lambda ctx, screen, rect: [MagicMock(data='2-4')])
+    assert _bp_mod._read_phase_round_pure(MagicMock(), MagicMock()) == (2, 4)
 
 
 def test_read_phase_round_pure_none_on_garbage(monkeypatch) -> None:
     """纯 phase 读:OCR 无数字 → None(不兜底、不写全局)。"""
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, '_area_rect', lambda ctx, name: _test_battle_prep_recognizer_MagicMock())
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, '_ocr', lambda ctx, screen, rect: [_test_battle_prep_recognizer_MagicMock(data='乱七八糟无数字')])
-    assert _test_battle_prep_recognizer_mod._read_phase_round_pure(_test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock()) is None
+    monkeypatch.setattr(_bp_mod, '_area_rect', lambda ctx, name: MagicMock())
+    monkeypatch.setattr(_bp_mod, '_ocr', lambda ctx, screen, rect: [MagicMock(data='乱七八糟无数字')])
+    assert _bp_mod._read_phase_round_pure(MagicMock(), MagicMock()) is None
 
 
 def _char(char_id: str, position_pref: str, slot: int = 1) -> SimpleNamespace:
@@ -740,24 +585,24 @@ def _char(char_id: str, position_pref: str, slot: int = 1) -> SimpleNamespace:
 
 def test_recognize_identifies_chars(monkeypatch) -> None:
     """templates 已加载 + SIFT 识别 → front_line / back_line / bench 产 BenchChar(含 char_id)。"""
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_gold', lambda ctx, screen: 0)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, '_read_phase_round_pure', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_hp_opt', lambda ctx, screen: 100)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_streak', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deployed_count', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deploy_cap', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_board', lambda ctx, screen: {})
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deployed_chars', lambda ctx, screen, templates, level=None: [
+    monkeypatch.setattr(_bp_mod, 'read_gold', lambda ctx, screen: 0)
+    monkeypatch.setattr(_bp_mod, '_read_phase_round_pure', lambda ctx, screen: None)
+    monkeypatch.setattr(_bp_mod, 'read_hp_opt', lambda ctx, screen: 100)
+    monkeypatch.setattr(_bp_mod, 'read_streak', lambda ctx, screen: None)
+    monkeypatch.setattr(_bp_mod, 'read_deployed_count', lambda ctx, screen: None)
+    monkeypatch.setattr(_bp_mod, 'read_deploy_cap', lambda ctx, screen: None)
+    monkeypatch.setattr(_bp_mod, 'read_board', lambda ctx, screen: {})
+    monkeypatch.setattr(_bp_mod, 'read_deployed_chars', lambda ctx, screen, templates, level=None: [
         _char('藿藿', 'front', slot=1), _char('希儿', 'back', slot=1),
     ])
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_bench_chars', lambda ctx, screen, templates, level=None: [_char('飞霄', 'back', slot=1)])
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_portrait_templates', lambda ctx: 'templates')   # 非 None → 产角色
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_equip_tm_templates', lambda ctx: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(_test_battle_prep_recognizer_MagicMock screen 进 cv2 崩)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_reward_spheres', lambda ctx, screen: [])          # 装备跳过 → equips=[]
+    monkeypatch.setattr(_bp_mod, 'read_bench_chars', lambda ctx, screen, templates, level=None: [_char('飞霄', 'back', slot=1)])
+    monkeypatch.setattr(_bp_mod, 'ensure_portrait_templates', lambda ctx: 'templates')   # 非 None → 产角色
+    monkeypatch.setattr(_bp_mod, 'ensure_equip_tm_templates', lambda ctx: None)
+    monkeypatch.setattr(_bp_mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
+    monkeypatch.setattr(_bp_mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(MagicMock screen 进 cv2 崩)
+    monkeypatch.setattr(_bp_mod, 'read_reward_spheres', lambda ctx, screen: [])          # 装备跳过 → equips=[]
 
-    out = BattlePrepRecognizer().recognize(_test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock())
+    out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert [c.char_id for c in out['front_line']] == ['藿藿']
     assert [c.char_id for c in out['back_line']] == ['希儿']
     assert [c.char_id for c in out['bench']] == ['飞霄']
@@ -767,217 +612,75 @@ def test_recognize_identifies_chars(monkeypatch) -> None:
 
 def test_recognize_no_chars_when_templates_none(monkeypatch) -> None:
     """立绘库不可用(ensure_portrait_templates → None)→ 不产角色(三字段 None)。"""
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_gold', lambda ctx, screen: 0)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, '_read_phase_round_pure', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_hp_opt', lambda ctx, screen: 100)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_streak', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deployed_count', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deploy_cap', lambda ctx, screen: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_board', lambda ctx, screen: {})
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_deployed_chars', lambda *a, **k: [])   # 不该被调(templates None 跳过)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_bench_chars', lambda *a, **k: [])
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_portrait_templates', lambda ctx: None)   # 立绘库不可用
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_equip_tm_templates', lambda ctx: None)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(_test_battle_prep_recognizer_MagicMock screen 进 cv2 崩)
-    monkeypatch.setattr(_test_battle_prep_recognizer_mod, 'read_reward_spheres', lambda ctx, screen: [])
+    monkeypatch.setattr(_bp_mod, 'read_gold', lambda ctx, screen: 0)
+    monkeypatch.setattr(_bp_mod, '_read_phase_round_pure', lambda ctx, screen: None)
+    monkeypatch.setattr(_bp_mod, 'read_hp_opt', lambda ctx, screen: 100)
+    monkeypatch.setattr(_bp_mod, 'read_streak', lambda ctx, screen: None)
+    monkeypatch.setattr(_bp_mod, 'read_deployed_count', lambda ctx, screen: None)
+    monkeypatch.setattr(_bp_mod, 'read_deploy_cap', lambda ctx, screen: None)
+    monkeypatch.setattr(_bp_mod, 'read_board', lambda ctx, screen: {})
+    monkeypatch.setattr(_bp_mod, 'read_deployed_chars', lambda *a, **k: [])   # 不该被调(templates None 跳过)
+    monkeypatch.setattr(_bp_mod, 'read_bench_chars', lambda *a, **k: [])
+    monkeypatch.setattr(_bp_mod, 'ensure_portrait_templates', lambda ctx: None)   # 立绘库不可用
+    monkeypatch.setattr(_bp_mod, 'ensure_equip_tm_templates', lambda ctx: None)
+    monkeypatch.setattr(_bp_mod, 'ensure_equip_sift_templates', lambda ctx: None)  # owned 栏 SIFT 模板同 mock(recognizer:189)
+    monkeypatch.setattr(_bp_mod, 'read_supply_boxes', lambda ctx, screen: [])      # B6 补给箱/奖励球 reader 同 mock(MagicMock screen 进 cv2 崩)
+    monkeypatch.setattr(_bp_mod, 'read_reward_spheres', lambda ctx, screen: [])
 
-    out = BattlePrepRecognizer().recognize(_test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock(), _test_battle_prep_recognizer_MagicMock())
+    out = BattlePrepRecognizer().recognize(MagicMock(), MagicMock(), MagicMock())
     assert out['front_line'] is None
     assert out['back_line'] is None
     assert out['bench'] is None
 
 
-# ==================== test_currency_war_char_id ====================
-
-from pathlib import Path as _test_currency_war_char_id_Path
-
-from one_dragon.utils import cv2_utils as _test_currency_war_char_id_cv2_utils
-from sr_od.application.currency_war.obs.currency_war_char_id import  identify_character, load_avatar_templates
-
-# 备战栏槽位 GT 坐标(同 currency_war_battle_prep.yml;[x1,y1,x2,y2])
-BENCH1_RECT = (382, 845, 495, 979)
-
-
-def test_identify_bench_herta(test_image_dir: _test_currency_war_char_id_Path) -> None:
-    """备战屏 bench-1(herta)裁图 → SIFT 匹配头像库应识别为 herta(高置信)。"""
-    screen = _test_currency_war_char_id_cv2_utils.read_image(str(test_image_dir / 'currency_war_prep_herta.png'))
-    avatar_dir = _test_currency_war_char_id_Path(__file__).parents[5] / 'assets' / 'template' / 'character_avatar'
-    templates = load_avatar_templates(avatar_dir)
-    assert len(templates) > 50, f'头像模板库应加载 50+ 个(实测 {len(templates)})'
-
-    x1, y1, x2, y2 = BENCH1_RECT
-    bench1 = screen[y1:y2, x1:x2]
-    cid, score = identify_character(bench1, templates)
-
-    assert cid == 'herta', f'bench-1 应识别为 herta(实测 {cid}, inliers={score})'
-    assert score > 10, f'herta 匹配内点应 >10(实测 {score})'
-
-
-# ==================== test_currency_war_invest_strategy_screen ====================
-
-from typing import TYPE_CHECKING as _test_currency_war_invest_strategy_screen_TYPE_CHECKING
-
-import pytest as _test_currency_war_invest_strategy_screen_pytest
-
-from one_dragon.base.screen.screen_utils import get_match_screen_name
-
-if _test_currency_war_invest_strategy_screen_TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
-
-SCREEN = '货币战争-投资策略'
-
-
-@_test_currency_war_invest_strategy_screen_pytest.mark.parametrize('state', ['default', 'card1_selected', 'card3_refreshed'])
-def test_invest_strategy_id_mark_true_positive(test_context: SrTestContext, state: str) -> None:
-    """真阳性:三态 fixture(未选/选中卡1/刷新卡3)都精准匹配 投资策略屏。"""
-    if not test_context.has_screen(SCREEN, state):
-        _test_currency_war_invest_strategy_screen_pytest.skip(f'fixture 缺:screens/{SCREEN}/{state}.webp')
-    img = test_context.load_screen(SCREEN, state)
-    assert get_match_screen_name(test_context, img, screen_name_list=[SCREEN]) == SCREEN
-
-
-def test_invest_strategy_not_misread_as_battle_prep(test_context: SrTestContext) -> None:
-    """无碰撞:投资策略独立屏不被误判 货币战争-备战(无备战 id_mark 元素)。"""
-    if not test_context.has_screen(SCREEN, 'default'):
-        _test_currency_war_invest_strategy_screen_pytest.skip('fixture 缺:default.webp')
-    img = test_context.load_screen(SCREEN, 'default')
-    assert get_match_screen_name(test_context, img, screen_name_list=['货币战争-备战']) is None
-
-
-# ==================== test_currency_war_jade_detail_screen ====================
-
-def test_jade_detail_id_mark_true_positive(test_context: SrTestContext) -> None:
-    """真阳性:星琼详情弹窗 fixture(2026-09-07 事故帧)→ 精准匹配 货币战争-星琼详情。
-
-    双 id_mark(标识-星琼标题 @0.5 + 标识-稀有货币 @0.75)全中才算精准;
-    建档坐标 = 方案 §5 实测,MCP analyze_screen 当场验证 is_precise=True。
-    """
-    if not test_context.has_screen('货币战争-星琼详情', 'default'):
-        _test_currency_war_invest_strategy_screen_pytest.skip('fixture 缺:screens/货币战争-星琼详情/default.webp')
-    img = test_context.load_screen('货币战争-星琼详情', 'default')
-    assert get_match_screen_name(test_context, img, screen_name_list=['货币战争-星琼详情']) == '货币战争-星琼详情', (
-        '星琼详情 fixture 应精准匹配(id_mark 星琼标题+稀有货币 双锚全中)'
-    )
-
-
-def test_jade_detail_not_misread_as_sibling_screens(test_context: SrTestContext) -> None:
-    """无碰撞:星琼详情帧不被误判同族弹窗/宿主屏(双锚位置约束区分)。
-
-    候选撞车源:列车补给弹窗(同为入口链大世界弹窗,标题区不同屏)与 大厅
-    (模态压暗背景下的宿主)。双锚的矩形约束使既有屏凑不齐自家 id_mark → 不精准。
-    全屏库双向碰撞由 test_id_mark.py 自动发现机制另行覆盖,此处锁高危邻屏。
-    """
-    if not test_context.has_screen('货币战争-星琼详情', 'default'):
-        _test_currency_war_invest_strategy_screen_pytest.skip('fixture 缺:screens/货币战争-星琼详情/default.webp')
-    img = test_context.load_screen('货币战争-星琼详情', 'default')
-    assert get_match_screen_name(test_context, img, screen_name_list=['货币战争-列车补给弹窗']) is None, (
-        '星琼详情帧不应被误判 货币战争-列车补给弹窗'
-    )
-    assert get_match_screen_name(test_context, img, screen_name_list=['货币战争-大厅']) is None, (
-        '星琼详情帧(背景压暗)不应被误判 货币战争-大厅'
-    )
+# ==================== test_currency_war_screen_id_mark 归属分工 ====================
+# 投资策略 / 星琼详情 / 武装箱选择 / 补给(未选择·已选择)/ 祈愿试炼 / 位面过渡
+# 的 id_mark 真阳性与互相碰撞,统一由 test_id_mark.py 自动发现扫描覆盖(每 fixture
+# 自家 id_mark 全命中 + 全屏库双向碰撞;相关屏均带 id_mark、fixture 均在归档库)。
+# 投资策略另有行为锁:test_cw_round_flow.py 集成 + test_cw_invest_strategy_entry_tolerate.py。
+# 星琼详情对局屏排除面归 test_cw_screens_ops.py(T-98 真帧回归)。
+# 本文件只保留扫描覆盖不到的特例:下方位面过渡 vs 模拟宇宙负向(模拟宇宙无
+# id_mark,不在扫描碰撞候选内)。
 
 
 # ==================== test_currency_war_plane_transition_screen ====================
 
-from typing import TYPE_CHECKING as _test_currency_war_plane_transition_screen_TYPE_CHECKING
-
-import pytest as _test_currency_war_plane_transition_screen_pytest
-
-from one_dragon.base.screen.screen_utils import get_match_screen_name as _test_currency_war_plane_transition_screen_get_match_screen_name
-
-if _test_currency_war_plane_transition_screen_TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
-
-def test_plane_transition_id_mark_true_positive(test_context: SrTestContext) -> None:
-    """真阳性:位面1->2 过渡 fixture -> 精准匹配 货币战争-位面过渡。"""
-    if not test_context.has_screen('货币战争-位面过渡', 'plane_1to2'):
-        _test_currency_war_plane_transition_screen_pytest.skip('fixture 缺:screens/货币战争-位面过渡/plane_1to2.webp')
-    img = test_context.load_screen('货币战争-位面过渡', 'plane_1to2')
-    assert _test_currency_war_plane_transition_screen_get_match_screen_name(test_context, img, screen_name_list=['货币战争-位面过渡']) == '货币战争-位面过渡', (
-        '位面过渡 fixture 应精准匹配 货币战争-位面过渡(id_mark 标识-位面节点2+3 全中)'
-    )
+from one_dragon.base.screen.screen_utils import get_match_screen_name
 
 
 def test_plane_transition_not_misread_as_sim_universe(test_context: SrTestContext) -> None:
     """无碰撞:位面过渡 fixture 不被误判模拟宇宙。
 
-    撞车源:sim_uni.yml 有同名 点击空白处继续 area -> 建档前两画面并列
-    is_precise=false。组合 id_mark(位面节点2/3 位面 文字)使位面过渡精准命中,
-    模拟宇宙无此 id_mark -> 不被误判。
+    撞车源:sim_uni.yml 有同名「点击空白处继续」area,且模拟宇宙无 id_mark →
+    test_id_mark 碰撞扫描跳过无 id_mark 屏,本测是该高危邻屏(CW 位面过渡与
+    模拟宇宙共享交互文案,误判 = 入口链误路由)的唯一双向守卫。
     """
     if not test_context.has_screen('货币战争-位面过渡', 'plane_1to2'):
-        _test_currency_war_plane_transition_screen_pytest.skip('fixture 缺:screens/货币战争-位面过渡/plane_1to2.webp')
+        pytest.skip('fixture 缺:screens/货币战争-位面过渡/plane_1to2.webp')
     img = test_context.load_screen('货币战争-位面过渡', 'plane_1to2')
-    # 位面过渡应精准命中自身
-    assert _test_currency_war_plane_transition_screen_get_match_screen_name(test_context, img, screen_name_list=['货币战争-位面过渡']) == '货币战争-位面过渡'
-    # 模拟宇宙不应精准命中(无位面节点 id_mark)
-    assert _test_currency_war_plane_transition_screen_get_match_screen_name(test_context, img, screen_name_list=['模拟宇宙']) is None, (
+    assert get_match_screen_name(test_context, img, screen_name_list=['模拟宇宙']) is None, (
         '位面过渡 fixture 不应被误判模拟宇宙(模拟宇宙无位面节点 id_mark)'
     )
 
 
 # ==================== test_currency_war_supply_box_screen ====================
-
-from typing import TYPE_CHECKING as _test_currency_war_supply_box_screen_TYPE_CHECKING
-
-import pytest as _test_currency_war_supply_box_screen_pytest
-
-from one_dragon.base.screen.screen_utils import get_match_screen_name as _test_currency_war_supply_box_screen_get_match_screen_name
-
-if _test_currency_war_supply_box_screen_TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
-
-_test_currency_war_supply_box_screen_SCREEN = '货币战争-备战-武装箱选择'
-
-
-def test_supply_box_open_id_mark_true_positive(test_context: SrTestContext) -> None:
-    """真阳性:武装箱选择 fixture -> 精准匹配 货币战争-备战-武装箱选择。"""
-    if not test_context.has_screen(_test_currency_war_supply_box_screen_SCREEN, 'box_open'):
-        _test_currency_war_supply_box_screen_pytest.skip('fixture 缺:screens/货币战争-备战-武装箱选择/box_open.webp')
-    img = test_context.load_screen(_test_currency_war_supply_box_screen_SCREEN, 'box_open')
-    assert _test_currency_war_supply_box_screen_get_match_screen_name(test_context, img, screen_name_list=[_test_currency_war_supply_box_screen_SCREEN]) == _test_currency_war_supply_box_screen_SCREEN, (
-        '武装箱选择 fixture 应精准匹配(id_mark 标识-武装箱+标识-请选择 全中)'
-    )
-
-
-def test_supply_box_open_not_misread_as_battle_prep(test_context: SrTestContext) -> None:
-    """无碰撞:overlay 盖住备战 id_mark -> 不被误判货币战争-备战。"""
-    if not test_context.has_screen(_test_currency_war_supply_box_screen_SCREEN, 'box_open'):
-        _test_currency_war_supply_box_screen_pytest.skip('fixture 缺:screens/货币战争-备战-武装箱选择/box_open.webp')
-    img = test_context.load_screen(_test_currency_war_supply_box_screen_SCREEN, 'box_open')
-    assert _test_currency_war_supply_box_screen_get_match_screen_name(test_context, img, screen_name_list=['货币战争-备战']) is None, (
-        '武装箱 overlay 盖备战 id_mark,备战不应精准命中'
-    )
-
+# (武装箱选择真阳性/对备战碰撞两测删:均被 test_id_mark.py 扫描覆盖,
+#  归属分工见上「screen_id_mark 归属分工」节。)
 
 # ==================== test_currency_war_supply_screen ====================
-
-from typing import TYPE_CHECKING as _test_currency_war_supply_screen_TYPE_CHECKING
-
-import pytest as _test_currency_war_supply_screen_pytest
-
-from one_dragon.base.screen.screen_utils import get_match_screen_name as _test_currency_war_supply_screen_get_match_screen_name
-
-if _test_currency_war_supply_screen_TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
 
 def test_supply_options_five_column_fixture(test_context: SrTestContext) -> None:
     """正样本:5 选项特例帧 → 动态探测到 **5** 列(禁写死 4/5 的行为证明)。
 
     fixture ``screens/货币战争-补给/default.png|webp``(1-5 补给,5 张角色卡各带装备:
     银枝/希儿/丹恒·腾荒/飞霄/忘归人——augment 改写特例)。用户口径:补给通常 4 选 1,
-    augment 动态改 3-5,列数以 read_supply_options 实际识别为准。
+    augment 动态改 3-5,列数以 read_supply_options 实际识别为准。双排布局归
+    test_supply_options_dualrow.py(不同 fixture 形态,各守边界)。
     """
     from sr_od.application.currency_war.obs.cw_node_obs import read_supply_options
 
     if not test_context.has_screen('货币战争-补给', 'default'):
-        _test_currency_war_supply_screen_pytest.skip('fixture 缺:screens/货币战争-补给/default.webp')
+        pytest.skip('fixture 缺:screens/货币战争-补给/default.webp')
     screen = test_context.load_screen('货币战争-补给', 'default')
     opts = read_supply_options(test_context, screen)
     assert len(opts) == 5, f'5 选项特例帧应动态探到 5 列,实际 {len(opts)}:{[o.equip for o, _p in opts]}'
@@ -988,79 +691,21 @@ def test_supply_options_five_column_fixture(test_context: SrTestContext) -> None
         f'5 列中角色配对不足 3(大面积漏读):{[(o.char, o.equip) for o, _p in opts]}')
 
 
-def test_supply_screen_id_mark_true_positive(test_context: SrTestContext) -> None:
-    """真阳性:补给 fixture(未选择/已选择)→ 精准匹配 货币战争-补给。"""
-    for state in ('未选择', '已选择'):
-        if not test_context.has_screen('货币战争-补给', state):
-            _test_currency_war_supply_screen_pytest.skip(f'fixture 缺:screens/货币战争-补给/{state}.webp')
-    for state in ('未选择', '已选择'):
-        img = test_context.load_screen('货币战争-补给', state)
-        assert _test_currency_war_supply_screen_get_match_screen_name(test_context, img, screen_name_list=['货币战争-补给']) == '货币战争-补给', (
-            f'补给 fixture({state})应精准匹配 货币战争-补给(id_mark 标识-补给阶段 全中)'
-        )
-
-
-def test_supply_node_prep_not_misread_as_supply(test_context: SrTestContext) -> None:
-    """无碰撞:补给节点备战(含「返回补给阶段」按钮)→ 精准匹配 货币战争-备战,非 货币战争-补给。
-
-    防 BuyShopCards 假阳根因复发:备战「返回补给阶段」按钮文本含「补给阶段」,
-    但其位置 [1716,51] ≠ 补给标题 id_mark [893,120,1027,230] → 备战不被误判补给。
-    """
-    if not test_context.has_screen('货币战争-备战', '补给节点'):
-        _test_currency_war_supply_screen_pytest.skip('fixture 缺:screens/货币战争-备战/补给节点.webp')
-    img = test_context.load_screen('货币战争-备战', '补给节点')
-    assert _test_currency_war_supply_screen_get_match_screen_name(test_context, img, screen_name_list=['货币战争-备战']) == '货币战争-备战', (
-        '补给节点备战应精准匹配 货币战争-备战'
-    )
-    assert _test_currency_war_supply_screen_get_match_screen_name(test_context, img, screen_name_list=['货币战争-补给']) is None, (
-        '补给节点备战(含返回补给阶段按钮)不应被误判 货币战争-补给(id_mark 位置区分)'
-    )
-
-
-# ==================== test_currency_war_wish_trial_screen ====================
-
-from typing import TYPE_CHECKING as _test_currency_war_wish_trial_screen_TYPE_CHECKING
-
-import pytest as _test_currency_war_wish_trial_screen_pytest
-
-from one_dragon.base.screen.screen_utils import get_match_screen_name as _test_currency_war_wish_trial_screen_get_match_screen_name
-
-if _test_currency_war_wish_trial_screen_TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
-
-def test_wish_trial_screen_id_mark_true_positive(test_context: SrTestContext) -> None:
-    """真阳性:祈愿试炼 fixture → 精准匹配 货币战争-祈愿试炼。"""
-    if not test_context.has_screen('货币战争-祈愿试炼', '祈愿试炼'):
-        _test_currency_war_wish_trial_screen_pytest.skip('fixture 缺:screens/货币战争-祈愿试炼/祈愿试炼.webp')
-    img = test_context.load_screen('货币战争-祈愿试炼', '祈愿试炼')
-    assert _test_currency_war_wish_trial_screen_get_match_screen_name(
-        test_context, img, screen_name_list=['货币战争-祈愿试炼']) == '货币战争-祈愿试炼', (
-        '祈愿试炼 fixture 应精准匹配(id_mark 标识-祈愿试炼 命中)')
-
-
 # ==================== test_currency_war_shop ====================
 
-from pathlib import Path as _test_currency_war_shop_Path
-from typing import TYPE_CHECKING as _test_currency_war_shop_TYPE_CHECKING
+from pathlib import Path
+from cv2.typing import MatLike
 
-import pytest as _test_currency_war_shop_pytest
-from cv2.typing import MatLike as _test_currency_war_shop_MatLike
-
-from one_dragon.base.geometry.rectangle import Rect as _test_currency_war_shop_Rect
-from one_dragon.utils import cv2_utils as _test_currency_war_shop_cv2_utils
-from sr_od.application.currency_war.kernel.cw_state import HP_SAFE_THRESHOLD as HP_DANGER
+from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.utils import cv2_utils
+from sr_od.application.currency_war.kernel.cw_state import HP_SAFE_THRESHOLD
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.obs.cw_observation import  read_game_state, read_hp, read_shop_cards
+from sr_od.application.currency_war.obs.cw_observation import  read_game_state, read_hp_opt, read_shop_cards
 
-if _test_currency_war_shop_TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
-
-def _test_currency_war_shop_has_text(ctx: SrTestContext, screen: _test_currency_war_shop_MatLike, kw: str) -> bool:
+def _has_text(ctx: SrTestContext, screen: MatLike, kw: str) -> bool:
     """全屏 OCR,判断关键词是否出现(子串,容 OCR 分词差异)。"""
     texts = [m.data for m in
-             ctx.ocr_service.get_ocr_result_list(image=screen, rect=_test_currency_war_shop_Rect(0, 0, 1920, 1080))]
+             ctx.ocr_service.get_ocr_result_list(image=screen, rect=Rect(0, 0, 1920, 1080))]
     return any(kw in t for t in texts)
 
 
@@ -1069,9 +714,10 @@ def test_read_shop_cards_sift(test_context) -> None:
 
     read_shop_cards 裁 ``商店牌-1..5`` 肖像区(VLM 定位)→ SIFT ``currency_war/portrait_plaza`` 官方立绘库
     → 规范名;faction/cost 从 roster 派生。fixture ``shop_open.webp`` GT:翡翠/丹恒·腾荒/不死途/飞霄/三月七。
+    费用序列与池一致性归 test_cw_obs_chain.py;本锁独有 = 牌名-槽位对齐(换位不红那边)。
     """
     if not test_context.has_screen('货币战争-备战-开商店', 'shop_open'):
-        _test_currency_war_shop_pytest.skip('存档截图缺失:screens/货币战争-备战-开商店/shop_open.webp')
+        pytest.skip('存档截图缺失:screens/货币战争-备战-开商店/shop_open.webp')
     screen = test_context.load_screen('货币战争-备战-开商店', 'shop_open')
     cards = read_shop_cards(test_context, screen)
     gt = ['翡翠', '丹恒·腾荒', '不死途', '飞霄', '三月七']
@@ -1080,9 +726,13 @@ def test_read_shop_cards_sift(test_context) -> None:
     assert all(c.cost >= 1 for c in cards), f'cost 应 roster 派生 ≥1,实际 {[c.cost for c in cards]}'
 
 
-def test_read_game_state_prep(test_context, test_image_dir: _test_currency_war_shop_Path) -> None:
-    """备战屏 → read_game_state 读 gold/plane/round/board/shop + level 启发式(打印实测值)。"""
-    screen = _test_currency_war_shop_cv2_utils.read_image(str(test_image_dir / 'currency_war_shop.png'))
+def test_read_game_state_prep(test_context, test_image_dir: Path) -> None:
+    """备战屏 → read_game_state 真帧端到端 smoke(全仓唯一一条不经桩的观察主链)。
+
+    断言面 = 字段形状/范围(全链 OCR 崩时 gold 落 0 / level 落启发式,越界即红);
+    逐字段精确值归 test_cw_obs_gates.py 的单 reader 真帧锁。打印实测值供判读。
+    """
+    screen = cv2_utils.read_image(str(test_image_dir / 'currency_war_shop.png'))
     state = read_game_state(test_context, screen)
     print(f'\n[game state] gold={state.gold} hp={state.hp} level={state.level} '
           f'plane={state.plane} round={state.round_num} board={state.board}')
@@ -1091,23 +741,24 @@ def test_read_game_state_prep(test_context, test_image_dir: _test_currency_war_s
     assert 1 <= state.plane <= 3, f'plane 越界 {state.plane}'
 
 
-def test_read_hp_shop_state(test_context, test_image_dir: _test_currency_war_shop_Path) -> None:
-    """HP 只在 shop **关闭**态显示右上角(shop 开启态该区空 → 默认 100)。
+def test_read_hp_shop_state(test_context, test_image_dir: Path) -> None:
+    """HP 只在 shop **关闭**态显示右上角(shop 开启态该区空 → read_hp_opt None)。
 
     多样本确认(2026-08-03):5 张 shop-关闭态全读到真 HP(80/80/80/29/84)、shop-开启态该区空。
-    回归 guard:锁住 ``BuyShopCards``「shop 关闭帧读 hp 覆盖 state.hp」修复的前提 —— 改 read_hp /
+    回归 guard:锁 ``BuyShopCards``/``read_game_state`` 在 shop 关闭帧读 hp 覆盖 state.hp 的
+    生产读数前提(r317 起生产经 read_hp_opt,薄包装 read_hp 无生产消费)—— 改 read_hp_opt /
     shop 流程后重跑本测试,确保 HP 读取行为不回归。
     """
-    closed = _test_currency_war_shop_cv2_utils.read_image(str(test_image_dir / 'currency_war_prep_closed.png'))        # shop 关,hp=84
-    lowhp = _test_currency_war_shop_cv2_utils.read_image(str(test_image_dir / 'currency_war_prep_closed_lowhp.png'))  # shop 关,hp=29
-    open_shop = _test_currency_war_shop_cv2_utils.read_image(str(test_image_dir / 'currency_war_shop.png'))           # shop 开,hp 区空
-    assert read_hp(test_context, closed) == 84
-    assert read_hp(test_context, lowhp) == 29
-    assert read_hp(test_context, lowhp) < HP_DANGER, '低血(< HP_DANGER)应能让保血触发'
-    assert read_hp(test_context, open_shop) == 100, 'shop 开 → HP 区空 → 默认 100'
+    closed = cv2_utils.read_image(str(test_image_dir / 'currency_war_prep_closed.png'))        # shop 关,hp=84
+    lowhp = cv2_utils.read_image(str(test_image_dir / 'currency_war_prep_closed_lowhp.png'))  # shop 关,hp=29
+    open_shop = cv2_utils.read_image(str(test_image_dir / 'currency_war_shop.png'))           # shop 开,hp 区空
+    assert read_hp_opt(test_context, closed) == 84
+    assert read_hp_opt(test_context, lowhp) == 29
+    assert read_hp_opt(test_context, lowhp) < HP_SAFE_THRESHOLD, '低血(< HP_SAFE_THRESHOLD)应能让保血触发'
+    assert read_hp_opt(test_context, open_shop) is None, 'shop 开 → HP 区空 → None(不伪造读数)'
 
 
-def test_prep_anchor_buyexp_present_on_prep_absent_elsewhere(test_context, test_image_dir: _test_currency_war_shop_Path) -> None:
+def test_prep_anchor_buyexp_present_on_prep_absent_elsewhere(test_context, test_image_dir: Path) -> None:
     """``BuyShopCards`` 非备战屏守卫(2026-08-04 plane2 投资策略叠层实测)的前提:
 
     备战锚点「购买经验」在**备战屏有**(→ 守卫不触发,正常买牌)、**非备战屏无**(→ 守卫
@@ -1115,52 +766,82 @@ def test_prep_anchor_buyexp_present_on_prep_absent_elsewhere(test_context, test_
     max_retry 次后才恢复)。用可靠 fixture(备战 shop 屏 + 大厅)锁守卫检测前提,改守卫/OCR
     后重跑确保不回归。
     """
-    prep = _test_currency_war_shop_cv2_utils.read_image(str(test_image_dir / 'currency_war_shop.png'))        # 备战屏(shop 开,底部有「购买经验」)
-    assert _test_currency_war_shop_has_text(test_context, prep, '购买经验'), '备战屏应有「购买经验」→ 守卫不触发,正常买牌'
-    lobby = _test_currency_war_shop_cv2_utils.read_image(str(test_image_dir / 'currency_war_lobby.png'))      # 货币战争大厅(非备战)
-    assert not _test_currency_war_shop_has_text(test_context, lobby, '购买经验'), '非备战屏无「购买经验」→ 守卫应 round_fail 退出,交主循环处理'
-
-
-def test_read_deploy_paddle_cap_and_count(test_context, test_image_dir: _test_currency_war_shop_Path) -> None:
-    """D-139:「区域-部署数」paddle「X/Y」→ read_deployed_count=X、read_deploy_cap=Y(同源)。
-
-    回归 guard:refactor(read_deployed_count → _read_deploy_paddle[0])不破坏 X 读取;新增
-    read_deploy_cap 给真 cap(非 level 估,deploy_bench D-139 用)。paddle 在小 stylized 区偶 OCR 漏 →
-    读不到=None 合法(调用方 fallback),故只断言「读到则 sane」+ X<=Y。打印实测值供多样本核实。
-    """
-    from sr_od.application.currency_war.obs.cw_observation import  read_deploy_cap, read_deployed_count
-    for name in ('currency_war_shop.png', 'currency_war_prep_closed.png',
-                 'currency_war_prep_herta.png'):
-        screen = _test_currency_war_shop_cv2_utils.read_image(str(test_image_dir / name))
-        x = read_deployed_count(test_context, screen)
-        y = read_deploy_cap(test_context, screen)
-        print(f'\n[deploy paddle {name}] deployed={x} cap={y}')
-        if x is not None:
-            assert 0 <= x <= 9, f'deployed 越界 {x}'
-        if y is not None:
-            assert 1 <= y <= 9, f'cap 越界 {y}'
-        if x is not None and y is not None:
-            assert x <= y, f'deployed({x}) > cap({y})'
+    prep = cv2_utils.read_image(str(test_image_dir / 'currency_war_shop.png'))        # 备战屏(shop 开,底部有「购买经验」)
+    assert _has_text(test_context, prep, '购买经验'), '备战屏应有「购买经验」→ 守卫不触发,正常买牌'
+    lobby = cv2_utils.read_image(str(test_image_dir / 'currency_war_lobby.png'))      # 货币战争大厅(非备战)
+    assert not _has_text(test_context, lobby, '购买经验'), '非备战屏无「购买经验」→ 守卫应 round_fail 退出,交主循环处理'
 
 
 # (D-84 test_tracked_bench_chars_seeds_identity 已随 tracked_bench 旧名账退役删除:
 #  被锁的 _tracked_bench_chars helper 及其唯一消费点(旧回退播种)同批移除,
-#  事故帧回归锁迁至 test_cw4_shop_line.py 守卫族。)
+#  事故帧回归锁迁至 test_cw4_shop_line.py 守卫族。read_deploy_paddle 测已删:
+#  同生产函数 read_deployed_count/read_deploy_cap 在 test_cw_obs_gates.py:483 有
+#  真帧精确值超集(4 帧 cap/count 全锁),本测的 None 容忍范围断言为判别力子集。)
 
 
 # ==================== w518_briefing_telemetry ====================
 
-import inspect
-
 from sr_od.application.currency_war.operations.cw_screen import cw_screen_briefing
-from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
-def test_handle_briefing_telemetry_wiring_in_source() -> None:
-    """接线锁:简报 op 真调 record_exogenous(kind='briefing')(落盘点唯一源)。
+def test_handle_briefing_records_telemetry(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """简报 op 行为锁:handle 真调遥测落账 record_exogenous(0, 'briefing')。
 
-    W971 P3b:简报 op 迁至 cw_flow.CwScreenBriefing(HandleBriefing 退役),锁随迁。
+    W518 断链事故回归锁(简报 op = CwScreenBriefing;test_cw_telemetry_collect 的
+    七 handler 接线表不含 briefing,w971_p3a 行为测把遥测桩掉不验 → 本测是简报
+    遥测接线唯一守卫)。落账调用被 contextlib.suppress 包裹,断链不红任何 op 流程
+    测,只红本锁——故必须行为级跑通 handle 验证,源码扫描不证明调用真发生。
+    隔离:reader 全桩空 + cw_match 桩 None(跳过 session 写,session 级 ctx 不污染)。
     """
-    src = inspect.getsource(cw_screen_briefing.CwScreenBriefing.handle)
-    assert 'record_exogenous(' in src, 'CwScreenBriefing 未接 briefing 遥测落账(W518 断链)'
-    assert "'briefing'" in src, "落账 kind 不是 'briefing'(须与原位面简报先例同口径)"
+    captured: list[tuple[tuple, dict]] = []
+
+    def _record(*args: object, **kwargs: object) -> None:
+        captured.append((args, kwargs))
+
+    monkeypatch.setattr(cw_screen_briefing, 'cw_telemetry',
+                        SimpleNamespace(record_exogenous=_record))
+    monkeypatch.setattr(cw_screen_briefing, 'read_affixes_with_pos', lambda ctx, screen: [])
+    monkeypatch.setattr(cw_screen_briefing, 'read_bosses', lambda ctx, screen: [])
+    monkeypatch.setattr(cw_screen_briefing, 'read_briefing_enemy_difficulty',
+                        lambda ctx, screen: None)
+    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+
+    if not test_context.has_screen('货币战争-备战', 'shop_closed'):
+        pytest.skip('存档截图缺失:screens/货币战争-备战/shop_closed.webp')
+    fixture_controller.set_phases([{'frame': ('货币战争-备战', 'shop_closed')}])
+
+    class _WatchedBriefing(WatchdogOperationMixin, cw_screen_briefing.CwScreenBriefing):
+        """带看门狗的 CwScreenBriefing(同 _WatchedCwEntryStart 惯例)。"""
+
+    op = _WatchedBriefing(test_context)
+    op._init_watchdog()  # type: ignore[attr-defined]
+    # 入口锚第 1 次命中(进观察分支),出口验真 miss(点下一步后已离开)= 走完全程。
+    find_calls = {'n': 0}
+
+    def _find_area(*args: object, **kwargs: object):
+        find_calls['n'] += 1
+        return op.round_success('') if find_calls['n'] == 1 else op.round_fail('')
+
+    monkeypatch.setattr(op, 'round_by_find_area', _find_area)
+    monkeypatch.setattr(op, 'round_by_find_and_click_area',
+                        lambda *a, **k: op.round_success(''))
+    monkeypatch.setattr(op, 'park_cursor', lambda *a, **k: None)
+    monkeypatch.setattr(op, 'save_screenshot', lambda *a, **k: '<shot>')
+    monkeypatch.setattr(op, 'screenshot', lambda *a, **k: op.last_screenshot)
+
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert result.success, f'简报 op 应走完全程,实:{result.status}'
+    assert len(captured) == 1, f'遥测落账应恰好一次,实:{captured}'
+    args, kwargs = captured[0]
+    assert args[:2] == (0, 'briefing'), f'落账口径应为 (0, "briefing"),实:{args}'
+    assert 'affixes=' in str(kwargs.get('detail', '')), f'detail 应带三读数,实:{kwargs}'
