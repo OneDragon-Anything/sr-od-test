@@ -793,6 +793,28 @@ def test_write_batch_ledger_carries_new_keys() -> None:
         assert 'sess_active_env' in row
 
 
+def test_write_batch_ledger_outcomes_boss_names_slot() -> None:
+    """T-179 件②构造锁:outcomes 行带 boss_names 槽位(恒 None=未建模)。
+
+    键名与生产 OutcomeRecord 同键同构;sim 未建模简报面 → 「未建模」
+    显式缺省,须与旧数据「键缺失」可辨(消费端按键在/值 None 分型)。
+    boss 伤害双峰按敌型混合重标定的实采数据源 = 生产 outcomes
+    (单一源 = cw_registry.handoff_boss_e_damage 注)。
+    """
+    import json
+    import tempfile
+
+    result = _sim_obs_keys_simulate_p1(0, pool='fallback')
+    with tempfile.TemporaryDirectory() as td:
+        out = write_batch_ledger([result], Path(td))
+        rows = [json.loads(line)
+                for line in (out / 'outcomes.jsonl').open(encoding='utf-8')
+                if line.strip()]
+    assert rows, 'outcomes 流为空'
+    assert all('boss_names' in row for row in rows), 'boss_names 槽位缺失'
+    assert all(row['boss_names'] is None for row in rows)
+
+
 # ==================== sim_segment_checks ====================
 
 import pytest as _sim_segment_checks_pytest

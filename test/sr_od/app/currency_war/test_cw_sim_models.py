@@ -262,6 +262,100 @@ def test_shop_cost_conformance_bidirectional() -> None:
     assert r2['violations'] == 0
 
 
+# --- 期限 miss 原因分键(T-179 件①)-----------------------------------
+
+def _deadline_row(rn: int, *, rung: int = 0, gold: int = 30,
+                  gold_before: int | None = None, waves: list | None = None,
+                  actions: list | None = None) -> dict:
+    """期限检查合成行:board_factions 按 rung 摆(1=列车同行2;2=再加仙舟3)。"""
+    bf: dict = {}
+    if rung >= 1:
+        bf['列车同行'] = 2
+    if rung >= 2:
+        bf['仙舟'] = 3
+    return {
+        'plane': 1, 'round_num': rn, 'gold': gold, 'hp': 50,
+        'target_comp': '',
+        'state': {'board': {}, 'level': 4, 'bench': [], 'deployed': [],
+                  'cap': 4, 'board_factions': bf,
+                  'equipped': [], 'owned_equips': []},
+        'actions': list(actions or []),
+        'sim': {'node': 'battle', 'delta': -5, 'merges': 0,
+                'gold_before': gold if gold_before is None else gold_before,
+                'income': {'base': 5},
+                'spend': {'buys': {}, 'levelup': 0, 'refresh': 0},
+                'shop_waves': [{'gold': gold,
+                                'cards': list(waves or [])}]},
+    }
+
+
+def test_second_engine_deadline_reason_keys() -> None:
+    """期限 miss 原因分键构造锁(T-179 件①):四形态各归其键 + 期限
+    达标局不入桶 + 聚合键零漂移。
+
+    分键口径出处 = check_second_engine_deadline docstring(观测面
+    近似非因果;供给原料面 = 三体系阵营或希儿本卡,量子同频不计
+    ——无希儿不构成第四体系)。
+    """
+    train_card = {'name': '姬子', 'cost': 4, 'faction': '列车同行'}
+    off_card = {'name': '某散件', 'cost': 2, 'faction': 'x'}
+    # g0 供给断:窗(r5-7)波里只有量子同频/散件(量子不计=原料面
+    # 边界);r8 窗外才有列车件——窗界口径锁(窗外原料不救分类)。
+    g0 = [_deadline_row(3),
+          _deadline_row(4, rung=1),
+          _deadline_row(5, rung=1, gold=25,
+                        waves=[{'name': '某量子件', 'cost': 2,
+                                'faction': '量子同频'}, off_card]),
+          _deadline_row(6, rung=1, gold=25, waves=[off_card]),
+          _deadline_row(7, rung=1, gold=25, waves=[off_card]),
+          _deadline_row(8, rung=1, gold=25, waves=[train_card])]
+    # g1 金滞留:窗内有原料、进轮金全程 ≥40、零花费。
+    g1 = [_deadline_row(2),
+          _deadline_row(3, rung=1, gold=45),
+          _deadline_row(4, rung=1, gold=45, gold_before=45,
+                        waves=[train_card]),
+          _deadline_row(5, rung=1, gold=45, gold_before=45,
+                        waves=[train_card]),
+          _deadline_row(6, rung=1, gold=45, gold_before=45,
+                        waves=[train_card])]
+    # g2 摇摆挤占:窗内有原料、金 <40、金花在非引擎买入。
+    g2 = [_deadline_row(2),
+          _deadline_row(3, rung=1, gold=25),
+          _deadline_row(4, rung=1, gold=22, gold_before=25,
+                        waves=[train_card],
+                        actions=[{'__type__': 'BuyCard',
+                                  'card': off_card, 'reason': 'pair',
+                                  'channel': 'pair'}])]
+    g2[2]['sim']['spend']['buys'] = {'pair': 3}
+    # g3 other:窗内有原料且买了原料但 rung 仍未达(执行/合成 gap 形态)。
+    g3 = [_deadline_row(2),
+          _deadline_row(3, rung=1, gold=25),
+          _deadline_row(4, rung=1, gold=13, gold_before=25,
+                        waves=[train_card],
+                        actions=[{'__type__': 'BuyCard',
+                                  'card': train_card, 'reason': 'engine_seed',
+                                  'channel': 'engine_seed'}])]
+    g3[2]['sim']['spend']['buys'] = {'engine_seed': 12}
+    # g4 对照:期限达标(首引擎 r2,次引擎 r5,gap=3 ≤3)→ 不入桶。
+    g4 = [_deadline_row(1),
+          _deadline_row(2, rung=1),
+          _deadline_row(3, rung=1),
+          _deadline_row(4, rung=1),
+          _deadline_row(5, rung=2)]
+    r = runtime.check_second_engine_deadline([g0, g1, g2, g3, g4])
+    assert r['violations'] == 0
+    assert r['first_engine_games'] == 5
+    assert r['deadline_miss'] == 4
+    assert r['avg_gap'] is not None
+    # 分键互斥且各归其键(变异打红锚:任一键折叠/吞并,此处等值断言即红)
+    assert r['miss_reasons'] == {'supply_break': 1, 'gold_hoarded': 1,
+                                 'diverted_spend': 1, 'other': 1}
+    assert r['miss_reason_games'] == {'supply_break': [0],
+                                      'gold_hoarded': [1],
+                                      'diverted_spend': [2],
+                                      'other': [3]}
+
+
 # --- 语料级 -----------------------------------------------------------
 
 def test_attach_run_detector_bidirectional() -> None:
