@@ -3,7 +3,8 @@
 覆盖:①§5.3 对拍锚属步 2 项(P47 递推 / p̄ 精确口径 / V_comp 表 / Δ息流
 闭式 / 第三口封装)②schedule_of 单一源消费静态断言(禁新建长度常量)
 ③λ 表启动必载损坏守卫(R2-4)④22 项状态量「每项只实现一次」静态断言
-⑤前置半步 0 三测试位(挂后台效果资格谓词:例外①②/读装备态)⑥audit
+⑤前置半步 0 挂后台效果资格谓词(例外①/读装备态/载体缺口;
+生锈两态由装配端到端测承接)⑥audit
 载体(provisional fail-closed / proof_consts 白名单 / derived 登记)。
 
 对拍锚脚本经 sys.path 注入 tools/cw/proofs(锚=证明件自检脚本本体,
@@ -85,15 +86,9 @@ class TestPbarExact:
 
 
 class TestVCompTable:
-    """V_comp 表对拍(R2-11):p49 锚带 + 二维表 ±2%(DGOLD_TRUTH 誊录)。"""
-
-    def test_demo_anchors(self) -> None:
-        v3 = vopt.v_comp_marginal(3, 7)
-        assert 0.24 <= v3 <= 0.30, v3
-        v1 = vopt.v_comp_marginal(1, 5)
-        assert 0.06 <= v1 <= 0.08, v1
-        v5 = vopt.v_comp_marginal(5, 8)
-        assert 19.0 <= v5 <= 21.0, v5
+    """V_comp 表对拍(R2-11):二维表 ±2%(DGOLD_TRUTH 誊录,全 (费档,等级)
+    格覆盖)。原 p49 三格宽锚带(demo anchors)已被本表 ±2% 在同三格上
+    严格覆盖(0.268∈[0.24,0.30] 等),零独立判别力,冗余删除(rule 7)。"""
 
     DGOLD_TRUTH = {
         1: {4: 0.048, 5: 0.070, 6: 0.105, 7: 0.165, 8: 0.174, 9: 0.209, 10: 0.628},
@@ -154,8 +149,7 @@ class TestDeltaInterestFlow:
         # 旧现值式(cap=5)首项=5 < 真值 ⇒ 现值口径红;修正式按 cap_sup=10:
         prod = horizon.delta_interest_flow(56, cap_sup=10, trunc=3)
         assert prod >= truth1
-        # 首项=min(⌈56/10⌉,cap_sup)=6,按现值 cap=5 组装=5<真值 6 即红
-        assert min(-(-56 // 10), 10) == 6
+        # 首项=min(⌈56/10⌉,cap_sup)=6 ≥ 真值 6;按现值 cap=5 组装=5<6 即红
 
     def test_r9_3_common_mode_cashflow(self) -> None:
         # R_截=1 含共模现金流 X≠0 反例回归锚:cap=5/g=8/r=1/X=1(收入到账后
@@ -216,13 +210,10 @@ class TestThirdPort:
 # ==================== ② schedule_of 单一源消费静态断言 ====================
 
 class TestScheduleSingleSource:
-    """禁新建长度常量(§6.1):PLANE_LENGTHS_TRUTH 冻结元组形态处死;
-    horizon 消费 cw_plane_table.schedule_of。"""
-
-    def test_horizon_consumes_schedule_of(self) -> None:
-        src = (CW4_DIR / 'horizon.py').read_text(encoding='utf-8')
-        assert 'schedule_of' in src
-        assert 'from sr_od.application.currency_war.kernel.cw_plane_table import' in src
+    """禁新建长度常量(§6.1):PLANE_LENGTHS_TRUTH 冻结元组形态处死。
+    (旧「horizon 源码含 schedule_of/import 行」肯定式在场锁已删——单一源
+    纪律由本类墓碑扫描 + r_global session 真值行为锁 + QUANTITY_OWNERS
+    r_global cw4 内唯一实现条目三面承载,在场锁零独立判别力,rule 8 影子锁。)"""
 
     def test_no_length_constants_in_cw4(self) -> None:
         # 静态断言按代码符号(ast)而非原文 grep——horizon docstring 里的
@@ -367,9 +358,9 @@ class TestSingleImplementation:
         assert 'sell_refund' not in defs
 
     def test_no_private_phi_export(self) -> None:
-        # R5-7/R6-4:全量 Φ 数值不进对外输出列——horizon.__all__ 无 Φ 项,
-        # Φ̂ 以下划线私有名存在,且 statefn 其他模块不 import 它
-        assert '_phi_hat' in horizon.__dict__
+        # R5-7/R6-4 墓碑守卫:全量 Φ 数值不进对外输出列(horizon.__all__ 无
+        # Φ 项),且其他 cw4 模块禁引用私有 Φ̂ 名(裸 Φ̂ 消费位=模式审计红;
+        # 私有名在场断言已删——_phi_hat 现为死码零调用点,在场锁零判别力)
         for name in horizon.__all__:
             assert 'phi' not in name.lower()
         for py in CW4_DIR.rglob('*.py'):
@@ -382,9 +373,12 @@ class TestSingleImplementation:
 # ==================== ⑤ 前置半步 0:挂后台效果资格谓词三测试位 ====================
 
 class TestBenchEffectPredicate:
-    """三测试位(§6.4 步 1 原文):①黑塔语境件不走 fuel_sell 等三消费位
-    (谓词=资格载体,消费位随批 1 落地——本批锁谓词语义);②生锈词缀局
-    未穿排除/已穿照常;③读装备态分支两态。"""
+    """前置半步 0 测试位(§6.4 步 1 原文):①黑塔语境件不走 fuel_sell 等
+    三消费位(谓词=资格载体,消费位随批 1 落地——本批锁谓词语义);③读
+    装备态分支两态;载体缺口闭合(无载体字段单位恒不资格)。
+    (原②「生锈词缀局未穿排除/已穿照常」由本文件
+    TestBenchEffectContextAssembly::test_rust_from_enemy_affixes 经生产
+    装配链端到端承接——同一真值格择超集保留,rule 7。)"""
 
     def test_h1_herta_context_protects(self) -> None:
         # ①星级供强语境:小黑塔保持资格(不走 fuel_sell/不进凑息/入桶不动子集)
@@ -393,15 +387,6 @@ class TestBenchEffectPredicate:
         # 语境不在场:星级供强无承载对象,回归燃料类(类级默认不再静默放行)
         off = predicates.BenchEffectContext()
         assert not predicates.bench_effect_qualified('黑塔', off)
-
-    def test_h2_rust_affix_equipment_state(self) -> None:
-        # ②生锈词缀局:未穿装备 → 排除;已穿装备 → 照常入桶不动子集
-        uneq = predicates.BenchEffectContext(
-            herta_star_supply=True, rust_affix_present=True, equipped=False)
-        eq = predicates.BenchEffectContext(
-            herta_star_supply=True, rust_affix_present=True, equipped=True)
-        assert not predicates.bench_effect_qualified('黑塔', uneq)
-        assert predicates.bench_effect_qualified('黑塔', eq)
 
     def test_h3_equipped_branch_two_states(self) -> None:
         # ③读装备态分支:生锈不在场时穿/未穿两态均资格成立(合取条件左支真)
