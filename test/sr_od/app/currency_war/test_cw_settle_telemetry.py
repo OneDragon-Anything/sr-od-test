@@ -211,3 +211,68 @@ def test_progress_sign_three_states() -> None:
     assert settle_page1_progress_sign(['挑战进度', '+2']) == 'pos'
     assert settle_page1_progress_sign(['-22', '挑战进度']) == 'neg'
     assert settle_page1_progress_sign(['挑战结束', '点击空白加速']) is None
+
+
+# ===== heal_longline 补链(T-83/ADR-0609:tooltip 回血分量入遥测) =====
+
+def test_round_outcome_carries_heal_longline() -> None:
+    """read_round_outcome 透传回血分量:面板三行齐 → heal_longline=+2。
+    红证 = 旧实现丢弃第三行(解析器有值、RoundOutcome 无字段),L_node
+    对比「tooltip 幅度 = hp 链差 + 2」的系统偏移(长线作战回血)只能靠
+    猜,行内不可验证。桩保留 _PANEL_POS 坐标(行判据吃 y 几何)。"""
+    class _PanelOcr:
+        def get_ocr_result_list(self, image, rect, crop_first):
+            return list(_PANEL_POS)
+
+    obs = read_round_outcome(
+        SimpleNamespace(ocr_service=_PanelOcr()),
+        np.zeros((1080, 1920, 3), np.uint8),   # 非 None(面板读路径门)
+        plane=1, round_num=5, comp_tag='x')
+    assert obs.heal_longline == 2, '回血分量未透传(补链断裂)'
+    assert obs.damage_base == -10 and obs.damage_unfinished_progress == -1
+    # 净变化恒等式:链差 = 掉血两分量 + 回血(-10 + -1 + 2 = -9),
+    # 即「tooltip 幅度 = 链差 + 2」偏移的机制项,行内三量齐即可验
+    assert obs.damage_base + obs.damage_unfinished_progress \
+        + obs.heal_longline == -9
+
+
+def test_outcome_record_persists_heal_longline(
+        monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """recorder.record_outcome 把 heal_longline 写进 outcomes 行(jsonl round-trip)。
+
+    schema 字段缺失/透传缺失任一发生 → 行内无此键,判读侧偏移验证面断流。"""
+    import json
+
+    from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
+    from sr_od.application.currency_war.telemetry import recorder as rec_mod
+    from sr_od.application.currency_war.telemetry import state as tel_state
+
+    monkeypatch.setattr(tel_state, '_RECORDER',
+                        rec_mod.TelemetryRecorder(enabled=True,
+                                                  replay_dir=tmp_path))
+    monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', 'heal_longline')
+    monkeypatch.setattr(tel_state, '_CTX_MATCH_REF', [None])
+    rec = tel_state._RECORDER
+    rec.record_outcome('heal_longline', RoundOutcome(
+        round_num=5, plane=1, node_type='普通战斗', comp_tag='x',
+        hp_after=91, killed=True,
+        damage_base=-10, damage_unfinished_progress=-1, heal_longline=2))
+    row = json.loads((tmp_path / 'outcomes.jsonl').read_text(
+        encoding='utf-8').strip().splitlines()[-1])
+    assert row['heal_longline'] == 2, 'outcomes 行缺回血分量'
+    assert row['damage_base'] == -10
+
+
+def test_battle_wait_page1_stash_covers_heal_longline() -> None:
+    """页1 暂存/合并键面含 heal_longline(胜轮页2 调用时回血分量随暂存回填)。
+
+    接线锁(inspect 源码断言,test_cw_obs_chain 同款形态):暂存写入两处
+    与合并键列表三处任一漏键 → 胜轮 heal_longline 恒 None。"""
+    import inspect
+
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_battle_wait,
+    )
+    src = inspect.getsource(cw_screen_battle_wait)
+    assert src.count("'heal_longline'") >= 4, \
+        '页1 暂存/合并键面漏 heal_longline(期望暂存×2+合并×1+注释面≥1)'
