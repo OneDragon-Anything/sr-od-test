@@ -489,6 +489,195 @@ def test_plaza_names_canon_colon() -> None:
     assert isinstance(freq_dropped_names(), dict)
 
 
+# ==================== T-155 下沉臂(sim 投资选卡消费真实判据) ====================
+# 设计出处 = src/.../sim/cw_sim_invest.py 模块 docstring「双臂」节(T-155 前置批,
+# ADR-0519 审查线方案;基线臂 'sink' 缺省 = 真实判据裁决,'freq' 对照臂 = 旧频次
+# 直注入)。命中种子探针记录(2026-09-08 实测,seed 0..11,sink 流):
+# 全部 seed 命中 (1,1)+(1,3) 策略槽,(2,2) 追加命中 seed 2/4/7/8/9/10;
+# seed 3 归因三形态最全(env-eval / augment-defining / align×1)→ 显式代表。
+# (T-155 重推:comp-hit×1 → align×1,对齐对象换 D*,ADR-0597。)
+
+_SINK_SEED = 3      # 策略槽命中代表(归因形态最全)
+_SINK_SEED_P2 = 2   # (2,2) P2 段槽命中代表(sampler 级断言用,不跑 planes=2 局)
+
+
+def _spy_decide_event(monkeypatch) -> list[dict]:
+    """call-through 间谍:包住真 decide_event 记录 (options, 返回 PickEvent)。
+
+    flow.decide_invest 经 ``cw_events.decide_event`` 模块属性调用(运行时
+    解析),patch kernel 模块属性即生效;透传真实现 = 行为不变纯观测。
+    (T-155 重推:decide_event 对齐参数换 D* 三参,间谍改 **kwargs 透传——
+    对齐入参不进观测面,ADR-0597。)
+    """
+    from sr_od.application.currency_war.kernel import cw_events
+    real = cw_events.decide_event
+    calls: list[dict] = []
+
+    def _spy(options, config, state, **kwargs):
+        pick = real(options, config, state, **kwargs)
+        calls.append({'options': list(options), 'pick': pick})
+        return pick
+
+    monkeypatch.setattr(cw_events, 'decide_event', _spy)
+    return calls
+
+
+def test_invest_arm_off_stays_bit_identical() -> None:
+    """新参数零漂移门:invest=False 时任意 invest_arm 取值都与缺省逐位同。
+
+    开关只在 invest 真值时有意义——arm 参数漏进 off 路径(哪怕只耗一个
+    rng)即此处红(n=2,判据同 test_invest_off_is_bit_identical)。
+    """
+    for s in range(2):
+        base = _snap(s)
+        assert _snap(s, invest=False, invest_arm='sink') == base
+        assert _snap(s, invest=False, invest_arm='freq') == base
+
+
+def test_sink_arm_decides_via_decide_event_and_adopts(monkeypatch) -> None:
+    """基线臂核心锁:选卡真调 decide_event,采纳其裁决,归因透传。
+
+    - 每条 SimResult.invest_picks 对应一次真实 decide_event 调用(候选
+      3 张互异);picked = 该次返回的 option_idx 指向,reason = 判据归因串
+      原样透传(可观测契约);
+    - 采纳语义:env 裁决写 session/state(active_env 回显 invest_env),
+      策略裁决按序入 active_strategies(候选排除已持名 → 持有序 = 裁决序);
+    - 账本透传:P1 r1 行 sim.invest_picks 携带 env+策略归因(落盘判读入口)。
+    """
+    calls = _spy_decide_event(monkeypatch)
+    r = cw_sim.simulate_p1(_SINK_SEED, pool=_POOL, invest=True)
+    assert calls, '基线臂应经 decide_event 裁决(零调用 = 接线脱落)'
+    assert len(calls) == len(r.invest_picks)
+    for call, rec in zip(calls, r.invest_picks, strict=True):
+        assert len(call['options']) == 3
+        assert len(set(call['options'])) == 3          # 同屏三卡互异
+        assert rec['options'] == call['options']
+        assert rec['picked'] == call['options'][call['pick'].option_idx]
+        assert rec['reason'] == call['pick'].reason    # 归因原样透传
+    _env_recs = [p for p in r.invest_picks if p['kind'] == 'env']
+    _strat_recs = [p for p in r.invest_picks if p['kind'] == 'strategy']
+    assert len(_env_recs) == 1
+    assert r.invest_env == _env_recs[0]['picked']
+    assert list(r.invest_strategies) == [p['picked'] for p in _strat_recs]
+    for rec in r.invest_picks:
+        assert rec['reason'], '判据归因串不得为空(decide_event 恒带 score)'
+    # 账本行透传(P1 r1 行 = env + 首策略槽)
+    r1 = next(row for row in r.ledger
+              if (row.get('plane') or 1) == 1
+              and row.get('round_num') == 1)
+    row_picks = (r1.get('sim') or {}).get('invest_picks')
+    assert row_picks and row_picks[0]['kind'] == 'env'
+    assert row_picks == [p for p in r.invest_picks
+                         if p['round'] == 1 and p['plane'] == 1]
+
+
+def test_freq_arm_bypasses_decide_event(monkeypatch) -> None:
+    """对照臂行为面:freq 臂直注入,decide_event 零调用、归因恒空。
+
+    双臂行为对照的判据面 = 「谁做选择」:freq 臂选卡 = plaza 名直采
+    (decide_event 零消费 = 本批要修的缺口本体),基线臂 = 判据裁决
+    (test_sink_arm_decides_via_decide_event_and_adopts 对偶)。
+    """
+    calls = _spy_decide_event(monkeypatch)
+    r = cw_sim.simulate_p1(_SINK_SEED, pool=_POOL, invest=True,
+                           invest_arm='freq')
+    assert calls == []
+    assert r.invest_env != ''          # 注入仍发生(环境)
+    assert r.invest_strategies         # 注入仍发生(策略)
+    assert r.invest_picks == ()        # 但无判据归因(注入无裁决)
+
+
+def test_fixed_profile_arm_independent() -> None:
+    """固定剧本(SimInvestProfile)= 显式点名直注入,不受臂开关影响。
+
+    剧本逐位一致(行为投影)且两臂都无判据归因(点名无裁决面)。
+    """
+    prof = SimInvestProfile(active_env='银河学者概念股',
+                            picks=((1, 1, '黑塔纪元'),))
+    a = _snap(0, invest=prof, invest_arm='sink')
+    b = _snap(0, invest=prof, invest_arm='freq')
+    assert a == b
+
+
+def test_sink_sampler_candidates_contract() -> None:
+    """采样器契约:3 张互异、全注册表内、排除已持名、同 seed 可复现。
+
+    概率门/候选分布与 freq 臂同口径(模块 docstring 双臂节);seed 2
+    pick_slots 含 (2,2)(P2 段槽探针命中,见节头探针记录)。
+    """
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        get_env,
+        get_strategy,
+    )
+    from sr_od.application.currency_war.sim.cw_sim_invest import (
+        SINK_CANDIDATES,
+        SinkInvestSampler,
+    )
+    sm = SinkInvestSampler(_SINK_SEED)
+    env_opts = sm.sample_env_options()
+    assert len(env_opts) == SINK_CANDIDATES
+    assert len(set(env_opts)) == SINK_CANDIDATES
+    for name in env_opts:
+        assert get_env(name) is not None, name
+    strat_opts = sm.sample_strategy_options(held=('黑塔纪元',))
+    assert '黑塔纪元' not in strat_opts          # 已持名排除
+    assert len(set(strat_opts)) == SINK_CANDIDATES
+    for name in strat_opts:
+        assert get_strategy(name) is not None, name
+    # 同 seed 同臂可复现(T-155 配对 A/B 的随机面契约)
+    sm2 = SinkInvestSampler(_SINK_SEED)
+    assert sm2.pick_slots == sm.pick_slots
+    assert sm2.sample_env_options() == env_opts
+    assert sm2.sample_strategy_options(held=('黑塔纪元',)) == strat_opts
+    # P2 段槽日程门命中(探针固化,防日程表/概率门静默变形)
+    assert (2, 2) in SinkInvestSampler(_SINK_SEED_P2).pick_slots
+
+
+def test_sink_arm_invalid_arm_and_stub_strategy_raise() -> None:
+    """非法臂名/无 flow 接口的桩策略 → 响亮 ValueError(禁静默降级)。"""
+    from types import SimpleNamespace
+    with pytest.raises(ValueError, match='invest_arm'):
+        cw_sim.simulate_p1(0, pool=_POOL, invest=True, invest_arm='bogus')
+    with pytest.raises(ValueError, match='decide_invest'):
+        cw_sim.simulate_p1(0, pool=_POOL, invest=True,
+                           strategy=SimpleNamespace(registry=None))
+
+
+def test_batch_report_discloses_invest_arm() -> None:
+    """批报告 invest_arm 键:双臂报告同形可对账(缺臂标 = 无法对账)。"""
+    from sr_od.application.currency_war.sim import runner as cw_runner
+    rep = cw_runner.simulate_p1_batch(1, pool=_POOL, ledger=False,
+                                      checks=False, invest=True)
+    assert rep['invest_arm'] == 'sink'             # 缺省 = 基线臂
+    rep_freq = cw_runner.simulate_p1_batch(1, pool=_POOL, ledger=False,
+                                           checks=False, invest=True,
+                                           invest_arm='freq')
+    assert rep_freq['invest_arm'] == 'freq'
+    rep_off = cw_runner.simulate_p1_batch(1, pool=_POOL, ledger=False,
+                                          checks=False)
+    assert rep_off['invest_arm'] is None
+
+
+def test_sink_arm_symbols_stay_sim_domain() -> None:
+    """零生产守卫:下沉臂符号只活在 sim 域(本批硬约束 = 零生产行为)。
+
+    项目架构裁决(测试纪律 #20:工具不知道本项目的臂域边界):生产域
+    (strategies/kernel/operations/…) 禁消费 sim 臂开关与采样器——出现
+    引用 = 生产行为被 sim 批污染,此锁起诉。盲区自检:扫描覆盖
+    currency_war 全树(排除 sim/),新建生产文件带该符号同样会红。
+    """
+    root = (Path(__file__).resolve().parents[5]
+            / 'src' / 'sr_od' / 'application' / 'currency_war')
+    offenders: list[str] = []
+    for f in root.rglob('*.py'):
+        rel = f.relative_to(root).as_posix()
+        if rel.startswith('sim/'):
+            continue
+        text = f.read_text(encoding='utf-8')
+        if 'SinkInvestSampler' in text or 'invest_arm' in text:
+            offenders.append(rel)
+    assert not offenders, f'生产域禁消费 sim 下沉臂符号: {offenders}'
+
 
 # ==================== test_fortune_picker ====================
 

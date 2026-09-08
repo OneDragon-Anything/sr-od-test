@@ -184,10 +184,18 @@ def test_decide_event_strategy_forbid_avoided() -> None:
 
 
 def test_decide_event_strategy_priority_boost() -> None:
-    """strategy_priority:低评估分命中优先轴 → +30 反超(soft 倾向,非硬绑定)。"""
-    cfg = _cfg(strategy_priority=["成本控制"])   # 成本控制 48 vs 淘金客 50
-    pick = decide_event(["淘金客", "成本控制"], cfg, GameState())
-    assert pick.option_idx == 1, "priority +30 应让成本控制(48+30)反超淘金客(50)"
+    """strategy_priority:低评估分命中优先轴 → +30 反超(soft 倾向,非硬绑定)。
+    T-155 重推:S2 经济引擎档(域带 111-119)入序后,priority +30 的可压面 =
+    常规评估域(≤75),压不动引擎域带(锚位语义,ADR-0597)——用例对换成
+    两张非引擎卡保原命题(42+30=72 > 48),另加一行边界锁。"""
+    cfg = _cfg(strategy_priority=["着眼当下"])   # 着眼当下 42 vs 成本控制 48(均非引擎)
+    pick = decide_event(["成本控制", "着眼当下"], cfg, GameState())
+    assert pick.option_idx == 1, "priority +30 应让着眼当下(42+30)反超成本控制(48)"
+    # 边界锁:soft +30 不可跨越 S2 引擎域带(48+30=78 < 111)
+    cfg2 = _cfg(strategy_priority=["成本控制"])   # 成本控制 48(非引擎) vs 免费午餐(引擎)
+    pick2 = decide_event(["免费午餐", "成本控制"], cfg2, GameState())
+    assert pick2.option_idx == 0 and 'econ-engine' in pick2.reason, \
+        f"priority +30 不得把常规评估卡抬过引擎域带,实得 {pick2.reason}"
 
 
 def test_decide_event_env_axes() -> None:
@@ -522,24 +530,41 @@ def test_decide_event_registry_prior() -> None:
     #  test_decide_event_fallback_lexicographic pick5 同事实锁定,此处不再双写。)
 
 
-def test_decide_event_fallback_lexicographic() -> None:
+def test_decide_event_fallback_lexicographic(
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """品质回落纯字典序(ADR-0524,16 号稿 §1.6):主键=品质序(棱彩>金>银,
     游戏定义),次键=economy 有无;零拍值——旧 50/30/10/+economy20 序到分
-    映射无推导已删。行为翻转已申报:翻转方向 = 向游戏定义序收敛(保守化)。"""
+    映射无推导已删。行为翻转已申报:翻转方向 = 向游戏定义序收敛(保守化)。
+    T-155 重推(ADR-0597):注册表内未评卡+有经济卡已全部为持续通道卡
+    (落 S2 引擎域带,不再走回落域),回落域对位改合成注入条目保原命题
+    (teardown 自动恢复,同 test_decide_event_unevaluated_blood_candidate_level)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        INVESTMENT_STRATEGIES,
+        EconomyEffect,
+        InvestmentStrategy,
+    )
+    monkeypatch.setitem(
+        INVESTMENT_STRATEGIES, '测试银卡',
+        InvestmentStrategy(name='测试银卡', rarity='银', effect='测试注入',
+                           economy=EconomyEffect(instant_gold=6)))
+    monkeypatch.setitem(
+        INVESTMENT_STRATEGIES, '测试彩卡乙',
+        InvestmentStrategy(name='测试彩卡乙', rarity='棱彩', effect='测试注入',
+                           economy=EconomyEffect(instant_gold=6)))
     cfg = _cfg()
     st = GameState(board={}, hp=100)
     # 主键:棱彩无经济 > 金无经济(旧制 50>30 同序,翻转面守护)
     pick = decide_event(["不虚此行", "狸狸的早晨"], cfg, st)
     assert pick.option_idx == 1 and 'prior' in pick.reason, "品质序主键:棱彩 > 金"
     # 翻转锁(旧制金 30 vs 银+经济 30 平手取前者 → 新制品质序定序:金 > 银有经济)
-    pick2 = decide_event(["星星相印", "不虚此行"], cfg, st)
+    pick2 = decide_event(["测试银卡", "不虚此行"], cfg, st)
     assert pick2.option_idx == 1, "翻转锁:金 > 银有经济(旧制平手,新制主键定序)"
     # 次键:经济有无只在同品质内生效(棱彩+经济 > 棱彩无经济)
-    pick3 = decide_event(["狸狸的早晨", "狸财经狸"], cfg, st)
+    pick3 = decide_event(["狸狸的早晨", "测试彩卡乙"], cfg, st)
     assert pick3.option_idx == 1, "次键:同品质内经济有无"
     # 回落域整体压低于评估分域(回落=「未评估时别全盲」,评估分有知识判据依据;
     # 翻转已申报:旧制棱彩+经济 70 曾压过评估分 12-65 段,新制一律评估分优先)
-    pick4 = decide_event(["狸财经狸", "恢复生机"], cfg, st)
+    pick4 = decide_event(["测试彩卡乙", "恢复生机"], cfg, st)
     assert pick4.option_idx == 1, "回落域 < 评估分域:评估分 12 > 回落最高档"
     # 未注册(0)仍在回落域之下(全盲才兜底 idx0)
     pick5 = decide_event(["狸狸的早晨", "银色无名"], cfg, st)
@@ -552,38 +577,75 @@ def test_decide_event_fallback_lexicographic() -> None:
 #  test_cw_investment.test_adr0151_semantic_bindings_present,无绑定回落支在
 #  test_adr0151_bindings_table_valid —— 两断言面均为其子集/等价。)
 def test_decide_event_comp_match_wins() -> None:
-    """星徽套组对齐 target(飞霄)→ comp 命中域压过基准域;不对齐 = 回落字典序(ADR-0524)。"""
+    """S3 终局对齐族语义锁(T-155 重推;ADR-0597):对齐对象 = D* 预期终局
+    方向(①锁线级联),不再消费过渡对 target_comp——旧锁语义(∩过渡对)已随
+    用户裁定「投资选卡不为过渡阵容服务」过期,本锁改构造 D*① 锁线。
+    对齐套组(追击+飞霄)∩D*(追击飞霄)= 双命中(45×2+20=110)压评估分与
+    单命中;不对齐 = 回落字典序(ADR-0524)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    feixiao = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
+    feixiao_comp = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
     cfg = _cfg()
     st = GameState(board={}, hp=100)
-    # 对齐套组(追击+飞霄)= 双命中(45×2+20=110)压评估分与单命中;成型加速语义。
-    pick = decide_event(["定期福利", "追击星徽套组"], cfg, st, target_comp=feixiao)
-    assert pick.option_idx == 1 and 'comp-hit×2' in pick.reason, "双命中 110 > 评估分"
-    # 不对齐:燃血套组 vs 追击 target → 无命中 = 回落字典序 < 评估分
-    pick2 = decide_event(["定期福利", "燃血星徽套组"], cfg, st, target_comp=feixiao)
+    # 对齐套组(追击+飞霄)= 双命中 110 > 评估分(对位卡换鲜血阶梯 75——
+    # 原对位定期福利已入 S2 引擎域带 115 > 110,域带语义由 priority 锁边界行承载)
+    pick = decide_event(["鲜血阶梯", "追击星徽套组"], cfg, st,
+                        locked_comp=feixiao_comp.name)
+    assert pick.option_idx == 1 and 'align×2' in pick.reason, "双命中 110 > 评估分"
+    # 不对齐:燃血套组 vs 追击 D* → 无命中 = 回落字典序 < 评估分
+    pick2 = decide_event(["鲜血阶梯", "燃血星徽套组"], cfg, st,
+                         locked_comp=feixiao_comp.name)
     assert pick2.option_idx == 0, "不对齐套组 = 回落域 < 评估分域"
     # N 定序锁:N=1(65)压回落域与低评估分,但被 N=2(110)压过(N 大者优先)
-    pick_n1 = decide_event(["恢复生机", "追击星徽套组"], cfg, st, target_comp=feixiao)
-    assert pick_n1.option_idx == 1 and 'comp-hit' in pick_n1.reason, "N≥1 域压过基准域"
-    # (原「无 target」pick3 已删:同入同判 = registry_prior 第二断言
-    #  (无名甲 vs 乱成一锅粥+,评估分压未注册);且其注释所称「回落字典序」
-    #  与实际断言面不符——本测的不对齐回落面由 pick2 承载。)
+    pick_n1 = decide_event(["恢复生机", "追击星徽套组"], cfg, st,
+                           locked_comp=feixiao_comp.name)
+    assert pick_n1.option_idx == 1 and 'align×' in pick_n1.reason, "N≥1 域压过基准域"
+
+
+def test_decide_event_d_star_cascade() -> None:
+    """D* 级联消费面语义锁(T-155 重推时并入本簇;ADR-0597 §5.1/§5.1.1):
+    ①层信号(投资亲和)不进 D*;evicted 线不进 D*(「等同信号未发生」契约的
+    消费面镜像);weak_planes 弱面线不进 D*;demoted_endgame → D*=∅。"""
+    from sr_od.application.currency_war.kernel.cw_state import ShopCard
+    st = GameState(board={}, hp=100, plane=1)
+    st.shop = [ShopCard(x=1, name='姬子·启行', cost=3, star=1)]
+    # ②资产信号 → S3 对齐(列车同行绑定集)
+    pick = decide_event(["追击星徽套组", "列车同行星徽套组"], _cfg(), st)
+    assert 'align×' in pick.reason and pick.option_idx == 1, \
+        f"D*②(核心在店)应喂 S3 对齐,实得 {pick.reason}"
+    # evicted 继承:列车同行被意向层驱逐 → 信号视同未发生 → S3 全 N=0
+    pick2 = decide_event(["追击星徽套组", "列车同行星徽套组"], _cfg(), st,
+                         evicted=frozenset({'列车同行'}))
+    assert 'align' not in pick2.reason, \
+        f"被驱逐线不得进 D*,实得 {pick2.reason}"
+    # demoted_endgame → D*=∅(降格终局无对齐语义)
+    pick3 = decide_event(["追击星徽套组", "列车同行星徽套组"], _cfg(), st,
+                         locked_comp='列车同行', demoted_endgame=True)
+    assert 'align' not in pick3.reason, f"降格帧 D*=∅,实得 {pick3.reason}"
+    # ①层排除:投资环境亲和(银河学者概念股→大黑塔银河学者)只发①信号,
+    # 不进 D*(反投资自证:候选卡的亲和不得参与证明选它自己)
+    st2 = GameState(board={}, hp=100, plane=1)
+    st2.active_env = '银河学者概念股'
+    pick4 = decide_event(["银河学者星徽套组", "追击星徽套组"], _cfg(), st2)
+    assert 'align' not in pick4.reason, \
+        f"①层亲和信号不得进 D*(投资自证环),实得 {pick4.reason}"
 
 
 def test_decide_event_augment_dominance() -> None:
     """augment 定义型支配性优先序(ADR-0524,16 号稿 §1.4):定义型 > 一切常规
-    评估项(含 comp-hit 双命中 110),仅低于用户 forbid;120 = 定序实现常数。"""
+    评估项(含 S3 对齐双命中 110/S2 域带),仅低于用户 forbid;120 = 定序实现
+    常数。T-155 重推:对齐构造换 D*① 锁线(旧 target_comp 已退役,ADR-0597)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    feixiao = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
+    feixiao_comp = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
     st = GameState(board={}, hp=100)
-    # 定义型(黑塔纪元,120)压过 comp-hit 双命中(110)
-    pick = decide_event(["追击星徽套组", "黑塔纪元"], _cfg(), st, target_comp=feixiao)
+    # 定义型(黑塔纪元,120)压过 S3 对齐双命中(110)
+    pick = decide_event(["追击星徽套组", "黑塔纪元"], _cfg(), st,
+                        locked_comp=feixiao_comp.name)
     assert pick.option_idx == 1 and pick.reason.startswith('augment-defining'), \
-        f"定义型支配:120 > comp-hit 110,实得 {pick.reason}"
+        f"定义型支配:120 > align 110,实得 {pick.reason}"
     # 仅低于 forbid:用户 forbid 的定义型让位(steering hard− 10000)
     cfg_fb = _cfg(strategy_forbid=["黑塔纪元"])
-    pick2 = decide_event(["追击星徽套组", "黑塔纪元"], cfg_fb, st, target_comp=feixiao)
+    pick2 = decide_event(["追击星徽套组", "黑塔纪元"], cfg_fb, st,
+                         locked_comp=feixiao_comp.name)
     assert pick2.option_idx == 0, "forbid 是唯一压过定义型的家"
 
 
@@ -637,13 +699,13 @@ def test_env_pick_value_adr0144() -> None:
     pick = decide_event(["增发货币", "彩虹时代"], cfg, st)
     assert pick.option_idx == 1
     assert 'env-eval' in pick.reason
-    # 阵营条件分:无 comp 时 追击概念股 52 < 彩虹时代 72;target 含追击 → floor 78 反超
+    # 阵营条件分:无 comp 时 追击概念股 52 < 彩虹时代 72;D* 含追击 → floor 78 反超
+    # (T-155 重推:floor 触发条件从 target_comp 换 D*① 锁线,ADR-0597;归因串
+    # env-faction → align-locked = D* 来源级)
     pick2 = decide_event(["追击概念股", "彩虹时代"], cfg, st)
     assert pick2.option_idx == 1, "无 comp:裸分 52 < 72"
-    tgt = Comp(name="t2", factions=["追击"], core_chars=[], form_tiers={"追击": 4},
-               strength="A", form_difficulty="medium")
-    pick3 = decide_event(["追击概念股", "彩虹时代"], cfg, st, target_comp=tgt)
-    assert pick3.option_idx == 0 and 'env-faction' in pick3.reason, "comp 匹配:78 > 72"
+    pick3 = decide_event(["追击概念股", "彩虹时代"], cfg, st, locked_comp='追击飞霄')
+    assert pick3.option_idx == 0 and 'align-locked' in pick3.reason, "D* 匹配:78 > 72"
     # HP 钩子已退役(ADR-0519:env 生存加分未证置 0):白银时代 35 < 增发货币 48
     # 在低血帧同样增发胜(钩子不再改变行为)
     pick_a = decide_event(["白银时代", "增发货币"], cfg, st)
@@ -657,15 +719,14 @@ def test_env_pick_value_adr0144() -> None:
     _e2 = get_env("追击概念股")
     assert _e2 is not None and _e2.pick_value == 52
     # 策略/env 注册表不相交:策略名不落 env 分支
-    pick_c = decide_event(["免费午餐", "彩虹时代"], cfg, st)   # 50 vs 72
+    # (对位卡换着眼当下 42——原对位免费午餐已入 S2 引擎域带,ADR-0597)
+    pick_c = decide_event(["着眼当下", "彩虹时代"], cfg, st)   # 42 vs 72
     assert pick_c.option_idx == 1
     # ADR-0144b 跨表污染守卫(评审+自查双实证:83 env 名 29 个 LCS 误中策略名):
     # ①env 名不进策略 LCS 兜底(增发货币曾误中超发货币 55 计分);②env 无品质不吃难度惩罚
     # (列车同行概念股曾误中列车同行星徽棱彩 -12,floor 78 被削到 66 —— 评审量化)。
-    tgt2 = Comp(name="tf", factions=["列车同行"], core_chars=[], form_tiers={"列车同行": 4},
-                strength="A", form_difficulty="medium")
-    pick_d = decide_event(["列车同行概念股", "增发货币"], cfg, st, target_comp=tgt2)
-    assert pick_d.option_idx == 0 and 'env-faction' in pick_d.reason, "floor 78 无品质惩罚叠加"
+    pick_d = decide_event(["列车同行概念股", "增发货币"], cfg, st, locked_comp='列车同行')
+    assert pick_d.option_idx == 0 and 'align-locked' in pick_d.reason, "floor 78 无品质惩罚叠加"
     pick_e = decide_event(["增发货币", "头彩"], cfg, st)   # 48 vs 55:头彩 env 分高,表内胜出(无策略串台)
     assert pick_e.option_idx == 1 and 'env-eval' in pick_e.reason
 
@@ -676,13 +737,15 @@ def test_decide_event_rarity_penalty_retired() -> None:
     仍是游戏定义知识,幅度无推导不落码)。"""
     cfg = _cfg()
     st = GameState(board={}, hp=100)
-    # 评估分:免费午餐 50 银 / 黄金垃圾 48 金 / 乱成一锅粥+ 45 彩 → 银胜(分高者胜)
+    # 评估分/引擎域带:免费午餐(引擎,50→115) / 黄金垃圾 48 金 / 乱成一锅粥+(引擎,45→114.6)
+    # → 免费午餐胜(T-155 后引擎域带定序,ADR-0597;原「评估分 50 > 48 > 45」同序)
     pick = decide_event(["免费午餐", "黄金垃圾", "乱成一锅粥+"], cfg, st)
     assert pick.option_idx == 0
-    # 高评估彩不再吃削分:鲜血阶梯 75(彩) vs 免费午餐 50(银)→ 彩胜(75 > 50)
-    pick_b = decide_event(["鲜血阶梯", "免费午餐"], cfg, st)
+    # 高评估彩不再吃削分:鲜血阶梯 75(彩,economy None) vs 黄金垃圾 48(金)→ 彩胜
+    # (T-155 重推:原对位免费午餐已入引擎域带(115>75),换同域(S4)对位保原命题)
+    pick_b = decide_event(["鲜血阶梯", "黄金垃圾"], cfg, st)
     assert pick_b.option_idx == 0
-    # 低血帧无加倍惩罚:乱成一锅粥+ 45(彩) vs 尾款交付 30(银)→ 彩胜恒成立
+    # 低血帧无加倍惩罚:乱成一锅粥+(引擎域带) vs 尾款交付 30(银)→ 彩胜恒成立
     pick_c = decide_event(["尾款交付", "乱成一锅粥+"], cfg, st)
     assert pick_c.option_idx == 1
     st_low = GameState(board={}, hp=20)
