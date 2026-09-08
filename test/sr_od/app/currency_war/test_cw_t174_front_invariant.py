@@ -10,7 +10,8 @@ ADR-0601 板满失配闸短路,r250 场内前排保证永远不可达 → 备战
 
 设计出处 = ``.debug/temp/currency_war/attacks/t174_reward_node/修复方案.md``
 v2(易失工作副本;持久收编 = docs/develop/currency_war/decisions/0610-*.md)。
-锁编号 L1/L1b/L2/L2b/L3/L4/L4b/L5/L6 沿方案 §6.1 清单;L7 回归面 =
+锁编号 L1/L1b/L2/L2b/L2c/L3/L4/L4b/L5/L6 沿方案 §6.1 清单(L2c = 改动
+三审 C1/D1 收口批新增:NO_BENCH 第三出口不变量);L7 回归面 =
 既有 test_cw_p4r_deploy_battle_chain / test_cw_t164_action_op_compliance
 全绿不动(零决策层改动、闸三元组契约不动的界碑)。
 
@@ -20,7 +21,9 @@ v2(易失工作副本;持久收编 = docs/develop/currency_war/decisions/0610-*.
 - 守卫移除(拦下分支删除)→ L1 红(停机形态复现);
 - 守卫检查移回 back_empty 检查之前 → L1c 红;
 - 出口断言删除 → L2b 红;豁免门值分叉放开(PLANTOM 也可豁免)→ L4b 红;
-- 复位条件回退无条件复位 → L6 红。
+- 复位条件回退无条件复位 → L6 红;
+- NO_BENCH 早退复验移除 → L2c 红(改动三审 C1 收口批:备战栏槽未建模
+  + 板全后排 + 前排空的蒙混 success 形态复现)。
 """
 from __future__ import annotations
 
@@ -123,12 +126,15 @@ def _mk_deploy_op(monkeypatch, truth: _FrameTruth, deployed: list,
                   counters: dict, *, cap: int, paddle_x: int,
                   drag_ok: bool = True,
                   flip_front_empty_after_first_shot: bool = False,
+                  bench_slots: list | None = None,
                   ) -> tuple[object, list]:
     """deploy() 节点级桩(直驱 gate→豁免→出口断言全链)。
 
     ``flip_front_empty_after_first_shot``:第一次截图后把前排翻转为全空
     (L4b 判别力前提:若实现错误地对 PHANTOM 门值也跑豁免,判定帧看到
     「前排空」会通过 → 错误 success → 锁红;按门值短路则不可达)。
+    ``bench_slots``:备战栏槽坐标(缺省 = 9 槽全建模;传 ``[]`` = 备战栏
+    槽未建模识别退化态,L2c 场景——NO_BENCH 早退出口)。
     """
     from sr_od.application.currency_war.obs import cw_back_layout
     from sr_od.application.currency_war.operations.cw_op import (
@@ -173,7 +179,8 @@ def _mk_deploy_op(monkeypatch, truth: _FrameTruth, deployed: list,
         def round_by_find_area(self, screen, s1, s2, **kw):
             return SimpleNamespace(is_success=False)
         def _row_centers(self, prefix):
-            return {'备战栏': list(BENCH), '前排': list(FRONT)}.get(prefix, [])
+            bench = list(BENCH) if bench_slots is None else list(bench_slots)
+            return {'备战栏': bench, '前排': list(FRONT)}.get(prefix, [])
         def _back_row_centers(self):
             return list(BACK)
         def _get_templates(self):
@@ -264,7 +271,7 @@ def test_l1b_two_back_pref_front_chars_admit_once(monkeypatch) -> None:
         f'前排占用必须 = 1(静态读法实现此处 = 0 → 红),实得 {front_left}'
 
 
-# ==================== L2/L2b:r250 后置补位 + NOOP 出口不变量 ====================
+# ==================== L2/L2b/L2c:r250 后置补位 + 成功出口不变量(NOOP/NO_BENCH) ====================
 
 def test_l2_post_rowfix_backfills_empty_front(monkeypatch) -> None:
     """L2 r250 后置补位(方案 §6.1):上阵 = 前排0 + 后排3(全 pref=back,
@@ -304,6 +311,45 @@ def test_l2b_noop_exit_rejected_when_front_unfixable(monkeypatch) -> None:
     )
     assert CwOpDeploy.STATUS_FRONT_INVARIANT_FAIL in (res.status or ''), \
         f'必须以具名状态 fail,实得 {res.status!r}'
+
+
+def test_l2c_no_bench_exit_front_invariant(monkeypatch) -> None:
+    """L2c NO_BENCH 第三出口不变量锁(改动三审 C1/D1 收口,ADR-0610
+    §2.1):备战栏槽未建模(``_row_centers('备战栏')`` 返回空,识别退化
+    态)∧ 板上全在后排 ∧ 前排空 → 早退不得以 STATUS_NO_BENCH 蒙混
+    success(发射链拿到 success 即出战 → 游戏拒「前台区域无角色」,与
+    1-1 冻结同型从另一未覆盖出口复发),必须具名 STATUS_FRONT_INVARIANT_
+    FAIL round_fail——「success ⇒ 前排≥1」承诺覆盖第三出口。
+    变异打红口径:早退前复验移除 → 本锁红(NO_BENCH success 形态复现)。
+    反例半边:板真空时不变量前提不适用,NO_BENCH 合法稳态原样放行
+    (修复只堵「板有人而前排空」,不得把合法出口整体堵死)。"""
+    truth = _FrameTruth()
+    truth.set(BACK[:3], True)
+    deployed = [_bc(1, '翡翠', 'back'),
+                _bc(2, '大丽花', 'back'),
+                _bc(3, '银狼', 'back')]
+    counters: dict = {}
+    op, _ = _mk_deploy_op(monkeypatch, truth, deployed, counters,
+                          cap=5, paddle_x=3, bench_slots=[])
+    res = op.deploy()
+    assert res.result.name == 'FAIL', \
+        f'NO_BENCH 早退必须被不变量复验拒绝,实得 {res.status!r}'
+    from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
+        CwOpDeploy,
+    )
+    assert CwOpDeploy.STATUS_FRONT_INVARIANT_FAIL in (res.status or ''), \
+        f'必须以具名状态 fail,实得 {res.status!r}'
+    assert CwOpDeploy.STATUS_NO_BENCH not in (res.status or ''), \
+        '禁以合法稳态蒙混 success'
+    # 反例半边:板真空 → 谓词「整板空 = 前提不适用」放行,合法稳态原样。
+    truth2 = _FrameTruth()
+    op2, _ = _mk_deploy_op(monkeypatch, truth2, [], counters,
+                           cap=5, paddle_x=0, bench_slots=[])
+    res2 = op2.deploy()
+    assert res2.result.name == 'SUCCESS', \
+        f'板真空时 NO_BENCH 合法稳态必须放行,实得 {res2.status!r}'
+    assert CwOpDeploy.STATUS_NO_BENCH in (res2.status or ''), \
+        f'必须保持原具名成功状态,实得 {res2.status!r}'
 
 
 # ==================== L3:守卫与纠正的收敛二段 ====================
