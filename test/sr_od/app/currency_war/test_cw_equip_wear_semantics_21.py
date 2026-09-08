@@ -29,7 +29,6 @@ from sr_od.application.currency_war.kernel.cw_equip_env import (
     TOOL_REJECT_M1_GAP,
     TOOL_REJECT_NO_TARGET,
     TOOL_REJECT_RC_MISSING,
-    ZERO_WEAR_STRATEGY_BY_DESIGN,
     ZERO_WEAR_STRATEGY_BY_DESIGN_OPENING,
     admitted_tool_actions,
     battle_precede_release_active,
@@ -214,15 +213,13 @@ class TestEvaluationOrder:
 class TestTelemetryDomainKey:
     def test_row1_domain_key(self):
         """row1 域分键:新写入端前缀 opening_hold → strategy_by_design_
-        opening(§5:row1 帧数趋零锚与 row2 不回归锚预期相反,无分键不可判读)。"""
+        opening(§5:row1 帧数趋零锚与 row2 不回归锚预期相反,无分键不可判读)。
+        row2 旧键('过渡期hold…' → ZERO_WEAR_STRATEGY_BY_DESIGN)的
+        断言面由 test_cw_equip_wear_semantics_18.py 哨兵辖域二分组承载
+        (该文件持两处),本文件原同型测已删。"""
         assert classify_zero_wear_stop_reason(
             'opening_hold(row1):三门全不中(保留域扣留)') \
             == ZERO_WEAR_STRATEGY_BY_DESIGN_OPENING
-
-    def test_row2_legacy_key_unchanged(self):
-        assert classify_zero_wear_stop_reason(
-            '过渡期hold:无 key_equips 命中(全攒着)') \
-            == ZERO_WEAR_STRATEGY_BY_DESIGN
 
 
 # ===== 6. 工具件消费判据(10 号稿 §2.1 收编 + 21 号稿 §3 增量)=====

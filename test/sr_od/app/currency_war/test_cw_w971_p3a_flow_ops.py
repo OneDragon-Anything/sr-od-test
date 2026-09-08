@@ -5,8 +5,9 @@ FixtureController 假游戏 + 替身 handler + round_by_* 判定替身 + fast_sl
 - CwScreenBriefing:内联简报观察直写 session(P3b;P3a 委托壳已升级);非简报屏 fail。
 - CwScreenPlaneTransition:提示命中 → 点「区域-空白点击」+ 验提示消失;提示未现 fail。
 - CwScreenWaitOneOne:锚命中即成功;假时钟验 ~10s 超时留证 fail。
-- OpeningSequence:首帧分流纯函数 + 壳顺序执行/从中段续走。
-- 七 overlay op(六委托 + CwScreenBookcard 直写):入口识别 + 委托执行 + 固定时长交回。
+- 结构守卫:overlay 封装层退役墓碑(OpeningSequence 拆解退役后,开局两屏
+  分流接线由 test_cw_dispatch_order_matrix 承载)+ 完成承诺常量。
+  (原七 overlay op 行为测已随委托壳溶解退役,见「overlay 族」段注。)
 
 测试纪律:零真实副作用(save_screenshot/park_cursor 替身;台账不触)、
 execute() 包 fast_sleep、运行态用 enter/reset_running_state。
@@ -37,20 +38,6 @@ _FRAME = ('货币战争-备战', 'shop_closed')
 def _require_frame(test_context: SrTestContext) -> None:
     if not test_context.has_screen(*_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_FRAME[0]}/{_FRAME[1]}.webp')
-
-
-class _FakeSubOp:
-    """替身子 op/handler:execute() 返回预置成功/失败(记录执行次数)。"""
-
-    def __init__(self, ok: bool = True):
-        self._ok = ok
-        self.executed = 0
-
-    def execute(self) -> Any:
-        self.executed += 1
-        return SimpleNamespace(success=self._ok,
-                               status='stub-ok' if self._ok else 'stub-fail',
-                               data=None)
 
 
 class _StubStrategy:
@@ -273,6 +260,7 @@ def test_overlay_wrapper_family_absent() -> None:
     import sr_od.application.currency_war.operations.cw_screen as pkg
     for m in pkgutil.iter_modules(pkg.__path__):
         mod_src = Path(pkg.__path__[0], m.name + '.py').read_text(encoding='utf-8')
+        assert 'CwScreenOverlay' not in mod_src, f'{m.name}: 委托壳类未溶解'
         assert 'HANDLER_FACTORY' not in mod_src, f'{m.name}: 委托壳未溶解'
         assert 'OVERLAY_OPS' not in mod_src, f'{m.name}: 注册表未溶解'
 

@@ -59,7 +59,9 @@ def _state(**kw) -> GameState:
 # ===== 候选① 供给计数器(ADR-0519 重锚:断供驱逐已退役)=====================
 # 旧「供给确认加速驱逐」族(驱逐门槛减半/加速触发)已随 PAIR_DROUGHT_
 # EVICT_ROUNDS 未证阈值整体退役(ADR-0519「未证即退役」);本节锁残存
-# 语义:计数器累积/冻结 + 断供永不换向(pair_evicted 恒空)。
+# 语义:计数器累积/冻结。「断供永不换向(pair_evicted 恒空)」面由
+# test_cw_w633_migration_b3.py::test_pair_drought_counters_never_evict
+# 承载(超集:另辖锁线门槛 1.0 空窗面),本文件原同型测已删。
 
 class TestSupplyCounters:
 
@@ -67,23 +69,6 @@ class TestSupplyCounters:
         ist = IntentionState()
         ist.p1_pair = ('列车同行', '希儿系')
         return ist
-
-    def test_drought_never_evicts(self) -> None:
-        """断供任意多轮不驱逐(ADR-0519 保守缺省):pair 方向不因未证
-        断供阈值被移出候选;断供计数器照常累积供遥测/撤销证据链。
-
-        bench 两件列车成员 = 体系羁绊满员(支持度 1.0,ADR-0519 后锁线
-        门槛),pair 方向在场 → 断供计数辖。"""
-        ist = self._pair_ist()
-        for r in range(3, 12):
-            st = _state(round_num=r,
-                        bench=[_bc('三月七', slot=1), _bc('花火', slot=2)],
-                        shop=[SimpleNamespace(name='黑塔')])
-            ist = update_intention(st, ist)
-        assert ist.pair_evicted == set(), \
-            '断供驱逐分支已退役,pair_evicted 恒空集(ADR-0519)'
-        assert max(ist.pair_drought.values(), default=0) > 0, \
-            '断供计数器保留(遥测/撤销证据输入)'
 
     def test_supply_streak_accumulates(self) -> None:
         """方向外体系(仙舟)连续在店 ⇒ shop_supply_streak 逐轮 +1
@@ -227,6 +212,10 @@ class TestMergeCompletionBuy:
 
 
 # ===== 候选③ 危机带经验授权让位 =====
+# 带内正向面(挂起+计数,生产门 mandate.py M3 块 elif 臂,节点无关)由
+# test_cw4_mandate_v1.py::TestRewardNodeSuppress(分键对照腿)与
+# test_cw_l3_prep_must_spend_latch.py(fresh/latch-expiry 两测,counter==1)
+# 承载且断言更强;本文件原同型测(>=1)已删,留带外零漂移与对账让位两面。
 
 def _m3_state(plane: int, hp: int) -> GameState:
     """arm1 存在态(板满+bench 等待件共享体系)+ 整批经验可负担。"""
@@ -252,16 +241,6 @@ def _run_mandate(plane: int, hp: int):
 
 
 class TestCrisisLevelSpendBlocked:
-
-    def test_crisis_band_suspends_levelup_batch(self) -> None:
-        """P2 危机带(hp≤41)内 M3 整批经验挂起+计数——授权让位保命面
-        (P48 λ>0 段转化优先;g_20260904_054904 p2r1 hp=1 帧 36g 经验
-        病灶)。"""
-        out, sess = _run_mandate(2, 30)
-        assert not [e for e in out
-                    if isinstance(e.action, LevelUp)], \
-            '危机带内不得发射整批经验(让位保命转化面)'
-        assert state_of(sess).cw4_counters.get('crisis_level_spend_defer', 0) >= 1
 
     def test_zero_drift_outside_crisis_band(self) -> None:
         """带外(hp=100)零漂移:M3 照常发射(本批只挂危机带)。"""
