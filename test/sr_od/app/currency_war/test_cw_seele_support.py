@@ -1,7 +1,7 @@
 """T-171 批2:希儿系支持度分级公式单帧锁(支持度端口降档)。
 
-设计出处:T-171 设计方案 §5.1/§6.3-4(账本任务 T-171,辅助出处 =
-.debug/temp/currency_war/attacks/t171_xierie_criteria/设计方案.md);
+设计出处:ADR-0608(T-171 批序 2 支持度端口降档,编排者立档)+ T-171 设计方案
+§5.1/§6.3-4(账本任务 T-171,过程稿在 .debug/temp/ 易失,以 ADR 为准);
 判据源 = docs/game/currency_war/research/transition_combos.md:27
 (希儿系 = 希儿在场 AND(量≥2 ∨ 贝≥2))+ combo_methodology.md:138
 (希儿到手 ≠ 希儿线成型)+ 注册表锚 cw_chars.CHARACTERS['希儿']
@@ -10,8 +10,10 @@
 锁的是设计语义(§6.3-4 锁清单),不锁具体卡面;被取代的旧语义
 「希儿在手二元 1.0 即锁」(ADR-0519 C2 post-state)的锁红重推记录
 见 test_cw_lock_path_obs_keys.py::test_frozen_pair_snapshot_lifecycle
-docstring。变异验证已实跑:公式回退「到手即 1.0」时本文件单卡组
-断言必红(TestSeeleSupportFormula 五格)。
+docstring。变异验证已实跑:公式回退「到手即 1.0」时本文件恰 2 格
+必红(TestSeeleSupportFormula 的 1★/2★ 希儿单卡两格——满支持态在
+回退式下同为 1.0,不受扰动;删并消费面重复类后由原 4 格收敛,
+见 ADR-0608 验收指针)。
 """
 from __future__ import annotations
 
@@ -42,6 +44,10 @@ class TestSeeleSupportFormula:
 
     每格断言 support 值 + 消费面行为(_derive_p1_pair 锁线/p1_gap_window
     空窗),三者同源共锁,防「公式对、消费面断线」的双源形态。
+    消费面前两处(gap 空窗/锁线派生)断言并入本组各格(原独立消费面类
+    与格 1/格 3 同板面同断言,按测试纪律删并,唯一非重复断言「配对后
+    gap=False」折入格 3);p1_early_pair 属排序值变化,其 top-2 序由
+    _P1_PAIR_PREF 既有平手序承载,不另锁序。
     """
 
     def test_single_seele_1star_half_support_not_lockable(self):
@@ -66,13 +72,16 @@ class TestSeeleSupportFormula:
     def test_seele_plus_one_amplifier_full_support_lockable(self):
         """希儿 + 任 1 去重放大器 = 1.0(锁线证据成立):两腿对称验——
         量子腿(希儿+缇宝)与贝腿(希儿+桑博)各达文档 OR 档位之一
-        (÷2 档位 + max 取最好腿的 OR 结构,transition_combos.md:27)。"""
+        (÷2 档位 + max 取最好腿的 OR 结构,transition_combos.md:27)。
+        配对即出空窗(gap False):锁点 = 开线点,与文档「引擎达成那
+        一刻切希儿直通模式」同构(设计 §5.1 行为性质)。"""
         for amp in ('缇宝', '桑博'):
             st = _p1_state([_bc('希儿', 0), _bc(amp, 1)])
             sup = ci._p1_system_support(st)
             assert sup[ci.SEELE_SYSTEM] == 1.0, f'腿 {amp} 未满支持'
             pair = ci._derive_p1_pair(st)
             assert ci.SEELE_SYSTEM in pair, f'腿 {amp} 未进锁对'
+            assert ci.p1_gap_window(st) is False, f'腿 {amp} 配对后仍空窗'
 
     def test_seele_plus_three_copies_same_amplifier_dedup_full(self):
         """「希儿 + 3×1★ 同名放大器」态 = 1.0(设计 §6.3-4 第 4 格):
@@ -153,29 +162,6 @@ class TestNonSeeleZeroDrift:
         assert ci._p1_system_support(st) == {
             '仙舟': 0.0, '列车同行': 0.0, '希儿系': 1.0, '持续伤害': 1.5}
         assert list(ci._derive_p1_pair(st)) == ['持续伤害', '希儿系']
-
-
-class TestConsumerFacesIntermediateBand:
-    """消费面行为锁(设计 §5.2 消费面三处的前两处语义改善锚;
-    p1_early_pair 属排序值变化,其 top-2 序由 _P1_PAIR_PREF 既有
-    平手序承载,不另锁序——序常数锁归 _P1_PAIR_PREF 既有锚)。"""
-
-    def test_gap_window_true_for_single_seele(self):
-        """K 空窗回退门:希儿单卡帧 gap=True(旧码 False)——空窗期
-        囤货回退 hoard 全集的判定按文档口径走(支持度 < 门槛 1.0)。"""
-        st = _p1_state([_bc('希儿', 0)])
-        assert ci.p1_gap_window(st) is True
-
-    def test_lock_pair_requires_full_support(self):
-        """锁线派生:单卡 0.5 不产锁对;+1 去重放大器(贝腿 桑博)即
-        产锁对且含希儿系——锁点 = 开线点,与文档「引擎达成那一刻切
-        希儿直通模式」同构(设计 §5.1 行为性质)。"""
-        single = _p1_state([_bc('希儿', 0)])
-        assert ci._derive_p1_pair(single) == ()
-        paired = _p1_state([_bc('希儿', 0), _bc('桑博', 1)])
-        pair = ci._derive_p1_pair(paired)
-        assert ci.SEELE_SYSTEM in pair
-        assert ci.p1_gap_window(paired) is False
 
 
 if __name__ == '__main__':
