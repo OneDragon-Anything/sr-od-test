@@ -3,10 +3,10 @@
 # 语义出处:ADR-0530(board-full swap redeploy)+ dd-037(留 bench
 # 合法稳态,fail-closed 不对称口径)。锁的存在性纪律:每条锁 docstring
 # 引出处;本批锁的是**基础设施语义**(谓词判定/装配契约/分键显影),
-# 不锁发射行为——sim 探针实证靶场景频率 0(0/2700 帧;sim 部署代理
-# 消解板满形态,效果判定挂实机),发射位由 m1p_input_seam_pending 门
-# 维持关闭。
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
+# 不锁 sim 帧分布上的发射行为——探针实证靶场景频率 0(0/2700 帧;sim
+# 部署代理消解板满形态,效果判定挂实机);发射门已开闸(ADR-0530 开闸
+# 批:M1P_SEAM_VERIFIED 缺省 True),seam 门两态与 m1p_fired 发射面由
+# test_m1p_consumer_seam_gate_keeps_emission_closed 承载。
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -23,6 +23,9 @@ from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     MandateFrame,
     run_mandate,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 
 _TF = frozenset({'仙舟', '列车同行'})
@@ -142,7 +145,8 @@ def test_fresh_buys_record_per_name_and_expire_by_round() -> None:
     assert fresh_buys_of(sess, st3) == frozenset()   # 位面推进同辖
 
 
-# ==================== 谓词锁⑤:双弃权键(fail-closed) ====================
+# 谓词锁⑤之一:cap 缺读弃权(membership 缺读弃权由下方装配级缺读锁
+# 一并承载:装配产物 membership=None 经同一谓词分支弃权,同文件超集)
 
 def test_swap_plan_cap_unreadable_abstain() -> None:
     """cap_unreadable 锁(dd-037 维持 fail-closed;ADR-0530 决策1
@@ -155,16 +159,6 @@ def test_swap_plan_cap_unreadable_abstain() -> None:
     assert plan.abstain == 'cap_unreadable'
     assert not plan.nonempty
     assert reasons.get('(plan)') == 'cap_unreadable'
-
-
-def test_swap_plan_membership_unreadable_abstain() -> None:
-    """membership_unreadable 锁(ADR-0530 决策1 钉死:缺读 = 谓词
-    弃权、计划空,消除「排除集空=放行」与拒因并存的语义自相矛盾)。"""
-    plan = select_swap_plan(_base_ctx(deployed=_base_deployed(),
-                                      bench=[_bc(_TARGET_BENCH)],
-                                      membership=None))
-    assert plan.abstain == 'membership_unreadable'
-    assert not plan.nonempty
 
 
 def test_assembly_abstains_membership_when_intention_missing() -> None:
@@ -221,15 +215,14 @@ def test_swap_plan_recipe_floor_bench_piece_not_up_candidate() -> None:
 def test_fenced_arm_single_source_identity() -> None:
     """re-export 同一性锁(ADR-0530 决策2:fenced 臂判据迁
     kernel,执行侧 re-export 兼容——operations 桶副本必须归零,双源 =
-    r271 批同型复发)。真值表同 test_cw_deploy_ops 锁(占用数口径新
-    签名,防迁移改行为)。"""
+    r271 批同型复发)。fp 门真值单行在本锁自持;占用数口径真值表由
+    test_fenced_arm_revives_on_occupancy_full_frame 自持(cap 全域扫;
+    原 test_cw_deploy_ops 同型真值表已删,其头部注记回指本文件)。"""
     from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
     from sr_od.application.currency_war.operations.cw_op import cw_op_deploy
     assert cw_op_deploy.fenced_swap_arm_of is dl.fenced_swap_arm_of
     assert cw_op_deploy.swap_arm_deployed_count is dl.swap_arm_deployed_count
-    assert fenced_swap_arm_of(1.0, 7, 7) is True
-    assert fenced_swap_arm_of(0.42, 7, 7) is False
-    assert fenced_swap_arm_of(1.0, 6, 7) is False
+    assert fenced_swap_arm_of(0.42, 7, 7) is False   # fp 门:未成型臂关
 
 
 # ==================== 成型臂复活锁(占用数口径收口) ====================
@@ -451,13 +444,11 @@ def test_swap_sell_exclusion_single_source_verdict() -> None:
 
 def test_shop_buy_emission_writes_fresh_buys() -> None:
     """fresh 生产写点接线锁(ADR-0530 开闸批;开闸核对批需接线清单①):
-    shop 买入发射位(_emit_buy,8 处 BuyCard 返回位单一收口)在买入动作
+    shop 买入发射位(_emit_buy,全部 BuyCard 返回位单一收口)在买入动作
     被采纳(单动作契约:return 即被决策循环无条件执行)时,逐名写入
     kernel SWAP_FRESH_BUYS_ATTR 单一载体——发射位写入 → fresh_buys_of
     同帧可读;执行侧卖出臂经 swap_sell_exclusion_reason 消费同一载体,
     生产 fresh_buy 排除自此全量生效(P60 防抖在执行路径复活)。"""
-    from types import SimpleNamespace as _CFG
-
     from sr_od.application.currency_war.kernel.cw_comps import (
         COMP_LIBRARY,
         get_comp,
@@ -484,7 +475,7 @@ def test_shop_buy_emission_writes_fresh_buys() -> None:
     state_of(sess).cw4_counters = {}
     state_of(sess).target_comp = comp
     state_of(sess).cw4_line_state = _proof.LineState()
-    act = decide_shop_action(st, sess, _CFG(ev_arm='full'))
+    act = decide_shop_action(st, sess, _NS(ev_arm='full'))
     assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
     assert fresh_buys_of(sess, st) == frozenset({m})
 
