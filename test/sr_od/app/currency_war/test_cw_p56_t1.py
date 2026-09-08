@@ -341,12 +341,11 @@ class TestT115PrepInterestEmit:
     """规则②(a) prep 凑息接线(D5)+ Z1 卖回切除(ADR-0580)。"""
 
     def test_prep_gap_frame_emits_fuel_sell(self):
-        """备战帧 gold 9 < g* ∧ bench 有 1★ 燃料 ⇒ 发射 SellBench
-        (发射标记/载体归因随批 4 双写对齐 = 'interest_pullback_prep',
-        ADR-0585 §3;旧形态「载体无 reason 字段、标记
-        t1_interest_prep_emit」已退役);同帧凑息臂与腾席环共享素材
-        去重(每帧每素材至多 1)。state 必传(N1):漏传 = 血线地板
-        fail-closed 结构性哑火,本帧形 SellBench 断言即红。"""
+        """备战帧 gold 9 < g* ∧ bench 有 1★ 燃料 ⇒ 发射 SellBench(载体
+        reason 归因面已随 2026-09-08 用户归因遥测删除指令拆除,缺省 ''
+        未标);同帧凑息臂与腾席环共享素材去重(每帧每素材至多 1)。
+        state 必传(N1):漏传 = 血线地板 fail-closed 结构性哑火,本帧形
+        SellBench 断言即红。"""
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             SellBench,
         )

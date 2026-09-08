@@ -38,7 +38,6 @@ from sr_od.application.currency_war.kernel.cw_reward_node import (
     reward_node_suppressed,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
-    SELL_BENCH_CONVERT_REASONS,
     BenchChar,
     BuyCard,
     CloseShop,
@@ -490,7 +489,8 @@ class TestEmitRegistration:
 
     def test_stale_obligation_buy_not_marked_next_round(self):
         """防洗白反格:上一轮义务登记跨轮剪枝——同形态下一轮卖出非同轮
-        买卖(检查器本就不辖),证明不得打标,reason 保持通道名。"""
+        买卖(检查器本就不辖),证明不得打标(2026-09-08 归因遥测删除批:
+        非孤儿帧 reason 缺省 '',打标值唯一 = line_switch_collapse)。"""
         sess = _sess()
         st = _state(60, [], node='battle', round_num=3)
         st.shop = [_card('目标件', cost=3)]
@@ -501,7 +501,8 @@ class TestEmitRegistration:
         st2 = _state(1, [_bc('目标件', slot=1)], node='reward', round_num=4)
         act2 = decide_shop_action(st2, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act2, SellBench)
-        assert act2.reason == 'interest_pullback', \
+        assert act2.reason != 'line_switch_collapse' \
+            and act2.reason == '', \
             '跨轮陈旧证明误打标 = 豁免面自由扩边(防洗白边界破)'
 
     def test_emit_merge_detection_closes_and_skips_registration(self):
@@ -566,19 +567,17 @@ class TestFundingHoldFallback:
     面)空 ∧ 仍需筹资 ⇒ 兜底池单笔变现;两项减法与达成量化逐格反证。"""
 
     def test_shop_fallback_liquidates_hold_last_resort(self):
-        """正格:bench 唯一 ③④ 持有件 + 缺员 + gold<need ⇒ 兜底卖出,
-        reason 分键 funding_hold_liquidated(入同轮买卖检查豁免面,
-        cw_state.SELL_BENCH_CONVERT_REASONS 三键)。"""
+        """正格:bench 唯一 ③④ 持有件 + 缺员 + gold<need ⇒ 兜底卖出
+        (行为面;reason 分键填充已随 2026-09-08 用户归因遥测删除指令
+        拆除,缺省 '' 未标)。"""
         sess = _sess()
         st = _state(0, [_bc(_CORE_HOLD, slot=1)])   # 希儿 cost=3 → 退 3
         act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench), \
             '兜底豁免未接线 = ③④件变现出口缺席(ADR-0585 中介窗口未收)'
         assert act.expect == _CORE_HOLD
-        assert act.reason == 'funding_hold_liquidated'
+        assert act.reason == ''
         assert act.income == sell_refund(1, 3)
-        assert state_of(sess).cw4_counters.get('funding_hold_liquidated') == 1
-        assert act.reason in SELL_BENCH_CONVERT_REASONS
 
     def test_subtraction1_visit_bought_never_in_pool(self):
         """减法①(P78-5 条①/M1):本 visit 买入的持有件禁入兜底——否则
@@ -588,7 +587,6 @@ class TestFundingHoldFallback:
         act = decide_shop_action(_state(0, [_bc(_CORE_HOLD, slot=1)]), sess,
                                  SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, SellBench)
-        assert 'funding_hold_liquidated' not in state_of(sess).cw4_counters
 
     def test_subtraction2_obligation_base_never_in_pool(self):
         """减法②(P78-5 条②/M2):义务基座成员禁入兜底——兜底卖义务件
@@ -601,7 +599,6 @@ class TestFundingHoldFallback:
         act = decide_shop_action(_state(0, [_bc(_CORE_HOLD, slot=1)]), sess,
                                  SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, SellBench)
-        assert 'funding_hold_liquidated' not in state_of(sess).cw4_counters
 
     def test_quantification_refund_must_cover_gap(self):
         """达成量化(P78-5 条③,V3-04 机制授权条款):本笔退金 < need−gold
@@ -612,7 +609,6 @@ class TestFundingHoldFallback:
         act = decide_shop_action(_state(0, [_bc(_TRANS_CHEAP, slot=1)]), sess,
                                  SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, SellBench)
-        assert 'funding_hold_liquidated' not in state_of(sess).cw4_counters
 
     def test_main_path_nonempty_skips_fallback(self):
         """顺序豁免(P78-5 条③):非持有资格面未耗尽 ⇒ 兜底不评估。
@@ -625,13 +621,12 @@ class TestFundingHoldFallback:
         st = _state(0, [_bc(_CORE_HOLD, slot=1), _bc(_FUEL, slot=2)])
         act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
-        assert act.reason == 'funding_support_stall_convert'   # 主路径转化类
-        assert 'funding_hold_liquidated' not in state_of(sess).cw4_counters
+        assert act.expect == _FUEL   # 主路径卖 T3 垫件,兜底池未动
+        assert act.reason == ''   # 2026-09-08 归因删除批:特化值填充已拆
 
     def test_entry_ev_fallback_liquidates_prep_carrier(self):
-        """消费位②(entry EV pass):兜底经 prep 载体发射(reason 兜底
-        分键入载体 = 三审三波 F6 回填后与 shop 兜底位同口径;计数分键
-        同步显影)。"""
+        """消费位②(entry EV pass):兜底经 prep 载体发射(行为面;计数
+        分键已随 2026-09-08 用户归因遥测删除指令拆除)。"""
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             SellBench as PrepSellBench,
         )
@@ -647,7 +642,6 @@ class TestFundingHoldFallback:
                                    old_line_members=())
         sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]
         assert [s.slot for s in sells] == [1]
-        assert state_of(sess).cw4_counters.get('funding_hold_liquidated') == 1
 
 
 # ===== P78-6:projection 视图 = interest 全资格面(含 T3 活跃集)=====

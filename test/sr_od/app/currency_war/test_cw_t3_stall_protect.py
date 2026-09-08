@@ -107,9 +107,10 @@ class Test2FuelDemotion:
 
     def test_only_fuel_protected_passes_and_consumes(self):
         """唯一燃料 = 被保件 ⇒ 放行卖出(为义务买入腾位的转化类,非
-        自旋):分键 fuel_victim_protect_demoted + 卖出销账 + SellBench
-        reason 分键。9 个互异线外名(同名副本会触素材守卫,改用异名
-        全保集隔离守卫面——守卫交互由锁④专测)。"""
+        自旋):卖出销账(出口①)保留;归因分键/载体填充已随 2026-09-08
+        用户归因遥测删除指令拆除(reason 缺省 '')。9 个互异线外名
+        (同名副本会触素材守卫,改用异名全保集隔离守卫面——守卫交互
+        由锁④专测)。"""
         names = _distinct_fillers(9)
         # 策略器字段经 state_of 载体;cw4_fuel_filler_stall_buys 是执行侧
         # session 属性(N3 登记契约),保持在 session 上。
@@ -123,16 +124,14 @@ class Test2FuelDemotion:
         act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
         assert act.expect == names[0]
-        assert act.reason == 'fuel_victim_protect_demoted'
-        assert state_of(sess).cw4_counters.get('fuel_victim_protect_demoted') == 1
+        assert act.reason == ''
         assert names[0] not in state_of(sess).cw4_fuel_filler_stall_buys   # 卖出销
 
     def test_non_protected_victim_preferred(self):
-        """非保燃料在场 ⇒ 被保件零成本存活、非保件先卖。批 4 归因填充
-        实证(ADR-0585 §3):本端到端帧(SimpleNamespace 会话,k 派生为
-        空)实际由凑息臂先卖(绝对跳过被保件,reason='interest_pullback'
-        ——旧断言 reason='' 恰好掩盖了臂归属);M4 臂级「被保件降末位」
-        排序语义由 test_deferred_demoted_to_tail 承载,两臂语义同构。"""
+        """非保燃料在场 ⇒ 被保件零成本存活、非保件先卖。臂归属不再经
+        reason 判读(2026-09-08 归因遥测删除批,reason 恒 '' 未标);
+        M4 臂级「被保件降末位」排序语义由 test_deferred_demoted_to_tail
+        承载,两臂语义同构。"""
         other = '燃料G'
         sess = SimpleNamespace(cw4_counters={},
                                target_comp=_comp())
@@ -142,8 +141,6 @@ class Test2FuelDemotion:
         act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
         assert act.expect == other
-        assert act.reason == 'interest_pullback'
-        assert 'fuel_victim_protect_demoted' not in state_of(sess).cw4_counters
         assert state_of(sess).cw4_fuel_filler_stall_buys.get(_PROT) == 2   # 未销
 
     def test_funding_convert_demote_not_ban(self):
@@ -401,14 +398,13 @@ class Test8EntryFundingFace:
         assert len(sells) == 1
         assert sells[0].slot == 2   # 非保件 F
         assert state_of(sess).cw4_fuel_filler_stall_buys == {_PROT: 2}   # 未销
-        assert 'funding_support_stall_convert' not in state_of(sess).cw4_counters
 
     def test_only_fuel_protected_convert_consume(self):
-        """唯一燃料 = 被保件 ⇒ 放行卖出(转化类):分键计数 + 卖出销账。"""
+        """唯一燃料 = 被保件 ⇒ 放行卖出(转化类):卖出销账保留(出口①;
+        分键计数已随 2026-09-08 用户归因遥测删除指令拆除)。"""
         out, sess = self._run([_bc(_PROT, slot=1)], {_PROT: 2})
         sells = self._sells(out)
         assert len(sells) == 1 and sells[0].slot == 1
-        assert state_of(sess).cw4_counters.get('funding_support_stall_convert') == 1
         assert state_of(sess).cw4_fuel_filler_stall_buys == {}   # 卖出销账
 
 

@@ -318,9 +318,9 @@ class TestEntryFundingCells:
 
     def test_criteria_pass_funding_fallback_liquidates_hold(self):
         """格④(_criteria_pass funding,方案锚 entry.py:769-802):
-        bench 唯一 ④件 ⇒ 主路径空 → 兜底豁免单笔卖出 + 分键计数。
-        红证:判据直调不带排除集 ⇒ 该件恰入卖出槽集;活性伴随:普通
-        燃料件走主路径(零兜底分键)。"""
+        bench 唯一 ④件 ⇒ 主路径空 → 兜底豁免单笔卖出(行为面;分键
+        计数已随 2026-09-08 用户归因遥测删除指令拆除)。红证:判据直调
+        不带排除集 ⇒ 该件恰入卖出槽集;活性伴随:普通燃料件走主路径。"""
         st = GameState(gold=1, level=5, round_num=2, hp=40)
         sess = SimpleNamespace()
 
@@ -335,27 +335,22 @@ class TestEntryFundingCells:
                 k_switched=False, old_line_members=())
             return out, state_of(sess).cw4_counters
 
-        out, ct = _run([_bc('希儿', slot=1)])
+        out, _ct = _run([_bc('希儿', slot=1)])
         sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]
         assert [s.slot for s in sells] == [1], \
             '新格A④:④件兜底豁免未接线 = 变现出口缺席(中介窗口未收口)'
-        assert ct.get('funding_hold_liquidated') == 1, \
-            '兜底卖出缺分键显影(P78-5 条④)'
         slots, key = crit_sell.funding_support_sell(
             1, 9, [_bc('希儿', slot=1)], ('线内件X',), state=st)
         assert key == '' and slots == [1], '红证失效:希儿未穿过排除外谓词'
         # 达成量化(P78-5 条③):藿藿退金 1 < 缺口 2(need 3 − gold 1)
         # ⇒ 不放行——期权损失(P01)已付而义务未达成 = 严格有害
-        out3, ct3 = _run([_bc('藿藿', slot=1)])
+        out3, _ct3 = _run([_bc('藿藿', slot=1)])
         assert not [e for e in out3 if isinstance(e.action, PrepSellBench)], \
             '兜底卖出退金不达缺口 = 达成量化(P78-5 条③)违例'
-        assert 'funding_hold_liquidated' not in ct3
-        out2, ct2 = _run([_bc('填充燃料F', slot=1)])
+        out2, _ct2 = _run([_bc('填充燃料F', slot=1)])
         assert [e.action.slot for e in out2
                 if isinstance(e.action, PrepSellBench)] == [1], \
             '活性伴随失效:funding 分支未卖出普通燃料件(锁空转)'
-        assert 'funding_hold_liquidated' not in ct2, \
-            '主路径可卖时走了兜底 = 顺序豁免(P78-5 条③)违例'
 
     def test_skeleton_only_funding_fallback_liquidates_hold(self):
         """格③(skeleton_only funding,方案锚 entry.py:492-506):全
@@ -378,7 +373,6 @@ class TestEntryFundingCells:
         sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]
         assert [s.slot for s in sells] == [1], \
             f'新格A③:skeleton_only funding 兜底未卖出 {sells} = 出口缺席'
-        assert state_of(sess).cw4_counters.get('funding_hold_liquidated') == 1
         slots, key = crit_sell.funding_support_sell(
             0, 9, [_bc('藿藿', slot=1)], _core(), state=st)
         assert key == '' and slots == [1], '红证失效:藿藿未穿过排除外谓词'

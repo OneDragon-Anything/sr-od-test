@@ -1,27 +1,26 @@
-"""T-126 卖出归因枚举与「任意买因类×任意卖出通道」矩阵(单帧锁;批 4 收官)。
+"""卖出 reason 载体值域与「任意买因类×任意卖出通道」矩阵(单帧锁)。
 
 出处(锁纪律:新锁必引设计出处):
-- ADR-0585(§3 reason 枚举闭集×9 发射位装配键集/发射规则「T3 特化值
-  优先于通道名」/funding plain 分键;§5 契约正本首次落档申报 =
-  flow/action_exec.md §1 卖出类行);
+- 2026-09-08 用户归因遥测删除指令(现状载体面):纯归因 reason 填充/
+  分键计数整体拆除,SELL_BENCH_REASONS 缩至唯一承重值
+  line_switch_collapse(T-141 检查器豁免判别食物,授予须伴随登记簿
+  线账闭合证明,ADR-0591 §4);
+- ADR-0585(历史设计:§3 reason 枚举闭集原 5 通道值×9 发射位装配/
+  funding plain 分键,现状以该 ADR Status/§5 删除批增注为准;§5 契约
+  正本落档 = flow/action_exec.md §1 卖出类行);
 - docs/develop/currency_war/proofs/math_proofs.md **P78** 行(P78-1 同
   visit 禁卖无条件下成立/P78-2 τ 分类/P78-5′ 四关系表:垫保在凑息
   绝对跳过、在 M4/funding 降序放行转化类);
-- 方案 v3(`.debug/temp/currency_war/t126_sell_arbitration/方案.md`)
-  §3.4(W8 落地形态与两判定口径:默认值⇒类型消费无感/序列化白名单
-  挑字段⇒新字段默认不入 sim 账本)/§5.2(reason 枚举锁两阶段收敛:
-  9 位统一断言+prep 双写对齐+枚举闭集常量锁)/§5.3(矩阵测试;
-  ev_buy 行同轮-only = V2-07);
-- docs/develop/currency_war/decisions/dd-020(序列决策契约;批 4 完成
-  权威链重锚,词表落档行 = action_exec.md §1)。
+- docs/develop/currency_war/decisions/dd-020(序列决策契约;词表落档行
+  = action_exec.md §1)。
 
-9 位 reason 覆盖地图(重复断言择一保留,本文件补齐缺口位):shop M4
-腾席两位(plain+T3 特化)= test_cw_t3_stall_protect.Test2FuelDemotion;
-shop funding 主路径 T3 特化 = test_cw_sell_window_launch.
-TestFundingHoldFallback.test_main_path_nonempty_skips_fallback;shop
-funding 兜底位(funding_hold_liquidated)= 同文件
-test_shop_fallback_liquidates_hold_last_resort;**其余 9 位断言与
-全量归因面(双写对齐/登记门/序列化等值/消费位清单)由本文件承载**。
+载体面覆盖地图:line_switch_collapse 双写(entry 换线塌缩位)= 本文件
+test_prep_line_switch_collapse_dual_write;凑息回拉孤儿打标端到端 =
+同文件 TestLineSwitchOrphanSeed18 与 test_cw_sell_window_launch.
+test_line_switch_orphan_interest_sell_marked;防洗白三格(缺省 ''/
+plain 值/跨轮陈旧)= test_cw_sell_window_launch.
+test_stale_obligation_buy_not_marked_next_round + 检查器面
+test_cw_t3_stall_protect.Test7CheckerExemption。
 
 红证形态:矩阵格红证 = 「拔除对应装配构件后该件恰入卖出面」的机制
 复现(与批 2/批 3 主题文件同款),散布在各格注释与既有文件引用,
@@ -109,44 +108,47 @@ def _prep_emit_out(sells: list) -> list:
 
 
 class TestReasonEnumRegistry:
-    """卖出归因枚举登记门:增删值红且点名(判别问句:红时登记的语义 =
-    新发射位/新特化键入册,非机械跟绿)。"""
+    """发射位值域登记门:增删值红且点名(判别问句:红时登记的语义 =
+    新承重填充值入册/退役值回流,非机械跟绿)。"""
 
-    def test_close_set_is_five_channel_values(self):
-        assert set(SELL_BENCH_REASONS) == {
-            'interest_pullback_prep', 'interest_pullback', 'funding_support',
-            'm4_fuel_victim', 'line_switch_collapse',
-        }
+    def test_close_set_is_single_carrier_value(self):
+        """2026-09-08 用户归因遥测删除指令:纯归因通道值填充全撤,
+        闭集缩至唯一承重值 line_switch_collapse(T-141 检查器豁免
+        判别食物,ADR-0591)。红 = 归因填充回流或新填充值未登记。"""
+        assert set(SELL_BENCH_REASONS) == {'line_switch_collapse'}
 
     def test_convert_set_four_keys_and_intersection_carve_out(self):
-        """转化特化集(同轮买卖检查豁免面单一源)钉死四键;与通道枚举
-        不相交的唯一例外 = line_switch_collapse(T-141/ADR-0591:该键
-        双重身份 = entry 换线塌缩出口通道名 + 商店发射位线账闭合孤儿
-        证明标记,两语义同为 P78-2a 账闭合事件)。其余 plain 通道值恒
-        不豁免(检查器镜像锁见 TestSerializationEquivalence)。"""
+        """转化特化集(同轮买卖检查豁免面单一源)钉死四键——键集保留
+        非发射面(2026-09-08 删除批:三枚纯归因键的发射位填充已拆,
+        键语义/豁免边不变);与发射闭集相交的唯一成员 =
+        line_switch_collapse(T-141/ADR-0591:该键双重身份 = entry 换线
+        塌缩出口通道名 + 商店发射位线账闭合孤儿证明标记,两语义同为
+        P78-2a 账闭合事件)。其余值恒不豁免(检查器镜像锁见
+        TestSerializationEquivalence)。"""
         assert set(SELL_BENCH_CONVERT_REASONS) == {
             'fuel_victim_protect_demoted', 'funding_support_stall_convert',
             'funding_hold_liquidated', 'line_switch_collapse',
         }
-        assert (SELL_BENCH_REASONS & SELL_BENCH_CONVERT_REASONS) == \
-            {'line_switch_collapse'}
+        overlap = SELL_BENCH_REASONS & SELL_BENCH_CONVERT_REASONS
+        assert overlap == {'line_switch_collapse'}
 
 
 # ===== 序列化等值(方案 v3 §3.4 V2-02 两判定口径的锁面)=====
 
 
 class TestSerializationEquivalence:
-    """「reason 默认值下新旧账本逐位一致」的可观测锚:
+    """「reason 值变化不动任何判定面」的可观测锚(2026-09-08 删除批的
+    判定零变化契约:填充值→'' 不得移动键/渲染/豁免面):
     ①决策层幂等键逐字节不变;②decisions 转录面为加法增益(schema 容忍
-    新键);③sim 检查器豁免面不因 plain 值扩边;④cw_replay --diff 渲染
-    对 reason 结构性免疫(只取 bench_idx)——批 4 纯遥测增益的判定零变
-    由此四锚承载。"""
+    新键);③sim 检查器豁免面不因非特化值扩边;④cw_replay --diff 渲染
+    对 reason 结构性免疫(只取 bench_idx)——删除批判定零变由此四锚
+    承载。"""
 
     def test_action_key_ignores_reason_and_matches_pre_batch_format(self):
-        """幂等粒度 = 类型 + 行为参数:归因不入键,且键文本与批 4 前逐
-        字节一致(字段 metadata 排除,决策层屏蔽/计数粒度零漂移)。"""
+        """幂等粒度 = 类型 + 行为参数:reason 不入键,且键文本与批 4 前
+        逐字节一致(字段 metadata 排除,决策层屏蔽/计数粒度零漂移)。"""
         k_default = action_key(PrepSellBench(slot=3))
-        k_filled = action_key(PrepSellBench(slot=3, reason='m4_fuel_victim'))
+        k_filled = action_key(PrepSellBench(slot=3, reason='line_switch_collapse'))
         assert k_default == k_filled == "SellBench({'slot': 3})"
         # 对照:BailToOuter.reason 是载荷(非归因),必须入键。
         assert action_key(BailToOuter(reason='a')) != \
@@ -158,13 +160,14 @@ class TestSerializationEquivalence:
         追加且可选」)。"""
         d0 = serialize_action(PrepSellBench(slot=1))
         assert d0 == {'slot': 1, 'reason': '', '__type__': 'SellBench'}
-        d1 = serialize_action(PrepSellBench(slot=1, reason='interest_pullback_prep'))
-        assert d1['reason'] == 'interest_pullback_prep'
+        d1 = serialize_action(
+            PrepSellBench(slot=1, reason='line_switch_collapse'))
+        assert d1['reason'] == 'line_switch_collapse'
 
     def test_plain_reason_does_not_extend_convert_exemption_face(self):
-        """sim 检查器豁免面收敛(ADR-0585 §3;check_no_same_round_buy_sell
-        镜像):plain 通道值与 '' 同罪(同轮买后卖仍报),仅特化集豁免
-        ——枚举填充不得悄悄放大豁免面。"""
+        """sim 检查器豁免面收敛(check_no_same_round_buy_sell 镜像):
+        非特化集值(含已退役通道值)与 '' 同罪(同轮买后卖仍报),仅
+        特化集豁免——任意 reason 值不得悄悄放大豁免面。"""
         from sr_od.application.currency_war.sim.checks.ledger import (
             check_no_same_round_buy_sell,
         )
@@ -173,9 +176,9 @@ class TestSerializationEquivalence:
                    {'__type__': 'BuyCard',
                     'card': {'name': 'X'}, 'reason': ''},
                    {'__type__': 'SellBench', 'name': 'X',
-                    'sell_reason': 'm4_fuel_victim'}]}
+                    'sell_reason': 'funding_support'}]}
         assert check_no_same_round_buy_sell([row]), \
-            'plain 枚举值误入豁免面 = 同轮自旋检查被架空'
+            '非特化值误入豁免面 = 同轮自旋检查被架空'
         row_ok = {'plane': 1, 'round_num': 1,
                   'actions': [
                       {'__type__': 'BuyCard',
@@ -187,10 +190,11 @@ class TestSerializationEquivalence:
 
     def test_replay_diff_rendering_ignores_reason(self):
         """cw_replay --diff 分歧面对 reason 免疫:新旧两渲染器都只取
-        bench_idx/shop 行名——归因填充在回放对比面结构性零漂移。"""
+        bench_idx/shop 行名——reason 值(含已退役值)在回放对比面
+        结构性零漂移。"""
         from sr_od.application.currency_war.sim.cw_replay import _fmt, _fmt_json
         new_row = [ShopSellBench(bench_idx=2, income=1, expect='X',
-                                 reason='m4_fuel_victim')]
+                                 reason='funding_support')]
         old_row = [{'__type__': 'SellBench', 'bench_idx': 2}]
         assert _fmt(new_row) == _fmt_json(old_row) == 'Sell(2)'
         # prep 载体行(slot 域,无 bench_idx)渲染同样不含 reason 面。
@@ -198,9 +202,9 @@ class TestSerializationEquivalence:
 
     def test_shadow_adapter_fingerprint_aligned_with_action_key(self):
         """影子适配器指纹面(V2-02 清单 B「需映射」判定点,批 4 已映射):
-        action_to_atomop 与 action_key 消费同一 metadata 单一源——归因
-        字段不入指纹,默认值下 op_key 与批 4 前逐字节一致
-        ('sell_bench:3'),归因填充不再分裂同槽动作的幂等键。红时语义 =
+        action_to_atomop 与 action_key 消费同一 metadata 单一源——reason
+        字段不入指纹,任意值下 op_key 与批 4 前逐字节一致
+        ('sell_bench:3'),填充/删除都不分裂同槽动作的幂等键。红时语义 =
         有人改动了指纹的字段选择规则,先核对 action_key 同规再动。"""
         k0 = action_to_atomop(PrepSellBench(slot=3)).op_key
         k1 = action_to_atomop(
@@ -208,42 +212,45 @@ class TestSerializationEquivalence:
         assert k0 == k1 == 'sell_bench:3'
 
 
-# ===== 9 位 reason 统一断言(方案 v3 §5.2;ADR-0585 §3 装配键集)=====
+# ===== 发射位载体现状锁(2026-09-08 归因遥测删除批)=====
 
 
-class TestNineEmissionSites:
-    """归因面缺口位锁(prep 五位 + shop 凑息/funding plain;shop M4 两位
-    与 funding 特化/兜底由覆盖地图所指既有锁承载)。prep 位一律断言
-    tag==reason 双写对齐(方案 v3 §3.4)。"""
+class TestEmissionFace:
+    """发射位 reason 现状锁:纯归因值(通道名/转化特化)填充已全撤
+    (缺省 '' 未标),唯一在役填充 = line_switch_collapse 证明载体
+    (端到端锁 = TestLineSwitchOrphanSeed18 与 test_cw_sell_window_
+    launch.test_line_switch_orphan_interest_sell_marked)。红时语义 =
+    归因填充回流或发射行为位移,处置 = 对照删除指令裁决,非机械跟绿。
+    销账类行为面(T3 转化类出口①)在本类保留行为断言。"""
 
-    def test_shop_interest_pullback(self):
-        """shop 凑息回拉位(装配键集 shop.py:1716→现 :1799 区):gold<g*
-        ∧ 线外燃料 ⇒ SellBench.reason = 'interest_pullback'。"""
+    def test_shop_interest_pullback_unmarked(self):
+        """shop 凑息回拉位:gold<g* ∧ 线外燃料 ⇒ 卖出发射(行为不变),
+        非孤儿帧 reason 缺省 ''('interest_pullback' 已拆;孤儿帧打标
+        由 test_cw_sell_window_launch 正格锁辖)。"""
         sess = _sess()
         act = decide_shop_action(_state(1, [_bc(_FUEL, slot=1)]), sess,
                                  SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench)
-        assert act.reason == 'interest_pullback'
+        assert act.reason == ''
         assert act.expect == _FUEL
 
-    def test_shop_funding_plain_reason_and_counter(self):
+    def test_shop_funding_plain_emits_unmarked(self):
         """shop funding 位 plain 分支:买断制覆写(g*=0)令凑息臂
-        not_needed、血线不动 ⇒ 凑息让位,筹资卖出线外燃料 =
-        'funding_support' + plain 分键(funding 空手率可观测事件,
-        方案 v3 §5.4/ADR-0585 §3)。"""
+        not_needed、血线不动 ⇒ 凑息让位,筹资卖出线外燃料(发射行为
+        不变);plain 分键计数与 'funding_support' 填充已拆。"""
         sess = _sess()
         state_of(sess).cw4_cap_override = 0
         act = decide_shop_action(_state(1, [_bc(_FUEL, slot=1)]), sess,
                                  SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench)
-        assert act.reason == 'funding_support'
+        assert act.reason == ''
         ct = state_of(sess).cw4_counters
-        assert ct.get('funding_support_plain_sell') == 1
+        assert 'funding_support_plain_sell' not in ct
         assert 'funding_support_stall_convert' not in ct
 
-    def test_prep_interest_dual_write(self):
-        """prep 凑息位(mandate ②(a) 接线):载体 reason 与 Emitted 标记
-        同值 'interest_pullback_prep'(双写对齐);计数键零断链。"""
+    def test_prep_interest_emit_unmarked(self):
+        """prep 凑息位(mandate ②(a) 接线):卖出发射行为不变,载体
+        reason/标记缺省 ''(归因枚举填充已拆);发射计数键零断链。"""
         sess = _sess()
         bench = [_bc(_FUEL, slot=1)]
         frame = mandate.MandateFrame(
@@ -255,14 +262,13 @@ class TestNineEmissionSites:
                                                   plane=1, round_num=2))
         sells = _prep_emit_out(out)
         assert len(sells) == 1
-        assert sells[0].action.reason == 'interest_pullback_prep'
-        assert sells[0].reason == sells[0].action.reason
+        assert sells[0].action.reason == ''
+        assert sells[0].reason == ''
         assert state_of(sess).cw4_counters.get('t1_interest_prep_emit') == 1
 
-    def test_prep_m4_plain_and_t3_specialized_dual_write(self):
-        """prep M4 腾席位(mandate M2 重试环):plain victim =
-        'm4_fuel_victim';被保垫件为唯一燃料帧 = T3 特化值优先
-        ('fuel_victim_protect_demoted');两形态 tag==reason 双写。
+    def test_prep_m4_frees_seat_unmarked(self):
+        """prep M4 腾席位(mandate M2 重试环):plain/T3 两形态卖出发射
+        不变,载体 reason 缺省 '';T3 帧销账行为保留(出口①)。
         买断制覆写关凑息臂(裸 session g* 高,gold<g* 会让 ②(a) 先于
         M2 清空燃料面,隔离本位的发射臂)。"""
         k = ('目标件',)
@@ -278,8 +284,8 @@ class TestNineEmissionSites:
                                                   plane=1, round_num=2))
         sells = _prep_emit_out(out)
         assert len(sells) == 1
-        assert sells[0].action.reason == 'm4_fuel_victim'
-        assert sells[0].reason == sells[0].action.reason
+        assert sells[0].action.reason == ''
+        assert sells[0].reason == ''
         # T3 特化:8 张 3★ 非燃料 + 唯一被保垫件 ⇒ victim = 垫件。
         sess2 = _sess()
         state_of(sess2).cw4_cap_override = 0
@@ -295,16 +301,15 @@ class TestNineEmissionSites:
                                                    plane=1, round_num=2))
         sells2 = _prep_emit_out(out2)
         assert len(sells2) == 1
-        assert sells2[0].action.reason == 'fuel_victim_protect_demoted'
-        assert sells2[0].reason == 'fuel_victim_protect_demoted'
+        assert sells2[0].action.reason == ''
+        assert sells2[0].reason == ''
         ct2 = state_of(sess2).cw4_counters
-        assert ct2.get('fuel_victim_protect_demoted') == 1
         assert ct2.get('close_on_sell') == 1   # 出口①卖出销(转化类)
 
-    def test_prep_skeleton_funding_plain_dual_write(self):
+    def test_prep_skeleton_funding_emit_unmarked(self):
         """prep funding 骨架-only 位(entry.emit skeleton_only 臂):
-        买断制覆写关凑息臂后,筹资卖出线外燃料 = 'funding_support' +
-        plain 分键;载体与标记双写。"""
+        买断制覆写关凑息臂后,筹资卖出线外燃料(发射与 funding_support
+        标记位不变——发射面标记非归因);plain 分键计数与载体填充已拆。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )
@@ -319,17 +324,15 @@ class TestNineEmissionSites:
                          ev_arm='skeleton_only', registry=strat.registry)
         sells = _prep_emit_out(out)
         assert [s.action.slot for s in sells] == [1]
-        assert sells[0].action.reason == 'funding_support'
-        assert sells[0].reason == 'funding_support'
+        assert sells[0].action.reason == ''
+        assert sells[0].reason == ''
         assert sells[0].funding_support is True
         assert state_of(sess).cw4_counters.get(
-            'funding_support_plain_sell') == 1
+            'funding_support_plain_sell') is None
 
-    def test_prep_skeleton_funding_fallback_channel_reason(self):
+    def test_prep_skeleton_funding_fallback_emits_unmarked(self):
         """prep funding 兜底位(骨架-only 臂):唯一 ④件主路径空 → 兜底
-        变现;reason = 兜底分键入载体(三审三波 F6 修订:批 3 旧申报
-        「走计数不入载体」废止,批 4 载体已带 reason 字段,归因一致性
-        面与 shop 兜底位对齐;tag==reason 双写)。"""
+        变现(发射行为不变);兜底分键计数与载体填充已拆。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )
@@ -343,14 +346,14 @@ class TestNineEmissionSites:
                          ev_arm='skeleton_only', registry=strat.registry)
         sells = _prep_emit_out(out)
         assert [s.action.slot for s in sells] == [1]
-        assert sells[0].action.reason == 'funding_hold_liquidated'
-        assert sells[0].reason == 'funding_hold_liquidated'
-        assert state_of(sess).cw4_counters.get('funding_hold_liquidated') == 1
+        assert sells[0].action.reason == ''
+        assert sells[0].reason == ''
+        assert state_of(sess).cw4_counters.get('funding_hold_liquidated') \
+            is None
 
-    def test_prep_ev_funding_plain_and_t3_specialized(self):
-        """prep funding EV 位(entry._criteria_pass):plain 分支 =
-        'funding_support'+plain 分键;被保垫件 = T3 特化值优先;两分支
-        tag==reason 双写。"""
+    def test_prep_ev_funding_convert_consume_kept(self):
+        """prep funding EV 位:T3 被保垫件降序放行行为不变(销账经
+        T3 活跃集清空可观测);分键计数与载体填充已拆(reason '')。"""
         def _run(bench: list, sess) -> tuple[list, dict]:
             st = GameState(gold=1, level=5, round_num=2, hp=40)
             frame = mandate.MandateFrame(
@@ -364,22 +367,23 @@ class TestNineEmissionSites:
         sess = _sess()
         sells, ct = _run([_bc('填充燃料F', slot=1)], sess)
         assert [s.action.slot for s in sells] == [1]
-        assert sells[0].action.reason == 'funding_support'
-        assert sells[0].reason == 'funding_support'
-        assert ct.get('funding_support_plain_sell') == 1
-        # T3 特化:唯一燃料 = 被保垫件(defer 降序放行,转化类)。
+        assert sells[0].action.reason == ''
+        assert sells[0].reason == ''
+        assert ct.get('funding_support_plain_sell') is None
+        # T3 特化:唯一燃料 = 被保垫件(defer 降序放行,转化类),
+        # 放行卖出即销账 ⇒ T3 活跃集清空(τ=同轮,须在登记轮现读)。
         sess2 = _sess()
         assert sell_gate.register_launch(sess2, '填充燃料F',
                                          cause='stall_protect', round_num=2)
         sells2, ct2 = _run([_bc('填充燃料F', slot=1)], sess2)
         assert [s.action.slot for s in sells2] == [1]
-        assert sells2[0].action.reason == 'funding_support_stall_convert'
-        assert sells2[0].reason == 'funding_support_stall_convert'
-        assert ct2.get('funding_support_stall_convert') == 1
+        assert sells2[0].action.reason == ''
+        assert ct2.get('funding_support_stall_convert') is None
+        assert sell_gate.stall_protect_active(sess2, 2) == frozenset()
 
-    def test_prep_ev_funding_fallback_channel_reason(self):
-        """prep funding EV 兜底位:reason = 兜底分键入载体(F6 修订,
-        与骨架-only 兜底位同口径双写)。"""
+    def test_prep_ev_funding_fallback_emits_unmarked(self):
+        """prep funding EV 兜底位:兜底变现发射行为不变;兜底分键计数
+        与载体填充已拆。"""
         sess = _sess()
         st = GameState(gold=1, level=5, round_num=2, hp=40)
         bench = [_bc(_TRANS_HOLD, slot=1)]
@@ -391,9 +395,10 @@ class TestNineEmissionSites:
                                    k_switched=False, old_line_members=())
         sells = _prep_emit_out(out)
         assert [s.action.slot for s in sells] == [1]
-        assert sells[0].action.reason == 'funding_hold_liquidated'
-        assert sells[0].reason == 'funding_hold_liquidated'
-        assert state_of(sess).cw4_counters.get('funding_hold_liquidated') == 1
+        assert sells[0].action.reason == ''
+        assert sells[0].reason == ''
+        assert state_of(sess).cw4_counters.get('funding_hold_liquidated') \
+            is None
 
     def test_prep_line_switch_collapse_dual_write(self):
         """prep 换线塌缩位(entry._criteria_pass):k_switched 帧旧线
