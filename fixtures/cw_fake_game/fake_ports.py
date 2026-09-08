@@ -164,13 +164,12 @@ class FakeActionSink:
 
         **tracked 账随动 = 游戏规则真值重播**(自 ExecResult.observed
         整表重播,非逐动作 mutate 增量复刻):方案 §2.4 双账检测力②
-        「tracked 账在假环境 = 游戏规则真值」。为何不镜像 live 的
-        ``mutate_bench_deployed`` 增量:满栏 k-merge 买入语境下 mutate
-        的 ``bench_place`` 丢件与 simulate 的 §2.5 多买分支是**已申报的
-        双模型不同构面**(cw_shop_action_ops guard 豁免注释在案),增量
-        复刻会把该分叉原样带进假环境并在下一动作的 guard 炸出——真值
-        重播一次归零该类分叉,双账守卫在假环境退化为「投影链一致性
-        检查」(投影与真值同出 simulate 单一源,仍可检出播种/合并错)。
+        「tracked 账在假环境 = 游戏规则真值」。历史注:满栏 k-merge 买入
+        语境下 live mutate 曾与 simulate 的 §2.5 多买分支不同构(丢件
+        漏记),真值重播当年顺带归零该类分叉;T-182 修复批已让 live
+        mutate 与 simulate 同分支单一源(带 shop 视图),真值重播保留
+        = 更强语义(不只同构,还覆盖 mutate 未建模的面,如店侧 k 张
+        下架),非历史包袱。
 
         - BuyCard(对照 BuyCardOp.execute):total_buy/spend_executed/
           bought_names/merge 满栏补差/BuyPurchase(count=merge_buy_k
