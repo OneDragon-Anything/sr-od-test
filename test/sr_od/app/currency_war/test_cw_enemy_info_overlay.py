@@ -99,4 +99,3 @@ def test_enemy_overlay_area_rects_locked(test_context) -> None:
     assert actual == _EXPECTED_AREAS, (
         f'{_SCREEN} 档案 area 与坐标锁不一致(建档被改而测试未同步,或反向)。\n'
         f'档案: {actual}\n锁: {_EXPECTED_AREAS}')
-    assert actual['标识-敌方信息'] == _EXPECTED_AREAS['标识-敌方信息']

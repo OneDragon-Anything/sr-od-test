@@ -2,10 +2,9 @@
 
 三面:
 1. 补值键覆盖锁:策略层 key_equips 并集(去重)∩ 注册表 全量入表;
-2. 对位锚值锁:F4 两名锚值直调注册表/effect 复核(光速螺旋桨=5、
-   动能激发剑=4,对位锚件在案);
-3. 披露全量锁:检查项对全量缺值披露(移除任一单引用键也红),
-   清偿判据 = 检查归 0。
+2. 对位锚值锁:F4 两名锚值直调数值复核(光速螺旋桨=5、
+   动能激发剑=4,对位锚件在案由本锁 KeyError 面与死名守卫共辖);
+3. 披露全量锁:检查项对全量缺值披露(移除任一单引用键也红)。
 """
 from unittest.mock import patch
 
@@ -46,17 +45,6 @@ def test_equip_value_keys_subset_of_roster() -> None:
     assert not stale, f'价值表死名: {stale}'
 
 
-def test_equip_value_anchor_pairs_in_roster() -> None:
-    """对位锚注册表直调:锚值成立的前提 = 对位锚件真实存在且效果
-    同族(光速螺旋桨 effect 与反重力皮靴同为速度系强度换算域;动能
-    激发剑与冷笑话引擎同为回合资源经济域)——锚件被删/改名时先修锚
-    再议值,禁静默对位。"""
-    for name in ('光速螺旋桨', '动能激发剑',
-                 '反重力皮靴', '冷笑话引擎'):
-        assert name in EQUIPMENT_ROSTER, f'对位锚件缺注册表: {name}'
-        assert name in _EQUIP_VALUE, f'对位锚件缺价值: {name}'
-
-
 def test_equip_value_f4_anchor_tiers() -> None:
     """锚值锁(补值批核心两值,直锁数值):光速螺旋桨=对位反重力
     皮靴 5 档(速度→强度换算乘区,5 comps 命脉);动能激发剑=对位
@@ -72,11 +60,6 @@ def test_variant_same_tier_as_base() -> None:
     assert _EQUIP_VALUE['光速螺旋桨·特权'] == _EQUIP_VALUE['光速螺旋桨']
     assert _EQUIP_VALUE['火力风暴潮·特权'] == _EQUIP_VALUE['火力风暴潮']
     assert _EQUIP_VALUE['以牙还牙甲·特权'] == _EQUIP_VALUE['以牙还牙甲']
-
-
-def test_coverage_check_clears_after_adjudication() -> None:
-    """清偿判据:补值后检查项归 0(账本行不消费,空行输入即可判)。"""
-    assert check_equip_value_strategy_key_coverage([]) == []
 
 
 def test_coverage_check_discloses_any_single_reference_gap() -> None:

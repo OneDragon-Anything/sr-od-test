@@ -89,7 +89,6 @@ def test_plane_misdispatch_limit() -> None:
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
     assert cw_loop.CwLoop.PLANE_MISDISPATCH_LIMIT == 3
     src = inspect.getsource(cw_loop.CwLoop.loop)
-    assert '位面过渡连续 fail 超上限' in src
     assert "round_fail('位面过渡连续 fail 超上限(交兜底链)')" in src
     # 清零挂点:boss 简报接管(0p)与过渡成功两条恢复路径
     assert src.count('self._plane_mis_streak = 0') >= 2
