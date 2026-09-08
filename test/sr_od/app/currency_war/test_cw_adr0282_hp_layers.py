@@ -11,7 +11,9 @@ from __future__ import annotations
 
 
 def _mk_session():
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
     return StrategySession()
 
 
@@ -150,3 +152,37 @@ def test_hp_trusted_default_false() -> None:
     trusted=True——消费方守卫须显式依赖写入端赋值,不吃默认幸运值。"""
     from sr_od.application.currency_war.kernel.cw_state import GameState
     assert GameState().hp_trusted is False
+
+
+# ===== 件5:075840 hp 真值链形态锁(T-109③ 定谳,ADR-0605) =====
+
+def test_hp_down_cross_node_no_facts_accepts_075840_shape(monkeypatch) -> None:
+    """075840 08:35:31 实证帧锁(素材:obs_conflicts 行 + 冲突帧截图
+    .debug/temp/currency_war/shots/obs_conflict_hp__32006c4d.png 视觉实证:
+    备战帧 HP HUD 真值 = 1)。
+
+    形态:跨节点下行 17→1(p2r1 结算 17 为上一真值,节点锚 10;本帧节点
+    13),窗内无任何已观测战斗行(P2R2 结算行未入 performance.history 的
+    观察缺口形态)→「战斗事实缺观测」臂:采新 + 留证,读数链采信 1。
+
+    锁的存在性纪律判语:复盘候选「hp 帧读漏补给回血(final_hp=1 陈旧读数,
+    实际 17)」被冲突帧视觉证据反证——1 是真值,17 是补给合成行的陈旧
+    last_state 快照(ADR-0577 §3.3 同型鬼值,conf 降权守卫落地前的旧码行)。
+    本锁钉住读数链对该形态的采信方向,防后续下行守卫修订无意识翻转真值;
+    若将来修订「窗内事实查找覆盖面」(改走胜战臂),须先对照本帧重推——
+    该帧真值经视觉裁决,不是守卫臂选择的函数。
+    """
+    from sr_od.application.currency_war.kernel import cw_reconcile
+    s = _mk_session()
+    s.last_hp_real = 17
+    s.last_hp_real_node = 10
+    calls: list[tuple] = []
+    monkeypatch.setattr(cw_reconcile, '_conflict',
+                        lambda *a, **k: calls.append((a, k)))
+    hp, readable = cw_reconcile.reconcile_hp(
+        s, 1, source='read_game_state', node_t=13)
+    assert (hp, readable) == (1, True)              # 真值帧采新(视觉实证 1 为真)
+    assert (s.last_hp_real, s.last_hp_real_node) == (1, 13)
+    assert s.hp_suspect is None                      # 采新即出窗,无复现候选
+    assert len(calls) == 1 and calls[0][0][0] == 'hp'
+    assert '战斗事实缺观测' in calls[0][1]['verdict']   # 观察缺口臂留证(非拒信)
