@@ -61,17 +61,31 @@ def _quiet_logging():
 
 
 
+def _state_with_bits(hp: int | None, readable: bool, trusted: bool) -> GameState:
+    """最小帧构造器(组2-5/组7 共用;plane/round/节点固定,gold=50 无锁面消费)。"""
+    st = GameState()
+    st.plane, st.level, st.gold, st.hp = 2, 6, 50, hp
+    st.round_num = 4
+    st.node_type = 'battle'
+    st.hp_readable = readable
+    st.hp_trusted = trusted
+    return st
+
+
 def _ghost_state(hp: int = 100) -> GameState:
     """局21 P2 r4 幽灵帧形态:P2 备战帧,hp=100 假值、两位皆 False
     (shop 覆盖丢位产物:值写入了、保真位留在 shop 开态 read_game_state
     的 (False, False))。"""
-    st = GameState()
-    st.plane, st.level, st.gold, st.hp = 2, 6, 86, hp
-    st.round_num = 4
-    st.node_type = 'battle'
-    st.hp_readable = False
-    st.hp_trusted = False
+    st = _state_with_bits(hp, False, False)
+    st.gold = 86   # 局21 实帧字段回放保真(锁面谓词不读 gold)
     return st
+
+
+class SimpleOcrItem:
+    """最小 OCR 结果桩(消费面仅 .data;与仓内 SimpleNamespace 桩同型)。"""
+
+    def __init__(self, data: str) -> None:
+        self.data = data
 
 
 # ---------- 组1:失明复现锁(read_hp_opt 两级放大回退) ----------
@@ -158,13 +172,6 @@ def test_read_hp_opt_second_level_binarized_recovery(
     assert calls['n'] == 3
 
 
-class SimpleOcrItem:
-    """最小 OCR 结果桩(消费面仅 .data;与仓内 SimpleNamespace 桩同型)。"""
-
-    def __init__(self, data: str) -> None:
-        self.data = data
-
-
 # ---------- 组2:幽灵帧回放锁(消费门 fail-closed) ----------
 
 def test_ghost_frame_predicate_blocks() -> None:
@@ -188,16 +195,6 @@ def test_mutation_guard_removal_turns_locks_red(
 
 
 # ---------- 组3:放行面锁(语义零回归) ----------
-
-def _state_with_bits(hp: int, readable: bool, trusted: bool) -> GameState:
-    st = GameState()
-    st.plane, st.level, st.gold, st.hp = 2, 6, 50, hp
-    st.round_num = 4
-    st.node_type = 'battle'
-    st.hp_readable = readable
-    st.hp_trusted = trusted
-    return st
-
 
 def test_same_node_inherited_frame_passes() -> None:
     """放行面语义零回归(ADR-0428 主救场景):(16, False, True) 同节点
@@ -255,12 +252,24 @@ def test_apply_hp_writes_correct_triple() -> None:
 # 兜底在 r1 语境废除;r2+ 结算真值链/新鲜度门照旧。
 
 
-def test_r1_retry_read_hp_retries_then_recovers() -> None:
+def _stub_retry_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """桩掉 ``_r1_retry_read_hp`` 的 0.6s×2 重试静置:静置时长是生产节奏,
+    非本组锁面(重试语义/诚实 None)——纪律 15 能便宜化先便宜化(1.2s→~0)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.operations.cw_op import cw_op_buy_cards
+    monkeypatch.setattr(cw_op_buy_cards, 'time',
+                        SimpleNamespace(sleep=lambda *_: None))
+
+
+def test_r1_retry_read_hp_retries_then_recovers(
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """r1 重试读:miss 后重试,第 2 次命中 → 返回读数(读到的值即真读,
     不恒为 100——如难度修正后的 80 照收)。"""
     from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _r1_retry_read_hp,
     )
+    _stub_retry_sleep(monkeypatch)
     calls = {'n': 0}
 
     def _miss_then_hit() -> int | None:
@@ -270,11 +279,13 @@ def test_r1_retry_read_hp_retries_then_recovers() -> None:
     assert calls['n'] == 2
 
 
-def test_r1_retry_read_hp_persistent_miss_honest_none() -> None:
+def test_r1_retry_read_hp_persistent_miss_honest_none(
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """r1 重试穷尽仍 miss → None(诚实未知;严禁 100 兜底)。"""
     from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         _r1_retry_read_hp,
     )
+    _stub_retry_sleep(monkeypatch)
     calls = {'n': 0}
 
     def _always_miss() -> int | None:
@@ -320,11 +331,16 @@ def test_r1_real_read_frame_trace_keeps_value(tmp_path) -> None:
 
 def test_r2_unread_frame_trace_unchanged(tmp_path) -> None:
     """r2+ 不变:同节点沿用帧 (16, False, True) 的 hp=16 照记(结算真值
-    链/新鲜度门口径零回归);r2 两位皆 False 帧也不强制 None(边界仅 r1)。"""
+    链/新鲜度门口径零回归);r2 两位皆 False 帧也直通写 None——诚实未知
+    不分轮次(r1 特例臂退役后 recorder 无任何按轮分支,按轮特化回归即红)。"""
     st = _state_with_bits(16, False, True)
     st.plane, st.round_num = 1, 2
     row = _record_one(st, 't-r2', tmp_path)
     assert row['hp'] == 16
+    st2 = _state_with_bits(None, False, False)   # 诚实未知形态(原 docstring 声称、原断言面缺位,W823)
+    st2.plane, st2.round_num = 1, 2
+    row2 = _record_one(st2, 't-r2-none', tmp_path)
+    assert row2['hp'] is None
 
 
 def test_r1_rule_frame_match_archive_none_honest() -> None:
@@ -358,8 +374,11 @@ def test_sim_frames_default_trusted_gate_short_circuits() -> None:
 
 
 def test_sim_ledger_still_discloses_and_rejects_in_band() -> None:
-    """单局 sim 冒烟:账本键仍在、停手仍在血线内发生(ADR-0448 行为零
-    漂移;pool='fallback' 免快照依赖,同既有锁口径)。"""
+    """单局 sim 冒烟:账本披露键仍在——逐行 sim dict 携带
+    blood_budget_levelup_rejects 键(键集契约;键消失=判读/检查器侧对账
+    断链;pool='fallback' 免快照依赖,同既有锁口径)。停手判定的正确性由
+    组2/组3 谓词锁与组5 等价锁承接,本锁只辖披露面(命中次数依赖种子,
+    不做分布断言——纪律 11)。"""
     from sr_od.application.currency_war.sim import engine_p1 as cw_sim
     r = cw_sim.simulate_p1(0, pool='fallback', planes=2)
     assert r.ledger
