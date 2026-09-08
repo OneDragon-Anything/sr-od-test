@@ -635,6 +635,14 @@ def _isolate_cw_stop_flag_channels(
     # 三审报告-第二波.md F1,易失产物待 ADR 回填;正规复位入口 =
     # cw_state.reset_run_state,本钉桩是会话级兜底,两道防线不同层)。
     monkeypatch.setattr(cw_state, '_RUN_CLOSED', False)
+    # _CURRENT_DIFFICULTY 是同簇第四件(start_run 与 _CURRENT_RUN_ID 同语句
+    # 铸造,消费 = recorder decision 行难度列):残留会让仅桩 run_id 的
+    # 测试写出带前局难度的决策行(遥测内容污染,无分支翻转;出处:
+    # .debug/temp/currency_war/attacks/three_review_20260908/
+    # 三审报告-第三波.md F3,易失产物待 ADR 回填;正规复位入口 =
+    # cw_state.reset_run_state,本钉桩是会话级兜底,两道防线不同层,
+    # 与 _RUN_CLOSED 同款分层)。
+    monkeypatch.setattr(cw_state, '_CURRENT_DIFFICULTY', '')
     monkeypatch.setattr(cw_state, '_L0_ANDON_FIRED_RUNS', set())
     monkeypatch.setattr(cw_state, '_defect_seen', {})
     monkeypatch.setattr(cw_state, '_defect_seen_run', '')

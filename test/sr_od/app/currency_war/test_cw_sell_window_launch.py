@@ -34,6 +34,9 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
+from sr_od.application.currency_war.kernel.cw_reward_node import (
+    reward_node_suppressed,
+)
 from sr_od.application.currency_war.kernel.cw_state import (
     SELL_BENCH_CONVERT_REASONS,
     BenchChar,
@@ -391,6 +394,49 @@ class TestEmitRegistration:
         act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dead_gold_press_buy'
         assert _registry(sess) == {_FUEL: ('press', 3)}
+
+    def test_dead_gold_prio0_absorbed_by_m2_on_reward_frames(self):
+        """②(b) prio0(obligation)结构性吸收锁(三审报告-第三波.md F4,
+        易失产物待 ADR 回填;ADR-0585 §2 prio 三分映射):奖励帧 ∧
+        gold<g* ∧ 义务集缺口在售(死金地板内:cost 1 ≤ 11 mod 10 = 1)
+        ⇒ 更早的 M2 臂先行发射(m2_line_member),②(b) prio0 同帧结构性
+        不可达——shop.py ②(b) 注释自申报「线内缺口被更早 M2 臂吸收
+        (同帧更宽判据未发射 ⇒ 本臂同判据 + 更严地板必不发射),保留
+        枚举 = 候选集定义完备性」。帧型判据真值断言在先(夹具失准防御:
+        帧不满足 ②(b) 触发门时本锁空绿)。
+
+        为什么锁(F4 前提的承重面):prio0 卖回保护前提「prio0 买入必属
+        义务基座」现状由不可达性背书——可达形态中 prio1=hold 有类资格
+        断言兜底、prio2=press 入窗口段(W1),唯独 prio0 两侧皆无。本锁
+        红 = 臂序/节点辖域变动使 prio0 可达 ⇒ 前提转承重 ⇒ 保护缺口
+        浮出,行为修复候方案审,禁机械跟绿。"""
+        st = _state(11, [], node='reward')
+        assert reward_node_suppressed(st), (
+            '夹具失准:帧不满足 ②(b) 奖励帧触发门,本锁失去前提')
+        st.shop = [_card('高价杂件', cost=5), _card('目标件', cost=1)]
+        sess = _sess()
+        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, BuyCard) and act.reason == 'm2_line_member', (
+            '②(b) prio0 绕过 M2 先行发射 = 吸收前提破(F4 保护前提转承重)')
+        assert act.card.name == '目标件'
+
+    def test_obligation_launch_registration_has_no_base_qualification(self):
+        """②(b) prio0 登记不对称现状锁(三审报告-第三波.md F4,易失产物
+        待 ADR 回填):obligation 类登记无类资格断言——基座外名照常落账;
+        hold 类有名字腿∧硬闸腿合取拒收(_hold_qualification_ok,同一
+        _FUEL 在 W5 锁中被拒),两侧不对称。「prio0 买入必属基座」的
+        保护前提现状无登记侧强制,只靠发射位候选门(缺口 ⊆ 帧义务集)
+        加 M2 结构性吸收背书(见吸收锁)。
+
+        只锁现状不修行为(F4 裁定:现状即缺口,行为修复候方案审):本锁
+        红 = obligation 登记侧加了资格断言(行为修复批落地)——届时同步
+        重推本锁与吸收锁的前提表述,禁机械跟绿。"""
+        sess = _sess()
+        assert sell_gate.register_launch(sess, _FUEL, cause='obligation',
+                                         round_num=3), (
+            'obligation 登记出现资格断言拒收 = F4 不对称缺口已被行为修复'
+            '批收口,本锁与吸收锁前提表述需同步重推')
+        assert _registry(sess)[_FUEL] == ('obligation', 3)
 
     def test_dominance_buy_registers_press(self):
         """dominance_buy → press 写点(P78 INV 逃逸格封死;gold>g* ∧

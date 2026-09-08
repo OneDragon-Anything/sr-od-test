@@ -14,7 +14,8 @@ tmp_path,禁写真 .debug/。setup 桩清单(方案审 攻击面7 点名):
 「重复断言构成删/并理由」并入 L2,场景命名保留):
 L1 幂等认领 / L2 换局重铸三分支(含悬空防护形态)/ L3 选卡前铸造主锁 /
 L4 冷启动零行消灭 / L6 loop 构造认领(入口已铸 open run + 同容器不重铸)
-/ L7 复位正规入口(reset_run_state 清 run 态簇)/ L8 假局 teardown 复位链
+/ L7 复位正规入口(reset_run_state 清 run 态簇,含难度列/简报缓冲——
+三审报告-第三波.md F3,易失产物待 ADR 回填)/ L8 假局 teardown 复位链
 × 后续部分桩化 ensure(组合复位锁;出处 .debug/temp/currency_war/attacks/
 three_review_20260908/三审报告-第二波.md F1,易失产物待 ADR 回填)。
 """
@@ -195,21 +196,32 @@ def test_loop_construction_claims_entry_minted_run(
 
 def test_reset_run_state_clears_run_cluster(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """L7 复位正规入口:run 态簇三件套脏值 → reset_run_state 后全回生产缺省。
+    """L7 复位正规入口:run 态簇五件脏值 → reset_run_state 后全回生产缺省。
 
     红的语义 = 复位链缺件:漏清任一件即假局残留病理的入口侧复发
     (出处见文件头 L8 行)——收口位残留会让后续直调 ensure 的测试把
-    open run 误判「上局已收口」走重铸假分支。脏值经 monkeypatch 注入,
+    open run 误判「上局已收口」走重铸假分支;难度列/简报缓冲残留 =
+    遥测内容污染(三审报告-第三波.md F3,易失产物待 ADR 回填:决策行
+    带前局难度、简报行归属错局,无分支翻转)。脏值经 monkeypatch 注入,
     teardown 自动还原,不依赖本测试的复位调用兜底。"""
     monkeypatch.setattr(state_mod, '_CURRENT_RUN_ID', 'run_dirty')
     monkeypatch.setattr(state_mod, '_RUN_MATCH', object())
     monkeypatch.setattr(state_mod, '_RUN_CLOSED', True)
+    monkeypatch.setattr(state_mod, '_CURRENT_DIFFICULTY', 'A9_stale')
+    monkeypatch.setattr(state_mod, '_PENDING_BRIEFING_ROWS',
+                        [{'stale': 'previous_run'}])
     state_mod.reset_run_state()
     assert state_mod.current_run_id() == ''
     assert state_mod._RUN_MATCH is None
     assert state_mod._RUN_CLOSED is False, (
         '复位入口漏清收口位 _RUN_CLOSED(ensure 门与 recorder 简报缓冲'
         '都消费该位,残留即跨测试假分支)')
+    assert state_mod._CURRENT_DIFFICULTY == '', (
+        '复位入口漏清难度列 _CURRENT_DIFFICULTY(recorder 决策行难度列'
+        '消费,残留 = 后续测试遥测行带前局难度,F3)')
+    assert state_mod._PENDING_BRIEFING_ROWS == [], (
+        '复位入口漏清简报缓冲 _PENDING_BRIEFING_ROWS(下一局 start_run '
+        '把缓冲行归属新局,残留 = 简报行错局归属,F3)')
 
 
 def test_fake_p1_teardown_resets_cluster_before_next_ensure(
