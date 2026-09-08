@@ -13,7 +13,9 @@ t120_sim_redesign/保真度基线/`` 产物,批报告类、不入 git),不进测
 §4.2 权威源序(live 实测 > 代码注册表 > sim 自身)在 runner 内承载;
 本测试内半边只锁注册表/常量可推导的守恒面(纪律 9:期望值单一源现算)。
 
-锁的语义:
+锁的语义(单测三面共享同一种子批:批次确定性(同 seed 同剧本逐位
+复现,test_cw_fake_p1_segment 验收①)使逐测各跑一遍 = 同值重算,
+按纪律 11「昂贵计算同次运行内只算一次」收为一批):
 
 - **环境守恒锁**:全程任意轮「期初金 − 花销账 + 卖入 = 期末金」严格
   成立(花销账 = spend_executed,卖入 = 状态机口径;simulate 的金
@@ -68,16 +70,17 @@ def _run_batch(test_context: SrTestContext,
     return results
 
 
-def test_gold_identity_holds_across_run(
+def test_fidelity_baseline_conservation_domains_bands(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path) -> None:
-    """金恒等式:任意轮 期末金 = 期初金 − spend_executed + 卖入。
-
-    卖入双源同判:ledger 账(sink 落 BuyCardsOutcome.total_sell_income,
-    来源 = ExecResult.income 执行点真值)必须等于状态机金账差分
-    (spend − (期初 − 期末))——两源不一致 = sink 账本位与游戏真值分叉。
-    """
-    for res in _run_batch(test_context, monkeypatch, tmp_path):
+    """单批三面:①金恒等式(卖入双源同判);②轨迹域与开局先验;
+    ③对拍件(bands)形状。各面判据与红时语义见模块头「锁的语义」。"""
+    batch = _run_batch(test_context, monkeypatch, tmp_path)
+    # —— ①金恒等式:任意轮 期末金 = 期初金 − spend_executed + 卖入 ——
+    # 卖入双源同判:ledger 账(sink 落 BuyCardsOutcome.total_sell_income,
+    # 来源 = ExecResult.income 执行点真值)必须等于状态机金账差分
+    # (spend − (期初 − 期末))——两源不一致 = sink 账本位与游戏真值分叉。
+    for res in batch:
         for r in sorted(res.rounds):
             row = res.rounds[r]
             open_gold = row['gold_open']
@@ -94,30 +97,17 @@ def test_gold_identity_holds_across_run(
                 f'seed={res.seed} r{r}:卖入双源分叉(ledger='
                 f'{sold_by_ledger},状态机差分={sold_by_truth})')
             assert close_gold >= 0
-
-
-def test_hp_and_gold_trajectory_domains(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path) -> None:
-    """轨迹域:hp ∈ [0, HP_UPPER_BOUND] 且开局 = OPENING_HP_BASE 先验;
-    金轨迹恒非负;结算回执 hp_after 与逐局末态一致。"""
-    for res in _run_batch(test_context, monkeypatch, tmp_path):
+        # —— ②轨迹域:hp ∈ [0, HP_UPPER_BOUND];金轨迹恒非负;
+        # 首轮结算前 hp = 开局先验(初值表,非真读——语义 = 环境初值)。
         for hp in res.hp_trajectory:
             assert 0 <= hp <= HP_UPPER_BOUND
         assert all(g >= 0 for g in res.gold_trajectory)
-        # 首轮结算前 hp = 开局先验(初值表,非真读——语义 = 环境初值)
         assert res.rounds[1]['settlement'] is not None
         first = res.rounds[1]['settlement']
         assert first.hp_after == max(0, DEFAULT_OPENING_HP + first.delta)
-
-
-def test_baseline_bands_shape(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path) -> None:
-    """对拍件形状锁:逐轮金/hp 的 (中位, p90) 带对种子批完整产出——
-    离线 runner 消费的同一统计 helper(单一源 = fixtures.cw_harness.
-    bands_from_trajectories)。"""
-    batch = _run_batch(test_context, monkeypatch, tmp_path)
+    # —— ③对拍件形状:逐轮金/hp 的 (中位, p90) 带对种子批完整产出——
+    # 离线 runner 消费的同一统计 helper(单一源 = fixtures.cw_harness.
+    # bands_from_trajectories)。
     bands = bands_from_trajectories(
         [res.trajectory() for res in batch])
     assert set(bands) == set(range(1, len(_SCRIPT) + 1))

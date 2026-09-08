@@ -45,3 +45,9 @@ test_cw_identity_funnel.py::test_funnel_none_session_is_full_scan
 test_cw_r363_audit_p0.py::test_zero_outcome_but_observed_writes_row
 test_cw_round_flow.py::test_retreat_branch_clicks_retreat_on_pause_frame
 
+# 瘦身战役补登(2026-09-08:存量缺口巡检发现,call 实测 2.16s≥2s;n=20 为分布锚语义不降 n)
+test_cw_equip_grant_calib.py::test_p1_grant_volume_matches_real_profile
+
+# 瘦身战役补登(2026-09-08:簇V 合并改写后单测 2.26s≥2s;三面单批共享是纪律 11 语义,不拆回)
+test_cw_fidelity_baseline.py::test_fidelity_baseline_conservation_domains_bands
+

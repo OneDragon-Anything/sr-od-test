@@ -112,6 +112,11 @@ def test_hook_call_sites_exist():
     save_decision_frame 字面调用形」;包装上收后挂点单一化,新语义 =
     「①包装定义内统一落帧 + ②各调用点声明 frame_tag 实参」——红时登记的
     语义 = 分发点丢了留证帧声明(挂点存在性不变)。
+    烟雾容差背书(纪律 8「防证据链静默脱落」):留证钩子 best-effort
+    (落盘失败仅 log.warning,生产零报错),挂点静默脱落时证据停止累积
+    且不可发现——失守事故本体 = P35 局复盘「OCR 文本与牌面解析对不上」
+    无画面实锤(decision_frame_hooks 模块头「层次定位」背景),本锁是
+    挂点在场的唯一会红载体。
     """
     src_root = Path(__file__).parents[5] / 'src' / 'sr_od' / 'application' \
         / 'currency_war'
