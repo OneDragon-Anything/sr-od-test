@@ -69,7 +69,11 @@ def pytest_collection_modifyitems(config, items):
         return
     slow, kept = [], []
     for item in items:
-        if any(mark in item.nodeid for mark in marks):
+        # endswith 而非 in:名单条目=「文件名::类::测试」nodeid 后缀(模块
+        # docstring 同口径),子串包含会把「长名含短名」的兄弟用例误标 slow
+        # (判例:wave_normal_chain ⊂ wave_normal_chain_free_proc,后者的
+        #  fast 层回收被前者名字挡住)。
+        if any(item.nodeid.endswith(mark) for mark in marks):
             item.add_marker(pytest.mark.slow)
             slow.append(item)
         else:
