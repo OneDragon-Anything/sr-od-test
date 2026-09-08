@@ -22,6 +22,15 @@ account`` 边界注释(P40 R0-1「合格集空 ⇒ EV 恒负」刷新侧特例)�
 改锁先重推语义:本锁钉的是「**部分**不可追 ≠ 合格集空」,与 R0-1
 同源;禁为保绿机械跟绿。
 
+覆盖对账(2026-09-08 瘦身批,亲读两处断言面):``r1_commitment_account``
+纯数面真值表(within/over/non-finite 含 NaN/零负预算四臂)由判据主题
+文件 test_cw_vgap_frame_horizon.py::TestCriterionAffordability 承载,
+本文件原 TestR1CommitmentAccountBoundary 三测为其真子集已删;混合集
+过滤「部分不可追 ≠ 合格集空」的精确卡费面由同文件
+TestMixedPeakCompletionAccount lv6 臂承载(超集),本文件对应单测已删。
+本文件现辖:``_r1_ledger_terms`` 返回契约(inf 仅由合格集空三来源
+承载 + 成型先序探针)与档案帧端到端(污染墓碑 + 刷新发射 + 域外零漂移)。
+
 fixture 说明:锁 B 内联 p1r8 帧状态(来源 = 对局档案
 match_g_20260907_021326.json slices decisions.jsonl 首行,禁引用
 .debug 路径故原样抄录;gold=53/level=5/deployed 4 人/bench 空)。
@@ -35,9 +44,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     RefreshShop,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-    refresh as crit_refresh,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -49,10 +55,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 
 #: P1 配方体系对(本局档案锁帧对);成员全集 = 15 名跨 1-5 费。
 _T88_PAIR: tuple[str, ...] = ('仙舟', '持续伤害')
-
-#: 锁 A 成员对:停云(1 费,lv5 可追 p=0.45)+ 景元(5 费,lv4-6 无
-#: 此档 ⇒ p=0 不可追)——「部分可追」最小集。
-_MIXED_MEMBERS: tuple[str, ...] = ('停云', '景元')
 
 
 def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
@@ -106,14 +108,11 @@ def _p1r8_frame(gold: int = 53) -> tuple[GameState, object]:
 # ===== 锁 A:合格集语义单帧锁(主锁)=====
 
 class TestR1QualifiedSetSemantics:
-    """钉「部分不可追 ≠ 合格集空」:inf 只剩合格集空一个来源。"""
-
-    def test_partial_unchaseable_keeps_ledger_finite(self):
-        """混合集(停云 lv5 可追 + 景元 lv5 不可追)⇒ 账有限且卡费 > 0
-        (修复前此形返 (inf, 18)——本锁红证的单元形态)。"""
-        e_sum, fees = _r1_ledger_terms(_MIXED_MEMBERS, [], [], 5)
-        assert math.isfinite(e_sum) and e_sum > 0
-        assert fees > 0
+    """钉 inf 返回契约:inf 只剩「合格集空」三来源(成员集空 / 全部
+    2★ 成型 / 该级全不可追),任一非空合格集不得被打 inf(ADR-0571
+    污染缺陷的直锁形态);「部分不可追剔出合格集」的精确卡费行为面
+    由 test_cw_vgap_frame_horizon.py::TestMixedPeakCompletionAccount
+    承载(覆盖对账超集,本文件不双锁)。"""
 
     def test_all_unchaseable_is_inf(self):
         """变异探针①:成员全不可追(lv5 的 5 费)⇒ (inf, 0)——合格集
@@ -136,30 +135,28 @@ class TestR1QualifiedSetSemantics:
         assert fees == 0
 
     def test_formed_check_precedes_chaseability_probe(self):
-        """F7 成型先序探针:2★ 5 费成型件 + 可追 1 费件 ⇒ 账有限。
-        ``_r1_ledger_terms`` 内「成型检查先于可追性检查」的先序是修复
-        正确性的隐含前提(重排两判定则污染从成型检查之前回流),本探针
-        封死该回归路。"""
-        bench = [_bc('景元', star=2, slot=1)]
-        e_sum, fees = _r1_ledger_terms(('景元', '停云'), bench, [], 5)
+        """F7 成型先序探针(判别力修复版):「成型出合格集」必须先于
+        「可追性判定」——成型 ∧ 该级可追的成员若按可追性放行,会以
+        j≥2 混入账面多计 (k−j)×cost 卡费。fixture = 停云 2★ 成型件
+        (1 费,lv7 可追)+ 景元 1★(lv7 起 5 费可追):期望卡费 = 景元
+        单人 (k−0)×cost(注册表现算,纪律 9);先序翻转则停云再计
+        (3−2)×1 即红。旧 fixture(景元 2★ + 停云 @lv5)中成型件在该级
+        恰不可追,两种判定顺序同果,对先序零判别力,已重写。"""
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.data.cw_shop_odds import (
+            refresh_prob,
+        )
+        bench = [_bc('停云', star=2, slot=1)]
+        # 探针判别力前提:成型件在该级本可追(否则两判定顺序同果)
+        assert refresh_prob(7, CHARACTERS['停云'].cost) > 0
+        e_sum, fees = _r1_ledger_terms(('停云', '景元'), bench, [], 7)
         assert math.isfinite(e_sum)
-        assert fees > 0
+        assert fees == 3 * CHARACTERS['景元'].cost
 
 
-class TestR1CommitmentAccountBoundary:
-    """判据侧边界锁:finiteness 语义与本函数 docstring/修复后契约一致。"""
-
-    def test_inf_ledger_rejected_as_no_chaseable(self):
-        assert crit_refresh.r1_commitment_account(float('inf'), 3) == (
-            False, 'no_chaseable_member')
-
-    def test_finite_over_budget_rejected_as_account_over_budget(self):
-        assert crit_refresh.r1_commitment_account(10.0, 3) == (
-            False, 'account_over_budget')
-
-    def test_finite_within_budget_passes(self):
-        assert crit_refresh.r1_commitment_account(3.0, 3) == (True, '')
-
+# 判据纯数面(r1_commitment_account 真值表)已并入判据主题文件
+# test_cw_vgap_frame_horizon.py::TestCriterionAffordability(四臂超集,
+# 覆盖对账后本文件三测子集删除,见文件头「覆盖对账」)。
 
 # ===== 锁 B:档案帧端到端帧锁 =====
 
@@ -169,20 +166,19 @@ class TestArchiveP1R8Frame:
     修复后:真 account_over_budget → 必花域切分线 yield → r2_budget 批
     → RefreshShop 发射(reason='must_spend_r1_yielded')。"""
 
-    def test_r1_reject_reason_is_not_polluted(self):
-        """拒因归真:必花域帧 R1 判定走 account_over_budget→yield 链,
-        ``shop_r1_no_chaseable_member`` 键不再出现(修复前该键恰出现)。"""
+    def test_p1r8_frame_pollution_absent_and_refresh_emitted(self):
+        """档案 p1r8 必花域帧双面同帧锁:①拒因归真墓碑——
+        ``shop_r1_no_chaseable_member`` 键不得出现(修复前该键恰出现,
+        ADR-0571 污染签名),真链走 account_over_budget→yield(yielded
+        分键在案);②刷新发射——RefreshShop(reason='must_spend_r1_
+        yielded')且义务来源披露 v3_release_reason='must_spend'(该
+        写点全仓唯一直锁;同帧围栏键加密面由 test_cw_must_spend_zone
+        g20 派生帧承载,不双锁)。"""
         st, sess = _p1r8_frame()
-        _decide(st, sess)
+        acts = _decide(st, sess)
         cnt = state_of(sess).cw4_counters
         assert 'shop_r1_no_chaseable_member' not in cnt
         assert cnt.get('must_spend_r1_account_yielded', 0) >= 1
-
-    def test_must_spend_zone_refresh_emitted(self):
-        """必花域分支:RefreshShop 发射且触发源 = must_spend_r1_yielded;
-        同帧义务来源披露置 'must_spend'(v3_release_reason 写点)。"""
-        st, sess = _p1r8_frame()
-        acts = _decide(st, sess)
         refreshes = [a for a in acts if isinstance(a, RefreshShop)]
         assert refreshes, f'必花域帧应有刷新发射,实际 {acts}'
         assert all(a.reason == 'must_spend_r1_yielded' for a in refreshes)

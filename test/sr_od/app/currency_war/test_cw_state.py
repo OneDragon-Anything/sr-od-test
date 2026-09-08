@@ -1,53 +1,24 @@
 """货币战争 GameState 模型(cw_state)测试 —— 纯逻辑,不依赖游戏。
 
 D-78 加法块:strategy/13 §13.2 补字段(match_type/plane_modifiers/shop_locked/
-active_strategies/megastar_char/partner_char)+ BenchChar.equips + current_boss 派生。
-均 None/空兜底(OCR 未接→安全降级),零行为变化。
+active_strategies/megastar_char/partner_char)+ BenchChar.equips。
 ⚖️ NodeInfo/node_path 已随死字段删除(2026-08-16 review D3:0 写 0 读;节点序列
 由 cw_node_reader.NodeSlot 承载)。
+⚖️ 覆盖对账(2026-09-08 瘦身批,亲读生产消费面):新字段缺省测与
+current_boss 派生测删除——shop_locked/plane_modifiers/megastar_char/
+partner_char/match_type 生产零读、current_boss 属性零消费(未接线代码
+不立锁);字段/属性 src 侧删除候选挂 DEBTS.md D32。xp 累积面由
+test_cw_fake_game 升级测承载(FakeMatch.apply 直调 simulate 单一源)。
 """
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
-    XP_PER_BUY,
-    XP_TO_NEXT_LEVEL,
     _bench_char_cost,
     sell_refund,
     xp_clicks_to_level,
 )
-
-
-def test_new_fields_default_none_or_empty() -> None:
-    """D-78 新字段默认值:None / 空容器(OCR 未接 → 安全降级,不编默认值)。"""
-    s = GameState()
-    assert s.match_type is None
-    assert s.plane_modifiers == []
-    assert s.shop_locked is False
-    assert s.active_strategies == []
-    assert s.megastar_char is None
-    assert s.partner_char is None
-
-
-def test_current_boss_derived_from_plane() -> None:
-    """current_boss 派生 = bosses[plane-1];无 boss / 越界 → None(strategy/13 §13.2)。"""
-    s = GameState(plane_bosses=["电视机", "琥珀王", "盗火行者"])
-
-    s.plane = 1
-    assert s.current_boss == "电视机"
-    s.plane = 2
-    assert s.current_boss == "琥珀王"
-    s.plane = 3
-    assert s.current_boss == "盗火行者"
-
-    # 越界 → None
-    s.plane = 4
-    assert s.current_boss is None
-
-    # 无 boss 数据 → None
-    empty = GameState(plane_bosses=[], plane=1)
-    assert empty.current_boss is None
 
 
 def test_mutate_bench_deployed_buy_merge_sell_deploy() -> None:
@@ -137,15 +108,10 @@ def test_bench_char_cost_unknown_defaults_3() -> None:
 
 
 # ===== ADR-0129 购买经验模型(单击 +4 XP,攒门槛升级,溢出结转) =====
-def test_simulate_level_up_accumulates_xp() -> None:
-    """一次 LevelUp = +4 XP(单击),不直接升级;经验条同步推进。"""
-    from sr_od.application.currency_war.kernel.cw_state import LevelUp, simulate
-    s = GameState(level=5, gold=40, xp_progress=(0, 20), hp=100)
-    s2 = simulate(s, LevelUp(cost=4))
-    assert s2.level == 5, "4/20 未到门槛,不应升级"
-    assert s2.xp_progress == (4, 20)
-    assert s2.gold == 36
-
+# 累积面(未跨门槛一击 +XP_PER_BUY/金扣减)由 test_cw_fake_game
+# 升级测承载(FakeMatch.apply 直调 cw_state.simulate 单一源,断言面
+# 超集,覆盖对账后本文件单测删除);本文件保留跨门槛溢出结转与
+# xp 未知起步两个独家分支。
 
 def test_simulate_level_up_crosses_threshold_with_carryover() -> None:
     """18/20 时点 1 次(22 XP)→ 升到 6 级,溢出 2 结转(2/40,用户门槛表)。"""
@@ -166,9 +132,13 @@ def test_simulate_level_up_xp_unknown_starts_zero() -> None:
 
 
 def test_levelup_clicks_ladder_matches_registry() -> None:
-    """购买经验点击数阶梯:lv5→9 = 5/10/13/18(ceil(need/XP_PER_BUY))。
+    """购买经验点击数阶梯:lv5→8 = 5/10/13/18(ceil(need/XP_PER_BUY))。
 
-    并自 test_cw_w502_deathbed_levelup_ev ①(P21 批;w502 ②③④ 为
+    手值梯 = 校准登记门(门槛表/每击经验常量本身即校准对象,不可自
+    推导):常量或公式改动必红,登记新门槛表后跟绿。注册表常量面
+    (XP_PER_BUY==4 / XP_TO_NEXT_LEVEL[5]==20)由 test_cw_blood_xp_gate
+    承载,不双锁。
+    自 test_cw_w502_deathbed_levelup_ev ①(P21 批;w502 ②③④ 为
     math_proofs P21 已证命题的镜像复算,已退役——证明单篇
     docs/game/currency_war/research/proofs/p21-p2-deathbed-levelup-ev.md
     + tools/cw/proofs/ 可重跑脚本承载,测试不再镜像复算)。
@@ -176,9 +146,4 @@ def test_levelup_clicks_ladder_matches_registry() -> None:
     C=52 吻合,作为实测锚保留。
     """
     assert [xp_clicks_to_level(lv, 0) for lv in (5, 6, 7, 8)] == [5, 10, 13, 18]
-    assert xp_clicks_to_level(7, 0) == 13
-    assert xp_clicks_to_level(7, 0) * XP_PER_BUY == 52
-    # 注册表面:门槛表与每击经验常量即阶梯的单一源
-    assert XP_PER_BUY == 4
-    assert XP_TO_NEXT_LEVEL[5] == 20 and XP_TO_NEXT_LEVEL[7] == 52
 

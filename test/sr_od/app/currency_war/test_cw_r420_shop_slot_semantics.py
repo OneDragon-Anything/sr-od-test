@@ -1,27 +1,23 @@
-# -*- coding: utf-8 -*-
-"""r420(ADR-0284/0285,批㉒ F1/F3/F5 + 批㉑ F1/F3 + 批㉒ F4)锁:
+"""r420(ADR-0284/0285,批㉒ F1/F3/F5 + 批㉑ F3/F5 + 批㉒ F4)锁:
 
 - 件1(ADR-0284):商店槽消费语义——买走即下架(生产一致)、
   刷新全 5 槽重抽、幻影再买归 0、池 take 地板如实记;
   检查项 shop_slot_consumption / phantom_rebuy_disclosure 双向锁;
-- 件2(ADR-0285):carry_gate_bench_deadlock 金足判据 floor 对齐
-  (wave_gold−cost≥floor 才算 miss 可救;floor 边界两态);
 - 件3(ADR-0285):sim_endgold_calib 守卫残金双口径(净滞留 =
   末金 − bench_full_skipped_gold 折算);
 - 件4(ADR-0285):ab_resolution_floor(配对差 95% 底,差值小于底
   = 噪声带内)。
+(原 件2 carry_gate_bench_deadlock 检查器已随 v1 线库检查器删除,
+ADR-0336;carry 腾位门语义锁迁 test_cw_w35 纪律族,见文件中部注记。)
 """
 from __future__ import annotations
 
 import random
 
 from sr_od.application.currency_war.sim.checks import calib, ledger, runner
-from sr_od.application.currency_war.sim.pool import _Pool
-
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-
+from sr_od.application.currency_war.sim.pool import _Pool
 from sr_od.application.currency_war.sim.runner import simulate_p1_ab, simulate_p1_batch
-
 
 # --- 件1:槽消费语义 -------------------------------------------------------
 
@@ -164,10 +160,11 @@ def test_endgold_dual_criterion_guard_residual() -> None:
             'plane': 1, 'round_num': 9, 'gold': end_gold,
             'sim': {'bench_full_skipped_gold': skipped_gold},
         }]
+    anchor = calib.REAL_AVG_ENDGOLD   # 锚单一源直调(ADR-0447),禁手抄(纪律 9)
     rep = calib.check_sim_endgold_calib([_game(90, 45)])
-    assert rep['violations'] == 0, '净口径 45/45.1 ≤1.5,不应违规'
-    assert rep['ratio'] == round(90 / 45.1, 2), '总口径并行披露(90/45.1)'
-    assert rep['net_ratio'] == round(45 / 45.1, 2), '净口径 = (90−45)/45.1'
+    assert rep['violations'] == 0, f'净口径 45/{anchor} ≤1.5,不应违规'
+    assert rep['ratio'] == round(90 / anchor, 2), '总口径并行披露(90/锚)'
+    assert rep['net_ratio'] == round(45 / anchor, 2), '净口径 = (90−45)/锚'
     assert rep['guard_skipped_gold_avg'] == 45.0
     rep2 = calib.check_sim_endgold_calib([_game(90, 0)])
     assert rep2['violations'] == 1, '纯策略滞留 90 → 违规(漂移哨兵语义)'
@@ -192,8 +189,9 @@ def test_ab_resolution_floor_noise_band() -> None:
 
 
 def test_simulate_p1_ab_report_shape() -> None:
-    """simulate_p1_ab 报告附分辨率底(件4 落地接线)。"""
-    rep = simulate_p1_ab(8, pool='fallback', seed_base=0)
+    """simulate_p1_ab 报告附分辨率底(件4 落地接线)。纯形状锁 n 取最小
+    2(纪律 12:更大的样本量属 sim A/B 日常工作流,不由单元测试承担)。"""
+    rep = simulate_p1_ab(2, pool='fallback', seed_base=0)
     assert set(rep) >= {'n', 'avg_hp_a', 'avg_hp_b', 'ab_resolution_floor'}
-    assert rep['ab_resolution_floor']['n'] == 8
+    assert rep['ab_resolution_floor']['n'] == 2
 

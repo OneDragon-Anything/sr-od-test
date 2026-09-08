@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from sr_od.application.currency_war.kernel import cw_overlay_registry as reg
@@ -53,24 +54,37 @@ def _load_merged() -> dict[str, dict]:
     return out
 
 
-def _merged_area_keys() -> set[str]:
+def _merged_area_keys(data: dict[str, dict]) -> set[str]:
     """merged 的 ``画面名.area名`` 全集(= round_by_find_area 可解析键空间)。"""
     keys: set[str] = set()
-    for screen in _load_merged().values():
+    for screen in data.values():
         for area in (screen.get('area_list') or []):
             keys.add(f'{screen["screen_name"]}.{area["area_name"]}')
     return keys
 
 
+@pytest.fixture(scope='module')
+def _merged_data() -> dict[str, dict]:
+    """merged 全档(运行时真源)——本模块只解析一次(yml 解析 ~0.5s/次,
+    测试纪律 11:同一昂贵计算同一次运行只算一次,四锁共享)。"""
+    return _load_merged()
+
+
+@pytest.fixture(scope='module')
+def _merged_keys(_merged_data: dict[str, dict]) -> set[str]:
+    """分发面锚的可解析键空间(三个分发面锁共享,免重复解析)。"""
+    return _merged_area_keys(_merged_data)
+
+
 # ── 锁 1:merged 新鲜度(本事故直接回归锁)─────────────────────────────────
 
-def test_merged_yml_fresh_with_separated_files() -> None:
+def test_merged_yml_fresh_with_separated_files(_merged_data) -> None:
     """运行时加载源 merged 必须与分文件全集一致(screen_id 集 + 画面名 +
     area 名集)。分文件被改名/增删 area 后未再生 merged = 本锁红,提示跑
     ``audit_merged_drift.py --regen``(dd-029:改名批漏再生 → 分发层查新名
     AREA_NO_CONFIG 静默跳过 → 伙伴遮罩下部署死局)。"""
     sep = _load_separated()
-    merged = _load_merged()
+    merged = _merged_data
     assert set(sep) == set(merged), (
         f'merged 与分文件 screen_id 集不一致: '
         f'仅分文件有={sorted(set(sep) - set(merged))} '
@@ -90,11 +104,11 @@ def test_merged_yml_fresh_with_separated_files() -> None:
 
 # ── 锁 2:分发面锚全部在运行时真源可解析 ─────────────────────────────────
 
-def test_overlay_registry_resolvable_in_runtime_merged() -> None:
+def test_overlay_registry_resolvable_in_runtime_merged(_merged_keys) -> None:
     """激活 overlay 条目的 screen/识别锚/第二锚/关闭钮都在 merged 中
     (注册表一致性测试读分文件,w559 形态;本锁补「运行时真源」一侧——
     两侧同绿才保证分发判定真实可执行)。"""
-    keys = _merged_area_keys()
+    keys = _merged_keys
     for spec in reg.OVERLAY_REGISTRY:
         if not spec.active:
             continue
@@ -107,13 +121,14 @@ def test_overlay_registry_resolvable_in_runtime_merged() -> None:
             assert f'{spec.screen_name}.{spec.close_area}' in keys
 
 
-def test_dispatch_order_matrix_anchors_resolvable_in_runtime_merged() -> None:
+def test_dispatch_order_matrix_anchors_resolvable_in_runtime_merged(
+        _merged_keys) -> None:
     """主循环浮层序锁矩阵(仅 area 行)的全部锚都在 merged 中——矩阵锁住
     「序位」,本锁住「可解析」:任一锚名漂移(改名/merged 过期)即红。"""
     from test.sr_od.app.currency_war.test_cw_dispatch_order_matrix import (
         ORDER_MATRIX,
     )
-    keys = _merged_area_keys()
+    keys = _merged_keys
     for name, screen, anchor, method in ORDER_MATRIX:
         if method != 'area':
             continue
@@ -122,12 +137,13 @@ def test_dispatch_order_matrix_anchors_resolvable_in_runtime_merged() -> None:
             f'(分发分支静默失效形态,dd-029)')
 
 
-def test_loop_dispatch_anchor_table_resolvable_in_runtime_merged() -> None:
+def test_loop_dispatch_anchor_table_resolvable_in_runtime_merged(
+        _merged_keys) -> None:
     """主循环 iter1 分发锚预检表(dd-029)的全部锚都在 merged 中——预检在
     生产侧只 log.error 不 fail(不中止对局),本锁补「测试侧 fail 硬门」:
     预检表里有漂移锚 = 本锁红,与生产日志双通道。"""
     from sr_od.application.currency_war.operations.cw_loop import CwLoop
-    keys = _merged_area_keys()
+    keys = _merged_keys
     for branch, screen, anchor in CwLoop.DISPATCH_AREA_ANCHORS:
         assert f'{screen}.{anchor}' in keys, (
             f'分发锚预检表条目「{branch}」的 {screen}.{anchor} 不在运行时 '
