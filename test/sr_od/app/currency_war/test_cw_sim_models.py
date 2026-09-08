@@ -1,21 +1,77 @@
-# -*- coding: utf-8 -*-
-"""test_cw_sim_models 主题锁(结构合并批,机械拼接)。
+"""sim 模型族主题锁,五段各辖一个生产面的独家覆盖:
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
-- sim_checks_repay: test_cw_sim_checks_repay.py
-- w174_engine_completion: test_cw_w174_engine_completion.py
-- w213_sim_supply_two_step: test_cw_w213_sim_supply_two_step.py
-- coarse_battle: test_cw_coarse_battle.py
-- first_passage: test_cw_first_passage.py
-冲突改名:后来者顶层名加来源前缀(_<tag>_原名)。
+- sim.checks 检查器锁族:ledger/pool/runtime 逐局检查器双向锁 +
+  corpus/calib 锚登记披露 + runner 批量集登记门(检查器判据出处
+  见各生产函数 docstring);
+- cw_evolution 引擎补完通道(ADR-0371):补完事务发射/保护序/
+  末窗豁免/冻结轮/希儿系单卡/bench 溢出/观测行格式;
+- simulate_p1 补给两步链:decide_supply 在 sim 引擎内的接线行为
+  (decide_supply 单元选择行为归 test_cw_decisions.py);
+- cw_coarse_battle 战斗粗模型:两态采样/先验收缩/位面维/引擎开关/
+  版本披露(结构语义单一源 = 该模块 docstring);
+- cw_first_passage 首达生存:P(win)/hp_floor/位面乘子/三区律
+  (P2 损血标定面归 test_cw_w443_dp_first_passage.py)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
+
+import json
+import random
+import re
+
+import pytest
+
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel import (
+    cw_coarse_battle as cb,
+)
+from sr_od.application.currency_war.kernel import (
+    cw_events,
+)
+from sr_od.application.currency_war.kernel import (
+    cw_evolution as cw_evolution_mod,
+)
+from sr_od.application.currency_war.kernel.cw_battle_calib import _board_factions_of
+from sr_od.application.currency_war.kernel.cw_evolution import (
+    EvolutionState,
+    evolution_step,
+)
+from sr_od.application.currency_war.kernel.cw_first_passage import (
+    _loss_dist,
+    first_passage_win,
+    hp_floor,
+    p_win_lambda,
+    plane_hp_ratio,
+    posture_guidance,
+    risk_posture,
+)
+from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    CompTransaction,
+    GameState,
+    _recount_board,
+    simulate,
+)
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
+from sr_od.application.currency_war.sim import pool as sim_pool
+from sr_od.application.currency_war.sim import runner as sim_runner
+from sr_od.application.currency_war.sim.checks import (
+    calib,
+    corpus,
+    ledger,
+    pool,
+    runner,
+    runtime,
+)
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
+
+# ==================== sim.checks 检查器锁族 ====================
 
 
-# ==================== sim_checks_repay ====================
-
-from sr_od.application.currency_war.sim.checks import calib, corpus, ledger, pool, runner, runtime
 def _row(rn: int = 1, gold: int = 10, bench: list | None = None,
          deployed: list | None = None, cap: int = 4,
          actions: list | None = None, target_comp: str = '',
@@ -70,7 +126,7 @@ def test_deployed_schema_filter_bidirectional() -> None:
     assert not ledger.check_deployed_schema_filter(good)
 
 
-# --- 动作语义类(自由批/批⑳) ----------------------------------------
+# --- 动作语义类 ------------------------------------------------------
 
 def test_engine_seed_not_resold_bidirectional() -> None:
     buy = [{'__type__': 'BuyCard',
@@ -122,10 +178,8 @@ def test_oscillation_xp_cap_bidirectional() -> None:
     osc = [{'__type__': 'BuyCard', 'card': {'name': 'a', 'cost': 1},
             'reason': 'line'},
            {'__type__': 'SellBench', 'name': 'a'}]
-    bad = [_row(rn=1, level=9, actions=osc,
-                sim={'node': 'battle', 'shop_waves': []})]
-    # lv9 need=84,4 XP < 30% → 不报;lv5 need=20 → 4>6? 否。
-    # 用两次振荡(8 XP)对 lv5(need 20,30%=6)报
+    # 判别力锚:lv9 need=84 → 8 XP < 30% 不报(见 good);lv5 need=20、
+    # 30%=6 → 两次振荡 8 XP 超限报(单次 4 XP 不超,同踩阈值边界)
     osc2 = osc + [
         {'__type__': 'BuyCard', 'card': {'name': 'b', 'cost': 1},
          'reason': 'line'},
@@ -150,7 +204,7 @@ def test_levelup_flat4_lock_bidirectional() -> None:
     assert not ledger.check_levelup_flat4_ledger_lock(good)
 
 
-# --- 注册表类(批⑲) --------------------------------------------------
+# --- 注册表类 --------------------------------------------------------
 
 def test_phantom_equip_no_wear_bidirectional() -> None:
     bad = [_row(equipped=[{'char': 'x', 'equip': '钻石(幻影)'}])]
@@ -163,11 +217,9 @@ def test_phantom_equip_no_wear_bidirectional() -> None:
     assert not ledger.check_phantom_equip_no_wear(good)
 
 
-# --- 线/供给类(成型批) ----------------------------------------------
-# (v1 线库语义检查器——no_future_carry_sold / carry_on_shelf_responded /
-# dead_system_second_pivot / bond_fallback / carry_gate / protect_set /
-# carry_gate_outcome / recipe_refresh——随 ADR-0336 删除,双向锁同步删;
-# degrade_recover_mutex 是通用 target 切换检查,保留)
+# --- 线/供给类 --------------------------------------------------------
+# (v1 线库语义检查器族随 ADR-0336 删除、双向锁同步删;余下
+# degrade_recover_mutex 为通用 target 切换检查)
 
 def test_degrade_recover_mutex_bidirectional() -> None:
     a, b = 'lineA', 'lineB'
@@ -179,7 +231,7 @@ def test_degrade_recover_mutex_bidirectional() -> None:
     assert not ledger.check_degrade_recover_mutex(good)
 
 
-# --- 批级聚合类(批⑫/批④) -------------------------------------------
+# --- 批级聚合披露 ----------------------------------------------------
 
 def test_endgold_residue_channel_probe() -> None:
     sim = {'node': 'battle', 'merges': 0,
@@ -210,7 +262,7 @@ def test_shop_cost_conformance_bidirectional() -> None:
     assert r2['violations'] == 0
 
 
-# --- 语料级(批⑬/批⑧) -----------------------------------------------
+# --- 语料级 -----------------------------------------------------------
 
 def test_attach_run_detector_bidirectional() -> None:
     bad = [{'run_id': 'r1', 'plane': 1, 'round_num': 5}]
@@ -238,7 +290,7 @@ def test_plane_reached_consistency_bidirectional() -> None:
     assert not runtime.check_plane_reached_consistency(ok, outcomes)
 
 
-# --- 条件披露类(批⑲/批㉓) -------------------------------------------
+# --- 条件披露类 -------------------------------------------------------
 
 def test_conditional_disclosures_skip_and_fire() -> None:
     # 依赖未接线 → 披露跳过不判
@@ -258,7 +310,7 @@ def test_conditional_disclosures_skip_and_fire() -> None:
     assert r4['comp_score_calls'] == 7
 
 
-# --- 锚登记/工具(批⑭/批⑯/批⑤) -------------------------------------
+# --- 锚登记/工具 ------------------------------------------------------
 
 def test_anchor_seed_portability_and_lowchannel() -> None:
     """锚登记对照检查(语义锁:rep 从当前锚登记派生,随换锚自动跟)。
@@ -329,29 +381,7 @@ def test_batch_level_entrypoint_runs_all() -> None:
 
 
 
-# ==================== w174_engine_completion ====================
-
-import re
-
-import pytest
-
-from sr_od.application.currency_war.kernel import cw_evolution as cw_evolution_mod
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_evolution import (
-    EvolutionState,
-    evolution_step,
-)
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-
-from sr_od.application.currency_war.kernel.cw_battle_calib import _board_factions_of
-from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    CompTransaction,
-    GameState,
-    _recount_board,
-    simulate,
-)
-from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
+# ==================== cw_evolution 引擎补完通道(ADR-0371) ====================
 
 
 def _char(name: str, star: int = 1, row: str = 'back') -> BenchChar:
@@ -544,36 +574,14 @@ def test_engine_complete_log_undeploy_roster(monkeypatch: pytest.MonkeyPatch):
     assert 'undeployed=[]' in line2, line2
 
 
-# ==================== w213_sim_supply_two_step ====================
-
-from sr_od.application.currency_war.kernel import cw_events
-
-from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-
-
-def test_sim_supply_two_step_scoring_branch_reachable(
-        monkeypatch) -> None:
-    """① 评分分支(refresh_used=True)在 sim 可达——修复前恒 False。"""
-    calls: list[dict] = []
-    orig = cw_events.decide_supply
-
-    def spy(options, state, target_comp, config, refresh_used=False):
-        calls.append({'refresh_used': refresh_used,
-                      'n_opts': len(options)})
-        return orig(options, state, target_comp, config, refresh_used)
-
-    monkeypatch.setattr(cw_events, 'decide_supply', spy)
-    for seed in range(12):
-        simulate_p1(seed, planes=2, pool='fallback')
-        if any(c['refresh_used'] for c in calls):
-            break
-    assert any(c['refresh_used'] for c in calls), (
-        'decide_supply 评分分支(refresh_used=True)在 sim 从未执行'
-        '——「恒 idx0」伪影回归(ADR-0394)')
+# ==================== simulate_p1 补给两步链(sim 集成) ====================
 
 
 def test_sim_supply_reroll_chain_and_once_per_game(monkeypatch) -> None:
-    """②③ 两步链形态 + session 级只刷一次。"""
+    """两步链形态 + session 级只刷一次;评分分支(refresh_used=True)
+    在 sim 可达——「恒 idx0」伪影回归锚(ADR-0394)。
+    (可达性原为独立 12 种子扫描锁,断言面被本测链形态断言严格
+    覆盖,已并入:链形态蕴含任意 refresh_used=True。)"""
     # 显式命中种子集(纪律 12 续:实测探底后固化,非命中种子不再付运行成本)。
     # 探针记录(2026-09-03,seed 0-11 逐局 spy 实测):9/12 出现两步链;
     # 取三形态代表——0=[F,T,T] 立即重掷 / 4=[F,F,T] 迟重掷 / 8=[F,F,T,T] 双掷。
@@ -622,17 +630,8 @@ def test_sim_p1_key_hit_metric_pipe() -> None:
         b.p1_key_hit_hits, b.p1_key_hit_total), '同 seed 度量不可复现'
 
 
-# ==================== coarse_battle ====================
+# ==================== cw_coarse_battle 战斗粗模型 ====================
 
-import json
-import random
-
-import pytest as _coarse_battle_pytest
-
-from sr_od.application.currency_war.kernel import cw_coarse_battle as cb
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim import pool as _coarse_battle_pool
-from sr_od.application.currency_war.sim.checks import runner as _coarse_battle_runner
 # 拟合产物交付口径(逐单元;粗模型参数的机器可读真值,
 # 来源 = 冻结语料拟合,禁与其它口径混写)
 _DELIVERY_WIN_P: dict[str, dict[int, float]] = {
@@ -698,8 +697,8 @@ def test_prior_share_hard_caps() -> None:
             alpha = share * n / (1 - share)
             assert alpha <= cb.ALPHA_CAP + 1e-9
     # 值锁两例(份额帽在薄/厚单元的两个端型):
-    assert cb.prior_share('battle', 2) == _coarse_battle_pytest.approx(0.203, abs=1e-3)
-    assert cb.prior_share('battle', 3) == _coarse_battle_pytest.approx(0.25, abs=1e-9)
+    assert cb.prior_share('battle', 2) == pytest.approx(0.203, abs=1e-3)
+    assert cb.prior_share('battle', 3) == pytest.approx(0.25, abs=1e-9)
 
 
 def test_win_state_plus2() -> None:
@@ -752,7 +751,7 @@ def test_difficulty_multiplier_off_by_default() -> None:
         assert a == b
 
 
-def test_difficulty_multiplier_enabled(monkeypatch: _coarse_battle_pytest.MonkeyPatch) -> None:
+def test_difficulty_multiplier_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     """开关置位后:伤害按 1.052^(Δ难度) 缩放(A8 基准 108 不缩放)。"""
     monkeypatch.setattr(cb, 'DIFFICULTY_MULT_ENABLED', True)
     base = cb.sample_battle_delta(
@@ -763,14 +762,14 @@ def test_difficulty_multiplier_enabled(monkeypatch: _coarse_battle_pytest.Monkey
     assert up == -round(36 * 1.052 ** 1)
 
 
-def test_engine_switch_dual_mode(monkeypatch: _coarse_battle_pytest.MonkeyPatch) -> None:
+def test_engine_switch_dual_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     """引擎开关:coarse 走粗模型;delta 臂走 Δ池;reward/supply 恒 Δ池。"""
     coarse_calls: list[str] = []
     monkeypatch.setattr(
         cb, 'sample_battle_delta',
         lambda node, rung, hp, rng, **kw: coarse_calls.append(node) or 0)
     pool_calls: list[str] = []
-    _orig_ldf = _coarse_battle_pool.live_delta_for
+    _orig_ldf = sim_pool.live_delta_for
 
     def _spy_ldf(node: str, key: int, rng, **kw):  # type: ignore[no-untyped-def]
         pool_calls.append(node)
@@ -801,11 +800,12 @@ def test_coarse_game_smoke_snapshot_fingerprint() -> None:
     assert all(0 <= h <= 100 for h in r.hp_trail)
     # 局指纹 = 池指纹 + 装备发放结构版本位(供给重校准起)
     assert r.pool_fingerprint == (
-        _coarse_battle_pool.pool_fingerprint(_coarse_battle_pool.resolve_pool('snapshot')[0])
+        sim_pool.pool_fingerprint(sim_pool.resolve_pool('snapshot')[0])
         + f'+eqg{cw_sim.EQUIP_GRANT_CALIB_VERSION}')
 
 
-# ===== 位面维(P1 先行)锁:结构见 test_cw_w405_planarize 说明 =====
+# ===== 位面维(P1 先行)锁:结构语义单一源 = cw_coarse_battle 模块头
+# 「位面维(P1 先行)」节(P2 别名/口径声明在生产侧) =====
 
 
 def test_p1_layer_zero_drift_literals() -> None:
@@ -824,7 +824,7 @@ def test_p1_layer_zero_drift_literals() -> None:
     for node, rungs in _DELIVERY_WIN_P.items():
         for rung, p in rungs.items():
             assert cb.injected_win_p(node, rung, plane=1) == \
-                _coarse_battle_pytest.approx(p)
+                pytest.approx(p)
 
 
 def test_p2_alias_lock() -> None:
@@ -882,7 +882,7 @@ def test_default_plane_keeps_signature_compatible() -> None:
 
 
 def test_coarse_calib_version_disclosed_in_ledger_manifest(
-        monkeypatch: _coarse_battle_pytest.MonkeyPatch, tmp_path) -> None:
+        monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     """版本披露锁:COARSE_CALIB_VERSION=4 且进 sim 台账 manifest。
 
     DESIGN §验证:局终指纹核对锚——防止「结构改了、披露没跟上」的
@@ -892,27 +892,12 @@ def test_coarse_calib_version_disclosed_in_ledger_manifest(
     """
     assert cb.COARSE_CALIB_VERSION == 4
     r = cw_sim.simulate_p1(1, pool='snapshot')
-    out = _coarse_battle_runner.write_batch_ledger([r], tmp_path / 'batch')
+    out = sim_runner.write_batch_ledger([r], tmp_path / 'batch')
     manifest = json.loads((out / 'manifest.json').read_text(encoding='utf-8'))
     assert manifest['coarse_calib_version'] == cb.COARSE_CALIB_VERSION
 
 
-from sr_od.application.currency_war.sim import runner as _coarse_battle_runner
-
-
-# ==================== first_passage ====================
-
-import math
-
-from sr_od.application.currency_war.kernel.cw_first_passage import (
-    _loss_dist,
-    first_passage_win,
-    hp_floor,
-    plane_hp_ratio,
-    p_win_lambda,
-    posture_guidance,
-    risk_posture,
-)
+# ==================== cw_first_passage 首达生存 ====================
 
 
 def test_k1_gamblers_ruin_flip():
