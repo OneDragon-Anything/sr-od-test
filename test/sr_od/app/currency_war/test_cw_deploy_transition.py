@@ -372,20 +372,9 @@ def test_seele_leak_red_pair_merge_material_variant() -> None:
     assert '希儿' not in plan.sell_names
 
 
-# ============ 资格门不被 f≥2 收益侧豁免(方案 §2.3 辖域写死)============
-
-def test_two_star_victim_sell_state_star_guard_not_exempted() -> None:
-    """2★ victim 卖出态资格门锁(ADR-0590 决策3/4;T-127 方案 §2.3
-    「P41 ②与 star_guard 属 victim 资格门,不被 f≥2 收益侧豁免」):
-    f≥2 带(压席侧可计算成本全零,收益侧承载)帧,2★ 释放候选仍被
-    star_guard 持有(P41 ② fail-closed)——收益侧只豁免 C_sat 比较项,
-    资格面不松绑;拒因显影 star_guard(与 redeploy_cost_gate_defer
-    分列禁混桶)。"""
-    ctx = _lesion_ctx()
-    # 艾丝妲 2★:收窄释放(持续伤害未达成)但 star_guard fail-closed
-    assert swap_sell_exclusion_reason('艾丝妲', ctx) == 'star_guard'
-    # 三月七 2★:同带被守恒门先拦(列车同行 achieved 1→0)
-    assert swap_sell_exclusion_reason('三月七', ctx) == 'engines_guard'
+# 「资格门不被 f≥2 收益侧豁免」(方案 §2.3 辖域)事实由病灶复演锁与计划
+# 形态锁自持:前者经 run_mandate 计数器分键(star_guard/engines_guard),
+# 后者经 plan.reasons 逐件断言同两件同两拒因——独立锁省去,防双点维护。
 
 
 # ============ P79-3 执行条件发射门(ADR-0590 决策4/6)============

@@ -1,27 +1,74 @@
 # -*- coding: utf-8 -*-
-"""test_cw_screens_ops 主题锁(结构合并批,机械拼接)。
+"""test_cw_screens_ops 主题锁(结构合并批;拼接疤痕已收敛为单一顶层导入)。
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
+成员(原文件 docstring 语义索引):
 - test_handle_supply_sphere: test_handle_supply_sphere.py
 - test_settlement_recognizer: test_settlement_recognizer.py
-- test_interrupt_dialog_screen: test_interrupt_dialog_screen.py
+- test_interrupt_dialog_screen: test_interrupt_dialog_screen.py —— 真阳性锁与
+  父屏无碰撞锁的语义现由中央归档库自动扫描承载(超集):
+  test/sr_od/screen_state/test_get_match_screen_name/test_id_mark.py 对
+  screens/货币战争-中断挑战弹窗/open.webp 逐帧做「自家 id_mark 真阳性 +
+  全画面碰撞」双检;本文件仅保留非 id_mark area 可命中锁。
 - test_in_match_screen_layer: test_in_match_screen_layer.py
 - plaza_posts: test_cw_plaza_posts.py
-冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
 
-
-# ==================== test_handle_supply_sphere ====================
+import sys
+from dataclasses import fields as dc_fields
+from pathlib import Path
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_prep_expect import  material_value as _material_value
-from sr_od.application.currency_war.obs.cw_identity_obs import  read_reward_spheres, read_supply_boxes
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply import  CwScreenSupply
+from one_dragon.base.screen.screen_utils import find_area_in_screen
+from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
+from sr_od.application.currency_war.data.cw_plaza_comps import (
+    PLAZA_CARRY_CLUSTERS,
+    PLAZA_GLOBAL,
+    cluster_by_carry,
+    early_transition_pool,
+)
+from sr_od.application.currency_war.data.cw_plaza_posts import (
+    PLAZA_POSTS,
+    PlazaPost,
+    post_by_id,
+)
+from sr_od.application.currency_war.kernel.cw_prep_expect import (
+    material_value as _material_value,
+)
+from sr_od.application.currency_war.obs.cw_identity_obs import (
+    read_reward_spheres,
+    read_supply_boxes,
+)
+from sr_od.application.currency_war.obs.recognizers import (
+    settlement_recognizer as mod,
+)
+from sr_od.application.currency_war.obs.recognizers.settlement_recognizer import (
+    SettlementRecognizer,
+)
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply import (
+    CwScreenSupply,
+)
+from sr_od.application.currency_war.telemetry.cw_win_features import (
+    features_from_deployed,
+)
+from sr_od.application.currency_war.telemetry.cw_win_model import (
+    PLAZA_BASE_WEIGHT,
+    ShadowKilledModel,
+    plaza_post_features,
+    plaza_prior_weights,
+    plaza_sample_weight,
+)
 
-if True:
+if TYPE_CHECKING:
     from test.conftest import SrTestContext
+
+REPO = Path(__file__).resolve().parents[5]
+
+
+# ==================== test_handle_supply_sphere ====================
 
 
 def test_material_value_table() -> None:
@@ -46,20 +93,16 @@ def test_fixture_reads_spheres_and_box(test_context: SrTestContext) -> None:
     assert len(spheres5) == 5 and [s for s, _p in boxes5] == [1], '5 球帧:球 5 + 箱槽1 共存'
 
 
-def test_pick_card_key_equips_priority(test_context: SrTestContext) -> None:
-    """选卡:target_comp.key_equips 命中优先(无 match/无 comp 时按材料通用性)。"""
+def test_pick_card_fallback_by_material_value(test_context: SrTestContext) -> None:
+    """选卡回落路径锁:无 cw_match(局外)时按材料通用性选卡(生命之花 7 >
+    轮滑鞋 6),空卡列表返 None。key_equips 命中/策略打分路径需 cw_match
+    在场(pick_box_card 前置分支),不在本锁断言面。"""
     op = CwScreenSupply(test_context)
-    # 无 cw_match(局外)→ 材料通用性:生命之花(7) > 轮滑鞋(6)
     assert op._pick_card(['轮滑鞋', '生命之花', '幸运星']) == '生命之花'
     assert op._pick_card([]) is None
 
 
 # ==================== test_settlement_recognizer ====================
-
-from unittest.mock import MagicMock
-
-import sr_od.application.currency_war.obs.recognizers.settlement_recognizer as mod
-from sr_od.application.currency_war.obs.recognizers.settlement_recognizer import  SettlementRecognizer
 
 
 def _ctx_with_ocr(ocr_texts: list[str]) -> MagicMock:
@@ -74,76 +117,51 @@ def test_screen_name_matches_settlement() -> None:
     assert SettlementRecognizer.screen_name == '货币战争-结算'
 
 
-def test_recognize_parses_hp(monkeypatch) -> None:
-    """非失败屏:parse_settlement_hp 读到 71 → hp_after=71, is_failed=False。"""
-    monkeypatch.setattr(mod, 'parse_settlement_hp', lambda texts: 71)
-    ctx = _ctx_with_ocr(['挑战结束', '小队生命值71', '继续挑战'])
+@pytest.mark.parametrize(
+    'ocr_texts,parsed_hp,expected',
+    [
+        (['挑战结束', '小队生命值71', '继续挑战'], 71,
+         {'hp_after': 71, 'is_failed': False}),
+        (['挑战失败', '继续挑战'], None,
+         {'hp_after': 0, 'is_failed': True}),
+        (['挑战结束', '继续挑战'], None,
+         {'hp_after': None, 'is_failed': False}),
+    ],
+    ids=['nonfail_hp_parsed', 'failed_screen_ground_truth_zero',
+         'nonfail_hp_unreadable_none'],
+)
+def test_recognize_hp_branches(monkeypatch, ocr_texts: list[str],
+                               parsed_hp: int | None,
+                               expected: dict) -> None:
+    """recognize 三分支同形体参数化(断言面逐 case 同拆前单测):
+    - nonfail_hp_parsed:parse_settlement_hp 读到 71 → hp_after=71,is_failed=False;
+    - failed_screen_ground_truth_zero:失败屏(「挑战失败」)parse 读不到
+      → hp_after=0(团灭 ground truth,is_failed 由失败文案判定);
+    - nonfail_hp_unreadable_none:非失败屏 parse 读不到 → hp_after=None(不硬塞)。"""
+    monkeypatch.setattr(mod, 'parse_settlement_hp', lambda texts: parsed_hp)
+    ctx = _ctx_with_ocr(ocr_texts)
 
     out = SettlementRecognizer().recognize(ctx, MagicMock(), MagicMock())
-    assert out == {'hp_after': 71, 'is_failed': False}
-
-
-def test_recognize_failed_screen_hp_zero(monkeypatch) -> None:
-    """失败屏(「挑战失败」):parse_settlement_hp 读不到 → hp_after=0(团灭 ground truth)。"""
-    monkeypatch.setattr(mod, 'parse_settlement_hp', lambda texts: None)
-    ctx = _ctx_with_ocr(['挑战失败', '继续挑战'])
-
-    out = SettlementRecognizer().recognize(ctx, MagicMock(), MagicMock())
-    assert out == {'hp_after': 0, 'is_failed': True}
-
-
-def test_recognize_hp_none_when_unreadable(monkeypatch) -> None:
-    """非失败屏 parse_settlement_hp 读不到 → hp_after=None(不硬塞)。"""
-    monkeypatch.setattr(mod, 'parse_settlement_hp', lambda texts: None)
-    ctx = _ctx_with_ocr(['挑战结束', '继续挑战'])
-
-    out = SettlementRecognizer().recognize(ctx, MagicMock(), MagicMock())
-    assert out == {'hp_after': None, 'is_failed': False}
+    assert out == expected
 
 
 def test_does_not_import_session_based_reader() -> None:
-    """并发安全:模块不导入需 plane/round(从 session)的 read_round_outcome。"""
+    """并发安全墓碑:模块不导入需 plane/round(从 session)的 read_round_outcome。"""
     assert not hasattr(mod, 'read_round_outcome'), '不得复用需 session plane/round 的 read_round_outcome'
 
 
 # ==================== test_interrupt_dialog_screen ====================
 
-from typing import TYPE_CHECKING
-
-import pytest as _test_interrupt_dialog_screen_pytest
-
-from one_dragon.base.screen.screen_utils import  find_area_in_screen, get_match_screen_name, is_target_screen
-
-if TYPE_CHECKING:
-    from test.conftest import SrTestContext
-
 
 def _load(test_context: SrTestContext):
     if not test_context.has_screen('货币战争-中断挑战弹窗', 'open'):
-        _test_interrupt_dialog_screen_pytest.skip('fixture 缺:screens/货币战争-中断挑战弹窗/open.webp')
+        pytest.skip('fixture 缺:screens/货币战争-中断挑战弹窗/open.webp')
     return test_context.load_screen('货币战争-中断挑战弹窗', 'open')
 
 
-def test_interrupt_dialog_true_positive(test_context: SrTestContext) -> None:
-    """弹窗帧:自家 id_mark 组合全命中(is_precise)。"""
-    img = _load(test_context)
-    assert is_target_screen(test_context, img, screen_name='货币战争-中断挑战弹窗'), (
-        '中断挑战弹窗 fixture 应精准命中自家 id_mark 组合')
-
-
-def test_interrupt_dialog_no_parent_collision(test_context: SrTestContext) -> None:
-    """弹窗帧:父屏(货币战争-备战)不得 is_precise(遮罩压暗,天然区分)。"""
-    img = _load(test_context)
-    assert not is_target_screen(test_context, img, screen_name='货币战争-备战'), (
-        '弹窗帧不应命中备战 id_mark(遮罩应盖灭父屏识别)')
-    assert get_match_screen_name(
-        test_context, img,
-        screen_name_list=['货币战争-中断挑战弹窗', '货币战争-备战'],
-    ) == '货币战争-中断挑战弹窗'
-
-
 def test_interrupt_dialog_areas(test_context: SrTestContext) -> None:
-    """按钮/只读 area 在 fixture 上可命中(1g 分支点按钮-关闭的前提)。"""
+    """按钮/只读 area 在 fixture 上可命中(1g 分支点按钮-关闭的前提);
+    真阳性/父屏无碰撞由 test_id_mark 中央归档库扫描承载(见文件头)。"""
     img = _load(test_context)
     si = test_context.screen_loader.get_screen('货币战争-中断挑战弹窗')
     for name in ('按钮-暂时离开', '文本-小队生命值'):
@@ -159,20 +177,6 @@ def test_interrupt_dialog_areas(test_context: SrTestContext) -> None:
 
 
 # ==================== test_in_match_screen_layer ====================
-
-import sys
-from pathlib import Path
-from typing import TYPE_CHECKING as _test_in_match_screen_layer_TYPE_CHECKING
-
-import pytest as _test_in_match_screen_layer_pytest
-
-_REPO = Path(__file__).resolve().parents[5]
-sys.path.insert(0, str(_REPO / 'src'))
-
-from sr_od.application.currency_war.currency_war_app import CurrencyWarApp  # noqa: E402
-
-if _test_in_match_screen_layer_TYPE_CHECKING:
-    from test.conftest import SrTestContext
 
 
 class _FakeScreenInfo:
@@ -193,7 +197,9 @@ def test_in_match_screen_names_filters_lobby_states() -> None:
     assert '货币战争-备战' in got
     assert '货币战争-投资策略' in got
     assert '货币战争-挑战失败' in got
-    assert '模拟宇宙-2' not in got or len(got) == 3   # 非 CW 前缀不入
+    # 前缀外判定面:输入在场的两个非 货币战争- 前缀名都不得入列
+    assert '模拟宇宙--index' not in got
+    assert '星际列车' not in got
 
 
 def test_in_match_screen_names_auto_includes_new_screen() -> None:
@@ -202,56 +208,29 @@ def test_in_match_screen_names_auto_includes_new_screen() -> None:
     assert CurrencyWarApp.in_match_screen_names(infos) == ['货币战争-未来新屏']
 
 
-def test_in_match_screen_names_excludes_train_supply_popup() -> None:
-    """列车补给每日弹窗必须显式排除(白名单锁,守卫移除红检目标)。
-
-    match2 实锤(2026-08-31):弹窗屏名带 货币战争- 前缀,被前缀自动收录机制
-    收进对局屏集 → 弹窗帧被误判「已在对局中」→ 跳过 enter/start 直交
-    cw_loop → 未知态钩子 33s 停机。从白名单移除本行 = 本锁红。
-    """
-    infos = [_FakeScreenInfo('货币战争-列车补给弹窗')]
-    assert CurrencyWarApp.in_match_screen_names(infos) == [], (
-        '列车补给弹窗是非对局屏(盖在大世界上、早于 CW 入口导航),'
-        '不得进对局屏集(否则弹窗帧被误判对局中 → loop 未知态停机)'
-    )
-
-
-def test_in_match_screen_names_excludes_jade_detail_popup() -> None:
-    """星琼详情弹窗必须显式排除(白名单锁,T-98 事故;ADR-0574)。
-
-    模态详情弹窗屏名带 货币战争- 前缀,被前缀自动收录机制收进对局屏集 →
-    弹窗帧被误判「已在对局中」→ 跳过 enter/start 直交 cw_loop → 卡死换姿势
-    复发。从白名单移除本行 = 本锁红。
-    """
-    infos = [_FakeScreenInfo('货币战争-星琼详情')]
-    assert CurrencyWarApp.in_match_screen_names(infos) == [], (
-        '星琼详情弹窗是非对局屏(模态盖场,守卫=入口链共享助手),'
-        '不得进对局屏集(否则弹窗帧被误判对局中 → 卡死换姿势复发)'
-    )
+# 白名单排除登记项:屏名带 货币战争- 前缀但语义非对局屏。被前缀自动收录机制
+# 收进对局屏集的后果 = 弹窗帧被误判「已在对局中」→ 入口链跳过 enter/start
+# 直交 cw_loop(停机/卡死)。逐项事故出处见各 case 注释;移除对应排除行 =
+# 对应 case 红。
+_POPUP_EXCLUSION_CASES = [
+    # 列车补给弹窗:match2 实锤(2026-08-31)——弹窗帧误判对局中 → 未知态钩子 33s 停机。
+    '货币战争-列车补给弹窗',
+    # 星琼详情:T-98 事故(ADR-0574)——模态详情弹窗在场即误判对局中,卡死换姿势复发。
+    '货币战争-星琼详情',
+    # 星徽详情:已建档同族「标题+X」详情弹窗(currency_war_star_badge_detail.yml),
+    # 同族泛化待办,先行入清单防复发(方案审 F3;ADR-0574)。
+    '货币战争-星徽详情',
+    # 积分奖励:入口链 3b 分支处理的局末奖励页(cw_entry_start 一键领取+关闭),
+    # 语义非对局屏(方案审 F3)。
+    '货币战争-积分奖励',
+]
 
 
-def test_in_match_screen_names_excludes_star_badge_detail() -> None:
-    """星徽详情弹窗必须显式排除(白名单补漏,方案审 F3;ADR-0574)。
-
-    已建档同族「标题+X」详情弹窗(currency_war_star_badge_detail.yml),处理
-    分支属同族泛化待办;带前缀会被自动收屏,在场即误判对局中——与 match2
-    误路由同型,先行入清单防复发。
-    """
-    infos = [_FakeScreenInfo('货币战争-星徽详情')]
-    assert CurrencyWarApp.in_match_screen_names(infos) == [], (
-        '星徽详情弹窗是非对局屏(同族详情弹窗),不得进对局屏集'
-    )
-
-
-def test_in_match_screen_names_excludes_score_rewards() -> None:
-    """积分奖励页必须显式排除(白名单补漏,方案审 F3;ADR-0574)。
-
-    入口链 3b 分支处理的局末奖励页(cw_entry_start 承接:一键领取+关闭),
-    语义非对局屏;带前缀会被自动收屏,在场即误判对局中跳过 enter。
-    """
-    infos = [_FakeScreenInfo('货币战争-积分奖励')]
-    assert CurrencyWarApp.in_match_screen_names(infos) == [], (
-        '积分奖励页是非对局屏(入口链奖励页),不得进对局屏集'
+@pytest.mark.parametrize('popup', _POPUP_EXCLUSION_CASES)
+def test_in_match_screen_names_excludes_non_match_popups(popup: str) -> None:
+    """白名单排除锁(逐项出处见 _POPUP_EXCLUSION_CASES 注释)。"""
+    assert CurrencyWarApp.in_match_screen_names([_FakeScreenInfo(popup)]) == [], (
+        f'{popup} 是非对局屏,不得进对局屏集(否则弹窗帧被误判对局中)'
     )
 
 
@@ -260,7 +239,7 @@ def test_train_supply_popup_fixture_not_in_match(test_context: SrTestContext) ->
     from one_dragon.base.screen.screen_utils import get_match_screen_name
 
     if not test_context.has_screen('货币战争-列车补给弹窗', '今日未领取'):
-        _test_in_match_screen_layer_pytest.skip('fixture 缺:货币战争-列车补给弹窗/今日未领取')
+        pytest.skip('fixture 缺:货币战争-列车补给弹窗/今日未领取')
     screens = CurrencyWarApp.in_match_screen_names(test_context.screen_loader.screen_info_list)
     img = test_context.load_screen('货币战争-列车补给弹窗', '今日未领取')
     hit = get_match_screen_name(test_context, img, screen_name_list=screens)
@@ -274,7 +253,7 @@ def test_jade_detail_popup_fixture_not_in_match(test_context: SrTestContext) -> 
     from one_dragon.base.screen.screen_utils import get_match_screen_name
 
     if not test_context.has_screen('货币战争-星琼详情', 'default'):
-        _test_in_match_screen_layer_pytest.skip('fixture 缺:货币战争-星琼详情/default')
+        pytest.skip('fixture 缺:货币战争-星琼详情/default')
     screens = CurrencyWarApp.in_match_screen_names(test_context.screen_loader.screen_info_list)
     img = test_context.load_screen('货币战争-星琼详情', 'default')
     hit = get_match_screen_name(test_context, img, screen_name_list=screens)
@@ -294,7 +273,7 @@ def test_in_match_fixture_states(test_context: SrTestContext) -> None:
     assert '货币战争-挑战失败' in screens
 
     if not test_context.has_screen('货币战争-挑战失败', 'failed'):
-        _test_in_match_screen_layer_pytest.skip('fixture 缺:货币战争-挑战失败/failed')
+        pytest.skip('fixture 缺:货币战争-挑战失败/failed')
     img = test_context.load_screen('货币战争-挑战失败', 'failed')
     # 画面匹配层直接判(绕开 app 实例化;_in_match 同源调用)
     assert get_match_screen_name(ctx, img, screen_name_list=screens) == '货币战争-挑战失败'
@@ -307,25 +286,13 @@ def test_in_match_fixture_states(test_context: SrTestContext) -> None:
 
 # ==================== plaza_posts ====================
 
-import sys as _plaza_posts_sys
-from dataclasses import fields as dc_fields
-from pathlib import Path as _plaza_posts_Path
-
-import pytest as _plaza_posts_pytest
-
-from sr_od.application.currency_war.data.cw_plaza_comps import  PLAZA_CARRY_CLUSTERS, PLAZA_GLOBAL, cluster_by_carry, early_transition_pool
-from sr_od.application.currency_war.data.cw_plaza_posts import  PLAZA_POSTS, PlazaPost, post_by_id
-from sr_od.application.currency_war.telemetry.cw_win_features import  features_from_deployed
-from sr_od.application.currency_war.telemetry.cw_win_model import  PLAZA_BASE_WEIGHT, ShadowKilledModel, plaza_post_features, plaza_prior_weights, plaza_sample_weight
-
-REPO = _plaza_posts_Path(__file__).resolve().parents[5]
-
 
 # --- 生成器产物 schema 锁(逐篇语料,784 篇) --------------------------------
 
 def test_corpus_schema_and_uniqueness() -> None:
     """逐篇语料不变式(生成器过滤与去重的产物契约):
-    帖 id 唯一、每篇 >=1 单位且 >=1 carry、星级 1-3、pos 合法、use >=0。"""
+    帖 id 唯一、每篇 >=1 单位且 >=1 carry、星级 1-3、pos 合法、use >=0;
+    units 五元组 / equips 二元组按消费方位解包逐篇校验(特征化消费方按位解包)。"""
     assert len(PLAZA_POSTS) >= 700
     ids = [p.post_id for p in PLAZA_POSTS]
     assert len(ids) == len(set(ids)) == len(post_by_id())
@@ -340,19 +307,13 @@ def test_corpus_schema_and_uniqueness() -> None:
             assert pos in ('front', 'back')
             assert isinstance(is_carry, bool)
             assert name
-
-
-def test_corpus_field_arity() -> None:
-    """units 五元组 / equips 二元组形状锁(特征化消费方按位解包)。"""
-    p = PLAZA_POSTS[0]
-    for u in p.units:
-        assert len(u) == 5
-    for name, eqs in p.equips:
-        assert name
-        assert all(e for e in eqs)
+        for name, eqs in p.equips:
+            assert name
+            assert all(e for e in eqs)
 
 
 # --- 特征化(逐篇 → 胜率模型特征行) -----------------------------------------
+
 
 def _post(use: int = 100) -> PlazaPost:
     return PlazaPost(
@@ -391,7 +352,7 @@ def test_sample_weight_log_compression_and_base() -> None:
     import math
     assert plaza_sample_weight(0) == PLAZA_BASE_WEIGHT == 1.0
     assert plaza_sample_weight(-5) == PLAZA_BASE_WEIGHT  # 防御负值
-    assert plaza_sample_weight(100) == _plaza_posts_pytest.approx(1 + math.log1p(100))
+    assert plaza_sample_weight(100) == pytest.approx(1 + math.log1p(100))
     # 头部帖(万级 use)压缩后 <=12,不会淹没遥测集(784 篇原值和 ~10^6)
     assert plaza_sample_weight(30000) < 12
 
@@ -402,7 +363,7 @@ def test_prior_weights_face_normalized() -> None:
     from sr_od.application.currency_war.telemetry.cw_win_model import PLAZA_PRIOR_FACE_N
     rows = [{'plaza_weight_raw': plaza_sample_weight(u)} for u in (0, 10, 1000)]
     w = plaza_prior_weights(rows, n_telemetry=123)
-    assert sum(w) == _plaza_posts_pytest.approx(PLAZA_PRIOR_FACE_N * 123)
+    assert sum(w) == pytest.approx(PLAZA_PRIOR_FACE_N * 123)
     assert w[0] < w[1] < w[2]
     assert plaza_prior_weights([], 10) == []
     zero = plaza_prior_weights([{'plaza_weight_raw': 0.0}], 10)
@@ -442,7 +403,7 @@ def test_plaza_comps_aggregate_schema_backward_compat() -> None:
 
 def test_render_posts_exec_schema() -> None:
     """render_posts 输出可 exec 且 dataclass 结构/字段齐全(改渲染模板的锁)。"""
-    _plaza_posts_sys.path.insert(0, str(REPO / 'tools' / 'cw'))
+    sys.path.insert(0, str(REPO / 'tools' / 'cw'))
     import gen_plaza_comps
     rec = {
         'post_id': '12345', 'use': 7,

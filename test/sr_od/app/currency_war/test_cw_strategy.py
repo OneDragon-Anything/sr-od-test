@@ -276,8 +276,6 @@ def test_decide_partner_fallback_idx0_when_no_charid() -> None:
     assert pick.idx == 0
 
 
-# —— StrategySession 生命周期 + rng 种子复现(D-34/§11.4)——
-
 # —— 巨星强化角色维度已随 megastar_enhance_enabled 开关族删除——旧方案
 # —— 清退批,清查报告 OLD_MIX_AUDIT §1.3;保留一条恒 None 行为锁 ——
 
@@ -412,9 +410,12 @@ def test_settlement_drain_idempotent_clears_slot_once() -> None:
 
 
 def test_new_session_resets_layout_unknown_streak(monkeypatch) -> None:
-    """落地审 C4:跨局残留锁——上一局末未知 streak≥1 时,新局
+    """跨局残留锁:上一局末未知 streak≥1 时,新局
     create_session 必须复位布局未知态计数(否则开局 level 未 observed/
-    CV 高发不可判期会提前吃写面冻结)。"""
+    CV 高发不可判期会提前吃写面冻结)。
+    出处:复位义务挂在 create_session 冷建口唯一写入契约上——同一冷建口
+    的 MandateState/v3_phase 面由 test_cw_session_separation 独立锁辖,
+    本锁补其跨局残留复位面。"""
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
     monkeypatch.setattr(cbl, '_unknown_streak', 2)
     strat = MandateV1Strategy()
