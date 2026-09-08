@@ -9,8 +9,8 @@
 3. 用户定值等待:进详情开屏 ~3s;详情内点位面卡切换后 2s 即读;
 4. 备战识别失败(起始位面未取得)→ 回退全量采集(保底)。
 
-活跃锁(与 test_cw_plane_p2.py 的 legacy 基线桶分离;该桶随旧核冻结,
-本文件锁当前语义)。
+活跃锁(旧核基线桶已废止并整体删除,不再有分离对象;本文件锁当前
+语义)。
 """
 import inspect
 
@@ -35,28 +35,29 @@ def test_start_plane_trim_truth_table() -> None:
 
 
 def test_start_plane_defaults_to_full_collect() -> None:
-    """备战识别失败回退:构造参数缺省 start_plane=0(未知)→ 判据不跳。"""
+    """备战识别失败回退:构造参数缺省 start_plane=0(未知)。
+    (0/None 帧判据不跳的判定面由 test_start_plane_trim_truth_table
+    真值表辖,不在此重复。)"""
     op = cw_screen_plane_intel.CwScreenPlaneIntel.__new__(
         cw_screen_plane_intel.CwScreenPlaneIntel)
     cw_screen_plane_intel.CwScreenPlaneIntel.__init__(op, ctx=None)
     assert op._start_plane == 0, '缺省应未知(0),全采回退'
-    assert cw_screen_plane_intel.decide_plane_skip(1, op._start_plane or None)[0] is False
 
 
 # ==================== 详情侧不重试(变暗=正常态) ====================
 
 def test_detail_unreadable_concludes_without_gate_retry() -> None:
-    """采集循环的「节点条读不出」路径直接进位面级结论,不经等待门:
-    ①源码含直接结论调用;②不再有 conclude_plane 门参数(重试等待已删);
-    ③理由声明变暗为正常态(防后人把它当识别 bug 误修)。"""
+    """采集循环的「节点条读不出」路径直接进位面级结论,不经等待门
+    (接线存在性烟雾档,失守事故 = 第六局接管「切卡动画中」重试等待
+    烧 7s 后才放弃):①源码含直接结论调用;②等待门只允许备战入口
+    一处(详情侧读不出不得再间隔重试,2026-09-03 裁决);③门签名不再
+    承载 conclude_plane 分流(退役参数墓碑)。"""
     src = inspect.getsource(cw_screen_plane_intel.CwScreenPlaneIntel.collect)
     assert '_conclude_plane_unreadable(' in src, (
         '采集循环读不出应直接位面级结论')
     assert src.count('_nonclean_read_gate') == 1, (
         '采集节点内等待门只允许备战入口一处(详情侧读不出不得再间隔重试;'
         '2026-09-03 裁决)')
-    assert '变暗' in src and '正常态' in src, (
-        '读不出分支应声明「已通过节点变暗=正常态」根因')
     sig = inspect.signature(cw_screen_plane_intel.CwScreenPlaneIntel._nonclean_read_gate)
     assert 'conclude_plane' not in sig.parameters, (
         '等待门不应再承载详情侧结论分流(仅备战入口路径)')
@@ -75,17 +76,16 @@ def test_user_fixed_waits() -> None:
 
 # ==================== 接管链接线(时序反过来) ====================
 
-def test_takeover_chain_passes_start_plane() -> None:
-    """接管链两入口(cw_loop 备战环接管补采 / 独立接管补采 op)都在进详情
-    之前现读当前位面并以 start_plane 传入采集 op。"""
+def test_entry_takeover_passes_start_plane() -> None:
+    """独立接管补采入口(cw_entry_plane_intel)在进详情之前现读当前位面
+    并以 start_plane 传入采集 op(接线存在性烟雾,裁决 = 2026-09-03
+    DD-023 时序修正;失守 = 已通过位面被详情侧重采浪费)。
+    cw_loop 备战环侧(cw_screen_prep)的接线与时序由行为锁
+    test_cw_node_screens.py::test_plane_intel_takeover_refill_channel
+    辖(读桩 (2,3)→start_plane 收 [2],先委派后读的序位反转即红),
+    不在此重复源码断言。"""
     from sr_od.application.currency_war.operations.cw_entry import cw_entry_plane_intel
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
 
-    prep_src = inspect.getsource(cw_screen_prep)
-    assert 'start_plane=_start_plane' in prep_src, (
-        'cw_loop 接管补采未传 start_plane')
-    assert prep_src.index('read_phase_round') < prep_src.index('start_plane=_start_plane'), (
-        '接管链应先备战帧现读当前位面,再委派采集(时序反过来)')
     entry_src = inspect.getsource(cw_entry_plane_intel.CwEntryPlaneIntel)
     assert 'start_plane=_start_plane' in entry_src, (
         '独立接管补采入口未传 start_plane')

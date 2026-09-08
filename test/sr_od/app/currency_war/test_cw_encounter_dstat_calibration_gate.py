@@ -12,11 +12,11 @@ dict[旗牌→stat] 标定域 = ∅——机制公式 stat=B+q+L+s(−m) 的自�
    缺失 fail 向选低难(拒因 dstat_map_none),禁置零续比;
 2. 部分子集缺省锁——注入含部分旗牌键的映射时,未登记旗牌 ⇒
    dstat_missing fail-closed(诚实缺省逐键生效,禁拿其他键值冒充);
-3. 缺省复位锁——reset 后双槽回 None,fail 向现态恢复(测试注入
-   复原纪律的状态机面)。
+3. 复原链锚——provisional 注入→槽内可见→复位→缺席(测试注入复原
+   纪律的执行面,provisional 槽为生产标定供给通道;生产缺省
+   fail-closed 判读由锁 1 辖)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import pytest
 
@@ -28,6 +28,9 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import encounter
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
     provisional,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     lambda_death,
@@ -99,20 +102,16 @@ class TestDstatCalibrationGate:
         assert not pick.refresh
         assert 'dstat_missing(diff=3)' in pick.reason
 
-    def test_reset_restores_fail_closed_default(self, dstat_slot,
-                                                monkeypatch):
-        """缺省复位锁:注入后 reset 复原,fail 向现态恢复(双槽互锁的
-        状态机面;测试注入复原纪律的可执行表述)。"""
+    def test_provisional_inject_reset_roundtrip(self, dstat_slot):
+        """复原链锚:provisional 注入→槽内可见→复位→缺席(测试注入复原
+        纪律的执行面;provisional 槽是生产标定供给通道,注入/复位失守在本
+        文件内精确定位,跨文件消费方只会表现为难以归因的污染红)。复位后
+        的生产 fail-closed 判读由 test_dstat_none_default_fail_low 辖。"""
         provisional.inject('ENCOUNTER_DSTAT_MAP', provisional.CalibValue(
             value={1: 100, 3: 150}, injected_form=True))
         assert provisional.get('ENCOUNTER_DSTAT_MAP') is not None
         provisional.reset('ENCOUNTER_DSTAT_MAP')
-        monkeypatch.setattr(lambda_death, '_LAMBDA_TABLE', {})
-        pick = encounter.decide_encounter_ev([_FEE_L, _FEE_H], _state(),
-                                             _session())
         assert provisional.get('ENCOUNTER_DSTAT_MAP') is None
-        assert pick.idx == _FEE_L.idx
-        assert 'dstat_map_none' in pick.reason
 
 
 if __name__ == '__main__':

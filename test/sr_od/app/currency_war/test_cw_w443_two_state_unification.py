@@ -1,8 +1,8 @@
 """W443 阈值链共享面单帧锁:effective_hp_threshold 消费点 + 现值 + P1 零漂移。
 
-(2026-09-03 拆分批:DP 两态/first_passage/损血标定面拆往
-test_cw_w443_dp_first_passage.py(歼击战摘 legacy 错标复活);本文件只留
-effective_hp_threshold 共享面——该链生产消费点单口 + 现值锁。)
+DP 两态/first_passage/损血标定面(含三表对齐锁)在
+test_cw_w443_dp_first_passage.py;本文件只留 effective_hp_threshold
+共享面——该链生产消费点单口 + 现值锁。
 
 口径定稿与边界声明见 ADR-0440(标定源=W375 双源重标定,
 w375_dual_source_calib.json)。
@@ -13,15 +13,11 @@ import dataclasses
 
 import pytest
 
-from sr_od.application.currency_war.kernel import cw_first_passage as fp
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     effective_hp_threshold,
 )
 from sr_od.application.currency_war.kernel import cw_registry as reg_mod
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
-)
 
 # ---- 阈值链:消费点静态源级锁 ---------------------------------------------
 # 判据=全部消费点经 effective_hp_threshold(state) 单口消费,无旁路
@@ -87,24 +83,8 @@ def test_threshold_p1_untouched_by_p2_calib(monkeypatch: pytest.MonkeyPatch) -> 
         GameState(plane=2, round_num=1, level=7)) > 74
 
 
-
-
-# ---- 三表对齐锁(p_win × 条件败面 × 无条件期望;ADR-0440 三表对齐节) ----
-# 数学结论(检查点①复算的裁决):「同 rung 恒等式无条件=(1−p(rung))·
-# 条件」在 p_win_p2_by_rung × p2_cond_loss_table × p2_node_loss_table
-# 三表间**不成立也不应成立**——三表坐标与样本窗均不同:
-# - p_win_p2_by_rung: rung 坐标(同战斗节点型内按板强成型度;W346 sim
-#   Δ池 battle 样本,k0/k1/k2=0.016/0.413/0.657 单调升=H3 阶梯);
-# - 两损血表: kind 坐标(节点型桶;W375 实机深层局样本)。两表比值
-#   1−无条件/条件 隐含的是**各节点型桶上的板强混合平均存活率**
-#   {normal 0.204/encounter 0.100/boss 0.000}——递减序=节点型难度序
-#   (遭遇比普通战斗难、深层局 boss n=4 全败),与 ADR-0424 拟合伤害
-#   斜率(遭遇 −23.48 vs 战斗 −12.06)同向;这是 kind 间难度差,不是
-#   rung 阶梯反向,与 H3「同节点型内 p 随成型单调升」无矛盾。
-# - 恒等式本身还要求 E[损|胜]=0 严格且桶内板强分布与 p̄ 一致,W375
-#   口径(净负记 0/hp≤1 不删失/死亡行全额)不保证,只有近似意义。
-# 消费面自洽:两态行为链(DP/rounds_alive/阈值 μ)只吃
-# p2_cond_loss_table × p_win_p2_by_rung,无条件表不进任何行为公式。
+# 三表对齐锁(桶均存活率值锁/kind 难度序/混表禁令)与坐标叙事的
+# 单一源:test_cw_w443_dp_first_passage.py + ADR-0440 三表对齐节。
 
 
 

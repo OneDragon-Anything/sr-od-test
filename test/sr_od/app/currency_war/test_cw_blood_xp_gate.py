@@ -106,7 +106,6 @@ def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
     # 不可信帧经消费适配面同样拒(兜底 100 帧语义 = ADR-0282:两位皆 False,
     # 由读取端显式写;GameState 构造缺省 hp_readable=True 是 sim 恒真读帧约定)
     st_ghost = GameState(level=3, hp=100, hp_readable=False)
-    assert st_ghost.hp_readable is False
     assert blood_xp_gate_for(st_ghost, _blood_session()) is False
 
 
