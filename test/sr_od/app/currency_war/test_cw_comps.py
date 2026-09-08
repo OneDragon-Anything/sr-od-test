@@ -4,7 +4,8 @@
 - mechanics_fit 双向(debuff=buff):万敌+反伤=synergy 升;阿雅+禁速=counter 降。
 - equip_fit comp 相关(阿雅需 2 反重力皮靴;超线性)。
 - comp_score 多维;select_comp 用户 4 轴 steer(build_around/forbid/priority)+ optionality + 阶段成型难度。
-- maybe_pivot 转型信号;select_megastar 按 target 选。
+- maybe_pivot 转型信号;select_megastar 按 target 选(偏好绑定面在 test_cw_megastar_binding,
+  本文件只锁 target=None / 空候选两面)。
 """
 from __future__ import annotations
 
@@ -13,12 +14,16 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_comps import (
+    AUGMENT_COMP_AFFINITY,
     COMP_LIBRARY,
-    MECHANIC_COUNTERS,
-    MECHANIC_SYNERGIES,
+    EARLY_CORE_POOL,
+    TEMPO_POOL,
+    TRANSITION_POOL,
+    Comp,
     _difficulty_phase_factor,
     _held_base_copies,
     boss_fit,
+    char_routes,
     comp_score,
     comp_score_breakdown,
     current_enemy_mechanics,
@@ -26,15 +31,23 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     equip_fit,
     form_progress,
     get_comp,
+    held_strategy_fit,
     make_score_context,
     maybe_pivot,
     mechanics_fit,
+    pivot_overlap,
     progress,
     select_comp,
     select_megastar,
     shop_supply,
+    skeleton_factions,
+    target_committed,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
+    ShopCard,
+)
 
 
 def _cfg(**overrides) -> SimpleNamespace:
@@ -97,7 +110,6 @@ def test_equip_fit_aya_two_boots_supralinear() -> None:
 
 def test_equip_fit_no_key_equips_neutral() -> None:
     """comp 无关键装备依赖 → None(ADR-0107:无数据动态剔除,非 0.5 常量地板;用局部 Comp 不污染 LIBRARY)。"""
-    from sr_od.application.currency_war.kernel.cw_comps import Comp
     comp_no_equip = Comp(name="测试", factions=["巡海游侠"], core_chars=[], form_tiers={},
                          strength="A", form_difficulty="easy", key_equips=[])
     assert equip_fit(comp_no_equip, GameState(equips=["冷笑话引擎"])) is None, (
@@ -106,12 +118,6 @@ def test_equip_fit_no_key_equips_neutral() -> None:
 
 
 # —— mechanics_fit 双向(debuff=buff;用户核心洞察)——
-
-
-def test_mechanics_fit_wandi_debuff_is_buff() -> None:
-    """万敌[燃血] + 反伤 → synergy 升(>0.5):debuff 对燃血队是 buff(debuff=buff 典型)。"""
-    万敌 = get_comp("万敌单C")
-    assert mechanics_fit(万敌, {"反伤"}) > 0.5, "正当防卫反伤利燃血 → 升"
 
 
 def test_mechanics_fit_aya_countered_by_speed_suppress() -> None:
@@ -134,19 +140,14 @@ def test_mechanics_fit_neutral_when_no_mechanics() -> None:
 
 
 def test_mechanics_fit_same_affix_opposite_direction() -> None:
-    """同一'反伤'词缀:对万敌=利(>0.5),对反甲白厄=克(<0.5)—— 一词缀双向。"""
+    """同一'反伤'词缀:对万敌=利(>0.5),对反甲白厄=克(<0.5)—— 一词缀双向
+    (debuff=buff 典型:正当防卫反伤利燃血。原 test_mechanics_fit_wandi_debuff_is_buff
+    与本测首断言逐位重复已并入;反伤在 COUNTERS/SYNERGIES 双表的内容锁
+    同理由本测行为面承载,表测不再单列)。"""
     万敌 = get_comp("万敌单C")
     白厄 = get_comp("反甲白厄")
     assert mechanics_fit(万敌, {"反伤"}) > 0.5
     assert mechanics_fit(白厄, {"反伤"}) < 0.5, "反伤克高频低单次(白厄)"
-
-
-def test_mechanic_tables_bidirectional() -> None:
-    """MECHANIC 表双向:反伤既在 COUNTERS(克高频)又在 SYNERGIES(利燃血)。"""
-    assert "反伤" in MECHANIC_COUNTERS
-    assert "反伤" in MECHANIC_SYNERGIES
-    assert "高频低单次" in MECHANIC_COUNTERS["反伤"]
-    assert "燃血" in MECHANIC_SYNERGIES["反伤"]
 
 
 def test_mechanics_fit_jipo_pizairouhou_synergy() -> None:
@@ -182,13 +183,6 @@ def test_mechanics_fit_aya_chenzhongjiaobu_countered() -> None:
     assert mechanics_fit(阿雅, {"行动延后"}) < 0.5, "沉重脚步克速度依赖(鞋队 tuning 被打乱)→ 降"
 
 
-def test_current_enemy_mechanics_maps_d55_affixes() -> None:
-    """AFFIX_MECHANIC_MAP(D-55):忍无可忍→多段惩罚、沉重脚步→行动延后。"""
-    mechs = current_enemy_mechanics(GameState(enemy_affixes=["忍无可忍", "沉重脚步"]))
-    assert "多段惩罚" in mechs, "忍无可忍 → 多段惩罚"
-    assert "行动延后" in mechs, "沉重脚步 → 行动延后"
-
-
 # —— boss_fit / env_fit ——
 
 
@@ -222,11 +216,15 @@ def test_env_fit_faction_map() -> None:
 
 
 def test_current_enemy_mechanics_maps_affixes() -> None:
-    """敌人词缀(OCR 名)→ 机制 tag;未知词缀原样透传。"""
-    s = GameState(enemy_affixes=["正当防卫", "急速制冷", "未知词缀"])
+    """敌人词缀(OCR 名)→ 机制 tag;未知词缀原样透传。
+    (D-55 两行映射并入本测:忍无可忍→多段惩罚、沉重脚步→行动延后;
+    原独立测与本测同形体,同函数不同映射行,并一处断言。)"""
+    s = GameState(enemy_affixes=["正当防卫", "急速制冷", "忍无可忍", "沉重脚步", "未知词缀"])
     mechs = current_enemy_mechanics(s)
     assert "反伤" in mechs
     assert "冻结" in mechs
+    assert "多段惩罚" in mechs, "忍无可忍 → 多段惩罚(D-55)"
+    assert "行动延后" in mechs, "沉重脚步 → 行动延后(D-55)"
     assert "未知词缀" in mechs   # 未知原样当 tag
 
 
@@ -279,20 +277,20 @@ def test_acquirability_factor_pool_aware() -> None:
         acquirability_factor,
         refresh_prob,
     )
-    青雀 = get_comp("追击飞霄")   # core_chars 飞霄/知更鸟/缇宝/不死途(混合费用)
-    costs = [CHARACTERS[n].cost for n in 青雀.core_chars if n in CHARACTERS]
+    追击队 = get_comp("追击飞霄")   # core_chars 飞霄/知更鸟/缇宝/不死途(混合费用)
+    costs = [CHARACTERS[n].cost for n in 追击队.core_chars if n in CHARACTERS]
     assert costs, "core_chars 应在 CHARACTERS"
     # ① 牌池感知:特定角色 acq < min refresh_prob(÷v:1 张角色 < 1 格该费用,5 格也补不回 v 倍差)
     for lv in (7, 10):
-        acq = acquirability_factor(青雀.core_chars, lv)
+        acq = acquirability_factor(追击队.core_chars, lv)
         min_cost_prob = min(refresh_prob(lv, c) for c in costs)
         assert 0.0 < acq < min_cost_prob, (
             f"lv{lv}: 牌池感知 acq({acq:.4f}) 应在 (0, min refresh_prob={min_cost_prob})"
         )
     # ② held 消耗(牌库有限):持有副本 → 该角色剩余少 → acq 不升(持最稀核心则降)
-    acq_fresh = acquirability_factor(青雀.core_chars, 7)
-    held_all = dict.fromkeys(青雀.core_chars, 3)   # 每核心持 3 基础副本
-    acq_held = acquirability_factor(青雀.core_chars, 7, held=held_all)
+    acq_fresh = acquirability_factor(追击队.core_chars, 7)
+    held_all = dict.fromkeys(追击队.core_chars, 3)   # 每核心持 3 基础副本
+    acq_held = acquirability_factor(追击队.core_chars, 7, held=held_all)
     assert acq_held <= acq_fresh, f"持有副本后 acq({acq_held:.4f}) 应 ≤ 满池({acq_fresh:.4f})"
     # ③ 空 core_chars / 无识别角色 → 1.0(中性,不降权)
     assert acquirability_factor([], 7) == 1.0
@@ -313,8 +311,6 @@ def test_held_base_copies_folds_star() -> None:
     # 缺 char_id 的槽不计
     s2 = GameState(bench=[BenchChar(slot=0, char_id="", star=2)])
     assert _held_base_copies(s2) == {}, "空 char_id 不计"
-
-
 
 
 def test_select_comp_optionality_top_n() -> None:
@@ -488,13 +484,9 @@ def test_shop_supply_neither_zero() -> None:
     assert shop_supply(comp, s) == 0.0
 
 
-# —— select_megastar ——
-
-
-def test_select_megastar_binds_core() -> None:
-    """target.core_chars 含可选巨星 → 绑该角色(追击飞霄含知更鸟)。"""
-    飞霄 = get_comp("追击飞霄")
-    assert select_megastar(GameState(), 飞霄, ["知更鸟", "花火"]) == "知更鸟"
+# —— select_megastar(core 绑定/偏好表/属性兜底面锁在主题文件
+#    test_cw_megastar_binding(原 binds_core 测与其 L63 逐位等价,跨文件择一留);
+#    此处只留本文件独有的 target=None / 空候选两面)——
 
 
 def test_select_megastar_no_target_returns_first() -> None:
@@ -569,12 +561,6 @@ def test_comp_library_key_equips_canonical() -> None:
 # ===== ADR-0135 机会型 pivot(held_strategy_fit:持有策略 → comp 亲和 → select_comp 重评) =====
 def test_held_strategy_fit_opportunity_pivot() -> None:
     """持有追击套组(绑定 追击+飞霄)→ 追击 comp held_strategy_fit=1.0、无关 comp=0.5、无持有=None。"""
-    from sr_od.application.currency_war.kernel.cw_comps import (
-        COMP_LIBRARY,
-        held_strategy_fit,
-        make_score_context,
-        select_comp,
-    )
     feixiao = next(c for c in COMP_LIBRARY if "飞霄" in c.core_chars)
     other = next(c for c in COMP_LIBRARY if c.name != feixiao.name
                  and not (set(c.factions) & {"追击"}) and "飞霄" not in c.core_chars)
@@ -583,7 +569,8 @@ def test_held_strategy_fit_opportunity_pivot() -> None:
     assert held_strategy_fit(feixiao, []) is None, "无持有策略 → None(动态剔除)"
     # 端到端:空板 + 持有追击套组 → select_comp 偏向追击(机会型 pivot)
     _board_free = GameState(gold=50, round_num=3, level=5, plane=1, hp=100, board={})
-    _with = _board_free.copy(); _with.active_strategies = ["追击星徽套组"]
+    _with = _board_free.copy()
+    _with.active_strategies = ["追击星徽套组"]
     pick_with = select_comp(_with, make_score_context(_with), _cfg())[0]
     assert pick_with.name == feixiao.name, f"持有套组应机会转向 {feixiao.name},得 {pick_with.name}"
 
@@ -602,33 +589,25 @@ def test_comp_flex_factions_subset_and_form_tiers_core_only() -> None:
 
 def test_augment_comp_affinity_near_hardbind() -> None:
     """AUGMENT_COMP_AFFINITY:黑塔纪元 → 大黑塔银河学者 1.0(拿到即近乎硬绑);无关 comp 中性。"""
-    from sr_od.application.currency_war.kernel.cw_comps import (
-        AUGMENT_COMP_AFFINITY,
-        held_strategy_fit,
-    )
     dht = get_comp("大黑塔银河学者")
     other = get_comp("列车同行")
     assert AUGMENT_COMP_AFFINITY["黑塔纪元"]["大黑塔银河学者"] == 1.0
     assert held_strategy_fit(dht, ["黑塔纪元"]) == 1.0, "黑塔纪元在手 → 大黑塔 comp 满分(augment 定义型)"
     assert held_strategy_fit(other, ["黑塔纪元"]) == 0.5, "无关 comp 中性"
-    # 端到端:拿到黑塔纪元 → select_comp 转向大黑塔
-    s = GameState(gold=50, round_num=3, level=5, plane=1, hp=100, board={})
-    s.active_strategies = ["黑塔纪元"]
-    pick = select_comp(s, make_score_context(s), _cfg())[0]
-    assert pick.name == "大黑塔银河学者", f"持有黑塔纪元应近乎硬绑,得 {pick.name}"
+    # (端到端转向面由 test_defining_augment_overrides_board_investment 以更严场景
+    #  承载——板面投入领先仍翻转;空板场景为其真子集,不再重复)
 
 
 def test_env_comp_affinity_plaza_extended() -> None:
-    """ADR-0152 env 亲和扩充:列车同行概念股 → 列车同行 1.0;特邀专家:桑博 → 专家桑博DOT 1.0。"""
-    from sr_od.application.currency_war.kernel.cw_comps import env_fit
+    """ADR-0152 env 亲和扩充:列车同行概念股 → 列车同行 1.0;特邀专家:桑博 → 专家桑博DOT 1.0。
+    (「定向 env 非目标 comp → 0.5」支由 test_env_fit_t0_hardbind 与
+    test_env_fit_t0_no_flex_inversion 双锁,不在此第三实例重复。)"""
     assert env_fit(get_comp("列车同行"), "列车同行概念股") == 1.0
     assert env_fit(get_comp("专家桑博DOT"), "特邀专家:桑博") == 1.0
-    assert env_fit(get_comp("万敌单C"), "列车同行概念股") == 0.5, "无关 comp 中性"
 
 
 def test_skeleton_factions_derived() -> None:
     """M4 骨架派生:判据(最低档 ≤3 + ≤2费成员 ≥2)从注册表筛;含实战组合(仙舟/贝洛伯格/银河学者)。"""
-    from sr_od.application.currency_war.kernel.cw_comps import skeleton_factions
     sk = skeleton_factions()
     for must in ("仙舟", "贝洛伯格", "银河学者", "列车同行", "星核猎手"):
         assert must in sk, f"骨架集应含 {must}(plaza 实战开局组合)"
@@ -639,7 +618,6 @@ def test_skeleton_factions_derived() -> None:
 
 def test_char_routes_hub_structure() -> None:
     """M3 枢纽路由:瓦尔特/符玄/千冶·刃 跨路线 ≥3(终局枢纽);角色→路线网络非空。"""
-    from sr_od.application.currency_war.kernel.cw_comps import char_routes
     routes = char_routes()
     assert routes, "路由网络非空"
     for hub in ("瓦尔特", "符玄", "千冶·刃"):
@@ -648,7 +626,6 @@ def test_char_routes_hub_structure() -> None:
 
 def test_pivot_overlap_semantics() -> None:
     """M10 转型成本:同 comp 1.0;列车→绯英(共享花火/瓦尔特)> 列车→万敌(零共享);无阵营 comp 中性。"""
-    from sr_od.application.currency_war.kernel.cw_comps import pivot_overlap
     lt = get_comp("列车同行")
     assert pivot_overlap(lt, lt) == 1.0
     hi_overlap = pivot_overlap(lt, get_comp("绯英欢愉"))
@@ -658,7 +635,6 @@ def test_pivot_overlap_semantics() -> None:
 
 def test_transition_pool_two_tiers() -> None:
     """M3 过渡池两级:EARLY_CORE_POOL(存活≥0.8)与 TEMPO_POOL(纯打工)拆分且不重叠。"""
-    from sr_od.application.currency_war.kernel.cw_comps import EARLY_CORE_POOL, TEMPO_POOL, TRANSITION_POOL
     assert "千冶·刃" in EARLY_CORE_POOL, "千冶·刃 Early→Final 0.96 → 早期核心级"
     assert "艾丝妲" in TEMPO_POOL, "艾丝妲 Early→Final 0.05 → 纯过渡级"
     assert not set(EARLY_CORE_POOL) & set(TEMPO_POOL), "两级不重叠"
@@ -671,7 +647,6 @@ def test_env_fit_t0_no_flex_inversion() -> None:
 
     仙舟概念股:景元仙舟(affinity 0.9→0.95) 必须严格 > 绯英欢愉(flex 含仙舟,旧版 faction 命中 1.0 反转)。
     """
-    from sr_od.application.currency_war.kernel.cw_comps import env_fit
     assert env_fit(get_comp("景元仙舟"), "仙舟概念股") == 0.95
     fy = get_comp("绯英欢愉")
     assert "仙舟" in fy.flex_factions, "前置:绯英 flex 含仙舟(反转场景成立)"
@@ -695,7 +670,6 @@ def test_maybe_pivot_defining_augment_unlocks_commit() -> None:
     s = GameState(gold=50, round_num=4, level=5, plane=1, hp=100, board={"列车同行": 2})
     s.active_strategies = ["黑塔纪元"]
     ctx = make_score_context(s)
-    from sr_od.application.currency_war.kernel.cw_comps import target_committed
     assert target_committed(get_comp("列车同行"), s), "前置:列车已 commit"
     result = maybe_pivot(s, ctx, _cfg(), target=get_comp("列车同行"))
     assert result is not None and result.name == "大黑塔银河学者", (
