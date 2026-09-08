@@ -112,15 +112,10 @@ class TestReasonEnumRegistry:
     """卖出归因枚举登记门:增删值红且点名(判别问句:红时登记的语义 =
     新发射位/新特化键入册,非机械跟绿)。"""
 
-    def test_close_set_is_six_channel_values(self):
-        """通道枚举闭集登记门:六通道值(T-143/ADR-0594 增
-        endgame_liquidation_clear = 域①终局清算腾位发射位,卖出发射
-        位第 10 处;victim = 燃料类单一源 + 统一装配 A,P78 通道对价段
-        「终局清算」豁免行的落地值)。"""
+    def test_close_set_is_five_channel_values(self):
         assert set(SELL_BENCH_REASONS) == {
             'interest_pullback_prep', 'interest_pullback', 'funding_support',
             'm4_fuel_victim', 'line_switch_collapse',
-            'endgame_liquidation_clear',
         }
 
     def test_convert_set_four_keys_and_intersection_carve_out(self):
@@ -133,8 +128,8 @@ class TestReasonEnumRegistry:
             'fuel_victim_protect_demoted', 'funding_support_stall_convert',
             'funding_hold_liquidated', 'line_switch_collapse',
         }
-        assert {'line_switch_collapse'} == \
-            (SELL_BENCH_REASONS & SELL_BENCH_CONVERT_REASONS)
+        assert (SELL_BENCH_REASONS & SELL_BENCH_CONVERT_REASONS) == \
+            {'line_switch_collapse'}
 
 
 # ===== 序列化等值(方案 v3 §3.4 V2-02 两判定口径的锁面)=====
@@ -628,11 +623,7 @@ class TestConsumptionSiteManifest:
     未登记,处置 = 清单加行 + 确认其排除集出自 sell_exclusions/
     funding_hold_fallback,非机械跟绿。"""
 
-    _MANIFEST: dict[str, int] = {'entry.py': 2, 'mandate.py': 2, 'shop.py': 6}
-    # shop.py:6 清单增行(T-143/ADR-0594):第 6 位 = 域①终局清算臂腾位
-    # 卖出的装配读(exclude_names = sell_exclusions('m4_fuel') ∪ 本
-    # visit 买入名减法——P78-1 同 visit 禁卖,funding 兜底减法①同款
-    # 消费位减法;排除集本体仍出自 sell_gate 单一入口)。
+    _MANIFEST: dict[str, int] = {'entry.py': 2, 'mandate.py': 2, 'shop.py': 5}
 
     def _counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}
