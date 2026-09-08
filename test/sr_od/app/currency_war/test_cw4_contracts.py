@@ -258,7 +258,7 @@ class TestPrecedentPredicates:
                                   k_fallback_resolved=frozenset()), ct)
         assert ct['criteria_contract_violation:shop.k_projection'] == 1
 
-    def test_unknown_key_and_predicate_error_fail_closed(self):
+    def test_unknown_key_and_predicate_error_fail_closed(self, monkeypatch):
         """fail-closed:未登记键与谓词异常均弃权+计数,不抛异常。"""
         ct: dict = {}
         assert not contracts.ensure_contract(
@@ -272,13 +272,9 @@ class TestPrecedentPredicates:
         # ('buy','p2_lock_buy') 随生产行删除成死语义锚,不测死对象)。
         fake = {('sell', 'sell_for_interest'): contracts.Contract(
             _boom, '测试注入位', '测试')}
-        original = contracts.CONTRACTS
-        contracts.CONTRACTS = fake
-        try:
-            assert not contracts.ensure_contract(
-                ('sell', 'sell_for_interest'), contracts.ContractCtx(), ct)
-        finally:
-            contracts.CONTRACTS = original
+        monkeypatch.setattr(contracts, 'CONTRACTS', fake)
+        assert not contracts.ensure_contract(
+            ('sell', 'sell_for_interest'), contracts.ContractCtx(), ct)
         assert ct['criteria_contract_violation:sell.sell_for_interest'] == 1
 
 
@@ -334,19 +330,12 @@ class TestWiringShop:
         assert state_of(sess).cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
         assert cw_intention.p1_gap_window(st)
 
-    def test_arm1_wiring_positive_no_violation(self):
-        """接线正向:cap 现读口径 ⇒ arm1 无违例计数(契约层零误伤锚)。"""
-        comp = _comp()
-        st = _state(gold=40, bench=[_bc(_members(comp)[0], slot=1)],
-                    deployed=[_bc(_members(comp)[1], slot=1),
-                              _bc(_members(comp)[2], slot=2)])
-        sess = _session(comp)
-        _decide(st, sess)
-        assert state_of(sess).cw4_counters.get(
-            'criteria_contract_violation:predicates.arm1_existence', 0) == 0
-
     def test_normal_wave_zero_contract_violations(self):
-        """零误伤锚:正常决策波(K 成型、金/预留现读)零违例计数。"""
+        """零误伤锚:正常决策波(K 成型、金/预留现读)零违例计数。
+
+        前缀全扫覆盖 shop 波全部契约消费位(含 arm1:shop.py 对非抑制
+        帧无条件求值 arm1 前提,原 arm1 点名零违例锚的本测子集,已并入
+        此处;mandate 域点名锚见 TestMandateArm1Wiring 正向测)。"""
         comp = _comp()
         m = _members(comp)[0]
         st = _state(gold=30, shop=[_card(m, cost=3)])
@@ -399,11 +388,11 @@ class TestWiringShop:
 # 绑定名+调用名联合解析)且白名单改**路径全限定**,两盲区各配负测试。
 
 #: 判据函数 → 实现模块的 import 尾径(cw4 包内点分尾径;调用点只要
-#: 绑定到该模块即入扫描面——与 CONTRACTS 键集+四判据位对齐)
+#: 绑定到该模块即入扫描面——与 CONTRACTS 键集+四判据位对齐;六面
+#: 清单单一源 = 上方 _FACE_MODULES,禁另抄字面量)
 _FN_OWNER_TAIL: dict[str, str] = {}
 for (_mod, _fn) in contracts.CONTRACTS:
-    if _mod in ('buy', 'sell', 'levelup', 'refresh', 'stockpile',
-                'equipment'):
+    if _mod in _FACE_MODULES:
         _FN_OWNER_TAIL[_fn] = f'criteria.{_mod}'
     elif _mod == 'proof':
         _FN_OWNER_TAIL[_fn] = 'proof'
@@ -431,11 +420,9 @@ _EXEMPT_PATHS: frozenset[str] = frozenset({
 })
 
 #: 判据函数可绑定的源模块(import 尾径,点分;绑定来自这些模块的
-# import 才算判据调用点)
-_OWNER_TAILS: frozenset[str] = frozenset(
-    {f'criteria.{m}' for m in
-     ('buy', 'sell', 'levelup', 'refresh', 'stockpile', 'equipment')}
-    | {'statefn.predicates', 'proof'})
+# import 才算判据调用点)——从 _FN_OWNER_TAIL 值集推导(mandate/shop
+# 等非判据位键不入表,与旧手抄集内容恒等),禁另抄字面量。
+_OWNER_TAILS: frozenset[str] = frozenset(_FN_OWNER_TAIL.values())
 
 
 def _find_criteria_direct_calls(src_root: Path) -> list[str]:
