@@ -214,19 +214,30 @@ def test_c4a_convert_key_review() -> None:
 
 
 def test_c4b_oscillation_mirror_review() -> None:
-    """C4-b(XP 镜像):失配对计入 osc 且产可疑项;通过/无键照旧豁免。"""
+    """C4-b(XP 镜像):失配对计入 osc 且产可疑项;通过/无键照旧豁免。
+
+    ADR-0611 按键分工(§3-5):自报分键载体改 convert_reason(结构化键);
+    reason 载体上的转化值落 0 容忍格(无复核分支)——分工两态各锁。"""
     label, _ = _locked_target()
-    bad = _pair_row({'sell_reason': 'funding_hold_liquidated',
+    bad = _pair_row({'convert_reason': 'funding_hold_liquidated',
                      'dec_sell_in_line': False})
     bad['target_comp'] = label
     bad['state']['level'] = 8   # osc*4=4 ≤ 0.3*need(lv8) 不触 XP 报警线,
     # 本锁只辖复核失配面(XP 报警线自身归既有锁辖,不重复断言)
     v = ledger.check_oscillation_xp_cap([bad])
     assert len(v) == 1 and '可疑项(转化分键失配)' in v[0]
-    ok = _pair_row({'sell_reason': 'funding_hold_liquidated',
+    ok = _pair_row({'convert_reason': 'funding_hold_liquidated',
                     'dec_sell_in_line': True})
     ok['target_comp'] = label
     assert ledger.check_oscillation_xp_cap([ok]) == []
+    # 错误载体(reason 带转化值)= 直接 0 容忍计违例,无复核分支
+    #(lv3 缺省档:osc*4 > 0.3*need 报警线内,恰 1 条判违)。
+    wrong = _pair_row({'sell_reason': 'funding_hold_liquidated',
+                       'dec_sell_in_line': False})
+    wrong['target_comp'] = label
+    v_wrong = ledger.check_oscillation_xp_cap([wrong])
+    assert len(v_wrong) == 1 and '可疑项' not in v_wrong[0], \
+        'reason 载体转化值不得再入复核分支(按键分工)'
 
 
 # ===== 检查器修复锁(L1/L2/L3/L5;语义单一源 = ADR-0593 后果.5) ==========

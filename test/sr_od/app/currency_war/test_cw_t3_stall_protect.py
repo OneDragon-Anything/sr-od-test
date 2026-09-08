@@ -320,24 +320,54 @@ class Test6SingleSource:
 
 
 class Test7CheckerExemption:
-    """锁⑦同轮买卖检查豁免面:按 sell_reason 分键收敛,禁全开。"""
+    """锁⑦同轮买卖检查豁免面:按分键收敛,禁全开。
+
+    ADR-0611 按键分工改写(§3-5;锁红 ≠ 改动错,本类按
+    「结构化证明键 convert_reason + 孤儿键留 reason」重推语义后改格):
+    转化类豁免改读 convert_reason(两类放行位填充,值域收窄);孤儿键
+    line_switch_collapse 留 reason(ADR-0591 §4 证明打标,防窗口段
+    回归洗白);reason 旧通道值不再放大豁免面。
+    """
 
     ROW_BASE = {'plane': 1, 'round_num': 3, 'gold': 50, 'state': {}}
 
-    def _row(self, sell_reason: str) -> dict:
+    def _row(self, sell_reason: str, convert_reason: str = '') -> dict:
         return {**self.ROW_BASE, 'actions': [
             {'__type__': 'BuyCard',
              'card': {'name': _PROT, 'cost': 1}, 'reason': 't3_unlocked_hemostat'},
             {'__type__': 'SellBench', 'bench_idx': 0, 'name': _PROT,
-             'income': 1, 'sell_reason': sell_reason},
+             'income': 1, 'sell_reason': sell_reason,
+             'convert_reason': convert_reason},
         ]}
 
     def test_convert_reason_exempt(self):
+        """三类放行键经结构化字段豁免(键集保持四键单一源,其中孤儿键
+        走 reason 分支,见下格)。"""
         from sr_od.application.currency_war.sim.checks.ledger import (
             check_no_same_round_buy_sell,
         )
-        for r in SELL_BENCH_CONVERT_REASONS:
-            assert check_no_same_round_buy_sell([self._row(r)]) == []
+        for r in SELL_BENCH_CONVERT_REASONS - {'line_switch_collapse'}:
+            assert check_no_same_round_buy_sell(
+                [self._row('', convert_reason=r)]) == [], \
+                f'{r}:结构化分键未豁免 = L3 放行位被计违例'
+
+    def test_orphan_key_stays_on_reason(self):
+        """孤儿豁免读 reason(C3 分工另一侧;名册不可解析帧豁免照旧)。"""
+        from sr_od.application.currency_war.sim.checks.ledger import (
+            check_no_same_round_buy_sell,
+        )
+        assert check_no_same_round_buy_sell(
+            [self._row('line_switch_collapse')]) == []
+
+    def test_wrong_field_reason_value_not_exempt(self):
+        """零双源格:转化类值落在 reason(错误载体)不豁免——任意
+        reason 值不得放大豁免面(原 plain 格语义在新分工下的正格)。"""
+        from sr_od.application.currency_war.sim.checks.ledger import (
+            check_no_same_round_buy_sell,
+        )
+        out = check_no_same_round_buy_sell(
+            [self._row('fuel_victim_protect_demoted')])
+        assert len(out) == 1 and '同轮买后卖' in out[0]
 
     def test_unmarked_still_violation(self):
         from sr_od.application.currency_war.sim.checks.ledger import (
@@ -351,7 +381,8 @@ class Test7CheckerExemption:
             check_oscillation_xp_cap,
         )
         assert check_oscillation_xp_cap(
-            [self._row('fuel_victim_protect_demoted')]) == []
+            [self._row('', convert_reason='fuel_victim_protect_demoted')]
+        ) == []
         out = check_oscillation_xp_cap([self._row('')])
         assert len(out) == 1
 

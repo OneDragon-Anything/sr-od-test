@@ -493,7 +493,10 @@ class TestEmitRegistration:
     def test_stale_obligation_buy_not_marked_next_round(self):
         """防洗白反格:上一轮义务登记跨轮剪枝——同形态下一轮卖出非同轮
         买卖(检查器本就不辖),证明不得打标(2026-09-08 归因遥测删除批:
-        非孤儿帧 reason 缺省 '',打标值唯一 = line_switch_collapse)。"""
+        非孤儿帧 reason 缺省 '',打标值唯一 = line_switch_collapse)。
+        ADR-0611:L1 fresh_buys 读端自治依赖黑板帧(生产 last_state 逐帧
+        写点同形),跨轮帧须挂黑板方能解相位(缺帧 = fail-closed 全集
+        排除,方向安全)。"""
         sess = _sess()
         st = _state(60, [], node='battle', round_num=3)
         st.shop = [_card('目标件', cost=3)]
@@ -502,6 +505,7 @@ class TestEmitRegistration:
         state_of(sess).target_comp = SimpleNamespace(
             name='测试线二', core_chars=('新目标',), shared_chars=())
         st2 = _state(1, [_bc('目标件', slot=1)], node='reward', round_num=4)
+        sess.last_state = st2   # 生产 last_state 写点同形(读端相位解析)
         act2 = decide_shop_action(st2, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act2, SellBench)
         assert act2.reason != 'line_switch_collapse' \

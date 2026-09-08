@@ -169,8 +169,9 @@ class TestSerializationEquivalence:
 
     def test_plain_reason_does_not_extend_convert_exemption_face(self):
         """sim 检查器豁免面收敛(check_no_same_round_buy_sell 镜像):
-        非特化集值(含已退役通道值)与 '' 同罪(同轮买后卖仍报),仅
-        特化集豁免——任意 reason 值不得悄悄放大豁免面。"""
+        非特化集值(含已退役通道值)与 '' 同罪(同轮买后卖仍报);
+        ADR-0611 按键分工(§3-5)后转化类豁免改读 convert_reason 结构化键,
+        reason 载体上的特化值同样不豁免(豁免面只收窄不放大)。"""
         from sr_od.application.currency_war.sim.checks.ledger import (
             check_no_same_round_buy_sell,
         )
@@ -182,14 +183,25 @@ class TestSerializationEquivalence:
                     'sell_reason': 'funding_support'}]}
         assert check_no_same_round_buy_sell([row]), \
             '非特化值误入豁免面 = 同轮自旋检查被架空'
+        # reason 载体上的特化值(转换键)不再豁免(分工:转化类读
+        # convert_reason,零双源);reason 只保留孤儿键 line_switch_
+        # collapse 的分支(见 test_cw_t3_stall_protect.Test7)。
+        row_reason_carry = {'plane': 1, 'round_num': 1,
+                            'actions': [
+                                {'__type__': 'BuyCard',
+                                 'card': {'name': 'X'}, 'reason': ''},
+                                {'__type__': 'SellBench', 'name': 'X',
+                                 'sell_reason': 'funding_support_stall_convert'}]}
+        assert check_no_same_round_buy_sell([row_reason_carry]), \
+            'reason 载体特化值仍豁免 = 按键分工未生效(C3)'
         row_ok = {'plane': 1, 'round_num': 1,
                   'actions': [
                       {'__type__': 'BuyCard',
                        'card': {'name': 'X'}, 'reason': ''},
                       {'__type__': 'SellBench', 'name': 'X',
-                       'sell_reason': 'funding_support_stall_convert'}]}
+                       'convert_reason': 'funding_support_stall_convert'}]}
         assert not check_no_same_round_buy_sell([row_ok]), \
-            '特化集豁免边被误收窄(批 3 转化类语义回归)'
+            '结构化键豁免边被误收窄(批 3 转化类语义回归)'
 
     def test_replay_diff_rendering_ignores_reason(self):
         """cw_replay --diff 分歧面对 reason 免疫:新旧两渲染器都只取

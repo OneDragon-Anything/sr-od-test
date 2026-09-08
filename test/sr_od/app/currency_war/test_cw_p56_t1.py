@@ -542,16 +542,26 @@ class TestT115DeadGoldPressBuy:
         )
         sess = self._shop_sess()
         st = self._shop_frame(11, [_card('廉价杂件', cost=1)])
-        from sr_od.application.currency_war.kernel.cw_state import BuyCard
+        from sr_od.application.currency_war.kernel.cw_state import (
+            BuyCard,
+            GameState,
+        )
         act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard)
         bench = [_bc('廉价杂件', slot=1)]
-        # 同轮备战帧(prep round 3):凑息臂不卖(窗口段活跃)
+        # 同轮备战帧(prep round 3):凑息臂不卖(窗口段活跃;ADR-0611 起
+        # L1 fresh 面同轮同样辖——黑板帧挂载 = 生产 last_state 逐帧写点
+        # 同形,L1 读端相位解析依赖)。
+        sess.last_state = GameState(gold=9, level=3, hp=80, plane=1,
+                                    round_num=3)
         out = mandate_run(_prep_frame(9, bench, round_num=3), sess,
                           _prep_state(9))
         assert not [e for e in out if isinstance(e.action, SellBench)], \
             '同轮凑息卖回 press 登记件 = W1 同 visit 卖回未闭死'
-        # 轮进(下一备战期 round 4):回池,凑息臂照常可卖(P78-2b)
+        # 轮进(下一备战期 round 4):回池,凑息臂照常可卖(P78-2b;
+        # L1 fresh 面随相位失配整体过期,过度排除上界 ≤1 轮)。
+        sess.last_state = GameState(gold=9, level=3, hp=80, plane=1,
+                                    round_num=4)
         out2 = mandate_run(_prep_frame(9, bench, round_num=4), sess,
                            _prep_state(9))
         assert [e.action.slot for e in out2
