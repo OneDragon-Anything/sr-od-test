@@ -679,15 +679,19 @@ def test_comp_char_positions_data() -> None:
 
 # ===== ADR-0141 品质→敌难度进选卡(已退役面;ADR-0519) =====
 def test_decide_event_refresh_suggestion_retired() -> None:
-    """ADR-0519:刷新建议阈值(EVENT_REFRESH_SCORE_FLOOR=50,评估分中位
-    估计)已按「未证即退役」删除——PickEvent.refresh 恒 False,烂手牌
-    不再触发建议刷新(保守缺省:不弃当前手牌)。"""
+    """刷新建议判据换代(T-162 重立,2026-09 设计四轮对抗定稿;旧锁语义过期声明:
+    旧断言「评估分阈值退役 → refresh 恒 False、烂手牌不刷」钉的是 ADR-0519 C10
+    的阈值式判据——该判据按 T-162 换推导重立为**零阈值结构存在性判据**(无
+    S1/S2 顶级卡 ∧ max_N≠1 即触发),「烂手牌」恰是新判据的核心触发帧,旧语义
+    被设计明文取代,非机械跟绿)。新语义:全普通三卡 → 建议刷全部槽;env 混合帧
+    (fail-closed 轴钉死)仍恒不刷。"""
     cfg = _cfg()
     st = GameState(board={}, hp=100, hp_readable=True)
-    pick = decide_event(["赌神·银", "恢复生机", "气氛组"], cfg, st)   # 低分烂手牌
-    assert pick.refresh is False and 'suggest-refresh' not in pick.reason
-    pick2 = decide_event(["彩虹时代", "恢复生机", "气氛组"], cfg, st)  # env 72 高分
-    assert pick2.refresh is False
+    pick = decide_event(["赌神·银", "恢复生机", "气氛组"], cfg, st)   # 全普通手牌
+    assert pick.refresh is True and pick.refresh_slots == (0, 1, 2)
+    assert 'refresh-suggest' in pick.reason
+    pick2 = decide_event(["彩虹时代", "恢复生机", "气氛组"], cfg, st)  # env 混合帧 → 阻断
+    assert pick2.refresh is False and pick2.refresh_slots == ()
 
 
 def test_env_pick_value_adr0144() -> None:
