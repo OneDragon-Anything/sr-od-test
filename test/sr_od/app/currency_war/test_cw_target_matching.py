@@ -21,10 +21,10 @@ def test_char_synergies_includes_flows_and_independent() -> None:
 
 
 def test_equip_allocation_carry_first() -> None:
-    """carry 先拿 key_equips 按序(multiplicity);其余 core 次之;容量上限 3。"""
+    """carry 先拿 key_equips 按序(multiplicity);其余 core 次之拿剩余。"""
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.kernel.cw_comps import EQUIP_CAPACITY, equip_allocation
+    from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
 
     lt = get_comp("列车同行")   # key_equips: 风暴潮×1/电锯/自适应外骨骼/冷笑话(W55);carry=姬子·启行
     dep = [SimpleNamespace(char_id='三月七', position_pref='back', slot=1),
@@ -39,23 +39,19 @@ def test_equip_allocation_carry_first() -> None:
     assert sy == ['蓄能帆'], f"core 兜底拿剩余,得 {sy}"
 
 
-def test_equip_allocation_capacity_and_fallback() -> None:
-    """容量扣减(已穿 3 = 满)与 comp=None 通用兜底(r232 轮转)。
+def test_equip_allocation_capacity_deduction() -> None:
+    """容量扣减(已穿 3 = 满)→ 该员让位、件落下一位(comp=None 通道)。
 
-    r232 行为变更(用户实锤「无脑给前台1」修复):comp=None
-    从「deployed 顺序灌满第一人」改为**轮转分配**(每人 1 件
-    一圈再回头)——前排先序保留,但不再独占。"""
+    轮转序面(deployed 原序一人一件;r232 行为)由 test_equip_alloc_gen
+    ::test_no_comp_rotation_keeps_deployed_order 承载(4 人 4 件全序锁,
+    覆盖面为 2 人 2 件轮转断言的超集,亲读证实),此处不再重复断言轮转序。"""
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.kernel.cw_comps import equip_allocation
 
     dep = [SimpleNamespace(char_id='瓦尔特', position_pref='front', slot=1),
            SimpleNamespace(char_id='符玄', position_pref='back', slot=2)]
-    # comp=None → 轮转:瓦尔特先拿第一件,符玄拿第二件
-    # (r232 前:瓦尔特全拿)
-    alloc = equip_allocation(None, dep, ['永动机', '蓄能帆'])
-    assert alloc == [('瓦尔特', '永动机'), ('符玄', '蓄能帆')]
     # 容量:瓦尔特已穿满 3 → 让位给符玄
     occ = {('front', 1): ['a', 'b', 'c']}
-    alloc2 = equip_allocation(None, dep, ['永动机'], occ)
-    assert alloc2 == [('符玄', '永动机')]
+    alloc = equip_allocation(None, dep, ['永动机'], occ)
+    assert alloc == [('符玄', '永动机')]

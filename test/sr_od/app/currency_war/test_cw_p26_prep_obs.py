@@ -10,9 +10,10 @@
   + 标签来自位面节点台账真值(单一源 = ``cw_state.ledger_node_type``)。
 - 锁② 缺省零漂移锁:无 match 注册 → None;session 在场台账未命中 →
   ''(不猜);两种缺省都不产生猜测值。
-- 锁③ hp 硬闸门锁(00_framework §3):采集键面无任何 hp/战力量——
-  键集里不许出现 hp/血相关键(采 hp = 越闸,分位口径走既有结算
-  三项遥测授权面离线 join,不加新读链)。
+- hp 硬闸门(00_framework §3)的执行面 = 锁①a 键面精确等值:键集
+  扩条即红,新键禁携 hp/战力量(采 hp = 越闸;分位口径走既有结算
+  三项遥测授权面离线 join,不加新读链)。不另立负向扫描锁——
+  「键面无 hp」是精确等值的真子集,重复断言构成删并理由(README 纪律 7)。
 """
 from __future__ import annotations
 
@@ -138,13 +139,3 @@ def test_p26_prep_obs_zero_behavior_drift(tmp_path: Path, monkeypatch) -> None:
     r = _rows(tmp_path, 'decisions.jsonl')[0]
     assert r['p26_prep_obs'] is None          # 异常 → 缺省,不炸不猜
     assert r['gold'] == 10 and r['plane'] == 1   # 决策行本体零漂移
-
-
-# ===== 锁③ hp 硬闸门锁 =====
-
-def test_p26_prep_obs_no_hp_in_key_surface() -> None:
-    """锁③:采集键面禁 hp/战力量(00_framework §3 硬闸门;L_node 分位口径
-    走既有结算三项遥测授权面离线 join,本钩子禁加 hp 读链)。"""
-    for k in P26_PREP_OBS_FIELDS:
-        assert 'hp' not in k.lower()
-        assert 'power' not in k.lower() and 'combat' not in k.lower()
