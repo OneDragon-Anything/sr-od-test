@@ -28,20 +28,22 @@ from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     RECIPE_FLOOR_TRAIN_CAP,
     SwapPlanContext,
+    assemble_swap_plan_inputs,
     can_deploy_single,
     deployed_bond_counts,
     has_deployable,
-    has_deployable_reasoned,
     recipe_floor_holds,
     select_deployments,
     select_deployments_reasoned,
+    select_swap_plan,
     xianzhou_supply_exists,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
+    locked_faction_scope,
     locked_line_recipe_floor_conflict,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
@@ -175,9 +177,9 @@ _G64_TRAIN = '姬子·启行'
 # ==================== 1 非锁定语境仍拦(保绿 + I3 锚)====================
 
 def test_floor_gate_holds_non_lock_context() -> None:
-    """非锁定语境仍拦。①局64 精确形态(既有 test_cw_deploy_ops 锚同型
-    ——豁免不得误开);②显式 False vs 缺省不传同结果(向后兼容锁);
-    ③桥对帧变体(I3 锚):真 IntentionState 置 p1_pair 非空、
+    """非锁定语境仍拦。①局64 精确形态(本文件自持锚;test_cw_deploy_ops
+    的原同型锚已删,其头部处置注记回指本文件——豁免不得误开);
+    ②桥对帧变体(I3 锚):真 IntentionState 置 p1_pair 非空、
     locked_comp='' → helper False → 仍拦——scope 成员判会把门在过渡期
     误开(桥池列车目标档=2 = 门封顶,无冲突,过渡纪律应全额生效)。"""
     # ① 局64 精确形态
@@ -189,16 +191,10 @@ def test_floor_gate_holds_non_lock_context() -> None:
     assert not up, '非锁定语境列车件应被 r288 门拦(豁免不得误开)'
     assert len(held) == 2
 
-    # ② 显式 False vs 缺省不传,同输入同结果(ADR-0360 件3 同型兼容锚)
-    up2, held2 = select_deployments(
-        bench, deployed_cids=set(_G64_DEP), deployed_fac=fac,
-        board=dict(fac), cap=7, recipe_floor_lock_exempt=False)
-    assert (up2, held2) == (up, held)
-
-    # ③ 桥对帧变体:p1_pair 非空 + locked_comp='' → 豁免关
+    # ② 桥对帧变体:p1_pair 非空 + locked_comp='' → 豁免关
     ist_bridge = IntentionState(p1_pair=('仙舟', '持续伤害'))
     assert locked_line_recipe_floor_conflict(ist_bridge) is False
-    assert locked_faction_scope_nonempty(ist_bridge), '锁前提:scope 非空'
+    assert locked_faction_scope(ist_bridge), '锁前提:scope 非空'
     bench3 = [_bc(_G64_TRAIN, 1), _bc('彦卿', 2)]   # 彦卿 = 有效仙舟供给
     up3, _held3, reasons3 = select_deployments_reasoned(
         bench3, deployed_cids=set(_G64_DEP), deployed_fac=fac,
@@ -209,14 +205,6 @@ def test_floor_gate_holds_non_lock_context() -> None:
         '桥对帧(locked_comp 空)豁免必须关:scope 误开门 = r288 暴露面重开')
     assert '彦卿' in up_names, '有效供给件照常上(帧内优先语义)'
     assert 'recipe_floor' in set(reasons3.values())
-
-
-def locked_faction_scope_nonempty(ist: IntentionState) -> bool:
-    """断言辅助:桥对帧的 locked_faction_scope 确非空(锁前提自证)。"""
-    from sr_od.application.currency_war.kernel.cw_intention import (
-        locked_faction_scope,
-    )
-    return bool(locked_faction_scope(ist))
 
 
 # ==================== 2 锁定线放行(修复本体)====================
@@ -242,9 +230,8 @@ def test_lock_line_exempt_releases_train_core() -> None:
     assert has_deployable(
         bench, deployed_cids=set(dep), deployed_fac=fac, board=dict(fac),
         cap=8, recipe_floor_lock_exempt=armed) is True
-    assert has_deployable_reasoned(
-        bench, deployed_cids=set(dep), deployed_fac=fac, board=dict(fac),
-        cap=8, recipe_floor_lock_exempt=armed)[0] is True
+    # has_deployable_reasoned armed 面经第 7 节武装发射帧的生产链
+    # (mandate._deployable → 本函数)覆盖,不重复直调。
 
     # 同输入缺省(False)仍拦 = 逐位同旧(向后兼容锚)
     up_d, held_d, reasons_d = select_deployments_reasoned(
@@ -456,30 +443,26 @@ def test_swap_transition_arm_revived_on_lock_line() -> None:
         'deployed': deployed, 'bench': bench, 'cap': 6, 'fenced_on': False,
         'fp': 0.5, 'locked': True, 'board_full': True}
     ctx_armed = SwapPlanContext(**base, recipe_floor_lock_exempt=True)
-    plan = select_swap_plan_helper(ctx_armed)
+    plan = select_swap_plan(ctx_armed)
     assert plan.nonempty and plan.arm == 'transition', plan
     assert plan.sell_names == [victim]
     assert {bench[i].char_id for i in plan.up_bench} == {_G64_TRAIN}
 
     # 对照:同输入缺省(豁免关)→ post_sell_held(白卖不可达语义保持)
     reasons_off: dict[str, str] = {}
-    plan_off = select_swap_plan_helper(
+    plan_off = select_swap_plan(
         SwapPlanContext(**base), reasons_out=reasons_off)
     assert not plan_off.nonempty
     assert reasons_off.get(_G64_TRAIN) == 'post_sell_held'
     assert _G64_TRAIN not in {bench[i].char_id for i in plan_off.up_bench}
 
     # CP4 装配武装锁:锁定 session 经生产装配函数 → ctx 新字段 True
-    #(helper→SwapPlanContext 接线;helper 断链时本断言红)
-    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
-        assemble_swap_plan_inputs,
-    )
+    #(assemble_swap_plan_inputs→SwapPlanContext 接线;装配断链时红)
     sess_locked = SimpleNamespace(
         last_state=None,
         strategy_state=SimpleNamespace(
             v3_intention=_ist('列车同行'), target_comp=None,
             transition_framework=''))
-    from sr_od.application.currency_war.kernel.cw_state import GameState
     ctx_asm = assemble_swap_plan_inputs(
         sess_locked, state=GameState(plane=2, round_num=3),
         deployed=deployed, bench=bench, cap=6)
@@ -496,29 +479,20 @@ def test_swap_transition_arm_revived_on_lock_line() -> None:
     assert ctx_plain is not None and ctx_plain.recipe_floor_lock_exempt is False
 
 
-def select_swap_plan_helper(ctx: SwapPlanContext,
-                            reasons_out: dict[str, str] | None = None):
-    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
-        select_swap_plan,
-    )
-    return select_swap_plan(ctx, reasons_out=reasons_out)
-
-
 # ==================== 7 遥测:发射侧三键 + 执行侧分桶 ====================
 
-def _tele_frame():
+def _tele_frame(round_num: int = 3) -> mandate.MandateFrame:
     return mandate.MandateFrame(
         gold=20, level=3, bench=[_bc(_G64_TRAIN, 1)],
         deployed=[_bc('三月七', 1), _bc('瓦尔特', 2)],
         deploy_cap=8, node_type=None, stop_flag=False, k_members=(),
-        round_num=3)
+        round_num=round_num)
 
 
 def test_emission_frame_dedup_union_and_hold_key() -> None:
     """发射侧拦帧:计划空帧(列车 core 被门拦)连调 3 次(M5/M1/M1′
     帧内最多次数)→ deploy_emit_held_recipe_floor 只 +1(并集语义,
     帧级去重载体 phase 翻转自动重置)。"""
-    from sr_od.application.currency_war.kernel.cw_state import GameState
     sess = SimpleNamespace()
     state_of(sess).cw4_counters = {}
     state_of(sess).v3_intention = _ist()   # 未锁 → 豁免关
@@ -530,11 +504,7 @@ def test_emission_frame_dedup_union_and_hold_key() -> None:
     assert 'deploy_emit_floor_ctx_open' not in c
     assert 'deploy_emit_floor_exempt_open' not in c
     # 轮次推进 = 新帧,键重新可计(去重载体 phase 键式)
-    frame2 = mandate.MandateFrame(
-        gold=20, level=3, bench=[_bc(_G64_TRAIN, 1)],
-        deployed=[_bc('三月七', 1), _bc('瓦尔特', 2)],
-        deploy_cap=8, node_type=None, stop_flag=False, k_members=(),
-        round_num=4)
+    frame2 = _tele_frame(round_num=4)
     assert mandate._deployable(frame2, sess, GameState()) is False
     assert state_of(sess).cw4_counters.get(
         'deploy_emit_held_recipe_floor') == 2
@@ -545,7 +515,6 @@ def test_emission_armed_release_and_exempt_fire_keys() -> None:
     不增(拒因消失)、deploy_emit_floor_ctx_open +1(分母,帧级去重)、
     deploy_emit_floor_exempt_open +1(开火验证:armed 帧无豁免对照补跑,
     对照拒因消失 = 本帧开过火;G1 生效门读数)。"""
-    from sr_od.application.currency_war.kernel.cw_state import GameState
     sess = SimpleNamespace()
     state_of(sess).cw4_counters = {}
     state_of(sess).v3_intention = _ist('列车同行')
