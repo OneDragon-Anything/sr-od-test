@@ -178,11 +178,14 @@ class TestLaunchRegistry:
         assert _registry(sess)[_CORE_HOLD] == ('hold', 3)
 
     def test_launch_cause_mapping_closed_contract(self):
-        """登记门:12 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 + ev_buy→press
+        """登记门:13 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 + ev_buy→press
         (M4 修正补漏,方案 v3 §3.1;新买入臂未分类即登记 = 红,锁红时
-        该登记的语义 = 把新臂补进映射表并过对抗审,非机械跟绿)。"""
+        该登记的语义 = 把新臂补进映射表并过对抗审,非机械跟绿)。
+        press_buy_deployable = 泄金阶梯档 1 新臂(溢余 discretionary 面,
+        因果类 press 同 M6/dominance;设计方案 §1.2 档 1)。"""
         arms = ('m2_line_member', 'm2_locked_member', 'm2_stockpile',
                 'm2_merge_completion', 'dominance_buy', 'm6_stockpile',
+                'press_buy_deployable',
                 'ev_buy', 'core_single_card_buy',
                 'core_single_card_buy:unlocked', 'transition_component_buy',
                 'dead_gold_press_buy', 'fuel_filler_stall',

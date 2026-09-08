@@ -472,10 +472,12 @@ class TestMandateBehavior:
         assert not any(e.reason == 'm1_deploy' for e in out)
 
     def test_dominance_gate_param_gold(self):
-        """R70-1:金位阈值 g*=10×cap_resolved 参数化(字面 50 实现即红)。"""
-        assert mandate.dominance_buy_eligible(51, 1, True, cap_resolved=5)
-        assert not mandate.dominance_buy_eligible(50, 1, True, cap_resolved=5)
-        assert mandate.dominance_buy_eligible(91, 1, True, cap_resolved=9)
+        """R70-1:金位阈值 g*=10×cap_resolved 参数化(字面 50 实现即红)。
+        (stop_flag 形参已随泄金阶梯档 0 摘除:线成型旗不再是支配臂
+        触发前置,设计方案 §1.2 档 0/对抗审 F6;本锁只辖金带参数化。)"""
+        assert mandate.dominance_buy_eligible(51, 1, cap_resolved=5)
+        assert not mandate.dominance_buy_eligible(50, 1, cap_resolved=5)
+        assert mandate.dominance_buy_eligible(91, 1, cap_resolved=9)
 
     def test_signal_arm(self):
         session = _session()

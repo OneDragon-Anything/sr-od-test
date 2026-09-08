@@ -14,13 +14,7 @@
 3. 线内缺口件未买的门序可辨:金不足/席满/异常态三分键。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
@@ -32,6 +26,14 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 
 _COMP = get_comp('绯英欢愉')
 
@@ -106,11 +108,16 @@ def test_transition_char_rejected_with_reason_g20260904_replay():
     component'(④件被拒才是要盯的信号;旧 'transition_char' 键对交集
     卡不可达,正是 D7 诊断的键序缺陷)。行为面不变:plane=2 已定型,
     ④放行收窄,花火仍不买。
+    锁语义重推(泄金阶梯档 0,设计方案 §1.2):旧帧金 114 ∈ 必花域,
+    摘旗后 dominance(1★ 全额退零重叠 = 花火属其候选类)会先买花火
+    (零净成本可逆持有,[13] 停手线语义由候选集承载)——拒因分类
+    锁改用域外帧(gold=40 < g*)钉:分类语义与金带无关,域外帧四臂
+    全静,拒因串逐键可辨。
     """
     assert '花火' in (_COMP.transition_chars or [])
     assert '火花' in predicates.line_members(_COMP)
     assert '花火' not in predicates.line_members(_COMP)
-    st = _state(114, [_card('花火', 2), _card('银枝', 2)],
+    st = _state(40, [_card('花火', 2), _card('银枝', 2)],
                 deployed=[_dep('绯英')])
     sess = _session()
     acts = _decide(st, sess)
@@ -225,8 +232,8 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
     不辖本断言(与实机 decide_shop_wave 同语义)。真引擎跑局,face-value
     断言,不锁分布数值。
     """
-    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
         predicates,
     )

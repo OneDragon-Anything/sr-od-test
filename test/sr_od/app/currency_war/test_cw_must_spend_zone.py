@@ -103,9 +103,12 @@ class TestZonePredicate:
 
 class TestL2SecondTrigger:
 
-    def test_zone_triggers_l2_despite_chaseable(self):
-        """L2 第二触发源:必花域帧 A 支不辖(可追成员在场,Φ_stall 不
-        成立)⇒ 仍发射垫件买 + must_spend_l2_trigger 分键。"""
+    def test_zone_triggers_l2_despite_chaseable(self, monkeypatch):
+        """锁语义重推(泄金阶梯档 0,设计方案 §1.2 发射序申报):旧锁钉
+        「域内 L2 第二触发 → 出口③ 买垫件」——摘旗后垫件类(1★ 零重叠
+        全额退)同属 dominance 候选,支配性优先序先于带参臂,域内帧由
+        dominance 先吃(同帧断言①);L2 触发语义本体不变,以 dominance
+        猴补关的隔离帧钉住(断言②,构造声明见泄金阶梯锁文件头)。"""
         km = list(line_members(get_comp(_COMP)))
         pad = next(n for n, ch in __import__(
             'sr_od.application.currency_war.data.cw_chars',
@@ -114,9 +117,20 @@ class TestL2SecondTrigger:
         st, sess = _zone_frame(
             gold=80, cards=[ShopCard(x=100, name=pad, cost=1, star=1)])
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
-        assert state_of(sess).cw4_counters.get('must_spend_l2_trigger') == 1
-        assert 'fuel_filler_stall_buy' in state_of(sess).cw4_counters
+        # ① 新序:dominance(档 0)先于带参臂吃同候选类
+        assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
+        # ② L2 触发语义本体(dominance+M6 隔离帧:两臂摘旗后同候选类
+        # 先行,见①;本断言只辖出口③ L2 触发源语义)
+        monkeypatch.setattr(mandate, 'dominance_buy_eligible',
+                            lambda *a, **kw: False)
+        monkeypatch.setattr(shop.crit_stockpile, 'stockpile_buy',
+                            lambda *a, **kw: (False, 'not_in_tier'))
+        st2, sess2 = _zone_frame(
+            gold=80, cards=[ShopCard(x=100, name=pad, cost=1, star=1)])
+        act2 = _decide(st2, sess2)
+        assert isinstance(act2, BuyCard) and act2.reason == 'fuel_filler_stall'
+        assert state_of(sess2).cw4_counters.get('must_spend_l2_trigger') == 1
+        assert 'fuel_filler_stall_buy' in state_of(sess2).cw4_counters
 
     def test_outside_zone_no_l2(self):
         """负向对照:域外同形态(A 支不成立)⇒ 零发射(域外逐位零变化)。"""
@@ -153,6 +167,13 @@ class TestL3MustSpend:
             ([crit_buy.BuyCandidate('燃料件X', 2, 1, 0)], ''))
         monkeypatch.setattr(crit_buy, 'ev_buy_veto',
                             lambda cand, gold: (True, 'expectation'))
+        # dominance 猴补关(泄金阶梯档 0 后,域内 1★ 全额退零重叠候选被
+        # 支配臂先吃——本锁辖 EV 降排序语义,隔离档 0/档 2 两臂(同为
+        # 摘旗扩域,候选类同),构造声明同前)。
+        monkeypatch.setattr(mandate, 'dominance_buy_eligible',
+                            lambda *a, **kw: False)
+        monkeypatch.setattr(shop.crit_stockpile, 'stockpile_buy',
+                            lambda *a, **kw: (False, 'not_in_tier'))
         st, sess = _zone_frame(gold=80, locked=False)
         st.shop = [ShopCard(x=100, name='燃料件X', cost=2, star=1)]
         act = _decide(st, sess)
@@ -495,7 +516,7 @@ class TestArchiveFrameReplay:
         assert isinstance(act, BuyCard) and act.reason == 'm2_stockpile'
         assert (act.card.name or '') == '缇宝'
 
-    def test_g20_p3r1_derived_inzone_consumes_r1_yielded(self):
+    def test_g20_p3r1_derived_inzone_consumes_r1_yielded(self, monkeypatch):
         """域内对照帧(派生,声明:g50 帧金 50→54 入域带内,店/bench 摘
         缇宝消 M2 义务面,其余档案原值):入域帧消费路径 = R1 域内残形
         切分线——RefreshShop(reason='must_spend_r1_yielded' 触发源记录)
@@ -537,6 +558,15 @@ class TestArchiveFrameReplay:
             cw4_counters={}, target_comp=get_comp('希儿量子'),
             v3_intention=SimpleNamespace(phase='locked',
                                          locked_comp='希儿量子'))
+        # dominance/M6 猴补关(锁语义重推注,泄金阶梯档 0+档 2):域内
+        # 1★ 店牌(银枝/星期日/长夜月 全 1★ 全额退零重叠)摘旗后被
+        # 支配/压库臂先买,R1-yielded 消费路径不可达——本锁辖 R1 切分线
+        # 语义,隔离档 0/档 2(构造声明 = 泄金阶梯锁文件头同款),隔离
+        # 后档案帧路径原样。
+        monkeypatch.setattr(mandate, 'dominance_buy_eligible',
+                            lambda *a, **kw: False)
+        monkeypatch.setattr(shop.crit_stockpile, 'stockpile_buy',
+                            lambda *a, **kw: (False, 'not_in_tier'))
         act = _decide(st, sess)
         assert isinstance(act, RefreshShop)
         assert act.reason == 'must_spend_r1_yielded'

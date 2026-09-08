@@ -8,12 +8,11 @@ K 空窗回退 / 双账槽位漂移重播种 / T-115 转线臂 /
 新核零漂移自配对门(慢桶,sim 实跑)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
@@ -39,6 +38,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof, sho
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 
 # ===== 测试基建 =====
@@ -280,14 +282,20 @@ class TestCriteriaShopFaces:
         assert all(isinstance(a, vocab) for a in acts)
 
     def test_proof_face_stop_flag_gates_dominance(self):
-        """证明面投影:stop_flag=0(线未成型)⇒ dominance 通道关。"""
+        """锁语义重推(泄金阶梯档 0,设计方案 §1.2/对抗审 F6;锁红=改动
+        正确的判例):旧锁钉「stop_flag=0(线未成型)⇒ dominance 通道关」
+        ——该触发前置正是本批病灶三合取之一(必花域转化期帧买臂被旗
+        关死,刷新成唯一出口),已按设计摘除。同帧改钉新意图:线未成型
+        (转化期)帧 dominance 照常开火(支配性优先序 P24 零参数无条件
+        放行,先于带参臂);[13] 停手线纪律由候选集判据承载(1★ 全额
+        退零重叠),不随旗消失。"""
         comp = _comp()
         members = _members(comp)
         bench = [_bc(m) for m in members[:-1]]   # 缺一件 ⇒ 未成型
         st = _state(gold=60, shop=[_card('燃料件X', cost=1)], bench=bench)
         acts = _decide(st, _session(comp))
-        assert not [a for a in acts if isinstance(a, BuyCard)
-                    and a.reason == 'dominance_buy']
+        assert [a for a in acts if isinstance(a, BuyCard)
+                and a.reason == 'dominance_buy']
 
 
 # ===== ② 终结 op 契约锁(ADR-0517 迁移批重锚;前身 = 截断契约锁)=====
@@ -305,8 +313,8 @@ class TestShopTerminatorContract:
         现行商店决策不发射——旧波批执行侧同样无分支,词表声明辖外)。
         PickEvent = pick 决策返回载体,词表外 fail-closed。"""
         from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
-            LevelUpOp,
             _OP_TABLE,
+            LevelUpOp,
             shop_action_op_for,
         )
         classified = set(_OP_TABLE)
@@ -427,13 +435,13 @@ class TestShopTerminatorContract:
         设计出处:docs/develop/currency_war/flow/screen_op.md §守卫两属;
         ADR-0517 决策 8(入口观察即对账,唯一真值源=入口读屏)。
         """
-        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
-            LevelUpOp,
-            guard_expected_vs_tracked,
-        )
         from sr_od.application.currency_war.kernel.cw_state import (
             LevelUp,
             bench_from_compact,
+        )
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            LevelUpOp,
+            guard_expected_vs_tracked,
         )
         aop = LevelUpOp(LevelUp(cost=4))
         # 两形态:单笔(02:13 HIT)与多笔累积(02:26 HIT,两轮买-部署循环)
@@ -462,6 +470,7 @@ class TestShopTerminatorContract:
         """
         import re
         from pathlib import Path
+
         import sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops as _mod
         cw_root = Path(_mod.__file__).parents[2]   # .../currency_war
         pat = re.compile(r'\.tracked_bench\b')

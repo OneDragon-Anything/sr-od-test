@@ -18,7 +18,6 @@ docs/develop/currency_war/proofs/p72-full-band-budget-gate.md;
 锁结构/回显,不锁分布数值(sr-od-test README 第 11 条)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -49,6 +48,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     refresh as crit_refresh,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.interest import (
     saturation_line,
@@ -208,20 +210,29 @@ class TestGatePure:
 
 
 class TestAllInExempt:
-    """ALL IN 豁免支(P72 §2.5 新增交互;plane_last_battle 单一源)。"""
+    """ALL IN 豁免支(P72 §2.5 新增交互;plane_last_battle 单一源)。
+
+    锁重推记录(T-149,ADR-0603):本类旧锁「位面末 boss 帧深穿花光
+    放行」的语义已被保底金门取代——非末位面位面末 ALL IN 从「花光」
+    改「花至 1 息档」(域③ P83 全局轴:位面末 R=0⟹机会成本恒零前提
+    仅末位面末战成立);终局域(末位面末战)仍维持花光原语义。旧场景
+    (花后 <10)按新语义改写为「花后 ≥10 放行 + 花后 <10 推迟」,
+    非机械跟绿;花后 <10 的推迟行为锁在 test_cw_guarantee_floor.py。
+    """
 
     def test_plane_last_boss_exempt(self):
-        """P2 r7 boss 位面末战(R=0 机会成本恒零):深穿量也放行。
-        session 携 plane_node_table(7 槽)⇒ plane_last_battle 判真;
-        同参非 boss 帧不豁免——豁免谓词同帧判定,禁把豁免读成常开。"""
+        """P2 r7 boss 位面末战:豁免支维持(花后 15 ≥ 1 息档 ⇒ 放行);
+        同参非 boss 帧不豁免——豁免谓词同帧判定,禁把豁免读成常开。
+        旧断言场景(g=45 批 40 花后 5)在保底门下改判推迟,见
+        test_cw_guarantee_floor.TestGuaranteeFloorExemptionBranches。"""
         km = tuple(_km())
-        st_boss = _state(45, 7, xp=(48, 52))
+        st_boss = _state(55, 7, xp=(48, 52))
         st_boss.plane = 2
         st_boss.node_type = 'boss'
         st_boss.round_num = 7
         sess_p2 = SimpleNamespace(plane_node_table=list(range(7)))
         ok, why = crit_levelup.levelup_budget_gate(
-            st_boss, sess_p2, 45, 5, km, [], [], 10, 4)
+            st_boss, sess_p2, 55, 5, km, [], [], 10, 4)
         assert ok is True and why == ''
         # 同帧非 boss:量闸照判(45−40=5 < 40+2ρ)
         st_norm = _state(45, 7, xp=(48, 52))
