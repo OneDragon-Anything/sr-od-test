@@ -240,7 +240,11 @@ def test_units_conservation_across_bench_deployed() -> None:
     (ADR-0336 适配:decision_v2 的 CompTransaction 整档替换事务
     内部含 fill(shop 源买新件)/ sell(卖件),账本不落 tx 明细
     (只记 reason/result)——tx 轮重置守恒基线(该轮单位数作新
-    起点),非 tx 段内 v1 同式守恒照验;tx 披露缺口登记 ADR-0336。)"""
+    起点),非 tx 段内 v1 同式守恒照验;tx 披露缺口登记 ADR-0336。)
+    (T-169 适配:M1″ 换血执行面新增 SellDeployed 卖出通道(victim
+    下场,板面单位 -1;同轮「补上」= bench→deployed 移位守恒中性
+    不入式)——sells 计数扩为 SellBench ∪ applied SellDeployed 两通道,
+    不变量式本身不变。)"""
     # 5→2 seed(2026-09-03 瘦身批,纪律 12:守恒不变量逐局成立,2 seed 足够)
     for seed in (0, 42):
         r = simulate_p1(seed, pool='fallback')
@@ -262,6 +266,9 @@ def test_units_conservation_across_bench_deployed() -> None:
                     buys += 1
                 elif a['__type__'] == 'SellBench':
                     sells += 1
+                elif a['__type__'] == 'SellDeployed' \
+                        and a.get('result') == 'applied':
+                    sells += 1   # T-169 换血卖出通道(见 docstring 适配注)
             merges += (row['sim'].get('merges') or 0)
             expect = base_units + buys - sells - 2 * merges
             assert n_bench + n_dep == expect, (
