@@ -845,7 +845,15 @@ def _formed_state(level: int = 5) -> dict:
 
 # ---------------------------------------------------------------- [17]
 def test_seg_overflow_idle_spend_bidirectional() -> None:
-    """[17] 溢余即花:金>50 零花未成型必报;成型停手/bench 满豁免。"""
+    """[17] 溢余即花:金>50 零花未成型必报;自洽停手/bench 满豁免。
+
+    T-153 迁移(C5/ADR-0593)改锁重推:原第 4 断言「formed_stop 行 →
+    豁免」钉的是自报短路旧语义——迁移后豁免 = 自算成型复核通过
+    (engines≥2,即 formed 行那条断言,保留面不变);自报停手∧自算
+    未成型 = 成型谎报,不豁免且事件带 ``suspect`` 标记。原断言按新
+    语义改写为谎报显形断言,另补自洽停手(自报+自算双真)豁免照旧
+    断言(兼容面)。
+    """
     bad = [_sim_segment_checks_row(gold=55, waves_gold=55, node='battle')]
     evs = _sim_segment_checks_chk.seg_check_overflow_idle_spend(bad)
     assert evs and evs[0]['gold_before'] == 55
@@ -855,9 +863,16 @@ def test_seg_overflow_idle_spend_bidirectional() -> None:
     # 成型(engines≥2)→ 攒息合法面
     formed = [_sim_segment_checks_row(gold=70, waves_gold=70, state=_formed_state())]
     assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(formed)
-    # formed_stop 行 → 豁免
-    stop = [_sim_segment_checks_row(gold=70, waves_gold=70, formed_stop=True)]
-    assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(stop)
+    # 自报停手 ∧ 自算未成型(engines=0) = 成型谎报 → 不豁免+suspect 标记
+    # (T-153/ADR-0593:旧「自报即豁免」语义已退役——谎报恰是迁移要显形的形态)
+    lie = [_sim_segment_checks_row(gold=70, waves_gold=70, formed_stop=True)]
+    lie_evs = _sim_segment_checks_chk.seg_check_overflow_idle_spend(lie)
+    assert lie_evs and lie_evs[0].get('suspect'), \
+        '成型谎报未显形(C5 迁移回归)'
+    # 自洽停手(自报停手 ∧ 自算成型)→ 豁免照旧(兼容面)
+    honest = [_sim_segment_checks_row(gold=70, waves_gold=70,
+                                      state=_formed_state(), formed_stop=True)]
+    assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(honest)
     # bench 满守卫拦截轮 → 想买买不了,豁免
     guard = [_sim_segment_checks_row(gold=55, waves_gold=55, bench_full_skipped_buys=2)]
     assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(guard)
