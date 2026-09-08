@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.operations.cw_entry.cw_entry_start import  CwEntryStart
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_start import  CwEntryStart, try_handle_entry_popups
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import  FixtureController, WatchdogOperationMixin, enter_running_state, fast_sleep, reset_running_state
 
@@ -100,13 +100,32 @@ def _build_phases_train_supply_popup() -> list[dict]:
     """列车补给每日弹窗剧本(真帧锁:2026-08-31 实机建档帧)。
 
     launch_dead 停机后游戏停在大世界+「列车补给」全屏每日领取弹窗,下一局
-    入局链被弹窗挡死 → 「推进到备战阶段」超时失败。剧本:弹窗(点中央徽章
-    领取)→ 大厅 → 模式选择 → 备战(转换恢复)。
+    入局链被弹窗挡死 → 「推进到备战阶段」超时失败。剧本:弹窗(点底部
+    「文本-领取提示」领取,ADR-0607 T-101 点击目标修正)→ 大厅 → 模式选择
+    → 备战(转换恢复)。
     """
     return [
-        {  # 弹窗:入口 op 领取分支点「按钮-领取补贴」(中央徽章,无 X 关闭钮)
+        {  # 弹窗:领取分支点「文本-领取提示」(S2 实证领取点;点中央徽章 =
+            # 命中内嵌星琼图标只开详情不领取,ADR-0574 §5)
             'frame': ('货币战争-列车补给弹窗', '今日未领取'),
-            'exit': ('on_click_in', '货币战争-列车补给弹窗', '按钮-领取补贴'),
+            'exit': ('on_click_in', '货币战争-列车补给弹窗', '文本-领取提示'),
+        },
+        _LOBBY,
+        *_TAIL_FROM_MODE_SELECT,
+    ]
+
+
+def _build_phases_star_badge_detail_popup() -> list[dict]:
+    """星徽详情弹窗剧本(真帧锁:M53 建档帧「燃血星徽」;ADR-0607)。
+
+    对局内备战点星徽图标误开的全屏详情遮罩(M53/T-163 先例);入口链无已知
+    触发路径,守卫本质是防御面(实机 E2E 不可构造,验收以本真帧锁为准)。
+    剧本:弹窗(守卫点屏幕右上角「按钮-关闭」)→ 大厅 → 模式选择 → 备战。
+    """
+    return [
+        {  # 弹窗:守卫点「按钮-关闭」(全屏遮罩层,X 在屏幕角非弹窗卡角)
+            'frame': ('货币战争-星徽详情', '燃血星徽'),
+            'exit': ('on_click_in', '货币战争-星徽详情', '按钮-关闭'),
         },
         _LOBBY,
         *_TAIL_FROM_MODE_SELECT,
@@ -296,8 +315,12 @@ class TestCwEntryStartFlow:
     ) -> None:
         """列车补给每日弹窗(真帧):入口 op 领取 → 转换恢复推进到备战。
 
-        守卫锁:移除 op 的 ``_handle_train_supply_popup`` 分支 → 弹窗帧无分支可
+        守卫锁:移除注册表 supply 项(或入口链守卫分支)→ 弹窗帧无分支可
         推进 → 本锁红(推进无路,超时失败)。
+        领取点击语义(ADR-0607 T-101;判据 = ADR-0574 §5 S1/S2):点底部
+        「文本-领取提示」——S2 实证一次点击领取成功且不开详情;中央徽章区
+        点不得,其内嵌星琼图标,点击 = 只开详情不领取(T-98 级联事故源头),
+        负向断言钉死(危险区坐标单一源 = 画面档「区域-中央徽章危险区」rect)。
         """
         phases = _build_phases_train_supply_popup()
         _require_screens(test_context, phases)
@@ -318,11 +341,22 @@ class TestCwEntryStartFlow:
             f';phase_idx={fixture_controller.phase_idx}'
             f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
         )
-        # 领取点击必须落在中央徽章领取区(不是乱点/点提示文本)。
+        # 正向:领取点击落在底部提示区(OCR 验证后点击,不再盲点坐标)。
         assert fixture_controller.click_hit_area(
-            '货币战争-列车补给弹窗', '按钮-领取补贴'), (
-            '未点「按钮-领取补贴」领取弹窗:'
+            '货币战争-列车补给弹窗', '文本-领取提示'), (
+            '未点「文本-领取提示」领取弹窗:'
             f'{_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        # 负向(ADR-0607 T-101):弹窗相位窗口内零点击落入中央徽章危险区——
+        # 回退实现点中央时,负向断言与 phase exit 双双独立变红。窗口限定照
+        # 本文件残留逃逸测试「只锁关闭前点击序列」的先例,防跨屏坐标碰撞误伤。
+        popup_clicks = _popup_phase_clicks(
+            fixture_controller, '货币战争-列车补给弹窗', '文本-领取提示')
+        assert _clicks_in_area(
+            fixture_controller, '货币战争-列车补给弹窗', '区域-中央徽章危险区',
+            clicks=popup_clicks) == [], (
+            '领取点击落入中央徽章危险区(点中央 = 开详情不领取的事故路径):'
+            f'{_fmt_clicks(popup_clicks)}'
         )
         assert fixture_controller.phase_idx == len(phases) - 1, (
             f'剧本应推进到末 phase(备战):phase_idx={fixture_controller.phase_idx}'
@@ -335,8 +369,8 @@ class TestCwEntryStartFlow:
     ) -> None:
         """星琼详情弹窗(真帧):守卫点「按钮-关闭X」→ 转换恢复推进到备战。
 
-        守卫锁:移除 op 的 ``_handle_jade_detail_popup`` 分支 → 弹窗帧无分支可
-        推进 → 本锁红(推进无路,超时失败;ADR-0574)。
+        守卫锁:移除注册表 jade 项(或入口链守卫分支)→ 弹窗帧无分支可
+        推进 → 本锁红(推进无路,超时失败;ADR-0574,注册表化 ADR-0607)。
         """
         phases = _build_phases_jade_detail_popup()
         _require_screens(test_context, phases)
@@ -430,15 +464,17 @@ class TestCwEntryStartFlow:
         """大世界+弹窗帧(match2 实锤场景):app 首节点 `_enter_lobby` 前移挂点
         领取 → 恢复导航(下一帧大厅锚命中 → 「已在 CW」常规分支)。
 
-        守卫锁:移除 `_enter_lobby` 的弹窗分支,或把弹窗屏收进对局屏集(误判
+        守卫锁:移除注册表 supply 项,或把弹窗屏收进对局屏集(误判
         「已在对局中」跳过 enter 直交 loop)→ 本锁红。
+        领取点击语义同 op 级锁(点「文本-领取提示」;负向断言钉死不点中央
+        徽章危险区,ADR-0607 T-101)。
         """
         from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
 
         phases = [
-            {  # 大世界+弹窗:首节点前移挂点点「按钮-领取补贴」
+            {  # 大世界+弹窗:首节点前移挂点点「文本-领取提示」领取
                 'frame': ('货币战争-列车补给弹窗', '今日未领取'),
-                'exit': ('on_click_in', '货币战争-列车补给弹窗', '按钮-领取补贴'),
+                'exit': ('on_click_in', '货币战争-列车补给弹窗', '文本-领取提示'),
             },
             {  # 领取后回落大厅:app 首节点走「已在 CW」常规分支(导航恢复)
                 'frame': ('货币战争-大厅', 'lobby'),
@@ -469,31 +505,245 @@ class TestCwEntryStartFlow:
             f';phase_idx={fixture_controller.phase_idx}'
             f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
         )
+        # 正向:领取点击落在底部提示区。
         assert fixture_controller.click_hit_area(
-            '货币战争-列车补给弹窗', '按钮-领取补贴'), (
-            'app 首节点未点「按钮-领取补贴」领取弹窗:'
+            '货币战争-列车补给弹窗', '文本-领取提示'), (
+            'app 首节点未点「文本-领取提示」领取弹窗:'
             f'{_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        # 负向:弹窗相位窗口内零点击落入中央徽章危险区(同 op 级锁,ADR-0607)。
+        popup_clicks = _popup_phase_clicks(
+            fixture_controller, '货币战争-列车补给弹窗', '文本-领取提示')
+        assert _clicks_in_area(
+            fixture_controller, '货币战争-列车补给弹窗', '区域-中央徽章危险区',
+            clicks=popup_clicks) == [], (
+            '领取点击落入中央徽章危险区(点中央 = 开详情不领取的事故路径):'
+            f'{_fmt_clicks(popup_clicks)}'
         )
         assert fixture_controller.phase_idx == len(phases) - 1, (
             f'领取后应恢复导航到大厅(末 phase):phase_idx={fixture_controller.phase_idx}'
         )
 
+    def test_star_badge_detail_popup_closed_then_reaches_prep(
+        self,
+        test_context: SrTestContext,
+        fixture_controller: FixtureController,
+    ) -> None:
+        """星徽详情弹窗(真帧):守卫点屏幕右上角「按钮-关闭」→ 转换恢复推进到备战。
 
-def _clicks_in_area(ctrl: FixtureController, screen_name: str, area_name: str) -> list:
-    """落在指定 area 内的点击(按 recorded_clicks 顺序)。"""
+        守卫锁:注册表移除星徽项 → 弹窗帧无分支可推进 → 本锁红(推进无路;
+        ADR-0607)。识别 = 档内双 id_mark AND @0.9(与画面档 is_precise 同判据);
+        关闭走「按钮-关闭」禁 ESC(bug#2:面板已关时 ESC 落备战弹中断挑战)。
+        触发场景全在对局内,入口链守卫为防御面,验收以本真帧锁为准(ADR-0607)。
+        """
+        phases = _build_phases_star_badge_detail_popup()
+        _require_screens(test_context, phases)
+
+        fixture_controller.set_phases(phases)
+        op = _WatchedCwEntryStart(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        enter_running_state(test_context)
+        try:
+            with fast_sleep():
+                result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        assert result.success, (
+            f'弹窗关闭后未恢复推进到备战:status={result.status}'
+            f';phase_idx={fixture_controller.phase_idx}'
+            f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        # 关闭点击必须落在屏幕右上角 X 钮区(不是乱点/误点中央详情卡)。
+        assert fixture_controller.click_hit_area(
+            '货币战争-星徽详情', '按钮-关闭'), (
+            '未点「按钮-关闭」关闭星徽详情弹窗:'
+            f'{_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert fixture_controller.phase_idx == len(phases) - 1, (
+            f'剧本应推进到末 phase(备战):phase_idx={fixture_controller.phase_idx}'
+        )
+
+    def test_star_badge_detail_popup_closed_at_app_entry_then_nav_resumes(
+        self,
+        test_context: SrTestContext,
+        fixture_controller: FixtureController,
+    ) -> None:
+        """大世界+星徽详情弹窗帧(防御面场景):app 首节点 `_enter_lobby` 守卫
+        分支点 X 关闭 → 重跑节点走「已在 CW」常规分支导航恢复。
+
+        守卫锁:注册表移除星徽项,或把弹窗屏收进对局屏集(误判「已在对局中」
+        跳过 enter 直交 loop)→ 本锁红(ADR-0607)。
+        """
+        from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
+
+        phases = [
+            {  # 大世界+弹窗:首节点守卫分支点「按钮-关闭」
+                'frame': ('货币战争-星徽详情', '燃血星徽'),
+                'exit': ('on_click_in', '货币战争-星徽详情', '按钮-关闭'),
+            },
+            {  # 关闭后回落大厅:app 首节点走「已在 CW」常规分支(导航恢复)
+                'frame': ('货币战争-大厅', 'lobby'),
+            },
+        ]
+        _require_screens(test_context, phases)
+        fixture_controller.set_phases(phases)
+
+        app = CurrencyWarApp(test_context)
+        enter_running_state(test_context)
+        try:
+            with fast_sleep():
+                app.screenshot()
+                # 节点方法直调语义(同星琼 app 级锁):守卫分支返回 round_retry
+                # (计入节点预算),重跑节点才走常规分支。
+                first = app._enter_lobby()
+                app.screenshot()
+                result = app._enter_lobby()
+        finally:
+            reset_running_state(test_context, app)
+
+        assert first is not None and not first.is_success, (
+            f'弹窗帧首轮应返回非成功(守卫分支 round_retry),实:{first.status if first else None}'
+        )
+        assert fixture_controller.click_hit_area(
+            '货币战争-星徽详情', '按钮-关闭'), (
+            'app 首节点未点「按钮-关闭」关闭星徽详情弹窗:'
+            f'{_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert result.is_success, (
+            f'弹窗关闭后导航未恢复:status={result.status}'
+            f';phase_idx={fixture_controller.phase_idx}'
+            f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert fixture_controller.phase_idx == len(phases) - 1, (
+            f'关闭后应恢复导航到大厅(末 phase):phase_idx={fixture_controller.phase_idx}'
+        )
+
+
+def _clicks_in_area(
+    ctrl: FixtureController, screen_name: str, area_name: str,
+    clicks: list | None = None,
+) -> list:
+    """落在指定 area 内的点击(按 recorded_clicks 顺序;clicks=None=全程)。"""
     area = ctrl.ctx.screen_loader.get_area(screen_name, area_name)
     if area is None:
         return []
     rect = area.pc_rect
     region = (rect.x1, rect.y1, rect.x2, rect.y2)
+    if clicks is None:
+        clicks = ctrl.recorded_clicks
     return [
-        p for p in ctrl.recorded_clicks
+        p for p in clicks
         if FixtureController._pos_in_region(p, region)
     ]
 
 
+def _popup_phase_clicks(
+    ctrl: FixtureController, advance_screen: str, advance_area: str,
+) -> list:
+    """弹窗相位窗口 = 首相位推进前的点击前缀(含触发推进的那次点击)。
+
+    负向断言的窗口限定,照本文件残留逃逸测试「只锁关闭前点击序列」的先例:
+    后续画面按钮矩形可能与被禁区域重叠,全程过滤会跨屏坐标碰撞误伤——锁的
+    语义是「领取动作不点危险区」,不是「全程无人路过该矩形」。剧本未推进
+    (无命中点击)时返回全程点击,让负向断言在回退场景下如实变红。
+    """
+    hits = _clicks_in_area(ctrl, advance_screen, advance_area)
+    if not hits:
+        return list(ctrl.recorded_clicks)
+    prefix: list = []
+    for p in ctrl.recorded_clicks:
+        prefix.append(p)
+        if p is hits[0]:
+            break
+    return prefix
+
+
 def _fmt_clicks(clicks: list) -> str:
     return ', '.join(f'({p.x},{p.y})' for p in clicks) or '<empty>'
+
+
+# ==================== 守卫序位锁(L6,单元级 mock;ADR-0607) ====================
+#
+# 序位知识(supply → jade → badge)住在 ENTRY_POPUP_GUARDS 元组顺序里,fixture
+# 无叠层真帧(构造难),行为级序位锁不可得——本节用最小 op 探针补机械防线:
+# 元组重排 = 全锚命中场景的返回值变化 = 本锁红。
+
+_RETRY_SENTINEL: object = object()  # round_retry 返回值的非 None 占位(见探针注释)
+
+
+class _GuardProbeOp:
+    """守卫序位锁的探针 op:实现 try_handle_entry_popups 消费的最小接口,
+    锚命中可按 (screen_name, area_name) 逐个屏蔽。"""
+
+    def __init__(self, masked: set[tuple[str, str]]):
+        self._masked: set[tuple[str, str]] = masked
+        self.clicked: list[tuple[str, str]] = []
+        self.retry_status: str | None = None
+
+    def round_by_find_area(self, screen: object, screen_name: str,
+                           area_name: str, crop_first: bool = False):
+        class _FindResult:
+            def __init__(self, is_success: bool) -> None:
+                self.is_success: bool = is_success
+
+        return _FindResult((screen_name, area_name) not in self._masked)
+
+    def round_by_find_and_click_area(self, screen: object, screen_name: str,
+                                     area_name: str, **kwargs: object):
+        self.clicked.append((screen_name, area_name))
+        return None
+
+    def round_retry(self, status: str = '', wait: float = 0):
+        # 返回值必须非 None:生产 round_retry 恒返回 OperationRoundResult,
+        # try_handle_entry_popups 靠「结果非 None」提前返回(探针返回 None 会让
+        # 循环穿透到后续 spec,retry_status 被末位覆盖——首跑实证)。
+        self.retry_status = status
+        return _RETRY_SENTINEL
+
+
+def test_entry_popup_guard_order_supply_before_detail_family() -> None:
+    """守卫序位锁(ADR-0607;序位语义 = ADR-0574 §2.1「领取优先」挂点约定):
+    全锚命中 → 返回注册表首个 spec 的具名状态(supply);依次屏蔽前序 spec 的
+    识别锚 → 依次落到 jade / badge。
+
+    红证:ENTRY_POPUP_GUARDS 元组重排 → 全命中场景返回值变化,本锁红。
+    """
+    # 全锚命中:首个 spec(supply)接住,点击其动作区。
+    probe = _GuardProbeOp(masked=set())
+    try_handle_entry_popups(probe, screen=object())
+    assert probe.retry_status == '列车补给领取中', (
+        f'全锚命中应返回首个 spec(supply)的具名状态,实:{probe.retry_status}'
+    )
+    assert probe.clicked == [('货币战争-列车补给弹窗', '文本-领取提示')], (
+        f'全锚命中应点 supply 动作区,实:{probe.clicked}'
+    )
+
+    # 屏蔽 supply 识别锚 → jade 接住。
+    supply_anchors = {('货币战争-列车补给弹窗', '标识-列车补给')}
+    probe_jade = _GuardProbeOp(masked=set(supply_anchors))
+    try_handle_entry_popups(probe_jade, screen=object())
+    assert probe_jade.retry_status == '星琼详情弹窗关闭中', (
+        f'屏蔽 supply 锚应落到 jade spec,实:{probe_jade.retry_status}'
+    )
+    assert probe_jade.clicked == [('货币战争-星琼详情', '按钮-关闭X')], (
+        f'屏蔽 supply 锚应点 jade 关闭钮,实:{probe_jade.clicked}'
+    )
+
+    # 再屏蔽 jade 双锚 → badge 接住。
+    jade_anchors = {
+        ('货币战争-星琼详情', '标识-星琼标题'),
+        ('货币战争-星琼详情', '标识-稀有货币'),
+    }
+    probe_badge = _GuardProbeOp(masked=set(supply_anchors | jade_anchors))
+    try_handle_entry_popups(probe_badge, screen=object())
+    assert probe_badge.retry_status == '星徽详情弹窗关闭中', (
+        f'屏蔽 supply+jade 锚应落到 badge spec,实:{probe_badge.retry_status}'
+    )
+    assert probe_badge.clicked == [('货币战争-星徽详情', '按钮-关闭')], (
+        f'屏蔽 supply+jade 锚应点 badge 关闭钮,实:{probe_badge.clicked}'
+    )
 
 
 # ==================== test_briefing_recognizer ====================

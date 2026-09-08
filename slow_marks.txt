@@ -51,3 +51,6 @@ test_cw_equip_grant_calib.py::test_p1_grant_volume_matches_real_profile
 # 瘦身战役补登(2026-09-08:簇V 合并改写后单测 2.26s≥2s;三面单批共享是纪律 11 语义,不拆回)
 test_cw_fidelity_baseline.py::test_fidelity_baseline_conservation_domains_bands
 
+# 入口链守卫注册表批(2026-09-09,T-102 星徽新锁;call 实测 5.43s≥2s,真帧 OCR 同桶先例=supply/jade op 级锁)
+test_cw_screens_entry.py::TestCwEntryStartFlow::test_star_badge_detail_popup_closed_then_reaches_prep
+
