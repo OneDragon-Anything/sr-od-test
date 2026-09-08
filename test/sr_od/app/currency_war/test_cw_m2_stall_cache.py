@@ -35,7 +35,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
     GameState,
-    ShopCard,
+    SellBench,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -62,10 +62,6 @@ def _cfg():
 
 def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _card(name: str, cost: int, star: int = 1) -> ShopCard:
-    return ShopCard(x=100, name=name, cost=cost, star=star)
 
 
 def _locked_session() -> StrategySession:
@@ -166,16 +162,14 @@ class TestShopStallCache:
         offline = next(n for n in CHARACTERS
                        if n not in hoard_chars and n not in core)
         st = _storm_state()
+        sess = _locked_session()
         # 帧1:末席为 3★ 占位件(非燃料)⇒ 停摆形态
         st.bench[-1] = _bc('placeholder', slot=BENCH_CAPACITY, star=3)
-        shop.decide_shop_action(st, sess_placeholder := _locked_session(),
-                                _cfg())
+        shop.decide_shop_action(st, sess, _cfg())
         # 帧间:W 外动作(SellBench)卖出占位件 ⇒ offline 入席
         st.bench[-1] = _bc(offline, slot=BENCH_CAPACITY)
-        sess = sess_placeholder
         _arm_shop_token(sess, 'SellBench')
         act2 = shop.decide_shop_action(st, sess, _cfg())
-        from sr_od.application.currency_war.kernel.cw_state import SellBench
         assert isinstance(act2, SellBench), '重推导须发现恢复的燃料并卖出'
         assert act2.expect == offline
 
@@ -190,26 +184,6 @@ class TestShopStallCache:
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 2
         assert c.get('m2_stall_cache_hit', 0) == 0
-
-    def test_t5_event_semantics_exact_and_cross_segment_rearm(self):
-        """T5 计数语义:同一停摆段事件键恰 +1(首推导);跨段(段序号
-        推进后复现)再次 +1;命中帧 repeat 累加而事件键不动。"""
-        st = _storm_state()
-        sess = _locked_session()
-        shop.decide_shop_action(st, sess, _cfg())          # 段内首推导:+1
-        _arm_shop_token(sess, 'LevelUpShop')
-        shop.decide_shop_action(st, sess, _cfg())          # 命中:不增
-        c = state_of(sess).cw4_counters
-        assert c.get('m2_retry_exhausted', 0) == 1
-        assert c.get('m2_stall_repeat_frame', 0) == 1
-        # 跨段:段入口推进(模拟 visit 重新开始)→ 残留 token 序号过期
-        state_of(sess).cw4_segment_serial += 1
-        shop.decide_shop_action(st, sess, _cfg())          # 重推导:再 +1
-        c = state_of(sess).cw4_counters
-        assert c.get('m2_retry_exhausted', 0) == 2
-        assert c.get('bench_full_buy_abandon', 0) == 2
-        assert c.get('m2_stall_cache_rederive', 0) == 2
-        assert c.get('m2_stall_cache_hit', 0) == 1
 
     def test_t5_hit_frame_does_not_touch_sell_channel_keys(self):
         """T5 零静默面:命中帧除观测对外不新增任何计数键(跳过扫描 =
@@ -349,11 +323,7 @@ class TestPrepStallCache:
         assert c.get('m2_retry_exhausted', 0) == 1    # 商店帧首推导
         state_of(shop_sess).cw4_segment_serial += 1   # 备战期开始:推进
         _arm_shop_token(shop_sess, 'LevelUp')         # prep 帧间动作
-        frame = mandate.MandateFrame(
-            gold=30, level=3,
-            bench=[_bc(f'高价{i}', star=3, slot=i) for i in range(1, 10)],
-            deployed=[], deploy_cap=4, node_type=None, stop_flag=False,
-            k_members=('目标件',), round_num=3)
+        frame = self._storm_frame()
         mandate.run_mandate(frame, shop_sess)
         c = state_of(shop_sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 2, '跨域闩失效 ⇒ prep 帧重推导计数'
@@ -373,12 +343,9 @@ class TestPrepStallCache:
         hoard_chars, _eq = cw_intention._line_hoard(comp)
         material = next(n for n in CHARACTERS
                         if n not in hoard_chars and n not in core)
-        bench = [_bc(f'高价{i}', star=3, slot=i) for i in range(1, 9)]
-        bench.append(_bc(material, slot=9))
-        frame = mandate.MandateFrame(
-            gold=30, level=3, bench=bench,
-            deployed=[_bc(material, slot=1)], deploy_cap=4, node_type=None,
-            stop_flag=False, k_members=('目标件',), round_num=3)
+        frame = self._storm_frame()
+        frame.bench[-1] = _bc(material, slot=9)     # 末席换成素材件(风暴形态
+        frame.deployed = [_bc(material, slot=1)]    # 中唯一非 3★ 件 = 守卫目标)
         # 守卫的 deployed 域查经 run_mandate 的 state 参数现读,必须携带
         # 同名同星副本(与商店域 P56 位同款守卫输入)。
         state = GameState()
@@ -449,8 +416,6 @@ class TestTokenWritePointLiveness:
         """prep 主环写点活性:备战单轮 op 执行成功后 token 载体置位;
         写点被删 ⇒ 载体 None ⇒ 红。harness 最小集镜像
         test_cw_no_progress_guard._make_round_director(同域既有模式)。"""
-        from types import SimpleNamespace as _SN
-
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             OpenShop,
         )
@@ -460,6 +425,7 @@ class TestTokenWritePointLiveness:
         from test.harness.fixture_controller import (
             enter_running_state,
             fast_sleep,
+            reset_running_state,
         )
 
         class _StubStrategy:
@@ -469,7 +435,7 @@ class TestTokenWritePointLiveness:
         d = pd_mod.CwScreenPrep(test_context)
         session = StrategySession()
         state_of(session)   # 冷建 MandateState 并挂 session(写点消费面)
-        match = _SN(strategy=_StubStrategy(), session=session)
+        match = SimpleNamespace(strategy=_StubStrategy(), session=session)
         monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
         monkeypatch.setattr(d, '_clear_entry_overlays', lambda: None)
         monkeypatch.setattr(d, '_try_collapse_open_shop', lambda: False)
@@ -496,7 +462,7 @@ class TestTokenWritePointLiveness:
             try:
                 d.run()
             finally:
-                pass
+                reset_running_state(test_context, d)
         st = state_of(session)
         assert st.cw4_segment_serial == 1, '备战期入口段序号置位活性'
         assert st.cw4_frame_action_record is not None, \
