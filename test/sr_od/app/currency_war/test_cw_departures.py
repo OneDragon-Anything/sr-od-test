@@ -81,24 +81,52 @@ def test_swap_sell_departure_unexplained_075840_saber(tmp_path: _P):
         'same_window_arrivals': ['艾丝妲']}]
 
 
-# ===== ② 通道分键:sell_recorded(SellDeployed 槽位解析命中) =====
+# ===== ② 通道分键:sell_recorded(SellDeployed 按 deployed_idx 换算解析命中) =====
 
 def test_departure_sell_recorded_channel(tmp_path: _P):
-    """决策时点 SellDeployed(row=front, slot=1)卖掉椒丘 → 离场行通道
-    = sell_recorded(该件本就在 actions 逐件在案,通道分键防双计混淆);
-    同帧同名不同星不受更高星误判(合并通道只在无卖出背书时参与)。"""
+    """决策时点 SellDeployed 卖掉藿藿 → 离场行通道 = sell_recorded。
+
+    fixture 键面 = 生产唯一可落帧形状(kernel cw_state.SellDeployed:
+    deployed_idx/income/reason/expect;全仓唯一构造点 = cw_evolution
+    谷底回滚 / sim engine,prep 同名 row+slot 类零构造点、辖外声明
+    不发射)。**紧缩错位形态**:序列化 deployed 是紧缩占用序(空槽
+    剔除),藿藿 compact 下标 1 ≠ 其 deployed_idx 4(front slot2 空槽
+    被剔除所致)——解析必须走 deployed_idx→(排,排内槽号) 换算;直取
+    列表下标 / 回退 row+slot 旧键都命中不了 → 本例红(通道真触发的
+    变异防线)。同帧在场的椒丘不得误入卖出集合。"""
     rd = tmp_path / 'replay'
     rid = 'run_20260908_120000'
+    # 槽位表形态:front1=椒丘 front2=空 back1=藿藿 → 紧缩序列 [椒丘, 藿藿]
     dep_a = [_dep('椒丘', 1, 'front', 1), _dep('藿藿', 1, 'back', 1)]
-    dep_b = [_dep('藿藿', 1, 'back', 1)]
+    dep_b = [_dep('椒丘', 1, 'front', 1)]
     _seg_files(rd, rid, [
         _dec(rid, 1, 3, '2026-09-08T12:00:00', dep_a,
-             actions=[{'__type__': 'SellDeployed', 'row': 'front', 'slot': 1}]),
+             actions=[{'__type__': 'SellDeployed', 'deployed_idx': 4,
+                       'income': 1, 'reason': 'valley_rollback',
+                       'expect': '藿藿'}]),
         _dec(rid, 1, 3, '2026-09-08T12:00:20', dep_b,
              actions=[{'__type__': 'StartBattle'}])])
     a = _build(rd)
     assert [(d['char'], d['channel']) for d in a['departures']] == \
-        [('椒丘', 'sell_recorded')]
+        [('藿藿', 'sell_recorded')]
+
+
+def test_departure_sell_recorded_bad_idx_falls_to_unexplained(tmp_path: _P):
+    """deployed_idx 越界 = 解析不出身份 → 不入卖出集合,离场行落
+    unexplained(宁缺勿造:不猜不炸,与 hp 链不可信不入链同纪律)。"""
+    rd = tmp_path / 'replay'
+    rid = 'run_20260908_125000'
+    dep_a = [_dep('椒丘', 1, 'front', 1)]
+    dep_b: list[dict] = []
+    _seg_files(rd, rid, [
+        _dec(rid, 1, 3, '2026-09-08T12:25:00', dep_a,
+             actions=[{'__type__': 'SellDeployed', 'deployed_idx': 11,
+                       'reason': 'valley_rollback'}]),
+        _dec(rid, 1, 3, '2026-09-08T12:25:20', dep_b,
+             actions=[{'__type__': 'StartBattle'}])])
+    a = _build(rd)
+    assert [(d['char'], d['channel']) for d in a['departures']] == \
+        [('椒丘', 'unexplained')]
 
 
 # ===== ③ 通道分键:merge_promoted(同名更高星在场) =====
