@@ -147,6 +147,106 @@ def test_frame_hp_fallback_marks_untrusted(replay: _match_archive_Path):
     assert r['hp_trusted'] is False
 
 
+def test_zero_settlement_segment_self_identified(tmp_path: _match_archive_Path):
+    """零结算段自标识(v11):决策帧在、结算行零的段 → segments[] 带
+    ``settlement_gap``(决策帧数+摘要 claimed 值);有结算段键缺省。
+
+    锁的病灶 = 「rounds_survived=N 且零 outcome 行」曾被判读成「结算遥测
+    断流」(实证 g_20260908_165445 续段 run_20260908_210431:79 决策帧全
+    冻结 p2-r6、全程零战斗、rounds_survived=6;rounds_survived 写自收口
+    时点 state.round_num,备战停滞段带冻结值)。本锁钉装配端契约:零结算
+    是档案里直接可见的事实,判读不再靠跨流推断。"""
+    rd = tmp_path / 'replay'
+    rid_a = 'run_20260908_165445'   # 正常段:2 决策帧 2 结算行
+    rid_b = 'run_20260908_210431'   # 零结算续段:3 决策帧、0 结算行、claimed=6
+    dec = [_dec(rid_a, 2, 5, '2026-09-08T17:40:00'),
+           _dec(rid_a, 2, 6, '2026-09-08T17:44:00'),
+           _dec(rid_b, 2, 6, '2026-09-08T21:05:00'),
+           _dec(rid_b, 2, 6, '2026-09-08T21:10:00'),
+           _dec(rid_b, 2, 6, '2026-09-08T21:15:00')]
+    out = [_out(rid_a, 2, 5, '2026-09-08T17:40:30', 55),
+           _out(rid_a, 2, 6, '2026-09-08T17:44:30', 48)]
+    runs = [{'run_id': rid_a, 'ts': '2026-09-08T18:11:18', 'result': 'stopped',
+             'plane_reached': 2, 'rounds_survived': 6, 'final_hp': 48},
+            {'run_id': rid_b, 'ts': '2026-09-08T21:21:55', 'result': 'stopped',
+             'plane_reached': 2, 'rounds_survived': 6, 'final_hp': 48}]
+    _write_jsonl(rd, 'decisions.jsonl', dec)
+    _write_jsonl(rd, 'outcomes.jsonl', out)
+    _write_jsonl(rd, 'runs.jsonl', runs)
+    games = arch.assign_games(rd)
+    # 段 B 首帧 (2,6) 非 (p1,r1) → 续局并入段 A 所在局(段 B 时序在段 A 后,
+    # 归组语义 = assign_games 时序插位;含后继局的真实流形态由
+    # test_decision_only_segment_groups_to_prior_game_with_later_outcome_game 承接)
+    assert games[0]['segments'] == [rid_a, rid_b]
+    a = arch.build_archive(rd, games[0])
+    by_rid = {s['run_id']: s for s in a['segments']}
+    # 断流形态段:自标识在场,帧数与摘要 claimed 值随行可读
+    assert by_rid[rid_b]['settlement_gap'] == {
+        'decision_frames': 3, 'claimed_rounds_survived': 6}
+    # 正常段(有结算行):键缺省,不过度标注
+    assert 'settlement_gap' not in by_rid[rid_a]
+    # 判读面两端(段摘要列表被审计直读)同步可见
+    assert any(s.get('run_id') == rid_b and 'settlement_gap' in s
+               for s in a['endgame']['segment_summaries'])
+
+
+def test_settlement_gap_skips_empty_and_settled_segments():
+    """``_settlement_gap`` 边界:无决策帧段不标注(空段无判读价值);
+    有任一结算行(含 synthetic_supply 合成/补录来源)即视为有结算记录,
+    不标注——合成行可信度争议归判读侧先验,不在本键重复表达。"""
+    assert arch._settlement_gap([], [], 'r1', None) == {}
+    assert arch._settlement_gap(
+        [], [_out('r1', 1, 1, '2026-09-08T17:40:30', 80)], 'r1', None) == {}
+    assert arch._settlement_gap(
+        [_dec('r1', 1, 1, '2026-09-08T17:40:00')],
+        [_out('r1', 1, 1, '2026-09-08T17:40:30', 80,
+              source='synthetic_supply')],
+        'r1', {'rounds_survived': 1}) == {}
+
+
+def test_decision_only_segment_groups_to_prior_game_with_later_outcome_game(
+        tmp_path: _match_archive_Path):
+    """assign_games 时序插位锁(v11 修,ADR-0615):决策独有段(零结算段)的
+    流内位置由段首 ts 决定——其后有带 outcome 新局入流时,该段仍归其**前局**,
+    不被后局夺走。
+
+    锁的病灶 = 旧法「决策独有段排序后整体补尾」+ 续局归组「并入 games[-1]」
+    无时序门 → 真实流上 run_20260908_210431(09-08 21:04 零结算段)曾被错组
+    到 09-09 05:33 才开局的 g_20260909_053235 名下,锚点档案 g_20260908_
+    165445 静默丢段(v11 bump 触发存量档案重装配时必然显影)。端到端形态:
+    归位后该段 settlement_gap 落在 g_165445 名下。"""
+    rd = tmp_path / 'replay'
+    rid_a = 'run_20260908_165445'    # 前局段(带 outcome)
+    rid_b = 'run_20260908_210431'    # 决策独有段(零结算,时序居中)
+    rid_c = 'run_20260909_053235'    # 后继新局(带 outcome,首帧 (p1,r1))
+    dec = [_dec(rid_a, 2, 5, '2026-09-08T17:40:00'),
+           _dec(rid_a, 2, 6, '2026-09-08T17:44:00'),
+           _dec(rid_b, 2, 6, '2026-09-08T21:05:00'),
+           _dec(rid_c, 1, 1, '2026-09-09T05:33:00')]
+    out = [_out(rid_a, 2, 5, '2026-09-08T17:40:30', 55),
+           _out(rid_a, 2, 6, '2026-09-08T17:44:30', 48),
+           _out(rid_c, 1, 1, '2026-09-09T05:34:00', 82)]
+    runs = [{'run_id': rid_a, 'ts': '2026-09-08T18:11:18', 'result': 'stopped',
+             'plane_reached': 2, 'rounds_survived': 6, 'final_hp': 48},
+            {'run_id': rid_b, 'ts': '2026-09-08T21:21:55', 'result': 'stopped',
+             'plane_reached': 2, 'rounds_survived': 6, 'final_hp': 48},
+            {'run_id': rid_c, 'ts': '2026-09-09T05:40:00', 'result': 'loss',
+             'plane_reached': 1, 'rounds_survived': 1, 'final_hp': 0}]
+    _write_jsonl(rd, 'decisions.jsonl', dec)
+    _write_jsonl(rd, 'outcomes.jsonl', out)
+    _write_jsonl(rd, 'runs.jsonl', runs)
+    games = arch.assign_games(rd)
+    # 决策独有段按段首 ts 插回时序位 → 归前局;后继新局自成一体
+    assert [(g['game_id'], g['segments']) for g in games] == [
+        ('g_20260908_165445', [rid_a, rid_b]),
+        ('g_20260909_053235', [rid_c])]
+    # 端到端:归位后 settlement_gap 落在 g_165445 名下(锚点配对不被重写破坏)
+    a = arch.build_archive(rd, games[0])
+    by_rid = {s['run_id']: s for s in a['segments']}
+    assert by_rid[rid_b]['settlement_gap'] == {
+        'decision_frames': 1, 'claimed_rounds_survived': 6}
+
+
 def test_assemble_game_writes_index_and_no_tmp(replay: _match_archive_Path):
     """装配产物:match_*.json + index.jsonl 一行一局;无 .tmp 残留(原子写)。"""
     a = arch.assemble_game(replay, 'g_20260830_094811')

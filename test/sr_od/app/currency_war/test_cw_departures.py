@@ -72,7 +72,9 @@ def test_swap_sell_departure_unexplained_075840_saber(tmp_path: _P):
         _dec(rid, 1, 1, '2026-09-07T08:00:42', dep_b,
              actions=[{'__type__': 'StartBattle'}])])
     a = _build(rd)
-    assert a['schema_version'] == 10
+    # 版本单一源在 SCHEMA_VERSION(v7 起约定):加法列批次递增版本号,
+    # 字面钉版会随后续加法列批失灵(v11 零结算段自标识批实证)
+    assert a['schema_version'] == arch.SCHEMA_VERSION
     assert a['departures'] == [{
         'run_id': rid, 'plane': 1, 'round': 1,
         'ts': '2026-09-07T08:00:18',
