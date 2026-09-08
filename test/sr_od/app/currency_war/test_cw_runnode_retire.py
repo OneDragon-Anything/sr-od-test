@@ -2,8 +2,9 @@
 
 RunSupplyNode → CwScreenSupplyNode(cw_screen/cw_screen_supply_node.py)、
 RunMegastarNode → CwScreenMegastar 内联(委托壳废止)。本文件锁迁移前后的
-**行为断言一致**:①验证完成才 success(离开节点画面)+ ADR-0264 关态基线
-预置;②仍在节点内 = 做动作 + round_retry(计 node_max_retry_times=8 预算,
+**行为断言一致**:①验证完成才 success(离开节点画面)(原 ADR-0264 关态
+基线预置断言随 gate 模块退役删除,见 test_supply_leaves_node_success 注);
+②仍在节点内 = 做动作 + round_retry(计 node_max_retry_times=8 预算,
 超限框架转 FAIL 交回——预算语义不变);③源码零残留(基类/包路径)。
 """
 from pathlib import Path
@@ -43,12 +44,9 @@ def _make_op(cls, *, in_node: bool, do_action_calls: list):
 
     return _Op()
 
-
-
-
 # ==================== 补给节点流转(行为等价①②) ====================
 
-def test_supply_leaves_node_success(monkeypatch) -> None:
+def test_supply_leaves_node_success() -> None:
     """验证完成才 success:离开补给屏(锚 miss)→ success(节点完成)。
     (gate 清尾批:原「+关态稳定基线预置」断言随 gate 模块退役删除。)"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
@@ -62,7 +60,7 @@ def test_supply_leaves_node_success(monkeypatch) -> None:
     assert actions == []                       # 离开节点 = 不再发动作
 
 
-def test_supply_in_node_act_then_retry(monkeypatch) -> None:
+def test_supply_in_node_act_then_retry() -> None:
     """仍在补给屏 → 做一个动作 + round_retry(计节点预算;不 success)。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
         CwScreenSupplyNode,
@@ -86,7 +84,7 @@ def test_supply_budget_semantics_unchanged() -> None:
 
 # ==================== 巨星流转(行为等价①②) ====================
 
-def test_megastar_leaves_node_success_with_settle(monkeypatch) -> None:
+def test_megastar_leaves_node_success_with_settle() -> None:
     """巨星:overlay 消失 → success(完成承诺 = 固定 1.0s,原委托壳语义)
     (选中标记复位副作用随迁)。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
@@ -103,7 +101,7 @@ def test_megastar_leaves_node_success_with_settle(monkeypatch) -> None:
     assert actions == []
 
 
-def test_megastar_in_node_act_then_retry(monkeypatch) -> None:
+def test_megastar_in_node_act_then_retry() -> None:
     """巨星:仍在 overlay → 一个动作 + round_retry。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
         CwScreenMegastar,

@@ -90,10 +90,12 @@ def test_record_row_empty_without_extra(tmp_path) -> None:
 # ===== cw_screen_prep._record_step 接线 =====
 
 
-def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
-    """P1 活路径步进行:state_of(session).v3_intention 配方对 → record extra。"""
+def _prep_director(monkeypatch, v3_intention) -> dict:
+    """构免 ctx CwScreenPrep + record_decision 捕获桩,驱动一次 _record_step,
+    返回 captured(内含 'extra')。两接线测共用(机械拼接前导消解)。
 
-
+    策略器状态迁 MandateState:v3_* 经 state_of 附着(与生产
+    strategy_state_of 同读 session.strategy_state,桩同效)。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
 
     captured: dict = {}
@@ -105,40 +107,28 @@ def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
     monkeypatch.setattr(recorder, 'record_decision', _fake_record)
     director = object.__new__(CwScreenPrep)   # 免 ctx(纯遥测接线测试)
     director._steps = 0
-    # 策略器状态迁 MandateState:v3_* 经 state_of 附着(桩同效)
     fake_sess = SimpleNamespace(last_owned_equips=[])
     _ms = state_of(fake_sess)
     _ms.v3_formed_stop = False
-    _ms.v3_intention = IntentionState(phase='locked', p1_pair=('仙舟', '列车同行'))
+    _ms.v3_intention = v3_intention
     director._session = lambda: fake_sess   # 实例属性遮蔽方法
-    obs = SimpleNamespace(state=GameState())
-    director._record_step(obs, action=None)  # type: ignore[arg-type]
+    director._record_step(SimpleNamespace(state=GameState()),
+                          action=None)  # type: ignore[arg-type]
+    return captured
+
+
+def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
+    """P1 活路径步进行:v3_intention 配方对 → record extra 透传非空。"""
+    captured = _prep_director(
+        monkeypatch, IntentionState(phase='locked',
+                                    p1_pair=('仙舟', '列车同行')))
     assert captured['extra']['sess_p1_pair'] == '仙舟+列车同行'
     assert captured['extra']['formed_stop'] is False
 
 
 def test_director_record_step_empty_pair_without_intention(monkeypatch) -> None:
     """session 无意向状态机(v3_intention=None)→ extra 空串。"""
-
-
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
-
-    captured: dict = {}
-
-    def _fake_record(state, target_comp, candidate_scores, eval_breakdown,
-                     actions, extra=None, gold_point=True) -> None:
-        captured['extra'] = extra
-
-    monkeypatch.setattr(recorder, 'record_decision', _fake_record)
-    director = object.__new__(CwScreenPrep)
-    director._steps = 0
-    # 策略器状态迁 MandateState:v3_* 经 state_of 附着(桩同效)
-    fake_sess = SimpleNamespace(last_owned_equips=[])
-    _ms = state_of(fake_sess)
-    _ms.v3_formed_stop = False
-    _ms.v3_intention = None
-    director._session = lambda: fake_sess
-    director._record_step(SimpleNamespace(state=GameState()), action=None)  # type: ignore[arg-type]
+    captured = _prep_director(monkeypatch, None)
     assert captured['extra']['sess_p1_pair'] == ''
 
 
@@ -168,6 +158,3 @@ def test_label_matches_intention_serialization_source(pair: tuple) -> None:
     ist = IntentionState(phase='locked' if pair else 'unlocked', p1_pair=pair)
     d = serialize_intention(ist)
     assert schema.p1_pair_label(ist) == '+'.join(d['p1_pair'])
-
-
-from sr_od.application.currency_war.telemetry import state

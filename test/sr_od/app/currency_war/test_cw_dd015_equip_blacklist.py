@@ -99,7 +99,9 @@ def test_fill_plan_respects_dynamic_cap():
 
 
 def test_fill_plan_row_pref_with_fallback():
-    """选排:pref=front 优先前排;首选排满 fallback 另一排;两排皆满停。"""
+    """选排:pref=front 且前排有空 → 直接上前排;首选排满 fallback 另一排;
+    计划中途排尽停(第 3 件不再产计划);两排皆满空计划。计划全值精确断言
+    (空槽恰消费一次不重复——原 no_double_slot 单测断言面被本断言吸收)。"""
     plan = residual_fill_plan(
         held=[2, 5, 7],
         front_empty=[],            # 前排满 → front 件 fallback 后排
@@ -107,22 +109,14 @@ def test_fill_plan_row_pref_with_fallback():
         bench_pos={2: 'front', 5: 'back', 7: 'back'},
         bench_cid={2: '真理医生', 5: '黑塔', 7: '缇宝'},
         deployed_cids=set(), cap=10, deployed_count=0)
-    assert (2, 'back', 3) in plan, 'front 件前排满 → fallback 后排'
-    assert (5, 'back', 4) in plan
-    assert (7, 'back', 4) not in plan or plan[-1][2] != plan[-2][2], '空槽不重复分配'
+    assert plan == [(2, 'back', 3), (5, 'back', 4)]
+    # pref=front 且前排有空 → 直接前排,不 fallback
+    assert residual_fill_plan(
+        held=[2], front_empty=[1], back_empty=[4],
+        bench_pos={2: 'front'}, bench_cid={2: '真理医生'},
+        deployed_cids=set(), cap=10, deployed_count=0) == [(2, 'front', 1)]
     # 两排皆满 → 空计划
     assert residual_fill_plan(
         held=[2], front_empty=[], back_empty=[],
         bench_pos={2: 'back'}, bench_cid={2: '缇宝'},
         deployed_cids=set(), cap=10, deployed_count=0) == []
-
-
-def test_fill_plan_no_double_slot_assignment():
-    """同排多件依次消费不同空槽(计划内互不撞槽)。"""
-    plan = residual_fill_plan(
-        held=[2, 5, 7], front_empty=[], back_empty=[3, 4],
-        bench_pos={2: 'back', 5: 'back', 7: 'back'},
-        bench_cid={2: '缇宝', 5: '黑塔', 7: '银枝'},
-        deployed_cids=set(), cap=10, deployed_count=0)
-    slots = [s for _, _, s in plan]
-    assert len(slots) == len(set(slots)) == 2
