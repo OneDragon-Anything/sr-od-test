@@ -1,8 +1,11 @@
-"""货币战争 策略决策(评估函数 + 贪心)测试 —— 纯逻辑,不依赖游戏/百科数据。
+"""货币战争 决策族单元测试(cw_events / cw_economy / cw_state 阈值与 simulate /
+cw_comps 对齐与供给 / cw_investments 注册表先验)—— 纯逻辑,不依赖游戏/百科数据。
 
-验证 cw_decisions 架构:eval 单调性、plan 硬门(gold≥0 / bench-full 必破 / level≤10)、
-站位分流、3合1升星、凑整吃息跨档、char_quality 计已上阵、事件白名单/dot 主流派、
-economy_mode、boss 克制。用 mock config(SimpleNamespace)避免 config IO。
+覆盖面:economy_score 各分项与 economy_mode、get_node_goal 先验 fallback、
+3合1 升星(simulate 买入路径)、decide_event 全定序族(steering 轴 / ADR-0524
+回落字典序 / ADR-0578 血本位回避 / ADR-0133·0144 注册表先验)、decide_encounter /
+decide_supply 分支、effective_hp_threshold 职级表接线与位面相对序。
+用 mock config(SimpleNamespace)避免 config IO。
 """
 from __future__ import annotations
 
@@ -27,6 +30,8 @@ from sr_od.application.currency_war.kernel.cw_events import (
     decide_supply,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
+    DIFFICULTY_HP_TABLE,
+    HP_SAFE_THRESHOLD,
     BenchChar,
     BuyCard,
     GameState,
@@ -88,18 +93,12 @@ def test_get_node_goal_node_plan_rules() -> None:
     g = get_node_goal(1, 1)
     assert g.target_level == _expected_level(1, 1), "无状态传参 → 先验曲线(非 0126 表)"
     assert g.spend_mode == "adaptive", "fallback spend=adaptive(r69 删表)"
-    # 各位面 fallback 同语义(旧表的 saving/interest/level/allin 档位值不再存在)
-    for pl, rn in ((1, 5), (2, 5), (3, 1), (3, 5)):
+    # 各位面 fallback 同语义(旧表的 saving/interest/level/allin 档位值不再存在);
+    # (4, 1) = plane 越界(CW 3 位面)走同一 fallback 支(原独立 fallback 测并入)
+    for pl, rn in ((1, 5), (2, 5), (3, 1), (3, 5), (4, 1)):
         g = get_node_goal(pl, rn)
         assert g.spend_mode == "adaptive", f"p{pl}r{rn} fallback adaptive"
         assert g.target_level == _expected_level(rn, pl), f"p{pl}r{rn} 先验曲线"
-
-
-def test_get_node_goal_fallback() -> None:
-    """未匹配(plane>3 / round 超区间)→ fallback:target_level=_expected_level, spend_mode=adaptive。"""
-    fb = get_node_goal(4, 1)   # plane 4 无规则(CW 3 位面)→ fallback
-    assert fb.target_level == _expected_level(1, 4)
-    assert fb.spend_mode == "adaptive"
 
 
 def test_economy_mode_effects() -> None:
@@ -139,12 +138,6 @@ def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
                and d.faction == "能量") == 2          # faction 保留
     assert sum(1 for d in dep if d is not None
                and d.faction == "护盾") == 6
-
-
-# —— level_plan 硬 gate(task#18 经济统一论):level_plan 说 level_up + 够钱 → 强制升级 ——
-
-
-
 
 
 # —— deploy 站位 + 3合1 + 凑整吃息 + char_quality 已上阵(review r1 新覆盖)——
@@ -338,54 +331,41 @@ def test_decide_supply_generic_value_when_no_key() -> None:
     assert not pick.refresh
 
 
-# —— optionality_score + α(t)(design 02/03 P1-1 + F-3;纯逻辑)——
-
-
 # —— difficulty → 保血阈值(D-32;ADR-0204 起阈值表为代码常量 cw_state.DIFFICULTY_HP_TABLE)——
 
 
 def test_effective_hp_threshold_fallback_no_difficulty() -> None:
-    """difficulty 未检测("")→ 回退 HP_SAFE_THRESHOLD(40)。"""
+    """difficulty 未检测("")→ 回退 HP_SAFE_THRESHOLD(期望从 kernel 单一源现取)。"""
     s = GameState()  # difficulty 默认 ""
-    assert effective_hp_threshold(s) == 40, "无 difficulty → 默认 40"
+    assert effective_hp_threshold(s) == HP_SAFE_THRESHOLD
 
 
 def test_effective_hp_threshold_override_by_difficulty() -> None:
-    """selected_difficulty="A8" + 表含 A8 → 用覆盖值(高难更早保血)。"""
+    """selected_difficulty="A8" + 表含 A8 → 用覆盖值(高难更早保血;期望=表值现取,
+    校准值本身的现值锚由 test_cw_w443 的 A8 链式锁间接承载)。"""
     s = GameState(selected_difficulty="A8")
-    assert effective_hp_threshold(s) == 55, "A8 表值 55(高难保血地板)"
+    assert effective_hp_threshold(s) == DIFFICULTY_HP_TABLE["A8"]
 
 
 def test_effective_hp_threshold_missing_key_falls_back() -> None:
-    """difficulty="A4" → 表值 40(低难不吃升阶)。"""
-    s = GameState(selected_difficulty="A4")
-    assert effective_hp_threshold(s) == 40, "A4 → 40"
+    """表无此键(OCR 读到未收录职级)→ .get 兜底回退 HP_SAFE_THRESHOLD。
+    (原体断言 A4=40 实为表命中支,与 override 测同支且对兜底分支零判别力——
+    换真缺键 "Z9" 补上该支的判别。)"""
+    s = GameState(selected_difficulty="Z9")
+    assert effective_hp_threshold(s) == HP_SAFE_THRESHOLD
 
 
 def test_effective_hp_threshold_plane_model_ratio() -> None:
-    """P2+ 上浮由首达模型解出(W443 两态标定合一后现语义;ADR-0176 的
-    「上浮」主张随 PLANE_LOSS_SCALE 退役,方向由标定决定):
+    """P2+ 上浮由首达模型解出(W443 两态标定合一后现语义)——本测只锁**位面间
+    相对序**(独家面):位面维在模型内 = P2 别名,但同 tier 同轮次 P3 已到后程
+    (nodes_left 更少)→ 阈值低于 P2。
 
-    - P1:精确零漂移(ratio 分母恒等 → base 原值,M57 行为保持);
-    - 弱板(lv4 → tier0)P2:不上浮(P2 标定 μ0≈13.2 低于 P1 弱板先验
-      μ0=14 → ratio 夹下界 1.0)——「P2 恒更凶」旧先验不回植;
-    - 中板(lv7 → tier2)P2:上浮(μ2≈4.6 > μ1=2.5)且落健康带;
-    - P3 别名 P2 逐位相等(标定域声明);
-    - 强板(lv10)顶 2.0 夹界(P1 分支 μ=0.8 极小)。
+    P2 现值分布(40/74/73/80)与 P1 零漂移由 test_cw_w443_two_state_unification
+    现值锁与结构锚辖,不在此重复(原重复断言按超集留存原则删除)。
     """
-    # P1 零漂移
-    assert effective_hp_threshold(GameState(plane=1, level=4)) == 40
-    # 弱板(lv4 → tier0)P2 不上浮(P1 先验 μ0=14 ≥ P2 标定 μ0)
-    assert effective_hp_threshold(GameState(plane=2, round_num=1, level=4)) == 40
-    # 中板(lv7 → tier2)P2 上浮落健康带
     t_p2 = effective_hp_threshold(GameState(plane=2, round_num=1, level=7))
-    assert 40 < t_p2 <= 80, "中板 P2 上浮(模型导出)"
-    # P3 剩余日程更短(同轮次 P3 已到后程,nodes_left 更少)→ 阈值略低
     t_p3 = effective_hp_threshold(GameState(plane=3, round_num=1, level=7))
-    assert t_p3 < t_p2, "P3 同轮次剩余日程更短 → 所需缓冲更低(位面维=P2 别名)"
-    # 强板(lv10 → tier 满)顶夹界(base×2.0 封顶)
-    t_p2_strong = effective_hp_threshold(GameState(plane=2, round_num=1, level=10))
-    assert t_p2_strong == min(100, 2 * 40), "强板 P2 顶 2.0 夹界"
+    assert t_p3 < t_p2, "P3 同 tier 同轮次剩余日程更短 → 所需缓冲更低"
 
 
 # —— _board_alignment + shop_supply 收紧(梯度语义见 ADR-0105 board penalty)——
@@ -407,31 +387,15 @@ def test_board_alignment_deep_shallow_none() -> None:
 
 
 def test_shop_supply_core_vs_noncore() -> None:
-    """shop_supply 收紧(shop_supply 与 _board_alignment 同批收紧,ADR-0105 spread 修)——
-    核心(form_tiers)阵营在 shop → 1.0;仅非核心 → 0.5。"""
+    """shop_supply 核心判定取 form_tiers 键非 factions 全集(ADR-0105 spread 修同批收紧):
+    仅**非核心**阵营(盛会之星:factions 有、form_tiers 无)在 shop → 0.5 半信号。
+    1.0(core 在 shop)/0.3(board-only)/0.0(都无)三分支由 test_cw_comps
+    shop_supply 组锁,不在此重复(原 core→1.0 断言与其同支同值,已删)。"""
     from sr_od.application.currency_war.kernel.cw_comps import shop_supply
-    # comp: factions=[仙舟,追击,盛会之星],form_tiers={仙舟:5,追击:3} → core={仙舟,追击},盛会之星 非核心
     target = Comp(name="test", factions=["仙舟", "追击", "盛会之星"], core_chars=[],
                   form_tiers={"仙舟": 5, "追击": 3}, strength="S", form_difficulty="medium")
-    # 核心阵营(仙舟)在 shop → 1.0
-    s_core = GameState(shop=[ShopCard(x=1, faction="仙舟", name="", cost=1)])
-    assert shop_supply(target, s_core) == 1.0
-    # 仅非核心(盛会之星)在 shop → 0.5
     s_noncore = GameState(shop=[ShopCard(x=1, faction="盛会之星", name="", cost=1)])
     assert shop_supply(target, s_noncore) == 0.5
-
-
-# ===== D-122 concentration(deployed-lock 防 spread)=====
-
-
-def _mk_card(faction: str, cost: int, name: str = '未知卡') -> ShopCard:
-    return ShopCard(x=500, faction=faction, name=name, cost=cost)
-
-
-# ===== ADR-0125/0127 review 补测(H1 窗口语义 / room-bench / 同名 deploy 去重)=====
-
-def _bc_at(slot, name, star=1, faction='?') -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, faction=faction, star=star)
 
 
 # ===== ADR-0129 购买经验决策(单击价模型替整级大金;升级滞后 live 实锤修复) =====
@@ -530,13 +494,11 @@ def test_economy_reclassified_fields_adr0142() -> None:
 
 # ===== ADR-0133 全量图鉴 ingest + decide_event 注册表先验 =====
 def test_strategy_registry_full_ingest() -> None:
-    """注册表全量 335(plaza API base 334,ADR-0150;+补遗 1,ADR-0133 ingest 体系);
-    长尾经济抽取抽查。"""
+    """注册表长尾经济抽取抽查(ADR-0133 ingest 体系)。全量计数 335 由
+    test_cw_investment.test_adr0150_base_layer_full 锁,不在此重复计数。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
-        INVESTMENT_STRATEGIES,
         get_strategy,
     )
-    assert len(INVESTMENT_STRATEGIES) == 335   # 334(plaza API base,ADR-0150)+1(补遗 追击星徽套组(二))
     s = get_strategy("乱成一锅粥+")
     assert s is not None and s.economy is not None
     assert s.economy.instant_gold == 14 and s.economy.free_refresh_burst == 7
@@ -555,9 +517,9 @@ def test_decide_event_registry_prior() -> None:
     cfg = _cfg()
     st = GameState(board={}, hp=100)
     assert decide_event(["定期福利", "乱成一锅粥+"], cfg, st).option_idx == 0, "评估分高者胜"
-    assert decide_event(["无名甲", "乱成一锅粥+"], cfg, st).option_idx == 1, "评估分(回落域之上) > 未注册 0"
-    # 未注册(0) vs 回落字典序(>0) → 回落胜
-    assert decide_event(["银色无名", "及时雨"], cfg, st).option_idx == 1
+    assert decide_event(["无名甲", "乱成一锅粥+"], cfg, st).option_idx == 1, "评估分 > 未注册 0"
+    # (原「银色无名 vs 及时雨」断言已删:回落域 > 未注册域的交界由
+    #  test_decide_event_fallback_lexicographic pick5 同事实锁定,此处不再双写。)
 
 
 def test_decide_event_fallback_lexicographic() -> None:
@@ -586,18 +548,9 @@ def test_decide_event_fallback_lexicographic() -> None:
 
 
 # ===== ADR-0134 comp 匹配分(星徽套组对齐 target 压倒品质/白名单) =====
-def test_strategy_bindings_extraction() -> None:
-    """绑定派生:追击星徽套组 → (追击, 飞霄);无绑定策略 → 空集(安全回落)。"""
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        get_strategy,
-        strategy_bindings,
-    )
-    fs, cs = strategy_bindings(get_strategy("追击星徽套组"))
-    assert "追击" in fs and "飞霄" in cs
-    fs2, cs2 = strategy_bindings(get_strategy("数值碾压"))
-    assert not fs2 and not cs2, "纯战力无绑定 → 空(回落品质先验)"
-
-
+# (原 test_strategy_bindings_extraction 已删:追击星徽套组绑定精确等值锁在
+#  test_cw_investment.test_adr0151_semantic_bindings_present,无绑定回落支在
+#  test_adr0151_bindings_table_valid —— 两断言面均为其子集/等价。)
 def test_decide_event_comp_match_wins() -> None:
     """星徽套组对齐 target(飞霄)→ comp 命中域压过基准域;不对齐 = 回落字典序(ADR-0524)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
@@ -613,9 +566,9 @@ def test_decide_event_comp_match_wins() -> None:
     # N 定序锁:N=1(65)压回落域与低评估分,但被 N=2(110)压过(N 大者优先)
     pick_n1 = decide_event(["恢复生机", "追击星徽套组"], cfg, st, target_comp=feixiao)
     assert pick_n1.option_idx == 1 and 'comp-hit' in pick_n1.reason, "N≥1 域压过基准域"
-    # 无 target(None)→ 无命中,回落字典序
-    pick3 = decide_event(["无名甲", "乱成一锅粥+"], cfg, st)
-    assert pick3.option_idx == 1
+    # (原「无 target」pick3 已删:同入同判 = registry_prior 第二断言
+    #  (无名甲 vs 乱成一锅粥+,评估分压未注册);且其注释所称「回落字典序」
+    #  与实际断言面不符——本测的不对齐回落面由 pick2 承载。)
 
 
 def test_decide_event_augment_dominance() -> None:
@@ -635,22 +588,15 @@ def test_decide_event_augment_dominance() -> None:
 
 
 def test_env_faction_floor_category_tiers() -> None:
-    """阵营匹配定序门(ADR-0524,16 号稿 §1.3):三档值 = category 定序档位
-    邀请(70)< 契约(72)< 概念股(78);匹配 ⇒ 提到本 category 档位、压过全体
-    env 裸分上界 72;禁读基数——档位序锁在 dict 本体。"""
+    """阵营匹配定序门·档位序锁(ADR-0524,16 号稿 §1.3):三档值 = category
+    定序档位 邀请(70)< 契约(72)< 概念股(78),禁读基数——档位序锁在 dict 本体。
+    「匹配 ⇒ 档位压过全体 env 裸分」行为面由 test_env_pick_value_adr0144
+    (pick3/pick_d)锁,原此处同入同判的重复 pick 已删。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         ENV_FACTION_MATCH_FLOOR,
     )
-    # 档位序锁(定序语义本体)
     assert (ENV_FACTION_MATCH_FLOOR['邀请'] < ENV_FACTION_MATCH_FLOOR['契约']
             < ENV_FACTION_MATCH_FLOOR['概念股']), "category 定序档位:邀请<契约<概念股"
-    cfg = _cfg()
-    st = GameState(board={}, hp=100, hp_readable=True)
-    tgt = Comp(name="t3", factions=["追击"], core_chars=[], form_tiers={"追击": 4},
-               strength="A", form_difficulty="medium")
-    # 匹配 ⇒ 档位压过全体 env 裸分(78 > 上界 72)
-    pick = decide_event(["追击概念股", "彩虹时代"], cfg, st, target_comp=tgt)
-    assert pick.option_idx == 0 and 'env-faction' in pick.reason, "匹配档位 > 裸分上界"
 
 
 
