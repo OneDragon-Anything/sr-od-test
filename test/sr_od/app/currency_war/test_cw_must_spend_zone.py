@@ -87,13 +87,16 @@ class TestZonePredicate:
 
     def test_zone_predicate_bounds(self):
         """G_must = 10×cap_resolved:g 越线 True/等值 False;买断制
-        (cap=0)出辖恒 False。"""
-        sess = _ns_with_state(cw4_cap_override=None)
+        (cap=0)出辖恒 False。注入通道 = session.active_strategies
+        注册表名(ADR-0598 单一源迁移,原 cw4_cap_override 死通道退役)。"""
+        sess = _ns_with_state()
         assert in_must_spend_zone(51, sess) is True
         assert in_must_spend_zone(50, sess) is False
-        buyout = _ns_with_state(cw4_cap_override=0)
+        buyout = _ns_with_state()
+        buyout.active_strategies = ['买断制']
         assert in_must_spend_zone(999, buyout) is False
-        rich = _ns_with_state(cw4_cap_override=10)
+        rich = _ns_with_state()
+        rich.active_strategies = ['利息上调']
         assert in_must_spend_zone(101, rich) is True
         assert in_must_spend_zone(100, rich) is False
 
@@ -194,7 +197,7 @@ class TestPrepL3Zone:
         st.node_type = 'battle'
         sess = SimpleNamespace(cw4_counters={}, target_comp=comp,
                                v3_intention=IntentionState(),
-                               cw4_cap_override=None)
+                               active_strategies=[])
         out = mandate.run_mandate(frame, sess, state=st)
         lv = [e for e in out if isinstance(e.action, LevelUp)]
         assert lv, '备战必花帧停付线让位:LevelUp 仍发射'
@@ -224,7 +227,7 @@ class TestPrepL3Zone:
         st.node_type = 'battle'
         sess = SimpleNamespace(cw4_counters={}, target_comp=comp,
                                v3_intention=IntentionState(),
-                               cw4_cap_override=None)
+                               active_strategies=[])
         out = mandate.run_mandate(frame, sess, state=st)
         lv = [e for e in out if isinstance(e.action, LevelUp)]
         assert lv, '域内停付让位:LevelUp 仍发射(停付被域裁压掉)'
@@ -250,7 +253,7 @@ class TestPrepL3Zone:
         st.node_type = 'battle'
         sess = SimpleNamespace(cw4_counters={}, target_comp=comp,
                                v3_intention=IntentionState(),
-                               cw4_cap_override=None)
+                               active_strategies=[])
         out = mandate.run_mandate(frame, sess, state=st)
         assert not [e for e in out if isinstance(e.action, LevelUp)]
         assert state_of(sess).cw4_counters.get('arm0_level_unreadable') == 1
@@ -273,7 +276,7 @@ class TestPrepL3Zone:
         st.node_type = 'battle'
         sess = SimpleNamespace(cw4_counters={}, target_comp=comp,
                                v3_intention=IntentionState(),
-                               cw4_cap_override=None)
+                               active_strategies=[])
         out = mandate.run_mandate(frame, sess, state=st)
         assert not [e for e in out if isinstance(e.action, LevelUp)]
         assert state_of(sess).cw4_counters.get('crisis_level_spend_defer') is None
@@ -407,7 +410,7 @@ class TestArchiveFrameReplay:
                               ShopCard(x=1260, name='乱破', cost=1, star=1),
                               ShopCard(x=1514, name='阮·梅', cost=2, star=1)])
         sess = SimpleNamespace(cw4_counters={}, target_comp=None,
-                               v3_intention=None, cw4_cap_override=None)
+                               v3_intention=None)
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.card.name == '希儿'
         assert act.reason == 'core_single_card_buy:unlocked'
@@ -430,7 +433,7 @@ class TestArchiveFrameReplay:
                         refresh_probs={'1': 0.45, '2': 0.33, '3': 0.2,
                                        '4': 0.02, '5': 0.0})
         sess = SimpleNamespace(cw4_counters={}, target_comp=None,
-                               v3_intention=None, cw4_cap_override=None)
+                               v3_intention=None)
         act = _decide(st, sess)
         assert isinstance(act, LevelUpShop), (gold, act)
         assert act.auth_basis == 'm3_batch:must_spend'
@@ -486,8 +489,7 @@ class TestArchiveFrameReplay:
         sess = _ns_with_state(
             cw4_counters={}, target_comp=get_comp('希儿量子'),
             v3_intention=SimpleNamespace(phase='locked',
-                                         locked_comp='希儿量子'),
-            cw4_cap_override=None)
+                                         locked_comp='希儿量子'))
         assert in_must_spend_zone(50, sess) is False
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'm2_stockpile'
@@ -534,8 +536,7 @@ class TestArchiveFrameReplay:
         sess = _ns_with_state(
             cw4_counters={}, target_comp=get_comp('希儿量子'),
             v3_intention=SimpleNamespace(phase='locked',
-                                         locked_comp='希儿量子'),
-            cw4_cap_override=None)
+                                         locked_comp='希儿量子'))
         act = _decide(st, sess)
         assert isinstance(act, RefreshShop)
         assert act.reason == 'must_spend_r1_yielded'

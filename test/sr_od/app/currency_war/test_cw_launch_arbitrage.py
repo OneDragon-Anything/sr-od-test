@@ -41,9 +41,14 @@ from sr_od.application.currency_war.kernel.cw_state import (
 
 
 def _session(gold_frame: int, *, cap_override: int | None = None):
-    """最小 session 桩:策略状态(计数器 + cap 覆写)+ 期望态黑板。"""
-    st = SimpleNamespace(cw4_cap_override=cap_override, cw4_counters={})
-    sess = SimpleNamespace(strategy_state=st,
+    """最小 session 桩:策略状态(计数器)+ 息帽覆写注入 + 期望态黑板。
+
+    注入通道 = session.active_strategies 注册表名(ADR-0598 单一源迁移;
+    registry 可达值域 = 未持卡/买断制 0)。cap_override=5(=缺省档语义)
+    由空持卡承载,与注册表不可达的裸 5 注入等值。"""
+    strategies = {0: ['买断制']}.get(cap_override, [])
+    sess = SimpleNamespace(active_strategies=list(strategies),
+                           strategy_state=SimpleNamespace(cw4_counters={}),
                            shop_state_frame=SimpleNamespace(gold=gold_frame))
     return sess
 

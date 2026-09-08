@@ -597,7 +597,7 @@ class TestR196Wiring:
         for _ in range(3):
             proof.update_line_state(session, comps[0], [], [])   # dwell=2 ≥ D_min
 
-        def _fake_e(comp, state, registry=None):
+        def _fake_e(comp, state, registry=None, session=None):
             return 20.0 if comp.name == comps[0].name else 1.0
         monkeypatch.setattr(cw_line_switch, 'e_rounds', _fake_e)
         out = proof.should_switch(GameState(gold=30), session, None, None)
@@ -619,7 +619,7 @@ class TestR196Wiring:
     def test_e_cur_undefined_counted(self, monkeypatch):
         from sr_od.application.currency_war.kernel import cw_line_switch
 
-        def _boom(comp, state, registry=None):
+        def _boom(comp, state, registry=None, session=None):
             raise RuntimeError('degenerate')
         monkeypatch.setattr(cw_line_switch, 'e_rounds', _boom)
         self._inject_switch_params()
@@ -643,7 +643,7 @@ class TestR196Wiring:
             proof.update_line_state(session, cur, [], [])
         e_map = {cur.name: 20.0, alt.name: 1.0}
 
-        def _fake_e(comp, state, registry=None):
+        def _fake_e(comp, state, registry=None, session=None):
             return e_map[comp.name]
         monkeypatch.setattr(cw_line_switch, 'e_rounds', _fake_e)
         # 构造切换:alt 显著更优 ⇒ 事件真
@@ -1415,7 +1415,7 @@ def _mk_prep_reward_frame(node):
     st.level_up_cost = 4
     sess = SimpleNamespace(cw4_counters={}, target_comp=None,
                            v3_intention=IntentionState(),
-                           cw4_cap_override=None)
+                           active_strategies=[])
     return frame, sess, st
 
 

@@ -165,7 +165,7 @@ def test_schedule_predictive_even_when_fee_unaffordable() -> None:
     「付得起才排」会造 R* 塌缩 → 义务花光 → 更排不上的贫穷循环。"""
     st = _state(gold=51, level=7)
     assert schedule_upgrade(st, _locked_4cost_sess())
-    assert reserve_cap(st, _locked_4cost_sess(), _REG) > 50
+    assert reserve_cap(st, _locked_4cost_sess()) > 50
 
 
 def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
@@ -273,34 +273,37 @@ def test_pair_eviction_keeps_target_chain_materialized() -> None:
 
 
 def test_injection_consistency_single_registry_source() -> None:
-    """注入一致性锁(W636 A):三接缝(schedule/refresh_ev_budget/
-    reserve_cap)显式注入同一非默认 registry 时行为同变,prep_brain.
-    _budget 装配的 BudgetView 与显式注入的接缝值逐字段一致——禁
-    「部分字段落 DEFAULT」的双源混用(P6 契约)。cap 归一重锚
-    (ADR-0516):schedule 的 ② 前置息线已归一到 session resolved 链,
-    registry 注入只辖 refresh_ev_budget/reserve_cap 预算面(见体内注)。"""
+    """注入一致性锁(W636 A):prep_brain._budget 装配的 BudgetView 与
+    显式注入的接缝值逐字段一致——禁「部分字段落 DEFAULT」的双源混用
+    (P6 契约)。cap 归一(ADR-0516 三源归一 + ADR-0598 随批扩展):
+    schedule ② 前置息线与预算面守息线分量(reserve_cap floor/
+    BudgetView.interest_floor/refresh_ev_budget 溢余面)都随 session
+    resolved 链(session.active_strategies 注入面,registry 可达值域
+    = 买断制 0/开源节流 9/利息上调 10)移动,registry.interest_cap
+    注入不再移动任何息线。锁语义重推(锁存在性纪律,ADR-0598):旧锁
+    「注入面 cw4_cap_override=4(registry 不可达值)压过 registry 旋钮」
+    随死通道退役重写为「买断制(可达值 0)在排程前置与预算面同帧
+    生效,registry 旋钮双臂逐位不动」——判别结构(链动/旋钮不动)
+    保形。"""
     import dataclasses
     reg2 = dataclasses.replace(_REG, interest_cap=4)
-    # cap 归一(ADR-0516 cap 三源归一):schedule_upgrade ② 前置息线随
-    # session resolved 链(cap_resolved_of_session)移动,registry.
-    # interest_cap 注入不再移动它——gold 45 对 resolved cap 5(息线 50)
-    # 不排程,注入 reg2(cap 4)同样不排程;session 注入面
-    # cw4_cap_override=4 ⇒ resolved 息线 40,gold 45 排程
     st1 = _state(gold=45, level=7, r=5)
     sess = _locked_4cost_sess()
     assert not schedule_upgrade(st1, sess, _REG)
-    assert not schedule_upgrade(st1, sess, reg2)
+    assert not schedule_upgrade(st1, sess, reg2)   # registry 旋钮不动 resolved 链
     sess_ov = _locked_4cost_sess()
-    state_of(sess_ov).cw4_cap_override = 4   # 注入面迁 MandateState
-    assert schedule_upgrade(st1, sess_ov)
-    assert refresh_ev_budget(st1, sess, reg2) > refresh_ev_budget(
-        st1, sess, _REG)   # 息线下移 → 排程开+溢余面变化,预算随之
-    # gold 96:默认 R*=50+lv7 升级金(52)=102 → 零预算;注入 R*=40+52=92
-    # → 正预算(lv5 旧帧随 U_L 重锚帧上移,数字按帧现算)
+    sess_ov.active_strategies = ['买断制']   # 注册表可达覆写 cap=0 → 息线 0
+    assert schedule_upgrade(st1, sess_ov)    # gold 45 ≥ 息线 0 → ② 前置过
+    assert refresh_ev_budget(st1, sess, reg2) == refresh_ev_budget(
+        st1, sess, _REG)   # registry 旋钮对预算逐位惰性(ADR-0598 归一)
+    # 预算面同链:R* 守息线分量随 resolved cap 动(买断制 floor=0+费
+    # < 默认 50+费),registry 旋钮不动;gold 96:默认 R*=50+lv7 升级金
+    #(52)=102 → 零预算;买断制 R*=0+52=52 → 正预算(lv5 旧帧随 U_L
+    # 重锚帧上移,数字按帧现算)
     st2 = _state(gold=96, level=7, r=5)
-    assert reserve_cap(st2, sess, reg2) < reserve_cap(st2, sess, _REG)
+    assert reserve_cap(st2, sess_ov) < reserve_cap(st2, sess)
     assert refresh_ev_budget(st2, sess, _REG) == 0
-    assert refresh_ev_budget(st2, sess, reg2) > 0
+    assert refresh_ev_budget(st2, sess_ov) > 0
     # BudgetView 装配单源:传入 reg2 的 BudgetView == 逐字段显式注入值
     from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
         _budget,
@@ -308,12 +311,14 @@ def test_injection_consistency_single_registry_source() -> None:
     from sr_od.application.currency_war.strategies.impl.mandate_v1.economy_cycle import (
         obligation,
     )
-    bv = _budget(st2, sess, reg2)
-    assert bv.interest_floor == 40
-    assert bv.reserve_cap == reserve_cap(st2, sess, reg2)
-    assert bv.obligation == obligation(st2, sess, reg2)
-    assert bv.schedule == schedule_upgrade(st2, sess, reg2)
-    assert bv.ev_auth == refresh_ev_budget(st2, sess, reg2)
+    bv = _budget(st2, sess_ov, reg2)
+    assert bv.interest_floor == 0   # resolved 链(买断制)压过 registry 旋钮
+    assert bv.reserve_cap == reserve_cap(st2, sess_ov)
+    assert bv.obligation == obligation(st2, sess_ov, reg2)
+    assert bv.schedule == schedule_upgrade(st2, sess_ov, reg2)
+    assert bv.ev_auth == refresh_ev_budget(st2, sess_ov, reg2)
+    bv_base = _budget(st2, sess, reg2)
+    assert bv_base.interest_floor == 50   # registry cap=4 不再移动预算面息线
 
 
 def test_tracking_view_isolated_from_session_writers() -> None:

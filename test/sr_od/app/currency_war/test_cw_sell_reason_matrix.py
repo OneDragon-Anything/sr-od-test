@@ -242,7 +242,7 @@ class TestEmissionFace:
         not_needed、血线不动 ⇒ 凑息让位,筹资卖出线外燃料(发射行为
         不变);plain 分键计数与 'funding_support' 填充已拆。"""
         sess = _sess()
-        state_of(sess).cw4_cap_override = 0
+        sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         act = decide_shop_action(_state(1, [_bc(_FUEL, slot=1)]), sess,
                                  SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench)
@@ -282,7 +282,7 @@ class TestEmissionFace:
         k = ('目标件',)
         # plain:9 个互异线外 1★ 燃料,victim = 序首。
         sess = _sess()
-        state_of(sess).cw4_cap_override = 0
+        sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         bench = [_bc(f'燃料{i}', slot=i) for i in range(1, 10)]
         frame = mandate.MandateFrame(
             gold=30, level=3, bench=bench, deployed=[], deploy_cap=4,
@@ -296,7 +296,7 @@ class TestEmissionFace:
         assert sells[0].reason == 'm4_fuel_sell'
         # T3 特化:8 张 3★ 非燃料 + 唯一被保垫件 ⇒ victim = 垫件。
         sess2 = _sess()
-        state_of(sess2).cw4_cap_override = 0
+        sess2.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         assert sell_gate.register_launch(sess2, '垫保F',
                                          cause='stall_protect', round_num=2)
         bench2 = [_bc(f'高价{i}', star=3, slot=i) for i in range(1, 9)]
@@ -323,7 +323,7 @@ class TestEmissionFace:
         )
         strat = MandateV1Strategy()
         sess = _sess()
-        state_of(sess).cw4_cap_override = 0
+        sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         st = _state(0, [_bc('填充燃料F', slot=1)])
         obs = PrepObservation(state=st,
                               bench_chars=[_bc('填充燃料F', slot=1)],
@@ -346,7 +346,7 @@ class TestEmissionFace:
         )
         strat = MandateV1Strategy()
         sess = _sess()
-        state_of(sess).cw4_cap_override = 0
+        sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         st = _state(1, [_bc(_TRANS_HOLD, slot=1)])   # cost=2 → 退 2 ≥ 缺口 3−1
         obs = PrepObservation(state=st, bench_chars=[_bc(_TRANS_HOLD, slot=1)],
                               deployed_chars=[], deploy_vacancy=0)

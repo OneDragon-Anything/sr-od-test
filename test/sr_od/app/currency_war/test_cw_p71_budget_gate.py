@@ -91,7 +91,7 @@ def _state(gold: int, level: int, *, xp: tuple[int, int] = (0, 6),
 def _sess():
     return SimpleNamespace(cw4_counters={}, target_comp=_comp(),
                            v3_intention=IntentionState(),
-                           cw4_cap_override=None)
+                           active_strategies=[])
 
 
 class TestRhoPublicSource:

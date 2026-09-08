@@ -133,7 +133,7 @@ def _arb_op(monkeypatch: pytest.MonkeyPatch, *, prep_hit: bool = True,
         cw_op_open_shop,
     )
 
-    st = SimpleNamespace(cw4_cap_override=None, cw4_counters={})
+    st = SimpleNamespace(cw4_counters={})
     sess = SimpleNamespace(strategy_state=st,
                            shop_state_frame=SimpleNamespace(gold=gold))
     calls = {'open': 0, 'close': 0, 'waves': 0}

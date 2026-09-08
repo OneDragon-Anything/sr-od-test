@@ -394,7 +394,7 @@ class TestT115PrepInterestEmit:
             SellBench,
         )
         sess = _prep_session()
-        state_of(sess).cw4_cap_override = 0
+        sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         out = mandate_run(_prep_frame(9, [_bc('燃料件A', slot=1)]), sess,
                           _prep_state(9))
         assert not [e for e in out if isinstance(e.action, SellBench)]
@@ -502,7 +502,7 @@ class TestT115DeadGoldPressBuy:
         其余既有买面(如 T5 止血买,自有息纪律)不在本锁辖域。"""
         st = self._shop_frame(11, [_card('廉价杂件', cost=1)])
         sess = self._shop_sess()
-        state_of(sess).cw4_cap_override = 0
+        sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
         if isinstance(act, BuyCard):
             assert act.reason != 'dead_gold_press_buy'

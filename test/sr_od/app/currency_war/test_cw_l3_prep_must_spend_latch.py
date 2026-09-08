@@ -57,7 +57,7 @@ def _mk(gold: int, *, hp: int = 1, level: int = 7,
     st.level_up_cost = click_cost
     sess = SimpleNamespace(cw4_counters={}, target_comp=None,
                            v3_intention=IntentionState(),
-                           cw4_cap_override=None)
+                           active_strategies=[])
     return frame, sess, st
 
 

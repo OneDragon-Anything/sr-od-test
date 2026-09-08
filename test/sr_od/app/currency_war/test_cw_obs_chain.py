@@ -169,9 +169,11 @@ def test_reconcile_star_regression_pending_self_heals():
 
 
 def test_plane_table_smoke():
-    """cw_plane_table 冒烟(批 3:标定表模块随 DP 退役平移;
-    息闭式边界锁逐位保留)。"""
-    from sr_od.application.currency_war.kernel.cw_plane_table import interest
+    """cw_plane_table 冒烟(批 3:标定表模块随 DP 退役平移)。原息闭式
+    边界锁随死码 ``plane_table.interest`` 删除退役(ADR-0598 随批清理:
+    与 kernel cw_economy.interest 同形双源、零生产调用),等值边界由
+    kernel 息闭式单一源承载。"""
+    from sr_od.application.currency_war.kernel.cw_economy import interest
     assert interest(49) == 4
     assert interest(50) == 5
 

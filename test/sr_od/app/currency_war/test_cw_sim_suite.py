@@ -1214,15 +1214,16 @@ def test_doc_covers_all_gamestate_fields() -> None:
 
 
 def test_tier_counts_match_declared_reconciliation() -> None:
-    """三档+已接计数与文档头对账声明一致(18+12+6+5=41,ADR-0286 +deploy_cap;批㉖ F1 +enemy_difficulty_live、契约包 C1 步2 +action_log、ADR-0428 +hp_trusted、M2 obs 修复 +level_readable)。"""
+    """三档计数与文档头对账声明一致(18+12+6=36;ADR-0286 +deploy_cap;批㉖ F1 +enemy_difficulty_live、契约包 C1 步2 +action_log、ADR-0428 +hp_trusted、M2 obs 修复 +level_readable;2026-09-08 死字段清理删 5 个恒缺省「结构未建」占位字段 → 41→36,该档撤档)。"""
     rows = _tier_rows()
     counts = {k: len(v) for k, v in rows.items()}
-    assert sum(counts.values()) == len(fields(GameState)) == 41
+    assert sum(counts.values()) == len(fields(GameState)) == 36
     assert any('已接线' in k for k in counts) and counts[
         next(k for k in counts if '已接线' in k)] == 18
     assert counts[next(k for k in counts if '必须接线' in k)] == 12
     assert counts[next(k for k in counts if '观测冗余' in k)] == 6
-    assert counts[next(k for k in counts if '结构未建' in k)] == 5
+    # 「结构未建」档已撤(2026-09-08 死字段清理):文档不再有该节;
+    # 复现需求随依赖结构建设时按新字段流程重立,届时此锁随批加档。
 
 
 # ==================== shop_odds ====================

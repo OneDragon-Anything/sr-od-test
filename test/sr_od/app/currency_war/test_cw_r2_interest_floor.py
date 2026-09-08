@@ -149,7 +149,7 @@ class TestR2InterestFloor:
         cap=10(息律投资语境)下金 80 < 100+ρ ⇒ 拒(50 非域常数,
         dd-026 备选 2「拍常数」禁案的判别锁)。"""
         comp, st, sess = self._frame(80)
-        state_of(sess).cw4_cap_override = 10
+        sess.active_strategies = ['利息上调']   # ADR-0598 注入面迁移
         acts = _decide(st, sess)
         assert not [a for a in acts if isinstance(a, RefreshShop)]
 

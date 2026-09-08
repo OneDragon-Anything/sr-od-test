@@ -32,7 +32,6 @@ import pytest
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
 )
-from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     GameState,
@@ -167,7 +166,7 @@ class TestBudgetDisclosureWriteRead:
         st = state_of(sess)
         # 独立重算:同输入投影确定 ⇒ 与 _budget 内部同值(非转抄 turn)
         state = decision_state(snap, sess)
-        expected_cap = kernel_reserve_cap(state, sess, DEFAULT_REGISTRY)
+        expected_cap = kernel_reserve_cap(state, sess)
         assert st.v3_reserve_cap == turn.budget.reserve_cap
         assert st.v3_reserve_cap == expected_cap
         assert st.v3_reserve_overflow == max(

@@ -244,7 +244,7 @@ class TestS2Lifecycle:
         st.bench = bench
         sess = _sess()
         state_of(sess).target_comp = comp
-        state_of(sess).cw4_cap_override = 0
+        sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移
         decide_shop_action(st, sess, _NS(ev_arm='skeleton_only'))
         s2 = state_of(sess).cw4_shop_wanted_pending
         assert s2 is not None and s2[0] == (st.plane, st.round_num) \
