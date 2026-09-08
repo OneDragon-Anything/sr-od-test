@@ -6,7 +6,7 @@ from __future__ import annotations
 
 
 
-from types import SimpleNamespace as _r363_audit_p0_SimpleNamespace
+from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.operations.cw_loop import CwLoop
@@ -56,19 +56,24 @@ def _make_stop_loop(*, summary_written: bool = False,
 
     class _Loop(bl.CwLoop):
         def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
+            self.op_name = '收口桩loop'
+            self.op_callback = None   # 基类 after_operation_done 尾部读取
             self._summary_written = summary_written
             # (W971 05-battle §1 P4:hp/轮计数真值源收编进 SettlementState,
             #  收口经 self._settle 读——桩同形。)
-            self._settle = _r363_audit_p0_SimpleNamespace(
+            self._settle = SimpleNamespace(
                 last_outcome_hp=last_outcome_hp, rounds_done=rounds_done)
-            self.ctx = _r363_audit_p0_SimpleNamespace(
-                cw_match=_r363_audit_p0_SimpleNamespace(
-                    session=_r363_audit_p0_SimpleNamespace(
+            self.ctx = SimpleNamespace(
+                cw_match=SimpleNamespace(
+                    session=SimpleNamespace(
                         last_state=GameState(plane=plane, round_num=round_num,
                                              hp=hp, hp_readable=hp_readable),
                     ),
                 ),
-                run_context=_r363_audit_p0_SimpleNamespace(is_context_stop=stopped),
+                run_context=SimpleNamespace(is_context_stop=stopped),
+                # 基类 after_operation_done 会调 ctx.unlisten_all_event(self)
+                # (事件监听清理);SimpleNamespace 桩补 no-op 满足该依赖面。
+                unlisten_all_event=lambda *_a, **_k: None,
             )
 
     return _Loop()
@@ -138,11 +143,11 @@ def test_stop_summary_skips_true_fake_run(monkeypatch, tmp_path) -> None:
     class _GhostLoop(bl.CwLoop):
         def __init__(self):  # noqa: D107 桩:bypass __init__
             self._summary_written = False
-            self._settle = _r363_audit_p0_SimpleNamespace(
+            self._settle = SimpleNamespace(
                 last_outcome_hp=None, rounds_done=0)
-            self.ctx = _r363_audit_p0_SimpleNamespace(
-                cw_match=_r363_audit_p0_SimpleNamespace(session=None),
-                run_context=_r363_audit_p0_SimpleNamespace(is_context_stop=True),
+            self.ctx = SimpleNamespace(
+                cw_match=SimpleNamespace(session=None),
+                run_context=SimpleNamespace(is_context_stop=True),
             )
 
     op = _GhostLoop()
@@ -162,20 +167,33 @@ def test_stop_summary_no_duplicate_on_second_call(monkeypatch, tmp_path) -> None
     assert len(read_jsonl(tmp_path / 'runs.jsonl')) == 1
 
 
-def test_after_operation_done_wires_summary_write() -> None:
-    """弱锁保底:after_operation_done 真调 _write_terminal_summary_if_needed(收口接线)。"""
-    import inspect
+def test_after_operation_done_wires_summary_write(monkeypatch, tmp_path) -> None:
+    """收口接线行为锁:after_operation_done 真调收口(execute() 全路径必达位,
+    成功/失败/停止三路共达)。失守事故 = MCP stop 后 loop() 不再被调,
+    runs 缺行([RUNS-GAP] 哨兵四局连报,生产 cw_loop.after_operation_done
+    docstring 实锤)——本锁红 = 接线再次脱落。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_wire_1')
+    op = _make_stop_loop()
+    op.after_operation_done(SimpleNamespace(success=True, status='测试收口'))
+    rows = read_jsonl(tmp_path / 'runs.jsonl')
+    assert len(rows) == 1 and rows[0]['result'] == 'stopped'
 
-    from sr_od.application.currency_war.operations import cw_loop
-    src = inspect.getsource(cw_loop.CwLoop.after_operation_done)
-    assert '_write_terminal_summary_if_needed()' in src
 
-
-def test_terminal_summary_triggers_archive_assemble() -> None:
-    """弱锁(P4R4):补写收口连带按局存档装配——非正常终局的 runs 行
-    此前没有装配机会 → 对局档案缺该局(run_20260903_004418 实证)。"""
-    import inspect
-
-    from sr_od.application.currency_war.operations import cw_loop
-    src = inspect.getsource(cw_loop.CwLoop._write_terminal_summary_if_needed)
-    assert 'assemble_pending' in src
+def test_terminal_summary_triggers_archive_assemble(monkeypatch, tmp_path) -> None:
+    """补写收口连带按局存档装配(行为锁;P4R4 出处:非正常终局的 runs 行
+    此前没有装配机会 → 对局档案缺该局,run_20260903_004418 实证)——
+    spy 装配入口,红 = 装配连带脱落。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    from sr_od.application.currency_war.telemetry import match_archive
+    calls: list = []
+    monkeypatch.setattr(match_archive, 'assemble_pending',
+                        lambda replay_dir: calls.append(replay_dir))
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_asm_1')
+    op = _make_stop_loop()
+    op._write_terminal_summary_if_needed()
+    assert calls == [tmp_path]

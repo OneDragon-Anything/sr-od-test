@@ -16,7 +16,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
+from sr_od.application.currency_war.data.cw_shop_odds import (
+    expected_refreshes_for_card,
+    refresh_prob,
+)
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     get_comp,
@@ -100,11 +103,6 @@ class TestR2InterestFloor:
         出域)、目标 j=2 差 1 张(账 ≈19 金)⇒ 金 ≥80 时 R1 必过,
         R2 成唯一门。视界先验(9,5,7)。
         """
-        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.data.cw_shop_odds import (
-            expected_refreshes_for_card,
-        )
-
         comp = _comp()
         members = _members(comp)
         target = min(

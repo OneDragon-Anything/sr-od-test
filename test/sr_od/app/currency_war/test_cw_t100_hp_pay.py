@@ -147,31 +147,39 @@ _HP_PAY_SUBSTR_KEYS: tuple[str, ...] = ('hp_pay', 'hp_delta')
 _HP_PAY_WORD_KEYS: tuple[str, ...] = ('basis',)
 
 
+def _guard_key_hits(text: str) -> list[str]:
+    """守卫判据单一实现(主扫描与变异自检共用,防自检复刻判据)。"""
+    hits = [name for name in _HP_PAY_SUBSTR_KEYS if name in text]
+    hits += [name for name in _HP_PAY_WORD_KEYS
+             if re.search(rf'\b{name}\b', text)]
+    return hits
+
+
 def test_hp_pay_keys_not_consumed_by_decision_modules():
     """hp_pay 遥测键禁现于决策面(strategies/impl 全子树扫描,零白名单
     ——决策判据消费 hp_pay = 把「建模期望账」当支付真值读,违反遥测禁入
     决策输入禁令(ADR-0577 §隔离申报);写点/装配消费面分别在
     prep_actions 与 telemetry,均不在扫描根)。盲区自检:扫描根失准 =
-    假绿,先证根在且非空;变异自检:每个键对合成坏形必须可检出。"""
+    假绿,先证根在且非空;变异自检:判据函数对合成坏形必须可检出,
+    auth_basis 合法在册键必须不误伤。"""
     root = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
             / 'application' / 'currency_war' / 'strategies' / 'impl')
     sentinel = root / 'mandate_v1' / 'mandate.py'
     assert sentinel.is_file(), f'扫描根解析失准:{root}'
     scanned = list(root.rglob('*.py'))
     assert len(scanned) >= 20, f'扫描文件数异常({len(scanned)}),根可能错位'
-    for name in _HP_PAY_SUBSTR_KEYS:
-        assert name in f"x('{name}')", f'变异自检未命中:{name}'
-    assert re.search(r'\bbasis\b', 'x.basis = 0'), '变异自检未命中:basis'
+    # 变异自检:正例两键可检出;auth_basis 在册键不误伤(word 边界在
+    # 下划线处不成立,天然排除)。
+    assert _guard_key_hits("x('hp_pay') r['hp_delta']") == \
+        ['hp_pay', 'hp_delta'], '变异自检未命中'
+    assert _guard_key_hits('self.auth_basis = "record"') == [], \
+        '变异自检:auth_basis 被误伤'
     offenders: dict[str, str] = {}
     for path in scanned:
         rel = path.relative_to(root).as_posix()
         text = path.read_text(encoding='utf-8')
-        for name in _HP_PAY_SUBSTR_KEYS:
-            if name in text:
-                offenders[f'{rel}:{name}'] = name
-        for name in _HP_PAY_WORD_KEYS:
-            if re.search(rf'\b{name}\b', text):
-                offenders[f'{rel}:{name}'] = name
+        for name in _guard_key_hits(text):
+            offenders[f'{rel}:{name}'] = name
     assert not offenders, (
         'hp_pay 遥测键被决策面引用(禁令 = ADR-0577:血购回执纯观测,'
         f'禁回写 state.hp/session.last_hp_real/预算门):{offenders}')

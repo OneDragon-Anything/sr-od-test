@@ -14,6 +14,8 @@ gate_post_collapse(gate 桩段)/ gate_fixtures 三段随模块删除;保留的
 """
 from __future__ import annotations
 
+import inspect
+
 # ==================== gate_flags ====================
 
 from sr_od.application.currency_war.currency_war_config import CurrencyWarConfig
@@ -24,7 +26,6 @@ def test_gate_flags_removed() -> None:
     flag 回流 = 死代码复活(双路径维护+组合爆炸)。"""
     src_attrs = [a for a in vars(CurrencyWarConfig) if a.startswith('gate_')]
     assert not src_attrs, f'gate flag 已删不得回流: {src_attrs}'
-    import inspect
     init_src = inspect.getsource(CurrencyWarConfig.__init__)
     assert 'self.gate_' not in init_src, '__init__ 不得再读 gate flag'
     save_src = inspect.getsource(CurrencyWarConfig.save)
@@ -131,8 +132,6 @@ def test_prep_round_entry_collapse_once(monkeypatch) -> None:
 #  test_star_hook_gated 三条纯在场锁删除(纪律 8:hasattr/标识符在源=实现的
 #  影子);钩子门控行为面由各钩子的行为测辖定。)
 
-import inspect as _r330_hook_gates_inspect
-
 
 def test_bookcard_stop_hook_removed() -> None:
     """bookcard 确认停机钩子退役(2026-08-30 开启语义确认,自动处理链接管):
@@ -140,7 +139,7 @@ def test_bookcard_stop_hook_removed() -> None:
     (原锁 r133→r330「钩子过帧态门」钉的是停机语义,钩子删除后语义换新。
     2026-09-03 瘦身批:三个肯定式在场断言删除,否定墓碑保留。)"""
     from sr_od.application.currency_war.obs import cw_identity_obs
-    src = _r330_hook_gates_inspect.getsource(cw_identity_obs.read_bench_chars)
+    src = inspect.getsource(cw_identity_obs.read_bench_chars)
     assert 'bookcard_confirm' not in src   # 停机钩子段已删
 
 
@@ -153,14 +152,19 @@ from sr_od.application.currency_war.kernel.cw_survey19_hooks import (  # noqa: E
 )
 
 
-def test_p9_encounter_tier_context_dependent() -> None:
-    """遭遇档评分场合依赖:同 −4,边际局高分/大胜局≈0;位面无放大
-    (ADR-0519:P1 尖峰 ×1.5 系数未证退役,保守缺省 = 位面中性)。"""
-    edge = encounter_tier_score(100, -4, gap=0, plane=2)
-    blow = encounter_tier_score(100, -4, gap=-80, plane=2)
-    p1 = encounter_tier_score(100, -4, gap=0, plane=1)
-    assert edge > blow
-    assert p1 == edge   # ADR-0519:P1 尖峰放大已退役
+def test_p9_forwards_to_marginal_value() -> None:
+    """遭遇档评分 = cw_difficulty.marginal_value 纯转发委托(同参同值)。
+    评分语义(场合依赖/ADR-0519 位面中性/地板溢出)由 test_cw_difficulty
+    对 marginal_value 直测辖;此处只锁转发委托零漂移——包装改第二实现
+    或换判据(同参不同值)即红,不再重复锁被转发方的行为。"""
+    from sr_od.application.currency_war.kernel.cw_difficulty_account import (
+        marginal_value,
+    )
+    for d_now, d_delta, gap, plane in ((100, -4, 0, 2),
+                                       (100, -4, -80, 2),
+                                       (100, -4, 0, 1)):
+        assert encounter_tier_score(d_now, d_delta, gap=gap, plane=plane) == \
+            marginal_value(d_now, d_delta, gap=gap, plane=plane)
 
 
 def test_p1_wear_discipline() -> None:
