@@ -84,6 +84,76 @@ def _cur(plane: int, round_num: int, gold: int = 53) -> GameState:
                      hp=100)
 
 
+def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
+                                tmp_path: Path, disclose_impl) -> tuple[
+        list, object, object]:
+    """锁 F 行为腿共用离线宿主(零真实副作用;离线手法同
+    test_cw_shop_refresh)。替身面 = run_buy_waves 段顶消费面(读屏/帧
+    留证/决策源/遥测单例全替身):决策源首动作即 CloseShop 终结,循环
+    只走入口观察组装段一次;段顶读屏 gold=10 非零(跳过 gold 救援重读
+    支),shop/bench 默认空 → 停机钩子/占槽对拍支不可达,帧留证不落盘。
+    返回 (warned, rr, outcome);disclose_impl 替换店开帧披露写点
+    (接线点为函数内 lazy import,每次调用取模块属性,monkeypatch 即
+    生效)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards as buy_mod
+    from sr_od.application.currency_war.kernel.cw_state import CloseShop
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        CurrencyWarMatch,
+        StrategySession,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        assembly as assembly_mod,
+    )
+    from sr_od.application.currency_war.telemetry import recorder as rec_mod
+    from sr_od.application.currency_war.telemetry import state as tel_state
+
+    # 遥测单例隔离(shop_snapshots 行落 tmp_path;recorder 读 session 的
+    # 唯一通道 = _CTX_MATCH_REF)。
+    monkeypatch.setattr(tel_state, '_RECORDER',
+                        rec_mod.TelemetryRecorder(enabled=True,
+                                                  replay_dir=tmp_path))
+    monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', 't1host')
+    monkeypatch.setattr(tel_state, '_defect_seen', {})
+    monkeypatch.setattr(tel_state, '_defect_seen_run', '')
+
+    class _CloseShopStrategy:
+        """替身决策源:首动作即 CloseShop 终结(段顶接线段后立即收工)。"""
+
+        def decide_shop_action(self, session, config) -> CloseShop:
+            return CloseShop()
+
+    match = CurrencyWarMatch(_CloseShopStrategy(), StrategySession())
+    monkeypatch.setattr(tel_state, '_CTX_MATCH_REF', [match])
+
+    class _Op:
+        """离线宿主替身:run_buy_waves 消费面仅 ctx/screenshot/park_cursor。"""
+
+        ctx = SimpleNamespace(current_instance_idx=1)
+
+        def screenshot(self) -> bytes:
+            return b''
+
+        def park_cursor(self, after_wait: float = 0.0) -> None:
+            pass
+
+    monkeypatch.setattr(buy_mod, 'read_game_state',
+                        lambda *a, **k: _cur(1, 8, 10))
+    monkeypatch.setattr(buy_mod, 'save_decision_frame', lambda *a, **k: None)
+    monkeypatch.setattr(buy_mod, 'shop_card_click_points', lambda ctx: [])
+    monkeypatch.setattr(buy_mod, 'area_center', lambda *a, **k: (0, 0))
+    monkeypatch.setattr(buy_mod.time, 'sleep', lambda s: None)
+    monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',
+                        lambda idx: SimpleNamespace(strategy_id='mandate_v1',
+                                                    ev_arm=''))
+    monkeypatch.setattr(assembly_mod, 'disclose_budget_at_shop_frame',
+                        disclose_impl)
+    warned: list = []
+    monkeypatch.setattr(buy_mod.log, 'warning',
+                        lambda *a, **k: warned.append(a))
+    rr, outcome = buy_mod.run_buy_waves(_Op(), match, None, False, False)
+    return warned, rr, outcome
+
+
 # ===== 锁 C:写读闭环锁(主锁)=====
 
 class TestBudgetDisclosureWriteRead:
@@ -109,10 +179,14 @@ class TestBudgetDisclosureWriteRead:
         assert st.v3_reserve_overflow > 0
         assert st.v3_release_budget > 0
 
-    def test_recorder_row_keys_non_none_and_match_state(self):
-        """recorder 行组装:sess_* 四键非 None 且与状态字段一致(读链
-        写点两端对齐;T-84 修的读口在本锁钉「有真值可读」)。tmp 捕获
-        _append,零真实 .debug 写入。"""
+    def test_recorder_row_keys_non_none_and_match_state(
+            self, monkeypatch: pytest.MonkeyPatch):
+        """recorder 行组装:sess_* 五键与状态字段一致且非 None(读链写点
+        两端对齐;T-84 修的读口在本锁钉「有真值可读」)。写端走真生产链
+        (assemble 装配点 + accrue 执行回执)= sess_* 行族 rule 13 的
+        生产链路腿。捕获替身钉 _append,零真实 .debug 写入;模块槽
+        monkeypatch 自动还原(_CTX_MATCH_REF 是 recorder 读 session 的
+        唯一通道,w603 汇点先例)。"""
         from sr_od.application.currency_war.telemetry import recorder as rec_mod
         from sr_od.application.currency_war.telemetry import state as telstate
         from sr_od.application.currency_war.telemetry.recorder import (
@@ -129,20 +203,10 @@ class TestBudgetDisclosureWriteRead:
         rec = TelemetryRecorder(replay_dir='unused', enabled=False)
         rec._append = lambda name, payload: captured.append(
             (name, dict(payload)))   # noqa: SLF001 测试捕获替身
-        # 模块槽替换 + finally 复原(零真实 .debug 写入;_CTX_MATCH_REF
-        # 是 recorder 读 session 的唯一通道,w603 汇点先例)。
-        orig_get = telstate.get_recorder
-        orig_ref = telstate._CTX_MATCH_REF
-        orig_run = telstate._CURRENT_RUN_ID
-        try:
-            telstate.get_recorder = lambda: rec
-            telstate._CTX_MATCH_REF = [_StubMatch(sess)]
-            telstate._CURRENT_RUN_ID = 't88-lock-c'
-            rec_mod.record_decision(_cur(1, 8), '', {}, {}, [], extra=None)
-        finally:
-            telstate.get_recorder = orig_get
-            telstate._CTX_MATCH_REF = orig_ref
-            telstate._CURRENT_RUN_ID = orig_run
+        monkeypatch.setattr(telstate, 'get_recorder', lambda: rec)
+        monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [_StubMatch(sess)])
+        monkeypatch.setattr(telstate, '_CURRENT_RUN_ID', 't88-lock-c')
+        rec_mod.record_decision(_cur(1, 8), '', {}, {}, [], extra=None)
         assert captured, 'decisions 行未捕获'
         row = dict(captured[0][1])
         assert row.get('sess_reserve_cap') == st.v3_reserve_cap
@@ -185,8 +249,9 @@ class TestShopOpenFrameDualWrite:
     def test_shop_open_frame_overwrites_with_frame_values(self):
         """店开观察帧覆写:overflow/budget 变帧现值(gold 64 > cap ⇒
         溢余 14/义务 >0);同轮重复覆写不清 spent(轮界清零归 prep 键戳
-        独占);下轮 prep 关店帧 ⇒ 键戳翻轮清零 + 关店 0 语义恢复
-        (decisions 行 sess_* = 最近一次写点值语义)。"""
+        独占);下轮 prep 关店帧 ⇒ 关店 0 语义恢复(decisions 行 sess_*
+        = 最近一次写点值语义;键戳翻轮清零断言面 = 锁 D 主锁,此处
+        不重复)。"""
         sess = StrategySession()
         # ① prep 关店帧(轮入口装配)
         assemble(self._closed_snap(1, 8, 64), sess)
@@ -203,10 +268,9 @@ class TestShopOpenFrameDualWrite:
         st.v3_release_spent = 4
         disclose_budget_at_shop_frame(shop_state, sess)
         assert st.v3_release_spent == 4
-        # ④ 下轮 prep 关店帧:键戳翻轮清零 + 关店 0 语义恢复
+        # ④ 下轮 prep 关店帧:陈旧店开溢余被装配写点复位(独有判别面:
+        # F1 新会话构造测不到「覆写后再复位」;翻轮清零语义归锁 D)
         assemble(self._closed_snap(1, 9, 64), sess)
-        assert st.v3_release_spent == 0
-        assert st.v3_disclosure_key == (1, 9)
         assert st.v3_reserve_overflow == 0
 
 
@@ -302,110 +366,46 @@ class TestReleaseSpentAccrual:
         assert strategy_state_of(sess) is st
 
 
-def test_shop_frame_disclosure_wired_into_run_buy_waves():
-    """接线锁(结构形态,先例 = test_cw_r336_batch4_locks 模块级/体内
-    断言):``run_buy_waves`` 段顶必须调用店开帧披露写点——删调用块 =
-    本锁红(锁 F 行为腿直调薄壳只证「函数对」,本锁证「接到商店循环」,
-    二者合取才是完整接线证明)。钉两件事:①调用在位(烟雾容忍档,docstring
-    引锚⑤失守事故);②位次 = 店开帧落黑板(shop_state_frame 写点)之后。
-    债注(三审 T1③):②仍是源码文本锁容忍档——首现下标比较只证「文本
-    先后」不证运行时序,黑板写点改名/披露调用挪出本函数时依赖①兜底报红。
-    原「实参形态正则」「源码含 log 字面串」两枚实现形状锁已移除(三审
-    T1②④,README 规则 8):实参契约由锁 F 直调覆盖,降级留痕由
-    ``test_shop_frame_disclosure_failure_degrades_with_warning`` 行为锁
-    承接。"""
-    import inspect
+def test_shop_frame_disclosure_wired_after_blackboard_write(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """接线行为锁(T-88 店开帧第二写点;锚⑤失守事故防线):``run_buy_waves``
+    段顶必须调用店开帧披露写点,且调用时点黑板已落本访问融合帧——spy
+    在调用时点读 session.shop_state_frame,非 None = 披露消费的是决策
+    循环同源的已融合帧。锁 F 直调薄壳腿只证「函数对」,本锁证「接到
+    商店循环且位次在黑板写点后」,二者合取才是完整接线证明。原「call
+    in src」文本烟雾 + 「.index() 文本次序锁」整形为本行为锁(瘦身批
+    2026-09-08:文本形态不证运行时序,且变量改名/调用挪行等合法重构
+    即假红,README 规则 8)——删调用块或挪到黑板写前 = 本锁红。"""
 
-    from sr_od.application.currency_war.operations.cw_op import (
-        cw_op_buy_cards,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        assembly,
-    )
+    seen_frames: list = []
 
-    assert hasattr(assembly, 'disclose_budget_at_shop_frame'), \
-        '薄壳符号不存在(被改名/拆除)'
-    src = inspect.getsource(cw_op_buy_cards.run_buy_waves)
-    call = 'disclose_budget_at_shop_frame('
-    assert call in src, 'run_buy_waves 未调用店开帧披露写点(接线断裂)'
-    assert src.index('match.session.shop_state_frame = state') \
-        < src.index(call), '调用位次漂移:应在店开帧落黑板之后'
+    def _spy(state, session, registry=None) -> None:
+        seen_frames.append(getattr(session, 'shop_state_frame', None))
+
+    _warned, rr, outcome = _run_buy_waves_offline_host(monkeypatch, tmp_path,
+                                                       _spy)
+    assert len(seen_frames) == 1, \
+        f'店开帧披露写点调用次数异常({len(seen_frames)}):接线断裂/漂移'
+    assert seen_frames[0] is not None, \
+        '披露调用时点黑板未落帧(次序漂移:应在 shop_state_frame 写点后)'
+    assert rr is None and outcome is not None, '商店循环未正常收工'
 
 
 def test_shop_frame_disclosure_failure_degrades_with_warning(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """行为锁(原④字面串锁整形,三审 T1④):披露覆写失败 → log.warning
     降级留痕、不外抛中断商店循环(遥测 best-effort 契约;锚⑤缺陷无声
-    复发防线)。触发法 = 薄壳符号 monkeypatch 成抛错 + 最小替身面驱动
-    ``run_buy_waves`` 段顶接线段(读屏/帧留证/决策源/遥测单例全替身,
-    零真实副作用;离线宿主手法同 test_cw_shop_refresh),断言 warning
-    被调且循环正常收工——log 措辞/写法漂移不再假红。"""
-    import sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards as buy_mod
-    from sr_od.application.currency_war.kernel.cw_state import CloseShop
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        CurrencyWarMatch,
-        StrategySession,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        assembly as assembly_mod,
-    )
-    from sr_od.application.currency_war.telemetry import recorder as rec_mod
-    from sr_od.application.currency_war.telemetry import state as tel_state
+    复发防线)。触发法 = 薄壳符号 monkeypatch 成抛错,经共用离线宿主
+    驱动 ``run_buy_waves`` 段顶接线段,断言 warning 被调且循环正常收工
+    ——log 措辞/写法漂移不再假红。"""
 
-    # 遥测单例隔离(零真实 .debug 写入;test_cw_shop_refresh 同款四件套 +
-    # recorder 读 session 的唯一通道 _CTX_MATCH_REF)。
-    monkeypatch.setattr(tel_state, '_RECORDER',
-                        rec_mod.TelemetryRecorder(enabled=True,
-                                                  replay_dir=tmp_path))
-    monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', 't1degrade')
-    monkeypatch.setattr(tel_state, '_defect_seen', {})
-    monkeypatch.setattr(tel_state, '_defect_seen_run', '')
-
-    class _CloseShopStrategy:
-        """替身决策源:首动作即 CloseShop 终结(段顶接线段后立即收工)。"""
-
-        def decide_shop_action(self, session, config) -> CloseShop:
-            return CloseShop()
-
-    match = CurrencyWarMatch(_CloseShopStrategy(), StrategySession())
-    monkeypatch.setattr(tel_state, '_CTX_MATCH_REF', [match])
-
-    class _Op:
-        """离线宿主替身:run_buy_waves 消费面仅 ctx/screenshot/park_cursor。"""
-
-        ctx = SimpleNamespace(current_instance_idx=1)
-
-        def screenshot(self) -> bytes:
-            return b''
-
-        def park_cursor(self, after_wait: float = 0.0) -> None:
-            pass
-
-    # 段顶读屏替身:gold=10 非零(跳过 gold 救援重读支);shop/bench 默认
-    # 空 → 停机钩子/占槽对拍支不可达。帧留证不落盘。
-    monkeypatch.setattr(buy_mod, 'read_game_state',
-                        lambda *a, **k: _cur(1, 8, 10))
-    monkeypatch.setattr(buy_mod, 'save_decision_frame', lambda *a, **k: None)
-    monkeypatch.setattr(buy_mod, 'shop_card_click_points', lambda ctx: [])
-    monkeypatch.setattr(buy_mod, 'area_center', lambda *a, **k: (0, 0))
-    monkeypatch.setattr(buy_mod.time, 'sleep', lambda s: None)
-    monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',
-                        lambda idx: SimpleNamespace(strategy_id='mandate_v1',
-                                                    ev_arm=''))
-
-    # 触发 except 路径:薄壳符号抛错(接线点是函数内 lazy import,每次
-    # 调用取模块属性,monkeypatch 即生效)。
     def _boom(*a, **k):
         raise RuntimeError('t1 注入:披露覆写失败')
 
-    monkeypatch.setattr(assembly_mod, 'disclose_budget_at_shop_frame', _boom)
-    warned: list = []
-    monkeypatch.setattr(buy_mod.log, 'warning',
-                        lambda *a, **k: warned.append(a))
-
-    _rr, outcome = buy_mod.run_buy_waves(_Op(), match, None, False, False)
+    warned, rr, outcome = _run_buy_waves_offline_host(monkeypatch, tmp_path,
+                                                      _boom)
     assert warned, '披露覆写失败未走 log.warning 降级(静默 no-op 回归)'
-    assert _rr is None and outcome is not None, \
+    assert rr is None and outcome is not None, \
         '降级未收工:披露失败不应中断商店循环'
 
 
