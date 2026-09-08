@@ -991,7 +991,7 @@ def test_auto_pool_quarantine_same_judgment(tmp_path: _defense_Path) -> None:
 
 
 def test_auto_pool_normal_run_source_taken(tmp_path: _defense_Path) -> None:
-    """auto 池放行锁(F1 反向):纯正常 run_ 源在 _pool_from_replay
+    """auto 池放行锁:纯正常 run_ 源在 _pool_from_replay
     照常配对入池——隔离只辖 fake_/sim_ 前缀与显式名单,禁扩大化
     误伤生产局(run_ 前缀是生产局唯一历史形态,注册表核实)。"""
     groups = [_defense_delta_row('run_20260908_074522', 100, 88)]
