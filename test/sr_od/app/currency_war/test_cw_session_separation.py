@@ -102,7 +102,6 @@ def test_mandate_v1_create_state_override() -> None:
     工厂容忍 config=None(sim 注入桩面),且不携带 live 初值
     (v3_phase FORM 由 create_session 唯一冷建口写入,ADR-0583;
     sim 直调工厂产物恒 '' 保 sim 旧读数)。"""
-    from sr_od.application.currency_war.strategies.impl.flow import CwFlowStrategy
     from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
         MandateV1Strategy,
     )
@@ -112,9 +111,9 @@ def test_mandate_v1_create_state_override() -> None:
     ms = MandateV1Strategy().create_state(None)
     assert isinstance(ms, MandateState)
     assert ms.v3_phase == '', '工厂产物不得携带 live 初值 FORM(归冷建口)'
-    # 覆写落点 = CwFlowStrategy(流程核;本类留 abstract,经类直调验实现)
-    assert isinstance(
-        CwFlowStrategy.create_state(SimpleNamespace(), None), MandateState)
+    # 覆写落点断言(原 CwFlowStrategy 类直调句)已删:与上一断言调同一
+    # 函数对象(MandateV1Strategy 经继承无 create_state 覆写),仅换接收者,
+    # 证明的「工厂不依赖 self」无生产消费面(生产恒经实例继承路径调用)。
 
 
 def test_create_session_sole_cold_build_entry_l4() -> None:
@@ -157,17 +156,9 @@ def test_base_create_state_default_none() -> None:
     assert CwStrategy.create_state(SimpleNamespace(), None) is None
 
 
-def test_create_session_wires_state() -> None:
-    """create_session 接线(session.md §5.1):产出 session 即带当局
-    MandateState(manager/sim/replay/直调全创建路径同源)。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-        MandateV1Strategy,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-        MandateState,
-    )
-    sess = MandateV1Strategy().create_session(None)
-    assert isinstance(sess.strategy_state, MandateState)
+# 原 test_create_session_wires_state 已删:断言面(create_session 产物
+# strategy_state isinstance MandateState)是 test_create_session_sole_cold_
+# build_entry_l4 首段断言(L134)的真子集,同文件择一取超集。
 
 
 # ===== 策略状态工厂注入槽(_STATE_FACTORY 模块级全局;测试纪律第 4 条)=====

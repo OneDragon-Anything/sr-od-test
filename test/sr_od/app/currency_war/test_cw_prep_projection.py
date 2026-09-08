@@ -36,6 +36,12 @@ def _obs(state: GameState | None = None) -> PrepObservation:
     return PrepObservation(state=state, free_bench_slots=2)
 
 
+def _obs_with_boxes() -> PrepObservation:
+    obs = _obs()
+    obs.boxes = [(2, 'p2'), (5, 'p5'), (7, 'p7')]
+    return obs
+
+
 # ===== F2:SellBench state 侧金账 =====
 
 
@@ -76,6 +82,8 @@ def test_sellbench_projection_empty_slot_no_gold_change() -> None:
     out = d._project_prep_obs(SellBench(slot=5), obs)
     assert out is not None
     assert out.state is not None and out.state.gold == 10
+    assert out.free_bench_slots == 3, (
+        '空槽卖出席位数照 +1(投影不校验提案合法性,守卫在执行侧)')
 
 
 # ===== F3:OpenBox/OpenTome 按 action.slot 摘 =====
@@ -85,19 +93,11 @@ def test_openbox_projection_removes_named_slot() -> None:
     """OpenBox(slot=5) 摘槽 5 的箱,非恒摘首件;slot 缺号帧列表原样
     (无该槽 = 无对象可摘)。"""
     d = _director()
-    obs = _obs()
-    obs.boxes = [(2, 'p2'), (5, 'p5'), (7, 'p7')]
-    out = d._project_prep_obs(OpenBox(slot=5), obs)
+    out = d._project_prep_obs(OpenBox(slot=5), _obs_with_boxes())
     assert out is not None
     assert [b[0] for b in out.boxes] == [2, 7]
     out2 = d._project_prep_obs(OpenBox(slot=9), _obs_with_boxes())
     assert [b[0] for b in out2.boxes] == [2, 5, 7]
-
-
-def _obs_with_boxes() -> PrepObservation:
-    obs = _obs()
-    obs.boxes = [(2, 'p2'), (5, 'p5'), (7, 'p7')]
-    return obs
 
 
 def test_openbox_projection_none_slot_first() -> None:
