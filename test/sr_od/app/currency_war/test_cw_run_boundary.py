@@ -11,9 +11,10 @@ tmp_path,禁写真 .debug/。setup 桩清单(方案审 攻击面7 点名):
   start_run/_append 方法的 AttributeError 面。
 
 锁面(方案 §4.1;L5 悬空防护与 L2 第三分支同 gate 分支,按 README 规则 7
-「重复断言构成删/并理由」并入 L2,场景命名保留):
-L1 幂等认领 / L2 换局重铸三分支(含悬空防护形态)/ L3 选卡前铸造主锁 /
-L4 冷启动零行消灭 / L6 loop 构造认领(入口已铸 open run + 同容器不重铸)
+「重复断言构成删/并理由」并入 L2,场景命名保留;原 L4 冷启动零行为 L3
+断言面真子集,同规则并入 L3):
+L1 幂等认领 / L2 换局重铸三分支(含悬空防护形态)/ L3 选卡前铸造主锁
+(兼辖冷启动首局)/ L6 loop 构造认领(入口已铸 open run + 同容器不重铸)
 / L7 复位正规入口(reset_run_state 清 run 态簇,含难度列/简报缓冲——
 三审报告-第三波.md F3,易失产物待 ADR 回填)/ L8 假局 teardown 复位链
 × 后续部分桩化 ensure(组合复位锁;出处 .debug/temp/currency_war/attacks/
@@ -145,7 +146,9 @@ def test_invest_row_before_loop_claim_lands_on_entry_run(
         _isolated_state: Path) -> None:
     """L3 选卡前铸造主锁(S12 病灶序列):ensure(m) → record_invest_cards
     ('env', …) → 再次 ensure(m)(模拟 loop 认领)→ 落盘行 run_id == 入口
-    run_id 且 current_run_id 未变。回归(行盖上局戳/丢失)= 红。"""
+    run_id 且 current_run_id 未变。回归(行盖上局戳/丢失)= 红。
+    首个 ensure 即冷启动铸造(分支①,桩面 _CURRENT_RUN_ID 为空起步),
+    兼辖「冷启动首局 env 行落盘」(原独立冷启动测为断言面真子集,已并)。"""
     m = SimpleNamespace(session=None)
     rid_entry = state_mod.ensure_run_started(m, 'A8')
     recorder_mod.record_invest_cards('env', [
@@ -158,20 +161,6 @@ def test_invest_row_before_loop_claim_lands_on_entry_run(
     assert rows[0]['run_id'] == rid_entry, (
         '开局 env 行必须归属入口铸造的 run(修前行盖上局戳/首局被丢)')
     assert state_mod.current_run_id() == rid_entry
-
-
-def test_cold_start_first_match_writes_env_row(
-        _isolated_state: Path) -> None:
-    """L4 冷启动零行消灭:run_id 空起步 → ensure → env 行落盘(修前
-    ``record_invest_cards`` 空 run 门直接 return,首局零行)。"""
-    assert state_mod.current_run_id() == ''
-    m = SimpleNamespace(session=None)
-    rid = state_mod.ensure_run_started(m, 'A8')
-    recorder_mod.record_invest_cards('env', [
-        {'idx': 0, 'name': '乙', 'x': 600, 'effect_text': '',
-         'chosen': False}])
-    rows = _invest_rows(_isolated_state)
-    assert len(rows) == 1 and rows[0]['run_id'] == rid
 
 
 def test_loop_construction_claims_entry_minted_run(

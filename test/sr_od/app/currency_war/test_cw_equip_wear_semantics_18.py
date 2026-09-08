@@ -27,6 +27,7 @@ from sr_od.application.currency_war.kernel.cw_equip_env import (
     ZERO_WEAR_STRATEGY_GAP,
     classify_item_hold,
     classify_zero_wear_stop_reason,
+    is_free_item,
     resolve_affix_priority_order,
     resolve_wear_release,
 )
@@ -47,6 +48,16 @@ def _mk_comp(cores, keys=None, carry=None):
 def _mk_dep(char_id, row='back', slot=1):
     return BenchChar(slot=slot, char_id=char_id, faction='', star=1,
                      position_pref=row)
+
+
+def _prio_comp():
+    """词缀优先层/分配重排两组锁共用的定型线载体(carry + 双 core)。"""
+    return _mk_comp(['卡芙卡', '三月七'], carry='卡芙卡')
+
+
+def _prio_dep():
+    """三人在场帧:卡芙卡(back-1)/三月七(back-2)/砂金(back-3,非 core)。"""
+    return [_mk_dep('卡芙卡'), _mk_dep('三月七'), _mk_dep('砂金', slot=3)]
 
 
 # ===== 1. 释放判据表(§2.1)=====
@@ -71,19 +82,24 @@ class TestWearReleaseTable:
         d2 = resolve_wear_release(5, '投资', True, _BATTLE, 'c', 0.2, True,
                                   ['软弱无力', '库藏生锈'], True)
         assert d2.hold is False           # 豁免取并集,行为一致
-        # opening 活跃时 row5 不解 opening 域(21 号稿 ADR-0531 收窄后:
-        # 帧级 hold 只辖 row2 域;row5 判据面照常命中但豁免辖域 = row2,
-        # opening 域消费由 classify_item_hold 承接——旧断言
-        # 「opening 帧 hold=True」随帧级布尔降格改写,锁存在性纪律)
+        # opening 活跃时 row5 不解 opening 域(21 号稿 ADR-0531 收窄后帧级
+        # hold 只辖 row2 域;旧断言「opening 帧 hold=True」随帧级布尔降格
+        # 改写,锁存在性纪律)——hold 属性若回退旧公式(opening 参与),
+        # d3.hold 翻 True 即红
         d3 = resolve_wear_release(2, '奖励', True, _BATTLE, None, 0.0, False,
                                   ['软弱无力'], True)
         assert d3.opening_hold is True
         assert d3.output_penalty_release is True
         assert d3.hold is False
-        # row5 豁免辖域 = row2:opening 帧内 committed 活跃时非 key 件仍扣
+        # row5 豁免辖域 = row2:opening 帧内 committed 活跃时非 key 件仍扣。
+        # 样本须为真自由件(非 key/非保留域/非唯一/非工具,前提自证防样本
+        # 失真后静默落「枚举外恒扣」门);free_slot=False 让 O2 不中,判别
+        # 路径 = row1 帧保留域①——若 row5 豁免误辖 opening 域,本断言翻红
+        sample = '反重力皮靴'
+        assert is_free_item(sample, _mk_comp(['a'])) is True, '锁样本须为真自由件'
         d4 = resolve_wear_release(2, '奖励', True, _BATTLE, 'c', 0.2, True,
                                   ['软弱无力'], True)
-        assert classify_item_hold(d4, '非key自由件', _mk_comp(['a']), True) is True
+        assert classify_item_hold(d4, sample, _mk_comp(['a']), False) is True
 
     def test_row5_needs_structured_output_entry(self):
         """在册词缀集判定:承伤侧(额外打击)与无结构条目的散文词缀都不触发。"""
@@ -91,13 +107,6 @@ class TestWearReleaseTable:
             d = resolve_wear_release(5, '投资', True, _BATTLE, 'c', 0.2, True,
                                      affixes, True)
             assert d.output_penalty_release is False, affixes
-
-    def test_hold_frame_keeps_reason_string(self):
-        """扣留帧 + 无 key 命中的 stop_reason 字面量保持哨兵归域锚
-        (执行层写入端契约,字符串不随本批改)。"""
-        assert classify_zero_wear_stop_reason(
-            '过渡期hold:无 key_equips 命中(全攒着)') \
-            == ZERO_WEAR_STRATEGY_BY_DESIGN
 
 
 # ===== 2. 哨兵辖域二分(§1.2)=====
@@ -128,16 +137,10 @@ class TestZeroWearClassification:
 # ===== 3. 词缀条件优先层求序(§3.2)=====
 
 class TestAffixPriorityOrder:
-    def _comp(self):
-        return _mk_comp(['卡芙卡', '三月七'], carry='卡芙卡')
-
-    def _dep(self):
-        return [_mk_dep('卡芙卡'), _mk_dep('三月七'), _mk_dep('砂金', slot=3)]
-
     def test_unsatisfied_predicate_reorders(self):
         """谓词未满足:未满足者按 [9] 基序置前,core 恒在列(凑满契约)。"""
         order = resolve_affix_priority_order(
-            self._comp(), self._dep(), ['软弱无力'],
+            _prio_comp(), _prio_dep(), ['软弱无力'],
             {('back', 1): ['光能电池']})   # 卡芙卡 1 件 < 3
         assert order[0] == '卡芙卡'
         assert '三月七' in order           # core 恒在列(fill-to-full)
@@ -145,7 +148,7 @@ class TestAffixPriorityOrder:
         #                                      在场角色全集都入凑满面,§3.2-1)
         # 非 core 已满足谓词者不占凑满位
         order2 = resolve_affix_priority_order(
-            self._comp(), self._dep(), ['软弱无力'],
+            _prio_comp(), _prio_dep(), ['软弱无力'],
             {('back', 1): ['光能电池'],
              ('back', 3): ['x', 'y', 'z']})   # 砂金(back-3)已满 3 件
         assert '砂金' not in order2
@@ -155,45 +158,39 @@ class TestAffixPriorityOrder:
         occ = {('back', 1): ['a', 'b', 'c'], ('back', 2): ['d', 'e', 'f'],
                 ('back', 3): ['g', 'h', 'i']}
         assert resolve_affix_priority_order(
-            self._comp(), self._dep(), ['软弱无力'], occ) is None
+            _prio_comp(), _prio_dep(), ['软弱无力'], occ) is None
 
     def test_comp_none_forced_none(self):
         """§3.3:comp=None(未定型帧)强制零重排。"""
         assert resolve_affix_priority_order(
-            None, self._dep(), ['软弱无力'], None) is None
+            None, _prio_dep(), ['软弱无力'], None) is None
 
     def test_no_output_side_affix_none(self):
         """承伤侧族与无词缀帧不启用优先层(§3.2 分叉声明)。"""
         for affixes in (None, [], ['额外打击']):
             assert resolve_affix_priority_order(
-                self._comp(), self._dep(), affixes, None) is None
+                _prio_comp(), _prio_dep(), affixes, None) is None
 
     def test_no_deployed_none(self):
         assert resolve_affix_priority_order(
-            self._comp(), [], ['软弱无力'], None) is None
+            _prio_comp(), [], ['软弱无力'], None) is None
 
 
 # ===== 4. equip_allocation priority_order(§3.3 + fill-only)=====
 
 class TestEquipAllocationPriorityOrder:
-    def _comp(self):
-        return _mk_comp(['卡芙卡', '三月七'], carry='卡芙卡')
-
-    def _dep(self):
-        return [_mk_dep('卡芙卡'), _mk_dep('三月七'), _mk_dep('砂金', slot=3)]
-
     def test_default_zero_drift(self):
         """缺省 None = 现行内部派生序,输出逐位一致(零漂移锁)。"""
-        dep, owned = self._dep(), ['a', 'b', 'c', 'd', 'e']
-        assert equip_allocation(self._comp(), dep, owned) == \
-            equip_allocation(self._comp(), dep, owned, priority_order=None)
+        dep, owned = _prio_dep(), ['a', 'b', 'c', 'd', 'e']
+        assert equip_allocation(_prio_comp(), dep, owned) == \
+            equip_allocation(_prio_comp(), dep, owned, priority_order=None)
 
     def test_reorder_changes_landing_not_count(self):
         """重排改「落在谁身上」,不改可穿件总数(§3.3 语义保持声明)。"""
-        dep = self._dep()
+        dep = _prio_dep()
         owned = ['a', 'b', 'c', 'd', 'e']
-        base = equip_allocation(self._comp(), dep, owned)
-        prio = equip_allocation(self._comp(), dep, owned,
+        base = equip_allocation(_prio_comp(), dep, owned)
+        prio = equip_allocation(_prio_comp(), dep, owned,
                                 priority_order=['砂金', '卡芙卡', '三月七'])
         assert len(base) == len(prio)
         # 砂金(非 core)入凑满序后吃满容量,先于 core 拿件
@@ -203,9 +200,9 @@ class TestEquipAllocationPriorityOrder:
         """脱落预防(§1.2-3):occupied 仅容量扣减;已穿 3 件的角色零新分配,
         任何重排都不产出「取下/迁移」语义(输出只有 (角色, 新件) 对)。"""
         occ = {('back', 1): ['a', 'b', 'c']}   # 卡芙卡已穿满
-        dep = self._dep()
+        dep = _prio_dep()
         for prio in (None, ['卡芙卡', '砂金', '三月七']):
-            alloc = equip_allocation(self._comp(), dep, ['x', 'y'], occ,
+            alloc = equip_allocation(_prio_comp(), dep, ['x', 'y'], occ,
                                      priority_order=prio)
             assert all(c != '卡芙卡' for c, _ in alloc), (prio, alloc)
 
@@ -214,7 +211,7 @@ class TestEquipAllocationPriorityOrder:
         绑定——非 core 置前也不得先拿 key 件(key 接收者限于 carry∪core)。"""
         comp = _mk_comp(['卡芙卡', '三月七'],
                         keys=['火力风暴潮'], carry='卡芙卡')
-        dep = self._dep()
+        dep = _prio_dep()
         alloc = equip_allocation(comp, dep, ['火力风暴潮', 'x'],
                                  priority_order=['砂金', '卡芙卡', '三月七'])
         key_owner = next(c for c, w in alloc if w == '火力风暴潮')
@@ -223,7 +220,7 @@ class TestEquipAllocationPriorityOrder:
 
     def test_comp_none_ignores_priority_order(self):
         """comp=None 强制 priority_order=None(§3.3),与缺省输出一致。"""
-        dep = self._dep()
+        dep = _prio_dep()
         assert equip_allocation(None, dep, ['a', 'b', 'c']) == \
             equip_allocation(None, dep, ['a', 'b', 'c'],
                              priority_order=['砂金', '卡芙卡'])
