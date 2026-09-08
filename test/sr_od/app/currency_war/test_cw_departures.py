@@ -131,6 +131,49 @@ def test_departure_sell_recorded_bad_idx_falls_to_unexplained(tmp_path: _P):
         [('椒丘', 'unexplained')]
 
 
+def test_departure_sell_recorded_pref_fallback_normalized(tmp_path: _P):
+    """写端归一锁(T-180;ADR-0605 §5.2 断言的落码面):首选排满兜底
+    跨排落位时 deployed_place 就地把 position_pref/slot 归一到实际
+    下标——**pref 错位形态**(条目 pref='front' 而物理槽在后排)对解析键
+    deployed_idx→(排,槽号) 恒漏匹配,卖出件会误归 unexplained。本例走
+    生产写端(kernel deployed_place)→ 序列化(serialize_state 紧缩序)
+    → 派生解析全链,兜底件卖出命中 sell_recorded;信息位不归一的变异
+    (拆 deployed_place 的 pref 改写)此例必红。"""
+    from sr_od.application.currency_war.kernel.cw_state import (
+        BenchChar,
+        GameState,
+        deployed_clear,
+        deployed_place,
+    )
+    from sr_od.application.currency_war.telemetry.schema import serialize_state
+
+    st = GameState(gold=10, level=5, plane=1, round_num=3, hp=80)
+    st.deployed = []
+    for i in range(4):   # 前排填满,逼第 5 件走兜底
+        deployed_place(st.deployed, BenchChar(slot=0, char_id=f'前排{i}',
+                                              star=1, position_pref='front'))
+    tail = BenchChar(slot=0, char_id='藿藿', star=1, position_pref='front')
+    assert deployed_place(st.deployed, tail) == 4   # 前排满 → 兜底后排 idx4
+    dep_a = serialize_state(st)['deployed']
+    st_after = GameState(gold=10, level=5, plane=1, round_num=3, hp=80)
+    st_after.deployed = list(st.deployed)
+    deployed_clear(st_after.deployed, 4)
+    dep_b = serialize_state(st_after)['deployed']
+
+    rd = tmp_path / 'replay'
+    rid = 'run_20260909_070000'
+    _seg_files(rd, rid, [
+        _dec(rid, 1, 3, '2026-09-09T07:00:00', dep_a,
+             actions=[{'__type__': 'SellDeployed', 'deployed_idx': 4,
+                       'income': 1, 'reason': 'valley_rollback',
+                       'expect': '藿藿'}]),
+        _dec(rid, 1, 3, '2026-09-09T07:00:20', dep_b,
+             actions=[{'__type__': 'StartBattle'}])])
+    a = _build(rd)
+    assert [(d['char'], d['channel']) for d in a['departures']] == \
+        [('藿藿', 'sell_recorded')]
+
+
 # ===== ③ 通道分键:merge_promoted(同名更高星在场) =====
 
 def test_departure_merge_promoted_channel(tmp_path: _P):

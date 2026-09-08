@@ -132,6 +132,36 @@ class TestReasonEnumRegistry:
         overlap = SELL_BENCH_REASONS & SELL_BENCH_CONVERT_REASONS
         assert overlap == {'line_switch_collapse'}
 
+    def test_orphan_exempt_set_independent_from_emission_gate(self, monkeypatch):
+        """检查器孤儿豁免键集独立锁(T-180):cw_prep_actions.SELL_BENCH_
+        ORPHAN_REASONS = 与发射位登记门 SELL_BENCH_REASONS 分离的独立
+        闭集——检查器三消费位(ledger 两检查 + suspects D1)读本集,
+        发射登记门新增/删值不放大/不收窄豁免面(豁免面随登记门生长 =
+        振荡防空洞,零容忍)。变异红证 = 三消费位借道改回登记门时,
+        本例给登记门注入新值即见豁免面被放大(检查静默),红有语义。
+        红时处置 = 对照 ADR-0591 §4 裁决,非机械跟绿。"""
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            SELL_BENCH_ORPHAN_REASONS,
+        )
+        assert set(SELL_BENCH_ORPHAN_REASONS) == {'line_switch_collapse'}
+        # 行为面:登记门被注入新发射值(模拟未来登记),经 sell_reason
+        # 载体的同轮买卖对仍须判违——豁免面不随登记门生长。
+        import sr_od.application.currency_war.kernel.cw_prep_actions as _pa
+        from sr_od.application.currency_war.sim.checks.ledger import (
+            check_no_same_round_buy_sell,
+        )
+        monkeypatch.setattr(
+            _pa, 'SELL_BENCH_REASONS',
+            frozenset({'line_switch_collapse', 'future_emission_tag'}))
+        row_new_gate_value = {'plane': 1, 'round_num': 1,
+                              'actions': [
+                                  {'__type__': 'BuyCard',
+                                   'card': {'name': 'X'}, 'reason': ''},
+                                  {'__type__': 'SellBench', 'name': 'X',
+                                   'sell_reason': 'future_emission_tag'}]}
+        assert check_no_same_round_buy_sell([row_new_gate_value]), \
+            '登记门新值经 sell_reason 误入豁免面 = 独立闭集失守(T-180)'
+
 
 # ===== 序列化等值(方案 v3 §3.4 V2-02 两判定口径的锁面)=====
 

@@ -15,7 +15,8 @@
 
 变异红证(OR 退 AND):把 pair_target_comp 希儿对分支改回「放大器档进
 form_tiers(and 账)」→ test_or_leg_achieves_form_ok(量2 达成帧)与
-test_nested_inclusion_grid(包含格)红;亲测红证记录见 ADR-0613 §验收。
+test_grid_fp_iff_ok_and_nested_inclusion(包含格)红;亲测红证记录见
+ADR-0613 §验收。
 """
 from __future__ import annotations
 
@@ -60,18 +61,15 @@ def seele_comp():
 class TestPseudoCompShape:
     def test_seele_pair_shape(self, seele_comp) -> None:
         """希儿系对:form_tiers 只含他体系档 + or_legs 两放大器腿 +
-        required_deployed=carry;板面键集仍含量/贝(部署/评分视图不盲)。"""
+        required_deployed=carry;板面键集仍含量/贝(部署/评分视图不盲)。
+        档位/期望值自模块常量现算(纪律第 9 条禁手抄双源;T-171 三审
+        T3)——常量换档(候选档切换点)时本锁随常量重推,不跟绿。"""
         assert seele_comp is not None
         assert seele_comp.form_tiers == {'列车同行': 2}
-        assert list(seele_comp.or_legs) == [('量子同频', 2), ('贝洛伯格', 2)]
-        assert seele_comp.required_deployed == ('希儿',)
+        assert list(seele_comp.or_legs) == list(SEELE_OR_LEGS)
+        assert seele_comp.required_deployed == (SEELE_CARRY_CHAR,)
         assert set(seele_comp.factions) == {'列车同行', '量子同频', '贝洛伯格'}
         assert '希儿' in seele_comp.core_chars
-
-    def test_or_legs_constant_single_source(self) -> None:
-        """or_legs 档位来自模块常量单一源(候选档切换点;禁消费位另写档)。"""
-        assert tuple(SEELE_OR_LEGS) == (('量子同频', 2), ('贝洛伯格', 2))
-        assert SEELE_CARRY_CHAR == '希儿'
 
     def test_non_seele_pair_byte_identical(self) -> None:
         """非希儿对产物零漂移:桥池档照旧、无 OR/carry 字段(缺省空)。"""
@@ -129,6 +127,10 @@ class TestFormOkQuadrants:
 
 
 # ===== 单卡不算开线保持锁(:138 语义在形态端口的投影)=====
+# (test_support_port_unchanged_independent 已删(T-171 三审可删清单):
+#  支持度端口三格值断言由批序 2 文件 test_cw_seele_support.py 全覆盖
+#  且其为超集(同格值 + 锁线/gap 消费面),重复断言源 = 双处跟绿点;
+#  支持度语义变更时该文件红,本文件不再二次报。)
 
 class TestSingleCarryNotFormed:
     def test_single_carry_never_form_ok(self, seele_comp) -> None:
@@ -138,16 +140,6 @@ class TestSingleCarryNotFormed:
         assert readiness_form_ok(st, seele_comp) is False
         assert form_progress(seele_comp, st) \
             == pytest.approx((1.0 + 0.0 + 1.0) / 3.0, abs=1e-9)
-
-    def test_support_port_unchanged_independent(self) -> None:
-        """支持度端口(批序 2)语义不受本批扰动:希儿单卡支持度仍 0.5
-        (不即锁),希儿+1 去重放大器 1.0——两端口各自独立成立。"""
-        from sr_od.application.currency_war.kernel.cw_intention import (
-            _seele_system_support,
-        )
-        assert _seele_system_support({'希儿'}) == 0.5
-        assert _seele_system_support({'希儿', '桑博'}) == 1.0
-        assert _seele_system_support({'桑博', '佩拉'}) == 0.0
 
 
 # ===== §6.3-3 半成品进度与单一源不变式 =====
@@ -165,14 +157,33 @@ class TestProgressFolding:
         assert form_progress(seele_comp, st_both) \
             == pytest.approx(1.0, abs=1e-9)
 
-    def test_fp_one_iff_form_ok(self, seele_comp) -> None:
-        """fp=1.0 ⟺ form_ok 单一源契约(三腿折法扩展后不变式):
-        板面网格全格同值。"""
+    def test_grid_fp_iff_ok_and_nested_inclusion(self, seele_comp) -> None:
+        """36 格网格锁(4×3×3,一次帧构造断言两组事实,T-171 三审 T4 并格;
+        docstring 分行声明):
+        ① 单一源契约:每格 fp=1.0 ⟺ form_ok(三腿折法扩展后不变式);
+        ② 条件域(希儿在板)嵌套包含:旧 AND 谓词(量≥3∧贝≥2∧他档满)
+        成 ⟹ 新 OR 谓词必成,且存在严格反向格(量2贝0:新成旧不成)。
+        (原两锁各自独立遍历 36 帧成本翻倍,并格后断言面逐格等价。)"""
+        def old_code_ok(st: GameState) -> bool:
+            # 被 ADR-0613 取代的旧口径(仅本锁内联重构作对照,非第二判定):
+            # 他档满 ∧ 量子≥3 ∧ 贝≥2(cw_recipe 完全体档 AND)。
+            return (st.board.get('列车同行', 0) >= 2
+                    and st.board.get('量子同频', 0) >= 3
+                    and st.board.get('贝洛伯格', 0) >= 2)
+
+        strict_reverse_found = False
         for q, b, t in itertools.product(range(4), range(3), range(3)):
             st = _frame({'列车同行': t, '量子同频': q, '贝洛伯格': b},
                         ('希儿',))
+            new_ok = readiness_form_ok(st, seele_comp)
             fp = form_progress(seele_comp, st)
-            assert (fp >= 1.0) == readiness_form_ok(st, seele_comp)
+            assert (fp >= 1.0) == new_ok, \
+                f'单一源契约违反: q={q} b={b} t={t}'           # ①
+            if old_code_ok(st):
+                assert new_ok, f'包含违反: q={q} b={b} t={t}'   # ②
+            if new_ok and not old_code_ok(st):
+                strict_reverse_found = True
+        assert strict_reverse_found, '条件域上包含须为严格(反向格存在)'
 
     def test_registry_comps_zero_drift(self) -> None:
         """空字段 comp(全注册表)逐位同旧式均值:追击飞霄
@@ -194,31 +205,6 @@ class TestProgressFolding:
         assert fp == pytest.approx((1.0 + 1.0 + 0.0) / 3.0, abs=1e-9)
 
 
-# ===== 嵌套包含锁(命题 §4-1:条件域上 doc ⊇ code,事件级事实)=====
-
-class TestNestedInclusion:
-    def test_nested_inclusion_grid(self, seele_comp) -> None:
-        """条件域(希儿在板)网格全格:旧 AND 谓词(量≥3∧贝≥2∧他档满)
-        成 ⟹ 新 OR 谓词必成;且存在严格反向格(量2贝0:新成旧不成)。"""
-        def old_code_ok(st: GameState) -> bool:
-            # 被 ADR-0613 取代的旧口径(仅本锁内联重构作对照,非第二判定):
-            # 他档满 ∧ 量子≥3 ∧ 贝≥2(cw_recipe 完全体档 AND)。
-            return (st.board.get('列车同行', 0) >= 2
-                    and st.board.get('量子同频', 0) >= 3
-                    and st.board.get('贝洛伯格', 0) >= 2)
-
-        strict_reverse_found = False
-        for q, b, t in itertools.product(range(4), range(3), range(3)):
-            st = _frame({'列车同行': t, '量子同频': q, '贝洛伯格': b},
-                        ('希儿',))
-            new_ok = readiness_form_ok(st, seele_comp)
-            if old_code_ok(st):
-                assert new_ok, f'包含违反: q={q} b={b} t={t}'
-            if new_ok and not old_code_ok(st):
-                strict_reverse_found = True
-        assert strict_reverse_found, '条件域上包含须为严格(反向格存在)'
-
-
 # ===== 辖域切分机械锁(form 链禁出现支持度端口消费)=====
 
 class TestPortSeparation:
@@ -227,6 +213,7 @@ class TestPortSeparation:
         pair_target_comp 的函数源码禁引用 _seele_system_support——
         form 链读板面羁绊计数,不读 owned 去重支持度值。"""
         import inspect
+
         from sr_od.application.currency_war.kernel import cw_comps, cw_intention
         form_src = inspect.getsource(cw_comps.form_progress)
         pair_src = inspect.getsource(cw_intention.pair_target_comp)

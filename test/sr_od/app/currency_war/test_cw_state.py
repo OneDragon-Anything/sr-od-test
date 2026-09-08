@@ -147,3 +147,40 @@ def test_levelup_clicks_ladder_matches_registry() -> None:
     """
     assert [xp_clicks_to_level(lv, 0) for lv in (5, 6, 7, 8)] == [5, 10, 13, 18]
 
+
+# ===== ADR-0392 deployed 槽位信息位归一(T-180 写端治本;ADR-0605 §5.2)=====
+
+def test_deployed_place_normalizes_pref_and_slot_to_authoritative_idx() -> None:
+    """deployed_place 信息位归一锁:放置时 position_pref/slot 恒与实际
+    落位下标一致(权威槽位 = 下标,信息位为派生)。①首选排内落位 pref
+    保持;②首选排满兜底跨排时 pref 随落位改写——错位形态(pref='front'
+    而物理槽在后排)对 sell_recorded 解析键 deployed_idx→(排,槽号) 固定
+    双射恒漏匹配,卖出件误归 unexplained(端到端锁 =
+    test_cw_departures.test_departure_sell_recorded_pref_fallback_);
+    ③无空槽返回 None 且不写信息位。"""
+    from sr_od.application.currency_war.kernel.cw_state import (
+        DEPLOYED_CAPACITY,
+        DEPLOYED_FRONT_CAPACITY,
+        deployed_place,
+        deployed_slot_no,
+    )
+    deployed: list[BenchChar | None] = []
+    for i in range(DEPLOYED_FRONT_CAPACITY):   # ① front 落前排:pref 保持
+        bc = BenchChar(slot=0, char_id=f'前排{i}', star=1,
+                       position_pref='front')
+        assert deployed_place(deployed, bc) == i
+        assert (bc.position_pref, bc.slot) == ('front', i + 1)
+    tail = BenchChar(slot=0, char_id='尾件', star=1, position_pref='front')
+    assert deployed_place(deployed, tail) == DEPLOYED_FRONT_CAPACITY
+    assert (tail.position_pref, tail.slot) == \
+        ('back', deployed_slot_no(DEPLOYED_FRONT_CAPACITY))   # ② 兜底改写
+    b_tail = BenchChar(slot=0, char_id='背件', star=1, position_pref='back')
+    assert deployed_place(deployed, b_tail) == DEPLOYED_FRONT_CAPACITY + 1
+    assert (b_tail.position_pref, b_tail.slot) == \
+        ('back', deployed_slot_no(DEPLOYED_FRONT_CAPACITY + 1))
+    full = [BenchChar(slot=1, char_id=f'X{i}', star=1)
+            for i in range(DEPLOYED_CAPACITY)]
+    rejected = BenchChar(slot=0, char_id='溢出', star=1)
+    assert deployed_place(full, rejected) is None   # ③ 满表拒放
+    assert (rejected.position_pref, rejected.slot) == ('back', 0)
+
