@@ -1,5 +1,4 @@
-"""r106 补测试:量子预囤路径 + 1.5 边界(此前一次调用返回 '' 是旧进程缓存,
-重跑确认 1+0.5=1.5 边界通过)。
+"""量子框架的平局先验锁(量子2 vs 仙舟2 → 仙舟)。
 
 出处:被测模块本体——现行基建锁(量子囤货;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import sys
@@ -14,19 +13,16 @@ class BC:
         self.char_id = n
 
 
-class Card:
-    def __init__(self, n):
-        self.name = n
-
-
-def test_quantum_hoard_boot_boundary():
-    """量子 1 持有 + 1 在售 = 1.5 → 启动(浮点边界;纯持有态单一源=
-    test_quantum_recipe::test_quantum_selected_by_ownership,原
-    test_quantum_two_owned 同事实断言已并入)。"""
-    assert pick_framework([BC('希儿')], [], [Card('缇宝')]) == '量子'
-
-
 def test_xianzhou_beats_quantum_tie():
-    """量子2 vs 仙舟2 平局 → 仙舟(dict 序主流先验,r102 审计③)。"""
+    """量子2 vs 仙舟2 平局 → 仙舟(dict 序主流先验,r102 审计③)。
+
+    平局先验的载体:pick_framework 计数 dict 由 FRAMEWORKS 序生成,
+    max 取首个最大 → 平局归 FRAMEWORKS 首位仙舟(cw_transition 注:
+    主流先验 32% vs 29%,有意为之)。FRAMEWORKS 序的单一源锁 =
+    test_quantum_recipe::test_three_frameworks(元组序)。
+    (原 test_quantum_hoard_boot_boundary 已删:量子 1.5 启动边界与
+    test_scenario_gen::test_inv_boot_gate_semantics[量子] 同输入同断言,
+    后者超集(兼锁纯 shop 半权不启动),等价取一,单一源 = scenario_gen
+    不变量族(三框架参数化)。)"""
     bench = [BC('希儿'), BC('缇宝'), BC('藿藿'), BC('丹恒·饮月')]
     assert pick_framework(bench, []) == '仙舟'

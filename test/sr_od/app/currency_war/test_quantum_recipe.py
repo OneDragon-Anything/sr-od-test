@@ -1,6 +1,7 @@
 """r102 统一化测试:量子=第三过渡配方(希儿线无特例通道)。
 
-出处:被其他测试文件引用(防断链保留,需后续人工归并)(2026-08-31 测试瘦身批考证补记)。"""
+出处:被测模块本体;纯持有态单一源被 test_quantum_hoard 引用(防断链保留)
+(2026-08-31 测试瘦身批考证补记)。"""
 import sys
 
 sys.path.insert(0, 'src')
@@ -41,26 +42,9 @@ def test_recipe_quantum_registered():
     assert '希儿' in rc.core_chars
 
 
-def test_decision_target_no_walkin_branch():
-    """decision_target 双轨期只有配方/终局两分支(walkin 已删)。"""
-    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    from sr_od.application.currency_war.kernel.cw_recipe import decision_target
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
-
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-        state_of,
-    )
-
-    class _Sess:
-        pass
-
-    # 策略器字段已迁 MandateState(transition_framework/target_comp)
-    sess = _Sess()
-    st_s = state_of(sess)
-    st_s.transition_framework = '量子'
-    st_s.target_comp = next(c for c in COMP_LIBRARY if c.name == '希儿量子')
-
-    st = GameState(round_num=3, plane=1, dual_track_phase=True)
-    st.bench = [BenchChar(slot=1, char_id='希儿', faction='?', star=1, position_pref='back')]
-    got = decision_target(sess, st)
-    assert got.name == '过渡·量子配方', '双轨期量子框架 → 配方伪 comp(不是终局)'
+# (test_decision_target_no_walkin_branch 已删:量子双轨返配方 =
+#  分支面(test_cw_deploy_ops::test_decision_target_dual_track_returns_recipe,
+#  同一生产分支的仙舟面)+ 注册表面(本文件 test_recipe_quantum_registered)
+#  的合取——生产 decision_target 对框架无特判分支(统一 _RECIPES.get),
+#  量子变体零独立判别力。「双轨期只有配方/终局两分支」语义由生产
+#  cw_recipe.decision_target docstring 承载。)

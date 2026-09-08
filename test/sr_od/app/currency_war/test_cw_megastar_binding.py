@@ -81,6 +81,18 @@ def test_preference_table_covers_and_valid() -> None:
         assert set(stars) <= set(_ALL)
 
 
+def test_no_target_and_empty_candidates() -> None:
+    """target=None → 首个可选;候选空 → None(select_megastar 出口契约)。
+
+    语义自 test_cw_comps 的 no_target/empty 两测归并(select_megastar 主题文件,
+    README 纪律 14);原位待其文件批删除。空候选门在生产函数首行短路、先于
+    target 分支,故有 target + 空候选同走 None 出口(分支序一并锁定)。"""
+    s = _S()
+    assert select_megastar(s, None, ['花火', '知更鸟']) == '花火'
+    assert select_megastar(s, None, []) is None
+    assert select_megastar(s, _by_name('反甲白厄'), []) is None
+
+
 # (select_megastar_enhance 绑定序锁段已随 megastar_enhance_enabled 开关族
 #  删除——旧方案清退批,清查报告 OLD_MIX_AUDIT §1.3;函数与开关同批删,
 #  MegastarPick.enhance_char_id 字段保留恒 None。)
