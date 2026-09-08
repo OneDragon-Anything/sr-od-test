@@ -1,12 +1,13 @@
-"""结算屏三项遥测读数器单测(SETTLE_OCR_DESIGN 落地批)。
+"""结算屏三项遥测读数器单测(结算 OCR 三读数器落地批)。
 
 被测 = ``cw_settlement_obs`` 的结算三项读数器(挑战进度填充率 / 基础伤害 /
 未完成进度伤害)+ ``read_round_outcome`` 字段透传。分两层:
 - 纯函数层(行归并/符号守卫/锚判据/像素列扫描):构造 token list 与合成图像,
   不依赖 OCR;
-- 真实 OCR 层:fixtures_settle/ 下 5 张实机帧(出处 = 主仓
-  ``.debug/temp/currency_war/redesign/fixtures/settle_ocr/``,SETTLE_OCR_DESIGN
-  §0 抽样判读表),走 test_context 的真 OCR 引擎锁读数真值。
+- 真实 OCR 层:fixtures_settle/ 下 5 张实机帧(已入仓,读真值锚 = 帧本体;
+  原始样本面为主仓 .debug 易失产物,判读结论以入仓帧为准),走
+  test_context 的真 OCR 引擎锁读数真值。读点链语义出处 =
+  docs/develop/currency_war/decisions/dd-006-settle-read-chain-boss-win-form.md。
 """
 from types import SimpleNamespace
 
@@ -14,10 +15,13 @@ import numpy as np
 import pytest
 
 from sr_od.application.currency_war.obs.cw_settlement_obs import (
+    is_boss_win_settle_page1,
     parse_progress_fill_ratio,
     parse_settle_damage_breakdown,
     parse_settle_hp_anchor,
+    read_round_outcome,
     read_settle_damage_breakdown,
+    settle_page1_progress_sign,
 )
 
 
@@ -26,7 +30,23 @@ def _it(data: str, x: int, y: int, w: int = 60, h: int = 30) -> SimpleNamespace:
     return SimpleNamespace(data=data, x=x, y=y, width=w, height=h)
 
 
-# 面板正例几何 = end_boss_win_with_breakdown_panel.png 帧实测(SETTLE_OCR_DESIGN §2.2)
+class _FakeOcr:
+    """桩 OCR:get_ocr_result_list 恒返回固定 token 序列
+    (data=texts[i],x=100,y=i*40;read_round_outcome 共用载体)。"""
+
+    def __init__(self, texts: list[str]) -> None:
+        self._tokens = [_it(t, 100, i * 40) for i, t in enumerate(texts)]
+
+    def get_ocr_result_list(self, image, rect, crop_first):
+        return self._tokens
+
+
+def _fake_ctx(*texts: str) -> SimpleNamespace:
+    """最小 ctx 载体(只挂 ocr_service 桩;read_round_outcome 两测共用)。"""
+    return SimpleNamespace(ocr_service=_FakeOcr(list(texts)))
+
+
+# 面板正例几何 = end_boss_win_with_breakdown_panel.png 帧实测(入仓帧即真值锚)
 _PANEL_POS = [_it('小队生命值结算说明', 1348, 503, 240, 30),
               _it('基础伤害', 1250, 555, 100, 33), _it('-10', 1630, 553, 60, 35),
               _it('未完成进度伤害', 1250, 588, 160, 34), _it('-1', 1630, 588, 60, 34),
@@ -88,7 +108,8 @@ def test_progress_fill_ratio_synthetic_bar() -> None:
     img = np.zeros((1080, 1920, 3), np.uint8)
     img[424:440, 710:710 + 300] = (200, 40, 40)
     assert parse_progress_fill_ratio(img) == pytest.approx(0.6, abs=0.01)
-    assert parse_progress_fill_ratio(np.zeros((1080, 1920, 3), np.uint8)) is None
+    blank = np.zeros((1080, 1920, 3), np.uint8)
+    assert parse_progress_fill_ratio(blank) is None
     assert parse_progress_fill_ratio(None) is None
 
 
@@ -100,20 +121,9 @@ def test_settle_hp_anchor() -> None:
 
 def test_round_outcome_carries_settle_fields() -> None:
     """read_round_outcome 透传三项字段(screen=None → 填充率 None/面板不在场)。"""
-    from sr_od.application.currency_war.obs.cw_settlement_obs import read_round_outcome
-
-    class _FakeOcr:
-        def get_ocr_result_list(self, image, rect, crop_first):
-            return [_it(t, 100, i * 40) for i, t in
-                    enumerate(['挑战结束', '-22', '挑战进度', '前往结算'])]
-
-    class _FakeCtx:
-        ocr_service = None
-
-        def __init__(self):
-            _FakeCtx.ocr_service = _FakeOcr()
-
-    obs = read_round_outcome(_FakeCtx(), None, plane=2, round_num=1, comp_tag='x')
+    obs = read_round_outcome(
+        _fake_ctx('挑战结束', '-22', '挑战进度', '前往结算'),
+        None, plane=2, round_num=1, comp_tag='x')
     assert obs.progress_fill_ratio is None
     assert obs.damage_base is None and obs.damage_unfinished_progress is None
     assert obs.damage_breakdown_visible is False
@@ -135,7 +145,7 @@ def test_breakdown_real_ocr_positive(test_context, test_image_dir) -> None:
     if screen is None:
         pytest.skip('fixture 缺失')
     out = read_settle_damage_breakdown(test_context, screen)
-    assert out['visible'] is True, f'tooltip 应在场(帧证据 SETTLE_OCR_DESIGN §0): {out}'
+    assert out['visible'] is True, f'tooltip 应在场(证据 = 入仓实机帧本体): {out}'
     assert out['damage_base'] == -10
     assert out['damage_unfinished_progress'] == -1
 
@@ -167,18 +177,12 @@ def test_progress_fill_ratio_real_frames(test_context, test_image_dir) -> None:
 
 def test_boss_win_page1_positive_progress() -> None:
     """挑战进度 +N(节点胜利)→ boss 胜局页1 判 True(实跑 token 形态)。"""
-    from sr_od.application.currency_war.obs.cw_settlement_obs import (
-        is_boss_win_settle_page1,
-    )
     assert is_boss_win_settle_page1(['挑战结束', '挑战进度', '+2']) is True
     assert is_boss_win_settle_page1(['挑战结束', '挑战进度+2']) is True
 
 
 def test_boss_win_page1_defeat_and_unreadable() -> None:
     """战败页(负增量)/OCR 漏读(None)→ False(判 False = 回旧行为,不劣化)。"""
-    from sr_od.application.currency_war.obs.cw_settlement_obs import (
-        is_boss_win_settle_page1,
-    )
     assert is_boss_win_settle_page1(['挑战结束', '-22', '挑战进度']) is False
     assert is_boss_win_settle_page1(['挑战结束', '点击空白加速']) is False
 
@@ -186,38 +190,24 @@ def test_boss_win_page1_defeat_and_unreadable() -> None:
 def test_round_outcome_fill_only_on_page1() -> None:
     """填充率页态门(DD-006):页2 帧(无「点击空白加速」)不读条——同矩形
     罩 HP 心形会恒定读假值(0.392 三局同值实证);页1 帧才读。"""
-    from sr_od.application.currency_war.obs import cw_settlement_obs
-
     img = np.zeros((1080, 1920, 3), np.uint8)
     img[424:440, 710:1010] = (200, 40, 40)   # 进度条 60% 红填充
 
-    class _FakeOcr:
-        def __init__(self, texts):
-            self._texts = texts
-
-        def get_ocr_result_list(self, image, rect, crop_first):
-            return [_it(t, 100, i * 40) for i, t in enumerate(self._texts)]
-
-    class _FakeCtx:
-        def __init__(self, texts):
-            self.ocr_service = _FakeOcr(texts)
-
     # 页2 形态(挑战成功 + 继续挑战,无「点击空白加速」)→ 同帧含红条也判 None
-    obs_p2 = cw_settlement_obs.read_round_outcome(
-        _FakeCtx(['挑战结束', '1-9首领', '继续挑战']), img, plane=1, round_num=9, comp_tag='x')
+    obs_p2 = read_round_outcome(
+        _fake_ctx('挑战结束', '1-9首领', '继续挑战'), img,
+        plane=1, round_num=9, comp_tag='x')
     assert obs_p2.progress_fill_ratio is None
     # 页1 形态(「点击空白加速」在场)→ 正常读条
-    obs_p1 = cw_settlement_obs.read_round_outcome(
-        _FakeCtx(['挑战结束', '1-9首领', '点击空白加速']), img, plane=1, round_num=9, comp_tag='x')
+    obs_p1 = read_round_outcome(
+        _fake_ctx('挑战结束', '1-9首领', '点击空白加速'), img,
+        plane=1, round_num=9, comp_tag='x')
     assert obs_p1.progress_fill_ratio == pytest.approx(0.6, abs=0.01)
 
 
 def test_progress_sign_three_states() -> None:
     """进度符号三态(DD-006 置闩门单一源):pos/neg/None 可分——None=OCR 漏读,
     两种形态页都可能漏,不得当败局真值置闩(防 boss 胜局 run 判废)。"""
-    from sr_od.application.currency_war.obs.cw_settlement_obs import (
-        settle_page1_progress_sign,
-    )
     assert settle_page1_progress_sign(['挑战进度', '+2']) == 'pos'
     assert settle_page1_progress_sign(['-22', '挑战进度']) == 'neg'
     assert settle_page1_progress_sign(['挑战结束', '点击空白加速']) is None

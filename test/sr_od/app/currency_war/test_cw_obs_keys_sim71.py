@@ -12,7 +12,6 @@
 锁口径 = 各键正确性 + 缺省零漂移(容器/comp 缺席静默,不炸不虚构)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from types import SimpleNamespace
 
@@ -28,6 +27,9 @@ from sr_od.application.currency_war.sim.engine_p1 import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 
 SIM_KW = {'pool': 'snapshot', 'planes': 2, 'use_refresh': True,
@@ -196,20 +198,34 @@ class TestSellBuybackProjection:
             [self._buy('甲', 5), self._sell('乙', 3)]) == []
         assert project_sell_buyback(None) == []
 
-    def test_engine_counters_and_obs_projection(self):
-        """引擎接线:有回环的轮,obs.sell_buyback_loops 带明细;
-        cw4_counters 差分含两键;实例 net 合计 ≡ 局级键增量。"""
-        for seed in range(6):
-            r = _seeded_result(seed)
-            for row in r.ledger:
-                loops = (row.get('obs') or {}).get('sell_buyback_loops')
-                if not loops:
-                    continue
-                for lp in loops:
-                    assert {'name', 'round', 'node', 'sell_income',
-                            'buy_cost', 'net_gold'} <= set(lp)
-        # 真 sim 采样窗不保证命中回环(回环率低属真实分布)——命中即锁
-        # 明细形状;纯函数正确性/计数器一致性由上锁与累计键锁承。
+    def test_engine_counters_and_obs_projection(self, monkeypatch):
+        """引擎接线(写点真链,engine_p1 逐轮投影非空即累计):obs.sell_buyback
+        _loops 带引擎补全明细(round/node);cw4_counters 差分两键值精确
+        (count=笔数 / net=Σnet_gold)。投影函数本体替换为剧本回环(纯函数
+        正确性由上五锁承),写点链全真——写点被删或绕过时本锁红。"""
+        from sr_od.application.currency_war.sim import engine_p1
+        loop = {'name': '甲', 'sell_income': 3, 'buy_cost': 5, 'net_gold': 2}
+        calls = {'n': 0}
+
+        def _scripted(_acts):
+            calls['n'] += 1
+            return [dict(loop)] if calls['n'] == 1 else []
+
+        monkeypatch.setattr(engine_p1, 'project_sell_buyback', _scripted)
+
+        sess = StrategySession()
+        state_of(sess).cw4_counters = {}
+        r = _run(0, sess)
+        hit = [row for row in r.ledger
+               if (row.get('obs') or {}).get('sell_buyback_loops')]
+        assert len(hit) == 1, f'剧本回环恰一轮入账本: 实际 {len(hit)} 轮带明细'
+        (lp,) = hit[0]['obs']['sell_buyback_loops']
+        assert {'name', 'round', 'node', 'sell_income', 'buy_cost',
+                'net_gold'} <= set(lp)
+        assert lp['net_gold'] == 2
+        ct = state_of(sess).cw4_counters
+        assert ct.get('sell_buyback_count') == 1
+        assert ct.get('sell_buyback_net_gold') == 2
 
 
 if __name__ == '__main__':

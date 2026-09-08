@@ -97,7 +97,11 @@ def _line_tiers(name: str) -> set[str]:
 
 
 def test_p65_snapshot_12_lines() -> None:
-    """枚举快照锁:12 线 × (family, 字面体系键交集, weak_planes) 结构事实。"""
+    """枚举快照锁:12 线 × (family, 字面体系键交集, weak_planes) 结构事实。
+
+    字面域读数(设计 §2.2;由快照表全等断言承载,不另立断言):交集
+    非空线恰 3 条(列车同行/DOT队/专家桑博DOT),弱面注册恰 1 条(DOT队,
+    单载体边界)。"""
     v2 = _v2_comps()
     assert len(v2) == 12
     got = []
@@ -107,11 +111,6 @@ def test_p65_snapshot_12_lines() -> None:
                     tuple(sorted(tiers & set(_ENGINE_KEYS))),
                     tuple(c.weak_planes or ())))
     assert tuple(got) == SNAPSHOT_12
-    # 字面域读数:交集非空线恰 3 条,弱面注册恰 1 条(单载体边界,设计 §2.2)
-    inter_lines = [r for r in SNAPSHOT_12 if r[2]]
-    weak_lines = [r for r in SNAPSHOT_12 if r[3]]
-    assert {r[0] for r in inter_lines} == {'列车同行', 'DOT队', '专家桑博DOT'}
-    assert [r[0] for r in weak_lines] == ['DOT队']
 
 
 def test_p65_containment_grid() -> None:
