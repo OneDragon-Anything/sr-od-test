@@ -321,7 +321,9 @@ class TestL4BudgetGateSuspend:
     def test_l4_p72_reject_suspends_ladder(self, monkeypatch):
         """锁 L4(NORMAL 限定):P72 预算闸拒帧,档 1 挂起(预留金不被
         同帧击穿;复用 m6_budget_gate_suspend 先例,ADR-0560;FLOOR_ON
-        让位随 hp 闸批,本帧为 NORMAL)。"""
+        让位随 hp 闸批,本帧为 NORMAL)。档 2 同帧挂起(m6_budget_gate_
+        suspend 分键)同事实由 test_cw_p71_budget_gate.TestShopM3M6
+        承载,本测不再双锁。"""
         monkeypatch.setattr(shop, 'can_deploy_single',
                             lambda *a, **kw: (True, ''))
         km = _km()
@@ -339,8 +341,6 @@ class TestL4BudgetGateSuspend:
         assert not isinstance(act, (BuyCard, LevelUpShop))
         assert state_of(sess).cw4_counters.get(
             'press_buy_deployable_budget_suspend', 0) >= 1
-        assert state_of(sess).cw4_counters.get(
-            'm6_budget_gate_suspend', 0) >= 1
 
 
 # ===== L7:ALL IN 类别过滤(P21 域辖;XP 仅支A 合法)=====

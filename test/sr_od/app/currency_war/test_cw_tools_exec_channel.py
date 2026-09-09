@@ -318,15 +318,10 @@ class TestMandateEmission:
             free_bench_slots=9)
         return entry.emit(obs, SimpleNamespace(), s, None)
 
-    def test_admitted_emits_runtools(self):
-        """admitted 非空(炉+死库存)→ 发射 RunTools;判据全拒时不发。"""
-        s = _session_with([_FURNACE, _DEAD])
-        st = GameState(plane=1, round_num=3)
-        out = self._emit(s, st)
-        assert any(isinstance(e.action, RunTools) for e in out)
-        s2 = _session_with([_TOKEN])   # 令牌 R(c) 缺档 → 全拒 → 不发
-        out2 = self._emit(s2, st)
-        assert not any(isinstance(e.action, RunTools) for e in out2)
+    # admitted 非空 → 发射 RunTools 的正面断言面由 test_cw_prep_flag_machine
+    # .TestRuntoolsEmitPosition 承载(同缝位 entry.emit,发射恰一次+位次);
+    # 判据全拒 → 不发的负面面由本类 test_m75_evaluated… s2 腿承载——
+    # 原双锁 test_admitted_emits_runtools 已按覆盖关系表删除。
 
     def test_m75_evaluated_trace_and_reject_keys(self):
         """M7.5 评估即留痕锁(二十四局复盘候选⑤:评估过但拒与未评估

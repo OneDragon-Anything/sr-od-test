@@ -1,5 +1,7 @@
 """锁线断头 P2 定向通道·观测件分键锁(设计出处 = 锁线断头 P2 定向通道
-设计稿 v2 §6 分键清单,.debug/temp/currency_war/lock_path_p2_channel_design/)。
+设计稿 v2 §6 分键清单;原稿存于 .debug 易失目录且已清理,持久指针回填
+挂 cw_test_slim_audit/DEBTS.md D72——分键语义以本文件各测 docstring
+自持描述与 kernel/cw_intention.LOCK_PATH_OBS_KEY_PREFIXES 登记面为准)。
 
 锁三类事:
 1. 分键正确性——G5 weakplane_exempt_eval(+豁免判据分支)/ G6 缓锁剔除 +
@@ -302,6 +304,8 @@ def test_zero_drift_with_and_without_counter_session(monkeypatch):
         if base is None:
             base = snap
         assert snap == base, '观测分键改变了状态机终态:零行为守卫破线'
+    # session=None 臂兼辖「纯逻辑直调零异常」契约(抛错即本测红),
+    # 原单测 test_session_none_counts_nothing 为其真子集,已删。
 
 
 def test_default_session_counter_container_lazily_created():
@@ -313,8 +317,3 @@ def test_default_session_counter_container_lazily_created():
     assert isinstance(ct, dict) and ct
     for k in ct:
         assert k.startswith(ci.LOCK_PATH_OBS_KEY_PREFIXES), f'未登记键:{k}'
-
-
-def test_session_none_counts_nothing():
-    """session=None(纯逻辑直调)零计数、零异常(既有纯函数契约不破)。"""
-    update_intention(_state(plane=2), IntentionState(), None, None)   # 不抛即过

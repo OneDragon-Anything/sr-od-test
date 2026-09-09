@@ -70,12 +70,11 @@ class TestLaunchSpendZone:
                 (gold > saturation_line(cap_resolved_of_session(sess))), gold
 
     def test_zone_boundary_and_buyout_scope(self):
-        """边界:恰 g* 不入域(溢出 = 严格大于);买断制(cap=0)出辖
-        恒 False(与必花域 §2.1 同口径)。"""
+        """边界:恰 g* 不入域(溢出 = 严格大于)。买断制(cap=0)出辖
+        恒 False 同事实由 test_cw_cap_override_link.test_none_zero_
+        distinction_buyout 承载(双域×5 金位超集),本测不再双锁。"""
         assert in_launch_spend_zone(50, _session(50, cap_override=5)) is False
         assert in_launch_spend_zone(51, _session(51, cap_override=5)) is True
-        assert in_launch_spend_zone(10 ** 6, _session(0, cap_override=0)) \
-            is False
 
     def test_zone_shares_g_star_with_must_spend(self):
         """与必花域同 g* 同帧同值(共享 saturation_line 链;两域辖域不同
@@ -145,7 +144,9 @@ class TestSingleSourceLocks:
     def test_counter_keys_reference_kernel_constants_only(self):
         """engine_p1/cw_loop 源内 ``launch_arbitrage_`` 字面量只允许出现在
         常量定义(kernel)——两消费面全部经 cw_launch_arbitrage 常量
-        消费(分键名单一源;判读按常量名族对账)。"""
+        消费(分键名单一源;判读按常量名族对账)。引号前缀扫描兼辖拒因键
+        launch_arbitrage_budget_blocked 等全部分键字面量(原单键窄扫描
+        test_gate_blocked_reason_single_literal 为其真子集,已删)。"""
         from one_dragon.utils.file_utils import get_project_root
         root = get_project_root()
         for rel in ('src/sr_od/application/currency_war/sim/engine_p1.py',
@@ -155,16 +156,6 @@ class TestSingleSourceLocks:
             assert "'launch_arbitrage_" not in src \
                 and '"launch_arbitrage_' not in src, (
                 f'{rel} 残留 launch_arbitrage_* 字面量分键(单一源锁)')
-
-    def test_gate_blocked_reason_single_literal(self):
-        """拒因键字面量只在 kernel 定义;消费面经 GATE_BLOCKED_REASON。"""
-        from one_dragon.utils.file_utils import get_project_root
-        root = get_project_root()
-        for rel in ('src/sr_od/application/currency_war/sim/engine_p1.py',
-                    'src/sr_od/application/currency_war/operations/cw_loop.py'):
-            src = (root / rel).read_text(encoding='utf-8')
-            assert 'launch_arbitrage_budget_blocked' not in src, (
-                f'{rel} 残留拒因键字面量(单一源锁)')
 
 
 class TestProductionPositionContract:
@@ -232,12 +223,12 @@ class TestProductionArbitrationBehavior:
 
         waves:'ok'=正常产出(买 1 刷 1,末金 gold−5);'fail'=waves 失败
         路径(_rr 非 None,无产出)。"""
+        from sr_od.application.currency_war.obs import cw_observation
         from sr_od.application.currency_war.operations.cw_op import (
             cw_op_buy_cards,
             cw_op_close_shop,
             cw_op_open_shop,
         )
-        from sr_od.application.currency_war.obs import cw_observation
 
         sess = _session(gold)
         calls = {'open': 0, 'close': 0, 'waves': 0, 'gate_arg': None}
