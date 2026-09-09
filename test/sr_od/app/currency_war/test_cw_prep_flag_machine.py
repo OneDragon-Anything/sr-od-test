@@ -7,7 +7,9 @@ S2 = 商店 wanted 残差旗标(cw4_shop_wanted_pending,新增);
 S3 = 升级检查逻辑旗标不立变量(单向上位,本文件墓碑行看守)。
 
 锁面分组(方案 §7.2 轨 1 同号节,ADR-0596 收编;出处列见各 docstring):
-1. test_s1_reset_whitelist——S1 清键三路径封闭枚举逐行(§3.3,审 D1);
+1. test_s1_reset_whitelist——S1 清键三路径封闭枚举之 (i)(ii) 逐行
+   (§3.3,审 D1);路径 (iii) 消费臂门 1 由同文件 test_s2_lifecycle 的
+   test_gate1_reopens_before_legs 承载(断言面并测,不重复立锁);
 2. S1 置位纪律(发射不置闩/访问位置闩)由 test_cw_mandate_v1 既有锁
    承载(TestEmit 附近「发射不置闩」与「闩置位=访问位」两断言),本
    文件按锁纪律第 7 条不重复立锁,仅挂指针;
@@ -25,6 +27,9 @@ S3 = 升级检查逻辑旗标不立变量(单向上位,本文件墓碑行看守)
 8. test_wanted_precondition——S2 门 0′ 前件五态(T-161 F2:不在店/
    不可负担 hold 保留、∃在店∧可负担照常开环、late-flip 翻真、节点
    推进过期不变;出处 = ADR-0599 + T161方案审.md §1.2/§1.4/§4)。
+9. test_run_deploy_dispatch_landing_is_structural——F1b 落地判定 =
+   执行器分派位具名常量结构化比对(真 _run_composite 形态构造,
+   防字符串反推复辟;T-167 事故修法)。
 """
 from __future__ import annotations
 
@@ -114,11 +119,13 @@ def _set_s2(sess: StrategySession, state: GameState,
 # ===== 1. S1 清键三路径封闭枚举(§3.3,审 D1)=====
 
 class TestS1ResetWhitelist:
-    """路径 (i) 白名单 tag 落地 / (ii) S2 在册 ∧ 腾席翻正(任意 tag)/
-    (iii) 消费臂门 1(臂内提前收敛形态)。三条均未命中一律不清;
-    纯金变更永不清(B3 裁决唯一绝对项)。写点 = mark_s1_route_check
-    (备战域执行器 progressed 返回,迁移 D);此处直调写点锁枚举本体,
-    执行器挂钩接线由 prep_actions 挂钩位同源消费(生产链单一)。"""
+    """路径 (i) 白名单 tag 落地 / (ii) S2 在册 ∧ 腾席翻正(任意 tag);
+    路径 (iii) 消费臂门 1(臂内提前收敛形态)由同文件
+    TestS2Lifecycle.test_gate1_reopens_before_legs 承载(含 wanted_reopen
+    记账面),本类不重复立锁。三路径均未命中一律不清;纯金变更永不清
+    (B3 裁决唯一绝对项)。写点 = mark_s1_route_check(备战域执行器
+    progressed 返回,迁移 D);此处直调写点锁枚举本体,执行器挂钩接线
+    由 prep_actions 挂钩位同源消费(生产链单一)。"""
 
     def _mk(self, s1: bool = True, s2: bool = True):
         sess = _sess()
@@ -230,18 +237,6 @@ class TestS1ResetWhitelist:
                                         landed=True)
             assert not self.cleared(st), f'S2 在册={s2} 形态被误清'
 
-    def test_iii_arm_gate1_state_clears(self):
-        """(iii) 门 1 状态判定(S2 在册 ∧ bench_free>0)→ 清键(非落地
-        转移,臂内提前收敛形态;臂序完整面归 test_s2_lifecycle)。"""
-        sess, st = self._mk()
-        state = _state()
-        _set_s2(sess, state)
-        out = mandate.wanted_closure_emit(sess, state, [_bc('填充件', 1)],
-                                          [], 4, 3)
-        assert out == []
-        assert self.cleared(st)
-        assert st.cw4_counters.get('wanted_reopen') == 1
-
     def test_latch_of_other_phase_not_touched(self):
         """闩不在本节点(未置/他节点键)时白名单落地零清零遥测——清键
         只消费「本节点闩实清」事件,跨节点零污染(§3.2 键式推论)。"""
@@ -333,7 +328,9 @@ class TestS2Lifecycle:
 
     def test_gate1_reopens_before_legs(self):
         """门 1:席已空闲先重进——不发腾席腿(其他臂已腾过席不重复腾),
-        S1 实清记一次重进预算;闩已清帧不重复记账(路径 (ii) 已清形态)。"""
+        S1 实清记一次重进预算(wanted_reopen 计数;S1 清键三路径枚举的
+        (iii) 臂内提前收敛形态亦由本锁承载);闩已清帧不重复记账
+        (路径 (ii) 已清形态)。"""
         sess = _sess()
         state = _state()
         _set_s2(sess, state)
@@ -343,6 +340,7 @@ class TestS2Lifecycle:
         assert out1 == []   # 零发射:下帧(实际=本帧④)M2 重评发 OpenShop
         assert state_of(sess).cw4_shopped_phase is None
         assert state_of(sess).cw4_wanted_reopens == (_PHASE, 1)
+        assert state_of(sess).cw4_counters.get('wanted_reopen') == 1
         # 第二帧:闩已被别人清(如路径 (ii))→ 门 1 直落常规序,不双计
         out2 = mandate.wanted_closure_emit(sess, state, [_bc('填充件', 1)],
                                            [], 4, 3)
@@ -780,7 +778,7 @@ class TestS3NoVariable:
         assert board_full is True and cap_expanded is False
 
 
-# ===== 9. F1b 分派位结构化落地判定(T-167)=====
+# ===== 7. F1b 分派位结构化落地判定(T-167)=====
 
 def test_run_deploy_dispatch_landing_is_structural(monkeypatch):
     """F1b 锁(T-167 事故修法;真执行器分派位):部署组合的 landed 由
