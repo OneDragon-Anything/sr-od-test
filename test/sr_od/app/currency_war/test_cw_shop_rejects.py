@@ -285,3 +285,87 @@ def test_sim_k_empty_window_comp_none_falls_back_non_line():
                 deployed=[_dep('绯英')])
     out = shop_unbought_reasons(st, None, (), [])
     assert out == {'花火': 'transition_component', '银枝': 'non_line'}
+
+
+def test_sim_locked_frame_canonical_members_not_non_line():
+    """锁定帧买侧口径与生产同源锁(模拟找问题批 findprob_20260909_083024
+    问题②验收):实机 g_20260905_035710 同型事故在 sim 打标点的对齐。
+
+    生产侧拒因遥测传正典 buy_members(锁定帧 = locked_buy_membership,
+    单一源 = cw_intention.locked_buy_membership,其 docstring 记载该
+    事故修法);sim 引擎打标调用点旧口径传 line_members(target_comp)
+    (core∪shared 小集)且不传 hub_names——锁定帧阵营∪流派扩展成员
+    (丹恒·饮月/开拓者·欢愉,列车同行阵营但非 comp core∪shared)被误
+    标 non_line,污染 sim 复盘归因。修复 = 打标与同帧 obs 段同源消费
+    正典口径。
+
+    锁:锁定帧行(v3_intention.phase=='locked')的 shop_rejects 中,
+    正典采购集成员拒因 ≠ 'non_line'(不变式,不锁分布数值);驱动 =
+    P2 进场态锁线注入(真引擎决策段走打标块)。覆盖前提锚:锁定帧行与
+    正典成员拒因键须真实命中,防空转假绿。
+    """
+    import random
+
+    from sr_od.application.currency_war.kernel import cw_intention
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        IntentionState,
+    )
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+    from sr_od.application.currency_war.sim.engine_p2 import P2ReplayEntry
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of,
+    )
+
+    def _locked_ist() -> IntentionState:
+        ist = IntentionState()
+        ist.phase = 'locked'
+        ist.locked_comp = '列车同行'
+        ist.lock_plane = 2
+        return ist
+
+    comp = get_comp('列车同行')
+    membership = cw_intention.locked_buy_membership(_locked_ist())
+    ext = sorted(membership - set(predicates.line_members(comp)))
+    assert '丹恒·饮月' in ext and '开拓者·欢愉' in ext, \
+        '锁测试前提:锁定采购集须含事故局点名的扩展成员'
+    seen_locked_row = False
+    seen_member_key = False
+    for seed in (40, 44, 46, 50):
+        sess = StrategySession(rng=random.Random(f'sim-p2-entry-{seed}'))
+        state_of(sess).target_comp = comp
+        state_of(sess).v3_intention = _locked_ist()
+        state_of(sess).cw4_counters = {}
+        entry = P2ReplayEntry(hp=60, gold=25, level=7,
+                              locked_comp='列车同行')
+        res = simulate_p1(seed, pool='fallback', planes=2, session=sess,
+                          _p2_entry=entry)
+        for row in res.ledger:
+            if (row.get('v3_intention') or {}).get('phase') != 'locked':
+                continue
+            seen_locked_row = True
+            for name, why in (row.get('shop_rejects') or {}).items():
+                if name in membership:
+                    seen_member_key = True
+                    assert why != 'non_line', \
+                        f'锁定帧行正典采购集成员 {name} 拒因 {why}:' \
+                        f'sim 打标口径与生产分叉(扩展成员被误标 non_line)'
+    assert seen_locked_row, '无锁定帧行 = 锁线注入失效,本锁空转'
+    assert seen_member_key, \
+        '正典采购集成员拒因键零命中 = 覆盖失效,不变式断言空转假绿'
+
+
+def test_sim_reject_call_site_canonical_source_anchor():
+    """sim 打标调用点源码锚(变异逃生口;先例形态 =
+    test_cw_locked_buy_membership_split.test_shop_consumes_membership_
+    not_scope_direct):打标行必须消费 obs 段正典 membership 变量
+    (_obs_bm)并直传 hub_names——回退旧口径 line_members 直传、或
+    删除 hub_names 直传的变异均被本锚抓红。"""
+    from pathlib import Path
+
+    from sr_od.application.currency_war.sim import engine_p1
+    src = Path(engine_p1.__file__).read_text(encoding='utf-8')
+    assert 'st, _k_comp, _obs_bm, acts, hub_names=_seg_hub)' in src, \
+        'sim 打标调用点须消费 obs 段正典 membership 并直传 hub_names'
