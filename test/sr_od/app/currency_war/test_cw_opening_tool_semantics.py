@@ -12,8 +12,9 @@
    令牌 R(c) 缺档 fail-closed;特权卡「持有不泄」)+ G1 发射位准入
    (§2.4-2/流程:197,执行通道未建档不发射);
 7. sim 注入基建缺省零漂移(§4/§5 最小面)。
-row2(committed)语义不回归锁在 test_cw_equip_wear_semantics.py 与
-test_cw_opening_hold.py(第十六局 P2r5-r7 对照,§4 保留域行)。
+row2(committed)语义不回归锁在本文件 test_row2_semantics_unchanged、
+test_cw_equip.py「穿戴语义代表行」节与 test_cw_opening_hold.py
+(row1 域标记面;第十六局 P2r5-r7 对照,§4 保留域行)。
 """
 from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
 from sr_od.application.currency_war.data.cw_synthesis import (
@@ -29,6 +30,8 @@ from sr_od.application.currency_war.kernel.cw_equip_env import (
     TOOL_REJECT_M1_GAP,
     TOOL_REJECT_NO_TARGET,
     TOOL_REJECT_RC_MISSING,
+    ZERO_WEAR_EXECUTION,
+    ZERO_WEAR_STRATEGY_BY_DESIGN,
     ZERO_WEAR_STRATEGY_BY_DESIGN_OPENING,
     admitted_tool_actions,
     battle_precede_release_active,
@@ -213,13 +216,28 @@ class TestEvaluationOrder:
 class TestTelemetryDomainKey:
     def test_row1_domain_key(self):
         """row1 域分键:新写入端前缀 opening_hold → strategy_by_design_
-        opening(§5:row1 帧数趋零锚与 row2 不回归锚预期相反,无分键不可判读)。
-        row2 旧键('过渡期hold…' → ZERO_WEAR_STRATEGY_BY_DESIGN)的
-        断言面由 test_cw_equip_wear_semantics.py 哨兵辖域二分组承载
-        (该文件持两处),本文件原同型测已删。"""
+        opening(§5:row1 帧数趋零锚与 row2 不回归锚预期相反,无分键不可判读)。"""
         assert classify_zero_wear_stop_reason(
             'opening_hold(row1):三门全不中(保留域扣留)') \
             == ZERO_WEAR_STRATEGY_BY_DESIGN_OPENING
+
+    def test_row2_domain_key_legacy(self):
+        """row2 旧键分键:旧写入端前缀 '过渡期hold' → ZERO_WEAR_STRATEGY_
+        BY_DESIGN(row1/row2 对同一帧族预期相反须分键,§5;样本字面量 =
+        _build_equip_wear_plan 空计划写入端 empty_reason 实值,与
+        test_cw_equip_plan_builder 空计划锁同源)。"""
+        assert classify_zero_wear_stop_reason(
+            '过渡期hold:无 key_equips 命中(全攒着)') \
+            == ZERO_WEAR_STRATEGY_BY_DESIGN
+
+    def test_tools_plan_stale_execution_domain(self):
+        """工具计划失效 → execution(词表精确行;写入端常量经 import
+        比对,词表行/写入端任一侧单改字面量即红,防两侧静默漂移)。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_op_tools import (
+            CwOpTools,
+        )
+        assert classify_zero_wear_stop_reason(
+            CwOpTools.STATUS_PLAN_STALE) == ZERO_WEAR_EXECUTION
 
 
 # ===== 6. 工具件消费判据(10 号稿 §2.1 收编 + 21 号稿 §3 增量)=====
