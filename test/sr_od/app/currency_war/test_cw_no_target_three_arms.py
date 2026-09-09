@@ -376,6 +376,65 @@ class TestHubEmission:
         assert not isinstance(act, BuyCard)
         assert _ct(sess).get('hub_option_reject_merge_material') == 1
 
+    def test_hub_hold_registration_and_sell_protection(self):
+        """攻击 r1 发现1(高)三面收口锁:TRANSITION_PACK 之外枢纽
+        (瓦尔特,cw_line_facts:75-76 移出记录实证)——面① hold 登记资格
+        域 = 静态持有集 ∪ 乙臂获取名集(发射位先登记后 emit,当笔在场):
+        买入后 launch_cause_mismatch 零污染 + 登记簿落 (hold, 轮);
+        面② 装配 A 身份段并集:获取名 ∈ sell_exclusions(凑息/腾席/筹资
+        资格排除),1★ 期权不再被己方卖面跨轮卖掉;面③ 部署域读端 =
+        鸭子读同一载体(静态扫描锁见下)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            sell_gate,
+        )
+        st = _state(shop_cards=[_card('瓦尔特', cost=4)])
+        sess = _session(IntentionState())
+        act = _decide(st, sess)
+        assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
+        ct = _ct(sess)
+        # 面①:登记资格域并入获取名集,病灶信号键零污染 + 簿落账
+        assert 'launch_cause_mismatch' not in ct
+        book = getattr(state_of(sess), sell_gate.LAUNCH_REGISTRY_ATTR, {})
+        assert book.get('瓦尔特') == ('hold', 2)
+        # 面②:装配 A 身份段并集(下一备战帧 round 推进,L1 同轮硬面过期
+        # ——fresh_buys 只保当轮,攻击报告「跨轮自动失效」形态;非并集时
+        # 该名落回凑息/腾席燃料资格 = 期权被己方卖面销毁)
+        st_next = _state(round_num=3)
+        sess.shop_state_frame = st_next
+        excl_next = sell_gate.sell_exclusions(
+            sess, (), channel='interest', current_round=3)
+        assert '瓦尔特' in excl_next
+        fuel = mandate.fuel_sell_candidates(
+            [_bc('瓦尔特', slot=1)], (), state=st_next,
+            exclude_names=excl_next)
+        assert not fuel
+        # 面③:读口单一源(登记域/身份段/部署域三面同源)
+        assert '瓦尔特' in sell_gate.hub_acquired_names_of(sess)
+
+    def test_deploy_domain_hub_read_static(self):
+        """攻击 r1 发现1 面③部署域消费接线锁:静态扫描 cw_op_deploy 的
+        deployed_from_hub 读端与载体属性名(鸭子读属性契约,同
+        cw4_fuel_filler_stall_buys 先例)。带变异自检。"""
+        import sr_od.application.currency_war.operations.cw_op.cw_op_deploy as _dep
+        src = Path(_dep.__file__).read_text(encoding='utf-8')
+        assert 'deployed_from_hub' in src
+        assert "'cw4_hub_acquired_names'" in src
+        # 变异自检:扫描器对注入形态能命中
+        assert 'deployed_from_hub' in "counters['deployed_from_hub'] = 1"
+
+    def test_hub_hold_registration_negative_stale_semantics(self):
+        """面①②负锁:获取名集之外的名不获资格域扩张——非持有名 hold
+        登记仍拒(launch_cause_mismatch 病灶信号语义不被乙臂面稀释)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            sell_gate,
+        )
+        sess = _session(IntentionState())
+        ok = sell_gate.register_launch(
+            sess, '注册表外散件Q', cause='hold', round_num=3,
+            star=1, cost=1)
+        assert not ok
+        assert _ct(sess).get('launch_cause_mismatch') == 1
+
     def test_star2_hub_card_not_enumerated(self):
         """锁 8 前件(§3.2 合取:refund_full_star_ok 仅 1★):2★ 枢纽直出卡
         不入候选枚举(2★ 退金 3c−1 ≠ 净 0,定理 B4 闭集 3 的事实面)。"""
