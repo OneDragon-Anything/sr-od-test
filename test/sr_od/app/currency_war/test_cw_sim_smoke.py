@@ -7,7 +7,8 @@
   静默绿 = 断言永久失明)+ sim 账本写入器禁写生产 live 流目录(自中毒防线);
 - 退役锁回补家(T-197,自 test_cw_sim_suite.py 各节原名回补,利于
   git -S 追溯):连胜金收入口径双向 / 冷启动种子浪费双向 / 写入器退役
-  旧根禁写 / 满级拒付守卫(flat4 台账不破)/ 观测硬依赖键哨兵。
+  旧根禁写 / 满级拒付守卫(flat4 台账不破)/ 观测硬依赖键哨兵;
+  T-198 续补:ret 越限削顶(pool cap,T-197 报告边界发现①)。
 
 来源指针(2026-09-09 目标形态重建批,断言零改动迁移):
 - test_cw_sim_suite.py(sim 段/账本检查段/写入器守卫段)。
@@ -46,6 +47,24 @@ def test_pool_conservation() -> None:
     p.ret(name)
     assert sum(p.copies.values()) == total0
     assert p.copies[name] <= POOL_COPIES_PER_CARD[CHARACTERS[name].cost]
+
+
+def test_pool_cap_respected() -> None:
+    """ret 越限削顶:重复卖出回池,copies 不超过该卡基础副本数。
+
+    前身 = test_cw_sim_suite.py sim 段同名锁(f799914 退役,T-198 回补):
+    同文件迁入的 test_pool_conservation 只断单帧 `copies ≤ cap`,不辖
+    连续 ret 越限后的削顶行为(pool.py::ret 的 min(base, ·) 守卫)。
+    cap 从 POOL_COPIES_PER_CARD 单一源现算,不抄常数。
+    """
+    import random
+    rng = random.Random(7)
+    p = _Pool(rng)
+    name = next(iter(p.copies))
+    cap = POOL_COPIES_PER_CARD[CHARACTERS[name].cost]
+    for _ in range(cap + 5):
+        p.ret(name)
+    assert p.copies[name] == cap, 'ret 越限未削顶:回池超过基础副本数'
 
 
 # ==================== 裁判:键名演化变异缺键守卫(自 sim_checks_streak_income 段迁入) ====================
