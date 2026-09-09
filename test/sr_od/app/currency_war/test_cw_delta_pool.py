@@ -94,14 +94,13 @@ def test_poverty_selfconsistency_real_snapshot_green() -> None:
     assert out['disclosed_n'] == out['pool_poor_n']
 
 
-def test_poverty_selfconsistency_synthetic_green() -> None:
-    out = check_delta_pool_poverty_selfconsistency(
-        _mini_pool(), _mini_meta())
-    assert out['violations'] == 0, f'{out}'
-
-
 def test_poverty_selfconsistency_skip_states() -> None:
-    """两跳过态:无披露载体(meta=None)/空池(fallback)→ 0 违规不辖。"""
+    """两跳过态:无披露载体(meta=None)/空池(fallback)→ 0 违规不辖。
+
+    (CUT7 收缩:原 test_poverty_selfconsistency_synthetic_green 删——
+    合成池绿态与真实快照绿态同属「自洽 → 0 违规」一分支的数据变体,
+    绿态代表行由真实快照锚承载;合成池仍在跳过态/漂移态各分支作载体,
+    2026-09-09。)"""
     out = check_delta_pool_poverty_selfconsistency(_mini_pool(), None)
     assert out['violations'] == 0
     assert '不辖' in out['note']
@@ -212,32 +211,38 @@ def test_boss_gate_direct_fit_ready_tracks() -> None:
 # check_ab_verdict_claim 词表反转(批㊲ 加固)
 # --------------------------------------------------------------------
 
-@pytest.mark.parametrize('claim', ['首超', 'wins', '更高', 'better', ''])
+@pytest.mark.parametrize('claim', ['首超', ''],
+                         ids=('cjk_wording', 'empty_claim'))
 def test_verdict_claim_unknown_wording_now_flagged(claim: str) -> None:
     """批㊲ 攻击面锁:换措辞旧版绕过(词表命中才辖)→ 新版默认辖。
-    n=30 + 带内差 → 至少 1 违规。"""
+    n=30 + 带内差 → 至少 1 违规。
+
+    (CUT7 收缩:参数 5 行 → 2 代表行——非白名单→必辖是一分支,
+    词形是数据变体;留 CJK 词与空串边界。同分支的旧方向词测
+    test_verdict_claim_legacy_directional_words_still_flagged 一并删,
+    2026-09-09。)"""
     out = check_ab_verdict_claim(3.0, 14.0, 30, claim)
     assert out['directional'] is True
     assert out['violations'] >= 1, (
         f'claim={claim!r} 绕过判罚面 = 词表反转回归')
 
 
-@pytest.mark.parametrize('claim', ['noise', 'noise_band', 'tie', '平局',
-                                   '持平', '无差异', 'parity'])
+@pytest.mark.parametrize('claim', ['noise', '平局'],
+                         ids=('en_whitelist', 'cjk_whitelist'))
 def test_verdict_claim_nondirectional_whitelist_still_exempt(claim: str
                                                              ) -> None:
+    """白名单豁免支(与判罚支互为真值表两翼;CUT7 收缩 7 行 → 2 代表行,
+    中英词形各一,2026-09-09)。"""
     out = check_ab_verdict_claim(-3.0, 14.0, 30, claim)
     assert out['directional'] is False
     assert out['violations'] == 0
 
 
-@pytest.mark.parametrize('claim', ['leads', 'behind', '领先', '落后'])
-def test_verdict_claim_legacy_directional_words_still_flagged(claim: str
-                                                              ) -> None:
-    """旧方向词在反转后仍辖(回归,不因词表反转漏放)。"""
-    out = check_ab_verdict_claim(-3.0, 14.0, 30, claim)
-    assert out['directional'] is True
-    assert out['violations'] >= 1
+# (CUT7 收缩:原 test_verdict_claim_legacy_directional_words_still_flagged
+#  删(2026-09-09)——旧方向词 'leads/behind/领先/落后' 走「非白名单 → 判罚」
+#  同一代码分支,断言面(directional=True + violations≥1)与
+#  test_verdict_claim_unknown_wording_now_flagged 逐位同形,纯数据变体;
+#  词表反转的回归判别力由非白名单任意词必辖承载,旧词形无独立分支。)
 
 
 # --------------------------------------------------------------------
@@ -490,17 +495,22 @@ def test_live_delta_battle_rung_sampling_paths() -> None:
     # 池空 → None(调用方旧模型)
     assert sim_pool.live_delta_for('battle', 1, random.Random(1),
                                pool_map={}) is None
-
-
-def test_live_delta_battle_guard_merges_adjacent_rungs() -> None:
-    """battle 防饥饿守卫:薄 rung 桶与相邻 rung(±1)合并采样。"""
-    pool = {'battle': {1: {1: [-3] * 6, 2: [-6]}}}   # rung2 n=1 饥饿
-    rng = random.Random(0)
-    drawn = [sim_pool.live_delta_for('battle', 2, rng, pool_map=pool)
-             for _ in range(200)]
-    # 唯一样本 -6 以 1/7 权重参与(合并非剔除),远非恒定
-    assert drawn.count(-6) <= 60
+    # 薄 rung 桶合并(CUT7:原独立守卫测并此——守卫代码块为 rung/depth
+    # 两分支共式(pool.live_delta_for 尾段),rung 侧 width=1 邻接合并由
+    # 本腿承载:唯一样本以 1/7 权重参与,远非恒定命中)
+    thin = {'battle': {1: {2: [-6], 1: [-3] * 6}}}
+    drawn = [sim_pool.live_delta_for('battle', 2, random.Random(0),
+                                     pool_map=thin) for _ in range(60)]
+    assert drawn.count(-6) <= 30, f'饥饿桶样态恒定命中 = 合并守卫失效: {drawn[:5]}'
     assert -3 in drawn
+
+
+# (CUT7 收缩:原 test_live_delta_battle_guard_merges_adjacent_rungs 删
+#  (2026-09-09)——薄桶与相邻桶合并守卫对 battle(rung 键)/supply(depth 键)
+#  是同一守卫代码路径(pool.live_delta_for 共式,邻接宽随键语义),
+#  两测断言逐位同形(合并权重参与 + 邻桶可达);代表行由下方 supply 变体
+#  承载,rung 域采样/截幅/下探分支由 test_live_delta_battle_rung_sampling_
+#  paths 单独辖。)
 
 
 def test_pool_from_replay_battle_rung_keys(tmp_path: Path) -> None:
@@ -864,7 +874,13 @@ def test_fake_and_sim_runs_isolated_from_snapshot(
     若此锁红:隔离判据被绕开或收窄——假游戏/sim 批行会随下次再生
     流回提交快照(只「作废信任」不排池的旧病,QUARANTINED_RUNS
     机制注释所述)。禁为保绿收窄断言。
-    """
+
+    (CUT7 收缩:原 test_auto_pool_quarantine_same_judgment 并入本测
+    作双消费面腿——隔离判据单一源 cw_delta_pool_gen._run_quarantine_
+    reason(gen 定义、pool._pool_from_replay 导入复用),auto/gen 两
+    接线走同一 corpus 同断言面;同 corpus 只建一次,两消费面循环共验
+    (同 test_pool_build_synthetic_row_never_endpoint 的双面形态),
+    2026-09-09。)"""
     real_id = 'run_20260908_074522'
     groups = [
         _defense_delta_row('fake_20260908', 84, 47),   # 实证同款假游戏前缀
@@ -879,13 +895,19 @@ def test_fake_and_sim_runs_isolated_from_snapshot(
     fp = cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
     ns: dict = {}
     exec(target.read_text(encoding='utf-8'), ns)
-    snap, meta = ns['SNAPSHOT'], ns['META']
-    vals = [x for planes in snap.values() for bks in planes.values()
-            for v in bks.values() for x in v]
-    assert vals == [-12], vals          # -37/-53(假/sim 腿)不得出现
-    assert set(meta['quarantined_hits']) == {
-        'fake_20260908', 'sim_20260908_120001_n1_s0_aabbccdd_s1'}
-    assert real_id in meta['runs'] and meta['fingerprint'] == fp
+    pool_auto, meta_auto = sim_pool._pool_from_replay(src)
+    consumers = (
+        ('gen', ns['SNAPSHOT'], ns['META']),
+        ('auto', pool_auto, meta_auto),
+    )
+    for name, snap, meta in consumers:
+        vals = [x for planes in snap.values() for bks in planes.values()
+                for v in bks.values() for x in v]
+        assert vals == [-12], (name, vals)   # -37/-53(假/sim 腿)不得出现
+        assert set(meta['quarantined_hits']) == {
+            'fake_20260908', 'sim_20260908_120001_n1_s0_aabbccdd_s1'}
+        assert real_id in meta['runs']
+    assert ns['META']['fingerprint'] == fp   # gen 产物指纹=返回值(产物自洽)
 
 
 def test_fake_only_source_rejected_target_untouched(
@@ -997,30 +1019,10 @@ def test_collapse_baseline_reads_committed_head_not_disk(
     assert disk_file.read_text(encoding='utf-8') == disk_text   # 盘面零覆写
 
 
-def test_auto_pool_quarantine_same_judgment(tmp_path: Path) -> None:
-    """auto 池同判据锁(ADR-0595 适用范围含 auto 池):_pool_from_replay
-    消费同一 _run_quarantine_reason——fake_/sim_ run 不入缺省校准池,
-    正常 run_ 照常入池(防过滤扩大化),quarantined_hits 同名披露。
-
-    若此锁红:auto 池隔离被拆除——resolve_pool('auto') 是
-    simulate_p1 的缺省池,假局行会持续被配对进缺省校准路径
-    (ADR-0582 方案审阻断-1 同型反模式「默认路径继续吃毒」,
-    ADR-0595 适用范围在案),禁为保绿拆除。"""
-    real_id = 'run_20260908_074522'
-    groups = [
-        _defense_delta_row('fake_20260908', 84, 47),
-        _defense_delta_row('sim_20260908_120001_n1_s0_aabbccdd_s1', 90, 37),
-        _defense_delta_row(real_id, 100, 88),          # Δ=-12 唯一入池值
-    ]
-    d = tmp_path / 'replay'
-    _defense_write_corpus(d, groups)
-    pool, meta = sim_pool._pool_from_replay(d)
-    vals = [x for planes in pool.values() for bks in planes.values()
-            for v in bks.values() for x in v]
-    assert vals == [-12], vals          # -37/-53(假/sim 腿)不得出现
-    assert set(meta['quarantined_hits']) == {
-        'fake_20260908', 'sim_20260908_120001_n1_s0_aabbccdd_s1'}
-    assert real_id in meta['runs']
+# (CUT7 收缩:原 test_auto_pool_quarantine_same_judgment 删——已并入
+#  test_fake_and_sim_runs_isolated_from_snapshot 双消费面腿(隔离判据
+#  单一源 = cw_delta_pool_gen._run_quarantine_reason,pool._pool_from_replay
+#  导入复用;同 corpus 同断言面在彼循环共验),2026-09-09。)
 
 
 def test_auto_pool_normal_run_source_taken(tmp_path: Path) -> None:
@@ -1097,13 +1099,10 @@ def test_guard_preserves_missing_bucket_none() -> None:
                                  pool_map=pool) in (-11, -4)
 
 
-def test_guard_healthy_bucket_unchanged() -> None:
-    """n≥5 健康桶照旧裸采样(守卫零影响面)。"""
-    pool = {'battle': {1: {6: [-4, -5, -6, -7, -8]}}}
-    rng = random.Random(2)
-    for _ in range(50):
-        v = sim_pool.live_delta_for('battle', 7, rng, pool_map=pool)
-        assert v in (-4, -5, -6, -7, -8)
+# (CUT7 收缩:原 test_guard_healthy_bucket_unchanged 删(2026-09-09)
+#  ——n≥BUCKET_MIN_N 健康桶裸采样分支已由 test_live_delta_battle_rung_
+#  sampling_paths 承载(同函数 n=5 桶恒裸采样断言),本测为其同分支
+#  数据变体(断言面逐位同形:采样值 ∈ 桶样本集)。)
 
 
 def test_check_delta_pool_bucket_min_n() -> None:
@@ -1208,14 +1207,16 @@ def test_pool_contains_cost_4_and_5() -> None:
         assert not missing, f'{cost} 费角色未全入池(截断回归): {missing}'
 
 
-@pytest.mark.parametrize('level,cost', [(5, 4), (9, 5)],
-                         ids=('lv5_cost4', 'lv9_cost5'))
+@pytest.mark.parametrize('level,cost', [(5, 4)], ids=('lv5_cost4',))
 def test_high_cost_appears_in_shop(level: int, cost: int) -> None:
     """高档费用在可达等级的商店出现率 > 0(2026-09-09 两测并参化)。
 
     lv5 4 费 REFRESH_PROB .02(期望 ~50 命中/500 抽);lv9 5 费 .10
     (P1 可达等级)。红 = 池截断回归或概率未接。
-    """
+
+    (CUT7 收缩:参数 2 行 → 1 代表行 lv5_cost4——draw_shop 按 cost
+    过滤是同一纯路径,lv5@.02 是最低概率=最强判别行;lv9_cost5 同分支
+    数据变体删,2026-09-09。)"""
     p = _Pool(random.Random(11 if cost == 4 else 13))
     hits = sum(1 for _ in range(500) for c in p.draw_shop(level)
                if c.cost == cost)

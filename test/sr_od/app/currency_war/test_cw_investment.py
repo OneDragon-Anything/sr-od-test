@@ -522,16 +522,10 @@ def _spy_decide_event(monkeypatch) -> list[dict]:
     return calls
 
 
-def test_invest_arm_off_stays_bit_identical() -> None:
-    """新参数零漂移门:invest=False 时任意 invest_arm 取值都与缺省逐位同。
-
-    开关只在 invest 真值时有意义——arm 参数漏进 off 路径(哪怕只耗一个
-    rng)即此处红(n=2,判据同 test_invest_off_is_bit_identical)。
-    """
-    for s in range(2):
-        base = _snap(s)
-        assert _snap(s, invest=False, invest_arm='sink') == base
-        assert _snap(s, invest=False, invest_arm='freq') == base
+# (CUT7 收缩:原 test_invest_arm_off_stays_bit_identical 删(2026-09-09)
+#  ——invest=False 的零漂移门与 test_invest_off_is_bit_identical 同一
+#  生产分支(off 短路,arm 参数不可达),断言面逐位同形(docstring 自证
+#  「判据同」),arm 取值是同分支数据变体;off 门零漂移语义由原测承载。)
 
 
 def test_sink_arm_decides_via_decide_event_and_adopts(monkeypatch) -> None:

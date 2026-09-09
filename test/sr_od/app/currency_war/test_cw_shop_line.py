@@ -713,7 +713,11 @@ class TestKGapFallback:
     def test_gap_window_fallback_nonempty_and_m2_emits(self):
         """①空窗死锁场景:bench 支持度 <0.5(注册表外散件板面)⇒
         K 回退非空(hoard_target_set 单一源)+ 店面引擎件经 M2 发射
-        + ``shop_k_fallback_p1_gap`` 计数。"""
+        + ``shop_k_fallback_p1_gap`` 计数。
+
+        (CUT7 收缩:原 test_gap_fallback_matches_hoard_single_source
+        并入本测——同帧同 decide 的单一源对拍腿,回退集与 hoard 独立
+        直算同源比对在本测内完成,不再二次决策,2026-09-09。)"""
         from sr_od.application.currency_war.kernel import cw_intention
         members = cw_intention._pair_members(cw_intention._P1_PAIR_PREF)
         engine_piece = sorted(members)[0]
@@ -726,18 +730,12 @@ class TestKGapFallback:
         assert any(b.card.name == engine_piece
                    and b.reason == 'm2_line_member' for b in buys)
         assert state_of(sess).cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
-
-    def test_gap_fallback_matches_hoard_single_source(self):
-        """回退单一源:空窗帧 K 投影 == hoard_target_set().char_targets
-        (禁复制四体系全集逻辑的行为锚;hoard 侧独立直算对拍)。"""
-        from sr_od.application.currency_war.kernel import cw_intention
-        st = _state(gold=30, bench=[_bc('注册表外散件Z', slot=1)])
-        sess = self._gap_session()
-        _decide(st, sess)
+        # 单一源对拍:回退方向集 == hoard_target_set 独立直算(禁复制四体系全集逻辑)
         expect = cw_intention.hoard_target_set(
             st, state_of(sess).v3_intention).char_targets
-        assert expect                       # 空窗回退非空(四体系引擎件全集)
-        assert state_of(sess).cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
+        assert expect, '空窗回退单一源(hoard 全集)不得为空'
+        bought = {a.card.name for a in buys if a.reason == 'm2_line_member'}
+        assert bought and bought <= expect, (bought, sorted(expect))
 
     def test_non_gap_support_at_threshold_lock_band_fallback(self):
         """②P1 锁线过渡带(ADR-0519 重锚:锁线门槛 = 羁绊满员当量 1.0,
@@ -761,16 +759,11 @@ class TestKGapFallback:
                   and a.reason == 'm2_line_member'}
         if bought:
             assert bought <= expect   # 只买方向件(与 top-2 单一源一致)
-
-    def test_lock_band_matches_p1_early_pair_single_source(self):
-        """过渡带单一源行为锚:回退成员集 == p1_early_pair_members
-        (hoard_target_set 空窗全集仅在 pair 派生空时兜底,本帧不辖)。"""
-        from sr_od.application.currency_war.kernel import cw_intention
-        st = _state(gold=30, bench=[_bc('桑博', slot=1), _bc('卡芙卡', slot=2)])
-        sess = self._gap_session()
-        _decide(st, sess)
-        assert cw_intention.p1_early_pair_members(
-            st, state_of(sess).v3_intention) != cw_intention.hoard_target_set(
+        # 锁锚有效性与单一源对拍(CUT7 收缩:原
+        # test_lock_band_matches_p1_early_pair_single_source 并入——同帧
+        # 同 decide 的对拍腿;过渡带回退集 == p1_early_pair_members 独立
+        # 直算,且两带集合确异防锚失效):
+        assert expect != cw_intention.hoard_target_set(
             st, state_of(sess).v3_intention).char_targets   # 两带集合确异(锁锚有效)
 
     def test_p2plus_unlocked_fallback_three_arm(self):

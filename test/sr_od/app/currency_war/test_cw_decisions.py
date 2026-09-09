@@ -285,12 +285,12 @@ def test_decide_encounter_reward_neutral_no_tiebreak() -> None:
 
 
 def test_reward_value_tiers() -> None:
-    """ADR-0519:奖励文本价值分恒中性 0.5(先验阶梯未证退役,保守缺省)。"""
+    """ADR-0519:奖励文本价值分恒中性 0.5(先验阶梯未证退役,保守缺省)。
+
+    (CUT7 收缩:5 行 → 2 代表行——_reward_value 是恒值查表,任意奖励
+    词形同返 0.5,留具名奖励与空值(OCR 漏/无)两端,2026-09-09。)"""
     from sr_od.application.currency_war.kernel.cw_events import _reward_value
     assert _reward_value(['棱彩装备']) == 0.5
-    assert _reward_value(['进阶武装']) == 0.5
-    assert _reward_value(['简易装备']) == 0.5
-    assert _reward_value(['经验']) == 0.5
     assert _reward_value([]) == 0.5   # OCR 漏/无 → 中性不惩罚
 
 

@@ -780,10 +780,12 @@ def test_yinzhi_trial_template(templates):
 
 
 # ===== 旧 9/10/11 档触发帧 → 按 8 格档锁(ADR-0281 核心证据;F7 参数化合一) =====
+# (CUT7 收缩:参数 3 帧 → 2 代表行——「cap≥9 不派生额外档」由域内两端
+# cap10(满级局)/cap11(P3 局)极值承载;双宝钻局(cap9)与已存的
+# test_slot8_all_positions(狸猫局 8 格全位锚)同组合成态,同分支数据
+# 变体删,2026-09-09。)
 
 @pytest.mark.parametrize('fn, want', [
-    ('后排8槽-双宝钻局.webp', {1: '藿藿', 2: '爻光', 6: '开拓者·欢愉',
-                               7: '狸小虎', 8: '狸小龙'}),   # cap9/lv7
     ('后排8槽-满级局.webp', {1: '爻光', 2: '三月七', 3: '藿藿', 6: '开拓者·欢愉',
                              7: '狸小虎', 8: '狸小龙'}),      # cap10/lv8
     ('后排8槽-P3局.webp', {3: '藿藿', 6: '开拓者·欢愉',
@@ -923,16 +925,18 @@ def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模
     import numpy as np
 
     from sr_od.application.currency_war.obs.cw_back_layout import cv_back_slots
+    # CUT7 收缩:16 帧 → 6 代表帧(2026-09-09)。探针门分支覆盖:
+    # (full,full)→8 = 狸猫局;占用态门消解不可判带(空槽暗框=整格存在)
+    # = P3 局;(slice,slice)→7 = 佩佩局拖测后;none→6 = shop_closed;
+    # 事故回归锚 = run26 崩坏现场帧(6 格);越界守卫 = 非 1080p 小帧。
+    # 被删 10 帧均为对应分支的同签名数据变体(满级/双宝钻=full 支、
+    # 佩佩拖测前/r9_7grid=slice 支、P2开局/a8_start/prep_all/p1r9/
+    # r1_idle=none 支),探针三段判据错一版必被代表帧暴露。
     for fn, want in (
-            ('后排8槽-狸猫局.webp', 8), ('后排8槽-全位验证.webp', 8),
-            ('后排8槽-双宝钻局.webp', 8), ('后排8槽-满级局.webp', 8),
+            ('后排8槽-狸猫局.webp', 8),
             ('后排8槽-P3局.webp', 8),   # 空 1 槽暗框=整格存在(占用态门消解旧不可判带)
-            ('后排7槽-佩佩局.png', 7),          # slice,slice:两端切片签名 → 直读 7
-            ('后排7槽-佩佩局-拖测后.png', 7),   # 同上(拖测后帧)
-            ('deployed_r9_7grid.webp', 7),      # slice,slice(不对称比 5.3/28.8)→ 直读 7
-            ('后排6槽-P2开局局.webp', 6), ('shop_closed.webp', 6),
-            ('shop_closed_a8_start.webp', 6), ('prep_1-6_all_positions.webp', 6),
-            ('deployed_p1r9.webp', 6), ('r1_idle_stop.webp', 6),
+            ('后排7槽-佩佩局-拖测后.png', 7),   # slice,slice:两端切片签名 → 直读 7
+            ('shop_closed.webp', 6),
             ('后排6槽-run26崩坏现场.png', 6)):
         img = cv2_utils.read_image(str(FIXTURES / fn))
         got = cv_back_slots(img)
@@ -1340,29 +1344,27 @@ def test_pepe_board_truth_current(templates):
     assert got == {1: '万敌', 3: '乱破', 5: '卡芙卡', 7: '佩佩'}, got
 
 
-def test_pepe_board_truth_golden(templates):
-    """佩佩局拖测前帧(用户口述真值):1=卡芙卡/3=万敌/5=爻光/7=佩佩。"""
-    fix = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局.png'))
-    got = {c.slot: c.char_id for c in identify_slots(
-        fix, templates, _slots7(), 'back', min_inliers=15, live_only=True,
-        center_gate=True)}
-    assert got == {1: '卡芙卡', 3: '万敌', 5: '爻光', 7: '佩佩'}, got
+# (CUT7 收缩:原 test_pepe_board_truth_golden 删(2026-09-09)——拖测前/
+#  拖测后两帧是同一 7 格识别锚的数据变体(同 identify_slots 生产参数、同
+#  断言形态),代表行由 test_pepe_board_truth_current(拖测后)承载;该帧
+#  另辖空槽零本底锁(test_true_grid_empty_slots_zero_baseline)。)
 
 
 def test_pepe_board_coverage_s246(templates):
-    """7 格全覆盖锁(用户交办「拖动角色到后台246 覆盖测试」,2026-08-26):
-    万敌 534→676→960→1244 逐位拖测三帧,2/4/6 各读对万敌(真中心拾取,
-    板内→空位可拖实证;ADR-0390)。"""
-    for fn, slot in (('后排7槽-佩佩局-覆盖s2.png', 2),
-                     ('后排7槽-佩佩局-覆盖s4.png', 4),
-                     ('后排7槽-佩佩局-覆盖s6.png', 6)):
-        fix = cv2_utils.read_image(str(FIXTURES / fn))
-        got = {c.slot: c.char_id for c in identify_slots(
-            fix, templates, _slots7(), 'back', min_inliers=15, live_only=True,
-            center_gate=True)}
-        assert got.get(slot) == '万敌', f'{fn}: s{slot} 应为万敌,实得 {got}'
-        assert got.get(3) == '风堇' and got.get(5) == '艾丝妲' \
-            and got.get(7) == '佩佩', f'{fn}: 基准位漂移 {got}'
+    """7 格覆盖锁(用户交办「拖动角色到后台246 覆盖测试」,2026-08-26):
+    万敌拖到空位 → 空位读对万敌(真中心拾取,板内→空位可拖实证;ADR-0390)。
+
+    (CUT7 收缩:3 拖测帧 → 1 代表帧 s2——同一「拖动-识别」分支的多帧
+    重复验证,居中重排几何由 7 格坐标档与空槽零本底锁共同辖;留最远端
+    新位 s2=最强判别帧,基准位 3/5/7 断言保留,2026-09-09。)"""
+    fn, slot = ('后排7槽-佩佩局-覆盖s2.png', 2)
+    fix = cv2_utils.read_image(str(FIXTURES / fn))
+    got = {c.slot: c.char_id for c in identify_slots(
+        fix, templates, _slots7(), 'back', min_inliers=15, live_only=True,
+        center_gate=True)}
+    assert got.get(slot) == '万敌', f'{fn}: s{slot} 应为万敌,实得 {got}'
+    assert got.get(3) == '风堇' and got.get(5) == '艾丝妲' \
+        and got.get(7) == '佩佩', f'{fn}: 基准位漂移 {got}'
 
 
 def test_true_grid_empty_slots_zero_baseline(templates):
@@ -1611,8 +1613,9 @@ def test_probe_state_slice_never_misjudged_full():
         _PROBE_SLICE,
         _probe_state,
     )
-    for l_std, r_std in ((3.0, 40.0), (5.0, 30.0), (2.0, 45.0), (40.0, 3.0),
-                         (11.3, 60.1), (61.5, 2.1)):   # 后三项=真帧实测形态
+    # CUT7 收缩:6 行 → 3 代表行——同一 slice→SLICE 判据分支,正向/反向
+    # 强不对称 + 真帧实测形态各一,其余为同分支数据变体(2026-09-09)。
+    for l_std, r_std in ((3.0, 40.0), (40.0, 3.0), (61.5, 2.1)):
         frame = _mk_probe_frame(l_std, r_std)
         got = _probe_state(frame, 464)
         assert got == _PROBE_SLICE, f'(l={l_std},r={r_std}) → {got} ≠ slice'

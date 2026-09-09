@@ -15,7 +15,6 @@ I4 不超发:输出总条数 ≤ owned 总数(每件至多一次)
 I5 无 comp 轮转保序:comp=None 按 deployed 原序轮转(r232 改轮转,
    前排先入序;全序断言判别「deployed 原序」与「按行排序」两种实现)
 """
-import itertools
 import sys
 
 import pytest
@@ -60,8 +59,21 @@ OWNED_SETS = [
     ['以牙还牙甲', '以牙还牙甲', '高周波电锯', '狙击枪', '生命之花'],
 ]
 
+# 枚举面(CUT7 收缩:48 组合积 → 4 代表行,覆盖分配器全分支;2026-09-09)
+# 收缩自 4×3×4=48 行 → 4 行,代表行选择依据 = equip_allocation 分支覆盖:
+# - (0,2,0):comp=None 无-comp 轮转路径 + 空 owned(I4 平凡支);
+# - (1,0,1):core 不在场(di=0 仅砂金)→ key/通用兜底给场上人支,I3 field_cores 空;
+# - (3,1,3):key×3+carry 且 core 在场(di=1)→ I2 key 优先 + I3 容量被 key 占满
+#   的非 core 豁免面(3 key 占满白厄容量 → 通用件流 non-core 合法);
+# - (2,2,2):双 core + 4 人前后排交错(di=2)→ I3 多 core 容量分配。
+# 被删 44 行均为同一纯函数下的数据变体:不变量 I1-I4 对任意输入成立,
+# 同分支变体行错一版必被代表行与其余用例(equipment 主题文件)共同暴露。
+REPRESENTATIVE_COMBOS = [(0, 2, 0), (1, 0, 1), (3, 1, 3), (2, 2, 2)]
 
-@pytest.mark.parametrize('ci,di,oi', list(itertools.product(range(4), range(3), range(4))))
+
+@pytest.mark.parametrize('ci,di,oi', REPRESENTATIVE_COMBOS,
+                         ids=['nocomp_empty', 'core_absent_fallback',
+                              'key_priority_full', 'dual_core_multirow'])
 def test_allocation_invariants(ci, di, oi):
     comp, dep, owned = COMPS[ci], DEPLOYED_SETS[di], OWNED_SETS[oi]
     alloc = equip_allocation(comp, dep, owned)

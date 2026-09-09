@@ -268,19 +268,10 @@ class TestTruncateFrameStable:
             assert self._classify(action) == expect, \
                 f'{type(action).__name__}: 期望 {expect}'
 
-    def test_word_list_exhaustive(self):
-        """17 具体类(PREP_ACTION_TYPES)全部有分类(§3.3「词表内但无分类」
-        不存在)。参数化动作用代表实例。"""
-        reps = {SellBench: SellBench(slot=1),
-                SellDeployed: SellDeployed(row='front', slot=1),
-                DeployMove: DeployMove(from_slot=1, to_row='back', to_slot=1),
-                ClickSpheres: ClickSpheres(max_k=1),
-                OpenBox: OpenBox(slot=1), OpenTome: OpenTome(slot=1),
-                PickBoxCard: PickBoxCard(card_idx=0),
-                BailToOuter: BailToOuter(reason='')}
-        for cls in PREP_ACTION_TYPES:
-            inst = reps[cls] if cls in reps else cls()
-            assert entry.classify_frame_stability(inst) != 'unknown', cls
+    # (CUT7 收缩:原 test_word_list_exhaustive 删(2026-09-09)——「全类
+    #  ≠unknown」是 test_17_classes_each_classified(逐类精确判型 +
+    #  len==17 新类守卫)的真子集:同一纯查表函数,精确值断言蕴含
+    #  ≠unknown,超集保留判型表本体。)
 
     def test_truncation_point_cuts_tail(self):
         out = entry.truncate_frame_stable(
