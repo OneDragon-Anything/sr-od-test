@@ -476,6 +476,23 @@ class TestEmissionFace:
         assert sells[0].action.reason == 'line_switch_collapse'
         assert sells[0].reason == 'line_switch_collapse'
 
+    def test_core_seat_vacate_unmarked(self):
+        """C1 恒买腾席发射位(T-115 恒买腾席批,ADR-0580;方案 v2 §5.4):
+        席满帧腾席卖出发射行为不变,载体字段 reason 缺省 ''(唯一在役
+        填充仍 = 孤儿证明标记),expect = victim。基数(实测口径):
+        本类测试方法 HEAD 基数 9 → 本位 10(方案文面「9→10」即实测态;
+        对抗审 B8 的「现有 10」系未实测误记,勿沿袭)。"""
+        from sr_od.application.currency_war.kernel.cw_state import ShopCard
+        sess = _sess()
+        bench = [_bc('目标件', slot=1), _bc(_FUEL, slot=2)] + [
+            _bc(f'燃料{i}', slot=i + 1) for i in range(3, 10)]
+        st = _state(45, bench)
+        st.shop = [ShopCard(x=100, name='希儿', cost=3, star=1)]
+        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        assert isinstance(act, ShopSellBench)
+        assert act.reason == ''
+        assert act.expect == _FUEL
+
 
 # ===== seed18 p1r1 端到端首发点锁(T-141;ADR-0591)=====
 
@@ -678,11 +695,16 @@ class TestConsumptionSiteManifest:
     未登记,处置 = 清单加行 + 确认其排除集出自 sell_exclusions/
     funding_hold_fallback,非机械跟绿。"""
 
-    _MANIFEST: dict[str, int] = {'entry.py': 3, 'mandate.py': 3, 'shop.py': 5}
+    _MANIFEST: dict[str, int] = {'entry.py': 3, 'mandate.py': 3, 'shop.py': 6}
     # T-159 加行登记:entry.py +1 = 迁移 B 席满前置谓词的腾席卖(①位
     # spheres 分支,装配 A channel='m4_fuel' 同源);mandate.py +1 =
     # 迁移 A wanted 消费臂腿 2(M4 卖角色,同源候选)。两新消费位排除
     # 集均出自 sell_exclusions 单一入口,非手搓。
+    # T-115 加行登记(恒买腾席批,ADR-0580):shop.py +1 = C1/④ 三腿
+    # 共享腾席 victim 探测 helper(_core_victim,唯一 exclude_names=
+    # 落点;金闸双桶探测与席满腾席共享同一装配,帧内惰性缓存)。排除集
+    # 出自 sell_exclusions(channel='m4_fuel')单一入口,与 M2 缺员/
+    # m2_stockpile 两腾席位同源,非手搓。
 
     def _counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}
