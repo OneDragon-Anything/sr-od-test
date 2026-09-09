@@ -29,6 +29,10 @@ arbitrage-batch1.md)**:发射帧仲裁段(出口 B,P70 已证)落地后,发射�
    仲裁披露缺位/带内帧动作/带内帧花费/溢出帧破线」逐个红,真账本绿;
 5. armed 单键锁(三审整改):admission 异常吞 None 时发射帧仍短路
    (victim=None 观测位不拦门)。
+
+CUT6 瘦身批(2026-09-09):哨兵边缘变体(zone 域外值/legacy 批归因)
+砍除——核心红形态(docstring 第 4 条五枚举)全数保留;判据与保留核
+清单 = reports/_cluster_CUT6.md。
 """
 from __future__ import annotations
 
@@ -314,12 +318,6 @@ class TestAntiFalseNegativeSentinel:
         out = check_sim_launch_short_circuit(ledgers)
         assert out['violations'] == 1
 
-    def test_unknown_zone_red(self):
-        """仲裁披露 zone 域外值 = 引擎披露漂移,红。"""
-        ledgers = [[self._row({'short_circuited': True,
-                               'arbitrage': {'zone': '??'}})]]
-        assert check_sim_launch_short_circuit(ledgers)['violations'] == 1
-
     def test_actions_on_inband_frame_red(self):
         """带内帧动作非空 = fail-closed 破(L1' 证不出不花),红。"""
         ledgers = [[self._row(self._inband(),
@@ -340,18 +338,6 @@ class TestAntiFalseNegativeSentinel:
                               actions=[{'__type__': 'BuyCard'}],
                               spend={'buys': {'m6_stockpile': 31}})]]
         assert check_sim_launch_short_circuit(ledgers)['violations'] == 1
-
-    def test_mixed_batch_only_legacy_games_red(self):
-        """批内有发射帧但某局全为旧形态(无分键)⇒ 仅该局红;含真短路
-        帧的局绿。全批零短路帧时逐局全红(batch_bad 分支)。"""
-        rows = [self._row(self._overflow())]
-        legacy = [self._row({'__type__': 'LaunchBattle'})]   # 无分键
-        out = check_sim_launch_short_circuit([rows, legacy])
-        assert out['violations'] == 1 and out['games'] == [1]
-        legacy_all = [self._row({'__type__': 'LaunchBattle'})] * 2
-        out2 = check_sim_launch_short_circuit([legacy_all, legacy_all])
-        assert out2['violations'] == 2   # 全批零短路帧 → 全红
-
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

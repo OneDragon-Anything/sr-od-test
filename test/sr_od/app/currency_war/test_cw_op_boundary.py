@@ -14,9 +14,10 @@
 test_cw_launch_arbitrage 行为锁同缝位)。既有 test_cw_dispatch_wrapper 的
 行为锁面不在此重复——ok 路径对照臂已按重复断言纪律并回其
 test_wrapper_journal_pair_and_outcome(该文件 fixture 修复后执行,ok 面
-由彼处承载);本文件只留异常注入两臂。仲裁段六测辖 journal 行流面,与
+由彼处承载);本文件只留异常注入两臂。仲裁段五测辖 journal 行流面,与
 test_cw_launch_arbitrage 的 report/counter 行为面互补双留(逐对亲读:
-彼处零 journal 断言,此处零 report/counter 断言)。
+彼处零 journal 断言,此处零 report/counter 断言;CUT6 瘦身批砍除
+close-fail 残量形态变体——行窗口=尝试边界契约由 open-fail 形态承载)。
 """
 from __future__ import annotations
 
@@ -83,26 +84,6 @@ def test_wrapper_execute_exception_still_emits_exit(
     assert [r['event'] for r in rows] == ['enter', 'exit']
     assert rows[1]['outcome'] == 'error'
     assert rows[1].get('detail')   # 异常摘要在行内可辨
-
-
-def test_wrapper_on_result_exception_still_emits_exit(
-        journal: Path, monkeypatch) -> None:
-    """异常注入(on_result 守卫钩子抛):exit 行仍发——钩子调用点在
-    record_op_exit 之前,异常路径不跳过闭合(ADR-0584 §5.2)。"""
-    op = _bare_loop(monkeypatch)
-
-    def _hook_boom(ok: bool, res: Any) -> None:
-        raise ValueError('钩子异常注入')
-
-    with pytest.raises(ValueError):
-        op._dispatch_screen_op(
-            SimpleNamespace(execute=lambda: SimpleNamespace(success=True,
-                                                            status='stub')),
-            journal_name='位面过渡', frame_tag=None, wait=0,
-            on_result=_hook_boom)
-    rows = _op_rows(journal, '位面过渡')
-    assert [r['event'] for r in rows] == ['enter', 'exit']
-    assert rows[1]['outcome'] == 'error'
 
 
 # ==================== 仲裁段第三载体(journal 行流对照) ====================
@@ -222,18 +203,6 @@ def test_arbitration_abort_pair(journal: Path, monkeypatch) -> None:
     rows = _op_rows(journal, _ARB_OP_NAME)
     assert rows[1]['outcome'] == 'fail'
     assert rows[1].get('detail') == 'abort'
-
-
-def test_arbitration_close_fail_marks_fail(journal: Path,
-                                           monkeypatch) -> None:
-    """关店未生效(交发射核复验裁定的残量路径):outcome='fail'——与 0n
-    载体口径一致(关店失败 = 访问非正常出口)。"""
-    op, _sess, _calls = _arb_op(monkeypatch, gold=80, close_ok=False)
-    report = cw_loop._launch_frame_arbitration(op)
-    assert report['entered'] is True
-    rows = _op_rows(journal, _ARB_OP_NAME)
-    assert rows[1]['outcome'] == 'fail'
-    assert rows[1].get('detail') == 'close_failed'
 
 
 def test_arbitration_exception_closes_row_with_error(

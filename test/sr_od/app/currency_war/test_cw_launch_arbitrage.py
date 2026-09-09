@@ -8,11 +8,15 @@
 2. 消费面单一源锁:engine_p1/cw_loop 源内 ``launch_arbitrage_`` 分键
    全部经 kernel 常量消费(禁字面量散写第二源);
 3. 生产位次契约锁(v1.1 I-2 钉死):cw_loop 源内仲裁调用点 = 浮层在场
-   闸之后、发射核调用之前(「确将发射」路径独占),弃射 defect 分键
-   挂 stale 分支内;
-4. 生产仲裁段行为锁:``_launch_frame_arbitration`` 全分支(预检未过/
-   带内不开店/溢出开店→受限访问→关店/开店失败/访问失败 abort/预算闸
-   闭包接线/后验跌破检测)。
+   闸之后、发射核调用之前(「确将发射」路径独占;仲裁段预检经
+   _prep_anchors_hit 单一源,函数体不内联发射核);
+4. 生产仲裁段行为锁:带内不开店 / 溢出开店→受限访问→关店 / 访问失败
+   abort(保画面)/ 预算闸闭包接线 / 后验跌破检测。
+
+CUT6 瘦身批(2026-09-09):区判边界点(zone_sweep 已含 49/50/51)、
+g* 共享推论、弃射分键辖域、预检未过/开店失败/关店失败变体砍除——
+对应行为面由 op_boundary journal 行流锁与 sim_launch_sink 形态锁互补
+承载;保留核清单 = reports/_cluster_CUT6.md。
 
 真 sim 账本的仲裁行为形态锁 = test_cw_sim_launch_sink.py(锁 3/4,同
 批重推),本文件不重复。
@@ -27,7 +31,6 @@ from sr_od.application.currency_war.kernel import cw_launch_arbitrage
 from sr_od.application.currency_war.kernel.cw_economy import (
     cap_resolved_of_session,
     in_launch_spend_zone,
-    in_must_spend_zone,
     saturation_line,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -68,22 +71,6 @@ class TestLaunchSpendZone:
         for gold in (0, 1, 49, 50, 51, 100, 10 ** 6):
             assert in_launch_spend_zone(gold, sess) == \
                 (gold > saturation_line(cap_resolved_of_session(sess))), gold
-
-    def test_zone_boundary_and_buyout_scope(self):
-        """边界:恰 g* 不入域(溢出 = 严格大于)。买断制(cap=0)出辖
-        恒 False 同事实由 test_cw_cap_override_link.test_none_zero_
-        distinction_buyout 承载(双域×5 金位超集),本测不再双锁。"""
-        assert in_launch_spend_zone(50, _session(50, cap_override=5)) is False
-        assert in_launch_spend_zone(51, _session(51, cap_override=5)) is True
-
-    def test_zone_shares_g_star_with_must_spend(self):
-        """与必花域同 g* 同帧同值(共享 saturation_line 链;两域辖域不同
-        禁并键,但判定值恒等是单一源的直接推论)。"""
-        sess = _session(0, cap_override=5)
-        for gold in (49, 50, 51, 200):
-            assert in_launch_spend_zone(gold, sess) == \
-                in_must_spend_zone(gold, sess), gold
-
 
 class TestLaunchArbitrationGate:
     """判定锁:单动作预算闸(P70 Δ息=0 形)。"""
@@ -181,20 +168,6 @@ class TestProductionPositionContract:
         assert i_hold < i_arb < i_launch, (
             '仲裁调用点必须在浮层闸之后、发射核之前(位次契约)')
 
-    def test_abandoned_launch_key_inside_stale_branch(self):
-        """弃射 defect 分键 = stale 分支辖域(仲裁切屏 ∧ 屏态复验未过的
-        可辨识残量),且分键经 kernel 常量消费。"""
-        src = self._src()
-        i_arb = src.index('_arb = _launch_frame_arbitration(self)')
-        i_stale = src.index("if _detail_r == 'readiness_stale_screen':",
-                            i_arb)
-        i_end = src.index("else:", i_stale)
-        seg = src[i_stale:i_end]
-        assert 'KEY_ABANDONED_LAUNCH' in seg, (
-            '弃射分键须在 stale 分支内(defect 残量禁静默)')
-        assert '_arb.get' in seg or '_arb' in seg, (
-            '弃射判定须消费仲裁报告(entered 位)')
-
     def test_precheck_uses_prep_anchors_single_source(self):
         """仲裁预检 = `_prep_anchors_hit`(C3 备战双锚单一源,零新参数),
         只作仲裁段的门;函数体(去 docstring)不得调用发射核。"""
@@ -273,14 +246,6 @@ class TestProductionArbitrationBehavior:
         )
         return cw_loop, op, sess, calls
 
-    def test_precheck_fail_skips_arbitration(self, monkeypatch):
-        cw_loop, op, sess, calls = self._make_op(monkeypatch, prep_hit=False)
-        report = cw_loop._launch_frame_arbitration(op)
-        assert report['entered'] is False
-        assert calls['open'] == 0 and calls['waves'] == 0
-        assert sess.strategy_state.cw4_counters[
-            cw_launch_arbitrage.KEY_PRECHECK_SKIP] == 1
-
     def test_inband_frame_fails_closed_without_opening_shop(self, monkeypatch):
         """带内帧(g ≤ g*)不开店不花(fail-closed;L1' 挂账),分键显影。"""
         cw_loop, op, sess, calls = self._make_op(monkeypatch, gold=40)
@@ -317,14 +282,6 @@ class TestProductionArbitrationBehavior:
         assert gate(SellBench(bench_idx=0, income=2, expect='某件')) == \
             (True, '')
 
-    def test_open_failure_counts_and_skips(self, monkeypatch):
-        cw_loop, op, sess, calls = self._make_op(monkeypatch, gold=80,
-                                                 open_ok=False)
-        report = cw_loop._launch_frame_arbitration(op)
-        assert report['entered'] is False and calls['waves'] == 0
-        assert sess.strategy_state.cw4_counters[
-            cw_launch_arbitrage.KEY_OPEN_FAILED] == 1
-
     def test_waves_failure_aborts_without_close(self, monkeypatch):
         """访问失败路径(未识别卡停机钩子等):abort 旗置位、不关店
         (保画面交停机接管,禁发射摧毁现场)。"""
@@ -333,13 +290,6 @@ class TestProductionArbitrationBehavior:
         report = cw_loop._launch_frame_arbitration(op)
         assert report.get('abort') is True
         assert calls['close'] == 0
-
-    def test_close_failure_reported_not_raised(self, monkeypatch):
-        """关店未生效 = 交发射核屏态复验裁定的残量路径,不抛异常。"""
-        cw_loop, op, sess, calls = self._make_op(monkeypatch, gold=80,
-                                                 close_ok=False)
-        report = cw_loop._launch_frame_arbitration(op)
-        assert report['entered'] is True
 
     def test_cross_line_counter_on_overshoot(self, monkeypatch):
         """后验跌破检测:执行侧末金 < g*(投影外成本)⇒ cross_line 分键

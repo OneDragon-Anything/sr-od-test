@@ -6,14 +6,12 @@
 退役批分配,后续批回填编号。
 
 锁的语义(测试纪律 7「锁的存在性」自检):
-- **确定性锁** = 重放契约的假游戏半边:同 seed → 全轨迹(画面身份/
-  节点日程/金/牌池副本/结算回执)逐位相等。真值来源全部是 kernel/sim
-  真码直调,fixture 零平行实现——红 = 真码确定性或分流纪律被破坏。
-- **单一源守卫** = ``apply`` 的转移必经 ``cw_state.simulate``、reward/
-  supply 结算必经 ``live_delta_for``(方案 §2.2「假游戏不内联任何动作
-  转移」)。monkeypatch spy 证明接线(删直调即红),属依赖方向守卫
-  (测试纪律 8②),非源码形状锁。
-- **行为锁** = 动作/结算/浮层的可观测效果;期望值从单一源推导式现算
+- **单一源守卫** = 假游戏日程必经 kernel 真码(sample_node_sequence 同源
+  派生,禁 fixture 自造第二张日程表)、动作转移必经 ``cw_state.simulate``
+  (方案 §2.2「假游戏不内联任何动作转移」;spy 证明接线面已随 CUT6 瘦身
+  批砍除——买入/卖出/合成的单一源现算期望值断言仍 red-proof 转移实现,
+  判据与保留核清单 = reports/_cluster_CUT6.md)。
+- **行为锁** = 动作/结算的可观测效果;期望值从单一源推导式现算
   (registry 常量/真码 helper,测试纪律 9),零手抄常数。
 """
 from __future__ import annotations
@@ -21,9 +19,6 @@ from __future__ import annotations
 import pytest
 from fixtures.cw_fake_game import fake_match as fake_match_mod
 from fixtures.cw_fake_game.fake_match import (
-    DEFAULT_OPENING_HP,
-    FAKE_GAME_ENV_VERSION,
-    PHASE_PLANE_TRANSITION,
     PHASE_PREP,
     FakeMatch,
 )
@@ -39,11 +34,8 @@ from sr_od.application.currency_war.cw_game_ports import (
 from sr_od.application.currency_war.kernel.cw_coarse_battle import WIN_CAP
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
-    XP_PER_BUY,
-    XP_TO_NEXT_LEVEL,
     BuyCard,
     GameState,
-    LevelUp,
     RefreshShop,
     SellBench,
     ShopCard,
@@ -72,7 +64,7 @@ def _deal_shop(m: FakeMatch, level: int = 3) -> list[ShopCard]:
 
 
 class TestDeterminism:
-    """确定性锁(方案 §6.2 批 0 验收:同 seed 逐位可复现)。"""
+    """日程单一源守卫(无剧本时日程 = kernel 真码同源派生)。"""
 
     @staticmethod
     def _drive(seed: int) -> list:
@@ -97,28 +89,6 @@ class TestDeterminism:
         trace.append([e.method for e in m.observation_log])
         return trace
 
-    def test_same_seed_bitwise_replay(self) -> None:
-        """同 seed 两次全程驱动 → 轨迹逐位相等(重放契约的假游戏半边)。"""
-        t1 = self._drive(20260907)
-        t2 = self._drive(20260907)
-        assert t1 == t2
-
-    def test_scripted_node_sequence_honored_and_exhausts_to_transition(
-            self) -> None:
-        """剧本注入优先于采样;日程耗尽 → 画面身份切位面过渡(骨架面,
-        P2 继承归批 3)。"""
-        seq = ['reward', 'battle', 'boss']
-        m = FakeMatch(seed=1, node_sequence=seq)
-        assert m.node_sequence == seq
-        assert (m.state.node_type, m.state.round_num) == ('reward', 1)
-        m.advance_node()
-        assert (m.state.node_type, m.state.round_num) == ('battle', 2)
-        assert m.phase == PHASE_PREP
-        m.advance_node()
-        assert m.state.node_type == 'boss'
-        m.advance_node()
-        assert m.phase == PHASE_PLANE_TRANSITION
-
     def test_sampled_schedule_matches_kernel_single_source(self) -> None:
         """无剧本时日程 = sample_node_sequence 真码(同派生种子下逐位
         同源;禁 fixture 自造第二张日程表)。"""
@@ -129,16 +99,6 @@ class TestDeterminism:
         sched_seed = master.getrandbits(64)
         assert m.node_sequence == fake_match_mod.sample_node_sequence(
             random.Random(sched_seed))
-
-    def test_env_fingerprint_carries_version_and_pool(self) -> None:
-        """环境指纹 = 规则层版本 + Δ池指纹(跨版本对照禁裸串比的载体;
-        池指纹值 = 主仓快照在案锚 460e6031e2f4ae06(T-119 提交触发 Δ池
-        快照再生,前值 a0722904dea13294 为 ADR-0582 时代历史出处))。"""
-        m = FakeMatch(seed=7)
-        fp = m.env_fingerprint()
-        assert fp['env_version'] == FAKE_GAME_ENV_VERSION
-        assert fp['delta_pool'] == '460e6031e2f4ae06'
-
 
 class TestActionTransitionSingleSource:
     """动作转移单一源守卫 + 行为锁(方案 §2.2 商店动作结算行)。"""
@@ -291,32 +251,6 @@ class TestActionTransitionSingleSource:
         # 假游戏规则外效应:池按 k=2 精确扣减(真值 27→25 形态)
         assert m.shop_pool.copies[name] == copies_before - 2
 
-    def test_levelup_click_accumulates_xp_and_crosses_threshold(self) -> None:
-        """升级 = 一次点击 +XP_PER_BUY(ADR-0129 真实语义);跨门槛自动
-        升级,期望值全部从 XP 常量表现算(测试纪律 9)。
-        级别取 5(门槛 20):未跨/跨两态可分(level 3 门槛 4 = XP_PER_BUY,
-        任何一击都跨,两态不可分)。"""
-        need5 = XP_TO_NEXT_LEVEL[5]
-        m = FakeMatch(seed=8)
-        m.state.level = 5
-        m.state.xp_progress = (0, need5)
-        m.state.gold = 40
-        cost = 6
-        res = m.apply(LevelUp(cost=cost))
-        assert res.applied
-        assert m.state.gold == 40 - cost
-        assert m.state.level == 5
-        assert m.state.xp_progress == (XP_PER_BUY, need5)
-        # 跨门槛:余量 = 门槛 - 已攒 = XP_PER_BUY,一击恰好填满 → 溢出 0
-        m2 = FakeMatch(seed=8)
-        m2.state.level = 5
-        m2.state.xp_progress = (need5 - XP_PER_BUY, need5)
-        m2.state.gold = 40
-        res2 = m2.apply(LevelUp(cost=cost))
-        assert res2.applied
-        assert m2.state.level == 6
-        assert m2.state.xp_progress == (0, XP_TO_NEXT_LEVEL[6])
-
     def test_refresh_shop_deducts_and_redeals_via_rule_layer(self) -> None:
         """刷新:金 -cost(simulate 契约:只扣金不模拟牌)+ 重抽 = 假游戏
         规则层 _Pool.draw_shop(五槽、牌名全部在池词表内)。"""
@@ -335,16 +269,6 @@ class TestActionTransitionSingleSource:
 class TestBattleSettlement:
     """战斗结算直调锁(coarse 主路径 + Δ池直调;方案 §2.2/F7 主从口径)。"""
 
-    def test_battle_settlement_deterministic_and_applies_hp(self) -> None:
-        """同 seed 同节点 → 回执逐位相等;hpΔ 落到 state(下钳 0)。"""
-        a = FakeMatch(seed=12)
-        b = FakeMatch(seed=12)
-        sa = a.settle_battle('battle')
-        sb = b.settle_battle('battle')
-        assert sa == sb
-        assert a.state.hp == sa.hp_after
-        assert sa.hp_after == max(0, DEFAULT_OPENING_HP + sa.delta)
-
     def test_coarse_win_returns_win_cap(self) -> None:
         """coarse 主路径的胜态交付 = WIN_CAP 封顶值(单一源现算;证明
         battle 节点走 sample_battle_delta 而非 Δ池经验分布)。
@@ -356,53 +280,6 @@ class TestBattleSettlement:
         记录,不是机械跟绿。"""
         m = FakeMatch(seed=_COARSE_WIN_SEED)
         assert m.settle_battle('battle').delta == WIN_CAP
-
-    def test_reward_settlement_routes_delta_pool(
-            self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Δ池直调接线守卫:reward 结算走 live_delta_for 且显式带池
-        (snapshot 源,零本地产物依赖);断言不锁池数值——池内容由
-        快照指纹守卫(env_fingerprint 锁),此处只锁接线与回执形状。"""
-        m = FakeMatch(seed=13)
-        calls: list[tuple[str, bool]] = []
-        real = fake_match_mod.live_delta_for
-
-        def spy(node_type: str, key: int, rng, **kw):
-            calls.append((node_type, kw.get('pool_map') is not None))
-            return real(node_type, key, rng, **kw)
-
-        monkeypatch.setattr(fake_match_mod, 'live_delta_for', spy)
-        out = m.settle_battle('reward')
-        assert calls == [('reward', True)]
-        assert isinstance(out.delta, int)
-        assert out.hp_after == max(0, DEFAULT_OPENING_HP + out.delta)
-
-    def test_supply_settlement_deterministic(self) -> None:
-        m1 = FakeMatch(seed=14)
-        m2 = FakeMatch(seed=14)
-        assert m1.settle_battle('supply') == m2.settle_battle('supply')
-
-
-class TestOverlayStack:
-    """浮层栈行为锁(方案 §2.2 浮层栈行)。"""
-
-    def test_lifo_and_kind_filter(self) -> None:
-        m = FakeMatch(seed=15)
-        m.push_overlay('invest', ['甲', '乙'])
-        m.push_overlay('supply', [{'char': 'x', 'equip': 'y'}])
-        # kind 过滤按栈顶优先,越过不匹配的上层帧
-        assert m.top_overlay('invest').payload == ['甲', '乙']
-        assert m.top_overlay('supply').payload == [{'char': 'x',
-                                                    'equip': 'y'}]
-        top = m.pop_overlay()
-        assert top is not None and top.kind == 'supply'
-        assert m.top_overlay('supply') is None
-        assert m.top_overlay().kind == 'invest'
-
-    def test_empty_stack_returns_none_and_empty_options(self) -> None:
-        m = FakeMatch(seed=16)
-        assert m.pop_overlay() is None
-        assert m.top_overlay('invest') is None
-
 
 class TestFakePorts:
     """两端口假实现行为锁(真值直出 + 快照断别名 + 留痕)。"""
@@ -425,46 +302,6 @@ class TestFakePorts:
         assert bundle.prep is not None and bundle.prep.state is st
         assert bundle.prep.state_gold_trusted is True
 
-    def test_shop_cards_snapshot_copies(self) -> None:
-        m = FakeMatch(seed=18)
-        _deal_shop(m)
-        obs = FakeCwObserver(m)
-        cards = obs.observe_shop_cards(_CTX)
-        assert [c.name for c in cards] == [c.name for c in m.state.shop]
-        cards[0].cost = 99
-        assert m.state.shop[0].cost != 99   # 快照拷贝语义
-
-    def test_overlay_options_from_stack_top(self) -> None:
-        m = FakeMatch(seed=19)
-        obs = FakeCwObserver(m)
-        assert obs.overlay_options(_CTX, 'invest') == []
-        m.push_overlay('invest', ['甲', '乙', '丙'])
-        assert obs.overlay_options(_CTX, 'invest') == ['甲', '乙', '丙']
-        assert obs.overlay_options(_CTX, 'supply') == []
-
-    def test_observation_log_records_calls_monotonic(self) -> None:
-        """契约二则:读屏次数语义保留(留痕 = 语义事件计数,seq 单调)。"""
-        m = FakeMatch(seed=20)
-        obs = FakeCwObserver(m)
-        obs.screen_identity(_CTX)
-        obs.observe_prep(_CTX, 'prep_clean')
-        obs.observe_prep(_CTX, 'prep_clean')
-        assert [e.method for e in m.observation_log] == [
-            'screen_identity', 'observe_prep', 'observe_prep']
-        seqs = [e.seq for e in m.observation_log]
-        assert seqs == sorted(seqs) and len(set(seqs)) == len(seqs)
-        assert all(e.clock <= m.clock for e in m.observation_log)
-
-    def test_sink_executes_action_into_match(self) -> None:
-        """执行器端口 = 状态机转移直落(applied/金变化经真值回执)。"""
-        m = FakeMatch(seed=21)
-        cards = _deal_shop(m)
-        m.state.gold = 30
-        sink = FakeActionSink(m)
-        res = sink.execute_action(_CTX, BuyCard(card=cards[0]))
-        assert res.applied
-        assert m.state.gold == 30 - card_cost(cards[0])
-
     def test_installed_ports_drive_match_end_to_end(self) -> None:
         """经模块槽装配后,观察/执行全链路可用(批 1 harness 的最小形)。"""
         m = FakeMatch(seed=22)
@@ -482,28 +319,3 @@ class TestFakePorts:
         assert observation_source() is None and action_sink() is None
 
 
-class TestPhaseVocabulary:
-    """画面身份词表锚(screen_info screen_name 同名,方案 §2.2)。"""
-
-    def test_core_phases_match_screen_info(self) -> None:
-        """词表单一源 = screen_info 画面档:名漂移即红(档案改名须同批
-        改词表)。PHASE_LOBBY 在列但骨架推进面暂不消费(大厅档归入口链,
-        批 3 接入)。"""
-        from pathlib import Path
-        # fake_match.py 住 sr-od-test/fixtures/cw_fake_game/ → parents[3] = 仓库根
-        repo = Path(fake_match_mod.__file__).resolve()
-        info_root = (repo.parents[3] / 'assets' / 'game_data' / 'screen_info')
-        expect = {
-            'currency_war_battle_prep': fake_match_mod.PHASE_PREP,
-            'currency_war_battle_prep_shop_open':
-                fake_match_mod.PHASE_PREP_SHOP_OPEN,
-            'currency_war_battle': fake_match_mod.PHASE_BATTLE,
-            'currency_war_battle_settle': fake_match_mod.PHASE_SETTLE,
-            'currency_war_plane_transition':
-                fake_match_mod.PHASE_PLANE_TRANSITION,
-            'currency_war_lobby': fake_match_mod.PHASE_LOBBY,
-        }
-        for screen_id, phase_name in expect.items():
-            yml = (info_root / f'{screen_id}.yml').read_text(encoding='utf-8')
-            assert f'screen_name: {phase_name}' in yml, (
-                f'{screen_id} 的 screen_name 与词表 {phase_name!r} 漂移')

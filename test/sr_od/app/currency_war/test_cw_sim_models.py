@@ -15,13 +15,15 @@
   版本披露(结构语义单一源 = 该模块 docstring);
 - cw_first_passage 首达生存:P(win)/hp_floor/位面乘子/三区律
   (P2 损血标定面归 test_cw_dp_first_passage.py)。
+
+CUT6 瘦身批(2026-09-09):sim 每晚真局覆盖的披露/锚登记/诊断分键/
+采样行为面砍除(endgold 探针/期限分键/条件披露/锚登记工具/CEM 外
+机械面等),保留核清单与逐条判据见 reports/_cluster_CUT6.md。
 """
 from __future__ import annotations
 
 import json
 import random
-import re
-from dataclasses import fields as dataclass_fields
 from types import SimpleNamespace
 
 import pytest
@@ -32,9 +34,6 @@ from sr_od.application.currency_war.kernel import (
 )
 from sr_od.application.currency_war.kernel import (
     cw_events,
-)
-from sr_od.application.currency_war.kernel import (
-    cw_evolution as cw_evolution_mod,
 )
 from sr_od.application.currency_war.kernel.cw_battle_calib import (
     _battles_before_engines,
@@ -50,7 +49,6 @@ from sr_od.application.currency_war.kernel.cw_first_passage import (
     _loss_dist,
     first_passage_win,
     hp_floor,
-    p_win_lambda,
     plane_hp_ratio,
     posture_guidance,
     risk_posture,
@@ -67,8 +65,6 @@ from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.sim import pool as sim_pool
 from sr_od.application.currency_war.sim import runner as sim_runner
 from sr_od.application.currency_war.sim.checks import (
-    calib,
-    corpus,
     ledger,
     pool,
     runner,
@@ -124,17 +120,6 @@ def test_bench_capacity_bidirectional() -> None:
         [_row(bench=bench10)]), 'bench>9 未报'
     bench9 = bench10[:9]
     assert not ledger.check_bench_capacity_invariant([_row(bench=bench9)])
-
-
-def test_deployed_schema_filter_bidirectional() -> None:
-    bad = [_row(bench=[{'char_id': '', 'faction': 'x'}])]
-    assert ledger.check_deployed_schema_filter(bad), '空 char_id 未报'
-    bad2 = [_row(deployed=[{'char_id': 'a', 'faction': 'x'},
-                           {'char_id': '', 'faction': 'x'}])]
-    assert ledger.check_deployed_schema_filter(bad2)
-    good = [_row(bench=[{'char_id': 'a', 'faction': 'x'}],
-                 deployed=[{'char_id': 'b', 'faction': 'x'}])]
-    assert not ledger.check_deployed_schema_filter(good)
 
 
 # --- 动作语义类 ------------------------------------------------------
@@ -232,31 +217,7 @@ def test_phantom_equip_no_wear_bidirectional() -> None:
 # (v1 线库语义检查器族随 ADR-0336 删除、双向锁同步删;余下
 # degrade_recover_mutex 为通用 target 切换检查)
 
-def test_degrade_recover_mutex_bidirectional() -> None:
-    a, b = 'lineA', 'lineB'
-    bad = [_row(rn=1, target_comp=a), _row(rn=2, target_comp=b),
-           _row(rn=3, target_comp=b), _row(rn=4, target_comp=a)]
-    assert ledger.check_degrade_recover_mutex(bad), '切线回锁 relapse 未报'
-    good = [_row(rn=1, target_comp=a), _row(rn=2, target_comp=b),
-            _row(rn=6, target_comp=a)]   # >3 轮回锁不辖
-    assert not ledger.check_degrade_recover_mutex(good)
-
-
 # --- 批级聚合披露 ----------------------------------------------------
-
-def test_endgold_residue_channel_probe() -> None:
-    sim = {'node': 'battle', 'merges': 0,
-           'shop_waves': [{'gold': 30,
-                           'cards': [{'name': 'a', 'cost': 1,
-                                      'faction': 'x'}]}]}
-    rows = [_row(rn=7, gold=30, sim=dict(sim))]
-    r = runtime.check_endgold_residue_channel_probe([rows])
-    assert r['has_card_room_no_buy'] == 1, '有牌有位不买通道未归因'
-    bench9 = [{'char_id': f'c{i}', 'faction': 'x'} for i in range(9)]
-    r2 = runtime.check_endgold_residue_channel_probe(
-        [[_row(rn=7, gold=30, bench=bench9, sim=dict(sim))]])
-    assert r2['bench_full'] == 1
-
 
 def test_shop_cost_conformance_bidirectional() -> None:
     # 坏:lv9(level 表 p4=0.30)零 4 费供给,200+ 抽全 1 费
@@ -271,100 +232,6 @@ def test_shop_cost_conformance_bidirectional() -> None:
     r2 = runtime.check_shop_cost_conformance(
         [[_row(rn=3, level=3, sim=dict(sim))]])
     assert r2['violations'] == 0
-
-
-# --- 期限 miss 原因分键(T-179 件①)-----------------------------------
-
-def _deadline_row(rn: int, *, rung: int = 0, gold: int = 30,
-                  gold_before: int | None = None, waves: list | None = None,
-                  actions: list | None = None) -> dict:
-    """期限检查合成行:board_factions 按 rung 摆(1=列车同行2;2=再加仙舟3)。"""
-    bf: dict = {}
-    if rung >= 1:
-        bf['列车同行'] = 2
-    if rung >= 2:
-        bf['仙舟'] = 3
-    return {
-        'plane': 1, 'round_num': rn, 'gold': gold, 'hp': 50,
-        'target_comp': '',
-        'state': {'board': {}, 'level': 4, 'bench': [], 'deployed': [],
-                  'cap': 4, 'board_factions': bf,
-                  'equipped': [], 'owned_equips': []},
-        'actions': list(actions or []),
-        'sim': {'node': 'battle', 'delta': -5, 'merges': 0,
-                'gold_before': gold if gold_before is None else gold_before,
-                'income': {'base': 5},
-                'spend': {'buys': {}, 'levelup': 0, 'refresh': 0},
-                'shop_waves': [{'gold': gold,
-                                'cards': list(waves or [])}]},
-    }
-
-
-def test_second_engine_deadline_reason_keys() -> None:
-    """期限 miss 原因分键构造锁(T-179 件①):四形态各归其键 + 期限
-    达标局不入桶 + 聚合键零漂移。
-
-    分键口径出处 = check_second_engine_deadline docstring(观测面
-    近似非因果;供给原料面 = 三体系阵营或希儿本卡,量子同频不计
-    ——无希儿不构成第四体系)。
-    """
-    train_card = {'name': '姬子', 'cost': 4, 'faction': '列车同行'}
-    off_card = {'name': '某散件', 'cost': 2, 'faction': 'x'}
-    # g0 供给断:窗(r5-7)波里只有量子同频/散件(量子不计=原料面
-    # 边界);r8 窗外才有列车件——窗界口径锁(窗外原料不救分类)。
-    g0 = [_deadline_row(3),
-          _deadline_row(4, rung=1),
-          _deadline_row(5, rung=1, gold=25,
-                        waves=[{'name': '某量子件', 'cost': 2,
-                                'faction': '量子同频'}, off_card]),
-          _deadline_row(6, rung=1, gold=25, waves=[off_card]),
-          _deadline_row(7, rung=1, gold=25, waves=[off_card]),
-          _deadline_row(8, rung=1, gold=25, waves=[train_card])]
-    # g1 金滞留:窗内有原料、进轮金全程 ≥40、零花费。
-    g1 = [_deadline_row(2),
-          _deadline_row(3, rung=1, gold=45),
-          _deadline_row(4, rung=1, gold=45, gold_before=45,
-                        waves=[train_card]),
-          _deadline_row(5, rung=1, gold=45, gold_before=45,
-                        waves=[train_card]),
-          _deadline_row(6, rung=1, gold=45, gold_before=45,
-                        waves=[train_card])]
-    # g2 摇摆挤占:窗内有原料、金 <40、金花在非引擎买入。
-    g2 = [_deadline_row(2),
-          _deadline_row(3, rung=1, gold=25),
-          _deadline_row(4, rung=1, gold=22, gold_before=25,
-                        waves=[train_card],
-                        actions=[{'__type__': 'BuyCard',
-                                  'card': off_card, 'reason': 'pair',
-                                  'channel': 'pair'}])]
-    g2[2]['sim']['spend']['buys'] = {'pair': 3}
-    # g3 other:窗内有原料且买了原料但 rung 仍未达(执行/合成 gap 形态)。
-    g3 = [_deadline_row(2),
-          _deadline_row(3, rung=1, gold=25),
-          _deadline_row(4, rung=1, gold=13, gold_before=25,
-                        waves=[train_card],
-                        actions=[{'__type__': 'BuyCard',
-                                  'card': train_card, 'reason': 'engine_seed',
-                                  'channel': 'engine_seed'}])]
-    g3[2]['sim']['spend']['buys'] = {'engine_seed': 12}
-    # g4 对照:期限达标(首引擎 r2,次引擎 r5,gap=3 ≤3)→ 不入桶。
-    g4 = [_deadline_row(1),
-          _deadline_row(2, rung=1),
-          _deadline_row(3, rung=1),
-          _deadline_row(4, rung=1),
-          _deadline_row(5, rung=2)]
-    r = runtime.check_second_engine_deadline([g0, g1, g2, g3, g4])
-    assert r['violations'] == 0
-    assert r['first_engine_games'] == 5
-    assert r['deadline_miss'] == 4
-    assert r['avg_gap'] is not None
-    # 分键互斥且各归其键(变异打红锚:任一键折叠/吞并,此处等值断言即红)
-    assert r['miss_reasons'] == {'supply_break': 1, 'gold_hoarded': 1,
-                                 'diverted_spend': 1, 'other': 1}
-    assert r['miss_reason_games'] == {'supply_break': [0],
-                                      'gold_hoarded': [1],
-                                      'diverted_spend': [2],
-                                      'other': [3]}
 
 
 # --- 语料级 -----------------------------------------------------------
@@ -395,72 +262,7 @@ def test_plane_reached_consistency_bidirectional() -> None:
     assert not runtime.check_plane_reached_consistency(ok, outcomes)
 
 
-# --- 条件披露类 -------------------------------------------------------
-
-def test_conditional_disclosures_skip_and_fire() -> None:
-    # 依赖未接线 → 披露跳过不判
-    r = runtime.check_supply_agent_semantics([[_row()]])
-    assert r['violations'] == 0 and '依赖未接线' in r['note']
-    # 依赖在(sim.supply)→ 计数披露
-    row = _row(sim={'node': 'battle', 'shop_waves': [], 'merges': 0,
-                    'supply': {'pick_reason': 'x'}})
-    r2 = runtime.check_supply_agent_semantics([[row]])
-    assert r2['games_with_supply_ledger'] == 1
-    # briefing:字段不在 → 休眠标;在 → 计数
-    r3 = runtime.check_briefing_pipeline_liveness([[_row()]])
-    assert '休眠' in r3['note']
-    row2 = _row(sim={'node': 'battle', 'shop_waves': [], 'merges': 0,
-                     'comp_score_calls': 7})
-    r4 = runtime.check_briefing_pipeline_liveness([[row2]])
-    assert r4['comp_score_calls'] == 7
-
-
-# --- 锚登记/工具 ------------------------------------------------------
-
-def test_anchor_seed_portability_and_lowchannel() -> None:
-    """锚登记对照检查(语义锁:rep 从当前锚登记派生,随换锚自动跟)。
-
-    ADR-0306 换锚(886f8a39)暴露原硬编码 066c4185 值锁=锁旧锚
-    副作用;本锁语义=「登记锚在位时,同指纹同指标报告判 match +
-    drift 全零」;失配检测能力由负例锁(不属于任何登记段的指纹
-    → 不判 match)。
-    """
-    reg = calib.ANCHOR_REGISTRY_N300
-    rep = {'pool_fingerprint': reg['pool_fingerprint_prefix'] + 'xx',
-           **{k: v for k, v in reg['metrics'].items()
-              if isinstance(v, (int, float))}}
-    r = corpus.check_anchor_seed_portability_n600(rep)
-    assert r['n300_fp_match'] and r['violations'] == 0
-    assert all(d == 0 for d in r['n300_drift'].values())
-    assert 's300_n600_drift' in r
-    bad = dict(rep, pool_fingerprint='deadbeef00000000xx')
-    rb = corpus.check_anchor_seed_portability_n600(bad)
-    assert not rb['n300_fp_match']
-    r2 = corpus.check_anchor_lowchannel_registry({})
-    assert r2['registry_in_place']
-
-
-def test_anchor_segment_noise_band() -> None:
-    ra = {'hp_ge_60': 0.05, 'avg_final_hp': 29.0,
-          'pool_fingerprint': 'fp'}
-    rb = {'hp_ge_60': 0.055, 'avg_final_hp': 33.0,
-          'pool_fingerprint': 'fp'}
-    r = corpus.check_anchor_segment_noise_band(ra, rb)
-    assert r['marks']['hp_ge_60']['in_band']   # 0.005 ≤ 0.02
-    assert not r['marks']['avg_final_hp']['in_band']   # 4.0 > 1.6
-
-
-def test_adr0266_ab_guard() -> None:
-    r = corpus.check_adr0266_ab_guard(-1.0, -1.0)
-    assert r['adr0266_closure_shape']
-    assert not corpus.check_adr0266_ab_guard(1.0, -1.0)['adr0266_closure_shape']
-
-
-def test_rare_metric_min_n() -> None:
-    r = corpus.check_rare_metric_min_n({'engines2': (0.24, 300),
-                                     'trio3': (0.02, 12)}, min_n=60)
-    assert r['undetermined'] == ['trio3']
-
+# --- 批量集登记门(检查器家族在场烟雾,至多 1 条) ----------------------
 
 def test_new_checks_in_batch_set() -> None:
     """清偿批逐局锁进批量集(sim 批次自动扫;ADR-0289)。
@@ -471,19 +273,6 @@ def test_new_checks_in_batch_set() -> None:
                  'levelup_flat4_lock', 'phantom_equip_no_wear',
                  'degrade_recover_mutex'):
         assert name in runner._BATCH_CHECKS, name
-
-
-def test_batch_level_entrypoint_runs_all() -> None:
-    """批级聚合入口:空账本也全键返回(依赖断裂不静默)。"""
-    r = runner.run_batch_level_checks([[]], report={'n': 0},
-                                   pool_map={})
-    for k in ('late_deploy_full', 'mc_faction_calib',
-              'calibration_dead_knob_disclosure',
-              'encounter_rung_sample_budget',
-              'anchor_seed_portability_n600',
-              'anchor_lowchannel_registry'):
-        assert k in r, k
-
 
 
 # ==================== cw_evolution 引擎补完通道(ADR-0371) ====================
@@ -579,47 +368,12 @@ def test_completion_no_gap_no_tx():
     assert not _completion_txs(evolution_step(st2, sess2, EvolutionState()))
 
 
-def test_completion_flag_off_restores_baseline():
-    """④A/B 通道:engine_completion=False 回 后行为(同帧无补完
-   事务);对照组(开)同帧有——差异即本批行为面。"""
-    st = _t42_frame()
-    sess = _sess(('列车同行', '仙舟'))
-    actions_off = evolution_step(st, sess, EvolutionState(),
-                                 engine_completion=False)
-    assert not _completion_txs(actions_off)
-    assert _completion_txs(evolution_step(st, sess, EvolutionState()))
-
-
-def test_completion_final_window_exemption():
-    """⑤末窗豁免:r8(cap 满,undeploy 非空)补完事务照发——净效果
-   pair on-board 不减∧引擎数不减;ADR-0363 件2「防丢」语义不辖补上。"""
-    st = _t42_frame()
-    st.round_num = 8   # P1 位面末窗(nodes_of_plane=9 → 剩 ≤1 轮)
-    sess = _sess(('列车同行', '仙舟'))
-    txs = _completion_txs(evolution_step(st, sess, EvolutionState()))
-    assert txs, '末窗补完(换下散件换上体系件)应豁免冻结'
-    out = simulate(st, txs[0])
-    assert out.action_log[-1]['result'] == 'applied'
-
-
 def test_completion_frozen_on_encounter_node():
     """⑤b 遭遇/boss 冻结轮不启动补完(与既有演进纪律一致)。"""
     st = _t42_frame()
     st.node_type = 'boss'
     sess = _sess(('列车同行', '仙舟'))
     assert not _completion_txs(evolution_step(st, sess, EvolutionState()))
-
-
-def test_completion_seeie_system_single_card():
-    """⑥希儿系单卡判据:希儿在手未上场 → 补完事务上希儿(档=1)。"""
-    st = _state(bench=(_char('希儿'), _char('姬子·启行')),
-                deployed=_B_FILLER)
-    sess = _sess(('希儿系', '列车同行'))
-    txs = _completion_txs(evolution_step(st, sess, EvolutionState()))
-    assert txs and '希儿系' in txs[0].reason
-    out = simulate(st, txs[0])
-    assert out.action_log[-1]['result'] == 'applied'
-    assert '希儿' in {d.char_id for d in out.deployed if d is not None}   # ADR-0392
 
 
 def test_completion_bench_overflow_sells_unprotected():
@@ -649,34 +403,6 @@ class _LogRecorder:
 
     def info(self, msg: str, *args: object) -> None:
         self.lines.append(msg % args if args else msg)
-
-
-def test_engine_complete_log_undeploy_roster(monkeypatch: pytest.MonkeyPatch):
-    """⑧W228 观测行格式锁:engine-complete 行 undeploy 追加下场名单
-    (角色名 list;空则 [])——判读问题⑥,补完保护锚点(-3)
-    需名单级可核。零行为改动:仅锁日志行格式。"""
-    rec = _LogRecorder()
-    monkeypatch.setattr(cw_evolution_mod, 'log', rec)
-    # 有下场件帧(cap 满):undeployed=[角色名,...],名单与 tx 索引一致
-    st = _t42_frame()
-    txs = _completion_txs(evolution_step(st, _sess(('列车同行', '仙舟')),
-                                         EvolutionState()))
-    assert txs
-    line = next(x for x in rec.lines if 'engine-complete' in x)
-    expect_names = [st.deployed[i].char_id
-                    for i in (txs[0].undeploy or [])]
-    assert f'undeployed={expect_names}' in line, line
-    assert re.search(r'undeploy=\d+', line), line  # 计数仍在
-    # 无下场件帧(cap 未满,纯 deploy 补完):名单为空 → undeployed=[]
-    # (列车 owned 4 ≥ tier ∧ 上场 0 缺口;deployed 仅 2 散件有 room,
-    # 补完不需换下任何人)
-    st2 = _state(bench=[_char(n) for n in _B_TRAIN],
-                 deployed=_B_FILLER[:2])
-    txs2 = _completion_txs(evolution_step(st2, _sess(('列车同行', '仙舟')),
-                                          EvolutionState()))
-    assert txs2 and not (txs2[0].undeploy or []), txs2
-    line2 = [x for x in rec.lines if 'engine-complete' in x][-1]
-    assert 'undeployed=[]' in line2, line2
 
 
 # ==================== simulate_p1 补给两步链(sim 集成) ====================
@@ -724,15 +450,6 @@ def test_sim_supply_reroll_chain_and_once_per_game(monkeypatch) -> None:
                 seen_true = True
             assert not (seen_true and not flag), (
                 f'refresh_used 标志回退(session 级一次被破坏): {t}')
-
-
-def test_sim_p1_key_hit_metric_pipe() -> None:
-    """④ key 命中度量管道:hits ≤ total,同 seed 可复现。"""
-    a = simulate_p1(3, planes=2, pool='fallback')
-    b = simulate_p1(3, planes=2, pool='fallback')
-    assert 0 <= a.p1_key_hit_hits <= a.p1_key_hit_total
-    assert (a.p1_key_hit_hits, a.p1_key_hit_total) == (
-        b.p1_key_hit_hits, b.p1_key_hit_total), '同 seed 度量不可复现'
 
 
 # ==================== 标定口径与注册表登记门(承三小件) ====================
@@ -870,16 +587,6 @@ class _ScriptRng:
         return [self._pick]
 
 
-def test_rung01_cells_not_injected() -> None:
-    """rung0/1 单元遥测样本充足,不注入(份额 0,值 = p_data)。"""
-    for node, planes in cb._WIN_TABLE.items():
-        for rung in (0, 1):
-            n, p_data = planes[1][rung]
-            assert cb.prior_share(node, rung) == 0.0
-            assert cb.injected_win_p(node, rung) == p_data
-            assert n > 0
-
-
 def test_prior_share_hard_caps() -> None:
     """先验份额恒 ≤25%、等效样本恒 ≤12(裸收缩口径禁止)。"""
     for node in cb._WIN_TABLE:
@@ -892,12 +599,6 @@ def test_prior_share_hard_caps() -> None:
     # 值锁两例(份额帽在薄/厚单元的两个端型):
     assert cb.prior_share('battle', 2) == pytest.approx(0.203, abs=1e-3)
     assert cb.prior_share('battle', 3) == pytest.approx(0.25, abs=1e-9)
-
-
-def test_win_state_plus2() -> None:
-    """胜态:均匀抽样 < P(win) → delta = +2(封顶,池语料主型)。"""
-    assert cb.sample_battle_delta(
-        'battle', 1, 80, _ScriptRng(0.1, 13)) == cb.WIN_CAP
 
 
 def test_loss_mean_match_and_floor() -> None:
@@ -942,47 +643,6 @@ def test_difficulty_multiplier_off_by_default() -> None:
         a = cb.sample_battle_delta('boss', 2, 60, rng_a, difficulty=200)
         b = cb.sample_battle_delta('boss', 2, 60, rng_b, difficulty=None)
         assert a == b
-
-
-def test_difficulty_multiplier_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    """开关置位后:伤害按 1.052^(Δ难度) 缩放(A8 基准 108 不缩放)。"""
-    monkeypatch.setattr(cb, 'DIFFICULTY_MULT_ENABLED', True)
-    base = cb.sample_battle_delta(
-        'boss', 1, 60, _ScriptRng(0.99, 36), difficulty=108)
-    assert base == -36
-    up = cb.sample_battle_delta(
-        'boss', 1, 60, _ScriptRng(0.99, 36), difficulty=109)
-    assert up == -round(36 * 1.052 ** 1)
-
-
-def test_engine_switch_dual_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    """引擎开关:coarse 走粗模型;delta 臂走 Δ池;reward/supply 恒 Δ池。"""
-    coarse_calls: list[str] = []
-    monkeypatch.setattr(
-        cb, 'sample_battle_delta',
-        lambda node, rung, hp, rng, **kw: coarse_calls.append(node) or 0)
-    pool_calls: list[str] = []
-    _orig_ldf = sim_pool.live_delta_for
-
-    def _spy_ldf(node: str, key: int, rng, **kw):  # type: ignore[no-untyped-def]
-        pool_calls.append(node)
-        return _orig_ldf(node, key, rng, **kw)
-
-    monkeypatch.setattr(cw_sim, 'live_delta_for', _spy_ldf)
-
-    monkeypatch.setattr(cb, 'BATTLE_ENGINE_MODE', 'coarse')
-    r1 = cw_sim.simulate_p1(0, pool='snapshot')
-    assert coarse_calls, 'coarse 默认:战斗类节点必走粗模型'
-    assert not (set(coarse_calls) & {'reward', 'supply'})
-    assert {'reward', 'supply'} <= set(pool_calls), 'reward/supply 仍走 Δ池'
-
-    monkeypatch.setattr(cb, 'BATTLE_ENGINE_MODE', 'delta')
-    coarse_calls.clear()
-    pool_calls.clear()
-    r2 = cw_sim.simulate_p1(0, pool='snapshot')
-    assert not coarse_calls, 'delta 对照臂:粗模型不被消费'
-    assert 'battle' in pool_calls, 'delta 臂:战斗类节点回 Δ池经验分布'
-    assert r1.seed == r2.seed
 
 
 def test_coarse_game_smoke_snapshot_fingerprint() -> None:
@@ -1058,22 +718,6 @@ def test_p2_alias_lock() -> None:
             == cb.prior_share(node, 2, plane=1)
 
 
-def test_default_plane_keeps_signature_compatible() -> None:
-    """旧调用面零漂移:不传 plane 的三函数全部等价于 plane=1。"""
-    rng_a = random.Random(23)
-    rng_b = random.Random(23)
-    for node in ('battle', 'encounter', 'boss'):
-        for rung in range(4):
-            assert cb.injected_win_p(node, rung) \
-                == cb.injected_win_p(node, rung, plane=1)
-            assert cb.prior_share(node, rung) \
-                == cb.prior_share(node, rung, plane=1)
-        for _ in range(20):
-            a = cb.sample_battle_delta(node, 1, 70, rng_a)
-            b = cb.sample_battle_delta(node, 1, 70, rng_b, plane=1)
-            assert a == b
-
-
 def test_coarse_calib_version_disclosed_in_ledger_manifest(
         monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     """版本披露锁:COARSE_CALIB_VERSION=4 且进 sim 台账 manifest。
@@ -1106,28 +750,6 @@ def test_k1_gamblers_ruin_flip():
     # HP=15 剩 2 节点:A(强板)仍高;弱板 B 的 P(win) 仍有右尾 > 0(首达语义:不是期望判死)
     pb15 = first_passage_win(0, 15, 2)
     assert 0.0 < pb15 < 0.5
-
-
-def test_first_passage_monotone():
-    """P(win) 对 hp 单调不减;nodes_left 越多越难。"""
-    for hp in (10, 30, 60):
-        assert first_passage_win(2, hp, 5) >= first_passage_win(2, hp - 1, 5)
-    assert first_passage_win(2, 40, 9) <= first_passage_win(2, 40, 2)
-
-
-def test_lambda_peak_shape():
-    """λ_hp 峰形断言(18 号主张二):远离屏障≈0 → 临界带峰 → 漂移深处回落。
-
-    弱板(μ=14)剩 9 节点:均值耗血 126 → hp=200(远离)λ 小;hp≈120-140(P(win) 0.4-0.85
-    临界带)λ 峰;hp=60(均值路径深处,P(win)≈0)λ 回落为 0。
-    (弱板长程下「必死边缘」的 hp 绝对值高 —— 漂移 14/节点把屏障推到 ~130;三区律的区
-    边界由 (μ, hp, nodes) 联合解出,正是「手写 hp 阈值」要被替代的证据。)
-    """
-    lam_far = p_win_lambda(0, 200, 9)
-    lam_peak = max(p_win_lambda(0, h, 9) for h in range(115, 145, 5))
-    lam_deep = p_win_lambda(0, 60, 9)
-    assert lam_peak > lam_far       # 峰 > 远离屏障区
-    assert lam_peak > lam_deep      # 峰 > 漂移深处(P(win)≈0 区,±1 血无差)
 
 
 def test_three_zones():

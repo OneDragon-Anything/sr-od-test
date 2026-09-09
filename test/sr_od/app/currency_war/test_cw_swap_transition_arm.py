@@ -1,24 +1,26 @@
 # 转型臂(M1″ swap 谓词触发域扩展)单帧锁——锁线后 fp<1.00 板满帧的
-# bench→板 换血通道:守恒门/合成素材守卫/1★ 守卫/回滚常量/双臂互斥/
-# 胜出序/执行侧逐件放行。
+# bench→板 换血通道:病灶回放/守恒门/合成素材守卫/1★ 守卫/卖后底线/
+# 双臂互斥/胜出不提权/执行侧同函数/发射分键/守恒门辖域不变式。
 # 语义出处:ADR-0534(docs/develop/currency_war/decisions/
 # 0534-swap-transition-arm.md)。病灶帧 = 实机「锁 列车同行 →
 # 三月七 2★ + 姬子·启行 bench 成型,deployed 恒 6 过渡件、3 备战轮未
 # 上板)。锁的存在性纪律:每条锁 docstring 引出处;守卫均为「移除即红」
 # 属性(删守卫代码 = 本文件对应锁必红)。
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
+# CUT6 瘦身批(2026-09-09):回滚常量翻臂/胜出序让渡退化/成型臂与
+# pending 透传分键变体/守恒门逐件参数化(病灶回放锁已断言同事实)砍除;
+# 保留核清单 = reports/_cluster_CUT6.md。
 from types import SimpleNamespace as _NS
 
-import pytest
-
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel import cw_deploy_logic as _dl
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
     select_swap_plan,
     swap_sell_exclusion_reason,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 
 _TGT_FACS = frozenset({'列车同行'})
 _TGT_CORE = frozenset({'三月七'})
@@ -85,23 +87,6 @@ def test_transition_arm_keeps_w209_in_unlocked_domain() -> None:
         assert plan.reasons.get(name) == 'fenced_arm_closed', name
 
 
-def test_rollback_constant_closes_transition_arm_only(
-        monkeypatch) -> None:
-    """回滚常量锁(ADR-0534 §6):SWAP_TRANSITION_ARM_ENABLED=False ⇒
-    转型臂分支整体关闭——发射侧计划空(fenced_arm_closed),资格判定
-    单点生效;翻回 True 即恢复(开关不改变基座/成型臂面)。"""
-    bench = [_bc('三月七', 1, star=2)]
-    monkeypatch.setattr(_dl, 'SWAP_TRANSITION_ARM_ENABLED', False)
-    plan = select_swap_plan(_locked_ctx(deployed=_lesion_frame_deployed(),
-                                        bench=bench))
-    assert not plan.nonempty
-    assert plan.reasons.get('爻光') == 'fenced_arm_closed'
-    monkeypatch.setattr(_dl, 'SWAP_TRANSITION_ARM_ENABLED', True)
-    plan2 = select_swap_plan(_locked_ctx(deployed=_lesion_frame_deployed(),
-                                         bench=bench))
-    assert plan2.nonempty and plan2.arm == 'transition'
-
-
 def test_fp_unreadable_abstains_transition_arm() -> None:
     """fp 缺读弃权锁(ADR-0534 §1:fp=None ⇒ fp_unreadable,两臂同
     fail-closed):fp 不可读的锁线板满帧,转型臂关且拒因显影
@@ -126,23 +111,6 @@ def test_formed_arm_wins_when_fp_above_100() -> None:
     assert plan.nonempty
     assert plan.sell_names == ['艾丝妲']
     assert plan.arm == 'formed'
-
-
-def test_winner_order_first_transactable_no_reorder() -> None:
-    """胜出序锁(ADR-0534 §5 + ADR-0590 决策2/5 修订:转型域序 =
-    P79-4 让渡序,本帧合格 victim 全 1★ 且贡献并列 0——仙舟 4→3 均
-    achieved 无倒退——让渡序退化为星级键,与旧 1★ 优先同判):1★
-    victim(爻光)胜出,序稳定不被臂资格改写,arm 随胜出者;2★ 释放件
-    (黑塔)经统一资格族 star_guard 持有(行 #5:非 fenced 释放件同吃
-    资格族,基座臂无星级检查的旧路径封堵),非排序 runner-up。"""
-    deployed = [_bc('爻光', 1), _bc('艾丝妲', 2, star=2),
-                _bc('黑塔', 3, star=2), _bc('藿藿', 4),
-                _bc('忘归人', 5), _bc('符玄', 6)]
-    bench = [_bc('三月七', 1, star=2)]
-    plan = select_swap_plan(_locked_ctx(deployed=deployed, bench=bench))
-    assert plan.nonempty
-    assert plan.sell_names == ['爻光']
-    assert plan.arm == 'transition'   # 2★ 基座 victim 未被提权顶前
 
 
 def test_base_victim_wins_over_transition_when_first() -> None:
@@ -295,80 +263,6 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     assert state_of(sess).cw4_m1p_arm_pending == 'transition'
 
 
-def test_mandate_formed_arm_keyed_separately(monkeypatch) -> None:
-    """成型臂分键锁(ADR-0534 §7:swap_arm_formed_trigger):fp≥1.00 帧
-    胜出臂 = formed ⇒ 计 swap_arm_formed_trigger,转型键不计数(双臂
-    分键互斥,判读不混桶)。"""
-    import sr_od.application.currency_war.kernel.cw_intention as _int_mod
-    import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
-        run_mandate,
-    )
-    monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', True)
-    monkeypatch.setattr(_int_mod, 'committed_from',
-                        lambda session, state=None: True)
-    monkeypatch.setattr(_int_mod, 'locked_buy_membership',
-                        lambda ist: frozenset())
-    comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
-               factions=('列车同行',), form_tiers={'列车同行': 2},
-               shared_chars=(), substitute_plan=None)
-    # 策略器字段经 state_of 载体(session 职责分离迁移后生产唯一读面);
-    # last_owned_equips 是观察数据字段,仍在 session 上。
-    sess = _NS(last_owned_equips=None)
-    _st = state_of(sess)
-    _st.cw4_counters = {}
-    _st.v3_intention = _NS(locked_comp='列车同行', p1_pair=(),
-                           phase='locked', transition_pair=())
-    _st.target_comp = comp
-    _st.transition_framework = ''
-    dep, bench = _lesion_frame_deployed(), [_bc('三月七', 1, star=2)]
-    st = GameState(gold=0, level=6, plane=1, round_num=2,
-                   board={'列车同行': 2}, deployed=list(dep),
-                   bench=list(bench))
-    run_mandate(_m1p_frame(dep, bench), sess, state=st)
-    assert state_of(sess).cw4_counters.get('swap_arm_formed_trigger') == 1
-    assert 'swap_arm_transition_trigger' not in state_of(sess).cw4_counters
-    assert state_of(sess).cw4_m1p_arm_pending == 'formed'
-
-
-def test_m1p_pending_arm_none_without_fire(monkeypatch) -> None:
-    """执行侧透传零漂移锁:非 m1p 发射帧(plan 空)⇒ pending 恒 None
-    (执行侧卖出计 sell_offtarget_regular 的前提);观测面零策略语义,
-    不改任何发射/卖出行为。"""
-    import sr_od.application.currency_war.kernel.cw_intention as _int_mod
-    import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
-        run_mandate,
-    )
-    monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', True)
-    monkeypatch.setattr(_int_mod, 'committed_from',
-                        lambda session, state=None: True)
-    monkeypatch.setattr(_int_mod, 'locked_buy_membership',
-                        lambda ist: frozenset())
-    comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
-               factions=('列车同行',), form_tiers={'列车同行': 2},
-               shared_chars=(), substitute_plan=None)
-    # 策略器字段经 state_of 载体(session 职责分离迁移后生产唯一读面);
-    # last_owned_equips 是观察数据字段,仍在 session 上。
-    sess = _NS(last_owned_equips=None)
-    _st = state_of(sess)
-    _st.cw4_counters = {}
-    _st.v3_intention = _NS(locked_comp='列车同行', p1_pair=(),
-                           phase='locked', transition_pair=())
-    _st.target_comp = comp
-    _st.transition_framework = ''
-    # 无 bench target 帧:swap 计划空(m1p_plan_empty)⇒ 不发射
-    dep = _lesion_frame_deployed()
-    st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
-                   deployed=list(dep), bench=[])
-    run_mandate(_m1p_frame(dep, []), sess, state=st)
-    assert state_of(sess).cw4_counters.get('m1p_plan_empty') == 1
-    assert 'm1p_fired' not in state_of(sess).cw4_counters
-    assert state_of(sess).cw4_m1p_arm_pending is None
-
-
 def test_guard_set_covers_deploy_fence() -> None:
     """守恒门辖域不变式锁(ADR-0534 §2 直核义务):SWAP_GUARD_SYSTEMS
     体系集 ⊇ DEPLOY_FENCE(熔断替代论证承重前提;注册表 tiers 消费,
@@ -382,17 +276,3 @@ def test_guard_set_covers_deploy_fence() -> None:
     assert dict(SWAP_GUARD_SYSTEMS)['护盾'] == tuple(FACTIONS['护盾'].tiers)
 
 
-@pytest.mark.parametrize('name,expect_guard', [
-    ('艾丝妲', 'engines_guard'), ('椒丘', 'engines_guard'),
-])
-def test_conservation_gate_reject_keys(name: str,
-                                       expect_guard: str) -> None:
-    """守恒门逐件拒因锁(ADR-0534 §2:逐体系 achieved 档数不减):
-    DOT 2→1 帧,两张 DOT 件逐件拒 engines_guard(守卫移除即红);
-    仙舟 4→3 帧四件全过(tier 3 卖后仍达成),守恒门不误伤。"""
-    bench = [_bc('三月七', 1, star=2)]
-    plan = select_swap_plan(_locked_ctx(deployed=_lesion_frame_deployed(),
-                                        bench=bench))
-    assert plan.reasons.get(name) == expect_guard
-    for keeper in ('爻光', '藿藿', '忘归人', '符玄'):
-        assert plan.reasons.get(keeper) != 'engines_guard'

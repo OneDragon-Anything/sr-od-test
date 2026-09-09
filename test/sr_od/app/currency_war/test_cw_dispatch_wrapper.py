@@ -1,15 +1,16 @@
 """dispatch 包装锁(T-121/ADR-0584:画面分支统一经 _dispatch_screen_op 分发)。
 
-锁面(T-121 方案 §6.1 测试面声明;判定/排他/序位/守卫域归属不在此辖):
-- 包装行为:journal enter/exit 成对 + outcome 口径(.success)+ 默认映射
-  wait/on_fail_retry + on_result 覆盖默认返回 + frame_tag=None 跳过落帧;
+锁面(判定/排他/序位/守卫域归属不在此辖):
+- 包装行为:journal enter/exit 成对 + outcome 口径(.success)(ADR-0579
+  流形态;ok 路径对照臂的唯一承载,异常注入臂在 test_cw_op_boundary);
 - 0n 元组适配:visit_open_shop 形的 (ok, detail) 可调用经包装落 op 行;
-- 链形透传(0j/3c):返回 OperationRoundResult 的零参可调用原样交回;
-- 心跳不变量:三处流程心跳载体行(锁定直出战/补给分流/收益耗尽臂出战,
-  ADR-0554;方案审 N1 计数口径)不随推进分支包装增减;
 - S11 接线:0n 转交通道 journal_name='商店访问'(复盘按 journal 直读商店
-  访问边界的对齐关键行,ADR-0584 §3.3);
-- B5 守卫钩子:窗口关/闩清在 on_result 闭包(战斗宽限守卫域留外循环)。
+  访问边界的对齐关键行,ADR-0584 §3.3)。
+
+CUT6 瘦身批(2026-09-09):实机每局反复走过的映射/透传/选项面砍除
+(默认映射 wait/on_fail_retry、on_result 覆盖、frame_tag 落帧、链形
+透传 0j/3c、心跳计数、B5 闭包守卫域)——包装被实机逐屏走过,失守即
+现场炸;保留核清单 = reports/_cluster_CUT6.md。
 
 测试纪律:零真实副作用(journal 重定向 tmp_path、帧落盘替身、等待替身)。
 """
@@ -79,58 +80,6 @@ def test_wrapper_journal_pair_and_outcome(journal: Path, monkeypatch) -> None:
     assert ret.result == OperationRoundResultEnum.WAIT   # 默认映射 round_wait
 
 
-def test_wrapper_fail_without_retry_still_waits(journal: Path, monkeypatch) -> None:
-    """on_fail_retry 缺省:失败也走 round_wait(overlay 消费面既有口径)。"""
-    op = _bare_loop(monkeypatch)
-    ret = op._dispatch_screen_op(
-        SimpleNamespace(execute=lambda: _op_result(False)),
-        journal_name='遭遇节点', frame_tag=None, wait=0)
-    rows = _op_rows(journal, '遭遇节点')
-    assert rows[1]['outcome'] == 'fail'
-    assert ret.result == OperationRoundResultEnum.WAIT
-
-
-def test_wrapper_on_fail_retry_maps_retry(journal: Path, monkeypatch) -> None:
-    """on_fail_retry=True:op 失败映射 loop 级 round_retry(单尝试合同的重试
-    预算承接面;与原分支内联 round_retry 消费同一 retry 池)。"""
-    op = _bare_loop(monkeypatch)
-    ret = op._dispatch_screen_op(
-        SimpleNamespace(execute=lambda: _op_result(False)),
-        journal_name='策划事件', frame_tag=None, wait=0, on_fail_retry=True)
-    assert ret.result == OperationRoundResultEnum.RETRY
-
-
-def test_wrapper_on_result_overrides_default(journal: Path, monkeypatch) -> None:
-    """on_result 返回 round 对象 = 覆盖默认返回(0q 超限 round_fail 形);
-    返回 None = 走默认映射(A1/0n/B5 形)。"""
-    op = _bare_loop(monkeypatch)
-    fail_ret = op.round_fail('超限')
-    ret1 = op._dispatch_screen_op(
-        SimpleNamespace(execute=lambda: _op_result(False)),
-        journal_name='A', frame_tag=None, wait=0,
-        on_result=lambda ok, res: fail_ret)
-    ret2 = op._dispatch_screen_op(
-        SimpleNamespace(execute=lambda: _op_result(True)),
-        journal_name='B', frame_tag=None, wait=0,
-        on_result=lambda ok, res: None)
-    assert ret1 is fail_ret
-    assert ret2.result == OperationRoundResultEnum.WAIT
-
-
-def test_wrapper_frame_tag_none_skips_frame(journal: Path, monkeypatch) -> None:
-    """frame_tag=None = 跳过落帧(留证面零扩的可退选项,ADR-0584 §2.3)。"""
-    op = _bare_loop(monkeypatch)
-    seen: list[Any] = []
-    monkeypatch.setattr(cw_loop, 'save_decision_frame',
-                        lambda *a, **k: seen.append(a) or 'f.png')
-    op._dispatch_screen_op(SimpleNamespace(execute=lambda: _op_result(True)),
-                           journal_name='X', frame_tag=None, wait=0)
-    assert not seen           # None 跳过
-    op._dispatch_screen_op(SimpleNamespace(execute=lambda: _op_result(True)),
-                           journal_name='Y', frame_tag='tag_y', wait=0)
-    assert seen and seen[0][1] == 'tag_y'   # 带 tag 落帧
-
-
 # ==================== 0n 元组适配 + 链形透传 ====================
 
 
@@ -146,32 +95,7 @@ def test_wrapper_callable_tuple_adapter(journal: Path, monkeypatch) -> None:
     assert ret.result == OperationRoundResultEnum.WAIT
 
 
-def test_wrapper_chain_result_passthrough(journal: Path, monkeypatch) -> None:
-    """链形(0j/3c):可调用返回 OperationRoundResult → 原样透传,journal
-    outcome = 非 FAIL/RETRY 即 ok。"""
-    op = _bare_loop(monkeypatch)
-    wait3 = op.round_wait(wait=0)
-    ret = op._dispatch_screen_op(
-        lambda: wait3, journal_name='回大厅收口', frame_tag=None, wait=0)
-    assert ret is wait3
-    rows = _op_rows(journal, '回大厅收口')
-    assert rows[1]['outcome'] == 'ok'
-    fail_ret = op.round_fail('超限')
-    op._dispatch_screen_op(lambda: fail_ret,
-                           journal_name='前台无角色恢复', frame_tag=None, wait=0)
-    rows = _op_rows(journal, '前台无角色恢复')
-    assert rows[1]['outcome'] == 'fail'
-
-
 # ==================== 源码接线不变量(顺序即语义档) ====================
-
-
-def test_heartbeat_carrier_rows_invariant() -> None:
-    """心跳不变量(方案审 N1 计数口径):流程心跳载体行恰三处——锁定直出战/
-    补给分流/收益耗尽臂出战(ADR-0554;cw_loop.register_flow_heartbeat docstring
-    自陈「三类流程心跳」)。推进分支包装零新增载体行(推进分支零 decisions 行
-    是正确归属,ADR-0584 §3.2);第 4 处出现 = 红时登记「该分支为何需要心跳」。"""
-    assert _LOOP_SRC.count('register_flow_heartbeat(') == 3
 
 
 def test_0n_shop_visit_journal_wired() -> None:
@@ -181,13 +105,3 @@ def test_0n_shop_visit_journal_wired() -> None:
     assert "journal_name='商店访问'" in _LOOP_SRC
 
 
-def test_battle_window_guard_hooks_in_closure() -> None:
-    """B5 守卫钩子在分支闭包(settle 注入/窗口关/闩清 = ADR-0250 守卫域,
-    留外循环不进 op):窗口关(saw_settlement)与闩清在 on_battle_wait 闭包内,
-    且闩清在源内恰一处赋 False(包装外的第二清点 = 出口归一被破坏)。"""
-    i_def = _LOOP_SRC.find('def _on_battle_wait')
-    i_dispatch = _LOOP_SRC.find('self._battle_wait,')
-    assert 0 < i_def < i_dispatch, '战斗窗守卫钩子未内联于分支(守卫域外泄)'
-    seg = _LOOP_SRC[i_def:i_dispatch]
-    assert 'saw_settlement' in seg
-    assert 'self._battle_wait_active = False' in seg

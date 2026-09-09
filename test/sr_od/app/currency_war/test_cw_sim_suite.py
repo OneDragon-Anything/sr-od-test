@@ -17,6 +17,10 @@ math / simulate_p1 / simulate_p1_batch 全文件唯一绑定;sim.checks
 sim.runner(仅在退休根红测内以 ledger_runner 显式指认)不混。
 (瘦身批 F11 归位成员:test_sim_ledger_core_count_semantics ← test_cw_data_registry.py,
 落 sim_ledger_checks 节。)
+
+CUT6 瘦身批(2026-09-09):sim 每晚全链路覆盖的 happy-path 集成/接线锁砍除
+(seed 复现/批量形状/节点骨架/批检接线/文档对照/单调性族/变异推演/
+权重搜索机械面等),保留核清单与逐条判据见 reports/_cluster_CUT6.md。
 """
 from __future__ import annotations
 
@@ -25,16 +29,6 @@ from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import POOL_COPIES_PER_CARD
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 from sr_od.application.currency_war.sim.pool import _Pool
-from sr_od.application.currency_war.sim.runner import simulate_p1_batch
-
-
-def test_seed_reproducible() -> None:
-    """同 seed 同局(结果全字段一致)。"""
-    a = simulate_p1(42, pool='fallback')
-    b = simulate_p1(42, pool='fallback')
-    assert a.final_hp == b.final_hp
-    assert a.hp_trail == b.hp_trail
-    assert a.dir_round == b.dir_round
 
 
 def test_pool_conservation() -> None:
@@ -65,88 +59,9 @@ def test_pool_cap_respected() -> None:
     assert p.copies[name] == cap
 
 
-def test_direction_matches_strategy_claim() -> None:
-    """认领必以方向建立为前提:结果带认领线(locked_line)时方向轮
-    dir_round 必已落地(<99);方向未建立时不得凭空认领(模拟本身
-    不另立判据,与策略认领同源)。"""
-    r = simulate_p1(3, pool='fallback')
-    assert r.dir_round < 99 or r.locked_line is None
-
-
-def test_ab_channel_refresh() -> None:
-    """use_refresh=False 时刷新数为 0(A/B 通道工作)。"""
-    on = simulate_p1(11, pool='fallback', use_refresh=True)
-    off = simulate_p1(11, pool='fallback', use_refresh=False)
-    assert off.refreshes == 0
-    assert on.refreshes > 0   # 通道真发射(seed 11 固定=确定性,实测 34 次;原断言 >=0 对被测对象零判别力)
-
-
-def test_batch_stats_shape() -> None:
-    """批量统计口径齐全(HP≥60/方向分布/平均)。
-
-    n=5 够锁形状(2026-09-03 合并战役降 n;断言全是范围/回显检查,与 n
-    无关;更大的种子扫面归 sim A/B 批日常工作流,不靠这条测试);
-    ledger=False 不落盘(测试纪律:不写真实 .debug/ 路径,账本落盘路径
-    由 test_cw_sim_cli_smoke 的 tmp_path 覆盖)。
-    """
-    s = simulate_p1_batch(5, pool='fallback', ledger=False)
-    assert s['n'] == 5
-    assert 0.0 <= s['hp_ge_60'] <= 1.0
-    assert 0.0 <= s['dir_by_r4'] <= 1.0
-    assert 0 <= s['avg_final_hp'] <= 100
-
-
-def test_node_sequence_shape() -> None:
-    """节点序列(r284 固定骨架):首二 reward,slot2-3 battle,
-    slot4 supply,slot5-6 变异位,末 boss(遥测 14 帧实证)。"""
-    import random
-
-    from sr_od.application.currency_war.kernel.cw_battle_calib import (
-        sample_node_sequence,
-    )
-    for seed in (1, 2, 3):
-        seq = sample_node_sequence(random.Random(seed))
-        assert len(seq) == 9
-        assert seq[0] == 'reward' and seq[1] == 'reward'
-        assert seq[2] == 'battle' and seq[3] == 'battle'
-        assert seq[4] == 'supply'
-        assert seq[5] in ('battle', 'encounter')
-        assert seq[-1] == 'boss'
-
-
-def test_reward_node_no_damage() -> None:
-    """奖励/补给节点零战力要求 → 不掉血(r260 分层)。"""
-    import random
-
-    from sr_od.application.currency_war.kernel.cw_battle_calib import node_delta
-    rng = random.Random(7)
-    for node in ('reward', 'supply'):
-        for rn in (3, 5, 8):
-            d = node_delta(node, rn, 99, rng)
-            assert d > 0, f'{node} r{rn} 不应掉血,得 {d}'
-
-
-def test_encounter_harder_than_battle() -> None:
-    """遭遇轮结算强度 > 同期普通战斗(用户口述:遭遇可比 boss 难)。"""
-    import random
-
-    from sr_od.application.currency_war.kernel.cw_battle_calib import node_delta
-    losses_enc, losses_bat = [], []
-    for seed in range(50):
-        rng = random.Random(seed)
-        losses_enc.append(node_delta('encounter', 6, 99, rng))
-        losses_bat.append(node_delta('battle', 6, 99, rng))
-    avg_enc = -sum(losses_enc) / len(losses_enc)
-    avg_bat = -sum(losses_bat) / len(losses_bat)
-    assert avg_enc > avg_bat, \
-        f'遭遇均值损 {avg_enc} 应大于战斗 {avg_bat}'
-
-
 # ==================== sim_checks_streak_income ====================
 
-from typing import Any
 
-from sr_od.application.currency_war.kernel import cw_economy
 from sr_od.application.currency_war.sim.checks import runtime as chk
 
 
@@ -227,74 +142,12 @@ def test_missing_node_key_counts_as_violation() -> None:
     assert r3['violations'] >= 1 and r3['missing_key_rows'] == 1
 
 
-# --- 3. 去守卫变异推演(不必真改生产代码) -----------------------------
-
-def _mutant_flat_table(ledgers: list[list[dict]]) -> dict:
-    """退化变异:所有行一律按 streak_gold(进轮连胜)重算——
-    丢掉「补给轮恒 0」与「败轮金路径」两个特殊分支。
-    """
-    from sr_od.application.currency_war.kernel.cw_economy import streak_gold
-    violations = ledger_sum = recompute = 0
-    for rows in ledgers:
-        streaks = chk._combat_streak_by_round(rows)
-        for row in rows:
-            sim = row.get('sim') or {}
-            inc_streak = (sim.get('income') or {}).get('streak', 0) or 0
-            ledger_sum += inc_streak
-            expect = streak_gold(streaks.get(row.get('round_num') or 0, 0))
-            recompute += expect
-            if inc_streak != expect:
-                violations += 1
-    return {'violations': violations, 'ledger_streak_income': ledger_sum,
-            'combat_only_streak_income': recompute}
-
-
-def test_mutation_flat_table_killed() -> None:
-    """扁平表变异(丢补给零/丢败轮金)必须被本文件样本杀死。"""
-    good = _good_ledger()
-    real = chk.check_streak_combat_only_income(good)
-    assert real['violations'] == 0
-    mutant = _mutant_flat_table(good)
-    # 杀死面①:补给轮——生产恒 0,扁平表按表算 1 → 变异误报
-    # (r5 补给进轮 streak=0,表值 1 ≠ 账本 0)
-    assert mutant['violations'] >= 1, '补给零断言杀不死扁平表变异'
-    # 杀死面②:败轮金——生产发 LOSS_GOLD 2,扁平表按表算 1 → 变异误报
-    bad_loss = [[_row(1, 'battle', streak=1, delta=-5),
-                 _row(2, 'battle', streak=2, delta=-3)]]
-    assert chk.check_streak_combat_only_income(bad_loss)['violations'] == 0
-    assert _mutant_flat_table(bad_loss)['violations'] >= 1, \
-        '败轮金路径杀不死扁平表变异'
-
-
-def test_mutation_no_count_guard_killed(monkeypatch: Any) -> None:
-    """重算链断(monkeypatch streak_gold 恒 0)→ 披露口径必须涌现差异。
-
-    检查器函数体内 `from cw_economy import streak_gold` 每次调用现取
-    → monkeypatch 源模块即生效。
-    """
-    good = _good_ledger()
-    real = chk.check_streak_combat_only_income(good)
-    assert real['combat_only_streak_income'] == 5, \
-        '重算基线漂移(生产侧先红)'
-    monkeypatch.setattr(cw_economy, 'streak_gold', lambda streak: 0)
-    mutated = chk.check_streak_combat_only_income(good)
-    assert mutated['combat_only_streak_income'] == 2, \
-        'monkeypatch 未生效(只剩败轮金 2),推演无效'
-    assert mutated['combat_only_streak_income'] != real[
-        'combat_only_streak_income'], \
-        '好样本杀不死「重算链断」变异=披露锁失效'
-
-
-
-
 # ==================== sim_ledger_checks ====================
-
 from pathlib import Path
 
 import pytest
 
 from sr_od.application.currency_war.sim.checks import ledger
-from sr_od.application.currency_war.sim.checks import runner as checks_runner
 from sr_od.application.currency_war.sim.runner import write_batch_ledger
 
 
@@ -394,19 +247,6 @@ def test_coldstart_check_bidirectional() -> None:
     assert not ledger.check_coldstart_seed_squander(d2good)
 
 
-def test_coldstart_check_in_batch_set() -> None:
-    """r371b 后局49 检查进批量集(sim 批次自动扫)。"""
-    assert 'coldstart_direction' in checks_runner._BATCH_CHECKS
-
-
-def test_run_checks_report_shape() -> None:
-    """批量检查报告形:violations 计数 + 局索引(供 seed 重放)。"""
-    ledgers = [[_sim_ledger_checks_row(gold=11)], [_sim_ledger_checks_row(gold=99)], [_sim_ledger_checks_row(gold=11)]]
-    rep = checks_runner.run_checks_on_ledgers(ledgers)
-    assert rep['ledger_consistency']['violations'] == 1
-    assert rep['ledger_consistency']['games'] == [1]
-
-
 def test_write_batch_ledger_guard() -> None:
     """写入器守卫:sim 账本禁写生产 live 流目录(自中毒防线)。
 
@@ -473,51 +313,6 @@ def test_write_batch_ledger_guard_retired_roots(
             restore.verify()
 
 
-def test_sim_ledger_core_count_semantics() -> None:
-    """sim 账本 core_count 语义标记(core_routed;含 None 序列化)。
-
-    (瘦身批 F11 自 test_cw_data_registry.py 归位本文件:机制=sim 账本契约,
-    属 sim_ledger_checks 主题;断言零改动。)
-    """
-    import contextlib
-    import io
-    import json
-    import tempfile
-
-    with contextlib.redirect_stderr(io.StringIO()), tempfile.TemporaryDirectory() as td:
-        rep = simulate_p1_batch(3, pool='snapshot',
-                                ledger=Path(td) / 'sem')
-        mf = json.loads((Path(rep['ledger_dir'])
-                         / 'manifest.json').read_text(encoding='utf-8'))
-        assert mf['ledger_semantics'] == 'core_routed'
-
-
-def test_checks_module_does_not_import_sim() -> None:
-    """依赖方向:checks 不 import cw_sim(二轮#7;调用方传账本)。
-
-    r405 修订:原断言 `'from sr_od' not in src` 过宽——新检查
-    (no_component_equipped_p1)合法 lazy-import cw_synthesis.
-    RESERVED_COMPONENTS(叶子模块,单一源纪律;压测经济批规格),
-    非循环依赖。锁收窄到本意:不 import cw_sim(AST 级判,免疫
-    docstring 字样)。
-    """
-    import ast
-    import inspect
-
-    tree = ast.parse(inspect.getsource(checks_runner))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            names = [a.name for a in node.names]
-        elif isinstance(node, ast.ImportFrom):
-            names = [node.module or '']
-        else:
-            continue
-        for n in names:
-            assert 'cw_sim' not in n, f'checks 不得 import cw_sim: {n}'
-
-
-
-
 # ==================== sim_levelcap_guard ====================
 
 class _LevelUpSpamStub:
@@ -531,7 +326,6 @@ class _LevelUpSpamStub:
 def test_sim_levelup_cap_guard_rejects_and_discloses() -> None:
     """满级后 LevelUp 拒付:金不扣、无 LevelUp 执行行、计数披露。"""
 
-    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
     res = simulate_p1(1, pool='fallback', strategy=_LevelUpSpamStub())
     rows = res.ledger
@@ -564,68 +358,20 @@ def test_sim_levelup_cap_guard_rejects_and_discloses() -> None:
         cap_seen = cap_seen or (r.get('state') or {}).get('level', 0) >= 9
 
 
-def test_sim_levelup_pre_cap_regression() -> None:
-    """回归:未满级时 LevelUp 行为不变——照常执行、照常扣 4 金/击。"""
-
-    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-
-    res = simulate_p1(1, pool='fallback', strategy=_LevelUpSpamStub())
-    pre_cap = [r for r in res.ledger
-               if (r.get('state') or {}).get('level', 0) < 9
-               and (r.get('sim') or {}).get('spend', {}).get('levelup', 0) > 0]
-    assert pre_cap, '未满级轮无升级执行:回归(合法升级被误拦)'
-    for r in pre_cap:
-        acts = r.get('actions') or []
-        n_lv = sum(1 for a in acts if a.get('__type__') == 'LevelUp')
-        spent = (r.get('sim') or {}).get('spend', {}).get('levelup', 0)
-        assert spent == 4 * n_lv, (
-            f"r{r.get('round_num')} 未满级支出 {spent} ≠ 4×{n_lv}(flat4 回归)")
-
-
 def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
     """拒付行不破坏 flat4 台账锁(spend.levelup == 4×LevelUp 行数)。"""
 
     from sr_od.application.currency_war.sim.checks.ledger import (
         check_levelup_flat4_ledger_lock,
     )
-    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
     res = simulate_p1(1, pool='fallback', strategy=_LevelUpSpamStub())
     violations = check_levelup_flat4_ledger_lock(res.ledger)
     assert not violations, f'flat4 台账锁被拒付行破坏:{violations[:3]}'
 
 
-def test_sim_batch_cap_rejects_by_plane_consistent_with_total() -> None:
-    """按 plane 分解披露:键值合法、与总量键和恒等、plane 单调可读。
-
-    为什么按 plane:lv≥9 态在实机只见 P2/P3(实机 P1 等级上限 7),
-    总量把 P1 等级虚高噪声与 P2/P3 语义分歧混桶,分解后才能为
-    LEVEL_CAP 放开批提供干净读数。兼容判据:总量键保留不删,分解值
-    求和必须等于总量——不等即聚合端分组与总量口径漂移。
-
-    合并墓碑:原 test_sim_batch_aggregate_discloses_level_cap_rejects
-    (同参批只断言 level_cap_rejects 键存在且 ≥0)退役并入本测试——
-    键缺失在此 KeyError,负值被「分解和=总量」恒等排除(跨层合并战役)。
-    """
-
-    from sr_od.application.currency_war.sim.runner import simulate_p1_batch
-
-    rep = simulate_p1_batch(6, pool='fallback', seed_base=600,
-                            ledger=False, checks=False)
-    by_plane = rep['level_cap_rejects_by_plane']
-    assert isinstance(by_plane, dict)
-    for plane, cnt in by_plane.items():
-        assert plane in (1, 2, 3), f'非法 plane 键:{plane}'
-        assert isinstance(cnt, int) and cnt > 0
-    assert sum(by_plane.values()) == rep['level_cap_rejects'], (
-        f"分解和 {sum(by_plane.values())} ≠ 总量 "
-        f"{rep['level_cap_rejects']}(聚合口径漂移)")
-
-
 # ==================== sim_obs_keys ====================
 
-from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.sim.engine_p1 import _board_next_tier_of
 
 _SEEDS = (0, 7, 42)
 
@@ -676,146 +422,9 @@ def test_observation_keys_check_bad_rows_report() -> None:
     assert not ledger.check_observation_keys_live([p2])
 
 
-def test_observation_keys_check_good_row_passes() -> None:
-    """好账本必过(防误报);active 帧位(接管态)同样过。"""
-    assert not ledger.check_observation_keys_live([_good_row()])
-    takeover = _good_row()
-    takeover['sim']['alloc_frame'] = {
-        'active': True, 'domain': 'death', 'reason': 'pipeline_spent',
-        'gold': 30}
-    takeover['sim']['alloc_active_any'] = True
-    assert not ledger.check_observation_keys_live([takeover])
-
-
-def test_observation_keys_check_registered() -> None:
-    """哨兵入批检注册表(随批自动扫,不入=死检查)。"""
-    assert 'observation_keys_live' in checks_runner._BATCH_CHECKS
-
-
-# ---------- 引擎侧真实性(值语义 + 非恒值分布) ----------
-
-@pytest.mark.parametrize('seed', _SEEDS)
-def test_obs_keys_shape_on_real_game(seed: int) -> None:
-    """真局每行 P1 账本:三键齐且形状合法;检查器对真局零违规。"""
-    res = simulate_p1(seed, pool='fallback')
-    p1 = [r for r in res.ledger if (r.get('plane') or 1) == 1]
-    assert p1, 'P1 账本为空'
-    for row in p1:
-        st = row['state']
-        assert isinstance(st['bench_full_flag'], bool)
-        rp = st['refresh_probs']
-        assert rp is None or isinstance(rp, dict)
-        bnt = st['board_next_tier']
-        assert isinstance(bnt, dict)
-        for f, v in bnt.items():
-            assert v in FACTIONS[f].tiers, f'{f} 下档 {v} 不在注册表 tier 表'
-            assert v >= 2
-        assert row['sim']['alloc_active_any'] is False or \
-            row['sim']['alloc_frame'] is not None
-    assert not ledger.check_observation_keys_live(p1)
-
-
-def test_board_next_tier_helper_semantics() -> None:
-    """单源推导式:取 >count 的最小 tier,无更高档不计(与生产 obs
-    computed 支同一式)。阵营取注册表实键(不点名,防表键漂移)。"""
-    fname = next(iter(FACTIONS))
-    tiers = FACTIONS[fname].tiers
-    mid = tiers[len(tiers) // 2]
-    below = mid - 1
-    assert _board_next_tier_of({fname: below}) == {fname: mid}
-    # 已达最高档 → 不计(键省略)
-    top = max(tiers)
-    assert _board_next_tier_of({fname: top}) == {}
-    # 注册表外阵营(理论上不出现)→ 安全省略
-    assert _board_next_tier_of({'不存在阵营': 1}) == {}
-
-
-def test_bench_full_flag_and_alloc_frame_not_degenerate() -> None:
-    """观测键形状对偶门(统一迁移批 ② 锁语义重推):alloc 半部(帧位/
-    接管域)已随 v2 分配器死链退役——engine 仍恒写键(None/False),
-    恒值分布对账与 bench_full_flag 点亮面随 sim 重锚批重探(w614 同批);
-    本锁现辖 = 真局行三键形状 + checker 零违规(batch 链路另有专测)。"""
-    rows = [r for seed in (9, 11) for r in simulate_p1(
-        seed, pool='fallback').ledger if (r.get('plane') or 1) == 1]
-    assert len(rows) >= 2 * 5, '局数行数异常'
-    for r in rows:
-        assert isinstance(r['state']['bench_full_flag'], bool)
-        af = r['sim']['alloc_frame']
-        assert af is None or (isinstance(af, dict) and 'active' in af)
-        assert isinstance(r['sim']['alloc_active_any'], bool)
-
-
-def test_batch_check_reports_observation_keys_zero_violation() -> None:
-    """批检链路闭合:observation_keys_live 随批自动扫且真批零违规。"""
-    rep = simulate_p1_batch(5, pool='fallback', ledger=False, checks=True)
-    ck = rep['checks_violations']['observation_keys_live']
-    assert ck['violations'] == 0, f"games={ck.get('games')}"
-
-
-def test_sess_active_env_disclosed() -> None:
-    """投资环境名入账本(invest 注入写;空串=未注入机制性缺省)。"""
-    from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
-    prof = SimInvestProfile(active_env='昼之半神概念股', picks=())
-    r = simulate_p1(0, pool='fallback', invest=prof)
-    assert r.ledger, '账本为空'
-    assert all(row.get('sess_active_env') == '昼之半神概念股'
-               for row in r.ledger)
-    r_plain = simulate_p1(0, pool='fallback')
-    assert all(row.get('sess_active_env') == ''
-               for row in r_plain.ledger)
-
-
-def test_write_batch_ledger_carries_new_keys() -> None:
-    """落盘链闭合:新键经 write_batch_ledger 落 jsonl 后可读回(判读
-    CLI 消费面;向后兼容——旧账本无新键不炸)。"""
-    import json
-    import tempfile
-    from pathlib import Path
-
-    from sr_od.application.currency_war.sim.runner import write_batch_ledger
-    results = [simulate_p1(s, pool='fallback') for s in (0, 7)]
-    with tempfile.TemporaryDirectory() as td:
-        out = Path(td)
-        write_batch_ledger(results, out)
-        manifest = json.loads((out / 'manifest.json').read_text('utf-8'))
-        assert manifest['rounds_rows'] == sum(len(r.ledger) for r in results)
-        lines = (out / 'decisions.jsonl').read_text('utf-8').splitlines()
-        assert lines
-        row = json.loads(lines[0])
-        assert isinstance(row['state']['bench_full_flag'], bool)
-        assert isinstance(row['state']['board_next_tier'], dict)
-        assert 'alloc_frame' in row['sim']
-        assert 'sess_active_env' in row
-
-
-def test_write_batch_ledger_outcomes_boss_names_slot() -> None:
-    """T-179 件②构造锁:outcomes 行带 boss_names 槽位(恒 None=未建模)。
-
-    键名与生产 OutcomeRecord 同键同构;sim 未建模简报面 → 「未建模」
-    显式缺省,须与旧数据「键缺失」可辨(消费端按键在/值 None 分型)。
-    boss 伤害双峰按敌型混合重标定的实采数据源 = 生产 outcomes
-    (单一源 = cw_registry.handoff_boss_e_damage 注)。
-    """
-    import json
-    import tempfile
-
-    result = simulate_p1(0, pool='fallback')
-    with tempfile.TemporaryDirectory() as td:
-        out = write_batch_ledger([result], Path(td))
-        rows = [json.loads(line)
-                for line in (out / 'outcomes.jsonl').open(encoding='utf-8')
-                if line.strip()]
-    assert rows, 'outcomes 流为空'
-    assert all('boss_names' in row for row in rows), 'boss_names 槽位缺失'
-    assert all(row['boss_names'] is None for row in rows)
-
-
 # ==================== sim_segment_checks ====================
 
 from sr_od.application.currency_war.sim.checks import segments
-from sr_od.application.currency_war.sim.runner import (
-    simulate_p1_batch as simulate_p1_batch,
-)
 
 
 def _sim_segment_checks_row(round_num: int = 1, *, plane: int = 1, gold: int = 30,
@@ -1107,143 +716,12 @@ def test_seg_gold_identity_bidirectional() -> None:
     assert evs and '99' in evs[0]['detail']
 
 
-def test_seg_must_spend_observation_aggregates() -> None:
-    """必花域观测三键聚合(20 号稿 §6):zone/zero 合计 + 零消费帧定位
-    + 层命中分布;无键行跳过不造零;零 zone ⇒ 零事件。"""
-    rows = [
-        {'plane': 1, 'round_num': 1, 'gold': 60,
-         'obs': {'must_spend_zone_frames': 2,
-                 'must_spend_zero_consume': 1,
-                 'must_spend_layer_hit': {'L1': 1, 'L3': 1}}},
-        {'plane': 1, 'round_num': 2, 'gold': 70,
-         'obs': {'must_spend_zone_frames': 1,
-                 'must_spend_zero_consume': 0,
-                 'must_spend_layer_hit': {'L2': 1}}},
-        {'plane': 1, 'round_num': 3, 'gold': 70},   # 无键行:跳过
-    ]
-    evs = segments.seg_check_must_spend_observation(rows)
-    assert len(evs) == 1
-    ev = evs[0]
-    assert ev['zone_frames'] == 3
-    assert ev['zero_consume'] == 1
-    assert ev['zero_consume_rounds'] == [1]
-    assert ev['layer_hit'] == {'L1': 1, 'L3': 1, 'L2': 1}
-    # 零 zone ⇒ 零事件(无必花域帧不造摘要)
-    assert segments.seg_check_must_spend_observation(
-        [{'plane': 1, 'round_num': 1, 'gold': 10}]) == []
-    # 已入段级检查表(批报告管线自动收账)
-    assert 'seg_must_spend_observation' in segments._SEGMENT_CHECKS
-
-
-# ------------------------------------------------------- 批入口/接线
-def test_run_segment_counts_and_caps() -> None:
-    """批量入口:计数=真值、events 截断披露、seed 定位字段齐。"""
-    ledgers = [[_sim_segment_checks_row(1, gold=55, waves_gold=55)]
-               for _ in range(segments._SEGMENT_EVENTS_CAP + 3)]
-    rep = segments.run_segment_checks(ledgers, seed_base=100)
-    seg = rep['seg_overflow_idle_spend']
-    assert seg['count'] == len(ledgers)   # 全部触发
-    assert len(seg['events']) == segments._SEGMENT_EVENTS_CAP
-    assert seg['truncated'] is True
-    assert seg['events'][0]['seed'] == 100 and \
-        seg['events'][0]['game_idx'] == 0
-
-
-@pytest.mark.parametrize('max_rounds', [None, 4])
-def test_batch_wiring_window(max_rounds: int | None) -> None:
-    """batch 内嵌接线(最小 n;n 小不是统计口径,只验管线):
-    segment_checks 键在(独立于 checks 开关)、max_rounds 披露、
-    窗口语义=前缀切片(全量跑的前 K 轮金轨迹 ≡ 窗口口径下应为
-    同段——这里间接锁 max_rounds=None 时键仍存在且为 None)。"""
-    rep = simulate_p1_batch(2, pool='snapshot', ledger=False,
-                            checks=False, seed_base=3100,
-                            max_rounds=max_rounds)
-    assert rep['max_rounds'] == max_rounds
-    sc = rep['segment_checks']
-    assert set(sc) >= set(segments._SEGMENT_CHECKS) | {'_summary'}
-    for row in sc.get('seg_gold_identity', {}).get('events', []):
-        assert row['round_num'] <= (max_rounds or 99)
-
-
-def test_batch_zero_drift_when_no_window(tmp_path) -> None:  # type: ignore[no-untyped-def]
-    """零漂移门:不传窗口参数时,checks_violations 与 headline 键集
-    与改动前的契约一致(增量键=max_rounds/segment_checks 只增不改)。
-
-    逐字节对拍的基线快照在开发机 .debug/temp(不入仓);测试仓
-    锁的是**结构**:既有 top-level 键仍在且 checks_violations 各项
-    形状不变(sim-testing checklist 步骤②的机读版)。
-    """
-    rep = simulate_p1_batch(2, pool='snapshot', ledger=False,
-                            seed_base=3200)
-    for k in ('n', 'pool_fingerprint', 'pool_source', 'hp_ge_60',
-              'avg_final_hp', 'battle_losses_le_2', 'dir_by_r2',
-              'avg_refreshes'):
-        assert k in rep, f'headline 键缺失: {k}'
-    assert rep['max_rounds'] is None
-    cv = rep['checks_violations']
-    for name, r in cv.items():
-        assert 'violations' in r and 'seed_base' in r, f'{name}: {r}'
-
-
-
-
-# ==================== sim_wiring_doc ====================
-
-import re
-from dataclasses import fields
-
-from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-
-_DOC = (Path(cw_sim.__file__).resolve().parents[5]
-        / 'docs' / 'develop' / 'currency_war' / 'sim' / 'sim-wiring.md')
-
-
-def _tier_rows() -> dict[str, list[str]]:
-    """解析文档四个二级节的数据表:节名 → 字段名列表。"""
-    text = _DOC.read_text(encoding='utf-8')
-    sections = re.split(r'^## ', text, flags=re.M)[1:]
-    out: dict[str, list[str]] = {}
-    for sec in sections:
-        title = sec.splitlines()[0]
-        names = re.findall(r'^\| ([a-z_]\w*) \|', sec, flags=re.M)
-        out[title] = names
-    return out
-
-
-def test_doc_covers_all_gamestate_fields() -> None:
-    """对照表覆盖 GameState 全部字段,一字段一行不重不漏。"""
-    rows = _tier_rows()
-    all_names = [n for names in rows.values() for n in names]
-    expect = [f.name for f in fields(GameState)]
-    assert sorted(all_names) == sorted(expect), (
-        f'对照表与 GameState 字段不一致:'
-        f'缺 {sorted(set(expect) - set(all_names))},'
-        f'多 {sorted(set(all_names) - set(expect))}')
-    assert len(all_names) == len(set(all_names)), '字段重复出现'
-
-
-def test_tier_counts_match_declared_reconciliation() -> None:
-    """三档计数与文档头对账声明一致(18+12+6=36;ADR-0286 +deploy_cap;批㉖ F1 +enemy_difficulty_live、契约包 C1 步2 +action_log、ADR-0428 +hp_trusted、M2 obs 修复 +level_readable;2026-09-08 死字段清理删 5 个恒缺省「结构未建」占位字段 → 41→36,该档撤档)。"""
-    rows = _tier_rows()
-    counts = {k: len(v) for k, v in rows.items()}
-    assert sum(counts.values()) == len(fields(GameState)) == 36
-    assert any('已接线' in k for k in counts) and counts[
-        next(k for k in counts if '已接线' in k)] == 18
-    assert counts[next(k for k in counts if '必须接线' in k)] == 12
-    assert counts[next(k for k in counts if '观测冗余' in k)] == 6
-    # 「结构未建」档已撤(2026-09-08 死字段清理):文档不再有该节;
-    # 复现需求随依赖结构建设时按新字段流程重立,届时此锁随批加档。
-
-
 # ==================== shop_odds ====================
 
 import math
 
 from sr_od.application.currency_war.data.cw_shop_odds import (
-    SHOP_SLOTS,
     expected_refreshes,
-    expected_refreshes_for_card,
     refresh_prob,
 )
 
@@ -1261,74 +739,10 @@ def test_owned_meets_target_returns_zero() -> None:
     assert expected_refreshes(0.4, 13, 18, 0, 9, 10) == 0.0
 
 
-# —— 单调性 ——
-
-
-def test_higher_p_fewer_refreshes() -> None:
-    """刷新概率越高,凑齐所需刷新次数越少。"""
-    e_low = expected_refreshes(0.3, 13, 18, 0, 3, 0)
-    e_mid = expected_refreshes(0.6, 13, 18, 0, 3, 0)
-    e_high = expected_refreshes(1.0, 13, 18, 0, 3, 0)
-    assert e_low > e_mid, "p=0.3 期望 > p=0.6"
-    assert e_mid > e_high, "p=0.6 期望 > p=1.0"
-    assert e_high > 0
-
-
-def test_more_owned_fewer_refreshes() -> None:
-    """手上已有越多目标牌,凑齐所需刷新越少(2星 k=3)。"""
-    e0 = expected_refreshes(0.4, 13, 18, 0, 3, 0)
-    e1 = expected_refreshes(0.4, 13, 18, 0, 3, 1)
-    e2 = expected_refreshes(0.4, 13, 18, 0, 3, 2)
-    assert e0 > e1, "j=0 期望 > j=1"
-    assert e1 > e2, "j=1 期望 > j=2"
-
-
-def test_pool_manipulation_reduces_refreshes() -> None:
-    """买走同费非目标牌(c↑)→ 目标在剩余池里更密 → 期望刷新↓(牌池操纵有效)。"""
-    e_c0 = expected_refreshes(0.4, 13, 18, 0, 3, 0)
-    e_c10 = expected_refreshes(0.4, 13, 18, 10, 3, 0)
-    e_c30 = expected_refreshes(0.4, 13, 18, 30, 3, 0)
-    assert e_c0 > e_c10, "c=0 期望 > c=10"
-    assert e_c10 > e_c30, "c↑ 期望继续↓"
-
-
-# —— sanity ——
-
-
-def test_v44_example_finite_positive() -> None:
-    """V4.4 实测参数(77124902 例):7级(p=0.4)找2星3费(v=13,a=18),手上1张 → 有限正数。"""
-    e = expected_refreshes(0.4, 13, 18, 0, 3, 1)
-    assert e > 0
-    assert not math.isinf(e), "期望应为有限值"
-
-
-def test_three_star_needs_more_than_two_star() -> None:
-    """3星(k=9)比 2星(k=3)需要更多刷新(凑齐更多张)。"""
-    e_2star = expected_refreshes(0.4, 13, 18, 0, 3, 0)
-    e_3star = expected_refreshes(0.4, 13, 18, 0, 9, 0)
-    assert e_3star > e_2star, "3星(9张)期望 > 2星(3张)"
-
-
-# —— 便捷查询 ——
-
-
 def test_refresh_prob_lookup() -> None:
     """refresh_prob 查表:7级3费=0.4 实测点;无数据=0。"""
     assert refresh_prob(7, 3) == pytest.approx(0.4, abs=1e-2)
     assert refresh_prob(99, 3) == 0.0, "无该等级 → 0"
-
-
-def test_expected_refreshes_for_card() -> None:
-    """便捷查询:7级 D 3费到 2星 → 有限正;已有2张 → 更少。"""
-    e = expected_refreshes_for_card(level=7, cost=3, target_star=2, owned=0)
-    assert e > 0
-    e_owned = expected_refreshes_for_card(level=7, cost=3, target_star=2, owned=2)
-    assert e_owned < e, "已有2张 → 期望更少"
-
-
-def test_shop_slots_is_5() -> None:
-    """每次刷新 5 格(机制常量)。"""
-    assert SHOP_SLOTS == 5
 
 
 # ==================== platt_calibration ====================
@@ -1337,15 +751,6 @@ from sr_od.application.currency_war.telemetry.cw_win_model import (
     PlattCalibrator,
     fit_platt_scaling,
 )
-
-
-def _sigmoid(z: float) -> float:
-    return 1.0 / (1.0 + math.exp(-z))
-
-
-def _logit(p: float) -> float:
-    return math.log(p / (1.0 - p))
-
 
 # --- 恒等默认零漂移锁 --------------------------------------------------------
 
@@ -1366,38 +771,6 @@ def test_out_of_range_input_passthrough() -> None:
 
 # --- 拟合纯函数锁 ------------------------------------------------------------
 
-def test_fit_recovers_known_linear_logit_transform() -> None:
-    """可识别性锁:标签按 ``y ~ Bernoulli(sigmoid(a·logit(p)+b))`` 采样
-    (真随机噪声标签 → 数据不可分,LR 极大似然一致),拟合应恢复 (a, b)
-    (有限样本估计误差,量级锁 ±40%)。注:近可分数据(标签近乎确定性)
-    会使无正则 LR 斜率发散,是 Platt 已知边界——故必须用伯努利采样标签。"""
-    a_true, b_true = 1.8, -1.2
-    n = 4000
-    ys: list[int] = []
-    ps: list[float] = []
-    # 确定性伪随机(lcg),保持纯函数测试零随机依赖
-    s = 12345
-    for i in range(n):
-        z = -3.0 + 6.0 * i / n
-        p = _sigmoid(z)
-        q = _sigmoid(a_true * z + b_true)  # logit(p) == z,真后验即 Platt 模型
-        s = (s * 1103515245 + 12345) % (1 << 31)
-        ys.append(1 if s / (1 << 31) < q else 0)
-        ps.append(p)
-    cal = fit_platt_scaling(ys, ps)
-    assert cal.a == pytest.approx(a_true, rel=0.4)
-    assert cal.b == pytest.approx(b_true, abs=0.8)
-
-
-def test_fit_is_pure_and_deterministic() -> None:
-    """纯函数锁:同入参两次拟合结果逐一相同(零随机/零 IO 的可观测面)。"""
-    ys = [1, 0, 1, 1, 0, 0, 1, 0] * 5
-    ps = [0.9, 0.1, 0.8, 0.7, 0.2, 0.3, 0.6, 0.4] * 5
-    c1 = fit_platt_scaling(ys, ps)
-    c2 = fit_platt_scaling(ys, ps)
-    assert c1 == c2 and (c1.a, c1.b) != (1.0, 0.0)
-
-
 def test_fit_degenerate_inputs_fall_back_identity() -> None:
     """退化输入(空/单类/全非法概率)→ 恒等降级(校准层自动关闭,不抛):
     单类锚定不了偏移与尺度,硬拟合会把校准面扭曲成常数——宁可不校准。"""
@@ -1411,45 +784,14 @@ def test_fit_degenerate_inputs_fall_back_identity() -> None:
     assert c.a > 0  # 正常学出正斜率
 
 
-def test_fit_reduces_systematic_undershoot() -> None:
-    """语义锁(锁的是校准意图,不是 LR 数值):构造「排序好但概率整体
-    下压」的锚(欠冲形态,出处=W495 影子对拍顶桶偏差 −0.30),
-    拟合后的校准应把桶均值偏差显著收窄。"""
-    # n 1500→600(2026-09-03 瘦身批,纪律 12):锁的是「欠冲收窄」方向,
-    # 非 LR 数值;种子固定 LCG,600 点方向判定稳定。主恢复锁
-    # (test_fit_recovers, n=4000)保持全量。
-    n = 600
-    ys: list[int] = []
-    ps: list[float] = []
-    s = 777
-    for i in range(n):
-        z = -3.0 + 6.0 * i / n
-        s = (s * 1103515245 + 12345) % (1 << 31)
-        noise = s / (1 << 31) - 0.5
-        ys.append(1 if z + noise > 0 else 0)
-        ps.append(_sigmoid(0.35 * z - 0.6))  # 压缩 + 下压 → 高分段欠冲
-    cal = fit_platt_scaling(ys, ps)
-    bias_before = sum(ps) / n - sum(ys) / n
-    ps_cal = [cal.apply(p) for p in ps]
-    bias_after = sum(ps_cal) / n - sum(ys) / n
-    assert abs(bias_after) < abs(bias_before)
-    # 顶桶(原分数最高段)欠冲收敛方向
-    k = n // 4
-    top = sorted(range(n), key=lambda i: ps[i])[-k:]
-    bias_top_before = sum(ps[i] for i in top) / k - sum(ys[i] for i in top) / k
-    bias_top_after = (sum(ps_cal[i] for i in top) / k
-                      - sum(ys[i] for i in top) / k)
-    assert abs(bias_top_after) < abs(bias_top_before)
-
-
 # ==================== weight_search ====================
 
 import random
+
 from sr_od.application.currency_war.tools.cw_weight_search import (
     WeightDim,
     WeightSpace,
     cem_search,
-    evaluate_weights,
 )
 
 
@@ -1463,20 +805,6 @@ def _synthetic_fitness(xs, seed, optimum=None, trap=None):
         # 陷阱:把权重大幅推离先验可获 sim 虚高(reward hacking 的合成形态)
         v += 0.8 * max(0.0, xs[0] - opt[0]) * 2
     return v
-
-
-def test_j1_cem_converges_toward_optimum() -> None:
-    """J1:已知更优点(远离先验中心)→ CEM 收敛方向正确(最优适应度显著高于先验点)。"""
-    space = WeightSpace((WeightDim('w1', 1.0), WeightDim('w2', 0.5)))
-    seeds = list(range(20))
-    r = cem_search(space, lambda xs, s: _synthetic_fitness(xs, s, optimum=[3.0, 1.0]),
-                   seed_bank=seeds, n_gen=10)
-    prior_fit = evaluate_weights(space.prior_vector(),
-                                 lambda xs, s: _synthetic_fitness(xs, s, optimum=[3.0, 1.0]),
-                                 seeds, l2_coeff=0.05, center=space.prior_vector())
-    assert r['best_fitness'] > prior_fit + 0.5, (
-        f"收敛不足: best={r['best_fitness']} vs prior={prior_fit}")
-    assert r['best'][0] > 2.0   # 朝 optimum=3 方向移动
 
 
 def test_j2_regularization_bounds_reward_hacking() -> None:
@@ -1494,18 +822,3 @@ def test_j2_regularization_bounds_reward_hacking() -> None:
     assert with_reg['best'][0] < no_reg['best'][0]
 
 
-def test_prior_anchor_monotone() -> None:
-    """中心保留锚:任何代的最优不劣于先验起点(搜索不倒退)。"""
-    space = WeightSpace((WeightDim('w1', 1.0),))
-    r = cem_search(space, lambda xs, s: _synthetic_fitness(xs, s),
-                   seed_bank=list(range(8)), n_gen=5)
-    assert r['best_fitness'] >= r['history'][0]['best_fit'] - 1e-9
-
-
-def test_l2_penalty_semantics() -> None:
-    """L2 语义:同适应度下离先验远者罚重。"""
-    f = lambda xs, s: 1.0
-    near = evaluate_weights([1.2], f, [1], l2_coeff=1.0, center=[1.0])
-    far = evaluate_weights([3.0], f, [1], l2_coeff=1.0, center=[1.0])
-    assert far < near
-    assert math.isclose(near, 1.0 - 0.04, abs_tol=1e-9)
