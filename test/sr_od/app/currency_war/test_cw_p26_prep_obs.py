@@ -21,6 +21,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     ledger_update_plane,
@@ -130,7 +131,9 @@ def test_p26_prep_obs_zero_behavior_drift(tmp_path: Path, monkeypatch) -> None:
     # 采集故障注入:台账容器形态坏(seq_by_plane 非 dict → .get 抛)——
     # 钩子在 best-effort suppress 内,只影响本钩子及其后字段,不炸主链
     broken = SimpleNamespace(seq_by_plane=object())
-    sess = SimpleNamespace(**{'_cw_plane_node_ledger': broken})
+    sess = SimpleNamespace()
+    # 台账宿主迁 ExecState(经 exec_state_of 附着;session 职责分离批同款)
+    exec_state_of(sess).plane_node_ledger = broken
     monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF',
                         [SimpleNamespace(session=sess)])
     cw_telemetry.get_recorder().record_decision(

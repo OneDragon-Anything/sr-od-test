@@ -85,11 +85,15 @@ class _ProbeCloseStrategy:
 
 def _drive_run_buy_waves(monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
                          session: StrategySession,
-                         strategy: _ProbeCloseStrategy) -> None:
+                         strategy: _ProbeCloseStrategy,
+                         seed_ledger=None) -> None:
     """最小替身面驱动 ``run_buy_waves`` 段顶组装段(budget_disclosure 同款)。
 
     段顶读屏替身产出 p1r3 形态帧(gold=11 非零跳过金救援支;shop 含
     1 费候选;bench 空 = 有席);遥测单例隔离 → 零真实 .debug 写入。
+    ``seed_ledger`` = 局容器构造后的台账预置回调(生产时序 = 局容器先建、
+    局中写入;ExecState 载体绑定单一调用点 = CurrencyWarMatch.__post_init__
+    幂等覆写,先于构造的懒建载体写入会被孤儿化,禁先写后建)。
     """
     import sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards as buy_mod
     from sr_od.application.currency_war.telemetry import recorder as rec_mod
@@ -103,6 +107,8 @@ def _drive_run_buy_waves(monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
     monkeypatch.setattr(tel_state, '_defect_seen_run', '')
 
     match = CurrencyWarMatch(strategy, session)
+    if seed_ledger is not None:
+        seed_ledger()
     monkeypatch.setattr(tel_state, '_CTX_MATCH_REF', [match])
 
     class _Op:
@@ -170,12 +176,17 @@ def test_ledger_hit_enters_shop_frame_and_rewards_press_buy_legally(
     发射 ②(b)(奖励帧 ∧ 死金域 ∧ 席位 ∧ 1 费候选,合法奖励帧行为)。"""
     session = StrategySession()
     session.last_node_type = 'battle'
-    # 键语义 = seq 下标 i(0-based)= 第 i+1 轮(cw_state.PlaneNodeLedger);
-    # 第 3 轮 = seq[2] = 'reward',写入端通道标 plane_detail(位面详情全量)。
-    ledger_update_plane(session, 1, ['battle', 'reward', 'reward'],
-                        'plane_detail')
     strategy = _ProbeCloseStrategy()
-    _drive_run_buy_waves(monkeypatch, tmp_path, session, strategy)
+
+    def _seed() -> None:
+        # 键语义 = seq 下标 i(0-based)= 第 i+1 轮(cw_state.PlaneNodeLedger);
+        # 第 3 轮 = seq[2] = 'reward',写入端通道标 plane_detail(位面详情全量)。
+        # 写入时点 = 局容器构造后(载体绑定单一调用点先于局中写入,生产同序)。
+        ledger_update_plane(session, 1, ['battle', 'reward', 'reward'],
+                            'plane_detail')
+
+    _drive_run_buy_waves(monkeypatch, tmp_path, session, strategy,
+                         seed_ledger=_seed)
     frame = strategy.frames[0]
     assert frame.node_type == 'reward', '台账查表值未进店开帧'
     act = strategy.actions[0]

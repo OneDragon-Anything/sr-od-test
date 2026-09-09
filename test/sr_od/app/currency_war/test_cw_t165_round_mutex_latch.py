@@ -30,11 +30,11 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
-    SWAP_FRESH_BUYS_ATTR,
     fresh_buys_of,
     fresh_buys_sell_face,
     record_fresh_buy,
 )
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_state import (
     SELL_BENCH_CONVERT_REASONS,
     BuyCard,
@@ -238,7 +238,8 @@ class TestL1CarveOutAndFailClosed:
         assert fresh_buys_sell_face(sess) == frozenset()
         assert _FUEL not in sell_gate.sell_exclusions(
             sess, (), channel='interest', current_round=4)
-        reg = getattr(sess, SWAP_FRESH_BUYS_ATTR)
+        # 载体迁 ExecState(session 职责分离批同款):经访问口抽读登记记录
+        reg = exec_state_of(sess).cw4_swap_fresh_buys
         assert reg['names'] == {_FUEL} and reg['phase'] == (2, 3), \
             '读端不得销账(零销账语义,与档 2 载体同形态)'
 

@@ -696,7 +696,7 @@ def test_shop_buy_emission_writes_fresh_buys() -> None:
     """fresh 生产写点接线锁(ADR-0530 开闸批;开闸核对批需接线清单①):
     shop 买入发射位(_emit_buy,全部 BuyCard 返回位单一收口)在买入动作
     被采纳(单动作契约:return 即被决策循环无条件执行)时,逐名写入
-    kernel SWAP_FRESH_BUYS_ATTR 单一载体——发射位写入 → fresh_buys_of
+    kernel ExecState.cw4_swap_fresh_buys 单一载体——发射位写入 → fresh_buys_of
     同帧可读;执行侧卖出臂经 swap_sell_exclusion_reason 消费同一载体,
     生产 fresh_buy 排除自此全量生效(P60 防抖在执行路径复活)。"""
     from sr_od.application.currency_war.kernel.cw_comps import (
