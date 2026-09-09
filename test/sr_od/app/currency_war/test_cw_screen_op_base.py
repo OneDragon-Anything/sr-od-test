@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """统一观察架构·画面 op 基类锁(试点步骤 1;设计正本 =
 docs/develop/currency_war/design/统一观察架构-画面op基类设计.md,下称
 「架构设计」;§9.1 新锁面 = 基类生命周期锁(六段各一段)+ on_outcome
@@ -13,8 +12,9 @@ docs/develop/currency_war/design/统一观察架构-画面op基类设计.md,下�
   策略器、act 不经适配器位)。
 - **触发时点轴锁**(§6.4-R-E):落地回执门(默认)= progressed 为触发
   前提,未落地不触发(§6.5-1);发射型 = 逐件显式申报(未入申报面注册
-  即炸错)+ 点击发射时点触发、与落地解耦。在册发射型成员 =
-  encounter_refresh_used(遭遇刷新计数,该屏 op 迁移批接线)。
+  即炸错)+ 点击发射时点触发、与落地解耦。在册发射型成员 = F-3 裁决
+  两件:encounter_refresh_used + strategy_refresh_used(遭遇/策略屏
+  刷新计数,各屏 op 迁移批接线)。
 
 装配 = ``_cw_helpers.make_prep_round_director`` 单一源(其 harness 已装入
 装配点分流桩端口 → run() 经装配点判据走六段新路径,架构设计 §9.1 主门 a)。
@@ -39,7 +39,6 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base impor
     EMIT_TRIGGERED_DECLARED,
     OUTCOME_TRIGGER_EMITTED,
     OUTCOME_TRIGGER_LANDED,
-    ActionOutcome,
 )
 from test.harness.fixture_controller import (
     enter_running_state,
@@ -296,8 +295,8 @@ def test_outcome_axis_emit_requires_declaration_and_fires_at_emission(
     """发射型半边(§6.4-R-E 逐件显式申报):①未入申报面的发射型注册
     直接炸错(禁静默选型);②在册成员(encounter_refresh_used,遭遇刷新
     计数)注册后于点击发射时点触发,与落地解耦(随点击置位不等验效,
-    §6.5-4);③默认触发型 = 落地回执门;④申报面在册 = 唯一成员。
-    红 = 发射型可静默注册 / 发射型被落地门误闸 / 申报面成员漂移。"""
+    §6.5-4);③默认触发型 = 落地回执门;④申报面在册 = F-3 裁决两件。
+    红 = 发射型可静默注册 / 发射型被落地门误闸 / 在册成员漂移。"""
     d, _match, session = make_prep_round_director(
         test_context, monkeypatch, [DeferSpheres()])
 
@@ -324,6 +323,9 @@ def test_outcome_axis_emit_requires_declaration_and_fires_at_emission(
     assert all(spec.trigger == OUTCOME_TRIGGER_LANDED
                for spec in d._outcome_hooks[_AnyAction]
                if spec.name == 'plain_landed')
-    # ④在册申报面 = 唯一成员(架构设计 §6.4:发射型例外在册唯一 =
-    #   遭遇刷新计数;新增成员 = 先改申报面再登记,本锁红即面漂移)
-    assert set(EMIT_TRIGGERED_DECLARED) == {'encounter_refresh_used'}
+    # ④在册申报面 = F-3 裁决两件(架构设计 §6.4-R-E「在册成员两件(F3)」
+    #   = 遭遇 + 策略屏刷新计数)。钉成员在场不变量而非全集快照:新增成员
+    #   走「先改申报面再登记」正门(申报门①炸错兜底),本锁红 = 在册
+    #   成员被移除/更名(面漂移)
+    assert {'encounter_refresh_used',
+            'strategy_refresh_used'} <= set(EMIT_TRIGGERED_DECLARED)
