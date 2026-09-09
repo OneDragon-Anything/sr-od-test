@@ -42,9 +42,6 @@ from sr_od.application.currency_war.operations import decision_frame_hooks as df
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CurrencyWarMatch,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
-)
 from sr_od.application.currency_war.telemetry import op_journal, recorder
 from sr_od.application.currency_war.telemetry import state as tel_state
 
@@ -81,10 +78,14 @@ class FakeP1Result:
 
     ``rounds[r]`` 键 = 位面内轮次(1 起);每轮含收入分解/动作账/结算
     回执——全部来自生产链路的返回值与状态机真值,零测试侧再计算。
+    ``launched`` = 本局发射面真实发生(策略出战出口或达标臂真链;
+    批 2 发射面判定位,逐轮任一即置位)。
     """
 
     seed: int
     rounds: dict[int, dict[str, Any]] = field(default_factory=dict)
+    launched: bool = False
+    armed_evaluated: bool = False
 
     @property
     def gold_trajectory(self) -> list[int]:
@@ -159,9 +160,16 @@ class FakeP1Run:
         if initial_gold is not None:
             self.match.state.gold = initial_gold
         # 真策略对局(与生产 run_buy_waves 的 match=None 冷建分支同源;
-        # 被测对象含真策略器,方案 §2.1「策略器=被测对象」)
+        # 被测对象含真策略器,方案 §2.1「策略器=被测对象」)。壳 =
+        # 生产注册面 MandateV1Live(strategies/mandate_v1_strategy.py):
+        # 装配缝(_assemble_turn)在其上覆写注入,prep 决策入口
+        # decide_prep_screen 消费装配链——直接实例化 impl 基类会在
+        # 装配缝哨兵处显式拒绝(桥壳哨兵语义,非缺陷)。
         config = self._config()
-        _def = MandateV1Strategy()
+        from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
+            MandateV1Live,
+        )
+        _def = MandateV1Live()
         self.cw_match: CurrencyWarMatch = CurrencyWarMatch(
             _def, _def.create_session(config))
         # 节点序列供给(实机信息通道的假环境对位;缺它 = 策略器节点感知
@@ -197,6 +205,16 @@ class FakeP1Run:
         # **逐槽差分**(像素 diff 的「槽变了」语义对位),非身份值集差分
         self._bench_pre_slots: dict[int, tuple[str, int]] = {}
         self._shot_i: int = 0
+        # —— 批 2(prep 域实体化)状态 ——
+        # 逐动作落点审计(方案批 2 验收②):每次执行缝落地记录
+        # (动作键/applied/pre-post 真值摘要),链相邻衔接断言的载体。
+        self.prep_audit: list[dict[str, Any]] = []
+        # 商店访问产出捕获(visit_open_shop → run_buy_waves 的 outcome,
+        # 经模块attr捕获桩直传,run_prep_phase 消费)
+        self.last_shop_outcome: Any = None
+        # monkeypatch 引用(fake_p1_run 存入;run_p1 无参调用的既有测试
+        # 契约保持,prep 相位补丁内部取用)
+        self._monkeypatch: Any = None
 
     def _config(self) -> Any:
         from sr_od.application.currency_war.currency_war_config import (
@@ -285,11 +303,11 @@ class FakeP1Run:
         return {b.slot: (b.char_id, b.star)
                 for b in iter_occupied(self.match.state.bench)}
 
-    # ---- 部署围栏代理(保真校准面)----
+    # ---- 批 2:prep 域实体化(方案 §6.2 批 2 行;围栏代理退役)----
 
     def _seed_tracked_from_truth(self) -> None:
         """tracked 账真值播种(实机「入口 heavy 读屏重建 tracked」的假环境
-        对位,每轮开店前同节拍):实机每节点备战环入口重读重建跟踪账
+        对位,每轮备战访问前同节拍):实机每节点备战环入口重读重建跟踪账
         (ADR-0517 决策 8「入口观察即对账」);假环境零读图,tracked 若停
         在冷建空账,守卫 guard_expected_vs_tracked 会把观察帧真值 bench
         误判「识别幻影」拒发首动作。真值直拨零识别(观察 = 状态机快照,
@@ -312,40 +330,172 @@ class FakeP1Run:
             replace(d) if d is not None else None for d in st.deployed]
         pad_deployed(ex.tracked_deployed)
 
-    def _deploy_fence_pass(self) -> int:
-        """备战期部署的环境承接代理(与引擎 sim 同款:围栏纯函数单一源)。
+    def _truth_digest(self) -> dict[str, Any]:
+        """状态机真值摘要(逐动作审计的 pre/post 载体):bench 物理槽 →
+        (身份, 星, 物品槽位)/ deployed 槽位表全槽 → (身份, 星)/ 金。"""
+        return {
+            'bench': {b.slot: (b.char_id, b.star, bool(b.is_item_slot))
+                      for b in self.match.state.bench if b is not None},
+            'deployed': {i: ((d.char_id if d is not None else None),
+                             (d.star if d is not None else None))
+                         for i, d in enumerate(self.match.state.deployed)},
+            'gold': self.match.state.gold,
+        }
 
-        **为什么环境层代跑部署**:实机部署 = 策略器在备战期发 RunDeploy
-        (prep 域 op,方案 §6.2 归批 2 完整实体化);批 1 假环境只有商店域
-        编排 → deployed 恒空,连锁 = 板深 0(Δ池最凶掉血桶,假局 hp 比
-        实机崩得快的主因)+ M3 升级触发信号 arm1_existence(板满∧bench
-        有候补)构造性不可达(策略器停升的「环境结构性无机会」面)。
-        引擎对同一缺口的对位 = sim 层围栏代理(engine_p1 围栏趟注释
-        「deployed 代理 = deploy_bench 真实围栏逻辑,与 CwOpDeploy op
-        生产语义对齐」)——本代理与其同构:同一纯函数
-        ``cw_deploy_logic.select_deployments`` 直调,零平行围栏语义。
-        target 语境参数传空(意向驱动优先归批 2 部署域;围栏的 cap 填空/
-        成对点火/板空保底主干不依赖 target)。
+    def _flush_shop_window(self) -> None:
+        """商店审计窗口闭合(开→收一段落一个边界项;链轴跨窗连续)。"""
+        pre = getattr(self, '_shop_window_pre', None)
+        if pre is None:
+            return
+        self._shop_window_pre = None
+        self.prep_audit.append({'action': 'ShopVisit(env)',
+                                'applied': True, 'pre': pre,
+                                'post': self._truth_digest(),
+                                'node': self._audit_node_tag()})
 
-        调用时机 = 商店访问后、战斗结算前(本备战期部署当轮生效)。
-        返回上场件数(对拍留证用)。
+    def _audit_node_tag(self) -> str:
+        """审计项的回合标签(跨回合收入段为域外金动,链断言按组内)。"""
+        return str(getattr(self.cw_match.session, 'node_type_current', '')
+                   or self.match.state.node_type or '')
+
+    def prep_landing(self, action: Any) -> tuple[bool, str, bool]:
+        """备战动作执行缝的假环境落点(执行器机械半边的替换面)。
+
+        语义:真 op 的 wrapper 半边(S1 清键门/装备闩/期望态推进/W209j
+        刹车,PrepActionExecutor.execute 内联)保持生产码执行,本方法只
+        承接「点击/拖拽/验证读」的机械半边——动作落假游戏状态机
+        (:meth:`FakeMatch.apply_prep`;RunDeploy 走会话语境完整装配,见
+        :meth:`_run_deploy_with_context`)+ 逐动作审计 + tracked 真值重播
+        (与商店 sink 同语义)。回执 ``(progressed, detail, landed)``:
+        applied 即落地(规则性拒绝两域同判,架构设计 §6.3);detail 带
+        假环境显影前缀,与裸 STATUS 常量永不相等(F1b 同款纪律)。
+        """
+        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+            RunDeploy,
+            action_key,
+        )
+        self._flush_shop_window()
+        pre = self._truth_digest()
+        if isinstance(action, RunDeploy):
+            res = self._run_deploy_with_context()
+        else:
+            res = self.match.apply_prep(action)
+        post = self._truth_digest()
+        self.prep_audit.append({
+            'action': action_key(action), 'applied': bool(res.applied),
+            'pre': pre, 'post': post, 'node': self._audit_node_tag()})
+        if res.applied:
+            # tracked 真值重播(实机对位 = 执行器 tracked 随动;漏同步 =
+            # 期望态 vs tracked 双账守卫炸「投影建模 bug」假象)
+            self._seed_tracked_from_truth()
+        mark = '✓(fake)' if res.applied else '✗(fake-rejected)'
+        return (bool(res.applied), f'{type(action).__name__} {mark}',
+                bool(res.applied))
+
+    def _run_deploy_with_context(self) -> Any:
+        """RunDeploy 完整装配(会话语境版)。
+
+        选人/围栏/排序单一源 = kernel ``select_deployments_reasoned``;
+        输入装配与生产 CwOpDeploy dd-037 同源(deploy_target_sets/
+        deployed_bond_counts/locked_faction_scope/
+        locked_line_recipe_floor_conflict 全 kernel 函数,零第二推导)。
+        身份/站位真值 = 注册表直查(假环境无 SIFT;position_pref 与
+        comp.char_positions 覆盖两规则随迁,ADR-0139 同款);单步转移经
+        :meth:`FakeMatch.apply` 的 DeployMove simulate 分支,本方法零
+        直接落位。
+        """
+        from sr_od.application.currency_war.cw_game_ports import ExecResult
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.kernel import cw_deploy_logic
+        from sr_od.application.currency_war.kernel.cw_state import (
+            DeployMove,
+            iter_occupied_deployed,
+        )
+        from sr_od.application.currency_war.kernel.cw_strategy_session import (
+            strategy_state_of,
+        )
+
+        m = self.match
+        st = m.state
+        occ = [b for b in st.bench if b is not None]
+        if not occ:
+            return ExecResult(applied=False, observed=st.copy())
+        cap = st.max_units()
+        if cap is None:
+            return ExecResult(applied=False, observed=st.copy())
+        _ss = strategy_state_of(self.cw_match.session)
+        _tgt, _fw = cw_deploy_logic.deploy_target_sets(
+            getattr(_ss, 'target_comp', None),
+            getattr(_ss, 'transition_framework', ''))
+        _cores = list(getattr(getattr(_ss, 'target_comp', None),
+                              'core_chars', None) or [])
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            locked_faction_scope,
+            locked_line_recipe_floor_conflict,
+        )
+        _locked = locked_faction_scope(
+            getattr(_ss, 'v3_intention', None)) or frozenset()
+        _rf = locked_line_recipe_floor_conflict(
+            getattr(_ss, 'v3_intention', None))
+        dep_occ = list(iter_occupied_deployed(st.deployed))
+        dep_cids = {d.char_id for d in dep_occ if d.char_id}
+        dep_fac = cw_deploy_logic.deployed_bond_counts(dep_cids)
+        # 站位装配:命途默认 + comp 特定覆盖(覆盖语义随生产两规则)
+        bench_pos: dict[int, str] = {}
+        for i, b in enumerate(occ):
+            bench_pos[i] = b.position_pref or 'back'
+        _tc = getattr(_ss, 'target_comp', None)
+        if _tc is not None and getattr(_tc, 'char_positions', None):
+            for i, b in enumerate(occ):
+                if b.char_id in _tc.char_positions:
+                    bench_pos[i] = _tc.char_positions[b.char_id]
+        _up_rel, _held, _reasons = cw_deploy_logic.select_deployments_reasoned(
+            occ,
+            deployed_cids=dep_cids,
+            deployed_fac=dict(dep_fac),
+            board=dict(st.board or {}),
+            cap=cap,
+            target_factions=_tgt,
+            target_cores=set(_cores),
+            fw_carry=_fw,
+            locked_factions=_locked,
+            recipe_floor_lock_exempt=_rf,
+        )
+        n_up = 0
+        for i in _up_rel:
+            if i >= len(occ):
+                continue
+            bc = occ[i]
+            bench_idx = st.bench.index(bc)
+            ch = CHARACTERS.get(bc.char_id)
+            row = bench_pos.get(i, 'back')
+            faction = bc.faction or (
+                (ch.factions or ['?'])[0] if ch is not None else '?')
+            res = m.apply(DeployMove(bench_idx=bench_idx, to_row=row,
+                                     faction=faction))
+            if res.applied:
+                n_up += 1
+        return ExecResult(applied=n_up > 0, verification={'up': n_up},
+                          observed=st.copy())
+
+    @staticmethod
+    def fence_up_slots_for(match: Any) -> list[int]:
+        """围栏单一源直调(批 2 验收③对拍的期望半边;非执行通路)。
+
+        与 :meth:`FakeMatch._run_deploy_basic` 同输入构造(无会话语境
+        基干),返回 up 集对应的 bench 物理槽位号(1 基)——消费方 =
+        迁移等价锁(直调期望 vs 真链落地),流程内零调用。
         """
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.kernel import cw_deploy_logic
-        from sr_od.application.currency_war.kernel.cw_battle_calib import (
-            _board_counts_of,
-        )
         from sr_od.application.currency_war.kernel.cw_state import (
-            deployed_place,
             iter_occupied_deployed,
         )
-        st = self.match.state
+        st = match.state
         occ_idx = [i for i, b in enumerate(st.bench) if b is not None]
-        if not occ_idx:
-            return 0
         cap = st.max_units()
-        if cap is None:
-            return 0
+        if not occ_idx or cap is None:
+            return []
         dep_occ = list(iter_occupied_deployed(st.deployed))
         dep_fac: dict[str, int] = {}
         for d in dep_occ:
@@ -353,46 +503,244 @@ class FakeP1Run:
             if ch is not None and ch.factions:
                 dep_fac[ch.factions[0]] = dep_fac.get(ch.factions[0], 0) + 1
         up_idx, _held = cw_deploy_logic.select_deployments(
-            [b for b in st.bench if b is not None],
+            [st.bench[i] for i in occ_idx],
             deployed_cids={d.char_id for d in dep_occ if d.char_id},
             deployed_fac=dep_fac,
             board=dict(st.board or {}),
             cap=cap,
         )
-        n_up = 0
-        # up_idx 是紧缩占用序下标 → 回映射物理槽(引擎围栏趟同构;
-        # ADR-0316 槽位表,ADR-0271 上阵即出 bench)
-        for i in up_idx:
-            if i < len(occ_idx):
-                bc = st.bench[occ_idx[i]]
-                if bc is not None:
-                    deployed_place(st.deployed, bc)
-                    st.bench[occ_idx[i]] = None
-                    n_up += 1
-        if n_up:
-            st.board = _board_counts_of(st.deployed)
-            # 跟踪账随动(实机对位 = 执行器 _track_move_deployed 的
-            # tracked 同步;漏同步 = 期望态 vs tracked 双账守卫炸出
-            # 「投影建模 bug」假象)——真值重播,与 sink 账本位随动同语义
-            self._seed_tracked_from_truth()
-        return n_up
+        return [st.bench[occ_idx[i]].slot for i in up_idx
+                if i < len(occ_idx) and st.bench[occ_idx[i]] is not None]
+
+    def _inject_equips_truth(self) -> None:
+        """m7 发射门输入的假环境对位(session.last_owned_equips = 状态机
+        库存真值直拨;实机写点 = 识别链装备读,与节点序列四通道同先例:
+        实机信息通道的假环境对位,非策略可见特殊通道)。"""
+        self.cw_match.session.last_owned_equips = list(
+            self.match.state.equips or [])
+
+    # ---- prep 相位驱动(真 op 全链;方案批 2 内容行)----
+
+    def run_prep_phase(self, monkeypatch: Any, *,
+                       max_visits: int = 6) -> dict[str, Any]:
+        """一个备战期的真 op 驱动(批 2 载体;围栏代理退役的承接面)。
+
+        逐 visit = 真 ``CwScreenPrep``(端口观察 → 实机策略器单动作环 →
+        执行缝落假游戏);OpenShop 动作走生产流程层编排(_open_shop_phase
+        → visit_open_shop → run_buy_waves,批 1 商店域链)。出口判定:
+        策略出战出口(StartBattle 落地)= 本相位发射;空批/验证失败收敛
+        → 达标臂真链(:meth:`_try_armed_launch`)。返回相位摘要。
+        """
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+            CwScreenPrep,
+        )
+
+        self._install_prep_patches(monkeypatch)
+        self._inject_equips_truth()
+        visits = 0
+        launched = False
+        armed_evaluated = False
+        d0 = self._truth_digest()
+        self.prep_audit.append({'action': 'PhaseStart(env)', 'applied': True,
+                                'pre': d0, 'post': d0,
+                                'node': self._audit_node_tag()})
+        while visits < max_visits:
+            audit_before = len(self.prep_audit)
+            prep = CwScreenPrep(self.ctx)
+            self._stub_prep_op(prep, monkeypatch)
+            rr = prep.run()
+            visits += 1
+            new_acts = self.prep_audit[audit_before:]
+            if any(e['action'] == 'StartBattle' and e['applied']
+                   for e in new_acts):
+                launched = True
+                break
+            if rr is None or not getattr(rr, 'is_success', True):
+                break   # 策略异常/执行异常 = fail-stop(留证,交编排方)
+            status = getattr(rr, 'status', '') or ''
+            if not new_acts and ('空批' in status or '验证失败' in status
+                                 or '参数非法' in status):
+                break   # 收敛:无动作可发,交达标臂
+        armed_fired = False
+        armed_evaluated = False
+        if not launched:
+            armed_evaluated, armed_fired = self._try_armed_launch()
+        d1 = self._truth_digest()
+        self.prep_audit.append({'action': 'PhaseEnd(env)', 'applied': True,
+                                'pre': d1, 'post': d1,
+                                'node': self._audit_node_tag()})
+        return {'visits': visits, 'launched': launched,
+                'armed_launched': armed_fired,
+                'armed_evaluated': armed_evaluated,
+                'outcome': self.last_shop_outcome}
+
+    def _stub_prep_op(self, prep: Any, monkeypatch: Any) -> None:
+        """实例级区域原语桩(画面原语层的环境承接;批 1 run_visit 同族)。
+
+        - find_and_click:开店/收起按钮 = 环境规则承接(match.open/close_
+          shop 相位迁移),其余探针 miss(清场注册表/未知弹层结构性无);
+        - find_area:收起锚随相位、备战双锚(发射核屏态复验消费)在备战
+          相位命中;
+        - ocr/存档帧/画面判定桩同族;sleep 已由 _install_stubs 全局桩。
+        """
+        from fixtures.cw_fake_game.fake_match import (
+            PHASE_PREP,
+            PHASE_PREP_SHOP_OPEN,
+        )
+
+        def _shot() -> Any:
+            self._shot_i += 1
+            v = 40 if self._shot_i % 2 else 200
+            return np.full((1080, 1920, 3), v, dtype=np.uint8)
+
+        class _Res:
+            def __init__(self, ok: bool) -> None:
+                self.is_success: bool = ok
+                self.status: str = '成功' if ok else '未命中'
+
+        def _click(screen: Any, screen_name: str, area: str,
+                   **k: Any) -> _Res:
+            if area == '按钮-商店' and self.match.phase == PHASE_PREP:
+                self.match.open_shop()
+                self._bench_pre_slots = dict(self._bench_identity())
+                # 审计链窗口标记(不落项):开店后商店域金/席动走 sink、
+                # 不经 prep 审计——窗口以单一边界项闭合(见收店臂),
+                # 维持链相邻衔接的完整真值轴
+                self._shop_window_pre = self._truth_digest()
+                return _Res(True)
+            if (area == '按钮-收起'
+                    and self.match.phase == PHASE_PREP_SHOP_OPEN):
+                self._flush_shop_window()
+                self.match.close_shop()
+                return _Res(True)
+            return _Res(False)
+
+        def _find(screen: Any, screen_name: str, area: str, **k: Any) -> _Res:
+            if area == '按钮-收起':
+                return _Res(self.match.phase == PHASE_PREP_SHOP_OPEN)
+            if area in ('备战标识-购买经验', '按钮-出战'):
+                return _Res(self.match.phase == PHASE_PREP)
+            return _Res(False)
+
+        def _cur_screen(screen: Any, screen_name_list: Any) -> str:
+            if self.match.phase == PHASE_PREP:
+                return '货币战争-备战'
+            if self.match.phase == PHASE_PREP_SHOP_OPEN:
+                return '货币战争-备战-开商店'
+            return (screen_name_list[0] if screen_name_list else '')
+
+        monkeypatch.setattr(prep, 'screenshot', _shot)
+        monkeypatch.setattr(prep, 'park_cursor', lambda *a, **k: None)
+        monkeypatch.setattr(prep, 'save_screenshot',
+                            lambda *a, **k: '<stub-shot>')
+        monkeypatch.setattr(prep, 'round_by_find_and_click_area', _click)
+        monkeypatch.setattr(prep, 'round_by_find_area', _find)
+        monkeypatch.setattr(prep, 'round_by_ocr', lambda *a, **k: _Res(False))
+        monkeypatch.setattr(prep, 'check_and_update_current_screen',
+                            _cur_screen)
+        # 恢复原语的控制器原语桩(try_recovery 失败路径消费;MockController
+        # 无 mouse_move——失败路径本身合法,桩只清噪声)
+        monkeypatch.setattr(self.ctx.controller, 'mouse_move',
+                            lambda *a, **k: None, raising=False)
+
+    def _install_prep_patches(self, monkeypatch: Any) -> None:
+        """模块级补桩(批 2 prep 相位;全部 monkeypatch,teardown 还原)。
+
+        - 执行缝类级替换(机械半边 → prep_landing;wrapper 半边真码);
+        - finalize/节点探针读屏喂真值(批 1 run_visit 同族,读屏桩只
+          换来源不造值);
+        - run_buy_waves 透传捕获(outcome 直传 harness,零语义变更)。
+        """
+        from fixtures.cw_fake_game.fake_ports import FakeCwObserver
+        from sr_od.application.currency_war.obs import cw_observation as cwo
+        from sr_od.application.currency_war.operations.cw_op import (
+            cw_op_buy_cards as buy_mod,
+        )
+        from sr_od.application.currency_war.prep_actions import (
+            PrepActionExecutor,
+        )
+
+        monkeypatch.setattr(PrepActionExecutor, '_execute_dispatch',
+                            lambda ex, action: self.prep_landing(action))
+
+        def _gold_truth(*a: Any, **k: Any) -> int:
+            return self.match.state.gold
+
+        monkeypatch.setattr(cwo, 'read_gold_settled', _gold_truth)
+        monkeypatch.setattr(cwo, 'read_gold', _gold_truth)
+        monkeypatch.setattr(
+            cwo, 'read_game_state',
+            lambda ctx, shot, phase=None:
+                FakeCwObserver(self.match).observe_prep(ctx, phase).state)
+        monkeypatch.setattr(cwo, 'read_node_sequence', lambda *a, **k: None)
+
+        real_rbw = buy_mod.run_buy_waves
+
+        def _rbw_capture(op: Any, match: Any, hp: Any, hr: Any,
+                         ht: Any) -> Any:
+            rr, outcome = real_rbw(op, match, hp, hr, ht)
+            self.last_shop_outcome = outcome
+            return rr, outcome
+
+        monkeypatch.setattr(buy_mod, 'run_buy_waves', _rbw_capture)
+
+    def _launch_host_stub(self) -> Any:
+        """发射核宿主桩(消费面 = screenshot/备战双锚;测试与达标臂共用)。"""
+        return _LaunchHostStub(self)
+
+    def _try_armed_launch(self) -> tuple[bool, bool]:
+        """达标臂真链(kernel armed 判据 → cw_loop.readiness_battle_launch
+        → launch_prepared_battle 发射核;方案批 2「发射帧走真备战分支」)。
+
+        armed 单一源 = kernel ``readiness_launch_decision``(与 engine_p1
+        :1297 同参形态;质量闸 defer 短路 = cw_loop 消费序同款);发射核
+        的 RunDeploy/StartBattle 经类级执行缝落假游戏。host op = 最小桩
+        (发射核消费面 = screenshot/备战双锚,屏态复验在备战相位恒过)。
+        返回 ``(evaluated, fired)``:evaluated = armed 判据核已消费
+        (会话语据在位);fired = 真发射核已执行出战。
+        """
+        from sr_od.application.currency_war.kernel.cw_launch_admission import (
+            readiness_launch_decision,
+        )
+        from sr_od.application.currency_war.kernel.cw_strategy_session import (
+            strategy_state_of,
+        )
+        from sr_od.application.currency_war.operations import cw_loop
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
+            line_members,
+        )
+
+        sess = self.cw_match.session
+        st = getattr(sess, 'last_state', None)
+        tc = getattr(strategy_state_of(sess), 'target_comp', None)
+        if st is None or tc is None:
+            return False, False
+        core = readiness_launch_decision(st, tc, line_members=line_members)
+        if not core.get('armed'):
+            return True, False
+        _q = core.get('quality')
+        if _q is not None and _q.get('defer_by_quality'):
+            return True, False   # 质量闸关闸帧(达标准入消费序同款)
+        host = _LaunchHostStub(self)
+        ok, _detail = cw_loop.readiness_battle_launch(host, self.ctx)
+        return True, bool(ok)
 
     # ---- P1 段驱动 ----
 
     def run_p1(self, *, settle: bool = True) -> FakeP1Result:
-        """驱动假 P1 全段:逐节点「收入 → 开店 → 真 op 商店访问 → 收店
-        → 结算 → 推进」。
+        """驱动假 P1 全段:逐节点「收入 → 真 op 备战全链(部署/收球/
+        开箱/装备/开店访问/出战)→ 结算 → 推进」(批 2 载体)。
 
         每步的编排 = harness 承担的环境事件序(真环境的回合推进由游戏
-        本体承载,假环境由状态机规则 + 本编排表达);商店访问本体 =
-        生产 ``run_buy_waves`` 全链(入口观察经端口、决策真策略器、动作
-        执行经 sink)。
+        本体承载,假环境由状态机规则 + 本编排表达);备战期本体 = 生产
+        ``CwScreenPrep`` 生命周期全链(实机策略器决策 + 执行缝落假游戏,
+        OpenShop 内联生产商店编排 = 批 1 已验证链)——批 1 的手工商店
+        编排(收入→开店→run_buy_waves→收店)与部署围栏代理随批 2
+        退役(方案 §6.2 批 2 行「围栏自动部署代理退役」)。
 
         ``settle=False`` 时跳过战斗结算(商店域单轮测试用)。
         """
-        from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
-            run_buy_waves,
-        )
+        from fixtures.cw_fake_game import rules
         from sr_od.application.currency_war.telemetry import recorder as rec
 
         result = FakeP1Result(seed=self.seed)
@@ -402,41 +750,48 @@ class FakeP1Run:
             # 保连胜门/节点感知判据,见 __init__ 节点序列供给注)
             self.cw_match.session.node_type_current = node
             # tracked 真值播种(实机入口 heavy 读屏重建的同节拍对位,
-            # 见方法注;先于开店,防首动作守卫误判)
+            # 见方法注;先于备战访问,防首动作守卫误判)
             self._seed_tracked_from_truth()
+            self.last_shop_outcome = None
             inc = self.match.apply_income()
             gold_after_income = self.match.state.gold
-            # 备战期部署趟(决策前;实机 actions 序 RunDeploy 先于
-            # OpenShop——决策帧须携带板满态,M3 升级的 arm1 判据
-            # 「板满∧bench 有候补」才可达)
-            row_deployed_up = self._deploy_fence_pass()
-            self.match.open_shop()
-            _rr, outcome = run_buy_waves(self.op, self.cw_match,
-                                         None, False, False)
-            if _rr is not None or outcome is None:
-                raise AssertionError(
-                    f'假局 P1 r{r}({node})商店访问未收工:'
-                    f'{getattr(_rr, "status", None)}')
-            self.match.close_shop()
+            # 奖励节点带球(环境事件,rng 归发放股;参数账见 rules)
+            if node == 'reward':
+                self.match.spawn_balls(rules.BALLS_PER_REWARD_NODE)
+            # 备战期 = 真 op 全链(实机策略器决策;部署由策略 RunDeploy
+            # 发射经执行缝落地——决策帧携带板满态的时序由真链自持)
+            phase = self.run_prep_phase(self._monkeypatch)
+            outcome = phase['outcome']
+            if outcome is not None:
+                gold_open = outcome.gold_open
+                gold_close = self.match.state.gold
+                counters = {
+                    'total_buy': outcome.total_buy,
+                    'total_level': outcome.total_level,
+                    'total_refresh': outcome.total_refresh,
+                    'total_sell': outcome.total_sell,
+                    'total_sell_income': outcome.total_sell_income,
+                    'spend_executed': outcome.spend_executed,
+                }
+            else:
+                # 本备战期策略未开店(合法态):无商店窗口,金账连续
+                gold_open = None
+                gold_close = self.match.state.gold
+                counters = dict.fromkeys(('total_buy', 'total_level', 'total_refresh', 'total_sell', 'total_sell_income', 'spend_executed'), 0)
             row: dict[str, Any] = {
                 'node': node,
                 'income': inc,
                 'gold_after_income': gold_after_income,
-                'gold_open': outcome.gold_open,
-                'gold_close': self.match.state.gold,
-                'total_buy': outcome.total_buy,
-                'total_level': outcome.total_level,
-                'total_refresh': outcome.total_refresh,
-                'total_sell': outcome.total_sell,
-                'total_sell_income': outcome.total_sell_income,
-                'spend_executed': outcome.spend_executed,
-                'deployed_up': row_deployed_up,
+                'gold_open': gold_open,
+                'gold_close': gold_close,
+                'deployed_up': sum(
+                    1 for d in self.match.state.deployed if d is not None),
+                'prep_visits': phase['visits'],
+                'launched': phase['launched'] or phase['armed_launched'],
+                **counters,
             }
             settlement = None
             if settle:
-                # 买后补部署趟(引擎围栏主趟在动作循环后的同位;当轮
-                # 买的牌同备战期上板,战斗结算消费)
-                row['deployed_up'] += self._deploy_fence_pass()
                 settlement = self.match.settle_battle(node)
                 rec.record_outcome(FakeRoundOutcome(
                     round_num=r, plane=self.match.state.plane,
@@ -444,6 +799,10 @@ class FakeP1Run:
                     streak=self.match.state.streak))
             row['settlement'] = settlement
             result.rounds[r] = row
+            if row['launched']:
+                result.launched = True
+            if phase['armed_evaluated']:
+                result.armed_evaluated = True
             self.match.advance_node()
         # 局终收口(生产 schema;Δ池再生钩已在桩面截停)
         tel_state.record_run_summary(
@@ -530,6 +889,39 @@ class FakeP1Run:
         return ok, detail, info
 
 
+class _LaunchHostStub:
+    """达标臂发射核的宿主桩(消费面最小:screenshot + 备战双锚 find_area)。
+
+    生产宿主 = CwLoop 实例;发射核(readiness_battle_launch/
+    launch_prepared_battle)对宿主的消费面 = 屏态复验两锚与
+    ``PrepActionExecutor(op, ctx)`` 构造(执行器只消费 ctx + 类级执行缝
+    已拦截机械半边)——桩满足消费面即真链可达,零点击真发。
+    """
+
+    def __init__(self, run: Any) -> None:
+        self.ctx: Any = run.ctx
+        self._run: Any = run
+        self._shot_i: int = 0
+
+    def screenshot(self) -> Any:
+        self._shot_i += 1
+        v = 40 if self._shot_i % 2 else 200
+        return np.full((1080, 1920, 3), v, dtype=np.uint8)
+
+    def round_by_find_area(self, screen: Any, screen_name: str, area: str,
+                           **k: Any) -> Any:
+        from fixtures.cw_fake_game.fake_match import PHASE_PREP
+
+        class _Res:
+            pass
+
+        r = _Res()
+        r.is_success = (self._run.match.phase == PHASE_PREP
+                        and area in ('备战标识-购买经验', '按钮-出战'))
+        r.status = '成功' if r.is_success else '未命中'
+        return r
+
+
 @contextlib.contextmanager
 def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
                 seed: int, *,
@@ -549,6 +941,7 @@ def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
     root = tmp_path / archive_dir_name
     run = FakeP1Run(ctx, seed, node_sequence=node_sequence,
                     initial_hp=initial_hp, initial_gold=initial_gold)
+    run._monkeypatch = monkeypatch   # prep 相位补桩的延迟取用(批 2)
     # 根槽接通(生产形 API;先于任何 recorder 构造/写点)。三写根同点
     # 接指同一档案根(recorder/journal/决策帧;第三槽 = 三审二波 F2
     # 修复,漏接一件即部分隔离)。

@@ -97,6 +97,60 @@ def income_for_round(st: GameState, rng: random.Random,
     }
 
 
+# ============================================================ prep 编排域(批 2)
+# 归属判据(方案 §2.2 F6 行):收球/开箱/装备穿戴在 ``cw_state.simulate``
+# 无分支(Action 联合类型无对应动作),转移语义落在环境保真件层;本节
+# 只放**校准层参数常量**(带误差,参数账纪律),转移机制在 FakeMatch
+# (状态机职责,需多槽联动:pool/浮层栈/座位表)。
+#
+# 球奖励三通道**结构** = 实录锚 ``docs/game/currency_war/research/
+# screen_flow_timing.md`` #16(备战画面点奖励球:奖励角色→备战 /
+# 金币→商店 / 装备→右侧装备栏);**概率与金额** = 校准层参数
+# (注册表无球金机制真值;引擎 ``EVENT_GOLD_BY_ROUND`` 是 ADR-0447
+# 残差补偿闸,禁回指——批 1 锁 test_income_event_component_stays_zero
+# 在辖)。参数变更 = 环境分布变更,须随 env_version 位升版申报。
+
+#: 单球奖励通道权重(校准层;金币主导 = 开局/前期观测面缺定量记录的
+#: 保守形态,后续按实机球奖励画像重校准时改此处 + 升 env_version)
+BALL_REWARD_WEIGHTS: dict[str, float] = {'gold': 0.7, 'equip': 0.2, 'char': 0.1}
+
+#: 单球金币额(校准层;收入 event 分量恒 0 的对立面 = 球金只经收球
+#: 动作入账,Income 分解不承载)
+BALL_GOLD: int = 4
+
+#: 点球掉箱概率(校准层;「掉箱即停回环交规则统筹」= ClickSpheres
+#: 词表注的规则面:掉箱占一备战空席,席满时该通道落空不结算)
+BALL_BOX_DROP_P: float = 0.25
+
+#: 奖励节点带球数(校准层;开局球恒 1 件 = screen_flow_timing #5
+#: 「开局补给:给开局角色 + 奖励球」实录,落在 FakeMatch 开局段)
+BALLS_PER_REWARD_NODE: int = 2
+
+
+def ball_reward_channel(rng: random.Random) -> str:
+    """单球奖励通道采样(权重单一源 = :data:`BALL_REWARD_WEIGHTS`)。
+
+    ``rng`` = 发放股(FakeMatch._rng_grant):球域加消费不位移
+    日程/抽店/战斗三股(重放对账的分流前提)。
+    """
+    channels = list(BALL_REWARD_WEIGHTS)
+    weights = [BALL_REWARD_WEIGHTS[c] for c in channels]
+    return rng.choices(channels, weights=weights, k=1)[0]
+
+
+def box_card_options(pool_names: list[str], rng: random.Random,
+                     k: int = 4) -> list[str]:
+    """武装箱选项抽选(同店抽池同源;数量 4 = PickBoxCard card_idx 1-4 词表)。
+
+    ``pool_names`` = 牌池可发名字集(调用方从 _Pool.copies 过滤正库存);
+    抽序归发放股。选中件 take、未选件 ret 的守恒语义由调用方落
+    (FakeMatch.apply_prep 的 PickBoxCard 分支)。
+    """
+    names = list(pool_names)
+    rng.shuffle(names)
+    return names[:k]
+
+
 def settle_streak(st: GameState, delta: int, node: str) -> tuple[int, bool]:
     """节点结算的连胜/败轮状态迁移(输入 = 采样 delta 与节点类型)。
 

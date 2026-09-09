@@ -77,8 +77,10 @@ from sr_od.application.currency_war.sim.pool import (
 #: 本骨架直调即继承。环境指纹含本位,跨版本对照禁裸串比(与池指纹同纪律)。
 #: v2 = 开局态校准(开局等级/金对齐实机机制) + 收入事件金分量归零,
 #: 出处 = ``.debug/temp/currency_war/t120_sim_redesign/保真度校准.md``;
+#: v3 = prep 编排域实体化(球金入账/收球/开箱/装备穿戴/部署走真链,
+#: 批 2;球域参数账见 :mod:`rules` prep 节)——分布面变更,与 v1/v2 不可比。
 #: v1 批次(批 1 保真度基线)与本版不可比。
-FAKE_GAME_ENV_VERSION: int = 2
+FAKE_GAME_ENV_VERSION: int = 3
 
 #: 开局等级 = 3(重述 engine_p1 开局真值 ``st.level = 3``——引擎行是裸
 #: 字面量无符号名,故本骨架按值重述+锚注,非 import)。三源互证:
@@ -188,6 +190,13 @@ class FakeMatch:
         # 节点更新,prev_combat_lost 只由战斗类节点置位;初值 = 无前轮)
         self._prev_node: str | None = None
         self._prev_combat_lost: bool = False
+        # prep 编排域状态(批 2;方案 §2.2 F6 行):
+        # spheres = 待收奖励球 [(color, r)](r 大 = 大球,观察面直出);
+        # boxes = 占席补给箱的物理槽位表(1 基;箱 = bench 上 is_item_slot
+        # 占位件,派生量 free_bench_slots/围栏 held 因此天然 truthful);
+        # overlay 栈复用批 0 面('box' kind = 武装箱 4 选 1)。
+        self.spheres: list[tuple[str, int]] = []
+        self.boxes: list[int] = []
         self.state: GameState = GameState(
             plane=1,
             round_num=1,
@@ -200,6 +209,9 @@ class FakeMatch:
             hp=initial_hp,
         )
         self._deal_opening_bench()
+        # 开局奖励球(screen_flow_timing.md #5「开局补给:给开局角色 +
+        # 奖励球」实录;rng 归发放股)
+        self.spawn_balls(1)
 
     def _deal_opening_bench(self) -> None:
         """开局补给 bench(校准面:真游戏开局给初始角色——机制锚 =
@@ -228,6 +240,373 @@ class FakeMatch:
             bench_place(self.state.bench, BenchChar(
                 slot=0, char_id=name,
                 faction=(CHARACTERS[name].factions or ['散'])[0]))
+
+    def _deal_bench_char(self, bc: cw_state.BenchChar) -> int | None:
+        """一个角色入座首个空席并回填物理槽号(开局补给/球角色通道/选卡
+        共用;座位真值 = bench 槽位表,禁列表 append)。"""
+        from sr_od.application.currency_war.kernel.cw_state import bench_place
+
+        placed = bench_place(self.state.bench, bc)
+        return placed
+
+    # ---- prep 编排域环境事实生成(批 2;球/箱生成 = 环境事件,非动作)----
+
+    def spawn_balls(self, n: int) -> None:
+        """生成 n 个待收奖励球(开局补给/奖励节点事件;大球优先语义的
+        r 值 = 20 基础 + 序内抖动,观察面消费)。rng 归发放股。"""
+        for _ in range(max(0, n)):
+            r = 20 + self._rng_grant.randint(0, 6)
+            self.spheres.append(('晶矿', r))
+
+    def spawn_box(self) -> int | None:
+        """生成一个占席补给箱(bench 上 is_item_slot 占位件;席满 = 无箱,
+        返回 None)。物理槽 = 首个空席。"""
+        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+
+        for i, b in enumerate(self.state.bench):
+            if b is None:
+                bc = BenchChar(slot=i + 1, char_id='', faction='?',
+                               is_item_slot=True)
+                self.state.bench[i] = bc
+                self.boxes.append(i + 1)
+                return i + 1
+        return None
+
+    def _take_first_free_slot(self) -> int | None:
+        for i, b in enumerate(self.state.bench):
+            if b is None:
+                return i + 1
+        return None
+
+    # ---- prep 编排动作转移(批 2;方案 §2.2 F6 行「批 2 词汇」)----
+
+    def apply_prep(self, action: Any) -> ExecResult:
+        """族B(PrepAction 词表)动作落假游戏的唯一入口(批 2)。
+
+        坐标系换算发生在本边界(族B 物理槽位 1 基 → 族A 槽位表下标
+        0 基;对照表 = cw_state.py Action 节约定块),换算后一律直调
+        :meth:`apply`(simulate 单一源)——本方法不内联任何动作转移。
+
+        无 simulate 分支域(收球/开箱/选卡/装备穿戴)= 环境保真件层
+        新增规则(方案 F6 裁决);常量单一源 = :mod:`rules` prep 节。
+        StartBattle = 出战的环境承接(applied 恒真;战斗结算由编排方
+        驱动 settle_battle)。OpenTome(典籍)批 2 不建模(P2 投资策略
+        发放域)→ applied=False 显式拒绝;退役/兼容动作同判。
+        """
+        from sr_od.application.currency_war.kernel import cw_prep_actions as pa
+        from sr_od.application.currency_war.kernel import cw_state
+
+        if isinstance(action, pa.SellBench):
+            return self.apply(cw_state.SellBench(bench_idx=action.slot - 1))
+        if isinstance(action, pa.SellDeployed):
+            idx = (action.slot - 1 if action.row == 'front'
+                   else 4 + action.slot - 1)
+            return self.apply(cw_state.SellDeployed(deployed_idx=idx))
+        if isinstance(action, pa.DeployMove):
+            target = (self.state.bench[action.from_slot - 1]
+                      if 1 <= action.from_slot <= len(self.state.bench)
+                      else None)
+            faction = (target.faction if target is not None and target.faction
+                       else '?')
+            return self.apply(cw_state.DeployMove(
+                bench_idx=action.from_slot - 1, to_row=action.to_row,
+                faction=faction))
+        if isinstance(action, pa.LevelUp):
+            return self._apply_levelup_clicks()
+        if isinstance(action, pa.ClickSpheres):
+            return self._collect_spheres(action.max_k)
+        if isinstance(action, pa.OpenBox):
+            return self._open_box(action.slot)
+        if isinstance(action, pa.PickBoxCard):
+            return self._pick_box_card(action.card_idx)
+        if isinstance(action, pa.RunDeploy):
+            # 计划装配消费策略会话语境(target/fence 输入),由执行缝
+            # 层(harness)组装后落本入口的单步转移——状态机不持会话。
+            # 直发(无会话语境)= 保守围栏基干(cap 填空/去重)仍可落地。
+            return self._run_deploy_basic()
+        if isinstance(action, pa.RunEquip):
+            return self._wear_equips(action)
+        if isinstance(action, pa.StartBattle):
+            self.clock += 1
+            return ExecResult(applied=True, observed=self.state.copy())
+        if isinstance(action, pa.OpenShop):
+            self.open_shop()
+            return ExecResult(applied=True, observed=self.state.copy())
+        if isinstance(action, (pa.OpenTome, pa.DeferSpheres, pa.BailToOuter,
+                               pa.EnsureShopOpen, pa.EnsureShopClosed,
+                               pa.RunBuyPhase, pa.RunTools)):
+            # OpenTome 批 2 不建模;其余 = 控制流/退役兼容面(控制流动作
+            # 到不了执行缝,防御兜底);显式拒绝非静默。
+            self.clock += 1
+            return ExecResult(applied=False, observed=self.state.copy())
+        raise TypeError(f'apply_prep 不认识的动作类型: {type(action).__name__}')
+
+    def _apply_levelup_clicks(self) -> ExecResult:
+        """prep LevelUp = 点「购买经验」至 level+1(词表语义)。
+
+        simulate LevelUp 分支 = 单击(+XP_PER_BUY/−单击价,cw_state.py
+        真实语义 ADR-0129);单击价/击数单一源 = kernel ``xp_click_cost``
+        / ``clicks_to_next_level``(cw_economy)。金不足即停(fail-closed,
+        与 live 执行器 _level_up 同向)。HP 支付结构性为零 = 环境边界
+        (simulate 同不扣 HP,批 1 落地审申报面)。
+        """
+        from sr_od.application.currency_war.kernel.cw_economy import (
+            clicks_to_next_level,
+            xp_click_cost,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import LevelUp
+
+        level_pre = self.state.level
+        clicks = clicks_to_next_level(self.state)
+        spent = 0
+        for _ in range(max(1, clicks)):
+            price = xp_click_cost(self.state)
+            if self.state.gold < price:
+                break
+            res = self.apply(LevelUp(cost=price))
+            if not res.applied:
+                break
+            spent += price
+        applied = self.state.level > level_pre or spent > 0
+        return ExecResult(applied=applied, income=None,
+                          verification={'levelup_spent': spent},
+                          observed=self.state.copy()
+                          if applied else None)
+
+    def _collect_spheres(self, max_k: int) -> ExecResult:
+        """收球(点奖励球):逐球三通道(rules.ball_reward_channel 单一源)。
+
+        - gold:BALL_GOLD 入账;equip:基础件入 state.equips(库存正本,
+          simulate 卖出回收分支同域);char:牌池 take + 入座空席
+          (席满 = 收球中断,球保留——live 口径「席满时部分球可能没点开,
+          由后续 heavy 观察自然回补」,screen_flow_timing #16);
+        - 掉箱(rules.BALL_BOX_DROP_P):箱占一空席,席满落空;
+        - 内验早停同词表(球数减即进展)。
+        """
+
+        picked = 0
+        gained_gold = 0
+        got_equip = 0
+        got_char = ''
+        dropped_box = 0
+        while self.spheres and picked < max(1, max_k):
+            channel = rules.ball_reward_channel(self._rng_grant)
+            picked += 1
+            self.spheres.pop()
+            if channel == 'gold':
+                gained_gold += rules.BALL_GOLD
+                self.state.gold += rules.BALL_GOLD
+            elif channel == 'equip':
+                self.state.equips.append(self._draw_base_equip())
+                got_equip += 1
+            else:  # char
+                bc = self._draw_pool_char_to_bench()
+                if bc is None:
+                    # 席满:角色奖励落空即中断(球已消耗,live 同口)
+                    break
+                got_char = bc.char_id
+            if (self._rng_grant.random() < rules.BALL_BOX_DROP_P
+                    and self._take_first_free_slot() is not None):
+                if self.spawn_box() is not None:
+                    dropped_box += 1
+                    break   # 掉箱即停(词表注:回环交规则统筹)
+        applied = picked > 0
+        return ExecResult(applied=applied, income=None,
+                          verification={'picked': picked,
+                                        'gold': gained_gold,
+                                        'equip': got_equip,
+                                        'char': got_char,
+                                        'box_dropped': dropped_box},
+                          observed=self.state.copy() if applied else None)
+
+    def _draw_base_equip(self) -> str:
+        """基础件均匀抽选(库存正本 state.equips 的来源通道)。
+
+        基础件名集单一源 = kernel ``cw_synthesis.RESERVED_COMPONENTS``
+        ∩ 装备名册(engine 供给校准段 3 选 1 池的同源过滤式,非第二表)。
+        """
+        from sr_od.application.currency_war.data.cw_equipment_data import (
+            EQUIPMENT_ROSTER,
+        )
+        from sr_od.application.currency_war.data.cw_synthesis import (
+            RESERVED_COMPONENTS,
+        )
+        basics = [n for n in RESERVED_COMPONENTS if n in EQUIPMENT_ROSTER]
+        return self._rng_grant.choice(basics)
+
+    def _draw_pool_char_to_bench(self) -> cw_state.BenchChar | None:
+        """牌池抽一角色入座空席(池守恒:take;席满/池空返回 None)。"""
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+
+        if self._take_first_free_slot() is None:
+            return None
+        names = [n for n, c in self.shop_pool.copies.items() if c > 0]
+        if not names:
+            return None
+        name = self._rng_grant.choice(names)
+        self.shop_pool.take(name)
+        ch = CHARACTERS[name]
+        bc = BenchChar(slot=0, char_id=name,
+                       faction=(ch.factions or ['散'])[0],
+                       position_pref=ch.position_pref())
+        self._deal_bench_char(bc)
+        return bc
+
+    def _open_box(self, slot: int | None) -> ExecResult:
+        """开补给箱:箱离席(腾席)+ 压「box」浮层(4 选 1 载荷)。
+
+        选项 = 武装箱同店抽池(rules.box_card_options 单一源);选中件
+        take、未选件 ret 的守恒语义在 _pick_box_card 落(选项暂存 = 浮层
+        载体,不占池)。
+        """
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+
+        slot_no = slot
+        if slot_no is None and self.boxes:
+            slot_no = self.boxes[0]
+        if slot_no is None or slot_no not in self.boxes:
+            return ExecResult(applied=False, observed=self.state.copy())
+        idx = slot_no - 1
+        target = (self.state.bench[idx]
+                  if 0 <= idx < len(self.state.bench) else None)
+        if target is None or not target.is_item_slot:
+            return ExecResult(applied=False, observed=self.state.copy())
+        self.state.bench[idx] = None
+        self.boxes = [s for s in self.boxes if s != slot_no]
+        options = rules.box_card_options(
+            [n for n, c in self.shop_pool.copies.items() if c > 0],
+            self._rng_grant)
+        self.push_overlay('box', [(n, CHARACTERS[n].cost) for n in options])
+        return ExecResult(applied=bool(options), observed=self.state.copy())
+
+    def _pick_box_card(self, card_idx: int | None) -> ExecResult:
+        """武装箱选卡:点选项入座(选中 take/未选 ret,池守恒)。"""
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+
+        frame = self.top_overlay('box')
+        if frame is None:
+            return ExecResult(applied=False, observed=self.state.copy())
+        options = list(frame.payload)
+        if not options:
+            self.pop_overlay()
+            return ExecResult(applied=False, observed=self.state.copy())
+        idx = (card_idx if card_idx is not None else 1) - 1
+        if not (0 <= idx < len(options)):
+            return ExecResult(applied=False, observed=self.state.copy())
+        name = options[idx][0]
+        self.pop_overlay()
+        # 守恒落账:选中 take,未选 ret(选项期不占池)
+        for j, (opt_name, _c) in enumerate(options):
+            if j == idx:
+                self.shop_pool.take(opt_name)
+            elif opt_name != name:
+                self.shop_pool.ret(opt_name)
+        ch = CHARACTERS[name]
+        bc = BenchChar(slot=0, char_id=name,
+                       faction=(ch.factions or ['散'])[0],
+                       position_pref=ch.position_pref())
+        placed = self._deal_bench_char(bc)
+        if placed is None:
+            self.shop_pool.ret(name)
+            return ExecResult(applied=False, observed=self.state.copy())
+        return ExecResult(applied=True, observed=self.state.copy())
+
+    def _run_deploy_basic(self) -> ExecResult:
+        """围栏基干部署(无会话语境面;有会话语境的完整装配在执行缝层)。
+
+        同一纯函数 ``cw_deploy_logic.select_deployments`` 直调(cap 填空/
+        成对点火/板空保底/伪槽恒拒主干);单步转移经 :meth:`apply`
+        (DeployMove simulate 分支),本方法零直接落位。
+        """
+        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.kernel import cw_deploy_logic
+        from sr_od.application.currency_war.kernel.cw_state import (
+            DeployMove,
+            iter_occupied_deployed,
+        )
+
+        st = self.state
+        # 紧缩占用序含物品槽(箱 is_item_slot=True 进装配,kernel 恒拒
+        # 语义真实激活;与生产装配单一源同式,cw_op_deploy B1 返工注)
+        occ = [b for b in st.bench if b is not None]
+        if not occ:
+            return ExecResult(applied=False, observed=self.state.copy())
+        cap = st.max_units()
+        if cap is None:
+            return ExecResult(applied=False, observed=self.state.copy())
+        dep_occ = list(iter_occupied_deployed(st.deployed))
+        dep_fac: dict[str, int] = {}
+        for d in dep_occ:
+            ch = CHARACTERS.get(d.char_id)
+            if ch is not None and ch.factions:
+                dep_fac[ch.factions[0]] = dep_fac.get(ch.factions[0], 0) + 1
+        up_idx, _held = cw_deploy_logic.select_deployments(
+            occ,
+            deployed_cids={d.char_id for d in dep_occ if d.char_id},
+            deployed_fac=dep_fac,
+            board=dict(st.board or {}),
+            cap=cap,
+        )
+        n_up = 0
+        for i in up_idx:
+            if i >= len(occ):
+                continue
+            bc = occ[i]
+            if bc is None or bc.is_item_slot:
+                continue
+            bench_idx = st.bench.index(bc)
+            ch = CHARACTERS.get(bc.char_id)
+            row = (ch.position_pref() if ch is not None else None) \
+                or bc.position_pref or 'back'
+            res = self.apply(DeployMove(bench_idx=bench_idx, to_row=row,
+                                        faction=bc.faction or '?'))
+            if res.applied:
+                n_up += 1
+        return ExecResult(applied=n_up > 0, verification={'up': n_up},
+                          observed=self.state.copy())
+
+    def _wear_equips(self, action: Any) -> ExecResult:
+        """装备穿戴(分配计划单一源 = kernel ``equip_allocation``)。
+
+        occupied 容量扣减输入 = 真值已穿列表;穿戴 = 分配序列逐件落
+        ``BenchChar.equips`` + 库存出账(state.equips)。计划空 = applied
+        False(无件可穿/无位可穿,live 空批出口同向)。
+        """
+        from sr_od.application.currency_war.kernel.cw_comps import (
+            EQUIP_CAPACITY,
+            equip_allocation,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import (
+            iter_occupied_deployed,
+        )
+
+        if not self.state.equips:
+            return ExecResult(applied=False, observed=self.state.copy())
+        dep_occ = list(iter_occupied_deployed(self.state.deployed))
+        if not dep_occ:
+            return ExecResult(applied=False, observed=self.state.copy())
+        occupied = {
+            ((d.position_pref or ''), d.slot): list(d.equips or [])
+            for d in dep_occ}
+        plan = equip_allocation(None, dep_occ, list(self.state.equips),
+                                occupied=occupied)
+        if not plan:
+            return ExecResult(applied=False, observed=self.state.copy())
+        worn = 0
+        for char_name, equip_name in plan:
+            if equip_name not in self.state.equips:
+                continue
+            for d in dep_occ:
+                if (d.char_id == char_name
+                        and len(d.equips or []) < EQUIP_CAPACITY):
+                    d.equips = list(d.equips or []) + [equip_name]
+                    self.state.equips.remove(equip_name)
+                    worn += 1
+                    break
+        return ExecResult(applied=worn > 0, verification={'worn': worn},
+                          observed=self.state.copy())
 
     # ---- 观察留痕(契约二则:读屏次数语义保留)----
 

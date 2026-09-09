@@ -85,6 +85,17 @@ class FakeCwObserver:
         # 物理槽消费,须与 tracked 重播(同文件)「物理槽位 1 基」同契
         bench_occ = [replace(b) for b in st.bench if b is not None]
         dep_occ = [replace(d) for d in st.deployed if d is not None]
+        # prep 编排域真值字段(批 2;球/箱 = 状态机事实直出,坐标域 =
+        # 结构位假环境不消费点击,占位坐标确定性生成):
+        # spheres = read_reward_spheres [(color, Point, r)] 对位;
+        # boxes = read_supply_boxes [(slot, Point)] 对位(箱占席由 bench
+        # 的 is_item_slot 件承载,此处只供观察面);tomes 恒空(典籍 =
+        # P2 投资策略发放域,批 2 不建模,申报面见 FakeMatch.apply_prep)。
+        from one_dragon.base.geometry.point import Point
+
+        spheres = [(color, Point(300 + 60 * i, 990), r)
+                   for i, (color, r) in enumerate(self._match.spheres)]
+        boxes = [(slot, Point(563, 911)) for slot in self._match.boxes]
         prep = PrepObservation(
             state=st,
             # state_gold_trusted 语义 = heavy 时 shop 开(PrepObservation
@@ -92,6 +103,8 @@ class FakeCwObserver:
             state_gold_trusted=True,
             bench_chars=bench_occ,
             deployed_chars=dep_occ,
+            # 空席 = 9 − 占用(占用含箱:箱 = bench 上 is_item_slot 件,
+            # bench_occ 计数天然覆盖——free_bench_slots 词表注同式)
             free_bench_slots=max(0, BENCH_CAPACITY - len(bench_occ)),
             deploy_vacancy=max(0, (st.deploy_cap or st.level) - len(dep_occ)),
             front_occupied={d.slot for d in dep_occ
@@ -99,6 +112,8 @@ class FakeCwObserver:
             back_occupied={d.slot for d in dep_occ
                            if getattr(d, 'row', '') == 'back'},
             shop_open=(self._match.phase == PHASE_PREP_SHOP_OPEN),
+            spheres=spheres,
+            boxes=boxes,
         )
         return ObservationBundle(state=st, prep=prep)
 
@@ -151,13 +166,18 @@ class FakeActionSink:
         # 刷新有效性对拍的「刷前牌名集」:转移前取(与 live RefreshShopOp
         # 「点击前现读」同语义位,来源换状态机真值)
         pre_shop_names = [c.name for c in self._match.state.shop if c.name]
+        # 卖出登记名源(批 2 裂口③收敛):转移**前**状态机真值——期望帧
+        # (env.state)与真值陈旧错位时,登记名仍随真值(批 1 取期望帧
+        # 槽位,陈旧可漂;修法 = 来源换真值,语义位不变)
+        pre_truth = self._match.state.copy()
         res = self._match.apply(action)
         if res.applied and env is not None:
-            self._land_ledger(env, action, res, pre_shop_names)
+            self._land_ledger(env, action, res, pre_shop_names, pre_truth)
         return res
 
     def _land_ledger(self, env: Any, action: Action, res: ExecResult,
-                     pre_shop_names: list[str]) -> None:
+                     pre_shop_names: list[str],
+                     pre_truth: GameState | None = None) -> None:
         """账本位随动(方案 §2.4;与 live 动作 op execute 的账户增量
         逐项对照——对照锚 = cw_shop_action_ops 各 op 类的 execute,行号
         为 2026-09-08 时点):计数单一源 = 同一 ShopVisitLedger 槽位。
@@ -242,8 +262,17 @@ class FakeActionSink:
             else:
                 ledger.buy_unidentified = True
         elif isinstance(action, SellBench):
-            _expected = (state.bench[action.bench_idx]
-                         if 0 <= action.bench_idx < len(state.bench) else None)
+            # 登记名源 = 转移前真值(pre_truth;批 2 裂口③收敛——期望帧
+            # 陈旧时不再漂);pre_truth 缺席(旧调用形)回落期望帧槽位
+            _truth_slot = (pre_truth.bench[action.bench_idx]
+                           if pre_truth is not None
+                           and 0 <= action.bench_idx < len(pre_truth.bench)
+                           else None)
+            _expected = (_truth_slot
+                         if _truth_slot is not None
+                         else (state.bench[action.bench_idx]
+                               if 0 <= action.bench_idx < len(state.bench)
+                               else None))
             _expected_name = (_expected.char_id
                               if _expected is not None else None)
             register_round_sold([_expected_name], state, session)
