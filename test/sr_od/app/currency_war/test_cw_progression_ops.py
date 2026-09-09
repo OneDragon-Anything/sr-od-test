@@ -526,7 +526,8 @@ def test_next_button_ocr_click(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """锁:OCR「下一步」命中 → ocr_and_click 推进(success_wait=2 同原值);
-    未命中 → fail 不点击。"""
+    断言面仅命中臂——miss 臂走基类 handle 入口锚 miss 路径,与全部推进 op
+    同一继承代码,由 test_plane_detail_entry_miss_fails_without_click 辖。"""
     op, _fc = _make_op(test_context, monkeypatch, cw_screen_next_button.CwScreenNextButton)
     _stub_ocr(op, monkeypatch, {'下一步': True})
     click_calls: list[dict] = []

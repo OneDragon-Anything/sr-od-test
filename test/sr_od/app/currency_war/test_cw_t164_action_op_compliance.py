@@ -177,7 +177,9 @@ def test_node_report_wiring_contract() -> None:
     i_noop = deploy_src.find('round_success(CwOpDeploy.STATUS_NOOP')
     assert i_noop >= 0, 'NOOP 合法稳态出口缺失(dd-037 三分被破坏)'
     assert i_noop > i_gate, 'gate_fail 判定必须在 NOOP 出口之前'
-    assert 'round_fail(_gate_fail)' in deploy_src
+    # gate_fail → round_fail 透传的行为面由 test_cw_t174_front_invariant
+    # L4b/L5 经 op.deploy() 端到端辖(BOARD_FULL_MISMATCH/PHANTOM 两形态
+    # 均断言具名状态在 res.status),此处不再重复源码字面在场断言。
     assert 'round_fail(CwOpDeploy.STATUS_LANDED_NONE)' in deploy_src, \
         'placed=0 失败上报分支失守(D3 如实报告语义回归)'
     tools_src = inspect.getsource(CwOpTools.tools_consume)

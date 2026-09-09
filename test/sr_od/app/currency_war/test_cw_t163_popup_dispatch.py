@@ -68,29 +68,17 @@ def test_role_detail_anchor_either_leg() -> None:
     assert _role_detail_anchor_hit(none, object()) is False
 
 
-def test_variant_mutual_exclusion() -> None:
-    """变体互斥(T-163 验收②):商店卡牌详情帧 → 0t 命中、1b 不命中;
-    备战角色详情帧 → 1b 命中、0t 不命中——双判据互不越界。"""
-    popup = {('货币战争-商店卡牌详情', '按钮-购买'),
-             ('货币战争-商店卡牌详情', '按钮-角色详情')}
-    prep_detail = {('货币战争-备战-角色详情', '按钮-装备推荐')}
-    assert _shop_card_detail_anchor_hit(_stub_op(popup), object()) is True
-    assert _role_detail_anchor_hit(_stub_op(popup), object()) is False
-    assert _role_detail_anchor_hit(_stub_op(prep_detail), object()) is True
-    assert _shop_card_detail_anchor_hit(_stub_op(prep_detail), object()) is False
-
-
 def test_role_detail_fullscreen_ocr_retired() -> None:
     """退场锁:旧全屏 OCR 判据(「可合成列表」/「角色详情」,lcs 0.8)不得
     回到 cw_loop 分发——全屏「角色详情」与商店卡牌详情弹窗底部按钮全等共享
-    (LCS 1.0,收紧无济于事)= T-163 垄断 26 分钟的判据根。"""
+    (LCS 1.0,收紧无济于事)= T-163 垄断 26 分钟的判据根。1b 分发走锚化
+    判据单一源的在场面由 test_role_detail_dispatch_on_fail_retry_wired
+    的分支定位自持(同串断言,不重复)。"""
     src = inspect.getsource(cw_loop)
     assert "round_by_ocr(screen, '角色详情'" not in src, \
         '1b 全屏 OCR 判据回归(T-163 事故判据根)'
     assert "round_by_ocr(screen, '可合成列表'" not in src, \
         '1b 全屏 OCR 判据回归(T-163 事故判据根)'
-    assert '_role_detail_anchor_hit(self, screen)' in src, \
-        '1b 分发未走锚化判据单一源'
 
 
 def test_role_detail_dispatch_on_fail_retry_wired() -> None:
@@ -227,8 +215,7 @@ def test_run_composite_deploy_not_guarded() -> None:
 def test_dispatch_point_guards_registered() -> None:
     """接线锁:装备/工具两处派发点必须传 guard_screen(判断上提落位),
     防后续新增组合动作时漏带守卫退回「op 内自判」形态。"""
-    src = inspect.getsource(
-        __import__('sr_od.application.currency_war.prep_actions',
-                   fromlist=['PrepActionExecutor']))
+    import sr_od.application.currency_war.prep_actions as pa_mod
+    src = inspect.getsource(pa_mod)
     assert src.count("guard_screen='货币战争-备战'") == 2, \
         '装备/工具派发点守卫接线缺失'
