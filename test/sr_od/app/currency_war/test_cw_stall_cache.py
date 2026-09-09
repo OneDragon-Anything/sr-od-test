@@ -50,6 +50,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
 
 # ===== 基建 =====
 
@@ -58,10 +61,6 @@ _LOCK_COMP = '列车同行'
 
 def _cfg():
     return SimpleNamespace(ev_arm='full')
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
 
 
 def _locked_session() -> StrategySession:
@@ -414,49 +413,25 @@ class TestTokenWritePointLiveness:
 
     def test_prep_op_write_point_sets_token(self, test_context, monkeypatch):
         """prep 主环写点活性:备战单轮 op 执行成功后 token 载体置位;
-        写点被删 ⇒ 载体 None ⇒ 红。harness 最小集镜像
-        test_cw_no_progress_guard._make_round_director(同域既有模式)。"""
+        写点被删 ⇒ 载体 None ⇒ 红。harness 单一源 =
+        _cw_helpers.make_prep_round_director(D22 收敛;与
+        test_cw_no_progress_guard 的签名写点锁同源镜像,禁删边留角;
+        prewarm_state=True = 预冷建 MandateState 载体,写点消费面)。"""
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             OpenShop,
-        )
-        from sr_od.application.currency_war.operations.cw_screen import (
-            cw_screen_prep as pd_mod,
         )
         from test.harness.fixture_controller import (
             enter_running_state,
             fast_sleep,
             reset_running_state,
         )
+        from test.sr_od.app.currency_war._cw_helpers import (
+            make_prep_round_director,
+        )
 
-        class _StubStrategy:
-            def decide_prep_screen(self, session, config):
-                return [OpenShop(read_only=True)]
-
-        d = pd_mod.CwScreenPrep(test_context)
-        session = StrategySession()
-        state_of(session)   # 冷建 MandateState 并挂 session(写点消费面)
-        match = SimpleNamespace(strategy=_StubStrategy(), session=session)
-        monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
-        monkeypatch.setattr(d, '_clear_entry_overlays', lambda: None)
-        monkeypatch.setattr(d, '_try_collapse_open_shop', lambda: False)
-        monkeypatch.setattr(d, '_takeover_collect_if_needed', lambda m, s: None)
-        monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-
-        class _Obs:
-            event_overlay = None
-            state = None
-            bench_chars: list = []
-            deployed_chars: list = []
-            spheres: list = []
-            boxes: list = []
-            deploy_vacancy = 0
-
-        monkeypatch.setattr(d, '_observe', lambda heavy=True, screen=None: _Obs())
-        monkeypatch.setattr(
-            'sr_od.application.currency_war.obs.cw_observation.read_bench_full',
-            lambda ctx, screen: False)
-        monkeypatch.setattr(d, '_open_shop_phase',
-                            lambda a, obs: (True, 'read_only 读牌完成'))
+        d, _match, session = make_prep_round_director(
+            test_context, monkeypatch, [OpenShop(read_only=True)],
+            prewarm_state=True)
         with fast_sleep():
             enter_running_state(test_context)
             try:

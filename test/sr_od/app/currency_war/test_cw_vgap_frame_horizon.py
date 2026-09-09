@@ -12,11 +12,7 @@
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
-
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
     GameState,
     RefreshShop,
     ShopCard,
@@ -24,56 +20,29 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     shop as shop_mod,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     refresh as crit_refresh,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_comp as _comp,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_decide as _decide,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_members as _members,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_session as _session,
+)
 
-# ===== 测试基建(承旧 vgap 文件同款桩)=====
-
-
-def _comp():
-    names = [c.name for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
-    return get_comp(names[0])
-
-
-def _members(comp) -> list[str]:
-    ms = list(comp.core_chars) + list(getattr(comp, 'shared_chars', []) or [])
-    return list(dict.fromkeys(ms))
-
-
-def _session(comp=None, plane_lengths=None):
-    from sr_od.application.currency_war.kernel.cw_strategy_session import (
-        StrategySession,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
-
-    s = StrategySession()
-    state_of(s).cw4_counters = {}
-    state_of(s).target_comp = comp
-    state_of(s).cw4_line_state = proof.LineState()
-    if plane_lengths is not None:
-        s.plane_lengths_seen = list(plane_lengths)
-    return s
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _decide(state: GameState, session) -> list:
-    from sr_od.application.currency_war.sim.engine_p1 import (
-        sim_decision_registry,
-    )
-
-    strat = MandateV1Strategy(registry=sim_decision_registry())
-    session.shop_state_frame = state
-    return strat.decide_shop_screen(session, SimpleNamespace(ev_arm='full'))
+# ===== 测试基建(承旧 vgap 文件同款桩;六件套单一源 = _cw_helpers)=====
 
 
 class TestCriterionAffordability:

@@ -24,11 +24,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
     BuyCard,
-    GameState,
     LevelUpShop,
     RefreshShop,
     SellBench,
@@ -38,64 +35,22 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import prov
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-    state_of,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
-
-# ===== 测试基建(与 test_cw_shop_line 同款桩)=====
-
-class _Cfg:
-
-    def __init__(self, ev_arm: str = 'full') -> None:
-        self.ev_arm = ev_arm
-
-
-def _comp():
-    names = [c.name for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
-    return get_comp(names[0])
-
-
-def _session(comp=None):
-    from sr_od.application.currency_war.kernel.cw_strategy_session import (
-        StrategySession,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
-
-    s = StrategySession()
-    state_of(s).cw4_counters = {}
-    state_of(s).target_comp = comp
-    state_of(s).cw4_line_state = proof.LineState()
-    return s
-
-
-def _state(gold: int = 30, shop=None, bench=None, deployed=None,
-           level: int = 3, deploy_cap: int | None = None,
-           xp: tuple[int, int] | None = None, hp: int = 100) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, hp=hp)
-    st.shop = shop if shop is not None else []
-    st.bench = bench if bench is not None else []
-    st.deployed = deployed if deployed is not None else []
-    if deploy_cap is not None:
-        st.deploy_cap = deploy_cap
-    if xp is not None:
-        st.xp_progress = xp
-    return st
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _decide(state: GameState, session, cfg: _Cfg | None = None):
-    from sr_od.application.currency_war.sim.engine_p1 import (
-        sim_decision_registry,
-    )
-
-    strat = MandateV1Strategy(registry=sim_decision_registry())
-    session.shop_state_frame = state
-    return strat.decide_shop_screen(session, cfg or _Cfg())
-
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_comp as _comp,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_decide as _decide,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_session as _session,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_state as _state,
+)
 
 # ===== r2 预算门纯数锁(P40 R2 原语义,ADR-0516 保留声明)=====
 

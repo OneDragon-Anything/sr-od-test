@@ -27,6 +27,9 @@ from test.harness.fixture_controller import (
     fast_sleep,
     reset_running_state,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    make_prep_round_director as _make_round_director,
+)
 
 # ==================== 纯函数:计数与指纹 ====================
 
@@ -237,51 +240,9 @@ def test_write_no_progress_flag_content(tmp_path) -> None:
 
 # ==================== 接线:备战单轮 op 写签名 / loop 消费 ====================
 
-
-def _make_round_director(test_context, monkeypatch, scripted_actions,
-                         overlay=None):
-    """备战单轮单测装配(最小集)。
-
-    同域镜像副本 = test_cw_stall_cache 的 prep 写点测(同款桩面):
-    彼锁 cw4_frame_action_record token 载体写点,本文件锁
-    last_prep_action_sig 签名写点——两写点同一决策出口,禁删边留角。
-    """
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_prep as pd_mod,
-    )
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
-    )
-
-    class _StubStrategy:
-        def decide_prep_screen(self, session, config):
-            return list(scripted_actions)
-
-    d = pd_mod.CwScreenPrep(test_context)
-    session = StrategySession()
-    match = SimpleNamespace(strategy=_StubStrategy(), session=session)
-    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
-    monkeypatch.setattr(d, '_clear_entry_overlays', lambda: None)
-    monkeypatch.setattr(d, '_try_collapse_open_shop', lambda: False)
-    monkeypatch.setattr(d, '_takeover_collect_if_needed', lambda m, s: None)
-    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-
-    class _Obs:
-        event_overlay = overlay
-        state = None
-        bench_chars: list = []
-        deployed_chars: list = []
-        spheres: list = []
-        boxes: list = []
-        deploy_vacancy = 0
-
-    monkeypatch.setattr(d, '_observe', lambda heavy=True, screen=None: _Obs())
-    monkeypatch.setattr(
-        'sr_od.application.currency_war.obs.cw_observation.read_bench_full',
-        lambda ctx, screen: False)
-    monkeypatch.setattr(d, '_open_shop_phase',
-                        lambda a, obs: (True, 'read_only 读牌完成'))
-    return d, match, session
+# 备战单轮装配单一源 = _cw_helpers.make_prep_round_director(顶部别名导入
+# _make_round_director;与 stall_cache 的 token 写点锁同源镜像:两写点同一
+# 决策出口,禁删边留角)
 
 
 def test_prep_op_records_action_signature(test_context, monkeypatch) -> None:

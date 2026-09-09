@@ -23,11 +23,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
-    GameState,
     LevelUpShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -39,45 +35,36 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
-    line_members,
+from test.sr_od.app.currency_war._cw_helpers import (
+    battle_state as _state,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_comp as _comp_single_source,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_km as _km_of,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    ns_session as _ns_session,
 )
 
 _COMP = '列车同行'
 
 
 def _comp():
-    return get_comp(_COMP)
+    """本文件锚定具名套(``列车同行``;血线族三文件共用锚)。"""
+    return _comp_single_source(_COMP)
 
 
 def _km() -> list[str]:
-    return list(line_members(_comp()))
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _state(gold: int, level: int, *, xp: tuple[int, int] = (0, 6),
-           hp: int = 60, bench: list | None = None,
-           deployed: list | None = None) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, hp=hp)
-    st.level_readable = True
-    st.plane = 2
-    st.node_type = 'battle'
-    st.xp_progress = xp
-    st.level_up_cost = 4
-    st.shop = []
-    st.bench = list(bench) if bench is not None else []
-    st.deployed = list(deployed) if deployed is not None else []
-    st.refresh_probs = {5: 0}
-    return st
+    return _km_of(_comp())
 
 
 def _sess():
-    return SimpleNamespace(cw4_counters={}, target_comp=_comp(),
-                           v3_intention=IntentionState(),
-                           active_strategies=[])
+    return _ns_session(_comp())
 
 
 def _support_shapes():

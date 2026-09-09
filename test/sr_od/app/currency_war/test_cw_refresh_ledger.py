@@ -40,7 +40,6 @@ from __future__ import annotations
 import math
 
 from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
     GameState,
     RefreshShop,
 )
@@ -50,43 +49,30 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     _r1_ledger_terms,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_decide as _decide,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_session as _session,
+)
 
-# ===== 测试基建(与 test_cw_zero_refresh 同款桩模式)=====
+# ===== 测试基建(与 test_cw_zero_refresh 同款桩模式;单一源 = _cw_helpers)=====
 
 #: P1 配方体系对(本局档案锁帧对);成员全集 = 15 名跨 1-5 费。
 _T88_PAIR: tuple[str, ...] = ('仙舟', '持续伤害')
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _session():
+def _session_t88():
+    """T88 锁线会话:target = 配方对(非六件套家族的 comp 直选)、
+    档案帧位面史、不建 LineState——cw4_session 的三参数分层面。"""
     from sr_od.application.currency_war.kernel.cw_intention import (
         pair_target_comp,
     )
-    from sr_od.application.currency_war.kernel.cw_strategy_session import (
-        StrategySession,
-    )
-
-    s = StrategySession()
-    state_of(s).cw4_counters = {}
-    state_of(s).target_comp = pair_target_comp(_T88_PAIR)
-    s.plane_lengths_seen = [9, 5, 7]
-    return s
-
-
-def _decide(state: GameState, session):
-    from sr_od.application.currency_war.sim.engine_p1 import (
-        sim_decision_registry,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-        MandateV1Strategy,
-    )
-
-    strat = MandateV1Strategy(registry=sim_decision_registry())
-    session.shop_state_frame = state
-    return strat.decide_shop_screen(session, type('_Cfg', (), {'ev_arm': 'full'})())
+    return _session(pair_target_comp(_T88_PAIR),
+                    plane_lengths=[9, 5, 7], line_state=False)
 
 
 def _p1r8_frame(gold: int = 53) -> tuple[GameState, object]:
@@ -102,7 +88,7 @@ def _p1r8_frame(gold: int = 53) -> tuple[GameState, object]:
     st.shop = []
     st.bench = []
     st.deployed = deployed
-    return st, _session()
+    return st, _session_t88()
 
 
 # ===== 锁 A:合格集语义单帧锁(主锁)=====

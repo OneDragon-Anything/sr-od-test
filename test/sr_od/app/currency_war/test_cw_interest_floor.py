@@ -11,27 +11,16 @@
   防把 50 拍成域常数 = dd-026 备选 2 禁案的判别锁)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
-
-from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import (
     expected_refreshes_for_card,
     refresh_prob,
 )
-from sr_od.application.currency_war.kernel.cw_comps import (
-    COMP_LIBRARY,
-    get_comp,
-)
 from sr_od.application.currency_war.kernel.cw_state import (
-    BenchChar,
     GameState,
     RefreshShop,
     ShopCard,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     _r2_card_reserve,
@@ -39,35 +28,24 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.interest import (
     saturation_line,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_comp as _comp,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_decide as _decide,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_members as _members,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_session as _session,
+)
 
-# ===== 测试基建(与 test_cw_zero_refresh 同款桩)=====
-
-
-def _comp():
-    names = [c.name for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
-    return get_comp(names[0])
-
-
-def _members(comp) -> list[str]:
-    ms = list(comp.core_chars) + list(getattr(comp, 'shared_chars', []) or [])
-    return list(dict.fromkeys(ms))
-
-
-def _session(comp=None):
-    from sr_od.application.currency_war.kernel.cw_strategy_session import (
-        StrategySession,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
-
-    s = StrategySession()
-    state_of(s).cw4_counters = {}
-    state_of(s).target_comp = comp
-    state_of(s).cw4_line_state = proof.LineState()
-    return s
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
+# ===== 测试基建(与 test_cw_zero_refresh 同款桩;六件套单一源 = _cw_helpers,
+# 本文件 _state 为垫卡 shop 帧专属形状,留本地自持)=====
 
 
 def _state(gold: int, level: int = 3) -> GameState:
@@ -76,16 +54,6 @@ def _state(gold: int, level: int = 3) -> GameState:
     st.bench = []
     st.deployed = []
     return st
-
-
-def _decide(state: GameState, session) -> list:
-    from sr_od.application.currency_war.sim.engine_p1 import (
-        sim_decision_registry,
-    )
-
-    strat = MandateV1Strategy(registry=sim_decision_registry())
-    session.shop_state_frame = state
-    return strat.decide_shop_screen(session, SimpleNamespace(ev_arm='full'))
 
 
 class TestR2InterestFloor:

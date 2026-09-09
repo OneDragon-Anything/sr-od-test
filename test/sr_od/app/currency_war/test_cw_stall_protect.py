@@ -28,17 +28,19 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
-    line_members,
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_comp as _comp_single_source,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_km as _km_of,
 )
 
 
 def _mod_src(mod) -> str:
     return inspect.getsource(mod)
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
 
 
 def _mandate_src() -> str:
@@ -454,12 +456,12 @@ def _distinct_fillers(n: int) -> list[str]:
 
 
 def _comp():
-    from sr_od.application.currency_war.kernel.cw_comps import get_comp
-    return get_comp('列车同行')
+    """本文件锚定具名套(``列车同行``)。"""
+    return _comp_single_source('列车同行')
 
 
 def _km() -> tuple[str, ...]:
-    return tuple(line_members(_comp()))
+    return tuple(_km_of(_comp()))
 
 
 def _off_line_filler(exclude: tuple[str, ...]) -> str:

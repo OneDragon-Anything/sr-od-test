@@ -14,21 +14,12 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
-    GameState,
-    ShopCard,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     buy,
     contracts,
@@ -52,56 +43,27 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
     state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
-
-
-def _comp():
-    names = [c.name for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
-    return get_comp(names[0])
-
-
-def _members(comp) -> list[str]:
-    ms = list(comp.core_chars) + list(getattr(comp, 'shared_chars', []) or [])
-    return list(dict.fromkeys(ms))
-
-
-def _session(comp=None) -> StrategySession:
-    s = StrategySession()
-    state_of(s).cw4_counters = {}
-    state_of(s).target_comp = comp
-    state_of(s).cw4_line_state = proof.LineState()
-    return s
-
-
-def _state(gold: int = 30, shop=None, bench=None, deployed=None,
-           level: int = 3, node=None, hp: int = 100) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, node_type=node,
-                   hp=hp)
-    st.shop = shop if shop is not None else []
-    st.bench = bench if bench is not None else []
-    st.deployed = deployed if deployed is not None else []
-    return st
-
-
-def _card(name: str, cost: int = 3, star: int = 1) -> ShopCard:
-    return ShopCard(x=100, name=name, cost=cost, star=star)
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _decide(state: GameState, session: StrategySession, cfg=None):
-    class _Cfg:
-        def __init__(self, ev_arm: str = 'full') -> None:
-            self.ev_arm = ev_arm
-
-    from sr_od.application.currency_war.sim.engine_p1 import (
-        sim_decision_registry,
-    )
-    strat = MandateV1Strategy(registry=sim_decision_registry())
-    session.shop_state_frame = state
-    return strat.decide_shop_screen(session, cfg or _Cfg())
-
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_card as _card,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_comp as _comp,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_decide as _decide,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_members as _members,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_session as _session,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_state as _state,
+)
 
 # ===== ① 注册完备性静态断言(表覆盖=criteria 全公开函数)=====
 

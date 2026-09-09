@@ -18,15 +18,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
-    BenchChar,
     BuyCard,
     GameState,
     LevelUpShop,
     SellBench,
-    ShopCard,
     simulate,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -39,26 +36,29 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
     arm0_level_lag,
     arm0_need,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_card as _card,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_comp as _comp_single_source,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_members as _members_of,
+)
 
 _LOCK_COMP = '列车同行'
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _card(name: str, cost: int = 3, star: int = 1) -> ShopCard:
-    return ShopCard(x=100, name=name, cost=cost, star=star)
-
-
 def _comp():
-    return get_comp(_LOCK_COMP)
+    """本文件锚定具名套(``列车同行``;六件套缺省锚 = 首个 core 套)。"""
+    return _comp_single_source(_LOCK_COMP)
 
 
 def _members() -> list[str]:
-    comp = _comp()
-    return list(dict.fromkeys(
-        list(comp.core_chars) + list(getattr(comp, 'shared_chars', []) or [])))
+    return _members_of(_comp())
 
 
 def _shop_session(comp) -> SimpleNamespace:

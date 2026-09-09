@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, get_comp
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -21,20 +20,18 @@ from sr_od.application.currency_war.kernel.cw_state import (
     CloseShop,
     CompTransaction,
     DeployMove,
-    GameState,
     LevelUp,
     LevelUpShop,
     PickEvent,
     RefreshShop,
     SellBench,
     SellDeployed,
-    ShopCard,
     SwapDeploy,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof, shop
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
@@ -42,67 +39,32 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    DecideCfg as _Cfg,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_card as _card,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_comp as _comp,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_decide as _decide,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_members as _members,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_session as _session,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_state as _state,
+)
 
-# ===== 测试基建 =====
-
-class _Cfg:
-    """决策 config 桩(ev_arm 字段=R1-1 实验因子)。"""
-
-    def __init__(self, ev_arm: str = 'full') -> None:
-        self.ev_arm = ev_arm
-
-
-def _comp():
-    names = [c.name for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
-    return get_comp(names[0])
-
-
-def _members(comp) -> list[str]:
-    ms = list(comp.core_chars) + list(getattr(comp, 'shared_chars', []) or [])
-    return list(dict.fromkeys(ms))
-
-
-def _session(comp=None) -> StrategySession:
-    s = StrategySession()
-    state_of(s).cw4_counters = {}
-    state_of(s).target_comp = comp
-    state_of(s).cw4_line_state = proof.LineState()
-    return s
-
-
-def _state(gold: int = 30, shop=None, bench=None, deployed=None,
-           level: int = 3, node=None, xp=None, hp: int = 100) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, node_type=node,
-                   hp=hp)
-    st.shop = shop if shop is not None else []
-    st.bench = bench if bench is not None else []
-    st.deployed = deployed if deployed is not None else []
-    if xp is not None:
-        st.xp_progress = xp
-    return st
-
-
-def _card(name: str, cost: int = 3, star: int = 1, x: int = 100) -> ShopCard:
-    return ShopCard(x=x, name=name, cost=cost, star=star)
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _decide(state: GameState, session: StrategySession,
-            cfg: _Cfg | None = None, *, registry=None):
-    """商店决策驱动;``registry=None`` = sim 注入视图(本文件历史缺省,
-    sim 冻结语义锁的面),传 ``DEFAULT_REGISTRY`` = live 真值表
-    (等级帽单一源锁的双表对拍面,ADR-0565)。"""
-    from sr_od.application.currency_war.sim.engine_p1 import (
-        sim_decision_registry,
-    )
-    strat = MandateV1Strategy(
-        registry=(sim_decision_registry() if registry is None
-                  else registry))
-    session.shop_state_frame = state
-    return strat.decide_shop_screen(session, cfg or _Cfg())
+# ===== 测试基建(六件套单一源 = _cw_helpers;本地桩已收敛,勿再写回)=====
 
 
 # ===== ① criteria 七面商店形态(每面判据式行为锚)=====

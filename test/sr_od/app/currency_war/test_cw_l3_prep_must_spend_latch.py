@@ -14,7 +14,6 @@ from dataclasses import replace
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_prep_actions import LevelUp
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -28,11 +27,12 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-
-
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    ns_session as _ns_session,
+)
 
 _DEP7 = ['藿藿', '艾丝妲', '丹恒·饮月', '风堇', '爻光', '彦卿', '椒丘']
 _BENCH5 = ['千冶·刃', '银狼LV.999', '卡芙卡', '姬子·启行', '三月七']
@@ -59,9 +59,7 @@ def _mk(gold: int, *, hp: int = 1, level: int = 7,
     st.node_type = 'encounter'
     st.xp_progress = xp
     st.level_up_cost = click_cost
-    sess = SimpleNamespace(cw4_counters={}, target_comp=None,
-                           v3_intention=IntentionState(),
-                           active_strategies=[])
+    sess = _ns_session(None)
     return frame, sess, st
 
 
