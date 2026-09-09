@@ -60,6 +60,11 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     bench_place,
 )
+from sr_od.application.currency_war.sim.cw_sim_invest import (
+    InvestInjectionState,
+    SimInvestProfile,
+    SinkInvestSampler,
+)
 from sr_od.application.currency_war.sim.engine_p1 import (
     HP_UPPER_BOUND,
     START_BENCH_COST_WEIGHTS,
@@ -79,8 +84,23 @@ from sr_od.application.currency_war.sim.pool import (
 #: 出处 = ``.debug/temp/currency_war/t120_sim_redesign/保真度校准.md``;
 #: v3 = prep 编排域实体化(球金入账/收球/开箱/装备穿戴/部署走真链,
 #: 批 2;球域参数账见 :mod:`rules` prep 节)——分布面变更,与 v1/v2 不可比。
+#: v4 = 批 3 通道建模:典籍获取→登记→消耗链(OpenTome 真转移+星徽四选一)、
+#: 装备进阶通道(供给节点发放 + 穿着即合成;发放参数账见 :mod:`rules`
+#: 供给/典籍发放域节)、轮岗概率条建模(active_env 条件位,未选环境恒
+#: 基线 None,抽店流零新增消费)——建模面变更,与 v3 不可比。
+#: v6 = v4 基础上双语义一次升版合流(终值与语义 = 编排者二次裁决
+#: 2026-09-10,归属 = T-122/T-204):①商店直出 2★ 通道(T-122;
+#: merge_mechanics §2.6/§2.7 机制实锤,频率 = rules.
+#: SHOP_DIRECT_OUT_2STAR_P 校准层演练偏置,真值待采集批)——分布面
+#: 变更;②投资剧本注入面(T-204,批 3 落地审 F1 立项):SimInvestProfile
+#: 剧本 → 浮层栈/持卡注入(方案 §6.1「投资注入」行的假游戏承接)+
+#: 收入面持卡聚合消费(rules.income_for_round,息帽覆写/flat 息/
+#: gold_per_node)——建模面变更。缺省(无剧本)主路径逐位零漂移
+#: (零漂移锁辖),环境指纹另带 invest_injected 位区分注入域。
+#: 沿革:v5 曾短暂只挂直出单语义(未出版,无存档对照面),T-204 注入
+#: 面落地时并入 v6 合流出版——考古勿把 v5 当独立出版版;与 v4 不可比。
 #: v1 批次(批 1 保真度基线)与本版不可比。
-FAKE_GAME_ENV_VERSION: int = 3
+FAKE_GAME_ENV_VERSION: int = 6
 
 #: 开局等级 = 3(重述 engine_p1 开局真值 ``st.level = 3``——引擎行是裸
 #: 字面量无符号名,故本骨架按值重述+锚注,非 import)。三源互证:
@@ -103,12 +123,43 @@ PHASE_BATTLE: str = '货币战争-战斗'
 PHASE_SETTLE: str = '货币战争-战斗结算'
 PHASE_PLANE_TRANSITION: str = '货币战争-位面过渡'
 PHASE_LOBBY: str = '货币战争-大厅'
+#: 补给阶段屏(批 3;0e1 分支判定锚 = 标识-补给阶段,cw_screen_supply_node
+#: ``_in_node`` 消费同名画面档;画面身份词表单一源 = screen_info)
+PHASE_SUPPLY: str = '货币战争-补给'
 
 #: 开局 hp 缺省(骨架便捷值)——单一源 = kernel/cw_opening_hp.
 #: OPENING_HP_BASE(ADR-0559 初值表:A8/108 基础 82 零方差;import 非复写,
 #: 初值表重校准自动跟随,落地审 L1 修后口径)。仅免「hp=None 无法结算」
 #: 的样板,非环境保真申报面——开局词缀/难度对 hp 的影响归批 1 规则模块。
 DEFAULT_OPENING_HP: int = OPENING_HP_BASE
+
+
+def _upgrade_direct_outs(cards: list, rng: random.Random,
+                         pool_copies: dict) -> list:
+    """直出 2★ 升档(T-122;merge_mechanics §2.6/§2.7 机制实锤)。
+
+    对已抽 1★ 槽逐槽掷 ``rules.SHOP_DIRECT_OUT_2STAR_P``:命中且池余
+    ≥3 基础副本(2★ = 三副本,不足不发)→ 升档 star=2、cost=3×roster
+    基价(徽章实付语义,与 live 费用通道同形)。频率 = 校准层演练偏置
+    (真值「概率待实机调研」——§2.7 零样本存档;禁把该速率下频次读成
+    真值估计)。池账简化申报:生成侧不扣池(展示不消耗池,P77 0.2-3
+    同构),买走时内核路径 take×1(真值 3 副本离池,欠记 2——与既有
+    star 盲 ret 同族既知简化,重校准随采集批)。rng = 抽店股池流
+    (与 draw 同股,同 seed 逐位可复现)。3★ 直出(×9)未建模。
+    """
+    from dataclasses import replace as _replace
+
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    out = []
+    for c in cards:
+        if (c.star or 1) == 1 \
+                and rng.random() < rules.SHOP_DIRECT_OUT_2STAR_P \
+                and pool_copies.get(c.name, 0) >= 3:
+            base = CHARACTERS[c.name].cost if c.name in CHARACTERS else 1
+            out.append(_replace(c, star=2, cost=base * 3))
+        else:
+            out.append(c)
+    return out
 
 
 @dataclass
