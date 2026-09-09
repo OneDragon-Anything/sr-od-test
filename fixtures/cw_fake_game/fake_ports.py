@@ -63,7 +63,7 @@ class FakeCwObserver:
 
         heavy 字段(落地审 L3 承接)全部由状态机真值推导:bench/deployed
         占用身份、空席数、部署空位、前后排占用物理槽位——坐标/视觉域
-        字段(spheres/boxes/tomes/overlay 检测)结构性为零(无读图),
+        字段(spheres/boxes/tomes 占位坐标)结构性为结构位生成(无读图),
         是「识别缺陷面结构性为零」申报(方案 §4-6)的一部分,消费方按
         空值分流(备战环 overlay 防线在假环境天然不触发)。
         """
@@ -89,13 +89,17 @@ class FakeCwObserver:
         # 结构位假环境不消费点击,占位坐标确定性生成):
         # spheres = read_reward_spheres [(color, Point, r)] 对位;
         # boxes = read_supply_boxes [(slot, Point)] 对位(箱占席由 bench
-        # 的 is_item_slot 件承载,此处只供观察面);tomes 恒空(典籍 =
-        # P2 投资策略发放域,批 2 不建模,申报面见 FakeMatch.apply_prep)。
+        # 的 is_item_slot 件承载,此处只供观察面);
+        # tomes = read_tomes [(slot, Point)] 对位(批 3 典籍通道登记面:
+        # 秘密典籍占席真值直出,消费 = prep 决策环 prep_tome 臂发射
+        # OpenTome,entry.py 编排①实体系)。
         from one_dragon.base.geometry.point import Point
 
         spheres = [(color, Point(300 + 60 * i, 990), r)
                    for i, (color, r) in enumerate(self._match.spheres)]
         boxes = [(slot, Point(563, 911)) for slot in self._match.boxes]
+        tomes = [(slot, Point(563 + 70 * i, 911))
+                 for i, slot in enumerate(self._match.tomes)]
         prep = PrepObservation(
             state=st,
             # state_gold_trusted 语义 = heavy 时 shop 开(PrepObservation
@@ -114,6 +118,7 @@ class FakeCwObserver:
             shop_open=(self._match.phase == PHASE_PREP_SHOP_OPEN),
             spheres=spheres,
             boxes=boxes,
+            tomes=tomes,
         )
         return ObservationBundle(state=st, prep=prep)
 

@@ -18,8 +18,10 @@ t120_sim_redesign/方案.md``)§6.2 批 2 行 + 批 1 落地审
   建模域(OpenBox/ClickSpheres/SellBench)的投影与假游戏规则真值
   逐字段一致——红 = 假游戏规则与生产投影模型分叉(两边必有一错)。
 - **三保真裂口对拍显式项锁**(批 1 落地审 §2.1/§7 登记):
-  ①轮岗概率表:假环境 refresh_probs 恒基线 None(建模归批 3);
-  ②血购 HP 支付:LevelUp 只扣金不动 hp(环境边界申报);
+  ①轮岗概率条:未选环境恒基线 None;已选「轮岗」环境按机制原文
+  每备战期重掷翻倍档(批 3 建模落地,锁改写);
+  ②血购 HP 支付:LevelUp 只扣金不动 hp(环境边界申报,N3 补金差
+  逐位断言);
   ③sold 名字源:商店 sink 卖出登记名 = 转移前状态机真值(期望帧
   陈旧不再漂)。
 - **球域真值锁** = 收球金经收球动作入账、收入分解 event 分量恒 0
@@ -243,29 +245,57 @@ def test_projection_matches_fake_truth_on_modeled_domains() -> None:
 # ============================================================ 三保真裂口对拍显式项
 
 
-def test_refresh_probs_stay_baseline_in_fake_env() -> None:
-    """裂口①:假环境轮岗概率条恒基线 None(建模归批 3,显式边界)。
+def test_refresh_probs_rotation_env_models_doubled_tier() -> None:
+    """裂口①(批 3 建模落地):轮岗概率条按已选环境建模,未选恒基线。
 
-    批 1 落地审 §2.1①:轮岗翻倍概率表恒 None = 基线概率,真实缺口
-    已申报、归批 3 概率条建模。本锁辖「边界如实」:刷新后概率条仍
-    None = 基线抽牌(非静默换真值);批 3 建模时本锁按新申报改写。
+    批 1 落地审 §2.1① 登记「归批 3 概率条建模」;本锁为批 3 改写版
+    (原批 2 版辖「恒基线 None」边界)。语义:①未选环境 → refresh_probs
+    恒 None(基线概率,批 2 轨迹不变式);②已选「轮岗」环境 → 每备战期
+    100% 重掷翻倍档(机制 = cw_invest_data id=114 原文「每个备战阶段
+    重新随机」,ADR-0286 勘误口径),单一源 = kernel
+    ``roll_rotation_per_stage``;③翻倍档 = 基线 ×2(boosted_cost_tier
+    可判);④刷新消费概率条且概率条不因刷新漂移。
     """
     from fixtures.cw_fake_game.fake_match import FakeMatch
 
+    from sr_od.application.currency_war.data.cw_shop_odds import (
+        boosted_cost_tier,
+        rotation_probs,
+    )
     from sr_od.application.currency_war.kernel.cw_state import (
         REFRESH_COST_BASE,
         RefreshShop,
     )
 
+    # ①未选环境:备战期收入后概率条恒基线 None(抽店流零新增消费)
     m = FakeMatch(seed=13, node_sequence=['battle'])
     m.open_shop()
-    assert m.state.refresh_probs is None, (
-        '假环境概率条非基线 None(轮岗建模提前且未申报——批 3 义务,'
-        '本批边界为恒基线)')
+    assert m.state.refresh_probs is None, '未选环境概率条非基线 None'
+    m.apply_income()
+    assert m.state.refresh_probs is None, '未选环境备战期掷出了概率条'
     m.state.gold = 50
     res = m.apply(RefreshShop(cost=REFRESH_COST_BASE))
-    assert res.applied
-    assert m.state.refresh_probs is None, '刷新后概率条漂移(裂口①边界破缺)'
+    assert res.applied and m.state.refresh_probs is None, \
+        '未选环境刷新后概率条漂移'
+
+    # ②已选轮岗环境:每备战期重掷,概率条非 None 且翻倍档 = 基线 ×2
+    # (场景升 lv6:lv3 基线纯 1 费档无可翻倍档,roll 退基线 None =
+    # 机制正确形态「低级帧无轮岗」,kernel roll_rotation_per_stage 注)
+    m2 = FakeMatch(seed=13, node_sequence=['battle'])
+    m2.state.level = 6
+    m2.select_invest_env('轮岗')
+    m2.apply_income()
+    probs = m2.state.refresh_probs
+    assert probs is not None, '轮岗环境未掷概率条(机制原文:每阶段重新随机)'
+    tier = boosted_cost_tier(probs, m2.state.level)
+    assert tier is not None, '轮岗概率条无可判翻倍档(×2 语义破缺)'
+    assert probs == rotation_probs(m2.state.level, tier), (
+        '概率条与 kernel rotation_probs 单一源分叉')
+    # ④刷新消费概率条:刷新后概率条保持(环境不因刷新重掷)
+    m2.state.gold = 50
+    res2 = m2.apply(RefreshShop(cost=REFRESH_COST_BASE))
+    assert res2.applied, '刷新未落地'
+    assert m2.state.refresh_probs == probs, '刷新重掷了概率条(每备战期一次语义破缺)'
 
 
 def test_levelup_pays_gold_not_hp() -> None:
@@ -273,7 +303,8 @@ def test_levelup_pays_gold_not_hp() -> None:
 
     simulate LevelUp 分支只扣金(cw_state.py :1508 区间,批 1 落地审
     亲核);prep 域 LevelUp 组合(clicks × 单击价)同判。hp 变化 =
-    环境批回归信号,非本锁语义。
+    环境批回归信号,非本锁语义。金扣减断言 = 批 2 验收 N3 补强
+    (verification.levelup_spent 与状态机金差逐位一致)。
     """
     from fixtures.cw_fake_game.fake_match import FakeMatch
 
@@ -290,6 +321,11 @@ def test_levelup_pays_gold_not_hp() -> None:
     assert m.state.hp == hp_pre, 'LevelUp 动了 hp(血购边界破缺,须回申报面)'
     assert (m.state.level > level_pre
             or m.state.xp_progress[0] > 0), '升级/经验零推进'
+    # 金扣减 = 击数×单击价的执行点真值(N3):状态机金差与回执一致
+    spent = (res.verification or {}).get('levelup_spent', 0)
+    assert spent > 0, '升级零花销(金扣减断言面缺)'
+    assert 200 - m.state.gold == spent, (
+        f'金差 {200 - m.state.gold} != 执行回执 {spent}(扣减账分叉)')
 
 
 def test_sold_name_source_is_pre_transition_truth(
