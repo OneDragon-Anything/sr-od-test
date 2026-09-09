@@ -1,4 +1,14 @@
-"""W971 P3b 段1 接线锁(现役面):环接线守卫族(环入口锚 / 备战链接线)
+"""CW 流程接线 smoke(#2 目标形态,现状 3 测保留):干扰弹窗分支锚
++ 环入口锚 + 备战链接线存在。
+
+覆盖面:三测均为源码结构 smoke(锁「分发接线与退役清单」,不锁分布数值),
+即本文件四类承重件的落位形态;无金钱不变量/OCR 真值(接线域不适用)。
+
+来源:flow_wiring(现名保留,零断言改动);历史并入来源 =
+test_cw_loop_wiring_guards.py / test_cw_loop_entry_anchor.py /
+test_cw_prep_chain_wiring_smoke.py(见下)。其余历史锁已退役(git 可复活)。
+
+W971 P3b 段1 接线锁(现役面):环接线守卫族(环入口锚 / 备战链接线)
 + 罕见干扰弹窗分支锚。
 
 设计单一源 = docs/develop/currency_war/prereg/w971_flow_layer/

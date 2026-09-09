@@ -1,4 +1,12 @@
-"""货币战争 GameState 模型(cw_state)测试 —— 纯逻辑,不依赖游戏。
+"""货币战争 GameState 模型(cw_state)核不变量测试 —— 纯逻辑,不依赖游戏。
+
+覆盖面(#3 目标形态):mutate 不变量(buy+merge/sell/deploy,占用数守恒)/
+deploy 抽象(deployed_place 信息位归一)/双轨代表(mutate 就地 vs simulate
+copy:跨门槛溢出结转 + xp 未知保守起步)/金钱不变量(sell_refund 退金表
++ 未知身份 cost 兜底 3)/registry 锚(xp 点击阶梯校准登记门)。
+
+来源:test_cw_state.py(现名保留,零断言改动)。其余历史锁已退役
+(git 可复活)。
 
 D-78 加法块:strategy/13 §13.2 补字段(match_type/plane_modifiers/shop_locked/
 active_strategies/megastar_char/partner_char)+ BenchChar.equips。
@@ -136,7 +144,7 @@ def test_levelup_clicks_ladder_matches_registry() -> None:
 
     手值梯 = 校准登记门(门槛表/每击经验常量本身即校准对象,不可自
     推导):常量或公式改动必红,登记新门槛表后跟绿。注册表常量面
-    (XP_PER_BUY==4 / XP_TO_NEXT_LEVEL[5]==20)由 test_cw_blood_xp_gate
+    (XP_PER_BUY==4 / XP_TO_NEXT_LEVEL[5]==20)由 test_cw_economy
     承载,不双锁。
     自 test_cw_w502_deathbed_levelup_ev ①(P21 批;w502 ②③④ 为
     math_proofs P21 已证命题的镜像复算,已退役——证明单篇

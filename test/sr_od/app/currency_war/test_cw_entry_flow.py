@@ -1,15 +1,16 @@
-"""ESC 清零批(2026-09-08)自有测试锁:退局链零 ESC 三锁。
+"""CW 入口/退局流测试:入口 smoke + ESC-4 落地审条件 F1 发射锁 + 防伪绿路径。
 
-ESC-4 落地审条件 F1 的三条锁(落地审批报告出处暂记,行为正本 = 持久索引:
-cw_entry_exit.py 文件头与各分支注释、docs/game/screens/currency_war_
-interrupt_dialog.md、runtime-ops「运行坑」ESC 绝对禁令)。三锁分工:
-① 源级禁 ESC 墓碑——cw_entry_exit.py 全文零 ESC 发射形态,红 = 回潮
-  (此前的行为级否定墓碑只覆盖撤退分支,回填 btn_tap('esc') 照样全绿);
-② OVERLAY_ACTION_MAX 梯子算术——overlay 未命中场景恰 5 次动作后
-  round_fail,不多不少,fail 文案算术与常量同源;
-③ yml 中心锁——门形「按钮-退出对局」建档中心 =(61,63)±2、goto 边含
-  中断挑战弹窗,防建档漂移(先例 = test_invest_strategy_confirm_area_
-  onboarded 直读 yml 形态)。
+覆盖面(四类承重件在本文件的对位):
+- 入口 smoke:传送已落地场景入口分流到大厅(enter 修复回归,18:29 事故);
+- 防伪绿:F 分支必须真按交互键(修复前 AttributeError 被吞成 retry 也能假绿);
+- F1 发射锁①:cw_entry_exit.py 源级零 ESC 发射墓碑(红 = ESC 回潮);
+- fail-closed 代表:OVERLAY_ACTION_MAX 梯子算术,恰 MAX 次动作后 round_fail;
+- 建档锚:门形「按钮-退出对局」中心 (61,63)±2 + goto 转场边(防建档漂移)。
+
+来源:本文件 = test_cw_enter_flow.py(git mv)+ test_cw_entry_exit_esc_free.py
+三锁并入(2026-09-09 套件重建批 A,#1)。其余历史锁已退役(git 可复活)。
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览
+docs/develop/currency_war/strategy/README.md)。
 """
 from __future__ import annotations
 
@@ -17,20 +18,112 @@ import inspect
 import re
 from pathlib import Path
 
+import pytest
+
+from one_dragon.base.operation.operation_base import OperationResult
 from one_dragon.base.operation.operation_round_result import (
     OperationRoundResultEnum,
+)
+from sr_od.application.currency_war.operations.cw_entry import cw_entry_enter
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_enter import (
+    CwEntryEnter,
 )
 from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import (
     CwEntryExit,
 )
 from test.conftest import SrTestContext
-from test.harness.fixture_controller import fast_sleep
+from test.harness.fixture_controller import (
+    FixtureController,
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
 
 # 主仓根(src/ 所在):yml/源码扫描锚定,不依赖 pytest 运行 CWD
 _MAIN_REPO = Path(__file__).resolve().parents[5]
 
 
-# ==================== 锁① 源级禁 ESC 墓碑 ====================
+class _WatchedCwEntryEnter(WatchdogOperationMixin, CwEntryEnter):
+    """带看门狗的 CwEntryEnter(防 WAIT 段死循环)。"""
+
+
+class _FakeGuideStepOp:
+    """打开指南 / 选择 TAB 的替身:直接成功(本测试聚焦「前往参与」节点分流)。"""
+
+    def __init__(self, *args, **kwargs) -> None:  # 与真 op 构造签名解耦(ctx / ctx+tab)
+        pass
+
+    def execute(self) -> OperationResult:
+        return OperationResult(success=True, status='mock-成功')
+
+
+@pytest.fixture()
+def fixture_controller(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> FixtureController:
+    ctrl = FixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+    # 指南两步替身(真实 GuideOpen/GuideChooseTab 需要大世界导航链 fixture,超出本测试焦点)
+    monkeypatch.setattr(cw_entry_enter, 'GuideOpen', _FakeGuideStepOp)
+    monkeypatch.setattr(cw_entry_enter, 'GuideChooseTab', _FakeGuideStepOp)
+    return ctrl
+
+
+def test_enter_recovers_when_transport_already_done(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """传送已落地场景:「前往参与」按钮不在 → 不判死,分流到 wait_lobby 按F进大厅。"""
+    phases = [
+        {  # 大世界普通:打开指南/选TAB(替身成功)两轮后推进
+            'frame': ('大世界', '普通'),
+            'exit': ('on_polls', 2),
+        },
+        {  # 朝露公馆入口(已传送):无「前往参与」→ 修复点:交 wait_lobby → F 分支按 F
+            'frame': ('大世界', '朝露公馆入口'),
+            'exit': ('on_polls', 4),
+        },
+        {  # 大厅:terminal(wait_lobby 命中「标识-创业指南」→ op 成功)
+            'frame': ('货币战争-大厅', 'lobby'),
+        },
+    ]
+    for screen_name, state in (p['frame'] for p in phases):
+        if not test_context.has_screen(screen_name, state):
+            pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
+
+    fixture_controller.set_phases(phases)
+    op = _WatchedCwEntryEnter(test_context)
+    op._init_watchdog()  # type: ignore[attr-defined]
+
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert result.success, (
+        f'传送已落地场景应恢复到达大厅而非判死「找不到 前往参与」:'
+        f'status={result.status};phase_idx={fixture_controller.phase_idx}'
+    )
+    assert fixture_controller.phase_idx == len(phases) - 1, (
+        f'剧本应推进到末 phase(大厅):phase_idx={fixture_controller.phase_idx}'
+    )
+    # F 分支真按了 F(防伪绿:修复前 controller.btn_tap 缺失 → AttributeError 被
+    # 框架吞成 round_retry,靠异常重试的 poll 副作用推进剧本也能 PASS,F 从未被按)
+    assert test_context.game_config.key_interact in fixture_controller.recorded_btn_taps, (
+        '朝露公馆入口应按交互键 F 进大厅,但 recorded_btn_taps 里没有:'
+        f'{fixture_controller.recorded_btn_taps}'
+    )
+
+
+# ==================== ESC-4 落地审条件 F1 三锁(自 test_cw_entry_exit_esc_free.py 并入) ====================
 
 # ESC 发射形态(全文扫描,含大小写变体):
 # - 引号包住的 esc 字面量:btn_tap('esc') / key_tap("ESC") / 键名映射 'esc'
@@ -61,9 +154,6 @@ def test_entry_exit_source_has_zero_esc_emission() -> None:
             f'(命中 {hit.group(0)!r})——该通道已随 ESC 清零批退役,'
             f'回潮 = 违反 runtime-ops ESC 绝对禁令,须改建档点击'
         )
-
-
-# ==================== 锁② OVERLAY_ACTION_MAX 梯子算术 ====================
 
 
 def test_overlay_action_ladder_exact_max_then_fail(
@@ -132,9 +222,6 @@ def test_overlay_action_ladder_exact_max_then_fail(
         f'另一子态键首轮应 WAIT(独立预算),实际={r_other.result}')
     assert len(act_calls) == max_actions + 1, (
         f'另一子态键首轮应发 1 次动作,实际动作总数 {len(act_calls)}')
-
-
-# ==================== 锁③ yml 中心锁(防建档漂移)====================
 
 
 def test_exit_door_area_center_and_goto_edge_onboarded() -> None:
