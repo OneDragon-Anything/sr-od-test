@@ -607,3 +607,158 @@ def test_refresh_execution_evidence_carries_round_key() -> None:
     record_refresh_execution(bs, free=True, frame='p2-r1')
     assert bs.total_refresh_count.evidence == 'refresh_exec@p2-r1', \
         '免费帧 total 也带当次轮键'
+
+
+# ============================================================ 四事件屏 chosen_* 接线锁(设计 §3.4.5 余屏写端)
+
+def _op_with_session(op_cls: type, sess: object) -> object:
+    """``__new__`` 绕过 op 构造(SrContext 全量依赖不可裸建);只喂四屏
+    chosen 记录面读取的唯一 ctx 依赖面 = cw_match.session。"""
+    op = op_cls.__new__(op_cls)
+    op.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
+    return op
+
+
+def test_encounter_chosen_written_on_true_pick_only() -> None:
+    """遭遇屏 chosen_encounter 接线锁(§3.4.5 余屏写端;先例形态 = P3-6
+    chosen_tome 锁):①写端接线在位且挂在出口验真通过分支;②真选写
+    (难度档, 奖励文本)原名口径、source=logic;③fallback(无会话/候选
+    未读到/越界)不写。"""
+    import inspect
+
+    from sr_od.application.currency_war.kernel.cw_events import EncounterOption
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_encounter,
+    )
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+
+    src = inspect.getsource(cw_screen_encounter)
+    assert '.chosen_encounter' in src and 'write_logic' in src, \
+        '遭遇屏 chosen_encounter 写端接线在位'
+    assert 'if rs.is_success:' in src, '写在出口验真通过分支(非点击即写)'
+    opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
+            EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
+    sess = StrategySession()
+    op = _op_with_session(cw_screen_encounter.CwScreenEncounter, sess)
+    op._record_chosen(sess, opts, 1)
+    bs = board_state_of(sess)
+    assert bs.chosen_encounter.value == (3, '随机4费×3'), '值=(难度档,奖励文本)原名口径'
+    assert bs.chosen_encounter.source == 'logic', '单次逻辑写入(source=logic)'
+    sess2 = StrategySession()
+    op2 = _op_with_session(cw_screen_encounter.CwScreenEncounter, sess2)
+    op2._record_chosen(None, opts, 0)     # 无策略会话 = 盲选
+    op2._record_chosen(sess2, [], 0)      # 候选未读到
+    op2._record_chosen(sess2, opts, 5)    # 决策越界
+    assert board_state_of(sess2).chosen_encounter.value is None, 'fallback 不写'
+
+
+def test_supply_chosen_written_from_stash_after_exit_only() -> None:
+    """补给节点 chosen_supply 接线锁(§3.4.5;列数动态 → 值=选定列三元组
+    原文,不做列数假定):①真选暂存 → 出口验真方法写 (角色,装备,有钻石)
+    且写后取走暂存;②暂存空(兜底点卡/刷新轮)不写;③pop 取走即清
+    (重入轮入口先弃,防陈旧选跨轮/跨节点误写);无 match 安全空转。"""
+    import inspect
+
+    from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node,
+    )
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+
+    src = inspect.getsource(cw_screen_supply_node)
+    assert '.chosen_supply' in src and 'write_logic' in src, \
+        '补给节点 chosen_supply 写端接线在位'
+    assert '_pending_chosen_supply' in src, '选定暂存中转在位(出口验真后写)'
+    sess = StrategySession()
+    op = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, sess)
+    exec_state_of(sess)._pending_chosen_supply = ('希儿', '星币收集器', True)
+    op._record_chosen_supply()
+    bs = board_state_of(sess)
+    assert bs.chosen_supply.value == ('希儿', '星币收集器', True), '值=选定列三元组原名'
+    assert bs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
+    assert exec_state_of(sess)._pending_chosen_supply is None, \
+        '写后取走暂存(不跨节点残留)'
+    sess2 = StrategySession()
+    op2 = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, sess2)
+    op2._record_chosen_supply()
+    assert board_state_of(sess2).chosen_supply.value is None, \
+        '暂存空(兜底/刷新轮)不写'
+    # pop 取走即清(重入轮防陈旧语义)
+    exec_state_of(sess)._pending_chosen_supply = ('符玄', '旧选定', False)
+    assert op._pop_pending_chosen_supply() == ('符玄', '旧选定', False)
+    assert exec_state_of(sess)._pending_chosen_supply is None
+    # 无 match(测试/离线无会话)→ pop/写均安全空转不炸
+    op3 = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, None)
+    op3.ctx = SimpleNamespace(cw_match=None)
+    assert op3._pop_pending_chosen_supply() is None
+    op3._record_chosen_supply()
+
+
+def test_expert_chosen_written_on_card_pick_only() -> None:
+    """专家邀请函 chosen_expert 接线锁(§3.4.5):卡分支写羁绊原文名;
+    「现金为王」兜底分支不写(该事实由 ConfirmExpertCash +4 金到账登记
+    通道承载,照旧不动)——真选守卫照 chosen_tome 式。"""
+    import inspect
+
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_expert_invite,
+    )
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+
+    src = inspect.getsource(cw_screen_expert_invite)
+    assert '.chosen_expert' in src and 'write_logic' in src, \
+        '专家邀请函 chosen_expert 写端接线在位'
+    assert 'ConfirmExpertCash' in src, '现金为王 +4 金到账登记通道保持(照旧)'
+    bonds: list[str | None] = ['仙舟', None, '贝洛伯格', None]
+    sess = StrategySession()
+    op = _op_with_session(cw_screen_expert_invite.CwScreenExpertInvite, sess)
+    op._record_chosen_expert(0, bonds)
+    assert board_state_of(sess).chosen_expert.value == '仙舟', '值=卡羁绊原文名'
+    assert board_state_of(sess).chosen_expert.source == 'logic', \
+        '单次逻辑写入(source=logic)'
+    sess2 = StrategySession()
+    op2 = _op_with_session(cw_screen_expert_invite.CwScreenExpertInvite, sess2)
+    op2._record_chosen_expert(-1, bonds)   # 现金为王兜底
+    op2._record_chosen_expert(9, bonds)    # 越界(防御面)
+    op2._record_chosen_expert(1, bonds)    # 羁绊缺失(防御面)
+    assert board_state_of(sess2).chosen_expert.value is None, \
+        '兜底/越界/羁绊缺失不写'
+
+
+def test_wish_chosen_written_with_objective_text_only() -> None:
+    """祈愿试炼 chosen_wish 接线锁(§3.4.5):objective 原文名读到才写;
+    未读到(None)/选中槽文本空 = 盲选 fallback 不写——真选守卫照
+    chosen_tome 式。"""
+    import inspect
+
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_wish_trial,
+    )
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+
+    src = inspect.getsource(cw_screen_wish_trial)
+    assert '.chosen_wish' in src and 'write_logic' in src, \
+        '祈愿试炼 chosen_wish 写端接线在位'
+    assert 'self._record_chosen(objs, pick_idx)' in src, \
+        '写在出口验真(标识消失)之后的收案路径'
+    sess = StrategySession()
+    op = _op_with_session(cw_screen_wish_trial.CwScreenWishTrial, sess)
+    op._record_chosen(['累计刷新10次', '', ''], 0)
+    assert board_state_of(sess).chosen_wish.value == '累计刷新10次', \
+        '值=objective 原文名'
+    assert board_state_of(sess).chosen_wish.source == 'logic', \
+        '单次逻辑写入(source=logic)'
+    sess2 = StrategySession()
+    op2 = _op_with_session(cw_screen_wish_trial.CwScreenWishTrial, sess2)
+    op2._record_chosen(None, 0)                  # objective 未读到
+    op2._record_chosen(['', '难度3+战斗'], 0)    # 选中槽文本空
+    op2._record_chosen(['累计刷新10次'], 7)      # 越界
+    assert board_state_of(sess2).chosen_wish.value is None, 'fallback 不写'
