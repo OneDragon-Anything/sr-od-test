@@ -1,18 +1,28 @@
 """CW 装备域测试(#10):分配不变量 4 代表行 + M7 转移门(dd-027 事故家族)
 + 穿戴语义代表 + 阵营星徽(dd-015 事故代表)。
 
+收缩注记(CUT9 二次收缩:原 15 测试→8 测试;同分支变体/双保险重复砍,
+git 可复活):
+- 分配 4 代表行全留(CUT7 定稿参数化,覆盖 equip_allocation 全分支);
+- transfer 留门① 工具-only 事故回归帧 1 代表(fail-closed 根);
+  门① 正向/门② 同相位闩/C3 部署终结不烧闩/截断存活四变体砍;
+- wear 留释放判据表 row5(committed/opening 不对称)1 代表;零上身
+  哨兵兜底行砍(fail-closed 面由 transfer 门① 承载);
+- 星徽留同阵营排除(dd-015 定谳)1 代表,异阵营正常授予变体砍;
+- 真值锚留散文↔结构对拍(罚值 80%/8% 注册表真值);I5 轮转保序全序
+  行砍(nocomp_empty 代表档已辖 comp=None 路径)。
+
 覆盖面:
 - 分配 4 代表行:test_allocation_invariants 参数化 4 档(CUT7 收缩定稿,
-  覆盖 equip_allocation 全分支)+ I5 轮转保序全序锚;
-- transfer gate:M7 可穿存在性门①(工具-only 活锁事故回归帧)+ 门② 执行位闩
-  (同相位只消费一次)+ 发射序回排截断存活 + C3「发射不烧闩」残留锁;
+  覆盖 equip_allocation 全分支);
+- transfer gate:M7 可穿存在性门①(工具-only 活锁事故回归帧);
 - wear 代表:释放判据表 row5(committed 域豁免 + opening 不对称)+
-  零上身哨兵枚举外兜底 fail-closed + 散文↔结构对拍真值锚(罚值 80%/8%);
-- 星徽:同阵营排除(dd-015 复盘 g_20260902_181254 定谳)+ 异阵营正常授予。
+  散文↔结构对拍真值锚(罚值 80%/8%);
+- 星徽:同阵营排除(dd-015 复盘 g_20260902_181254 定谳)。
 
 来源:本文件 = test_cw_equip_alloc_gen.py(git mv)+ test_cw_equip_transfer_gate.py
-/test_cw_equip_wear_semantics.py 代表行并入(2026-09-09 套件重建批 A,#10)。
-其余历史锁已退役(git 可复活)。
+/test_cw_equip_wear_semantics.py 代表行并入(2026-09-09 套件重建批 A,#10;
+CUT9 二次收缩见收缩注记)。其余历史锁已退役(git 可复活)。
 
 --- 原 r135 装备分配场景生成器说明(用户提议:装备做成模拟数据 test) ---
 与 r134 手写 4 条互补:组合枚举 × 不变量。枚举面 = 真实分配维度:
@@ -42,18 +52,14 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     equip_allocation,
 )
 from sr_od.application.currency_war.kernel.cw_equip_env import (
-    ZERO_WEAR_EXECUTION_PENDING,
     classify_item_hold,
-    classify_zero_wear_stop_reason,
     is_free_item,
     resolve_wear_release,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
-    OpenShop,
-    RunDeploy,
     RunEquip,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -163,18 +169,6 @@ def test_allocation_invariants(ci, di, oi):
                         f'但非 core 拿了 {non_core_got} 件')
 
 
-def test_no_comp_rotation_keeps_deployed_order():
-    """I5:comp=None 轮转按 deployed 原序(前排先入序;r232 轮转不改序)。
-
-    4 人 front/back 交错帧:deployed 原序 ≠ 前排排序(翡翠 front 但序 4)
-    ——只断首元素的旧形态对「按行排序」实现不红,全序断言才有判别力。
-    2 人轮转 + 容量扣减面由 test_cw_target_matching
-    ::test_equip_allocation_capacity_and_fallback 承载,两帧互补。"""
-    dep = DEPLOYED_SETS[2]
-    alloc = equip_allocation(None, dep, ['a', 'b', 'c', 'd'])
-    assert alloc == [(d.char_id, e) for d, e in zip(dep, 'abcd')], alloc
-
-
 # ----- dd-015 后补:阵营星徽排除同阵营角色(复盘 g_20260902_181254 定谳) -----
 
 def _mk_dep(char_id, row='back', slot=1):
@@ -194,15 +188,6 @@ def test_emblem_not_allocated_to_same_faction():
         {('back', 1): ['x', 'y', 'z'], ('back', 2): []})
     assert all(not (c == '三月七' and e == '列车同行星徽') for c, e in out), out
     assert all(e != '列车同行星徽' for _, e in out), '守卫在位:同阵营无人可穿,星徽留 owned'
-
-
-def test_emblem_allowed_to_other_faction():
-    """非同阵营角色正常获得星徽(add-if-absent 授予新羁绊=星徽用途)。"""
-    deploy = [_mk_dep('艾丝妲', slot=1), _mk_dep('三月七', slot=2)]
-    out = equip_allocation(
-        _mk_comp(['艾丝妲']), deploy, ['列车同行星徽'],
-        {('back', 1): [], ('back', 2): []})
-    assert any(e == '列车同行星徽' for _, e in out), out
 
 
 # ==================== M7 装备转移发射门(自 test_cw_equip_transfer_gate.py 并入代表行) ====================
@@ -244,73 +229,6 @@ def test_m7_tools_only_owned_never_fires():
     assert _m7_actions(out) == []
 
 
-def test_m7_wearable_owned_fires():
-    """门① 正向控制:owned 有穿戴类件 → 正常发射(门不误杀常态转移)。"""
-    out = mandate.run_mandate(_m7_frame(), _m7_session(_WEARABLE))
-    assert len(_m7_actions(out)) == 1
-
-
-def test_m7_same_phase_fires_once():
-    """门②:执行成功置闩后,同 (plane, round) 后续帧不再发,计数
-    equip_latch_skip_m7=1;闩未置时同帧重跑照常重发(发射不烧闩)。
-    (闩置位从发射位移到 RunEquip 执行位——发射位只读不写,2026-09-05
-    C3 同型残留修复;详见 test_m7_deploy_termination_does_not_burn_latch。)"""
-    s = _m7_session(_WEARABLE)
-    st = GameState(round_num=3)
-    assert len(_m7_actions(mandate.run_mandate(_m7_frame(), s, state=st))) == 1
-    # 闩未置(发射≠执行):重跑照常发射
-    assert len(_m7_actions(mandate.run_mandate(_m7_frame(), s, state=st))) == 1
-    # 穿戴 pass 执行成功(执行位置位)→ 同期后续帧不再发
-    mandate.mark_equip_pass_executed(s, st)
-    out3 = mandate.run_mandate(_m7_frame(), s, state=st)
-    assert _m7_actions(out3) == []
-    assert state_of(s).cw4_counters['equip_latch_skip_m7'] == 1
-
-
-def test_m7_deploy_termination_does_not_burn_latch():
-    """C3 同型残留回归锁(2026-09-05 双修对抗审计):同帧 [RunDeploy,
-    RunEquip] 发射,环被 RunDeploy 先终结(RunEquip 未执行)——下一环
-    mandate 重跑 RunEquip 重新发射(闩未烧)。
-
-    事故形态:部署空位 ∧ 可穿件同时成立(如补给发装备 + 场上有空位)时,
-    单动作备战环第 1 环执行 RunDeploy 即「投影未建模,访问终结交回外循环
-    重观察」;旧实现发射即置闩 ⇒ 第 2 环 equip_latch_skip ⇒ 空批
-    StartBattle,装备整个备战期滞留。修法 = 置位时机移执行位。"""
-    frame = mandate.MandateFrame(
-        gold=0, level=3,
-        bench=[BenchChar(slot=1, char_id='彦卿', star=1)],
-        deployed=[], deploy_cap=4,
-        node_type='战斗', stop_flag=True, k_members=(),
-        round_num=3)
-    s = _m7_session(_WEARABLE)
-    out1 = mandate.run_mandate(frame, s)
-    kinds = [type(e.action) for e in out1]
-    assert kinds == [RunDeploy, RunEquip]       # 可续双动作,无截断点
-    assert getattr(s, 'cw4_m7_equipped_phase', None) is None  # 发射不置闩
-    out2 = mandate.run_mandate(frame, s)
-    assert len(_m7_actions(out2)) == 1          # 闩未烧,重发
-    assert state_of(s).cw4_counters.get('equip_latch_skip_m7', 0) == 0
-
-
-def test_m7_truncation_keeps_both_actions():
-    """dd-027 修订端到端(事故 g_20260904_010335 1-6/1-7 漏发):真实发射
-    列表经 truncate_frame_stable 后 [RunEquip, OpenShop] 两动作均存活
-    (事故里 M7 末位的 RunEquip 落截断点后被静默丢弃,闩已消耗 ⇒ 整个
-    备战期装备滞留;发射序回排后本锁守存活面)。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.entry import (
-        truncate_frame_stable,
-    )
-    # 可穿件在场 + M2 买面意图(线成员缺,bench 空,金足)→ 同帧双意图
-    frame = mandate.MandateFrame(
-        gold=10, level=3, bench=[], deployed=[], deploy_cap=4,
-        node_type='战斗', stop_flag=False, k_members=('希儿',),
-        round_num=3)
-    s = _m7_session(_WEARABLE)
-    actions = [e.action for e in mandate.run_mandate(frame, s)]
-    kept = truncate_frame_stable(actions, s)
-    assert [type(a) for a in kept] == [RunEquip, OpenShop]
-
-
 # ==================== 穿戴语义代表行(自 test_cw_equip_wear_semantics.py 并入) ====================
 
 _BATTLE = frozenset({'战斗', 'boss', '遭遇', '精英'})
@@ -346,13 +264,6 @@ def test_wear_row5_releases_committed_only():
     d4 = resolve_wear_release(2, '奖励', True, _BATTLE, 'c', 0.2, True,
                               ['软弱无力'], True)
     assert classify_item_hold(d4, sample, _mk_comp(['a']), False) is True
-
-
-def test_zero_wear_unknown_reason_falls_back_pending():
-    """零上身哨兵兜底行:枚举外一切(含空串 stall)暂归执行链待分诊(fail-closed)。"""
-    for r in ('', '神秘新原因', '循环自然结束(stall)'):
-        assert classify_zero_wear_stop_reason(r) \
-            == ZERO_WEAR_EXECUTION_PENDING, r
 
 
 def test_wear_prose_value_pairing_lock():

@@ -1,23 +1,31 @@
 """CW 经济闸族测试(#5):afford / vgap / must_spend / budget_disclosure
 各代表行 + data_registry 金核(金票券 OCR 真值锚)。
 
+收缩注记(CUT9 二次收缩:原 15 测试→8 测试;同分支变体/双保险重复砍,
+git 可复活):
+- afford 判据本体留超预算拒(fail-closed 方向);开门方向由 vgap
+  大溢余开门端到端代表;非有限/零预算两变体砍;
+- vgap 门形态三分支留息线关门 + 大溢余开门两代表,合格集空关门
+  (shop_r1_no_chaseable_member 分键)归 #8 刷新面 fail-closed 锁,
+  本文件三处重复代表砍;
+- must_spend 留 G_must 判据单一源代表(L3 skeleton_only 模式无关
+  变体砍);disclosure 留 defer 分键代表(deadend 观测分键砍);
+- 金核 OCR 两代表全留(金卡典籍命中 + 银箱互斥,两真实分支各 1 行);
+- 混合峰值完成账 lv6 行砍(求和口径由 afford 判据 + r2 硬闸承载,
+  事故病理形态已随 ADR-0571 修复入生产)。
+
 覆盖面:
-- afford:r1_commitment_account 判据本体四分支(预算内放行/超预算拒/
-  非有限=合格集空拒/零预算恒拒)+ r2_budget 硬闸两向(全仓唯一直调);
-- vgap:R1 门形态三分支(息线关门/大溢余开门/合格集空关门分键)
-  + 混合峰值完成账(部分不可追≠合格集空;g_20260907_021326 实机
-  9 评估帧 0 刷店事故定谳,ADR-0571 勘误);
-- must_spend:G_must 判据单一源(10×cap_resolved 边界,买断制出辖,
-  cap 覆写参数化)+ L3 模式无关行为行(m3_batch:must_spend 授权);
-- budget_disclosure:闸拒归因分键可辨(budget_gate_must_spend_defer /
-  deadend 观测分键,域内独立于域外);
+- afford:r1_commitment_account 超预算拒(fail-closed)+ r2_budget
+  硬闸两向(金−预留 ≥ 刷价,全仓唯一直调);
+- vgap:R1 门形态息线关门/大溢余开门两代表(行为级);
+- must_spend:G_must 判据单一源(10×cap_resolved 边界,买断制出辖);
+- budget_disclosure:闸拒归因分键可辨(budget_gate_must_spend_defer);
 - 金核:备战店面金卡典籍/银箱互斥判定(slot1/7 命中典籍、slot4/9
   走箱不判典籍;OCR 真值锚)。
 
 来源:must_spend_zone(mv 主干)/ vgap_frame_horizon / budget_gate
-(披露分键两行)/ data_registry 金核段(该文件已按 #15 重建,金核代表
-迁入本文件;2026-09-09 套件重建批 A,#5)。其余历史锁已退役
-(git 可复活)。
+(披露分键)/ data_registry 金核段(2026-09-09 套件重建批 A,#5;
+CUT9 二次收缩见收缩注记)。其余历史锁已退役(git 可复活)。
 """
 from __future__ import annotations
 
@@ -41,17 +49,11 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 from sr_od.application.currency_war.obs import cw_identity_obs as cio
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-    shop as shop_mod,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     refresh as crit_refresh,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
-    line_members,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     battle_state as _state,
@@ -88,30 +90,6 @@ def _ns_with_state(**state_fields) -> SimpleNamespace:
     return s
 
 
-def _zone_frame(gold: int, *, cards=None, level: int = 5,
-                locked: bool = True) -> tuple[GameState, SimpleNamespace]:
-    """必花域帧:锁线列车同行、level=level、gold 必入域(g > 50)。"""
-    comp = get_comp(_COMP)
-    km = list(line_members(comp))
-    chaseable = [m for m in km if m != '瓦尔特']
-    deployed = [_bc(m, star=2, slot=i + 1)
-                for i, m in enumerate(chaseable)]
-    st = GameState(gold=gold, level=level, round_num=2, hp=60)
-    st.level_readable = True
-    st.plane = 2
-    st.node_type = 'battle'
-    st.shop = list(cards) if cards is not None else []
-    st.bench = []
-    st.deployed = deployed
-    st.refresh_probs = {5: 0}
-    sess = _ns_with_state(
-        cw4_counters={},
-        target_comp=comp,
-        v3_intention=SimpleNamespace(
-            locked_comp=(_COMP if locked else '')))
-    return st, sess
-
-
 def _bg_sess():
     """budget_gate 披露分键两行的 session(锁线列车同行)。"""
     return _ns_session(get_comp(_COMP))
@@ -138,45 +116,15 @@ class TestZonePredicate:
         assert in_must_spend_zone(100, rich) is False
 
 
-class TestL3MustSpend:
-
-    def test_l3_skeleton_only_mode_applies(self):
-        """C1 模式无关锁:skeleton_only(骨架 only)帧 ⇒ L3 照样适用
-        (金量级裁定与模式无关,ADR-0528 模式无关声明)。"""
-        st, sess = _zone_frame(gold=80, cards=[])
-        act = shop.decide_shop_action(st, sess,
-                                      SimpleNamespace(ev_arm='skeleton_only'))
-        assert isinstance(act, LevelUpShop)
-        assert act.auth_basis == 'm3_batch:must_spend'
-
-
 # ==================== afford:r1 判据本体 + r2 硬闸(自 test_cw_vgap_frame_horizon 并入) ====================
 
 
 class TestCriterionAffordability:
     """判据本体(纯数面;ADR-0516 形式二)。"""
 
-    def test_within_budget_opens(self):
-        assert crit_refresh.r1_commitment_account(10.0, 11) == (True, '')
-
     def test_over_budget_closed(self):
         ok, key = crit_refresh.r1_commitment_account(11.0, 10)
         assert not ok and key == 'account_over_budget'
-
-    def test_non_finite_is_no_chaseable_member(self):
-        """合格集空(E=∅/该级不出此费)⇒ inf/NaN 拒 no_chaseable_member
-        (P40 R0-1 刷新侧特例)。"""
-        for bad in (float('inf'), float('nan')):
-            assert crit_refresh.r1_commitment_account(bad, 100) \
-                == (False, 'no_chaseable_member')
-
-    def test_zero_budget_always_closed(self):
-        """预算 ≤ 0(金在息线 g* 及以下)恒拒——息线双侧修正由比较式
-        结构承载,不另设门(修正③:停级买牌也压金破息)。"""
-        for ledger in (0.5, 1.0, 100.0):
-            assert crit_refresh.r1_commitment_account(ledger, 0) \
-                == (False, 'account_over_budget')
-            assert crit_refresh.r1_commitment_account(ledger, -5)[0] is False
 
 
 class TestR2BudgetGate:
@@ -240,45 +188,6 @@ class TestR1AffordabilityGate:
         acts = _decide(st, sess)
         assert any(isinstance(a, RefreshShop) for a in acts)
 
-    def test_qualified_set_empty_closed(self):
-        """合格集空(成员全部 2★ 成型)⇒ 关门 +
-        ``shop_r1_no_chaseable_member`` 分键(P40 R0-1)。"""
-        comp = _comp()
-        members = _members(comp)
-        bench = [_bc(m, star=2, slot=i + 1)
-                 for i, m in enumerate(members[:5])]
-        st = GameState(gold=120, level=7, round_num=8)
-        st.plane = 1
-        st.shop = [ShopCard(x=100, name='垫', cost=3, star=1)]
-        st.bench = bench
-        st.deployed = []
-        sess = _session(comp, plane_lengths=[9, 5, 7])
-        acts = _decide(st, sess)
-        assert not [a for a in acts if isinstance(a, RefreshShop)]
-        assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
-
-
-class TestMixedPeakCompletionAccount:
-    """完成账整套求和口径锁(用户裁定 2026-09-04;装配承载修正 =
-    ADR-0571;旧 inf 污染缺陷病理形态实证 = g_20260907_021326 实机
-    9 评估帧 0 刷店)。本文件保留 lv6 过滤代表行;lv7 求和行退役
-    git 可复活。"""
-
-    @staticmethod
-    def _terms(level: int) -> tuple[float, int]:
-        return shop_mod._r1_ledger_terms(('花火', '流萤'), [], [], level)
-
-    def test_lv6_mixed_set_filters_unchaseable(self):
-        """lv6:5费(流萤)不可追 ⇒ 剔出本级合格集(禁打 inf):账 =
-        花火单成员贡献,有限且卡费为正——「部分不可追 ≠ 合格集空」;
-        小预算帧 R1 拒因归真(account_over_budget,预算比较承载
-        fail-closed),非「合格集空」伪拒因。"""
-        e_sum, fees = self._terms(6)
-        assert 0.0 < e_sum < float('inf')
-        assert fees == (3 - 0) * 2   # 仅花火入集合:(k−j)×cost,k=3,j=0
-        ok, key = crit_refresh.r1_commitment_account(e_sum + fees, 10)
-        assert not ok and key == 'account_over_budget'
-
 
 # ==================== budget_disclosure:闸拒归因分键(自 test_cw_budget_gate 并入) ====================
 
@@ -297,22 +206,6 @@ class TestMustSpendGate:
         assert not isinstance(act, LevelUpShop)
         assert state_of(sess).cw4_counters.get('budget_gate_must_spend_defer') == 1
         assert 'levelup_budget_gate_blocked' not in state_of(sess).cw4_counters
-
-    def test_zone_gate_deadend_observed(self):
-        """金滞留死角观测:闸拒 ∧ bench 无空席(义务无处安放)⇒
-        budget_gate_must_spend_deadend 观测分键在案(纯观察,不降档)。
-        帧构造:满编全 2★ 线(无 M2 缺口/M4 腾席干扰)+ bench 9 垫
-        (bench_free=0)+ g=57(τ(57)=5,花后 49 < 50,ρ=0 闸拒)。"""
-        km = list(line_members(get_comp(_COMP)))
-        deployed = [_bc(m, star=2, slot=i + 1) for i, m in enumerate(km)]
-        pad_bench = [_bc(f'垫{i}', star=1, slot=i + 1) for i in range(9)]
-        st = _state(57, 4, xp=(0, 6), bench=pad_bench, deployed=deployed)
-        sess = _bg_sess()
-        act = shop.decide_shop_action(st, sess,
-                                      SimpleNamespace(ev_arm='full'))
-        assert not isinstance(act, LevelUpShop)
-        assert state_of(sess).cw4_counters.get('budget_gate_must_spend_defer') == 1
-        assert state_of(sess).cw4_counters.get('budget_gate_must_spend_deadend') == 1
 
 
 # ==================== 金核:金票券 OCR 真值锚(自 test_cw_data_registry 金核段迁入) ====================

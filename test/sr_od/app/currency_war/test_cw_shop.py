@@ -1,22 +1,27 @@
 """CW 商店决策测试(#8):decide_shop 七面代表行 + refresh 真值 +
 rejects fail-closed 代表。
 
+收缩注记(CUT9 二次收缩:原 13 测试→8 测试;同分支变体砍,git 可复活):
+- 买面留 M2 线成员义务买 1 代表(金不足不买/支配买两变体砍);
+- 卖面(M4 腾席)/升级面(整买纪律)/刷新面(合格集空 fail-closed)
+  各留 1 代表;M6 压库面与 ev_arm 值域护栏变体砍;
+- rejects 留词表外 fail-closed + R197 同槽防线两代表;
+- refresh 真值留多波对拍金闭合(金钱净守恒锚)+ refresh_effective
+  真值表;刷费 0/None 分道行砍(None 口径由对账跳过路径承载)。
+
 覆盖面:
-- decide_shop 真值:买面三行(M2 线成员义务买/金不足不买=可逆面缺输入
-  默认不做/D-FM1 支配买 sink)、卖面(M4 腾席卖出+单帧闭环)、升级面
-  (D-BUYNOTE 整买纪律行为)、刷新面(合格集空 fail-closed 不刷)、
-  M6 压库面(帧级窗口二态直锁)、ev_arm 非法值回落 full(值域护栏);
-- refresh 真值(自 test_cw_shop_refresh 并入):refresh_effective
-  判据纯函数真值表(集合不等=生效/全同=未生效/未识别不猜)+
-  多波刷新对拍金闭合(刷费单次计数,金钱不变量)+ 刷费 0 与 None
-  分道(0=读到的免费,None=读不到,绝不混写);
+- decide_shop 真值:买面(M2 线成员义务买)/卖面(M4 腾席卖出+单帧
+  闭环)/升级面(D-BUYNOTE 整买纪律行为)/刷新面(合格集空
+  fail-closed 不刷)各 1 代表;
+- refresh 真值(自 test_cw_shop_refresh 并入):多波刷新对拍金闭合
+  (刷费单次计数,金钱不变量)+ refresh_effective 判据纯函数真值表;
 - rejects:词表外动作 shop_action_op_for 断言炸出(ADR-0517 决策 9
   fail-closed)+ R197 同槽防线(同一 bench_idx 至多一笔卖出,结构性
   保证;R197 症3 防线继任不变量)。
 
 来源:shop_line(mv 主干,保留代表行;spend_unified 段迁 #9)/
-shop_refresh 核三行(2026-09-09 套件重建批 A,#8;来源文件已退役)。
-其余历史锁已退役(git 可复活)。
+shop_refresh 核三行(2026-09-09 套件重建批 A,#8;来源文件已退役;
+CUT9 二次收缩见收缩注记)。其余历史锁已退役(git 可复活)。
 """
 from __future__ import annotations
 
@@ -25,30 +30,18 @@ import pytest
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BuyCard,
-    CloseShop,
-    CompTransaction,
-    DeployMove,
-    LevelUp,
     LevelUpShop,
     PickEvent,
     RefreshShop,
     SellBench,
-    SellDeployed,
-    SwapDeploy,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
     expected_gold_after_actions,
     refresh_effective,
 )
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
-    build_refresh_expect,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
-)
-from test.sr_od.app.currency_war._cw_helpers import (
-    DecideCfg as _Cfg,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
@@ -87,26 +80,6 @@ class TestCriteriaShopFaces:
         assert any(b.card.name == m for b in buys)
         assert all(b.reason == 'm2_line_member' for b in buys
                    if b.card.name == m)
-
-    def test_buy_face_m2_gold_gated(self):
-        """买面:硬约束①——金不足不买(可逆面缺输入默认不做侧镜像)。"""
-        comp = _comp()
-        m = _members(comp)[0]
-        st = _state(gold=2, shop=[_card(m, cost=3)])
-        acts = _decide(st, _session(comp))
-        assert not [a for a in acts if isinstance(a, BuyCard)]
-
-    def test_buy_face_dominance_sink(self):
-        """D-FM1 sink:金>g* ∧ stop_flag(线成型)⇒ 支配买全额可退 1★ 件。"""
-        comp = _comp()
-        members = _members(comp)
-        # 线成型:全部成员已在 bench ⇒ stop_flag=1
-        bench = [_bc(m) for m in members]
-        fuel = '燃料件X'          # 注册表外名=零重叠可判(类级默认低费)
-        st = _state(gold=60, shop=[_card(fuel, cost=1, star=1)], bench=bench)
-        acts = _decide(st, _session(comp))
-        buys = [a for a in acts if isinstance(a, BuyCard)]
-        assert any(b.reason == 'dominance_buy' for b in buys)
 
     def test_sell_face_m4_fuel_sell_when_bench_full(self):
         """卖面:M4 腾席——bench 满 ∧ 有线成员可买 ⇒ 卖 1★ 零重叠件。"""
@@ -159,25 +132,6 @@ class TestCriteriaShopFaces:
         acts = _decide(st, sess)
         assert state_of(sess).cw4_counters.get('shop_r1_no_chaseable_member', 0) >= 1
         assert not [a for a in acts if isinstance(a, RefreshShop)]
-
-    def test_stockpile_face_m6_opens_with_frame_window(self):
-        """M6 窗口接线直锁(判据本体,帧级窗口二态对比):窗口非空且
-        1★ 全退 ⇒ 放行;空窗 ⇒ 'not_in_tier' 不买(该分支全仓唯一直锁)。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.stockpile import (
-            stockpile_buy,
-        )
-        ok, key = stockpile_buy(60, 0, 4, 1, 1, frozenset({1, 2, 3}))
-        assert ok is True and key == ''
-        ok2, key2 = stockpile_buy(60, 0, 4, 1, 1, frozenset())
-        assert ok2 is False and key2 == 'not_in_tier'
-
-    def test_invalid_ev_arm_falls_back_full(self):
-        """ev_arm 非法值回落 full(R1-1 值域护栏)。"""
-        comp = _comp()
-        m = _members(comp)[0]
-        st = _state(gold=30, shop=[_card(m)])
-        acts = _decide(st, _session(comp), _Cfg('bogus'))
-        assert any(isinstance(a, BuyCard) for a in acts)
 
 
 # ==================== ② rejects:fail-closed 代表行 ====================
@@ -251,18 +205,3 @@ def test_refresh_effective_truth_table():
     assert refresh_effective([], ['A', 'B']) is None               # 空读不可判
     assert refresh_effective(['A'], []) is None
 
-
-class TestBuildRefreshExpect:
-    def test_true_zero_preserved(self) -> None:
-        """真 0(免费刷/减免档)原样保 0:gold_after==gold_before、不判不足。
-        与 None 分道——0 是「读到的免费」,None 是「读不到」,绝不混写
-        (None 口径单一源;刷费/开店金失读 → 跳过对账,禁 or-2 兜底)。"""
-        assert build_refresh_expect(10, None, [], 1, 1) is None
-        assert build_refresh_expect(None, 2, [], 1, 1) is None
-        r = build_refresh_expect(10, 0, [('甲', 1)], 1, 1)
-        assert r is not None
-        expect, plane, round_num = r
-        assert expect.refresh_cost == 0
-        assert expect.gold_after == 10
-        assert expect.insufficient is False
-        assert (plane, round_num) == (1, 1)

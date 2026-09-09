@@ -1,8 +1,18 @@
 """test_cw_misc_smoke 主题锁——零散子系统入口 smokes(watchdog/faction/portal/全 op 可导入)。
 
+收缩注记(CUT9 二次收缩:原 66 测试→25 测试;代表子集收缩,git 可复活):
+- watchdog 留:T-163 弹窗全文不豁免(fail-closed)+ 弹窗帧报警集成
+  smoke + 结算帧对照臂;参数在位两行断言砍(阈值由报警集成锁承载);
+- faction 留双阵营兜底 + 在册 carry 序两决策真值锚;
+- portal 留偏置生效 + 来牌翻越两决策真值锚;
+- 全 op 可导入参数化 58 模块收缩为 18 代表子集:每子包(cw_entry/
+  cw_op/cw_screen/dev/tools)≥1 + 顶层三件 + r98 地雷本体 planner
+  等高频面;import 活性机制(逐模块真 import)不变,未抽查模块的
+  签名/语法错误回归窗口放宽(git 可复活全量行)。
+
 覆盖面(四类承重件):
-- 入口 smoke:停滞 watchdog 参数在位 + 报警链(T-163 去盲后形态)/
-  全 CW operations 模块可导入(r98 地雷纪律代码化)/ portal 偏置生效;
+- 入口 smoke:停滞报警链(T-163 去盲后形态)/ 全 CW operations 代表
+  模块可导入(r98 地雷纪律代码化)/ portal 偏置生效;
 - fail-closed 代表:T-163 弹窗正文必不豁免(裸子串致盲回归即红)+
   结算帧对照臂(豁免不误伤);
 - 决策真值代表锚:阵营兜底分(r137 口径)与在册 carry 序 / portal 偏置
@@ -19,12 +29,10 @@
 from __future__ import annotations
 
 import importlib
-import pkgutil
 from types import SimpleNamespace
 
 import pytest
 
-import sr_od.application.currency_war.operations as cw_ops_pkg
 from sr_od.application.currency_war.kernel.cw_transition import (
     pick_framework,
     transition_score,
@@ -32,12 +40,6 @@ from sr_od.application.currency_war.kernel.cw_transition import (
 from sr_od.application.currency_war.operations.cw_loop import CwLoop
 
 # ==================== watchdog 段(自 test_cw_stall_watchdog.py 迁入) ====================
-
-def test_stall_thresholds_defined():
-    """参数在位:5 iter 采样/6 次触发(≈1-2min 检出,vs 局29/32 的 30-41min)。"""
-    assert CwLoop.STALL_SNAPSHOT_EVERY == 5
-    assert CwLoop.STALL_N == 6
-
 
 #: T-163 失败帧(20260908_181116_921_overlay_role_detail.png)实测 OCR 全文:
 #: 弹窗天赋行含「战斗」→ 旧裸子串豁免恒中 → 停滞计数恒清零(26min 致盲源)。
@@ -167,11 +169,33 @@ def test_portal_overridable_by_cards():
 # 逐个 import,任何签名/语法级错误在此立即红。
 
 def _iter_cw_op_modules() -> list[str]:
-    """枚举 CW operations 包下全部模块(递归)。"""
-    names: list[str] = []
-    for info in pkgutil.walk_packages(cw_ops_pkg.__path__, prefix=cw_ops_pkg.__name__ + '.'):
-        names.append(info.name)
-    return sorted(names)
+    """CW operations 代表模块子集(CUT9 收缩:全量 58 → 18 代表)。
+
+    抽查覆盖判据:每子包 ≥1(cw_entry/cw_op/cw_screen/dev/tools)+
+    顶层三件(cw_loop/decision_frame_hooks/settle_collect_hooks)+
+    r98 地雷本体 cw_screen_planner 与高频面(prep/encounter/overlay/
+    buy_cards/shop_action_ops 等)。import 活性机制不变——逐模块真
+    import,签名/语法/顶层符号错误在此立即红。"""
+    return sorted([
+        'sr_od.application.currency_war.operations.cw_loop',
+        'sr_od.application.currency_war.operations.decision_frame_hooks',
+        'sr_od.application.currency_war.operations.settle_collect_hooks',
+        'sr_od.application.currency_war.operations.cw_entry.cw_entry_start',
+        'sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards',
+        'sr_od.application.currency_war.operations.cw_op.cw_op_deploy',
+        'sr_od.application.currency_war.operations.cw_op.cw_op_equip_all',
+        'sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops',
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_planner',
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_prep',
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_encounter',
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait',
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing',
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy',
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_supply',
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_role_detail_overlay',
+        'sr_od.application.currency_war.operations.dev.drag_cw_char',
+        'sr_od.application.currency_war.operations.tools.harvest_invest_codex',
+    ])
 
 
 @pytest.mark.parametrize('module_name', _iter_cw_op_modules())

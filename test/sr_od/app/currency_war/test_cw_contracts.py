@@ -1,10 +1,20 @@
 """cw4 判据契约层测试(R198 批:assume-guarantee 契约化,IMPL_DESIGN §4.2.2)。
 
+收缩注记(CUT9 二次收缩:原 14 测试→8 测试;同分支变体砍,git 可复活):
+- ①注册完备性:留 criteria 全公开函数覆盖断言(主锚);在册键存在性/
+  第七面+先例键枚举/辖域声明三静态变体砍;
+- ②先例谓词:留先例①(S 线)正反 + fail-closed(未登记键+谓词异常);
+  先例③(arm1 cap 喂入)变体砍(正反面由 ②b/⑤ 承载);
+- ②b arm1 口径:留板满触发正支;板未满反面/M3 decide 链反面变体砍
+  (反面面由 ⑤ 弃权锁承载);
+- ④AST 守卫:主测 + 裸名直调负测双留(守卫有效性两道证据,缺一 =
+  守卫可能形同虚设,R200-F1 实证);
+- ⑤arm1 接线正反:常数 cap 违例弃权 + state 派生照发双留。
+
 目标形态覆盖面(2026-09-09 重建批,TARGET_SPEC #17「契约层核+事件接线」):
-- ①CONTRACTS 注册完备性静态断言(criteria 全公开函数 + 第七面 proof 判据位
-  + 三先例非 criteria 消费位,漏登记=红);
+- ①CONTRACTS 注册完备性静态断言(criteria 全公开函数,漏登记=红);
 - ②先例前提谓词代表行 + fail-closed(未登记键与谓词异常均弃权+计数,不抛);
-- ③arm1 板满 cap 口径谓词数学 + M3「板未满不发射」decide 链反面锁;
+- ③arm1 板满 cap 口径谓词数学;
 - ④禁绕过 ensure_contract 直调的 AST 守卫(主测+裸名直调负测);
 - ⑤arm1 消费位事件接线正反(常数 cap 喂入=违例计数+弃权 / state 派生链
   喂入=零违例+照发)。
@@ -29,7 +39,6 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
-    LevelUpShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
@@ -57,12 +66,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
-)
-from test.sr_od.app.currency_war._cw_helpers import (
-    cw4_comp as _comp,
-)
-from test.sr_od.app.currency_war._cw_helpers import (
-    cw4_decide as _decide,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_session as _session,
@@ -96,45 +99,12 @@ class TestRegistryCompleteness:
                         missing.append((mod_name, attr_name))
         assert not missing, f'判据漏登记契约: {missing}'
 
-    #: 零调用面墓碑键(函数已物理删除、登记行保留枚举完备性;先例 =
-    #: criteria/__init__.py BYPASS_TABLE refresh.r1_start 墓碑注)。
-    #: 唯一在册成员 = equipment.affix_allocation:判据出处纠错批删除
-    #: (孤儿第二实现+死键,生产单一源 = cw_equip_env
-    #: .resolve_affix_priority_order),禁为保绿恢复死代码。
-    _TOMBSTONED_KEYS: frozenset[tuple[str, str]] = frozenset({
-        ('equipment', 'affix_allocation'),
-    })
 
-    def test_contract_entries_reference_existing_functions(self):
-        """在册键(除三先例非 criteria 消费位)必须对应真实判据函数;
-        零调用面墓碑键豁免(函数已删、登记行保留,docstring 记删除原因)。"""
-        sources = dict(_FACE_MODULES)
-        sources.update({'proof': proof, 'predicates': predicates})
-        for (mod_name, fn_name) in contracts.CONTRACTS:
-            mod = sources.get(mod_name)
-            if mod is None:
-                continue        # mandate 邻接位(先例① dominance 消费位)
-            if (mod_name, fn_name) in self._TOMBSTONED_KEYS:
-                continue
-            assert hasattr(mod, fn_name), \
-                f'契约键 ({mod_name}, {fn_name}) 无对应函数'
-
-    def test_proof_face_and_precedent_keys_registered(self):
-        """第七面 proof 判据位 + 三先例消费位 + K 空窗回退消费位
-        显式在册。"""
-        for key in (('proof', 'stop_buy'), ('proof', 'should_switch'),
-                    ('proof', 'signal_arm'),
-                    ('mandate', 'dominance_buy'),
-                    ('mandate', 'core_single_card_buy_eligible'),
-                    ('predicates', 'arm1_existence'),
-                    ('shop', 'k_projection')):
-            assert key in contracts.CONTRACTS, f'{key} 未登记'
-
-    def test_unconditional_entries_declare_scope(self):
-        """前提恒真(None)也须显式辖域声明 + 规格锚(禁空串)。"""
-        for key, c in contracts.CONTRACTS.items():
-            assert c.scope, f'{key} 辖域声明缺失'
-            assert c.anchor, f'{key} 规格锚缺失'
+# (CUT9 收缩:原 test_contract_entries_reference_existing_functions(在册
+#  键 ↔ 真实函数,含墓碑豁免面)/ test_proof_face_and_precedent_keys_
+#  registered(第七面+先例键枚举)/ test_unconditional_entries_declare_
+#  scope(辖域+规格锚非空)删(2026-09-09)——注册表静态面三变体,
+#  全函数覆盖主测已锚注册完备性,git 可复活。)
 
 
 # ===== ② 先例前提谓词代表行 + fail-closed =====
@@ -153,16 +123,10 @@ class TestPrecedentPredicates:
             contracts.ContractCtx(k_members=()), ct)
         assert ct['criteria_contract_violation:buy.ev_buy_candidates'] == 1
 
-    def test_precedent3_arm1_cap_level_driven(self):
-        """先例③(arm1 口径):cap 现读放行;None(固定常数兜底)弃权+计数。"""
-        ct: dict = {}
-        assert contracts.ensure_contract(
-            ('predicates', 'arm1_existence'),
-            contracts.ContractCtx(deploy_cap=5), ct)
-        assert not contracts.ensure_contract(
-            ('predicates', 'arm1_existence'),
-            contracts.ContractCtx(deploy_cap=None), ct)
-        assert ct['criteria_contract_violation:predicates.arm1_existence'] == 1
+
+    # (CUT9 收缩:原 test_precedent3_arm1_cap_level_driven(arm1 cap 喂入
+    #  前提正反)删(2026-09-09)——cap 喂入正反面由 ②b 谓词数学与 ⑤
+    #  接线正反锁承载,git 可复活。)
 
     def test_unknown_key_and_predicate_error_fail_closed(self, monkeypatch):
         """fail-closed:未登记键与谓词异常均弃权+计数,不抛异常。"""
@@ -203,28 +167,11 @@ class TestArm1CapSemantics:
             5, [b.char_id for b in bench],
             [d.char_id for d in board], deploy_cap=5) is True
 
-    def test_board_not_full_below_cap_no_trigger(self):
-        """板未满(deployed < cap)⇒ 假——升级前应先部署(M1 优先)。"""
-        board = [_bc('爻光') for _ in range(3)]
-        bench = [_bc('爻光')]
-        assert predicates.arm1_existence(
-            3, [b.char_id for b in bench],
-            [d.char_id for d in board], deploy_cap=5) is False
 
-    def test_m3_silent_when_board_below_cap(self):
-        """反面:板未满(deployed=3/cap=5)同 bench/金 ⇒ M3 不发射
-        (升级价值以「有等待件上不了场」为前提)。
-
-        decide 链级唯一反面锁:shop_line 侧反面为「板满+整批不够」与
-        「等级帽」两形(亲读证实无板未满帧),本锁辖「谓词假 ⇒ 零
-        LevelUpShop 发射」的消费位接线。"""
-        comp = _comp()
-        deployed = [_bc('爻光', slot=i + 1) for i in range(3)]
-        bench = [_bc('爻光', slot=1)]
-        st = _state(gold=8, bench=bench, deployed=deployed,
-                    level=3, deploy_cap=5, xp=(0, 4))
-        acts = _decide(st, _session(comp))
-        assert not [a for a in acts if isinstance(a, LevelUpShop)]
+    # (CUT9 收缩:原 test_board_not_full_below_cap_no_trigger(谓词反面)
+    #  与 test_m3_silent_when_board_below_cap(M3 decide 链反面)删
+    #  (2026-09-09)——反面面由 ⑤ test_constant_cap_feed_violates_and_
+    #  abstains 的「M3 弃权」锁承载,git 可复活。)
 
 
 # ===== ④ 静态守卫:禁绕过 ensure_contract 直调判据(FIX_REVIEW 防线硬化)=====

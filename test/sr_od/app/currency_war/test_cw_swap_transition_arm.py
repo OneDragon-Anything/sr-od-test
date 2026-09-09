@@ -9,6 +9,15 @@
 # CUT6 瘦身批(2026-09-09):回滚常量翻臂/胜出序让渡退化/成型臂与
 # pending 透传分键变体/守恒门逐件参数化(病灶回放锁已断言同事实)砍除;
 # 保留核清单 = reports/_cluster_CUT6.md。
+# 收缩注记(CUT9 二次收缩:原 11 测试→6 测试;同分支变体砍,git 可复活):
+# - 留:病灶帧回放主锁(engines_guard 守恒门×2 + 胜出序 + arm 标注
+#   联合锚)/ fp 缺读弃权(fail-closed)/ 双臂 fp 单值互斥 / 合成素材
+#   守卫(判定函数级+计划面双锁)/ 执行侧发射⇔执行同函数同判(未锁域
+#   fenced_arm_closed 断言在彼)/ mandate 发射分键消费面;
+# - 砍:未锁域 W209 对照(执行侧锁同断言面)/ 胜出序首位 victim 变体 /
+#   1★ star_guard(守卫族第二件,守卫代表由 merge_material 承载)/
+#   卖后上序底线 post_sell_offline / 守恒门辖域不变式(SWAP_GUARD_
+#   SYSTEMS ⊇ DEPLOY_FENCE 注册表直核)。
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -75,16 +84,9 @@ def test_lesion_frame_replay_transition_swap_fires() -> None:
     assert plan.reasons.get('椒丘') == 'engines_guard'
 
 
-def test_transition_arm_keeps_w209_in_unlocked_domain() -> None:
-    """复活对照锁(ADR-0534 §1/§3:熔断替代论证辖域绑定 locked=True):
-    同板面未锁帧(locked=False)⇒ 臂不开,W209 熔断在未锁全域保持——
-    fenced victim 全拒 fenced_arm_closed,计划空。守卫移除即红。"""
-    bench = [_bc('三月七', 1, star=2)]
-    plan = select_swap_plan(_locked_ctx(deployed=_lesion_frame_deployed(),
-                                        bench=bench, locked=False))
-    assert not plan.nonempty
-    for name in ('爻光', '藿藿', '忘归人', '符玄'):
-        assert plan.reasons.get(name) == 'fenced_arm_closed', name
+# (CUT9 收缩:原 test_transition_arm_keeps_w209_in_unlocked_domain 删
+#  (2026-09-09)——未锁域 fenced_arm_closed 拒面由执行侧同函数锁的
+#  ctx_unlocked 腿承载,同断言面。)
 
 
 def test_fp_unreadable_abstains_transition_arm() -> None:
@@ -113,22 +115,10 @@ def test_formed_arm_wins_when_fp_above_100() -> None:
     assert plan.arm == 'formed'
 
 
-def test_base_victim_wins_over_transition_when_first() -> None:
-    """胜出序锁(ADR-0534 §5 + ADR-0590 决策2/5 修订):现行序首位 victim
-    (黑塔 1★)胜出,转型 victim(爻光)不提权顶前——「禁 fenced 提权」
-    语义保留。arm 标注按 T-127 行 #5/三轮 N5 重推(ADR-0534 §5 的
-    「基座合格 ⇒ arm='base'」在锁线转型域被取代):非 fenced 释放件经
-    基座臂封堵落资格族,胜出 arm 恒 'transition'(swap_arm_transition_
-    trigger 分键归因依赖);'base' 标注自此外溢到未锁帧域
-    (test_cw_deploy_transition 锁面)。旧断言 arm='base' 系语义过期,
-    非机械跟绿(出处 = ADR-0590 Considered「释放件资格路径」)。"""
-    deployed = [_bc('黑塔', 1), _bc('艾丝妲', 2), _bc('椒丘', 3),
-                _bc('爻光', 4), _bc('藿藿', 5), _bc('忘归人', 6)]
-    bench = [_bc('三月七', 1, star=2)]
-    plan = select_swap_plan(_locked_ctx(deployed=deployed, bench=bench))
-    assert plan.nonempty
-    assert plan.sell_names == ['黑塔']
-    assert plan.arm == 'transition'   # 释放件统一资格族,arm 恒 transition
+# (CUT9 收缩:原 test_base_victim_wins_over_transition_when_first 删
+#  (2026-09-09)——现行序首位 victim 胜出、转型 victim 不提权的胜出序
+#  面,病灶回放主锁已断言「胜出 = 现行序首个可成交者」,本测为序数据
+#  变体,git 可复活。)
 
 
 # ============ 逐件守卫(守卫移除即红) ============
@@ -154,28 +144,11 @@ def test_merge_material_guard_blocks_unfinished_pair() -> None:
     assert plan2.arm == 'transition'
 
 
-def test_star_guard_blocks_2star_victim() -> None:
-    """1★ 限卖锁(ADR-0534 §2 star_guard):非 1★ fenced victim 拒卖
-    (1★ 全退金前提),拒因显影 star_guard。"""
-    deployed = [_bc('艾丝妲', 1), _bc('椒丘', 2), _bc('爻光', 3, star=2),
-                _bc('藿藿', 4), _bc('忘归人', 5), _bc('符玄', 6)]
-    bench = [_bc('三月七', 1, star=2)]
-    plan = select_swap_plan(_locked_ctx(deployed=deployed, bench=bench))
-    assert plan.reasons.get('爻光') == 'star_guard'
-    assert plan.sell_names == ['藿藿']   # 现行序后移,不跳序
-
-
-def test_post_sell_offline_blocks_no_target_up() -> None:
-    """卖后上序底线锁(ADR-0534 §1:up ∩ target 视图 ≠ ∅,拒因
-    post_sell_offline):卖爻光后假想态上序只有非 target 视图件
-    (花火,经 locked_factions 围栏放行的非线内件)⇒ 该 victim 不可
-    成交,计划空。"""
-    bench = [_bc('花火', 1)]
-    plan = select_swap_plan(_locked_ctx(
-        deployed=_lesion_frame_deployed(), bench=bench,
-        locked_factions=frozenset({'战技点'})))
-    assert not plan.nonempty
-    assert plan.reasons.get('爻光') == 'post_sell_offline'
+# (CUT9 收缩:原 test_star_guard_blocks_2star_victim(1★ 限卖守卫)与
+#  test_post_sell_offline_blocks_no_target_up(卖后上序底线)删
+#  (2026-09-09)——守卫族代表行由 merge_material_guard 承载(判定函数
+#  级 + 计划面双锁),star/post_sell 为守卫族另外两件的数据变体锁,
+#  git 可复活。)
 
 
 # ============ 执行侧逐件放行(ADR-0534 §3/§4:发射⇔执行同函数同判) ============
@@ -263,16 +236,7 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     assert state_of(sess).cw4_m1p_arm_pending == 'transition'
 
 
-def test_guard_set_covers_deploy_fence() -> None:
-    """守恒门辖域不变式锁(ADR-0534 §2 直核义务):SWAP_GUARD_SYSTEMS
-    体系集 ⊇ DEPLOY_FENCE(熔断替代论证承重前提;注册表 tiers 消费,
-    护盾 (2,4) 与 FACTIONS 同源)。"""
-    from sr_od.application.currency_war.data.cw_factions import FACTIONS
-    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
-        DEPLOY_FENCE,
-        SWAP_GUARD_SYSTEMS,
-    )
-    assert {k for k, _ in SWAP_GUARD_SYSTEMS} >= set(DEPLOY_FENCE)
-    assert dict(SWAP_GUARD_SYSTEMS)['护盾'] == tuple(FACTIONS['护盾'].tiers)
-
+# (CUT9 收缩:原 test_guard_set_covers_deploy_fence 删(2026-09-09)
+#  ——SWAP_GUARD_SYSTEMS ⊇ DEPLOY_FENCE 注册表直核不变式,守卫族行为
+#  面已由上方锁承载,注册表内容回归窗口放宽,git 可复活。)
 

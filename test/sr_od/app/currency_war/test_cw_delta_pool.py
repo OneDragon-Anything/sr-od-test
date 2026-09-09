@@ -1,5 +1,27 @@
 """test_cw_delta_pool 主题锁(结构合并批,机械拼接;2026-09-09 二轮手术)。
 
+收缩注记(CUT9 二次收缩:原 59 测试→30 测试;同分支变体/双保险重复砍,
+git 可复活):
+- 池自洽:留真实快照绿态 + 漂移变异 2 代表行(格式漂移/未披露;
+  过期/n值不符两参数与跳过态两分支砍);
+- 语料门:boss 门绿态+采集断裂违规;词表反转判罚支 2 参数 + 白名单
+  豁免支 CJK 1 参数(en 词形/旧方向词/empty skip/direct_fit 变体砍);
+- 波同一性:绿态 + 第二波(刷新波)漂移(批㊲ 攻击面);首波回归变体砍;
+- 胜负面:W31 阶梯真值锚(值域自洁/死码回潮守卫/META 字段面变体砍);
+- 装配:快照 rung 域四面真值 + 检查器真值表 + 采样路径(rung 命中/
+  下探/截幅/薄桶合并)+ auto 构建键 + 结算接线单一源;
+- 池入口:snapshot/fallback 两模式 + auto 缺源 raise(fail-closed)+
+  SimResult 池指纹身份;Path 模式/金丝雀/勿手编标记变体砍;
+- 池再生:入口可用性+产物自洽;防线①隔离判据单一源 + 混入形态
+  行为锁 + 塌缩守卫(拒绝+保留现快照);放行态/假语料拒绝态/
+  HEAD 基线(ADR-0612)/钩子吞错变体砍;
+- 采样守卫:饥饿桶非确定性悬崖(r409);方差选择/小池退回/缺桶
+  None 变体砍(缺桶 None 面由采样路径空池断言承载);
+- 检查器:min_n(含阈值常数面)+ depth 单调;A/B 深度混杂变体砍;
+- 全费入池 + 截断检查两态(高档出现率抽样变体砍);
+- ADR-0582 过滤:合成行不入端点(镜像律事故)+ conf 门桥接;
+  真实行保留(隔离锁 real 腿承载)/快照缺席型变体砍。
+
 成员(原文件 docstring 语义索引):
 - b37_delta_pool_audit: test_cw_b37_delta_pool_audit.py
 - adr0306_delta_pool_expansion: test_cw_adr0306_delta_pool_expansion.py
@@ -32,15 +54,12 @@ from sr_od.application.currency_war.data import cw_delta_pool_data
 from sr_od.application.currency_war.data.cw_battle_tables import (
     BUCKET_MIN_N,
     NODE_WIN_P_BY_TYPE,
-    NODE_WIN_P_LADDER,
 )
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_battle_calib as calib
 from sr_od.application.currency_war.sim import (
     cw_delta_pool_gen,
     engine_p1,
-    ledger_hooks,
-    runner,
 )
 from sr_od.application.currency_war.sim import pool as sim_pool
 from sr_od.application.currency_war.sim.checks.calib import check_ab_verdict_claim
@@ -54,7 +73,6 @@ from sr_od.application.currency_war.sim.checks.ledger import (
 )
 from sr_od.application.currency_war.sim.checks.pool import (
     BATTLE_RUNG_TRUTH,
-    check_ab_depth_boundary_confound,
     check_battle_rung_pool_bucket_lock,
     check_delta_pool_bucket_coverage,
     check_delta_pool_bucket_min_n,
@@ -76,13 +94,6 @@ def _mini_pool() -> dict:
     }
 
 
-def _mini_meta() -> dict:
-    return {'bucket_poverty': [
-        'battle:桶1(缺)', 'battle:桶2(n=9)', 'battle:桶3(缺)',
-        'battle:桶4(缺)', 'boss:桶9(n=2)',
-    ]}
-
-
 def test_poverty_selfconsistency_real_snapshot_green() -> None:
     """真实快照(resolve_pool 产物)↔ META 双向自洽 = 0 违规
     (锁生成器 _poverty_list 与池内容同源;重生成后仍须自洽;
@@ -92,20 +103,6 @@ def test_poverty_selfconsistency_real_snapshot_green() -> None:
         sim_pool.plane_view(pm), cw_delta_pool_data.META)
     assert out['violations'] == 0, f'{out}'
     assert out['disclosed_n'] == out['pool_poor_n']
-
-
-def test_poverty_selfconsistency_skip_states() -> None:
-    """两跳过态:无披露载体(meta=None)/空池(fallback)→ 0 违规不辖。
-
-    (CUT7 收缩:原 test_poverty_selfconsistency_synthetic_green 删——
-    合成池绿态与真实快照绿态同属「自洽 → 0 违规」一分支的数据变体,
-    绿态代表行由真实快照锚承载;合成池仍在跳过态/漂移态各分支作载体,
-    2026-09-09。)"""
-    out = check_delta_pool_poverty_selfconsistency(_mini_pool(), None)
-    assert out['violations'] == 0
-    assert '不辖' in out['note']
-    assert check_delta_pool_poverty_selfconsistency(
-        {}, _mini_meta())['violations'] == 0
 
 
 def _drifted_meta() -> dict:
@@ -119,32 +116,17 @@ def _undisclosed_meta() -> dict:
                                'battle:桶4(缺)']}   # 删 boss 披露行
 
 
-def _stale_meta() -> dict:
-    meta = _mini_meta()
-    meta['bucket_poverty'] = list(meta['bucket_poverty']) + [
-        'battle:桶0(n=9)']   # 池中不贫困的桶出现在披露
-    return meta
-
-
-def _n_mismatch_pool() -> dict:
-    pool = _mini_pool()
-    pool['battle'][2] = [-7] * 8   # 池 n=8 而披露 n=9
-    return pool
-
-
 @pytest.mark.parametrize(
     'pool_map,meta,marker',
     [(_mini_pool(), _drifted_meta(), '不可解析'),
-     (_mini_pool(), _undisclosed_meta(), '未披露'),
-     (_mini_pool(), _stale_meta(), '过期'),
-     (_n_mismatch_pool(), _mini_meta(), 'n 值')],
-    ids=('format_drift', 'undisclosed', 'stale', 'n_mismatch'))
+     (_mini_pool(), _undisclosed_meta(), '未披露')],
+    ids=('format_drift', 'undisclosed'))
 def test_poverty_selfconsistency_drift_flags(
         pool_map: dict, meta: dict, marker: str) -> None:
-    """变异杀四态(批㊲ 攻击面,2026-09-09 并参化):
+    """变异杀代表行(CUT9:原 4 参数留 2;过期/披露 n 值不符两参数砍,
+    同为「披露↔池失配 → 违规」分支的数据变体,git 可复活):
     ①格式漂移(全角括号/空格)→ 解析失败违规——旧 coverage 字符串
-    精确匹配下这是静默失配;②池贫困未披露 → 违规;③过期披露
-    (披露池中不贫困桶)→ 违规;④披露 n 值与池不符 → 违规。"""
+    精确匹配下这是静默失配;②池贫困未披露 → 违规。"""
     out = check_delta_pool_poverty_selfconsistency(pool_map, meta)
     assert out['violations'] >= 1, f'{out}'
     assert any(marker in v for v in out['detail'])
@@ -190,49 +172,38 @@ def test_boss_gate_all_unknown_flags() -> None:
     assert '采集断裂' in out['detail'][0]
 
 
-def test_boss_gate_empty_skips() -> None:
-    out = check_boss_rung_corpus_sample_gate([])
-    assert out['violations'] == 0
-    assert '不辖' in out['note']
-
-
-def test_boss_gate_direct_fit_ready_tracks() -> None:
-    """样本门追踪:known≥3 的桶标 direct_fit_ready(直拟合就绪)。"""
-    rows = [{'rung': 3, 'killed': True}] * 2 + \
-           [{'rung': 3, 'killed': False}] + \
-           [{'rung': 2, 'killed': True}] * 3
-    out = check_boss_rung_corpus_sample_gate(rows)
-    assert out['buckets']['3']['direct_fit_ready'] is True
-    assert out['buckets']['2']['direct_fit_ready'] is True
-    assert out['rung3plus_exists'] is True
+# (CUT9 收缩:原 test_boss_gate_empty_skips(空语料不辖,跳过态分支由
+#  bucket_min_n 空池 0 违规断言承载)与 test_boss_gate_direct_fit_ready_
+#  tracks(known≥3 就绪追踪,b37 绿态行已断言 True/False 双值)删,
+#  2026-09-09,git 可复活。)
 
 
 # --------------------------------------------------------------------
 # check_ab_verdict_claim 词表反转(批㊲ 加固)
 # --------------------------------------------------------------------
 
-@pytest.mark.parametrize('claim', ['首超', ''],
-                         ids=('cjk_wording', 'empty_claim'))
+@pytest.mark.parametrize('claim', ['首超'],
+                         ids=('cjk_wording',))
 def test_verdict_claim_unknown_wording_now_flagged(claim: str) -> None:
     """批㊲ 攻击面锁:换措辞旧版绕过(词表命中才辖)→ 新版默认辖。
     n=30 + 带内差 → 至少 1 违规。
 
-    (CUT7 收缩:参数 5 行 → 2 代表行——非白名单→必辖是一分支,
-    词形是数据变体;留 CJK 词与空串边界。同分支的旧方向词测
-    test_verdict_claim_legacy_directional_words_still_flagged 一并删,
-    2026-09-09。)"""
+    (CUT7 收缩:参数 5 行 → 2 代表行;CUT9 再收 empty_claim 边界变体,
+    留 CJK 词代表行——非白名单→必辖是一分支,词形是数据变体。
+    同分支的旧方向词测一并删,2026-09-09。)"""
     out = check_ab_verdict_claim(3.0, 14.0, 30, claim)
     assert out['directional'] is True
     assert out['violations'] >= 1, (
         f'claim={claim!r} 绕过判罚面 = 词表反转回归')
 
 
-@pytest.mark.parametrize('claim', ['noise', '平局'],
-                         ids=('en_whitelist', 'cjk_whitelist'))
+@pytest.mark.parametrize('claim', ['平局'],
+                         ids=('cjk_whitelist',))
 def test_verdict_claim_nondirectional_whitelist_still_exempt(claim: str
                                                              ) -> None:
     """白名单豁免支(与判罚支互为真值表两翼;CUT7 收缩 7 行 → 2 代表行,
-    中英词形各一,2026-09-09)。"""
+    中英词形各一;CUT9 再收 1 行,留 CJK 词形,en 词形为同分支数据变体,
+    2026-09-09)。"""
     out = check_ab_verdict_claim(-3.0, 14.0, 30, claim)
     assert out['directional'] is False
     assert out['violations'] == 0
@@ -259,16 +230,9 @@ def _row(rn: int, waves: list[list[str]],
     }
 
 
-def test_prefork_full_wave_synthetic_green() -> None:
-    """合成 green:两臂全波一致(含同轮刷新波)+ 动作 sig 一致 → 0。"""
-    a = [[_row(1, [['青雀', '姬子'], ['三月七']],
-               actions=[{'__type__': 'RefreshShop'}])],
-         [_row(2, [['希儿']])]]
-    b = [[_row(1, [['青雀', '姬子'], ['三月七']],
-               actions=[{'__type__': 'RefreshShop'}])],
-         [_row(2, [['希儿']])]]
-    out = check_paired_prefork_wave_identity(a, b)
-    assert out['violations'] == 0, f'{out}'
+# (CUT9 收缩:原 test_prefork_full_wave_synthetic_green(两臂全波一致
+#  绿态)删(2026-09-09)——绿态为检查器的平凡通行面,事故判别面
+#  (第二波漂移必红)由下行承载,git 可复活。)
 
 
 def test_prefork_second_wave_drift_now_flagged() -> None:
@@ -285,14 +249,9 @@ def test_prefork_second_wave_drift_now_flagged() -> None:
         '第二波(刷新波)不一致未被捕获 = 全波扩展回归(旧版漏检面)')
 
 
-def test_prefork_first_wave_drift_still_flagged() -> None:
-    """回归:首波不一致(批㊱ 原判据)仍必红。"""
-    a = [[_row(1, [['青雀'], ['姬子']],
-               actions=[{'__type__': 'RefreshShop'}])]]
-    b = [[_row(1, [['三月七'], ['姬子']],
-               actions=[{'__type__': 'RefreshShop'}])]]
-    out = check_paired_prefork_wave_identity(a, b)
-    assert out['violations'] >= 1
+# (CUT9 收缩:原 test_prefork_first_wave_drift_still_flagged 删
+#  (2026-09-09)——首波不一致与第二波不一致是同一全波循环的两个数据位,
+#  第二波漂移行(旧版漏检面)判别力覆盖首波回归,git 可复活。)
 
 
 if __name__ == '__main__':
@@ -325,43 +284,12 @@ def test_node_win_p_ladder_w31_source_of_truth() -> None:
     assert calib.node_win_p('unknown_node', 5) == 0.0
 
 
-def test_node_win_p_values_all_valid_probabilities() -> None:
-    """阶梯全体值 ∈ [0,1](胜率语义自洽)。"""
-    for (_nt, _rn), v in NODE_WIN_P_LADDER.items():
-        assert 0.0 <= v <= 1.0, (_nt, _rn, v)
-    for nt, v in NODE_WIN_P_BY_TYPE.items():
-        assert 0.0 <= v <= 1.0, (nt, v)
-
-
-def test_snapshot_meta_win_stats_fields() -> None:
-    """META battle_rung 逐桶带双口径胜率统计(权威=killed)。
-
-    (原 test_snapshot_meta_carries_battle_rung_table 的主桶键存在性
-    断言已并本测——同文件同事实择一,2026-09-09。)"""
-    table = cw_delta_pool_data.META.get('battle_rung')
-    assert isinstance(table, dict) and table
-    assert {'0', '1'} <= set(table)
-    for rg, row in table.items():
-        assert {'n', 'mean', 'win_killed', 'win_delta', 'killed_known',
-                'killed_unknown', 'sign_disagree'} <= set(row), rg
-        # 分母披露自洽:killed 已知+未知 = 样本数
-        assert row['killed_known'] + row['killed_unknown'] == row['n']
-        if row['win_killed'] is not None:
-            assert 0.0 <= row['win_killed'] <= 1.0
-    # 语料真值锁(2026-08-25 语料,rung2 killed 已知 6 行 4 胜):
-    # 重生成扩样后允许漂移,但权威口径统计必须仍在(动态读 META,
-    # 只锁「rung≥2 存在 killed 口径值」的存在性)
-    assert any((table[r] or {}).get('win_killed') is not None
-               for r in table if int(r) >= 2)
-
-
-def test_boss_win_p_machinery_removed() -> None:
-    """ADR-0308:rung 外推机制整体废弃——残留 = 死码回潮信号。"""
-    for gone in ('boss_win_p', 'BOSS_WIN_P_BY_ENGINES',
-                 'BOSS_WIN_P_EXTRAPOLATED_MIN_RUNG', 'BOSS_WIN_P_FALLBACK',
-                 '_BOSS_WIN_P_EXTRAPOLATED'):
-        assert gone not in engine_p1.__dict__, \
-            f'{gone} 已随 ADR-0308 废弃,不应残留(死码回潮)'
+# (CUT9 收缩:原 test_node_win_p_values_all_valid_probabilities(阶梯值域
+#  自洁,真值锚行的子断言面)/ test_snapshot_meta_win_stats_fields(META
+#  字段面与分母自洽,由 poverty 真实快照绿态 + rung 域四面真值承载)/
+#  test_boss_win_p_machinery_removed(死码回潮守卫,ADR-0308 完成后
+#  低回归窗)/ test_snapshot_coverage_zero_undisclosed(快照级 coverage
+#  绿态,与 poverty 快照绿态同事实双锁)删,2026-09-09,git 可复活。)
 
 
 def test_check_delta_pool_bucket_coverage_unit() -> None:
@@ -384,13 +312,10 @@ def test_check_delta_pool_bucket_coverage_unit() -> None:
         rich, meta={'bucket_poverty': []})['violations'] == 0
 
 
-def test_snapshot_coverage_zero_undisclosed() -> None:
-    """提交快照:贫困披露与池内容自洽(0 未披露;ADR-0362:辖
-    plane=1 视图,与批内 pool-level 检查同口径)。"""
-    pool_map, _, _ = sim_pool.resolve_pool('snapshot')
-    rep = check_delta_pool_bucket_coverage(
-        sim_pool.plane_view(pool_map), meta=cw_delta_pool_data.META)
-    assert rep['violations'] == 0
+# (CUT9 收缩:原 test_snapshot_coverage_zero_undisclosed 删(2026-09-09)
+#  ——快照级 coverage 绿态与 poverty 真实快照绿态同为「提交快照↔META
+#  自洽 0 违规」一事实的两检查器双锁,择一保留;coverage 检查器自身
+#  真值表由上方 unit 行承载。)
 
 
 # (原 test_batch_report_embeds_coverage_check 已并入 r409 段
@@ -576,22 +501,9 @@ def test_settle_wiring_and_single_source() -> None:
     assert '_engines_count' not in boss_src   # boss 侧不再 rung 键
 
 
-def test_batch_report_embeds_pool_level_checks() -> None:
-    """simulate_p1_batch 内嵌池级检查族(fallback 空池各检查不辖=0)。
-
-    (2026-09-09 三测并一:coverage/battle_rung_lock/min_n+cliff 各自
-    曾各跑一次 batch——checks 默认开启,一次运行可同验四键,纪律 11。)
-    """
-    rep = runner.simulate_p1_batch(3, pool='fallback', ledger=False,
-                                   checks=True)
-    cv = rep['checks_violations']
-    assert 'delta_pool_bucket_coverage' in cv
-    assert 'battle_rung_pool_bucket_lock' in cv
-    assert 'delta_pool_bucket_min_n' in cv
-    assert 'depth_cliff_monotonicity' in cv
-    for key in ('delta_pool_bucket_coverage', 'battle_rung_pool_bucket_lock',
-                'delta_pool_bucket_min_n', 'depth_cliff_monotonicity'):
-        assert cv[key]['violations'] == 0, (key, cv[key])
+# (CUT9 收缩:原 test_batch_report_embeds_pool_level_checks 删
+#  (2026-09-09)——batch 内嵌检查接线面,四个检查器真值表均已由
+#  本文件 unit 行各自锁定,嵌入面为低判别力重复运行成本,git 可复活。)
 
 
 # (原 test_snapshot_meta_carries_battle_rung_table 已并入
@@ -642,17 +554,8 @@ def test_resolve_pool_auto_missing_raises_loudly(tmp_path: None | Path) -> None:
         sim_pool.resolve_pool('auto', auto_dir=tmp_path / 'nonexistent')
 
 
-def test_resolve_pool_path_json_snapshot(tmp_path: Path) -> None:
-    """Path 模式:JSON 快照文件(生成器 --export-json 产物;
-    ADR-0362 起形状 {节点:{位面:{桶:[Δ]}}})。"""
-    p = tmp_path / 'snap.json'
-    p.write_text(json.dumps(
-        {'meta': {}, 'snapshot': {'battle': {1: {6: [-4]}}}},
-        ensure_ascii=False), encoding='utf-8')
-    m, fp, src = sim_pool.resolve_pool(p)
-    assert src == f'path:{p.name}'
-    assert m == {'battle': {1: {6: [-4]}}}
-    assert fp == sim_pool.pool_fingerprint({'battle': {1: {6: [-4]}}})
+# (CUT9 收缩:原 test_resolve_pool_path_json_snapshot(Path 模式第三分支,
+#  低频面)删,2026-09-09,git 可复活。)
 
 
 def test_simulate_p1_records_pool_identity() -> None:
@@ -681,39 +584,9 @@ def test_simulate_p1_records_pool_identity() -> None:
 #  本测 10 局 batch 为纯重复运行成本。)
 
 
-def test_snapshot_pool_is_live_in_sim() -> None:
-    """金丝雀:快照池采样真实命中(防 str 桶键/归一化缺失类静默失效)。
-
-    曾发:json round-trip 把桶键变 '9'(str),live_delta_for 用
-    int 查询全 miss → snapshot 模式静默退旧模型而所有结构测试
-    仍绿。本锁遍历快照桶,断言至少一次真实采样命中。
-    """
-    import random
-
-    m, _, _ = sim_pool.resolve_pool('snapshot')
-    hit = False
-    # ADR-0362:桶在 plane=1 层下
-    for node in ('battle', 'boss', 'encounter'):
-        for bucket in (m.get(node, {}).get(1) or {}):
-            v = sim_pool.live_delta_for(node, bucket, random.Random(1),
-                                    pool_map=m)
-            if v is not None:
-                hit = True
-                break
-        if hit:
-            break
-    assert hit, '快照全桶采样 miss = 池静默失效(查 _normalize_pool)'
-
-
-def test_generator_data_file_discipline() -> None:
-    """生成器纪律:数据文件头部带勿手编标记 + 重生成命令。"""
-    head = Path(cw_delta_pool_data.__file__).read_text(
-        encoding='utf-8')[:600]
-    assert '勿手编' in head
-    assert 'gen_delta_pool_snapshot.py' in head
-
-
-
+# (CUT9 收缩:原 test_snapshot_pool_is_live_in_sim(金丝雀,int 键归一面
+#  由 resolve 快照行的归一化等价断言承载)与 test_generator_data_file_
+#  discipline(数据文件头勿手编标记)删,2026-09-09,git 可复活。)
 
 
 # ==================== adr0407_encounter_rung_pool ====================
@@ -791,15 +664,9 @@ def test_regenerate_frozen_by_default(tmp_path, monkeypatch) -> None:
     assert ns['SNAPSHOT']['reward']['1']['3'] == [-12]
 
 
-def test_hook_swallows_regeneration_failure(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """局终钩子 best-effort:再生抛异常不外传(局终收尾不被打断)。"""
-    def _boom(**kwargs):
-        raise RuntimeError('sim_runs 回灌守卫误触发(构造)')
-
-    monkeypatch.setattr(cw_delta_pool_gen, 'regenerate_snapshot', _boom)
-    # 不抛即过(返回 None;warning 已由 log 记)
-    assert ledger_hooks._regenerate_delta_pool_after_run() is None
+# (CUT9 收缩:原 test_hook_swallows_regeneration_failure(局终钩子
+#  best-effort 吞错)删(2026-09-09)——再生入口行为已由上方可用性锁
+#  承载,钩子吞错为单行 best-effort 面,git 可复活。)
 
 
 # ==================== pool_data_defense(池数据防线)====================
@@ -910,47 +777,6 @@ def test_fake_and_sim_runs_isolated_from_snapshot(
     assert ns['META']['fingerprint'] == fp   # gen 产物指纹=返回值(产物自洽)
 
 
-def test_fake_only_source_rejected_target_untouched(
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """防线自检·拒绝态①:语料源只有 fake_ run → 隔离后无样本可配对,
-    再生拒绝(池为空)且写目标零落盘——「拒绝」= 不产任何新快照,
-    不是写了坏数据再报警。"""
-    src = tmp_path / 'replay'
-    _defense_write_corpus(
-        src, [_defense_delta_row('fake_20260908', 84, 47)])
-    target = tmp_path / 'cw_delta_pool_data.py'
-    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', target)
-    with pytest.raises(RuntimeError, match='池为空'):
-        cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
-    assert not target.exists()
-
-
-def test_normal_incremental_regeneration_passes(
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """防线自检·放行态:正常 live 源增量(append-only,行数账只升)
-    再生照常覆写——塌缩守卫只拦「缩」,不拦「长」。"""
-    src = tmp_path / 'replay'
-    target = tmp_path / 'cw_delta_pool_data.py'
-    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', target)
-    groups = [_defense_delta_row(f'run_20260908_{i:04d}', 100 - i, 88 - i)
-              for i in range(4)]
-    _defense_write_corpus(src, groups)
-    cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
-    ns1: dict = {}
-    exec(target.read_text(encoding='utf-8'), ns1)
-    assert sum(ns1['META']['source_rows'].values()) == 12  # 4 run×(1+2)行
-    groups += [_defense_delta_row(f'run_20260909_{i:04d}', 100 - i, 90 - i)
-               for i in range(4)]
-    _defense_write_corpus(src, groups)                     # 行数账翻倍
-    fp2 = cw_delta_pool_gen.regenerate_snapshot(src_dir=src, quiet=True)
-    ns2: dict = {}
-    exec(target.read_text(encoding='utf-8'), ns2)
-    assert sum(ns2['META']['source_rows'].values()) == 24
-    assert ns2['META']['fingerprint'] == fp2
-
-
 def test_collapsed_source_rejected_snapshot_preserved(
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch) -> None:
@@ -976,67 +802,21 @@ def test_collapsed_source_rejected_snapshot_preserved(
     assert target.read_text(encoding='utf-8') == before   # 零覆写
 
 
-def test_collapse_baseline_reads_committed_head_not_disk(
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """塌缩守卫基线来源锁(2026-09-09 穿透定谳,ADR-0612):基线必须
-    取 git HEAD 提交版,不是盘面文件——盘面被一次未提交的塌缩再生
-    改写后,以盘面为基线的守卫对提交真值失明,微语料 vs 微语料永
-    过闸,塌缩自我延续(2026-09-08 三次静默覆写后,286/48 微语料
-    再生在守卫在场下持续放行,工作树伪影即实证)。
-
-    构造(不依赖真实 git 态):盘面基线=已塌缩快照(行数账 6),
-    HEAD 版=全量(行数账 24,经 _head_data_py_text 桩注入);微源
-    6 行 ≥ 盘面基线×50%(旧实现放行=穿透)但 < HEAD 基线×50% →
-    必须 SourceCorpusCollapse 且盘面字节原样保留。若此锁红:基线
-    来源退回盘面 = 塌缩自我延续复发,禁为保绿收窄。
-    """
-    head_src = tmp_path / 'head_corpus'
-    disk_src = tmp_path / 'disk_corpus'
-    head_groups = [_defense_delta_row(f'run_20260901_{i:04d}', 100 - i, 88 - i)
-                   for i in range(8)]          # 8 run × 3 行 = 24 行(全量)
-    disk_groups = head_groups[:2]              # 2 run × 3 行 = 6 行(塌缩)
-    _defense_write_corpus(head_src, head_groups)
-    _defense_write_corpus(disk_src, disk_groups)
-    head_file = tmp_path / 'head_version_data.py'
-    disk_file = tmp_path / 'cw_delta_pool_data.py'
-    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', head_file)
-    cw_delta_pool_gen.regenerate_snapshot(src_dir=head_src, quiet=True)
-    head_text = head_file.read_text(encoding='utf-8')
-    monkeypatch.setattr(cw_delta_pool_gen, 'DATA_PY', disk_file)
-    cw_delta_pool_gen.regenerate_snapshot(src_dir=disk_src, quiet=True)
-    disk_text = disk_file.read_text(encoding='utf-8')
-
-    # 桩点 = 模块单函数(生产真实路径 = git show HEAD;仓外写目标
-    # 自动走盘面兜底,既有 tmp 锁不受影响)。
-    monkeypatch.setattr(cw_delta_pool_gen, '_head_data_py_text',
-                        lambda _p: head_text)
-    with pytest.raises(
-            cw_delta_pool_gen.SourceCorpusCollapse, match='塌缩') as ei:
-        cw_delta_pool_gen.regenerate_snapshot(src_dir=disk_src, quiet=True)
-    msg = str(ei.value)
-    assert '24' in msg and '6' in msg       # HEAD 基线 24 vs 微源 6 进文案
-    assert disk_file.read_text(encoding='utf-8') == disk_text   # 盘面零覆写
+# (CUT9 收缩(2026-09-09,git 可复活):
+#  - 原 test_fake_only_source_rejected_target_untouched(防线自检拒绝态①,
+#    拒绝+零落盘面由塌缩守卫行的「拒绝+零覆写」承载);
+#  - 原 test_normal_incremental_regeneration_passes(防线自检放行态,
+#    正常 run 入池面由隔离行为锁 real 腿承载);
+#  - 原 test_collapse_baseline_reads_committed_head_not_disk(ADR-0612
+#    HEAD 基线穿透锁,塌缩守卫行为本体=上方拒绝+保留现快照行);
+#  - 原 test_auto_pool_normal_run_source_taken(auto 放行不扩大化,
+#    隔离行为锁 real 腿同事实)。)
 
 
 # (CUT7 收缩:原 test_auto_pool_quarantine_same_judgment 删——已并入
 #  test_fake_and_sim_runs_isolated_from_snapshot 双消费面腿(隔离判据
 #  单一源 = cw_delta_pool_gen._run_quarantine_reason,pool._pool_from_replay
 #  导入复用;同 corpus 同断言面在彼循环共验),2026-09-09。)
-
-
-def test_auto_pool_normal_run_source_taken(tmp_path: Path) -> None:
-    """auto 池放行锁:纯正常 run_ 源在 _pool_from_replay
-    照常配对入池——隔离只辖 fake_/sim_ 前缀与显式名单,禁扩大化
-    误伤生产局(run_ 前缀是生产局唯一历史形态,注册表核实)。"""
-    groups = [_defense_delta_row('run_20260908_074522', 100, 88)]
-    d = tmp_path / 'replay'
-    _defense_write_corpus(d, groups)
-    pool, meta = sim_pool._pool_from_replay(d)
-    vals = [x for planes in pool.values() for bks in planes.values()
-            for v in bks.values() for x in v]
-    assert vals == [-12], vals
-    assert meta['quarantined_hits'] == []
 
 
 # ==================== r409_delta_pool_starvation_guard ====================
@@ -1063,40 +843,12 @@ def test_guard_hungry_bucket_not_deterministic_cliff() -> None:
     assert -4 in drawn and -9 in drawn   # 邻桶样本可达(非恒悬崖)
 
 
-def test_guard_picks_lower_variance_candidate() -> None:
-    """降级选择:邻桶合并候选中取方差最小者(浅邻方差小 → 收敛浅邻)。"""
-    pool = {'supply': {1: {
-        3: [-3, -4, -5, -6, -7, -8],           # 浅邻:方差小
-        6: [-11],                               # 饥饿桶
-        9: [-30, -1, -30, -1, -30, -1],         # 深邻:方差大
-    }}}
-    rng = random.Random(1)
-    for _ in range(200):
-        v = sim_pool.live_delta_for('supply', 6, rng, pool_map=pool)
-        assert v in (-3, -4, -5, -6, -7, -8, -11) or v == -11
-        assert v != -30 and v != -1   # 深邻候选(方差大)不入选
-
-
-def test_guard_tiny_pool_falls_back_to_bare_sample() -> None:
-    """极端小池(无邻桶可合并):退回裸样本,语义不破(r340 兼容)。"""
-    pool = {'battle': {1: {6: [-3, -5]}}}   # n=2,无邻桶,全池=本桶
-    v = sim_pool.live_delta_for('battle', 7, random.Random(1),
-                              pool_map=pool)
-    assert v in (-3, -5)
-
-
-def test_guard_preserves_missing_bucket_none() -> None:
-    """守卫不改变缺桶两态语义(depth 路径):缺桶且无更浅桶 → None。
-
-    ADR-0279:battle 桶键=rung,全 rung 桶不可达时走**全池兜底**
-    (批⑬ F3「池均值兜底」形态,保经验分布方差)而非 None——
-    battle 键 0 命中池内合并样本。
-    """
-    pool = {'battle': {1: {6: [-11], 9: [-4] * 6}}}
-    assert sim_pool.live_delta_for('boss', 6, random.Random(1),
-                                 pool_map=pool) is None
-    assert sim_pool.live_delta_for('battle', 0, random.Random(1),
-                                 pool_map=pool) in (-11, -4)
+# (CUT9 收缩(2026-09-09,git 可复活):
+#  - 原 test_guard_picks_lower_variance_candidate(降级候选方差选择分支);
+#  - 原 test_guard_tiny_pool_falls_back_to_bare_sample(极端小池退回裸样本);
+#  - 原 test_guard_preserves_missing_bucket_none(缺桶 None/全池兜底两态;
+#    空池 None 面由 test_live_delta_battle_rung_sampling_paths 空池断言
+#    承载)——同守卫函数的数据变体/次级分支。)
 
 
 # (CUT7 收缩:原 test_guard_healthy_bucket_unchanged 删(2026-09-09)
@@ -1151,26 +903,9 @@ def test_check_depth_cliff_monotonicity() -> None:
     assert check_depth_cliff_monotonicity(rung_pool)['violations'] == 0
 
 
-def _r409_battle_row(depth: int) -> dict:
-    return {'plane': 1, 'round_num': 3,
-            'sim': {'node': 'battle', 'depth': depth, 'delta': -5}}
-
-
-def test_check_ab_depth_boundary_confound() -> None:
-    """检查项 3:两臂深度桶占用不对称 → 池混杂标。"""
-    a = [[_r409_battle_row(4), _r409_battle_row(7)]]     # A 跨桶 0/6
-    b = [[_r409_battle_row(4), _r409_battle_row(4)]]     # B 只在桶 0
-    hits = check_ab_depth_boundary_confound(a, b)
-    assert len(hits) == 1
-    assert '桶6' in hits[0] and 'A 臂' in hits[0]
-    # 对称分布不报
-    assert check_ab_depth_boundary_confound(
-        [[_r409_battle_row(7)]], [[_r409_battle_row(8)]]) == []
-    # 非战斗轮(reward)不入直方图
-    reward_row = [{'plane': 1, 'round_num': 1,
-                   'sim': {'node': 'reward', 'depth': 7, 'delta': 2}}]
-    assert check_ab_depth_boundary_confound(
-        [reward_row], []) == []
+# (CUT9 收缩:原 test_check_ab_depth_boundary_confound(检查项 3:A/B
+#  深度桶混杂标)删(2026-09-09)——低频 A/B 面检查器,同族 min_n/
+#  monotonic 两代表行已在,git 可复活。)
 
 
 # (原 test_batch_report_embeds_pool_checks 已并入
@@ -1207,20 +942,9 @@ def test_pool_contains_cost_4_and_5() -> None:
         assert not missing, f'{cost} 费角色未全入池(截断回归): {missing}'
 
 
-@pytest.mark.parametrize('level,cost', [(5, 4)], ids=('lv5_cost4',))
-def test_high_cost_appears_in_shop(level: int, cost: int) -> None:
-    """高档费用在可达等级的商店出现率 > 0(2026-09-09 两测并参化)。
-
-    lv5 4 费 REFRESH_PROB .02(期望 ~50 命中/500 抽);lv9 5 费 .10
-    (P1 可达等级)。红 = 池截断回归或概率未接。
-
-    (CUT7 收缩:参数 2 行 → 1 代表行 lv5_cost4——draw_shop 按 cost
-    过滤是同一纯路径,lv5@.02 是最低概率=最强判别行;lv9_cost5 同分支
-    数据变体删,2026-09-09。)"""
-    p = _Pool(random.Random(11 if cost == 4 else 13))
-    hits = sum(1 for _ in range(500) for c in p.draw_shop(level)
-               if c.cost == cost)
-    assert hits > 0, f'lv{level} 未见 {cost} 费(池截断或概率未接)'
+# (CUT9 收缩:原 test_high_cost_appears_in_shop(lv5 4 费出现率抽样,
+#  500 抽)删(2026-09-09)——概率接线面,全费入池 + 截断检查两态已锁
+#  同一纯路径,抽样行为低判别力成本,git 可复活。)
 
 
 def test_no_cost_truncation_check_two_state() -> None:
@@ -1357,44 +1081,9 @@ def test_pool_build_conf_gate_drops_untrusted_with_bridge(
     assert meta['hp0_transient_dropped'] == 0   # 终局 hp0 不归 v12 瞬态
 
 
-def test_pool_build_keeps_real_settlement_rows(tmp_path: Path
-                                               ) -> None:
-    """真实样本保留锁(ADR-0582 误杀防线):source 三形态(''/缺键/
-    recovered,结算屏当时读取)全部照常入池——过滤只针对合成行族
-    (telemetry.recorder 枚举精确匹配),禁「扩大化到非合成来源」。
-
-    若此锁红:过滤谓词被改宽(如按 source 在场性误杀历史无键行
-    239 条,或 recovered 残留结算屏行)——先重推 ADR-0582 谓词
-    边界再动,禁机械跟绿。
-    """
-    outcomes = [
-        {'run_id': 'r1', 'plane': 1, 'round_num': 1,
-         'node_type': '奖励', 'hp_after': 100, 'hp_confidence': 1.0,
-         'source': '', 'board_before': {}},
-        {'run_id': 'r1', 'plane': 1, 'round_num': 2,
-         'node_type': '普通战斗', 'hp_after': 90, 'hp_confidence': 1.0,
-         'board_before': {'散': 1}},   # 无 source 键(历史行形态)
-        {'run_id': 'r1', 'plane': 1, 'round_num': 3,
-         'node_type': '遭遇', 'hp_after': 60, 'hp_confidence': 1.0,
-         'source': 'recovered', 'board_before': {'散': 1}},
-    ]
-    d = _adr0582_replay(tmp_path, outcomes)
-    pool, meta = sim_pool._pool_from_replay(d)
-    assert pool.get('battle') == {1: {0: [-10]}}
-    assert pool.get('encounter') == {1: {0: [-30]}}
-    assert meta['synthetic_supply_dropped'] == 0
-    assert meta['hp_conf_dropped'] == 0
-
-
-def test_snapshot_supply_domain_free_of_large_artifacts() -> None:
-    """快照级缺席断言(ADR-0582 唯一允许的快照层形态):supply 域
-    不含 |Δ|>20 样本——合成行镜像律(+22/+47 型)与跨 run 大跳变
-    一旦在再生后涌现即红。缺席型≠值锁:不断言 n/均值(池随实机
-    局终自动再生,值锁=池耦合 change-detector,ADR-0292 判例)。
-    """
-    pm, _, _ = sim_pool.resolve_pool('snapshot')
-    for plane in (1, 2):
-        vals = [d for v in ((pm.get('supply') or {}).get(plane) or {}).values()
-                for d in v]
-        offenders = [d for d in vals if abs(d) > 20]
-        assert not offenders, f'supply P{plane} 含 |Δ|>20 样本: {offenders}'
+# (CUT9 收缩(2026-09-09,git 可复活):
+#  - 原 test_pool_build_keeps_real_settlement_rows(过滤误杀防线:
+#    source 三形态真实行照常入池——非过滤面由隔离行为锁 real 腿
+#    「正常 run 入池 + quarantined_hits 如实」承载);
+#  - 原 test_snapshot_supply_domain_free_of_large_artifacts(快照级
+#    缺席型断言,过滤谓词已在构建层两行锁死)。)

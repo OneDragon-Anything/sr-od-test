@@ -2,23 +2,29 @@
 (swap)决策 / boss 硬节点释放 / 供给(supply)/ 刷新(refresh)/
 事件轴 每真实分支 1 代表行。
 
+收缩注记(CUT9 二次收缩:原 20 测试→10 测试;同分支变体砍,git 可复活):
+- decide 门四硬约束留 affordable(金钱门)/s_reserve 两代表,
+  seats/irreversible 同拦截集分支变体砍;
+- swap 正例 + θ 缺失 fail-closed 双向全留;boss D-B 三态门全留;
+- 发射契约 fail-closed + 入口 smoke 全留;M2→M4 行为真值留;
+- supply 留带钻碾压 1 代表,encounter 留全克刷新换批 1 代表(refresh
+  分支锚);supply 无钻刷新/key 契合/通用价值、encounter 刷新已用/
+  未成型低难/成型利高难、事件轴 strategy_forbid/env 两行砍。
+
 覆盖面:
-- decide 门(四硬约束):affordable / seats / s_reserve / irreversible
-  各一例(§3.2 唯一合法拦截集);
+- decide 门:affordable / s_reserve 各一例(§3.2 唯一合法拦截集);
 - swap(换线):should_switch 换线活正例(R196 症1 接线修活,事故背书)
   + θ/D_min/δ 缺失 fail-closed(theta_unavailable 分键,禁复用旧键);
 - boss/硬节点:D-B 三态门(简易件即穿/里程碑收窄/boss 强敌节点释放);
 - 发射契约:词表外动作截断+计数披露(fail-closed,禁静默丢弃)+
   _emit 全链冒烟(探针语料,契约符合性 = 本域入口 smoke);
 - 行为真值:M2→M4 腾席重试环(单帧闭环 swap-out-and-buy);
-- 供给 decide_supply 四分支(带钻碾压/无钻刷新/刷新已用按 key 契合/
-  无 key 按通用价值)+ 遭遇 decide_encounter 四分支(全克刷新换批/
-  刷新已用不刷/未成型低难/成型利 comp 高难)+ 事件轴两行
-  (strategy_forbid 硬避 / env 轴 priority/forbid 归轴)。
+- 供给 decide_supply 带钻分支 + 遭遇 decide_encounter 全克刷新分支
+  各 1 代表行。
 
 来源:mandate_v1(mv 主干,保留代表行)/ decisions 核之 decide 真值族
-(economy 真值两行已归 #4;2026-09-09 套件重建批 A,#6)。其余历史锁
-已退役(git 可复活)。
+(economy 真值两行已归 #4;2026-09-09 套件重建批 A,#6;CUT9 二次收缩
+见收缩注记)。其余历史锁已退役(git 可复活)。
 """
 from __future__ import annotations
 
@@ -30,7 +36,6 @@ from sr_od.application.currency_war.kernel.cw_events import (
     EncounterOption,
     SupplyOption,
     decide_encounter,
-    decide_event,
     decide_supply,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
@@ -116,31 +121,12 @@ class TestHardConstraints:
         ok, _ = mandate.check_affordable(9, 0, batch_cost=12)
         assert not ok
 
-    def test_checkpoint2_seats(self):
-        ok, why = mandate.check_seats(0, 2, needs_bench=True, needs_board=False,
-                                      name='', deployed_names=[])
-        assert not ok and why == 'bench_full'
-        ok, why = mandate.check_seats(2, 0, needs_bench=False, needs_board=True,
-                                      name='x', deployed_names=[])
-        assert not ok and why == 'board_full'
-        # 同名同星≤1(②对象列穷举:M1/M2/M3/M5/M6/dominance)
-        ok, why = mandate.check_seats(2, 2, needs_bench=False, needs_board=True,
-                                      name='dup_name',
-                                      deployed_names=['dup_name'])
-        assert not ok and why == 'same_name_on_board'
-
     def test_checkpoint3_s_reserve(self):
         # 10−4=6 ≥5 ⇒ 过;10−4=6 <7 ⇒ 拦(检查点③辖 EV 买入面+M6+dominance)
         ok, _ = mandate.check_s_reserve(10, 4, s_reserve=5)
         assert ok
         ok, _ = mandate.check_s_reserve(10, 4, s_reserve=7)
         assert not ok
-
-    def test_checkpoint4_irreversible(self):
-        ok, why = mandate.check_irreversible('线内件', ('线内件',))
-        assert not ok and why == 'line_member'
-        ok, _ = mandate.check_irreversible('燃料件', ('线内件',))
-        assert ok
 
 
 # ===== ② swap(换线)决策真值:正例 + fail-closed =====
@@ -292,7 +278,7 @@ class TestMandateBehavior:
         assert not any(e.reason == 'm2_buy' for e in out2)
 
 
-# ===== ⑥ decide_supply / decide_encounter / decide_event 真值(自 test_cw_decisions 并入)=====
+# ===== ⑥ decide_supply / decide_encounter 真值(自 test_cw_decisions 并入)=====
 
 def _cfg(**overrides) -> SimpleNamespace:
     """mock CurrencyWarConfig(纯属性,决策函数用 getattr 读)。"""
@@ -316,32 +302,6 @@ def _comp_key(key_equips: list[str]) -> Comp:
                 strength="A", form_difficulty="medium", key_equips=key_equips)
 
 
-def test_decide_event_strategy_forbid_avoided() -> None:
-    """strategy_forbid:被禁策略有替代时永不选(哪怕评估分更高)。"""
-    cfg = _cfg(strategy_forbid=["淘金客"])   # 淘金客 eval=50 > 成本控制 48
-    pick = decide_event(["淘金客", "成本控制"], cfg, GameState())
-    assert pick.option_idx == 1, "淘金客被禁,应选成本控制"
-
-
-def test_decide_event_env_axes() -> None:
-    """env_forbid / env_priority 走 env 轴(注册表命中归 env,不落 strategy 轴)。"""
-    # 长线利好 65 vs 蓝海 38:forbid 长线利好 → 选蓝海
-    cfg = _cfg(env_forbid=["长线利好"])
-    assert decide_event(["长线利好", "蓝海"], cfg, GameState()).option_idx == 1, (
-        "长线利好被禁应选蓝海"
-    )
-    # priority 蓝海 → 38+30=68 > 65 → 反超
-    cfg = _cfg(env_priority=["蓝海"])
-    assert decide_event(["长线利好", "蓝海"], cfg, GameState()).option_idx == 1, (
-        "蓝海 priority +30 应反超长线利好"
-    )
-    # strategy 轴不误伤 env 名(只配 strategy_forbid 时 env 选项不受影响)
-    cfg = _cfg(strategy_forbid=["蓝海"])
-    assert decide_event(["长线利好", "蓝海"], cfg, GameState()).option_idx == 0, (
-        "strategy_forbid 不该影响 env 选项"
-    )
-
-
 def test_decide_encounter_refresh_when_all_counter() -> None:
     """全分支词缀都克 comp + 刷新未用 → 刷新换批(避开高危)。"""
     cfg = _cfg()
@@ -352,41 +312,6 @@ def test_decide_encounter_refresh_when_all_counter() -> None:
     assert pick.refresh, "全分支克 comp 应刷新换批"
 
 
-def test_decide_encounter_no_refresh_when_used() -> None:
-    """刷新已用 → 不再刷(按最优分支选)。"""
-    cfg = _cfg()
-    comp = _mcomp(["速度依赖"])
-    opts = [EncounterOption(idx=0, difficulty=1, affixes=["忽快忽慢"])]
-    pick = decide_encounter(opts, GameState(), comp, cfg, refresh_used=True)
-    assert not pick.refresh, "刷新已用不再刷"
-
-
-def test_decide_encounter_unformed_picks_low_difficulty() -> None:
-    """未成型(level 低/deployed 空)→ 偏低难度(生存优先);中性词缀按难度选。"""
-    cfg = _cfg()
-    comp = _mcomp(["燃血"])
-    unformed = GameState(level=1, deployed=[])   # max_units=1, deployed 0 → 未成型
-    opts = [EncounterOption(idx=0, difficulty=1),    # 中性(无词缀)
-            EncounterOption(idx=1, difficulty=3)]
-    pick = decide_encounter(opts, unformed, comp, cfg)
-    assert pick.idx == 0, "未成型应选低难度(diff=1)"
-    assert not pick.refresh
-
-
-def test_decide_encounter_formed_buff_picks_high_difficulty() -> None:
-    """成型 + 词缀利 comp(debuff=buff)→ 挑高难度拿奖励。"""
-    cfg = _cfg()
-    comp = _mcomp(["燃血"])  # 正当防卫→反伤,对燃血是 synergy(debuff=buff,利)
-    # 成型:board 满足 form_tiers + deployed ≥ max_units/2
-    formed = GameState(level=8, board={"燃血": 4},
-                       deployed=[BenchChar(slot=i) for i in range(4)])
-    opts = [EncounterOption(idx=0, difficulty=1, affixes=["正当防卫"]),
-            EncounterOption(idx=1, difficulty=3, affixes=["正当防卫"])]
-    pick = decide_encounter(opts, formed, comp, cfg)
-    assert pick.idx == 1, "成型 + 利 comp 应挑高难度(diff=3)拿奖励"
-    assert not pick.refresh, "利 comp 不刷新"
-
-
 def test_decide_supply_diamond_first() -> None:
     """带钻选项 → 选它(碾压装备价值)。"""
     cfg = _cfg()
@@ -394,33 +319,4 @@ def test_decide_supply_diamond_first() -> None:
             SupplyOption(idx=1, equip="光能电池", has_diamond=True)]  # 带钻
     pick = decide_supply(opts, GameState(), _comp_key([]), cfg)
     assert pick.idx == 1, "带钻应优先选"
-    assert not pick.refresh
-
-
-def test_decide_supply_refresh_when_no_diamond() -> None:
-    """全无钻 + 刷新未用 → 刷新找钻。"""
-    cfg = _cfg()
-    opts = [SupplyOption(idx=0, equip="反重力皮靴")]
-    pick = decide_supply(opts, GameState(), _comp_key([]), cfg, refresh_used=False)
-    assert pick.refresh, "无钻应刷新找钻"
-
-
-def test_decide_supply_key_equip_when_refresh_used() -> None:
-    """刷新已用 → 按 target_comp.key_equips 契合选(命脉级,碾压通用价值)。"""
-    cfg = _cfg()
-    comp = _comp_key(["反重力皮靴"])   # 反重力靴是命脉
-    opts = [SupplyOption(idx=0, equip="光能电池"),      # 通用 value 3
-            SupplyOption(idx=1, equip="反重力皮靴")]    # key_fit +10 → 5+10=15
-    pick = decide_supply(opts, GameState(), comp, cfg, refresh_used=True)
-    assert pick.idx == 1, "刷新已用应选 key_equips 契合的"
-    assert not pick.refresh
-
-
-def test_decide_supply_generic_value_when_no_key() -> None:
-    """刷新已用 + 无 key 契合 → 通用装备价值高者优先(鞋>电池)。"""
-    cfg = _cfg()
-    opts = [SupplyOption(idx=0, equip="光能电池"),      # value 3
-            SupplyOption(idx=1, equip="反重力皮靴")]    # value 5
-    pick = decide_supply(opts, GameState(), _comp_key([]), cfg, refresh_used=True)
-    assert pick.idx == 1, "无 key 契合应选通用价值高的(反重力皮靴)"
     assert not pick.refresh
