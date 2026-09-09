@@ -85,6 +85,21 @@ def _counters_ctx(counters: dict) -> SimpleNamespace:
             strategy_state=SimpleNamespace(cw4_counters=counters))))
 
 
+def _fake_drag_fn(truth: _FrameTruth, drags: list, drag_ok: bool = True):
+    """拖拽桩单一源(rowfix/deploy 两装配共用,复制桩体 = 漂移源头):
+    记录 (src, dst);成功时按游戏侧真值改帧占用(源槽清空+落点占用)。"""
+
+    def _drag(op, src, dst):
+        drags.append((src, dst))
+        if not drag_ok:
+            return False
+        truth.set([src], False)
+        truth.set([dst], True)
+        return True
+
+    return _drag
+
+
 def _mk_rowfix_op(monkeypatch, truth: _FrameTruth, deployed: list,
                   counters: dict | None = None,
                   drag_ok: bool = True) -> tuple[object, list]:
@@ -97,16 +112,8 @@ def _mk_rowfix_op(monkeypatch, truth: _FrameTruth, deployed: list,
                         lambda ctx, scr, tpl, level=None: list(deployed))
     monkeypatch.setattr(db.time, 'sleep', lambda s: None)
     drags: list = []
-
-    def _fake_drag(op, src, dst):
-        drags.append((src, dst))
-        if not drag_ok:
-            return False
-        truth.set([src], False)   # 源槽变
-        truth.set([dst], True)    # 落点占用(游戏侧真值)
-        return True
-
-    monkeypatch.setattr(db.DragCwChar, 'drag_char', _fake_drag)
+    monkeypatch.setattr(db.DragCwChar, 'drag_char',
+                        _fake_drag_fn(truth, drags, drag_ok))
 
     class _Op(db.CwOpDeploy):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
@@ -153,16 +160,8 @@ def _mk_deploy_op(monkeypatch, truth: _FrameTruth, deployed: list,
     monkeypatch.setattr(db, 'save_decision_frame', lambda *a, **k: None)
     monkeypatch.setattr(db.time, 'sleep', lambda s: None)
     drags: list = []
-
-    def _fake_drag(op, src, dst):
-        drags.append((src, dst))
-        if not drag_ok:
-            return False
-        truth.set([src], False)
-        truth.set([dst], True)
-        return True
-
-    monkeypatch.setattr(db.DragCwChar, 'drag_char', _fake_drag)
+    monkeypatch.setattr(db.DragCwChar, 'drag_char',
+                        _fake_drag_fn(truth, drags, drag_ok))
 
     class _Op(db.CwOpDeploy):
         def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
