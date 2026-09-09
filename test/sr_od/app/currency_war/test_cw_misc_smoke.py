@@ -169,7 +169,7 @@ def test_portal_overridable_by_cards():
 # 逐个 import,任何签名/语法级错误在此立即红。
 
 def _iter_cw_op_modules() -> list[str]:
-    """CW operations 代表模块子集(CUT9 收缩:全量 58 → 18 代表)。
+    """CW operations 代表模块子集(CUT9 收缩后的代表集,现 17 模块)。
 
     抽查覆盖判据:每子包 ≥1(cw_entry/cw_op/cw_screen/dev/tools)+
     顶层三件(cw_loop/decision_frame_hooks/settle_collect_hooks)+
@@ -191,7 +191,6 @@ def _iter_cw_op_modules() -> list[str]:
         'sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait',
         'sr_od.application.currency_war.operations.cw_screen.cw_screen_boss_briefing',
         'sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy',
-        'sr_od.application.currency_war.operations.cw_screen.cw_screen_supply',
         'sr_od.application.currency_war.operations.cw_screen.cw_screen_role_detail_overlay',
         'sr_od.application.currency_war.operations.dev.drag_cw_char',
         'sr_od.application.currency_war.operations.tools.harvest_invest_codex',

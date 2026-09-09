@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_screens_ops 主题锁(结构合并批;拼接疤痕已收敛为单一顶层导入)。
 
 成员(原文件 docstring 语义索引):
@@ -17,6 +16,7 @@ from __future__ import annotations
 import sys
 from dataclasses import fields as dc_fields
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
@@ -48,9 +48,7 @@ from sr_od.application.currency_war.obs.recognizers import (
 from sr_od.application.currency_war.obs.recognizers.settlement_recognizer import (
     SettlementRecognizer,
 )
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply import (
-    CwScreenSupply,
-)
+from sr_od.application.currency_war.prep_actions import PrepActionExecutor
 from sr_od.application.currency_war.telemetry.cw_win_features import (
     features_from_deployed,
 )
@@ -93,13 +91,16 @@ def test_fixture_reads_spheres_and_box(test_context: SrTestContext) -> None:
     assert len(spheres5) == 5 and [s for s, _p in boxes5] == [1], '5 球帧:球 5 + 箱槽1 共存'
 
 
-def test_pick_card_fallback_by_material_value(test_context: SrTestContext) -> None:
+def test_pick_card_fallback_by_material_value() -> None:
     """选卡回落路径锁:无 cw_match(局外)时按材料通用性选卡(生命之花 7 >
-    轮滑鞋 6),空卡列表返 None。key_equips 命中/策略打分路径需 cw_match
-    在场(pick_box_card 前置分支),不在本锁断言面。"""
-    op = CwScreenSupply(test_context)
-    assert op._pick_card(['轮滑鞋', '生命之花', '幸运星']) == '生命之花'
-    assert op._pick_card([]) is None
+    轮滑鞋 6)。现役载体 = PrepActionExecutor._default_box_card(原锁挂在
+    CwScreenSupply._pick_card 上,该死类随退役批删除,断言语义迁移至此;
+    key_equips 命中/策略打分路径需 cw_match 在场,不在本锁断言面)。"""
+    ex = object.__new__(PrepActionExecutor)
+    ex._ctx = SimpleNamespace(cw_match=None)
+    assert ex._default_box_card(
+        [('轮滑鞋', 100), ('生命之花', 200), ('幸运星', 300)],
+    ) == ('生命之花', 200)
 
 
 # ==================== test_settlement_recognizer ====================
