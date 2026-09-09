@@ -189,7 +189,8 @@ def make_prep_round_director(test_context, monkeypatch, scripted_actions,
 
     桩面 = 决策策略桩(scripted_actions 原样回放)+ 入口浮层清理/
     收店探针/代收/步记录全 no-op + ``_observe`` 恒空观察(overlay 可注
-    模拟交回环)+ read_bench_full False + 开店阶段 read_only 短路。
+    模拟交回环)+ 开店阶段 read_only 短路。(read_bench_full 桩已随通道
+    退役删除——迁移批次二 §3.2.5,墓碑函数无桩面消费。)
     返回 ``(director, match, session)``;运行外壳
     (``fast_sleep`` + enter/reset_running_state)留在各锁自持。
     """
@@ -225,9 +226,6 @@ def make_prep_round_director(test_context, monkeypatch, scripted_actions,
         deploy_vacancy = 0
 
     monkeypatch.setattr(d, '_observe', lambda heavy=True, screen=None: _Obs())
-    monkeypatch.setattr(
-        'sr_od.application.currency_war.obs.cw_observation.read_bench_full',
-        lambda ctx, screen: False)
     monkeypatch.setattr(d, '_open_shop_phase',
                         lambda a, obs: (True, 'read_only 读牌完成'))
     return d, match, session

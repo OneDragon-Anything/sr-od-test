@@ -1,5 +1,14 @@
 """test_cw_data_registry 主题锁(结构合并批,机械拼接)。
 
+目标形态(2026-09-09 重建批,TARGET_SPEC #15):registry 登记门 + K8 闭合锁代表。
+- 登记门 = chars 段 test_registry_complete_all_costs / test_roster_derived_from_registry
+  (单一真相源派生)+ K8 段 test_all_recipe_names_in_roster(合成名 ↔ 装备注册表);
+- K8 闭合锁 = K8 段(自 test_cw_synthesis.py 迁入,生产点名的漂移兜底,断言零改动)。
+来源指针:test_cw_synthesis.py(已随迁退役,git 可复活)。本文件同时是
+TARGET_SPEC #5(test_cw_economy_gates)的「金核」水源——共同来源文件,
+非规格段的清理留终局统一执行,本批只做加法与头部申报。
+其余历史锁已退役(git 可复活)。
+
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
 - chars: test_cw_chars.py
 - enemy_data: test_cw_enemy_data.py
@@ -25,6 +34,7 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
+from sr_od.application.currency_war.data import cw_synthesis as synth
 from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
     CHARACTERS,
@@ -34,6 +44,7 @@ from sr_od.application.currency_war.data.cw_chars import (
     get_char,
 )
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
+from sr_od.application.currency_war.obs.cw_equipment import EQUIPMENT_ROSTER
 from test.conftest import SrTestContext
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]   # 仓库根(StarRailOneDragon)
@@ -1823,3 +1834,30 @@ def test_t8_level_single_source_readable_gate():
     st.level_readable = True
     assert _session_level(ctx) == 8
     assert _level_trusted(ctx) is True
+
+
+# ==================== K8 闭合锁(自 test_cw_synthesis.py 逐字迁入) ====================
+# 装备合成图谱闭合 = 注册表登记门的合成域半边:配方名 ↔ 装备注册表互证,
+# 进阶全量有配方(K8 闭合;2026-08-26 官方 API 补齐后成立)。生产点名漂移兜底
+# (簇G 裁定:图谱漂移由本锁先红)。
+
+def test_all_recipe_names_in_roster() -> None:
+    """所有合成结果名(交叉+自配+光能系)都在装备注册表(OCR↔官方 API 双源对拍)。"""
+    names = (set(synth.CROSS_RECIPES) | set(synth.SELF_RECIPES)
+             | set(synth.GUANGNENG_CROSS_RECIPES) | set(synth.GUANGNENG_SELF_RECIPES))
+    miss = [n for n in names if n not in EQUIPMENT_ROSTER]
+    assert miss == [], f"注册表缺: {miss}"
+
+
+def test_all_advanced_have_recipe() -> None:
+    """36 件进阶全量有配方(K8 闭合;2026-08-26 官方 API 补齐后成立)。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
+    adv = [n for n, e in EQUIPMENTS.items() if e.category == '进阶']
+    assert len(adv) == 36
+    missing = [n for n in adv
+               if not (synth.cross_components(n) or synth.self_base(n))]
+    assert missing == [], f"进阶无配方: {missing}"
+
+
+if __name__ == '__main__':
+    pytest.main([__file__])

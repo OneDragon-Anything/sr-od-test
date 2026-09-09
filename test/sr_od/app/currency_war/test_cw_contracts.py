@@ -1,13 +1,23 @@
 """cw4 判据契约层测试(R198 批:assume-guarantee 契约化,IMPL_DESIGN §4.2.2)。
 
-覆盖:①CONTRACTS 注册完备性静态断言(criteria 全公开函数 + 第七面
-proof 判据位 + 三先例非 criteria 消费位,漏登记=红);②三先例前提
-谓词正反测(前提成立放行/不成立弃权+``criteria_contract_violation``
-分键计数);③接线核验点正反测(shop/entry 消费位,前提不成立 ⇒ 判据
-本帧弃权零发射 + 计数;正常帧零违例计数=契约层零误伤锚);④arm1 板
-满 cap 口径谓词数学 + M3「板未满不发射」decide 链反面锁(2026-09-09
-合并批自 test_cw_zero_refresh 迁入;cap 口径直调主载体在本类,跨角色
-阵营共享腿由 test_cw_prep_flag_machine 的 S3 纯函数翻转锁分辖)。
+目标形态覆盖面(2026-09-09 重建批,TARGET_SPEC #17「契约层核+事件接线」):
+- ①CONTRACTS 注册完备性静态断言(criteria 全公开函数 + 第七面 proof 判据位
+  + 三先例非 criteria 消费位,漏登记=红);
+- ②先例前提谓词代表行 + fail-closed(未登记键与谓词异常均弃权+计数,不抛);
+- ③arm1 板满 cap 口径谓词数学 + M3「板未满不发射」decide 链反面锁;
+- ④禁绕过 ensure_contract 直调的 AST 守卫(主测+裸名直调负测);
+- ⑤arm1 消费位事件接线正反(常数 cap 喂入=违例计数+弃权 / state 派生链
+  喂入=零违例+照发)。
+
+来源指针:本文件原地收核(契约层核主体留位);arm1 板满段 2026-09-09 合并批
+自 test_cw_zero_refresh 迁入(D27 指认);跨角色阵营共享腿由
+test_cw_prep_flag_machine 的 S3 纯函数翻转锁分辖。
+其余历史锁已退役(git 可复活),退役面墓碑:
+- 先例② r2_gold_minus_reserve / r1_commitment 恒真前提 / K 空窗回退前提
+  (P86 六例形态)——谓词正反测同类多条,择代表行保留;
+- shop/entry 接线核验点正反测(ev_buy 弃权/空窗波/正常波/骨架波零违例锚);
+- AST 守卫负测 basename 逃逸腿与全限定白名单正例腿(主测+裸名负测已辖
+  守卫本体,负测留一)。
 """
 from __future__ import annotations
 
@@ -19,11 +29,9 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
-    BuyCard,
     LevelUpShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
-from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     buy,
     contracts,
@@ -51,16 +59,10 @@ from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
-    cw4_card as _card,
-)
-from test.sr_od.app.currency_war._cw_helpers import (
     cw4_comp as _comp,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_decide as _decide,
-)
-from test.sr_od.app.currency_war._cw_helpers import (
-    cw4_members as _members,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_session as _session,
@@ -135,7 +137,7 @@ class TestRegistryCompleteness:
             assert c.anchor, f'{key} 规格锚缺失'
 
 
-# ===== ② 三先例前提谓词正反测 =====
+# ===== ② 先例前提谓词代表行 + fail-closed =====
 
 class TestPrecedentPredicates:
 
@@ -151,21 +153,6 @@ class TestPrecedentPredicates:
             contracts.ContractCtx(k_members=()), ct)
         assert ct['criteria_contract_violation:buy.ev_buy_candidates'] == 1
 
-    def test_precedent2_r2_gold_minus_reserve(self):
-        """先例②(r2 预算门):金−预留语境在场放行;缺输入弃权+计数。"""
-        ct: dict = {}
-        assert contracts.ensure_contract(
-            ('refresh', 'r2_budget'),
-            contracts.ContractCtx(gold=10, reserve=0), ct)
-        assert not contracts.ensure_contract(
-            ('refresh', 'r2_budget'),
-            contracts.ContractCtx(gold=10, reserve=None), ct)
-        assert ct['criteria_contract_violation:refresh.r2_budget'] == 1
-        assert not contracts.ensure_contract(
-            ('refresh', 'r2_budget'),
-            contracts.ContractCtx(gold=None, reserve=0), ct)
-        assert ct['criteria_contract_violation:refresh.r2_budget'] == 2
-
     def test_precedent3_arm1_cap_level_driven(self):
         """先例③(arm1 口径):cap 现读放行;None(固定常数兜底)弃权+计数。"""
         ct: dict = {}
@@ -176,74 +163,6 @@ class TestPrecedentPredicates:
             ('predicates', 'arm1_existence'),
             contracts.ContractCtx(deploy_cap=None), ct)
         assert ct['criteria_contract_violation:predicates.arm1_existence'] == 1
-
-    def test_r1_contract_none_precedent(self):
-        """r1 承诺账前提(ADR-0516 形式二重锚):判据输入全为游戏定义量
-        (REFRESH_PROB/XP 表/息律),无标定槽位依赖 ⇒ 前提恒真(None
-        登记)——旧 ev_slot 核验(V_GAP 槽位现读)随 V̄ 链退役消解;
-        r1_start(无生产消费端的纯数函数)保留 ev_slot 核验原锁。"""
-        ct: dict = {}
-        assert contracts.ensure_contract(
-            ('refresh', 'r1_commitment_account'),
-            contracts.ContractCtx(), ct)
-        assert contracts.ensure_contract(
-            ('refresh', 'r1_commitment_account'),
-            contracts.ContractCtx(ev_slot=24.7), ct)   # 恒真前提:ctx 不辖
-        assert not ct
-        assert contracts.ensure_contract(
-            ('refresh', 'r1_start'),
-            contracts.ContractCtx(ev_slot=None), ct)
-        assert not contracts.ensure_contract(
-            ('refresh', 'r1_start'),
-            contracts.ContractCtx(ev_slot=10.0), ct)
-        assert ct['criteria_contract_violation:refresh.r1_start'] == 1
-
-    def test_k_projection_domain_covered_derivable(self):
-        """第三病灶(K 空窗回退)前提(可核验派生形态+P86 带维度):
-        k_target 非 None(锁线世界)或供给缺帧(保守侧)放行;供给在场而
-        回退实解析空集 = 「回退字面量空元组但保留声明」复发形态,p1 带
-        弃权+计数;p2plus 带空集合法但必须携带三臂判据来源证据
-        (P86 证明批 §4.6-4 六例形态,原四例随批重推)。"""
-        ct: dict = {}
-        # ① 锁线世界:无回退义务
-        assert contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(k_target=object()), ct)
-        # ② 空窗世界+供给在场+回退实解析非空
-        assert contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(k_target=None, k_fallback_available=True,
-                                  k_fallback_resolved=frozenset({'a'})), ct)
-        # ③ 供给缺帧:保守侧不回退(合法 fail 方向)
-        assert contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(k_target=None, k_fallback_available=False,
-                                  k_fallback_resolved=None), ct)
-        # ④ 供给在场而回退解析空集(p1 带语义,band 未传按保守)= 复发形态
-        assert not contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(k_target=None, k_fallback_available=True,
-                                  k_fallback_resolved=frozenset()), ct)
-        assert ct['criteria_contract_violation:shop.k_projection'] == 1
-        # ⑤ P86:p2plus 带空集 + 判据臂来源证据 → 放行(丙臂守息帧)
-        from sr_od.application.currency_war.kernel.cw_intention import (
-            K_FALLBACK_SOURCE_THREE_ARM,
-        )
-        ct2: dict = {}
-        assert contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(k_target=None, k_fallback_available=True,
-                                  k_fallback_resolved=frozenset(),
-                                  k_fallback_band='p2plus',
-                                  k_fallback_source=K_FALLBACK_SOURCE_THREE_ARM),
-            ct2)
-        # ⑥ P86:p2plus 带空集无来源证据 = 复发守卫不松动
-        assert not contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(k_target=None, k_fallback_available=True,
-                                  k_fallback_resolved=frozenset(),
-                                  k_fallback_band='p2plus'), ct2)
-        assert ct2['criteria_contract_violation:shop.k_projection'] == 1
 
     def test_unknown_key_and_predicate_error_fail_closed(self, monkeypatch):
         """fail-closed:未登记键与谓词异常均弃权+计数,不抛异常。"""
@@ -306,108 +225,6 @@ class TestArm1CapSemantics:
                     level=3, deploy_cap=5, xp=(0, 4))
         acts = _decide(st, _session(comp))
         assert not [a for a in acts if isinstance(a, LevelUpShop)]
-
-
-# ===== ③ 接线核验点正反测(shop/entry 消费位)=====
-
-class TestWiringShop:
-
-    def test_ev_buy_abstains_without_target_line(self):
-        """接线正反:K 未成型 ⇒ EV 买面弃权(零 ev_buy 发射)+违例计数。
-
-        注入形态(U_X/T_SEARCH_A 开闸)下前提成立与否是唯一差:
-        target_comp=None 时契约层必须拦住候选评估。
-        """
-        comp = _comp()
-        off_line = '不存在于任何线的散件_x'
-        st = _state(gold=60, shop=[_card(off_line, cost=1, star=1)])
-        sess = _session(comp)      # 先证正向:有 K 时契约放行,候选可评估
-        try:
-            provisional.inject('U_X', provisional.CalibValue(
-                value=1.0, injected_form=True))
-            provisional.inject('T_SEARCH_A', provisional.CalibValue(
-                value=1.0, injected_form=True))
-            _decide(st, sess)
-            # 线外件是否入选属判据域不在此锁;锁的是契约层零违例
-            assert not [k for k in state_of(sess).cw4_counters
-                        if k.startswith('criteria_contract_violation')]
-            # 反向:同一店面,target_comp=None(目标线未成型)
-            sess2 = _session(None)
-            acts2 = _decide(_state(gold=60,
-                                   shop=[_card(off_line, cost=1, star=1)]),
-                            sess2)
-            assert not [a for a in acts2 if isinstance(a, BuyCard)
-                        and a.reason == 'ev_buy']
-            assert state_of(sess2).cw4_counters.get(
-                'criteria_contract_violation:buy.ev_buy_candidates', 0) >= 1
-        finally:
-            provisional.reset('U_X')
-            provisional.reset('T_SEARCH_A')
-
-    def test_gap_wave_zero_contract_violations(self):
-        """接线正向(K 空窗回退修复批):空窗帧(target_comp=None)
-        k_projection 前提放行,零违例计数(契约层零误伤锚)。"""
-        from sr_od.application.currency_war.kernel import cw_intention
-        from sr_od.application.currency_war.kernel.cw_intention import (
-            IntentionState,
-        )
-        st = _state(gold=30, bench=[_bc('注册表外散件Z', slot=1)])
-        sess = _session(None)
-        state_of(sess).v3_intention = IntentionState()
-        _decide(st, sess)
-        assert state_of(sess).cw4_counters.get(
-            'criteria_contract_violation:shop.k_projection', 0) == 0
-        assert state_of(sess).cw4_counters.get('shop_k_fallback_p1_gap', 0) >= 1
-        assert cw_intention.p1_gap_window(st)
-
-    def test_normal_wave_zero_contract_violations(self):
-        """零误伤锚:正常决策波(K 成型、金/预留现读)零违例计数。
-
-        前缀全扫覆盖 shop 波全部契约消费位(含 arm1:shop.py 对非抑制
-        帧无条件求值 arm1 前提,原 arm1 点名零违例锚的本测子集,已并入
-        此处;mandate 域点名锚见 TestMandateArm1Wiring 正向测)。"""
-        comp = _comp()
-        m = _members(comp)[0]
-        st = _state(gold=30, shop=[_card(m, cost=3)])
-        sess = _session(comp)
-        acts = _decide(st, sess)
-        assert any(isinstance(a, BuyCard) for a in acts)
-        assert not [k for k in state_of(sess).cw4_counters
-                    if k.startswith('criteria_contract_violation')]
-
-    def test_skeleton_wave_zero_contract_violations(self):
-        """骨架臂波同样零违例计数(entry 侧 funding 通道契约不误伤)。"""
-        from sr_od.application.currency_war.sim.engine_p1 import (
-            sim_decision_registry,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
-        comp = _comp()
-        members = _members(comp)
-
-        class _Obs:
-            boxes = ()
-            tomes = ()
-            spheres = ()
-            event_overlay = ''
-            bench_chars = ()
-            deployed_chars = ()
-            deploy_vacancy = 0
-            state = _state(gold=5, bench=[_bc(members[0], slot=1)],
-                           deployed=[])
-            k = None
-
-        class _Turn:
-            pass
-
-        sess = _session(comp)
-        sess.node_type_current = None
-        obs = _Obs()
-        out = entry.emit(obs, _Turn(), sess, type('C', (), {'ev_arm':
-                                                            'skeleton_only'})(),
-                         registry=sim_decision_registry())
-        assert isinstance(out, list)
-        assert not [k for k in state_of(sess).cw4_counters
-                    if k.startswith('criteria_contract_violation')]
 
 
 # ===== ④ 静态守卫:禁绕过 ensure_contract 直调判据(FIX_REVIEW 防线硬化)=====
@@ -608,34 +425,6 @@ class TestNoBypassDirectCalls:
             'def f() -> None:\n    lv9_stop(3)\n', encoding='utf-8')
         offenders = _find_criteria_direct_calls(src, _CRITERIA_SCAN_SUBDIR)
         assert any('裸名直调 lv9_stop' in o for o in offenders), offenders
-
-    def test_guard_catches_basename_whitelist_escape(self, tmp_path):
-        """负测试(盲区②=红):白名单外目录下同名 shop.py(旧守卫按
-        basename 豁免即逃逸)——全限定路径白名单下模块属性直调必须
-        报红。"""
-        src = tmp_path / 'src'
-        subtree = src.joinpath(*_CRITERIA_SCAN_SUBDIR)
-        (subtree / 'somewhere' / 'else').mkdir(parents=True)
-        (subtree / 'somewhere' / 'else' / 'shop.py').write_text(
-            'from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria'
-            ' import levelup\n'
-            'def f() -> None:\n    levelup.lv9_stop(3)\n', encoding='utf-8')
-        offenders = _find_criteria_direct_calls(src, _CRITERIA_SCAN_SUBDIR)
-        assert any('currency_war/somewhere/else/shop.py' in o
-                   for o in offenders), offenders
-
-    def test_guard_allows_fully_qualified_whitelisted_path(self, tmp_path):
-        """正测试:全限定白名单路径(决策/cw4/shop.py 全径)内的判据调用
-        不报(接线消费位豁免按路径精确匹配,basename 逃逸修复的另一
-        半边——不同目录同名文件不再共享豁免)。"""
-        src = tmp_path / 'src'
-        wired = src / 'sr_od/application/currency_war/strategies/impl/mandate_v1'
-        wired.mkdir(parents=True)
-        (wired / 'shop.py').write_text(
-            'from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria'
-            ' import levelup\n'
-            'def f() -> None:\n    levelup.lv9_stop(3)\n', encoding='utf-8')
-        assert _find_criteria_direct_calls(src, _CRITERIA_SCAN_SUBDIR) == []
 
 
 # ===== ⑤ R1 接线正反测(mandate arm1 消费位;FIX_REVIEW 场景 A 复验)=====
