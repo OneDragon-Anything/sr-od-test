@@ -4,7 +4,10 @@
 proof 判据位 + 三先例非 criteria 消费位,漏登记=红);②三先例前提
 谓词正反测(前提成立放行/不成立弃权+``criteria_contract_violation``
 分键计数);③接线核验点正反测(shop/entry 消费位,前提不成立 ⇒ 判据
-本帧弃权零发射 + 计数;正常帧零违例计数=契约层零误伤锚)。
+本帧弃权零发射 + 计数;正常帧零违例计数=契约层零误伤锚);④arm1 板
+满 cap 口径谓词数学 + M3「板未满不发射」decide 链反面锁(2026-09-09
+合并批自 test_cw_zero_refresh 迁入;cap 口径直调主载体在本类,跨角色
+阵营共享腿由 test_cw_prep_flag_machine 的 S3 纯函数翻转锁分辖)。
 """
 from __future__ import annotations
 
@@ -17,6 +20,7 @@ import pytest
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     BuyCard,
+    LevelUpShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
@@ -259,6 +263,49 @@ class TestPrecedentPredicates:
         assert not contracts.ensure_contract(
             ('sell', 'sell_for_interest'), contracts.ContractCtx(), ct)
         assert ct['criteria_contract_violation:sell.sell_for_interest'] == 1
+
+
+# ===== ②b arm1 板满 cap 口径(承 test_cw_zero_refresh 迁入,2026-09-09)=====
+# 原壳「病灶2」零刷新事故修复的谓词数学正反锁 + M3 decide 链反面锁;
+# 壳退役后按 D27 指认落位本文件(cap 喂入契约 TestMandateArm1Wiring 与
+# 前提谓词 TestPrecedentPredicates::precedent3 均已在此,同主题归并)。
+
+class TestArm1CapSemantics:
+    """arm1_existence 板满 cap 口径(谓词数学直调;cap 口径直调主载体——
+    跨角色阵营共享腿由 test_cw_prep_flag_machine 的
+    TestS3NoVariable::test_m3_predicate_flips_with_input 分辖)。"""
+
+    def test_board_full_at_level_cap_triggers(self):
+        """板满=当前 cap(等级驱动)而非固定槽表 10:deployed==cap(5)
+        + bench 等待件共享阵营/流派 ⇒ 真(修复点:旧语义此帧恒 False)。"""
+        board = [_bc('爻光') for _ in range(5)]
+        bench = [_bc('爻光')]
+        assert predicates.arm1_existence(
+            5, [b.char_id for b in bench],
+            [d.char_id for d in board], deploy_cap=5) is True
+
+    def test_board_not_full_below_cap_no_trigger(self):
+        """板未满(deployed < cap)⇒ 假——升级前应先部署(M1 优先)。"""
+        board = [_bc('爻光') for _ in range(3)]
+        bench = [_bc('爻光')]
+        assert predicates.arm1_existence(
+            3, [b.char_id for b in bench],
+            [d.char_id for d in board], deploy_cap=5) is False
+
+    def test_m3_silent_when_board_below_cap(self):
+        """反面:板未满(deployed=3/cap=5)同 bench/金 ⇒ M3 不发射
+        (升级价值以「有等待件上不了场」为前提)。
+
+        decide 链级唯一反面锁:shop_line 侧反面为「板满+整批不够」与
+        「等级帽」两形(亲读证实无板未满帧),本锁辖「谓词假 ⇒ 零
+        LevelUpShop 发射」的消费位接线。"""
+        comp = _comp()
+        deployed = [_bc('爻光', slot=i + 1) for i in range(3)]
+        bench = [_bc('爻光', slot=1)]
+        st = _state(gold=8, bench=bench, deployed=deployed,
+                    level=3, deploy_cap=5, xp=(0, 4))
+        acts = _decide(st, _session(comp))
+        assert not [a for a in acts if isinstance(a, LevelUpShop)]
 
 
 # ===== ③ 接线核验点正反测(shop/entry 消费位)=====

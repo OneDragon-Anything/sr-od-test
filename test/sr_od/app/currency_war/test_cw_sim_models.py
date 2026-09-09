@@ -3,6 +3,10 @@
 - sim.checks 检查器锁族:ledger/pool/runtime 逐局检查器双向锁 +
   corpus/calib 锚登记披露 + runner 批量集登记门(检查器判据出处
   见各生产函数 docstring);
+- 标定口径与注册表登记门(2026-09-09 合并批承三小件并入,断言
+  逐条原样迁移):rung 统计口径(原 test_cw_goldrich_rungstat,
+  ADR-0305 件2)、boss 税标量墓碑(原 test_cw_boss_tax_p75_by_plane)、
+  连胜奖励表守卫(原 test_cw_streak_gold_table,r305);
 - cw_evolution 引擎补完通道(ADR-0371):补完事务发射/保护序/
   末窗豁免/冻结轮/希儿系单卡/bench 溢出/观测行格式;
 - simulate_p1 补给两步链:decide_supply 在 sim 引擎内的接线行为
@@ -17,6 +21,8 @@ from __future__ import annotations
 import json
 import random
 import re
+from dataclasses import fields as dataclass_fields
+from types import SimpleNamespace
 
 import pytest
 
@@ -30,7 +36,12 @@ from sr_od.application.currency_war.kernel import (
 from sr_od.application.currency_war.kernel import (
     cw_evolution as cw_evolution_mod,
 )
-from sr_od.application.currency_war.kernel.cw_battle_calib import _board_factions_of
+from sr_od.application.currency_war.kernel.cw_battle_calib import (
+    _battles_before_engines,
+    _board_factions_of,
+    _first_engines_round,
+)
+from sr_od.application.currency_war.kernel.cw_economy import streak_gold
 from sr_od.application.currency_war.kernel.cw_evolution import (
     EvolutionState,
     evolution_step,
@@ -722,6 +733,94 @@ def test_sim_p1_key_hit_metric_pipe() -> None:
     assert 0 <= a.p1_key_hit_hits <= a.p1_key_hit_total
     assert (a.p1_key_hit_hits, a.p1_key_hit_total) == (
         b.p1_key_hit_hits, b.p1_key_hit_total), '同 seed 度量不可复现'
+
+
+# ==================== 标定口径与注册表登记门(承三小件) ====================
+# (2026-09-09 合并批:原 test_cw_goldrich_rungstat / test_cw_boss_tax_p75_by_plane /
+#  test_cw_streak_gold_table 按同性质并入——三件均为口径登记门/注册表级守卫,
+#  与本文件既有 corpus/calib 锚登记段同性质;断言逐条原样迁移,零砍。)
+
+# --- rung 统计口径(原 test_cw_goldrich_rungstat;ADR-0305 件2)---
+
+
+def _fake_calib_res() -> SimpleNamespace:
+    """最小 ledger/hp_events 载体:r1 仙舟1 → r2 仙舟3 → r4 双体系。"""
+    return SimpleNamespace(
+        ledger=[
+            {'round_num': 1,
+             'state': {'board_factions': {'仙舟': 1}, 'deployed': []}},
+            {'round_num': 2,
+             'state': {'board_factions': {'仙舟': 3}, 'deployed': []}},
+            {'round_num': 3,
+             'state': {'board_factions': {'仙舟': 3}, 'deployed': []}},
+            {'round_num': 4, 'state': {
+                'board_factions': {'仙舟': 3, '列车同行': 2},
+                'deployed': []}},
+        ],
+        hp_events=[
+            (1, 'battle', -5, False),
+            (2, 'reward', 2, False),
+            (3, 'encounter', -4, False),
+            (4, 'boss', -8, False),
+        ],
+    )
+
+
+def test_battles_before_e2_metric_semantics() -> None:
+    """e2 首达 r4(仙舟3+列车2):此前战斗类 = r1 battle + r3 encounter
+    = 2(r2 reward 不计;r4 当轮不计,< 严格)。
+
+    锁定对象 = cw_battle_calib._battles_before_engines 的 rung 统计口径:
+    首达 e2 前的战斗类结算计数,奖励不计;未达 e2 → None——0304
+    「30 vs 10」未定义口径误读的防再犯。(件1 金充裕买偏置已被 A/B
+    定谳否决,其锁随 ADR-0305 增补清理节删除,清理后语义守卫见
+    test_cw_dead_arm_cleanup_locks.py。)"""
+    res = _fake_calib_res()
+    assert _first_engines_round(res, 2) == 4
+    assert _battles_before_engines(res, 2) == 2
+
+
+def test_battles_before_e2_none_when_never() -> None:
+    """未达 e2 → None(与 _first_engines_round 同 None 语义;
+    批报告均值只对达成局算)。"""
+    res = _fake_calib_res()
+    assert _first_engines_round(res, 3) is None
+    assert _battles_before_engines(res, 3) is None
+
+
+# --- boss 税标量墓碑(原 test_cw_boss_tax_p75_by_plane)---
+
+
+def test_boss_tax_scalar_not_resurrected() -> None:
+    """无消费者标量不复活锁:boss_tax_p75 已随旧方案清退批删除
+    (清查报告 OLD_MIX_AUDIT §1.3);by_plane 是唯一取值口。
+
+    值面由 test_cw_adr0293_calibration 面册逐值辖死(登记门:
+    _EXPECTED_FIELDS['boss_tax_p75_by_plane'],增删改键值=红且点名
+    字段);by_plane 结构预埋锚保留因锚组 boss_tax_anchor_group 仍是
+    sim 标定接口。"""
+    from dataclasses import fields
+
+    from sr_od.application.currency_war.kernel.cw_registry import (
+        DEFAULT_REGISTRY,
+        DecisionV2Registry,
+    )
+    names = {f.name for f in fields(DecisionV2Registry)}
+    assert 'boss_tax_p75' not in names
+    assert not hasattr(DEFAULT_REGISTRY, 'boss_tax_p75')
+
+
+# --- 连胜奖励表守卫(原 test_cw_streak_gold_table;r305 域)---
+
+
+def test_streak_gold_table_constant() -> None:
+    """ADR-0262:STREAK_GOLD_TABLE 常量与函数逐点一致守卫(防表与实现漂移)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        STREAK_GOLD_TABLE,
+    )
+    for streak in range(0, len(STREAK_GOLD_TABLE) + 3):
+        expected = STREAK_GOLD_TABLE[min(streak, len(STREAK_GOLD_TABLE) - 1)]
+        assert streak_gold(streak) == expected, f'streak={streak}'
 
 
 # ==================== cw_coarse_battle 战斗粗模型 ====================

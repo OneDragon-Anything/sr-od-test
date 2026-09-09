@@ -5,7 +5,14 @@
   复演必红 + 注入/豁免两通道放行 + 豁免批文非空纪律;
 - 症4 强制消费:活性守卫豁免快照落档 + prereg manifest 形态;
 - 症7:归因域/活性证据辖域限定随守卫产物输出;
-- ab_judge v6 自测复跑(判读器迁移)。
+- ab_judge v6 自测复跑(判读器迁移);
+- 动作族活性下限守卫:饥饿 raise / 升级扫描(救低频活 / 耗尽仍 raise)/
+  V_GAP 注入解豁免(2026-09-09 合并批自 test_cw_zero_refresh 迁入,
+  原壳退役后本文件为其唯一载体;原壳其余簇去向:r2_budget 纯数锁 →
+  test_cw_vgap_frame_horizon,arm1 谓词数学/M3 反面锁 → test_cw_contracts);
+- v6 检查单类条款行序锁 + mark 行证据硬化锁(同上迁入);
+- 真引擎 levelup 族活性端到端烟测(同上迁入,原 TestZeroRefreshFixSim
+  Acceptance,全仓唯一真跑 mandate_v1 的动作族活性断言)。
 """
 from __future__ import annotations
 
@@ -17,12 +24,17 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import prov
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     LevelUpShop,
+    RefreshShop,
     SellBench,
     ShopCard,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
 
 def _fake_sim(actions_by_seed):
-    """造假 simulate_p1(与 test_cw_zero_refresh 同款桩)。"""
+    """造假 simulate_p1(活性守卫/检查单测试共用的进程内桩;动作对象用
+    真实类,计数按 type 名)。"""
 
     from types import SimpleNamespace
 
@@ -217,6 +229,167 @@ class TestRow17IncidentGuard:
         assert out == {'shop_ev_u_unavailable': 3, 'm6_overflow_strand': 1,
                        'shop_r1_ev_unavailable': 7,
                        'shop_r1_account_over_vgap': 2}
+
+
+class TestActionFamilyLivenessGate:
+    """动作族活性下限守卫(原 test_cw_zero_refresh::TestLivenessGate
+    迁入,2026-09-09 合并批;断言零改动,_V6State 承担原文件逐测手写的
+    注册表清场与 provisional 复位)。豁免正形(V_GAP=None fail-closed
+    落档放行)见上方 test_liveness_exemptions_filed_and_consumed。"""
+
+    def test_starved_family_raises(self, monkeypatch):
+        """反例:卖族零发射且无 fail-closed 豁免 ⇒ raise 疑似结构性饥饿。"""
+        with _V6State() as m:
+            monkeypatch.setattr(
+                m, 'simulate_p1',
+                _fake_sim({0: [RefreshShop(cost=2), BuyCard(
+                    card=ShopCard(x=1, name='x', cost=1), reason='t'),
+                    LevelUpShop(cost=4)]}))
+            with pytest.raises(RuntimeError, match='结构性饥饿'):
+                m.action_family_liveness_gate(n=1, seed_base=0)
+
+    def test_escalation_rescues_rare_alive_family(self, monkeypatch):
+        """升级扫描(FIX_REVIEW 复审返工批):首段 n 局零发射的族在追加
+        seed 段活过 ⇒ 守卫过(区分「低频活」与「真死路」;sell 族
+        4/30 局实证形态)+ escalated_runs 披露。"""
+        with _V6State() as m:
+            acts = [BuyCard(card=ShopCard(x=1, name='x', cost=1),
+                            reason='t'),
+                    LevelUpShop(cost=4), RefreshShop(cost=2)]
+            by_seed = dict.fromkeys(range(10), acts)
+            # 升级段第 3 局(seed=12)出现 sell——低频活
+            by_seed[12] = acts + [SellBench(bench_idx=0, income=1,
+                                            expect='x')]
+            monkeypatch.setattr(m, 'simulate_p1', _fake_sim(by_seed))
+            report = m.action_family_liveness_gate(n=10, seed_base=0)
+            assert report['ok']
+            for arm in report['arms'].values():
+                assert not arm['starved']
+            assert any(arm['escalated_runs'] > 0
+                       for arm in report['arms'].values())
+
+    def test_escalation_exhausted_still_raises(self, monkeypatch):
+        """升级段耗尽仍零发射 ⇒ 照 raise(升级只救低频活,不掩盖死路)。"""
+        with _V6State() as m:
+            monkeypatch.setattr(m, 'LIVENESS_ESCALATION_N', 3)
+            acts = [BuyCard(card=ShopCard(x=1, name='x', cost=1),
+                            reason='t'),
+                    LevelUpShop(cost=4), RefreshShop(cost=2)]
+            monkeypatch.setattr(
+                m, 'simulate_p1',
+                _fake_sim(dict.fromkeys(range(13), acts)))
+            with pytest.raises(RuntimeError, match='结构性饥饿'):
+                m.action_family_liveness_gate(n=10, seed_base=0)
+
+    def test_opened_slot_removes_exemption(self, monkeypatch):
+        """V_GAP 注入后豁免失效:刷新族零发射 ⇒ raise(开闸路径存在
+        却零发射=饥饿,豁免只覆盖 fail-closed 降级态)。"""
+        with _V6State() as m:
+            provisional.inject('V_GAP', provisional.CalibValue(
+                value=10.0, injected_form=True))
+            acts = [BuyCard(card=ShopCard(x=1, name='x', cost=1),
+                            reason='t'),
+                    LevelUpShop(cost=4), SellBench(bench_idx=0, income=1,
+                                                   expect='x')]
+            monkeypatch.setattr(
+                m, 'simulate_p1',
+                _fake_sim(dict.fromkeys(range(10), acts)))
+            with pytest.raises(RuntimeError, match='结构性饥饿'):
+                m.action_family_liveness_gate(n=10, seed_base=0)
+
+
+class TestV6ChecklistRows:
+    """v6 检查单行锁(原 test_cw_zero_refresh::TestV6Checklist 迁入,
+    2026-09-09 合并批;清场改走 _V6State,断言零改动)。"""
+
+    def test_class_clause_rows_do_not_block(self):
+        """类条款行(R94-6:行 3/8/9/12 等):批事件未到期 ⇒ 「未到期」
+        不阻塞;到期且序合 ⇒ 已落地。"""
+        with _V6State() as m:
+            rows = {r['row']: r for r in m.v6_checklist()}
+            assert rows[3]['status'].startswith('未到期')
+            m.record_batch_event('theta_calib')
+            m.record_batch_event('p_open')
+            rows = {r['row']: r for r in m.v6_checklist()}
+            assert rows[3]['status'] == '已落地'
+
+    def test_mark_row_requires_nonempty_evidence(self):
+        """v6 mark 行硬化(FIX_REVIEW_20260903 场景 B 复验):evidence
+        缺/空/纯空白 ⇒ record_v6_landing raise;绕过入口直写空证据 ⇒
+        checklist 行红(不因「申报过」即绿)。"""
+        with _V6State() as m:
+            for bad in ('', '   '):
+                with pytest.raises(ValueError, match='evidence'):
+                    m.record_v6_landing(4, bad)
+            # 入口拒绝后未登记
+            rows = {r['row']: r for r in m.v6_checklist()}
+            assert rows[4]['status'] == '未落地'
+            # 绕过入口直写空证据(对抗形态):checklist 独立复验=行红
+            m._V6_LANDINGS[4] = '   '
+            rows = {r['row']: r for r in m.v6_checklist()}
+            assert rows[4]['status'] == '未落地'
+            del m._V6_LANDINGS[4]   # 清对抗直写,走正规入口
+            # 非空证据:绿 + 证据文本随行输出(可审计)
+            m.record_v6_landing(4, '锚批/判读批拆半预注册,档=X')
+            rows = {r['row']: r for r in m.v6_checklist()}
+            assert rows[4]['status'] == '已落地'
+            assert rows[4]['evidence'].startswith('锚批/判读批')
+
+
+class TestRealEngineLivenessSmoke:
+    """真引擎 sim 验收(原 test_cw_zero_refresh::
+    TestZeroRefreshFixSimAcceptance 迁入,2026-09-09 合并批;断言零改动)。
+
+    levelup 族活性端到端烟测(2026-09-08 实测 call≈0.35s,远低于 2s
+    桶线,快速层回收;引擎后续演进若实测超 2s 再按纪律复测入桶)。"""
+
+    SIM_KW = {'pool': 'snapshot', 'planes': 1, 'use_refresh': True,
+              'invest': False, 'p2_combat': None, 'synthesis_chain': False,
+              'equip_wear_effect': 0.0}
+
+    @staticmethod
+    def _run(seed: int):
+        import logging
+
+        from sr_od.application.currency_war.sim.engine_p1 import (
+            sim_decision_registry,
+            simulate_p1,
+        )
+
+        logging.disable(logging.CRITICAL)
+        try:
+            return simulate_p1(
+                seed, strategy=MandateV1Strategy(
+                    registry=sim_decision_registry()),
+                **TestRealEngineLivenessSmoke.SIM_KW)
+        finally:
+            logging.disable(logging.NOTSET)
+
+    @staticmethod
+    def _counts(res):
+        # ledger 行的 actions 可能是动作对象或已序列化 dict(键 __type__)
+        c: dict[str, int] = {}
+        for row in (res.ledger or []):
+            for a in (row.get('actions') or []):
+                t = (a.get('__type__') if isinstance(a, dict)
+                     else type(a).__name__)
+                c[t] = c.get(t, 0) + 1
+        return c
+
+    def test_none_period_levelups_alive(self):
+        """真引擎端到端烟测(全仓唯一真跑 mandate_v1 的动作族活性
+        断言):V_GAP=None 缺省态真跑 5 seed,levelup 族合计发射
+        >0(病灶2 arm1 修复的整合面回归锁;frame 级发射锁归
+        test_cw_shop_line)。刷新面按 20 号稿/ADR-0516 已合法化
+        (必花域内 r2 硬闸承载),原「验收①零漂移」断言随设计退役,
+        不再断言零刷新。"""
+        provisional.reset('V_GAP')
+        lv_total = 0
+        for seed in range(5):
+            res = self._run(seed)
+            lv_total += sum(v for k, v in self._counts(res).items()
+                            if k in ('LevelUp', 'LevelUpShop'))
+        assert lv_total > 0
 
 
 class TestV6LandingPersistence:

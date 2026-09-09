@@ -8,7 +8,13 @@
   g* 之上的溢余);
 - 门形态(行为面):金在息线及以下关门;大溢余 + 可追缺件开门发射
   RefreshShop;深缺口小溢余关门 + ``shop_r1_account_over_budget`` 分键;
-  合格集空(成员全 2★)关门 + ``shop_r1_no_chaseable_member`` 分键。
+  合格集空(成员全 2★)关门 + ``shop_r1_no_chaseable_member`` 分键;
+- r2 预算门纯数锁(2026-09-09 合并批自 test_cw_zero_refresh 迁入;
+  P40 R2 原语义,ADR-0516 保留声明,全仓唯一直调载体——原壳退役后
+  本文件为其唯一载体;原壳其余簇去向:arm1 谓词数学/M3 反面锁 →
+  test_cw_contracts,活性守卫/v6 检查单/真引擎烟测 → test_cw_v6_cleanup;
+  r1 门行为面其余断言面早已归 test_cw_must_spend_zone/
+  test_cw_refresh_ledger 分辖)。
 """
 from __future__ import annotations
 
@@ -69,6 +75,28 @@ class TestCriterionAffordability:
             assert crit_refresh.r1_commitment_account(ledger, 0) \
                 == (False, 'account_over_budget')
             assert crit_refresh.r1_commitment_account(ledger, -5)[0] is False
+
+
+class TestR2BudgetGate:
+    """r2 预算门纯数锁(P40 R2 原语义,ADR-0516 保留声明;原
+    test_cw_zero_refresh 同名类迁入,断言零改动,2026-09-09 合并批)。
+
+    r1 门行为面(判据本体/门形态/必花域切分线/档案帧)归本文件
+    TestCriterionAffordability/TestR1AffordabilityGate 与
+    test_cw_must_spend_zone、test_cw_refresh_ledger(亲读证实同断言面
+    覆盖);contracts 侧另有 r2_budget 前提谓词契约锁
+    (TestPrecedentPredicates,辖「输入缺席弃权」非数值语义)。"""
+
+    def test_gold_minus_reserve_gates_refresh_cost(self):
+        """r2 预算门两向:金−预留 ≥ 刷价才批(全仓唯一直调锁)。
+        门形态端到端面归 test_cw_vgap_frame_horizon(gold=40/50 关门)
+        与 test_cw_must_spend_zone(域内可负担性硬闸仍辖)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+            refresh as crit_refresh,
+        )
+
+        assert not crit_refresh.r2_budget(1, 51, 2)
+        assert crit_refresh.r2_budget(60, 51, 2)
 
 
 class TestR1AffordabilityGate:

@@ -14,10 +14,18 @@ T-120 退役批分配,后续批回填编号。
 - **确定性锁** = 同 seed + 同剧本两次全程驱动,轨迹逐位相等(重放契约
   的假局半边;红 = 随机流串扰或环境规则引入不可复现分支)。
 - **账本位锁** = sink 的 ledger/tracked 随动与游戏真值对得上:金账
-  (期初−花销+卖入=期末,单一源 = 状态机 gold)与动作账自洽。红 =
-  sink 账本位漂移(批 1 新引入面的在环检测器)。
+  严格恒等式(任意轮 期末金 = 期初金 − spend_executed + 卖入,卖入
+  双源同判:ledger 账 == 状态机金账差分)与动作账自洽。红 = sink
+  账本位漂移(批 1 新引入面的在环检测器)。(2026-09-09 合并批:原
+  同文件 test_sink_ledger_matches_game_truth 单侧不等式弱锁按
+  DEBTS.md D65 处置删除——本文件现由金恒等式强锁为正主,原
+  test_cw_fidelity_baseline.py 整件并入承载。)
 - **journal 写端隔离锁** = 假局 journal 行落假局根、live 根零新行
   (T-129/T-130 混流注记的机器可判形)。
+- **保真基线锁**(原 test_cw_fidelity_baseline 批 1 验收③,2026-09-09
+  并入):种子批三面——金恒等式(见账本位锁)/轨迹域(hp ∈
+  [0, HP_UPPER_BOUND]、金非负、开局 = OPENING_HP_BASE 先验)/
+  对拍件形状(bands 统计件完整产出,离线 runner 消费的同一 helper)。
 """
 from __future__ import annotations
 
@@ -25,8 +33,16 @@ import json
 from pathlib import Path
 
 import pytest
-from fixtures.cw_fake_game.fake_match import FakeMatch
-from fixtures.cw_harness import fake_p1_run
+from fixtures.cw_fake_game.fake_match import (
+    DEFAULT_OPENING_HP,
+    FakeMatch,
+    HP_UPPER_BOUND,
+)
+from fixtures.cw_harness import (
+    FakeP1Result,
+    bands_from_trajectories,
+    fake_p1_run,
+)
 
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import enter_running_state, reset_running_state
@@ -172,37 +188,94 @@ def test_fake_p1_same_seed_bitwise_replay(
         'decisions 行(动作身份序列)两局不等(同 seed 身份盲区破缺)')
 
 
-def test_sink_ledger_matches_game_truth(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path) -> None:
-    """账本位锁:sink 随动的动作账与状态机金账自洽——全程任意轮,
-    期末金 = 期初金 − spend_executed + 卖入(sell_income 与状态机金账
-    同源,ExecResult.income=执行点真值)。红 = sink 账本位与游戏真值
-    分叉(双账对账的假环境形态)。"""
+# (2026-09-09 合并批:原 test_sink_ledger_matches_game_truth 按 DEBTS.md
+#  D65 处置整测删除——单侧不等式 `_delta <= spent + 1`(+1 容差、不读
+#  ledger 账、仅终局 gold≥0)是下方 test_fidelity_baseline_conservation_
+#  domains_bands 面①双源严格恒等式的真子集(簇V 批逐对亲读两处断言面
+#  证实),强锁为正主,期间无双留覆盖缺口。)
+
+
+#: 保真基线批种子(原 test_cw_fidelity_baseline 迁入):显式固定保确定性,
+#: 测试内 n = 守恒锁成立的最小值(纪律 12):3 seed × 5 节点已覆盖四类
+#: 节点与胜负两态;保真度批 n≥40 的全量规格归离线 runner(sim-design
+#: §4.2 复测规格),不进测试网。
+_SEEDS: tuple[int, ...] = (11, 23, 57)
+
+
+def _run_fidelity_batch(test_context: SrTestContext,
+                        monkeypatch: pytest.MonkeyPatch,
+                        tmp_path: Path) -> list[FakeP1Result]:
+    """种子批驱动(同一 fixture 会话内共享 ctx;逐局隔离档案根)。"""
+    results: list[FakeP1Result] = []
     enter_running_state(test_context)
     try:
-        with fake_p1_run(test_context, monkeypatch, tmp_path, _SEED,
-                         node_sequence=_SCRIPT, initial_gold=30) as run:
-            result = run.run_p1()
-            match = run.match
-            for r in sorted(result.rounds):
-                row = result.rounds[r]
-                spent = row['spend_executed']
-                # 卖入 = sink income 累计;期末金真值 = 状态机。
-                # 本轮净额 = 期末金 − 期初金 + 花销账(若轮内无收入事件)
-                # ——商店访问期内金变 = −花销 + 卖入,故:
-                # spend_executed − 卖入 == 期初金 − 期末金
-                # 卖入从状态机口径取:sell 场景下 spend−(期初−期末) = 卖入
-                _delta = row['gold_open'] - row['gold_close']
-                assert spent >= 0
-                assert _delta <= spent + 1, (
-                    f'r{r} 金账失配:期初 {row["gold_open"]} → 期末 '
-                    f'{row["gold_close"]},花销账 {spent}(卖入之外'
-                    '金不得凭空减少)')
-            # 状态机真值终检:全程金非负(拒绝面/守卫面正常工作时恒成立)
-            assert match.state.gold >= 0
+        for i, seed in enumerate(_SEEDS):
+            with fake_p1_run(test_context, monkeypatch, tmp_path, seed,
+                             node_sequence=_SCRIPT,
+                             initial_gold=30,
+                             archive_dir_name=f'fidelity_{seed}_{i}') as run:
+                results.append(run.run_p1())
     finally:
         reset_running_state(test_context, test_context.cw_match)
+    return results
+
+
+def test_fidelity_baseline_conservation_domains_bands(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path) -> None:
+    """保真基线单批三面(原 test_cw_fidelity_baseline 整件并入,批 1
+    验收③):①金恒等式(卖入双源同判,本文件账本位锁的正主);②轨迹
+    域与开局先验;③对拍件(bands)形状。各面判据与红时语义见文件头。
+
+    出处 = T-120 方案 v2(``.debug/temp/currency_war/t120_sim_redesign/
+    方案.md``,**易失产物**)§5-5「环境保真度 = 新 sim 唯一质量指标」;
+    分工申报随迁:假局 vs 实机近期局的分布带对比 = 离线 runner(批报告
+    类、不入 git),不进测试网——实机档案是本地易失产物,读它当断言锚
+    违测试纪律 19;本测只锁注册表/常量可推导的守恒面(纪律 9:期望值
+    单一源现算)。种子批共享同一种子集,与上文确定性锁(验收①)同值域,
+    逐测各跑一遍 = 同值重算,按纪律 11 收为一批。"""
+    batch = _run_fidelity_batch(test_context, monkeypatch, tmp_path)
+    # —— ①金恒等式:任意轮 期末金 = 期初金 − spend_executed + 卖入 ——
+    # 卖入双源同判:ledger 账(sink 落 BuyCardsOutcome.total_sell_income,
+    # 来源 = ExecResult.income 执行点真值)必须等于状态机金账差分
+    # (spend − (期初 − 期末))——两源不一致 = sink 账本位与游戏真值分叉。
+    for res in batch:
+        for r in sorted(res.rounds):
+            row = res.rounds[r]
+            open_gold = row['gold_open']
+            close_gold = row['gold_close']
+            spent = row['spend_executed']
+            if open_gold is None:
+                continue
+            sold_by_ledger = row['total_sell_income']
+            sold_by_truth = spent - (open_gold - close_gold)
+            assert sold_by_truth >= 0, (
+                f'seed={res.seed} r{r}:金凭空减少(期初 {open_gold} → '
+                f'期末 {close_gold},花销账 {spent})')
+            assert sold_by_ledger == sold_by_truth, (
+                f'seed={res.seed} r{r}:卖入双源分叉(ledger='
+                f'{sold_by_ledger},状态机差分={sold_by_truth})')
+            assert close_gold >= 0
+        # —— ②轨迹域:hp ∈ [0, HP_UPPER_BOUND];金轨迹恒非负;
+        # 首轮结算前 hp = 开局先验(初值表,非真读——语义 = 环境初值)。
+        for hp in res.hp_trajectory:
+            assert 0 <= hp <= HP_UPPER_BOUND
+        assert all(g >= 0 for g in res.gold_trajectory)
+        assert res.rounds[1]['settlement'] is not None
+        first = res.rounds[1]['settlement']
+        assert first.hp_after == max(0, DEFAULT_OPENING_HP + first.delta)
+    # —— ③对拍件形状:逐轮金/hp 的 (中位, p90) 带对种子批完整产出——
+    # 离线 runner 消费的同一统计 helper(单一源 = fixtures.cw_harness.
+    # bands_from_trajectories)。
+    bands = bands_from_trajectories(
+        [res.trajectory() for res in batch])
+    assert set(bands) == set(range(1, len(_SCRIPT) + 1))
+    for band in bands.values():
+        assert set(band) == {'gold', 'hp'}
+        for metric in ('gold', 'hp'):
+            med, p90 = band[metric]
+            assert med is not None and p90 is not None
+            assert med <= p90
 
 
 def test_fake_match_rules_streak_and_income() -> None:
