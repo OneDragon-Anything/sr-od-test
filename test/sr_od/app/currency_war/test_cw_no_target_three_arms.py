@@ -13,11 +13,9 @@
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
@@ -25,7 +23,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     get_comp,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
-    K_FALLBACK_SOURCE_THREE_ARM,
     IntentionState,
     arm_a_live_direction,
     char_declaration_index,
@@ -678,9 +675,11 @@ class TestRetirementFaces:
         root = Path(cw_intention.__file__).parents[2]
         hits: list[str] = []
         for py in root.rglob('*.py'):
+            text = py.read_text(encoding='utf-8', errors='replace')
+            if 'FALLBACK_COMP_NAME' not in text:
+                continue   # 预滤:AST 标识符命中必含裸串,免全树逐文件解析(纪律 15)
             try:
-                tree = ast.parse(py.read_text(encoding='utf-8',
-                                              errors='replace'))
+                tree = ast.parse(text)
             except SyntaxError:
                 continue
             for node in ast.walk(tree):
@@ -766,35 +765,14 @@ class TestArmACorner:
         assert ct.get('shop_no_target_arm_a_dead_defer') == 1
 
 
-# ===== 证明批 §6 增量 5:契约带维度(p2plus 合法空来源证据)=====
+# ===== 证明批 §6 增量 5:契约面单一源守卫 ============================
+# 增量 5 读端格(p2plus 合法空 + 三臂来源证据放行 / 无来源计违例 / p1 带
+# 空集违例)= test_cw4_contracts.test_k_projection_domain_covered_
+# derivable ⑤⑥(2026-09-09 瘦身批逐格亲读等价;p1_gap 显式带格与该测④
+# 同判违支,差异落在无判别力分支)——单一承载于契约主题位,此处不重复。
 
 
-class TestContractBandDimension:
-
-    def test_p2plus_legal_empty_requires_source(self):
-        """增量 5(证明批 §4.6-4 例⑤⑥):p2plus 带空集仅在三臂来源证据
-        在场时放行;无来源空 = 违例弃权+计数(复发形态守卫不松动)。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-            contracts,
-        )
-        ct: dict = {}
-        ctx = dict(k_target=None, k_fallback_available=True,
-                   k_fallback_resolved=frozenset(), k_fallback_band='p2plus')
-        assert contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(k_fallback_source=K_FALLBACK_SOURCE_THREE_ARM,
-                                  **ctx), ct)
-        assert not contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(**ctx), ct)
-        assert ct['criteria_contract_violation:shop.k_projection'] == 1
-        # p1 带构造性非空,空集仍违例(带维度非对称)
-        ct2: dict = {}
-        assert not contracts.ensure_contract(
-            ('shop', 'k_projection'),
-            contracts.ContractCtx(k_target=None, k_fallback_available=True,
-                                  k_fallback_resolved=frozenset(),
-                                  k_fallback_band='p1_gap'), ct2)
+class TestContractSourceToken:
 
     def test_source_token_single_source(self):
         """来源证据 token 单一源:契约面消费与 kernel 产出同值(禁第二

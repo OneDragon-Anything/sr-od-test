@@ -17,9 +17,11 @@ docs/develop/currency_war/decisions/0611-t165-round-mutex-unified-latch.md):
 
 红证形态:各锁 docstring 自带「拔除对应构件后该形态复发」的机制描述,
 与 ADR-0611 §5 六条变异一一对应(变异 1→L1 硬面族 / 变异 2→读源完备
-性族 / 变异 3→fail-closed 族 / 变异 4→L2 全臂族 / 变异 5→豁免分键族 /
-变异 6→A4 抛错族;红对全列 = 判读留痕档,持久结论以 ADR-0611 §5 为准),
-不另设重复红证函数。
+性族 / 变异 3→fail-closed 族 / 变异 4→L2 全臂族 / 变异 5→豁免分键族
+[宿主 = test_cw_t3_stall_protect.Test7CheckerExemption 读端五格 +
+test_cw_suspect_review.C4 复核两格;本文件 L3 只留写端值域与 D1 复盘
+独家面,见 TestL3KeyingWriteEnd 类注] / 变异 6→A4 抛错族;红对全列 =
+判读留痕档,持久结论以 ADR-0611 §5 为准),不另设重复红证函数。
 """
 from __future__ import annotations
 
@@ -42,10 +44,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     SellBench as ShopSellBench,
-)
-from sr_od.application.currency_war.sim.checks.ledger import (
-    check_no_same_round_buy_sell,
-    check_oscillation_xp_cap,
 )
 from sr_od.application.currency_war.sim.checks.suspects import (
     d1_same_round_pair_review,
@@ -315,10 +313,11 @@ class TestL2AllArmsSoldFace:
             monkey.undo()
 
     def test_launch_map_exhaustive_over_emission_sites(self):
-        """15 键穷举断言(ADR-0611 §3-4 后半;臂计数对现值校正):
-        shop 域全部 _emit_buy 发射位的 reason 字面量 ∈ LAUNCH_CAUSE_
-        BY_ARM(15 键,死金臂的显式传因三分 ⊆ LAUNCH_CAUSES)——映射
-        表 = 臂全集的地基由本源扫描锁钉死;新臂未映射 = 发射位红。
+        """发射位穷举扫描(ADR-0611 §3-4 后半的源扫描半边):shop 域
+        全部 _emit_buy 发射位的 reason 字面量 ∈ LAUNCH_CAUSE_BY_ARM
+        ——新臂发射未映射 = 发射位红。映射闭集/键数/值域登记门 =
+        test_cw_sell_window_launch.test_launch_cause_mapping_closed_
+        contract(单一承载,2026-09-09 瘦身批亲读等价后本锁不重复)。
         P86 重推(T-177):+hub_option_buy(乙臂枢纽期权,hold 类,
         出处 = p86-proof-batch.md §3.2/§4.2;映射行随批登记)。"""
         src = (_PKG / 'shop.py').read_text(encoding='utf-8')
@@ -327,22 +326,11 @@ class TestL2AllArmsSoldFace:
         for call in calls:
             reasons |= set(re.findall(r"'([a-z_0-9:]+)'", call))
         reasons.discard('card')   # 防御:位置实参变量名不入字面量集
-        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) == {
-            'm2_line_member', 'm2_locked_member', 'm2_stockpile',
-            'm2_merge_completion', 'dominance_buy', 'm6_stockpile',
-            'press_buy_deployable', 'ev_buy', 'core_single_card_buy',
-            'core_single_card_buy:unlocked', 'transition_component_buy',
-            'dead_gold_press_buy', 'fuel_filler_stall',
-            't3_unlocked_hemostat', 'hub_option_buy',
-        }, '映射表漂移:先对照 ADR-0585 §2 与 ADR-0611 §2 重推,禁机械跟绿'
-        assert len(sell_gate.LAUNCH_CAUSE_BY_ARM) == 15
         assert reasons <= set(sell_gate.LAUNCH_CAUSE_BY_ARM), \
             f'发射位存在未映射 reason: {sorted(reasons - set(sell_gate.LAUNCH_CAUSE_BY_ARM))}'
-        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM.values()) \
-            <= sell_gate.LAUNCH_CAUSES
 
 
-# ===== L3:转化类豁免分键(结构化证明键 convert_reason) ==============
+# ===== L3:写端分键值域 + D1 复盘独家面(读端格归主题位) =============
 
 
 def _pair_row(sell_extra: dict) -> dict:
@@ -357,43 +345,18 @@ def _pair_row(sell_extra: dict) -> dict:
                      **sell_extra)]}
 
 
-class TestL3ConvertKeying:
-    """检查器按键分工判定(ADR-0611 §3-5;迁移期不并读零双源;变异 5
-    的红证宿主:变异 convert_reason 恒 '' 则本组豁免格全红 = T3 放行
-    被计违例)。"""
+class TestL3KeyingWriteEnd:
+    """按键分工的写端与复盘独家面(ADR-0611 §3-5)。读端豁免格由主题
+    位单一承载(2026-09-09 瘦身批逐格亲读等价后收拢,禁双点维护):
+    键豁免 / 缺省零容忍 / 孤儿 reason / 错误载体不豁免 / XP 同边 =
+    test_cw_t3_stall_protect.Test7CheckerExemption 五格;复核失配两
+    载体(convert/孤儿)与错误载体零复核支 = test_cw_suspect_review
+    .C4a/C4b。本类只留全仓无第二载体的两面(见下)。"""
 
-    def test_convert_reason_exempt_and_review_preserved(self):
-        """转化类豁免读 convert_reason:三类放行键豁免;线成员复核语义
-        原样平移(失配 = 可疑项 + 判违,键缺省/名册不可解析豁免照旧,
-        T-153 迁移语义不变)。"""
-        label, _member = _locked_target()
-        for r in sorted(_CONVERT_KEYS):
-            row = _pair_row({'convert_reason': r})
-            assert check_no_same_round_buy_sell([row]) == [], \
-                f'{r}:结构化分键未豁免 = L3 转化类放行被计违例(缺口 E)'
-        # 复核失配形态原样(锁语义与 test_cw_suspect_review.C4 同族):
-        bad = _pair_row({'convert_reason': 'funding_hold_liquidated',
-                         'dec_sell_in_line': False})
-        bad['target_comp'] = label
-        v = check_no_same_round_buy_sell([bad])
-        assert len(v) == 2 and '可疑项(转化分键失配)' in v[0]
-
-    def test_zero_tolerance_kept_on_empty_key(self):
-        """缺省 '' 恒不豁免(0 容忍保持)——变异 5 的红证格:分键恒空
-        时 T3 放行卖出被计违例。"""
-        out = check_no_same_round_buy_sell([_pair_row({})])
-        assert len(out) == 1 and '同轮买后卖' in out[0]
-
-    def test_key_division_no_dual_source(self):
-        """按键分工零双源(C3):转化类值出现在 reason = 不豁免(错误
-        载体,迁移期旧通道值不再放大豁免面);发射位 convert_reason 填
-        充值域 = 两类放行键(写端值域锁;line_switch_collapse 留
-        reason,其「双重身份」成员在检查器键集保留 = 单一源不拆,分工
-        由「每键一分支、不并读」承载,写端值域由本锁承托)。"""
-        wrong_field = _pair_row(
-            {'sell_reason': 'fuel_victim_protect_demoted'})
-        assert check_no_same_round_buy_sell([wrong_field]), \
-            'reason 旧通道值放大豁免面 = 分工被架空'
+    def test_emission_fill_value_domain(self):
+        """发射位 convert_reason 填充值域 = 两类放行键(写端值域锁;
+        line_switch_collapse 留 reason,其「双重身份」成员在检查器键集
+        保留 = 单一源不拆,分工由「每键一分支、不并读」承载)。"""
         src = (_PKG / 'shop.py').read_text(encoding='utf-8')
         fills = set(re.findall(r"convert_reason=(?:\(\s*)?'([a-z_]+)'", src))
         assert fills <= set(_CONVERT_KEYS), \
@@ -401,19 +364,6 @@ class TestL3ConvertKeying:
         assert fills == {'fuel_victim_protect_demoted',
                          'funding_support_stall_convert',
                          'funding_hold_liquidated'}
-
-    def test_orphan_branch_reads_reason(self):
-        """孤儿豁免读 reason(C3 分工另一侧):line_switch_collapse 留
-        reason 的路径保持(ADR-0591 §4;名册不可解析帧豁免照旧)。"""
-        assert check_no_same_round_buy_sell(
-            [_pair_row({'sell_reason': 'line_switch_collapse'})]) == []
-
-    def test_oscillation_xp_cap_same_edge(self):
-        """check_oscillation_xp_cap 与主检查同边(同键分工)。"""
-        ok_row = _pair_row({'convert_reason': 'fuel_victim_protect_demoted'})
-        assert check_oscillation_xp_cap([ok_row]) == []
-        bad_row = _pair_row({})
-        assert len(check_oscillation_xp_cap([bad_row])) == 1
 
     def test_d1_suspect_review_same_division(self):
         """复盘面 D1 与检查器同构:convert_reason 自报失配产可疑条目;
