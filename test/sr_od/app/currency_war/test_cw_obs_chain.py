@@ -338,15 +338,9 @@ def test_board_pairs_badge_beats_tier_chain(test_context) -> None:
         f'持续伤害 next_tier 应=注册表 >3 的最小档 4,实得 {pairs.get("持续伤害")}'
 
 
-def test_board_pairs_badge_frame_second_sample(test_context) -> None:
-    """低估修复实帧锁(3db91784,不同局):持续伤害=3、狼狩=2(视觉真值)。"""
-    screen = _load('boardfix_underestim_3db91784.png')
-    pairs, honest = _board_pairs(test_context, screen)
-    assert honest, '徽标帧应 honest'
-    assert pairs.get('持续伤害', (None, None))[0] == 3, \
-        f'持续伤害应读徽标 3,实得 {pairs.get("持续伤害")}'
-    assert pairs.get('狼狩', (None, None))[0] == 2, \
-        f'狼狩应读 2,实得 {pairs.get("狼狩")}'
+# (墓碑·硬砍批:test_board_pairs_badge_frame_second_sample(3db91784 第二样本)
+#  删——badge 胜档位链不变量由上一测(f1173e2d,断言面含 next_tier 超集)辖定,
+#  跨局第二样本属同事实重复。)
 
 
 def test_rebuild_cap_zero_blocks_phantom() -> None:
@@ -372,11 +366,8 @@ def test_source_deployed_align_uses_paddle_not_board_sum() -> None:
     src = inspect.getsource(obs_mod.read_game_state)
     assert '_board_n' not in src, \
         'read_game_state 不得再保留 board 羁绊和对齐目标 _board_n(ADR-0417)'
-    # ADR-0462 阶段化后:paddle X 对齐基准的肯定半(赋值字面形状锁)已按
-    # 源码锁瘦身删除;否定半(_board_n 禁残留)+ 下方两断言继续守住语义。
-    assert 'resolve_paddle_pair' in src, \
-        '阶段 gate 路径应使用 paddle 合并单读(ADR-0462)'
-    assert 'tracked_vs_paddle' in src, '对齐留证 source 应指向 paddle 基准'
+    # (墓碑·硬砍批:ADR-0462 阶段化后的肯定式在场断言 'resolve_paddle_pair'/
+    #  'tracked_vs_paddle' 已删——在场烟雾;阶段 gate 行为由实帧回归测辖定。)
 
 
 # (2026-09-03 瘦身批:test_source_board_arbitration_prefers_badge_with_overlay_guard
@@ -687,7 +678,6 @@ from sr_od.application.currency_war.obs.cw_faction_obs import (
     compare_factions,
     parse_panel_tokens,
     read_displayed_factions,
-    report_faction_reconcile,
 )
 from test.conftest import SrTestContext as _w545_faction_reconcile_SrTestContext
 
@@ -829,22 +819,9 @@ def test_read_displayed_factions_real_fixtures(
         assert reading.truncated == (filename in _TRUNCATED), filename
 
 
-def test_report_faction_reconcile_forwards_mismatches_only(
-        monkeypatch: _w545_faction_reconcile_pytest.MonkeyPatch) -> None:
-    """台账转发锁:逐 mismatch 落 record_defect(kind=faction_display_mismatch)。
-    分包期 4:obs 落账走 kernel.cw_telemetry_exit 出口钩子位,桩点随迁。"""
-    from sr_od.application.currency_war.kernel import cw_telemetry_exit
-    calls: list[tuple[tuple, dict]] = []
-    monkeypatch.setattr(cw_telemetry_exit, '_record_defect',
-                        lambda *a, **k: calls.append((a, k)))
-    r = compare_factions({'仙舟': 3, '能量': 5}, [('仙舟', 3), ('能量', 4)])
-    n = report_faction_reconcile(r, round_num=3)
-    assert n == 1 and len(calls) == 1
-    args, kwargs = calls[0]
-    assert kwargs['surface'] == 'board'
-    assert kwargs['kind'] == 'faction_display_mismatch'
-    assert kwargs['expected'] == '5' and kwargs['observed'] == '4'
-    assert kwargs['note'] == 'faction=能量' and kwargs['round_num'] == 3
+# (墓碑·硬砍批:test_report_faction_reconcile_forwards_mismatches_only 删——
+#  与下方 w547 行为锁 test_wire_mismatch_records_defect 同事实两锁(直调 vs
+#  director 路径),择一保留超集(director 路径,断言面含 refs/plane/round)。)
 
 
 # ==================== w547_faction_wire ====================
@@ -1035,8 +1012,6 @@ def test_wire_end_to_end_fixture(test_context: _w547_faction_wire_SrTestContext,
 
 # ==================== w552_xp_reconcile ====================
 
-import json
-from pathlib import Path as _w552_xp_reconcile_Path
 from types import SimpleNamespace as _w552_xp_reconcile_SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_prep_actions import PrepObservation
@@ -1056,10 +1031,7 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     StrategySession as _w552_xp_reconcile_StrategySession,
 )
-from sr_od.application.currency_war.telemetry import defects, recorder
-from sr_od.application.currency_war.telemetry import (
-    state as _w552_xp_reconcile_cw_telemetry,
-)
+from sr_od.application.currency_war.telemetry import defects
 
 # ===== ① 推进算子真值表(单一源语义 = ADR-0129;门槛表 XP_TO_NEXT_LEVEL)=====
 
@@ -1230,65 +1202,16 @@ def test_parse_buy_clicks():
     assert _xp_parse_buy_clicks('') == 0
 
 
-# ===== ③ 接线源码锁(静态结构,防重构断链/改口径)=====
-
-def test_w552_wiring_locks():
-    """①意图推进在 execute 返回后且仅 progressed 分支;②对账在 heavy
-    定型帧观察之后(buy_expect 消费点同区域);③锚定前不评+轮界重锚。
-
-    (2026-09-09 按纪律 8 拆解+消费 DEBTS D34:expect_src 四条常量/
-    形态在场断言删——台账 surface/kind/reader_source 由
-    test_xp_defect_row_shape 真落盘行辖,解析形态由 test_parse_buy_
-    clicks 辖;cw_state 推进算子两条「def xp_*_in state_src」肯定式
-    在场锁删——行为面由本文件 test_xp_apply_clicks_* 四测 +
-    test_xp_clicks_to_level_truth_table 及 test_cw_state 门槛梯全辖,
-    在场断言零增量判别力(rule 8 实现形状锁)。)"""
-    src = _w552_xp_reconcile_Path(
-        'src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py'
-    ).read_text(encoding='utf-8')
-    # W971 P3b 拆内环:XP 推账两通道随单轮 run(LevelUp 在执行器分支;
-    # 买牌单元在 OpenShop 编排分支),对账消费点在 _v2_post_frame_accounting
-    lv_at = src.index('if progressed and isinstance(action, LevelUp):')
-    assert src.index('self._xp_apply_levelup()') > lv_at
-    buy_apply_at = src.index('self._xp_apply_buy_clicks(detail)')
-    assert buy_apply_at > src.index('if isinstance(action, OpenShop):')
-    obs_at = src.index('self._reconcile_xp_expect(obs)')
-    # W591:pending_buy_expect 升 _w552_xp_reconcile_StrategySession 正式字段,消费端由
-    # getattr 兜底改直接字段读写(语义不变,机制被取代——见
-    # test_cw_buy_expect.test_w536_wiring_locks 改锁依据)
-    consume_at = src.index('_pending_buy = exec_state_of(session).pending_buy_expect')
-    assert consume_at < obs_at                      # heavy 定型帧之后
-    # 对账在 anchor 之前不评(锚定前纯推算无起点)
-    rec_at = src.index('def _reconcile_xp_expect')
-    rec_body = src[rec_at:src.index('def _session')]
-    assert 'not led.anchored' in rec_body
-    assert 'led.round_key != key' in rec_body       # 轮界重锚在位
+# ===== ③ 接线源码锁 =====
+# (墓碑·硬砍批:test_w552_wiring_locks 删——源码语句顺序/守卫在场形状锁:
+#  锚定前不评、轮界重锚两面由 test_ledger_* 行为测辖;'not led.anchored'/
+#  'led.round_key != key' 在场断言与其重复;语句 order 断言零行为判别力。)
 
 
-# ===== ④ 台账行形态锁(写端真实落盘形态)=====
-
-def test_xp_defect_row_shape(tmp_path: _w552_xp_reconcile_Path, monkeypatch):
-    """defect_ledger.jsonl 行形态:surface='xp'/kind='xp_expect_mismatch'。"""
-    monkeypatch.setattr(_w552_xp_reconcile_cw_telemetry, '_RECORDER',
-                        recorder.TelemetryRecorder(enabled=True,
-                                                       replay_dir=tmp_path))
-    monkeypatch.setattr(_w552_xp_reconcile_cw_telemetry, '_CURRENT_RUN_ID', 'rt')
-    monkeypatch.setattr(_w552_xp_reconcile_cw_telemetry, '_defect_seen', {})
-    monkeypatch.setattr(_w552_xp_reconcile_cw_telemetry, '_defect_seen_run', '')
-    defects.record_defect(
-        'xp', 'xp_expect_mismatch',
-        expected='lv8 xp 10/72(账本;events=+buy×2击)',
-        observed='lv8 xp 6/72',
-        plane=2, round_num=5, gap_large=True,
-        reader_source='xp_expect_reconcile')
-    rows = [ln for ln in
-            (tmp_path / 'defect_ledger.jsonl').read_text(encoding='utf-8')
-            .splitlines() if ln.strip()]
-    assert len(rows) == 1
-    row = json.loads(rows[0])
-    assert row['surface'] == 'xp'
-    assert row['kind'] == 'xp_expect_mismatch'
-    assert row['reader_source'] == 'xp_expect_reconcile'
+# ===== ④ 台账行形态锁 =====
+# (墓碑·硬砍批:test_xp_defect_row_shape 删——defect_ledger.jsonl 落盘行
+#  逐字段锁(纯遥测写端形状);台账调用边界字段面由 test_ledger_mismatch_
+#  lands_defect_once 的 record_defect kwargs 捕获辖定。)
 
 
 
@@ -1375,27 +1298,9 @@ class TestCompareMergePreview:
         assert r.suspect_slots == []
         assert [row.detected for row in r.rows] == [None, None]
 
-    def test_our_true_detected_false_is_suspect(self) -> None:
-        """单向罚则唯一对象:我方 True 而识别无星 → our_suspect。"""
-        r = compare_merge_preview({3: True}, {3: False})
-        assert r.rows[0].verdict == 'our_suspect'
-        assert r.suspect_slots == [3]
-
-    def test_game_extra_counted_not_penalized(self) -> None:
-        """识别 True 而我方 False → game_extra(留证不判罚,不出 suspect)。"""
-        r = compare_merge_preview({1: False}, {1: True})
-        assert r.rows[0].verdict == 'game_extra'
-        assert r.suspect_slots == []
-
-    def test_match_and_key_union(self) -> None:
-        """同键相等 = match;键集 = 两侧并集,缺键按 False 兜。"""
-        r = compare_merge_preview({0: False, 2: True}, {0: False, 4: False})
-        assert [row.slot for row in r.rows] == [0, 2, 4]
-        assert [row.verdict for row in r.rows] == ['match', 'our_suspect', 'match']
-
-    def test_empty_inputs(self) -> None:
-        assert compare_merge_preview({}, {}).rows == []
-        assert compare_merge_preview({}, None).rows == []
+    # (墓碑·硬砍批:our_suspect/game_extra/match/empty 四分支测删——compare_merge_
+    #  preview 虽已接线,但识别端未建 → 生产恒走 pending 支,其余分支为不可达
+    #  预留机制锁;识别端落地时按新语义重写。)
 
 
 # ---------------------------------------------------------------------------

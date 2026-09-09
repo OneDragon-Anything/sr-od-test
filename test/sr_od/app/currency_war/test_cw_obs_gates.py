@@ -633,50 +633,10 @@ def test_read_enemy_difficulty_real_fixture(
             f'{p.name} 难度应读 {expects[p.relative_to(fix_dir).as_posix()]}'
 
 
-# ===== 刷新徽标/连胜 实帧锁(放大两级管线;W577:徽标=利息数值非刷价,ADR-0456) =====
-def test_read_refresh_cost_and_streak_real_fixture(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    """真实备战帧锁:read_shop_refresh_cost / read_streak 放大管线读数。
-
-    W577 语义翻转(ADR-0456):「文本-刷新金币数」rect 读到的是商店面板
-    「↻ N」徽标,N = min(gold//10,5) = 利息数值,**不是刷价**(实付恒基价
-    REFRESH_COST_BASE=2,多局干净对账定谳)。期望值 0,0,2,3,2 仍是该 rect
-    的正确 OCR 读数——函数保留作旁证,已退出 read_game_state 主链。
-    模型不可用 / fixture 缺失 → skip。
-    """
-    from pathlib import Path
-
-    from one_dragon.base.matcher.ocr.ocr_service import OcrService
-    from one_dragon.utils import cv2_utils
-
-    fix_dir = Path(__file__).resolve().parents[4] / 'screens'
-    expects = {
-        '货币战争-备战/攻略已应用.webp': (0, 1),
-        '货币战争-备战/shop_closed.webp': (0, 0),
-        '货币战争-备战/deployed_2star.webp': (2, None),
-        '货币战争-备战/后排8槽-满级局.webp': (3, 0),
-        '货币战争-备战/shop_closed_lowhp.webp': (2, 0),
-    }
-    frames = [fix_dir / n for n in expects]
-    if not all(p.exists() for p in frames):
-        pytest.skip('fixture 缺失')
-    try:
-        from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
-        matcher = OnnxOcrMatcher()
-        if not matcher.init_model(download_by_github=False, download_by_gitee=True):
-            pytest.skip('OCR 模型不可用')
-    except Exception:
-        pytest.skip('OCR 模型不可用')
-    monkeypatch.setattr(test_context, 'ocr_service', OcrService(ocr_matcher=matcher))
-    for p in frames:
-        img = cv2_utils.read_image(str(p))
-        exp_cost, exp_streak = expects[p.relative_to(fix_dir).as_posix()]
-        got_cost = read_shop_refresh_cost(test_context, img)
-        assert got_cost == exp_cost, f'{p.name} 刷新费应读 {exp_cost},实读 {got_cost}'
-        got_streak = read_streak(test_context, img)
-        if exp_streak is not None:
-            assert got_streak == exp_streak, \
-                f'{p.name} 连胜应读 {exp_streak},实读 {got_streak}'
+# (墓碑·硬砍批:test_read_refresh_cost_and_streak_real_fixture 删——被测函数
+#  read_shop_refresh_cost 已退出 read_game_state 决策主链(ADR-0456,仅旁证),
+#  实帧锁锁的是退役函数的 OCR 读数;退役 tombstone 守卫见
+#  test_shop_refresh_cost_base_price_model_lock。)
 
 
 # ===== W577 刷价基价模型锁(ADR-0456:徽标退役出决策链,state 恒基价) =====
@@ -701,42 +661,9 @@ def test_shop_refresh_cost_base_price_model_lock() -> None:
 
 
 
-# ==================== observe_throttle ====================
-
-import sys
-from pathlib import Path
-
-import numpy as _observe_throttle_np
-
-_REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(_REPO / 'src'))
-
-import sr_od.application.currency_war.kernel.cw_observe as obs_mod  # noqa: E402
-
-
-def test_obs_conflict_shot_throttle(monkeypatch, tmp_path):
-    """节流三态:窗内第二张不存(JSONL 照写)/ 异 verdict 不受影响 / 窗口过后恢复。"""
-    calls: list[str] = []
-    monkeypatch.setattr(obs_mod, 'cw_shot_unique',
-                        lambda img, label: (calls.append(label), f'{label}__x.png')[1])
-    monkeypatch.setattr(obs_mod, '_CONFLICT_JOURNAL', tmp_path / 'conf.jsonl')
-    obs_mod._conflict_shot_ts.clear()
-    fake = _observe_throttle_np.zeros((4, 4, 3), dtype=_observe_throttle_np.uint8)
-    # 第一张:存
-    obs_mod.obs_conflict('deployed_align', 4, 6, fake, verdict='补齐-tracked少计')
-    assert len(calls) == 1
-    # 同 key 窗内:不存(JSONL 仍追加)
-    obs_mod.obs_conflict('deployed_align', 4, 6, fake, verdict='补齐-tracked少计')
-    assert len(calls) == 1, '同 (field,verdict) 300s 内节流'
-    lines = (tmp_path / 'conf.jsonl').read_text(encoding='utf-8').splitlines()
-    assert len(lines) == 2, 'JSONL 证据行不受节流(统计价值保留)'
-    # 异 verdict:不受影响
-    obs_mod.obs_conflict('deployed_align', 4, 6, fake, verdict='留证-双源不等')
-    assert len(calls) == 2, '不同 verdict = 不同慢性态,照存'
-    # 窗口过后(monotonic 回拨):恢复存
-    obs_mod._conflict_shot_ts[('deployed_align', '补齐-tracked少计')] = -1e9
-    obs_mod.obs_conflict('deployed_align', 4, 6, fake, verdict='补齐-tracked少计')
-    assert len(calls) == 3, '窗口过后恢复存'
+# (墓碑·硬砍批:observe_throttle 段(test_obs_conflict_shot_throttle)删——
+#  obs_conflict 截图节流属观测留证卫生,无决策面、无已登记事故;JSONL 证据行
+#  不节流语义随段退役,恢复点见 git 历史。)
 
 
 # ==================== identity_obs ====================
@@ -870,30 +797,9 @@ def test_read_star_2star_all_slots_multifixture(test_context: _identity_obs_SrTe
         _identity_obs_pytest.skip('multi-fixture 未采(2★ 全槽覆盖用)')
 
 
-def test_read_star_1star_back_bench_slots(test_context: _identity_obs_SrTestContext) -> None:
-    """read_star 1★:后排-2/3/4/5/6 + 备战-9(1★ 单星易 case,补全 1★ 全槽覆盖)。
-
-    1★ 单颗星 val 0.6+ 稳读 1(从未误判)。前排 1-4 见 ``test_read_star_front_row_1star``,
-    备战 1-8 见 ``test_read_star_all_rows_2star_full``,后排-1 见 ``test_read_star_all_rows_2star_full``。
-    后排-2/4:把 2★ 挪走(deployed→deployed 到空槽)+ 1★(三月七/花火)挪进 —— 无损 shuffle(CW swap/
-    sell 拖不生效,但 deployed→deployed 到空槽可行)。至此 1★ 全 19 槽覆盖。
-    """
-    cases: list[tuple[str, list[tuple[str, list[int]]]]] = [
-        ('deployed_2star_3rows',        [('后排-3', [823, 600, 953, 739])]),
-        ('deployed_1star_back5_bench9', [('后排-5', [1106, 600, 1241, 739]), ('备战栏-9', [1379, 844, 1493, 980])]),
-        ('deployed_1star_back6',        [('后排-6', [1245, 600, 1386, 739])]),
-        ('deployed_1star_back24',       [('后排-2', [679, 600, 814, 739]), ('后排-4', [967, 600, 1097, 739])]),
-    ]
-    ran = False
-    for fx, slots in cases:
-        if not test_context.has_screen('货币战争-备战', fx):
-            continue
-        ran = True
-        screen = test_context.load_screen('货币战争-备战', fx)
-        for label, (x1, y1, x2, y2) in slots:
-            assert read_star(screen[y1:y2, x1:x2]) == 1, f'{fx} {label} 应为 1★'
-    if not ran:
-        _identity_obs_pytest.skip('1★ back/bench fixture 未采')
+# (墓碑·硬砍批:test_read_star_1star_back_bench_slots 删——1★ 单星 val 0.6+
+#  稳读 1(自供「从未误判」)的低风险覆盖补支;2★ 全槽难点覆盖由
+#  2star_positions / all_rows_2star_full / bench9_edge / edge_slots 辖定。)
 
 
 def test_read_star_all_rows_2star_full(test_context: _identity_obs_SrTestContext) -> None:
@@ -973,8 +879,8 @@ def test_read_star_edge_slots_2star(test_context: _identity_obs_SrTestContext) -
 
 # ==================== board_by_row ====================
 
-from sr_od.application.currency_war.kernel.cw_board_by_row import BoardByRow, board_by_row, board_by_row_of
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_board_by_row import BoardByRow, board_by_row
+from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
 def _char(name: str, slot: int = 0, row: str = 'back',
@@ -1069,11 +975,8 @@ def test_empty_board_gives_empty_aggregate():
     assert board_by_row(None) == BoardByRow()    # None 防御 = 空聚合
 
 
-def test_board_by_row_of_state_convenience():
-    st = GameState()
-    st.deployed = [_char('希儿', slot=1, row='front')]
-    assert board_by_row_of(st).count('贝洛伯格') == 1
-    assert board_by_row_of(st).count('量子同频', 'front') == 1
+# (墓碑·硬砍批:test_board_by_row_of_state_convenience 删——state_of 透传
+#  包装测,聚合语义由上方各测辖定。)
 
 
 # ==================== w534_board_center_gate ====================

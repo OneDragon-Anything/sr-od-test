@@ -1,15 +1,16 @@
-"""决策帧截图留证钩子锁(decision_frame_hooks)。
+"""决策帧截图留证钩子锁(decision_frame_hooks;硬砍批后残存)。
 
-锁四件:①输出文件名格式(ts 前缀可对齐 decisions.jsonl 行 ts);
-②滚动删除逻辑(每挂点保留最近 KEEP_PER_TAG 帧,旧的被删;PNG 与
-观察证据 JSON 两分支都辖);③挂点调用存在(源码级:cw_op 两挂点内联
+残存锁面:①滚动删除逻辑(每挂点保留最近 KEEP_PER_TAG 帧,旧的被删;PNG 与
+观察证据 JSON 两分支都辖);②挂点调用存在(源码级:cw_op 两挂点内联
 字面 + cw_loop 经 dispatch 包装统一落帧、调用点声明 frame_tag,
-ADR-0584);④观察证据 JSON 分支的滚动治理(suffix 路由)。
-"""
-import re
-from pathlib import Path
+ADR-0584;烟雾容差背书见 test_hook_call_sites_exist docstring)。
 
+砍除面墓碑(硬砍批):test_filename_format 删——文件名格式锁(ts 前缀可对齐
+decisions 行 ts),纯命名格式约束;滚动删除语义由残存 2 测辖定(旧文件构造
+即依赖 ts 字典序=时间序,格式破坏会连带滚动测试红)。
+"""
 import numpy as np
+from pathlib import Path
 import pytest
 
 from sr_od.application.currency_war.operations import decision_frame_hooks as dfh
@@ -32,14 +33,6 @@ def frame_env(tmp_path, monkeypatch):
 
 def _img() -> np.ndarray:
     return np.zeros((4, 4, 3), dtype=np.uint8)
-
-
-def test_filename_format(frame_env):
-    """锁文件名格式:<yyyymmdd_HHMMSS>_<mmm>_<tag>.png(ts 与 decisions 行对齐)。"""
-    fn = dfh.save_decision_frame(_FakeOp(), 'shop_entry', _img())
-    assert fn is not None
-    assert re.fullmatch(r'\d{8}_\d{6}_\d{3}_shop_entry\.png', fn), fn
-    assert (frame_env / fn).is_file()
 
 
 def test_rolling_delete_keeps_recent(frame_env):

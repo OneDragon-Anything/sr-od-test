@@ -1,19 +1,16 @@
-"""锁线断头 P2 定向通道·观测件分键锁(设计出处 = 锁线断头 P2 定向通道
-设计稿 v2 §6 分键清单;原稿存于 .debug 易失目录且已清理,持久指针回填
-挂 cw_test_slim_audit/DEBTS.md D72——分键语义以本文件各测 docstring
-自持描述与 kernel/cw_intention.LOCK_PATH_OBS_KEY_PREFIXES 登记面为准)。
+"""锁线断头 P2 定向通道·观测件锁(硬砍批后残存;分键语义以
+kernel/cw_intention.LOCK_PATH_OBS_KEY_PREFIXES 登记面与各测 docstring 为准)。
 
-锁三类事:
-1. 分键正确性——G5 weakplane_exempt_eval(+豁免判据分支)/ G6 缓锁剔除 +
-   neardeath_direction_obs_* / G7 移交帧与候选空帧 / G8 promote_candidate
-   非空率,各门触发场景构造,逐键断言;
-2. 缺省零漂移——session=None / 无 cw4_counters 容器时行为逐位不变
-   (IntentionState 深比较相等);
-3. 「只观测零行为」守卫锁——观测代码不改变任何判定结果(带/不带计数
-   session 的终态逐位相等),promote_candidates 纯函数不突变输入。
+残存判据(硬砍批三保留条):① promote_candidates 派生公式(决策逻辑,锁的
+是候选推导行为非计数);② p1_pair_frozen_obs 快照生命周期(G8 门的决策输入);
+③ 零行为守卫(观测分键不得改变状态机终态)+ 键前缀注册门(schema/注册表级
+守卫:一键族一锁)。
 
-纪律:分键禁合并为单一「锁线失败」键(设计稿 §6);锁定率只承归因
-不作目标值(42 跳对照警示:有锁对照批 hp 中位反而 0.0)。
+砍除面墓碑(硬砍批:遥测分键逐键计数锁 = 「遥测键名字符串锁」砍类,计数
+值/键名失守不改变 bot 行为;键域由残存注册门测辖定):
+- G5 fail_thickness 支 / G6 supply_gate_cull + neardeath_direction_obs_* /
+  G7 handoff_frame/cand_empty(+neardeath 版)/ G8 promote_candidate_frame/
+  nonempty 分键 / 锁定率帧计数(intention_frame_p*)。
 """
 from __future__ import annotations
 
@@ -84,25 +81,7 @@ def _bench_char(name: str, slot: int) -> BenchChar:
                      position_pref=ch.position_pref())
 
 
-# ---------- G5:weakplane_exempt_eval(信号曾生成但被弱面剔) ----------
-
-def test_g5_weakplane_cull_fail_thickness_branch(monkeypatch):
-    """DOT队信号在 P2 被弱面剔:eval 计 1;空板厚度 0 < A_min(5.0)→
-    fail 支=厚度不足(「维持零通道」组拼合式输入;设计稿 §6)。"""
-    comp = ci.get_comp('DOT队')
-    assert 2 in comp.weak_planes   # 前提锚:该线自注 P2 弱面
-    monkeypatch.setattr(ci, 'detect_signals',
-                        lambda s: [IntentionSignal(3, 'core_card', 'DOT队',
-                                                   't', 1.0)])
-    sess = _counting_session()
-    out = update_intention(_state(plane=2), IntentionState(), sess, None)
-    ct = state_of(sess).cw4_counters
-    assert ct.get('weakplane_exempt_eval') == 1
-    assert ct.get('weakplane_exempt_eval_fail_thickness') == 1
-    assert 'weakplane_exempt_eval_hit' not in ct
-    assert 'weakplane_exempt_eval_fail_visible' not in ct
-    assert out.phase == 'unlocked' and out.locked_comp == ''   # 行为零变更
-
+# ---------- G5:weakplane_exempt_eval(豁免 fail-closed 守卫;分键计数测已砍) ----------
 
 def test_g5_weakplane_cull_hit_branch(monkeypatch):
     """厚资产 + 核心在手:豁免判据(设计稿 §2.2:厚度 ≥ A_min ∧ 核心
@@ -124,63 +103,9 @@ def test_g5_weakplane_cull_hit_branch(monkeypatch):
     assert out.locked_comp != 'DOT队'
 
 
-# ---------- G6:p2_supply_gate_cull + neardeath_direction_obs_* ----------
+# ---------- G7/G8 之间的分键计数测已砍(墓碑见模块 docstring) ----------
 
-def test_g6_supply_gate_cull_neardeath_and_not(monkeypatch):
-    """信号存活至缓锁门但 G≤ε 被剔:P2 帧计 cull;濒死带(hp=10 →
-    血预算 ⌈10/20.05⌉=1)加计 neardeath_direction_obs_frame/supply_cull;
-    非濒死帧(hp=40)不加计濒死键。"""
-    comp = ci.get_comp('绯英欢愉')
-    assert 2 not in (comp.weak_planes or ())   # 非弱面线:能活到缓锁门
-    monkeypatch.setattr(ci, 'detect_signals',
-                        lambda s: [IntentionSignal(1, 'strategy', comp.name,
-                                                   't', 1.0)])
-    monkeypatch.setattr(ci, 'line_completion_feasibility',
-                        lambda *a, **k: 0.01)
-    for hp, expect_nd in ((10, True), (40, False)):
-        sess = _counting_session()
-        update_intention(_state(plane=2, hp=hp), IntentionState(), sess, None)
-        ct = state_of(sess).cw4_counters
-        assert ct.get('p2_supply_gate_cull') == 1
-        assert ct.get('neardeath_direction_obs_frame') == (1 if expect_nd else None)
-        assert ct.get('neardeath_direction_obs_supply_cull') == (1 if expect_nd else None)
-
-
-# ---------- G7:p2_handoff_frame / p2_handoff_cand_empty ----------
-
-def test_g7_handoff_empty_frame_count(monkeypatch):
-    """unlocked 帧零候选(全线 G≤ε)⇒ handoff_lock 零发射:p2_handoff_
-    frame=1 且 p2_handoff_cand_empty=1;候选非空帧不加 cand_empty。"""
-    monkeypatch.setattr(ci, 'line_completion_feasibility',
-                        lambda *a, **k: 0.0)
-    sess = _counting_session()
-    out = update_intention(_state(plane=2), IntentionState(), sess, None)
-    assert out.phase == 'unlocked'   # 零候选保持 unlocked(既有语义)
-    assert state_of(sess).cw4_counters.get('p2_handoff_frame') == 1
-    assert state_of(sess).cw4_counters.get('p2_handoff_cand_empty') == 1
-    # 对照:候选非空 → 移交重锁,cand_empty 不计(恢复可行 G)
-    monkeypatch.setattr(ci, 'line_completion_feasibility',
-                        lambda *a, **k: 0.5)
-    sess2 = _counting_session()
-    out2 = update_intention(_state(plane=2), IntentionState(), sess2, None)
-    assert out2.phase == 'locked' and out2.last_event.startswith('handoff_lock:')
-    assert state_of(sess2).cw4_counters.get('p2_handoff_frame') == 1
-    assert 'p2_handoff_cand_empty' not in state_of(sess2).cw4_counters
-
-
-def test_g7_neardeath_handoff_empty(monkeypatch):
-    """濒死带移交帧零候选:neardeath_direction_obs_handoff_frame /
-    handoff_empty 各计 1(实际出口去向观测;授权面出辖并案批)。"""
-    monkeypatch.setattr(ci, 'line_completion_feasibility',
-                        lambda *a, **k: 0.0)
-    sess = _counting_session()
-    update_intention(_state(plane=2, hp=10), IntentionState(), sess, None)
-    ct = state_of(sess).cw4_counters
-    assert ct.get('neardeath_direction_obs_handoff_frame') == 1
-    assert ct.get('neardeath_direction_obs_handoff_empty') == 1
-
-
-# ---------- G8:promote_candidates 纯派生 + 非空率分键 ----------
+# ---------- G8:promote_candidates 纯派生(决策逻辑) ----------
 
 def _pair_bond_comp(pair: tuple[str, ...]):
     """pair 体系键交集的首条 v2 线(非弱面;测试定位用派生,不手写线名)。"""
@@ -222,27 +147,6 @@ def test_g8_promote_candidates_pure_derivation(monkeypatch):
     assert _snapshot(ist) == before
 
 
-def test_g8_promote_nonempty_obs_at_handoff(monkeypatch):
-    """移交帧的 G8 分键:冻结对非空 → promote_candidate_frame 计 1;
-    候选非空 → promote_candidate_nonempty 计 1(零行为:移交锁仍走
-    既有候选源,handoff_lock 事件不变)。"""
-    pair = ('仙舟', '列车同行')
-    comp = _pair_bond_comp(pair)
-    monkeypatch.setattr(ci, 'detect_signals', lambda s: [])
-    monkeypatch.setattr(ci, 'line_completion_feasibility',
-                        lambda *a, **k: 0.5)
-    st = _state(plane=2)
-    st.shop = [ShopCard(x=0, name=ci.intention_core(comp), cost=3)]
-    ist = IntentionState()
-    ist.p1_pair_frozen_obs = pair
-    sess = _counting_session()
-    out = update_intention(st, ist, sess, None)
-    ct = state_of(sess).cw4_counters
-    assert ct.get('promote_candidate_frame') == 1
-    assert ct.get('promote_candidate_nonempty') == 1
-    assert out.last_event.startswith('handoff_lock:')   # 发射语义零变更
-
-
 # ---------- p1_pair_frozen_obs 快照生命周期 ----------
 
 def test_frozen_pair_snapshot_lifecycle():
@@ -264,25 +168,6 @@ def test_frozen_pair_snapshot_lifecycle():
     out2 = update_intention(_state(plane=2, round_num=1), out1, None, None)
     assert out2.p1_pair == ()                 # exit_p1 清空(既有语义零变更)
     assert out2.p1_pair_frozen_obs            # 快照保留
-
-
-# ---------- 锁定率帧计数(分母/分子按位面分列) ----------
-
-def test_lock_rate_frame_counters(monkeypatch):
-    """intention_frame_p* = 意向驱动帧数;intention_locked_frame_p* =
-    帧末 phase=='locked' 帧数;按位面分列,跨位面不串。"""
-    monkeypatch.setattr(ci, 'line_completion_feasibility',
-                        lambda *a, **k: 0.5)   # 移交候选可行 → 帧 1 即锁
-    sess = _counting_session()
-    ist = IntentionState()
-    update_intention(_state(plane=2, round_num=1), ist, sess, None)   # 移交帧 → 锁
-    update_intention(_state(plane=2, round_num=2), ist, sess, None)   # 保持锁
-    update_intention(_state(plane=1, round_num=1), IntentionState(), sess, None)
-    ct = state_of(sess).cw4_counters
-    assert ct.get('intention_frame_p2') == 2
-    assert ct.get('intention_locked_frame_p2') == 2
-    assert ct.get('intention_frame_p1') == 1
-    assert 'intention_locked_frame_p1' not in ct   # P1 配方锁帧 locked_comp 恒空
 
 
 # ---------- 缺省零漂移 + 只观测零行为守卫 ----------
