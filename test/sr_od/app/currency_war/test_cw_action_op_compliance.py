@@ -6,7 +6,7 @@
 整改点与锁面:
 - E2/E3(cw_op_equip_all):批内画面漂移闸 break+success → round_fail
   具名状态(STATUS_SCREEN_DRIFTED);哨兵观测保留(stop_reason 串不变,
-  分类域锁仍在 test_cw_equip_wear_semantics)。
+  分类域锁在 test_cw_opening_tool_semantics 的 TestTelemetryDomainKey)。
 - D1(cw_op_deploy):事件 overlay 三锚 success-skip → round_fail
   (STATUS_EVENT_OVERLAY);「op 内 overlay 弹出 = 执行环境失配,重判
   归分发层」;不升 guard_screen(test_cw_popup_dispatch 边界

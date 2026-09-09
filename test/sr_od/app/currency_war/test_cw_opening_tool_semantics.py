@@ -239,6 +239,16 @@ class TestTelemetryDomainKey:
         assert classify_zero_wear_stop_reason(
             CwOpTools.STATUS_PLAN_STALE) == ZERO_WEAR_EXECUTION
 
+    def test_equip_plan_stale_execution_domain(self):
+        """装备计划失效 → execution(词表精确行;写入端常量经 import
+        比对,词表行/写入端任一侧单改字面量即红,防两侧静默漂移;
+        与工具侧锁同形,写入端 = ADR-0601 §3-C1 具名常量)。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
+            CwOpEquipAll,
+        )
+        assert classify_zero_wear_stop_reason(
+            CwOpEquipAll.STATUS_PLAN_STALE) == ZERO_WEAR_EXECUTION
+
 
 # ===== 6. 工具件消费判据(10 号稿 §2.1 收编 + 21 号稿 §3 增量)=====
 

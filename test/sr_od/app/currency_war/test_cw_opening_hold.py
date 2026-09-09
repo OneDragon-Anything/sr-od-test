@@ -9,8 +9,8 @@
 kernel/cw_equip_env.resolve_wear_release;21 号稿落码批(ADR-0531)把
 opening 扣留收窄为逐件判定(classify_item_hold,§2.3)——旧锁「开局帧
 hold 布尔=True」的语义已被取代(帧级布尔只辖 row2 域),按锁的存在性
-纪律改写为 row1 域标记断言;逐件收窄行为由 test_cw_equip_wear_semantics_
-21.py 锁面承接。
+纪律改写为 row1 域标记断言;逐件收窄行为由 test_cw_opening_tool_
+semantics.py 逐件判定锁面(自由件/hold 保留域五条/求值序组)承接。
 """
 from sr_od.application.currency_war.kernel.cw_comps import COMMIT_FRAC
 from sr_od.application.currency_war.kernel.cw_equip_env import (
