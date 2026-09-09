@@ -21,6 +21,7 @@
 """
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 
@@ -156,20 +157,45 @@ def test_line_switch_affordable_window_linkage() -> None:
     assert e_rounds(comp, st, session=_sess_with('买断制')) == e_buyout
 
 
+def _mandate_state_docstring_lines(path: Path) -> set[int]:
+    """mandate_state.py 全部 docstring 的行号集(ast 解析,模块/类/函数级)。
+
+    墓碑扫描的豁免面 = 该文件的退役叙事行本身(docstring/注释)——整文件
+    豁免会让真实代码行(读点/写点)在叙事文件内静默回流不红,故收窄到
+    叙事行(DEBTS D76)。"""
+    tree = ast.parse(path.read_text(encoding='utf-8'))
+    spans: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef,
+                             ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = node.body
+            if (body and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)):
+                spans.update(range(body[0].value.lineno,
+                                   body[0].value.end_lineno + 1))
+    return spans
+
+
 def test_grep_lock_no_cw4_cap_override_in_src() -> None:
     """墓碑 grep 锁:``cw4_cap_override`` 在生产面(src)零代码命中——
     死通道退役(ADR-0598)后任何读点/写点回流即违规(注入通道唯一
     合法形态 = session.active_strategies,锁①③⑤已辖)。豁免 =
-    mandate_state.py(墓碑注与模块迁移账本叙述所在文件,w628 锁豁免
-    定义文件同款先例)+ 注释行。"""
+    mandate_state.py 的 docstring/注释行(墓碑注与模块迁移账本叙述所在
+    文件,w628 锁豁免定义文件同款先例;原整文件豁免已收窄到叙事行,
+    代码行回流即违规)+ 各文件注释行。"""
     pat = re.compile(r'cw4_cap_override')
+    doc_lines = _mandate_state_docstring_lines(
+        _SRC / 'strategies' / 'impl' / 'mandate_v1' / 'mandate_state.py')
     offenders = {}
     for path in _SRC.rglob('*.py'):
-        if path.name == 'mandate_state.py':
-            continue
-        hits = sum(1 for line in
-                   path.read_text(encoding='utf-8').splitlines()
-                   if pat.search(line) and not line.lstrip().startswith('#'))
+        spans = doc_lines if path.name == 'mandate_state.py' else set()
+        hits = sum(1 for no, line in
+                   enumerate(path.read_text(encoding='utf-8').splitlines(),
+                             start=1)
+                   if pat.search(line)
+                   and not line.lstrip().startswith('#')
+                   and no not in spans)
         if hits:
             offenders[str(path.relative_to(_SRC))] = hits
     assert offenders == {}, offenders
