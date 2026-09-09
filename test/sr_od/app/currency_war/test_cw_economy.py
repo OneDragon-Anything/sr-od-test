@@ -1,21 +1,23 @@
-"""CW 经济域测试(#4):金守恒 / budget 门(blood_xp_gate)/ interest+streak
-表锚 / ev_arm 值域(aggregate_economy 分型登记)。
+"""CW 经济域测试(#4):金守恒(单代表)/ budget 拒付(fail-closed 单代表)/
+interest+streak 表锚 / ev_arm 值域(aggregate_economy 分型登记)。
 
-覆盖面:
-- 金守恒:投资收入入账本(invest 键收入行)+ R2 息线下界(刷新通道
-  刷后投影金 ≥ g*+ρ,金钱不蒸发);
-- budget 门:blood_xp_gate 纯函数阈值红证 + hp 不可信帧 fail-closed;
-- interest+streak 表锚:R2 息线 floor 三分支(门过下界 / 贴线拒刷 /
-  cap 参数化表锚)+ economy_score 利息单调 + streak 只计连胜方向
-  (ADR-0128 无连败补偿);
+覆盖面(金钱类按 2026-09-09 编排者裁决收缩:实机结算对账 + sim 段检双层
+已覆盖逐面金钱锁,单位层只留 commit→sim 空窗价值):
+- 金守恒(净守恒单代表):1★ 牌买卖回合 simulate 金总量守恒(净 0 对任意
+  费用成立,注册表改费不红)——红 = 支出面与退金面静默分叉;
+- budget 拒付(1 代表,归 fail-closed):hp 不可信帧 blood_xp_gate 拒;
+- interest+streak 表锚:R2 息线 g*=10×cap 参数化表锚 + economy_score
+  利息单调 + streak 只计连胜方向(ADR-0128 无连败补偿);
 - ev_arm 值域:aggregate_economy 分型登记表逐字段算子期望(值域表)
   + 区分力非零证明锚(篡改登记必分歧,非恒绿护栏);
 - 过继锁:投资注册表 335/83 计数(原 test_cw_investment 唯一承载,
   终局归编 #15 data_registry,重建期暂挂本文件防断链)。
+退役面:投资收入入账本/息线 floor 行为两行/血闸阈值逐点(预算闸族逐面锁
+按裁决不搬,git 可复活)。
 
 来源:economy_typing(mv 主干)/ investment / r2_interest_floor /
 blood_xp_gate 核 / decisions 之 economy 真值两行(2026-09-09 套件重建批
-A,#4)。其余历史锁已退役(git 可复活)。
+A,#4;金钱类收缩随编排者裁决)。其余历史锁已退役(git 可复活)。
 """
 from __future__ import annotations
 
@@ -29,7 +31,6 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
 )
 from sr_od.application.currency_war.kernel import cw_investments as inv
 from sr_od.application.currency_war.kernel.cw_economy import (
-    blood_xp_full_clicks,
     blood_xp_gate,
     blood_xp_gate_for,
     economy_score,
@@ -41,18 +42,12 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     aggregate_economy,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
-    XP_TO_NEXT_LEVEL,
+    BuyCard,
     GameState,
     RefreshShop,
+    SellBench,
     ShopCard,
-)
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
-from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
-from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
-    _r2_card_reserve,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.interest import (
-    saturation_line,
+    simulate,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
@@ -70,7 +65,6 @@ from test.sr_od.app.currency_war._cw_helpers import (
     cw4_session as _session,
 )
 
-_POOL = 'fallback'
 
 
 # ==================== ev_arm 值域:aggregate_economy 分型登记 ====================
@@ -210,15 +204,19 @@ def test_half3_detection_power_proof(patched_registry) -> None:
     assert _reference_aggregate(effects, mutated)['xp_buy_hp_cost'] == 8 != impl
 
 
-# ==================== 金守恒:投资收入入账本(自 test_cw_investment 并入) ====================
+# ==================== 金守恒:净守恒单代表(金钱类按裁决收缩) ====================
 
-def test_gold_per_node_and_instant_gold_apply() -> None:
-    """定期福利(+4 金选卡 / 每节点 +2):账本收入行出现 invest 键。"""
-    prof = SimInvestProfile(picks=((1, 1, '定期福利'),))
-    r = cw_sim.simulate_p1(0, pool=_POOL, invest=prof)
-    rows = [row for row in r.ledger
-            if (row.get('sim') or {}).get('income', {}).get('invest')]
-    assert rows, 'gold_per_node 未进账本收入分解'
+def test_gold_net_conserved_buy_sell_roundtrip() -> None:
+    """净守恒代表:1★ 牌买卖一回合金总量守恒——simulate 花 −cost、退
+    +sell_refund(1★,cost)=cost,净 0(对任意费用成立,注册表改费不红;
+    支出面与退金面经同一事务单一源 cw_state.simulate)。红 = 中间事务
+    静默分叉(花金/退金两套算账走样)。"""
+    s0 = GameState(gold=50)
+    s1 = simulate(s0, BuyCard(ShopCard(x=0, name='三月七', cost=1, star=1)))
+    assert s1.gold < s0.gold, '买入应扣金(花出面缺席)'
+    s2 = simulate(s1, SellBench(bench_idx=0))
+    assert s2.gold == s0.gold, (
+        f'1★ 买卖回合应净守恒,实得 {s0.gold}→{s1.gold}→{s2.gold}')
 
 
 def test_adr0150_base_layer_full() -> None:
@@ -258,13 +256,6 @@ def _state(gold: int, level: int = 3) -> GameState:
 
 class TestR2InterestFloor:
 
-    @staticmethod
-    def _floor(comp, level: int, bench: list) -> int:
-        """帧内 floor = g*(默认局 cap_resolved=5) + ρ(合格集最低费)。"""
-        return saturation_line(5) + _r2_card_reserve(
-            tuple(_members(comp)), bench, [], GameState(
-                gold=0, level=level, round_num=2))
-
     def _frame(self, gold: int):
         """R1 可负担性过账帧(ADR-0516 形式二;旧 V_GAP 注入开闸语义随
         V̄ 链退役):lv6、合格集收缩到单目标成员(其余线成员 2★ 成型
@@ -289,33 +280,11 @@ class TestR2InterestFloor:
         sess.plane_lengths_seen = [9, 5, 7]
         return comp, st, sess
 
-    def test_floor_respected_when_gate_opens(self):
-        """floor 结构锁(帧级,P54 §③):门过帧的刷后投影金 ≥ g*+ρ
-        ——刷新通道永不掉满息档;本帧金=80(R1 总账 ≈19 ≤ 预算 30)
-        ⇒ 发射。"""
-        comp, st, sess = self._frame(80)
-        acts = _decide(st, sess)
-        rs = [a for a in acts if isinstance(a, RefreshShop)]
-        assert rs, '门过帧应发射刷新(健康带下界 >0,P54 §④)'
-        floor = self._floor(comp, 6, st.bench)
-        assert st.gold - rs[0].cost >= floor
-
-    def test_just_below_floor_rejected(self):
-        """贴线拒刷(账本级):金 = g*+ρ(P40 刷窗 n_max=0)⇒ r1/r2 关,
-        不发射刷新——旧值 b_target(0,0,0)=0 使此帧发射
-        (gold≥2 病灶,P53 §④ 申报 1),floor 落码后为判别锁。"""
-        comp = _comp()
-        gold_at_floor = (saturation_line(5)
-                         + _r2_card_reserve(tuple(_members(comp)),
-                                            [], [], _state(0)))
-        _c, st, sess = self._frame(gold_at_floor)
-        acts = _decide(st, sess)
-        assert not [a for a in acts if isinstance(a, RefreshShop)]
-
     def test_cap_resolved_parameterizes_floor(self):
-        """cap 语境锁:g*=10×cap_resolved 随 session 覆写参数化——
-        cap=10(息律投资语境)下金 80 < 100+ρ ⇒ 拒(50 非域常数,
-        dd-026 备选 2「拍常数」禁案的判别锁)。"""
+        """cap 语境锁(息线表锚):g*=10×cap_resolved 随 session 覆写参数
+        化——cap=10(息律投资语境)下金 80 < 100+ρ ⇒ 拒(50 非域常数,
+        dd-026 备选 2「拍常数」禁案的判别锁)。
+        (金钱类收缩:floor 门过下界/贴线拒刷两行按裁决不搬,git 可复活。)"""
         comp, st, sess = self._frame(80)
         sess.active_strategies = ['利息上调']   # ADR-0598 注入面迁移
         acts = _decide(st, sess)
@@ -345,7 +314,8 @@ def test_economy_streak_bonus() -> None:
     )
 
 
-# ==================== budget 门:blood_xp_gate 核(自 test_cw_blood_xp_gate 并入) ====================
+# ==================== budget 拒付单代表(归 fail-closed;自 test_cw_blood_xp_gate 并入) ====================
+# (金钱类收缩:T6 阈值边界逐点红证按裁决不搬,git 可复活。)
 
 
 def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespace:
@@ -354,19 +324,6 @@ def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespa
         active_strategies=list(active or ['奋斗协议']),
         last_state=GameState(**state_kw),
     )
-
-
-def test_blood_xp_gate_threshold() -> None:
-    """T6 阈值边界逐点红证(全量口径帧;ADR-0578):
-    lv3(XP_TO_NEXT_LEVEL[3]=4 → 全量 ⌈4/4⌉=1 击)cost=6:hp=6 → True / hp=5 → False;
-    lv7(need=52 → 全量 13 击):hp=78 → True(78≥78)/ hp=77 → False。
-    红证语义:移除闸 → False 案例放行。"""
-    assert XP_TO_NEXT_LEVEL[3] == 4 and XP_TO_NEXT_LEVEL[7] == 52
-    assert blood_xp_full_clicks(3) == 1 and blood_xp_full_clicks(7) == 13
-    assert blood_xp_gate(6, True, 3, 6) is True    # 6 ≥ 1×6
-    assert blood_xp_gate(5, True, 3, 6) is False   # 5 < 6
-    assert blood_xp_gate(78, True, 7, 6) is True   # 78 ≥ 13×6
-    assert blood_xp_gate(77, True, 7, 6) is False  # 77 < 78
 
 
 def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
