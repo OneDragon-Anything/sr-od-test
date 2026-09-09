@@ -83,8 +83,9 @@ def _row(rn: int = 1, gold: int = 10, bench: list | None = None,
          deployed: list | None = None, cap: int = 4,
          actions: list | None = None, target_comp: str = '',
          sim: dict | None = None, level: int = 3,
-         equipped: list | None = None) -> dict:
-    return {
+         equipped: list | None = None,
+         bf: dict | None = None) -> dict:
+    row = {
         'plane': 1, 'round_num': rn, 'gold': gold, 'hp': 50,
         'target_comp': target_comp,
         'state': {
@@ -103,6 +104,10 @@ def _row(rn: int = 1, gold: int = 10, bench: list | None = None,
             'shop_waves': [], 'merges': 0,
         },
     }
+    if bf is not None:
+        # 成型度面:state.board_factions = 体系计数 dict(_rung_of_row 消费)
+        row['state']['board_factions'] = bf
+    return row
 
 
 # --- 账本不变量类(批⑮/⑰/⑧) --------------------------------------
@@ -755,6 +760,64 @@ def test_shop_cost_conformance_bidirectional() -> None:
     r2 = runtime.check_shop_cost_conformance(
         [[_row(rn=3, level=3, sim=dict(sim))]])
     assert r2['violations'] == 0
+
+
+def test_second_engine_deadline_form_split() -> None:
+    """second_engine_deadline 形态分键锁:「从未出第二引擎」与「第二
+    引擎延迟」两形态各自命中自己的键,互斥且并集完备。
+
+    键语义 = 泛找批报告 F2 的区分定义(报告路径易失产物暂记:
+    .debug/temp/currency_war/findprob_20260910_泛找批_20260910_062008/
+    report.md):never = 首引擎后至局终仍未凑出次引擎(gap=99 哨兵;
+    结构问题形态);delayed = 限期窗(首引擎 F 后 ≤3 轮)过后以
+    有限轮差达成(gap>3 且有限;节奏问题形态)。病灶背景:99 缺省进
+    avg_gap 混合均值,「从未变多」与「延迟变长」在均值上不可分,
+    掩蔽归因——分键即解,avg_gap 旧混合口径零漂移(报告连续性锚,
+    语义变更须先重推本锚而非机械跟绿)。分键为归因观测面,零判定
+    阈值/零策略行为变更。前身注:CUT6 预算批砍过 T-179 期限 miss
+    分键锁(诊断披露工具口径);本锁为形态分键行为锁,合成夹具零
+    sim 运行(预算档 <0.5s)。
+    """
+    e1 = {'仙舟': 3}                  # 一体系达成 = 首引擎(_rung_of_row=1)
+    e2 = {'仙舟': 3, '列车同行': 2}   # 两体系达成 = 次引擎(_rung_of_row=2)
+
+    # 形态一(从未):首引擎后再无次引擎直至局终
+    never = [[_row(rn=rn, bf=e1) for rn in range(1, 10)]]
+    r = runtime.check_second_engine_deadline(never)
+    assert r['never_second_engine'] == 1, r
+    assert r['never_games'] == [0], r
+    assert r['delayed_miss'] == 0 and r['delayed_avg_gap'] is None, r
+    assert r['deadline_miss'] == 1, r
+
+    # 形态二(延迟):限期窗后有限轮差达成(gap=4>3)
+    delayed = [[_row(rn=1, bf=e1), _row(rn=5, bf=e2)]]
+    r2 = runtime.check_second_engine_deadline(delayed)
+    assert r2['delayed_miss'] == 1 and r2['delayed_avg_gap'] == 4.0, r2
+    assert r2['never_second_engine'] == 0 and r2['never_games'] == [], r2
+
+    # 互斥完备:混合批 never+delayed == deadline_miss;finite 均值
+    # 不被 99 缺省稀释(delayed_avg_gap=4.0 ≠ 混合 51.5)
+    mixed = never + delayed
+    r3 = runtime.check_second_engine_deadline(mixed)
+    assert r3['never_second_engine'] + r3['delayed_miss'] \
+        == r3['deadline_miss'] == 2, r3
+    assert r3['delayed_avg_gap'] == 4.0, r3
+    assert r3['avg_gap'] == 51.5, r3   # 旧键连续性:混合均值含 99 哨兵
+
+    # 负空间:限期窗内达成(gap≤3)与无首引擎局,两形态都不计
+    fast = [[_row(rn=1, bf=e1), _row(rn=3, bf=e2)]]
+    r4 = runtime.check_second_engine_deadline(fast)
+    assert r4['never_second_engine'] == 0 \
+        and r4['delayed_miss'] == 0 and r4['deadline_miss'] == 0, r4
+    nofirst = [[_row(rn=rn) for rn in range(1, 5)]]
+    r5 = runtime.check_second_engine_deadline(nofirst)
+    assert r5['never_second_engine'] == 0 and r5['delayed_miss'] == 0 \
+        and r5['first_engine_games'] == 0, r5
+
+    # 接线烟雾:分键经批聚合出口在场(run_batch_level_checks;消费面
+    # = 批报告 checks 段——检查器家族在场烟雾档,至多 1 条纪律)
+    s = runner.run_batch_level_checks(mixed)['second_engine_deadline']
+    assert s['never_second_engine'] == 1 and s['delayed_miss'] == 1, s
 
 
 # --- 语料级 -----------------------------------------------------------
