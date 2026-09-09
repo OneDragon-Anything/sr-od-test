@@ -5,7 +5,11 @@
 fail-closed None 槽位(θ_unavailable 分键等)/修复池 OPEN 检查点核销
 (P7/D-lv7/F4 落点)/ mandate 行为(M2→M4 重试环/fuel_sell/stop_flag/
 D-A45 干旱重置)/ 冒烟(探针语料跑 _emit 无异常+截断判符合 v2)/
-零漂移门(商店线透传零污染,n≥20)。
+R196 修复批(换线活/回锁窗/冲突丢弃/截断逐类/影子键/常数单源)/
+R200 三卖面通道语境+塌缩出口保守子集 / RunDeploy 提案抑制(实机
+守卫停机事故回归)/ 备战期开店闩(访问位置闩)/ 奖励帧升级抑制
+四消费位。头部旧列「零漂移门(商店线透传零污染,n≥20)」已随基线臂
+退役删除(见下方「基线臂零漂移复跑」墓碑注),不再入覆盖面。
 """
 from __future__ import annotations
 
@@ -15,7 +19,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.decision_assembly import snapshot_from_obs
+from sr_od.application.currency_war.kernel import cw_line_switch
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PREP_ACTION_TYPES,
@@ -70,6 +76,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     levelup as crit_levelup,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    sell as crit_sell,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
     line_switch_sell,
@@ -410,10 +419,13 @@ class TestFixpoolCheckpoints:
         assert proof.stop_buy(comp, list(k)[:-1], []) is False
 
     def test_d_c44_fresh_read_frame(self):
-        """D-C44:骨架输入=黑板全量现读(MandateFrame 每帧重建,
-        bench_free 由现读派生,含新购件)。"""
+        """D-C44:骨架输入=黑板全量现读——bench_free 是活派生属性
+        (mandate.MandateFrame.bench_free = max(0, BENCH_CAPACITY-len)),
+        构造后 bench 变动即时反映;若退化为构造期缓存字段本锁即红。"""
         frame = _frame(bench=[_bench(1, 'a'), _bench(2, 'b')])
         assert frame.bench_free == 7
+        frame.bench.append(_bench(3, 'c'))
+        assert frame.bench_free == 6
 
 
 # ===== mandate 行为 =====
@@ -546,6 +558,10 @@ class TestEmitSmoke:
             strat.decide_prep_screen(session, None)
 
     def test_bridge_decide_prep_screen_smoke(self):
+        """接线烟雾(README 纪律 8 容忍档,MandateV1Live 装配缝唯一载体):
+        注册桥壳经真实 registry 注入态走 snapshot→assemble→emit→truncate
+        全链产动作列表;形状断言即可,抛错臂/纯层缺省臂各有专测。
+        (本缝无逐分支具体断言的子集宿主,删除即 Live 注入半环裸奔。)"""
         strat = MandateV1Live()   # 注册桥壳:装配缝(snapshot_from_obs→assemble)注入态
         session = _session()
         state_of(session).target_comp = COMP_LIBRARY[0]
@@ -591,7 +607,6 @@ class TestR196Wiring:
     def test_should_switch_event_with_alt_supply(self, monkeypatch):
         """换线活:参数齐备 + 候选更优 ⇒ 事件真 + alt_comp 非空(entry 不再
         构造性恒 no_alt)。"""
-        from sr_od.application.currency_war.kernel import cw_line_switch
         self._inject_switch_params()
         comps = [c for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
         session = _session()
@@ -619,8 +634,6 @@ class TestR196Wiring:
         assert state_of(session2).cw4_counters.get('switchline_no_target', 0) == 1
 
     def test_e_cur_undefined_counted(self, monkeypatch):
-        from sr_od.application.currency_war.kernel import cw_line_switch
-
         def _boom(comp, state, registry=None, session=None):
             raise RuntimeError('degenerate')
         monkeypatch.setattr(cw_line_switch, 'e_rounds', _boom)
@@ -633,7 +646,6 @@ class TestR196Wiring:
 
     def test_relock_window_blocks_within_dmin(self, monkeypatch):
         """D-P4 回锁窗行为锁:构造切换(撤线登记)→ 窗口内回锁请求被拒。"""
-        from sr_od.application.currency_war.kernel import cw_line_switch
         self._inject_switch_params()
         comps = [c for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
         assert len(comps) >= 2
@@ -768,8 +780,6 @@ class TestR196EvConflictDrop:
         被凑息绝对跳过(defer);M4/funding 降序放行(转化类,P78-5′
         四关系表「放行(在册语义保持)」)——批 2 的 ②(b) press 登记差分
         随窗口段落地消失(P78 INV 全通道硬禁),本适配按新语义重推。"""
-        from types import SimpleNamespace
-
         comp = SimpleNamespace(name='测试线', core_chars=('目标件',),
                                shared_chars=())
         bench = ([_bench(2, '燃料件X')]
@@ -788,9 +798,6 @@ class TestR196EvConflictDrop:
         差分承载(ADR-0585 批 3 重推,与上锁同源):两燃料件均为 T3 垫保
         登记名(凑息臂绝对跳过不抢跑;M4/funding defer 降序放行,P78-5′
         四关系表)。"""
-        from types import SimpleNamespace
-
-        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         m = next(n for n, ch in CHARACTERS.items()
                  if ch.cost and ch.cost >= 5)   # need-金 > 单件燃料回金 3
         comp = SimpleNamespace(name='测试线', core_chars=(m,), shared_chars=())
@@ -954,7 +961,6 @@ class TestR196Constants:
         assert 'BENCH_CAPACITY: int = 9' not in src   # 本地重定义已删
 
     def test_cheapest_member_cost_registry_derived(self):
-        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         comps = [c for c in COMP_LIBRARY if getattr(c, 'core_chars', None)]
         comp = comps[0]
         members = proof.predicates.line_members(comp)
@@ -974,11 +980,7 @@ class TestR196Constants:
             + 2 * REFRESH_COST_BASE
 
     def test_funding_refund_registry_derived(self):
-        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.kernel.cw_state import sell_refund
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-            sell as crit_sell,
-        )
         # 注册名:sell_refund(1, 注册表 cost) 派生
         name = next(n for n, ch in CHARACTERS.items() if ch.cost)
         cost = CHARACTERS[name].cost
@@ -1022,10 +1024,6 @@ class TestR200BenchEffectChannels:
 
     def test_funding_support_channel_uses_context(self):
         """支付支撑通道同资格:语境在场 ⇒ 例外件不作为筹资燃料。"""
-        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-            sell as crit_sell,
-        )
         cost = CHARACTERS['黑塔'].cost
         bench = [_bench(1, '黑塔'), _bench(2, '阿格莱雅')]
         st_on = GameState(gold=0)
@@ -1043,9 +1041,6 @@ class TestR200BenchEffectChannels:
         「T_SEARCH_A 注入态资格全集无差别全发」语义已被取代——T1 三项:
         金位触发+目标量止盈+布尔门退役)。资格谓词不变:语境在场
         (黑塔纪元)⇒ 例外件受保护;语境缺场回归资格集。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-            sell as crit_sell,
-        )
         bench = [_bench(1, '黑塔'), _bench(2, '阿格莱雅')]
         st_on = GameState()
         st_on.active_strategies = ['黑塔纪元']
@@ -1123,8 +1118,6 @@ class TestRunDeployProposalSuppression:
         机制腿。"""
         out = mandate.run_mandate(self._floor_gate_frame(), _session())
         assert not any(isinstance(e.action, RunDeploy) for e in out)
-        if out:
-            assert not isinstance(out[0].action, RunDeploy)
 
     def test_plan_nonempty_frame_run_deploy_emitted(self):
         """对照:计划非空(仙舟件不受列车底线门辖)⇒ M1 照常提案。"""
@@ -1301,9 +1294,6 @@ class TestRewardNodeSuppress:
         """消费位2(shop 必花域变体):大金奖励帧(gold>G_must,三臂未
         触发)⇒ 变体显式拒,分键 reward_node_must_spend_defer;红证 =
         combat 帧同形照发 m3_batch:must_spend(绕行面补守卫的承载)。"""
-        from sr_od.application.currency_war.kernel.cw_state import (
-            LevelUpShop,
-        )
         s = _session()
         st = _m3_shop_state(60, 'reward')
         act = decide_shop_action(st, s, SimpleNamespace(ev_arm='full'))
@@ -1321,9 +1311,6 @@ class TestRewardNodeSuppress:
         """消费位3(mandate M3):hp=1 濒死奖励帧——抑制先于危机/血闸
         求值:仅 reward_node_defer,crisis/blood 分键零产生(同帧双闸
         不混桶);红证 = 同帧形 encounter 节点走危机带挂起分键。"""
-        from sr_od.application.currency_war.kernel.cw_prep_actions import (
-            LevelUp,
-        )
         f, sess, st = _mk_prep_reward_frame('reward')
         out = mandate.run_mandate(f, sess, state=st)
         assert not [e for e in out if isinstance(e.action, LevelUp)]
@@ -1343,10 +1330,6 @@ class TestRewardNodeSuppress:
         语境(金本位闸恒直通,patch 闸拒载体钉位次)下 reason 仍是奖励
         让位而非 blood_xp_gate_blocked——让位居授权链首位,置于血闸
         之后则本分键永不可达。"""
-        from sr_od.application.currency_war.kernel.cw_state import GameState
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-            entry,
-        )
         un = _posture_unfulfilled_for(
             GameState(gold=60, level=7, hp=80, plane=1, round_num=3,
                       node_type='reward'), monkeypatch)
@@ -1400,7 +1383,6 @@ def _mk_prep_reward_frame(node):
     from sr_od.application.currency_war.kernel.cw_intention import (
         IntentionState,
     )
-    from sr_od.application.currency_war.kernel.cw_state import GameState
     deployed = [_bench(i + 1, n, star=2 if n == '椒丘' else 1)
                 for i, n in enumerate(['藿藿', '艾丝妲', '丹恒·饮月',
                                        '风堇', '爻光', '彦卿', '椒丘'])]
@@ -1424,9 +1406,6 @@ def _mk_prep_reward_frame(node):
 def _posture_unfulfilled_for(state, monkeypatch):
     """entry 授权面让位求值(monkeypatch get_node_goal 恒 level 授权)。"""
     from sr_od.application.currency_war.kernel import cw_economy
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        entry,
-    )
     monkeypatch.setattr(
         cw_economy, 'get_node_goal',
         lambda *a, **k: SimpleNamespace(spend_mode='level'))

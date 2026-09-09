@@ -11,7 +11,10 @@
 - shop_odds: test_cw_shop_odds.py
 - platt_calibration: test_cw_platt_calibration.py
 - weight_search: test_cw_weight_search.py
-冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+合并期「后来者加来源前缀」的临时别名已统一回素名:pytest / Path /
+math / simulate_p1 / simulate_p1_batch 全文件唯一绑定;sim.checks
+下三模块正名绑定(ledger / runner→checks_runner / segments)与
+sim.runner(仅在退休根红测内以 ledger_runner 显式指认)不混。
 (瘦身批 F11 归位成员:test_sim_ledger_core_count_semantics ← test_cw_data_registry.py,
 落 sim_ledger_checks 节。)
 """
@@ -63,9 +66,10 @@ def test_pool_cap_respected() -> None:
 
 
 def test_direction_matches_strategy_claim() -> None:
-    """方向建立 = 策略认领(锁线/桥);模拟本身不另立判据。"""
+    """认领必以方向建立为前提:结果带认领线(locked_line)时方向轮
+    dir_round 必已落地(<99);方向未建立时不得凭空认领(模拟本身
+    不另立判据,与策略认领同源)。"""
     r = simulate_p1(3, pool='fallback')
-    # 若报告已建立,则建立轮之后每一轮都应保持认领态(锁线粘性)
     assert r.dir_round < 99 or r.locked_line is None
 
 
@@ -74,7 +78,7 @@ def test_ab_channel_refresh() -> None:
     on = simulate_p1(11, pool='fallback', use_refresh=True)
     off = simulate_p1(11, pool='fallback', use_refresh=False)
     assert off.refreshes == 0
-    assert on.refreshes >= 0          # 开通道至少不崩
+    assert on.refreshes > 0   # 通道真发射(seed 11 固定=确定性,实测 34 次;原断言 >=0 对被测对象零判别力)
 
 
 def test_batch_stats_shape() -> None:
@@ -289,7 +293,8 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.sim.checks import ledger, runner
+from sr_od.application.currency_war.sim.checks import ledger
+from sr_od.application.currency_war.sim.checks import runner as checks_runner
 from sr_od.application.currency_war.sim.runner import write_batch_ledger
 
 
@@ -391,13 +396,13 @@ def test_coldstart_check_bidirectional() -> None:
 
 def test_coldstart_check_in_batch_set() -> None:
     """r371b 后局49 检查进批量集(sim 批次自动扫)。"""
-    assert 'coldstart_direction' in runner._BATCH_CHECKS
+    assert 'coldstart_direction' in checks_runner._BATCH_CHECKS
 
 
 def test_run_checks_report_shape() -> None:
     """批量检查报告形:violations 计数 + 局索引(供 seed 重放)。"""
     ledgers = [[_sim_ledger_checks_row(gold=11)], [_sim_ledger_checks_row(gold=99)], [_sim_ledger_checks_row(gold=11)]]
-    rep = runner.run_checks_on_ledgers(ledgers)
+    rep = checks_runner.run_checks_on_ledgers(ledgers)
     assert rep['ledger_consistency']['violations'] == 1
     assert rep['ledger_consistency']['games'] == [1]
 
@@ -435,8 +440,8 @@ def test_write_batch_ledger_guard_retired_roots(
         RETIRED_SIM_ROOT,
         RETIRED_STREAMS_ROOT,
     )
-    # 本文件多段合流,`runner` 名在其段落绑 checks.runner——清理函数的
-    # 归属模块显式指认,防桩错对象
+    # 模块级 `runner` 名绑 sim.checks.runner,而清理函数在 sim.runner——
+    # 两个同名生产模块,归属显式指认防桩错对象
     from sr_od.application.currency_war.sim import runner as ledger_runner  # noqa: I001
 
     monkeypatch.setattr(ledger_runner, '_prune_sim_runs', lambda: None)
@@ -499,7 +504,7 @@ def test_checks_module_does_not_import_sim() -> None:
     import ast
     import inspect
 
-    tree = ast.parse(inspect.getsource(runner))
+    tree = ast.parse(inspect.getsource(checks_runner))
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names = [a.name for a in node.names]
@@ -619,18 +624,8 @@ def test_sim_batch_cap_rejects_by_plane_consistent_with_total() -> None:
 
 # ==================== sim_obs_keys ====================
 
-import pytest as _sim_obs_keys_pytest
-
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.sim.checks import ledger as _sim_obs_keys_ledger
-from sr_od.application.currency_war.sim.checks import runner as _sim_obs_keys_runner
 from sr_od.application.currency_war.sim.engine_p1 import _board_next_tier_of
-from sr_od.application.currency_war.sim.engine_p1 import (
-    simulate_p1 as _sim_obs_keys_simulate_p1,
-)
-from sr_od.application.currency_war.sim.runner import (
-    simulate_p1_batch as _sim_obs_keys_simulate_p1_batch,
-)
 
 _SEEDS = (0, 7, 42)
 
@@ -673,36 +668,36 @@ def test_observation_keys_check_bad_rows_report() -> None:
     del r['state']['refresh_probs']
     cases.append(('缺轮岗概率条', r))
     for label, row in cases:
-        v = _sim_obs_keys_ledger.check_observation_keys_live([row])
+        v = ledger.check_observation_keys_live([row])
         assert v, f'{label}: 坏行未报=检查静默失效'
     # P2 行不辖(键族只承诺 P1 段)
     p2 = copy.deepcopy(base)
     p2['plane'] = 2
-    assert not _sim_obs_keys_ledger.check_observation_keys_live([p2])
+    assert not ledger.check_observation_keys_live([p2])
 
 
 def test_observation_keys_check_good_row_passes() -> None:
     """好账本必过(防误报);active 帧位(接管态)同样过。"""
-    assert not _sim_obs_keys_ledger.check_observation_keys_live([_good_row()])
+    assert not ledger.check_observation_keys_live([_good_row()])
     takeover = _good_row()
     takeover['sim']['alloc_frame'] = {
         'active': True, 'domain': 'death', 'reason': 'pipeline_spent',
         'gold': 30}
     takeover['sim']['alloc_active_any'] = True
-    assert not _sim_obs_keys_ledger.check_observation_keys_live([takeover])
+    assert not ledger.check_observation_keys_live([takeover])
 
 
 def test_observation_keys_check_registered() -> None:
     """哨兵入批检注册表(随批自动扫,不入=死检查)。"""
-    assert 'observation_keys_live' in _sim_obs_keys_runner._BATCH_CHECKS
+    assert 'observation_keys_live' in checks_runner._BATCH_CHECKS
 
 
 # ---------- 引擎侧真实性(值语义 + 非恒值分布) ----------
 
-@_sim_obs_keys_pytest.mark.parametrize('seed', _SEEDS)
+@pytest.mark.parametrize('seed', _SEEDS)
 def test_obs_keys_shape_on_real_game(seed: int) -> None:
     """真局每行 P1 账本:三键齐且形状合法;检查器对真局零违规。"""
-    res = _sim_obs_keys_simulate_p1(seed, pool='fallback')
+    res = simulate_p1(seed, pool='fallback')
     p1 = [r for r in res.ledger if (r.get('plane') or 1) == 1]
     assert p1, 'P1 账本为空'
     for row in p1:
@@ -717,7 +712,7 @@ def test_obs_keys_shape_on_real_game(seed: int) -> None:
             assert v >= 2
         assert row['sim']['alloc_active_any'] is False or \
             row['sim']['alloc_frame'] is not None
-    assert not _sim_obs_keys_ledger.check_observation_keys_live(p1)
+    assert not ledger.check_observation_keys_live(p1)
 
 
 def test_board_next_tier_helper_semantics() -> None:
@@ -740,7 +735,7 @@ def test_bench_full_flag_and_alloc_frame_not_degenerate() -> None:
     接管域)已随 v2 分配器死链退役——engine 仍恒写键(None/False),
     恒值分布对账与 bench_full_flag 点亮面随 sim 重锚批重探(w614 同批);
     本锁现辖 = 真局行三键形状 + checker 零违规(batch 链路另有专测)。"""
-    rows = [r for seed in (9, 11) for r in _sim_obs_keys_simulate_p1(
+    rows = [r for seed in (9, 11) for r in simulate_p1(
         seed, pool='fallback').ledger if (r.get('plane') or 1) == 1]
     assert len(rows) >= 2 * 5, '局数行数异常'
     for r in rows:
@@ -752,7 +747,7 @@ def test_bench_full_flag_and_alloc_frame_not_degenerate() -> None:
 
 def test_batch_check_reports_observation_keys_zero_violation() -> None:
     """批检链路闭合:observation_keys_live 随批自动扫且真批零违规。"""
-    rep = _sim_obs_keys_simulate_p1_batch(5, pool='fallback', ledger=False, checks=True)
+    rep = simulate_p1_batch(5, pool='fallback', ledger=False, checks=True)
     ck = rep['checks_violations']['observation_keys_live']
     assert ck['violations'] == 0, f"games={ck.get('games')}"
 
@@ -761,11 +756,11 @@ def test_sess_active_env_disclosed() -> None:
     """投资环境名入账本(invest 注入写;空串=未注入机制性缺省)。"""
     from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
     prof = SimInvestProfile(active_env='昼之半神概念股', picks=())
-    r = _sim_obs_keys_simulate_p1(0, pool='fallback', invest=prof)
+    r = simulate_p1(0, pool='fallback', invest=prof)
     assert r.ledger, '账本为空'
     assert all(row.get('sess_active_env') == '昼之半神概念股'
                for row in r.ledger)
-    r_plain = _sim_obs_keys_simulate_p1(0, pool='fallback')
+    r_plain = simulate_p1(0, pool='fallback')
     assert all(row.get('sess_active_env') == ''
                for row in r_plain.ledger)
 
@@ -778,7 +773,7 @@ def test_write_batch_ledger_carries_new_keys() -> None:
     from pathlib import Path
 
     from sr_od.application.currency_war.sim.runner import write_batch_ledger
-    results = [_sim_obs_keys_simulate_p1(s, pool='fallback') for s in (0, 7)]
+    results = [simulate_p1(s, pool='fallback') for s in (0, 7)]
     with tempfile.TemporaryDirectory() as td:
         out = Path(td)
         write_batch_ledger(results, out)
@@ -804,7 +799,7 @@ def test_write_batch_ledger_outcomes_boss_names_slot() -> None:
     import json
     import tempfile
 
-    result = _sim_obs_keys_simulate_p1(0, pool='fallback')
+    result = simulate_p1(0, pool='fallback')
     with tempfile.TemporaryDirectory() as td:
         out = write_batch_ledger([result], Path(td))
         rows = [json.loads(line)
@@ -817,13 +812,9 @@ def test_write_batch_ledger_outcomes_boss_names_slot() -> None:
 
 # ==================== sim_segment_checks ====================
 
-import pytest as _sim_segment_checks_pytest
-
-from sr_od.application.currency_war.sim.checks import (
-    segments as _sim_segment_checks_chk,
-)
+from sr_od.application.currency_war.sim.checks import segments
 from sr_od.application.currency_war.sim.runner import (
-    simulate_p1_batch as _sim_segment_checks_simulate_p1_batch,
+    simulate_p1_batch as simulate_p1_batch,
 )
 
 
@@ -877,33 +868,33 @@ def test_seg_overflow_idle_spend_bidirectional() -> None:
     断言(兼容面)。
     """
     bad = [_sim_segment_checks_row(gold=55, waves_gold=55, node='battle')]
-    evs = _sim_segment_checks_chk.seg_check_overflow_idle_spend(bad)
+    evs = segments.seg_check_overflow_idle_spend(bad)
     assert evs and evs[0]['gold_before'] == 55
     # 有花费 → 过
     spent = [_sim_segment_checks_row(gold=48, waves_gold=55, actions=[_buy()])]
-    assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(spent)
+    assert not segments.seg_check_overflow_idle_spend(spent)
     # 成型(engines≥2)→ 攒息合法面
     formed = [_sim_segment_checks_row(gold=70, waves_gold=70, state=_formed_state())]
-    assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(formed)
+    assert not segments.seg_check_overflow_idle_spend(formed)
     # 自报停手 ∧ 自算未成型(engines=0) = 成型谎报 → 不豁免+suspect 标记
     # (T-153/ADR-0593:旧「自报即豁免」语义已退役——谎报恰是迁移要显形的形态)
     lie = [_sim_segment_checks_row(gold=70, waves_gold=70, formed_stop=True)]
-    lie_evs = _sim_segment_checks_chk.seg_check_overflow_idle_spend(lie)
+    lie_evs = segments.seg_check_overflow_idle_spend(lie)
     assert lie_evs and lie_evs[0].get('suspect'), \
         '成型谎报未显形(C5 迁移回归)'
     # 自洽停手(自报停手 ∧ 自算成型)→ 豁免照旧(兼容面)
     honest = [_sim_segment_checks_row(gold=70, waves_gold=70,
                                       state=_formed_state(), formed_stop=True)]
-    assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(honest)
+    assert not segments.seg_check_overflow_idle_spend(honest)
     # bench 满守卫拦截轮 → 想买买不了,豁免
     guard = [_sim_segment_checks_row(gold=55, waves_gold=55, bench_full_skipped_buys=2)]
-    assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(guard)
+    assert not segments.seg_check_overflow_idle_spend(guard)
     # 息线邻近容忍带(ADR-0478):g0=51/52 浮动态不报;≥53 仍报
     near1 = [_sim_segment_checks_row(gold=51, waves_gold=51, node='battle')]
     near2 = [_sim_segment_checks_row(gold=52, waves_gold=52, node='battle')]
-    assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(near1)
-    assert not _sim_segment_checks_chk.seg_check_overflow_idle_spend(near2)
-    evs_far = _sim_segment_checks_chk.seg_check_overflow_idle_spend(
+    assert not segments.seg_check_overflow_idle_spend(near1)
+    assert not segments.seg_check_overflow_idle_spend(near2)
+    evs_far = segments.seg_check_overflow_idle_spend(
         [_sim_segment_checks_row(gold=53, waves_gold=53, node='battle')])
     assert evs_far and evs_far[0]['gold_before'] == 53
 
@@ -917,36 +908,36 @@ def test_seg_p2_bleed_gold_stack_bidirectional() -> None:
     bad = [_sim_segment_checks_row(1, plane=2, gold=55, hp=50),
            _sim_segment_checks_row(2, plane=2, gold=65, hp=40),
            _sim_segment_checks_row(3, plane=2, gold=75, hp=25)]
-    evs = _sim_segment_checks_chk.seg_check_p2_bleed_gold_stack(bad)
+    evs = segments.seg_check_p2_bleed_gold_stack(bad)
     assert evs and evs[0]['streak'] == 2 and evs[0]['round_num'] == 3
     # 血线稳定(胜局攒息合法面)→ 不报
     stable = [_sim_segment_checks_row(1, plane=2, gold=60, hp=50),
               _sim_segment_checks_row(2, plane=2, gold=70, hp=50)]
-    assert not _sim_segment_checks_chk.seg_check_p2_bleed_gold_stack(stable)
+    assert not segments.seg_check_p2_bleed_gold_stack(stable)
     # 金在泄(买入盖过收入,溢余在消化)→ 不报
     draining = [_sim_segment_checks_row(1, plane=2, gold=70, hp=50),
                 _sim_segment_checks_row(2, plane=2, gold=60, hp=35)]
-    assert not _sim_segment_checks_chk.seg_check_p2_bleed_gold_stack(draining)
+    assert not segments.seg_check_p2_bleed_gold_stack(draining)
     # 单轮堆积即被非溢余轮打断(灰区)→ 不报
     single = [_sim_segment_checks_row(1, plane=2, gold=70, hp=50),
               _sim_segment_checks_row(2, plane=2, gold=75, hp=45),
               _sim_segment_checks_row(3, plane=2, gold=50, hp=40)]
-    assert not _sim_segment_checks_chk.seg_check_p2_bleed_gold_stack(single)
+    assert not segments.seg_check_p2_bleed_gold_stack(single)
     # P1 行不辖([17] P1 面归 seg_overflow_idle_spend)
     p1 = [_sim_segment_checks_row(1, plane=1, gold=60, hp=50),
           _sim_segment_checks_row(2, plane=1, gold=70, hp=35)]
-    assert not _sim_segment_checks_chk.seg_check_p2_bleed_gold_stack(p1)
+    assert not segments.seg_check_p2_bleed_gold_stack(p1)
     # 息线邻近容忍带内(g≤52,ADR-0478 同带宽)→ 不报
     band = [_sim_segment_checks_row(1, plane=2, gold=50, hp=50),
             _sim_segment_checks_row(2, plane=2, gold=52, hp=35)]
-    assert not _sim_segment_checks_chk.seg_check_p2_bleed_gold_stack(band)
+    assert not segments.seg_check_p2_bleed_gold_stack(band)
     # 金不可读帧断链(不可信金不猜)
     broken = [_sim_segment_checks_row(1, plane=2, gold=60, hp=50),
               _sim_segment_checks_row(2, plane=2, gold=None, hp=35),
               _sim_segment_checks_row(3, plane=2, gold=70, hp=20)]
-    assert not _sim_segment_checks_chk.seg_check_p2_bleed_gold_stack(broken)
+    assert not segments.seg_check_p2_bleed_gold_stack(broken)
     # 新检查已入段级表(sim 批顺路扫,回灌纪律①)
-    assert 'seg_p2_bleed_gold_stack' in _sim_segment_checks_chk._SEGMENT_CHECKS
+    assert 'seg_p2_bleed_gold_stack' in segments._SEGMENT_CHECKS
 
 
 # ([11] 无损购买段检已随 press 带判据死链退役删除——统一迁移批 ② MAP B 类;
@@ -961,14 +952,14 @@ def test_seg_break_interest_exception_bidirectional() -> None:
                 actions=[_buy('杂件', channel='off')]),
            ]
     bad[0]['sim']['spend']['buys'] = {'d2_off': 15}
-    evs = _sim_segment_checks_chk.seg_check_break_interest_exception(bad)
+    evs = segments.seg_check_break_interest_exception(bad)
     assert evs and evs[0]['gold_before'] == 55 \
         and evs[0]['buys'][0]['channel'] == 'off' \
         and isinstance(evs[0]['final_shop_panel'], list)
     # 例外①店全想要(≥2 笔无一 off)
     store_all = [_sim_segment_checks_row(gold=40, waves_gold=55, node='battle',
                       actions=[_buy('引擎件'), _buy('凑对件', channel='pair')])]
-    assert not _sim_segment_checks_chk.seg_check_break_interest_exception(store_all)
+    assert not segments.seg_check_break_interest_exception(store_all)
     # 例外②连胜保([19]):进轮重算连胜 ≥2(前两轮战斗胜 delta≥0)
     streak_rows = [
         _sim_segment_checks_row(1, gold=52, waves_gold=52, node='battle'),
@@ -976,26 +967,26 @@ def test_seg_break_interest_exception_bidirectional() -> None:
         _sim_segment_checks_row(3, gold=40, waves_gold=58, node='battle',
              actions=[_buy('保连件', channel='pair')]),
     ]
-    assert not _sim_segment_checks_chk.seg_check_break_interest_exception(streak_rows)
+    assert not segments.seg_check_break_interest_exception(streak_rows)
     # 奖励帧 LevelUp 支出仍豁免(T-115 对齐:原节点型例外③已退役,
     # 豁免依据 = ④ levelup_spend 通道口径,ADR-0471/ADR-0580)
     reward_lv = [{**_sim_segment_checks_row(gold=45, waves_gold=52, node='reward'),
                   'actions': [{'__type__': 'LevelUp', 'cost': 4}]}]
     reward_lv[0]['sim']['spend']['levelup'] = 4
-    assert not _sim_segment_checks_chk.seg_check_break_interest_exception(reward_lv)
+    assert not segments.seg_check_break_interest_exception(reward_lv)
     # 不破息(gold_end≥50 或起点<50)不管(买后仍 ≥50)
     calm = [_sim_segment_checks_row(gold=51, waves_gold=52, actions=[_buy()])]
-    assert not _sim_segment_checks_chk.seg_check_break_interest_exception(calm)
+    assert not segments.seg_check_break_interest_exception(calm)
     # 例外⑥boss 窗地板授权(ADR-0478):boss 节点破息但花后 ≥ boss_floor(10)
     # → 豁免;跌破地板 → 越权仍报(detail 带越权标注)
     boss_ok = [_sim_segment_checks_row(gold=48, waves_gold=51, node='boss',
                     actions=[_buy('线核件', cost=3, channel='engine')])]
     boss_ok[0]['sim']['spend']['buys'] = {'d2_line_carry': 3}
-    assert not _sim_segment_checks_chk.seg_check_break_interest_exception(boss_ok)
+    assert not segments.seg_check_break_interest_exception(boss_ok)
     boss_breach = [_sim_segment_checks_row(gold=6, waves_gold=51, node='boss',
                         actions=[_buy('线核件', cost=45, channel='engine')])]
     boss_breach[0]['sim']['spend']['buys'] = {'d2_line_carry': 45}
-    evs_boss = _sim_segment_checks_chk.seg_check_break_interest_exception(boss_breach)
+    evs_boss = segments.seg_check_break_interest_exception(boss_breach)
     assert evs_boss and '越权' in evs_boss[0]['detail']
 
 
@@ -1007,21 +998,21 @@ def test_seg_formed_still_buying_transition_bidirectional() -> None:
            _sim_segment_checks_row(2, gold=30, waves_gold=30, actions=[
                _buy('散装过渡件', channel='engine')], state=_formed_state()),
            ]
-    evs = _sim_segment_checks_chk.seg_check_formed_still_buying_transition(bad)
+    evs = segments.seg_check_formed_still_buying_transition(bad)
     assert evs and evs[0]['round_num'] == 2 \
         and evs[0]['bought'] == '散装过渡件'
     # 未成型阶段的同类买入 → 不报
     early = [_sim_segment_checks_row(1, gold=30, waves_gold=30, actions=[_buy('散装过渡件')],
                   state={'board_factions': {}, 'deployed': [],
                          'bench': [], 'cap': 3, 'level': 3})]
-    assert not _sim_segment_checks_chk.seg_check_formed_still_buying_transition(early)
+    assert not segments.seg_check_formed_still_buying_transition(early)
     # 同名在场再买 = 升星副本路径([4]/[28]) → 豁免
     dup_state = _formed_state()
     dup_state['deployed'] = [{'char_id': '散装过渡件'}]
     dup = [_sim_segment_checks_row(1, **base), _sim_segment_checks_row(2, gold=30, waves_gold=30,
                                  state=dup_state,
                                  actions=[_buy('散装过渡件')])]
-    assert not _sim_segment_checks_chk.seg_check_formed_still_buying_transition(dup)
+    assert not segments.seg_check_formed_still_buying_transition(dup)
     # 目标件买入(bridge 名册内身份/目标 comp 名册)→ 豁免:用真实
     # bridge_pool 组件名查一个名单成员
     from sr_od.application.currency_war.kernel.cw_line_defs import BRIDGE_POOL
@@ -1030,7 +1021,7 @@ def test_seg_formed_still_buying_transition_bidirectional() -> None:
     target = [_sim_segment_checks_row(1, **base),
               _sim_segment_checks_row(2, gold=30, waves_gold=30, state=_formed_state(),
                    actions=[_buy(bridge_member, channel='engine')])]
-    assert not _sim_segment_checks_chk.seg_check_formed_still_buying_transition(target)
+    assert not segments.seg_check_formed_still_buying_transition(target)
 
 
 def test_seg_formed_still_buying_transition_release_arm() -> None:
@@ -1049,7 +1040,6 @@ def test_seg_formed_still_buying_transition_release_arm() -> None:
     engine 身份档——都避开桥池/目标名册既有豁免,防既有豁免先行
     吞掉新分支(锁假绿)。
     """
-    chk = _sim_segment_checks_chk
     formed_r2 = {'gold': 30, 'waves_gold': 30, 'state': _formed_state()}
 
     def _frame(buy: dict) -> list[dict]:
@@ -1061,15 +1051,15 @@ def test_seg_formed_still_buying_transition_release_arm() -> None:
                 'reason': 'transition_component_buy', 'channel': 'engine'}
 
     # ④ 件放行:carry 成员 + ④ 买因 → 不报
-    assert not chk.seg_check_formed_still_buying_transition(
+    assert not segments.seg_check_formed_still_buying_transition(
         _frame(_buy4('姬子·启行')))
     # drop 档 + ④ 买因(误挂形态)→ 仍报,事件点名声与买因
-    evs_drop = chk.seg_check_formed_still_buying_transition(
+    evs_drop = segments.seg_check_formed_still_buying_transition(
         _frame(_buy4('卡芙卡')))
     assert evs_drop and evs_drop[0]['bought'] == '卡芙卡' \
         and evs_drop[0]['reason'] == 'transition_component_buy'
     # 放行集成员非 ④ 买因(常规 engine 通道)→ 仍报
-    evs_non4 = chk.seg_check_formed_still_buying_transition(
+    evs_non4 = segments.seg_check_formed_still_buying_transition(
         _frame(_buy('姬子·启行', cost=3, channel='engine')))
     assert evs_non4 and evs_non4[0]['bought'] == '姬子·启行' \
         and evs_non4[0]['reason'] == 'd2_engine'
@@ -1087,40 +1077,39 @@ def test_seg_unjustified_levelup_bidirectional() -> None:
     bad = [_sim_segment_checks_row(1, state=pre),
            _sim_segment_checks_row(2, gold=28, waves_gold=28, node='battle', state=post,
                 actions=[{'__type__': 'LevelUp', 'cost': 4, 'auth': ''}])]
-    evs = _sim_segment_checks_chk.seg_check_unjustified_levelup(bad)
+    evs = segments.seg_check_unjustified_levelup(bad)
     assert evs and evs[0]['level_before'] == 5 and evs[0]['gold_before'] == 28
     # 授权白名单(pop_slot=[33] 人口位)→ 放行
     ok_auth = [bad[0], {**bad[1],
                         'actions': [{'__type__': 'LevelUp', 'cost': 4,
                                      'auth': 'pop_slot'}]}]
-    assert not _sim_segment_checks_chk.seg_check_unjustified_levelup(ok_auth)
+    assert not segments.seg_check_unjustified_levelup(ok_auth)
     # 奖励帧无授权升级 → 违规可见(T-115 对齐:原「[16]② 放行」语义退役)
     reward_unauth = [bad[0], {**bad[1], 'sim':
                               {**bad[1]['sim'], 'node': 'reward'}}]
-    evs_r = _sim_segment_checks_chk.seg_check_unjustified_levelup(reward_unauth)
+    evs_r = segments.seg_check_unjustified_levelup(reward_unauth)
     assert len(evs_r) == 1 and evs_r[0]['round_num'] == 2
     # 奖励帧带白名单授权(扑满环境帧经 M3 闸链形态)→ 放行
     reward_auth = [bad[0], {**bad[1], 'sim':
                             {**bad[1]['sim'], 'node': 'reward'},
                             'actions': [{'__type__': 'LevelUp', 'cost': 4,
                                          'auth': 'm3_batch:arm1'}]}]
-    assert not _sim_segment_checks_chk.seg_check_unjustified_levelup(reward_auth)
+    assert not segments.seg_check_unjustified_levelup(reward_auth)
 
 
 # ------------------------------------------------------------ 恒等式
 def test_seg_gold_identity_bidirectional() -> None:
     """链式金恒等式:改一行末金必报;守恒账本零事件。"""
     good = [_sim_segment_checks_row(1, gold=6), _sim_segment_checks_row(2, gold=12)]
-    assert not _sim_segment_checks_chk.seg_check_gold_identity(good)
+    assert not segments.seg_check_gold_identity(good)
     bad = [_sim_segment_checks_row(1, gold=6), _sim_segment_checks_row(2, gold=99)]
-    evs = _sim_segment_checks_chk.seg_check_gold_identity(bad)
+    evs = segments.seg_check_gold_identity(bad)
     assert evs and '99' in evs[0]['detail']
 
 
 def test_seg_must_spend_observation_aggregates() -> None:
     """必花域观测三键聚合(20 号稿 §6):zone/zero 合计 + 零消费帧定位
     + 层命中分布;无键行跳过不造零;零 zone ⇒ 零事件。"""
-    chk = _sim_segment_checks_chk
     rows = [
         {'plane': 1, 'round_num': 1, 'gold': 60,
          'obs': {'must_spend_zone_frames': 2,
@@ -1132,7 +1121,7 @@ def test_seg_must_spend_observation_aggregates() -> None:
                  'must_spend_layer_hit': {'L2': 1}}},
         {'plane': 1, 'round_num': 3, 'gold': 70},   # 无键行:跳过
     ]
-    evs = chk.seg_check_must_spend_observation(rows)
+    evs = segments.seg_check_must_spend_observation(rows)
     assert len(evs) == 1
     ev = evs[0]
     assert ev['zone_frames'] == 3
@@ -1140,38 +1129,38 @@ def test_seg_must_spend_observation_aggregates() -> None:
     assert ev['zero_consume_rounds'] == [1]
     assert ev['layer_hit'] == {'L1': 1, 'L3': 1, 'L2': 1}
     # 零 zone ⇒ 零事件(无必花域帧不造摘要)
-    assert chk.seg_check_must_spend_observation(
+    assert segments.seg_check_must_spend_observation(
         [{'plane': 1, 'round_num': 1, 'gold': 10}]) == []
     # 已入段级检查表(批报告管线自动收账)
-    assert 'seg_must_spend_observation' in chk._SEGMENT_CHECKS
+    assert 'seg_must_spend_observation' in segments._SEGMENT_CHECKS
 
 
 # ------------------------------------------------------- 批入口/接线
 def test_run_segment_counts_and_caps() -> None:
     """批量入口:计数=真值、events 截断披露、seed 定位字段齐。"""
     ledgers = [[_sim_segment_checks_row(1, gold=55, waves_gold=55)]
-               for _ in range(_sim_segment_checks_chk._SEGMENT_EVENTS_CAP + 3)]
-    rep = _sim_segment_checks_chk.run_segment_checks(ledgers, seed_base=100)
+               for _ in range(segments._SEGMENT_EVENTS_CAP + 3)]
+    rep = segments.run_segment_checks(ledgers, seed_base=100)
     seg = rep['seg_overflow_idle_spend']
     assert seg['count'] == len(ledgers)   # 全部触发
-    assert len(seg['events']) == _sim_segment_checks_chk._SEGMENT_EVENTS_CAP
+    assert len(seg['events']) == segments._SEGMENT_EVENTS_CAP
     assert seg['truncated'] is True
     assert seg['events'][0]['seed'] == 100 and \
         seg['events'][0]['game_idx'] == 0
 
 
-@_sim_segment_checks_pytest.mark.parametrize('max_rounds', [None, 4])
+@pytest.mark.parametrize('max_rounds', [None, 4])
 def test_batch_wiring_window(max_rounds: int | None) -> None:
     """batch 内嵌接线(最小 n;n 小不是统计口径,只验管线):
     segment_checks 键在(独立于 checks 开关)、max_rounds 披露、
     窗口语义=前缀切片(全量跑的前 K 轮金轨迹 ≡ 窗口口径下应为
     同段——这里间接锁 max_rounds=None 时键仍存在且为 None)。"""
-    rep = _sim_segment_checks_simulate_p1_batch(2, pool='snapshot', ledger=False,
+    rep = simulate_p1_batch(2, pool='snapshot', ledger=False,
                             checks=False, seed_base=3100,
                             max_rounds=max_rounds)
     assert rep['max_rounds'] == max_rounds
     sc = rep['segment_checks']
-    assert set(sc) >= set(_sim_segment_checks_chk._SEGMENT_CHECKS) | {'_summary'}
+    assert set(sc) >= set(segments._SEGMENT_CHECKS) | {'_summary'}
     for row in sc.get('seg_gold_identity', {}).get('events', []):
         assert row['round_num'] <= (max_rounds or 99)
 
@@ -1184,7 +1173,7 @@ def test_batch_zero_drift_when_no_window(tmp_path) -> None:  # type: ignore[no-u
     锁的是**结构**:既有 top-level 键仍在且 checks_violations 各项
     形状不变(sim-testing checklist 步骤②的机读版)。
     """
-    rep = _sim_segment_checks_simulate_p1_batch(2, pool='snapshot', ledger=False,
+    rep = simulate_p1_batch(2, pool='snapshot', ledger=False,
                             seed_base=3200)
     for k in ('n', 'pool_fingerprint', 'pool_source', 'hp_ge_60',
               'avg_final_hp', 'battle_losses_le_2', 'dir_by_r2',
@@ -1202,12 +1191,11 @@ def test_batch_zero_drift_when_no_window(tmp_path) -> None:  # type: ignore[no-u
 
 import re
 from dataclasses import fields
-from pathlib import Path as _sim_wiring_doc_Path
 
 from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 
-_DOC = (_sim_wiring_doc_Path(cw_sim.__file__).resolve().parents[5]
+_DOC = (Path(cw_sim.__file__).resolve().parents[5]
         / 'docs' / 'develop' / 'currency_war' / 'sim' / 'sim-wiring.md')
 
 
@@ -1251,8 +1239,6 @@ def test_tier_counts_match_declared_reconciliation() -> None:
 # ==================== shop_odds ====================
 
 import math
-
-import pytest as _shop_odds_pytest
 
 from sr_od.application.currency_war.data.cw_shop_odds import (
     SHOP_SLOTS,
@@ -1328,7 +1314,7 @@ def test_three_star_needs_more_than_two_star() -> None:
 
 def test_refresh_prob_lookup() -> None:
     """refresh_prob 查表:7级3费=0.4 实测点;无数据=0。"""
-    assert refresh_prob(7, 3) == _shop_odds_pytest.approx(0.4, abs=1e-2)
+    assert refresh_prob(7, 3) == pytest.approx(0.4, abs=1e-2)
     assert refresh_prob(99, 3) == 0.0, "无该等级 → 0"
 
 
@@ -1347,10 +1333,6 @@ def test_shop_slots_is_5() -> None:
 
 # ==================== platt_calibration ====================
 
-import math as _platt_calibration_math
-
-import pytest as _platt_calibration_pytest
-
 from sr_od.application.currency_war.telemetry.cw_win_model import (
     PlattCalibrator,
     fit_platt_scaling,
@@ -1358,11 +1340,11 @@ from sr_od.application.currency_war.telemetry.cw_win_model import (
 
 
 def _sigmoid(z: float) -> float:
-    return 1.0 / (1.0 + _platt_calibration_math.exp(-z))
+    return 1.0 / (1.0 + math.exp(-z))
 
 
 def _logit(p: float) -> float:
-    return _platt_calibration_math.log(p / (1.0 - p))
+    return math.log(p / (1.0 - p))
 
 
 # --- 恒等默认零漂移锁 --------------------------------------------------------
@@ -1378,7 +1360,7 @@ def test_out_of_range_input_passthrough() -> None:
     """越界/非有限输入原样返回(防御口径:不静默修正也不抛)。"""
     cal = PlattCalibrator(a=2.0, b=-1.0)
     assert cal.apply(-0.1) == -0.1 and cal.apply(1.1) == 1.1
-    assert _platt_calibration_math.isnan(cal.apply(float('nan')))
+    assert math.isnan(cal.apply(float('nan')))
     assert cal.apply(float('inf')) == float('inf')
 
 
@@ -1403,8 +1385,8 @@ def test_fit_recovers_known_linear_logit_transform() -> None:
         ys.append(1 if s / (1 << 31) < q else 0)
         ps.append(p)
     cal = fit_platt_scaling(ys, ps)
-    assert cal.a == _platt_calibration_pytest.approx(a_true, rel=0.4)
-    assert cal.b == _platt_calibration_pytest.approx(b_true, abs=0.8)
+    assert cal.a == pytest.approx(a_true, rel=0.4)
+    assert cal.b == pytest.approx(b_true, abs=0.8)
 
 
 def test_fit_is_pure_and_deterministic() -> None:
@@ -1462,15 +1444,8 @@ def test_fit_reduces_systematic_undershoot() -> None:
 
 # ==================== weight_search ====================
 
-import math as _weight_search_math
 import random
-import sys
-from pathlib import Path as _weight_search_Path
-
-_REPO = _weight_search_Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(_REPO / 'src'))
-
-from sr_od.application.currency_war.tools.cw_weight_search import (  # noqa: E402
+from sr_od.application.currency_war.tools.cw_weight_search import (
     WeightDim,
     WeightSpace,
     cem_search,
@@ -1533,4 +1508,4 @@ def test_l2_penalty_semantics() -> None:
     near = evaluate_weights([1.2], f, [1], l2_coeff=1.0, center=[1.0])
     far = evaluate_weights([3.0], f, [1], l2_coeff=1.0, center=[1.0])
     assert far < near
-    assert _weight_search_math.isclose(near, 1.0 - 0.04, abs_tol=1e-9)
+    assert math.isclose(near, 1.0 - 0.04, abs_tol=1e-9)

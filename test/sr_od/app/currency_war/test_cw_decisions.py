@@ -117,9 +117,6 @@ def test_economy_rush_level_rewards_level() -> None:
     )
 
 
-
-
-
 def test_rebuild_deployed_from_board_aligns_count_and_rows() -> None:
     """rebuild_deployed_from_board 从 board 重建 deployed,计数=sum(board),back 先填至 back_max 再 front。
     (出处备注:原引用「D-107」为会话局部编号,docs 树无持久索引,出处未考;
@@ -499,7 +496,6 @@ def test_economy_reclassified_fields_adr0142() -> None:
     assert agg.gold_next_nodes_amount == 16 and agg.gold_next_nodes_count == 3
 
 
-
 # ===== ADR-0133 全量图鉴 ingest + decide_event 注册表先验 =====
 def test_strategy_registry_full_ingest() -> None:
     """注册表长尾经济抽取抽查(ADR-0133 ingest 体系)。全量计数 335 由
@@ -569,7 +565,6 @@ def test_decide_event_fallback_lexicographic(
     # 未注册(0)仍在回落域之下(全盲才兜底 idx0)
     pick5 = decide_event(["狸狸的早晨", "银色无名"], cfg, st)
     assert pick5.option_idx == 0
-
 
 
 # ===== ADR-0134 comp 匹配分(星徽套组对齐 target 压倒品质/白名单) =====
@@ -661,7 +656,6 @@ def test_env_faction_floor_category_tiers() -> None:
             < ENV_FACTION_MATCH_FLOOR['概念股']), "category 定序档位:邀请<契约<概念股"
 
 
-
 def test_comp_char_positions_data() -> None:
     """三 comp 站位数据在库:绯英(爻光 back)/追击(知更鸟 front)/万敌(万敌 front)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
@@ -669,7 +663,6 @@ def test_comp_char_positions_data() -> None:
     assert by["绯英欢愉"].get("爻光") == "back"
     assert by["追击飞霄"].get("知更鸟") == "front"
     assert by["万敌单C"].get("万敌") == "front"
-
 
 
 # ===== ADR-0140 中期护航三套:已随清退评估批删除(2026-09) =====
