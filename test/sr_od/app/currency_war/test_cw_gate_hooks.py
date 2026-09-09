@@ -50,7 +50,32 @@ def _make_director(monkeypatch, collapse_open):
 
     collapse_open 控制 _try_collapse_open_shop 返回值(标量=恒值;
     列表=按序弹出,记录实际返回到返回的 list)。
+
+    装配点分流(统一观察架构 §9.1,试点批):monkeypatch 装入分流桩端口
+    (teardown 自动复位),run() 经装配点判据走六段生命周期新路径
+    (架构设计 §9.1 主门 a);_observe 已桩化,桩端口不被消费。
     """
+    from sr_od.application.currency_war import cw_game_ports as _ports_mod
+
+    class _DispatchOnlyObserver:
+        def screen_identity(self, ctx):
+            raise NotImplementedError('分流桩端口被消费(观察半)')
+
+        def observe_prep(self, ctx, phase):
+            raise NotImplementedError('分流桩端口被消费(观察半)')
+
+        def observe_shop_cards(self, ctx):
+            raise NotImplementedError('分流桩端口被消费(观察半)')
+
+        def overlay_options(self, ctx, kind):
+            raise NotImplementedError('分流桩端口被消费(观察半)')
+
+    class _DispatchOnlySink:
+        def execute_action(self, ctx, action, env=None):
+            raise NotImplementedError('分流桩端口被消费(动作半)')
+
+    monkeypatch.setattr(_ports_mod, '_INSTALLED',
+                        (_DispatchOnlyObserver(), _DispatchOnlySink()))
     d = CwScreenPrep.__new__(CwScreenPrep)
     d.ctx = SimpleNamespace(current_instance_idx=99)
     d._executor = SimpleNamespace(

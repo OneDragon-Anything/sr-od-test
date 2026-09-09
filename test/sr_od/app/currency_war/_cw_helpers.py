@@ -193,7 +193,42 @@ def make_prep_round_director(test_context, monkeypatch, scripted_actions,
     退役删除——迁移批次二 §3.2.5,墓碑函数无桩面消费。)
     返回 ``(director, match, session)``;运行外壳
     (``fast_sleep`` + enter/reset_running_state)留在各锁自持。
+
+    装配点分流(统一观察架构 §9.1 并存期,试点批):本装配 monkeypatch
+    ``cw_game_ports._INSTALLED`` 装入分流桩端口(teardown 自动复位 = 卸载
+    语义)——使 run() 经装配点判据进入六段生命周期新路径,备战行为锁自此
+    锁「op execute() 走新基类」(架构设计 §9.1 主门 a)。``_observe`` 桩
+    使桩端口不被消费(端口方法 = 响错误,静默消费即桩面破缺信号);
+    setattr 直改模块槽绕过 install_game_ports 的单装配守卫 = harness
+    用法(守卫语义由 test_cw_game_ports 自辖)。
     """
+    from sr_od.application.currency_war import cw_game_ports as _ports_mod
+
+    class _DispatchOnlyObserver:
+        """装配点分流桩(观察半):仅作 run() 分流判据的在场端口;
+        方法被消费 = 桩面破缺(锁应桩化 _observe,端口不该被读)。"""
+
+        def screen_identity(self, ctx):
+            raise NotImplementedError('分流桩端口被消费(观察半)')
+
+        def observe_prep(self, ctx, phase):
+            raise NotImplementedError('分流桩端口被消费(观察半)')
+
+        def observe_shop_cards(self, ctx):
+            raise NotImplementedError('分流桩端口被消费(观察半)')
+
+        def overlay_options(self, ctx, kind):
+            raise NotImplementedError('分流桩端口被消费(观察半)')
+
+    class _DispatchOnlySink:
+        """装配点分流桩(动作半):同上,仅作分流判据。"""
+
+        def execute_action(self, ctx, action, env=None):
+            raise NotImplementedError('分流桩端口被消费(动作半)')
+
+    monkeypatch.setattr(_ports_mod, '_INSTALLED',
+                        (_DispatchOnlyObserver(), _DispatchOnlySink()))
+
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_prep as pd_mod,
     )
