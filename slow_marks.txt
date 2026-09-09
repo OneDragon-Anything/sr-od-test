@@ -34,7 +34,6 @@ test_cw_shop_refresh.py::test_hook_heals_after_settled_reread
 test_cw_r363_audit_p0.py::test_stop_summary_no_duplicate_on_second_call
 test_cw_r363_audit_p0.py::test_stop_path_writes_stopped_summary
 test_cw_w603_telemetry_wiring.py::test_briefing_after_run_closed_lands_in_next_run
-test_cw4_contracts.py::TestNoBypassDirectCalls::test_criteria_public_calls_whitelisted
 test_cw_identity_funnel.py::test_funnel_equivalence_and_tiering
 
 # 度量修复批(2026-09-03)准入:首条 setup 2.18s(apply_core_swap_calibration+注册表装配;call 0.02s)

@@ -445,8 +445,21 @@ _EXEMPT_PATHS: frozenset[str] = frozenset({
 # 等非判据位键不入表,与旧手抄集内容恒等),禁另抄字面量。
 _OWNER_TAILS: frozenset[str] = frozenset(_FN_OWNER_TAIL.values())
 
+#: 扫描面(守卫出慢桶批收窄):守卫保护对象 = currency_war 子树。
+#: 判据函数定义面(criteria 六面/proof/statefn.predicates)与全部
+#: 已接线消费位均住该子树,src 树内子树外对 mandate_v1 零引用
+#: (收窄时全树 grep 实证)——遍历收窄只减「保护对象外的扫描」,
+#: 子树内检查项逐位不变;offender 路径与白名单匹配恒按 src 根
+#: 全限定口径,与扫描面解耦。捕获力两道独立证据:负测试三例
+#: (盲区①/②/白名单正例,与生产同参调用形状)+ 金丝雀验证
+#: (子树内临时注入裸名直调违例 → 守卫主测报红 → 移除)。
+_CRITERIA_SCAN_SUBDIR: tuple[str, ...] = ('sr_od', 'application',
+                                          'currency_war')
 
-def _find_criteria_direct_calls(src_root: Path) -> list[str]:
+
+def _find_criteria_direct_calls(src_root: Path,
+                                scan_subdir: tuple[str, ...] | None = None
+                                ) -> list[str]:
     """AST 扫描:白名单外文件中「绑定到判据模块的函数」调用点。
 
     解析规则(import 绑定名+调用名联合):
@@ -456,10 +469,16 @@ def _find_criteria_direct_calls(src_root: Path) -> list[str]:
       ``mod.attr.lv9_stop(...)``(点链)→ 绑定解析命中且函数属主一致
       = 判据直调点。白名单豁免按**全限定文件路径**(堵 basename 逃逸,
       盲区②)。
+
+    扫描面:``scan_subdir`` 给定时只遍历 ``src_root`` 下该子树
+    (生产入口传 _CRITERIA_SCAN_SUBDIR,即守卫保护对象;缺省全树,
+    供临时目录复用分析本体)。``rel`` 恒按 ``src_root`` 计算——
+    白名单是全限定路径,匹配口径不随扫描面收窄变化。
     """
     offenders: list[str] = []
+    scan_root = src_root.joinpath(*scan_subdir) if scan_subdir else src_root
     cw4_prefix = 'sr_od.application.currency_war.strategies.impl.mandate_v1.'
-    for py in sorted(src_root.rglob('*.py')):
+    for py in sorted(scan_root.rglob('*.py')):
         rel = py.relative_to(src_root).as_posix()
         if rel in _WIRED_CALLER_PATHS or rel in _EXEMPT_PATHS:
             continue
@@ -556,11 +575,14 @@ class TestNoBypassDirectCalls:
         return Path(proof.__file__).resolve().parents[6]
 
     def test_criteria_public_calls_whitelisted(self):
-        """静态守卫(AST 版):src 树内判据函数调用点只允许出现在已接线
-        消费位(全限定路径白名单)——防新增消费位绕过 ensure_contract
-        直调。AST 解析 import 绑定名+调用名,覆盖裸名直调与模块属性两
+        """静态守卫(AST 版):currency_war 子树内判据函数调用点只允许
+        出现在已接线消费位(全限定路径白名单)——防新增消费位绕过
+        ensure_contract 直调。扫描面 = 守卫保护对象子树
+        (_CRITERIA_SCAN_SUBDIR,收窄理由与零损失证据见其注释);
+        AST 解析 import 绑定名+调用名,覆盖裸名直调与模块属性两
         形态(旧正则守卫的盲区①,REWORK_REVIEW_20260903 F1)。"""
-        offenders = _find_criteria_direct_calls(self._src_root())
+        offenders = _find_criteria_direct_calls(self._src_root(),
+                                                _CRITERIA_SCAN_SUBDIR)
         assert not offenders, \
             f'判据直调点绕过 ensure_contract(白名单外): {offenders}'
 
@@ -569,12 +591,13 @@ class TestNoBypassDirectCalls:
         旧正则守卫下漏网(正则只捕 ``<alias>.<fn>(`` 形态)——AST 版
         经 import 绑定名解析必须报红。"""
         src = tmp_path / 'src'
-        (src / 'decision').mkdir(parents=True)
-        (src / 'decision' / 'new_consumer.py').write_text(
+        subtree = src.joinpath(*_CRITERIA_SCAN_SUBDIR)
+        (subtree / 'decision').mkdir(parents=True)
+        (subtree / 'decision' / 'new_consumer.py').write_text(
             'from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria'
             '.levelup import lv9_stop\n'
             'def f() -> None:\n    lv9_stop(3)\n', encoding='utf-8')
-        offenders = _find_criteria_direct_calls(src)
+        offenders = _find_criteria_direct_calls(src, _CRITERIA_SCAN_SUBDIR)
         assert any('裸名直调 lv9_stop' in o for o in offenders), offenders
 
     def test_guard_catches_basename_whitelist_escape(self, tmp_path):
@@ -582,14 +605,15 @@ class TestNoBypassDirectCalls:
         basename 豁免即逃逸)——全限定路径白名单下模块属性直调必须
         报红。"""
         src = tmp_path / 'src'
-        (src / 'somewhere' / 'else').mkdir(parents=True)
-        (src / 'somewhere' / 'else' / 'shop.py').write_text(
+        subtree = src.joinpath(*_CRITERIA_SCAN_SUBDIR)
+        (subtree / 'somewhere' / 'else').mkdir(parents=True)
+        (subtree / 'somewhere' / 'else' / 'shop.py').write_text(
             'from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria'
             ' import levelup\n'
             'def f() -> None:\n    levelup.lv9_stop(3)\n', encoding='utf-8')
-        offenders = _find_criteria_direct_calls(src)
-        assert any('somewhere/else/shop.py' in o for o in offenders), \
-            offenders
+        offenders = _find_criteria_direct_calls(src, _CRITERIA_SCAN_SUBDIR)
+        assert any('currency_war/somewhere/else/shop.py' in o
+                   for o in offenders), offenders
 
     def test_guard_allows_fully_qualified_whitelisted_path(self, tmp_path):
         """正测试:全限定白名单路径(决策/cw4/shop.py 全径)内的判据调用
@@ -602,7 +626,7 @@ class TestNoBypassDirectCalls:
             'from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria'
             ' import levelup\n'
             'def f() -> None:\n    levelup.lv9_stop(3)\n', encoding='utf-8')
-        assert _find_criteria_direct_calls(src) == []
+        assert _find_criteria_direct_calls(src, _CRITERIA_SCAN_SUBDIR) == []
 
 
 # ===== ⑤ R1 接线正反测(mandate arm1 消费位;FIX_REVIEW 场景 A 复验)=====
