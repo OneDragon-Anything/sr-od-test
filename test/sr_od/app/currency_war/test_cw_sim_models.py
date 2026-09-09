@@ -200,6 +200,50 @@ def test_levelup_flat4_lock_bidirectional() -> None:
     assert not ledger.check_levelup_flat4_ledger_lock(good)
 
 
+def test_degrade_recover_mutex_segment_first_round() -> None:
+    """段首轮号语义锁:history 段首 = 配方首次出现轮,段末不覆盖。
+
+    判据表语义无歧义:切线 A→B 后 ≤3 轮内回锁 A = relapse 指纹,
+    回锁时点 = A 首次重新出现之轮;r_c - r_b 因此等于 B 段驻留
+    轮数(≤3 = 试错回摆,>3 = 合法 pivot 不辖)。缺陷形态(段末
+    覆盖):「回锁后保持稳定」的 A 段轮号被推到段末,r_c - r_b
+    必然 >3,最常见回摆形态全部漏判(实测摇摆率被低估约一半)。
+    """
+    a, b = '过渡配方·仙舟+列车同行', '过渡配方·仙舟+希儿系'
+
+    def _seq(rounds: list[tuple[int, str]]) -> list[dict]:
+        return [_row(rn=rn, target_comp=comp) for rn, comp in rounds]
+
+    # 回锁后保持稳定 ≥4 轮(最常见试错回摆形态;段末覆盖语义下
+    # r_c 取段末 10,r_c - r_b = 10 - 5 = 5 > 3 → 全部漏判):
+    # 段首语义 r_c = 6,r_c - r_b = 1 → 恰 1 次命中
+    stable = _seq([(1, a), (2, a), (3, a), (4, a), (5, b),
+                   (6, a), (7, a), (8, a), (9, a), (10, a)])
+    hits = ledger.check_degrade_recover_mutex(stable)
+    assert len(hits) == 1, f'回锁后稳定形态漏判: {hits}'
+    assert '(r5)' in hits[0] and '(r6)' in hits[0], hits[0]
+
+    # 边界:B 段驻留恰 3 轮后回锁 = 摇摆(检出);驻留 4 轮 =
+    # 合法 pivot(不辖;段末覆盖语义下后者反而命中——判据失真)
+    edge3 = _seq([(1, a), (2, a), (3, b), (4, b), (5, b),
+                  (6, a), (7, a)])
+    assert len(ledger.check_degrade_recover_mutex(edge3)) == 1
+    pivot4 = _seq([(1, a), (2, a), (3, b), (4, b), (5, b), (6, b),
+                   (7, a), (8, a)])
+    assert not ledger.check_degrade_recover_mutex(pivot4), \
+        'B 段驻留 4 轮的合法 pivot 误报'
+
+    # 连续摇摆逐三元组各记一次(A→B→A→B→A = 3 次)
+    multi = _seq([(1, a), (2, b), (3, a), (4, b), (5, a), (6, a)])
+    assert len(ledger.check_degrade_recover_mutex(multi)) == 3
+
+    # p2 段与空 target_comp 不进 history(p1 口径):剔除后剩
+    # A(r1)→B(r4)→A(r5),恰 1 次命中
+    noise = _seq([(1, a), (2, b), (3, ''), (4, b), (5, a)])
+    noise[1]['plane'] = 2
+    assert len(ledger.check_degrade_recover_mutex(noise)) == 1
+
+
 # --- 注册表类 --------------------------------------------------------
 
 def test_phantom_equip_no_wear_bidirectional() -> None:
