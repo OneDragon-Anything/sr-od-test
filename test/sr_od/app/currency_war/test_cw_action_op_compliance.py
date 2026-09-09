@@ -50,26 +50,23 @@ def _screen_seq_stub(op, monkeypatch, seq: list[str]) -> None:
 
 # ==================== E2:M7 主循环批内漂移 → round_fail ====================
 
-def _mk_equip_op(monkeypatch, *, avatar_templates) -> object:
-    """裸 CwOpEquipAll(过入口闸,抵达 M7/front-only 分叉前的最小桩面)。"""
-    from sr_od.application.currency_war.obs import cw_back_layout
+def _mk_equip_op(monkeypatch, *, avatar_templates, plan) -> object:
+    """裸 CwOpEquipAll(过入口闸,抵达计划消费循环的最小桩面;T-164 C1
+    计划化后 op 由分发段下发计划执行——桩面补 plan 参数,断言面不动:
+    锁改桩不改语义,批内漂移执行断言在计划消费循环中原样保留)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_equip_all as ea,
     )
 
     op = ea.CwOpEquipAll.__new__(ea.CwOpEquipAll)
     op.last_screenshot = object()
+    op.plan = list(plan)
     monkeypatch.setattr(op, 'screenshot', lambda: object())
     monkeypatch.setattr(op, '_get_templates', lambda: object())
     monkeypatch.setattr(op, '_get_tm_grays', lambda: object())
-    monkeypatch.setattr(op, '_get_avatar_templates',
-                        lambda: avatar_templates)
     monkeypatch.setattr(ea, '_area_rect',
                         lambda ctx, name, screen: SimpleNamespace(
                             x1=1620, y1=100, x2=1918, y2=900))
-    monkeypatch.setattr(cw_back_layout, 'select_back_layout',
-                        lambda ctx, scr, level=None, cap=None,
-                        level_trusted=None: (6, ''))
     op.ctx = SimpleNamespace(cw_match=None)
     return op
 
@@ -80,12 +77,11 @@ def test_equip_m7_drift_fails_mid_batch(monkeypatch) -> None:
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_equip_all as ea,
     )
-    op = _mk_equip_op(monkeypatch, avatar_templates=object())
+    plan = [ea.EquipWearStep(item_name='财富宝钻', char_name='姬子',
+                             row='back', slot=1)]
+    op = _mk_equip_op(monkeypatch, avatar_templates=object(), plan=plan)
     _screen_seq_stub(op, monkeypatch, [_ACT, _DRIFT])
-    monkeypatch.setattr(ea, 'read_deployed_chars',
-                        lambda ctx, scr, tpl: [SimpleNamespace(
-                            char_id='姬子', position_pref='back', slot=1)])
-    monkeypatch.setattr(ea, 'read_row_equipped', lambda *a, **k: {})
+    monkeypatch.setattr(ea, 'record_zero_wear_defect', lambda *a, **k: None)
     res = op.equip_all()
     assert res.result.name == 'FAIL'
     assert ea.CwOpEquipAll.STATUS_SCREEN_DRIFTED in (res.status or ''), \
@@ -94,14 +90,15 @@ def test_equip_m7_drift_fails_mid_batch(monkeypatch) -> None:
 
 def test_equip_frontonly_drift_fails_mid_batch(monkeypatch) -> None:
     """E3 行为锁:front-only 回退路径批内漂移 → round_fail(同具名状态),
-    禁静默 break 后 success 假完成。avatar_templates=None = 身份读失败
-    → 走回退路径(与生产分叉条件一致)。"""
+    禁静默 break 后 success 假完成。计划步 char_name='' = 身份读失败的
+    回退计划步(与生产分叉条件一致,builder front_only 分支产出形态)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_equip_all as ea,
     )
-    op = _mk_equip_op(monkeypatch, avatar_templates=None)
+    plan = [ea.EquipWearStep(item_name='财富宝钻', char_name='',
+                             row='front', slot=1)]
+    op = _mk_equip_op(monkeypatch, avatar_templates=None, plan=plan)
     _screen_seq_stub(op, monkeypatch, [_ACT, _DRIFT])
-    monkeypatch.setattr(ea, 'read_row_equipped', lambda *a, **k: {})
     res = op.equip_all()
     assert res.result.name == 'FAIL'
     assert ea.CwOpEquipAll.STATUS_SCREEN_DRIFTED in (res.status or ''), \
@@ -198,12 +195,11 @@ def test_deploy_deterministic_bench_empty_returns_noop_triple(
     三审 C1 实证:旧 2 元组 return 恰在此路径漏过全部既有锁——调用点
     三元解包 ValueError → 框架转 retry 烧尽预算后假失败)。行为锁直钉
     该 return 面:回退 2 元组的单点变异在此以 ValueError 打红。"""
-    from one_dragon.base.geometry.point import Point
 
+    from sr_od.application.currency_war.obs import cw_back_layout
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_deploy as db,
     )
-    from sr_od.application.currency_war.obs import cw_back_layout
 
     op = db.CwOpDeploy.__new__(db.CwOpDeploy)
     monkeypatch.setattr(op, 'screenshot', lambda: object())

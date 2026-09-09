@@ -213,9 +213,23 @@ def test_run_composite_deploy_not_guarded() -> None:
 
 
 def test_dispatch_point_guards_registered() -> None:
-    """接线锁:装备/工具两处派发点必须传 guard_screen(判断上提落位),
-    防后续新增组合动作时漏带守卫退回「op 内自判」形态。"""
+    """接线锁:装备/工具两处派发点必须带派发前置守卫(判断上提落位),
+    防后续新增组合动作时漏带守卫退回「op 内自判」形态。
+
+    结构跟进(T-164 C1 计划化):装备派发改走专用 ``_run_equip``(计划
+    随指令下发,通用 _run_composite 路径无法传构造参),其守卫经共用
+    helper ``_guard_screen_mismatch`` 接线;工具派发仍走 _run_composite
+    的 guard_screen 参数。锁义不变 = 两处派发点都有守卫,仅字面锚随
+    结构更新(锁红≠改动错,先判锁再跟进,判据=守卫语义仍全覆盖)。"""
     import sr_od.application.currency_war.prep_actions as pa_mod
+    from sr_od.application.currency_war.prep_actions import PrepActionExecutor
+
     src = inspect.getsource(pa_mod)
-    assert src.count("guard_screen='货币战争-备战'") == 2, \
-        '装备/工具派发点守卫接线缺失'
+    dispatch_src = inspect.getsource(PrepActionExecutor._execute_dispatch)
+    equip_src = inspect.getsource(PrepActionExecutor._run_equip)
+    assert 'self._run_equip()' in dispatch_src, \
+        '装备派发未走专用计划产出位(C1 计划化结构回归)'
+    assert "_guard_screen_mismatch('货币战争-备战')" in equip_src, \
+        '装备派发点守卫接线缺失'
+    assert src.count("guard_screen='货币战争-备战'") == 1, \
+        '工具派发点守卫接线缺失'
