@@ -170,15 +170,19 @@ def test_p65_pair_carriers_expanded_bonds() -> None:
 
 
 def test_p65_hole_pair_derivable() -> None:
-    """(仙舟,希儿系) pair 派生性锁:支持度 1.0 资产确可派生该 pair
-    (注册表现查;该 pair 在生产展开语义下非空,派生性只证帧面可达)。"""
+    """(仙舟,希儿系) pair 派生性锁:支持度双 1.0 资产确可派生该 pair
+    (注册表现查;该 pair 在生产展开语义下非空,派生性只证帧面可达)。
+    锁语义重推(T-166 批1):ADR-0616 §2.3 门槛过滤先行政两席都查 1.0,
+    1★ 希儿单资产(希儿系门槛维 0.5)不再入对——旧夹具缺放大器腿,
+    改为希儿+缇宝(量子腿满档)保持本锁意图(P65 派生洞闭合的帧面
+    前提)不变。"""
     tiers = dict(TRANSITION_TRAITS)
-    bench_names = ['希儿']
+    bench_names = ['希儿', '缇宝']
     for name, ch in CHARACTERS.items():
         if '仙舟' in (set(ch.factions) | set(ch.flows)) \
-                and len(bench_names) < tiers['仙舟'] + 1:
+                and len(bench_names) < tiers['仙舟'] + 2:
             bench_names.append(name)
-    assert len(bench_names) == tiers['仙舟'] + 1
+    assert len(bench_names) == tiers['仙舟'] + 2
 
     class _Bc:
         def __init__(self, cid: str) -> None:

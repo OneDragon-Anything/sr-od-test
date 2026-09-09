@@ -127,12 +127,18 @@ class TestNonSeeleZeroDrift:
     """
 
     def test_dot_full_support_unchanged(self):
-        """桑博+卡芙卡(DOT 满员)= 1.0:三羁绊系腿口径不变(ADR-0519
-        满员当量),希儿系 0,pair 仍含仙舟垫位(基线 A 态逐键值)。"""
+        """桑博+卡芙卡(DOT 满员)= 1.0:三羁绊系腿门槛维口径不变
+        (ADR-0519 满员当量),希儿系 0。
+        锁语义重推(T-166 批1,锁红≠改动错):旧断言「pair 仍含仙舟
+        垫位」钉的是第二席零资格入对——该语义已被 ADR-0616 §2.1/§2.3
+        门槛过滤先取代(两席都查 1.0,零在册资格的第二席不再入对,
+        宁缺勿滥保守向);Q 恰一系帧派生 1 元对(ADR 在册边缘帧),
+        第二席资格由 test_cw_pair_predicate_layers 门槛先行层新锁承载。
+        本格改锁门槛维值与 1 元对产物(基线 A 态逐键值)。"""
         st = _p1_state([_bc('桑博', 0), _bc('卡芙卡', 1)])
         assert ci._p1_system_support(st) == {
             '仙舟': 0.0, '列车同行': 0.0, '希儿系': 0.0, '持续伤害': 1.0}
-        assert list(ci._derive_p1_pair(st)) == ['仙舟', '持续伤害']
+        assert list(ci._derive_p1_pair(st)) == ['持续伤害']
         assert ci.p1_gap_window(st) is False
 
     def test_duplicate_copies_per_copy_counting_unchanged(self):

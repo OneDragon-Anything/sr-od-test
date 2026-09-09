@@ -244,6 +244,51 @@ def test_degrade_recover_mutex_segment_first_round() -> None:
     assert len(ledger.check_degrade_recover_mutex(noise)) == 1
 
 
+def test_degrade_recover_mutex_same_anchor_containment_exempt() -> None:
+    """同锚子集/超集转换豁免语义锁(ADR-0616 §3.3 裁决②;T-166 批1)。
+
+    门槛过滤先行落地后,1 元对为在册边缘帧(ADR-0616 §2.1),合法新增
+    「{A,B}→{A}→{A,B'}」席位退场/补位链——同锚包含关系转换是席位进出,
+    不是方向切线,并入前段延续(段首轮号语义不更新);跨锚转换仍各立段
+    照判,守卫意图(A→B→A relapse 指纹 + ≤3 轮辖域)零松动。
+    """
+    ab = '过渡配方·仙舟+列车同行'
+    a1 = '过渡配方·仙舟'                    # 1 元对(锚=仙舟 ⊂ {仙舟,列车同行})
+    ab2 = '过渡配方·仙舟+持续伤害'          # 同锚补位(列车退场→DOT 补位)
+    cd = '过渡配方·持续伤害+希儿系'         # 跨锚(仙舟系退场)
+
+    def _seq(rounds: list[tuple[int, str]]) -> list[dict]:
+        return [_row(rn=rn, target_comp=comp) for rn, comp in rounds]
+
+    # 豁免格:席位退场→回补({A,B}→{A}→{A,B}),方向未切线 → 0 命中
+    # (旧语义按三元组误计 1 次 relapse——裁决②的豁免对象)
+    seat_cycle = _seq([(1, ab), (2, a1), (3, ab), (4, ab), (5, ab)])
+    assert ledger.check_degrade_recover_mutex(seat_cycle) == [], \
+        '同锚子集/超集转换被误计为切线摇摆'
+
+    # 豁免链延伸:退场→同锚补位({A,B}→{A}→{A,B'}) → 0 命中
+    seat_refill = _seq([(1, ab), (2, a1), (3, ab2), (4, ab2)])
+    assert ledger.check_degrade_recover_mutex(seat_refill) == []
+
+    # 跨锚回摆仍照判:A+B→C+D→A+B(方向真切线又回锁)→ 恰 1 命中
+    cross = _seq([(1, ab), (2, cd), (3, ab), (4, ab)])
+    hits = ledger.check_degrade_recover_mutex(cross)
+    assert len(hits) == 1, f'跨锚回摆漏判(守卫意图松动): {hits}'
+
+    # 二席换人({A,B}→{A,B'})非包含关系 → 立段照判:换回 = 1 命中
+    seat_swap = _seq([(1, ab), (2, ab2), (3, ab), (4, ab)])
+    assert len(ledger.check_degrade_recover_mutex(seat_swap)) == 1
+
+    # 经由 1 元对中转的跨锚回摆:{A,B}→{A}→{C+D}→{A,B}:同锚半段并入
+    # 不稀释三元组 → A+B→C+D→A+B 恰 1 命中(豁免不制造漏判盲区)
+    mixed = _seq([(1, ab), (2, a1), (3, cd), (4, ab), (5, ab)])
+    assert len(ledger.check_degrade_recover_mutex(mixed)) == 1
+
+    # 非过渡配方名(终局 comp 等)无锚集 → 原子段行为不变
+    legacy = _seq([(1, '某终局套'), (2, a1), (3, '某终局套')])
+    assert len(ledger.check_degrade_recover_mutex(legacy)) == 1
+
+
 # --- 段级检查器(sim/checks/segments,seg_* 族) ----------------------
 # 段级行形状与上面 _row(ledger 批检查器)不同:成型判据读
 # state.board_factions(engines_count 单一源),不消费 board/equipped。
