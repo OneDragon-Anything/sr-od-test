@@ -10,11 +10,7 @@
 test_cw_infra_locks.py::test_ci_smoke_snapshot_batch
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_new_match_a8_reaches_prep
 test_cw_data_registry.py::test_layout_hook_no_stop_only_evidence
-test_cw_data_registry.py::test_layout_hook_silent_on_archived
 test_cw_observe_full_fixture.py::test_observe_full_heavy_on_prep_fixture
-test_cw_data_registry.py::test_cv_transient_falls_back_to_formula
-test_cw_data_registry.py::test_cv_reread_mismatch_logged_no_action
-test_cw_data_registry.py::test_cv_stable_new_grid_confirmed
 test_cw_equip_grid.py::TestTwoStateZoneDy::test_labeled_frame_second_candidate
 test_cw_equip_grid.py::TestTwoStateZoneDy::test_fallback_scan_on_unknown_layout
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_residual_lobby_escapes_via_close_and_world
@@ -56,6 +52,5 @@ test_cw_deploy_lag_hold_exempt.py::test_seed_31016_p1r6_lag_zero_regression
 # 重建轮终局对账(2026-09-09:删 shop_refresh hook 三死条目[测已随收缩消失];补登 4 条实测 ≥2s 缺登条目)
 test_cw_obs_chain.py::test_read_displayed_factions_real_fixtures
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_jade_detail_popup_closed_then_reaches_prep
-test_cw_spend_face.py::TestReadinessBattleArm::test_readiness_launch_failure_falls_back_to_guard
 test_cw_tools_exec_channel.py::TestFixtureInteraction::test_prep_frame_to_plan
 
