@@ -1,7 +1,8 @@
-"""test_cw_obs_chain 主题锁(结构合并批,机械拼接)。
+"""test_cw_obs_chain 主题锁(结构合并批,机械拼接;2026-09-09 二轮手术)。
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
-- test_obs_conflict_guards: test_obs_conflict_guards.py
+成员(原文件 docstring 语义索引):
+- test_obs_conflict_guards: test_obs_conflict_guards.py(含等级三源解析
+  _resolve_level 真值表段;board/reconcile/star 防抖段)
 - w287_obs_readchain: test_cw_w287_obs_readchain.py
 - w289_match_start_reset: test_cw_w289_match_start_reset.py
 - w529_xy_reader: test_cw_w529_xy_reader.py
@@ -9,11 +10,20 @@
 - w547_faction_wire: test_cw_w547_faction_wire.py
 - w552_xp_reconcile: test_cw_w552_xp_reconcile.py
 - w556_shop_obs: test_cw_w556_shop_obs.py
-冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+- 商店牌费用徽章数字识别 / level_readable 保真位 / deployed 计数双源仲裁
+  (后续批并入时未登记——2026-09-09 补录;各段内出处见段头注释)
+
+2026-09-09 二轮手术(判据 = sr-od-test/README.md 测试纪律;明细 =
+.debug/temp/cw_test_slim_audit/reports/_cluster_R2A.md):删跨文件子集
+2(star 防抖自愈→test_star_regression_hook 超集;cap<level 双帧一致→
+test_cw_adr0286 域防抖超集)、消费 DEBTS D34(xp 推进算子在场锁×2)、
+两处接线源码锁去行为已辖的肯定式断言(墓碑与顺序断言保留)、
+TestCheckShopPool 边界内侧测删(全表互证测子集)。
+来源前缀别名(_<tag>_原名)为本文件声明的合并约定——同名绑定均唯一,
+无遮蔽隐患,本轮不改(改名风险>收益,见报告驳回项)。
 """
 from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 # ==================== test_obs_conflict_guards ====================
 import pytest
@@ -21,9 +31,6 @@ import pytest
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
-from sr_od.application.currency_war.strategies.impl.flow import (
-    CwFlowStrategy,
-)
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
@@ -155,24 +162,22 @@ def test_reconcile_star_rollback_no_crash():
     assert exec_state_of(sess).tracked_bench_chars[0].star == 1, '连续 2 次回退确认采新'
 
 
-def test_reconcile_star_regression_pending_self_heals():
-    """防抖自愈(2026-08-18):首帧回退(动画窗)→ 下帧读回正常 → pending 清零、
-    tracking star 保持旧值(2★)未被动画窗 1★ 毒化。"""
-    sess = _Sess(bench=[BenchChar(slot=1, char_id='万敌', star=2)])
-    # 首帧:动画窗读 1★ → 保旧
-    reconcile_tracking(sess, [BenchChar(slot=1, char_id='万敌', star=1)], [], None, source='t')
-    assert exec_state_of(sess).tracked_bench_chars[0].star == 2
-    # 下帧:动画结束读回 2★(=旧值,非回退)→ 自愈,防抖挂起清零
-    reconcile_tracking(sess, [BenchChar(slot=1, char_id='万敌', star=2)], [], None, source='t')
-    assert exec_state_of(sess).tracked_bench_chars[0].star == 2
-    assert not getattr(sess, 'star_pending_regression', {}).get('万敌'), '读回恢复清防抖'
+# (原 test_reconcile_star_regression_pending_self_heals 已删(2026-09-09,
+#  跨文件子集):「首帧回退保旧 + 读回恢复清 pending」两面由
+#  test_star_regression_hook.py::test_first_regression_no_stop(L50-61,
+#  超集:另断 no-stop/不计数/pending==1)+ test_recovered_star_resets_
+#  count(L95-106,恢复清 pending+计数)覆盖;star 回退真封装(M41
+#  no-crash)载体 = 本文件 test_reconcile_star_rollback_no_crash——
+#  其 autouse 夹具只桩 obs_conflict 源头、_conflict 封装真跑,hook 侧
+#  整桩 _conflict 辖不到该面。)
 
 
-def test_plane_table_smoke():
-    """cw_plane_table 冒烟(批 3:标定表模块随 DP 退役平移)。原息闭式
-    边界锁随死码 ``plane_table.interest`` 删除退役(ADR-0598 随批清理:
-    与 kernel cw_economy.interest 同形双源、零生产调用),等值边界由
-    kernel 息闭式单一源承载。"""
+def test_kernel_interest_boundary():
+    """kernel cw_economy.interest 息闭式边界(原 test_plane_table_smoke;
+    批 3 标定表模块随 DP 退役平移后,原息闭式边界锁随死码
+    ``plane_table.interest`` 删除退役(ADR-0598 随批清理:与 kernel
+    cw_economy.interest 同形双源、零生产调用),等值边界由 kernel
+    息闭式单一源承载——本测即该承载的 49/50 边界两腿。"""
     from sr_od.application.currency_war.kernel.cw_economy import interest
     assert interest(49) == 4
     assert interest(50) == 5
@@ -437,17 +442,15 @@ def test_discard_idempotent_when_no_container():
     assert ctx.cw_match is None
 
 
-def test_phase_round_cross_match_reset():
+def test_phase_round_cross_match_reset(monkeypatch):
     """锁 3(phase_round 跨局重置豁免语义):last-known-good 在新局边界被清,
     单调守卫不会拿上局 [9,9] 打回新局 1-9(phase_round 抽样 2/3 ✗ 根因)。"""
     import sr_od.application.currency_war.obs.cw_observation as obs_mod
-    obs_mod._last_phase_round = (3, 9)     # 模拟上局 P3-9 残留
-    try:
-        assert obs_mod._last_phase_round == (3, 9)
-        reset_phase_round_cache()          # discard/handle_init 新局边界调用点
-        assert obs_mod._last_phase_round is None
-    finally:
-        reset_phase_round_cache()
+    # 纪律 1 形态(2026-09-09:裸赋值改 monkeypatch,teardown 自动还原)
+    monkeypatch.setattr(obs_mod, '_last_phase_round', (3, 9))   # 模拟上局 P3-9 残留
+    assert obs_mod._last_phase_round == (3, 9)
+    reset_phase_round_cache()          # discard/handle_init 新局边界调用点
+    assert obs_mod._last_phase_round is None
 
 
 def test_entry_discard_call_sites_are_new_match_only():
@@ -571,22 +574,13 @@ def test_parse_paddle_rescues_poisoned_level_prior(monkeypatch) -> None:
     assert conflicts == [], '先验一致帧零噪声'
 
 
-def test_debounce_cap_below_level_two_frame_consistent(monkeypatch) -> None:
-    """cap<level 双帧一致采信:域判据的对照集 level 自身可能毒化,不再恒拒——
-    与 ADR-0420 上向「域外双帧一致采信」同判据的镜像;瞬时误读被两帧一致压住。"""
-    import sr_od.application.currency_war.obs.cw_observation as obs_mod
-
-    class _Ctl:
-        def screenshot(self):
-            return object()
-
-    monkeypatch.setattr(obs_mod, 'read_deploy_cap', lambda ctx, screen, level=None: 4)
-    conflicts: list[tuple] = []
-    monkeypatch.setattr(obs_mod, 'obs_conflict',
-                        lambda *a, **kw: conflicts.append((a[0], kw.get('verdict', ''))))
-    got = obs_mod._debounce_cap(type('_C', (), {'controller': _Ctl()})(), None, 4, 5)
-    assert got == 4, 'cap<level 重读一致 → 采信(旧恒拒把毒化 level 先验下的真值锁死)'
-    assert conflicts and conflicts[0][0] == 'deploy_cap_domain'
+# (原 test_debounce_cap_below_level_two_frame_consistent 已删(2026-09-09,
+#  跨文件子集):「cap<level 双帧一致采信 + obs_conflict 留证」分支由
+#  test_cw_adr0286_sim_truth_wiring.py::test_cap_debounce_out_of_domain_
+#  equal_pair_accepted 末腿(L215-221)经公共入口 read_deploy_cap_
+#  debounced 覆盖且断言面更全(采信/拒信/上界三形态 + verdict 文本
+#  'cap<level');_debounce_cap 的唯一消费方即该包装(cw_observation.py
+#  L1316/L1381),内层直测是窄入口子集。)
 
 
 # ===== 真帧终态锁(fixture 驱动,模型不可用 → skip) =====
@@ -813,20 +807,26 @@ def _w545_faction_reconcile_make_real_ocr_ctx(test_context: _w545_faction_reconc
     monkeypatch.setattr(test_context, 'ocr_service', OcrService(ocr_matcher=matcher))
 
 
-@_w545_faction_reconcile_pytest.mark.parametrize('filename', sorted(_w545_faction_reconcile_EXPECTS))
 def test_read_displayed_factions_real_fixtures(
-        test_context: _w545_faction_reconcile_SrTestContext, monkeypatch: _w545_faction_reconcile_pytest.MonkeyPatch,
-        filename: str) -> None:
-    """16 帧对拍代表集终态锁:名称/徽章数逐条读对,截断如实标记。"""
+        test_context: _w545_faction_reconcile_SrTestContext,
+        monkeypatch: _w545_faction_reconcile_pytest.MonkeyPatch) -> None:
+    """对拍代表集终态锁:名称/徽章数逐条读对,截断/失读如实标记。
+
+    (2026-09-09 由 8 案参数化并单测循环——同文件 w529 十二帧单测
+    先例;OCR 逐帧读成本不变,失败断言自带帧名定位。)
+    """
     from one_dragon.utils import cv2_utils
-    if not (_w545_faction_reconcile_FIX_DIR / filename).exists():
-        _w545_faction_reconcile_pytest.skip(f'fixture 缺:{filename}')
+    missing = [n for n in sorted(_w545_faction_reconcile_EXPECTS)
+               if not (_w545_faction_reconcile_FIX_DIR / n).exists()]
+    if missing:
+        _w545_faction_reconcile_pytest.skip(f'fixture 缺:{missing}')
     _w545_faction_reconcile_make_real_ocr_ctx(test_context, monkeypatch)
-    img = cv2_utils.read_image(str(_w545_faction_reconcile_FIX_DIR / filename))
-    reading = read_displayed_factions(test_context, img)
-    assert reading.entries == _w545_faction_reconcile_EXPECTS[filename], filename
-    assert sorted(reading.unreadable) == sorted(_TRUNCATED.get(filename, [])), filename
-    assert reading.truncated == (filename in _TRUNCATED), filename
+    for filename in sorted(_w545_faction_reconcile_EXPECTS):
+        img = cv2_utils.read_image(str(_w545_faction_reconcile_FIX_DIR / filename))
+        reading = read_displayed_factions(test_context, img)
+        assert reading.entries == _w545_faction_reconcile_EXPECTS[filename], filename
+        assert sorted(reading.unreadable) == sorted(_TRUNCATED.get(filename, [])), filename
+        assert reading.truncated == (filename in _TRUNCATED), filename
 
 
 def test_report_faction_reconcile_forwards_mismatches_only(
@@ -868,28 +868,26 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
 from test.conftest import SrTestContext as _w547_faction_wire_SrTestContext
 
 
-# ===== 接线源码锁(形态先例=_w547_faction_wire_inspect.getsource 静态锁) =====
+# ===== 接线源码锁(2026-09-09 按纪律 8 拆解:肯定式在场断言删——
+#  cw_faction_obs 三件套的接线由下方行为锁群体辖(book_from_tracked/
+#  read_displayed_factions 未被调用时假注入不消费、defect 不落账即红;
+#  best-effort 由 test_wire_best_effort_on_reader_error 行为辖;模块
+#  import 由行为测的 monkeypatch.setattr(pd, …) 属性在场性辖),
+#  墓碑(零决策面)与消费序断言保留。) =====
 def test_faction_wire_source_locks() -> None:
-    """接线三锁:方法用 cw_faction_obs 三件套且 best-effort;主环在 XP 对账
-    同帧之后消费;禁改面(cw_faction_obs)只 import 不含本地重定义。"""
+    """墓碑+顺序两锁:方法零决策面(不动环、不做游戏交互);主环在
+    XP 对账同帧之后消费(W971 P3b:XP/羁绊同帧消费点在
+    _v2_post_frame_accounting,羁绊紧随其后)。"""
     src = _w547_faction_wire_inspect.getsource(CwScreenPrep._reconcile_faction_display)
-    assert 'board_from_tracked(' in src
-    assert 'read_displayed_factions(' in src
-    assert 'compare_factions(' in src
-    assert 'report_faction_reconcile(' in src
     # 零决策:方法不 return 环结果、不做任何游戏交互(无 screenshot/click)
     assert 'round_' not in src.replace('round_num', '')
     assert 'screenshot(' not in src
-    # best-effort:异常吞掉不阻塞环(与 _reconcile_xp_expect 同款)
-    assert 'except Exception' in src
     # 消费序(W971 P3b 拆内环:XP/羁绊同帧消费点在 _v2_post_frame_accounting)
     acct_src = _w547_faction_wire_inspect.getsource(
         CwScreenPrep._v2_post_frame_accounting)
     xp_at = acct_src.index('self._reconcile_xp_expect(obs)')
     fac_at = acct_src.index('self._reconcile_faction_display(obs)')
     assert fac_at > xp_at, '羁绊对账须与 XP 对账同一 heavy 定型帧、紧随其后'
-    mod_src = _w547_faction_wire_Path(pd.__file__).read_text(encoding='utf-8')
-    assert 'from sr_od.application.currency_war.obs.cw_faction_obs import' in mod_src
 
 
 # ===== 行为锁(假 reader/假账本,零 OCR/零游戏) =====
@@ -1236,7 +1234,15 @@ def test_parse_buy_clicks():
 
 def test_w552_wiring_locks():
     """①意图推进在 execute 返回后且仅 progressed 分支;②对账在 heavy
-    定型帧观察之后(buy_expect 消费点同区域);③台账常量与解析形态锁。"""
+    定型帧观察之后(buy_expect 消费点同区域);③锚定前不评+轮界重锚。
+
+    (2026-09-09 按纪律 8 拆解+消费 DEBTS D34:expect_src 四条常量/
+    形态在场断言删——台账 surface/kind/reader_source 由
+    test_xp_defect_row_shape 真落盘行辖,解析形态由 test_parse_buy_
+    clicks 辖;cw_state 推进算子两条「def xp_*_in state_src」肯定式
+    在场锁删——行为面由本文件 test_xp_apply_clicks_* 四测 +
+    test_xp_clicks_to_level_truth_table 及 test_cw_state 门槛梯全辖,
+    在场断言零增量判别力(rule 8 实现形状锁)。)"""
     src = _w552_xp_reconcile_Path(
         'src/sr_od/application/currency_war/operations/cw_screen/cw_screen_prep.py'
     ).read_text(encoding='utf-8')
@@ -1252,22 +1258,6 @@ def test_w552_wiring_locks():
     # test_cw_w536_buy_expect.test_w536_wiring_locks 改锁依据)
     consume_at = src.index('_pending_buy = exec_state_of(session).pending_buy_expect')
     assert consume_at < obs_at                      # heavy 定型帧之后
-    # 分包期 6(DESIGN §4.5):xp 常量/解析形态随纯期望段迁
-    # kernel/cw_prep_expect(cw_screen_prep 经 import 引用);接线点
-    # (reader_source/record 调用)仍在本体。
-    expect_src = _w552_xp_reconcile_Path(
-        'src/sr_od/application/currency_war/kernel/cw_prep_expect.py'
-    ).read_text(encoding='utf-8')
-    assert "_XP_DEFECT_KIND = 'xp_expect_mismatch'" in expect_src
-    assert "_XP_DEFECT_SURFACE = 'xp'" in expect_src
-    assert "reader_source='xp_expect_reconcile'" in src
-    assert "_XP_BUY_CLICKS_PAT = re.compile(r'升(\\d+)次')" in expect_src
-    # 推进算子单一源 = cw_state(sim 侧不重复建模)
-    state_src = _w552_xp_reconcile_Path(
-        'src/sr_od/application/currency_war/kernel/cw_state.py'
-    ).read_text(encoding='utf-8')
-    assert 'def xp_apply_clicks(' in state_src
-    assert 'def xp_clicks_to_level(' in state_src
     # 对账在 anchor 之前不评(锚定前纯推算无起点)
     rec_at = src.index('def _reconcile_xp_expect')
     rec_body = src[rec_at:src.index('def _session')]
@@ -1320,11 +1310,10 @@ from sr_od.application.currency_war.obs.cw_shop_obs import (
 
 
 class TestCheckShopPool:
-    def test_tier_boundary_pass(self) -> None:
-        """门槛线内侧:4费在 Lv5(p=0.02)、5费在 Lv7(p=0.01)→ 通过。"""
-        assert check_shop_pool([('甲', 4)], level=5) == []
-        assert check_shop_pool([('乙', 5)], level=7) == []
-        assert check_shop_pool([('丙', 1)], level=3) == []  # Lv1-3 纯 1 费
+    # (原 test_tier_boundary_pass 已删(2026-09-09,同文件子集):
+    #  「4费@Lv5/5费@Lv7/1费@Lv3 通过」三格是下方
+    #  test_tier_table_exhaustive_with_registry 全表互证(判据同形:
+    #  violations==[] ⇔ p>0)的真子集。)
 
     def test_tier_boundary_locked(self) -> None:
         """门槛线外侧:4费在 Lv4、5费在 Lv6、2费在 Lv1-3 → tier_locked。"""

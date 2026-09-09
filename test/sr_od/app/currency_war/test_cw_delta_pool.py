@@ -1,30 +1,68 @@
-# -*- coding: utf-8 -*-
-"""test_cw_delta_pool 主题锁(结构合并批,机械拼接)。
+"""test_cw_delta_pool 主题锁(结构合并批,机械拼接;2026-09-09 二轮手术)。
 
-成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
+成员(原文件 docstring 语义索引):
 - b37_delta_pool_audit: test_cw_b37_delta_pool_audit.py
 - adr0306_delta_pool_expansion: test_cw_adr0306_delta_pool_expansion.py
 - battle_rung_delta_pool: test_cw_battle_rung_delta_pool.py
 - delta_pool_snapshot: test_cw_delta_pool_snapshot.py
 - adr0407_encounter_rung_pool: test_cw_adr0407_encounter_rung_pool.py
 - w109_pool_pipeline: test_cw_w109_pool_pipeline.py
+- pool_data_defense: 池再生数据防线(2026-09-08 事故批新增段,原并入未登记,本轮补录)
+- adr0582_synthetic_supply_pairing_filter: 合成行/conf 门配对过滤(同上,补录)
 - r409_delta_pool_starvation_guard: test_cw_r409_delta_pool_starvation_guard.py(2026-09-03 瘦身批并入)
 - r411_pool_no_cost_truncation: test_cw_r411_pool_no_cost_truncation.py(2026-09-03 瘦身批并入;n4/n5 手抄常数改注册表现算,2000 次抽样按纪律 12 降到 500)
-冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
+
+2026-09-09 二轮手术(判据 = sr-od-test/README.md 测试纪律 + 战役工作稿
+METHODOLOGY;删除/合并明细 = .debug/temp/cw_test_slim_audit/reports/_cluster_R2A.md):
+- 来源前缀别名(_<tag>_原名)统一为单一绑定并归顶——消除「同测混用两别名」
+  隐患(机械拼接疤痕清单:METHODOLOGY §4.14);
+- 子集/重复测试删除(采样器版本锁/快照指纹双锁/batch 指纹/battle_rung META 表)、
+  同形测试并参化、三次 batch 嵌入检查并一次、三处结算接线源码锁并一。
 """
 from __future__ import annotations
 
-
-# ==================== b37_delta_pool_audit ====================
+import inspect
+import json
+import random
+from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.sim import pool as cw_sim
-from sr_od.application.currency_war.data.cw_delta_pool_data import  META as SNAP_META
-
+from sr_od.application.currency_war.data import cw_delta_pool_data
+from sr_od.application.currency_war.data.cw_battle_tables import (
+    BUCKET_MIN_N,
+    NODE_WIN_P_BY_TYPE,
+    NODE_WIN_P_LADDER,
+)
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel import cw_battle_calib as calib
+from sr_od.application.currency_war.sim import (
+    cw_delta_pool_gen,
+    engine_p1,
+    ledger_hooks,
+    runner,
+)
+from sr_od.application.currency_war.sim import pool as sim_pool
 from sr_od.application.currency_war.sim.checks.calib import check_ab_verdict_claim
+from sr_od.application.currency_war.sim.checks.corpus import (
+    check_boss_rung_corpus_sample_gate,
+    check_delta_pool_poverty_selfconsistency,
+    check_paired_prefork_wave_identity,
+)
+from sr_od.application.currency_war.sim.checks.ledger import (
+    check_sim_pool_no_cost_truncation,
+)
+from sr_od.application.currency_war.sim.checks.pool import (
+    BATTLE_RUNG_TRUTH,
+    check_ab_depth_boundary_confound,
+    check_battle_rung_pool_bucket_lock,
+    check_delta_pool_bucket_coverage,
+    check_delta_pool_bucket_min_n,
+    check_depth_cliff_monotonicity,
+)
+from sr_od.application.currency_war.sim.pool import _Pool
 
-from sr_od.application.currency_war.sim.checks.corpus import check_boss_rung_corpus_sample_gate, check_delta_pool_poverty_selfconsistency, check_paired_prefork_wave_identity
+# ==================== b37_delta_pool_audit ====================
 
 # --------------------------------------------------------------------
 # check_delta_pool_poverty_selfconsistency
@@ -49,9 +87,9 @@ def test_poverty_selfconsistency_real_snapshot_green() -> None:
     """真实快照(resolve_pool 产物)↔ META 双向自洽 = 0 违规
     (锁生成器 _poverty_list 与池内容同源;重生成后仍须自洽;
     ADR-0362:检查项辖 plane=1 视图,与批内 pool-level 检查同口径)。"""
-    pm, _, _ = cw_sim.resolve_pool('snapshot')
+    pm, _, _ = sim_pool.resolve_pool('snapshot')
     out = check_delta_pool_poverty_selfconsistency(
-        cw_sim.plane_view(pm), SNAP_META)
+        sim_pool.plane_view(pm), cw_delta_pool_data.META)
     assert out['violations'] == 0, f'{out}'
     assert out['disclosed_n'] == out['pool_poor_n']
 
@@ -62,54 +100,55 @@ def test_poverty_selfconsistency_synthetic_green() -> None:
     assert out['violations'] == 0, f'{out}'
 
 
-def test_poverty_selfconsistency_meta_none_skips() -> None:
+def test_poverty_selfconsistency_skip_states() -> None:
+    """两跳过态:无披露载体(meta=None)/空池(fallback)→ 0 违规不辖。"""
     out = check_delta_pool_poverty_selfconsistency(_mini_pool(), None)
     assert out['violations'] == 0
     assert '不辖' in out['note']
+    assert check_delta_pool_poverty_selfconsistency(
+        {}, _mini_meta())['violations'] == 0
 
 
-def test_poverty_selfconsistency_empty_pool_skips() -> None:
-    out = check_delta_pool_poverty_selfconsistency({}, _mini_meta())
-    assert out['violations'] == 0
+def _drifted_meta() -> dict:
+    return {'bucket_poverty': ['battle:桶2(n=9)', 'battle:桶3(缺)',
+                               'battle:桶4(缺)',
+                               'boss:桶9(n=9)]']}   # 全角括号
 
 
-def test_poverty_selfconsistency_format_drift_flags() -> None:
-    """变异杀①:格式漂移(全角括号/空格)→ 解析失败违规
-    (旧 coverage 的字符串精确匹配下这是静默失配,批㊲ 攻击面)。"""
-    drifted = {'bucket_poverty': ['battle:桶2(n=9)', 'battle:桶3(缺)',
-                                  'battle:桶4(缺)',
-                                  'boss:桶9(n=9)]']}   # 全角括号
-    out = check_delta_pool_poverty_selfconsistency(_mini_pool(), drifted)
-    assert out['violations'] >= 1
-    assert any('不可解析' in v for v in out['detail'])
+def _undisclosed_meta() -> dict:
+    return {'bucket_poverty': ['battle:桶2(n=9)', 'battle:桶3(缺)',
+                               'battle:桶4(缺)']}   # 删 boss 披露行
 
 
-def test_poverty_selfconsistency_undisclosed_flags() -> None:
-    """变异杀②:池贫困未披露(删 boss 披露行)→ 违规。"""
-    meta = {'bucket_poverty': ['battle:桶2(n=9)', 'battle:桶3(缺)',
-                               'battle:桶4(缺)']}
-    out = check_delta_pool_poverty_selfconsistency(_mini_pool(), meta)
-    assert out['violations'] >= 1
-    assert any('未披露' in v for v in out['detail'])
-
-
-def test_poverty_selfconsistency_stale_flags() -> None:
-    """变异杀③:过期披露(池中不贫困的桶出现在披露)→ 违规。"""
+def _stale_meta() -> dict:
     meta = _mini_meta()
     meta['bucket_poverty'] = list(meta['bucket_poverty']) + [
-        'battle:桶0(n=9)']
-    out = check_delta_pool_poverty_selfconsistency(_mini_pool(), meta)
-    assert out['violations'] >= 1
-    assert any('过期' in v for v in out['detail'])
+        'battle:桶0(n=9)']   # 池中不贫困的桶出现在披露
+    return meta
 
 
-def test_poverty_selfconsistency_n_mismatch_flags() -> None:
-    """变异杀④:披露 n 值与池不符(池 n=8 披露 n=9)→ 违规。"""
+def _n_mismatch_pool() -> dict:
     pool = _mini_pool()
-    pool['battle'][2] = [-7] * 8
-    out = check_delta_pool_poverty_selfconsistency(pool, _mini_meta())
-    assert out['violations'] >= 1
-    assert any('n 值' in v for v in out['detail'])
+    pool['battle'][2] = [-7] * 8   # 池 n=8 而披露 n=9
+    return pool
+
+
+@pytest.mark.parametrize(
+    'pool_map,meta,marker',
+    [(_mini_pool(), _drifted_meta(), '不可解析'),
+     (_mini_pool(), _undisclosed_meta(), '未披露'),
+     (_mini_pool(), _stale_meta(), '过期'),
+     (_n_mismatch_pool(), _mini_meta(), 'n 值')],
+    ids=('format_drift', 'undisclosed', 'stale', 'n_mismatch'))
+def test_poverty_selfconsistency_drift_flags(
+        pool_map: dict, meta: dict, marker: str) -> None:
+    """变异杀四态(批㊲ 攻击面,2026-09-09 并参化):
+    ①格式漂移(全角括号/空格)→ 解析失败违规——旧 coverage 字符串
+    精确匹配下这是静默失配;②池贫困未披露 → 违规;③过期披露
+    (披露池中不贫困桶)→ 违规;④披露 n 值与池不符 → 违规。"""
+    out = check_delta_pool_poverty_selfconsistency(pool_map, meta)
+    assert out['violations'] >= 1, f'{out}'
+    assert any(marker in v for v in out['detail'])
 
 
 # --------------------------------------------------------------------
@@ -258,16 +297,6 @@ if __name__ == '__main__':
 
 # ==================== adr0306_delta_pool_expansion ====================
 
-from sr_od.application.currency_war.sim import engine_p1 as _adr0306_delta_pool_expansion_cw_sim
-from sr_od.application.currency_war.sim import pool
-from sr_od.application.currency_war.sim import runner
-from sr_od.application.currency_war.data import cw_delta_pool_data
-from sr_od.application.currency_war.data.cw_battle_tables import  NODE_WIN_P_BY_TYPE as tables_NODE_WIN_P_BY_TYPE, NODE_WIN_P_LADDER as tables_NODE_WIN_P_LADDER
-from sr_od.application.currency_war.kernel import cw_battle_calib as calib
-
-from sr_od.application.currency_war.sim.checks.pool import check_delta_pool_bucket_coverage
-
-
 def test_node_win_p_ladder_w31_source_of_truth() -> None:
     """ADR-0308:回退层胜负面单一取值口 = W31 实测阶梯。
 
@@ -281,10 +310,10 @@ def test_node_win_p_ladder_w31_source_of_truth() -> None:
     assert calib.node_win_p('battle', 4) == 0.29
     assert calib.node_win_p('encounter', 7) == 0.04
     assert calib.node_win_p('boss', 9) == 0.05
-    # 未观测组合 → 类型边际
-    assert calib.node_win_p('battle', 6) == tables_NODE_WIN_P_BY_TYPE['battle']
-    assert calib.node_win_p('encounter', 6) == 0.04
-    assert calib.node_win_p('boss', 8) == 0.05
+    # 未观测组合 → 类型边际(期望值从注册表现算,禁手抄锚值)
+    assert calib.node_win_p('battle', 6) == NODE_WIN_P_BY_TYPE['battle']
+    assert calib.node_win_p('encounter', 6) == NODE_WIN_P_BY_TYPE['encounter']
+    assert calib.node_win_p('boss', 8) == NODE_WIN_P_BY_TYPE['boss']
     for nt in ('reward', 'supply'):
         for rn in (1, 2, 5, 8):
             assert calib.node_win_p(nt, rn) == 1.0
@@ -293,16 +322,20 @@ def test_node_win_p_ladder_w31_source_of_truth() -> None:
 
 def test_node_win_p_values_all_valid_probabilities() -> None:
     """阶梯全体值 ∈ [0,1](胜率语义自洽)。"""
-    for (_nt, _rn), v in tables_NODE_WIN_P_LADDER.items():
+    for (_nt, _rn), v in NODE_WIN_P_LADDER.items():
         assert 0.0 <= v <= 1.0, (_nt, _rn, v)
-    for nt, v in tables_NODE_WIN_P_BY_TYPE.items():
+    for nt, v in NODE_WIN_P_BY_TYPE.items():
         assert 0.0 <= v <= 1.0, (nt, v)
 
 
 def test_snapshot_meta_win_stats_fields() -> None:
-    """META battle_rung 逐桶带双口径胜率统计(权威=killed)。"""
+    """META battle_rung 逐桶带双口径胜率统计(权威=killed)。
+
+    (原 test_snapshot_meta_carries_battle_rung_table 的主桶键存在性
+    断言已并本测——同文件同事实择一,2026-09-09。)"""
     table = cw_delta_pool_data.META.get('battle_rung')
     assert isinstance(table, dict) and table
+    assert {'0', '1'} <= set(table)
     for rg, row in table.items():
         assert {'n', 'mean', 'win_killed', 'win_delta', 'killed_known',
                 'killed_unknown', 'sign_disagree'} <= set(row), rg
@@ -322,7 +355,7 @@ def test_boss_win_p_machinery_removed() -> None:
     for gone in ('boss_win_p', 'BOSS_WIN_P_BY_ENGINES',
                  'BOSS_WIN_P_EXTRAPOLATED_MIN_RUNG', 'BOSS_WIN_P_FALLBACK',
                  '_BOSS_WIN_P_EXTRAPOLATED'):
-        assert gone not in _adr0306_delta_pool_expansion_cw_sim.__dict__, \
+        assert gone not in engine_p1.__dict__, \
             f'{gone} 已随 ADR-0308 废弃,不应残留(死码回潮)'
 
 
@@ -349,27 +382,20 @@ def test_check_delta_pool_bucket_coverage_unit() -> None:
 def test_snapshot_coverage_zero_undisclosed() -> None:
     """提交快照:贫困披露与池内容自洽(0 未披露;ADR-0362:辖
     plane=1 视图,与批内 pool-level 检查同口径)。"""
-    pool_map, _, _ = pool.resolve_pool('snapshot')
+    pool_map, _, _ = sim_pool.resolve_pool('snapshot')
     rep = check_delta_pool_bucket_coverage(
-        pool.plane_view(pool_map), meta=cw_delta_pool_data.META)
+        sim_pool.plane_view(pool_map), meta=cw_delta_pool_data.META)
     assert rep['violations'] == 0
 
 
-def test_batch_report_embeds_coverage_check() -> None:
-    """simulate_p1_batch 内嵌 delta_pool_bucket_coverage(ADR-0306 件5)。"""
-    rep = runner.simulate_p1_batch(3, pool='fallback', ledger=False,
-                                   checks=True)
-    cv = rep['checks_violations']
-    assert 'delta_pool_bucket_coverage' in cv
-    assert cv['delta_pool_bucket_coverage']['violations'] == 0
+# (原 test_batch_report_embeds_coverage_check 已并入 r409 段
+#  test_batch_report_embeds_pool_level_checks——同一 batch 运行的嵌入
+#  检查面,2026-09-09 三测并一(纪律 11:同次运行内重复昂贵计算)。)
 
 
-def test_boss_settle_uses_win_p_single_source() -> None:
-    """boss_settle_delta 掷胜走 node_win_p 单一取值口(不散落内联表)。"""
-    import inspect
-    src = inspect.getsource(calib.boss_settle_delta)
-    assert 'node_win_p' in src
-    assert 'NODE_WIN_P_LADDER[' not in src
+# (原 test_boss_settle_uses_win_p_single_source 已并入
+#  test_settle_wiring_and_single_source——同事实「node_win_p 单一取值口」
+#  在两测各断一次,2026-09-09 择一。)
 
 
 
@@ -377,71 +403,42 @@ def test_boss_settle_uses_win_p_single_source() -> None:
 
 # ==================== battle_rung_delta_pool ====================
 
-import inspect
-import json
-import random
-from pathlib import Path
+def test_snapshot_pool_rung_domain_truth_and_domains() -> None:
+    """提交快照 rung 域/真值锚/encounter 迁键/boss 域四面对拍。
 
-from sr_od.application.currency_war.data import cw_delta_pool_data as _battle_rung_delta_pool_cw_delta_pool_data
-from sr_od.application.currency_war.sim import engine_p1 as _sim
-from sr_od.application.currency_war.sim import pool as sim_pool
-from sr_od.application.currency_war.sim import runner as _battle_rung_delta_pool_runner
-from sr_od.application.currency_war.kernel import cw_battle_calib as _calib
+    独立性声明:本测对快照**内联现判**,不经 check_battle_rung_pool_
+    bucket_lock(检查器自身真值表 = test_check_battle_rung_pool_
+    bucket_lock_unit;若此处换调检查器,检查器回归时两测同时失明)。
+    2026-09-09 四测并一测,断言面逐条保留:
 
-from sr_od.application.currency_war.sim.checks.pool import BATTLE_RUNG_TRUTH, check_battle_rung_pool_bucket_lock
-
-
-def test_snapshot_battle_buckets_are_rung_domain() -> None:
-    """快照 battle 桶键全落 rung 域(0-4);depth 域键(≥6)= 未生效。
-    (ADR-0362:消费 plane=1 视图;P2 桶另辖。)"""
+    - battle 桶键全落 rung 域(0-4),双主桶 n≥10(批⑬ F1);
+    - 双主桶均值符合真值表(真值锚=v13/ADR-0582 过滤后语料重推:
+      r0 -9.73/r1 -3.24;漂移 ≤3hp。旧锚 -11.5/-6.3 是含毒语料——
+      合成行入配对——的产物,治理随批重推,非机械跟绿);
+    - v11/ADR-0407:encounter 桶键已迁 rung 且主桶达标(批⑬ F1
+      「暂 depth 分桶」边界声明已被扩容+键查证解禁取代);
+    - boss 池域不缩(重生成不丢失既有极值样本 min≤-36;批⑬ F7
+      原始读数 -42 是决策帧口径,outcomes 差分口径不可达)。
+    (ADR-0362:各面消费 plane=1 视图;P2 桶另辖。)
+    """
     m, _, _ = sim_pool.resolve_pool('snapshot')
     m = sim_pool.plane_view(m)
     battle = m['battle']
     assert battle, 'battle 池缺失'
     assert all(int(b) <= 4 for b in battle), \
         f'battle 桶键落 depth 域: {sorted(battle)}'
-    # 双主桶存在(批⑬ F1:r0=26/r1=24 达标)
-    assert len(battle.get(0, [])) >= 10
-    assert len(battle.get(1, [])) >= 10
-
-
-def test_snapshot_battle_rung_means_match_b13_truth() -> None:
-    """双主桶均值符合真值表(真值锚=v13/ADR-0582 过滤后语料重推:
-    r0 -9.73/r1 -3.24;漂移 ≤3hp。旧锚 -11.5/-6.3 是含毒语料——
-    合成行入配对——的产物,治理随批重推,非机械跟绿;
-    ADR-0362:plane=1 视图口径)。"""
-    m, _, _ = sim_pool.resolve_pool('snapshot')
-    m = sim_pool.plane_view(m)
+    assert len(battle.get(0, [])) >= 10 and len(battle.get(1, [])) >= 10
     for rg, truth in BATTLE_RUNG_TRUTH.items():
-        v = m['battle'][rg]
+        v = battle[rg]
         mean = sum(v) / len(v)
         assert abs(mean - truth) <= 3.0, \
             f'battle rung{rg} 均值 {mean:+.1f} 距真值 {truth:+.1f} 漂移>3hp'
-
-
-def test_snapshot_encounter_rung_keyed_v11() -> None:
-    """v11(ADR-0407):encounter 桶键已迁 rung——桶键全落 0-4 域
-    且主桶(rung0/rung1)达标(批⑬ F1 的「暂 depth 分桶」边界声明
-    已被扩容+键查证解禁取代)。"""
-    m, _, _ = sim_pool.resolve_pool('snapshot')
-    m = sim_pool.plane_view(m)
     enc = m.get('encounter') or {}
     assert enc, 'encounter 池缺失'
-    depth_like = sorted(b for b in enc if int(b) >= 6)
-    assert not depth_like, f'encounter 桶键落 depth 域: {depth_like}'
+    assert not sorted(b for b in enc if int(b) >= 6), \
+        f'encounter 桶键落 depth 域: {sorted(enc)}'
     assert len(enc.get(0, [])) >= 10, 'encounter rung0 主桶饥饿'
     assert len(enc.get(1, [])) >= 10, 'encounter rung1 主桶饥饿'
-
-
-def test_snapshot_boss_pool_domain_covers_extremes() -> None:
-    """批⑬ F7:boss 池域不缩(重生成不丢失既有极值样本 min≤-36)。
-
-    F7 原始读数 -42 是决策帧口径(run154910 attach 局);outcomes
-    差分口径下该局 boss Δ=71→58=-13 已入池——差分不可达 -42,
-    扩域诉求兑现为「域不缩」(ADR-0279 Considered Options)。
-    """
-    m, _, _ = sim_pool.resolve_pool('snapshot')
-    m = sim_pool.plane_view(m)
     boss_vals = [d for v in m['boss'].values() for d in v]
     assert min(boss_vals) <= -36
 
@@ -547,33 +544,49 @@ def test_pool_from_replay_battle_rung_keys(tmp_path: Path) -> None:
     assert meta['runs'] == {'r1': 4}
 
 
-def test_settle_wiring_battle_rung_single_source() -> None:
-    """结算接线:simulate_p1 battle 走 _settle_rung(rung 定义单一源
-    = _engines_count;ADR-0308 起 boss 回退胜负面换 W31 阶梯,boss
-    侧不再 rung 键)。"""
-    src = inspect.getsource(_sim.simulate_p1)
+def test_settle_wiring_and_single_source() -> None:
+    """结算接线与单一取值口源码锁(三测并一,2026-09-09;原
+    test_settle_wiring_battle_rung_single_source / _v11_settle_wiring_
+    encounter_rung_source / _boss_settle_uses_win_p_single_source)。
+
+    锁的是**接线存在性**(纪律 8 容忍档,失守形态:v11 前「池已
+    rung 化、采样仍喂 depth」的键错位——调用串漂移即红):
+    - simulate_p1 battle/encounter 两类节点经 _settle_rung 取样
+      (rung 定义单一源 = _engines_count);
+    - boss_settle_delta 掷胜走 node_win_p 单一取值口(ADR-0308 起
+      回退层胜负面换 W31 阶梯),不散落内联阶梯表、不持 rung 键。
+    """
+    src = inspect.getsource(engine_p1.simulate_p1)
     assert '_settle_rung' in src
     assert "live_delta_for('battle', _settle_rung(st)" in src
-    boss_src = inspect.getsource(_calib.boss_settle_delta)
+    assert "live_delta_for('encounter', _settle_rung(st)" in src
+    boss_src = inspect.getsource(calib.boss_settle_delta)
     assert 'node_win_p' in boss_src   # ADR-0308 胜负面单一取值口
-    assert '_engines_count' not in boss_src   # 单一源收口,不散落内联
+    assert 'NODE_WIN_P_LADDER[' not in boss_src   # 不散落内联阶梯表
+    assert '_engines_count' not in boss_src   # boss 侧不再 rung 键
 
 
-def test_batch_report_embeds_battle_rung_lock() -> None:
-    """simulate_p1_batch 内嵌 battle_rung_pool_bucket_lock(批⑬ 检查项)。"""
-    rep = _battle_rung_delta_pool_runner.simulate_p1_batch(3, pool='fallback', ledger=False)
+def test_batch_report_embeds_pool_level_checks() -> None:
+    """simulate_p1_batch 内嵌池级检查族(fallback 空池各检查不辖=0)。
+
+    (2026-09-09 三测并一:coverage/battle_rung_lock/min_n+cliff 各自
+    曾各跑一次 batch——checks 默认开启,一次运行可同验四键,纪律 11。)
+    """
+    rep = runner.simulate_p1_batch(3, pool='fallback', ledger=False,
+                                   checks=True)
     cv = rep['checks_violations']
+    assert 'delta_pool_bucket_coverage' in cv
     assert 'battle_rung_pool_bucket_lock' in cv
-    assert cv['battle_rung_pool_bucket_lock']['violations'] == 0
+    assert 'delta_pool_bucket_min_n' in cv
+    assert 'depth_cliff_monotonicity' in cv
+    for key in ('delta_pool_bucket_coverage', 'battle_rung_pool_bucket_lock',
+                'delta_pool_bucket_min_n', 'depth_cliff_monotonicity'):
+        assert cv[key]['violations'] == 0, (key, cv[key])
 
 
-def test_snapshot_meta_carries_battle_rung_table() -> None:
-    """生成器把 battle rung 真值表锁进 META(批⑬检查项设计表原文)。"""
-    table = _battle_rung_delta_pool_cw_delta_pool_data.META.get('battle_rung')
-    assert isinstance(table, dict) and table
-    assert {'0', '1'} <= set(table)
-    for row in table.values():
-        assert {'n', 'mean'} <= set(row)
+# (原 test_snapshot_meta_carries_battle_rung_table 已并入
+#  test_snapshot_meta_win_stats_fields——{'0','1'} 主桶键 + n/mean 字段面
+#  同文件同事实,2026-09-09 择一保留全字段版。)
 
 
 
@@ -582,33 +595,24 @@ def test_snapshot_meta_carries_battle_rung_table() -> None:
 
 # ==================== delta_pool_snapshot ====================
 
-import json as _delta_pool_snapshot_json
-from pathlib import Path as _delta_pool_snapshot_Path
+def test_resolve_pool_snapshot_and_fallback() -> None:
+    """snapshot 命中提交快照(归一 int 桶键);fallback 显式空池+打标。
 
-import pytest as _delta_pool_snapshot_pytest
-
-from sr_od.application.currency_war.data import cw_delta_pool_data as _delta_pool_snapshot_cw_delta_pool_data
-from sr_od.application.currency_war.sim import engine_p1 as _delta_pool_snapshot_sim
-from sr_od.application.currency_war.sim import pool as _delta_pool_snapshot_pool
-from sr_od.application.currency_war.sim import runner as _delta_pool_snapshot_runner
-def test_snapshot_module_loads_and_fingerprint_selfconsistent() -> None:
-    """提交快照可加载;META 指纹与重算一致(手改会被发现)。"""
-    fp = _delta_pool_snapshot_pool.pool_fingerprint(_delta_pool_snapshot_cw_delta_pool_data.SNAPSHOT)
-    assert fp == _delta_pool_snapshot_cw_delta_pool_data.META['fingerprint']
+    (原 test_snapshot_module_loads_and_fingerprint_selfconsistent 的
+    「指纹重算 == META」与 unlabeled_dropped 披露键两面已并本测——
+    resolve_pool('snapshot') 内部即做指纹失配校验,同事实双锁,
+    2026-09-09 择一。)
+    """
+    m, fp, src = sim_pool.resolve_pool('snapshot')
+    assert src == 'snapshot'
+    assert fp == cw_delta_pool_data.META['fingerprint']
     # 可信标签口径:丢弃计数已披露(2026-08-22 retrofix 后死链
     # 历史标签置 None,不入池)
-    assert 'unlabeled_dropped' in _delta_pool_snapshot_cw_delta_pool_data.META
-
-
-def test_resolve_pool_snapshot_and_fallback() -> None:
-    """snapshot 命中提交快照(归一 int 桶键);fallback 显式空池+打标。"""
-    m, fp, src = _delta_pool_snapshot_pool.resolve_pool('snapshot')
-    assert src == 'snapshot'
-    assert fp == _delta_pool_snapshot_cw_delta_pool_data.META['fingerprint']
-    # 归一化后语义等价(int 桶键;_delta_pool_snapshot_json round-trip 的 str 键会让
+    assert 'unlabeled_dropped' in cw_delta_pool_data.META
+    # 归一化后语义等价(int 桶键;json round-trip 的 str 键会让
     # live_delta_for 的 int 查询全 miss = 快照静默失效)
     # ADR-0362:位面层同样归一 int 键
-    assert m == _delta_pool_snapshot_pool._normalize_pool(_delta_pool_snapshot_cw_delta_pool_data.SNAPSHOT)
+    assert m == sim_pool._normalize_pool(cw_delta_pool_data.SNAPSHOT)
     assert all(isinstance(b, int)
                for planes in m.values() for b in planes)
     assert all(isinstance(b, int)
@@ -616,29 +620,29 @@ def test_resolve_pool_snapshot_and_fallback() -> None:
                for buckets in planes.values() for b in buckets)
     assert m.get('battle')
 
-    m2, fp2, src2 = _delta_pool_snapshot_pool.resolve_pool('fallback')
+    m2, fp2, src2 = sim_pool.resolve_pool('fallback')
     assert src2 == 'fallback'
     assert m2 == {}
-    assert fp2 == _delta_pool_snapshot_pool.pool_fingerprint({})
+    assert fp2 == sim_pool.pool_fingerprint({})
 
 
-def test_resolve_pool_auto_missing_raises_loudly(tmp_path: None | _delta_pool_snapshot_Path) -> None:
+def test_resolve_pool_auto_missing_raises_loudly(tmp_path: None | Path) -> None:
     """auto 缺源 raise(不静默回退空池)——blocker 修复的核心语义。"""
-    with _delta_pool_snapshot_pytest.raises(_delta_pool_snapshot_pool.DeltaPoolUnavailable):
-        _delta_pool_snapshot_pool.resolve_pool('auto', auto_dir=tmp_path / 'nonexistent')
+    with pytest.raises(sim_pool.DeltaPoolUnavailable):
+        sim_pool.resolve_pool('auto', auto_dir=tmp_path / 'nonexistent')
 
 
-def test_resolve_pool_path_json_snapshot(tmp_path: _delta_pool_snapshot_Path) -> None:
+def test_resolve_pool_path_json_snapshot(tmp_path: Path) -> None:
     """Path 模式:JSON 快照文件(生成器 --export-json 产物;
     ADR-0362 起形状 {节点:{位面:{桶:[Δ]}}})。"""
     p = tmp_path / 'snap.json'
-    p.write_text(_delta_pool_snapshot_json.dumps(
+    p.write_text(json.dumps(
         {'meta': {}, 'snapshot': {'battle': {1: {6: [-4]}}}},
         ensure_ascii=False), encoding='utf-8')
-    m, fp, src = _delta_pool_snapshot_pool.resolve_pool(p)
+    m, fp, src = sim_pool.resolve_pool(p)
     assert src == f'path:{p.name}'
     assert m == {'battle': {1: {6: [-4]}}}
-    assert fp == _delta_pool_snapshot_pool.pool_fingerprint({'battle': {1: {6: [-4]}}})
+    assert fp == sim_pool.pool_fingerprint({'battle': {1: {6: [-4]}}})
 
 
 def test_simulate_p1_records_pool_identity() -> None:
@@ -647,25 +651,24 @@ def test_simulate_p1_records_pool_identity() -> None:
     供给重校准起指纹含装备发放结构版本位(``+eqgN``)——发放结构是
     行为语义的一部分,新旧结构不可比,跨版本对照必须显式失败。
     """
-    r = _delta_pool_snapshot_sim.simulate_p1(42, pool='fallback')
+    r = engine_p1.simulate_p1(42, pool='fallback')
     assert r.pool_source == 'fallback'
     assert r.pool_fingerprint == (
-        _delta_pool_snapshot_pool.pool_fingerprint({})
-        + f'+eqg{_sim.EQUIP_GRANT_CALIB_VERSION}')
-    r2 = _delta_pool_snapshot_sim.simulate_p1(42, pool='snapshot')
+        sim_pool.pool_fingerprint({})
+        + f'+eqg{engine_p1.EQUIP_GRANT_CALIB_VERSION}')
+    r2 = engine_p1.simulate_p1(42, pool='snapshot')
     assert r2.pool_source == 'snapshot'
     assert r2.pool_fingerprint == (
-        _delta_pool_snapshot_cw_delta_pool_data.META['fingerprint']
-        + f'+eqg{_sim.EQUIP_GRANT_CALIB_VERSION}')
+        cw_delta_pool_data.META['fingerprint']
+        + f'+eqg{engine_p1.EQUIP_GRANT_CALIB_VERSION}')
 
 
-def test_batch_report_carries_pool_fingerprint() -> None:
-    """批量结果携带池指纹(基线数字可追溯其校准地基)。"""
-    s = _delta_pool_snapshot_runner.simulate_p1_batch(10, pool='fallback')
-    assert s['pool_source'] == 'fallback'
-    assert s['pool_fingerprint'] == (
-        _delta_pool_snapshot_pool.pool_fingerprint({})
-        + f'+eqg{_sim.EQUIP_GRANT_CALIB_VERSION}')
+# (原 test_batch_report_carries_pool_fingerprint 已删(2026-09-09):
+#  batch 报告指纹管线单路(runner.simulate_p1_batch 直取 results[0]),
+#  batch 级指纹面由 test_cw_infra_locks.py::test_ci_smoke_snapshot_batch
+#  以 snapshot 批承载,fallback 池身份面由本文件
+#  test_simulate_p1_records_pool_identity 局级双源承载——组合即覆盖,
+#  本测 10 局 batch 为纯重复运行成本。)
 
 
 def test_snapshot_pool_is_live_in_sim() -> None:
@@ -677,12 +680,12 @@ def test_snapshot_pool_is_live_in_sim() -> None:
     """
     import random
 
-    m, _, _ = _delta_pool_snapshot_pool.resolve_pool('snapshot')
+    m, _, _ = sim_pool.resolve_pool('snapshot')
     hit = False
     # ADR-0362:桶在 plane=1 层下
     for node in ('battle', 'boss', 'encounter'):
         for bucket in (m.get(node, {}).get(1) or {}):
-            v = _delta_pool_snapshot_pool.live_delta_for(node, bucket, random.Random(1),
+            v = sim_pool.live_delta_for(node, bucket, random.Random(1),
                                     pool_map=m)
             if v is not None:
                 hit = True
@@ -694,7 +697,7 @@ def test_snapshot_pool_is_live_in_sim() -> None:
 
 def test_generator_data_file_discipline() -> None:
     """生成器纪律:数据文件头部带勿手编标记 + 重生成命令。"""
-    head = _delta_pool_snapshot_Path(_delta_pool_snapshot_cw_delta_pool_data.__file__).read_text(
+    head = Path(cw_delta_pool_data.__file__).read_text(
         encoding='utf-8')[:600]
     assert '勿手编' in head
     assert 'gen_delta_pool_snapshot.py' in head
@@ -705,11 +708,9 @@ def test_generator_data_file_discipline() -> None:
 
 # ==================== adr0407_encounter_rung_pool ====================
 
-from sr_od.application.currency_war.sim import engine_p1 as _adr0407_encounter_rung_pool_sim
-from sr_od.application.currency_war.sim import pool as _adr0407_encounter_rung_pool_pool
 def _p1_means() -> dict[int, float]:
-    m, _, _ = _adr0407_encounter_rung_pool_pool.resolve_pool('snapshot')
-    m = _adr0407_encounter_rung_pool_pool.plane_view(m)
+    m, _, _ = sim_pool.resolve_pool('snapshot')
+    m = sim_pool.plane_view(m)
     enc = m.get('encounter') or {}
     return {int(b): sum(v) / len(v)
             for b, v in enc.items() if len(v) >= 5}
@@ -727,22 +728,14 @@ def test_v11_pool_encounter_main_buckets_monotonic() -> None:
             f'>= r2={means[2]:.1f}'
 
 
-def test_v11_settle_wiring_encounter_rung_source() -> None:
-    """结算接线:simulate_p1 encounter 走 _settle_rung 单一源
-    (与 battle 同式;防「池已 rung 化、采样仍喂 depth」错位)。"""
-    import inspect
-    src = inspect.getsource(_adr0407_encounter_rung_pool_sim.simulate_p1)
-    assert "live_delta_for('encounter', _settle_rung(st)" in src
+# (原 test_v11_settle_wiring_encounter_rung_source 已并入
+#  test_settle_wiring_and_single_source——encounter 调用串断言面在彼,
+#  2026-09-09 三处接线锁并一。)
 
 
 
 
 # ==================== w109_pool_pipeline ====================
-
-import pytest as _w109_pool_pipeline_pytest
-
-from sr_od.application.currency_war.sim import cw_delta_pool_gen
-from sr_od.application.currency_war.sim import ledger_hooks
 
 
 def test_regenerate_frozen_by_default(tmp_path, monkeypatch) -> None:
@@ -789,7 +782,7 @@ def test_regenerate_frozen_by_default(tmp_path, monkeypatch) -> None:
 
 
 def test_hook_swallows_regeneration_failure(
-        monkeypatch: _w109_pool_pipeline_pytest.MonkeyPatch) -> None:
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """局终钩子 best-effort:再生抛异常不外传(局终收尾不被打断)。"""
     def _boom(**kwargs):
         raise RuntimeError('sim_runs 回灌守卫误触发(构造)')
@@ -811,9 +804,6 @@ def test_hook_swallows_regeneration_failure(
 # fixture 全部 tmp_path 合成语料 + 写目标指 tmp(测试纪律 2/19:
 # 零真实副作用、不碰生产快照)。
 
-import json as _defense_json
-from pathlib import Path as _defense_Path
-
 
 def _defense_delta_row(run_id: str, hp_from: float,
                        hp_to: float) -> tuple[dict, dict, dict]:
@@ -834,15 +824,15 @@ def _defense_delta_row(run_id: str, hp_from: float,
     return dec, out1, out2
 
 
-def _defense_write_corpus(src: _defense_Path,
+def _defense_write_corpus(src: Path,
                           row_groups: list[tuple[dict, dict, dict]]) -> None:
     """把行组落成 replay 目录(decisions/outcomes 各一份 jsonl,整写)。"""
     src.mkdir(parents=True, exist_ok=True)
     (src / 'decisions.jsonl').write_text(
-        '\n'.join(_defense_json.dumps(d, ensure_ascii=False)
+        '\n'.join(json.dumps(d, ensure_ascii=False)
                   for d, _, _ in row_groups) + '\n', encoding='utf-8')
     (src / 'outcomes.jsonl').write_text(
-        '\n'.join(_defense_json.dumps(o, ensure_ascii=False)
+        '\n'.join(json.dumps(o, ensure_ascii=False)
                   for _, o1, o2 in row_groups for o in (o1, o2)) + '\n',
         encoding='utf-8')
 
@@ -866,7 +856,7 @@ def test_quarantine_reason_single_source() -> None:
 
 
 def test_fake_and_sim_runs_isolated_from_snapshot(
-        tmp_path: _defense_Path,
+        tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch) -> None:
     """防线① 行为锁(混入形态):fake_/sim_ run 混在语料里时物理
     不入池,正常 run 照常入池,quarantined_hits 如实披露。
@@ -899,7 +889,7 @@ def test_fake_and_sim_runs_isolated_from_snapshot(
 
 
 def test_fake_only_source_rejected_target_untouched(
-        tmp_path: _defense_Path,
+        tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch) -> None:
     """防线自检·拒绝态①:语料源只有 fake_ run → 隔离后无样本可配对,
     再生拒绝(池为空)且写目标零落盘——「拒绝」= 不产任何新快照,
@@ -915,7 +905,7 @@ def test_fake_only_source_rejected_target_untouched(
 
 
 def test_normal_incremental_regeneration_passes(
-        tmp_path: _defense_Path,
+        tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch) -> None:
     """防线自检·放行态:正常 live 源增量(append-only,行数账只升)
     再生照常覆写——塌缩守卫只拦「缩」,不拦「长」。"""
@@ -940,7 +930,7 @@ def test_normal_incremental_regeneration_passes(
 
 
 def test_collapsed_source_rejected_snapshot_preserved(
-        tmp_path: _defense_Path,
+        tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch) -> None:
     """防线自检·拒绝态②(塌缩守卫):源行数账 < 现快照行数账 × 50% →
     SourceCorpusCollapse,且「将被覆写的文件」字节原样保留——保留
@@ -965,7 +955,7 @@ def test_collapsed_source_rejected_snapshot_preserved(
 
 
 def test_collapse_baseline_reads_committed_head_not_disk(
-        tmp_path: _defense_Path,
+        tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch) -> None:
     """塌缩守卫基线来源锁(2026-09-09 穿透定谳,ADR-0612):基线必须
     取 git HEAD 提交版,不是盘面文件——盘面被一次未提交的塌缩再生
@@ -1007,7 +997,7 @@ def test_collapse_baseline_reads_committed_head_not_disk(
     assert disk_file.read_text(encoding='utf-8') == disk_text   # 盘面零覆写
 
 
-def test_auto_pool_quarantine_same_judgment(tmp_path: _defense_Path) -> None:
+def test_auto_pool_quarantine_same_judgment(tmp_path: Path) -> None:
     """auto 池同判据锁(ADR-0595 适用范围含 auto 池):_pool_from_replay
     消费同一 _run_quarantine_reason——fake_/sim_ run 不入缺省校准池,
     正常 run_ 照常入池(防过滤扩大化),quarantined_hits 同名披露。
@@ -1033,7 +1023,7 @@ def test_auto_pool_quarantine_same_judgment(tmp_path: _defense_Path) -> None:
     assert real_id in meta['runs']
 
 
-def test_auto_pool_normal_run_source_taken(tmp_path: _defense_Path) -> None:
+def test_auto_pool_normal_run_source_taken(tmp_path: Path) -> None:
     """auto 池放行锁:纯正常 run_ 源在 _pool_from_replay
     照常配对入池——隔离只辖 fake_/sim_ 前缀与显式名单,禁扩大化
     误伤生产局(run_ 前缀是生产局唯一历史形态,注册表核实)。"""
@@ -1049,20 +1039,13 @@ def test_auto_pool_normal_run_source_taken(tmp_path: _defense_Path) -> None:
 
 # ==================== r409_delta_pool_starvation_guard ====================
 # (2026-09-03 瘦身批自 test_cw_r409_delta_pool_starvation_guard.py 原文并入;
-# 断言零改动;sim_pool/runner/random 复用前述成员既有绑定)
-
-from sr_od.application.currency_war.sim.checks.pool import (
-    check_ab_depth_boundary_confound,
-    check_delta_pool_bucket_min_n,
-    check_depth_cliff_monotonicity,
-)
-
+# 2026-09-09 二轮:sim_pool/runner/random/检查器 import 已归顶统一绑定)
 
 def test_guard_hungry_bucket_not_deterministic_cliff() -> None:
-    """守卫触发:n<5 桶不裸采样——饥饿桶唯一样本不再恒定命中。
+    """守卫触发:n<BUCKET_MIN_N 桶不裸采样——饥饿桶唯一样本不再恒定命中。
 
-    合并候选 = 本桶∪深邻桶(20 样本),饥饿样本 -11 以 1/20
-    权重参与(合并非剔除);旧语义下 depth∈[6,8] 的战斗轮
+    本合成池形态:饥饿桶 n=1 与深邻桶 n=6 合并(共 7 样本),饥饿
+    样本 -11 以 1/7 权重参与(合并非剔除);旧语义下饥饿桶采样
     **恒 -11**(确定性悬崖)是伪惩罚本体。
     (ADR-0279 起 battle 桶键=rung;v11/ADR-0407 起 encounter 同迁
     rung——守卫的 depth 路径锁改用 supply 承载,同一条守卫代码路径。)
@@ -1124,7 +1107,12 @@ def test_guard_healthy_bucket_unchanged() -> None:
 
 
 def test_check_delta_pool_bucket_min_n() -> None:
-    """检查项 1:饥饿桶审计(批③ 形态:battle 桶6 n=1)。"""
+    """检查项 1:饥饿桶审计(批③ 形态:battle 桶6 n=1)。
+
+    阈值单一源锁(原 test_sampler_version_bumped_and_snapshot_guarded
+    的 BUCKET_MIN_N==5 断言并此,2026-09-09):n=5 不报/n=2 报钉住
+    行为面,此处钉常数面——改桶宽阈值时两处同红,登记新阈值。
+    """
     pool = {'battle': {6: [-11], 9: [-4] * 6},
             'encounter': {9: [-13, 2]}}
     rep = check_delta_pool_bucket_min_n(pool)
@@ -1133,8 +1121,10 @@ def test_check_delta_pool_bucket_min_n() -> None:
     assert 'encounter:桶9(n=2)' in rep['buckets']
     # 全健康池 / 空池(fallback)零违规
     assert check_delta_pool_bucket_min_n(
-        {'battle': {6: [-1] * 5}})['violations'] == 0
+        {'battle': {6: [-1] * BUCKET_MIN_N}})['violations'] == 0
     assert check_delta_pool_bucket_min_n({})['violations'] == 0
+    # 阈值常数面(单一源 = data/cw_battle_tables;期 0b 锁改判 N7)
+    assert BUCKET_MIN_N == 5
 
 
 def test_check_depth_cliff_monotonicity() -> None:
@@ -1184,28 +1174,17 @@ def test_check_ab_depth_boundary_confound() -> None:
         [reward_row], []) == []
 
 
-def test_batch_report_embeds_pool_checks() -> None:
-    """simulate_p1_batch 内嵌池级检查(fallback 空池零违规)。"""
-    rep = runner.simulate_p1_batch(3, pool='fallback', ledger=False)
-    cv = rep['checks_violations']
-    assert cv['delta_pool_bucket_min_n']['violations'] == 0
-    assert cv['depth_cliff_monotonicity']['violations'] == 0
+# (原 test_batch_report_embeds_pool_checks 已并入
+#  test_batch_report_embeds_pool_level_checks,2026-09-09 三测并一。)
 
 
-def test_sampler_version_bumped_and_snapshot_guarded() -> None:
-    """采样器版本锁(历次语义: v3=ADR-0279 battle rung 分桶 /
-    v4=ADR-0292 reward/supply 池采样 / v5=ADR-0306 胜率外推 /
-    v6=ADR-0308 W31 节点×轮次胜率阶梯 / v7=ADR-0312 W50 采样键
-    Σboard 全集口径 / v8(快照 note 链记 v9)=ADR-0362 Δ池
-    plane 维键化 / v10=ADR-0404 boss 桶键 Σboard→净星深 /
-    v11=ADR-0407 encounter 桶键 depth→rung)+ 提交快照自洽。"""
-    assert sim_pool._SAMPLER_VERSION == 11
-    from sr_od.application.currency_war.data.cw_battle_tables import BUCKET_MIN_N as _BUCKET_MIN_N  # 期 0b 锁改判(N7):单一源迁 data
-    assert _BUCKET_MIN_N == 5
-    m, fp, src = sim_pool.resolve_pool('snapshot')
-    assert src == 'snapshot'
-    from sr_od.application.currency_war.data import cw_delta_pool_data
-    assert fp == cw_delta_pool_data.META['fingerprint']
+# (原 test_sampler_version_bumped_and_snapshot_guarded 已删(2026-09-09,
+#  跨文件子集):_SAMPLER_VERSION==11 / src=='snapshot' / fp==META 指纹
+#  三面与 test_cw_adr0292_reward_pool_sampling.py::
+#  test_sampler_v4_and_snapshot_selfconsistent(超集:另钉 META sampler_
+#  version + 旧指纹墓碑)同事实双锁,择一保留超集;其独有 BUCKET_MIN_N==5
+#  面迁入 test_check_delta_pool_bucket_min_n。版本史语义见生产
+#  sim/pool.py _SAMPLER_VERSION 常量注,无信息丢失。)
 
 
 # ==================== r411_pool_no_cost_truncation ====================
@@ -1213,55 +1192,44 @@ def test_sampler_version_bumped_and_snapshot_guarded() -> None:
 # 两处按纪律修订:n4/n5 手抄常数 14/9 改注册表现算(纪律 9 推导锚定),
 # 2000 次抽店按「断言成立的最小 n」降到 500(纪律 12;种子固定=确定性))
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS as _r411_CHARACTERS
-from sr_od.application.currency_war.sim.pool import _Pool as _r411_Pool
-from sr_od.application.currency_war.sim.checks.ledger import check_sim_pool_no_cost_truncation
-
-
 def test_pool_contains_cost_4_and_5() -> None:
     """全费入池:copies 含 4 费与 5 费角色(无 max_cost 过滤)。
 
     期望集合从注册表现算(原锁手抄「n4>=14/n5>=9」,注册表扩角色
     即静默过期):每个 4/5 费在册角色都必须在池,缺失点名单独报。
     """
-    p = _r411_Pool(random.Random(7))
-    costs = {_r411_CHARACTERS[n].cost for n in p.copies}
+    p = _Pool(random.Random(7))
+    costs = {CHARACTERS[n].cost for n in p.copies}
     assert 4 in costs and 5 in costs
     for cost in (4, 5):
-        expected = [n for n, c in _r411_CHARACTERS.items() if c.cost == cost]
+        expected = [n for n, c in CHARACTERS.items() if c.cost == cost]
         assert expected, f'注册表无 {cost} 费角色(锁口径失效,须重推)'
         missing = [n for n in expected if not p.copies.get(n)]
         assert not missing, f'{cost} 费角色未全入池(截断回归): {missing}'
 
 
-def test_four_cost_appears_at_lv5() -> None:
-    """lv5 起商店 4 费出现率 > 0(REFRESH_PROB .02;期望 ~50 命中/500 抽)。"""
-    p = _r411_Pool(random.Random(11))
-    hits = sum(1 for _ in range(500) for c in p.draw_shop(5)
-               if c.cost == 4)
-    assert hits > 0, 'lv5 未见 4 费(池截断或概率未接)'
+@pytest.mark.parametrize('level,cost', [(5, 4), (9, 5)],
+                         ids=('lv5_cost4', 'lv9_cost5'))
+def test_high_cost_appears_in_shop(level: int, cost: int) -> None:
+    """高档费用在可达等级的商店出现率 > 0(2026-09-09 两测并参化)。
+
+    lv5 4 费 REFRESH_PROB .02(期望 ~50 命中/500 抽);lv9 5 费 .10
+    (P1 可达等级)。红 = 池截断回归或概率未接。
+    """
+    p = _Pool(random.Random(11 if cost == 4 else 13))
+    hits = sum(1 for _ in range(500) for c in p.draw_shop(level)
+               if c.cost == cost)
+    assert hits > 0, f'lv{level} 未见 {cost} 费(池截断或概率未接)'
 
 
-def test_five_cost_appears_at_lv9() -> None:
-    """lv9 商店 5 费出现率 > 0(P1 可达等级;REFRESH_PROB .10)。"""
-    p = _r411_Pool(random.Random(13))
-    hits = sum(1 for _ in range(500) for c in p.draw_shop(9)
-               if c.cost == 5)
-    assert hits > 0, 'lv9 未见 5 费(池截断或概率未接)'
-
-
-def test_check_passes_on_real_pool() -> None:
-    """检查项:真池(全费)0 违规。"""
-    p = _r411_Pool(random.Random(1))
-    rep = check_sim_pool_no_cost_truncation(p.copies)
-    assert rep == {'violations': 0, 'missing_costs': []}
-
-
-def test_check_fires_on_truncated_pool() -> None:
-    """检查项双向:截断池(去门变异)必报缺失费用。"""
-    p = _r411_Pool(random.Random(1))
+def test_no_cost_truncation_check_two_state() -> None:
+    """检查项两态(2026-09-09 两测并一):真池(全费)0 违规;
+    截断池(去门变异,重建 max_cost=3)必报缺失费用 [4, 5]。"""
+    p = _Pool(random.Random(1))
+    assert check_sim_pool_no_cost_truncation(p.copies) == \
+        {'violations': 0, 'missing_costs': []}
     truncated = {n: c for n, c in p.copies.items()
-                 if _r411_CHARACTERS[n].cost <= 3}   # 变异:重建 max_cost=3
+                 if CHARACTERS[n].cost <= 3}
     rep = check_sim_pool_no_cost_truncation(truncated)
     assert rep['violations'] == 2
     assert rep['missing_costs'] == [4, 5]
@@ -1276,12 +1244,9 @@ def test_check_fires_on_truncated_pool() -> None:
 # 断言为辅(禁快照值锁——池随局终自动再生,值锁=change-detector,
 # ADR-0292 判例 test_cw_adr0292_reward_pool_sampling.py 注)。
 
-import json as _adr0582_json
-from pathlib import Path as _adr0582_Path
 
-
-def _adr0582_replay(tmp_path: _adr0582_Path,
-                    outcomes: list[dict]) -> _adr0582_Path:
+def _adr0582_replay(tmp_path: Path,
+                    outcomes: list[dict]) -> Path:
     """最小 replay 目录:decisions 行按 outcomes 的 (run,plane,round)
     全集合生成(Σboard join 物料必须覆盖每个配对后继键,否则
     dep None 静默跳对——锁会假绿);outcomes 行原样落盘。"""
@@ -1289,19 +1254,19 @@ def _adr0582_replay(tmp_path: _adr0582_Path,
     d.mkdir()
     keys = sorted({(o.get('run_id') or 'r1', o.get('plane') or 1,
                     o.get('round_num') or 0) for o in outcomes})
-    dec = [_adr0582_json.dumps(
+    dec = [json.dumps(
         {'run_id': run, 'plane': plane, 'round_num': rn,
          'state': {'board': {'散': 6}, 'deployed': []}},
         ensure_ascii=False) for run, plane, rn in keys]
     (d / 'decisions.jsonl').write_text(
         '\n'.join(dec) + '\n', encoding='utf-8')
     (d / 'outcomes.jsonl').write_text(
-        '\n'.join(_adr0582_json.dumps(o, ensure_ascii=False)
+        '\n'.join(json.dumps(o, ensure_ascii=False)
                   for o in outcomes) + '\n', encoding='utf-8')
     return d
 
 
-def test_pool_build_synthetic_row_never_endpoint(tmp_path: _adr0582_Path
+def test_pool_build_synthetic_row_never_endpoint(tmp_path: Path
                                                  ) -> None:
     """镜像律消失锁(毒形态 fixture,ADR-0582):合成行不入配对端点。
 
@@ -1347,7 +1312,7 @@ def test_pool_build_synthetic_row_never_endpoint(tmp_path: _adr0582_Path
 
 
 def test_pool_build_conf_gate_drops_untrusted_with_bridge(
-        tmp_path: _adr0582_Path) -> None:
+        tmp_path: Path) -> None:
     """conf 门剔除计数锁(ADR-0582):低可信行不作端点+移行桥接。
 
     两个真实毒形态一起钉:①非终局低可信行(语料实测 0 条,机制
@@ -1391,7 +1356,7 @@ def test_pool_build_conf_gate_drops_untrusted_with_bridge(
     assert meta['hp0_transient_dropped'] == 0   # 终局 hp0 不归 v12 瞬态
 
 
-def test_pool_build_keeps_real_settlement_rows(tmp_path: _adr0582_Path
+def test_pool_build_keeps_real_settlement_rows(tmp_path: Path
                                                ) -> None:
     """真实样本保留锁(ADR-0582 误杀防线):source 三形态(''/缺键/
     recovered,结算屏当时读取)全部照常入池——过滤只针对合成行族
