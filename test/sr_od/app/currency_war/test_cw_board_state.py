@@ -176,7 +176,10 @@ def test_bs_schema_domain_map_present() -> None:
 # ============================================================ §8.6-3
 # 画面附加域与缺口域(开局初值域/十事件屏域/结算事件位/刷新计数组/持久账本组)
 
-_PAYLOAD_DOMAINS = ('shop', 'encounter', 'supply', 'settlement')
+# 画面附加域 = kernel 三域口径(cw_board_state._PAYLOAD_DOMAINS 同源):
+# shop/encounter/supply。settlement 是结算真值组(§3.5.1)非画面 payload,
+# 不在附加域词表(负断言见 test_leave_screen_payload_only)。
+_PAYLOAD_DOMAINS = ('shop', 'encounter', 'supply')
 _CHOSEN_DOMAINS = ('chosen_encounter', 'chosen_supply', 'chosen_megastar',
                    'chosen_partner', 'chosen_wish', 'chosen_fortune',
                    'chosen_hack', 'chosen_expert', 'chosen_tome',
@@ -361,15 +364,24 @@ def test_write_prior_requires_prior_evidence() -> None:
 
 
 def test_leave_screen_payload_only() -> None:
-    """§2.2 显式例外:shop/encounter/supply/settlement 离开画面置 None 是
-    结构事实,不受 carried 硬边界辖;整局字段禁走此口。"""
+    """§2.2 显式例外:画面附加域(kernel 三域口径 shop/encounter/supply)离开
+    画面置 None 是结构事实,不受 carried 硬边界辖;整局字段禁走此口,
+    settlement(结算真值组,§3.5.1)非画面 payload 同样禁离屏清值。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.shop, SimpleNamespace(cards=[]))
+    bs.observe(bs.encounter, SimpleNamespace(options=[]))
+    bs.observe(bs.supply, SimpleNamespace(options=[]))
     bs.leave_screen(bs.shop)
-    assert bs.shop.value is None
+    bs.leave_screen(bs.encounter)
+    bs.leave_screen(bs.supply)
+    assert bs.shop.value is None and bs.encounter.value is None \
+        and bs.supply.value is None
     bs.observe(bs.gold, 20)
     with pytest.raises(ValueError):
         bs.leave_screen(bs.gold), '整局字段(有过正式值)禁离屏清值'
+    bs.observe(bs.settlement, SimpleNamespace(hp_after=76))
+    with pytest.raises(ValueError):
+        bs.leave_screen(bs.settlement), 'settlement 非画面附加域,禁离屏'
 
 
 def test_observe_over_logic_mismatch_emits_defect_row() -> None:
