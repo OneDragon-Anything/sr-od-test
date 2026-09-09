@@ -234,35 +234,27 @@ class TestNonExemptPathZeroDrift:
 
 
 class TestChannelAttribution:
-    """三通道花穿显影(ADR-0603 §4 观测项;禁洗「钱在卡上」)。"""
+    """三通道花穿显影(ADR-0603 §4 观测项;禁洗「钱在卡上」)。
 
-    def test_defer_key_separate_from_blocked_key(self):
-        """XP 花穿推迟键与 (3a) 量闸拒键分离——同帧形态分别产出各自
-        键,计数不混桶(出口金 <10 归因「经豁免支」vs「被量闸拦」
-        的前提;买入通道花穿观测以本分离为分母界)。"""
-        km, bench, deployed = _support_shapes()
-        st_defer = _state(12, 4, bench=bench, deployed=deployed)
-        _, why_defer = crit_levelup.levelup_budget_gate(
-            st_defer, None, 12, 5, tuple(km), bench, deployed, 2, 4)
-        st_block = _state(82, 8, xp=(12, 72))
-        _, why_block = crit_levelup.levelup_budget_gate(
-            st_block, None, 82, 5, tuple(_km()), [], [], 18, 4)
-        assert why_defer == 'guarantee_floor_defer'
-        assert why_block == 'levelup_budget_gate_blocked'
-        assert why_defer != why_block
+    defer/blocked 两键分离断言已删(同文件 test_support_a_below_floor_
+    deferred 与 test_73002_form_reject_key_unchanged 各自同参同键,
+    分离事实由两条相等断言合取承载)。"""
 
     def test_buy_arm_attribution_vocabulary_registered(self):
         """三条合法花穿通道的归因分键词汇在册(观测载体锁;sim/checks
         在禁碰面,显影词汇登记于此):M2 线成员义务(骨架义务不走息律
         门,01 §3.1)/E_rev 豁免臂(P46 支出否决域)/funding 兜底
-        (P78-5)——买入通道出口金 <10 局占比可按臂分列。"""
+        (P78-5)——买入通道出口金 <10 局占比可按臂分列。本锁辖
+        他文件登记门未及的两面:m2 义务值、funding 通道在册;
+        ev_buy→press 全量映射闭集单一源 =
+        test_cw_sell_window_launch.test_launch_cause_mapping_closed_
+        contract(登记门),funding_hold_fallback 行为面 = 同文件
+        TestFundingHoldFallback,两处此处不重复。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             sell_gate,
         )
         assert sell_gate.launch_cause_of('m2_line_member') == 'obligation'
-        assert sell_gate.launch_cause_of('ev_buy') == 'press'
         assert 'funding' in sell_gate.SELL_CHANNELS
-        assert callable(sell_gate.funding_hold_fallback)
 
 
 class TestMustSpendForwarding:

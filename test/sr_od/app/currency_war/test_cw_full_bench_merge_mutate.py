@@ -109,65 +109,38 @@ def _legacy_drop_mutate(bench, deployed, action) -> None:
 
 class TestIncidentFrameReplay:
 
-    def test_crash1_jiaochiu_merge_buy_then_aglaea(self, monkeypatch):
-        """05:52:01 帧:满栏 9/9 + 场上椒丘@1,买椒丘@1(合成,k=1)→
-        买阿格莱雅@1(落腾出槽)。修复后:两动作后双账签名一致、场上
-        载体椒丘@2、守卫静默(不炸/无降级告警)。"""
-        from sr_od.application.currency_war.operations.cw_op import (
-            cw_shop_action_ops,
-        )
-        warnings: list[tuple] = []
-        monkeypatch.setattr(
-            cw_shop_action_ops, 'log',
-            type('W', (), {'warning': staticmethod(
-                lambda *a, **k: warnings.append(a))})())
-        deployed = [BenchChar(slot=1, char_id='椒丘', star=1,
-                              position_pref='front')]
-        sess = _session(deployed=deepcopy(deployed))
-        # 生产同构:mutate 直接作用于 session 台账列表(guard 读同一列表)
-        tracked = exec_state_of(sess).tracked_bench_chars
-        tracked_deployed = exec_state_of(sess).tracked_deployed
-        st = _state(gold=61,
-                    shop=[ShopCard(x=501, name='阿格莱雅', faction='昼之半神',
-                                   cost=1, star=1),
-                          ShopCard(x=1007, name='椒丘', faction='狼狩',
-                                   cost=1, star=1)],
-                    deployed=deepcopy(deployed))
-        act1 = BuyCard(card=ShopCard(x=1007, name='椒丘', faction='狼狩',
-                                     cost=1, star=1))
-        proj1 = simulate(st, act1)
-        mutate_bench_deployed(tracked, tracked_deployed, act1, shop=st.shop)
-        # 动作1 后:素材槽(槽1)腾出,场上载体升 2★,双账一致
-        after_merge = [('丹恒·饮月', 1), ('花火', 1), ('艾丝妲', 1),
-                       ('绯英', 1), ('阮·梅', 1), ('绯英', 1), ('花火', 1),
-                       ('希儿', 1)]
-        assert _sig(proj1.bench) == after_merge, _sig(proj1.bench)
-        assert _sig(tracked) == after_merge, _sig(tracked)
-        assert proj1.gold == 60   # journal 回执:gold=60 bench_used=8
-        assert any(d.char_id == '椒丘' and d.star == 2
-                   for d in proj1.deployed if d is not None)
-        assert any(d.char_id == '椒丘' and d.star == 2
-                   for d in tracked_deployed if d is not None)
-        # 动作2:阿格莱雅落腾出的槽1(两侧首个空位规则同位)
-        act2 = BuyCard(card=ShopCard(x=501, name='阿格莱雅',
-                                     faction='昼之半神', cost=1, star=1))
-        proj2 = simulate(proj1, act2)
-        mutate_bench_deployed(tracked, tracked_deployed, act2,
-                              shop=proj1.shop)
-        expected_final = [('阿格莱雅', 1)] + after_merge
-        assert _sig(proj2.bench) == expected_final, _sig(proj2.bench)
-        assert _sig(tracked) == expected_final, _sig(tracked)
-        assert proj2.bench[0] is not None \
-            and proj2.bench[0].char_id == '阿格莱雅'
-        assert tracked[0] is not None and tracked[0].char_id == '阿格莱雅'
-        # 事故守卫点:修复前此处 AssertionError(误炸);修复后静默
-        cw_shop_action_ops.guard_expected_vs_tracked(proj2, sess)
-        assert warnings == [], warnings
+    #: 双响两帧参数(载荷取自守卫 Traceback 原文 + op_journal gold/bench_used
+    #: 回执行,禁改动语义):同形体帧合并为参数化(判定分支相同,差异全在
+    #: 数据面——合成卡 cost 1/2、腾出槽位、journal 金锚)。
+    _FRAMES = [
+        pytest.param(
+            '椒丘',
+            ShopCard(x=1007, name='椒丘', faction='狼狩', cost=1, star=1),
+            ShopCard(x=501, name='阿格莱雅', faction='昼之半神', cost=1, star=1),
+            61, 60,
+            [('阿格莱雅', 1), ('丹恒·饮月', 1), ('花火', 1), ('艾丝妲', 1),
+             ('绯英', 1), ('阮·梅', 1), ('绯英', 1), ('花火', 1), ('希儿', 1)],
+            id='055201_jiaochiu_merge_buy_then_aglaea'),
+        pytest.param(
+            '丹恒·饮月',
+            ShopCard(x=754, name='丹恒·饮月', faction='仙舟', cost=2, star=1),
+            ShopCard(x=1514, name='三月七', faction='列车同行', cost=1, star=1),
+            51, 49,
+            [('椒丘', 1), ('三月七', 1), ('花火', 1), ('艾丝妲', 1),
+             ('绯英', 1), ('阮·梅', 1), ('绯英', 1), ('花火', 1), ('希儿', 1)],
+            id='055225_danhen_merge_buy_then_march7th'),
+    ]
 
-    def test_crash2_danhen_merge_buy_then_march7th(self, monkeypatch):
-        """05:52:25 帧:满栏 9/9 + 场上丹恒·饮月@1,买丹恒·饮月@1(cost2,
-        合成,k=1)→ 买三月七@1(落腾出槽2)。修复后双账一致 + 守卫静默
-        (expected=椒丘,三月七,花火… = Traceback 原文形态)。"""
+    @pytest.mark.parametrize(
+        'deployed_char, merge_card, second_card, gold_before, '
+        'gold_after_first, expected_final', _FRAMES)
+    def test_incident_frame_dual_ledger_isomorphic_and_guard_silent(
+            self, monkeypatch, deployed_char, merge_card, second_card,
+            gold_before, gold_after_first, expected_final):
+        """事故帧重放:满栏 9/9 + 场上<deployed_char>@1,买同名@1(合成,
+        k=1)→ 买第二张(落腾出槽)。修复后:两动作后双账签名逐槽一致、
+        场上载体 2★(投影与 tracked 两侧)、守卫静默(不炸/无降级告警
+        ——事故现场 = 修复前守卫点 AssertionError 误炸)。"""
         from sr_od.application.currency_war.operations.cw_op import (
             cw_shop_action_ops,
         )
@@ -176,39 +149,35 @@ class TestIncidentFrameReplay:
             cw_shop_action_ops, 'log',
             type('W', (), {'warning': staticmethod(
                 lambda *a, **k: warnings.append(a))})())
-        deployed = [BenchChar(slot=1, char_id='丹恒·饮月', star=1,
+        deployed = [BenchChar(slot=1, char_id=deployed_char, star=1,
                               position_pref='front')]
         sess = _session(deployed=deepcopy(deployed))
         # 生产同构:mutate 直接作用于 session 台账列表(guard 读同一列表)
         tracked = exec_state_of(sess).tracked_bench_chars
         tracked_deployed = exec_state_of(sess).tracked_deployed
-        st = _state(gold=51,
-                    shop=[ShopCard(x=754, name='丹恒·饮月', faction='仙舟',
-                                   cost=2, star=1),
-                          ShopCard(x=1514, name='三月七',
-                                   faction='列车同行', cost=1, star=1)],
+        st = _state(gold=gold_before, shop=[second_card, merge_card],
                     deployed=deepcopy(deployed))
-        act1 = BuyCard(card=ShopCard(x=754, name='丹恒·饮月', faction='仙舟',
-                                     cost=2, star=1))
+        act1 = BuyCard(card=deepcopy(merge_card))
         proj1 = simulate(st, act1)
         mutate_bench_deployed(tracked, tracked_deployed, act1, shop=st.shop)
-        after_merge = [('椒丘', 1), ('花火', 1), ('艾丝妲', 1), ('绯英', 1),
-                       ('阮·梅', 1), ('绯英', 1), ('花火', 1), ('希儿', 1)]
+        # 动作1 后:素材槽腾出,场上载体升 2★,双账一致
+        after_merge = [e for e in expected_final
+                       if e != (second_card.name, 1)]
         assert _sig(proj1.bench) == after_merge, _sig(proj1.bench)
         assert _sig(tracked) == after_merge, _sig(tracked)
-        assert proj1.gold == 49   # journal 回执:gold=49 bench_used=8
-        assert any(d.char_id == '丹恒·饮月' and d.star == 2
+        assert proj1.gold == gold_after_first   # journal 回执:bench_used=8
+        assert any(d.char_id == deployed_char and d.star == 2
                    for d in proj1.deployed if d is not None)
-        act2 = BuyCard(card=ShopCard(x=1514, name='三月七',
-                                     faction='列车同行', cost=1, star=1))
+        assert any(d.char_id == deployed_char and d.star == 2
+                   for d in tracked_deployed if d is not None)
+        # 动作2:第二张落腾出槽(两侧首个空位规则同位)
+        act2 = BuyCard(card=deepcopy(second_card))
         proj2 = simulate(proj1, act2)
         mutate_bench_deployed(tracked, tracked_deployed, act2,
                               shop=proj1.shop)
-        expected_final = [('椒丘', 1), ('三月七', 1), ('花火', 1),
-                          ('艾丝妲', 1), ('绯英', 1), ('阮·梅', 1),
-                          ('绯英', 1), ('花火', 1), ('希儿', 1)]
         assert _sig(proj2.bench) == expected_final, _sig(proj2.bench)
         assert _sig(tracked) == expected_final, _sig(tracked)
+        # 事故守卫点:修复前此处 AssertionError(误炸);修复后静默
         cw_shop_action_ops.guard_expected_vs_tracked(proj2, sess)
         assert warnings == [], warnings
 
