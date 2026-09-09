@@ -1,7 +1,7 @@
 """T-182 满栏合成买双账同构锁(2026-09-09 05:52 运行局双响事故回归)。
 
-事故形态(证据 = .log/mcp_server.log 05:52:01/05:52:25 两 Traceback +
-op_journal gold/bench_used 回执行):bench 满栏(9/9,含同名同星副本对
+事故形态(证据 = ADR-0617 §根因证据链;原始日志链 = .log/mcp_server.log
+05:52:01/05:52:25 两 Traceback + op_journal gold/bench_used 回执行):bench 满栏(9/9,含同名同星副本对
 ——T-59 同名同星可同场,建模须兼容)下,m2 合成完成买(own=2 = bench
 素材 + 场上素材)经 merge_mechanics §2.5 满栏例外自动合成:游戏真实
 行为 = 接受买入(金照扣)、消费 bench 素材(槽位腾出)、场上载体升星。
@@ -14,7 +14,7 @@ deployed`` 满栏丢件 → 只见 2 份不合成 → 槽位不动 → 两账结
 修复:``mutate_bench_deployed`` 带 shop 视图,满栏合成买与 ``simulate``
 共用 ``_apply_full_bench_merge_buy`` 单一源(分支同构 = 写端治本)。
 
-锁面(五件):
+锁面(六件):
 - 事故帧重放 ×2(05:52:01 椒丘帧 / 05:52:25 丹恒·饮月帧,载荷取自
   守卫 Traceback 原文 + journal gold/bench_used)——两动作序列后双账
   签名逐槽一致 + 守卫静默(不炸也不降级告警);
@@ -24,6 +24,11 @@ deployed`` 满栏丢件 → 只见 2 份不合成 → 槽位不动 → 两账结
 - k=2 自动多买(own=1 + 店内 2 张)双账同构;
 - 非合成满栏买(merge_buy_completes=False)零漂移:tracked 维持拒收
   不动、simulate no-op、两账一致(ADR-0283 拒买语义);
+- own=0 门(T-184,ADR-0619):own=0 + 店内同名同星 3 张的
+  满栏帧,合成买不成立(merge_buy_completes own≥1 门,语义锚 =
+  merge_mechanics §2.5 例外以已有素材/载体在场为前提)→ 按满栏非
+  合成买拒收:金不扣、店侧 3 张不下架、双账零漂移一致(摘门变异
+  红点 = 金被扣 k×单价 + 店侧被下架,旧形态合成载体被截删凭空消失);
 - shop=None 兼容面:旧调用形态零漂移(满栏丢件维持,无 shop 视图的
   调用方行为不变)。
 """
@@ -321,6 +326,35 @@ class TestBranchFaces:
         assert proj.gold == 30   # 拒买不扣金
         assert _sig(proj.bench) == before_sig
         assert _sig(tracked) == before_sig   # 丢件 = 拒收(与游戏拒绝一致)
+
+    def test_own0_shop3_full_bench_buy_rejected_gold_unchanged(self):
+        """own=0 + 店内同名同星 3 张满栏帧:合成买不成立(own≥1 门,
+        T-184,ADR-0619)→ 按满栏非合成买拒收——金不扣、店侧 3 张不下架、
+        双账零漂移一致。摘门变异时本锁红:金被扣 3×单价(30→27)、
+        店侧 3 张被下架(旧形态 k=3 全为尾挂张,合成载体落 idx9 被
+        ``del bench[9:]`` 截删,买下的 2★ 凭空消失)。"""
+        deployed: list[BenchChar] = []
+        sess = _session(bench=self._flat_full_bench('甲'),
+                        deployed=deepcopy(deployed))
+        tracked = deepcopy(exec_state_of(sess).tracked_bench_chars)
+        st = GameState(gold=30, level=5, round_num=9, hp=35)
+        st.shop = [ShopCard(x=1, name='丙', cost=1, star=1),
+                   ShopCard(x=2, name='丙', cost=1, star=1),
+                   ShopCard(x=3, name='丙', cost=1, star=1)]
+        st.bench = self._flat_full_bench('甲')
+        st.deployed = []
+        act = BuyCard(card=ShopCard(x=1, name='丙', cost=1, star=1))
+        before_sig = _sig(st.bench)
+        proj = simulate(st, act)
+        mutate_bench_deployed(tracked,
+                              exec_state_of(sess).tracked_deployed,
+                              act, shop=st.shop)
+        assert proj.gold == 30   # 拒买不扣金(摘门变异红点:30→27)
+        assert _sig(proj.bench) == before_sig   # 账面无截删凭空消失
+        assert _sig(tracked) == before_sig   # tracked 拒收不动
+        assert sum(1 for c in proj.shop
+                   if c.name == '丙') == 3   # 拒买店侧不下架(变异红点:0)
+        assert _sig(proj.bench) == _sig(tracked)   # 双账一致
 
     def test_shop_none_keeps_legacy_drop_face(self):
         """shop=None 兼容面锁:无店面语境的既有调用方(部署/备战域)
