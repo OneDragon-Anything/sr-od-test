@@ -244,6 +244,440 @@ def test_degrade_recover_mutex_segment_first_round() -> None:
     assert len(ledger.check_degrade_recover_mutex(noise)) == 1
 
 
+# --- 段级检查器(sim/checks/segments,seg_* 族) ----------------------
+# 段级行形状与上面 _row(ledger 批检查器)不同:成型判据读
+# state.board_factions(engines_count 单一源),不消费 board/equipped。
+
+def _seg_formed_state() -> dict:
+    """成型态 board_factions:仙舟3+列车2 = 两体系达成(engines≥2)。"""
+    return {'board_factions': {'仙舟': 3, '列车同行': 2},
+            'deployed': [{'char_id': '藿藿'}], 'bench': [],
+            'cap': 5, 'level': 5}
+
+
+def _seg_row(round_num: int, *, gold: int = 30,
+             actions: list | None = None,
+             state: dict | None = None,
+             plane: int = 1, hp: int = 60, node: str = 'battle',
+             waves_gold: int | None = None,
+             gold_readable: bool | None = None,
+             formed_stop: bool = False,
+             bench_full_skipped_buys: int = 0,
+             sim_extra: dict | None = None) -> dict:
+    """合成段级账本行(形状对齐 seg 检查器消费面;shop_waves 单波)。
+
+    可选参按各 seg 检查器消费面扩展(T-196 回补批):P2 面用
+    plane/hp/gold_readable;[17]/[6] 豁免面用 formed_stop/
+    bench_full_skipped_buys;时点金与末金分离用 waves_gold(g0 取
+    首波 gold);node/sim_extra 供奖励帧、连胜 delta、spend 分解等
+    sim 子字典覆盖(sim_extra 浅合并,同键整体覆盖)。
+    """
+    sim: dict = {'node': node,
+                 'income': {'base': 5, 'interest': 0, 'streak': 0,
+                            'event': 1},
+                 'spend': {'buys': {}, 'levelup': 0, 'refresh': 0,
+                           'sell_income': 0},
+                 'shop_waves': [{'event': 'offer',
+                                 'gold': gold if waves_gold is None
+                                 else waves_gold,
+                                 'cards': []}]}
+    if bench_full_skipped_buys:
+        sim['bench_full_skipped_buys'] = bench_full_skipped_buys
+    if sim_extra:
+        sim.update(sim_extra)
+    row = {
+        'plane': plane, 'round_num': round_num, 'gold': gold,
+        'hp': hp, 'formed_stop': formed_stop, 'target_comp': '',
+        'state': state if state is not None else {
+            'board_factions': {}, 'deployed': [], 'bench': [],
+            'cap': 3, 'level': 4},
+        'actions': actions or [],
+        'sim': sim,
+    }
+    if gold_readable is not None:
+        row['gold_readable'] = gold_readable
+    return row
+
+
+def _seg_buy(name: str, cost: int = 1,
+             channel: str = 'engine') -> dict:
+    """段级买入动作(身份通道写入 reason/channel,seg 检查器消费面)。"""
+    return {'__type__': 'BuyCard', 'card': {'name': name, 'cost': cost},
+            'reason': f'd2_{channel}', 'channel': channel}
+
+
+def test_seg_formed_still_buying_transition_release_arm() -> None:
+    """[13] ④ 放行臂例外(两形态构造帧锁)。前身 = 同名锁,原在
+    test_cw_sim_suite.py,2026-09-09 测试重组批(f799914)申报性退役,
+    T-192 回补至本主题文件——现役具名锁缺失期间该例外臂回潮无人报。
+
+    断言:成型后经 ④ 转线前瞻放行臂(买因 ``transition_component_buy``)
+    买入 TRANSITION_PACK carry/partial 成员**不报**。出处 = 策略文档
+    12_line_and_intention.md §2「④ 转线前瞻放行臂 = 未定型期转型前瞻
+    例外」边界行(用户裁定 2026-09-07);对齐申报 = ADR-0580 §3 规则④
+    + §7。纯过渡件仍报,负空间两形态:
+    - drop 档带 ④ 买因(写侧误挂形态)照报 = 放行集成员资格闸——
+      drop 档在 transition_release_names 数据源处即不入集,负空间
+      排除,无需独立 drop 判定;
+    - 放行集成员不经 ④ 买因(常规通道买入)照报 = 买因闸——例外
+      只辖 ④ 臂买入,不经该臂的过渡件买入仍在 [13] 辖域。
+    夹具选名(回补时亲核注册表):姬子·启行 = TRANSITION_PACK carry
+    档、BRIDGE_POOL_P2 fixed(P1 检测器 bridge 豁免集只并 BRIDGE_POOL,
+    不含 P2 池)、列车阵营(engine 身份档);卡芙卡 = drop 档、P1 桥池
+    flex 档(豁免集只收 fixed∪core,不收 flex)——都避开桥池/目标
+    名册既有豁免,防既有豁免先行吞掉例外分支(锁假绿)。
+    事件轮号 = 买入行 round_num 原值(seg 检查器逐行判定,无跨轮归并;
+    与 ledger.check_degrade_recover_mutex 的段首轮号语义互不相干,
+    T-194 修正不辖本检查器)。
+    """
+    from sr_od.application.currency_war.sim.checks.segments import (
+        seg_check_formed_still_buying_transition,
+    )
+    formed = _seg_formed_state()
+
+    def _frame(buy: dict) -> list[dict]:
+        # 行1 成型态(engines≥2),行2 携买入动作:成型判定逐行先
+        # 更新后检查,行2 落在成型后辖域。
+        return [_seg_row(1, state=dict(formed)),
+                _seg_row(2, state=dict(formed), actions=[buy])]
+
+    def _buy4(name: str) -> dict:
+        return {'__type__': 'BuyCard', 'card': {'name': name, 'cost': 3},
+                'reason': 'transition_component_buy', 'channel': 'engine'}
+
+    # ④ 件放行:carry 成员 + ④ 买因 → 不报
+    assert not seg_check_formed_still_buying_transition(
+        _frame(_buy4('姬子·启行')))
+    # drop 档 + ④ 买因(误挂形态)→ 仍报,事件点名声与买因
+    evs_drop = seg_check_formed_still_buying_transition(
+        _frame(_buy4('卡芙卡')))
+    assert evs_drop and evs_drop[0]['round_num'] == 2 \
+        and evs_drop[0]['bought'] == '卡芙卡' \
+        and evs_drop[0]['reason'] == 'transition_component_buy'
+    # 放行集成员非 ④ 买因(常规 engine 通道)→ 仍报
+    plain_buy = {'__type__': 'BuyCard',
+                 'card': {'name': '姬子·启行', 'cost': 3},
+                 'reason': 'd2_engine', 'channel': 'engine'}
+    evs_non4 = seg_check_formed_still_buying_transition(
+        _frame(plain_buy))
+    assert evs_non4 and evs_non4[0]['bought'] == '姬子·启行' \
+        and evs_non4[0]['reason'] == 'd2_engine'
+
+
+def test_seg_overflow_idle_spend_bidirectional() -> None:
+    """[17] 溢余即花(P1 段级)双向锁。前身 = 同名锁,原在
+    test_cw_sim_suite.py,2026-09-09 测试重组批(f799914)申报性退役,
+    T-196 回补至本主题文件(回潮期间该检查器无任何具名锁看守)。
+
+    出处 = user_playstyle.md [17] + ADR-0478(容忍带)+
+    ADR-0593 §C5(T-153 迁移:自报停手豁免降级为「自算成型复核通过
+    才豁免」,谎报带 suspect 标记)。断言按现行检查器语义重推:
+    - 金线与容忍带从单一源现算(interest_floor() = interest_cap×10
+      + segments._OVERFLOW_TOLERANCE),不硬编码退役锁时代的 50/52;
+    - 成型判据 = engines_count≥2 单一源(夹具 _seg_formed_state);
+    - 谎报面断言 suspect 标记在事件上(非旧「自报即豁免」语义);
+    - 批版同门检查(check_overflow_gold_zero_buy_streak)的 C5-b 面
+      归 test_cw_suspect_review.py,本锁只辖段级版。
+    """
+    from sr_od.application.currency_war.kernel.cw_registry import (
+        DEFAULT_REGISTRY,
+    )
+    from sr_od.application.currency_war.sim.checks import segments
+    floor = DEFAULT_REGISTRY.interest_floor()
+    band_top = floor + segments._OVERFLOW_TOLERANCE
+    unformed = {'board_factions': {}, 'deployed': [], 'bench': [],
+                'cap': 3, 'level': 3}
+    # 坏:金>带顶 零花费 未成型 → 必报,事件带时点金与成型度回显
+    bad = [_seg_row(1, gold=band_top + 5, waves_gold=band_top + 5,
+                    state=dict(unformed))]
+    evs = segments.seg_check_overflow_idle_spend(bad)
+    assert evs and evs[0]['gold_before'] == band_top + 5 \
+        and evs[0]['engines'] == 0, f'[17] 零花费未成型未报: {evs}'
+    # 有花费动作 → 不报(时点金取首波,末金无关)
+    spent = [_seg_row(1, gold=floor - 2, waves_gold=band_top + 5,
+                      state=dict(unformed), actions=[_seg_buy('甲')])]
+    assert not segments.seg_check_overflow_idle_spend(spent)
+    # 自算成型(engines≥2)→ 攒息合法面,不报
+    formed_ok = [_seg_row(1, gold=band_top + 20, waves_gold=band_top + 20,
+                          state=_seg_formed_state())]
+    assert not segments.seg_check_overflow_idle_spend(formed_ok)
+    # 成型谎报(自报停手 ∧ 自算未成型)→ 不豁免 + suspect 标记
+    # (ADR-0593 C5:旧「自报即豁免」下谎报形态不可见)
+    lie = [_seg_row(1, gold=band_top + 20, waves_gold=band_top + 20,
+                    formed_stop=True)]
+    lie_evs = segments.seg_check_overflow_idle_spend(lie)
+    assert lie_evs and lie_evs[0].get('suspect'), \
+        '成型谎报未显形(C5 迁移回归)'
+    # 自洽停手(自报停手 ∧ 自算成型)→ 豁免照旧(兼容面)
+    honest = [_seg_row(1, gold=band_top + 20, waves_gold=band_top + 20,
+                       state=_seg_formed_state(), formed_stop=True)]
+    assert not segments.seg_check_overflow_idle_spend(honest)
+    # bench 满守卫拦截轮(想买买不了)→ 豁免
+    guard = [_seg_row(1, gold=band_top + 5, waves_gold=band_top + 5,
+                      bench_full_skipped_buys=2)]
+    assert not segments.seg_check_overflow_idle_spend(guard)
+    # 息线邻近容忍带(ADR-0478):带顶(≤floor+容忍)不报,带顶+1 起报
+    assert not segments.seg_check_overflow_idle_spend(
+        [_seg_row(1, gold=band_top, waves_gold=band_top)])
+    evs_far = segments.seg_check_overflow_idle_spend(
+        [_seg_row(1, gold=band_top + 1, waves_gold=band_top + 1)])
+    assert evs_far and evs_far[0]['gold_before'] == band_top + 1, \
+        '容忍带边界失守:带顶+1 未报'
+
+
+def test_seg_p2_bleed_gold_stack_bidirectional() -> None:
+    """[17] 位面2 延伸(血线下降段金堆积,ADR-0479)豁免/边界面双向锁。
+    前身 = 同名锁(test_cw_sim_suite.py,f799914 申报性退役),T-196 回补。
+
+    分工申报:「溢余∧血降∧≥2 连」报红面、「血线稳定不报」对偶门、
+    轮定位与 _SEGMENT_CHECKS 登记在场,已由接线验收锚辖
+    (test_cw_telemetry_archive.py::test_p2_bleed_gold_stack_wired /
+    _healthy_not_fired,经 run_checks_on_replay 生产 checks 路径)。
+    本锁补接线锚不辖的独家豁免面:金在泄/单轮堆积被打断/P1 行不辖/
+    容忍带内/金不可读断链(None 与 gold_readable=False 两形态,后者为
+    现行检查器「不可信金不猜」新增口径)。
+    溢余线从单一源现算(interest_floor() + _OVERFLOW_TOLERANCE)。
+    """
+    from sr_od.application.currency_war.kernel.cw_registry import (
+        DEFAULT_REGISTRY,
+    )
+    from sr_od.application.currency_war.sim.checks import segments
+    floor = DEFAULT_REGISTRY.interest_floor()
+    band_top = floor + segments._OVERFLOW_TOLERANCE
+    over = band_top + 8   # 溢余在手基准金(>带顶)
+    # 金在泄(买入支出盖过收入,溢余在消化)→ 不报
+    draining = [_seg_row(1, plane=2, gold=over, hp=50),
+                _seg_row(2, plane=2, gold=over - 5, hp=35)]
+    assert not segments.seg_check_p2_bleed_gold_stack(draining)
+    # 单轮堆积即被非溢余轮打断(灰区)→ 不报
+    single = [_seg_row(1, plane=2, gold=over, hp=50),
+              _seg_row(2, plane=2, gold=over + 5, hp=45),
+              _seg_row(3, plane=2, gold=floor, hp=40)]
+    assert not segments.seg_check_p2_bleed_gold_stack(single)
+    # P1 行不辖([17] P1 面归 seg_overflow_idle_spend)
+    p1 = [_seg_row(1, gold=over, hp=50),
+          _seg_row(2, gold=over + 10, hp=35)]
+    assert not segments.seg_check_p2_bleed_gold_stack(p1)
+    # 容忍带内(g ≤ floor+容忍,ADR-0478 同带宽)→ 不报
+    band = [_seg_row(1, plane=2, gold=over, hp=50),
+            _seg_row(2, plane=2, gold=band_top, hp=35)]
+    assert not segments.seg_check_p2_bleed_gold_stack(band)
+    # 金不可读帧断链(不可信金不猜):gold=None 断 streak 链
+    broken = [_seg_row(1, plane=2, gold=over, hp=50),
+              _seg_row(2, plane=2, gold=None, hp=35),
+              _seg_row(3, plane=2, gold=over + 10, hp=20)]
+    assert not segments.seg_check_p2_bleed_gold_stack(broken)
+    # gold_readable=False 帧断链(现行口径;实机沿用值帧的检查侧镜像)
+    unread = [_seg_row(1, plane=2, gold=over, hp=50),
+              _seg_row(2, plane=2, gold=over + 10, hp=35,
+                       gold_readable=False),
+              _seg_row(3, plane=2, gold=over + 20, hp=20)]
+    assert not segments.seg_check_p2_bleed_gold_stack(unread)
+
+
+def test_seg_break_interest_exception_bidirectional() -> None:
+    """[6]/[19] 破息例外记账(P1 段级)双向锁。前身 = 同名锁
+    (test_cw_sim_suite.py,f799914 申报性退役),T-196 回补。
+
+    出处 = user_playstyle.md [6][19] + ADR-0471/ADR-0580(③奖励节点
+    型豁免已退役,升级破息豁免依据 = ④ levelup_spend 通道口径,节点
+    无关)+ ADR-0478(boss 窗地板)。断言按现行检查器语义重推:
+    - [19] 连胜保 = 进轮重算连胜 ≥2(_combat_streak_by_round 单一源:
+      战斗类节点 delta≥0 累积,夹具 battle 行缺 delta = 0 = 胜);
+    - ⑤ 刷新找牌通道放行面为现行在册通道,退役锁尚无此面,按现行
+      意图补断言;
+    - boss 地板与金线从注册表现算(boss_floor / interest_floor()),
+      不硬编码退役锁时代的 10/50。
+    """
+    from sr_od.application.currency_war.kernel.cw_registry import (
+        DEFAULT_REGISTRY,
+    )
+    from sr_od.application.currency_war.sim.checks import segments
+    floor = DEFAULT_REGISTRY.interest_floor()
+    g0 = floor + 5
+    gend = floor - 10
+    lv_spend = {'buys': {}, 'levelup': 4, 'refresh': 0, 'sell_income': 0}
+    rf_spend = {'buys': {}, 'levelup': 0, 'refresh': 2, 'sell_income': 0}
+    off_spend = {'buys': {'d2_off': 15}, 'levelup': 0, 'refresh': 0,
+                 'sell_income': 0}
+    # 坏:破息买 1 笔 off、无连胜、战斗节点 → 必报,事件回显
+    # 时点金/买入通道/最终店面板三件
+    bad = [_seg_row(1, gold=gend, waves_gold=g0,
+                    actions=[_seg_buy('杂件', cost=15, channel='off')],
+                    sim_extra={'spend': dict(off_spend)})]
+    evs = segments.seg_check_break_interest_exception(bad)
+    assert evs and evs[0]['gold_before'] == g0 \
+        and evs[0]['buys'][0]['channel'] == 'off' \
+        and isinstance(evs[0]['final_shop_panel'], list), \
+        f'[6] 凭空破息未报或回显缺失: {evs}'
+    # 例外①店全想要(≥2 笔无一 off)→ 放行
+    store_all = [_seg_row(1, gold=gend, waves_gold=g0,
+                          actions=[_seg_buy('引擎件'),
+                                   _seg_buy('凑对件', channel='pair')])]
+    assert not segments.seg_check_break_interest_exception(store_all)
+    # 例外②连胜保([19]):前两轮战斗胜(进轮重算 ≥2)→ 放行
+    streak_rows = [
+        _seg_row(1, gold=floor + 2, waves_gold=floor + 2),
+        _seg_row(2, gold=floor + 4, waves_gold=floor + 4),
+        _seg_row(3, gold=gend, waves_gold=floor + 8,
+                 actions=[_seg_buy('保连件', channel='pair')]),
+    ]
+    assert not segments.seg_check_break_interest_exception(streak_rows)
+    # 例外④追级经验通道:奖励帧 LevelUp 由 levelup_spend 通道豁免
+    # (ADR-0580:节点型豁免已退役,豁免依据是通道不是节点)
+    reward_lv = [_seg_row(1, gold=gend, waves_gold=floor + 2,
+                          node='reward',
+                          actions=[{'__type__': 'LevelUp', 'cost': 4}],
+                          sim_extra={'spend': dict(lv_spend)})]
+    assert not segments.seg_check_break_interest_exception(reward_lv)
+    # 例外⑤刷新找牌通道(spend.refresh>0,[3] 预算式授权)→ 放行
+    refresh_row = [_seg_row(1, gold=gend, waves_gold=g0,
+                            actions=[{'__type__': 'RefreshShop',
+                                      'cost': 2}],
+                            sim_extra={'spend': dict(rf_spend)})]
+    assert not segments.seg_check_break_interest_exception(refresh_row)
+    # 非破息(gold_end ≥ floor 或起点 < floor)不管
+    calm = [_seg_row(1, gold=floor + 1, waves_gold=floor + 2,
+                     actions=[_seg_buy('甲')])]
+    assert not segments.seg_check_break_interest_exception(calm)
+    # 例外⑥boss 窗地板(ADR-0478):花后 ≥ boss_floor → 豁免
+    boss_floor = DEFAULT_REGISTRY.boss_floor
+    boss_ok = [_seg_row(1, gold=boss_floor + 2, waves_gold=floor + 1,
+                        node='boss',
+                        actions=[_seg_buy('线核件', cost=3,
+                                          channel='engine')])]
+    assert not segments.seg_check_break_interest_exception(boss_ok)
+    # 跌破 boss_floor → 越权仍报(detail 带越权标注)
+    boss_breach = [_seg_row(1, gold=boss_floor - 4, waves_gold=floor + 1,
+                            node='boss',
+                            actions=[_seg_buy('线核件', cost=45,
+                                              channel='engine')])]
+    evs_boss = segments.seg_check_break_interest_exception(boss_breach)
+    assert evs_boss and '越权' in evs_boss[0]['detail'], \
+        f'boss 窗跌破地板未报越权: {evs_boss}'
+
+
+def test_seg_formed_still_buying_transition_bidirectional() -> None:
+    """[13] 成型停手主条(P1 段级)双向锁。前身 = 同名锁
+    (test_cw_sim_suite.py,f799914 申报性退役;T-192 申报主条无现役
+    承接并移交本批),T-196 回补。
+
+    与本文件 ④ 放行臂锁的分工:那边辖例外臂双闸(放行集成员资格闸/
+    买因闸),这边辖主条四形态——成型后过渡填充件必报、未成型阶段
+    同类买入不报、同名在场再买 = 升星副本路径豁免([4] 核心 2★/
+    [28] 过渡核心升星)、目标件买入豁免(bridge 框架件名册真实成员;
+    target_comp 为空时 bridge 白名单兜底,与检查器 _is_target_piece
+    同口径)。成型判据 = engines_count≥2 单一源
+    (board_factions 经 cw_deploy_logic.engines_count,夹具
+    _seg_formed_state);成型判定逐行先更新后检查,行 2 落成型后辖域。
+    """
+    from sr_od.application.currency_war.kernel.cw_line_defs import (
+        BRIDGE_POOL,
+    )
+    from sr_od.application.currency_war.sim.checks.segments import (
+        seg_check_formed_still_buying_transition,
+    )
+    formed = _seg_formed_state()
+    unformed = {'board_factions': {}, 'deployed': [], 'bench': [],
+                'cap': 3, 'level': 3}
+    # 坏:成型后新增过渡填充件(engine 通道)→ 必报,回显轮号与件名
+    bad = [_seg_row(1, state=dict(formed)),
+           _seg_row(2, gold=30, waves_gold=30, state=dict(formed),
+                    actions=[_seg_buy('散装过渡件')])]
+    evs = seg_check_formed_still_buying_transition(bad)
+    assert evs and evs[0]['round_num'] == 2 \
+        and evs[0]['bought'] == '散装过渡件', \
+        f'[13] 成型后买过渡件未报: {evs}'
+    # 未成型阶段的同类买入 → 不报
+    early = [_seg_row(1, gold=30, waves_gold=30, state=dict(unformed),
+                      actions=[_seg_buy('散装过渡件')])]
+    assert not seg_check_formed_still_buying_transition(early)
+    # 同名在场再买 = 升星副本路径([4]/[28]) → 豁免
+    dup_state = dict(formed)
+    dup_state['deployed'] = [{'char_id': '散装过渡件'}]
+    dup = [_seg_row(1, state=dict(formed)),
+           _seg_row(2, gold=30, waves_gold=30, state=dup_state,
+                    actions=[_seg_buy('散装过渡件')])]
+    assert not seg_check_formed_still_buying_transition(dup)
+    # 目标件买入(bridge 名册内真实成员)→ 豁免
+    bridge_member = next(iter({n for combo in BRIDGE_POOL
+                               for n in (*combo.fixed, *combo.core)}))
+    target = [_seg_row(1, state=dict(formed)),
+              _seg_row(2, gold=30, waves_gold=30, state=dict(formed),
+                       actions=[_seg_buy(bridge_member)])]
+    assert not seg_check_formed_still_buying_transition(target)
+
+
+def test_seg_unjustified_levelup_bidirectional() -> None:
+    """[12]/[33] 凭空追级(P1 段级)双向锁——与在册承接面分工申报:
+    授权白名单 m3_batch 分键前缀放行与白名单外计数,由
+    test_cw_auth_crossface.py(ledger 批表/segments 段表两侧镜像)辖;
+    T-153 前置自算复核的 suspect 标记与金门辖域,由
+    test_cw_suspect_review.py::test_c2b_seg_unjustified_review_event 辖。
+    本锁补退役锁(f799914 申报性退役,T-196 回补)的其余独家面:
+    - 基础违规事件字段回显(level_before/gold_before,段级归因现场);
+    - 奖励帧两形态(T-115 对齐 ADR-0580:节点型豁免已退役,授权判定
+      节点无关——奖励帧无授权升级 = 违规可见;白名单授权照常放行,
+      m3_batch 分键经前置复核 unverifiable 豁免口径)。
+    金门从单一源现算(interest_floor()),禁硬编码阈数字(同 C2-b
+    红证口径)。
+    """
+    from sr_od.application.currency_war.kernel.cw_registry import (
+        DEFAULT_REGISTRY,
+    )
+    from sr_od.application.currency_war.sim.checks.segments import (
+        seg_check_unjustified_levelup,
+    )
+    floor = DEFAULT_REGISTRY.interest_floor()
+    g0 = floor - 22
+    pre = {'board_factions': {}, 'deployed': [], 'bench': [],
+           'cap': 5, 'level': 5}
+    post = {**pre, 'level': 6}
+
+    def _lv_frame(node: str, auth: str) -> list[dict]:
+        return [_seg_row(1, state=dict(pre)),
+                _seg_row(2, gold=g0, waves_gold=g0, node=node,
+                         state=dict(post),
+                         actions=[{'__type__': 'LevelUp', 'cost': 4,
+                                   'auth': auth}])]
+
+    # 坏:lv≥5 进追级段、金<金门、无授权 → 必报,回显前轮等级与时点金
+    evs = seg_check_unjustified_levelup(_lv_frame('battle', ''))
+    assert evs and evs[0]['level_before'] == 5 \
+        and evs[0]['gold_before'] == g0, \
+        f'[12] 凭空追级未报或回显缺失: {evs}'
+    # 奖励帧无授权升级 → 违规可见(节点不再是豁免依据,ADR-0580)
+    evs_r = seg_check_unjustified_levelup(_lv_frame('reward', ''))
+    assert len(evs_r) == 1 and evs_r[0]['round_num'] == 2, \
+        f'奖励帧无授权升级漏报(T-115 回归): {evs_r}'
+    # 奖励帧带白名单授权(m3_batch 分键,前置复核 unverifiable 豁免)
+    # → 放行
+    assert not seg_check_unjustified_levelup(
+        _lv_frame('reward', 'm3_batch:arm1'))
+
+
+def test_seg_gold_identity_bidirectional() -> None:
+    """链式金恒等式(段级实现层探针)双向锁。前身 = 同名锁
+    (test_cw_sim_suite.py,f799914 申报性退役),T-196 回补。
+
+    与 ledger.check_ledger_consistency(行内 gold_before 单行自洽,
+    锁见本文件批检查器小节之外的历史分工声明)的分工:本检查用
+    **链式上一行末金**——跨行的记账断裂(轮间丢一笔/收入重复入账)
+    只有链式才能暴露。夹具收入合计 = 6(base 5 + event 1),期望金
+    从收入/支出现算,不硬编码;违规事件 detail 必须携带末金读数供
+    定位(回显契约)。
+    """
+    from sr_od.application.currency_war.sim.checks import segments
+    # 守恒链(6 + 6 = 12)→ 零事件
+    good = [_seg_row(1, gold=6), _seg_row(2, gold=12)]
+    assert not segments.seg_check_gold_identity(good)
+    # 改一行末金 → 必报,detail 带末金读数
+    bad = [_seg_row(1, gold=6), _seg_row(2, gold=99)]
+    evs = segments.seg_check_gold_identity(bad)
+    assert evs and '99' in evs[0]['detail'], \
+        f'链式金不守恒未报或回显缺失: {evs}'
+
+
 # --- 注册表类 --------------------------------------------------------
 
 def test_phantom_equip_no_wear_bidirectional() -> None:
