@@ -26,6 +26,6 @@ def test_boot_from_shop_half_weight():
 
 # (原 test_boot_pure_shop_two / test_hysteresis_survives_shop_noise /
 #  test_quantum_portal_boot_unchanged 已并入同族单一源:
-#  纯 shop 拒 + 滞后不翻转 → test_cw_hoard_boot 同输入同断言逐字重复;
-#  量子 portal → test_cw_quantum_recipe::test_quantum_portal_bias。
+#  纯 shop 拒 + 滞后不翻转 → test_cw_hoard 同输入同断言逐字重复;
+#  量子 portal → test_cw_quantum_hoard::test_quantum_portal_bias。
 #  重复构成删并理由(README 纪律 8)。)

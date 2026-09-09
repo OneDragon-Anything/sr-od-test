@@ -48,7 +48,7 @@ def test_no_portal_unchanged():
 
 
 def test_early_cards_count_selects_framework():
-    """早期计数(迁自 test_cw_quantum_recipe.test_quantum_not_early_without_cards
+    """早期计数(迁自 test_cw_quantum_hoard 前身 test_quantum_not_early_without_cards
     的残余有效断言):无 portal 时按实际持有计框架——2 张仙舟件即达阈值
     选仙舟;量子配方 3 费出得晚,早期持有计数起不来,自然不选量子
     (空持有 + 无关 portal 返 '' 由 test_portal_unrelated_no_bias 辖定)。"""

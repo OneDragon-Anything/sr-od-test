@@ -52,3 +52,6 @@ test_cw_fidelity_baseline.py::test_fidelity_baseline_conservation_domains_bands
 # 入口链守卫注册表批(2026-09-09,T-102 星徽新锁;call 实测 5.43s≥2s,真帧 OCR 同桶先例=supply/jade op 级锁)
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_star_badge_detail_popup_closed_then_reaches_prep
 
+# 瘦身战役补登(2026-09-09,D64:整局仿真慢桶登记,内联 slow 标记对应条目)
+test_cw_deploy_lag_hold_exempt.py::test_seed_31016_p1r6_lag_zero_regression
+
