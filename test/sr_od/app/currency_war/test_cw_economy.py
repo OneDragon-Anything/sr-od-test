@@ -27,7 +27,11 @@ import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import (
+    DISTINCT_CARDS_PER_COST,
+    POOL_COPIES_PER_CARD,
+    expected_refreshes,
     expected_refreshes_for_card,
+    refresh_prob,
 )
 from sr_od.application.currency_war.kernel import cw_investments as inv
 from sr_od.application.currency_war.kernel.cw_economy import (
@@ -64,8 +68,6 @@ from test.sr_od.app.currency_war._cw_helpers import (
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_session as _session,
 )
-
-
 
 # ==================== ev_arm 值域:aggregate_economy 分型登记 ====================
 # 分型表(测试位常量表)= 聚合语义机器可读单一源(§E6 裁决:代码即载体,
@@ -341,3 +343,36 @@ def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
     # 由读取端显式写;GameState 构造缺省 hp_readable=True 是 sim 恒真读帧约定)
     st_ghost = GameState(level=3, hp=100, hp_readable=False)
     assert blood_xp_gate_for(st_ghost, _blood_session()) is False
+
+
+# ==================== D 牌期望模型边界(自 test_cw_sim_suite.py shop_odds 节回补,T-197) ====================
+# 前身 = test_cw_shop_odds.py 随测试重组批 f799914 整体退役;边界语义在现行
+# data/cw_shop_odds.py 未演进(p≤0/k≤0/j≥k → 0;查表无数据 → 0),回补防回潮。
+# v/a 参数从注册表单一源现算(DISTINCT_CARDS_PER_COST/POOL_COPIES_PER_CARD),
+# 不手抄旧锁常数(README 第 9 条);单一源守卫与消费面公式 =
+# test_cw_statefn.py(expected_refreshes 禁第二实现 + refresh_prob 进期望式)。
+
+def test_zero_p_returns_zero() -> None:
+    """p≤0 → 0(该等级不出该费用,刷不到;无穷循环前置短路)。"""
+    assert expected_refreshes(
+        0.0, DISTINCT_CARDS_PER_COST[3], POOL_COPIES_PER_CARD[3], 0, 3, 0,
+    ) == 0.0
+
+
+def test_owned_meets_target_returns_zero() -> None:
+    """j≥k → 0(已凑齐,无需再刷;2星 k=3 与 3星 k=9 两档)。"""
+    assert expected_refreshes(
+        0.4, DISTINCT_CARDS_PER_COST[3], POOL_COPIES_PER_CARD[3], 0, 3, 3,
+    ) == 0.0
+    assert expected_refreshes(
+        0.4, DISTINCT_CARDS_PER_COST[3], POOL_COPIES_PER_CARD[3], 0, 9, 10,
+    ) == 0.0
+
+
+def test_refresh_prob_lookup() -> None:
+    """refresh_prob 查表:lv7 3费 = 0.40 实机 OCR 权威锚(D-91,2026-08-11
+    商店刷新概率表);查表一致性 + 无数据等级 → 0(该等级不出该费用)。"""
+    from sr_od.application.currency_war.data.cw_shop_odds import REFRESH_PROB
+    assert refresh_prob(7, 3) == REFRESH_PROB[7][3]
+    assert REFRESH_PROB[7][3] == pytest.approx(0.4, abs=1e-2)
+    assert refresh_prob(99, 3) == 0.0, '无该等级 → 0'

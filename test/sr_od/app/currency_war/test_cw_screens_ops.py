@@ -10,9 +10,12 @@
   全画面碰撞」双检;本文件仅保留非 id_mark area 可命中锁。
 - test_in_match_screen_layer: test_in_match_screen_layer.py
 - plaza_posts: test_cw_plaza_posts.py
+- win_model 校准层(T-197 回补): 原 test_cw_platt_calibration.py(随
+  test_cw_sim_suite.py 重组退役,本文件已辖 cw_win_model 家族故归此)
 """
 from __future__ import annotations
 
+import math
 import sys
 from dataclasses import fields as dc_fields
 from pathlib import Path
@@ -54,7 +57,9 @@ from sr_od.application.currency_war.telemetry.cw_win_features import (
 )
 from sr_od.application.currency_war.telemetry.cw_win_model import (
     PLAZA_BASE_WEIGHT,
+    PlattCalibrator,
     ShadowKilledModel,
+    fit_platt_scaling,
     plaza_post_features,
     plaza_prior_weights,
     plaza_sample_weight,
@@ -425,3 +430,38 @@ def test_render_posts_exec_schema() -> None:
     assert p.units == (('景元', 3, 5, 'front', True),)
     assert p.equips == (('景元', ('火力风暴潮',)),)
     assert ns['post_by_id']()['12345'] is p
+
+
+# ==================== 胜率模型 Platt 校准层(自 test_cw_sim_suite.py platt_calibration 节回补,T-197) ====================
+# 前身 = test_cw_platt_calibration.py 随测试重组批 f799914 整体退役;现行
+# telemetry/cw_win_model.py 校准层语义未演进(恒等默认零漂移/越界原样返回/
+# 退化输入恒等降级),回补防回潮。同名事实已有锁:plaza 样本权重面在本文件
+# plaza 家族,与本节(概率再校准纯函数)不交叠。
+
+def test_identity_default_is_zero_drift() -> None:
+    """默认参数 a=1, b=0 = 恒等映射:任意合法 p 逐位不变(校准层关闭态
+    零漂移锚;apply 的恒等短路 = 数值与语义双零漂移)。"""
+    assert PlattCalibrator().a == 1.0 and PlattCalibrator().b == 0.0
+    for p in (0.0, 1e-9, 0.01, 0.2, 0.5, 0.7321, 0.99, 1.0 - 1e-9, 1.0):
+        assert PlattCalibrator().apply(p) == p, p
+
+
+def test_out_of_range_input_passthrough() -> None:
+    """越界/非有限输入原样返回(防御口径:不静默修正也不抛)。"""
+    cal = PlattCalibrator(a=2.0, b=-1.0)
+    assert cal.apply(-0.1) == -0.1 and cal.apply(1.1) == 1.1
+    assert math.isnan(cal.apply(float('nan')))
+    assert cal.apply(float('inf')) == float('inf')
+
+
+def test_fit_degenerate_inputs_fall_back_identity() -> None:
+    """退化输入(空/单类/全非法概率)→ 恒等降级(校准层自动关闭,不抛):
+    单类锚定不了偏移与尺度,硬拟合会把校准面扭曲成常数——宁可不校准。
+    部分行非法:合法行仍参与拟合(剔除而非整批作废)。"""
+    ident = PlattCalibrator()
+    assert fit_platt_scaling([], []) == ident
+    assert fit_platt_scaling([1, 1, 1], [0.2, 0.5, 0.9]) == ident
+    assert fit_platt_scaling([0, 0, 0], [0.2, 0.5, 0.9]) == ident
+    assert fit_platt_scaling([1, 0], [float('nan'), 0.5]) == ident
+    c = fit_platt_scaling([1, 0, 1, 0], [1.5, 0.1, 0.9, 0.2])
+    assert c.a > 0  # 正常学出正斜率
