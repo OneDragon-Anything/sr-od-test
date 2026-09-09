@@ -1735,3 +1735,63 @@ def test_cw_loop_counters_snapshot_wiring(
     monkeypatch.setattr(arch, 'record_cw4_counters_from_match',
                         lambda *a, **k: (_ for _ in ()).throw(RuntimeError('x')))
     op._record_cw4_counters_snapshot()   # 不抛即过
+
+
+# ==================== T-185 收口终局行(末轮 outcome 采集补全) ====================
+# 病灶:result=stopped 局对局循环在末轮战斗结算前中止 → 该轮 outcomes 零行 →
+# 档案末轮 outcome=null → batch_stats 通关权威口径 killed(ADR-0306 件3)
+# 落不可判桶。采集侧修法 = 收口时点补写末轮终局行(cw_loop._write_terminal_
+# outcome_row);本节锁档案读端验收与真值链退出边界。
+
+def test_stopped_game_last_round_outcome_in_archive(
+        tmp_path: _match_archive_Path):
+    """T-185 验收:stopped 局末轮仅有收口终局行 → 档案末轮 outcome 在档且
+    killed 可判(False=对局级终了真值);hp/node_type 回落决策帧,零扰动。"""
+    rd = tmp_path / 'replay_t185'
+    dec = [_dec('run_20260909_120000', 1, 1, '2026-09-09T12:00:00'),
+           _dec('run_20260909_120000', 1, 3, '2026-09-09T12:08:00',
+                hp=77, hp_readable=True)]
+    out = [_out('run_20260909_120000', 1, 1, '2026-09-09T12:02:00', 60),
+           # 收口终局行(生产形状 = cw_loop._write_terminal_outcome_row 产物;
+           # 本手写 fixture 的消费键集对账锚 = test_cw_r363_audit_p0.
+           # test_stop_closure_writes_terminal_outcome_row 末的键集断言,
+           # 生产写端形状漂移时两侧同步红——落地审建议-5③):
+           {'schema_version': 1, 'run_id': 'run_20260909_120000',
+            'plane': 1, 'round_num': 3, 'ts': '2026-09-09T12:10:00',
+            'node_type': '', 'hp_after': None, 'hp_confidence': 0.0,
+            'killed': False, 'source': 'terminal_closure',
+            'match_result': 'stopped'}]
+    runs = [{'run_id': 'run_20260909_120000', 'ts': '2026-09-09T12:10:00',
+             'result': 'stopped', 'plane_reached': 1,
+             'rounds_survived': 3, 'final_hp': 77}]
+    _write_jsonl(rd, 'decisions.jsonl', dec)
+    _write_jsonl(rd, 'outcomes.jsonl', out)
+    _write_jsonl(rd, 'runs.jsonl', runs)
+    games = arch.assign_games(rd)
+    a = arch.build_archive(rd, games[0])
+    last = a['rounds'][-1]
+    assert (last['plane'], last['round']) == (1, 3)
+    oc = last['outcome']
+    assert oc is not None                               # 末轮 outcome 在档
+    assert oc['killed'] is False                        # killed 可判(非未知桶)
+    assert oc['source'] == 'terminal_closure'
+    assert oc['match_result'] == 'stopped'
+    # 零扰动:终局行不发 hp/节点真值 → 轮槽回落决策帧口径
+    assert last['hp'] == 77 and last['hp_source'] == 'frame'
+    assert last['node_type'] == '普通战斗' and last['node_type_source'] == 'frame'
+
+
+def test_terminal_row_exits_hp_truth_chains():
+    """终局行结构性退出 hp 真值链(Δ池配对端点/hp 步进锚):hp_after=None 落
+    Δ池配对前置剔除、conf=0.0 落可信门(0.0<HP_CONF_TRUSTED)——两既有谓词
+    均 False,采集侧零新过滤、sim 读端零改动。"""
+    from sr_od.application.currency_war.sim.pool import (
+        hp_pair_endpoint_admissible,
+    )
+    from sr_od.application.currency_war.telemetry.match_archive import (
+        _settlement_hp_usable,
+    )
+    row = {'source': 'terminal_closure', 'hp_after': None,
+           'hp_confidence': 0.0}
+    assert hp_pair_endpoint_admissible(row) is False
+    assert _settlement_hp_usable(row) is False

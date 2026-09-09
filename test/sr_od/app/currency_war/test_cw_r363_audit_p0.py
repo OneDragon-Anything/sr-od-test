@@ -197,3 +197,154 @@ def test_terminal_summary_triggers_archive_assemble(monkeypatch, tmp_path) -> No
     op = _make_stop_loop()
     op._write_terminal_summary_if_needed()
     assert calls == [tmp_path]
+
+
+# ===== T-185:收口终局结算行(outcomes 末轮 outcome 采集补全) =====
+# 病灶:result=stopped 局末轮无结算行 → 档案末轮 outcome=null → batch_stats
+# 通关权威口径 killed(ADR-0306 件3)落不可判桶。写点 = 收口
+# (_write_terminal_summary_if_needed)内 _write_terminal_outcome_row。
+
+def _terminal_rows(tmp_path, run_id: str) -> list[dict]:
+    from sr_od.application.currency_war.telemetry.query import read_jsonl
+    return [r for r in read_jsonl(tmp_path / 'outcomes.jsonl')
+            if r.get('run_id') == run_id]
+
+
+def test_stop_closure_writes_terminal_outcome_row(monkeypatch, tmp_path) -> None:
+    """stop 收口补写末轮终局行:字段齐且不发任何战斗/hp 真值(killed=False
+    为对局级终了真值;hp/conf/progress/streak/node_type 全空防冒认)。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_term_1')
+    op = _make_stop_loop()
+    op._write_terminal_summary_if_needed()
+    rows = _terminal_rows(tmp_path, 'run_term_1')
+    assert len(rows) == 1
+    r = rows[0]
+    assert (r['plane'], r['round_num']) == (2, 7)   # last_state 键
+    assert r['killed'] is False                     # 对局级:终了时未通关
+    assert r['hp_after'] is None                    # 不冒认 hp 真值
+    assert r['hp_confidence'] == 0.0                # 显式不可信(防可信门放行)
+    assert r['progress_delta'] is None and r['streak'] is None
+    assert r['node_type'] == ''                     # 不冒认节点型(读端回落帧)
+    assert r['source'] == op.TERMINAL_OUTCOME_SOURCE
+    assert r['match_result'] == 'stopped'
+    # 档案 E2E 手写 fixture(test_cw_telemetry_archive 终局行)消费键对账锚
+    #(落地审建议-5③):生产行必须至少携带该键集,生产写端形状漂移时
+    # 两侧(本锁与档案 E2E)同步红。
+    assert {'plane', 'round_num', 'ts', 'killed', 'source', 'match_result',
+            'node_type', 'hp_after', 'hp_confidence'} <= set(r.keys())
+
+
+def test_terminal_row_precedes_runs_row(monkeypatch, tmp_path) -> None:
+    """承载性次序锁(落地审建议-5①):终局行 ts ≤ runs 行 ts——档案装配按
+    start_ts ≤ ts ≤ end_ts 切窗,终局行若晚于 runs 行(ts 超 end_ts)会被
+    切出档案,T-185 静默失效(同秒粒度下由写点先后保证)。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    from sr_od.application.currency_war.telemetry.query import read_jsonl
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_ord_1')
+    op = _make_stop_loop()
+    op._write_terminal_summary_if_needed()
+    oc_rows = _terminal_rows(tmp_path, 'run_ord_1')
+    run_rows = read_jsonl(tmp_path / 'runs.jsonl')
+    assert len(oc_rows) == 1 and len(run_rows) == 1
+    assert oc_rows[0]['ts'] <= run_rows[0]['ts']
+
+
+def test_run_has_outcome_at_fails_closed_on_read_error(monkeypatch, tmp_path) -> None:
+    """防重门 fail 方向锁(落地审建议-1 裁决:宁缺勿污):文件级读失败
+    视同「键已有行」返回 True 不补——误放行会让终局行以 ts 末行身份覆盖
+    既有 killed 真值(恶性);缺行只是回到不可判(良性,方向不对称)。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_failclosed_1')
+    op = _make_stop_loop()
+    (tmp_path / 'outcomes.jsonl').mkdir()   # 文件位被目录占位 = 文件级读必失败
+    assert op._run_has_outcome_at(2, 7) is True
+
+
+def test_run_has_outcome_at_tolerates_torn_tail_line(monkeypatch, tmp_path) -> None:
+    """撕裂行容错锁(落地审建议-1 伴生):append 尾行撕裂(半写 JSON)不使
+    整读抛异常——既有键行照常命中(门不失能),无键行时放行补行(功能保留)。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_torn_1')
+    op = _make_stop_loop()
+    # 键行在前 + 尾行撕裂(生产 append 崩溃的半写形态)
+    (tmp_path / 'outcomes.jsonl').write_text(
+        '{"run_id": "run_torn_1", "plane": 2, "round_num": 7}\n'
+        '{"run_id": "run_torn_1", "plane": 2', encoding='utf-8')
+    assert op._run_has_outcome_at(2, 7) is True    # 坏行不挡键行命中
+    # 仅它轮行 + 尾行撕裂,无本键行 → 放行
+    (tmp_path / 'outcomes.jsonl').write_text(
+        '{"run_id": "run_torn_1", "plane": 2, "round_num": 6}\n'
+        '{"torn', encoding='utf-8')
+    assert op._run_has_outcome_at(2, 7) is False
+
+
+def test_abandoned_closure_carries_match_result(monkeypatch, tmp_path) -> None:
+    """非 stop 异常退出收口 → 终局行 match_result='abandoned'。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_term_2')
+    op = _make_stop_loop(stopped=False)
+    op._write_terminal_summary_if_needed()
+    rows = _terminal_rows(tmp_path, 'run_term_2')
+    assert len(rows) == 1 and rows[0]['match_result'] == 'abandoned'
+
+
+def test_terminal_row_skipped_when_key_already_settled(monkeypatch, tmp_path) -> None:
+    """防重门:末轮键已有本 run 结算行(停止点在结算读取之后,如败局
+    多页链/通关结算链中途停)→ 不补行——终局行 ts 更晚会以「ts 末行」
+    身份在档案覆盖既有真值行(killed=True/False 被冲成对局级 False)。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    from sr_od.application.currency_war.telemetry.query import read_jsonl
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_term_3')
+    # 预置:末轮键 (2,7) 已有结算屏真值行(胜利结算 killed=True)
+    rec.record_outcome('run_term_3', SimpleNamespace(
+        round_num=7, plane=2, node_type='boss', comp_tag='甲',
+        intentional_fold=False, hp_after=55, hp_confidence=1.0,
+        enemy_hp_after=None, damage_dealt=None, killed=True,
+        progress_delta=2, streak=3, match_result=''))
+    op = _make_stop_loop()
+    op._write_terminal_summary_if_needed()
+    rows = read_jsonl(tmp_path / 'outcomes.jsonl')
+    assert len(rows) == 1                     # 未补终局行
+    assert rows[0]['killed'] is True          # 原真值行原样在档
+    assert rows[0]['source'] == ''
+
+
+def test_terminal_row_skipped_without_last_state(monkeypatch, tmp_path) -> None:
+    """last_state 缺失(无键可落)→ 只写 runs summary,不落终局行。"""
+    import sr_od.application.currency_war.telemetry.state as tel
+    from sr_od.application.currency_war.operations import cw_loop as bl
+
+    class _NoStateLoop(bl.CwLoop):
+        def __init__(self):  # noqa: D107 桩:bypass __init__
+            self.op_name = '收口桩loop'
+            self.op_callback = None
+            self._summary_written = False
+            self._settle = SimpleNamespace(
+                last_outcome_hp=30, rounds_done=2)   # 有结算痕迹=真局
+            self.ctx = SimpleNamespace(
+                cw_match=SimpleNamespace(session=SimpleNamespace(
+                    last_state=None)),
+                run_context=SimpleNamespace(is_context_stop=True),
+                unlisten_all_event=lambda *_a, **_k: None,
+            )
+
+    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
+    monkeypatch.setattr(tel, '_RECORDER', rec)
+    monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_term_4')
+    op = _NoStateLoop()
+    op._write_terminal_summary_if_needed()
+    assert len(read_jsonl(tmp_path / 'runs.jsonl')) == 1   # summary 照写
+    assert read_jsonl(tmp_path / 'outcomes.jsonl') == []   # 终局行不落
