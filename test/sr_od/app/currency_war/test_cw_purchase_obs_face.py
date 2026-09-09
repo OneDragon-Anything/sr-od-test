@@ -80,7 +80,7 @@ class TestObsRowLedgerLock:
                            if not isinstance(v, (dict, list))), obs
                 # sim71 批键形态:sell_buyback_loops = 逐笔明细 list
                 # (空 list = 无回环;明细字段单一源 =
-                # project_sell_buyback,形状细锁 = test_cw_obs_keys_sim71)
+                # project_sell_buyback,形状细锁 = test_cw_obs_keys)
                 assert isinstance(obs['sell_buyback_loops'], list), obs
                 # 必花域三键形态:zone/zero 非负且 zero ≤ zone;
                 # layer_hit 值全非负 int(键 ⊆ {L1, L2, L3})

@@ -925,7 +925,7 @@ def test_supply_options_five_column_fixture(test_context: SrTestContext) -> None
     fixture ``screens/货币战争-补给/default.png|webp``(1-5 补给,5 张角色卡各带装备:
     银枝/希儿/丹恒·腾荒/飞霄/忘归人——augment 改写特例)。用户口径:补给通常 4 选 1,
     augment 动态改 3-5,列数以 read_supply_options 实际识别为准。双排布局归
-    test_supply_options_dualrow.py(不同 fixture 形态,各守边界)。
+    test_cw_supply_options_dualrow.py(不同 fixture 形态,各守边界)。
     """
     from sr_od.application.currency_war.obs.cw_node_obs import read_supply_options
 
@@ -1024,7 +1024,7 @@ def test_prep_anchor_buyexp_present_on_prep_absent_elsewhere(test_context, test_
 
 # (D-84 test_tracked_bench_chars_seeds_identity 已随 tracked_bench 旧名账退役删除:
 #  被锁的 _tracked_bench_chars helper 及其唯一消费点(旧回退播种)同批移除,
-#  事故帧回归锁迁至 test_cw4_shop_line.py 守卫族。read_deploy_paddle 测已删:
+#  事故帧回归锁迁至 test_cw_shop_line.py 守卫族。read_deploy_paddle 测已删:
 #  同生产函数 read_deployed_count/read_deploy_cap 在 test_cw_obs_gates.py:483 有
 #  真帧精确值超集(4 帧 cap/count 全锁),本测的 None 容忍范围断言为判别力子集。)
 

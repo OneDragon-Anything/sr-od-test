@@ -4,7 +4,7 @@
   $env:PYTHONPATH="src"; uv run python -X utf8 sr-od-test/test/sr_od/app/currency_war/fixtures/regen_w546_count_ocr_fixture.py
 产物: 同目录 w546_count_ocr_fixture.json
 内容:每代表帧 → 目标格 TM 峰心(真 read_equip_grid 输出)+ 数量裁片 → 真引擎原文表。
-录制路径与 test_cw_w546_equip_grid.TestEquipCount 的回放路径完全一致;
+录制路径与 test_cw_equip_grid.TestEquipCount 的回放路径完全一致;
 裁片内容变 → 哈希变 → 回放未命中 = 失读,与真引擎对错裁片失读同语义。
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ REPO = Path(__file__).resolve().parents[6]
 sys.path.insert(0, str(REPO / 'src'))
 sys.path.insert(0, str(REPO / 'sr-od-test' / 'test' / 'sr_od' / 'app' / 'currency_war'))
 
-import test_cw_w546_equip_grid as t  # noqa: E402
+import test_cw_equip_grid as t  # noqa: E402
 
 from sr_od.application.currency_war.obs.cw_equipment import (  # noqa: E402
     read_equip_count,

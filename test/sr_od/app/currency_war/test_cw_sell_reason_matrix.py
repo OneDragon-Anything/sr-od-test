@@ -20,7 +20,7 @@ test_prep_line_switch_collapse_dual_write;凑息回拉孤儿打标端到端 =
 test_line_switch_orphan_interest_sell_marked;防洗白三格(缺省 ''/
 plain 值/跨轮陈旧)= test_cw_sell_window_launch.
 test_stale_obligation_buy_not_marked_next_round + 检查器面
-test_cw_t3_stall_protect.Test7CheckerExemption。
+test_cw_stall_protect.Test7CheckerExemption。
 
 红证形态:矩阵格红证 = 「拔除对应装配构件后该件恰入卖出面」的机制
 复现(与批 2/批 3 主题文件同款),散布在各格注释与既有文件引用,
@@ -215,7 +215,7 @@ class TestSerializationEquivalence:
             '非特化值误入豁免面 = 同轮自旋检查被架空'
         # reason 载体上的特化值(转换键)不再豁免(分工:转化类读
         # convert_reason,零双源);reason 只保留孤儿键 line_switch_
-        # collapse 的分支(见 test_cw_t3_stall_protect.Test7)。
+        # collapse 的分支(见 test_cw_stall_protect.Test7)。
         row_reason_carry = {'plane': 1, 'round_num': 1,
                             'actions': [
                                 {'__type__': 'BuyCard',

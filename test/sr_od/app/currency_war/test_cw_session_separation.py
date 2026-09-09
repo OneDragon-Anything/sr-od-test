@@ -177,7 +177,7 @@ def test_create_session_sole_cold_build_entry_l4() -> None:
     create_session 后 strategy_state 为 MandateState 且 v3_phase='FORM'
     (live 初值随唯一冷建口落位);二次 create_session 全量重建(新对象、
     新状态,工厂恰走一次);生命周期钩子 on_match_start/on_match_end 已删
-    (残留调用点 = 墓碑锁辖,test_cw_w971_blackboard L6 空间守卫)。"""
+    (残留调用点 = 墓碑锁辖,test_cw_blackboard L6 空间守卫)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
         MandateV1Strategy,
     )
@@ -369,7 +369,7 @@ def test_strategy_fields_no_session_form_access_residue() -> None:
     合法读口与观察字段必须全部不命中(防正则失效假绿)。"""
     cw_root = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
                / 'application' / 'currency_war')
-    # 盲区自检:扫描根解析失准则 rglob 恒空 = 假绿(判例 test_cw4_contracts
+    # 盲区自检:扫描根解析失准则 rglob 恒空 = 假绿(判例 test_cw_contracts
     # 「parents[N] 解析到不存在路径,守卫形同虚设」),先证根在且非空。
     assert (cw_root / 'kernel' / 'cw_exec_state.py').is_file(), (
         f'扫描根解析失准:{cw_root}')

@@ -218,7 +218,7 @@ class TestBoardTargetLineTrackedFallback:
     """b_t 实机回退源(两局全帧 0.0 实证:商店观察帧 deployed
     恒空 → 写者输入缺;回退 = exec_state_of(session).tracked_deployed)。
 
-    空板 = 0 面由 test_cw_obs_face_batch2.py::TestBoardTargetLineWriter::
+    空板 = 0 面由 test_cw_obs_face_keys.py::TestBoardTargetLineWriter::
     test_empty_board_zero_and_stamp 承载(同输入 GameState() 直调同一
     写者,超集另锁轮键戳章),此处只留回退路径独家面。
     """

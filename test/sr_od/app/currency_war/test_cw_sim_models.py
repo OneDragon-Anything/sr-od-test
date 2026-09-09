@@ -10,7 +10,7 @@
 - cw_coarse_battle 战斗粗模型:两态采样/先验收缩/位面维/引擎开关/
   版本披露(结构语义单一源 = 该模块 docstring);
 - cw_first_passage 首达生存:P(win)/hp_floor/位面乘子/三区律
-  (P2 损血标定面归 test_cw_w443_dp_first_passage.py)。
+  (P2 损血标定面归 test_cw_dp_first_passage.py)。
 """
 from __future__ import annotations
 

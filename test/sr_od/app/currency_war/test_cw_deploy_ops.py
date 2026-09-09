@@ -23,7 +23,7 @@
   承载(test_cw_round_flow.py:953-981);src 退役债登记债账。
 - game64 拦截形态锁已删:与 test_cw_recipe_floor_lock_exempt.py:184-190
   等价,超集留彼处。
-- check_deploy_fills_cap 正向报面已删:与 test_cw_f1_residual_fill.py
+- check_deploy_fills_cap 正向报面已删:与 test_cw_residual_fill.py
   :153-160 等价;lag=0 负向锁已并入 test_lag_one(同分支)。
 - fenced_swap_arm_of 真值表已删:与 test_cw_swap_plan.py:221-254 等价。
 - read_xp_progress 域守卫锁已删:与 test_cw_obs_gates.py:350-362 重复。
@@ -194,7 +194,7 @@ def _row(rn: int, deployed: int, cap: int, lag: int) -> dict:
 
 # (2026-09-07 瘦身批删 2 条:test_no_lag_not_reported 与 test_lag_one
 #  同辖 lag<2 分支(W767 锚随迁彼处);test_persistent_gap_reported 正向
-#  报面与 test_cw_f1_residual_fill.py:153-160 等价,超集留彼处。)
+#  报面与 test_cw_residual_fill.py:153-160 等价,超集留彼处。)
 
 def test_transient_gap_not_reported() -> None:
     """单轮短缺(下一轮补满)→ 不报(代理时序过渡态,game14)。"""

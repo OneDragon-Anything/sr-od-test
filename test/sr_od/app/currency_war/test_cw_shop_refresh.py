@@ -3,7 +3,7 @@
 成员(原文件 docstring 语义索引;断言面经覆盖对账后有删减,删处留指针注释):
 - w510_refreshfee: test_cw_w510_refreshfee.py
 - w514_refresh_surface: test_cw_w514_refresh_surface.py(防抖/流纯净两测删除,
-  单一源 = test_cw_w505_defect_ledger.py / test_cw_w512_obs_surfaces.py)
+  单一源 = test_cw_defect_ledger.py / test_cw_obs_surfaces.py)
 - w564_shop_wire: test_cw_w564_shop_wire.py
 - w591_refresh_wave_op: test_cw_w591_refresh_wave_op.py
 - w891_buy_edge: test_cw_w891_buy_edge.py
@@ -74,9 +74,9 @@ def test_refresh_effective_truth_table():
     assert refresh_effective(['A'], []) is None
 
 # (原 ③「两连全同防抖 L1→L0」与 ④「流纯净」两测已删——跨文件等价双锁:
-#  防抖机制单一源 = test_cw_w505_defect_ledger.py::test_reproduction_counter_
+#  防抖机制单一源 = test_cw_defect_ledger.py::test_reproduction_counter_
 #  upgrades_second_occurrence + shop_refresh 关键面成员域锁同文件
-#  test_critical_surface_domain_lock;流纯净单一源 = test_cw_w512_obs_surfaces.
+#  test_critical_surface_domain_lock;流纯净单一源 = test_cw_obs_surfaces.
 #  py::test_defect_row_not_appended_to_spend_ledger(带 2e7364de 失守事故引证)。
 #  判别力检验法:surface/kind 味差异落在生产无分支通路上(_mark_defect_
 #  reproduced 键泛型),保留超集。)
@@ -618,7 +618,7 @@ def test_segment_action_cap_raises_loud(
 
     场景替身 = 恒吐 LevelUpShop(非终结、守卫无辖面、simulate 无金
     校验)——复现「决策器每帧重复提案同类动作」的无限循环形态;席位
-    门的收敛根因修复在决策侧(test_cw4_shop_line TestEvBuySeatGate),
+    门的收敛根因修复在决策侧(test_cw_shop_line TestEvBuySeatGate),
     本帽 = 执行侧最后防线。动作 sleep 经模块级替身吃掉(测试纪律:
     不为生产加参数)。
     """

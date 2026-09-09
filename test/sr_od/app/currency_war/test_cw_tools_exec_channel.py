@@ -2,7 +2,7 @@
 
 设计出处 = 21 号稿 §3.2(工具消耗确认通道:四态登记 + 成功/部分/取消
 三分支)、§5 影响面(执行 op = cw_op_tools;发射位 = mandate_v1 M7.5)、
-10 号稿 §2.1(判据收编源,判据面锁在 test_cw_equip_wear_semantics_21)。
+10 号稿 §2.1(判据收编源,判据面锁在 test_cw_opening_tool_semantics)。
 锁面分组:
 1. 执行链锁:admitted(usable)→ plan_tool_drags 逐件计划(炉目标 =
    recycle_qualified 死库存,禁宽取;特权目标 = key 对应进阶成品);

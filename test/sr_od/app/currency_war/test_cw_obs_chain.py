@@ -15,7 +15,7 @@
 
 2026-09-09 二轮手术(判据 = sr-od-test/README.md 测试纪律;明细 =
 .debug/temp/cw_test_slim_audit/reports/_cluster_R2A.md):删跨文件子集
-2(star 防抖自愈→test_star_regression_hook 超集;cap<level 双帧一致→
+2(star 防抖自愈→test_cw_star_regression_hook 超集;cap<level 双帧一致→
 test_cw_adr0286 域防抖超集)、消费 DEBTS D34(xp 推进算子在场锁×2)、
 两处接线源码锁去行为已辖的肯定式断言(墓碑与顺序断言保留)、
 TestCheckShopPool 边界内侧测删(全表互证测子集)。
@@ -164,7 +164,7 @@ def test_reconcile_star_rollback_no_crash():
 
 # (原 test_reconcile_star_regression_pending_self_heals 已删(2026-09-09,
 #  跨文件子集):「首帧回退保旧 + 读回恢复清 pending」两面由
-#  test_star_regression_hook.py::test_first_regression_no_stop(L50-61,
+#  test_cw_star_regression_hook.py::test_first_regression_no_stop(L50-61,
 #  超集:另断 no-stop/不计数/pending==1)+ test_recovered_star_resets_
 #  count(L95-106,恢复清 pending+计数)覆盖;star 回退真封装(M41
 #  no-crash)载体 = 本文件 test_reconcile_star_rollback_no_crash——
@@ -576,7 +576,7 @@ def test_parse_paddle_rescues_poisoned_level_prior(monkeypatch) -> None:
 
 # (原 test_debounce_cap_below_level_two_frame_consistent 已删(2026-09-09,
 #  跨文件子集):「cap<level 双帧一致采信 + obs_conflict 留证」分支由
-#  test_cw_adr0286_sim_truth_wiring.py::test_cap_debounce_out_of_domain_
+#  test_cw_sim_truth_wiring.py::test_cap_debounce_out_of_domain_
 #  equal_pair_accepted 末腿(L215-221)经公共入口 read_deploy_cap_
 #  debounced 覆盖且断言面更全(采信/拒信/上界三形态 + verdict 文本
 #  'cap<level');_debounce_cap 的唯一消费方即该包装(cw_observation.py
@@ -1255,7 +1255,7 @@ def test_w552_wiring_locks():
     obs_at = src.index('self._reconcile_xp_expect(obs)')
     # W591:pending_buy_expect 升 _w552_xp_reconcile_StrategySession 正式字段,消费端由
     # getattr 兜底改直接字段读写(语义不变,机制被取代——见
-    # test_cw_w536_buy_expect.test_w536_wiring_locks 改锁依据)
+    # test_cw_buy_expect.test_w536_wiring_locks 改锁依据)
     consume_at = src.index('_pending_buy = exec_state_of(session).pending_buy_expect')
     assert consume_at < obs_at                      # heavy 定型帧之后
     # 对账在 anchor 之前不评(锚定前纯推算无起点)

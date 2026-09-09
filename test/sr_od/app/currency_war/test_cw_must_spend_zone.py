@@ -189,7 +189,7 @@ class TestL3MustSpend:
         P48 整买拦截(批 84 金 > 80),``level_cap`` 分键不再产生——
         真满级帧的 level_cap 显影归 prep 侧锁
         (test_cw_l3_prep_must_spend_latch)与商店单一源三帧锁
-        (test_cw4_shop_line)承载。"""
+        (test_cw_shop_line)承载。"""
         st, sess = _zone_frame(gold=80, cards=[], level=9, locked=False)
         st.deployed = [_bc(m, star=2, slot=i + 1)
                        for i, m in enumerate(line_members(get_comp(_COMP)))]
@@ -408,7 +408,7 @@ class TestArchiveFrameReplay:
         卡,未锁线恒买放行(裁定 410:「1-3 未锁线不触发」即病灶本体)
         ⇒ 本帧出口从「t1 凑息卖」改为「core_single_card_buy:unlocked」
         ——单动作契约下凑息卖下帧再评,域外无 must_spend 分键的锁意图
-        不变;t1 消费语义由 test_cw_p56_t1 锁组与 r5 帧锁承载。"""
+        不变;t1 消费语义由 test_cw_realizable_interest_floor 锁组与 r5 帧锁承载。"""
         st = _arc_state(gold=46, hp=47, level=5, plane=1, round_num=6,
                         node_type='普通战斗', xp_progress=(10, 20),
                         level_up_cost=4, deploy_cap=5,
@@ -446,7 +446,7 @@ class TestArchiveFrameReplay:
         faf09a64,第三触发源缺)在当前码形不复现,闸上线后由本帧承载
         L3 消费语义锁。r9 帧(奖励关,原第二腿)断言面 =
         reward_node_defer/reward_node_must_spend_defer 双分键,由
-        test_cw4_mandate_v1.TestRewardNodeSuppress 超集承载,已并。"""
+        test_cw_mandate_v1.TestRewardNodeSuppress 超集承载,已并。"""
         gold, xp = 58, (12, 20)
         st = _arc_state(gold=gold, hp=47, level=5, plane=1,
                         round_num=7, node_type='encounter',

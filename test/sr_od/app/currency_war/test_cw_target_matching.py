@@ -42,7 +42,7 @@ def test_equip_allocation_carry_first() -> None:
 def test_equip_allocation_capacity_deduction() -> None:
     """容量扣减(已穿 3 = 满)→ 该员让位、件落下一位(comp=None 通道)。
 
-    轮转序面(deployed 原序一人一件;r232 行为)由 test_equip_alloc_gen
+    轮转序面(deployed 原序一人一件;r232 行为)由 test_cw_equip_alloc_gen
     ::test_no_comp_rotation_keeps_deployed_order 承载(4 人 4 件全序锁,
     覆盖面为 2 人 2 件轮转断言的超集,亲读证实),此处不再重复断言轮转序。"""
     from types import SimpleNamespace

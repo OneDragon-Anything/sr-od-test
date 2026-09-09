@@ -7,7 +7,7 @@
 - hp ≤ 阈值 ⇒ 解锁包三件武装(F7 禁令/M3 分流/arm2 门,行为介入
   开启)+ advisor_bloodline_armed 分键;影子键保留对照。
 λ 顾问(P_LAMBDA_QUANTILE 注入武装 + 影子对照键)的覆盖由
-test_cw4_mandate_v1.py::TestR196ShadowKeys 承载(真注入 + 真谓词的
+test_cw_mandate_v1.py::TestR196ShadowKeys 承载(真注入 + 真谓词的
 超集锁),本文件不再持有其子集副本。
 """
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
@@ -74,6 +74,7 @@ class TestBloodlineCalibration:
             gold=40, level=6, round_num=2, hp=10, plane=1,
             node_type='战斗', shop=[], bench=[], deployed=[],
             max_units=lambda: 6, level_readable=True,
+            hp_readable=True, hp_trusted=False,
             enemy_difficulty=None, refresh_probs=None,
             shop_refresh_cost=2)
         obs = SimpleNamespace(

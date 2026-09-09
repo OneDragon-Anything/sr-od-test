@@ -4,7 +4,7 @@
 (锚 miss = fail 不点击)→ 单次推进 → 可选验效 → 如实返回;节点单尝试
 (node_max_retry_times=1,重试预算归外循环)。
 
-离线桩手法 = test_cw_w971_p3a_flow_ops 同款(FixtureController 假游戏 +
+离线桩手法 = test_cw_flow_ops 同款(FixtureController 假游戏 +
 round_by_* 判定替身 + fast_sleep);坐标类断言消费真实 screen_info
 (按钮-关闭概率表/按钮-关闭/按钮-简易装备首件 三处 area 化产物,矩形
 中心 = 原 Point,ADR-0584 §6.3-2 对拍的离线腿)。

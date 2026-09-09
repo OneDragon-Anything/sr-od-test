@@ -611,7 +611,7 @@ def test_commit_signals_has_no_decision_interface() -> None:
 
 # (test_commit_boundary_plane_gate_only 已删:committed_authority 的三断言
 #  (P1 高分未锁 False / P1 意向锁 True / P2 恒 True)是
-#  test_cw_w628_migration_b2.py::test_committed_predicate_frame_by_frame_
+#  test_cw_migration_direction_layer.py::test_committed_predicate_frame_by_frame_
 #  vs_old(帧 3/4/5 同构造)的真子集——对拍锁为超集(另辖 both_false 帧 +
 #  旧谓词镜像),跨文件等价择一保留超集(README 纪律 7)。)
 

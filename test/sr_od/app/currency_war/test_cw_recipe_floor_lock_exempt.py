@@ -96,7 +96,7 @@ def _make_rf_op(monkeypatch, *, sess: SimpleNamespace,
                 cap: int = 6, front_occ: int = 1, back_occ: int = 2,
                 paddle_x: int | None = None):
     """直驱 _deploy_deterministic 的桩 op(形态先例 =
-    test_cw_p4r_deploy_battle_chain._make_gate_op;身份读面 monkeypatch
+    test_cw_deploy_battle_chain._make_gate_op;身份读面 monkeypatch
     ——templates 直传非 None 哨兵,read_*_chars 桩出身份,templates=None
     时身份空集走 fail-open,武装锁无从验证)。
 

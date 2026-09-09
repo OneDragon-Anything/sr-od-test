@@ -19,7 +19,7 @@
 LF 钉的是档 2 自身闸链(档匹配/s_reserve/新鲜度/bench 硬闸),不声明
 「该帧档 2 无条件可达」。围栏预检(kernel can_deploy_single)在 L1 帧
 猴补放行——围栏语义归 kernel 锁
-(test_cw_n2_n3_deploy_single_source 等)辖,本文件钉档 1 的接线。
+(test_cw_deploy_single_source 等)辖,本文件钉档 1 的接线。
 """
 from types import SimpleNamespace
 
@@ -322,7 +322,7 @@ class TestL4BudgetGateSuspend:
         """锁 L4(NORMAL 限定):P72 预算闸拒帧,档 1 挂起(预留金不被
         同帧击穿;复用 m6_budget_gate_suspend 先例,ADR-0560;FLOOR_ON
         让位随 hp 闸批,本帧为 NORMAL)。档 2 同帧挂起(m6_budget_gate_
-        suspend 分键)同事实由 test_cw_p71_budget_gate.TestShopM3M6
+        suspend 分键)同事实由 test_cw_budget_gate.TestShopM3M6
         承载,本测不再双锁。"""
         monkeypatch.setattr(shop, 'can_deploy_single',
                             lambda *a, **kw: (True, ''))

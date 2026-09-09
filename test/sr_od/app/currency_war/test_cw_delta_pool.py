@@ -1180,7 +1180,7 @@ def test_check_ab_depth_boundary_confound() -> None:
 
 # (原 test_sampler_version_bumped_and_snapshot_guarded 已删(2026-09-09,
 #  跨文件子集):_SAMPLER_VERSION==11 / src=='snapshot' / fp==META 指纹
-#  三面与 test_cw_adr0292_reward_pool_sampling.py::
+#  三面与 test_cw_reward_pool_sampling.py::
 #  test_sampler_v4_and_snapshot_selfconsistent(超集:另钉 META sampler_
 #  version + 旧指纹墓碑)同事实双锁,择一保留超集;其独有 BUCKET_MIN_N==5
 #  面迁入 test_check_delta_pool_bucket_min_n。版本史语义见生产
@@ -1242,7 +1242,7 @@ def test_no_cost_truncation_check_two_state() -> None:
 # 锁为主(镜像律是配对过程性质,池条目不含配对信息,快照层不可
 # 检验;判例 = test_pool_build_never_mixes_runs)、快照级**缺席型**
 # 断言为辅(禁快照值锁——池随局终自动再生,值锁=change-detector,
-# ADR-0292 判例 test_cw_adr0292_reward_pool_sampling.py 注)。
+# ADR-0292 判例 test_cw_reward_pool_sampling.py 注)。
 
 
 def _adr0582_replay(tmp_path: Path,

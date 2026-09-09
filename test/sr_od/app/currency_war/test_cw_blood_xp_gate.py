@@ -39,7 +39,7 @@ from sr_od.application.currency_war.telemetry import recorder as cw_recorder
 @pytest.fixture()
 def captured_exo(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
     """捕获 record_exogenous 调用(写点经模块属性消费,patch 即全捕;
-    手法 = test_cw_t100_hp_pay 同款)。"""
+    手法 = test_cw_hp_pay 同款)。"""
     rows: list[dict] = []
 
     def _cap(round_num, kind, detail='', state=None, choice=None):
@@ -135,7 +135,7 @@ def test_blood_xp_gate_high_level_expected_stop() -> None:
 
 def _level_up_env(session, monkeypatch: pytest.MonkeyPatch,
                   level_reads: list, gold: int | None = 100):
-    """PrepActionExecutor._level_up 离线桩(手法 = test_cw_t100_hp_pay 同款):
+    """PrepActionExecutor._level_up 离线桩(手法 = test_cw_hp_pay 同款):
     ctx/op 全 SimpleNamespace,level 验证读序列与 gold 现读可控。"""
     import sr_od.application.currency_war.prep_actions as pa
     ex = object.__new__(PrepActionExecutor)

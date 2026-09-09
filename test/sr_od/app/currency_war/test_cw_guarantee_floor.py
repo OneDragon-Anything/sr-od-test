@@ -118,7 +118,7 @@ class TestGuaranteeFloorExemptionBranches:
     def test_all_in_nonterminal_below_floor_deferred(self):
         """非末位面位面末 boss 帧 ALL IN 花后 <10:推迟(原「花光放行」
         语义被本门收窄——P2 r7 形,同一场景在旧 ALL IN 锁中曾放行,
-        锁重推记录见 test_cw_p71_budget_gate.TestAllInExempt docstring)。"""
+        锁重推记录见 test_cw_budget_gate.TestAllInExempt docstring)。"""
         km = tuple(_km())
         st_boss = _state(45, 7, xp=(48, 52))
         st_boss.plane = 2

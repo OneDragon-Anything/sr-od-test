@@ -242,7 +242,7 @@ def _make_round_director(test_context, monkeypatch, scripted_actions,
                          overlay=None):
     """备战单轮单测装配(最小集)。
 
-    同域镜像副本 = test_cw_m2_stall_cache 的 prep 写点测(同款桩面):
+    同域镜像副本 = test_cw_stall_cache 的 prep 写点测(同款桩面):
     彼锁 cw4_frame_action_record token 载体写点,本文件锁
     last_prep_action_sig 签名写点——两写点同一决策出口,禁删边留角。
     """

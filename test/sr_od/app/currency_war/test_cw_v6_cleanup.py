@@ -22,7 +22,7 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 
 def _fake_sim(actions_by_seed):
-    """造假 simulate_p1(与 test_cw_zero_refresh_fix 同款桩)。"""
+    """造假 simulate_p1(与 test_cw_zero_refresh 同款桩)。"""
 
     from types import SimpleNamespace
 

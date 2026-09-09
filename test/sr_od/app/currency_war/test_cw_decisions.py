@@ -365,7 +365,7 @@ def test_effective_hp_threshold_plane_model_ratio() -> None:
     相对序**(独家面):位面维在模型内 = P2 别名,但同 tier 同轮次 P3 已到后程
     (nodes_left 更少)→ 阈值低于 P2。
 
-    P2 现值分布(40/74/73/80)与 P1 零漂移由 test_cw_w443_two_state_unification
+    P2 现值分布(40/74/73/80)与 P1 零漂移由 test_cw_two_state_unification
     现值锁与结构锚辖,不在此重复(原重复断言按超集留存原则删除)。
     """
     t_p2 = effective_hp_threshold(GameState(plane=2, round_num=1, level=7))

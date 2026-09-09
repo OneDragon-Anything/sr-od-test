@@ -17,7 +17,7 @@
 相邻参照 = test_cw_op_journal / test_cw_dispatch_wrapper。
 
 离线宿主手法 = test_cw_budget_disclosure 同款(读屏/帧留证/决策源/遥测
-单例全替身,零真实副作用);真核直调形态 = test_cw_p56_t1 同款。
+单例全替身,零真实副作用);真核直调形态 = test_cw_realizable_interest_floor 同款。
 """
 from __future__ import annotations
 
@@ -203,7 +203,7 @@ def test_none_frame_press_buy_silent() -> None:
 
     None 帧直调决策核 → ``reward_node_suppressed`` 取 False → 压库臂
     关门,零命中计数。None 帧的死金域「禁死囤」义务仍由 ②(a) 备战凑息
-    承载——该存活面的等价断言单点承载于 test_cw_p56_t1::
+    承载——该存活面的等价断言单点承载于 test_cw_realizable_interest_floor::
     test_pullback_success_closes_press_arm 前半(同输入帧型 + 同
     sorted(sells)==[1,2] 断言,跨文件等价择一,本侧原重复腿已删)。"""
     st = GameState(gold=11, level=7, hp=80, plane=1, round_num=3)

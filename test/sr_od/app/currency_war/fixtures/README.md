@@ -1,6 +1,6 @@
 # w546 数量锁识别结果 fixture
 
-`w546_count_ocr_fixture.json` 是 `test_cw_w546_equip_grid.py::TestEquipCount::
+`w546_count_ocr_fixture.json` 是 `test_cw_equip_grid.py::TestEquipCount::
 test_count_digits_and_infinity` 的**识别结果 fixture**:把数量锁依赖的两类真识别输出
 一次性提取入库,测试不再跑逐帧网格分类(~7s/帧)与 OCR 引擎装载推理,从 20.3s 降到
 亚秒级(2026-09-01 实测 16.0s call → 0.08s)。

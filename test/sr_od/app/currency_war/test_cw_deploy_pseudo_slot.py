@@ -1,7 +1,7 @@
 """占槽物品排除双源缺口修复批 锁集(方案 = .debug/temp/currency_war/
 deploy_pseudo_slot/方案.md;三件 ①单一源双置信档 ②kernel 防线 ③熔断
 ——③熔断已随 ADR-0601 下线,现锁面 = 前两件;熔断下线 grep 锁已并入
-test_cw_t164_action_op_compliance 的退役机制双禁表锁)。
+test_cw_action_op_compliance 的退役机制双禁表锁)。
 
 - 单一源 grep 锁:bench_item_slots 定义点唯一,钩子/部署两消费点各自引用,
   禁第三方手搓 find_* 拼集;
@@ -14,7 +14,7 @@ test_cw_t164_action_op_compliance 的退役机制双禁表锁)。
   'item_slot';char_id='' 非伪槽照旧上(SIFT 漏读真角色不被关死 bench);
 - 熔断下线锁(ADR-0601 §3 C4/D3:placed=0 同签名熔断跳槽删除,失败记忆
   单一源 = 分发层 cw_loop prep_no_progress 同签名计数;grep 锁防熔断
-  形态回归复活,已并入 test_cw_t164_action_op_compliance 单锁双禁表)。
+  形态回归复活,已并入 test_cw_action_op_compliance 单锁双禁表)。
 """
 from __future__ import annotations
 
@@ -227,9 +227,9 @@ def test_empty_char_id_still_deploys_deploy_lock() -> None:
 # 设计取代的旧语义):失败记忆单一源收敛到分发层 cw_loop prep_no_progress
 # (同签名计数 + 停机留证,锁面在 test_cw_no_progress_guard.py);op 侧
 # placed=0 且计划非空 = round_fail 如实上报(行为锁在
-# test_cw_t164_action_op_compliance.py)。
+# test_cw_action_op_compliance.py)。
 # 本文件原持独立全树扫描锁 test_zero_place_breaker_symbols_eradicated,
 # 与同批 collect_spheres 下线锁载体全同(全 src 树扫描墓碑),已并为其
 # 单锁双禁表(test_retired_mechanism_symbols_stay_offline,文件
-# test_cw_t164_action_op_compliance.py)——单次扫描省一趟树读,禁表
+# test_cw_action_op_compliance.py)——单次扫描省一趟树读,禁表
 # 断言面不变。

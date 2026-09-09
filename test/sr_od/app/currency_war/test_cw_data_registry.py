@@ -1307,7 +1307,7 @@ def test_deploy_bench_gate_no_raw_cap_read():
     cap 必须经域防抖读(域外重读一帧,run 27 型瞬态读数不得直驱行动)。
     墓碑 = 否定式 + 退役背书(README 第 8 条合法形态);肯定式在场锁已按
     混合锁拆解删除。接线行为面(生产真调 debounced)由
-    test_cw_p4r_deploy_battle_chain.py 的桩驱动断言辖(stub
+    test_cw_deploy_battle_chain.py 的桩驱动断言辖(stub
     read_deploy_cap_debounced 后 notes 分键必含 deploy_cap_gate)。"""
     src = (_REPO_ROOT / 'src/sr_od/application/currency_war/operations/cw_op'
            / 'cw_op_deploy.py').read_text(encoding='utf-8')

@@ -411,7 +411,7 @@ def test_image_dir(request) -> Path:
 # 背景:``test_context`` 是 session 级共享,测试若裸赋值替换其属性(如
 # ``ctx.run_context = _FakeRunCtx``)且不还原,污染会泄漏到**后续别的测试
 # 文件**才炸(单跑必过/全量必挂的假 flaky;实锤:test_cw_back_layout 裸赋值
-# run_context → test_enter_currency_war_flow 的 op 初始化读 run_context.event_bus
+# run_context → test_cw_enter_flow 的 op 初始化读 run_context.event_bus
 # AttributeError,曾被误诊为并发干扰)。
 #
 # 守卫语义:记录守卫属性的「对象身份」,测试后若被换成别的对象 → 还原 + 警告

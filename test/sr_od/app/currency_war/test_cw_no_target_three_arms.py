@@ -767,7 +767,7 @@ class TestArmACorner:
 
 # ===== 证明批 §6 增量 5:契约面单一源守卫 ============================
 # 增量 5 读端格(p2plus 合法空 + 三臂来源证据放行 / 无来源计违例 / p1 带
-# 空集违例)= test_cw4_contracts.test_k_projection_domain_covered_
+# 空集违例)= test_cw_contracts.test_k_projection_domain_covered_
 # derivable ⑤⑥(2026-09-09 瘦身批逐格亲读等价;p1_gap 显式带格与该测④
 # 同判违支,差异落在无判别力分支)——单一承载于契约主题位,此处不重复。
 

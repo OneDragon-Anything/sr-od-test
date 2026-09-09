@@ -13,7 +13,7 @@ from pathlib import Path as _P
 
 from sr_od.application.currency_war.telemetry import match_archive as arch
 
-# ===== 源流构造(手法沿用 test_cw_t100_v9_assembly 既有先例) =====
+# ===== 源流构造(手法沿用 test_cw_hp_assembly 既有先例) =====
 
 
 def _write_jsonl(d: _P, name: str, rows: list[dict]) -> None:
