@@ -215,7 +215,8 @@ class FakeMatch:
 
     def __init__(self, seed: int, *,
                  node_sequence: list[str] | None = None,
-                 initial_hp: int = DEFAULT_OPENING_HP) -> None:
+                 initial_hp: int = DEFAULT_OPENING_HP,
+                 invest_profile: SimInvestProfile | None = None) -> None:
         self.seed: int = seed
         # 随机流:主种子派生四股(getrandbits 派生,股间互不串扰——
         # 某域新增 rng 消费不位移他域流位置,重放对账的分流前提)
@@ -248,6 +249,35 @@ class FakeMatch:
         # overlay 栈复用批 0 面('box' kind = 武装箱 4 选 1)。
         self.spheres: list[tuple[str, int]] = []
         self.boxes: list[int] = []
+        # 批 3 通道状态:
+        # tomes = 占席秘密典籍的物理槽位表(1 基;获取/登记/消耗链见
+        #   :meth:`spawn_tome`/:meth:`apply_prep` OpenTome 分支);
+        # supply_options = 当前供给节点选项 [(equip, char, has_diamond)]
+        #   (0e1 屏真值,CwScreenSupplyNode 观察/选装消费);
+        # active_env = 已选投资环境名(轮岗概率条条件位,engine_p1:1103
+        #   同字段语义;'' = 未选,refresh_probs 恒基线 None)。
+        self.tomes: list[int] = []
+        self.supply_options: list[tuple[str, str, bool]] = []
+        self._supply_refreshed: bool = False
+        self.active_env: str = ''
+        # 投资剧本注入面(T-204;方案 §6.1「投资注入」行的假游戏承接:
+        # 剧本 → 浮层栈/持卡注入,替换 engine_p1 装配点——旧引擎以
+        # ``invest`` 参数内装配,新载体在环境装配位接 SimInvestProfile,
+        # 消费点迁测试仓 = 设计 §7.1「cw_sim_invest 消费点迁测试仓装配」):
+        # _invest = 逐 (plane, round) 选卡日程(剧本真值);
+        # _invest_sampler = 陪跑候选采样器(公共单一源 SinkInvestSampler,
+        #   自带独立命名空间 rng 流,四股零新增消费);
+        # last_income_breakdown = 逐回合收入分解留证位(对拍锚/离线
+        #   runner 消费;apply_income 返回值在分支驱动路径被吸收后可回读)。
+        # 环境名经 select_invest_env 落条件位(与批 3 裸环境名位同写点,
+        # 剧本只是装配来源)。无剧本(None)= 全部槽缺省,主路径零漂移。
+        self._invest: InvestInjectionState | None = None
+        self._invest_sampler: SinkInvestSampler | None = None
+        self.last_income_breakdown: dict[str, int] = {}
+        if invest_profile is not None:
+            self._invest = InvestInjectionState.build(invest_profile)
+            self._invest_sampler = SinkInvestSampler(seed)
+            self.select_invest_env(invest_profile.active_env)
         self.state: GameState = GameState(
             plane=1,
             round_num=1,
@@ -323,6 +353,162 @@ class FakeMatch:
                 return i + 1
         return None
 
+    # ---- 典籍/供给通道环境事实生成(批 3)----
+
+    def spawn_tome(self, variant: str = '秘密典籍') -> int | None:
+        """典籍获取(机制原文:投资策略「秘密典籍/秘密典籍+」给的红金
+        典籍道具占备战席 1 槽,cw_prep_actions.OpenTome 词表注 +
+        cw_invest_data PlazaAugment effect「获得1个【星徽秘典】」)。
+
+        - 金随件入账:instant_gold 单一源 = ``cw_investments.
+          economy_effect_of(variant)`(秘密典籍 8 / 秘密典籍+ 12);
+        - 占备战席 1 槽(类补给箱,is_item_slot 占位件),登记进
+          ``self.tomes``(观察面 tomes 真值源);
+        - 席满 = 发放落空返 None(与 spawn_box 同守恒口径)。
+        """
+        from sr_od.application.currency_war.kernel.cw_investments import (
+            economy_effect_of,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+
+        for i, b in enumerate(self.state.bench):
+            if b is None:
+                bc = BenchChar(slot=i + 1, char_id='', faction='?',
+                               is_item_slot=True)
+                self.state.bench[i] = bc
+                self.tomes.append(i + 1)
+                self.state.gold += economy_effect_of(variant).instant_gold
+                return i + 1
+        return None
+
+    def spawn_supply_options(self) -> None:
+        """生成供给节点选项(0e1 屏真值;基础件池采样,参数账见
+        :mod:`rules` 供给/典籍发放域节)。选项形 = (equip, char,
+        has_diamond) 对位 ``SupplyOption``;rng 归发放股。重进节点不重掷
+        (真机制:已选择/剩余次数状态重进后保留,cw_screen_supply_node
+        实测注);:meth:`refresh_supply_options` 显式重掷。"""
+        if self.supply_options:
+            return
+        self._supply_refreshed = False
+        self.supply_options = [(equip, '', False)
+                               for equip in rules.supply_options(
+                                   self._rng_grant)]
+
+    def refresh_supply_options(self) -> None:
+        """供给刷新重掷(游戏规则:补给可刷 1 次,cw_screen_supply_node
+        节点实例态口径;次数判定在被测 op 侧,环境只承接重掷)。"""
+        self._supply_refreshed = True
+        self.supply_options = [(equip, '', False)
+                               for equip in rules.supply_options(
+                                   self._rng_grant)]
+
+    def apply_supply_pick(self, idx: int) -> dict:
+        """选定+确认的环境承接(0e1 出口):选中列入账 + 追加件通道。
+
+        - 选中 equip → ``state.equips``(库存正本);char 非空 → 入座空席
+          (席满落空,球角色通道同守恒);
+        - 追加件 = ``rules.supply_bonus`` 掷签(engine EQUIP_GRANT 校准族
+          单一源),直接入库存(旁路选项,不改决策语义,engine 校准注同);
+        - 选项清单清空(节点收口);返回落账摘要(审计/锁消费)。
+        """
+        landed: dict = {'equip': '', 'char': '', 'bonus': None}
+        if not (0 <= idx < len(self.supply_options)):
+            return landed
+        equip, char, _diamond = self.supply_options.pop(idx)
+        if equip:
+            self.state.equips.append(equip)
+            landed['equip'] = equip
+        if char:
+            from sr_od.application.currency_war.data.cw_chars import (
+                CHARACTERS,
+            )
+            from sr_od.application.currency_war.kernel.cw_state import (
+                BenchChar,
+            )
+            ch = CHARACTERS[char]
+            self._deal_bench_char(BenchChar(
+                slot=0, char_id=char, faction=(ch.factions or ['散'])[0],
+                position_pref=ch.position_pref()))
+            landed['char'] = char
+        bonus = rules.supply_bonus(self._rng_grant)
+        if bonus is not None:
+            self.state.equips.append(bonus)
+            landed['bonus'] = bonus
+        self.supply_options = []
+        return landed
+
+    def select_invest_env(self, name: str) -> None:
+        """已选投资环境登记(轮岗概率条条件位;engine_p1:1103
+        ``st.active_env`` 同字段语义)。生产真值 = 投资环境选择屏(0s 分支)
+        读屏;假环境 = 环境事实注入(测试编排给定,非策略可见特殊通道)。"""
+        self.active_env = name
+
+    def _maybe_push_invest_overlay(self) -> None:
+        """投资剧本日程检查(收入后、决策前;engine_p1 注入段同位:
+        「overlay 在备战期出现 → 收入结算后、决策前」,engine_p1.py:1050
+        区间注)。
+
+        日程点 (plane, round) 命中且剧本名未持 → 压 'invest' 浮层,负载
+        = 剧本名 + 陪跑候选(实机 3 候选屏语义;**剧本名恒首位 = 负载
+        位次非语义**——直注入契约 = cw_sim_invest 模块头「显式点名 =
+        直注入」,选卡裁决由剧本承载,非策略可见特殊通道)。陪跑候选经
+        ``SinkInvestSampler.sample_strategy_options`` 加权不放回抽取
+        (排除已持与剧本名;权重单一源 = strategy_freq_table plaza 聚合;
+        采样器自带独立命名空间 rng 流——日程/抽店/战斗/发放四股零新增
+        消费,重放对账的分流前提)。无剧本/未命中/已持 = 零动作
+        (缺省主路径零漂移;已持重发 = handler 去重语义的推侧对位)。
+        """
+        if self._invest is None or self._invest_sampler is None:
+            return
+        scheduled = self._invest.picks_by_key.get(
+            (self.state.plane, self.state.round_num))
+        if not scheduled or scheduled in self.state.active_strategies:
+            return
+        excluded = set(self.state.active_strategies) | {scheduled}
+        candidates = [n for n in self._invest_sampler.sample_strategy_options(
+            excluded) if n != scheduled][:2]
+        self.push_overlay('invest', [scheduled] + candidates)
+
+    def pick_invest_strategy(self, name: str) -> bool:
+        """投资策略选卡的环境承接(0e ``CwScreenInvestStrategy`` 确认链;
+        外循环 0e 分支/注入局备战序消费)。
+
+        生产对位 = handler 确认成功后 session append(ADR-0598 幻影卡
+        收口)——本承接只落**状态机侧真值**(state.active_strategies),
+        会话侧持卡由真 op 尾块生产码自写,双侧同语义(engine_p1 注入
+        「写 session+state 双处」的分工形:op=会话,环境=状态机)。
+
+        到账 = 持卡登记(handler 去重语义:重名不重复入列、不重复入账
+        instant_gold)+ instant_gold 选卡时点入账(生产游戏引擎同点,
+        单一源 = ``economy_effect_of``)+ 浮层弹栈。负载外名/无浮层 =
+        False(显式拒绝,与 pick_star_tome 同门形)。
+        """
+        from sr_od.application.currency_war.kernel.cw_investments import (
+            economy_effect_of,
+        )
+
+        frame = self.top_overlay('invest')
+        if frame is None or name not in frame.payload:
+            return False
+        # 弹匹配帧非盲弹栈顶:选卡浮层在场期间,prep 域可再压箱/星徽浮层
+        # (同回合开箱先例),盲弹会误弹后压入帧
+        self.overlay_stack.remove(frame)
+        if name not in self.state.active_strategies:
+            self.state.active_strategies.append(name)
+            self.state.gold += economy_effect_of(name).instant_gold
+        return True
+
+    def scheduled_invest_pick(self, plane: int, round_num: int) -> str:
+        """剧本日程回读(0e 驱动方取剧本名;无剧本/未命中 = '')。
+
+        [索引定义] 坐标系: (plane, round_num) = GameState 位面/位面内轮次
+                    (1 基,与 SimInvestProfile.picks 同坐标系)
+                    取值时机: 生成期快照(剧本装配期定死,执行期恒稳)
+        """
+        if self._invest is None:
+            return ''
+        return self._invest.picks_by_key.get((plane, round_num), '')
+
     def _take_first_free_slot(self) -> int | None:
         for i, b in enumerate(self.state.bench):
             if b is None:
@@ -341,8 +527,9 @@ class FakeMatch:
         无 simulate 分支域(收球/开箱/选卡/装备穿戴)= 环境保真件层
         新增规则(方案 F6 裁决);常量单一源 = :mod:`rules` prep 节。
         StartBattle = 出战的环境承接(applied 恒真;战斗结算由编排方
-        驱动 settle_battle)。OpenTome(典籍)批 2 不建模(P2 投资策略
-        发放域)→ applied=False 显式拒绝;退役/兼容动作同判。
+        驱动 settle_battle)。OpenTome(典籍)批 3 建模 = 腾席 + 压星徽
+        四选一浮层(选卡归外循环 0i op,非 prep 动作,词表注同口径);
+        退役/兼容控制流动作为显式拒绝。
         """
         from sr_od.application.currency_war.kernel import cw_prep_actions as pa
         from sr_od.application.currency_war.kernel import cw_state
@@ -377,13 +564,15 @@ class FakeMatch:
             return self._run_deploy_basic()
         if isinstance(action, pa.RunEquip):
             return self._wear_equips(action)
+        if isinstance(action, pa.OpenTome):
+            return self._open_tome(action.slot)
         if isinstance(action, pa.StartBattle):
             self.clock += 1
             return ExecResult(applied=True, observed=self.state.copy())
         if isinstance(action, pa.OpenShop):
             self.open_shop()
             return ExecResult(applied=True, observed=self.state.copy())
-        if isinstance(action, (pa.OpenTome, pa.DeferSpheres, pa.BailToOuter,
+        if isinstance(action, (pa.DeferSpheres, pa.BailToOuter,
                                pa.EnsureShopOpen, pa.EnsureShopClosed,
                                pa.RunBuyPhase, pa.RunTools)):
             # OpenTome 批 2 不建模;其余 = 控制流/退役兼容面(控制流动作
@@ -564,6 +753,48 @@ class FakeMatch:
             return ExecResult(applied=False, observed=self.state.copy())
         return ExecResult(applied=True, observed=self.state.copy())
 
+    def _open_tome(self, slot: int | None) -> ExecResult:
+        """开秘密典籍(批 3 通道消耗步 1;词表语义:点槽两次:选中→开启
+        → 弹星徽四选一,开典籍即腾席,选卡交 loop 0i——cw_prep_actions.
+        OpenTome 词表注)。
+
+        环境转移 = 典籍离席(腾席)+ 压 'star_tome' 浮层(4 选 1 星徽
+        载荷,选项单一源 = :func:`rules.tome_emblem_options`);选卡本体
+        = :meth:`pick_star_tome`(外循环 0i op 经观察/点击消费,非 prep
+        动作——OpenTome 只负责把典籍点开)。
+        """
+
+        slot_no = slot
+        if slot_no is None and self.tomes:
+            slot_no = self.tomes[0]
+        if slot_no is None or slot_no not in self.tomes:
+            return ExecResult(applied=False, observed=self.state.copy())
+        idx = slot_no - 1
+        target = (self.state.bench[idx]
+                  if 0 <= idx < len(self.state.bench) else None)
+        if target is None or not target.is_item_slot:
+            return ExecResult(applied=False, observed=self.state.copy())
+        self.state.bench[idx] = None
+        self.tomes = [s for s in self.tomes if s != slot_no]
+        options = rules.tome_emblem_options(self._rng_grant)
+        self.push_overlay('star_tome', list(options))
+        return ExecResult(applied=bool(options), observed=self.state.copy())
+
+    def pick_star_tome(self, emblem: str) -> bool:
+        """星徽四选一选卡的环境承接(批 3 通道消耗步 2;外循环 0i
+        ``CwScreenBookcard`` 点卡即选,弹窗自关)。
+
+        到账 = 星徽入 ``state.equips`` 装备库存(CwScreenBookcard 到账
+        登记「owned += 星徽」同语义的环境真值面);浮层弹栈。非法名/
+        无浮层 = False(显式拒绝)。
+        """
+        frame = self.top_overlay('star_tome')
+        if frame is None or emblem not in frame.payload:
+            return False
+        self.pop_overlay()
+        self.state.equips.append(emblem)
+        return True
+
     def _run_deploy_basic(self) -> ExecResult:
         """围栏基干部署(无会话语境面;有会话语境的完整装配在执行缝层)。
 
@@ -622,8 +853,22 @@ class FakeMatch:
         """装备穿戴(分配计划单一源 = kernel ``equip_allocation``)。
 
         occupied 容量扣减输入 = 真值已穿列表;穿戴 = 分配序列逐件落
-        ``BenchChar.equips`` + 库存出账(state.equips)。计划空 = applied
-        False(无件可穿/无位可穿,live 空批出口同向)。
+        ``BenchChar.equips`` + 库存出账(state.equips);落账后执行
+        穿着即合成(游戏规则,见 :meth:`_synthesize_worn`)。计划空 =
+        applied False(无件可穿/无位可穿,live 空批出口同向)。
+        """
+        return self.wear_inventory_equips()
+
+    def wear_inventory_equips(self, comp: Any = None) -> ExecResult:
+        """库存装备按 kernel 分配单一源穿戴,随后执行穿着即合成规则。
+
+        批 3 公共入口(:meth:`_wear_equips` RunEquip 分支与通道锁共用;
+        分配计划单一源与占用容量口径同批 2 面)。``comp`` = 策略阵容
+        语境(生产 CwOpEquipAll 同形):缺省 None = 保守分配(防误合成
+        配对守卫拦全部配对,recycle_qualified(None) 空集口径);传入
+        阵容时配对守卫例外①生效(想要的配对,core 上穿着合成=快路径,
+        ADR-0391)——游戏规则(配对即合成)由 :meth:`_synthesize_worn`
+        承载,与本分配纪律分层。
         """
         from sr_od.application.currency_war.kernel.cw_comps import (
             EQUIP_CAPACITY,
@@ -641,7 +886,7 @@ class FakeMatch:
         occupied = {
             ((d.position_pref or ''), d.slot): list(d.equips or [])
             for d in dep_occ}
-        plan = equip_allocation(None, dep_occ, list(self.state.equips),
+        plan = equip_allocation(comp, dep_occ, list(self.state.equips),
                                 occupied=occupied)
         if not plan:
             return ExecResult(applied=False, observed=self.state.copy())
@@ -656,8 +901,50 @@ class FakeMatch:
                     self.state.equips.remove(equip_name)
                     worn += 1
                     break
+        worn += self._synthesize_worn()
         return ExecResult(applied=worn > 0, verification={'worn': worn},
                           observed=self.state.copy())
+
+    def _synthesize_worn(self) -> int:
+        """穿着即合成(批 3;机制原文 = research/equipment_mechanics.md
+        §1「穿着触发:两件简易装备穿到同一角色身上时游戏自动合成,无确认
+        无日志」+「合成不耗金」+「合成落点:产物占最左简易槽」§1.1)。
+
+        配方判定单一源 = ``cw_synthesis.synthesize_target``(交叉)/
+        ``self_advance``(×2 自配)——假游戏零第二图谱。产物替换两组件、
+        落点 = 首组件位次(最左简易槽语义);返回合成次数。
+        """
+        from sr_od.application.currency_war.data.cw_synthesis import (
+            self_advance,
+            synthesize_target,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import (
+            iter_occupied_deployed,
+        )
+
+        merged = 0
+        for d in iter_occupied_deployed(self.state.deployed):
+            changed = True
+            while changed:
+                changed = False
+                eqs = list(d.equips or [])
+                for i in range(len(eqs)):
+                    for j in range(i + 1, len(eqs)):
+                        if eqs[i] == eqs[j]:
+                            prod = self_advance(eqs[i])
+                        else:
+                            prod = synthesize_target(eqs[i], eqs[j])
+                        if prod is None:
+                            continue
+                        # 合成落点 = 产物占最左简易槽(首组件位次)
+                        d.equips = (eqs[:i] + [prod] + eqs[i + 1:j]
+                                    + eqs[j + 1:])
+                        merged += 1
+                        changed = True
+                        break
+                    if changed:
+                        break
+        return merged
 
     # ---- 观察留痕(契约二则:读屏次数语义保留)----
 
@@ -739,9 +1026,12 @@ class FakeMatch:
         elif isinstance(action, cw_state.RefreshShop):
             # 刷新重抽 = 假游戏规则层(simulate 只扣金不模拟牌);
             # probs 非空 = 轮岗翻倍后的概率表(ADR-0286,GameState 概率条
-            # 真值同构),None = 基线 REFRESH_PROB
-            self.state.shop = self.shop_pool.draw_shop(
-                self.state.level, probs=self.state.refresh_probs)
+            # 真值同构),None = 基线 REFRESH_PROB;直出 2★ 升档随抽
+            # (T-122,rng 同抽店股流)
+            self.state.shop = _upgrade_direct_outs(
+                self.shop_pool.draw_shop(
+                    self.state.level, probs=self.state.refresh_probs),
+                self.shop_pool.rng, self.shop_pool.copies)
             verification['dealt'] = len(self.state.shop)
         # DeployMove/SwapDeploy/CompTransaction/LevelUp:转移语义全部在
         # simulate 内,无规则外效应(装备发放归批 1 规则模块)
@@ -818,11 +1108,32 @@ class FakeMatch:
 
         调用时机 = 备战期开始、商店访问前(游戏语义:收入在备战期入账,
         开店决策消费的是含收入金)。rng 消费归发放股(事件金抖动)。
+
+        轮岗概率条(批 3;裂口① 建模义务承接):已选投资环境 =
+        「轮岗」→ 本备战期掷翻倍档(单一源 = kernel
+        ``roll_rotation_per_stage``,机制 = cw_invest_data id=114 原文
+        「每个备战阶段重新随机」,ADR-0286 勘误口径);未选/其他环境 →
+        恒基线 None(抽店流零新增消费,批 2 前轨迹不受影响)。掷点位置
+        与引擎备战期起点同位(engine_p1.py:1103-1106)。
         """
         self.clock += 1
+        if (self.active_env or '') == '轮岗':
+            from sr_od.application.currency_war.kernel.cw_battle_calib import (
+                roll_rotation_per_stage,
+            )
+            self.state.refresh_probs = roll_rotation_per_stage(
+                self._rng_draw, self.state.level)
+        else:
+            self.state.refresh_probs = None
         inc = rules.income_for_round(self.state, self._rng_grant,
                                      self._prev_node, self._prev_combat_lost)
         self.state.gold += sum(inc.values())
+        # 收入分解留证位(对拍锚/离线 runner 消费;apply_income 返回值
+        # 在分支驱动路径被 _open_branch_round 吸收后仍可回读)
+        self.last_income_breakdown = dict(inc)
+        # 投资剧本日程检查(T-204):收入后、决策前(engine_p1 注入段同位;
+        # 无剧本 = 零动作,缺省主路径零漂移)
+        self._maybe_push_invest_overlay()
         return inc
 
     def open_shop(self) -> None:
@@ -835,8 +1146,11 @@ class FakeMatch:
         """
         self.clock += 1
         self.phase = PHASE_PREP_SHOP_OPEN
-        self.state.shop = list(self.shop_pool.draw_shop(
-            self.state.level, probs=self.state.refresh_probs))
+        # 直出 2★ 升档随抽(T-122;rng 与 draw 同股,同 seed 逐位可复现)
+        self.state.shop = _upgrade_direct_outs(
+            self.shop_pool.draw_shop(
+                self.state.level, probs=self.state.refresh_probs),
+            self.shop_pool.rng, self.shop_pool.copies)
 
     def close_shop(self) -> None:
         """收店:画面身份回「备战」(CloseShop 终结动作的环境承接)。
@@ -867,10 +1181,38 @@ class FakeMatch:
         self.phase = PHASE_PREP
         return self.phase
 
+    def advance_plane(self,
+                      node_sequence: list[str] | None = None) -> int:
+        """位面过渡确认的环境承接(0q 消费后;批 3 P2 段)。
+
+        进场继承(单一源 = sim-wiring.md「P2 段接线」注记:hp/gold/
+        board/bench/deployed/equips/意向**原样带过**,hp 跨位面继承 =
+        用户纠错真值;其余无重置证据按全继承标注):对局态槽零重置,
+        只推进 plane、轮次按位面重置(r1 起,round_num 按位面 OCR 口径)、
+        新节点日程换装。浮层栈清空(画面态不跨位面);refresh_probs 复位
+        (新位面环境事实重掷)。节点序列缺省 = 真码采样(日程股);
+        确定性测试剧本注入。返回新 plane。
+        """
+        self.clock += 1
+        self.state.plane += 1
+        self.state.round_num = 1
+        self.node_sequence = (
+            list(node_sequence) if node_sequence is not None
+            else sample_node_sequence(self._rng_schedule))
+        self._node_idx = 0
+        self.state.node_type = self.node_sequence[0]
+        self.state.refresh_probs = None
+        self.overlay_stack = []
+        self.phase = PHASE_PREP
+        return self.state.plane
+
     # ---- 环境指纹(重放三元之「环境指纹」)----
 
     def env_fingerprint(self) -> dict[str, str | int]:
-        """环境指纹 = 规则层版本 + Δ池指纹(方案 §2.2 确定性行:同 seed +
-        同环境指纹 → 逐位可复现;跨版本对照禁裸串比)。"""
+        """环境指纹 = 规则层版本 + Δ池指纹 + 注入域标记(方案 §2.2 确定
+        性行:同 seed + 同环境指纹 → 逐位可复现;跨版本对照禁裸串比)。
+        ``invest_injected`` = 剧本装配位(0/1):注入局与缺省局的分布
+        语义不同域,跨域对照禁裸串比(与 env_version 同纪律)。"""
         return {'env_version': FAKE_GAME_ENV_VERSION,
-                'delta_pool': self.delta_pool_fingerprint}
+                'delta_pool': self.delta_pool_fingerprint,
+                'invest_injected': 1 if self._invest is not None else 0}

@@ -144,7 +144,8 @@ class FakeP1Run:
     def __init__(self, ctx: SrTestContext, seed: int, *,
                  node_sequence: list[str] | None = None,
                  initial_hp: int | None = None,
-                 initial_gold: int | None = None) -> None:
+                 initial_gold: int | None = None,
+                 invest_profile: Any | None = None) -> None:
         self.ctx: SrTestContext = ctx
         self.seed: int = seed
         kw: dict[str, Any] = {'seed': seed}
@@ -152,6 +153,8 @@ class FakeP1Run:
             kw['node_sequence'] = list(node_sequence)
         if initial_hp is not None:
             kw['initial_hp'] = initial_hp
+        if invest_profile is not None:
+            kw['invest_profile'] = invest_profile
         self.match: FakeMatch = FakeMatch(**kw)
         # 剧本注金(场景注入,同 sim 投资剧本的注入语义:环境事实由
         # 测试编排给定,非策略可见的特殊通道);None = 环境开局金缺省
@@ -183,6 +186,15 @@ class FakeP1Run:
         #   决策前写 session.node_type_current,engine_p1.py:827 同位)
         #   ④plane_lengths_seen(schedule_of 消费,见下)。
         _session = self.cw_match.session
+        # 投资剧本注入的会话侧环境写点(T-204):实机写点 =
+        # CwScreenInvestEnv handler 写 session.active_env;engine_p1 注入
+        # 「写 session+state 双处」同语义——会话侧供判据链
+        # (cap_resolved_of_session 禁读 state 镜像,cw_economy.py:109
+        # 在案),环境侧(selected_invest_env)供轮岗条件位与观察镜像。
+        # 持卡无会话侧预写:选卡由真 op 尾块生产码 append(0e 驱动承载)。
+        if invest_profile is not None and getattr(invest_profile,
+                                                  'active_env', ''):
+            _session.active_env = invest_profile.active_env
         from sr_od.application.currency_war.kernel.cw_state import (
             ledger_update_plane,
         )
@@ -212,6 +224,19 @@ class FakeP1Run:
         # 商店访问产出捕获(visit_open_shop → run_buy_waves 的 outcome,
         # 经模块attr捕获桩直传,run_prep_phase 消费)
         self.last_shop_outcome: Any = None
+        # —— 批 3(外循环分支序)状态 ——
+        # 分发序日志(run_round_branch_order 每次调用重建;outer_loop §2.2
+        # 序表的假环境对位,分支序锁的断言载体)
+        self.branch_dispatch: list[str] = []
+        # 回合开闭闩(分支序驱动的一节点回合:收入/节点事件只开一次)
+        self._branch_round_open: bool = False
+        # 最近一次节点结算回执(战斗窗/供给分支的环境承接记录)
+        self.last_settlement: Any = None
+        # —— T-204(投资剧本注入域)状态 ——
+        # 逐回合收入分解/期初金留证(分支驱动路径 _open_branch_round 的
+        # apply_income 返回值吸收位;对拍锚/离线 runner 消费)
+        self.last_income: dict[str, int] = {}
+        self.last_gold_after_income: int = 0
         # monkeypatch 引用(fake_p1_run 存入;run_p1 无参调用的既有测试
         # 契约保持,prep 相位补丁内部取用)
         self._monkeypatch: Any = None
@@ -288,6 +313,23 @@ class FakeP1Run:
         # 零副作用纪律要求沿调用链整链桩化,不是「我没调 summary」式回避
         monkeypatch.setattr(recorder, '_regenerate_delta_pool_after_run',
                             lambda: None)
+        # —— N1 归因处置(批 3;T-120-batch2-r1.md N1)——
+        # 残留源头 = 真 op 链路中的生产停机路径写 run_context.
+        # last_run_result:探针实证唯一命中 = cw_screen_prep
+        # ._exec_fail_hook_check → stop_running('hook:exec_fail_mismatch')
+        # (执行失败安灯:检出「计划花费>0 金差≈0 = 点击落空」)。假环境
+        # 触发形态 = 决策帧 plan 投影(全量清单,内含 income=null 计 0 的
+        # 卖出)vs 单动作环逐动作重决策的合法金差落进 ±2 容差带 → 分类器
+        # not_effective。该检测器的前提(真实点击可能落空)在假环境
+        # 结构性不成立(执行失败面=零,方案 §2.4 边界申报)——与
+        # 「bench 落位 audit 结构性豁免」同族:检出点击落空的检测器,
+        # 输入域在假环境不存在。豁免 = 桩化安灯触发判定(分类器本体
+        # 不桩,由其单测与实机侧辖);残留兜底清零在 fake_p1_run teardown。
+        from sr_od.application.currency_war.operations.cw_screen import (
+            cw_screen_prep as prep_mod,
+        )
+        monkeypatch.setattr(prep_mod, 'exec_fail_should_stop',
+                            lambda *_a, **_k: False)
         # 缺陷台账复现计数按局清零(模块全局;测试纪律 4)
         monkeypatch.setattr(tel_state, '_defect_seen', {})
         monkeypatch.setattr(tel_state, '_defect_seen_run', '')
@@ -555,6 +597,13 @@ class FakeP1Run:
                    for e in new_acts):
                 launched = True
                 break
+            # 典籍开匣即让位(批 3;真机制:开典籍腾席 + 星徽四选一弹窗
+            # 遮蔽备战画面,选卡归外循环 0i——prep 环在弹窗在场时不可继续
+            # 交互,弹窗消费后由外循环重判。OpenTome 词表注「开典籍即腾席
+            # +loop 0i 接管选卡」的环境承接)
+            if any(e['action'].startswith('OpenTome') and e['applied']
+                   for e in new_acts):
+                break
             if rr is None or not getattr(rr, 'is_success', True):
                 break   # 策略异常/执行异常 = fail-stop(留证,交编排方)
             status = getattr(rr, 'status', '') or ''
@@ -725,6 +774,567 @@ class FakeP1Run:
         ok, _detail = cw_loop.readiness_battle_launch(host, self.ctx)
         return True, bool(ok)
 
+    # ---- 批 3:外循环分支序(方案 §6.2 批 3;批 2 申报的归批 3 面)----
+    #
+    # 分支序正本 = docs/develop/currency_war/flow/outer_loop.md §2.2
+    # (浮层先于备战双锚;序位漏项 = 实机事故源)。本节把批 2 申报归批 3
+    # 的分支(0i 星徽秘典/0e1 补给/战斗窗/0q 位面过渡)接进假环境:
+    # 每分支 = **真画面 op**(决策半真码)+ 读图域桩(识别缺陷面结构性
+    # 为零的申报面)+ 机械半边环境承接(prep_landing 同缝语义)。
+
+    def _bind_controller_click(self, monkeypatch: Any,
+                               handler: Any) -> None:
+        """controller.click 的环境承接绑定(共享 MockController 的机械
+        半边替换;驱动族顺序执行,后绑覆盖先绑,teardown 统一还原)。"""
+        def _click(point: Any = None, *a: Any, **k: Any) -> bool:
+            handler(point)
+            return True
+        monkeypatch.setattr(self.ctx.controller, 'click', _click,
+                            raising=False)
+
+    @staticmethod
+    def _point_x_near(point: Any, x: float) -> bool:
+        """点击点按 x 邻近匹配列位(结构位坐标域,无像素语义)。"""
+        return point is not None and abs(float(point.x) - x) < 5.0
+
+    def run_star_tome_pick(self, monkeypatch: Any) -> str:
+        """0i 星徽秘典四选一(真 ``CwScreenBookcard``;分支序 §2.2 0i)。
+
+        决策半真码 = ``decide_star_tome`` 候选打分(目标阵营/板面/框架)
+        在环;读图域桩 = OCR 卡名从浮层载荷真值直读(_read_card_factions
+        同变换:星徽全名去「星徽」后缀 = 阵营名);机械半边 = 环境承接
+        (:meth:`FakeMatch.pick_star_tome` 落状态机——星徽入库存 + 浮层
+        弹栈,「点卡即选,弹窗自关」现役口径)。返回 op 终态文案。
+        """
+        from sr_od.application.currency_war.kernel.cw_obs_core import (
+            area_center,
+        )
+        from sr_od.application.currency_war.operations.cw_screen import (
+            cw_screen_bookcard as book_mod,
+        )
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_bookcard import (
+            CwScreenBookcard,
+        )
+
+        m = self.match
+        frame = m.top_overlay('star_tome')
+        if frame is None:
+            raise AssertionError('星徽秘典浮层不在场(0i 分支误派)')
+        op = CwScreenBookcard(self.ctx)
+        # OCR 卡名读数 = 浮层载荷真值([(阵营名, x 中心)],左→右)
+        cards = [((n[:-2] if n.endswith('星徽') else n), 300 + 200 * i)
+                 for i, n in enumerate(frame.payload)]
+        monkeypatch.setattr(op, '_read_card_factions',
+                            lambda _screen: list(cards))
+
+        class _Res:
+            def __init__(self, ok: bool) -> None:
+                self.is_success: bool = ok
+                self.status: str = '成功' if ok else '未命中'
+
+        def _find(_screen: Any, scr_name: str, area: str, **_k: Any) -> _Res:
+            return _Res(scr_name == CwScreenBookcard.SCREEN_NAME
+                        and area == CwScreenBookcard.MARK_AREA
+                        and m.top_overlay('star_tome') is not None)
+
+        monkeypatch.setattr(op, 'round_by_find_area', _find)
+        monkeypatch.setattr(op, 'screenshot', self._stub_shot)
+        self._stub_window_check(monkeypatch, op)
+        monkeypatch.setattr(self.ctx.controller, 'mouse_move',
+                            lambda *a, **k: None, raising=False)
+        chosen: dict = {}
+
+        def _card_point(idx: int, faction_x: int | None) -> Any:
+            chosen['idx'] = idx
+            return area_center(self.ctx, CwScreenBookcard.CARD_AREAS[idx],
+                               CwScreenBookcard.SCREEN_NAME)
+
+        monkeypatch.setattr(op, '_card_point', _card_point)
+
+        def _fake_safe_click(_op: Any, _point: Any, **_k: Any) -> None:
+            idx = chosen.get('idx', 0)
+            emblem = (frame.payload[idx]
+                      if idx < len(frame.payload) else '')
+            if not m.pick_star_tome(emblem):
+                raise AssertionError(f'星徽选卡环境承接拒绝: {emblem}')
+
+        monkeypatch.setattr(book_mod, 'safe_click', _fake_safe_click)
+        from test.harness.fixture_controller import fast_sleep
+
+        with fast_sleep():
+            rr = op.execute()   # 真 op 框架循环(fast_sleep 包裹,测试纪律 3)
+        return getattr(rr, 'status', '') or ''
+
+    def run_invest_pick(self, monkeypatch: Any) -> str:
+        """0e 投资策略三选一(真 ``CwScreenInvestStrategy``;分支序
+        §2.2 0e 行,T-204 注入域)。
+
+        - 决策半边 = **剧本直注入**:stub 本局 strategy 实例的
+          ``decide_invest`` 返回剧本名 option_idx——直注入契约 =
+          cw_sim_invest 模块头「显式点名 = 直注入,测试/配对夹具路径」
+          (engine_p1 freq 注入臂同语义:剧本重放域选卡裁决由剧本承载);
+          实例级 patch 仅辖本局 strategy 对象,teardown 还原真判据。
+        - 其余全链真码:入口锚/选项读取(浮层负载真值,读图域桩同族)/
+          刷新链跳过(剧本 pick.refresh_slots 恒空 = ADR-0600 消费门
+          自然不进)/session 尾块 append + BoardState 写端 + 效果账本
+          登记 + 确认到达登记(生产码原样执行)/机械半边 = 环境承接
+          (:meth:`FakeMatch.pick_invest_strategy` 落状态机)。
+        - 读图域桩:OCR 选项 = 浮层负载直出(x 列位 = 实机三列结构位
+          460/959/1458 同形);area_center 桩 None = op 走兜底常量(与
+          screen_info 缺档同形,点击点不消费——机械半边在承接桩)。
+        """
+        from sr_od.application.currency_war.kernel.cw_state import PickEvent
+        from sr_od.application.currency_war.operations.cw_screen import (
+            cw_screen_invest_strategy as strat_mod,
+        )
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
+            CwScreenInvestStrategy,
+        )
+
+        m = self.match
+        frame = m.top_overlay('invest')
+        if frame is None:
+            raise AssertionError('选卡浮层不在场(0e 分支误派)')
+        scripted = m.scheduled_invest_pick(m.state.plane, m.state.round_num)
+        if not scripted:
+            raise AssertionError('浮层在场但剧本无日程(装配错位)')
+        op = CwScreenInvestStrategy(self.ctx)
+        # OCR 选项读数 = 浮层负载真值([(名, x 中心, y)],左→右三列)
+        opts = [(n, 460 + 499 * i, 490) for i, n in enumerate(frame.payload)]
+        monkeypatch.setattr(op, '_read_options', lambda _screen: list(opts))
+
+        class _Res:
+            def __init__(self, ok: bool) -> None:
+                self.is_success: bool = ok
+                self.status: str = '成功' if ok else '未命中'
+
+        def _find(_screen: Any, scr_name: str, area: str, **_k: Any) -> _Res:
+            return _Res(scr_name == CwScreenInvestStrategy.SCREEN_NAME
+                        and area == '标识-请选择投资策略'
+                        and m.top_overlay('invest') is not None)
+
+        monkeypatch.setattr(op, 'round_by_find_area', _find)
+        monkeypatch.setattr(op, 'screenshot', self._stub_shot)
+        self._stub_window_check(monkeypatch, op)
+        monkeypatch.setattr(self.ctx.controller, 'mouse_move',
+                            lambda *a, **k: None, raising=False)
+
+        def _fake_safe_click(_op: Any, _point: Any, **_k: Any) -> None:
+            if not m.pick_invest_strategy(scripted):
+                raise AssertionError(f'选卡环境承接拒绝: {scripted}')
+
+        monkeypatch.setattr(strat_mod, 'safe_click', _fake_safe_click)
+        monkeypatch.setattr(strat_mod, 'area_center',
+                            lambda *_a: None)
+        # 确认验关 = 浮层已弹即关(环境真值;选卡承接在点卡步已落)
+        def _fake_confirm(op_: Any, confirm_point: Any = None,
+                          entry_keyword: str = '', tag: str = '') -> Any:
+            return op_.round_success('确认桩(选卡浮层已弹,假环境无确认点击)')
+
+        monkeypatch.setattr(strat_mod, 'confirm_and_verify', _fake_confirm)
+        # 决策半边 = 剧本直注入(实例级;teardown 还原真判据)
+        def _scripted_decide(kind: str, options: list[str], _st: Any,
+                             _sess: Any, _cfg: Any) -> PickEvent:
+            idx = options.index(scripted) if scripted in options else 0
+            return PickEvent(option_idx=idx, reason='剧本直注入(T-204)')
+
+        monkeypatch.setattr(self.cw_match.strategy, 'decide_invest',
+                            _scripted_decide)
+        # 选卡屏时序等待(1.0s 稳定窗/0.7s 点卡后)= op 顶层 time 引用,
+        # 真实等待零信息量(_install_stubs buy_mod.time.sleep 桩同族)
+        monkeypatch.setattr(strat_mod.time, 'sleep', lambda *_a: None)
+        from test.harness.fixture_controller import fast_sleep
+
+        with fast_sleep():
+            rr = op.execute()   # 真 op 框架循环(fast_sleep 包裹,测试纪律 3)
+        return getattr(rr, 'status', '') or ''
+
+    def run_supply_node(self, monkeypatch: Any) -> str:
+        """0e1 补给阶段(真 ``CwScreenSupplyNode``;分支序 §2.2 0e1)。
+
+        决策半真码 = ``decide_supply``(带钻碾压/刷新找钻/key_equips
+        契合)在环;观察域桩 = 选项从状态机真值直出(SupplyOption 对位,
+        基础件池采样,参数账见 rules 供给/典籍发放域节);机械半边 =
+        环境承接(点列身 = 记候选列、刷新 = 重掷、确认 =
+        :meth:`FakeMatch.apply_supply_pick` 落账)。采集 detour 预跳
+        (session 实态 `_supply_detour_done`:采集管线的输入域 = 真实
+        画面帧,假环境结构性零信息——sleep 全桩同族申报)。返回终态。
+        """
+        from fixtures.cw_fake_game.fake_match import PHASE_SUPPLY
+        from fixtures.cw_fake_game.fake_ports import FakeCwObserver
+        from one_dragon.base.geometry.point import Point
+        from sr_od.application.currency_war.kernel.cw_events import (
+            SupplyOption,
+        )
+        from sr_od.application.currency_war.kernel.cw_exec_state import (
+            exec_state_of,
+        )
+        from sr_od.application.currency_war.operations.cw_screen import (
+            cw_screen_supply_node as supply_mod,
+        )
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
+            CwScreenSupplyNode,
+        )
+
+        m = self.match
+        m.spawn_supply_options()
+        exec_state_of(self.cw_match.session)._supply_detour_done = True
+        op = CwScreenSupplyNode(self.ctx)
+        col_pts = [Point(560 + 260 * i, 550)
+                   for i in range(max(1, len(m.supply_options)))]
+
+        def _fake_read_options(_ctx: Any, _screen: Any) -> list:
+            return [(SupplyOption(idx=i, equip=e, char=c, has_diamond=d),
+                     col_pts[i])
+                    for i, (e, c, d) in enumerate(m.supply_options)]
+
+        monkeypatch.setattr(supply_mod, 'read_supply_options',
+                            _fake_read_options)
+        monkeypatch.setattr(
+            supply_mod, 'read_game_state',
+            lambda ctx_, _screen, phase=None:
+                FakeCwObserver(m).observe_prep(ctx_, phase).state)
+
+        class _Res:
+            def __init__(self, ok: bool) -> None:
+                self.is_success: bool = ok
+                self.status: str = '成功' if ok else '未命中'
+
+        def _find(_screen: Any, scr_name: str, area: str, **_k: Any) -> _Res:
+            return _Res(scr_name == '货币战争-补给'
+                        and area == '标识-补给阶段'
+                        and m.phase == PHASE_SUPPLY)
+
+        monkeypatch.setattr(op, 'round_by_find_area', _find)
+
+        chosen: dict = {}
+
+        def _click(point: Any = None, *a: Any, **k: Any) -> bool:
+            for i, p in enumerate(col_pts):
+                if self._point_x_near(point, p.x):
+                    chosen['idx'] = i
+                    return True
+            if point is not None and self._point_x_near(
+                    point, CwScreenSupplyNode.REFRESH_BTN.x):
+                m.refresh_supply_options()
+            return True
+
+        self._bind_controller_click(monkeypatch, _click)
+        monkeypatch.setattr(self.ctx.controller, 'mouse_move',
+                            lambda *a, **k: None, raising=False)
+
+        def _click_area(_screen: Any, scr_name: str, area: str,
+                        **_k: Any) -> _Res:
+            if scr_name != '货币战争-补给':
+                return _Res(False)
+            if area == '按钮-确认' and m.phase == PHASE_SUPPLY:
+                m.apply_supply_pick(chosen.get('idx', 0))
+                return _Res(True)
+            return _Res(True)   # 返回备战/返回补给(detour 已预跳,防御成功)
+
+        monkeypatch.setattr(op, 'round_by_find_and_click_area', _click_area)
+        monkeypatch.setattr(op, 'screenshot', self._stub_shot)
+        self._stub_window_check(monkeypatch, op)
+        from test.harness.fixture_controller import fast_sleep
+
+        with fast_sleep():
+            rr = op.execute()   # 真 op 框架循环(fast_sleep 包裹,测试纪律 3)
+        return getattr(rr, 'status', '') or ''
+
+    def run_battle_wait(self, monkeypatch: Any) -> str:
+        """战斗窗分支(真 ``CwScreenBattleWait``;分支序「战斗窗」行)。
+
+        三段式中,「等结算」半边在假环境零信息量(战斗 = 即时结算,
+        settle_battle 已落),消费面 = 结算处理(真 op 结算观测回路:
+        read_round_outcome 真值注入 → 观察半直写/策略半入槽/recorder
+        生产写点)+ 白名单完成判据(备战锚到达判定)。读图域桩 =
+        区域原语/OCR 行;结算读数经 :meth:`run_battle_wait` 真值注入
+        (read_round_outcome 桩返状态机真值,hp_confidence 恒真读)。
+        「继续挑战」点击 = 环境承接(:meth:`FakeMatch.advance_node`,
+        outer_loop §4 轮次推进信号)。返回 op 终态文案。
+        """
+        from fixtures.cw_fake_game.fake_match import (
+            PHASE_PREP,
+            PHASE_SETTLE,
+            PHASE_SUPPLY,
+        )
+        from sr_od.application.currency_war.operations import (
+            settle_collect_hooks,
+        )
+        from sr_od.application.currency_war.operations.cw_screen import (
+            cw_screen_battle_wait as bwait_mod,
+        )
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait import (
+            CwScreenBattleWait,
+            SettlementState,
+        )
+
+        m = self.match
+        st = SettlementState()
+        st.battle_ts = 0.0   # 出战驻留起点(宽限判定面,假环境无真实时钟语义)
+        config = self._config()
+        op = CwScreenBattleWait(self.ctx, st, config)
+
+        class _Res:
+            def __init__(self, ok: bool) -> None:
+                self.is_success: bool = ok
+                self.status: str = '成功' if ok else '未命中'
+
+        _completion = {
+            ('货币战争-备战', '备战标识-购买经验'): PHASE_PREP,
+            ('货币战争-补给', '标识-补给阶段'): PHASE_SUPPLY,
+        }
+
+        def _find(_screen: Any, scr_name: str, area: str, **_k: Any) -> _Res:
+            if scr_name == '货币战争-结算':
+                return _Res(area == '按钮-继续挑战'
+                            and m.phase == PHASE_SETTLE)
+            anchor = (scr_name, area)
+            if anchor in _completion:
+                return _Res(m.phase == _completion[anchor])
+            return _Res(False)
+
+        monkeypatch.setattr(op, 'round_by_find_area', _find)
+
+        def _click_area(_screen: Any, scr_name: str, area: str,
+                        **_k: Any) -> _Res:
+            if scr_name == '货币战争-结算' and area == '按钮-继续挑战':
+                m.advance_node()   # 环境承接:结算确认 → 节点推进
+                return _Res(True)
+            return _Res(False)
+
+        monkeypatch.setattr(op, 'round_by_find_and_click_area', _click_area)
+        monkeypatch.setattr(op, 'round_by_ocr', lambda *a, **k: _Res(False))
+        monkeypatch.setattr(op, 'screenshot', self._stub_shot)
+        self._stub_window_check(monkeypatch, op)
+        # OCR 行读数 = 读图域桩(空行 = 读数缺失 → 分类器 unknown 不停,
+        # 判定语义由 query 单测辖);结算观测真值经 read_round_outcome 注入
+        monkeypatch.setattr(self.ctx.ocr_service, 'get_ocr_result_list',
+                            lambda *a, **k: [])
+        monkeypatch.setattr(bwait_mod, 'read_phase_round',
+                            lambda _ctx, _screen: (m.state.plane,
+                                                   m.state.round_num))
+
+        settle = self.last_settlement
+
+        def _fake_read_round_outcome(_ctx: Any, _screen: Any, *, plane: int,
+                                     round_num: int, comp_tag: str = '',
+                                     node_type: str = '') -> Any:
+            from fixtures.cw_harness import FakeRoundOutcome
+            return FakeRoundOutcome(
+                round_num=round_num, plane=plane,
+                node_type=node_type or m.state.node_type or 'battle',
+                hp_after=(settle.hp_after if settle is not None
+                          else int(m.state.hp or 0)),
+                killed=(settle.delta > 0) if settle is not None else None,
+                streak=m.state.streak)
+
+        monkeypatch.setattr(bwait_mod, 'read_round_outcome',
+                            _fake_read_round_outcome)
+        # 结算屏时序帧采集钩子 = 真实画面采集(写盘),假环境结构性零信息
+        monkeypatch.setattr(settle_collect_hooks, 'settle_frame_collect',
+                            lambda _screen: None)
+        from test.harness.fixture_controller import fast_sleep
+
+        with fast_sleep():
+            rr = op.execute()   # 真 op 框架循环(fast_sleep 包裹,测试纪律 3)
+        return getattr(rr, 'status', '') or ''
+
+    def run_plane_transition(self, monkeypatch: Any) -> str:
+        """0q 位面过渡(真 ``CwScreenPlaneTransition``;分支序 §2.2 0q)。
+
+        机械半边 = 环境承接(:meth:`FakeMatch.advance_plane`,P2 进场
+        继承语义在该方法注);出口验真 = 提示消失(op 真逻辑 + 区域桩);
+        过渡落定后同步会话节点通道(plane 2 四通道,同 __init__ 位面 1
+        对位注)。返回 op 终态文案。
+        """
+        from fixtures.cw_fake_game.fake_match import PHASE_PLANE_TRANSITION
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_plane_transition import (
+            CwScreenPlaneTransition,
+        )
+
+        m = self.match
+        op = CwScreenPlaneTransition(self.ctx)
+
+        class _Res:
+            def __init__(self, ok: bool) -> None:
+                self.is_success: bool = ok
+                self.status: str = '成功' if ok else '未命中'
+
+        def _find(_screen: Any, scr_name: str, area: str, **_k: Any) -> _Res:
+            return _Res(scr_name == CwScreenPlaneTransition.SCREEN_NAME
+                        and area == CwScreenPlaneTransition.PROMPT_AREA
+                        and m.phase == PHASE_PLANE_TRANSITION)
+
+        monkeypatch.setattr(op, 'round_by_find_area', _find)
+        monkeypatch.setattr(op, 'screenshot', self._stub_shot)
+        self._stub_window_check(monkeypatch, op)
+        monkeypatch.setattr(self.ctx.controller, 'mouse_move',
+                            lambda *a, **k: None, raising=False)
+
+        def _click(point: Any = None, *a: Any, **k: Any) -> bool:
+            if m.phase == PHASE_PLANE_TRANSITION:
+                m.advance_plane()   # 环境承接:点空白 → 位面推进(P2 继承)
+            return True
+
+        self._bind_controller_click(monkeypatch, _click)
+        from test.harness.fixture_controller import fast_sleep
+
+        with fast_sleep():
+            rr = op.execute()   # 真 op 框架循环(fast_sleep 包裹,测试纪律 3)
+        # 会话节点通道同步(plane 2;实机写点 = 位面详情采集/备战开局帧,
+        # 四通道对位注见 FakeP1Run.__init__)
+        from sr_od.application.currency_war.kernel.cw_state import (
+            ledger_update_plane,
+        )
+        sess = self.cw_match.session
+        seq = list(m.node_sequence)
+        ledger_update_plane(sess, m.state.plane, seq, source='plane_detail')
+        sess.plane_node_table = seq
+        sess.plane_node_table_plane = m.state.plane
+        if sess.plane_lengths_seen is None:
+            sess.plane_lengths_seen = []
+        sess.plane_lengths_seen.append(len(seq))
+        return getattr(rr, 'status', '') or ''
+
+    def _stub_window_check(self, monkeypatch: Any, op: Any) -> None:
+        """op 框架首节点「检测游戏窗口」的假环境承接(实例级桩):测试
+        ctx 无真实窗口,窗口就绪位恒假会让真 op 首轮即滑进「打开游戏」
+        整链。桩 = 窗口检查直通成功(环境承接,与截图桩同域)。"""
+
+        def _window_ok() -> Any:
+            return op.round_success('窗口桩(假环境无窗口)')
+
+        monkeypatch.setattr(op, 'check_game_window', _window_ok)
+
+    def _stub_shot(self) -> Any:
+        """驱动族共用的截图桩(旋转亮度帧;同 _install_stubs 形)。"""
+        self._shot_i += 1
+        v = 40 if self._shot_i % 2 else 200
+        return np.full((1080, 1920, 3), v, dtype=np.uint8)
+
+    def _open_branch_round(self) -> str:
+        """分支序回合的环境事件开演(收入/节点事件/相位初始化)。
+
+        与 run_p1 逐节点开演同节拍(收入→节点类型供给→tracked 播种),
+        补节点事件:奖励带球/供给选项生成与补给屏分流(outer_loop §3
+        备战分支第 7 步:补给轮不驻留备战交互 → 相位直入补给屏)。
+        返回本回合节点类型。
+        """
+        from fixtures.cw_fake_game import rules as cw_rules
+        from fixtures.cw_fake_game.fake_match import (
+            PHASE_PREP,
+            PHASE_SUPPLY,
+        )
+
+        m = self.match
+        node = (m.node_sequence[m._node_idx]
+                if m._node_idx < len(m.node_sequence) else '')
+        self._bench_pre_slots = dict(self._bench_identity())
+        self.cw_match.session.node_type_current = node
+        self._seed_tracked_from_truth()
+        self.last_shop_outcome = None
+        self._inject_equips_truth()
+        inc = m.apply_income()
+        # 收入留证(T-204;对拍锚/离线 runner 消费)
+        self.last_income = dict(inc)
+        self.last_gold_after_income = m.state.gold
+        if node == 'reward':
+            m.spawn_balls(cw_rules.BALLS_PER_REWARD_NODE)
+        if node == 'supply':
+            m.spawn_supply_options()
+            m.phase = PHASE_SUPPLY
+        else:
+            m.phase = PHASE_PREP
+        return node
+
+    def run_round_branch_order(self, monkeypatch: Any) -> dict[str, Any]:
+        """一个外循环回合的分支序驱动(outer_loop §2.2 序表的假环境对位)。
+
+        回合 = 一节点;分支循环 = 浮层(0i 星徽秘典)→ 补给屏(0e1)→
+        备战(1,经 :meth:`run_prep_phase`;发射后战斗窗)→ 节点收口。
+        每次分发落 :attr:`branch_dispatch`(分支序锁断言载体);分支体
+        全部为真画面 op(读图域桩 + 机械半边环境承接,本节头注)。
+
+        发射兜底 = 真发射核直驱(``cw_loop.launch_prepared_battle``,
+        批 2 专项锁同款):备战收敛而达标臂质量闸 defer 时,锁驱动的
+        确定性发射通道——环境编排职责(回合必须向战斗推进),非策略
+        信号。位面过渡回合(日程耗尽后的下一次调用)= 0q 消费 +
+        P2 进场继承。
+        """
+        from fixtures.cw_fake_game.fake_match import (
+            PHASE_BATTLE,
+            PHASE_PLANE_TRANSITION,
+            PHASE_PREP,
+            PHASE_PREP_SHOP_OPEN,
+            PHASE_SETTLE,
+            PHASE_SUPPLY,
+        )
+
+        m = self.match
+        self.branch_dispatch = []
+        if m.phase == PHASE_PLANE_TRANSITION:
+            self.branch_dispatch.append('0q_plane_transition')
+            self.run_plane_transition(monkeypatch)
+            return {'dispatch': list(self.branch_dispatch),
+                    'launched': False, 'settlement': self.last_settlement,
+                    'node': ''}
+        node = ('' if self._branch_round_open
+                else self._open_branch_round())
+        self._branch_round_open = True
+        launched = False
+        settlement = None
+        for _step in range(8):   # 分支环预算(防分发成环)
+            if m.top_overlay('invest') is not None:
+                # 0e 投资策略三选一(§2.2 表序 0e 先于 0i;注入域浮层,
+                # 命中即接管——overlay 先于备战双锚,§2.2 行 70)
+                self.branch_dispatch.append('0e_invest_pick')
+                self.run_invest_pick(monkeypatch)
+                continue   # 环让位重入契约(§3-12):回分支顶重判
+            if m.top_overlay('star_tome') is not None:
+                self.branch_dispatch.append('0i_star_tome')
+                self.run_star_tome_pick(monkeypatch)
+                continue   # 环让位重入契约(§3-12):回分支顶重判
+            if m.phase == PHASE_SUPPLY:
+                self.branch_dispatch.append('0e1_supply')
+                self.run_supply_node(monkeypatch)
+                # 供给节点无战斗(settle_battle 供给域 = Δ池 hp 桶;
+                # 「补给是唯一无结算屏节点」,outer_loop §5 钩子表)
+                settlement = m.settle_battle('supply')
+                self.last_settlement = settlement
+                m.advance_node()
+                break
+            if m.phase in (PHASE_PREP, PHASE_PREP_SHOP_OPEN):
+                self.branch_dispatch.append('1_prep')
+                phase = self.run_prep_phase(monkeypatch)
+                if m.top_overlay('star_tome') is not None:
+                    # 开典籍让位:星徽四选一弹窗在场(§2.2 浮层分支先于
+                    # 备战双锚)→ 回分支顶交 0i 接管,不发射不收口;
+                    # 消费后恢复段同回合续跑。
+                    continue
+                launched = bool(phase['launched'] or phase['armed_launched'])
+                if not launched:
+                    from sr_od.application.currency_war.operations import (
+                        cw_loop,
+                    )
+                    ok, _detail = cw_loop.launch_prepared_battle(
+                        self._launch_host_stub(), self.ctx)
+                    launched = bool(ok)
+                if launched:
+                    self.branch_dispatch.append('2_battle_window')
+                    m.phase = PHASE_BATTLE   # 出战落地 → 画面切战斗窗
+                    settlement = m.settle_battle(
+                        m.state.node_type or 'battle')
+                    self.last_settlement = settlement
+                    m.phase = PHASE_SETTLE
+                    self.run_battle_wait(monkeypatch)
+                break
+            break   # 未知相位(防御):交调用方,不猜
+        self._branch_round_open = False
+        return {'dispatch': list(self.branch_dispatch),
+                'launched': launched, 'settlement': settlement,
+                'node': node}
+
     # ---- P1 段驱动 ----
 
     def run_p1(self, *, settle: bool = True) -> FakeP1Result:
@@ -754,6 +1364,13 @@ class FakeP1Run:
             self._seed_tracked_from_truth()
             self.last_shop_outcome = None
             inc = self.match.apply_income()
+            # 注入局 0e 承接(T-204):剧本日程在收入后压选卡浮层,浮层
+            # 先于备战(§2.2 行 70)——真 op 驱动消费(与分支序驱动同款
+            # 承接;无剧本/未命中 = 零动作,既有批路径零漂移)。承接先于
+            # 期初金快照:instant_gold 属选卡时点金,计入「决策时点金」
+            # 口径(与实机决策帧金同域,对拍可比)
+            if self.match.top_overlay('invest') is not None:
+                self.run_invest_pick(self._monkeypatch)
             gold_after_income = self.match.state.gold
             # 奖励节点带球(环境事件,rng 归发放股;参数账见 rules)
             if node == 'reward':
@@ -928,6 +1545,7 @@ def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
                 node_sequence: list[str] | None = None,
                 initial_hp: int | None = None,
                 initial_gold: int | None = None,
+                invest_profile: Any | None = None,
                 archive_dir_name: str = 'fake_p1') -> Iterator[FakeP1Run]:
     """装配 + 驱动 + 全链 teardown 的假局上下文(测试唯一入口形)。
 
@@ -940,7 +1558,8 @@ def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
     """
     root = tmp_path / archive_dir_name
     run = FakeP1Run(ctx, seed, node_sequence=node_sequence,
-                    initial_hp=initial_hp, initial_gold=initial_gold)
+                    initial_hp=initial_hp, initial_gold=initial_gold,
+                    invest_profile=invest_profile)
     run._monkeypatch = monkeypatch   # prep 相位补桩的延迟取用(批 2)
     # 根槽接通(生产形 API;先于任何 recorder 构造/写点)。三写根同点
     # 接指同一档案根(recorder/journal/决策帧;第三槽 = 三审二波 F2
@@ -960,6 +1579,16 @@ def fake_p1_run(ctx: SrTestContext, monkeypatch: Any, tmp_path: Path,
         # _RUN_CLOSED=True 不在任何 monkeypatch 清单内,散点补桩随簇扩员
         # 会再漏,统一走 state 正规复位入口(teardown 必达档,同三根槽)。
         tel_state.reset_run_state()
+        # 停机路径写点残留清零(N1 归因处置兜底,批 3):真 op 链路的生产
+        # 停机路径(rc.stop_running/finish_running,探针实证 =
+        # hook:exec_fail_mismatch;安灯本体已按「点击落空检测器假环境
+        # 结构性豁免」桩化,见 _install_stubs)会把 last_run_result 留在
+        # session 级 run_context 上,泄漏给全集后续 execute()(W209j 刹车
+        # 假红)。harness 拥有假局链路的副作用面,teardown 必达清零——
+        # conftest 守卫(警告+自动复位)是全集防线,这里是本链路的源头处置。
+        rc = getattr(ctx, 'run_context', None)
+        if rc is not None:
+            rc.last_run_result = None
         tel_state.set_recorder_replay_dir(None)
         op_journal.set_journal_dir(None)
         dfh.set_decision_frame_dir(None)

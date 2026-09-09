@@ -41,6 +41,7 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     LOSS_GOLD_BY_NODE,
     REWARD_BASE_GOLD_BY_ROUND,
     interest,
+    interest_cap_resolved,
     streak_gold,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
@@ -60,14 +61,24 @@ def income_for_round(st: GameState, rng: random.Random,
 
     - ``base``:BASE_INCOME;奖励轮查 REWARD_BASE_GOLD_BY_ROUND(成对
       改口径:奖励轮 streak 分量照发,base 查表补位,ADR-0439);
-    - ``interest``:min(息帽, gold//10)(息帽 = DEFAULT_INTEREST_CAP;
-      持卡注入的息帽覆写/flat 息归投资注入面,批 3 接入时随浮层栈进);
+    - ``interest``:min(息帽, gold//10) + flat 息。息帽/flat 单一源 =
+      kernel 聚合链(``aggregate_economy`` + ``interest_cap_resolved``,
+      ADR-0516 cap 三源归一/ADR-0598 息帽死链修复口径):已持投资
+      策略聚合取 cap 覆写(并持取宽 = ADR-0131,**0 是有效覆写**——
+      买断制息通道改写,判别只认 None,禁 ``or 缺省`` 真值折叠)与
+      flat 息(狸财经狸,与息帽无关);未持卡回 DEFAULT_INTEREST_CAP
+      = 与旧逐位相同(缺省主路径零漂移)。T-204 投资剧本迁装面,
+      注入母本 = engine_p1 收入注入段(w162_inject/ADR-0364 语义,
+      知识迁移非第二实现——表达式与引擎注入段同式);
     - ``streak``:补给轮零发(ADR-0439:实发零发放证据样本不足,条件
       升级挂账同源);奖励轮照发 streak_gold;连胜==0 且上一轮是败掉的
       战斗类节点 → 发 LOSS_GOLD_BY_NODE[prev_node](败轮金);其余 =
       streak_gold(streak);
     - ``event``:恒 0(奖励球金归批 2 收球域,机制申报见模块头——
-      引擎 EVENT_GOLD_BY_ROUND 为残差补偿闸,非机制真值,不继承)。
+      引擎 EVENT_GOLD_BY_ROUND 为残差补偿闸,非机制真值,不继承);
+    - ``invest``(**仅在有持卡且聚合 gold_per_node>0 时出现**的第四键,
+      engine_p1 账本行形状同构——缺省路径分解恒 3 键 + event,行形状
+      不变):gold_per_node(每节点给金,注册表聚合值)。
 
     ``rng`` 消费归发放股(调用方传入 FakeMatch._rng_grant):收入域加
     消费不位移日程/抽店/战斗三股的流位置(重放对账的分流前提)。本批
@@ -77,6 +88,16 @@ def income_for_round(st: GameState, rng: random.Random,
     node = st.node_type or 'battle'
     rn = st.round_num
     streak = st.streak or 0
+    # 持卡聚合(kernel 单一源;惰性 import 保模块导入轻,与文件内
+    # 数据模块同模式)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        aggregate_economy,
+    )
+    _held = list(st.active_strategies or [])
+    _agg = aggregate_economy(_held) if _held else None
+    _cap = (interest_cap_resolved(_agg.interest_cap_override)
+            if _agg is not None else DEFAULT_INTEREST_CAP)
+    _flat = _agg.interest_flat_per_node if _agg is not None else 0
     if node == 'supply':
         streak_amt = 0
     elif node == 'reward':
@@ -88,13 +109,16 @@ def income_for_round(st: GameState, rng: random.Random,
         streak_amt = LOSS_GOLD_BY_NODE[prev_node]
     else:
         streak_amt = streak_gold(streak)
-    return {
+    out = {
         'base': (REWARD_BASE_GOLD_BY_ROUND.get(rn, BASE_INCOME)
                  if node == 'reward' else BASE_INCOME),
-        'interest': interest(st.gold, DEFAULT_INTEREST_CAP),
+        'interest': interest(st.gold, _cap) + _flat,
         'streak': streak_amt,
         'event': 0,
     }
+    if _agg is not None and _agg.gold_per_node:
+        out['invest'] = _agg.gold_per_node
+    return out
 
 
 # ============================================================ prep 编排域(批 2)
@@ -168,3 +192,80 @@ def settle_streak(st: GameState, delta: int, node: str) -> tuple[int, bool]:
     if delta > 0:
         return (prev + 1) if prev > 0 else 1, False
     return (prev - 1) if prev < 0 else -1, True
+
+
+# ============================================================ 供给/典籍发放域(批 3)
+# 归属判据(方案 §2.2 装备发放行):供给节点 3 选 1(基础件池)+ 追加件
+# 通道的**校准层参数**单一源 = engine_p1 EQUIP_GRANT 校准族直调(import
+# 身份,禁复写第二源);选项/追加件抽选纯函数在此,转移机制在 FakeMatch
+# (需多槽联动:库存/座位/浮层栈)。机制原文锚:
+# - 供给选项池 = 基础件 8 名均匀池(engine_p1:204 区供给校准注原文
+#   「供给节点 3 选项采自基础件 8 名均匀池」);
+# - 追加件 = 每供给节点按 EQUIP_GRANT_BONUS_P 概率 +1 件,其中进阶占比
+#   EQUIP_GRANT_BONUS_ADV_SHARE(engine 校准段口径随迁);
+# - 典籍(星徽四选一选项)= 注册表星徽件(category='星徽')均匀抽 4,
+#   注册表单一源 = cw_equipment_data.EQUIPMENTS。
+#
+# 供给校准版本位:engine ``EQUIP_GRANT_CALIB_VERSION`` 语义随环境指纹
+# (FakeMatch.env_fingerprint)升级申报,不另立第二版本号。
+
+from sr_od.application.currency_war.sim.engine_p1 import (  # noqa: E402
+    EQUIP_GRANT_BONUS_ADV_SHARE,
+    EQUIP_GRANT_BONUS_P,
+)
+
+
+def supply_options(rng: random.Random, k: int = 3) -> list[str]:
+    """供给节点选项抽选(基础件 8 名均匀池;engine 供给校准段同构)。
+
+    ``rng`` = 发放股(FakeMatch._rng_grant):发放域加消费不位移
+    日程/抽店/战斗三股(重放对账的分流前提)。
+    """
+    from sr_od.application.currency_war.data.cw_synthesis import (
+        RESERVED_COMPONENTS,
+    )
+    bases = sorted(RESERVED_COMPONENTS)
+    return rng.choices(bases, k=k)
+
+
+def supply_bonus(rng: random.Random) -> str | None:
+    """供给节点追加件掷签(命中返装备名,未命中返 None)。
+
+    概率/构成单一源 = engine EQUIP_GRANT 校准族(本模块 import 身份);
+    进阶/基础构成 = ADV_SHARE 掷进阶,进阶件从注册表进阶层均匀抽,
+    基础件同 :func:`supply_options` 池。
+    """
+    from sr_od.application.currency_war.data.cw_equipment_data import (
+        EQUIPMENTS,
+    )
+    if rng.random() >= EQUIP_GRANT_BONUS_P:
+        return None
+    if rng.random() < EQUIP_GRANT_BONUS_ADV_SHARE:
+        advances = sorted(n for n, e in EQUIPMENTS.items()
+                          if e.category == '进阶')
+        return rng.choice(advances)
+    return supply_options(rng, k=1)[0]
+
+
+def tome_emblem_options(rng: random.Random, k: int = 4) -> list[str]:
+    """星徽秘典四选一选项抽选(注册表星徽件均匀抽 k;不重复)。
+
+    注册表单一源 = ``cw_equipment_data.EQUIPMENTS``(category='星徽',
+    22 张;equipment_mechanics.md §6)。选项名 = 星徽装备全名('X星徽');
+    rng 归发放股。
+    """
+    from sr_od.application.currency_war.data.cw_equipment_data import (
+        EQUIPMENTS,
+    )
+    emblems = sorted(n for n, e in EQUIPMENTS.items()
+                     if e.category == '星徽')
+    return rng.sample(emblems, k=min(k, len(emblems)))
+
+# ---- 商店直出 2★ 通道(T-122;机制层,非收入层)----
+
+#: 直出 2★ 每槽每帧升档概率(校准层·演练偏置):机制锚 = merge_mechanics
+#: §2.6/§2.7 实锤(商店直出 2★/3★ 存在,费用 ×3 实付;**频率「概率待实机
+#: 调研」零样本存档**)——本常量取值使机制在批量局可观测(装载设计 §3.2),
+#: **禁把该速率下频次读成真值估计**;真值随采集批(商店 2★ 直出频次)
+#: 回填并升 env_version。3★ 直出(×9)未建模。
+SHOP_DIRECT_OUT_2STAR_P: float = 0.05

@@ -54,3 +54,10 @@ test_cw_obs_chain.py::test_read_displayed_factions_real_fixtures
 test_cw_screens_entry.py::TestCwEntryStartFlow::test_jade_detail_popup_closed_then_reaches_prep
 test_cw_tools_exec_channel.py::TestFixtureInteraction::test_prep_frame_to_plan
 
+# T-204 投资剧本迁装(2026-09-10:三条实测 call+setup ≥2s——锚批 3.90s/装配锁 setup 2.39s/0e 分支锁 2.30s;
+# 真op驱动与注入批同桶先例 = fake_p1 域既有慢锁)
+test_cw_invest_injection.py::test_injected_batch_anchor_schedule_effects_bands
+test_cw_invest_injection.py::test_invest_profile_schedules_overlay_and_pick_lands_held_card
+test_cw_invest_injection.py::test_branch_order_drives_invest_pick_op
+
+test_cw_ab_carrier.py::TestAbCarrier::test_paired_two_seeds_structure_and_counterfactual
