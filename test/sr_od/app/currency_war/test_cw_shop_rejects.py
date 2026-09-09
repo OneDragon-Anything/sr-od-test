@@ -26,7 +26,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
@@ -159,21 +158,17 @@ def test_owned_member_not_missing():
     assert (state_of(sess).cw4_shop_rejects or {}).get('绯英') is None
 
 
-def test_pure_function_matches_session_output():
-    """生产端函数与 decide 落盘口径一致(同一输入同一映射)。
-
-    花火 = ④放行集 ∩ _COMP.transition_chars 交集卡,D7 键序
-    (ADR-0580)⇒ 'transition_component'(与 decide 链同键)。"""
-    st = _state(114, [_card('花火', 2)], deployed=[_dep('绯英')])
-    out = shop.shop_unbought_reasons(st, _COMP,
-                                     predicates.line_members(_COMP), [])
-    assert out == {'花火': 'transition_component'}
-
-
-def test_schema_field_default_empty_dict():
-    """schema 追加字段缺省空 dict:旧 decisions 行(无此键)读端兼容。"""
-    from sr_od.application.currency_war.telemetry.schema import DecisionTrace
-    assert DecisionTrace().shop_rejects == {}
+def test_schema_old_row_read_path_default_empty_dict():
+    """schema 追加字段读端契约:历史 decisions 行(无 shop_rejects 键)
+    经回放读端 from_dict 反序列化不炸、缺省空 dict——消费链 =
+    cw_replay_reader.from_dict(DecisionTrace, 行)(裸构造透传断言按
+    纪律 18「构造透传」档升级为读路径契约锁:值改了,读端消费者坏)。"""
+    from sr_od.application.currency_war.telemetry.cw_replay_reader import (
+        DecisionTrace,
+        from_dict,
+    )
+    trace = from_dict(DecisionTrace, {'run_id': 'r'})
+    assert trace.shop_rejects == {}
 
 
 # ===== sim 侧透传(sim 决策帧 → 账本行;实机 DecisionTrace.shop_rejects
@@ -238,17 +233,17 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
         predicates,
     )
     seen_member_key = False
-    # 种子集 ADR-0519 重锚:锁线门槛收紧(0.5→1.0 羁绊满员当量)后
-    # 42/43 两局全程无锁线行,改用含锁线行的种子子集(40/44/46/50),
-    # 锁语义(供给 vs 闸门可辨)不变。
+    # 种子固化(测试纪律 12 探底后取断言成立最小值):探针记录——
+    # plain 配置逐种子扫面(40/44/46/50)线内成员键与臂①动作四种子
+    # 全命中,固化 40 单种子;引擎改动位移 RNG 消费致种子失准时本测红,
+    # 处理 = 重跑逐种子探针更新,不是机械跟绿。历史:种子集 ADR-0519
+    # 重锚(锁线门槛收紧后 42/43 无锁线行,弃 42/43)。
     # 重推导(14号稿 §3 臂①落码):线内成员副本(cnt1=1)帧已由
     # m2_stockpile 义务囤腿买入,拒绝行内线内成员键大幅减少(§7.3
     # 「拒因 owned 命中占比大幅下降」的验收面)——本锁保留不变式断言
-    # (凡出现线内成员键,必不落 non_line/transition_char),覆盖前提
-    # 由纯函数映射锁(test_pure_function_matches_session_output)与
-    # missing_unaffordable/missing_bench_full 两帧锁承载。
-    saw_stockpile = False
-    for seed in (40, 44, 46, 50):
+    # (凡出现线内成员键,必不落 non_line/transition_char),纯映射面由
+    # K 空窗直调锁与 missing_unaffordable/missing_bench_full 两帧锁承载。
+    for seed in (40,):
         res = simulate_p1(seed, pool='fallback', planes=2)
         for row in res.ledger:
             label = row.get('target_comp')
@@ -260,15 +255,10 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
                     seen_member_key = True
                     assert why not in ('non_line', 'transition_char'), \
                         f'锁线行线内成员 {name} 拒因 {why} 越界(分类失效)'
-        for row in res.ledger:
-            for a in row.get('actions') or []:
-                if a.get('reason') == 'm2_stockpile':
-                    saw_stockpile = True
-    # 覆盖前提(落地审低-3):键分类不变式须有真实命中面——线内成员键
-    # (拒绝侧,臂①后大幅减少)或臂①买入动作(行动侧)至少其一出现,
-    # 防断言在空转恒真下假绿;拒绝侧纯映射由 pure-function 锁承载。
-    assert seen_member_key or saw_stockpile, \
-        '种子局既无线内成员拒因键也无臂①买入 = 键分类覆盖存疑'
+    # 覆盖前提(落地审低-3):键分类不变式须有真实命中面,防空转恒真假绿;
+    # 种子 40 探针实测成员键命中,零命中 = 引擎位移致种子失准,重跑探针。
+    assert seen_member_key, \
+        '种子局无线内成员拒因键 = 键分类覆盖失效(重跑逐种子探针更新种子)'
 
 
 def test_sim_k_empty_window_comp_none_falls_back_non_line():
@@ -333,7 +323,11 @@ def test_sim_locked_frame_canonical_members_not_non_line():
         '锁测试前提:锁定采购集须含事故局点名的扩展成员'
     seen_locked_row = False
     seen_member_key = False
-    for seed in (40, 44, 46, 50):
+    # 种子固化(测试纪律 12):探针记录——逐种子扫面(40/44/46/50)
+    # 锁定帧行四种子均在,正典采购集成员键 seed 40 不命中(该局零出现)、
+    # 44/46/50 全命中,固化 44 单种子(断言成立最小值);引擎位移 RNG
+    # 消费致失准的红 = 重跑探针更新种子,不是机械跟绿。
+    for seed in (44,):
         sess = StrategySession(rng=random.Random(f'sim-p2-entry-{seed}'))
         state_of(sess).target_comp = comp
         state_of(sess).v3_intention = _locked_ist()

@@ -99,11 +99,11 @@ class TestSeeleSupportFormula:
                         _bc('符玄', 3), _bc('银狼', 4)])
         assert ci._p1_system_support(st)[ci.SEELE_SYSTEM] == 1.0
 
-    def test_mixed_pools_full_support(self):
-        """希儿 + 两池各 1 件 = 1.0:量/贝两腿同时达档,OR-max 语义下
-        与单腿达档同值(双腿齐不叠加、不超 1.0)。"""
-        st = _p1_state([_bc('希儿', 0), _bc('缇宝', 1), _bc('桑博', 2)])
-        assert ci._p1_system_support(st)[ci.SEELE_SYSTEM] == 1.0
+    # test_mixed_pools_full_support 已删(覆盖对账):两池各 1 件格
+    # (c_量,c_贝)=(2,2) 与两腿单测 (2,1)/(1,2) 走同一 min-max 代码
+    # 路径,判别力无增量(判别力检验法:字面不同落在无判别力分支上
+    # 也是重复);两腿对称达档由 test_seele_plus_one_amplifier 的
+    # 缇宝/桑博双臂承载,封顶由上一格承载。
 
     def test_no_seele_amplifiers_not_independent(self):
         """无希儿 + 任意多放大器 = 0(不独立,§6.3-4 第 4 格第 4 项):

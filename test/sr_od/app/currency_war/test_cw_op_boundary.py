@@ -12,8 +12,11 @@
 
 测试纪律:journal 重定向 tmp_path;kernel/op 缝替身 = 模块属性替换(与
 test_cw_launch_arbitrage 行为锁同缝位)。既有 test_cw_dispatch_wrapper 的
-行为锁面不在此重复;仅保留一条 ok 对照臂证明 error 断言有牙(该文件
-fixture 在遥测面改动后破损,修复后按重复断言纪律并回)。
+行为锁面不在此重复——ok 路径对照臂已按重复断言纪律并回其
+test_wrapper_journal_pair_and_outcome(该文件 fixture 修复后执行,ok 面
+由彼处承载);本文件只留异常注入两臂。仲裁段六测辖 journal 行流面,与
+test_cw_launch_arbitrage 的 report/counter 行为面互补双留(逐对亲读:
+彼处零 journal 断言,此处零 report/counter 断言)。
 """
 from __future__ import annotations
 
@@ -61,19 +64,6 @@ def _op_rows(path: Path, op_name: str) -> list[dict]:
 
 
 # ==================== 包装异常安全(异常注入红测) ====================
-
-
-def test_wrapper_ok_path_control(journal: Path, monkeypatch) -> None:
-    """对照臂:正常路径 enter/exit 成对且 outcome='ok'——证明 error 断言
-    非恒真(error 行只出现在异常路径)。"""
-    op = _bare_loop(monkeypatch)
-    op._dispatch_screen_op(
-        SimpleNamespace(execute=lambda: SimpleNamespace(success=True,
-                                                        status='stub')),
-        journal_name='位面过渡', frame_tag=None, wait=0)
-    rows = _op_rows(journal, '位面过渡')
-    assert [r['event'] for r in rows] == ['enter', 'exit']
-    assert rows[1]['outcome'] == 'ok'
 
 
 def test_wrapper_execute_exception_still_emits_exit(
