@@ -811,11 +811,14 @@ class TestKGapFallback:
             st, state_of(sess).v3_intention) != cw_intention.hoard_target_set(
             st, state_of(sess).v3_intention).char_targets   # 两带集合确异(锁锚有效)
 
-    def test_p2plus_unlocked_fallback_hoard_fifth(self):
-        """③P2+ 带(FIX_REVIEW R3②,场景 D 复验):plane=2、
-        target_comp=None ⇒ 回退走 hoard_target_set 分带(unlocked=
-        绯英⑤兜底采购集),``shop_k_fallback_p2plus`` 计数,兜底线成员
-        (爻光 ∈ 绯英欢愉 core)经 M2 发射;不再零买入。"""
+    def test_p2plus_unlocked_fallback_three_arm(self):
+        """③P2+ 带(P86 三臂判据重推;原「绯英⑤兜底采购集经 M2 发射」
+        锁钉的语义已被四面退役表①面取代——单线硬编码囤货方向无判据位):
+        plane=2、target_comp=None ⇒ 回退走三臂判据(本帧机器判死形态 =
+        甲臂空 ⇒ 合法空集带来源证据,``shop_no_target_hold_default`` 分键,
+        历史键 ``shop_k_fallback_p2plus`` 零计数);在售绯英档成员爻光
+        (覆盖数 ≥ 2 枢纽)经乙臂发射位获取(P35 病灶 D3 接口),不再落
+        m2_line_member 错向囤积。"""
         st = _state(gold=80, level=5)
         st.round_num = 10
         st.plane = 2
@@ -823,10 +826,14 @@ class TestKGapFallback:
         sess = self._gap_session()
         state_of(sess).v3_intention.phase = 'unlocked'
         acts = _decide(st, sess)
-        assert state_of(sess).cw4_counters.get('shop_k_fallback_p2plus', 0) >= 1
-        assert 'shop_k_fallback_p1_gap' not in state_of(sess).cw4_counters
+        ct = state_of(sess).cw4_counters
+        assert 'shop_k_fallback_p2plus' not in ct   # 合法空不采历史键(禁混桶)
+        assert ct.get('shop_no_target_hold_default', 0) >= 1
+        assert ct.get('shop_no_target_arm_a_dead_defer', 0) >= 1
         assert any(isinstance(a, BuyCard) and a.card.name == '爻光'
-                   and a.reason == 'm2_line_member' for a in acts)
+                   and a.reason == 'hub_option_buy' for a in acts)
+        assert not [a for a in acts if isinstance(a, BuyCard)
+                    and a.reason == 'm2_line_member']
 
     def test_locked_line_unchanged(self):
         """②非空窗行为不变(锁线后):target_comp 非 None ⇒ K 投影=

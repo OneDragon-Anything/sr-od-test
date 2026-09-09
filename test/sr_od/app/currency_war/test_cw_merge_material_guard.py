@@ -72,9 +72,12 @@ def _state(bench: list[BenchChar], deployed: list[BenchChar],
 
 
 def _fallback_k(state: GameState) -> tuple[str, ...]:
-    """案发帧真实 k_members(K 空窗回退非空集,R2-1):禁用 k_members=()
-    假设构造——派生单一源 = cw_intention.k_empty_window_fallback P2+
-    带(FALLBACK_COMP_NAME 采购集)。"""
+    """案发帧真实 k_members——派生单一源 = cw_intention.k_empty_window_
+    fallback P2+ 带。P86 落码批重推(证明批 §4.6:p2plus 空集合法):
+    回退 = 三臂判据输出,本判死帧(机器门全灭)产**合法空集**(丙臂守息
+    帧)——原 R2-1「禁 k_members=() 假设构造」禁的是无出处的假设,现在
+    的空集是单一源评估真值,且让守卫锁更锐:zero_overlap 对空集全放,
+    燃料候选唯一拦截 = merge 守卫本体。"""
     k, token = k_empty_window_fallback(state, IntentionState())
     assert token == 'p2plus'
     return tuple(sorted(k))
@@ -249,7 +252,7 @@ class TestReplayCaseFrames:
                     _bc('刻律德菈', slot=4)]
         st = _state(bench, deployed)
         k = _fallback_k(st)
-        assert k and '藿藿' not in k
+        assert '藿藿' not in k   # P86 判死帧:回退合法空集,成员资格零豁免
         assert mandate.fuel_sell_candidates(bench, k, state=st) == []
         slots, _ = crit_sell.sell_for_interest(24, bench, 5, k, state=st)
         assert slots == []                          # 不再指向 bench_idx=1

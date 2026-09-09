@@ -314,10 +314,12 @@ class TestL2AllArmsSoldFace:
             monkey.undo()
 
     def test_launch_map_exhaustive_over_emission_sites(self):
-        """14 键穷举断言(ADR-0611 §3-4 后半;臂计数对现值校正):
+        """15 键穷举断言(ADR-0611 §3-4 后半;臂计数对现值校正):
         shop 域全部 _emit_buy 发射位的 reason 字面量 ∈ LAUNCH_CAUSE_
-        BY_ARM(14 键,死金臂的显式传因三分 ⊆ LAUNCH_CAUSES)——映射
-        表 = 臂全集的地基由本源扫描锁钉死;新臂未映射 = 发射位红。"""
+        BY_ARM(15 键,死金臂的显式传因三分 ⊆ LAUNCH_CAUSES)——映射
+        表 = 臂全集的地基由本源扫描锁钉死;新臂未映射 = 发射位红。
+        P86 重推(T-177):+hub_option_buy(乙臂枢纽期权,hold 类,
+        出处 = p86-proof-batch.md §3.2/§4.2;映射行随批登记)。"""
         src = (_PKG / 'shop.py').read_text(encoding='utf-8')
         calls = re.findall(r"_emit_buy\((?:[^()']|'[^']*')*\)", src)
         reasons: set[str] = set()
@@ -330,9 +332,9 @@ class TestL2AllArmsSoldFace:
             'press_buy_deployable', 'ev_buy', 'core_single_card_buy',
             'core_single_card_buy:unlocked', 'transition_component_buy',
             'dead_gold_press_buy', 'fuel_filler_stall',
-            't3_unlocked_hemostat',
+            't3_unlocked_hemostat', 'hub_option_buy',
         }, '映射表漂移:先对照 ADR-0585 §2 与 ADR-0611 §2 重推,禁机械跟绿'
-        assert len(sell_gate.LAUNCH_CAUSE_BY_ARM) == 14
+        assert len(sell_gate.LAUNCH_CAUSE_BY_ARM) == 15
         assert reasons <= set(sell_gate.LAUNCH_CAUSE_BY_ARM), \
             f'发射位存在未映射 reason: {sorted(reasons - set(sell_gate.LAUNCH_CAUSE_BY_ARM))}'
         assert set(sell_gate.LAUNCH_CAUSE_BY_ARM.values()) \

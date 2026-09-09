@@ -233,30 +233,51 @@ class TestPrecedentPredicates:
         assert ct['criteria_contract_violation:refresh.r1_start'] == 1
 
     def test_k_projection_domain_covered_derivable(self):
-        """第三病灶(K 空窗回退)前提(可核验派生形态):k_target 非 None
-        (锁线世界)或供给缺帧(保守侧)放行;供给在场而回退实解析空集
-        (「回退字面量空元组但保留声明」复发形态)弃权+计数。"""
+        """第三病灶(K 空窗回退)前提(可核验派生形态+P86 带维度):
+        k_target 非 None(锁线世界)或供给缺帧(保守侧)放行;供给在场而
+        回退实解析空集 = 「回退字面量空元组但保留声明」复发形态,p1 带
+        弃权+计数;p2plus 带空集合法但必须携带三臂判据来源证据
+        (P86 证明批 §4.6-4 六例形态,原四例随批重推)。"""
         ct: dict = {}
-        # 锁线世界:无回退义务
+        # ① 锁线世界:无回退义务
         assert contracts.ensure_contract(
             ('shop', 'k_projection'),
             contracts.ContractCtx(k_target=object()), ct)
-        # 空窗世界+供给在场+回退实解析非空
+        # ② 空窗世界+供给在场+回退实解析非空
         assert contracts.ensure_contract(
             ('shop', 'k_projection'),
             contracts.ContractCtx(k_target=None, k_fallback_available=True,
                                   k_fallback_resolved=frozenset({'a'})), ct)
-        # 供给缺帧:保守侧不回退(合法 fail 方向)
+        # ③ 供给缺帧:保守侧不回退(合法 fail 方向)
         assert contracts.ensure_contract(
             ('shop', 'k_projection'),
             contracts.ContractCtx(k_target=None, k_fallback_available=False,
                                   k_fallback_resolved=None), ct)
-        # 供给在场而回退解析空集=复发形态
+        # ④ 供给在场而回退解析空集(p1 带语义,band 未传按保守)= 复发形态
         assert not contracts.ensure_contract(
             ('shop', 'k_projection'),
             contracts.ContractCtx(k_target=None, k_fallback_available=True,
                                   k_fallback_resolved=frozenset()), ct)
         assert ct['criteria_contract_violation:shop.k_projection'] == 1
+        # ⑤ P86:p2plus 带空集 + 判据臂来源证据 → 放行(丙臂守息帧)
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            K_FALLBACK_SOURCE_THREE_ARM,
+        )
+        ct2: dict = {}
+        assert contracts.ensure_contract(
+            ('shop', 'k_projection'),
+            contracts.ContractCtx(k_target=None, k_fallback_available=True,
+                                  k_fallback_resolved=frozenset(),
+                                  k_fallback_band='p2plus',
+                                  k_fallback_source=K_FALLBACK_SOURCE_THREE_ARM),
+            ct2)
+        # ⑥ P86:p2plus 带空集无来源证据 = 复发守卫不松动
+        assert not contracts.ensure_contract(
+            ('shop', 'k_projection'),
+            contracts.ContractCtx(k_target=None, k_fallback_available=True,
+                                  k_fallback_resolved=frozenset(),
+                                  k_fallback_band='p2plus'), ct2)
+        assert ct2['criteria_contract_violation:shop.k_projection'] == 1
 
     def test_unknown_key_and_predicate_error_fail_closed(self, monkeypatch):
         """fail-closed:未登记键与谓词异常均弃权+计数,不抛异常。"""
