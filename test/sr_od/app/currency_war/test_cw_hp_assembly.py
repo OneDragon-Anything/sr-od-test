@@ -1,22 +1,46 @@
-"""T-100 批2 锁:v9 装配统一件(ADR-0577)——hp 变化事件步进链 + 段界重锚
-+ 合成行一律退出步进链 + 终局腿 + ts 三边界 + 真值对账 + 写端 conf 诚实性。
+"""HP 档案装配与血购写点主题文件(ADR-0577 两道独立的门,禁合断言)。
 
-验收单甲(025608 旧档 v9 重装配诚实预期)与 182456 对照的机制等价形态
-在各用例 docstring 标注;双档案实装读数见 ADR-0577 §验证。
+合并出处(2026-09-09 CUT2 合并批③,自 test_cw_hp_pay 整体并入;断言面
+原样迁入,装配门与写点/隔离/grep 守卫门保持语义分节——写点隔离测与
+grep 守卫是两道独立的门,midsize3 驳回在案,合并不改变门的独立性):
+
+- 装配门(⑧ 节前,T-100 批2):v9 装配统一件——hp 变化事件步进链 +
+  段界重锚 + 合成行一律退出步进链 + 终局腿 + ts 三边界 + 真值对账 +
+  写端 conf 诚实性。验收单甲(025608 旧档 v9 重装配诚实预期)与
+  182456 对照的机制等价形态在各用例 docstring 标注;双档案实装读数见
+  ADR-0577 §验证。
+- 写点门(⑧ 节,T-100 批1):hp_pay 血购执行回执写点——写点 =
+  prep_actions.record_hp_pay_event(两通道共用唯一实现):店通道
+  LevelUpOp.execute(单击=一行)与 prep 通道 _level_up(连点循环内
+  每击一行),粒度 = 击数(F2 裁决,判读口径:行数=击数,总量=
+  Σhp_delta);mode 与判定同源注册表派生(F8):active_strategies 中
+  xp_buy_hp_cost>0 的卡;非 active(金本位升级)→ 零行。
+- 隔离门(⑨ 节,F6-2/§1.3):hp_pay 行纯观测追加写,禁入决策输入
+  ——写点零状态突变锁。
+- grep 守卫门(⑩ 节,F7):键在 strategies/impl 决策面零命中,手法 =
+  ADR-0571 test_disclosure_fields_not_consumed_by_decision_modules。
 """
 from __future__ import annotations
 
 import json
-from pathlib import Path as _P
+import re
+from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import GameState
+import pytest
+
+from one_dragon.base.geometry.point import Point
+from sr_od.application.currency_war.kernel.cw_state import GameState, LevelUp
+from sr_od.application.currency_war.prep_actions import (
+    PrepActionExecutor,
+    record_hp_pay_event,
+)
 from sr_od.application.currency_war.telemetry import match_archive as arch
 from sr_od.application.currency_war.telemetry import recorder as cw_recorder
 
 # ===== 源流构造(手法沿用 test_cw_telemetry_archive 既有先例) =====
 
-def _write_jsonl(d: _P, name: str, rows: list[dict]) -> None:
+def _write_jsonl(d: Path, name: str, rows: list[dict]) -> None:
     d.mkdir(parents=True, exist_ok=True)
     with (d / name).open('w', encoding='utf-8') as f:
         for r in rows:
@@ -49,7 +73,7 @@ def _ev(run_id, plane, rnd, ts, hp_delta=-6, mode='奋斗协议', **kw):
     return base
 
 
-def _build(rd: _P) -> dict:
+def _build(rd: Path) -> dict:
     return arch.build_archive(rd, arch.assign_games(rd)[0])
 
 
@@ -60,7 +84,7 @@ def _ln_at(a: dict, plane: int, rnd: int) -> list[dict]:
 
 # ===== ① 事件步进链(单乙同构:66 →事件−24→ 42 →结算 44) =====
 
-def test_events_advance_cursor_no_phantom_entry(tmp_path: _P):
+def test_events_advance_cursor_no_phantom_entry(tmp_path: Path):
     """单乙形态锁(§1.4 测试2/测试5):66 → hp_pay×4(−24)→ 结算 44
     → 幻影败场条目消失(游标 42,结算腿 +2 无条目);hp_events 显影 4 行;
     真值对账:modeled 期望 42 vs 结算 44 偏差 +2 → hp_pay_defects 落一行
@@ -95,7 +119,7 @@ def test_events_advance_cursor_no_phantom_entry(tmp_path: _P):
     assert by_key[(1, 2)]['hp'] == 44
 
 
-def test_events_matched_no_defect(tmp_path: _P):
+def test_events_matched_no_defect(tmp_path: Path):
     """真值对账吻合 → 零 defect 行(§1.4 测试5 反支):modeled 全额解释
     血变时 hp_pay_defects 保持空。"""
     rd = tmp_path / 'replay'
@@ -118,7 +142,7 @@ def test_events_matched_no_defect(tmp_path: _P):
 
 # ===== ② 段界重锚(025608 形态①:游标 61 → 重锚 37 → 战斗腿 −19) =====
 
-def test_segment_boundary_reanchor_minus19(tmp_path: _P):
+def test_segment_boundary_reanchor_minus19(tmp_path: Path):
     """B 件主用例(§2.4 测试1):段1 尾无事件 hp 61、段2 恢复帧 37 + 结算
     18 → 修前(v8)跨段膨胀 −43;v9 重锚 → 战斗腿 −19 + 边界差 −24 显影
     (unexplained_delta/consumed_by_chain 进 resume_reconciliation,不进
@@ -151,7 +175,7 @@ def test_segment_boundary_reanchor_minus19(tmp_path: _P):
     assert by_key[(2, 1)]['hp_delta'] == -19        # 段内化(读端口径变化)
 
 
-def test_events_explain_boundary_reanchor_noop(tmp_path: _P):
+def test_events_explain_boundary_reanchor_noop(tmp_path: Path):
     """A 联动形态(§2.4 测试4,防双计):段1 尾事件把游标推到 resume 值
     (61−24=37)→ 重锚 no-op(零差)、无边界差记录、对账吻合零 defect
     ——同值不同路径与 test_segment_boundary_reanchor_minus19 分立锁。"""
@@ -179,7 +203,7 @@ def test_events_explain_boundary_reanchor_noop(tmp_path: _P):
     assert a['hp_pay_defects'] == []        # 结算 18 == 期望游标 18,吻合
 
 
-def test_resume_unreadable_no_reanchor(tmp_path: _P):
+def test_resume_unreadable_no_reanchor(tmp_path: Path):
     """诚实退化锁(§2.4 测试3):恢复帧 hp 不可读(readable=False)→ 不锚,
     游标跨段携带,行为与 v8 一致(−43),无边界差记录。"""
     rd = tmp_path / 'replay'
@@ -204,7 +228,7 @@ def test_resume_unreadable_no_reanchor(tmp_path: _P):
 
 # ===== ③ 单段局逐字节退化(§2.4 测试2) =====
 
-def test_single_segment_degradation_v8_parity(tmp_path: _P):
+def test_single_segment_degradation_v8_parity(tmp_path: Path):
     """单段局(无事件/无合成行/无重锚形态/win 局)与 v8 输出逐字节一致:
     loss_nodes 条目集与序、rounds、resume_reconciliation 空表;加法列空、
     无终局腿。结算腿序 = key 序(ts 同序),帧回落轮条目形状同 v8 契约
@@ -237,7 +261,7 @@ def test_single_segment_degradation_v8_parity(tmp_path: _P):
 
 # ===== ④ 合成行一律退出步进链(§3.4 测试4,双实证案各一锁) =====
 
-def test_synthetic_conf1_stale_row_excluded_025608_case(tmp_path: _P):
+def test_synthetic_conf1_stale_row_excluded_025608_case(tmp_path: Path):
     """025608 p2r4 案(§3.4 测试1 合并;C1 回落守卫落地后重推):陈旧合成行
     18@conf=1.0 不入链,同轮 ts 末行 loss_page 0@conf=0.0 作回落源行同守卫
     (conf 门)→ 该轮零回落条目,游标保真 1;死亡由 runs.final_hp=0 结构
@@ -270,7 +294,7 @@ def test_synthetic_conf1_stale_row_excluded_025608_case(tmp_path: _P):
     assert by_key[(2, 4)]['hp'] == 0        # rounds 槽显示行为不变
 
 
-def test_synthetic_row_no_cursor_advance_182456_case(tmp_path: _P):
+def test_synthetic_row_no_cursor_advance_182456_case(tmp_path: Path):
     """182456 p2r4 案(§3.4 测试4 第二实证):鬼值 45@conf=1.0 不推进游标
     → 战斗腿 = 12−31 = −19(v8 语义重装配将捏造 −33);前位 p1r6 同构
     合成行(86)同样不入链 → 不捏造 v8 幻影 −2 条目。兼承 telemetry_
@@ -308,7 +332,7 @@ def test_synthetic_row_no_cursor_advance_182456_case(tmp_path: _P):
     assert by_key[(1, 6)]['hp'] == 90 and by_key[(1, 6)]['hp_delta'] == 2
 
 
-def test_pure_supply_round_synthetic_only_fallback_guarded(tmp_path: _P):
+def test_pure_supply_round_synthetic_only_fallback_guarded(tmp_path: Path):
     """T2 形态锁(纯补给轮:唯一 outcome=合成行,ADR-0577 §3.2 声明在
     C1 回落守卫落地后的补执):补给节点天然无结算屏,某轮唯一结算行是
     合成行(零决策帧)→ 修前回落路以快照鬼值出幻影条目并推进游标(与
@@ -349,7 +373,7 @@ def test_pure_supply_round_synthetic_only_fallback_guarded(tmp_path: _P):
 
 # ===== ⑤ ts 三边界(F5) =====
 
-def test_same_second_event_precedes_settlement(tmp_path: _P):
+def test_same_second_event_precedes_settlement(tmp_path: Path):
     """F5① 同秒 tiebreak:事件与结算同秒 → 事件先于结算(备战先于战斗的
     物理先序;事件物料前置拼接 + 稳定排序)。事件吸收后结算腿 0,不出条目
     (若序反则会出 −6 伪条目)。"""
@@ -371,7 +395,7 @@ def test_same_second_event_precedes_settlement(tmp_path: _P):
     assert a['hp_pay_defects'] == []        # 期望 44 == 实际 44,吻合
 
 
-def test_missing_ts_rows_excluded_from_chain(tmp_path: _P):
+def test_missing_ts_rows_excluded_from_chain(tmp_path: Path):
     """F5② 缺 ts 行守卫:缺 ts 结算行/事件行不进步进链(空串排序键会错位
     到全局最前);缺 ts 结算行的步进资格让位回落(条目仍按轮槽语义产出,
     ts=None 同 v8 契约);缺 ts 事件不推进游标(结算腿证明:−10 而非 −4)。"""
@@ -398,7 +422,7 @@ def test_missing_ts_rows_excluded_from_chain(tmp_path: _P):
 
 # ===== ⑥ 终局腿(§3.4 测试2/3) =====
 
-def test_endgame_leg_without_death_row(tmp_path: _P):
+def test_endgame_leg_without_death_row(tmp_path: Path):
     """C-主独立验收:loss 局无死亡结算行(硬崩形态)→ runs.final_hp=0
     结构真值兜底出 endgame_final 条目(round=末 key,delta=−游标);不被
     回落路径遮蔽(末轮可信结算行在场,游标停 12)。"""
@@ -422,7 +446,7 @@ def test_endgame_leg_without_death_row(tmp_path: _P):
         'outcome_source': 'runs.final_hp', 'ts': None}]
 
 
-def test_win_and_stopped_zero_endgame_leg(tmp_path: _P):
+def test_win_and_stopped_zero_endgame_leg(tmp_path: Path):
     """win 局零终局腿(§3.4 测试3)+ abandoned/stopped 同(非 loss 结局
     无 runs.final_hp=0 结构保证,不冒领);游标 None(全程无可锚行)诚实
     跳过(无 delta 可算)。"""
@@ -498,3 +522,163 @@ class TestSupplyConfHonesty:
         cap = self._run(monkeypatch, GameState(hp=18, hp_readable=False),
                         last_hp_real_node=13, last_hp_t=12)
         assert cap[0]['outcome'].hp_confidence == 0.0
+
+
+# ===== ⑧ 血购写点回执(合并批③自 test_cw_hp_pay 迁入;F2 粒度/F8 mode
+# ===== 注册表派生;两通道共用唯一写点实现)=====
+
+def _hp_session(active: list[str] | None = None) -> SimpleNamespace:
+    """血购回执写点依赖面桩:active_strategies + last_state(其余无关)。"""
+    return SimpleNamespace(
+        active_strategies=list(active or []),
+        last_state=GameState(plane=2, round_num=1, hp=61, gold=70),
+    )
+
+
+@pytest.fixture()
+def captured_exo(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    """捕获 record_exogenous 调用(写点经模块属性消费,patch 即全捕)。"""
+    rows: list[dict] = []
+
+    def _cap(round_num, kind, detail='', state=None, choice=None):
+        rows.append({'round_num': round_num, 'kind': kind,
+                     'detail': detail, 'choice': choice})
+
+    monkeypatch.setattr(cw_recorder, 'record_exogenous', _cap)
+    return rows
+
+
+# ===== 单元:店通道(prep_actions LevelUpOp 走 cw_shop_action_ops) =====
+
+def _shop_env(session, ledger=None):
+    """ShopExecEnv 依赖面桩(LevelUpOp.execute 只触 op/ledger/match/state)。"""
+
+    from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+        LevelUpOp,
+        ShopExecEnv,
+        ShopVisitLedger,
+    )
+
+    op = SimpleNamespace(ctx=SimpleNamespace(
+        controller=SimpleNamespace(click=lambda p: None)))
+    env = ShopExecEnv(
+        op=op, match=SimpleNamespace(session=session), config=None,
+        click_pts=[], level_btn=Point(1, 2), refresh_btn=Point(3, 4),
+        ledger=ledger or ShopVisitLedger(), state=GameState())
+    return LevelUpOp(LevelUp(cost=4)), env
+
+
+def test_shop_channel_receipt_per_click(captured_exo, monkeypatch):
+    """店通道协议 active → execute 一击一行,字段全锁(F8 mode=注册表派生
+    卡名;plane/round 显式入 choice,currency/hp_delta/clicks/basis 定值)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops as so
+    monkeypatch.setattr(so.time, 'sleep', lambda s: None)   # 动画等待桩
+    op, env = _shop_env(_hp_session(['奋斗协议']))
+    assert op.execute(env) is True
+    rows = [r for r in captured_exo if r['kind'] == 'hp_pay']
+    assert len(rows) == 1                    # 单动作形态 = 恰一击一行
+    assert rows[0]['choice'] == {
+        'plane': 2, 'round_num': 1, 'currency': 'hp', 'hp_delta': -6,
+        'mode': '奋斗协议', 'clicks': 1, 'basis': 'modeled'}
+    assert rows[0]['round_num'] == 1         # 顶层 round 同步携带(读端兼容)
+
+
+def test_shop_channel_inactive_zero_rows(captured_exo, monkeypatch):
+    """非血本位协议(无 xp_buy_hp_cost 卡 active)→ 零行 no-op(金本位
+    升级不产 hp_pay;mode 判定与 mode 值同源注册表,零行为面遗漏)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops as so
+    monkeypatch.setattr(so.time, 'sleep', lambda s: None)
+    op, env = _shop_env(_hp_session(['淘金客']))   # 在册卡但非血本位
+    assert op.execute(env) is True
+    assert [r for r in captured_exo if r['kind'] == 'hp_pay'] == []
+
+
+def test_prep_channel_four_clicks_four_rows(captured_exo, monkeypatch):
+    """F2 粒度锁:prep 通道连点 4 击 → 4 行(每击已实际扣血,验证成功前
+    落行);同批 level_up 事件行不混入 hp_pay 计数。"""
+    import sr_od.application.currency_war.prep_actions as pa
+    ex = object.__new__(PrepActionExecutor)
+    sess = _hp_session(['奋斗协议'])
+    sess.effect_inventory = SimpleNamespace(on_level_up=lambda: None)
+    sess.last_level_obs = None
+    ex._ctx = SimpleNamespace(
+        cw_match=SimpleNamespace(session=sess),
+        controller=SimpleNamespace(mouse_move=lambda p: None,
+                                   click=lambda p: None))
+    ex._op = SimpleNamespace(screenshot=lambda: None,
+                             park_cursor=lambda **kw: None)
+    # before=5;前 3 击验证 miss(lv None),第 4 击读到 6 → 恰 4 击
+    reads = iter([5, None, None, None, 6])
+    monkeypatch.setattr(pa, '_read_level_raw',
+                        lambda ctx, screen: next(reads))
+    monkeypatch.setattr(pa, 'read_gold', lambda ctx, screen: 100)
+    monkeypatch.setattr(pa, 'area_center', lambda ctx, name: None)
+    ok, detail = ex._level_up()
+    assert ok is True and '5→6' in detail
+    rows = [r for r in captured_exo if r['kind'] == 'hp_pay']
+    assert len(rows) == 4                    # 4 击 = 4 行(粒度=击数)
+    assert all(r['choice']['hp_delta'] == -6 and r['choice']['clicks'] == 1
+               for r in rows)
+
+
+# ===== ⑨ 隔离门(§1.4 测试3):写点零决策状态突变 =====
+
+def test_receipt_write_isolation_no_state_mutation(captured_exo):
+    """hp_pay 回执写入前后:state 序列化逐字节不变 + session 无新增属性
+    ——写入路径与决策路径无共享可变状态(ADR-0577 隔离申报的可执行面)。"""
+    from sr_od.application.currency_war.telemetry.schema import serialize_state
+    sess = _hp_session(['奋斗协议'])
+    before = json.dumps(serialize_state(sess.last_state), sort_keys=True)
+    attrs_before = set(vars(sess).keys())
+    record_hp_pay_event(sess, 2, 1)
+    assert json.dumps(serialize_state(sess.last_state),
+                      sort_keys=True) == before
+    assert set(vars(sess).keys()) == attrs_before
+    assert len(captured_exo) == 1            # 行照常落(隔离≠不写)
+
+
+# ===== ⑩ grep 守卫门(F7,ADR-0571 同款手法):hp_pay 遥测键禁入决策面 =====
+
+#: 守卫键集:kind 名 / 结构化载荷键。'basis' 用词边界匹配——决策面在册键
+#: auth_basis(授权依据记录字段,LevelUp/发射分键)是不同语义的合法存在,
+#: 子串判据会误伤(\\b 在 auth_basis 的下划线处不成立,天然排除)。
+_HP_PAY_SUBSTR_KEYS: tuple[str, ...] = ('hp_pay', 'hp_delta')
+_HP_PAY_WORD_KEYS: tuple[str, ...] = ('basis',)
+
+
+def _guard_key_hits(text: str) -> list[str]:
+    """守卫判据单一实现(主扫描与变异自检共用,防自检复刻判据)。"""
+    hits = [name for name in _HP_PAY_SUBSTR_KEYS if name in text]
+    hits += [name for name in _HP_PAY_WORD_KEYS
+             if re.search(rf'\b{name}\b', text)]
+    return hits
+
+
+def test_hp_pay_keys_not_consumed_by_decision_modules():
+    """hp_pay 遥测键禁现于决策面(strategies/impl 全子树扫描,零白名单
+    ——决策判据消费 hp_pay = 把「建模期望账」当支付真值读,违反遥测禁入
+    决策输入禁令(ADR-0577 §隔离申报);写点/装配消费面分别在
+    prep_actions 与 telemetry,均不在扫描根)。盲区自检:扫描根失准 =
+    假绿,先证根在且非空;变异自检:判据函数对合成坏形必须可检出,
+    auth_basis 合法在册键必须不误伤。"""
+    root = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
+            / 'application' / 'currency_war' / 'strategies' / 'impl')
+    sentinel = root / 'mandate_v1' / 'mandate.py'
+    assert sentinel.is_file(), f'扫描根解析失准:{root}'
+    scanned = list(root.rglob('*.py'))
+    assert len(scanned) >= 20, f'扫描文件数异常({len(scanned)}),根可能错位'
+    # 变异自检:正例两键可检出;auth_basis 在册键不误伤(word 边界在
+    # 下划线处不成立,天然排除)。
+    assert _guard_key_hits("x('hp_pay') r['hp_delta']") == \
+        ['hp_pay', 'hp_delta'], '变异自检未命中'
+    assert _guard_key_hits('self.auth_basis = "record"') == [], \
+        '变异自检:auth_basis 被误伤'
+    offenders: dict[str, str] = {}
+    for path in scanned:
+        rel = path.relative_to(root).as_posix()
+        text = path.read_text(encoding='utf-8')
+        for name in _guard_key_hits(text):
+            offenders[f'{rel}:{name}'] = name
+    assert not offenders, (
+        'hp_pay 遥测键被决策面引用(禁令 = ADR-0577:血购回执纯观测,'
+        f'禁回写 state.hp/session.last_hp_real/预算门):{offenders}')
