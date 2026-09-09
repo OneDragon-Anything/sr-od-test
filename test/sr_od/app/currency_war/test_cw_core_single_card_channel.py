@@ -200,9 +200,17 @@ class TestCoreChannelLaunch:
         assert 'core_dominance_buy_hit' not in ct
 
     def test_bench_full_frame_gate_blocks(self):
-        """席位前件(bench 空槽,V_slot=0):满栏帧帧级门拦 ⇒ 候补触发
-        键落、命中/数值域键均不落(§6 V_slot>0 = 支配性支失效域,如实
-        不放行)。垫栏件用线成员(非燃料)防 M4 腾席改写帧。"""
+        """席满帧入循环走腾席支(T-115 恒买腾席批 A1 重推;ADR-0580):
+        资格门席位维已下放循环内(mandate.core_single_card_buy_eligible
+        收窄为锁线态单判),满栏帧过星→息→金三门后在席门走腾席支——
+        垫栏件 = 线成员三月七(列车同行 core_chars,义务基座身份排除)
+        ⇒ 无合法燃料 victim ⇒ 诚实停摆(权限模型:骨架义务 M2 族 > 裁定
+        族买,禁卖义务件凑恒买)。判锁层订正:旧 docstring「帧级门拦」
+        的拦截面在帧内席门,非帧门;四条旧断言全保持(不买 ✓/seen==1 ✓/
+        无 dominance_hit ✓/无 numeric_fail_closed ✓——for-else:席满
+        break 跳过尾键,消「no_fuel 与 numeric_fail_closed 共火」)+
+        新增 core_locked_no_fuel == 1。出处 = 恒买腾席方案 v2 §5.1/§5.5
+        /§10。"""
         bench = [_bc('三月七', slot=i + 1) for i in range(BENCH_CAPACITY)]
         st = _state(gold=45, shop_cards=[_card('希儿', 3)], bench=bench)
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
@@ -210,6 +218,7 @@ class TestCoreChannelLaunch:
         assert not _core_buys([act])
         ct = _counters(sess)
         assert ct.get('core_candidate_seen') == 1
+        assert ct.get('core_locked_no_fuel') == 1
         assert 'core_dominance_buy_hit' not in ct
         assert 'core_numeric_fail_closed' not in ct
 
