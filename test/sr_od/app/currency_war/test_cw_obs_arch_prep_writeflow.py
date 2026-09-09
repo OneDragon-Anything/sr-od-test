@@ -29,6 +29,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.cw_game_ports import (
+    action_sink,
+    observation_source,
+)
 from sr_od.application.currency_war.kernel.cw_board_state import (
     Field,
     NodeKey,
@@ -277,12 +281,23 @@ def test_legacy_path_prep_records_action_signature(
     d, _match, session = make_prep_round_director(
         test_context, monkeypatch, [OpenShop(read_only=True)],
         install_dispatch_ports=False)
+    # 确走旧分支判别(统一观察架构设计 §9.1 并存期;装配点 =
+    # cw_screen_prep.run 按两端口在场与否分流):端口被上游污染在场时,
+    # 本节代表锁的断言面(新旧路径同语义)会静默变新路径锁且全量仍绿
+    # ——run 前断言装配判据入参为两端口 None,并桩记新路径入口证其零调用。
+    lifecycle_calls: list[int] = []
+    monkeypatch.setattr(d, 'run_lifecycle',
+                        lambda *a, **k: lifecycle_calls.append(1))
+    assert (observation_source(), action_sink()) == (None, None), (
+        '游戏端口在场(上游污染/装配泄漏):本锁辖的已不是旧路径分支')
     with fast_sleep():
         enter_running_state(test_context)
         try:
             d.run()
         finally:
             reset_running_state(test_context, d)
+    assert not lifecycle_calls, (
+        'run() 经装配点走了新路径 run_lifecycle(旧路径代表锁失义)')
     assert exec_state_of(session).last_prep_action_sig == ('OpenShop',), (
         f'旧路径决策出口须写动作批签名:'
         f'{exec_state_of(session).last_prep_action_sig!r}')
@@ -305,6 +320,12 @@ def test_legacy_path_entry_collapse_probe_once(
     d, _match, _session = make_prep_round_director(
         test_context, monkeypatch, [DeferSpheres()],
         install_dispatch_ports=False)
+    # 确走旧分支判别(同上条代表锁:装配点分流污染防护,§9.1 并存期)。
+    lifecycle_calls: list[int] = []
+    monkeypatch.setattr(d, 'run_lifecycle',
+                        lambda *a, **k: lifecycle_calls.append(1))
+    assert (observation_source(), action_sink()) == (None, None), (
+        '游戏端口在场(上游污染/装配泄漏):本锁辖的已不是旧路径分支')
     monkeypatch.setattr(d, '_try_collapse_open_shop', _fake_collapse)
     with fast_sleep():
         enter_running_state(test_context)
@@ -312,5 +333,39 @@ def test_legacy_path_entry_collapse_probe_once(
             rr = d.run()
         finally:
             reset_running_state(test_context, d)
+    assert not lifecycle_calls, (
+        'run() 经装配点走了新路径 run_lifecycle(旧路径代表锁失义)')
     assert collapse_calls == [True], f'收起探针应恰调一次,实得 {collapse_calls}'
     assert '交回外循环' in (rr.status or ''), f'单轮须交回外循环:{rr.status!r}'
+
+
+# ==================== 选卡调用面单一源守卫(BoardState 迁移收尾) ====================
+
+def test_box_card_pick_single_source_wiring() -> None:
+    """选卡决策区单一源守卫(墓碑 + 接线双角):``PrepActionExecutor
+    ._default_box_card`` 是 pick 族调用面最后一个切到 BoardState 消费视图
+    的接入点(prep_actions 内单一源宣言注释;设计正本 = docs/develop/
+    currency_war/design/BoardState-数据结构设计.md §8.7 批次二,单一源
+    本体 = kernel/cw_bs_view.strategy_input_state)。
+
+    - 墓碑角(否定式 + 退役背书):选卡决策区禁回落 ``last_state or
+      GameState`` 直读字面——被删的 cw_screen_supply.pick_box_card 原本
+      同款直读,迁移批已切除;该第二源回流 = BoardState 观察流旁路
+      (失读帧 carry 语义/记录模型全部绕过),全量照绿但单一源纪律破;
+    - 接线角:同区必须仍含 strategy_input_state 调用——接入点静默脱落
+      是回归直读的另一形态(换写法绕开墓碑字面),与墓碑角成对堵死;
+    - 变异自检:``decide_box_card`` 在场断言钉住扫描对象是选卡决策区
+      本体,防 getsource 抓错函数后双断言恒真空转。
+    """
+    import inspect
+
+    from sr_od.application.currency_war.prep_actions import PrepActionExecutor
+
+    src = inspect.getsource(PrepActionExecutor._default_box_card)
+    assert 'decide_box_card' in src, '扫描锚失守:getsource 未取到选卡决策区'
+    assert 'last_state or GameState' not in src, (
+        '选卡决策区回落 last_state or GameState() 直读第二源'
+        '(BoardState 单一源纪律破,观察流被旁路)')
+    assert 'strategy_input_state(' in src, (
+        '选卡决策区单一源接入点脱落(strategy_input_state 未被调用,'
+        '回归直读同罪)')
