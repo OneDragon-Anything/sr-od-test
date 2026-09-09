@@ -34,6 +34,7 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     NodeKey,
     board_state_of,
 )
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     BenchChar,
     DeferSpheres,
@@ -43,6 +44,12 @@ from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
 )
+from test.harness.fixture_controller import (
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
+from test.sr_od.app.currency_war._cw_helpers import make_prep_round_director
 from test.sr_od.app.currency_war.test_cw_board_state import (
     _patch_clean_readers,
 )
@@ -176,7 +183,10 @@ def test_prep_writeflow_full_frame_pin(test_context: SimpleNamespace,
     槽位保序)。"""
     d = _make_director(test_context, monkeypatch, _fixed_bench())
     sess = d.ctx.cw_match.session
-    d.run_lifecycle()
+    # fast_sleep(README 第 6 条):终结出口 round_success(wait=1.0)的轮间
+    # 等待是 op 框架真 sleep(实测每 run 2×0.5s),mock 画面下纯属空等。
+    with fast_sleep():
+        d.run_lifecycle()
     bs = board_state_of(sess)
     snap = _frame_snapshot(bs)
     for name, expected in _PIN_FRAME.items():
@@ -206,7 +216,8 @@ def test_prep_writeflow_empty_bench_is_miss_not_clear(
     carried 处置(从未读过 = 保持 None),禁把「9 槽全空」当 observation
     入记录(席空数派生误报 free=9/挂起合成升星预期被空视图误清)。"""
     d = _make_director(test_context, monkeypatch, [])
-    d.run_lifecycle()
+    with fast_sleep():
+        d.run_lifecycle()
     bs = board_state_of(d.ctx.cw_match.session)
     # 处置②(§2.2:字段从未读过 → 保持 None):空集经 bench_view_from_obs
     # 返 None → carry 对未写字段为 no-op → 值恒 None(Field 默认 source
@@ -234,8 +245,72 @@ def test_prep_writeflow_merge_window_defers_reconcile(
     )
     expected_view: BenchView = bench_view_of_slots([])
     bs.expect(bs.bench, expected_view, confirm_point='prep_obs')
-    d.run_lifecycle()
+    with fast_sleep():
+        d.run_lifecycle()
     assert bs.expected.get('bench') is not None, (
         '特效窗内挂起预期须顺延核对(P3-10:留表下帧干净帧核对),'
         '实得被核对清账')
     _ = bs_seed   # 样板未挂单例,防误用断言占位
+
+
+# ==================== 旧路径代表锁(并存窗专用,退役批随删)====================
+# 架构设计 §9.1 并存期(试点步骤 1):生产缺省装配(端口 None)实际在跑
+# cw_screen_prep.run 的旧路径分支,而四份备战行为锁全部经缺省装配点走新
+# 路径——旧路径回归无锁能红 = 并存窗覆盖缺口。本节补 2 条**不装端口**
+# 的代表锁:各断言一个关键行为(签名写点/收起探针恰一次),断言面与
+# 在册新路径锁同语义、仅去掉端口桩走原生 run(),禁在本节加新语义。
+# 退役时机 = 旧路径退役批:旧路径删除时本节整节随删,勿迁移。
+
+
+def test_legacy_path_prep_records_action_signature(
+        test_context: SimpleNamespace,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """旧路径签名写点代表锁:不装分流桩端口(= 生产缺省装配)时,备战
+    单轮 run() 旧路径决策出口写 ``exec_state_of(session).last_prep_action_sig``
+    (环级无进展守卫动作腿的唯一写点)。与 test_cw_no_progress_guard 的
+    签名写点锁同语义断言(该锁经缺省装配走新路径),本锁补旧路径半边:
+    窗口内任何提交改坏旧路径决策出口时本锁红,全量不绿。"""
+    from sr_od.application.currency_war.kernel.cw_prep_actions import (
+        OpenShop,
+    )
+
+    d, _match, session = make_prep_round_director(
+        test_context, monkeypatch, [OpenShop(read_only=True)],
+        install_dispatch_ports=False)
+    with fast_sleep():
+        enter_running_state(test_context)
+        try:
+            d.run()
+        finally:
+            reset_running_state(test_context, d)
+    assert exec_state_of(session).last_prep_action_sig == ('OpenShop',), (
+        f'旧路径决策出口须写动作批签名:'
+        f'{exec_state_of(session).last_prep_action_sig!r}')
+
+
+def test_legacy_path_entry_collapse_probe_once(
+        test_context: SimpleNamespace,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """旧路径收起探针代表锁:不装分流桩端口时,备战单轮入口的开店态
+    收起探针**恰一次**,单轮交回外循环(交回语义由外循环每轮重识别保证)。
+    与 test_cw_gate_hooks 的 test_prep_round_entry_collapse_once 同语义
+    断言(该锁经缺省装配走新路径),本锁补旧路径半边:窗口内旧路径入口
+    序列回归(探针丢失/多次/不交回)时本锁红。"""
+    collapse_calls: list[bool] = []
+
+    def _fake_collapse() -> bool:
+        collapse_calls.append(True)
+        return True
+
+    d, _match, _session = make_prep_round_director(
+        test_context, monkeypatch, [DeferSpheres()],
+        install_dispatch_ports=False)
+    monkeypatch.setattr(d, '_try_collapse_open_shop', _fake_collapse)
+    with fast_sleep():
+        enter_running_state(test_context)
+        try:
+            rr = d.run()
+        finally:
+            reset_running_state(test_context, d)
+    assert collapse_calls == [True], f'收起探针应恰调一次,实得 {collapse_calls}'
+    assert '交回外循环' in (rr.status or ''), f'单轮须交回外循环:{rr.status!r}'

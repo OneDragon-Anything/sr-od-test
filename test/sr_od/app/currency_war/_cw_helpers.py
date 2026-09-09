@@ -176,31 +176,17 @@ def cw4_decide(state: GameState, session, cfg=None, *, registry=None):
     return strat.decide_shop_screen(session, cfg or DecideCfg())
 
 
-def make_prep_round_director(test_context, monkeypatch, scripted_actions,
-                             overlay=None, *, prewarm_state: bool = False):
-    """备战单轮 op 单测装配(CwScreenPrep 最小桩面;DEBTS.md D22 单一源)。
+def install_dispatch_stub_ports(monkeypatch) -> None:
+    """装配点分流桩端口(观察/动作两半)安装·单一源。
 
-    镜像关系声明(原 no_progress_guard/stall_cache 两处互指声明归此):
-    本装配同源服务两个写点锁——no_progress_guard 锁
-    ``exec_state_of(session).last_prep_action_sig`` 签名写点、stall_cache
-    锁 ``cw4_frame_action_record`` token 载体写点;两写点同一决策出口,
-    禁删边留角。``prewarm_state=True`` = 预冷建 MandateState 并挂
-    session(token 载体锁的写点消费面需要载体先在;签名写点不需要)。
+    桩端口仅作 run() 装配点判据的在场标记(统一观察架构 §9.1 并存期);
+    方法被消费 = 桩面破缺(测试应桩化 _observe,端口不该被读)。
+    monkeypatch 装配,teardown 自动复位 = 卸载语义;setattr 直改模块槽
+    绕过 install_game_ports 的单装配守卫 = harness 用法(守卫语义由
+    test_cw_game_ports 自辖)。
 
-    桩面 = 决策策略桩(scripted_actions 原样回放)+ 入口浮层清理/
-    收店探针/代收/步记录全 no-op + ``_observe`` 恒空观察(overlay 可注
-    模拟交回环)+ 开店阶段 read_only 短路。(read_bench_full 桩已随通道
-    退役删除——迁移批次二 §3.2.5,墓碑函数无桩面消费。)
-    返回 ``(director, match, session)``;运行外壳
-    (``fast_sleep`` + enter/reset_running_state)留在各锁自持。
-
-    装配点分流(统一观察架构 §9.1 并存期,试点批):本装配 monkeypatch
-    ``cw_game_ports._INSTALLED`` 装入分流桩端口(teardown 自动复位 = 卸载
-    语义)——使 run() 经装配点判据进入六段生命周期新路径,备战行为锁自此
-    锁「op execute() 走新基类」(架构设计 §9.1 主门 a)。``_observe`` 桩
-    使桩端口不被消费(端口方法 = 响错误,静默消费即桩面破缺信号);
-    setattr 直改模块槽绕过 install_game_ports 的单装配守卫 = harness
-    用法(守卫语义由 test_cw_game_ports 自辖)。
+    消费方 = ``make_prep_round_director``(整体装配)与
+    ``test_cw_gate_hooks._make_director``(__new__ 裸装配,只共享本桩)。
     """
     from sr_od.application.currency_war import cw_game_ports as _ports_mod
 
@@ -228,6 +214,40 @@ def make_prep_round_director(test_context, monkeypatch, scripted_actions,
 
     monkeypatch.setattr(_ports_mod, '_INSTALLED',
                         (_DispatchOnlyObserver(), _DispatchOnlySink()))
+
+
+def make_prep_round_director(test_context, monkeypatch, scripted_actions,
+                             overlay=None, *, prewarm_state: bool = False,
+                             install_dispatch_ports: bool = True):
+    """备战单轮 op 单测装配(CwScreenPrep 最小桩面;DEBTS.md D22 单一源)。
+
+    镜像关系声明(原 no_progress_guard/stall_cache 两处互指声明归此):
+    本装配同源服务两个写点锁——no_progress_guard 锁
+    ``exec_state_of(session).last_prep_action_sig`` 签名写点、stall_cache
+    锁 ``cw4_frame_action_record`` token 载体写点;两写点同一决策出口,
+    禁删边留角。``prewarm_state=True`` = 预冷建 MandateState 并挂
+    session(token 载体锁的写点消费面需要载体先在;签名写点不需要)。
+
+    桩面 = 决策策略桩(scripted_actions 原样回放)+ 入口浮层清理/
+    收店探针/代收/步记录全 no-op + ``_observe`` 恒空观察(overlay 可注
+    模拟交回环)+ 开店阶段 read_only 短路。(read_bench_full 桩已随通道
+    退役删除——迁移批次二 §3.2.5,墓碑函数无桩面消费。)
+    返回 ``(director, match, session)``;运行外壳
+    (``fast_sleep`` + enter/reset_running_state)留在各锁自持。
+
+    装配点分流(统一观察架构 §9.1 并存期,试点批):缺省(缺省装配,
+    ``install_dispatch_ports=True``)monkeypatch ``cw_game_ports.
+    _INSTALLED`` 装入分流桩端口(teardown 自动复位 = 卸载语义)——使
+    run() 经装配点判据进入六段生命周期新路径,备战行为锁自此锁
+    「op execute() 走新基类」(架构设计 §9.1 主门 a)。``_observe`` 桩
+    使桩端口不被消费(端口方法 = 响错误,静默消费即桩面破缺信号)。
+    ``install_dispatch_ports=False`` = **不装端口(生产缺省形态)**,
+    run() 直连旧路径——并存窗旧路径代表锁专用(架构设计 §9.1 并存期:
+    生产在跑旧路径,零行为锁 = 回归网清零;**退役批随删**,旧路径删除
+    时本形态的消费锁一并退役)。
+    """
+    if install_dispatch_ports:
+        install_dispatch_stub_ports(monkeypatch)
 
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_prep as pd_mod,
