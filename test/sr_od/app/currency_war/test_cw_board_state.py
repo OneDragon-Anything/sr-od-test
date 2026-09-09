@@ -181,8 +181,10 @@ _CHOSEN_DOMAINS = ('chosen_encounter', 'chosen_supply', 'chosen_megastar',
                    'chosen_partner', 'chosen_wish', 'chosen_fortune',
                    'chosen_hack', 'chosen_expert', 'chosen_tome',
                    'chosen_equip')
-_LEDGER_DOMAINS = ('equips', 'consumables', 'skip_battle_active',
-                   'skip_battle_remaining')
+# ~~skip_battle_active/remaining 已移出本组(迁移批次二载体归一,§8.6-3):
+# 免战牌激活态+剩余次数正本 = effect_inventory.remaining_uses(§5.1),
+# BoardState 不设平行 Field——负向锁见本文件下方 test_skip_battle_fields_retired。
+_LEDGER_DOMAINS = ('equips', 'consumables')
 _REFRESH_GROUP = ('free_refresh_balance', 'paid_refresh_count',
                   'total_refresh_count', 'prev_node_spent')
 _NODE_SCREEN_REFRESH = ('encounter_refresh_used', 'supply_refresh_used',
@@ -198,6 +200,16 @@ def test_gap3_domains_present(name: str) -> None:
     P1-2 落地审:节点屏刷新计数组 §3.4.1-4 亦点名在列)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     assert isinstance(getattr(bs, name), Field), f'缺域:{name}'
+
+
+def test_skip_battle_fields_retired() -> None:
+    """§8.6-3 载体归一(迁移批次二):免战牌激活态+剩余次数正本 =
+    effect_inventory.remaining_uses(ActiveEffect.remaining_uses「次数类
+    余量(免战牌×2 等)」,§5.1 同型躺平/节省工位)——BoardState 平行
+    Field 按正本归一移除(改锁依据:设计正本明文,非机械跟绿)。"""
+    field_names = {f.name for f in dataclasses.fields(BoardState)}
+    for banned in ('skip_battle_active', 'skip_battle_remaining'):
+        assert banned not in field_names, f'免战牌平行 Field 应已归一移除:{banned}'
 
 
 def test_gap3_node_screen_refresh_schema_domain() -> None:
