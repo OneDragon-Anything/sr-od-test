@@ -77,6 +77,10 @@ class FakeCwObserver:
         st.gold_readable = True
         st.board_readable = True
         st.level_readable = True
+        # 投资环境镜像(T-204 注入域观察真值):真值 = 状态机
+        # select_invest_env 位;实机对位 = read_game_state 尾部
+        # session→state 统一回写的 active_env 字段同语义
+        st.active_env = self._match.active_env
         # 部署上限真值规则:cap = level(ADR-0281 布局裁定;宝钻叠加项
         # 归装备域,批 1 假环境无装备 overlay → 恒基础式)
         st.deploy_cap = st.level
