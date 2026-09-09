@@ -25,7 +25,7 @@ from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.obs import cw_briefing_obs, cw_observation
 from sr_od.application.currency_war.obs.cw_briefing_obs import parse_enemy_difficulty, read_briefing_enemy_difficulty
 from sr_od.application.currency_war.obs.cw_briefing_obs import read_affix_effect, read_affixes, read_bosses
-from sr_od.application.currency_war.obs.cw_observation import parse_selected_difficulty, read_board, read_board_next_tier, read_deploy_cap, read_deployed_count, read_enemy_difficulty, read_level_up_cost, read_node_type, read_selected_difficulty, read_shop_refresh_cost, read_streak, read_xp_progress
+from sr_od.application.currency_war.obs.cw_observation import parse_selected_difficulty, read_board, read_board_next_tier, read_deploy_cap, read_deployed_count, read_enemy_difficulty, read_level_up_cost, read_node_type, read_selected_difficulty, read_streak, read_xp_progress
 from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_hp, parse_streak
 from test.conftest import SrTestContext
 
@@ -82,12 +82,14 @@ def test_parse_hp_garble_missing_sheng() -> None:
 
 
 def test_parse_streak_win_loss_direction() -> None:
-    """结算「连胜×N」/「连败×N」前缀=方向:连胜 + / 连败 −;未读到 0(fixture 核实 2026-08-11)。"""
+    """结算「连胜×N」/「连败×N」前缀=方向:连胜 + / 连败 −。~~未读到 0~~
+    失读 → None(迁移批次二 §8.8:0 是真读值,'连胜×0' = 无连胜方向真值,
+    失读返 0 会经 last_streak 写链假复位——与 read_hp 100 假值同型消除)。"""
     assert parse_streak(['连胜×0']) == 0
     assert parse_streak(['挑战结束', '连胜×3', '继续挑战']) == 3
     assert parse_streak(['连败×2']) == -2
     assert parse_streak(['连胜x5']) == 5               # × 读成 x 也容忍
-    assert parse_streak(['挑战结束', '数据统计']) == 0   # 无 streak 文本
+    assert parse_streak(['挑战结束', '数据统计']) is None   # 无 streak 文本 → 失读非 0
 
 
 def test_parse_streak_from_real_settlement_ocr() -> None:
@@ -377,10 +379,14 @@ def test_read_node_type_keyword(test_context: SrTestContext, monkeypatch: pytest
 
 
 def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    """备战左上/购买经验/商店区数字字段:enemy_difficulty/level_up_cost/shop_refresh_cost/streak(D-74)。
+    """备战左上/购买经验数字字段:enemy_difficulty/level_up_cost/streak(D-74)。
 
-    各字段 OCR 其 screen_info area → int(越界/空 → None 或默认)。shop_refresh_cost
-    放大两级管线,空 → None(W577:读到的是面板徽标=利息数值非刷价,函数仅旁证)。
+    各字段 OCR 其 screen_info area → int(越界/空 → None 或默认)。
+    (2026-09-10 对账补刀:shop_refresh_cost mock 腿删——read_shop_refresh_cost
+    生产全仓零调用点(ADR-0456 退役后连旁证调用也已不存在,grep 证实),
+    死函数不立锁(D1/D12 判例);退役 tombstone 见
+    test_shop_refresh_cost_base_price_model_lock。streak 真帧管线锁由
+    test_read_streak_real_fixture 复活承接。)
     """
     # enemy_difficulty(文本-难度,stylized 但能读到时):"108" → 108
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
@@ -399,20 +405,8 @@ def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pyte
 
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', _two_stage)
     assert read_level_up_cost(test_context, None) == 4
-    # shop_refresh_cost(文本-刷新金币数):"2" → 2;空 → None(W577:函数
-    # 保留作旁证读数,读到的是面板徽标=利息数值,非刷价——见实帧锁 docstring)
-    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
-                        lambda **kw: [_ocr('2', 1621, 855)])
-    assert read_shop_refresh_cost(test_context, None) == 2
-    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', lambda **kw: [])
-    assert read_shop_refresh_cost(test_context, None) is None   # 空 → None
-    # 刷价金币图标并入前缀('G0'/'GO')→ 归一后读 0
-    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
-                        lambda **kw: [_ocr('G0', 1621, 855)])
-    assert read_shop_refresh_cost(test_context, None) == 0
-    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
-                        lambda **kw: [_ocr('GO', 1621, 855)])
-    assert read_shop_refresh_cost(test_context, None) == 0
+    # (墓碑(2026-09-10 对账补刀):shop_refresh_cost 四段 mock 腿('2'→2/
+    #  空→None/'G0'/'GO'→0)删——死函数不立锁,墓碑见本测 docstring。)
     # streak(文本-连胜数):"3" → 3;空 → None
     monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list',
                         lambda **kw: [_ocr('3', 1523, 875)])
@@ -425,46 +419,33 @@ def test_read_prep_numeric_fields(test_context: SrTestContext, monkeypatch: pyte
     assert read_enemy_difficulty(test_context, None) is None
 
 
-def test_write_affix_effects_merge(tmp_path) -> None:
+def test_write_affix_effects_merge(tmp_path, monkeypatch) -> None:
     """merge updates 进 affix_effects_data.py:新名新增、**不一致不覆盖(D-81:静态数据现有值更可信)**、
     空 updates 不写(写回仍是合法 py + 中文)。
 
     _AFFIX_EFFECTS_PATH + write_affix_effects 在 cw_briefing_obs(D-70 拆分);函数 read 其模块全局,
     故 monkeypatch cw_briefing_obs._AFFIX_EFFECTS_PATH(不是 cw_observation 的 re-export 绑定)。
+    (DEBTS D43 消费顺手项:裸赋值+手工 save/restore 改 monkeypatch.setattr,
+    teardown 自动还原,断言面零改动。)
     """
     py_file = tmp_path / 'affix_effects_data.py'
     py_file.write_text('AFFIX_EFFECTS = {"旧词缀": "旧效果"}\n', encoding='utf-8')
-    original = cw_briefing_obs._AFFIX_EFFECTS_PATH
-    cw_briefing_obs._AFFIX_EFFECTS_PATH = py_file
-    try:
-        assert cw_briefing_obs.write_affix_effects({}) is False                 # 空 → 不写
-        assert cw_briefing_obs.write_affix_effects({'新词缀': '效果A'}) is True  # 新名 → 写
-        assert cw_briefing_obs.write_affix_effects({                              # D-81:旧词缀 divergent 不覆盖 + 新名追加
-            '旧词缀': '旧效果改', '词缀2': '效果C',
-        }) is True
-        # 写回的文件仍是合法 py(exec 能解析)+ 内容正确(旧词缀保留旧效果,未被 divergent 覆盖)
-        ns: dict = {}
-        exec(py_file.read_text(encoding='utf-8'), ns)   # noqa: S102
-        assert ns['AFFIX_EFFECTS'] == {'旧词缀': '旧效果', '新词缀': '效果A', '词缀2': '效果C'}
-    finally:
-        cw_briefing_obs._AFFIX_EFFECTS_PATH = original
+    monkeypatch.setattr(cw_briefing_obs, '_AFFIX_EFFECTS_PATH', py_file)
+    assert cw_briefing_obs.write_affix_effects({}) is False                 # 空 → 不写
+    assert cw_briefing_obs.write_affix_effects({'新词缀': '效果A'}) is True  # 新名 → 写
+    assert cw_briefing_obs.write_affix_effects({                              # D-81:旧词缀 divergent 不覆盖 + 新名追加
+        '旧词缀': '旧效果改', '词缀2': '效果C',
+    }) is True
+    # 写回的文件仍是合法 py(exec 能解析)+ 内容正确(旧词缀保留旧效果,未被 divergent 覆盖)
+    ns: dict = {}
+    exec(py_file.read_text(encoding='utf-8'), ns)   # noqa: S102
+    assert ns['AFFIX_EFFECTS'] == {'旧词缀': '旧效果', '新词缀': '效果A', '词缀2': '效果C'}
 
 
-def test_load_affix_effects_from_file(tmp_path) -> None:
-    """读 affix_effects_data.py → AFFIX_EFFECTS dict(采集对比用);文件不存在 → 空。
-
-    _AFFIX_EFFECTS_PATH 在 cw_briefing_obs(D-70 拆分),monkeypatch 它(非 cw_observation re-export)。
-    """
-    py_file = tmp_path / 'affix_effects_data.py'
-    py_file.write_text('AFFIX_EFFECTS = {"词缀A": "效果A"}\n', encoding='utf-8')
-    original = cw_briefing_obs._AFFIX_EFFECTS_PATH
-    cw_briefing_obs._AFFIX_EFFECTS_PATH = py_file
-    try:
-        assert cw_briefing_obs.load_affix_effects_from_file() == {'词缀A': '效果A'}
-        cw_briefing_obs._AFFIX_EFFECTS_PATH = tmp_path / 'no_exist.py'          # 文件不存在 → 空
-        assert cw_briefing_obs.load_affix_effects_from_file() == {}
-    finally:
-        cw_briefing_obs._AFFIX_EFFECTS_PATH = original
+# (墓碑·DEBTS D43 消费(2026-09-10):test_load_affix_effects_from_file 删——
+#  load 两面(happy path + 缺文件→{})为主题文件 test_cw_affix_effects.py
+#  8 测全分支表的真子集(纪律 7 择一取超集);裸赋值违例形态随测消亡,
+#  存留 twin 已改 monkeypatch。)
 
 
 def test_read_round_outcome_failure_hp_zero(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -539,18 +520,9 @@ def test_parse_enemy_difficulty() -> None:
     assert parse_enemy_difficulty([]) is None
 
 
-def test_parse_damage_value() -> None:
-    """伤害值文本 parse(万/亿/纯数字;无数字/异常 → None;3.5.4 战斗总伤害)。"""
-    from sr_od.application.currency_war.obs.cw_observation import parse_damage_value
-    assert parse_damage_value('126.5万') == 1_265_000
-    assert parse_damage_value('89.8万') == 898_000
-    assert parse_damage_value('83.7万') == 837_000
-    assert parse_damage_value('1439282') == 1_439_282
-    assert parse_damage_value('1.5亿') == 150_000_000
-    assert parse_damage_value('0') == 0
-    assert parse_damage_value('') is None
-    assert parse_damage_value('abc') is None
-    assert parse_damage_value('试用') is None  # 战斗屏噪声
+# (墓碑(2026-09-10 对账补刀):test_parse_damage_value 删——被测
+#  parse_damage_value 生产全仓零消费(仅定义行 cw_observation.py,无调用点),
+#  死函数不立锁(D1/D12 判例);src 删除候选已记 DEBTS D85。)
 
 
 # ===== ADR-0129 XP 分母反推真等级 =====
@@ -633,10 +605,51 @@ def test_read_enemy_difficulty_real_fixture(
             f'{p.name} 难度应读 {expects[p.relative_to(fix_dir).as_posix()]}'
 
 
-# (墓碑·硬砍批:test_read_refresh_cost_and_streak_real_fixture 删——被测函数
-#  read_shop_refresh_cost 已退出 read_game_state 决策主链(ADR-0456,仅旁证),
-#  实帧锁锁的是退役函数的 OCR 读数;退役 tombstone 守卫见
-#  test_shop_refresh_cost_base_price_model_lock。)
+# (墓碑+复活(2026-09-10 对账补刀):原 test_read_refresh_cost_and_streak_
+#  real_fixture 整测删于 2026-09-09 硬砍批;复核裁定半砍半复活——refresh 半
+#  维持砍(read_shop_refresh_cost 生产零调用点,退役 tombstone 见
+#  test_shop_refresh_cost_base_price_model_lock);streak 半复活为下测
+#  (生产活链,硬砍批误同葬)。)
+def test_read_streak_real_fixture(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """连胜真帧锁:read_streak 是生产活链——read_game_state 主链写 state.streak
+    (无 session 时的 fallback 写入 + 有 session 时的双源对拍留证),streak 进
+    利息/economy 决策面 → ①读取正确性直接喂决策,三保留条自证成立。
+
+    mock 级解析由 test_read_prep_numeric_fields 辖;本测锁真帧端到端读数
+    (area rect 漂移/OCR 管线退化在此红,mock 测对此恒绿)。帧集沿用原
+    refresh+streak 合测的非 None 期望(deployed_2star 帧连胜区读 None,原测
+    即不设断言,维持)。模型不可用 / fixture 缺失 → skip。
+    """
+    from pathlib import Path
+
+    from one_dragon.base.matcher.ocr.ocr_service import OcrService
+
+    # cv2_utils 用模块级绑定(identity_obs 段 mechanical-merge 布局,绑定在
+    # 文件后段;测试运行期模块已完整加载,不加局部 import 免 F811 三连)。
+    fix_dir = Path(__file__).resolve().parents[4] / 'screens'
+    expects = {
+        '货币战争-备战/攻略已应用.webp': 1,
+        '货币战争-备战/shop_closed.webp': 0,
+        '货币战争-备战/后排8槽-满级局.webp': 0,
+        '货币战争-备战/shop_closed_lowhp.webp': 0,
+    }
+    frames = [fix_dir / n for n in expects]
+    if not all(p.exists() for p in frames):
+        pytest.skip('fixture 缺失')
+    try:
+        from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
+        matcher = OnnxOcrMatcher()
+        if not matcher.init_model(download_by_github=False, download_by_gitee=True):
+            pytest.skip('OCR 模型不可用')
+    except Exception:
+        pytest.skip('OCR 模型不可用')
+    monkeypatch.setattr(test_context, 'ocr_service', OcrService(ocr_matcher=matcher))
+    for p in frames:
+        img = cv2_utils.read_image(str(p))
+        exp = expects[p.relative_to(fix_dir).as_posix()]
+        got = read_streak(test_context, img)
+        assert got == exp, f'{p.name} 连胜应读 {exp},实读 {got}'
 
 
 # ===== W577 刷价基价模型锁(ADR-0456:徽标退役出决策链,state 恒基价) =====
@@ -879,7 +892,7 @@ def test_read_star_edge_slots_2star(test_context: _identity_obs_SrTestContext) -
 
 # ==================== board_by_row ====================
 
-from sr_od.application.currency_war.kernel.cw_board_by_row import BoardByRow, board_by_row
+from sr_od.application.currency_war.kernel.cw_board_by_row import board_by_row
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
 
@@ -969,10 +982,11 @@ def test_unknown_char_falls_back_to_faction_field():
     assert b.back == {}
 
 
-def test_empty_board_gives_empty_aggregate():
-    b = board_by_row([])
-    assert b.front == {} and b.back == {} and b.total() == {}
-    assert board_by_row(None) == BoardByRow()    # None 防御 = 空聚合
+# (墓碑(2026-09-10 对账补刀):test_empty_board_gives_empty_aggregate 删——
+#  空板/None 平凡边界:空输入恒空聚合(纯迭代零分支),None 防御支生产
+#  零触达(唯一生产调用点 cw_system_cards 传 state.deployed 槽位表,恒非
+#  None),无可登记语义。连带发现:便捷入口 board_by_row_of 全仓(src+测试)
+#  零消费,src 删除候选已记 DEBTS D86。)
 
 
 # (墓碑·硬砍批:test_board_by_row_of_state_convenience 删——state_of 透传

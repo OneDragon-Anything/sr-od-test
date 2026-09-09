@@ -204,6 +204,30 @@ def test_settlement_gap_skips_empty_and_settled_segments():
         'r1', {'rounds_survived': 1}) == {}
 
 
+def test_settlement_gap_ignores_terminal_closure_rows():
+    """零结算段自标识不受收口终局行干扰(T-185 落地审建议-2):终局行
+    (source='terminal_closure')不是战斗结算——它恰是「本段零场战斗走到
+    结算屏」的证据行(ADR-0615 零结算语义),计入「有结算记录」会让终局行
+    恰好填进的零结算停机段静默失去 settlement_gap 自标识,判读者按协议
+    读到的是「有 outcome 行的普通段」。对照:synthetic_supply 等其余来源
+    仍算有结算记录(ADR-0615 §3.2 既有边界不变)。"""
+    dec = [_dec('r1', 1, 2, '2026-09-09T12:00:00')]
+    term = {'schema_version': 1, 'run_id': 'r1', 'plane': 1,
+            'round_num': 3, 'ts': '2026-09-09T12:10:00', 'node_type': '',
+            'hp_after': None, 'hp_confidence': 0.0, 'killed': False,
+            'source': 'terminal_closure', 'match_result': 'stopped'}
+    # 段内唯一 outcome 行 = 终局行 → 仍标注零结算(决策帧≥1 且战斗结算行=0)
+    gap = arch._settlement_gap(dec, [term], 'r1', {'rounds_survived': 3})
+    assert gap == {'settlement_gap': {'decision_frames': 1,
+                                      'claimed_rounds_survived': 3}}
+    # 混入任一战斗结算行(合成行同款)→ 不标注(既有边界不松动)
+    assert arch._settlement_gap(
+        dec,
+        [dict(term), _out('r1', 1, 3, '2026-09-09T12:09:00', 55,
+                          source='synthetic_supply')],
+        'r1', None) == {}
+
+
 def test_decision_only_segment_groups_to_prior_game_with_later_outcome_game(
         tmp_path: _match_archive_Path):
     """assign_games 时序插位锁(v11 修,ADR-0615):决策独有段(零结算段)的
@@ -798,9 +822,9 @@ def test_load_archive_stale_without_source_warns_and_returns_stale(
 # v9 重推(T-100 批2,ADR-0577):合成行(synthetic_supply)一律退出步进链
 # (先验「陈旧直到证伪」);逐结算行化方向与 M1 不可信行契约保留。
 # 同案收敛:182456 案(战斗腿 −19/合成行退链/净额轮如实记账/加法键取值)
-# 归 test_cw_t100_v9_assembly.py 同 run_id 专锁;本文件保留 M1 分叉与
+# 归 test_cw_hp_assembly.py 同 run_id 专锁;本文件保留 M1 分叉与
 # v7→v9 迁移语义。fixture 的 runs 结果改 'stopped' = 隔离终局腿变量
-# (终局腿归 test_cw_t100_v9_assembly 专锁),步进链锁不与 result 字段耦合。
+# (终局腿归 test_cw_hp_assembly 专锁),步进链锁不与 result 字段耦合。
 
 def _replay_c8(tmp_path: _match_archive_Path,
                p2r4_outs: list[dict]) -> _match_archive_Path:
@@ -1753,7 +1777,7 @@ def test_stopped_game_last_round_outcome_in_archive(
                 hp=77, hp_readable=True)]
     out = [_out('run_20260909_120000', 1, 1, '2026-09-09T12:02:00', 60),
            # 收口终局行(生产形状 = cw_loop._write_terminal_outcome_row 产物;
-           # 本手写 fixture 的消费键集对账锚 = test_cw_r363_audit_p0.
+           # 本手写 fixture 的消费键集对账锚 = test_cw_run_terminal_summary.
            # test_stop_closure_writes_terminal_outcome_row 末的键集断言,
            # 生产写端形状漂移时两侧同步红——落地审建议-5③):
            {'schema_version': 1, 'run_id': 'run_20260909_120000',
@@ -1795,3 +1819,34 @@ def test_terminal_row_exits_hp_truth_chains():
            'hp_confidence': 0.0}
     assert hp_pair_endpoint_admissible(row) is False
     assert _settlement_hp_usable(row) is False
+
+
+def test_terminal_row_query_hp_typed_not_fake(
+        tmp_path: _match_archive_Path):
+    """query_hp 显示面终局行分型(T-185 落地审建议-4):行尾「收口(stopped)」
+    替代「伪值」——终局行 hp_after=None 是诚实缺省(不发 hp 真值)非 OCR
+    伪值;killed 显示 '?'(行内 False 是对局级终了真值非战斗结算,按战斗
+    语义显示 killed=0 会把停机收口轮误读成「该轮打输」)。正常结算行
+    显示不变(对照行:killed=0 + 伪值标注照旧)。"""
+    from sr_od.application.currency_war.telemetry import query as _q
+    rd = tmp_path / 'replay_hp_view'
+    _write_jsonl(rd, 'outcomes.jsonl', [
+        _out('run_20260909_130000', 1, 1, '2026-09-09T13:01:00', 55,
+             conf=0.0),
+        {'schema_version': 1, 'run_id': 'run_20260909_130000',
+         'plane': 1, 'round_num': 2, 'ts': '2026-09-09T13:10:00',
+         'node_type': '', 'hp_after': None, 'hp_confidence': 0.0,
+         'killed': False, 'source': 'terminal_closure',
+         'match_result': 'stopped'},
+    ])
+    lines = _q.query_hp(rd, 'run_20260909_130000')
+    assert len(lines) == 2
+    # 终局行:收口分型,无「伪值」、无 killed=0
+    term_ln = next(ln for ln in lines if 'p1r2' in ln)
+    assert '收口(stopped)' in term_ln
+    assert '伪值' not in term_ln
+    assert 'killed=?' in term_ln
+    # 正常低置信结算行(对照):伪值标注与 killed=0 语义照旧
+    norm_ln = next(ln for ln in lines if 'p1r1' in ln)
+    assert '伪值' in norm_ln and 'killed=0' in norm_ln
+    assert '收口(' not in norm_ln

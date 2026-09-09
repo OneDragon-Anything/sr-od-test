@@ -845,26 +845,33 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
 from test.conftest import SrTestContext as _w547_faction_wire_SrTestContext
 
 
-# ===== 接线源码锁(2026-09-09 按纪律 8 拆解:肯定式在场断言删——
-#  cw_faction_obs 三件套的接线由下方行为锁群体辖(book_from_tracked/
-#  read_displayed_factions 未被调用时假注入不消费、defect 不落账即红;
-#  best-effort 由 test_wire_best_effort_on_reader_error 行为辖;模块
-#  import 由行为测的 monkeypatch.setattr(pd, …) 属性在场性辖),
-#  墓碑(零决策面)与消费序断言保留。) =====
-def test_faction_wire_source_locks() -> None:
-    """墓碑+顺序两锁:方法零决策面(不动环、不做游戏交互);主环在
-    XP 对账同帧之后消费(W971 P3b:XP/羁绊同帧消费点在
-    _v2_post_frame_accounting,羁绊紧随其后)。"""
+# ===== 接线锁(2026-09-10 对账补刀改形:肯定式在场断言删于 2026-09-09 手术
+#  ——纪律 8;原语句序断言(fac_at > xp_at)经预检表架空巡检改 spy 行为锁:
+#  两通道相互独立、异常各自吞,调用先后无行为语义(「顺序即语义」容忍档
+#  不成立);但「两通道挂 heavy 定型帧消费」的接线面无别家锁(下方行为测
+#  全部直调方法本体,调用位被删时恒绿),改运行时态 spy 后方法体重排不再
+#  假红、通道脱接线仍红。墓碑(零决策面)保留。) =====
+def test_faction_wire_source_locks(monkeypatch: _w547_faction_wire_pytest.MonkeyPatch) -> None:
+    """墓碑+接线两锁:方法零决策面(不动环、不做游戏交互);heavy 定型帧
+    对账族 XP/羁绊两通道真被 _v2_post_frame_accounting 调用(W971 P3b:同帧
+    消费点拆分后,羁绊通道随迁挂同一 heavy 帧)。"""
+    # 零决策墓碑:方法不 return 环结果、不做任何游戏交互(无 screenshot/click)
     src = _w547_faction_wire_inspect.getsource(CwScreenPrep._reconcile_faction_display)
-    # 零决策:方法不 return 环结果、不做任何游戏交互(无 screenshot/click)
     assert 'round_' not in src.replace('round_num', '')
     assert 'screenshot(' not in src
-    # 消费序(W971 P3b 拆内环:XP/羁绊同帧消费点在 _v2_post_frame_accounting)
-    acct_src = _w547_faction_wire_inspect.getsource(
-        CwScreenPrep._v2_post_frame_accounting)
-    xp_at = acct_src.index('self._reconcile_xp_expect(obs)')
-    fac_at = acct_src.index('self._reconcile_faction_display(obs)')
-    assert fac_at > xp_at, '羁绊对账须与 XP 对账同一 heavy 定型帧、紧随其后'
+    # 接线行为锁(spy 读运行时态,判定调用位而非源码串)
+    calls: list[str] = []
+    monkeypatch.setattr(pd.CwScreenPrep, '_reconcile_xp_expect',
+                        lambda self, obs: calls.append('xp'))
+    monkeypatch.setattr(pd.CwScreenPrep, '_reconcile_faction_display',
+                        lambda self, obs: calls.append('faction'))
+    d = object.__new__(CwScreenPrep)
+    session = SimpleNamespace()
+    d.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
+    d.last_screenshot = object()
+    d._v2_post_frame_accounting(pd.PrepObservation(),
+                                {'key': None, 'progressed': False}, session)
+    assert calls.count('xp') == 1 and calls.count('faction') == 1, calls
 
 
 # ===== 行为锁(假 reader/假账本,零 OCR/零游戏) =====

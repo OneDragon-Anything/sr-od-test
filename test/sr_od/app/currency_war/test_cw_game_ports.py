@@ -164,13 +164,16 @@ class TestZeroProductionConsumption:
     批 0 锁「零消费」;批 1 起按批 0 预写的跟绿条件改写:生产树对
     cw_game_ports 的引用面 = 协议文件 + 改道调用点**封闭集**——集合外
     新增消费 = 旁路改道(未登记的读屏/执行新缝),红。当前封闭集
-    (批 1 改道清单,方案 §6.2 批 1 行 + §7.1 文件面):
+    (批 1 改道清单,方案 §6.2 批 1 行 + §7.1 文件面;批 2 增补
+    cw_screen_op_base 一项,理由见集合内注):
 
     - cw_game_ports.py —— 协议本体(槽与两 Protocol);
     - operations/cw_op/cw_op_buy_cards.py —— 商店入口观察改道 +
       动作执行步改道(§3.3 执行面);
     - operations/cw_screen/cw_screen_prep.py —— 备战入口 heavy 观察
       改道(§2.3 表消费点);
+    - operations/cw_screen/cw_screen_op_base.py —— docstring 提及,
+      非改道点(试点基类,零 import 零调用);
     - operations/decision_frame_hooks.py —— 留证面改形(§2.3 契约
       三则:假环境落结构化观察 JSON)。
     """
@@ -182,6 +185,11 @@ class TestZeroProductionConsumption:
             / 'cw_op_buy_cards.py'),
         str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
             / 'cw_screen_prep.py'),
+        # 统一观察架构试点步骤 1(commit 3a688669a)基类:docstring 提及
+        # 安装协议名(「双清复位见 cw_game_ports」),零 import 零调用——
+        # 扫描为文本匹配,提及即命中;非改道点,批 2 登记豁免。
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_op_base.py'),
         str(Path('application') / 'currency_war' / 'operations'
             / 'decision_frame_hooks.py'),
     )

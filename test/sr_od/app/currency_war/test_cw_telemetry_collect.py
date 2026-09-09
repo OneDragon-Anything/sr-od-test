@@ -2,7 +2,8 @@
 
 残存判据(用户裁定硬砍批:默认砍,三保留条=①读取正确性喂决策 ②事故耦合
 ③schema/注册表守卫):结算读链(parse_settlement_round/ recovered 残卷门/
-monotonic gate)、补给 detour 失败安全(防备战屏盲点卡身)、位面情报接管链
+monotonic gate)、补给 detour 失败安全(防备战屏盲点卡身)+ 供给半环写入端
+链路锁(supply_pick decisions 帧,DEBTS D4 消费)、位面情报接管链
 (obs→session 写入正确性)、观测异常不阻塞对局。
 
 砍除面墓碑(锁面→砍因,一次性记录不展开):
@@ -46,7 +47,7 @@ if TYPE_CHECKING:
     from test.conftest import SrTestContext
 
 
-# ==================== 补给 detour 失败安全(残存 2 测) ====================
+# ==================== 补给 detour 失败安全(残存 2 测)+ 供给写入端链路锁(D4) ====================
 # (墓碑:detour happy-path 快照/once-per-node/返回 miss 静默放弃 3 测砍于
 #  硬砍批——采集成功面是纯遥测;残存 2 测辖「失败不卡身/不假完成」。)
 
@@ -165,6 +166,51 @@ def test_detour_failure_not_marked_retry_next_round(monkeypatch) -> None:
         '失败不得落标记(否则下轮跳过 detour 直接在错误画面选择)'
     assert op._should_supply_detour(match) is True   # 下轮重试 detour
     assert ocr_clicks == ['返回补给阶段']   # OCR 文本兜底枪已打(重试序列末位)
+
+
+def test_do_action_pick_writes_supply_pick_decision_frame(monkeypatch) -> None:
+    """供给半环写入端链路锁(DEBTS D4 消费):选卡路径经生产 _do_action 链
+    真实写出 decisions 帧——extra.phase='supply_pick' + supply_pick 选定快照
+    (含 n_options/options 漏读审计清单)单行可读;gold_point=False(detour 帧
+    已采过 gold 轨,选卡帧不重复入轨的效率契约)。
+
+    写点 = cw_screen_supply_node 选卡确认后 record_decision(观测失败不阻塞)。
+    detour 失败安全由上方 2 测辖,本测走「detour 已完成」直入选卡路径。
+    """
+    from sr_od.application.currency_war.operations.cw_screen import (
+        _overlay_confirm as oc,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node as m,
+    )
+
+    op, captured = _make_supply_op(monkeypatch)   # cw_telemetry 即 recorder 别名,patch 即捕获
+    match = op.ctx.cw_match
+    op._mark_supply_detour(match)                 # detour 已完成 → _do_action 直入选卡路径
+    opts = [(SimpleNamespace(char='姬子', equip='火焰', has_diamond=False),
+             SimpleNamespace(x=900, y=550)),
+            (SimpleNamespace(char='笑笑', equip='面具', has_diamond=True),
+             SimpleNamespace(x=1100, y=550))]   # 点击点带 x/y(生产 log 读 target.x)
+    monkeypatch.setattr(m, 'read_supply_options', lambda ctx, screen: opts)
+    monkeypatch.setattr(m, 'CurrencyWarConfig', lambda idx: SimpleNamespace())   # 离线:不读真实实例配置
+    match.strategy = SimpleNamespace(
+        decide_supply=lambda *a, **k: SimpleNamespace(idx=0, refresh=False,
+                                                      reason='lock'))
+    op.ctx.controller = SimpleNamespace(mouse_move=lambda p: None,
+                                        click=lambda p: None)
+    monkeypatch.setattr(oc, 'register_confirm_arrival', lambda *a, **k: None)
+    try:
+        op._do_action(object())
+    finally:
+        state.consume_last_supply_pick()          # 选卡路径真写暂存槽,测后清干净
+    rows = [r for r in captured
+            if r['extra'].get('phase') == 'supply_pick']
+    assert len(rows) == 1, f'选卡路径应恰写一帧 supply_pick,实得 {captured}'
+    pick = rows[0]['extra']['supply_pick']
+    assert pick['char'] == '姬子' and pick['equip'] == '火焰'
+    assert pick['has_diamond'] is False and pick['refreshed'] is False
+    assert pick['n_options'] == 2 and len(pick['options']) == 2
+    assert rows[0]['gold_point'] is False
 
 
 # ==================== 结算屏真值 + 败局页 telemetry-only 边界 ====================

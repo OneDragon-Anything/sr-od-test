@@ -560,6 +560,42 @@ class TestOpRendering:
             assert f'外生行 {kind}@' in md, kind
         assert '丹恒·腾荒 +2金' in md
 
+    def test_terminal_closure_row_typed_not_battle_verdict(
+            self, tmp_path: Path) -> None:
+        """收口终局行(T-185)显示面分型:killed=False 是对局级终了真值非
+        战斗结算——fill 轨迹胜负列与战斗窗观察面「结算判定」均专项标注
+        「收口(未通关·stopped)」,禁渲染成战斗败轮(旧法走 killed is False
+        → '败')或「存活(killed=False)」;op 标题时间戳标签用「收口」替代
+        「结算」(先例:补给合成行「合成快照非结算事件」专项标注)。"""
+        mod = _load_tool()
+        frame = _frame(_ts(0, 0, 0), plane=1, rnd=3)
+        terminal = _outcome(_ts(0, 6, 0), plane=1, rnd=3,
+                            source='terminal_closure', node_type='',
+                            killed=False, hp_after=None, hp_confidence=0.0,
+                            match_result='stopped', streak=None,
+                            damage_dealt=None)
+        archive = _archive(
+            slices=_archive()['slices'] | {
+                'decisions.jsonl': [frame],
+                'outcomes.jsonl': [terminal],
+            },
+            rounds=[], endgame={'result': 'stopped', 'abandoned': False,
+                                'plane_reached': 1, 'rounds_survived': 3,
+                                'final_hp': 55, 'difficulty': 'A3'})
+        md = _render(mod, archive, tmp_path)
+
+        # fill 轨迹行:胜负列 = 收口标注,禁「败」
+        fill_row = next(ln for ln in md.splitlines()
+                        if ln.startswith('| P1·R3 '))
+        assert '收口(未通关·stopped)' in fill_row
+        assert '败' not in fill_row
+        # 战斗窗观察面「结算判定」:同款收口标注(非战斗结算显式声明)
+        assert ('| 结算判定 | 收口(未通关·stopped)·非战斗结算 |' in md)
+        # op 标题:时间戳标签「收口」(「(收口 」形态,替代战斗行的「(结算 」)
+        assert '(收口 00:06:00' in md
+        # 正常备战行标题不带结算/收口标签(时间戳裸形态,对照不受影响)
+        assert '(00:00:00,帧 [00]' in md
+
 
 # ---------------------------------------------------------------------------
 # 4. 渲染缺口清偿锁(084421 审计 R1-R12 逐条 + 误报回归)
