@@ -225,17 +225,19 @@ def test_factory_slot_unregistered_returns_none_no_writeback(monkeypatch) -> Non
     出处 = ADR-0563 决策-4(kernel 写路径经 strategy_state_lazy 惰性兜底,
     工厂未注册 = 保守跳过)+ ``ensure_strategy_state_attached`` docstring。
     _STATE_FACTORY 是 mandate_v1 包导入即全局安装的模块级全局(同会话
-    其他测试 import 后恒为 MandateState 工厂),按测试纪律第 4 条 setup
+    其他测试 import 后恒为 StrategyState 工厂),按测试纪律第 4 条 setup
     必须 monkeypatch 桩化(自动还原,防跨测试串染)。本测试同时直锁
     mandate_v1 装配副作用契约(出处 = mandate_v1/__init__ docstring
     「装配副作用(本包被导入即生效)」+ ADR-0563 决策-4 注册点声明):
-    包导入即全局安装,_STATE_FACTORY is MandateState(先于桩化断言,
-    自带导入保证与测试顺序无关)。"""
+    包导入即全局安装,_STATE_FACTORY is StrategyState(先于桩化断言,
+    自带导入保证与测试顺序无关)。改锁依据 = 设计正本 §8.6-6 改名归位
+    (迁移批次三):状态类目标名 StrategyState,MandateState 为同对象
+    别名——锁语义(装配副作用 = 安装 mandate_v1 状态工厂)不变。"""
     from sr_od.application.currency_war.kernel import cw_strategy_session as ss_mod
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        MandateState,
+        StrategyState,
     )
-    assert ss_mod._STATE_FACTORY is MandateState, (
+    assert ss_mod._STATE_FACTORY is StrategyState, (
         'mandate_v1 包导入即全局安装工厂(装配副作用直锁)')
     monkeypatch.setattr(ss_mod, '_STATE_FACTORY', None)
     sess = _strategy_cls()()
