@@ -668,6 +668,24 @@ def test_sim_batch_dir_structure(tmp_path: _sim_cli_smoke_Path) -> None:
                 f"killed 极性反转(产线 killed=胜): {r}"
 
 
+def test_sim_batch_p2_second_engine_full_ledger_wiring() -> None:
+    """「局终」口径检查的 full_ledgers 穿线(simulate_p1_batch→批出口;ADR-0629)。
+
+    planes=2 批的批报告 second_engine_deadline 必须出数且自描述局终
+    口径。语义面(统一轴/never 判定)由
+    test_second_engine_deadline_game_end_caliber 的合成两段账本锁
+    承重;本烟雾钉生产接线本身——若 simulate_p1_batch 退回 P1 段
+    视图喂入,输出数值静默变截断口径(T-211「never 21 超带」假警报
+    根因),口径声明面仍在但本锁的出数形状由语义锁联合把守。
+    fallback 池 n=2,实测 ~0.3s(快速集)。
+    """
+    rep = simulate_p1_batch(2, pool='fallback', seed_base=7,
+                            ledger=False, planes=2)
+    chk = rep['checks_violations']['second_engine_deadline']
+    assert chk['first_engine_games'] == 2, chk
+    assert '局终口径' in (chk['caliber_note'] or ''), chk
+
+
 # ==================== replay_reader ====================
 
 import sys

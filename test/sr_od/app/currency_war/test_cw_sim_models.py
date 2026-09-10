@@ -820,6 +820,72 @@ def test_second_engine_deadline_form_split() -> None:
     assert s['never_second_engine'] == 1 and s['delayed_miss'] == 1, s
 
 
+def test_second_engine_deadline_game_end_caliber() -> None:
+    """second_engine_deadline 口径声明锁(键↔口径绑定;ADR-0629)。
+
+    口径 = 局终(全账本 P1+P2):「首引擎后至局终仍未凑出次引擎」
+    的局终是模拟局真实末轮,而 P2 转型期正是二引擎形成窗;T-211
+    归因实锤 P1 段截断口径把 P2 内形成的二引擎记成 never(冻结
+    s8550 批:截断 21 vs 全局面 15,「never 21 超带」假警报直接
+    成因)。本锁钉两处回退形态:
+    ①检查器轴回退——跨段 gap/期限窗用统一局轮轴 ts(P2 round_num
+      段内重计 1..7,直接做差会在位面边界回卷/负 gap);
+    ②批接线回退——run_batch_level_checks 若把「局终」检查退回
+      P1 段视图喂入(full_ledgers 缺席回退 ledgers 对纯 P1 批零
+      漂移属合法;对 planes>=2 批则是口径静默截断),③发变红。
+    冻结账本实证锚(.debug/temp/currency_war/validate_t212.py 可
+    复跑):七批全局面 never 序列 2/0/1/11/12/12/15、P1 截断 3/0/
+    1/22/24/20/21,与 T-211 归因批 §2 直算表逐位一致;s8350 冻结↔
+    收窄重放配对在局终口径下零翻转保持(never 12→12/delayed 45
+    →45),配对结论跨口径换算不失效。
+    """
+    e1 = {'仙舟': 3}
+    e2 = {'仙舟': 3, '列车同行': 2}
+
+    def p1_row(rn: int, bf: dict | None = None) -> dict:
+        r = _row(rn=rn, bf=bf)
+        r['ts'] = rn            # 账本行写入端语义:P1 段 ts == rn
+        return r
+
+    def p2_row(rn: int, bf: dict | None = None) -> dict:
+        r = _row(rn=rn, bf=bf)
+        r['plane'] = 2
+        r['ts'] = 9 + rn        # P2 首轮 ts=10(_Plane1View 切片注释同源)
+        return r
+
+    # ① 局终口径:次引擎在 P2 形成 → 不再记 never,按统一轴算 delayed
+    #    (首引擎 P1r2,P2r2 = 轴 11 → gap 9 >3)
+    game = [p1_row(rn, e1) for rn in range(2, 10)] + [p2_row(2, e2)]
+    r = runtime.check_second_engine_deadline([game])
+    assert r['never_second_engine'] == 0, r
+    assert r['delayed_miss'] == 1 and r['delayed_avg_gap'] == 9.0, r
+    assert '局终口径' in (r['caliber_note'] or ''), r   # 输出自描述口径
+
+    # ② 位面边界期限窗:首引擎 P1r8 → 窗 = ts(8,11] 跨 P1r9+P2r1;
+    #    P2r1 达成 = gap 2 ≤3,不计 miss(轴回卷回归即此发变红)
+    edge = [p1_row(8, e1), p1_row(9, e1), p2_row(1, e2)]
+    r2 = runtime.check_second_engine_deadline([edge])
+    assert r2['deadline_miss'] == 0 and r2['never_second_engine'] == 0, r2
+
+    # ③ 批接线:full_ledgers 携带全量账本 → 局终口径穿透批出口;
+    #    接线回退成 P1 段视图喂入时,同一批的 never 翻成 1 → 红
+    p1_views = [[row for row in game if row['plane'] == 1]]
+    s = runner.run_batch_level_checks(
+        p1_views, full_ledgers=[game])['second_engine_deadline']
+    assert s['never_second_engine'] == 0 and s['delayed_miss'] == 1, s
+
+    # ④ planes=1 零漂移锚:纯 P1 账本带/缺 ts 输出逐键相同
+    #    (回退轴 rn 恒等 ts)——历史批与既有形态分键锁的连续性依据
+    pure = [p1_row(rn, e1) for rn in range(1, 6)] + [p1_row(6, e2)]
+    no_ts = [{k: v for k, v in row.items() if k != 'ts'} for row in pure]
+    a = runtime.check_second_engine_deadline([pure])
+    b = runtime.check_second_engine_deadline([no_ts])
+    for k in ('first_engine_games', 'deadline_miss', 'never_second_engine',
+              'never_games', 'delayed_miss', 'delayed_avg_gap', 'avg_gap',
+              'miss_reasons'):
+        assert a[k] == b[k], (k, a[k], b[k])
+
+
 # --- 语料级 -----------------------------------------------------------
 
 def test_attach_run_detector_bidirectional() -> None:
