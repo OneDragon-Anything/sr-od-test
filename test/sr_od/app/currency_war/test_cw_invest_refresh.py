@@ -415,18 +415,24 @@ def test_lock10_zero_or_missing_count_skips_slot(
         '重决策用最终名集(槽 1 已换卡)')
 
 
-def test_lock11_double_verify_fail_failsafe_no_retry(
+def test_lock11_reread_redecide_natural_chain_after_emit(
         test_context, monkeypatch: pytest.MonkeyPatch) -> None:
-    """锁 11:验效双输(计数不扣 ∧ 卡名未变)→ 停止刷新照常选当前最优 +
-    不重试(同槽不二次点击、后续槽不再尝试);名集未变不重决策(失败 = 现状)。"""
+    """锁 11(语义翻转改写;原「验效双输失败安全」锁):验效双通道拆除
+    (用户裁定 2026-09-10 动作 op 只管机械执行禁止验效,出处 = 清查报告
+    .debug/temp/currency_war/验证违规清查-报告.md H2)后,本锁改锁机械执行
+    +观察驱动新形态:点刷新+固定等待→无条件重读→重决策(名集未变 = 新观察
+    与旧同名,重决策结果天然等价,不要求与原 pick 等价);链继续条件只由
+    新观察承载——名集未变不拦链,后续槽闸(计数现读/防重入/L1 逐步守卫)
+    过即照刷;防重入(发射即记)保每槽恰一次点击。"""
     book = _FrameBook([object(), object()])
     book.options[id(book.frames[0])] = _opts_of(['赌神·银', '恢复生机', '气氛组'])
     book.options[id(book.frames[1])] = _opts_of(['赌神·银', '恢复生机', '气氛组'])
     book.counts[id(book.frames[0])] = _counts_of([1, 1, 1])
-    book.counts[id(book.frames[1])] = _counts_of([1, 1, 1])   # 计数不扣(双输)
+    book.counts[id(book.frames[1])] = _counts_of([1, 1, 1])   # 重读帧计数不扣(原「双输」形态)
     strategy = _StubStrategy([
         PickEvent(option_idx=0, refresh=True, refresh_slots=(0, 1),
                   reason='eval+refresh-suggest'),
+        PickEvent(option_idx=0, reason='re-decide'),
     ])
     _wire(test_context, monkeypatch, strategy)
     op, clicks = _make_op(test_context, monkeypatch, book)
@@ -435,11 +441,14 @@ def test_lock11_double_verify_fail_failsafe_no_retry(
 
     assert result.is_success
     refresh_clicks = [c for c in clicks if c.y == _CNT_Y]
-    assert _pts(refresh_clicks) == [(_CNT_XS[0] + _DX, _CNT_Y)], (
-        f'仅槽 0 尝试一次、不重试不续刷,实得 {refresh_clicks}')
-    assert len(strategy.calls) == 1, '名集未变 → 不重决策(照常选当前最优)'
+    assert _pts(refresh_clicks) == [(_CNT_XS[0] + _DX, _CNT_Y),
+                                    (_CNT_XS[1] + _DX, _CNT_Y)], (
+        f'名集未变不拦链:两槽各点一次(防重入保恰一次),实得 {refresh_clicks}')
+    assert len(strategy.calls) == 2, '恰两次决策(初始 + 刷后重决策)'
+    assert strategy.calls[1] == ['赌神·银', '恢复生机', '气氛组'], (
+        '重决策用重读名集(未变 = 天然等价)')
     assert _pts(clicks[-2:]) == [(460, _SELECT_Y), (_CONFIRM.x, _CONFIRM.y)], (
-        '按原决策选卡(idx0)+ 确认')
+        '按重决策选卡(idx0)+ 确认')
 
 
 def test_lock12_reset_semantics_three_lanes(

@@ -76,12 +76,14 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
                     pick: EncounterPick,
                     cnt: tuple | None = (1, (771, 899)),
                     confirm_success: bool = True,
-                    refresh_result: tuple[bool, list] = (False, [])):
+                    refresh_opts: list[EncounterOption] | None = None):
     """遭遇屏真类装配(生产构造走 __init__ = on_outcome 注册表在位)。
 
     桩面 = 画面门/截屏/读链/策略器/确认链/遥测;``_try_refresh`` 方法级桩
-    (刷新验效双通道的载体面,本锁族只断言发射型登记语义,不验验效通道
-    本身——其在册锁见 test_cw_node_obs 族)。返回 (op, match, session)。
+    (刷新机械执行面:点钮+固定等待+重读;验效双通道已拆除——用户裁定
+    2026-09-10 动作 op 只管机械执行禁止验效,出处 = 清查报告
+    .debug/temp/currency_war/验证违规清查-报告.md H1——本桩回传重读候选,
+    空表 = 读缺失败安全形态)。返回 (op, match, session)。
     """
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_encounter as em,
@@ -98,7 +100,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
                         lambda scr, s, a, **k: _Area(in_screen))
     monkeypatch.setattr(op, 'screenshot', lambda: _FRAME)
     monkeypatch.setattr(op, '_try_refresh',
-                        lambda text_pt, old_sig, old_count: refresh_result)
+                        lambda text_pt: list(refresh_opts or []))
     monkeypatch.setattr(em, 'read_encounter_options',
                         lambda ctx, scr: list(options))
     monkeypatch.setattr(em, 'read_encounter_refresh_count',
@@ -304,27 +306,41 @@ def test_encounter_refresh_emission_wired_to_registry(test_context,
         f'发射型登记件须在 __init__ 入注册表:{specs!r}')
 
 
-def test_encounter_refresh_emission_counts_on_verify_failure_new_path(
+def test_encounter_refresh_emission_counts_and_reread_redecide_new_path(
         test_context, monkeypatch) -> None:
     """B5-④ 发射型断言(新路径):建议刷新 → 有次数未用 → 发射即置位
-    (+1 带 refresh_click 证据),验效失败帧仍 +1;落地回执点不重复计数
-    (发射型不混触落地门,§6.4);防重入旗标(执行侧载体)同步置位。"""
+    (+1 带 refresh_click 证据),卡面未变帧(原「验效失败」形态)仍 +1;
+    落地回执点不重复计数(发射型不混触落地门,§6.4);防重入旗标(执行
+    侧载体)同步置位。验效双通道拆除后(用户裁定 2026-09-10 动作 op 禁
+    验效,清查报告 H1):点钮+固定等待→无条件重读→带 refresh_used=True
+    自然重决策(恰两次决策;不要求与原 pick 等价)。"""
     install_dispatch_stub_ports(monkeypatch)
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=0, refresh=True, reason='stub'),
-        refresh_result=(False, []))   # 刷新验效失败(点偏/无布局)
+        refresh_opts=opts)   # 重读=原卡面(未变形态)
+    _decide_calls: list[tuple[list, bool]] = []
+    _orig_decide = match.strategy.decide_encounter
+
+    def _counting(opts_, st, sess, cfg, refresh_used=False):
+        _decide_calls.append((list(opts_), refresh_used))
+        return _orig_decide(opts_, st, sess, cfg, refresh_used=refresh_used)
+
+    match.strategy.decide_encounter = _counting
     _run_node(test_context, op, op.handle)
     bs = board_state_of(session)
     assert bs.encounter_refresh_used.value == 1, (
-        f'验效失败帧仍 +1(随点击置位不等验效,§6.5-4):{bs.encounter_refresh_used.value}')
+        f'卡面未变帧仍 +1(随点击置位不等验效,§6.5-4):{bs.encounter_refresh_used.value}')
     assert bs.encounter_refresh_used.evidence == 'refresh_click', (
         f'发射证据逐位一致:{bs.encounter_refresh_used.evidence!r}')
     assert exec_state_of(session)._encounter_refresh_used is True, (
         '防重入旗标(执行侧载体)发射点同步置位')
+    assert len(_decide_calls) == 2 and _decide_calls[1][1] is True, (
+        f'刷后无条件重读+自然重决策(恰两次决策,重决策带 refresh_used=True):'
+        f'{_decide_calls!r}')
     assert bs.chosen_encounter.value == (1, '金币×2'), (
-        '刷新失败安全分支照常选卡,出口验真通过 → chosen 照写')
+        '刷后重决策照常选卡,出口验真通过 → chosen 照写')
 
 
 def test_encounter_refresh_emission_counts_on_old_path_too(
@@ -337,7 +353,7 @@ def test_encounter_refresh_emission_counts_on_old_path_too(
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=0, refresh=True, reason='stub'),
-        refresh_result=(False, []))
+        refresh_opts=[])
     _run_node(test_context, op, op.handle)
     bs = board_state_of(session)
     assert bs.encounter_refresh_used.value == 1, (
