@@ -103,6 +103,22 @@ def replay(tmp_path: _match_archive_Path) -> _match_archive_Path:
     _write_jsonl(rd, 'exogenous.jsonl', [
         {'run_id': 'run_20260830_094811', 'kind': 'briefing', 'round_num': 0,
          'ts': '2026-08-30T09:47:00', 'detail': '难度A8', 'state_snapshot': {}}])
+    # 新账行(v12+ 装配切片语义;W3 起 _SLICE_FILES 只含 op_journal+journal,
+    # materialize/读面同源测试消费本行集)
+    jrows = [
+        {'v': 1, 'ts': '2026-08-30T09:50:00', 'run_id': 'run_20260830_094811',
+         'row': 'write', 'field': 'gold', 'after': 10,
+         'state': {'values': {'gold': 10, 'hp': 60}},
+         'sig': {'family': 'obs', 'actor': 'X', 'mode': 'read'},
+         'note': '', 'evidence_refs': []},
+        {'v': 2, 'ts': '2026-08-30T10:26:00', 'run_id': 'run_20260830_101513',
+         'row': 'write', 'field': 'gold', 'after': 5,
+         'state': {'values': {'gold': 5, 'hp': 40}},
+         'sig': {'family': 'obs', 'actor': 'X', 'mode': 'read'},
+         'note': '', 'evidence_refs': []},
+    ]
+    (rd / 'state').mkdir(parents=True, exist_ok=True)
+    _write_jsonl(rd, 'state/journal.jsonl', jrows)
     return rd
 
 
@@ -119,34 +135,12 @@ def test_assign_games_cross_segment_inheritance(replay: _match_archive_Path):
     assert games[1]['segments'] == ['run_20260830_110000']
 
 
-def test_archive_hp_truth_chain(replay: _match_archive_Path):
-    """hp 真值链:结算屏(conf≥0.9)优先;备帧 hp=100 不可信不冒充真值。"""
-    a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
-    r11 = by_key[(1, 1)]
-    assert r11['hp'] == 60 and r11['hp_source'] == 'settlement'
-    assert r11['hp_trusted'] is True
-    # 掉血轮列表(败场节点)= hp 链上 delta<0 的轮(p1r9: 52→18)
-    assert any(n['plane'] == 1 and n['round'] == 9 and n['delta'] == -34
-               for n in a['loss_nodes'])
-    # 只有无结算行的轮才落备帧兜底(本 fixture 全有结算行)
-    assert all(r['hp_source'] == 'settlement' for r in a['rounds'])
-
-
-def test_frame_hp_fallback_marks_untrusted(replay: _match_archive_Path):
-    """无结算行的轮 → 备帧兜底,且 hp_readable=False 必标不可信。"""
-    games = arch.assign_games(replay)
-    # run_C 只造 decisions(删 outcome 行模拟读不到结算)
-    out_p = replay / 'outcomes.jsonl'
-    rows = [json.loads(l) for l in out_p.open(encoding='utf-8') if l.strip()]
-    rows = [r for r in rows if r.get('run_id') != 'run_20260830_110000']
-    _write_jsonl(replay, 'outcomes.jsonl', rows)
-    a = arch.build_archive(replay, games[1])
-    r = a['rounds'][0]
-    assert r['hp'] == 100 and r['hp_source'] == 'frame'
-    assert r['hp_trusted'] is False
-
-
+# [退役墓碑,W3]test_archive_hp_truth_chain 随档案 rounds hp 链构建面
+# (旧流切片)拆除退役(W3)。git 历史可复活。
+# [退役墓碑,W3]test_frame_hp_fallback_marks_untrusted 随档案 rounds hp 链
+# 构建面(旧流切片)拆除退役(W3);hp 可信门单一源由 HP_CONF_TRUSTED 谓词
+# 锁(test_terminal_row_exits_hp_truth_chains 与 sim/pool 侧)承锁。
+# git 历史可复活。
 def test_zero_settlement_segment_self_identified(tmp_path: _match_archive_Path):
     """零结算段自标识(v11):决策帧在、结算行零的段 → segments[] 带
     ``settlement_gap``(决策帧数+摘要 claimed 值);有结算段键缺省。
@@ -178,16 +172,8 @@ def test_zero_settlement_segment_self_identified(tmp_path: _match_archive_Path):
     # 归组语义 = assign_games 时序插位;含后继局的真实流形态由
     # test_decision_only_segment_groups_to_prior_game_with_later_outcome_game 承接)
     assert games[0]['segments'] == [rid_a, rid_b]
-    a = arch.build_archive(rd, games[0])
-    by_rid = {s['run_id']: s for s in a['segments']}
-    # 断流形态段:自标识在场,帧数与摘要 claimed 值随行可读
-    assert by_rid[rid_b]['settlement_gap'] == {
-        'decision_frames': 3, 'claimed_rounds_survived': 6}
-    # 正常段(有结算行):键缺省,不过度标注
-    assert 'settlement_gap' not in by_rid[rid_a]
-    # 判读面两端(段摘要列表被审计直读)同步可见
-    assert any(s.get('run_id') == rid_b and 'settlement_gap' in s
-               for s in a['endgame']['segment_summaries'])
+    # W3:settlement_gap 归档显影随段摘要构建面的旧流切片拆除退化
+    # (归组断言仍全量承锁继承规则)。git 历史可复活原断言。
 
 
 def test_settlement_gap_skips_empty_and_settled_segments():
@@ -264,20 +250,17 @@ def test_decision_only_segment_groups_to_prior_game_with_later_outcome_game(
     assert [(g['game_id'], g['segments']) for g in games] == [
         ('g_20260908_165445', [rid_a, rid_b]),
         ('g_20260909_053235', [rid_c])]
-    # 端到端:归位后 settlement_gap 落在 g_165445 名下(锚点配对不被重写破坏)
-    a = arch.build_archive(rd, games[0])
-    by_rid = {s['run_id']: s for s in a['segments']}
-    assert by_rid[rid_b]['settlement_gap'] == {
-        'decision_frames': 1, 'claimed_rounds_survived': 6}
+    # W3:settlement_gap 端到端显影随 rounds/段摘要构建面的旧流切片拆除
+    # 退化(归组断言仍全量承锁时序插位语义)。git 历史可复活原断言。
 
 
 def test_assemble_game_writes_index_and_no_tmp(replay: _match_archive_Path):
     """装配产物:match_*.json + index.jsonl 一行一局;无 .tmp 残留(原子写)。"""
     a = arch.assemble_game(replay, 'g_20260830_094811')
-    assert a is not None and len(a['rounds']) == 4
+    assert a is not None and a['rounds'] == []  # W3:rounds 面旧流切片已拆,宽容退化
     assert a['endgame']['result'] == 'loss'          # 末段 loss = 全局结果
     assert a['endgame']['abandoned'] is False
-    assert a['opening']['chosen_env'] == ['增发货币']
+    assert a['opening']['chosen_env'] == []  # W3:opening 面(exogenous/invest 切片)同拆
     assert a['continuity_note'] == ''
     assert not list((replay / 'matches').glob('*.tmp'))
     idx = [json.loads(l) for l in
@@ -343,7 +326,7 @@ def test_pending_reassembles_on_resume_segment_merge(replay: _match_archive_Path
     got = arch.load_archive(replay, 'g_20260830_110000')
     assert [s['run_id'] for s in got['segments']] == [
         'run_20260830_110000', 'run_20260830_120000']
-    assert any((r['plane'], r['round']) == (1, 2) for r in got['rounds'])
+    # W3:rounds 构建面旧流切片已拆,rounds 退化空(续段归并由段集断言承接)
     assert got['endgame']['result'] == 'loss'
     idx = [json.loads(ln) for ln in (replay / 'matches' / 'index.jsonl')
            .open(encoding='utf-8')]
@@ -380,87 +363,12 @@ def test_pending_new_game_unaffected_by_resume_merge(replay: _match_archive_Path
     assert [s['run_id'] for s in again['segments']] == ['run_20260830_110000']
 
 
-def test_resume_reconciliation_columns(replay: _match_archive_Path):
-    """恢复态对账列(v6③):续局段的恢复帧读数 vs 前段末帧账面逐字段
-    对账;readable=False 的恢复读数对齐判 None(不可判,不猜)。
-
-    复刻 2026-09-05 夜第八局实证:恢复帧 hp/gold 与停机前账面对不上,
-    判读需此列显影才免手工翻流对账;装配器不裁真值。
-    """
-    dec_p = replay / 'decisions.jsonl'
-    rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
-    for r in rows:
-        # 前段(run_A)末帧 p1r2:hp 不可信帧默认形态(hp=100, readable=False)
-        if r.get('run_id') == 'run_20260830_094811' and r.get('round_num') == 2:
-            r['gold'], r['gold_readable'] = 55, True
-        # 续段(run_B)恢复帧 p1r9:hp 可信但与档案账面对不上(29→18 形态)
-        if (r.get('run_id') == 'run_20260830_101513'
-                and r.get('round_num') == 9):
-            r['hp'], r['hp_readable'] = 18, True
-            r['gold'], r['gold_readable'] = 68, True
-    _write_jsonl(replay, 'decisions.jsonl', rows)
-    a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    rec = a['resume_reconciliation']
-    assert len(rec) == 1                                 # 单续局段一条
-    e = rec[0]
-    assert e['run_id'] == 'run_20260830_101513'
-    assert e['resume_frame'] == {'plane': 1, 'round_num': 9}
-    assert e['resume_ts'] == '2026-08-30T10:17:16'
-    assert e['prev_final_ts'] == '2026-08-30T09:50:00'   # 前段末帧(run_A p1r2)
-    # hp:恢复帧 18(可信)vs 前段末帧 100(帧值)→ 不对齐,显影
-    assert e['hp'] == {'resume': 18, 'prev_final': 100, 'aligned': False}
-    # gold:68 vs 55 → 不对齐
-    assert e['gold'] == {'resume': 68, 'prev_final': 55, 'aligned': False}
-    # level:两侧帧 state.level 均为默认 3 → 对齐(与 hp/gold 同构三键)
-    assert e['level'] == {'resume': 3, 'prev_final': 3, 'aligned': True}
-    # 单段独立局:无恢复事件 → 空列表
-    a2 = arch.build_archive(replay, arch.assign_games(replay)[1])
-    assert a2['resume_reconciliation'] == []
-    # 恢复帧 hp 不可信(readable=False)→ aligned=None 不可判,不猜;
-    # level 两侧不等(恢复帧 7 vs 前段 3)→ aligned=False
-    rows2 = []
-    for r in rows:
-        if (r.get('run_id') == 'run_20260830_101513'
-                and r.get('round_num') == 9):
-            r = dict(r, hp_readable=False)
-            r['state'] = {**r['state'], 'level': 7}
-        rows2.append(r)
-    _write_jsonl(replay, 'decisions.jsonl', rows2)
-    a3 = arch.build_archive(replay, arch.assign_games(replay)[0])
-    rec3 = a3['resume_reconciliation'][0]
-    assert rec3['hp']['aligned'] is None
-    assert rec3['level'] == {'resume': 7, 'prev_final': 3, 'aligned': False}
-
-
-def test_resume_reconciliation_outcome_fallback(replay: _match_archive_Path):
-    """恢复帧兜底(M2):续局段零决策帧(采集缺口形态)→ 最早结算行
-    兜底,hp_after/hp_confidence 归一为帧 hp/hp_readable 口径;结算行
-    不采金/等级 → 对应字段 aligned=None(诚实缺省,不猜)。"""
-    dec_p = replay / 'decisions.jsonl'
-    rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
-    # 清掉续段(run_B)全部决策帧,只留结算行(p1r9 hp18 conf=1.0)
-    _write_jsonl(replay, 'decisions.jsonl',
-                 [r for r in rows if r.get('run_id') != 'run_20260830_101513'])
-    a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    rec = a['resume_reconciliation']
-    assert len(rec) == 1
-    e = rec[0]
-    assert e['run_id'] == 'run_20260830_101513'
-    assert e['resume_frame'] == {'plane': 1, 'round_num': 9}
-    assert e['resume_ts'] == '2026-08-30T10:20:00'       # 结算行 ts
-    assert e['hp'] == {'resume': 18, 'prev_final': 100, 'aligned': False}
-    assert e['gold'] == {'resume': None, 'prev_final': 10, 'aligned': None}
-    assert e['level']['aligned'] is None                 # 结算行无 level
-    # 低置信结算行(conf<0.9)→ hp 不可信 → aligned=None(与帧口径同判)
-    out_p = replay / 'outcomes.jsonl'
-    outs = [json.loads(ln) for ln in out_p.open(encoding='utf-8') if ln.strip()]
-    _write_jsonl(replay, 'outcomes.jsonl', [
-        dict(o, hp_confidence=0.5) if (o.get('run_id') == 'run_20260830_101513')
-        else o for o in outs])
-    a2 = arch.build_archive(replay, arch.assign_games(replay)[0])
-    assert a2['resume_reconciliation'][0]['hp']['aligned'] is None
-
-
+# [退役墓碑,W3]test_resume_reconciliation_columns 随档案 resume_
+# reconciliation 构建面(续局恢复帧 vs 前段末帧对账,旧流 decisions 帧)
+# 拆除退役(W3)。git 历史可复活。
+# [退役墓碑,W3]test_resume_reconciliation_outcome_fallback 随档案
+# resume_reconciliation 构建面(旧流 decisions 帧)拆除退役(W3)。
+# git 历史可复活。
 def test_pending_warns_behind_watermark_unarchived(
         replay: _match_archive_Path,
         monkeypatch: pytest.MonkeyPatch):
@@ -484,15 +392,21 @@ def test_pending_warns_behind_watermark_unarchived(
     assert not any('g_20260830_110000' in w for w in warnings)
 
 
-def test_materialized_slice_views_equal_source(replay: _match_archive_Path):
-    """--match 视图同源:切片物化后 query_* 输出与源目录逐字节一致。"""
-    from sr_od.application.currency_war.telemetry import query as q
+def test_materialized_slice_journal_reads_equal_source(replay: _match_archive_Path):
+    """--match 视图同源:切片物化后 journal 读面输出与源目录逐字节一致。
+
+    W3 退役改锚:query_* 旧视图族已随删除波 1 写入端退役拆除
+    (r5-migration-plan.md §2 W3),同源判据改走唯一读面 journal_query
+    (装配切片 v12 起内嵌 state/journal.jsonl;旧流切片键已从 _SLICE_FILES
+    拆除,物化目录无旧流文件 = 与源目录同「空」)。"""
+    from sr_od.application.currency_war.telemetry import journal_query as jq
     a = arch.assemble_game(replay, 'g_20260830_094811')
     slice_dir = arch.materialize_slice(a, replay / '_slice_tmp')
+    assert jq.read_journal(slice_dir), '装配切片应内嵌新账行(v12+)'
     for seg in ('run_20260830_094811', 'run_20260830_101513'):
-        for view in (q.query_rounds, q.query_supply, q.query_anomalies,
-                     q.query_hp, q.query_economy):
-            assert view(slice_dir, seg) == view(replay, seg), \
+        for view in (jq.view_gold, jq.view_hp, jq.view_rounds):
+            assert view(jq.read_journal(slice_dir), seg) == \
+                view(jq.read_journal(replay), seg), \
                 f'{view.__name__}@{seg}: 档案切片视图与源目录不一致'
     import shutil
     shutil.rmtree(slice_dir)
@@ -500,41 +414,16 @@ def test_materialized_slice_views_equal_source(replay: _match_archive_Path):
 
 # ===== 二期补齐批:决策明细显形 / 策略版本戳 =====
 
-def test_rounds_decision_detail_and_bench_equips(replay: _match_archive_Path):
-    """二期①③⑤:逐轮表显形决策明细(v3_intention/candidate_scores/
-    eval_breakdown/dp_posture)与备战席逐张/装备栏 owned;无明细字段 = None。"""
-    # 给 p1r9 帧(段 B)补明细字段与 bench/equips 快照
-    dec_p = replay / 'decisions.jsonl'
-    rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
-    for r in rows:
-        if r.get('run_id') == 'run_20260830_101513' and r.get('round_num') == 9:
-            r['v3_intention'] = {'primary': '甲'}
-            r['candidate_scores'] = {'甲': 1.5}
-            r['eval_breakdown'] = {'form': 0.4}
-            r['dp_posture'] = '存息'
-            r['state']['bench'] = [{'name': '椒丘', 'star': 1}, None]
-            r['state']['equips'] = {'递归': 1}
-    _write_jsonl(replay, 'decisions.jsonl', rows)
-    a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
-    d = by_key[(1, 9)]['decision_detail']
-    assert d['v3_intention'] == {'primary': '甲'}
-    assert d['candidate_scores'] == {'甲': 1.5}
-    assert d['eval_breakdown'] == {'form': 0.4}
-    assert d['dp_posture'] == '存息'
-    assert by_key[(1, 9)]['bench'] == [{'name': '椒丘', 'star': 1}, None]
-    assert by_key[(1, 9)]['equips'] == {'递归': 1}
-    # 无明细字段的帧 → 明细键全 None(不炸);有帧轮 detail 非 None
-    assert by_key[(1, 1)]['decision_detail'] is not None
-    assert by_key[(1, 1)]['decision_detail']['v3_intention'] is None
+def _rewrite_runs(replay: _match_archive_Path, fn) -> None:
+    """runs.jsonl 行集变换 helper(原属已退役 resume 区,W3 迁此供版本戳测试)。"""
+    rows = [json.loads(ln) for ln in (replay / 'runs.jsonl')
+            .open(encoding='utf-8') if ln.strip()]
+    _write_jsonl(replay, 'runs.jsonl', fn(rows))
 
 
-def _rewrite_runs(replay: _match_archive_Path, mutate) -> None:
-    runs_p = replay / 'runs.jsonl'
-    rows = [json.loads(ln) for ln in runs_p.open(encoding='utf-8') if ln.strip()]
-    _write_jsonl(replay, 'runs.jsonl', mutate(rows))
-
-
+# [退役墓碑,W3]test_rounds_decision_detail_and_bench_equips 随档案 rounds
+# 构建面(decision_detail 逐帧明细,旧流 decisions 帧源)拆除退役(W3)。
+# git 历史可复活。
 def test_strategy_version_stamp_propagates(replay: _match_archive_Path):
     """二期②:runs 行带版本戳 → 档案顶层 strategy_version(倒查首个非空)+
     index 列透传。"""
@@ -595,151 +484,18 @@ def test_terminal_state_summary_field_lock():
         'equips_worn': 1, 'equips_owned': 0}
 
 
-def test_rounds_terminal_vs_decision_frame_divergence(replay: _match_archive_Path):
-    """端到端:同轮「决策帧列」与「终态列」并列且可分歧——决策帧取
-    actions 最多帧(执行前),终态取最晚帧(执行后);复刻 w936 误读形态
-    (决策帧 4/6 → 执行后 6/6)并断言两列不同。"""
-    dec_p = replay / 'decisions.jsonl'
-    rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
-    # 给段 B p1r9 造三帧:①决策帧(actions 最多,dep=1 无装备)→
-    # ②执行步进帧 → ③终态帧(最晚 ts,dep=3 已穿 2 件 + owned 1)
-    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:17:16',
-                        actions=[{'__type__': 'BuyCard', 'card': {'name': '甲'}},
-                                 {'__type__': 'BuyCard', 'card': {'name': '乙'}}]),
-                 'state': {'node_type': '普通战斗', 'level': 3,
-                           'hp_trusted': None, 'board': {},
-                           'deployed': [{'name': '甲', 'equips': []}],
-                           'bench': [], 'equips': []}})
-    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:18:00'),
-                 'state': {'node_type': '普通战斗', 'level': 3,
-                           'hp_trusted': None, 'board': {},
-                           'deployed': [{'name': '甲', 'equips': []},
-                                        {'name': '乙', 'equips': []}],
-                           'bench': [], 'equips': []}})
-    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:19:30'),
-                 'state': {'node_type': '普通战斗', 'level': 3,
-                           'hp_trusted': None, 'board': {},
-                           'deployed': [{'name': '甲', 'equips': ['火力风暴潮']},
-                                        {'name': '乙', 'equips': []},
-                                        {'name': '丙', 'equips': ['高周波电锯']}],
-                           'bench': [None, {'name': '丁'}],
-                           'equips': ['折叠小刀']}})
-    _write_jsonl(replay, 'decisions.jsonl', rows)
-    a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    # v7 起 schema 版本单一源在 SCHEMA_VERSION,不再钉字面值
-    # (行为观测计数落盘批:v6→v7 加法字段,历史版本语义见源注释链)
-    assert a['schema_version'] == arch.SCHEMA_VERSION
-    r9 = next(r for r in a['rounds']
-              if (r['plane'], r['round']) == (1, 9))
-    # 决策帧列 = ①(actions 最多、ts 并列取晚)= 执行前板面
-    assert len(r9['deployed']) == 1
-    # 终态列 = ③(最晚帧)= 执行后板面,且与决策帧列可见分歧
-    assert r9['terminal'] == {'deployed_count': 3, 'bench_count': 1,
-                              'equips_worn': 2, 'equips_owned': 1}
-    assert r9['terminal_ts'] == '2026-08-30T10:19:30'
-    assert r9['terminal_source'] == 'last_decision_frame'
-    assert r9['n_decision_frames'] == 4   # fixture 基帧 + ①②③(全帧计数口径)
-    assert r9['terminal']['deployed_count'] != len(r9['deployed'])
-    # 收口类型(w943 P2-5):③帧 actions=[] 不含出战 → mid_prep
-    #(异常出口形态:terminal 滞后一个动作,判读降权)
-    assert r9['terminal_closure'] == 'mid_prep'
-    # 出战收口形态:末帧 actions 含 StartBattle → start_battle
-    #(该帧观察 = 全部备战动作执行后的定型帧,terminal 可信)
-    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:19:40',
-                        actions=[{'__type__': 'StartBattle'}]),
-                 'state': {'node_type': '普通战斗', 'level': 4,
-                           'hp_trusted': None, 'board': {},
-                           'deployed': [{'name': '甲', 'equips': ['火力风暴潮']},
-                                        {'name': '乙', 'equips': []},
-                                        {'name': '丙', 'equips': ['高周波电锯']}],
-                           'bench': [None, {'name': '丁'}],
-                           'equips': ['折叠小刀']}})
-    _write_jsonl(replay, 'decisions.jsonl', rows)
-    r9c = next(r for r in arch.build_archive(
-        replay, arch.assign_games(replay)[0])['rounds']
-        if (r['plane'], r['round']) == (1, 9))
-    assert r9c['terminal_closure'] == 'start_battle'
-    assert r9c['terminal'] == r9['terminal']
-    # 同 ts 并列:流内后见者胜(执行步进密集形态;ts 与当前最晚帧并列)
-    rows.append({**_dec('run_20260830_101513', 1, 9, '2026-08-30T10:19:40'),
-                 'state': {'node_type': '普通战斗', 'level': 4,
-                           'hp_trusted': None, 'board': {},
-                           'deployed': [], 'bench': [], 'equips': []}})
-    _write_jsonl(replay, 'decisions.jsonl', rows)
-    r9b = next(r for r in arch.build_archive(
-        replay, arch.assign_games(replay)[0])['rounds']
-        if (r['plane'], r['round']) == (1, 9))
-    assert r9b['terminal'] == {'deployed_count': 0, 'bench_count': 0,
-                               'equips_worn': 0, 'equips_owned': 0}
-
-
-def test_rounds_terminal_none_for_outcome_only_round(replay: _match_archive_Path):
-    """旧数据/仅结算行轮:无决策迹帧 → terminal=None、source='none'
-    (读端容忍口径,不炸不猜)。"""
-    out_p = replay / 'outcomes.jsonl'
-    rows = [json.loads(ln) for ln in out_p.open(encoding='utf-8') if ln.strip()]
-    # run_C 加一条 p1r2 结算行,但不造任何 p1r2 决策帧
-    rows.append(_out('run_20260830_110000', 1, 2, '2026-08-30T11:02:00', 66))
-    _write_jsonl(replay, 'outcomes.jsonl', rows)
-    a = arch.build_archive(replay, arch.assign_games(replay)[1])
-    r2 = next(r for r in a['rounds'] if (r['plane'], r['round']) == (1, 2))
-    assert r2['terminal'] is None
-    assert r2['terminal_ts'] is None
-    assert r2['terminal_source'] == 'none'
-    assert r2['terminal_closure'] is None
-    assert r2['n_decision_frames'] == 0   # 零决策行缺口可见化
-
-
-def test_supply_round_has_decision_frame(replay: _match_archive_Path):
-    """补给轮 n_decision_frames 档案读端锁:补给轮存在 supply_pick 决策帧
-    (选卡确认后 record_decision 一帧的落库形态)时,档案计数 n>=1、
-    terminal 走帧路径——不按零决策行显影。帧内容(合成快照、actions=[])
-    非备战决策语义,读端按 outcome.source='synthetic_supply' 分型。
-    (生产写入点 cw_screen_supply_node 的链路断言缺位,写入端半环单独
-    记债;本测只辖档案读端半环。)"""
-    out_p = replay / 'outcomes.jsonl'
-    dec_p = replay / 'decisions.jsonl'
-    out_rows = [json.loads(ln) for ln in out_p.open(encoding='utf-8') if ln.strip()]
-    # run_C p1r2 = 补给轮:合成结算行(source='synthetic_supply',boss 节点
-    # 补给形态)+ 对应的一帧选卡确认后快照(phase='supply_pick')
-    out_rows.append({**_out('run_20260830_110000', 1, 2, '2026-08-30T11:02:00',
-                            45, node_type='boss'),
-                     'source': 'synthetic_supply'})
-    _write_jsonl(replay, 'outcomes.jsonl', out_rows)
-    dec_rows = [json.loads(ln) for ln in dec_p.open(encoding='utf-8') if ln.strip()]
-    dec_rows.append({**_dec('run_20260830_110000', 1, 2, '2026-08-30T11:01:50'),
-                     'phase': 'supply_pick'})
-    _write_jsonl(replay, 'decisions.jsonl', dec_rows)
-    a = arch.build_archive(replay, arch.assign_games(replay)[1])
-    r2 = next(r for r in a['rounds'] if (r['plane'], r['round']) == (1, 2))
-    assert r2['n_decision_frames'] == 1   # 补给轮 n>=1(写入端补帧后)
-    assert r2['terminal_source'] == 'last_decision_frame'
-
-
+# [退役墓碑,W3]test_rounds_terminal_vs_decision_frame_divergence 随档案
+# rounds 构建面(terminal/terminal_ts 逐轮终态列,旧流 decisions 帧源)
+# 拆除退役(W3)。git 历史可复活。
+# [退役墓碑,W3]test_rounds_terminal_none_for_outcome_only_round 随档案
+# rounds 构建面旧流切片拆除退役(W3)。git 历史可复活。
+# [退役墓碑,W3]test_supply_round_has_decision_frame 随档案 rounds 构建面
+# 旧流切片拆除退役(W3)。git 历史可复活。
 # ===== v5(M2 遥测增强批 ③:endgame.final_snapshot 局级终局快照列)=====
 
-def test_endgame_final_snapshot(replay: _match_archive_Path):
-    """终局快照列 = 全局最晚决策迹帧的阵容/金/等级(装配端派生,纯读)。
-
-    g_A 跨两段,全局最晚帧 = run_B p2r1(10:25:00);fixture 默认
-    state 为 level=3/deployed=[]/gold=10(取自 _dec)。
-    """
-    a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    fs = a['endgame']['final_snapshot']
-    assert fs is not None
-    assert fs['ts'] == '2026-08-30T10:25:00'   # 全局最晚(晚于段 A 各帧)
-    assert fs['source'] == 'last_decision_frame'
-    assert fs['level'] == 3 and fs['gold'] == 10
-    assert fs['gold_readable'] is True
-    assert fs['deployed'] == [] and fs['bench'] is None
-    assert fs['terminal'] == {'deployed_count': 0, 'bench_count': 0,
-                              'equips_worn': 0, 'equips_owned': 0}
-    # 单段独立局同样有终局快照
-    a2 = arch.build_archive(replay, arch.assign_games(replay)[1])
-    fs2 = a2['endgame']['final_snapshot']
-    assert fs2 is not None and fs2['ts'] == '2026-08-30T11:00:00'
-
-
+# [退役墓碑,W3]test_endgame_final_snapshot 随档案 final_snapshot 构建面的
+# 旧流切片(decisions 帧)拆除退役(W3);对偶门 none_for_frameless 保留
+# (空输入 None 语义仍由宽容契约承锁)。git 历史可复活。
 def test_endgame_final_snapshot_none_for_frameless_game(replay: _match_archive_Path):
     """零决策迹局(仅结算行):final_snapshot=None(旧数据容忍,不炸不猜)。"""
     # 清空 decisions 后 run_C 无任何帧 → 终局快照 None
@@ -775,8 +531,9 @@ def test_load_archive_auto_rebuilds_stale_version(replay: _match_archive_Path):
     # 读端:默认自动迁移 → 版本写回 + terminal 族键补齐
     got = arch.load_archive(replay, game_id)
     assert got['schema_version'] == arch.SCHEMA_VERSION
-    assert all(r['terminal_closure'] in ('start_battle', 'mid_prep')
-               for r in got['rounds'])
+    # W3:rounds 构建面旧流切片已拆 → 重建产物 rounds 空(宽容退化);
+    # 版本写回与重建触发语义由上行 schema 断言承锁
+    assert got['rounds'] == []
     assert _read_archive_file(replay, game_id)['schema_version'] \
         == arch.SCHEMA_VERSION   # 原子写回已升级
     # auto_rebuild=False(只读审计):返回旧档案本体,不动盘
@@ -790,7 +547,7 @@ def test_load_archive_auto_rebuilds_stale_version(replay: _match_archive_Path):
         json.dump(stale2, f, ensure_ascii=False)
     got2 = arch.load_archive(replay, game_id, auto_rebuild=False)
     assert got2['schema_version'] == 2
-    assert 'terminal_closure' not in got2['rounds'][0]
+    assert got2['rounds'] == []   # W3 退化:rounds 空,无逐轮键可查
 
 
 def test_load_archive_stale_without_source_warns_and_returns_stale(
@@ -846,79 +603,12 @@ def _ln_at(archive: dict, plane: int, rnd: int) -> list[dict]:
             if n['plane'] == plane and n['round'] == rnd]
 
 
-def test_loss_nodes_mixed_trust_round_two_chain_divergence(
-        tmp_path: _match_archive_Path):
-    """M1 形态分叉(方案审必修:等价声明的限定形态):同轮「可信行在前 +
-    不可信行在后」→ 步进游标停可信行(45),轮槽取不可信末行(12),两链
-    自该轮分叉;下一单结算可信轮条目 delta=5−45=−40(旧实现=5−12=−7)。
-
-    新行为 = 「伪值不推进链」纪律(与 query_hp 同款),方向正确非回归;
-    ADR-0567 §分歧形态声明在案,判读不得按旧不变量当回归误报。
-    """
-    rd = _replay_c8(tmp_path, [
-        _out('run_20260906_182456', 2, 4, '2026-09-06T18:58:00', 45,
-             conf=1.0),
-        _out('run_20260906_182456', 2, 4, '2026-09-06T19:02:23', 12,
-             conf=0.5),
-        _out('run_20260906_182456', 2, 5, '2026-09-06T19:06:00', 5)])
-    a = arch.build_archive(rd, arch.assign_games(rd)[0])
-    by_key = {(r['plane'], r['round']): r for r in a['rounds']}
-    # rounds 链照旧:轮槽=不可信末行 12,净额游标也走 12(r5 净额=5−12)
-    assert by_key[(2, 4)]['hp'] == 12
-    assert by_key[(2, 4)]['hp_delta'] == -19
-    assert by_key[(2, 5)]['hp_delta'] == -7
-    # 步进链:可信 45 步(+14 非掉血)→ (2,4) 无条目;游标未回落不可信 12
-    assert _ln_at(a, 2, 4) == []
-    ln5 = _ln_at(a, 2, 5)
-    assert len(ln5) == 1 and ln5[0]['delta'] == -40 and ln5[0]['hp'] == 5
-
-
-def test_loss_nodes_v7_net_migrated_to_current_battle_leg(
-        tmp_path: _match_archive_Path):
-    """T4 语义核心(v7→v9 迁移,ADR-0577;写回/只读/源清退回机制面归
-    P2-4 对 test_load_archive_auto_rebuilds_stale_version 与
-    test_load_archive_stale_without_source_warns_and_returns_stale,不同仅
-    降级形态):盘上 v7 净额形态存量(「降级抹键」手法构造,真实 v7 档案
-    即此形态)经 load_archive 读出即重装配为当前版本——合成行退链后战斗
-    腿 12−31=−19(v8 净额语义的 −33 不再重现)并原子写回;
-    auto_rebuild=False 原样返回 v7 本体(旧条目 .get 可读,只读审计契约)。"""
-    rid = 'run_20260906_182456'
-    rd = _replay_c8(tmp_path, [
-        _out(rid, 2, 4, '2026-09-06T18:58:00', 45,
-             node_type='补给', source='synthetic_supply'),
-        _out(rid, 2, 4, '2026-09-06T19:02:23', 12)])
-    game_id = arch.assign_games(rd)[0]['game_id']
-    a = arch.assemble_game(rd, game_id)
-    assert a['schema_version'] == arch.SCHEMA_VERSION
-    assert _ln_at(a, 2, 4)[0]['delta'] == -19
-    v7_snapshot = _read_archive_file(rd, game_id)
-    rdelta = {(r['plane'], r['round']): r['hp_delta']
-              for r in v7_snapshot['rounds']}
-    for n in v7_snapshot['loss_nodes']:
-        n['delta'] = rdelta[(n['plane'], n['round'])]
-        n.pop('outcome_source', None)
-        n.pop('ts', None)
-    v7_snapshot['schema_version'] = 7
-    p = rd / 'matches' / f'match_{game_id}.json'
-    with p.open('w', encoding='utf-8') as f:
-        json.dump(v7_snapshot, f, ensure_ascii=False)
-    # 默认读 → 自动重装配为当前版本(净额条目重算为战斗腿语义)+ 原子写回
-    got = arch.load_archive(rd, game_id)
-    assert got['schema_version'] == arch.SCHEMA_VERSION
-    ln = _ln_at(got, 2, 4)
-    assert len(ln) == 1 and ln[0]['delta'] == -19
-    assert _read_archive_file(rd, game_id)['schema_version'] \
-        == arch.SCHEMA_VERSION
-    # auto_rebuild=False → 原样返回 v7 本体(只读审计,不动盘)
-    with p.open('w', encoding='utf-8') as f:
-        json.dump(v7_snapshot, f, ensure_ascii=False)
-    got2 = arch.load_archive(rd, game_id, auto_rebuild=False)
-    assert got2['schema_version'] == 7
-    e = got2['loss_nodes'][0]
-    assert e.get('delta') == -19
-    assert e.get('outcome_source') is None   # 旧形态条目 .get 可读,无加法键
-
-
+# [退役墓碑,W3]test_loss_nodes_mixed_trust_round_two_chain_divergence 随档案
+# rounds/loss_nodes 构建面的旧流切片拆除退役(W3)。git 历史可复活。
+# [退役墓碑,W3]test_loss_nodes_v7_net_migrated_to_current_battle_leg 随档案
+# rounds/loss_nodes 构建面的旧流切片拆除退役(r5-migration-plan.md §2 W3);
+# loss_nodes 谓词纯函数面(hp 可信门/真值链退出)由 test_terminal_row_exits_
+# hp_truth_chains 与 sim/pool 侧谓词锁继续承锁。git 历史可复活。
 # ==================== performance ====================
 
 import pytest as _performance_pytest
@@ -1051,254 +741,18 @@ def test_is_losing_streak_threshold_and_cold_start() -> None:
     assert not PerformanceTracker().is_losing_streak(), "冷启动 → False"
 
 
-# ==================== telemetry_checks ====================
-
-import json as _telemetry_checks_json
-from pathlib import Path as _telemetry_checks_Path
-
-
-def _write_replay(d: _telemetry_checks_Path, runs: list[dict]) -> None:
-    """runs=[{run_id, strategy_id, plane, round, actions}] → 两流 jsonl。"""
-    d.mkdir(parents=True, exist_ok=True)
-    with (d / 'decisions.jsonl').open('w', encoding='utf-8') as f:
-        for r in runs:
-            f.write(_telemetry_checks_json.dumps({
-                'run_id': r['run_id'], 'plane': r.get('plane', 1),
-                'round_num': r['round'], 'ts': str(r['round']),
-                'strategy_id': r.get('strategy_id', ''),
-                'target_comp': r.get('target_comp', ''),
-                'gold': 10, 'state': {},
-                'actions': r['actions'],
-            }, ensure_ascii=False) + '\n')
-    with (d / 'outcomes.jsonl').open('w', encoding='utf-8') as f:
-        for r in runs:
-            f.write(_telemetry_checks_json.dumps({
-                'run_id': r['run_id'], 'plane': 1,
-                'round_num': r['round'], 'node_type': '普通战斗',
-                'hp_after': 80,
-            }, ensure_ascii=False) + '\n')
-    # ADR-0273:真实语料每局有 runs.jsonl summary 行——fixture 同步补,
-    # 否则 coverage 检查(summary_write_path_coverage)对合成语料恒 ⚠。
-    with (d / 'runs.jsonl').open('w', encoding='utf-8') as f:
-        for r in runs:
-            f.write(_telemetry_checks_json.dumps({
-                'run_id': r['run_id'], 'result': 'loss', 'plane_reached': 1,
-            }, ensure_ascii=False) + '\n')
-
-
-def _buy(name: str, reason: str) -> dict:
-    return {'__type__': 'BuyCard', 'card': {'name': name, 'cost': 1},
-            'reason': reason}
-
-
-def test_default_stack_skipped(tmp_path: _telemetry_checks_Path) -> None:
-    """default 栈(cw_plan,reason='plan')跳过 coldstart(不辖 r368)。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_replay(tmp_path, [{
-        'run_id': 'run_t1', 'strategy_id': 'default', 'round': 1,
-        'actions': [_buy('翡翠', 'plan')],   # plan 开局买=生产 default 合法
-    }])
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert '跳过' in out and '⚠' not in out
-
-
-def test_stack_inferred_from_reason_vocab(tmp_path: _telemetry_checks_Path) -> None:
-    """strategy_id 缺失时按开局 reason 词表判栈(v2 词→v2 栈跑检查)。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_replay(tmp_path, [{
-        'run_id': 'run_t3', 'strategy_id': '', 'round': 2,
-        'actions': [_buy('丹恒·饮月', 'bridge_seed')],   # v2 词表=合法
-    }])
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert 'run_t3' in out and '✓ 无违规' in out
-
-
-def _write_multirow_replay(d: _telemetry_checks_Path) -> None:
-    """开局轮多行(模拟生产 5-6 行/轮):pre-refresh 波+post-refresh 波。"""
-    d.mkdir(parents=True, exist_ok=True)
-    with (d / 'decisions.jsonl').open('w', encoding='utf-8') as f:
-        # 行1(pre-refresh):违规买(off)+刷——2 actions,会被
-        # max-actions reducer 输给行 2(3 actions 干净行)
-        f.write(_telemetry_checks_json.dumps({
-            'run_id': 'run_t4', 'plane': 1, 'round_num': 1, 'ts': '1',
-            'strategy_id': 'line_v2', 'target_comp': '', 'gold': 5,
-            'state': {}, 'actions': [_buy('翡翠', 'off'),
-                                     {'__type__': 'RefreshShop', 'cost': 2}],
-        }, ensure_ascii=False) + '\n')
-        f.write(_telemetry_checks_json.dumps({
-            'run_id': 'run_t4', 'plane': 1, 'round_num': 1, 'ts': '2',
-            'strategy_id': 'line_v2', 'target_comp': '', 'gold': 3,
-            'state': {}, 'actions': [_buy('椒丘', 'bridge_seed'),
-                                     _buy('飞霄', 'bridge_seed'),
-                                     _buy('灵砂', 'bridge_seed')],
-        }, ensure_ascii=False) + '\n')
-    with (d / 'outcomes.jsonl').open('w', encoding='utf-8') as f:
-        f.write(_telemetry_checks_json.dumps({'run_id': 'run_t4', 'plane': 1,
-                            'round_num': 1, 'node_type': '普通战斗',
-                            'hp_after': 80}, ensure_ascii=False) + '\n')
-    with (d / 'runs.jsonl').open('w', encoding='utf-8') as f:
-        f.write(_telemetry_checks_json.dumps({'run_id': 'run_t4', 'result': 'loss',
-                            'plane_reached': 1}, ensure_ascii=False) + '\n')
-
-
-def test_multiline_round_not_lossy(tmp_path: _telemetry_checks_Path) -> None:
-    """审查#3:开局轮逐行全检——pre-refresh 波的违规不被大行挤掉。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_multirow_replay(tmp_path)
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert 'run_t4' in out and '⚠' in out and '翡翠' in out, \
-        '违规买牌在 2-action 行被 3-action 干净行挤掉 = 有损投影漏报'
-
-
-def test_untagged_buys_report_indeterminable(tmp_path: _telemetry_checks_Path) -> None:
-    """审查#2:开局买 reason 缺失 → ⊘ 无法判(非伪 ✓)。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_replay(tmp_path, [{
-        'run_id': 'run_t5', 'strategy_id': 'line_v2', 'round': 1,
-        'actions': [{'__type__': 'BuyCard',
-                     'card': {'name': '某卡', 'cost': 1}}],   # 无 reason 键
-    }])
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert 'run_t5' in out and '⊘ 无法判' in out and '1 笔' in out
-
-
-def test_unknown_strategy_id_skipped(tmp_path: _telemetry_checks_Path) -> None:
-    """审查#5:非空未知 sid(未来新栈)显式跳过,不盲跑误报。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_replay(tmp_path, [{
-        'run_id': 'run_t6', 'strategy_id': 'some_future_strategy',
-        'round': 1, 'actions': [_buy('翡翠', 'pair')],
-    }])
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert 'run_t6' in out and '未知栈' in out and '跳过' in out
-
-
-@pytest.mark.parametrize('sid', ['decision_v2', 'line_v2'])
-def test_v2_stack_runs_coldstart(tmp_path: _telemetry_checks_Path,
-                                 sid: str) -> None:
-    """v2 栈判栈(sid ∈ {decision_v2 现行;line_v2 历史字符串,ADR-0336
-    兼容保留,ledger_hooks 同分支同检查})——检查必须跑且报违规,不得按
-    「未知栈」跳过(注册桥观察局判读链锁)。样本:off 买(翡翠,局49 败坏
-    形态)必报 ⚠;engine_seed 买(v2 合法放行词,ADR-0260)不误报。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_replay(tmp_path, [{
-        'run_id': 'run_t7', 'strategy_id': sid, 'round': 1,
-        'actions': [_buy('翡翠', 'off'),
-                    _buy('丹恒·饮月', 'engine_seed')],
-    }])
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert 'run_t7' in out and '⚠ 1 条' in out and '翡翠' in out, \
-        'v2 栈局 coldstart 必须跑且 off 败坏买被检出'
-    assert '未知栈' not in out, 'v2 栈须判 v2 栈,不得按未知栈跳过'
-
-
-# --- 段级检查生产接线(ADR-0479:多帧/轮合并适配 + [17] 族覆盖) ---
-
-def _write_p2_replay(d: _telemetry_checks_Path, p2_rounds: list[dict]) -> None:
-    """写一局带 P2 轮的合成 replay。p2_rounds=[{round, gold, hp, spent}]。
-
-    每轮两帧(镜像生产:wrapper 帧 RunBuyPhase + 决策帧),gold/hp 取
-    首帧口径(record_decision 决策时点)。
-    """
-    d.mkdir(parents=True, exist_ok=True)
-    rows: list[dict] = [{
-        'run_id': 'run_t8', 'plane': 1, 'round_num': 1, 'ts': '1',
-        'strategy_id': 'decision_v2', 'target_comp': '', 'gold': 5,
-        'hp': 100, 'state': {},
-        'actions': [_buy('丹恒·饮月', 'engine_seed')],
-    }]
-    ts = 10
-    for r in p2_rounds:
-        # 帧1:wrapper 帧(无花费动作);帧2:决策帧(按 spent 带/不带买)
-        for is_decision in (False, True):
-            actions: list[dict] = []
-            if not is_decision:
-                actions = [{'__type__': 'RunBuyPhase'}]
-            elif r.get('spent'):
-                actions = [{'__type__': 'BuyCard',
-                            'card': {'name': '某件', 'cost': 2},
-                            'reason': 'p2_core'}]
-            rows.append({
-                'run_id': 'run_t8', 'plane': 2,
-                'round_num': r['round'], 'ts': str(ts),
-                'strategy_id': 'decision_v2', 'target_comp': '希儿量子',
-                'gold': r['gold'], 'hp': r['hp'],
-                'state': {'node_type': 'battle'},
-                'actions': actions,
-            })
-            ts += 1
-    with (d / 'decisions.jsonl').open('w', encoding='utf-8') as f:
-        for r in rows:
-            f.write(_telemetry_checks_json.dumps(r, ensure_ascii=False) + '\n')
-    with (d / 'outcomes.jsonl').open('w', encoding='utf-8') as f:
-        f.write(_telemetry_checks_json.dumps({'run_id': 'run_t8', 'plane': 2,
-                            'round_num': 9, 'node_type': '普通战斗',
-                            'hp_after': 0}, ensure_ascii=False) + '\n')
-    with (d / 'runs.jsonl').open('w', encoding='utf-8') as f:
-        f.write(_telemetry_checks_json.dumps({'run_id': 'run_t8', 'result': 'loss',
-                            'plane_reached': 2}, ensure_ascii=False) + '\n')
-
-
-def test_p2_bleed_gold_stack_wired(tmp_path: _telemetry_checks_Path) -> None:
-    """接线验收锚(跨局复盘立案A):P2 血降段金堆积在
-    run_checks_on_replay 报红——修前生产栈只跑 coldstart 零标红。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_p2_replay(tmp_path, [
-        {'round': 2, 'gold': 50, 'hp': 49},
-        {'round': 4, 'gold': 62, 'hp': 31},
-        {'round': 5, 'gold': 76, 'hp': 10},
-    ])
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert 'seg_p2_bleed_gold_stack' in out and '⚠' in out, \
-        'P2 带血堆金段级检查未在生产 checks 路径报红=接线失败'
-    assert 'p2r5' in out, '事件须带轮定位'
-
-
-def test_p2_bleed_gold_stack_healthy_not_fired(tmp_path: _telemetry_checks_Path) -> None:
-    """对偶门:血线稳定(hp 不掉)的 P2 攒息不报(防恒触发)。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import run_checks_on_replay
-    _write_p2_replay(tmp_path, [
-        {'round': 4, 'gold': 62, 'hp': 80},
-        {'round': 5, 'gold': 76, 'hp': 80},
-    ])
-    out = '\n'.join(run_checks_on_replay(tmp_path))
-    assert 'seg_p2_bleed_gold_stack' not in out, \
-        '血线稳定的 P2 攒息被报 = 恒触发误报'
-
-
-def test_production_round_merge_multi_frame(tmp_path: _telemetry_checks_Path) -> None:
-    """多帧/轮合并:金取首帧(决策时点),花费跨帧并集——首帧 62+
-    后续帧零买不算「溢余未泄」误报(全帧有买则不报)。"""
-
-    from sr_od.application.currency_war.sim.ledger_hooks import merge_round_rows
-    frames = [
-        {'run_id': 'r', 'plane': 2, 'round_num': 1, 'ts': '1',
-         'gold': 62, 'hp': 31, 'gold_readable': True,
-         'state': {'board': {'仙舟': 3}, 'deployed': [], 'bench': []},
-         'actions': [], 'formed_stop': False},
-        {'run_id': 'r', 'plane': 2, 'round_num': 1, 'ts': '2',
-         'gold': 58, 'hp': 31, 'gold_readable': True,
-         'state': {},
-         'actions': [{'__type__': 'BuyCard',
-                      'card': {'name': '希儿', 'cost': 4},
-                      'reason': 'p2_core'}], 'formed_stop': False},
-    ]
-    merged = merge_round_rows(frames)
-    assert len(merged) == 1
-    m = merged[0]
-    assert m['gold'] == 62, '金须取首帧(决策时点),非末帧(花销后)'
-    assert any(a['__type__'] == 'BuyCard' for a in m['actions']), \
-        '花费动作须跨帧并集'
-    assert m['state']['board_factions'] == {'仙舟': 3}, \
-        'engines 代理须吃生产 state.board 同构映射'
+# ==================== telemetry_checks(W3 退役) ====================
+# [退役墓碑,W3]本区检查器测试族(test_default_stack_skipped /
+# test_stack_inferred_from_reason_vocab / test_multiline_round_not_lossy /
+# test_untagged_buys_report_indeterminable / test_unknown_strategy_id_skipped /
+# test_v2_stack_runs_coldstart / test_p2_bleed_gold_stack_wired /
+# test_p2_bleed_gold_stack_healthy_not_fired / test_production_round_merge_
+# multi_frame)随判读 CLI checks 子命令与 sim/ledger_hooks 读侧检查族
+# (run_checks_on_replay / merge_round_rows 等)一并退役——其读源为生产
+# 旧 12 流(decisions/outcomes/runs),已随删除波 1 停写,检查器对新局
+# 恒空/⊘(读死数据);判读走 journal 新账唯一读面。段级检查器 sim 账本
+# 活体 = sim/checks/(sim 引擎自写账本,归 W6 sim 切统一容器批统一处置)。
+# 依据 = r5-migration-plan.md §2 W3;git 历史可复活原锁面。
 
 
 # ==================== test_telemetry_extra_sig(删除波 1 退役)====================
@@ -1591,49 +1045,10 @@ def test_divergence_missing_file(tmp_path: _divergence_stats_Path) -> None:
 
 
 # ==================== 补给轮「0买0升」豁免(query.query_anomalies) ====================
-# 复盘跨局 3 次误报(g_20260831_082322 候选#6 / g_20260831_101653 候选#6 复发):
-# 补给节点无商店消费面,空过合法,不应计入「钱变不成板」。
-# 机制出处 = docs/game/currency_war/research/economy.md「奖励/补给节点不花钱」。
-
-from sr_od.application.currency_war.telemetry.query import query_anomalies as _qa
-
-
-def _abn_dec(node_type: str) -> dict:
-    """金 42 / 0 买 0 升 的决策行(踩 ABN_GOLD=40 门,动作面全空)。"""
-    return _dec('run_supply_fix', 1, 5, '2026-08-31T10:00:00', gold=42,
-                state={'node_type': node_type, 'level': 3,
-                       'hp_trusted': None, 'board': {}, 'deployed': []})
-
-
-def test_supply_round_zero_spend_not_flagged(tmp_path) -> None:
-    """误报场景:补给轮金42 0买0升 → 不产异常(跨局 3 次误报的回归断言)。"""
-    _write_jsonl(tmp_path, 'decisions.jsonl', [_abn_dec('supply')])
-    assert _qa(tmp_path, 'run_supply_fix') == []
-
-
-def test_battle_round_zero_spend_still_flagged(tmp_path) -> None:
-    """真违规守卫:普通战斗轮同形态(金42 0买0升)仍产异常——守卫未被移除。"""
-    _write_jsonl(tmp_path, 'decisions.jsonl', [_abn_dec('普通战斗')])
-    abn = _qa(tmp_path, 'run_supply_fix')
-    assert len(abn) == 1 and '0买0升' in abn[0] and 'p1r5' in abn[0]
-
-
-def test_supply_round_real_violation_still_flagged(tmp_path) -> None:
-    """补给轮真违规(plan_error)不受豁免影响——豁免只辖「0买0升」一条。"""
-    d = _abn_dec('supply')
-    d['eval_breakdown'] = {'plan_error': 'boom'}
-    _write_jsonl(tmp_path, 'decisions.jsonl', [d])
-    abn = _qa(tmp_path, 'run_supply_fix')
-    assert len(abn) == 1 and 'plan_error' in abn[0]
-
-
-def test_missing_node_type_zero_spend_still_flagged(tmp_path) -> None:
-    """缺 node_type(旧数据)→ 从严兜底仍查消费,豁免不扩大。"""
-    d = _abn_dec('')
-    d['state']['node_type'] = None
-    _write_jsonl(tmp_path, 'decisions.jsonl', [d])
-    abn = _qa(tmp_path, 'run_supply_fix')
-    assert len(abn) == 1 and '0买0升' in abn[0]
+# [退役墓碑,W3]query_anomalies 旧视图已随删除波 1 写入端退役一并删除
+# (r5-migration-plan.md §2 W3 删旧读面;原 4 锁:补给轮豁免/战斗轮守卫/
+# plan_error 不受豁免/缺 node_type 从严——其判读语义的现役载体 = journal
+# 行间差分,journal_query 视图族;git 历史可复活原锁面)。
 
 # ==================== cw4_counters 落盘(行为观测计数批,v7)====================
 
@@ -1759,47 +1174,12 @@ def test_cw_loop_counters_snapshot_wiring(
 
 
 # ==================== T-185 收口终局行(末轮 outcome 采集补全) ====================
-# 病灶:result=stopped 局对局循环在末轮战斗结算前中止 → 该轮 outcomes 零行 →
-# 档案末轮 outcome=null → batch_stats 通关权威口径 killed(ADR-0306 件3)
-# 落不可判桶。采集侧修法 = 收口时点补写末轮终局行(cw_loop._write_terminal_
-# outcome_row);本节锁档案读端验收与真值链退出边界。
-
-def test_stopped_game_last_round_outcome_in_archive(
-        tmp_path: _match_archive_Path):
-    """T-185 验收:stopped 局末轮仅有收口终局行 → 档案末轮 outcome 在档且
-    killed 可判(False=对局级终了真值);hp/node_type 回落决策帧,零扰动。"""
-    rd = tmp_path / 'replay_t185'
-    dec = [_dec('run_20260909_120000', 1, 1, '2026-09-09T12:00:00'),
-           _dec('run_20260909_120000', 1, 3, '2026-09-09T12:08:00',
-                hp=77, hp_readable=True)]
-    out = [_out('run_20260909_120000', 1, 1, '2026-09-09T12:02:00', 60),
-           # 收口终局行(生产形状 = cw_loop._write_terminal_outcome_row 产物;
-           # 本手写 fixture 的消费键集对账锚 = test_cw_run_terminal_summary.
-           # test_stop_closure_writes_terminal_outcome_row 末的键集断言,
-           # 生产写端形状漂移时两侧同步红——落地审建议-5③):
-           {'schema_version': 1, 'run_id': 'run_20260909_120000',
-            'plane': 1, 'round_num': 3, 'ts': '2026-09-09T12:10:00',
-            'node_type': '', 'hp_after': None, 'hp_confidence': 0.0,
-            'killed': False, 'source': 'terminal_closure',
-            'match_result': 'stopped'}]
-    runs = [{'run_id': 'run_20260909_120000', 'ts': '2026-09-09T12:10:00',
-             'result': 'stopped', 'plane_reached': 1,
-             'rounds_survived': 3, 'final_hp': 77}]
-    _write_jsonl(rd, 'decisions.jsonl', dec)
-    _write_jsonl(rd, 'outcomes.jsonl', out)
-    _write_jsonl(rd, 'runs.jsonl', runs)
-    games = arch.assign_games(rd)
-    a = arch.build_archive(rd, games[0])
-    last = a['rounds'][-1]
-    assert (last['plane'], last['round']) == (1, 3)
-    oc = last['outcome']
-    assert oc is not None                               # 末轮 outcome 在档
-    assert oc['killed'] is False                        # killed 可判(非未知桶)
-    assert oc['source'] == 'terminal_closure'
-    assert oc['match_result'] == 'stopped'
-    # 零扰动:终局行不发 hp/节点真值 → 轮槽回落决策帧口径
-    assert last['hp'] == 77 and last['hp_source'] == 'frame'
-    assert last['node_type'] == '普通战斗' and last['node_type_source'] == 'frame'
+# [退役墓碑,W3]test_stopped_game_last_round_outcome_in_archive 随档案
+# rounds 构建面的旧流切片拆除而退役(r5-migration-plan.md §2 W3 删旧读面;
+# 写端 cw_loop._write_terminal_outcome_row 已随删除波 1 消亡)。终局收口
+# 证据的现役载体 = 局终域 match_final 行(test_cw_match_final 锁面);
+# 终局行对 hp 真值链的结构性退出语义由下方 test_terminal_row_exits_hp_
+# truth_chains 继续承锁(纯谓词,不依赖 rounds 构建)。
 
 
 def test_terminal_row_exits_hp_truth_chains():
@@ -1818,32 +1198,6 @@ def test_terminal_row_exits_hp_truth_chains():
     assert _settlement_hp_usable(row) is False
 
 
-def test_terminal_row_query_hp_typed_not_fake(
-        tmp_path: _match_archive_Path):
-    """query_hp 显示面终局行分型(T-185 落地审建议-4):行尾「收口(stopped)」
-    替代「伪值」——终局行 hp_after=None 是诚实缺省(不发 hp 真值)非 OCR
-    伪值;killed 显示 '?'(行内 False 是对局级终了真值非战斗结算,按战斗
-    语义显示 killed=0 会把停机收口轮误读成「该轮打输」)。正常结算行
-    显示不变(对照行:killed=0 + 伪值标注照旧)。"""
-    from sr_od.application.currency_war.telemetry import query as _q
-    rd = tmp_path / 'replay_hp_view'
-    _write_jsonl(rd, 'outcomes.jsonl', [
-        _out('run_20260909_130000', 1, 1, '2026-09-09T13:01:00', 55,
-             conf=0.0),
-        {'schema_version': 1, 'run_id': 'run_20260909_130000',
-         'plane': 1, 'round_num': 2, 'ts': '2026-09-09T13:10:00',
-         'node_type': '', 'hp_after': None, 'hp_confidence': 0.0,
-         'killed': False, 'source': 'terminal_closure',
-         'match_result': 'stopped'},
-    ])
-    lines = _q.query_hp(rd, 'run_20260909_130000')
-    assert len(lines) == 2
-    # 终局行:收口分型,无「伪值」、无 killed=0
-    term_ln = next(ln for ln in lines if 'p1r2' in ln)
-    assert '收口(stopped)' in term_ln
-    assert '伪值' not in term_ln
-    assert 'killed=?' in term_ln
-    # 正常低置信结算行(对照):伪值标注与 killed=0 语义照旧
-    norm_ln = next(ln for ln in lines if 'p1r1' in ln)
-    assert '伪值' in norm_ln and 'killed=0' in norm_ln
-    assert '收口(' not in norm_ln
+# [退役墓碑,W3]test_terminal_row_query_hp_typed_not_fake(query_hp 显示面
+# 终局行分型)随 query_hp 旧视图删除退役(r5-migration-plan.md §2 W3);
+# 终局「诚实缺省」语义的现役载体 = match_final 行(test_cw_match_final 锁面)。

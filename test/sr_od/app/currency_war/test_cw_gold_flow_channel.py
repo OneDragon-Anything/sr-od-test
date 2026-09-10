@@ -23,7 +23,6 @@ import pytest
 sys.path.insert(0, 'src')
 
 from sr_od.application.currency_war.telemetry import match_archive as arch
-from sr_od.application.currency_war.telemetry import query as q
 from sr_od.application.currency_war.telemetry import recorder as rec
 
 # ===== fixtures =====
@@ -91,76 +90,7 @@ def test_modality_gold_writer_retired(tmp_path: Path) -> None:
 
 # ===== 2. 查询端 =====
 
-def test_gold_flow_lists_entries_and_unexplained(replay: Path):
-    """模态逐笔显形 + 未解释残差 = 收入 − Σ可信模态笔,非 0 标 ⚠。
-
-    r2:金 5→10,买 2(花=2)→ 收=7;模态 +3 → 未解释=4 → ⚠。
-    r3:金 10→20,花 0 → 收=10;无模态行 → 无未解释格。
-    """
-    lines = q.query_gold_flow(replay, 'run_g1')
-    text = '\n'.join(lines)
-    assert 'p1r2' in text and '模态[spheres+3]' in text
-    assert '未解释=4' in text and '⚠' in text
-    r3 = [ln for ln in lines if ln.strip().startswith('p1r3')]
-    assert r3 and '花=0' in r3[0] and '收=10' in r3[0]
-    assert '⚠' not in r3[0]
-
-
-def test_gold_flow_income_same_source_as_economy(replay: Path):
-    """口径同源锁:goldflow 的「收」逐轮等于 economy 视图的「收」格。"""
-    eco = q.query_economy(replay, 'run_g1')
-    flow = q.query_gold_flow(replay, 'run_g1')
-
-    def _income(lines: list[str]) -> dict[str, str]:
-        out = {}
-        for ln in lines:
-            s = ln.strip()
-            key = s.split(' ')[0]
-            for tok in s.split(' '):
-                if tok.startswith('收='):
-                    out[key] = tok[len('收='):]
-        return out
-    assert _income(flow) == _income(eco)
-
-
-def test_gold_flow_zero_modality_rows_tolerated(replay: Path):
-    """零 modality 行(旧数据/sim 局)→ 仅 economy 同构行,不炸不报错。"""
-    _write_jsonl(replay, 'exogenous.jsonl', [])
-    lines = q.query_gold_flow(replay, 'run_g1')
-    assert lines and all('模态' not in ln for ln in lines)
-
-
-def test_gold_flow_untrusted_delta_excluded_from_sum(replay: Path):
-    """delta=None(miss)笔只显形 '?' 不进 Σ;未解释按可信笔计。"""
-    _write_jsonl(replay, 'exogenous.jsonl', [
-        _exo('run_g1', 'modality_gold', 2, '2026-09-06T10:03:00',
-             {'node': 'spheres', 'plane': 1, 'gold_before': None,
-              'gold_after': 10, 'gold_delta': None}),
-    ])
-    text = '\n'.join(q.query_gold_flow(replay, 'run_g1'))
-    assert '模态[spheres?]' in text      # miss 笔显形为 ?
-    # 全 miss 笔 → Σ 未知 → 不出「未解释」数(诚实缺省,不拿 0 冒充对平)
-    assert '未解释' not in text
-
-
-def test_gold_flow_flags_negative_residual_without_entries(replay: Path):
-    """⚠未挂钩:无模态行的负收入残差显影(第9局悬案「金 33→0」形态)。
-
-    r2 金 10→4 花 0 → 收=-6 且无逐笔 → ⚠未挂钩;
-    对照正收入轮(不标)。"""
-    rd = replay.parent / 'replay_neg'
-    _write_jsonl(rd, 'decisions.jsonl', [
-        _dec('run_neg', 1, 1, '2026-09-06T11:00:00', 10),
-        _dec('run_neg', 1, 2, '2026-09-06T11:05:00', 4),
-        _dec('run_neg', 1, 3, '2026-09-06T11:10:00', 9),
-    ])
-    _write_jsonl(rd, 'outcomes.jsonl', [])
-    _write_jsonl(rd, 'exogenous.jsonl', [])
-    text = '\n'.join(q.query_gold_flow(rd, 'run_neg'))
-    assert 'p1r2' in text and '收=-6' in text and '⚠未挂钩' in text
-    assert '⚠' not in text.split('p1r3')[1]   # 正收入轮不标
-
-
+# [退役墓碑,W3] test_gold_flow_* 四锁(gold_flow 视图:逐项清单/收入同源/零行容忍/不可信剔除)随 query_gold_flow/query_economy 旧视图退役(W3,r5-migration-plan.md §2 W3);动作账 vs 实读金对账的现役载体 = journal(obs_event gold_delta 留证 + receipts 回执窗)。git 历史可复活。
 # ===== 3. 装配端 D1 收口 =====
 
 def test_assemble_pending_rebuilds_stale_schema(replay: Path):
@@ -192,7 +122,7 @@ def test_assemble_pending_rebuilds_stale_schema(replay: Path):
     assert done == [g2]
     got = json.loads(p2.open(encoding='utf-8').read())
     assert got['schema_version'] == arch.SCHEMA_VERSION
-    assert got['rounds']   # 重装后非空壳
+    assert got['rounds'] == []  # W3:rounds 面旧流切片已拆,重装机制(版本写回)由 schema 断言承锁
 
 
 def test_assemble_pending_skips_current_schema(replay: Path):
@@ -228,7 +158,7 @@ def test_assemble_pending_skips_current_schema(replay: Path):
     assert done == [g2]
     got = json.loads(p.open(encoding='utf-8').read())
     assert [s['run_id'] for s in got['segments']] == [new_run, resumed]
-    assert got['rounds']   # 重装为全量派生,非手写空壳
+    # W3:rounds 退化空;重装(段集增长触发)由 segments 断言承锁
     # 收敛:段集无增长后再触发不重复写
     assert arch.assemble_pending(replay) == []
     # 形态③:缺 segments 键的手写档案(旧锁 fixture 形态)→ 无法证明

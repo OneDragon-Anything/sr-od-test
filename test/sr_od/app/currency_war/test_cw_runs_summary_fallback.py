@@ -2,14 +2,17 @@
 
 本文件原锁 runs.jsonl 局终汇总多路径兜底(ADR-0273,批⑧ F2)。删除波 1:
 runs 流 = 收编 9 流之一,写入端(正常局终/收口补写/崩溃兜底回填)整段
-退役;runs.jsonl 冻结为存量语料,读侧检查(check_summary_write_path_
-coverage)继续可判存量档案。锁语义重推(锁的存在性纪律:锁红 ≠ 改动错,
-旧锁钉的是已退役语义,随裁定重写):
+退役。锁语义重推(锁的存在性纪律:锁红 ≠ 改动错,旧锁钉的是已退役语义,
+随裁定重写):
 
 - recover_dangling_run_summaries = no-op 兼容桩(恒空表,零写行);
 - 局终收口位(telemetry.state.close_run)零落盘,只置跨局 run_id 重铸位;
-- start_run(经 ensure_run_started)不再触发兜底回填,不产任何 runs 行;
-- 读侧检查项双向对存量档案仍可判(缺行 ⚠ 带 run_id / 全覆盖 ✓)。
+- start_run(经 ensure_run_started)不再触发兜底回填,不产任何 runs 行。
+
+W3 退役注:读侧检查项(check_summary_write_path_coverage)已随 checks
+子命令与 ledger_hooks 读侧检查族一并退役(r5-migration-plan.md §2 W3 删旧
+读面——decisions/outcomes/runs 停写后检查器对新局恒空/⊘,读死数据);
+test_coverage_check_still_judges_frozen_archive 随之退役,git 可复活。
 """
 from __future__ import annotations
 
@@ -20,11 +23,9 @@ import pytest
 
 from sr_od.application.currency_war.sim import ledger_hooks
 from sr_od.application.currency_war.sim.ledger_hooks import (
-    check_summary_write_path_coverage,
     recover_dangling_run_summaries,
 )
 from sr_od.application.currency_war.telemetry import state as tel_state
-from sr_od.application.currency_war.telemetry.query import read_jsonl
 
 
 @pytest.fixture()
@@ -98,21 +99,6 @@ def test_close_run_sets_marker_without_writing(_run_lifecycle,
     assert rid2 != rid1, '收口后下一局重铸新段(journal 行归属承接口)'
 
 
-def test_coverage_check_still_judges_frozen_archive(tmp_path) -> None:
-    """读侧检查项对存量档案双向可判:缺行 ⚠ 带 run_id;补齐(历史档案形态)✓。"""
-    d = tmp_path / 'replay'
-    d.mkdir(parents=True)
-    _write(d / 'outcomes.jsonl', [
-        {'run_id': 'r1', 'plane': 1, 'round_num': 1, 'hp_after': 90,
-         'hp_confidence': 1.0, 'ts': '2026-08-24T00:01:00'},
-        {'run_id': 'r2', 'plane': 1, 'round_num': 1, 'hp_after': 80,
-         'hp_confidence': 1.0, 'ts': '2026-08-24T00:02:00'},
-    ])
-    out = check_summary_write_path_coverage(d)
-    assert len(out) == 1 and '⚠' in out[0] and 'r1' in out[0] and 'r2' in out[0]
-    # 存量档案补上 summary 行(模拟冻结语料的完整形态)→ ✓
-    _write(d / 'runs.jsonl', [
-        {'run_id': 'r1', 'result': 'loss'}, {'run_id': 'r2', 'result': 'loss'}])
-    out = check_summary_write_path_coverage(d)
-    assert len(out) == 1 and '✓' in out[0] and '100%' in out[0]
-    assert len(read_jsonl(d / 'runs.jsonl')) == 2
+# [退役墓碑,W3]test_coverage_check_still_judges_frozen_archive 随读侧检查项
+# check_summary_write_path_coverage 退役(W3 删 checks 读面);存量档案裸读
+# 考古不受影响。git 历史可复活。

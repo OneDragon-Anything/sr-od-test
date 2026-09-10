@@ -436,7 +436,7 @@ from sr_od.application.currency_war.sim.engine_p1 import (
     simulate_p1,
 )
 from sr_od.application.currency_war.sim.runner import simulate_p1_batch
-from sr_od.application.currency_war.telemetry import query as tel
+
 
 
 def _strip_comments_and_docstrings(text: str) -> str:
@@ -612,38 +612,10 @@ def test_levelup_budget_gate_dec_disclosure_write_end() -> None:
             f'写端披露断线(检查器将静默回退行末近似): {a}'
 
 
-def test_views_render_sim_ledger(tmp_path: _sim_cli_smoke_Path) -> None:
-    """同构接线:rounds/economy/supply/hp/tiers 视图直接渲染 sim 批次目录。
-
-    保真度锁(视图 sim 回退):hp 板深读 sim.depth(非 '-')、
-    tiers 三维同屏换 深/核/方向 维度(非 档0)、rounds 板面位
-    显示 sim 维度(非 (空))。
-    """
-    rep = simulate_p1_batch(3, pool='snapshot', seed_base=900,
-                            ledger=tmp_path / 'iso')
-    d = _sim_cli_smoke_Path(rep['ledger_dir'])
-    runs = tel._list_runs(d)
-    assert len(runs) == 3, '每局独立 run_id(带 seed)'
-    rid = runs[0]
-    eco = tel.query_economy(d, rid)
-    assert eco and '花=' in eco[0]
-    sup = tel.query_supply(d, rid)
-    assert any('[offer]' in ln for ln in sup), 'supply 读 shop_snapshots 流'
-    rounds = tel.query_rounds(d, rid)
-    assert any('run' not in ln and 'hp=' in ln for ln in rounds)
-    # (卖+N 渲染暂无锁:当前种子不保证含 SellBench 局,原断言「or True」恒真
-    #  已删(2026-09-03 攻击性排查);待构造含卖局种子后补真锁。)
-    # 保真度:sim 行回退账本维度(板深恒 '-' / 档0 / (空) = 同构破洞)
-    hp = tel.query_hp(d, rid)
-    assert any('板深=' in ln and '板深=-' not in ln for ln in hp), \
-        'hp 视图 sim 板深应回退 sim.depth'
-    tiers = tel.query_tiers(d, rid)
-    assert any('深=' in ln and '核=' in ln for ln in tiers), \
-        'tiers 视图 sim 行应显示 深/核 代理维度'
-    assert any('(sim 深=' in ln for ln in rounds), \
-        'rounds 视图 sim 板面位应显示 深/核'
-
-
+# [退役墓碑,W3] test_views_render_sim_ledger 随旧视图族与 --sim-batch
+# 判读入口退役(W3):sim 批目录无 journal,旧视图删后失读面;sim 批判读
+# 桥期 = skills 侧 cw_batch_stats(sim 引擎自写账本,活读),journal 侧 sim
+# 视图候 W6 sim 切统一容器批。git 历史可复活。
 def test_sim_batch_dir_structure(tmp_path: _sim_cli_smoke_Path) -> None:
     """批次目录三流齐:decisions/outcomes/shop_snapshots.jsonl。"""
     rep = simulate_p1_batch(2, pool='fallback', seed_base=7,

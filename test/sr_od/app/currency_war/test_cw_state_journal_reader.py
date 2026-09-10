@@ -361,7 +361,7 @@ def test_cli_journal_source_full_views(tmp_path: Path,
     """--source journal 视图族:逐轮表/金账/hp 链/快照全族输出。"""
     rd = tmp_path / 'replay'
     _mk_replay(rd, _JOURNAL_ROWS)
-    _run_cli(monkeypatch, ['query', '--source', 'journal', '--view', 'all',
+    _run_cli(monkeypatch, ['query', '--view', 'all',
                            '--run', 'run_20260830_094811',
                            '--replay-dir', str(rd)])
     out = capsys.readouterr().out
@@ -378,7 +378,7 @@ def test_cli_journal_source_default_run_is_last(tmp_path: Path,
     """缺省 run = 账内末 run(首现序末位),与旧读面「缺省=最近一局」同语义。"""
     rd = tmp_path / 'replay'
     _mk_replay(rd, _JOURNAL_ROWS)
-    _run_cli(monkeypatch, ['query', '--source', 'journal', '--view', 'snapshot',
+    _run_cli(monkeypatch, ['query', '--view', 'snapshot',
                            '--replay-dir', str(rd)])
     out = capsys.readouterr().out
     assert 'run_other_game' in out, '末 run 缺省选择'
@@ -391,7 +391,7 @@ def test_cli_journal_source_recent_overview(tmp_path: Path,
     """--recent 概览:逐 run 一行(行数/节点/末快照读数)。"""
     rd = tmp_path / 'replay'
     _mk_replay(rd, _JOURNAL_ROWS)
-    _run_cli(monkeypatch, ['query', '--source', 'journal', '--recent', '5',
+    _run_cli(monkeypatch, ['query', '--recent', '5',
                            '--replay-dir', str(rd)])
     out = capsys.readouterr().out
     assert 'run_20260830_094811: 行=2' in out
@@ -405,7 +405,7 @@ def test_cli_journal_source_missing_ledger_hint(tmp_path: Path,
     """新账缺席(影子缺省关常态):提示行不炸,不回落旧流视图。"""
     rd = tmp_path / 'replay'
     _mk_replay(rd)
-    _run_cli(monkeypatch, ['query', '--source', 'journal',
+    _run_cli(monkeypatch, ['query',
                            '--replay-dir', str(rd)])
     out = capsys.readouterr().out
     assert '无统一 state 新账' in out
@@ -421,7 +421,7 @@ def test_cli_journal_truncated_lines_still_render(tmp_path: Path,
     p = rd / 'state' / 'journal.jsonl'
     with p.open('a', encoding='utf-8') as f:
         f.write('{"v": 3, "ts": "截断\n')
-    _run_cli(monkeypatch, ['query', '--source', 'journal', '--view', 'gold',
+    _run_cli(monkeypatch, ['query', '--view', 'gold',
                            '--replay-dir', str(rd)])
     out = capsys.readouterr().out
     assert '40→38' in out and '[gold 链]' in out
@@ -434,7 +434,7 @@ def test_cli_match_journal_from_archive_slice(tmp_path: Path,
     rd = tmp_path / 'replay'
     game_id = _mk_replay(rd, _JOURNAL_ROWS)
     arch.assemble_game(rd, game_id)
-    _run_cli(monkeypatch, ['query', '--source', 'journal', '--view', 'gold',
+    _run_cli(monkeypatch, ['query', '--view', 'gold',
                            '--match', game_id, '--replay-dir', str(rd)])
     out = capsys.readouterr().out
     assert game_id in out and '新账视图' in out
@@ -443,27 +443,27 @@ def test_cli_match_journal_from_archive_slice(tmp_path: Path,
 
 def test_cli_source_view_pairing_rejected(tmp_path: Path,
                                           monkeypatch) -> None:
-    """读面配对校验:新账视图配旧源/旧视图配新账源/checks 配新账源 = 显式拒绝
-    (静默回落 = 判读人以为在读新账实际在读旧流)。"""
+    """W3 改锚:--source 已删,唯一读面下新账视图恒合法;旧视图名(economy
+    族)与 checks 子命令 = argparse choices 显式拒绝(不留静默回落)。"""
     rd = tmp_path / 'replay'
     _mk_replay(rd, _JOURNAL_ROWS)
-    for argv in (['query', '--view', 'gold', '--replay-dir', str(rd)],
-                 ['query', '--source', 'journal', '--view', 'economy',
-                  '--replay-dir', str(rd)],
-                 ['checks', '--source', 'journal', '--replay-dir', str(rd)]):
+    for argv in (['query', '--view', 'economy', '--replay-dir', str(rd)],
+                 ['checks', '--replay-dir', str(rd)]):
         with pytest.raises(SystemExit):
             _run_cli(monkeypatch, argv)
 
 
-def test_cli_default_old_path_unchanged(tmp_path: Path,
-                                        monkeypatch,
-                                        capsys) -> None:
-    """缺省(--source old)路径零变化:目录只有新账、无旧流时按旧口径报
-    无数据(旧读面不看新账——并存期两读面互不越界)。"""
+def test_cli_default_is_journal_only(tmp_path: Path,
+                                     monkeypatch,
+                                     capsys) -> None:
+    """W3:缺省 = journal 唯一读面(--source 已删,无回落);只有新账、
+    无旧流的目录按新账视图正常出数(唯一账直接暴露)。"""
     rd = tmp_path / 'replay'
     _write_journal(rd, _JOURNAL_ROWS)
     _run_cli(monkeypatch, ['query', '--replay-dir', str(rd)])
-    assert capsys.readouterr().out.strip() == '(无 replay 数据)'
+    out = capsys.readouterr().out
+    assert 'run_other_game' in out and '新账' in out, \
+        '缺省读面 = 新账(唯一账直接暴露,无旧口径回落)'
 
 
 # ============================================ 宽容装配与计数申报锁(R3.2)
@@ -586,7 +586,7 @@ def test_cli_match_summary_survives_segment_missing_run_id(
     a['segments'][0].pop('run_id')
     with p.open('w', encoding='utf-8') as f:
         json.dump(a, f, ensure_ascii=False)
-    _run_cli(monkeypatch, ['query', '--source', 'journal', '--view', 'gold',
+    _run_cli(monkeypatch, ['query', '--view', 'gold',
                            '--match', game_id, '--replay-dir', str(rd)])
     out = capsys.readouterr().out
     assert game_id in out and '新账视图' in out, '摘要行降级显示不崩'

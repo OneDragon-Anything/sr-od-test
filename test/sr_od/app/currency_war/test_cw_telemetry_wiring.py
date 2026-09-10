@@ -25,7 +25,7 @@ from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategyS
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.telemetry import query, recorder
+from sr_od.application.currency_war.telemetry import recorder
 from sr_od.application.currency_war.telemetry import state as telstate
 
 
@@ -134,23 +134,7 @@ def test_obs_conflict_no_row_outside_run(tmp_path: Path, monkeypatch,
     assert not (tmp_path / 'obs_conflicts.jsonl').exists()
 
 
-def test_query_obs_conflicts_filters_by_run_id(tmp_path: Path) -> None:
-    """锁②c:读端 --run 过滤「有键且相等」;历史行(无键)只在全量视图出现。"""
-    p = tmp_path / 'obs_conflicts.jsonl'
-    p.write_text(
-        json.dumps({'ts': '2026-08-30T01:00:00', 'field': 'gold',
-                    'run_id': 'run_a'}) + '\n'
-        + json.dumps({'ts': '2026-08-30T02:00:00', 'field': 'hp'}) + '\n',
-        encoding='utf-8')
-    filtered = query.query_obs_conflicts(tmp_path, 'run_a')
-    assert any('[gold]' in ln for ln in filtered)
-    assert not any('[hp]' in ln for ln in filtered)   # 历史行(无键)被过滤
-    assert query.query_obs_conflicts(tmp_path, 'run_b') == ['  (无记录)']
-    # 全量(空 run_id)= 历史行 + 新行都在
-    full = query.query_obs_conflicts(tmp_path, '')
-    assert any('[hp]' in ln for ln in full) and any('[gold]' in ln for ln in full)
-
-
+# [退役墓碑,W3] test_query_obs_conflicts_filters_by_run_id 随 query_obs_conflicts 旧视图退役(W3);obs_conflicts 写面收编 journal obs_event(删除波 1)后,冲突读数走 journal_query.view_events。git 历史可复活。
 # ===== ③ 简报行 run_id 归属(删除波 1:局间缓冲与直写面整体退役)=====
 
 def test_record_exogenous_exit_stub_is_total_noop(tmp_path: Path,

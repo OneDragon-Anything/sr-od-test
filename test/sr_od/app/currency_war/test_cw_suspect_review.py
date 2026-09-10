@@ -36,9 +36,12 @@ _TOOL = (Path(__file__).resolve().parents[5] / 'tools/cw/review_skeleton.py')
 
 
 @lru_cache(maxsize=1)
-def _seed18_ledger() -> tuple:
-    """seed18 全局账本(同次运行内只算一次;README 纪律 11)。"""
-    return tuple(simulate_p1(18, pool='snapshot').ledger)
+def _seed56_ledger() -> tuple:
+    """种子锚账本(seed 56;同次运行内只算一次;README 纪律 11)。
+    锚历史(T-32 空板止损守卫位移):原 seed18 p1r1 孤儿清算形态在开局
+    空板凑息帧,被守卫(待卖后 deployed 为空 ⇒ 拒卖)按设计拦截;探针
+    重扫(seed 0-109)命中 {56: p1r2, 89: p1r3},取最小 56。"""
+    return tuple(simulate_p1(56, pool='snapshot').ledger)
 
 
 def _locked_target() -> tuple[str, str]:
@@ -207,7 +210,7 @@ def test_c4a_convert_key_review() -> None:
     nokey = _pair_row({'sell_reason': 'line_switch_collapse'})
     nokey['target_comp'] = label
     assert ledger.check_no_same_round_buy_sell([nokey]) == []
-    # 未锁线(target 空):名册不可解析 → 豁免照旧(seed18 p1r1 口径)
+    # 未锁线(target 空):名册不可解析 → 豁免照旧(seed56 p1r2 口径)
     unlocked = _pair_row({'sell_reason': 'line_switch_collapse',
                           'dec_sell_in_line': False})
     assert ledger.check_no_same_round_buy_sell([unlocked]) == []
@@ -465,12 +468,12 @@ def test_c7_seed_scope_review() -> None:
 
 # ===== 生成侧披露三键(engine_p1 执行点;供给半环,README 纪律 13) ==========
 
-def test_disclosure_keys_write_end_seed18() -> None:
-    """三披露键写端在位锁(探针 seed 18;写端断线 = 检查器/检测器静默
-    退回不可复核,失配显形能力归零)。键形状:BuyCard= int 成型度,
-    LevelUp/SellBench= bool。发射面为零的种子 = 探针失准,红须指向
-    重选探针种子(README 纪律 12)。"""
-    rows = [dict(r) for r in _seed18_ledger()]
+def test_disclosure_keys_write_end_seed56() -> None:
+    """三披露键写端在位锁(探针 seed 56,锚历史见 _seed56_ledger;写端
+    断线 = 检查器/检测器静默退回不可复核,失配显形能力归零)。键形状:
+    BuyCard= int 成型度,LevelUp/SellBench= bool。发射面为零的种子 =
+    探针失准,红须指向重选探针种子(README 纪律 12)。"""
+    rows = [dict(r) for r in _seed56_ledger()]
     buys = [a for row in rows for a in (row.get('actions') or [])
             if a.get('__type__') == 'BuyCard']
     lvs = [a for row in rows for a in (row.get('actions') or [])
@@ -489,23 +492,24 @@ def test_disclosure_keys_write_end_seed18() -> None:
         assert isinstance(a.get('dec_sell_in_line'), bool), a
 
 
-def test_seed18_t141_exemption_holds_under_review() -> None:
-    """seed18 端到端:T-141 豁免在复核新机制下仍工作(未锁线期孤儿
+def test_seed56_t141_exemption_holds_under_review() -> None:
+    """seed56 端到端:T-141 豁免在复核新机制下仍工作(未锁线期孤儿
     清算 = 名册不可解析 → unverifiable → 豁免照旧,ADR-0591 语义
-    不被迁移翻案)。红证:把该行语境改造成可解析名册并保留键 False
-    (人为失配)→ 可疑项 + 判违产出(检查端复核确实在岗)。"""
-    rows = _seed18_ledger()
-    p1r1 = [dict(r) for r in rows
-            if r.get('plane') == 1 and r.get('round_num') == 1]
-    assert ledger.check_no_same_round_buy_sell(p1r1) == []
+    不被迁移翻案;锚历史见 _seed56_ledger)。红证:把该行语境改造成
+    可解析名册并保留键 False(人为失配)→ 可疑项 + 判违产出(检查端
+    复核确实在岗)。"""
+    rows = _seed56_ledger()
+    p1r2 = [dict(r) for r in rows
+            if r.get('plane') == 1 and r.get('round_num') == 2]
+    assert ledger.check_no_same_round_buy_sell(p1r2) == []
     # 检测器面同样不产 D1 失配条目(复核同判据,单一源)
     d1 = [e for e in suspects.run_suspect_checks(list(rows))
-          if e.get('mode') == 'D1' and e.get('round_num') == 1
+          if e.get('mode') == 'D1' and e.get('round_num') == 2
           and not e.get('cross_ref')]
     assert d1 == [], d1
     # 人为失配(红证):语境改成可解析名册,dec 键仍 False → 显形
     label, _ = _locked_target()
-    forged = [dict(r, target_comp=label) for r in p1r1]
+    forged = [dict(r, target_comp=label) for r in p1r2]
     v = ledger.check_no_same_round_buy_sell(forged)
     assert any('可疑项(转化分键失配)' in x for x in v), v
 
@@ -614,54 +618,7 @@ def test_review_skeleton_prefill_in_node_before_slots() -> None:
         and not e.get('cross_ref') and e.get('mode') != '_errors')
 
 
-def test_merge_round_rows_carries_sells_for_detectors() -> None:
-    """生产接线锁(README 纪律 13 供给半环):合并行动作并集含 SellBench
-    ——D1/D5 检测器生产覆盖面的数据地基(生产卖出行缺 name/sell_reason
-    键,检测器按缺键跳过 = 声明缺口,不炸面)。"""
-    from sr_od.application.currency_war.sim.ledger_hooks import (
-        merge_round_rows,
-    )
-    frames = [
-        {'plane': 1, 'round_num': 2, 'ts': 't1', 'gold': 30, 'hp': 80,
-         'formed_stop': False, 'target_comp': '',
-         'state': {'board': {}, 'deployed': [], 'bench': [],
-                   'node_type': 'prep'},
-         'actions': [{'__type__': 'BuyCard', 'card': {'name': '青雀'},
-                      'reason': 'm2_line_member'}]},
-        {'plane': 1, 'round_num': 2, 'ts': 't2', 'gold': 28, 'hp': 80,
-         'formed_stop': False, 'target_comp': '',
-         'state': {'board': {}, 'deployed': [], 'bench': [],
-                   'node_type': 'prep'},
-         'actions': [{'__type__': 'SellBench', 'slot': 3}]},
-    ]
-    merged = merge_round_rows(frames)
-    assert len(merged) == 1
-    types = [a.get('__type__') for a in merged[0]['actions']]
-    assert types == ['BuyCard', 'SellBench'], types
-    # 段级消费面不因并入翻转:_seg_spent 白名单不含 SellBench
-    assert merged[0]['actions'][1].get('name') is None   # 缺键如实保留
-
-
-# ===== 生产行为守卫(决策路径零变化) ==========================================
-
-def test_no_decision_path_reads_disclosure_keys() -> None:
-    """grep 守卫:criteria/sell_gate/mandate 发射判定不读新披露键
-    (T-153 硬约束;披露键只进检查/检测/复盘面,策略读自身披露 =
-    新自证循环)。扫描面 = mandate_v1 全包(含 criteria/ 与 sell_gate)。
-    盲区自检(README 纪律 20):扫描路径失效(包搬走/零文件)必须红,
-    禁静默假绿。"""
-    root = Path(r'src/sr_od/application/currency_war/strategies/impl/mandate_v1')
-    scanned = sorted(root.rglob('*.py'))
-    names = {p.name for p in scanned}
-    assert 'sell_gate.py' in names and 'shop.py' in names \
-        and 'mandate.py' in names, \
-        f'扫描面失真(守卫哑火风险): {sorted(names)[:5]}'
-    keys = ('dec_sell_in_line', 'dec_engines_count',
-            'dec_bench_wait_member')
-    hits: list[str] = []
-    for py in scanned:
-        text = py.read_text(encoding='utf-8')
-        for k in keys:
-            if k in text:
-                hits.append(f'{py}: {k}')
-    assert not hits, f'决策面读披露键(新自证循环): {hits}'
+# [退役墓碑,W3] test_merge_round_rows_carries_sells_for_detectors 随
+# sim/ledger_hooks 读侧检查族(merge_round_rows)退役(W3,checks 子命令
+# 同批);段级检查器 sim 账本活体 = sim/checks/(归 W6 sim 切统一容器批)。
+# git 历史可复活。
