@@ -53,12 +53,20 @@ def test_wait_slot_occupied_timeout_false(monkeypatch) -> None:
 
 
 def test_deterministic_landing_verification_wired() -> None:
-    """源码锁:deterministic 主路径与「源槽已空(验证滞后)」路径都验落点;
-    落点未验出 = 判无效拖拽(不计 placed)+ 存证。"""
+    """源码锁(T-277 三态化,锁语义重推:旧锁钉「主/滞后路径直接调
+    ``_wait_slot_occupied(dst``」,三态化后落点验证统一收编
+    ``_landing_verdict``——原语本体仍是其 landed 支,锁面随形状更新、
+    语义保持「主路径与滞后路径都验落点」):三消费位(拖成-判负/
+    源空-滞后/P24)都必须经 verdict 统一入口;遮蔽哨两处(主循环+P24)
+    前置;UNKNOWN 以具名状态上报;落点未验出且无遮蔽 = 判无效拖拽
+    (不计 placed)+ 存证(1-1 防线零放宽)。"""
     from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
     src = inspect.getsource(db.CwOpDeploy._deploy_deterministic)
-    assert '_wait_slot_occupied(dst' in src          # 主路径落点验证
-    assert src.count('_wait_slot_occupied(dst') >= 2  # 滞后补偿路径同样验
+    assert src.count('_landing_verdict(') >= 3, '三消费位必须统一经 verdict 入口'
+    assert 'STATUS_LANDING_VERDICT_UNKNOWN' in src, 'UNKNOWN 必须具名状态上报'
+    assert src.count('_decision_overlay_screen(') >= 2, '主循环+P24 两哨必须前置'
+    helper = inspect.getsource(db.CwOpDeploy._landing_verdict)
+    assert '_wait_slot_occupied(dst' in helper      # 原语本体仍验目标槽
     assert '判无效拖拽' in src
     assert 'deploy_landing_fail_slot' in src          # 失败帧存证
     # 否定墓碑(P4R 面二):主循环禁 `for bi in order` 迭代形态——
@@ -160,13 +168,15 @@ def test_frontless_recovery_chain_wired() -> None:
 # cw_observation.arbitrate_deployed_count);板满谓词的全部早退分支
 # (含 CV 幻影满板的入口早退)统一经仲裁 + 留证。
 
-def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
+def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4,
+                  occlusion: str | None = None):
     """构直驱 _deploy_deterministic 的桩 op:CV 占用按槽序列出票。
 
     默认事故帧形态:bench 槽 1-4 占用(4 真实 bench 角色)、前排 1/4 占用、
     后排 4/6 「占用」(2 真 + 2 幻影)→ CV 计数 = 1+4 = 5;
     paddle 桩恒返 paddle_x(事故真值 3)。
-    ``cv_front_occ``/``cv_back_occ`` = 前排/后排占用槽数(幻影满板形态传 4/6)。"""
+    ``cv_front_occ``/``cv_back_occ`` = 前排/后排占用槽数(幻影满板形态传 4/6)。
+    ``occlusion`` = T-277 遮蔽探测桩返回值(None = 无 overlay 在场)。"""
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
@@ -209,6 +219,8 @@ def _make_gate_op(monkeypatch, *, paddle_x, cv_front_occ=1, cv_back_occ=4):
             return object()
         def _wait_slot_occupied(self, pt, budget):
             return True
+        def _decision_overlay_screen(self, scr):
+            return occlusion   # T-277 遮蔽探测桩化(无 screen_loader 面)
 
     op = _Op()
     op.ctx = SimpleNamespace(cw_match=None)
@@ -323,7 +335,8 @@ class _BoardTruth:
 
 
 def _make_fill_op(monkeypatch, *, paddle_x: int, cap: int, bench_n: int = 4,
-                  front_occ: int = 0, miss_drag_index: int | None = None):
+                  front_occ: int = 0, miss_drag_index: int | None = None,
+                  probe_seq: list | None = None):
     """直驱 _deploy_deterministic 的真值模型桩 op(仿 _make_gate_op,
     序列出票改为坐标键真值模型——幻影空槽回归需要「拖成后目标槽真翻
     占用」的有状态语义)。
@@ -332,7 +345,9 @@ def _make_fill_op(monkeypatch, *, paddle_x: int, cap: int, bench_n: int = 4,
     前置占用可选);drag 桩真改真值(源空+落占)并记录拖拽序列
     ``[(src, dst, dst_drag 前是否真空)]``(主循环拖拽在前、fill 在后)。
     ``miss_drag_index`` = 第 N 次(0-based)拖拽「落点验证漏判」:真值已
-    落位但 _wait_slot_occupied 返 False(特效/时间窗漏判形态)。"""
+    落位但 _wait_slot_occupied 返 False(特效/时间窗漏判形态)。
+    ``probe_seq`` = T-277 遮蔽探测出票序列(按 _decision_overlay_screen
+    调用序出票,耗尽后循环末值;None = 恒无遮蔽)。"""
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
@@ -360,6 +375,8 @@ def _make_fill_op(monkeypatch, *, paddle_x: int, cap: int, bench_n: int = 4,
 
     drags: list = []      # [(src, dst, dst_drag 前是否真空)]
     waits = {'n': 0}
+    probes = {'n': 0}     # 遮蔽探测调用计数(probe_seq 出票游标)
+    prefixes: list = []   # save_screenshot 前缀记录(UNKNOWN/invalid 分支归因)
 
     def _fake_drag(op, src, dst):
         drags.append((src, dst, not truth.is_occ(dst)))
@@ -378,17 +395,25 @@ def _make_fill_op(monkeypatch, *, paddle_x: int, cap: int, bench_n: int = 4,
         def screenshot(self):
             return object()
         def save_screenshot(self, prefix=None):
-            pass   # 失败存证桩化(零真实落盘)
+            prefixes.append(prefix)   # 失败存证桩化(零真实落盘;记录前缀供分支归因)
         def _wait_slot_occupied(self, pt, budget):
             i = waits['n']
             waits['n'] += 1
             if i == miss_drag_index:
                 return False   # 验证漏判:真值已落位,验证窗未验出
             return truth.is_occ(pt)
+        def _decision_overlay_screen(self, scr):
+            # T-277 遮蔽探测桩:按 probe_seq 出票(耗尽后循环末值;
+            # None 序列 = 恒无遮蔽,非遮蔽路径回归绿的前提)。
+            if not probe_seq:
+                return None
+            i = min(probes['n'], len(probe_seq) - 1)
+            probes['n'] += 1
+            return probe_seq[i]
 
     op = _Op()
     op.ctx = SimpleNamespace(cw_match=None)
-    return op, truth, drags, bench, front, back
+    return op, truth, drags, bench, front, back, prefixes
 
 
 def test_p24_fill_skipped_when_order_exhausted_at_cap(monkeypatch) -> None:
@@ -396,7 +421,7 @@ def test_p24_fill_skipped_when_order_exhausted_at_cap(monkeypatch) -> None:
     bench 4 人 → kernel cap 截断 3 上 1 留(拒因 'cap')→ 主循环拖 3 次
     自然排尽 → fill 段零拖拽(整场总拖拽==3),留置件不得被拖出。
     旧代码 fill 门按入口快照 0 恒开 → 总拖拽 4(往满员板白拖)。"""
-    op, truth, drags, bench, front, back = _make_fill_op(
+    op, truth, drags, bench, front, back, prefixes = _make_fill_op(
         monkeypatch, paddle_x=0, cap=3)
     placed, plan_empty, gate_fail = op._deploy_deterministic(
         bench, front, back, None)
@@ -413,7 +438,7 @@ def test_p24_fill_skipped_on_cap_stop_break(monkeypatch) -> None:
     (=1)分歧 → order=3 但主循环拖 2 次后动态板满门 break → fill 段零
     拖拽(总拖拽==2)。旧代码 fill 门按入口仲裁快照 1(1+0>=3)恒开 →
     总拖拽 3。"""
-    op, truth, drags, bench, front, back = _make_fill_op(
+    op, truth, drags, bench, front, back, prefixes = _make_fill_op(
         monkeypatch, paddle_x=1, cap=3, front_occ=1)
     placed, plan_empty, gate_fail = op._deploy_deterministic(
         bench, front, back, None)
@@ -429,7 +454,7 @@ def test_p24_fill_targets_truth_empty_slots_after_landing_miss(
     时刻必须是真值模型真空槽——对真值断言,不对喂入 fe/be 断言(旧代码
     喂别名列表含幻影槽,fill 拖向已占槽=白烧)。cap=4 + bench 5 人:
     主循环 3 验证落地 + 第 4 件真落位但漏判,fill 补第 5 件至真空槽。"""
-    op, truth, drags, bench, front, back = _make_fill_op(
+    op, truth, drags, bench, front, back, prefixes = _make_fill_op(
         monkeypatch, paddle_x=0, cap=4, bench_n=5, miss_drag_index=3)
     placed, plan_empty, gate_fail = op._deploy_deterministic(
         bench, front, back, None)
@@ -440,3 +465,87 @@ def test_p24_fill_targets_truth_empty_slots_after_landing_miss(
     assert dst_was_truth_empty, \
         f'fill 拖拽目标必须是真值真空槽,实得 {fill_dst}(拖前已占用=幻影槽)'
     assert fill_dst is not back[2], '漏判回收的幻影槽不得成为 fill 目标'
+
+
+# ==================== ⑥ 落地判定三态化 + 遮蔽哨(T-277,T-268 治本)====================
+# 病灶(T-268 归因对账报告):部署拖拽真实落地时,游戏以 decision overlay
+# 覆盖棋盘(列车同行跨档部署触发「选择伙伴」为驱动形态,两例实机假失败),
+# 落地验证像素轮询读到 overlay 像素恒假阴 → 真部署被判「无效拖拽」→
+# placed=0 假失败(STATUS_LANDED_NONE)。修法 = 判定三态化(landed/invalid/
+# unknown;纯 UNKNOWN 方案,R2 确认轮裁剪 ΔC 计数器改判辅助支)+ 拖拽循环
+# 遮蔽哨(主循环 + P24 两处,迭代体一切像素读之前)。判别力:各锁断言对
+# 「探测短路退回旧单分支判无效」变异均红(守卫移除验证记录见交付报告)。
+
+_PARTNER_OVERLAY = '货币战争-列车同行'   # 驱动病灶 overlay(registry decision 锚)
+
+
+def test_landing_verdict_unknown_on_partner_occlusion(monkeypatch) -> None:
+    """主形态行为锁(partner 覆盖型几何,实机两例形态):验证窗像素假阴
+    (miss)+ decision overlay 在场 → 落地判定 UNKNOWN——具名状态经
+    gate_fail 通道返回,**不判无效、不回收槽、已落地件如实保留**;UNKNOWN
+    即终止含 P24 段(旧代码在此形态判无效回收槽 + fill 继续拖 = 遮蔽域
+    盲拖,probe 出票#5 命中即本锁判别点)。"""
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    op, truth, drags, bench, front, back, prefixes = _make_fill_op(
+        monkeypatch, paddle_x=0, cap=4, bench_n=5, miss_drag_index=3,
+        probe_seq=[None, None, None, None, _PARTNER_OVERLAY])
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
+    assert (placed, plan_empty) == (3, False), '批内已落地件必须如实保留'
+    assert gate_fail == db.CwOpDeploy.STATUS_LANDING_VERDICT_UNKNOWN, \
+        f'遮蔽域必须 UNKNOWN 具名上报,实得 {gate_fail!r}'
+    assert len(drags) == 4, f'UNKNOWN 即终止(fill 零拖拽),实得 {len(drags)}'
+    # 分支归因(守卫移除验证补强:探测短路变异下,本结果可被「invalid 判负
+    # 回收 + fill 哨兜底 UNKNOWN」的替代路径伪造出同值三元组——存证前缀
+    # 钉死分支身份,UNKNOWN 分支不走 invalid 存证)。
+    assert 'deploy_landing_unknown_slot4' in prefixes, \
+        f'UNKNOWN 分支存证缺失,实得 {prefixes}'
+    assert 'deploy_landing_fail_slot4' not in prefixes, \
+        f'UNKNOWN 形态不得走 invalid 判负存证(槽位不回收),实得 {prefixes}'
+
+
+def test_landing_verdict_unknown_independent_of_paddle(monkeypatch) -> None:
+    """F-2 裁剪后结构性质锁:遮蔽域裁决与 paddle 读数无关——paddle 正常
+    (0)与双帧失读(None)两变体在同遮蔽帧下恒 UNKNOWN 且零拖拽(纯
+    UNKNOWN 方案不消费计数器,ΔC 改判支已裁剪 = R2 确认轮裁决;基线缺失
+    形态并入 UNKNOWN,不产生假成功面)。"""
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    for paddle in (0, None):
+        op, truth, drags, bench, front, back, prefixes = _make_fill_op(
+            monkeypatch, paddle_x=paddle, cap=4, bench_n=5,
+            probe_seq=[_PARTNER_OVERLAY])   # 首槽哨即命中
+        placed, plan_empty, gate_fail = op._deploy_deterministic(
+            bench, front, back, None)
+        assert gate_fail == db.CwOpDeploy.STATUS_LANDING_VERDICT_UNKNOWN, \
+            f'paddle={paddle}:遮蔽在场恒 UNKNOWN,实得 {gate_fail!r}'
+        assert (placed, plan_empty) == (0, False)
+        assert len(drags) == 0
+
+
+def test_occlusion_sentry_stops_before_drag(monkeypatch) -> None:
+    """哨位锁(决策点 2):遮蔽从首槽就在场 → 哨在迭代体一切像素读/拖拽
+    之前接住 → 零拖拽发起 → UNKNOWN 返回(旧形态首槽 drag 已发出、验证
+    窗假阴后才判无效 = 盲拖 + 白烧验证窗)。"""
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    op, truth, drags, bench, front, back, prefixes = _make_fill_op(
+        monkeypatch, paddle_x=0, cap=3, probe_seq=[_PARTNER_OVERLAY])
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
+    assert (placed, plan_empty) == (0, False)
+    assert gate_fail == db.CwOpDeploy.STATUS_LANDING_VERDICT_UNKNOWN
+    assert len(drags) == 0, f'哨必须先于本槽 drag,实得 {len(drags)}'
+
+
+def test_p24_sentry_stops_fill_blind_drag(monkeypatch) -> None:
+    """P24 段哨锁(F-5②,R2 残扫低项):主循环无遮蔽(miss 件按现行语义
+    判无效回收,探测#5 出票 None),fill 段首槽哨命中 overlay → fill 零
+    盲拖 → UNKNOWN 截断——窄时序窗残余盲拖面归零(F-5② 同置哨选项)。"""
+    from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
+    op, truth, drags, bench, front, back, prefixes = _make_fill_op(
+        monkeypatch, paddle_x=0, cap=4, bench_n=5, miss_drag_index=3,
+        probe_seq=[None] * 5 + [_PARTNER_OVERLAY])
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench, front, back, None)
+    assert placed == 3, 'miss 件非遮蔽域判无效(现行语义),不进 placed'
+    assert gate_fail == db.CwOpDeploy.STATUS_LANDING_VERDICT_UNKNOWN
+    assert len(drags) == 4, f'fill 哨必须先于 fill drag,实得 {len(drags)}'

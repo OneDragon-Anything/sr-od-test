@@ -199,7 +199,8 @@ def test_run_composite_deploy_not_guarded() -> None:
     勿误伤 op 边界契约)——无守卫时直接到达延迟导入。
 
     语义重推(T-164 批A/D1,方案审选项 b):deploy 派发仍不带回环守卫,
-    本锁语义不变;派发间隙的 overlay 弹出由 op 内三锚检查降级后的
+    本锁语义不变;派发间隙的 overlay 弹出由 op 内 registry decision 全集
+    检查(T-277 registry 化,旧措辞「三锚」)降级后的
     **执行断言**(round_fail STATUS_EVENT_OVERLAY)如实上报交回重判——
     「op 内 overlay 弹出 = 执行环境失配,重判归分发层」。行为锁在
     test_cw_action_op_compliance.py;本锁只钉「不升 guard_screen」

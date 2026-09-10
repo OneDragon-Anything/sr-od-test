@@ -149,6 +149,9 @@ def _make_rf_op(monkeypatch, *, sess: SimpleNamespace,
         def _wait_slot_occupied(self, pt, budget):
             return True
 
+        def _decision_overlay_screen(self, scr):
+            return None   # T-277 遮蔽探测桩化(无 screen_loader 面)
+
     op = _Op()
     op.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
     bench_pts = [Point(100 + 30 * i, 900) for i in range(9)]

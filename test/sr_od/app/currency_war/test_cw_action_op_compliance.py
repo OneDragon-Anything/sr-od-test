@@ -7,8 +7,9 @@
 - E2/E3(cw_op_equip_all):批内画面漂移闸 break+success → round_fail
   具名状态(STATUS_SCREEN_DRIFTED);哨兵观测保留(stop_reason 串不变,
   分类域锁在 test_cw_opening_tool_semantics 的 TestTelemetryDomainKey)。
-- D1(cw_op_deploy):事件 overlay 三锚 success-skip → round_fail
-  (STATUS_EVENT_OVERLAY);「op 内 overlay 弹出 = 执行环境失配,重判
+- D1(cw_op_deploy):事件 overlay registry 全集锚 success-skip → round_fail
+  (STATUS_EVENT_OVERLAY;T-277 registry 化,旧措辞「三锚」= 硬编码三屏
+  已扩为 derive_decision() 全集);「op 内 overlay 弹出 = 执行环境失配,重判
   归分发层」;不升 guard_screen(test_cw_popup_dispatch 边界
   申报锁语义不变)。
 - D2(cw_op_deploy):入口 cap 门/幻影满板失配 fail 暴露(3 元组契约,
@@ -105,12 +106,14 @@ def test_equip_frontonly_drift_fails_mid_batch(monkeypatch) -> None:
         f'回退路径批内漂移必须以具名状态 fail,实得 {res.status!r}'
 
 
-# ==================== D1:事件 overlay 三锚 → round_fail ====================
+# ==================== D1:事件 overlay registry 全集 → round_fail ====================
 
 def test_deploy_event_overlay_fails_not_skips(monkeypatch) -> None:
-    """D1 行为锁:overlay 三锚任一命中 → round_fail(STATUS_EVENT_OVERLAY
-    前缀 + 命中画面名),禁旧 round_success('事件overlay,跳过部署') 把
-    弃执行记成成功吞分发。"""
+    """D1 行为锁(T-277 registry 化,docstring 措辞随检查集更新):registry
+    decision 全集锚任一命中 → round_fail(STATUS_EVENT_OVERLAY 前缀 +
+    命中画面名),禁旧 round_success('事件overlay,跳过部署') 把弃执行
+    记成成功吞分发。检查集单一源 = kernel cw_overlay_registry.derive_
+    decision()(T-268 治本 G3:旧硬编码三屏扩为全集,纯收紧)。"""
     from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
         CwOpDeploy,
     )
@@ -128,9 +131,10 @@ def test_deploy_event_overlay_fails_not_skips(monkeypatch) -> None:
 
 
 def test_deploy_clean_screen_reaches_past_overlay(monkeypatch) -> None:
-    """对照臂:三锚全不中 → 越过 overlay 断言继续执行(裸实例缺识别面,
-    后续第一步即 AttributeError;若断言误拦,round_fail 正常返回 →
-    raises 不触发 = 红,精确证明「放行」而非恒 fail)。"""
+    """对照臂:registry decision 全集锚全不中 → 越过 overlay 断言继续
+    执行(裸实例缺识别面,后续第一步即 AttributeError;若断言误拦,
+    round_fail 正常返回 → raises 不触发 = 红,精确证明「放行」而非恒
+    fail)。"""
     import pytest
 
     from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (

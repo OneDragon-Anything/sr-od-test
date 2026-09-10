@@ -194,7 +194,7 @@ def _mk_deploy_op(monkeypatch, truth: _FrameTruth, deployed: list,
             pass
 
     op = _Op()
-    op.last_screenshot = truth.shot()   # deploy() overlay 三锚消费入口帧
+    op.last_screenshot = truth.shot()   # deploy() overlay 入口检查消费入口帧(T-277 registry 化)
     op.ctx = _counters_ctx(counters)
     op.ctx.screen_loader = SimpleNamespace(get_screen=lambda name: object())
     return op, drags
