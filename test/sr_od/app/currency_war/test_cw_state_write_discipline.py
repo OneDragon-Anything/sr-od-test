@@ -201,7 +201,7 @@ def test_resumed_flag_live_disables_popup_leg(journal, run_id, monkeypatch):
         bs = board_state_of(session)
         assert bs.current_screen.value == '货币战争-备战-开商店', \
             '漏斗弹窗帧写入(前置)'
-        return bs.node_inferred.value
+        return bs.node_ord.value
 
     assert _probe(resumed=True) is None, \
         '恢复局弹窗腿禁用不猜(旗标 live 进派生,R3 规则六)'

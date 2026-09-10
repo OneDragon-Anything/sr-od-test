@@ -10,9 +10,9 @@
   applied = 动作 op 自身发出的机械事实透传,禁读屏核验。
 
 开局链写点(R2 §3.4.1 弹窗腿守卫集 prev_branch 供给,cw_loop 侧):
-守卫集成员补齐「等待 1-1」(R3 判定方案 §3.3 规则二②开局链五成员;R1 常量
-注释「接线批核对后补」的承接),分支标识写点经 :meth:`observe_screen_context`
-唯一写口落上下文域(域准入 ①obs 家族不破)。
+分支标识写点经 :meth:`observe_screen_context` 唯一写口落上下文域(域准入
+①obs 家族不破)。守卫集成员终版 = 结算窗 ∪ 开局链{简报,投资环境,等待1-1}
+(0p/0q 有专用腿②③出族,用户终裁 2026-09-11/攻击 R5 高-1)。
 
 影子纪律:回执写点与分支写点同受影子闸(缺省关),关 = 零写入零版本消费,
 行为与 R1 逐位一致。
@@ -462,12 +462,21 @@ def test_close_shop_receipt_all_exits(mode, journal, run_id, monkeypatch):
 
 
 def test_guard_set_opening_chain_members_complete() -> None:
-    """R3 判定方案 §3.3 规则二②:前驱守卫族 = 战斗等待 ∪ 开局链五成员
-    (简报/位面过渡/投资环境/等待1-1/BOSS简报)——R1「接线批核对后补」承接。"""
-    for member in ('货币战争-战斗等待', '货币战争-简报', '货币战争-位面过渡',
-                   '货币战争-投资环境', '货币战争-等待1-1', '货币战争-BOSS简报'):
+    """守卫族成员终版锁(用户终裁 2026-09-11,攻击 R5 高-1):守卫族 =
+    结算窗 ∪ 开局链{简报,投资环境,等待1-1};**0p/0q 出族**——二者有专用腿
+    ②③(规则②位面过渡/规则③BOSS简报),守卫族残留其成员会与专用腿构成
+    级联双推进(专用腿推进后弹窗腿再 +1,缓存守卫只是掩码)。
+    【R1.2 锁语义重推】本锁前身为 R2「开局链五成员」形态(R1.1 曾把 0p 列入
+    守卫族,E12 边序勘误),随规则③落码与守卫族收缩更新;写点本体(cw_loop
+    五分支)不受影响——分支写点仍供上下文域,只是 0p/0q 不再作弹窗腿 prev
+    判据成员。"""
+    for member in ('货币战争-战斗等待', '货币战争-简报',
+                   '货币战争-投资环境', '货币战争-等待1-1'):
         assert member in SCREEN_CONTEXT_GUARD_PREV, \
-            f'守卫集缺开局链成员 {member}(弹窗腿 S1/S3 形态漏判据)'
+            f'守卫集缺成员 {member}(弹窗腿 S1/S3 形态漏判据)'
+    for leg_own in ('货币战争-BOSS简报', '货币战争-位面过渡'):
+        assert leg_own not in SCREEN_CONTEXT_GUARD_PREV, \
+            f'{leg_own} 有专用腿②③,守卫族残留 = 级联双推进破口(攻击 R5 高-1)'
 
 
 def test_opening_chain_write_arms_popup_leg_s1(journal, run_id) -> None:
@@ -479,7 +488,7 @@ def test_opening_chain_write_arms_popup_leg_s1(journal, run_id) -> None:
     bs.observe_screen_context('货币战争-等待1-1')
     # 开局补给动画期间商店面板先被采到(funnel prep_shop_open → 开商店块)
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))
-    assert bs.node_inferred.value == 1, '开局无前值 → 候选 1(弹窗腿)'
+    assert bs.node_ord.value == 1, '开局无前值 → 候选 1(弹窗腿)'
     assert bs.node_hist_ord == 1
     ctx_rows = [r for r in journal.rows if r['field'] == 'current_screen']
     assert [r['after'] for r in ctx_rows] == [

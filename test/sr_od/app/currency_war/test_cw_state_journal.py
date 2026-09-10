@@ -27,6 +27,8 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     BATTLE_WAIT_CONTEXT,
     BENCH_CAPACITY_DEFAULT,
     BS_SCHEMA_VERSION,
+    SCREEN_BOSS_BRIEFING,
+    SCREEN_CONTEXT_GUARD_PREV,
     SCREEN_PREP_FRAME,
     BenchSlot,
     BenchView,
@@ -331,21 +333,32 @@ def _prep(bs, plane: int, rnd: int, **kw) -> None:
 
 
 def _derive_rows(journal, actor: str) -> list[dict]:
-    return [r for r in journal.rows
-            if r['sig']['family'] == 'logic_hook' and r['sig']['actor'] == actor]
+    """派生规则行(按 actor 取;四腿序键行均为逻辑层 family=logic_hook,
+    备战帧顶栏原文行(top_bar_raw)才是观察层 family=obs,actor 归因不变
+    ——单字段双层形态,用户终裁 2026-09-11)。"""
+    return [r for r in journal.rows if r['sig']['actor'] == actor]
 
 
 def test_prep_leg_advances_node_observed(journal, run_id) -> None:
-    """§3.4.1 规则二(备战腿):干净备战帧 ∧ 顶栏可读 → node_observed = 节点序
-    (ord = (plane-1)*9 + round);渠道 = ③ logic_hook。"""
+    """§3.4.1 规则二(备战腿):干净备战帧 ∧ 顶栏可读 → write_logic(node_ord)
+    = 解析顶栏文本成序键(ord = (plane-1)*9 + round);**逻辑层字段**(用户
+    终裁 2026-09-11 字段层次终极版:四腿全部 write_logic,无 observe 写序键
+    例外);顶栏原文的观察层落点 = top_bar_raw(独立字段)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    _prep(bs, 1, 2)
-    assert bs.node_observed.value == 2
+    _prep(bs, 1, 2, top_raw='备战阶段 1-2')
+    assert bs.node_ord.value == 2
+    assert bs.node_ord.source == 'logic', '序键 = 逻辑层(四腿全 write_logic)'
+    assert bs.top_bar_raw.value == '备战阶段 1-2', '顶栏原文 = 观察层落点'
+    assert bs.top_bar_raw.source == 'observation', '原文走 observe(观察层)'
     rows = _derive_rows(journal, 'derive_node_observed')
     assert len(rows) == 1
     assert rows[0]['after'] == 2
-    assert rows[0]['sig']['family'] == 'logic_hook'
+    assert rows[0]['field'] == 'node_ord'
+    assert rows[0]['sig']['family'] == 'logic_hook', '序键行 = 逻辑层(logic_hook)'
     assert rows[0]['sig']['screen'] == '货币战争-备战'
+    raw_rows = [r for r in journal.rows if r['field'] == 'top_bar_raw']
+    assert raw_rows and raw_rows[0]['sig']['family'] == 'obs', \
+        '原文行 = 观察层(observe 契约)'
     # 画面上下文对(§3.1.4):旧值转 prev,同 group
     assert bs.current_screen.value == '货币战争-备战'
     ctx_rows = [r for r in journal.rows if r['field'] == 'current_screen']
@@ -354,7 +367,7 @@ def test_prep_leg_advances_node_observed(journal, run_id) -> None:
 
 def test_prep_leg_same_value_reread_is_same_value_row(journal, run_id) -> None:
     """v3.1-N2 后到腿写字段裁定:备战重入重读(候选 == hist 且字段已同值)
-    = 观察真值照录,行 = same_value 形态(计入行量预算);不构成第二次跃迁。"""
+    = 照录,行 = same_value 形态(计入行量预算);不构成第二次跃迁。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 2)
     _prep(bs, 1, 2)   # 同节点重入重读
@@ -362,26 +375,27 @@ def test_prep_leg_same_value_reread_is_same_value_row(journal, run_id) -> None:
     assert len(rows) == 2
     assert rows[-1]['after'] == 2
     assert rows[-1]['same_value'] is True, '重入重读行 = same_value 形态'
-    assert rows[-1]['note'] == 'same_advance', '同序行注记(去重键已占,非跃迁)'
     assert bs.node_hist_ord == 2
 
 
-def test_advance_dedup_key_hist_survives_correction(journal, run_id) -> None:
-    """v3.1-N2 去重键 = (run_id, effective_ord):同序恰一次推进——字段低于
-    hist 的窗内,弹窗腿候选 ≤ hist 不写不锚(去重键已占,禁重推已见序)。
-
-    「字段低于 hist」窗 = 测试直设属性种子(生产不可达:备战腿推进即拉齐
-    推断;种值只为单测去重键判定,非旁路写入面)。"""
+def test_effective_read_port_max_of_layer_and_hist(journal, run_id) -> None:
+    """生效序读口 = max(node_ord 字段现值, hist)(effective_node_ord,派生
+    计算非存储字段;单字段双层形态的用户终裁保留面):字段现值滞后于 hist
+    的窗内不拖低生效序,弹窗腿候选照常越 hist 推进。"""
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        effective_node_ord,
+    )
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 5)                       # 腿 A 推进 hist=5
-    # 种子:两派生字段均低于 hist(effective=4,candidate=5 ≤ hist=5)
-    bs.node_inferred = Field(value=4, source='logic')
-    bs.node_observed = Field(value=4, source='logic')
+    # 种子:字段现值回拨到 4(低于 hist;单字段下现值=最近层写,种值只为
+    # 单测读口判定,非旁路写入面)
+    bs.node_ord = Field(value=4, source='logic')
+    assert effective_node_ord(bs) == 5, '读口取 max(现值, hist),滞后不拖低'
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 5))
-    # c=5==hist=5 → 候选=effective(4)+1=5 ≤ hist=5 → 不写不锚(去重键已占)
-    assert bs.node_inferred.value == 4, '去重键已占,同序不重推'
-    assert _derive_rows(journal, 'derive_node_inferred') == []
+    # c=5==hist=5 → 候选=effective(5)+1=6 > 5 → 照常推进(去重键未占 6)
+    assert bs.node_ord.value == 6, '生效读口不被滞后字段拖低,推进照常'
+    assert bs.node_hist_ord == 6
 
 
 def test_prep_leg_retrograde_rejected(journal, run_id) -> None:
@@ -389,26 +403,26 @@ def test_prep_leg_retrograde_rejected(journal, run_id) -> None:
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 5)
     _prep(bs, 1, 4)   # 倒退
-    assert bs.node_observed.value == 5
+    assert bs.node_ord.value == 5
 
 
 def test_prep_leg_authority_correction(journal, run_id) -> None:
-    """§3.4.1 规则二(权威纠偏):备战腿观察值与 node_inferred 不一致时
-    以观察值为准拉齐,纠偏事实记入行 note(推断偏差显影不静默)。"""
+    """字段层次终极版分层锁(用户终裁 2026-09-11):备战腿序键 = 逻辑层
+    (write_logic),顶栏原文 = 观察层(observe)——两字段两层,序键无
+    observe 写入路径;派生规则间的先后覆盖(后写层)不改变「序键恒逻辑层」
+    形态。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    # 先让弹窗腿推到 2(开局形态候选 1 → 再次守卫通过候选 2)
+    # 先让弹窗腿写逻辑层 2(开局形态候选 1 → 再次守卫通过候选 2)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 1))
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 1))
-    assert bs.node_inferred.value == 2
-    # 备战帧顶栏真读 3(与推断不一致)→ 权威值落位 + 推断拉齐 + 纠偏显影
+    assert bs.node_ord.value == 2
+    assert bs.node_ord.source == 'logic', '弹窗腿 = 逻辑层'
+    # 备战帧顶栏真读 3 → 解析成序键后同样写逻辑层(层级不因腿而异)
     _prep(bs, 1, 3)
-    assert bs.node_observed.value == 3
-    corr = [r for r in _derive_rows(journal, 'derive_node_observed')
-            if r.get('note')]
-    assert corr and '纠偏' in corr[-1]['note'], '纠偏事实入 note 显影'
-    assert bs.node_inferred.value == 3, '以观察值为准拉齐(决策消费面 max 不被推断毒化)'
+    assert bs.node_ord.value == 3
+    assert bs.node_ord.source == 'logic', '备战腿序键同为逻辑层(终极形态)'
 
 
 def test_popup_leg_advances_by_inference(journal, run_id) -> None:
@@ -418,21 +432,27 @@ def test_popup_leg_advances_by_inference(journal, run_id) -> None:
     # 开局形态:守卫集(开局链/战斗等待)→ 商店面板先被采到,last 空 → 候选 1
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))
-    assert bs.node_inferred.value == 1
+    assert bs.node_ord.value == 1
+    assert bs.node_ord.source == 'logic', '弹窗腿 = 逻辑层'
     # 常规形态:结算/战斗段之后快弹窗,c == last → 候选 = last+1
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 1))
-    assert bs.node_inferred.value == 2
+    assert bs.node_ord.value == 2
     rows = _derive_rows(journal, 'derive_node_inferred')
     assert [r['after'] for r in rows] == [1, 2]
 
 
 def test_popup_leg_prev_guard_rejects_reentry(journal, run_id) -> None:
-    """R3 规则五:备战帧已分派后的弹窗 = 段内子阶段(prev ∉ 守卫集)零触发。"""
+    """R3 规则五:备战帧已分派后的弹窗 = 段内子阶段(prev ∉ 守卫集)零触发。
+    单字段双层:node_ord 已由备战腿写 1(逻辑层 write_logic),弹窗腿零写的
+    证据 = 推进行缺席 + hist 不动(不再断言字段 None)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 1)   # 备战帧先被采到(prev 备战 ∉ 守卫集)
+    assert bs.node_ord.value == 1 and bs.node_ord.source == 'logic'
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))
-    assert bs.node_inferred.value is None, '商店访问重入不误触发'
+    assert bs.node_ord.value == 1 and bs.node_hist_ord == 1, \
+        '商店访问重入不误触发(弹窗腿零写)'
+    assert _derive_rows(journal, 'derive_node_inferred') == []
 
 
 def test_popup_leg_cache_guard_and_fallback_to_prep_leg(
@@ -440,34 +460,38 @@ def test_popup_leg_cache_guard_and_fallback_to_prep_leg(
     """R3 规则二③/规则五:缓存 c != last → 零触发交腿 A 兜底;后续弹窗帧
     prev ∈ 弹窗族 ∉ 守卫集 → 持续零触发;下一节点备战帧由腿 A 兜底推进。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    _prep(bs, 1, 1)                     # 腿 A 先推进 node_observed=1
+    _prep(bs, 1, 1)                     # 腿 A 先推进 node_ord=1(逻辑层)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 3))
     # c=ord(1,3)=3 != last=1 → 缓存守卫拒绝
-    assert bs.node_inferred.value is None
+    assert bs.node_ord.value == 1 and bs.node_hist_ord == 1, '缓存守卫拒绝零写'
+    assert _derive_rows(journal, 'derive_node_inferred') == []
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 1))
     # prev=遭遇 ∉ 守卫集(R3 prev_branch 守卫:弹窗重入不触发)
-    assert bs.node_inferred.value is None
+    assert bs.node_ord.value == 1 and bs.node_hist_ord == 1
+    assert _derive_rows(journal, 'derive_node_inferred') == []
     _prep(bs, 1, 2)                     # 下一节点备战帧 → 腿 A 兜底
-    assert bs.node_observed.value == 2
+    assert bs.node_ord.value == 2
 
 
 def test_two_legs_same_transition_popup_first(journal, run_id) -> None:
-    """v3.1-N2「两腿落同一跃迁」:弹窗腿先到先推进;备战帧后到同序 = 观察
-    真值补全照写(note=same_advance)但去重键已占,不构成第二次跃迁。"""
+    """v3.1-N2「两腿落同一跃迁」:弹窗腿先到先推进;备战帧后到同序 = 照写
+    (same_value 形态)但去重键已占,不构成第二次跃迁。四腿同写逻辑层
+    (字段层次终极版),层级不因腿而异。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))
-    assert bs.node_inferred.value == 1           # 弹窗腿先到,先推进
+    assert bs.node_ord.value == 1           # 弹窗腿先到,先推进
+    assert bs.node_ord.source == 'logic'
     n_inf = len(_derive_rows(journal, 'derive_node_inferred'))
     _prep(bs, 1, 1)                               # 备战帧后到(同序)
     backfill = _derive_rows(journal, 'derive_node_observed')
     assert len(backfill) == 1 and backfill[0]['after'] == 1
-    assert backfill[0]['note'] == 'same_advance', '同序补录行注记'
+    assert backfill[0]['same_value'] is True, '同序补录行 = same_value 形态'
     assert len(_derive_rows(journal, 'derive_node_inferred')) == n_inf, \
         '推进不重复(去重键已占)'
-    assert bs.node_hist_ord == 1 and (bs.node_inferred.value,
-                                      bs.node_observed.value) == (1, 1)
+    assert bs.node_hist_ord == 1 and bs.node_ord.value == 1
+    assert bs.node_ord.source == 'logic', '序键恒逻辑层(终极形态)'
 
 
 def test_popup_leg_resume_disabled(journal, run_id) -> None:
@@ -475,7 +499,7 @@ def test_popup_leg_resume_disabled(journal, run_id) -> None:
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', resumed=True)
-    assert bs.node_inferred.value is None
+    assert bs.node_ord.value is None
 
 
 def test_popup_leg_without_cache_reading_disabled(journal, run_id) -> None:
@@ -484,17 +508,20 @@ def test_popup_leg_without_cache_reading_disabled(journal, run_id) -> None:
     _prep(bs, 1, 1)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点')
-    assert bs.node_inferred.value is None
+    assert bs.node_ord.value == 1 and bs.node_hist_ord == 1, '守卫输入缺位零写'
+    assert _derive_rows(journal, 'derive_node_inferred') == []
 
 
 def test_derivation_fields_are_logic_hook_channel_only(journal, run_id) -> None:
-    """§3.1.3 域准入:node_inferred/node_observed 唯一写点 = 派生规则(渠道③);
-    上下文域唯一写点 = ①观察汇聚。影子行可对账。"""
+    """§3.1.3 域准入(字段层次终极版):node_ord 序键 = 逻辑层(四腿全部
+    logic_hook 行,无 observe 写序键路径);顶栏原文 top_bar_raw = 观察层
+    (obs 族);上下文域唯一写点 = ①观察汇聚。影子行可对账。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    _prep(bs, 2, 1)
-    assert bs.node_observed.value == 10   # (2-1)*9+1
+    _prep(bs, 2, 1, top_raw='备战阶段 2-1')
+    assert bs.node_ord.value == 10   # (2-1)*9+1
     writers = {(r['field'], r['sig']['family']) for r in journal.rows}
-    assert ('node_observed', 'logic_hook') in writers
+    assert ('node_ord', 'logic_hook') in writers, '序键行 = 逻辑层'
+    assert ('top_bar_raw', 'obs') in writers, '原文行 = 观察层'
     assert ('prev_screen', 'obs') in writers and ('current_screen', 'obs') in writers
 
 
@@ -502,30 +529,34 @@ def test_derivation_fields_are_logic_hook_channel_only(journal, run_id) -> None:
 
 
 def test_popup_leg_boss_briefing_predecessor_advances(journal, run_id) -> None:
-    """R1.1 守卫族扩员锁(用户 2026-09-10 裁定;证据 = screen_flow_timing.md
+    """boss 流推进锁(判定方案 E12 边序,证据 = screen_flow_timing.md
     #26/#14/#27/#29):boss 流 = 奖励关 → BOSS 简报(0p)→ 商店自动开,
-    弹窗腿前驱 = 0p(非结算窗)——0p 前驱下商店面板块被采到,弹窗腿必须
-    推进(候选 = hist+1 = boss 节点序)。
-    走查(判定方案 E12 边序勘误后):奖励关备战帧(腿 A,hist=8)→ 0p 分支
-    写点(前驱供给,自身零腿——不在弹窗族)→ 0n 商店面板块漏斗写 → 弹窗腿
-    推 9;boss 备战帧后到同序 = 观察补录(R3 本体零变化,锁
-    test_two_legs_same_transition_popup_first 同簇)。"""
+    boss 节点恰一次推进。
+    【R1.2 锁语义重推(锁红 ≠ 改动错)】本锁 R1.1 原形态钉「0p 纯前驱零腿,
+    推进来自商店面板块弹窗腿」——四规则组终版(用户 2026-09-10 裁,设计
+    v3.4 §3.4.1)把 0p 升格为规则③触发面(简报屏自身即确定性证据,推进
+    = 当前+1、类型 = boss 随屏自带);守卫族成员终版(用户终裁 2026-09-11,
+    攻击 R5 高-1)0p/0q 出族——商店面板块后到弹窗腿被 prev 守卫结构性拒绝
+    (缓存守卫 c=8≠hist=9 为第二道防线),级联双推进破口消除。锁意图
+    (boss 节点恰一次推进、推进证据可归因)不变。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 8)                                    # 奖励关备战帧:腿 A 推 8
-    bs.observe_screen_context('货币战争-BOSS简报')      # 0p 分支写点(cw_loop 同款输入)
-    assert _derive_rows(journal, 'derive_node_inferred') == [], \
-        '0p 分支写点自身零腿(BOSS简报不在弹窗族,纯 prev 供给)'
-    bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 8))
-    assert bs.node_inferred.value == 9, \
-        '0p 前驱 → 商店面板块弹窗腿推 9(boss 节点;守卫族漏 0p = 本场景漏触发)'
-    rows = _derive_rows(journal, 'derive_node_inferred')
-    assert len(rows) == 1 and rows[0]['after'] == 9
-    assert rows[0]['sig']['screen'] == '货币战争-备战-开商店', '触发画面 = 商店面板块'
+    assert SCREEN_BOSS_BRIEFING not in SCREEN_CONTEXT_GUARD_PREV, \
+        '0p 出守卫族(专用腿③,残留 = 级联双推进破口,攻击 R5 高-1)'
+    bs.observe_screen_context(SCREEN_BOSS_BRIEFING)    # 规则③:当前+1 = 9
+    rows3 = _derive_rows(journal, 'derive_node_boss_brief')
+    assert [r['after'] for r in rows3 if r['field'] == 'node_ord'] == [9], \
+        '0p 即推进(规则③,boss 节点序 = 当前+1,禁写死 round=9 的独立来源)'
     assert bs.node_hist_ord == 9
+    bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 8))
+    assert bs.node_ord.value == 9, '商店面板块后到:弹窗腿零触发(prev=0p 出族)'
+    assert _derive_rows(journal, 'derive_node_inferred') == [], \
+        '推进不重复(boss 节点恰一次推进,来源 = 规则③)'
     _prep(bs, 1, 9)                                    # boss 备战帧后到:同序补录
     backfill = _derive_rows(journal, 'derive_node_observed')
     assert backfill[-1]['after'] == 9
-    assert backfill[-1]['note'] == 'same_advance', 'boss 备战帧同序补录注记'
+    assert backfill[-1]['same_value'] is True, 'boss 备战帧同序补录 = same_value 形态'
+    assert backfill[-1]['sig']['family'] == 'logic_hook', '备战腿序键行 = 逻辑层'
 
 
 def test_funnel_transition_frames_never_write_context() -> None:
