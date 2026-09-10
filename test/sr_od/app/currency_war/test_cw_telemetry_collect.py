@@ -34,7 +34,6 @@ from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlemen
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.telemetry import recorder, state
 from test.harness.fixture_controller import (
     FixtureController,
     WatchdogOperationMixin,
@@ -85,20 +84,9 @@ def _make_supply_op(monkeypatch):
     # 离线桩空等消除:模块自持 import time,换 no-sleep 替身(类 docstring 详因)
     monkeypatch.setattr(m, 'time', _NoSleepTime())
 
-    decision_captured: list[dict] = []
+    # (decisions 帧捕获桩与 read_game_state 快照桩已随删除波 1 移除——
+    #  detour 快照/选卡帧写入端退役;行为面以存活观察锚锁定。)
 
-    monkeypatch.setattr(recorder, 'record_decision',
-                        lambda state, target_comp='', candidate_scores=None,
-                        eval_breakdown=None, actions=None, gold_point=True,
-                        extra=None: decision_captured.append(
-                            {'target_comp': target_comp,
-                             'actions': list(actions or []),
-                             'gold_point': gold_point,
-                             'extra': dict(extra or {})}))
-    monkeypatch.setattr(m, 'read_game_state',
-                        lambda ctx, screen, **kw: GameState(hp=88, gold=66,
-                                                            plane=1,
-                                                            round_num=5))
     op = m.CwScreenSupplyNode.__new__(m.CwScreenSupplyNode)
     fake_screen = object()
     match = SimpleNamespace(session=SimpleNamespace(target_comp=None,
@@ -116,7 +104,7 @@ def _make_supply_op(monkeypatch):
     # OCR 文本兜底枪(重进序列末位):桩离线无画面
     op.round_by_ocr_and_click = (
         lambda screen, text, **kw: SimpleNamespace(is_success=False))
-    return op, decision_captured
+    return op
 
 
 def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
@@ -125,7 +113,7 @@ def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
         cw_screen_supply_node as m,
     )
 
-    op, captured = _make_supply_op(monkeypatch)
+    op = _make_supply_op(monkeypatch)
 
     def _fail_reenter(screen, sn, an, **kw):
         # 「返回备战界面」成功;备战侧「按钮-返回补给阶段」恒失败 → 重进不通
@@ -139,10 +127,7 @@ def test_do_action_skips_pick_when_detour_fails(monkeypatch) -> None:
     pick_calls: list = []
     monkeypatch.setattr(m, 'read_supply_options',
                         lambda ctx, screen: pick_calls.append(screen) or [])
-    monkeypatch.setattr(state, 'consume_last_supply_pick', lambda: None)
     op._do_action(object())
-    assert len([r for r in captured
-                if r['extra'].get('phase') == 'supply_detour']) == 1
     assert pick_calls == []   # 未进入选择读帧(detour 失败即止)
 
 
@@ -150,7 +135,7 @@ def test_detour_failure_not_marked_retry_next_round(monkeypatch) -> None:
     """失败不落标记(宁可见 FAIL bail 不带病假完成):session 无 _supply_detour_done,
     下轮 _should_supply_detour 仍 True → 重试整个 detour;OCR 文本兜底点击已尝试。"""
 
-    op, captured = _make_supply_op(monkeypatch)
+    op = _make_supply_op(monkeypatch)
     ocr_clicks: list[str] = []
     op.round_by_find_and_click_area = (
         lambda screen, sn, an, **kw: SimpleNamespace(
@@ -168,15 +153,12 @@ def test_detour_failure_not_marked_retry_next_round(monkeypatch) -> None:
     assert ocr_clicks == ['返回补给阶段']   # OCR 文本兜底枪已打(重试序列末位)
 
 
-def test_do_action_pick_writes_supply_pick_decision_frame(monkeypatch) -> None:
-    """供给半环写入端链路锁(DEBTS D4 消费):选卡路径经生产 _do_action 链
-    真实写出 decisions 帧——extra.phase='supply_pick' + supply_pick 选定快照
-    (含 n_options/options 漏读审计清单)单行可读;gold_point=False(detour 帧
-    已采过 gold 轨,选卡帧不重复入轨的效率契约)。
-
-    写点 = cw_screen_supply_node 选卡确认后 record_decision(观测失败不阻塞)。
-    detour 失败安全由上方 2 测辖,本测走「detour 已完成」直入选卡路径。
-    """
+def test_do_action_pick_registers_confirm_arrival(monkeypatch) -> None:
+    """供给半环选卡链路锁(删除波 1 重写):选卡路径经生产 _do_action 链
+    走完「决策→点卡→确认→到账登记」——register_confirm_arrival 携选中装备
+    (ConfirmSupply;到账登记 = 选定事实现役记录面,原 decisions 帧/暂存槽
+    已随旧流写入端退役)。detour 失败安全由上方 2 测辖,本测走「detour 已
+    完成」直入选卡路径。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         _overlay_confirm as oc,
     )
@@ -184,7 +166,7 @@ def test_do_action_pick_writes_supply_pick_decision_frame(monkeypatch) -> None:
         cw_screen_supply_node as m,
     )
 
-    op, captured = _make_supply_op(monkeypatch)   # cw_telemetry 即 recorder 别名,patch 即捕获
+    op = _make_supply_op(monkeypatch)
     match = op.ctx.cw_match
     op._mark_supply_detour(match)                 # detour 已完成 → _do_action 直入选卡路径
     opts = [(SimpleNamespace(char='姬子', equip='火焰', has_diamond=False),
@@ -198,19 +180,13 @@ def test_do_action_pick_writes_supply_pick_decision_frame(monkeypatch) -> None:
                                                       reason='lock'))
     op.ctx.controller = SimpleNamespace(mouse_move=lambda p: None,
                                         click=lambda p: None)
-    monkeypatch.setattr(oc, 'register_confirm_arrival', lambda *a, **k: None)
-    try:
-        op._do_action(object())
-    finally:
-        state.consume_last_supply_pick()          # 选卡路径真写暂存槽,测后清干净
-    rows = [r for r in captured
-            if r['extra'].get('phase') == 'supply_pick']
-    assert len(rows) == 1, f'选卡路径应恰写一帧 supply_pick,实得 {captured}'
-    pick = rows[0]['extra']['supply_pick']
-    assert pick['char'] == '姬子' and pick['equip'] == '火焰'
-    assert pick['has_diamond'] is False and pick['refreshed'] is False
-    assert pick['n_options'] == 2 and len(pick['options']) == 2
-    assert rows[0]['gold_point'] is False
+    arrivals: list[tuple] = []
+    monkeypatch.setattr(oc, 'register_confirm_arrival',
+                        lambda sess, kind, equip, **k:
+                        arrivals.append((kind, equip)))
+    op._do_action(object())
+    assert arrivals == [('ConfirmSupply', '火焰')], \
+        '选卡确认后应登记到账(kind=ConfirmSupply,装备=选中件)'
 
 
 # ==================== 结算屏真值 + 败局页 telemetry-only 边界 ====================
@@ -226,8 +202,9 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
 
     (W971 05-battle §1 P4:结算链自 cw_loop 收编 CwScreenBattleWait,本桩随迁。)
     read_phase_round 桩返 ``read_phase``(模拟 last-known 缓存态);read_round_outcome
-    桩按入参回显 plane/round 并可控 killed/hp_confidence;cw_telemetry 写端 monkeypatch
-    捕获(自动还原);观察半写入面(ADR-0583 拆两半)以真实 StrategySession 承载,
+    桩按入参回显 plane/round 并可控 killed/hp_confidence;cw_telemetry 写端已随
+    删除波 1 退役——行为捕获改锚 session.pending_round_outcomes(策略半入槽,
+    ADR-0583 拆两半的存活半);观察半写入面以真实 StrategySession 承载,
     断言 telemetry-only 面零写入(performance.history/pending 槽均空)。
     """
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -237,13 +214,6 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
         StrategySession,
     )
 
-    captured: list[dict] = []
-
-    def _fake_record_outcome(outcome, source: str = '') -> None:
-        captured.append({'outcome': outcome, 'source': source})
-
-    monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
-    monkeypatch.setattr(recorder, 'record_exogenous', lambda *a, **k: None)
     monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: read_phase)
 
     def _fake_read_outcome(ctx, screen, *, plane, round_num, comp_tag,
@@ -284,7 +254,7 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
         def round_by_find_area(self, screen, screen_name, area_name, **kw):
             return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
 
-    return _Op(), captured
+    return _Op()
 
 
 # ===== 屏面真值单调门(事故耦合:replay 实锤错归属 run_20260825_145641) =====
@@ -296,13 +266,15 @@ def test_win_settlement_screen_truth_overrides_stale_p1_cache(monkeypatch) -> No
     即 replay 实锤的错归属形态(run_20260825_145641:node_type=普通战斗 落在 (1,9),
     P1r9 恒为 boss 不可能)——屏面真值在读时点,不依赖过场后是否有帧读到「2-1」。
     """
-    op, captured = _w239_p2r1_loss_outcome_make_loop(
+    op = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(1, 9),
         ocr_texts=['挑战成功', '2-1', '战斗', '小队生命值78i', '继续挑战'],
         hp_confidence=1.0)
     op._record_round_outcome(screen=None)
-    assert captured[0]['outcome'].plane == 2
-    assert captured[0]['outcome'].round_num == 1
+    _sess = op.ctx.cw_match.session
+    o = _sess.pending_round_outcomes[-1]
+    assert o.plane == 2
+    assert o.round_num == 1
 
 
 def test_screen_truth_behind_cache_rejected(monkeypatch) -> None:
@@ -311,36 +283,33 @@ def test_screen_truth_behind_cache_rejected(monkeypatch) -> None:
     单调门镜像 read_phase_round 的单调守卫;位面前进 (1,9)→(2,1) 合法不受影响
     (t 序 (2-1)*9+1=10 > 9,见 test_win_settlement_screen_truth_overrides_stale_p1_cache)。
     """
-    op, captured = _w239_p2r1_loss_outcome_make_loop(
+    op = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(1, 6),
         ocr_texts=['挑战成功', '1-4', '战斗'], hp_confidence=1.0)
     op._record_round_outcome(screen=None)
-    assert captured[0]['outcome'].round_num == 6
+    _sess = op.ctx.cw_match.session
+    o = _sess.pending_round_outcomes[-1]
+    assert o.round_num == 6
 
 
 # ===== 败局页 telemetry-only 补录(ADR-0583 拆两半边界) =====
 
 
 def test_loss_page_records_row_telemetry_only(monkeypatch) -> None:
-    """败局页(killed=False)→ 落一行 source='loss_page';零策略/循环状态面。
+    """败局页(killed=False)→ telemetry-only 补录(删除波 1 后**零落盘零写入**)。
 
     断言面(ADR-0583 拆两半语义重推):telemetry-only 不写观察半
     (performance.history 空/last_streak 不动/last_hp 不写)也不写策略半
     (pending 槽空)→ prep 行为面零变更;_battle_ts 不清(ADR-0250 战斗
     窗口维持 1f 原语义)、_last_outcome_t 不写(killed 兜底对比链不受新
-    路径扰动)。
+    路径扰动)。原 source='loss_page' 行来源标记随 outcomes 流写入端退役。
     """
-    op, captured = _w239_p2r1_loss_outcome_make_loop(
+    op = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(2, 1),
         ocr_texts=['挑战结束', '2-1', '战斗', '-22', '挑战进度', '前往结算'],
         killed=False)
     _battle_ts_sentinel = op._st.battle_ts
     op._record_loss_page(screen=None)
-    assert len(captured) == 1
-    assert captured[0]['source'] == 'loss_page'
-    o = captured[0]['outcome']
-    assert o.plane == 2 and o.round_num == 1
-    assert o.killed is False
     _sess = op.ctx.cw_match.session
     assert len(_sess.performance.history) == 0         # 观察半零写入
     assert _sess.last_streak == 0                      # streak 不动(缺省)
@@ -353,13 +322,12 @@ def test_loss_page_records_row_telemetry_only(monkeypatch) -> None:
 
 def test_loss_page_failures_do_not_raise(monkeypatch) -> None:
     """OCR 服务抛错 → 补录吞异常不阻塞对局(观测为辅)。"""
-    op, captured = _w239_p2r1_loss_outcome_make_loop(
+    op = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(2, 1), ocr_texts=[], killed=False)
     def _boom(**kw):
         raise RuntimeError('ocr down')
     op.ctx.ocr_service.get_ocr_result_list = _boom
     op._record_loss_page(screen=None)   # 不抛
-    assert captured == []
 
 
 # ==================== parse_settlement_round 读链 + recovered 残卷门 ====================
@@ -404,22 +372,13 @@ def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapse
     (W971 05-battle §1 P4:结算链收编 CwScreenBattleWait,本桩随迁。)
     read_phase_round 桩返 (1,1)(模拟 relaunch 后缓存已 reset 的兜底值);
     read_round_outcome 桩返高置信 RoundOutcome(hp 真值来自结算屏);
-    recorder.record_outcome / record_exogenous monkeypatch 捕获(自动还原,
-    不写真实 .debug)。
+    cw_telemetry 写端已随删除波 1 退役——行为捕获改锚 session.pending_
+    round_outcomes(策略半存活半)。
     """
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
     )
 
-    captured: list[dict] = []
-
-    def _fake_record_outcome(outcome, source: str = '', supply_pick=None) -> None:
-        captured.append({'outcome': outcome, 'source': source,
-                         'supply_pick': supply_pick})
-
-    monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
-    monkeypatch.setattr(recorder, 'record_exogenous',
-                        lambda *a, **k: None)
     monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: (1, 1))
 
     def _fake_read_outcome(ctx, screen, *, plane, round_num, comp_tag,
@@ -460,30 +419,32 @@ def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapse
         def round_by_find_area(self, screen, screen_name, area_name, **kw):
             return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
 
-    return _Op(), captured
+    return _Op()
 
 
 def test_relaunch_residual_tagged_recovered_and_round_fixed(monkeypatch) -> None:
-    """启动宽限内首见结算屏:source='recovered' + round 按屏面「1-6」校正。"""
-    op, captured = _w28_outcome_write_defects_make_loop(
+    """启动宽限内首见结算屏:round 按屏面「1-6」校正(原 source='recovered'
+    行标记随 outcomes 流写入端退役;残局判定本身保留,驱动归属校正)。"""
+    op = _w28_outcome_write_defects_make_loop(
         monkeypatch, new_match=True, elapsed_s=1.0,
         ocr_texts=['挑战结束', '1-6', '战斗', '小队生命值78i', '继续挑战'])
     op._record_round_outcome(screen=None)
-    assert len(captured) == 1
-    assert captured[0]['source'] == 'recovered'
-    assert captured[0]['outcome'].round_num == 6
-    assert captured[0]['outcome'].plane == 1
+    _sess = op.ctx.cw_match.session
+    o = _sess.pending_round_outcomes[-1]
+    assert o.round_num == 6
+    assert o.plane == 1
 
 
 def test_residual_unparseable_still_tagged(monkeypatch) -> None:
-    """屏面「X-Y」解析不出(OCR 噪声)→ round 保底不抛,但 recovered 标记仍在
-    (修法 b 兜底:脏行可识别,训练侧可剔)。"""
-    op, captured = _w28_outcome_write_defects_make_loop(
+    """屏面「X-Y」解析不出(OCR 噪声)→ round 保底不抛(兜底:归属保持
+    last-known,不冒认屏面)。"""
+    op = _w28_outcome_write_defects_make_loop(
         monkeypatch, new_match=True, elapsed_s=1.0,
         ocr_texts=['挑战结束', '??', '战斗'])
     op._record_round_outcome(screen=None)
-    assert captured[0]['source'] == 'recovered'
-    assert captured[0]['outcome'].round_num == 1
+    _sess = op.ctx.cw_match.session
+    o = _sess.pending_round_outcomes[-1]
+    assert o.round_num == 1
 
 
 # ==================== 位面情报接管链(obs→session 写入正确性) ====================

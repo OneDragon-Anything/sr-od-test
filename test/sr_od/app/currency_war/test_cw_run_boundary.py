@@ -71,15 +71,16 @@ def _isolated_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(state_mod, '_CURRENT_DIFFICULTY', '')
     monkeypatch.setattr(state_mod, '_RUN_CLOSED', False)
     monkeypatch.setattr(state_mod, '_RUN_MATCH', None)
-    monkeypatch.setattr(state_mod, '_PENDING_BRIEFING_ROWS', [])
+    # (简报缓冲 _PENDING_BRIEFING_ROWS 桩已随删除波 1 的槽退役移除。)
     # 缺陷复现计数/L0 副作用链隔离(与 w603 同款:构造与铸造路径会触碰)
     monkeypatch.setattr(state_mod, '_defect_seen', {})
     monkeypatch.setattr(state_mod, '_defect_seen_run', '')
     monkeypatch.setattr(state_mod, '_L0_ANDON_HANDLER', lambda payload: True)
     monkeypatch.setattr(state_mod, '_L0_ANDON_FIRED_RUNS', set())
-    # ensure → start_run → 兜底回填:同桩(w603 先例,防真实 .debug/ 读面)
+    # ensure → start_run 链已无兜底回填(删除波 1:runs 写入端退役);
+    # 桩保留为冗余隔离面(外部残留调用不落真实 .debug/)。
     monkeypatch.setattr(ledger_hooks, 'recover_dangling_run_summaries',
-                        lambda: None)
+                        lambda replay_dir=None: [])
     return tmp_path
 
 
@@ -94,14 +95,6 @@ def _count_start_run(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
     monkeypatch.setattr(state_mod, 'start_run', _counting)
     return calls
-
-
-def _invest_rows(tmp_path: Path) -> list[dict]:
-    p = tmp_path / 'invest_cards.jsonl'
-    if not p.exists():
-        return []
-    return [json.loads(ln) for ln in
-            p.read_text(encoding='utf-8').splitlines() if ln.strip()]
 
 
 def test_ensure_same_match_claims_existing_run(
@@ -144,22 +137,23 @@ def test_ensure_remaps_on_new_container_closed_or_empty(
 
 def test_invest_row_before_loop_claim_lands_on_entry_run(
         _isolated_state: Path) -> None:
-    """L3 选卡前铸造主锁(S12 病灶序列):ensure(m) → record_invest_cards
-    ('env', …) → 再次 ensure(m)(模拟 loop 认领)→ 落盘行 run_id == 入口
-    run_id 且 current_run_id 未变。回归(行盖上局戳/丢失)= 红。
-    首个 ensure 即冷启动铸造(分支①,桩面 _CURRENT_RUN_ID 为空起步),
-    兼辖「冷启动首局 env 行落盘」(原独立冷启动测为断言面真子集,已并)。"""
+    """L3 开局行铸造主锁(S12 病灶序列):ensure(m) → 开局遥测写 → 再次
+    ensure(m)(模拟 loop 认领)→ 落盘行 run_id == 入口 run_id 且
+    current_run_id 未变。回归(行盖上局戳/丢失)= 红。
+    删除波 1:原写面 record_invest_cards 退役,改用保留流缺陷台账行
+    (defect_ledger.jsonl)承载同一归属语义(开局行归属入口铸造 run)。"""
+    from sr_od.application.currency_war.telemetry.defects import record_defect
     m = SimpleNamespace(session=None)
     rid_entry = state_mod.ensure_run_started(m, 'A8')
-    recorder_mod.record_invest_cards('env', [
-        {'idx': 0, 'name': '昼之半神概念股', 'x': 300,
-         'effect_text': 'e', 'chosen': True}])
+    record_defect('run_boundary', 'lock_probe', 'e', 'o')
     rid_claim = state_mod.ensure_run_started(m, 'A8')
     assert rid_claim == rid_entry
-    rows = _invest_rows(_isolated_state)
+    rows = [json.loads(ln) for ln in
+            (_isolated_state / 'defect_ledger.jsonl').read_text(
+                encoding='utf-8').splitlines() if ln.strip()]
     assert len(rows) == 1
     assert rows[0]['run_id'] == rid_entry, (
-        '开局 env 行必须归属入口铸造的 run(修前行盖上局戳/首局被丢)')
+        '开局行必须归属入口铸造的 run(修前行盖上局戳/首局被丢)')
     assert state_mod.current_run_id() == rid_entry
 
 
@@ -185,32 +179,25 @@ def test_loop_construction_claims_entry_minted_run(
 
 def test_reset_run_state_clears_run_cluster(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """L7 复位正规入口:run 态簇五件脏值 → reset_run_state 后全回生产缺省。
+    """L7 复位正规入口:run 态簇四件脏值 → reset_run_state 后全回生产缺省。
 
     红的语义 = 复位链缺件:漏清任一件即假局残留病理的入口侧复发
     (出处见文件头 L8 行)——收口位残留会让后续直调 ensure 的测试把
-    open run 误判「上局已收口」走重铸假分支;难度列/简报缓冲残留 =
-    遥测内容污染(三审报告-第三波.md F3,易失产物待 ADR 回填:决策行
-    带前局难度、简报行归属错局,无分支翻转)。脏值经 monkeypatch 注入,
-    teardown 自动还原,不依赖本测试的复位调用兜底。"""
+    open run 误判「上局已收口」走重铸假分支;难度列残留 = 遥测内容污染
+    (三审报告-第三波.md F3,易失产物待 ADR 回填)。脏值经 monkeypatch 注入,
+    teardown 自动还原,不依赖本测试的复位调用兜底。删除波 1:簇成员
+    _PENDING_BRIEFING_ROWS(简报缓冲)随槽退役移出复位面。"""
     monkeypatch.setattr(state_mod, '_CURRENT_RUN_ID', 'run_dirty')
     monkeypatch.setattr(state_mod, '_RUN_MATCH', object())
     monkeypatch.setattr(state_mod, '_RUN_CLOSED', True)
     monkeypatch.setattr(state_mod, '_CURRENT_DIFFICULTY', 'A9_stale')
-    monkeypatch.setattr(state_mod, '_PENDING_BRIEFING_ROWS',
-                        [{'stale': 'previous_run'}])
     state_mod.reset_run_state()
     assert state_mod.current_run_id() == ''
     assert state_mod._RUN_MATCH is None
     assert state_mod._RUN_CLOSED is False, (
-        '复位入口漏清收口位 _RUN_CLOSED(ensure 门与 recorder 简报缓冲'
-        '都消费该位,残留即跨测试假分支)')
+        '复位入口漏清收口位 _RUN_CLOSED(ensure 门消费该位,残留即跨测试假分支)')
     assert state_mod._CURRENT_DIFFICULTY == '', (
-        '复位入口漏清难度列 _CURRENT_DIFFICULTY(recorder 决策行难度列'
-        '消费,残留 = 后续测试遥测行带前局难度,F3)')
-    assert state_mod._PENDING_BRIEFING_ROWS == [], (
-        '复位入口漏清简报缓冲 _PENDING_BRIEFING_ROWS(下一局 start_run '
-        '把缓冲行归属新局,残留 = 简报行错局归属,F3)')
+        '复位入口漏清难度列 _CURRENT_DIFFICULTY(残留 = 后续测试遥测内容污染,F3)')
 
 
 def test_fake_p1_teardown_resets_cluster_before_next_ensure(

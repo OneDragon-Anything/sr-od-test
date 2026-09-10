@@ -17,7 +17,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from one_dragon.utils.file_utils import get_project_root
-
 from sr_od.application.currency_war.telemetry import defects, recorder
 
 _L0 = 'sr_od.application.currency_war.telemetry.defects'
@@ -52,7 +51,8 @@ def test_telemetry_roots_single_source() -> None:
     assert root / '.debug' / 'currency_war' / 'deep_review' == obs.DEEP_REVIEW_ROOT
     # ② 写端/读端全走 import(同值断言:与根常量块同一目录,非第二份字面量)
     assert _oj._JOURNAL.parent == obs.LIVE_DIR
-    assert obs._CONFLICT_JOURNAL.parent == obs.LIVE_DIR
+    # (obs._CONFLICT_JOURNAL 根常量已随删除波 1 移除——obs_conflicts 写端
+    #  退役,证据归宿 journal;根常量块其余四根照旧单一源。)
     assert obs.DEFAULT_REPLAY_DIR == obs.LIVE_DIR
     # ③ 装配端:生产 live 根 → 兄弟 matches 根;其他目录(测试合成流)→ 子目录
     assert _arch.matches_dir(obs.LIVE_DIR) == obs.MATCHES_ROOT
@@ -191,13 +191,10 @@ def test_autouse_stubs_pin_stop_flag_channels(tmp_path: Path) -> None:
     assert '.debug' not in rec.replay_dir.parts, rec.replay_dir
     # run_id 钉空串(便捷入口空 id 门控 no-op;防跨测试局归属泄漏)
     assert state._CURRENT_RUN_ID == ''
-    # 进程内闩锁/计数器/暂存槽均为干净缺省
+    # 进程内闩锁/计数器均为干净缺省
     assert not state._L0_ANDON_FIRED_RUNS
     assert not state._defect_seen and state._defect_seen_run == ''
-    assert state._PENDING_BRIEFING_ROWS == []
-    assert state._LAST_SUPPLY_PICK is None
-    assert state._PENDING_UNIT_GOLD_CLOSE is None
-    assert state._PENDING_UNIT_EXEC is None
+    # (简报缓冲/暂存槽三件复位桩已随删除波 1 移除——槽本体随旧流写入端退役。)
     # flag 路径常量钉 tmp 绝对路径(get_project_root() / 绝对路径 = 绝对路径)
     assert defects.l0_andon_flag_path().is_relative_to(tmp_path)
     assert run_state.exec_fail_flag_path().is_relative_to(tmp_path)

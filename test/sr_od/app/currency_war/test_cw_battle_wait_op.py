@@ -165,7 +165,7 @@ def test_loop_delegation_wiring() -> None:
     - 墓碑:旧内联结算分支(「前往结算」lcs 0.8 点名)不再双写。"""
     src = _loop_src()
     assert '_frame_in_battle_window' in src
-    assert 'record_run_summary(' in src
+    assert 'close_run(' in src, '3c 收口位调用在(run 收口,删除波 1 后零落盘)'
     assert 'match_archive.assemble_pending(' in src
     assert '前往结算", lcs_percent=0.8' not in src
 

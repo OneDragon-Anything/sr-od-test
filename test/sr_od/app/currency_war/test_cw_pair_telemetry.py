@@ -1,40 +1,30 @@
-"""P1 配方对平铺遥测(sess_p1_pair)回归锁。
+"""P1 配方对平铺遥测(sess_p1_pair)回归锁(删除波 1 重写)。
 
 背景(W473 复盘,P1 观测盲区):决策层 P1 锁定的「配方对」产物
-(IntentionState.p1_pair / transition_pair 过渡体系键二元组)在 P1
-活路径(CwScreenPrep 步进行 decisions 行)不落任何平铺遥测字段——
-target_comp 恒空、sess_framework 恒空,判读看不到 P1 锁了哪个配方对,
-「终局线何时锁」在 P1 段不可答;该字段是后续配对完成度买牌信号 A/B
-的关键度量上游。
+(IntentionState.p1_pair / transition_pair 过渡体系键二元组)的平铺标签
+派生(p1_pair_label)是配对完成度买牌信号 A/B 的关键度量上游。
 
-本锁钉死:
+删除波 1(用户 2026-09-10 直迁裁定):sess_p1_pair 的 decisions 行落盘
+面(record 站点/步进行接线)已随旧流写入端退役;本锁现辖——
 - ``schema.p1_pair_label`` 派生口径(配方锁 p1_pair 优先,
   ①锁局 transition_pair 次选;空窗/无意向 = '');
-- record 站点:extra 透传 → DecisionTrace.sess_p1_pair 落盘;
-  缺 extra 时空串(纯遥测,决策行为零变化);
-- cw_screen_prep._record_step 接线(state_of(session).v3_intention 来源);
+- cw_screen_prep._record_step 退役壳(零写入,防半删);
 - 旧台账兼容:无 sess_p1_pair 键的历史行经 cw_replay_reader 读取
   不炸(dataclass 已知字段过滤 + 缺省 '')。
 
 
 出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
-
-import json
-from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_intention import serialize_intention
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_intention import (
+    IntentionState,
+    serialize_intention,
+)
+from sr_od.application.currency_war.telemetry import schema
 from sr_od.application.currency_war.telemetry.cw_replay_reader import from_dict
-
 from sr_od.application.currency_war.telemetry.schema import DecisionTrace
-from sr_od.application.currency_war.telemetry import recorder, schema
-
 
 # ===== 派生口径:p1_pair_label =====
 
@@ -58,78 +48,38 @@ def test_label_empty_when_unlocked_or_absent() -> None:
     assert schema.p1_pair_label(object()) == ''
 
 
-# ===== record 站点:extra 透传 → decisions 行 =====
+# ===== record 站点:extra 透传 → decisions 行(删除波 1 退役)=====
+# 原 4 锁(record 行透传非空/空串、_record_step 接线两支)钉的是 decisions
+# 写入端形态,已随删除波 1 退役(git 可复活)。派生口径(p1_pair_label)
+# 与读端兼容面继续由下方锁承——离线判读/sim 分析仍消费该标签派生。
 
 
-def _write_and_read(rec: recorder.TelemetryRecorder, tmp_path: Path,
-                    extra: dict | None = None) -> dict:
-    rec.record_decision('p1pair', 'A8', GameState(gold=10, round_num=1, plane=1),
-                        '', {}, {}, [], extra=extra)
-    rows = [json.loads(r) for r in
-            (tmp_path / 'decisions.jsonl').read_text(encoding='utf-8').splitlines()]
-    return rows[-1]
+# ===== 派生口径回归(签名面守卫)=====
 
 
-def test_record_row_carries_pair_when_locked(tmp_path) -> None:
-    """锁定帧:extra 透传 → 行内 sess_p1_pair 非空且值正确。"""
-    rec = recorder.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    row = _write_and_read(rec, tmp_path,
-                          extra={'sess_p1_pair': '仙舟+列车同行'})
-    assert row['sess_p1_pair'] == '仙舟+列车同行'
+def test_label_signature_stable() -> None:
+    """派生签名面守卫:label 接受 dataclass/None/异型对象三态,纯观测不阻塞。"""
+    assert schema.p1_pair_label(IntentionState(phase='locked',
+                                               p1_pair=('仙舟', '列车同行'))) \
+        == '仙舟+列车同行'
+    assert schema.p1_pair_label(None) == ''
 
 
-def test_record_row_empty_without_extra(tmp_path) -> None:
-    """未锁/无 extra(旧调用方):行内 sess_p1_pair 空串。"""
-    rec = recorder.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    row = _write_and_read(rec, tmp_path)
-    assert row['sess_p1_pair'] == ''
-    row = _write_and_read(rec, tmp_path, extra={'formed_stop': True})
-    assert row['sess_p1_pair'] == ''
+# ===== cw_screen_prep._record_step 退役壳 =====
 
 
-# ===== cw_screen_prep._record_step 接线 =====
+def test_record_step_is_retired_noop_shell() -> None:
+    """_record_step = no-op 壳(删除波 1):步进 decisions 行写入端退役,
+    方法在场只为 harness 桩面契约;壳内零写入(防半删)。"""
+    from pathlib import Path as _Path
 
-
-def _prep_director(monkeypatch, v3_intention) -> dict:
-    """构免 ctx CwScreenPrep + record_decision 捕获桩,驱动一次 _record_step,
-    返回 captured(内含 'extra')。两接线测共用(机械拼接前导消解)。
-
-    策略器状态迁 MandateState:v3_* 经 state_of 附着(与生产
-    strategy_state_of 同读 session.strategy_state,桩同效)。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
-
-    captured: dict = {}
-
-    def _fake_record(state, target_comp, candidate_scores, eval_breakdown,
-                     actions, extra=None, gold_point=True) -> None:
-        captured['extra'] = extra
-
-    monkeypatch.setattr(recorder, 'record_decision', _fake_record)
-    director = object.__new__(CwScreenPrep)   # 免 ctx(纯遥测接线测试)
-    director._steps = 0
-    fake_sess = SimpleNamespace(last_owned_equips=[])
-    _ms = state_of(fake_sess)
-    _ms.v3_formed_stop = False
-    _ms.v3_intention = v3_intention
-    director._session = lambda: fake_sess   # 实例属性遮蔽方法
-    director._record_step(SimpleNamespace(state=GameState()),
-                          action=None)  # type: ignore[arg-type]
-    return captured
-
-
-def test_director_record_step_passes_pair_from_session(monkeypatch) -> None:
-    """P1 活路径步进行:v3_intention 配方对 → record extra 透传非空。"""
-    captured = _prep_director(
-        monkeypatch, IntentionState(phase='locked',
-                                    p1_pair=('仙舟', '列车同行')))
-    assert captured['extra']['sess_p1_pair'] == '仙舟+列车同行'
-    assert captured['extra']['formed_stop'] is False
-
-
-def test_director_record_step_empty_pair_without_intention(monkeypatch) -> None:
-    """session 无意向状态机(v3_intention=None)→ extra 空串。"""
-    captured = _prep_director(monkeypatch, None)
-    assert captured['extra']['sess_p1_pair'] == ''
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_prep,
+    )
+    src = _Path(cw_screen_prep.__file__).read_text(encoding='utf-8')
+    i_step = src.index('def _record_step')
+    assert 'record_decision' not in src[i_step:i_step + 600], \
+        '_record_step 壳内不得残留 decisions 写入(防半删)'
 
 
 # ===== 旧台账兼容(cw_replay_reader 已知字段过滤)=====

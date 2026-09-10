@@ -599,9 +599,9 @@ def _isolate_l0_andon_handler(
 #   防某测试泄漏 run_id 后,后续测试的旁路写入带错局归属);
 # - _L0_ANDON_FIRED_RUNS(局级闩锁)/ _defect_seen+_defect_seen_run(复现
 #   计数器):进程内状态,残留会让后续测试的 L0 判级/复现升级场景静默变形;
-# - 简报缓冲与三个暂存槽(_PENDING_BRIEFING_ROWS/_LAST_SUPPLY_PICK/
-#   _PENDING_UNIT_GOLD_CLOSE/_PENDING_UNIT_EXEC):消费即清是常规路径,但
-#   异常路径的残留会串到下一个测试的落账行。
+# - (简报缓冲与三个暂存槽 _PENDING_BRIEFING_ROWS/_LAST_SUPPLY_PICK/
+#   _PENDING_UNIT_GOLD_CLOSE/_PENDING_UNIT_EXEC 已随删除波 1 的暂存槽退役
+#   删除,复位面随之移除。)
 # - flag 路径常量(defects._L0_ANDON_FLAG_RELPATH / run_state
 #   ._EXEC_FAIL_FLAG_RELPATH):两常量经 get_project_root() / relpath 求路径,
 #   pathlib 与绝对路径相接取右侧——钉成 tmp 绝对路径即把安灯/执行失败停机
@@ -636,8 +636,7 @@ def _isolate_cw_stop_flag_channels(
     # cw_state.reset_run_state,本钉桩是会话级兜底,两道防线不同层)。
     monkeypatch.setattr(cw_state, '_RUN_CLOSED', False)
     # _CURRENT_DIFFICULTY 是同簇第四件(start_run 与 _CURRENT_RUN_ID 同语句
-    # 铸造,消费 = recorder decision 行难度列):残留会让仅桩 run_id 的
-    # 测试写出带前局难度的决策行(遥测内容污染,无分支翻转;出处:
+    # 铸造):残留会污染依赖该簇的后续测试(出处:
     # .debug/temp/currency_war/attacks/three_review_20260908/
     # 三审报告-第三波.md F3,易失产物待 ADR 回填;正规复位入口 =
     # cw_state.reset_run_state,本钉桩是会话级兜底,两道防线不同层,
@@ -646,10 +645,6 @@ def _isolate_cw_stop_flag_channels(
     monkeypatch.setattr(cw_state, '_L0_ANDON_FIRED_RUNS', set())
     monkeypatch.setattr(cw_state, '_defect_seen', {})
     monkeypatch.setattr(cw_state, '_defect_seen_run', '')
-    monkeypatch.setattr(cw_state, '_PENDING_BRIEFING_ROWS', [])
-    monkeypatch.setattr(cw_state, '_LAST_SUPPLY_PICK', None)
-    monkeypatch.setattr(cw_state, '_PENDING_UNIT_GOLD_CLOSE', None)
-    monkeypatch.setattr(cw_state, '_PENDING_UNIT_EXEC', None)
     monkeypatch.setattr(cw_defects, '_L0_ANDON_FLAG_RELPATH',
                         str(tmp_path / 'l0_andon_hook.flag'))
     monkeypatch.setattr(run_state, '_EXEC_FAIL_FLAG_RELPATH',

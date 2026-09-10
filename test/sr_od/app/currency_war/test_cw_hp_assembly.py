@@ -38,16 +38,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from types import SimpleNamespace
 
-import pytest
-
-from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.kernel.cw_state import GameState, LevelUp
-from sr_od.application.currency_war.prep_actions import (
-    PrepActionExecutor,
-    record_hp_pay_event,
-)
 from sr_od.application.currency_war.telemetry import match_archive as arch
 from sr_od.application.currency_war.telemetry import recorder as cw_recorder
 
@@ -262,145 +253,38 @@ def test_missing_ts_rows_excluded_from_chain(tmp_path: Path):
     assert _ln_at(a, 1, 3)[0]['delta'] == -10
 
 
-# ===== ⑦ 写端 conf 诚实性(§3.4 测试6,cw_loop 合成行) =====
+# ===== ⑦ 血购写点退役(删除波 1:用户 2026-09-10 直迁裁定)=====
 
-class TestSupplyConfHonesty:
-    """快照新鲜性降权(锚 last_hp_t 比较,ADR-0577 禁 readable 位作新鲜
-    证据):快照 hp 观察节点(last_hp_real_node)≤ 最后可信结算节点
-    (last_hp_t)⇒ conf=0.0;任一锚 None(无结算/无真读)⇒ conf 维持。"""
+class TestHpPayWriterRetired:
+    """hp_pay 写点面(⑦ 合成行 conf 诚实性 / ⑧ 两通道回执 / ⑨ 隔离门)
+    已随 exogenous 流写入端整段退役——record_hp_pay_event 删除,店/prep
+    两通道调用点同批移除;血本位消费事实的现役证据 = 注册表建模期望账
+    (blood_xp_mode)与结算域观察链。装配门(上方 ①-⑥)辖冻结存量档案,
+    不受影响。防半删 = 机器可验面:
 
-    def _run(self, monkeypatch, last_state, **sess_kw) -> list[dict]:
-        from sr_od.application.currency_war.operations import cw_loop as bl
-        from sr_od.application.currency_war.telemetry import state as tel_state
-        captured: list[dict] = []
+    - 符号已删(prep_actions / recorder 双面);
+    - 两通道调用点零残留(店通道 cw_shop_action_ops/prep 通道 _level_up)。
+    """
 
-        def _fake(outcome, source='', supply_pick=None):
-            captured.append({'outcome': outcome, 'source': source})
+    def test_writer_symbols_absent(self) -> None:
+        from sr_od.application.currency_war import prep_actions as pa
+        assert not hasattr(pa, 'record_hp_pay_event')
+        assert not hasattr(cw_recorder, 'record_exogenous')
 
-        monkeypatch.setattr(cw_recorder, 'record_outcome', _fake)
-        monkeypatch.setattr(tel_state, 'consume_last_supply_pick',
-                            lambda: None)
-        monkeypatch.setattr(bl, 'read_phase_round', lambda ctx, s: (2, 4))
-        sess = SimpleNamespace(last_state=last_state, **sess_kw)
-        op = object.__new__(bl.CwLoop)
-        op.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
-        op._record_supply_outcome(screen=None)
-        return captured
+    def test_channel_call_sites_absent(self) -> None:
+        from pathlib import Path as _Path
 
-    def test_stale_snapshot_conf_zero(self, monkeypatch):
-        """结算后快照(观察节点 11 ≤ 结算节点 12)→ conf=0.0,不冒真值。"""
-        cap = self._run(monkeypatch, GameState(hp=18, hp_readable=True),
-                        last_hp_real_node=11, last_hp_t=12)
-        assert cap[0]['outcome'].hp_confidence == 0.0
-        assert cap[0]['source'] == 'synthetic_supply'
-
-
-# ===== ⑧ 血购写点回执(合并批③自 test_cw_hp_pay 迁入;F2 粒度/F8 mode
-# ===== 注册表派生;两通道共用唯一写点实现)=====
-
-def _hp_session(active: list[str] | None = None) -> SimpleNamespace:
-    """血购回执写点依赖面桩:active_strategies + last_state(其余无关)。"""
-    return SimpleNamespace(
-        active_strategies=list(active or []),
-        last_state=GameState(plane=2, round_num=1, hp=61, gold=70),
-    )
-
-
-@pytest.fixture()
-def captured_exo(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
-    """捕获 record_exogenous 调用(写点经模块属性消费,patch 即全捕)。"""
-    rows: list[dict] = []
-
-    def _cap(round_num, kind, detail='', state=None, choice=None):
-        rows.append({'round_num': round_num, 'kind': kind,
-                     'detail': detail, 'choice': choice})
-
-    monkeypatch.setattr(cw_recorder, 'record_exogenous', _cap)
-    return rows
-
-
-# ===== 单元:店通道(prep_actions LevelUpOp 走 cw_shop_action_ops) =====
-
-def _shop_env(session, ledger=None):
-    """ShopExecEnv 依赖面桩(LevelUpOp.execute 只触 op/ledger/match/state)。"""
-
-    from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
-        LevelUpOp,
-        ShopExecEnv,
-        ShopVisitLedger,
-    )
-
-    op = SimpleNamespace(ctx=SimpleNamespace(
-        controller=SimpleNamespace(click=lambda p: None)))
-    env = ShopExecEnv(
-        op=op, match=SimpleNamespace(session=session), config=None,
-        click_pts=[], level_btn=Point(1, 2), refresh_btn=Point(3, 4),
-        ledger=ledger or ShopVisitLedger(), state=GameState())
-    return LevelUpOp(LevelUp(cost=4)), env
-
-
-def test_shop_channel_receipt_per_click(captured_exo, monkeypatch):
-    """店通道协议 active → execute 一击一行,字段全锁(F8 mode=注册表派生
-    卡名;plane/round 显式入 choice,currency/hp_delta/clicks/basis 定值)。"""
-    import sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops as so
-    monkeypatch.setattr(so.time, 'sleep', lambda s: None)   # 动画等待桩
-    op, env = _shop_env(_hp_session(['奋斗协议']))
-    assert op.execute(env) is True
-    rows = [r for r in captured_exo if r['kind'] == 'hp_pay']
-    assert len(rows) == 1                    # 单动作形态 = 恰一击一行
-    assert rows[0]['choice'] == {
-        'plane': 2, 'round_num': 1, 'currency': 'hp', 'hp_delta': -6,
-        'mode': '奋斗协议', 'clicks': 1, 'basis': 'modeled'}
-    assert rows[0]['round_num'] == 1         # 顶层 round 同步携带(读端兼容)
-
-
-def test_prep_channel_four_clicks_four_rows(captured_exo, monkeypatch):
-    """F2 粒度锁:prep 通道连点 4 击 → 4 行(每击已实际扣血,机械发射序
-    逐击落行);同批 level_up 事件行不混入 hp_pay 计数。批3a(A4 判效
-    拆除):点击按授权击数机械执行(血本位 = 入口整级授权击数
-    blood_xp_full_clicks),原逐击 OCR 验级判效半删除——击数由授权口径
-    承载,不再由验证停点决定。"""
-    import sr_od.application.currency_war.prep_actions as pa
-    ex = object.__new__(PrepActionExecutor)
-    sess = _hp_session(['奋斗协议'])
-    sess.effect_inventory = SimpleNamespace(on_level_up=lambda: None)
-    sess.last_level_obs = None
-    ex._ctx = SimpleNamespace(
-        cw_match=SimpleNamespace(session=sess),
-        controller=SimpleNamespace(mouse_move=lambda p: None,
-                                   click=lambda p: None))
-    ex._op = SimpleNamespace(screenshot=lambda: None,
-                             park_cursor=lambda **kw: None)
-    # 基线读一次(血闸/击数推导输入,执行前观察);判效读已拆(A4)
-    reads = iter([5])
-    monkeypatch.setattr(pa, '_read_level_raw',
-                        lambda ctx, screen: next(reads))
-    monkeypatch.setattr(pa, 'read_gold', lambda ctx, screen: 100)
-    monkeypatch.setattr(pa, 'area_center', lambda ctx, name: None)
-    _detail, emitted = ex._level_up()
-    assert emitted is True
-    # before=5 → 下一级需 XP 20 → 全量击数 ⌈20/4⌉ = 5 击(机械授权击数)
-    rows = [r for r in captured_exo if r['kind'] == 'hp_pay']
-    assert len(rows) == 5, \
-        f'授权击数 5 = 5 行(粒度=击数,机械执行),实得 {len(rows)}'
-    assert all(r['choice']['hp_delta'] == -6 and r['choice']['clicks'] == 1
-               for r in rows)
-
-
-# ===== ⑨ 隔离门(§1.4 测试3):写点零决策状态突变 =====
-
-def test_receipt_write_isolation_no_state_mutation(captured_exo):
-    """hp_pay 回执写入前后:state 序列化逐字节不变 + session 无新增属性
-    ——写入路径与决策路径无共享可变状态(ADR-0577 隔离申报的可执行面)。"""
-    from sr_od.application.currency_war.telemetry.schema import serialize_state
-    sess = _hp_session(['奋斗协议'])
-    before = json.dumps(serialize_state(sess.last_state), sort_keys=True)
-    attrs_before = set(vars(sess).keys())
-    record_hp_pay_event(sess, 2, 1)
-    assert json.dumps(serialize_state(sess.last_state),
-                      sort_keys=True) == before
-    assert set(vars(sess).keys()) == attrs_before
-    assert len(captured_exo) == 1            # 行照常落(隔离≠不写)
+        from sr_od.application.currency_war import prep_actions as pa
+        from sr_od.application.currency_war.operations.cw_op import (
+            cw_shop_action_ops as so,
+        )
+        so_src = _Path(so.__file__).read_text(encoding='utf-8')
+        assert 'record_hp_pay_event' not in so_src, \
+            '店通道残留 hp_pay 写点调用(防半删)'
+        pa_src = _Path(pa.__file__).read_text(encoding='utf-8')
+        i_lu = pa_src.index('def _level_up')
+        assert 'record_hp_pay_event' not in pa_src[i_lu:i_lu + 4000], \
+            'prep 通道 _level_up 残留 hp_pay 写点调用(防半删)'
 
 
 # ===== ⑩ grep 守卫门(F7,ADR-0571 同款手法):hp_pay 遥测键禁入决策面 =====

@@ -8,6 +8,7 @@ transition / false_win_guard / gold_settle_gate / r404_ignition_order,出处见 
 from __future__ import annotations
 
 import inspect
+import json
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,7 +22,6 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     ignition_gain,
     select_deployments,
 )
-from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORK_FACTIONS,
@@ -40,9 +40,6 @@ from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import CwE
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.telemetry import recorder
-from sr_od.application.currency_war.telemetry.query import read_jsonl
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     FixtureController,
@@ -463,33 +460,30 @@ def test_read_round_outcome_damage_none_without_panel() -> None:
 
 
 def test_outcome_record_damage_roundtrip(tmp_path) -> None:
-    """OutcomeRecord.damage_dealt 落盘往返;默认行(None)旧锁兼容。"""
-    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    rec.record_outcome('r1', RoundOutcome(
+    """OutcomeRecord.damage_dealt 序列化往返;默认行(None)旧锁兼容。
+    (jsonl 落盘面随删除波 1 退役,序列化单一源 = schema `_to_jsonable`。)"""
+    from sr_od.application.currency_war.telemetry.schema import (
+        OutcomeRecord,
+        _to_jsonable,
+    )
+    row = _to_jsonable(OutcomeRecord(
         round_num=8, plane=1, node_type='奖励', comp_tag='c',
         hp_after=20, hp_confidence=1.0, damage_dealt=4_027_000))
-    rec.record_outcome('r1', RoundOutcome(
+    assert json.loads(json.dumps(row))['damage_dealt'] == 4_027_000
+    row2 = _to_jsonable(OutcomeRecord(
         round_num=9, plane=1, node_type='boss', comp_tag='c', hp_after=1))
-    lines = read_jsonl(tmp_path / 'outcomes.jsonl')
-    assert lines[0]['damage_dealt'] == 4_027_000
-    assert lines[1]['damage_dealt'] is None
+    assert row2['damage_dealt'] is None
 
 
-# ===== cw_screen_battle_wait 接线(结算帧 → record_outcome 携带 damage_dealt) =====
-# (W971 05-battle §1 P4:结算链自 cw_loop 收编 CwScreenBattleWait,本测试随迁。)
+# ===== cw_screen_battle_wait 接线(结算帧 → damage_dealt 携带;删除波 1
+# ===== 重写:行为捕获改锚策略半 pending 槽) =====
 
 def test_loop_outcome_carries_damage(monkeypatch) -> None:
-    """②段路径:真实 read_round_outcome(不桩)喂 win 形帧 → 遥测行带 damage。"""
+    """②段路径:真实 read_round_outcome(不桩)喂 win 形帧 → 结算对象带 damage。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
     )
 
-    captured: list[dict] = []
-    monkeypatch.setattr(recorder, 'record_outcome',
-                        lambda outcome, source='': captured.append(
-                            {'outcome': outcome, 'source': source}))
-    monkeypatch.setattr(recorder, 'record_exogenous',
-                        lambda *a, **k: None)
     monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: (1, 8))
 
     class _Op(bwo.CwScreenBattleWait):
@@ -524,17 +518,16 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
 
     op = _Op()
     op._record_round_outcome(screen=None)
-    assert len(captured) == 1
-    assert captured[0]['source'] == ''
-    assert captured[0]['outcome'].damage_dealt == 4_027_000
-    assert captured[0]['outcome'].round_num == 8
+    _sess = op.ctx.cw_match.session
+    o = _sess.pending_round_outcomes[-1]
+    assert o.damage_dealt == 4_027_000
+    assert o.round_num == 8
     # 结算观察半供给半环锁(ADR-0583 拆两半;落地审低2,纪律 13):
     # 真实 op 回路走完 → 观察半经生产调用线已写(performance.history 增行 +
     # last_streak 直写)+ 策略半已入 pending 槽——删 op 内调用线全集即红。
-    _sess = op.ctx.cw_match.session
     assert len(_sess.performance.history) == 1, (
         'op 回路必须触发结算观察半直写(供给半环;删调用线 = 红)')
-    assert _sess.last_streak == captured[0]['outcome'].streak
+    assert _sess.last_streak == o.streak
     assert len(_sess.pending_round_outcomes) == 1, (
         '策略半必须同点入 pending 槽(决策入口 drain 的供给前提)')
 
@@ -832,10 +825,10 @@ def test_gold_settled_ticking_timeout_still_takes_last(monkeypatch):
 
 
 def _run_conflict(monkeypatch, tmp_path, old, new):
-    """跑一次真实 obs_conflict(落盘指到 tmp_path),返回告警行列表。"""
+    """跑一次真实 obs_conflict(删除波 1:证据行归宿 journal,本 helper
+    只取告警行;旧流文件指针桩已随写入端退役删除),返回告警行列表。"""
     fake_log = _RecordingLog()
     monkeypatch.setattr(obs_mod, '_log', fake_log)
-    monkeypatch.setattr(obs_mod, '_CONFLICT_JOURNAL', tmp_path / 'conf.jsonl')
     obs_mod.obs_conflict('gold_delta', old, new, None,
                          verdict='留证-动作账vs读数不等', source='shop_spend_audit')
     return fake_log.warnings

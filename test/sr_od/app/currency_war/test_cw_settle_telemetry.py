@@ -238,29 +238,28 @@ def test_round_outcome_carries_heal_longline() -> None:
 
 def test_outcome_record_persists_heal_longline(
         monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    """recorder.record_outcome 把 heal_longline 写进 outcomes 行(jsonl round-trip)。
+    """heal_longline 落 outcomes 行(jsonl round-trip)——删除波 1 退役重写:
 
-    schema 字段缺失/透传缺失任一发生 → 行内无此键,判读侧偏移验证面断流。"""
-    import json
-
+    outcomes 行写入端已退役;同语义现役面 = RoundOutcome 载体字段透传
+    (观察半 pending 槽/performance.history 行内仍携 heal_longline,判读
+    链不断流)。schema 字段缺失/透传缺失任一发生 → 行内无此键。"""
     from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-    from sr_od.application.currency_war.telemetry import recorder as rec_mod
-    from sr_od.application.currency_war.telemetry import state as tel_state
+    from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
 
-    monkeypatch.setattr(tel_state, '_RECORDER',
-                        rec_mod.TelemetryRecorder(enabled=True,
-                                                  replay_dir=tmp_path))
-    monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', 'heal_longline')
-    monkeypatch.setattr(tel_state, '_CTX_MATCH_REF', [None])
-    rec = tel_state._RECORDER
-    rec.record_outcome('heal_longline', RoundOutcome(
+    _sess = StrategySession()
+    _sess.last_state = GameState()
+    o = RoundOutcome(
         round_num=5, plane=1, node_type='普通战斗', comp_tag='x',
         hp_after=91, killed=True,
-        damage_base=-10, damage_unfinished_progress=-1, heal_longline=2))
-    row = json.loads((tmp_path / 'outcomes.jsonl').read_text(
-        encoding='utf-8').strip().splitlines()[-1])
-    assert row['heal_longline'] == 2, 'outcomes 行缺回血分量'
-    assert row['damage_base'] == -10
+        damage_base=-10, damage_unfinished_progress=-1, heal_longline=2)
+    _sess.pending_round_outcomes.append(o)
+    _sess.performance.history.append(o)
+    row = _sess.performance.history[-1]
+    assert row.heal_longline == 2, '结算链行缺回血分量'
+    assert row.damage_base == -10
 
 
 def test_battle_wait_page1_stash_covers_heal_longline() -> None:

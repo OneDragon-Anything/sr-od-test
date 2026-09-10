@@ -53,12 +53,12 @@ def test_obs_conflict_bypass_copies_numeric_confidence(tmp_path: Path, monkeypat
     """旁路:obs_conflict ctx 带数值 confidence → 台账行透传;非数值/缺省 → None。
 
     分包期 4:obs_conflict 的旁路出口走 kernel/cw_telemetry_exit 钩子位,
-    本测注入真实现(monkeypatch 槽位,自动还原)。"""
+    本测注入真实现(monkeypatch 槽位,自动还原)。删除波 1:证据行归宿 =
+    journal obs_event,旁路面不受账本武装影响。"""
     from sr_od.application.currency_war.kernel import cw_telemetry_exit
     _setup_recorder(monkeypatch, tmp_path)
     monkeypatch.setattr(cw_telemetry_exit, '_bypass_obs_conflict_to_defect',
                         defects.bypass_obs_conflict_to_defect)
-    monkeypatch.setattr(cw_observe, '_CONFLICT_JOURNAL', tmp_path / 'obs_conflicts.jsonl')
     cw_observe.obs_conflict('level', 4, 5, None, verdict='采新-XP确认',
                             confidence=42.0)
     cw_observe.obs_conflict('level', 5, 6, None, verdict='采新',
@@ -71,26 +71,24 @@ def test_obs_conflict_bypass_copies_numeric_confidence(tmp_path: Path, monkeypat
     assert ledger_rows[1]['confidence'] is None
 
 
-# ===== ② 策略激活态事件级对拍(§2.9)=====
+# ===== ② 策略激活态事件级对拍(§2.9;删除波 1 退役重写)=====
 
-def test_strategy_pick_slot_produce_consume(tmp_path: Path, monkeypatch):
-    """生产:record_invest_cards('strategy') 暂存声明选中名;消费即清;
-    非strategy类 / chosen='?' 不暂存。(分包期 4:槽迁 kernel.cw_observe,
-    生产者 telemetry 写入、消费者 obs 读取,两侧零直依反向桶)"""
+def test_strategy_pick_slot_producer_retired(tmp_path: Path, monkeypatch):
+    """删除波 1:槽生产端(record_invest_cards)已随 invest_cards 流写入端
+    退役——槽(kernel stage/consume)与消费面(obs 对拍)保留,候
+    strategy_offer 收编批重接生产端。本锁钉:槽符号在、写端符号不在
+    (防半删);消费面无暂存时零开销通路(恒 None)。"""
     _setup_recorder(monkeypatch, tmp_path)
     from sr_od.application.currency_war.kernel.cw_observe import (
         consume_pending_strategy_pick,
+        stage_pending_strategy_pick,
     )
-    recorder.record_invest_cards('strategy', [
-        {'idx': 0, 'name': '策略甲', 'chosen': False},
-        {'idx': 1, 'name': '策略乙', 'chosen': True},
-    ])
-    assert consume_pending_strategy_pick() == '策略乙'
-    assert consume_pending_strategy_pick() is None   # 消费即清
-    recorder.record_invest_cards('env', [{'idx': 0, 'name': '环境卡', 'chosen': True}])
-    assert consume_pending_strategy_pick() is None   # env 类不进槽
-    recorder.record_invest_cards('strategy', [{'idx': 0, 'name': '?', 'chosen': True}])
-    assert consume_pending_strategy_pick() is None   # 识别失败不暂存
+    assert callable(stage_pending_strategy_pick)
+    assert callable(consume_pending_strategy_pick)
+    assert not hasattr(recorder, 'record_invest_cards'), \
+        'record_invest_cards 应已随删除波 1 删除(防半删)'
+    assert consume_pending_strategy_pick() is None, \
+        '无生产端时消费面恒 None(零开销通路,不炸)'
 
 
 # ===== ③ defect_ledger 纯净锁(台账不混入 spend_ledger)=====

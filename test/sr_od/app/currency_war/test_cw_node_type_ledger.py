@@ -109,7 +109,9 @@ def _drive_run_buy_waves(monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
     match = CurrencyWarMatch(strategy, session)
     if seed_ledger is not None:
         seed_ledger()
-    monkeypatch.setattr(tel_state, '_CTX_MATCH_REF', [match])
+    # (删除波 1:_CTX_MATCH_REF 暂存槽桩已移除——决策行 session 读通道随
+    #  decisions 写入端退役;台账读链经 exec_state_of(session) 直读,
+    #  seed_ledger() 即覆盖台账注入面。)
 
     class _Op:
         """离线宿主替身:run_buy_waves 消费面仅 ctx/screenshot/park_cursor。"""

@@ -19,6 +19,9 @@ from sr_od.application.currency_war.telemetry import (
     schema,
     state,
 )
+from sr_od.application.currency_war.telemetry import (
+    recorder as rec_mod,
+)
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 
 
@@ -140,20 +143,19 @@ def test_reproduction_counter_upgrades_second_occurrence(tmp_path: Path, monkeyp
 # ===== ③ 旁路接线锁(obs_conflict / exec_event 写入 → 台账同行出现)=====
 
 def test_obs_conflict_bypass_appends_ledger_row(tmp_path: Path, monkeypatch):
-    """obs_conflict 写入 → obs_conflicts 原流行 + defect_ledger 同行出现
-    (refs 指回原行;gold_delta 大 gap → 关键面单次 = L1)。"""
+    """obs_conflict 写入 → defect_ledger 同行出现(refs 指回冻结档案行;
+    gold_delta 大 gap → 关键面单次 = L1)。原流行已随删除波 1 退役,
+    证据归宿 = journal obs_event(其形状由 test_cw_telemetry_wiring 辖)。"""
     _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(cw_observe, '_CONFLICT_JOURNAL', tmp_path / 'obs_conflicts.jsonl')
     cw_observe.obs_conflict('gold_delta', 45, 20, None,
                             verdict='留证-动作账vs读数不等',
                             source='shop_spend_audit', plane=1, round_num=3,
                             spend=5)
-    conflicts = _rows(tmp_path, 'obs_conflicts.jsonl')
     defects = _rows(tmp_path, 'defect_ledger.jsonl')
-    assert len(conflicts) == 1 and len(defects) == 1
-    c, d = conflicts[0], defects[0]
-    # 原流行原样(field/old/new 在),台账是归一映射(refs 指回)
-    assert (c['field'], c['old'], c['new']) == ('gold_delta', 45, 20)
+    assert len(defects) == 1
+    assert not (tmp_path / 'obs_conflicts.jsonl').exists(), \
+        '旧流文件零新增(证据行归宿 = journal)'
+    d = defects[0]
     assert d['surface'] == 'gold' and d['kind'] == 'perception_conflict'
     assert d['expected'] == 'gold_delta: 45' and d['observed'] == '20'
     assert d['gap'] == -25.0
@@ -161,14 +163,15 @@ def test_obs_conflict_bypass_appends_ledger_row(tmp_path: Path, monkeypatch):
     assert d['run_id'] == 'w505t'        # 台账补齐旧流缺的 join key
     assert d['reader_source'] == 'shop_spend_audit'
     assert d['evidence']['refs'][0]['stream'] == 'obs_conflicts'
-    assert f"ts={c['ts']}" in d['evidence']['refs'][0]['key']
+    assert 'field=gold_delta' in d['evidence']['refs'][0]['key']
 
 
 def test_obs_conflict_bypass_auto_resolved_and_text_field(tmp_path: Path, monkeypatch):
     """裁决已自动面(deployed_align)恒 L2;未映射文本字段原样落 surface、
     gap 不硬猜(None)。"""
     _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(cw_observe, '_CONFLICT_JOURNAL', tmp_path / 'obs_conflicts.jsonl')
+    # (旧证据文件指针桩 _CONFLICT_JOURNAL 已随删除波 1 移除——证据归宿 =
+    #  journal obs_event;本锁辖 obs→缺陷台账旁路,旁路不受账本武装影响。)
     cw_observe.obs_conflict('deployed_align', 4, 5, None,
                             verdict='采新-paddle锚', source='align')
     cw_observe.obs_conflict('back_layout_channel_conflict', {'a': 1}, {'b': 2}, None,
@@ -181,57 +184,34 @@ def test_obs_conflict_bypass_auto_resolved_and_text_field(tmp_path: Path, monkey
     assert defects[1]['severity'] == 'L2_record'
 
 
-def test_exec_event_bypass_fail_only(tmp_path: Path, monkeypatch):
-    """record_exec_event 写入 → fail 类事件台账同行出现;success 类不进台账。"""
+def test_exec_event_bypass_retired(tmp_path: Path, monkeypatch):
+    """exec 失败旁路已随 exec_events 流写入端退役(删除波 1):发射语义下
+    动作 op 无成败知识(receipts 零成败字段 + 观察侧 reconcile 对比),
+    执行失败证据面随之消失;缺陷台账保留面的现役供给 = obs 冲突旁路 +
+    各显式判级点。防半删 = 符号面机器可验。"""
     _setup_recorder(monkeypatch, tmp_path)
     rec = state.get_recorder()
-    rec.record_exec_event('w505t', 7, 'BuyCard', 'battle_prep',
-                          'fail', reason='识别MISS', retry_count=2)
-    rec.record_exec_event('w505t', 7, 'LevelUp', 'battle_prep',
-                          'success_uncharged', reason='x')
-    defects = _rows(tmp_path, 'defect_ledger.jsonl')
-    assert len(defects) == 1
-    d = defects[0]
-    assert d['surface'] == 'bench' and d['kind'] == 'exec_fail'
-    assert d['expected'] == 'BuyCard 动作生效'
-    assert d['observed'] == 'fail: 识别MISS'
-    assert d['severity'] == 'L2_record'   # 执行失败写端恒初判 L2(安灯归既有钩子)
-    assert d['evidence']['refs'][0]['stream'] == 'exec_events'
-    assert 'family=BuyCard' in d['evidence']['refs'][0]['key']
+    assert not hasattr(rec, 'record_exec_event'), \
+        'record_exec_event 应已随删除波 1 删除(防半删)'
+    assert not hasattr(rec_mod, 'bypass_exec_event_to_defect'), \
+        'bypass_exec_event_to_defect 应已随删除波 1 删除(防半删)'
 
 
-def test_exec_event_bypass_surface_mapping(tmp_path: Path, monkeypatch):
-    """动作族 → surface 映射锁(LevelUp→level_xp / Refresh→shop_refresh)。"""
+# ===== ④ spend_ledger gold_close 暂存流(删除波 1 退役重写)=====
+
+def test_gold_close_slot_retired(tmp_path: Path, monkeypatch):
+    """gold_close 暂存槽与单元落账写端已随 spend_ledger 流写入端退役
+    (删除波 1);单元框架事实的现役归宿 = receipts 发射行 extra 字段。
+    读端(query_spend_ledger)对冻结存量档案的视图契约由下方各测继续承。
+    防半删 = 符号面机器可验。"""
     _setup_recorder(monkeypatch, tmp_path)
-    rec = state.get_recorder()
-    rec.record_exec_event('w505t', 2, 'LevelUp', 'battle_prep', 'blocked', reason='x')
-    rec.record_exec_event('w505t', 3, 'RefreshShop', 'battle_prep', 'bail', reason='y')
-    surfaces = [d['surface'] for d in _rows(tmp_path, 'defect_ledger.jsonl')]
-    assert surfaces == ['level_xp', 'shop_refresh']
-
-
-# ===== ④ gold_close 流锁(shop 暂存 → spend_ledger 充实 / unknown 不猜)=====
-
-def test_gold_close_slot_fills_spend_ledger(tmp_path: Path, monkeypatch):
-    """shop 侧 set_unit_gold_close → 单元关闭落账行 gold_close/trusted 充实;
-    消费即清(下一单元无暂存恒 None,不串)。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    state.set_unit_gold_close(45)
-    recorder.record_spend_unit(1, 1, 1, 'closed', True, 1.0)
-    recorder.record_spend_unit(1, 2, 2, 'closed', True, 1.0)
-    rows = _rows(tmp_path, 'spend_ledger.jsonl')
-    assert (rows[0]['gold_close'], rows[0]['gold_close_trusted']) == (45, True)
-    assert (rows[1]['gold_close'], rows[1]['gold_close_trusted']) == (None, False)
-
-
-def test_gold_close_read_failure_recorded_not_silent(tmp_path: Path, monkeypatch):
-    """read_gold 失读(None)照记 trusted=False——「对拍通过」与「失读」
-    离线可分,unknown 占比降到读失败率而非静默缺失。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    state.set_unit_gold_close(None)
-    recorder.record_spend_unit(1, 1, 1, 'closed', True, 1.0)
-    row = _rows(tmp_path, 'spend_ledger.jsonl')[0]
-    assert (row['gold_close'], row['gold_close_trusted']) == (None, False)
+    assert not hasattr(state, 'set_unit_gold_close'), \
+        'set_unit_gold_close 应已随删除波 1 删除(防半删)'
+    assert not hasattr(state, 'set_unit_exec_facts'), \
+        'set_unit_exec_facts 应已随删除波 1 删除(防半删)'
+    assert not hasattr(rec_mod, 'record_spend_unit'), \
+        'record_spend_unit 应已随删除波 1 删除(防半删)'
+    assert not hasattr(rec_mod, 'shop_close_audit_wiring_lock')
 
 
 def test_query_prefers_ledger_gold_close_over_conflict(tmp_path: Path):
@@ -316,17 +296,18 @@ def test_spend_view_live_str_ts_behavior_unchanged(tmp_path: Path):
     assert 'effective' in r  # 20s 在 600s 秒窗内,join 到 new=45
 
 
-def test_shop_close_audit_wiring_lock():
-    """买后 gold 收口对拍接线锁(静态;原 shop.py 段随壳退役迁 cw_screen_prep.finalize_buy_phase):spend_audit 点在 mismatch 分支之外
-    无条件调 set_unit_gold_close(_final_gold)(失读 None 也照记);
-    锁「落点在对拍段内且无条件」,防后续重构静默断链。"""
+def test_shop_close_audit_wiring_retired():
+    """买后 gold 收口对拍接线锁(删除波 1 重写):set_unit_gold_close 暂存
+    挂点已随 spend_ledger 流写入端退役删除;finalize_buy_phase 保留的金
+    对拍(期望账 vs 关店实读)照常走 obs_conflict 收编面(gold_delta 冲突
+    行 → journal)。锁「对拍段在场 + 暂存槽符号已删」,防静默断链或半删。"""
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as shop
     src = Path(shop.__file__).read_text(encoding='utf-8')
-    assert 'set_unit_gold_close(_final_gold)' in src
-    # 无条件性:调用必须位于 read_gold 之后、mismatch 判定(if _final_gold is not None)之前
-    tail = src[src.index('_final_gold = read_gold'):]
-    unconditional = tail.split('if _final_gold is not None')[0]
-    assert 'set_unit_gold_close' in unconditional
+    assert '_final_gold = read_gold' in src, '金收口对拍读点在(删除断链防线)'
+    assert 'gold_delta' in src, '对拍冲突留证面在(收编 obs_conflict)'
+    from sr_od.application.currency_war.telemetry import state as tel_state
+    assert not hasattr(tel_state, 'set_unit_gold_close'), \
+        'gold_close 暂存槽应已随删除波 1 删除(防半删)'
 
 
 # ===== deployed 计数双源分歧独立分键(观测仲裁批;不一致率防静默)=====

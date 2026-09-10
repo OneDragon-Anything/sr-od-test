@@ -21,9 +21,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_state import (
-    GameState,
     ledger_update_plane,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
@@ -45,7 +43,6 @@ def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'p26t') -> None:
     monkeypatch.setattr(cw_telemetry, '_CURRENT_RUN_ID', run_id)
     monkeypatch.setattr(cw_telemetry, '_CURRENT_DIFFICULTY', 'A8')
     monkeypatch.setattr(cw_telemetry, '_RUN_CLOSED', False)
-    monkeypatch.setattr(cw_telemetry, '_PENDING_BRIEFING_ROWS', [])
     monkeypatch.setattr(cw_telemetry, '_defect_seen', {})
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
     monkeypatch.setattr(cw_telemetry, '_L0_ANDON_HANDLER', lambda payload: True)
@@ -74,71 +71,27 @@ def test_p26_prep_obs_key_surface_single_source() -> None:
     assert P26_PREP_OBS_FIELDS == ('node_type_next',)
 
 
+def test_p26_prep_obs_writer_retired() -> None:
+    """锁(删除波 1 重写):p26_prep_obs 的 decisions 行落盘面(record_decision)
+    已随旧流写入端退役——原②支行面锁(台账真值标签/无 match None/未命中 ''/
+    零行为漂移四支)随写端消亡;采集函数读链与键面单一源(锁①a)保留辖
+    读端/后续接线批。防半删 = 写端符号机器可验。"""
+    assert not hasattr(cw_recorder, 'record_decision'), \
+        'record_decision 应已随删除波 1 删除(防半删)'
+
+
 def test_p26_prep_obs_label_from_ledger_truth(tmp_path: Path, monkeypatch) -> None:
-    """锁①b:标签 = 位面节点台账真值(单一源);硬节点 token 原样透传不映射。"""
-    _setup_recorder(monkeypatch, tmp_path)
+    """采集真值面(删除波 1 重写锚):标签 = 位面节点台账真值(单一源),
+    硬节点 token 原样透传不映射——锁 kernel 台账读链(ledger_node_type,
+    原行内采集的读数源)对 1-based 轮次的下标换算与 boss token 透传。"""
+    from sr_od.application.currency_war.kernel.cw_state import ledger_node_type
     sess = StrategySession()
     ledger_update_plane(sess, 1, ['battle', 'encounter', 'supply', 'boss'],
                         source='plane_detail')
-    monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF',
-                        [_match_with_session(sess)])
-    rec = cw_telemetry.get_recorder()
-    for rn in (1, 2, 4):
-        rec.record_decision('p26a', 'A8',
-                            GameState(gold=10, hp=50, round_num=rn, plane=1),
-                            '', {}, {}, [])
-    rows = _rows(tmp_path, 'decisions.jsonl')
-    assert [r['p26_prep_obs']['node_type_next'] for r in rows] == \
-        ['battle', 'encounter', 'boss']
-
-
-def test_p26_prep_obs_no_match_default_none(tmp_path: Path, monkeypatch) -> None:
-    """锁②a:无 match 注册(离线/测试)→ 字段恒 None,不猜。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF', [None])
-    cw_telemetry.get_recorder().record_decision(
-        'p26b', 'A8', GameState(gold=10, hp=50, round_num=2, plane=1),
-        '', {}, {}, [])
-    r = _rows(tmp_path, 'decisions.jsonl')[0]
-    assert r['p26_prep_obs'] is None
-
-
-def test_p26_prep_obs_ledger_miss_empty_not_guess(tmp_path: Path, monkeypatch) -> None:
-    """锁②b:session 在场但台账未命中(表缺/越界/该位次 None)→ '' 诚实缺省。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    sess = StrategySession()   # 无台账写入 → ledger_node_type 读不到表
-    monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF',
-                        [_match_with_session(sess)])
-    rec = cw_telemetry.get_recorder()
-    rec.record_decision('p26c', 'A8',
-                        GameState(gold=10, hp=50, round_num=9, plane=1),
-                        '', {}, {}, [])
-    r = _rows(tmp_path, 'decisions.jsonl')[0]
-    assert r['p26_prep_obs'] == {'node_type_next': ''}
-    # None 位次(未识别占位)同样 '' 不猜
-    ledger_update_plane(sess, 1, [None], source='prep_row')
-    rec.record_decision('p26c', 'A8',
-                        GameState(gold=10, hp=50, round_num=1, plane=1),
-                        '', {}, {}, [])
-    r2 = _rows(tmp_path, 'decisions.jsonl')[1]
-    assert r2['p26_prep_obs'] == {'node_type_next': ''}
-
-
-def test_p26_prep_obs_zero_behavior_drift(tmp_path: Path, monkeypatch) -> None:
-    """锁②c:零行为漂移——采集失败路径(异常 session)不炸、决策行照写,
-    其余字段面不受钩子影响(纯观测零行为)。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    # 采集故障注入:台账容器形态坏(seq_by_plane 非 dict → .get 抛)——
-    # 钩子在 best-effort suppress 内,只影响本钩子及其后字段,不炸主链
-    broken = SimpleNamespace(seq_by_plane=object())
-    sess = SimpleNamespace()
-    # 台账宿主迁 ExecState(经 exec_state_of 附着;session 职责分离批同款)
-    exec_state_of(sess).plane_node_ledger = broken
-    monkeypatch.setattr(cw_telemetry, '_CTX_MATCH_REF',
-                        [SimpleNamespace(session=sess)])
-    cw_telemetry.get_recorder().record_decision(
-        'p26d', 'A8', GameState(gold=10, hp=50, round_num=2, plane=1),
-        '', {}, {}, [])
-    r = _rows(tmp_path, 'decisions.jsonl')[0]
-    assert r['p26_prep_obs'] is None          # 异常 → 缺省,不炸不猜
-    assert r['gold'] == 10 and r['plane'] == 1   # 决策行本体零漂移
+    assert ledger_node_type(sess, 1, 1) == 'battle'
+    assert ledger_node_type(sess, 1, 2) == 'encounter'
+    assert ledger_node_type(sess, 1, 4) == 'boss'
+    # 越界/缺表/None 位次 → None(调用方退逐帧识别链,不猜)
+    assert ledger_node_type(sess, 1, 9) is None
+    assert ledger_node_type(StrategySession(), 1, 1) is None
+    assert ledger_node_type(None, 1, 1) is None

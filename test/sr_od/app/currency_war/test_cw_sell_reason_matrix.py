@@ -137,22 +137,41 @@ class TestReasonEnumRegistry:
         ORPHAN_REASONS = 与发射位登记门 SELL_BENCH_REASONS 分离的独立
         闭集——检查器三消费位(ledger 两检查 + suspects D1)读本集,
         发射登记门新增/删值不放大/不收窄豁免面(豁免面随登记门生长 =
-        振荡防空洞,零容忍)。变异红证 = 三消费位借道改回登记门时,
-        本例给登记门注入新值即见豁免面被放大(检查静默),红有语义。
+        振荡防空洞,零容忍)。行为面对三消费位逐一注入检测(消费位循环,
+        防「只穿机械判违位、复盘位回归借道不可见」):机械判违两检查
+        (ledger)行不带 target_comp = 线成员复核不可复核,借道登记门时
+        对被豁免静默(报告面消失)即红;复盘面(suspects D1)只复核
+        自报的合法分键,行带可解析 target_comp ∧ dec_sell_in_line=False,
+        借道登记门时新值被误升格为合法分键→被自算反驳,失配条目
+        出现(误报污染复盘面)即红。变异红证 = 三消费位任一借道改回
+        登记门,注入新值即见豁免面放大(机械位静默漏报/复盘位误报),
+        红有语义。
+        叙述重推申报(T-259):断言与检测方向保持 T-180 原样不变(借道
+        必红的实测=T-180 核验批落地审变异亲复现),本批仅把复盘位三处
+        叙述对齐实测机理——借道在 D1 复盘位的后果是失配条目出现(误报),
+        非消失(漏报);「消失」直觉只对机械判违位成立(T-180 核验批
+        落地审 R1 实测勘误)。
         红时处置 = 对照 ADR-0591 §4 裁决,非机械跟绿。"""
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             SELL_BENCH_ORPHAN_REASONS,
         )
         assert set(SELL_BENCH_ORPHAN_REASONS) == {'line_switch_collapse'}
         # 行为面:登记门被注入新发射值(模拟未来登记),经 sell_reason
-        # 载体的同轮买卖对仍须判违——豁免面不随登记门生长。
+        # 载体的同轮买卖对仍须判违/仍须产复盘条目——豁免面不随登记门
+        # 生长,三消费位逐一可见。
         import sr_od.application.currency_war.kernel.cw_prep_actions as _pa
         from sr_od.application.currency_war.sim.checks.ledger import (
             check_no_same_round_buy_sell,
+            check_oscillation_xp_cap,
+        )
+        from sr_od.application.currency_war.sim.checks.suspects import (
+            d1_same_round_pair_review,
         )
         monkeypatch.setattr(
             _pa, 'SELL_BENCH_REASONS',
             frozenset({'line_switch_collapse', 'future_emission_tag'}))
+        # 机械判违行(不带 target_comp:线成员复核不可复核,正常路径下
+        # 同轮买卖对必须判违;借道登记门则被豁免静默)
         row_new_gate_value = {'plane': 1, 'round_num': 1,
                               'actions': [
                                   {'__type__': 'BuyCard',
@@ -161,6 +180,22 @@ class TestReasonEnumRegistry:
                                    'sell_reason': 'future_emission_tag'}]}
         assert check_no_same_round_buy_sell([row_new_gate_value]), \
             '登记门新值经 sell_reason 误入豁免面 = 独立闭集失守(T-180)'
+        assert check_oscillation_xp_cap([dict(row_new_gate_value)]), \
+            '登记门新值经 sell_reason 误入豁免面(振荡检查静默) = 失守'
+        # 复盘面行(带可解析 target_comp + dec_sell_in_line=False:该值
+        # 不在豁免闭集 = 不构成合法分键自报,d1 复核辖域外,正常路径
+        # 返空;借道登记门则被误升格为合法分键→自算反驳→失配条目
+        # 出现即红)
+        row_review_mismatch = {'plane': 1, 'round_num': 1,
+                               'target_comp': '列车同行',
+                               'actions': [
+                                   {'__type__': 'BuyCard',
+                                    'card': {'name': 'X'}, 'reason': ''},
+                                   {'__type__': 'SellBench', 'name': 'X',
+                                    'sell_reason': 'future_emission_tag',
+                                    'dec_sell_in_line': False}]}
+        assert d1_same_round_pair_review([row_review_mismatch]) == [], \
+            '登记门新值被复盘面误升格为合法分键(失配条目出现=误报) = 失守'
 
 
 # ===== 序列化等值(方案 v3 §3.4 V2-02 两判定口径的锁面)=====

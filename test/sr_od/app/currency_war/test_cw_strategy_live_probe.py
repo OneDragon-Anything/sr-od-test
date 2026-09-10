@@ -264,59 +264,15 @@ def test_true_dead_still_caught_alongside_flow_rounds() -> None:
     assert streak >= 2, '真哑行连续 2 轮必须仍被抓(钩子保留)'
 
 
-def test_strategy_dead_flag_three_elements(tmp_path) -> None:
-    """钩子 flag 三要素锁(od-dev-stop-hooks 审计口径):写入文件含
-    [HOOK-STOP] 特征头 / 处理步骤 / 删除条件 + 定位(run/轮/streak/截图)。"""
-    from sr_od.application.currency_war.operations.cw_loop import (
-        write_strategy_dead_flag,
-    )
-    p = tmp_path / 'strategy_dead_early_stop.flag'
-    ret = write_strategy_dead_flag(2, (2, 3), 'run-x', 'shot.png', path=p)
-    text = p.read_text(encoding='utf-8')
-    assert ret == str(p)
-    assert '[HOOK-STOP]' in text
-    assert '处理步骤' in text and '删除条件' in text
-    assert 'run-x' in text and 'P2-r3' in text and 'streak=2' in text
-    assert 'shot.png' in text
-
-
-def test_register_flow_heartbeat_writes_carrier_rows(monkeypatch) -> None:
-    """登记函数行为锁:恢复局分支写真实 StartBattle 载体行(sid=''),
-    补给分支写流程 sid 标记行;遥测关闭/last_state 缺席静默跳过。
-    (改锁重推语义,局33 复盘接线修复):recorder 单一源 = telemetry
-    state 模块单例(``cw_loop.state.get_recorder``),与 cw_loop 其余
-    消费端同源——旧锁钉在 ``last_state.get_recorder()`` 上,而 GameState
-    无该属性 → 生产路径恒 AttributeError 被 best-effort 吞掉,三类流程
-    心跳从未生效(被锁语义 = 偶然实现且自失效,非设计意图,故随接线
-    修正改写本锁)。"""
-    from types import SimpleNamespace as _NS
-
+def test_strategy_dead_early_stop_retired_with_its_data_source() -> None:
+    """删除波 1 退役锁:策略失活早停的运行时写面(write_strategy_dead_flag/
+    register_flow_heartbeat 心跳载体行)已随 decisions 流写入端退役删除
+    (心跳行停写后新局恒零心跳行,检查保留=误杀每一局);判据函数本体
+    (query.strategy_round_live/dead_streak_transition)保留辖存量语料
+    (上方两测),运行时消费面退役。"""
     from sr_od.application.currency_war.operations import cw_loop
-
-    written: list[tuple] = []
-    monkeypatch.setattr(recorder, 'record_decision',
-                        lambda st, t, cs, eb, actions, extra=None,
-                        gold_point=True: written.append((actions, extra)))
-    monkeypatch.setattr(cw_loop.state, 'get_recorder',
-                        lambda: _NS(enabled=True))
-    _state = _NS(plane=2, round_num=2, hp=1, gold=68, level=7)
-    ctx = _NS(cw_match=_NS(session=_NS(last_state=_state)))
-    cw_loop.register_flow_heartbeat(ctx, 'locked_resume_direct_battle')
-    assert written and len(written[0][0]) == 1
-    assert written[0][1] == {'strategy_id': ''}
-    cw_loop.register_flow_heartbeat(ctx, 'supply_node_divert')
-    assert written[1][0] == []
-    assert written[1][1] == {'strategy_id': 'cw:flow:supply_node_divert'}
-    # 静默面:遥测关闭 / last_state 缺席 ⇒ 不写不炸
-    n = len(written)
-    monkeypatch.setattr(cw_loop.state, 'get_recorder',
-                        lambda: _NS(enabled=False))
-    cw_loop.register_flow_heartbeat(ctx, 'supply_node_divert')
-    monkeypatch.setattr(cw_loop.state, 'get_recorder',
-                        lambda: _NS(enabled=True))
-    cw_loop.register_flow_heartbeat(_NS(cw_match=_NS(session=_NS(last_state=None))),
-                                    'supply_node_divert')
-    assert len(written) == n
+    assert not hasattr(cw_loop, 'write_strategy_dead_flag')
+    assert not hasattr(cw_loop, 'register_flow_heartbeat')
 
 
 def test_stack_detection_ignores_flow_marker_rows(tmp_path) -> None:

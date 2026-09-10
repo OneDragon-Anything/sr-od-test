@@ -33,7 +33,6 @@ from sr_od.application.currency_war.operations.cw_screen import (
     cw_screen_role_detail_overlay,
     cw_screen_shop_card_detail,
 )
-from sr_od.application.currency_war.telemetry import recorder as cw_recorder
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     FixtureController,
@@ -503,27 +502,22 @@ def test_emblem_detail_clicks_close_never_esc(
 # ==================== A9 中断挑战(真模态) ====================
 
 
-def test_interrupt_dialog_clicks_close_records_popup(
+def test_interrupt_dialog_clicks_close(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """锁(验证废除批改写):锚命中 → 外生 popup 行 + 点「按钮-关闭」+
-    park_cursor;一击 + 重入裁决(桩 misses_after=1 模拟裁决帧锚已消失 =
-    success);绝不点「放弃并结算」。"""
+    """锁(验证废除批改写;删除波 1 重写:popup 行随 exogenous 流写入端
+    退役):锚命中 → 点「按钮-关闭」+ park_cursor;一击 + 重入裁决
+    (桩 misses_after=1 模拟裁决帧锚已消失 = success);绝不点「放弃并结算」。"""
     op, fc = _make_op(test_context, monkeypatch,
                       cw_screen_interrupt_dialog.CwScreenInterruptDialog)
     _stub_find(op, monkeypatch, [('货币战争-中断挑战弹窗', '标识-中断挑战')],
                misses_after=1)
     clicks = _stub_find_and_click(op, monkeypatch, ok=True)
-    exog: list[tuple] = []
-    monkeypatch.setattr(cw_screen_interrupt_dialog.recorder, 'record_exogenous',
-                        lambda *a, **k: exog.append(a))
-    assert cw_screen_interrupt_dialog.recorder is cw_recorder   # 同源替身
 
     result = _run(op)
 
     assert result.success
     assert ('货币战争-中断挑战弹窗', '按钮-关闭') in clicks
-    assert exog and exog[0][1] == 'popup'
 
 
 def test_interrupt_dialog_x_retry_then_bounded_fail(
@@ -539,8 +533,6 @@ def test_interrupt_dialog_x_retry_then_bounded_fail(
     taps: list[str] = []
     monkeypatch.setattr(fc, 'btn_tap', lambda k: taps.append(k), raising=False)
     monkeypatch.setattr(fc, 'esc', lambda: taps.append('esc'), raising=False)
-    monkeypatch.setattr(cw_screen_interrupt_dialog.recorder, 'record_exogenous',
-                        lambda *a, **k: None)
 
     result = _run(op)
 

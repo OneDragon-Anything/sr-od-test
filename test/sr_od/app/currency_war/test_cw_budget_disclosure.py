@@ -106,8 +106,8 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     from sr_od.application.currency_war.telemetry import recorder as rec_mod
     from sr_od.application.currency_war.telemetry import state as tel_state
 
-    # 遥测单例隔离(shop_snapshots 行落 tmp_path;recorder 读 session 的
-    # 唯一通道 = _CTX_MATCH_REF)。
+    # 遥测单例隔离(shop_snapshots 行写入端已随删除波 1 退役;缺陷台账行
+    # 落 tmp_path)。
     monkeypatch.setattr(tel_state, '_RECORDER',
                         rec_mod.TelemetryRecorder(enabled=True,
                                                   replay_dir=tmp_path))
@@ -122,7 +122,6 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
             return CloseShop()
 
     match = CurrencyWarMatch(_CloseShopStrategy(), StrategySession())
-    monkeypatch.setattr(tel_state, '_CTX_MATCH_REF', [match])
 
     class _Op:
         """离线宿主替身:run_buy_waves 消费面仅 ctx/screenshot/park_cursor。"""
@@ -178,45 +177,28 @@ class TestBudgetDisclosureWriteRead:
         assert st.v3_reserve_overflow > 0
         assert st.v3_release_budget > 0
 
-    def test_recorder_row_keys_non_none_and_match_state(
+    def test_disclosure_fields_non_none_and_match_state(
             self, monkeypatch: pytest.MonkeyPatch):
-        """recorder 行组装:sess_* 五键与状态字段一致且非 None(读链写点
-        两端对齐;T-84 修的读口在本锁钉「有真值可读」)。写端走真生产链
-        (assemble 装配点 + accrue 执行回执)= sess_* 行族 rule 13 的
-        生产链路腿。捕获替身钉 _append,零真实 .debug 写入;模块槽
-        monkeypatch 自动还原(_CTX_MATCH_REF 是 recorder 读 session 的
-        唯一通道,w603 汇点先例)。"""
-        from sr_od.application.currency_war.telemetry import recorder as rec_mod
-        from sr_od.application.currency_war.telemetry import state as telstate
-        from sr_od.application.currency_war.telemetry.recorder import (
-            TelemetryRecorder,
-        )
-
+        """预算披露状态面(删除波 1 重写:sess_* 五键的 decisions 行组装
+        写端已随 decisions 流写入端退役,行族归属策略侧决策行接线批):
+        assemble 装配点 + accrue 执行回执后,策略态五字段与预算构式一致
+        且非 None(读链写点两端对齐;T-84 修的读口在本锁钉「有真值可读」)。"""
         sess = StrategySession()
         assemble(_snap(1, 8, 53), sess)
         accrue_release_spent(_StubMatch(sess), RefreshShop(cost=2), True,
                              _cur(1, 8))
         st = state_of(sess)
 
-        captured: list[tuple[str, dict]] = []
-        rec = TelemetryRecorder(replay_dir='unused', enabled=False)
-        rec._append = lambda name, payload: captured.append(
-            (name, dict(payload)))   # noqa: SLF001 测试捕获替身
-        monkeypatch.setattr(telstate, 'get_recorder', lambda: rec)
-        monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [_StubMatch(sess)])
-        monkeypatch.setattr(telstate, '_CURRENT_RUN_ID', 't88-lock-c')
-        rec_mod.record_decision(_cur(1, 8), '', {}, {}, [], extra=None)
-        assert captured, 'decisions 行未捕获'
-        row = dict(captured[0][1])
-        assert row.get('sess_reserve_cap') == st.v3_reserve_cap
-        assert row.get('sess_reserve_overflow') == st.v3_reserve_overflow
-        assert row.get('sess_release_budget') == st.v3_release_budget
-        assert row.get('sess_release_spent') == st.v3_release_spent
-        assert row.get('sess_release_reason') == st.v3_release_reason
+        assert st.v3_disclosure_key == (1, 8)
+        assert st.v3_reserve_overflow is not None
+        assert st.v3_release_budget is not None
+        assert st.v3_release_spent is not None
+        assert st.v3_release_spent >= 2   # RefreshShop(cost=2) 执行回执已计
+        assert st.v3_release_reason is not None
         # None 语义边界:default 栈帧(无写点)读端保持 None,非 0 假数据
-        assert all(row.get(k) is not None for k in (
-            'sess_reserve_cap', 'sess_reserve_overflow',
-            'sess_release_budget', 'sess_release_spent'))
+        assert all(getattr(st, k) is not None for k in (
+            'v3_reserve_cap', 'v3_reserve_overflow', 'v3_release_budget',
+            'v3_release_spent'))
 
 
 # ===== 锁 F:店开帧双写(实机锚⑤补遗)=====

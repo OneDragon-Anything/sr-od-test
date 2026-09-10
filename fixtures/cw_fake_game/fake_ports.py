@@ -299,7 +299,6 @@ class FakeActionSink:
             from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
                 refresh_effective,
             )
-            from sr_od.application.currency_war.telemetry import recorder
             ledger.refresh_attempted = True
             _fee = state.shop_refresh_cost or REFRESH_COST_BASE
             ledger.spend_executed += _fee
@@ -308,7 +307,5 @@ class FakeActionSink:
             ledger.refresh_board_changed = refresh_effective(
                 pre_shop_names,
                 [c.name for c in self._match.state.shop if c.name])
-            post_gold = self._match.state.gold
-            recorder.record_shop_snapshot(
-                'refresh', [replace(c) for c in self._match.state.shop],
-                post_gold, self._match.state.plane, self._match.state.round_num)
+            # (record_shop_snapshot 已随删除波 1 退役;假环境牌面快照 = 状态机
+            #  现读,批账本由 runner 落盘面承载,此处零落盘。)

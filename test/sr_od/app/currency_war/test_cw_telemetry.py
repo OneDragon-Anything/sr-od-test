@@ -1,4 +1,4 @@
-"""test_cw_telemetry 主题锁(结构合并批,机械拼接)。
+"""test_cw_telemetry 主题锁(结构合并批,机械拼接;删除波 1 重写)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
 - w146_intention_telemetry: test_cw_w146_intention_telemetry.py
@@ -7,6 +7,11 @@
 - w222_telemetry_gaps: test_cw_w222_telemetry_gaps.py
 - w253_boss_names_telemetry: test_cw_w253_boss_names_telemetry.py
 冲突改名:后来者顶层名加来源前缀(_<tag>_原名)。
+
+删除波 1(用户 2026-09-10 直迁裁定):decisions/outcomes 等收编 9 流的
+写入端退役,原「经 record_* 落行」的锁面按两条路重写——①语义存活面
+(serialize_intention 纯函数/序列化 schema/读端兼容)改锚现役单一源;
+②写端形态面(落行顺序/行字段回读)随写端消亡,锁退役语义本身。
 """
 from __future__ import annotations
 
@@ -17,32 +22,15 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     serialize_intention,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-from sr_od.application.currency_war.telemetry.recorder import TelemetryRecorder
 
 
-def _record_one(tmp_path, extra):
-    """最小 fixture:一条 decisions 落盘并读回(tmp_path,不写真实 .debug/)。"""
-    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    rec.start_run('run_w146', 'A2')
-    rec.record_decision('run_w146', 'A2', GameState(), 'X',
-                        {}, {}, [], extra=extra)
-    rows = [json.loads(ln) for ln in
-            (tmp_path / 'decisions.jsonl').read_text(encoding='utf-8'
-                                                     ).splitlines()]
-    assert rows
-    return rows[-1]
-
-
-def test_locked_row_carries_phase_and_comp(tmp_path):
-    """①锁定局决策行:v3_intention.phase='locked' 且 locked_comp=目标名。"""
-    row = _record_one(tmp_path, {
-        'v3_intention': serialize_intention(
-            IntentionState(phase='locked', locked_comp='DOT卡芙卡',
-                           lock_layer=3, lock_plane=1, lock_round=4)),
-    })
-    ist = row['v3_intention']
+def test_locked_intention_serializes_phase_and_comp():
+    """①锁定局意向序列化:v3_intention.phase='locked' 且 locked_comp=目标名。
+    (原经 decisions 行落盘回读;行写入退役后锁序列化纯函数单一源。)"""
+    ist = serialize_intention(
+        IntentionState(phase='locked', locked_comp='DOT卡芙卡',
+                       lock_layer=3, lock_plane=1, lock_round=4))
     assert isinstance(ist, dict)
     assert ist['phase'] == 'locked'
     assert ist['locked_comp'] == 'DOT卡芙卡'
@@ -50,20 +38,15 @@ def test_locked_row_carries_phase_and_comp(tmp_path):
     assert ist['lock_plane'] == 1 and ist['lock_round'] == 4
 
 
-def test_unlocked_row_has_explicit_empty_state(tmp_path):
-    """②未锁局:v3_intention 是 dict 且 phase='unlocked'(非缺失/非猜)。"""
-    row = _record_one(tmp_path, {
-        'v3_intention': serialize_intention(IntentionState()),
-    })
-    ist = row['v3_intention']
+def test_unlocked_intention_has_explicit_empty_state():
+    """②未锁局:v3_intention 是 dict 且 phase='unlocked'(非缺失/非猜);
+    非法输入退 None(不是崩)。"""
+    ist = serialize_intention(IntentionState())
     assert isinstance(ist, dict)
     assert ist['phase'] == 'unlocked'
     assert ist['locked_comp'] == ''
-    # 非法输入退 None(不是崩);extra 缺键 → 行缺省 None(旧 schema 兼容)
     assert serialize_intention(None) is None
     assert serialize_intention('junk') is None
-    row2 = _record_one(tmp_path, {})
-    assert row2['v3_intention'] is None
 
 
 def test_sim_ledger_rows_carry_same_key():
@@ -97,9 +80,6 @@ from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     _owned_wearable_names,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
-from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
-    MandateV1Strategy,
-)
 
 
 def test_owned_wearable_names_filters_tools() -> None:
@@ -123,7 +103,9 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_ROOT / 'src'))
 
-from sr_od.application.currency_war.kernel.cw_reconcile import _merge_equips  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_reconcile import (
+    _merge_equips,  # noqa: E402
+)
 from sr_od.application.currency_war.kernel.cw_state import BenchChar  # noqa: E402
 
 
@@ -170,7 +152,6 @@ def test_reconcile_multi_copy_pairing_and_departure() -> None:
 from pathlib import Path
 
 from one_dragon.utils import log_utils
-from sr_od.application.currency_war.telemetry import recorder as cw_telemetry
 
 _SRC_ROOT = Path('src/sr_od/application/currency_war')
 
@@ -183,53 +164,26 @@ def _src(rel: str) -> str:
 # ===== 缺口①:decisions.state.equips 落盘链(record 站点)=====
 
 
-def test_shop_record_site_copies_owned_pool_before_record() -> None:
-    """buy_cards.py 主 record 站点(ADR-0517 单动作迁移后 = 段尾累计行):
-    决策循环之后、record_decision 之前补拷。
-
-    顺序锁三点:①拷贝行存在;②在 decide_shop_action 循环之后(装备权重
-    读 state.equips,提前拷=改决策行为);③在其后的 record_decision(state
-    调用之前)。"""
+def test_shop_record_site_copies_owned_pool_before_decision_loop() -> None:
+    """buy_cards.py 段收尾 equips 补拷(ADR-0517 单动作迁移后 = 段循环后):
+    拷贝行存在且在 decide_shop_action 循环之后(装备权重读 state.equips,
+    提前拷=改决策行为)。删除波 1:原第三锚 record_decision 调用已退役,
+    顺序锁退化为两锚(plan 循环 < 补拷)。"""
     src = _src('operations/cw_op/cw_op_buy_cards.py')
     copy_line = 'state.equips = list(getattr(match.session, \'last_owned_equips\', []) or [])'
-    assert copy_line in src, 'buy_cards record 站点缺 owned 池补拷行(W222 缺口①回归)'
-    # ADR-0517 迁移批:decide_shop_screen 波调用 → decide_shop_action
-    # 单动作循环,顺序锁锚点随迁
+    assert copy_line in src, 'buy_cards 段收尾缺 owned 池补拷行(W222 缺口①回归)'
     i_plan = src.index('action = match.strategy.decide_shop_action')
     i_copy = src.index(copy_line)
-    i_rec = src.index('recorder.record_decision(state, target_name')
-    assert i_plan < i_copy < i_rec, '补拷必须在决策之后、record 之前(行为边界)'
+    assert i_plan < i_copy, '补拷必须在决策循环之后(行为边界)'
 
 
-def test_director_record_step_copies_owned_pool_on_state_copy() -> None:
-    """cw_screen_prep._record_step 步进站点:copy 后补拷(防污染 obs 决策输入)。"""
+def test_director_record_step_is_retired_noop_shell() -> None:
+    """cw_screen_prep._record_step = 退役 no-op 壳(删除波 1):方法在场
+    (harness 桩面契约)但零落盘;旧「copy→补拷→record」顺序锁随写端消亡。"""
     src = _src('operations/cw_screen/cw_screen_prep.py')
     i_step = src.index('def _record_step')
-    i_copy = src.index('st = st.copy()', i_step)
-    i_equips = src.index('last_owned_equips', i_step)
-    i_rec = src.index('recorder.record_decision(', i_step)
-    assert i_step < i_copy < i_equips < i_rec, \
-        '_record_step 必须先 copy 再补拷 equips 再 record(W222 缺口①回归)'
-
-
-def test_record_decision_state_carries_equips(tmp_path) -> None:
-    """端到端空值/非空回归:state.equips 经 serialize 落 decisions 行。"""
-    # 分包期 6 消费面重写遗留修复:本文件 import 别名是 recorder 模块
-    # (recorder as cw_telemetry),TelemetryRecorder 类在 recorder 模块;
-    # 单例(_RECORDER 等)在 state 模块,桩点处另引 state。
-    rec = cw_telemetry.TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    st = GameState(gold=50, round_num=1, plane=1)
-    st.equips = ['财富宝钻', '分身墨镜', '拆装扳手']
-    rec.record_decision('w222', 'A8', st, '', {}, {}, [])
-    rows = [json.loads(r) for r in
-            (tmp_path / 'decisions.jsonl').read_text(encoding='utf-8').splitlines()]
-    # 全量语义(工具同进快照,ADR-0387):不专名、只锁非空与成员
-    assert set(rows[-1]['state']['equips']) == {'财富宝钻', '分身墨镜', '拆装扳手'}
-    # 空值语义:默认 GameState → [](不造出假持有)
-    rec.record_decision('w222', 'A8', GameState(), '', {}, {}, [])
-    rows = [json.loads(r) for r in
-            (tmp_path / 'decisions.jsonl').read_text(encoding='utf-8').splitlines()]
-    assert rows[-1]['state']['equips'] == []
+    assert 'record_decision' not in src[i_step:i_step + 600], \
+        '_record_step 壳内不得残留 decisions 写入(防半删)'
 
 
 # ===== 缺口②:简报日志可见性(死 logger)=====
@@ -252,79 +206,13 @@ def test_briefing_modules_use_framework_logger() -> None:
 
 
 # ==================== w253_boss_names_telemetry ====================
+# 删除波 1:boss_names/难度/词缀的 outcomes 行落盘面(record_outcome)已退役;
+# 三态语义(实采保位透传/缺省/空采)现役归宿 = session 直写链
+# (briefing_bosses/selected_difficulty/briefing_affixes → 观察半), 行内
+# 三键按历史数据只读口径冻结。存档读端兼容锁保留(下方)。
 
-from types import SimpleNamespace
-
-from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.telemetry.query import read_jsonl
 from sr_od.application.currency_war.telemetry.schema import OutcomeRecord
-from sr_od.application.currency_war.telemetry.state import set_ctx_match
-
-
-def _rec(tmp_path):
-    return TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-
-
-def test_record_outcome_boss_names_roundtrip(tmp_path) -> None:
-    """session.briefing_bosses 有实采真值 → 行带 boss_names,None 徽章态**保位**透传。"""
-    set_ctx_match(SimpleNamespace(session=SimpleNamespace(
-        target_comp=None,
-        last_state=GameState(),
-        briefing_bosses=['浮黎', None, '星期日'],
-        selected_difficulty='A4',
-        briefing_affixes=['伤害提高', '生命降低'],
-    )))
-    try:
-        rec = _rec(tmp_path)
-        rec.record_outcome('r1', RoundOutcome(round_num=9, plane=1, node_type='boss',
-                                              comp_tag='c', hp_after=60))
-        lines = read_jsonl(tmp_path / 'outcomes.jsonl')
-        assert len(lines) == 1
-        row = lines[0]
-        # 位面序全量 3 元素;None 位面照 None 写在原位(防左移错位)
-        assert row['boss_names'] == ['浮黎', None, '星期日']
-        assert row['selected_difficulty'] == 'A4'
-        assert row['enemy_affixes'] == ['伤害提高', '生命降低']
-    finally:
-        set_ctx_match(None)
-
-
-def test_record_outcome_no_session_defaults(tmp_path) -> None:
-    """无 ctx match/session 缺字段 → 落默认值(boss_names=None),记录不被阻塞。"""
-    set_ctx_match(SimpleNamespace(session=SimpleNamespace(
-        target_comp=None, last_state=GameState(),
-    )))   # 无 briefing_bosses/难度/词缀属性
-    try:
-        rec = _rec(tmp_path)
-        # 接管局开局:briefing_bosses 尚空(list 空)也落 None(未采 ≠ 全 None 行)
-        rec.record_outcome('r1', RoundOutcome(round_num=1, plane=1, node_type='普通战斗',
-                                              comp_tag='?', hp_after=100))
-        set_ctx_match(None)   # 第二行彻底无 ctx(合成补给路径等)
-        rec.record_outcome('r1', RoundOutcome(round_num=2, plane=1, node_type='补给',
-                                              comp_tag='?', hp_after=99))
-        rows = read_jsonl(tmp_path / 'outcomes.jsonl')
-        for row in rows:
-            assert row['boss_names'] is None
-            assert row['selected_difficulty'] == ''
-            assert row['enemy_affixes'] == []
-    finally:
-        set_ctx_match(None)
-
-
-def test_record_outcome_empty_briefing_bosses_is_none(tmp_path) -> None:
-    """briefing_bosses=[](未采,接管局常态)→ boss_names=None(区分「采到但徽章态」)。"""
-    set_ctx_match(SimpleNamespace(session=SimpleNamespace(
-        target_comp=None, last_state=GameState(), briefing_bosses=[],
-    )))
-    try:
-        rec = _rec(tmp_path)
-        rec.record_outcome('r1', RoundOutcome(round_num=5, plane=1, node_type='普通战斗',
-                                              comp_tag='c', hp_after=80))
-        (row,) = read_jsonl(tmp_path / 'outcomes.jsonl')
-        assert row['boss_names'] is None
-    finally:
-        set_ctx_match(None)
-
 
 # ===== 旧 schema 兼容锁 =====
 

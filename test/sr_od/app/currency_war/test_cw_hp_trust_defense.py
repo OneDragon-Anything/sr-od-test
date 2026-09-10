@@ -295,52 +295,44 @@ def test_r1_retry_read_hp_persistent_miss_honest_none(
     assert calls['n'] == 2   # 恰好重试上限,不无限等
 
 
-def _record_one(st: GameState, run_id: str, tmp_path) -> dict:
-    """记录一帧决策迹并读回(decisions.jsonl 单行;tmp_path 隔离零副作用)。"""
-    from sr_od.application.currency_war.telemetry.recorder import (
-        TelemetryRecorder,
-    )
-    rec = TelemetryRecorder(replay_dir=tmp_path, enabled=True)
-    rec.record_decision(run_id, 'A1', st, '', {}, {}, [])
-    import json
-    lines = (tmp_path / 'decisions.jsonl').read_text(
-        encoding='utf-8').strip().splitlines()
-    return json.loads(lines[-1])
+def _state_payload(st: GameState) -> dict:
+    """state 诚实位形状(删除波 1 重写锚:decisions 行写入退役,hp 诚实性
+    语义的现役载体 = state 序列化形状,判读/档案读链消费同面)。"""
+    from sr_od.application.currency_war.telemetry.schema import serialize_state
+    return serialize_state(st)
 
 
 def test_r1_none_hp_trace_none_not_100(tmp_path) -> None:
-    """r1 无真值帧(hp=None,两位皆 False)→ 决策迹 hp=None 直通。
+    """r1 无真值帧(hp=None,两位皆 False)→ 序列化 hp=None 直通。
 
-    W823 None 化后对账层不再产 100 兜底——recorder 的 r1 特例臂退役,
-    直通写 state.hp;真值帧照记(见下一条)。"""
+    W823 None 化后对账层不再产 100 兜底——直通写 state.hp;真值帧照记
+    (见下一条)。原 decisions 行落盘面随删除波 1 退役。"""
     st = _state_with_bits(None, False, False)   # 诚实未知形态(None 化 producer 唯一产出)
     st.plane, st.round_num = 1, 1
-    row = _record_one(st, 't-r1-none', tmp_path)
-    assert row['hp'] is None
-    assert row['hp_readable'] is False
+    payload = _state_payload(st)
+    assert payload['hp'] is None
+    assert payload['hp_readable'] is False
 
 
 def test_r1_real_read_frame_trace_keeps_value(tmp_path) -> None:
-    """r1 真读帧(读到的值即 trusted)→ trace.hp=读数值照记(非 100 也照记)。"""
+    """r1 真读帧(读到的值即 trusted)→ 序列化 hp=读数值照记(非 100 也照记)。"""
     st = _state_with_bits(80, True, True)
     st.plane, st.round_num = 1, 1
-    row = _record_one(st, 't-r1-hit', tmp_path)
-    assert row['hp'] == 80
-    assert row['hp_readable'] is True
+    payload = _state_payload(st)
+    assert payload['hp'] == 80
+    assert payload['hp_readable'] is True
 
 
 def test_r2_unread_frame_trace_unchanged(tmp_path) -> None:
     """r2+ 不变:同节点沿用帧 (16, False, True) 的 hp=16 照记(结算真值
     链/新鲜度门口径零回归);r2 两位皆 False 帧也直通写 None——诚实未知
-    不分轮次(r1 特例臂退役后 recorder 无任何按轮分支,按轮特化回归即红)。"""
+    不分轮次(recorder 无任何按轮分支的语义随写端退役移交序列化单一源)。"""
     st = _state_with_bits(16, False, True)
     st.plane, st.round_num = 1, 2
-    row = _record_one(st, 't-r2', tmp_path)
-    assert row['hp'] == 16
+    assert _state_payload(st)['hp'] == 16
     st2 = _state_with_bits(None, False, False)   # 诚实未知形态(原 docstring 声称、原断言面缺位,W823)
     st2.plane, st2.round_num = 1, 2
-    row2 = _record_one(st2, 't-r2-none', tmp_path)
-    assert row2['hp'] is None
+    assert _state_payload(st2)['hp'] is None
 
 
 def test_r1_rule_frame_match_archive_none_honest() -> None:

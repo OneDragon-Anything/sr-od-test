@@ -83,14 +83,14 @@ def _wired_read_env(monkeypatch, tmp_path, hp_opt):
     """read_game_state 真链最小桩面(reader 全桩,只留 hp 现读可变)。
 
     手法镜像 test_cw_arbitration._stub_read_game_state(reader 桩按模块属性
-    打);冲突账本重定向 tmp_path(真值下行帧经 ADR-0431「观察缺口」臂留证,
-    落 tmp 不写真实 .debug/)。返回 (obs 模块, session, ctx)。
+    打);删除波 1:冲突证据行归宿 = journal obs_event,本 helper 辖 hp 读链
+    (留证行非断言面,无需装账本——obs_conflict 无账本时零产出、不写真实
+    .debug/)。返回 (obs 模块, session, ctx)。
     """
     from types import SimpleNamespace
 
     import sr_od.application.currency_war.kernel.cw_observe as core_obs
     import sr_od.application.currency_war.obs.cw_observation as obs
-    monkeypatch.setattr(core_obs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
     monkeypatch.setattr(core_obs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(obs, 'is_prep_like_frame', lambda c, s: True)
     monkeypatch.setattr(obs, '_board_pairs',

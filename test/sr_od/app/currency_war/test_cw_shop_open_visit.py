@@ -19,14 +19,13 @@ test_cw_shop_open_branch.py;run_buy_waves 循环内部语义(刷新终结/帧帽
 test_cw_shop_refresh._make_op 同款,不跨文件 import 测试私有夹具。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import pathlib
 from typing import Any
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     CloseShop,
@@ -110,8 +109,8 @@ def _make_prep(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
                         lambda *a, **k: _shop_cards(_OLD_NAMES))
     monkeypatch.setattr(cwo, 'read_hp_opt', lambda *a, **k: None)
     monkeypatch.setattr(cwo, 'read_phase_round', lambda *a, **k: (1, 5))
-    monkeypatch.setattr(cw_telemetry, 'set_unit_exec_facts',
-                        lambda **k: None)
+    # (set_unit_exec_facts 暂存槽桩已随删除波 1 移除——spend_ledger 写入端
+    #  退役,执行事实在账面走 receipts 发射行。)
     # 决策帧留证钩子桩(零真实落盘;挂点行在生产代码中保留)
     monkeypatch.setattr(buy_cards_mod, 'save_decision_frame',
                         lambda *a, **k: 'stub.png')

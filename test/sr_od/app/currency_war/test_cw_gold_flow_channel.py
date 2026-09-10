@@ -79,45 +79,14 @@ def replay(tmp_path: Path) -> Path:
     return rd
 
 
-# ===== 1. 记录端 =====
+# ===== 1. 记录端(删除波 1 退役重写)=====
 
-def test_record_modality_gold_writes_row(tmp_path: Path,
-                                         monkeypatch: pytest.MonkeyPatch):
-    """模块级入口落 exogenous 行:kind/choice 键面锁(delta 符号 = 后−前)。"""
-    tmp_rec = rec.TelemetryRecorder(tmp_path, enabled=True)
-    monkeypatch.setattr(rec._telstate, '_CURRENT_RUN_ID', 'run_x')
-    monkeypatch.setattr(rec._telstate, 'get_recorder', lambda: tmp_rec)
-    rec.record_modality_gold('spheres', 2, 5, 30, 33)
-    rows = [json.loads(ln) for ln in
-            (tmp_path / 'exogenous.jsonl').open(encoding='utf-8') if ln.strip()]
-    assert len(rows) == 1
-    r = rows[0]
-    assert r['kind'] == 'modality_gold'
-    assert r['run_id'] == 'run_x' and r['round_num'] == 5
-    ch = r['choice']
-    assert ch['node'] == 'spheres' and ch['plane'] == 2
-    assert ch['gold_before'] == 30 and ch['gold_after'] == 33
-    assert ch['gold_delta'] == 3
-
-
-def test_record_modality_gold_miss_is_honest_none(
-        tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """OCR miss(gold 传 None)→ delta=None 诚实缺省,不冒认真值。"""
-    tmp_rec = rec.TelemetryRecorder(tmp_path, enabled=True)
-    monkeypatch.setattr(rec._telstate, '_CURRENT_RUN_ID', 'run_x')
-    monkeypatch.setattr(rec._telstate, 'get_recorder', lambda: tmp_rec)
-    rec.record_modality_gold('spheres', 1, 1, None, 12)
-    r = [json.loads(ln) for ln in
-         (tmp_path / 'exogenous.jsonl').open(encoding='utf-8') if ln.strip()][0]
-    assert r['choice']['gold_delta'] is None
-
-
-def test_record_modality_gold_noop_outside_run(
-        tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """局外(run_id 空)no-op——与 record_exogenous 同门控,不产孤儿行。"""
-    monkeypatch.setattr(rec._telstate, '_CURRENT_RUN_ID', '')
-    rec.record_modality_gold('spheres', 1, 1, 0, 5)   # 不落盘即过
-    assert not (tmp_path / 'exogenous.jsonl').exists()
+def test_modality_gold_writer_retired(tmp_path: Path) -> None:
+    """记录端 record_modality_gold 已随 exogenous 流写入端退役(删除波 1,
+    防半删);模态逐笔的现役归宿 = journal 金域写入行(收编归 M2/M4 批)。
+    查询端对冻结存量档案的视图契约由下方 2/3 节锁继续承。"""
+    assert not hasattr(rec, 'record_modality_gold'), \
+        'record_modality_gold 应已随删除波 1 删除(防半删)'
 
 
 # ===== 2. 查询端 =====

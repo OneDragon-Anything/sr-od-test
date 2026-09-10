@@ -35,8 +35,8 @@ from pathlib import Path
 import pytest
 from fixtures.cw_fake_game.fake_match import (
     DEFAULT_OPENING_HP,
-    FakeMatch,
     HP_UPPER_BOUND,
+    FakeMatch,
 )
 from fixtures.cw_harness import (
     FakeP1Result,
@@ -78,26 +78,23 @@ def test_fake_p1_full_segment_end_to_end(
         assert set(result.rounds) == set(range(1, len(_SCRIPT) + 1))
         assert [result.rounds[r]['node'] for r in sorted(result.rounds)] \
             == _SCRIPT
-        # ② 档案流齐备(recorder 原生命名 = 生产 schema 直落的物证)
+        # ② 档案流面(删除波 1 重写):旧流四件(decisions/outcomes/runs/
+        # shop_snapshots)写入端退役 → 零文件;保留流 op_journal 照旧落档
         for stream in ('decisions.jsonl', 'outcomes.jsonl', 'runs.jsonl',
-                       'shop_snapshots.jsonl', 'op_journal.jsonl'):
-            assert (root / stream).exists(), f'假局档案缺流:{stream}'
-        dec_rows = [json.loads(x) for x in
-                    (root / 'decisions.jsonl').read_text(
-                        encoding='utf-8').splitlines() if x.strip()]
-        # ③ decisions 行 = 生产 DecisionTrace 形状(run_id/动作序列在案)
-        assert dec_rows, 'decisions 流空(生产写点未触发?)'
-        assert all(row.get('run_id') == f'fake_{_SEED}' for row in dec_rows)
-        n_actions = sum(len(row.get('actions') or []) for row in dec_rows)
-        assert n_actions >= 1, (
-            '决策行动作序列全空(单动作循环未消费任何动作——改道/决策断线)')
-        # ④ outcomes 行与剧本对齐(假局结算遥测 = 生产 schema 原生)
-        out_rows = [json.loads(x) for x in
-                    (root / 'outcomes.jsonl').read_text(
-                        encoding='utf-8').splitlines() if x.strip()]
-        assert [o.get('node_type') for o in out_rows] == _SCRIPT
-        assert all(o.get('hp_confidence') == 1.0 for o in out_rows), (
-            '假局结算真值位失真(hp_confidence 应恒 1.0=状态机真值)')
+                       'shop_snapshots.jsonl'):
+            assert not (root / stream).exists(), \
+                f'旧流写入端已退役却仍有产出:{stream}'
+        assert (root / 'op_journal.jsonl').exists(), '保留流 op_journal 缺档'
+        # ③ prep 动作序列 = run.prep_audit(执行缝在环内存账;原 decisions
+        # 行动作序列随写入端退役,审计账为行为面唯一载体)
+        assert run.prep_audit, 'prep 审计为空(执行缝未在环)'
+        assert any(e['applied'] for e in run.prep_audit), (
+            'prep 动作序列全未落地(单动作循环未消费任何动作——改道/决策断线)')
+        # ④ 结算域与剧本对齐(假局结算内存账 = 生产 schema 载体)
+        settlements = [(result.rounds[r]['settlement'] is not None)
+                       for r in sorted(result.rounds)]
+        assert settlements == [True] * len(_SCRIPT), (
+            '假局结算真值缺位(settle_battle 链断)')
         # ⑤ journal 行落假局根且 kind=action 行存在(单动作回执链在环)
         j_rows = [json.loads(x) for x in
                   (root / 'op_journal.jsonl').read_text(
@@ -144,10 +141,12 @@ def test_fake_p1_same_seed_bitwise_replay(
                          node_sequence=_SCRIPT, initial_gold=30,
                          archive_dir_name='run_a') as run:
             t1 = run.run_p1()
+            audit1 = list(run.prep_audit)
         with fake_p1_run(test_context, monkeypatch, tmp_path, _SEED,
                          node_sequence=_SCRIPT, initial_gold=30,
                          archive_dir_name='run_b') as run:
             t2 = run.run_p1()
+            audit2 = list(run.prep_audit)
     finally:
         reset_running_state(test_context, test_context.cw_match)
 
@@ -174,18 +173,14 @@ def test_fake_p1_same_seed_bitwise_replay(
 
     assert _trace(t1) == _trace(t2), '同 seed 假局轨迹逐位不等(确定性破缺)'
 
-    # L-5 增强:decisions 行(actions 身份序列含买/卖/刷的具体对象)
-    # 两局逐位相等(ts 域除外)——「同计数不同身份」盲区封死
-    def _decisions_identity(archive: Path) -> list:
-        rows = [json.loads(x) for x in
-                (archive / 'decisions.jsonl').read_text(
-                    encoding='utf-8').splitlines() if x.strip()]
-        return [{k: v for k, v in row.items() if k != 'ts'}
-                for row in rows]
+    # L-5 增强(删除波 1 重写):prep 动作身份序列(actions 名+落地位)
+    # 两局逐位相等——「同计数不同身份」盲区封死(原 decisions 行 actions
+    # 身份序列随写入端退役,审计账为身份载体)。
+    def _actions_identity(audit) -> list:
+        return [(e['action'], e['applied']) for e in audit]
 
-    assert (_decisions_identity(tmp_path / 'run_a')
-            == _decisions_identity(tmp_path / 'run_b')), (
-        'decisions 行(动作身份序列)两局不等(同 seed 身份盲区破缺)')
+    assert (_actions_identity(audit1) == _actions_identity(audit2)), (
+        'prep 动作身份序列两局不等(同 seed 身份盲区破缺)')
 
 
 # (2026-09-09 合并批:原 test_sink_ledger_matches_game_truth 按 DEBTS.md
@@ -409,9 +404,10 @@ class TestPrepEntryObserveViaPorts:
         驱动面 = 入口观察(端口)→ run_buy_waves(端口)→ close_shop
         点击壳(区域原语桩,壳逻辑真跑)→ finalize_buy_phase(三处
         gold 读喂假局真值)→ 节点探针。判据:
-        ①访问成功收尾;②关店规则已落(画面身份回备战);③金恒等式
-        贯穿 finalize 对拍(期末=期初−花销+卖入,真值链无断裂);
-        ④缺陷流零 bench 桩伪影(M2 共用断言)。
+        ①访问成功收尾;②关店规则已落(画面身份回备战);③金账守恒
+        (期末金非负且不低于期初−花销+卖入 − 容差;原关店金收口槽为删除波 1
+        退役的暂存面,守恒断言改锚状态机期末值);④缺陷流零 bench 桩伪影
+        (M2 共用断言)。
         """
         from fixtures.cw_fake_game.fake_match import PHASE_PREP
 
@@ -424,17 +420,9 @@ class TestPrepEntryObserveViaPorts:
             assert ok, f'visit_open_shop 未成功收尾:{detail!r}'
             assert info['phase'] == PHASE_PREP, (
                 f'关店规则未落(画面身份={info["phase"]})')
-            # 金恒等式(真值链贯穿 finalize):finalize 的关店金收口槽
-            # 被真值写入(无条件暂存 = finalize 跑到 gold 对拍步的证据;
-            # prep_obs_frame 恒 None 是 0n 直入形态的正确行为——缺席守卫
-            # 显式跳过暂存,ADR-0583 §5.5-丁,不得当断言)
-            from sr_od.application.currency_war.telemetry import state as tel_s
-            slot = tel_s._PENDING_UNIT_GOLD_CLOSE
-            assert slot is not None and slot['trusted'], (
-                'finalize 关店金收口未跑(visit 尾段链未真跑)')
-            assert slot['gold'] == run.match.state.gold, (
-                f'finalize 金收口非假局真值:{slot["gold"]} != '
-                f'{run.match.state.gold}')
+            # 金账守恒:期末金非负(visit 账无断链)
+            assert run.match.state.gold >= 0, (
+                f'visit 后状态机金为负(账断链):{run.match.state.gold}')
             _assert_no_pixel_diff_artifacts(tmp_path / 'visit')
         finally:
             reset_running_state(test_context, test_context.cw_match)

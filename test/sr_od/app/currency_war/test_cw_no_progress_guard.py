@@ -715,39 +715,26 @@ def test_loop_exhaustion_attempts_reset_across_episodes(
     assert stops == [], f'状态推进环不得停机:{stops!r}'
 
 
-def test_loop_exhaustion_success_registers_flow_heartbeat(
+def test_loop_exhaustion_heartbeat_retired_with_writer(
         test_context, monkeypatch) -> None:
-    """发射成功帧心跳登记锁(局33 复盘定谳的静默失效修复):收益耗尽臂
-    发射成功必须经 register_flow_heartbeat 登记 decisions 心跳行
-    (sid=cw:flow:exhaustion_battle_launch)——接线断裂时本锁红
-    (旧病:_state.get_recorder() 恒 AttributeError 被 best-effort 静默吞,
-    心跳从未落盘且无任何可见信号)。"""
+    """删除波 1 退役锁:发射成功帧心跳行(register_flow_heartbeat →
+    decisions 行)已随旧流写入端退役删除——原接线断裂静默吞的病理面
+    连同写端整段消亡(局33 复盘定谳的失效修复由此失去对象)。发射链
+    行为面(收益耗尽臂 → 战斗发射)由上方无_progress 主链锁继续承。"""
     session = _session()
     stops: list = []
     flags: list = []
     op = _make_loop_op(test_context, monkeypatch, session, stops, flags,
                        sig=('RunDeploy',))
     from sr_od.application.currency_war.operations import cw_loop as loop_mod
-    beats: list = []
-    monkeypatch.setattr(loop_mod.state, 'get_recorder',
-                        lambda: SimpleNamespace(enabled=True))
-    # 策略失活检查在 recorder enabled 时走 read_phase_round(真 OCR)——
-    # 桩化为 None(零真识别;本锁只辖心跳登记面)
-    monkeypatch.setattr(loop_mod, 'read_phase_round',
-                        lambda ctx, screen: None)
-    monkeypatch.setattr(loop_mod.recorder, 'record_decision',
-                        lambda *a, **k: beats.append((a, k)))
     monkeypatch.setattr(loop_mod, 'readiness_battle_launch',
                         lambda op_, ctx_: (True, 'stub-launch'))
     with fast_sleep():
         for _ in range(4):
             op.loop()
-    assert len(beats) == 1, (
-        f'发射成功帧必须恰登记 1 条心跳行,实得 {len(beats)}')
-    _args, kwargs = beats[0]
-    assert kwargs.get('extra', {}).get('strategy_id') == \
-        'cw:flow:exhaustion_battle_launch', (
-        f'心跳行 strategy_id 接线错误:{kwargs!r}')
+    assert not hasattr(loop_mod, 'register_flow_heartbeat'), \
+        'register_flow_heartbeat 应已随删除波 1 删除(防半删)'
+    assert stops == [], f'状态推进环不得停机:{stops!r}'
 
 
 # ==================== F2 排除族(F2 边界;单一源 = prep_exhaustion_exclusion_reason)====================

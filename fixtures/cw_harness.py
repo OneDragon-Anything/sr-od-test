@@ -17,10 +17,10 @@
   旋转亮度帧、``new_bench_slots`` pixel-diff 读数按假局 bench 真值差分、
   stdlib sleep 桩(段顶 settle/刷新稳定门等待零信息量,先例 =
   test_cw_shop_refresh 同款);
-- **局终收口**:逐节点 outcome 行(生产 ``record_outcome`` schema 形状,
-  真值位恒真)+ 局终 run summary(经生产 ``state.record_run_summary``;
-  Δ池局终再生钩在 harness 内桩化——它是读实机档案并重写池快照的
-  真实副作用,测试零副作用纪律要求整链桩化,测试纪律 4)。
+- **局终收口**:逐节点结算行内存账(生产 ``record_outcome`` 写入已随
+  删除波 1 退役,结算行改由 ``fake_outcome_rows`` 承载)+ 局终收口位
+  (经生产 ``state.close_run``;删除波 1 后零落盘,置跨局 run_id 重铸位;
+  Δ池局终再生钩已随 runs 写入端退役不复存在,无桩化对象)。
 
 方案出处 = ``.debug/temp/currency_war/t120_sim_redesign/方案.md``
 §6.2 批 1 行(**易失产物**,ADR 落点待退役批分配,后续批回填)。
@@ -42,7 +42,7 @@ from sr_od.application.currency_war.operations import decision_frame_hooks as df
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CurrencyWarMatch,
 )
-from sr_od.application.currency_war.telemetry import op_journal, recorder
+from sr_od.application.currency_war.telemetry import op_journal
 from sr_od.application.currency_war.telemetry import state as tel_state
 
 if TYPE_CHECKING:
@@ -232,6 +232,9 @@ class FakeP1Run:
         self._branch_round_open: bool = False
         # 最近一次节点结算回执(战斗窗/供给分支的环境承接记录)
         self.last_settlement: Any = None
+        # 结算行内存账(删除波 1:生产 record_outcome 写入退役,假局结算
+        # 行改由本列表承载;批账本由 runner 落盘面消费)
+        self.fake_outcome_rows: list[dict] = []
         # —— T-204(投资剧本注入域)状态 ——
         # 逐回合收入分解/期初金留证(分支驱动路径 _open_branch_round 的
         # apply_income 返回值吸收位;对拍锚/离线 runner 消费)
@@ -308,11 +311,8 @@ class FakeP1Run:
             real_record_defect(*a, **k)
 
         monkeypatch.setattr(defects, 'record_defect', _filtered_defect)
-        # Δ池局终再生钩桩化:它读实机档案并重写池快照数据文件(真实
-        # 副作用;recorder.record_run_summary 尾部无条件调用)——测试
-        # 零副作用纪律要求沿调用链整链桩化,不是「我没调 summary」式回避
-        monkeypatch.setattr(recorder, '_regenerate_delta_pool_after_run',
-                            lambda: None)
+        # (Δ池局终再生钩桩已随删除波 1 移除——runs 流写入端退役后该钩
+        #  不复存在,无真实副作用面可桩。)
         # —— N1 归因处置(批 3;T-120-batch2-r1.md N1)——
         # 残留源头 = 真 op 链路中的生产停机路径写 run_context.
         # last_run_result:探针实证唯一命中 = cw_screen_prep
@@ -963,7 +963,6 @@ class FakeP1Run:
         画面帧,假环境结构性零信息——sleep 全桩同族申报)。返回终态。
         """
         from fixtures.cw_fake_game.fake_match import PHASE_SUPPLY
-        from fixtures.cw_fake_game.fake_ports import FakeCwObserver
         from one_dragon.base.geometry.point import Point
         from sr_od.application.currency_war.kernel.cw_events import (
             SupplyOption,
@@ -992,10 +991,8 @@ class FakeP1Run:
 
         monkeypatch.setattr(supply_mod, 'read_supply_options',
                             _fake_read_options)
-        monkeypatch.setattr(
-            supply_mod, 'read_game_state',
-            lambda ctx_, _screen, phase=None:
-                FakeCwObserver(m).observe_prep(ctx_, phase).state)
+        # (supply_node 模块级 read_game_state 读点已随删除波 1 退役删除;
+        #  补给半环行为面 = read_supply_options/确认登记,此桩随读点消失。)
 
         class _Res:
             def __init__(self, ok: bool) -> None:
@@ -1353,7 +1350,6 @@ class FakeP1Run:
         ``settle=False`` 时跳过战斗结算(商店域单轮测试用)。
         """
         from fixtures.cw_fake_game import rules
-        from sr_od.application.currency_war.telemetry import recorder as rec
 
         result = FakeP1Result(seed=self.seed)
         for r, node in enumerate(list(self.match.node_sequence), start=1):
@@ -1412,10 +1408,13 @@ class FakeP1Run:
             settlement = None
             if settle:
                 settlement = self.match.settle_battle(node)
-                rec.record_outcome(FakeRoundOutcome(
-                    round_num=r, plane=self.match.state.plane,
-                    node_type=node, hp_after=settlement.hp_after,
-                    streak=self.match.state.streak))
+                # (生产 record_outcome 写入已随删除波 1 退役;假局结算行
+                #  照旧随 result.rounds 内存账承载,批账本由 runner 落盘面。)
+                self.fake_outcome_rows.append({
+                    'run_id': tel_state.current_run_id(),
+                    'round_num': r, 'plane': self.match.state.plane,
+                    'node_type': node, 'hp_after': settlement.hp_after,
+                    'streak': self.match.state.streak})
             row['settlement'] = settlement
             result.rounds[r] = row
             if row['launched']:
@@ -1423,8 +1422,8 @@ class FakeP1Run:
             if phase['armed_evaluated']:
                 result.armed_evaluated = True
             self.match.advance_node()
-        # 局终收口(生产 schema;Δ池再生钩已在桩面截停)
-        tel_state.record_run_summary(
+        # 局终收口(生产收口位;删除波 1 后零落盘,置跨局重铸位)
+        tel_state.close_run(
             'completed', plane_reached=self.match.state.plane,
             rounds_survived=len(result.rounds),
             final_hp=int(self.match.state.hp or 0))

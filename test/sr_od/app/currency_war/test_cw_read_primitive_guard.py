@@ -63,7 +63,6 @@ _LIVE_SEAL: frozenset[tuple[str, str, str]] = frozenset({
         ('application/currency_war/operations/cw_op/cw_op_deploy.py', '_sell_offtarget_deployed', 'read_deployed_chars'),
         ('application/currency_war/operations/cw_op/cw_op_deploy.py', 'deploy', 'read_bench_chars'),
         ('application/currency_war/operations/cw_op/cw_op_deploy.py', 'deploy', 'read_deployed_chars'),
-        ('application/currency_war/operations/cw_op/cw_shop_action_ops.py', 'execute', 'read_gold'),
         ('application/currency_war/operations/cw_op/cw_shop_action_ops.py', 'execute', 'read_shop_cards'),
         ('application/currency_war/operations/cw_screen/cw_screen_prep.py', '_observe', 'observe_full'),
         ('application/currency_war/operations/cw_screen/cw_screen_prep.py', '_observe', 'read_deployed_count'),
@@ -75,7 +74,8 @@ _LIVE_SEAL: frozenset[tuple[str, str, str]] = frozenset({
 RESIDUAL: frozenset[tuple[str, str, str]] = frozenset({
         ('application/currency_war/operations/cw_entry/cw_entry_plane_intel.py', 'takeover', 'read_phase_round'),
         ('application/currency_war/operations/cw_loop.py', '_launch_frame_arbitration', 'read_game_state'),
-        ('application/currency_war/operations/cw_loop.py', '_record_supply_outcome', 'read_phase_round'),
+        # (删除波 1:loop._record_supply_outcome read_phase_round 登记项已删
+        #  ——合成结算行随旧流写入端退役,读点消失。)
         ('application/currency_war/operations/cw_loop.py', 'loop', 'read_game_state'),
         ('application/currency_war/operations/cw_loop.py', 'loop', 'read_node_sequence'),
         ('application/currency_war/operations/cw_loop.py', 'loop', 'read_phase_round'),
@@ -100,8 +100,10 @@ RESIDUAL: frozenset[tuple[str, str, str]] = frozenset({
         ('application/currency_war/operations/cw_screen/cw_screen_prep.py', 'finalize_buy_phase', 'read_gold_settled'),
         ('application/currency_war/operations/cw_screen/cw_screen_prep.py', 'lifecycle_decision_cycle', 'read_deployed_count'),
         ('application/currency_war/operations/cw_screen/cw_screen_prep.py', 'run', 'read_deployed_count'),
-        ('application/currency_war/operations/cw_screen/cw_screen_supply_node.py', '_do_action', 'read_game_state'),
-        ('application/currency_war/operations/cw_screen/cw_screen_supply_node.py', '_supply_detour_collect', 'read_game_state'),
+        # (删除波 1:supply_node 两处登记项已删——detour 快照读/选卡 state 读
+        #  随旧流写入端退役,读点同批消失;去向 = 读点消亡,无改道。)
+        # (删除波 1:loop._record_supply_outcome / shop_action_ops.execute 两处
+        #  登记项已删——合成结算行/执行段读数随旧流写入端退役,读点同批消失。)
 })
 
 _EXPECTED: frozenset[tuple[str, str, str]] = _LIVE_SEAL | RESIDUAL
@@ -202,12 +204,8 @@ _GS_CLOSURE: dict[tuple[str, str], tuple[int, str]] = {
     ('application/currency_war/operations/cw_screen/cw_screen_prep.py',
      'finalize_buy_phase'): (
         1, '族③试点迁移收编类:基类 observe 段接管后归 obs 族并移出本表'),
-    ('application/currency_war/operations/cw_screen/cw_screen_supply_node.py',
-     '_supply_detour_collect'): (
-        1, '族③试点迁移收编类:基类 observe 段接管后归 obs 族并移出本表'),
-    ('application/currency_war/operations/cw_screen/cw_screen_supply_node.py',
-     '_do_action'): (
-        1, '族③试点迁移收编类:基类 observe 段接管后归 obs 族并移出本表'),
+    # (删除波 1:supply_node 两处登记项已删——detour 快照读/选卡读_game_state
+    #  随旧流写入端退役,读点同批消失;去向 = 读点消亡,无改道。)
 }
 
 

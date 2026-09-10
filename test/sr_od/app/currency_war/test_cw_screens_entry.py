@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_screens_entry 主题锁(CW 入口链行为 + 入口屏观察 reader 真帧锁)。
 
 成员(主题段索引):
@@ -16,14 +15,21 @@ id_mark 全命中 + 全屏库双向碰撞);本文件只留扫描覆盖不到的�
 """
 from __future__ import annotations
 
-
 # ==================== test_currency_war_entry_flow ====================
-
 import pytest
 
-from sr_od.application.currency_war.operations.cw_entry.cw_entry_start import  CwEntryStart, try_handle_entry_popups
+from sr_od.application.currency_war.operations.cw_entry.cw_entry_start import (
+    CwEntryStart,
+    try_handle_entry_popups,
+)
 from test.conftest import SrTestContext
-from test.harness.fixture_controller import  FixtureController, WatchdogOperationMixin, enter_running_state, fast_sleep, reset_running_state
+from test.harness.fixture_controller import (
+    FixtureController,
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
 
 
 class _WatchedCwEntryStart(WatchdogOperationMixin, CwEntryStart):
@@ -751,7 +757,9 @@ def test_entry_popup_guard_order_supply_before_detail_family() -> None:
 from unittest.mock import MagicMock
 
 import sr_od.application.currency_war.obs.recognizers.briefing_recognizer as mod
-from sr_od.application.currency_war.obs.recognizers.briefing_recognizer import  BriefingRecognizer
+from sr_od.application.currency_war.obs.recognizers.briefing_recognizer import (
+    BriefingRecognizer,
+)
 
 
 def test_recognize_composes_pure_reads(monkeypatch) -> None:
@@ -776,7 +784,9 @@ def test_does_not_import_click_based_reader() -> None:
 from types import SimpleNamespace
 
 import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as _bp_mod
-from sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer import  BattlePrepRecognizer
+from sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer import (
+    BattlePrepRecognizer,
+)
 
 
 def test_test_battle_prep_recognizer_recognize_composes_pure_reads(monkeypatch) -> None:
@@ -944,13 +954,19 @@ def test_supply_options_five_column_fixture(test_context: SrTestContext) -> None
 # ==================== test_currency_war_shop ====================
 
 from pathlib import Path
+
 from cv2.typing import MatLike
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.kernel.cw_state import HP_SAFE_THRESHOLD
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.obs.cw_observation import  read_game_state, read_hp_opt, read_shop_cards
+from sr_od.application.currency_war.kernel.cw_state import HP_SAFE_THRESHOLD
+from sr_od.application.currency_war.obs.cw_observation import (
+    read_game_state,
+    read_hp_opt,
+    read_shop_cards,
+)
+
 
 def _has_text(ctx: SrTestContext, screen: MatLike, kw: str) -> bool:
     """全屏 OCR,判断关键词是否出现(子串,容 OCR 分词差异)。"""
@@ -1029,31 +1045,21 @@ def test_prep_anchor_buyexp_present_on_prep_absent_elsewhere(test_context, test_
 #  真帧精确值超集(4 帧 cap/count 全锁),本测的 None 容忍范围断言为判别力子集。)
 
 
-# ==================== w518_briefing_telemetry ====================
+# ==================== w518_briefing_telemetry(删除波 1 退役)====================
 
 from sr_od.application.currency_war.operations.cw_screen import cw_screen_briefing
 
 
-def test_handle_briefing_records_telemetry(
+def test_handle_briefing_completes_without_old_stream_write(
     test_context: SrTestContext,
     fixture_controller: FixtureController,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """简报 op 行为锁:handle 真调遥测落账 record_exogenous(0, 'briefing')。
-
-    W518 断链事故回归锁(简报 op = CwScreenBriefing;test_cw_telemetry_collect 的
-    七 handler 接线表不含 briefing,w971_p3a 行为测把遥测桩掉不验 → 本测是简报
-    遥测接线唯一守卫)。落账调用被 contextlib.suppress 包裹,断链不红任何 op 流程
-    测,只红本锁——故必须行为级跑通 handle 验证,源码扫描不证明调用真发生。
-    隔离:reader 全桩空 + cw_match 桩 None(跳过 session 写,session 级 ctx 不污染)。
+    """简报 op 行为锁(删除波 1 重写):briefing 存证行已随 exogenous 流
+    写入端退役,W518 接线守卫随之消亡;本锁改辖「op 全程零 telemetry 依赖
+    照常走完」——session 三读数直写(行为面)与点击链由下方桩面承载。
+    隔离:reader 全桩空 + cw_match 桩 None(session 级 ctx 不污染)。
     """
-    captured: list[tuple[tuple, dict]] = []
-
-    def _record(*args: object, **kwargs: object) -> None:
-        captured.append((args, kwargs))
-
-    monkeypatch.setattr(cw_screen_briefing, 'cw_telemetry',
-                        SimpleNamespace(record_exogenous=_record))
     monkeypatch.setattr(cw_screen_briefing, 'read_affixes_with_pos', lambda ctx, screen: [])
     monkeypatch.setattr(cw_screen_briefing, 'read_bosses', lambda ctx, screen: [])
     monkeypatch.setattr(cw_screen_briefing, 'read_briefing_enemy_difficulty',
@@ -1091,7 +1097,3 @@ def test_handle_briefing_records_telemetry(
         reset_running_state(test_context, op)
 
     assert result.success, f'简报 op 应走完全程,实:{result.status}'
-    assert len(captured) == 1, f'遥测落账应恰好一次,实:{captured}'
-    args, kwargs = captured[0]
-    assert args[:2] == (0, 'briefing'), f'落账口径应为 (0, "briefing"),实:{args}'
-    assert 'affixes=' in str(kwargs.get('detail', '')), f'detail 应带三读数,实:{kwargs}'

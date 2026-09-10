@@ -18,7 +18,6 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_comps import (
-    COMP_LIBRARY,
     CORE_SINGLE_CARD_REGISTRY,
     get_comp,
 )
@@ -101,25 +100,6 @@ def _ct(sess: StrategySession) -> dict:
 
 def _own(*names: str) -> list[BenchChar]:
     return [_bc(n, slot=i + 1) for i, n in enumerate(names)]
-
-
-def _direction_line_with_exact_single() -> str:
-    """运行时派生:存在「核心全在手判活 ∧ 含恰一条单线成员」的线
-    (注册表演进时先在此定位构帧对象,不写死线名)。"""
-    for c in COMP_LIBRARY:
-        comp = get_comp(c.name)
-        if comp is None or comp.plaza_carry is None:
-            continue
-        st = _state(hp=100)
-        st.bench = _own(*comp.core_chars)
-        if arm_a_live_direction(st, IntentionState()) == c.name:
-            chars, _eq = cw_intention._line_hoard(comp)
-            singles = [m for m in sorted(chars)
-                       if hub_covered_lines(_state(), IntentionState(), m)
-                       == frozenset({c.name})]
-            if singles:
-                return c.name
-    raise AssertionError('注册表无「判活线含单线成员」构帧对象(注册表演进,锁需重推)')
 
 
 # ===== 正本 §5.2 锁 1/2:甲臂强锁门逐字 + 判死出辖 =====
@@ -672,7 +652,7 @@ class TestRetirementFaces:
         标识符扫描——墓碑注/退役注是注释与 docstring 文本,不构成代码
         引用,不误伤)。带变异自检(扫描器对注入代码形态能命中)。"""
         import ast
-        root = Path(cw_intention.__file__).parents[2]
+        root = Path(cw_intention.__file__).parents[1]
         hits: list[str] = []
         for py in root.rglob('*.py'):
             text = py.read_text(encoding='utf-8', errors='replace')

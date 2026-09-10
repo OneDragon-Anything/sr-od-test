@@ -35,7 +35,6 @@ from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.telemetry import recorder
 
 # ==================== 唯一 schema 锁:OBS_KEYS 登记门(自 test_cw_lock_path_obs_keys.py 迁入) ====================
 
@@ -67,9 +66,10 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
 
     (W971 05-battle §1 P4:结算链自 cw_loop 收编 CwScreenBattleWait,本桩随迁。)
     read_phase_round 桩返 ``read_phase``(模拟 last-known 缓存态);read_round_outcome
-    桩按入参回显 plane/round 并可控 killed/hp_confidence;cw_telemetry 写端 monkeypatch
-    捕获(自动还原);观察半写入面(ADR-0583 拆两半)以真实 StrategySession 承载,
-    断言 telemetry-only 面零写入(performance.history/pending 槽均空)。
+    桩按入参回显 plane/round 并可控 killed/hp_confidence;cw_telemetry 写端已随
+    删除波 1 退役(零落盘零零写入);观察半写入面(ADR-0583 拆两半)以真实
+    StrategySession 承载,断言 telemetry-only 面零写入(performance.history/
+    pending 槽均空)。
     """
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
@@ -78,13 +78,6 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
         StrategySession,
     )
 
-    captured: list[dict] = []
-
-    def _fake_record_outcome(outcome, source: str = '') -> None:
-        captured.append({'outcome': outcome, 'source': source})
-
-    monkeypatch.setattr(recorder, 'record_outcome', _fake_record_outcome)
-    monkeypatch.setattr(recorder, 'record_exogenous', lambda *a, **k: None)
     monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: read_phase)
 
     def _fake_read_outcome(ctx, screen, *, plane, round_num, comp_tag,
@@ -126,29 +119,24 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
         def round_by_find_area(self, screen, screen_name, area_name, **kw):
             return SimpleNamespace(is_success=False)   # T#103:boss 判定改 area(标识-首领)
 
-    return _Op(), captured
+    return _Op()
 
 
 def test_loss_page_records_row_telemetry_only(monkeypatch) -> None:
-    """败局页(killed=False)→ 落一行 source='loss_page';零策略/循环状态面。
+    """败局页(killed=False)→ telemetry-only 补录(删除波 1 后**零落盘零写入**)。
 
     断言面(ADR-0583 拆两半语义重推):telemetry-only 不写观察半
     (performance.history 空/last_streak 不动/last_hp 不写)也不写策略半
     (pending 槽空)→ prep 行为面零变更;_battle_ts 不清(ADR-0250 战斗
     窗口维持 1f 原语义)、_last_outcome_t 不写(killed 兜底对比链不受新
-    路径扰动)。
+    路径扰动)。原 source='loss_page' 行来源标记随 outcomes 流写入端退役。
     """
-    op, captured = _w239_p2r1_loss_outcome_make_loop(
+    op = _w239_p2r1_loss_outcome_make_loop(
         monkeypatch, read_phase=(2, 1),
         ocr_texts=['挑战结束', '2-1', '战斗', '-22', '挑战进度', '前往结算'],
         killed=False)
     _battle_ts_sentinel = op._st.battle_ts
     op._record_loss_page(screen=None)
-    assert len(captured) == 1
-    assert captured[0]['source'] == 'loss_page'
-    o = captured[0]['outcome']
-    assert o.plane == 2 and o.round_num == 1
-    assert o.killed is False
     _sess = op.ctx.cw_match.session
     assert len(_sess.performance.history) == 0         # 观察半零写入
     assert _sess.last_streak == 0                      # streak 不动(缺省)

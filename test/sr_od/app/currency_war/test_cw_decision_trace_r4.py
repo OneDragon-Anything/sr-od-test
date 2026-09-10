@@ -1,46 +1,25 @@
-"""统一state R4 策略侧遥测演进锁(DecisionTrace 瘦身演进第一批)。
+"""统一state R4 策略侧遥测演进锁(删除波 1 重写:写端退役,申报面守卫保留)。
 
 设计正本 = ADR-0630(统一 state 状态流水,持久结论单一源;.debug/temp
 工作稿为易失档)策略侧 state_ref 版本钉与逐项理由溯源面;账本裁定 =
 dag T-217 note 2026-09-10T12:33:16(策略侧遥测定稿:四要素/瘦身判据/动作
 计划逐项理由溯源)与 12:34:44(每决策一行,动作计划随行携带)。
 
-本文件锁四件:
-① state_ref 版本钉——决策行回溯流程侧账本版本 id(``BoardState.
-   current_version()`` 读口);R4返工方案 A 钉读点 = 「决策读取完成时点」:
-   段入口观察完成处捕获版本经 ``state_ref_version`` 传入落钉(锁①d 钉
-   「中途推进不漂移」/①e 钉缺省语义/①f 钉商店段接线);M4 窗内带
-   ``pin_scope='board_state'`` 显式标记(v3.3-M1:钉面≠决策消费面,
-   禁无标记的对账假结论);
-② 动作计划逐项理由溯源——actions 逐项 'reason' 归一键,从现役决策构建
-   链已有字段提取(不新算);
-③ 申报面锁——B 档快照重复候选字段仍在场(候裁不执行的结构性守卫,
-   误删即红)+ A 档删候选已删封闭锁与瘦身后 schema 形态封闭锁(③d)+
-   理由提取键序单一源;
-④ 消费方兼容面——旧档案行(无新字段)经规范读端零破坏(判读读面宽容
-   原则)。
+删除波 1(用户 2026-09-10 直迁裁定):本文件原辖的 decisions 行写端面
+(① state_ref 版本钉五支、② 理由溯源 record 路径四支、③c 行 shape 回归)
+随 record_decision 写入端整段退役——state_ref 钉与逐项理由的现役归宿 =
+策略侧决策行(两文件之二,M4 前落地),接线批重立锁。保留面:
+
+- 申报面锁:理由提取键序单一源(schema 纯函数)/ B 档瘦身候选字段在场
+  (候裁不执行的结构性守卫)/ A 档删候选已删封闭 + 瘦身后 schema 形态
+  封闭 / state_ref、pin_scope 可选末尾字段读端兼容;
+- 退役锁:写端符号不存在(防半删)。
 """
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, fields, is_dataclass
-from pathlib import Path
-from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel import cw_board_state
-from sr_od.application.currency_war.kernel.cw_state import (
-    BuyCard,
-    GameState,
-    LevelUp,
-    RefreshShop,
-    SellBench,
-    ShopCard,
-)
-from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-    StrategySession,
-)
 from sr_od.application.currency_war.telemetry import recorder as rec_mod
-from sr_od.application.currency_war.telemetry import state as telstate
 from sr_od.application.currency_war.telemetry.cw_replay_reader import (
     DecisionTrace,
     from_dict,
@@ -49,224 +28,19 @@ from sr_od.application.currency_war.telemetry.schema import (
     ACTION_REASON_SOURCE_KEYS,
 )
 
+# ===== ① state_ref 版本钉(写端退役;字段面归策略侧决策行接线批)=====
 
-def _setup_recorder(monkeypatch, tmp_path: Path, run_id: str = 'r4t') -> None:
-    """recorder/run_id 指向 tmp_path(测试纪律:不写真实 .debug/)。"""
-    monkeypatch.setattr(telstate, '_RECORDER',
-                        rec_mod.TelemetryRecorder(enabled=True,
-                                                  replay_dir=tmp_path))
-    monkeypatch.setattr(telstate, '_CURRENT_RUN_ID', run_id)
-    monkeypatch.setattr(telstate, '_CURRENT_DIFFICULTY', 'A8')
-    monkeypatch.setattr(telstate, '_RUN_CLOSED', False)
-    monkeypatch.setattr(telstate, '_PENDING_BRIEFING_ROWS', [])
-    monkeypatch.setattr(telstate, '_defect_seen', {})
-    monkeypatch.setattr(telstate, '_defect_seen_run', '')
-    monkeypatch.setattr(telstate, '_L0_ANDON_HANDLER', lambda payload: True)
-    monkeypatch.setattr(telstate, '_L0_ANDON_FIRED_RUNS', set())
-    from sr_od.application.currency_war.kernel import cw_telemetry_exit
-    monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider',
-                        telstate.current_run_id)
+def test_state_ref_writer_retired() -> None:
+    """锁①(重写):决策行写入端退役,防半删;版本钉语义(决策行回溯
+    流程侧账本版本,ADR-0630)现役落点 = 策略侧决策行(两文件之二,
+    M4 前落地),接线批重立钉读点锁。"""
+    assert not hasattr(rec_mod, 'record_decision'), \
+        'record_decision 应已随删除波 1 删除(防半删)'
+    assert not hasattr(rec_mod.TelemetryRecorder, 'record_decision'), \
+        '类方法 record_decision 应已随删除波 1 删除(防半删)'
 
 
-def _fake_match() -> SimpleNamespace:
-    """fake ctx.cw_match 容器(session 旁挂 BoardState 单例随用随建)。"""
-    return SimpleNamespace(session=StrategySession())
-
-
-def _rows(tmp_path: Path, name: str = 'decisions.jsonl') -> list[dict]:
-    p = tmp_path / name
-    if not p.exists():
-        return []
-    return [json.loads(ln) for ln in
-            p.read_text(encoding='utf-8').splitlines() if ln.strip()]
-
-
-# ===== ① state_ref 版本钉 =====
-
-def test_state_ref_pin_format_and_scope(tmp_path: Path, monkeypatch) -> None:
-    """锁①a:决策行带 state_ref='{run_id}#{v}' + pin_scope='board_state'。
-
-    v = 写入时点 ``board_state_of(session).current_version()``;断言在
-    record 返回后现读(current_version 读不写,中间零状态写入则同值)。
-    """
-    _setup_recorder(monkeypatch, tmp_path)
-    m = _fake_match()
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [m])
-    sess = m.session
-    bs = cw_board_state.board_state_of(sess)
-    bs.write_logic(bs.gold, 77, produced_by='r4test')   # 版本 ≥1(非零形态)
-    st = GameState(gold=30, hp=50, round_num=6, plane=1)
-    telstate.get_recorder().record_decision('r4a', 'A8', st, '', {}, {}, [])
-    r = _rows(tmp_path)[0]
-    assert r['state_ref'] == f"r4a#{bs.current_version()}"
-    assert int(r['state_ref'].split('#')[1]) >= 1
-    # M4 窗内钉面标记(v3.3-M1:钉解析出 BoardState 面,非决策消费面)
-    assert r['pin_scope'] == 'board_state'
-
-
-def test_state_ref_pin_tracks_version_advancement(
-        tmp_path: Path, monkeypatch) -> None:
-    """锁①b:账本版本推进 → 后续决策行钉值严格跟随(回溯键单调可比)。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    m = _fake_match()
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [m])
-    bs = cw_board_state.board_state_of(m.session)
-    st = GameState(gold=30, hp=50, round_num=1, plane=1)
-    rec = telstate.get_recorder()
-    rec.record_decision('r4b', 'A8', st, '', {}, {}, [])
-    v1 = int(_rows(tmp_path)[0]['state_ref'].split('#')[1])
-    bs.write_logic(bs.gold, 99, produced_by='r4test')
-    rec.record_decision('r4b', 'A8', st, '', {}, {}, [])
-    v2 = int(_rows(tmp_path)[1]['state_ref'].split('#')[1])
-    assert v2 == v1 + 1
-
-
-def test_state_ref_pin_honest_default_without_session(
-        tmp_path: Path, monkeypatch) -> None:
-    """锁①c:无 match 注册(离线/测试)→ state_ref=''(诚实缺省,不猜)。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [None])
-    telstate.get_recorder().record_decision(
-        'r4c', 'A8', GameState(gold=30, hp=50, round_num=6, plane=1),
-        '', {}, {}, [])
-    r = _rows(tmp_path)[0]
-    assert r['state_ref'] == ''
-    assert r['pin_scope'] == ''
-
-
-def test_state_ref_pin_uses_observation_version_under_midway_writes(
-        tmp_path: Path, monkeypatch) -> None:
-    """锁①d(方案 A 钉读点,R4返工核心):决策计算中途动作回执推进版本
-    → 钉值 = 观测完成时点版本,不漂移到落盘时点版本。
-
-    场景对位 = 商店段真实时序(ADR-0630 关联序:决策行钉版本 ≤ 其动作
-    的落地行版本):段入口观察完成捕获 v_obs → 段内 k 次动作回执推进
-    账本版本 → 行落盘。捕获时点归调用方(只有它知道观察何时完成),经
-    ``state_ref_version=v_obs`` 显式传入;recorder 不得改读落盘时点版本。
-    红态在案(2026-09-11 返工批):实现前本锁 TypeError(签名无该参)。
-    """
-    _setup_recorder(monkeypatch, tmp_path)
-    m = _fake_match()
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [m])
-    bs = cw_board_state.board_state_of(m.session)
-    bs.write_logic(bs.gold, 77, produced_by='r4test')
-    v_obs = bs.current_version()   # 段入口观察完成时点捕获
-    for i in range(3):             # 决策计算中途:动作回执逐条推进版本
-        bs.write_logic(bs.gold, 80 + i, produced_by='r4test')
-    st = GameState(gold=30, hp=50, round_num=6, plane=1)
-    telstate.get_recorder().record_decision(
-        'r4i', 'A8', st, '', {}, {}, [], state_ref_version=v_obs)
-    r = _rows(tmp_path)[0]
-    assert r['state_ref'] == f'r4i#{v_obs}', (
-        '钉值漂移到落盘时点版本(观测完成捕获未生效/被入口现读覆盖)')
-    assert int(r['state_ref'].split('#')[1]) < bs.current_version(), (
-        '钉版本须严格早于落盘时点账本版本(ADR-0630 决策行钉 ≤ 动作落地行序)')
-
-
-def test_state_ref_default_path_pins_at_record_entry(
-        tmp_path: Path, monkeypatch) -> None:
-    """锁①e(缺省语义申报):不传 state_ref_version = 入口现读(落盘时点)
-    ——该缺省只对「观察完成与落盘之间零状态写入交错」的调用点等价于观测
-    完成版本(prep 步进行行/补给快照行/流程心跳行等,调用点清点申报面);
-    有交错写入的调用点(商店段)必须显式传参(锁①d)。本锁钉缺省行为,
-    防缺省语义无声漂移。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    m = _fake_match()
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [m])
-    bs = cw_board_state.board_state_of(m.session)
-    bs.write_logic(bs.gold, 77, produced_by='r4test')
-    v_obs = bs.current_version()
-    for i in range(2):
-        bs.write_logic(bs.gold, 80 + i, produced_by='r4test')
-    st = GameState(gold=30, hp=50, round_num=6, plane=1)
-    telstate.get_recorder().record_decision('r4j', 'A8', st, '', {}, {}, [])
-    r = _rows(tmp_path)[0]
-    assert r['state_ref'] == f"r4j#{bs.current_version()}"
-    assert int(r['state_ref'].split('#')[1]) > v_obs, (
-        '缺省路径应钉落盘时点版本(有交错写入的调用点须显式传参,见锁①d)')
-
-
-def test_shop_segment_capture_wiring() -> None:
-    """锁①f(方案 A 落地接线,结构锁):商店段 run_buy_waves 在段入口
-    观察完成处捕获账本版本,段尾 record_decision 经 state_ref_version
-    传入;捕获点先于首个决策读(段内动作回执推进版本前)。结构锁先例 =
-    test_cw_telemetry 记录站点顺序锁 / ADR-0571 grep 守卫。红态在案
-    (2026-09-11 返工批):实现前捕获标记不存在,ValueError。"""
-    import inspect
-
-    from sr_od.application.currency_war.operations.cw_op import cw_op_buy_cards
-    src = inspect.getsource(cw_op_buy_cards.run_buy_waves)
-    i_cap = src.index('_seg_pin_version: int | None = None')
-    assert 'current_version()' in src[i_cap:i_cap + 240], (
-        '段入口捕获未读 BoardState 版本读口')
-    i_decide = src.index('decide_shop_action(')
-    i_rec = src.index('state_ref_version=_seg_pin_version')
-    assert i_cap < i_decide, '捕获点晚于首个决策读(观测完成时点不成立)'
-    assert i_rec > i_cap, '段尾落钉未传入捕获版本'
-
-
-# ===== ② 动作计划逐项理由溯源 =====
-
-def test_action_reason_from_existing_reason_field(
-        tmp_path: Path, monkeypatch) -> None:
-    """锁②a:动作自带 reason 字段 → 逐项 reason 原值透传(提取非新算)。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [_fake_match()])
-    acts = [
-        BuyCard(card=ShopCard(x=100, name='某角色', cost=3), reason='line'),
-        SellBench(bench_idx=0, reason='line_switch_collapse'),
-        RefreshShop(cost=2, reason='r1'),
-    ]
-    telstate.get_recorder().record_decision(
-        'r4d', 'A8', GameState(gold=30, hp=50, round_num=1, plane=1),
-        '', {}, {}, acts)
-    items = _rows(tmp_path)[0]['actions']
-    assert [it['reason'] for it in items] == [
-        'line', 'line_switch_collapse', 'r1']
-
-
-def test_action_reason_route_tag_fallback(tmp_path: Path, monkeypatch) -> None:
-    """锁②b:无 reason 字段的动作 → route_tag(发射臂标签,Emitted.reason
-    经 bridge.decide_from_turn 透传)归一进 reason;两键同值时一致。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [_fake_match()])
-    from sr_od.application.currency_war.kernel.cw_prep_actions import (
-        StartBattle,
-    )
-    a = StartBattle()
-    a.route_tag = 'battle'   # 生产链位 = bridge.decide_from_turn 透传
-    telstate.get_recorder().record_decision(
-        'r4e', 'A8', GameState(gold=30, hp=50, round_num=1, plane=1),
-        '', {}, {}, [a])
-    it = _rows(tmp_path)[0]['actions'][0]
-    assert it['reason'] == 'battle'
-    assert it['route_tag'] == 'battle'   # 原键保留(消费方零迁移)
-
-
-def test_action_reason_auth_basis_fallback(
-        tmp_path: Path, monkeypatch) -> None:
-    """锁②c:LevelUp 无 reason 字段 → auth_basis(授权依据)归一进 reason。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [_fake_match()])
-    telstate.get_recorder().record_decision(
-        'r4f', 'A8', GameState(gold=30, hp=50, round_num=1, plane=1),
-        '', {}, {}, [LevelUp(cost=10, auth_basis='dp')])
-    it = _rows(tmp_path)[0]['actions'][0]
-    assert it['reason'] == 'dp'
-
-
-def test_action_reason_empty_honest_default(
-        tmp_path: Path, monkeypatch) -> None:
-    """锁②d:链上无任何理由事实 → reason=''(2026-09-08 归因遥测删除
-    指令后的大多数发射形态;诚实缺省,禁新算回填)。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [_fake_match()])
-    telstate.get_recorder().record_decision(
-        'r4g', 'A8', GameState(gold=30, hp=50, round_num=1, plane=1),
-        '', {}, {}, [LevelUp(cost=10), BuyCard(card=ShopCard(x=1))])
-    items = _rows(tmp_path)[0]['actions']
-    assert [it['reason'] for it in items] == ['', '']
-
+# ===== ② 动作计划逐项理由溯源(键序单一源保留;record 路径退役)=====
 
 def test_action_reason_keys_declared_single_source() -> None:
     """锁②e:理由提取键序单一源(申报面):reason > route_tag > auth_basis
@@ -350,21 +124,3 @@ def test_state_ref_fields_are_optional_trailing() -> None:
     f2 = from_dict(DecisionTrace, {'run_id': 'r', 'state_ref': 'run#3',
                                    'pin_scope': 'board_state'})
     assert f2.state_ref == 'run#3' and f2.pin_scope == 'board_state'
-
-
-def test_recorder_row_action_reason_shape_regression(
-        tmp_path: Path, monkeypatch) -> None:
-    """锁③c:理由归一只加键不改既有键——actions 项原字段(shape)逐位
-    保留,BuyCard 的 cost/char_id 富化与 __type__ 标签不受影响(判读 CLI
-    旧视图按 __type__/card.* 读,零迁移)。"""
-    _setup_recorder(monkeypatch, tmp_path)
-    monkeypatch.setattr(telstate, '_CTX_MATCH_REF', [_fake_match()])
-    telstate.get_recorder().record_decision(
-        'r4h', 'A8', GameState(gold=30, hp=50, round_num=1, plane=1),
-        '', {}, {},
-        [BuyCard(card=ShopCard(x=100, name='某角色', cost=3), reason='line')])
-    it = _rows(tmp_path)[0]['actions'][0]
-    assert it['__type__'] == 'BuyCard'
-    assert it['char_id'] == ''   # 非注册表名 → 诚实缺省(serialize_action 契约)
-    assert it['cost'] == 3
-    assert it['reason'] == 'line'

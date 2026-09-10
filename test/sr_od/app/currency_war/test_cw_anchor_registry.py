@@ -69,7 +69,11 @@ def anchor_env(monkeypatch: pytest.MonkeyPatch):
         rows.append({'round_num': round_num, 'kind': kind,
                      'detail': detail, 'choice': choice})
 
-    monkeypatch.setattr(cw_telemetry_exit, '_record_exogenous', _capture)
+    # 删除波 1:出口真实现槽(_record_exogenous)已随 exogenous 流写入端
+    # 退役删除,出口访问器 = no-op 桩——捕获改锚桩(挂本文件捕获面,防
+    # 真实台账落盘;锚路由本身的候裁归宿归 §5-7)。原生产上行断言随退役
+    # 移除,本捕获仅证明「发射链不炸、可观测点仍可挂」。
+    monkeypatch.setattr(cw_telemetry_exit, 'record_exogenous', _capture)
     monkeypatch.setattr(cw_telemetry_exit, '_run_id_provider',
                         lambda: 'run-anchor-test')
     cw_anchor.reset_anchor_dedupe()

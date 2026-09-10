@@ -132,11 +132,14 @@ _SRC = Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
 
 
 def test_telemetry_field_hit_count_lock():
-    """命中点计数锁:基名 `_telemetry_last_candidate_scores` 在 src 生产树
-    恰 3 文件(声明/写点/读点);第 4 文件出现 = 决策消费嫌疑,锁红。"""
+    """命中点计数锁(删除波 1 重写):基名 `_telemetry_last_candidate_scores`
+    的生产树命中收缩到 mandate_state.py 单文件(字段载体禁碰面,候其归属
+    批清理);写入点(flow.py 供数块)与读点(店内决策行披露构造)已随
+    decisions 流写入端退役删除。命中重新扩散 = 有代码开始消费死字段,锁红。"""
     hits = {p.name for p in _SRC.rglob('*.py')
             if '_telemetry_last_candidate_scores' in p.read_text(encoding='utf-8')}
-    assert hits == {'mandate_state.py', 'flow.py', 'cw_op_buy_cards.py'}
+    assert hits == {'mandate_state.py'}, (
+        f'死遥测字段命中面漂移:{hits}(写点/读点已退役,禁复活)')
 
 
 def test_op_journal_keys_confined():

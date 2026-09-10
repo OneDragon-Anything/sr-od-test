@@ -14,7 +14,6 @@ execute() 包 fast_sleep、运行态用 enter/reset_running_state。
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -127,8 +126,8 @@ def test_briefing_op_reads_and_writes_session(
                         lambda ctx, screen: 5)
     monkeypatch.setattr(CwScreenBriefing, '_collect_affix_effects',
                         lambda self, aff: {})   # 采集 best-effort,本锁不覆盖
-    monkeypatch.setattr(briefing_mod, 'cw_telemetry', SimpleNamespace(
-        record_exogenous=lambda *a, **k: None))   # 遥测替身(零真实台账)
+    # (cw_telemetry 遥测替身桩已随删除波 1 移除——简报 exogenous 存证行
+    #  写入端退役,模块不再引用 telemetry。)
     monkeypatch.setattr(op, 'screenshot', lambda *a, **k: op.last_screenshot)
     monkeypatch.setattr(test_context, 'cw_match',
                         CurrencyWarMatch(_StubStrategy(), StrategySession()),
@@ -257,6 +256,7 @@ def test_overlay_wrapper_family_absent() -> None:
     不再存在于 cw_screen 包(迁移终态唯一真身 = 各 cw_screen_* 模块)。"""
     import pkgutil
     from pathlib import Path
+
     import sr_od.application.currency_war.operations.cw_screen as pkg
     for m in pkgutil.iter_modules(pkg.__path__):
         mod_src = Path(pkg.__path__[0], m.name + '.py').read_text(encoding='utf-8')

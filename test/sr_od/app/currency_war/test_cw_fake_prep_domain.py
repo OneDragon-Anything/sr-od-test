@@ -509,18 +509,14 @@ def test_prep_phase_end_to_end_via_real_op(
         with fake_p1_run(test_context, monkeypatch, tmp_path, _SEED,
                          node_sequence=_SCRIPT, initial_gold=30) as run:
             result = run.run_p1()
-        root = tmp_path / 'fake_p1'
-        # ①prep 动作入生产决策档案(序列化键 = __type__,schema.serialize_action)
-        dec_rows = [json.loads(x) for x in
-                    (root / 'decisions.jsonl').read_text(
-                        encoding='utf-8').splitlines() if x.strip()]
-        prep_acts = [a for row in dec_rows for a in (row.get('actions') or [])
-                     if isinstance(a, dict)
-                     and a.get('__type__', '') in (
+        # ①prep 动作在执行缝审计账(删除波 1:decisions 档案写入退役,审计
+        # 账 = 动作序列唯一行为载体)
+        prep_acts = [e['action'] for e in run.prep_audit
+                     if e['applied'] and e['action'] in (
                          'RunDeploy', 'SellBench', 'DeployMove', 'LevelUp',
                          'ClickSpheres', 'OpenBox', 'StartBattle', 'RunEquip')]
         assert prep_acts, (
-            'decisions 档案无 prep 域动作(prep 画面全链未在假环境跑)')
+            '审计账无 prep 域动作(prep 画面全链未在假环境跑)')
         # ②真链部署落地(围栏代理退役的载体面)
         assert run.prep_audit, 'prep 审计为空(执行缝未在环)'
         dep_events = [e for e in run.prep_audit
@@ -532,7 +528,7 @@ def test_prep_phase_end_to_end_via_real_op(
         assert result.armed_evaluated, (
             'armed 判据核未被消费(达标臂面未接通)')
         # ④缺陷流零 prep 域伪影
-        defect_file = root / 'defect_ledger.jsonl'
+        defect_file = tmp_path / 'fake_p1' / 'defect_ledger.jsonl'
         if defect_file.exists():
             rows = [json.loads(x) for x in
                     defect_file.read_text(encoding='utf-8').splitlines()

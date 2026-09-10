@@ -93,11 +93,26 @@ def test_t2_deployed_migration_parity_full_grid():
 
 def _stub_read_game_state(monkeypatch, tmp_path: Path, prep_like: bool):
     """read_game_state 真链驱动(reader 桩面镜像 test_cw_node_screens 注入
-    手法),board 段注入分歧帧:badge_ocr=3 vs computed=2。返回 (state, rows)。"""
+    手法),board 段注入分歧帧:badge_ocr=3 vs computed=2。返回 (state, rows)。
+
+    删除波 1:证据行归宿 = journal obs_event(装 tmp 账本 + BoardState 供给
+    provider);rows 取账本 obs_event 行(field='board')。"""
     import sr_od.application.currency_war.kernel.cw_observe as core_obs
+    from sr_od.application.currency_war.kernel import (
+        cw_state_journal,
+        cw_telemetry_exit,
+    )
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        board_state_of,
+    )
     from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
-    monkeypatch.setattr(core_obs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
+    cw_state_journal.install_state_telemetry(
+        tmp_path / 'state' / 'journal.jsonl', flush_every=1,
+        run_id_provider=lambda: 'run-arb')
+    session = None
+    monkeypatch.setattr(cw_telemetry_exit, '_obs_event_board_provider',
+                        lambda: board_state_of(session))
     monkeypatch.setattr(core_obs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cobs, 'is_prep_like_frame', lambda c, s: prep_like)
     monkeypatch.setattr(cobs, '_board_pairs',
@@ -123,25 +138,27 @@ def _stub_read_game_state(monkeypatch, tmp_path: Path, prep_like: bool):
         PHASE_PREP_SHOP_OPEN,
     )
     state = cobs.read_game_state(ctx, None, phase=PHASE_PREP_SHOP_OPEN)
-    p = tmp_path / 'obs.jsonl'
-    rows = [json.loads(ln) for ln in p.read_text(encoding='utf-8').splitlines()
-            if ln.strip()] if p.exists() else []
+    jp = tmp_path / 'state' / 'journal.jsonl'
+    rows = ([json.loads(ln) for ln in jp.read_text(encoding='utf-8').splitlines()
+             if ln.strip()] if jp.exists() else [])
+    rows = [r for r in rows
+            if r.get('row') == 'obs_event' and r.get('field') == 'board']
     return state, rows
 
 
 def test_t2_board_matrix_prep_frame_badge_overwrites(tmp_path: Path, monkeypatch):
     """board 矩阵①:分歧帧 × 备战帧(honest)→ 徽标覆写(state.board=3)+
-    obs_conflict 留证行(field='board',new=采新 verdict)——迁移前后裁决与
-    留证全同(经生产 read_game_state 真链)。"""
+    obs_event 留证行(field='board',observed.new=采新 verdict)——迁移前后
+    裁决与留证全同(经生产 read_game_state 真链;删除波 1 后行归宿 journal)。"""
     state, rows = _stub_read_game_state(monkeypatch, tmp_path, prep_like=True)
     assert state.board == {'持续伤害': 3}
-    board_rows = [r for r in rows if r['field'] == 'board']
+    board_rows = rows
     assert len(board_rows) == 1
     r = board_rows[0]
-    assert r['old'] == {'ocr': 3, 'computed': 2}
-    assert r['new'] == 'count不等:持续伤害'
+    assert r['observed']['old'] == {'ocr': 3, 'computed': 2}
+    assert r['observed']['new'] == 'count不等:持续伤害'
     assert '采新-badge' in r['verdict']
-    assert r['source'] == 'computed_vs_ocr'
+    assert r['observed']['source'] == 'computed_vs_ocr'
 
 
 def test_t2_board_matrix_non_prep_frame_keeps_computed(tmp_path: Path, monkeypatch):
@@ -149,9 +166,9 @@ def test_t2_board_matrix_non_prep_frame_keeps_computed(tmp_path: Path, monkeypat
     (board=2)+ 留证行(不覆写)——帧态门语义迁移前后全同。"""
     state, rows = _stub_read_game_state(monkeypatch, tmp_path, prep_like=False)
     assert state.board == {'持续伤害': 2}
-    board_rows = [r for r in rows if r['field'] == 'board']
+    board_rows = rows
     assert len(board_rows) == 1
-    assert board_rows[0]['old'] == {'ocr': 3, 'computed': 2}
+    assert board_rows[0]['observed']['old'] == {'ocr': 3, 'computed': 2}
     assert '留证-双不可信' in board_rows[0]['verdict']
 
 
@@ -160,9 +177,21 @@ def test_t2_board_no_divergence_zero_rows(tmp_path: Path, monkeypatch):
     (is_prep_like_frame 常态零开销语义随迁移保持)。"""
     import sr_od.application.currency_war.kernel.cw_observe as core_obs
     import sr_od.application.currency_war.obs.cw_observation as obs
+    from sr_od.application.currency_war.kernel import (
+        cw_state_journal,
+        cw_telemetry_exit,
+    )
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        board_state_of,
+    )
     from sr_od.application.currency_war.kernel.cw_state import BenchChar
 
-    monkeypatch.setattr(core_obs, '_CONFLICT_JOURNAL', tmp_path / 'obs.jsonl')
+    cw_state_journal.install_state_telemetry(
+        tmp_path / 'state' / 'journal.jsonl', flush_every=64,
+        run_id_provider=lambda: 'run-arb')
+    session = None
+    monkeypatch.setattr(cw_telemetry_exit, '_obs_event_board_provider',
+                        lambda: board_state_of(session))
     monkeypatch.setattr(core_obs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(obs, 'is_prep_like_frame', lambda c, s: True)
     monkeypatch.setattr(obs, '_board_pairs',
@@ -189,10 +218,11 @@ def test_t2_board_no_divergence_zero_rows(tmp_path: Path, monkeypatch):
     )
     state = obs.read_game_state(ctx, None, phase=PHASE_PREP_SHOP_OPEN)
     assert state.board == {'持续伤害': 2}
-    p = tmp_path / 'obs.jsonl'
-    rows = [json.loads(ln) for ln in p.read_text(encoding='utf-8').splitlines()
-            if ln.strip()] if p.exists() else []
-    assert not [r for r in rows if r['field'] == 'board']
+    jp = tmp_path / 'state' / 'journal.jsonl'
+    rows = ([json.loads(ln) for ln in jp.read_text(encoding='utf-8').splitlines()
+             if ln.strip()] if jp.exists() else [])
+    assert not [r for r in rows
+                if r.get('row') == 'obs_event' and r.get('field') == 'board']
 
 
 # ==================== T-6 分键互不混流(§2.4/§6)====================

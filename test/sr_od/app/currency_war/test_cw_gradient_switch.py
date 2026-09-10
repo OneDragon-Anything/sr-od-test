@@ -39,45 +39,23 @@ def test_config_domain_fields_validated_at_construction(monkeypatch) -> None:
         CurrencyWarConfig()
 
 
-def test_v2_extra_roundtrip(tmp_path: Path, monkeypatch) -> None:
-    """S3:遥测链端到端——record_decision(extra v2_*) → 字段落盘。
-
-    (2026-09-03 瘦身批:遥测全局裸赋值改 monkeypatch——原写法断言失败即
-    污染后续测试文件(纪律 1 全集假红类),且 _CURRENT_DIFFICULTY 原先从不还原。)
-    """
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    from sr_od.application.currency_war.telemetry import state as _telstate
-    monkeypatch.setattr(_telstate, '_RECORDER', recorder.TelemetryRecorder(
-        enabled=True, replay_dir=tmp_path))
-    monkeypatch.setattr(_telstate, '_CURRENT_RUN_ID', 'test_v2')
-    monkeypatch.setattr(_telstate, '_CURRENT_DIFFICULTY', 'A8')
-    st = GameState()
-    st.plane, st.round_num, st.gold = 1, 1, 50
-    recorder.record_decision(
-        st, 'tgt', {}, {}, [],
-        extra={'strategy_id': 'line_v2', 'v2_mode': 'economy',
-               'v2_locked_line': 'jizi_train', 'v2_bridge': ''})
-    with open(tmp_path / 'decisions.jsonl', encoding='utf-8') as fh:
-        rows = [json.loads(line) for line in fh]
-    assert rows[-1]['strategy_id'] == 'line_v2'
-    assert rows[-1]['v2_mode'] == 'economy'
-    assert rows[-1]['v2_locked_line'] == 'jizi_train'
-    assert rows[-1]['v2_bridge'] == ''
+def test_v2_extra_writer_retired(tmp_path: Path) -> None:
+    """S3(删除波 1 重写):v2 披露键的 decisions 行写入端已退役
+    (record_decision 删除,防半删);v2_* 键的 schema/查询面继续辖冻结
+    存量档案(下方 rounds 视图测)。"""
+    assert not hasattr(recorder, 'record_decision'), \
+        'record_decision 应已随删除波 1 删除(防半删)'
 
 
-def test_query_rounds_shows_v2(tmp_path: Path, monkeypatch) -> None:
-    """S1:rounds 视图显示 v2 字段(schema 变更查询同步;遥测全局走 monkeypatch)。"""
-    from sr_od.application.currency_war.telemetry import state as _telstate
-    monkeypatch.setattr(_telstate, '_RECORDER', recorder.TelemetryRecorder(
-        enabled=True, replay_dir=tmp_path))
-    monkeypatch.setattr(_telstate, '_CURRENT_RUN_ID', 'test_v2q')
-    monkeypatch.setattr(_telstate, '_CURRENT_DIFFICULTY', 'A8')
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    st = GameState()
-    st.plane, st.round_num, st.gold = 1, 1, 50
-    recorder.record_decision(
-        st, '', {}, {}, [],
-        extra={'strategy_id': 'line_v2', 'v2_mode': 'war',
-               'v2_locked_line': 'jizi_train', 'v2_bridge': ''})
+def test_query_rounds_shows_v2(tmp_path: Path) -> None:
+    """S1:rounds 视图显示 v2 字段(冻结存量档案读端契约;行写入已退役,
+    构造 tmp 档案喂视图)。"""
+    rows = [{'schema_version': 1, 'run_id': 'test_v2q',
+             'strategy_id': 'line_v2', 'v2_mode': 'war',
+             'v2_locked_line': 'jizi_train', 'v2_bridge': '',
+             'plane': 1, 'round_num': 1, 'gold': 50}]
+    with open(tmp_path / 'decisions.jsonl', 'w', encoding='utf-8') as fh:
+        for r in rows:
+            fh.write(json.dumps(r, ensure_ascii=False) + '\n')
     lines = query.query_rounds(tmp_path, 'test_v2q')
     assert any('v2=[war|jizi_train|-]' in ln for ln in lines), lines

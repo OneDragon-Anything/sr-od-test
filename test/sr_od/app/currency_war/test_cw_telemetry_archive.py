@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_telemetry_archive 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -17,16 +16,17 @@
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
-
 
 # ==================== match_archive ====================
-
 import json
 import sys as _match_archive_sys
 from pathlib import Path as _match_archive_Path
 
 import pytest
+
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 
 _match_archive_sys.path.insert(0, 'src')
 
@@ -567,7 +567,7 @@ def test_terminal_state_summary_field_lock():
 
     口径单一源 = schema.terminal_state_summary docstring(坐标系/取值时机);
     本锁钉键名与计数语义,分布数值不锁(测试纪律 #11)。"""
-    from sr_od.application.currency_war.telemetry.schema import  terminal_state_summary
+    from sr_od.application.currency_war.telemetry.schema import terminal_state_summary
     st = {'deployed': [
               {'name': '甲', 'equips': ['火力风暴潮', '高周波电锯']},
               None,
@@ -924,7 +924,10 @@ def test_loss_nodes_v7_net_migrated_to_current_battle_leg(
 import pytest as _performance_pytest
 
 from sr_od.application.currency_war.kernel.cw_performance import (
-    HP_LOSS_FULL, PerformanceTracker, RoundOutcome)
+    HP_LOSS_FULL,
+    PerformanceTracker,
+    RoundOutcome,
+)
 
 
 def _performance_out(round_num: int, hp: int, node: str = "普通战斗", comp: str = "c1",
@@ -1275,7 +1278,7 @@ def test_production_round_merge_multi_frame(tmp_path: _telemetry_checks_Path) ->
     """多帧/轮合并:金取首帧(决策时点),花费跨帧并集——首帧 62+
     后续帧零买不算「溢余未泄」误报(全帧有买则不报)。"""
 
-    from sr_od.application.currency_war.sim.ledger_hooks import  merge_round_rows
+    from sr_od.application.currency_war.sim.ledger_hooks import merge_round_rows
     frames = [
         {'run_id': 'r', 'plane': 2, 'round_num': 1, 'ts': '1',
          'gold': 62, 'hp': 31, 'gold_readable': True,
@@ -1298,26 +1301,9 @@ def test_production_round_merge_multi_frame(tmp_path: _telemetry_checks_Path) ->
         'engines 代理须吃生产 state.board 同构映射'
 
 
-# ==================== test_telemetry_extra_sig ====================
-
-import sys as _test_telemetry_extra_sig_sys
-
-_test_telemetry_extra_sig_sys.path.insert(0, 'src')
-
-from sr_od.application.currency_war.telemetry import recorder as t
-from sr_od.application.currency_war.kernel.cw_state import GameState as _test_telemetry_extra_sig_GameState
-
-
-def test_record_decision_accepts_extra():
-    """shop.py 的调用形态(带 extra=sess_*)不再 TypeError。
-
-    局30 实证:r101 加 session 快照时 shop.py 传 extra=,但模块级便捷函数
-    签名没有该参数 → 买牌 op 每轮 TypeError → 金 3→110 全程闲置,整局报废。
-    """
-    st = _test_telemetry_extra_sig_GameState(gold=5)
-    t.record_decision(st, 'x', {}, {}, [],
-                      extra={'sess_framework': '仙舟', 'sess_dual_track': True})
-    # 不 start_run → early return,不落盘;到这里 = 签名对齐,不再 TypeError
+# ==================== test_telemetry_extra_sig(删除波 1 退役)====================
+# (record_decision 签名对齐锁已随 decisions 流写入端退役删除——局30 的
+#  TypeError 病灶连同写端整段消亡,git 可复活。)
 
 
 # (2026-09-03 瘦身批:test_recorder_method_and_helper_signatures_align 与
@@ -1335,10 +1321,18 @@ import pytest as _w527_node_ledger_pytest
 _ROOT = _w527_node_ledger_Path(__file__).resolve().parents[5]          # 仓库根(StarRailOneDragon)
 _TEST_ROOT = _w527_node_ledger_Path(__file__).resolve().parents[4]     # 测试仓根(sr-od-test)
 
-from sr_od.application.currency_war.kernel.cw_state import  fill_boss_by_position, get_node_ledger, ledger_node_type, ledger_update_plane
+from sr_od.application.currency_war.kernel.cw_state import (
+    fill_boss_by_position,
+    get_node_ledger,
+    ledger_node_type,
+    ledger_update_plane,
+)
 from sr_od.application.currency_war.obs import cw_node_reader, cw_observation
-from sr_od.application.currency_war.obs.cw_node_reader import  classify_node_row, load_node_type_templates
-from sr_od.application.currency_war.obs.cw_observation import  node_vote_verdict
+from sr_od.application.currency_war.obs.cw_node_reader import (
+    classify_node_row,
+    load_node_type_templates,
+)
+from sr_od.application.currency_war.obs.cw_observation import node_vote_verdict
 
 _ASSETS = _ROOT / 'assets' / 'game_data' / 'cw_node_types'
 _FIXTURES = _TEST_ROOT / 'screens' / '货币战争-备战'
@@ -1553,7 +1547,9 @@ def test_read_plane_detail_difficulty_truth(test_context) -> None:
     """敌人难度参考读法真值对拍:位面详情全屏 fixture,真值 = VLM 亲读 108
     (w527 批;底部明文「敌人难度 108」)。"""
     from one_dragon.utils import cv2_utils
-    from sr_od.application.currency_war.obs.cw_observation import  read_plane_detail_difficulty
+    from sr_od.application.currency_war.obs.cw_observation import (
+        read_plane_detail_difficulty,
+    )
     img = cv2_utils.read_image(
         str(_TEST_ROOT / 'screens' / '货币战争-位面详情' / '位面详情全屏.png'))
     assert read_plane_detail_difficulty(test_context, img) == 108
@@ -1561,11 +1557,12 @@ def test_read_plane_detail_difficulty_truth(test_context) -> None:
 
 # ==================== divergence_stats ====================
 
+import json as _divergence_stats_json  # noqa: E402
 from pathlib import Path as _divergence_stats_Path
 
-import json as _divergence_stats_json  # noqa: E402
-
-from sr_od.application.currency_war.telemetry.cw_divergence_stats import divergence_stats  # noqa: E402
+from sr_od.application.currency_war.telemetry.cw_divergence_stats import (
+    divergence_stats,  # noqa: E402
+)
 
 
 def test_divergence_stats(tmp_path: _divergence_stats_Path) -> None:
