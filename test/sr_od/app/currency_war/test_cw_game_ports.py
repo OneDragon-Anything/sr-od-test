@@ -185,6 +185,15 @@ class TestZeroProductionConsumption:
             / 'cw_op_buy_cards.py'),
         str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
             / 'cw_screen_prep.py'),
+        # 统一观察架构试点步骤 2(逐屏迁移首批,§9.2 迁移步骤 4 + B3 两
+        # 代表屏):遭遇/盛会之星 handle 顶部装配点分流判据消费
+        # observation_source/action_sink(与 cw_screen_prep.run 同式,
+        # §9.1 并存期机制面;非旁路改道——零读屏/执行新缝,两屏缺省
+        # None = 生产直连旧路径)。
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_encounter.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_megastar.py'),
         # 统一观察架构试点步骤 1(commit 3a688669a)基类:docstring 提及
         # 安装协议名(「双清复位见 cw_game_ports」),零 import 零调用——
         # 扫描为文本匹配,提及即命中;非改道点,批 2 登记豁免。
