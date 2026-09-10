@@ -195,14 +195,38 @@ def test_oscillation_xp_cap_bidirectional() -> None:
 
 
 def test_levelup_flat4_lock_bidirectional() -> None:
-    bad = [_row(actions=[{'__type__': 'LevelUp', 'cost': 4}],
-                sim={'node': 'battle', 'merges': 0, 'shop_waves': [],
-                     'spend': {'buys': {}, 'levelup': 6, 'refresh': 0}})]
-    assert ledger.check_levelup_flat4_ledger_lock(bad), 'flat4 偏离未报'
-    good = [_row(actions=[{'__type__': 'LevelUp', 'cost': 4}],
-                 sim={'node': 'battle', 'merges': 0, 'shop_waves': [],
-                      'spend': {'buys': {}, 'levelup': 4, 'refresh': 0}})]
+    """升级支出锁双向(T-240 语义重推:判据 = spend == Σ action.cost,
+    无折扣局退化为原字面 4×行数;重推依据 = 锁检查器 docstring)。
+
+    - 无折扣一致(spend 4)/偏离(spend 6):原判据面保持,双向照旧;
+    - 折扣局(商业间谍,载体单价 3):spend 3×行数 → 绿——旧字面 4×行数
+      在此误报 = 重推动因(在先矛盾);载体 3 实付 4 → 报(执行器弃用
+      决策载体回退私价模型回归);
+    - cost 缺读行(旧档案形状):按引擎同口径 4 兜(engine_p1
+      `getattr(a,'cost',0) or 4`),判据不因档案代际漂移。"""
+    _sim = {'node': 'battle', 'merges': 0, 'shop_waves': []}
+
+    def _spend(v: int) -> dict:
+        return {'node': 'battle', 'merges': 0, 'shop_waves': [],
+                'spend': {'buys': {}, 'levelup': v, 'refresh': 0}}
+
+    good = [_row(actions=[{'__type__': 'LevelUp', 'cost': 4}], sim=_spend(4))]
     assert not ledger.check_levelup_flat4_ledger_lock(good)
+    bad = [_row(actions=[{'__type__': 'LevelUp', 'cost': 4}], sim=_spend(6))]
+    assert ledger.check_levelup_flat4_ledger_lock(bad), 'flat4 偏离未报'
+    # 折扣局:载体 3×2 行实付 6 → 绿(旧字面判据 4×2=8 在此误报)
+    spy_ok = [_row(actions=[{'__type__': 'LevelUp', 'cost': 3},
+                            {'__type__': 'LevelUp', 'cost': 3}],
+                   sim=_spend(6))]
+    assert not ledger.check_levelup_flat4_ledger_lock(spy_ok)
+    # 折扣局执行偏离:载体 3 实付 4 → 报
+    spy_bad = [_row(actions=[{'__type__': 'LevelUp', 'cost': 3}],
+                    sim=_spend(4))]
+    assert ledger.check_levelup_flat4_ledger_lock(spy_bad), \
+        '折扣局执行器偏离决策载体未报'
+    # 旧档案行 cost 缺读 → 引擎同口径 4 兜
+    legacy = [_row(actions=[{'__type__': 'LevelUp'}], sim=_spend(4))]
+    assert not ledger.check_levelup_flat4_ledger_lock(legacy)
 
 
 def test_degrade_recover_mutex_segment_first_round() -> None:

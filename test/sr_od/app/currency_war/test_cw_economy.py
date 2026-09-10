@@ -376,3 +376,137 @@ def test_refresh_prob_lookup() -> None:
     assert refresh_prob(7, 3) == REFRESH_PROB[7][3]
     assert REFRESH_PROB[7][3] == pytest.approx(0.4, abs=1e-2)
     assert refresh_prob(99, 3) == 0.0, '无该等级 → 0'
+
+
+# ==================== xp 买费折扣修复锁族(T-240;T-217 双重折扣核对) ====================
+# 规范语义 = strategy-env-impacts.md §2 通用模式 1(2026-09-10 定稿):
+# 观察优先、兜底逻辑——显示价(最近备战帧 OCR,游戏已算好折扣)直通不再减;
+# 观察缺省 → 兜底 = 基准 4 − 折扣(max 0;商业间谍 xp_buy_cost_discount +
+# 成长的快乐等级门 xp_click_discount_from_level 族)。
+# 改前病理(T-217 核对 §0/§4):xp_click_cost 对两支无差别再减(显示价支双扣);
+# upgrade_plan_fee 裸字段取价零折扣(反方向单侧错)——两函数互补单侧错。
+
+_JUST_JOY = '成长的快乐'    # xp_click_discount_from_level=1 @8(cw_investments 注册)
+_JUST_SPY = '商业间谍'      # xp_buy_cost_discount=1(cw_investments 注册)
+
+
+def _xp_state(level: int = 5, strategies: list[str] | None = None,
+              display: int | None = None) -> GameState:
+    """费用轴最小决策帧(strategies=已持投资策略;display=OCR 显示价,
+    None=未读到走兜底支——两支来源凭该字段可判别)。"""
+    st = GameState(gold=30, level=level, round_num=2)
+    st.active_strategies = list(strategies or [])
+    st.level_up_cost = display
+    return st
+
+
+def test_xp_fee_no_discount_invariance() -> None:
+    """无折扣局不变锁:未持任何折扣卡时费用与改前逐位一致(方案审修改清单④①)。
+
+    改前病理只在持折扣卡时显形,本锁钉住占绝大多数的无间谍局零漂移:
+    显示价支原值直通、兜底支基价 4、upgrade_plan_fee = 击数×同价
+    (击数值来自 cw_plane_table 注册表,非本锁辖值)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        upgrade_plan_fee,
+        xp_click_cost,
+    )
+    from sr_od.application.currency_war.kernel.cw_plane_table import (
+        clicks_to_level,
+    )
+    assert xp_click_cost(_xp_state(display=3)) == 3     # 显示价支:原样
+    assert xp_click_cost(_xp_state(display=5)) == 5
+    assert xp_click_cost(_xp_state(display=None)) == 4  # 兜底支:基价
+    assert upgrade_plan_fee(_xp_state(level=5, display=3)) \
+        == clicks_to_level(5) * 3
+    assert upgrade_plan_fee(_xp_state(level=5, display=None)) \
+        == clicks_to_level(5) * 4
+
+
+def test_xp_click_display_price_passthrough() -> None:
+    """显示价直通锁:持商业间谍时显示价 3 原样返回(改前双扣 = 2,真值 3)。
+
+    依据 = strategy-env-impacts §3 商业间谍条「显示价即折后价,游戏已算好」
+    (2026-09-10 用户确认);对已折显示价再减模型折扣 = 双重折扣。"""
+    from sr_od.application.currency_war.kernel.cw_economy import xp_click_cost
+    assert xp_click_cost(_xp_state(strategies=[_JUST_SPY], display=3)) == 3
+    # 直通对等级门折扣同样成立(成长快乐 8 级起,游戏侧显示价已含):
+    assert xp_click_cost(_xp_state(level=8, strategies=[_JUST_JOY],
+                                   display=3)) == 3
+
+
+def test_xp_click_branch_equivalence_with_discount() -> None:
+    """两支等价锁:同持卡同等级,观察支(显示价=基准−折扣)与兜底支同价。
+
+    等价前提 = 显示价与注册表折扣模型同源(间谍 −1 → 显示 3);
+    改前病理 = 显示价支再减 → 2 ≠ 3(本修复要关的回归本体,方案审④②)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import xp_click_cost
+    observed = _xp_state(strategies=[_JUST_SPY], display=3)
+    fallback = _xp_state(strategies=[_JUST_SPY], display=None)
+    assert xp_click_cost(observed) == xp_click_cost(fallback) == 3
+
+
+@pytest.mark.parametrize('level,strategies,expected', [
+    (7, [_JUST_JOY], 4),                    # 等级门前:无减项
+    (8, [_JUST_JOY], 3),                    # 门前跨档:−1
+    (9, [_JUST_JOY], 3),                    # 门后持续
+    (7, [_JUST_SPY, _JUST_JOY], 3),         # 门前:仅间谍 −1
+    (8, [_JUST_SPY, _JUST_JOY], 2),         # 门后:折扣叠加 −2
+], ids=['gate-before', 'gate-at', 'gate-persists',
+        'spy-only-before', 'stacked-after'])
+def test_xp_click_joy_level_gate_truth_table(
+        level: int, strategies: list[str], expected: int) -> None:
+    """成长的快乐真值表锁(兜底支等级门;方案审关键修改②,关闭
+    「登记不消费」豁免口)。
+
+    聚合分型已在册(sum+guarded_min,AGG_FIELDS 两字段在表),本锁钉消费位:
+    折扣合计 = xp_buy_cost_discount + (等级 ≥ xp_click_discount_from_level_at
+    时 xp_click_discount_from_level)。sim 恒兜底支(无 OCR),不消费 =
+    sim 对该卡局费用恒虚高 1 金/击,恰保留本修复要消灭的 sim/实机分歧。"""
+    from sr_od.application.currency_war.kernel.cw_economy import xp_click_cost
+    assert xp_click_cost(
+        _xp_state(level=level, strategies=strategies)) == expected
+
+
+def test_xp_click_fallback_clamp_floor(monkeypatch) -> None:
+    """兜底支下限 0 钳(语义保持):折扣合计超基准时钳 0 不出负。
+
+    注册表现无合计 ≥4 的折扣源(间谍 1 + 快乐 1 = 2),钳臂经
+    _strategy_economy 缝注入合成折扣覆盖(纯函数消费面,monkeypatch.setattr
+    隔离,README 第 1 条)。"""
+    from sr_od.application.currency_war.kernel import cw_economy as ke
+    monkeypatch.setattr(
+        ke, '_strategy_economy',
+        lambda _st: EconomyEffect(xp_buy_cost_discount=6))
+    assert ke.xp_click_cost(_xp_state(display=None)) == 0
+
+
+def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
+    """upgrade_plan_fee 委托锁:sim 形态(无显示价)持商业间谍时升级总费
+    = 击数×3(改前裸字段取价 = 击数×4,反方向单侧错,方案审问题 3-a)。
+
+    委托语义 = 击数面零变化(clicks_to_level 只供次数),取价唯一源 =
+    xp_click_cost;显示价支委托后与直通同源(改前碰巧对 → 委托后结构性对)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        upgrade_plan_fee,
+    )
+    from sr_od.application.currency_war.kernel.cw_plane_table import (
+        clicks_to_level,
+    )
+    fallback = _xp_state(level=5, strategies=[_JUST_SPY], display=None)
+    assert upgrade_plan_fee(fallback) == clicks_to_level(5) * 3
+    observed = _xp_state(level=5, strategies=[_JUST_SPY], display=3)
+    assert upgrade_plan_fee(observed) == clicks_to_level(5) * 3
+
+
+def test_upgrade_plan_fee_no_second_discount_implementation() -> None:
+    """结构锁:upgrade_plan_fee 内禁第二处独立取价/折扣实现(方案审关键修改①)。
+
+    「同一语义两处实现」正是互补单侧错的漂移温床(T-217 核对 §4);源面
+    断言:只许委托 xp_click_cost,禁裸读 level_up_cost、禁折扣字段字样。"""
+    import inspect
+
+    from sr_od.application.currency_war.kernel import cw_economy as ke
+    src = inspect.getsource(ke.upgrade_plan_fee)
+    assert 'xp_click_cost' in src, '未委托 xp_click_cost 单一源'
+    assert 'level_up_cost' not in src, '裸字段取价复活 = 第二实现回归'
+    assert 'xp_buy_cost_discount' not in src, '独立折扣计算复活'

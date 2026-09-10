@@ -370,8 +370,8 @@ def test_sim_levelup_cap_guard_rejects_and_discloses() -> None:
 
 
 def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
-    """拒付行不破坏 flat4 台账锁(spend.levelup == 4×LevelUp 执行行数;
-    原名回补,前身同上节)。
+    """拒付行不破坏升级支出锁(T-240 重推:spend == Σ action.cost,无折扣局
+    退化 = 原 flat4 4×执行行数;原名回补,前身同上节)。
 
     判据本体(检查器单元面)由 test_cw_sim_models.py::
     test_levelup_flat4_lock_bidirectional 辖;本锁辖生产链路面
@@ -383,7 +383,59 @@ def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
     )
 
     violations = check_levelup_flat4_ledger_lock(_levelcap_spam_run().ledger)
-    assert not violations, f'flat4 台账锁被拒付行破坏:{violations[:3]}'
+    assert not violations, f'升级支出锁被拒付行破坏:{violations[:3]}'
+
+
+class _SpyPricedLevelUpStub:
+    """商业间谍局升级桩:单价走 kernel ``xp_click_cost`` 真值(与生产策略层
+    同价源——mandate shop 升级链 spend_unified/LevelUp cost 同函数);
+    sim 无 OCR 恒兜底支 4−1=3,载体链 = 决策层定价 → engine action.cost
+    → 账本 spend。"""
+
+    def decide_shop_screen(self, sess, cfg):  # noqa: ANN001, ARG002
+        from types import SimpleNamespace
+
+        from sr_od.application.currency_war.kernel.cw_economy import (
+            xp_click_cost,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import LevelUp
+        price = xp_click_cost(SimpleNamespace(
+            level=1, level_up_cost=None, active_strategies=['商业间谍']))
+        return [LevelUp(cost=price) for _ in range(3)]
+
+
+_SPY_SIM_CACHE: dict[int, object] = {}
+
+
+def _spy_levelup_run():
+    """间谍局一局(simulate 同次测试运行只跑一遍,README 第 11 条)。"""
+    if 1 not in _SPY_SIM_CACHE:
+        from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+        _SPY_SIM_CACHE[1] = simulate_p1(
+            1, pool='fallback', strategy=_SpyPricedLevelUpStub())
+    return _SPY_SIM_CACHE[1]
+
+
+def test_sim_spy_round_fee_path_single_discount() -> None:
+    """商业间谍局 sim 对账(T-240 验证自证):决策定价 → 执行载体 → 账本
+    → 支出锁全链单次折扣一致。
+
+    旧字面 flat4 锁(4×行数)对本局误报 = T-240 锁重推动因(先红在案);
+    重推后判据 spend == Σ action.cost 全程绿。价格面真值(折扣感知取价
+    正确性)由 kernel 锁族(test_cw_economy xp 折扣修复锁族)辖,本锁辖
+    执行/账本链一致性。"""
+    from sr_od.application.currency_war.sim.checks.ledger import (
+        check_levelup_flat4_ledger_lock,
+    )
+
+    rows = _spy_levelup_run().ledger
+    executed = [a for r in rows for a in (r.get('actions') or [])
+                if a.get('__type__') == 'LevelUp']
+    assert executed, '间谍局无 LevelUp 执行行:桩未生效'
+    assert all(a.get('cost') == 3 for a in executed), (
+        '间谍局单价 ≠ 3:费用路径折扣口径漂移(应单次折扣 4−1)')
+    violations = check_levelup_flat4_ledger_lock(rows)
+    assert not violations, f'间谍局支出锁红:{violations[:3]}'
 
 
 # --- 观测硬依赖键面哨兵(ledger.check_observation_keys_live) -----------
