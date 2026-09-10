@@ -44,8 +44,12 @@ def test_planner_handler_routes_through_strategy_layer() -> None:
     """接线锁:策略层路径被走;kernel 直调仅在无 match 防御分支。
 
     锁的是「调用路径」不是分布数值;改接线形态时先重推语义再改锁
-    (锁的存在性纪律)。"""
-    src = inspect.getsource(CwScreenPlanner.handle)
+    (锁的存在性纪律)。
+    锁面随试点步骤 3 迁移(handle 体纯移入 ``_handle_overlay`` 共享体,
+    两路径共用零转录;统一观察架构 B3 三段走第二段,验收
+    reviews/T-215-r1.md 先例)自 handle 改指共享体——接线语义零改动,
+    仅断言面跟随代码移动。"""
+    src = inspect.getsource(CwScreenPlanner._handle_overlay)
     # ① 唯一入口 = 策略对象(DESIGN §3.4 规约1)
     assert '_match.strategy.decide_planner(' in src, \
         'handle 必须经 match.strategy.decide_planner(策略层唯一入口)'

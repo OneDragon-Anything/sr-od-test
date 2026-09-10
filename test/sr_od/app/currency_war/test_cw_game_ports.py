@@ -194,6 +194,28 @@ class TestZeroProductionConsumption:
             / 'cw_screen_encounter.py'),
         str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
             / 'cw_screen_megastar.py'),
+        # 统一观察架构试点步骤 3(逐屏迁移第二批量,§9.2 迁移步骤 4 +
+        # B3 三段走第二段「补给 + 余事件屏按族批量」):八屏决策承载节点
+        # 顶部装配点分流判据消费 observation_source/action_sink(与步骤 2
+        # 两屏同式,§9.1 并存期机制面;非旁路改道——零读屏/执行新缝,缺省
+        # None = 生产直连旧路径。专家邀请函分流在选卡节点,开卡节点留旧
+        # 路径,申报面见其模块 docstring 与迁移锁源面锁)。
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_supply_node.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_partner.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_planner.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_wish_trial.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_fortune.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_bookcard.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_equip_pick.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_expert_invite.py'),
         # 统一观察架构试点步骤 1(commit 3a688669a)基类:docstring 提及
         # 安装协议名(「双清复位见 cw_game_ports」),零 import 零调用——
         # 扫描为文本匹配,提及即命中;非改道点,批 2 登记豁免。
