@@ -1,14 +1,13 @@
-"""统一 state 状态流水(R1 影子双写)锁面。
+"""统一 state 状态流水锁面(R5 W1 常开化后形态)。
 
-设计正本 = ``.debug/temp/currency_war/流程侧遥测-设计v3.1.md``(v3 根本性纠正
-定稿:自足状态流水——每次写入一行,行内 = 改了什么 + 渠道签名 + 版本 id +
-写入后完整 state 快照;快照锚/对账自检/前溯推导整套作废,禁回归)。
+设计正本 = ADR-0630(含修订节)+ ADR-0634(影子双写推翻:journal 无条件
+常开,无开关无影子期;写入口签名必填)。
 
 锁面 =
 - 渠道枚举封闭集(§3.2.1:family/mode 集外值 = 红);
 - 版本 id 单调不重不漏(§3.2.2:run 段内自 1 连续,行序 = 版本序);
 - 自足快照行完整性(§3.2.3:任取一行可独立解读——行内 state 含此前全部写入);
-- 影子双写零行为变更(§3.7.1:开关缺省关 = 零文件零写入;开 = 既有字段轨迹逐位一致);
+- 常开形态(ADR-0634:签名必填无 legacy 合成;账本接线被动零行为分支);
 - 节点推进派生规则(§3.4:双腿照搬判定方案 R3 本体——单调推进/重入拒绝/
   倒退免疫/先到先推进/权威纠偏);
 - 批量 flush 与局外拒写(§3.2.3 落盘形态:run_id 空 = 拒写,不写假行)。
@@ -37,13 +36,40 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     Field,
     Unit,
     register_sig_actors,
-    state_telemetry_armed,
 )
+
+
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     install_state_telemetry,
     reset_state_telemetry,
 )
 from sr_od.application.currency_war.telemetry import state as tel_state
+
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+    register_sig_actors as _register_sig_actors,
+)
+
+_register_sig_actors('TestSigWriter')
+
+
+def _sig() -> "_ChannelSig":
+    """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
+    return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _lsig() -> "_ChannelSig":
+    """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
+    return _ChannelSig(family='logic_action', actor='TestSigWriter',
+                       mode='compute')
+
+
+def _hsig() -> "_ChannelSig":
+    """渠道③签名(logic_hook 族;relay 中继)。"""
+    return _ChannelSig(family='logic_hook', actor='TestSigWriter',
+                       mode='compute')
+
 
 # ============================================================ fixtures
 
@@ -141,11 +167,11 @@ def test_version_id_monotonic_contiguous_and_row_order(
         journal, run_id, tmp_path) -> None:
     """§3.2.2:run 段内自 1 连续单调不重不漏;行序 = 版本序;读口一致。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)                       # v1
-    bs.observe(bs.gold, 21)                       # v2(值未变重读也计版本见下条)
-    bs.carry(bs.gold, frame='p1-r2')              # v3
+    bs.observe(bs.gold, 20, sig=_sig())                       # v1
+    bs.observe(bs.gold, 21, sig=_sig())                       # v2(值未变重读也计版本见下条)
+    bs.carry(bs.gold, frame='p1-r2', sig=_sig())              # v3
     bs.write_logic(bs.free_refresh_balance, 2,
-                   produced_by='RefreshShop')     # v4
+                   produced_by='RefreshShop', sig=_lsig())     # v4
     rows = journal.rows
     assert [r['v'] for r in rows] == [1, 2, 3, 4], 'run 段内自 1 连续,不重不漏'
     assert rows == sorted(rows, key=lambda r: r['v']), '行序 = 版本序'
@@ -157,8 +183,8 @@ def test_reread_same_value_still_versions_with_same_value_flag(
         journal, run_id) -> None:
     """§3.2.2 规则 4:值未变重读也是「观察发生了」,计版本 + 行注记 same_value。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)
-    bs.observe(bs.gold, 20)
+    bs.observe(bs.gold, 20, sig=_sig())
+    bs.observe(bs.gold, 20, sig=_sig())
     rows = journal.rows
     assert [r['v'] for r in rows] == [1, 2]
     assert rows[0]['same_value'] is False
@@ -168,7 +194,7 @@ def test_reread_same_value_still_versions_with_same_value_flag(
 def test_carry_without_value_no_row_no_version(journal, run_id) -> None:
     """§3.2.2 规则 4:carry 且值无正式值(early return)不换帧不产行不占版本。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.carry(bs.gold, frame='p1-r1')   # gold 从未读过 → 不写
+    bs.carry(bs.gold, frame='p1-r1', sig=_sig())   # gold 从未读过 → 不写
     assert journal.rows == []
     assert bs.current_version() == 0
 
@@ -176,7 +202,7 @@ def test_carry_without_value_no_row_no_version(journal, run_id) -> None:
 def test_expect_bookkeeping_no_row(journal, run_id) -> None:
     """§3.1.1-5(v3 简化):预期登记/清账不产行,挂起面随快照可见。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)
+    bs.observe(bs.gold, 20, sig=_sig())
     before = len(journal.rows)
     entry = bs.expect(bs.gold, 17)
     bs.discard_expected(entry)
@@ -190,11 +216,11 @@ def test_row_schema_complete_and_self_contained(journal, run_id) -> None:
     """§3.2.3 行型 1:行 = v/ts/run_id/row/field/after/same_value/state/sig;
     任取一行可独立解读——行内 state 含该时点完整字段面(含此前写入)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)                                    # v1
+    bs.observe(bs.gold, 20, sig=_sig())                                    # v1
     bs.observe(bs.bench, BenchView(
         slots=[BenchSlot(kind='unit',
                          unit=Unit(char_id='aglaea', star=1, slot=1))],
-        capacity=BENCH_CAPACITY_DEFAULT))                      # v2
+        capacity=BENCH_CAPACITY_DEFAULT), sig=_sig())          # v2
     rows = journal.rows
     assert len(rows) == 2
     for r in rows:
@@ -215,19 +241,40 @@ def test_row_schema_complete_and_self_contained(journal, run_id) -> None:
     assert rows[1]['state']['values']['bench']['slots'][0]['unit']['char_id'] == 'aglaea'
 
 
-def test_legacy_sig_synthesis_per_api(journal, run_id) -> None:
-    """影子期过渡:显式 sig 缺位时按 API 语义合成封闭集内签名
-    (write_logic 带 produced_by → actor;观察族 family=obs)。"""
+def test_legacy_sig_synthesis_retired_sig_required(journal, run_id) -> None:
+    """R5 W1(ADR-0634,锁语义重推):影子期「缺位合成 legacy 签名」过渡
+    路径已退役——写入口签名必填(缺位 = TypeError),显式 sig 的
+    family/mode/actor 逐位落行(actor 在册,无空 actor 行)。本锁取代
+    原「影子期合成签名逐 API 锁」(该锁钉的过渡语义已被直迁裁定取代)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)
-    bs.write_logic(bs.free_refresh_balance, 2, produced_by='RefreshShop')
+    # 写入口缺 sig = 结构性拒绝(TypeError),禁静默合成空 actor 行
+    # (此处刻意缺 sig——签名必填的调用期 TypeError 正是本锁的断言对象)
+    for call in (
+        lambda: bs.observe(bs.gold, 20),
+        lambda: bs.carry(bs.gold, frame='p1-r1'),
+        lambda: bs.write_prior(bs.hp, 82, evidence='prior:adr-0559'),
+        lambda: bs.leave_screen(bs.shop),
+        lambda: bs.write_logic(bs.free_refresh_balance, 2,
+                               produced_by='RefreshShop'),
+        lambda: bs.relay(bs.active_strategies, ['x']),
+    ):
+        try:
+            call()
+        except TypeError:
+            pass
+        else:
+            raise AssertionError('写入口缺 sig 应显式 TypeError(legacy 合成已退役)')
+    # 显式 sig 落行:family/mode/actor 逐位如实
+    bs.observe(bs.gold, 20, sig=_sig())
+    bs.write_logic(bs.free_refresh_balance, 2, produced_by='RefreshShop',
+                   sig=_lsig())
     rows = journal.rows
     assert rows[0]['sig']['family'] == 'obs'
     assert rows[0]['sig']['mode'] == 'read'
+    assert rows[0]['sig']['actor'] == 'TestSigWriter'
     assert rows[1]['sig']['family'] == 'logic_action'
     assert rows[1]['sig']['mode'] == 'compute'
-    assert rows[1]['sig']['actor'] == 'RefreshShop', \
-        'legacy 合成 sig 的 actor = produced_by(留证不丢)'
+    assert rows[1]['sig']['actor'] == 'TestSigWriter'
 
 
 def test_state_snapshot_effects_normalized(journal, run_id) -> None:
@@ -250,60 +297,66 @@ def test_state_snapshot_effects_normalized(journal, run_id) -> None:
                             duration_nodes=3),
             source='strategy', acquired_t=1, remaining_nodes=3,
             remaining_uses=None))
-    bs.observe(bs.gold, 5)
+    bs.observe(bs.gold, 5, sig=_sig())
     row = journal.rows[-1]
     effect_ids = [e['spec_id'] for e in row['state']['effects']]
     assert effect_ids == sorted(effect_ids), 'effects 按 spec id 规范化排序'
 
 
-# ============================================================ 影子双写零行为变更(§3.7.1)
+# ============================================================ 常开形态(R5 W1:journal 被动记录,无影子开关)
 
 
-def test_shadow_off_no_file_no_sink(tmp_path) -> None:
-    """缺省关(项目纪律):不武装 = sink 缺席,写入链零新增副作用零文件。"""
+def test_no_journal_no_file_writes_still_flow(tmp_path) -> None:
+    """常开化后形态(锁语义重推,原「影子关 = 零写入零版本消费」作废):
+    无流水实例 = 行不落零文件,但写路径照常(字段写入/版本分配不受
+    记录层影响——记录被动,ADR-0634)。"""
     reset_state_telemetry()
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)
-    assert state_telemetry_armed() is False
+    v0 = bs.write_seq
+    bs.observe(bs.gold, 20, sig=_sig())
     assert journal_mod.state_journal_instance() is None
+    assert bs.gold.value == 20, '无实例 = 行不落而字段照常写入'
+    assert bs.write_seq == v0 + 1, '版本照常分配'
     # 不指到 tmp_path 的任何落盘:整体校验 = 装配目录树不存在(临时目录为空)
     assert not (tmp_path / 'state').exists()
 
 
-def test_shadow_on_off_identical_preexisting_fields(journal, run_id, tmp_path) -> None:
-    """§3.7.1 影子纪律:开/关两种状态下,既有字段写入轨迹逐位一致
-    (影子面只新增派生域,不改既有域任何一帧)。"""
+def test_journal_passive_wiring_identical_trajectories(journal, run_id, tmp_path) -> None:
+    """常开形态的不变式(原「影子开/关两态既有字段轨迹逐位一致」的承接,
+    锁语义重推):账本接线与否,写路径的既有字段轨迹逐位一致——journal =
+    被动记录,零行为分支(ADR-0634 直迁裁定:常开后记录不再是可开关面)。"""
 
     def _trajectory() -> list[tuple]:
         bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-        bs.observe(bs.gold, 20)
-        bs.carry(bs.gold, frame='p1-r2')
-        bs.write_logic(bs.free_refresh_balance, 2, produced_by='RefreshShop')
-        bs.observe(bs.gold, 25)
+        bs.observe(bs.gold, 20, sig=_sig())
+        bs.carry(bs.gold, frame='p1-r2', sig=_sig())
+        bs.write_logic(bs.free_refresh_balance, 2, produced_by='RefreshShop',
+                       sig=_lsig())
+        bs.observe(bs.gold, 25, sig=_sig())
         entry = bs.expect(bs.gold, 27, confirm_point='prep_obs')
-        bs.confirm(entry)
-        bs.leave_screen(bs.shop)
-        bs.relay(bs.active_strategies, [' Handsome'])
+        bs.confirm(entry, sig=_lsig())
+        bs.leave_screen(bs.shop, sig=_sig())
+        bs.relay(bs.active_strategies, [' Handsome'], sig=_hsig())
         seq = []
         for name in ('gold', 'free_refresh_balance', 'shop', 'active_strategies'):
             f = getattr(bs, name)
             seq.append((name, f.value, f.source, f.evidence))
         return seq
 
-    reset_state_telemetry()      # 先取「关」轨迹(fixture 的武装先复位)
+    reset_state_telemetry()      # 先取「无实例」轨迹(fixture 的装配先复位)
     off = _trajectory()
     install_state_telemetry(tmp_path / 'state2' / 'journal.jsonl',
                             run_id_provider=tel_state.current_run_id)
     on = _trajectory()
     reset_state_telemetry()
-    assert on == off, '影子双写对既有字段轨迹逐位零变更'
+    assert on == off, '账本接线对既有字段轨迹逐位零变更(被动记录)'
 
 
 def test_run_id_empty_rejects_rows(journal, monkeypatch) -> None:
     """§3.2.3 局外写入拒绝:run_id 空 = 拒写假行(诚实缺失)。"""
     monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', '')
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)
+    bs.observe(bs.gold, 20, sig=_sig())
     assert journal.rows == [], '局外不写假行'
     assert bs.current_version() == 1, 'state 写入本体照常(版本照常分配)'
 
@@ -315,10 +368,10 @@ def test_journal_batch_flush(tmp_path, monkeypatch) -> None:
                                 flush_every=2,
                                 run_id_provider=tel_state.current_run_id)
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 1)
+    bs.observe(bs.gold, 1, sig=_sig())
     assert not (tmp_path / 'state' / 'journal.jsonl').exists(), \
         '未到阈值不落盘(行在内存缓冲)'
-    bs.observe(bs.gold, 2)
+    bs.observe(bs.gold, 2, sig=_sig())
     rows = _read_rows(tmp_path / 'state' / 'journal.jsonl')
     assert [r['v'] for r in rows] == [1, 2], '到阈值批量落盘'
     j.flush()
@@ -595,12 +648,13 @@ def test_obs_event_occupies_version_and_embeds_state(journal, run_id) -> None:
     """v3.1-N1/§3.2.3 行型 2:obs_event 同流、占版本、内嵌当时 state——
     零状态变更;「run 段内行序 = 版本序」不变量覆盖全部行型。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 40)                                    # v1 (write)
+    bs.observe(bs.gold, 40, sig=_sig())                                    # v1 (write)
     bs.note_obs_event(
         'arbitrate', 'level', {'old': 4, 'new': 213},
         verdict='保旧-单调守卫', obs_phase='prep_clean',
+        sig=_sig(),
         evidence_refs=[{'shot': 'obs_conflict_level_x.webp'}])  # v2 (obs_event)
-    bs.observe(bs.gold, 41)                                    # v3 (write)
+    bs.observe(bs.gold, 41, sig=_sig())                                    # v3 (write)
     rows = journal.rows
     assert [r['v'] for r in rows] == [1, 2, 3], 'obs_event 占版本,行序=版本序'
     ev = rows[1]

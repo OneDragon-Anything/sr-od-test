@@ -34,11 +34,39 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     NodeKey,
     chain_node_type,
 )
+
+
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     install_state_telemetry,
     reset_state_telemetry,
 )
 from sr_od.application.currency_war.telemetry import state as tel_state
+
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+    register_sig_actors as _register_sig_actors,
+)
+
+_register_sig_actors('TestSigWriter')
+
+
+def _sig() -> "_ChannelSig":
+    """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
+    return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _lsig() -> "_ChannelSig":
+    """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
+    return _ChannelSig(family='logic_action', actor='TestSigWriter',
+                       mode='compute')
+
+
+def _hsig() -> "_ChannelSig":
+    """渠道③签名(logic_hook 族;relay 中继)。"""
+    return _ChannelSig(family='logic_hook', actor='TestSigWriter',
+                       mode='compute')
+
 
 # ============================================================ fixtures
 
@@ -119,7 +147,8 @@ def test_plane_transition_leg_plane_from_observed_mirror(journal, run_id) -> Non
     """规则②位面来源② = bs.node 观察镜像(plane;生产 cw_loop 分支写点不携
     phase_round,镜像顶栏遗产为当前位面来源)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.node, NodeKey(plane=1, round_num=9, kind='boss'))
+    bs.observe(bs.node, NodeKey(plane=1, round_num=9, kind='boss'),
+               sig=_sig())
     _wait(bs)
     bs.observe_screen_context(SCREEN_PLANE_TRANSITION)
     assert bs.node_ord.value == 10
@@ -400,7 +429,7 @@ def test_chain_query_position_addressing_on_injected_chain(journal, run_id) -> N
     """链在位形态(测试注入;生产写端归件 B B-2/B-3):位寻址 = seq[i] 第
     i+1 轮(round 基 1,与 PlaneNodeLedger 下标语义同式);位越界 = None。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.node_path, ['reward', 'battle', 'supply'],
+    bs.write_logic(bs.node_path, ['reward', 'battle', 'supply'], sig=_lsig(),
                    produced_by='TestChainWriter')
     assert chain_node_type(bs, 1, 2).token == 'battle'
     assert chain_node_type(bs, 1, 4).token is None, '位越界 = 现行链不知道'

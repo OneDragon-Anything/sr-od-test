@@ -167,8 +167,10 @@ def test_obs_conflict_bypass_appends_ledger_row(tmp_path: Path, monkeypatch):
 
 
 def test_obs_conflict_bypass_auto_resolved_and_text_field(tmp_path: Path, monkeypatch):
-    """裁决已自动面(deployed_align)恒 L2;未映射文本字段原样落 surface、
-    gap 不硬猜(None)。"""
+    """裁决已自动面(deployed_align)恒 L2;R5 W1 键封闭清单补全后
+    back_layout 系键映射 deployed,reconcile 对账域 tracking/star 两活键
+    落同名 surface(枚举覆盖调用点全集,ADR-0634——原「未映射键原样落
+    surface」的敞口面收窄);gap 不硬猜(None)。"""
     _setup_recorder(monkeypatch, tmp_path)
     # (旧证据文件指针桩 _CONFLICT_JOURNAL 已随删除波 1 移除——证据归宿 =
     #  journal obs_event;本锁辖 obs→缺陷台账旁路,旁路不受账本武装影响。)
@@ -176,12 +178,21 @@ def test_obs_conflict_bypass_auto_resolved_and_text_field(tmp_path: Path, monkey
                             verdict='采新-paddle锚', source='align')
     cw_observe.obs_conflict('back_layout_channel_conflict', {'a': 1}, {'b': 2}, None,
                             verdict='留证')
+    cw_observe.obs_conflict('tracking', '[(甲,1)]|[]', '[]|[]', None,
+                            verdict='保旧-双空读守卫', source='align')
+    cw_observe.obs_conflict('star', 2, 1, None,
+                            verdict='保旧-回退防抖', source='align', char='甲')
     defects = _rows(tmp_path, 'defect_ledger.jsonl')
     assert defects[0]['surface'] == 'deployed'
     assert defects[0]['severity'] == 'L2_record'   # 自动裁决 → L2
-    assert defects[1]['surface'] == 'back_layout_channel_conflict'   # 未映射原样
+    assert defects[1]['surface'] == 'deployed', \
+        'back_layout 系键已入 OBS_FIELD_TO_SURFACE 枚举(R5 W1 补全,映射部署域)'
     assert defects[1]['gap'] is None               # 文本面不填 gap
     assert defects[1]['severity'] == 'L2_record'
+    assert defects[2]['surface'] == 'tracking' and defects[3]['surface'] == 'star', \
+        'reconcile 对账域两活键已入枚举,surface 保持 field 同名(值跨 bench|deployed 两册)'
+    assert defects[2]['gap'] is None               # 账面快照串 = 文本面
+    assert defects[2]['severity'] == 'L2_record'
 
 
 def test_exec_event_bypass_retired(tmp_path: Path, monkeypatch):

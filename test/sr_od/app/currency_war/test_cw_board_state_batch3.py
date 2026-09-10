@@ -26,6 +26,8 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     NodeKey,
     board_state_of,
 )
+
+
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     CounterKey,
     ActiveEffectInventory,
@@ -49,6 +51,32 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
     StrategyState,
     state_of,
 )
+
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+    register_sig_actors as _register_sig_actors,
+)
+
+_register_sig_actors('TestSigWriter')
+
+
+def _sig() -> "_ChannelSig":
+    """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
+    return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _lsig() -> "_ChannelSig":
+    """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
+    return _ChannelSig(family='logic_action', actor='TestSigWriter',
+                       mode='compute')
+
+
+def _hsig() -> "_ChannelSig":
+    """渠道③签名(logic_hook 族;relay 中继)。"""
+    return _ChannelSig(family='logic_hook', actor='TestSigWriter',
+                       mode='compute')
+
 
 _REPO = Path(__file__).resolve().parents[5]
 _PKG = _REPO / 'src' / 'sr_od' / 'application' / 'currency_war'
@@ -269,7 +297,7 @@ def test_capacity_projection_activates_and_recovers() -> None:
     assert bs.bench.value is None, 'bench 未观察 = 无容器,不造帧'
     # 观察(默认容量 9)→ 投影 3
     slots = [BenchSlot(kind='unit')] + [BenchSlot(kind='empty')] * 8
-    bs.observe(bs.bench, BenchView(slots=slots, capacity=BENCH_CAPACITY_DEFAULT))
+    bs.observe(bs.bench, BenchView(slots=slots, capacity=BENCH_CAPACITY_DEFAULT), sig=_sig())
     project_effect_capacity(bs)
     assert bs.bench.value.capacity == 3, '激活期容量 = 声明值'
     assert bs.bench.value.slots[0].kind == 'unit', '槽位表原样保留'
@@ -413,7 +441,7 @@ def test_synthesis_payload_offscreen_branch() -> None:
 
 def _bs_with_node(sess) -> None:
     bs = board_state_of(sess)
-    bs.observe(bs.node, NodeKey(plane=2, round_num=5, kind='battle'))
+    bs.observe(bs.node, NodeKey(plane=2, round_num=5, kind='battle'), sig=_sig())
 
 
 def test_snapshot_assembly_falls_back_to_board_state_view() -> None:

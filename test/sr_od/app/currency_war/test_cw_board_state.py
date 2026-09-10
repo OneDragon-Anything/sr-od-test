@@ -35,6 +35,8 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     slot_occupies,
     synthesize_from_game_state,
 )
+
+
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
     BenchChar,
@@ -43,6 +45,32 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.kernel.cw_state import (
     ShopCard as StateShopCard,
 )
+
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+    register_sig_actors as _register_sig_actors,
+)
+
+_register_sig_actors('TestSigWriter')
+
+
+def _sig() -> "_ChannelSig":
+    """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
+    return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _lsig() -> "_ChannelSig":
+    """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
+    return _ChannelSig(family='logic_action', actor='TestSigWriter',
+                       mode='compute')
+
+
+def _hsig() -> "_ChannelSig":
+    """渠道③签名(logic_hook 族;relay 中继)。"""
+    return _ChannelSig(family='logic_hook', actor='TestSigWriter',
+                       mode='compute')
+
 
 
 # ============================================================ §8.6-1/§2.1
@@ -86,7 +114,7 @@ def test_expected_entry_table_five_keys_and_last_wins() -> None:
 def test_expect_leaves_field_unreadable_to_strategy() -> None:
     """§2.5 两步机制:预期只进条目表,字段值暂不动——策略器读字段读不到预期。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)
+    bs.observe(bs.gold, 20, sig=_sig())
     bs.expect(bs.gold, 17)
     assert bs.gold.value == 20, '预期未核实前字段保持原值(策略器不读预期)'
     assert bs.gold.source == 'observation'
@@ -95,9 +123,9 @@ def test_expect_leaves_field_unreadable_to_strategy() -> None:
 def test_confirm_writes_logic_and_keeps_logic_source() -> None:
     """§2.5/§8.1:核实通过 → 字段写入且 source=logic(保持 logic,不翻 observation)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)
+    bs.observe(bs.gold, 20, sig=_sig())
     entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry)
+    bs.confirm(entry, sig=_lsig())
     assert bs.gold.value == 17
     assert bs.gold.source == 'logic', 'logic 值保持 logic 来源(§8.1)'
     assert not bs.pending_entries(), '确认后条目清账'
@@ -108,7 +136,7 @@ def test_confirm_rejects_wrong_confirm_point() -> None:
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     entry = bs.expect(bs.gold, 17, confirm_point='shop_wave_top')
     with pytest.raises(ValueError):
-        bs.confirm(entry, at_point='prep_obs')
+        bs.confirm(entry, at_point='prep_obs', sig=_lsig())
 
 
 def test_confirm_group_all_or_nothing() -> None:
@@ -118,7 +146,7 @@ def test_confirm_group_all_or_nothing() -> None:
     e_gold = bs.expect(bs.gold, 17, group_id=g, confirm_point='prep_obs')
     e_bench = bs.expect(bs.bench, BenchView(), group_id=g,
                         confirm_point='prep_obs')
-    bs.confirm(e_gold, at_point='prep_obs')
+    bs.confirm(e_gold, at_point='prep_obs', sig=_lsig())
     assert bs.gold.value == 17
     assert not bs.pending_entries(), '组确认 = 整组清账(全有全无)'
 
@@ -126,7 +154,7 @@ def test_confirm_group_all_or_nothing() -> None:
 def test_discard_expected_clears_without_write() -> None:
     """§8.4 用法块第 4 步:点击落空 → 条目清账不写字段(观察赢前清预期)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20)
+    bs.observe(bs.gold, 20, sig=_sig())
     entry = bs.expect(bs.gold, 17)
     bs.discard_expected(entry)
     assert not bs.pending_entries()
@@ -137,9 +165,9 @@ def test_logic_written_fields_tracks_and_reanchors() -> None:
     """§8.4 logic_written_fields:已确认未重锚的 logic 字段名;观察覆盖后除名。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry)
+    bs.confirm(entry, sig=_lsig())
     assert bs.logic_written_fields() == ['gold']
-    bs.observe(bs.gold, 19)
+    bs.observe(bs.gold, 19, sig=_sig())
     assert bs.logic_written_fields() == [], '观察重锚后不再算 logic 在写'
 
 
@@ -156,13 +184,13 @@ def test_write_seq_is_monotonic_carrier() -> None:
     (消费即清后当不了哨兵);心跳观察者断言「不断流」。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     seq0 = bs.heartbeat()
-    bs.observe(bs.gold, 20)
-    bs.observe(bs.gold, 21)
+    bs.observe(bs.gold, 20, sig=_sig())
+    bs.observe(bs.gold, 21, sig=_sig())
     bs.mark_frame_obs('full')
     assert bs.consume_frame_obs() == 'full', '消费标注不影响哨兵计数'
     seq1 = bs.heartbeat()
     assert seq1 > seq0, '写点推进 → 心跳单调递增(不断流)'
-    bs.carry(bs.gold, frame='p1-r5')
+    bs.carry(bs.gold, frame='p1-r5', sig=_sig())
     assert bs.heartbeat() > seq1, 'carried 写也是写点,哨兵照常推进'
 
 
@@ -220,7 +248,7 @@ def test_gap3_node_screen_refresh_schema_domain() -> None:
     逐卡计数形状 = 卡名 → 已用次数(§3.4.4)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     assert bs.bs_schema.get('node_screen_refresh') == 1
-    bs.observe(bs.strategy_refresh_used, {'白银投资': 1})
+    bs.observe(bs.strategy_refresh_used, {'白银投资': 1}, sig=_sig())
     assert bs.strategy_refresh_used.value == {'白银投资': 1}
 
 
@@ -241,7 +269,7 @@ def test_game_mode_field_accepts_two_modes() -> None:
     """§3.1.2:对局类型=标准/超频博弈(两屏均无建档区域,接线前先补档——
     字段先入 schema,写端挂补档批)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.game_mode, '标准')
+    bs.observe(bs.game_mode, '标准', sig=_sig())
     assert bs.game_mode.value == '标准'
 
 
@@ -249,7 +277,7 @@ def test_node_path_ledger_is_type_sequence() -> None:
     """§3.2.2:节点序列台账 = 本局节点**类型序**台账(权威写端=备战帧
     node_path 现读;内容主题替换族不改类型序,台账不受影响)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.node_path, ['battle', 'encounter', 'reward', 'boss'])
+    bs.observe(bs.node_path, ['battle', 'encounter', 'reward', 'boss'], sig=_sig())
     assert bs.node_path.value == ['battle', 'encounter', 'reward', 'boss']
 
 
@@ -258,7 +286,7 @@ def test_prep_substate_four_values() -> None:
     无帧识别锚,写端=接管协议(§6.3),禁按帧子态统一路由。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     for v in ('策略锁定', '遭遇锁定', '补给锁定', '恢复锁定'):
-        bs.observe(bs.prep_substate, v)
+        bs.observe(bs.prep_substate, v, sig=_sig())
         assert bs.prep_substate.value == v
 
 
@@ -266,7 +294,7 @@ def test_hp_floor_event_is_pure_observation_registry() -> None:
     """§3.5.3:hp 保底触发事件位 = 纯观察登记、无判据载体(消费端按不确定降级)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     assert bs.hp_floor_triggered.value is None
-    bs.observe(bs.hp_floor_triggered, True)
+    bs.observe(bs.hp_floor_triggered, True, sig=_sig())
     assert bs.hp_floor_triggered.value is True
 
 
@@ -305,11 +333,11 @@ def test_bench_free_slots_counts_occupying_kinds() -> None:
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     slots = [BenchSlot(kind='unit'), BenchSlot(kind='supply_box'),
              BenchSlot(kind='tome')] + [BenchSlot(kind='empty')] * 6
-    bs.observe(bs.bench, BenchView(slots=slots, capacity=9))
+    bs.observe(bs.bench, BenchView(slots=slots, capacity=9), sig=_sig())
     assert bench_free_slots(bs) == 6
     assert bench_is_full(bs) is False
     full = [BenchSlot(kind='unit')] * 8 + [BenchSlot(kind='supply_box')]
-    bs.observe(bs.bench, BenchView(slots=full, capacity=9))
+    bs.observe(bs.bench, BenchView(slots=full, capacity=9), sig=_sig())
     assert bench_is_full(bs) is True, '8 单位 + 1 箱 = 满(箱占席)'
 
 
@@ -328,7 +356,7 @@ def test_observe_replaces_frame_not_mutates() -> None:
     """§2.4:frozen 帧替换——旧帧引用保持旧值(持旧引用的读者不被跨时段写回污染)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     old = bs.gold
-    bs.observe(bs.gold, 20)
+    bs.observe(bs.gold, 20, sig=_sig())
     assert old.value is None and old.source == 'observation'
     assert bs.gold.value == 20 and bs.gold is not old
 
@@ -338,9 +366,9 @@ def test_observe_rejects_none_loses_are_carried_not_cleared() -> None:
     (处置②),字段一旦有过正式值任何失读不得清成 None。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     with pytest.raises(ValueError):
-        bs.observe(bs.hp, None)
-    bs.observe(bs.hp, 80)
-    bs.carry(bs.hp, frame='p1-r5')
+        bs.observe(bs.hp, None, sig=_sig())
+    bs.observe(bs.hp, 80, sig=_sig())
+    bs.carry(bs.hp, frame='p1-r5', sig=_sig())
     assert bs.hp.value == 80, '失读帧沿用上次好值'
     assert bs.hp.source == 'carried' and bs.hp.evidence == 'carried:p1-r5'
     assert bs.hp.value is not None, '硬边界:正式值永不清成 None'
@@ -350,7 +378,7 @@ def test_carry_on_never_read_keeps_none() -> None:
     """§2.2 处置②:字段从未读过(机制性不可读态+新局)→ 保持 None
     (机制性 None 专指此态)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.carry(bs.gold, frame='p1-r1')
+    bs.carry(bs.gold, frame='p1-r1', sig=_sig())
     assert bs.gold.value is None
 
 
@@ -358,8 +386,8 @@ def test_write_prior_requires_prior_evidence() -> None:
     """§2.1/§3.1.6:prior 写入必带 prior: 来源注记;禁扩散(仅显式申报条目)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     with pytest.raises(ValueError):
-        bs.write_prior(bs.hp, 82, evidence='carried:x')
-    bs.write_prior(bs.hp, 82, evidence='prior:adr-0559')
+        bs.write_prior(bs.hp, 82, evidence='carried:x', sig=_sig())
+    bs.write_prior(bs.hp, 82, evidence='prior:adr-0559', sig=_sig())
     assert bs.hp.value == 82 and bs.hp.source == 'prior'
 
 
@@ -368,20 +396,20 @@ def test_leave_screen_payload_only() -> None:
     画面置 None 是结构事实,不受 carried 硬边界辖;整局字段禁走此口,
     settlement(结算真值组,§3.5.1)非画面 payload 同样禁离屏清值。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.shop, SimpleNamespace(cards=[]))
-    bs.observe(bs.encounter, SimpleNamespace(options=[]))
-    bs.observe(bs.supply, SimpleNamespace(options=[]))
-    bs.leave_screen(bs.shop)
-    bs.leave_screen(bs.encounter)
-    bs.leave_screen(bs.supply)
+    bs.observe(bs.shop, SimpleNamespace(cards=[]), sig=_sig())
+    bs.observe(bs.encounter, SimpleNamespace(options=[]), sig=_sig())
+    bs.observe(bs.supply, SimpleNamespace(options=[]), sig=_sig())
+    bs.leave_screen(bs.shop, sig=_sig())
+    bs.leave_screen(bs.encounter, sig=_sig())
+    bs.leave_screen(bs.supply, sig=_sig())
     assert bs.shop.value is None and bs.encounter.value is None \
         and bs.supply.value is None
-    bs.observe(bs.gold, 20)
+    bs.observe(bs.gold, 20, sig=_sig())
     with pytest.raises(ValueError):
-        bs.leave_screen(bs.gold), '整局字段(有过正式值)禁离屏清值'
-    bs.observe(bs.settlement, SimpleNamespace(hp_after=76))
+        bs.leave_screen(bs.gold, sig=_sig()), '整局字段(有过正式值)禁离屏清值'
+    bs.observe(bs.settlement, SimpleNamespace(hp_after=76), sig=_sig())
     with pytest.raises(ValueError):
-        bs.leave_screen(bs.settlement), 'settlement 非画面附加域,禁离屏'
+        bs.leave_screen(bs.settlement, sig=_sig()), 'settlement 非画面附加域,禁离屏'
 
 
 def test_observe_over_logic_mismatch_emits_defect_row() -> None:
@@ -389,11 +417,11 @@ def test_observe_over_logic_mismatch_emits_defect_row() -> None:
     观察赢——来源改回 observation。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry)
+    bs.confirm(entry, sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        bs.observe(bs.gold, 19)
+        bs.observe(bs.gold, 19, sig=_sig())
     finally:
         set_defect_sink(None)
         consume_defect_sink()
@@ -407,11 +435,11 @@ def test_observe_over_logic_match_silent() -> None:
     """§2.3:观察值与 logic 值一致 = 核实通过形态,不留缺陷行。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry)
+    bs.confirm(entry, sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        bs.observe(bs.gold, 17)
+        bs.observe(bs.gold, 17, sig=_sig())
     finally:
         set_defect_sink(None)
     assert rows == []
@@ -421,7 +449,7 @@ def test_observe_does_not_touch_pending_entries() -> None:
     """§2.3:观察帧不得确认或清除未核实预期——预期只由它自己的核对点关闭。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     entry = bs.expect(bs.gold, 17)
-    bs.observe(bs.gold, 19)
+    bs.observe(bs.gold, 19, sig=_sig())
     assert bs.pending_entries() == [entry], '观察不清预期条目'
 
 
@@ -451,7 +479,7 @@ def test_streak_signed_value_preserved() -> None:
     """§3.2.12:streak 带符号(正=连胜/负=连败);无方向读数禁覆盖带符号值
     ——观察口只收带方向真值。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.streak, -3)
+    bs.observe(bs.streak, -3, sig=_sig())
     assert bs.streak.value == -3
 
 
@@ -460,8 +488,8 @@ def test_shop_refresh_cost_none_is_not_zero() -> None:
     ——失读走 carried,值保持上次读数。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     assert bs.shop_refresh_cost.value is None, '新局未读 = None,不是 0'
-    bs.observe(bs.shop_refresh_cost, 2)
-    bs.carry(bs.shop_refresh_cost, frame='shop-free-frame')
+    bs.observe(bs.shop_refresh_cost, 2, sig=_sig())
+    bs.carry(bs.shop_refresh_cost, frame='shop-free-frame', sig=_sig())
     assert bs.shop_refresh_cost.value == 2
     assert bs.shop_refresh_cost.value != 0
 
@@ -470,7 +498,7 @@ def test_event_overlay_none_vs_not_read_distinct() -> None:
     """§3.6.1:'none'=确认无浮层(显式枚举值);None=这一帧没读到。两者分写。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     assert bs.event_overlay.value is None, '未读到'
-    bs.observe(bs.event_overlay, 'none')
+    bs.observe(bs.event_overlay, 'none', sig=_sig())
     assert bs.event_overlay.value == 'none', '确认无浮层'
 
 
@@ -478,9 +506,9 @@ def test_back_layout_writes_real_slot_count_with_superset_mark() -> None:
     """§3.2.7:布局档写真实槽位数;域外按 8 格超集读全扩展带,evidence 补
     superset 标记(防超集近似被当精确值消费)。断言不按 level 驱动表写。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.back_layout, 7)
+    bs.observe(bs.back_layout, 7, sig=_sig())
     assert bs.back_layout.value == 7
-    bs.observe(bs.back_layout, 8, evidence='superset')
+    bs.observe(bs.back_layout, 8, evidence='superset', sig=_sig())
     assert bs.back_layout.value == 8 and bs.back_layout.evidence == 'superset'
 
 
@@ -505,7 +533,7 @@ def test_heartbeat_observer_flags_stall() -> None:
     assert bs.hb_stall_count == 1
     note_board_state_heartbeat(sess)   # 零推进 #2 → 达标
     assert bs.hb_stall_count >= 2
-    bs.observe(bs.gold, 20)            # 有推进
+    bs.observe(bs.gold, 20, sig=_sig())            # 有推进
     note_board_state_heartbeat(sess)
     assert bs.hb_stall_count == 0, '推进即复位'
 
@@ -760,7 +788,8 @@ def test_observation_feed_battle_frame_kind_inherits(
     assert bs.node.value is None, 'kind 未读∧无现值 → node 不写(禁猜)'
 
     # 有现值(boss):继承 kind 合成新键,evidence 标继承
-    bs.observe(bs.node, NodeKey(plane=1, round_num=8, kind='boss'))
+    bs.observe(bs.node, NodeKey(plane=1, round_num=8, kind='boss'),
+               sig=_sig())
     obs.read_game_state(_feed_ctx(sess), None, phase='battle_or_transit')
     node = bs.node.value
     assert node is not None and node.kind == 'boss', \
@@ -794,11 +823,11 @@ def test_consume_defect_sink_drains() -> None:
     consume_defect_sink()   # 清其他测试遗留(模块级缓冲 = 副作用链桩化点)
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry)
+    bs.confirm(entry, sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        bs.observe(bs.gold, 18)
+        bs.observe(bs.gold, 18, sig=_sig())
     finally:
         drained = consume_defect_sink()
     assert len(rows) == 1 and drained == rows

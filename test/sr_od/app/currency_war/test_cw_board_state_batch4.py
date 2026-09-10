@@ -27,6 +27,32 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     board_state_of,
 )
 
+
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+    register_sig_actors as _register_sig_actors,
+)
+
+_register_sig_actors('TestSigWriter')
+
+
+def _sig() -> "_ChannelSig":
+    """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
+    return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _lsig() -> "_ChannelSig":
+    """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
+    return _ChannelSig(family='logic_action', actor='TestSigWriter',
+                       mode='compute')
+
+
+def _hsig() -> "_ChannelSig":
+    """渠道③签名(logic_hook 族;relay 中继)。"""
+    return _ChannelSig(family='logic_hook', actor='TestSigWriter',
+                       mode='compute')
+
 _REPO = Path(__file__).resolve().parents[5]
 _PKG = _REPO / 'src' / 'sr_od' / 'application' / 'currency_war'
 
@@ -42,12 +68,12 @@ def test_relay_rejects_session_empty_defaults() -> None:
     """§2.1 空值=未知态禁中继:字符串空/空白、列表/元组/字典/集合空 = 会话
     侧值未确立,一律拒写(返回 False,字段保持从未写过)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    assert bs.relay(bs.active_env, '') is False
-    assert bs.relay(bs.selected_difficulty, '   ') is False, \
+    assert bs.relay(bs.active_env, '', sig=_hsig()) is False
+    assert bs.relay(bs.selected_difficulty, '   ', sig=_hsig()) is False, \
         '空白字符串 = 无内容读数,同空域'
-    assert bs.relay(bs.active_strategies, []) is False
-    assert bs.relay(bs.plane_bosses, ()) is False
-    assert bs.relay(bs.enemy_affixes, {}) is False
+    assert bs.relay(bs.active_strategies, [], sig=_hsig()) is False
+    assert bs.relay(bs.plane_bosses, (), sig=_hsig()) is False
+    assert bs.relay(bs.enemy_affixes, {}, sig=_hsig()) is False
     for name in _MIRROR_FIELDS:
         fld = getattr(bs, name)
         assert fld.value is None, f'空默认禁落 BoardState:{name}'
@@ -59,13 +85,13 @@ def test_relay_empty_refusal_does_not_block_late_truth() -> None:
     落(source=logic + evidence=session_carrier,§2.1 中继形态);「持卡名单
     [] 为假事实、拦截后到真值」的缺陷面由本锁钉死。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    assert bs.relay(bs.active_strategies, []) is False
-    assert bs.relay(bs.active_env, '') is False
-    assert bs.relay(bs.active_strategies, ['白银投资']) is True
+    assert bs.relay(bs.active_strategies, [], sig=_hsig()) is False
+    assert bs.relay(bs.active_env, '', sig=_hsig()) is False
+    assert bs.relay(bs.active_strategies, ['白银投资'], sig=_hsig()) is True
     assert bs.active_strategies.value == ['白银投资']
     assert bs.active_strategies.source == 'logic'
     assert bs.active_strategies.evidence == 'session_carrier'
-    assert bs.relay(bs.active_env, '昼之半神概念股') is True
+    assert bs.relay(bs.active_env, '昼之半神概念股', sig=_hsig()) is True
     assert bs.active_env.value == '昼之半神概念股'
     assert bs.active_env.evidence == 'session_carrier'
 
@@ -74,9 +100,9 @@ def test_relay_gate_scope_is_empty_string_and_containers_only() -> None:
     """闸辖域 = 空字符串与空容器(§2.1 词面:字符串非空/列表非空);falsy 但
     有语义的标量(如 streak=0 真 0)不受闸辖,禁过度收紧。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    assert bs.relay(bs.streak, 0) is True
+    assert bs.relay(bs.streak, 0, sig=_hsig()) is True
     assert bs.streak.value == 0 and bs.streak.source == 'logic'
-    assert bs.relay(bs.plane_bosses, [None, None, None]) is True, \
+    assert bs.relay(bs.plane_bosses, [None, None, None], sig=_hsig()) is True, \
         '非空列表即确立(结构已知,元素 None = 该位面无身份,§8.4)'
 
 

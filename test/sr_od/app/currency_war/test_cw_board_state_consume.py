@@ -31,6 +31,8 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     record_refresh_execution,
     set_defect_sink,
 )
+
+
 from sr_od.application.currency_war.kernel.cw_bs_view import (
     game_state_view,
     strategy_input_state,
@@ -42,6 +44,32 @@ from sr_od.application.currency_war.kernel.cw_state import (
     ShopCard as StateShopCard,
 )
 from sr_od.application.currency_war.obs import cw_observation as cobs
+
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+    register_sig_actors as _register_sig_actors,
+)
+
+_register_sig_actors('TestSigWriter')
+
+
+def _sig() -> "_ChannelSig":
+    """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
+    return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _lsig() -> "_ChannelSig":
+    """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
+    return _ChannelSig(family='logic_action', actor='TestSigWriter',
+                       mode='compute')
+
+
+def _hsig() -> "_ChannelSig":
+    """渠道③签名(logic_hook 族;relay 中继)。"""
+    return _ChannelSig(family='logic_hook', actor='TestSigWriter',
+                       mode='compute')
+
 
 
 # ============================================================ §8.7 消费适配器
@@ -129,7 +157,7 @@ def test_view_refresh_cost_policy_none_is_base_not_zero() -> None:
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     view = game_state_view(bs, GameState())
     assert view.shop_refresh_cost == 2
-    bs.observe(bs.shop_refresh_cost, 1)   # 长线利好态现场识别值
+    bs.observe(bs.shop_refresh_cost, 1, sig=_sig())   # 长线利好态现场识别值
     assert game_state_view(bs, GameState()).shop_refresh_cost == 1
 
 
@@ -146,7 +174,7 @@ def test_strategy_input_state_reads_board_state(tmp_path) -> None:
     last_state);BoardState 有值域以记录值为准。"""
     sess = SimpleNamespace(last_state=None)
     bs = board_state_of(sess)
-    bs.observe(bs.gold, 55)
+    bs.observe(bs.gold, 55, sig=_sig())
     view = strategy_input_state(sess)
     assert view.gold == 55
 
@@ -158,13 +186,14 @@ def test_write_logic_writes_confirmed_logic_source() -> None:
     """§3.4 申报豁免写端:单次逻辑写入直接转正(source=logic),并入
     logic_written_fields;之后照受观察覆盖辖(§2.3)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.chosen_megastar, '花火', produced_by='CwScreenMegastar')
+    bs.write_logic(bs.chosen_megastar, '花火', produced_by='CwScreenMegastar',
+                   sig=_lsig())
     assert bs.chosen_megastar.value == '花火'
     assert bs.chosen_megastar.source == 'logic'
     assert bs.chosen_megastar in [
         getattr(bs, n) for n in bs.logic_written_fields()]
     # 观察覆盖照常赢(豁免不是免检通道)
-    bs.observe(bs.chosen_megastar, '希儿')
+    bs.observe(bs.chosen_megastar, '希儿', sig=_sig())
     assert bs.chosen_megastar.value == '希儿'
     assert bs.chosen_megastar.source == 'observation'
 
@@ -174,11 +203,12 @@ def test_write_logic_over_logic_mismatch_still_defects() -> None:
     (write_logic 产物与 confirm 产物同受观察赢辖)。"""
     consume_defect_sink()
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.active_env, '昼之半神概念股', produced_by='x')
+    bs.write_logic(bs.active_env, '昼之半神概念股', produced_by='x',
+                   sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        bs.observe(bs.active_env, '战争边疆')
+        bs.observe(bs.active_env, '战争边疆', sig=_sig())
     finally:
         set_defect_sink(None)
         consume_defect_sink()
@@ -202,7 +232,8 @@ def test_refresh_execution_free_gate_skips_paid_count() -> None:
     """§3.3.7 免费帧闸(本批申报核心):免费帧不进付费累计(长线利好触发
     计数载体禁混入免费刷),消耗免费余额 + total 照计。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.free_refresh_balance, 2, produced_by='effect')
+    bs.write_logic(bs.free_refresh_balance, 2, produced_by='effect',
+                   sig=_lsig())
     record_refresh_execution(bs, free=True, frame='p1-r3')
     assert bs.paid_refresh_count.value is None, '免费帧禁写付费计数'
     assert bs.free_refresh_balance.value == 1, '免费余额消耗'
@@ -212,7 +243,8 @@ def test_refresh_execution_free_gate_skips_paid_count() -> None:
 def test_refresh_execution_free_balance_floor_zero() -> None:
     """免费余额下限 0(计数器单调域,禁负值漂移)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.free_refresh_balance, 1, produced_by='effect')
+    bs.write_logic(bs.free_refresh_balance, 1, produced_by='effect',
+                   sig=_lsig())
     record_refresh_execution(bs, free=True)
     record_refresh_execution(bs, free=True)
     assert bs.free_refresh_balance.value == 0
@@ -307,7 +339,7 @@ def test_settlement_cover_unread_hp_not_written() -> None:
     """hp 失读(结算页 OCR miss)→ 不写(不可信帧不写,§2.2 写入闸),
     不清既有正式值。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.hp, 80)
+    bs.observe(bs.hp, 80, sig=_sig())
     apply_settlement_cover(bs, hp_after=None, streak_after=None)
     assert bs.hp.value == 80 and bs.hp.source == 'observation'
 
@@ -319,10 +351,11 @@ def test_archive_snapshot_three_keys_and_prov_sparsity() -> None:
     """§8.8 三键形态:bs_prov 只记非默认来源(稀疏化)/bs_pending 预期
     条目/bs_extra 工程结构+非 None 值(JSON 安全)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 55)                       # 默认 observation 无注记 → prov 不记
-    bs.write_prior(bs.hp, 82, evidence='prior:adr-0559')   # prior → prov 记
-    bs.carry(bs.gold, frame='p1-r5')              # carried → prov 记
-    bs.observe(bs.node, NodeKey(plane=1, round_num=5, kind='boss'))
+    bs.observe(bs.gold, 55, sig=_sig())                       # 默认 observation 无注记 → prov 不记
+    bs.write_prior(bs.hp, 82, evidence='prior:adr-0559',
+                   sig=_sig())   # prior → prov 记
+    bs.carry(bs.gold, frame='p1-r5', sig=_sig())              # carried → prov 记
+    bs.observe(bs.node, NodeKey(plane=1, round_num=5, kind='boss'), sig=_sig())
     e = bs.expect(bs.level, 6)
     snap = archive_snapshot(bs)
     assert set(snap) >= {'schema_version', 'bs_prov', 'bs_pending', 'bs_extra'}
@@ -361,7 +394,7 @@ def test_relay_writes_logic_with_carrier_evidence_when_never_written() -> None:
     """§2.1 载体中继:从未写过的字段 → source=logic + evidence=
     session_carrier(不设第五来源类,禁标 observation)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    assert bs.relay(bs.active_env, '昼之半神概念股') is True
+    assert bs.relay(bs.active_env, '昼之半神概念股', sig=_hsig()) is True
     assert bs.active_env.value == '昼之半神概念股'
     assert bs.active_env.source == 'logic'
     assert bs.active_env.evidence == 'session_carrier'
@@ -371,13 +404,14 @@ def test_relay_skips_fields_with_official_value() -> None:
     """§2.1 收敛核心:已有正式值的字段一律跳过——handler 已写的 logic
     禁被中继翻成 observation(§8.1);observation 同样不翻。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.active_env, '战争边疆', produced_by='CwScreenInvestEnv')
-    assert bs.relay(bs.active_env, '昼之半神概念股') is False
+    bs.write_logic(bs.active_env, '战争边疆', produced_by='CwScreenInvestEnv',
+                   sig=_lsig())
+    assert bs.relay(bs.active_env, '昼之半神概念股', sig=_hsig()) is False
     assert bs.active_env.value == '战争边疆', 'handler 真写端值保持'
     assert bs.active_env.source == 'logic', '禁把 logic 翻成 observation'
     assert bs.active_env.evidence is None, '真写端 evidence 不被中继污染'
-    bs.observe(bs.active_strategies, ['白银投资'])
-    assert bs.relay(bs.active_strategies, []) is False
+    bs.observe(bs.active_strategies, ['白银投资'], sig=_sig())
+    assert bs.relay(bs.active_strategies, [], sig=_hsig()) is False
     assert bs.active_strategies.source == 'observation'
 
 
@@ -451,13 +485,13 @@ def test_merge_expect_reconcile_loop_two_step() -> None:
                       produced_by='BuyCard')
     assert bs.bench.value is None, '预期不进字段(策略器读不到)'
     verdict = reconcile_pending_observation(bs, bs.bench, real_view,
-                                            at_point='prep_obs')
+                                            at_point='prep_obs', sig=_lsig())
     assert verdict == 'confirmed'
     assert bs.bench.value == expected_view and bs.bench.source == 'logic'
     assert entry not in bs.pending_entries()
     # 失配路径:清账 + 缺陷留证(观察已覆盖真值)
     bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs2.observe(bs2.bench, real_view)
+    bs2.observe(bs2.bench, real_view, sig=_sig())
     bs2.expect(bs2.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8),
         confirm_point='prep_obs', produced_by='BuyCard')
@@ -465,7 +499,8 @@ def test_merge_expect_reconcile_loop_two_step() -> None:
     set_defect_sink(rows.append)
     try:
         verdict2 = reconcile_pending_observation(bs2, bs2.bench, real_view,
-                                                 at_point='prep_obs')
+                                                 at_point='prep_obs',
+                                                 sig=_lsig())
     finally:
         set_defect_sink(None)
         consume_defect_sink()
@@ -473,9 +508,10 @@ def test_merge_expect_reconcile_loop_two_step() -> None:
     assert bs2.bench.value == real_view and bs2.bench.source == 'observation', \
         '观察赢:核对失败字段保持观察真值'
     assert not bs2.pending_entries(), '失配条目清账'
-    # 无挂起预期 → none
+    # 无挂起预期 → none(无行无写入,sig 不消费;签名必填仍须带)
     assert reconcile_pending_observation(bs, bs.bench, real_view,
-                                         at_point='prep_obs') == 'none'
+                                         at_point='prep_obs',
+                                         sig=_lsig()) == 'none'
 
 
 # ============================================================ 扩单件 4:parse_streak 失读 None 化(§8.8)

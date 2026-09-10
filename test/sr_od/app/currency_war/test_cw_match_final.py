@@ -42,7 +42,6 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     OBS_EVENT_EVENTS,
     _derive_node_observed,
     set_match_final_listener,
-    state_telemetry_armed,
     write_match_final,
 )
 from sr_od.application.currency_war.kernel.cw_state_journal import (
@@ -61,6 +60,32 @@ from sr_od.application.currency_war.telemetry.journal_query import (
     match_final_rows,
     view_match_final,
 )
+
+
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+    register_sig_actors as _register_sig_actors,
+)
+
+_register_sig_actors('TestSigWriter')
+
+
+def _sig() -> "_ChannelSig":
+    """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
+    return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _lsig() -> "_ChannelSig":
+    """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
+    return _ChannelSig(family='logic_action', actor='TestSigWriter',
+                       mode='compute')
+
+
+def _hsig() -> "_ChannelSig":
+    """渠道③签名(logic_hook 族;relay 中继)。"""
+    return _ChannelSig(family='logic_hook', actor='TestSigWriter',
+                       mode='compute')
 
 
 @pytest.fixture()
@@ -110,7 +135,7 @@ def test_write_match_final_one_atomic_row(journal, run_id) -> None:
     """同版本原子:一次调用恰一行,载荷(类型/版本 id/快照/时长)一次装配
     (行头 v 与 at_version 恒等);渠道签名 = logic_hook/MatchClose。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.hp, 48, produced_by='test')
+    bs.write_logic(bs.hp, 48, produced_by='test', sig=_lsig())
     assert write_match_final(bs, final_type='loss', plane=2, round_num=6,
                              level=7, hp=48, gold=53, streak=-1,
                              node_kind='boss', duration_s=1234.5) is True
@@ -250,9 +275,9 @@ def test_obs_event_vocab_closed_set() -> None:
     assert OBS_EVENT_EVENTS == ('arbitrate', 'miss', 'popup')
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     for ev in OBS_EVENT_EVENTS:
-        bs.note_obs_event(ev, 'level', {'old': 1, 'new': 2})
+        bs.note_obs_event(ev, 'level', {'old': 1, 'new': 2}, sig=_sig())
     with pytest.raises(ValueError):
-        bs.note_obs_event('bogus_event', 'level', {})
+        bs.note_obs_event('bogus_event', 'level', {}, sig=_sig())
 
 
 def test_g10_retrograde_obs_event_evidence(journal, run_id) -> None:

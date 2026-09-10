@@ -14,8 +14,8 @@
 ①obs 家族不破)。守卫集成员终版 = 结算窗 ∪ 开局链{简报,投资环境,等待1-1}
 (0p/0q 有专用腿②③出族,用户终裁 2026-09-11/攻击 R5 高-1)。
 
-影子纪律:回执写点与分支写点同受影子闸(缺省关),关 = 零写入零版本消费,
-行为与 R1 逐位一致。
+常开形态(R5 W1/ADR-0634,原影子纪律作废):回执写点与分支写点写入
+无条件(记录被动不分支写路径);行落盘另以 sink/run_id 在场为准。
 """
 from __future__ import annotations
 
@@ -30,11 +30,11 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     SCREEN_CONTEXT_GUARD_PREV,
     BoardState,
     note_action_receipt,
-    state_telemetry_armed,
 )
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     install_state_telemetry,
     reset_state_telemetry,
+    state_journal_instance as journal_mod_state_journal_instance,
 )
 from sr_od.application.currency_war.telemetry import state as tel_state
 
@@ -145,16 +145,19 @@ def test_receipt_failure_visibility_no_success_judgment(journal, run_id) -> None
         '执行面结构化字段入回执(§3.2.1 质量词表执行面承接)'
 
 
-def test_receipt_shadow_off_zero_side_effect(tmp_path, monkeypatch) -> None:
-    """影子纪律(§3.7.1):未武装 = 回执写点零写入零版本消费零文件
-    (缺省关 + 启动点显式接通;行为与 R1 逐位一致)。"""
+def test_receipt_no_journal_no_rows_field_still_written(tmp_path, monkeypatch) -> None:
+    """常开化后形态(R5 W1 影子闸折叠,ADR-0634;锁语义重推,原「影子关 =
+    回执零写入零版本消费」作废):无流水实例 = 行不落零文件,但回执域照常
+    写入、版本照常分配——记录被动,不分支写路径(与 match_final 写口
+    「未装配 = 行不落而事件照发」同语义)。"""
     reset_state_telemetry()
-    assert state_telemetry_armed() is False
+    assert journal_mod_state_journal_instance() is None
     monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', 'run_off')
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     note_action_receipt(bs, op='SellBench', applied=True, actor='TestActorR2')
-    assert bs.receipts.value is None, '影子关 = 回执域零写入'
-    assert bs.current_version() == 0, '影子关 = 零版本消费'
+    assert bs.receipts.value is not None and len(bs.receipts.value) == 1, \
+        '无实例 = 行不落而回执域照常写入'
+    assert bs.current_version() == 1, '版本照常分配'
     assert not (tmp_path / 'state').exists()
 
 
@@ -498,7 +501,9 @@ def test_opening_chain_write_arms_popup_leg_s1(journal, run_id) -> None:
 
 def test_cw_loop_branch_writepoints_wired(journal, run_id, monkeypatch):
     """cw_loop 开局链五分支写点在位(0p/0q/0r/0s×2);行为 = 上下文对
-    (域准入 ①obs 家族,actor=CwLoop),影子关零调用。"""
+    (域准入 ①obs 家族,actor=CwLoop);常开形态 = 写入无条件
+    (R5 W1 影子闸折叠,ADR-0634——原「影子关零调用」段作废,改锁
+    「无实例 = 行不落而上下文照常写入」)。"""
     # —— 源面:五分支写点字面在位(最小侵入面锚,防静默脱落)——
     import inspect
 
@@ -510,7 +515,7 @@ def test_cw_loop_branch_writepoints_wired(journal, run_id, monkeypatch):
         assert f"_note_branch_screen('{branch}')" in src, \
             f'cw_loop 缺分支写点 {branch}(prev_branch 供给断供)'
 
-    # —— 行为:武装态写上下文对;影子关零调用 ——
+    # —— 行为:写入无条件(上下文对入账);无实例 = 行不落而写入照常 ——
     loop = CwLoop.__new__(CwLoop)
     session = _stub_session()
     loop.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
@@ -523,12 +528,10 @@ def test_cw_loop_branch_writepoints_wired(journal, run_id, monkeypatch):
     assert ctx_rows[-1]['sig']['actor'] == 'CwLoop'
 
     reset_state_telemetry()
-    calls: list[str] = []
-    monkeypatch.setattr(
-        type(bs), 'observe_screen_context',
-        lambda self, name, **k: calls.append(name))
+    bs2 = journal_mod_board_state(session)
     loop._note_branch_screen('货币战争-简报')
-    assert calls == [], '影子关 = 分支写点零调用(缺省关纪律)'
+    assert bs2.current_screen.value == '货币战争-简报', \
+        '无流水实例 = 行不落而上下文照常写入(常开形态,记录被动)'
 
 
 def journal_mod_board_state(session):
