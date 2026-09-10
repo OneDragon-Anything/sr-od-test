@@ -40,12 +40,15 @@ import inspect
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
-from sr_od.application.currency_war.kernel.cw_events import EncounterOption, EncounterPick
+from sr_od.application.currency_war.kernel.cw_events import (
+    EncounterOption,
+    EncounterPick,
+)
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
-    CwScreenOpBase,
     OUTCOME_TRIGGER_EMITTED,
+    CwScreenOpBase,
 )
 from test.harness.fixture_controller import (
     enter_running_state,
@@ -210,9 +213,6 @@ def test_encounter_observe_gate_fails_off_screen(
 def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
     """盛会之星装配点分流双向:装端口 → 五段(离屏 = observe 段早退
     成功交还,带完成 settle 语义);不装端口 → 旧路径零段迹。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
-        CW_OVERLAY_SETTLE_S,
-    )
     # 装端口 + 离屏:observe 段早退 = 节点完成(旧 handle 首闸语义)
     install_dispatch_stub_ports(monkeypatch)
     op, match, _session, calls = _make_megastar(
@@ -259,6 +259,8 @@ def test_event_screens_source_free_of_verify_segment() -> None:
     回潮。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_encounter as em,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_megastar as ms,
     )
     for name, mod in (('encounter', em), ('megastar', ms)):
