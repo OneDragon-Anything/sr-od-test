@@ -1,8 +1,11 @@
 """统一 state 账本判读读面锁(R3-1 消费方迁移第一批·离线工具族)。
 
-设计正本 = ``.debug/temp/currency_war/流程侧遥测-设计v3.3.md`` §3.3/§3.6.2
-(判读 CLI 行:新视图族按行读 + 行间差分、零重放;档案行:装配器 v12+ 切片
-含 journal;并存期旧视图只读保留至 M5)。锁面四组 =
+设计裁定正本 = ADR-0630(``docs/develop/currency_war/decisions/
+0630-unified-state-journal.md``:决策 3 自足快照变更账+后果节 M4 消费方切换
+档案行「装配器 v12+:切片 = 两文件」;记录机制 as-built 正本面 =
+``docs/develop/currency_war/game_state/journal.md``;设计工作稿存
+.debug/temp 为易失档,禁作正本指针)(判读 CLI 行:新视图族按行读 + 行间
+差分、零重放;并存期旧视图只读保留至 M5)。锁面四组 =
 - 新读能力锁:自足快照行(fixture 构造,与写端 kernel/cw_board_state
   ``_swap``/``note_obs_event`` 行键同形)→ 读回断言(读/清单/取值口/视图);
 - 宽容性锁:缺细节字段行、坏 JSON 行、非 dict 行、缺文件——不炸、给显式
@@ -11,6 +14,9 @@
   还原相对路径、旧档案版本检查自动重装配补键;
 - CLI 读面锁:--source journal 视图族/--recent 概览/--match 切片读/配对
   校验拒绝/缺账提示。
+- 宽容装配与计数申报锁(R3.2):截断尾/坏行/非法 UTF-8 字节 → 装配端
+  不崩 + 计数申报(设计 §3.3 撕裂行消费契约落到装配消费方);--match
+  新账摘要 str 守卫。
 
 测试隔离:全部输入 = tmp_path 合成行,零真实 .debug 触碰;不装影子面
 (kernel 写端零调用),本文件只测读面。
@@ -18,6 +24,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -457,3 +464,130 @@ def test_cli_default_old_path_unchanged(tmp_path: Path,
     _write_journal(rd, _JOURNAL_ROWS)
     _run_cli(monkeypatch, ['query', '--replay-dir', str(rd)])
     assert capsys.readouterr().out.strip() == '(无 replay 数据)'
+
+
+# ============================================ 宽容装配与计数申报锁(R3.2)
+# 设计 §3.3「journal 撕裂行消费契约」(v3.5-低-2):批量 flush 的半行/坏行
+# = 逐行跳过 + 坏行计数留痕,消费方(判读 CLI/装配器/哨兵)统一遵守;
+# 写端(kernel/cw_state_journal)批量 flush 崩溃丢失窗 = 未 flush 尾部,
+# 半行 = 合法输入。R3.2 把契约从判读读面落到装配消费方(R3.1 落地审
+# F1),并把字节层纳入同一契约(F3:非法 UTF-8 = 物理截断可劈开多字节
+# 字符,替换修复+计数);计数申报语义 = 现役先例
+# cw_loop._run_has_outcome_at(跳过+计数+log 留痕)。
+
+
+def _write_journal_bytes(rd: Path, chunks: list[bytes]) -> None:
+    """字节级写新账(构造非法 UTF-8 样本用;文本夹具走 _write_journal)。"""
+    p = rd / 'state' / 'journal.jsonl'
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(b''.join(chunks))
+
+
+def test_read_journal_stats_counts_bad_lines(tmp_path: Path) -> None:
+    """宽容读取计数单一源(read_journal_stats,装配器与读面共用):截断尾
+    /坏行/非对象行逐层计数,好行照读;文件缺 = 零计数空行;read_journal
+    旧行为保持(跳过坏行,读面契约不变)。"""
+    rows, stats = jq.read_journal_stats(tmp_path / 'nope')
+    assert rows == []
+    assert (stats.bad_json_lines, stats.non_dict_lines,
+            stats.byte_repair_lines) == (0, 0, 0)
+    good = _wrow(1, 't1', 'r', 'gold', 40, _vals(gold=40))
+    p = tmp_path / 'state' / 'journal.jsonl'
+    p.parent.mkdir(parents=True)
+    with p.open('w', encoding='utf-8') as f:
+        f.write('{"v": 2, "ts": "截断尾(进程死在 write 中途)…\n')   # 坏行
+        f.write('[1, 2]\n')                                        # 非对象行
+        f.write('garbage-line\n')                                  # 坏行
+        f.write('\n')                                              # 空行不计
+        f.write(json.dumps(good, ensure_ascii=False) + '\n')       # 好行
+    rows, stats = jq.read_journal_stats(tmp_path)
+    assert rows == [good]
+    assert stats.bad_json_lines == 2, 'JSON 层坏行(截断尾+garbage)计数'
+    assert stats.non_dict_lines == 1, '合法 JSON 非对象行单列计数'
+    assert stats.byte_repair_lines == 0
+    assert stats.total_skipped == 3
+    assert jq.read_journal(tmp_path) == [good], '读面旧行为保持'
+
+
+def test_read_journal_stats_survives_invalid_utf8_bytes(
+        tmp_path: Path) -> None:
+    """字节层宽容(F3):非法 UTF-8 字节(整行坏字节/截断劈开多字节序列)
+    → 替换字符修复不抛 UnicodeDecodeError,行计数申报,结构完整行照读。"""
+    good = _wrow(1, 't1', 'r', 'gold', 40, _vals(gold=40))
+    line = json.dumps(good, ensure_ascii=False).encode('utf-8')
+    _write_journal_bytes(tmp_path, [
+        b'\xff\xfe broken-bytes\n',            # 整行非法字节
+        line[:len(line) // 2] + b'\xed\xa0\n',  # 截断尾 + 劈开的字节序列
+        line + b'\n',                           # 结构完整行
+    ])
+    rows, stats = jq.read_journal_stats(tmp_path)
+    assert rows == [good], '字节修复后按 JSON 判:坏行跳过,好行照读'
+    assert stats.byte_repair_lines == 2, '字节层修复行逐行计数'
+    assert stats.bad_json_lines == 2, '被字节破坏的行同时计入 JSON 层坏行'
+
+
+def test_assemble_tolerates_truncated_journal_tail(tmp_path: Path) -> None:
+    """装配端宽容契约(F1):新账截断尾(崩溃丢窗 = 未 flush 尾部,设计
+    §3.3 明文合法形态)→ build_archive/assemble_game 不崩,切片只含好行。"""
+    rd = tmp_path / 'replay'
+    game_id = _mk_replay(rd, _JOURNAL_ROWS)
+    with (rd / 'state' / 'journal.jsonl').open('a', encoding='utf-8') as f:
+        f.write('{"v": 9, "ts": "2026-08-30T23:59:59", "run_id": ')  # 截断尾
+    a = arch.build_archive(rd, arch.assign_games(rd)[0])   # 不抛即过
+    assert [r['v'] for r in a['slices']['state/journal.jsonl']] == [1, 2], \
+        '切片只收好行(截断尾 = 诚实缺失,不入切片)'
+    assert arch.assemble_game(rd, game_id) is not None, 'CLI 补装配同路不崩'
+
+
+def test_assemble_tolerates_invalid_utf8_journal_bytes(
+        tmp_path: Path) -> None:
+    """字节层破账经装配端不崩(F3 走装配路径):非法 UTF-8 行替换修复后按
+    JSON 判(坏行跳过),结构完整行照入切片,补装配原子写回不炸。"""
+    rd = tmp_path / 'replay'
+    game_id = _mk_replay(rd)
+    line = json.dumps(_JOURNAL_ROWS[0], ensure_ascii=False).encode('utf-8')
+    _write_journal_bytes(rd, [b'\xff\xfe garbage\n', line + b'\n'])
+    a = arch.build_archive(rd, arch.assign_games(rd)[0])
+    assert [r['v'] for r in a['slices']['state/journal.jsonl']] == [1]
+    assert arch.assemble_game(rd, game_id) is not None
+
+
+def test_assemble_declares_skipped_journal_lines(tmp_path: Path,
+                                                 caplog) -> None:
+    """计数申报(F1 契约半边):装配端遇坏行/截断尾 → log 留痕带行数与
+    文件名(判读/哨兵可辨「行被跳过」非静默);零坏行零告警(常态无噪音)。"""
+    rd = tmp_path / 'replay'
+    _mk_replay(rd, _JOURNAL_ROWS)
+    with (rd / 'state' / 'journal.jsonl').open('a', encoding='utf-8') as f:
+        f.write('{"v": 9, "截断尾\n')
+        f.write('garbage-line\n')
+    with caplog.at_level(logging.WARNING):
+        arch.build_archive(rd, arch.assign_games(rd)[0])
+    assert 'state/journal.jsonl' in caplog.text, '申报带文件名'
+    assert '跳过坏行 2' in caplog.text, '申报带坏行计数'
+    caplog.clear()
+    clean_rd = tmp_path / 'clean'
+    _mk_replay(clean_rd, _JOURNAL_ROWS)
+    with caplog.at_level(logging.WARNING):
+        arch.build_archive(clean_rd, arch.assign_games(clean_rd)[0])
+    assert '跳过坏行' not in caplog.text, '干净账零告警'
+
+
+def test_cli_match_summary_survives_segment_missing_run_id(
+        tmp_path: Path, monkeypatch, capsys) -> None:
+    """F2 守卫:档案段条目缺 run_id(畸形/未来格式档案)→ --match 新账
+    摘要行 str 守卫降级显示,不 TypeError 崩,视图照常出。"""
+    rd = tmp_path / 'replay'
+    game_id = _mk_replay(rd, _JOURNAL_ROWS)
+    arch.assemble_game(rd, game_id)
+    p = arch.archive_path(rd, game_id)
+    with p.open('r', encoding='utf-8') as f:
+        a = json.load(f)
+    a['segments'][0].pop('run_id')
+    with p.open('w', encoding='utf-8') as f:
+        json.dump(a, f, ensure_ascii=False)
+    _run_cli(monkeypatch, ['query', '--source', 'journal', '--view', 'gold',
+                           '--match', game_id, '--replay-dir', str(rd)])
+    out = capsys.readouterr().out
+    assert game_id in out and '新账视图' in out, '摘要行降级显示不崩'
+    assert '40→38' in out, '视图不受畸形段条目影响'
