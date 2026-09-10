@@ -870,7 +870,7 @@ def test_faction_wire_source_locks(monkeypatch: _w547_faction_wire_pytest.Monkey
     d.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
     d.last_screenshot = object()
     d._v2_post_frame_accounting(pd.PrepObservation(),
-                                {'key': None, 'progressed': False}, session)
+                                {'key': None}, session)
     assert calls.count('xp') == 1 and calls.count('faction') == 1, calls
 
 

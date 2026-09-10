@@ -5,10 +5,10 @@
 - 计划产出位 = 分发段 ``prep_actions._build_equip_wear_plan``(对执行帧
   现读后由 kernel 判据单一源求值),静态计划(EquipWearStep 列表)随
   ``CwOpEquipAll.__init__(ctx, plan)`` 构造下发;
-- 空计划 = 合法稳态具名 NOOP(dd-037 形态):分发段短路 ok=True + landed=
-  False,闩写点唯一仍在 ``PrepActionExecutor.execute`` 执行位(只看 ok)——
-  hold 期闭环不变量「每期 RunEquip 恰一次 ok=True 收敛」= dd-027 活锁
-  不返场的直接断言面(锁②);
+- 空计划 = 合法稳态具名 NOOP(dd-037 形态):分发段短路发出事实 True,
+  闩写点唯一仍在 ``PrepActionExecutor.execute`` 执行位(批3a 发出即置,
+  T-223 回执退役后原「只看 ok」改「发出事实」)——hold 期闭环不变量
+  「每期 RunEquip 恰一次发出收敛」= dd-027 活锁不返场的直接断言面(锁②);
 - op 侧四 kernel 判据(resolve_wear_release/classify_item_hold/
   apply_equip_env_variants/resolve_affix_priority_order)零引用(锁③,
   Q6 红线「不得残留为 op 调用的 helper」的执行断言);
@@ -264,9 +264,11 @@ def test_empty_plan_noop_sets_equip_latch_and_keeps_shopped(monkeypatch) -> None
     """锁②(R1 修正:断言入口 = **公共入口 execute(RunEquip())**,置闩在
     execute 不在 _execute_dispatch——直调分派绕过闩写点该锁必假红):
     executor 级空计划场景 →
-    ①返回 (True, detail 含具名原因)(ok=True = NOOP 合法稳态);
+    ①机械摘要含具名原因(发出事实 True = NOOP 合法稳态;批3a:T-223
+      端口无返回,摘要经 last_detail 旁路);
     ②``state.cw4_m7_equipped_phase == (plane, round)``(**闩照置 = dd-027
-      活锁不返场的直接断言**:hold 期门①恒真时,门②因闩置位挡同期重发);
+      活锁不返场的直接断言**:hold 期门①恒真时,门②因闩置位挡同期重发;
+      批3a 置位判据 = 发出事实,原 ok 门随 T-223 退役);
     ③预置 ``cw4_shopped_phase`` 后未被清(S1 清键门被调但 RunEquip 不命中
       mark_s1_route_check 三路径封闭枚举——landed=False 行为中性,R2);
     ④哨兵计划面挂点在场(equipped=0 + 具名原因,经 record_zero_wear_defect)。"""
@@ -303,8 +305,9 @@ def test_empty_plan_noop_sets_equip_latch_and_keeps_shopped(monkeypatch) -> None
     ex = pa_mod.PrepActionExecutor(host, ctx)
     st = state_of(sess)
     st.cw4_shopped_phase = (1, 5)   # 预置 S1 闩(第三断言的对照基线)
-    ok, detail = ex.execute(RunEquip())
-    assert ok is True and '计划空' in detail, f'NOOP 形态漂移:{ok!r} {detail!r}'
+    ex.execute(RunEquip())   # 批3a:机械执行无返回
+    detail = ex.last_detail
+    assert '计划空' in detail, f'NOOP 形态漂移:{detail!r}'
     assert 'opening_hold(row1):三门全不中(保留域扣留)' in detail, \
         f'具名原因必须逐字透传进 detail:{detail!r}'
     assert st.cw4_m7_equipped_phase == (1, 5), \
@@ -384,12 +387,15 @@ def test_plan_stale_source_wiring() -> None:
         '计划失效上报分支失守(STATUS_PLAN_STALE 语义回归)'
 
 
-def test_plan_stale_executor_latch_stays_unset(monkeypatch) -> None:
-    """锁④-③(executor 级,与锁②对偶):plan_stale fail 链(ok=False)
-    全链经公共入口 execute → **闩不置位**(cw4_m7_equipped_phase 保持
-    None)——fail 后下帧重派的前提。op 内真行为面(两次现读 miss →
-    round_fail(STALE))由锁④①辖;本锁在执行器边界以桩 op 呈现该
-    fail 形态(真 op 构造走 SrOperation 框架初始化链,桩法同
+def test_plan_stale_executor_status_flows_through(monkeypatch) -> None:
+    """锁④-③(executor 级,与锁②对偶;批3a 重推):plan_stale 形态
+    (组合 op 返回 STATUS_PLAN_STALE)经公共入口 execute → op 级结果仅作
+    摘要透传(STATUS_PLAN_STALE 显影进 detail = 观察侧对账供给面)、
+    **闩照置**(批3a 发出即置:原「ok=False 闩不置、下帧重派」消费成败
+    回执,随 T-223 退役——失败面改由装备期望态对账族在下一入口暴露,
+    纠偏/缺陷台账;「闩改观察侧事实驱动」的重推挂账批5)。op 内真行为面
+    (两次现读 miss → round_fail(STALE))由锁④①辖;本锁在执行器边界以
+    桩 op 呈现该形态(真 op 构造走 SrOperation 框架初始化链,桩法同
     test_cw_mandate_lifecycle 的 _StubDeploy 先例)。"""
     import sr_od.application.currency_war.prep_actions as pa_mod
     from sr_od.application.currency_war.kernel.cw_prep_actions import RunEquip
@@ -431,11 +437,13 @@ def test_plan_stale_executor_latch_stays_unset(monkeypatch) -> None:
     ex = pa_mod.PrepActionExecutor(host, ctx)
     st = state_of(sess)
     assert st.cw4_m7_equipped_phase is None   # 清白起点
-    ok, detail = ex.execute(RunEquip())
-    assert ok is False, f'计划失效必须 ok=False(闩不置前提),实得 {ok!r} {detail!r}'
-    assert ea.CwOpEquipAll.STATUS_PLAN_STALE in detail
-    assert st.cw4_m7_equipped_phase is None, \
-        f'fail 路径闩被置位(与锁②对偶面失守):{st.cw4_m7_equipped_phase!r}'
+    ex.execute(RunEquip())   # 批3a:机械执行无返回
+    detail = ex.last_detail
+    assert ea.CwOpEquipAll.STATUS_PLAN_STALE in detail, \
+        f'op 级 STATUS 必须显影透传(观察侧对账供给面):{detail!r}'
+    assert st.cw4_m7_equipped_phase == (1, 5), \
+        (f'批3a 发出即置:组合 op 已派发 = 闩照置(失败面改观察侧期望态'
+         f'对账暴露;原「闩不置重派」随 ok 回执退役):{st.cw4_m7_equipped_phase!r}')
 
 
 # ==================== 锁⑤:门①谓词与产出位同源对读 ====================

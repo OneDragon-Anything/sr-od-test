@@ -355,8 +355,11 @@ def test_shop_channel_receipt_per_click(captured_exo, monkeypatch):
 
 
 def test_prep_channel_four_clicks_four_rows(captured_exo, monkeypatch):
-    """F2 粒度锁:prep 通道连点 4 击 → 4 行(每击已实际扣血,验证成功前
-    落行);同批 level_up 事件行不混入 hp_pay 计数。"""
+    """F2 粒度锁:prep 通道连点 4 击 → 4 行(每击已实际扣血,机械发射序
+    逐击落行);同批 level_up 事件行不混入 hp_pay 计数。批3a(A4 判效
+    拆除):点击按授权击数机械执行(血本位 = 入口整级授权击数
+    blood_xp_full_clicks),原逐击 OCR 验级判效半删除——击数由授权口径
+    承载,不再由验证停点决定。"""
     import sr_od.application.currency_war.prep_actions as pa
     ex = object.__new__(PrepActionExecutor)
     sess = _hp_session(['奋斗协议'])
@@ -368,16 +371,18 @@ def test_prep_channel_four_clicks_four_rows(captured_exo, monkeypatch):
                                    click=lambda p: None))
     ex._op = SimpleNamespace(screenshot=lambda: None,
                              park_cursor=lambda **kw: None)
-    # before=5;前 3 击验证 miss(lv None),第 4 击读到 6 → 恰 4 击
-    reads = iter([5, None, None, None, 6])
+    # 基线读一次(血闸/击数推导输入,执行前观察);判效读已拆(A4)
+    reads = iter([5])
     monkeypatch.setattr(pa, '_read_level_raw',
                         lambda ctx, screen: next(reads))
     monkeypatch.setattr(pa, 'read_gold', lambda ctx, screen: 100)
     monkeypatch.setattr(pa, 'area_center', lambda ctx, name: None)
-    ok, detail = ex._level_up()
-    assert ok is True and '5→6' in detail
+    _detail, emitted = ex._level_up()
+    assert emitted is True
+    # before=5 → 下一级需 XP 20 → 全量击数 ⌈20/4⌉ = 5 击(机械授权击数)
     rows = [r for r in captured_exo if r['kind'] == 'hp_pay']
-    assert len(rows) == 4                    # 4 击 = 4 行(粒度=击数)
+    assert len(rows) == 5, \
+        f'授权击数 5 = 5 行(粒度=击数,机械执行),实得 {len(rows)}'
     assert all(r['choice']['hp_delta'] == -6 and r['choice']['clicks'] == 1
                for r in rows)
 

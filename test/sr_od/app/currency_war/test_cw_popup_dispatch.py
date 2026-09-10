@@ -160,8 +160,9 @@ def _executor_with(op_stub) -> object:
 
 def test_run_composite_guard_blocks_dispatch(monkeypatch) -> None:
     """派发前置(T-163 D5 判断上提):非干净备战 → 不实例化组合 op 即
-    返回失败断批(op_path 故意给不存在模块——若守卫失效,延迟导入会抛
-    ModuleNotFoundError,本测即 error)。"""
+    返回未发出断批(op_path 故意给不存在模块——若守卫失效,延迟导入会抛
+    ModuleNotFoundError,本测即 error)。批3a:返回形态 = (摘要, 是否发出)
+    (T-223 三元组退役);守卫拦截 = 未发出。"""
     calls = {'check': 0}
 
     def _check(screen, screen_name_list):
@@ -171,10 +172,10 @@ def test_run_composite_guard_blocks_dispatch(monkeypatch) -> None:
     host = SimpleNamespace(screenshot=lambda: object(),
                            check_and_update_current_screen=_check)
     ex = _executor_with(host)
-    ok, detail, _landed = ex._run_composite(   # F1b 三元组(第三位=结构化落地位)
+    detail, emitted = ex._run_composite(
         '装备', 'nonexistent_module_t163.NoSuchOp',
         guard_screen='货币战争-备战')
-    assert ok is False
+    assert emitted is False, '守卫拦截 = 动作未发出(非成败回执)'
     assert '不在预期屏' in detail
     assert calls['check'] == 1
 

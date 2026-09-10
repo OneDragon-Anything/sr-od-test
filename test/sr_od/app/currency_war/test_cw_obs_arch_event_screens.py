@@ -47,7 +47,6 @@ from sr_od.application.currency_war.kernel.cw_events import (
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
-    OUTCOME_TRIGGER_EMITTED,
     CwScreenOpBase,
 )
 from test.harness.fixture_controller import (
@@ -281,29 +280,33 @@ def test_event_screens_source_free_of_verify_segment() -> None:
 
 def test_encounter_refresh_emission_wired_to_registry(test_context,
                                                       monkeypatch) -> None:
-    """发射型接线形态(B5-② 登记调用点形态,断言面限定接线点):
-    ①注册表在 __init__ 按 EncounterPick 登记发射型钩子
-    (name=encounter_refresh_used,已入申报面);②fire_emit_hooks 全模块
-    恰一处(= _emit_refresh_click 两路径共用分派点,触发唯一性);③写端
+    """发射接线形态(B5-② 登记调用点形态,断言面限定接线点;批3a 改形):
+    ①注册表在 __init__ 按 EncounterPick 登记发射钩子
+    (name=encounter_refresh_used,已入申报面);②单一发射口
+    fire_outcome_hooks 全模块恰一处(= _emit_refresh_click 两路径共用分派
+    点,触发唯一性;批3a:T-223 两 fire 口合并,原 fire_emit_hooks 口与
+    落地回执门混触防线的 _act_execute progressed 调用位随门退役);③写端
     (write_logic encounter_refresh_used)住钩子体内联位零残留。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_encounter as em,
     )
     src = inspect.getsource(em)
-    assert src.count('fire_emit_hooks') == 1, (
-        '发射触发点须唯一(_emit_refresh_click 分派面)')
+    assert src.count('fire_outcome_hooks') == 1, (
+        '发射触发点须唯一且经单一发射口(_emit_refresh_click 分派面;批3a)'
+        )
+    assert 'fire_emit_hooks' not in src, (
+        '原发射口名须已退役(两 fire 口合并,T-223)')
     assert '_emit_refresh_click' in src and 'encounter_refresh_used' in src
     hook_src = inspect.getsource(em.CwScreenEncounter._on_refresh_emitted)
     assert 'write_logic' in hook_src and "evidence='refresh_click'" in hook_src, (
-        '登记件写端须住发射型钩子体(B5-②:内联登记调用点零残留)')
+        '登记件写端须住发射钩子体(B5-②:内联登记调用点零残留)')
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, _session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=0, reason='stub'))
     specs = op._outcome_hooks.get(type(EncounterPick(idx=0)), [])
-    assert any(s.name == 'encounter_refresh_used'
-               and s.trigger == OUTCOME_TRIGGER_EMITTED for s in specs), (
-        f'发射型登记件须在 __init__ 入注册表:{specs!r}')
+    assert any(s.name == 'encounter_refresh_used' for s in specs), (
+        f'发射登记件须在 __init__ 入注册表:{specs!r}')
 
 
 def test_encounter_refresh_emission_counts_and_reread_redecide_new_path(

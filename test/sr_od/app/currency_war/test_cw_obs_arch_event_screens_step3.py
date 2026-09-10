@@ -381,10 +381,11 @@ def test_expert_open_card_node_stays_legacy() -> None:
 
 def test_batch3_no_outcome_registry_wiring() -> None:
     """注册表零登记锁(§6.4 收编面本批零行):八屏源无 register_outcome_
-    hook / fire_emit_hooks 接线。§6.4 表登记件(刷新执行事实组/bump_key/
+    hook / fire_outcome_hooks 接线。§6.4 表登记件(刷新执行事实组/bump_key/
     合成升星 expect/免战牌 consume_use/遭遇·策略屏刷新计数)全不涉事件
     选卡屏;新登记件入册须先申报(EMIT_TRIGGERED_DECLARED 同款纪律),
-    红 = 未经申报擅立登记件。"""
+    红 = 未经申报擅立登记件。批3a:原 fire_emit_hooks 口名随两 fire 口
+    合并退役,本锁断言面对准合并后的单一发射口名。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
         cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
@@ -396,8 +397,8 @@ def test_batch3_no_outcome_registry_wiring() -> None:
         src = inspect.getsource(mod)
         assert 'register_outcome_hook' not in src, (
             f'{mod.__name__} 私设落地登记件(§6.4 收编面本批零行)')
-        assert 'fire_emit_hooks' not in src, (
-            f'{mod.__name__} 私设发射型触发(在册两件不涉本批屏)')
+        assert 'fire_outcome_hooks' not in src, (
+            f'{mod.__name__} 私设发射触发(在册登记件不涉本批屏)')
 
 
 def test_batch3_sources_free_of_verify_segment() -> None:

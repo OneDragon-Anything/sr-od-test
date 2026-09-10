@@ -479,10 +479,14 @@ def test_l6_frontless_budget_reset_tightened() -> None:
         '预算复位必须在收紧条件之内'
     i_clear = loop_src.find('last_prep_battle_launch_ok = None', i_cond)
     assert i_clear > i_reset, '消费后必须清 None(防跨环残留)'
-    prep_src = inspect.getsource(cw_screen_prep.CwScreenPrep.run)
+    # 批3a:执行态写点自 cw_screen_prep 决策环迁入执行器(T-223 端口无
+    # 回执后 StartBattle 发射位内部事实旁路;批4 J4 消费端同退役)
+    from sr_od.application.currency_war.prep_actions import PrepActionExecutor
+    prep_src = inspect.getsource(PrepActionExecutor.execute) + \
+        inspect.getsource(PrepActionExecutor._execute_dispatch)
     assert 'isinstance(action, StartBattle)' in prep_src and \
         'last_prep_battle_launch_ok' in prep_src, \
-        '备战单轮执行记账处缺发射结果写入端'
+        '备战执行器发射记账处缺发射结果写入端'
     field = ExecState.__dataclass_fields__.get('last_prep_battle_launch_ok')
     assert field is not None and field.default is None, \
         'ExecState 缺 last_prep_battle_launch_ok 字段或缺省非 None(三态约定)'

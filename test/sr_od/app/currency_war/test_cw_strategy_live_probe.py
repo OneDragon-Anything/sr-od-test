@@ -351,7 +351,8 @@ def test_locked_resume_sync_step_precedes_start_battle(monkeypatch) -> None:
     """8:44 形态锁(恢复局锁定直出战,board_before 空):LockedResume 分支
     的出战执行 = 同步步(RunDeploy 组合:deploy-swap/腾席/确定性部署)
     **先于** StartBattle,且每锁定局恰一次(第二次调用不再同步);
-    无条件插入,零血线入参。"""
+    无条件插入,零血线入参。批3a:执行器 execute 机械执行无返回(T-223),
+    发射核返回形态 = StartBattle 发射位内部事实 (launch_ok, detail)。"""
     from types import SimpleNamespace as _NS
 
     from sr_od.application.currency_war.operations import cw_loop
@@ -363,8 +364,9 @@ def test_locked_resume_sync_step_precedes_start_battle(monkeypatch) -> None:
             calls.append('init')
 
         def execute(self, action):
-            calls.append(type(action).__name__)
-            return True, 'ok'
+            calls.append(type(action).__name__)   # 机械执行无返回(T-223)
+            self.last_launch_ok = True
+            self.last_detail = 'ok'
 
     import sr_od.application.currency_war.prep_actions as _pa
     monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
@@ -376,7 +378,7 @@ def test_locked_resume_sync_step_precedes_start_battle(monkeypatch) -> None:
 
     op = _Loop()
     progressed, detail = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-    assert progressed is True
+    assert progressed is True and detail == 'ok'
     assert calls == ['init', 'RunDeploy', 'StartBattle'], calls
     assert op._cw_locked_sync_done is True
     # 同一锁定局第二次出战:只 StartBattle,不重复同步(init = 执行体重建,非动作)
@@ -409,13 +411,13 @@ def _mk_sync_loop():
         def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
             self.ctx = _NS(cw_match=_NS(session=None))
             self._cw_locked_sync_done = False
-            self._cw_locked_sync_fails = 0
 
     return _Loop()
 
 
-def _patch_executor(monkeypatch, results: list[tuple[bool, str]],
-                    calls: list[str]):
+def _patch_executor(monkeypatch, results: list[bool], calls: list[str]):
+    """发射核执行缝桩(批3a 形态):execute 机械执行无返回;last_launch_ok
+    按 results 序列模拟 StartBattle 发射位内部事实(批4 挂账旁路面)。"""
     import sr_od.application.currency_war.prep_actions as _pa
 
     class _FakeExecutor:
@@ -425,52 +427,43 @@ def _patch_executor(monkeypatch, results: list[tuple[bool, str]],
         def execute(self, action):
             name = type(action).__name__
             calls.append(name)
-            return results.pop(0) if name == 'RunDeploy' else (True, 'ok')
+            if name == 'StartBattle':
+                self.last_launch_ok = bool(results.pop(0))
+                self.last_detail = 'launch'
 
     monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
 
 
-def test_locked_resume_sync_failure_not_marked_and_retried(monkeypatch) -> None:
-    """R1/R2 失败路径锁:RunDeploy ok=False(drag 白拖/刹车/板满门退化)
-    ⇒ 证据位不置位 + StartBattle 照常发射(本环不出席);下环重进同步
-    (RunDeploy 再次执行);重试成功后证据位置位、不再重试。"""
+def test_locked_resume_sync_marks_done_at_emission(monkeypatch) -> None:
+    """批3a 重推(T-223 回执退役):同步步证据位 = **发出即写**——原
+    「RunDeploy ok=True 才置位 + 失败下环重试」消费执行器成败回执,回执
+    退役后失败概念消解,重试/放弃治理结构随之退役(发射次数预算承载归
+    批4 J2 形态,同源重推);「部署是否真落地」由下一帧观察侧 reconcile
+    对账暴露(T-82 token 门「发出即写」同款裁定)。本锁钉:同步步发射后
+    证据位立即置位、StartBattle 照发、同局不再重复同步。"""
     from sr_od.application.currency_war.operations import cw_loop
     op = _mk_sync_loop()
     calls: list[str] = []
-    _patch_executor(monkeypatch, [(False, '拖3次源槽未变'), (True, '计划空')],
-                    calls)
-    # 第 1 环:同步失败 → 证据位不置位,StartBattle 照发(本环不出席)
+    _patch_executor(monkeypatch, [True, True], calls)
     p1, _ = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-    assert p1 is True and op._cw_locked_sync_done is False
+    assert p1 is True and op._cw_locked_sync_done is True, (
+        '同步步发出即写证据位(T-223 回执退役)')
     assert [c for c in calls if c != 'init'] == ['RunDeploy', 'StartBattle']
-    # 第 2 环:重进同步,成功 ⇒ 置位;此后不再同步
-    p2, _ = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-    assert p2 is True and op._cw_locked_sync_done is True
     calls.clear()
     cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-    assert [c for c in calls if c != 'init'] == ['StartBattle']
+    assert [c for c in calls if c != 'init'] == ['StartBattle'], (
+        '同局证据位已置,不再重复同步')
 
 
-def test_locked_resume_sync_gives_up_after_retry_limit(monkeypatch) -> None:
-    """重试上限锁:连续失败达上限(3)⇒ 放弃重试(证据位置位,防止与
-    StartBattle 重试共用 retry 池的无限消耗),StartBattle 照发——放弃侧
-    显式代价,非静默。新锁定局复位计数后重新获得完整重试预算。"""
+def test_locked_resume_sync_retry_structure_retired() -> None:
+    """治理结构退役墓碑(批3a):同步步「失败计数/上限放弃」结构随发射型
+    退役删除——源面零 ``_cw_locked_sync_fails``/``_SYNC_RETRY_LIMIT`` 残留
+    (红 = 已退役结构复活;替代防线 = 发射次数预算,归批4 J2 形态)。"""
+    import inspect
+
     from sr_od.application.currency_war.operations import cw_loop
-    op = _mk_sync_loop()
-    calls: list[str] = []
-    _patch_executor(monkeypatch, [(False, '已停止[W209j刹车]')] * 4, calls)
-    limit = 3
-    for _i in range(1, limit):
-        p, _ = cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-        assert p is True   # StartBattle 每环照发
-        assert op._cw_locked_sync_done is False, '未达上限不放弃'
-    # 第 limit 次失败:达上限 ⇒ 放弃置位(此后不再重试同步)
-    cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-    assert op._cw_locked_sync_done is True
-    runs = [c for c in calls if c == 'RunDeploy']
-    assert len(runs) == limit, '放弃后不得再消耗同步重试'
-    # 新锁定局复位:证据位与失败计数归零
-    op._cw_locked_sync_done = False
-    op._cw_locked_sync_fails = 0
-    cw_loop.locked_resume_sync_and_battle(op, op.ctx)
-    assert op._cw_locked_sync_fails == 1
+    src = inspect.getsource(cw_loop)
+    assert '_cw_locked_sync_fails' not in src, \
+        '失败计数结构须已随发射型退役(批3a)'
+    assert '_SYNC_RETRY_LIMIT' not in src, \
+        '重试上限结构须已随发射型退役(批3a)'

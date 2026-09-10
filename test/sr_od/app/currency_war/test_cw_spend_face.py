@@ -451,7 +451,7 @@ def _mk_loop():
         def __init__(self):  # noqa: D107 桩:bypass SrOperation.__init__
             self.ctx = _NS(cw_match=_NS(session=None))
             self._cw_locked_sync_done = True   # 恢复局闩已置位形态
-            self._cw_locked_sync_fails = 0
+            # (批3a:_cw_locked_sync_fails 随发射型退役删除,桩不再预置)
 
     return _Loop()
 

@@ -664,51 +664,12 @@ def test_read_reward_spheres_phantom_blacklist_filter(
     assert all(p != base[0][1] for _c, p, _r in out)
 
 
-def test_click_spheres_zero_disappear_blacklists_phantom(monkeypatch) -> None:
-    """点击后零消失 → 幻球登记(会话黑名单 + 分键),detail 携带黑名单痕迹;
-    席满(无空位)时不拉黑(席满点不动 = 真球保留的既有裁定语义)。"""
-    import sr_od.application.currency_war.prep_actions as pa
-
-    sphere = ('blue', Point(1400, 300), 33)
-    reads = {'n': 0}
-
-    def _fake_read(ctx, screen, prev=None):
-        reads['n'] += 1
-        return [sphere]   # 点击前后恒在 = 零消失形态
-
-    monkeypatch.setattr(pa, 'read_reward_spheres', _fake_read)
-    monkeypatch.setattr(pa, 'read_supply_boxes', lambda ctx, screen: [])
-    monkeypatch.setattr(pa.time, 'sleep', lambda s: None)
-    # 备战席有空位(拉黑前置通过)
-    monkeypatch.setattr(pa, 'row_area_centers', lambda ctx, prefix: [Point(400, 900)])
-    import sr_od.application.currency_war.obs.currency_war_cv as cvmod
-    monkeypatch.setattr(cvmod, 'slot_occupied', lambda scr, x, y: False)
-
-    clicks = {'n': 0}
-
-    class _Ctrl:
-        def mouse_move(self, p): pass
-        def click(self, p): clicks['n'] += 1
-
-    class _Sess:
-        last_state = None
-        reward_sphere_phantom_points = None
-
-    class _Op:
-        def screenshot(self): return object()
-        def park_cursor(self, **k): pass
-
-    ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
-    ex._op = _Op()
-    ex._ctx = type('C', (), {'controller': _Ctrl(),
-                             'cw_match': SimpleNamespace(session=_Sess())})()
-    ok, detail = ex._click_spheres(ClickSpheres(max_k=3))
-    assert ok is False                       # 零消失 = 未推进
-    assert clicks['n'] == 1
-    assert '幻球' in detail and '黑名单' in detail
-    pts = ex._ctx.cw_match.session.reward_sphere_phantom_points
-    assert pts and abs(pts[0].x - 1400) <= 18 and abs(pts[0].y - 300) <= 18, \
-        f'幻球坐标必须入会话黑名单,实得 {pts}'
+# [墓碑] test_click_spheres_zero_disappear_blacklists_phantom 已随批3 A2
+# 拆除(用户裁定 2026-09-10:动作 op 只管机械执行禁止验证 + M5 裁定拉黑
+# 结构整体删):_click_spheres 点后「重读验消失」判效半与幻球检出→会话
+# 黑名单写点整体删除,球未消由下一帧观察回补(幻球 = 观察 bug,观察侧
+# 质量治理另立不入本线;读侧过滤函数 note_phantom_sphere/read 侧过滤与
+# 其单测归批5 dd-015 五文件面处置)。红 = 执行器侧拉黑结构复活。
 
 
 # ==================== test_supply_box(补给箱识别) ====================

@@ -219,16 +219,16 @@ class TestWantedPrecondition:
         assert st.cw4_counters.get('wanted_leg_fuel_sell') is None
 
 
-# ===== 4. F1b 分派位结构化落地判定(T-167;landed 契约)=====
+# ===== 4. F1b 落地判定退役墓碑 + 过渡期供给写死(T-167→T-223;批3a)=====
 
-def test_run_deploy_dispatch_landing_is_structural(monkeypatch):
-    """F1b 锁(T-167 事故修法;真执行器分派位):部署组合的 landed 由
-    执行器具名常量 STATUS_DEPLOYED **结构化比对**产生——STATUS_NOOP
-    (计划空合法稳态)→ landed=False;STATUS_DEPLOYED(真部署)→
-    landed=True。修法红线:禁由 detail 字符串反推(detail =
-    f'{name} {status}' 带前缀显影文本,裸比对恒 False 会让 landed 恒
-    True、修复静默失效)——本锁用真 _run_composite 返回形态构造,复辟
-    字符串比对时本锁红。"""
+def test_run_deploy_dispatch_landing_retired_interim_failclosed(monkeypatch):
+    """F1b 墓碑 + 过渡期锁(批3a):原「执行器具名常量结构化落地判定
+    ``(ok, detail, landed)`` 三元组」随 T-223 端口回执退役——执行器不再
+    输出成败与落地(落地判定归观察侧 reconcile,批5 E1 落地供给)。分派
+    位改为 ``(机械摘要, 是否发出)``,STATUS 具名常量经 detail 显影透传
+    (观察侧对账的供给面,禁丢);S1 清键门 landed 过渡期恒 False = 
+    fail-closed(宁「该清不清」不「乱清」——T-167 交替活锁防线语义完整
+    存活;红 = 执行器回执形态复活或 STATUS 显影断流)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_deploy as deploy_mod,
     )
@@ -252,31 +252,29 @@ def test_run_deploy_dispatch_landing_is_structural(monkeypatch):
         screen_loader=SimpleNamespace(get_screen=lambda name: None),
         run_context=None, cw_match=None)
     ex = PrepActionExecutor(SimpleNamespace(screenshot=lambda: object()), ctx)
-    # no-op 稳态:progressed=True 但零落地
-    ok, detail, landed = ex._execute_dispatch(RunDeploy())
-    assert ok is True and landed is False, (
-        f'STATUS_NOOP 必须 landed=False(零落地),实得 ok={ok} landed={landed}')
+    # no-op 稳态:机械执行已发出,STATUS_NOOP 经 detail 显影透传
+    detail, emitted = ex._execute_dispatch(RunDeploy())
+    assert emitted is True, '组合 op 已派发 = 发出事实 True(非落地判定)'
     assert '部署' in detail and _StubDeploy.STATUS_NOOP in detail, (
-        f'detail 仍为带前缀显影文本(禁改语义):{detail!r}')
-    # 真部署:landed=True
+        f'STATUS 显影文本必须透传(观察侧对账供给面,禁丢):{detail!r}')
+    # 真部署:同样只透传 STATUS(成败/落地不再由执行器输出)
     statuses['next'] = deploy_mod.CwOpDeploy.STATUS_DEPLOYED
-    ok2, _detail2, landed2 = ex._execute_dispatch(RunDeploy())
-    assert ok2 is True and landed2 is True, '真部署落地 landed=True'
-    # 执行器具名常量缺失 = fail-closed 按未落地(宁该清不清,不乱清)
-    class _BrokenDeploy:
-        STATUS_NOOP = deploy_mod.CwOpDeploy.STATUS_NOOP
-
-        def __init__(self, ctx) -> None:
-            pass
-
-        def execute(self):
-            return SimpleNamespace(success=True,
-                                   status=statuses['next'])
-
-    monkeypatch.setattr(deploy_mod, 'CwOpDeploy', _BrokenDeploy)
-    statuses['next'] = '任意状态'
-    _ok3, _d3, landed3 = ex._execute_dispatch(RunDeploy())
-    assert landed3 is False, '常量解析缺失必须 fail-closed 按未落地'
+    detail2, emitted2 = ex._execute_dispatch(RunDeploy())
+    assert emitted2 is True and deploy_mod.CwOpDeploy.STATUS_DEPLOYED in detail2
+    # 端口无回执形态墓碑:execute 机械执行无返回(T-223);分派位不再
+    # 产出落地判定位(F1b 结构化比对面退役)
+    import inspect as _inspect
+    dispatch_src = _inspect.getsource(PrepActionExecutor._execute_dispatch)
+    assert 'landed_status_attr' not in dispatch_src, (
+        '分派位不得再产出落地判定位(T-223;过渡期 landed=False 写死在 '
+        'execute 的 S1 门调用位)')
+    assert ', emitted' in dispatch_src or 'emitted' in dispatch_src, (
+        '分派位返回形态 = (机械摘要, 是否发出)——发出事实非落地判定')
+    # S1 门过渡期供给写死:landed=False(fail-closed,批5 观察侧接管)
+    exec_src = _inspect.getsource(PrepActionExecutor.execute)
+    assert 'landed=False' in exec_src, (
+        'S1 清键门过渡期必须恒传 landed=False(fail-closed;批5 观察侧'
+        ' reconcile 落地事实接管后随批改写)')
 
 
 # ===== 5. 备战投影金账(自 test_cw_prep_projection.py 并入;F2)=====

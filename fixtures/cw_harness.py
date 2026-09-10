@@ -400,17 +400,20 @@ class FakeP1Run:
         return str(getattr(self.cw_match.session, 'node_type_current', '')
                    or self.match.state.node_type or '')
 
-    def prep_landing(self, action: Any) -> tuple[bool, str, bool]:
-        """备战动作执行缝的假环境落点(执行器机械半边的替换面)。
+    def prep_landing(self, action: Any) -> tuple[str, bool]:
+        """备战动作执行缝的假环境落点(执行器机械半边的替换面;批3a 申报
+        面随 T-223 端口回执退役重钉)。
 
         语义:真 op 的 wrapper 半边(S1 清键门/装备闩/期望态推进/W209j
         刹车,PrepActionExecutor.execute 内联)保持生产码执行,本方法只
-        承接「点击/拖拽/验证读」的机械半边——动作落假游戏状态机
+        承接「点击/拖拽」的机械半边——动作落假游戏状态机
         (:meth:`FakeMatch.apply_prep`;RunDeploy 走会话语境完整装配,见
         :meth:`_run_deploy_with_context`)+ 逐动作审计 + tracked 真值重播
-        (与商店 sink 同语义)。回执 ``(progressed, detail, landed)``:
-        applied 即落地(规则性拒绝两域同判,架构设计 §6.3);detail 带
-        假环境显影前缀,与裸 STATUS 常量永不相等(F1b 同款纪律)。
+        (与商店 sink 同语义)。返回 ``(机械执行摘要, 是否发出)``:
+        ``emitted`` = sim applied 真值(F11 双轨申报:sim 侧规则性拒绝 =
+        动作应用语义,未发出 → wrapper 半边闩/期望态不登记);detail 带
+        假环境显影前缀。原回执 ``(progressed, detail, landed)`` 三元组随
+        T-223 退役(LANDED 判定归观察侧 reconcile,批5 落地供给)。
         """
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             RunDeploy,
@@ -431,8 +434,7 @@ class FakeP1Run:
             # 期望态 vs tracked 双账守卫炸「投影建模 bug」假象)
             self._seed_tracked_from_truth()
         mark = '✓(fake)' if res.applied else '✗(fake-rejected)'
-        return (bool(res.applied), f'{type(action).__name__} {mark}',
-                bool(res.applied))
+        return (f'{type(action).__name__} {mark}', bool(res.applied))
 
     def _run_deploy_with_context(self) -> Any:
         """RunDeploy 完整装配(会话语境版)。
@@ -570,7 +572,7 @@ class FakeP1Run:
         逐 visit = 真 ``CwScreenPrep``(端口观察 → 实机策略器单动作环 →
         执行缝落假游戏);OpenShop 动作走生产流程层编排(_open_shop_phase
         → visit_open_shop → run_buy_waves,批 1 商店域链)。出口判定:
-        策略出战出口(StartBattle 落地)= 本相位发射;空批/验证失败收敛
+        策略出战出口(StartBattle 发射)= 本相位发射;空批/参数非法收敛
         → 达标臂真链(:meth:`_try_armed_launch`)。返回相位摘要。
         """
         from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
@@ -607,9 +609,9 @@ class FakeP1Run:
             if rr is None or not getattr(rr, 'is_success', True):
                 break   # 策略异常/执行异常 = fail-stop(留证,交编排方)
             status = getattr(rr, 'status', '') or ''
-            if not new_acts and ('空批' in status or '验证失败' in status
-                                 or '参数非法' in status):
-                break   # 收敛:无动作可发,交达标臂
+            if not new_acts and ('空批' in status or '参数非法' in status):
+                break   # 收敛:无动作可发,交达标臂(批3a:'验证失败'收敛词
+                        # 随 B1 验证段拆除退役)
         armed_fired = False
         armed_evaluated = False
         if not launched:
@@ -687,8 +689,8 @@ class FakeP1Run:
         monkeypatch.setattr(prep, 'round_by_ocr', lambda *a, **k: _Res(False))
         monkeypatch.setattr(prep, 'check_and_update_current_screen',
                             _cur_screen)
-        # 恢复原语的控制器原语桩(try_recovery 失败路径消费;MockController
-        # 无 mouse_move——失败路径本身合法,桩只清噪声)
+        # 机械半边的控制器原语桩(MockController 无 mouse_move——桩只
+        # 清环境噪声,非行为断言面)
         monkeypatch.setattr(self.ctx.controller, 'mouse_move',
                             lambda *a, **k: None, raising=False)
 
