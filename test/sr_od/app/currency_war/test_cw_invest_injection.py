@@ -134,6 +134,61 @@ def test_invest_pick_dedup_and_env_carry() -> None:
     assert m.state.gold == gold_pre, '重名选卡重复入账 instant_gold'
 
 
+# ============================================================ 畸形剧本防御锁(T-209/G5)
+
+
+def test_same_key_multi_pick_assembly_rejects() -> None:
+    """装配侧校验锁:同键多 pick = 畸形剧本,装配拒绝(fail-loud)。
+
+    行为定义(T-209 先写测试):SimInvestProfile 契约「同一 (plane, round)
+    至多一条」(主仓 docstring);装配位 FakeMatch.__init__ 对畸形输入
+    (同键两条)必须显式拒绝——原实现经 dict 推导静默保留后名,畸形
+    输入被折叠成「合法剧本」继续重放,污染对拍/确定性读数且无披露。
+    拒绝(不静默去重)的裁决:畸形剧本 = 提取端 bug 的信号,吞掉它 =
+    把上游缺陷藏进装配层;调用人应修提取,不是让装配替他选一张。
+    """
+    from fixtures.cw_fake_game.fake_match import FakeMatch
+
+    from sr_od.application.currency_war.sim.cw_sim_invest import (
+        SimInvestProfile,
+    )
+
+    for bad in (((1, 3, '开源节流'), (1, 3, '按劳分配')),   # 同键异名
+                ((1, 3, '开源节流'), (1, 3, '开源节流'))):  # 同键同名重复
+        with pytest.raises(ValueError, match=r'同键多.*pick|3.*3') as ei:
+            FakeMatch(seed=_SEED, node_sequence=list(_PROFILE_SCRIPT),
+                      invest_profile=SimInvestProfile(
+                          active_env='', picks=bad))
+        # 报错点名冲突键(可行动:提取端按键定位坍缩行)
+        assert '1' in str(ei.value) and '3' in str(ei.value), \
+            '报错未点名冲突 (plane, round) 键'
+
+
+def test_cross_key_same_name_assembly_still_legal() -> None:
+    """反过度拒绝守卫:跨键重名 = 契约内合法(主仓 docstring「重名跨轮
+    出现时按 handler 去重语义忽略」),装配不得误拒;运行期由既有
+    handler 去重语义(重名不重复入列/不重复入账)承接。"""
+    from fixtures.cw_fake_game.fake_match import FakeMatch
+
+    from sr_od.application.currency_war.sim.cw_sim_invest import (
+        SimInvestProfile,
+    )
+
+    m = FakeMatch(seed=_SEED, node_sequence=['battle', 'battle', 'battle'],
+                  invest_profile=SimInvestProfile(
+                      active_env='',
+                      picks=((1, 1, '开源节流'), (1, 3, '开源节流'))))
+    m.apply_income()
+    assert m.pick_invest_strategy('开源节流'), '首轮选卡被拒'
+    m.advance_node()
+    m.apply_income()
+    m.advance_node()
+    m.apply_income()
+    # r3 重发已持名:推侧跳过(已持不压浮层),持卡不重复
+    assert m.top_overlay('invest') is None, '已持名日程点重复压选卡浮层'
+    assert m.state.active_strategies == ['开源节流'], '跨键重名重复入列'
+
+
 # ============================================================ 持卡收入锁
 
 

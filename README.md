@@ -20,6 +20,35 @@ uv run pytest sr-od-test/test/sr_od/app/currency_war/test_cw_merge.py  # 单文�
   零维护零漂移。教训:手工清单与磁盘漂移 44 文件(新文件漏登记)才废除;新增测试放对
   目录即自动入层,不再维护任何文件清单。
 
+## 对拍与批驱动申报规范(离线工具,2026-09-10 起)
+
+本仓两支**脱离 pytest 可跑**的批驱动,产物落 `.debug/temp/`(易失产物域):
+
+```shell
+# A/B 配对批(T-122 载体;同 seed 两臂,Δ = variant − baseline,无数值裁决权)
+uv run python sr-od-test/tools/cw_ab_batch.py --seeds 24 --out .debug/temp/currency_war/<批次目录>
+
+# 投资剧本对拍(T-204 方法常驻版;实机带卡局逐局注入重放 vs 分布带)
+uv run python sr-od-test/tools/cw_invest_compare.py --out .debug/temp/currency_war/<批次目录> \
+    [--since 20260901] [--limit 5]   # 时间窗按 game_id 日期过滤;--limit 烟测
+```
+
+**申报规范(G2)**:凡对拍/重放运行于**合并工作树**,报告的边界/口径申报
+节必须列出——
+
+1. **重放树内他批已落码的行为偏置面**:树上存在但不属于本批验证目标的
+   行为改动(典型:假环境直出 2★ 演练偏置 `rules.SHOP_DIRECT_OUT_2STAR_P`,
+   校准层演练值非真值,对金分布有方向不定扰动),逐项点名常量/符号并
+   注明扰动方向已知与否;
+2. **环境指纹**:假环境 `env_fingerprint()`(env_version/Δ池/注入位)
+   随产物落盘,报告引用,禁裸报「当时树态」无指纹;
+3. **已知观测缺口**:消费的实机遥测域若含在案缺口(如 W162:entry 选卡
+   在 match 建立前写点丢失 → 剧本只覆盖可见选卡域,注入侧低估),照抄
+   缺口编号与方向,不得默认读者知情。
+
+纪律出处:假环境对拍为确认性(strategy-work §3,不构成数值合法性来源);
+申报缺项判例 = T-204 落地审 §三-G2(直出偏置在树活跃而报告未列)。
+
 ## 环境要求
 
 - Python 3.11 + uv(依赖随主仓 `--group dev`)。

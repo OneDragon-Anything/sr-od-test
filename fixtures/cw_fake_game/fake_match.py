@@ -275,6 +275,22 @@ class FakeMatch:
         self._invest_sampler: SinkInvestSampler | None = None
         self.last_income_breakdown: dict[str, int] = {}
         if invest_profile is not None:
+            # 装配侧畸形剧本防御(T-209/G5;行为定义先写测试 =
+            # test_cw_invest_injection::test_same_key_multi_pick_assembly_rejects):
+            # 契约 = 同一 (plane, round) 至多一条(SimInvestProfile docstring),
+            # 畸形输入显式拒绝不静默去重——InvestInjectionState.build 的
+            # dict 推导对同键多 pick 会静默保留后名,把上游提取端 bug
+            # 折叠成「合法剧本」继续重放;吞掉它对拍读数失真且无披露。
+            # 跨键重名不在本门辖域(契约内合法,handler 去重语义承接)。
+            _seen: dict[tuple[int, int], str] = {}
+            for _p, _r, _n in invest_profile.picks:
+                if (_p, _r) in _seen:
+                    raise ValueError(
+                        f'投资剧本同键多 pick:'
+                        f'(plane={_p}, round={_r}) 已有 {_seen[(_p, _r)]!r}'
+                        f' 又出现 {_n!r}(契约=同一 (plane, round) 至多一条;'
+                        f'装配拒绝,修提取端而非在装配层代选)')
+                _seen[(_p, _r)] = _n
             self._invest = InvestInjectionState.build(invest_profile)
             self._invest_sampler = SinkInvestSampler(seed)
             self.select_invest_env(invest_profile.active_env)
