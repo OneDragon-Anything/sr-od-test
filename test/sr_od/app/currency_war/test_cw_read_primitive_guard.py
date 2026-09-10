@@ -15,6 +15,21 @@
 
 出处 = T-120 方案 v2 §3.3 守卫锁② + 批 1 落地审 §1.2-G-2(「visit 链
 接入前必须有」;批 2 visit/备战链已接入假局,锁随批落地)。
+
+**第二锁面:全仓 read_game_state 调用点封闭集(统一观察架构 B4 静态锁)**。
+出处 = ``docs/develop/currency_war/design/统一观察架构-画面op基类设计.md``
+§1.1-1(read_game_state 调用点全量扫描基线 + 调用点白名单制)。两锁面
+关系:本文件第一锁面(T-120)辖 operations 桶 × read_* 族的**改道登记
+冻结**;B4 锁面辖**全仓 src 树 × read_game_state 本体**的调用点封闭集
+(锁面收窄口径:operations/ 内其余 read_* 调用是验真锚,不属 B4 锁面,
+仍由第一锁面管辖)——B4 面比第一锁面宽在 obs 桶内部与 operations 之外
+(telemetry 等),两面互补不重复。封闭集与第一锁面的 read_game_state
+登记项在 operations 桶内交叠:两边登记语义不同(改道收敛 vs 迁移收编),
+同批真实事件须两边同步更新,各自红讯指向各自处置。
+两锁面共同的**扫描边界申报**:按**调用名**匹配(Name/Attribute),注释
+与 def 不入锁面;``from x import read_game_state as rgs`` 的别名调用与
+getattr 字符串形态不入扫描集(刻意绕名/绕 AST 的写法不属本锁辖域,
+与第一锁面同边界;别名导入本项目风格不用,出现即按绕过守卫处置)。
 """
 from __future__ import annotations
 
@@ -158,3 +173,127 @@ def test_scanner_catches_new_direct_call(tmp_path: Path) -> None:
             if name in _PRIMITIVES:
                 names.add(name)
     assert names == {'read_game_state'}
+
+
+# ==================== B4 锁面:全仓 read_game_state 调用点封闭集 ====================
+# 出处 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
+# §1.1-1「read_game_state 调用点全量扫描基线」+「调用点白名单制」。
+# 立锁前基线复扫(2026-09-10,全仓 src 树):14 命中 = 真实调用 10(下表
+# 8 宿主,observe_full 宿主含 3 点)+ 注释 3 + def 1,与设计文档基线逐条
+# 一致、零漂移,按其「立锁前重跑扫描确认基线未漂移」纪律立锁。
+
+#: 封闭集登记:{(相对 sr_od 的 posix 文件路径, 宿主函数): (调用点数, 族别+理由)}。
+#: 族别口径 = 设计文档 §1.1-1 四族;「试点迁移收编类」在基类 observe 段
+#: 接管后归 obs 族,届时同批从本表移出(移出 = 改道收敛,不是放宽)。
+_GS_CLOSURE: dict[tuple[str, str], tuple[int, str]] = {
+    ('application/currency_war/obs/cw_observe_full.py', 'observe_full'): (
+        3, '族①obs 桶内部:观察漏斗本体互调(readers/漏斗实现即职责)'),
+    ('application/currency_war/operations/cw_loop.py',
+     '_launch_frame_arbitration'): (
+        1, '族②既有豁免:发射帧仲裁段的仲裁读'),
+    ('application/currency_war/operations/cw_loop.py', 'loop'): (
+        1, '族②既有豁免:开局最小读(恢复对局检测仅位面轮次)'),
+    ('application/currency_war/operations/cw_op/cw_op_buy_cards.py',
+     'run_buy_waves'): (
+        1, '族②既有豁免:开店态买牌波入口的金/牌读'),
+    ('application/currency_war/telemetry/cw_match_recorder.py',
+     'extract_frame'): (
+        1, '族④非画面 op 合法面:遥测录局关键帧结构化(白名单显式收录)'),
+    ('application/currency_war/operations/cw_screen/cw_screen_prep.py',
+     'finalize_buy_phase'): (
+        1, '族③试点迁移收编类:基类 observe 段接管后归 obs 族并移出本表'),
+    ('application/currency_war/operations/cw_screen/cw_screen_supply_node.py',
+     '_supply_detour_collect'): (
+        1, '族③试点迁移收编类:基类 observe 段接管后归 obs 族并移出本表'),
+    ('application/currency_war/operations/cw_screen/cw_screen_supply_node.py',
+     '_do_action'): (
+        1, '族③试点迁移收编类:基类 observe 段接管后归 obs 族并移出本表'),
+}
+
+
+def _scan_read_game_state(src_root: Path) -> dict[tuple[str, str], list[int]]:
+    """AST 扫描 src 树 read_game_state **真实调用** → {(文件, 宿主): [行号]}。
+
+    注释与 def 不入 AST Call,天然不计锁面(基线 14 命中中 3 注释 + 1 def
+    被本口径排除)。名字先文本预过滤再 parse:源码文本不含该名的文件不可
+    能含同名调用,全仓 1092 文件扫描成本因此从 ~2.2s 降到 <0.5s(慢桶线下)。
+    """
+    needle = 'read_game_state'
+    hits: dict[tuple[str, str], list[int]] = {}
+    for f in sorted(src_root.rglob('*.py')):
+        if needle not in f.read_text(encoding='utf-8'):
+            continue
+        tree = ast.parse(f.read_text(encoding='utf-8'))
+        parent: dict[ast.AST, ast.AST] = {}
+        for node in ast.walk(tree):
+            for ch in ast.iter_child_nodes(node):
+                parent[ch] = node
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fn = node.func
+            name = (fn.id if isinstance(fn, ast.Name)
+                    else (fn.attr if isinstance(fn, ast.Attribute) else None))
+            if name != needle:
+                continue
+            cur, host = parent.get(node), '<module>'
+            while cur is not None:
+                if isinstance(cur, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    host = cur.name
+                    break
+                cur = parent.get(cur)
+            rel = f.relative_to(src_root).as_posix()
+            hits.setdefault((rel, host), []).append(node.lineno)
+    return hits
+
+
+def test_read_game_state_call_closure() -> None:
+    """B4 封闭集:全仓 read_game_state 真实调用点 == 登记集(多/少皆红)。
+
+    红(多) = 封闭集外新增调用点(设计文档 §1.1-1:新增调用点 = 锁红)
+    → 处置 = ①观察漏斗本体 → 归 obs 桶实现内部并登记族①;②画面 op 内
+    观察语义 → 走基类 observe 段收编,登记「试点迁移收编类」并注明移出
+    时点;③其余 → 按白名单纪律逐点申报(禁随手豁免)。禁机械跟绿。
+    红(少) = 登记点已收敛(收编/改道)→ 同批删登记项并注明去向。
+    """
+    src_root = Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
+    hits = _scan_read_game_state(src_root)
+    extra = sorted(set(hits) - set(_GS_CLOSURE))
+    missing = sorted(set(_GS_CLOSURE) - set(hits))
+    assert not extra, (
+        f'全仓 read_game_state 封闭集外新增调用点 {len(extra)} 处'
+        f'(统一观察架构 §1.1-1:新增 = 锁红):{extra}——'
+        f'处置 = obs 桶收编/迁移收编类登记/白名单逐点申报,禁随手豁免')
+    assert not missing, (
+        f'封闭集登记 {len(missing)} 处已不在扫描集(收编/改道收敛?):'
+        f'{missing}——同批删除登记项并注明去向')
+    drifted = {k: (hits[k], _GS_CLOSURE[k][0]) for k in hits
+               if k in _GS_CLOSURE and len(hits[k]) != _GS_CLOSURE[k][0]}
+    assert not drifted, (
+        f'封闭集登记点调用数漂移(宿主内调用点增减,登记语义须重申):'
+        f'{drifted}')
+
+
+def test_read_game_state_closure_blindspot(tmp_path: Path) -> None:
+    """盲区自检(禁假绿,三腿):①新调用点在未登记宿主必须被捕获;
+    ②注释与 def 不计锁面(基线分族口径 14 = 10 + 3 + 1);③read_* 族
+    其余成员不属 B4 锁面(验真读合法,由本文件第一锁面另行管辖)。"""
+    pkg = tmp_path / 'pkg'
+    pkg.mkdir()
+    (pkg / 'fresh_call.py').write_text(
+        'def unregistered_host(ctx, shot):\n'
+        '    return read_game_state(ctx, shot)\n',
+        encoding='utf-8')
+    (pkg / 'comment_and_def_only.py').write_text(
+        '# 尽力而为 read_game_state(注释不属锁面)\n'
+        'def read_game_state(ctx, screen):\n'
+        '    """docstring 提及 read_game_state( 同样不属锁面。"""\n'
+        '    return None\n',
+        encoding='utf-8')
+    (pkg / 'verification_reads.py').write_text(
+        'def verify(ctx, shot):\n'
+        '    return read_gold(ctx, shot), read_deployed_chars(ctx, shot)\n',
+        encoding='utf-8')
+    hits = _scan_read_game_state(pkg)
+    assert set(hits) == {('fresh_call.py', 'unregistered_host')}, hits
+    assert len(hits[('fresh_call.py', 'unregistered_host')]) == 1

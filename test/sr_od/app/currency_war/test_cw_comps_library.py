@@ -10,6 +10,11 @@
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 # ==================== comp_v2 ====================
 
@@ -794,6 +799,143 @@ def test_valley_rollback_no_retained_sells_weakest():
     action = rollback_weakest(out, mem)
     assert isinstance(action, SellDeployed)
     assert mem.paused is True
+
+
+# ---------- 5.1 谷底回滚登记槽零消费守卫(结构面负向锁) ----------
+
+#: 登记槽字段名(SwapDeploy 谷底回滚「登记半边」的唯一载体)。
+_SLOT = 'v3_pending_rollback'
+
+
+def _scan_slot_accesses(src_root: Path) -> tuple[list[str], list[str], list[str]]:
+    """AST 扫描 src 树 ``_SLOT`` 访问形状 → (声明, 读 Load, 写 Store)。
+
+    返回元素为 '相对路径:行号' 串。docstring/注释/getattr 字符串形态
+    不入 AST 属性访问,天然不计(刻意绕 AST 的写法不属本锁辖域,同
+    test_cw_read_primitive_guard 扫描边界申报)。
+    """
+    import ast
+
+    decl: list[str] = []
+    loads: list[str] = []
+    stores: list[str] = []
+    for f in sorted(src_root.rglob('*.py')):
+        if _SLOT not in f.read_text(encoding='utf-8'):
+            continue
+        tree = ast.parse(f.read_text(encoding='utf-8'))
+        rel = f.relative_to(src_root).as_posix()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and node.attr == _SLOT:
+                (loads if isinstance(node.ctx, ast.Load) else stores).append(
+                    f'{rel}:{node.lineno}')
+            elif (isinstance(node, ast.AnnAssign)
+                  and isinstance(node.target, ast.Name)
+                  and node.target.id == _SLOT):
+                decl.append(f'{rel}:{node.lineno}')
+    return decl, loads, stores
+
+
+def test_valley_rollback_slot_zero_consumer_guard() -> None:
+    """谷底回滚登记槽零消费守卫(SwapDeploy 发射面退役 as-built 负向锁)。
+
+    出处 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
+    §6.6 SwapDeploy 行(发射面退役 = as-built 事实申报;负向锁申报 =
+    登记槽非空告警)+ §7-T5 注意项(禁把 v3_pending_rollback 当 bug 接上
+    发射)。as-built:登记半边活(谷底回滚臂仍构造 SwapDeploy 写入本槽)、
+    发射半边退役(全仓零消费,SwapDeploy 无两适配器执行链映射)。
+
+    断言面 = 结构形状:①声明恰 1(StrategyState 字段,mandate_state);
+    ②写恰 1(flow 谷底回滚登记臂);③**消费读基线 = 恰 1 且在 flow 登记
+    臂内**(即登记臂自身的槽空守卫读)——基线外任何新增读一律红,无论
+    跨文件还是**同文件**:flow 的 decide()/结算段是 §7-T5 点名的复活
+    热区,同文件读槽出发射是最高危向量,禁因「同在 flow」豁免。
+    基线实扫(2026-09-10):读 1(守卫)+ 写 1(登记)全在 flow 登记臂,
+    声明 1 在 mandate_state。
+
+    红(新增读出现)处置 = 确要复活发射 → 两适配器同批补执行链映射并
+    回写设计文档 §6.6 as-built 后改判本锁(禁机械跟绿);误用(把待发槽
+    当可消费队列)→ 删消费读。
+    runtime 告警半边(执行器消费点「槽非空」告警)挂 on_outcome 收编批
+    落点,不属本结构锁。
+
+    与旧锁关系:同文件 ``test_valley_rollback_weakest_then_pause`` 断言
+    登记半边仍活(rollback_weakest 返回 SwapDeploy)——本锁守消费半边
+    恒零,两锁合成「登记活/发射退役」完整 as-built,断言面不重复。
+    """
+    from pathlib import Path
+
+    src_root = Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
+    decl, loads, stores = _scan_slot_accesses(src_root)
+    assert len(decl) == 1 and decl[0].startswith(
+        'application/currency_war/strategies/impl/mandate_v1/mandate_state.py'), (
+        f'{_SLOT} 声明面漂移(恰 1 处数据类字段声明,现 {decl})——'
+        f'槽载体变更须同批回写设计文档 §6.6 as-built')
+    assert len(stores) == 1 and stores[0].startswith(
+        'application/currency_war/strategies/impl/flow.py'), (
+        f'{_SLOT} 写点漂移(恰 1 处 = flow 谷底回滚登记臂,现 {stores})——'
+        f'第二写端 = 登记语义分叉,禁')
+    assert len(loads) == 1 and loads[0].startswith(
+        'application/currency_war/strategies/impl/flow.py'), (
+        f'{_SLOT} 消费读越出基线(基线 = 恰 1 处登记臂槽空守卫读,现 '
+        f'{len(loads)} 处:{loads})——发射面已退役(设计文档 §6.6/§7-T5):'
+        f'登记动作永不发射,新增读 = 静默复活(同文件 decide()/结算段读槽'
+        f'出发射即复活热区),重接须两适配器同批映射申报后改判本锁')
+
+
+def test_valley_rollback_slot_guard_blindspot(tmp_path: Path) -> None:
+    """盲区自检(禁假绿,两腿,均验证读计数基线断言会红):
+
+    ①跨文件腿:登记文件外的消费读被捕获且令「恰 1 且在 flow」谓词红;
+    ②同文件腿(登记臂文件内盗版消费读):文件级过滤豁免的恰是 §7-T5
+    点名的复活热区——两读全在 flow.py 时唯一能红的是读计数基线,
+    本腿钉死它必须红(基线断言缺失即本腿假绿)。
+    """
+    # 腿①:跨文件消费读
+    pkg = tmp_path / 'pkg1'
+    st = pkg / 'strategies'
+    st.mkdir(parents=True)
+    (st / 'flow.py').write_text(
+        'def arm(ms, act):\n'
+        '    if ms.v3_pending_rollback is None:\n'
+        '        ms.v3_pending_rollback = act\n',
+        encoding='utf-8')
+    (st / 'mandate_state.py').write_text(
+        'class StrategyState:\n'
+        '    v3_pending_rollback: object = None\n',
+        encoding='utf-8')
+    (pkg / 'consumer.py').write_text(
+        'def fire(ms):\n'
+        '    return ms.v3_pending_rollback\n',
+        encoding='utf-8')
+    decl, loads, stores = _scan_slot_accesses(pkg)
+    assert len(decl) == 1 and len(stores) == 1
+    outside = [p for p in loads if not p.startswith('strategies/flow.py')]
+    assert outside, '合成跨文件消费读必须被扫描捕获(禁假绿)'
+    assert outside[0].startswith('consumer.py:')
+    assert len(loads) != 1, '读计数基线谓词必须因跨文件消费读而红'
+
+    # 腿②:同文件盗版消费读(登记臂 + 同文件内读槽出发射形态)
+    pkg2 = tmp_path / 'pkg2'
+    st2 = pkg2 / 'strategies'
+    st2.mkdir(parents=True)
+    (st2 / 'flow.py').write_text(
+        'def arm(ms, act):\n'
+        '    if ms.v3_pending_rollback is None:\n'
+        '        ms.v3_pending_rollback = act\n'
+        '\n'
+        'def rogue_fire(ms):\n'
+        '    return ms.v3_pending_rollback\n',
+        encoding='utf-8')
+    (st2 / 'mandate_state.py').write_text(
+        'class StrategyState:\n'
+        '    v3_pending_rollback: object = None\n',
+        encoding='utf-8')
+    decl2, loads2, stores2 = _scan_slot_accesses(pkg2)
+    assert len(decl2) == 1 and len(stores2) == 1
+    assert len(loads2) == 2, f'同文件盗版读必须入扫描集: {loads2}'
+    assert all(p.startswith('strategies/flow.py') for p in loads2), \
+        '两读全在登记文件内 = 文件级过滤无法红,读计数基线是唯一防线'
+    assert len(loads2) != 1, '读计数基线谓词必须因同文件盗版消费读而红'
 
 
 # ---------- 边界:DOT 同体线退化为加深 ----------
