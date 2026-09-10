@@ -3,7 +3,7 @@
 设计正本 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度依据 = 开放问题清单 B3(先迁 2 个代表屏:
 遭遇 = 带刷新链最复杂、盛会之星 = 纯选卡最简 → 验证断言集模板 → 其余按族
-批量);迁移手法单一源 = 试点步骤 1 先例(CwScreenPrep:装配点分流 + 六段
+批量);迁移手法单一源 = 试点步骤 1 先例(CwScreenPrep:装配点分流 + 五段
 转录 + 实机适配器封口 + on_outcome 注册表,验收 reviews/T-189-r1.md)。
 
 **F11/B3 sim 腿不适用例外清单(随迁移批逐屏落测试 docstring)**:
@@ -164,16 +164,19 @@ def test_migration_batch2_ops_inherit_base() -> None:
 
 def test_encounter_dispatch_routes_to_lifecycle_when_ports_installed(
         test_context, monkeypatch) -> None:
-    """遭遇屏装配点分流:两端口完整在场 → handle 经六段新路径(段迹
-    observe 起步);红 = 分流判据缺失(装端口仍走旧路径=迁移无效)。"""
+    """遭遇屏装配点分流:两端口完整在场 → handle 经五段新路径(段迹
+    observe 起、on_outcome 收,无验证段——用户裁定 2026-09-10 验证段
+    废除);红 = 分流判据缺失(装端口仍走旧路径=迁移无效)或验证段
+    残迹回潮。"""
     install_dispatch_stub_ports(monkeypatch)
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, _session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=0, reason='stub'))
     _run_node(test_context, op, op.handle)
-    assert op._lifecycle_trace[:2] == ['observe', 'reconcile'], (
-        f'装端口须走六段新路径(observe/reconcile 起步):{op._lifecycle_trace}')
+    assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act',
+                                   'on_outcome'], (
+        f'装端口须走五段新路径(恰五段,验证段已废除):{op._lifecycle_trace}')
 
 
 def test_encounter_old_path_kept_without_ports(
@@ -205,7 +208,7 @@ def test_encounter_observe_gate_fails_off_screen(
 
 
 def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
-    """盛会之星装配点分流双向:装端口 → 六段(离屏 = observe 段早退
+    """盛会之星装配点分流双向:装端口 → 五段(离屏 = observe 段早退
     成功交还,带完成 settle 语义);不装端口 → 旧路径零段迹。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
         CW_OVERLAY_SETTLE_S,
@@ -217,7 +220,7 @@ def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
     match.exec_state.megastar_candidate_clicked = True
     rs = _run_node(test_context, op, op.handle)
     assert op._lifecycle_trace == ['observe'], (
-        f'装端口须走六段新路径;离屏早退 = 后续段不执行(仅 observe 段迹):'
+        f'装端口须走五段新路径;离屏早退 = 后续段不执行(仅 observe 段迹):'
         f'{op._lifecycle_trace}')
     assert calls == [], '离屏早退 = 不发动作'
     assert '巨星节点完成' in (rs.status or ''), f'完成语义不变:{rs!r}'
@@ -236,16 +239,32 @@ def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
 
 def test_megastar_in_node_lifecycle_single_action_retry(
         test_context, monkeypatch) -> None:
-    """盛会之星六段在屏形态:decide+act 内聚于 _do_action 单动作
-    (committed-but-verifying;验证 = 下一轮 observe 门,迹到 act 为止)。"""
+    """盛会之星五段在屏形态:decide+act 内聚于 _do_action 单动作
+    (committed-but-verifying;节点完成判定 = 下一轮 observe 门,非生命
+    周期验证段——用户裁定 2026-09-10 验证段废除,迹到 act 为止)。"""
     install_dispatch_stub_ports(monkeypatch)
     op, _match, _session, calls = _make_megastar(
         test_context, monkeypatch, in_node=True)
     _run_node(test_context, op, op.handle)
     assert calls == [1], f'每轮恰一个动作:{calls!r}'
     assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act'], (
-        f'盛会之星段迹 = observe/reconcile/decide/act(验证归下轮门):'
-        f'{op._lifecycle_trace}')
+        f'盛会之星段迹 = observe/reconcile/decide/act(节点完成判定归下一轮'
+        f' observe 门,无验证段):{op._lifecycle_trace}')
+
+
+def test_event_screens_source_free_of_verify_segment() -> None:
+    """验证段废除·源面锁(用户裁定 2026-09-10:动作 op 只管机械执行,
+    禁止在画面 op 做验证):两屏源无「六段」表述、无 'verify' 段迹字面;
+    落地判定归动作适配器回执(§6.2),非生命周期段。红 = 验证段残面
+    回潮。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_encounter as em,
+        cw_screen_megastar as ms,
+    )
+    for name, mod in (('encounter', em), ('megastar', ms)):
+        src = inspect.getsource(mod)
+        assert '六段' not in src, f'{name} 源面残留「六段」表述(验证段已废除)'
+        assert "'verify'" not in src, f'{name} 源面残留 verify 段迹字面(验证段已废除)'
 
 
 # ==================== 发射型接线锁(§6.4-R-E 在册①;B5 四件套)====================

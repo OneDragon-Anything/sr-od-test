@@ -13,7 +13,7 @@ payload → BoardState 全帧对拍(回归 pin 钉 payload)**。
   域(球/箱/典籍/占用像素)在 pd_mod 命名空间桩空;
 - 被测链 = 真实 ``CwScreenPrep._observe(heavy=True)``(实机适配器①的
   封口内容:observe_full + read_game_state 漏斗 + BoardState 观察写端)
-  经六段生命周期 run_lifecycle 驱动(段1 observe → 段2 reconcile);
+  经五段生命周期 run_lifecycle 驱动(段1 observe → 段2 reconcile);
 - 对拍口径 = BoardState 全帧快照(值/来源/evidence 三元)逐字段对
   回归 pin;pin 面覆盖 prep_clean 帧触达的全部建模域 + 未触达域的
   恒 None 断言(禁静默新写端)。
@@ -71,7 +71,7 @@ def _make_director(test_context: SimpleNamespace,
                    *,
                    merge_effect_window: bool = False) -> CwScreenPrep:
     """实机适配器夹具装配:裸 ctx(全部 area rect 缺失 → 真读链自然失读,
-    同 _feed_ctx 口径)+ 固定帧源桩 + 真实 _observe 经六段驱动。
+    同 _feed_ctx 口径)+ 固定帧源桩 + 真实 _observe 经五段驱动。
 
     执行侧 tracked 账对账(`_reconcile_tracking`)不在本夹具辖域
     (执行侧装配源 = 尾批,ADR-0530),桩化防漂。
@@ -210,7 +210,7 @@ def test_prep_writeflow_full_frame_pin(test_context: SimpleNamespace,
             for s in bench_val.slots] == ['希儿', '景元'] + [None] * 7
     # 段序:观察 → 对账(夹具辖前两段;decide 由桩脚本交回)
     assert d._lifecycle_trace[:2] == ['observe', 'reconcile'], (
-        f'六段段序漂移:{d._lifecycle_trace}')
+        f'五段段序漂移:{d._lifecycle_trace}')
 
 
 def test_prep_writeflow_empty_bench_is_miss_not_clear(

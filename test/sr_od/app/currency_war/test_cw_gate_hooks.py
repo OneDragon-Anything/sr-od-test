@@ -52,7 +52,7 @@ def _make_director(monkeypatch, collapse_open):
     列表=按序弹出,记录实际返回到返回的 list)。
 
     装配点分流(统一观察架构 §9.1,试点批):monkeypatch 装入分流桩端口
-    (teardown 自动复位),run() 经装配点判据走六段生命周期新路径
+    (teardown 自动复位),run() 经装配点判据走五段生命周期新路径
     (架构设计 §9.1 主门 a);_observe 已桩化,桩端口不被消费。
     桩端口单一源 = _cw_helpers.install_dispatch_stub_ports(README
     第 14 条「跨文件的复制夹具是漂移源头」上收,禁再复制类体)。

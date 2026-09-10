@@ -1,15 +1,22 @@
 """统一观察架构·画面 op 基类锁(试点步骤 1;设计正本 =
 docs/develop/currency_war/design/统一观察架构-画面op基类设计.md,下称
-「架构设计」;§9.1 新锁面 = 基类生命周期锁(六段各一段)+ on_outcome
+「架构设计」;§9.1 新锁面 = 基类生命周期锁(五段各一段)+ on_outcome
 触发时点轴锁(落地门/发射型各一))。
 
 锁的语义(测试纪律 7 自检;出处 = 架构设计 §5.1/§6.4-R-E):
 
-- **生命周期六段锁**:被测面 = CwScreenOpBase.run_lifecycle 模板的段序与
-  段职责——observe(适配器①)→ reconcile(对账)→ decide→act→on_outcome→
-  验证(后四段在单动作决策循环内逐动作迭代)。段迹(_lifecycle_trace,
+- **生命周期五段锁**:被测面 = CwScreenOpBase.run_lifecycle 模板的段序与
+  段职责——observe(适配器①)→ reconcile(对账)→ decide→act→on_outcome
+  (后三段在单动作决策循环内逐动作迭代)。段迹(_lifecycle_trace,
   只增不改)是断言载体;红 = 段被跳/段序颠倒/段职责断线(如 decide 不经
   策略器、act 不经适配器位)。
+- **验证段废除锁**(用户裁定 2026-09-10:「动作 op 只管机械执行,禁止做
+  任何验证,也禁止在画面 op 做验证。如果观察正确,动作 op 没生效,那就
+  是动作 op 有 bug,不应该为了 bug 增加验证这种复杂度」):生命周期模板
+  无第六段——段迹止于 on_outcome,基类源面无「六段」/「verify」残段;
+  落地判定(applied/progressed)归动作适配器执行回执(架构设计 §6.2),
+  仅作 on_outcome 落地回执门的触发前提(§6.4),不是生命周期段;动作
+  未生效的处置 = 修动作适配器本身,禁验证+重试兜底。红 = 验证段复活。
 - **触发时点轴锁**(§6.4-R-E):落地回执门(默认)= progressed 为触发
   前提,未落地不触发(§6.5-1);发射型 = 逐件显式申报(未入申报面注册
   即炸错)+ 点击发射时点触发、与落地解耦。在册发射型成员 = F-3 裁决
@@ -17,12 +24,16 @@ docs/develop/currency_war/design/统一观察架构-画面op基类设计.md,下�
   刷新计数,各屏 op 迁移批接线)。
 
 装配 = ``_cw_helpers.make_prep_round_director`` 单一源(其 harness 已装入
-装配点分流桩端口 → run() 经装配点判据走六段新路径,架构设计 §9.1 主门 a)。
+装配点分流桩端口 → run() 经装配点判据走五段新路径,架构设计 §9.1 主门 a)。
+五段模板锁(段数/段序/无验证段)用本文件内最小桩子类直驱 run_lifecycle,
+不经备战 op——其决策循环的迭代/失败处置语义归备战修复批辖域,不属基类
+模板锁面(段1-段5 职责锁仍经备战 op 走真实装配)。
 执行器注入面 = 模块级 ``PrepActionExecutor`` 构造点桩(与 test_cw_gate_hooks
 同款:单轮入口会重建执行器,桩构造点保注入面)。
 """
 from __future__ import annotations
 
+import inspect
 from types import SimpleNamespace
 
 import pytest
@@ -39,6 +50,7 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base impor
     EMIT_TRIGGERED_DECLARED,
     OUTCOME_TRIGGER_EMITTED,
     OUTCOME_TRIGGER_LANDED,
+    CwScreenOpBase,
 )
 from test.harness.fixture_controller import (
     enter_running_state,
@@ -83,7 +95,7 @@ def _run_director(test_context, monkeypatch, scripted_actions, *, overlay=None):
     return d, match, session, rr
 
 
-# ==================== 生命周期六段锁(架构设计 §5.1)====================
+# ==================== 生命周期五段锁(架构设计 §5.1)====================
 
 
 def test_segment_observe_adapter_feeds_blackboard(
@@ -231,29 +243,57 @@ def test_segment_on_outcome_fires_registered_hook(
     assert '交回外循环重识别' in (rr.status or ''), '终结出口语义不受收编影响'
 
 
-def test_segment_verify_consumes_outcome_and_recovers(
+class _FiveSegStub(CwScreenOpBase):
+    """五段模板桩:子类钩子最小实现(基类模板管 observe/reconcile 两段,
+    本桩决策循环管后三段),供模板段序锁直驱 run_lifecycle。"""
+
+    def __init__(self, ctx) -> None:
+        CwScreenOpBase.__init__(self, ctx, op_name='五段模板桩')
+
+    def lifecycle_observe(self
+                          ) -> tuple[dict, object | None]:
+        return {'frame': 'stub'}, None
+
+    def lifecycle_reconcile(self, payload: dict) -> None:
+        return None
+
+    def lifecycle_decision_cycle(self, payload: dict
+                                 ) -> object:
+        self._lifecycle_mark('decide')
+        self._lifecycle_mark('act')
+        self._lifecycle_mark('on_outcome')
+        return self.round_success('五段走完')
+
+
+def test_lifecycle_template_five_segments_exact_trace(
         test_context, monkeypatch) -> None:
-    """段6 验证:执行侧验证回执消费——progressed=False → 恢复原语一次 +
-    交回外循环(fail-stop,契约 §2);段迹收尾 = verify。红 = 回执消费/
-    失败恢复编排断线。"""
-    d, _match, session = make_prep_round_director(
-        test_context, monkeypatch, [StartBattle()])
-    _stub_executor(monkeypatch, execute_result=(False, '验证失败(备战标识未消失)'))
-    recoveries: list[bool] = []
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_prep as pd_mod,
-    )
-    monkeypatch.setattr(pd_mod, 'try_recovery',
-                        lambda op_, ctx_: recoveries.append(True) or ('close', True))
+    """五段模板锁(用户裁定 2026-09-10 验证段废除):run_lifecycle 一次
+    访问的段迹恰为 observe→reconcile→decide→act→on_outcome 五段,无第六
+    段、无验证残迹(落地判定归动作适配器回执 §6.2,非生命周期段)。
+    红 = 验证段复活(段迹再现第六段)或段序漂移。"""
+    op = _FiveSegStub(test_context)
     with fast_sleep():
         enter_running_state(test_context)
         try:
-            rr = d.run()
+            rs = op.run_lifecycle()
         finally:
-            reset_running_state(test_context, d)
-    assert d._lifecycle_trace[-1] == 'verify', f'末段须为 verify:{d._lifecycle_trace}'
-    assert len(recoveries) == 1, '验证失败须恰编排一次恢复原语'
-    assert '验证失败' in (rr.status or '') and '交回外循环' in (rr.status or '')
+            reset_running_state(test_context, op)
+    assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act',
+                                   'on_outcome'], (
+        f'生命周期模板须恰五段(验证段已废除,用户裁定 2026-09-10):'
+        f'{op._lifecycle_trace}')
+    assert rs.is_success, '模板走完 = 正常交回'
+
+
+def test_lifecycle_base_source_free_of_verify_segment() -> None:
+    """验证段废除·源面锁(同上裁定):基类模块源无「六段」表述、无
+    'verify' 段迹字面。红 = 源面残段(文档表述/段迹字样回潮)。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_op_base as base_mod,
+    )
+    src = inspect.getsource(base_mod)
+    assert '六段' not in src, '基类源面残留「六段」表述(验证段已废除)'
+    assert "'verify'" not in src, '基类源面残留 verify 段迹字面(验证段已废除)'
 
 
 # ==================== on_outcome 触发时点轴锁(架构设计 §6.4-R-E)====================

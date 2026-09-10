@@ -238,7 +238,7 @@ def make_prep_round_director(test_context, monkeypatch, scripted_actions,
     装配点分流(统一观察架构 §9.1 并存期,试点批):缺省(缺省装配,
     ``install_dispatch_ports=True``)monkeypatch ``cw_game_ports.
     _INSTALLED`` 装入分流桩端口(teardown 自动复位 = 卸载语义)——使
-    run() 经装配点判据进入六段生命周期新路径,备战行为锁自此锁
+    run() 经装配点判据进入五段生命周期新路径,备战行为锁自此锁
     「op execute() 走新基类」(架构设计 §9.1 主门 a)。``_observe`` 桩
     使桩端口不被消费(端口方法 = 响错误,静默消费即桩面破缺信号)。
     ``install_dispatch_ports=False`` = **不装端口(生产缺省形态)**,
