@@ -223,6 +223,14 @@ class TestZeroProductionConsumption:
             / 'cw_screen_op_base.py'),
         str(Path('application') / 'currency_war' / 'operations'
             / 'decision_frame_hooks.py'),
+        # 观测锚实现批①(T-221,统一观察架构 §12):kernel/cw_anchor.py
+        # 模块 docstring 以「cw_game_ports 消费面封闭集」为登记式先例引名
+        # (与 op_base 同形态:扫描为文本匹配,提及即命中)——零 import
+        # 零调用(惰性纯机制面,其零生产消费另有守卫锁
+        # test_cw_anchor_registry::test_anchor_mechanism_lazy 独立钉死),
+        # 非改道点,登记豁免。
+        str(Path('application') / 'currency_war' / 'kernel'
+            / 'cw_anchor.py'),
     )
 
     def test_scanner_catches_new_violations(self, tmp_path: Path) -> None:
