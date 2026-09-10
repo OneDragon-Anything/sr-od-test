@@ -72,11 +72,6 @@ def _make_director(monkeypatch, collapse_open):
                         lambda op, ctx: d._executor)
     d._steps = 0
     d._stall = 0
-    d._fail_counts = {}
-    d._blocked = set()
-    d._recovered = set()
-    d._recovery_closed_known = {}
-    d._recovery_tried = False
     d._bench_pts = []
     d._cached_state = None
     d._cached_bench = []
