@@ -329,6 +329,10 @@ def _make_op(test_context, monkeypatch: pytest.MonkeyPatch,
     safe_click/confirm 走 handler 模块命名空间桩,选卡 y 用真 screen_info area)。"""
     op = CwScreenInvestStrategy(test_context)
     monkeypatch.setattr(op, '_ensure_entry_screen', lambda: True)
+    # 验证废除批(pending 重入裁决)联动桩:入口锚单帧判定恒命中 = 重入时
+    # 「确认未落地」车道(清 pending 重走),禁走真 OCR(last_screenshot 为
+    # object 哨兵帧,digest 即炸)。
+    monkeypatch.setattr(op, '_entry_anchor_hit', lambda screen: True)
     monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
     monkeypatch.setattr(op, 'screenshot', lambda: book.next_frame())
     monkeypatch.setattr(op, '_read_options',
@@ -341,7 +345,7 @@ def _make_op(test_context, monkeypatch: pytest.MonkeyPatch,
         return book.counts.get(id(screen), [])
 
     monkeypatch.setattr(strat_mod, 'read_invest_refresh_counts', _fake_counts)
-    monkeypatch.setattr(strat_mod, 'confirm_and_verify',
+    monkeypatch.setattr(strat_mod, 'emit_overlay_confirm',
                         lambda op, confirm_point, entry_keyword, tag:
                         (clicks.append(confirm_point),
                          SimpleNamespace(is_success=True))[1])

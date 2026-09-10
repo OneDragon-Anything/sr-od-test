@@ -153,9 +153,22 @@ def test_retreat_branch_clicks_retreat_on_pause_frame(
 
 
 def test_no_round_retry_tail() -> None:
-    """战斗中不再落入 retry 死循环(旧版尾分支;否定墓碑,r279 退役背书)。"""
+    """战斗中不再落入无界 retry 尾(旧版尾分支;否定墓碑,r279 退役背书)。
+
+    K1(验证废除批 2026-09-10)改写:overlay 分支 round_wait → round_retry
+    (计节点 retry 预算,node_max_retry_times=30,耗尽框架原生 FAIL)——
+    本锁防线语义收窄为「全分支 miss 不落入无上界重试」:①尾部兜底(战斗中
+    右上 X)仍是有界形态(全分支 miss 计数 _miss_rounds ≥10 → fail,无
+    retry 尾);②overlay 分支的 retry 为节点预算有界,非 r279 防的无界尾。
+    """
     src = inspect.getsource(CwEntryExit.exit_match)
-    assert 'round_retry' not in src, 'r279: 全分支消化,无 retry 尾'
+    tail = src.split('战斗中右上 X')[1] if '战斗中右上 X' in src else ''
+    assert "round_retry" not in tail or "_miss_rounds" in tail, (
+        'r279: 全分支 miss 尾分支不得引入无界 retry(须由 _miss_rounds 有界化)')
+    # overlay 分支 retry 必须自述预算有界依据(K1 改形备注),防退化为裸 retry 尾
+    overlay_retry = src.split('_overlay_branch(')[0].count('round_retry')
+    assert 'node_max_retry_times=30' in src, (
+        'overlay 分支 retry 化的预算锚(exit_match 节点预算 30)必须在场')
 
 
 # ===== W62 件3(ADR-0329):投资策略屏「左卡+确认」点击落地修复锁 =====

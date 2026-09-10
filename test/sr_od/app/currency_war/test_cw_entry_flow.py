@@ -4,7 +4,7 @@
 - 入口 smoke:传送已落地场景入口分流到大厅(enter 修复回归,18:29 事故);
 - 防伪绿:F 分支必须真按交互键(修复前 AttributeError 被吞成 retry 也能假绿);
 - F1 发射锁①:cw_entry_exit.py 源级零 ESC 发射墓碑(红 = ESC 回潮);
-- fail-closed 代表:OVERLAY_ACTION_MAX 梯子算术,恰 MAX 次动作后 round_fail;
+- overlay 分支出口语义:retry 化(验证废除批 K1,预算归节点,无自带上界);
 - 建档锚:门形「按钮-退出对局」中心 (61,63)±2 + goto 转场边(防建档漂移)。
 
 来源:本文件 = test_cw_enter_flow.py(git mv)+ test_cw_entry_exit_esc_free.py
@@ -156,72 +156,43 @@ def test_entry_exit_source_has_zero_esc_emission() -> None:
         )
 
 
-def test_overlay_action_ladder_exact_max_then_fail(
+def test_overlay_branch_retry_budget_semantics(
     test_context: SrTestContext,
 ) -> None:
-    """梯子算术锁:overlay 未命中场景恰 OVERLAY_ACTION_MAX 次动作后 round_fail。
+    """锁(L1-12 改写,验证废除批 + K1):overlay 分支 retry 化——动作已发
+    返回 round_retry(计节点 retry 预算),不再自带上界计数。
 
-    出处:overlay 兜底分支自带上界(依据 = cw_entry_exit.py OVERLAY_ACTION_MAX
-    字段注释:定向点击后分支每轮重命中、不计尾部 _miss_rounds,success 边
-    循环不消耗节点 retry 预算,必须自带计数上界)。构造 = act 桩恒 True
-    (动作已发但画面未推进 = overlay 未命中,分支下轮重命中),直调
-    _overlay_branch 复现「分支自命中但动作无效」形态。
-
-    断言:①前 MAX 次调用每次发 1 个动作并 WAIT(交画面推进);②第 MAX+1 次
-    调用在发动作**之前** fail(动作数恰 = MAX,不多不少——fail 那次再发动作
-    = off-by-one);③fail 文案「连续 {MAX} 次」与常量同源推导(文案算术
-    streak-1);④键隔离:耗尽的子态键不影响另一子态键的独立预算。
-    红 = 梯子算术被改(off-by-one / 上界失效 → success 边死循环复发)。
+    重推依据(锁的存在性纪律):原 OVERLAY_ACTION_MAX=5 自带上界因
+    「round_wait 不消耗预算」而生;验证废除批(用户裁定 2026-09-10:动作
+    op 禁「未生效」检出)拆计数上界,分支改 round_retry 后每轮重命中 =
+    每轮耗 1 次节点预算(exit_match node_max_retry_times=30),耗尽框架
+    原生 FAIL 交外层重新导航——有界终止单由预算机制原生承载,空壳计数
+    删除(禁保留空壳,批0c L1-12 判语)。本锁改锁新语义:①动作已发恒
+    retry(轮次流转语义,非成败回执);②area 缺失(动作没发出)仍
+    fail 如实交回;③同分支重命中不产生任何自带上界 fail(预算归节点)。
     """
-    max_actions = CwEntryExit.OVERLAY_ACTION_MAX
-    # 钉死设计值:上界数值本身是 ESC 清零批语义(≤5 次动作 ≈10s+ 慢转场余量),
-    # 改值 = 设计变更,须同步重推本锁断言与 fail 文案算术,禁机械跟绿
-    assert max_actions == 5, (
-        f'OVERLAY_ACTION_MAX 设计值 = 5,现值 {max_actions}——改值须重推'
-        f'梯子算术锁与 fail 文案算术(esc4 落地审 §4 核实口径)'
-    )
-
     op = CwEntryExit(test_context)
     act_calls: list[str] = []
 
     def _act() -> bool:
         act_calls.append('click')
-        return True   # 点击已发但浮层未关 = 未命中,分支下轮重命中
+        return True   # 点击已发(浮层关没关由重入观察重判,不在动作层)
 
-    results: list[OperationRoundResultEnum] = []
-    fail_status: str | None = None
-    with fast_sleep():   # round_wait(wait=2) 的轮间等待在测试环境纯属空转
-        for _ in range(max_actions + 2):   # 多调 2 次:双向夹出恰一次 fail
-            r = op._overlay_branch('补给阶段', _act)
-            if r.result == OperationRoundResultEnum.FAIL:
-                fail_status = r.status
-                break
-            results.append(r.result)
+    with fast_sleep():   # round_retry(wait=2) 的轮间等待在测试环境纯属空转
+        results = [op._overlay_branch('补给阶段', _act).result
+                   for _ in range(8)]
+    assert results == [OperationRoundResultEnum.RETRY] * 8, (
+        f'动作已发应恒 retry(计节点预算,无自带上界),实际={results}')
+    assert len(act_calls) == 8, (
+        f'每次调用应恰发 1 次动作,实际 {len(act_calls)} 次')
 
-    assert len(results) == max_actions, (
-        f'前 {max_actions} 次调用应全 WAIT、第 {max_actions + 1} 次 fail,'
-        f'实际 WAIT {len(results)} 次(结果序={[r.name for r in results]})')
-    assert results == [OperationRoundResultEnum.WAIT] * max_actions, (
-        f'动作未生效期间每次都该 WAIT(交画面推进重观察),实际={results}')
-    assert len(act_calls) == max_actions, (
-        f'恰 {max_actions} 次动作(不多不少),实际 {len(act_calls)} 次——'
-        f'fail 那次调用不得再发动作(动作先于上界判定 = off-by-one)')
+    # area 缺失臂:动作没发出(职责未完成)→ fail 如实交回(ESC 已禁用)
+    def _act_missing() -> bool:
+        return False
 
-    # fail 文案算术与常量同源:第 MAX+1 次调用时 streak=MAX+1,文案报 streak-1=MAX
-    assert fail_status is not None, '第 MAX+1 次调用应以 FAIL 收口'
-    assert f'连续 {max_actions} 次' in fail_status, (
-        f'fail 文案应含「连续 {max_actions} 次」(streak-1 算术,落地审 §4'
-        f' off-by-one 核验口径),实际文案={fail_status!r}')
-
-    # 键隔离:按 overlay 子态键独立计数,耗尽的键不吞别的子态预算
-    # (必须同入 fast_sleep 窗口:本轮 round_wait(wait=2) 在加速窗外走真睡,
-    # 实测 4×0.5s 切片 = 恰 2s/call,白付慢桶成本)
-    with fast_sleep():
-        r_other = op._overlay_branch('遭遇其一', _act)
-    assert r_other.result == OperationRoundResultEnum.WAIT, (
-        f'另一子态键首轮应 WAIT(独立预算),实际={r_other.result}')
-    assert len(act_calls) == max_actions + 1, (
-        f'另一子态键首轮应发 1 次动作,实际动作总数 {len(act_calls)}')
+    r_fail = op._overlay_branch('补给阶段', _act_missing)
+    assert r_fail.result == OperationRoundResultEnum.FAIL, (
+        f'area 缺失应 fail 交外层,实际={r_fail.result}')
 
 
 def test_exit_door_area_center_and_goto_edge_onboarded() -> None:

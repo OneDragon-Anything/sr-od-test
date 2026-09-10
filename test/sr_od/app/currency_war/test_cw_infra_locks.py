@@ -880,13 +880,16 @@ def test_card_point_falls_back_to_legacy_safe_band(
 
 
 def test_press_time_hardening_wired() -> None:
-    """加固接线:点卡/确认都走 0.15 按压;共享助手默认 0.1(其它 handler 零影响)。"""
+    """加固接线(L1-1 改写,验证废除批):点卡/确认都走 0.15 按压;确认
+    原语 = emit_overlay_confirm(原 confirm_and_verify 验关半拆除后更名,
+    机械交回),默认 0.1(其它 handler 零影响)、press_time 透传保持——
+    按压加固语义迁新确认原语后锁新原语,防加固线静默失守。"""
     src = inspect.getsource(CwScreenPlanner)
     assert 'press_time=self.CLICK_PRESS_TIME' in src, '点卡未带按压加固'
     assert 'press_time=self.CLICK_PRESS_TIME)' in inspect.getsource(
         CwScreenPlanner.handle) or 'press_time=self.CLICK_PRESS_TIME' in src
     assert 'press_time: float = 0.1' in inspect.getsource(_overlay_confirm), (
-        'confirm_and_verify 默认值变了(会波及其它 handler)')
+        'emit_overlay_confirm 默认值变了(会波及其它 handler)')
     assert 'press_time=press_time' in inspect.getsource(_overlay_confirm), (
         '确认点击未透传 press_time')
 

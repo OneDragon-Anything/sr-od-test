@@ -931,7 +931,7 @@ class FakeP1Run:
                           entry_keyword: str = '', tag: str = '') -> Any:
             return op_.round_success('确认桩(选卡浮层已弹,假环境无确认点击)')
 
-        monkeypatch.setattr(strat_mod, 'confirm_and_verify', _fake_confirm)
+        monkeypatch.setattr(strat_mod, 'emit_overlay_confirm', _fake_confirm)
         # 决策半边 = 剧本直注入(实例级;teardown 还原真判据)
         def _scripted_decide(kind: str, options: list[str], _st: Any,
                              _sess: Any, _cfg: Any) -> PickEvent:

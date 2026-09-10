@@ -111,7 +111,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     _confirm_rs = OperationRoundResult(
         OperationRoundResultEnum.SUCCESS if confirm_success
         else OperationRoundResultEnum.RETRY, status='stub')
-    monkeypatch.setattr(em, 'confirm_and_verify',
+    monkeypatch.setattr(em, 'emit_overlay_confirm',
                         lambda o, **k: _confirm_rs)
     monkeypatch.setattr(em, 'record_event_choice', lambda *a, **k: None)
     import sr_od.application.currency_war.kernel.cw_bs_view as bs_view_mod
@@ -185,7 +185,9 @@ def test_encounter_dispatch_routes_to_lifecycle_when_ports_installed(
 def test_encounter_old_path_kept_without_ports(
         test_context, monkeypatch) -> None:
     """缺省 None = 生产直连旧路径(§9.1):不装端口 → 旧序列原样
-    (零段迹);行为锁面 = 出口验真通过才写 chosen(既有语义保形)。
+    (零段迹);行为锁面(L1-11 联动改写,验证废除批)= 确认发出置
+    pending、chosen 写时机归重入裁决(单调用内不写——时点后移语义,
+    新旧路径同承)。
     红 = 分流判据破坏(生产误走新路径)。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
@@ -193,8 +195,11 @@ def test_encounter_old_path_kept_without_ports(
         pick=EncounterPick(idx=0, reason='stub'))
     rs = _run_node(test_context, op, op.handle)
     assert op._lifecycle_trace == [], f'旧路径不得写段迹:{op._lifecycle_trace}'
-    assert rs.is_success and board_state_of(session).chosen_encounter.value == (
-        1, '金币×2'), '旧路径出口验真通过 → chosen 照写(保形)'
+    assert rs.is_success, f'旧路径确认链轮次结果照回(保形):{rs!r}'
+    assert op._confirm_pending is not None, (
+        '确认已发 → pending 置位(chosen 归重入裁决承载)')
+    assert board_state_of(session).chosen_encounter.value is None, (
+        'chosen 单调用内不写(写时机 = 重入裁决,时点后移)')
 
 
 def test_encounter_observe_gate_fails_off_screen(

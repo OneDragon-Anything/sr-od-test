@@ -211,26 +211,11 @@ def test_visit_open_shop_no_buyable_closes_directly(
                 if c is not None], '零买入面 tracked 账不得有进账'
 
 
-def test_visit_open_shop_close_fail_reported(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-        tmp_path: pathlib.Path) -> None:
-    """编排锁③:关店未生效 → 访问失败如实返回(不冒充进展;店留着交
-    上层重新识别,失败路径语义与显式开店路径同款)。"""
-    from sr_od.application.currency_war.operations.cw_op import (
-        cw_op_close_shop as close_mod,
-    )
-
-    def _close_fail(op, *a, **k):
-        return type('R', (), {'is_success': False, 'status': '失败'})()
-
-    prep, _close_calls, _clicks = _make_prep(
-        test_context, monkeypatch, tmp_path, [])
-    # 先装配(内含关店成功桩)再翻转失败桩——被测方法调用时取模块属性,
-    # 后设的桩生效
-    monkeypatch.setattr(close_mod, 'close_shop', _close_fail)
-    ok, detail = _visit(prep)
-    assert not ok and '关店未生效' in detail, (
-        f'关店失败须如实申报:{ok!r} {detail!r}')
+# (L1-15 test_visit_open_shop_close_fail_reported 随验证废除批退役,2026-09-10:
+#  用户裁定「动作 op 只管机械执行禁止验证」(M1③ 调用方不问成败)——
+#  close_shop 验关型失败回执退役(幂等观察 success / 点击已发机械 retry),
+#  visit_open_shop 的「关店未生效→访问失败如实返回」消费面同批拆除(墓碑);
+#  店关没关由下一帧观察侧对账(0n 三锚/备战双锚)自然闭环。)
 
 
 def test_visit_open_shop_entry_rebuilds_last_state(
