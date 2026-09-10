@@ -14,7 +14,8 @@ dag T-217 note 2026-09-10T12:33:16(策略侧遥测定稿:四要素/瘦身判据/
    禁无标记的对账假结论);
 ② 动作计划逐项理由溯源——actions 逐项 'reason' 归一键,从现役决策构建
    链已有字段提取(不新算);
-③ 申报面锁——瘦身候选字段仍在场(候裁不执行的结构性守卫,误删即红)+
+③ 申报面锁——B 档快照重复候选字段仍在场(候裁不执行的结构性守卫,
+   误删即红)+ A 档删候选已删封闭锁与瘦身后 schema 形态封闭锁(③d)+
    理由提取键序单一源;
 ④ 消费方兼容面——旧档案行(无新字段)经规范读端零破坏(判读读面宽容
    原则)。
@@ -304,6 +305,40 @@ def test_slimming_candidate_fields_still_present() -> None:
         and d['level_readable'] is True
     assert d['hp'] == 0 and d['gold'] == 0 and d['plane'] == 0 \
         and d['round_num'] == 0
+
+
+def test_tier_a_deleted_fields_absent_and_shape_locked() -> None:
+    """锁③d:A 档删候选 4 字段已从 DecisionTrace 删除 + 瘦身后形态封闭锁。
+
+    A 档 4 字段(ledger_fingerprint/sess_v2_state/sess_p2_auth_intercept/
+    sess_p2_auth_water)= R4 逐字段消费方审计 A 档「写端已死且全域零读」,
+    经用户直迁裁定执行删除(T-217 note 2026-09-10T12:33:16 ②瘦身判据链);
+    本锁钉「已删」防回填,并以封闭字段名集钉瘦身后 schema 形态(59−4=55
+    面)——未申报的增删字段即红。B 档 7 字段(快照重复)仍由锁③a 守在场,
+    其删除归消费方迁移裁决后的后续批。
+    """
+    names = {f.name for f in fields(DecisionTrace)}
+    deleted = ('ledger_fingerprint', 'sess_v2_state',
+               'sess_p2_auth_intercept', 'sess_p2_auth_water')
+    for n in deleted:
+        assert n not in names, f'A 档已删字段 {n} 重新出现(已删封闭,禁回填)'
+    assert names == {
+        'active_strategies', 'actions', 'b_t', 'candidate_scores',
+        'difficulty', 'dp_posture', 'eval_breakdown', 'ev_arm',
+        'expected_paths', 'formed_stop', 'form_ok', 'form_score',
+        'gold', 'gold_readable', 'handoff', 'hp', 'hp_readable',
+        'level_readable', 'phase', 'piggy_reward', 'pin_scope',
+        'p1_downgrade_active', 'p26_prep_obs', 'plane',
+        'posture_unfulfilled', 'refresh_trigger', 'round_num', 'run_id',
+        'schema_version', 'sess_active_env', 'sess_blood_budget_rejects',
+        'sess_blood_budget_refresh_rejects', 'sess_commit_scores',
+        'sess_drought', 'sess_dual_track', 'sess_framework',
+        'sess_p1_pair', 'sess_release_budget', 'sess_release_reason',
+        'sess_release_spent', 'sess_reserve_cap', 'sess_reserve_overflow',
+        'sess_terminal_release', 'shop_rejects', 'state', 'state_ref',
+        'strategy_id', 'supply_pick', 'target_comp', 'ts', 'v2_bridge',
+        'v2_locked_line', 'v2_mode', 'v3_intention', 'xp_expect_ledger',
+    }, 'DecisionTrace 字段面漂移(瘦身后形态封闭锁;增删字段须申报并改本锁)'
 
 
 def test_state_ref_fields_are_optional_trailing() -> None:
