@@ -297,7 +297,11 @@ class FakeActionSink:
                                else None))
             _expected_name = (_expected.char_id
                               if _expected is not None else None)
-            register_round_sold([_expected_name], state, session)
+            from sr_od.application.currency_war.kernel.cw_board_state import (
+                board_state_bridge,
+            )
+            register_round_sold([_expected_name],
+                                board_state_bridge(state), session)
             ledger.total_sell += 1
             ledger.buy_has_sell = True
             ledger.total_sell_income += (res.income if res.income is not None

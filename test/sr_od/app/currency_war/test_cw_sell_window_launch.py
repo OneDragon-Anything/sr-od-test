@@ -26,6 +26,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_card_identity import (
     TIER_TRANSITION,
     line_identity_tier,
@@ -416,7 +419,7 @@ class TestEmitRegistration:
         红 = 臂序/节点辖域变动使 prio0 可达 ⇒ 前提转承重 ⇒ 保护缺口
         浮出,行为修复候方案审,禁机械跟绿。"""
         st = _state(11, [], node='reward')
-        assert reward_node_suppressed(st), (
+        assert reward_node_suppressed(_bridge(st)), (
             '夹具失准:帧不满足 ②(b) 奖励帧触发门,本锁失去前提')
         st.shop = [_card('高价杂件', cost=5), _card('目标件', cost=1)]
         sess = _sess()

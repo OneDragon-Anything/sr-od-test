@@ -851,7 +851,11 @@ class FakeP1Run:
         tc = getattr(strategy_state_of(sess), 'target_comp', None)
         if st is None or tc is None:
             return False, False
-        core = readiness_launch_decision(st, tc, line_members=line_members)
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            board_state_bridge,
+        )
+        core = readiness_launch_decision(board_state_bridge(st), tc,
+                                         line_members=line_members)
         if not core.get('armed'):
             return True, False
         _q = core.get('quality')

@@ -128,10 +128,27 @@ def _fake_state(board: dict[str, int], deployed: list = (),
                            position_pref='back')
     b = [None] * 9
     for i, name in enumerate(bench):
-        b[i] = BenchChar(slot=i + 1, char_id=name, star=1,
-                         position_pref='back')
-    return SimpleNamespace(board=board, bench=b, deployed=dep,
-                           level=6, deploy_cap=6, max_units=lambda: 6)
+        b[i] = SimpleNamespace(kind='unit',
+                               unit=SimpleNamespace(char_id=name,
+                                                    star=1,
+                                                    equips=[]))
+    _front = [SimpleNamespace(char_id=u.char_id, star=u.star, slot=j + 1,
+                              equips=[])
+              for j, u in enumerate(x for x in dep[:4] if x is not None)]
+    _back = [SimpleNamespace(char_id=u.char_id, star=u.star, slot=j + 1,
+                             equips=[])
+             for j, u in enumerate(x for x in dep[4:] if x is not None)]
+
+    def _fld(v):
+        return SimpleNamespace(value=v)
+
+    return SimpleNamespace(board=_fld(board),
+                           front_row=_fld(_front), back_row=_fld(_back),
+                           bench=_fld(SimpleNamespace(slots=b, capacity=9)),
+                           level=_fld(6), deploy_cap=_fld(6),
+                           back_layout=_fld(None),
+                           selected_difficulty=_fld(''),
+                           shop=_fld(None))
 
 
 def _line_members(comp):

@@ -17,6 +17,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -86,7 +89,7 @@ class TestFormOkPresentReadWriter:
                              deployed=[None] * 10, plane=1, round_num=1)
         assert state_of(sess).v3_form_ok is False
         _fake_strat().write_shop_mirrors(st, sess)
-        return sess, readiness_form_ok(st, comp)
+        return sess, readiness_form_ok(_bridge(st), comp)
 
     def test_writer_matches_kernel_present_read(self):
         """写端输出 ≡ readiness_form_ok 直调(同式同源锁;满/缺两侧)。"""

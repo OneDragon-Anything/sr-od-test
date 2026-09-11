@@ -25,6 +25,9 @@ import ast
 import re
 from pathlib import Path
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_economy import (
     DEFAULT_INTEREST_CAP,
     cap_resolved_of_session,
@@ -149,12 +152,12 @@ def test_line_switch_affordable_window_linkage() -> None:
                    shop_refresh_cost=2, deployed=[],
                    bench=[None] * 10, shop=[], node_type='battle',
                    board={})
-    e_base = e_rounds(comp, st, session=StrategySession())
-    e_buyout = e_rounds(comp, st, session=_sess_with('买断制'))
+    e_base = e_rounds(comp, _bridge(st), session=StrategySession())
+    e_buyout = e_rounds(comp, _bridge(st), session=_sess_with('买断制'))
     assert e_buyout < e_base   # 可负担刷数变多 → E_rounds 变小(单调)
     # 换算核:affordable 差 = 息线差 50 金 / 刷价 2 = 25 刷(帽前);
     # 单调判 + 同 session 双调幂等即可,禁在此复算第二套账(单一源)。
-    assert e_rounds(comp, st, session=_sess_with('买断制')) == e_buyout
+    assert e_rounds(comp, _bridge(st), session=_sess_with('买断制')) == e_buyout
 
 
 def _mandate_state_docstring_lines(path: Path) -> set[int]:

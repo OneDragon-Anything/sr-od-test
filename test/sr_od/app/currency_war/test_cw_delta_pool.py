@@ -57,6 +57,9 @@ from sr_od.application.currency_war.data.cw_battle_tables import (
 )
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_battle_calib as calib
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.sim import (
     cw_delta_pool_gen,
     engine_p1,
@@ -493,8 +496,8 @@ def test_settle_wiring_and_single_source() -> None:
     """
     src = inspect.getsource(engine_p1.simulate_p1)
     assert '_settle_rung' in src
-    assert "live_delta_for('battle', _settle_rung(st)" in src
-    assert "live_delta_for('encounter', _settle_rung(st)" in src
+    assert "live_delta_for('battle', _settle_rung(_bs_cal)" in src
+    assert "live_delta_for('encounter', _settle_rung(_bs_cal)" in src
     boss_src = inspect.getsource(calib.boss_settle_delta)
     assert 'node_win_p' in boss_src   # ADR-0308 胜负面单一取值口
     assert 'NODE_WIN_P_LADDER[' not in boss_src   # 不散落内联阶梯表

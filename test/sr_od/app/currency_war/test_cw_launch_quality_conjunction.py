@@ -54,24 +54,37 @@ def _comp(form: dict, factions: list, core: list = (),
 
 
 def _state(names: list, *, bench: list = (), max_units: int = 6):
-    """最小 GameState 形状:board 按注册表全羁绊聚合(deployed 聚合
-    语义),deployed/bench 定长槽表。"""
+    """最小容器视图形状(消费契约 = 容器 .value 属性,W6 波1 起):
+    board 按注册表全羁绊聚合;deployed 全员置后排(行内 1 基槽号),
+    席位读口换算回定长槽表;level/deploy_cap/back_layout 供
+    max_units 容器版派生。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     board: dict[str, int] = {}
-    dep: list = [None] * 10
+    back: list = []
     for i, name in enumerate(names):
-        dep[i] = BenchChar(slot=i + 1, char_id=name, star=1,
-                           position_pref='back')
+        back.append(BenchChar(slot=i + 1, char_id=name, star=1,
+                              position_pref='back'))
         ch = CHARACTERS.get(name)
         for f in ((set(ch.factions) | set(ch.flows)) if ch else set()):
             board[f] = board.get(f, 0) + 1
     b: list = [None] * 9
     for i, name in enumerate(bench):
-        b[i] = BenchChar(slot=i + 1, char_id=name, star=1,
-                         position_pref='back')
-    return SimpleNamespace(board=board, deployed=dep, bench=b,
-                           level=max_units, deploy_cap=max_units,
-                           max_units=lambda: max_units)
+        b[i] = SimpleNamespace(kind='unit',
+                               unit=SimpleNamespace(char_id=name,
+                                                    star=1,
+                                                    equips=[]))
+
+    def _fld(v):
+        return SimpleNamespace(value=v)
+
+    return SimpleNamespace(board=_fld(board),
+                           front_row=_fld([]), back_row=_fld(back),
+                           bench=_fld(SimpleNamespace(slots=b, capacity=9)),
+                           level=_fld(max_units),
+                           deploy_cap=_fld(max_units),
+                           back_layout=_fld(None),
+                           selected_difficulty=_fld(''),
+                           shop=_fld(None))
 
 
 def _decide(state, comp):

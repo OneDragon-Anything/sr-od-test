@@ -26,6 +26,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_reward_node import (
     reward_node_suppressed,
 )
@@ -157,7 +160,7 @@ def test_battle_frame_stale_reward_not_copied_no_press_buy_no_m3_defer(
     _drive_run_buy_waves(monkeypatch, tmp_path, session, strategy)
     frame = strategy.frames[0]
     assert frame.node_type is None, '滞后值被拷入店开帧(C2 病灶复发)'
-    assert reward_node_suppressed(frame) is False, 'M3 规则①在战斗帧被误抑制'
+    assert reward_node_suppressed(_bridge(frame)) is False, 'M3 规则①在战斗帧被误抑制'
     act = strategy.actions[0]
     assert not (isinstance(act, BuyCard)
                 and act.reason == 'dead_gold_press_buy'), '②(b) 在战斗帧发射'

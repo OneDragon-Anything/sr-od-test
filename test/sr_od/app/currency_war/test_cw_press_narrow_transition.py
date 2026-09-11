@@ -43,6 +43,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_intention
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_comps import (
     form_progress,
     get_comp,
@@ -261,7 +264,7 @@ class TestZeroDriftOutsideDomain:
         tiers = dict(getattr(comp, 'form_tiers', {}) or {})
         assert tiers, '锁线 comp 无 form_tiers(锁前提失效)'
         st.board = dict(tiers)
-        assert form_progress(comp, st) >= 1.0, '成型构帧失效(fp<1.0)'
+        assert form_progress(comp, _bridge(st)) >= 1.0, '成型构帧失效(fp<1.0)'
         sess = _lad_session(locked=True)
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy', \

@@ -1088,13 +1088,17 @@ class FakeMatch:
         self.clock += 1
         _node = node or self.state.node_type or 'battle'
         st = self.state
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            board_state_bridge,
+        )
         if _node in ('battle', 'encounter', 'boss'):
             delta = sample_battle_delta(
-                _node, _settle_rung(st), st.hp if st.hp is not None else 0,
+                _node, _settle_rung(board_state_bridge(st)),
+                st.hp if st.hp is not None else 0,
                 self._rng_battle,
                 difficulty=st.enemy_difficulty, plane=st.plane)
         elif _node in ('reward', 'supply'):
-            _ld = live_delta_for(_node, _deployable_depth(st),
+            _ld = live_delta_for(_node, _deployable_depth(board_state_bridge(st)),
                                  self._rng_battle,
                                  pool_map=self._delta_pool_map,
                                  plane=st.plane)

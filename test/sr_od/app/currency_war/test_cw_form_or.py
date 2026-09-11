@@ -35,6 +35,9 @@ import itertools
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_comps
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_comps import (
     Comp,
     form_progress,
@@ -108,22 +111,22 @@ class TestFormOkQuadrants:
         """【OR 达成锁;变异必红】量 2 达成(无贝)即成型 fp=1.0——
         旧 AND 口径要求量子 3,该帧判 False(批序 1 病灶本体)。"""
         st = _frame({'列车同行': 2, '量子同频': 2}, ('希儿',))
-        fp = form_progress(seele_comp, st)
+        fp = form_progress(seele_comp, _bridge(st))
         assert fp == pytest.approx(1.0, abs=1e-9)
-        assert readiness_form_ok(st, seele_comp) is True
+        assert readiness_form_ok(_bridge(st), seele_comp) is True
 
     def test_belobog_leg_alone_also_achieves(self, seele_comp) -> None:
         """贝 2 达成(无量)同为 OR 满腿(两腿对等)。"""
         st = _frame({'列车同行': 2, '贝洛伯格': 2}, ('希儿',))
-        assert form_progress(seele_comp, st) == pytest.approx(1.0, abs=1e-9)
-        assert readiness_form_ok(st, seele_comp) is True
+        assert form_progress(seele_comp, _bridge(st)) == pytest.approx(1.0, abs=1e-9)
+        assert readiness_form_ok(_bridge(st), seele_comp) is True
 
     def test_half_amp_legs_fail_with_fp(self, seele_comp) -> None:
         """量1∧贝1(他档满、希儿在板)→ False,OR 虚拟腿=0.5,
         fp=(1+0.5+1)/3(半成品如实贡献,不冒充达标)。"""
         st = _frame({'列车同行': 2, '量子同频': 1, '贝洛伯格': 1}, ('希儿',))
-        fp = form_progress(seele_comp, st)
-        assert readiness_form_ok(st, seele_comp) is False
+        fp = form_progress(seele_comp, _bridge(st))
+        assert readiness_form_ok(_bridge(st), seele_comp) is False
         assert fp == pytest.approx((1.0 + 0.5 + 1.0) / 3.0, abs=1e-9)
 
     def test_carry_absent_fails_with_fp(self, seele_comp) -> None:
@@ -131,21 +134,21 @@ class TestFormOkQuadrants:
         腿 0;镜像/armed/[28] 读数全经 fp<1.0 显影——单一源链可见性
         核心格)。bench 在手不算在场(deployed 口径,末帧实测 bench 维)。"""
         st_board_only = _frame({'列车同行': 2, '量子同频': 2}, ())
-        assert readiness_form_ok(st_board_only, seele_comp) is False
-        assert form_progress(seele_comp, st_board_only) \
+        assert readiness_form_ok(_bridge(st_board_only), seele_comp) is False
+        assert form_progress(seele_comp, _bridge(st_board_only)) \
             == pytest.approx(2.0 / 3.0, abs=1e-9)
         # 希儿在 bench(在手)不在 deployed、桑博占 deployed 位 → False
         # (帧形态/变量名失实修正,落地审 B-4:原 st_on_bench 帧实为
         # 「桑博在板、希儿完全不在场」,未测 bench 维度)
         st_carry_on_bench = _frame({'列车同行': 2, '量子同频': 2},
                                    ('桑博',), bench=('希儿',))
-        assert readiness_form_ok(st_carry_on_bench, seele_comp) is False
+        assert readiness_form_ok(_bridge(st_carry_on_bench), seele_comp) is False
 
     def test_other_leg_still_and(self, seele_comp) -> None:
         """他体系档未达 → False 即便 OR 腿满(跨体系 AND 保留,防半对冒充)。"""
         st = _frame({'列车同行': 1, '贝洛伯格': 2}, ('希儿',))
-        assert readiness_form_ok(st, seele_comp) is False
-        assert form_progress(seele_comp, st) \
+        assert readiness_form_ok(_bridge(st), seele_comp) is False
+        assert form_progress(seele_comp, _bridge(st)) \
             == pytest.approx((0.5 + 1.0 + 1.0) / 3.0, abs=1e-9)
 
 
@@ -160,8 +163,8 @@ class TestSingleCarryNotFormed:
         """希儿单卡在板 + 他档满、零放大器 → 不成型(fp=2/3)——
         「希儿到手 ≠ 希儿线成型」的形态端口判据面。"""
         st = _frame({'列车同行': 2}, ('希儿',))
-        assert readiness_form_ok(st, seele_comp) is False
-        assert form_progress(seele_comp, st) \
+        assert readiness_form_ok(_bridge(st), seele_comp) is False
+        assert form_progress(seele_comp, _bridge(st)) \
             == pytest.approx((1.0 + 0.0 + 1.0) / 3.0, abs=1e-9)
 
 
@@ -173,11 +176,11 @@ class TestProgressFolding:
         不回落(换最好腿无重置,进度连续性)。"""
         seq = [_frame({'列车同行': 2, '量子同频': k}, ('希儿',))
                for k in (0, 1, 2)]
-        vals = [form_progress(seele_comp, s) for s in seq]
+        vals = [form_progress(seele_comp, _bridge(s)) for s in seq]
         assert vals[0] < vals[1] < vals[2] == pytest.approx(1.0, abs=1e-9)
         st_both = _frame({'列车同行': 2, '量子同频': 2, '贝洛伯格': 2},
                          ('希儿',))
-        assert form_progress(seele_comp, st_both) \
+        assert form_progress(seele_comp, _bridge(st_both)) \
             == pytest.approx(1.0, abs=1e-9)
 
     def test_grid_fp_iff_ok_and_nested_inclusion(self, seele_comp) -> None:
@@ -198,8 +201,8 @@ class TestProgressFolding:
         for q, b, t in itertools.product(range(4), range(3), range(3)):
             st = _frame({'列车同行': t, '量子同频': q, '贝洛伯格': b},
                         ('希儿',))
-            new_ok = readiness_form_ok(st, seele_comp)
-            fp = form_progress(seele_comp, st)
+            new_ok = readiness_form_ok(_bridge(st), seele_comp)
+            fp = form_progress(seele_comp, _bridge(st))
             assert (fp >= 1.0) == new_ok, \
                 f'单一源契约违反: q={q} b={b} t={t}'           # ①
             if old_code_ok(st):
@@ -214,17 +217,17 @@ class TestProgressFolding:
         from sr_od.application.currency_war.kernel.cw_comps import get_comp
         comp = get_comp('追击飞霄')
         assert comp.or_legs == [] and comp.required_deployed == ()
-        assert form_progress(comp, GameState(board={})) == 0.0
-        assert form_progress(comp, GameState(board={'追击': 2})) \
+        assert form_progress(comp, _bridge(GameState(board={}))) == 0.0
+        assert form_progress(comp, _bridge(GameState(board={'追击': 2}))) \
             == pytest.approx(2.0 / 3.0, abs=1e-9)
-        assert form_progress(comp, GameState(board={'追击': 3})) == 1.0
+        assert form_progress(comp, _bridge(GameState(board={'追击': 3}))) == 1.0
 
     def test_lightweight_board_only_state_tolerated(self, seele_comp) -> None:
         """轻量假想面板(仅 board 视图,mandate 部署差额折算消费形)不炸:
         carry 缺读按 0 计(保守向,缺读≠满成)。"""
         from types import SimpleNamespace
         fp = form_progress(seele_comp, SimpleNamespace(
-            board={'列车同行': 2, '量子同频': 2}))
+            board=SimpleNamespace(value={'列车同行': 2, '量子同频': 2})))
         assert fp == pytest.approx((1.0 + 1.0 + 0.0) / 3.0, abs=1e-9)
 
 
@@ -318,8 +321,8 @@ class TestStaticSeeleFormOk:
         comp = _static_seele_comp()
         board = {'量子同频': 3, '贝洛伯格': 1}
         st = _frame(board, ('希儿',))
-        fp = form_progress(comp, st)
-        assert readiness_form_ok(st, comp) is True
+        fp = form_progress(comp, _bridge(st))
+        assert readiness_form_ok(_bridge(st), comp) is True
         assert fp == pytest.approx(
             _static_expected_fp(board, deployed=True), abs=1e-9)
 
@@ -329,8 +332,8 @@ class TestStaticSeeleFormOk:
         comp = _static_seele_comp()
         board = {'贝洛伯格': 2}
         st = _frame(board, ('希儿',))
-        assert readiness_form_ok(st, comp) is True
-        assert form_progress(comp, st) == pytest.approx(
+        assert readiness_form_ok(_bridge(st), comp) is True
+        assert form_progress(comp, _bridge(st)) == pytest.approx(
             _static_expected_fp(board, deployed=True), abs=1e-9)
 
     def test_half_legs_fail_with_fp(self) -> None:
@@ -339,8 +342,8 @@ class TestStaticSeeleFormOk:
         comp = _static_seele_comp()
         board = {'量子同频': 1, '贝洛伯格': 1}
         st = _frame(board, ('希儿',))
-        fp = form_progress(comp, st)
-        assert readiness_form_ok(st, comp) is False
+        fp = form_progress(comp, _bridge(st))
+        assert readiness_form_ok(_bridge(st), comp) is False
         assert fp == pytest.approx(
             _static_expected_fp(board, deployed=True), abs=1e-9)
 
@@ -350,8 +353,8 @@ class TestStaticSeeleFormOk:
         fp<1.0 不成型。"""
         comp = _static_seele_comp()
         st = _frame({}, ('希儿',))
-        assert readiness_form_ok(st, comp) is False
-        assert form_progress(comp, st) == pytest.approx(
+        assert readiness_form_ok(_bridge(st), comp) is False
+        assert form_progress(comp, _bridge(st)) == pytest.approx(
             _static_expected_fp({}, deployed=True), abs=1e-9)
 
     def test_carry_absent_fails_with_fp(self) -> None:
@@ -360,8 +363,8 @@ class TestStaticSeeleFormOk:
         comp = _static_seele_comp()
         board = {'量子同频': 3, '贝洛伯格': 2}
         st = _frame(board, ())
-        assert readiness_form_ok(st, comp) is False
-        assert form_progress(comp, st) == pytest.approx(
+        assert readiness_form_ok(_bridge(st), comp) is False
+        assert form_progress(comp, _bridge(st)) == pytest.approx(
             _static_expected_fp(board, deployed=False), abs=1e-9)
 
     def test_carry_on_bench_not_deployed_fails(self) -> None:
@@ -372,8 +375,8 @@ class TestStaticSeeleFormOk:
         comp = _static_seele_comp()
         board = {'量子同频': 2, '贝洛伯格': 2}
         st = _frame(board, (), bench=('希儿',))
-        fp = form_progress(comp, st)
-        assert readiness_form_ok(st, comp) is False
+        fp = form_progress(comp, _bridge(st))
+        assert readiness_form_ok(_bridge(st), comp) is False
         assert fp == pytest.approx(
             _static_expected_fp(board, deployed=False), abs=1e-9)
 
@@ -382,7 +385,8 @@ class TestStaticSeeleFormOk:
         carry 缺读按 0 计(保守向)——量2 满腿亦因 carry 0 不成型。"""
         from types import SimpleNamespace
         comp = _static_seele_comp()
-        fp = form_progress(comp, SimpleNamespace(board={'量子同频': 2}))
+        fp = form_progress(comp, SimpleNamespace(
+            board=SimpleNamespace(value={'量子同频': 2})))
         assert fp == pytest.approx(
             _static_expected_fp({'量子同频': 2}, deployed=False), abs=1e-9)
         assert fp < 1.0
@@ -406,8 +410,8 @@ class TestStaticSeeleFormOk:
         for q, b, dep in itertools.product(range(5), range(3),
                                            ((), ('希儿',))):
             st = _frame({'量子同频': q, '贝洛伯格': b}, dep)
-            ok = readiness_form_ok(st, comp)
-            fp = form_progress(comp, st)
+            ok = readiness_form_ok(_bridge(st), comp)
+            fp = form_progress(comp, _bridge(st))
             assert (fp >= 1.0) == ok, \
                 f'单一源契约违反: q={q} b={b} dep={dep}'          # ①
             if dep and old_full_form_ok(st):
@@ -437,16 +441,16 @@ class TestOrOwnershipFold:
         即满该键,A2 满档 → 成型 fp=1.0。"""
         comp = self._mixed_comp()
         st = _frame({'A': 2, 'B': 1})
-        assert form_progress(comp, st) == pytest.approx(1.0, abs=1e-9)
-        assert readiness_form_ok(st, comp) is True
+        assert form_progress(comp, _bridge(st)) == pytest.approx(1.0, abs=1e-9)
+        assert readiness_form_ok(_bridge(st), comp) is True
 
     def test_unowned_bond_still_and(self) -> None:
         """非承接键 A 仍是 AND 硬档:A1 即便 OR 满 → False(防半套冒充,
         与 pair 路径「跨体系 AND 保留」同构)。"""
         comp = self._mixed_comp()
         st = _frame({'A': 1, 'B': 1})
-        assert readiness_form_ok(st, comp) is False
-        assert form_progress(comp, st) == pytest.approx(0.75, abs=1e-9)
+        assert readiness_form_ok(_bridge(st), comp) is False
+        assert form_progress(comp, _bridge(st)) == pytest.approx(0.75, abs=1e-9)
 
     def test_owned_tier_out_of_denominator(self) -> None:
         """【变异必红】分子分母同免:B2 帧 fp=(A1.0+OR1.0)/2=1.0;若承接
@@ -454,7 +458,7 @@ class TestOrOwnershipFold:
         读数(完全体加深与「已成型」判读分离)。"""
         comp = self._mixed_comp()
         st = _frame({'A': 2, 'B': 2})
-        assert form_progress(comp, st) == pytest.approx(1.0, abs=1e-9)
+        assert form_progress(comp, _bridge(st)) == pytest.approx(1.0, abs=1e-9)
 
 
 class TestBridgePoolAmpSeal:

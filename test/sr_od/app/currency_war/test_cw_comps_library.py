@@ -20,6 +20,9 @@ if TYPE_CHECKING:
 
 from collections import Counter
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, V2_FAMILIES, Comp, EquipChoice, derive_key_equips, get_comp
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
 from sr_od.application.currency_war.kernel.cw_plugins import PLUGIN_DISABLE_MATRIX, PLUGIN_LIBRARY, plugin_disabled
@@ -315,42 +318,42 @@ def test_xianzhou3_active_and_inactive():
     card = SYSTEM_CARDS['xianzhou3']
     # 正例:仙舟 ≥3(铁三角三人组)
     st = _state_with_deployed(['爻光', '藿藿', '丹恒·饮月'])
-    assert card_active(card, st) is True
+    assert card_active(card, _bridge(st)) is True
     # 反例:仙舟 2 人(档位未到)
     st2 = _state_with_deployed(['爻光', '藿藿'])
-    assert card_active(card, st2) is False
+    assert card_active(card, _bridge(st2)) is False
 
 
 def test_dot2_active_and_inactive():
     card = SYSTEM_CARDS['dot2']
     st = _state_with_deployed(['卡芙卡', '桑博'])
-    assert card_active(card, st) is True
+    assert card_active(card, _bridge(st)) is True
     st2 = _state_with_deployed(['卡芙卡'])
-    assert card_active(card, st2) is False
+    assert card_active(card, _bridge(st2)) is False
 
 
 def test_train2_active_and_inactive():
     card = SYSTEM_CARDS['train2']
     st = _state_with_deployed(['三月七', '姬子·启行'])
-    assert card_active(card, st) is True
+    assert card_active(card, _bridge(st)) is True
     st2 = _state_with_deployed(['三月七'])
-    assert card_active(card, st2) is False
+    assert card_active(card, _bridge(st2)) is False
 
 
 def test_seele_or_branch_and_amplifier_not_independent():
     card = SYSTEM_CARDS['seele']
     # 正例A(量子分支):希儿在场 + 量子 ≥2(希儿自身=量子1,符玄=量子2)
     st = _state_with_deployed(['希儿', '符玄'])
-    assert card_active(card, st) is True
+    assert card_active(card, _bridge(st)) is True
     # 正例B(贝洛伯格分支):希儿在场 + 贝洛伯格 ≥2(希儿自身=贝1,桑博=贝2)
     st2 = _state_with_deployed(['希儿', '桑博'])
-    assert card_active(card, st2) is True
+    assert card_active(card, _bridge(st2)) is True
     # 反例:放大器不能独立(无希儿时量子 2 不当过渡;p1_definition 卡4)
     st3 = _state_with_deployed(['符玄', '花火'])
-    assert card_active(card, st3) is False
+    assert card_active(card, _bridge(st3)) is False
     # 反例:希儿单卡无放大器(量子 1/贝 1 均不足;停云=仙舟,两分支都不沾)
     st5 = _state_with_deployed(['希儿', '停云'])
-    assert card_active(card, st5) is False
+    assert card_active(card, _bridge(st5)) is False
 
 
 # ---------- 2. 引擎完备度(铁三角不可拆/缺一=空壳) ----------
@@ -390,7 +393,7 @@ def test_pick_dot2_wins_by_score_when_only_dot_pieces():
     st = GameState()
     st.bench = [_char('卡芙卡'), _char('桑博')]
     st.board = {}
-    dec = pick_card_combination(st)
+    dec = pick_card_combination(_bridge(st))
     assert dec.blank_window is False
     assert dec.chosen[0] == 'dot2'
     assert dec.scores['dot2'] == (2 * _WEIGHT_PIECE + 1.0 * _WEIGHT_READINESS)
@@ -406,7 +409,7 @@ def test_equiv_trio_full_hand_beats_dot():
                    _char('藿藿', slot=1, row='back'),
                    _char('丹恒·饮月', slot=2, row='back')]
     st.board = _recount_board(st.deployed)
-    dec = pick_card_combination(st)
+    dec = pick_card_combination(_bridge(st))
     assert dec.chosen[0] == 'xianzhou3'
     assert dec.scores['xianzhou3'] > dec.scores['dot2']
     assert not any('例外' in r or '一轮成型' in r for r in dec.ruling)   # 例外条款已删
@@ -419,7 +422,7 @@ def test_readiness_unified_across_cards():
     # pieces 2>1 主判据胜;readiness 0.667>0.5 同向
     st = GameState()
     st.bench = [_char('爻光'), _char('藿藿'), _char('三月七')]
-    dec = pick_card_combination(st)
+    dec = pick_card_combination(_bridge(st))
     assert dec.chosen[0] == 'xianzhou3'
     assert dec.scores['xianzhou3'] == (2 * _WEIGHT_PIECE + 2 / 3 * _WEIGHT_READINESS)
 
@@ -428,7 +431,7 @@ def test_pick_arrival_is_primary_signal():
     """来牌主判据:无词条无意向时,件数多的体系胜出。"""
     st = GameState()
     st.bench = [_char('三月七'), _char('姬子·启行'), _char('卡芙卡')]
-    dec = pick_card_combination(st)
+    dec = pick_card_combination(_bridge(st))
     assert dec.chosen[0] == 'train2'   # 列车 2 件 > DOT 1 件
 
 
@@ -436,15 +439,15 @@ def test_pick_tie_break_ruling_nonempty_and_intent_breaks_tie():
     """同分构造:裁决记录非空;意向同向 tie-break 定向(非一票否决)。"""
     st = GameState()
     st.bench = [_char('三月七'), _char('桑博')]   # 列车 1 件 vs DOT 1 件 = 同分
-    dec = pick_card_combination(st)
+    dec = pick_card_combination(_bridge(st))
     assert dec.scores['train2'] == dec.scores['dot2']
     assert dec.ruling, '同分构造下裁决记录必须非空(C2 冻结要求)'
     assert any('tie-break' in r for r in dec.ruling)
     # 意向同向(希儿量子家族→seele 的映射没有;用 DOT 家族验证):
-    dec2 = pick_card_combination(st, intent='DOT卡芙卡')
+    dec2 = pick_card_combination(_bridge(st), intent='DOT卡芙卡')
     assert dec2.chosen[0] == 'dot2'
     # 意向非同向 = 不否决(列车仍可因来牌胜出/或 DOT 因意向翻越——只锁非崩溃+有记录)
-    dec3 = pick_card_combination(st, intent='希儿量子')
+    dec3 = pick_card_combination(_bridge(st), intent='希儿量子')
     assert any('非同向' in r for r in dec3.ruling)
 
 
@@ -452,9 +455,9 @@ def test_pick_affix_input_adjusts_dot():
     """词条前置输入:敌方频动旺(忍无可忍)→ DOT 权重升;净化身心 → DOT 权重降。"""
     st = GameState()
     st.bench = [_char('三月七'), _char('桑博')]   # 平分底
-    dec_like = pick_card_combination(st, affixes=['忍无可忍'])
+    dec_like = pick_card_combination(_bridge(st), affixes=['忍无可忍'])
     assert dec_like.chosen[0] == 'dot2'
-    dec_fear = pick_card_combination(st, affixes=['净化身心'])
+    dec_fear = pick_card_combination(_bridge(st), affixes=['净化身心'])
     assert dec_fear.chosen[0] == 'train2'
     assert any('词条输入' in r for r in dec_fear.ruling)
 
@@ -463,9 +466,9 @@ def test_pick_seele_affix_fear_counter():
     """希儿系怕量子熄火(counter 警惕):3 件的领先被 fear(-3.0) 抵成落后。"""
     st = GameState()
     st.bench = [_char('希儿'), _char('符玄')]   # seele 件数 2(希儿引擎+符玄放大器,去重)
-    dec = pick_card_combination(st, affixes=['量子熄火'])
+    dec = pick_card_combination(_bridge(st), affixes=['量子熄火'])
     assert SYSTEM_CARDS['seele'].affix_fears == ['量子熄火']
-    assert card_pieces(SYSTEM_CARDS['seele'], st) == 2
+    assert card_pieces(SYSTEM_CARDS['seele'], _bridge(st)) == 2
     assert dec.scores['seele'] == (2 * _WEIGHT_PIECE + 2 / 3 * _WEIGHT_READINESS - 3.0)
     #   # 2 件(readiness 2/3)+ fear -3.0 = -0.33(counter 压制)
 
@@ -475,7 +478,7 @@ def test_pick_blank_when_nothing_arrived():
     st = GameState()
     # 灵砂=狼狩+治疗,不沾四系任一判据阵营(瓦尔特含列车同行,不可用)
     st.bench = [_char('灵砂')]
-    dec = pick_card_combination(st)
+    dec = pick_card_combination(_bridge(st))
     assert dec.blank_window is True
     assert dec.chosen == []
     assert any('空窗' in r for r in dec.ruling)
@@ -491,7 +494,7 @@ def test_blank_window_buy_target_only():
                      ('卡芙卡', '持续伤害'),  # 来牌方向件 → 买
                      ('停云', '仙舟'),        # 仙舟无来牌方向但停云=仙舟阵营……
                      ('瓦尔特', '星核猎手')])
-    dec = blank_window_policy(st)
+    dec = blank_window_policy(_bridge(st))
     assert dec.is_blank is True
     assert dec.target_factions == ['持续伤害']
     assert '藿藿' in dec.target_char_ids and '希儿' in dec.target_char_ids
@@ -505,7 +508,7 @@ def test_blank_window_cost_band_and_no_direction():
     """无来牌方向:仅引擎件见即买;费用带=引擎件费用众数(铁三角 1,1,2 + 希儿 3 → 1)。"""
     st = GameState()
     st.shop = _shop([('瓦尔特', '星核猎手')])
-    dec = blank_window_policy(st)
+    dec = blank_window_policy(_bridge(st))
     assert dec.is_blank is True
     assert dec.target_factions == []
     assert dec.buy_idx == []            # 无目标件 → 不买(off-target 不 D)

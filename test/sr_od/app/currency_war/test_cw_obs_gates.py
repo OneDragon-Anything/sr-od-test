@@ -22,6 +22,9 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.point import Point
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.obs import cw_briefing_obs, cw_observation
 from sr_od.application.currency_war.obs.cw_briefing_obs import parse_enemy_difficulty, read_briefing_enemy_difficulty
 from sr_od.application.currency_war.obs.cw_briefing_obs import read_affix_effect, read_affixes, read_bosses
@@ -1144,11 +1147,11 @@ def test_pivot_p2_avoids_dot_if_alternative() -> None:
     try:
         # P2 危血(hp 低):应选 other(非 P2 乏力),不选 DOT
         st2 = _test_pivot_plane_filter_GameState(level=6, plane=2, round_num=1, gold=30, hp=10)
-        got = maybe_pivot(st2, None, _test_pivot_plane_filter_SimpleNamespace(), None)
+        got = maybe_pivot(_bridge(st2), None, _test_pivot_plane_filter_SimpleNamespace(), None)
         assert got is None or got.name != 'DOT队', f'P2 保命不应选 P2 乏力 comp,实选 {got and got.name}'
         # P1 危血:DOT 不过滤(P1 是它的强势面,过滤只按当前位面)
         st1 = _test_pivot_plane_filter_GameState(level=6, plane=1, round_num=1, gold=30, hp=10)
-        got1 = maybe_pivot(st1, None, _test_pivot_plane_filter_SimpleNamespace(), None)
+        got1 = maybe_pivot(_bridge(st1), None, _test_pivot_plane_filter_SimpleNamespace(), None)
         # P1 时 DOT(P1强,form 可能更快)允许被选;不 assert 具体,只验证不炸
         assert got1 is None or got1.name in ('DOT队', other.name)
     finally:
@@ -1186,7 +1189,7 @@ def test_cooldown_blocks_crisis_pivot_same_round(monkeypatch):
     monkeypatch.setattr(cw_comps, 'select_comp', lambda *a, **k: list(cw_comps.COMP_LIBRARY))
     for cd_until in (7, 8, 9):   # 同轮(7)/跨 1-2 轮内:全拦
         ctx = _Ctx(_Sess(cd_until=cd_until))
-        assert _pivot_invariant_maybe_pivot(st, ctx, None, None) is None, f'冷却至 r{cd_until} 仍翻转'
+        assert _pivot_invariant_maybe_pivot(_bridge(st), ctx, None, None) is None, f'冷却至 r{cd_until} 仍翻转'
 
 
 def test_cooldown_release_allows_pivot(monkeypatch):
@@ -1194,7 +1197,7 @@ def test_cooldown_release_allows_pivot(monkeypatch):
     st = _state(hp=20)
     monkeypatch.setattr(cw_comps, 'select_comp', lambda *a, **k: list(cw_comps.COMP_LIBRARY))
     ctx = _Ctx(_Sess(cd_until=6))   # r7 > 6:冷却过
-    piv = _pivot_invariant_maybe_pivot(st, ctx, None, None)
+    piv = _pivot_invariant_maybe_pivot(_bridge(st), ctx, None, None)
     # 放行(返回某 easy comp)——具体哪个由保命逻辑定,关键是非 None 或有明确保持理由
     # (target=None + 危机 → 应给出落点)
     assert piv is not None
