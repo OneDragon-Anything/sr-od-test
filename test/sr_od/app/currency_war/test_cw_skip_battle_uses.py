@@ -17,19 +17,25 @@
 
 与 test_cw_board_state_batch3.py 的分工(测试纪律「同层不重复」):
 彼文件锁**单链节**(登记播种/consume_use 单元/burst 桥零额度 no-op/
-挂点接线烟雾/spec 条目 id 面);本文件锁**同一局内全链流**——授予
-(登记 + burst 桥同点采样,生产登记挂点形状)→余额(卡文无刷新腿,
-两桥零注入,全链零 Field 写)→节点推进(余量正交:次数类余量不被
-节点推进吞,与 remaining_nodes 两维互不排斥)→消费(2→1→0 归零
-离场)→缺位保守。混合清单求和段(免战牌+双手狸)证明桥活线,
-负断言非空转。
+spec 条目 id 面)与接线存在性烟雾(容忍档);本文件锁**行为链**两支——
+①kernel 内全链流:授予(登记 + burst 桥同点采样,生产登记挂点形状)
+→余额(卡文无刷新腿,两桥零注入,全链零 Field 写)→节点推进(余量
+正交:次数类余量不被节点推进吞,与 remaining_nodes 两维互不排斥)→
+消费(2→1→0 归零离场)→缺位保守;②生产挂点真实推进:经真实
+``PrepActionExecutor._launch_attempt`` 跳过段驱动 登记→跳过→递减→
+离场(桌面缝桩,先例 = test_cw_prep_dispatch_return_order._executor)。
+混合清单求和段(免战牌+双手狸)证明桥活线,负断言非空转。
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+from sr_od.application.currency_war import prep_actions
 from sr_od.application.currency_war.kernel.cw_board_state import (
     BS_SCHEMA_VERSION,
     BoardState,
     apply_effect_burst_grant,
+    board_state_of,
     grant_effect_node_refresh_balance,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -41,16 +47,21 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
 )
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
+from sr_od.application.currency_war.prep_actions import PrepActionExecutor
 
 _SPEC_ID: str = '151301'   # 免战牌 plaza 稳定 id(= EffectSpec.id,恒稳)
 
 
 def test_skip_card_grant_balance_consume_chain() -> None:
-    """授予→余额→消费全链(一局同流;链节单元锁在 batch3,本锁锁流)。
+    """授予→余额→消费 kernel 内全链(一局同流;链节单元锁在 batch3,
+    本锁锁流;生产递减腿由本文件生产接线锁辖)。
 
     覆盖申报:生产登记挂点形状(登记 + burst 桥同点)/节点 tick 挂点
-    形状(advance_node advanced 位闸门 + per-node 桥)/跳过递减
-    (consume_use)。接线存在性烟雾与链节单元断言归 batch3,不在此重复。
+    形状(advance_node advanced 位闸门 + per-node 桥)/consume_use
+    递减语义本体。接线存在性烟雾与链节单元断言归 batch3,不在此重复。
     """
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     seq0 = bs.write_seq
@@ -125,3 +136,61 @@ def test_skip_card_registry_semantics_gate() -> None:
         and payload.free_refresh_cond_cap == 0, '无条件刷新三元组'
     assert payload.xp_per_node == 0, \
         '经验腿仅选牌当场一支(xp_instant=30,batch3 已锁数值)'
+
+
+def _skip_launch_executor(monkeypatch, session) -> PrepActionExecutor:
+    """跳过子态桌面 executor(缝桩先例 =
+    test_cw_prep_dispatch_return_order._executor):读屏/找区/等待/焦点
+    全桩,真实执行器只跑控制流。找区按 area 名查表——出战缺席、跳过
+    在场(免战子态)、未达上限警告缺席、备战标识缺席(=执行落地)、
+    发射后拦截弹窗全缺席(POST_LAUNCH_BLOCKERS 各锚默认 False)。
+    """
+    ex = object.__new__(PrepActionExecutor)
+
+    def _find(screen, screen_name, area_name, **_kw) -> SimpleNamespace:
+        return SimpleNamespace(is_success=area_name == '按钮-跳过')
+
+    ex._op = SimpleNamespace(
+        screenshot=lambda: SimpleNamespace(),
+        round_by_find_area=_find,
+    )
+    ex._ctx = SimpleNamespace(
+        controller=SimpleNamespace(
+            mouse_move=lambda p: None,
+            click=lambda p, **_kw: None,
+            game_win=SimpleNamespace(is_win_active=True, active=lambda: None),
+        ),
+        cw_match=SimpleNamespace(session=session),
+    )
+    monkeypatch.setattr(prep_actions, 'area_center',
+                        lambda ctx, name, *a, **kw: None)
+    monkeypatch.setattr(prep_actions.time, 'sleep', lambda s: None)
+    return ex
+
+
+def test_skip_decrement_production_wiring(monkeypatch) -> None:
+    """生产挂点真实推进锁:登记→跳过执行落地→consume_use→余量递减→离场。
+
+    驱动 = 真实 ``PrepActionExecutor._launch_attempt`` 跳过段(prep_actions
+    「按钮-跳过」分支,详设 §3.2.19/§5.1 跳过递减挂点):成功判据 =
+    备战标识消失验证通过,递减恰挂在该判定之后。锁红 = 生产递减腿
+    断裂(挂点删除/短路/子态分支名漂移/会话取径漂移)——batch3 的
+    substring 接线烟雾(容忍档)由本锁升级行为锁。三段断言:首跳
+    2→1(尚有余量不移除)/再跳 1→0 归零离场/缺位后再跳仍出战成功
+    (递减挂点与登记挂点解耦,登记面缺位的局零动作不炸发射回执)。
+    """
+    session = StrategySession()
+    bs = board_state_of(session)
+    bs.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=5)
+    ex = _skip_launch_executor(monkeypatch, session)
+
+    assert ex._launch_attempt() == (True, '出战成功')
+    entry = bs.effects.first(_SPEC_ID)
+    assert entry is not None and entry.remaining_uses == 1, \
+        '首跳递减 2→1(余量在生产调用链上真实推进)'
+
+    assert ex._launch_attempt() == (True, '出战成功')
+    assert bs.effects.first(_SPEC_ID) is None, '再跳 1→0,用尽 = 效果离场'
+
+    assert ex._launch_attempt() == (True, '出战成功'), \
+        '登记面缺位(用尽离场后)= 零动作,不炸发射回执'
