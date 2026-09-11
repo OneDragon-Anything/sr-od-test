@@ -357,7 +357,8 @@ def test_box_card_pick_single_source_wiring() -> None:
     """选卡决策区单一源守卫(墓碑 + 接线双角):``PrepActionExecutor
     ._default_box_card`` 是 pick 族调用面最后一个切到 BoardState 消费视图
     的接入点(prep_actions 内单一源宣言注释;设计正本 = docs/develop/
-    currency_war/design/BoardState-数据结构设计.md §8.7 批次二,单一源
+    sr_od/application/currency_war/changes/2026-09-11-unified-state/
+    details/BoardState-数据结构设计.md §8.7 批次二,单一源
     本体 = kernel/cw_bs_view.strategy_input_state)。
 
     - 墓碑角(否定式 + 退役背书):选卡决策区禁回落 ``last_state or

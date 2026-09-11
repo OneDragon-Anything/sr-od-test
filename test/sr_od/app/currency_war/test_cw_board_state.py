@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""BoardState 迁移回归锁(迁移批次一;设计正本 = docs/develop/currency_war/
-design/BoardState-数据结构设计.md,下称「设计」)。
+"""BoardState 迁移回归锁(迁移批次一;设计正本 = docs/develop/sr_od/application/currency_war/
+changes/2026-09-11-unified-state/details/BoardState-数据结构设计.md,下称「设计」)。
 
 锁面 = 设计 §8.6 差距清单逐条(草板旧契约禁复发的负锁)+ §3 字段语义抽样
 + 心跳不断流(§2.4 关键结构 2)+ sim 合成口箱占席语义(§3.2.5;迁移批次一

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """BoardState 迁移批次三回归锁(策略器状态归位;设计正本 =
-docs/develop/currency_war/design/BoardState-数据结构设计.md,下称「设计」)。
+docs/develop/sr_od/application/currency_war/
+changes/2026-09-11-unified-state/details/BoardState-数据结构设计.md,下称「设计」)。
 
 锁面 = §8.7 批次三六件:§8.6-6 StrategyState 改名归位+泛型携带(§1 归属
 判据)/§5.1 effect_inventory 挂点接线(登记/节点 tick/计数 bump/到期

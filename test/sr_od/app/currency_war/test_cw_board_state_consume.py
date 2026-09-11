@@ -1,5 +1,6 @@
 """BoardState 消费切换批回归锁(迁移批次二;设计正本 =
-docs/develop/currency_war/design/BoardState-数据结构设计.md,下称「设计」)。
+docs/develop/sr_od/application/currency_war/
+changes/2026-09-11-unified-state/details/BoardState-数据结构设计.md,下称「设计」)。
 
 锁面 = 批次二任务书件:§8.7 消费适配器(旧读取对象 → BoardState 适配层)/
 §3.4 单次逻辑写入口(申报豁免写端)/§3.3.6-8 刷新执行事实组(免费帧闸)/

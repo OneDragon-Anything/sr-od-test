@@ -1,5 +1,6 @@
 """BoardState 迁移批次四回归锁(退役 + relay 空值闸;设计正本 =
-docs/develop/currency_war/design/BoardState-数据结构设计.md,下称「设计」)。
+docs/develop/sr_od/application/currency_war/
+changes/2026-09-11-unified-state/details/BoardState-数据结构设计.md,下称「设计」)。
 
 锁面 = §8.7 批次四:
 - **relay 会话侧值已确立闸**(§2.1:会话载体默认空值 ''/[] 是「未知」非
