@@ -233,6 +233,15 @@ class TestZeroProductionConsumption:
             / 'cw_screen_briefing.py'),
         str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
             / 'cw_screen_boss_briefing.py'),
+        # 统一观察架构余项收口阶段二(账本 T-47 推进型基类收编;设计 =
+        # changes/2026-09-11-unified-observation/ landing 阶段二 + 推进型
+        # 基类收编详设):CwProgressionScreenOp 重挂 CwScreenOpBase 作
+        # 只读/导航变体,handle 顶部装配点分流判据消费
+        # observation_source/action_sink(先例锚同上;ADR-0584 空决策合同
+        # 逐字保留,11 子类零改动。非旁路改道——零读屏/执行新缝,缺省
+        # None = 生产直连现役骨架,§9.1 并存期)。
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / '_progression_base.py'),
         # 统一观察架构试点步骤 1(commit 3a688669a)基类:docstring 提及
         # 安装协议名(「双清复位见 cw_game_ports」),零 import 零调用——
         # 扫描为文本匹配,提及即命中;非改道点,批 2 登记豁免。
