@@ -352,10 +352,65 @@ def test_cap_diff_routing():
     assert back_slots_from_cap_diff(0) == 6
     assert back_slots_from_cap_diff(1) == 7    # 7 格已建档 → 直读(佩佩局锚)
     assert back_slots_from_cap_diff(2) == 8
-    assert back_slots_from_cap_diff(3) == 8    # 域外按 2(cap10/lv8、cap11/lv8 局同 8 格)
+    assert back_slots_from_cap_diff(3) == 9    # 上限 9(用户口述 2026-09-11,board_structure.md;e4972b43 diff=5 实拍 9 格吻合封顶;diff>2 形状待实机)
     assert back_slots_from_cap_diff(-1) == 6   # cap<level 读错族按 0
     slots = fallback_back_slots()
     assert len(slots) == 6 and slots[0][0] == 1
+
+
+def test_resolve_back_slots_feeds_container(monkeypatch: pytest.MonkeyPatch):
+    """back_max 语义裁决·闸门二写端锁(值源定谳 = W5 方案稿 §2.3 + 机制
+    正本 board_structure.md 量化公式节):resolve_back_slots 已知帧裁决值
+    随写 BoardState.back_layout(挂三信号裁决单一源,零新增读)——
+    - 已建档裁决(7 = 佩佩局档)→ 容器 7、无 superset 标记(精确值);
+    - 域外裁决(9 → 8 格超集运行)→ 容器 8 + evidence 'superset'
+      (裁决值与坐标档分离:值=运行档 8,标记防超集近似被当精确值消费);
+    - 未知态帧(公式弃权 ∧ CV 不可判)不写(宁缺勿造,容器保持上一已知值);
+    - 防抖未过帧(公式弃权 ∧ CV 未建档读数 ∧ 三读不一致)不写——兜底
+      运行档 8 禁以「无 superset 标记的精确值」形态入容器(落地审阻断1
+      判别分支;n_raw=None 唯一对应此泄漏路径);
+    - 无 session(离线/测试桩/MCP 纯读)不写。"""
+    from types import SimpleNamespace
+
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        board_state_of,
+    )
+    cbl.reset_layout_unknown_state()
+    try:
+        sess = SimpleNamespace()
+        ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
+        bs = board_state_of(sess)
+        # 已建档 7 档(diff=1,screen=None → CV 通道弃权,公式单源一致)
+        cbl.resolve_back_slots(ctx, None, level=7, cap=8)
+        assert bs.back_layout.value == 7 \
+            and bs.back_layout.evidence is None, '已建档档直读落容器,无标记'
+        # 域外 9(cap9/lv6 → 公式 9)→ 运行值 8 格超集 + superset 标记
+        cbl.resolve_back_slots(ctx, None, level=6, cap=9)
+        assert bs.back_layout.value == 8 \
+            and bs.back_layout.evidence == 'superset', \
+            '域外裁决记运行档 8 + superset(裁决值 9 不入坐标域)'
+        # 未知态(公式弃权 ∧ CV 不可判):不写,保持上一已知值
+        cbl.resolve_back_slots(ctx, None, level=6, cap=9, level_trusted=False)
+        assert bs.back_layout.value == 8 \
+            and bs.back_layout.evidence == 'superset', '未知态帧不写'
+        # 防抖未过(公式弃权 ∧ CV 读 9 未建档 ∧ W209h 三读不一致):
+        # n_raw=None → 兜底 8 禁入容器,保持上一已知值(上一态=8+superset,
+        # 值面同 8 不可分,判别位 = evidence——泄漏形态会把 superset 翻成
+        # 无标记精确值)
+        monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 9)
+        monkeypatch.setattr(cbl, '_cv_confirm_readings',
+                            lambda ctx, screen, first, formula: [9, 8, 8])
+        cbl.resolve_back_slots(ctx, object(), level=6, cap=9,
+                               level_trusted=False)
+        assert bs.back_layout.value == 8 \
+            and bs.back_layout.evidence == 'superset', \
+            '防抖未过帧不写:兜底 8 禁以无标记精确值覆写容器'
+        # 无 session:不写(上一已知值保持)
+        cbl.resolve_back_slots(SimpleNamespace(), None, level=7, cap=8)
+        assert bs.back_layout.value == 8, '无 session 形态不落容器'
+    finally:
+        cbl.reset_layout_unknown_state()
 
 
 @pytest.fixture()

@@ -133,10 +133,38 @@ def test_view_adopted_domains_bitwise_equal_on_clean_frame() -> None:
     assert [c.x for c in view.shop] == [300, 500], \
         '同帧 raw 对齐:x 执行域字段透传(执行侧点击身份不受收编影响)'
     assert view.refresh_probs == {1: 0.6, 2: 0.22}
-    # 残差键:front_max 常量供数 / back_max 透传保留(语义裁决另立批)
+    # 残差键:front_max 常量供数 / back_max 容器动态真值供数(back_max 语义
+    # 裁决·闸门一,值源切 bs.back_layout:合成口已写 back_layout=6,视图取
+    # 容器值——与帧值逐位一致;引导窗仍透传帧,见 back_max 供数专项锁)
     assert view.front_max == DEPLOYED_FRONT_CAPACITY == 4
     assert view.back_max == st.back_max == 6
     assert view.dual_track_phase is False
+
+
+def test_view_back_max_supplies_container_truth_with_frame_bootstrap() -> None:
+    """back_max 供数专项锁(语义裁决·闸门一;值源定谳 = W5 方案稿 §2.3,
+    机制正本 = board_structure.md 量化公式节「平常 6,上限 9」):容器
+    back_layout 有值(含 superset 标记态)→ 视图 = 容器值,帧旧值禁回流
+    (退回「恒透传帧」= 容器值被帧残留遮蔽,扩展局「链按 6 格自洽地错」
+    复发形态);容器空(引导窗/裸帧形态)→ 透传入参帧。"""
+    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs.observe(bs.back_layout, 8, sig=_sig())
+    fr = GameState()
+    fr.back_max = 6   # 帧旧值(与容器值不同 → 两值源可分)
+    assert game_state_view(bs, fr).back_max == 8, \
+        '容器有值 → back_max = 容器值(帧值不回流)'
+    # superset 标记态:值照常供数(9 格局 8 档超集运行,标记在 evidence)
+    bs.observe(bs.back_layout, 8, evidence='superset', sig=_sig())
+    assert game_state_view(bs, fr).back_max == 8, \
+        'superset 标记态容器值照常供数(标记不改变数值面)'
+    # 引导窗:容器无值 → 透传入参帧(自定义帧值可分)
+    bs_empty = BoardState(schema_version=BS_SCHEMA_VERSION)
+    fr7 = GameState()
+    fr7.back_max = 7
+    assert game_state_view(bs_empty, fr7).back_max == 7, \
+        '引导窗透传帧值(容器空壳期零行为变化)'
+    assert game_state_view(None, fr7).back_max == 7, \
+        '裸帧形态(bs=None)同引导窗口径'
 
 
 def test_view_payload_offscreen_never_falls_back_to_frame() -> None:
@@ -283,12 +311,16 @@ def test_feed_equips_relay_from_session_mirror_when_never_written() -> None:
 
 
 def test_sim_synth_writes_w5_domains() -> None:
-    """sim 合成口扩域(§2.6:合成口与实机喂入口域覆盖集对齐):七新域
-    真值直写 observation + evidence=sim:synthesized;缺席域不写(禁假值)。"""
+    """sim 合成口扩域(§2.6:合成口与实机喂入口域覆盖集对齐):八新域
+    (plane_bosses/enemy_affixes/active_env/equips/front_row/back_row/
+    deploy_cap + back_max 语义裁决增补的 back_layout)真值直写
+    observation + evidence=sim:synthesized;缺席域不写(禁假值)。"""
     st = _full_truth_frame()
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     synthesize_from_game_state(bs, st, at_round='p1-r4')
     assert bs.deploy_cap.value == 6
+    assert bs.back_layout.value == 6, \
+        'back_layout 增补域:GameState.back_max 真值直写(sim 场景侧设定)'
     assert bs.plane_bosses.value == ['镜流', None, '卡芙卡']
     assert bs.enemy_affixes.value == ['迅捷']
     assert bs.active_env.value == '昼之半神概念股'
@@ -298,8 +330,9 @@ def test_sim_synth_writes_w5_domains() -> None:
     assert bs.front_row.value[0].slot == 1 and bs.back_row.value[0].slot == 1, \
         'Unit.slot = 行内 1 基(前排 1..4/后排 1..N)'
     assert all('sim:synthesized' in (f.evidence or '')
-               for f in (bs.deploy_cap, bs.plane_bosses, bs.enemy_affixes,
-                         bs.active_env, bs.equips, bs.front_row, bs.back_row))
+               for f in (bs.deploy_cap, bs.back_layout, bs.plane_bosses,
+                         bs.enemy_affixes, bs.active_env, bs.equips,
+                         bs.front_row, bs.back_row))
 
 
 # ============================================================ hp 专项对拍(等价三支实证)
@@ -454,6 +487,33 @@ def test_adapter_decision_state_readable_single_source_from_view() -> None:
     assert st.hp == 40, \
         ('readable False → 放宽窗(gap=2)结算覆盖;快照位残根(True)会'
          '停在 75,本断言即双源判别')
+
+
+def test_adapter_decision_state_back_max_from_container() -> None:
+    """闸门三锁(back_max 语义裁决):decision_state 的 back_max 供数 =
+    容器 back_layout(经视图单一源)——快照 back_size 是假动态(写端 =
+    len(「后排-N」)恒基线前缀 6,扩展档独立前缀区不进计数,裁决材料 F3)
+    不再进决策链;snapshot.back_size 字段保留(契约位)。判别场景 = 容器
+    8 vs 快照 6 两值源可分;容器空(引导窗)数值面与旧链一致(6)。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.adapter import (
+        decision_state,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
+        Snapshot,
+        SubstateClassification,
+    )
+    sess = _session_with_settlement(None, None)
+    bs = board_state_of(sess)
+    bs.observe(bs.back_layout, 8, sig=_sig())   # 容器裁决值(8 格局)
+    snap = Snapshot(classification=SubstateClassification(name='prep_shop'),
+                    plane=1, round_num=10, back_size=6)
+    st = decision_state(snap, sess)
+    assert st.back_max == 8, \
+        '决策链 back_max = 容器值(快照假动态 6 不回流——两值源可分)'
+    # 引导窗(容器空):数值面与旧链一致(快照缺省 6)
+    sess2 = _session_with_settlement(None, None)
+    st2 = decision_state(snap, sess2)
+    assert st2.back_max == 6, '容器空 → 引导窗缺省,数值面零变化'
 
 
 def test_posture_flip_guard_predicate_unchanged_on_view_outputs() -> None:

@@ -699,6 +699,56 @@ def test_fill_gap_true_core_waits_on_bench():
     assert '飞霄' not in picked and picked[0] == '灵砂'
 
 
+# ---------- back_max 语义裁决·闸门四:规划改排口径与终态校验同源 ----------
+
+def test_back_capacity_source_shared_by_fill_planning_and_tx_validation():
+    """同源锁(back_max 语义裁决·闸门四;值源定谳 = W5 方案稿 §2.3,裁决
+    口径 = 溢出校验/空位计算统一切「当前局面容量」):同一帧 state 的
+    back_max 供数必须**同时**是——
+    ①补缺填位的排容量口径(fill_gap_after:back_left = back_max − back);
+    ②CompTransaction 终态校验阈值(back_overflow 阈值 = back_max,
+    cw_state._resolve_comp_transaction)。
+    回归形态 = 单点回退常量 6 造成「链内自洽但整体错位」:构造 back_max=8
+    扩展局帧,补缺两件全上后排、事务放行第 7 后排人(7≤8);同构造翻回
+    6,补缺改排前排、事务拒 back_overflow:7>6——两侧必须随同一字段同翻,
+    任一侧单点回退即红。"""
+    def _ext_state(back_max: int) -> GameState:
+        st = GameState()
+        st.gold = 10
+        st.level = 8
+        st.back_max = back_max   # 扩展局容量(8 格;基线局 = 默认 6)
+        # 后排 6 人占满基线区(槽 4-9,ADR-0392 坐标系),前排空——
+        # 扩展格(第 7/8 格)空置 = 扩展局空位疼感形态(裁决材料 P5);
+        # 六人异名(同名唯一性 invariant 会拒事务,与本锁无关)
+        st.deployed = [None] * 4 + [
+            _char(name, '持续伤害', row='back', slot=4 + k)
+            for k, name in enumerate(
+                ('桑博', '艾丝妲', '卡芙卡', '椒丘', '黑天鹅', '长夜月'))]
+        st.bench = [_char('知更鸟', row='back'),   # 插件 T1(既有锁同款候选)
+                    _char('娜塔莎', row='back')]   # 散件
+        return st   # board 留空 = 禁目标推断,候选面只测排容量路由
+
+    # back_max=8:规划侧空位 = 8−6=2 → 两件全上后排;校验侧 7≤8 放行
+    st8 = _ext_state(8)
+    fills = fill_gap_after(CompTransaction([], [], [], reason='t'), st8)
+    assert [f.row for f in fills] == ['back', 'back'], \
+        '规划口径随 back_max:扩展局后排空位不再漏看(旧常量 6 会改排前排)'
+    tx = CompTransaction(deploy=[(0, 'back')], undeploy=[], sell=[],
+                         reason='t')
+    out8 = simulate(st8, tx)
+    assert out8.action_log[-1]['result'] == 'applied', \
+        '校验口径随 back_max:终态 7 ≤ 8 放行(扩展局 back_overflow 误拒消失)'
+    # 同构造翻回 6:两侧同翻(基线行为保持;锁非恒过)
+    st6 = _ext_state(6)
+    fills6 = fill_gap_after(CompTransaction([], [], [], reason='t'), st6)
+    assert [f.row for f in fills6] == ['front', 'front'], \
+        '基线 6 格:后排无空位 → 补缺改排前排(基线行为不回退)'
+    out6 = simulate(st6, tx)
+    assert out6.action_log[-1]['result'] == 'rejected' \
+        and 'back_overflow:7>6' in out6.action_log[-1].get('reason', ''), \
+        '基线 6 格:终态 7 > 6 拒(阈值确随字段翻,非恒过锁)'
+
+
 # ---------- 4. W65/ADR-0323:部署名单按名去重(同名副本不整事务拒) ----------
 
 def test_execute_replacement_dedup_same_name_copies():
