@@ -3,20 +3,28 @@
 裁定口径:不用影子开关/影子期,新账本 journal 无条件常开后,旧 12 流中
 「策略源收编 9 流」的写入端直接删除(处置表单一源 =
 docs/develop/currency_war/game_state/retirement.md §2)。禁碰面 =
-保留 2 流(defect_ledger/op_journal)+ 清点补遗流(board_state_archive)
-+ journal 写路径本体 + 旧档案只读判读面(query/cli/match_archive 读旧档)。
+保留 2 流(defect_ledger/op_journal)+ journal 写路径本体 + 旧档案只读
+判读面(query/cli/match_archive 读旧档)。
 
 W4 增量(r5-migration-plan.md §2 W4):逐 key 审计流
 cw4_counters 写入端亦退役——局终级全键聚合收编载体 = 局终域行载荷
 ``MatchFinal.cw4_counters``(journal);键全集登记 = test_cw4_key_closure。
 本锁 _OLD_STREAM_FILES/_CALL_SITE_RE/_STREAM_NAME_RE 随之扩员辖 cw4 面。
 
+W7 增量(r5-migration-plan.md §2 W7):清点补遗流 board_state_archive
+写点(cw_loop._archive_board_state)退役并入本锁——逐能力归宿 W2 已落位
+(bs_prov=快照来源注记/局终速查=match_final 行),存量数据文件归档只读
+(不删不写,裸读考古,§4-6)。**保留流豁免申明**(候裁 4 定谳,对抗定谳
+记录 T-68 第十节):defect_ledger/op_journal 两流全保留专用,W7 删除面
+不含两流(r5 §7 条 4 合法性条款);defect_ledger refs 同批迁移 journal
+``(run_id,v)`` 键(本锁 refs 旧挂点归零锁辖)。
+
 锁面 =
 - 结构删净锁:9+1 流 writer 符号在 telemetry.recorder/match_archive 上
   不存在;src 生产树无写入调用点/流文件名残留(防半删:writer 删了
   调用点留着 = 死代码);
 - 行为零产出锁:模拟流(run 生命周期 + BoardState 写入 + obs_conflict
-  收编面 + run 收口)跑完,旧 9 流文件零新增;journal 照常产出
+  收编面 + run 收口)跑完,旧流文件零新增;journal 照常产出
   (write 行 + obs_event 行,run 归属一致);
 - 常开锁:state_journal 影子开关已销案(config 无此字段,app 装配段
   无条件武装 + obs_event 收编制 provider 已注册)。
@@ -66,12 +74,13 @@ from sr_od.application.currency_war.kernel.cw_observe import obs_conflict
 from sr_od.application.currency_war.telemetry import state as tel_state
 
 #: 收编 9+1 流的旧流文件名(写入端退役对象;retirement.md §2 处置表;
-#: cw4_counters.jsonl 随 R5 W4 流删并入——聚合载体改局终域行,r5-migration-plan.md §2 W4)。
+#: cw4_counters.jsonl 随 R5 W4 流删并入——聚合载体改局终域行,r5-migration-plan.md §2 W4;
+#: board_state_archive.jsonl 随 R5 W7 写点下线并入——能力归宿 W2 已落位)。
 _OLD_STREAM_FILES: tuple[str, ...] = (
     'decisions.jsonl', 'outcomes.jsonl', 'exogenous.jsonl',
     'spend_ledger.jsonl', 'shop_snapshots.jsonl', 'exec_events.jsonl',
     'invest_cards.jsonl', 'obs_conflicts.jsonl', 'runs.jsonl',
-    'cw4_counters.jsonl',
+    'cw4_counters.jsonl', 'board_state_archive.jsonl',
 )
 
 #: 随旧流写入端退役的 writer 符号(telemetry.recorder 模块面)。
@@ -119,10 +128,18 @@ _CALL_SITE_RE: re.Pattern = re.compile(
     r'record_(?:decision|outcome|run_summary|exec_event|exogenous'
     r'|event_choice|sell_income|modality_gold|spend_unit|invest_cards'
     r'|shop_snapshot|cw4_counters)\b')
-#: 生产树扫描正则:旧流文件名字面量(写入面残留)。
+#: 生产树扫描正则:旧流文件名字面量(写入面残留;W7 扩员 board_state_archive)。
 _STREAM_NAME_RE: re.Pattern = re.compile(
     r'(?:decisions|outcomes|exogenous|spend_ledger|shop_snapshots'
-    r'|exec_events|invest_cards|obs_conflicts|runs|cw4_counters)\.jsonl')
+    r'|exec_events|invest_cards|obs_conflicts|runs|cw4_counters'
+    r'|board_state_archive)\.jsonl')
+#: 缺陷台账 refs 旧挂点字面量(W7 refs 迁移判据:retirement.md §2
+#: defect_ledger 行「refs 改指 journal (run_id,v) 键」——旧流行指针在
+#: 保留流写点上零残留,防新落台账行继续携带下钻扑空的死地址)。
+_REFS_RETIRED_STREAM_RE: re.Pattern = re.compile(
+    r"'stream'\s*:\s*'(?:decisions|outcomes|exogenous|spend_ledger"
+    r"|shop_snapshots|exec_events|invest_cards|obs_conflicts|runs"
+    r"|cw4_counters|board_state_archive)'")
 
 _SRC_ROOT: Path = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
                    / 'application' / 'currency_war')
@@ -176,6 +193,49 @@ def test_no_retired_writer_call_sites_in_production_tree() -> None:
             elif _STREAM_NAME_RE.search(line):
                 violations.append(f'{rel}:{i} 流名残留: {line.strip()[:120]}')
     assert violations == [], '旧流写入面残留(防半删):\n' + '\n'.join(violations)
+
+
+def test_defect_refs_no_retired_stream_anchors() -> None:
+    """缺陷台账 refs 旧挂点归零锁(W7 refs 迁移判据)。
+
+    retirement.md §2 defect_ledger 行(候裁 4 定谳):保留专用流的 refs
+    改指 journal ``(run_id,v)`` 键——构造单一源 =
+    kernel.cw_telemetry_exit.journal_refs(无账本媒体时诚实省略)。旧流
+    (decisions/outcomes/obs_conflicts 等)写面已随删除波 1 退役,refs 字面
+    指旧流名 = 新落台账行携带下钻扑空的死地址。豁免面 = 本锁白名单
+    (读旧冻结档案的判读/装配面);非白名单命中 = 旧挂点复活。
+    """
+    violations: list[str] = []
+    for py in sorted(_SRC_ROOT.rglob('*.py')):
+        rel = py.relative_to(_SRC_ROOT).as_posix()
+        if rel in _READ_FACE_WHITELIST:
+            continue
+        for i, line in enumerate(
+                py.read_text(encoding='utf-8').splitlines(), 1):
+            if _REFS_RETIRED_STREAM_RE.search(line):
+                violations.append(f'{rel}:{i} refs 旧挂点: {line.strip()[:120]}')
+    assert violations == [], '缺陷 refs 旧挂点残留:\n' + '\n'.join(violations)
+
+
+def test_board_state_archive_writer_orphan_pinned() -> None:
+    """board_state_archive 写点退役后 kernel 侧孤儿符号钉住(W7)。
+
+    ``archive_snapshot``(kernel/cw_board_state)是写点删除后的孤儿构造器:
+    本体在该文件内(守卫族+波次面禁触,删除归 kernel 面批),锁其生产树
+    **零调用点**防写面借尸复活;删除时机 = kernel 面微批,届时连同本锁
+    收窄。tool/测试直接调用不受生产树扫描辖。
+    """
+    violations: list[str] = []
+    for py in sorted(_SRC_ROOT.rglob('*.py')):
+        rel = py.relative_to(_SRC_ROOT).as_posix()
+        if rel == 'kernel/cw_board_state.py':
+            continue   # 本体居所(孤儿待删,禁触面)
+        for i, line in enumerate(
+                py.read_text(encoding='utf-8').splitlines(), 1):
+            if 'archive_snapshot' in line:
+                violations.append(f'{rel}:{i}: {line.strip()[:120]}')
+    assert violations == [], \
+        'archive_snapshot 生产调用点残留(写点应已退役):\n' + '\n'.join(violations)
 
 
 # ============================================================ 行为零产出 + journal 照常锁

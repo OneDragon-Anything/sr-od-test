@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
+from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
 from sr_od.application.currency_war.telemetry import (
     defects,
     query,
@@ -143,14 +144,33 @@ def test_reproduction_counter_upgrades_second_occurrence(tmp_path: Path, monkeyp
 # ===== ③ 旁路接线锁(obs_conflict / exec_event 写入 → 台账同行出现)=====
 
 def test_obs_conflict_bypass_appends_ledger_row(tmp_path: Path, monkeypatch):
-    """obs_conflict 写入 → defect_ledger 同行出现(refs 指回冻结档案行;
-    gold_delta 大 gap → 关键面单次 = L1)。原流行已随删除波 1 退役,
-    证据归宿 = journal obs_event(其形状由 test_cw_telemetry_wiring 辖)。"""
+    """obs_conflict 写入 → defect_ledger 同行出现,refs = journal
+    ``(run_id,v)`` 锚且**行级可下钻闭合**(gold_delta 大 gap → 关键面单次
+    = L1)。原流行已随删除波 1 退役;W7 refs 迁移(retirement.md §2
+    defect_ledger 行,候裁 4 定谳)后 refs 锚指向同栈刚写入的 obs_event
+    证据行——本测试同装 journal + 收编制 provider 验证锚与账本行的
+    (run_id,v) 精确对账( 下钻闭合 = 迁移的核心承诺)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.kernel import (
+        cw_state_journal,
+        cw_telemetry_exit,
+    )
     _setup_recorder(monkeypatch, tmp_path)
-    cw_observe.obs_conflict('gold_delta', 45, 20, None,
-                            verdict='留证-动作账vs读数不等',
-                            source='shop_spend_audit', plane=1, round_num=3,
-                            spend=5)
+    journal = cw_state_journal.install_state_telemetry(
+        tmp_path / 'state' / 'journal.jsonl', flush_every=1,
+        run_id_provider=state.current_run_id)
+    match = SimpleNamespace(session=SimpleNamespace())
+    cw_telemetry_exit.set_obs_event_board_provider(
+        lambda: board_state_of(match.session))
+    try:
+        cw_observe.obs_conflict('gold_delta', 45, 20, None,
+                                verdict='留证-动作账vs读数不等',
+                                source='shop_spend_audit', plane=1, round_num=3,
+                                spend=5)
+    finally:
+        cw_telemetry_exit.set_obs_event_board_provider(None)
+        cw_state_journal.reset_state_telemetry()
     defects = _rows(tmp_path, 'defect_ledger.jsonl')
     assert len(defects) == 1
     assert not (tmp_path / 'obs_conflicts.jsonl').exists(), \
@@ -160,10 +180,32 @@ def test_obs_conflict_bypass_appends_ledger_row(tmp_path: Path, monkeypatch):
     assert d['expected'] == 'gold_delta: 45' and d['observed'] == '20'
     assert d['gap'] == -25.0
     assert d['severity'] == 'L1_alert'   # 关键面+大gap(>10)+单次
-    assert d['run_id'] == 'w505t'        # 台账补齐旧流缺的 join key
+    assert d['run_id'] == 'w505t'        # 台账 run 归属键
     assert d['reader_source'] == 'shop_spend_audit'
-    assert d['evidence']['refs'][0]['stream'] == 'obs_conflicts'
-    assert 'field=gold_delta' in d['evidence']['refs'][0]['key']
+    # refs 锚 = journal (run_id,v),且与账本 obs_event 证据行精确对账。
+    refs = d['evidence']['refs']
+    assert len(refs) == 1 and refs[0]['stream'] == 'journal', \
+        '旁路行 refs 应恰为 journal 锚(旧 obs_conflicts 指针已迁移)'
+    assert refs[0]['key'].startswith('run_id=w505t|v=')
+    _anchor_v = int(refs[0]['key'].split('|v=', 1)[1])
+    jrows = [json.loads(ln) for ln in
+             journal.path.read_text(encoding='utf-8').splitlines()
+             if ln.strip()]
+    ev = [r for r in jrows if r.get('row') == 'obs_event']
+    assert ev and ev[-1]['v'] == _anchor_v and ev[-1]['field'] == 'gold_delta', \
+        'refs 锚 (run_id,v) 应下钻命中同栈写入的 obs_event 证据行'
+
+
+def test_obs_conflict_bypass_refs_omitted_without_journal(
+        tmp_path: Path, monkeypatch):
+    """无账本媒体(未装 journal/provider)→ refs 诚实省略(空列表):
+    锚缺媒体不造死地址(W7 refs 迁移的缺省形态;journal_refs 单一源)。"""
+    _setup_recorder(monkeypatch, tmp_path)
+    cw_observe.obs_conflict('deployed_align', 4, 5, None,
+                            verdict='采新-paddle锚', source='align')
+    d = _rows(tmp_path, 'defect_ledger.jsonl')[0]
+    assert d['evidence']['refs'] == [], \
+        '无 journal 媒体时 refs 应为空(诚实缺失,禁残旧流指针)'
 
 
 def test_obs_conflict_bypass_auto_resolved_and_text_field(tmp_path: Path, monkeypatch):

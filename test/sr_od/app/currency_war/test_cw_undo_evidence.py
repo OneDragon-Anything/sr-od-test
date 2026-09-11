@@ -40,7 +40,10 @@ class TestDroughtNoResetEvidence:
 
     def test_buy_no_reset_row_recorded(self, monkeypatch):
         """买入不重置 → 分键在案可读回:成员/体系/当值摘要齐
-        (干旱解锁流程审计面)。"""
+        (干旱解锁流程审计面)。W7 refs 迁移:decisions 流写面已随删除波 1
+        退役,旧 refs 挂点拆除——当值内联本行 expected/observed,锚形 refs
+        (journal (run_id,v))由 journal_refs 构造(本测试无账本媒体 →
+        诚实省略为空;锚闭合由 test_cw_defect_ledger 旁路测试辖)。"""
         rows = _capture(monkeypatch)
         undo_evidence.record_drought_buy_no_reset(
             member='三月七', system='列车同行', drought=7)
@@ -51,7 +54,8 @@ class TestDroughtNoResetEvidence:
         assert '三月七' in row['observed']
         assert '列车同行' in row['observed']
         assert '=7' in row['observed']
-        assert 'pair_drought|列车同行|7|三月七' in row['refs'][0]['key']
+        assert row['refs'] == [], \
+            '无账本媒体时 refs 诚实省略(旧 decisions 挂点应已拆除)'
 
     def test_zero_drought_no_row(self, monkeypatch):
         """干旱计数为 0(无审计诉求)⇒ 不落行(零噪声)。"""
