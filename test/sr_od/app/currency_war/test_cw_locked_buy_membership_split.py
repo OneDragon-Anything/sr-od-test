@@ -20,7 +20,6 @@ R1/R2 刷新账合格集(P40 A4「目标阵容件」口径,无数学重推不翻
 必须与声明口径同源;不锁具体买入数与经济面数值。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from pathlib import Path
 from types import SimpleNamespace
@@ -47,6 +46,9 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
     shop,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
@@ -98,7 +100,10 @@ def _state(gold: int, shop_cards: list[ShopCard], plane: int = 2,
     st.plane = plane
     st.shop = shop_cards
     st.bench = bench if bench is not None else []
-    st.deployed = []
+    # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
+    # 拒卖」,卖出判据/发射位直调环境须 ≥1 上场件,否则 fail-closed 拒帧
+    # ——与被测语义无关的红按环境前置补齐,非跟绿。
+    st.deployed = [_bc('板上件锚', slot=1)]
     return st
 
 
@@ -196,22 +201,32 @@ class TestSellFaceAndLedgerUnswitched:
         assert not fuel_ex, 'P60:义务集成员禁入燃料集(Fuel∩B=∅,Φ 单调)'
 
     def test_bench_full_of_hoard_members_still_frees_seat_and_buys(self):
-        """(P60 重推导,锁语义按证伪结论改写)bench 满且占员全为 B(锁定
-        采购集)成员 + 缺员核心件在店 ⇒ 不再有可卖腾席(卖 B 成员 = 义务
-        换手,P60 已闭死)——诚实停摆可判读:m2_retry_exhausted /
-        bench_full_buy_abandon 计数、零 BuyCard/零 SellBench。真实死锁帧
-        的 bench 占员是旧线 off-line 件(非 B),腾席由其承载(下条)。"""
+        """(P60 重推导 + T-307/R1 语义改写,ADR-0647)bench 满且占员全为
+        B'(容量可行截断义务集,lv7 下 = 宽集−{杰帕德,彦卿})成员 +
+        缺员核心件在店 ⇒ 义务面内换手通道仍闭死——诚实停摆可判读:
+        m2_retry_exhausted / bench_full_buy_abandon 计数、零 BuyCard/
+        零 SellBench。旧构造语义(hoard-only 按名序前 9,含彦卿)在 R1
+        后由 test_cw_t307_locked_buy_truncation 的死锁解除锁承接(被截
+        成员 ∉B' 可卖 = 修复行为,非换手)——本锁改用 B' 内成员构造,
+        钉「义务面内禁卖」语义不因截断引入而松动。"""
         comp = get_comp(_LOCK_COMP)
         core = list(predicates.line_members(comp))
         missing_core = core[0]
         hoard_chars, _eq = cw_intention._line_hoard(comp)
         hoard_only = sorted(set(hoard_chars) - set(core))
+        st_probe = _state(gold=30, shop_cards=[])
+        bp = locked_buy_membership(
+            _locked_ist(),
+            cap_hold=cw_intention.locked_buy_cap_hold(st_probe))
+        in_bp = [m for m in hoard_only if bp and m in bp]
+        assert len(in_bp) >= BENCH_CAPACITY, \
+            '锁测试前提:B\' 内囤件不足 9(注册表/截断参数漂移)'
         bench = [_bc(m, slot=i + 1)
-                 for i, m in enumerate(hoard_only[:BENCH_CAPACITY])]
+                 for i, m in enumerate(in_bp[:BENCH_CAPACITY])]
         st = _state(gold=30, shop_cards=[_card(missing_core, 3)], bench=bench)
         sess = _session(comp, _locked_ist())
         act = shop.decide_shop_action(st, sess, _cfg())
-        assert not isinstance(act, BuyCard), 'B 成员不得被卖出/换手'
+        assert not isinstance(act, BuyCard), 'B\' 成员不得被卖出/换手'
         assert not isinstance(act, SellBench)
         assert state_of(sess).cw4_counters.get('m2_retry_exhausted', 0) >= 1
         assert state_of(sess).cw4_counters.get('bench_full_buy_abandon', 0) >= 1

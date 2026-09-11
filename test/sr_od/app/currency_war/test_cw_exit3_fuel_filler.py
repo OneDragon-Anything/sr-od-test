@@ -179,7 +179,13 @@ class TestExit3Emission:
         from sr_od.application.currency_war.kernel import cw_intention
         km = list(line_members(get_comp(_COMP)))
         ist = SimpleNamespace(locked_comp=_COMP)
-        purchase = sorted(cw_intention.locked_buy_membership(ist))
+        # T-307/R1(ADR-0647)fixture 口径对齐:占位池取截断义务集 B'
+        #(lv5 下宽集含被截成员——R1 后可卖,会抢跑 M4 腾席使 bench_full
+        # 分键不可达;风暴前提「采购集件占位不可卖」须 B' 内成员)。
+        _cap = cw_intention.locked_buy_cap_hold(
+            GameState(gold=0, level=5, round_num=2, hp=60))
+        purchase = sorted(cw_intention.locked_buy_membership(
+            ist, cap_hold=_cap) or frozenset())
         chaseable = [m for m in km if m != _causal_name()]
         deployed = [_bc(m, star=2, slot=i + 1)
                     for i, m in enumerate(chaseable)]

@@ -207,7 +207,7 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     monkeypatch.setattr(_int_mod, 'committed_from',
                         lambda session, state=None: True)
     monkeypatch.setattr(_int_mod, 'locked_buy_membership',
-                        lambda ist: frozenset({'三月七'}))
+                        lambda ist, cap_hold=None: frozenset({'三月七'}))
     comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
                factions=('列车同行',), form_tiers={'列车同行': 2},
                shared_chars=(), substitute_plan=None)

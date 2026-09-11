@@ -30,6 +30,7 @@ from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
+    locked_buy_cap_hold,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     BENCH_CAPACITY,
@@ -79,19 +80,41 @@ def _locked_session() -> StrategySession:
 def _storm_state(gold: int = 30, deployed: list[BenchChar] | None = None
                  ) -> GameState:
     """风暴帧构造:bench 9/9 全为锁定采购集成员(经 exclude 排除 ⇒ 腾席
-    燃料集空)∧ 缺员核心件不在场 ⇒ M4 腾席无候选停摆形态。"""
+    燃料集空)∧ 缺员核心件不在场 ⇒ M4 腾席无候选停摆形态。
+    T-307/R1(ADR-0647)fixture 口径对齐:占位成员取截断义务集 B' 内
+    (lv7 下剔除被截的杰帕德/彦卿——被截成员 R1 后可卖,混入会使风暴
+    前提「燃料集空」破,由 test_cw_t307_locked_buy_truncation 的死锁
+    解除锁另行承载)。"""
     comp = get_comp(_LOCK_COMP)
     core = set(predicates.line_members(comp))
     hoard_chars, _eq = cw_intention._line_hoard(comp)
     hoard_only = sorted(set(hoard_chars) - core)
-    assert len(hoard_only) >= BENCH_CAPACITY, '构造前提:采购集 hoard 件须满席'
+    st_probe = GameState(gold=gold, level=7, round_num=2, hp=60)
+    bp = cw_intention.locked_buy_membership(
+        _locked_ist_proxy(), cap_hold=locked_buy_cap_hold(st_probe)) or frozenset()
+    hoard_only = [m for m in hoard_only if m in bp]
+    assert len(hoard_only) >= BENCH_CAPACITY, '构造前提:B\' 内囤件须满席'
     st = GameState(gold=gold, level=7, round_num=2, hp=60)
     st.plane = 2
     st.shop = []
     st.bench = [_bc(m, slot=i + 1)
                 for i, m in enumerate(hoard_only[:BENCH_CAPACITY])]
-    st.deployed = list(deployed or [])
+    # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
+    # 拒卖」,卖出判据/发射位直调环境须 ≥1 上场件,否则 fail-closed
+    # 拒帧——与被测语义无关的红按环境前置补齐,非跟绿。
+    st.deployed = (list(deployed) if deployed is not None
+                   else [_bc('板上件锚', slot=1)])
     return st
+
+
+def _locked_ist_proxy() -> IntentionState:
+    """_storm_state 构造期的意向代理(与 _locked_session 同构,独立于
+    会话生命周期)。"""
+    ist = IntentionState()
+    ist.phase = 'locked'
+    ist.locked_comp = _LOCK_COMP
+    ist.lock_plane = 2
+    return ist
 
 
 def _arm_shop_token(sess: StrategySession, action_name: str = 'LevelUpShop'

@@ -142,7 +142,7 @@ def test_assemble_computes_arm_and_leg_removals(monkeypatch) -> None:
     monkeypatch.setattr(_int_mod, 'committed_from',
                         lambda session, state=None: True)
     monkeypatch.setattr(_int_mod, 'locked_buy_membership',
-                        lambda ist: frozenset({'三月七'}))
+                        lambda ist, cap_hold=None: frozenset({'三月七'}))
     from sr_od.application.currency_war.kernel.cw_state import GameState
     comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
                factions=('列车同行',), form_tiers={'列车同行': 2},
@@ -234,7 +234,7 @@ def test_run_mandate_emits_armed_two_star_swap(monkeypatch) -> None:
     monkeypatch.setattr(_int_mod, 'committed_from',
                         lambda session, state=None: True)
     monkeypatch.setattr(_int_mod, 'locked_buy_membership',
-                        lambda ist: frozenset({'三月七'}))
+                        lambda ist, cap_hold=None: frozenset({'三月七'}))
     comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
                factions=('列车同行',), form_tiers={'列车同行': 2},
                shared_chars=(), substitute_plan=None)
