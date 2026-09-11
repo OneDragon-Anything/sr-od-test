@@ -279,8 +279,8 @@ def test_fake_match_rules_streak_and_income() -> None:
     from fixtures.cw_fake_game import rules
 
     from sr_od.application.currency_war.kernel.cw_economy import (
-        BASE_INCOME,
         LOSS_GOLD_BY_NODE,
+        reward_base_gold,
         streak_gold,
     )
 
@@ -290,7 +290,10 @@ def test_fake_match_rules_streak_and_income() -> None:
     # 利息单一源现算:min(帽, 100//10)
     from sr_od.application.currency_war.kernel.cw_economy import interest
     inc = rules.income_for_round(st, m._rng_grant, None, False)
-    assert inc['base'] == BASE_INCOME
+    # base = 平面感知键单一源(T-64 切源:原恒 BASE_INCOME=5 是 round
+    # 单键同族第二值源,非奖励节点落 r1/r2 时与权威键分叉——battle@r1
+    # 权威值 3;与 T-21 引擎侧校准同款)
+    assert inc['base'] == reward_base_gold(st.plane, st.round_num)
     assert inc['interest'] == interest(100)
     assert inc['streak'] == streak_gold(0)
     # 败轮金:连胜归 0 + 上一战斗轮败 → LOSS_GOLD_BY_NODE[prev]
@@ -335,6 +338,41 @@ def test_income_event_component_stays_zero() -> None:
             f'{node} 轮事件金非 0(残差闸回潮/球金未按真值建模):'
             f'{inc["event"]}——处理 = 按球真值另行建模,禁回指 '
             f'EVENT_GOLD_BY_ROUND 残差闸')
+
+
+def test_fake_income_base_plane_aware_no_single_key_hazard() -> None:
+    """假环境收入 base = 平面感知键单一源回归锁(T-64 切源,T-21 引擎
+    侧同款收口)。
+
+    被禁形态 = 奖励轮按 round_num 单键直查注册表(fields.md §4.2
+    奖励轮行明文禁用):P2r1/P3r1 会误返 3——本锁钉 P2r1/P3r1=5、
+    P1 r1/r2 成对 3/4、非奖励轮同款键;期望值经 kernel reward_base_gold
+    现算(纪律 9),末尾注册表锚自检区分「注册表值变了」还是「切源
+    回退了」。"""
+    from fixtures.cw_fake_game import rules
+
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        reward_base_gold,
+    )
+
+    m = FakeMatch(seed=31, node_sequence=['reward'])
+    st = m.state
+    for plane, rn in ((2, 1), (3, 1), (1, 1), (1, 2), (1, 8)):
+        st.plane = plane
+        st.round_num = rn
+        st.node_type = 'reward'
+        inc = rules.income_for_round(st, m._rng_grant, None, False)
+        assert inc['base'] == reward_base_gold(plane, rn), \
+            (plane, rn, '假环境 base 未走平面感知键单一源')
+    # 非奖励轮同款键(恒 BASE_INCOME 第二值源形态禁回潮)
+    st.plane, st.round_num, st.node_type = 1, 1, 'battle'
+    assert rules.income_for_round(
+        st, m._rng_grant, None, False)['base'] == reward_base_gold(1, 1)
+    # 注册表锚自检(hazard 值锚:P2r1/P3r1=5 是单键直查会失真的点)
+    assert reward_base_gold(2, 1) == 5, 'P2r1 注册表锚漂移'
+    assert reward_base_gold(3, 1) == 5, 'P3r1 注册表锚漂移'
+    assert (reward_base_gold(1, 1), reward_base_gold(1, 2)) == (3, 4), \
+        'P1 r1/r2 注册表锚漂移'
 
 
 class TestPrepEntryObserveViaPorts:

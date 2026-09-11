@@ -9,10 +9,16 @@
 **单一源纪律**:常量与公式全部 kernel/引擎真码直调或按其重述,本模块
 零平行真值——
 
-- 收入分量:``kernel/cw_economy``(BASE_INCOME / REWARD_BASE_GOLD_BY_ROUND /
-  LOSS_GOLD_BY_NODE / streak_gold / interest),口径 = ADR-0439 收入模型
-  (108 局/767 轮 gold 差分实证:败轮金替换旧 streak_gold(0)=1;奖励轮
-  streak 分量照发 + base 查表);三分量全集 = 结算金币明细弹窗
+- 收入值分量(base/interest/streak):``kernel/cw_economy
+  .round_start_income`` 单一源直调(T-64 切源,与引擎消费缝
+  ``sim_round_income`` 同源同式;原 ``REWARD_BASE_GOLD_BY_ROUND``
+  奖励轮 round 单键直查 = P2r1/P3r1 误返 3 的 hazard 形态,
+  fields.md §4.2 奖励轮行明文禁用——随切源结构性消灭)。连胜分量
+  已乘 ``win_reward_mult``(伟大征服 ×3;fields.md §4.1「施于连胜
+  分量含奖励轮」,聚合取最大不叠乘 = ADR-0623)。败轮金槽仍按
+  ``LOSS_GOLD_BY_NODE`` 类型表连胜槽替换(ADR-0439 口径;与 kernel
+  败补支 = 玩家裁定口径的竞争挂账 ADR-0623 决策3 待定谳,sim 常量
+  修正随定谳);三分量全集 = 结算金币明细弹窗
   (docs/game/currency_war/research/economy.md §11:基础+连胜+利息,
   无第四分量);
 - 事件金分量恒 0(保真度校准裁定,出处 =
@@ -36,13 +42,8 @@ from __future__ import annotations
 import random
 
 from sr_od.application.currency_war.kernel.cw_economy import (
-    BASE_INCOME,
-    DEFAULT_INTEREST_CAP,
     LOSS_GOLD_BY_NODE,
-    REWARD_BASE_GOLD_BY_ROUND,
-    interest,
-    interest_cap_resolved,
-    streak_gold,
+    round_start_income,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
 
@@ -52,37 +53,44 @@ _COMBAT_NODES: tuple[str, ...] = ('battle', 'encounter', 'boss')
 
 def income_for_round(st: GameState, rng: random.Random,
                      prev_node: str | None, prev_combat_lost: bool) -> dict[str, int]:
-    """每备战期收入分解(方案 §2.2 收入行;规则知识自 engine_p1 收入段
-    :829-878 重述一次,ADR-0439/0233 锚随迁——旧载体退役后本函数是
-    该规则知识的存活处,非第二实现)。
+    """每备战期收入分解(方案 §2.2 收入行;规则知识按 kernel 真码直调
+    重述一次,ADR-0439 锚随迁——旧载体退役后本函数是该规则知识的
+    存活处,非第二实现)。
+
+    值分量三支(base/interest/streak)= ``round_start_income`` 单一源
+    直调(T-64 切源;T-21 引擎侧同款收口):原奖励轮 base 按 round
+    单键直查注册表 = P2r1/P3r1 误返 3 的 hazard 形态(fields.md §4.2
+    奖励轮行明文禁用),随切源结构性消灭;连胜分量已乘
+    ``win_reward_mult``(伟大征服 ×3,施于连胜分量含奖励轮——
+    fields.md §4.1;缺省无持卡恒 1.0 = 逐位零漂移)。
 
     分量语义(键 = 收入分解账本口径;三分量全集 = 结算金币明细弹窗,
     economy.md §11):
 
-    - ``base``:BASE_INCOME;奖励轮查 REWARD_BASE_GOLD_BY_ROUND(成对
-      改口径:奖励轮 streak 分量照发,base 查表补位,ADR-0439);
+    - ``base``:平面感知键(kernel ``reward_base_gold``;P1 {1:3,2:4}、
+      P2r1/P3r1=5、其余 5,各分支同款键);
     - ``interest``:min(息帽, gold//10) + flat 息。息帽/flat 单一源 =
       kernel 聚合链(``aggregate_economy`` + ``interest_cap_resolved``,
       ADR-0516 cap 三源归一/ADR-0598 息帽死链修复口径):已持投资
       策略聚合取 cap 覆写(并持取宽 = ADR-0131,**0 是有效覆写**——
       买断制息通道改写,判别只认 None,禁 ``or 缺省`` 真值折叠)与
       flat 息(狸财经狸,与息帽无关);未持卡回 DEFAULT_INTEREST_CAP
-      = 与旧逐位相同(缺省主路径零漂移)。T-204 投资剧本迁装面,
-      注入母本 = engine_p1 收入注入段(w162_inject/ADR-0364 语义,
-      知识迁移非第二实现——表达式与引擎注入段同式);
-    - ``streak``:补给轮零发(ADR-0439:实发零发放证据样本不足,条件
-      升级挂账同源);奖励轮照发 streak_gold;连胜==0 且上一轮是败掉的
-      战斗类节点 → 发 LOSS_GOLD_BY_NODE[prev_node](败轮金);其余 =
-      streak_gold(streak);
-    - ``event``:恒 0(奖励球金归批 2 收球域,机制申报见模块头——
+      = 缺省主路径零漂移;
+    - ``streak``:补给轮零发(连胜不动,ADR-0439 决策 2);奖励/常规
+      轮 = streak_gold × win_reward_mult(四舍五入取整,kernel 同式);
+      非连胜态(≤0)且上一轮是败掉的战斗类节点 → 连胜槽替换
+      LOSS_GOLD_BY_NODE[prev_node](败轮金;**不乘** win_reward_mult)。
+      带符号口径:连败侧 -N 与 0 同判(streak_gold 内部 max(0,) 钳制
+      把连败值归表首,与引擎无符号 streak==0 判据同值);
+    - ``event``:恒 0(奖励球金归收球域,机制申报见模块头——
       引擎 EVENT_GOLD_BY_ROUND 为残差补偿闸,非机制真值,不继承);
     - ``invest``(**仅在有持卡且聚合 gold_per_node>0 时出现**的第四键,
       engine_p1 账本行形状同构——缺省路径分解恒 3 键 + event,行形状
       不变):gold_per_node(每节点给金,注册表聚合值)。
 
     ``rng`` 消费归发放股(调用方传入 FakeMatch._rng_grant):收入域加
-    消费不位移日程/抽店/战斗三股的流位置(重放对账的分流前提)。本批
-    收入域暂无 rng 消费者(球金批 2 回填时启用),参数保留占股约定。
+    消费不位移日程/抽店/战斗三股的流位置(重放对账的分流前提)。本域
+    现无 rng 消费者,参数保留占股约定。
     返回分解 dict(不落金——入账由调用方对 ``state.gold`` 一次落定)。
     """
     node = st.node_type or 'battle'
@@ -95,24 +103,27 @@ def income_for_round(st: GameState, rng: random.Random,
     )
     _held = list(st.active_strategies or [])
     _agg = aggregate_economy(_held) if _held else None
-    _cap = (interest_cap_resolved(_agg.interest_cap_override)
-            if _agg is not None else DEFAULT_INTEREST_CAP)
-    _flat = _agg.interest_flat_per_node if _agg is not None else 0
-    if node == 'supply':
-        streak_amt = 0
-    elif node == 'reward':
-        streak_amt = streak_gold(streak)
-    elif streak <= 0 and prev_combat_lost and prev_node in LOSS_GOLD_BY_NODE:
+    # 值分量三支 = kernel 单一源(T-64 切源;cap/flat/mult 经聚合入参,
+    # kernel 内部 interest_cap_resolved 归一——None 判别缺省,0 覆写有效)
+    _inc = round_start_income(
+        st.plane, rn, node, st.gold, streak,
+        win_reward_mult=(_agg.win_reward_mult
+                         if _agg is not None else 1.0),
+        interest_flat=(_agg.interest_flat_per_node
+                       if _agg is not None else 0),
+        interest_cap=(_agg.interest_cap_override
+                      if _agg is not None else None))
+    streak_amt = _inc.streak
+    if (node not in ('supply', 'reward') and streak <= 0
+            and prev_combat_lost and prev_node in LOSS_GOLD_BY_NODE):
         # 带符号口径:非连胜态(≤0)+上一战斗类节点败掉 → 败轮金
         #(engine_p1 无符号 streak==0 的同构翻译;连败侧 -N 与 0 同判,
-        # streak_gold 内部 max(0,) 钳制把连败值归表首,与引擎一致)
+        # streak_gold 内部 max(0,) 钳制把连败值归表首,与引擎一致;
+        # ADR-0439 类型表连胜槽替换,win_reward_mult 不生效)
         streak_amt = LOSS_GOLD_BY_NODE[prev_node]
-    else:
-        streak_amt = streak_gold(streak)
     out = {
-        'base': (REWARD_BASE_GOLD_BY_ROUND.get(rn, BASE_INCOME)
-                 if node == 'reward' else BASE_INCOME),
-        'interest': interest(st.gold, _cap) + _flat,
+        'base': _inc.base,
+        'interest': _inc.interest,
         'streak': streak_amt,
         'event': 0,
     }

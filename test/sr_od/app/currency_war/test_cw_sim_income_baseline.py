@@ -14,11 +14,14 @@ changes/2026-09-11-legacy-hygiene-ops/details/sim-baseline.md §T-21)。
    决策3,sim 常量修正随定谳,不属本锁语义);
 ④ 引擎息帽第二值源退役锁;
 ⑤ 端到端对拍:引擎默认局账本逐行 vs 注册表直算重算(进轮连胜按
-   delta>0 重放,镜像 checks.runtime 精确重算锁口径;含开局金注入点锚)。
+   delta>0 重放,镜像 checks.runtime 精确重算锁口径;含开局金注入点锚);
+⑥ win_reward_mult 接线锁(T-64):引擎注入局 e2e(伟大征服 ×3 施于
+   连胜分量含奖励轮,fields.md §4.1)+ 账本行倍率披露经 checks.runtime
+   镜像零违规(生产链锁)+ 镜像行键消费单元(缺键 = 接线前旧批次按
+   1.0 重放兼容)。
 
-挂账申报(非本锁语义,差异清单见 T-21 交付报告):win_reward_mult 未入
-sim 收入路径(BoardState 设计「收入修饰」行「sim 修正随之」桶),本文件
-对拍一律 mult=1.0 现势。
+挂账沿革:win_reward_mult 未入 sim 收入路径的 T-21 挂账已随 T-64 接线
+闭合;①-⑤ 对拍路径仍一律 mult=1.0(缺省恒等,逐位等价)。
 """
 from __future__ import annotations
 
@@ -187,3 +190,107 @@ def test_engine_ledger_income_matches_registry_replay() -> None:
         assert inc['streak'] == exp_streak, (rn, sim['node'], 'streak')
         assert 'invest' not in inc, '默认局无持卡,invest 键不应出现'
         prev = (rn, sim['node'], sim.get('delta') or 0)
+
+
+# --- ⑥ win_reward_mult 接线(T-64;引擎半部 + 镜像行键消费) ---
+
+
+def test_engine_win_reward_mult_wiring_end_to_end() -> None:
+    """伟大征服 ×3 施于引擎连胜分量(fields.md §4.1「收入修饰」施于
+    连胜分量含奖励轮;T-21 挂账「sim 修正随之」桶的接线闭合)。
+
+    固定剧本 (1,1) 直注入(cw_sim_invest「显式点名 = 直注入」契约,
+    不经 decide_invest):选卡落在当轮收入之后(实机同点)→ r1 行倍率
+    1.0、自 r2 起行倍率 3.0;期望值按注册表现算(int(round(
+    streak_gold×mult)),kernel _streak_component 同式),败补槽不乘
+    (ADR-0439 类型表连胜槽替换)。被动策略桩 + pool='fallback' = 快桶。"""
+    from sr_od.application.currency_war.sim.checks import runtime
+    from sr_od.application.currency_war.sim.cw_sim_invest import (
+        SimInvestProfile,
+    )
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+
+    class _PassiveStrategy:
+        def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
+            return []
+
+    res = simulate_p1(
+        7, pool='fallback', strategy=_PassiveStrategy(),
+        session=StrategySession(),
+        invest=SimInvestProfile(picks=((1, 1, '伟大征服'),)))
+    rows = res.ledger
+    assert rows, '账本空局不可作对拍载体'
+    assert rows[0]['sim']['win_reward_mult'] == 1.0, \
+        'r1 选卡落在收入后,当轮倍率须仍 1.0(实机同点)'
+    assert any(r['sim']['win_reward_mult'] == 3.0 for r in rows[1:]), \
+        '持 伟大征服 后无任何行携带 3.0 倍率(接线断/行披露缺)'
+    # 进轮连胜重放(delta>0 战斗胜;分支序镜像 checks.runtime:
+    # supply→reward→败补→常规)
+    enter: dict[int, int] = {}
+    running = 0
+    for row in rows:
+        enter[row.get('round_num') or 0] = running
+        sim = row.get('sim') or {}
+        if (sim.get('node') or '') in ('battle', 'encounter', 'boss'):
+            running = running + 1 if (sim.get('delta') or 0) > 0 else 0
+    prev: tuple[int, str, int] | None = None   # (rn, node, delta)
+    for row in rows:
+        sim = row['sim']
+        rn = row.get('round_num') or 0
+        inc = sim['income']
+        mult = sim['win_reward_mult']
+        enter_streak = enter.get(rn, 0)
+        if sim['node'] == 'supply':
+            exp_streak = 0
+        elif sim['node'] == 'reward':
+            exp_streak = int(round(streak_gold(enter_streak) * mult))
+        elif (enter_streak == 0 and prev is not None
+                and prev[1] in LOSS_GOLD_BY_NODE and prev[2] <= 0):
+            exp_streak = LOSS_GOLD_BY_NODE[prev[1]]
+        else:
+            exp_streak = int(round(streak_gold(enter_streak) * mult))
+        assert inc['streak'] == exp_streak, \
+            (rn, sim['node'], mult, 'streak 未按当轮倍率重算')
+        prev = (rn, sim['node'], sim.get('delta') or 0)
+    # 镜像生产链锁(测试纪律 13 供给半环):行倍率经真实账本喂入
+    # 精确重算锁——引擎行未披露或镜像未消费,本断言二选一红
+    rep = runtime.check_streak_combat_only_income([rows])
+    assert rep['violations'] == 0, rep
+
+
+def test_runtime_mirror_consumes_row_mult_key() -> None:
+    """镜像行键消费单元:``sim.win_reward_mult`` 施于奖励/常规槽;
+    补给/败补槽不乘;缺键行 = 接线前旧批次按 1.0 折算(重放兼容,
+    与旧口径逐位等价——非缺键守卫辖域)。负控 = 持倍率行按未乘表值
+    入账 → 违规计 1(镜像对倍率失明即红)。"""
+    from sr_od.application.currency_war.sim.checks import runtime
+
+    def _row(rn: int, node: str, delta: int, streak: int,
+             mult: float | None = None) -> dict:
+        sim: dict = {'node': node, 'delta': delta,
+                     'income': {'streak': streak, 'base': 0, 'interest': 0}}
+        if mult is not None:
+            sim['win_reward_mult'] = mult
+        return {'round_num': rn, 'sim': sim}
+
+    ledger = [
+        # 旧批次行(缺键):常规槽按纯表值
+        _row(1, 'battle', -3, streak_gold(0)),
+        # 败补槽 = 类型表连胜槽替换,不乘 3.0
+        _row(2, 'battle', -2, LOSS_GOLD_BY_NODE['battle'], 3.0),
+        # 奖励/常规槽 ×3(含 counter0=1 表值同乘)
+        _row(3, 'reward', 0, int(round(streak_gold(0) * 3.0)), 3.0),
+        # 缺键行(旧批次)奖励槽按 1.0
+        _row(4, 'reward', 0, streak_gold(0)),
+        _row(5, 'supply', 0, 0, 3.0),
+        _row(6, 'encounter', 2, int(round(streak_gold(0) * 3.0)), 3.0),
+    ]
+    rep = runtime.check_streak_combat_only_income([ledger])
+    assert rep['violations'] == 0, rep
+    # 负控:同一持倍率行按未乘表值入账 → 镜像必红
+    bad = list(ledger)
+    bad[5] = _row(6, 'encounter', 2, streak_gold(0), 3.0)
+    rep_bad = runtime.check_streak_combat_only_income([bad])
+    assert rep_bad['violations'] == 1, rep_bad

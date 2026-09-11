@@ -259,6 +259,61 @@ def test_held_cards_flat_interest_and_gold_per_node() -> None:
     assert inc3['invest'] == 1
 
 
+def _income_state(node: str, rn: int, streak: int, held: list[str],
+                  prev_node: str | None = None,
+                  prev_lost: bool = False) -> dict:
+    """持卡收入锁构造器(node/轮/连胜可控;金库恒 0 = 利息零发,
+    连胜分量隔离断言)。"""
+    from fixtures.cw_fake_game import rules
+    from fixtures.cw_fake_game.fake_match import FakeMatch
+
+    m = FakeMatch(seed=_SEED, node_sequence=['battle'])
+    m.state.gold = 0
+    m.state.node_type = node
+    m.state.round_num = rn
+    m.state.streak = streak
+    m.state.active_strategies = list(held)
+    return rules.income_for_round(m.state, m._rng_grant,
+                                  prev_node, prev_lost)
+
+
+def test_held_win_reward_mult_scales_streak_component() -> None:
+    """伟大征服 ×3 施于假环境连胜分量(fields.md §4.1「收入修饰」:
+    施于连胜分量**含奖励轮**;T-64 切源后与引擎消费缝同源
+    round_start_income,BoardState「sim 修正随之」桶闭合)。
+
+    补给槽零发、败补槽按 ADR-0439 类型表连胜槽替换(均不乘倍率);
+    期望值注册表现算(纪律 9,kernel _streak_component 同式)。红 =
+    假环境连胜面与 kernel 单一源分叉(切源回退或倍率未入缝)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        LOSS_GOLD_BY_NODE,
+        streak_gold,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        economy_effect_of,
+    )
+
+    # 注册表锚自检(锁红时先区分「注册表值变了」还是「接线断了」)
+    assert economy_effect_of('伟大征服').win_reward_mult == 3.0
+    mult = economy_effect_of('伟大征服').win_reward_mult
+    # 常规战斗槽与奖励轮 ×3(奖励轮含 counter0=1 表值同乘)
+    assert _income_state('battle', 5, 2, ['伟大征服'])['streak'] \
+        == int(round(streak_gold(2) * mult)), '常规战斗槽未乘倍率'
+    assert _income_state('reward', 8, 3, ['伟大征服'])['streak'] \
+        == int(round(streak_gold(3) * mult)), '奖励轮未乘倍率(fields §4.1)'
+    assert _income_state('reward', 2, 0, ['伟大征服'])['streak'] \
+        == int(round(streak_gold(0) * mult)), '奖励轮 counter0 表值未乘倍率'
+    # 补给槽零发、败补槽类型表替换(连胜槽替换语义,倍率不生效)
+    assert _income_state('supply', 5, 2, ['伟大征服'])['streak'] == 0, \
+        '补给轮连胜槽被倍率路径改写'
+    assert _income_state('battle', 4, -1, ['伟大征服'],
+                         prev_node='encounter',
+                         prev_lost=True)['streak'] \
+        == LOSS_GOLD_BY_NODE['encounter'], '败补槽被误乘倍率'
+    # 无持卡缺省 = 纯表值(mult 恒 1.0,逐位等价零漂移)
+    assert _income_state('battle', 5, 2, [])['streak'] == streak_gold(2)
+
+
 def test_default_path_income_shape_unchanged() -> None:
     """零漂移锁:无持卡收入恒 4 键、无 'invest' 键;无剧本装配面全中性。"""
     from fixtures.cw_fake_game.fake_match import FakeMatch
