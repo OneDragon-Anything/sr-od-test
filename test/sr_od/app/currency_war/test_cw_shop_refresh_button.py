@@ -10,9 +10,11 @@ read_shop_refresh_button``,T-15 实机三态取证):免费态=「免费刷新」
    失读回退逻辑账(接线前保守形态,行为逐位一致);
 2. **免费帧喂入口闸**(cw_observation 商店开态):免费态次数与标价同 rect,
    锚命中即 carry,禁落次数当 shop_refresh_cost(§3.3.4 免费帧不写;
-   T-15 推翻「免费帧渲染无数字」旧假设后的结构性防线);
+   T-15 推翻「免费帧渲染无数字」旧假设后的结构性防线);同帧 gold 透传闸
+   (灰态判别输入,失读保真 None 禁 0 假值);
 3. **真帧锁**(三态归档 fixture × 项目真 OCR):免费帧锚命中读数 2 /
-   付费帧标价 2 / 灰态帧标价 2+金 1 不可负担。
+   付费帧标价 2 / 灰态帧标价 2+金 1 不可负担;「标识-免费刷新」锚判别
+   边界直锁(免费帧命中 / 付费帧+灰态帧不命中)。
 
 证据帧出处 = ``.debug/currency_war/evidence/20260912_t15_t13_t18/``
 (测试仓归档 = ``screens/货币战争-备战-开商店/免费刷新可用|刷新耗尽付费态|
@@ -338,8 +340,8 @@ def test_feed_free_frame_carries_never_writes_count_as_price(
     # 前置:付费帧写入旧标价 2(独立 session,零桩污染)
     monkeypatch.setattr(
         cw_shop_refresh_obs, 'read_shop_refresh_button',
-        lambda ctx, screen: ShopRefreshButton(free=False, free_remaining=None,
-                                              price=2, affordable=True),
+        lambda ctx, screen, gold=None: ShopRefreshButton(
+            free=False, free_remaining=None, price=2, affordable=True),
     )
     obs.read_game_state(_feed_ctx(sess), None, phase='prep_shop_open')
     bs = board_state_of(sess)
@@ -348,8 +350,8 @@ def test_feed_free_frame_carries_never_writes_count_as_price(
     # 免费帧:锚命中(次数 2)→ carry 沿旧值,次数禁入标价通道
     monkeypatch.setattr(
         cw_shop_refresh_obs, 'read_shop_refresh_button',
-        lambda ctx, screen: ShopRefreshButton(free=True, free_remaining=2,
-                                              price=None, affordable=True),
+        lambda ctx, screen, gold=None: ShopRefreshButton(
+            free=True, free_remaining=2, price=None, affordable=True),
     )
     obs.read_game_state(_feed_ctx(sess), None, phase='prep_shop_open')
     bs2 = board_state_of(sess)
@@ -360,20 +362,55 @@ def test_feed_free_frame_carries_never_writes_count_as_price(
 
 def test_feed_paid_frame_observes_price(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """对照(付费帧):锚未中+标价读出 → 照旧 observe(行为逐位一致)。"""
+    """对照(付费帧):锚未中+标价读出 → 照旧 observe(行为逐位一致);
+    同帧 gold 透传闸:喂入口必须把 state.gold 传按钮态闸(灰态判别定谳
+    =逻辑面金价对比,观察侧 affordable 由本透传活化)。"""
     from sr_od.application.currency_war.obs import cw_observation as obs
 
     _patch_feed_readers(monkeypatch)
-    monkeypatch.setattr(
-        cw_shop_refresh_obs, 'read_shop_refresh_button',
-        lambda ctx, screen: ShopRefreshButton(free=False, free_remaining=None,
-                                              price=2, affordable=True),
-    )
+    captured: dict = {}
+
+    def _btn_spy(ctx: object, screen: object, gold: int | None = None) \
+            -> ShopRefreshButton:
+        captured['gold'] = gold
+        return ShopRefreshButton(free=False, free_remaining=None,
+                                 price=2, affordable=True)
+
+    monkeypatch.setattr(cw_shop_refresh_obs, 'read_shop_refresh_button',
+                        _btn_spy)
     sess = SimpleNamespace(last_streak=0, active_strategies=[])
     obs.read_game_state(_feed_ctx(sess), None, phase='prep_shop_open')
     bs = board_state_of(sess)
     assert bs.shop_refresh_cost.value == 2
     assert bs.shop_refresh_cost.source == 'observation'
+    assert captured['gold'] == 20, \
+        f'喂入口必须透传同帧 state.gold(read_gold_settled 桩=20),实得 {captured}'
+
+
+def test_feed_gold_unread_passes_none(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """金失读帧:read_gold_settled 失读 → gold_readable=False,喂入口传
+    gold=**None** 保真(禁 0 假值混进可负担对比:0≥价恒 False 会把失读
+    误判成不可负担)→ composite 内 affordable=None 按失读处理。"""
+    from sr_od.application.currency_war.obs import cw_observation as obs
+
+    _patch_feed_readers(monkeypatch)
+    monkeypatch.setattr(obs, 'read_gold_settled', lambda ctx, screen: None,
+                        raising=False)
+    captured: dict = {}
+
+    def _btn_spy(ctx: object, screen: object, gold: int | None = None) \
+            -> ShopRefreshButton:
+        captured['gold'] = gold
+        return ShopRefreshButton(free=False, free_remaining=None,
+                                 price=2, affordable=None)
+
+    monkeypatch.setattr(cw_shop_refresh_obs, 'read_shop_refresh_button',
+                        _btn_spy)
+    sess = SimpleNamespace(last_streak=0, active_strategies=[])
+    obs.read_game_state(_feed_ctx(sess), None, phase='prep_shop_open')
+    assert captured['gold'] is None, \
+        f'金失读必须传 None 禁 0 假值,实得 {captured}'
 
 
 # ===== 4. 真帧锁(三态归档 fixture × 项目真 OCR;本地跑,模型缺 → skip) =====
@@ -431,6 +468,37 @@ def test_button_real_fixtures(
     btn = read_shop_refresh_button(test_context, img_gray, gold=1)
     assert btn.free is False, f'灰态帧锚应未中(渲染同付费): {btn}'
     assert btn.price == 2 and btn.affordable is False, f'{btn}'
+
+
+def test_free_anchor_three_state_boundary(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """「标识-免费刷新」锚判别边界直锁(三态归档帧 × 真 OCR,直接打锚
+    函数):免费帧命中(True)/付费帧不命中/灰态帧不命中(False)。本 area
+    ``id_mark=false``(画面级判定不依赖它),通用 id_mark 扫描不覆盖其
+    判别边界——lcs 0.7 对付费/灰态「刷新」两字的拒识在此独立锁死,防
+    rect/阈值调整或 OCR 行为漂移静默破坏三态判别(T-84)。fixture/
+    area/模型缺 → skip。"""
+    fix_dir = Path(__file__).resolve().parents[4] / 'screens' / _SHOP_SCREEN_DIR
+    frames = [fix_dir / f'{n}.webp' for n in
+              (_FREE_FRAME, _PAID_FRAME, _GRAY_FRAME)]
+    if not all(p.exists() for p in frames):
+        pytest.skip('fixture 缺失')
+    if test_context.screen_loader.get_area(
+            '货币战争-备战-开商店',
+            cw_shop_refresh_obs._FREE_ANCHOR_AREA) is None:
+        pytest.skip('标识-免费刷新 area 未入运行时 screen_info')
+    _real_ocr_ctx_or_skip(test_context, monkeypatch)
+
+    from one_dragon.utils import cv2_utils
+
+    img_free = cv2_utils.read_image(str(frames[0]))
+    assert cw_shop_refresh_obs._free_anchor_hit(test_context, img_free) is True, \
+        '免费帧锚应命中(真阳性——免费态判定的唯一 UI 事实源)'
+    for name, img_path in ((_PAID_FRAME, frames[1]),
+                           (_GRAY_FRAME, frames[2])):
+        img = cv2_utils.read_image(str(img_path))
+        assert cw_shop_refresh_obs._free_anchor_hit(test_context, img) is False, \
+            f'{name} 锚必须不命中(「刷新」两字 lcs 2/4=0.5 < 0.7 拒识边界)'
 
 
 def test_price_reader_free_frame_count_is_not_price_via_gate(
