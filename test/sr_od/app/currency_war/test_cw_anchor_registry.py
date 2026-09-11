@@ -4,7 +4,7 @@
 AnchorEvent + 载体接线 emit_anchor + 观测-only 守卫)。设计正本 =
 ``docs/develop/currency_war/design/统一观察架构-画面op基类设计.md`` §12
 (锚点事件集总表 §12.2 / 数据面 schema §12.3 / 测试锁五条 §12.4-B /
-对抗审 T-217 发现 6/7 的锁④拆分与 effect_ref 结构锁)。
+对抗审发现 6/7 的锁④拆分与 effect_ref 结构锁,折入设计正本 §12.4-B 锁编号对照)。
 
 本批辖域申报:
 
@@ -106,7 +106,8 @@ def test_emit_rejects_unregistered_anchor(anchor_env):
 
 
 def test_levelup_landed_kind_revoked_no_double_row_regrowth():
-    """禁双行回归守卫(T-217 发现 3 修复面):被撤的 kind='levelup_landed'
+    """禁双行回归守卫(对抗审发现 3 修复面,申报否决折入设计正本
+    §12.2 levelup_landed 行):被撤的 kind='levelup_landed'
     不得以任何行的载体 kind 回潮(现役行 = kind='level_up' 复用)。"""
     from sr_od.application.currency_war.kernel.cw_anchor import (
         ANCHOR_REGISTRY,
@@ -169,9 +170,10 @@ def test_boundary_declaration_surface_is_registry_type_column():
 
 
 def test_refresh_landed_carrier_routing_deferred(anchor_env):
-    """refresh_landed 载体 = 三写点即锚面(§12.2「收编」行;非单一
-    ExogenousEvent kind),锚行落盘路由候 H2 申报——本批发射口对该锚
-    拒绝路由(如实申报,不假装有单一载体 kind)。"""
+    """refresh_landed 载体 = 原三写点面(宿主写点已随删除波 1 退役,
+    归宿候裁挂 retirement.md §2;非单一 ExogenousEvent kind),锚行落盘
+    路由候 H2 申报——本批发射口对该锚拒绝路由(如实申报,不假装有单一
+    载体 kind)。"""
     from sr_od.application.currency_war.kernel.cw_anchor import emit_anchor
     with pytest.raises(ValueError, match='载体'):
         emit_anchor('refresh_landed', plane=1, round_num=1, payload={},
@@ -441,14 +443,36 @@ def test_unknown_payload_domain_ref_arming_rejected():
         cw_anchor.register_payload_domain_values('elsewhere.SET', frozenset())
 
 
+#: 惰性面字面豁免(本锁 docstring 预留「随批申报扩展」通道的扩展;
+#: 逐条依据见锁 docstring 语义重推)。
+#: - kernel/cw_telemetry_exit.py:出口桩 docstring 持久指针(T-272 申报);
+#: - operations/cw_screen/cw_screen_boss_briefing.py:T-8 五相位屏迁移批,
+#:   模块 docstring 指向判别单一源在册锁文件(test_cw_anchor_exclusion)
+#:   作持久索引——散文提及 ≠ import/调用(同 cw_telemetry_exit 豁免语义;
+#:   该屏零锚机制消费,本批迁移只改宿主类)。
+_LAZY_FACE_MENTION_WHITELIST: frozenset[str] = frozenset({
+    'kernel/cw_telemetry_exit.py',
+    'operations/cw_screen/cw_screen_boss_briefing.py',
+})
+
+
 def test_anchor_mechanism_lazy_zero_production_call_sites():
     """零生产消费守卫(cw_game_ports 批 0 同款):本批机制 = 惰性纯登记
     文件,src 全树除机制文件自身零引用 = 零行为变更的机器可验面。触发口
-    接线批落调用点时,本锁白名单随批申报扩展(先改锁再接线)。"""
+    接线批落调用点时,本锁白名单随批申报扩展(先改锁再接线)。
+
+    白名单语义重推(T-272 修正批申报):kernel/cw_telemetry_exit.py 的
+    record_exogenous 出口桩 = 锚机制自身的合法上行出口(依赖方向
+    cw_anchor → record_exogenous,单向,非消费方);该文件含「cw_anchor」
+    字面是出口桩 docstring 按注释规范必须携带的持久指针(模块路径),
+    散文提及 ≠ import/调用,锁意图(机制面零生产消费、接线先改锁)未破
+    ——子串扫描对「散文提及」过近似,按预留通道豁免该文件。"""
     offenders: list[str] = []
     for path in _SRC_CW.rglob('*.py'):
         rel = path.relative_to(_SRC_CW).as_posix()
         if rel.replace('\\', '/').endswith('kernel/cw_anchor.py'):
+            continue
+        if rel in _LAZY_FACE_MENTION_WHITELIST:
             continue
         if 'cw_anchor' in path.read_text(encoding='utf-8'):
             offenders.append(rel)

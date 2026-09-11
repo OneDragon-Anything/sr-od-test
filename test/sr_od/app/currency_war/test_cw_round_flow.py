@@ -163,7 +163,6 @@ def test_no_round_retry_tail() -> None:
     assert "round_retry" not in tail or "_miss_rounds" in tail, (
         'r279: 全分支 miss 尾分支不得引入无界 retry(须由 _miss_rounds 有界化)')
     # overlay 分支 retry 必须自述预算有界依据(K1 改形备注),防退化为裸 retry 尾
-    overlay_retry = src.split('_overlay_branch(')[0].count('round_retry')
     assert 'node_max_retry_times=30' in src, (
         'overlay 分支 retry 化的预算锚(exit_match 节点预算 30)必须在场')
 
@@ -537,11 +536,14 @@ def test_branch3_records_before_continue_click() -> None:
 
     顺序即语义(README 纪律 8 容忍档,记债):读点先于点击 = 读的是点击前
     同帧,无更便宜观测点(经 wait() 全链重放需整套结算 fixture)。锚取
-    wait() 内单次出现的调用名,不锚缩进/换行形状(合法重排不假红)。"""
+    分支链内单次出现的调用名,不锚缩进/换行形状(合法重排不假红)。
+    T-8 重锚申报:分支链自 wait() 平移进共享方法 ``_dispatch_frame``(装配
+    点分流转录,T-8 五相位屏迁移;两路径共享零转录),锚面随体迁移——锁
+    语义(读点先于点击)不变,锚目标 = 现承载方法。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait,
     )
-    src = inspect.getsource(cw_screen_battle_wait.CwScreenBattleWait.wait)
+    src = inspect.getsource(cw_screen_battle_wait.CwScreenBattleWait._dispatch_frame)
     i_read = src.index('_record_round_outcome(screen)')
     i_click = src.index('round_by_find_and_click_area')
     assert i_read < i_click
