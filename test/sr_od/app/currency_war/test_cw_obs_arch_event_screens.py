@@ -49,21 +49,17 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySe
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
     CwScreenOpBase,
 )
-from test.harness.fixture_controller import (
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
+from test.sr_od.app.currency_war._cw_helpers import (
+    Area as _Area,
 )
-from test.sr_od.app.currency_war._cw_helpers import install_dispatch_stub_ports
+from test.sr_od.app.currency_war._cw_helpers import (
+    install_dispatch_stub_ports,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    run_node as _run_node,
+)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递不断言内容)
-
-
-class _Area:
-    """round_by_find_area 桩回执(程序化回 in_screen/in_node)。"""
-
-    def __init__(self, ok: bool) -> None:
-        self.is_success = ok
 
 
 def _make_session() -> StrategySession:
@@ -141,16 +137,6 @@ def _make_megastar(test_context, monkeypatch, *, in_node: bool):
     calls: list[int] = []
     monkeypatch.setattr(op, '_do_action', lambda scr: calls.append(1))
     return op, match, session, calls
-
-
-def _run_node(test_context, op, fn) -> object:
-    """节点函数运行外壳(fast_sleep + running_state;返回轮次结果)。"""
-    with fast_sleep():
-        enter_running_state(test_context)
-        try:
-            return fn()
-        finally:
-            reset_running_state(test_context, op)
 
 
 # ==================== 迁移结构锁(§9.1 并存期)====================

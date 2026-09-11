@@ -31,11 +31,13 @@ receipts.py 回执三出口/test_cw_op_boundary、test_cw_launch_arbitrage
 锁的语义(测试纪律 7 自检;出处 = 本批报告对照表 + 总纲契约 1/5):
 
 - **结构锁**:三件是 CwScreenOpBase 子类(SrOperation 祖链不截断)∧
-  start 节点方法顶部装配点分流(表达式同总纲契约 1,先于旧路径调用;
-  节点预算归装饰器、保持缺省不随路径变)∧ 变体五段钩子覆写(open/close
-  observe 早退语义 + reconcile/decide 空申报;buy 空申报 observe/reconcile
-  + decision_cycle 消费委托体)∧ on_outcome 无登记件(三模块零
-  register_outcome_hook,注册表缺席 = 零动作)。
+  节点预算保持缺省(归装饰器、不随路径变——登记门)∧ 变体五段钩子
+  覆写(open/close observe 早退语义 + reconcile/decide 空申报;buy 空申报
+  observe/reconcile + decision_cycle 消费委托体)∧ on_outcome 无登记件
+  (三模块零 register_outcome_hook,注册表缺席 = 零动作)。装配点分流的
+  存在性/「先于旧路径调用」不再源码锁(纪律 8 形状锁禁):装端口恰一次
+  点击(分流后置 = 装端口双击即红)、幂等早退零点击、buy 恰一次委托的
+  行为锁承重同一事实。
 - **新路径语义锁**:装两端口经节点方法走变体五段,轮次语义与旧路径
   逐条同形(open 三出口/.close 两出口/buy 委托透传)+ 段迹形态
   (全五段/observe 早退仅一段);不装端口 → 旧路径同形零段迹
@@ -58,12 +60,15 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base impor
     CwScreenOpBase,
 )
 from sr_od.operations.sr_operation import SrOperation
-from test.harness.fixture_controller import (
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
+from test.sr_od.app.currency_war._cw_helpers import (
+    install_dispatch_stub_ports,
 )
-from test.sr_od.app.currency_war._cw_helpers import install_dispatch_stub_ports
+from test.sr_od.app.currency_war._cw_helpers import (
+    run_node as _run_node,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    uninstall_ports as _uninstall_ports,
+)
 
 #: 三件清单(模块名 → 类名 → start 节点方法名 → 旧路径被委托体)
 _SHOP_OPS = {
@@ -71,9 +76,6 @@ _SHOP_OPS = {
     'cw_op_close_shop': ('CwOpCloseShop', 'close', 'close_shop(self)'),
     'cw_op_buy_cards': ('CwOpBuyCards', 'buy', 'return self._buy_round()'),
 }
-
-_DISPATCH_EXPR = ('observation_source() is not None'
-                  ' and action_sink() is not None')
 
 _FULL_TRACE = ['observe', 'reconcile', 'decide', 'act', 'on_outcome']
 
@@ -93,26 +95,11 @@ def _shop_module(name: str):
     }[name]
 
 
-def _uninstall_ports(monkeypatch: pytest.MonkeyPatch) -> None:
-    """卸载复位(生产缺省形态;旧路径代表驱动专用,先例 = T-47 锁)。"""
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-
-
-def _run_node(test_context, op, fn) -> object:
-    """节点函数运行外壳(fast_sleep + running_state;返回轮次结果)。"""
-    with fast_sleep():
-        enter_running_state(test_context)
-        try:
-            return fn()
-        finally:
-            reset_running_state(test_context, op)
-
-
 def _make_open_shop(test_context, monkeypatch: pytest.MonkeyPatch, *,
                     shop_open: bool, click_ok: bool = True):
     """开商店真类装配(round_by_*/screenshot/park_cursor 实例级桩;
-    生产构造走 __init__ = 注册表/适配器位在位)。"""
+    生产构造走 __init__ = 注册表/适配器位在位)。``clicks`` = 发出的
+    点击记录(观察纯读零动作 / 装端口恰一次点击的行为锁载体)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_open_shop as m,
     )
@@ -120,15 +107,22 @@ def _make_open_shop(test_context, monkeypatch: pytest.MonkeyPatch, *,
     monkeypatch.setattr(op, 'screenshot', lambda: _FRAME)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda *a, **k: SimpleNamespace(is_success=shop_open))
-    monkeypatch.setattr(op, 'round_by_find_and_click_area',
-                        lambda *a, **k: SimpleNamespace(is_success=click_ok))
+    clicks: list = []
+
+    def _click(*a, **k):
+        if click_ok:
+            clicks.append(1)   # 只计发出的点击(find 未命中 = 未发出)
+        return SimpleNamespace(is_success=click_ok)
+
+    monkeypatch.setattr(op, 'round_by_find_and_click_area', _click)
     monkeypatch.setattr(op, 'park_cursor', lambda *a, **k: None)
-    return op
+    return op, clicks
 
 
 def _make_close_shop(test_context, monkeypatch: pytest.MonkeyPatch, *,
                      shop_open: bool):
-    """关商店真类装配(桩面同开商店;融合判定点击 is_success = shop_open)。"""
+    """关商店真类装配(桩面同开商店;融合判定点击 is_success = shop_open)。
+    ``clicks`` = 发出的点击记录(行为锁载体,同开商店)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_close_shop as m,
     )
@@ -136,10 +130,16 @@ def _make_close_shop(test_context, monkeypatch: pytest.MonkeyPatch, *,
     monkeypatch.setattr(op, 'screenshot', lambda: _FRAME)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda *a, **k: SimpleNamespace(is_success=shop_open))
-    monkeypatch.setattr(op, 'round_by_find_and_click_area',
-                        lambda *a, **k: SimpleNamespace(is_success=shop_open))
+    clicks: list = []
+
+    def _click(*a, **k):
+        if shop_open:
+            clicks.append(1)   # 只计发出的点击(find 未命中 = 未发出)
+        return SimpleNamespace(is_success=shop_open)
+
+    monkeypatch.setattr(op, 'round_by_find_and_click_area', _click)
     monkeypatch.setattr(op, 'park_cursor', lambda *a, **k: None)
-    return op
+    return op, clicks
 
 
 def _make_buy_cards(test_context, monkeypatch: pytest.MonkeyPatch, *,
@@ -181,21 +181,15 @@ def test_shop_ops_inherit_base() -> None:
 
 
 @pytest.mark.parametrize('mod_name', sorted(_SHOP_OPS))
-def test_shop_op_dispatch_source_form(mod_name: str) -> None:
-    """结构锁②(总纲契约 1):start 节点方法顶部装配点分流——表达式
-    同总纲(两端口完整在场)、run_lifecycle 在场、分流先于旧路径调用
-    (旧路径原序列保留位);节点预算保持缺省(预算归装饰器,不随路径
-    变,总纲契约 1/5)。红 = 分流缺失(装端口仍走旧路径 = 收编无效)、
-    分流后置(旧路径先执行 = 生产行为变化)或预算漂移。"""
+def test_shop_op_node_budget_default_gate(mod_name: str) -> None:
+    """结构锁②(登记门):节点预算保持缺省——预算归装饰器、不随收编变
+    (总纲契约 1/5 红线)。红时该登记的是「该 op 预算为何改」。
+    分流表达式/旧路径保留位的存在性与先后不再源码锁(纪律 8 形状锁禁):
+    装端口恰一次点击、不装端口同形零段迹的双向行为锁在分流被删/后置时
+    必红(下方语义锁 + clicks 计数承重同一事实)。"""
     mod = _shop_module(mod_name)
-    cls_name, node_name, old_call = _SHOP_OPS[mod_name]
+    cls_name, node_name, _old_call = _SHOP_OPS[mod_name]
     src = inspect.getsource(getattr(mod, cls_name).__dict__[node_name])
-    assert _DISPATCH_EXPR in src, f'{cls_name}.{node_name} 缺装配点分流判据'
-    assert 'run_lifecycle' in src, f'{cls_name}.{node_name} 分流缺 run_lifecycle'
-    assert old_call in src, f'{cls_name}.{node_name} 缺旧路径保留位({old_call})'
-    assert src.index(_DISPATCH_EXPR) < src.index(old_call), (
-        f'{cls_name}.{node_name} 分流须在旧路径之前(契约 1:分流在顶部,'
-        f'生产行为零变化)')
     assert 'node_max_retry_times' not in src, (
         f'{cls_name}.{node_name} 节点预算被显式改动(缺省预算不随收编变,'
         f'契约 5 红线)')
@@ -204,7 +198,10 @@ def test_shop_op_dispatch_source_form(mod_name: str) -> None:
 def test_open_close_variant_hooks_declared() -> None:
     """结构锁③(open/close 只读/导航变体):observe 早退语义(幂等出口
     构造共享单一构造)∧ reconcile/decide 空申报显式覆写 ∧ act 整体委托
-    旧路径函数(零第二转录)∧ 零策略器问询(B4 选项②空决策合同声明)。"""
+    旧路径函数(零第二转录)∧ 零策略器问询(B4 选项②空决策合同声明)。
+    段迹标记在位/observe 纯读零动作不再源码锁:装端口段迹恰五段/observe
+    早退仅一段的行为锁 + 幂等早退 clicks == [] 行为锁承重同一事实
+    (纪律 8:实现形状锁禁)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_close_shop as cm,
     )
@@ -221,18 +218,11 @@ def test_open_close_variant_hooks_declared() -> None:
             is not CwScreenOpBase.lifecycle_reconcile, (
             f'{cls_name} reconcile 空申报未显式')
         obs_src = inspect.getsource(cls.lifecycle_observe)
-        assert 'round_by_find_area' in obs_src, (
-            f'{cls_name} observe 非纯读判定(点击动作不得进观察段)')
         assert exit_helper in obs_src, (
             f'{cls_name} observe 幂等出口未共享单一构造({exit_helper})')
         dc_src = inspect.getsource(cls.lifecycle_decision_cycle)
         assert f'{old_fn}(self)' in dc_src, (
             f'{cls_name} act 半未整体委托 {old_fn}(旧体单一共享)')
-        assert "_lifecycle_mark('decide')" in dc_src, (
-            f'{cls_name} decide 段迹缺失')
-        assert "_lifecycle_mark('act')" in dc_src, f'{cls_name} act 段迹缺失'
-        assert "_lifecycle_mark('on_outcome')" in dc_src, (
-            f'{cls_name} on_outcome 段迹缺失')
         assert 'strategy' not in dc_src, (
             f'{cls_name} decide 空申报被破坏:决策循环出现策略器问询'
             f'(B4 选项②零策略消费合同)')
@@ -288,12 +278,13 @@ def test_open_shop_already_open_early_exit(
         install_dispatch_stub_ports(monkeypatch)
     else:
         _uninstall_ports(monkeypatch)
-    op = _make_open_shop(test_context, monkeypatch, shop_open=True)
+    op, clicks = _make_open_shop(test_context, monkeypatch, shop_open=True)
 
     rs = _run_node(test_context, op, op.open)
 
     assert rs.is_success and '商店已开' in (rs.status or ''), (
         f'幂等已开应 success 交回:{rs!r}')
+    assert clicks == [], '幂等早退零点击(observe 纯读,旧路径亦零执行)'
     expected = ['observe'] if install else []
     assert op._lifecycle_trace == expected, f'段迹漂移:{op._lifecycle_trace}'
 
@@ -307,13 +298,15 @@ def test_open_shop_click_issued_reentry_roundtrip(
         install_dispatch_stub_ports(monkeypatch)
     else:
         _uninstall_ports(monkeypatch)
-    op = _make_open_shop(test_context, monkeypatch, shop_open=False,
-                         click_ok=True)
+    op, clicks = _make_open_shop(test_context, monkeypatch, shop_open=False,
+                                 click_ok=True)
 
     rs = _run_node(test_context, op, op.open)
 
     assert not rs.is_success and '重入观察裁决' in (rs.status or ''), (
         f'点击已发应机械交回 retry:{rs!r}')
+    assert len(clicks) == 1, (
+        f'点击恰一次(分流后置/旧路径先执行 = 装端口双击,此处红):{clicks!r}')
     expected = _FULL_TRACE if install else []
     assert op._lifecycle_trace == expected, f'段迹漂移:{op._lifecycle_trace}'
 
@@ -326,13 +319,14 @@ def test_open_shop_not_found_fail(
         install_dispatch_stub_ports(monkeypatch)
     else:
         _uninstall_ports(monkeypatch)
-    op = _make_open_shop(test_context, monkeypatch, shop_open=False,
-                         click_ok=False)
+    op, clicks = _make_open_shop(test_context, monkeypatch, shop_open=False,
+                                 click_ok=False)
 
     rs = _run_node(test_context, op, op.open)
 
     assert not rs.is_success and '找不到商店/收起按钮' in (rs.status or ''), (
         f'入口观察失败应 fail 交回:{rs!r}')
+    assert clicks == [], '入口观察失败 = 动作没发出,零点击'
     expected = _FULL_TRACE if install else []
     assert op._lifecycle_trace == expected, f'段迹漂移:{op._lifecycle_trace}'
 
@@ -346,12 +340,13 @@ def test_close_shop_already_closed_early_exit(
         install_dispatch_stub_ports(monkeypatch)
     else:
         _uninstall_ports(monkeypatch)
-    op = _make_close_shop(test_context, monkeypatch, shop_open=False)
+    op, clicks = _make_close_shop(test_context, monkeypatch, shop_open=False)
 
     rs = _run_node(test_context, op, op.close)
 
     assert rs.is_success and '商店已关' in (rs.status or ''), (
         f'幂等已关应 success 交回:{rs!r}')
+    assert clicks == [], '幂等早退零点击(observe 纯读,旧路径亦零执行)'
     expected = ['observe'] if install else []
     assert op._lifecycle_trace == expected, f'段迹漂移:{op._lifecycle_trace}'
 
@@ -365,12 +360,14 @@ def test_close_shop_click_issued_reentry_roundtrip(
         install_dispatch_stub_ports(monkeypatch)
     else:
         _uninstall_ports(monkeypatch)
-    op = _make_close_shop(test_context, monkeypatch, shop_open=True)
+    op, clicks = _make_close_shop(test_context, monkeypatch, shop_open=True)
 
     rs = _run_node(test_context, op, op.close)
 
     assert not rs.is_success and '重入观察裁决' in (rs.status or ''), (
         f'点击已发应机械交回 retry:{rs!r}')
+    assert len(clicks) == 1, (
+        f'点击恰一次(分流后置/旧路径先执行 = 装端口双击,此处红):{clicks!r}')
     expected = _FULL_TRACE if install else []
     assert op._lifecycle_trace == expected, f'段迹漂移:{op._lifecycle_trace}'
 

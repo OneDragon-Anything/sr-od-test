@@ -16,10 +16,11 @@ sim 无对应画面段(空决策合同零策略问询、零 BoardState 写端),�
 锁的语义(测试纪律 7 自检;出处 = landing 阶段二判据 + 总纲契约 1-5):
 
 - **变体结构锁**:CwProgressionScreenOp 是 CwScreenOpBase 子类 ∧ 11 子类
-  AST 全量为其后代 ∧ handle 含装配点分流判据表达式(两端口完整在场 →
-  run_lifecycle,分流先于骨架观察;缺省 None = 现役骨架,§9.1 并存期)
+  AST 全量为其后代 ∧ 节点预算 = 2 归装饰器不随路径变(登记门,ADR-0584)
   ∧ 变体五段钩子在(observe 早退语义 + decide 空申报 = 本屏无策略消费
-  合同声明)∧ 节点预算 = 2 归装饰器不随路径变(ADR-0584)。
+  合同声明)。装配点分流的存在性/「先于骨架观察」不再源码锁(纪律 8
+  形状锁禁):装端口走变体五段的行为锁承重分流存在性,重入往返锁的
+  入口单读计数承重「分流在 handle 顶部」(后置 = 每轮双读即红)。
 - **新路径语义锁**(§9.1-F2 主门 (a) 变体行):装两端口经 handle() 走
   变体五段,ADR-0584 轮次语义(误分发 fail / 推进 retry / 重入 success
   清旗标 / act 未落地 fail / 免锚发出即 success)逐条保形 + 段迹形态;
@@ -47,12 +48,15 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base impor
 )
 from sr_od.context.sr_context import SrContext
 from sr_od.operations.sr_operation import SrOperation
-from test.harness.fixture_controller import (
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
+from test.sr_od.app.currency_war._cw_helpers import (
+    install_dispatch_stub_ports,
 )
-from test.sr_od.app.currency_war._cw_helpers import install_dispatch_stub_ports
+from test.sr_od.app.currency_war._cw_helpers import (
+    run_node as _run_node,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    uninstall_ports as _uninstall_ports,
+)
 
 #: 11 子类(详设辖域清单;模块名 → 画面 op 类名)
 _SUBCLASS_MODULES = {
@@ -78,33 +82,23 @@ def _prog_module(name: str):
         f'sr_od.application.currency_war.operations.cw_screen.{name}')
 
 
-def _uninstall_ports(monkeypatch: pytest.MonkeyPatch) -> None:
-    """卸载复位(生产缺省形态;旧路径代表驱动专用,先例 = T-8 锁)。"""
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-
-
-def _run_node(test_context, op, fn) -> object:
-    """节点函数运行外壳(fast_sleep + running_state;返回轮次结果)。"""
-    with fast_sleep():
-        enter_running_state(test_context)
-        try:
-            return fn()
-        finally:
-            reset_running_state(test_context, op)
-
-
 def _make_plane_detail(test_context, monkeypatch: pytest.MonkeyPatch, *,
                        entry_hit: bool, progress_ok: bool = True):
     """位面详情真类装配(entry_ok/progress_once 实例级桩;生产构造走
-    __init__ = 注册表/适配器位在位)。``entry`` dict 供重入场景翻转。"""
+    __init__ = 注册表/适配器位在位)。``entry`` dict 供重入场景翻转;
+    ``entry['reads']`` = 入口读计数(单轮单读行为锁载体)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_plane_detail as pdm,
     )
 
     op = pdm.CwScreenPlaneDetail(test_context)
-    entry = {'hit': entry_hit}
-    monkeypatch.setattr(op, 'entry_ok', lambda screen: entry['hit'])
+    entry = {'hit': entry_hit, 'reads': 0}
+
+    def _entry_ok(screen) -> bool:
+        entry['reads'] += 1
+        return entry['hit']
+
+    monkeypatch.setattr(op, 'entry_ok', _entry_ok)
     monkeypatch.setattr(op, 'progress_once', lambda: progress_ok)
     return op, entry
 
@@ -159,44 +153,33 @@ def test_progression_subclasses_ast_full_coverage() -> None:
                 f'(变体收编面漂移)')
 
 
-def test_progression_variant_handle_dispatch_source_form() -> None:
-    """变体结构锁③:handle 顶部装配点分流(表达式同总纲契约 1,先于
-    骨架入口观察)∧ 节点预算 = 2 归装饰器不随路径变(ADR-0584,与
-    test_cw_progression_ops 合同锁同判据的基类面)。红 = 分流判据缺失
-    (装端口仍走旧路径 = 收编无效)、分流后置(骨架先执行 = 生产行为
-    变化)或预算漂移。"""
+def test_progression_variant_node_budget_gate() -> None:
+    """变体结构锁③(登记门):节点预算 = 2 归装饰器不随路径变
+    (ADR-0584)。红时该登记的是「推进型预算为何改」。装配点分流的
+    存在性/「先于骨架入口观察」不再源码锁(纪律 8 形状锁禁):装端口
+    走变体五段的行为锁承重分流存在性;「分流在 handle 顶部」由重入
+    往返锁的入口单读计数承重(分流后置 = handle 先读 + observe 再读,
+    每轮双读,reads 计数即红)。"""
     src = inspect.getsource(pb.CwProgressionScreenOp.handle)
     assert 'node_max_retry_times=2' in src, '推进节点预算 ≠ 2(ADR-0584)'
-    i_disp = src.index('observation_source() is not None'
-                       ' and action_sink() is not None')
-    assert 'run_lifecycle' in src, '分流缺 run_lifecycle(收编无效)'
-    assert i_disp < src.index('self.entry_ok'), (
-        '装配点分流须在 handle 顶部、骨架入口观察之前(总纲契约 1)')
 
 
 def test_progression_variant_hooks_declared() -> None:
     """变体结构锁④(详设 §4「变体五段钩子在」):三钩子均为本类覆写;
-    observe 早退语义(误分发 round_fail / 重入 round_success 清旗标
-    wait=1);decide 空申报(段迹登记 + 零策略器问询,ADR-0584)+
-    act 半(progress_once)+ on_outcome 段迹;on_outcome 无登记件
-    (模块零 register_outcome_hook,注册表缺席 = 零动作)。"""
+    decide 空申报(零策略器问询,ADR-0584)+ on_outcome 无登记件
+    (模块零 register_outcome_hook,注册表缺席 = 零动作)。
+    observe 早退分支形态/旗标清零写点/段迹标记在位不再源码锁:误分发
+    fail、重入 success 清旗标、act 未落地 fail 的双向行为锁(下方)承重
+    同一事实(纪律 8:实现形状锁禁);``wait=1`` 轮间等待由框架在返回
+    对象之外消费,无行为观测点,随位序锁一并退役。"""
     assert pb.CwProgressionScreenOp.lifecycle_observe \
         is not CwScreenOpBase.lifecycle_observe, 'observe 钩子未覆写'
     assert pb.CwProgressionScreenOp.lifecycle_reconcile \
         is not CwScreenOpBase.lifecycle_reconcile, 'reconcile 空申报未显式'
     assert pb.CwProgressionScreenOp.lifecycle_decision_cycle \
         is not CwScreenOpBase.lifecycle_decision_cycle, '决策循环未覆写'
-    obs_src = inspect.getsource(pb.CwProgressionScreenOp.lifecycle_observe)
-    assert 'round_fail' in obs_src and 'round_success' in obs_src, (
-        'observe 早退语义缺分支(误分发 fail / 重入 success)')
-    assert 'self._advanced_once = False' in obs_src, (
-        '重入裁决出口须清旗标(ADR-0584 骨架合同)')
-    assert 'wait=1' in obs_src, '重入 success 交回等待 ≠ 1(轮次语义漂移)'
     dc_src = inspect.getsource(
         pb.CwProgressionScreenOp.lifecycle_decision_cycle)
-    assert "_lifecycle_mark('decide')" in dc_src, 'decide 段迹缺失'
-    assert 'progress_once' in dc_src, 'act 半未消费 progress_once'
-    assert "_lifecycle_mark('on_outcome')" in dc_src, 'on_outcome 段迹缺失'
     assert 'strategy' not in dc_src, (
         'decide 空申报被破坏:决策循环出现策略器问询(ADR-0584 零策略器'
         '问询合同)')
@@ -233,6 +216,9 @@ def test_progression_variant_reentry_roundtrip_both_paths(
     assert rs2.is_success and '已推进' in (rs2.status or ''), (
         f'重入锚 miss 应 success 交回:{rs2!r}')
     assert op._advanced_once is False, '重入出口须清旗标(ADR-0584)'
+    assert entry['reads'] == 2, (
+        f'两轮各恰一次入口读(分流在 handle 顶部——后置时每轮 handle 先读'
+        f' + observe 再读 = 双读,此处红):{entry["reads"]}')
     expected = (_FULL_TRACE + ['observe']) if install else []
     assert op._lifecycle_trace == expected, (
         f'段迹形态漂移:{op._lifecycle_trace}')

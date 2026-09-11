@@ -65,12 +65,15 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySe
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
     CwScreenOpBase,
 )
-from test.harness.fixture_controller import (
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
+from test.sr_od.app.currency_war._cw_helpers import (
+    Area as _Area,
 )
-from test.sr_od.app.currency_war._cw_helpers import install_dispatch_stub_ports
+from test.sr_od.app.currency_war._cw_helpers import (
+    install_dispatch_stub_ports,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    run_node as _run_node,
+)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;共享体桩只验传递不断言内容)
 _OK_RS = OperationRoundResult(OperationRoundResultEnum.SUCCESS, status='stub')
@@ -88,13 +91,6 @@ _BATCH3_SCREENS: tuple[tuple[str, str], ...] = (
 )
 
 
-class _Area:
-    """round_by_find_area 桩回执(程序化回 in_screen/in_node)。"""
-
-    def __init__(self, ok: bool) -> None:
-        self.is_success = ok
-
-
 def _make_op(test_context, monkeypatch, module_name: str, cls_name: str, *,
              in_screen: bool):
     """事件屏真类装配(生产构造走 __init__ = 适配器位在位)。
@@ -104,9 +100,13 @@ def _make_op(test_context, monkeypatch, module_name: str, cls_name: str, *,
     桩喂稳定帧哨兵。返回 (op, calls)。
     """
     from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_partner, cw_screen_planner, cw_screen_wish_trial,
-        cw_screen_fortune, cw_screen_bookcard, cw_screen_equip_pick,
+        cw_screen_bookcard,
+        cw_screen_equip_pick,
         cw_screen_expert_invite,
+        cw_screen_fortune,
+        cw_screen_partner,
+        cw_screen_planner,
+        cw_screen_wish_trial,
     )
     mod = {
         'cw_screen_partner': cw_screen_partner,
@@ -156,16 +156,6 @@ def _make_supply(test_context, monkeypatch, *, in_node: bool):
     return op, match, session, calls
 
 
-def _run_node(test_context, op, fn) -> object:
-    """节点函数运行外壳(fast_sleep + running_state;返回轮次结果)。"""
-    with fast_sleep():
-        enter_running_state(test_context)
-        try:
-            return fn()
-        finally:
-            reset_running_state(test_context, op)
-
-
 # ==================== 迁移结构锁(§9.1 并存期)====================
 
 
@@ -173,9 +163,14 @@ def test_migration_batch3_ops_inherit_base() -> None:
     """逐屏迁移第二批量(试点步骤 3):补给 + 余事件屏八 op 均为
     CwScreenOpBase 子类(B3 三段走第二段族表)。红 = 迁移回退或漏迁。"""
     from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
-        cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
-        cw_screen_equip_pick, cw_screen_expert_invite,
+        cw_screen_bookcard,
+        cw_screen_equip_pick,
+        cw_screen_expert_invite,
+        cw_screen_fortune,
+        cw_screen_partner,
+        cw_screen_planner,
+        cw_screen_supply_node,
+        cw_screen_wish_trial,
     )
     for mod in (cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
                 cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
@@ -387,9 +382,14 @@ def test_batch3_no_outcome_registry_wiring() -> None:
     红 = 未经申报擅立登记件。批3a:原 fire_emit_hooks 口名随两 fire 口
     合并退役,本锁断言面对准合并后的单一发射口名。"""
     from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
-        cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
-        cw_screen_equip_pick, cw_screen_expert_invite,
+        cw_screen_bookcard,
+        cw_screen_equip_pick,
+        cw_screen_expert_invite,
+        cw_screen_fortune,
+        cw_screen_partner,
+        cw_screen_planner,
+        cw_screen_supply_node,
+        cw_screen_wish_trial,
     )
     for mod in (cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
                 cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
@@ -407,9 +407,14 @@ def test_batch3_sources_free_of_verify_segment() -> None:
     节点完成判定归 observe 门复检(观察驱动节点循环),落地判定归动作
     适配器回执(§6.2)。红 = 验证段残面回潮。"""
     from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
-        cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
-        cw_screen_equip_pick, cw_screen_expert_invite,
+        cw_screen_bookcard,
+        cw_screen_equip_pick,
+        cw_screen_expert_invite,
+        cw_screen_fortune,
+        cw_screen_partner,
+        cw_screen_planner,
+        cw_screen_supply_node,
+        cw_screen_wish_trial,
     )
     for mod in (cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
                 cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,

@@ -1,4 +1,4 @@
-"""统一观察架构·收尾五屏迁移锁 + cw_screen 收口锁(账本 T-48,余项收口阶段三)。
+"""统一观察架构·收尾五屏迁移锁 + cw_screen/cw_op 收口锁(账本 T-48,余项收口阶段三)。
 
 设计正本 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度/五段形态依据 = changes/2026-09-11-
@@ -29,15 +29,16 @@ CwScreenWaitOneOne / 位面情报采集 CwScreenPlaneIntel(薄转录 + 双节点
 
 锁的语义(测试纪律 7 自检;出处 = landing 阶段三判据 + 总纲契约 1-6):
 
-- **五 op 结构锁**:五 op 是 CwScreenOpBase 子类 ∧ start 节点方法顶部装配点
-  分流(位面过渡/武装箱/未达上限/等待1-1 = ``handle``,位面情报采集 =
-  ``collect()`` 节点首行;两端口完整在场 → ``run_lifecycle``;缺省 None =
-  生产直连旧路径,§9.1 并存期)∧ 节点预算归装饰器不随路径变(总纲契约 1)。
-- **重入裁决归属锁**(总纲契约 6,单一定谳):位面过渡/武装箱/未达上限的
-  「已发」旗标裁决住 handle 分流判据**之前**两路径共享段;裁决位序逐字保真
-  禁统一——位面过渡/武装箱 = pending 先行、miss fail 后置,未达上限 = miss
-  分支内先查 pending 后 fail(收尾屏详设 §1-§3)。红 = 裁决被转录进 observe
-  段/适配器①,或位序被顺手统一。
+- **五 op 结构锁**:五 op 是 CwScreenOpBase 子类 ∧ 节点预算逐屏逐字
+  登记归装饰器不随路径变(登记门,总纲契约 1);装配点分流的存在性/
+  先后不再源码锁——装两端口走五段段迹、不装端口零段迹的双向行为锁
+  在分流判据被删/后置时必红,承重同一事实(纪律 8:实现形状锁禁)。
+- **重入裁决×门组合行为锁**(总纲契约 6 行为面):「已发」旗标裁决
+  住分流**之前**两路径共享段(位面过渡/武装箱 = 裁决先行式:门命中 +
+  pending 在位 → 不误判完成、失败轮旗标不复活;未达上限 = miss 分支内
+  式:门命中 + pending 在位 → 裁决不触发、确认重发)——两屏位序差异的
+  行为观测点 = 门命中+旗标在位时旗标清否,由组合行为锁承重(收尾屏
+  详设 §1-§3)。
 - **新路径行为锁**(§9.1-F2 主门 (a) 本阶段行,逐屏适用性随批登记:五屏全
   适用):装两端口经节点方法走新路径,段迹形态 + 单轮动作/确认置位行为
   (模板同构 = 五相位屏锁);不装端口 → 旧路径零段迹同行为(旧路径不写
@@ -45,11 +46,13 @@ CwScreenWaitOneOne / 位面情报采集 CwScreenPlaneIntel(薄转录 + 双节点
 - **薄转录锁**(位面情报采集,总纲契约 2):observe 直通(场景门不前移)+
   决策循环消费 ``_collect_cycle`` 单一共享体(新旧路径同一份,禁第二套
   转录)+ 双节点图边(采集→关闭并回写)保留(收尾屏详设关键取舍 2)。
-- **收口锁**(landing 阶段三判据;B4 判据第 1 条的 cw_screen/ 目录达成
-  凭据):cw_screen 全目录顶层类凡op 祖链达 SrOperation 者必为 CwScreenOpBase
-  后代(AST 全目录扫描 + 运行时 issubclass 复核双面)。达成声明收窄定谳
-  (design.md §2.1-4):点名清单余 cw_op/ 商店系三件 CwOpBuyCards/
-  CwOpOpenShop/CwOpCloseShop 直继 SrOperation,不在本迭代,挂账归后续批。
+- **收口锁**(landing 阶段三判据;B4 判据第 1 条达成凭据):cw_screen/ 与
+  cw_op/ 两目录顶层类凡 op 祖链达 SrOperation 者必为 CwScreenOpBase 后代
+  (AST 全目录扫描 + 运行时 issubclass 复核双面;豁免登记门 = 非画面
+  动作 op 直继 SrOperation 逐名注缘由,未登记新名即红)。商店系三件
+  (CwOpBuyCards/CwOpOpenShop/CwOpCloseShop)已随 T-45 收编挂基类
+  (结构/行为锁 = test_cw_obs_arch_shop_ops.py),原「三件直继、挂账归
+  后续批」的收窄声明随之失效。
 
 驱动方式 = 真类实例(构造走 __init__,注册表/适配器位在位)+ 读链/点击链
 桩化;装配点分流桩端口 = ``_cw_helpers.install_dispatch_stub_ports`` 单一源;
@@ -73,12 +76,18 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base impor
     CwScreenOpBase,
 )
 from sr_od.operations.sr_operation import SrOperation
-from test.harness.fixture_controller import (
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
+from test.sr_od.app.currency_war._cw_helpers import (
+    Area as _Area,
 )
-from test.sr_od.app.currency_war._cw_helpers import install_dispatch_stub_ports
+from test.sr_od.app.currency_war._cw_helpers import (
+    install_dispatch_stub_ports,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    run_node as _run_node,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    uninstall_ports as _uninstall_ports,
+)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递不断言内容)
 
@@ -94,9 +103,6 @@ _CLOSING_OPS = (
     ('cw_screen_wait_one_one', 'CwScreenWaitOneOne', 'handle'),
     ('cw_screen_plane_intel', 'CwScreenPlaneIntel', 'collect'),
 )
-
-_DISPATCH_EXPR = ('observation_source() is not None'
-                  ' and action_sink() is not None')
 
 
 def _closing_module(name: str):
@@ -114,29 +120,6 @@ def _closing_module(name: str):
         'cw_screen_wait_one_one': cw_screen_wait_one_one,
         'cw_screen_plane_intel': cw_screen_plane_intel,
     }[name]
-
-
-def _uninstall_ports(monkeypatch: pytest.MonkeyPatch) -> None:
-    """卸载复位(生产缺省形态;旧路径代表驱动专用,先例 = T-8 锁)。"""
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-
-
-def _run_node(test_context, op, fn) -> object:
-    """节点函数运行外壳(fast_sleep + running_state;返回轮次结果)。"""
-    with fast_sleep():
-        enter_running_state(test_context)
-        try:
-            return fn()
-        finally:
-            reset_running_state(test_context, op)
-
-
-class _Area:
-    """round_by_find_area 桩回执(程序化回 in_screen/in_node)。"""
-
-    def __init__(self, ok: bool) -> None:
-        self.is_success = ok
 
 
 def _stub_controller(test_context, monkeypatch: pytest.MonkeyPatch) -> list:
@@ -162,10 +145,12 @@ def test_closing_ops_inherit_base() -> None:
             f'{cls_name} 未迁移到 CwScreenOpBase(T-48 收尾五屏)')
 
 
-def test_closing_ops_dispatch_source_form() -> None:
-    """五 op 结构锁②:装配点分流表达式 + 位置(分流措辞 = 各屏 start 节点
-    方法顶部,位面情报采集 = collect() 节点首行)+ 节点预算归装饰器不随
-    路径变(总纲契约 1)。红 = 分流判据缺失/后置或预算漂移。"""
+def test_closing_ops_node_budget_gate() -> None:
+    """五 op 结构锁②(登记门):节点预算归装饰器、逐屏逐字登记
+    (总纲契约 1:预算不随路径变)。红时该登记的是「哪屏预算为何改」
+    ——登记门形态,照常跟绿;装配点分流的存在性/先后不再源码锁:
+    装两端口走五段段迹、不装走旧路径零段迹的双向行为锁(下方各屏)
+    在分流判据被删/后置时必红,承重同一事实。"""
     _BUDGETS = {
         'cw_screen_plane_transition': 'node_max_retry_times=8',
         'cw_screen_armory_box': 'node_max_retry_times=8',
@@ -173,60 +158,75 @@ def test_closing_ops_dispatch_source_form() -> None:
         'cw_screen_wait_one_one': "name='等待1-1', is_start_node=True)",
         'cw_screen_plane_intel': 'node_max_retry_times=60',
     }
-    for mod_name, cls_name, node_name in _CLOSING_OPS:
+    for mod_name, cls_name, _node_name in _CLOSING_OPS:
         cls = getattr(_closing_module(mod_name), cls_name)
-        src = inspect.getsource(getattr(cls, node_name))
-        assert _DISPATCH_EXPR in src, f'{cls_name}: 装配点分流判据缺失'
-        assert 'run_lifecycle' in src, f'{cls_name}: 分流缺 run_lifecycle'
         assert _BUDGETS[mod_name] in inspect.getsource(cls), (
             f'{cls_name}: 节点预算漂移(预算归装饰器不随路径变,总纲契约 1)')
 
 
-def test_reentry_arbitration_position_and_order() -> None:
-    """重入裁决归属锁(总纲契约 6 + 收尾屏详设 §1-§3 位序红线):
-    - 位面过渡/武装箱:「已发」旗标裁决住分流**之前**;裁决序 = pending
-      先行、miss fail 后置(pending 判据先于 miss fail 出现);
-    - 未达上限:裁决住分流之前;裁决序 = miss 分支内先查 pending 后 fail
-      (miss 判据先于 pending 出现——与位面过渡序**刻意不同**,逐字保真
-      禁统一);
-    - 等待1-1/位面情报采集:无裁决旗标,分流在首行(锚/场景判定之前)。
-    红 = 裁决被移进五段 observe 形态/适配器,或位序被顺手统一。"""
-    pt_src = inspect.getsource(
-        _closing_module('cw_screen_plane_transition').CwScreenPlaneTransition.handle)
-    i_flag = pt_src.index('self._click_pending')
-    i_disp = pt_src.index('run_lifecycle')
-    assert i_flag < i_disp, '位面过渡:重入裁决须住装配点分流之前(总纲契约 6)'
-    assert i_flag < pt_src.index('if not _hit'), (
-        '位面过渡裁决序 = pending 先行、miss fail 后置(详设 §1,禁与未达上限统一)')
-
-    ab_src = inspect.getsource(
-        _closing_module('cw_screen_armory_box').CwScreenArmoryBox.handle)
-    assert ab_src.index('self._click_pending') < ab_src.index('run_lifecycle'), (
-        '武装箱:重入裁决须住装配点分流之前(总纲契约 6)')
-    assert ab_src.index('self._click_pending') < ab_src.index('if not _hit'), (
-        '武装箱裁决序 = pending 先行(详设 §2)')
-
-    dn_src = inspect.getsource(
-        _closing_module('cw_screen_deploy_not_full').CwScreenDeployNotFull.handle)
-    i_disp = dn_src.index('run_lifecycle')
-    i_miss = dn_src.index('if not _hit')
-    i_flag = dn_src.index('self._confirm_pending')
-    assert i_miss < i_flag, (
-        '未达上限裁决序 = miss 分支内先查 pending(与位面过渡序刻意不同,'
-        '详设 §3 逐字保真禁统一)')
-    assert i_flag < i_disp, '未达上限:重入裁决须住装配点分流之前(总纲契约 6)'
-
-    wo_src = inspect.getsource(
-        _closing_module('cw_screen_wait_one_one').CwScreenWaitOneOne.handle)
-    assert wo_src.index('run_lifecycle') < wo_src.index('self.PREP_ANCHOR'), (
-        '等待1-1:无裁决旗标,分流在首行、锚判定之前(详设 §4)')
-    assert '_pending' not in wo_src, '等待1-1 无裁决旗标(纯等待型)'
-
-    pi_cls = _closing_module('cw_screen_plane_intel').CwScreenPlaneIntel
-    pi_src = inspect.getsource(pi_cls.collect)
-    assert pi_src.index('return self.run_lifecycle()') \
-        < pi_src.index('return self._collect_cycle()'), (
-        '位面情报采集:分流在 collect() 节点首行、采集体委托之前(详设 §5)')
+@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
+def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
+                                                   install: bool) -> None:
+    """重入裁决×门组合行为锁(总纲契约 6 的行为面;替代原 .index() 位序
+    源码锁——纪律 8 位序锁禁令。「裁决先行式 vs miss 分支内式」两屏差异
+    的行为观测点 = 门命中 + 旗标在位时裁决是否消费旗标):
+    - 位面过渡/武装箱(裁决先行式):门命中 + pending 在位 → 裁决不误判
+      完成(门在 = 动作未落地,重点一次机械交回);推进体缺坐标的失败轮
+      旗标保持已消费态不复活(裁决住分流前共享段——若被移进门后/miss
+      分支内,此轮旗标残留 True,断言红);
+    - 未达上限(miss 分支内式):门命中 + pending 在位 → 裁决不触发,
+      勾选+确认重发、旗标经确认体重置(弹窗仍在 = 重发非完成)。
+    等待1-1/位面情报采集无裁决旗标,其「分流在首行」语义由双向行为锁段迹
+    承重:分流判据被移到锚判定/采集体委托之后时,装端口轮段迹偏离五段/仅
+    observe 形态即红(下方各屏行为锁)。
+    红 = 裁决出口语义漂移(门命中误判完成 / 失败轮旗标复活)。"""
+    if install:
+        install_dispatch_stub_ports(monkeypatch)
+    else:
+        _uninstall_ports(monkeypatch)
+    # 位面过渡:门命中 + pending 在位 → 重点一轮(不误判完成)
+    blank = SimpleNamespace(x=960, y=540)
+    op, clicks = _make_plane_transition(test_context, monkeypatch,
+                                        prompt_hit=True, blank=blank)
+    op._click_pending = True
+    rs = _run_node(test_context, op, op.handle)
+    assert not rs.is_success and '点空白已发' in (rs.status or ''), (
+        f'install={install}:提示在 = 点击未落地,重点非完成:{rs!r}')
+    assert clicks == [blank] and op._click_pending is True, (
+        f'install={install}:裁决不误清旗标,重点恰一次')
+    assert op._lifecycle_trace == (_FULL_TRACE if install else []), (
+        f'install={install}:段迹:{op._lifecycle_trace}')
+    # 位面过渡失败轮:裁决已消费旗标 → 缺坐标 fail 轮旗标不复活
+    op_f, _clicks_f = _make_plane_transition(test_context, monkeypatch,
+                                             prompt_hit=True, blank=None)
+    op_f._click_pending = True
+    rs_f = _run_node(test_context, op_f, op_f.handle)
+    assert not rs_f.is_success \
+        and '缺「区域-空白点击」建档' in (rs_f.status or ''), (
+        f'install={install}:失败轮入口:{rs_f!r}')
+    assert op_f._click_pending is False, (
+        f'install={install}:裁决先行消费旗标,失败轮不残留待裁决旗标')
+    # 武装箱:门命中 + pending 在位 → 重点一轮(不误判完成)
+    close_pt = SimpleNamespace(x=1108, y=760)
+    op_a, clicks_a = _make_armory(test_context, monkeypatch,
+                                  mark_hit=True, close_pt=close_pt)
+    op_a._click_pending = True
+    rs_a = _run_node(test_context, op_a, op_a.handle)
+    assert not rs_a.is_success and '点 × 已发' in (rs_a.status or ''), (
+        f'install={install}:标识在 = 点击未落地,重点非完成:{rs_a!r}')
+    assert clicks_a == [close_pt] and op_a._click_pending is True, (
+        f'install={install}:裁决不误清旗标,重点恰一次')
+    # 未达上限:门命中 + pending 在位 → 裁决不触发,确认链重发
+    op_d, clicks_d = _make_deploy_not_full(test_context, monkeypatch,
+                                           mark_hit=True)
+    op_d._confirm_pending = True
+    rs_d = _run_node(test_context, op_d, op_d.handle)
+    assert not rs_d.is_success and 'stub-confirm' in (rs_d.status or ''), (
+        f'install={install}:门命中 = 裁决不触发,确认重发机械交回:{rs_d!r}')
+    assert [c[0] for c in clicks_d] == ['check', 'confirm'], (
+        f'install={install}:勾选+确认重发恰两动作')
+    assert op_d._confirm_pending is True, (
+        f'install={install}:miss 分支内裁决未触发,旗标经确认体重置')
 
 
 # ==================== 位面过渡:分流双向行为锁 ====================
@@ -568,9 +568,8 @@ def test_plane_intel_dual_node_graph_edge_preserved(test_context) -> None:
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_plane_intel as pim,
     )
-    mod_src = inspect.getsource(pim)
-    assert "@node_from(from_name='采集')" in mod_src, (
-        '显式 node_from 边声明缺失(关闭节点漏跑事故防线)')
+    # 边的登记面以运行时节点图为准(下方真图查询);不另做装饰器源码
+    # 字面扫描——合法改写登记写法即假红,纪律 8(运行时锁承重同事实)。
     op = pim.CwScreenPlaneIntel(test_context)
     op._init_network()   # 显式建图(框架在 execute 前调;测试内直调取边登记面)
     edges = op._node_edges_map.get('采集', [])
@@ -578,12 +577,30 @@ def test_plane_intel_dual_node_graph_edge_preserved(test_context) -> None:
         f'采集→关闭并回写 边未在节点图登记:{op._node_edges_map!r}')
 
 
-# ==================== 收口锁(cw_screen/ 目录全量)====================
+# ==================== 收口锁(cw_screen/ + cw_op/ 目录全量)====================
 
 
-def _cw_screen_pkg_dir() -> Path:
-    from sr_od.application.currency_war.operations import cw_screen as pkg
-    return Path(pkg.__file__).parent
+def _closure_scan_targets() -> list[tuple[str, Path]]:
+    """收口锁扫描目录(画面 op 收编辖域):(包前缀, 目录路径)对。"""
+    from sr_od.application.currency_war.operations import cw_op, cw_screen
+    return [
+        ('sr_od.application.currency_war.operations.cw_screen',
+         Path(cw_screen.__file__).parent),
+        ('sr_od.application.currency_war.operations.cw_op',
+         Path(cw_op.__file__).parent),
+    ]
+
+
+#: 动作 op 豁免登记(登记门):直继 SrOperation 的**非画面** op 逐名
+#: 注缘由——它们无画面生命周期,不属 CwScreenOpBase 收编辖域。登记
+#: 双向:未登记的新直继 op = 红(强制「收编 or 豁免登记」决策);
+#: 登记名对应的类消失 = 红(清死登记)。
+_CLOSURE_EXEMPT: dict[str, str] = {
+    'CwOpTools': '工具箱编排动作 op,非画面 op',
+    'CwOpDeploy': '出战编排动作 op,非画面 op',
+    'CwOpEquipAll': '装备全穿编排动作 op,非画面 op',
+    'CwOpSellOffTarget': '卸下目标编排动作 op,非画面 op',
+}
 
 
 def _ast_base_names(cls_node: ast.ClassDef) -> list[str]:
@@ -598,26 +615,28 @@ def _ast_base_names(cls_node: ast.ClassDef) -> list[str]:
 
 
 def test_closure_all_cw_screen_ops_inherit_base() -> None:
-    """收口锁(landing 阶段三判据;B4 判据第 1 条的 cw_screen/ 目录达成
-    凭据):cw_screen 全目录顶层类,凡 op 祖链达 SrOperation 者必达
-    CwScreenOpBase(AST 全目录扫描:不靠手点名,遗漏新类自动入锁;运行时
-    issubclass 复核补 AST 跨模块基类盲区)。达成声明收窄定谳(design.md
-    §2.1-4):cw_op/ 商店系三件直继 SrOperation 不在锁面,挂账归后续批。
-    红 = 目录内出现直继 SrOperation 的新画面 op(收口回退)。"""
-    root = _cw_screen_pkg_dir()
+    """收口锁(landing 阶段三判据;B4 判据第 1 条达成凭据):cw_screen/
+    与 cw_op/ 两目录顶层类,凡 op 祖链达 SrOperation 者必达 CwScreenOpBase
+    或入豁免登记(AST 全目录扫描:不靠手点名,遗漏新类自动入锁;运行时
+    issubclass 复核补 AST 跨模块基类盲区)。商店系三件已随 T-45 收编挂
+    基类(其结构/行为锁 = test_cw_obs_arch_shop_ops.py),原「三件直继
+    不在锁面、挂账归后续批」的收窄声明随之失效,锁面扩至 cw_op/。
+    红 = 扫描目录内出现直继 SrOperation 且未豁免登记的 op(收口回退),
+    或豁免登记名对应的类已消失(死登记)。"""
     class_bases: dict[str, list[str]] = {}
     class_module: dict[str, str] = {}
-    for f in sorted(root.glob('*.py')):
-        tree = ast.parse(f.read_text(encoding='utf-8'))
-        for node in tree.body:
-            if isinstance(node, ast.ClassDef):
-                assert node.name not in class_bases, (
-                    f'cw_screen 顶层类名冲突:{node.name}')
-                class_bases[node.name] = _ast_base_names(node)
-                class_module[node.name] = f.stem
+    for pkg_prefix, root in _closure_scan_targets():
+        for f in sorted(root.glob('*.py')):
+            tree = ast.parse(f.read_text(encoding='utf-8'))
+            for node in tree.body:
+                if isinstance(node, ast.ClassDef):
+                    assert node.name not in class_bases, (
+                        f'收口目录顶层类名冲突:{node.name}')
+                    class_bases[node.name] = _ast_base_names(node)
+                    class_module[node.name] = f'{pkg_prefix}.{f.stem}'
 
     def reaches(cls_name: str, target: str, seen: set[str] | None = None) -> bool:
-        """cls_name 的基类闭包(经目录内定义的类上溯)是否含 target;
+        """cls_name 的基类闭包(经扫描目录内定义的类上溯)是否含 target;
         cls_name 即 target = 边界本体,平凡成立。"""
         if cls_name == target:
             return True
@@ -633,18 +652,23 @@ def test_closure_all_cw_screen_ops_inherit_base() -> None:
                 return True
         return False
 
-    assert 'CwScreenOpBase' in class_bases, '基类不在 cw_screen 目录(锁面前提)'
+    assert 'CwScreenOpBase' in class_bases, '基类不在扫描目录(锁面前提)'
     for name in class_bases:
         if reaches(name, 'SrOperation'):
-            assert reaches(name, 'CwScreenOpBase'), (
-                f'收口锁失守:cw_screen/{class_module[name]}.py 顶层类 {name} '
-                f'直继 SrOperation(未迁 CwScreenOpBase)')
+            assert reaches(name, 'CwScreenOpBase') or name in _CLOSURE_EXEMPT, (
+                f'收口锁失守:{class_module[name]} 顶层类 {name} 直继 '
+                f'SrOperation(画面 op 必挂 CwScreenOpBase;确属非画面动作 '
+                f'op 则逐名登记 _CLOSURE_EXEMPT 并注缘由)')
+    # 死登记清查(登记门双向):豁免名必须仍对应扫描面里的真实顶层类。
+    for exempt in _CLOSURE_EXEMPT:
+        assert exempt in class_bases, (
+            f'收口豁免死登记:{exempt} 不在扫描目录顶层类中(类已删/更名,'
+            f'同步清登记项)')
     # 运行时复核(AST 跨模块基类的盲区补面):逐顶层类真 issubclass。
-    for name, mod_stem in class_module.items():
-        mod = importlib.import_module(
-            f'sr_od.application.currency_war.operations.cw_screen.{mod_stem}')
+    for name, mod_path in class_module.items():
+        mod = importlib.import_module(mod_path)
         cls = getattr(mod, name)
         if isinstance(cls, type) and issubclass(cls, SrOperation):
-            assert issubclass(cls, CwScreenOpBase), (
-                f'收口锁失守(运行时):{mod_stem}.{cls.__name__} 是 '
-                f'SrOperation 后代但非 CwScreenOpBase 后代')
+            assert issubclass(cls, CwScreenOpBase) or name in _CLOSURE_EXEMPT, (
+                f'收口锁失守(运行时):{mod_path}.{cls.__name__} 是 '
+                f'SrOperation 后代但非 CwScreenOpBase 后代且未豁免登记')

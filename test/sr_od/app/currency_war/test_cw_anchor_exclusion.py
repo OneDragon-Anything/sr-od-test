@@ -31,7 +31,9 @@ def test_boss_briefing_texts_misread_forms() -> None:
 def test_boss_briefing_takeover_on_misread(monkeypatch) -> None:
     """area 锚(误读)miss + OCR 片段判别命中 → handle 走点空白路径
     (0p 接管,不再漏给 0q)。"""
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_boss_briefing as bb
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_boss_briefing as bb,
+    )
 
     class _FakeArea:
         def __init__(self, ok: bool): self.is_success = ok
@@ -86,12 +88,12 @@ def test_plane_misdispatch_limit() -> None:
     import inspect
 
     from sr_od.application.currency_war.operations import cw_loop
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_battle_wait
     assert cw_loop.CwLoop.PLANE_MISDISPATCH_LIMIT == 3
     src = inspect.getsource(cw_loop.CwLoop.loop)
     assert "round_fail('位面过渡连续 fail 超上限(交兜底链)')" in src
     # 清零挂点:boss 简报接管(0p)与过渡成功两条恢复路径
     assert src.count('self._plane_mis_streak = 0') >= 2
-    # CwScreenBattleWait 白名单同源加固(boss 帧不误判位面过渡项)
-    bw_src = inspect.getsource(cw_screen_battle_wait.CwScreenBattleWait._hit_completion_anchor)
-    assert 'is_boss_briefing_texts' in bw_src
+    # CwScreenBattleWait 白名单同源消费面锁已并入超集锁
+    # test_cw_obs_arch_phase_screens.test_boss_discrimination_single_source_
+    # consumers_unchanged(消费点集 + 零复制两源 + 定义在 boss_briefing,
+    # 纪律 7 重复断言择一取超集),本文件不再重复断言。

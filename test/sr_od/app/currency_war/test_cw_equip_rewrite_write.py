@@ -7,8 +7,9 @@
   effect-domain.md §6.3 写入归属判据):确定性可算 → 逻辑写;含随机 → 零
   逻辑写端,观察收口;
 - 写入归属申报单一源 = kernel/cw_affix_effects.py EQUIP_REWRITE_DECLARATIONS
-  × EQUIP_WRITE_SIDES(逐件写端落码登记;键恰等与目标可解析由生产模块
-  import 即炸校验单一承责,本文件不重复);
+  × EQUIP_WRITE_SIDES(逐件写端落码登记;键恰等/目标可解析/值词表由生产
+  模块 import 即炸校验单一承责,本文件只留「校验被删后登记面静默失联」
+  的失联锁,不重复其分布面);
 - 实现单一源 = kernel/cw_effect_inventory.py 文末「装备改写写端」段
   (写端桥/贡献算术/计数底座;窗口独占性分形判据见该段头注);
 - 谓词扫描恰等锁(申报表 ↔ 装备注册表)在 test_cw_affix_spec_registry.py。
@@ -37,8 +38,6 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
-    DIAMOND_PHASE_STEP,
-    EQUIP_PRIVILEGE_SUFFIX,
     STAFF_PROJECTOR_COST_GATE,
     TREASURE_ACQUIRE_HP,
     WEALTH_GOLD_PER_NODE,
@@ -115,17 +114,15 @@ def _bench_view(occupied: int = 0, capacity: int = 9) -> BenchView:
 
 
 def test_write_side_registry_exact_coverage() -> None:
-    """写端登记键集 == 申报表键集 == 谓词扫描命中集(三层恰等,零静默):
-    登记漏件/多件即红;键恰等与目标可解析的日常守卫在生产 import 即炸
-    校验,本锁把三层对齐面显式钉在测试面(防校验被删后静默失联)。"""
-    assert set(EQUIP_WRITE_SIDES) == set(EQUIP_REWRITE_DECLARATIONS)
-    assert set(EQUIP_WRITE_SIDES) == set(_EQUIP_SCAN)
-    assert len(EQUIP_WRITE_SIDES) == 25
-
-
-def test_write_side_value_vocabulary() -> None:
-    """值词表封闭四形:bridge:/contribution:/op:/observation——集外值由
-    生产校验即炸,本锁钉词表本身(新增形须先扩词表与分形判据再入册)。"""
+    """写端登记面失联锁:登记表键集 == 申报表键集 == 谓词扫描命中集,
+    且值封闭词表四形(bridge:/contribution:/op:/observation)。
+    增量价值申报(锁四问 3):键恰等/目标可解析/词表外值由生产
+    ``_validate_equip_write_sides`` import 即炸单一承责,申报表↔注册表
+    扫描恰等由 test_cw_affix_spec_registry.py 承责——本锁钉「生产校验
+    被删后登记面静默失联」的回归面(校验被删仍红),不重复上述两面的
+    分布细节;新增值形须先扩词表与分形判据再入册。"""
+    assert (set(EQUIP_WRITE_SIDES) == set(EQUIP_REWRITE_DECLARATIONS)
+            == set(_EQUIP_SCAN))
     for side in EQUIP_WRITE_SIDES.values():
         assert (side == 'observation'
                 or side.startswith(('bridge:', 'contribution:', 'op:'))), side
@@ -174,7 +171,6 @@ def test_held_and_worn_count_basis() -> None:
     """持有件数 = 前排已穿 + 后排已穿 + 备战席已穿(记录内)+ 库存四源和;
     已穿件数 = 前排 + 后排(「装备者」口径,库存/备战席不计)。字段从未
     观察(None)= 该源跳过不猜。"""
-    cost = _char_by_cost(1)
     bs = _make_bs(
         front=[_wearing(1, 1, 1, ['财富']), _wearing(2, 2, 2, [])],
         back=[_wearing(3, 1, 1, ['财富', '生命之环'])],
@@ -194,7 +190,6 @@ def test_held_and_worn_count_basis() -> None:
     empty = BoardState(schema_version=BS_SCHEMA_VERSION)
     assert held_equip_count(empty, '财富') == 0
     assert worn_equip_count(empty, '财富') == 0
-    assert cost  # 稳定性锚(防 _char_by_cost 被优化掉的面)
 
 
 # ==================== 3. 写端桥行为(窗口独占直写) ====================
@@ -206,7 +201,7 @@ def test_apply_equip_acquire_hp_window_exclusive_write() -> None:
     bs = _make_bs(hp=82)
     seq0 = bs.write_seq
     gained = apply_equip_acquire_hp(bs, frame='p1-r3')
-    assert gained == TREASURE_ACQUIRE_HP == 50
+    assert gained == TREASURE_ACQUIRE_HP   # 返回实际增益,期望从常量现算
     assert bs.hp.value == 132 and bs.hp.source == 'logic'
     assert bs.hp.evidence == 'equip_acquire_hp@p1-r3'
     assert bs.write_seq == seq0 + 1
@@ -311,7 +306,6 @@ def test_privilege_counterpart_bijection_over_registry() -> None:
     assert {privilege_counterpart(n) for n in advance} == privilege
     for n in advance:
         assert EQUIPMENTS[privilege_counterpart(n)].category == '特权'
-    assert EQUIP_PRIVILEGE_SUFFIX == '·特权'
 
 
 # ==================== 4. 贡献算术(零直写纪律) ====================
@@ -337,7 +331,6 @@ def test_equip_diamond_phase_gold_worn_basis_and_floor() -> None:
     bs = _make_bs(front=[_wearing(1, 1, 1, ['财富宝钻']),
                          _wearing(2, 2, 2, ['财富宝钻'])],
                   equips=['财富宝钻'])
-    assert DIAMOND_PHASE_STEP == 3
     assert equip_diamond_phase_gold(bs, phases_elapsed=2) == 0    # 零头未到
     assert equip_diamond_phase_gold(bs, phases_elapsed=3) == 2    # 2 穿 ×1
     assert equip_diamond_phase_gold(bs, phases_elapsed=7) == 4    # 2 穿 ×2

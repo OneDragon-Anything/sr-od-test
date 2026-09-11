@@ -1,10 +1,12 @@
-"""cw4 策略测试共享构造器(六件套)与 prep 单测装配的单一源。
+"""cw4 策略测试共享构造器(六件套)、prep 单测装配与 obs_arch 运行夹具的单一源。
 
 收纳此前散布在十余个测试文件、各持一份近同构副本的桩构造六件套
-(``_comp/_members/_session/_state/_card/_bc/_decide``,DEBTS.md D17)
-与备战单轮 op 装配(``_make_round_director``,DEBTS.md D22)。收敛建立在
-sr-od-test README 第 14 条「跨文件的复制夹具是漂移源头」之上;本模块
-文件名以下划线开头,pytest 不收集。
+(``_comp/_members/_session/_state/_card/_bc/_decide``,DEBTS.md D17)、
+备战单轮 op 装配(``_make_round_director``,DEBTS.md D22)与 obs_arch
+六文件的运行外壳三件(``run_node``/``uninstall_ports``/``Area``,T-58
+夹具收敛——原为 6/4/4 份逐文件复制)。收敛建立在 sr-od-test README
+第 14 条「跨文件的复制夹具是漂移源头」之上;本模块文件名以下划线开头,
+pytest 不收集。
 
 消费面分层(参照 DEBTS D3/D17 的分叉教训,禁强行合一):
 
@@ -54,6 +56,11 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
+)
+from test.harness.fixture_controller import (
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
 )
 
 
@@ -214,6 +221,40 @@ def install_dispatch_stub_ports(monkeypatch) -> None:
 
     monkeypatch.setattr(_ports_mod, '_INSTALLED',
                         (_DispatchOnlyObserver(), _DispatchOnlySink()))
+
+
+def uninstall_ports(monkeypatch) -> None:
+    """装配点分流桩端口卸载复位(生产缺省形态;旧路径代表驱动专用)。
+
+    与 :func:`install_dispatch_stub_ports` 成对的卸载半:``_INSTALLED``
+    复位 ``(None, None)`` = 装配点判据不成立,op 直连旧路径原序列。
+    直改模块槽绕过 install_game_ports 的单装配守卫 = harness 用法
+    (守卫语义由 test_cw_game_ports 自辖)。
+    """
+    from sr_od.application.currency_war import cw_game_ports as _ports_mod
+    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
+
+
+def run_node(test_context, op, fn) -> object:
+    """节点函数运行外壳(fast_sleep + running_state;返回轮次结果)。
+
+    op 流程测试纪律 5/6 的封装位:``execute()``/节点直调包
+    ``fast_sleep()``(mock 画面瞬时切换,框架轮间等待纯属空等)+
+    运行态前置/复位(harness helper,禁手写 ``_run_state`` 裸赋值)。
+    """
+    with fast_sleep():
+        enter_running_state(test_context)
+        try:
+            return fn()
+        finally:
+            reset_running_state(test_context, op)
+
+
+class Area:
+    """round_by_find_area 桩回执(程序化回 is_success;桩只验判定结果)。"""
+
+    def __init__(self, ok: bool) -> None:
+        self.is_success = ok
 
 
 def make_prep_round_director(test_context, monkeypatch, scripted_actions,

@@ -85,34 +85,22 @@ from test.harness.fixture_controller import (
     fast_sleep,
     reset_running_state,
 )
-from test.sr_od.app.currency_war._cw_helpers import install_dispatch_stub_ports
+from test.sr_od.app.currency_war._cw_helpers import (
+    Area as _Area,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    install_dispatch_stub_ports,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    run_node as _run_node,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    uninstall_ports as _uninstall_ports,
+)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递不断言内容)
 
 _RETRY_RS = OperationRoundResult(OperationRoundResultEnum.RETRY, status='stub-confirm')
-
-
-class _Area:
-    """round_by_find_area 桩回执(程序化回 in_screen/in_node)。"""
-
-    def __init__(self, ok: bool) -> None:
-        self.is_success = ok
-
-
-def _uninstall_ports(monkeypatch: pytest.MonkeyPatch) -> None:
-    """卸载复位(生产缺省形态;旧路径代表驱动专用,先例 = step3 锁)。"""
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-
-
-def _run_node(test_context, op, fn) -> object:
-    """节点函数运行外壳(fast_sleep + running_state;返回轮次结果)。"""
-    with fast_sleep():
-        enter_running_state(test_context)
-        try:
-            return fn()
-        finally:
-            reset_running_state(test_context, op)
 
 
 # ==================== 迁移结构锁 + 重入裁决归属锁 ====================
@@ -444,9 +432,12 @@ def test_strategy_refresh_emission_wired_to_registry(test_context,
                                                      monkeypatch) -> None:
     """发射型接线锁(§6.4-R-E 在册两件②;B5-② 形态):①注册表在 __init__
     按 StrategyRefreshClick 登记发射钩子(name=strategy_refresh_used,已在
-    申报面——基类申报面本批零增改);②单一发射口 fire_outcome_hooks 全模块
-    恰一处(= _emit_refresh_click 两路径共用分派点,触发唯一性先例 = 遭遇
-    屏同名面);③发射点同步置位执行侧防重入旗标。"""
+    申报面——基类申报面本批零增改;运行时注册表直接取证);②单一发射口
+    fire_outcome_hooks 全模块恰一处 + 原口名退役墓碑(两 fire 口合并,
+    T-223)。登记件写端住钩子体/发射点同步置位防重入旗标不再源码在场锁
+    (纪律 8 肯定性在场禁):两路径真实驱动的行为锁
+    (test_strategy_refresh_emission_semantics:值/evidence/防重入旗标/
+    sig.actor 逐位对拍)承重同一事实。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_invest_strategy as ism,
     )
@@ -455,13 +446,6 @@ def test_strategy_refresh_emission_wired_to_registry(test_context,
         '发射触发点须唯一且经单一发射口(_emit_refresh_click 分派面)')
     assert 'fire_emit_hooks' not in src, (
         '原发射口名须已退役(两 fire 口合并,T-223)')
-    assert "name='strategy_refresh_used'" in src
-    hook_src = inspect.getsource(ism.CwScreenInvestStrategy._on_refresh_emitted)
-    assert 'write_logic' in hook_src and 'normalize_invest_name' in hook_src, (
-        '登记件写端须住发射钩子体(键 = normalize_invest_name 归一)')
-    emit_src = inspect.getsource(ism.CwScreenInvestStrategy._emit_refresh_click)
-    assert '_invest_refresh_used_slots.add' in emit_src, (
-        '发射点同步置位防重入旗标(随点击置位不等验效)')
     op = ism.CwScreenInvestStrategy(test_context)
     specs = op._outcome_hooks.get(
         ism.StrategyRefreshClick(slot=0, name='x').__class__, [])
