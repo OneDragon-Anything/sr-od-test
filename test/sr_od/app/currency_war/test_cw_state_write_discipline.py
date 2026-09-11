@@ -160,7 +160,14 @@ def test_v32_effect_bridge_actor_registered() -> None:
 
 
 def _resumed_probe_ctx(session) -> SimpleNamespace:
-    return SimpleNamespace(cw_match=SimpleNamespace(session=session))
+    # screen_loader 恒 None:商店开态喂入口经按钮态 composite 读链
+    # (read_shop_refresh_button,见 cw_shop_refresh_obs 模块头)需经
+    # ctx.screen_loader 取「标识-免费刷新」/「文本-刷新价格」建档;
+    # None = 建档缺失失读形态(reader 产出 free=None → 漏斗 carry 回退),
+    # 与下方刷新费识别桩同守「识别失败=None 禁兜底」语义,不触真 OCR。
+    return SimpleNamespace(cw_match=SimpleNamespace(session=session),
+                           screen_loader=SimpleNamespace(
+                               get_screen=lambda name: None))
 
 
 def test_resumed_flag_live_disables_popup_leg(journal, run_id, monkeypatch):

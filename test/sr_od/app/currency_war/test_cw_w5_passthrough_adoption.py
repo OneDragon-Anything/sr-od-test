@@ -623,8 +623,9 @@ def test_phase_field_spec_no_invalid_keys_added() -> None:
 
 def test_strategy_input_state_call_sites_baseline() -> None:
     """调用点基线锁(对抗审 F9/发现 7:数字以 grep 为准,不承规划笔误):
-    strategy_input_state 外部直调现树 src 基线 = 15 处(新增调用点须
-    有意扩面并改本基线,防静默增殖)。"""
+    strategy_input_state 外部直调现树 src 基线 = 16 处(新增调用点须
+    有意扩面并改本基线,防静默增殖;遭遇/盛会之星迁移基类生命周期按
+    等价转录扩入第 16 处,15→16 随批同步)。"""
     from pathlib import Path
     root = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
             / 'currency_war')
@@ -635,4 +636,4 @@ def test_strategy_input_state_call_sites_baseline() -> None:
         text = path.read_text(encoding='utf-8')
         hits += [f'{path.relative_to(root)}:{m.start()}'
                  for m in re.finditer(r'strategy_input_state\(', text)]
-    assert len(hits) == 15, f'调用点基线漂移(现 {len(hits)}):{hits}'
+    assert len(hits) == 16, f'调用点基线漂移(现 {len(hits)}):{hits}'

@@ -17,11 +17,14 @@ tmp_path,零真实 .debug/ 触碰(测试纪律 2)。
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+import pytest
 
 from one_dragon.utils.file_utils import get_project_root
 
@@ -60,10 +63,21 @@ def test_smoke_gap_explicit_live_path_refuses(tmp_path: Path) -> None:
 
     单一源守卫(测试纪律 20·项目架构裁决):脚本内嵌现役根字面量必须与
     生产遥测根同址(生产根锁定 = test_cw_infra_locks.test_telemetry_roots_
-    single_source)——漂移时本断言先红,禁在错位常量下继续注入验证。"""
+    single_source)——漂移时本断言先红,禁在错位常量下继续注入验证。
+
+    隔离哨(worktree 副本):哨兵真源按设计锚定主检出的单一 live 账面
+    (脚本内嵌 _REPO 绝对字面量,操作者武装口径在主检出);worktree 副本
+    内 get_project_root() 指向副本根,不是生产遥测根,根字面量守卫在
+    副本态不可评估——检测到「脚本的 _REPO 字面量 ≠ 本进程仓库根」时
+    诚实跳过,主检出上守卫全量在役(脚本根字面量被误删时正则落空,
+    不跳过、照常走断言红)。"""
+    src = _SCRIPT.read_text(encoding='utf-8')
+    repo_literal = re.search(r"_REPO = Path\(r'([^']+)'\)", src)
+    if repo_literal is not None and \
+            Path(repo_literal.group(1)).resolve() != get_project_root().resolve():
+        pytest.skip('worktree 副本:现役根字面量守卫仅在主检出可验')
     live_root = (get_project_root() / '.debug' / 'currency_war'
                  / 'telemetry' / 'live')
-    src = _SCRIPT.read_text(encoding='utf-8')
     assert str(live_root).lower() in src.lower(), \
         '脚本现役根字面量与生产遥测根漂移,先对齐再谈注入禁写'
     live_journal = live_root / 'state' / 'journal.jsonl'
