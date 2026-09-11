@@ -24,6 +24,7 @@ from one_dragon.base.operation.operation_base import OperationResult
 from one_dragon.base.operation.operation_round_result import (
     OperationRoundResultEnum,
 )
+from sr_od.application.currency_war import cw_screen_state
 from sr_od.application.currency_war.operations.cw_entry import cw_entry_enter
 from sr_od.application.currency_war.operations.cw_entry.cw_entry_enter import (
     CwEntryEnter,
@@ -228,3 +229,35 @@ def test_exit_door_area_center_and_goto_edge_onboarded() -> None:
     assert '货币战争-中断挑战弹窗' in goto, (
         f'goto_list 应含「货币战争-中断挑战弹窗」(点门 → 弹窗转场边),'
         f'实际={goto}')
+
+
+# ==================== 结算屏清场语义批(T-57)判定层真帧锁 ====================
+
+
+def test_settlement_real_frame_in_match_judgment(
+    test_context: SrTestContext,
+) -> None:
+    """结算屏真帧(win/ended 双标题变体)→ 判定单一源命中「货币战争-结算」。
+
+    T-57 定谳锚:.debug/temp/TODO.md 2026-08-24 债登记「BackToNormalWorldPlus
+    不认识 CW P1 结算屏(挑战结束+继续挑战挂着时清场失败)」的识别面——
+    判定单一源 ``cw_screen_state``(货币战争- 前缀 − 大厅白名单)按前缀
+    自动收录结算屏(不在白名单),无需任何 per-screen 代码分支。真帧 + 真
+    画面匹配照跑(id_mark = 按钮-继续挑战 OCR 锚):命中失败 = 建档漂移
+    (锚失配)或白名单误收(结构性回潮),两层任一失效本锁红。
+
+    ended.webp = 挑战结束 + 1-9 首领 + 继续挑战(P1 位面末首领存活挂机态,
+    即债登记的目标画面;判读见 docs/game/screens/currency_war_settlement.md
+    「子态」),win.webp = 挑战成功变体(同布局同 id_mark)。
+    """
+    # 结构半边:结算屏不许进大厅态白名单(误收 = 判定单一源漏接,委托分支失明)
+    assert '货币战争-结算' not in cw_screen_state.LOBBY_STATE_SCREENS, (
+        '结算屏是大厅白名单成员 = 对局中判定漏接(清场链失明回潮)')
+    for state in ('win', 'ended'):
+        if not test_context.has_screen('货币战争-结算', state):
+            pytest.skip(f'存档截图缺失:screens/货币战争-结算/{state}.webp')
+        img = test_context.load_screen('货币战争-结算', state)
+        matched = cw_screen_state.get_in_match_screen_name(test_context, img)
+        assert matched == '货币战争-结算', (
+            f'结算屏 {state} 变体应对局中判定命中「货币战争-结算」,实际={matched}'
+            f'(id_mark 漂移或白名单误收)')

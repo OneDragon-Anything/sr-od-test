@@ -149,6 +149,71 @@ def test_retreat_branch_clicks_retreat_on_pause_frame(
         f'撤退分支不得按 esc,实际按键={ctrl.recorded_btn_taps}')
 
 
+def test_settlement_screen_clicks_continue_challenge(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """结算屏(挑战结束态)挂着 → 真 exit_match 链命中「继续挑战」分支推进。
+
+    T-57 定谳锚(2026-08-24 债「清场失败」的动作面,销账回归):结算屏残留
+    (P1 位面末首领存活挂机态,挑战结束+继续挑战)时退局 op 的正确动作 =
+    点「继续挑战」(对局继续 → 后续轮见备战走退局门分支弃局),与 r309b
+    胜利结算同分支同文案(故 lcs 0.8 防「继续战斗」误配史同样生效)。
+
+    真帧锁:fixture = 测试仓归档 ended.webp(挑战结束+1-9 首领);点击走
+    OCR 框中心(win 帧实测 (960,893),落「按钮-继续挑战」area rect 内)。
+    断言:点击落 area 内;不点右上角 X 兜底 (1843,42)(全分支 miss 形态);
+    不按 esc;大厅锚终局 success(剧本 = 结算屏 → 大厅 terminal)。
+    """
+    frames = [
+        ('货币战争-结算', 'ended'),
+        ('货币战争-大厅', 'lobby'),
+    ]
+    for screen_name, state in frames:
+        if not test_context.has_screen(screen_name, state):
+            pytest.skip(f'fixture 缺失:screens/{screen_name}/{state}.webp')
+
+    phases = [
+        {   # 结算屏挑战结束态:「继续挑战」OCR 框中心点击才推进(错点不推进)
+            'frame': ('货币战争-结算', 'ended'),
+            'exit': ('on_click_in', '货币战争-结算', '按钮-继续挑战'),
+        },
+        {   # 大厅:terminal(退局完成,大厅锚命中即 success,零点击)
+            'frame': ('货币战争-大厅', 'lobby'),
+        },
+    ]
+    ctrl = _ExitFixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    ctrl.set_phases(phases)
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+
+    op = _WatchedExit(test_context)
+    op._init_watchdog()  # type: ignore[attr-defined]
+
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert result.success, (
+        f'结算屏挂机态应经「继续挑战」分支推进到大厅:status={result.status};'
+        f'phase_idx={ctrl.phase_idx}'
+    )
+    assert ctrl.click_hit_area('货币战争-结算', '按钮-继续挑战'), (
+        f'应点击「按钮-继续挑战」area 内(OCR 框中心),实际点击={ctrl.recorded_clicks}')
+    # 不走其他出口:不点右上角 X 兜底 (1843,42),不按 esc
+    assert not any(abs(p.x - 1843) <= 5 and abs(p.y - 42) <= 5
+                   for p in ctrl.recorded_clicks), (
+        f'不得点右上角 X 兜底坐标(全分支 miss 形态),实际点击={ctrl.recorded_clicks}')
+    assert ctrl.recorded_btn_taps.count('esc') == 0, (
+        f'结算屏分支不得按 esc,实际按键={ctrl.recorded_btn_taps}')
+
+
 def test_no_round_retry_tail() -> None:
     """战斗中不再落入无界 retry 尾(旧版尾分支;否定墓碑,r279 退役背书)。
 

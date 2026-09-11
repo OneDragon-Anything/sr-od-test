@@ -61,3 +61,8 @@ test_cw_invest_injection.py::test_invest_profile_schedules_overlay_and_pick_land
 test_cw_invest_injection.py::test_branch_order_drives_invest_pick_op
 
 test_cw_ab_carrier.py::TestAbCarrier::test_paired_two_seeds_structure_and_counterfactual
+
+# T-57 结算屏清场语义批(2026-09-12:真帧+真画面匹配/真 OCR 全链锁,冷跑 call 2.23s/setup 2.01s ≥2s;
+# 同桶先例 = 既有真帧锁四条 battle_fail/lobby_residual/sim_uni_confirm/page2)
+test_back_to_normal_world_plus.py::TestCwSettlementDelegationRealFrame::test_settlement_frame_real_match_routes_to_cw_exit
+test_cw_entry_flow.py::test_settlement_real_frame_in_match_judgment

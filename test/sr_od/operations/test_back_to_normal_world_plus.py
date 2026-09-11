@@ -429,6 +429,7 @@ def _run_real_frame_check_screen(
     state: str,
     in_match_screen_name: str | None = None,
     exit_match_cls: type | None = None,
+    use_real_cw_match: bool = False,
 ) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]], list[tuple[Point | None, bool]]]:
     """真帧驱动单轮 check_screen,返回 (结果, find记录, find+click记录, 裸click记录, controller点击记录)。
 
@@ -440,6 +441,8 @@ def _run_real_frame_check_screen(
     - CW 对局中画面判定默认恒 None;``in_match_screen_name`` 非 None 时改为
       恒返回该屏名(真帧 + 判定桩:对局画面匹配层已由 cw 侧测试单独锁定,
       本仓真帧测试只锁 check_screen 的分支路由);
+    - ``use_real_cw_match=True`` 时判定桩整体不装,走真实 ``cw_screen_state``
+      判定(真帧 + 真画面匹配的端到端路由锁,如结算屏委托);
     - ``exit_match_cls`` 非 None 时替换为该假类(不触真实退出对局 op)。
     """
     img = test_context.load_screen(screen_name, state)
@@ -485,18 +488,20 @@ def _run_real_frame_check_screen(
         lambda *args, **kw: False,
     )
     # CW 对局中画面判定恒 None(真实实现走真 OCR 画面匹配,与被测分支无关;
-    # None=判定失败退既有行为)。真帧场景需命中时由调用方显式覆盖。
-    monkeypatch.setattr(
-        btnw_module.cw_screen_state,
-        'get_in_match_screen_name',
-        lambda *args, **kw: None,
-    )
-    if in_match_screen_name is not None:
+    # None=判定失败退既有行为)。真帧场景需命中时由调用方显式覆盖;
+    # use_real_cw_match=True 时整段不桩,判定单一源照真跑(端到端路由锁)。
+    if not use_real_cw_match:
         monkeypatch.setattr(
             btnw_module.cw_screen_state,
             'get_in_match_screen_name',
-            lambda *args, **kw: in_match_screen_name,
+            lambda *args, **kw: None,
         )
+        if in_match_screen_name is not None:
+            monkeypatch.setattr(
+                btnw_module.cw_screen_state,
+                'get_in_match_screen_name',
+                lambda *args, **kw: in_match_screen_name,
+            )
     if exit_match_cls is not None:
         monkeypatch.setattr(btnw_module, 'CwEntryExit', exit_match_cls)
     monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
@@ -1031,4 +1036,60 @@ class TestCwInMatchDelegationBranch:
         # 不落兜底:零裸点击(兜底「菜单-右上角返回」走 round_by_click_area 记录)。
         assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
         # 顺序判据:大厅分支(更轻的直点关闭)未抢在本分支前误吸备战帧。
+        assert ('货币战争-大厅', '标识-创业指南') not in finds, f'识别命中:{finds}'
+
+
+class TestCwSettlementDelegationRealFrame:
+    """CW 结算屏真帧 + 真判定的端到端委托锁(T-57 定谳,2026-08-24 债销账面)。
+
+    背景:.debug/temp/TODO.md 2026-08-24 登记「BackToNormalWorldPlus 不认识
+    CW P1 结算屏(挑战结束+继续挑战挂着时清场失败)」——该债登记早于
+    2026-09-01 的对局中委托分支(commit 5376b8f70):判定单一源
+    ``cw_screen_state``(货币战争- 前缀 − 大厅白名单)已自动收录结算屏,
+    命中即委托 CwEntryExit(残局清理优先路线)。本类与既有
+    ``TestCwInMatchDelegationBranch`` 的差别 = 判定不桩(use_real_cw_match):
+    真帧 + 真画面匹配 + 真路由一次锁死——识别(id_mark 失配/白名单误收)或
+    路由(分支被删/挪到兜底后)任一层回潮,本锁红。
+
+    真帧 = 测试仓归档 ``货币战争-结算/ended.webp``(挑战结束 + 1-9 首领 +
+    继续挑战,即 P1 位面末首领存活挂机态;判读见
+    docs/game/screens/currency_war_settlement.md「子态」)。
+    判定层(真画面匹配命中「货币战争-结算」)由 cw 侧
+    test_cw_entry_flow 的结算屏判定锁单独锁定,本锁在其上游证明路由全链。
+    """
+
+    def test_settlement_frame_real_match_routes_to_cw_exit(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """结算屏真帧(真判定)→ 委托 CwEntryExit;兜底与大厅分支零触达。"""
+        if not test_context.has_screen('货币战争-结算', 'ended'):
+            pytest.skip('存档截图缺失:screens/货币战争-结算/ended.webp')
+
+        fake = _RecordingFakeCwExit
+        fake.constructed = 0
+        fake.executed = 0
+        fake.fail_after = 99  # 单轮测试,恒成功
+
+        result, finds, find_clicks, bare_clicks, ctrl_clicks = (
+            _run_real_frame_check_screen(
+                test_context, monkeypatch, '货币战争-结算', 'ended',
+                exit_match_cls=fake,
+                use_real_cw_match=True,
+            )
+        )
+
+        # 分支路由:委托成功 → round_wait 等下一轮(大厅分支接管)。
+        assert not result.is_success, (
+            f'结算屏真帧应经委托分支 round_wait,status={result.status}'
+        )
+        # 委托发生:真判定命中后假类被构造并 execute 恰一次。
+        assert fake.constructed == 1 and fake.executed == 1, (
+            f'真判定应命中并委托一次:构造 {fake.constructed}/执行 {fake.executed}'
+        )
+        # 兜底零触达:无裸点击、无 controller 直点(兜底/大厅关闭都是直点形态)。
+        assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
+        assert ctrl_clicks == [], f'不应有兜底/大厅关闭直点:{ctrl_clicks}'
+        # 顺序判据:大厅分支未抢在前(结算屏无创业指南锚)。
         assert ('货币战争-大厅', '标识-创业指南') not in finds, f'识别命中:{finds}'
