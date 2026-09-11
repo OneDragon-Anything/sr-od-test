@@ -837,6 +837,72 @@ class TestRenderGapRemediation:
 
 
 # ---------------------------------------------------------------------------
+# 4b. cw4_counters 判读可见性(W4 审计 N3:流删后新档案显影位渲染回落)
+# ---------------------------------------------------------------------------
+
+
+def _endgame_with_cw4(cw4: Any) -> dict[str, Any]:
+    """新档案收口面骨架:endgame.match_final.final.cw4_counters 显影位
+    (局终行载荷透传,装配端纯读派生;None=无策略载体,{}=零计数)。"""
+    return {'result': 'loss', 'abandoned': False, 'plane_reached': 1,
+            'rounds_survived': 2, 'final_hp': 0, 'difficulty': 'A3',
+            'match_final': {'final': {'final_type': 'loss',
+                                      'cw4_counters': cw4}}}
+
+
+class TestCw4CountersCarrierVisibility:
+    """W4 流删后 cw4_counters 判读可见性:新档案顶层键已拆,渲染回落
+    endgame.match_final.final.cw4_counters 显影位(N3:新显影位此前在
+    tools 零读者 = 「局终快照→档案→复盘渲染」可见性断链);旧档案顶层
+    键渲染路径不变(存量只读)。"""
+
+    def test_new_archive_renders_from_match_final(self, tmp_path: Path) -> None:
+        """新档案:顶层无键、显影位有计数 → 分键统计照渲染,缺口清单
+        零 cw4 条目(可见性链接通的主锁)。"""
+        mod = _load_tool()
+        archive = _archive(endgame=_endgame_with_cw4({
+            'shop_churn_pair_buy': 3, 'advisor_bloodline_armed': 1}))
+        md = _render(mod, archive, tmp_path)
+        assert 'shop_churn_pair_buy: 3' in md
+        assert 'advisor_bloodline_armed: 1' in md
+        assert 'armed 与拒因分键统计' in md
+        assert '`cw4_counters' not in md.split('## 4.')[-1]
+
+    def test_new_archive_none_carrier_honest_missing(self, tmp_path: Path) -> None:
+        """新档案:显影位 None(局终行无策略载体,诚实缺省)→ 缺口如实
+        记录,不静默留白也不误报成旧流缺口。"""
+        mod = _load_tool()
+        archive = _archive(endgame=_endgame_with_cw4(None))
+        md = _render(mod, archive, tmp_path)
+        assert '`cw4_counters' in md.split('## 4.')[-1]
+
+    def test_new_archive_zero_count_form_no_gap(self, tmp_path: Path) -> None:
+        """新档案:显影位 {} = 局内真实零计数(与 None 分型)→ 不产缺口。"""
+        mod = _load_tool()
+        archive = _archive(endgame=_endgame_with_cw4({}))
+        md = _render(mod, archive, tmp_path)
+        assert '局内真实零计数' in md
+        assert '`cw4_counters' not in md.split('## 4.')[-1]
+
+    def test_new_archive_missing_match_final_structure(self, tmp_path: Path) -> None:
+        """新档案:endgame 在而 match_final 缺(装配残缺形态)→ 回落取
+        不到,缺口如实记录,渲染不炸。"""
+        mod = _load_tool()
+        archive = _archive(endgame={'result': 'loss', 'abandoned': False})
+        md = _render(mod, archive, tmp_path)
+        assert 'armed 与拒因分键统计' in md
+        assert '`cw4_counters' in md.split('## 4.')[-1]
+
+    def test_old_archive_top_level_key_still_rendered(self, tmp_path: Path) -> None:
+        """旧档案:顶层流装配键(存量只读)优先,渲染路径不变。"""
+        mod = _load_tool()
+        archive = _archive(cw4_counters={'advisor_armed': 2})
+        md = _render(mod, archive, tmp_path)
+        assert 'advisor_armed: 2' in md
+        assert '`cw4_counters' not in md.split('## 4.')[-1]
+
+
+# ---------------------------------------------------------------------------
 # 5. 字段缺省容忍 + 缺口零假阳性
 # ---------------------------------------------------------------------------
 

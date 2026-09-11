@@ -7,8 +7,9 @@ W4-审计-交付报告.md)§2.2 逐键底稿 + §2.3 勾稽 + §2.6 七类清点
 
 锁什么:策略行为观测计数容器 ``MandateState.cw4_counters`` 的**写点
 全集**对齐本登记——
-- 字面键层:全仓扫出的字面键 ∈ 字面登记集(256;W4 审计 §2.2 底稿);
-- 参数化层:模板/常量/变量产键表达式 ∈ 表达式登记(16 闭族 + 9 开放族;
+- 字面键层:全仓扫出的字面键 ∈ 字面登记集(257;W4 审计 v3 §2.2 底稿
+  256 + N1 增量 1,T-3 核验版三分清单 §3.3);
+- 参数化层:模板/常量/变量产键表达式 ∈ 表达式登记(17 闭族 + 9 开放族;
   新产出表达式未登记即红);
 - 漏斗层:容器别名上的变量下标写(helper 漏斗体)逐点登记,新漏斗未
   登记即红;
@@ -18,8 +19,10 @@ W4-审计-交付报告.md)§2.2 逐键底稿 + §2.3 勾稽 + §2.6 七类清点
 - 效果域空转申报(W4 验收门 D1 锚):效果域 0 键定谳的机器面——
   效果域容器(cw_effect_inventory)内零本容器写点,且两容器键域零交集。
 
-扫描方法 = 审计 §2.6 七类写模式的机器化(第 6 类别名赋值→别名下标写、
-第 7 类 helper 实参常量键→模块常量表解析;纯字面量正则不封闭,r2 复核
+扫描方法 = 审计 §2.6 七类写模式 + 第 8 类(T-3 核验版三分清单 N4 增补)
+的机器化(第 6 类别名赋值→别名下标写、第 7 类 helper 实参常量键→模块
+常量表解析、第 8 类跨行隐式串接→解析期归并单节点,自检锁双管:
+synthetic 三形态 + 真树 N1 写点正向捕获;纯字面量正则不封闭,r2 复核
 逃逸实证 mandate.py deploy_emit_floor_exempt_open)。
 
 为什么登记住测试侧:键集唯一消费方 = 本锁与判读面,src 侧无运行时
@@ -212,9 +215,10 @@ _LITERAL_KEYS_BY_FAMILY: dict[str, tuple[str, ...]] = {
 LITERAL_KEYS: frozenset[str] = frozenset(
     k for keys in _LITERAL_KEYS_BY_FAMILY.values() for k in keys)
 
-#: 闭域参数化族(16;审计 §2.3 闭族列名定稿)。shape = 产出表达式的
-#: 静态形状(f 模板头/尾,或变量漏斗声明);instances = 闭域实例全集
-#: (域单一源注明;和 = 80,与 §2.3 勾稽)。
+#: 闭域参数化族(17;审计 §2.3 闭族列名 + T-3 核验版 N2 补登)。shape =
+#: 产出表达式的静态形状(f 模板头/尾,或变量漏斗声明);instances = 闭域
+#: 实例全集(域单一源注明;上界和 = 86,与 T-3 核验版三分清单勾稽:
+#: 16 族 80 + l2_ 族 kernel 拒因闭集上界 6)。
 CLOSED_FAMILIES: tuple[dict[str, Any], ...] = (
     {'name': 'intention_frame_{plane}', 'shape': ('intention_frame_', ''),
      'instances': ('intention_frame_p1', 'intention_frame_p2'),
@@ -293,6 +297,15 @@ CLOSED_FAMILIES: tuple[dict[str, Any], ...] = (
                '(core_unlocked/core_locked/transition × no_fuel/seat_swap/'
                'unaffordable_strict/unaffordable_fundable;判红闭集单一源'
                '=sim/checks/ledger._CORE_EXIT_KEYS)'},
+    {'name': 'fuel_filler_stall_fenced_l2_{why}', 'shape':
+        ('fuel_filler_stall_fenced_l2_', ''),
+     'instances': None,   # 上界 6 = kernel 拒因闭集;闭集外动态后缀零静默
+     'domain': 'kernel 部署拒因闭集(scatter_fence/rest_capacity/cap/'
+               'name_dup/recipe_floor/item_slot;单一源 = cw_deploy_logic '
+               'select_deployments_with_reasons 返回拒因注)+ 闭集外动态'
+               '后缀零静默(shop 写点注);触发源对照分列键(④专,shop 写'
+               '点预注册裁决协议:先写死后看数防挪线;与同名 fenced_ 开放'
+               '族是两个族形,分别登记,N2)'},
 )
 
 #: 开放域参数化族(9;域=判据产物/拒因串解析/名单,不设上界,逐族申报)。
@@ -730,7 +743,7 @@ def test_literal_keys_within_registry():
 
 
 def test_parameterized_expressions_within_registered_families():
-    """参数化层:模板/常量前缀产出表达式 ∈ 已登记族(16 闭族+9 开放族)。
+    """参数化层:模板/常量前缀产出表达式 ∈ 已登记族(17 闭族+9 开放族)。
 
     新产出表达式(新 f 模板/新前缀常量)未登记即红——审计 §三.16
     「禁纯字面量正则断格」的参数化面承接。"""
@@ -785,12 +798,15 @@ def test_funnel_funnels_bound_to_declared_context():
 
 
 def test_census_accounts_consistent():
-    """登记账目自洽(与审计 §2.3 勾稽同构):字面集非空、闭族实例
-    加和 = 80(臂族域 = LAUNCH_CAUSE_BY_ARM 全集 15,core 腿 = 3 前缀
-    ×4 后缀)、豁免面 7 名。"""
+    """登记账目自洽(与审计 §2.3 勾稽同构,T-3 核验版口径):字面集非空、
+    闭族 17 个、闭族实例加和(上界口径)= 86(臂族域 = LAUNCH_CAUSE_BY_
+    ARM 全集 15,core 腿 = 3 前缀 ×4 后缀,l2_ 族 = kernel 拒因闭集 6)、
+    豁免面 7 名。"""
     assert len(LITERAL_KEYS) == 257, (
         f'字面登记 {len(LITERAL_KEYS)} ≠ 257(审计 256 + 增量 1)')
     assert len(EXEMPT_KEYS) == 7
+    assert len(CLOSED_FAMILIES) == 17, (
+        f'闭族登记 {len(CLOSED_FAMILIES)} ≠ 17(16 族 + N2 l2_ 族)')
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         sell_gate as _sell_gate,
     )
@@ -801,9 +817,12 @@ def test_census_accounts_consistent():
             inst_sum += len(_sell_gate.LAUNCH_CAUSE_BY_ARM)
         elif fam['name'].startswith('core'):
             inst_sum += 12
+        elif fam['name'].startswith('fuel_filler_stall_fenced_l2_'):
+            inst_sum += 6   # kernel 拒因闭集上界(域单一源 = cw_deploy_logic)
         else:
             inst_sum += len(fam['instances'] or ())
-    assert inst_sum == 80, f'闭族实例加和 {inst_sum} ≠ 80(§2.3 勾稽)'
+    assert inst_sum == 86, (
+        f'闭族实例加和(上界) {inst_sum} ≠ 86(16 族 80 + N2 域上界 6)')
 
 
 def test_effect_domain_zero_keys_d1_idle_declaration():
@@ -831,3 +850,60 @@ def test_effect_domain_zero_keys_d1_idle_declaration():
                 f'效果域模块出现登记键字面 {key}(两容器键域须零交集)')
             assert key not in EXEMPT_KEYS, (
                 f'效果域模块出现豁免面键字面 {key}')
+
+
+def test_class8_cross_line_concat_forms_resolved():
+    """第 8 类自检(T-3 核验版三分清单 N4 移交落码):跨行隐式串接的
+    三种 AST 形态都解析为完整键——①隐式邻接字符串(解析期归并成单
+    Constant,helper 实参/下标两写位同源);②BinOp 加串(lit+lit 合并
+    求值);③相邻 f-string(JoinedStr 解析期归并,常量段拼接)。任一
+    形态漏捕 = 扫描器键域失明,封闭性承诺失效。"""
+    # ① 隐式邻接:解析期已是单 Constant(N1 实证写点形态)
+    tree = ast.parse("_count('k8_a_'\n       'b')\n")
+    call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call))
+    assert isinstance(call.args[0], ast.Constant), '邻接串须解析期归并'
+    assert call.args[0].value == 'k8_a_b'
+    assert _keys_in_expr(call.args[0], {}) == [('lit', 'k8_a_b')]
+    # ② BinOp 加串(lit+lit → 合并字面;flow _k_* 形态同源)
+    tree2 = ast.parse("cw4_counters['k8_c_' + 'd'] = 1\n")
+    sub = next(n for n in ast.walk(tree2) if isinstance(n, ast.Subscript))
+    assert _keys_in_expr(sub.slice, {}) == [('lit', 'k8_c_d')]
+    # ③ 相邻 f-string 归并(N2 实证写点形态):常量段拼接+插值占位
+    tree3 = ast.parse("cw4_counters[f'k8_e_'\n          f'f_{w}'] = 1\n")
+    sub3 = next(n for n in ast.walk(tree3) if isinstance(n, ast.Subscript))
+    assert isinstance(sub3.slice, ast.JoinedStr), '相邻 f-string 须解析期归并'
+    assert _joined_template(sub3.slice) == 'k8_e_f_{}'
+
+
+def test_class8_live_write_site_discovered():
+    """第 8 类正向锁:真树 N1 写点(fuel 预检不可得分键,跨行隐式串接
+    形态,逐行 grep 不可见)被扫描器以完整字面捕获于 shop.py 写点——
+    登记面与扫描面双覆盖(红 = 扫描器第 8 类解析退化,非登记缺口)。"""
+    sites = _scan()['literals'].get(
+        'fuel_filler_stall_precheck_unavailable', [])
+    assert sites and any('shop.py' in s for s in sites), (
+        f'跨行隐式串接写点未被扫描器捕获(第 8 类失明): {sites}')
+
+
+def test_n2_l2_family_template_discovered_and_registered():
+    """N2 族形正向锁:触发源对照分列键(l2_ 前缀,相邻 f-string 归并
+    形态)以模板表达式被扫描器捕获,且归入本登记闭族;与同名 fenced_
+    开放族两族形并存互不吞并(N2:开放族域不含 l2_ 实例,分别登记)。"""
+    r = _scan()
+    l2_hits = [(rel, tmpl) for rel, tmpl in r['templates']
+               if rel.endswith('shop.py')
+               and tmpl == 'fuel_filler_stall_fenced_l2_{}']
+    assert l2_hits, (
+        f'l2_ 族模板未被扫描器捕获: {sorted(r["templates"])}')
+    for rel, tmpl in l2_hits:
+        owner = _template_family(rel, tmpl)
+        assert owner is not None and 'l2_' in owner, (
+            f'l2_ 族模板须归入闭族登记,现归: {owner}')
+    open_hits = [(rel, tmpl) for rel, tmpl in r['templates']
+                 if rel.endswith('shop.py')
+                 and tmpl == 'fuel_filler_stall_fenced_{}']
+    assert open_hits, 'fenced_ 开放族模板未被捕获'
+    for rel, tmpl in open_hits:
+        owner = _template_family(rel, tmpl)
+        assert owner is not None and '开放族' in owner, (
+            f'fenced_ 开放族归属漂移: {owner}')
