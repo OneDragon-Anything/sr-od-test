@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """BoardState 消费切换批回归锁(迁移批次二;设计正本 =
 docs/develop/currency_war/design/BoardState-数据结构设计.md,下称「设计」)。
 
@@ -10,16 +9,15 @@ docs/develop/currency_war/design/BoardState-数据结构设计.md,下称「设�
 """
 from __future__ import annotations
 
-import dataclasses
 from types import SimpleNamespace
 
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_board_state import (
     BS_SCHEMA_VERSION,
-    BoardState,
     COST_SOURCE_BADGE,
     COST_SOURCE_REGISTRY,
+    BoardState,
     NodeKey,
     apply_settlement_cover,
     archive_snapshot,
@@ -32,7 +30,13 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     set_defect_sink,
 )
 
-
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+)
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    register_sig_actors as _register_sig_actors,
+)
 from sr_od.application.currency_war.kernel.cw_bs_view import (
     game_state_view,
     strategy_input_state,
@@ -43,27 +47,21 @@ from sr_od.application.currency_war.kernel.cw_state import (
 )
 from sr_od.application.currency_war.obs import cw_observation as cobs
 
-# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
-    ChannelSig as _ChannelSig,
-    register_sig_actors as _register_sig_actors,
-)
-
 _register_sig_actors('TestSigWriter')
 
 
-def _sig() -> "_ChannelSig":
+def _sig() -> _ChannelSig:
     """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
     return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
-def _lsig() -> "_ChannelSig":
+def _lsig() -> _ChannelSig:
     """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
     return _ChannelSig(family='logic_action', actor='TestSigWriter',
                        mode='compute')
 
 
-def _hsig() -> "_ChannelSig":
+def _hsig() -> _ChannelSig:
     """渠道③签名(logic_hook 族;relay 中继)。"""
     return _ChannelSig(family='logic_hook', actor='TestSigWriter',
                        mode='compute')
@@ -135,18 +133,20 @@ def test_view_bootstrap_empty_bs_passes_frame_through() -> None:
     assert view.gold == 12 and view.plane == 2 and view.round_num == 3
 
 
-def test_view_hp_is_frame_passthrough_gate_authoritative() -> None:
-    """hp 域 = 帧透传(申报):last_state.hp 是 gated_hp 门后消费值
-    (ADR-0583 §2.4 同门纪律),BoardState.hp 是门前真值——消费视图取
-    帧值(门已施),记录模型保留真值。"""
+def test_view_hp_supplies_pre_gate_truth() -> None:
+    """hp 域(W5 收编):视图供**门前真值**(记录/消费分离)——消费侧
+    施门(gated_hp)在策略读点显式进行(mandate adapter/encounter λ 键
+    读点),kernel 不可反向依赖策略实现;视图不再透传帧的门后值。
+    详锁 = test_cw_w5_passthrough_adoption.py hp 专项族。"""
     st = GameState()
     st.hp = 82
     bs = _synth_bs_with(st)
     fr = GameState()
-    fr.hp = 76   # 门后消费值(与 bs 真值不同)
+    fr.hp = 76   # 旧链门后消费值(与容器真值不同)
     fr.hp_readable = True
     view = game_state_view(bs, fr)
-    assert view.hp == 76, 'hp 消费 = 帧透传(门权威随帧),非记录真值'
+    assert view.hp == 82, 'hp 消费 = 容器门前真值(施门迁消费侧)'
+    assert view.hp_readable is True, '真读帧 readable = observation 映射'
 
 
 def test_view_refresh_cost_policy_none_is_base_not_zero() -> None:
