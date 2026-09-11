@@ -440,7 +440,8 @@ def test_button_real_fixtures(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """三态真帧锁(T-15 采证帧归档;同帧离线重放 = analyze_screen 对账的
     测试内形态):免费帧锚命中读数 2 / 付费帧标价 2 可负担 / 灰态帧标价 2
-    金 1 不可负担。fixture/模型/area 缺 → skip。"""
+    金 1 不可负担。fixture/模型缺 → skip;area 缺 = fail(配置缺陷非环境
+    缺失,T-85 区分告警:分文件已建而 merged 缺 = 漏再生/漏随批提交)。"""
     fix_dir = Path(__file__).resolve().parents[4] / 'screens' / _SHOP_SCREEN_DIR
     frames = [fix_dir / f'{n}.webp' for n in
               (_FREE_FRAME, _PAID_FRAME, _GRAY_FRAME)]
@@ -448,7 +449,10 @@ def test_button_real_fixtures(
         pytest.skip('fixture 缺失')
     if test_context.screen_loader.get_area(
             '货币战争-备战-开商店', '标识-免费刷新') is None:
-        pytest.skip('标识-免费刷新 area 未入运行时 screen_info')
+        pytest.fail(
+            '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
+            '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
+            '(dd-029/T-13 形态),请再生 merged 并随批提交')
     _real_ocr_ctx_or_skip(test_context, monkeypatch)
 
     from one_dragon.utils import cv2_utils
@@ -476,8 +480,8 @@ def test_free_anchor_three_state_boundary(
     函数):免费帧命中(True)/付费帧不命中/灰态帧不命中(False)。本 area
     ``id_mark=false``(画面级判定不依赖它),通用 id_mark 扫描不覆盖其
     判别边界——lcs 0.7 对付费/灰态「刷新」两字的拒识在此独立锁死,防
-    rect/阈值调整或 OCR 行为漂移静默破坏三态判别(T-84)。fixture/
-    area/模型缺 → skip。"""
+    rect/阈值调整或 OCR 行为漂移静默破坏三态判别(T-84)。fixture/模型缺
+    → skip;area 缺 = fail(配置缺陷非环境缺失,T-85 区分告警)。"""
     fix_dir = Path(__file__).resolve().parents[4] / 'screens' / _SHOP_SCREEN_DIR
     frames = [fix_dir / f'{n}.webp' for n in
               (_FREE_FRAME, _PAID_FRAME, _GRAY_FRAME)]
@@ -486,7 +490,10 @@ def test_free_anchor_three_state_boundary(
     if test_context.screen_loader.get_area(
             '货币战争-备战-开商店',
             cw_shop_refresh_obs._FREE_ANCHOR_AREA) is None:
-        pytest.skip('标识-免费刷新 area 未入运行时 screen_info')
+        pytest.fail(
+            '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
+            '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
+            '(dd-029/T-13 形态),请再生 merged 并随批提交')
     _real_ocr_ctx_or_skip(test_context, monkeypatch)
 
     from one_dragon.utils import cv2_utils
@@ -505,14 +512,18 @@ def test_price_reader_free_frame_count_is_not_price_via_gate(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """隐患锁(T-15 发现):免费帧次数数字同 rect,标价 reader 直调会误读
     ——免费帧的正确消费路径 = 按钮态闸先行(喂入口已接),本锁钉住
-    「免费帧经 composite 不产标价」;直调误读行为如实留证不回退。"""
+    「免费帧经 composite 不产标价」;直调误读行为如实留证不回退。area 缺
+    = fail(配置缺陷非环境缺失,T-85 区分告警)。"""
     fix_dir = Path(__file__).resolve().parents[4] / 'screens' / _SHOP_SCREEN_DIR
     frame = fix_dir / f'{_FREE_FRAME}.webp'
     if not frame.exists():
         pytest.skip('fixture 缺失')
     if test_context.screen_loader.get_area(
             '货币战争-备战-开商店', '标识-免费刷新') is None:
-        pytest.skip('标识-免费刷新 area 未入运行时 screen_info')
+        pytest.fail(
+            '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
+            '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
+            '(dd-029/T-13 形态),请再生 merged 并随批提交')
     _real_ocr_ctx_or_skip(test_context, monkeypatch)
     from one_dragon.utils import cv2_utils
     from sr_od.application.currency_war.obs.cw_shop_refresh_obs import (
