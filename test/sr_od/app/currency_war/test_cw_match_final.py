@@ -437,3 +437,36 @@ def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:
     a2 = match_archive.build_archive(rd, game)
     assert a2['endgame']['match_final'] is None
     assert a2['schema_version'] == match_archive.SCHEMA_VERSION
+
+
+# ============================================================ W4 键收编聚合载体(R5 W4/ADR-0650)
+
+def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
+    """载荷聚合锁:write_match_final(cw4_counters=…) → 载荷原样落账;
+    写口浅拷贝(传入容器后写不串账)。None = 无策略载体诚实缺省。"""
+    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    counters = {'shop_churn_pair_buy': 3, 'launch_frame_idle_gold': 120}
+    assert write_match_final(bs, final_type='loss',
+                             cw4_counters=counters) is True
+    payload = bs.match_final.value
+    assert payload.cw4_counters == counters, '聚合随局终行落账'
+    assert payload.cw4_counters is not counters, '载荷持快照副本非容器引用'
+    counters['shop_churn_pair_buy'] = 99
+    assert payload.cw4_counters['shop_churn_pair_buy'] == 3, '后写不串'
+    # None 形态(无 session/历史段补写无源)
+    bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
+    assert write_match_final(bs2, final_type='abnormal',
+                             backfilled=True) is True
+    assert bs2.match_final.value.cw4_counters is None, (
+        '无载体 = None 诚实缺省(与零计数空 dict 可辨)')
+
+
+def test_match_final_cw4_aggregate_in_journal_row(journal, run_id) -> None:
+    """端到端(写口→journal 行):局终行 after 载荷携带聚合键,行行自足
+    可读(判读直接读行,零重放)。"""
+    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    write_match_final(bs, final_type='win',
+                      cw4_counters={'m6_bench_full': 1})
+    rows = _final_rows()
+    assert rows and rows[0]['after']['cw4_counters'] == {'m6_bench_full': 1}, (
+        '聚合进 journal 局终行(局终级全键聚合可见性载体)')

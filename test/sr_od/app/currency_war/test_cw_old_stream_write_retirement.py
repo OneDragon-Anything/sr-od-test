@@ -3,13 +3,18 @@
 裁定口径:不用影子开关/影子期,新账本 journal 无条件常开后,旧 12 流中
 「策略源收编 9 流」的写入端直接删除(处置表单一源 =
 docs/develop/currency_war/game_state/retirement.md §2)。禁碰面 =
-保留 2 流(defect_ledger/op_journal)+ 逐 key 审计流(cw4_counters)
-+ 清点补遗流(board_state_archive)+ journal 写路径本体 + 旧档案只读
-判读面(query/cli/match_archive 读旧档)。
+保留 2 流(defect_ledger/op_journal)+ 清点补遗流(board_state_archive)
++ journal 写路径本体 + 旧档案只读判读面(query/cli/match_archive 读旧档)。
+
+W4 增量(r5-migration-plan.md §2 W4/ADR-0650):逐 key 审计流
+cw4_counters 写入端亦退役——局终级全键聚合收编载体 = 局终域行载荷
+``MatchFinal.cw4_counters``(journal);键全集登记 = test_cw4_key_closure。
+本锁 _OLD_STREAM_FILES/_CALL_SITE_RE/_STREAM_NAME_RE 随之扩员辖 cw4 面。
 
 锁面 =
-- 结构删净锁:9 流 writer 符号在 telemetry.recorder 上不存在;src 生产树
-  无写入调用点/流文件名残留(防半删:writer 删了调用点留着 = 死代码);
+- 结构删净锁:9+1 流 writer 符号在 telemetry.recorder/match_archive 上
+  不存在;src 生产树无写入调用点/流文件名残留(防半删:writer 删了
+  调用点留着 = 死代码);
 - 行为零产出锁:模拟流(run 生命周期 + BoardState 写入 + obs_conflict
   收编面 + run 收口)跑完,旧 9 流文件零新增;journal 照常产出
   (write 行 + obs_event 行,run 归属一致);
@@ -60,11 +65,13 @@ def _hsig() -> "_ChannelSig":
 from sr_od.application.currency_war.kernel.cw_observe import obs_conflict
 from sr_od.application.currency_war.telemetry import state as tel_state
 
-#: 收编 9 流的旧流文件名(本批写入端退役对象;retirement.md §2 处置表)。
+#: 收编 9+1 流的旧流文件名(写入端退役对象;retirement.md §2 处置表;
+#: cw4_counters.jsonl 随 R5 W4 流删并入——聚合载体改局终域行,ADR-0650)。
 _OLD_STREAM_FILES: tuple[str, ...] = (
     'decisions.jsonl', 'outcomes.jsonl', 'exogenous.jsonl',
     'spend_ledger.jsonl', 'shop_snapshots.jsonl', 'exec_events.jsonl',
     'invest_cards.jsonl', 'obs_conflicts.jsonl', 'runs.jsonl',
+    'cw4_counters.jsonl',
 )
 
 #: 随旧流写入端退役的 writer 符号(telemetry.recorder 模块面)。
@@ -106,15 +113,15 @@ _READ_FACE_WHITELIST: frozenset[str] = frozenset({
     'tools/cw_node_validate.py',
 })
 
-#: 生产树扫描正则:退役 writer 调用残留。
+#: 生产树扫描正则:退役 writer 调用残留(W4 扩员:record_cw4_counters*)。
 _CALL_SITE_RE: re.Pattern = re.compile(
     r'record_(?:decision|outcome|run_summary|exec_event|exogenous'
     r'|event_choice|sell_income|modality_gold|spend_unit|invest_cards'
-    r'|shop_snapshot)\b')
+    r'|shop_snapshot|cw4_counters)\b')
 #: 生产树扫描正则:旧流文件名字面量(写入面残留)。
 _STREAM_NAME_RE: re.Pattern = re.compile(
     r'(?:decisions|outcomes|exogenous|spend_ledger|shop_snapshots'
-    r'|exec_events|invest_cards|obs_conflicts|runs)\.jsonl')
+    r'|exec_events|invest_cards|obs_conflicts|runs|cw4_counters)\.jsonl')
 
 _SRC_ROOT: Path = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
                    / 'application' / 'currency_war')

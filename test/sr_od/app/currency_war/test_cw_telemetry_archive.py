@@ -24,10 +24,6 @@ from pathlib import Path as _match_archive_Path
 
 import pytest
 
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-    state_of,
-)
-
 _match_archive_sys.path.insert(0, 'src')
 
 from sr_od.application.currency_war.telemetry import match_archive as arch
@@ -1052,125 +1048,70 @@ def test_divergence_missing_file(tmp_path: _divergence_stats_Path) -> None:
 
 # ==================== cw4_counters 落盘(行为观测计数批,v7)====================
 
-def _freeze_archive_now(monkeypatch: pytest.MonkeyPatch, iso: str) -> None:
-    """把 match_archive 写端时钟冻结到 fixture 时间窗内(写行 ts 参与归局)。"""
-    import datetime as _dt
-    frozen = _dt.datetime.fromisoformat(iso)
+# ==================== W4 cw4 计数流删 + 局终行聚合收编(R5 W4/ADR-0650) ====================
+# [退役墓碑,W4]test_cw4_counters_snapshot_into_archive /
+# test_cw4_counters_zero_count_and_missing_distinct /
+# test_cw4_counters_from_match_extracts_session /
+# test_cw_loop_counters_snapshot_wiring 四锁随流载体退役
+# (r5-migration-plan.md §2 W4 流删;写端 cw_loop._record_cw4_counters_snapshot
+# 与 match_archive COUNTERS_FILE 面已删)。局终级全键聚合现役载体 =
+# 局终域行载荷 MatchFinal.cw4_counters(test_cw_match_final 承行为锁),
+# 档案显影位 = endgame.match_final.final.cw4_counters(下二锁)。
+# 键全集封闭性锁另立 sr-od-test test_cw4_key_closure.py。
 
-    class _FrozenDT(_dt.datetime):
-        @classmethod
-        def now(cls) -> _dt.datetime:
-            return frozen
 
-    monkeypatch.setattr(arch, 'datetime', _FrozenDT)
-
-
-def test_cw4_counters_snapshot_into_archive(
-        replay: _match_archive_Path,
-        monkeypatch: pytest.MonkeyPatch):
-    """触发计数局 → 局终快照经 cw4_counters.jsonl 归局,档案顶层含键值。
-
-    归局时间窗契约:写行 ts 落在 g_A 的 [start_ts, end_ts] 闭区间内
-    (生产时序 = cw_loop 局终先落计数再写 runs summary)。
-    """
-    _freeze_archive_now(monkeypatch, '2026-08-30T10:31:30')   # g_A 窗内
-    arch.record_cw4_counters_snapshot(replay, {
-        'shop_churn_pair_buy': 3, 'shop_hoard_over_capacity': 1,
-        'm2_retry_exhausted': 0})
+def test_cw4_stream_face_retired_from_assembler(
+        replay: _match_archive_Path):
+    """流删结构锁:装配器面无 COUNTERS_FILE/record_cw4_* 符号;新装配
+    档案无顶层 ``cw4_counters`` 键(读侧宽容缺键,判读按显影位移读)。"""
+    assert not hasattr(arch, 'COUNTERS_FILE'), (
+        'COUNTERS_FILE 应已随 W4 流删删除(防半删)')
+    assert not hasattr(arch, 'record_cw4_counters_snapshot'), (
+        'record_cw4_counters_snapshot 应已随 W4 流删删除')
+    assert not hasattr(arch, 'record_cw4_counters_from_match'), (
+        'record_cw4_counters_from_match 应已随 W4 流删删除')
     a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    assert a['cw4_counters'] == {
-        'shop_churn_pair_buy': 3, 'shop_hoard_over_capacity': 1,
-        'm2_retry_exhausted': 0}
-    # 时间窗隔离:无关局(g_C)不受 g_A 计数行污染
-    a_c = arch.build_archive(replay, arch.assign_games(replay)[1])
-    assert a_c['cw4_counters'] is None
+    assert 'cw4_counters' not in a, (
+        '新装配档案不得再有顶层 cw4_counters(流源已拆)')
 
 
-def test_cw4_counters_zero_count_and_missing_distinct(
-        replay: _match_archive_Path,
-        monkeypatch: pytest.MonkeyPatch):
-    """形态三分锁:None=无计数流(数据缺失)≠ {}=真实零计数;窗外行不归局。"""
-    # g_C:落空快照(零计数局形态)→ 档案字段 = {}(在窗、非 None)
-    _freeze_archive_now(monkeypatch, '2026-08-30T11:09:59')   # g_C 窗内
-    got = arch.record_cw4_counters_snapshot(replay, None)
-    assert got == {}
-    a_c = arch.build_archive(replay, arch.assign_games(replay)[1])
-    assert a_c['cw4_counters'] == {}
-    # g_A:无任何计数行 → None(数据缺失,判读可区分)
-    a = arch.build_archive(replay, arch.assign_games(replay)[0])
-    assert a['cw4_counters'] is None
-    # 完全无计数流文件:不炸,恒 None
-    (replay / arch.COUNTERS_FILE).unlink()
-    a2 = arch.build_archive(replay, arch.assign_games(replay)[1])
-    assert a2['cw4_counters'] is None
-    # 防御性容忍:窗外晚行(掉窗形态)不归 g_C
-    _write_jsonl(replay, arch.COUNTERS_FILE, [
-        {'ts': '2026-08-30T12:00:00', 'counters': {'x': 1}}])
-    a3 = arch.build_archive(replay, arch.assign_games(replay)[1])
-    assert a3['cw4_counters'] is None
+def test_assembler_importable_and_callable():
+    """装配冒烟门(T-318 补令;半截删除态机器拦截):装配文件可编译可
+    导入、装配/重装配/物化入口可调用——`def build_archive` 被卷入
+    整块删除而函数体残留时,模块导入不炸但装配函数缺失(实测形态),
+    本锁在属主批自测即炸,不外溢成跨批树健康警报。"""
+    import py_compile
+    py_compile.compile(str(_match_archive_Path(arch.__file__)), doraise=True)
+    for fn in ('build_archive', 'assemble_game', 'assemble_pending',
+               'load_archive', 'assign_games'):
+        entry = getattr(arch, fn, None)
+        assert callable(entry), (
+            f'装配面入口 {fn} 缺失/不可调用(半截删除态,防半删)')
 
 
-def test_cw4_counters_from_match_extracts_session(
-        replay: _match_archive_Path,
-        monkeypatch: pytest.MonkeyPatch):
-    """match 载体提取:state_of(session).cw4_counters 全量落盘;无 session/无计数
-    → 空快照(default 栈形态,不炸)。"""
-    from types import SimpleNamespace as _NS
-    _freeze_archive_now(monkeypatch, '2026-08-30T10:31:30')
-    # 策略器状态迁 MandateState:cw4_counters 经 state_of 附着(桩同效)
-    m = _NS(session=_NS())
-    state_of(m.session).cw4_counters = {'shop_drought_reset_on_buy': 2}
-    got = arch.record_cw4_counters_from_match(replay, m)
-    assert got == {'shop_drought_reset_on_buy': 2}
-    # session 无 cw4_counters 属性 → 空快照
-    got2 = arch.record_cw4_counters_from_match(replay, _NS(session=_NS()))
-    assert got2 == {}
-    rows = [json.loads(ln) for ln in
-            (replay / arch.COUNTERS_FILE).open(encoding='utf-8')]
-    assert rows[0]['counters'] == {'shop_drought_reset_on_buy': 2}
-    assert rows[1]['counters'] == {}
-
-
-def test_cw_loop_counters_snapshot_wiring(
-        tmp_path: _match_archive_Path,
-        monkeypatch: pytest.MonkeyPatch):
-    """cw_loop 收口接线锁:局终助手把 ctx.cw_match.session 的计数快照
-    落进 replay 流;无 match → 不写文件;写端失败不抛(best-effort)。"""
-    # noqa: 本文件为机械拼接合并文件,函数内多处局部 import 属既有形态,
-    # 逐处与既有风格一致(不新增违规类别,仅与全文件同型)。
-    from types import SimpleNamespace as _NS  # noqa: I001
-    from sr_od.application.currency_war.operations import cw_loop as loop_mod  # noqa: I001
-    from sr_od.application.currency_war.telemetry import state as _tel_state  # noqa: I001
-
-    class _StubRecorder:
-        def __init__(self, d: _match_archive_Path) -> None:
-            self.replay_dir = d
-
-    monkeypatch.setattr(_tel_state, 'get_recorder',
-                        lambda: _StubRecorder(tmp_path))
-    op = loop_mod.CwLoop.__new__(loop_mod.CwLoop)
-
-    # 有 match + 计数 → 落盘含键值(cw4_counters 经 state_of 附着,桩同效)
-    _sess = _NS()
-    state_of(_sess).cw4_counters = {'shop_churn_pair_buy': 1}
-    op.ctx = _NS(cw_match=_NS(session=_sess))
-    op._record_cw4_counters_snapshot()
-    rows = [json.loads(ln) for ln in
-            (tmp_path / arch.COUNTERS_FILE).open(encoding='utf-8')]
-    assert rows == [{'ts': rows[0]['ts'],
-                     'counters': {'shop_churn_pair_buy': 1}}]
-    # 无 match(对局已清理)→ 不再追加
-    n_before = len(rows)
-    op.ctx = _NS(cw_match=None)
-    op._record_cw4_counters_snapshot()
-    rows2 = [json.loads(ln) for ln in
-             (tmp_path / arch.COUNTERS_FILE).open(encoding='utf-8')]
-    assert len(rows2) == n_before
-    # 写端失败 → 吞异常不抛(best-effort 契约)
-    op.ctx = _NS(cw_match=_NS(session=_NS(cw4_counters={'k': 1})))
-    monkeypatch.setattr(arch, 'record_cw4_counters_from_match',
-                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError('x')))
-    op._record_cw4_counters_snapshot()   # 不抛即过
+def test_cw4_aggregate_surfaces_via_match_final_view():
+    """聚合显影锁:局终行载荷携带的 ``cw4_counters`` 经 extract_match_
+    final_rows + match_final_view 原样透传到档案 endgame 显影位
+    (纯读派生,装配端零新写入)。"""
+    row = {'row': 'write', 'field': 'match_final', 'run_id': 'run_x',
+           'v': 7, 'ts': '2026-09-11T12:00:00', 'note': '',
+           'after': {'final_type': 'loss', 'at_version': 7,
+                     'cw4_counters': {'shop_churn_pair_buy': 3,
+                                      'm2_retry_exhausted': 0}}}
+    rows = arch.extract_match_final_rows([row])
+    view = arch.match_final_view(rows.get('run_x'))
+    assert view is not None
+    assert view['final']['cw4_counters'] == {
+        'shop_churn_pair_buy': 3, 'm2_retry_exhausted': 0}, (
+        '局终行聚合须在档案 endgame.match_final.final.cw4_counters 显影')
+    # 无计数载体形态:载荷缺键(旧档案)/None(诚实缺省)透传不炸
+    for after in ({'final_type': 'loss'}, {'final_type': 'loss',
+                                           'cw4_counters': None}):
+        v = arch.match_final_view({'row': 'write', 'field': 'match_final',
+                                   'run_id': 'run_y', 'v': 1, 'ts': '',
+                                   'note': '', 'after': after})
+        assert v['final'].get('cw4_counters') in (None, {}), (
+            '无载体/缺省形态透传容忍')
 
 
 # ==================== T-185 收口终局行(末轮 outcome 采集补全) ====================
