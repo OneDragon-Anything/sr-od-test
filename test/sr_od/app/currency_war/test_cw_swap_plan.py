@@ -376,7 +376,7 @@ def test_m1p_execution_face_sells_victim_with_ledger_row() -> None:
     )
     st = _m1p_state(deployed=_base_deployed(),
                     bench=[_bc(_TARGET_BENCH)])
-    plan, rec = _m1p_plan_and_record(st, _m1p_directed_session())
+    plan, rec, _ctx = _m1p_plan_and_record(st, _m1p_directed_session())
     assert plan.nonempty and rec['sell'] == [_VICTIM]
     acts: list[dict] = []
     spend: dict = {'buys': {}, 'levelup': 0, 'refresh': 0, 'sell_income': 0}
@@ -407,7 +407,7 @@ def test_m1p_execution_face_noop_when_plan_empty() -> None:
     )
     st = _m1p_state(deployed=_base_deployed()[:3],
                     bench=[_bc(_TARGET_BENCH)])
-    plan, rec = _m1p_plan_and_record(st, _m1p_directed_session())
+    plan, rec, _ctx = _m1p_plan_and_record(st, _m1p_directed_session())
     assert not plan.nonempty and rec['sell'] == []
     acts: list[dict] = []
     spend: dict = {'buys': {}, 'levelup': 0, 'refresh': 0, 'sell_income': 0}
@@ -415,6 +415,216 @@ def test_m1p_execution_face_noop_when_plan_empty() -> None:
                                  pool=_RetPool())
     assert sold is False and st2.gold == st.gold and acts == []
     assert spend['sell_income'] == 0
+
+
+# ==================== T-279 R1/R2:计划单一源补部署 ====================
+# 语义出处:ADR-0640(C-A2 双源缺口修复;装配单一源契约 ADR-0530/0534
+# 延伸至部署补上段)。锁面:①记录 up_names(R2);②R1-a 直投等价锁
+# (条件式【推】:前提面 = victim 名一致 + 占用序稳定,断言对象 = 名字
+# 集——对抗审 F3);③R1-b 防御锁(前提破帧缺口仍补);④mandate 计划
+# 载荷透传锁。
+
+def test_m1p_record_carries_up_names() -> None:
+    """m1p 记录 up_names 锁(T-279 R2):记录 dict 追加上序名单(名字级,
+    `swap_plan_up_names` 单一换算——up_bench 是 ctx.bench 下标非名字,
+    对抗审 F3),与 up 计数一致;义务件处置四态直读的判读锚。"""
+    from sr_od.application.currency_war.sim.engine_p1 import (
+        _m1p_plan_and_record,
+    )
+    st = _m1p_state(deployed=_base_deployed(),
+                    bench=[_bc(_TARGET_BENCH)])
+    plan, rec, ctx = _m1p_plan_and_record(st, _m1p_directed_session())
+    assert plan.nonempty
+    assert rec['up'] == len(rec['up_names']) == 1
+    assert rec['up_names'] == [_TARGET_BENCH]
+    # 换算单一源:记录名单与 kernel helper 直调逐位同
+    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+        swap_plan_up_names,
+    )
+    assert rec['up_names'] == swap_plan_up_names(plan, ctx)
+
+
+def test_m1p_plan_fill_deploys_plan_up_names() -> None:
+    """R1-a 直投等价锁(T-279 R1;ADR-0640):卖出成功帧(m1p_swap_execute
+    卖的就是计划 victim,卖出后板面 ≡ 计划假想态)⇒ 补部署逐位等于计划
+    up 名单。条件式【推】的前提面显式断言(对抗审 F3):victim 名一致
+    (rec['sell'] == 实际转录名)+ 占用序稳定(卖出后占用数 = 计划时点
+    −1)+ up 名单在 bench;断言对象 = 名字集(up_names == 实际补上名)。
+    本帧形态与局 18/局 58 缺口帧同构(板满 + 计划非空 + up=1)。"""
+    from sr_od.application.currency_war.kernel.cw_state import (
+        iter_occupied_deployed,
+    )
+    from sr_od.application.currency_war.sim.engine_p1 import (
+        _m1p_plan_and_record,
+        _m1p_plan_fill_deploy,
+        m1p_swap_execute,
+    )
+    sess = _m1p_directed_session()
+    st = _m1p_state(deployed=_base_deployed(),
+                    bench=[_bc(_TARGET_BENCH)])
+    plan, rec, ctx = _m1p_plan_and_record(st, sess)
+    acts: list[dict] = []
+    spend: dict = {'buys': {}, 'levelup': 0, 'refresh': 0, 'sell_income': 0}
+    st2, sold = m1p_swap_execute(st, plan, acts=acts, spend=spend,
+                                 pool=_RetPool())
+    assert sold is True
+    # —— 等价性前提面(条件式【推】的前提,显式断言)——
+    assert rec['sell'] == [_VICTIM]                    # ① victim 名一致
+    assert [a.get('name') for a in acts if a.get('__type__') == 'SellDeployed'] \
+        == [_VICTIM]                                   # ① 实际卖出 = 计划 victim
+    occ_after_sell = sum(1 for _ in iter_occupied_deployed(st2.deployed))
+    assert occ_after_sell == len(_base_deployed()) - 1  # ③ 占用 = 计划时点 −1
+    # —— R1-a 直投:补上名单 == 计划 up 名单(名字集断言)——
+    res_up, res_held, lag = _m1p_plan_fill_deploy(st2, plan, ctx, sess)
+    dep_names = {d.char_id for d in iter_occupied_deployed(st2.deployed)
+                 if d.char_id}
+    assert res_up == 1 and res_held == 0 and lag == 0
+    assert set(rec['up_names']) <= dep_names, '计划 up 件必须真上板'
+    assert dep_names == ({d.char_id for d in _base_deployed()}
+                         - {_VICTIM}) | set(rec['up_names'])
+    assert sum(1 for _ in iter_occupied_deployed(st2.deployed)) \
+        == len(_base_deployed()), '单空槽补满 = 计划假想终态'
+
+
+def test_m1p_plan_fill_falls_back_to_rederive_when_premise_broken() -> None:
+    """R1-b 防御锁(T-279 R1;对抗审 F2/F4):直投前提破(计划 up 件不在
+    bench——模拟板面漂移帧)⇒ 走装配单一源对卖出后现读重 derive,缺口
+    仍被补(板满恢复),补上件来自重 derive 判定而非计划名单(已离席的
+    计划 pick 禁虚报)。陪衬件 = 景元(注册表事实:仙舟主阵营,板上
+    仙舟 ≥2 成对 ⇒ 围栏认可可补)。非 m1p 显式动作轮不归本函数辖
+    (F4 辖域钉 m1_swap_redeploy 轮,由引擎分支结构承载)。"""
+    from sr_od.application.currency_war.kernel.cw_state import (
+        iter_occupied_deployed,
+    )
+    from sr_od.application.currency_war.sim.engine_p1 import (
+        _m1p_plan_and_record,
+        _m1p_plan_fill_deploy,
+        m1p_swap_execute,
+    )
+    sess = _m1p_directed_session()
+    st = _m1p_state(deployed=_base_deployed(),
+                    bench=[_bc(_TARGET_BENCH), _bc('景元', 2)])
+    plan, rec, ctx = _m1p_plan_and_record(st, sess)
+    assert plan.nonempty
+    assert rec['up_names'] == [_TARGET_BENCH], '锁前提:扫描序首件为计划 pick'
+    acts: list[dict] = []
+    spend: dict = {'buys': {}, 'levelup': 0, 'refresh': 0, 'sell_income': 0}
+    st2, sold = m1p_swap_execute(st, plan, acts=acts, spend=spend,
+                                 pool=_RetPool())
+    assert sold is True
+    # 前提破坏:计划 up 件从 bench 消失(漂移帧)
+    st2.bench = [b for b in st2.bench
+                 if b is None or b.char_id != _TARGET_BENCH]
+    res_up, _held, _lag = _m1p_plan_fill_deploy(st2, plan, ctx, sess)
+    dep_names = {d.char_id for d in iter_occupied_deployed(st2.deployed)
+                 if d.char_id}
+    assert res_up >= 1, '前提破帧缺口仍必须被补(R1-b 重 derive)'
+    assert _TARGET_BENCH not in dep_names, '已离席的计划 pick 禁虚报'
+    assert '景元' in dep_names, '补上件 = 重 derive 判定(注册表目标视图件)'
+    assert sum(1 for _ in iter_occupied_deployed(st2.deployed)) \
+        == len(_base_deployed()), '板满恢复'
+
+
+def test_m1p_plan_fill_equivalence_locked_transition_domain() -> None:
+    """等价锁·锁线转型域帧(T-279 验收设计锚;局 18 P2r4 形态固化,
+    ADR-0640):锁线转型域(locked ∧ fp<1.00 ∧ 板满)+ 义务件黄泉带已
+    达成弹性键(减益 2 档)⇒ 计划面(装配收窄键集)up pick = 黄泉,
+    R1-a 直投后 m1p.up_names == 实际补部署名单(名字集断言,前提面 =
+    victim 名一致 + 占用序稳定)。帧数据 = 局 18 卖出后账本形态的注册表
+    真名重建(收窄键集 {减益,列车同行,星间旅人} 与账本 m1p 逐键一致;
+    判据源 = T-279-交付报告 §二 + probe2/3 对照重放)。守卫移除红证:
+    拔 R1-a 直投 + 拔 transition_domain 钉定(退域谓词现算 = 卖出后
+    board_full 翻假 → 全量 8 键)⇒ 补上件变丹恒·腾荒 ≠ 计划 pick,本锁
+    必红——分叉已亲证(no-pin up=[丹恒·腾荒] / pin up=[黄泉])。"""
+    from types import SimpleNamespace as _NS2
+
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS as _CH
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp as _get_comp
+    from sr_od.application.currency_war.kernel.cw_state import (
+        iter_occupied_deployed,
+    )
+    from sr_od.application.currency_war.sim.engine_p1 import (
+        _m1p_plan_and_record,
+        _m1p_plan_fill_deploy,
+        m1p_swap_execute,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of as _state_of,
+    )
+
+    def _g18_bc(name: str, slot: int) -> BenchChar:
+        ch = _CH[name]
+        return BenchChar(slot=slot, char_id=name, star=1,
+                         faction=(ch.factions[0] if ch.factions else '?'))
+
+    # 局 18 P2r4:计划时点板 = 末态板 + victim(藿藿),cap 9 板满;
+    # bench = 末态 bench(黄泉 = 本轮新购义务件,减益已达成 2 档)。
+    kept = ['三月七', '椒丘', '海瑟音', '桑博', '姬子·启行', '千冶·刃',
+            '飞霄', '艾丝妲']
+    pre_board = kept + ['藿藿']
+    bench_names = ['貊泽', '丹恒·腾荒', '黄泉', '银狼LV.999', '希儿',
+                   '瓦尔特', '彦卿', '貊泽']
+    board: dict[str, int] = {}
+    for _n in pre_board:
+        _c = _CH[_n]
+        for _f in tuple(_c.factions or ()) + tuple(_c.flows or ()):
+            board[_f] = board.get(_f, 0) + 1
+    sess = _NS2()
+    _st = _state_of(sess)
+    _st.target_comp = _get_comp('列车同行')
+    _st.transition_framework = ''
+    _st.v3_intention = _NS2(locked_comp='列车同行', p1_pair=(),
+                            phase='locked', transition_pair=())
+    gs = GameState(gold=0, level=9, deploy_cap=9, plane=2, round_num=4,
+                   board=board,
+                   deployed=[_g18_bc(n, i + 1)
+                             for i, n in enumerate(pre_board)],
+                   bench=[_g18_bc(n, i + 1)
+                          for i, n in enumerate(bench_names)])
+    plan, rec, ctx = _m1p_plan_and_record(gs, sess)
+    assert ctx is not None and ctx.transition_domain is True, (
+        '锁前提:锁线转型域帧装配域事实 = True')
+    assert ctx.target_factions == frozenset(
+        {'减益', '列车同行', '星间旅人'}), (
+        f'收窄键集与局 18 账本 m1p 逐键一致,实得 {sorted(ctx.target_factions)}')
+    assert rec['up_names'] == ['黄泉'], (
+        f'义务件(达成弹性键承载者)= 计划 pick,实得 {rec["up_names"]}')
+    acts: list[dict] = []
+    spend: dict = {'buys': {}, 'levelup': 0, 'refresh': 0, 'sell_income': 0}
+    gs2, sold = m1p_swap_execute(gs, plan, acts=acts, spend=spend,
+                                 pool=_RetPool())
+    assert sold is True and plan.sell_names == ['飞霄']
+    res_up, _held, _lag = _m1p_plan_fill_deploy(gs2, plan, ctx, sess)
+    dep_names = {d.char_id for d in iter_occupied_deployed(gs2.deployed)
+                 if d.char_id}
+    assert res_up == 1 and '黄泉' in dep_names, '计划 pick 真上板'
+    assert set(rec['up_names']) <= dep_names, (
+        'm1p.up_names == 实际补部署名单(执行=计划等价,名字集断言)')
+    assert sum(1 for _ in iter_occupied_deployed(gs2.deployed)) == 9, (
+        '板满恢复 = 计划假想终态')
+
+
+def test_mandate_carries_m1p_plan_payload() -> None:
+    """mandate 计划载荷透传锁(T-279 R1;ADR-0640):m1p 发射帧置
+    cw4_m1p_plan_pending = {sell, up, trans_domain, occ}(载荷仅作部署段
+    核对,不改卖出仲裁权);非 m1p 帧恒 None(帧级同宿复位)。"""
+    dep, bench = _base_deployed(), [_bc(_TARGET_BENCH)]
+    st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
+                   deployed=list(dep), bench=list(bench))
+    sess = _m1p_session(None, directed=True)
+    out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess, state=st)
+    fired = [e for e in out if e.action.__class__.__name__ == 'RunDeploy'
+             and e.reason == 'm1_swap_redeploy']
+    assert len(fired) == 1, '锁前提:m1p 发射帧'
+    payload = state_of(sess).cw4_m1p_plan_pending
+    assert payload == {'sell': [_VICTIM], 'up': [_TARGET_BENCH],
+                       'trans_domain': False, 'occ': len(dep)}, payload
+    # 非 m1p 帧(无方向 → 计划弃权 → 无发射):载荷恒 None
+    sess_nd = _m1p_session(None, directed=False)
+    out_nd = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess_nd,
+                         state=st)
+    assert not any(e.action.__class__.__name__ == 'RunDeploy' for e in out_nd)
+    assert state_of(sess_nd).cw4_m1p_plan_pending is None
 
 
 # ==================== mandate M1″ 消费方:seam 门关闭态 ====================
