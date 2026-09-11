@@ -121,7 +121,9 @@ def test_debounce_bumps_only_one_copy(tmp_path, monkeypatch) -> None:
     read = [SimpleNamespace(char_id='万敌', star=1, slot=1, position_pref='back'),
             SimpleNamespace(char_id='万敌', star=1, slot=2, position_pref='back')]
     reconcile_tracking(s, read, [], None, source='t', ctx=ctx)
-    stars = sorted(bc.star for bc in exec_state_of(s).tracked_bench_chars)
+    # T-308/ADR-0646 S2:tracked 恒 pad 态槽位表(定长 9 含 None)——迭代走占用滤 None
+    stars = sorted(bc.star for bc in exec_state_of(s).tracked_bench_chars
+                   if bc is not None)
     assert stars == [1, 2], f'只抬一个副本(数量守恒),got {stars}'
 
 

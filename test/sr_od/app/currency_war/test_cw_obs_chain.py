@@ -112,10 +112,13 @@ def test_reconcile_double_empty_guard_keeps_old():
 
 
 def test_reconcile_double_empty_with_empty_prev_ok():
-    """双空读但前值也空 → 正常写回(空板开局,非读失败)。"""
+    """双空读但前值也空 → 正常写回(空板开局,非读失败)。
+    T-308/ADR-0646 S2:写回恒槽位表形态——空板 = 全 None 定长表(占用 0,
+    与旧紧凑空表语义等价)。"""
     sess = _Sess()
     assert reconcile_tracking(sess, [], [], None, source='t') is True
-    assert exec_state_of(sess).tracked_bench_chars == []
+    assert all(b is None
+               for b in exec_state_of(sess).tracked_bench_chars), '空板写回 = 全 None 槽位表'
 
 
 def test_reconcile_none_side_kept():
