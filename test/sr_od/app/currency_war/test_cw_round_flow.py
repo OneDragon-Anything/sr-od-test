@@ -549,6 +549,67 @@ def test_branch3_records_before_continue_click() -> None:
     assert i_read < i_click
 
 
+def test_battle_end_hook_advances_effect_ledger(monkeypatch) -> None:
+    """效果账本结算挂点行为锁(BoardState 设计 §5.1 挂点清单「结算挂点
+    (on_battle_end)」生产接线):真实 ``_record_round_outcome`` 回路 →
+    BoardState.effects 单例 ``_event_battle_end`` 事件计数真实推进(删接线行
+    即红);telemetry-only 补录面(败局页)不标记(与 apply_settlement_cover
+    同口径);挂点零 Field 写入(write_seq 不变)——账本事件面与观察覆盖
+    互不冲突,「逻辑写后观察覆盖」路径不受接线影响。"""
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        board_state_of,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_battle_wait as bwo,
+    )
+
+    monkeypatch.setattr(bwo, 'read_phase_round', lambda ctx, screen: (1, 8))
+
+    class _Op(bwo.CwScreenBattleWait):
+        def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
+            self._st = bwo.SettlementState(
+                run_start_ts=time.monotonic() - 9999.0,   # 超宽限:正常行
+                is_new_match=True)
+            self._unknown_streak = 0
+            # 挂点载体 = 真实 StrategySession(effect_inventory 属性 →
+            # BoardState.effects 单例,批次三载体归一)
+            from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+                StrategySession as _SS,
+            )
+            _sess = _SS()
+            _sess.last_state = GameState()
+            state_of(_sess)
+            self.ctx = SimpleNamespace(
+                cw_match=SimpleNamespace(
+                    session=_sess,
+                    strategy=SimpleNamespace(),
+                ),
+                ocr_service=SimpleNamespace(
+                    get_ocr_result_list=lambda image, rect=None,
+                    color_range=None, crop_first=False: WIN_FRAME),
+            )
+            self._cw_config = None
+
+        def round_by_ocr(self, screen, word, **kw):
+            return SimpleNamespace(is_success=False)
+
+        def round_by_find_area(self, screen, screen_name, area_name, **kw):
+            return SimpleNamespace(is_success=False)
+
+    op = _Op()
+    _sess = op.ctx.cw_match.session
+    _bs = board_state_of(_sess)
+    n0 = _bs.effects.event_count('_event_battle_end')
+    op._record_round_outcome(screen=None)
+    assert _bs.effects.event_count('_event_battle_end') == n0 + 1, (
+        '真实结算回路必须推进账本结算事件(生产接线;删挂点调用 = 红)')
+    # telemetry-only 补录面(win 帧 killed=True 走 loss_page 行不落提前
+    # return;即使落行也不进观察半分支)不触发挂点。
+    op._record_round_outcome(screen=None, telemetry_only=True)
+    assert _bs.effects.event_count('_event_battle_end') == n0 + 1, (
+        'telemetry-only 补录面禁触发结算挂点(与 apply_settlement_cover 同口径)')
+
+
 
 
 

@@ -166,6 +166,25 @@ def test_level_up_hook_writes_unified_ledger() -> None:
         '归一后写点落在单一实例(经属性写透)'
 
 
+def test_battle_end_hook_writes_unified_ledger() -> None:
+    """结算挂点(on_battle_end,§5.1 挂点清单第六挂点)经归一读口写
+    BoardState 正本:session.effect_inventory.on_battle_end() 与 bs.effects
+    事件计数同源(镜像升级标记锁);挂点零 Field 写入(write_seq 不变——
+    账本事件面在 inventory 方法域,不与观察覆盖争 frozen 帧域);注册表
+    现役零 BATTLE_END 条目 → 挂点推进零效果条目触碰(effect-domain §7.4
+    零条目 = 零驱动)。"""
+    sess = StrategySession()
+    bs = board_state_of(sess)
+    seq0 = bs.write_seq
+    sess.effect_inventory.on_battle_end()
+    assert bs.effects.event_count('_event_battle_end') == 1, \
+        '归一后写点落在单一实例(经属性写透)'
+    assert bs.write_seq == seq0, \
+        '挂点零 Field 写入(事件面与观察覆盖互不冲突)'
+    assert bs.effects.entries == [], \
+        '零 BATTLE_END 条目现役 = 零效果条目推进(零条目 = 零驱动)'
+
+
 # ============================================================ §5.1 挂点机制
 # register 播种 / tick 去重与到期 / consume_use / bump_key
 
