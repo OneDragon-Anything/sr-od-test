@@ -421,8 +421,11 @@ _PAID_FRAME = '刷新耗尽付费态'
 _GRAY_FRAME = '刷新不可用灰态'
 
 
-def _real_ocr_ctx_or_skip(test_context: SrTestContext,
-                          monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.fixture(scope='module')
+def real_ocr_ctx(test_context: SrTestContext):
+    """module 级真 OCR 服务(T-84 R2):OnnxOcrMatcher 模型加载一次,
+    本文件三条真帧锁用例共享(原逐用例 helper 每条重付模型 init 3-5s);
+    模型缺 → 整组 skip。替换值拆卸时还原,不向 session 级 test_context 泄漏。"""
     from one_dragon.base.matcher.ocr.ocr_service import OcrService
     from one_dragon.base.matcher.ocr.onnx_ocr_matcher import OnnxOcrMatcher
     try:
@@ -432,12 +435,13 @@ def _real_ocr_ctx_or_skip(test_context: SrTestContext,
             pytest.skip('OCR 模型不可用')
     except Exception:
         pytest.skip('OCR 模型不可用')
-    monkeypatch.setattr(test_context, 'ocr_service',
-                        OcrService(ocr_matcher=matcher))
+    prev = test_context.ocr_service
+    test_context.ocr_service = OcrService(ocr_matcher=matcher)
+    yield test_context
+    test_context.ocr_service = prev
 
 
-def test_button_real_fixtures(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_button_real_fixtures(real_ocr_ctx: SrTestContext) -> None:
     """三态真帧锁(T-15 采证帧归档;同帧离线重放 = analyze_screen 对账的
     测试内形态):免费帧锚命中读数 2 / 付费帧标价 2 可负担 / 灰态帧标价 2
     金 1 不可负担。fixture/模型缺 → skip;area 缺 = fail(配置缺陷非环境
@@ -447,35 +451,33 @@ def test_button_real_fixtures(
               (_FREE_FRAME, _PAID_FRAME, _GRAY_FRAME)]
     if not all(p.exists() for p in frames):
         pytest.skip('fixture 缺失')
-    if test_context.screen_loader.get_area(
+    if real_ocr_ctx.screen_loader.get_area(
             '货币战争-备战-开商店', '标识-免费刷新') is None:
         pytest.fail(
             '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
             '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
             '(dd-029/T-13 形态),请再生 merged 并随批提交')
-    _real_ocr_ctx_or_skip(test_context, monkeypatch)
 
     from one_dragon.utils import cv2_utils
 
     img_free = cv2_utils.read_image(str(frames[0]))
-    btn = read_shop_refresh_button(test_context, img_free, gold=48)
+    btn = read_shop_refresh_button(real_ocr_ctx, img_free, gold=48)
     assert btn.free is True, f'免费帧锚应命中: {btn}'
     assert btn.free_remaining == 2, f'免费帧次数应读 2: {btn}'
     assert btn.price is None
 
     img_paid = cv2_utils.read_image(str(frames[1]))
-    btn = read_shop_refresh_button(test_context, img_paid, gold=61)
+    btn = read_shop_refresh_button(real_ocr_ctx, img_paid, gold=61)
     assert btn.free is False, f'付费帧锚应未中: {btn}'
     assert btn.price == 2 and btn.affordable is True, f'{btn}'
 
     img_gray = cv2_utils.read_image(str(frames[2]))
-    btn = read_shop_refresh_button(test_context, img_gray, gold=1)
+    btn = read_shop_refresh_button(real_ocr_ctx, img_gray, gold=1)
     assert btn.free is False, f'灰态帧锚应未中(渲染同付费): {btn}'
     assert btn.price == 2 and btn.affordable is False, f'{btn}'
 
 
-def test_free_anchor_three_state_boundary(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_free_anchor_three_state_boundary(real_ocr_ctx: SrTestContext) -> None:
     """「标识-免费刷新」锚判别边界直锁(三态归档帧 × 真 OCR,直接打锚
     函数):免费帧命中(True)/付费帧不命中/灰态帧不命中(False)。本 area
     ``id_mark=false``(画面级判定不依赖它),通用 id_mark 扫描不覆盖其
@@ -487,29 +489,28 @@ def test_free_anchor_three_state_boundary(
               (_FREE_FRAME, _PAID_FRAME, _GRAY_FRAME)]
     if not all(p.exists() for p in frames):
         pytest.skip('fixture 缺失')
-    if test_context.screen_loader.get_area(
+    if real_ocr_ctx.screen_loader.get_area(
             '货币战争-备战-开商店',
             cw_shop_refresh_obs._FREE_ANCHOR_AREA) is None:
         pytest.fail(
             '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
             '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
             '(dd-029/T-13 形态),请再生 merged 并随批提交')
-    _real_ocr_ctx_or_skip(test_context, monkeypatch)
 
     from one_dragon.utils import cv2_utils
 
     img_free = cv2_utils.read_image(str(frames[0]))
-    assert cw_shop_refresh_obs._free_anchor_hit(test_context, img_free) is True, \
+    assert cw_shop_refresh_obs._free_anchor_hit(real_ocr_ctx, img_free) is True, \
         '免费帧锚应命中(真阳性——免费态判定的唯一 UI 事实源)'
     for name, img_path in ((_PAID_FRAME, frames[1]),
                            (_GRAY_FRAME, frames[2])):
         img = cv2_utils.read_image(str(img_path))
-        assert cw_shop_refresh_obs._free_anchor_hit(test_context, img) is False, \
+        assert cw_shop_refresh_obs._free_anchor_hit(real_ocr_ctx, img) is False, \
             f'{name} 锚必须不命中(「刷新」两字 lcs 2/4=0.5 < 0.7 拒识边界)'
 
 
 def test_price_reader_free_frame_count_is_not_price_via_gate(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+        real_ocr_ctx: SrTestContext) -> None:
     """隐患锁(T-15 发现):免费帧次数数字同 rect,标价 reader 直调会误读
     ——免费帧的正确消费路径 = 按钮态闸先行(喂入口已接),本锁钉住
     「免费帧经 composite 不产标价」;直调误读行为如实留证不回退。area 缺
@@ -518,20 +519,19 @@ def test_price_reader_free_frame_count_is_not_price_via_gate(
     frame = fix_dir / f'{_FREE_FRAME}.webp'
     if not frame.exists():
         pytest.skip('fixture 缺失')
-    if test_context.screen_loader.get_area(
+    if real_ocr_ctx.screen_loader.get_area(
             '货币战争-备战-开商店', '标识-免费刷新') is None:
         pytest.fail(
             '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
             '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
             '(dd-029/T-13 形态),请再生 merged 并随批提交')
-    _real_ocr_ctx_or_skip(test_context, monkeypatch)
     from one_dragon.utils import cv2_utils
     from sr_od.application.currency_war.obs.cw_shop_refresh_obs import (
         read_shop_refresh_price,
     )
     img = cv2_utils.read_image(str(frame))
-    assert read_shop_refresh_price(test_context, img) == 2, \
+    assert read_shop_refresh_price(real_ocr_ctx, img) == 2, \
         '免费帧次数 2 会被标价 reader 误读为 2(隐患实证;消费方必须先过按钮态闸)'
-    btn = read_shop_refresh_button(test_context, img)
+    btn = read_shop_refresh_button(real_ocr_ctx, img)
     assert btn.free is True and btn.price is None, \
         '经 composite 消费则结构性隔离(free 分支零标价通道)'
