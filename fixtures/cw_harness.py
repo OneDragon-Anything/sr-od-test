@@ -770,7 +770,19 @@ class FakeP1Run:
         - finalize/节点探针读屏喂真值(批 1 run_visit 同族,读屏桩只
           换来源不造值);
         - run_buy_waves 透传捕获(outcome 直传 harness,零语义变更)。
+
+        安装幂等闸(T-76):run_prep_phase 每轮调用本方法,而裸 setattr
+        捕获会把上一轮已装的捕获壳当「原函数」再包一层——链长随轮次
+        线性增长,一次物理 rbw 执行被 append 轮次号次(同一 outcome 复制),
+        商店窗切片 Σspend = 轮次号×真值(T-22 在册 xfail 真漏账机制,
+        探针定谳:production rbw 聚合与逐动作 sink 记账无分叉,分叉在
+        本捕获层的重复安装)。补丁集全部静态,重复安装零增益 → 已装过
+        直接返回;monkeypatch teardown 统一还原(闸旗随实例,逐 fake_p1_run
+        上下文天然复位)。
         """
+        if getattr(self, '_prep_patches_installed', False):
+            return
+        self._prep_patches_installed = True
         from fixtures.cw_fake_game.fake_ports import FakeCwObserver
         from sr_od.application.currency_war.obs import cw_observation as cwo
         from sr_od.application.currency_war.operations.cw_op import (
@@ -797,8 +809,11 @@ class FakeP1Run:
         real_rbw = buy_mod.run_buy_waves
 
         def _rbw_capture(op: Any, match: Any, hp: Any, hr: Any,
-                         ht: Any) -> Any:
-            rr, outcome = real_rbw(op, match, hp, hr, ht)
+                         ht: Any, **k: Any) -> Any:
+            # **k 透传(T-76):production 签名带仅关键字参(spend_gate,
+            # 发射帧仲裁臂调用形),捕获壳签名必须宽容透传,防仲裁路径
+            # 在假环境触达时 TypeError 在捕获边界折断。
+            rr, outcome = real_rbw(op, match, hp, hr, ht, **k)
             self.last_shop_outcome = outcome
             self._round_shop_outcomes.append(outcome)
             return rr, outcome

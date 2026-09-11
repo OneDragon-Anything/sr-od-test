@@ -23,9 +23,10 @@ T-120 退役批分配,后续批回填编号。
   恒等式辖域按「商店窗 vs 备战域」拆分,正主 = 本文件两常设检查卡
   test_fake_ledger_zero_tolerance_gold_attribution(备战域逐动作
   归属,零容忍)+ test_fake_ledger_window_plan_vs_executed_zero_
-  tolerance(商店窗 plan账vs实扣,零容忍;既有真漏账 xfail 在册钉),
+  tolerance(商店窗 plan账vs实扣,零容忍;T-22 时点的真漏账
+  xfail 在册钉已随 T-76 根因修复摘除,现为零容忍正锁),
   保真基线面①只保金非负底线——定谳记录 = .debug/progress/
-  2026-09-11-cw-clear-run/reports/T-22-r1.md。)
+  2026-09-11-cw-clear-run/reports/T-22-r1.md 与 T-76-r1.md。)
 - **journal 写端隔离锁** = 假局 journal 行落假局根、live 根零新行
   (T-129/T-130 混流注记的机器可判形)。
 - **保真基线锁**(原 test_cw_fidelity_baseline 批 1 验收③,2026-09-09
@@ -239,7 +240,7 @@ def test_fidelity_baseline_conservation_domains_bands(
     batch = _run_fidelity_batch(test_context, monkeypatch, tmp_path)
     # —— ①金恒等式(T-22 定谳重推辖域):商店窗恒等式归账本位检查卡
     # (test_fake_ledger_window_plan_vs_executed_zero_tolerance,窗口行
-    # 恒等 + 在册真漏账 xfail 钉;原「期末金 = 期初金 − spend_executed +
+    # 恒等零容忍正锁;原「期末金 = 期初金 − spend_executed +
     # 卖入」按轮测量把关店后的备战域金动错并进窗口辖域——备战域金动
     # 现由备战域卡逐动作归属管辖,本面只保金非负底线)。
     # 卖入双源同判语义随迁窗口行(卖入账 == 状态机金账差分)。
@@ -300,7 +301,7 @@ def test_fake_ledger_zero_tolerance_gold_attribution(
     枚举 = ∅(无免费刷新通道/无 OCR 兜底/名册全注册表真值)→ 容忍
     恒 0,任何非零残差 = 真漏账。
 
-    本测辖**备战域**(商店窗 plan-vs-实扣面见下方 xfail 在册锁):
+    本测辖**备战域**(商店窗 plan-vs-实扣面见下方商店窗零容忍卡):
     ①逐动作归属:每审计行金差 == 归属值(prep 动作 = 执行点回执
       levelup_spent/球金/卖出 income;其余 = 0)——红 = 回执通道漏记
       或无主金动;
@@ -329,7 +330,7 @@ def test_fake_ledger_zero_tolerance_gold_attribution(
                     '相位金动脱离账本位)')
                 prev_close = row['gold_close']
                 continue
-            # ① 逐动作金归属(零容忍;商店窗行归 xfail 在册锁辖)
+            # ① 逐动作金归属(零容忍;商店窗行归商店窗零容忍卡辖)
             for e in moves:
                 delta = e['post']['gold'] - e['pre']['gold']
                 ch = e.get('gold_channel')
@@ -339,7 +340,7 @@ def test_fake_ledger_zero_tolerance_gold_attribution(
                         f"(applied={e['applied']}) 金差 {delta} vs "
                         f'归属 {ch}')
             # ② 相位闭合(审计链外无主金动;全行含商店窗行——窗口行
-            # 金差本身在审计链内,其 plan-vs-实扣残差归 xfail 在册锁辖)
+            # 金差本身在审计链内,其 plan-vs-实扣残差归商店窗零容忍卡辖)
             phase_net = sum(e['post']['gold'] - e['pre']['gold']
                             for e in audit_by_round.get(r, []))
             truth_net = row['gold_close'] - row['gold_after_income']
@@ -361,30 +362,25 @@ def test_fake_ledger_zero_tolerance_gold_attribution(
         '定谳=假环境合法差集∅,非零即真漏账):\n' + '\n'.join(violations))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason='T-22 在册真漏账:商店窗 run_buy_waves outcome 账 spend_executed '
-           'Σ > 窗口金差真值(逐窗实差的招唤路 = visit 臂/发射帧仲裁臂 '
-           'cw_loop.py 多路 rbw 与重入组合;修复项已立回编排者,修复落地 '
-           '后本锁 XPASS(strict) 必红 = 强制摘除在册钉转零容忍正锁)')
 def test_fake_ledger_window_plan_vs_executed_zero_tolerance(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path) -> None:
-    """T-22 常设检查卡·商店窗 plan账 vs 实扣(零容忍;真漏账在册钉)。
+    """T-22 常设检查卡·商店窗 plan账 vs 实扣(零容忍正锁;T-76 摘钉)。
 
     判据(定谳终态语义):每商店窗审计行 金差真值 == Σ窗内 outcome
     卖入 − Σ实扣申报——容忍 0(合法差形态枚举 = ∅,见备战域卡 docstring)。
     开窗无 outcome(窗内账丢)= 同罪判红。
 
-    **当前红 = 在册真漏账**(非本批引入,删除波 1 报告 §五既有容忍缺口
-    显影):probe 实证逐动作 sink 记账恒等(买/升/刷每动作申报价 == 金差),
-    分叉出在 rbw 层聚合——visit 臂(cw_screen_prep)与发射帧仲裁臂
-    (cw_loop.py:643)多路 run_buy_waves 的 outcome 账 Σ 超窗内实际金动
-    (批实测逐窗残差 seed11 r2 +2/r3 +18/r4 +21/r5 +80、seed23 r4 +48、
-    seed57 r2 +10;数字随在飞树轨迹漂移,机制为准)。修复项已立回编排者
-    (见 T-22-r1 报告 §五);修复前本锁以 xfail(strict) 在册——漏账存在
-    时红转 xfail(套件绿),漏账修复时 XPASS(strict) 红 = 强制摘钉翻正锁,
-    禁在册钉吞新形态(新窗/新分叉照样红转 xfail 失败显形)。
+    T-22 时点的红曾以 xfail(strict) 在册钉(定谳记录 = T-22-r1 报告
+    §一.3);T-76 根因定谳摘钉转正锁:残差机制 = harness 捕获壳
+    (``FakeP1Run._install_prep_patches`` 的 rbw 透传捕获)每轮
+    run_prep_phase 重复安装、把上一轮捕获壳当原函数再包一层,一次物理
+    run_buy_waves 执行的 outcome 被追加轮次号次,窗切片 Σspend = 轮次
+    号×真值——production rbw 聚合与逐动作 sink 记账经探针定谳恒等,
+    分叉不在生产层(逐窗残差 ×轮次 指纹全行成立 + 捕获链调用栈取证,
+    定谳记录 = T-76-r1 报告)。修法 = 安装幂等闸(harness 单点)。
+    红语义:窗口恒等破坏 = 真漏账(生产聚合/逐动作 sink/窗口配对切片
+    三面任一分叉),零容忍禁回 xfail 吞新形态。
     """
     runs = _run_ledger_audit_batch(test_context, monkeypatch, tmp_path)
     violations: list[str] = []
