@@ -260,6 +260,18 @@ class TestZeroProductionConsumption:
             / 'cw_screen_wait_one_one.py'),
         str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
             / 'cw_screen_plane_intel.py'),
+        # 统一观察架构 B4 挂账批(账本 T-45 商店系三件收编;设计依据 =
+        # changes/2026-09-11-unified-observation/design.md §2.1-4 挂账行 +
+        # 推进型基类收编详设变体形态):cw_op_open_shop/cw_op_close_shop
+        # 改挂 CwScreenOpBase 作只读/导航变体,open/close 节点顶部装配点
+        # 分流判据消费 observation_source/action_sink(先例锚同上;幂等
+        # 原子动作零策略消费,decide 空申报。非旁路改道——零读屏/执行
+        # 新缝,缺省 None = 生产直连旧函数,§9.1 并存期)。cw_op_buy_cards
+        # 为既有登记面(商店入口观察改道),本批仅增同式分流判据。
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_op'
+            / 'cw_op_open_shop.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_op'
+            / 'cw_op_close_shop.py'),
         # 统一观察架构试点步骤 1(commit 3a688669a)基类:docstring 提及
         # 安装协议名(「双清复位见 cw_game_ports」),零 import 零调用——
         # 扫描为文本匹配,提及即命中;非改道点,批 2 登记豁免。
