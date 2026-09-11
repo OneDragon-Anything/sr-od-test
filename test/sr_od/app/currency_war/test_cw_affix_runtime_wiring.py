@@ -1,4 +1,4 @@
-"""test_cw_affix_runtime_wiring —— 词缀运行时登记挂点接线锁(效果账本 source='affix')。
+"""test_cw_affix_runtime_wiring —— 效果账本运行时挂点接线锁(词缀源+板面重写桥)。
 
 被测:
 - kernel/cw_affix_effects.register_affixes_from_names(简报/位面详情两读链
@@ -8,9 +8,12 @@
   挂点代码零来源特判(effect-domain.md §7.2「新增效果 = 新增规格声明,
   实例清单结构与挂点代码零改动」——现役三条词缀规格均无时限/计数面,
   驱动轨用合成 spec 验证,先例 = test_cw_affix_spec_registry 播种轨);
-- 接线在场:两读链产出点(CwScreenBriefing._read_and_advance 开局首读 /
-  CwScreenPlaneIntel.close_and_report 补采落点)调用共用登记体(源扫锁:
-  挂点被拆/改名时红,指向重接线)。
+- 接线在场:效果账本挂点的生产调用点源扫锁——词缀两读链产出点
+  (CwScreenBriefing._read_and_advance 开局首读 / CwScreenPlaneIntel
+  .close_and_report 补采落点)调用共用登记体;选卡确认落地登记点
+  (CwScreenInvestStrategy._append_confirmed_strategy)调用板面重写桥
+  (apply_board_rewrite,设计 §5 全员晋升/人力重组两行的生产写端)。
+  挂点被拆/改名时红,指向重接线。
 
 设计出处(持久索引):docs/develop/currency_war/game_state/effect-domain.md
 §7.3(驱动事件映射·登记挂点纪律:best-effort 失败不阻塞读链)/§9.1(实例按
@@ -43,6 +46,9 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
 from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_briefing import (
     CwScreenBriefing,
+)
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
+    CwScreenInvestStrategy,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_plane_intel import (
     CwScreenPlaneIntel,
@@ -169,3 +175,14 @@ def test_read_chain_producers_call_shared_register_body() -> None:
         '简报读链登记挂点缺位(cw_screen_briefing._read_and_advance)'
     assert 'register_affixes_from_names' in src_intel, \
         '位面详情补采登记挂点缺位(cw_screen_plane_intel.close_and_report)'
+
+
+def test_board_rewrite_bridge_wired_at_strategy_confirm_point() -> None:
+    """选卡确认落地登记点调用板面重写桥(apply_board_rewrite,设计 §5
+    全员晋升/人力重组两行的生产写端;与 register_strategy/burst 桥同点):
+    调用被拆除 → 桥回归零生产调用方,板面重写族申报了语义而写端静默丢
+    (出售面退款/清场不入记录,替换面失负写端留证),本锁红指向重接线。"""
+    src = inspect.getsource(CwScreenInvestStrategy._append_confirmed_strategy)
+    assert 'apply_board_rewrite' in src, \
+        '选卡登记点板面重写桥接线缺位' \
+        '(cw_screen_invest_strategy._append_confirmed_strategy)'
