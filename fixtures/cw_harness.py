@@ -108,6 +108,35 @@ class FakeP1Result:
         return out
 
 
+def _prep_gold_channel(action: Any, res: Any) -> int:
+    """备战动作的金归属(T-22 账本位立卡;定谳口径见 test_cw_fake_p1_
+    segment 检查卡 docstring 与 fixtures/cw_fake_game/fake_ports._land_
+    ledger 注)。
+
+    逐形态归属(差值容忍恒 0 的枚举依据:假环境合法差集 = ∅,每个
+    金动通道都取其执行点回执真值):
+    - ``pa.LevelUp``(点击环至 level+1):−``verification.levelup_spent``
+      (取价单一源 = kernel ``xp_click_cost``,逐击累计;与状态机金差
+      独立计算,对拍 = 真检查非同义反复);
+    - ``pa.ClickSpheres``(收球):+``verification.gold``(球金通道逐球
+      累计,独立于金差);
+    - ``pa.SellBench``/``pa.SellDeployed``:+``res.income``(卖出回金 =
+      ``cw_state.simulate`` 执行点真值;与卖出申报 ``action.income`` 的
+      对拍归卖出门辖区,此处不二算);
+    - 其余备战动作(部署/开箱/开典籍/出战/控制流):金动恒 0,归属 0
+      ——非零金差即无主金动(真漏账),检查卡判红。
+    """
+    _v = getattr(res, 'verification', None) or {}
+    _name = type(action).__name__
+    if _name == 'LevelUp':
+        return -int(_v.get('levelup_spent', 0) or 0)
+    if _name == 'ClickSpheres':
+        return int(_v.get('gold', 0) or 0)
+    if _name in ('SellBench', 'SellDeployed'):
+        return int(getattr(res, 'income', None) or 0)
+    return 0
+
+
 def bands_from_trajectories(
         games: list[dict[int, tuple[float | None, float | None]]],
 ) -> dict[int, dict[str, tuple[float, float] | tuple[None, None]]]:
@@ -243,6 +272,17 @@ class FakeP1Run:
         # monkeypatch 引用(fake_p1_run 存入;run_p1 无参调用的既有测试
         # 契约保持,prep 相位补丁内部取用)
         self._monkeypatch: Any = None
+        # —— T-22 账本位立卡(金归属逐动作审计)状态 ——
+        # [索引定义] _audit_round = 审计行当前所属回合号(run_p1 循环变量
+        # r,1 基,写入时机 = 每轮 run_prep_phase 前;domain 测试不经 run_p1
+        # 时为 None,账本检查卡只辖 run_p1 批)。消费 = prep_landing/
+        # _flush_shop_window/run_prep_phase 给 prep_audit 行打轮戳。
+        self._audit_round: int | None = None
+        # 本轮商店窗 outcome 账(run_p1 每轮清空;_rbw_capture 逐访问追加,
+        # 与 ShopVisit(env) 窗口行按下标配对——窗打开时点记录基下标)
+        self._round_shop_outcomes: list[Any] = []
+        # 当前打开窗口的 outcome 起始下标(开店点击时点快照;None=无开窗)
+        self._window_outcome_start: int | None = None
 
     def _config(self) -> Any:
         from sr_od.application.currency_war.currency_war_config import (
@@ -385,15 +425,36 @@ class FakeP1Run:
         }
 
     def _flush_shop_window(self) -> None:
-        """商店审计窗口闭合(开→收一段落一个边界项;链轴跨窗连续)。"""
+        """商店审计窗口闭合(开→收一段落一个边界项;链轴跨窗连续)。
+
+        T-22 立卡:窗口行带金归属 ``gold_channel`` = Σ(窗内 outcome 卖入
+        −实扣申报)——plan 账 vs 窗口金差真值的**商店窗零容忍检查位**
+        (定谳口径见行 schema 注释与本方法注;合法差形态枚举 = live-only,
+        假环境内恒空集,故容忍恒 0)。窗内 outcome 按开店时点下标切片配
+        对,多窗各配各的;无 outcome 的开窗(窗内 run_buy_waves 中断)=
+        归属 None(检查卡判红——花了金账却丢了 = 真漏账形态)。
+        """
         pre = getattr(self, '_shop_window_pre', None)
         if pre is None:
             return
         self._shop_window_pre = None
+        _start = self._window_outcome_start
+        self._window_outcome_start = None
+        _wins = (self._round_shop_outcomes[_start:]
+                 if _start is not None else [])
+        _spend = sum(getattr(o, 'spend_executed', 0) or 0 for o in _wins)
+        _sold = sum(getattr(o, 'total_sell_income', 0) or 0 for o in _wins)
         self.prep_audit.append({'action': 'ShopVisit(env)',
                                 'applied': True, 'pre': pre,
                                 'post': self._truth_digest(),
-                                'node': self._audit_node_tag()})
+                                'node': self._audit_node_tag(),
+                                'round': self._audit_round,
+                                'gold_channel': (
+                                    None if _start is not None
+                                    and not _wins
+                                    else _sold - _spend),
+                                'window_spend': _spend,
+                                'window_sold': _sold})
 
     def _audit_node_tag(self) -> str:
         """审计项的回合标签(跨回合收入段为域外金动,链断言按组内)。"""
@@ -428,7 +489,9 @@ class FakeP1Run:
         post = self._truth_digest()
         self.prep_audit.append({
             'action': action_key(action), 'applied': bool(res.applied),
-            'pre': pre, 'post': post, 'node': self._audit_node_tag()})
+            'pre': pre, 'post': post, 'node': self._audit_node_tag(),
+            'round': self._audit_round,
+            'gold_channel': _prep_gold_channel(action, res)})
         if res.applied:
             # tracked 真值重播(实机对位 = 执行器 tracked 随动;漏同步 =
             # 期望态 vs tracked 双账守卫炸「投影建模 bug」假象)
@@ -587,7 +650,9 @@ class FakeP1Run:
         d0 = self._truth_digest()
         self.prep_audit.append({'action': 'PhaseStart(env)', 'applied': True,
                                 'pre': d0, 'post': d0,
-                                'node': self._audit_node_tag()})
+                                'node': self._audit_node_tag(),
+                                'round': self._audit_round,
+                                'gold_channel': 0})
         while visits < max_visits:
             audit_before = len(self.prep_audit)
             prep = CwScreenPrep(self.ctx)
@@ -619,7 +684,9 @@ class FakeP1Run:
         d1 = self._truth_digest()
         self.prep_audit.append({'action': 'PhaseEnd(env)', 'applied': True,
                                 'pre': d1, 'post': d1,
-                                'node': self._audit_node_tag()})
+                                'node': self._audit_node_tag(),
+                                'round': self._audit_round,
+                                'gold_channel': 0})
         return {'visits': visits, 'launched': launched,
                 'armed_launched': armed_fired,
                 'armed_evaluated': armed_evaluated,
@@ -658,6 +725,8 @@ class FakeP1Run:
                 # 不经 prep 审计——窗口以单一边界项闭合(见收店臂),
                 # 维持链相邻衔接的完整真值轴
                 self._shop_window_pre = self._truth_digest()
+                # T-22 立卡:窗内 outcome 切片基下标(闭窗时配对卖入/实扣)
+                self._window_outcome_start = len(self._round_shop_outcomes)
                 return _Res(True)
             if (area == '按钮-收起'
                     and self.match.phase == PHASE_PREP_SHOP_OPEN):
@@ -731,6 +800,7 @@ class FakeP1Run:
                          ht: Any) -> Any:
             rr, outcome = real_rbw(op, match, hp, hr, ht)
             self.last_shop_outcome = outcome
+            self._round_shop_outcomes.append(outcome)
             return rr, outcome
 
         monkeypatch.setattr(buy_mod, 'run_buy_waves', _rbw_capture)
@@ -1354,6 +1424,11 @@ class FakeP1Run:
         result = FakeP1Result(seed=self.seed)
         for r, node in enumerate(list(self.match.node_sequence), start=1):
             self._bench_pre_slots = dict(self._bench_identity())
+            # T-22 立卡:审计行轮戳 + 本轮商店窗 outcome 账清零(窗配对
+            # 切片基下标以本轮为界,跨轮不混)
+            self._audit_round = r
+            self._round_shop_outcomes = []
+            self._window_outcome_start = None
             # 节点类型供给(决策前写,引擎同位 engine_p1.py:827;消费 =
             # 保连胜门/节点感知判据,见 __init__ 节点序列供给注)
             self.cw_match.session.node_type_current = node
@@ -1376,6 +1451,9 @@ class FakeP1Run:
             # 备战期 = 真 op 全链(实机策略器决策;部署由策略 RunDeploy
             # 发射经执行缝落地——决策帧携带板满态的时序由真链自持)
             phase = self.run_prep_phase(self._monkeypatch)
+            # T-22 立卡:悬挂窗先闭合再读期末金(相位异常中断时窗未走
+            # 收店臂——无此闭合,窗口金差会漏出审计链 = 检查卡误红)
+            self._flush_shop_window()
             outcome = phase['outcome']
             if outcome is not None:
                 gold_open = outcome.gold_open
@@ -1393,6 +1471,16 @@ class FakeP1Run:
                 gold_open = None
                 gold_close = self.match.state.gold
                 counters = dict.fromkeys(('total_buy', 'total_level', 'total_refresh', 'total_sell', 'total_sell_income', 'spend_executed'), 0)
+            # 账本行 schema 定谳口径(T-22,合法差形态声明;定谳记录 =
+            # .debug/progress/2026-09-11-cw-clear-run/reports/T-22-r1.md):
+            # ``spend_executed``/``total_*`` = **计划口径执行账**(申报
+            # 语义:Σ动作申报价,非游戏金差观测账;实扣真值 = 状态机金差,
+            # 对拍位 = ShopVisit(env) 审计行的 gold_channel 检查)。
+            # plan 账 vs 实扣的差值形态枚举:假环境内 = ∅(零容忍判红);
+            # live-only 合法差 = 免费刷新 proc(账记刷新费实付 0,fields.md
+            # §3.3.4)/单击价显示价支观察域(ADR-0632 两支)/未识别名卖出
+            # 退款中费兜底(bench_char_cost)——各有留证与对账通道,不进
+            # 假环境守恒等式。
             row: dict[str, Any] = {
                 'node': node,
                 'income': inc,

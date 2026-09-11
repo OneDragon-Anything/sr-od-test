@@ -215,6 +215,19 @@ class FakeActionSink:
           spend(fee)/total_refresh/did_refresh/refresh_board_changed
           (refresh_effective 单一源对拍)+ 刷后 shop_snapshots 行
           (金 = 状态机真值,较 live 的期望值列更真)。
+
+        **账本语义定谳(T-22 立卡;定谳记录 = .debug/progress/
+        2026-09-11-cw-clear-run/reports/T-22-r1.md)**:本账(spend_
+        executed/total_*)= **计划口径执行账**——Σ动作申报价(BuyCard
+        单价+满栏 (k−1)×单价 / LevelUp action.cost / RefreshShop 标价),
+        非游戏金差观测账;实扣真值 = ``cw_state.simulate`` 金差
+        (kernel 单一源)。对拍位 = 商店窗守恒(ShopVisit(env) 窗口行
+        ``gold_channel`` 检查,容忍 0)。plan 账 vs 实扣差值形态枚举:
+        **假环境内 = ∅**(无免费刷新通道/无 OCR 兜底/名册全注册表真值,
+        故零容忍);live-only 合法差 = 免费刷新 proc(game_state/fields.md
+        §3.3.4 免费帧不写标价,实付 0 账记费,ADR-0456 留证通道)/
+        单击价显示价支观察域(ADR-0632 两支语义)/未识别名卖出退款
+        中费兜底(kernel bench_char_cost)——不进假环境守恒等式。
         """
         from sr_od.application.currency_war.kernel.cw_exec_state import (
             exec_state_of,

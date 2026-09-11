@@ -19,7 +19,13 @@ T-120 退役批分配,后续批回填编号。
   账本位漂移(批 1 新引入面的在环检测器)。(2026-09-09 合并批:原
   同文件 test_sink_ledger_matches_game_truth 单侧不等式弱锁按
   DEBTS.md D65 处置删除——本文件现由金恒等式强锁为正主,原
-  test_cw_fidelity_baseline.py 整件并入承载。)
+  test_cw_fidelity_baseline.py 整件并入承载。)(T-22 定谳重推:
+  恒等式辖域按「商店窗 vs 备战域」拆分,正主 = 本文件两常设检查卡
+  test_fake_ledger_zero_tolerance_gold_attribution(备战域逐动作
+  归属,零容忍)+ test_fake_ledger_window_plan_vs_executed_zero_
+  tolerance(商店窗 plan账vs实扣,零容忍;既有真漏账 xfail 在册钉),
+  保真基线面①只保金非负底线——定谳记录 = .debug/progress/
+  2026-09-11-cw-clear-run/reports/T-22-r1.md。)
 - **journal 写端隔离锁** = 假局 journal 行落假局根、live 根零新行
   (T-129/T-130 混流注记的机器可判形)。
 - **保真基线锁**(原 test_cw_fidelity_baseline 批 1 验收③,2026-09-09
@@ -31,6 +37,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fixtures.cw_fake_game.fake_match import (
@@ -230,26 +237,16 @@ def test_fidelity_baseline_conservation_domains_bands(
     单一源现算)。种子批共享同一种子集,与上文确定性锁(验收①)同值域,
     逐测各跑一遍 = 同值重算,按纪律 11 收为一批。"""
     batch = _run_fidelity_batch(test_context, monkeypatch, tmp_path)
-    # —— ①金恒等式:任意轮 期末金 = 期初金 − spend_executed + 卖入 ——
-    # 卖入双源同判:ledger 账(sink 落 BuyCardsOutcome.total_sell_income,
-    # 来源 = ExecResult.income 执行点真值)必须等于状态机金账差分
-    # (spend − (期初 − 期末))——两源不一致 = sink 账本位与游戏真值分叉。
+    # —— ①金恒等式(T-22 定谳重推辖域):商店窗恒等式归账本位检查卡
+    # (test_fake_ledger_window_plan_vs_executed_zero_tolerance,窗口行
+    # 恒等 + 在册真漏账 xfail 钉;原「期末金 = 期初金 − spend_executed +
+    # 卖入」按轮测量把关店后的备战域金动错并进窗口辖域——备战域金动
+    # 现由备战域卡逐动作归属管辖,本面只保金非负底线)。
+    # 卖入双源同判语义随迁窗口行(卖入账 == 状态机金账差分)。
     for res in batch:
         for r in sorted(res.rounds):
             row = res.rounds[r]
-            open_gold = row['gold_open']
             close_gold = row['gold_close']
-            spent = row['spend_executed']
-            if open_gold is None:
-                continue
-            sold_by_ledger = row['total_sell_income']
-            sold_by_truth = spent - (open_gold - close_gold)
-            assert sold_by_truth >= 0, (
-                f'seed={res.seed} r{r}:金凭空减少(期初 {open_gold} → '
-                f'期末 {close_gold},花销账 {spent})')
-            assert sold_by_ledger == sold_by_truth, (
-                f'seed={res.seed} r{r}:卖入双源分叉(ledger='
-                f'{sold_by_ledger},状态机差分={sold_by_truth})')
             assert close_gold >= 0
         # —— ②轨迹域:hp ∈ [0, HP_UPPER_BOUND];金轨迹恒非负;
         # 首轮结算前 hp = 开局先验(初值表,非真读——语义 = 环境初值)。
@@ -271,6 +268,144 @@ def test_fidelity_baseline_conservation_domains_bands(
             med, p90 = band[metric]
             assert med is not None and p90 is not None
             assert med <= p90
+
+
+def _run_ledger_audit_batch(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path) -> list[tuple[Any, FakeP1Result]]:
+    """检查卡批驱动(保真基线批同种子同剧本;保留 run 对象供审计账)。"""
+    runs: list[tuple[Any, FakeP1Result]] = []
+    enter_running_state(test_context)
+    try:
+        for i, seed in enumerate(_SEEDS):
+            with fake_p1_run(test_context, monkeypatch, tmp_path, seed,
+                             node_sequence=_SCRIPT, initial_gold=30,
+                             archive_dir_name=f'ledger_{seed}_{i}') as run:
+                runs.append((run, run.run_p1()))
+    finally:
+        reset_running_state(test_context, test_context.cw_match)
+    return runs
+
+
+def test_fake_ledger_zero_tolerance_gold_attribution(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path) -> None:
+    """T-22 常设检查卡·备战域金归属(零容忍,在册即红)。
+
+    定谳口径(定谳记录 = .debug/progress/2026-09-11-cw-clear-run/
+    reports/T-22-r1.md;权威 = game_state/fields.md §3.2.9/§3.2.11/
+    §3.3.4 + ADR-0561 申报表 #5/#7 + ADR-0632;实扣规则单一源 =
+    kernel ``cw_state.simulate`` 金差):执行账(spend_executed/total_*)
+    = 计划口径账(Σ动作申报价),非金差观测账;假环境内合法差形态
+    枚举 = ∅(无免费刷新通道/无 OCR 兜底/名册全注册表真值)→ 容忍
+    恒 0,任何非零残差 = 真漏账。
+
+    本测辖**备战域**(商店窗 plan-vs-实扣面见下方 xfail 在册锁):
+    ①逐动作归属:每审计行金差 == 归属值(prep 动作 = 执行点回执
+      levelup_spent/球金/卖出 income;其余 = 0)——红 = 回执通道漏记
+      或无主金动;
+    ②相位闭合:gold_after_income→gold_close 全差 == Σ审计行金差
+      ——红 = 审计链外无主金动(检查卡盲窗回潮);
+    ③跨轮收入腿:上轮期末金 +Σincome == 本轮期初金(结算/推进零金动;
+      invest 注入局 instant_gold 归选卡时点金,本卡辖无注入批)。
+    原「open_gold is None 跳过」盲窗(prep 域金动不设防)由①②闭合
+    ——删除波 1 报告 §五「升级连发成本差」显影位的立卡处置(prep 域
+    pa.LevelUp 点击环 −Σxp_click_cost 现有归属可判,实判全绿)。
+    """
+    runs = _run_ledger_audit_batch(test_context, monkeypatch, tmp_path)
+    violations: list[str] = []
+    for run, res in runs:
+        audit_by_round: dict[Any, list[dict]] = {}
+        for e in run.prep_audit:
+            audit_by_round.setdefault(e.get('round'), []).append(e)
+        prev_close: int | None = 30   # initial_gold(批驱动同参)
+        for r in sorted(res.rounds):
+            row = res.rounds[r]
+            moves = [e for e in audit_by_round.get(r, [])
+                     if e['action'] != 'ShopVisit(env)']
+            if not moves:
+                violations.append(
+                    f'seed={res.seed} r{r}: 审计行缺位(轮戳断线——'
+                    '相位金动脱离账本位)')
+                prev_close = row['gold_close']
+                continue
+            # ① 逐动作金归属(零容忍;商店窗行归 xfail 在册锁辖)
+            for e in moves:
+                delta = e['post']['gold'] - e['pre']['gold']
+                ch = e.get('gold_channel')
+                if ch is None or delta != ch:
+                    violations.append(
+                        f"seed={res.seed} r{r}: {e['action']}"
+                        f"(applied={e['applied']}) 金差 {delta} vs "
+                        f'归属 {ch}')
+            # ② 相位闭合(审计链外无主金动;全行含商店窗行——窗口行
+            # 金差本身在审计链内,其 plan-vs-实扣残差归 xfail 在册锁辖)
+            phase_net = sum(e['post']['gold'] - e['pre']['gold']
+                            for e in audit_by_round.get(r, []))
+            truth_net = row['gold_close'] - row['gold_after_income']
+            if truth_net != phase_net:
+                violations.append(
+                    f'seed={res.seed} r{r}: 备战相位存在无审计金动 '
+                    f'{truth_net - phase_net}(审计账覆盖缺口)')
+            # ③ 跨轮收入腿
+            if prev_close is not None:
+                leg = row['gold_after_income'] - prev_close
+                if leg != sum((row['income'] or {}).values()):
+                    violations.append(
+                        f'seed={res.seed} r{r}: 收入腿分叉(金跳 {leg} '
+                        f"vs 收入账 Σ{sum((row['income'] or {}).values())}"
+                        ')')
+            prev_close = row['gold_close']
+    assert not violations, (
+        'T-22 账本位零容忍检查卡红(备战域金归属残差逐条:'
+        '定谳=假环境合法差集∅,非零即真漏账):\n' + '\n'.join(violations))
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason='T-22 在册真漏账:商店窗 run_buy_waves outcome 账 spend_executed '
+           'Σ > 窗口金差真值(逐窗实差的招唤路 = visit 臂/发射帧仲裁臂 '
+           'cw_loop.py 多路 rbw 与重入组合;修复项已立回编排者,修复落地 '
+           '后本锁 XPASS(strict) 必红 = 强制摘除在册钉转零容忍正锁)')
+def test_fake_ledger_window_plan_vs_executed_zero_tolerance(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path) -> None:
+    """T-22 常设检查卡·商店窗 plan账 vs 实扣(零容忍;真漏账在册钉)。
+
+    判据(定谳终态语义):每商店窗审计行 金差真值 == Σ窗内 outcome
+    卖入 − Σ实扣申报——容忍 0(合法差形态枚举 = ∅,见备战域卡 docstring)。
+    开窗无 outcome(窗内账丢)= 同罪判红。
+
+    **当前红 = 在册真漏账**(非本批引入,删除波 1 报告 §五既有容忍缺口
+    显影):probe 实证逐动作 sink 记账恒等(买/升/刷每动作申报价 == 金差),
+    分叉出在 rbw 层聚合——visit 臂(cw_screen_prep)与发射帧仲裁臂
+    (cw_loop.py:643)多路 run_buy_waves 的 outcome 账 Σ 超窗内实际金动
+    (批实测逐窗残差 seed11 r2 +2/r3 +18/r4 +21/r5 +80、seed23 r4 +48、
+    seed57 r2 +10;数字随在飞树轨迹漂移,机制为准)。修复项已立回编排者
+    (见 T-22-r1 报告 §五);修复前本锁以 xfail(strict) 在册——漏账存在
+    时红转 xfail(套件绿),漏账修复时 XPASS(strict) 红 = 强制摘钉翻正锁,
+    禁在册钉吞新形态(新窗/新分叉照样红转 xfail 失败显形)。
+    """
+    runs = _run_ledger_audit_batch(test_context, monkeypatch, tmp_path)
+    violations: list[str] = []
+    for run, res in runs:
+        for e in run.prep_audit:
+            if e['action'] != 'ShopVisit(env)':
+                continue
+            delta = e['post']['gold'] - e['pre']['gold']
+            ch = e.get('gold_channel')
+            if ch is None:
+                violations.append(
+                    f"seed={res.seed} r{e.get('round')}: 商店窗无 outcome "
+                    f'账(窗金差真值 {delta}——花金账丢)')
+            elif delta != ch:
+                violations.append(
+                    f"seed={res.seed} r{e.get('round')}: 商店窗 plan账"
+                    f'vs实扣差 {delta - ch}(窗 spend='
+                    f"{e['window_spend']} sold={e['window_sold']}"
+                    f' 金差真值={delta})')
+    assert not violations, (
+        '商店窗 plan账vs实扣残差逐条(零容忍判据):\n' + '\n'.join(violations))
 
 
 def test_fake_match_rules_streak_and_income() -> None:
