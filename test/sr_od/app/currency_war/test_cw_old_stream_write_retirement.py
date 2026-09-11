@@ -79,6 +79,7 @@ _RETIRED_RECORDER_SYMBOLS: tuple[str, ...] = (
     'record_decision', 'record_outcome', 'record_exogenous',
     'record_event_choice', 'record_sell_income', 'record_modality_gold',
     'record_spend_unit', 'record_invest_cards', 'record_shop_snapshot',
+    'snapshot_expected_paths',   # 期望态快照 helper,随 ADR-0651 两态制退役
 )
 
 #: TelemetryRecorder 类面上退役的方法(保留面 = record_defect/_append/
@@ -155,9 +156,10 @@ def test_retired_writer_symbols_absent_from_recorder() -> None:
     for m in _RETIRED_RECORDER_METHODS:
         assert not hasattr(recorder.TelemetryRecorder, m), \
             f'TelemetryRecorder.{m} 应已随退役删除(防半删)'
-    # 保留面在位:缺陷台账(保留专用流)写入与 sim 共用 expected 快照 helper。
+    # 保留面在位:缺陷台账(保留专用流)写入。
+    # (snapshot_expected_paths 已移入退役符号表——expected_state 条目表
+    #  随 ADR-0651 两态制废除,快照无源可取。)
     assert hasattr(recorder.TelemetryRecorder, 'record_defect')
-    assert hasattr(recorder, 'snapshot_expected_paths')
 
 
 def test_no_retired_writer_call_sites_in_production_tree() -> None:

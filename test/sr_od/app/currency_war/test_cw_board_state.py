@@ -94,78 +94,39 @@ def test_board_state_schema_version_has_no_default() -> None:
 
 
 # ============================================================ §8.6-2/§2.4
-# 三个关键结构:预期条目表 / 帧观察完整度标注+心跳 / bs_schema
+# 两个关键结构:帧观察完整度标注+心跳 / bs_schema
+# (预期条目表已随 ADR-0651 两态制废除——两步机制测试套同步退役,
+#  换两态直写锁 + 墓碑锁。)
 
 
-def test_expected_entry_table_five_keys_and_last_wins() -> None:
-    """§2.4 关键结构 1:预期条目五键齐备;同字段后写覆盖前写(last-wins)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    e1 = bs.expect(bs.gold, 17, confirm_point='prep_obs',
-                   group_id='', at_round='p1-r4')
-    assert e1.path and e1.confirm_point == 'prep_obs'
-    assert e1.at_round == 'p1-r4'
-    # last-wins:同字段再 expect → 旧条目被替换,表中仍一条
-    e2 = bs.expect(bs.gold, 15, confirm_point='shop_wave_top',
-                   group_id='', at_round='p1-r4')
-    pending = bs.pending_entries()
-    assert len(pending) == 1 and pending[0] is e2
-
-
-def test_expect_leaves_field_unreadable_to_strategy() -> None:
-    """§2.5 两步机制:预期只进条目表,字段值暂不动——策略器读字段读不到预期。"""
+def test_write_logic_direct_write_immediately_readable() -> None:
+    """ADR-0651 两态制核心锁:逻辑推算值经 write_logic **直接写字段**
+    (source=logic)——策略器立即可读,无「预期条目表挂账」中间态。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())
-    bs.expect(bs.gold, 17)
-    assert bs.gold.value == 20, '预期未核实前字段保持原值(策略器不读预期)'
-    assert bs.gold.source == 'observation'
-
-
-def test_confirm_writes_logic_and_keeps_logic_source() -> None:
-    """§2.5/§8.1:核实通过 → 字段写入且 source=logic(保持 logic,不翻 observation)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20, sig=_sig())
-    entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry, sig=_lsig())
-    assert bs.gold.value == 17
+    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
+    assert bs.gold.value == 17, '逻辑直写:字段立即可读(策略器读得到)'
     assert bs.gold.source == 'logic', 'logic 值保持 logic 来源(§8.1)'
-    assert not bs.pending_entries(), '确认后条目清账'
 
 
-def test_confirm_rejects_wrong_confirm_point() -> None:
-    """§2.4 五键②:条目只在绑定的核对点可确认转正,错点确认显式炸错。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    entry = bs.expect(bs.gold, 17, confirm_point='shop_wave_top')
-    with pytest.raises(ValueError):
-        bs.confirm(entry, at_point='prep_obs', sig=_lsig())
-
-
-def test_confirm_group_all_or_nothing() -> None:
-    """§2.4 五键③:组内条目全有全无清账,禁单字段半确认中间态。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    g = 'buy-阿格莱雅-p1-r4'
-    e_gold = bs.expect(bs.gold, 17, group_id=g, confirm_point='prep_obs')
-    e_bench = bs.expect(bs.bench, BenchView(), group_id=g,
-                        confirm_point='prep_obs')
-    bs.confirm(e_gold, at_point='prep_obs', sig=_lsig())
-    assert bs.gold.value == 17
-    assert not bs.pending_entries(), '组确认 = 整组清账(全有全无)'
-
-
-def test_discard_expected_clears_without_write() -> None:
-    """§8.4 用法块第 4 步:点击落空 → 条目清账不写字段(观察赢前清预期)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 20, sig=_sig())
-    entry = bs.expect(bs.gold, 17)
-    bs.discard_expected(entry)
-    assert not bs.pending_entries()
-    assert bs.gold.value == 20, '清账不动字段值'
+def test_two_step_mechanism_retired_tombstone() -> None:
+    """ADR-0651 墓碑锁:expect/confirm/discard_expected/pending_entries/
+    expected 条目表与模块级 PendingEntry/reconcile_pending_observation
+    全套废除——复活即红(防两步机制半删回归)。"""
+    for gone in ('expect', 'confirm', 'discard_expected', 'pending_entries'):
+        assert not hasattr(BoardState, gone), f'BoardState.{gone} 应已废除'
+    assert 'expected' not in {f.name for f in dataclasses.fields(BoardState)}, \
+        'expected 条目表应已删除'
+    import sr_od.application.currency_war.kernel.cw_board_state as bs_mod
+    assert not hasattr(bs_mod, 'PendingEntry'), 'PendingEntry 应已删除'
+    assert not hasattr(bs_mod, 'reconcile_pending_observation'), \
+        '核对点闭环函数应已删除'
 
 
 def test_logic_written_fields_tracks_and_reanchors() -> None:
-    """§8.4 logic_written_fields:已确认未重锚的 logic 字段名;观察覆盖后除名。"""
+    """§8.4 logic_written_fields:已直写未重锚的 logic 字段名;观察覆盖后除名。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry, sig=_lsig())
+    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     assert bs.logic_written_fields() == ['gold']
     bs.observe(bs.gold, 19, sig=_sig())
     assert bs.logic_written_fields() == [], '观察重锚后不再算 logic 在写'
@@ -413,11 +374,10 @@ def test_leave_screen_payload_only() -> None:
 
 
 def test_observe_over_logic_mismatch_emits_defect_row() -> None:
-    """§2.3:观察覆盖 logic 值失配 → 失配记入缺陷台账(挂点注入,缺省关);
-    观察赢——来源改回 observation。"""
+    """§2.3/ADR-0651:观察覆盖 logic 值失配 → 失配记入缺陷台账(挂点注入,
+    缺省关);观察赢——来源改回 observation。失配 = 推算 bug 留证修码。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry, sig=_lsig())
+    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
@@ -432,10 +392,9 @@ def test_observe_over_logic_mismatch_emits_defect_row() -> None:
 
 
 def test_observe_over_logic_match_silent() -> None:
-    """§2.3:观察值与 logic 值一致 = 核实通过形态,不留缺陷行。"""
+    """§2.3/ADR-0651:观察值与 logic 值一致 = 投影被实读核实形态,不留缺陷行。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry, sig=_lsig())
+    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
@@ -443,14 +402,6 @@ def test_observe_over_logic_match_silent() -> None:
     finally:
         set_defect_sink(None)
     assert rows == []
-
-
-def test_observe_does_not_touch_pending_entries() -> None:
-    """§2.3:观察帧不得确认或清除未核实预期——预期只由它自己的核对点关闭。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    entry = bs.expect(bs.gold, 17)
-    bs.observe(bs.gold, 19, sig=_sig())
-    assert bs.pending_entries() == [entry], '观察不清预期条目'
 
 
 # ============================================================ §8.6-7
@@ -822,8 +773,7 @@ def test_consume_defect_sink_drains() -> None:
     防跨局残留。"""
     consume_defect_sink()   # 清其他测试遗留(模块级缓冲 = 副作用链桩化点)
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    entry = bs.expect(bs.gold, 17)
-    bs.confirm(entry, sig=_lsig())
+    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:

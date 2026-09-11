@@ -9,7 +9,8 @@ reason 面丢失、``last_detail`` 被布尔污染。本文件两把锁防同形
 
 ⚠️ 验证锚警示(T-299 方案对抗审问题 1,勘误版口径):勿以「期望态不变」作
 本锁断言——反序下 execute 的 ``if emitted:`` 门虽被带开,但门内
-``apply_op_effect(OpenBox)`` 落显式零登记分支(cw_expected_state.py:282-290)、
+``apply_op_effect(OpenBox)`` 落显式零推进分支(cw_expected_state.apply_op_effect
+else 注释块「显式不推进理由」枚举)、
 ``mark_s1_route_check`` 对 OpenBox 无 route_tag → route='' 直接 return
 (mandate.py:898-904):期望态/闩/清键门三面修前修后恒不变,恒真断言 =
 无效验证锚。锁断言面 = 返回形状 + detail 内容 + 回执 applied/reason。

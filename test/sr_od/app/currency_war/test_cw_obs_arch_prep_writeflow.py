@@ -19,7 +19,8 @@ payload → BoardState 全帧对拍(回归 pin 钉 payload)**。
   恒 None 断言(禁静默新写端)。
 
 被锁语义的保绿面(试点批交付对照表载体):P2-1 备战席空集 = 失读非全空
-(carry,不写「9 槽全空」观察)/ P3-10 合成升星特效窗内挂起预期顺延核对
+(carry,不写「9 槽全空」观察)/ P3-10 合成升星特效窗内观察顺延(两态制
+ADR-0651 等价形态:窗内读数不可信 → 本帧不写观察,保 logic 投影值)
 ——两者经本夹具在**新路径**上钉住。
 """
 from __future__ import annotations
@@ -42,9 +43,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     BenchChar,
     DeferSpheres,
-    PrepObservation,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
 )
@@ -230,31 +229,44 @@ def test_prep_writeflow_empty_bench_is_miss_not_clear(
         '空集 = 失读(P2-1):禁写「9 槽全空」观察,未读过的字段保持 None')
 
 
-def test_prep_writeflow_merge_window_defers_reconcile(
+def test_prep_writeflow_merge_window_defers_observe(
         test_context: SimpleNamespace,
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """P3-10(批次二复审)经新路径钉住:合成升星特效窗内挂起预期**顺延
-    核对**(窗内观测=门后保旧星,与投影新星比对必失配)——挂起条目在帧后
-    仍在册(不被误清/误转正),下帧干净帧核对自愈。"""
-    bs_seed = board_state_of(SimpleNamespace())   # 预期条目构造样板(不挂 fixture)
+    """P3-10 经新路径钉住(两态制 ADR-0651 等价形态):合成升星特效窗内
+    星读不可信(门后保旧星,reconcile_tracking 防抖同口径)→ 备战席观察
+    **本帧不写**——bench 保 BuyCard 的 logic 投影值,且不产生「投影 vs
+    窗内旧星读数」的观察失配缺陷行(噪声抑制语义保留);下帧干净帧实读
+    覆盖:一致 = 零缺陷行,失配 = 投影 bug 留证修码。"""
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        ChannelSig,
+        BenchView,
+        bench_view_of_slots,
+        consume_defect_sink,
+        set_defect_sink,
+    )
     d = _make_director(test_context, monkeypatch, _fixed_bench(),
                        merge_effect_window=True)
     sess = d.ctx.cw_match.session
-    # 预置挂起预期(模拟 BuyCard 落地门 expect,confirm_point 绑 prep_obs,
-    # §6.4 表第三行):期望 = 本帧身份投影(星空抬升面)
+    # 预置 BuyCard 合成升星投影(两态制:write_logic 直写;期望 = 星级
+    # 抬升面,与 _fixed_bench 的窗内旧星读数必失配)
     bs = board_state_of(sess)
-    from sr_od.application.currency_war.kernel.cw_board_state import (
-        BenchView,
-        bench_view_of_slots,
-    )
-    expected_view: BenchView = bench_view_of_slots([])
-    bs.expect(bs.bench, expected_view, confirm_point='prep_obs')
-    with fast_sleep():
-        d.run_lifecycle()
-    assert bs.expected.get('bench') is not None, (
-        '特效窗内挂起预期须顺延核对(P3-10:留表下帧干净帧核对),'
-        '实得被核对清账')
-    _ = bs_seed   # 样板未挂单例,防误用断言占位
+    proj: BenchView = bench_view_of_slots(
+        [BenchChar(slot=1, char_id='希儿', star=3, faction='?'),
+         BenchChar(slot=2, char_id='景元', star=1, faction='?')])
+    bs.write_logic(bs.bench, proj, produced_by='BuyCard',
+                   sig=ChannelSig(family='logic_action', actor='TestSigWriter',
+                                  mode='compute'))
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    try:
+        with fast_sleep():
+            d.run_lifecycle()
+    finally:
+        set_defect_sink(None)
+        consume_defect_sink()
+    assert bs.bench.value is proj and bs.bench.source == 'logic', (
+        '特效窗内观察不写:bench 保持 logic 投影值(P3-10 两态等价)')
+    assert rows == [], '窗内不产生观察失配缺陷行(噪声抑制语义保留)'
 
 
 # ==================== 旧路径代表锁(并存窗专用,退役批随删)====================

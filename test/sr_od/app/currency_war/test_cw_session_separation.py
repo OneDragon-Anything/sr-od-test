@@ -147,8 +147,8 @@ def test_none_session_returns_throwaway_no_cache() -> None:
     b = es_mod.exec_state_of(None)
     assert isinstance(a, es_mod.ExecState) and isinstance(b, es_mod.ExecState)
     assert a is not b, 'None 调用间不得共享载体(旧 id(None) 缓存形态 = 串染源)'
-    a.expected_state = {'k': object()}
-    assert b.expected_state is None, '一次性载体的写入不得跨调用可见'
+    a.v2_round_sold = {'k'}
+    assert b.v2_round_sold == set(), '一次性载体的写入不得跨调用可见'
 
 
 # ===== ADR-0563 决策-2:工厂钩子落位 =====

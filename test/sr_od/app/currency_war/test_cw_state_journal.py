@@ -199,14 +199,16 @@ def test_carry_without_value_no_row_no_version(journal, run_id) -> None:
     assert bs.current_version() == 0
 
 
-def test_expect_bookkeeping_no_row(journal, run_id) -> None:
-    """§3.1.1-5(v3 简化):预期登记/清账不产行,挂起面随快照可见。"""
+def test_write_logic_emits_row(journal, run_id) -> None:
+    """渠道②:write_logic 逻辑直写产行(ADR-0651 两态制;原「预期登记/
+    清账不产行」的簿记面随两步机制废除——逻辑写 = 正式写点必落账)。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())
     before = len(journal.rows)
-    entry = bs.expect(bs.gold, 17)
-    bs.discard_expected(entry)
-    assert len(journal.rows) == before, '预期簿记不产行(v3 简化语义)'
+    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
+    assert len(journal.rows) == before + 1, '逻辑直写产行(正式写点)'
+    assert journal.rows[-1]['field'] == 'gold'
+    assert journal.rows[-1]['sig']['family'] == 'logic_action'
 
 
 # ============================================================ 自足快照行(§3.2.3)
@@ -333,8 +335,7 @@ def test_journal_passive_wiring_identical_trajectories(journal, run_id, tmp_path
         bs.write_logic(bs.free_refresh_balance, 2, produced_by='RefreshShop',
                        sig=_lsig())
         bs.observe(bs.gold, 25, sig=_sig())
-        entry = bs.expect(bs.gold, 27, confirm_point='prep_obs')
-        bs.confirm(entry, sig=_lsig())
+        bs.write_logic(bs.gold, 27, produced_by='TestSigWriter', sig=_lsig())
         bs.leave_screen(bs.shop, sig=_sig())
         bs.relay(bs.active_strategies, [' Handsome'], sig=_hsig())
         seq = []

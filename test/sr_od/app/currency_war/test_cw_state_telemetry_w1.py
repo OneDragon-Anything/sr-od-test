@@ -182,11 +182,12 @@ def test_no_legacy_synthesis_path_in_kernel_source() -> None:
 
 @pytest.mark.parametrize('api', [
     'observe', 'carry', 'write_prior', 'leave_screen',
-    'confirm', 'write_logic', 'relay', 'note_obs_event',
+    'write_logic', 'relay', 'note_obs_event',
 ])
 def test_write_apis_require_sig(api: str) -> None:
-    """写入口 sig 必填(inspect 签名面):8 个写 API 的 sig 参数无缺省值
-    (显式签名铺满的结构保证;缺位 = 调用期 TypeError,非静默合成)。"""
+    """写入口 sig 必填(inspect 签名面):7 个写 API 的 sig 参数无缺省值
+    (显式签名铺满的结构保证;缺位 = 调用期 TypeError,非静默合成;
+    confirm 已随 ADR-0651 两步机制废除出列)。"""
     sig = inspect.signature(getattr(BoardState, api))
     assert 'sig' in sig.parameters, f'{api} 缺 sig 参数'
     assert sig.parameters['sig'].default is inspect.Parameter.empty, \

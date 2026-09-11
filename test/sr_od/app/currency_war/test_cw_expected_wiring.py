@@ -1,20 +1,22 @@
-"""期望态接线缺口三件批单测(DD-019 后果节三缺口;EXPECTED_STATE §3.3/§6)。
+"""op 逻辑效果推进接线单测(两态制 ADR-0651;前身为 DD-019 三缺口期望态接线批)。
 
-覆盖:①件1 overlay handler 侧到账登记(register_confirm_arrival 按 op 分道
-语义 + prep_obs 覆盖点到账清账);②件2 CwOpEquipAll 装备分布期望态
-(register_equip_worn 本体推进 + 条目登记 + 覆盖点清账);③件3 外循环 stall
-消费 expected_state(prep_stall_pending_expected 只取 prep_obs 可确认条目)。
-纯函数 + StrategySession 直构,零 IO 零识别。
+覆盖:①overlay handler 侧确认逻辑推进(register_confirm_arrival 按 op 分道:
+owned 本体直推 / 现金为王 gold 直推 / chosen_* 与 ConfirmStrategy 零写——
+写端在各 handler);②装备分布逻辑推进(register_equip_worn 本体推进);
+③apply_op_effect 原子 op 字段直推(卖出回金/owned 增减);④墓碑锁
+(expected_state 条目表全套 API 复活即红)。纯函数 + StrategySession 直构,
+零 IO 零识别。
 """
 from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
-
-from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_expected_state import (
-    reconcile_expected,
-    register_expected,
+    apply_op_effect,
+)
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    PickBoxCard,
+    SellBench,
+    SellDeployed,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     DEPLOYED_FRONT_CAPACITY,
@@ -24,17 +26,11 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.operations.cw_loop import (
-    prep_stall_pending_expected,
-)
 from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     register_equip_worn,
 )
 from sr_od.application.currency_war.operations.cw_screen._overlay_confirm import (
     register_confirm_arrival,
-)
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
-    prep_obs_actual_for,
 )
 
 
@@ -44,42 +40,23 @@ def _session() -> StrategySession:
     return s
 
 
-def _obs(gold_trusted: bool = False, spheres: bool = False) -> SimpleNamespace:
-    return SimpleNamespace(state_gold_trusted=gold_trusted, spheres=spheres)
+# ==================== ①overlay handler 侧确认逻辑推进 ====================
 
-
-def _build_and_reconcile(s: StrategySession) -> list[dict]:
-    """按生产 prep_obs 覆盖点同式(过滤+逐条目构造)reconcile,返 diff 行。"""
-    act: dict = {}
-    for p, e in list((getattr(exec_state_of(s), 'expected_state', None) or {}).items()):
-        if e.confirm_point != 'prep_obs':
-            continue
-        r = prep_obs_actual_for(s, e, s.last_state, _obs(), '', '')
-        if r is not None:
-            act[p] = r
-    return reconcile_expected(s, 'prep_obs', act)
-
-
-# ==================== 件1:overlay handler 侧到账登记 ====================
-
-def test_confirm_box_arrival_owned_registered_and_cleared() -> None:
-    """武装箱确认(ConfirmBox):owned += 选中装备(apply 推进本体)+ 条目
-    登记;备战覆盖点本体确认 → 只清账不 diff。"""
+def test_confirm_box_arrival_owned_direct_advance() -> None:
+    """武装箱确认(ConfirmBox):owned += 选中装备(本体直推,策略器
+    立即可读;无条目表挂账)。"""
     s = _session()
     register_confirm_arrival(s, 'ConfirmBox', '和平手枪', produced_by='t')
     assert '和平手枪' in s.last_owned_equips
-    entry = exec_state_of(s).expected_state['owned[和平手枪]']
-    assert entry.kind == 'owned'
-    assert _build_and_reconcile(s) == []
-    assert 'owned[和平手枪]' not in exec_state_of(s).expected_state
+    assert getattr(exec_state_of(s), 'expected_state', None) is None, \
+        '两态制:无 expected_state 条目表'
 
 
-def test_confirm_supply_arrival_owned_registered() -> None:
-    """补给节点确认(ConfirmSupply):owned += 选中装备名(§3.3 #18)。"""
+def test_confirm_supply_arrival_owned_direct_advance() -> None:
+    """补给节点确认(ConfirmSupply):owned += 选中装备名。"""
     s = _session()
     register_confirm_arrival(s, 'ConfirmSupply', '轮滑鞋', produced_by='t')
     assert '轮滑鞋' in s.last_owned_equips
-    assert 'owned[轮滑鞋]' in exec_state_of(s).expected_state
 
 
 def test_confirm_tome_arrival_star_badge_named() -> None:
@@ -87,60 +64,25 @@ def test_confirm_tome_arrival_star_badge_named() -> None:
     s = _session()
     register_confirm_arrival(s, 'ConfirmTome', '仙舟星徽', produced_by='t')
     assert '仙舟星徽' in s.last_owned_equips
-    assert 'owned[仙舟星徽]' in exec_state_of(s).expected_state
 
 
-def test_confirm_strategy_arrival_cleared_via_body() -> None:
-    """投资策略确认(ConfirmStrategy):active_strategies 条目登记(本体追加
-    由 handler 既有写入点承担);本体已有该策略 → 覆盖点清账不 diff。"""
-    s = _session()
-    s.active_strategies.append('利息上调')
-    register_confirm_arrival(s, 'ConfirmStrategy', '利息上调', produced_by='t')
-    entry = exec_state_of(s).expected_state['active_strategies[利息上调]']
-    assert entry.kind == 'strategy'
-    assert _build_and_reconcile(s) == []
-    assert 'active_strategies[利息上调]' not in exec_state_of(s).expected_state
-
-
-def test_confirm_chosen_partner_megastar_registered() -> None:
-    """巨星/伙伴确认(chosen_*,infra 未建 dict op → register_expected 直登):
-    kind='strategy'、绑 prep_obs;本体已有 → 清账不 diff。"""
-    s = _session()
-    s.chosen_partner = '丹恒'
-    register_confirm_arrival(s, 'ConfirmPartner', '丹恒', produced_by='t')
-    assert exec_state_of(s).expected_state['chosen_partner'].kind == 'strategy'
-    assert _build_and_reconcile(s) == []
-    assert 'chosen_partner' not in exec_state_of(s).expected_state
-
-    s2 = _session()
-    s2.chosen_megastar = '花火'
-    register_confirm_arrival(s2, 'ConfirmMegastar', '花火', produced_by='t')
-    assert 'chosen_megastar' in exec_state_of(s2).expected_state
-
-
-def test_confirm_expert_cash_gold_binds_shop_wave_top() -> None:
-    """专家邀请函「现金为王」:gold +4(待实读)绑 shop_wave_top——备战覆盖点
-    透传不清账(F7);gold 可信源覆盖点清账不 diff(kind=gold 口径)。"""
+def test_confirm_expert_cash_gold_direct_advance() -> None:
+    """专家邀请函「现金为王」:gold +4 直推 session.last_state.gold
+    (原「待实读」挂账条目随两态制废除转直推;shop_wave_top 实读覆盖修正)。"""
     s = _session()
     register_confirm_arrival(s, 'ConfirmExpertCash', '现金为王', produced_by='t')
-    entry = exec_state_of(s).expected_state['gold']
-    assert entry.kind == 'gold'
-    assert entry.confirm_point == 'shop_wave_top'
-    assert reconcile_expected(s, 'prep_obs', {}) == []
-    assert 'gold' in exec_state_of(s).expected_state
-    assert reconcile_expected(s, 'shop_wave_top', {'gold': (54, True)}) == []
-    assert 'gold' not in exec_state_of(s).expected_state
+    assert s.last_state.gold == 54, 'gold +4 逻辑直推(策略器立即可读)'
 
 
 def test_confirm_arrival_no_item_or_session_noop() -> None:
-    """无 session / 无 item → 安全 no-op(确认收尾不被登记面阻塞)。"""
+    """无 session / 无 item → 安全 no-op(确认收尾不被推进面阻塞)。"""
     register_confirm_arrival(None, 'ConfirmBox', '和平手枪')
     s = _session()
     register_confirm_arrival(s, 'ConfirmBox', '')
-    assert not exec_state_of(s).expected_state
+    assert s.last_owned_equips in (None, [])
 
 
-# ==================== 件2:装备分布期望态(M7 穿装备) ====================
+# ==================== ②装备分布逻辑推进(M7 穿装备) ====================
 
 def _session_with_deployed() -> StrategySession:
     s = _session()
@@ -155,17 +97,11 @@ def _session_with_deployed() -> StrategySession:
 
 
 def test_register_equip_worn_front_advances_distribution() -> None:
-    """前排穿戴(落点已验后调用):owned −1 + 角色 equips +1,两覆盖点条目
-    登记后由备战覆盖点只清账不 diff。"""
+    """前排穿戴(落点已验后调用):owned −1 + 角色 equips +1(本体直推)。"""
     s = _session_with_deployed()
     register_equip_worn(s, '轮滑鞋', '飞霄', 'front', 1, produced_by='t')
     assert s.last_owned_equips == ['幸运星']
     assert exec_state_of(s).tracked_deployed[0].equips == ['轮滑鞋']
-    assert 'owned[轮滑鞋]' in exec_state_of(s).expected_state
-    assert 'tracked_deployed[0]' in exec_state_of(s).expected_state
-    assert _build_and_reconcile(s) == []
-    assert 'owned[轮滑鞋]' not in exec_state_of(s).expected_state
-    assert 'tracked_deployed[0]' not in exec_state_of(s).expected_state
 
 
 def test_register_equip_worn_back_slot_index() -> None:
@@ -173,48 +109,84 @@ def test_register_equip_worn_back_slot_index() -> None:
     (与 apply_op_effect SellDeployed 同式)。"""
     s = _session_with_deployed()
     register_equip_worn(s, '幸运星', '卡芙卡', 'back', 1, produced_by='t')
-    assert exec_state_of(s).tracked_deployed[DEPLOYED_FRONT_CAPACITY].equips == ['幸运星']
-    assert f'tracked_deployed[{DEPLOYED_FRONT_CAPACITY}]' in exec_state_of(s).expected_state
+    assert exec_state_of(s).tracked_deployed[DEPLOYED_FRONT_CAPACITY].equips \
+        == ['幸运星']
 
 
 def test_register_equip_worn_none_session_safe() -> None:
-    """无 session → 安全 no-op(穿戴主循环不被登记面阻塞)。"""
+    """无 session → 安全 no-op(穿戴主循环不被推进面阻塞)。"""
     register_equip_worn(None, '轮滑鞋', '飞霄', 'front', 1)
 
 
-# ==================== 件3:外循环 stall 消费 expected_state ====================
+# ==================== ③apply_op_effect 原子 op 字段直推 ====================
 
-def test_prep_stall_pending_expected_filters_confirm_point() -> None:
-    """只取 prep_obs 可确认条目(§6/F7):绑 shop_wave_top 的条目在本覆盖点
-    不可确认 → 不计 stall 时钟;排序稳定保签名可比。"""
+def test_apply_op_effect_sell_bench_advances_gold_refund() -> None:
+    """卖备战席:按注册表费算回金直推 last_state.gold(sell_refund
+    星级×费率);tracked 本体推进 = 执行器辖,本函数不碰。"""
     s = _session()
-    from sr_od.application.currency_war.kernel.cw_expected_state import (
-        ExpectedEntry,
+    exec_state_of(s).tracked_bench_chars = [
+        BenchChar(slot=3, char_id='花火', star=2, position_pref='?')]
+    effects = apply_op_effect(s, SellBench(slot=3), produced_by='t')
+    # 回金 = sell_refund(2星, 花火费):直推为非零正增量(具体值 = 注册表
+    # 单一源,断言锁定「推进发生且为正」,不锁分布数值)
+    assert s.last_state.gold > 50, '卖出回金逻辑直推'
+    assert any(e['path'] == 'gold' for e in effects)
+
+
+def test_apply_op_effect_pick_box_card_advances_owned() -> None:
+    """武装箱选卡:owned += 选中装备(detail 形态「选卡 <名>」解析)。"""
+    s = _session()
+    apply_op_effect(s, PickBoxCard(), detail='选卡 轮滑鞋', produced_by='t')
+    assert '轮滑鞋' in s.last_owned_equips
+
+
+def test_apply_op_effect_sell_deployed_returns_equips_to_owned() -> None:
+    """卖上阵角色:装备全额返还 → owned 直推 +1/件(游戏规则推算值)。"""
+    s = _session()
+    s.last_owned_equips = []
+    exec_state_of(s).tracked_deployed = [
+        BenchChar(slot=1, char_id='希儿', star=1, position_pref='front',
+                  equips=['星海'])]
+    apply_op_effect(s, SellDeployed(row='front', slot=1), produced_by='t')
+    assert '星海' in s.last_owned_equips
+
+
+def test_apply_op_effect_none_session_safe() -> None:
+    """session=None → 空效果表 no-op(离线/无局调用面)。"""
+    assert apply_op_effect(None, PickBoxCard()) == []
+
+
+# ==================== ④墓碑锁(条目表全套 API 废除) ====================
+
+def test_expected_state_ledger_api_retired() -> None:
+    """ADR-0651 墓碑:ExpectedEntry/register_expected/clear_expected/
+    reconcile_expected/set_evidence_sink/prep_obs_actual_for/
+    prep_stall_pending_expected 复活即红(防挂账对账机制半删回归)。"""
+    import sr_od.application.currency_war.kernel.cw_expected_state as es
+    for gone in ('ExpectedEntry', 'register_expected', 'clear_expected',
+                 'reconcile_expected', 'set_evidence_sink',
+                 '_emit_evidence', 'expected_round_key'):
+        assert not hasattr(es, gone), f'cw_expected_state.{gone} 应已废除'
+    assert not hasattr(exec_state_of(_session()), 'expected_state'), \
+        'ExecState.expected_state 容器应已删除'
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_prep,
     )
-    register_expected(s, ExpectedEntry(
-        path='owned[和平手枪]', value='+1(待实读)', produced_by='t',
-        at_round='p1-r2', kind='owned', confirm_point='prep_obs'))
-    register_expected(s, ExpectedEntry(
-        path='gold', value='+4(待实读)', produced_by='t', at_round='p1-r2',
-        kind='gold', confirm_point='shop_wave_top'))
-    out = prep_stall_pending_expected(s)
-    assert out == ('owned[和平手枪]@p1-r2',)
-
-
-def test_prep_stall_pending_expected_empty_session() -> None:
-    """无容器 / 空容器 → 空元组(旧 session 构造路径兼容)。"""
-    assert prep_stall_pending_expected(_session()) == ()
-    assert prep_stall_pending_expected(None) == ()
-
-
-def test_cw_loop_stall_block_consumes_pending_expected() -> None:
-    """cw_loop stall 判定段接线烟雾(至多 1 条):prep_stall_pending_expected
-    接线在场。失守场景 = 有人摘掉 stall 判定段对 pending 期望的消费接线,
-    stall 留证退化为不带期望条目。不再加 'pending_expected' in src 之类
-    子串断言(是本断言的子串,冗余);锁口径 = 接线存在性,至多 1 条烟雾。
-    """
-    import inspect
-
+    assert not hasattr(cw_screen_prep, 'prep_obs_actual_for'), \
+        'prep_obs 覆盖点单条目实读构造器应已废除'
     from sr_od.application.currency_war.operations import cw_loop
-    src = inspect.getsource(cw_loop)
-    assert 'prep_stall_pending_expected' in src
+    assert not hasattr(cw_loop, 'prep_stall_pending_expected'), \
+        'stall 滞留期望线索应已废除'
+
+
+def test_confirm_chosen_family_has_no_registration_side_channel() -> None:
+    """chosen_*(巨星/伙伴)与 ConfirmStrategy 经 register_confirm_arrival
+    零写——写端 = 各 handler 的 write_logic/本体追加(单一写者,ADR-0651
+    无「到账登记」旁路)。"""
+    s = _session()
+    s.chosen_partner = '丹恒'
+    register_confirm_arrival(s, 'ConfirmPartner', '丹恒', produced_by='t')
+    assert getattr(exec_state_of(s), 'expected_state', None) is None
+    # 无 owned/gold 副作用
+    assert s.last_state.gold == 50
+    assert s.last_owned_equips in (None, [])

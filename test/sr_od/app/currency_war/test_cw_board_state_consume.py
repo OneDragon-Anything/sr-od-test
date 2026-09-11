@@ -38,10 +38,8 @@ from sr_od.application.currency_war.kernel.cw_bs_view import (
     strategy_input_state,
 )
 from sr_od.application.currency_war.kernel.cw_state import (
-    BENCH_CAPACITY,
     BenchChar,
     GameState,
-    ShopCard as StateShopCard,
 )
 from sr_od.application.currency_war.obs import cw_observation as cobs
 
@@ -347,23 +345,23 @@ def test_settlement_cover_unread_hp_not_written() -> None:
 # ============================================================ §6.2/§8.8 局终归档快照
 
 
-def test_archive_snapshot_three_keys_and_prov_sparsity() -> None:
-    """§8.8 三键形态:bs_prov 只记非默认来源(稀疏化)/bs_pending 预期
-    条目/bs_extra 工程结构+非 None 值(JSON 安全)。"""
+def test_archive_snapshot_keys_and_prov_sparsity() -> None:
+    """§8.8 两键形态(ADR-0651 两态制后):bs_prov 只记非默认来源(稀疏化)/
+    bs_extra 工程结构+非 None 值(JSON 安全);bs_pending 挂起预期摘要键
+    已随两步机制废除退役。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 55, sig=_sig())                       # 默认 observation 无注记 → prov 不记
     bs.write_prior(bs.hp, 82, evidence='prior:adr-0559',
                    sig=_sig())   # prior → prov 记
     bs.carry(bs.gold, frame='p1-r5', sig=_sig())              # carried → prov 记
     bs.observe(bs.node, NodeKey(plane=1, round_num=5, kind='boss'), sig=_sig())
-    e = bs.expect(bs.level, 6)
     snap = archive_snapshot(bs)
-    assert set(snap) >= {'schema_version', 'bs_prov', 'bs_pending', 'bs_extra'}
+    assert set(snap) == {'schema_version', 'bs_prov', 'bs_extra'}, \
+        '两键形态:bs_pending 已随 ADR-0651 退役'
     assert snap['bs_prov']['hp'] == {'source': 'prior',
                                      'evidence': 'prior:adr-0559'}
     assert snap['bs_prov']['gold']['source'] == 'carried'
     assert 'node' not in snap['bs_prov'], '默认 observation 无注记不入 prov(稀疏化)'
-    assert snap['bs_pending'] == [dataclasses.asdict(e)]
     extra = snap['bs_extra']
     assert extra['bs_schema']['economy'] == 1
     assert extra['values']['gold'] == 55
@@ -465,53 +463,51 @@ def test_bench_view_of_slots_positional_mapping() -> None:
     assert view.slots[2].unit.slot == 3
 
 
-def test_merge_expect_reconcile_loop_two_step() -> None:
-    """§2.5 两步闭环(修法 a 本体):expect 记升星预期(字段值不动)→
-    核对点一致 → confirm 转正 logic;失配 → 清账+缺陷留证(kind=
-    expect_vs_obs_mismatch,§2.3 观察赢)。"""
+def test_merge_projection_direct_write_and_observe_wins() -> None:
+    """§3.2.18 修法 a 两态制形态(ADR-0651):BuyCard 合成升星投影经
+    write_logic **直写 bench**(策略器立即可读);下一备战帧实读覆盖
+    (观察赢)——一致静默,失配 = 投影 bug 缺陷留证后修推算代码。"""
     from sr_od.application.currency_war.kernel.cw_board_state import (
         bench_view_of_slots,
         consume_defect_sink,
-        reconcile_pending_observation,
         set_defect_sink,
     )
     consume_defect_sink()
     proj_bench = [BenchChar(slot=1, char_id='花火', star=2)] + [None] * 8
-    expected_view = bench_view_of_slots(proj_bench)
+    proj_view = bench_view_of_slots(proj_bench)
     real_view = bench_view_of_slots([BenchChar(slot=1, char_id='花火', star=2)])
-    # 一致路径:确认转正 logic
+    # 一致路径:逻辑直写 → 字段立即可读;同值实读覆盖 = 静默
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    entry = bs.expect(bs.bench, expected_view, confirm_point='prep_obs',
-                      produced_by='BuyCard')
-    assert bs.bench.value is None, '预期不进字段(策略器读不到)'
-    verdict = reconcile_pending_observation(bs, bs.bench, real_view,
-                                            at_point='prep_obs', sig=_lsig())
-    assert verdict == 'confirmed'
-    assert bs.bench.value == expected_view and bs.bench.source == 'logic'
-    assert entry not in bs.pending_entries()
-    # 失配路径:清账 + 缺陷留证(观察已覆盖真值)
-    bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs2.observe(bs2.bench, real_view, sig=_sig())
-    bs2.expect(bs2.bench, bench_view_of_slots(
-        [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8),
-        confirm_point='prep_obs', produced_by='BuyCard')
+    bs.write_logic(bs.bench, proj_view, produced_by='BuyCard', sig=_lsig())
+    assert bs.bench.value is proj_view and bs.bench.source == 'logic', \
+        '投影直写:策略器立即可读(ADR-0651)'
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        verdict2 = reconcile_pending_observation(bs2, bs2.bench, real_view,
-                                                 at_point='prep_obs',
-                                                 sig=_lsig())
+        bs.observe(bs.bench, real_view, sig=_sig())
     finally:
         set_defect_sink(None)
         consume_defect_sink()
-    assert verdict2 == 'discarded'
-    assert bs2.bench.value == real_view and bs2.bench.source == 'observation', \
-        '观察赢:核对失败字段保持观察真值'
-    assert not bs2.pending_entries(), '失配条目清账'
-    # 无挂起预期 → none(无行无写入,sig 不消费;签名必填仍须带)
-    assert reconcile_pending_observation(bs, bs.bench, real_view,
-                                         at_point='prep_obs',
-                                         sig=_lsig()) == 'none'
+    assert rows == [], '投影与实读一致 = 零缺陷行'
+    assert bs.bench.source == 'observation', '实读后来源翻 observation(正常)'
+    # 失配路径:观察赢覆盖真值 + 缺陷留证(失配 = 推算 bug,修推算代码)
+    bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs2.observe(bs2.bench, real_view, sig=_sig())
+    bs2.write_logic(bs2.bench, bench_view_of_slots(
+        [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8),
+        produced_by='BuyCard', sig=_lsig())
+    rows2: list[dict] = []
+    set_defect_sink(rows2.append)
+    try:
+        bs2.observe(bs2.bench, real_view, sig=_sig())
+    finally:
+        set_defect_sink(None)
+        consume_defect_sink()
+    assert len(rows2) == 1, '失配留证(kind=observe_vs_logic_mismatch)'
+    assert rows2[0]['kind'] == 'observe_vs_logic_mismatch'
+    assert bs2.bench.value == real_view \
+        and bs2.bench.source == 'observation', \
+        '观察赢:实读覆盖逻辑值(推算 bug 不挂账,留证修码)'
 
 
 # ============================================================ 扩单件 4:parse_streak 失读 None 化(§8.8)

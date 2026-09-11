@@ -109,7 +109,8 @@ def _scan_src(exempt: set[str], guard) -> dict[str, str]:
 def test_board_state_field_bypass_grep_lock() -> None:
     """旁路直改锁(§3.2.4 硬约束 1①):容器外(kernel/cw_board_state.py 之外
     全子树)零「bs/board_state.<attr> =」形态——Field 帧替换只经 observe/
-    carry/write_prior/expect/confirm/write_logic/relay API;工程结构
+    carry/write_prior/write_logic/relay API(两态制 ADR-0651:expect/confirm
+    已废除,write_logic = 标准逻辑写通道);工程结构
     (write_seq/node_hist_ord 等)只在容器本体方法内变。变异自检防判据失准。"""
     assert _bypass_guard_hits('bs.gold = Field(value=1)') == ['bs.gold ='], \
         '变异自检未命中'
