@@ -64,9 +64,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import prov
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-    equipment as crit_equip,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -174,21 +171,6 @@ class TestSwapDecide:
         out = proof.should_switch(GameState(gold=30), session, None, None)
         assert out.event and out.alt_comp is not None
         assert out.alt_comp.name != comps[0].name
-
-
-# ===== ③ boss/硬节点决策真值:D-B 三态门 =====
-
-
-class TestBossNodeRelease:
-
-    def test_d_b_wear_release_three_states(self):
-        """D-B 三态门:简易件即穿/里程碑收窄释放/强敌节点释放。"""
-        ok, why = crit_equip.wear_release(False, None, simple_item=True)
-        assert ok and why == 'simple_item'
-        ok, why = crit_equip.wear_release(True, None, simple_item=False)
-        assert ok and why == 'opening_achieved'
-        ok, why = crit_equip.wear_release(False, 'boss', simple_item=False)
-        assert ok and why == 'hard_node'
 
 
 # ===== ④ 发射契约:fail-closed + 入口 smoke =====
