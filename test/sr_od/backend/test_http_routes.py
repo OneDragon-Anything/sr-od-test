@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from one_dragon.base.operation.operation_base import OperationResult
-from sr_od.backend.backend_context import BackendNotReadyError
+from sr_od.backend.backend_context import BackendNotReadyError, SrBackendContext
 from sr_od.backend.http import routes as routes_mod
 from sr_od.backend.http.routes import (
     handle_game_analyze,
@@ -50,6 +50,9 @@ def _mock_backend(start_ok: bool = True) -> MagicMock:
         duration_seconds=1.0,
     )
     b.stop.return_value = {'stopped': True, 'source': 'http'}
+    # 并发拒绝响应由 backend 统一助手产出(start 类工具只透传,T-59):
+    # 绑真实现——方法只读 query_status / run_slot,二者均已被 mock。
+    b.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(b, hint)
     return b
 
 
@@ -413,6 +416,8 @@ def test_handle_game_run_operation_concurrent_reject() -> None:
     backend = MagicMock()
     backend.run_slot._start.return_value = (False, None)
     backend.query_status.return_value = RunStatusResult(state='running', source='mcp')
+    # 并发拒绝响应由 backend 统一助手产出(T-59),绑真实现(依赖均已被 mock)。
+    backend.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(backend, hint)
     request = _request_with_body({'op_id': _OPEN_AND_ENTER}, {})
     resp = asyncio.run(handle_game_run_operation(backend, request))
     data = json.loads(resp.body.decode('utf-8'))

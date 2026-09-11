@@ -557,6 +557,41 @@ def _isolate_debug_images(
 
 
 # --------------------------------------------------------------------------- #
+# 跨进程窗口运行锁目录隔离(README 测试纪律 2 的机检层)
+# --------------------------------------------------------------------------- #
+# 背景:ApplicationRunContext.start_running 的跨进程互斥(按窗口标题的字节锁,
+# 见 one_dragon.base.operation.window_run_mutex)把锁文件落在
+# <work_dir>/.debug/run_mutex/;op 流程测试经 harness 会真实触发 start_running,
+# 不重定向有两个后果:① 测试写真实 .debug/(纪律 2);② 锁语义在测试进程与
+# 并行的 sim/server 进程间真实生效 → 无关进程恰好在跑 run 时本进程测试假红
+# (互斥本来就是跨进程的,重定向 = 测试与外界解耦)。teardown 顺带回收测试
+# 遗留的窗口锁(防线,同 _RUN_LEFTOVER_ATTRS 分层):Windows 字节锁按句柄
+# 冲突(同进程不同句柄也互斥),残留会把本进程后续一切 start_running 锁死。
+
+
+@pytest.fixture(autouse=True)
+def _isolate_window_run_mutex(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, test_context: SrTestContext
+) -> Iterator[None]:
+    """把跨进程窗口运行锁目录重定向到 tmp_path,并回收测试遗留的窗口锁(见上注释)。"""
+    from one_dragon.base.operation import window_run_mutex
+
+    monkeypatch.setattr(
+        window_run_mutex, 'default_lock_dir', lambda: tmp_path / 'run_mutex'
+    )
+    yield
+    rc = getattr(test_context, 'run_context', None)
+    mutex = getattr(rc, '_window_mutex', None) if rc is not None else None
+    if mutex is not None and mutex.is_holding:
+        mutex.release()
+        warnings.warn(
+            'run_context 窗口运行锁被本测试遗留持有(未走 finish/stop 收口?)'
+            '已自动释放——Windows 字节锁按句柄冲突,残留会锁死后续 start_running。',
+            stacklevel=2,
+        )
+
+
+# --------------------------------------------------------------------------- #
 # 安灯停线通道隔离(README 测试纪律 2 的机检层:零真实副作用)
 # --------------------------------------------------------------------------- #
 # 背景:L0 安灯 handler 是 ``telemetry.state._L0_ANDON_HANDLER`` 模块级单例,
