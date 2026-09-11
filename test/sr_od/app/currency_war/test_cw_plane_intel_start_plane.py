@@ -51,8 +51,12 @@ def test_detail_unreadable_concludes_without_gate_retry() -> None:
     (接线存在性烟雾档,失守事故 = 第六局接管「切卡动画中」重试等待
     烧 7s 后才放弃):①源码含直接结论调用;②等待门只允许备战入口
     一处(详情侧读不出不得再间隔重试,2026-09-03 裁决);③门签名不再
-    承载 conclude_plane 分流(退役参数墓碑)。"""
-    src = inspect.getsource(cw_screen_plane_intel.CwScreenPlaneIntel.collect)
+    承载 conclude_plane 分流(退役参数墓碑)。
+    (锁面宿主 = ``_collect_cycle``:统一观察架构迁移批 T-48 起采集体
+    为两路径方法级共享体,collect 节点 = 装配点分流 + 委托;锁语义
+    随体迁,判定面不变。)"""
+    src = inspect.getsource(
+        cw_screen_plane_intel.CwScreenPlaneIntel._collect_cycle)
     assert '_conclude_plane_unreadable(' in src, (
         '采集循环读不出应直接位面级结论')
     assert src.count('_nonclean_read_gate') == 1, (
@@ -66,10 +70,14 @@ def test_detail_unreadable_concludes_without_gate_retry() -> None:
 # ==================== 用户定值等待 ====================
 
 def test_user_fixed_waits() -> None:
-    """用户定值:进详情开屏 ~3s、详情内切位面卡后 2s;且确实接在两次点击后。"""
+    """用户定值:进详情开屏 ~3s、详情内切位面卡后 2s;且确实接在两次点击后。
+    (锁面宿主 = ``_collect_cycle``:统一观察架构迁移批 T-48 起采集体为
+    两路径方法级共享体,collect 节点 = 装配点分流 + 委托;锁语义随体迁,
+    判定面不变。)"""
     assert cw_screen_plane_intel._DETAIL_OPEN_WAIT_S == 3.0
     assert cw_screen_plane_intel._PLANE_SWITCH_WAIT_S == 2.0
-    src = inspect.getsource(cw_screen_plane_intel.CwScreenPlaneIntel.collect)
+    src = inspect.getsource(
+        cw_screen_plane_intel.CwScreenPlaneIntel._collect_cycle)
     assert 'time.sleep(_DETAIL_OPEN_WAIT_S)' in src, '开屏等待未接 3s 定值'
     assert 'time.sleep(_PLANE_SWITCH_WAIT_S)' in src, '切卡等待未接 2s 定值'
 

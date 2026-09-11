@@ -242,6 +242,24 @@ class TestZeroProductionConsumption:
         # None = 生产直连现役骨架,§9.1 并存期)。
         str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
             / '_progression_base.py'),
+        # 统一观察架构余项收口阶段三(账本 T-48 收尾五屏;设计 =
+        # changes/2026-09-11-unified-observation/ landing 阶段三 + 收尾屏
+        # 迁移详设):位面过渡/武装箱弹窗/未达上限弹窗/等待1-1/位面情报采集
+        # 五屏 start 节点方法顶部(handle / collect() 节点首行)装配点分流
+        # 判据消费 observation_source/action_sink(先例锚同上;重入裁决留守
+        # 分流前共享段,总纲契约 6;位面情报采集 = 薄转录,总纲契约 2。
+        # 非旁路改道——零读屏/执行新缝,缺省 None = 生产直连旧路径,
+        # §9.1 并存期)。
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_plane_transition.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_armory_box.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_deploy_not_full.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_wait_one_one.py'),
+        str(Path('application') / 'currency_war' / 'operations' / 'cw_screen'
+            / 'cw_screen_plane_intel.py'),
         # 统一观察架构试点步骤 1(commit 3a688669a)基类:docstring 提及
         # 安装协议名(「双清复位见 cw_game_ports」),零 import 零调用——
         # 扫描为文本匹配,提及即命中;非改道点,批 2 登记豁免。

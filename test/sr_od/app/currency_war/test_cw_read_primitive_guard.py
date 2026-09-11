@@ -87,8 +87,11 @@ RESIDUAL: frozenset[tuple[str, str, str]] = frozenset({
         ('application/currency_war/operations/cw_screen/cw_screen_battle_wait.py', '_record_round_outcome', 'read_phase_round'),
         ('application/currency_war/operations/cw_screen/cw_screen_invest_env.py', '_refresh_node_ledger', 'read_node_sequence'),
         ('application/currency_war/operations/cw_screen/cw_screen_invest_env.py', '_refresh_node_ledger', 'read_phase_round'),
-        ('application/currency_war/operations/cw_screen/cw_screen_plane_intel.py', 'collect', 'read_node_sequence'),
-        ('application/currency_war/operations/cw_screen/cw_screen_plane_intel.py', 'collect', 'read_phase_round'),
+        # (统一观察架构迁移批 T-48:plane_intel 采集体为两路径共享体
+        #  ``_collect_cycle``,collect 节点 = 装配点分流 + 委托——两读点
+        #  宿主名随体迁移,登记语义(残读未改道)不变。)
+        ('application/currency_war/operations/cw_screen/cw_screen_plane_intel.py', '_collect_cycle', 'read_node_sequence'),
+        ('application/currency_war/operations/cw_screen/cw_screen_plane_intel.py', '_collect_cycle', 'read_phase_round'),
         ('application/currency_war/operations/cw_screen/cw_screen_prep.py', '_probe_node_type', 'read_node_sequence'),
         ('application/currency_war/operations/cw_screen/cw_screen_prep.py', '_reconcile_buy_expect', 'read_deployed_chars'),
         ('application/currency_war/operations/cw_screen/cw_screen_prep.py', '_reconcile_drag_expect', 'read_deployed_chars'),
