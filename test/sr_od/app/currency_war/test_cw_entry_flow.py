@@ -261,3 +261,24 @@ def test_settlement_real_frame_in_match_judgment(
         assert matched == '货币战争-结算', (
             f'结算屏 {state} 变体应对局中判定命中「货币战争-结算」,实际={matched}'
             f'(id_mark 漂移或白名单误收)')
+
+
+def test_settlement_fail_step1_real_frame_in_match_judgment(
+    test_context: SrTestContext,
+) -> None:
+    """结算-失败 步骤1帧(点击空白加速)真帧 → 判定单一源命中「货币战争-结算-失败」。
+
+    退局分支补齐批的识别面地基:上层清场链委托前提 = 判定单一源在该帧上
+    认得出对局中(命中屏名后按屏名路由 CwEntryExit)。fixture = 步骤1实拍
+    (挑战结束+挑战进度+点击空白加速,「前往结算」未现;步骤2 变体由
+    轮败-前往结算按钮.webp 承载,动作面锁见 test_cw_round_flow)。命中失败
+    = 组合 id_mark 漂移(单锚三连撞车史的组合门回退)。
+    """
+    state = '轮败-点击空白加速'
+    if not test_context.has_screen('货币战争-结算-失败', state):
+        pytest.skip(f'存档截图缺失:screens/货币战争-结算-失败/{state}.webp')
+    img = test_context.load_screen('货币战争-结算-失败', state)
+    matched = cw_screen_state.get_in_match_screen_name(test_context, img)
+    assert matched == '货币战争-结算-失败', (
+        f'步骤1帧应对局中判定命中「货币战争-结算-失败」,实际={matched}'
+        f'(组合 id_mark 漂移或白名单误收)')

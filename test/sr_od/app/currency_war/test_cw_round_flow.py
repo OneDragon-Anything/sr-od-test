@@ -214,6 +214,170 @@ def test_settlement_screen_clicks_continue_challenge(
         f'结算屏分支不得按 esc,实际按键={ctrl.recorded_btn_taps}')
 
 
+# ============ 结算-失败 步骤1帧分支(战败演出加速;退局链实录缺陷补齐)============
+
+
+def test_settlement_fail_step1_onboarded() -> None:
+    """结算-失败 步骤1分支的画面档地基(检测锚 + 点击坐标单一源)。
+
+    分支依赖三个 area:标识-挑战进度 / 提示-点击空白加速(货币战争-结算-失败,
+    双锚 area 判定)与 货币战争-位面过渡/区域-空白点击(点空白加速坐标的建档
+    单一源)。area 缺失时 round_by_find_area 的 is_success=False 会让分支静默
+    落穿尾部(回退有界 fail 形态)——本锁把配置缺口炸到测试面。
+    """
+    import yaml
+
+    with open('assets/game_data/screen_info/currency_war_settlement_fail.yml',
+              encoding='utf-8') as f:
+        d = yaml.safe_load(f)
+    names = {a['area_name'] for a in d['area_list']}
+    assert '标识-挑战进度' in names, '步骤1分支检测锚①(战败独有 id_mark)'
+    assert '标识-挑战结束' in names, '本屏组合 id_mark 另一半'
+    assert '提示-点击空白加速' in names, '步骤1分支检测锚②(步骤1 独有提示)'
+
+    with open('assets/game_data/screen_info/currency_war_plane_transition.yml',
+              encoding='utf-8') as f:
+        d2 = yaml.safe_load(f)
+    names2 = {a['area_name'] for a in d2['area_list']}
+    assert '区域-空白点击' in names2, '点空白加速坐标单一源(对局内主路径同坐标)'
+
+
+def test_settlement_fail_step1_clicks_blank_accel(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """结算-失败 步骤1帧(点击空白加速,「前往结算」未现)→ 真 exit_match 链
+    点空白加速推进,演出完的步骤2帧由「前往结算」分支接管。
+
+    退局链实录缺陷的动作面回归锁:步骤1帧(挑战结束+挑战进度+点击空白加速)
+    旧版全分支 miss 落尾部连点右上 X,演出自动完成前 >10 轮即 fail 交外层。
+    真帧锁:fixture = 步骤1实拍 + 步骤2实拍(同屏两步序贯出口,见
+    docs/game/screens/currency_war_settlement_fail.md「状态流转」)。
+    断言:加速点击落「区域-空白点击」area 内(建档单一源,对局内主路径
+    CwScreenBattleWait.BLANK 同坐标);不点右上角 X 兜底 (1843,42);不按 esc;
+    「前往结算」分支消费步骤2后大厅锚 success。
+    """
+    frames = [
+        ('货币战争-结算-失败', '轮败-点击空白加速'),
+        ('货币战争-结算-失败', '轮败-前往结算按钮'),
+        ('货币战争-大厅', 'lobby'),
+    ]
+    for screen_name, state in frames:
+        if not test_context.has_screen(screen_name, state):
+            pytest.skip(f'fixture 缺失:screens/{screen_name}/{state}.webp')
+
+    phases = [
+        {   # 步骤1帧:点空白(区域-空白点击 rect 内)才推进(错点不推进)
+            'frame': ('货币战争-结算-失败', '轮败-点击空白加速'),
+            'exit': ('on_click_in', '货币战争-位面过渡', '区域-空白点击'),
+        },
+        {   # 步骤2帧:「前往结算」OCR 框中心点击(按钮 area rect 内)推进
+            'frame': ('货币战争-结算-失败', '轮败-前往结算按钮'),
+            'exit': ('on_click_in', '货币战争-结算-失败', '按钮-前往结算'),
+        },
+        {   # 大厅:terminal(退局完成,大厅锚命中即 success,零点击)
+            'frame': ('货币战争-大厅', 'lobby'),
+        },
+    ]
+    ctrl = _ExitFixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    ctrl.set_phases(phases)
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+
+    op = _WatchedExit(test_context)
+    op._init_watchdog()  # type: ignore[attr-defined]
+
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert result.success, (
+        f'步骤1帧应点空白加速推进到大厅:status={result.status};'
+        f'phase_idx={ctrl.phase_idx}'
+    )
+    assert ctrl.click_hit_area('货币战争-位面过渡', '区域-空白点击'), (
+        f'步骤1帧应点「区域-空白点击」area 内(点空白加速),'
+        f'实际点击={ctrl.recorded_clicks}')
+    assert ctrl.click_hit_area('货币战争-结算-失败', '按钮-前往结算'), (
+        f'步骤2帧应由「前往结算」分支消费,实际点击={ctrl.recorded_clicks}')
+    # 不走其他出口:不点右上角 X 兜底 (1843,42)(全分支 miss 形态),不按 esc
+    assert not any(abs(p.x - 1843) <= 5 and abs(p.y - 42) <= 5
+                   for p in ctrl.recorded_clicks), (
+        f'不得点右上角 X 兜底坐标(旧缺陷形态),实际点击={ctrl.recorded_clicks}')
+    assert ctrl.recorded_btn_taps.count('esc') == 0, (
+        f'步骤1分支不得按 esc,实际按键={ctrl.recorded_btn_taps}')
+
+
+def test_plane_transition_frame_not_misfire_blank_accel(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """位面过渡真帧 → 步骤1分支不得误触(共享子序列误配史的 rect 约束回归)。
+
+    位面过渡屏「点击空白处继续」与步骤1词「点击空白加速」共享子序列 4/6
+    (LCS 0.67 过默认阈值),全屏 OCR 判定必误命中;分支用 area rect 判定,
+    两提示 rect 不相交(位面过渡提示 y930 起 vs 步骤1提示 rect y≤922)应互斥。
+    绊线剧本:位面过渡帧上若误点「区域-空白点击」即推进到大厅 → success = 红;
+    正确行为 = 该帧全分支 miss(既有有界 fail 形态,与步骤1分支无关)→
+    watchdog 截停 → 非 success,且全程零点击落入空白 rect。
+    """
+    frames = [
+        ('货币战争-位面过渡', 'plane_1to2'),
+        ('货币战争-大厅', 'lobby'),   # 仅误触时到达(绊线)
+    ]
+    for screen_name, state in frames:
+        if not test_context.has_screen(screen_name, state):
+            pytest.skip(f'fixture 缺失:screens/{screen_name}/{state}.webp')
+
+    phases = [
+        {
+            'frame': ('货币战争-位面过渡', 'plane_1to2'),
+            # 误触绊线:步骤1分支误命中 → 点空白 → 推进到大厅 → success = 红
+            'exit': ('on_click_in', '货币战争-位面过渡', '区域-空白点击'),
+        },
+        {
+            'frame': ('货币战争-大厅', 'lobby'),
+        },
+    ]
+    ctrl = _ExitFixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    ctrl.set_phases(phases)
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+
+    op = _WatchedExit(test_context)
+    op.watchdog_max_rounds = 3   # 位面过渡帧合法 miss 3 轮足够暴露误触(误触第 1 轮即推进)
+    op._init_watchdog()  # type: ignore[attr-defined]
+
+    enter_running_state(test_context)
+    try:
+        with fast_sleep():
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert not result.success, (
+        f'位面过渡帧不得被步骤1分支误触推进(误配回潮):'
+        f'phase_idx={ctrl.phase_idx}'
+    )
+    assert ctrl.phase_idx == 0, (
+        f'绊线不得推进(误点空白 = 步骤1分支误命中),实际点击={ctrl.recorded_clicks}')
+    blank = test_context.screen_loader.get_area('货币战争-位面过渡', '区域-空白点击')
+    r = blank.pc_rect
+    assert not any(r.x1 <= p.x <= r.x2 and r.y1 <= p.y <= r.y2
+                   for p in ctrl.recorded_clicks), (
+        f'位面过渡帧上不得有点击落入「区域-空白点击」rect,'
+        f'实际点击={ctrl.recorded_clicks}')
+
+
 def test_no_round_retry_tail() -> None:
     """战斗中不再落入无界 retry 尾(旧版尾分支;否定墓碑,r279 退役背书)。
 
