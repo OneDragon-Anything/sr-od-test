@@ -1,4 +1,4 @@
-"""cw4 判据契约层测试(R198 批:assume-guarantee 契约化,IMPL_DESIGN §4.2.2)。
+"""cw4 判据契约层测试(R198 批:assume-guarantee 契约化;纪律单一源=criteria/contracts.py)。
 
 收缩注记(CUT9 二次收缩:原 14 测试→8 测试;同分支变体砍,git 可复活):
 - ①注册完备性:留 criteria 全公开函数覆盖断言(主锚);在册键存在性/
