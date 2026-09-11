@@ -1048,7 +1048,7 @@ def test_divergence_missing_file(tmp_path: _divergence_stats_Path) -> None:
 
 # ==================== cw4_counters 落盘(行为观测计数批,v7)====================
 
-# ==================== W4 cw4 计数流删 + 局终行聚合收编(R5 W4/ADR-0650) ====================
+# ==================== W4 cw4 计数流删 + 局终行聚合收编(R5 W4,r5-migration-plan.md §2) ====================
 # [退役墓碑,W4]test_cw4_counters_snapshot_into_archive /
 # test_cw4_counters_zero_count_and_missing_distinct /
 # test_cw4_counters_from_match_extracts_session /

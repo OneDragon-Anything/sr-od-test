@@ -6,7 +6,7 @@ docs/develop/currency_war/game_state/retirement.md §2)。禁碰面 =
 保留 2 流(defect_ledger/op_journal)+ 清点补遗流(board_state_archive)
 + journal 写路径本体 + 旧档案只读判读面(query/cli/match_archive 读旧档)。
 
-W4 增量(r5-migration-plan.md §2 W4/ADR-0650):逐 key 审计流
+W4 增量(r5-migration-plan.md §2 W4):逐 key 审计流
 cw4_counters 写入端亦退役——局终级全键聚合收编载体 = 局终域行载荷
 ``MatchFinal.cw4_counters``(journal);键全集登记 = test_cw4_key_closure。
 本锁 _OLD_STREAM_FILES/_CALL_SITE_RE/_STREAM_NAME_RE 随之扩员辖 cw4 面。
@@ -66,7 +66,7 @@ from sr_od.application.currency_war.kernel.cw_observe import obs_conflict
 from sr_od.application.currency_war.telemetry import state as tel_state
 
 #: 收编 9+1 流的旧流文件名(写入端退役对象;retirement.md §2 处置表;
-#: cw4_counters.jsonl 随 R5 W4 流删并入——聚合载体改局终域行,ADR-0650)。
+#: cw4_counters.jsonl 随 R5 W4 流删并入——聚合载体改局终域行,r5-migration-plan.md §2 W4)。
 _OLD_STREAM_FILES: tuple[str, ...] = (
     'decisions.jsonl', 'outcomes.jsonl', 'exogenous.jsonl',
     'spend_ledger.jsonl', 'shop_snapshots.jsonl', 'exec_events.jsonl',

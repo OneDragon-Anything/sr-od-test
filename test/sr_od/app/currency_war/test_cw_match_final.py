@@ -439,7 +439,7 @@ def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:
     assert a2['schema_version'] == match_archive.SCHEMA_VERSION
 
 
-# ============================================================ W4 键收编聚合载体(R5 W4/ADR-0650)
+# ============================================================ W4 键收编聚合载体(R5 W4,r5-migration-plan.md §2)
 
 def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     """载荷聚合锁:write_match_final(cw4_counters=…) → 载荷原样落账;
