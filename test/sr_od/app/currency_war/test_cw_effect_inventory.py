@@ -11,7 +11,8 @@
 
 辖域 = 板面重写两形态行为锁:整场上阵替换(全员晋升,随机面 = 负写端)/
 全场出售+再发牌(人力重组,出售面 = 逻辑写、发牌面 = 不造单位)+ 词表锚 +
-边界(从未观察字段/零退款金翻标禁令/未知语义/非重写条目)。
+边界(从未观察字段/出售域部分读退款零写入/零退款金翻标禁令/未知语义/
+非重写条目)。
 同族桥(burst/每节点/容量投影)行为锁在 test_cw_board_state_batch3.py(历史存量簇)。
 """
 from __future__ import annotations
@@ -151,17 +152,23 @@ def test_sell_all_clears_units_and_refunds_gold() -> None:
             '写入 evidence 带板面重写标记(留证)'
     assert rep == BoardRewriteReport(
         rewrite=BOARD_REWRITE_SELL_ALL, refund_gold=expected_refund,
-        sold_units=4, cleared_fields=('front_row', 'back_row', 'bench'))
+        sold_units=4, cleared_fields=('front_row', 'back_row', 'bench'),
+        partial_read=False)
 
 
 def test_sell_all_unknown_char_cost_falls_back_mid() -> None:
     """未知 char_id 单位按中费 3 保守估(cw_state.bench_char_cost 兜底口径),
-    退款推导随兜底价走,不炸不跳过。"""
+    退款推导随兜底价走,不炸不跳过;bench 从未观察 = 出售域未全读 → 退款
+    零写入留证(effect-domain.md §6.3:输入不完整不满足确定性分支前提,
+    禁部分退款翻标 logic 权威值)。"""
     bs = _make_bs(front=[Unit(char_id='不存在角色xx', star=2, slot=1)],
                   back=[], bench_slots=None, gold=10)
     rep = apply_board_rewrite(bs, STRATEGY_EFFECTS['人力重组'])
     assert rep is not None and rep.sold_units == 1
-    assert bs.gold.value == 10 + sell_refund(2, 3), '兜底中费 3 入退款推导'
+    assert rep.refund_gold == sell_refund(2, 3), '兜底中费 3 进退款推导(留证)'
+    assert rep.partial_read is True, 'bench 从未观察 = 出售域未全读'
+    assert bs.gold.value == 10 and bs.gold.source == 'observation', \
+        '部分读 → 退款零写入(禁部分退款写成 logic 权威值)'
     assert bs.front_row.value == [], '识别不出名字不影响出售清空事实'
 
 
@@ -185,10 +192,46 @@ def test_sell_all_preserves_active_bench_capacity() -> None:
 # ============================================================ 边界(禁造帧/禁翻标/禁猜)
 
 
+def test_sell_all_partial_read_withholds_refund() -> None:
+    """部分读回归锁(出售域全读判据):front_row/back_row/bench 任一从未
+    观察 = 退款公式输入不完整(未读域实际卖数未知)→ 不满足归属判据
+    确定性分支「确定性公式+已知输入」前提(effect-domain.md §6.3)→
+    退款零写入,金字段保持观察来源——禁把部分退款以 logic 标写成权威值
+    (观察帧覆盖前记录层留错误金);已读子域清空照常落,已读面退款在
+    报告 refund_gold × partial_read 留证等观察收口。"""
+    # 子域 A:bench 从未观察(接管局/观察缺口典型)——已读前排+后排照常清空
+    bs = _make_bs(front=[_unit(1, 1, 1), _unit(4, 2, 2)],
+                  back=[_unit(2, 2, 1)], bench_slots=None, gold=20)
+    seq0 = bs.write_seq
+    rep = apply_board_rewrite(bs, STRATEGY_EFFECTS['人力重组'])
+    read_face_refund = (sell_refund(1, 1) + sell_refund(2, 4)
+                        + sell_refund(2, 2))
+    assert bs.write_seq == seq0 + 2, '只清空已读两行,金零写入'
+    assert bs.front_row.value == [] and bs.back_row.value == []
+    assert bs.bench.value is None, '未读子域不造帧'
+    assert bs.gold.value == 20 and bs.gold.source == 'observation', \
+        '部分退款禁翻标金字段(禁留错误权威值)'
+    assert rep.partial_read is True and rep.refund_gold == read_face_refund \
+        and rep.sold_units == 3, '已读面退款留证在报告(标记部分读)'
+    assert rep.cleared_fields == ('front_row', 'back_row')
+    # 子域 B:front 从未观察——判据对三个子域对称,同门拒金写
+    bs2 = _make_bs(front=None, back=[_unit(2, 2, 1)],
+                   bench_slots=[BenchSlot(kind='unit', unit=_unit(1, 1, 1))]
+                   + [BenchSlot(kind='empty')] * 8, gold=7)
+    seq1 = bs2.write_seq
+    rep2 = apply_board_rewrite(bs2, STRATEGY_EFFECTS['人力重组'])
+    assert bs2.write_seq == seq1 + 2, '后排+备战席清空,金零写入'
+    assert bs2.gold.value == 7 and bs2.gold.source == 'observation'
+    assert rep2.partial_read is True \
+        and rep2.refund_gold == sell_refund(2, 2) + sell_refund(1, 1) \
+        and rep2.sold_units == 2
+
+
 def test_sell_all_skips_never_observed_fields() -> None:
     """从未观察字段(value=None)= 无容器可写,跳过(同族先例 =
     project_effect_capacity):不造空阵帧,真值由下一备战帧观察到达;
-    出售域全未读 → 退款 0 → 金不写(禁把观察金翻标成 logic)。"""
+    出售域全未读 → 退款 0 → 金不写(禁把观察金翻标成 logic),报告
+    partial_read=True 标记出售域未全读。"""
     bs = _make_bs(front=None, back=None, bench_slots=None, gold=20)
     seq0 = bs.write_seq
     rep = apply_board_rewrite(bs, STRATEGY_EFFECTS['人力重组'])
@@ -198,7 +241,8 @@ def test_sell_all_skips_never_observed_fields() -> None:
     assert bs.gold.value == 20 and bs.gold.source == 'observation', \
         '零退款禁翻标金字段来源'
     assert rep == BoardRewriteReport(rewrite=BOARD_REWRITE_SELL_ALL,
-                                     refund_gold=0, sold_units=0)
+                                     refund_gold=0, sold_units=0,
+                                     partial_read=True)
 
 
 def test_sell_all_gold_unread_keeps_none() -> None:
@@ -209,6 +253,8 @@ def test_sell_all_gold_unread_keeps_none() -> None:
     assert bs.gold.value is None, '金未读保持 None(§3.2.9 None=不可读)'
     assert bs.front_row.value == [] and bs.bench.value is not None
     assert rep.refund_gold > 0 and 'gold' not in rep.cleared_fields
+    assert rep.partial_read is False, \
+        '出售域全读;金跳过是基座缺位而非部分读'
 
 
 def test_noop_for_non_rewrite_entry_and_unknown_semantics() -> None:
