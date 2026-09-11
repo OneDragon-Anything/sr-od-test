@@ -72,3 +72,9 @@ test_cw_entry_flow.py::test_settlement_real_frame_in_match_judgment
 test_cw_round_flow.py::test_settlement_fail_step1_clicks_blank_accel
 test_cw_round_flow.py::test_plane_transition_frame_not_misfire_blank_accel
 test_cw_entry_flow.py::test_settlement_fail_step1_real_frame_in_match_judgment
+
+# T-69 测试基建批(2026-09-12 慢桶流程补办:跨进程证明用例 = Windows 子进程
+# 冷启(python + import one_dragon,依赖 one_dragon.utils 不可单文件加载)
+# + 0.7s 持锁安全边际;热跑 call 实测 0.86s,冷启/高载显著上浮(审计估 ≥2s);
+# 同桶先例 = 子进程/真环境形态锁族)
+test_window_run_mutex.py::test_cross_process_mutex_and_auto_release

@@ -217,8 +217,9 @@ LITERAL_KEYS: frozenset[str] = frozenset(
 
 #: 闭域参数化族(17;审计 §2.3 闭族列名 + T-3 核验版 N2 补登)。shape =
 #: 产出表达式的静态形状(f 模板头/尾,或变量漏斗声明);instances = 闭域
-#: 实例全集(域单一源注明;上界和 = 86,与 T-3 核验版三分清单勾稽:
-#: 16 族 80 + l2_ 族 kernel 拒因闭集上界 6)。
+#: 实例全集(域单一源注明;l2_ 族登记 None,实例经 _family_instances 从
+#: kernel 现算派生;上界和 = 86,与 T-3 核验版三分清单勾稽:16 族 80 +
+#: l2_ 族 kernel 拒因闭集)。
 CLOSED_FAMILIES: tuple[dict[str, Any], ...] = (
     {'name': 'intention_frame_{plane}', 'shape': ('intention_frame_', ''),
      'instances': ('intention_frame_p1', 'intention_frame_p2'),
@@ -299,13 +300,14 @@ CLOSED_FAMILIES: tuple[dict[str, Any], ...] = (
                '=sim/checks/ledger._CORE_EXIT_KEYS)'},
     {'name': 'fuel_filler_stall_fenced_l2_{why}', 'shape':
         ('fuel_filler_stall_fenced_l2_', ''),
-     'instances': None,   # 上界 6 = kernel 拒因闭集;闭集外动态后缀零静默
+     'instances': None,   # 实例 = kernel 拒因闭集现算派生(_family_instances,
+      # 单一源 = cw_deploy_logic;上界随单一源自动扩缩,禁手抄)
      'domain': 'kernel 部署拒因闭集(scatter_fence/rest_capacity/cap/'
                'name_dup/recipe_floor/item_slot;单一源 = cw_deploy_logic '
-               'select_deployments_with_reasons 返回拒因注)+ 闭集外动态'
-               '后缀零静默(shop 写点注);触发源对照分列键(④专,shop 写'
-               '点预注册裁决协议:先写死后看数防挪线;与同名 fenced_ 开放'
-               '族是两个族形,分别登记,N2)'},
+               'select_deployments 返回拒因注,_kernel_deploy_reject_'
+               'reasons 现算)+ 闭集外动态后缀零静默(shop 写点注);触发'
+               '源对照分列键(④专,shop 写点预注册裁决协议:先写死后看数'
+               '防挪线;与同名 fenced_ 开放族是两个族形,分别登记,N2)'},
 )
 
 #: 开放域参数化族(9;域=判据产物/拒因串解析/名单,不设上界,逐族申报)。
@@ -674,11 +676,72 @@ def scan_write_points() -> dict[str, Any]:
             'helper_var_args': helper_var_args}
 
 
+# ================= l2_ 族闭集机器锚定(kernel 单一源现算) =================
+
+#: l2_ 族登记名与键前缀(_family_instances 派生与 census 勾稽共用)。
+_L2_FAMILY_NAME: str = 'fuel_filler_stall_fenced_l2_{why}'
+_L2_KEY_PREFIX: str = 'fuel_filler_stall_fenced_l2_'
+_KERNEL_DEPLOY_LOGIC: str = 'kernel/cw_deploy_logic.py'
+_KERNEL_REJECT_FN: str = 'select_deployments'
+
+#: 现算结果缓存(多条断言共享一次 AST 解析;懒加载避免收集期付 kernel 源)。
+_KERNEL_REASONS: frozenset[str] | None = None
+
+
+def _kernel_deploy_reject_reasons() -> frozenset[str]:
+    """kernel 部署拒因闭集现算(纪律 9:期望值从单一源推导,禁手抄常数)。
+
+    单一源 = ``cw_deploy_logic.select_deployments`` 的 held 拒因赋值点
+    (``reasons[<下标>] = '<字面>'``;N2 规格单一源,17 号稿 §7.1)。
+    kernel 新增第 7 拒因 → 本集现算扩容 → census 上界勾稽红(登记门:
+    核对新增拒因入 cw4 计数域后同步勾稽锚)。只扫该函数:同模块
+    ``select_swap_plan`` 也有 ``reasons`` 字典,属 deploy_exec_held 域
+    (post_sell_* 两键,族形不同,分别登记)。推导退化(空集)= kernel
+    重构了赋值形态、现算器失明——fail-closed 炸错指引同步,禁静默放行。
+    """
+    global _KERNEL_REASONS
+    if _KERNEL_REASONS is None:
+        src = _SRC_ROOT / _KERNEL_DEPLOY_LOGIC
+        tree = ast.parse(src.read_text(encoding='utf-8'), filename=str(src))
+        reasons: set[str] = set()
+        for fn in ast.walk(tree):
+            if not (isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and fn.name == _KERNEL_REJECT_FN):
+                continue
+            for node in ast.walk(fn):
+                if not isinstance(node, ast.Assign):
+                    continue
+                for tgt in node.targets:
+                    if (isinstance(tgt, ast.Subscript)
+                            and isinstance(tgt.value, ast.Name)
+                            and tgt.value.id == 'reasons'
+                            and isinstance(node.value, ast.Constant)
+                            and isinstance(node.value.value, str)):
+                        reasons.add(str(node.value.value))
+        assert reasons, (
+            f'kernel 拒因闭集现算退化:{_KERNEL_DEPLOY_LOGIC}::'
+            f'{_KERNEL_REJECT_FN} 未扫出任何 reasons[*] = <字面> 赋值点'
+            '(拒因赋值形态变更,须同步本现算器,禁手抄回退)')
+        _KERNEL_REASONS = frozenset(reasons)
+    return _KERNEL_REASONS
+
+
+def _family_instances(fam: dict[str, Any]) -> tuple[str, ...]:
+    """族实例全集解析(登记 ``instances``;l2_ 族 = kernel 拒因闭集现算
+    派生全键,上界随单一源自动扩缩)。族校验(census 勾稽/字面键归属)
+    一律经本函数,禁绕行直读 ``instances``。"""
+    if fam['name'] == _L2_FAMILY_NAME:
+        return tuple(sorted(_L2_KEY_PREFIX + r
+                            for r in _kernel_deploy_reject_reasons()))
+    return fam['instances'] or ()
+
+
 def _family_instance_owner(key: str) -> str | None:
     """字面键 → 所属闭族名(键=已登记闭族实例时;用于直写形态的
-    族实例,如 shop_latch_skip_m2_buy 直写 mandate:1134)。"""
+    族实例,如 shop_latch_skip_m2_buy 直写 mandate:1134)。l2_ 族实例
+    为现算派生,kernel 闭集外字面后缀不属族 → 封闭性主门红。"""
     for fam in CLOSED_FAMILIES:
-        if key in (fam['instances'] or ()):
+        if key in _family_instances(fam):
             return str(fam['name'])
     return None
 
@@ -800,8 +863,9 @@ def test_funnel_funnels_bound_to_declared_context():
 def test_census_accounts_consistent():
     """登记账目自洽(与审计 §2.3 勾稽同构,T-3 核验版口径):字面集非空、
     闭族 17 个、闭族实例加和(上界口径)= 86(臂族域 = LAUNCH_CAUSE_BY_
-    ARM 全集 15,core 腿 = 3 前缀 ×4 后缀,l2_ 族 = kernel 拒因闭集 6)、
-    豁免面 7 名。"""
+    ARM 全集 15,core 腿 = 3 前缀 ×4 后缀,l2_ 族 = kernel 拒因闭集现算)、
+    豁免面 7 名。l2_ 上界从 cw_deploy_logic 现算(纪律 9,禁手抄):kernel
+    新增/删减拒因 → 本锁红 = 登记门,核对闭集变更入 cw4 域后同步勾稽锚。"""
     assert len(LITERAL_KEYS) == 257, (
         f'字面登记 {len(LITERAL_KEYS)} ≠ 257(审计 256 + 增量 1)')
     assert len(EXEMPT_KEYS) == 7
@@ -817,12 +881,13 @@ def test_census_accounts_consistent():
             inst_sum += len(_sell_gate.LAUNCH_CAUSE_BY_ARM)
         elif fam['name'].startswith('core'):
             inst_sum += 12
-        elif fam['name'].startswith('fuel_filler_stall_fenced_l2_'):
-            inst_sum += 6   # kernel 拒因闭集上界(域单一源 = cw_deploy_logic)
         else:
-            inst_sum += len(fam['instances'] or ())
+            inst_sum += len(_family_instances(fam))
     assert inst_sum == 86, (
-        f'闭族实例加和(上界) {inst_sum} ≠ 86(16 族 80 + N2 域上界 6)')
+        f'闭族实例加和(上界) {inst_sum} ≠ 86(16 族 80 + l2_ 族 kernel '
+        f'拒因闭集现算 {len(_kernel_deploy_reject_reasons())})——l2_ 项'
+        '漂移 = kernel 拒因闭集增删(cw_deploy_logic.select_deployments),'
+        '核对新增拒因入 cw4 计数域后同步本勾稽锚')
 
 
 def test_effect_domain_zero_keys_d1_idle_declaration():

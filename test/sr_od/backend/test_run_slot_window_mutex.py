@@ -47,7 +47,12 @@ def _hold_default_key_lock():
 
 
 def test_start_refused_when_window_held_by_other_process(slot) -> None:
-    """窗口被他进程占用:_start 受理前拒绝,原因可归因(非笼统的已有运行)。"""
+    """窗口被他进程占用:_start 受理前拒绝,原因可归因(非笼统的已有运行);
+    他方释放后同一 _start 再入受理成功、拒绝原因清空(拒绝+释放再入一体形,
+    先例 = test_application_run_context_window_mutex ::
+    test_start_refused_when_window_held_elsewhere;原独立再入用例的
+    「残留锁文件不阻塞」语义由本尾段同覆盖——release 不删文件,再入成功
+    即证残留文件不参与互斥判定)。"""
     external = _hold_default_key_lock()
     try:
         ok, fut = slot._start('mcp', op_factory=_make_op(OperationResult(success=True)))
@@ -59,12 +64,7 @@ def test_start_refused_when_window_held_by_other_process(slot) -> None:
     finally:
         external.release()
 
-
-def test_start_accepted_after_holder_releases(slot) -> None:
-    """释放后可再入:占用方释放后同一 _start 受理成功,拒绝原因清空。"""
-    external = _hold_default_key_lock()
-    external.release()
-
+    # 他方释放后可再入:同一 _start 受理成功,拒绝原因清空。
     ok, fut = slot._start('mcp', op_factory=_make_op(OperationResult(success=True)))
     assert ok is True and fut is not None
     fut.result(timeout=5)

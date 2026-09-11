@@ -126,7 +126,16 @@ time.sleep(float(sys.argv[4]))
 
 
 def test_cross_process_mutex_and_auto_release(tmp_path: Path) -> None:
-    """真·跨进程证明:子进程持锁期父进程拒绝;子进程退出后可再入。"""
+    """真·跨进程证明:子进程持锁期父进程拒绝;子进程退出后可再入。
+
+    慢桶(2026-09-12 补办流程):本用例是全文件唯一跨进程用例,子进程
+    冷启(python 解释器 + import one_dragon)不可省——``window_run_mutex``
+    依赖 ``one_dragon.utils``,无法单文件加载;``_CHILD_HOLD_SECONDS``
+    是「父进程拒绝检查先行于子进程退出」的安全边际,压小 = 拒绝断言
+    假绿风险,不降。实测:热跑 call 0.86s,冷启/高载场景显著上浮
+    (全子进程冷启形态,与既有真帧/OCR 重锁同桶);已按实测入
+    slow_marks.txt,快速层跳过、全量仍跑。
+    """
     # window_run_mutex.py → operation/ → base/ → one_dragon/ → src/
     src_root = str(Path(window_run_mutex.__file__).resolve().parents[3])
     lock_dir = str(tmp_path / 'run_mutex')

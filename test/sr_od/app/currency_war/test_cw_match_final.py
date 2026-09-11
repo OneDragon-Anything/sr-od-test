@@ -32,17 +32,25 @@ import json
 
 import pytest
 
-from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
 from sr_od.application.currency_war.kernel import cw_board_state as bs_mod
+from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
 from sr_od.application.currency_war.kernel.cw_board_state import (
     BS_SCHEMA_VERSION,
-    BoardState,
     MATCH_FINAL_FIELD,
     MATCH_FINAL_TYPES,
     OBS_EVENT_EVENTS,
+    BoardState,
     _derive_node_observed,
     set_match_final_listener,
     write_match_final,
+)
+
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+)
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    register_sig_actors as _register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     install_state_telemetry,
@@ -53,36 +61,28 @@ from sr_od.application.currency_war.obs.cw_observation import (
     resolve_final_type,
     runs_result_to_final_type,
 )
-from sr_od.application.currency_war.telemetry import match_archive
+from sr_od.application.currency_war.telemetry import match_archive, version_stamp
 from sr_od.application.currency_war.telemetry import state as tel_state
-from sr_od.application.currency_war.telemetry import version_stamp
 from sr_od.application.currency_war.telemetry.journal_query import (
     match_final_rows,
     view_match_final,
 )
 
-
-# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
-    ChannelSig as _ChannelSig,
-    register_sig_actors as _register_sig_actors,
-)
-
 _register_sig_actors('TestSigWriter')
 
 
-def _sig() -> "_ChannelSig":
+def _sig() -> _ChannelSig:
     """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
     return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
-def _lsig() -> "_ChannelSig":
+def _lsig() -> _ChannelSig:
     """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
     return _ChannelSig(family='logic_action', actor='TestSigWriter',
                        mode='compute')
 
 
-def _hsig() -> "_ChannelSig":
+def _hsig() -> _ChannelSig:
     """渠道③签名(logic_hook 族;relay 中继)。"""
     return _ChannelSig(family='logic_hook', actor='TestSigWriter',
                        mode='compute')
@@ -254,9 +254,19 @@ def test_match_final_version_stamps(journal, run_id, monkeypatch) -> None:
     """版本戳(§3.6.1 runs 行「+ code_commit/registry_fingerprint 版本戳,
     沿用 version_stamp」):终局行载荷带两戳、write_match_final 落账时取模块
     级常量填充;常量与取值单一源 telemetry/version_stamp 等值(kernel 桶依赖
-    矩阵禁依 telemetry,就地复刻,对拍防双实现漂移)。"""
-    assert bs_mod._CODE_COMMIT == version_stamp.code_commit()
-    assert bs_mod._REGISTRY_FINGERPRINT == version_stamp.registry_fingerprint()
+    矩阵禁依 telemetry,就地复刻,对拍防双实现漂移)。
+
+    对拍口径 = 同一时点双侧现取:commit 戳比较两个**现取解析器**
+    (``_resolve_code_commit()`` vs ``code_commit()``),不拿 kernel 模块级
+    导入快照(_CODE_COMMIT)比现读——快照冻结在导入时点、对拍发生在断言
+    时点,测试进程存活窗口内主仓 HEAD 落盘(多批并行收口期常态)即假红
+    (实发判例:T-62 验收复跑咬红一次)。解析器同点对拍保住锁的本义
+    「kernel 复刻与 telemetry 单一源双实现等值」且与时序解耦;模块常量 =
+    同一解析器在导入时点的返回值,进程内结构性恒等,无需另锁。fingerprint
+    不涉 git 且注册表进程内不变,无常量/现读时序差,维持常量对拍。
+    """
+    assert bs_mod._resolve_code_commit() == version_stamp.code_commit()
+    assert version_stamp.registry_fingerprint() == bs_mod._REGISTRY_FINGERPRINT
     monkeypatch.setattr(bs_mod, '_CODE_COMMIT', 't244commit')
     monkeypatch.setattr(bs_mod, '_REGISTRY_FINGERPRINT', 't244finger')
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
