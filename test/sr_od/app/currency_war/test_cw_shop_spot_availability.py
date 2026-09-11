@@ -1,4 +1,11 @@
-"""P77 缺口面装载锁(2★ 直出现货比较子 + s_reserve 拒绝对价载体)。
+"""商店现货可得性主题锁(2★ 直出现货比较子 + s_reserve 拒绝对价载体)。
+
+来源:自 test_cw_p77_spot2.py 并入(2026-09-12 归并批,按机制主题文件命名
+规范);并入时删原 test_j2_diary_dominates_exclusion_still_holds——恒真
+断言(base < base*3,base≥1 恒成立,测试自抄 3× 常数非生产单一源,无
+真实错误可杀之),其行为面(M2b 星过滤拒)由本文件 fail-closed/基线注入
+两锁承载,零覆盖损失(生产徽章定价单一源 = cw_observation.resolve_cost_
+star,倍率表 {1,3,9})。
 
 设计出处 = ``docs/develop/currency_war/proofs/p77-shop-spot-availability-signal.md``
 (已收口命题,本批=装载批)与本批装载设计
@@ -117,12 +124,6 @@ class TestSpot2PremiumAnchors:
             assert abs(premium - want) <= 0.1, \
                 f'{cost}费@L{level} 溢价 {premium:.2f} ≠ 表值 {want}'
 
-    def test_j2_diary_dominates_exclusion_still_holds(self):
-        """j=2 排除理由自检(P77 备注5):同星级 DIY 账再买 1★ 严格廉于
-        2★ 现货(1★ 价 < 2★ 价)——M2b 星过滤拒维持,禁后人重开。"""
-        m = _members()[0]
-        base = CHARACTERS[m].cost
-        assert base < base * 3, '1★ 价不廉于 2★ 价:j=2 排除前提破缺'
 
 
 # ===== 缺口面1:比较子行为(j=1 帧 2★ 直出现货)=====

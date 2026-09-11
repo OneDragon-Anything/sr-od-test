@@ -1,4 +1,4 @@
-"""T-190 批 C 检查项锁面(C-A1..A4;sim/checks/t190_c.py)。
+"""sim 停摆检查器族主题锁(t190_c 检查器四项 C-A1..A4 + 发射帧盲窗显影)。
 
 锁面组织(与检查器四项一一对应):
 - C-A1 归因分类账:占席桶闭集正控/负控(保护形态 → no_fuel_honest;
@@ -24,17 +24,24 @@
 
 数据面近似与红语义边界见 t190_c.py 模块 docstring;P89 定谳一致性
 边界(四项不读不判 0.75 线)同源。
+
+来源:自 test_cw_t190_batch_c.py 整体并入(2026-09-12 归并批,按机制
+主题文件命名规范);文末 TestR3aLaunchBlindWindowKey 与
+TestCA2LaunchShortCircuitBucket 两类自 test_cw_t307_locked_buy_truncation.py
+并入(发射帧盲窗显影 = T-295 方案 R3-a 终定形态,决策记录 = ADR-0647)。
 """
 
 from __future__ import annotations
 
 from sr_od.application.currency_war.sim.checks.t190_c import (
     LAUNCH_CAUSE_BY_ARM,
+    _c2_plan_point,
     check_t190_c1_bench_clog_attribution,
     check_t190_c2_new_buy_swap_coverage,
     check_t190_c3_exemption_fire,
     check_t190_c4_funnel_reconcile,
 )
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 
 # =====================================================================
 # 合成账本夹具(生产行形状最小子集;字段同 sim decisions.jsonl)
@@ -417,3 +424,91 @@ class TestGuardRemovalEngine:
         assert rep['shape_rows'].get('honest_stall_dispute', 0) > 0, \
             '守卫移除未涌现:victim 生产面被拔而矛盾候选零显影'
         assert rep['violations'] > 0
+
+
+# ===== 发射帧盲窗显影 + C-A2 桶内分键(自 test_cw_t307_locked_buy_truncation.py 并入)=====
+
+# ===== R3-a 发射帧盲窗显影(独立行内键)=====
+
+
+class TestR3aLaunchBlindWindowKey:
+    """发射帧盲窗显影锁(T-295 方案 R3-a 终定形态;ADR-0647):
+    发射帧 m1p 恒 None 的成因由独立行内键显影,判读面不再混桶。"""
+
+    def test_launch_rows_carry_skip_key(self):
+        """发射帧(launch 非 None):m1p_obs_skipped ==
+        'launch_short_circuit' ∧ m1p is None(观测面盲窗成因显影;
+        采样窗口内至少一局含发射帧,否则观测失明需换 seed)。"""
+        seen = 0
+        for seed in range(3):
+            for row in simulate_p1(seed, pool='snapshot').ledger:
+                if row.get('launch') is None:
+                    continue
+                seen += 1
+                assert row.get('m1p_obs_skipped') == 'launch_short_circuit'
+                assert row.get('m1p') is None
+        assert seen, '采样 3 seed 零发射帧(观测面失明,需换 seed 窗口)'
+
+    def test_non_launch_rows_key_none(self):
+        """非发射帧:显影键恒 None(m1p 在场或观测异常帧均不误标)。"""
+        checked = 0
+        for seed in range(2):
+            for row in simulate_p1(seed, pool='snapshot').ledger:
+                if row.get('launch') is not None:
+                    continue
+                checked += 1
+                if row.get('m1p') is not None:
+                    assert row.get('m1p_obs_skipped') is None
+        assert checked, '非发射帧采样为空(锁测试前提失效)'
+
+
+# ===== R3-a C-A2 桶内分键 =====
+
+
+class TestCA2LaunchShortCircuitBucket:
+    """C-A2 no_plan_carrier 桶内分键锁(T-295 方案「C-A2 分键随批」;
+    ADR-0647):申报桶非缺口语义不变,成因可辨非混桶。"""
+
+    @staticmethod
+    def _row(plane: int, **extra) -> dict:
+        row = {'plane': plane, 'actions': [], 'state': {}, 'm1p': None}
+        row.update(extra)
+        return row
+
+    def test_plan_point_reports_skip_reason(self):
+        """_c2_plan_point 第三返回值 = 扫描路径上的盲窗显影键;
+        计划载体在场帧恒 ''(定位语义零变)。"""
+        buy_row = self._row(2, m1p_obs_skipped='launch_short_circuit')
+        pt, tag, skip = _c2_plan_point([buy_row], 0)
+        assert pt is None and tag == ''
+        assert skip == 'launch_short_circuit'
+        carrier = self._row(2, m1p={'nonempty': False})
+        pt2, tag2, skip2 = _c2_plan_point([carrier], 0)
+        assert pt2 is carrier and tag2 == 'same_row' and skip2 == ''
+
+    def test_c2_counts_launch_short_circuit_subkey(self):
+        """无载体 + 显影键在场 → no_plan_carrier_launch_short_circuit
+        分键(非缺口桶);无键(旧档案)→ 原 no_plan_carrier 零漂移。"""
+        skipped_buy = {
+            'plane': 2,
+            'actions': [{'__type__': 'BuyCard',
+                         'reason': 'm2_line_member',
+                         'card': {'name': '砂金'}}],
+            'state': {'bench': [], 'deployed': []},
+            'm1p': None,
+            'm1p_obs_skipped': 'launch_short_circuit',
+        }
+        plain_buy = {
+            'plane': 2,
+            'actions': [{'__type__': 'BuyCard',
+                         'reason': 'm2_locked_member',
+                         'card': {'name': '瓦尔特'}}],
+            'state': {'bench': [], 'deployed': []},
+            'm1p': None,
+        }
+        res = check_t190_c2_new_buy_swap_coverage(
+            [[skipped_buy, plain_buy]])
+        shapes = res['shapes']
+        assert shapes.get('no_plan_carrier_launch_short_circuit') == 1
+        assert shapes.get('no_plan_carrier') == 1
+        assert res['gaps_plan_active'] == 0

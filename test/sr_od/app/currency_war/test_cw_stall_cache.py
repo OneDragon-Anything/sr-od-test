@@ -83,8 +83,8 @@ def _storm_state(gold: int = 30, deployed: list[BenchChar] | None = None
     燃料集空)∧ 缺员核心件不在场 ⇒ M4 腾席无候选停摆形态。
     T-307/R1(ADR-0647)fixture 口径对齐:占位成员取截断义务集 B' 内
     (lv7 下剔除被截的杰帕德/彦卿——被截成员 R1 后可卖,混入会使风暴
-    前提「燃料集空」破,由 test_cw_t307_locked_buy_truncation 的死锁
-    解除锁另行承载)。"""
+    前提「燃料集空」破,由 test_cw_locked_buy_membership_split 的
+    TestSeatDeadlockRelease(2026-09-12 归并批并入)另行承载)。"""
     comp = get_comp(_LOCK_COMP)
     core = set(predicates.line_members(comp))
     hoard_chars, _eq = cw_intention._line_hoard(comp)
