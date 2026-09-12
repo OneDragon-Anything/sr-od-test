@@ -50,6 +50,66 @@ uv run python sr-od-test/tools/cw_invest_compare.py --out .debug/temp/currency_w
 纪律出处:假环境对拍为确认性(strategy-work §3,不构成数值合法性来源);
 申报缺项判例 = T-204 落地审 §三-G2(直出偏置在树活跃而报告未列)。
 
+## 并行批 commit 口径(GIT_INDEX_FILE 私有索引 + CAS 提交锚,2026-09-13 起)
+
+本测试仓工作树被并行批共享,`.git/index`(共享暂存区)是全体批共用的可变态:
+A 批 `git add` 后滞留的暂存内容,会被 B 批随后的 `git commit` **整体卷走**
+(T-91/T-23 两起同型事故,均以空标记提交补救)。根治口径:**每批 commit 走
+自己的私有索引副本,共享暂存区不再承载任何待提交内容**——私有索引 = `.git/`
+下本批专属的 index 文件,由环境变量 `GIT_INDEX_FILE` 指向,git 的 add/commit
+只读写它,他批内容物理上进不了本笔提交。
+
+每批 commit 固定九步(在 `sr-od-test/` 目录执行;`<批id>`=任务号如 `t111`;
+`<文件...>`=本批逐文件点名,禁 `add -A`/目录级 add):
+
+```powershell
+$ErrorActionPreference = 'Continue'          # CAS 竞速重试是预期路径,勿让 stderr 中断
+$idx = "$PWD\.git\index-<批id>"
+$retries = 0
+while ($true) {
+  if ($retries -gt 5) { throw 'CAS 重试超限:并行提交过密,停手申报' }
+  $parent = (git rev-parse HEAD).Trim()      # 1. 锚定父提交快照
+  $env:GIT_INDEX_FILE = $idx
+  git read-tree $parent                      # 2. 私有索引 = parent 快照(不复制共享 index)
+  git add -- <文件...>                       # 3. 只暂存本批点名文件
+  git diff --cached $parent --stat           # 4. 核对 = 本批声明文件集;空输出 = 无可提交内容,停下排查勿硬提交
+  $tree = (git write-tree).Trim()            # 5. 固化树对象
+  Remove-Item Env:GIT_INDEX_FILE
+  $new = (git commit-tree $tree -p $parent -m '<任务id> <说明>').Trim()   # 6. 建 commit(父=parent)
+  git update-ref HEAD $new $parent 2>$null   # 7. CAS 提交锚:HEAD 被并行批推进则失败→回环重试
+  if ($LASTEXITCODE -eq 0) { break }
+  $retries++
+}
+Remove-Item $idx -ErrorAction SilentlyContinue
+git show --stat HEAD                         # 8. 核验:应恰=本批声明文件集
+git reset -q                                 # 9. 共享 index 对齐新 HEAD(清陈旧幻影)
+```
+
+原理与边界:
+
+- **commit 内容成为 `parent 快照 + 本批点名文件` 的纯函数**:第 2 步从
+  parent 快照重建私有索引(禁止复制共享 index——那会把滞留内容一起复制),
+  第 3 步只写入点名文件;并行批滞留在共享 index 的内容与本笔提交无关。
+- **CAS 提交锚 = 乐观版串行化 commit 窗**:第 1 步锚定 parent、第 7 步带
+  旧值校验原子落地,两步之间 HEAD 被并行批推进时第 7 步失败,整轮回环
+  (以新 HEAD 重建)。没有它,裸私有索引在真并发下会用陈旧索引树配新父
+  提交,**静默回退他批已提交内容**(演练 12 轮×2 并发实测 12 处回退,见
+  `.debug/temp/t111-drill/`,易失产物、判例语义以本节为准)。第 7 步的
+  `fatal: update_ref failed ... but expected ...` 是预期内重试信号,不是事故。
+- **第 4/8 步取代旧「add 前查 staged 面」**:检查对象从共享可变态升级为
+  「本笔实际提交面」。第 8 步核验 ≠ 声明集(出现集合外文件/文件缺失)=
+  异常,停手在报告申报,禁改写历史(并行期禁 rebase/amend)。
+- **故障模式**:忘设 `GIT_INDEX_FILE` → 操作落到共享 index,第 4/8 步核验
+  即暴露,按九步重跑即可;残留私有 index 文件惰性无害(commit 后仍建议
+  清理);第 9 步 `git reset -q` 只重置共享 index、不动工作树,与并行批的
+  私有索引操作互不干扰(git index.lock 自串行),旧口径滞留的暂存内容会被
+  对齐清掉(内容仍在工作树,按九步重跑即可)。
+- **同文件双写禁令不变**:本口径只治 commit 卷入与窗口竞速,不改变批间
+  文件面互斥分配。
+- 主仓的并行 commit 契约归 orchestration.md(同构机制可参照本节),本节
+  只辖本测试仓。
+
+
 ## 环境要求
 
 - Python 3.11 + uv(依赖随主仓 `--group dev`)。
