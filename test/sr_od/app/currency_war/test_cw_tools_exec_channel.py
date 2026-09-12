@@ -355,7 +355,11 @@ class TestMandateEmission:
         st = CwSimFrame(plane=1, round_num=3)
         out1 = self._emit(s, st)
         assert any(isinstance(e.action, RunTools) for e in out1)
-        mandate.mark_tools_pass_executed(s, st)
+        # state 形参契约 = 容器(T-146 装配源换源后 _phase_key_of 直读
+        # state.node.value,帧直喂 AttributeError):经 cw4_bs 单一源容器口
+        # 喂入,与 test_cw_stall_cache 的 run_mandate 喂法同款;闩语义不变。
+        from test.sr_od.app.currency_war._cw_helpers import cw4_bs
+        mandate.mark_tools_pass_executed(s, cw4_bs(st, s))
         out2 = self._emit(s, st)
         assert not any(isinstance(e.action, RunTools) for e in out2)
         assert state_of(s).cw4_counters.get('tools_latch_skip', 0) == 1
