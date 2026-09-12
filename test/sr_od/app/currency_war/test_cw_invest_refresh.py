@@ -8,7 +8,9 @@ attacks/t162_invest_refresh/设计方案.md R4,四轮对抗 14→11→8→0)—�
 (ADR-0600 §3.2 逐槽弱占优论证):帧级触发(候选恰 3 ∧ 全精确分类 ∧ 非 env
 帧 ∧ 无 S1/S2 ∧ max_N≠1)+ 槽级动作集(非顶级 ∧ 逐卡计数闸 ∧ 唯一 L1 守卫)。
 环境帧轴 = invest-env 迭代 design.md §2.8 判据(3.5 接线,取代 ADR-0600
-「env 帧恒不刷」F9;R1-R5/R7 kernel 锁同文件落此,锁 5 已随翻转改形)。
+「env 帧恒不刷」F9;R1-R5/R7 kernel 锁同文件落此,锁 5 已随翻转改形;
+R6 = 环境屏 handler 执行链端到端锁,3.8 接线,镜像策略侧锁 9-14 桩形,
+env 形差异 = 整组重掷单钮单计数 + 验效双通道按 design §2.8 保留)。
 
 fixture 卡取自注册表实卡(分类谓词直调核验,模块导入即验,漂移即全文件先红):
 - 全普通 S4:赌神·银/恢复生机/气氛组(无引擎无对齐无血);
@@ -53,7 +55,13 @@ from sr_od.application.currency_war.obs.cw_node_obs import (
     read_invest_refresh_counts,
 )
 from sr_od.application.currency_war.operations.cw_screen import (
+    cw_screen_invest_env as env_mod,
+)
+from sr_od.application.currency_war.operations.cw_screen import (
     cw_screen_invest_strategy as strat_mod,
+)
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_env import (
+    CwScreenInvestEnv,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
     CwScreenInvestStrategy,
@@ -305,6 +313,8 @@ assert INVESTMENT_ENVS['增发货币'].economy is not None, (
 for _n in ('战力提升', '成功经验', '彩虹时代', '头彩', '火药味'):
     assert INVESTMENT_ENVS[_n].faction == '', (
         f'{_n} 应为 faction 空候选(集内槽前提)')
+assert INVESTMENT_ENVS['仙舟概念股'].faction in _UNIV0, (
+    'R6e 前提:仙舟概念股应在全集内(锁线 floor 保护形,R6e 判别载体)')
 
 
 def _inject_arrival_params(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -740,3 +750,257 @@ def test_pair_counts_nearest_x_one_text_one_slot() -> None:
     out = pair_refresh_counts_to_slots(counts, list(_OPT_XS))
     assert out == [(1, 477, 855), None, (0, 1474, 855)], '就近 + 超容差 None'
     assert pair_refresh_counts_to_slots([], list(_OPT_XS)) == [None, None, None]
+
+
+# ===== R6 环境屏 handler 执行链锁(invest-env 迭代 3.8;design §2.8 R6 行,
+# 镜像策略侧 handler 锁 9-14 桩形。env 形差异 = 整组重掷单钮单计数(cw_node_obs
+# 归档帧实证,与策略屏逐卡刷新不同构)+ 验效双通道按 design §2.8 定稿保留
+# ——策略侧验效已拆(2026-09-10 裁定)不构成同构镜像面,链语义见
+# cw_screen_invest_env._decide_and_act 链头注)=====
+# 「剩余次数」文本中心(归档帧实测,与 reader 同源)→ 钮心 = x + _REFRESH_BTN_DX;
+# 选卡 y = screen_info「区域-卡牌描述行」center.y=450;确认 = 「按钮-确认」
+# center=(1082,982)(与 strategy 段同款真 screen_info area)。
+_ENV_CNT_X, _ENV_CNT_Y = 772, 983
+_EDX = CwScreenInvestEnv._REFRESH_BTN_DX
+_ESELECT_Y = 450
+_ECONFIRM = (1082, 982)
+
+
+def _env_opts_of(names: list[str]) -> list[tuple[str, int]]:
+    """env 屏候选桩:(名字, center-x) 左→右(与 _read_options 输出同形)。"""
+    return [(n, _OPT_XS[i]) for i, n in enumerate(names)]
+
+
+def _wire_env(test_context, monkeypatch: pytest.MonkeyPatch,
+              strategy: object) -> SimpleNamespace:
+    """接线 env 局容器(桩 session 即可,board_state_of 对裸对象惰性建)。"""
+    sess = SimpleNamespace()
+    match = SimpleNamespace(strategy=strategy, session=sess)
+    monkeypatch.setattr(test_context, 'cw_match', match)
+    return sess
+
+
+def _make_env_op(test_context, monkeypatch: pytest.MonkeyPatch,
+                 book: _FrameBook) -> tuple[CwScreenInvestEnv, list[Point]]:
+    """构造被测 env op:观察帧/截图走帧簿,计数读/点击/确认/台账全桩化
+    (零真实 IO;safe_click/confirm 走 env 模块命名空间桩,选卡 y 用真
+    screen_info area——与既有 env op 测试 E5/obs-arch 同款桩面)。"""
+    op = CwScreenInvestEnv(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
+    monkeypatch.setattr(op, 'screenshot', lambda: book.next_frame())
+    # 旧路径观察桩:入口门恒过 + 稳定帧 = 帧 0(经帧簿消费,与生产帧序同构:
+    # 观察帧 → 链内每次刷后重读各弹一帧)。
+    monkeypatch.setattr(
+        op, '_observe_frame',
+        lambda: (True, list(book.options.get(id(book.frames[0]), [])),
+                 book.next_frame()))
+    monkeypatch.setattr(op, '_read_options',
+                        lambda screen: book.options.get(id(screen), []))
+    monkeypatch.setattr(op, '_refresh_node_ledger', lambda: None)
+    monkeypatch.setattr(env_mod.time, 'sleep', lambda s: None)
+
+    def _fake_counts(ctx, screen, kind):
+        book.read_calls.append(kind)
+        return book.counts.get(id(screen), [])
+
+    monkeypatch.setattr(env_mod, 'read_invest_refresh_counts', _fake_counts)
+    monkeypatch.setattr(env_mod, 'emit_overlay_confirm',
+                        lambda op, confirm_point, entry_keyword, tag:
+                        (clicks.append(confirm_point),
+                         SimpleNamespace(is_success=True))[1])
+    clicks: list[Point] = []
+    monkeypatch.setattr(env_mod, 'safe_click',
+                        lambda op, point, *, tag: clicks.append(point))
+    return op, clicks
+
+
+class _EnvStubStrategy:
+    """decide_invest 记录桩(kind='env' 断言;按序弹出预置 PickEvent)。"""
+
+    def __init__(self, picks: list[PickEvent]) -> None:
+        self.picks = list(picks)
+        self.calls: list[list[str]] = []
+
+    def decide_invest(self, kind, options, state, session, config) -> PickEvent:
+        assert kind == 'env'
+        self.calls.append(list(options))
+        return self.picks.pop(0) if self.picks else PickEvent(
+            option_idx=0, reason='stub-exhausted')
+
+
+def test_r6a_count_gate_blocks_refresh(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R6·计数现读闸:计数 0 / 读缺 → 零刷新点击、零决策重放(闸 = 画面
+    现读,观察通道转正为执行闸的唯一授权源;读缺按无授予处理,失败安全),
+    refresh_slots 非空也不掷,链直落现状选卡路径。"""
+    names = ['狼狩概念股', '战力提升', '成功经验']
+    pick = PickEvent(option_idx=0, refresh=True, refresh_slots=(0,),
+                     reason='env-eval+refresh-suggest')
+    for counts in ([(0, _ENV_CNT_X, _ENV_CNT_Y)], []):   # 计数 0 / 读缺
+        book = _FrameBook([object()])
+        book.options[id(book.frames[0])] = _env_opts_of(names)
+        book.counts[id(book.frames[0])] = counts
+        strategy = _EnvStubStrategy([pick])
+        _wire_env(test_context, monkeypatch, strategy)
+        op, clicks = _make_env_op(test_context, monkeypatch, book)
+
+        result = op.handle()
+
+        assert result.is_success
+        assert strategy.calls == [names], '恰一次决策'
+        assert _pts(clicks) == [(_OPT_XS[0], _ESELECT_Y), _ECONFIRM], (
+            f'counts={counts}:零刷新击,直落选卡+确认,实得 {clicks}')
+
+
+def test_r6b_dual_channel_fail_stops(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R6·验效双输停:点击后计数未扣减 ∧ 名集未变 → 双输即停不重试
+    (恰一次刷新击),名集未变不重决策(canary 支不消费),按原决策选卡。"""
+    names = ['狼狩概念股', '战力提升', '成功经验']
+    book = _FrameBook([object(), object()])
+    book.options[id(book.frames[0])] = _env_opts_of(names)
+    book.options[id(book.frames[1])] = _env_opts_of(names)   # 刷后名集未变
+    book.counts[id(book.frames[0])] = [(1, _ENV_CNT_X, _ENV_CNT_Y)]
+    book.counts[id(book.frames[1])] = [(1, _ENV_CNT_X, _ENV_CNT_Y)]   # 计数未扣
+    strategy = _EnvStubStrategy([
+        PickEvent(option_idx=1, refresh=True, refresh_slots=(0,),
+                  reason='env-eval+refresh-suggest'),
+        PickEvent(option_idx=2, reason='canary'),   # 误重决策即消费 → 断言红
+    ])
+    _wire_env(test_context, monkeypatch, strategy)
+    op, clicks = _make_env_op(test_context, monkeypatch, book)
+
+    result = op.handle()
+
+    assert result.is_success
+    refresh_clicks = [c for c in clicks if c.y == _ENV_CNT_Y]
+    assert _pts(refresh_clicks) == [(_ENV_CNT_X + _EDX, _ENV_CNT_Y)], (
+        f'双输即停恰一次刷新击(不重试),实得 {refresh_clicks}')
+    assert len(strategy.calls) == 1, '名集未变不重决策(canary 不消费)'
+    assert _pts(clicks[-2:]) == [(_OPT_XS[1], _ESELECT_Y), _ECONFIRM], (
+        '按原决策选卡+确认')
+
+
+def test_r6c_chain_redecide_final_names(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R6·端到端主链:计数授权 → 文本锚定点击 → 验效(计数扣减权威)→
+    重分类(重决策用最终名集)→ 新动作集空(无零价值槽)停链 → 按重决策
+    选卡+确认。计数通道 = 'env'(同源 reader,不串策略轴)。"""
+    book = _FrameBook([object(), object()])
+    book.options[id(book.frames[0])] = _env_opts_of(
+        ['狼狩概念股', '战力提升', '成功经验'])
+    book.options[id(book.frames[1])] = _env_opts_of(
+        ['彩虹时代', '战力提升', '成功经验'])
+    book.counts[id(book.frames[0])] = [(1, _ENV_CNT_X, _ENV_CNT_Y)]
+    book.counts[id(book.frames[1])] = [(0, _ENV_CNT_X, _ENV_CNT_Y)]
+    strategy = _EnvStubStrategy([
+        PickEvent(option_idx=0, refresh=True, refresh_slots=(0,),
+                  reason='env-eval+refresh-suggest'),
+        PickEvent(option_idx=1, reason='env-eval'),
+    ])
+    _wire_env(test_context, monkeypatch, strategy)
+    op, clicks = _make_env_op(test_context, monkeypatch, book)
+
+    result = op.handle()
+
+    assert result.is_success
+    refresh_clicks = [c for c in clicks if c.y == _ENV_CNT_Y]
+    assert _pts(refresh_clicks) == [(_ENV_CNT_X + _EDX, _ENV_CNT_Y)], (
+        f'文本锚定刷新击一次,实得 {refresh_clicks}')
+    assert set(book.read_calls) == {'env'}, '计数读走 env 通道(不串策略轴)'
+    assert strategy.calls == [['狼狩概念股', '战力提升', '成功经验'],
+                              ['彩虹时代', '战力提升', '成功经验']], (
+        '重决策用最终名集(掷后重分类)')
+    assert _pts(clicks[-2:]) == [(_OPT_XS[1], _ESELECT_Y), _ECONFIRM], (
+        '按重决策选卡(idx1 彩虹时代)+确认')
+
+
+def test_r6d_name_change_fallback_rescues_chain(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R6·验效兜底通道:刷后计数读缺但卡名已变 → 名集变化兜底验效成立,
+    重分类照走;下一轮闸因计数读缺关闭(无授权不续掷)→ 恰一次刷新击。"""
+    book = _FrameBook([object(), object()])
+    book.options[id(book.frames[0])] = _env_opts_of(
+        ['狼狩概念股', '战力提升', '成功经验'])
+    book.options[id(book.frames[1])] = _env_opts_of(
+        ['彩虹时代', '战力提升', '成功经验'])
+    book.counts[id(book.frames[0])] = [(1, _ENV_CNT_X, _ENV_CNT_Y)]
+    book.counts[id(book.frames[1])] = []   # 刷后计数读缺
+    strategy = _EnvStubStrategy([
+        PickEvent(option_idx=0, refresh=True, refresh_slots=(0,),
+                  reason='env-eval+refresh-suggest'),
+        PickEvent(option_idx=0, refresh=True, refresh_slots=(0,),
+                  reason='canary'),   # 若误续掷会消费此支再点 → 断言红
+        PickEvent(option_idx=1, reason='eval'),
+    ])
+    _wire_env(test_context, monkeypatch, strategy)
+    op, clicks = _make_env_op(test_context, monkeypatch, book)
+
+    result = op.handle()
+
+    assert result.is_success
+    refresh_clicks = [c for c in clicks if c.y == _ENV_CNT_Y]
+    assert _pts(refresh_clicks) == [(_ENV_CNT_X + _EDX, _ENV_CNT_Y)], (
+        f'计数读缺关闸,恰一次刷新击,实得 {refresh_clicks}')
+    assert len(strategy.calls) == 2, '名集变化兜底验效成立,重分类照走'
+    assert _pts(clicks[-2:]) == [(_OPT_XS[0], _ESELECT_Y), _ECONFIRM], (
+        '按重分类决策(idx0)+确认')
+
+
+def test_r6e_redecide_via_flow_entry_g1(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R6·最终重决策入口 = G1(镜像策略侧锁 13 判别形态):掷后重决策经
+    flow.decide_invest(D*① 三参只在此解析)。锁线帧(D*① = 景元仙舟)刷
+    零价值槽(狼狩概念股)后,新卡 彩虹时代(裸 72):handler 若直调 kernel
+    判据(丢 locked_comp → D*=∅)则彩虹时代压过仙舟概念股(裸 48)→ 选卡
+    落槽 1,本锁红;经 flow 入口 D* floor 78 胜出 → 选卡落槽 0。"""
+    from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of,
+    )
+    from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
+        MandateV1Strategy,
+    )
+
+    strat = MandateV1Strategy()
+    sess = strat.create_session(_cfg())
+    sess.prep_frame_class = 'none'   # 丢黑板帧:方向重估不跑,锁线以注入为准
+    state_of(sess).v3_intention = IntentionState(locked_comp='景元仙舟')
+
+    calls: list[tuple[str, list[str]]] = []
+
+    class _CountingProxy:
+        """decide_invest 透传记录壳(kind/名集记账,行为零改)。"""
+
+        def __init__(self, inner: MandateV1Strategy) -> None:
+            self._inner = inner
+
+        def decide_invest(self, kind, options, bs, session, config):
+            calls.append((kind, list(options)))
+            return self._inner.decide_invest(kind, options, bs, session, config)
+
+    match = SimpleNamespace(strategy=_CountingProxy(strat), session=sess)
+    monkeypatch.setattr(test_context, 'cw_match', match)
+
+    book = _FrameBook([object(), object()])
+    book.options[id(book.frames[0])] = _env_opts_of(
+        ['仙舟概念股', '狼狩概念股', '战力提升'])
+    book.options[id(book.frames[1])] = _env_opts_of(
+        ['仙舟概念股', '彩虹时代', '战力提升'])
+    book.counts[id(book.frames[0])] = [(1, _ENV_CNT_X, _ENV_CNT_Y)]
+    book.counts[id(book.frames[1])] = [(0, _ENV_CNT_X, _ENV_CNT_Y)]
+    op, clicks = _make_env_op(test_context, monkeypatch, book)
+
+    result = op.handle()
+
+    assert result.is_success
+    refresh_clicks = [c for c in clicks if c.y == _ENV_CNT_Y]
+    assert _pts(refresh_clicks) == [(_ENV_CNT_X + _EDX, _ENV_CNT_Y)], (
+        f'仅零价值槽(狼狩概念股)掷一次,实得 {refresh_clicks}')
+    assert [k for k, _n in calls] == ['env', 'env'], (
+        f'恰两次决策且均经 decide_invest(env) 入口,实得 {calls}')
+    assert calls[1][1] == ['仙舟概念股', '彩虹时代', '战力提升'], (
+        '重决策用最终名集')
+    assert _pts(clicks[-2:]) == [(_OPT_XS[0], _ESELECT_Y), _ECONFIRM], (
+        '重决策 option_idx 应 = 仙舟概念股槽 0(D* floor 78 压过彩虹时代 72;'
+        '直调 kernel 丢 locked_comp 时彩虹时代胜出落槽 1,本断言红)')
