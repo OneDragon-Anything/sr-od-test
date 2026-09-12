@@ -212,7 +212,9 @@ class TestSingleSourceLock:
         return (_REPO / rel).read_text(encoding='utf-8')
 
     def test_single_definition_point(self):
-        kernel = self._src('src/sr_od/application/currency_war/kernel/cw_state.py')
+        # 候裁9 迁居(W8):合成规则族定义点 = cw_merge_simulate.py(定谳记录
+        # 第 2 归宿);原 cw_state 路径仅余转发壳,禁回读旧壳当定义点。
+        kernel = self._src('src/sr_od/application/currency_war/kernel/cw_merge_simulate.py')
         assert kernel.count(self.GUARD_DEF) == 1
 
     def test_no_hand_rolled_counter_outside_single_source(self):
@@ -353,13 +355,13 @@ class TestMaterialStaleKeys:
 
     def test_single_source_lock_counting_via_names_fn(self):
         """分键判定单一源:count_material_stale 必经
-        merge_material_stale_names(禁手搓同式);判定函数在 cw_state
-        唯一定义。"""
+        merge_material_stale_names(禁手搓同式);判定函数在 cw_merge_simulate
+        唯一定义(候裁9 迁居后定义点;原 cw_state 路径仅余转发壳)。"""
         import inspect
         src = inspect.getsource(count_material_stale)
         assert 'merge_material_stale_names(' in src
         kernel = (_REPO / 'src/sr_od/application/currency_war/kernel'
-                  '/cw_state.py').read_text(encoding='utf-8')
+                  '/cw_merge_simulate.py').read_text(encoding='utf-8')
         assert kernel.count('def merge_material_stale_names') == 1
 
 
@@ -446,9 +448,10 @@ class TestBlockedKeyEventSemantics:
 
     def test_count_helper_single_source(self):
         """计数单一源:四通道计数点全部经
-        ``count_merge_material_blocked``,kernel 唯一定义。"""
+        ``count_merge_material_blocked``,唯一性定义点 = cw_merge_simulate
+        (候裁9 迁居后)。"""
         ksrc = (_REPO / 'src/sr_od/application/currency_war/kernel'
-                '/cw_state.py').read_text(encoding='utf-8')
+                '/cw_merge_simulate.py').read_text(encoding='utf-8')
         assert ksrc.count('def count_merge_material_blocked') == 1
         for rel in ('src/sr_od/application/currency_war/strategies/impl'
                     '/mandate_v1/mandate.py',
