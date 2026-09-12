@@ -23,7 +23,8 @@ W7 增量(r5-migration-plan.md §2 W7):清点补遗流 board_state_archive
 - 结构删净锁:9+1 流 writer 符号在 telemetry.recorder/match_archive 上
   不存在;src 生产树代码域无写入调用点/流文件名残留(防半删:writer 删了
   调用点留着 = 死代码)。判定域 = 掩蔽代码域:注释与 docstring 在源文本
-  上按字符置空后对代码文本跑正则(机制见 _scan_code_violations)——
+  上按字符置空后对代码文本跑正则(机制与共享实现见
+  fixtures/masked_scan.py,T-107 收敛单一源)——
   「禁复用 X.jsonl」类负向声明是退役背书而非写入面引用,豁免不误红
   (决策行文件 docstring/注释实测误伤两处);掩蔽保留行/文本结构,代码域
   引用(字符串字面量/标识符/dict 字面量对)仍在域内,复合正则(缺陷 refs
@@ -36,16 +37,19 @@ W7 增量(r5-migration-plan.md §2 W7):清点补遗流 board_state_archive
 """
 from __future__ import annotations
 
-import ast
-import bisect
-import io
 import json
 import re
-import tokenize
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
+from fixtures.masked_scan import (
+    MaskedSource,
+    build_masked_sources,
+    find_violations,
+    scan_code_violations,
+)
 
 from sr_od.application.currency_war import currency_war_app as cw_app_mod
 from sr_od.application.currency_war import currency_war_config as cw_cfg_mod
@@ -110,9 +114,9 @@ _RETIRED_RECORDER_METHODS: tuple[str, ...] = (
 #: writer 符号/流文件名的只读豁免面(旧档案判读/装配/缺陷 refs/读侧检查;
 #: 这些面读旧档案但零写入)。相对 src/sr_od/application/currency_war。
 #: 三处书面豁免(逐条申报):kernel/cw_telemetry_exit.py = record_exogenous
-#: no-op 桩(护在飞挂起面调用方,恒零产出);kernel/cw_anchor.py = 未入库
-#: 在飞文件(T-221 挂起面禁碰,经出口桩上行);strategies/impl/mandate_v1/
-#: encounter.py = mandate 本体(禁碰,仅 docstring 提及)。
+#: no-op 桩(护挂起面调用方,恒零产出);kernel/cw_anchor.py = 已入库惰性
+#: 未接线(4985b6b88;锚登记面经出口桩上行,归宿候裁挂 retirement.md §2);
+#: strategies/impl/mandate_v1/encounter.py = mandate 本体(禁碰,仅 docstring 提及)。
 _READ_FACE_WHITELIST: frozenset[str] = frozenset({
     'telemetry/query.py', 'telemetry/cli.py', 'telemetry/match_archive.py',
     'telemetry/journal_query.py', 'telemetry/schema.py',
@@ -157,103 +161,15 @@ _SRC_ROOT: Path = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
 _ORPHAN_SNAPSHOT_RE: re.Pattern = re.compile(r'archive_snapshot')
 
 
-def _docstring_spans(text: str) -> list[tuple[tuple[int, int], tuple[int, int]]]:
-    """收集模块/类/函数 docstring 的位置跨度((起行,起列),(止行,止列))。
+@pytest.fixture(scope='module')
+def _masked_sources() -> tuple[MaskedSource, ...]:
+    """本文件三把全树扫描锁共享的掩蔽语料(module 级,构建一次)。
 
-    docstring 判定 = 定义体首语句为孤立字符串表达式(ast 标准语义),
-    嵌套定义逐层收集。语法解析失败的文件返回空表(扫描回退逐行全判,
-    宁误红不漏判)。
+    掩蔽实现与跨文件复用(进程内缓存)单一源 = fixtures/masked_scan.py
+    (T-107 收敛;currency_war 根那份构建与 runnode_retire/infra_locks
+    扫描锁共享,省去每锁重复的全树 tokenize+ast+掩蔽)。
     """
-    spans: list[tuple[tuple[int, int], tuple[int, int]]] = []
-    try:
-        tree = ast.parse(text)
-    except SyntaxError:
-        return spans
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.Module, ast.ClassDef,
-                             ast.FunctionDef, ast.AsyncFunctionDef)):
-            body = getattr(node, 'body', [])
-            if (body and isinstance(body[0], ast.Expr)
-                    and isinstance(body[0].value, ast.Constant)
-                    and isinstance(body[0].value.value, str)):
-                expr = body[0]
-                spans.append(((expr.lineno, expr.col_offset),
-                              (expr.end_lineno, expr.end_col_offset)))
-    return spans
-
-
-def _scan_code_violations(
-        text: str, *patterns: re.Pattern) -> list[tuple[int, str, int]]:
-    """在掩蔽后的代码文本上跑正则,返回 (行号, 命中行原文, 正则序号)。
-
-    判定域机制 = 掩蔽式:先用 tokenize 找出注释 token,用 ast 找出
-    docstring 跨度(定义体首语句孤立字符串,ast 标准语义),把这些跨度在
-    源文本上**按字符等长置空**,再对置空后的文本跑正则。两全:
-
-    - 豁免:注释/docstring 里的文档性提及(「禁复用 decisions.jsonl」
-      类负向声明)随置空消失,不误红——它们是退役背书而非写入面引用
-      (决策行文件 docstring:15/注释 :105 实测误伤形状);
-    - 检出力:掩蔽只置空字符、不拆结构,正则在连续文本上匹配,跨 token
-      复合正则(`_REFS_RETIRED_STREAM_RE` 形 `'stream'\\s*:\\s*'流名'`,
-      源码里拆为三个 token)照常检出。禁用「逐 token search」承载复合
-      正则——逐单 token 搜索下该形永久失配,dict 字面量复活形
-      (`refs=[{'stream': 'decisions', ...}]`,生产树现存同型惯用写法)
-      会盲绿。
-
-    与逐行原文语义(掩蔽前的旧判定域)的等价性:豁免面差异 = 仅注释与
-    docstring 离开判定域;检出面只强不弱——逐行能检出的形态掩蔽后仍能
-    检出,且正则按全文域跑,`\\s*` 可跨行吸收空白/被掩蔽的注释行,键值对
-    跨行拆写的 dict 形(`'stream':` 与 `'decisions'` 分行)也检出。
-
-    失败回退(宁误红不漏判):tokenize 失败 → 不掩蔽,对原文全判(含
-    注释);ast 解析失败 → docstring 跨度空表 → docstring 不掩蔽(同向)。
-    代码位置的字符串字面量(非 docstring 形态)不掩蔽,照判——真实写入
-    引用防复活。同一 (行, 正则) 只记一条,不同正则分别记账(序号供调用
-    方区分违规类别);行号取匹配起点所在行。
-    """
-    lines = text.split('\n')
-    # 行起始偏移(与 tokenize 物理行一致:按 \n 分行,\r 留在行尾),
-    # 供匹配偏移 → 行号换算。
-    line_starts = [0]
-    for line in lines:
-        line_starts.append(line_starts[-1] + len(line) + 1)
-
-    masked_lines: list[str] | None
-    try:
-        tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
-    except (tokenize.TokenError, SyntaxError, IndentationError):
-        masked_lines = None   # 回退:原文全判
-    else:
-        masked_lines = list(lines)
-        doc_spans = _docstring_spans(text)
-
-        def _in_docstring(tok: tokenize.TokenInfo) -> bool:
-            start = (tok.start[0], tok.start[1])
-            end = (tok.end[0], tok.end[1])
-            return any(s <= start and end <= e for s, e in doc_spans)
-
-        def _blank(srow: int, scol: int, erow: int, ecol: int) -> None:
-            """把 (srow,scol)-(erow,ecol) 跨度逐字符置空(等长,保行号)。"""
-            for row in range(srow, erow + 1):
-                line = masked_lines[row - 1]
-                c0 = scol if row == srow else 0
-                c1 = ecol if row == erow else len(line)
-                masked_lines[row - 1] = \
-                    line[:c0] + ' ' * (c1 - c0) + line[c1:]
-
-        for tok in tokens:
-            if tok.type == tokenize.COMMENT or (
-                    tok.type == tokenize.STRING and _in_docstring(tok)):
-                _blank(tok.start[0], tok.start[1], tok.end[0], tok.end[1])
-
-    judge_text = '\n'.join(masked_lines) if masked_lines is not None else text
-    hits: dict[tuple[int, int], str] = {}
-    for pi, pat in enumerate(patterns):
-        for m in pat.finditer(judge_text):
-            row = bisect.bisect_right(line_starts, m.start()) - 1
-            hits.setdefault((row, pi), lines[row].strip()[:120])
-    return [(row + 1, hits[(row, pi)], pi)
-            for row, pi in sorted(hits)]
+    return build_masked_sources(_SRC_ROOT)
 
 
 @pytest.fixture()
@@ -290,28 +206,28 @@ def test_retired_writer_symbols_absent_from_recorder() -> None:
     assert hasattr(recorder.TelemetryRecorder, 'record_defect')
 
 
-def test_no_retired_writer_call_sites_in_production_tree() -> None:
+def test_no_retired_writer_call_sites_in_production_tree(
+        _masked_sources: tuple[MaskedSource, ...]) -> None:
     """src 生产树代码域无退役 writer 调用点/旧流文件名残留(只读豁免面除外)。
 
     判定域 = 掩蔽代码域(注释/docstring 置空后跑正则,机制见
-    _scan_code_violations):「禁复用 decisions.jsonl」类负向声明是退役
+    fixtures.masked_scan):「禁复用 decisions.jsonl」类负向声明是退役
     背书,不是写入面引用(决策行文件 docstring/注释误伤实测修正);真实
     写入引用(字符串字面量/标识符)仍判红,防复活语义不变。
     """
     violations: list[str] = []
-    for py in sorted(_SRC_ROOT.rglob('*.py')):
-        rel = py.relative_to(_SRC_ROOT).as_posix()
-        if rel in _READ_FACE_WHITELIST:
+    for src in _masked_sources:
+        if src.rel in _READ_FACE_WHITELIST:
             continue
-        text = py.read_text(encoding='utf-8')
-        for lineno, snippet, pi in _scan_code_violations(
-                text, _CALL_SITE_RE, _STREAM_NAME_RE):
+        for lineno, snippet, pi in find_violations(
+                src.masked, _CALL_SITE_RE, _STREAM_NAME_RE):
             kind = '调用残留' if pi == 0 else '流名残留'
-            violations.append(f'{rel}:{lineno} {kind}: {snippet}')
+            violations.append(f'{src.rel}:{lineno} {kind}: {snippet}')
     assert violations == [], '旧流写入面残留(防半删):\n' + '\n'.join(violations)
 
 
-def test_defect_refs_no_retired_stream_anchors() -> None:
+def test_defect_refs_no_retired_stream_anchors(
+        _masked_sources: tuple[MaskedSource, ...]) -> None:
     """缺陷台账 refs 旧挂点归零锁(W7 refs 迁移判据)。
 
     retirement.md §2 defect_ledger 行(候裁 4 定谳):保留专用流的 refs
@@ -322,18 +238,17 @@ def test_defect_refs_no_retired_stream_anchors() -> None:
     (读旧冻结档案的判读/装配面);非白名单命中 = 旧挂点复活。
     """
     violations: list[str] = []
-    for py in sorted(_SRC_ROOT.rglob('*.py')):
-        rel = py.relative_to(_SRC_ROOT).as_posix()
-        if rel in _READ_FACE_WHITELIST:
+    for src in _masked_sources:
+        if src.rel in _READ_FACE_WHITELIST:
             continue
-        text = py.read_text(encoding='utf-8')
-        for lineno, snippet, _pi in _scan_code_violations(
-                text, _REFS_RETIRED_STREAM_RE):
-            violations.append(f'{rel}:{lineno} refs 旧挂点: {snippet}')
+        for lineno, snippet, _pi in find_violations(
+                src.masked, _REFS_RETIRED_STREAM_RE):
+            violations.append(f'{src.rel}:{lineno} refs 旧挂点: {snippet}')
     assert violations == [], '缺陷 refs 旧挂点残留:\n' + '\n'.join(violations)
 
 
-def test_board_state_archive_writer_orphan_pinned() -> None:
+def test_board_state_archive_writer_orphan_pinned(
+        _masked_sources: tuple[MaskedSource, ...]) -> None:
     """board_state_archive 写点退役后 kernel 侧孤儿符号钉住(W7)。
 
     ``archive_snapshot``(kernel/cw_board_state)是写点删除后的孤儿构造器:
@@ -342,14 +257,12 @@ def test_board_state_archive_writer_orphan_pinned() -> None:
     收窄。tool/测试直接调用不受生产树扫描辖。
     """
     violations: list[str] = []
-    for py in sorted(_SRC_ROOT.rglob('*.py')):
-        rel = py.relative_to(_SRC_ROOT).as_posix()
-        if rel == 'kernel/cw_board_state.py':
+    for src in _masked_sources:
+        if src.rel == 'kernel/cw_board_state.py':
             continue   # 本体居所(孤儿待删,禁触面)
-        text = py.read_text(encoding='utf-8')
-        for lineno, snippet, _pi in _scan_code_violations(
-                text, _ORPHAN_SNAPSHOT_RE):
-            violations.append(f'{rel}:{lineno}: {snippet}')
+        for lineno, snippet, _pi in find_violations(
+                src.masked, _ORPHAN_SNAPSHOT_RE):
+            violations.append(f'{src.rel}:{lineno}: {snippet}')
     assert violations == [], \
         'archive_snapshot 生产调用点残留(写点应已退役):\n' + '\n'.join(violations)
 
@@ -364,46 +277,47 @@ def test_docstring_mention_exempted_but_code_reference_flagged() -> None:
     (`'stream'\\s*:\\s*'流名'`,源码拆为三 token)在单 token 上永久失配,
     dict 字面量复活形盲绿——前六形态辖的两把正则都是单 token 形,探不到
     该退化,refs 面单独钉住(豁免/检出两条腿,含单行/跨行对齐/键值对
-    跨行拆写三种复活形)。合成语料直扫 _scan_code_violations,不落生产树。
+    跨行拆写三种复活形)。合成语料直扫共享实现 scan_code_violations
+    (fixtures.masked_scan),不落生产树。
     """
-    assert _scan_code_violations(
+    assert scan_code_violations(
         '# 禁复用 decisions.jsonl(历史档案以该名为键,双载体同名 = 读面歧义)',
         _STREAM_NAME_RE) == [], '注释负向声明不得判红(T-93 误伤形状)'
-    assert _scan_code_violations(
+    assert scan_code_violations(
         '"""禁复用 decisions.jsonl(退役背书)。"""',
         _STREAM_NAME_RE) == [], 'docstring 负向声明不得判红(T-93 误伤形状)'
-    assert _scan_code_violations(
+    assert scan_code_violations(
         '# 退役 writer 记录口:record_decision 已删',
         _CALL_SITE_RE) == [], '注释里 writer 符号提及不得判红'
-    hits = _scan_code_violations("_legacy = 'decisions.jsonl'",
+    hits = scan_code_violations("_legacy = 'decisions.jsonl'",
                                  _STREAM_NAME_RE)
     assert len(hits) == 1 and hits[0][0] == 1, \
         f'代码域字符串字面量引用必须判红(防复活),实得 {hits}'
-    hits_call = _scan_code_violations('telemetry.record_decision(row)',
+    hits_call = scan_code_violations('telemetry.record_decision(row)',
                                       _CALL_SITE_RE)
     assert len(hits_call) == 1, \
         f'代码域 writer 调用必须判红(防复活),实得 {hits_call}'
-    hits_mixed = _scan_code_violations(
+    hits_mixed = scan_code_violations(
         "_legacy = 'decisions.jsonl'  # 禁复用(见 retirement.md §2)",
         _STREAM_NAME_RE)
     assert len(hits_mixed) == 1, \
         f'行尾注释掩蔽后同行代码引用仍须判红,实得 {hits_mixed}'
     # ---- refs 复合正则双向断言(豁免腿)----
-    assert _scan_code_violations(
+    assert scan_code_violations(
         "# 缺陷 refs 旧挂点形 {'stream': 'decisions'} 已退役,"
         "新行 refs 改指 journal (run_id,v) 键",
         _REFS_RETIRED_STREAM_RE) == [], '注释里 refs 旧挂点形提及不得判红'
-    assert _scan_code_violations(
+    assert scan_code_violations(
         "\"\"\"refs 旧挂点 'stream': 'decisions' 形已退役(负向声明)。\"\"\"",
         _REFS_RETIRED_STREAM_RE) == [], \
         'docstring 里 refs 旧挂点形提及不得判红'
     # ---- refs 复合正则双向断言(检出腿:dict 字面量复活形三种)----
-    hits_refs_1 = _scan_code_violations(
+    hits_refs_1 = scan_code_violations(
         "refs=[{'stream': 'decisions', 'run_id': 1}]",
         _REFS_RETIRED_STREAM_RE)
     assert len(hits_refs_1) == 1 and hits_refs_1[0][0] == 1, \
         f'dict 字面量复活形(单行)必须判红(防复活),实得 {hits_refs_1}'
-    hits_refs_n = _scan_code_violations(
+    hits_refs_n = scan_code_violations(
         'refs=[\n'
         '    {\n'
         "        'stream': 'decisions',\n"
@@ -413,7 +327,7 @@ def test_docstring_mention_exempted_but_code_reference_flagged() -> None:
         _REFS_RETIRED_STREAM_RE)
     assert len(hits_refs_n) == 1 and hits_refs_n[0][0] == 3, \
         f'dict 字面量复活形(跨行对齐)必须判红(防复活),实得 {hits_refs_n}'
-    hits_refs_split = _scan_code_violations(
+    hits_refs_split = scan_code_violations(
         "refs=[{\n    'stream':\n    'decisions',\n}]",
         _REFS_RETIRED_STREAM_RE)
     assert len(hits_refs_split) == 1 and hits_refs_split[0][0] == 2, \
@@ -474,12 +388,16 @@ def test_simulated_flow_zero_old_stream_output_and_journal_produces(
 
 def test_state_journal_flag_abolished_and_assembly_unconditional() -> None:
     """state_journal 影子开关销案:config 面无字段;app 装配段无条件武装
-    并注册 obs_event 收编制 provider(无 flag 分支)。"""
+    并注册 obs_event 收编制 provider(无 flag 分支)。
+    接线烟雾(纪律 8 容差至多 1 条)的失守事故背景:删除波 1 后旧 12 流
+    停写,journal = 唯一遥测正本(ADR-0634 常开)——装配段接线静默脱落 =
+    全遥测断流且哨兵尾读源一同失明(哨兵断流探测已切 journal 尾读,
+    T-257 落地审口径),故装配接线点须有一条存在性烟雾防静默脱落。"""
     cfg_src = Path(cw_cfg_mod.__file__).read_text(encoding='utf-8')
     assert 'state_journal' not in cfg_src, \
         'state_journal 开关应已随直迁裁定销案(无影子开关)'
     app_src = Path(cw_app_mod.__file__).read_text(encoding='utf-8')
-    assert 'install_state_telemetry' in app_src, '装配段保留 journal 武装'
     assert '.state_journal' not in app_src, '装配段不得再有开关分支'
-    assert 'set_obs_event_board_provider' in app_src, \
-        '装配段注册 obs_event 收编制 provider'
+    assert 'install_state_telemetry' in app_src \
+        and 'set_obs_event_board_provider' in app_src, \
+        '装配段接线静默脱落(journal 武装 + obs_event 收编制 provider)'

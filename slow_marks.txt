@@ -87,8 +87,11 @@ test_cw_shop_refresh_button.py::test_price_reader_free_frame_count_is_not_price_
 
 # T-93 掩蔽式改造补登(2026-09-12 三审巡检:全树掩蔽域扫描三条,T-93 改造时未随批登记;
 # HEAD 1564765 工作区实态热跑复测 call 4.13s/4.00s/3.98s≥2s——掩蔽式 finditer 全文域比
-# 逐行扫描重,生产树增员还会继续上浮;结构性优化(三测试共享一次文件列表+文本读取的
-# module fixture,省 ~2/3)已申报归该文件辖域批,优化后 <2s 可巡检移除)
+# 逐行扫描重,生产树增员还会继续上浮)
+# T-107 结案(2026-09-12):掩蔽语料共享落地(fixtures/masked_scan.py,同根一次构建、
+# 多锁跨文件复用),全量口径五锁只付一次全树 tokenize+ast+掩蔽(~5s),单条 call 均降至
+# ≤0.09s;但 module fixture 首付必然落在会话内执行序首条(快速层里即本文件首条扫描锁),
+# 移除任何登记都会把 ~4s 首付链式推进快速层日常循环——三条维持登记,快速层仍零陪跑。
 test_cw_old_stream_write_retirement.py::test_defect_refs_no_retired_stream_anchors
 test_cw_old_stream_write_retirement.py::test_board_state_archive_writer_orphan_pinned
 test_cw_old_stream_write_retirement.py::test_no_retired_writer_call_sites_in_production_tree
@@ -99,8 +102,10 @@ test_cw_decision_trace_r4.py::test_state_ref_writer_retired
 
 # T-103 掩蔽式迁移补登(2026-09-12:两锁判定域逐行改掩蔽式后热跑实测 call
 # 3.77s/4.90s≥2s——掩蔽式 tokenize+ast+finditer 全文域比逐行 search 重,同上方
-# T-93 三条同因;结构性优化(多扫描锁共享一次文件列表+文本读取的 module
-# fixture)同口径申报归辖域批,优化后 <2s 可巡检移除)
+# T-93 三条同因)
+# T-107 结案(2026-09-12):同上方 T-107 结案——语料共享后全量口径单条亚秒
+# (runnode 0.03s/tombstone 0.02s),首付由会话执行序首条承担(全量口径实测 =
+# test_cw_infra_locks.py::test_telemetry_old_root_tombstone setup 4.88s),维持登记。
 test_cw_runnode_retire.py::test_runnode_zero_residue_in_src
 test_cw_infra_locks.py::test_telemetry_old_root_tombstone
 
