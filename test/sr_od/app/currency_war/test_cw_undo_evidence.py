@@ -54,8 +54,11 @@ class TestDroughtNoResetEvidence:
         assert '三月七' in row['observed']
         assert '列车同行' in row['observed']
         assert '=7' in row['observed']
-        assert row['refs'] == [], \
-            '无账本媒体时 refs 诚实省略(旧 decisions 挂点应已拆除)'
+        # refs 空集断言已并(T-102 去重,测试纪律第 7 条择一保留):「无媒体
+        # 诚实省略 / 有媒体 journal (run_id,v) 锚行级闭合」两腿由
+        # test_cw_defect_ledger 旁路锁独占精验;本处无媒体帧的 refs==[] 分不清
+        # 「refs 来自 journal_refs 单一源」与「任意空列表」(换 [] 字面量同绿),
+        # 零增量拦截价值。wiring 侧本分键仍传 refs=journal_refs()。
 
     def test_zero_drought_no_row(self, monkeypatch):
         """干旱计数为 0(无审计诉求)⇒ 不落行(零噪声)。"""
