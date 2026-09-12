@@ -349,12 +349,37 @@ class TestL4BudgetGateSuspend:
 class TestL7AllInCategoryFilter:
 
     def _allin_state(self, hp: int, *, readable: bool = True) -> GameState:
+        """GameState 帧(mandate_v1 闸入口仍持 GameState,闸内经桥装箱;
+        位面/节点语义同 _allin_bs)。"""
         st = GameState(gold=30, level=5, round_num=7, node_type='boss',
                        hp=hp)
         st.plane = 2
         st.hp_readable = readable
         st.hp_trusted = False
         return st
+
+    def _allin_bs(self, hp: int | None, *, source: str = 'observation'
+                  ) -> 'BoardState':
+        """P21 域判据容器帧(波 2 起门输入 = BoardState):P2r7 boss 帧,
+        来源三态 = 旧两位语义的容器形态(observation=真读/prior=不可信)。"""
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            BS_SCHEMA_VERSION,
+            BoardState,
+            ChannelSig,
+            NodeKey,
+        )
+        sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
+        bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+        if hp is not None:
+            if source == 'observation':
+                bs.observe(bs.hp, hp, sig=sig)
+            elif source == 'prior':
+                bs.write_prior(bs.hp, hp, evidence='prior:adr-0559', sig=sig)
+            else:
+                raise ValueError(f'未知 source {source!r}')
+        bs.observe(bs.node, NodeKey(plane=2, round_num=7, kind='boss'),
+                   sig=sig)
+        return bs
 
     def _allin_session(self) -> SimpleNamespace:
         s = SimpleNamespace()
@@ -364,22 +389,20 @@ class TestL7AllInCategoryFilter:
 
     def test_l7_domain_predicate_p21(self):
         """辖域判据(kernel 单一源):ALL IN boss 末轮 ∧ hp 真值可信
-        ∧ hp ≤ 停升级线 → 域内;域外/不可信/None 帧不过滤(§7.4 域外
+        ∧ 门后 hp ≤ 停升级线 → 域内;域外/不可信/None 帧不过滤(§7.4 域外
         不动 + [18] 豁免在不可信帧仍生效)。"""
         from sr_od.application.currency_war.kernel.cw_discipline_rules import (
             all_in_xp_domain_hit,
         )
         sess = self._allin_session()
-        assert all_in_xp_domain_hit(self._allin_state(10), sess,
+        assert all_in_xp_domain_hit(self._allin_bs(10), sess,
                                     DEFAULT_REGISTRY) is True
-        assert all_in_xp_domain_hit(self._allin_state(100), sess,
+        assert all_in_xp_domain_hit(self._allin_bs(100), sess,
                                     DEFAULT_REGISTRY) is False
-        untrusted = self._allin_state(10, readable=False)
-        untrusted.hp_trusted = False
-        assert all_in_xp_domain_hit(untrusted, sess,
-                                    DEFAULT_REGISTRY) is False
-        no_hp = self._allin_state(10)
-        no_hp.hp = None
+        # 不可信帧(prior 支,旧两位皆 False 的容器形态)不过滤
+        assert all_in_xp_domain_hit(self._allin_bs(10, source='prior'),
+                                    sess, DEFAULT_REGISTRY) is False
+        no_hp = self._allin_bs(None)
         assert all_in_xp_domain_hit(no_hp, sess,
                                     DEFAULT_REGISTRY) is False
 

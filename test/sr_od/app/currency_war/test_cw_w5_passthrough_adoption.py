@@ -517,20 +517,18 @@ def test_adapter_decision_state_back_max_from_container() -> None:
 
 
 def test_posture_flip_guard_predicate_unchanged_on_view_outputs() -> None:
-    """posture flip_hit 假帧守卫既有锁继续辖(hp_readable or hp_trusted):
-    视图沿用帧(readable False + trusted True)守卫仍放行;先验帧全 False
-    仍拒——谓词口径零改(方案 §2.4 等价验证申报面)。"""
+    """posture flip_hit 假帧守卫既有锁继续辖(容器可信位):
+    沿用帧(carried)守卫仍放行;先验帧(prior)仍拒——谓词口径零改
+    (方案 §2.4 等价验证申报面;波 2 起谓词 = 容器形态单一源
+    hp_decision_trusted_of)。"""
     from sr_od.application.currency_war.kernel.cw_discipline_rules import (
         hp_decision_trusted,
     )
 
-    def _truth_of(view: GameState) -> bool:
-        return hp_decision_trusted(view)
-
     bs_carry = _bs_hp_from_frame(80, readable=False, source='carried')
-    assert _truth_of(game_state_view(bs_carry, GameState())) is True
+    assert hp_decision_trusted(bs_carry) is True
     bs_prior = _bs_hp_from_frame(82, readable=False, source='prior')
-    assert hp_decision_trusted(game_state_view(bs_prior, GameState())) is False
+    assert hp_decision_trusted(bs_prior) is False
 
 
 # ============================================================ 类型去重(双 ShopCard 归一)

@@ -328,20 +328,43 @@ def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespa
     )
 
 
+def _blood_bs(hp: int | None, *, source: str = 'observation',
+              level: int | None = None) -> 'BoardState':
+    """血闸容器帧构造器(波 2 起闸输入 = BoardState;来源三态即旧两位
+    语义的容器形态:observation=真读/prior=不可信 fail-closed)。"""
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        BS_SCHEMA_VERSION,
+        BoardState,
+        ChannelSig,
+    )
+    sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
+    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    if level is not None:
+        bs.observe(bs.level, level, sig=sig)
+    if hp is not None:
+        if source == 'observation':
+            bs.observe(bs.hp, hp, sig=sig)
+        elif source == 'prior':
+            bs.write_prior(bs.hp, hp, evidence='prior:adr-0559', sig=sig)
+        else:
+            raise ValueError(f'未知 source {source!r}')
+    return bs
+
+
 def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
     """T7 hp 不可信帧 fail-closed(P21 blood_budget_levelup_blocked 同面同论证:
-    误放=血线内追级、误拦=少升一级,非对称);消费面 state 缺席同向;
+    误放=血线内追级、误拦=少升一级,非对称);消费面 bs 缺席同向;
     金本位(无 active 血本位卡)恒 True 直通(零改动面)。"""
     assert blood_xp_gate(None, True, 3, 6) is False    # hp 无真值
     assert blood_xp_gate(100, False, 3, 6) is False    # 可信位 False
     assert blood_xp_gate(None, False, 3, 6) is False
-    # 消费适配面:state 缺席 fail-closed;金本位直通
+    # 消费适配面:bs 缺席 fail-closed;金本位直通
     assert blood_xp_gate_for(None, _blood_session()) is False
-    assert blood_xp_gate_for(GameState(hp=100, hp_readable=True),
+    assert blood_xp_gate_for(_blood_bs(100),
                              SimpleNamespace(active_strategies=[])) is True
     # 不可信帧经消费适配面同样拒(兜底 100 帧语义 = ADR-0282:两位皆 False,
-    # 由读取端显式写;GameState 构造缺省 hp_readable=True 是 sim 恒真读帧约定)
-    st_ghost = GameState(level=3, hp=100, hp_readable=False)
+    # 容器形态 = prior 支来源,prior/logic 支 fail-closed)
+    st_ghost = _blood_bs(100, source='prior', level=3)
     assert blood_xp_gate_for(st_ghost, _blood_session()) is False
 
 

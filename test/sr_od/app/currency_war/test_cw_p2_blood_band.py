@@ -114,11 +114,23 @@ class TestP2AuthorityLatchComposite:
         """fail-closed 单点:闩缺省 False ⇒ p2_blood_floor_unlock 恒 False,
         即使帧在域内(设计稿 §1.2「收口前恒 False ⇒ 两面全部 P2 行为支
         fail-closed」;§3.2-3 未裁未证前全局 fail-closed)。"""
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            BS_SCHEMA_VERSION,
+            BoardState,
+            ChannelSig,
+            NodeKey,
+        )
         from sr_od.application.currency_war.kernel.cw_discipline_rules import (
             hp_decision_trusted,
         )
+        # 可信位前提锚(波 2 起容器形态:真读帧 = observation 源 → 可信)
+        bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+        sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
+        bs.observe(bs.hp, 10, sig=sig)
+        bs.observe(bs.node, NodeKey(plane=2, round_num=2, kind='battle'),
+                   sig=sig)
+        assert hp_decision_trusted(bs) is True   # 前提锚:帧在域内且可信
         st = _st2(hp=10)
-        assert hp_decision_trusted(st) is True   # 前提锚:帧在域内且可信
         assert preds.p2_blood_floor(st) is True
         assert preds.P2_BLOOD_BAND_AUTHORITY_OPEN is False
         assert preds.p2_blood_floor_unlock(st) is False

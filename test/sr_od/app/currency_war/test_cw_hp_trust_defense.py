@@ -4,18 +4,19 @@
 1. 失明复现锁:全图 OCR det 漏检(mock 返空)→ read_hp_opt 经两级放大
    回退恢复读数(局21 P2 r4 画面实显 16、全图 rect 内零框、裁片放大即
    恢复的离线实证);常路径命中时不走回退(零新增开销锁)。
-2. 幽灵帧回放锁:(100, False, False) 三位自洽假值帧(局21 P2 r4 形态:
-   shop 覆盖丢位产物)→ blood_budget_levelup_blocked 拒;arbiter 端到端
-   逐击拒付;remediation 稳态组同拒(deploy_cap 补偿臂经同一谓词,单一
-   收口)。含变异自检:守卫删除(monkeypatch 可信位恒真)→ 本组锁必须
-   翻红(幽灵 100>21 不再拒),证明锁敏感性与守卫必要性。
-3. 放行面锁:同节点沿用帧 (v, False, True) 不拦(ADR-0428 语义零回归);
-   真读帧 (v, True, False) 不拦;ALL IN 豁免在不可信帧上仍生效
+2. 幽灵帧回放锁:hp 值在场而来源不可信帧(prior 支 = 容器形态的两位
+   皆 False,局21 P2 r4 shop 覆盖丢位形态的容器等价)→
+   blood_budget_levelup_blocked 拒;arbiter 端到端逐击拒付;remediation
+   稳态组同拒(deploy_cap 补偿臂经同一谓词,单一收口)。含变异自检:
+   守卫删除(monkeypatch 可信位恒真)→ 本组锁必须翻红(幽灵 100>21 不
+   再拒),证明锁敏感性与守卫必要性。
+3. 放行面锁:同节点沿用帧 (v, carried) 不拦(ADR-0428 语义零回归);
+   真读帧 (v, observation) 不拦;ALL IN 豁免在不可信帧上仍生效
    (豁免优先于守卫:末战花光是时机不是血线判断)。
 4. 写侧位一致锁:shop._apply_hp 三覆盖形态各产出正确 (hp, readable,
    trusted) 三元组;None(无真读且无新鲜结算真值)不覆盖 state——
    裸 100 不再喂决策路径。
-5. sim 零漂移锁:sim 帧恒真读(默认 hp_readable=True)→ 消费门短路,
+5. sim 零漂移锁:sim 帧恒真读(容器 observation 源)→ 消费门短路,
    血预算停手既有行为逐位不变(单局 sim 血线内帧仍拒、账本键仍在)。
 6. 检查器镜像锁(seg_check_untrusted_hp_levelup,W605/W580c):checks
    层显形面——不可信帧出现 LevelUp 账本行即命中(与消费门两层分工),
@@ -24,6 +25,13 @@
 拒收语义依据(DESIGN 防线设计):线内升级 EV=−C−I 严格负(ADR-0448),
 证据缺失时禁令保持有效=fail-closed;误放(血线内追级)与误拦(少升
 一级)代价非对称同型于 ADR-0428。
+
+统一 state 迁移波 2(T-95):血线门切容器签名(hp 经政策层读口
+decision_hp,可信位 = hp_decision_trusted → hp_decision_trusted_of),
+组 2/3/5/7 的门谓词输入 = BoardState 容器帧(来源三态即旧两位语义的
+容器形态:observation=真读/carried=沿用/prior=不可信 fail-closed);
+GameState 侧帧→桥视图 hp source 恒 observation 的失真语义见
+board_state_bridge docstring(过渡期申报面,防线主辖容器帧)。
 """
 from __future__ import annotations
 
@@ -32,6 +40,12 @@ import logging
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    BS_SCHEMA_VERSION,
+    BoardState,
+    ChannelSig,
+    NodeKey,
+)
 from sr_od.application.currency_war.kernel.cw_discipline_rules import (
     blood_budget_levelup_blocked,
 )
@@ -60,9 +74,44 @@ def _quiet_logging():
     logging.disable(prev)
 
 
+def _sig() -> ChannelSig:
+    """测试写入签名(门谓词帧只辖 hp/节点/位面域)。"""
+    return ChannelSig(family='obs', actor='cw_observation', mode='read')
+
+
+def _bs_with_hp(hp: int | None, source: str, *, plane: int = 2,
+                round_num: int = 4, node_kind: str = 'battle') -> BoardState:
+    """血线门容器帧构造器(组 2/3/5 共用):来源三态写入 + 节点键。
+
+    - source='observation' = 真读帧;'carried' = 同节点沿用帧
+      (值保持,来源翻沿用);'prior' = 不可信帧(局21 幽灵形态的容器
+      等价:prior 支两位皆 False,fail-closed)。"""
+    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    if hp is not None:
+        if source == 'observation':
+            bs.observe(bs.hp, hp, sig=_sig())
+        elif source == 'carried':
+            bs.observe(bs.hp, hp, sig=_sig())
+            bs.carry(bs.hp, frame='p2-r3', sig=_sig())
+        elif source == 'prior':
+            bs.write_prior(bs.hp, hp, evidence='prior:adr-0559', sig=_sig())
+        else:
+            raise ValueError(f'未知 source {source!r}')
+    bs.observe(bs.node, NodeKey(plane=plane, round_num=round_num,
+                                kind=node_kind), sig=_sig())
+    return bs
+
+
+def _ghost_bs(hp: int = 100) -> BoardState:
+    """局21 P2 r4 幽灵帧容器形态:P2 备战帧,hp=100 假值、来源不可信
+    (prior 支 = 旧 (False, False) 两位形态的容器等价,fail-closed)。"""
+    return _bs_with_hp(hp, 'prior')
+
 
 def _state_with_bits(hp: int | None, readable: bool, trusted: bool) -> GameState:
-    """最小帧构造器(组2-5/组7 共用;plane/round/节点固定,gold=50 无锁面消费)。"""
+    """GameState 最小帧构造器(组4 写侧位/组7 序列化共用;这两组辖
+    GameState 写端与遥测形状,非波 2 切换的血线门读口)。
+    plane/round/节点固定,gold=50 无锁面消费。"""
     st = GameState()
     st.plane, st.level, st.gold, st.hp = 2, 6, 50, hp
     st.round_num = 4
@@ -73,9 +122,8 @@ def _state_with_bits(hp: int | None, readable: bool, trusted: bool) -> GameState
 
 
 def _ghost_state(hp: int = 100) -> GameState:
-    """局21 P2 r4 幽灵帧形态:P2 备战帧,hp=100 假值、两位皆 False
-    (shop 覆盖丢位产物:值写入了、保真位留在 shop 开态 read_game_state
-    的 (False, False))。"""
+    """局21 P2 r4 幽灵帧 GameState 形态(组4 写侧位锁专用:值写入了、
+    保真位留在 (False, False) 的 shop 覆盖丢位产物)。"""
     st = _state_with_bits(hp, False, False)
     st.gold = 86   # 局21 实帧字段回放保真(锁面谓词不读 gold)
     return st
@@ -175,11 +223,10 @@ def test_read_hp_opt_second_level_binarized_recovery(
 # ---------- 组2:幽灵帧回放锁(消费门 fail-closed) ----------
 
 def test_ghost_frame_predicate_blocks() -> None:
-    """(100, False, False) 帧:100>21 线外,但不可信 → 拒(fail-closed)。"""
+    """prior 支假值帧(值 100 在场、来源不可信):100>21 线外,但不可信
+    → 拒(fail-closed;局21 幽灵形态的容器等价帧)。"""
     assert blood_budget_levelup_blocked(
-        _ghost_state(), StrategySession(), DEFAULT_REGISTRY) is True
-
-
+        _ghost_bs(), StrategySession(), DEFAULT_REGISTRY) is True
 
 
 def test_mutation_guard_removal_turns_locks_red(
@@ -191,34 +238,32 @@ def test_mutation_guard_removal_turns_locks_red(
         'sr_od.application.currency_war.kernel.cw_discipline_rules.'
         'hp_decision_trusted', lambda state: True)
     assert blood_budget_levelup_blocked(
-        _ghost_state(), StrategySession(), DEFAULT_REGISTRY) is False
+        _ghost_bs(), StrategySession(), DEFAULT_REGISTRY) is False
 
 
 # ---------- 组3:放行面锁(语义零回归) ----------
 
 def test_same_node_inherited_frame_passes() -> None:
-    """放行面语义零回归(ADR-0428 主救场景):(16, False, True) 同节点
-    沿用帧血线内照拒(值可信判断成立)、线外沿用帧 100 恒放(不因
-    readable=False 误拦);真读帧 (True, False) 位形态线外放行不拦。"""
+    """放行面语义零回归(ADR-0428 主救场景):同节点沿用帧血线内照拒
+    (值可信判断成立)、线外沿用帧 100 恒放(不因沿用误拦);真读帧线外
+    放行不拦。"""
     sess = StrategySession()
     # 沿用值在血线内:停手照常生效(值可信,判断成立)
     assert blood_budget_levelup_blocked(
-        _state_with_bits(16, False, True), sess, DEFAULT_REGISTRY) is True
+        _bs_with_hp(16, 'carried'), sess, DEFAULT_REGISTRY) is True
     # 沿用值在线外:放行(不因 readable=False 误拦)
     assert blood_budget_levelup_blocked(
-        _state_with_bits(100, False, True), sess, DEFAULT_REGISTRY) is False
-    # 真读帧 (True, False)(可读未过帧龄门):线外放行不拦
+        _bs_with_hp(100, 'carried'), sess, DEFAULT_REGISTRY) is False
+    # 真读帧线外放行不拦
     assert blood_budget_levelup_blocked(
-        _state_with_bits(30, True, False), StrategySession(),
+        _bs_with_hp(30, 'observation'), StrategySession(),
         DEFAULT_REGISTRY) is False
 
 
 def test_allin_exempt_precedes_trust_guard() -> None:
     """ALL IN 豁免优先于可信位守卫:位面末不可信帧仍让位(豁免语义=
     末战花光是时机不是血线判断,不因证据缺失收紧)。"""
-    st = _ghost_state(hp=100)
-    st.round_num = 7
-    st.node_type = 'boss'
+    st = _bs_with_hp(100, 'prior', plane=2, round_num=7, node_kind='boss')
     sess = StrategySession()
     sess.plane_node_table = ['battle'] * 7
     assert blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY) is False
@@ -348,18 +393,19 @@ def test_r1_rule_frame_match_archive_none_honest() -> None:
 # ---------- 组5:sim 零漂移锁 ----------
 
 def test_sim_frames_default_trusted_gate_short_circuits() -> None:
-    """sim 帧恒真读(默认 hp_readable=True)→ 消费门短路:同帧谓词结果
+    """sim 帧恒真读(容器 observation 源)→ 消费门短路:同帧谓词结果
     与守卫删除版逐位一致(零漂移的源级锁)。"""
-    st = _state_with_bits(16, True, False)   # sim 决策帧形态:真读
+    import copy as _copy
+    bs = _bs_with_hp(16, 'observation')   # sim 决策帧形态:真读
     sess = StrategySession()
-    with_guard = blood_budget_levelup_blocked(st, sess, DEFAULT_REGISTRY)
+    with_guard = blood_budget_levelup_blocked(bs, sess, DEFAULT_REGISTRY)
     monkey = pytest.MonkeyPatch()
     monkey.setattr(
         'sr_od.application.currency_war.kernel.cw_discipline_rules.'
         'hp_decision_trusted', lambda state: True)
     try:
-        without_guard = blood_budget_levelup_blocked(st.copy(), sess,
-                                                     DEFAULT_REGISTRY)
+        without_guard = blood_budget_levelup_blocked(
+            _copy.deepcopy(bs), sess, DEFAULT_REGISTRY)
     finally:
         monkey.undo()
     assert with_guard == without_guard is True
@@ -383,7 +429,7 @@ def test_registry_flag_off_still_zero_scope() -> None:
     在开关与豁免之后,不改变 A/B 注入面)。"""
     reg_off = dataclasses.replace(DEFAULT_REGISTRY,
                                   blood_budget_stop_enabled=False)
-    assert not blood_budget_levelup_blocked(_ghost_state(), StrategySession(),
+    assert not blood_budget_levelup_blocked(_ghost_bs(), StrategySession(),
                                             reg_off)
 
 
