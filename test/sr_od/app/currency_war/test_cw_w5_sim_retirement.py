@@ -25,8 +25,9 @@ _BRIDGE_REGISTERED: dict[str, str] = {
     # (寿命=在飞批落库 sweep;登记防「壳=回流」误判)。
     'kernel/cw_game_state.py': '旧路径转发壳(候裁7 改居过渡;非调用)',
     # 波 5b 消点后仍活调用:
-    'kernel/cw_economy.py': '活调用·标量投影缝无 session(结构性豁免 '
-                           'ADR-0598),退役挂 session 通道批/T-7',
+    # kernel/cw_economy.py 登记项已删(少红=推进协议):标量投影缝随
+    # T-145 消点退役——改直构造 kernel scalar_projection_state(桥引用
+    # 与惰性 CwWorkFrame 构造同批删除;等价锁 = 本文件投影等价测试)。
     # kernel/cw_evolution.py 登记项已删:模块本体随 W8(T-7 段2)整模块
     # 退役物理删除,桥引用随之消点(少红=推进协议,同批删登记项)。
     'prep_actions.py': '活调用·根(他批辖域,波 5b 禁触 :289-291 面)',
@@ -100,6 +101,43 @@ def test_back_size_dead_field_tombstone() -> None:
         hits += [f'{path.relative_to(_ROOT).as_posix()}:{m.start()}'
                  for m in re.finditer(r'\bback_size\s*=[^=]', text)]
     assert not hits, f'back_size 触点回写(死字段复活): {hits}'
+
+
+def test_scalar_projection_equivalent_to_bridge_projection() -> None:
+    """标量投影容器等价锁(T-145 766 缝退役):kernel scalar_projection_
+    state 的输出与旧载体「惰性构造 CwWorkFrame + board_state_bridge 装箱」
+    的投影**逐字段等价**——值/来源/evidence/工程结构经 full_state_snapshot
+    逐项对拍。字段契约单一源 = scalar_projection_state docstring;桥本体
+    映射将来变更时本锁强制两装配同批对账(禁静默漂移)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        board_state_bridge,
+        scalar_projection_state,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+
+    cases = [
+        # (全参典型帧 / 全缺省 strategies=None / 空表 strategies=[]——
+        #  空表与 None 同判不写 active_strategies,镜像桥行为)
+        {'gold': 73, 'level': 5, 'hp': 82, 'plane': 1, 'round_num': 3,
+         'strategies': ['淘金客', '定期福利']},
+        {'gold': 0, 'level': 3, 'hp': 80, 'plane': 2, 'round_num': 7,
+         'strategies': None},
+        {'gold': 51, 'level': 7, 'hp': 44, 'plane': 1, 'round_num': 9,
+         'strategies': []},
+    ]
+    for kw in cases:
+        bs_new = scalar_projection_state(**kw)
+        frame = CwWorkFrame(gold=kw['gold'], level=kw['level'],
+                            hp=kw['hp'], plane=kw['plane'],
+                            round_num=kw['round_num'])
+        frame.active_strategies = list(kw['strategies'] or [])
+        bs_old = board_state_bridge(frame)
+        snap_new = bs_new.full_state_snapshot()
+        snap_old = bs_old.full_state_snapshot()
+        assert snap_new == snap_old, (
+            f'标量投影容器与桥投影失配(全参支 {kw}):'
+            f'new={snap_new!r} old={snap_old!r}')
+        assert bs_new.bs_schema == bs_old.bs_schema
 
 
 def test_last_state_write_points_pinned_three() -> None:
