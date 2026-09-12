@@ -565,7 +565,7 @@ def test_sim_synthesis_none_truth_not_written() -> None:
 
 
 def test_synthesis_unread_bench_no_clobber() -> None:
-    """bench 写门(CwWorkFrame.bench_readable,对齐 board_readable 先例):
+    """bench 写门(CwSimFrame.bench_readable,对齐 board_readable 先例):
     未读域≠真空域。v1 漏斗帧(read_game_state 不读 bench 身份,bench 恒
     默认空表)合成必须跳写 bench——容器内备战装配环的真读观察保持原值
     原版本;可读真值帧(sim 形态,缺省 True)照写不回归。回归形态 = 无门
@@ -582,7 +582,7 @@ def test_synthesis_unread_bench_no_clobber() -> None:
         capacity=BENCH_CAPACITY_DEFAULT), sig=sig)
     bench_field_before = bs.bench   # Field 实例同一性:_swap 写入即换实例
     # v1 形态帧:bench 恒默认空表 + 不可读位(生产置位点 = read_game_state)
-    st_v1 = CwWorkFrame()
+    st_v1 = CwSimFrame()
     st_v1.bench_readable = False
     synthesize_from_game_state(bs, st_v1, at_round='p1-r1')
     view = bs.bench.value
@@ -592,7 +592,7 @@ def test_synthesis_unread_bench_no_clobber() -> None:
     assert bs.bench is bench_field_before, \
         '跳写 = bench Field 实例不换(其余域合成照写,版本推进不涉本域)'
     # 真值帧(sim 形态,缺省可读)照写:域语义不回归
-    st_sim = CwWorkFrame(bench=[BenchChar(slot=1, char_id='花火', star=2)])
+    st_sim = CwSimFrame(bench=[BenchChar(slot=1, char_id='花火', star=2)])
     synthesize_from_game_state(bs, st_sim, at_round='p1-r2')
     assert bs.bench.value.slots[0].unit is not None \
         and bs.bench.value.slots[0].unit.char_id == '花火', \

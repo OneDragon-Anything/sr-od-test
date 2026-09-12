@@ -342,7 +342,7 @@ def test_shop_entry_seed_guard_passes_with_funnel_bench() -> None:
     """T-177 商店入口播种对账场景锁(run_buy_waves 入口链回归):visit 入口
     = v1 帧合成 + guard_expected_vs_tracked(stage='seed')。容器 bench 由
     漏斗真读写入(deploy 后留 bench 一人),执行账 tracked 持同一真值;
-    合成对未读 bench(CwWorkFrame.bench_readable=False)跳写后,守卫
+    合成对未读 bench(CwSimFrame.bench_readable=False)跳写后,守卫
     seed 对账必须通过。回归形态 = 无门合成把 expected 覆盖成「9 槽全空」
     → 与 tracked 多集分歧 AssertionError(实机 2026-09-13 商店段循环
     崩溃 15+ 连发实证)。"""
