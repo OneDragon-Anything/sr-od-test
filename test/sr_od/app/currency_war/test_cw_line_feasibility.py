@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """P2 锁线可行性加权(供给概率×剩余轮×血预算)+ 商店拒因投影口径锁。
 
 设计出处:
@@ -22,13 +21,10 @@ import math
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
-    shop_unbought_reasons,
-)
+from sr_od.application.currency_war.kernel import cw_intention as ci
 from sr_od.application.currency_war.kernel.cw_board_state import (
     board_state_bridge,
 )
-from sr_od.application.currency_war.kernel import cw_intention as ci
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionSignal,
@@ -47,6 +43,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
     SellBench,
     ShopCard,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
+    shop_unbought_reasons,
 )
 
 #: P2 位面轮数真值(ADR-0366 语料:P2=7)。

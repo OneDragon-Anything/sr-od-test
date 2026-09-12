@@ -20,6 +20,7 @@ board_structure.md §备战栏「备战槽可被非角色物品占据」。占�
   修复前该帧形态 = 对占位件 ``SellBench(expect='')`` 合法发射(T-209
   案发动作形)。
 """
+
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
@@ -40,6 +41,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
 )
 
 _COMP = '列车同行'
@@ -185,7 +189,7 @@ class TestSinkConsistencyBenchFull:
         st.refresh_probs = {(get_char(_causal()).cost or 5): 0}
         sess = _ns_with_state(cw4_counters={}, target_comp=get_comp(_COMP),
                               v3_intention=ist)
-        act = shop.decide_shop_action(st, sess,
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess,
                                       SimpleNamespace(ev_arm='full'))
         assert state_of(sess).cw4_counters.get('bench_full') == 1
         assert not isinstance(act, SellBench), (

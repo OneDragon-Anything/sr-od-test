@@ -69,6 +69,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt import (
     refund_full_star_ok,
 )
+from test.sr_od.app.currency_war._cw_helpers import cw4_bs
 
 # ===== 测试基建 =====
 
@@ -105,7 +106,11 @@ def _state(gold: int, bench: list[BenchChar], *,
     st.plane = 2
     st.node_type = node
     st.bench = list(bench)
-    st.deployed = []
+    # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
+    # 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),卖出判据/
+    # 发射位的直调环境须 ≥1 上场件,否则守卫 fail-closed 拒帧——与被
+    # 测语义无关的红按环境前置补齐,非跟绿。
+    st.deployed = [_bc('板上件锚', slot=1)]
     st.shop = []
     return st
 
@@ -333,8 +338,9 @@ class TestW1SameVisitBan:
         静态持有集)⇒ CloseShop 收尾,零卖出发射。"""
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
-        act = decide_shop_action(_state(1, [_bc(_FUEL, slot=1)]), sess,
-                                 SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(
+            cw4_bs(_state(1, [_bc(_FUEL, slot=1)]), sess),
+            sess, SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, SellBench), \
             'W1:press 登记活跃件被同轮筹资卖出 = 同 visit 卖回未闭死'
         assert isinstance(act, CloseShop)
@@ -399,7 +405,7 @@ class TestEmitRegistration:
         sess = _sess()
         st = _state(11, [], node='reward')
         st.shop = [_card('高价杂件', cost=5), _card(_FUEL, cost=1)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dead_gold_press_buy'
         assert _registry(sess) == {_FUEL: ('press', 3)}
 
@@ -423,7 +429,7 @@ class TestEmitRegistration:
             '夹具失准:帧不满足 ②(b) 奖励帧触发门,本锁失去前提')
         st.shop = [_card('高价杂件', cost=5), _card('目标件', cost=1)]
         sess = _sess()
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'm2_line_member', (
             '②(b) prio0 绕过 M2 先行发射 = 吸收前提破(F4 保护前提转承重)')
         assert act.card.name == '目标件'
@@ -456,7 +462,7 @@ class TestEmitRegistration:
         st.shop = [_card(_FUEL, cost=1)]
         # 停手态 = 线全员在场(目标件在 bench)⇒ stop_flag=True
         st.bench = [_bc('目标件', slot=1), _bc(_FUEL, slot=2)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
         assert _registry(sess) == {_FUEL: ('press', 3)}
 
@@ -469,7 +475,7 @@ class TestEmitRegistration:
         sess = _sess()
         st = _state(60, [], node='battle')
         st.shop = [_card('目标件', cost=3)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
         assert _registry(sess) == {'目标件': ('obligation', 3)}
         assert sell_gate.active_window(sess, 3) == frozenset(), \
@@ -484,13 +490,13 @@ class TestEmitRegistration:
         sess = _sess()
         st = _state(60, [], node='battle')
         st.shop = [_card('目标件', cost=3)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
         # 下一帧:K 收窄('目标件' 出基座)∧ 金<g* 触发凑息回拉。
         state_of(sess).target_comp = SimpleNamespace(
             name='测试线二', core_chars=('新目标',), shared_chars=())
         st2 = _state(1, [_bc('目标件', slot=1)], node='reward')
-        act2 = decide_shop_action(st2, sess, SimpleNamespace(ev_arm='full'))
+        act2 = decide_shop_action(cw4_bs(st2, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act2, SellBench), \
             f'凑息回拉未发射(夹具失准,重推场景): {act2}'
         assert act2.expect == '目标件'
@@ -506,13 +512,13 @@ class TestEmitRegistration:
         sess = _sess()
         st = _state(60, [], node='battle', round_num=3)
         st.shop = [_card('目标件', cost=3)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard)
         state_of(sess).target_comp = SimpleNamespace(
             name='测试线二', core_chars=('新目标',), shared_chars=())
         st2 = _state(1, [_bc('目标件', slot=1)], node='reward', round_num=4)
         sess.last_state = st2   # 生产 last_state 写点同形(读端相位解析)
-        act2 = decide_shop_action(st2, sess, SimpleNamespace(ev_arm='full'))
+        act2 = decide_shop_action(cw4_bs(st2, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act2, SellBench)
         assert act2.reason != 'line_switch_collapse' \
             and act2.reason == '', \
@@ -529,7 +535,7 @@ class TestEmitRegistration:
         st = _state(11, [_bc(_FUEL, slot=1), _bc(_FUEL, slot=2)],
                     node='reward')
         st.shop = [_card(_FUEL, cost=1)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dead_gold_press_buy'
         assert _FUEL not in _registry(sess), \
             '合成帧旧登记滞留 = 同轮再买同名 1★ 被过禁(V2-05 病理)'
@@ -550,7 +556,7 @@ class TestW5RegistrationAssertion:
         sess = _sess()
         st = _state(12, [], node='reward')
         st.shop = [_card(_TRANS_HOLD, cost=2, star=2)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         # 发射不拦(N1:登记侧断言不辖买入)
         assert isinstance(act, BuyCard) and act.reason == 'dead_gold_press_buy'
         ct = state_of(sess).cw4_counters
@@ -566,7 +572,7 @@ class TestW5RegistrationAssertion:
         sess = _sess()
         st = _state(12, [], node='reward')
         st.shop = [_card(_TRANS_HOLD, cost=2, star=1)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard)
         assert _registry(sess) == {_TRANS_HOLD: ('hold', 3)}
         assert 'launch_cause_mismatch' not in state_of(sess).cw4_counters
@@ -585,7 +591,7 @@ class TestFundingHoldFallback:
         拆除,缺省 '' 未标)。"""
         sess = _sess()
         st = _state(0, [_bc(_CORE_HOLD, slot=1)])   # 希儿 cost=3 → 退 3
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench), \
             '兜底豁免未接线 = ③④件变现出口缺席(ADR-0585 中介窗口未收)'
         assert act.expect == _CORE_HOLD
@@ -597,8 +603,9 @@ class TestFundingHoldFallback:
         豁免机制自己制造 P78-1 同 visit 违例(R1 面5 逃逸链)。"""
         sess = _sess()
         state_of(sess).cw4_visit_bought_names = [_CORE_HOLD]
-        act = decide_shop_action(_state(0, [_bc(_CORE_HOLD, slot=1)]), sess,
-                                 SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(
+            cw4_bs(_state(0, [_bc(_CORE_HOLD, slot=1)]), sess),
+            sess, SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, SellBench)
 
     def test_subtraction2_obligation_base_never_in_pool(self):
@@ -609,8 +616,9 @@ class TestFundingHoldFallback:
         # 希儿 ∈ k = 基座 ⇒ 兜底池减法②排空 ⇒ 零卖出
         state_of(sess).target_comp = SimpleNamespace(
             name='测试线', core_chars=('目标件', '希儿'), shared_chars=())
-        act = decide_shop_action(_state(0, [_bc(_CORE_HOLD, slot=1)]), sess,
-                                 SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(
+            cw4_bs(_state(0, [_bc(_CORE_HOLD, slot=1)]), sess),
+            sess, SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, SellBench)
 
     def test_quantification_refund_must_cover_gap(self):
@@ -619,8 +627,9 @@ class TestFundingHoldFallback:
         逐帧级联清空兜底池路径。"""
         sess = _sess()
         # 三月七 cost=1 → 退 1 < 缺口 3(need 3 − gold 0)
-        act = decide_shop_action(_state(0, [_bc(_TRANS_CHEAP, slot=1)]), sess,
-                                 SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(
+            cw4_bs(_state(0, [_bc(_TRANS_CHEAP, slot=1)]), sess),
+            sess, SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, SellBench)
 
     def test_main_path_nonempty_skips_fallback(self):
@@ -632,7 +641,7 @@ class TestFundingHoldFallback:
         sell_gate.register_launch(sess, _FUEL, cause='stall_protect',
                                   round_num=3)
         st = _state(0, [_bc(_CORE_HOLD, slot=1), _bc(_FUEL, slot=2)])
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
         assert act.expect == _FUEL   # 主路径卖 T3 垫件,兜底池未动
         assert act.reason == ''   # 2026-09-08 归因删除批:特化值填充已拆

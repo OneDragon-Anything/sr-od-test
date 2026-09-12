@@ -43,7 +43,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 from fixtures.masked_scan import (
     MaskedSource,
     build_masked_sources,
@@ -54,32 +53,33 @@ from fixtures.masked_scan import (
 from sr_od.application.currency_war import currency_war_app as cw_app_mod
 from sr_od.application.currency_war import currency_war_config as cw_cfg_mod
 from sr_od.application.currency_war.kernel import cw_state_journal
-from sr_od.application.currency_war.kernel.cw_board_state import (
-    board_state_of,
-)
-
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
 from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
+)
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_board_state import (
     register_sig_actors as _register_sig_actors,
 )
 
 _register_sig_actors('TestSigWriter')
 
 
-def _sig() -> "_ChannelSig":
+def _sig() -> _ChannelSig:
     """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
     return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
-def _lsig() -> "_ChannelSig":
+def _lsig() -> _ChannelSig:
     """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
     return _ChannelSig(family='logic_action', actor='TestSigWriter',
                        mode='compute')
 
 
-def _hsig() -> "_ChannelSig":
+def _hsig() -> _ChannelSig:
     """渠道③签名(logic_hook 族;relay 中继)。"""
     return _ChannelSig(family='logic_hook', actor='TestSigWriter',
                        mode='compute')

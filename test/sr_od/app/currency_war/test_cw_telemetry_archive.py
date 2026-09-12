@@ -612,10 +612,16 @@ def _ln_at(archive: dict, plane: int, rnd: int) -> list[dict]:
 
 import pytest as _performance_pytest
 
+from sr_od.application.currency_war.kernel.cw_comps import Comp  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_performance import (
     HP_LOSS_FULL,
     PerformanceTracker,
     RoundOutcome,
+    star_achievement,
+)
+from sr_od.application.currency_war.kernel.cw_state import (  # noqa: E402
+    BenchChar,
+    GameState,
 )
 
 

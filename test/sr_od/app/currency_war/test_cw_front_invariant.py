@@ -466,9 +466,6 @@ def test_l6_frontless_budget_reset_tightened() -> None:
     回退无条件复位 → 本锁红。"""
     from sr_od.application.currency_war.kernel.cw_exec_state import ExecState
     from sr_od.application.currency_war.operations import cw_loop
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_prep,
-    )
     loop_src = inspect.getsource(cw_loop.CwLoop.loop)
     i_read = loop_src.find("last_prep_battle_launch_ok")
     assert i_read > 0, '备战环出口未读发射结果(F3 复位收紧失守)'

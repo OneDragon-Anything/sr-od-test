@@ -1,4 +1,5 @@
-"""cw_replay 回放恢复面锁(T-290 意向 latch 回读 + T-291 判读卫生)。
+"""cw_replay 回放恢复面锁(T-290 意向 latch 回读 + T-291 判读卫生
++ T-312 执行态回读面)。
 
 锁面:
 1. v3_intention dict → IntentionState 反序列化形状(list→tuple/set、
@@ -7,7 +8,12 @@
    (派生与 flow._refresh_direction_views 同源);
 3. v3_intention=None 行的残源回退(行携顶层 target 标签解析);
 4. main() 面:fake_ 前缀 run 恒过滤 + 无 --run 拼接警示头
-   (落盘全走 tmp_path,零真实 .debug 副作用)。
+   (落盘全走 tmp_path,零真实 .debug 副作用);
+5. T-312 执行态回读:state 携观察可信位(hp_readable/hp_trusted 等)
+   逐字段还原 + 血预算停升级门 fail-closed 消费语义;p1r4 实证帧形态
+   (hp 双 False 帧 = 生产拒付升级)在回放同口径复现;
+6. T-312 经验期望账本回读:xp_expect_ledger dict → exec_state 挂载
+   XpLedger(round_key list→tuple、未知键宽容、None 行零漂移)。
 
 消歧正本 = .debug/temp/currency_war/T-286-交付报告.md(回放器语义缺口
 消歧说明):LIMITS 旧文案「旧记录无 v3 态」实况是「有态不读」——档案行
@@ -123,6 +129,98 @@ def test_restore_session_none_intention_label_fallback() -> None:
     sess3 = _session()
     cw_replay._restore_session(None, {'v3_intention': None}, sess3)
     assert _ms(sess3).target_comp is None
+
+
+# ===== T-312 执行态回读面 =====
+
+def test_rebuild_state_reads_trust_flags() -> None:
+    """执行态可信位回读(T-312):state 携 hp_readable/hp_trusted 等逐字段还原。
+
+    p1r4 实证帧形态(hp_readable=False ∧ hp_trusted=False)= 血预算停升级
+    门的 fail-closed 输入——回放此前恒按 GameState 缺省 True 读,升级类
+    分歧结构性不可比。本用例连消费语义一起锁:重建态的不可信形态经
+    血预算停升级门判拒付,与可信形态判放行成对。
+
+    波 2 签名切换(T-95):血线门输入 = BoardState 容器帧(prior 支 =
+    旧两位皆 False 的容器等价,fail-closed 语义同面重钉;GameState 侧
+    帧→桥视图 hp source 恒 observation 的失真语义见 board_state_bridge
+    docstring,防线主辖容器帧)。
+    """
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        BS_SCHEMA_VERSION,
+        BoardState,
+        ChannelSig,
+        NodeKey,
+    )
+    from sr_od.application.currency_war.kernel.cw_discipline_rules import (
+        blood_budget_levelup_blocked,
+        hp_decision_trusted,
+    )
+    from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
+
+    st = cw_replay._rebuild_state({
+        'hp_readable': False, 'hp_trusted': False, 'level_readable': True,
+        'gold_readable': True, 'board_readable': True, 'deploy_cap': 6,
+        'hp': 84, 'level': 4, 'plane': 1, 'round_num': 4})
+    assert st.hp_readable is False and st.hp_trusted is False
+    assert st.level_readable is True and st.gold_readable is True
+    assert st.board_readable is True and st.deploy_cap == 6
+    assert st.max_units() == 6          # deploy_cap 真值优先于 level 兜底
+
+    def _bs(hp: int | None, source: str) -> BoardState:
+        sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
+        bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+        if hp is not None:
+            if source == 'prior':
+                bs.write_prior(bs.hp, hp, evidence='prior:adr-0559', sig=sig)
+            else:
+                bs.observe(bs.hp, hp, sig=sig)
+        bs.observe(bs.node, NodeKey(plane=1, round_num=4, kind='battle'),
+                   sig=sig)
+        return bs
+
+    # fail-closed 语义(容器形态):p1r4 不可信形态帧 = 停付升级
+    assert hp_decision_trusted(_bs(84, 'prior')) is False
+    assert blood_budget_levelup_blocked(_bs(84, 'prior'), _session(),
+                                        DEFAULT_REGISTRY) is True
+    # 对照:真读形态(= 修复前回放误判的可信形态)同参数放行
+    assert hp_decision_trusted(_bs(84, 'observation')) is True
+    assert blood_budget_levelup_blocked(_bs(84, 'observation'), _session(),
+                                        DEFAULT_REGISTRY) is False
+
+
+def test_rebuild_state_missing_flags_zero_drift() -> None:
+    """旧 schema 行缺可信位键 → 走 GameState 缺省,与 T-290 基线逐位一致。"""
+    st = cw_replay._rebuild_state({'hp': 50, 'plane': 1, 'round_num': 1})
+    assert st.hp_readable is True and st.hp_trusted is False
+    assert st.level_readable is True and st.gold_readable is True
+    assert st.board_readable is True and st.deploy_cap is None
+
+
+def test_restore_session_reads_xp_expect_ledger() -> None:
+    """经验期望账本回读(T-312):行顶 dict → exec_state 挂载 XpLedger。
+
+    round_key 落盘 list → tuple 还原;未知键宽容忽略(跨 schema 不炸);
+    None 行(未锚定帧/旧记录)不写,缺省 None 零漂移。账本零决策消费
+    (纯记账+对账面),本回读只为判读面同源。
+    """
+    from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+    from sr_od.application.currency_war.kernel.cw_prep_expect import XpLedger
+
+    sess = _session()
+    cw_replay._restore_session(None, {'xp_expect_ledger': {
+        'level': 4, 'xp_cur': 0, 'xp_next': 6, 'anchored': True,
+        'round_key': [1, 3], 'pending_clicks': 0, 'events_txt': '',
+        'exogenous_xp': 2, 'some_future_field': 1}}, sess)
+    led = exec_state_of(sess).xp_expect_ledger
+    assert isinstance(led, XpLedger)
+    assert led.anchored is True and led.round_key == (1, 3)
+    assert (led.level, led.xp_cur, led.xp_next) == (4, 0, 6)
+    assert led.exogenous_xp == 2
+
+    sess2 = _session()
+    cw_replay._restore_session(None, {'xp_expect_ledger': None}, sess2)
+    assert exec_state_of(sess2).xp_expect_ledger is None
 
 
 def _write_archive(tmp_path, rows) -> None:

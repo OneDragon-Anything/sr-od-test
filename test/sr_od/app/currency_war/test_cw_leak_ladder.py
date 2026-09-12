@@ -21,10 +21,14 @@ LF 钉的是档 2 自身闸链(档匹配/s_reserve/新鲜度/bench 硬闸),不�
 猴补放行——围栏语义归 kernel 锁
 (test_cw_deploy_single_source 等)辖,本文件钉档 1 的接线。
 """
+
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
 
 if TYPE_CHECKING:
     from sr_od.application.currency_war.kernel.cw_board_state import BoardState
@@ -127,7 +131,7 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
 
 
 def _decide(st: GameState, sess) -> object:
-    return shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+    return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
 def _tier_cost(level: int = 5) -> int:

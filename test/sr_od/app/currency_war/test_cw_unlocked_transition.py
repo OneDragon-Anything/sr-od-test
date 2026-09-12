@@ -10,6 +10,7 @@
 - 谓词单帧:t5_p1_false 现算(不按帧集清单,ADR-0556 §2 约定)。
 不锁卡名(ADR-0556 §8):垫件名均取自注册表运行时解析。
 """
+
 from types import SimpleNamespace
 
 import pytest
@@ -31,6 +32,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
     t5_p1_false,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
 )
 
 _ROUNDS = 13          # 病灶窗 R_全局代表值(ADR-0556 §4;发射位经
@@ -92,7 +96,11 @@ def _frame(gold: int, *, fuel_pieces: int = 1, fuel_cost: int = 5,
     st.plane = plane
     st.shop = list(cards) if cards is not None else []
     st.bench = bench
-    st.deployed = list(deployed)
+    # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
+    # 拒卖」,卖出判据/发射位直调环境须 ≥1 上场件,否则 fail-closed
+    # 拒帧——与被测语义无关的红按环境前置补齐,非跟绿。
+    st.deployed = (list(deployed) if deployed
+                   else [_bc('板上件锚', slot=1)])
     sess = _ns_with_state(
         cw4_counters={},
         target_comp=(get_comp(_COMP) if target_comp else None),
@@ -110,7 +118,7 @@ def _pin_rounds(monkeypatch):
 
 
 def _decide(st, sess):
-    return shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+    return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
 class TestT5StructurePredicate:

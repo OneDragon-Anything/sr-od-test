@@ -12,7 +12,7 @@
 开局链写点(R2 §3.4.1 弹窗腿守卫集 prev_branch 供给,cw_loop 侧):
 分支标识写点经 :meth:`observe_screen_context` 唯一写口落上下文域(域准入
 ①obs 家族不破)。守卫集成员终版 = 结算窗 ∪ 开局链{简报,投资环境,等待1-1}
-(0p/0q 有专用腿②③出族,用户终裁 2026-09-11/攻击 R5 高-1)。
+(0p/0q 有专用腿②③出族,用户终裁 2026-09-11,ADR-0630 修订节·守卫族终版)。
 
 常开形态(R5 W1/ADR-0634,原影子纪律作废):回执写点与分支写点写入
 无条件(记录被动不分支写路径);行落盘另以 sink/run_id 在场为准。
@@ -34,6 +34,8 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     install_state_telemetry,
     reset_state_telemetry,
+)
+from sr_od.application.currency_war.kernel.cw_state_journal import (
     state_journal_instance as journal_mod_state_journal_instance,
 )
 from sr_od.application.currency_war.telemetry import state as tel_state
@@ -465,7 +467,7 @@ def test_close_shop_receipt_all_exits(mode, journal, run_id, monkeypatch):
 
 
 def test_guard_set_opening_chain_members_complete() -> None:
-    """守卫族成员终版锁(用户终裁 2026-09-11,攻击 R5 高-1):守卫族 =
+    """守卫族成员终版锁(用户终裁 2026-09-11,ADR-0630 修订节·守卫族终版):守卫族 =
     结算窗 ∪ 开局链{简报,投资环境,等待1-1};**0p/0q 出族**——二者有专用腿
     ②③(规则②位面过渡/规则③BOSS简报),守卫族残留其成员会与专用腿构成
     级联双推进(专用腿推进后弹窗腿再 +1,缓存守卫只是掩码)。
@@ -479,7 +481,7 @@ def test_guard_set_opening_chain_members_complete() -> None:
             f'守卫集缺成员 {member}(弹窗腿 S1/S3 形态漏判据)'
     for leg_own in ('货币战争-BOSS简报', '货币战争-位面过渡'):
         assert leg_own not in SCREEN_CONTEXT_GUARD_PREV, \
-            f'{leg_own} 有专用腿②③,守卫族残留 = 级联双推进破口(攻击 R5 高-1)'
+            f'{leg_own} 有专用腿②③,守卫族残留 = 级联双推进破口(ADR-0630 修订节·守卫族终版)'
 
 
 def test_opening_chain_write_arms_popup_leg_s1(journal, run_id) -> None:

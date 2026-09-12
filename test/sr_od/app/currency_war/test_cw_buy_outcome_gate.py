@@ -40,7 +40,10 @@ def _drive(monkeypatch, ok: bool):
     monkeypatch.setattr(
         aop, 'project',
         lambda st: calls.append(('project', st)) or ('proj', st))
-    ledger = SimpleNamespace(refresh_first_action=True)
+    # ledger 桩字段对齐生产 ShopVisitLedger 消费面(buy_purchases = W536
+    # merge_expect 基座,执行回执 k 计数读点;缺字段 = SimpleNamespace
+    # 桩滞后,非语义锁面)。
+    ledger = SimpleNamespace(refresh_first_action=True, buy_purchases=[])
     match = SimpleNamespace(session=SimpleNamespace(
         shop_state_frame=None))
     state_of(match.session).cw4_visit_bought_names = []

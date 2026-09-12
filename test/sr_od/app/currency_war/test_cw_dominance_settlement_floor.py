@@ -66,6 +66,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.interest import (
     saturation_line,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+    cw4_feed,
+)
 from test.sr_od.app.currency_war.test_cw_leak_ladder import (
     _off_name as _lad_off_name,
 )
@@ -137,7 +141,7 @@ def _replay_plan(snap: dict) -> tuple[object, object, list]:
     返回 (重建态, session, plan)——session 供拒因分键读数。"""
     strat, sess = _fresh_sess()
     st = cw_replay._rebuild_state(snap)
-    sess.shop_state_frame = st
+    cw4_feed(sess, st)
     return st, sess, strat.decide_shop_screen(sess, _CFG)
 
 
@@ -165,7 +169,8 @@ class TestDominanceSettlementFloor:
         st = cw_replay._rebuild_state(_snapshot(
             52, [(c3, 3, 1), (_FUEL, 1, 1)]))
         sess = _sess()
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
         assert act.card.name == _FUEL, \
             '穿线笔未被地板拦截(买后 49 < g* = 病灶复发)'
@@ -182,7 +187,8 @@ class TestDominanceSettlementFloor:
         st = cw_replay._rebuild_state(_snapshot(
             52, [(c3, 3, 1), (_FUEL, 1, 1)]))
         sess = _sess()
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
         assert act.card.name == c3
         assert 52 - (act.card.cost or 3) < _G_STAR
@@ -225,7 +231,8 @@ class TestDominanceSettlementFloor:
         st = cw_replay._rebuild_state(_snapshot(52, [(c3, 3, 1)]))
         sess = _sess()
         sess.active_strategies = ['买断制']
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
         assert state_of(sess).cw4_counters.get(
             'dominance_settlement_floor_reject', 0) == 0
@@ -245,7 +252,8 @@ class TestLadder1MigrationEquivalence:
         cand = _lad_off_name()
         st = _lad_st(52, [_card(cand, cost=3, star=2)])   # 2★=非垫件非支配候选
         sess = _lad_session(locked=True)
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'press_buy_deployable')
         ct = state_of(sess).cw4_counters
@@ -261,7 +269,8 @@ class TestLadder1MigrationEquivalence:
         cand = _lad_off_name()
         st = _lad_st(52, [_card(cand, cost=3, star=2)])
         sess = _lad_session(locked=True)
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) \
             and act.reason == 'press_buy_deployable'
         assert 52 - (act.card.cost or 3) < _G_STAR

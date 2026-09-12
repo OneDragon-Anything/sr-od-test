@@ -29,10 +29,10 @@ from __future__ import annotations
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel import cw_intention as ci
 from sr_od.application.currency_war.kernel.cw_board_state import (
     board_state_bridge,
 )
-from sr_od.application.currency_war.kernel import cw_intention as ci
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,

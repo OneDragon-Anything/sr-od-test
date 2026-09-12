@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """test_cw_cap_domain 主题锁。
 
 2026-09-03 拆分归档批:自混合文件 test_cw_legacy_audit.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
 from __future__ import annotations
-
-
 
 import inspect as _r348_cap_domain_inspect
 

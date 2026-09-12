@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from sr_od.application.currency_war.kernel.cw_board_state import (
         BoardState,
     )
+
 from sr_od.application.currency_war.data.cw_shop_odds import (
     DISTINCT_CARDS_PER_COST,
     POOL_COPIES_PER_CARD,
@@ -407,12 +408,12 @@ def test_refresh_prob_lookup() -> None:
     assert refresh_prob(99, 3) == 0.0, '无该等级 → 0'
 
 
-# ==================== xp 买费折扣修复锁族(T-240;T-217 双重折扣核对) ====================
+# ==================== xp 买费折扣修复锁族(正本 = ADR-0632) ====================
 # 规范语义 = strategy-env-impacts.md §2 通用模式 1(2026-09-10 定稿):
 # 观察优先、兜底逻辑——显示价(最近备战帧 OCR,游戏已算好折扣)直通不再减;
 # 观察缺省 → 兜底 = 基准 4 − 折扣(max 0;商业间谍 xp_buy_cost_discount +
 # 成长的快乐等级门 xp_click_discount_from_level 族)。
-# 改前病理(T-217 核对 §0/§4):xp_click_cost 对两支无差别再减(显示价支双扣);
+# 改前病理(ADR-0632 背景核对):xp_click_cost 对两支无差别再减(显示价支双扣);
 # upgrade_plan_fee 裸字段取价零折扣(反方向单侧错)——两函数互补单侧错。
 
 _JUST_JOY = '成长的快乐'    # xp_click_discount_from_level=1 @8(cw_investments 注册)
@@ -530,7 +531,7 @@ def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
 def test_upgrade_plan_fee_no_second_discount_implementation() -> None:
     """结构锁:upgrade_plan_fee 内禁第二处独立取价/折扣实现(方案审关键修改①)。
 
-    「同一语义两处实现」正是互补单侧错的漂移温床(T-217 核对 §4);源面
+    「同一语义两处实现」正是互补单侧错的漂移温床(ADR-0632);源面
     断言:只许委托 xp_click_cost,禁裸读 level_up_cost、禁折扣字段字样。"""
     import inspect
 

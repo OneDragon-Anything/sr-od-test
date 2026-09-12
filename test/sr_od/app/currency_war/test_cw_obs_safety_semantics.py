@@ -12,10 +12,8 @@ _ocr/_area_rect 系),检验「OCR 层吐出 X → 读取器产出 Y」的合同:
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
-from one_dragon.base.geometry.rectangle import Rect
 
-from sr_od.application.currency_war.kernel.cw_obs_core import GOLD_MAX
+from one_dragon.base.geometry.rectangle import Rect
 from sr_od.application.currency_war.obs import cw_observation as cobs
 from sr_od.application.currency_war.obs import cw_resume_lock as rlock
 from sr_od.application.currency_war.obs import cw_shop_refresh_obs as srefresh
@@ -171,7 +169,6 @@ class TestLevelSafety:
         # 真帧锁(2026-08-26 佩佩局实弹修复):等级漏读 → 经验条反推真级
         # ("0/4"→lv3);仍读不到才退期望曲线。旧期望兜底 4 → cap−level=0 →
         # 后排选 6 格档 → 佩佩@slot7 窗口未被枚举丢读(事故背书)
-        from pathlib import Path
         from one_dragon.utils import cv2_utils
         from one_dragon.utils.file_utils import get_project_root
         img = cv2_utils.read_image(str(

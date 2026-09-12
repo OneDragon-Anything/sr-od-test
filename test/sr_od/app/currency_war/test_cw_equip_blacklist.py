@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """dd-015/dd-016 执行层修复批行为测试(复盘 g_20260902_181254 修复项 A/E)。
 
 - A(装备拖拽失败降级,dd-015):失败登记 ≥2 次拉黑该(件→角色)对、
@@ -13,16 +12,15 @@
 # 非 data 表——待装备策略主题归并,禁按 data 域处置。
 from __future__ import annotations
 
+from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
+    residual_fill_plan,
+)
 from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     DRAG_FAIL_BLACKLIST_LIMIT,
     equip_drag_key,
     filter_alloc_blacklisted,
     register_equip_drag_failure,
 )
-from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
-    residual_fill_plan,
-)
-
 
 # ==================== dd-015:A 失败拉黑 + 跳过继续 ====================
 

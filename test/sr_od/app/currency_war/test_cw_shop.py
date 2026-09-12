@@ -39,7 +39,6 @@ from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
     expected_gold_after_actions,
     refresh_effective,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -89,7 +88,8 @@ class TestCriteriaShopFaces:
         bench = [_bc(m) for m in members[1:]]     # 缺 m0,其余占满
         while len(bench) < BENCH_CAPACITY:
             bench.append(_bc(f'填充件{len(bench)}'))
-        st = _state(gold=30, shop=[_card(m0, cost=3)], bench=bench)
+        st = _state(gold=30, shop=[_card(m0, cost=3)], bench=bench,
+                    deployed=[_bc('板上件锚', slot=1)])   # T-32 守卫前置
         acts = _decide(st, _session(comp))
         sells = [a for a in acts if isinstance(a, SellBench)]
         buys = [a for a in acts if isinstance(a, BuyCard)]
@@ -162,7 +162,8 @@ class TestShopRejects:
         bench = [_bc(m, slot=i + 1) for i, m in enumerate(members[1:])]
         while len(bench) < BENCH_CAPACITY:
             bench.append(_bc(f'填充件{len(bench)}', slot=len(bench) + 1))
-        st = _state(gold=0, shop=[_card(m0, cost=3)], bench=bench)
+        st = _state(gold=0, shop=[_card(m0, cost=3)], bench=bench,
+                    deployed=[_bc('板上件锚', slot=1)])   # T-32 守卫前置
         sess = _session(comp)
         acts = _decide(st, sess)
         sells = [a for a in acts if isinstance(a, SellBench)]

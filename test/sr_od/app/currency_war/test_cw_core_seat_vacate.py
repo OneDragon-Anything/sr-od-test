@@ -42,6 +42,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
 
 # ===== 测试基建(idiom 同 test_cw_core_single_card_channel)=====
 
@@ -82,7 +85,10 @@ def _state(gold: int, shop_cards: list[ShopCard],
     st.plane = plane
     st.shop = shop_cards
     st.bench = bench if bench is not None else []
-    st.deployed = []
+    # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
+    # 拒卖」,腾席发射位直调环境须 ≥1 上场件,否则 fail-closed 拒帧
+    # ——与被测语义无关的红按环境前置补齐,非跟绿。
+    st.deployed = [_bc('板上件锚', slot=1)]
     return st
 
 
@@ -129,7 +135,7 @@ class TestSeatVacateEmission:
         sess = _sess(get_comp(_UNLOCK_COMP), IntentionState())
         bench = _unlocked_members_filled([_FUEL])
         st = _state(45, [_card('希儿', 3)], bench=bench)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, SellBench)
         assert act.expect == _FUEL
         assert act.reason == ''
@@ -150,7 +156,7 @@ class TestSeatVacateEmission:
         assert len(bench) == BENCH_CAPACITY
         sess = _sess(get_comp(_LOCK_COMP_SMALL), ist)
         st = _state(45, [_card('希儿', 3)], bench=bench)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, SellBench)
         assert act.expect == _FUEL
         assert act.reason == ''
@@ -165,7 +171,7 @@ class TestSeatVacateEmission:
         sess = _sess(get_comp(_UNLOCK_COMP), IntentionState())
         bench = _unlocked_members_filled([_FUEL])
         st = _state(45, [_card('丹恒·饮月', 3)], bench=bench, plane=1)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, SellBench)
         assert act.expect == _FUEL
         assert act.reason == ''
@@ -186,7 +192,7 @@ class TestSeatVacateConversion:
         sess = _sess(get_comp(_UNLOCK_COMP), IntentionState())
         bench = _unlocked_members_filled([_FUEL])
         st = _state(45, [_card('希儿', 3)], bench=bench)
-        act1 = shop.decide_shop_action(st, sess, _cfg())
+        act1 = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act1, SellBench) and act1.expect == _FUEL
         # 下一迭代:victim 离席(引擎卖出应用),其余输入不变
         bench2 = [b for b in bench if (b.char_id or '') != _FUEL]
@@ -194,7 +200,7 @@ class TestSeatVacateConversion:
             b.slot = i + 1
         st2 = _state(45 + (act1.income or 0), [_card('希儿', 3)],
                      bench=bench2)
-        act2 = shop.decide_shop_action(st2, sess, _cfg())
+        act2 = shop.decide_shop_action(cw4_bs(st2, sess), sess, _cfg())
         buys = _core_buys([act2])
         assert len(buys) == 1 and buys[0].card.name == '希儿'
         assert buys[0].reason == 'core_single_card_buy:unlocked'
@@ -222,7 +228,7 @@ class TestHonestStallAndTailKey:
         sess = _sess(get_comp(_UNLOCK_COMP), IntentionState())
         bench = _nonfuel_full_bench(_UNLOCK_COMP)
         st = _state(45, [_card('希儿', 3)], bench=bench)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not isinstance(act, SellBench)
         assert not _core_buys([act])
         ct = _counters(sess)
@@ -239,7 +245,7 @@ class TestHonestStallAndTailKey:
         bench = [_bc('三月七', slot=i + 1) for i in range(BENCH_CAPACITY)]
         sess = _sess(get_comp(_UNLOCK_COMP), ist)
         st = _state(45, [_card('希儿', 3, star=2)], bench=bench)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not _core_buys([act])
         ct = _counters(sess)
         assert ct.get('core_candidate_seen') == 1
@@ -263,7 +269,7 @@ class TestSameVisitWindowBoundary:
                                              round_num=2)
         bench = _unlocked_members_filled(fills)
         st = _state(45, [_card('希儿', 3)], bench=bench)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not isinstance(act, SellBench)
         assert not _core_buys([act])
         ct = _counters(sess)
@@ -284,14 +290,14 @@ class TestGateReorderZeroDrift:
         # TestUnlockedFrameUnchanged 的 ④放行帧:plane1 未定型期)
         sess = _sess(get_comp(_UNLOCK_COMP), IntentionState())
         st = _state(30, [_card('丹恒·饮月', 2)], plane=1)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, BuyCard)
         assert act.reason == 'transition_component_buy'
         assert _counters(sess).get('transition_component_buy_hit') == 1
         # 未锁线恒买席空直买(重排前序 = 席→金,现 = 金→席)
         sess2 = _sess(get_comp(_UNLOCK_COMP), IntentionState())
         st2 = _state(45, [_card('希儿', 3)])
-        act2 = shop.decide_shop_action(st2, sess2, _cfg())
+        act2 = shop.decide_shop_action(cw4_bs(st2, sess2), sess2, _cfg())
         buys = _core_buys([act2])
         assert len(buys) == 1
         assert buys[0].reason == 'core_single_card_buy:unlocked'
@@ -308,7 +314,7 @@ class TestAffordableDoubleBucket:
         sess = _sess(get_comp(_UNLOCK_COMP), IntentionState())
         bench = _nonfuel_full_bench(_UNLOCK_COMP)
         st = _state(2, [_card('希儿', 3)], bench=bench)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not isinstance(act, SellBench)
         assert not _core_buys([act])
         ct = _counters(sess)
@@ -325,7 +331,7 @@ class TestAffordableDoubleBucket:
         sess = _sess(get_comp(_UNLOCK_COMP), IntentionState())
         bench = _unlocked_members_filled([_FUEL])
         st = _state(2, [_card('希儿', 3)], bench=bench)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not _core_buys([act])
         ct = _counters(sess)
         assert ct.get('core_unlocked_unaffordable_fundable') == 1
@@ -343,7 +349,7 @@ class TestAffordableDoubleBucket:
         bench += [_bc(f'重装{i}', star=2, slot=i + 6) for i in range(4)]
         sess = _sess(get_comp(_LOCK_COMP_SMALL), ist)
         st = _state(2, [_card('希儿', 3)], bench=bench)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not _core_buys([act])
         ct = _counters(sess)
         assert ct.get('core_candidate_seen') == 1
@@ -432,7 +438,7 @@ class TestExitKeyCompleteness:
 
         def sweep(sess, st):
             state_of(sess).cw4_counters = {}
-            shop.decide_shop_action(st, sess, _cfg())
+            shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
             fired.update(k for k in _counters(sess)
                          if k.startswith(('core_', 'transition_')))
 

@@ -54,6 +54,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+    cw4_feed,
+)
 
 # ===== 基建 =====
 
@@ -138,7 +142,7 @@ class TestShopStallCache:
         发射动作与无缓存世界逐位一致(弱支配行为恒等锁)。"""
         st = _storm_state()
         sess = _locked_session()
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 1
         assert c.get('bench_full_buy_abandon', 0) == 1
@@ -147,7 +151,7 @@ class TestShopStallCache:
         assert state_of(sess).cw4_m2_stall_latch is not None, '首推导须写闩'
         # 帧间:执行层确认已执行 LevelUpShop(∈ 白名单)→ 置 token
         _arm_shop_token(sess, 'LevelUpShop')
-        act2 = shop.decide_shop_action(st, sess, _cfg())
+        act2 = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 1, '命中帧事件键不增'
         assert c.get('bench_full_buy_abandon', 0) == 1, '命中帧事件键不增'
@@ -156,7 +160,7 @@ class TestShopStallCache:
         assert c.get('m2_stall_cache_rederive', 0) == 1
         # 行为恒等:与无缓存世界的同输入首推导逐位一致
         sess_plain = _locked_session()
-        act_plain = shop.decide_shop_action(st, sess_plain, _cfg())
+        act_plain = shop.decide_shop_action(cw4_bs(st, sess_plain), sess_plain, _cfg())
         assert repr(act2) == repr(act_plain), (act2, act_plain)
 
     def test_t2_variant_action_invalidates_and_rederives(self):
@@ -164,9 +168,9 @@ class TestShopStallCache:
         重推导:两事件键再 +1(新停摆事件)、hit 恒 0。"""
         st = _storm_state()
         sess = _locked_session()
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         _arm_shop_token(sess, 'BuyCard')
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 2
         assert c.get('bench_full_buy_abandon', 0) == 2
@@ -187,11 +191,11 @@ class TestShopStallCache:
         sess = _locked_session()
         # 帧1:末席为 3★ 占位件(非燃料)⇒ 停摆形态
         st.bench[-1] = _bc('placeholder', slot=BENCH_CAPACITY, star=3)
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         # 帧间:W 外动作(SellBench)卖出占位件 ⇒ offline 入席
         st.bench[-1] = _bc(offline, slot=BENCH_CAPACITY)
         _arm_shop_token(sess, 'SellBench')
-        act2 = shop.decide_shop_action(st, sess, _cfg())
+        act2 = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act2, SellBench), '重推导须发现恢复的燃料并卖出'
         assert act2.expect == offline
 
@@ -200,9 +204,9 @@ class TestShopStallCache:
         重推导(最坏退化 = 现行为,零风险)。"""
         st = _storm_state()
         sess = _locked_session()
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         _arm_shop_token(sess, 'SomeFutureAction')
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 2
         assert c.get('m2_stall_cache_hit', 0) == 0
@@ -213,10 +217,10 @@ class TestShopStallCache:
         首推导帧的键集差恰为 {m2_retry_exhausted 事件化} 的设计声明)。"""
         st = _storm_state()
         sess = _locked_session()
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         keys1 = set(state_of(sess).cw4_counters)
         _arm_shop_token(sess, 'LevelUpShop')
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         keys2 = set(state_of(sess).cw4_counters)
         new_keys = keys2 - keys1
         assert new_keys == {'m2_stall_cache_hit', 'm2_stall_repeat_frame'}, \
@@ -229,12 +233,12 @@ class TestShopStallCache:
         跨战斗伪命中封死锁(防线承重 = 段标识比较,非读清)。"""
         st = _storm_state()
         sess = _locked_session()
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         _arm_shop_token(sess, 'LevelUpShop')      # visit 末帧动作 ∈ W 残留
         assert state_of(sess).cw4_frame_action_record is not None
         # 新段入口(仲裁段/重进 visit):序号推进
         state_of(sess).cw4_segment_serial += 1
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 2, '跨段残留须重推导'
         assert c.get('m2_stall_cache_rederive', 0) == 2
@@ -246,12 +250,12 @@ class TestShopStallCache:
         仍失败 ⇒ 重推导(闩防线不因 token 翻新而旁路)。"""
         st = _storm_state()
         sess = _locked_session()
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert state_of(sess).cw4_m2_stall_latch[1] == 0
         state_of(sess).cw4_segment_serial += 1
         # 模拟残留 token 被同段新动作翻新(序号已是当前段)——闩仍旧段
         _arm_shop_token(sess, 'LevelUpShop')
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 2
         assert c.get('m2_stall_cache_hit', 0) == 0
@@ -272,9 +276,9 @@ class TestShopStallCache:
         st.bench[-1] = _bc(material, slot=BENCH_CAPACITY)
         st.deployed = [_bc(material, slot=1)]
         sess = _locked_session()
-        shop.decide_shop_action(st, sess, _cfg())     # 帧1:重推导
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())     # 帧1:重推导
         _arm_shop_token(sess, 'LevelUpShop')
-        shop.decide_shop_action(st, sess, _cfg())     # 帧2:缓存命中
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())     # 帧2:缓存命中
         c = state_of(sess).cw4_counters
         assert c.get('m2_stall_cache_hit', 0) == 1, '帧2 须走缓存路径(锁有效前提)'
         assert c.get('merge_material_guard_blocked', 0) == 2, \
@@ -339,7 +343,7 @@ class TestPrepStallCache:
         序号,闩序号不等 ⇒ 重推导(跨域伪命中被段标识比较拦截)。"""
         st_state = _storm_state()
         shop_sess = _locked_session()
-        shop.decide_shop_action(st_state, shop_sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st_state, shop_sess), shop_sess, _cfg())
         assert state_of(shop_sess).cw4_m2_stall_latch is not None
         c = state_of(shop_sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 1    # 商店帧首推导
@@ -425,7 +429,7 @@ class TestTokenWritePointLiveness:
         st.bench = []
         st.deployed = []
         sess = _locked_session()
-        sess.shop_state_frame = st
+        cw4_feed(sess, st)
         acts = strat.decide_shop_screen(sess, _cfg())
         assert len(acts) == 1 and isinstance(acts[0], cw_state.RefreshShop), \
             '桩化首帧刷新终结(前提)'

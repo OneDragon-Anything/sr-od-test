@@ -23,12 +23,6 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.data import cw_synthesis as synth
-from sr_od.application.currency_war.data.cw_chars import (
-    CHARACTERS,
-    chars_by_cost,
-)
-from sr_od.application.currency_war.obs.cw_equipment import EQUIPMENT_ROSTER
 from test.conftest import SrTestContext
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]   # 仓库根(StarRailOneDragon)

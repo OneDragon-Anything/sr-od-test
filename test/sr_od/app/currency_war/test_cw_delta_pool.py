@@ -57,9 +57,6 @@ from sr_od.application.currency_war.data.cw_battle_tables import (
 )
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_battle_calib as calib
-from sr_od.application.currency_war.kernel.cw_board_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.sim import (
     cw_delta_pool_gen,
     engine_p1,

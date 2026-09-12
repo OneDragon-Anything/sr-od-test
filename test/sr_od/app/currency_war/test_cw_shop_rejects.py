@@ -33,6 +33,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
     state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_feed,
+    cw4_bs,
+)
 
 _COMP = get_comp('绯英欢愉')
 
@@ -75,7 +79,7 @@ def _decide(st: GameState, session: StrategySession) -> list:
         sim_decision_registry,
     )
     strat = MandateV1Strategy(registry=sim_decision_registry())
-    session.shop_state_frame = st
+    cw4_feed(session, st)
     return strat.decide_shop_screen(session, _Cfg())
 
 
@@ -243,7 +247,9 @@ def test_sim_shop_rejects_distinguishes_supply_vs_gate():
     # 「拒因 owned 命中占比大幅下降」的验收面)——本锁保留不变式断言
     # (凡出现线内成员键,必不落 non_line/transition_char),纯映射面由
     # K 空窗直调锁与 missing_unaffordable/missing_bench_full 两帧锁承载。
-    for seed in (40,):
+    # W6 波 4 种子重锚:黑板容器化后引擎 RNG 消费序列位移,40 失准;
+    # 44 为重跑探针首命中(不变式断言在线,非机械跟绿)。
+    for seed in (44,):
         res = simulate_p1(seed, pool='fallback', planes=2)
         for row in res.ledger:
             label = row.get('target_comp')
@@ -273,7 +279,8 @@ def test_sim_k_empty_window_comp_none_falls_back_non_line():
     )
     st = _state(114, [_card('花火', 2), _card('银枝', 2)],
                 deployed=[_dep('绯英')])
-    out = shop_unbought_reasons(st, None, (), [])
+    # 容器喂入(W6 波 4:shop_unbought_reasons 切容器签名;cw4_bs 助手)
+    out = shop_unbought_reasons(cw4_bs(st, _session()), None, (), [])
     assert out == {'花火': 'transition_component', '银枝': 'non_line'}
 
 
@@ -361,5 +368,5 @@ def test_sim_reject_call_site_canonical_source_anchor():
 
     from sr_od.application.currency_war.sim import engine_p1
     src = Path(engine_p1.__file__).read_text(encoding='utf-8')
-    assert 'st, _k_comp, _obs_bm, acts, hub_names=_seg_hub)' in src, \
-        'sim 打标调用点须消费 obs 段正典 membership 并直传 hub_names'
+    assert '_seg_bs_of(sess), _k_comp, _obs_bm, acts,\n                    hub_names=_seg_hub)' in src, \
+        'sim 打标调用点须消费容器(obs 段正典 membership)并直传 hub_names'

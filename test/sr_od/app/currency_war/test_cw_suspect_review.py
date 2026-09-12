@@ -36,12 +36,15 @@ _TOOL = (Path(__file__).resolve().parents[5] / 'tools/cw/review_skeleton.py')
 
 
 @lru_cache(maxsize=1)
-def _seed56_ledger() -> tuple:
-    """种子锚账本(seed 56;同次运行内只算一次;README 纪律 11)。
+def _seed89_ledger() -> tuple:
+    """种子锚账本(seed 89;同次运行内只算一次;README 纪律 11)。
     锚历史(T-32 空板止损守卫位移):原 seed18 p1r1 孤儿清算形态在开局
     空板凑息帧,被守卫(待卖后 deployed 为空 ⇒ 拒卖)按设计拦截;探针
-    重扫(seed 0-109)命中 {56: p1r2, 89: p1r3},取最小 56。"""
-    return tuple(simulate_p1(56, pool='snapshot').ledger)
+    重扫(seed 0-109)命中 {56: p1r2, 89: p1r3},取最小 56。
+    锚历史(W6 波 4 黑板容器化位移):引擎 RNG 消费序列再位移,seed 56
+    p1r2 形态消失;重跑探针(seed 0-199)全局面仅命中 {89: p1r3/桑博}
+    (不变式在线,非机械跟绿),锚移 89。"""
+    return tuple(simulate_p1(89, pool='snapshot').ledger)
 
 
 def _locked_target() -> tuple[str, str]:
@@ -210,7 +213,7 @@ def test_c4a_convert_key_review() -> None:
     nokey = _pair_row({'sell_reason': 'line_switch_collapse'})
     nokey['target_comp'] = label
     assert ledger.check_no_same_round_buy_sell([nokey]) == []
-    # 未锁线(target 空):名册不可解析 → 豁免照旧(seed56 p1r2 口径)
+    # 未锁线(target 空):名册不可解析 → 豁免照旧(seed89 p1r3 口径)
     unlocked = _pair_row({'sell_reason': 'line_switch_collapse',
                           'dec_sell_in_line': False})
     assert ledger.check_no_same_round_buy_sell([unlocked]) == []
@@ -468,12 +471,12 @@ def test_c7_seed_scope_review() -> None:
 
 # ===== 生成侧披露三键(engine_p1 执行点;供给半环,README 纪律 13) ==========
 
-def test_disclosure_keys_write_end_seed56() -> None:
-    """三披露键写端在位锁(探针 seed 56,锚历史见 _seed56_ledger;写端
+def test_disclosure_keys_write_end_seed89() -> None:
+    """三披露键写端在位锁(探针 seed 89,锚历史见 _seed89_ledger;写端
     断线 = 检查器/检测器静默退回不可复核,失配显形能力归零)。键形状:
     BuyCard= int 成型度,LevelUp/SellBench= bool。发射面为零的种子 =
     探针失准,红须指向重选探针种子(README 纪律 12)。"""
-    rows = [dict(r) for r in _seed56_ledger()]
+    rows = [dict(r) for r in _seed89_ledger()]
     buys = [a for row in rows for a in (row.get('actions') or [])
             if a.get('__type__') == 'BuyCard']
     lvs = [a for row in rows for a in (row.get('actions') or [])
@@ -492,24 +495,24 @@ def test_disclosure_keys_write_end_seed56() -> None:
         assert isinstance(a.get('dec_sell_in_line'), bool), a
 
 
-def test_seed56_t141_exemption_holds_under_review() -> None:
-    """seed56 端到端:T-141 豁免在复核新机制下仍工作(未锁线期孤儿
+def test_seed89_t141_exemption_holds_under_review() -> None:
+    """seed89 端到端:T-141 豁免在复核新机制下仍工作(未锁线期孤儿
     清算 = 名册不可解析 → unverifiable → 豁免照旧,ADR-0591 语义
-    不被迁移翻案;锚历史见 _seed56_ledger)。红证:把该行语境改造成
+    不被迁移翻案;锚历史见 _seed89_ledger)。红证:把该行语境改造成
     可解析名册并保留键 False(人为失配)→ 可疑项 + 判违产出(检查端
     复核确实在岗)。"""
-    rows = _seed56_ledger()
-    p1r2 = [dict(r) for r in rows
-            if r.get('plane') == 1 and r.get('round_num') == 2]
-    assert ledger.check_no_same_round_buy_sell(p1r2) == []
+    rows = _seed89_ledger()
+    p1r3 = [dict(r) for r in rows
+            if r.get('plane') == 1 and r.get('round_num') == 3]
+    assert ledger.check_no_same_round_buy_sell(p1r3) == []
     # 检测器面同样不产 D1 失配条目(复核同判据,单一源)
     d1 = [e for e in suspects.run_suspect_checks(list(rows))
-          if e.get('mode') == 'D1' and e.get('round_num') == 2
+          if e.get('mode') == 'D1' and e.get('round_num') == 3
           and not e.get('cross_ref')]
     assert d1 == [], d1
     # 人为失配(红证):语境改成可解析名册,dec 键仍 False → 显形
     label, _ = _locked_target()
-    forged = [dict(r, target_comp=label) for r in p1r2]
+    forged = [dict(r, target_comp=label) for r in p1r3]
     v = ledger.check_no_same_round_buy_sell(forged)
     assert any('可疑项(转化分键失配)' in x for x in v), v
 

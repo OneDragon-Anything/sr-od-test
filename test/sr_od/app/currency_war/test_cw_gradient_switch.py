@@ -8,7 +8,6 @@ Manager 发现/实例化/值域三测已并入主题文件 test_cw_strategy.py
 为超集——闭集锁多 PluginSource.BUILTIN 断言,同文件另有第三方发现/重复
 id 检测/缺省 registry 注入等 manager 独家面)。本文件主题 = config 值域门
 + 遥测 v2 字段面。"""
-import json
 from pathlib import Path
 
 import pytest
@@ -16,7 +15,7 @@ import pytest
 from sr_od.application.currency_war.currency_war_config import (
     CurrencyWarConfig,
 )
-from sr_od.application.currency_war.telemetry import query, recorder
+from sr_od.application.currency_war.telemetry import recorder
 
 
 def test_config_domain_fields_validated_at_construction(monkeypatch) -> None:
@@ -47,15 +46,6 @@ def test_v2_extra_writer_retired(tmp_path: Path) -> None:
         'record_decision 应已随删除波 1 删除(防半删)'
 
 
-def test_query_rounds_shows_v2(tmp_path: Path) -> None:
-    """S1:rounds 视图显示 v2 字段(冻结存量档案读端契约;行写入已退役,
-    构造 tmp 档案喂视图)。"""
-    rows = [{'schema_version': 1, 'run_id': 'test_v2q',
-             'strategy_id': 'line_v2', 'v2_mode': 'war',
-             'v2_locked_line': 'jizi_train', 'v2_bridge': '',
-             'plane': 1, 'round_num': 1, 'gold': 50}]
-    with open(tmp_path / 'decisions.jsonl', 'w', encoding='utf-8') as fh:
-        for r in rows:
-            fh.write(json.dumps(r, ensure_ascii=False) + '\n')
-    lines = query.query_rounds(tmp_path, 'test_v2q')
-    assert any('v2=[war|jizi_train|-]' in ln for ln in lines), lines
+# [退役墓碑,W3] test_query_rounds_shows_v2 随 query_rounds 旧视图退役
+# (W3,删旧读面);栈显示语义的现役载体 = journal_query 视图族。
+# git 历史可复活。

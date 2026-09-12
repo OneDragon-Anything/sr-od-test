@@ -1,5 +1,5 @@
 """CW 装备域测试(#10):分配不变量 4 代表行 + M7 转移门(dd-027 事故家族)
-+ 穿戴语义代表 + 阵营星徽(dd-015 事故代表)。
++ 穿戴语义代表 + 阵营星徽(dd-015 事故代表)+ 穿着可行性三谓词(W1/W2/W3)。
 
 收缩注记(CUT9 二次收缩:原 15 测试→8 测试;同分支变体/双保险重复砍,
 git 可复活):
@@ -18,7 +18,17 @@ git 可复活):
 - transfer gate:M7 可穿存在性门①(工具-only 活锁事故回归帧);
 - wear 代表:释放判据表 row5(committed 域豁免 + opening 不对称)+
   散文↔结构对拍真值锚(罚值 80%/8%);
-- 星徽:同阵营排除(dd-015 复盘 g_20260902_181254 定谳)。
+- 星徽:同阵营排除(dd-015 复盘 g_20260902_181254 定谳);
+- 穿着可行性三谓词(W1 同名∧非两基础件合成图谱对 / W2 件专属前置 /
+  W3 骇客目标类 fail-closed):设计出处 =
+  docs/develop/sr_od/application/currency_war/proofs/p95-allocation-feasibility-dominance.md
+  §2-A/§5(必拒对分配前排除严格支配分配后重试;三谓词各一组按「删守卫
+  即红/过宽即红」判别力落锁)+ 结构化载体
+  data/cw_equipment_wear_rules_data(前置/可穿性建模单一源)。锁面申报
+  (部分有效):W1/W2 的 worn 输入与容量扣减同源(below-avatar 画面现读),
+  read_row_equipped mini icon 漏读(3 件读 1 实证)使 worn 缩水 → 漏读帧
+  拦不全,识别面批收口前谓词部分有效,禁把漏读帧的漏拦读成谓词无效
+  (P95 §2 附出辖声明)。
 
 来源:本文件 = test_cw_equip_alloc_gen.py(git mv)+ test_cw_equip_transfer_gate.py
 /test_cw_equip_wear_semantics.py 代表行并入(2026-09-09 套件重建批 A,#10;
@@ -131,14 +141,34 @@ def test_allocation_invariants(ci, di, oi):
     # core 未上场时 key 件经兜底穿给场上人是合理行为(保战力)。core 上场后
     # 的转移不由分配器/本 op 直拖完成(装备不能角色间直拖;转移=卖角色或
     # 扳手拆,归决策器,见 equipment_mechanics「装备转移机制」节)。
+    # 穿戴可行性豁免(锁语义重推记录,P95 支配命题 §2-A 分配前排除):
+    # key 同名多副本是 comp 设计的合法输入形态,但第二副本对已持有同名件
+    # 的 core 构成必拒对(游戏侧同名∧非两基础件合成图谱对拒收,W1 建模)
+    # ——排除后副本留 pool 走兜底。故「非 core 收到 key 实例」的唯一合法
+    # 形态 = 每个在场 core 对该实例均被穿戴可行性门拦;复核用生产谓词
+    # 单源(_wearable_gate_ok)直调 + 分配终态 core 已穿名单,不复刻分配
+    # 内部序。W3 门(hacker 类)下非 core 同样不可穿,该形态仍被本断言拦。
     if comp is not None and comp.key_equips:
         keys = list(comp.key_equips)
         core_set = set(comp.core_chars) | ({comp.plaza_carry} if comp.plaza_carry else set())
         field_core = core_set & on_field
+        from sr_od.application.currency_war.kernel.cw_comps import _wearable_gate_ok
+        core_worn_final: dict[str, list[str]] = {}
+        for c, w in alloc:
+            if c in core_set:
+                core_worn_final.setdefault(c, []).append(w)
         for cname, w in alloc:
             if w in keys and field_core:
-                assert cname in core_set, f'key 件 {w} 分给了非 core {cname}(core 在场)'
-                keys.remove(w)   # multiplicity 消费
+                if cname in core_set:
+                    keys.remove(w)   # multiplicity 消费
+                    continue
+                infeasible_cores = [c for c in field_core
+                                    if not _wearable_gate_ok(
+                                        core_worn_final.get(c, []), c, w)]
+                assert len(infeasible_cores) == len(field_core), \
+                    (f'key 件 {w} 分给了非 core {cname},但存在可行 core '
+                     f'{[c for c in field_core if c not in infeasible_cores]}'
+                     f'(必拒对排除面失守)')
     # I3 core 优先(comp 在场):通用件填满 core 剩余容量前非 core 不拿
     # (core 容量可能已被 key 件占满——白厄 key×3 后通用容量 0,非 core 拿合法)。
     # 死库存豁免(ADR-0391,全 plane 生效——ADR-0265 增补后 P1 亦然):
@@ -282,3 +312,148 @@ def test_wear_prose_value_pairing_lock():
     assert '空缺装备栏' in prose2
     assert '8%' in prose2, '散文罚值 8% 已漂移,对拍后更新 penalty_value'
     assert e2.penalty_value == 0.08
+
+
+# ==================== 穿着可行性三谓词(W1/W2/W3;P95 §2-A 分配前排除) ====================
+# 设计出处(持久锚):docs/develop/sr_od/application/currency_war/proofs/
+# p95-allocation-feasibility-dominance.md §2-A(三谓词机制事实)/§3 边界②③
+# (推断级定谳前统一保守拦截 + 拦域与配对守卫例外域互斥)/§5(消费位与锁)。
+# 判定单源 = kernel/cw_comps._wearable_gate_ok(分配与分配空归因镜像共用);
+# 前置/可穿性建模单一源 = data/cw_equipment_wear_rules_data。
+# 每组首锁 = 「删守卫即红」的守卫移除验证载体;反例面锁 = 「过宽即红」
+# (防 W1 退化回裸同名形态拦掉合法穿着即合成通道)。
+
+def test_w1_same_name_non_graph_pair_stays_owned():
+    """W1 判拒面:身上已有永动机,同池再入第二件永动机 → 必拒留 owned
+    (同名对 ∉ 两基础件合成图谱对;定谳前保守拦截,P95 §3 边界②)。
+    删除 _wearable_gate_ok 的 W1 分支本锁即红。"""
+    deploy = [_mk_dep('符玄', slot=1)]
+    out = equip_allocation(None, deploy, ['永动机'], {('back', 1): ['永动机']})
+    assert out == [], f'同名非图谱对应被拦(件留 owned),得 {out}'
+
+
+def test_w1_same_name_basic_self_pair_allowed():
+    """W1 反例面(收窄辖域回归锚):身上已有光能电池,同池再入光能电池 →
+    放行(同名对 ∈ 配方图 = 合法穿着即合成通道,游戏自动合成永动机),
+    交配对守卫例外①②既有辖域;W1 若退化回裸「item ∈ worn」形态本锁即红。"""
+    deploy = [_mk_dep('符玄', slot=1)]
+    out = equip_allocation(None, deploy, ['光能电池'], {('back', 1): ['光能电池']})
+    assert out == [('符玄', '光能电池')], f'同名自配对 = 合成通道须放行,得 {out}'
+
+
+def test_w1_synthesis_product_expansion():
+    """W1 输入口径:现读仍见原始组件对(光能电池×2,游戏侧已合成永动机)
+    → 同名第二件永动机判拒(合成产物展开 = P95 §2-A「worn = 现读 ∪ 合成
+    产物展开」;展开 = cw_synthesis.expand_worn_products)。删除展开调用
+    本锁即红。"""
+    deploy = [_mk_dep('符玄', slot=1)]
+    out = equip_allocation(None, deploy, ['永动机'],
+                           {('back', 1): ['光能电池', '光能电池']})
+    assert out == [], f'合成产物展开后应见永动机在身(判拒),得 {out}'
+
+
+def test_w1_block_domain_disjoint_from_pairing_guard_exception_domain():
+    """W1 拦域 ∩ 配对守卫例外①②辖域 = 空(P95 §3 边界③互斥对账回归锁;
+    程序化口径:拦域成员 [同名对 ∉ 图谱] 全为非基础件,例外域全为基础件
+    交叉配对)。注册表图谱形态漂移(某基础件失去自配配方 → 拦域混入
+    基础件 = 拦合法合成通道)本锁即红。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
+    from sr_od.application.currency_war.data.cw_synthesis import (
+        RESERVED_COMPONENTS,
+        self_advance,
+    )
+    blocked = [n for n in EQUIPMENTS if self_advance(n) is None]
+    assert blocked, '拦域非空前提失真(注册表形态漂移,先复核再动)'
+    leaked = [n for n in blocked if n in RESERVED_COMPONENTS]
+    assert not leaked, \
+        f'基础件 {leaked} 无自配配方 → 混入 W1 拦域,与例外①②辖域相交(互斥被破坏)'
+
+
+def test_w2_empty_slots_prereq_blocks_nonempty_wearer():
+    """W2 判拒面:「需要空装备栏」族(随便骰子·特权)对身上有件的角色必拒
+    留 owned(实机实证形态:希儿 2 件在身拖骰子被拒;读法定谳前保守
+    「有任意件即拒」)。删除 W2 分支本锁即红。"""
+    deploy = [_mk_dep('希儿', slot=1)]
+    out = equip_allocation(None, deploy, ['随便骰子·特权'],
+                           {('back', 1): ['折叠小刀', '轮滑鞋']})
+    assert out == [], f'前置不满足(身上有件)应拒,得 {out}'
+
+
+def test_w2_empty_wearer_wearable():
+    """W2 合法面:空装备栏角色(occupied 空)→ 前置满足正常分配(保守缺省
+    只拒「有件」帧;空栏是骰子族唯一合法穿着态,不得误伤)。W2 过宽
+    (恒拒)本锁即红。"""
+    deploy = [_mk_dep('希儿', slot=1)]
+    out = equip_allocation(None, deploy, ['随便骰子·特权'], {('back', 1): []})
+    assert out == [('希儿', '随便骰子·特权')], f'空装备栏应可穿,得 {out}'
+
+
+def test_w2_structured_rule_coverage_lock():
+    """W2 散文↔结构对拍锁(载体同构先例 = 软弱无力罚值对拍锁):结构条目
+    谓词值与注册表 effect 措辞互为锚,漂移即红;互检零告警 = 无漏建模/
+    孤儿条目/名锚错位(消费点显警的静态保证面)。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
+    from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (
+        EQUIP_WEAR_PREREQUISITES,
+        WEAR_PREREQ_EMPTY_SLOTS,
+        check_equipment_wear_rule_coverage,
+    )
+    assert check_equipment_wear_rule_coverage() == [], '互检显警非空(漏建模/孤儿/措辞漂移)'
+    assert set(EQUIP_WEAR_PREREQUISITES) == {'随便骰子', '随便骰子·特权'}, \
+        '在册条目集漂移:增删条目须同步核对注册表 effect 全文(全表恰两处前置措辞)'
+    for name, entry in EQUIP_WEAR_PREREQUISITES.items():
+        assert entry.predicate == WEAR_PREREQ_EMPTY_SLOTS
+        assert '需要空装备栏' in EQUIPMENTS[name].effect, \
+            f'{name} 散文锚已漂移(effect 不再含前置措辞),对拍后更新结构载体'
+
+
+def test_w3_hacker_item_blocked_for_non_whitelist():
+    """W3 判拒面:骇客改件对白名单外角色必拒留 owned(fail-closed;实机
+    实证形态:欢愉卡带Max 对异阵营普通角色 4/4 拖拽全败)。删除 W3 分支
+    本锁即红。本锁兼作 cw_bond_equips 对账锚:卡带「非成员 +1」半边所依赖
+    的分配通道由本谓词在分配面关闭(bot 自派不再放电该形态)。"""
+    deploy = [_mk_dep('三月七', slot=1), _mk_dep('姬子·启行', slot=2)]
+    out = equip_allocation(None, deploy, ['欢愉卡带Max'])
+    assert out == [], f'骇客件对白名单外角色应全拦(件留 owned),得 {out}'
+
+
+def test_w3_hacker_gate_whitelist_form():
+    """W3 白名单形态锁(登记门语义):fail-closed 门在册值 = 仅银狼LV.999
+    (假说级,真值未定谳,禁当已证);银狼LV.999 在场时正常分配。白名单
+    静默放宽/收窄本锁即红——扩大或收窄须随实测定谳批(骇客件合法装备者
+    单点拖拽观测)同步改写本锁并更新载体注释。"""
+    from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (
+        CATEGORY_WEAR_GATES,
+    )
+    assert CATEGORY_WEAR_GATES.get('骇客') == frozenset({'银狼LV.999'}), \
+        '骇客门白名单形态漂移:改值须随定谳批同步(载体注释 + 本锁)'
+    deploy = [_mk_dep('银狼LV.999', slot=1)]
+    out = equip_allocation(None, deploy, ['欢愉卡带Max'])
+    assert out == [('银狼LV.999', '欢愉卡带Max')], f'白名单角色应可穿,得 {out}'
+
+
+def test_w3_gate_covers_key_equips_channel():
+    """W3 全通道辖域:key_equips 通道同受穿戴可行性门辖(P95 命题主语 =
+    (件,角色) 对,必拒对全分配通道排除;与 _emblem_ok/_pairing_ok 同构
+    ——后两者本就辖 key 环)。key 环摘钩本锁即红。"""
+    comp = _mk_comp(['三月七'], ['欢愉卡带'], carry='三月七')
+    deploy = [_mk_dep('三月七', slot=1)]
+    out = equip_allocation(comp, deploy, ['欢愉卡带'])
+    assert out == [], f'key 通道亦须过穿戴可行性门,得 {out}'
+
+
+def test_alloc_empty_reason_wearable_gate():
+    """分配空归因镜像:全池被穿戴可行性门拦下 → 'wearable_gate'(诊断与
+    分配语义单源镜像;镜像缺失会把全拦帧误归 'unknown' 漂移信号)。
+    stop_reason 同走「分配方案空:」前缀 → 哨兵归域 strategy_gap,与
+    pairing_guard 同域,归域枚举零改动。"""
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        equip_alloc_empty_reason,
+    )
+    deploy = [_mk_dep('三月七', slot=1)]
+    reason = equip_alloc_empty_reason(None, deploy, ['欢愉卡带Max'],
+                                      {('back', 1): []})
+    assert reason == 'wearable_gate', f'得 {reason}'
+    reason2 = equip_alloc_empty_reason(None, [_mk_dep('符玄', slot=1)], ['轮滑鞋'],
+                                       {('back', 1): ['光能电池']})
+    assert reason2 == 'pairing_guard', f'配对守卫归因被穿戴门遮蔽,得 {reason2}'

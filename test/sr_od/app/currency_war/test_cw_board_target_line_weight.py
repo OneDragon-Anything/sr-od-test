@@ -61,10 +61,10 @@ def test_off_line_and_unregistered_not_counted() -> None:
 def test_line_faction_set_derivation() -> None:
     """线内阵营集 = TRANSITION_TRAITS 三羁绊阵营 ∪ 希儿系放大器阵营
     (与 engines_count 同辖域的派生关系锁;阈值经 FACTIONS 注册表)。"""
-    assert TRANSITION_TRAITS == tuple(
+    assert tuple(
         (card.judge_factions[0], FACTIONS[card.judge_factions[0]].tiers[0])
-        for card in SYSTEM_CARDS.values() if card.card_id != 'seele')
-    assert SYSTEM_LINE_FACTIONS == (
-        frozenset(b for b, _t in TRANSITION_TRAITS) | SEELE_AMP_FACTIONS)
+        for card in SYSTEM_CARDS.values() if card.card_id != 'seele') == TRANSITION_TRAITS
+    assert (
+        frozenset(b for b, _t in TRANSITION_TRAITS) | SEELE_AMP_FACTIONS) == SYSTEM_LINE_FACTIONS
     assert '量子同频' in SYSTEM_LINE_FACTIONS
     assert '贝洛伯格' in SYSTEM_LINE_FACTIONS

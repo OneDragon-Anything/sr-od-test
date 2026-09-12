@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """r393 检查项锁:equip_worn_in_battle 语义(战斗轮 owned 非空连续
 2 轮零穿着;开局/无 deployed/全穿不报)。合成账本双向锁。"""
 from __future__ import annotations
-
 
 from sr_od.application.currency_war.sim.checks.ledger import check_equip_worn_in_battle
 

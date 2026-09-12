@@ -172,14 +172,17 @@ def cw4_decide(state: GameState, session, cfg=None, *, registry=None):
     视图(shop_line 历史缺省,sim 冻结语义锁的面),传
     ``DEFAULT_REGISTRY`` = live 真值表(等级帽单一源锁的双表对拍面,
     ADR-0565);cfg 缺省 = ``DecideCfg()``(ev_arm='full',与各文件原
-    SimpleNamespace/type 桩同语义:cfg 对象只承载 ev_arm 读数)。"""
+    SimpleNamespace/type 桩同语义:cfg 对象只承载 ev_arm 读数)。
+
+    W6 波 4 黑板容器化:喂入通道 = sim 合成口写容器(生产/离线同路;
+    原黑板槽直写随槽退役消亡,设计件《商店黑板容器化方案》§2.4-3)。"""
     from sr_od.application.currency_war.sim.engine_p1 import (
         sim_decision_registry,
     )
     strat = MandateV1Strategy(
         registry=(sim_decision_registry() if registry is None
                   else registry))
-    session.shop_state_frame = state
+    cw4_feed(session, state)
     return strat.decide_shop_screen(session, cfg or DecideCfg())
 
 
@@ -325,3 +328,49 @@ def make_prep_round_director(test_context, monkeypatch, scripted_actions,
     monkeypatch.setattr(d, '_open_shop_phase',
                         lambda a, obs: (True, 'read_only 读牌完成'))
     return d, match, session
+
+
+def cw4_feed(session, frame):
+    """帧 → session 容器喂入(W6 波 4 测试迁移单一源;生产同路 = sim
+    合成口)。空牌面补在屏空 payload(旧测试语境「在屏 ∧ 牌面空」,
+    与合成口「空表=离屏」真值口径的分叉在此显式对齐)。
+
+    节点缺席补写(node_type=None 帧的 plane/round 保真):合成口对
+    node_type 未识别帧不写 node(禁 'prep' 占位假值),旧决策链直读
+    ``GameState.plane/round_num`` 标量、位面门照常生效——补写
+    ``NodeKey(kind='')`` 与 kernel :func:`board_state_bridge` 的节点
+    缺席补写同式(kind 空串 = 帧未识别的忠实镜像,禁词表值冒充真值),
+    保 feed 与桥两路对同帧决策面行为逐位一致。"""
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        ChannelSig,
+        NodeKey,
+        ShopPayload,
+        board_state_of,
+        synthesize_from_game_state,
+    )
+    _bs = board_state_of(session)
+    synthesize_from_game_state(_bs, frame)
+    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
+                      mode='synthesized')
+    if _bs.node.value is None:
+        _bs.observe(_bs.node,
+                    NodeKey(plane=int(getattr(frame, 'plane', 1) or 1),
+                            round_num=int(getattr(frame, 'round_num', 1)
+                                          or 1),
+                            kind=''),
+                    evidence='kind_inherited', sig=_sig)
+    if _bs.shop.value is None:
+        _bs.observe(_bs.shop, ShopPayload(
+            cards=[],
+            refresh_probs={int(k): float(v) for k, v in
+                           (getattr(frame, 'refresh_probs', None)
+                            or {}).items()}),
+            sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
+                           mode='synthesized'))
+    return _bs
+
+
+def cw4_bs(frame, session):
+    """帧 → 容器并返回容器(cw4_feed 的取值形态;decide_shop_action
+    首参直喂迁移用)。"""
+    return cw4_feed(session, frame)

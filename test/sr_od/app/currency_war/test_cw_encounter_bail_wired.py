@@ -23,7 +23,6 @@ def test_encounter_bail_and_handler_wired() -> None:
     """bail 清单与专属 handler 双接线:遭遇屏在场即 bail 交 CwScreenEncounter 消化。"""
     import inspect
 
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
     from sr_od.application.currency_war.kernel.cw_overlay_registry import (
         derive_decision,
     )
@@ -47,7 +46,6 @@ def test_encounter_refresh_execution_wired() -> None:
     import inspect
 
     from sr_od.application.currency_war.kernel.cw_exec_state import ExecState
-    from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_encounter
     src = inspect.getsource(cw_screen_encounter)
     assert 'pick.refresh' in src, 'handler 未消费 refresh 建议(断链回退)'

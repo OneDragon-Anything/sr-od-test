@@ -115,10 +115,27 @@ class TestP76SandwichGate:
             assert reason.startswith('sandwich_unavailable'), cause
             assert cause in reason, (cause, reason)
 
-    def test_delta_non_positive_out_of_lemma_domain(self) -> None:
-        """丁.4 引理域 V_C>V_F:Δ≤0 系域外输入 ⇒ 不可评(fail-closed),
-        禁用非正分母出阈值。"""
-        _inject(delta=0.0)
+    def test_delta_non_positive_out_of_lemma_domain(self, monkeypatch) -> None:
+        """丁.4 引理域 V_C>V_F:Δ≤0 系域外输入 ⇒ 禁入槽。
+
+        语义迁移(T-214 值域守卫,标定批 ADR-0639;锁存在性纪律:
+        改锁=重推语义非机械跟绿)——旧断言「inject(0.0) 后门出
+        delta_non_positive」已不可达:值域守卫把同一域约束上移到
+        inject 通道(写入前校验不合法拒绝),旧注入形态直接 raise。
+        本锁改锁两义:①通道守卫拒 Δ≤0(红相先证:守卫落地前本锁
+        ①义以 ValueError 红相在案);②门内 delta_non_positive 分支
+        保留为纵深防御,经 monkeypatch 槽值直测(防注册态被绕行)。"""
+        with pytest.raises(ValueError, match='值域守卫'):
+            provisional.inject('V_C_MINUS_V_F',
+                               provisional.CalibValue(0.0))
+        with pytest.raises(ValueError, match='值域守卫'):
+            provisional.inject('V_C_MINUS_V_F',
+                               provisional.CalibValue(-3.0))
+        monkeypatch.setattr(
+            provisional, 'get',
+            lambda name: (provisional.CalibValue(0.0)
+                          if name == 'V_C_MINUS_V_F'
+                          else provisional._VALUES.get(name)))
         ok, reason = proof.evidence_gate(_MISS, _BUDGET, frame=_frame())
         assert ok is False
         assert reason.startswith('sandwich_unavailable')

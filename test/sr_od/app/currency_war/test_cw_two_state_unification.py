@@ -50,18 +50,21 @@ def _bs_frame(*, plane: int = 1, round_num: int = 1, level: int = 1,
 # ---- 阈值链:消费点静态源级锁 ---------------------------------------------
 # 判据=全部消费点经 effective_hp_threshold(容器帧)单口消费,无旁路
 # 裸算(裸算=绕过标定单口=双源)。路径清单即锁面:消费点增删须随批改锁。
-# (default_strategy 两点危机/生存门已随本体退役删除)
+# (default_strategy 两点危机/生存门已随本体退役删除;
+#  cw_economy 止损门 1 处随 _xp_gold_floor 退役消失——T-64 退役批,
+#  04_survival_budget §7 #8 同批,ADR-0638)
 
 _THRESHOLD_CONSUMERS: tuple[tuple[str, int], ...] = (
     ('kernel/cw_comps.py', 1),          # 保命转型 0.75×
-    ('kernel/cw_economy.py', 1),        # 止损门
 )
 
 
 def test_threshold_chain_consumption_sites() -> None:
     """消费点静态锁:各文件对 effective_hp_threshold 的调用次数
     与声明清单一致(只增不减;减=消费点退役,须随批改本锁)。
-    原名「five_consumption_sites」系拆分前旧账,现清单=2 文件各 1 处。"""
+    原名「five_consumption_sites」系拆分前旧账;cw_economy 止损门行
+    已按合法减员路径移除(消费点 _xp_gold_floor 随 T-64 退役批删除,
+    04_survival_budget §7 #8 同批,ADR-0638),现清单=1 文件 1 处。"""
     from pathlib import Path
     base = Path(__file__).parents[5] / 'src' / 'sr_od' / 'application' \
         / 'currency_war'

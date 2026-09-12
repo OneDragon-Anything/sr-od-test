@@ -59,7 +59,7 @@ def test_watch_holds_no_long_lived_journal_handle(tmp_path: Path) -> None:
     proc = _spawn(journal, tmp_path / 'earlystop.lock')
     try:
         time.sleep(2.0)   # 覆盖武装 + 至少一轮短持轮询窗
-        assert proc.poll() is None, f'watch 提前退出: stdout 见 communicate'
+        assert proc.poll() is None, 'watch 提前退出: stdout 见 communicate'
         moved = tmp_path / 'state' / 'journal.moved.jsonl'
         os.replace(journal, moved)   # 长持句柄在场 = WinError 5 红
     finally:

@@ -9,8 +9,9 @@ ADR-0584;烟雾容差背书见 test_hook_call_sites_exist docstring)。
 decisions 行 ts),纯命名格式约束;滚动删除语义由残存 2 测辖定(旧文件构造
 即依赖 ts 字典序=时间序,格式破坏会连带滚动测试红)。
 """
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 import pytest
 
 from sr_od.application.currency_war.operations import decision_frame_hooks as dfh

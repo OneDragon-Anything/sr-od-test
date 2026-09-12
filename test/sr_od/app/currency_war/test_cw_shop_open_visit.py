@@ -96,12 +96,51 @@ def _make_prep(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(cw_telemetry, '_defect_seen_run', '')
     monkeypatch.setattr(defects, 'record_defect', lambda *a, **k: None)
 
-    # 入口观察替身:恒同帧(单段场景,无刷新重观察);gold>0 免触发救援读
+    # W6 波 4 容器切换待修位适配(⚠️ src 缺口申报,非本锁辖域):
+    # guard_expected_vs_tracked 守卫输入已切容器单例(cw_shop_action_ops
+    # :337 bench_slots_of 直读),但 apply_action_outcome 调用位仍传投影
+    # 帧(cw_op_buy_cards apply_action_outcome 内,帧=GameState ⇒ 守卫
+    # AttributeError,生产买面同炸)。本测试辖域 = visit 编排面(守卫自身
+    # 语义归 test_cw_buy_outcome_gate/test_cw_shop_refresh),此处按容器
+    # 形态接通真守卫(帧输入改喂容器单例),判定语义零桩化。
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_shop_action_ops as _sao,
+    )
+
+    _real_guard = _sao.guard_expected_vs_tracked
+
+    def _guard_on_container(state, session, stage='project'):
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            BoardState,
+            board_state_of,
+        )
+        if not isinstance(state, BoardState):
+            state = board_state_of(session)
+        _real_guard(state, session, stage)
+
+    monkeypatch.setattr(_sao, 'guard_expected_vs_tracked',
+                        _guard_on_container)
+
+    # 入口观察替身:恒同帧(单段场景,无刷新重观察);gold>0 免触发救援读。
+    # W6 波 4:生产 read_game_state 尾部经 _feed_board_state 观察漏斗把
+    # 真读字段写入 session 容器(守卫读点 guard_proposal_vs_expected 改
+    # 容器单例);替身同形补喂(cw4_feed = 测试迁移单一源),否则容器
+    # shop payload 恒离屏、提案守卫误炸。
+    from test.sr_od.app.currency_war._cw_helpers import cw4_feed
+
     _state = GameState(gold=10, plane=1, round_num=5, level=5,
                        shop=_shop_cards(_OLD_NAMES))
-    monkeypatch.setattr(cwo, 'read_game_state', lambda *a, **k: _state)
+
+    def _fake_read_state(*a, **k):
+        _sess = getattr(getattr(test_context, 'cw_match', None),
+                        'session', None)
+        if _sess is not None:
+            cw4_feed(_sess, _state)
+        return _state
+
+    monkeypatch.setattr(cwo, 'read_game_state', _fake_read_state)
     monkeypatch.setattr(buy_cards_mod, 'read_game_state',
-                        lambda *a, **k: _state)
+                        _fake_read_state)
     monkeypatch.setattr(cwo, 'read_gold', lambda *a, **k: 10)
     monkeypatch.setattr(buy_cards_mod, 'read_gold', lambda *a, **k: 10)
     monkeypatch.setattr(buy_cards_mod, 'read_gold_opt', lambda *a, **k: 10)

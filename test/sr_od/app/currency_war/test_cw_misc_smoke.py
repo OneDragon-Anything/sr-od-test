@@ -169,17 +169,16 @@ def test_portal_overridable_by_cards():
 # 逐个 import,任何签名/语法级错误在此立即红。
 
 def _iter_cw_op_modules() -> list[str]:
-    """CW operations 代表模块子集(CUT9 收缩后的代表集,现 17 模块)。
+    """CW operations 代表模块子集(CUT9 收缩后的代表集,现 16 模块)。
 
     抽查覆盖判据:每子包 ≥1(cw_entry/cw_op/cw_screen/dev/tools)+
-    顶层三件(cw_loop/decision_frame_hooks/settle_collect_hooks)+
+    顶层两件(cw_loop/decision_frame_hooks)+
     r98 地雷本体 cw_screen_planner 与高频面(prep/encounter/overlay/
     buy_cards/shop_action_ops 等)。import 活性机制不变——逐模块真
     import,签名/语法/顶层符号错误在此立即红。"""
     return sorted([
         'sr_od.application.currency_war.operations.cw_loop',
         'sr_od.application.currency_war.operations.decision_frame_hooks',
-        'sr_od.application.currency_war.operations.settle_collect_hooks',
         'sr_od.application.currency_war.operations.cw_entry.cw_entry_start',
         'sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards',
         'sr_od.application.currency_war.operations.cw_op.cw_op_deploy',

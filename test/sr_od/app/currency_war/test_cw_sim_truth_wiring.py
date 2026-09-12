@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """r421(ADR-0286,批㉓ F3/F4 + 批㉔ F1/F5)锁:sim↔生产三活跃分叉合批。
 
 - 件1(批㉓ F3):xp_progress 真值化——sim 结算处维护(初始 0 / 3 买后
@@ -18,39 +17,45 @@ import types
 
 import pytest
 
-from sr_od.application.currency_war.obs import cw_observation
 from sr_od.application.currency_war.data.cw_shop_odds import (
     REFRESH_PROB,
     rotation_probs,
 )
-
-from sr_od.application.currency_war.sim.pool import _Pool
-
-from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
 from sr_od.application.currency_war.kernel.cw_state import (
     XP_PER_BUY,
     XP_TO_NEXT_LEVEL,
     BuyCard,
     GameState,
 )
-
+from sr_od.application.currency_war.obs import cw_observation
+from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
+from sr_od.application.currency_war.sim.pool import _Pool
 
 # --- 件1:xp_progress 真值化 ----------------------------------------------
 
 
 class _XpRecorder:
-    """round1 首段买 3 张,其余段/轮全记录 st 快照后停(returns [])。"""
+    """round1 首段买 3 张,其余段/轮全记录容器快照后停(returns [])。
+
+    W6 波 4 黑板容器化:sim 引擎不再把帧挂 session(shop_state_frame 写点
+    退役),决策读容器单例(board_state_of);牌面 = 容器 payload,买牌提案
+    发容器牌(无 x,引擎按 (name, star) 对齐帧牌执行)。"""
 
     def __init__(self) -> None:
         self.snapshots: list[tuple[int, tuple[int, int]]] = []
         self._bought = False
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
-        st = sess.shop_state_frame
-        self.snapshots.append((st.round_num, st.xp_progress))
-        if st.round_num == 1 and not self._bought and st.shop:
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            board_state_of,
+            round_num_of,
+        )
+        bs = board_state_of(sess)
+        self.snapshots.append((round_num_of(bs), bs.xp.value))
+        cards = bs.shop.value.cards if bs.shop.value is not None else []
+        if round_num_of(bs) == 1 and not self._bought and cards:
             self._bought = True
-            return [BuyCard(card=c, reason='stub') for c in st.shop[:3]]
+            return [BuyCard(card=c, reason='stub') for c in cards[:3]]
         return []
 
 
@@ -107,9 +112,9 @@ def test_draw_shop_consumes_rotation_table() -> None:
 
 
 class _ProbsRecorder:
-    """每段记录 (round, st.refresh_probs, st.deploy_cap, st.level);
-    delegate=True 时委托真 MandateV1Strategy(让 level 升到可轮岗档;
-    LineStrategy 已随 ADR-0336 删)。"""
+    """每段记录 (round, 容器概率条, deploy_cap, level)(W6 波 4:读容器
+    单例;概率条 = 店 payload 内嵌,离屏 = None);delegate=True 时委托真
+    MandateV1Strategy(让 level 升到可轮岗档;LineStrategy 已随 ADR-0336 删)。"""
 
     def __init__(self, delegate: bool = False) -> None:
         self.rows: list[tuple[int, object, object, int]] = []
@@ -121,9 +126,18 @@ class _ProbsRecorder:
             self._inner = MandateV1Strategy()
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
-        st = sess.shop_state_frame
-        self.rows.append((st.round_num, st.refresh_probs,
-                          st.deploy_cap, st.level))
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            board_state_of,
+            level_of,
+            round_num_of,
+        )
+        bs = board_state_of(sess)
+        # 概率条随黑板容器化迁入店 payload(离屏=None);合成口把「空表」
+        # 同判离屏,None 形态折叠为离屏——基线断言按「无概率条」语义取 not p。
+        probs = (bs.shop.value.refresh_probs
+                 if bs.shop.value is not None else None)
+        self.rows.append((round_num_of(bs), probs,
+                          bs.deploy_cap.value, level_of(bs)))
         if self._inner is not None:
             return self._inner.decide_shop_screen(sess, cfg)
         return []
@@ -138,7 +152,7 @@ def test_sim_rotation_event_never_fires_without_env() -> None:
     simulate_p1(0, pool='fallback', strategy=rec)
     assert rec.rows, '真策略局应有备战段'
     for rn, p, _cap, lv in rec.rows:
-        assert p is None, f'未选轮岗环境不得翻倍(rn={rn},lv={lv})'
+        assert not p, f'未选轮岗环境不得翻倍(rn={rn},lv={lv})'
 
 
 # --- 件3:cap 真值接线 -----------------------------------------------------
@@ -234,6 +248,7 @@ def test_sim_diamond_cap_channel_parameterized() -> None:
     prob=1 → 每备战期 +1,cap = level + 宝钻数(>level)。"""
     rec = _ProbsRecorder()
     simulate_p1(1, pool='fallback', strategy=rec)
+    # deploy_cap 读容器值域(None=未写;合成口缺席不写,与帧 None 同判)
     assert all(cap is None for _rn, _p, cap, _lv in rec.rows), \
         '默认 diamond_cap_prob=0 不应注入'
     rec2 = _ProbsRecorder()

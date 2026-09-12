@@ -71,8 +71,13 @@ def test_skip_round_ledger_row_and_pairing_intact() -> None:
         fired = False
 
         def decide_shop_screen(self, sess, screen):  # noqa: ARG002
-            st = sess.shop_state_frame
-            occ = [i for i, d in enumerate(st.deployed) if d is not None]
+            # 决策后读帧断言改容器读(W6 波 4 迁移约定 2:黑板槽退役)。
+            from sr_od.application.currency_war.kernel.cw_board_state import (
+                board_state_of,
+                deployed_slots_of,
+            )
+            slots = deployed_slots_of(board_state_of(sess))
+            occ = [i for i, d in enumerate(slots) if d is not None]
             if not self.fired and occ:
                 self.fired = True
                 return [SellDeployed(occ[0], reason='f1_lock_stub')]

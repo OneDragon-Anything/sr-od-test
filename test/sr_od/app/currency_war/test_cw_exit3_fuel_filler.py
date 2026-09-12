@@ -6,6 +6,7 @@ fenced/precheck_unavailable)、垫件买入→部署 held 闭环端到端(发射
 登记 state_of(session).cw4_fuel_filler_stall_buys → 执行侧
 record_fuel_filler_held_postbuy 计数)。
 """
+
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
@@ -25,6 +26,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
 )
 
 _COMP = '列车同行'
@@ -104,7 +108,7 @@ def _stall_frame(gold: int, fuel_pieces: int = 0, extra_bench=(),
 
 
 def _decide(st, sess):
-    return shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+    return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
 class TestExit3Emission:

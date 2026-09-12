@@ -195,7 +195,7 @@ def test_oscillation_xp_cap_bidirectional() -> None:
 
 
 def test_levelup_flat4_lock_bidirectional() -> None:
-    """升级支出锁双向(T-240 语义重推:判据 = spend == Σ action.cost,
+    """升级支出锁双向(ADR-0632 决策 3 锁重推:判据 = spend == Σ action.cost,
     无折扣局退化为原字面 4×行数;重推依据 = 锁检查器 docstring)。
 
     - 无折扣一致(spend 4)/偏离(spend 6):原判据面保持,双向照旧;

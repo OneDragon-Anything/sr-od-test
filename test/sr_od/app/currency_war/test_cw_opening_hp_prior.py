@@ -13,7 +13,8 @@ _D108 = 108
 
 def _mk_session():
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession)
+        StrategySession,
+    )
     return StrategySession()
 
 
@@ -22,7 +23,9 @@ def _mk_session():
 def test_prior_base_and_bad_start_affix() -> None:
     """默认档 82(109 局零方差);「开局不利」恒 −20 → 62(7/7 局)。"""
     from sr_od.application.currency_war.kernel.cw_opening_hp import (
-        OPENING_HP_BASE, opening_hp_prior)
+        OPENING_HP_BASE,
+        opening_hp_prior,
+    )
     assert OPENING_HP_BASE == 82
     assert opening_hp_prior([], _A8, _D108) == 82
     assert opening_hp_prior(None, _A8, _D108) == 82

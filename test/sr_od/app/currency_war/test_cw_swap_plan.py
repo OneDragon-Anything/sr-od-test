@@ -12,10 +12,10 @@
 # test_m1p_consumer_seam_gate_keeps_emission_closed 承载。
 from types import SimpleNamespace as _NS
 
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_board_state import (
     board_state_bridge as _bsb,
 )
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
     assemble_swap_plan_inputs,
@@ -1047,6 +1047,7 @@ def test_shop_buy_emission_writes_fresh_buys() -> None:
     from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
         decide_shop_action,
     )
+    from test.sr_od.app.currency_war._cw_helpers import cw4_bs
     comp = get_comp(next(c.name for c in COMP_LIBRARY
                          if getattr(c, 'core_chars', None)))
     m = list(comp.core_chars)[0]
@@ -1056,7 +1057,7 @@ def test_shop_buy_emission_writes_fresh_buys() -> None:
     state_of(sess).cw4_counters = {}
     state_of(sess).target_comp = comp
     state_of(sess).cw4_line_state = _proof.LineState()
-    act = decide_shop_action(st, sess, _NS(ev_arm='full'))
+    act = decide_shop_action(cw4_bs(st, sess), sess, _NS(ev_arm='full'))
     assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
     assert fresh_buys_of(sess, st) == frozenset({m})
 

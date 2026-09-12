@@ -55,6 +55,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt import (
     refund_full_star_ok,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+    cw4_feed,
+)
 
 # ===== 基建 =====
 
@@ -94,7 +98,7 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
 
 
 def _decide(st: GameState, sess: StrategySession):
-    return shop.decide_shop_action(st, sess, _cfg())
+    return shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
 
 
 def _ct(sess: StrategySession) -> dict:
@@ -298,7 +302,6 @@ class TestHubEmission:
         # 非合并素材:副本在 bench
         st = _state(shop_cards=[_card('花火', cost=2)],
                     bench=[_bc('花火', slot=1)])
-        ct = _ct(_session(IntentionState()))
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
@@ -380,7 +383,7 @@ class TestHubEmission:
         # ——fresh_buys 只保当轮,攻击报告「跨轮自动失效」形态;非并集时
         # 该名落回凑息/腾席燃料资格 = 期权被己方卖面销毁)
         st_next = _state(round_num=3)
-        sess.shop_state_frame = st_next
+        cw4_feed(sess, st_next)
         excl_next = sell_gate.sell_exclusions(
             sess, (), channel='interest', current_round=3)
         assert '瓦尔特' in excl_next
@@ -478,7 +481,6 @@ class TestArbitration:
         全部覆盖枢纽,「件先发」支无自然实例——夹具只动序不动判据)→
         全部枢纽让位、义务通道首发 m2_line_member。判据力:若实现按覆盖
         数降序或店面序,枢纽将越过件发射 → 本测红。"""
-        comp = get_comp('绯英欢愉')
         st = self._arm_live_frame([_card('花火', cost=2),
                                    _card('银狼LV.999', cost=5)],
                                   comp_name='绯英欢愉')

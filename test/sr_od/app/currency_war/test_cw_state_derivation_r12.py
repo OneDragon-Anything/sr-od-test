@@ -35,34 +35,34 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     chain_node_type,
 )
 
-
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+)
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    register_sig_actors as _register_sig_actors,
+)
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     install_state_telemetry,
     reset_state_telemetry,
 )
 from sr_od.application.currency_war.telemetry import state as tel_state
 
-# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
-    ChannelSig as _ChannelSig,
-    register_sig_actors as _register_sig_actors,
-)
-
 _register_sig_actors('TestSigWriter')
 
 
-def _sig() -> "_ChannelSig":
+def _sig() -> _ChannelSig:
     """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
     return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
-def _lsig() -> "_ChannelSig":
+def _lsig() -> _ChannelSig:
     """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
     return _ChannelSig(family='logic_action', actor='TestSigWriter',
                        mode='compute')
 
 
-def _hsig() -> "_ChannelSig":
+def _hsig() -> _ChannelSig:
     """渠道③签名(logic_hook 族;relay 中继)。"""
     return _ChannelSig(family='logic_hook', actor='TestSigWriter',
                        mode='compute')
@@ -250,7 +250,7 @@ def test_boss_brief_leg_repeat_deduped_type_idempotent(journal, run_id) -> None:
 def test_boss_flow_rule3_suppresses_popup_double_advance(journal, run_id) -> None:
     """boss 流全序(判定方案 E12 边序:奖励关 → 0p → 商店自动开 → boss 备战):
     规则③在 0p 即推进(+boss 类型);后续商店面板块弹窗腿被结构性拒绝
-    (prev=0p 出守卫族终版,用户终裁 2026-09-11/攻击 R5 高-1;缓存守卫
+    (prev=0p 出守卫族终版,用户终裁 2026-09-11,ADR-0630 修订节·守卫族终版;缓存守卫
     c=8≠hist=9 为第二道防线)零重推;boss 备战帧同序补录。boss 节点恰一次
     推进(级联双推进破口锁)。
     【R1.2 锁语义重推】本锁前身为 R1.1「0p 纯前驱零腿」形态锁——四规则组
@@ -275,7 +275,7 @@ def test_boss_flow_rule3_suppresses_popup_double_advance(journal, run_id) -> Non
 
 
 def test_plane_transition_flow_quiet_shop_popup(journal, run_id) -> None:
-    """跨位面级联破口锁(攻击 R5 高-1 同族):0q 推进 (2,1) 后,商店面板块
+    """跨位面级联破口锁(ADR-0630 修订节·守卫族终版同族):0q 推进 (2,1) 后,商店面板块
     若被采到,弹窗腿被结构性拒绝(prev=0q 出守卫族终版;缓存 c=9≠hist=10
     双防)——位面切换后节点序不级联 +1;过渡屏自身零类型写边界同锁。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)

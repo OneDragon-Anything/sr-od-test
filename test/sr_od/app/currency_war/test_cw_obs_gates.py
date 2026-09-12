@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_obs_gates 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -24,9 +23,7 @@
 
 from __future__ import annotations
 
-
 # ==================== observation ====================
-
 from types import SimpleNamespace
 
 import pytest
@@ -36,10 +33,30 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.obs import cw_briefing_obs, cw_observation
-from sr_od.application.currency_war.obs.cw_briefing_obs import parse_enemy_difficulty, read_briefing_enemy_difficulty
-from sr_od.application.currency_war.obs.cw_briefing_obs import read_affix_effect, read_affixes, read_bosses
-from sr_od.application.currency_war.obs.cw_observation import parse_selected_difficulty, read_board, read_board_next_tier, read_deploy_cap, read_deployed_count, read_enemy_difficulty, read_level_up_cost, read_node_type, read_selected_difficulty, read_streak, read_xp_progress
-from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_hp, parse_streak
+from sr_od.application.currency_war.obs.cw_briefing_obs import (
+    parse_enemy_difficulty,
+    read_affix_effect,
+    read_affixes,
+    read_bosses,
+    read_briefing_enemy_difficulty,
+)
+from sr_od.application.currency_war.obs.cw_observation import (
+    parse_selected_difficulty,
+    read_board,
+    read_board_next_tier,
+    read_deploy_cap,
+    read_deployed_count,
+    read_enemy_difficulty,
+    read_level_up_cost,
+    read_node_type,
+    read_selected_difficulty,
+    read_streak,
+    read_xp_progress,
+)
+from sr_od.application.currency_war.obs.cw_settlement_obs import (
+    parse_settlement_hp,
+    parse_streak,
+)
 from test.conftest import SrTestContext
 
 # 2026-08-05 实跑结算屏 OCR(战斗后「挑战结束」屏):小队生命值=71(战前 84,本战损 13)。
@@ -114,7 +131,9 @@ def test_parse_streak_from_real_settlement_ocr() -> None:
 
 def test_parse_settlement_progress_live_forms() -> None:
     """挑战进度三 live 形态:后随 +N(赢)/ 前置 -N(输,M41 战败屏)/ 无符号累计值不取。"""
-    from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_progress
+    from sr_od.application.currency_war.obs.cw_settlement_obs import (
+        parse_settlement_progress,
+    )
     # live 11:32 样本(遭遇赢):分离 token '+2' 跟后
     assert parse_settlement_progress(['28', '挑战结束', '遭遇', '挑战进度', '+2', '基础伤害']) == 2
     # M41 战败屏实锤形态:数字前置
@@ -130,7 +149,9 @@ def test_parse_settlement_progress_live_forms() -> None:
 
 def test_parse_settlement_won_live_forms() -> None:
     """胜负真值:挑战成功→True / 挑战失败→False / 负进度→False / 无据→None。"""
-    from sr_od.application.currency_war.obs.cw_settlement_obs import parse_settlement_won
+    from sr_od.application.currency_war.obs.cw_settlement_obs import (
+        parse_settlement_won,
+    )
     assert parse_settlement_won(['31', '挑战成功', '挑战进度', '46']) is True
     assert parse_settlement_won(['挑战失败', '下一步']) is False
     # 轮败屏(活着):挑战结束 + 负进度,无成功/失败字样
@@ -226,7 +247,9 @@ def test_read_invest_env_options(test_context: SrTestContext) -> None:
     """
     if not test_context.has_screen('货币战争-投资环境', 'default'):
         pytest.skip('存档截图缺失:screens/货币战争-投资环境/default.webp')
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_env import CwScreenInvestEnv
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_env import (
+        CwScreenInvestEnv,
+    )
     screen = test_context.load_screen('货币战争-投资环境', 'default')
     op = CwScreenInvestEnv(test_context)
     opts = op._read_options(screen)
@@ -700,8 +723,15 @@ import pytest as _identity_obs_pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils, file_utils
-from sr_od.application.currency_war.obs.currency_war_char_id import load_avatar_templates
-from sr_od.application.currency_war.obs.cw_identity_obs import identify_slots, read_deployed_chars, read_star, resolve_char_name
+from sr_od.application.currency_war.obs.currency_war_char_id import (
+    load_avatar_templates,
+)
+from sr_od.application.currency_war.obs.cw_identity_obs import (
+    identify_slots,
+    read_deployed_chars,
+    read_star,
+    resolve_char_name,
+)
 from sr_od.context.sr_context import SrContext
 from test.conftest import SrTestContext as _identity_obs_SrTestContext
 
@@ -1018,10 +1048,18 @@ _ROOT = _w534_board_center_gate_Path(__file__).resolve().parents[5]          # �
 _TEST_ROOT = _w534_board_center_gate_Path(__file__).resolve().parents[4]    # 测试仓根(sr-od-test)
 _w534_board_center_gate_sys.path.insert(0, str(_ROOT / 'src'))
 
-from one_dragon.base.geometry.rectangle import Rect as _w534_board_center_gate_Rect  # noqa: E402
-from one_dragon.utils import cv2_utils as _w534_board_center_gate_cv2_utils  # noqa: E402
-from sr_od.application.currency_war.obs.currency_war_char_id import load_avatar_templates as _w534_board_center_gate_load_avatar_templates
-from sr_od.application.currency_war.obs.cw_identity_obs import identify_slots as _w534_board_center_gate_identify_slots
+from one_dragon.base.geometry.rectangle import (
+    Rect as _w534_board_center_gate_Rect,  # noqa: E402
+)
+from one_dragon.utils import (
+    cv2_utils as _w534_board_center_gate_cv2_utils,  # noqa: E402
+)
+from sr_od.application.currency_war.obs.currency_war_char_id import (
+    load_avatar_templates as _w534_board_center_gate_load_avatar_templates,
+)
+from sr_od.application.currency_war.obs.cw_identity_obs import (
+    identify_slots as _w534_board_center_gate_identify_slots,
+)
 
 FIXTURES = _TEST_ROOT / 'screens' / '货币战争-备战'
 TPL_DIR = _ROOT / 'assets/template/currency_war/portrait_plaza'
@@ -1127,8 +1165,13 @@ from types import SimpleNamespace as _test_pivot_plane_filter_SimpleNamespace
 _test_pivot_plane_filter_REPO = _test_pivot_plane_filter_Path(__file__).resolve().parents[4]
 _test_pivot_plane_filter_sys.path.insert(0, str(_test_pivot_plane_filter_REPO / 'src'))
 
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, maybe_pivot  # noqa: E402
-from sr_od.application.currency_war.kernel.cw_state import GameState as _test_pivot_plane_filter_GameState  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_comps import (  # noqa: E402
+    COMP_LIBRARY,
+    maybe_pivot,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _test_pivot_plane_filter_GameState,  # noqa: E402
+)
 
 
 def test_dot_comp_has_weak_plane_tag() -> None:
@@ -1171,8 +1214,12 @@ def test_pivot_p2_avoids_dot_if_alternative() -> None:
 # ==================== pivot_invariant ====================
 
 from sr_od.application.currency_war.kernel import cw_comps
-from sr_od.application.currency_war.kernel.cw_comps import maybe_pivot as _pivot_invariant_maybe_pivot
-from sr_od.application.currency_war.kernel.cw_state import GameState as _pivot_invariant_GameState
+from sr_od.application.currency_war.kernel.cw_comps import (
+    maybe_pivot as _pivot_invariant_maybe_pivot,
+)
+from sr_od.application.currency_war.kernel.cw_state import (
+    GameState as _pivot_invariant_GameState,
+)
 
 
 class _Sess:

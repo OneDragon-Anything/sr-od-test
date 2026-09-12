@@ -29,10 +29,10 @@ import pytest
 from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
 from sr_od.application.currency_war.kernel.cw_board_state import (
     BS_SCHEMA_VERSION,
+    REGISTERED_ACTORS,
     BoardState,
     ChannelSig,
     NodeKey,
-    REGISTERED_ACTORS,
     apply_settlement_cover,
     board_state_of,
     register_sig_actors,

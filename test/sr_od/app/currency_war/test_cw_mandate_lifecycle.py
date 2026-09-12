@@ -199,7 +199,9 @@ class TestS2Lifecycle:
         sess = _sess()
         state_of(sess).target_comp = comp
         sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移
-        decide_shop_action(st, sess, _NS(ev_arm='skeleton_only'))
+        from test.sr_od.app.currency_war._cw_helpers import cw4_bs
+        decide_shop_action(cw4_bs(st, sess), sess,
+                           _NS(ev_arm='skeleton_only'))
         s2 = state_of(sess).cw4_shop_wanted_pending
         assert s2 is not None and s2[0] == (st.plane, st.round_num) \
             and s2[1] == 'obligation' and missing in s2[2], \
@@ -245,7 +247,7 @@ def test_run_deploy_dispatch_landing_retired_interim_failclosed(monkeypatch):
     ``(ok, detail, landed)`` 三元组」随 T-223 端口回执退役——执行器不再
     输出成败与落地(落地判定归观察侧 reconcile,批5 E1 落地供给)。分派
     位改为 ``(机械摘要, 是否发出)``,STATUS 具名常量经 detail 显影透传
-    (观察侧对账的供给面,禁丢);S1 清键门 landed 过渡期恒 False = 
+    (观察侧对账的供给面,禁丢);S1 清键门 landed 过渡期恒 False =
     fail-closed(宁「该清不清」不「乱清」——T-167 交替活锁防线语义完整
     存活;红 = 执行器回执形态复活或 STATUS 显影断流)。"""
     from sr_od.application.currency_war.operations.cw_op import (

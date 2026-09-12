@@ -45,6 +45,9 @@ from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
     cw4_card as _card,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
@@ -99,7 +102,7 @@ def _st(gold: int, shop_cards, bench, *, level: int = 7):
 
 def _decide(st, sess):
     from types import SimpleNamespace
-    return shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+    return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
 def _counters(sess) -> dict:

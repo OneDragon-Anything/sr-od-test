@@ -45,9 +45,22 @@ def _plain_session() -> SimpleNamespace:
 
 def test_default_session_counter_container_lazily_created():
     """容器缺席 → 惰性建空 dict 再计数(先例 = mandate_v1/entry 初始化面);
-    全部键落在登记前缀族内(与既有键族零交集,设计稿 §4 条款③)。"""
+    全部键落在登记前缀族内(与既有键族零交集,设计稿 §4 条款③)。
+    W6 波 4:update_intention 契约面已切容器——plane 真值改真 BoardState
+    节点域写入口写入(旧 GameState 帧直喂 = AttributeError)。"""
     sess = _plain_session()
-    update_intention(GameState(plane=2), IntentionState(), sess, None)
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        BS_SCHEMA_VERSION,
+        BoardState,
+        ChannelSig,
+        NodeKey,
+    )
+    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs.observe(bs.node, NodeKey(plane=2, round_num=1, kind='battle'),
+               sig=ChannelSig(family='obs',
+                              actor='synthesize_from_game_state',
+                              mode='synthesized'))
+    update_intention(bs, IntentionState(), sess, None)
     ct = getattr(state_of(sess), 'cw4_counters', None)
     assert isinstance(ct, dict) and ct
     for k in ct:

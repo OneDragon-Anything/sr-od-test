@@ -17,7 +17,6 @@ from __future__ import annotations
 import inspect
 
 # ==================== gate_flags ====================
-
 from sr_od.application.currency_war.currency_war_config import CurrencyWarConfig
 
 
@@ -41,7 +40,9 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     StartBattle,
 )
 from sr_od.application.currency_war.kernel.cw_state import GameState
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+    CwScreenPrep,
+)
 
 
 def _make_director(monkeypatch, collapse_open):

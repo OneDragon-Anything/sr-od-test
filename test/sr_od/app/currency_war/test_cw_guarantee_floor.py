@@ -42,6 +42,9 @@ from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
     cw4_comp as _comp_single_source,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
@@ -265,7 +268,7 @@ class TestMustSpendForwarding:
                                v3_intention=SimpleNamespace(
                                    locked_comp=_COMP),
                                active_strategies=[])
-        act = shop.decide_shop_action(st, sess,
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess,
                                       SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, LevelUpShop)
         counters = state_of(sess).cw4_counters
@@ -280,7 +283,7 @@ class TestMustSpendForwarding:
                                v3_intention=SimpleNamespace(
                                    locked_comp=_COMP),
                                active_strategies=[])
-        act = shop.decide_shop_action(st, sess,
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess,
                                       SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, LevelUpShop)
         counters = state_of(sess).cw4_counters

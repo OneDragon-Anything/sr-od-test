@@ -370,7 +370,7 @@ def test_sim_levelup_cap_guard_rejects_and_discloses() -> None:
 
 
 def test_sim_levelup_rejected_rows_keep_flat4_ledger_lock() -> None:
-    """拒付行不破坏升级支出锁(T-240 重推:spend == Σ action.cost,无折扣局
+    """拒付行不破坏升级支出锁(ADR-0632 决策 3 重推:spend == Σ action.cost,无折扣局
     退化 = 原 flat4 4×执行行数;原名回补,前身同上节)。
 
     判据本体(检查器单元面)由 test_cw_sim_models.py::
@@ -393,14 +393,23 @@ class _SpyPricedLevelUpStub:
     → 账本 spend。"""
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001, ARG002
-        from types import SimpleNamespace
-
+        # 定价读 = 容器(W6 波 4 接缝族切容器帧;构造容器帧直接喂)
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            BoardState as _BS,
+        )
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            ChannelSig,
+        )
         from sr_od.application.currency_war.kernel.cw_economy import (
             xp_click_cost,
         )
         from sr_od.application.currency_war.kernel.cw_state import LevelUp
-        price = xp_click_cost(SimpleNamespace(
-            level=1, level_up_cost=None, active_strategies=['商业间谍']))
+        _bs = _BS(schema_version=1)
+        _bs.write_logic(_bs.active_strategies, ['商业间谍'],
+                        produced_by='test_spy_stub',
+                        sig=ChannelSig(family='logic_hook',
+                                       actor='synthesize_from_game_state'))
+        price = xp_click_cost(_bs)
         return [LevelUp(cost=price) for _ in range(3)]
 
 
@@ -417,10 +426,10 @@ def _spy_levelup_run():
 
 
 def test_sim_spy_round_fee_path_single_discount() -> None:
-    """商业间谍局 sim 对账(T-240 验证自证):决策定价 → 执行载体 → 账本
+    """商业间谍局 sim 对账(ADR-0632 验证自证):决策定价 → 执行载体 → 账本
     → 支出锁全链单次折扣一致。
 
-    旧字面 flat4 锁(4×行数)对本局误报 = T-240 锁重推动因(先红在案);
+    旧字面 flat4 锁(4×行数)对本局误报 = ADR-0632 锁重推动因(先红在案);
     重推后判据 spend == Σ action.cost 全程绿。价格面真值(折扣感知取价
     正确性)由 kernel 锁族(test_cw_economy xp 折扣修复锁族)辖,本锁辖
     执行/账本链一致性。"""

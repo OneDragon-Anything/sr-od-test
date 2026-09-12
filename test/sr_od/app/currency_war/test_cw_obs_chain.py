@@ -32,18 +32,17 @@ TestCheckShopPool 边界内侧测删(全表互证测子集)。
 # 删除前必须完成上述归并并逐条证实覆盖(测试纪律第 7 条:并入目标必须存在)。
 
 from __future__ import annotations
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 
 # ==================== test_obs_conflict_guards ====================
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
 from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
-
 
 # ADR-0517 迁移批:旧死码核具现(_decide_prep_action_impl 桥)退役,
 # 直用活策略核 MandateV1Live(下述测试全部消费 live 接口)。

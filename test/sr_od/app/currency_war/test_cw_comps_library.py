@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_comps_library 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -20,12 +19,23 @@ if TYPE_CHECKING:
 
 from collections import Counter
 
+from sr_od.application.currency_war.data.cw_factions import FACTIONS
 from sr_od.application.currency_war.kernel.cw_board_state import (
     board_state_bridge as _bridge,
 )
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, V2_FAMILIES, Comp, EquipChoice, derive_key_equips, get_comp
-from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.kernel.cw_plugins import PLUGIN_DISABLE_MATRIX, PLUGIN_LIBRARY, plugin_disabled
+from sr_od.application.currency_war.kernel.cw_comps import (
+    COMP_LIBRARY,
+    V2_FAMILIES,
+    Comp,
+    EquipChoice,
+    derive_key_equips,
+    get_comp,
+)
+from sr_od.application.currency_war.kernel.cw_plugins import (
+    PLUGIN_DISABLE_MATRIX,
+    PLUGIN_LIBRARY,
+    plugin_disabled,
+)
 
 # ===== 1. key_equips 派生恒等(C5;裁决 2:先于数据变更落地)=====
 
@@ -280,8 +290,23 @@ def test_plugin_majority_lines_doctrine() -> None:
 # ==================== system_cards ====================
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard, _recount_board
-from sr_od.application.currency_war.kernel.cw_system_cards import _WEIGHT_PIECE, _WEIGHT_READINESS, SYSTEM_CARDS, blank_window_policy, card_active, card_engine_complete, card_pieces, engine_missing, pick_card_combination
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
+    ShopCard,
+    _recount_board,
+)
+from sr_od.application.currency_war.kernel.cw_system_cards import (
+    _WEIGHT_PIECE,
+    _WEIGHT_READINESS,
+    SYSTEM_CARDS,
+    blank_window_policy,
+    card_active,
+    card_engine_complete,
+    card_pieces,
+    engine_missing,
+    pick_card_combination,
+)
 
 
 def _char(name: str, faction: str | None = None, row: str | None = None,
@@ -525,9 +550,24 @@ def test_blank_window_not_blank_when_any_system_active():
 
 # ==================== evolution ====================
 
-from sr_od.application.currency_war.kernel.cw_evolution import EvolutionState, UpgradeOption, UpgradeVerdict, evaluate_upgrade, evolution_step, execute_replacement, fill_gap_after, fill_slot_policy, propose_upgrades
+from sr_od.application.currency_war.kernel.cw_evolution import (
+    EvolutionState,
+    UpgradeOption,
+    UpgradeVerdict,
+    evaluate_upgrade,
+    evolution_step,
+    execute_replacement,
+    fill_gap_after,
+    fill_slot_policy,
+    propose_upgrades,
+)
 from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
-from sr_od.application.currency_war.kernel.cw_state import CompTransaction, deployed_occupied, iter_occupied_deployed, simulate
+from sr_od.application.currency_war.kernel.cw_state import (
+    CompTransaction,
+    deployed_occupied,
+    iter_occupied_deployed,
+    simulate,
+)
 
 
 def _dot2_state() -> GameState:
@@ -978,7 +1018,10 @@ def test_dot_same_line_degenerates_to_deepen():
 def _engines(st_or_dep) -> int:
     """过渡引擎数(cw_sim._engines_count 口径,W158 strict 度量同源)。"""
 
-    from sr_od.application.currency_war.kernel.cw_battle_calib import _board_factions_of, _engines_count
+    from sr_od.application.currency_war.kernel.cw_battle_calib import (
+        _board_factions_of,
+        _engines_count,
+    )
     dep = st_or_dep.deployed if isinstance(st_or_dep, GameState) else st_or_dep
     return _engines_count(_board_factions_of(dep),
                           {d.char_id for d in dep

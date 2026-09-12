@@ -13,12 +13,12 @@
 from types import SimpleNamespace
 
 import pytest
+
 from sr_od.application.currency_war.obs import cw_briefing_obs as cwb
 from sr_od.application.currency_war.obs import cw_observation as cobs
-from sr_od.application.currency_war.obs import cw_settlement_obs as settle_obs
 from sr_od.application.currency_war.obs import cw_observe_full as of_mod
+from sr_od.application.currency_war.obs import cw_settlement_obs as settle_obs
 from sr_od.application.currency_war.obs.recognizers import battle_prep_recognizer as bpr
-
 
 # ===== read_game_state 阶段字段门(PHASE_FIELD_SPEC 单一源) =====
 
@@ -309,6 +309,7 @@ class TestRoundOutcomeChain:
         # 接线存在性烟雾(纪律第 8 条容忍档;事故背书 = 旧实现丢弃第三行):
         # 页 1 暂存写入两处 + 合并键列表一处任一漏键 → 胜轮 heal_longline 恒 None
         import inspect
+
         from sr_od.application.currency_war.operations.cw_screen import (
             cw_screen_battle_wait,
         )

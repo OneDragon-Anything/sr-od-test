@@ -1,12 +1,17 @@
 """开拓者形态切换(前后台命途不同)计算正确性(用户 2026-08-16 指示;ADR-0158)。"""
-import pytest
 
 from sr_od.application.currency_war.data.cw_chars import (
     is_trailblazer,
     trailblazer_form,
 )
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    DeployMove,
+    GameState,
+    mutate_bench_deployed,
+    simulate,
+)
 from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, DeployMove, GameState, mutate_bench_deployed, simulate
 
 
 def test_form_resolution_by_row():

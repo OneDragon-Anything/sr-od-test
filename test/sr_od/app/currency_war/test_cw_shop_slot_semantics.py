@@ -47,15 +47,20 @@ def test_phantom_rebuy_and_pool_floor_zero_real_strategy() -> None:
 
 
 class _DoubleBuyStub:
-    """同段重复提案同一店内卡:第 2 笔应命中已消费槽 → 跳过 +
-    披露计数(金/池不消费)。"""
+    """同段重复提案同一店内卡(读容器 payload,W6 波 4 取帧点改道):
+    第 2 笔在首笔消费后无剩余槽可对齐(身份优先/(name,star) 退化)→
+    跳过 + 披露计数(金/池不消费)。"""
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
-        st = sess.shop_state_frame
+        from sr_od.application.currency_war.kernel.cw_board_state import (
+            board_state_of,
+        )
         from sr_od.application.currency_war.kernel.cw_state import BuyCard
-        if not st.shop:
+        bs = board_state_of(sess)
+        cards = bs.shop.value.cards if bs.shop.value is not None else []
+        if not cards:
             return []
-        return [BuyCard(card=st.shop[0], reason='stub')] * 2
+        return [BuyCard(card=cards[0], reason='stub')] * 2
 
 
 def test_consumed_slot_rebuy_skipped_and_disclosed() -> None:

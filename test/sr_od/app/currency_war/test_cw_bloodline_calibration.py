@@ -10,11 +10,13 @@
 test_cw_mandate_v1.py::TestR196ShadowKeys 承载(真注入 + 真谓词的
 超集锁),本文件不再持有其子集副本。
 """
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 
 
 def _eval_hp(hp):

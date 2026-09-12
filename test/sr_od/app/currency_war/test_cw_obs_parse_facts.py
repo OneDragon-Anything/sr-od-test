@@ -8,9 +8,6 @@
 """
 import types
 
-from sr_od.application.currency_war.obs import cw_briefing_obs
-from sr_od.application.currency_war.obs import cw_observation as cobs
-from sr_od.application.currency_war.obs import cw_settlement_obs as settle
 from sr_od.application.currency_war.kernel.cw_board_state import (
     FINAL_ABNORMAL,
     FINAL_LOSS,
@@ -18,6 +15,9 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     FINAL_WIN,
 )
 from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.obs import cw_briefing_obs
+from sr_od.application.currency_war.obs import cw_observation as cobs
+from sr_od.application.currency_war.obs import cw_settlement_obs as settle
 
 
 def _ocr_item(data: str, x: int, y: int, w: int = 60, h: int = 20):

@@ -18,11 +18,13 @@ cw_loop._shop_open_anchors_hit 三 id_mark(idmark 审计批定稿,互斥依据 =
 编排与策略器决策路径锁单一源 = test_cw_shop_open_visit.py,两文件
 不重复锁同一语义。
 """
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 import inspect
 
 import pytest
 
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 from sr_od.operations.sr_operation import SrOperation
 from test.conftest import SrTestContext
 

@@ -71,6 +71,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
 )
+from test.sr_od.app.currency_war._cw_helpers import cw4_bs
 
 # ===== 测试基建(与 test_cw_locked_buy_membership_split 同构)=====
 
@@ -117,7 +118,11 @@ def _state(gold: int, bench: list[BenchChar]) -> GameState:
     st = GameState(gold=gold, level=7, round_num=2, hp=60)
     st.plane = 2
     st.bench = list(bench)
-    st.deployed = []
+    # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
+    # 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),卖出判据/
+    # 发射位直调环境须 ≥1 上场件,否则守卫 fail-closed 拒帧——与被测
+    # 语义无关的红按环境前置补齐,非跟绿。
+    st.deployed = [_bc('板上件锚', slot=1)]
     return st
 
 
@@ -208,7 +213,8 @@ class TestW4ShopM4HoldExcluded:
         st = _state(gold=30, bench=bench)
         st.shop = [_card(k[0], 3)]          # 缺员核心件在店(可负担)
         sess = _unlocked_sess()
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, ShopSellBench), \
             'W4:③④ 持有件被 M4 腾席卖出 = 持有换手通道未闭死'
         ct = state_of(sess).cw4_counters
@@ -237,7 +243,8 @@ class TestW4ShopM4HoldExcluded:
         st = _state(gold=30, bench=bench)
         st.shop = [_card(k[0], 3)]
         sess = _unlocked_sess()
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench), \
             '普通线外燃料件被身份段误排 = 排除面过宽(禁静态全集违例)'
 
@@ -308,6 +315,8 @@ class TestEntryFundingCells:
         - 活性伴随:普通燃料件走主路径(锁空转防御);
         - 红证:判据直调不带排除集 ⇒ ④件恰入卖出槽集。"""
         st = GameState(gold=1, level=5, round_num=2, hp=40)
+        # 非空板前置(T-32 空板止损守卫,同 _state 注):板空帧判据恒拒。
+        st.deployed = [_bc('板上件锚', slot=1)]
         sess = SimpleNamespace()
 
         def _run(bench: list[BenchChar]) -> tuple[list, dict]:
@@ -357,3 +366,130 @@ class TestEntryFundingCells:
         slots, key = crit_sell.funding_support_sell(
             0, 9, [_bc('藿藿', slot=1)], _core(), state=st)
         assert key == '' and slots == [1], '红证失效:藿藿未穿过排除外谓词'
+
+
+# ===== 空板止损守卫(T-32;后态单条件判定,零自由参数)=================
+
+
+class TestEmptyBoardSellGuard:
+    """空板止损守卫锁(设计出处 = supply_arbitration_design/DESIGN.md §6.4
+    v2 应修-3 单条件后态判定版 + 总图对账重审(reviews/出口族对账重审.md
+    T-32 节)「现在可落:空板止损单件」行;随批 ADR 记数学地基)。
+
+    守卫谓词 = 「待卖后 deployed 占用数为 0 ⇒ 拒卖」:后态判定覆盖
+    「板已空连卖 bench」与「卖掉仅存部署位」两类路径(v1 前置形态对
+    逐个卖穿路径每次卖出瞬间恒假,守卫目标失守——s7022 型病灶)。
+    数学地基 = 支配性结构判据:空板帧任意 bench 卖出相对不卖弱劣
+    (1★ 全额退净金 0 + 部署/合成期权损失 ≥0;2★+ 净损金 + 期权损失,
+    P76 甲),零自由参数、零 hp、零发射位。接线面 = 五个卖出候选单一源
+    (crit_sell 三函数/mandate.fuel_sell_candidates/sell_gate.
+    funding_hold_fallback),覆盖全部 15 个卖出发射位——新发射位消费
+    同源判据即自动被辖。
+    """
+    GUARD_KEY = 'empty_board_sell_guard'
+
+    def _empty_board_state(self, gold: int = 30) -> GameState:
+        st = GameState(gold=gold, level=5, round_num=2, hp=60)
+        st.bench = []
+        st.deployed = []          # 板空:s7022 型病灶帧
+        st.shop = []
+        return st
+
+    def test_predicate_post_state_truth_table(self):
+        """谓词真值表:占用 0/None(缺读)⇒ 拒(True);占用 ≥1 ⇒ 放
+        (False);拒帧计分键、放帧零计数(禁静默 + 禁假账)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.sell_gate import (
+            empty_board_sell_blocked,
+        )
+        ct: dict = {}
+        assert empty_board_sell_blocked([], counters=ct) is True
+        assert ct[self.GUARD_KEY] == 1
+        # 缺读 fail-closed 拒(资格判据禁缺读放行,与 hold 登记星/费
+        # 缺读同纪律),同键显影
+        ct2: dict = {}
+        assert empty_board_sell_blocked(None, counters=ct2) is True
+        assert ct2[self.GUARD_KEY] == 1
+        # 非空板放行 + 零计数(槽表 None 空位按占用数判,禁 len——
+        # ADR-0392 占用数语义)
+        padded = [None] * 10
+        padded[3] = _bc('板上件', slot=1)
+        ct3: dict = {}
+        assert empty_board_sell_blocked(padded, counters=ct3) is False
+        assert ct3 == {}
+
+    def test_criteria_faces_reject_on_empty_board(self):
+        """判据候选单一源面:板空帧四判据函数全拒(键 = 守卫分键,
+        禁静默)——凑息/funding/换线塌缩返回分键键,腾席候选返空集。"""
+        bench = [_bc('燃料F', slot=1), _bc('燃料G', slot=2)]
+        st = self._empty_board_state()
+        ct: dict = {}
+        slots, key = crit_sell.sell_for_interest(
+            47, bench, 5, (), state=st, counters=ct)
+        assert slots == [] and key == self.GUARD_KEY
+        fslots, fkey = crit_sell.funding_support_sell(
+            3, 9, bench, (), state=st, counters=ct)
+        assert fslots == [] and fkey == self.GUARD_KEY
+        # 换线塌缩位:U_X/V_MS 注入态(保守子集资格面开)才到达守卫位
+        #(封印期 switchline_exit_blocked 先短路,既有语义零触碰)
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
+            provisional,
+        )
+        provisional.inject('U_X', provisional.CalibValue(
+            value=1.0, injected_form=True))
+        provisional.inject('V_MS', provisional.CalibValue(
+            value=1.0, injected_form=True))
+        try:
+            lslots, lkey = crit_sell.line_switch_sell(
+                ('燃料F',), (), bench, [], st, k_switched=True, counters=ct)
+        finally:
+            provisional.reset('U_X')
+            provisional.reset('V_MS')
+        assert lslots == [] and lkey == self.GUARD_KEY
+        assert mandate.fuel_sell_candidates(bench, (), state=st,
+                                            counters=ct) == []
+        # 分键逐通道显影(事件计数,非静默吞)
+        assert ct[self.GUARD_KEY] >= 4
+
+    def test_fallback_rejects_on_empty_board(self):
+        """funding 兜底豁免(P78-5 最后手段权)同被辖:板空帧兜底池
+        不变现(2★ 兜底件卖出净损金 + 期权损失,弱劣更甚);deployed
+        缺读(None)= fail-closed 拒。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.sell_gate import (
+            funding_hold_fallback,
+        )
+        sess = SimpleNamespace()
+        state_of(sess).cw4_counters = {}
+        out = funding_hold_fallback(
+            sess, (), [_bc('藿藿', slot=1)], gold=1, need=9,
+            a_exclusions=frozenset({'藿藿'}), deployed=None)
+        assert out == []
+        out2 = funding_hold_fallback(
+            sess, (), [_bc('藿藿', slot=1)], gold=1, need=9,
+            a_exclusions=frozenset({'藿藿'}), deployed=[])
+        assert out2 == []
+
+    def test_non_empty_board_unchanged(self):
+        """对照零漂移:非空板帧判据行为不变(守卫只辖空板态,不构成
+        新的常态门槛)——同帧换 ≥1 上场件,凑息/腾席照常出候选。"""
+        bench = [_bc('燃料F', slot=1), _bc('燃料G', slot=2)]
+        st = self._empty_board_state()
+        st.deployed = [_bc('板上件锚', slot=1)]
+        ct: dict = {}
+        slots, key = crit_sell.sell_for_interest(
+            47, bench, 5, (), state=st, counters=ct)
+        assert key == '' and slots, '非空板帧凑息资格被守卫误伤'
+        assert mandate.fuel_sell_candidates(bench, (), state=st) != []
+        assert self.GUARD_KEY not in ct
+
+    def test_guard_removal_mutation_red(self, monkeypatch):
+        """守卫移除验证(变异红证):拔掉守卫谓词 ⇒ 板空帧判据恢复卖出
+        ——锁红由守卫本体承载,非其它资格面冒领(禁机械跟绿)。"""
+        import sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell as crit_mod
+        monkeypatch.setattr(crit_mod, 'empty_board_sell_blocked',
+                            lambda deployed, *, counters=None: False)
+        bench = [_bc('燃料F', slot=1), _bc('燃料G', slot=2)]
+        st = self._empty_board_state()
+        slots, key = crit_sell.sell_for_interest(
+            47, bench, 5, (), state=st)
+        assert key == '' and slots == [1], \
+            '守卫拔除后板空帧仍拒 = 红因不在守卫(锁语义漂移)'

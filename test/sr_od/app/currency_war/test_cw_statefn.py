@@ -408,6 +408,12 @@ class TestBenchEffectPredicate:
 class TestAuditCarriers:
 
     def test_provisional_none_fail_closed(self) -> None:
+        # 缺省全 None=fail-closed(断言对象 = 登记表缺省态)。setup 先
+        # reset 做全局态隔离(测试纪律:被测载体含模块级全局):标定批
+        # T-278/ADR-0639 起,生产构造位(MandateV1Strategy.__init__ →
+        # calibration.apply)会合法注入 Δ/ε₂,裸断言对测试序不再鲁棒;
+        # reset 后全 None = 缺省表无预置值,原语义不变。
+        provisional.reset()
         for name in provisional.slot_names():
             assert provisional.is_none(name), name  # 缺省全 None=fail-closed
 

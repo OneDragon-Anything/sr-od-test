@@ -32,7 +32,6 @@ from one_dragon.base.geometry.point import Point
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils.cv2_utils import read_image
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_prep_actions import ClickSpheres
 from sr_od.application.currency_war.obs.cw_identity_obs import (
     _get_bookcard_gray,
     find_bookcards,

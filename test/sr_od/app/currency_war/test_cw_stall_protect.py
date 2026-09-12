@@ -32,6 +32,9 @@ from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
     cw4_comp as _comp_single_source,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
@@ -79,7 +82,7 @@ class Test1PullbackSkip:
         bench = [_bc(_PROT, slot=1), _bc(_FUEL, slot=2)]
         ct: dict = {}
         slots, key = crit_sell.sell_for_interest(
-            47, bench, 5, (), state=GameState(),
+            47, bench, 5, (), state=_boarded(),
             defer_names=frozenset({_PROT}), counters=ct)
         assert key == '' and slots == [2]   # 被保件槽位 1 不在卖回集
         assert ct.get('t3_protect_deferred') == 1
@@ -93,7 +96,7 @@ class Test1PullbackSkip:
         (自旋路径 A = prefer 序刻意首卖刚买件的复合涌现)。"""
         bench = [_bc(_PROT, slot=1), _bc(_FUEL, slot=2)]
         slots, key = crit_sell.sell_for_interest(
-            47, bench, 5, (), state=GameState(),
+            47, bench, 5, (), state=_boarded(),
             prefer_names=(_PROT,), defer_names=frozenset({_PROT}))
         assert key == '' and slots == [2]
 
@@ -104,7 +107,7 @@ class Test2FuelDemotion:
     def test_deferred_demoted_to_tail(self):
         bench = [_bc(_PROT, slot=1), _bc(_FUEL, slot=2)]
         cands = mandate.fuel_sell_candidates(
-            bench, (), state=GameState(), defer_names=frozenset({_PROT}))
+            bench, (), state=_boarded(), defer_names=frozenset({_PROT}))
         assert [b.char_id for b in cands] == [_FUEL, _PROT]
 
     def test_only_fuel_protected_passes_and_consumes(self):
@@ -123,7 +126,7 @@ class Test2FuelDemotion:
         state_of(sess).target_comp = _comp()
         st = _m4_frame(bench=[_bc(n, slot=i + 1)
                               for i, n in enumerate(names)])
-        act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
         assert act.expect == names[0]
         assert act.reason == ''
@@ -140,7 +143,7 @@ class Test2FuelDemotion:
         state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 2}
         st = _m4_frame(bench=[_bc(_PROT, slot=1), _bc(other, slot=2)]
                        + [_bc(f'垫子{i}', slot=i + 3) for i in range(7)])
-        act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, SellBench)
         assert act.expect == other
         assert state_of(sess).cw4_fuel_filler_stall_buys.get(_PROT) == 2   # 未销
@@ -149,11 +152,11 @@ class Test2FuelDemotion:
         """支付变现通道:被保件仅降序放行(转化类,非禁卖)。"""
         bench = [_bc(_PROT, slot=1), _bc(_FUEL, slot=2)]
         out, key = crit_sell.funding_support_sell(
-            3, 9, bench, (), state=GameState(),
+            3, 9, bench, (), state=_boarded(),
             defer_names=frozenset({_PROT}))
         assert key == '' and out == [2, 1]   # 非保先卖;被保件兜底在列
         out_nd, _ = crit_sell.funding_support_sell(
-            3, 6, bench, (), state=GameState(),
+            3, 6, bench, (), state=_boarded(),
             defer_names=frozenset({_PROT}))
         assert out_nd == [2]   # 缺口 3 由非保件闭合,被保件不动
 
@@ -219,7 +222,7 @@ class Test3Lifecycle:
         sess = SimpleNamespace(cw4_counters={}, target_comp=_comp())
         state_of(sess).cw4_fuel_filler_stall_buys = {_PROT: 99}
         st = _m4_frame(bench=[_bc(_PROT, slot=i + 1) for i in range(9)])
-        shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert state_of(sess).cw4_fuel_filler_stall_buys == {}
         assert state_of(sess).cw4_counters.get('t3_protect_expired_round') == 1
 
@@ -234,17 +237,17 @@ class Test4GuardInteraction:
                  _bc(_FUEL, slot=3)]
         ct: dict = {}
         slots, key = crit_sell.sell_for_interest(
-            47, bench, 5, (), state=GameState(),
+            47, bench, 5, (), state=_boarded(),
             defer_names=frozenset({_PROT}), counters=ct)
         assert key == '' and slots == [3]
         # 双守卫各拒各的:被保素材被 defer 跳过(计数 1),素材守卫面
         # 由 fuel_sell_candidates 单独验——保护不构成素材豁免
         assert ct.get('t3_protect_deferred') == 2   # 两张被保副本均跳过
         cands = mandate.fuel_sell_candidates(
-            bench, (), state=GameState(), defer_names=frozenset())
+            bench, (), state=_boarded(), defer_names=frozenset())
         assert all((b.char_id or '') != _PROT for b in cands)   # 素材守卫拒入
         cands_def = mandate.fuel_sell_candidates(
-            bench, (), state=GameState(), defer_names=frozenset({_PROT}))
+            bench, (), state=_boarded(), defer_names=frozenset({_PROT}))
         assert all((b.char_id or '') != _PROT for b in cands_def)
 
 
@@ -258,27 +261,26 @@ class Test5ZeroDrift:
 
     def test_fuel_candidates_identical_without_defer(self):
         bench = [_bc(_PROT, slot=2), _bc(_FUEL, slot=1)]
-        st = GameState()
-        base = mandate.fuel_sell_candidates(bench, (), state=st)
+        base = mandate.fuel_sell_candidates(bench, (), state=_boarded())
         with_defer = mandate.fuel_sell_candidates(
-            bench, (), state=GameState(), defer_names=frozenset())
+            bench, (), state=_boarded(), defer_names=frozenset())
         assert base == with_defer
 
     def test_pullback_identical_without_defer(self):
         bench = [_bc(_PROT, slot=1), _bc(_FUEL, slot=2)]
         a, ka = crit_sell.sell_for_interest(44, bench, 5, (),
-                                            state=GameState())
+                                            state=_boarded())
         b, kb = crit_sell.sell_for_interest(44, bench, 5, (),
-                                            state=GameState(),
+                                            state=_boarded(),
                                             defer_names=frozenset())
         assert (a, ka) == (b, kb)
 
     def test_funding_identical_without_defer(self):
         bench = [_bc(_PROT, slot=1), _bc(_FUEL, slot=2)]
         a, ka = crit_sell.funding_support_sell(3, 9, bench, (),
-                                               state=GameState())
+                                               state=_boarded())
         b, kb = crit_sell.funding_support_sell(3, 9, bench, (),
-                                               state=GameState(),
+                                               state=_boarded(),
                                                defer_names=frozenset())
         assert (a, ka) == (b, kb)
 
@@ -414,6 +416,7 @@ class Test8EntryFundingFace:
             node_type=None, stop_flag=True, k_members=('线内件X',),
             round_num=2)
         st = GameState(gold=1, level=5, round_num=2, hp=40)
+        st.deployed = _boarded().deployed
         out = entry._criteria_pass(
             frame, sess, st, ('线内件X',),
             k_switched=False, old_line_members=())
@@ -442,6 +445,16 @@ class Test8EntryFundingFace:
 
 
 # ===== 复用脚手架 =====
+
+
+def _boarded(st: GameState | None = None) -> GameState:
+    """非空板测试环境(T-32 空板止损守卫前置):守卫钉「待卖后
+    deployed 为空 ⇒ 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),
+    直调卖出判据/发射位的环境须 ≥1 上场件,否则守卫 fail-closed 拒帧
+    ——与被测语义无关的红按环境前置补齐,非跟绿。"""
+    st = st if st is not None else GameState()
+    st.deployed = [_bc('板上件锚', slot=1)]
+    return st
 
 
 def _distinct_fillers(n: int) -> list[str]:
@@ -480,5 +493,5 @@ def _m4_frame(bench: list[BenchChar]) -> GameState:
     st.plane = 1
     st.shop = []
     st.bench = bench
-    st.deployed = []
+    st.deployed = _boarded().deployed
     return st

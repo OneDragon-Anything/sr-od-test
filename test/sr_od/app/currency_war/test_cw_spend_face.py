@@ -52,6 +52,9 @@ from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
     cw4_card as _card,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
@@ -100,7 +103,7 @@ def _decide(st, sess):
 
 def shop_decide(st, sess, cfg):
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
-    return shop.decide_shop_action(st, sess, cfg)
+    return shop.decide_shop_action(cw4_bs(st, sess), sess, cfg)
 
 
 # ===== 臂① m2_stockpile(§3.2-3.4)=====
@@ -145,7 +148,8 @@ class TestM2StockpileArm1:
         bench = [_bc(n, slot=i + 1)
                  for i, n in enumerate(offline[:BENCH_CAPACITY - 1])]
         bench.append(_bc(m, slot=BENCH_CAPACITY))   # cnt1=1 的成员在 bench
-        st = _st(gold=30, shop_cards=[_card(m, 3)], bench=bench)
+        st = _st(gold=30, shop_cards=[_card(m, 3)], bench=bench,
+                 deployed=[_bc('板上件锚', slot=1)])   # T-32 守卫前置
         sess = _shop_session(comp)
         act = _decide(st, sess)
         assert isinstance(act, SellBench), '满栏先 M4 腾席(off-line 燃料件)'
@@ -432,11 +436,17 @@ class TestShopRejectsArm1Semantics:
 
 
 def shop_rejects(st, comp):
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
     from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
         line_members,
     )
-    return shop.shop_unbought_reasons(st, comp, line_members(comp), [])
+    # W6 波 4:shop_unbought_reasons 切容器签名,帧经 cw4_bs 喂入
+    # (迁移约定 1;一次性 session 只作容器宿主)。
+    return shop.shop_unbought_reasons(cw4_bs(st, StrategySession()), comp,
+                                      line_members(comp), [])
 
 
 # ===== 检查点 3:达标即出战臂(W2 锁组,§9.6/C1;CUT8 只留 4 代表行)=====

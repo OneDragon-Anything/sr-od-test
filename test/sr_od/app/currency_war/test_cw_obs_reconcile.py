@@ -8,11 +8,11 @@ obs 独有的自检层:识别 vs 计算/池守恒的裁决语义,「对账不判
 全部纯函数直调,零桩零图片。组织蓝图 = obs 先删后重建规格 §2③。
 """
 import pytest
+
 from sr_od.application.currency_war.data.cw_shop_odds import POOL_COPIES_PER_CARD
 from sr_od.application.currency_war.obs import cw_arbitration as arb
 from sr_od.application.currency_war.obs import cw_faction_obs as facobs
 from sr_od.application.currency_war.obs import cw_shop_obs as shops
-
 
 # ===== 仲裁注册表(cw_arbitration;15 号稿 §2.4 批 A 迁移) =====
 

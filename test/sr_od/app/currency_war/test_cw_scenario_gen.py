@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """r125 场景生成器:枚举决策岔路口组合 → 批量不变量测试。
 
 高效造数 = 组合枚举 × 不变量断言(不是逐场景手写期望值)。
@@ -14,10 +13,13 @@ import pytest
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
+    ShopCard,
+)
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORKS,
-    TRANSITION_PACK,
     pick_framework,
     transition_score,
 )

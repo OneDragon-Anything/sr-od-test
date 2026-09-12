@@ -76,6 +76,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
 )
+from test.sr_od.app.currency_war._cw_helpers import cw4_bs
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
         / 'currency_war')
@@ -283,8 +284,8 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     """
     cfg = SimpleNamespace(ev_arm='full')
     sess = _ju23_session()
-    act = decide_shop_action(_ju23_frame(
-        100, [_sc('花火', star=2)]), sess, cfg)
+    act = decide_shop_action(cw4_bs(_ju23_frame(
+        100, [_sc('花火', star=2)]), sess), sess, cfg)
     assert not isinstance(act, (BuyCard, RefreshShop))
     # 必花域末位 L3(店空/2★ 无背书 ⇒ 全层无对象)
     assert isinstance(act, LevelUpShop)
@@ -319,7 +320,7 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
         st = _ju23_frame(gold0, [_sc('局23杂件')])
         sess = _ju23_session()
         for _ in range(15):
-            act = decide_shop_action(st, sess, cfg)
+            act = decide_shop_action(cw4_bs(st, sess), sess, cfg)
             if isinstance(act, BuyCard):
                 cost = act.card.cost if act.card.cost else 3
                 if gold0 <= 50:

@@ -47,6 +47,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
 
 # ===== 测试基建 =====
 
@@ -81,7 +84,7 @@ class _ProbeCloseStrategy:
         assert frame is not None, '店开帧未落黑板(组装断裂)'
         self.frames.append(frame)
         self.actions.append(
-            shop.decide_shop_action(frame, session,
+            shop.decide_shop_action(cw4_bs(frame, session), session,
                                     SimpleNamespace(ev_arm='full')))
         return CloseShop()
 
@@ -214,7 +217,7 @@ def test_none_frame_press_buy_silent() -> None:
     st = GameState(gold=11, level=7, hp=80, plane=1, round_num=3)
     st.shop = [_card()]
     sess = StrategySession()
-    act = shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+    act = shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
     assert not (isinstance(act, BuyCard)
                 and act.reason == 'dead_gold_press_buy'), \
         'None 帧上 ②(b) 发射(fail-open 失守)'

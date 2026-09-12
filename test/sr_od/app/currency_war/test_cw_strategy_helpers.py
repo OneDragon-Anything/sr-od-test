@@ -51,6 +51,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_feed,
+)
 
 
 def _cfg(**overrides) -> SimpleNamespace:
@@ -140,11 +143,11 @@ def test_settlement_observation_skips_low_confidence_hp() -> None:
 # ==================== blackboard 段(自 test_cw_blackboard.py 迁入) ====================
 
 def test_shop_screen_missing_frame_raises() -> None:
-    """黑板契约:观察帧缺失 = 观察层失约 → 抛错,禁静默按空态决策。"""
+    """黑板契约(W6 波 4 容器化,M3 在屏前置抛错形态):容器商店
+    payload 离屏(shop=None)= 观察层失约 → 抛错,禁静默按空态决策。"""
     strat = MandateV1Live()
     sess = _fresh(strat)
-    assert sess.shop_state_frame is None
-    with pytest.raises(ValueError, match='shop_state_frame'):
+    with pytest.raises(ValueError, match='离屏'):
         strat.decide_shop_screen(sess, None)
 
 
@@ -215,7 +218,7 @@ def _decide_shop(state: GameState, session: StrategySession):
         sim_decision_registry,
     )
     strat = MandateV1Strategy(registry=sim_decision_registry())
-    session.shop_state_frame = state
+    cw4_feed(session, state)
     return strat.decide_shop_screen(session, SimpleNamespace(ev_arm='full'))
 
 

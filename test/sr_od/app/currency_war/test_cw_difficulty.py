@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test_cw_difficulty 主题锁(结构合并批,机械拼接)。
 
 成员(原文件 docstring 语义索引;逐字搬运,断言零改动):
@@ -9,9 +8,7 @@
 """
 from __future__ import annotations
 
-
 # ==================== difficulty_account ====================
-
 import sys
 from pathlib import Path
 
@@ -72,7 +69,9 @@ def test_floor_diminishing() -> None:
 
 # ==================== difficulty_live_contamination ====================
 
-from sr_od.application.currency_war.sim.checks.corpus import check_difficulty_curve_live_contamination as chk
+from sr_od.application.currency_war.sim.checks.corpus import (
+    check_difficulty_curve_live_contamination as chk,
+)
 
 
 def _row(ed: int | None, live: bool | None, rnd: int = 1) -> dict:

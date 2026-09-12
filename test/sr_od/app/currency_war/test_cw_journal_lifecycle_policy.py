@@ -75,7 +75,6 @@ def test_real_run_id_re_consistency_with_archive_reader() -> None:
     kernel 禁依 telemetry、哨兵是跨仓独立脚本,三方无共享 import 面——
     字面量漂移 = 清理面与判读面对「实机段」的判定分叉(清理误删判读语料
     或判读采信已清段),一致性是分型窗安全的结构性前提。"""
-    import re
 
     from sr_od.application.currency_war.kernel.cw_state_journal import (
         REAL_RUN_ID_RE,

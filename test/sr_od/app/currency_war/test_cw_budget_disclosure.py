@@ -29,6 +29,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_of,
+)
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
 )
@@ -59,6 +62,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import 
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
 # ===== 测试基建 =====
 
@@ -78,9 +82,11 @@ class _StubMatch:
         self.session = session
 
 
-def _cur(plane: int, round_num: int, gold: int = 53) -> GameState:
+def _cur(plane: int, round_num: int, gold: int = 53,
+         node_type: str | None = None) -> GameState:
+    """帧构造(node_type = 喂容器时的节点轴载体,直调帧轴读属性不经容器)。"""
     return GameState(gold=gold, level=5, plane=plane, round_num=round_num,
-                     hp=100)
+                     hp=100, node_type=node_type)
 
 
 def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
@@ -158,14 +164,18 @@ class TestBudgetDisclosureWriteRead:
 
     def test_state_fields_equal_same_frame_computed_values(self):
         """装配后状态四字段 == 同帧独立现算值(R*/溢余/义务)。红证 =
-        现码恒 0(52 行全零实证);本腿断的是「值对」,非「非零」。"""
+        现码恒 0(52 行全零实证);本腿断的是「值对」,非「非零」。
+        W6 波 4:预算接缝读 session 容器单例,喂入先于装配(生产同路 =
+        观察漏斗,测试同路 = cw4_feed 合成口)。"""
         sess = StrategySession()
         snap = _snap(1, 8, 53)
+        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
         turn = assemble(snap, sess)
         st = state_of(sess)
-        # 独立重算:同输入投影确定 ⇒ 与 _budget 内部同值(非转抄 turn)
+        # 独立重算:同输入投影确定 ⇒ 与 _budget 内部同值(非转抄 turn);
+        # 重算输入 = 同一容器实例(键戳/轮轴的单一来源)。
         state = decision_state(snap, sess)
-        expected_cap = kernel_reserve_cap(state, sess)
+        expected_cap = kernel_reserve_cap(board_state_of(sess), sess)
         assert st.v3_reserve_cap == turn.budget.reserve_cap
         assert st.v3_reserve_cap == expected_cap
         assert st.v3_reserve_overflow == max(
@@ -182,8 +192,10 @@ class TestBudgetDisclosureWriteRead:
         """预算披露状态面(删除波 1 重写:sess_* 五键的 decisions 行组装
         写端已随 decisions 流写入端退役,行族归属策略侧决策行接线批):
         assemble 装配点 + accrue 执行回执后,策略态五字段与预算构式一致
-        且非 None(读链写点两端对齐;T-84 修的读口在本锁钉「有真值可读」)。"""
+        且非 None(读链写点两端对齐;T-84 修的读口在本锁钉「有真值可读」)。
+        W6 波 4:键戳轴读 session 容器,装配前先喂入(生产同路 = 观察漏斗)。"""
         sess = StrategySession()
+        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
         assemble(_snap(1, 8, 53), sess)
         accrue_release_spent(_StubMatch(sess), RefreshShop(cost=2), True,
                              _cur(1, 8))
@@ -230,17 +242,20 @@ class TestShopOpenFrameDualWrite:
     def test_shop_open_frame_overwrites_with_frame_values(self):
         """店开观察帧覆写:overflow/budget 变帧现值(gold 64 > cap ⇒
         溢余 14/义务 >0);同轮重复覆写不清 spent(轮界清零归 prep 键戳
-        独占);下轮 prep 关店帧 ⇒ 关店 0 语义恢复(decisions 行 sess_*
-        = 最近一次写点值语义;键戳翻轮清零断言面 = 锁 D 主锁,此处
-        不重复)。"""
+        独占);下轮 prep 关店帧 ⇒ 披露 = 容器现值重算(W6 波 4 语义
+        变更,见④注;键戳翻轮清零断言面 = 锁 D 主锁,此处不重复)。"""
         sess = StrategySession()
-        # ① prep 关店帧(轮入口装配)
+        # ① prep 关店帧(轮入口装配;容器金缺席 = 关店不采金,首读无前值
+        # 不 carry ⇒「金未采」0 语义保持)
         assemble(self._closed_snap(1, 8, 64), sess)
         st = state_of(sess)
         assert st.v3_reserve_overflow == 0
-        # ② 店开帧覆写(帧现值)
+        # ② 店开帧覆写(帧现值):金源切容器(W6 波 4),店开帧经喂入口写
+        # 容器(生产同路 = 观察漏斗;测试同路 = cw4_feed 合成口),披露读
+        # 容器现值
         shop_state = GameState(gold=64, level=5, plane=1, round_num=8,
-                               hp=100)
+                               hp=100, node_type='prep')
+        cw4_feed(sess, shop_state)
         disclose_budget_at_shop_frame(shop_state, sess)
         assert st.v3_reserve_overflow == 64 - st.v3_reserve_cap
         assert st.v3_reserve_overflow > 0
@@ -249,10 +264,16 @@ class TestShopOpenFrameDualWrite:
         st.v3_release_spent = 4
         disclose_budget_at_shop_frame(shop_state, sess)
         assert st.v3_release_spent == 4
-        # ④ 下轮 prep 关店帧:陈旧店开溢余被装配写点复位(独有判别面:
-        # F1 新会话构造测不到「覆写后再复位」;翻轮清零语义归锁 D)
+        # ④ 下轮 prep 关店帧(金失读 → 容器 carry 沿用店开金,funnel 同
+        # 口径):装配披露 = 容器现值重算。「陈旧店开溢余复位 0」旧语义随
+        # 金源切容器消亡——失读沿用下披露恒按沿用金重算,不存在复位面;
+        # F1 新会话构造测不到「覆写后再披露」面(翻轮清零语义归锁 D)。
+        cw4_feed(sess, GameState(gold=0, gold_readable=False, level=5,
+                                 plane=1, round_num=9, hp=100,
+                                 node_type='prep'))
         assemble(self._closed_snap(1, 9, 64), sess)
-        assert st.v3_reserve_overflow == 0
+        assert st.v3_reserve_overflow == 64 - st.v3_reserve_cap
+        assert st.v3_reserve_overflow > 0
 
 
 # ===== 锁 D:轮界清零锁 =====
@@ -262,12 +283,14 @@ class TestRoundBoundaryReset:
     def test_new_round_clears_spent_and_reason_and_renews_key(self):
         """同 session 连续两轮(p1r8→p1r9)装配:新轮首帧 spent==0、
         reason==''(F5 裁决①:reason 并入键戳清零块,杜绝跨轮陈读)、
-        键戳已翻新。"""
+        键戳已翻新。键戳轴 = session 容器(W6 波 4),每轮装配前喂入。"""
         sess = StrategySession()
+        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
         assemble(_snap(1, 8, 53), sess)
         st = state_of(sess)
         st.v3_release_spent = 7
         st.v3_release_reason = 'must_spend'
+        cw4_feed(sess, _cur(1, 9, 53, node_type='prep'))
         assemble(_snap(1, 9, 53), sess)
         assert st.v3_release_spent == 0
         assert st.v3_release_reason == ''
@@ -276,12 +299,14 @@ class TestRoundBoundaryReset:
     def test_same_round_reassembly_keeps_accumulation(self):
         """同轮重装配(幂等重入)不清账:键戳同值 ⇒ 只覆写三预算字段,
         spent 存活期 = 本轮装配后至下一轮键戳变更(与「轮内截至采样时点
-        累计」语义一致)。"""
+        累计」语义一致)。键戳轴 = session 容器(W6 波 4),装配前喂入。"""
         sess = StrategySession()
+        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
         assemble(_snap(1, 8, 53), sess)
         st = state_of(sess)
         accrue_release_spent(_StubMatch(sess), RefreshShop(cost=2), True,
                              _cur(1, 8))
+        cw4_feed(sess, _cur(1, 8, 51, node_type='prep'))
         assemble(_snap(1, 8, 51), sess)   # 同轮重入(刷新后金位变化)
         assert st.v3_release_spent == 2
         assert st.v3_disclosure_key == (1, 8)
@@ -293,8 +318,10 @@ class TestReleaseSpentAccrual:
 
     def test_two_refreshes_accumulate_per_receipt(self):
         """执行一次 RefreshShop(cost=2) ⇒ spent==2;同 visit 第二笔 ⇒ 4
-        (执行回执位逐笔累计)。"""
+        (执行回执位逐笔累计)。键戳轴 = session 容器(W6 波 4),装配前
+        喂入使键戳成文。"""
         sess = StrategySession()
+        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
         assemble(_snap(1, 8, 53), sess)
         st = state_of(sess)
         m = _StubMatch(sess)

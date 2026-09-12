@@ -30,6 +30,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.decision_assembly import snapshot_from_obs
 from sr_od.application.currency_war.kernel import cw_line_switch
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY, Comp
 from sr_od.application.currency_war.kernel.cw_events import (
@@ -51,7 +52,6 @@ from sr_od.application.currency_war.kernel.cw_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.decision_assembly import snapshot_from_obs
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
     mandate,
@@ -246,7 +246,11 @@ class TestMandateBehavior:
         bench = [_bench(i, '燃料' + str(i)) for i in range(1, 10)]
         frame = _frame(gold=30, bench=bench, k=k)
         session = _session()
-        out = mandate.run_mandate(frame, session)
+        # 非空板前置(T-32 空板止损守卫):板空帧守卫 fail-closed 拒卖,
+        # 腾席环须 ≥1 上场件环境(state 缺读 = 拒,与生产 entry 恒传一致)。
+        gs = GameState(gold=30, level=3, round_num=3, hp=60)
+        gs.deployed = [_bench(1, '板上件锚')]
+        out = mandate.run_mandate(frame, session, state=gs)
         reasons = [e.reason for e in out]
         assert any(isinstance(e.action, SellBench) for e in out), \
             '腾席卖出发射缺席'

@@ -38,34 +38,34 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     register_sig_actors,
 )
 
-
+# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
+from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+    ChannelSig as _ChannelSig,
+)
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    register_sig_actors as _register_sig_actors,
+)
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     install_state_telemetry,
     reset_state_telemetry,
 )
 from sr_od.application.currency_war.telemetry import state as tel_state
 
-# ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
-    ChannelSig as _ChannelSig,
-    register_sig_actors as _register_sig_actors,
-)
-
 _register_sig_actors('TestSigWriter')
 
 
-def _sig() -> "_ChannelSig":
+def _sig() -> _ChannelSig:
     """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
     return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
-def _lsig() -> "_ChannelSig":
+def _lsig() -> _ChannelSig:
     """渠道②签名(logic_action 族;逻辑写入/confirm)。"""
     return _ChannelSig(family='logic_action', actor='TestSigWriter',
                        mode='compute')
 
 
-def _hsig() -> "_ChannelSig":
+def _hsig() -> _ChannelSig:
     """渠道③签名(logic_hook 族;relay 中继)。"""
     return _ChannelSig(family='logic_hook', actor='TestSigWriter',
                        mode='compute')
@@ -590,13 +590,13 @@ def test_popup_leg_boss_briefing_predecessor_advances(journal, run_id) -> None:
     推进来自商店面板块弹窗腿」——四规则组终版(用户 2026-09-10 裁,设计
     v3.4 §3.4.1)把 0p 升格为规则③触发面(简报屏自身即确定性证据,推进
     = 当前+1、类型 = boss 随屏自带);守卫族成员终版(用户终裁 2026-09-11,
-    攻击 R5 高-1)0p/0q 出族——商店面板块后到弹窗腿被 prev 守卫结构性拒绝
+    ADR-0630 修订节·守卫族终版)0p/0q 出族——商店面板块后到弹窗腿被 prev 守卫结构性拒绝
     (缓存守卫 c=8≠hist=9 为第二道防线),级联双推进破口消除。锁意图
     (boss 节点恰一次推进、推进证据可归因)不变。"""
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 8)                                    # 奖励关备战帧:腿 A 推 8
     assert SCREEN_BOSS_BRIEFING not in SCREEN_CONTEXT_GUARD_PREV, \
-        '0p 出守卫族(专用腿③,残留 = 级联双推进破口,攻击 R5 高-1)'
+        '0p 出守卫族(专用腿③,残留 = 级联双推进破口,ADR-0630 修订节·守卫族终版)'
     bs.observe_screen_context(SCREEN_BOSS_BRIEFING)    # 规则③:当前+1 = 9
     rows3 = _derive_rows(journal, 'derive_node_boss_brief')
     assert [r['after'] for r in rows3 if r['field'] == 'node_ord'] == [9], \

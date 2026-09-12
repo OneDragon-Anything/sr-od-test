@@ -58,6 +58,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+    cw4_feed,
+)
 from test.sr_od.app.currency_war.test_cw_sell_window_launch import (
     _CORE_HOLD,
     _FUEL,
@@ -82,8 +86,10 @@ def _registry(sess) -> dict:
 
 
 def _with_frame(sess, state) -> None:
-    """黑板帧挂载(生产 last_state 写点同形;sim 用 shop_state_frame)。"""
-    sess.last_state = state
+    """帧 → session 容器喂入(W6 波 4 迁移:黑板槽挂载随槽退役,相位
+    读端自治改容器直读 = kernel fresh_buys_sell_face 同源;喂入单一源
+    = _cw_helpers.cw4_feed)。"""
+    cw4_feed(sess, state)
 
 
 def _merged_fixture() -> tuple:
@@ -94,7 +100,10 @@ def _merged_fixture() -> tuple:
     st = GameState(gold=30, level=7, round_num=3, hp=60)
     st.plane = 2
     st.bench = [_bc(_FUEL, slot=1), _bc(_FUEL, slot=2)]
-    st.deployed = []
+    # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
+    # 拒卖」,卖出判据/发射位直调环境须 ≥1 上场件,否则 fail-closed
+    # 拒帧——与被测语义无关的红按环境前置补齐,非跟绿。
+    st.deployed = [_bc('板上件锚', slot=1)]
     st.shop = [_card(_FUEL, cost=1, star=1)]
     return sess, st
 
@@ -140,7 +149,8 @@ class TestL1HardFace:
         (考古锚,ADR-0611 §3-1),捷径形态照样入硬面;发射登记簿不开账
         (捷径语义)。红证:变异 1(拔写点)则本锁红。"""
         sess, st = _merged_fixture()
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'm2_merge_completion'
         assert _FUEL not in _registry(sess), \
             '合成销语义漂移:捷径买入不应开登记账(V2-05)'
@@ -274,14 +284,15 @@ class TestL2AllArmsSoldFace:
         (变异 4)则对照格与本格同态 = 锁红。"""
         sess, st = _dominance_fixture()
         mandate.record_round_sold(sess, st, _FUEL)
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, BuyCard) or act.reason != 'dominance_buy'
         ct = state_of(sess).cw4_counters
         assert ct.get('dominance_buy_round_sold_excluded') == 1, \
             '逐臂分键显影缺席(C6/ADR-0604 §3-5 扩域候观测键)'
         # 对照:未卖帧照常发射(过滤位只辖「本轮已卖」,不过度扩面)
         p_sess, p_st = _dominance_fixture()
-        plain_act = decide_shop_action(p_st, p_sess,
+        plain_act = decide_shop_action(cw4_bs(p_st, p_sess), p_sess,
                                        SimpleNamespace(ev_arm='full'))
         assert isinstance(plain_act, BuyCard) \
             and plain_act.reason == 'dominance_buy'
@@ -293,7 +304,8 @@ class TestL2AllArmsSoldFace:
         st = _state(30, [], round_num=3)
         st.shop = [_card('目标件', cost=1)]
         mandate.record_round_sold(sess, st, '目标件')
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, BuyCard) \
             or act.reason not in ('m2_line_member', 'm2_locked_member')
         assert state_of(sess).cw4_counters.get('m2_round_sold_excluded') == 1
@@ -308,7 +320,8 @@ class TestL2AllArmsSoldFace:
         monkey.delitem(sell_gate.LAUNCH_CAUSE_BY_ARM, 'dominance_buy')
         try:
             with pytest.raises(ValueError, match='LAUNCH_CAUSE_BY_ARM'):
-                decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+                decide_shop_action(cw4_bs(st, sess), sess,
+                                   SimpleNamespace(ev_arm='full'))
         finally:
             monkey.undo()
 
@@ -393,7 +406,8 @@ class TestL3EmissionAndTranscription:
         bench = [_bc_helper(f'高价{i}', star=3, slot=i) for i in range(1, 9)]
         bench.append(_bc_helper('垫件P', slot=9))
         st = _state(30, bench, round_num=3)
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench) and act.expect == '垫件P'
         assert act.convert_reason == 'fuel_victim_protect_demoted'
         assert act.reason == ''
@@ -406,7 +420,8 @@ class TestL3EmissionAndTranscription:
         sess = _sess()
         bench = [_bc(_FUEL, slot=1)]
         st = _state(1, bench, round_num=3)   # gold<g*:凑息臂卖燃料
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench)
         assert act.convert_reason == '' and act.reason == ''
 
@@ -418,11 +433,15 @@ class TestL3EmissionAndTranscription:
 
         class _Stub:
             def decide_shop_screen(self, sess, screen):  # noqa: ARG002
-                st = sess.shop_state_frame
-                idx = None
-                if st is not None:
-                    idx = next((i for i, b in enumerate(st.bench or [])
-                                if b is not None), None)
+                # 决策后读帧断言改容器读(W6 波 4 迁移约定 2:黑板槽
+                # shop_state_frame 随槽退役,读 session 容器备战席槽表)。
+                from sr_od.application.currency_war.kernel.cw_board_state import (
+                    bench_slots_of,
+                    board_state_of,
+                )
+                slots = bench_slots_of(board_state_of(sess))
+                idx = next((i for i, b in enumerate(slots)
+                            if b is not None), None)
                 if not fired['done'] and idx is not None:
                     fired['done'] = True
                     return [ShopSellBench(

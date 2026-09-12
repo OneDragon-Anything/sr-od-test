@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """统一观察架构·实机半边写入流对拍夹具(试点步骤 1;设计正本 =
 docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md §9.1 主门
 (b)腿「写入流分域夹具对拍」+ §2.3 实机实现 = 识别链映射表;sim 半边 =
@@ -29,7 +28,6 @@ ADR-0651 等价形态:窗内读数不可信 → 本帧不写观察,保 logic 投
 # 不在 obs 六合同替代范围——待并行批(board state 迁移)落地后,
 # 与 cw_screen_prep 写流主题归并后再处置;禁在归并前直接删除。
 
-from __future__ import annotations
 from __future__ import annotations
 
 import dataclasses
@@ -84,8 +82,7 @@ def _make_director(test_context: SimpleNamespace,
     """
     from sr_od.application.currency_war import currency_war_config as cfg_mod
     from sr_od.application.currency_war.kernel import cw_reconcile
-    from sr_od.application.currency_war.obs import cw_arbitration
-    from sr_od.application.currency_war.obs import cw_observe_full
+    from sr_od.application.currency_war.obs import cw_arbitration, cw_observe_full
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_prep as pd_mod,
     )
@@ -245,8 +242,8 @@ def test_prep_writeflow_merge_window_defers_observe(
     窗内旧星读数」的观察失配缺陷行(噪声抑制语义保留);下帧干净帧实读
     覆盖:一致 = 零缺陷行,失配 = 投影 bug 留证修码。"""
     from sr_od.application.currency_war.kernel.cw_board_state import (
-        ChannelSig,
         BenchView,
+        ChannelSig,
         bench_view_of_slots,
         consume_defect_sink,
         set_defect_sink,
@@ -362,18 +359,18 @@ def test_legacy_path_entry_collapse_probe_once(
 
 def test_box_card_pick_single_source_wiring() -> None:
     """选卡决策区单一源守卫(墓碑 + 接线双角):``PrepActionExecutor
-    ._default_box_card`` 是 pick 族调用面最后一个切到 BoardState 消费视图
-    的接入点(prep_actions 内单一源宣言注释;设计正本 = docs/develop/
-    sr_od/application/currency_war/changes/2026-09-11-unified-state/
-    details/BoardState-数据结构设计.md §8.7 批次二,单一源
-    本体 = kernel/cw_bs_view.strategy_input_state)。
+    ._default_box_card`` 是 pick 族调用面的容器直读接入点(prep_actions
+    内单一源宣言注释;设计正本 = docs/develop/sr_od/application/
+    currency_war/changes/2026-09-11-unified-state/details/BoardState-数据
+    结构设计.md §8.7 批次二;W6 波 4 取帧点全部改道容器直读后,本接入点
+    = board_state_of 同款)。
 
     - 墓碑角(否定式 + 退役背书):选卡决策区禁回落 ``last_state or
       GameState`` 直读字面——被删的 cw_screen_supply.pick_box_card 原本
       同款直读,迁移批已切除;该第二源回流 = BoardState 观察流旁路
       (失读帧 carry 语义/记录模型全部绕过),全量照绿但单一源纪律破;
-    - 接线角:同区必须仍含 strategy_input_state 调用——接入点静默脱落
-      是回归直读的另一形态(换写法绕开墓碑字面),与墓碑角成对堵死;
+    - 接线角:同区必须仍含 board_state_of 调用——接入点静默脱落是
+      回归直读的另一形态(换写法绕开墓碑字面),与墓碑角成对堵死;
     - 变异自检:``decide_box_card`` 在场断言钉住扫描对象是选卡决策区
       本体,防 getsource 抓错函数后双断言恒真空转。
     """
@@ -386,6 +383,6 @@ def test_box_card_pick_single_source_wiring() -> None:
     assert 'last_state or GameState' not in src, (
         '选卡决策区回落 last_state or GameState() 直读第二源'
         '(BoardState 单一源纪律破,观察流被旁路)')
-    assert 'strategy_input_state(' in src, (
-        '选卡决策区单一源接入点脱落(strategy_input_state 未被调用,'
+    assert 'board_state_of(' in src, (
+        '选卡决策区容器直读接入点脱落(board_state_of 未被调用,'
         '回归直读同罪)')

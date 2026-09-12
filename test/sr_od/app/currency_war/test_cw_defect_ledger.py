@@ -15,7 +15,6 @@ from sr_od.application.currency_war.kernel import cw_observe
 from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
 from sr_od.application.currency_war.telemetry import (
     defects,
-    query,
     recorder,
     schema,
     state,
@@ -267,86 +266,7 @@ def test_gold_close_slot_retired(tmp_path: Path, monkeypatch):
     assert not hasattr(rec_mod, 'shop_close_audit_wiring_lock')
 
 
-def test_query_prefers_ledger_gold_close_over_conflict(tmp_path: Path):
-    """读端:行内 gold_close 优先(无冲突行也判 effective——unknown 面消除);
-    旧行(无该字段,gold_close 槽挂上前的历史局)回退冲突行;两者皆缺 →
-    unknown 不猜。带字段读失败行(None+trusted=False)**不回退**——回退
-    = 把陈旧冲突行 join 面(同轮上一单元误吃,ADR-0514)挪进读失败路径,
-    该语义锁在 test_cw_economy resolve_gold_close 新锁。"""
-    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
-        'ts': '2026-08-28T12:00:00', 'run_id': 't', 'plane': 1, 'round_num': 1,
-        'unit_seq': 1, 'boundary': 'closed', 'gold_close': 45,
-        'gold_close_trusted': True})
-    # r2 = legacy 行(无 gold_close 字段)——冲突行回退的唯一合法形态
-    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
-        'ts': '2026-08-28T12:05:00', 'run_id': 't', 'plane': 1, 'round_num': 2,
-        'unit_seq': 2, 'boundary': 'closed'})
-    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
-        'ts': '2026-08-28T12:10:00', 'run_id': 't', 'plane': 1, 'round_num': 3,
-        'unit_seq': 3, 'boundary': 'closed', 'gold_close': None,
-        'gold_close_trusted': False})
-    for rnd, ts in ((1, '12:00:05'), (2, '12:05:05'), (3, '12:10:05')):
-        schema.append_jsonl(tmp_path / 'decisions.jsonl', {
-            'run_id': 't', 'ts': f'2026-08-28T{ts}', 'plane': 1, 'round_num': rnd,
-            'gold': 50, 'gold_readable': True, 'eval_breakdown': {},
-            'actions': [{'__type__': 'BuyCard', 'card': {'x': 300, 'name': 'X', 'cost': 5}}]})
-    # 仅 r2 有冲突行(旧口径的唯一金源);r1/r3 无
-    schema.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
-        'ts': '2026-08-28T12:05:20', 'field': 'gold_delta', 'old': 45, 'new': 45,
-        'verdict': '留证', 'source': 'shop_spend_audit', 'plane': 1, 'round_num': 2})
-    lines = '\n'.join(query.query_spend_ledger(tmp_path, 't'))
-    # r1:仅行内 gold_close=45 → effective(旧口径下无冲突行会记 unknown)
-    r1 = next(ln for ln in lines.splitlines() if 'u1 p1r1' in ln)
-    assert 'effective' in r1
-    # r2:行内 None → 回退冲突行 45 → effective(旧行为保持)
-    r2 = next(ln for ln in lines.splitlines() if 'u2 p1r2' in ln)
-    assert 'effective' in r2
-    # r3:全缺 → unknown 不猜
-    r3 = next(ln for ln in lines.splitlines() if 'u3 p1r3' in ln)
-    assert 'unknown' in r3
 
-
-def test_spend_view_sim_int_ts_round_seq_disambiguation(tmp_path: Path):
-    """回归锁(sim 局 ts=轮序号 int):spend 视图查询不崩(旧版
-    `_match_conflict` 把 int ts 直传 fromisoformat 崩 TypeError),且
-    同 (plane, round) 冲突行按轮序号邻近窗消歧(取 |Δseq| 最小)。
-    跨形态不互配:int ts 与 ISO 冲突行互跳过(行为不猜)。"""
-    # legacy 行(无 gold_close)→ 回退冲突行 join,走 _match_conflict 全路径
-    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
-        'ts': 3, 'run_id': 's', 'plane': 1, 'round_num': 1,
-        'unit_seq': 1, 'boundary': 'closed'})
-    schema.append_jsonl(tmp_path / 'decisions.jsonl', {
-        'run_id': 's', 'ts': 3, 'plane': 1, 'round_num': 1,
-        'gold': 50, 'gold_readable': True, 'eval_breakdown': {},
-        'actions': [{'__type__': 'BuyCard', 'card': {'x': 300, 'name': 'X', 'cost': 5}}]})
-    # 同轮两条冲突行,seq=2 邻近(Δ1)、seq=7 远(Δ4)→ 消歧取 seq=2 行
-    schema.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
-        'ts': 7, 'field': 'gold_delta', 'old': 50, 'new': 50,
-        'verdict': '留证', 'source': 'shop_spend_audit', 'plane': 1, 'round_num': 1})
-    schema.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
-        'ts': 2, 'field': 'gold_delta', 'old': 50, 'new': 45,
-        'verdict': '留证', 'source': 'shop_spend_audit', 'plane': 1, 'round_num': 1})
-    lines = query.query_spend_ledger(tmp_path, 's')
-    r1 = next(ln for ln in lines if 'u1 p1r1' in ln)
-    assert 'effective' in r1  # 冲突行 join 成功(new=45 == plan 推算)不崩且消歧非远行
-
-
-def test_spend_view_live_str_ts_behavior_unchanged(tmp_path: Path):
-    """回归锁(实机局 ISO str ts):修复后秒窗消歧行为与旧版一致——
-    窗内就近行取值、窗外行不入;查询不崩。"""
-    schema.append_jsonl(tmp_path / 'spend_ledger.jsonl', {
-        'ts': '2026-08-28T12:05:00', 'run_id': 't', 'plane': 1, 'round_num': 2,
-        'unit_seq': 2, 'boundary': 'closed'})
-    schema.append_jsonl(tmp_path / 'decisions.jsonl', {
-        'run_id': 't', 'ts': '2026-08-28T12:05:05', 'plane': 1, 'round_num': 2,
-        'gold': 50, 'gold_readable': True, 'eval_breakdown': {},
-        'actions': [{'__type__': 'BuyCard', 'card': {'x': 300, 'name': 'X', 'cost': 5}}]})
-    schema.append_jsonl(tmp_path / 'obs_conflicts.jsonl', {
-        'ts': '2026-08-28T12:05:20', 'field': 'gold_delta', 'old': 50, 'new': 45,
-        'verdict': '留证', 'source': 'shop_spend_audit', 'plane': 1, 'round_num': 2})
-    lines = query.query_spend_ledger(tmp_path, 't')
-    r = next(ln for ln in lines if 'u2 p1r2' in ln)
-    assert 'effective' in r  # 20s 在 600s 秒窗内,join 到 new=45
 
 
 def test_shop_close_audit_wiring_retired():
@@ -472,3 +392,10 @@ def test_deployed_2src_run_counts_bounded(tmp_path: Path, monkeypatch):
     assert set(counts) == {'w505t'}, counts
     assert counts['w505t'] == 1
 
+
+# [退役墓碑,W3] test_query_prefers_ledger_gold_close_over_conflict /
+# test_spend_view_sim_int_ts_round_seq_disambiguation /
+# test_spend_view_live_str_ts_behavior_unchanged 随 query_spend_ledger 旧视图与
+# helper(_match_conflict/resolve_unit_gold_close)退役(W3,删旧读面);
+# spend 审计现役账面 = receipts 回执窗 + journal obs_event gold_delta 留证。
+# git 历史可复活。

@@ -62,6 +62,9 @@ from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
     cw4_comp as _comp,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
@@ -201,7 +204,7 @@ class TestMustSpendGate:
         零 LevelUpShop。"""
         st = _state(65, 5, xp=(0, 20))
         sess = _bg_sess()
-        act = shop.decide_shop_action(st, sess,
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess,
                                       SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, LevelUpShop)
         assert state_of(sess).cw4_counters.get('budget_gate_must_spend_defer') == 1

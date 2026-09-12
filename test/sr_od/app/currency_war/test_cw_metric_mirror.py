@@ -11,7 +11,6 @@ test_cw_board_target_line_weight(kernel 计数正确性);form_ok 正确性
 细锁 = test_cw_obs_keys。锁口径 = 结构/回显,不锁分布数值。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import random
 from types import SimpleNamespace

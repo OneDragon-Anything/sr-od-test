@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """test_cw_shop_guards 主题锁。
 
 2026-09-03 拆分归档批:自混合文件 test_cw_legacy_audit.py 按 member 拆回独立文件(纯移动,断言零改动;原合并文件消亡)。"""
 from __future__ import annotations
-
-
 
 import inspect as _r336_batch4_locks_inspect
 
@@ -16,12 +13,16 @@ def test_shop_open_collapse_wait_dd011() -> None:
     W970 批 A 原子化后商店路径 = 编排壳 buy + 波循环 run_buy_waves +
     开/关店原子核心,四落点同锁。
     注:不设肯定性断言(常量名在场类)——那类锁只是实现的影子,无独立语义。"""
-    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
     from sr_od.application.currency_war.operations.cw_op import (
         cw_op_buy_cards as buy_cards,
+    )
+    from sr_od.application.currency_war.operations.cw_op import (
         cw_op_close_shop as close_shop,
+    )
+    from sr_od.application.currency_war.operations.cw_op import (
         cw_op_open_shop as open_shop,
     )
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
     for fn in (cw_screen_prep.CwScreenPrep._open_shop_phase, buy_cards.run_buy_waves,
                open_shop.open_shop, close_shop.close_shop):
         src = _r336_batch4_locks_inspect.getsource(fn)
@@ -38,8 +39,10 @@ def test_shop_currency_war_config_module_level() -> None:
     buy 全崩。W970 批 A 原子化后 config 构造点 = run_buy_waves 顶部
     (无条件,UnboundLocalError 形态结构性消除);锁:buy_cards 模块级
     名存在 + 编排壳/波循环体内无任何局部 import。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_buy_cards as buy_cards,
+    )
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
-    from sr_od.application.currency_war.operations.cw_op import cw_op_buy_cards as buy_cards
     assert getattr(buy_cards, 'CurrencyWarConfig', None) is not None, \
         'buy_cards.py 必须模块级 import CurrencyWarConfig'
     # visit_open_shop = 0n 转交与显式开店的共用尾段(ADR-0562),同辖
@@ -59,8 +62,10 @@ def test_shop_contextlib_module_level_no_local_import() -> None:
     与遥测留证。W970 批 A 原子化后路径 = 编排壳 buy + 波循环
     run_buy_waves。锁:两模块模块级存在 + 两体内无局部 import
     contextlib + contextlib.suppress 使用点无局部 import 保护。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_buy_cards as buy_cards,
+    )
     from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
-    from sr_od.application.currency_war.operations.cw_op import cw_op_buy_cards as buy_cards
     assert getattr(cw_screen_prep, 'contextlib', None) is not None, \
         'cw_screen_prep.py 必须模块级 import contextlib(r346 H1;编排宿主随壳退役迁移)'
     assert getattr(buy_cards, 'contextlib', None) is not None, \

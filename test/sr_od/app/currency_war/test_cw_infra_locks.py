@@ -496,7 +496,6 @@ from sr_od.application.currency_war.sim.engine_p1 import (
 from sr_od.application.currency_war.sim.runner import simulate_p1_batch
 
 
-
 def _strip_comments_and_docstrings(text: str) -> str:
     """去 # 注释行与三引号 docstring(守卫只看活代码,定谳墓碑注释放行)。"""
     out: list[str] = []

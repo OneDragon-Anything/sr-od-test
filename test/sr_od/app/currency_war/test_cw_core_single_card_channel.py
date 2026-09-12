@@ -46,6 +46,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
 
 # ===== 基建(idiom 同 test_cw_locked_buy_membership_split)=====
 
@@ -114,7 +117,7 @@ class TestCoreChannelLaunch:
         之二:候补支触发 + 支配性支命中(§7 分账)。"""
         st = _state(gold=45, shop_cards=[_card('希儿', 3)])
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         buys = _core_buys([act])
         assert len(buys) == 1 and buys[0].card.name == '希儿'
         ct = _counters(sess)
@@ -130,7 +133,7 @@ class TestCoreChannelLaunch:
         「C1 锁线前置使 1-3 未锁线不触发」即本裁定病灶本体。"""
         st = _state(gold=45, shop_cards=[_card('希儿', 3)])
         sess = _session(get_comp(_LOCK_COMP), IntentionState())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         buys = _core_buys([act])
         assert len(buys) == 1 and buys[0].card.name == '希儿'
         assert buys[0].reason == 'core_single_card_buy:unlocked'
@@ -145,7 +148,7 @@ class TestCoreChannelLaunch:
         可逆性是 dominance 族语义、恒买语义 = 持有价值,ADR-0580)。"""
         st = _state(gold=45, shop_cards=[_card('希儿', 9, star=2)])
         sess = _session(get_comp(_LOCK_COMP), IntentionState())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         buys = _core_buys([act])
         assert len(buys) == 1 and buys[0].card.name == '希儿'
         assert _counters(sess).get('core_unlocked_buy_hit') == 1
@@ -159,7 +162,7 @@ class TestCoreChannelLaunch:
         st = _state(gold=45, shop_cards=[_card('希儿', 3)])
         st.plane = 1
         sess = _session(get_comp(_LOCK_COMP), IntentionState())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         buys = _core_buys([act])
         assert len(buys) == 1 and buys[0].card.name == '希儿'
         assert buys[0].reason == 'core_single_card_buy:unlocked'
@@ -169,7 +172,7 @@ class TestCoreChannelLaunch:
         锁定采购集 ⇒ 非候补,归 M2 义务(m2_line_member),通道零触发。"""
         st = _state(gold=45, shop_cards=[_card('希儿', 3)])
         sess = _session(get_comp('希儿量子'), _locked_ist('希儿量子'))
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, BuyCard) and act.card.name == '希儿'
         assert act.reason == 'm2_line_member'
         ct = _counters(sess)
@@ -181,7 +184,7 @@ class TestCoreChannelLaunch:
         P47 损 ≥1)⇒ 不放行;帧落数值支域(fail-closed 未落码)显影键。"""
         st = _state(gold=50, shop_cards=[_card('希儿', 3)])
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not _core_buys([act])
         ct = _counters(sess)
         assert ct.get('core_candidate_seen') == 1
@@ -193,7 +196,7 @@ class TestCoreChannelLaunch:
         2★ 直出卡帧不放行,落数值支域显影键。"""
         st = _state(gold=45, shop_cards=[_card('希儿', 3, star=2)])
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not _core_buys([act])
         ct = _counters(sess)
         assert ct.get('core_numeric_fail_closed') == 1
@@ -214,7 +217,7 @@ class TestCoreChannelLaunch:
         bench = [_bc('三月七', slot=i + 1) for i in range(BENCH_CAPACITY)]
         st = _state(gold=45, shop_cards=[_card('希儿', 3)], bench=bench)
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not _core_buys([act])
         ct = _counters(sess)
         assert ct.get('core_candidate_seen') == 1
@@ -244,7 +247,7 @@ class TestCoreChannelLaunch:
         shop_latch_skip_* 跳过计数、通道零闩读/写。"""
         st = _state(gold=45, shop_cards=[_card('希儿', 3)])
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert state_of(sess).cw4_shopped_phase == (2, 2)
         assert not [k for k in _counters(sess)
                     if k.startswith('shop_latch_skip_')]
@@ -257,7 +260,10 @@ def test_reject_split_core_candidate_vs_non_line():
     """non_line 拆键:registry 核心卡在售未买 = core_candidate_rejected,
     普通线外件保持 non_line(判读可辨;sim 检查器归机会错失类)。"""
     st = _state(gold=45, shop_cards=[_card('希儿', 3), _card('景元', 3)])
-    out = shop.shop_unbought_reasons(st, get_comp(_LOCK_COMP), (), [])
+    # W6 波 4:shop_unbought_reasons 切容器签名,帧经 cw4_bs 喂入。
+    out = shop.shop_unbought_reasons(
+        cw4_bs(st, _session(get_comp(_LOCK_COMP), None)),
+        get_comp(_LOCK_COMP), (), [])
     assert out['希儿'] == 'core_candidate_rejected'
     assert out['景元'] == 'non_line'
 

@@ -19,9 +19,9 @@ import dataclasses
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_board_state import (
+    SHOP_PROJECTION_DOMAINS,
     ChannelSig,
     ShopActionExecuted,
-    SHOP_PROJECTION_DOMAINS,
     apply_shop_action_logic,
     bench_slots_to_legacy,
     board_state_of,

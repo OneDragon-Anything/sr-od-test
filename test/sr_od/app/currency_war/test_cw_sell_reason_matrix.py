@@ -71,6 +71,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
 )
 from sr_od.application.currency_war.telemetry.schema import serialize_action
+from test.sr_od.app.currency_war._cw_helpers import cw4_bs
 from test.sr_od.app.currency_war.test_cw_sell_window_launch import (
     _CORE_HOLD,
     _FUEL,
@@ -102,6 +103,23 @@ def _register(sess, cause: str) -> str:
 
 def _prep_emit_out(sells: list) -> list:
     return [e for e in sells if isinstance(e.action, PrepSellBench)]
+
+
+def _boarded(gold: int = 1, level: int = 5, round_num: int = 2,
+             hp: int = 40) -> GameState:
+    """非空板测试环境(T-32 空板止损守卫前置):守卫钉「待卖后
+    deployed 为空 ⇒ 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),
+    卖出判据/发射位直调环境须 ≥1 上场件,否则守卫 fail-closed 拒帧
+    ——与被测语义无关的红按环境前置补齐,非跟绿。"""
+    st = GameState(gold=gold, level=level, round_num=round_num, hp=hp)
+    st.deployed = [_bc('板上件锚', slot=1)]
+    return st
+
+
+def _boarded_frame(**kw) -> mandate.MandateFrame:
+    """MandateFrame 带 1 上场件(与 _boarded 同前置语义)。"""
+    kw.setdefault('deployed', [_bc('板上件锚', slot=1)])
+    return mandate.MandateFrame(**kw)
 
 
 # ===== 枚举闭集登记门(方案 v3 §5.2 阶段 2;ADR-0585 §3)=====
@@ -308,8 +326,9 @@ class TestEmissionFace:
         非孤儿帧 reason 缺省 ''('interest_pullback' 已拆;孤儿帧打标
         由 test_cw_sell_window_launch 正格锁辖)。"""
         sess = _sess()
-        act = decide_shop_action(_state(1, [_bc(_FUEL, slot=1)]), sess,
-                                 SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(
+            cw4_bs(_state(1, [_bc(_FUEL, slot=1)]), sess),
+            sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench)
         assert act.reason == ''
         assert act.expect == _FUEL
@@ -320,8 +339,9 @@ class TestEmissionFace:
         不变);plain 分键计数与 'funding_support' 填充已拆。"""
         sess = _sess()
         sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
-        act = decide_shop_action(_state(1, [_bc(_FUEL, slot=1)]), sess,
-                                 SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(
+            cw4_bs(_state(1, [_bc(_FUEL, slot=1)]), sess),
+            sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench)
         assert act.reason == ''
         ct = state_of(sess).cw4_counters
@@ -336,13 +356,13 @@ class TestEmissionFace:
         内部路由键非放行证据,§3.3)。"""
         sess = _sess()
         bench = [_bc(_FUEL, slot=1)]
-        frame = mandate.MandateFrame(
-            gold=9, level=3, bench=bench, deployed=[], deploy_cap=4,
+        frame = _boarded_frame(
+            gold=9, level=3, bench=bench, deploy_cap=4,
             node_type=None, stop_flag=False, k_members=('目标件',),
             round_num=2)
         out = mandate.run_mandate(frame, sess,
-                                  state=GameState(gold=9, level=3, hp=80,
-                                                  plane=1, round_num=2))
+                                  state=_boarded(gold=9, level=3,
+                                                 hp=80, round_num=2))
         sells = _prep_emit_out(out)
         assert len(sells) == 1
         assert sells[0].action.reason == ''
@@ -361,12 +381,12 @@ class TestEmissionFace:
         sess = _sess()
         sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         bench = [_bc(f'燃料{i}', slot=i) for i in range(1, 10)]
-        frame = mandate.MandateFrame(
-            gold=30, level=3, bench=bench, deployed=[], deploy_cap=4,
+        frame = _boarded_frame(
+            gold=30, level=3, bench=bench, deploy_cap=4,
             node_type=None, stop_flag=False, k_members=k, round_num=2)
         out = mandate.run_mandate(frame, sess,
-                                  state=GameState(gold=30, level=3, hp=80,
-                                                  plane=1, round_num=2))
+                                  state=_boarded(gold=30, level=3,
+                                                 hp=80, round_num=2))
         sells = _prep_emit_out(out)
         assert len(sells) == 1
         assert sells[0].action.reason == ''
@@ -378,12 +398,12 @@ class TestEmissionFace:
                                          cause='stall_protect', round_num=2)
         bench2 = [_bc(f'高价{i}', star=3, slot=i) for i in range(1, 9)]
         bench2.append(_bc('垫保F', slot=9))
-        frame2 = mandate.MandateFrame(
-            gold=30, level=3, bench=bench2, deployed=[], deploy_cap=4,
+        frame2 = _boarded_frame(
+            gold=30, level=3, bench=bench2, deploy_cap=4,
             node_type=None, stop_flag=False, k_members=k, round_num=2)
         out2 = mandate.run_mandate(frame2, sess2,
-                                   state=GameState(gold=30, level=3, hp=80,
-                                                   plane=1, round_num=2))
+                                   state=_boarded(gold=30, level=3,
+                                                  hp=80, round_num=2))
         sells2 = _prep_emit_out(out2)
         assert len(sells2) == 1
         assert sells2[0].action.reason == ''
@@ -440,9 +460,9 @@ class TestEmissionFace:
         """prep funding EV 位:T3 被保垫件降序放行行为不变(销账经
         T3 活跃集清空可观测);分键计数与载体填充已拆(reason '')。"""
         def _run(bench: list, sess) -> tuple[list, dict]:
-            st = GameState(gold=1, level=5, round_num=2, hp=40)
-            frame = mandate.MandateFrame(
-                gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
+            st = _boarded()
+            frame = _boarded_frame(
+                gold=1, level=5, bench=bench, deploy_cap=6,
                 node_type=None, stop_flag=True, k_members=('线内件X',),
                 round_num=2)
             out = entry._criteria_pass(frame, sess, st, ('线内件X',),
@@ -470,10 +490,10 @@ class TestEmissionFace:
         """prep funding EV 兜底位:兜底变现发射行为不变;兜底分键计数
         与载体填充已拆。"""
         sess = _sess()
-        st = GameState(gold=1, level=5, round_num=2, hp=40)
+        st = _boarded()
         bench = [_bc(_TRANS_HOLD, slot=1)]
-        frame = mandate.MandateFrame(
-            gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
+        frame = _boarded_frame(
+            gold=1, level=5, bench=bench, deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('线内件X',),
             round_num=2)
         out = entry._criteria_pass(frame, sess, st, ('线内件X',),
@@ -490,10 +510,10 @@ class TestEmissionFace:
         燃料件(U_X/V_MS 注入态保守子集)= 'line_switch_collapse';
         载体与标记双写。"""
         sess = _sess()
-        st = GameState(gold=30, level=5, round_num=2, hp=40)
+        st = _boarded(gold=30)
         bench = [_bc(_FUEL, slot=1)]
-        frame = mandate.MandateFrame(
-            gold=30, level=5, bench=bench, deployed=[], deploy_cap=6,
+        frame = _boarded_frame(
+            gold=30, level=5, bench=bench, deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('线内件X',),
             round_num=2)
         provisional.inject('U_X', provisional.CalibValue(
@@ -523,13 +543,14 @@ class TestEmissionFace:
             _bc(f'燃料{i}', slot=i + 1) for i in range(3, 10)]
         st = _state(45, bench)
         st.shop = [ShopCard(x=100, name='希儿', cost=3, star=1)]
-        act = decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+        act = decide_shop_action(cw4_bs(st, sess), sess,
+                                 SimpleNamespace(ev_arm='full'))
         assert isinstance(act, ShopSellBench)
         assert act.reason == ''
         assert act.expect == _FUEL
 
 
-# ===== seed18 p1r1 端到端首发点锁(T-141;ADR-0591)=====
+# ===== 孤儿标记端到端首发点锁(T-141;ADR-0591;种子锚历史见测试 docstring)=====
 
 
 class TestLineSwitchOrphanSeed18:
@@ -542,17 +563,31 @@ class TestLineSwitchOrphanSeed18:
     reason)。种子锚同责(README 纪律 12):策略行为位移致形态消失时,
     红 = 重选探针种子,非机械跟绿。"""
 
-    def test_seed18_p1r1_orphan_sell_marked(self):
+    def test_seed89_p1r3_orphan_sell_marked(self):
+        """no_same_round_buy_sell 预存红的发射侧闭合证据:义务买入当轮
+        K 支持度重排致成员出基座 = P78-2a 线账闭合,其后的凑息回拉清算
+        行带 sell_reason='line_switch_collapse'(引擎转录面),检查器
+        豁免面据此分键;决策轨迹逐位不变(reason 不进决策输入,渲染面
+        免疫 = TestSerializationEquivalence.test_replay_diff_rendering_
+        ignores_reason)。种子锚同责(README 纪律 12):策略行为位移致
+        形态消失时,红 = 重跑探针重选种子,非机械跟绿。
+        种子锚历史(T-32 空板止损守卫位移):原 seed18 形态在 p1r1 开局
+        空板凑息清算帧——守卫(待卖后 deployed 为空 ⇒ 拒卖)按设计拦截
+        空板帧卖出,标记形态移至非空板帧;探针重扫(seed 0-109,守卫
+        生效树)命中 {56: p1r2/艾丝妲, 89: p1r3/桑博},取最小 56。
+        种子锚历史(W6 波 4 黑板容器化位移):引擎 RNG 消费序列再位移,
+        seed 56 p1r2 形态消失;重跑探针(seed 0-199)全局面仅命中
+        {89: p1r3/桑博}(不变式在线,非机械跟绿),锚移 89。"""
         from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-        res = simulate_p1(18, pool='snapshot')
+        res = simulate_p1(89, pool='snapshot')
         sells = [a for row in res.ledger
-                 if row.get('plane') == 1 and row.get('round_num') == 1
+                 if row.get('plane') == 1 and row.get('round_num') == 3
                  for a in (row.get('actions') or [])
                  if a.get('__type__') == 'SellBench']
         marked = [a for a in sells
                   if a.get('sell_reason') == 'line_switch_collapse']
         assert marked, \
-            f'p1r1 卖出行未见孤儿标记(形态消失则重选探针种子): {sells}'
+            f'p1r3 卖出行未见孤儿标记(形态消失则重跑探针重选种子): {sells}'
         # 证明随行可辨:卖出名带字段(转录面),豁免键不离证明。
         assert any(a.get('name') for a in marked), '卖出行缺名字段'
 
@@ -601,7 +636,7 @@ class TestCauseChannelMatrix:
         # 垫保类:硬排除会杀死转化类放行(P78-5′),A 面恒不含。
         assert x not in excl, f'{cause}×{channel}:垫保被误升 A 排除面'
         bench = [_bc(x, slot=1)]
-        st = GameState(gold=1, level=3, hp=80, plane=1, round_num=3)
+        st = _boarded(gold=1, level=3, round_num=3, hp=80)
         t3 = sell_gate.stall_protect_active(sess, 3)
         assert t3 == {x}
         if channel == 'interest':

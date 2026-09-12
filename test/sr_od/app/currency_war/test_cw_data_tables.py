@@ -9,6 +9,7 @@
 自 data_registry 解体收编:registry_complete/plaza_snapshot/recipe×2。
 """
 import pytest
+
 from sr_od.application.currency_war.data import cw_synthesis as synth
 from sr_od.application.currency_war.data.cw_battle_tables import (
     NODE_WIN_P_BY_TYPE,
@@ -23,8 +24,8 @@ from sr_od.application.currency_war.data.cw_enemy_data import (
     BOSS_NICKNAMES,
 )
 from sr_od.application.currency_war.data.cw_equipment_data import (
-    EQUIPMENTS,
     EQUIPMENT_ROSTER,
+    EQUIPMENTS,
 )
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
 from sr_od.application.currency_war.data.cw_invest_data import (
@@ -36,7 +37,6 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
     POOL_COPIES_PER_CARD,
     REFRESH_PROB,
 )
-
 
 # ===== 合同一:引用完整性(外键全在注册表) =====
 
@@ -116,15 +116,15 @@ class TestDerivationConsistency:
         # 从单一源现算对照组,防派生链被改成手抄表
         recalc_advance = {n: e.recipes for n, e in EQUIPMENTS.items()
                           if e.category == '进阶' and e.recipes}
-        assert synth._ADVANCE_RECIPES == recalc_advance
+        assert recalc_advance == synth._ADVANCE_RECIPES
         recalc_bases = frozenset(
             c for recipes in recalc_advance.values() for r in recipes for c in r)
-        assert synth.SYNTHESIS_BASES == recalc_bases - {'光能电池'}
+        assert recalc_bases - {'光能电池'} == synth.SYNTHESIS_BASES
 
     def test_distinct_cards_matches_chars(self):
         # shop_odds 的每档卡种数 = chars 注册表现算(派生;两表各自登记时此锁防漂移)
-        assert DISTINCT_CARDS_PER_COST == {
-            cost: len(chars_by_cost(cost)) for cost in range(1, 6)}
+        assert {
+            cost: len(chars_by_cost(cost)) for cost in range(1, 6)} == DISTINCT_CARDS_PER_COST
 
     def test_plaza_snapshot_guard(self):
         # 迁自 data_registry:8 条 plaza 冻结条目(与生成器同源 config API V4.4)

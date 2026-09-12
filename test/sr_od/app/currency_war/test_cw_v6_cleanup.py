@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.kernel.cw_state import (
     BuyCard,
     LevelUpShop,
@@ -28,9 +27,11 @@ from sr_od.application.currency_war.kernel.cw_state import (
     SellBench,
     ShopCard,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
+
 
 def _fake_sim(actions_by_seed):
     """造假 simulate_p1(活性守卫/检查单测试共用的进程内桩;动作对象用

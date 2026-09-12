@@ -59,6 +59,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
 
 # ===== 基建 =====
 
@@ -136,7 +139,7 @@ class TestLockedBuyFace:
         m2_locked_member,与线成员键分离。"""
         st = _state(gold=30, shop_cards=[_card('丹恒·饮月', 2)])
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, BuyCard), act
         assert act.card.name == '丹恒·饮月'
         assert act.reason == 'm2_locked_member'
@@ -148,7 +151,7 @@ class TestLockedBuyFace:
         core = list(predicates.line_members(comp))
         st = _state(gold=30, shop_cards=[_card(core[0], 3)])
         sess = _session(comp, _locked_ist())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, BuyCard) and act.card.name == core[0]
         assert act.reason == 'm2_line_member'
 
@@ -157,7 +160,7 @@ class TestLockedBuyFace:
         m2_line_member,m2_locked_member 不出现(缺省零漂移)。"""
         st = _state(gold=30, shop_cards=[_card('三月七', 2)])
         sess = _session(get_comp(_LOCK_COMP), IntentionState())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, BuyCard)
         assert act.reason == 'm2_line_member'
 
@@ -167,7 +170,7 @@ class TestLockedBuyFace:
         st = _state(gold=30, shop_cards=[
             _card('丹恒·饮月', 2), _card('开拓者·欢愉', 4, star=4)])
         sess = _session(get_comp(_LOCK_COMP), _locked_ist())
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         rejects = getattr(state_of(sess), 'cw4_shop_rejects', {}) or {}
         assert rejects.get('开拓者·欢愉', '').startswith('missing_')
 
@@ -231,7 +234,7 @@ class TestSellFaceAndLedgerUnswitched:
                  for i, m in enumerate(in_bp[:BENCH_CAPACITY])]
         st = _state(gold=30, shop_cards=[_card(missing_core, 3)], bench=bench)
         sess = _session(comp, _locked_ist())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not isinstance(act, BuyCard), 'B\' 成员不得被卖出/换手'
         assert not isinstance(act, SellBench)
         assert state_of(sess).cw4_counters.get('m2_retry_exhausted', 0) >= 1
@@ -257,10 +260,10 @@ class TestSellFaceAndLedgerUnswitched:
             bench.append(_bc(f'填充件{len(bench)}', slot=len(bench) + 1))
         st = _state(gold=30, shop_cards=[_card(missing_core, 3)], bench=bench)
         sess = _session(comp, _locked_ist())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, SellBench), 'off-line 件腾席候选须非空'
         st2 = simulate(st, act)
-        act2 = shop.decide_shop_action(st2, sess, _cfg())
+        act2 = shop.decide_shop_action(cw4_bs(st2, sess), sess, _cfg())
         assert isinstance(act2, BuyCard) and act2.card.name == missing_core
         assert act2.reason == 'm2_line_member'
 
@@ -285,7 +288,7 @@ class TestSellFaceAndLedgerUnswitched:
             return real(buy_members, bench, deployed, level)
 
         monkeypatch.setattr(shop, '_r1_ledger_terms', _spy)
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert captured, '刷新账未达(帧构造失效)'
         # F1 口径对齐后重推导(编排者裁定;出处 = 14号稿 §6.2 输入②):
         # R1 刷新账合格集单源 = buy_members(锁定帧 = locked_buy_membership
@@ -330,7 +333,7 @@ class TestTransitionPairNotObligated:
         comp = get_comp(_LOCK_COMP)
         st = _state(gold=30, shop_cards=[_card(pair_only[0], 3)])
         sess = _session(comp, ist)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm2_line_member')
         rejects = getattr(state_of(sess), 'cw4_shop_rejects', {}) or {}
@@ -355,7 +358,7 @@ class TestUnlockedFrameUnchanged:
         M2 义务口径不变(④买入 reason=transition_component_buy,非义务)。"""
         st = _state(gold=30, shop_cards=[_card('丹恒·饮月', 2)], plane=1)
         sess = _session(get_comp(_LOCK_COMP), IntentionState())
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm2_line_member')
         assert isinstance(act, BuyCard) and act.reason == 'transition_component_buy' \
@@ -378,7 +381,7 @@ class TestUnlockedFrameUnchanged:
         assert '丹恒·饮月' in locked_buy_scope(ist)  # 变异体(scope 直调)会翻转
         st = _state(gold=30, shop_cards=[_card('丹恒·饮月', 2)], plane=1)
         sess = _session(get_comp(_LOCK_COMP), ist)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm2_line_member')
         assert not isinstance(act, BuyCard), \
@@ -427,7 +430,7 @@ class TestP60DisguisedProgressTelemetry:
         state_of(sess).cw4_line_state = proof.LineState()
         state_of(sess).cw4_line_state.drought = 3
         state_of(sess).cw4_recent_sold_names = [core[0]]
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, BuyCard) and act.card.name == core[0]
         assert state_of(sess).cw4_counters.get('shop_churn_pair_buy', 0) >= 1
         assert state_of(sess).cw4_counters.get('shop_drought_reset_on_churn_buy', 0) >= 1
@@ -437,7 +440,7 @@ class TestP60DisguisedProgressTelemetry:
         sess2 = _session(comp, _locked_ist())
         state_of(sess2).cw4_line_state = proof.LineState()
         state_of(sess2).cw4_line_state.drought = 3
-        act2 = shop.decide_shop_action(st2, sess2, _cfg())
+        act2 = shop.decide_shop_action(cw4_bs(st2, sess2), sess2, _cfg())
         assert isinstance(act2, BuyCard)
         assert state_of(sess2).cw4_counters.get('shop_drought_reset_on_buy', 0) >= 1
         assert 'shop_drought_reset_on_churn_buy' not in state_of(sess2).cw4_counters
@@ -449,7 +452,7 @@ class TestP60DisguisedProgressTelemetry:
         comp = get_comp('黄泉减益')
         st = _state(gold=30, shop_cards=[])
         sess = _session(comp, _locked_ist('黄泉减益'))
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert state_of(sess).cw4_counters.get('shop_hoard_over_capacity', 0) >= 1
 
 # ===== 容量可行截断 + P60 修正门 + 基座随 B'(自 test_cw_t307_locked_buy_truncation.py 并入,ADR-0647)=====
@@ -595,12 +598,12 @@ class TestSeatDeadlockRelease:
         bp = _b_prime(ist, st)
         assert '彦卿' not in bp and '瓦尔特' in bp
         sess = _sess(comp, ist)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert isinstance(act, SellBench), act
         assert not (getattr(act, 'reason', '') or ''), \
             '被截成员卖出不得带孤儿标记(孤儿账随 B\')'
         st2 = simulate(st, act)
-        act2 = shop.decide_shop_action(st2, sess, _cfg())
+        act2 = shop.decide_shop_action(cw4_bs(st2, sess), sess, _cfg())
         assert isinstance(act2, BuyCard) and act2.card.name == '瓦尔特'
         assert act2.reason == 'm2_line_member'   # 瓦尔特 ∈ core∪shared
 
@@ -622,7 +625,7 @@ class TestSeatDeadlockRelease:
                            for i, m in enumerate(in_bp)],
                     shop_cards=[_card('瓦尔特', 5)])
         sess = _sess(comp, ist)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not isinstance(act, BuyCard)
         assert not isinstance(act, SellBench)
         counters = state_of(sess).cw4_counters
@@ -649,7 +652,7 @@ class TestSeatDeadlockRelease:
         st = _state_lv8(gold=30, level=8, bench=bench,
                     shop_cards=[_card('瓦尔特', 5)])
         sess = _sess(comp, ist)
-        act = shop.decide_shop_action(st, sess, _cfg())
+        act = shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert not isinstance(act, SellBench), \
             '囤货对(合成素材)不得入 M4 燃料集(G-S1)'
         assert not isinstance(act, BuyCard)
@@ -671,7 +674,7 @@ class TestP60CorrectedGate:
         comp = get_comp(_LOCK_COMP)
         st = _state_lv8(gold=30, level=8, shop_cards=[])
         sess = _sess(comp, _locked_ist())
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert state_of(sess).cw4_counters.get(
             'shop_hoard_over_capacity', 0) >= 1
 
@@ -680,7 +683,7 @@ class TestP60CorrectedGate:
         comp = get_comp(_SUB_CAP_COMP)
         st = _state_lv8(gold=30, level=8, shop_cards=[])
         sess = _sess(comp, _locked_ist(_SUB_CAP_COMP))
-        shop.decide_shop_action(st, sess, _cfg())
+        shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         assert 'shop_hoard_over_capacity' not in state_of(sess).cw4_counters
 
 
@@ -721,7 +724,7 @@ class TestSellGateBaseFollowsTruncation:
         sess = _sess(comp, _locked_ist())
         shop._line_switch_orphans = _spy   # 模块级槽位,事后还原
         try:
-            shop.decide_shop_action(st, sess, _cfg())
+            shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
         finally:
             shop._line_switch_orphans = real
         assert captured, '孤儿装配读点未触达(帧构造失效)'

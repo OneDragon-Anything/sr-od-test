@@ -30,7 +30,9 @@ from sr_od.application.currency_war.kernel.cw_prep_expect import (
 from sr_od.application.currency_war.kernel.cw_telemetry_exit import SEVERITY_L2_RECORD
 from sr_od.application.currency_war.obs import cw_equipment
 from sr_od.application.currency_war.obs.cw_equipment import EquipCell
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import CwScreenPrep
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+    CwScreenPrep,
+)
 from sr_od.application.currency_war.telemetry import defects, recorder
 from sr_od.application.currency_war.telemetry import state as cw_telemetry
 

@@ -8,8 +8,8 @@ owned 本体直推 / 现金为王 gold 直推 / chosen_* 与 ConfirmStrategy 零
 零 IO 零识别。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_expected_state import (
     apply_op_effect,
 )

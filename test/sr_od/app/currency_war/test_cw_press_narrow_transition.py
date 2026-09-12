@@ -72,6 +72,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.sell_gate import 
     LAUNCH_CAUSE_BY_ARM,
     WINDOW_LAUNCH_CAUSES,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_bs,
+)
 from test.sr_od.app.currency_war.test_cw_leak_ladder import (
     _COMP,
     _tier_cost,
@@ -137,7 +140,7 @@ def _d_frame_st(gold: int, cards: list[ShopCard]) -> GameState:
 
 
 def _decide(st: GameState, sess) -> object:
-    return shop.decide_shop_action(st, sess, SimpleNamespace(ev_arm='full'))
+    return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
 # ===== F1:dominance 位收窄开火锁 =====

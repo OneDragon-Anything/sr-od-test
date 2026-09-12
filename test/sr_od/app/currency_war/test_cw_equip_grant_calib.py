@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """装备供给结构重校准锁(EQUIP_GRANT_CALIB_VERSION)。
 
 数据源 = 实机 [cw!][grant] 快照逐轮差分画像(W465 同款语料,57 局;
@@ -12,9 +11,9 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENT_ROSTER
 from sr_od.application.currency_war.data.cw_synthesis import RESERVED_COMPONENTS
+from sr_od.application.currency_war.sim import engine_p1 as cw_sim
 
 
 def test_calib_constants_shape() -> None:

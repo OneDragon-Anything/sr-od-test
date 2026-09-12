@@ -620,9 +620,10 @@ def test_phase_field_spec_no_invalid_keys_added() -> None:
 # ============================================================ 调用点基线(批首 grep 口径)
 
 def test_strategy_input_state_call_sites_baseline() -> None:
-    """调用点基线锁(对抗审 F9/发现 7:数字以 grep 为准,不承规划笔误):
-    strategy_input_state 外部直调现树 src 基线 = 15 处(新增调用点须
-    有意扩面并改本基线,防静默增殖)。"""
+    """孤儿态钉零锁(W6 波 4 重写,原调用点基线锁退役):W6 波 4 取帧点
+    全部改道容器直读(board_state_of 同款),src 树内 ``strategy_input_state(``
+    直调 = 0——cw_bs_view.strategy_input_state 成孤儿,退役挂波 5;孤儿
+    期任何复活调用点(新取帧点误接视图口)即本锁红,防退役前静默扩面。"""
     from pathlib import Path
     root = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
             / 'currency_war')
@@ -633,4 +634,4 @@ def test_strategy_input_state_call_sites_baseline() -> None:
         text = path.read_text(encoding='utf-8')
         hits += [f'{path.relative_to(root)}:{m.start()}'
                  for m in re.finditer(r'strategy_input_state\(', text)]
-    assert len(hits) == 15, f'调用点基线漂移(现 {len(hits)}):{hits}'
+    assert not hits, f'孤儿态被破坏(strategy_input_state 直调复活):{hits}'
