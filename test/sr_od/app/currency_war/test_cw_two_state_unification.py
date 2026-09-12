@@ -25,7 +25,6 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
 )
 from sr_od.application.currency_war.kernel.cw_state import (
     effective_hp_threshold,
-    ('kernel/cw_economy.py', 1),        # 止损门
 )
 from sr_od.application.currency_war.kernel import cw_registry as reg_mod
 
@@ -55,6 +54,7 @@ def _bs_frame(*, plane: int = 1, round_num: int = 1, level: int = 1,
 
 _THRESHOLD_CONSUMERS: tuple[tuple[str, int], ...] = (
     ('kernel/cw_comps.py', 1),          # 保命转型 0.75×
+    ('kernel/cw_economy.py', 1),        # 止损门
 )
 
 

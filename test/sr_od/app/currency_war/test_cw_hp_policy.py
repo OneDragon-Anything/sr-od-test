@@ -215,16 +215,41 @@ def _attr_hits(rel: str, attrs: tuple[str, ...]) -> list[str]:
     return hits
 
 
+def _container_fn_hp_hits(rel: str) -> list[str]:
+    """AST 级扫描:容器签名函数(首参名 bs,BoardState 形态约定)函数体内
+    零 `.hp` 属性访问(注释/docstring 不计;GameState 形态旧函数的 state.hp
+    读不属容器决策分支,随各自波次/退役批消亡,不在本锁辖域)。
+    返回 [函数名, 行号, ...] 命中清单。"""
+    import ast
+    tree = ast.parse((_KERNEL_BASE / rel).read_text(encoding='utf-8'))
+    hits: list[str] = []
+
+    def _scan_fn_body(fn: ast.FunctionDef) -> None:
+        for node in ast.walk(fn):
+            if node is fn or isinstance(node, (ast.FunctionDef,
+                                               ast.AsyncFunctionDef)):
+                continue
+            if isinstance(node, ast.Attribute) and node.attr == 'hp':
+                hits.append(f'{fn.name}() L{node.lineno}')
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.args.args \
+                and node.args.args[0].arg == 'bs':
+            _scan_fn_body(node)
+    return hits
+
+
 class TestL2DecisionConsumptionSameGate:
     """波 2 后 kernel 决策簇 hp 直读零旁路(设计件 §4-L2)。"""
 
     def test_kernel_decision_cluster_zero_direct_hp_read(self) -> None:
-        """cw_economy / cw_discipline_rules 全量:`.hp` 字段直读 = 0
-        (hp 决策消费仅经政策层读口 cw_hp_policy;AST 级扫描,注释/docstring
-        中的指路字样不判)。"""
+        """cw_economy / cw_discipline_rules 全量:容器签名决策函数零 `.hp`
+        直读(hp 决策消费仅经政策层读口 cw_hp_policy;AST 级扫描,注释/
+        docstring 字样不判);GameState 形态旧函数(state.hp 读)不属容器
+        决策分支,不在本锁辖域。"""
         for rel in _L2_DIRECT_READ_FILES:
-            hits = _attr_hits(rel, ('hp',))
-            assert hits == [], f'{rel}: 决策簇残留 hp 直读(行号 {hits})'
+            hits = _container_fn_hp_hits(rel)
+            assert hits == [], f'{rel}: 容器决策函数残留 hp 直读 {hits}'
             src = (_KERNEL_BASE / rel).read_text(encoding='utf-8')
             assert 'cw_hp_policy' in src, \
                 f'{rel}: 未接政策层读口(单一源缺席)'
