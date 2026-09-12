@@ -12,6 +12,16 @@
 - pivot_invariant: test_cw_pivot_invariant.py
 冲突改名:后来者顶层名/import 绑定加来源前缀(_<tag>_原名)。
 """
+
+# ⚠️ 待删除标记(2026-09-12 obs 先删后重建轮;台账 = .debug/temp/cw_obs_rebuild/DEBT.md)
+# 本文件为混杂体,计划按主题归并后整体退役——
+#   已被新合同替代:结算解析(hp/streak/progress/won/round/assets) → test_cw_obs_parse_facts.py;
+#     write_affix_effects roundtrip、read_round_outcome 透传(killed/hp0/页态门) → test_cw_obs_entry_smoke.py;
+#     简报真帧三读(词缀/首领/难度) → test_cw_obs_ground_truth.py;
+#   待归并后再删:read_affix_effect tooltip、read_board 徽标/斜杠修复、xp/等级/难度等
+#     真帧字段读、resolve_char_name、level_from_xp 反推、invest_env op 读链 → 各自主题文件;
+# 删除前必须完成上述归并并逐条证实覆盖(测试纪律第 7 条:并入目标必须存在)。
+
 from __future__ import annotations
 
 

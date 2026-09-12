@@ -22,6 +22,15 @@ TestCheckShopPool 边界内侧测删(全表互证测子集)。
 来源前缀别名(_<tag>_原名)为本文件声明的合并约定——同名绑定均唯一,
 无遮蔽隐患,本轮不改(改名风险>收益,见报告驳回项)。
 """
+
+# ⚠️ 待删除标记(2026-09-12 obs 先删后重建轮;台账 = .debug/temp/cw_obs_rebuild/DEBT.md)
+# 本文件为混杂体,计划按主题归并后整体退役——
+#   已被新合同替代:board_from_tracked 真值对照 → test_cw_obs_parse_facts.py;
+#     match_faction/compare_factions 真值表 → test_cw_obs_reconcile.py;
+#   待归并后再删:paddle/board_pairs 斜杠修复规则、等级三源链守卫(_resolve_level)、
+#     reconcile_tracking 双空守卫、discard/跨局复位 → 各自主题文件(obs 解析件 / kernel 件);
+# 删除前必须完成上述归并并逐条证实覆盖(测试纪律第 7 条:并入目标必须存在)。
+
 from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 

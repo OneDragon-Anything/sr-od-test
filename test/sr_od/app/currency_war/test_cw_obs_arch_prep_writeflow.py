@@ -23,6 +23,13 @@ payload → BoardState 全帧对拍(回归 pin 钉 payload)**。
 ADR-0651 等价形态:窗内读数不可信 → 本帧不写观察,保 logic 投影值)
 ——两者经本夹具在**新路径**上钉住。
 """
+
+# ⚠️ 待删除标记(2026-09-12 obs 先删后重建轮;台账 = .debug/temp/cw_obs_rebuild/DEBT.md)
+# 本文件主体 = CwScreenPrep 写流架构锁(operations 侧,非 obs 解析层),
+# 不在 obs 六合同替代范围——待并行批(board state 迁移)落地后,
+# 与 cw_screen_prep 写流主题归并后再处置;禁在归并前直接删除。
+
+from __future__ import annotations
 from __future__ import annotations
 
 import dataclasses
