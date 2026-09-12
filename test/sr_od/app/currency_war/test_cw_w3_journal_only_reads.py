@@ -1,6 +1,6 @@
 """W3 锁:journal 唯一账读面(判读/哨兵/运行时切新账 + 删旧读面)。
 
-正本 = docs/develop/currency_war/game_state/r5-migration-plan.md §2 W3
+正本 = docs/develop/sr_od/application/currency_war/game_state/r5-migration-plan.md §2 W3
 (验证判据:旧读面零引用 grep 锁 / 旧档案 v11+ 装配回归锁(缺流键容忍)/
 在线收口接线 / 安灯 receipts 读面 / 寿命契约段粒度清理)。
 
@@ -321,22 +321,33 @@ def _mk_journal(tmp_path: Path, segs: list[tuple[str, str, int]]) -> Path:
 
 def test_w3_retention_segment_granularity(tmp_path: Path) -> None:
     """滚动清理以 run 段为整体单元:过期段整段淘汰,窗口内段与活跃段保留;
-    坏行原样保留(宽容契约,清理面不判定);幂等二跑零增量。"""
+    坏行原样保留(宽容契约,清理面不判定);幂等二跑零增量。
+
+    【T-77 锁语义重推】三段改实机形态 run_id:该锁意图 = 实机段跨期语料窗
+    (30 天)的段粒度行为;分型后非实机段走短窗(JOURNAL_NONLIVE_RETENTION_
+    DAYS,见 test_cw_journal_lifecycle_policy)——原夹具 run_old/run_mid 是
+    非实机形态,新策略下 60/10 天均超短窗,属新语义的正确清段,锁意图
+    (窗口内段保留)须用实机形态段承载,禁为保绿回退新策略。"""
     from datetime import datetime, timedelta
     now = datetime.now()
     jp = _mk_journal(tmp_path, [
-        ('run_old', (now - timedelta(days=60)).isoformat(timespec='seconds'), 3),
-        ('run_mid', (now - timedelta(days=10)).isoformat(timespec='seconds'), 2),
-        ('run_new', (now - timedelta(days=1)).isoformat(timespec='seconds'), 1),
+        ('run_20260714_000000',
+         (now - timedelta(days=60)).isoformat(timespec='seconds'), 3),
+        ('run_20260902_000000',
+         (now - timedelta(days=10)).isoformat(timespec='seconds'), 2),
+        ('run_20260911_000000',
+         (now - timedelta(days=1)).isoformat(timespec='seconds'), 1),
     ])
     with jp.open('a', encoding='utf-8') as f:
         f.write('{bad half line\n')
     r1 = enforce_journal_retention(jp, now=now)
-    assert r1 == {'checked': 3, 'retired': ['run_old'], 'rows_dropped': 3}
+    assert r1 == {'checked': 3, 'retired': ['run_20260714_000000'],
+                  'rows_dropped': 3}
     kept_rows = [json.loads(ln) for ln in
                  jp.read_text(encoding='utf-8').strip().splitlines()
                  if not ln.startswith('{bad')]
-    assert {r['run_id'] for r in kept_rows} == {'run_mid', 'run_new'}
+    assert {r['run_id'] for r in kept_rows} == {
+        'run_20260902_000000', 'run_20260911_000000'}
     assert 'version' not in kept_rows[0]   # 段内版本序完整(整段淘汰不切半段)
     r2 = enforce_journal_retention(jp, now=now)
     assert r2['retired'] == [], '幂等:二跑零增量'

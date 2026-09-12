@@ -131,3 +131,92 @@ def test_smoke_arm_snapshot_exits_clean(tmp_path: Path) -> None:
     assert '[runsgap] armed' in r.stdout
     assert str(journal) in r.stdout   # 武装回显消费账面 = 重定向副本
     assert journal.read_text(encoding='utf-8') == ''   # 快照干跑零写入
+
+
+# ============================================================ v3.1 尾读(T-77)
+
+def _row(rid: str, ts: str, field: str = 'gold') -> str:
+    """journal 自足快照行(实机段形态由 rid 决定;哨兵 RUN_ID_RE 过滤面)。"""
+    return json.dumps({'v': 1, 'ts': ts, 'run_id': rid, 'row': 'write',
+                       'field': field, 'after': 1, 'same_value': False,
+                       'state': {'values': {}}, 'sig': {}, 'note': '',
+                       'evidence_refs': []}) + '\n'
+
+
+def test_arm_tail_read_excludes_out_of_window_segments(tmp_path: Path) -> None:
+    """v3.1 尾读武装:尾窗外旧段不入状态(baseline 排除集变小 = 语义等价
+    申报面),尾窗内段照常计数——武装成本恒定,与账面体积无关。"""
+    journal = tmp_path / 'journal_copy.jsonl'
+    old_ts = '2020-01-01T00:00:00'
+    fresh_ts = datetime.now().isoformat(timespec='seconds')
+    body = ''.join(_row('run_20000101_000000', old_ts) for _ in range(20))
+    body += _row('run_20260912_000001', fresh_ts)
+    body += _row('run_20260912_000001', fresh_ts, field='match_final')
+    journal.write_text(body, encoding='utf-8')
+    r = _run_gap(tmp_path, {'CW_RUNSGAP_SMOKE': '1',
+                            'CW_RUNSGAP_JOURNAL': str(journal),
+                            'CW_RUNSGAP_TAIL_BYTES': '600'})
+    assert r.returncode == 0, f'尾读武装非零退出: {r.stdout} {r.stderr}'
+    assert 'armed v3.1' in r.stdout and 'tail=0MB' in r.stdout, \
+        'v3.1 武装行含尾读申报'
+    # 尾窗(600B < 尾 2 行)只见已收口新段:窗外 20 行旧悬挂段不入 baseline
+    assert 'baseline 悬挂段=0' in r.stdout, r.stdout
+    assert '已收口段=1' in r.stdout and 'mf行=1' in r.stdout, r.stdout
+
+
+def test_purged_journal_arms_clean_on_tail_read(tmp_path: Path) -> None:
+    """purge 后武装回归(T-77 判据②机制化):kernel 寿命策略清过的小账面上
+    武装照常(exit 0 + 尾读申报)——轮转/purge 与哨兵武装共存。"""
+    from sr_od.application.currency_war.kernel.cw_state_journal import (
+        enforce_journal_retention,
+    )
+    journal = tmp_path / 'journal_copy.jsonl'
+    old_ts = '2020-01-01T00:00:00'
+    fresh_ts = datetime.now().isoformat(timespec='seconds')
+    body = ''.join(_row(f'fake_old_{i:03d}', old_ts) for i in range(50))
+    body += _row('run_20260912_000001', fresh_ts)
+    journal.write_text(body, encoding='utf-8')
+    size_before = journal.stat().st_size
+    r1 = enforce_journal_retention(journal, max_bytes=1)
+    assert r1['retired'], '预置:体积窗清掉填充段(purge 发生)'
+    assert journal.stat().st_size < size_before
+    r = _run_gap(tmp_path, {'CW_RUNSGAP_SMOKE': '1',
+                            'CW_RUNSGAP_JOURNAL': str(journal)})
+    assert r.returncode == 0, f'purge 后武装失败: {r.stdout} {r.stderr}'
+    assert 'armed v3.1' in r.stdout
+    assert '已收口段=0' in r.stdout, r.stdout   # 尾窗内唯一段未收口=悬挂基线
+    assert 'baseline 悬挂段=1' in r.stdout, r.stdout
+
+
+def test_shrunk_journal_triggers_tail_rebuild(tmp_path: Path) -> None:
+    """运行中账面变小(轮转/purge)→ 尾读重建路径:refresh 检出 size<pos
+    后重建仍走尾读(读成本恒定),哨兵不崩持续值守。"""
+    journal = tmp_path / 'journal_copy.jsonl'
+    fresh_ts = datetime.now().isoformat(timespec='seconds')
+    journal.write_text(''.join(
+        _row(f'fake_fill_{i:03d}', fresh_ts) for i in range(200)),
+        encoding='utf-8')
+    aged_log = tmp_path / 'aged.log'
+    aged_log.write_text('', encoding='utf-8')
+    env = {k: v for k, v in os.environ.items() if not k.startswith('CW_RUNSGAP')}
+    env.update({'PYTHONUTF8': '1',
+                'CW_RUNSGAP_LOCK': str(tmp_path / 'runs_gap.lock'),
+                'CW_RUNSGAP_JOURNAL': str(journal),
+                'CW_RUNSGAP_LOG': str(aged_log),
+                'CW_RUNSGAP_INTERVAL': '0.3',
+                'CW_RUNSGAP_TAIL_BYTES': '800'})
+    proc = subprocess.Popen([sys.executable, str(_SCRIPT)], env=env,
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                            text=True, encoding='utf-8', errors='replace')
+    try:
+        time.sleep(1.5)   # 武装 + 至少一轮 refresh 增量
+        with journal.open('r+b') as fh:   # 模拟 purge:截到尾窗内一行
+            fh.truncate(len(_row('fake_fill_199', fresh_ts).encode('utf-8')))
+        time.sleep(1.5)   # refresh 周期检出变小 → 尾读重建
+        time.sleep(0.5)
+    finally:
+        proc.terminate()
+        out, _ = proc.communicate(timeout=10)
+    assert 'armed v3.1' in out
+    assert '尾读重建' in out, f'变小检出未走尾读重建: {out[-500:]}'
+    assert 'Traceback' not in out, '重建路径异常'
