@@ -9,8 +9,10 @@ landing.md §3.6 + details/env-value-models.md §2.2(§2.2.1 语义盘点/§2.2.
   _validate_env_pool_rewrite:孤儿键/三表互斥收全/结构完备/pending 必填);
 - 层 E = ``cw_env_economy.env_economy_value`` 单一入口分派 →
   _pool_rewrite_value(ΔV 公式,读 STRAT_POOL_ECON_MEANS/OFFER_QUALITY_DIST/
-  _STRAT_PICK_HORIZONS,任一缺参 fail-closed,v1 恒然——受限通道 μ_E 非单调
-  (银>金实测),转正须过准入门,详设 §2.2.2 裁决);
+  _STRAT_PICK_HORIZONS,任一缺参 fail-closed,当前恒然——转正准入门第 2 条
+  (序一致性检验)经数据批判定未过(全通道 μ_E 点估计 银≥金 残差),两表
+  哨兵不落;判定/口径/回炉候选 = details/layer-e-promotion-batch.md,
+  详设 §2.2.2 裁决);
 - 层 Q = 环境裸分维持(ENV_PICK_VALUE 零改动),两层从不相加。
 
 fixture 直调核验(模块导入即验;注册表漂移先红于此,漂移 = 修库后重核咬合面,
@@ -131,16 +133,32 @@ def test_q1_registry_structure() -> None:
 
 
 def test_q2_v1_fail_closed_all_seven() -> None:
-    """Q2:v1 恒 (0.0, False)——机制锁(注入空参数表,不依赖注册表现值,层 E
-    落参后照常可跑)+ 现值锁(v1 两表空 → 恒然;层 E 转正数据批落参后本断言
-    随批重立)。半值禁出:fail-closed 返回点值恒 0.0。"""
+    """Q2:fail-closed 现态——机制锁(注入空参数表,不依赖注册表现值,层 E
+    落参后照常可跑)+ 现值锁(随转正数据批重立)。
+
+    现值锁语义(数据批判定后,详设 §2.2.2 裁决分支):
+    - 两参数表空 = 准入门第 2 条(序一致性检验)未过的判定态,非「数据批
+      未做」——全通道重算判定与回炉候选在册 =
+      changes/2026-09-12-invest-env/details/layer-e-promotion-batch.md,
+      重采入口 = tools/cw/env_pool_rewrite_estimates.py;
+    - _STRAT_PICK_HORIZONS 现值 = 取卡点位实采注册(注册门 n≥20):k=3
+      有效样本不足哨兵不落,时代/尾彩通道因 H_3 缺参结构性 fail-closed;
+      实采口径偏移(日程/样本演化)先红于此,处置 = 重推语义后随重采批
+      重立,禁机械跟绿。
+    半值禁出:fail-closed 返回点值恒 0.0。
+    """
     _frame = _bs()
-    # 现值:v1 两参数表空 → 7 条恒然
+    # 现值:准入门未过 → 两参数表哨兵不落,7 条恒然
     assert eco.STRAT_POOL_ECON_MEANS == {} and eco.OFFER_QUALITY_DIST == {}, (
-        'v1 层 E 参数表应空(落参 = 转正数据批义务);非空 = 转正已发生,'
-        '本锁须随批重立')
+        '层 E 参数表应空(准入门未过的判定态;落参须序一致性复过 + 取卡序 3 '
+        '缺位补齐,两表同批);非空 = 转正已发生,本锁须随批重立')
+    # 现值:取卡点位实采注册表(H_k 1 基取卡序 → 剩余节点视界;重采入口
+    # 见模块注,演化只改 cw_env_economy 一处)
+    assert eco._STRAT_PICK_HORIZONS == {1: 23, 2: 15}, (
+        f'取卡点位实采注册漂移,实得 {eco._STRAT_PICK_HORIZONS}'
+        '(红 = 实采重采已执行,重推 H 注册语义后随批重立)')
     for _n in ENV_POOL_REWRITE:
-        assert env_economy_value(_n, _frame) == (0.0, False), f'{_n} v1 恒 fail-closed'
+        assert env_economy_value(_n, _frame) == (0.0, False), f'{_n} 恒 fail-closed'
     # 机制锁:即使参数表被注入,清空任一表即全量 fail-closed(缺参门)
     monkey_full_means = {('棱彩', 24): _est(10, 9, 11), ('金', 24): _est(6, 5, 7),
                          ('银', 24): _est(4, 3, 5)}
