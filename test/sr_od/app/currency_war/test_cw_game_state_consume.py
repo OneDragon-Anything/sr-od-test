@@ -1,8 +1,8 @@
-"""BoardState 消费切换批回归锁(迁移批次二;设计正本 =
+"""GameState 消费切换批回归锁(迁移批次二;设计正本 =
 docs/develop/sr_od/application/currency_war/
-changes/2026-09-11-unified-state/details/BoardState-数据结构设计.md,下称「设计」)。
+changes/2026-09-11-unified-state/details/GameState-数据结构设计.md,下称「设计」)。
 
-锁面 = 批次二任务书件:§8.7 消费适配器(旧读取对象 → BoardState 适配层)/
+锁面 = 批次二任务书件:§8.7 消费适配器(旧读取对象 → GameState 适配层)/
 §3.4 单次逻辑写入口(申报豁免写端)/§3.3.6-8 刷新执行事实组(免费帧闸)/
 §3.3.1 cost_source 三值归并消费/§3.2.6 board 下档派生单一源(ADR-0488 同键
 供给)/§3.5.1 结算覆盖写端/§6.2+§8.8 局终归档快照/§3.2.5 read_bench_full
@@ -14,11 +14,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
     COST_SOURCE_BADGE,
     COST_SOURCE_REGISTRY,
-    BoardState,
+    GameState,
     NodeKey,
     apply_settlement_cover,
     archive_snapshot,
@@ -32,15 +32,15 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
 )
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors as _register_sig_actors,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.obs import cw_observation as cobs
 
@@ -73,10 +73,10 @@ def _hsig() -> _ChannelSig:
 #  直调=0,文件本体删除,视图语义无消费面可锁。)
 
 
-def _synth_bs_with(st: GameState) -> BoardState:
-    """GameState 真值 → BoardState(sim 合成口,批一资产)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+def _synth_bs_with(st: CwWorkFrame) -> GameState:
+    """CwWorkFrame 真值 → GameState(sim 合成口,批一资产)。"""
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         synthesize_from_game_state,
     )
     synthesize_from_game_state(bs, st, at_round='p1-r2')
@@ -89,7 +89,7 @@ def _synth_bs_with(st: GameState) -> BoardState:
 def test_write_logic_writes_confirmed_logic_source() -> None:
     """§3.4 申报豁免写端:单次逻辑写入直接转正(source=logic),并入
     logic_written_fields;之后照受观察覆盖辖(§2.3)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.chosen_megastar, '花火', produced_by='CwScreenMegastar',
                    sig=_lsig())
     assert bs.chosen_megastar.value == '花火'
@@ -106,7 +106,7 @@ def test_write_logic_over_logic_mismatch_still_defects() -> None:
     """§2.3 双向成立:logic 值被观察覆盖且失配 → 缺陷台账照常留证
     (write_logic 产物与 confirm 产物同受观察赢辖)。"""
     consume_defect_sink()
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.active_env, '昼之半神概念股', produced_by='x',
                    sig=_lsig())
     rows: list[dict] = []
@@ -125,7 +125,7 @@ def test_write_logic_over_logic_mismatch_still_defects() -> None:
 def test_refresh_execution_paid_increments_paid_and_total() -> None:
     """§3.3.7/§3.3.8:付费刷新 = paid+1 ∧ total+1(RefreshShop 执行回执,
     写入=仅逻辑)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     record_refresh_execution(bs, free=False, frame='p1-r3')
     assert bs.paid_refresh_count.value == 1
     assert bs.total_refresh_count.value == 1
@@ -135,7 +135,7 @@ def test_refresh_execution_paid_increments_paid_and_total() -> None:
 def test_refresh_execution_free_gate_skips_paid_count() -> None:
     """§3.3.7 免费帧闸(本批申报核心):免费帧不进付费累计(长线利好触发
     计数载体禁混入免费刷),消耗免费余额 + total 照计。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.free_refresh_balance, 2, produced_by='effect',
                    sig=_lsig())
     record_refresh_execution(bs, free=True, frame='p1-r3')
@@ -146,7 +146,7 @@ def test_refresh_execution_free_gate_skips_paid_count() -> None:
 
 def test_refresh_execution_free_balance_floor_zero() -> None:
     """免费余额下限 0(计数器单调域,禁负值漂移)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.free_refresh_balance, 1, produced_by='effect',
                    sig=_lsig())
     record_refresh_execution(bs, free=True)
@@ -197,15 +197,15 @@ def test_board_next_tier_of_matches_registry_formula() -> None:
 
 
 def test_sim_bench_full_key_supplied_by_derived_function() -> None:
-    """ADR-0488 席满观测键同键供给:合成后的 BoardState 经
+    """ADR-0488 席满观测键同键供给:合成后的 GameState 经
     bench_is_full 派生值 = 占用式(同一真值两形态;sim 段内 OR 支)。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [BenchChar(slot=1, char_id='花火', star=1)] * 9 + [None] * 0
     st.bench = [BenchChar(slot=i + 1, char_id='花火', star=1)
                 for i in range(9)]
     bs = _synth_bs_with(st)
     assert bench_is_full(bs) is True
-    st2 = GameState()
+    st2 = CwWorkFrame()
     st2.bench = [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8
     bs2 = _synth_bs_with(st2)
     assert bench_is_full(bs2) is False
@@ -217,7 +217,7 @@ def test_sim_bench_full_key_supplied_by_derived_function() -> None:
 def test_settlement_cover_writes_truth_group() -> None:
     """§3.5.1:结算真值组覆盖 = observation;hp/streak 带方向/gold·level·xp
     仅胜局;settlement 结构同步落。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     apply_settlement_cover(bs, hp_after=76, streak_after=4,
                            killed=True, gold=23, level=6, xp=(3, 10))
     assert bs.hp.value == 76 and bs.hp.source == 'observation'
@@ -231,7 +231,7 @@ def test_settlement_cover_writes_truth_group() -> None:
 def test_settlement_cover_loss_page_writes_no_win_only_fields() -> None:
     """败局结算页:无收入面板(gold/level/xp 缺席不写,§3.5.1),hp/streak
     真值照覆。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     apply_settlement_cover(bs, hp_after=41, streak_after=-2, killed=False)
     assert bs.hp.value == 41 and bs.streak.value == -2
     assert bs.gold.value is None and bs.level.value is None
@@ -242,7 +242,7 @@ def test_settlement_cover_loss_page_writes_no_win_only_fields() -> None:
 def test_settlement_cover_unread_hp_not_written() -> None:
     """hp 失读(结算页 OCR miss)→ 不写(不可信帧不写,§2.2 写入闸),
     不清既有正式值。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.hp, 80, sig=_sig())
     apply_settlement_cover(bs, hp_after=None, streak_after=None)
     assert bs.hp.value == 80 and bs.hp.source == 'observation'
@@ -255,7 +255,7 @@ def test_archive_snapshot_keys_and_prov_sparsity() -> None:
     """§8.8 两键形态(ADR-0651 两态制后):bs_prov 只记非默认来源(稀疏化)/
     bs_extra 工程结构+非 None 值(JSON 安全);bs_pending 挂起预期摘要键
     已随两步机制废除退役。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 55, sig=_sig())                       # 默认 observation 无注记 → prov 不记
     bs.write_prior(bs.hp, 82, evidence='prior:adr-0559',
                    sig=_sig())   # prior → prov 记
@@ -297,7 +297,7 @@ def test_read_bench_full_channel_retired_tombstone() -> None:
 def test_relay_writes_logic_with_carrier_evidence_when_never_written() -> None:
     """§2.1 载体中继:从未写过的字段 → source=logic + evidence=
     session_carrier(不设第五来源类,禁标 observation)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.relay(bs.active_env, '昼之半神概念股', sig=_hsig()) is True
     assert bs.active_env.value == '昼之半神概念股'
     assert bs.active_env.source == 'logic'
@@ -307,7 +307,7 @@ def test_relay_writes_logic_with_carrier_evidence_when_never_written() -> None:
 def test_relay_skips_fields_with_official_value() -> None:
     """§2.1 收敛核心:已有正式值的字段一律跳过——handler 已写的 logic
     禁被中继翻成 observation(§8.1);observation 同样不翻。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.active_env, '战争边疆', produced_by='CwScreenInvestEnv',
                    sig=_lsig())
     assert bs.relay(bs.active_env, '昼之半神概念股', sig=_hsig()) is False
@@ -325,12 +325,12 @@ def test_relay_skips_fields_with_official_value() -> None:
 def test_detect_merge_upgrade_signature() -> None:
     """§3.2.18 修法 a 触发判定:同名最高星被抬升 = 合成签名(星级只经
     合成上升);普通买新卡/无变化 → False。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         detect_merge_upgrade,
     )
 
     def _mk(bench, deployed=None):
-        st = GameState()
+        st = CwWorkFrame()
         st.bench = bench
         st.deployed = deployed or []
         return st
@@ -354,7 +354,7 @@ def test_detect_merge_upgrade_signature() -> None:
 def test_bench_view_of_slots_positional_mapping() -> None:
     """投影槽位表(0 基 + None 洞)→ BenchView 1:1(槽 i = 物理槽 i+1,
     与 sim 合成口同构);不足容量补空槽。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         bench_view_of_slots,
     )
     view = bench_view_of_slots([
@@ -373,7 +373,7 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
     """§3.2.18 修法 a 两态制形态(ADR-0651):BuyCard 合成升星投影经
     write_logic **直写 bench**(策略器立即可读);下一备战帧实读覆盖
     (观察赢)——一致静默,失配 = 投影 bug 缺陷留证后修推算代码。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         bench_view_of_slots,
         consume_defect_sink,
         set_defect_sink,
@@ -383,7 +383,7 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
     proj_view = bench_view_of_slots(proj_bench)
     real_view = bench_view_of_slots([BenchChar(slot=1, char_id='花火', star=2)])
     # 一致路径:逻辑直写 → 字段立即可读;同值实读覆盖 = 静默
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.bench, proj_view, produced_by='BuyCard', sig=_lsig())
     assert bs.bench.value is proj_view and bs.bench.source == 'logic', \
         '投影直写:策略器立即可读(ADR-0651)'
@@ -397,7 +397,7 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
     assert rows == [], '投影与实读一致 = 零缺陷行'
     assert bs.bench.source == 'observation', '实读后来源翻 observation(正常)'
     # 失配路径:观察赢覆盖真值 + 缺陷留证(失配 = 推算 bug,修推算代码)
-    bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
     bs2.observe(bs2.bench, real_view, sig=_sig())
     bs2.write_logic(bs2.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8),
@@ -462,7 +462,7 @@ def test_bench_view_from_obs_empty_is_miss_not_full() -> None:
     全空——值构造返 None(调用方走 carried,§2.2 处置①;宁缺勿造),禁把
     「9 槽全空」当 observation 入记录(席空数派生误报 free=9/挂起合成升星
     预期被空视图误清);非空 = 槽位保序映射;越界条目丢弃(读链漂移)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         bench_view_from_obs,
     )
     assert bench_view_from_obs([]) is None, '空集 = 失读,禁合成全空视图'
@@ -525,7 +525,7 @@ def test_merge_effect_window_gate_default_off_and_injectable(
 def test_settlement_cover_carries_progress_delta() -> None:
     """P3-3:progress_delta 经覆盖写端落 settlement 结构(挑战进度带符号
     真值;battle_wait 调用点传参为接线半,本锁辖函数半)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     apply_settlement_cover(bs, hp_after=76, streak_after=4, killed=True,
                            progress_delta=2, gold=23)
     assert bs.settlement.value is not None \
@@ -538,7 +538,7 @@ def test_settlement_cover_carries_progress_delta() -> None:
 def test_refresh_execution_evidence_carries_round_key() -> None:
     """P3-2:刷新执行逻辑写入的 evidence 落轮键(refresh_exec@<frame>,
     归因留证面;write_logic evidence 形参在册)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     record_refresh_execution(bs, free=False, frame='p1-r3')
     assert bs.total_refresh_count.evidence == 'refresh_exec@p1-r3'
     assert bs.paid_refresh_count.evidence == 'refresh_exec@p1-r3'

@@ -1,5 +1,5 @@
-"""BoardState 迁移回归锁(迁移批次一;设计正本 = docs/develop/sr_od/application/currency_war/
-changes/2026-09-11-unified-state/details/BoardState-数据结构设计.md,下称「设计」)。
+"""GameState 迁移回归锁(迁移批次一;设计正本 = docs/develop/sr_od/application/currency_war/
+changes/2026-09-11-unified-state/details/GameState-数据结构设计.md,下称「设计」)。
 
 锁面 = 设计 §8.6 差距清单逐条(草板旧契约禁复发的负锁)+ §3 字段语义抽样
 + 心跳不断流(§2.4 关键结构 2)+ sim 合成口箱占席语义(§3.2.5;迁移批次一
@@ -22,12 +22,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BENCH_CAPACITY_DEFAULT,
     BS_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
-    BoardState,
+    GameState,
     Field,
     NodeKey,
     Unit,
@@ -45,10 +45,10 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
 )
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors as _register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -59,12 +59,12 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_STRATEGIES,
     STRATEGY_EFFECTS,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard as StateShopCard,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -121,7 +121,7 @@ def test_field_has_four_sources_and_evidence() -> None:
 def test_board_state_schema_version_has_no_default() -> None:
     """任务书件 1:schema_version 无默认值(新局必显式申报域版本,禁静默缺省)。"""
     with pytest.raises(TypeError):
-        BoardState()  # type: ignore[call-arg]
+        GameState()  # type: ignore[call-arg]
 
 
 # ============================================================ §8.6-2/§2.4
@@ -133,7 +133,7 @@ def test_board_state_schema_version_has_no_default() -> None:
 def test_write_logic_direct_write_immediately_readable() -> None:
     """ADR-0651 两态制核心锁:逻辑推算值经 write_logic **直接写字段**
     (source=logic)——策略器立即可读,无「预期条目表挂账」中间态。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())
     bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     assert bs.gold.value == 17, '逻辑直写:字段立即可读(策略器读得到)'
@@ -145,10 +145,10 @@ def test_two_step_mechanism_retired_tombstone() -> None:
     expected 条目表与模块级 PendingEntry/reconcile_pending_observation
     全套废除——复活即红(防两步机制半删回归)。"""
     for gone in ('expect', 'confirm', 'discard_expected', 'pending_entries'):
-        assert not hasattr(BoardState, gone), f'BoardState.{gone} 应已废除'
-    assert 'expected' not in {f.name for f in dataclasses.fields(BoardState)}, \
+        assert not hasattr(GameState, gone), f'GameState.{gone} 应已废除'
+    assert 'expected' not in {f.name for f in dataclasses.fields(GameState)}, \
         'expected 条目表应已删除'
-    import sr_od.application.currency_war.kernel.cw_board_state as bs_mod
+    import sr_od.application.currency_war.kernel.cw_game_state as bs_mod
     assert not hasattr(bs_mod, 'PendingEntry'), 'PendingEntry 应已删除'
     assert not hasattr(bs_mod, 'reconcile_pending_observation'), \
         '核对点闭环函数应已删除'
@@ -156,7 +156,7 @@ def test_two_step_mechanism_retired_tombstone() -> None:
 
 def test_logic_written_fields_tracks_and_reanchors() -> None:
     """§8.4 logic_written_fields:已直写未重锚的 logic 字段名;观察覆盖后除名。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     assert bs.logic_written_fields() == ['gold']
     bs.observe(bs.gold, 19, sig=_sig())
@@ -165,7 +165,7 @@ def test_logic_written_fields_tracks_and_reanchors() -> None:
 
 def test_frame_obs_marker_consumed_on_read() -> None:
     """§2.4 关键结构 2:帧观察完整度标注 full/view/none,消费即清。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.mark_frame_obs('full')
     assert bs.consume_frame_obs() == 'full'
     assert bs.consume_frame_obs() == 'none', '消费即清'
@@ -174,7 +174,7 @@ def test_frame_obs_marker_consumed_on_read() -> None:
 def test_write_seq_is_monotonic_carrier() -> None:
     """§2.4:停更检测哨兵 = 只增不减计数(写点序号),不做帧标注现值
     (消费即清后当不了哨兵);心跳观察者断言「不断流」。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     seq0 = bs.heartbeat()
     bs.observe(bs.gold, 20, sig=_sig())
     bs.observe(bs.gold, 21, sig=_sig())
@@ -188,7 +188,7 @@ def test_write_seq_is_monotonic_carrier() -> None:
 
 def test_bs_schema_domain_map_present() -> None:
     """§2.4 关键结构 3:bs_schema = 域粒度版本映射(缺域键 = 该域未建模)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert isinstance(bs.bs_schema, dict) and bs.bs_schema
     assert 'node' in bs.bs_schema and 'economy' in bs.bs_schema
 
@@ -196,7 +196,7 @@ def test_bs_schema_domain_map_present() -> None:
 # ============================================================ §8.6-3
 # 画面附加域与缺口域(开局初值域/十事件屏域/结算事件位/刷新计数组/持久账本组)
 
-# 画面附加域 = kernel 三域口径(cw_board_state._PAYLOAD_DOMAINS 同源):
+# 画面附加域 = kernel 三域口径(cw_game_state._PAYLOAD_DOMAINS 同源):
 # shop/encounter/supply。settlement 是结算真值组(§3.5.1)非画面 payload,
 # 不在附加域词表(负断言见 test_leave_screen_payload_only)。
 _PAYLOAD_DOMAINS = ('shop', 'encounter', 'supply')
@@ -206,7 +206,7 @@ _CHOSEN_DOMAINS = ('chosen_encounter', 'chosen_supply', 'chosen_megastar',
                    'chosen_equip')
 # ~~skip_battle_active/remaining 已移出本组(迁移批次二载体归一,§8.6-3):
 # 免战牌激活态+剩余次数正本 = effect_inventory.remaining_uses(§5.1),
-# BoardState 不设平行 Field——负向锁见本文件下方 test_skip_battle_fields_retired。
+# GameState 不设平行 Field——负向锁见本文件下方 test_skip_battle_fields_retired。
 _LEDGER_DOMAINS = ('equips', 'consumables')
 _REFRESH_GROUP = ('free_refresh_balance', 'paid_refresh_count',
                   'total_refresh_count', 'prev_node_spent')
@@ -221,16 +221,16 @@ _OPENING_DOMAINS = ('game_mode', 'node_path')
 def test_gap3_domains_present(name: str) -> None:
     """§8.6-3:草板未入的域在骨架里在场(设计 §8.4 注:迁移批次一补齐;
     P1-2 落地审:节点屏刷新计数组 §3.4.1-4 亦点名在列)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert isinstance(getattr(bs, name), Field), f'缺域:{name}'
 
 
 def test_skip_battle_fields_retired() -> None:
     """§8.6-3 载体归一(迁移批次二):免战牌激活态+剩余次数正本 =
     effect_inventory.remaining_uses(ActiveEffect.remaining_uses「次数类
-    余量(免战牌×2 等)」,§5.1 同型躺平/节省工位)——BoardState 平行
+    余量(免战牌×2 等)」,§5.1 同型躺平/节省工位)——GameState 平行
     Field 按正本归一移除(改锁依据:设计正本明文,非机械跟绿)。"""
-    field_names = {f.name for f in dataclasses.fields(BoardState)}
+    field_names = {f.name for f in dataclasses.fields(GameState)}
     for banned in ('skip_battle_active', 'skip_battle_remaining'):
         assert banned not in field_names, f'免战牌平行 Field 应已归一移除:{banned}'
 
@@ -238,7 +238,7 @@ def test_skip_battle_fields_retired() -> None:
 def test_gap3_node_screen_refresh_schema_domain() -> None:
     """P1-2:节点屏刷新计数组有 bs_schema 域键(缺域键 = 该域未建模,§3.7.1);
     逐卡计数形状 = 卡名 → 已用次数(§3.4.4)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.bs_schema.get('node_screen_refresh') == 1
     bs.observe(bs.strategy_refresh_used, {'白银投资': 1}, sig=_sig())
     assert bs.strategy_refresh_used.value == {'白银投资': 1}
@@ -247,7 +247,7 @@ def test_gap3_node_screen_refresh_schema_domain() -> None:
 def test_gap4_missing_fields_present() -> None:
     """§8.6-4:board/level_up_cost/back_layout/spheres/分类子态/对局类型/
     节点序列台账/hp 保底事件位在场;bench 容量默认恒 9(§3.2.5)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     for name in ('board', 'level_up_cost', 'back_layout', 'spheres',
                  'prep_substate', 'hp_floor_triggered'):
         assert isinstance(getattr(bs, name), Field), f'缺字段:{name}'
@@ -260,7 +260,7 @@ def test_gap4_missing_fields_present() -> None:
 def test_game_mode_field_accepts_two_modes() -> None:
     """§3.1.2:对局类型=标准/超频博弈(两屏均无建档区域,接线前先补档——
     字段先入 schema,写端挂补档批)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.game_mode, '标准', sig=_sig())
     assert bs.game_mode.value == '标准'
 
@@ -268,7 +268,7 @@ def test_game_mode_field_accepts_two_modes() -> None:
 def test_node_path_ledger_is_type_sequence() -> None:
     """§3.2.2:节点序列台账 = 本局节点**类型序**台账(权威写端=备战帧
     node_path 现读;内容主题替换族不改类型序,台账不受影响)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.node_path, ['battle', 'encounter', 'reward', 'boss'], sig=_sig())
     assert bs.node_path.value == ['battle', 'encounter', 'reward', 'boss']
 
@@ -276,7 +276,7 @@ def test_node_path_ledger_is_type_sequence() -> None:
 def test_prep_substate_four_values() -> None:
     """§3.2.17:分类子态四档(三暗色锁定 + 恢复锁定);恢复锁定=会话推断档
     无帧识别锚,写端=接管协议(§6.3),禁按帧子态统一路由。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     for v in ('策略锁定', '遭遇锁定', '补给锁定', '恢复锁定'):
         bs.observe(bs.prep_substate, v, sig=_sig())
         assert bs.prep_substate.value == v
@@ -284,7 +284,7 @@ def test_prep_substate_four_values() -> None:
 
 def test_hp_floor_event_is_pure_observation_registry() -> None:
     """§3.5.3:hp 保底触发事件位 = 纯观察登记、无判据载体(消费端按不确定降级)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.hp_floor_triggered.value is None
     bs.observe(bs.hp_floor_triggered, True, sig=_sig())
     assert bs.hp_floor_triggered.value is True
@@ -297,7 +297,7 @@ def test_hp_floor_event_is_pure_observation_registry() -> None:
 def test_derived_quantities_not_stored() -> None:
     """§8.6-4:派生量禁入 schema(board_next_tier/席空数/席满判定;
     bench_full_flag 警告位已裁撤不建,§3.2.5)。"""
-    field_names = {f.name for f in dataclasses.fields(BoardState)}
+    field_names = {f.name for f in dataclasses.fields(GameState)}
     for banned in ('board_next_tier', 'free_bench_slots', 'bench_full_flag',
                    'bench_is_full'):
         assert banned not in field_names, f'派生量入了 schema:{banned}'
@@ -305,7 +305,7 @@ def test_derived_quantities_not_stored() -> None:
 
 def test_bench_free_slots_unobserved_is_none() -> None:
     """§3.2.5:席空数没读到 = 不确定,**禁猜 0**——bench 从未观察返 None。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bench_free_slots(bs) is None
     assert bench_is_full(bs) is None
 
@@ -322,7 +322,7 @@ def test_slot_occupancy_real_machine_truth() -> None:
 def test_bench_free_slots_counts_occupying_kinds() -> None:
     """席空数派生 = capacity − 占席槽数;箱占席计入(实机真值,sim 无箱实体
     只是 sim 内部口径约定,不进记录模型)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     slots = [BenchSlot(kind='unit'), BenchSlot(kind='supply_box'),
              BenchSlot(kind='tome')] + [BenchSlot(kind='empty')] * 6
     bs.observe(bs.bench, BenchView(slots=slots, capacity=9), sig=_sig())
@@ -338,7 +338,7 @@ def test_bench_free_slots_counts_occupying_kinds() -> None:
 
 
 def test_field_is_frozen_frame() -> None:
-    """§8.6-5:Field 冻结——写入只能经 BoardState API 换新帧,禁原地改。"""
+    """§8.6-5:Field 冻结——写入只能经 GameState API 换新帧,禁原地改。"""
     f = Field(value=1)
     with pytest.raises(dataclasses.FrozenInstanceError):
         f.value = 2  # type: ignore[misc]
@@ -346,7 +346,7 @@ def test_field_is_frozen_frame() -> None:
 
 def test_observe_replaces_frame_not_mutates() -> None:
     """§2.4:frozen 帧替换——旧帧引用保持旧值(持旧引用的读者不被跨时段写回污染)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     old = bs.gold
     bs.observe(bs.gold, 20, sig=_sig())
     assert old.value is None and old.source == 'observation'
@@ -356,7 +356,7 @@ def test_observe_replaces_frame_not_mutates() -> None:
 def test_observe_rejects_none_loses_are_carried_not_cleared() -> None:
     """§2.2 硬边界:observe(None) 拒绝——失读走 carried(处置①)或保持 None
     (处置②),字段一旦有过正式值任何失读不得清成 None。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     with pytest.raises(ValueError):
         bs.observe(bs.hp, None, sig=_sig())
     bs.observe(bs.hp, 80, sig=_sig())
@@ -369,14 +369,14 @@ def test_observe_rejects_none_loses_are_carried_not_cleared() -> None:
 def test_carry_on_never_read_keeps_none() -> None:
     """§2.2 处置②:字段从未读过(机制性不可读态+新局)→ 保持 None
     (机制性 None 专指此态)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.carry(bs.gold, frame='p1-r1', sig=_sig())
     assert bs.gold.value is None
 
 
 def test_write_prior_requires_prior_evidence() -> None:
     """§2.1/§3.1.6:prior 写入必带 prior: 来源注记;禁扩散(仅显式申报条目)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     with pytest.raises(ValueError):
         bs.write_prior(bs.hp, 82, evidence='carried:x', sig=_sig())
     bs.write_prior(bs.hp, 82, evidence='prior:adr-0559', sig=_sig())
@@ -387,7 +387,7 @@ def test_leave_screen_payload_only() -> None:
     """§2.2 显式例外:画面附加域(kernel 三域口径 shop/encounter/supply)离开
     画面置 None 是结构事实,不受 carried 硬边界辖;整局字段禁走此口,
     settlement(结算真值组,§3.5.1)非画面 payload 同样禁离屏清值。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.shop, SimpleNamespace(cards=[]), sig=_sig())
     bs.observe(bs.encounter, SimpleNamespace(options=[]), sig=_sig())
     bs.observe(bs.supply, SimpleNamespace(options=[]), sig=_sig())
@@ -407,7 +407,7 @@ def test_leave_screen_payload_only() -> None:
 def test_observe_over_logic_mismatch_emits_defect_row() -> None:
     """§2.3/ADR-0651:观察覆盖 logic 值失配 → 失配记入缺陷台账(挂点注入,
     缺省关);观察赢——来源改回 observation。失配 = 推算 bug 留证修码。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
@@ -424,7 +424,7 @@ def test_observe_over_logic_mismatch_emits_defect_row() -> None:
 
 def test_observe_over_logic_match_silent() -> None:
     """§2.3/ADR-0651:观察值与 logic 值一致 = 投影被实读核实形态,不留缺陷行。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
@@ -460,7 +460,7 @@ def test_bench_slot_kind_taxonomy() -> None:
 def test_streak_signed_value_preserved() -> None:
     """§3.2.12:streak 带符号(正=连胜/负=连败);无方向读数禁覆盖带符号值
     ——观察口只收带方向真值。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.streak, -3, sig=_sig())
     assert bs.streak.value == -3
 
@@ -468,7 +468,7 @@ def test_streak_signed_value_preserved() -> None:
 def test_shop_refresh_cost_none_is_not_zero() -> None:
     """§3.3.4/ADR-0622:免费帧不写(None≠标价 0);识别失败=None 禁兜底改值
     ——失读走 carried,值保持上次读数。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.shop_refresh_cost.value is None, '新局未读 = None,不是 0'
     bs.observe(bs.shop_refresh_cost, 2, sig=_sig())
     bs.carry(bs.shop_refresh_cost, frame='shop-free-frame', sig=_sig())
@@ -478,7 +478,7 @@ def test_shop_refresh_cost_none_is_not_zero() -> None:
 
 def test_event_overlay_none_vs_not_read_distinct() -> None:
     """§3.6.1:'none'=确认无浮层(显式枚举值);None=这一帧没读到。两者分写。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.event_overlay.value is None, '未读到'
     bs.observe(bs.event_overlay, 'none', sig=_sig())
     assert bs.event_overlay.value == 'none', '确认无浮层'
@@ -487,7 +487,7 @@ def test_event_overlay_none_vs_not_read_distinct() -> None:
 def test_back_layout_writes_real_slot_count_with_superset_mark() -> None:
     """§3.2.7:布局档写真实槽位数;域外按 8 格超集读全扩展带,evidence 补
     superset 标记(防超集近似被当精确值消费)。断言不按 level 驱动表写。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.back_layout, 7, sig=_sig())
     assert bs.back_layout.value == 7
     bs.observe(bs.back_layout, 8, evidence='superset', sig=_sig())
@@ -498,7 +498,7 @@ def test_back_layout_writes_real_slot_count_with_superset_mark() -> None:
 
 
 def test_board_state_of_binds_per_session() -> None:
-    """§1:单例,每局新建——session 对象 = 局身份,新 session = 新 BoardState。"""
+    """§1:单例,每局新建——session 对象 = 局身份,新 session = 新 GameState。"""
     s1 = SimpleNamespace()
     s2 = SimpleNamespace()
     assert board_state_of(s1) is board_state_of(s1)
@@ -527,10 +527,10 @@ def test_heartbeat_observer_flags_stall() -> None:
 def test_sim_synthesis_preserves_bench_slots() -> None:
     """§2.1/§3.2.5:sim 真值合成 bench 槽位保序(0 基下标 → 1 基物理槽位),
     记录模型不采 sim「箱不占席」内部口径。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # 经构造器传入(__post_init__ pad 到定长 9,ADR-0316 形状契约;直赋值
     # 绕过 pad 是旧紧缩构造兼容域,合成口输出侧补齐见模块实现)。
-    st = GameState(bench=[
+    st = CwWorkFrame(bench=[
         BenchChar(slot=1, char_id='阿格莱雅', star=1),
         None,
         BenchChar(slot=3, char_id='花火', star=2),
@@ -554,8 +554,8 @@ def test_sim_synthesis_preserves_bench_slots() -> None:
 def test_sim_synthesis_none_truth_not_written() -> None:
     """sim 帧真值 None 的字段不写(sim 无识别过程,不存在失读;未建模域保持
     None 诚实缺位,禁合成假值)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    st = GameState()   # hp=None(未观测态);gold 默认 0 且 readable=True(P2-3 实断言依据)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    st = CwWorkFrame()   # hp=None(未观测态);gold 默认 0 且 readable=True(P2-3 实断言依据)
     synthesize_from_game_state(bs, st, at_round='p1-r1')
     assert bs.hp.value is None
     assert bs.node.value is None, \
@@ -567,7 +567,7 @@ def test_sim_synthesis_none_truth_not_written() -> None:
 
 def test_sim_engine_feeds_board_state() -> None:
     """任务书件 7:engine_p1 决策帧合成段接线——sim 引擎跑一局,session 的
-    BoardState 被喂入(心跳推进 + bench 观察 sim:synthesized)。"""
+    GameState 被喂入(心跳推进 + bench 观察 sim:synthesized)。"""
     from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         StrategySession,
@@ -641,7 +641,7 @@ def _patch_clean_readers(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_observation_feed_wires_board_state(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """任务书件 2:read_game_state 观察流接线——真读字段进 BoardState
+    """任务书件 2:read_game_state 观察流接线——真读字段进 GameState
     (observation);失读字段走 carried/prior;hp 写入闸:非真读帧不经
     observe 假值入账。"""
     from sr_od.application.currency_war.obs import cw_observation
@@ -683,7 +683,7 @@ def test_observation_feed_hp_unified_loss_semantics(
 
     bs = board_state_of(sess)
     assert bs.hp.value is None, \
-        'BoardState 从未读过 → 处置②保持 None(session 暖启动值不入,禁猜)'
+        'GameState 从未读过 → 处置②保持 None(session 暖启动值不入,禁猜)'
 
     # 真值帧到达 → observation 转正
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
@@ -789,8 +789,8 @@ def test_observation_feed_battle_frame_kind_inherits(
 def test_cost_source_passthrough_not_folded() -> None:
     """P2-4:cost_source 原值透传不折叠——roster_fallback 的「徽章失读」
     证据分级禁丢(生产 reader 产三值,批次二消费前必须有区分)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    st = GameState()
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    st = CwWorkFrame()
     st.shop = [StateShopCard(x=1, name='花火', cost=2, star=1,
                              cost_source='roster_fallback')]
     synthesize_from_game_state(bs, st, at_round='p1-r3')
@@ -803,7 +803,7 @@ def test_consume_defect_sink_drains() -> None:
     在 setup 先清,隔离整条副作用链);consume 供装配点取走行后复位,
     防跨局残留。"""
     consume_defect_sink()   # 清其他测试遗留(模块级缓冲 = 副作用链桩化点)
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     rows: list[dict] = []
     set_defect_sink(rows.append)
@@ -821,7 +821,7 @@ def test_consume_defect_sink_drains() -> None:
 # (§1 归属判据)/§5.1 effect_inventory 挂点接线(登记/节点 tick/计数 bump/
 # 到期尾款返回面)/§3.2.19 免战牌 EffectSpec 条目+跳过递减/§3.4.1-4 节点屏
 # 刷新计数组写端/§8.7 Snapshot 消费切换(mandate_v1 内部改读)/§5.1 账本
-# 载体归一(session.effect_inventory → BoardState.effects 单例)。断言全部
+# 载体归一(session.effect_inventory → GameState.effects 单例)。断言全部
 # 按设计语义写,与上方批次一/消费批锁面不重复。
 
 
@@ -882,11 +882,11 @@ def test_base_class_carries_state_only_generically() -> None:
 
 
 # ============================================================ §5.1 载体归一
-# session.effect_inventory → BoardState.effects 单例
+# session.effect_inventory → GameState.effects 单例
 
 
 def test_effect_inventory_is_board_state_ledger_read_through() -> None:
-    """§5.1/§8.4 载体归一(批次三):账本单一实例 = BoardState.effects;
+    """§5.1/§8.4 载体归一(批次三):账本单一实例 = GameState.effects;
     ``session.effect_inventory`` 是只读透传属性(历史写点读点零改动兼容),
     字段本体已从 session 移除——双账本漂移面消除。"""
     assert 'effect_inventory' not in {
@@ -894,13 +894,13 @@ def test_effect_inventory_is_board_state_ledger_read_through() -> None:
         'session 不得再持有独立账本实例(双账本禁)'
     sess = StrategySession()
     inv = sess.effect_inventory
-    assert inv is board_state_of(sess).effects, '透传属性指向 BoardState 正本'
+    assert inv is board_state_of(sess).effects, '透传属性指向 GameState 正本'
     with pytest.raises(AttributeError):
         sess.effect_inventory = ActiveEffectInventory(), '无 setter:禁直挂实例'
 
 
 def test_level_up_hook_writes_unified_ledger() -> None:
-    """升级标记挂点(prep_actions 既有)经归一后写 BoardState 正本:
+    """升级标记挂点(prep_actions 既有)经归一后写 GameState 正本:
     session.effect_inventory.on_level_up() 与 bs.effects 事件计数同源。"""
     sess = StrategySession()
     sess.effect_inventory.on_level_up()
@@ -910,7 +910,7 @@ def test_level_up_hook_writes_unified_ledger() -> None:
 
 def test_battle_end_hook_writes_unified_ledger() -> None:
     """结算挂点(on_battle_end,§5.1 挂点清单第六挂点)经归一读口写
-    BoardState 正本:session.effect_inventory.on_battle_end() 与 bs.effects
+    GameState 正本:session.effect_inventory.on_battle_end() 与 bs.effects
     事件计数同源(镜像升级标记锁);挂点零 Field 写入(write_seq 不变——
     账本事件面在 inventory 方法域,不与观察覆盖争 frozen 帧域);注册表
     现役零 BATTLE_END 条目 → 挂点推进零效果条目触碰(effect-domain §7.4
@@ -990,7 +990,7 @@ def test_burst_grant_adds_free_refresh_balance_once() -> None:
     """桥·burst:登记时点把 payload.free_refresh_burst 一次性累加进余额
     (固定理财即时段=2 活载体);零额度 payload(免战牌)= no-op。「一次性」
     由调用点唯一性承载(登记挂点,接线锁辖),函数本体不加去重。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     apply_effect_burst_grant(bs, STRATEGY_EFFECTS['固定理财'], frame='p1-r2')
     assert bs.free_refresh_balance.value == 2
     assert bs.free_refresh_balance.evidence == 'effect_burst@p1-r2'
@@ -1002,7 +1002,7 @@ def test_per_node_grant_adds_once_per_node() -> None:
     """桥·per_node:节点边界一次,把在场条目声明的每节点额度累加
     (双手狸 free_refresh_on_node_enter=2 活载体);同节点重复挂点采样不
     双计(闸 = advance_node advanced 位)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_t=5)
     adv, _ex = bs.effects.advance_node(6)
@@ -1036,7 +1036,7 @@ def test_capacity_projection_activates_and_recovers() -> None:
         TriggerKind,
     )
 
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # bench 未观察:无容器可写,投影跳过
     inv = bs.effects
     inv.register_strategy(EffectSpec(
@@ -1164,15 +1164,15 @@ def test_synthesis_payload_offscreen_branch() -> None:
     leave_screen)——禁旧 shop payload 连旧 evidence 残留(把「不在商店」帧
     误读成「商店仍开着」);encounter/supply 两域 sim 不建模,合成帧恒
     离屏口径;牌面在场帧照常观察落 payload。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    st_shop = GameState()
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    st_shop = CwWorkFrame()
     st_shop.shop = [StateShopCard(x=1, name='花火', cost=2, star=1,
                                   cost_source='badge')]
     synthesize_from_game_state(bs, st_shop, at_round='p1-r2')
     assert bs.shop.value is not None and bs.shop.value.cards[0].name == '花火'
 
     # 连续合成帧:真值缺席 → 离屏(旧 payload 不残留)
-    st_prep = GameState()
+    st_prep = CwWorkFrame()
     synthesize_from_game_state(bs, st_prep, at_round='p1-r3')
     assert bs.shop.value is None, '离屏帧 payload 置 None(禁残留)'
     assert bs.shop.source == 'observation' \
@@ -1183,7 +1183,7 @@ def test_synthesis_payload_offscreen_branch() -> None:
 
 
 # ============================================================ §8.7 件 3
-# Snapshot 消费切换:mandate_v1 内部改读 BoardState 视图
+# Snapshot 消费切换:mandate_v1 内部改读 GameState 视图
 
 
 def _bs_with_node(sess) -> None:
@@ -1192,7 +1192,7 @@ def _bs_with_node(sess) -> None:
 
 
 def test_snapshot_assembly_falls_back_to_board_state_view() -> None:
-    """件 3:snapshot_from_obs 的 session 回退锚改读 BoardState 视图——
+    """件 3:snapshot_from_obs 的 session 回退锚改读 GameState 视图——
     obs.state 缺席帧,plane/round 取记录值(与旧 last_state 直读在常态帧
     逐位一致;失读帧取 carried 沿用值 = 记录模型申报面)。"""
     from sr_od.application.currency_war.decision_assembly import snapshot_from_obs
@@ -1207,12 +1207,12 @@ def test_snapshot_assembly_falls_back_to_board_state_view() -> None:
     )
     snap = snapshot_from_obs(obs, sess)
     assert (snap.plane, snap.round_num) == (2, 5), \
-        '回退锚 = BoardState 记录值(非 last_state 原帧)'
+        '回退锚 = GameState 记录值(非 last_state 原帧)'
 
 
 def test_snapshot_anchor_state_falls_back_to_board_state_view() -> None:
     """件 3 收口墓碑(原锁:adapter._anchor_state 的 session 锚回退取
-    BoardState 记录值)——该缝已随 T-116 段 2 退役删除(snapshot_from_obs
+    GameState 记录值)——该缝已随 T-116 段 2 退役删除(snapshot_from_obs
     纯容器锚),符号复活即红;锚语义守护归 test_cw_w5_sim_retirement
     哨兵与容器锚现役锁。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -1227,11 +1227,11 @@ def test_snapshot_anchor_state_falls_back_to_board_state_view() -> None:
 # 零语义改动)。锁面 = §8.7 批次四:
 # - relay 会话侧值已确立闸(§2.1:会话载体默认空值 ''/[] 是「未知」非
 #   「已知事实」,禁中继成正式值;字符串非空/列表非空才中继)——单元锁 +
-#   恢复局场景端到端锁(新 session 空默认不落 BoardState、真值后到可落);
+#   恢复局场景端到端锁(新 session 空默认不落 GameState、真值后到可落);
 #   端到端两锁复用上方观察流域的 _feed_ctx/_patch_clean_readers(镜像字段
 #   中继走 feed 尾部公共段,reader 读值与本组断言面无关);
 # - 退役载体零残留(AST 级静态锁,标识符面):已退役符号全仓零命中 +
-#   记录面(kernel/cw_board_state.py)零 last_state 标识符命中。
+#   记录面(kernel/cw_game_state.py)零 last_state 标识符命中。
 # payload 域三域口径的对齐断言在本文件上方(test_leave_screen_payload_only
 # 负断言辖 settlement),本节不重复。
 
@@ -1246,7 +1246,7 @@ _MIRROR_FIELDS = ('active_strategies', 'active_env', 'plane_bosses',
 def test_relay_rejects_session_empty_defaults() -> None:
     """§2.1 空值=未知态禁中继:字符串空/空白、列表/元组/字典/集合空 = 会话
     侧值未确立,一律拒写(返回 False,字段保持从未写过)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.relay(bs.active_env, '', sig=_hsig()) is False
     assert bs.relay(bs.selected_difficulty, '   ', sig=_hsig()) is False, \
         '空白字符串 = 无内容读数,同空域'
@@ -1255,7 +1255,7 @@ def test_relay_rejects_session_empty_defaults() -> None:
     assert bs.relay(bs.enemy_affixes, {}, sig=_hsig()) is False
     for name in _MIRROR_FIELDS:
         fld = getattr(bs, name)
-        assert fld.value is None, f'空默认禁落 BoardState:{name}'
+        assert fld.value is None, f'空默认禁落 GameState:{name}'
         assert fld.evidence is None, '拒写不留任何来源痕迹'
 
 
@@ -1263,7 +1263,7 @@ def test_relay_empty_refusal_does_not_block_late_truth() -> None:
     """恢复局核心语义:空默认被拒后字段仍是「从未写过」——真值后到可正常
     落(source=logic + evidence=session_carrier,§2.1 中继形态);「持卡名单
     [] 为假事实、拦截后到真值」的缺陷面由本锁钉死。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.relay(bs.active_strategies, [], sig=_hsig()) is False
     assert bs.relay(bs.active_env, '', sig=_hsig()) is False
     assert bs.relay(bs.active_strategies, ['白银投资'], sig=_hsig()) is True
@@ -1278,7 +1278,7 @@ def test_relay_empty_refusal_does_not_block_late_truth() -> None:
 def test_relay_gate_scope_is_empty_string_and_containers_only() -> None:
     """闸辖域 = 空字符串与空容器(§2.1 词面:字符串非空/列表非空);falsy 但
     有语义的标量(如 streak=0 真 0)不受闸辖,禁过度收紧。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.relay(bs.streak, 0, sig=_hsig()) is True
     assert bs.streak.value == 0 and bs.streak.source == 'logic'
     assert bs.relay(bs.plane_bosses, [None, None, None], sig=_hsig()) is True, \
@@ -1292,7 +1292,7 @@ def test_restore_session_empty_mirrors_not_relayed(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """§2.1 恢复局场景(端到端):恢复局新 session 五镜像字段停会话默认
     (''/[])→ 生产 feed(read_game_state 观察流)逐帧中继全被空值闸拒,
-    BoardState 五字段保持 None(未知态不固化成正式值)。"""
+    GameState 五字段保持 None(未知态不固化成正式值)。"""
     from sr_od.application.currency_war.obs import cw_observation
 
     sess = SimpleNamespace(last_streak=0, active_strategies=[])
@@ -1375,7 +1375,7 @@ def test_ast_retired_symbols_zero_hits_repo_wide() -> None:
 
 
 def test_ast_record_layer_reads_no_last_state() -> None:
-    """§8.7 批次四静态锁(记录面):kernel/cw_board_state.py 零 last_state
+    """§8.7 批次四静态锁(记录面):kernel/cw_game_state.py 零 last_state
     标识符命中——记录模型只由观察流/写入 API/sim 合成口供数(§2.4),
     禁读 session.last_state 旧观察帧(帧新鲜度差域的独立性与记录/消费
     分离的结构前提)。
@@ -1385,6 +1385,6 @@ def test_ast_record_layer_reads_no_last_state() -> None:
     last_state,尾批完成后把本断言面从记录面扩到全仓;现写全仓零命中
     断言 = 永久红锁,不做。
     """
-    ids = _identifiers(_PKG / 'kernel' / 'cw_board_state.py')
+    ids = _identifiers(_PKG / 'kernel' / 'cw_game_state.py')
     assert 'last_state' not in ids, \
-        '记录面(kernel/cw_board_state.py)不得引用 last_state 旧帧'
+        '记录面(kernel/cw_game_state.py)不得引用 last_state 旧帧'
