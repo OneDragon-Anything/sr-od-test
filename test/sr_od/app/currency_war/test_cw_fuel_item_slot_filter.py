@@ -57,11 +57,16 @@ def _item(slot: int = 1, star: int = 1) -> BenchChar:
 
 def _state(bench: list[BenchChar],
            deployed: list[BenchChar] | None = None) -> GameState:
+    # deployed 缺省给非空板(占位一件即可):空板帧会被空板止损守卫
+    # (sell_gate.empty_board_sell_blocked,ADR-0636)先于资格面短路,
+    # 测不到本文件辖的滤门本体;空板帧行为由守卫自身锁面辖。
+    if deployed is None:
+        deployed = [_bc('前线', slot=1)]
     st = GameState()
     st.plane = 2
     st.hp = 50
     st.bench = list(bench)
-    st.deployed = list(deployed or [])
+    st.deployed = list(deployed)
     return st
 
 
