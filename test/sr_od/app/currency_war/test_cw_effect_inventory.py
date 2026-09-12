@@ -13,7 +13,7 @@
 全场出售+再发牌(人力重组,出售面 = 逻辑写、发牌面 = 不造单位)+ 词表锚 +
 边界(从未观察字段/出售域部分读退款零写入/零退款金翻标禁令/未知语义/
 非重写条目)。
-同族桥(burst/每节点/容量投影)行为锁在 test_cw_board_state_batch3.py(历史存量簇)。
+同族桥(burst/每节点/容量投影)行为锁在 test_cw_board_state.py(§8.7 批次三节)。
 """
 from __future__ import annotations
 

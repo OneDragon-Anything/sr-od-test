@@ -15,8 +15,8 @@
   id='151301'「进入战斗节点时,直接跳过战斗并进入下一个节点,可生效
   2次。获得30点经验。」
 
-与 test_cw_board_state_batch3.py 的分工(测试纪律「同层不重复」):
-彼文件锁**单链节**(登记播种/consume_use 单元/burst 桥零额度 no-op/
+与 test_cw_board_state.py §8.7 批次三节(下称「批次三节」)的分工
+(测试纪律「同层不重复」):彼节锁**单链节**(登记播种/consume_use 单元/burst 桥零额度 no-op/
 spec 条目 id 面)与接线存在性烟雾(容忍档);本文件锁**行为链**两支——
 ①kernel 内全链流:授予(登记 + burst 桥同点采样,生产登记挂点形状)
 →余额(卡文无刷新腿,两桥零注入,全链零 Field 写)→节点推进(余量
@@ -56,12 +56,12 @@ _SPEC_ID: str = '151301'   # 免战牌 plaza 稳定 id(= EffectSpec.id,恒稳)
 
 
 def test_skip_card_grant_balance_consume_chain() -> None:
-    """授予→余额→消费 kernel 内全链(一局同流;链节单元锁在 batch3,
-    本锁锁流;生产递减腿由本文件生产接线锁辖)。
+    """授予→余额→消费 kernel 内全链(一局同流;链节单元锁在批次三节
+    test_cw_board_state.py,本锁锁流;生产递减腿由本文件生产接线锁辖)。
 
     覆盖申报:生产登记挂点形状(登记 + burst 桥同点)/节点 tick 挂点
     形状(advance_node advanced 位闸门 + per-node 桥)/consume_use
-    递减语义本体。接线存在性烟雾与链节单元断言归 batch3,不在此重复。
+    递减语义本体。接线存在性烟雾与链节单元断言归批次三节,不在此重复。
     """
     bs = BoardState(schema_version=BS_SCHEMA_VERSION)
     seq0 = bs.write_seq
@@ -89,7 +89,7 @@ def test_skip_card_grant_balance_consume_chain() -> None:
 
     # —— 桥活线证人 + 混合清单求和形状:同账本并入有腿条目(双手狸
     # on_node_enter=2)后,求和恰 = 有腿条目自身额度。免战牌零贡献
-    # 由此与「桥死」的空转绿区分(正样活线锁另在 batch3 burst/per_node)
+    # 由此与「桥死」的空转绿区分(正样活线锁另在批次三节 burst/per_node)
     bs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_t=5)
     advanced2, _expired2 = bs.effects.advance_node(7)
@@ -112,8 +112,8 @@ def test_skip_card_grant_balance_consume_chain() -> None:
 def test_skip_card_registry_semantics_gate() -> None:
     """卡文原文 ↔ 规格语义字段登记门(逐句映射)。
 
-    id/duration_uses/xp_instant 三字段已由 batch3
-    test_skip_battle_spec_entry_matches_base_registry 辖,本锁补其余
+    id/duration_uses/xp_instant 三字段已由批次三节
+    (test_cw_board_state.py)test_skip_battle_spec_entry_matches_base_registry 辖,本锁补其余
     语义面;其中「payload 零刷新腿」是两桥零注入行为的注册表前提,
     建模漂移(给免战牌误加刷新腿)在此与链锁双红。锁红 = 建模语义
     判定被改:对照卡文逐句重推后登记新语义,禁机械跟绿。
@@ -135,7 +135,7 @@ def test_skip_card_registry_semantics_gate() -> None:
         and payload.free_refresh_cond_gold_step == 0 \
         and payload.free_refresh_cond_cap == 0, '无条件刷新三元组'
     assert payload.xp_per_node == 0, \
-        '经验腿仅选牌当场一支(xp_instant=30,batch3 已锁数值)'
+        '经验腿仅选牌当场一支(xp_instant=30,批次三节已锁数值)'
 
 
 def _skip_launch_executor(monkeypatch, session) -> PrepActionExecutor:
@@ -174,7 +174,7 @@ def test_skip_decrement_production_wiring(monkeypatch) -> None:
     驱动 = 真实 ``PrepActionExecutor._launch_attempt`` 跳过段(prep_actions
     「按钮-跳过」分支,详设 §3.2.19/§5.1 跳过递减挂点):成功判据 =
     备战标识消失验证通过,递减恰挂在该判定之后。锁红 = 生产递减腿
-    断裂(挂点删除/短路/子态分支名漂移/会话取径漂移)——batch3 的
+    断裂(挂点删除/短路/子态分支名漂移/会话取径漂移)——批次三节的
     substring 接线烟雾(容忍档)由本锁升级行为锁。三段断言:首跳
     2→1(尚有余量不移除)/再跳 1→0 归零离场/缺位后再跳仍出战成功
     (递减挂点与登记挂点解耦,登记面缺位的局零动作不炸发射回执)。

@@ -12,8 +12,8 @@ docs/develop/currency_war/game_state/effect-domain.md(效果域正本)。
 
 附加锁:棱彩加强值口径(两卡条件腿逐字同文 → 三元组同值;加强值只在
 instant_gold 26/45)+ 注册表条目形状(id 双匹配/同实例单一源/counter 不建)。
-断言全部按设计语义写;桥静态形态既有锁 = test_cw_board_state_batch3.py,
-本文件不重复其断言面。
+断言全部按设计语义写;桥静态形态既有锁 = test_cw_board_state.py(§8.7
+批次三节),本文件不重复其断言面。
 """
 from __future__ import annotations
 
