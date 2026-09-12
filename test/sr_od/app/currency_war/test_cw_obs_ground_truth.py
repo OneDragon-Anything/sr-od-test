@@ -215,13 +215,16 @@ class TestSettlePage1GroundTruth:
 # ===== 升星预览 ✦(cw_identity_obs.read_merge_preview;真帧 = 开商店档) =====
 
 class TestMergePreviewGroundTruth:
-    """商店牌头顶 ✦ 数(= 已持同名同星副本份数)真帧锚。
+    """商店牌头顶 ✦ 指示份数真帧锚(✦ = 已持同名同星副本份数,≤2)。
 
-    真值确认 = 看图人工核对(2026-09-12):shop_open_preview_star 帧仅 card5
-    (万敌,试用标)头顶 2 个金色 ✦,其余 4 牌无——我方持万敌同名同星副本
-    2 份形态。负样本 = shop_open 帧(同店态无副本)全 0,与正样本同测试
-    聚合对照(0 是合法语义:该牌无已持副本)。
+    真值确认 = 看图人工核对(2026-09-12)。历史事故(用户供帧裁决):
+    ✦ 上下浮动+明暗脉动 → 旧刚性 TM 漏检 2/4 帧态(含 shop_open card5
+    被标定误判「金发噪声」负样本,实为漏检 ✦)→ 算法重写为连通域几何
+    计数;两帧浮动相位横带入库(fixtures/shop_merge_preview/,裁自
+    .debug 易失取证帧,650ms 相位对 = bright/dark)。
     """
+
+    _BAND_OFFSET = (382, 55)   # 横带裁剪时相对全帧的 (x1, y1)
 
     def _previews(self, test_context, frame_name: str) -> list[int]:
         from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
@@ -236,10 +239,37 @@ class TestMergePreviewGroundTruth:
             out.append(read_merge_preview(img[rect.y1:rect.y2, rect.x1:rect.x2]))
         return out
 
+    def _band_previews(self, test_context, band_name: str) -> list[int]:
+        from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
+        from sr_od.application.currency_war.obs.cw_identity_obs import (
+            read_merge_preview,
+        )
+        band = _read(_DIR / 'fixtures' / 'shop_merge_preview' / band_name)
+        bx, by = self._BAND_OFFSET
+        out = []
+        for i in range(1, 6):
+            rect = _area_rect(test_context, f'商店牌-{i}', '货币战争-备战-开商店')
+            assert rect is not None, f'商店牌-{i} area 缺'
+            crop = band[rect.y1 - by:rect.y2 - by, rect.x1 - bx:rect.x2 - bx]
+            out.append(read_merge_preview(crop))
+        return out
+
     def test_preview_star_frame(self, test_context):
         assert self._previews(test_context, 'shop_open_preview_star.webp') == \
             [0, 0, 0, 0, 2]
 
-    def test_no_preview_frame_all_zero(self, test_context):
-        # 负样本:无副本店帧全 0(0 = 「无✦」合法语义,非失读)
-        assert self._previews(test_context, 'shop_open.webp') == [0, 0, 0, 0, 0]
+    def test_shop_open_frame_card5_has_copies(self, test_context):
+        # 历史误判修正:shop_open card5 实有 2✦(旧 TM 漏检并被标定误判
+        # 「金发噪声」负样本——看图核对金 ✦ 可见);card1-4 无 ✦ 部分负样本
+        assert self._previews(test_context, 'shop_open.webp') == [0, 0, 0, 0, 2]
+
+    def test_flicker_bright_phase_band(self, test_context):
+        # 浮动亮相相位横带:card4/card5(阿格莱雅×2 试用)各 2✦,其余 0
+        assert self._band_previews(test_context, 'preview_flicker_bright_band.png') \
+            == [0, 0, 0, 2, 2]
+
+    def test_flicker_dark_phase_band(self, test_context):
+        # 浮动暗相位横带(旧 TM 漏检事故相位):✦ 变暗变小但依然可判 → 2/2
+        # 动画相位鲁棒性的核心锚(650ms 前后两帧同真值)
+        assert self._band_previews(test_context, 'preview_flicker_dark_band.png') \
+            == [0, 0, 0, 2, 2]
