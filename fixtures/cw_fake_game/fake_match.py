@@ -100,7 +100,25 @@ from sr_od.application.currency_war.sim.pool import (
 #: 沿革:v5 曾短暂只挂直出单语义(未出版,无存档对照面),T-204 注入
 #: 面落地时并入 v6 合流出版——考古勿把 v5 当独立出版版;与 v4 不可比。
 #: v1 批次(批 1 保真度基线)与本版不可比。
-FAKE_GAME_ENV_VERSION: int = 6
+#: v7 = 占位件登记表真值对账(T-216):applied 转移后 boxes/tomes
+#: 对 bench is_item_slot 真值对账——修复前商店段策略器腾席卖出通道
+#: 可合法卖掉箱/典籍占位件而登记表残留幽灵槽号(P2 OpenBox/OpenTome
+#: 恒拒死循环,T-209 新发现④);修复后幽灵不再形成,受影响局(P1 内
+#: 占位件被卖的局,探针样本 ≈2/8)的 P2+ 段逐位轨迹相对 v6 位移,
+#: P1 段逐位不变(登记表在 P1 段零消费,对账零 rng 消费)——分布面
+#: 变更,与 v6 不可比。T-284 正式 A/B 批(env v6 域)验收证据在案
+#: 不重开,新批从 v7 重采。
+#: v8 = 占位件卖出语义对齐实机真值(T-23):实机采证定谳「箱不可卖」
+#: (同参数拖拽,角色 9 连全卖、箱零效果;宝箱面 = 4 选 1 装备面板,
+#: 无金币现值无出售项)——SellBench 对 bench is_item_slot 占位件改为
+#: 规则层拒绝(applied=False、零状态变化、零 rng 消费;kernel 不识
+#: 占位件语义,委托前拦截)。修复前(v7 形)= kernel 合法卖出,幽灵
+#: 槽靠 T-216 对账点事后兜;修复后卖出路径不再能产生幽灵,对账点保留
+#: 为 kernel 未来写路径的纵深防线。分布面 = 「仍对占位件发射卖单」的
+#: 局自发射点起轨迹位移(主仓 T-18 资格面滤除后 fuel_sell_candidates
+#: 通道已绝发射,残余可及面 = criteria/sell 未滤通道,T-18-r1 申报
+#: 在案);不发射的局逐位不变。与 v7 不可比。
+FAKE_GAME_ENV_VERSION: int = 8
 
 #: 开局等级 = 3(重述 engine_p1 开局真值 ``st.level = 3``——引擎行是裸
 #: 字面量无符号名,故本骨架按值重述+锚注,非 import)。三源互证:
@@ -1010,8 +1028,22 @@ class FakeMatch:
           状态原样副本 → 状态不等为 False → applied=False。
         - **合成买入**(满栏 merge-buy,ADR-0453):simulate 按 k 张下架 +
           k×cost 扣金;牌池 take 次数 = 店内下架数(普通买 1/合成买 k)。
+        - **规则层拒绝**(v8,委托 simulate 之前):SellBench 目标槽为
+          is_item_slot 占位件 = 环境拒绝(实机真值「箱不可卖」)——不经
+          kernel、零状态变化、无日志条目;拒绝形态与 :meth:`_open_box`
+          等环境拒绝同族(applied=False + 原状态副本)。
         """
         self.clock += 1
+        # 占位件卖出拒绝(v8):实机真值 = 箱不可卖(T-15 实机采证定谳;
+        # 环境版本历史 v8 节)。kernel 不识 is_item_slot 语义,直接委托会
+        # 合法转移占位件(幽灵登记根因面,T-216 对账点因此存在)——故在
+        # 委托前规则层拒绝:applied=False、零状态变化、零 rng 消费、无
+        # 日志条目(与 _open_box 等环境拒绝同形;动作照常计一次交互时钟)。
+        # SellDeployed 不设门:占位件不可合法上场(部署侧 is_item_slot
+        # 恒拒),deployed 上无占位件可达。
+        if isinstance(action, cw_state.SellBench) \
+                and self._slot_holds_item(action.bench_idx + 1):
+            return ExecResult(applied=False, observed=self.state.copy())
         before = self.state
         log_base = len(before.action_log)
         after = cw_state.simulate(before, action)
@@ -1051,6 +1083,9 @@ class FakeMatch:
             verification['dealt'] = len(self.state.shop)
         # DeployMove/SwapDeploy/CompTransaction/LevelUp:转移语义全部在
         # simulate 内,无规则外效应(装备发放归批 1 规则模块)
+        # 占位件登记表对账(kernel 转移可能清掉箱/典籍占位件槽,唯一
+        # 同步点见 _reconcile_item_slot_registry;T-216)
+        self._reconcile_item_slot_registry()
         return ExecResult(applied=True, income=income,
                           verification=verification,
                           observed=self.state.copy())
@@ -1067,6 +1102,42 @@ class FakeMatch:
             if 0 <= action.deployed_idx < len(before.deployed):
                 return before.deployed[action.deployed_idx]
         return None
+
+    def _slot_holds_item(self, slot: int) -> bool:
+        """登记槽号对应的 bench 槽当前是否仍是占位件(对账判据)。"""
+        idx = slot - 1
+        b = (self.state.bench[idx]
+             if 0 <= idx < len(self.state.bench) else None)
+        return b is not None and b.is_item_slot
+
+    def _reconcile_item_slot_registry(self) -> None:
+        """占位件登记表(boxes/tomes)对账到 bench 真值(T-216)。
+
+        boxes/tomes 是本状态机私账(占位件的物理槽位表),bench 真值在
+        kernel ``GameState``——两者经 :meth:`apply` 直调 ``simulate``
+        衔接,而 kernel 不认识 is_item_slot 概念:其卖出/上场/事务身份
+        清等转移清掉占位件槽时,登记表不会自动跟随。实证链(T-209
+        新发现④ → T-216 探针):商店段策略器腾席卖出通道把箱占位件
+        列为燃料候选(fuel_sell_candidates 对空名占位件四门全放行),
+        ``SellBench(expect='')`` 经 simulate 合法卖出 → 登记表残留
+        幽灵槽号 → 后续落座占槽 → P2 备战 OpenBox/OpenTome 对幽灵槽
+        恒拒死循环、买动作零发生。
+
+        本对账 = 登记表对 kernel 侧转移的**唯一同步点**:applied 转移后
+        按「登记槽号的 bench 现值是否仍是占位件」剔除失效槽——判据与
+        动作类型无关,一个点覆盖全部 kernel 写路径(现有分支与未来新增),
+        禁在各发射位散点补丁。生成/消耗通道(spawn/open 等)的自有同步
+        保持不变,本对账对其幂等。归属不猜:只删「已不是占位件」的槽,
+        占位件是箱还是典籍由生成通道的登记决定(kernel 转移只会使其
+        消失,不会互换归属)。零 rng 消费(P1 段登记表零消费,对账不
+        位移 P1 轨迹)。tomes 同构同根,同点一并收口(非扩面)。
+
+        v8 起(T-23)卖出路径已在源头拒绝(见 :meth:`apply` 占位件拒绝
+        门),实证链所述卖单形态不再发生;本对账保留 = kernel 未来写路径
+        的纵深防线(对拒绝门互不替代:门辖「发射前」,对账辖「转移后」)。
+        """
+        self.boxes = [s for s in self.boxes if self._slot_holds_item(s)]
+        self.tomes = [s for s in self.tomes if self._slot_holds_item(s)]
 
     # ---- 战斗结算(coarse 主路径 + Δ池直调)----
 

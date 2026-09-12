@@ -4,8 +4,9 @@
 一次识别 + 人工确认的真值(注释注明来源与确认方式);一图一测聚合该图全部
 检查面。样本事故驱动增量:识别出错的实况帧每种情况补 1 张,不预先铺满。
 
-挂账(正常样本待裁剪入库,按第 21 条随重建/改函数补):
-find_bookcards(待 gold_card 语义核对后判定,疑似已有主)。
+挂账清单:已清零(2026-09-12)。find_bookcards 判定已有主——检测链通路锁 +
+模板可加载锁在 test_cw_node_screens(bookcard_handler 段),生产消费 =
+cw_loop/cw_screen_expert_invite 书册卡自动处理链。
 已锚并划掉:read_merge_preview(本文件 TestMergePreviewGroundTruth);
 detect_bench_avatars / detect_empty_slots /
 detect_board_slots / detect_slot_centers——生产零外部消费死码已删,不补样本。
