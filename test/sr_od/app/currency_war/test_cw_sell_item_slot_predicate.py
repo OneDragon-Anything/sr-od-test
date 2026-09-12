@@ -102,13 +102,10 @@ class TestInterestItemSlotGate:
         assert slots == []
         assert key == ''
 
-    def test_gate_precedes_star_gate(self):
-        """门序锁:占位件判读先于星级门——物品语义与星级无关(任何星级
-        不可变现);star=2 占位件非真实帧形,钉的是门序而非游戏形态。"""
-        bench = [_item(slot=1, star=2)]
-        slots, _key = sell.sell_for_interest(
-            0, bench, 5, _K, state=_state(bench))
-        assert slots == []
+    # 「门序锁」已删(T-102,同燃料通道判):滤门禁用变异下 star=2 占位件
+    # 输入仍被星门(criteria/sell.py 内 b.star != 1)同样拒——两门同为纯拒、
+    # 序不可观测,锁零拦截价值;滤门回归由星=1 两锁实际拦截(变异红证)。
+    # 勿以「钉门序」为由重建:无合法可观测形态。
 
     def test_zero_drift_without_placeholder(self):
         """零误伤对照:无占位件帧输出与既有语义逐位一致(两件全入)。"""
@@ -144,12 +141,9 @@ class TestFundingItemSlotGate:
         assert slots == []
         assert key == ''
 
-    def test_gate_precedes_star_gate(self):
-        """门序锁(同凑息):占位件判读先于星级门。"""
-        bench = [_item(slot=1, star=2)]
-        slots, _key = sell.funding_support_sell(
-            0, 5, bench, _K, state=_state(bench))
-        assert slots == []
+    # 「门序锁」已删(T-102,同凑息通道判):滤门禁用变异下 star=2 占位件
+    # 输入仍被星门(criteria/sell.py 内 b.star != 1)同样拒——序不可观测,
+    # 锁零拦截价值;滤门回归由星=1 锁实际拦截(变异红证)。
 
     def test_zero_drift_without_placeholder(self):
         """零误伤对照:无占位件帧输出与既有语义逐位一致。"""
