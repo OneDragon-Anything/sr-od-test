@@ -69,10 +69,10 @@ from sr_od.application.currency_war.kernel.cw_equip_env import (
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     RunEquip,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
@@ -255,7 +255,14 @@ def _m7_actions(out: list) -> list:
 
 def test_m7_tools_only_owned_never_fires():
     """门① 事故回归帧:owned 全工具件 → 不发 RunEquip(旧码永真重发=活锁根)。"""
-    out = mandate.run_mandate(_m7_frame(), _m7_session(_TOOLS))
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        board_state_bridge as _bsb,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame as _F
+    # state 容器必填(容器化段 2):帧轴镜像 _m7_frame 同值构造。
+    st = _F(gold=0, level=3, bench=[], deployed=[], deploy_cap=4,
+            node_type='战斗', round_num=3)
+    out = mandate.run_mandate(_m7_frame(), _m7_session(_TOOLS), state=_bsb(st))
     assert _m7_actions(out) == []
 
 

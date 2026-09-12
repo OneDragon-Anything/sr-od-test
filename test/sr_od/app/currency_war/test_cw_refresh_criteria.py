@@ -29,6 +29,9 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
     CwWorkFrame,
@@ -112,7 +115,7 @@ class TestFrontWindowPredicates:
             st = _front_state()
             for rn, want in ((1, True), (2, True), (3, True), (4, False)):
                 st.round_num = rn
-                assert front_window_frame(st, s) is want, (table, rn)
+                assert front_window_frame(_bsb(st), s) is want, (table, rn)
 
     def test_front_window_fail_closed_on_table_missing(self):
         """表缺/锚不符/位面外帧 fail-closed False(前窗行为不发生 =
@@ -120,13 +123,13 @@ class TestFrontWindowPredicates:
         comp = _pair_comp_travel()
         st = _front_state()
         s = _table_session(comp, None, None)
-        assert front_window_frame(st, s) is False
+        assert front_window_frame(_bsb(st), s) is False
         s = _table_session(comp, _TABLE_P1_CN, 2)   # 锚=P2(表非本位面)
-        assert front_window_frame(st, s) is False
+        assert front_window_frame(_bsb(st), s) is False
         st2 = _front_state()
         st2.plane = 2
         s = _table_session(comp, _TABLE_P1_CN, 1)
-        assert front_window_frame(st2, s) is False
+        assert front_window_frame(_bsb(st2), s) is False
 
     def test_zero_form_truth_table(self):
         """零成型 = per-体系 board_factions[s] < FACTIONS tiers[0] 全真

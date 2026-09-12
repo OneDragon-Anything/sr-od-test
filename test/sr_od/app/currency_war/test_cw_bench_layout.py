@@ -40,7 +40,13 @@ from copy import deepcopy
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
@@ -51,9 +57,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     mutate_bench_deployed,
     pad_bench,
     simulate,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.operations.cw_op import cw_shop_action_ops
 
@@ -158,13 +161,13 @@ def test_full_visit_chain_guard_silent(monkeypatch):
     act_buy = BuyCard(card=deepcopy(_BUY_CARD))
     proj = simulate(state, act_buy)
     mutate_bench_deployed(tracked, exec_state_of(sess).tracked_deployed, act_buy)
-    cw_shop_action_ops.guard_expected_vs_tracked(proj, sess)
+    cw_shop_action_ops.guard_expected_vs_tracked(_bsb(proj), sess)
     # 第二动作:卖掉刚买的(两域同序转移)
     from sr_od.application.currency_war.kernel.cw_vocab import SellBench
     act_sell = SellBench(bench_idx=1, expect='丹恒·饮月')
     proj2 = simulate(proj, act_sell)
     mutate_bench_deployed(tracked, exec_state_of(sess).tracked_deployed, act_sell)
-    cw_shop_action_ops.guard_expected_vs_tracked(proj2, sess)
+    cw_shop_action_ops.guard_expected_vs_tracked(_bsb(proj2), sess)
     assert warnings == [], warnings
 
 
@@ -265,14 +268,19 @@ def test_stale_check_clean_when_epoch_unchanged():
 
 def test_stale_check_reseeded_on_epoch_bump(_no_conflict_io):
     """代次命中(人工递增模拟 visit 内 churn)→ 'reseeded':投影 bench
-    按 tracked 重建(逐槽一致),真值侧胜出。"""
+    按 tracked 重建(逐槽一致),真值侧胜出。(重播种写点 = 容器 bench 域
+    [波 4],断言面同切容器读口;state 帧 = 桥装箱载体。)"""
     state, sess, tracked = _stale_state()
+    bs = _bsb(state)
     _seed = exec_state_of(sess).bench_layout_epoch
     state.bench[1] = BenchChar(slot=2, char_id='陈旧投影', star=1)   # 投影被污染
     exec_state_of(sess).bench_layout_epoch = _seed + 1
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        bench_slots_of,
+    )
     assert cw_shop_action_ops.reseed_bench_if_layout_stale(
-        state, sess, _seed) == 'reseeded'
-    assert _layout(state.bench) == _layout(pad_bench(deepcopy(tracked)))
+        bs, sess, _seed) == 'reseeded'
+    assert _layout(bench_slots_of(bs)) == _layout(pad_bench(deepcopy(tracked)))
 
 
 def test_stale_check_failed_when_tracked_unhealthy():
@@ -311,6 +319,6 @@ def test_guard_multiset_branch_detects_historical_bug_shape(monkeypatch):
     state.deployed = []
     proj = simulate(state, BuyCard(card=deepcopy(_BUY_CARD)))
     # 多集等价(6 成员同名同星)仅槽序分歧 → WARNING 降级不炸 + 重播种
-    cw_shop_action_ops.guard_expected_vs_tracked(proj, sess)
+    cw_shop_action_ops.guard_expected_vs_tracked(_bsb(proj), sess)
     assert len(warnings) == 1, warnings
     assert '槽位布局漂移' in str(warnings[0][0])

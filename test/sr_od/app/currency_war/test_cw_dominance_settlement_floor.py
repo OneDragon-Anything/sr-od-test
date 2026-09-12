@@ -46,11 +46,13 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     line_identity_tier,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
+    BenchChar,
     BuyCard,
+    CwWorkFrame,
     LevelUpShop,
     RefreshShop,
+    ShopCard,
 )
-from sr_od.application.currency_war.sim import cw_replay
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     shop,
 )
@@ -136,11 +138,41 @@ def _fresh_sess() -> tuple[MandateV1Strategy, object]:
     return strat, sess
 
 
+def _frame_of_snapshot(snap: dict) -> CwWorkFrame:
+    """合成快照 dict → CwWorkFrame(本文件夹具本地转换)。
+
+    cw_replay._rebuild_state 已随旧格式回放退役(回放源切 journal,
+    容器经 restore_state_snapshot 直读);本文件快照由 _snapshot 自造、
+    字段即 CwWorkFrame 决策轴,转换改测试本地承载,字段名与
+    cw4_feed 合成口消费面一致。"""
+    st = CwWorkFrame(gold=snap['gold'], hp=snap['hp'], level=snap['level'],
+                     plane=snap['plane'], round_num=snap['round_num'],
+                     node_type=snap.get('node_type'))
+    st.board = dict(snap.get('board') or {})
+
+    def _bc(b: dict, i: int) -> BenchChar:
+        return BenchChar(slot=b.get('slot') or i + 1,
+                         char_id=b.get('char_id') or '',
+                         faction=b.get('faction') or '?',
+                         star=b.get('star') or 1,
+                         position_pref=b.get('position_pref') or 'back')
+
+    st.shop = [ShopCard(x=c.get('x', 0), faction=c.get('faction') or '?',
+                        name=c.get('name') or '', cost=c.get('cost') or 1,
+                        star=c.get('star') or 1)
+               for c in (snap.get('shop') or []) if isinstance(c, dict)]
+    st.bench = [_bc(b, i) for i, b in enumerate(snap.get('bench') or [])
+                if isinstance(b, dict)]
+    st.deployed = [_bc(b, i) for i, b in enumerate(snap.get('deployed') or [])
+                   if isinstance(b, dict)]
+    return st
+
+
 def _replay_plan(snap: dict) -> tuple[object, object, list]:
-    """离线重放一步:快照 → _rebuild_state → 部署驱动器出 visit 序列。
+    """离线重放一步:快照 → 帧 → 部署驱动器出 visit 序列。
     返回 (重建态, session, plan)——session 供拒因分键读数。"""
     strat, sess = _fresh_sess()
-    st = cw_replay._rebuild_state(snap)
+    st = _frame_of_snapshot(snap)
     cw4_feed(sess, st)
     return st, sess, strat.decide_shop_screen(sess, _CFG)
 
@@ -166,7 +198,7 @@ class TestDominanceSettlementFloor:
         reject),continue 试下一更便宜候选 ⇒ 1 金笔发射(买后 51 ≥ g*)。
         变异红证见 test_f1_mutation_floor_removed_red。"""
         c3 = _off_name(3, exclude=(_FUEL,))
-        st = cw_replay._rebuild_state(_snapshot(
+        st = _frame_of_snapshot(_snapshot(
             52, [(c3, 3, 1), (_FUEL, 1, 1)]))
         sess = _sess()
         act = decide_shop_action(cw4_bs(st, sess), sess,
@@ -184,7 +216,7 @@ class TestDominanceSettlementFloor:
         monkeypatch.setattr(shop, 'check_settlement_line',
                             lambda gold, cost, g_star: (True, ''))
         c3 = _off_name(3, exclude=(_FUEL,))
-        st = cw_replay._rebuild_state(_snapshot(
+        st = _frame_of_snapshot(_snapshot(
             52, [(c3, 3, 1), (_FUEL, 1, 1)]))
         sess = _sess()
         act = decide_shop_action(cw4_bs(st, sess), sess,
@@ -228,7 +260,7 @@ class TestDominanceSettlementFloor:
         check_affordable 蕴含——52 金帧 3 金笔照常发射、零拒键,与
         旧世界逐位同(零行为变更申报)。"""
         c3 = _off_name(3, exclude=(_FUEL,))
-        st = cw_replay._rebuild_state(_snapshot(52, [(c3, 3, 1)]))
+        st = _frame_of_snapshot(_snapshot(52, [(c3, 3, 1)]))
         sess = _sess()
         sess.active_strategies = ['买断制']
         act = decide_shop_action(cw4_bs(st, sess), sess,

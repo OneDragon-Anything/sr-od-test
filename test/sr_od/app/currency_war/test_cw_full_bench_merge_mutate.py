@@ -39,6 +39,12 @@ from copy import deepcopy
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
@@ -52,9 +58,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     pad_bench,
     pad_deployed,
     simulate,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 
 # ===== 事故帧载荷(取自 2026-09-09 05:52 运行局,禁改动语义)=====
@@ -178,7 +181,7 @@ class TestIncidentFrameReplay:
         assert _sig(proj2.bench) == expected_final, _sig(proj2.bench)
         assert _sig(tracked) == expected_final, _sig(tracked)
         # 事故守卫点:修复前此处 AssertionError(误炸);修复后静默
-        cw_shop_action_ops.guard_expected_vs_tracked(proj2, sess)
+        cw_shop_action_ops.guard_expected_vs_tracked(_bsb(proj2), sess)
         assert warnings == [], warnings
 
 
@@ -223,7 +226,7 @@ class TestMutationSelfCheck:
         assert not any(c.char_id == '阿格莱雅'
                        for c in legacy_tracked if c is not None)
         with pytest.raises(AssertionError, match='双账分离'):
-            cw_shop_action_ops.guard_expected_vs_tracked(proj, sess)
+            cw_shop_action_ops.guard_expected_vs_tracked(_bsb(proj), sess)
         # ②生产(修复后)与旧形态分道:同序列逐步跑生产 mutate
         #(动作1 用动作前店面 st.shop,动作2 用动作1 投影后的店面)
         fixed_tracked = deepcopy(exec_state_of(sess).tracked_bench_chars)

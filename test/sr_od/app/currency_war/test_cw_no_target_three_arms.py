@@ -17,12 +17,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_intention
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _kbridge,
-)
 from sr_od.application.currency_war.kernel.cw_comps import (
     CORE_SINGLE_CARD_REGISTRY,
     get_comp,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _kbridge,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -37,6 +37,9 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     no_target_arms,
 )
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
@@ -44,9 +47,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwWorkFrame,
     RefreshShop,
     ShopCard,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate, shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
@@ -388,7 +388,7 @@ class TestHubEmission:
             sess, (), channel='interest', current_round=3)
         assert '瓦尔特' in excl_next
         fuel = mandate.fuel_sell_candidates(
-            [_bc('瓦尔特', slot=1)], (), state=st_next,
+            [_bc('瓦尔特', slot=1)], (), state=_kbridge(st_next),
             exclude_names=excl_next)
         assert not fuel
         # 面③:读口单一源(登记域/身份段/部署域三面同源)
@@ -601,7 +601,7 @@ class TestArmCHoldDefault:
         sess = SimpleNamespace(cw4_counters={}, target_comp=None,
                                v3_intention=IntentionState(),
                                active_strategies=[])
-        out = mandate.run_mandate(frame, sess, state=st)
+        out = mandate.run_mandate(frame, sess, state=_kbridge(st))
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             LevelUp,
         )
@@ -641,7 +641,7 @@ class TestKMembersDownstream:
         )
         fuel = m.fuel_sell_candidates(
             [_bc(missing_piece, slot=8), _bc('注册表外散件Y', slot=9)],
-            tuple(sorted(chars)), state=st)
+            tuple(sorted(chars)), state=_kbridge(st))
         names = [c.char_id or '' for c in fuel]
         assert '注册表外散件Y' in names
         assert missing_piece not in names

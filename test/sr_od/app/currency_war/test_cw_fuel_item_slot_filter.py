@@ -25,6 +25,9 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
@@ -83,14 +86,14 @@ class TestFuelItemSlotGate:
     def test_placeholder_excluded_real_fuel_kept(self):
         """占位件不入清单,同帧真燃料件照卖(修复前形态 = [1, 2] 双入)。"""
         bench = [_item(slot=1), _bc('燃料A', slot=2)]
-        cands = mandate.fuel_sell_candidates(bench, _K, state=_state(bench))
+        cands = mandate.fuel_sell_candidates(bench, _K, state=_bsb(_state(bench)))
         assert [b.slot for b in cands] == [2]
 
     def test_placeholder_only_bench_empty_candidates(self):
         """仅占位件可「腾」的帧 = 诚实空集(消费位走无候选停摆路径)。"""
         bench = [_item(slot=1)]
         assert mandate.fuel_sell_candidates(
-            bench, (), state=_state(bench)) == []
+            bench, (), state=_bsb(_state(bench))) == []
 
     # 「门序锁」已删(T-102,三审测试面可删项):滤门禁用变异下 star=2 占位件
     # 输入仍被星门(mandate.fuel_sell_candidates 内 b.star != 1)同样拒——两门
@@ -101,20 +104,20 @@ class TestFuelItemSlotGate:
     def test_order_preserved_with_placeholder_in_middle(self):
         """占位件夹层不改真件相对序(slot 升序确定性保持)。"""
         bench = [_bc('燃料A', slot=1), _item(slot=2), _bc('燃料B', slot=3)]
-        cands = mandate.fuel_sell_candidates(bench, (), state=_state(bench))
+        cands = mandate.fuel_sell_candidates(bench, (), state=_bsb(_state(bench)))
         assert [b.slot for b in cands] == [1, 3]
 
     def test_control_zero_drift_without_placeholder(self):
         """零误伤对照:无占位件帧输出与旧语义逐位一致(两件全入,序不变)。"""
         bench = [_bc('燃料A', slot=1), _bc('燃料B', slot=2)]
-        cands = mandate.fuel_sell_candidates(bench, _K, state=_state(bench))
+        cands = mandate.fuel_sell_candidates(bench, _K, state=_bsb(_state(bench)))
         assert [b.slot for b in cands] == [1, 2]
 
     def test_other_gates_intact(self):
         """其余资格门未被稀释:线内件仍被 zero_overlap 拒(zero-drift 面)。"""
         bench = [_bc('线内件', slot=1)]
         assert mandate.fuel_sell_candidates(
-            bench, _K, state=_state(bench)) == []
+            bench, _K, state=_bsb(_state(bench))) == []
 
 
 # ===== 发射位锁:逐动作 sink 不收占位件 =====

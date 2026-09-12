@@ -37,6 +37,9 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     record_fresh_buy,
 )
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SELL_BENCH_CONVERT_REASONS,
     BuyCard,
@@ -283,7 +286,7 @@ class TestL2AllArmsSoldFace:
         孤儿买回 = 意图内行为变更)。红证:拔 dominance 臂的统一过滤位
         (变异 4)则对照格与本格同态 = 锁红。"""
         sess, st = _dominance_fixture()
-        mandate.record_round_sold(sess, st, _FUEL)
+        mandate.record_round_sold(sess, _bsb(st), _FUEL)
         act = decide_shop_action(cw4_bs(st, sess), sess,
                                  SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, BuyCard) or act.reason != 'dominance_buy'
@@ -303,7 +306,7 @@ class TestL2AllArmsSoldFace:
         sess = _sess()
         st = _state(30, [], round_num=3)
         st.shop = [_card('目标件', cost=1)]
-        mandate.record_round_sold(sess, st, '目标件')
+        mandate.record_round_sold(sess, _bsb(st), '目标件')
         act = decide_shop_action(cw4_bs(st, sess), sess,
                                  SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, BuyCard) \

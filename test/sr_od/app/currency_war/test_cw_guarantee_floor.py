@@ -23,6 +23,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     LevelUpShop,
 )
@@ -86,9 +89,9 @@ class TestGuaranteeFloorExemptionBranches:
         guarantee_floor_defer(0 金过位面的豁免支通道闭死)。"""
         km, bench, deployed = _support_shapes()
         st = _state(12, 4, bench=bench, deployed=deployed)
-        assert crit_levelup._realize_chain_ready(st, bench, deployed)
+        assert crit_levelup._realize_chain_ready(_bsb(st), bench, deployed)
         ok, why = crit_levelup.levelup_budget_gate(
-            st, None, 12, 5, tuple(km), bench, deployed, 2, 4)
+            _bsb(st), None, 12, 5, tuple(km), bench, deployed, 2, 4)
         assert ok is False
         assert why == 'guarantee_floor_defer'
 
@@ -98,11 +101,11 @@ class TestGuaranteeFloorExemptionBranches:
         km, bench, deployed = _support_shapes()
         st_ok = _state(18, 4, bench=bench, deployed=deployed)   # 18−8=10
         ok, why = crit_levelup.levelup_budget_gate(
-            st_ok, None, 18, 5, tuple(km), bench, deployed, 2, 4)
+            _bsb(st_ok), None, 18, 5, tuple(km), bench, deployed, 2, 4)
         assert ok is True and why == ''
         st_no = _state(17, 4, bench=bench, deployed=deployed)   # 17−8=9
         ok2, why2 = crit_levelup.levelup_budget_gate(
-            st_no, None, 17, 5, tuple(km), bench, deployed, 2, 4)
+            _bsb(st_no), None, 17, 5, tuple(km), bench, deployed, 2, 4)
         assert ok2 is False and why2 == 'guarantee_floor_defer'
 
     def test_all_in_nonterminal_below_floor_deferred(self):
@@ -116,7 +119,7 @@ class TestGuaranteeFloorExemptionBranches:
         st_boss.round_num = 7
         sess_p2 = SimpleNamespace(plane_node_table=list(range(7)))
         ok, why = crit_levelup.levelup_budget_gate(
-            st_boss, sess_p2, 45, 5, km, [], [], 10, 4)
+            _bsb(st_boss), sess_p2, 45, 5, km, [], [], 10, 4)
         assert ok is False and why == 'guarantee_floor_defer'
 
     def test_all_in_nonterminal_at_floor_passes(self):
@@ -128,7 +131,7 @@ class TestGuaranteeFloorExemptionBranches:
         st_boss.round_num = 7
         sess_p2 = SimpleNamespace(plane_node_table=list(range(7)))
         ok, why = crit_levelup.levelup_budget_gate(
-            st_boss, sess_p2, 55, 5, km, [], [], 10, 4)
+            _bsb(st_boss), sess_p2, 55, 5, km, [], [], 10, 4)
         assert ok is True and why == ''
 
 
@@ -149,7 +152,7 @@ class TestGuaranteeFloorOutOfScope:
         sess_p3 = SimpleNamespace(plane_node_table=list(range(9)),
                                   plane_lengths_seen=[9, 7, 9])
         ok, why = crit_levelup.levelup_budget_gate(
-            self._p3_boss(45), sess_p3, 45, 5, km, [], [], 10, 4)
+            _bsb(self._p3_boss(45)), sess_p3, 45, 5, km, [], [], 10, 4)
         assert ok is True and why == ''
 
     def test_nonterminal_plane_end_still_gated(self):
@@ -163,7 +166,7 @@ class TestGuaranteeFloorOutOfScope:
         sess = SimpleNamespace(plane_node_table=list(range(9)),
                                plane_lengths_seen=[9, 7, 9])
         ok, why = crit_levelup.levelup_budget_gate(
-            st_p1, sess, 45, 5, km, [], [], 10, 4)
+            _bsb(st_p1), sess, 45, 5, km, [], [], 10, 4)
         assert ok is False and why == 'guarantee_floor_defer'
 
     def test_blood_floor_support_a_yields(self):
@@ -174,7 +177,7 @@ class TestGuaranteeFloorOutOfScope:
         st.plane = 1
         st.hp_readable = True
         ok, why = crit_levelup.levelup_budget_gate(
-            st, None, 12, 5, tuple(km), bench, deployed, 2, 4)
+            _bsb(st), None, 12, 5, tuple(km), bench, deployed, 2, 4)
         assert ok is True and why == ''
 
     def test_blood_floor_allin_band_yields(self):
@@ -190,7 +193,7 @@ class TestGuaranteeFloorOutOfScope:
         sess = SimpleNamespace(plane_node_table=list(range(9)),
                                plane_lengths_seen=[9, 7, 9])
         ok, why = crit_levelup.levelup_budget_gate(
-            st, sess, 45, 5, km, [], [], 10, 4)
+            _bsb(st), sess, 45, 5, km, [], [], 10, 4)
         assert ok is True and why == ''
 
     def test_buyout_cap_zero_out_of_scope(self):
@@ -199,7 +202,7 @@ class TestGuaranteeFloorOutOfScope:
         km, bench, deployed = _support_shapes()
         st = _state(12, 4, bench=bench, deployed=deployed)
         ok, why = crit_levelup.levelup_budget_gate(
-            st, None, 12, 0, tuple(km), bench, deployed, 2, 4)
+            _bsb(st), None, 12, 0, tuple(km), bench, deployed, 2, 4)
         assert ok is True and why == ''
 
 
@@ -211,7 +214,7 @@ class TestNonExemptPathZeroDrift:
         levelup_budget_gate_blocked(非 defer)——本门只辖豁免支。"""
         st = _state(82, 8, xp=(12, 72))
         ok, why = crit_levelup.levelup_budget_gate(
-            st, None, 82, 5, tuple(_km()), [], [], 18, 4)
+            _bsb(st), None, 82, 5, tuple(_km()), [], [], 18, 4)
         assert ok is False
         assert why == 'levelup_budget_gate_blocked'
 
@@ -219,7 +222,7 @@ class TestNonExemptPathZeroDrift:
         """s ≤ 0(无批可发)恒可行:闸辖「升级支出的量」,不制造支出。"""
         st = _state(10, 3)
         ok, why = crit_levelup.levelup_budget_gate(
-            st, None, 10, 5, tuple(_km()), [], [], 0, 4)
+            _bsb(st), None, 10, 5, tuple(_km()), [], [], 0, 4)
         assert ok is True and why == ''
 
 
@@ -263,7 +266,7 @@ class TestMustSpendForwarding:
                      for j in range(7 - len(km))]
         bench = [_bc('阮·梅', star=2, slot=1)]
         st = _state(60, 7, xp=(0, 52), bench=bench, deployed=deployed)
-        assert crit_levelup._realize_chain_ready(st, bench, deployed)
+        assert crit_levelup._realize_chain_ready(_bsb(st), bench, deployed)
         sess = SimpleNamespace(cw4_counters={}, target_comp=_comp(),
                                v3_intention=SimpleNamespace(
                                    locked_comp=_COMP),

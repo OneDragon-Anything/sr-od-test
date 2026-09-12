@@ -44,10 +44,10 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (  # noqa: E40
     RunEquip,
     RunTools,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_strategy_session import (  # noqa: E402
     StrategySession,
 )
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame  # noqa: E402
 from sr_od.application.currency_war.operations.cw_op.cw_op_tools import (  # noqa: E402
     ToolDragPlan,
     classify_tool_consume,
@@ -307,10 +307,12 @@ class TestMandateEmission:
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             PrepObservation,
         )
+        from test.sr_od.app.currency_war._cw_helpers import cw4_feed
         # 黑板契约 = 紧缩型(仅已识别件;snapshot_from_obs 同款过滤),
-        # CwWorkFrame.bench 是 pad 态,禁原样传入决策面。
+        # CwWorkFrame.bench 是 pad 态,禁原样传入决策面。局内事实经
+        # 合成口喂 session 容器(obs.state 视图槽已随容器化段 2 退役)。
+        cw4_feed(s, st)
         obs = PrepObservation(
-            state=st,
             bench_chars=[b for b in getattr(st, 'bench', [])
                          if b is not None],
             deployed_chars=[d for d in getattr(st, 'deployed', [])

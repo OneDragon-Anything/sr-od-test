@@ -26,19 +26,22 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_card_identity import (
     TIER_TRANSITION,
     line_identity_tier,
     sell_hold_exclusion_names,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
 from sr_od.application.currency_war.kernel.cw_reward_node import (
     reward_node_suppressed,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
@@ -48,9 +51,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench,
     ShopCard,
     sell_refund,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
@@ -353,7 +353,7 @@ class TestW1SameVisitBan:
         bench = [_bc(_FUEL, slot=1)]
         excl = sell_gate.identity_exclusions(sess, ('目标件',))
         slots, key = crit_sell.funding_support_sell(
-            1, 3, bench, ('目标件',), state=_state(1, bench),
+            1, 3, bench, ('目标件',), state=_bridge(_state(1, bench)),
             exclude_names=excl)
         assert key == '' and slots == [1], '红证失效:燃料件未穿过身份段外谓词'
 
@@ -370,7 +370,8 @@ class TestW1SameVisitBan:
             gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('目标件',),
             round_num=2)
-        out = entry._criteria_pass(frame, sess, _state(1, bench, round_num=2),
+        out = entry._criteria_pass(frame, sess,
+                                   _bridge(_state(1, bench, round_num=2)),
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
         assert not [e for e in out if isinstance(e.action, PrepSellBench)]
@@ -385,10 +386,11 @@ class TestW1SameVisitBan:
         window = sell_gate.sell_exclusions(sess, ('目标件',),
                                            channel='m4_fuel', current_round=3)
         assert not mandate.fuel_sell_candidates(bench, ('目标件',),
-                                                state=st,
+                                                state=_bridge(st),
                                                 exclude_names=window)
         identity_only = sell_gate.identity_exclusions(sess, ('目标件',))
-        cands = mandate.fuel_sell_candidates(bench, ('目标件',), state=st,
+        cands = mandate.fuel_sell_candidates(bench, ('目标件',),
+                                             state=_bridge(st),
                                              exclude_names=identity_only)
         assert [b.char_id for b in cands] == [_FUEL], '红证失效'
 
@@ -659,7 +661,8 @@ class TestFundingHoldFallback:
             gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('目标件',),
             round_num=2)
-        out = entry._criteria_pass(frame, sess, _state(1, bench, round_num=2),
+        out = entry._criteria_pass(frame, sess,
+                                   _bridge(_state(1, bench, round_num=2)),
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
         sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]

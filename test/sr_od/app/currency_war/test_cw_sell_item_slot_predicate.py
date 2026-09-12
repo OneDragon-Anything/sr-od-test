@@ -30,6 +30,9 @@ from pathlib import Path
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwWorkFrame,
@@ -90,7 +93,7 @@ class TestInterestItemSlotGate:
         fuel_a, _fuel_b = _fuel_pair()
         bench = [_item(slot=1), _bc(fuel_a, slot=2)]
         slots, key = sell.sell_for_interest(
-            0, bench, 5, _K, state=_state(bench))
+            0, bench, 5, _K, state=_bsb(_state(bench)))
         assert key == ''
         assert slots == [2]
 
@@ -98,7 +101,7 @@ class TestInterestItemSlotGate:
         """仅占位件可「凑」的帧 = 诚实空集(占位件槽永不入发射列)。"""
         bench = [_item(slot=1)]
         slots, key = sell.sell_for_interest(
-            0, bench, 5, _K, state=_state(bench))
+            0, bench, 5, _K, state=_bsb(_state(bench)))
         assert slots == []
         assert key == ''
 
@@ -112,7 +115,7 @@ class TestInterestItemSlotGate:
         fuel_a, fuel_b = _fuel_pair()
         bench = [_bc(fuel_a, slot=1), _bc(fuel_b, slot=2)]
         slots, key = sell.sell_for_interest(
-            0, bench, 5, _K, state=_state(bench))
+            0, bench, 5, _K, state=_bsb(_state(bench)))
         assert key == ''
         assert slots == [1, 2]
 
@@ -129,7 +132,7 @@ class TestFundingItemSlotGate:
         fuel_a, _fuel_b = _fuel_pair()
         bench = [_item(slot=1), _bc(fuel_a, slot=2)]
         slots, key = sell.funding_support_sell(
-            0, 5, bench, _K, state=_state(bench))
+            0, 5, bench, _K, state=_bsb(_state(bench)))
         assert key == ''
         assert slots == [2]
 
@@ -137,7 +140,7 @@ class TestFundingItemSlotGate:
         """仅占位件可「筹」的帧 = 诚实空集。"""
         bench = [_item(slot=1)]
         slots, key = sell.funding_support_sell(
-            0, 5, bench, _K, state=_state(bench))
+            0, 5, bench, _K, state=_bsb(_state(bench)))
         assert slots == []
         assert key == ''
 
@@ -150,7 +153,7 @@ class TestFundingItemSlotGate:
         fuel_a, fuel_b = _fuel_pair()
         bench = [_bc(fuel_a, slot=1), _bc(fuel_b, slot=2)]
         slots, key = sell.funding_support_sell(
-            0, 5, bench, _K, state=_state(bench))
+            0, 5, bench, _K, state=_bsb(_state(bench)))
         assert key == ''
         assert slots == [1, 2]
 

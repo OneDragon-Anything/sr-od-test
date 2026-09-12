@@ -25,9 +25,6 @@ import ast
 import re
 from pathlib import Path
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_economy import (
     DEFAULT_INTEREST_CAP,
     cap_resolved_of_session,
@@ -36,15 +33,18 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     interest,
     saturation_line,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_ECONOMY,
     EconomyEffect,
     aggregate_economy,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
         / 'currency_war')
@@ -131,12 +131,12 @@ def test_budget_face_reserve_floor_linkage() -> None:
         strategy_state_of(session)   # 状态面触达(与生产读口同形)
         return st
 
-    base = reserve_cap(_frame(30, StrategySession()), StrategySession())
+    base = reserve_cap(_bridge(_frame(30, StrategySession())), StrategySession())
     assert base == saturation_line(DEFAULT_INTEREST_CAP)
     buyout_sess = _sess_with('买断制')
-    assert reserve_cap(_frame(30, buyout_sess), buyout_sess) == 0
+    assert reserve_cap(_bridge(_frame(30, buyout_sess)), buyout_sess) == 0
     rich_sess = _sess_with('利息上调')
-    assert reserve_cap(_frame(30, rich_sess), rich_sess) \
+    assert reserve_cap(_bridge(_frame(30, rich_sess)), rich_sess) \
         == saturation_line(10)
 
 

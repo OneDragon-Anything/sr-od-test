@@ -18,6 +18,9 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     levelup as crit_levelup,
 )
@@ -64,6 +67,6 @@ def test_levelup_budget_gate_midband_dive_rejected():
     豁免/prep 整批推迟各行按裁决不搬,git 可复活。)"""
     st = _state(49, 7, xp=(40, 52))
     ok, why = crit_levelup.levelup_budget_gate(
-        st, None, 49, 5, tuple(_km()), [], [], 5, 4)
+        _bsb(st), None, 49, 5, tuple(_km()), [], [], 5, 4)
     assert ok is False
     assert why == 'levelup_budget_gate_blocked'

@@ -171,10 +171,18 @@ def test_compare_ignores_unrelated_names():
 def _stub_director(frame: object | None) -> tuple[CwScreenPrep, list[tuple]]:
     """免 SrContext 构造的 CwScreenPrep(object.__new__ + stub ctx,
     test_cw_w552_xp_reconcile._stub_director 同款)。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+    from test.sr_od.app.currency_war._cw_helpers import cw4_feed
     pd = object.__new__(CwScreenPrep)
-    pd.ctx = SimpleNamespace()
+    session = StrategySession()
+    pd.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
     pd.last_screenshot = frame
-    pd._cached_state = SimpleNamespace(plane=1, round_num=3)
+    # 台账行 plane/round = 容器读口(容器化段 2;原 _cached_state 桩退役,
+    # 同值经合成口喂 session 容器)。
+    cw4_feed(session, CwWorkFrame(plane=1, round_num=3))
     captured: list[tuple] = []
     return pd, captured
 

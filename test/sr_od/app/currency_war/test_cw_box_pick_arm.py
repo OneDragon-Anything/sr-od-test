@@ -16,10 +16,11 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
 
 
 def _obs(box_overlay_open: bool, boxes=()) -> PrepObservation:
+    # state 槽已随容器化段 2 退役:箱选卡臂只读浮标/占用域,局内事实
+    # 经 session 容器喂入(本臂发射先于事实消费,无需喂入)。
     return PrepObservation(
         box_overlay_open=box_overlay_open,
-        boxes=list(boxes),
-        state=None)
+        boxes=list(boxes))
 
 
 def _run(obs):

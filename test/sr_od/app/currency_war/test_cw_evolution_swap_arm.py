@@ -252,7 +252,7 @@ def test_run_mandate_emits_armed_two_star_swap(monkeypatch) -> None:
     dep, bench = _all_two_star_deployed(), [_bc('三月七', 1, star=2)]
     st = CwWorkFrame(gold=0, level=6, plane=2, round_num=3, board={},
                    deployed=list(dep), bench=list(bench))
-    out = run_mandate(_m1p_frame(dep, bench), sess, state=st)
+    out = run_mandate(_m1p_frame(dep, bench), sess, state=board_state_bridge(st))
     fired = [e for e in out if e.action.__class__.__name__ == 'RunDeploy'
              and e.reason == 'm1_swap_redeploy']
     assert len(fired) == 1

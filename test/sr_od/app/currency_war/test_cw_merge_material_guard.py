@@ -130,14 +130,14 @@ class TestGuardBlocksAllSellChannels:
 
     def test_m4_fuel_candidates_exclude_material(self):
         st = _state(self.BENCH, self.DEPLOYED)
-        cands = mandate.fuel_sell_candidates(self.BENCH, self.K, state=st)
+        cands = mandate.fuel_sell_candidates(self.BENCH, self.K, state=board_state_bridge(st))
         assert [b.slot for b in cands] == [2]      # 仅普通垫件入燃料集
 
     def test_sell_for_interest_excludes_material(self):
         st = _state(self.BENCH, self.DEPLOYED)
         ct: dict = {}
         slots, key = crit_sell.sell_for_interest(
-            44, self.BENCH, 5, self.K, state=st, counters=ct)
+            44, self.BENCH, 5, self.K, state=board_state_bridge(st), counters=ct)
         assert key == '' and 1 not in slots        # 素材不入凑息卖回集
         assert ct['merge_material_guard_blocked'] == 1   # 拒因同键计数显影
 
@@ -145,7 +145,7 @@ class TestGuardBlocksAllSellChannels:
         st = _state(self.BENCH, self.DEPLOYED)
         ct: dict = {}
         slots, key = crit_sell.funding_support_sell(
-            0, 4, self.BENCH, self.K, state=st, counters=ct)
+            0, 4, self.BENCH, self.K, state=board_state_bridge(st), counters=ct)
         assert key == '' and 1 not in slots
         assert ct['merge_material_guard_blocked'] == 1
 
@@ -160,7 +160,7 @@ class TestGuardBlocksAllSellChannels:
         try:
             slots, key = crit_sell.line_switch_sell(
                 ('卡芙卡', '燃料A'), self.K, self.BENCH, self.DEPLOYED,
-                st, k_switched=True)
+                board_state_bridge(st), k_switched=True)
         finally:
             provisional.reset('U_X')
             provisional.reset('V_MS')
@@ -171,15 +171,15 @@ class TestGuardBlocksAllSellChannels:
         bench = [_bc('卡芙卡', slot=1), _bc('燃料A', slot=2)]
         st = _state(bench, [_bc('万敌')])
         # M4:两张都入燃料集,序不变(slot 升序)
-        cands = mandate.fuel_sell_candidates(bench, self.K, state=st)
+        cands = mandate.fuel_sell_candidates(bench, self.K, state=board_state_bridge(st))
         assert [b.slot for b in cands] == [1, 2]
         # 凑息:缺口 6 → 恰卖两张(与守卫前语义逐字节同)
         slots, key = crit_sell.sell_for_interest(
-            44, bench, 5, self.K, state=st)
+            44, bench, 5, self.K, state=board_state_bridge(st))
         assert key == '' and slots == [1, 2]
         # 支付变现:同资格序 (star, slot)
         fslots, fkey = crit_sell.funding_support_sell(
-            0, 7, bench, self.K, state=st)
+            0, 7, bench, self.K, state=board_state_bridge(st))
         assert fkey == '' and fslots == [1, 2]
         # 换线塌缩:旧线两件全卖(注入态保守子集语义不变)
         provisional.inject('U_X', provisional.CalibValue(
@@ -189,7 +189,7 @@ class TestGuardBlocksAllSellChannels:
         try:
             lslots, lkey = crit_sell.line_switch_sell(
                 ('卡芙卡', '燃料A'), self.K, bench,
-                [_bc('万敌')], st, k_switched=True)
+                [_bc('万敌')], board_state_bridge(st), k_switched=True)
         finally:
             provisional.reset('U_X')
             provisional.reset('V_MS')
@@ -260,12 +260,12 @@ class TestReplayCaseFrames:
         st = _state(bench, deployed)
         k = _fallback_k(st)
         assert '藿藿' not in k   # P86 判死帧:回退合法空集,成员资格零豁免
-        assert mandate.fuel_sell_candidates(bench, k, state=st) == []
-        slots, _ = crit_sell.sell_for_interest(24, bench, 5, k, state=st)
+        assert mandate.fuel_sell_candidates(bench, k, state=board_state_bridge(st)) == []
+        slots, _ = crit_sell.sell_for_interest(24, bench, 5, k, state=board_state_bridge(st))
         assert slots == []                          # 不再指向 bench_idx=1
         # F-1 修正:gold < need_gold 才真辖资格循环(gold=24 ≥ need=4
         # 会走 'not_needed' 早退,断言空转不辖守卫语义)
-        fslots, fkey = crit_sell.funding_support_sell(2, 9, bench, k, state=st)
+        fslots, fkey = crit_sell.funding_support_sell(2, 9, bench, k, state=board_state_bridge(st))
         assert fkey == '' and fslots == []
 
     def test_replay_control_frame_still_sells_fodder(self):
@@ -278,7 +278,7 @@ class TestReplayCaseFrames:
         st = _state(bench, deployed)
         k = _fallback_k(st)
         assert [b.slot for b in mandate.fuel_sell_candidates(
-            bench, k, state=st)] == [2]
+            bench, k, state=board_state_bridge(st))] == [2]
 
 
 # ===== 锁5:滞留素材显影官方键(ADR-0558 §4 G-B1 第四级)=====
@@ -384,16 +384,16 @@ class TestBlockedKeyEventSemantics:
         ct: dict = {}
         dedup: set[str] = set()
         # 同帧两次触达:投影读(P56)→ 真卖评估(M4)——事件只计 1
-        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=board_state_bridge(st),
                                      counters=ct, dedup_names=dedup)
-        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=board_state_bridge(st),
                                      counters=ct, dedup_names=dedup)
         assert ct['merge_material_guard_blocked'] == 1
         # 对照:无去重(旧评估次数口径)= 2,证明去重载体生效
         ct2: dict = {}
-        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=board_state_bridge(st),
                                      counters=ct2)
-        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=board_state_bridge(st),
                                      counters=ct2)
         assert ct2['merge_material_guard_blocked'] == 2
 
@@ -402,11 +402,11 @@ class TestBlockedKeyEventSemantics:
         st = _state(self.BENCH, self.DEPLOYED)
         ct: dict = {}
         dedup: set[str] = set()
-        mandate.fuel_sell_candidates(self.BENCH, self.K, state=st,
+        mandate.fuel_sell_candidates(self.BENCH, self.K, state=board_state_bridge(st),
                                      counters=ct, dedup_names=dedup)
-        crit_sell.sell_for_interest(44, self.BENCH, 5, self.K, state=st,
+        crit_sell.sell_for_interest(44, self.BENCH, 5, self.K, state=board_state_bridge(st),
                                     counters=ct, dedup_names=dedup)
-        crit_sell.funding_support_sell(0, 4, self.BENCH, self.K, state=st,
+        crit_sell.funding_support_sell(0, 4, self.BENCH, self.K, state=board_state_bridge(st),
                                        counters=ct, dedup_names=dedup)
         provisional.inject('U_X', provisional.CalibValue(
             value=1.0, injected_form=True))
@@ -415,7 +415,7 @@ class TestBlockedKeyEventSemantics:
         try:
             crit_sell.line_switch_sell(
                 ('卡芙卡', '燃料A'), self.K, self.BENCH, self.DEPLOYED,
-                st, k_switched=True, counters=ct, dedup_names=dedup)
+                board_state_bridge(st), k_switched=True, counters=ct, dedup_names=dedup)
         finally:
             provisional.reset('U_X')
             provisional.reset('V_MS')
@@ -432,7 +432,7 @@ class TestBlockedKeyEventSemantics:
         try:
             slots, key = crit_sell.line_switch_sell(
                 ('卡芙卡', '燃料A'), self.K, self.BENCH, self.DEPLOYED,
-                st, k_switched=True, counters=ct, dedup_names=set())
+                board_state_bridge(st), k_switched=True, counters=ct, dedup_names=set())
         finally:
             provisional.reset('U_X')
             provisional.reset('V_MS')

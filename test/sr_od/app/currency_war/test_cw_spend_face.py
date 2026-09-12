@@ -30,6 +30,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BuyCard,
@@ -238,14 +241,14 @@ class TestArm0LevelLag:
         state.deploy_cap = 5   # 宝钻叠加口径(max_units=5),arm0 非满级
         sess = StrategySession()
         state_of(sess).cw4_counters = {}
-        out = mandate.run_mandate(frame, sess, state=state)
+        out = mandate.run_mandate(frame, sess, state=_bsb(state))
         assert any(e.reason.startswith('m3_levelup_batch') for e in out), \
             'arm0 触发须经 M3 判据链发射批经验授权'
         # C4/W6:不可信帧 fail 向
         state.level_readable = False
         sess2 = StrategySession()
         state_of(sess2).cw4_counters = {}
-        out2 = mandate.run_mandate(frame, sess2, state=state)
+        out2 = mandate.run_mandate(frame, sess2, state=_bsb(state))
         assert not any(e.reason.startswith('m3_levelup_batch')
                        for e in out2)
         assert state_of(sess2).cw4_counters.get('arm0_level_unreadable', 0) >= 1
@@ -288,15 +291,15 @@ class TestP1BloodFloorPredicate:
         st.hp = 10
         st.hp_readable = True
         st.hp_trusted = False
-        assert p1_blood_floor(st) is True
+        assert p1_blood_floor(_bsb(st)) is True
         st.hp = 20
-        assert p1_blood_floor(st) is False
+        assert p1_blood_floor(_bsb(st)) is False
         st.hp = 10
         st.hp_readable = False   # 不可信帧 fail 向(P1 hp 毒化史口径)
-        assert p1_blood_floor(st) is False
+        assert p1_blood_floor(_bsb(st)) is False
         st.hp_readable = True
         st.hp = None
-        assert p1_blood_floor(st) is False
+        assert p1_blood_floor(_bsb(st)) is False
 
     def test_floor_plane2_excluded(self):
         """落地审清单应-A():P2 帧 hp≤15 不得开 P1 解锁包(授权族 = P1 血线
@@ -315,29 +318,29 @@ class TestP1BloodFloorPredicate:
         st.plane = 2
         st.hp = 10
         st.hp_readable = True
-        assert p1_blood_floor(st) is False
+        assert p1_blood_floor(_bsb(st)) is False
         assert level_spend_blocked(
-            st, SimpleNamespace(node_type_current='normal'),
+            _bsb(st), SimpleNamespace(node_type_current='normal'),
             DEFAULT_REGISTRY) is True, 'P2 深血线帧不得经 P1 地板解锁'
 
     def test_interest_ban_on_floor(self):
         """凑息禁令(解锁包件②):死亡线帧 sell_for_interest 不发射,
-        ([], 'blood_floor') 零静默;非死亡线帧语义零变化;state=None
-        语境缺失按保守端照禁(fail-closed 防御补口)。"""
+        ([], 'blood_floor') 零静默;非死亡线帧语义零变化。(原「state=None
+        语境缺失照禁」格已随载体退役删除:容器化段 2 后 bs 恒存在,生产
+        帧视图恒非 None,None 防御支结构性不可达——entry._criteria_pass
+        载体申报同源。)"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
             sell_for_interest,
         )
         st_floor = _st(gold=30)
         st_floor.plane = 1
         st_floor.hp = 10
-        slots, key = sell_for_interest(30, [], 4, (), state=st_floor)
+        slots, key = sell_for_interest(30, [], 4, (), state=_bsb(st_floor))
         assert slots == [] and key == 'blood_floor'
-        slots_n, key_n = sell_for_interest(30, [], 4, (), state=None)
-        assert slots_n == [] and key_n == 'blood_floor'
         st_ok = _st(gold=30)
         st_ok.plane = 1
         st_ok.hp = 60
-        slots2, key2 = sell_for_interest(30, [], 4, (), state=st_ok)
+        slots2, key2 = sell_for_interest(30, [], 4, (), state=_bsb(st_ok))
         assert key2 != 'blood_floor'
 
 

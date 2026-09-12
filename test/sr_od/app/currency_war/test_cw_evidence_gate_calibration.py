@@ -16,9 +16,6 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.data.cw_shop_odds import SHOP_SLOTS
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_economy import (
     XP_CLICK_COST_FALLBACK,
@@ -28,6 +25,9 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     round_base_income,
     saturation_line,
     streak_gold,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_plane_table import r_remaining
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -82,7 +82,7 @@ def _recalc_plan(state: CwWorkFrame, session: SimpleNamespace,
     floor = saturation_line(cap)
     refresh_cost = state.shop_refresh_cost or 2
     t_horizon = max(0, r_remaining(session, plane, round_num))
-    lvl = budget.next_level_xp_cost(state, missing)
+    lvl = budget.next_level_xp_cost(_bridge(state), missing)
     streak_term = (streak_gold(state.streak)
                    if isinstance(state.streak, int) and state.streak > 0
                    else budget.STREAK_PLAN_MEDIAN)
@@ -122,7 +122,7 @@ class TestP38BudgetRecursion:
         sess = _session()
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        plan = budget.p38_budget_recursion(st, sess, purchase_cost=11.0,
+        plan = budget.p38_budget_recursion(_bridge(st), sess, purchase_cost=11.0,
                                            missing_copies=4)
         r, b, exhausted = _recalc_plan(st, sess, 11.0, 4)
         assert plan.refreshes == r
@@ -135,7 +135,7 @@ class TestP38BudgetRecursion:
         sess = _session()
         st = CwWorkFrame(gold=30, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        plan = budget.p38_budget_recursion(st, sess, purchase_cost=1000.0,
+        plan = budget.p38_budget_recursion(_bridge(st), sess, purchase_cost=1000.0,
                                            missing_copies=5)
         assert plan.exhausted is True
         assert plan.refreshes == 0
@@ -149,7 +149,7 @@ class TestP38BudgetRecursion:
             st = CwWorkFrame(gold=gold, level=7, round_num=3, plane=1,
                            board={}, shop=[])
             plans.append(budget.p38_budget_recursion(
-                st, sess, purchase_cost=11.0, missing_copies=4))
+                _bridge(st), sess, purchase_cost=11.0, missing_copies=4))
         rs = [p.refreshes for p in plans]
         assert rs == sorted(rs)
 
@@ -160,22 +160,22 @@ class TestP38BudgetRecursion:
                             board={}, shop=[])
         # 日程先验 _expected_level(3, P1)=5 ≤ 7 ⇒ 视界内无升级
         assert get_node_goal(1, 3).target_level <= 7
-        assert budget.next_level_xp_cost(st_stay, 4) == 0
+        assert budget.next_level_xp_cost(_bridge(st_stay), 4) == 0
         st_push = CwWorkFrame(gold=60, level=4, round_num=3, plane=1,
                             board={}, shop=[])
         # target=5 > 4:need=XP_TO_NEXT_LEVEL[4]=6,cur=0,买 0 张
         # ⇒ clicks=⌈6/4⌉=2,单击价 = 兜底 4
-        assert budget.next_level_xp_cost(st_push, 0) \
+        assert budget.next_level_xp_cost(_bridge(st_push), 0) \
             == 2 * XP_CLICK_COST_FALLBACK
         # 买牌送 XP 抵扣:2 张 ×4 XP 盖过 need 6 ⇒ 0
-        assert budget.next_level_xp_cost(st_push, 2) == 0
+        assert budget.next_level_xp_cost(_bridge(st_push), 2) == 0
         # xp_progress 现读 + 抵扣:lv5(round 6,target 6>5)need20
         # cur4,买 1 张(−4)⇒ remain 12 ⇒ clicks 3 × 兜底 4 = 12
         st_prog = CwWorkFrame(gold=60, level=5, round_num=6, plane=1,
                             board={}, shop=[])
         st_prog.xp_progress = (4, XP_TO_NEXT_LEVEL[5])
         assert get_node_goal(1, 6).target_level == 6
-        assert budget.next_level_xp_cost(st_prog, 1) == 12
+        assert budget.next_level_xp_cost(_bridge(st_prog), 1) == 12
 
 
 # ===== ② T-214 值域守卫(provisional.inject 通道)=====
@@ -256,9 +256,9 @@ class TestCalibrationApply:
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         monkeypatch.setattr(calibration, 'E2_DOMAIN_M_MAX', 3)
-        _missing, _trials, frame = proof.assemble_lock_frame(st, sess)
+        _missing, _trials, frame = proof.assemble_lock_frame(_bridge(st), sess)
         assert frame.band_domain_ok is False   # 列车同行缺 4 张 > 3
-        ok, reason = proof.evaluate_evidence_gate(st, sess)
+        ok, reason = proof.evaluate_evidence_gate(_bridge(st), sess)
         assert ok is False
         assert 'e2_domain' in reason, reason
 
@@ -268,9 +268,9 @@ class TestCalibrationApply:
         sess = _session()
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        _missing, _trials, frame = proof.assemble_lock_frame(st, sess)
+        _missing, _trials, frame = proof.assemble_lock_frame(_bridge(st), sess)
         assert frame.band_domain_ok is True
-        _ok, reason = proof.evaluate_evidence_gate(st, sess)
+        _ok, reason = proof.evaluate_evidence_gate(_bridge(st), sess)
         assert 'e2_domain' not in reason, reason
 
     def test_shadow_causes_after_apply(self):
@@ -281,7 +281,7 @@ class TestCalibrationApply:
         sess = _session()
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        ok, reason = proof.evaluate_evidence_gate(st, sess)
+        ok, reason = proof.evaluate_evidence_gate(_bridge(st), sess)
         assert ok is False
         assert reason.startswith('sandwich_unavailable')
         ct = state_of(sess).cw4_counters
@@ -324,8 +324,8 @@ class TestAssembleTrialsUpgrade:
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         purchase, copies = self._expected_purchase(_COMP, st)
-        plan = budget.p38_budget_recursion(st, sess, purchase, copies)
-        _missing, trials, _frame = proof.assemble_lock_frame(st, sess)
+        plan = budget.p38_budget_recursion(_bridge(st), sess, purchase, copies)
+        _missing, trials, _frame = proof.assemble_lock_frame(_bridge(st), sess)
         r_rem = r_remaining(sess, 1, 3)
         assert not plan.exhausted
         assert trials == SHOP_SLOTS * max(0, r_rem + plan.refreshes)
@@ -346,11 +346,11 @@ class TestAssembleTrialsUpgrade:
         sess = _session()
         st = CwWorkFrame(gold=0, level=7, round_num=8, plane=3, board={},
                        shop=[])
-        missing, trials, frame = proof.assemble_lock_frame(st, sess)
+        missing, trials, frame = proof.assemble_lock_frame(_bridge(st), sess)
         assert missing
         assert trials == 0
         assert frame.e_p_next == 0.0
-        ok, reason = proof.evaluate_evidence_gate(st, sess)
+        ok, reason = proof.evaluate_evidence_gate(_bridge(st), sess)
         assert ok is False
         assert reason.startswith('sandwich_unavailable'), reason
         ct = state_of(sess).cw4_counters

@@ -32,6 +32,9 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     sell_hold_exclusion_names,
 )
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     locked_buy_membership,
@@ -42,6 +45,9 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     SellBench as PrepSellBench,
 )
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
@@ -50,9 +56,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench as ShopSellBench,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
@@ -71,7 +74,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
 )
-from test.sr_od.app.currency_war._cw_helpers import cw4_bs
+from test.sr_od.app.currency_war._cw_helpers import cw4_bs, cw4_feed
 
 # ===== 测试基建(与 test_cw_locked_buy_membership_split 同构)=====
 
@@ -228,7 +231,7 @@ class TestW4ShopM4HoldExcluded:
         k = _core()
         bench = [_bc(n, slot=i + 1) for i, n in enumerate(_HOLDS_9)]
         st = _state(gold=30, bench=bench)
-        cands = mandate.fuel_sell_candidates(bench, k, state=st,
+        cands = mandate.fuel_sell_candidates(bench, k, state=_bsb(st),
                                              exclude_names=frozenset(k))
         assert {b.char_id for b in cands} == set(_HOLDS_9), \
             '红证失效:持有件未穿过身份段外的全部资格谓词'
@@ -268,7 +271,7 @@ class TestBeiZhanF1PrepM4:
         frame = mandate.MandateFrame(
             gold=60, level=3, bench=bench, deployed=[], deploy_cap=4,
             node_type=None, stop_flag=False, k_members=k, round_num=2)
-        out = mandate.run_mandate(frame, sess, state=_state(60, bench))
+        out = mandate.run_mandate(frame, sess, state=_bsb(_state(60, bench)))
         sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]
         assert not sells, \
             f'备战F1:prep M4 卖出 {sells} = P60/身份段注入缺位(伪装换手)'
@@ -284,10 +287,10 @@ class TestBeiZhanF1PrepM4:
                        '希儿', '爻光', '符玄', '缇宝', '藿藿')
         bench = [_bc(n, slot=i + 1) for i, n in enumerate(bench_names)]
         st = _state(60, bench)
-        no_excl = mandate.fuel_sell_candidates(bench, k, state=st)
+        no_excl = mandate.fuel_sell_candidates(bench, k, state=_bsb(st))
         assert 'Saber' in {b.char_id for b in no_excl}, '红证①失效'
         base_only = mandate.fuel_sell_candidates(
-            bench, k, state=st, exclude_names=frozenset(k))
+            bench, k, state=_bsb(st), exclude_names=frozenset(k))
         assert '藿藿' in {b.char_id for b in base_only}, '红证②失效'
 
 
@@ -326,12 +329,12 @@ class TestEntryFundingCells:
                 node_type=None, stop_flag=True, k_members=('线内件X',),
                 round_num=2)
             out = entry._criteria_pass(
-                frame, sess, st, ('线内件X',),
+                frame, sess, _bsb(st), ('线内件X',),
                 k_switched=False, old_line_members=())
             return out, state_of(sess).cw4_counters
 
         slots, key = crit_sell.funding_support_sell(
-            1, 9, [_bc('希儿', slot=1)], ('线内件X',), state=st)
+            1, 9, [_bc('希儿', slot=1)], ('线内件X',), state=_bsb(st))
         assert key == '' and slots == [1], '红证失效:希儿未穿过排除外谓词'
         # 达成量化(P78-5 条③):藿藿退金 1 < 缺口 2 ⇒ 不放行
         out3, _ct3 = _run([_bc('藿藿', slot=1)])
@@ -356,7 +359,9 @@ class TestEntryFundingCells:
         # 死格,锁空转)——funding 触发前件 gold < need 必须真开。
         st = _state(gold=0, bench=[_bc('藿藿', slot=1)])
         st.shop = []
-        obs = PrepObservation(state=st, bench_chars=[_bc('藿藿', slot=1)],
+        # obs.state 视图槽已随 prep 链容器化段 2 退役:局内事实经容器喂入。
+        cw4_feed(sess, st)
+        obs = PrepObservation(bench_chars=[_bc('藿藿', slot=1)],
                               deployed_chars=[], deploy_vacancy=0)
         out = entry.emit(obs, SimpleNamespace(), sess, None,
                          ev_arm='skeleton_only', registry=strat.registry)
@@ -364,7 +369,7 @@ class TestEntryFundingCells:
         assert [s.slot for s in sells] == [1], \
             f'新格A③:skeleton_only funding 兜底未卖出 {sells} = 出口缺席'
         slots, key = crit_sell.funding_support_sell(
-            0, 9, [_bc('藿藿', slot=1)], _core(), state=st)
+            0, 9, [_bc('藿藿', slot=1)], _core(), state=_bsb(st))
         assert key == '' and slots == [1], '红证失效:藿藿未穿过排除外谓词'
 
 
@@ -424,10 +429,10 @@ class TestEmptyBoardSellGuard:
         st = self._empty_board_state()
         ct: dict = {}
         slots, key = crit_sell.sell_for_interest(
-            47, bench, 5, (), state=st, counters=ct)
+            47, bench, 5, (), state=_bsb(st), counters=ct)
         assert slots == [] and key == self.GUARD_KEY
         fslots, fkey = crit_sell.funding_support_sell(
-            3, 9, bench, (), state=st, counters=ct)
+            3, 9, bench, (), state=_bsb(st), counters=ct)
         assert fslots == [] and fkey == self.GUARD_KEY
         # 换线塌缩位:U_X/V_MS 注入态(保守子集资格面开)才到达守卫位
         #(封印期 switchline_exit_blocked 先短路,既有语义零触碰)
@@ -440,12 +445,13 @@ class TestEmptyBoardSellGuard:
             value=1.0, injected_form=True))
         try:
             lslots, lkey = crit_sell.line_switch_sell(
-                ('燃料F',), (), bench, [], st, k_switched=True, counters=ct)
+                ('燃料F',), (), bench, [], _bsb(st), k_switched=True,
+                counters=ct)
         finally:
             provisional.reset('U_X')
             provisional.reset('V_MS')
         assert lslots == [] and lkey == self.GUARD_KEY
-        assert mandate.fuel_sell_candidates(bench, (), state=st,
+        assert mandate.fuel_sell_candidates(bench, (), state=_bsb(st),
                                             counters=ct) == []
         # 分键逐通道显影(事件计数,非静默吞)
         assert ct[self.GUARD_KEY] >= 4
@@ -476,9 +482,9 @@ class TestEmptyBoardSellGuard:
         st.deployed = [_bc('板上件锚', slot=1)]
         ct: dict = {}
         slots, key = crit_sell.sell_for_interest(
-            47, bench, 5, (), state=st, counters=ct)
+            47, bench, 5, (), state=_bsb(st), counters=ct)
         assert key == '' and slots, '非空板帧凑息资格被守卫误伤'
-        assert mandate.fuel_sell_candidates(bench, (), state=st) != []
+        assert mandate.fuel_sell_candidates(bench, (), state=_bsb(st)) != []
         assert self.GUARD_KEY not in ct
 
     def test_guard_removal_mutation_red(self, monkeypatch):
@@ -490,6 +496,6 @@ class TestEmptyBoardSellGuard:
         bench = [_bc('燃料F', slot=1), _bc('燃料G', slot=2)]
         st = self._empty_board_state()
         slots, key = crit_sell.sell_for_interest(
-            47, bench, 5, (), state=st)
+            47, bench, 5, (), state=_bsb(st))
         assert key == '' and slots == [1], \
             '守卫拔除后板空帧仍拒 = 红因不在守卫(锁语义漂移)'

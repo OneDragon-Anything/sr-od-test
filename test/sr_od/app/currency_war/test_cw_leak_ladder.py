@@ -38,6 +38,9 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     line_identity_tier,
 )
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
@@ -236,6 +239,15 @@ class TestL2L5LFM6Compression:
         st, sess, _ = _m6_frame(gold=60, cand=cand, bench=fill)
         act1 = _decide(st, sess)
         assert isinstance(act1, BuyCard) and act1.reason == 'm6_stockpile'
+        # 决策核发射容器牌(无 x),投影下架按 x 对账:经单一源映射函数
+        # 回旧牌(同帧 raw 保序对齐透传 x),与 sim 引擎对齐块同族。
+        from dataclasses import replace as _dc_replace
+
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            shop_cards_to_legacy,
+        )
+        act1 = _dc_replace(act1, card=shop_cards_to_legacy(
+            [act1.card], frame_cards=st.shop)[0])
         st2 = cw_state.simulate(st, act1)
         act2 = _decide(st2, sess)
         assert not (isinstance(act2, BuyCard)
@@ -253,7 +265,7 @@ class TestL2L5LFM6Compression:
         st, sess, _ = _m6_frame(gold=60, cand=sold)
         # 同轮卖出登记(写端单元面;发射位写点 = shop._note_sell 收口 +
         # prep 凑息/M4,由 LF-写端锁另行覆盖)
-        mandate.record_round_sold(sess, st, sold)
+        mandate.record_round_sold(sess, _bsb(st), sold)
         act = _decide(st, sess)
         assert not (isinstance(act, BuyCard)
                     and act.reason == 'm6_stockpile')
@@ -270,13 +282,13 @@ class TestL2L5LFM6Compression:
         sess = SimpleNamespace()
         st = CwWorkFrame(gold=10, level=5, round_num=3)
         st.plane = 2
-        mandate.record_round_sold(sess, st, '甲')
-        assert mandate.round_sold_names(sess, st) == frozenset({'甲'})
+        mandate.record_round_sold(sess, _bsb(st), '甲')
+        assert mandate.round_sold_names(sess, _bsb(st)) == frozenset({'甲'})
         st.round_num = 4
-        assert mandate.round_sold_names(sess, st) == frozenset()
+        assert mandate.round_sold_names(sess, _bsb(st)) == frozenset()
         st.round_num = 3
         st.plane = 3
-        assert mandate.round_sold_names(sess, st) == frozenset()
+        assert mandate.round_sold_names(sess, _bsb(st)) == frozenset()
 
 
 # ===== L3:dominance 摘旗(档 0)+ prep 位 M6 摘旗可达性 =====
@@ -317,7 +329,7 @@ class TestL3FlagRemoval:
         state = CwWorkFrame(gold=60, level=3, round_num=3)
         state.hp = 60
         state.hp_readable = True
-        mandate.run_mandate(frame, sess, state=state)
+        mandate.run_mandate(frame, sess, state=_bsb(state))
         assert state_of(sess).cw4_counters.get('m6_bench_full', 0) >= 1
 
 
@@ -372,8 +384,8 @@ class TestL7AllInCategoryFilter:
         来源三态 = 旧两位语义的容器形态(observation=真读/prior=不可信)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import (
             BS_SCHEMA_VERSION,
-            GameState,
             ChannelSig,
+            GameState,
             NodeKey,
         )
         sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
@@ -422,16 +434,16 @@ class TestL7AllInCategoryFilter:
         sess = self._allin_session()
         st = self._allin_state(10)
         ok, why = crit_levelup.levelup_budget_gate(
-            st, sess, 30, 5, ('甲',), [], [], 2, 4)
+            _bsb(st), sess, 30, 5, ('甲',), [], [], 2, 4)
         assert ok is False and why == 'all_in_xp_category_filtered'
         # 支A:板满(cap 5)+ bench 有 2★ 等待件 → 兑现链当帧可兑现
         deployed = [_bc(f'甲{i}', star=2, slot=i + 1) for i in range(5)]
         bench = [_bc('乙', star=2, slot=1)]
         ok2, why2 = crit_levelup.levelup_budget_gate(
-            st, sess, 30, 5, ('甲', '乙'), bench, deployed, 2, 4)
+            _bsb(st), sess, 30, 5, ('甲', '乙'), bench, deployed, 2, 4)
         assert ok2 is True and why2 == ''
         # 域外(hp>停线):全豁免放行
         st_out = self._allin_state(100)
         ok3, why3 = crit_levelup.levelup_budget_gate(
-            st_out, sess, 30, 5, ('甲',), [], [], 2, 4)
+            _bsb(st_out), sess, 30, 5, ('甲',), [], [], 2, 4)
         assert ok3 is True and why3 == ''

@@ -30,11 +30,17 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     locked_buy_cap_hold,
     locked_buy_membership,
     locked_buy_scope,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
@@ -44,9 +50,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench,
     ShopCard,
     simulate,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
@@ -202,10 +205,10 @@ class TestSellFaceAndLedgerUnswitched:
         assert hoard_only, '锁测试前提:锁定采购集须含 core∪shared 外成员'
         bench = [_bc(m, slot=i + 1) for i, m in enumerate(hoard_only)]
         st = _state(gold=30, shop_cards=[], bench=bench)
-        fuel_default = mandate.fuel_sell_candidates(bench, core, state=st)
+        fuel_default = mandate.fuel_sell_candidates(bench, core, state=_bsb(st))
         assert {b.char_id for b in fuel_default} >= set(hoard_only[:2]), \
             '默认口径(未注入排除集)零变化:hoard-only 1★ 仍是燃料'
-        fuel_ex = mandate.fuel_sell_candidates(bench, core, state=st,
+        fuel_ex = mandate.fuel_sell_candidates(bench, core, state=_bsb(st),
                                                exclude_names=set(hoard_chars))
         assert not fuel_ex, 'P60:义务集成员禁入燃料集(Fuel∩B=∅,Φ 单调)'
 

@@ -327,14 +327,15 @@ def test_shop_rejects_projects_bench_across_buys():
     """波内先买占掉末席后,同波后续线内件应归 missing_bench_full
     (旧口径误标 missing_no_path)。"""
     comp = None                       # transition 分类不辖,聚焦投影
-    # shop_unbought_reasons 属 mandate_v1(波4 面,CwWorkFrame 签名)——喂原始帧
+    # mandate_v1 拒因面已切容器签名(波4):旧帧经过渡桥装箱喂入
     st = CwWorkFrame()
     st.gold = 99
     st.bench = _bench(BENCH_CAPACITY - 1)     # 8/9,剩 1 席
     a = ShopCard(x=0, name='甲一', cost=3)
     b = ShopCard(x=1, name='乙二', cost=3)
     st.shop = [a, b]
-    rejects = shop_unbought_reasons(st, comp, ('甲一', '乙二'),
+    rejects = shop_unbought_reasons(board_state_bridge(st), comp,
+                                    ('甲一', '乙二'),
                                     [BuyCard(card=a, reason='t')])
     assert '甲一' not in rejects            # 已买不进拒因
     assert rejects['乙二'] == 'missing_bench_full'   # 波内席满如实归因
@@ -344,16 +345,18 @@ def test_shop_rejects_projects_sell_refund_and_seat():
     """卖买同帧:卖出回金与席释放进投影——席满帧经 M4 腾席后线内件
     买入可行,不再留拒因。"""
     comp = None
-    # 同上:mandate_v1 拒因面喂原始 CwWorkFrame 帧
+    # 同上:mandate_v1 拒因面已切容器签名,旧帧经过渡桥装箱喂入
     st = CwWorkFrame()
     st.gold = 5
     st.bench = _bench(BENCH_CAPACITY)         # 席满
     b = ShopCard(x=0, name='乙二', cost=5)
     st.shop = [b]
     sell = SellBench(bench_idx=0, income=2, expect='娜塔莎')
-    rejects = shop_unbought_reasons(st, comp, ('乙二',),
+    rejects = shop_unbought_reasons(board_state_bridge(st), comp,
+                                    ('乙二',),
                                     [sell, BuyCard(card=b, reason='t')])
     assert '乙二' not in rejects              # 卖 1 买 1:席/金投影可行已买
     # 反事实:同帧只卖不买(买入未发射)→ 席空金足,如实归 no_path 侧语义
-    rejects2 = shop_unbought_reasons(st, comp, ('乙二',), [sell])
+    rejects2 = shop_unbought_reasons(board_state_bridge(st), comp,
+                                     ('乙二',), [sell])
     assert rejects2['乙二'] == 'missing_no_path'

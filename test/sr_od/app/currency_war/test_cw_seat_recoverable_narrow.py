@@ -33,6 +33,9 @@ from __future__ import annotations
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
 from sr_od.application.currency_war.kernel import cw_intention
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
 )
@@ -127,11 +130,11 @@ class TestP92SeatRecoverableDirect:
                        and not getattr(c, 'bench_effect', ''))
         s, st, k = self._frame([_bc(fuel, star=1, slot=1)])
         assert shop.p92_seat_recoverable(
-            s, st.bench, k, st, cap_hold=None, current_round=_ROUND,
+            s, st.bench, k, _bsb(st), cap_hold=None, current_round=_ROUND,
             defer_names=frozenset()) is True
         s2, st2, k2 = self._frame([_bc(filler2, star=2, slot=1)])
         assert shop.p92_seat_recoverable(
-            s2, st2.bench, k2, st2, cap_hold=None, current_round=_ROUND,
+            s2, st2.bench, k2, _bsb(st2), cap_hold=None, current_round=_ROUND,
             defer_names=frozenset()) is False
 
     def test_placeholder_only_false_t18_gate_inherited(self):
@@ -139,7 +142,7 @@ class TestP92SeatRecoverableDirect:
         自动继承 T-18 占位件滤门(收窄不复活占位件高估灶面)。"""
         s, st, k = self._frame([_item(slot=1)])
         assert shop.p92_seat_recoverable(
-            s, st.bench, k, st, cap_hold=None, current_round=_ROUND,
+            s, st.bench, k, _bsb(st), cap_hold=None, current_round=_ROUND,
             defer_names=frozenset()) is False
 
     def test_t3_active_only_fuel_true(self):
@@ -158,7 +161,7 @@ class TestP92SeatRecoverableDirect:
         st.deployed = [_bc('前线', slot=1)]
         _t3_premise(s, st, k, t3)
         assert shop.p92_seat_recoverable(
-            s, st.bench, k, st, cap_hold=cw_intention.locked_buy_cap_hold(st),
+            s, st.bench, k, _bsb(st), cap_hold=cw_intention.locked_buy_cap_hold(st),
             current_round=_ROUND, defer_names=frozenset({t3})) is True
 
 

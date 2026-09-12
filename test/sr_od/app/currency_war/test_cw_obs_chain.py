@@ -921,7 +921,8 @@ def test_wire_mismatch_records_defect(monkeypatch: _w547_faction_wire_pytest.Mon
         [_w547_faction_wire_tok('3', 83, 175), _w547_faction_wire_tok('4', 83, 275)])
     d = _make_director(monkeypatch, {'仙舟': 3, '能量': 5}, reading)
     obs = pd.PrepObservation()
-    obs.state = SimpleNamespace(plane=2, round_num=5)
+    # 台账行 plane/round 读容器(obs.state 视图槽已退役):合成口喂入。
+    cw4_feed(d.ctx.cw_match.session, CwWorkFrame(plane=2, round_num=5))
     d._reconcile_faction_display(obs)
     assert len(calls) == 1
     kw = calls[0]['kwargs']
@@ -1040,6 +1041,7 @@ from sr_od.application.currency_war.kernel.cw_prep_expect import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     XP_TO_NEXT_LEVEL,
+    CwWorkFrame,
     xp_apply_clicks,
     xp_clicks_to_level,
 )
@@ -1050,6 +1052,7 @@ from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     StrategySession as _w552_xp_reconcile_StrategySession,
 )
 from sr_od.application.currency_war.telemetry import defects
+from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
 # ===== ① 推进算子真值表(单一源语义 = ADR-0129;门槛表 XP_TO_NEXT_LEVEL)=====
 
@@ -1109,10 +1112,13 @@ def _cap(*a, **k):
     return (a, k)
 
 
-def _obs(xp: tuple[int, int] | None, level: int, plane: int = 2,
+def _obs(session, xp: tuple[int, int] | None, level: int, plane: int = 2,
          round_num: int = 5) -> PrepObservation:
-    return PrepObservation(state=_w552_xp_reconcile_SimpleNamespace(
-        xp_progress=xp, level=level, plane=plane, round_num=round_num))
+    """黑板观察帧(纯视觉域):xp/level/plane/round 台账读数走容器,
+    obs.state 视图槽已随容器化段 2 退役 = 合成口喂入。"""
+    cw4_feed(session, CwWorkFrame(xp_progress=xp, level=level,
+                                  plane=plane, round_num=round_num))
+    return PrepObservation()
 
 
 def test_ledger_anchors_then_reconciles_clean(monkeypatch):
@@ -1120,18 +1126,18 @@ def test_ledger_anchors_then_reconciles_clean(monkeypatch):
     pd, session, captured = _stub_director()
     monkeypatch.setattr(defects, 'record_defect', _cap)
     # 首帧:锚定(2/72 lv8),不对账
-    pd._reconcile_xp_expect(_obs((2, 72), 8))
+    pd._reconcile_xp_expect(_obs(session, (2, 72), 8))
     led = exec_state_of(session).xp_expect_ledger
     assert led.anchored and (led.level, led.xp_cur, led.xp_next) == (8, 2, 72)
     assert led.round_key == (2, 5)
     assert captured == []
     # 同帧再读(pending=0)不评
-    pd._reconcile_xp_expect(_obs((2, 72), 8))
+    pd._reconcile_xp_expect(_obs(session, (2, 72), 8))
     assert captured == []
     # RunBuyPhase 升 1 击 → 期望 6/72;显示一致 → 不落台账
     pd._xp_apply_buy_clicks('买牌 plan 买1张 升1次 刷0次 (gold=30 lv=8)')
     assert (led.level, led.xp_cur) == (8, 6) and led.pending_clicks == 1
-    pd._reconcile_xp_expect(_obs((6, 72), 8))
+    pd._reconcile_xp_expect(_obs(session, (6, 72), 8))
     assert captured == [] and led.pending_clicks == 0
 
 
@@ -1141,9 +1147,9 @@ def test_ledger_mismatch_lands_defect_once(monkeypatch):
     pd, session, captured = _stub_director()
     monkeypatch.setattr(defects, 'record_defect',
                         lambda *a, **k: captured.append((a, k)))
-    pd._reconcile_xp_expect(_obs((2, 72), 8))          # 锚定
+    pd._reconcile_xp_expect(_obs(session, (2, 72), 8))          # 锚定
     pd._xp_apply_buy_clicks('买牌 plan 买0张 升2次 刷1次')  # 期望 10/72
-    pd._reconcile_xp_expect(_obs((6, 72), 8))          # 显示只有 +4
+    pd._reconcile_xp_expect(_obs(session, (6, 72), 8))          # 显示只有 +4
     assert len(captured) == 1
     args, row = captured[0]
     assert args[0] == 'xp' and args[1] == 'xp_expect_mismatch'
@@ -1152,7 +1158,7 @@ def test_ledger_mismatch_lands_defect_once(monkeypatch):
     assert any(r['field'] == 'pending_clicks' and r['value'] == '2'
                for r in row['refs'])
     # pending 已清:同段再读不重复落
-    pd._reconcile_xp_expect(_obs((6, 72), 8))
+    pd._reconcile_xp_expect(_obs(session, (6, 72), 8))
     assert len(captured) == 1
 
 
@@ -1162,15 +1168,15 @@ def test_ledger_levelup_channel_and_level_mismatch(monkeypatch):
     pd, session, captured = _stub_director()
     monkeypatch.setattr(defects, 'record_defect',
                         lambda *a, **k: captured.append((a, k)))
-    pd._reconcile_xp_expect(_obs((18, 20), 5, plane=1, round_num=3))
+    pd._reconcile_xp_expect(_obs(session, (18, 20), 5, plane=1, round_num=3))
     pd._xp_apply_levelup()                             # 1 击 → lv6 2/40
     led = exec_state_of(session).xp_expect_ledger
     assert (led.level, led.xp_cur, led.xp_next) == (6, 2, 40)
-    pd._reconcile_xp_expect(_obs((2, 40), 6, plane=1, round_num=3))  # 一致
+    pd._reconcile_xp_expect(_obs(session, (2, 40), 6, plane=1, round_num=3))  # 一致
     assert captured == []
     # 等级不一致形态:显示 lv 仍 5(等级区误读/升级未生效)
     pd._xp_apply_levelup()                             # → lv7 0/52
-    pd._reconcile_xp_expect(_obs((0, 52), 6, plane=1, round_num=3))
+    pd._reconcile_xp_expect(_obs(session, (0, 52), 6, plane=1, round_num=3))
     assert len(captured) == 1
     args, row = captured[0]
     assert 'level' in row['observed'] and '7' in row['expected']
@@ -1181,11 +1187,11 @@ def test_ledger_round_rollover_reanchors(monkeypatch):
     披露,不落台账(不硬编码外生模型,把未知变实测)。"""
     pd, session, captured = _stub_director()
     monkeypatch.setattr(defects, 'record_defect', _cap)
-    pd._reconcile_xp_expect(_obs((2, 72), 8))
+    pd._reconcile_xp_expect(_obs(session, (2, 72), 8))
     pd._xp_apply_buy_clicks('买牌 plan 买0张 升1次 刷0次')   # 期望 6/72
-    pd._reconcile_xp_expect(_obs((6, 72), 8))                # 对账一致清 pending
+    pd._reconcile_xp_expect(_obs(session, (6, 72), 8))                # 对账一致清 pending
     # 轮界:显示 8/72(本轮 +2 外生)→ 重锚,不评不落账
-    pd._reconcile_xp_expect(_obs((8, 72), 8, round_num=6))
+    pd._reconcile_xp_expect(_obs(session, (8, 72), 8, round_num=6))
     led = exec_state_of(session).xp_expect_ledger
     assert led.round_key == (2, 6) and (led.level, led.xp_cur) == (8, 8)
     assert led.exogenous_xp == 2 and captured == []
@@ -1198,7 +1204,8 @@ def test_ledger_no_session_is_noop():
     assert pd._xp_ledger() is None
     pd._xp_apply_levelup()
     pd._xp_apply_buy_clicks('升1次')
-    pd._reconcile_xp_expect(_obs((2, 72), 8))   # state 非 None 也不抛
+    pd._reconcile_xp_expect(_obs(_w552_xp_reconcile_StrategySession(),
+                                 (2, 72), 8))   # 无 session 也不抛
 
 
 def test_xp_compare_truth_table():

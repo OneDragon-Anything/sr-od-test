@@ -34,6 +34,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     SELL_BENCH_REASONS,
     BailToOuter,
@@ -71,7 +74,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
 )
 from sr_od.application.currency_war.telemetry.schema import serialize_action
-from test.sr_od.app.currency_war._cw_helpers import cw4_bs
+from test.sr_od.app.currency_war._cw_helpers import cw4_bs, cw4_feed
 from test.sr_od.app.currency_war.test_cw_sell_window_launch import (
     _CORE_HOLD,
     _FUEL,
@@ -354,8 +357,8 @@ class TestEmissionFace:
             node_type=None, stop_flag=False, k_members=('目标件',),
             round_num=2)
         out = mandate.run_mandate(frame, sess,
-                                  state=_boarded(gold=9, level=3,
-                                                 hp=80, round_num=2))
+                                  state=_bsb(_boarded(gold=9, level=3,
+                                                      hp=80, round_num=2)))
         sells = _prep_emit_out(out)
         assert len(sells) == 1
         assert sells[0].action.reason == ''
@@ -378,8 +381,8 @@ class TestEmissionFace:
             gold=30, level=3, bench=bench, deploy_cap=4,
             node_type=None, stop_flag=False, k_members=k, round_num=2)
         out = mandate.run_mandate(frame, sess,
-                                  state=_boarded(gold=30, level=3,
-                                                 hp=80, round_num=2))
+                                  state=_bsb(_boarded(gold=30, level=3,
+                                                      hp=80, round_num=2)))
         sells = _prep_emit_out(out)
         assert len(sells) == 1
         assert sells[0].action.reason == ''
@@ -395,8 +398,8 @@ class TestEmissionFace:
             gold=30, level=3, bench=bench2, deploy_cap=4,
             node_type=None, stop_flag=False, k_members=k, round_num=2)
         out2 = mandate.run_mandate(frame2, sess2,
-                                   state=_boarded(gold=30, level=3,
-                                                  hp=80, round_num=2))
+                                   state=_bsb(_boarded(gold=30, level=3,
+                                                       hp=80, round_num=2)))
         sells2 = _prep_emit_out(out2)
         assert len(sells2) == 1
         assert sells2[0].action.reason == ''
@@ -415,8 +418,9 @@ class TestEmissionFace:
         sess = _sess()
         sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         st = _state(0, [_bc('填充燃料F', slot=1)])
-        obs = PrepObservation(state=st,
-                              bench_chars=[_bc('填充燃料F', slot=1)],
+        # obs.state 视图槽已随 prep 链容器化段 2 退役:局内事实经容器喂入。
+        cw4_feed(sess, st)
+        obs = PrepObservation(bench_chars=[_bc('填充燃料F', slot=1)],
                               deployed_chars=[], deploy_vacancy=0)
         out = entry.emit(obs, SimpleNamespace(), sess, None,
                          ev_arm='skeleton_only', registry=strat.registry)
@@ -438,7 +442,9 @@ class TestEmissionFace:
         sess = _sess()
         sess.active_strategies = ['买断制']   # ADR-0598 注入面迁移(下同)
         st = _state(1, [_bc(_TRANS_HOLD, slot=1)])   # cost=2 → 退 2 ≥ 缺口 3−1
-        obs = PrepObservation(state=st, bench_chars=[_bc(_TRANS_HOLD, slot=1)],
+        # obs.state 视图槽已随 prep 链容器化段 2 退役:局内事实经容器喂入。
+        cw4_feed(sess, st)
+        obs = PrepObservation(bench_chars=[_bc(_TRANS_HOLD, slot=1)],
                               deployed_chars=[], deploy_vacancy=0)
         out = entry.emit(obs, SimpleNamespace(), sess, None,
                          ev_arm='skeleton_only', registry=strat.registry)
@@ -458,7 +464,7 @@ class TestEmissionFace:
                 gold=1, level=5, bench=bench, deploy_cap=6,
                 node_type=None, stop_flag=True, k_members=('线内件X',),
                 round_num=2)
-            out = entry._criteria_pass(frame, sess, st, ('线内件X',),
+            out = entry._criteria_pass(frame, sess, _bsb(st), ('线内件X',),
                                        k_switched=False, old_line_members=())
             return _prep_emit_out(out), state_of(sess).cw4_counters
 
@@ -489,7 +495,7 @@ class TestEmissionFace:
             gold=1, level=5, bench=bench, deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('线内件X',),
             round_num=2)
-        out = entry._criteria_pass(frame, sess, st, ('线内件X',),
+        out = entry._criteria_pass(frame, sess, _bsb(st), ('线内件X',),
                                    k_switched=False, old_line_members=())
         sells = _prep_emit_out(out)
         assert [s.action.slot for s in sells] == [1]
@@ -514,7 +520,7 @@ class TestEmissionFace:
         provisional.inject('V_MS', provisional.CalibValue(
             value=1.0, injected_form=True))
         try:
-            out = entry._criteria_pass(frame, sess, st, ('线内件X',),
+            out = entry._criteria_pass(frame, sess, _bsb(st), ('线内件X',),
                                        k_switched=True, old_line_members=(_FUEL,))
         finally:
             provisional.reset('U_X')
@@ -634,16 +640,16 @@ class TestCauseChannelMatrix:
         assert t3 == {x}
         if channel == 'interest':
             slots, key = crit_sell.sell_for_interest(
-                1, bench, 5, (), state=st, defer_names=t3)
+                1, bench, 5, (), state=_bsb(st), defer_names=t3)
             assert key == '' and slots == []
         elif channel in ('funding', 'm4_fuel'):
             if channel == 'funding':
                 slots, key = crit_sell.funding_support_sell(
-                    1, 9, bench, (), state=st, defer_names=t3)
+                    1, 9, bench, (), state=_bsb(st), defer_names=t3)
                 assert key == '' and slots == [1]
             else:
                 cands = mandate.fuel_sell_candidates(
-                    bench, (), state=st, defer_names=t3)
+                    bench, (), state=_bsb(st), defer_names=t3)
                 assert [b.char_id for b in cands] == [x]
         else:
             assert channel == 'line_switch'
@@ -653,7 +659,7 @@ class TestCauseChannelMatrix:
                 value=1.0, injected_form=True))
             try:
                 slots, key = crit_sell.line_switch_sell(
-                    (), (), bench, [], st, k_switched=True)
+                    (), (), bench, [], _bsb(st), k_switched=True)
             finally:
                 provisional.reset('U_X')
                 provisional.reset('V_MS')

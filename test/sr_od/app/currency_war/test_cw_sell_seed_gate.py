@@ -23,15 +23,18 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.kernel.cw_card_identity import (
     is_engine_piece,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwWorkFrame,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.sim.checks import selfcalc
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -366,11 +369,11 @@ class TestAssemblyWiring:
         cw4_feed(sess, st)
         sell_gate.register_seed_acquisition(sess, _SEED, plane=2,
                                             round_num=3)
-        raw = mandate.fuel_sell_candidates(bench, (), st)
+        raw = mandate.fuel_sell_candidates(bench, (), _bsb(st))
         assert _SEED in [c.char_id for c in raw]
         excl = sell_gate.sell_exclusions(sess, (), channel='m4_fuel',
                                          current_round=3)
-        gated = mandate.fuel_sell_candidates(bench, (), st,
+        gated = mandate.fuel_sell_candidates(bench, (), _bsb(st),
                                              exclude_names=excl)
         assert _SEED not in [c.char_id for c in gated]
         assert _FUEL in [c.char_id for c in gated]

@@ -45,12 +45,12 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
     SellBench,
 )
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwWorkFrame,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
@@ -96,10 +96,14 @@ def _session() -> StrategySession:
     return s
 
 
-def _obs(state: CwWorkFrame | None = None, bench=None, deployed=None,
-         spheres=(), boxes=(), tomes=(), vacancy: int = 4) -> PrepObservation:
+def _obs(session, state: CwWorkFrame | None = None, bench=None,
+         deployed=None, spheres=(), boxes=(), tomes=(),
+         vacancy: int = 4) -> PrepObservation:
+    """黑板观察帧(纯视觉/占用域):局内事实经合成口喂 session 容器,
+    obs.state 视图槽已随容器化段 2 退役。"""
+    from test.sr_od.app.currency_war._cw_helpers import cw4_feed
+    cw4_feed(session, state or CwWorkFrame(gold=20))
     return PrepObservation(
-        state=state or CwWorkFrame(gold=20),
         bench_chars=bench or [], deployed_chars=deployed or [],
         spheres=list(spheres), boxes=list(boxes), tomes=list(tomes),
         deploy_vacancy=vacancy)
@@ -194,14 +198,14 @@ class TestEmitterContract:
         session = _session()
         state_of(session).target_comp = COMP_LIBRARY[0]
         cases = [
-            _obs(bench=[_bench(1, '燃料件')]),
-            _obs(bench=[_bench(i, '燃料' + str(i)) for i in range(1, 10)],
+            _obs(session, bench=[_bench(1, '燃料件')]),
+            _obs(session, bench=[_bench(i, '燃料' + str(i)) for i in range(1, 10)],
                  vacancy=0),
-            _obs(state=CwWorkFrame(gold=99), bench=[_bench(1, '目标件')],
+            _obs(session, state=CwWorkFrame(gold=99), bench=[_bench(1, '目标件')],
                  vacancy=0),
-            _obs(spheres=[('red', _Pt(), 3)]),
-            _obs(boxes=[(2, _Pt())]),
-            _obs(),
+            _obs(session, spheres=[('red', _Pt(), 3)]),
+            _obs(session, boxes=[(2, _Pt())]),
+            _obs(session),
         ]
         outs = []
         for obs in cases:
@@ -248,9 +252,12 @@ class TestMandateBehavior:
         session = _session()
         # 非空板前置(T-32 空板止损守卫):板空帧守卫 fail-closed 拒卖,
         # 腾席环须 ≥1 上场件环境(state 缺读 = 拒,与生产 entry 恒传一致)。
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            board_state_bridge as _bsb,
+        )
         gs = CwWorkFrame(gold=30, level=3, round_num=3, hp=60)
         gs.deployed = [_bench(1, '板上件锚')]
-        out = mandate.run_mandate(frame, session, state=gs)
+        out = mandate.run_mandate(frame, session, state=_bsb(gs))
         reasons = [e.reason for e in out]
         assert any(isinstance(e.action, SellBench) for e in out), \
             '腾席卖出发射缺席'
@@ -259,8 +266,10 @@ class TestMandateBehavior:
         #(m2_retry_exhausted / bench_full_buy_abandon 计数由
         # test_cw_stall_cache.TestPrepStallCache 同帧形 ==1 强断言辖)
         bench2 = [_bench(i, '高价', star=3) for i in range(1, 10)]
+        gs2 = CwWorkFrame(gold=30, level=3, round_num=3, hp=60)
+        gs2.deployed = [_bench(1, '板上件锚')]
         out2 = mandate.run_mandate(_frame(gold=30, bench=bench2, k=k),
-                                   _session())
+                                   _session(), state=_bsb(gs2))
         assert not any(e.reason == 'm2_buy' for e in out2)
 
 

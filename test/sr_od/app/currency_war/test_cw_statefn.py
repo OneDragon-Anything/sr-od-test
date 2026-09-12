@@ -19,6 +19,9 @@ from pathlib import Path
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
     derived,
     proof_consts,
@@ -598,38 +601,38 @@ class TestBenchEffectContextAssembly:
         # 黑塔纪元 augment 局 ⇒ 语境在场(单一源=proof.DIRECT_LINE_
         # SIGNAL_STRATEGIES)
         ctx = predicates.bench_effect_context(
-            self._state(active_strategies=['黑塔纪元']), self._unit())
+            _bsb(self._state(active_strategies=['黑塔纪元'])), self._unit())
         assert ctx.herta_star_supply and not ctx.rust_affix_present
         # 板面存在承载对象「大黑塔」⇒ 语境在场
         from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
         ctx2 = predicates.bench_effect_context(
-            self._state(deployed=[BenchChar(slot=1, char_id='大黑塔')]),
+            _bsb(self._state(deployed=[BenchChar(slot=1, char_id='大黑塔')])),
             self._unit())
         assert ctx2.herta_star_supply
         # 线内含承载对象 ⇒ 语境在场(换线过渡期)
         ctx3 = predicates.bench_effect_context(
-            self._state(), self._unit(), k_members=('大黑塔',))
+            _bsb(self._state()), self._unit(), k_members=('大黑塔',))
         assert ctx3.herta_star_supply
         # 语境缺场(空 state)⇒ 星级供强无承载对象
-        ctx4 = predicates.bench_effect_context(self._state(), self._unit())
+        ctx4 = predicates.bench_effect_context(_bsb(self._state()),
+                                               self._unit())
         assert not ctx4.herta_star_supply
 
     def test_rust_from_enemy_affixes(self) -> None:
         aff = ['库藏生锈']
         ctx = predicates.bench_effect_context(
-            self._state(enemy_affixes=aff), self._unit())
+            _bsb(self._state(enemy_affixes=aff)), self._unit())
         assert ctx.rust_affix_present
         assert not predicates.bench_effect_qualified('黑塔', ctx)  # 未穿排除
         # 已穿 + 语境在场(例外①②均过)⇒ 照常入桶不动子集
         ctx_eq = predicates.bench_effect_context(
-            self._state(enemy_affixes=aff, active_strategies=['黑塔纪元']),
+            _bsb(self._state(enemy_affixes=aff,
+                             active_strategies=['黑塔纪元'])),
             self._unit(equipped=True))
         assert ctx_eq.equipped
         assert predicates.bench_effect_qualified('黑塔', ctx_eq)
 
-    def test_state_none_conservative_end(self) -> None:
-        """缺读保守端:state=None ⇒ 按保护端处置(herta 在场 ∧ 生锈
-        不在场 ⇒ 载体件资格成立;申报行为,影响面=仅 bench_effect 载体件)。"""
-        ctx = predicates.bench_effect_context(None, self._unit())
-        assert not ctx.rust_affix_present and ctx.herta_star_supply
-        assert predicates.bench_effect_qualified('黑塔', ctx)
+    # (test_state_none_conservative_end 已删(容器化段 2 适配):state=None
+    #  保守端支随载体退役结构性不可达——生产三消费位经容器签名链,state
+    #  恒非 None(entry._criteria_pass 载体申报同源);None 防御语义无
+    #  容器表示,禁猜测重写。)

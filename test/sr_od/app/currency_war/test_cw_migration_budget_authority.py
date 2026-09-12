@@ -15,15 +15,15 @@ W623 预验尸(D0-D4)+ W630 A/B 协议 + W615 R1-R4 规则集。锁契约:
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_economy import (
     refresh_ev_budget,
     reserve_cap,
     schedule_upgrade,
 )
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     pair_target_comp,
@@ -88,13 +88,13 @@ def test_schedule_pop_slot_trigger() -> None:
     st = _state(gold=30, level=6, r=9,
                 bench=bench)                  # gold 30<息线:禁升②不触发
     assert deployed_occupied(st.deployed) < st.max_units()   # 有空位(非满)
-    assert not schedule_upgrade(st, sess_of(st))
+    assert not schedule_upgrade(board_state_bridge(st), sess_of(st))
     st.dep = None
     # cap 满:deployed 填满 → 人口位触发
     st.deployed = [BenchChar(slot=20 + i, char_id=f'杂{i}', faction='公司',
                              star=1) for i in range(st.max_units())]
     assert deployed_occupied(st.deployed) >= st.max_units()
-    assert schedule_upgrade(st, sess_of(st))
+    assert schedule_upgrade(board_state_bridge(st), sess_of(st))
 
 
 def sess_of(state: CwWorkFrame) -> StrategySession:
@@ -127,11 +127,11 @@ def test_schedule_probability_trigger_requires_engine() -> None:
     # 锁定 4 费核(大移位带,U_L 检验过;ADR-0516 修正①)+ 息引擎已立
     sess = _locked_4cost_sess()
     st = _state(gold=60, level=7)             # 峰值 9>7 ∧ 60≥50 ∧ U_L 过
-    assert schedule_upgrade(st, sess)
+    assert schedule_upgrade(board_state_bridge(st), sess)
     st_low = _state(gold=49, level=7)         # 引擎未立:禁升
-    assert not schedule_upgrade(st_low, _locked_4cost_sess())
+    assert not schedule_upgrade(board_state_bridge(st_low), _locked_4cost_sess())
     st_done = _state(gold=60, level=9)        # 峰值已达:无排程
-    assert not schedule_upgrade(st_done, _locked_4cost_sess())
+    assert not schedule_upgrade(board_state_bridge(st_done), _locked_4cost_sess())
 
 
 def test_schedule_ul_threshold_negative_small_shift_band() -> None:
@@ -158,10 +158,10 @@ def test_schedule_ul_threshold_negative_small_shift_band() -> None:
     state_of(sess).v3_intention = IntentionState(
         phase='locked', locked_comp=comp.name)
     st = _state(gold=60, level=5)      # 2 费 lv5→6:benefit≈9.9 < U_L 20
-    assert not _upgrade_ul_threshold_ok(st, sess)
+    assert not _upgrade_ul_threshold_ok(board_state_bridge(st), sess)
     # 行为面同帧:schedule_upgrade ② 臂同样被收紧(引擎已立 60≥息线、
     # 峰值 6>5,唯 U_L 检验拦下)
-    assert not schedule_upgrade(st, sess)
+    assert not schedule_upgrade(board_state_bridge(st), sess)
 
 
 def test_schedule_predictive_even_when_fee_unaffordable() -> None:
@@ -169,20 +169,20 @@ def test_schedule_predictive_even_when_fee_unaffordable() -> None:
     gold 51(远不够升级费)∧ 峰值未达 → 排程照发、R* 计入升级费;
     「付得起才排」会造 R* 塌缩 → 义务花光 → 更排不上的贫穷循环。"""
     st = _state(gold=51, level=7)
-    assert schedule_upgrade(st, _locked_4cost_sess())
-    assert reserve_cap(st, _locked_4cost_sess()) > 50
+    assert schedule_upgrade(board_state_bridge(st), _locked_4cost_sess())
+    assert reserve_cap(board_state_bridge(st), _locked_4cost_sess()) > 50
 
 
 def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
     """淘金客姿态:升级通道退役(W621:LevelUp 退役是刷驱姿态主驱动;
     谓词单一址=cw_investments.refresh_invest_active,授权链同址关闭)。"""
     st = _state(gold=100, level=7)
-    assert schedule_upgrade(st, _locked_4cost_sess())   # 前置:常态帧排程成立
+    assert schedule_upgrade(board_state_bridge(st), _locked_4cost_sess())   # 前置:常态帧排程成立
     monkeypatch.setattr(
         'sr_od.application.currency_war.kernel.cw_investments.STRATEGY_ECONOMY',
         {'淘金客': EconomyEffect(xp_per_refresh=2)})
     st.active_strategies = ['淘金客']
-    assert not schedule_upgrade(st, _locked_4cost_sess())
+    assert not schedule_upgrade(board_state_bridge(st), _locked_4cost_sess())
 
 
 # --- 预算核契约锁(W623 D2)---------------------------------------------------
@@ -192,11 +192,11 @@ def test_budget_value_domain_and_legal_zero_frames() -> None:
     """契约:值域 [0,6](6 刷帽单一源);合法 0 帧存在(g≤R* 常态帧;
     全恒正=契约未实现)。"""
     st = _state(gold=200, level=6)
-    assert refresh_ev_budget(st, sess_of(st)) == 6     # 6 刷帽
+    assert refresh_ev_budget(board_state_bridge(st), sess_of(st)) == 6     # 6 刷帽
     st0 = _state(gold=50, level=6)                     # g=R*:溢余 0
-    assert refresh_ev_budget(st0, sess_of(st0)) == 0   # 合法 0 帧
+    assert refresh_ev_budget(board_state_bridge(st0),sess_of(st0)) == 0   # 合法 0 帧
     st1 = _state(gold=51, level=6)                     # 溢余 1<刷价
-    assert refresh_ev_budget(st1, sess_of(st1)) == 0   # 合法 0 帧(准入门辖域)
+    assert refresh_ev_budget(board_state_bridge(st1), sess_of(st1)) == 0   # 合法 0 帧(准入门辖域)
 
 
 # (test_blood_budget_stop_not_inflated_by_budget_merge 已随 DP 姿态/泄息
@@ -224,8 +224,8 @@ def test_w721_collapse_band_zero_and_fallback_exempt() -> None:
     sess_locked = StrategySession()
     state_of(sess_locked).v3_intention = IntentionState(
         phase='locked', locked_comp=comp.name)
-    assert refresh_ev_budget(st, sess_locked) == 0
-    assert refresh_ev_budget(st, StrategySession()) > 0
+    assert refresh_ev_budget(board_state_bridge(st), sess_locked) == 0
+    assert refresh_ev_budget(board_state_bridge(st), StrategySession()) > 0
 
 
 # --- R3 · pair 断供驱逐(蓝图 §4.3-R3 推广)------------------------------------
@@ -294,22 +294,26 @@ def test_injection_consistency_single_registry_source() -> None:
     reg2 = dataclasses.replace(_REG, interest_cap=4)
     st1 = _state(gold=45, level=7, r=5)
     sess = _locked_4cost_sess()
-    assert not schedule_upgrade(st1, sess, _REG)
-    assert not schedule_upgrade(st1, sess, reg2)   # registry 旋钮不动 resolved 链
+    assert not schedule_upgrade(board_state_bridge(st1), sess, _REG)
+    assert not schedule_upgrade(board_state_bridge(st1), sess, reg2)   # registry 旋钮不动 resolved 链
     sess_ov = _locked_4cost_sess()
     sess_ov.active_strategies = ['买断制']   # 注册表可达覆写 cap=0 → 息线 0
-    assert schedule_upgrade(st1, sess_ov)    # gold 45 ≥ 息线 0 → ② 前置过
-    assert refresh_ev_budget(st1, sess, reg2) == refresh_ev_budget(
-        st1, sess, _REG)   # registry 旋钮对预算逐位惰性(ADR-0598 归一)
+    assert schedule_upgrade(board_state_bridge(st1), sess_ov)    # gold 45 ≥ 息线 0 → ② 前置过
+    assert refresh_ev_budget(board_state_bridge(st1), sess, reg2) == \
+        refresh_ev_budget(board_state_bridge(st1), sess, _REG)   # registry 旋钮对预算逐位惰性(ADR-0598 归一)
     # 预算面同链:R* 守息线分量随 resolved cap 动(买断制 floor=0+费
     # < 默认 50+费),registry 旋钮不动;gold 96:默认 R*=50+lv7 升级金
     #(52)=102 → 零预算;买断制 R*=0+52=52 → 正预算(lv5 旧帧随 U_L
     # 重锚帧上移,数字按帧现算)
     st2 = _state(gold=96, level=7, r=5)
-    assert reserve_cap(st2, sess_ov) < reserve_cap(st2, sess)
-    assert refresh_ev_budget(st2, sess, _REG) == 0
-    assert refresh_ev_budget(st2, sess_ov) > 0
+    assert reserve_cap(board_state_bridge(st2), sess_ov) < reserve_cap(
+        board_state_bridge(st2), sess)
+    assert refresh_ev_budget(board_state_bridge(st2), sess, _REG) == 0
+    assert refresh_ev_budget(board_state_bridge(st2), sess_ov) > 0
     # BudgetView 装配单源:传入 reg2 的 BudgetView == 逐字段显式注入值
+    # (_budget 读 session 容器单例,局内事实先经合成口喂入 = 生产同路)
+    from test.sr_od.app.currency_war._cw_helpers import cw4_feed
+    cw4_feed(sess_ov, st2)
     from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
         _budget,
     )
@@ -318,10 +322,11 @@ def test_injection_consistency_single_registry_source() -> None:
     )
     bv = _budget(st2, sess_ov, reg2)
     assert bv.interest_floor == 0   # resolved 链(买断制)压过 registry 旋钮
-    assert bv.reserve_cap == reserve_cap(st2, sess_ov)
-    assert bv.obligation == obligation(st2, sess_ov, reg2)
-    assert bv.schedule == schedule_upgrade(st2, sess_ov, reg2)
-    assert bv.ev_auth == refresh_ev_budget(st2, sess_ov, reg2)
+    assert bv.reserve_cap == reserve_cap(board_state_bridge(st2), sess_ov)
+    assert bv.obligation == obligation(board_state_bridge(st2), sess_ov, reg2)
+    assert bv.schedule == schedule_upgrade(board_state_bridge(st2), sess_ov, reg2)
+    assert bv.ev_auth == refresh_ev_budget(board_state_bridge(st2), sess_ov, reg2)
+    cw4_feed(sess, st2)
     bv_base = _budget(st2, sess, reg2)
     assert bv_base.interest_floor == 50   # registry cap=4 不再移动预算面息线
 

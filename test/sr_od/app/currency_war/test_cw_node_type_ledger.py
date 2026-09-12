@@ -29,6 +29,9 @@ import pytest
 from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    node_kind_of,
+)
 from sr_od.application.currency_war.kernel.cw_reward_node import (
     reward_node_suppressed,
 )
@@ -67,24 +70,30 @@ def _shop_frame(gold: int, cards: list[ShopCard]) -> CwWorkFrame:
 
 
 class _ProbeCloseStrategy:
-    """替身决策源:捕获店开组装帧 + 真核试算,随即 CloseShop 终结。
+    """替身决策源:捕获店开组装容器 + 真核试算,随即 CloseShop 终结。
 
-    试算结果只记录不返回——动作执行层不进本锁辖域;断言面 = 组装帧
+    试算结果只记录不返回——动作执行层不进本锁辖域;断言面 = 组装容器
     内容 + 真决策核对组装帧的反应(②(b)/M3),即「生产组装 → 决策核」
     全链,禁自抄复刻组装逻辑(测试纪律第 10 条)。
     """
 
     def __init__(self) -> None:
-        self.frames: list[CwWorkFrame] = []
+        self.frames: list[object] = []
         self.actions: list[object] = []
 
     def decide_shop_action(self, session: StrategySession,
                            config: object) -> CloseShop:
-        frame = session.shop_state_frame
-        assert frame is not None, '店开帧未落黑板(组装断裂)'
-        self.frames.append(frame)
+        # 店开组装的决策载体 = session 容器单例(shop_state_frame 黑板槽
+        # 已随波 4 退役,组装喂入 = 合成口容器直写);组装断裂检测 =
+        # 容器店 payload 缺席,节点判读经容器 node 读口。
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            board_state_of,
+        )
+        bs = board_state_of(session)
+        assert bs.shop.value is not None, '店开帧未落黑板(组装断裂)'
+        self.frames.append(bs)
         self.actions.append(
-            shop.decide_shop_action(cw4_bs(frame, session), session,
+            shop.decide_shop_action(bs, session,
                                     SimpleNamespace(ev_arm='full')))
         return CloseShop()
 
@@ -162,8 +171,8 @@ def test_battle_frame_stale_reward_not_copied_no_press_buy_no_m3_defer(
     strategy = _ProbeCloseStrategy()
     _drive_run_buy_waves(monkeypatch, tmp_path, session, strategy)
     frame = strategy.frames[0]
-    assert frame.node_type is None, '滞后值被拷入店开帧(C2 病灶复发)'
-    assert reward_node_suppressed(_bridge(frame)) is False, 'M3 规则①在战斗帧被误抑制'
+    assert node_kind_of(frame) is None, '滞后值被拷入店开帧(C2 病灶复发)'
+    assert reward_node_suppressed(frame) is False, 'M3 规则①在战斗帧被误抑制'
     act = strategy.actions[0]
     assert not (isinstance(act, BuyCard)
                 and act.reason == 'dead_gold_press_buy'), '②(b) 在战斗帧发射'
@@ -196,7 +205,7 @@ def test_ledger_hit_enters_shop_frame_and_rewards_press_buy_legally(
     _drive_run_buy_waves(monkeypatch, tmp_path, session, strategy,
                          seed_ledger=_seed)
     frame = strategy.frames[0]
-    assert frame.node_type == 'reward', '台账查表值未进店开帧'
+    assert node_kind_of(frame) == 'reward', '台账查表值未进店开帧'
     act = strategy.actions[0]
     assert isinstance(act, BuyCard) and act.reason == 'dead_gold_press_buy', \
         '台账背书的合法奖励帧上 ②(b) 未发射'
