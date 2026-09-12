@@ -9,11 +9,13 @@ exit 2)——把「杀净」变成可验证出口;②树语义防御纵深(psuti
 children(recursive=True) 收编后代,单机制,不引 taskkill/CIM 第二套);
 ③cycle_restart 两处单点 terminate 消费点复用同一树杀实现。
 
-三行为锁(ADR-0602 §5 验收设计逐条):
+四行为锁(①-③ = ADR-0602 §5 验收设计逐条;④-⑤ = 账本 T-180 安全化):
   ① 树递归:匹配进程的后代(命令行不含脚本名)被收进杀集;
   ② 杀后复扫:复扫才抓得到的漏网哨兵被自动再杀(凭据=其 kill 调用数
     超过单轮上限 2);有界重试后仍非空 → exit 2;
-  ③ --selftest 路径零杀。
+  ③ --selftest 路径零杀;
+  ④ 无参数默认 = 只查旧零杀(在岗哨兵原样存活+旧水位文件不动);
+  ⑤ 显式 --kill 臂仍在(与④成对,防「为保绿删杀净功能」式机械跟绿)。
 附加:kill_pids_tree 复用缝语义 + 消费点源码锁(terminate() 绝迹 /
 杀语义单一源在 rewatch / cycle_restart 不自引 psutil)。
 
@@ -258,6 +260,52 @@ def test_selftest_kills_nothing(monkeypatch, capsys) -> None:
     mod.main()
     assert chain_top.kill_calls == 0 and chain_top.alive, '--selftest 路径发生了杀'
     assert '[干跑]' in capsys.readouterr().out
+
+
+# ---- 行为④/⑤:无参数默认零杀 + 显式 --kill 臂(账本 T-180 安全化)----------
+
+
+def test_default_no_args_kills_nothing(monkeypatch, capsys, tmp_path) -> None:
+    """无参数默认 = 只查旧零杀(安全化锁):查旧命中的在岗哨兵原样存活、
+    零 kill 调用、旧水位文件不动;输出仍带在岗清单、「只查旧」模式行与
+    武装命令——核岗场景要看的照给,只是不杀。
+    病灶 = 核岗场景无参数误跑清理动作,在岗哨兵整链被杀(两次实证);
+    查旧无害、杀是破坏性动作,后者必须显式 --kill(显式臂由下一测试成对锁)。"""
+    mod = _load(_REWATCH_PATH, _REWATCH_MOD)
+    on_duty = _FakeProc(500, ['pwsh.exe', '-c', f'uv run python {_script_cmd("cw_sentinel.py")}'])
+    monkeypatch.setattr(mod, 'psutil', _PsutilStub([on_duty]))
+    pos = tmp_path / 'cw_sentinel.pos'
+    pos.write_text('0', encoding='utf-8')
+    monkeypatch.setattr(mod, 'SENTINEL_POS', pos)
+    monkeypatch.setattr(sys, 'argv', ['rewatch.py'])
+
+    mod.main()
+
+    assert on_duty.kill_calls == 0 and on_duty.alive, '无参数默认发生了杀(安全默认回归)'
+    assert pos.read_text(encoding='utf-8') == '0', '无参数默认动了旧水位文件'
+    out = capsys.readouterr().out
+    assert '[查旧]' in out, '缺在岗清单(核岗场景要看的查旧信息)'
+    assert '--kill' in out, '缺「杀净须显式 --kill」模式提示行'
+    assert '[武装命令]' in out, '缺武装命令打印(默认开)'
+
+
+def test_explicit_kill_flag_still_kills(monkeypatch, capsys, tmp_path) -> None:
+    """显式 --kill 臂仍在(与上一锁成对):--kill 触发杀净路径,在岗哨兵
+    被树终杀,事件哨兵旧水位顺手删除(杀净阶段既有行为);缺这条锁,
+    上一锁红时可能被「删掉杀净功能」机械跟绿,清理能力静默蒸发。"""
+    mod = _load(_REWATCH_PATH, _REWATCH_MOD)
+    on_duty = _FakeProc(510, ['pwsh.exe', '-c', f'uv run python {_script_cmd("cw_sentinel.py")}'])
+    monkeypatch.setattr(mod, 'psutil', _PsutilStub([on_duty]))
+    pos = tmp_path / 'cw_sentinel.pos'
+    pos.write_text('0', encoding='utf-8')
+    monkeypatch.setattr(mod, 'SENTINEL_POS', pos)
+    monkeypatch.setattr(sys, 'argv', ['rewatch.py', '--kill'])
+
+    mod.main()
+
+    assert not on_duty.alive and on_duty.kill_calls >= 1, '--kill 显式臂未触发杀净'
+    assert not pos.exists(), '--kill 后事件哨兵旧水位未顺手删除'
+    assert '复扫零残留' in capsys.readouterr().out
 
 
 # ---- 复用缝与消费点 -----------------------------------------------------
