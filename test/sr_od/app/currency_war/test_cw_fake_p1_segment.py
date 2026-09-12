@@ -205,22 +205,33 @@ def test_fake_p1_same_seed_bitwise_replay(
 _SEEDS: tuple[int, ...] = (11, 23, 57)
 
 
-def _run_fidelity_batch(test_context: SrTestContext,
-                        monkeypatch: pytest.MonkeyPatch,
-                        tmp_path: Path) -> list[FakeP1Result]:
-    """种子批驱动(同一 fixture 会话内共享 ctx;逐局隔离档案根)。"""
-    results: list[FakeP1Result] = []
-    enter_running_state(test_context)
-    try:
-        for i, seed in enumerate(_SEEDS):
-            with fake_p1_run(test_context, monkeypatch, tmp_path, seed,
-                             node_sequence=_SCRIPT,
-                             initial_gold=30,
-                             archive_dir_name=f'fidelity_{seed}_{i}') as run:
-                results.append(run.run_p1())
-    finally:
-        reset_running_state(test_context, test_context.cw_match)
-    return results
+_SHARED_BATCH_CACHE: list[tuple[list[dict], FakeP1Result]] | None = None
+
+
+def _shared_seed_batch(test_context: SrTestContext,
+                       monkeypatch: pytest.MonkeyPatch,
+                       tmp_path: Path) -> list[tuple[list[dict], FakeP1Result]]:
+    """同种子批单次驱动、三锁共享(纪律 11 同值重算收为一次;保真基线批
+    与两检查卡批同 _SEEDS 同 _SCRIPT,原各跑一遍 = 每套件三遍全同执行)。
+    缓存只共享不可变结果面(轮轨迹 res + 审计行快照),FakeMatch 活体
+    不出借(隔离纪律:活体随首次驱动会话消亡,消费面纯 dict/list 数据)。"""
+    global _SHARED_BATCH_CACHE
+    if _SHARED_BATCH_CACHE is None:
+        runs: list[tuple[list[dict], FakeP1Result]] = []
+        enter_running_state(test_context)
+        try:
+            for i, seed in enumerate(_SEEDS):
+                with fake_p1_run(test_context, monkeypatch, tmp_path, seed,
+                                 node_sequence=_SCRIPT, initial_gold=30,
+                                 archive_dir_name=f'shared_{seed}_{i}') as run:
+                    res = run.run_p1()
+                    # 审计行快照必须在 run_p1() 之后取(执行期回填;
+                    # 先取 = 空表,两检查卡零数据假红)
+                    runs.append((list(run.prep_audit), res))
+        finally:
+            reset_running_state(test_context, test_context.cw_match)
+        _SHARED_BATCH_CACHE = runs
+    return _SHARED_BATCH_CACHE
 
 
 def test_fidelity_baseline_conservation_domains_bands(
@@ -235,16 +246,16 @@ def test_fidelity_baseline_conservation_domains_bands(
     分工申报随迁:假局 vs 实机近期局的分布带对比 = 离线 runner(批报告
     类、不入 git),不进测试网——实机档案是本地易失产物,读它当断言锚
     违测试纪律 19;本测只锁注册表/常量可推导的守恒面(纪律 9:期望值
-    单一源现算)。种子批共享同一种子集,与上文确定性锁(验收①)同值域,
-    逐测各跑一遍 = 同值重算,按纪律 11 收为一批。"""
-    batch = _run_fidelity_batch(test_context, monkeypatch, tmp_path)
+    单一源现算)。种子批与两检查卡批同种子同剧本,经 ``_shared_seed_batch``
+    单次驱动三锁共享(纪律 11 同值重算收为一次,勿共享活体)。"""
+    batch = _shared_seed_batch(test_context, monkeypatch, tmp_path)
     # —— ①金恒等式(T-22 定谳重推辖域):商店窗恒等式归账本位检查卡
     # (test_fake_ledger_window_plan_vs_executed_zero_tolerance,窗口行
     # 恒等零容忍正锁;原「期末金 = 期初金 − spend_executed +
     # 卖入」按轮测量把关店后的备战域金动错并进窗口辖域——备战域金动
     # 现由备战域卡逐动作归属管辖,本面只保金非负底线)。
     # 卖入双源同判语义随迁窗口行(卖入账 == 状态机金账差分)。
-    for res in batch:
+    for _audit, res in batch:
         for r in sorted(res.rounds):
             row = res.rounds[r]
             close_gold = row['gold_close']
@@ -261,7 +272,7 @@ def test_fidelity_baseline_conservation_domains_bands(
     # 离线 runner 消费的同一统计 helper(单一源 = fixtures.cw_harness.
     # bands_from_trajectories)。
     bands = bands_from_trajectories(
-        [res.trajectory() for res in batch])
+        [res.trajectory() for _audit, res in batch])
     assert set(bands) == set(range(1, len(_SCRIPT) + 1))
     for band in bands.values():
         assert set(band) == {'gold', 'hp'}
@@ -269,23 +280,6 @@ def test_fidelity_baseline_conservation_domains_bands(
             med, p90 = band[metric]
             assert med is not None and p90 is not None
             assert med <= p90
-
-
-def _run_ledger_audit_batch(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path) -> list[tuple[Any, FakeP1Result]]:
-    """检查卡批驱动(保真基线批同种子同剧本;保留 run 对象供审计账)。"""
-    runs: list[tuple[Any, FakeP1Result]] = []
-    enter_running_state(test_context)
-    try:
-        for i, seed in enumerate(_SEEDS):
-            with fake_p1_run(test_context, monkeypatch, tmp_path, seed,
-                             node_sequence=_SCRIPT, initial_gold=30,
-                             archive_dir_name=f'ledger_{seed}_{i}') as run:
-                runs.append((run, run.run_p1()))
-    finally:
-        reset_running_state(test_context, test_context.cw_match)
-    return runs
 
 
 def test_fake_ledger_zero_tolerance_gold_attribution(
@@ -313,11 +307,11 @@ def test_fake_ledger_zero_tolerance_gold_attribution(
     ——删除波 1 报告 §五「升级连发成本差」显影位的立卡处置(prep 域
     pa.LevelUp 点击环 −Σxp_click_cost 现有归属可判,实判全绿)。
     """
-    runs = _run_ledger_audit_batch(test_context, monkeypatch, tmp_path)
+    runs = _shared_seed_batch(test_context, monkeypatch, tmp_path)
     violations: list[str] = []
-    for run, res in runs:
+    for audit, res in runs:
         audit_by_round: dict[Any, list[dict]] = {}
-        for e in run.prep_audit:
+        for e in audit:
             audit_by_round.setdefault(e.get('round'), []).append(e)
         prev_close: int | None = 30   # initial_gold(批驱动同参)
         for r in sorted(res.rounds):
@@ -382,10 +376,10 @@ def test_fake_ledger_window_plan_vs_executed_zero_tolerance(
     红语义:窗口恒等破坏 = 真漏账(生产聚合/逐动作 sink/窗口配对切片
     三面任一分叉),零容忍禁回 xfail 吞新形态。
     """
-    runs = _run_ledger_audit_batch(test_context, monkeypatch, tmp_path)
+    runs = _shared_seed_batch(test_context, monkeypatch, tmp_path)
     violations: list[str] = []
-    for run, res in runs:
-        for e in run.prep_audit:
+    for audit, res in runs:
+        for e in audit:
             if e['action'] != 'ShopVisit(env)':
                 continue
             delta = e['post']['gold'] - e['pre']['gold']

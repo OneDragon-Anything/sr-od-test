@@ -8,12 +8,12 @@
   挂点代码零来源特判(effect-domain.md §7.2「新增效果 = 新增规格声明,
   实例清单结构与挂点代码零改动」——现役三条词缀规格均无时限/计数面,
   驱动轨用合成 spec 验证,先例 = test_cw_affix_spec_registry 播种轨);
-- 接线在场:效果账本挂点的生产调用点源扫锁——词缀两读链产出点
-  (CwScreenBriefing._read_and_advance 开局首读 / CwScreenPlaneIntel
-  .close_and_report 补采落点)调用共用登记体;选卡确认落地登记点
-  (CwScreenInvestStrategy._append_confirmed_strategy)调用板面重写桥
-  (apply_board_rewrite,设计 §5 全员晋升/人力重组两行的生产写端)。
-  挂点被拆/改名时红,指向重接线。
+- 挂点接线经生产链路(行为锁;原「调用点源扫」在场锁按纪律 8 退役):
+  简报开局首读(_read_and_advance)与位面详情补采落点(close_and_report)
+  真实驱动产出登记事实(账本条目在案);选卡确认落地登记点
+  (_append_confirmed_strategy)以注册表真条目驱动板面重写桥落成
+  BoardState 写端(清场+退款入金,设计 §5 全员晋升/人力重组两行的生产
+  写端)。挂点被拆/改名时账本零条目/板面原值,断言红,指向重接线。
 
 设计出处(持久索引):docs/develop/sr_od/application/currency_war/game_state/effect-domain.md
 §7.3(驱动事件映射·登记挂点纪律:best-effort 失败不阻塞读链)/§9.1(实例按
@@ -25,8 +25,9 @@ spec_key 唯一);BoardState 数据结构设计 §5.1(词缀效果辖域申报·�
 # 非 data 表——待 kernel 接线主题归并,禁按 data 域处置。
 from __future__ import annotations
 
-import inspect
 from types import SimpleNamespace
+
+import pytest
 
 from sr_od.application.currency_war.kernel.cw_affix_effects import (
     register_affixes_from_names,
@@ -36,6 +37,7 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     NodeKey,
     board_state_of,
     register_sig_actors,
+    synthesize_from_game_state,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     SOURCE_AFFIX,
@@ -48,8 +50,9 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     TriggerKind,
 )
 from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_briefing import (
-    CwScreenBriefing,
+from sr_od.application.currency_war.kernel.cw_state import (
+    BenchChar,
+    GameState,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
     CwScreenInvestStrategy,
@@ -167,26 +170,124 @@ def test_bump_key_drives_track_declared_affix_entry() -> None:
     assert inv.counter('词缀静默形', CounterKey.REFRESH) == 0
 
 
-# ==================== 3. 接线在场(源扫锁) ====================
+# ==================== 3. 挂点接线经生产链路(行为锁;原源码在场锁退役) ====================
 
-def test_read_chain_producers_call_shared_register_body() -> None:
-    """两读链产出点调用共用登记体:简报开局首读(_read_and_advance)与
-    位面详情补采落点(close_and_report)任一被拆除/改名 → 本锁红,指向
-    重接线(登记面缺位 = 词缀效果账本静默空转,改写面退回纯观察无对账输入)。"""
-    src_briefing = inspect.getsource(CwScreenBriefing._read_and_advance)
-    src_intel = inspect.getsource(CwScreenPlaneIntel.close_and_report)
-    assert 'register_affixes_from_names' in src_briefing, \
-        '简报读链登记挂点缺位(cw_screen_briefing._read_and_advance)'
-    assert 'register_affixes_from_names' in src_intel, \
-        '位面详情补采登记挂点缺位(cw_screen_plane_intel.close_and_report)'
+def test_briefing_read_chain_registers_hits_into_ledger(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """简报开局首读经生产链路把注册表命中词缀登记进效果账本(替代原
+    「调用点源扫」在场锁——纪律 8 肯定性在场禁档;失守语义 = 登记面缺位
+    致账本静默空转,现由真实驱动承载:删调用/改名 → 账本零条目即红)。
+    出处 = effect-domain.md §7.3(登记挂点纪律:best-effort 失败不阻塞
+    读链;登记体自身幂等由 §1 锁辖)。"""
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_briefing as bm,
+    )
+    session = StrategySession()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=session), raising=False)
+    op = bm.CwScreenBriefing(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
+    monkeypatch.setattr(op, 'round_by_find_and_click_area',
+                        lambda *a, **k: SimpleNamespace(is_success=True),
+                        raising=False)
+    monkeypatch.setattr(bm, 'read_affixes_with_pos',
+                        lambda ctx, scr: [('成长的烦恼',
+                                           SimpleNamespace(x=1, y=1))])
+    monkeypatch.setattr(bm, 'read_bosses', lambda ctx, scr: [])
+    monkeypatch.setattr(bm, 'read_briefing_enemy_difficulty',
+                        lambda ctx, scr: None)
+    monkeypatch.setattr(bm.CwScreenBriefing, '_collect_affix_effects',
+                        lambda self, aff: {})
+    rs = op._read_and_advance(op.last_screenshot)
+    assert session.briefing_affixes == ['成长的烦恼'], '读链直写 session 在环'
+    assert not rs.is_success and '重入观察裁决' in (rs.status or ''), \
+        f'「下一步」已发机械交回(主链保形):{rs!r}'
+    assert [e.spec.id
+            for e in board_state_of(session).effects.by_source(SOURCE_AFFIX)] \
+        == ['成长的烦恼'], '读链登记挂点缺位 = 账本零条目(静默空转)'
 
 
-def test_board_rewrite_bridge_wired_at_strategy_confirm_point() -> None:
-    """选卡确认落地登记点调用板面重写桥(apply_board_rewrite,设计 §5
-    全员晋升/人力重组两行的生产写端;与 register_strategy/burst 桥同点):
-    调用被拆除 → 桥回归零生产调用方,板面重写族申报了语义而写端静默丢
-    (出售面退款/清场不入记录,替换面失负写端留证),本锁红指向重接线。"""
-    src = inspect.getsource(CwScreenInvestStrategy._append_confirmed_strategy)
-    assert 'apply_board_rewrite' in src, \
-        '选卡登记点板面重写桥接线缺位' \
-        '(cw_screen_invest_strategy._append_confirmed_strategy)'
+def test_plane_intel_close_report_registers_hits_into_ledger(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """位面详情补采落点(close_and_report)经生产链路登记词缀入账本
+    (同上替代形态;补采产出点 = ctx 中转与登记挂点同段,接管局补采
+    重跑幂等由登记体辖)。出处 = effect-domain.md §7.3。"""
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    session = StrategySession()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=session), raising=False)
+    # ctx 中转槽 monkeypatch 预登记(生产在 close_and_report 内赋值,拆卸
+    # 时还原,纪律 1:共享 ctx 改动一律走 monkeypatch)
+    monkeypatch.setattr(test_context, 'cw_plane_bosses', [], raising=False)
+    monkeypatch.setattr(test_context, 'cw_plane_affixes', [], raising=False)
+    op = CwScreenPlaneIntel(test_context)
+    monkeypatch.setattr(op, 'screenshot', lambda: object(), raising=False)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda *a, **k: SimpleNamespace(is_success=False),
+                        raising=False)
+    op._affixes = ['成长的烦恼']
+    rs = op.close_and_report()
+    assert rs.is_success, f'补采收尾语义:{rs!r}'
+    assert test_context.cw_plane_affixes == ['成长的烦恼'], 'ctx 中转在环'
+    assert [e.spec.id
+            for e in board_state_of(session).effects.by_source(SOURCE_AFFIX)] \
+        == ['成长的烦恼'], '补采登记挂点缺位 = 账本零条目(静默空转)'
+
+
+def test_append_confirmed_strategy_applies_board_rewrite(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """选卡确认落地登记点把板面重写桥落成 BoardState 写端(替代原源码
+    在场锁):真实驱动 ``_append_confirmed_strategy('人力重组')``——
+    注册表真条目(payload.board_rewrite = sell_all,单一源 =
+    STRATEGY_EFFECTS)→ 出售面清场 + 退款按卖价公式入金;期望值从容器
+    观察值经 cw_state 单一源现算(纪律 9),删桥调用 → 板面保持原值即红。
+    出处 = BoardState 数据结构设计 §5 人力重组行 / effect-domain.md §6.3
+    (归属判据确定性分支)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_EFFECTS,
+        normalize_invest_name,
+    )
+    from sr_od.application.currency_war.kernel.cw_state import (
+        bench_char_cost,
+        sell_refund,
+    )
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    # 锁前提自检:注册表锚在位(区分「注册表值漂移」与「桥调用被拆」)
+    assert STRATEGY_EFFECTS.get(normalize_invest_name('人力重组')) is not None, \
+        '人力重组注册表锚漂移(换锚并同步本注释)'
+    session = StrategySession()
+    frame = GameState(plane=1, round_num=2)
+    frame.gold = 40
+    frame.bench = [BenchChar(slot=1, char_id='希儿', star=1)]
+    frame.deployed = [BenchChar(slot=1, char_id='景元', star=2,
+                                position_pref='front')]
+    # 合成进 session 惰性单例板(生产桥读写 = board_state_of(session),
+    # 独立 BoardState 对象不进桥视线)
+    bs = board_state_of(session)
+    synthesize_from_game_state(bs, frame, at_round='p1-r2')
+    # 期望退款从容器观察值经单一源现算(与桥内同式,预驱动读取)
+    sold = (list(bs.front_row.value) + list(bs.back_row.value)
+            + [s.unit for s in bs.bench.value.slots
+               if s.kind == 'unit' and s.unit is not None])
+    expected_refund = sum(sell_refund(int(u.star), bench_char_cost(u))
+                          for u in sold)
+    assert expected_refund > 0, '锁前提:合成板面非空(空场驱动无判别力)'
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=session), raising=False)
+    op = CwScreenInvestStrategy(test_context)
+    op._append_confirmed_strategy('人力重组')
+    assert list(bs.front_row.value) == [] and list(bs.back_row.value) == [], \
+        '出售面清场写端缺位(桥调用被拆 → 板面保持原值即本断言红)'
+    assert all(s.kind == 'empty' for s in bs.bench.value.slots), \
+        '备战席清场写端缺位(容量保留语义由载体锁辖)'
+    assert bs.gold.value == 40 + expected_refund, (
+        f'退款按卖价公式入金(确定性分支,禁零写入):'
+        f'{bs.gold.value} vs {40 + expected_refund}')
+    assert session.active_strategies == ['人力重组'], '持卡本体追加在环'

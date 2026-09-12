@@ -12,6 +12,7 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
 )
 from sr_od.application.currency_war.kernel.cw_comps import Comp
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+    _bonds_of,
     assemble_swap_plan_inputs,
     deploy_target_sets,
     select_deployments_reasoned,
@@ -42,7 +43,12 @@ def test_b2_recipe_faction_keys_complete() -> None:
     (装配单一源)把框架 drop 件挤出 tgt 桶:卡芙卡(星核猎手+持续伤害
     flow)/椒丘(狼狩+持续伤害 flow)注册表均无仙舟阵营,其围栏身份只系于
     持续伤害键(r70「框架牌不上场被卖」回归向量的真实形状)。键面补全后
-    框架并集语义由配方单一承载,deploy_target_sets 的显式 ∪ 退役。"""
+    框架并集语义由配方单一承载,deploy_target_sets 的显式 ∪ 退役。
+    与 m1p 行为锁(test_b2_m1p_assembly_keeps_drop_piece_fence_identity)
+    的同根因关系(防未来双维护):仙舟/持续伤害键缺席时两锁同红,行为锁
+    为该键的超集;本锁独立辖域 = 其余框架键(列车同行/量子同频族)——
+    它们无行为锁驱动腿,本锁是唯一守卫并点名缺键,故保留(登记门精确
+    且 <1ms,同根因审计已申报)。"""
     for fw in FRAMEWORKS:
         rc = recipe_comp(fw)
         assert rc is not None, f'{fw} 配方必须注册'
@@ -96,11 +102,13 @@ def test_b2_m1p_assembly_keeps_drop_piece_fence_identity() -> None:
     # ③终局特有键(夜之半神/燃血)不因终局 comp 混入双轨围栏视图
     assert not target_view_char_is(ctx, '飞霄'), \
         '终局特有键件在双轨期不应获围栏 tgt(方向混装回归)'
-    # ④fw_carry 零漂移:drop(卡芙卡/椒丘)与散件(艾丝妲)不入
+    # ④fw_carry 面(装配链零漂移):drop/散件不入 carry 名单。正向子集
+    # 断言(通用件四名 ⊆ ctx.fw_carry)已并
+    # test_deploy_target_sets_fw_carry_zero_drift(等值==+drop 负例,纪律
+    # 7 择一取超集;装配链 :1620 为 deploy_target_sets 直通,1③ 腿已钉
+    # 同一调用对象在环);本处保留装配层 drop 负例(装配面不得自行增员)。
     assert '卡芙卡' not in ctx.fw_carry and '椒丘' not in ctx.fw_carry
     assert '艾丝妲' not in ctx.fw_carry
-    assert {'藿藿', '丹恒·饮月', '爻光', '千冶·刃'} <= set(ctx.fw_carry), \
-        f'carry/通用件名单漂移,实得 {sorted(ctx.fw_carry)}'
 
 
 def test_b2_fence_deploy_drop_piece_not_scatter_held() -> None:
@@ -214,8 +222,11 @@ def test_obligation_piece_rest_to_tgt_reflip_ab() -> None:
                 flex_factions=['减益'])
     old_view = set(comp.factions)             # 旧口径(收口前围栏视图)
     new_view, _fw = deploy_target_sets(comp, '')
-    jq = get_char('椒丘')
-    bonds = set(jq.factions) | set(jq.flows)   # {狼狩, 持续伤害, 减益}
+    # 羁绊集 = 生产判定口单一源 _bonds_of(factions ∪ flows);禁手抄
+    # 判定式(生产改式本锁静默失真 = 第 10 条边缘违点,已改调单一源)
+    bonds = _bonds_of(_bc('椒丘'))            # {狼狩, 持续伤害, 减益}
+    assert bonds == {'狼狩', '持续伤害', '减益'}, \
+        f'锁前提:注册表羁绊集漂移 {sorted(bonds)}(换锚并同步本注释)'
     assert not (bonds & old_view), '锁前提:旧视图判椒丘 rest(病灶机制)'
     assert bonds & new_view, '新视图必须判 tgt(改判发生,义务件不再滞留)'
     assert (bonds & new_view) - (bonds & old_view) == {'减益'}, \

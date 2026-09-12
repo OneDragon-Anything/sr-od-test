@@ -837,7 +837,8 @@ class TestRenderGapRemediation:
 
 
 # ---------------------------------------------------------------------------
-# 4b. cw4_counters 判读可见性(W4 审计 N3:流删后新档案显影位渲染回落)
+# 4b. cw4_counters 判读可见性(语义出处 = retirement.md §3 定谳落码形态:
+# 流载体退役,局终级全键聚合改由局终域行载荷 MatchFinal.cw4_counters 携带)
 # ---------------------------------------------------------------------------
 
 
@@ -851,10 +852,14 @@ def _endgame_with_cw4(cw4: Any) -> dict[str, Any]:
 
 
 class TestCw4CountersCarrierVisibility:
-    """W4 流删后 cw4_counters 判读可见性:新档案顶层键已拆,渲染回落
-    endgame.match_final.final.cw4_counters 显影位(N3:新显影位此前在
-    tools 零读者 = 「局终快照→档案→复盘渲染」可见性断链);旧档案顶层
-    键渲染路径不变(存量只读)。"""
+    """cw4_counters 判读可见性(cw4 流退役后):新档案顶层键已拆,渲染
+    回落 endgame.match_final.final.cw4_counters 显影位。语义出处(持久
+    索引,纪律 7)= docs/develop/sr_od/application/currency_war/
+    game_state/retirement.md §3「定谳落码形态」:键收编归策略 state 容器,
+    流载体退役,局终级全键聚合改由局终域行载荷 ``MatchFinal.cw4_counters``
+    携带。锁红时该重推的语义 = 「局终快照→档案→复盘渲染」可见性链(新
+    显影位曾在判读工具零读者 = 断链事故形态);旧档案顶层键渲染路径不变
+    (存量只读,出处 = 同 §3 存量兼容口径)。"""
 
     def test_new_archive_renders_from_match_final(self, tmp_path: Path) -> None:
         """新档案:顶层无键、显影位有计数 → 分键统计照渲染,缺口清单
@@ -959,8 +964,10 @@ class TestEmptyArchiveGapSummary:
 
         assert '## 4. 本次未能渲染的字段' in md
         assert mod.MISSING in md
-        # cw4_counters 空 dict = 真实零计数,不是缺口(与 None 分型)
-        assert '局内真实零计数' in md
+        # 「局内真实零计数」分型断言已并
+        # TestCw4CountersCarrierVisibility.test_new_archive_zero_count_form_
+        # no_gap(纪律 7 同事实择一取超集:回落路径解析+零计数形态一并
+        # 覆盖);本处只辖零缺口形态下缺口节标题仍渲染(节形状恒在)。
         assert '`cw4_counters' not in md
 
     def test_full_archive_zero_false_gaps(self, tmp_path: Path) -> None:

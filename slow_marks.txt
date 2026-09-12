@@ -114,3 +114,8 @@ test_cw_infra_locks.py::test_telemetry_old_root_tombstone
 test_cw_early_stop.py::test_watch_holds_no_long_lived_journal_handle
 test_cw_early_stop.py::test_watch_reads_appended_rows_alert_path
 test_cw_runs_gap.py::test_shrunk_journal_triggers_tail_rebuild
+
+# T-72 形状锁收敛批补登(2026-09-12 三审 060228 T6 前轮漏带:封闭锁扫描
+# 首用例全树扫描付全树 tokenize+ast,call 3.04s+setup 1.96s≥2s;文件内
+# 「~2s」旧注同因过时。同桶先例 = T-93 掩蔽扫描族;快速层日常零陪跑)
+test_cw4_key_closure.py::test_literal_keys_within_registry

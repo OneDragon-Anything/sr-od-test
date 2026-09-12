@@ -12,14 +12,15 @@
   (T-51/T-63 交付;载体本体行为锁在 test_cw_effect_write_carriers.py,
   本文件不重复,只锁「生产面调用了它们」的接线形状与快照捕获行)。
 
-辖域 = 三挂点在场锁(cw_loop 备战 tick/cw_screen_battle_wait 结算覆盖带/
-cw_op_tools 消费回执)+ 选卡登记挂点「现役零装备写端条目」声明与实物一致
-锁 + full_state_snapshot equip_progress 捕获行为锁 + 工具回执分派手臂
-行为锁(特权赋予卡库存腿直写/冶金炉零写留证/异常不冒泡)。
+辖域 = 三挂点接线烟雾(容忍档唯一一条,提交面读法)+ 选卡登记挂点
+「现役零装备写端条目」依赖方向守卫 + full_state_snapshot equip_progress
+捕获行为锁 + 工具回执分派手臂行为锁(特权赋予卡库存腿直写/冶金炉零写
+留证/异常不冒泡)。
 """
 from __future__ import annotations
 
 import inspect
+from pathlib import Path
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_board_state import (
@@ -44,57 +45,66 @@ def _char_by_cost(cost: int) -> str:
     return names[0]
 
 
-# ==================== 1. 挂点在场锁(接线形状) ====================
+# ==================== 1. 挂点接线烟雾(纪律 8 容忍档唯一一条;提交面读法) ====================
+
+def _head_text(rel: str) -> str:
+    """主仓 HEAD 提交面文件文本(锚锁辖已提交树形状,工作树在飞批改动
+    不进视线——消并行窗口咬红;接线批改挂点随批同笔提交)。"""
+    import subprocess
+
+    root = Path(__file__).parents[5]
+    return subprocess.run(
+        ['git', '-C', str(root), 'show', f'HEAD:{rel}'],
+        capture_output=True, check=True).stdout.decode('utf-8')
 
 
-def test_node_boundary_settlement_wired_at_prep_tick() -> None:
-    """节点边界金结算接线在场:cw_loop 备战分支 tick 块内调用
-    settle_node_boundary_gold(T-63 §⑤.6 指定挂点 = 备战分支 advance_node
-    点);倍率/息修饰经 aggregate_economy 聚合链(载体 docstring 指派归
-    接线批的调用方契约);宝钻透传 0(T-51 逐件进度载体缺位申报维持);
-    保守闸(最近结算败局跳过,败补口径 ADR-0623 决策3 待定谳)在场。"""
-    from sr_od.application.currency_war.operations import cw_loop
-    src = inspect.getsource(cw_loop)
-    assert 'settle_node_boundary_gold' in src, '节点边界金结算接线被移除'
-    assert 'aggregate_economy' in src, \
-        '倍率/息修饰聚合链缺失(调用方契约 = aggregate_economy)'
-    assert 'diamond_gold=0' in src, \
-        '宝钻逐件进度载体缺位透传 0(申报面)缺失'
-    assert 'killed is True' in src, \
-        '败局保守闸缺失(败补口径待定谳,该窗须维持观察覆盖兜底)'
+def _head_method(rel: str, name: str) -> str:
+    """HEAD 文本中指定方法的源码切片(到下一个同级 def 为止)。"""
+    src = _head_text(rel)
+    start = src.index(f'def {name}(')
+    end = src.find('\n    def ', start + 1)
+    return src[start:end if end != -1 else len(src)]
 
 
-def test_copy_machine_settlement_wired_at_battle_settlement_band() -> None:
-    """拷贝仪参与计数接线在场:cw_screen_battle_wait 结算覆盖带调用
-    settle_copy_machine_participation,与 on_battle_end 挂点同分支同时序
-    (同一 _record_round_outcome 非 telemetry_only 段;独立 best-effort)。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_battle_wait,
-    )
-    rec_src = inspect.getsource(
-        cw_screen_battle_wait.CwScreenBattleWait._record_round_outcome)
+def test_equipment_wiring_hooks_present() -> None:
+    """三挂点接线存在性烟雾(纪律 8 容忍档:本文件唯一一条;四测试收敛
+    为此一条——表达式级字面 'diamond_gold=0'/'killed is True' 与聚合链
+    在场断言退役,见 docstring 末段承重映射)。提交面读法(git show HEAD)。
+    失守事故语义:挂点静默脱落 = 效果账本三载体断供(节点边界金/拷贝仪
+    参与/工具效果全零写入),红指向重接线:
+    - 节点边界金结算住 cw_loop 备战分支(底稿 = effect-domain.md §7.3,
+      指派批报告 reports/T-63-r1.md §⑤.6 为暂记出处,回填义务在案);
+    - 拷贝仪参与结算与 on_battle_end 同方法同段(cw_screen_battle_wait
+      ._record_round_outcome,同分支同时序契约);
+    - 工具执行写端分派住 cw_op_tools 消费回执点。
+    参数级契约承重映射:diamond_gold 透传/streak 语义由载体参数锁
+    (test_cw_effect_write_carriers 节点边界金族)分侧承重;倍率/息修饰
+    聚合链由 test_cw_economy/test_cw_cap_override_link 承重;败局保守闸
+    (killed 门)为 cw_loop 调用点参数——调用点住主循环体无廉价驱动面,
+    调用侧参数传递行为锁挂账,候 cw_loop 主循环 harness 落位后升级。"""
+    loop_src = _head_text(
+        'src/sr_od/application/currency_war/operations/cw_loop.py')
+    assert 'settle_node_boundary_gold' in loop_src, '节点边界金结算接线脱落'
+    rec_src = _head_method(
+        'src/sr_od/application/currency_war/operations/cw_screen/'
+        'cw_screen_battle_wait.py', '_record_round_outcome')
     assert 'on_battle_end' in rec_src, '既有效果账本结算挂点在位'
     assert 'settle_copy_machine_participation' in rec_src, \
         '拷贝仪参与结算接线被移除或落在结算带之外(同分支同时序契约)'
-
-
-def test_tool_execution_write_wired_at_drag_receipt() -> None:
-    """工具执行写端分派接线在场:cw_op_tools 消费确认(consumed)回执点
-    调用 apply_tool_execution_write(T-63 §⑤.6 指定挂点 = 工具拖拽回执
-    点);手臂方法在 CwOpTools 上,回执闭包内发起。"""
-    from sr_od.application.currency_war.operations.cw_op import cw_op_tools
-    mod_src = inspect.getsource(cw_op_tools)
-    assert 'apply_tool_execution_write' in mod_src, '工具效果写端分派被移除'
-    consume_src = inspect.getsource(cw_op_tools.CwOpTools.tools_consume)
-    assert '_apply_tool_effect_write' in consume_src, \
-        '回执点未发起分派(挂点须在 consumed 确认闭包内)'
+    tools_src = _head_text(
+        'src/sr_od/application/currency_war/operations/cw_op/cw_op_tools.py')
+    assert 'apply_tool_execution_write' in tools_src, '工具效果写端分派脱落'
 
 
 def test_strategy_card_hook_has_zero_equip_write_entries() -> None:
-    """选卡登记挂点「现役零装备写端条目」声明与实物一致:装备写端三载体
-    的生命周期映射事件 = 节点推进/工具拖拽回执/战斗结算,与选卡落地
-    (INSTANT 登记 + burst/板面重写两桥)零交集——三载体符号均不得落
-    选卡登记面;既有登记三件不因本批扰动。"""
+    """选卡登记挂点「现役零装备写端条目」依赖方向守卫(纪律 8 合法源码
+    扫描②):装备写端三载体的生命周期映射事件 = 节点推进/工具拖拽回执/
+    战斗结算,与选卡落地(INSTANT 登记 + burst/板面重写两桥)零交集——
+    三载体符号均不得落选卡登记面。原「既有登记三件在位」正向断言退役:
+    register_strategy/burst 与 test_cw_board_state
+    .test_effect_hooks_wired_at_production_sites 同事实(纪律 7 择一),
+    apply_board_rewrite 由 test_cw_affix_runtime_wiring
+    .test_append_confirmed_strategy_applies_board_rewrite 行为锁承重。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_invest_strategy,
     )
@@ -104,9 +114,6 @@ def test_strategy_card_hook_has_zero_equip_write_entries() -> None:
                    'settle_copy_machine_participation'):
         assert marker not in src, \
             f'{marker} 不应落在选卡登记挂点(生命周期映射无交集)'
-    for marker in ('register_strategy', 'apply_effect_burst_grant',
-                   'apply_board_rewrite'):
-        assert marker in src, f'既有选卡登记挂点件 {marker} 被误删'
 
 
 # ==================== 2. 快照捕获行为锁(equip_progress 侧栏) ====================

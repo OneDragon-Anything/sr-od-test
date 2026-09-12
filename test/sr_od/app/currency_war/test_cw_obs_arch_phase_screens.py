@@ -26,9 +26,11 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
 - **迁移结构锁**:五 op 是 CwScreenOpBase 子类 ∧ start 节点方法顶部装配点
   分流(投资两屏/简报/BOSS 简报 = ``handle``,战斗等待 = ``wait()``;两端口
   完整在场 → ``run_lifecycle``;缺省 None = 生产直连旧路径,§9.1 并存期)。
-- **重入裁决归属锁**(总纲契约 6,单一定谳):投资两屏/简报的「已发」旗标
-  裁决住分流判据**之前**两路径共享段(裁决出口写端随段共享);战斗等待/
-  BOSS 简报无裁决旗标,分流在出口判定之前。先例锚 = cw_screen_encounter.py
+- **重入裁决归属锁**(总纲契约 6,单一定谳;锁形 = 裁决×门组合行为锁
+  ``test_reentry_arbitration_flag_gate_combination``,原位序源形锁已按
+  纪律 8 退役):投资两屏/简报的「已发」旗标裁决住分流判据**之前**两路径
+  共享段(裁决出口写端随段共享);战斗等待/BOSS 简报无裁决旗标,分流在
+  出口判定之前(双向段迹行为锁承重)。先例锚 = cw_screen_encounter.py
   :241-251(裁决)/:252-258(分流)。红 = 裁决被转录进 observe 段/适配器①。
 - **新路径行为锁**(§9.1-F2 主门 (a)):四屏装两端口经节点方法走新路径,
   段迹形态 + 单轮动作/确认置位行为(模板同构 = 事件屏锁 :170-184 段迹、
@@ -140,39 +142,106 @@ def test_phase_ops_inherit_base() -> None:
             f'{cls_name} 未迁移到 CwScreenOpBase(T-8 五相位屏)')
 
 
-def test_dispatch_and_reentry_arbitration_source_form() -> None:
-    """装配点分流 + 重入裁决归属(总纲契约 6,源形态锁;先例锚 =
-    cw_screen_encounter.py :241-251/:252-258「两路径共用(分流前挂,先于
-    五段 lifecycle 的 observe 门)」):
-    - 投资环境/投资策略/简报:「已发」旗标裁决住 handle 内 ``run_lifecycle``
-      分流判据**之前**(裁决出口写端随共享段;禁转录进 observe 段/适配器①);
-    - 战斗等待:无裁决旗标,``wait()`` 内分流在出口判定(大厅终局锚)之前;
-    - BOSS 简报:无裁决旗标,分流在 handle 首行(横幅判定之前)。
-    红 = 裁决被移进五段 observe 形态/适配器,或分流判据缺失。"""
-    # 投资两屏/简报:裁决(旗标消费)先于分流(run_lifecycle)
-    for mod_name, cls_name, flag in (
-            ('cw_screen_invest_env', 'CwScreenInvestEnv', '_confirm_pending'),
-            ('cw_screen_invest_strategy', 'CwScreenInvestStrategy', '_confirm_pending'),
-            ('cw_screen_briefing', 'CwScreenBriefing', '_click_pending')):
-        src = inspect.getsource(getattr(_phase_mod(mod_name), cls_name).handle)
-        i_flag = src.index(flag)
-        i_disp = src.index('run_lifecycle')
-        assert i_flag < i_disp, (
-            f'{cls_name}: 重入裁决须住装配点分流之前(总纲契约 6 两路径共享段)')
-    # 战斗等待:分流先于出口判定(本屏无裁决旗标;出口判定旧路径原位保留,
-    # observe 段另持转录份——遭遇先例同式,门判定纯读零副作用)
-    bw_src = inspect.getsource(
-        _phase_mod('cw_screen_battle_wait').CwScreenBattleWait.wait)
-    i_disp = bw_src.index('run_lifecycle')
-    i_exit = bw_src.index('标识-创业指南')
-    assert i_disp < i_exit, (
-        '战斗等待分流须在 wait() 首行、出口判定之前(详设关键取舍 4)')
-    assert '_dispatch_frame' in bw_src, (
-        '战斗等待分流后分支链经共享方法承载(两路径共享零转录)')
-    bb_src = inspect.getsource(
-        _phase_mod('cw_screen_boss_briefing').CwScreenBossBriefing.handle)
-    assert bb_src.index('run_lifecycle') < bb_src.index('banner_hit'), (
-        'BOSS 简报分流在首行(无裁决旗标,横幅判定归 observe 段)')
+@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
+def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
+                                                   install: bool) -> None:
+    """重入裁决×门组合行为锁(总纲契约 6 的行为面;替代原 .index() 位序
+    源码锁——纪律 8 位序锁禁令,收敛手法 = closing_screens 先例
+    test_reentry_arbitration_flag_gate_combination):
+    - 投资环境/简报(裁决先行式两态):落地轮(锚已退 = overlay 已关)+
+      旗标在位 → 裁决出口 success + **本轮零段迹**(裁决住分流前共享段;
+      若被移进门后/五段 observe 段,段迹非空即红)+ 旗标保持已消费态不
+      复活;门命中轮(锚仍在 = 未落地)+ 旗标在位 → 裁决不误判完成,
+      确认链重发、旗标经确认体重置;
+    - 投资策略:门命中(入口锚在)+ 旗标在位 → 裁决不触发,在屏轮零
+      append(append 归裁决出口,出口面由
+      test_invest_strategy_active_strategies_appended_at_reentry_exit
+      承重——该锁的成功轮零段迹断言同时钉「裁决住分流前」);
+    - 战斗等待/BOSS 简报无裁决旗标,其「分流在首行/出口判定之前」语义
+      由既有双向行为锁段迹承重(分流判据被移到锚判定之后时,装端口轮
+      段迹偏离五段/仅 observe 形态即红):test_battle_wait_execute_
+      terminal_exit_new_path / test_boss_briefing_dispatch_both_ways,
+      与 closing_screens 先例的无旗标屏处置同式。
+    红 = 裁决出口语义漂移(门命中误判完成 / 落地轮旗标复活 / 裁决移位)。"""
+    if install:
+        install_dispatch_stub_ports(monkeypatch)
+    else:
+        _uninstall_ports(monkeypatch)
+    # 投资环境·落地轮:pending 在位 + 锚已退 → 裁决出口 success,零段迹
+    op_land, _m, _s = _make_env(test_context, monkeypatch, in_screen=False)
+    op_land._confirm_pending = True
+    rs_land = _run_node(test_context, op_land, op_land.handle)
+    assert rs_land.is_success and '重入观察裁决' in (rs_land.status or ''), (
+        f'install={install}:落地轮裁决出口 success 交回:{rs_land!r}')
+    assert op_land._confirm_pending is False, (
+        f'install={install}:裁决先行消费旗标,落地轮不残留待裁决旗标')
+    assert op_land._lifecycle_trace == [], (
+        f'install={install}:裁决在分流前共享段,本轮不经生命周期'
+        f'(零段迹):{op_land._lifecycle_trace}')
+    # 投资环境·门命中轮:pending 在位 + 锚仍在 → 不误判完成,确认链重发
+    events: list = []
+    op_hit, _m2, _s2 = _make_env(test_context, monkeypatch, in_screen=True,
+                                 opts=[('追击概念股', 460)], events=events)
+    op_hit._confirm_pending = True
+    rs_hit = _run_node(test_context, op_hit, op_hit.handle)
+    assert not rs_hit.is_success, (
+        f'install={install}:锚在 = 确认未落地,裁决不误判完成:{rs_hit!r}')
+    assert any(e[0] == 'card_click' for e in events), (
+        f'install={install}:裁决消费后正常流程重发(选卡点击在案):{events!r}')
+    assert op_hit._confirm_pending is True, (
+        f'install={install}:旗标经确认体重置(非裁决出口):{events!r}')
+    assert op_hit._lifecycle_trace == (
+        ['observe', 'reconcile', 'decide', 'act', 'on_outcome'] if install
+        else []), f'install={install}:门命中轮段迹:{op_hit._lifecycle_trace}'
+    # 投资策略·门命中轮:pending 在位 + 入口锚在 → 裁决不触发,在屏轮
+    # 零 append(append 只归裁决出口)
+    book = _FrameBook([object()])
+    book.options[id(book.frames[0])] = _opts_of(['赌神·银', '恢复生机',
+                                                 '气氛组'])
+    picks = [SimpleNamespace(option_idx=1, refresh=False, refresh_slots=(),
+                             reason='stub')]
+    op_st, _m3, session_st, clicks_st, _dc = _make_strategy(
+        test_context, monkeypatch, book, picks)
+    op_st._confirm_pending = '白银投资'
+    rs_st = _run_node(test_context, op_st, op_st.handle)
+    assert not rs_st.is_success and 'stub-confirm' in (rs_st.status or ''), (
+        f'install={install}:在屏轮确认链机械交回:{rs_st!r}')
+    assert len(clicks_st) == 2, (
+        f'install={install}:裁决不触发,选卡+确认重发恰两击:{clicks_st!r}')
+    assert op_st._confirm_pending == '恢复生机', (
+        f'install={install}:旗标经确认体重置:{clicks_st!r}')
+    assert session_st.active_strategies == [], (
+        f'install={install}:门命中轮裁决不触发,零 append(出口面归重入锁)')
+    # 简报·落地轮:pending 在位 + 标识已退 → 裁决出口 success,零段迹
+    # 且读链不发生(裁决在共享段,先于 observe 门与决策体)
+    op_b_land, session_b, calls_b = _make_briefing(
+        test_context, monkeypatch, mark_hit=False)
+    op_b_land._click_pending = True
+    rs_b = _run_node(test_context, op_b_land, op_b_land.handle)
+    assert rs_b.is_success and '已离开简报' in (rs_b.status or ''), (
+        f'install={install}:落地轮裁决出口 success 交回:{rs_b!r}')
+    assert op_b_land._click_pending is False, (
+        f'install={install}:裁决先行消费旗标,落地轮不残留')
+    assert op_b_land._lifecycle_trace == [], (
+        f'install={install}:裁决在分流前共享段,本轮零段迹:'
+        f'{op_b_land._lifecycle_trace}')
+    assert calls_b['affix_read'] == 0 and calls_b['boss_read'] == 0, (
+        f'install={install}:裁决出口先行,读链不发生:{calls_b!r}')
+    # 简报·门命中轮:pending 在位 + 标识仍在 → 「下一步」重发,旗标经
+    # 置位体重置
+    op_b_hit, _s_b2, _c_b2 = _make_briefing(test_context, monkeypatch,
+                                            mark_hit=True, affixes=[('火弱点',
+                                                                     None)],
+                                            bosses=['碎星王虫'], difficulty=5)
+    op_b_hit._click_pending = True
+    rs_bh = _run_node(test_context, op_b_hit, op_b_hit.handle)
+    assert not rs_bh.is_success and '重入观察裁决' in (rs_bh.status or ''), (
+        f'install={install}:标识在 = 点击未落地,重点非完成:{rs_bh!r}')
+    assert op_b_hit._click_pending is True, (
+        f'install={install}:旗标经「下一步」置位体重置')
+    assert op_b_hit._lifecycle_trace == (
+        ['observe', 'reconcile', 'decide', 'act', 'on_outcome'] if install
+        else []), f'install={install}:门命中轮段迹:{op_b_hit._lifecycle_trace}'
 
 
 # ==================== 投资环境:分流双向 + 写入流对拍 ====================
