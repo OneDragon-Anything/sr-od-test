@@ -16,7 +16,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.operations.cw_op import cw_shop_action_ops
@@ -61,8 +61,8 @@ def _clicked_pts(monkeypatch, card: ShopCard, frame_cards: list) -> tuple:
     pts = [SimpleNamespace(x=100 * (i + 1), y=165) for i in range(5)]
     env = ShopExecEnv(op=op, match=match, config=None, click_pts=pts,
                       level_btn=None, refresh_btn=None, ledger=ledger,
-                      state=board_state_bridge(CwWorkFrame(bench=[],
-                                                           shop=frame_cards)))
+                      state=board_state_bridge(CwSimFrame(bench=[],
+                                                         shop=frame_cards)))
     ok = BuyCardOp(action).execute(env)
     return clicks, pts, ledger, ok
 
