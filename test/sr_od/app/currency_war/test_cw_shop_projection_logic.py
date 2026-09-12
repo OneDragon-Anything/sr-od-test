@@ -1,8 +1,9 @@
 """T-97 W6波4 商店动作投影直写锁(设计件《商店黑板容器化方案》§4-M1/M5)。
 
-- M1 投影行为等价锁:``apply_shop_action_logic``(容器直写,合成升星腿
-  由执行侧既有 ``detect_merge_upgrade`` 整表直写承接——测试内按执行侧
-  同序复刻两写合计)vs ``cw_state.simulate``:同动作同输入逐域等价
+- M1 投影行为等价锁:生产两写合计(``apply_shop_action_logic`` 投影口
+  直写 + ``apply_shop_merge_leg`` 合成升星整表直写,买前快照基点;
+  T-163 起 simulate 前瞻投影已删,simulate 在本文件只作**等价性基准**)
+  vs ``cw_state.simulate``:同动作同输入逐域等价
   (gold/bench/shop payload/xp;含满栏多买 −k×单价)。波 5 sim 反转
   收敛单形态后本锁改钉单形态(设计件 M1 行申报)。
 - M5 投影公式语义源锁:登记面断言(直写域集封闭/executed 回执字段集/
@@ -23,8 +24,11 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     ShopActionExecuted,
     apply_shop_action_logic,
+    apply_shop_merge_leg,
+    bench_slots_of,
     bench_slots_to_legacy,
     board_state_of,
+    deployed_slots_of,
     detect_merge_upgrade,
     shop_cards_to_legacy,
     synthesize_from_game_state,
@@ -66,23 +70,20 @@ def _sig_of(container):
 
 
 def _project_with_merge_leg(bs, action, executed, st_frame):
-    """执行落地门两写合计的测试复刻:投影口直写 → 升星腿整表直写
-    (顺序与 cw_op_buy_cards.apply_action_outcome 一致:先投影口后
-    升星写,后写赢)。返回逐动作 simulate 帧(供逐域对拍)。"""
+    """执行落地门两写合计的测试复刻(T-163 后生产同形):买前快照三件组
+    → 投影口直写 → 升星腿整表直写(先投影口后升星写,后写赢)。
+    ``simulate(st_frame, action)`` 作等价性基准(kernel 单步应用器;非
+    策略决策消费)。"""
     sim = simulate(st_frame, action)
+    pre_bench = list(bench_slots_of(bs))
+    pre_dep = list(deployed_slots_of(bs))
+    pre_shop = (list(bs.shop.value.cards)
+                if bs.shop.value is not None else [])
     apply_shop_action_logic(bs, action, executed=executed,
                             produced_by=type(action).__name__, sig=_SIG)
-    if isinstance(action, BuyCard) and detect_merge_upgrade(st_frame, sim):
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            bench_view_of_slots,
-        )
-        bs.write_logic(bs.bench, bench_view_of_slots(sim.bench),
-                       produced_by='BuyCard',
-                       sig=ChannelSig(family='logic_action',
-                                      actor='CwOpBuyCards',
-                                      mode='compute',
-                                      group_id=f'act:CwOpBuyCards@'
-                                               f'{bs.write_seq + 1}'))
+    if isinstance(action, BuyCard):
+        apply_shop_merge_leg(bs, action, sig=_SIG, pre_bench=pre_bench,
+                             pre_deployed=pre_dep, pre_shop=pre_shop)
     return sim
 
 
@@ -173,6 +174,41 @@ class TestM1Equivalence:
             ShopActionExecuted(bought_count=k), st)
         assert k == 2
         _assert_domains_equal(bs, sim)
+
+    def test_merge_leg_alone_prestate_basis(self):
+        """升星腿直锁(T-163 快照基点回归):腿单写(不跑投影口)时,
+        买前快照基点 + shop 视图透传的合成结果对 simulate bench 逐槽等价
+        ——非满栏合成买与满栏合成买两形态;gold/payload 域零写(腿只辖
+        bench 整表)。基点误取买后容器会重复落位、shop 视图缺失会漏满栏
+        合成(失准形态申报见 apply_shop_merge_leg docstring)。"""
+        for title, st, act in (
+            ('非满栏合成买',
+             _state(gold=30, shop=[_card('希儿', cost=3)],
+                    bench=[_bc('希儿', star=1, slot=1),
+                           _bc('希儿', star=1, slot=2)]),
+             BuyCard(card=_card('希儿', cost=3))),
+            ('满栏合成买(k=2)',
+             _state(gold=60, shop=[_card('希儿', cost=3, x=100),
+                                   _card('希儿', cost=3, x=200)],
+                    bench=[_bc(f'c{i}', star=1, slot=i + 1)
+                           for i in range(8)] + [_bc('希儿', star=1, slot=9)]),
+             BuyCard(card=_card('希儿', cost=3))),
+        ):
+            sim = simulate(st, act)
+            bs = _bs_of(st)
+            seq0 = bs.write_seq
+            apply_shop_merge_leg(
+                bs, act, sig=_SIG,
+                pre_bench=list(bench_slots_of(bs)),
+                pre_deployed=list(deployed_slots_of(bs)),
+                pre_shop=(list(bs.shop.value.cards)
+                          if bs.shop.value is not None else []))
+            assert _sig_of(bench_slots_to_legacy(bs.bench.value)) \
+                == _sig_of(sim.bench), f'{title}: bench 与 simulate 失配'
+            assert bs.gold.value == st.gold, f'{title}: 腿禁写 gold 域'
+            assert len(bs.shop.value.cards) == len(st.shop), \
+                f'{title}: 腿禁写 payload 域'
+            assert bs.write_seq > seq0, f'{title}: 升星腿应整表直写'
 
     def test_sell_bench_refund(self):
         """卖备战席:bench −该牌 + gold +退款(sell_refund 锚)。"""
