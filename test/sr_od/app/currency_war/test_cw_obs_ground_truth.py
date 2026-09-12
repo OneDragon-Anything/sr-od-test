@@ -177,6 +177,87 @@ def cbl_slots(name: str):
     return cv_back_slots(_read(_SCREEN_DIR / name))
 
 
+# ===== 后排 9 格帧族 SIFT 身份真值(狸职狸狸系统单位;生产门识别) =====
+
+class TestBackRowSiftIdentityGroundTruth:
+    """后排 9 格帧族 SIFT 身份真值锚(真实正常帧 + 一次读取一次识别,测试纪律第 21 条)。
+
+    帧族 = 2026-09-12 实机 1-3 备战帧实拍(投资策略「狸职手续」204001 送
+    3 个穿 1 件简易装备的【狸狸】,浮窗名=狸职狸狸/后台;三只各带 1 件装备
+    恒占最右 7/8/9 格,与系统单位恒最右模型吻合),真值 = 看图人工核对。
+    识别参数走生产门(``_DEPLOYED_*``,read_deployed_chars 同参):center_gate
+    几何 + min15 双防下空槽全库零认领(main 帧 2-6 为空槽 faint 框,弱门
+    (缺省 10)下会出现 艾丝妲/黄泉/万敌 空槽假阳——生产门语义才可锁)。
+    狸职狸狸与蓝/红狸同造型(灰度 SIFT 近亲互撞),同规格模板(净艺术区+
+    掩码)落地后三帧 7/8/9 稳定命中;红时先查模板目录 raw/mask 是否成对。
+    """
+
+    @pytest.fixture(scope='class')
+    @classmethod
+    def _templates(cls):
+        from sr_od.application.currency_war.obs.currency_war_char_id import (
+            load_avatar_templates,
+        )
+        tpls = load_avatar_templates(
+            get_project_root() / 'assets' / 'template' / 'currency_war'
+            / 'portrait_plaza')
+        assert '狸职狸狸' in tpls, '狸职狸狸模板缺失(portrait_plaza)'
+        return tpls
+
+    @pytest.fixture(scope='class')
+    @classmethod
+    def _slots9(cls, test_context):
+        # rect 单一源 = screen_info(布局档「后排9槽-1..9」,cw_back_layout 同源)
+        from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
+        out = []
+        for i in range(1, 10):
+            rect = _area_rect(test_context, f'后排9槽-{i}', '货币战争-备战')
+            assert rect is not None, f'后排9槽-{i} area 缺'
+            out.append((i, rect))
+        return out
+
+    def _identify(self, templates, slots9, name: str) -> dict[int, str]:
+        from sr_od.application.currency_war.obs.cw_identity_obs import (
+            _DEPLOYED_CENTER_GATE,
+            _DEPLOYED_LIVE_ONLY,
+            _DEPLOYED_MIN_INLIERS,
+            identify_slots,
+        )
+        img = _read(_SCREEN_DIR / name)
+        got = identify_slots(img, templates, slots9, 'back',
+                             min_inliers=_DEPLOYED_MIN_INLIERS,
+                             live_only=_DEPLOYED_LIVE_ONLY,
+                             center_gate=_DEPLOYED_CENTER_GATE)
+        return {c.slot: c.char_id for c in got}
+
+    def test_nine_grid_first_frame_identity(self, _templates, _slots9):
+        # 首帧(平放静止态):1=千冶·刃 + 狸职狸狸三连 7/8/9;2-6 空槽零认领
+        assert self._identify(_templates, _slots9, '后排9槽-cap7lv4.png') == {
+            1: '千冶·刃', 7: '狸职狸狸', 8: '狸职狸狸', 9: '狸职狸狸'}
+
+    def test_nine_grid_hover_artifact_frame_identity(self, _templates, _slots9):
+        # -b 拖拽悬停态:3=黄泉/4=千冶·刃/5=艾丝妲(悬停抬升白框卡)/6=万敌
+        # + 狸职狸狸三连;1/2 空槽零认领
+        assert self._identify(_templates, _slots9, '后排9槽-cap7lv4-b.png') == {
+            3: '黄泉', 4: '千冶·刃', 5: '艾丝妲', 6: '万敌',
+            7: '狸职狸狸', 8: '狸职狸狸', 9: '狸职狸狸'}
+
+    def test_nine_grid_restored_clean_frame_identity(self, _templates, _slots9):
+        # -c 恢复态干净真值帧:1=艾丝妲/3=黄泉/4=千冶·刃/6=万敌 + 狸职狸狸
+        # 三连;2/5 空槽零认领
+        assert self._identify(_templates, _slots9, '后排9槽-cap7lv4-c.png') == {
+            1: '艾丝妲', 3: '黄泉', 4: '千冶·刃', 6: '万敌',
+            7: '狸职狸狸', 8: '狸职狸狸', 9: '狸职狸狸'}
+
+    def test_liuzhi_roster_registered(self):
+        # roster 注册锚:狸职狸狸 cost=0 系统单位。识别锁的 name 断言隐式
+        # 依赖 roster 命中(resolve_char_name 对非 roster 名返 None);本锚
+        # 把注册面显式化,红 = roster 条目被删/费用被改。
+        from sr_od.application.currency_war.data.cw_chars import get_char
+        ch = get_char('狸职狸狸')
+        assert ch is not None and ch.cost == 0
+
+
 # ===== 结算页 1 真帧(settlement;像素判据 + 区域 OCR,一图聚合) =====
 
 class TestSettlePage1GroundTruth:
