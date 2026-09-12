@@ -21,8 +21,11 @@ W7 增量(r5-migration-plan.md §2 W7):清点补遗流 board_state_archive
 
 锁面 =
 - 结构删净锁:9+1 流 writer 符号在 telemetry.recorder/match_archive 上
-  不存在;src 生产树无写入调用点/流文件名残留(防半删:writer 删了
-  调用点留着 = 死代码);
+  不存在;src 生产树代码域无写入调用点/流文件名残留(防半删:writer 删了
+  调用点留着 = 死代码)。判定域 = 代码 token:注释/docstring 里的文档性
+  提及豁免——「禁复用 X.jsonl」类负向声明是退役背书而非写入面引用,
+  逐行文本扫描会误红(决策行文件 docstring/注释实测误伤两处);真实
+  写入引用(字符串字面量/标识符)仍在域内,防复活语义不变;
 - 行为零产出锁:模拟流(run 生命周期 + BoardState 写入 + obs_conflict
   收编面 + run 收口)跑完,旧流文件零新增;journal 照常产出
   (write 行 + obs_event 行,run 归属一致);
@@ -31,8 +34,11 @@ W7 增量(r5-migration-plan.md §2 W7):清点补遗流 board_state_archive
 """
 from __future__ import annotations
 
+import ast
+import io
 import json
 import re
+import tokenize
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -144,6 +150,82 @@ _REFS_RETIRED_STREAM_RE: re.Pattern = re.compile(
 _SRC_ROOT: Path = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
                    / 'application' / 'currency_war')
 
+#: 孤儿构造器符号钉(防写面借尸复活;W7 形态)。
+_ORPHAN_SNAPSHOT_RE: re.Pattern = re.compile(r'archive_snapshot')
+
+
+def _docstring_spans(text: str) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+    """收集模块/类/函数 docstring 的位置跨度((起行,起列),(止行,止列))。
+
+    docstring 判定 = 定义体首语句为孤立字符串表达式(ast 标准语义),
+    嵌套定义逐层收集。语法解析失败的文件返回空表(扫描回退逐行全判,
+    宁误红不漏判)。
+    """
+    spans: list[tuple[tuple[int, int], tuple[int, int]]] = []
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return spans
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef,
+                             ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = getattr(node, 'body', [])
+            if (body and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)):
+                expr = body[0]
+                spans.append(((expr.lineno, expr.col_offset),
+                              (expr.end_lineno, expr.end_col_offset)))
+    return spans
+
+
+def _scan_code_violations(
+        text: str, *patterns: re.Pattern) -> list[tuple[int, str, int]]:
+    """在代码 token 域跑正则,返回 (行号, 命中行文本, 正则序号)。
+
+    判定域 = 代码 token(tokenize):注释与 docstring 里的文档性提及豁免
+    ——「禁复用 decisions.jsonl」类负向声明是退役背书而非写入面引用,
+    逐行文本扫描会误红(决策行文件 docstring:15/注释 :105 实测误伤);
+    代码位置的字符串字面量与标识符仍在域内,防复活语义不变。token 豁免面
+    = 注释/空白缩进/换行;STRING 仅当位置落于 docstring 跨度内才豁免
+    (表达式内字符串字面量 = 真实引用,照判)。单个 token 命中多正则时
+    只记最先一个(判定同为红,报告去重)。tokenize 失败的文件回退逐行
+    全判(含注释),宁误红不漏判。
+    """
+    lines = text.splitlines()
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    except (tokenize.TokenError, SyntaxError, IndentationError):
+        hits: list[tuple[int, str, int]] = []
+        for i, line in enumerate(lines, 1):
+            for pi, pat in enumerate(patterns):
+                if pat.search(line):
+                    hits.append((i, line.strip()[:120], pi))
+                    break
+        return hits
+    doc_spans = _docstring_spans(text)
+
+    def _in_docstring(tok: tokenize.TokenInfo) -> bool:
+        start = (tok.start[0], tok.start[1])
+        end = (tok.end[0], tok.end[1])
+        return any(s <= start and end <= e for s, e in doc_spans)
+
+    skip_types = frozenset({tokenize.COMMENT, tokenize.NL, tokenize.NEWLINE,
+                            tokenize.INDENT, tokenize.DEDENT,
+                            tokenize.ENCODING, tokenize.ENDMARKER})
+    hits = []
+    for tok in tokens:
+        if tok.type in skip_types:
+            continue
+        if tok.type == tokenize.STRING and _in_docstring(tok):
+            continue
+        for pi, pat in enumerate(patterns):
+            if pat.search(tok.string):
+                lineno = tok.start[0]
+                hits.append((lineno, lines[lineno - 1].strip()[:120], pi))
+                break
+    return hits
+
 
 @pytest.fixture()
 def _retire_isolation():
@@ -180,18 +262,23 @@ def test_retired_writer_symbols_absent_from_recorder() -> None:
 
 
 def test_no_retired_writer_call_sites_in_production_tree() -> None:
-    """src 生产树无退役 writer 调用点/旧流文件名残留(只读豁免面除外)。"""
+    """src 生产树代码域无退役 writer 调用点/旧流文件名残留(只读豁免面除外)。
+
+    判定域 = 代码 token(豁免注释/docstring 文档性提及,机制见
+    _scan_code_violations):「禁复用 decisions.jsonl」类负向声明是退役
+    背书,不是写入面引用(决策行文件 docstring/注释误伤实测修正);真实
+    写入引用仍判红,防复活语义不变。
+    """
     violations: list[str] = []
     for py in sorted(_SRC_ROOT.rglob('*.py')):
         rel = py.relative_to(_SRC_ROOT).as_posix()
         if rel in _READ_FACE_WHITELIST:
             continue
         text = py.read_text(encoding='utf-8')
-        for i, line in enumerate(text.splitlines(), 1):
-            if _CALL_SITE_RE.search(line):
-                violations.append(f'{rel}:{i} 调用残留: {line.strip()[:120]}')
-            elif _STREAM_NAME_RE.search(line):
-                violations.append(f'{rel}:{i} 流名残留: {line.strip()[:120]}')
+        for lineno, snippet, pi in _scan_code_violations(
+                text, _CALL_SITE_RE, _STREAM_NAME_RE):
+            kind = '调用残留' if pi == 0 else '流名残留'
+            violations.append(f'{rel}:{lineno} {kind}: {snippet}')
     assert violations == [], '旧流写入面残留(防半删):\n' + '\n'.join(violations)
 
 
@@ -210,10 +297,10 @@ def test_defect_refs_no_retired_stream_anchors() -> None:
         rel = py.relative_to(_SRC_ROOT).as_posix()
         if rel in _READ_FACE_WHITELIST:
             continue
-        for i, line in enumerate(
-                py.read_text(encoding='utf-8').splitlines(), 1):
-            if _REFS_RETIRED_STREAM_RE.search(line):
-                violations.append(f'{rel}:{i} refs 旧挂点: {line.strip()[:120]}')
+        text = py.read_text(encoding='utf-8')
+        for lineno, snippet, _pi in _scan_code_violations(
+                text, _REFS_RETIRED_STREAM_RE):
+            violations.append(f'{rel}:{lineno} refs 旧挂点: {snippet}')
     assert violations == [], '缺陷 refs 旧挂点残留:\n' + '\n'.join(violations)
 
 
@@ -230,12 +317,44 @@ def test_board_state_archive_writer_orphan_pinned() -> None:
         rel = py.relative_to(_SRC_ROOT).as_posix()
         if rel == 'kernel/cw_board_state.py':
             continue   # 本体居所(孤儿待删,禁触面)
-        for i, line in enumerate(
-                py.read_text(encoding='utf-8').splitlines(), 1):
-            if 'archive_snapshot' in line:
-                violations.append(f'{rel}:{i}: {line.strip()[:120]}')
+        text = py.read_text(encoding='utf-8')
+        for lineno, snippet, _pi in _scan_code_violations(
+                text, _ORPHAN_SNAPSHOT_RE):
+            violations.append(f'{rel}:{lineno}: {snippet}')
     assert violations == [], \
         'archive_snapshot 生产调用点残留(写点应已退役):\n' + '\n'.join(violations)
+
+
+def test_docstring_mention_exempted_but_code_reference_flagged() -> None:
+    """负向声明豁免的变异自检(双向):文档性提及不判红,代码域引用仍判红。
+
+    防两种回归:①豁免写宽(STRING 一刀切全豁)→ 真实写入引用漏判,
+    防复活失效;②豁免失效(回退逐行文本)→「禁复用 decisions.jsonl」
+    类负向声明误红复发(决策行文件 docstring:15/注释 :105 误伤形状)。
+    合成语料直扫 _scan_code_violations,不落生产树。
+    """
+    assert _scan_code_violations(
+        '# 禁复用 decisions.jsonl(历史档案以该名为键,双载体同名 = 读面歧义)',
+        _STREAM_NAME_RE) == [], '注释负向声明不得判红(T-93 误伤形状)'
+    assert _scan_code_violations(
+        '"""禁复用 decisions.jsonl(退役背书)。"""',
+        _STREAM_NAME_RE) == [], 'docstring 负向声明不得判红(T-93 误伤形状)'
+    assert _scan_code_violations(
+        '# 退役 writer 记录口:record_decision 已删',
+        _CALL_SITE_RE) == [], '注释里 writer 符号提及不得判红'
+    hits = _scan_code_violations("_legacy = 'decisions.jsonl'",
+                                 _STREAM_NAME_RE)
+    assert len(hits) == 1 and hits[0][0] == 1, \
+        f'代码域字符串字面量引用必须判红(防复活),实得 {hits}'
+    hits_call = _scan_code_violations('telemetry.record_decision(row)',
+                                      _CALL_SITE_RE)
+    assert len(hits_call) == 1, \
+        f'代码域 writer 调用必须判红(防复活),实得 {hits_call}'
+    hits_mixed = _scan_code_violations(
+        "_legacy = 'decisions.jsonl'  # 禁复用(见 retirement.md §2)",
+        _STREAM_NAME_RE)
+    assert len(hits_mixed) == 1, \
+        f'行尾注释不豁免同行代码引用(豁免按 token 不按行),实得 {hits_mixed}'
 
 
 # ============================================================ 行为零产出 + journal 照常锁
