@@ -290,9 +290,11 @@ def test_resolve_back_slots_feeds_container(monkeypatch: pytest.MonkeyPatch):
     """back_max 语义裁决·闸门二写端锁(值源定谳 = W5 方案稿 §2.3 + 机制
     正本 board_structure.md 量化公式节):resolve_back_slots 已知帧裁决值
     随写 BoardState.back_layout(挂三信号裁决单一源,零新增读)——
-    - 已建档裁决(7 = 佩佩局档)→ 容器 7、无 superset 标记(精确值);
-    - 域外裁决(9 → 8 格超集运行)→ 容器 8 + evidence 'superset'
-      (裁决值与坐标档分离:值=运行档 8,标记防超集近似被当精确值消费);
+    - 已建档裁决(7 = 佩佩局档;9 = 2026-09-12 交互实锤档)→ 容器直读、
+      无 superset 标记(精确值);
+    - 未建档新档(10,模拟未来档)→ 容器 8 + evidence 'superset'
+      (裁决值与坐标档分离残余面:值=运行档 8,标记防超集近似被当精确值
+      消费);
     - 未知态帧(公式弃权 ∧ CV 不可判)不写(宁缺勿造,容器保持上一已知值);
     - 防抖未过帧(公式弃权 ∧ CV 未建档读数 ∧ 三读不一致)不写——兜底
       运行档 8 禁以「无 superset 标记的精确值」形态入容器(落地审阻断1
@@ -313,27 +315,34 @@ def test_resolve_back_slots_feeds_container(monkeypatch: pytest.MonkeyPatch):
         cbl.resolve_back_slots(ctx, None, level=7, cap=8)
         assert bs.back_layout.value == 7 \
             and bs.back_layout.evidence is None, '已建档档直读落容器,无标记'
-        # 域外 9(cap9/lv6 → 公式 9)→ 运行值 8 格超集 + superset 标记
+        # 已建档 9 档(diff=3)→ 直读 9、无 superset 标记(建档后标记消失)
         cbl.resolve_back_slots(ctx, None, level=6, cap=9)
-        assert bs.back_layout.value == 8 \
-            and bs.back_layout.evidence == 'superset', \
-            '域外裁决记运行档 8 + superset(裁决值 9 不入坐标域)'
+        assert bs.back_layout.value == 9 \
+            and bs.back_layout.evidence is None, \
+            '9 档已交互建档,裁决直读无 superset 标记'
         # 未知态(公式弃权 ∧ CV 不可判):不写,保持上一已知值
         cbl.resolve_back_slots(ctx, None, level=6, cap=9, level_trusted=False)
-        assert bs.back_layout.value == 8 \
-            and bs.back_layout.evidence == 'superset', '未知态帧不写'
-        # 防抖未过(公式弃权 ∧ CV 读 9 未建档 ∧ W209h 三读不一致):
-        # n_raw=None → 兜底 8 禁入容器,保持上一已知值(上一态=8+superset,
-        # 值面同 8 不可分,判别位 = evidence——泄漏形态会把 superset 翻成
-        # 无标记精确值)
-        monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 9)
+        assert bs.back_layout.value == 9 \
+            and bs.back_layout.evidence is None, '未知态帧不写'
+        # 防抖未过(公式弃权 ∧ CV 读 10 未建档 ∧ W209h 三读不一致):
+        # n_raw=None → 兜底 8 禁入容器,保持上一已知值(9 无标记)——
+        # 泄漏形态会把 9 无标记精确值翻成 8
+        monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 10)
         monkeypatch.setattr(cbl, '_cv_confirm_readings',
-                            lambda ctx, screen, first, formula: [9, 8, 8])
+                            lambda ctx, screen, first, formula: [10, 8, 8])
+        cbl.resolve_back_slots(ctx, object(), level=6, cap=9,
+                               level_trusted=False)
+        assert bs.back_layout.value == 9 \
+            and bs.back_layout.evidence is None, \
+            '防抖未过帧不写:兜底 8 禁以精确值覆写容器'
+        # 未建档新档 10 防抖过(三读一致)→ 运行值 8 格超集 + superset 标记
+        monkeypatch.setattr(cbl, '_cv_confirm_readings',
+                            lambda ctx, screen, first, formula: [10, 10, 10])
         cbl.resolve_back_slots(ctx, object(), level=6, cap=9,
                                level_trusted=False)
         assert bs.back_layout.value == 8 \
             and bs.back_layout.evidence == 'superset', \
-            '防抖未过帧不写:兜底 8 禁以无标记精确值覆写容器'
+            '未建档裁决记运行档 8 + superset(裁决值 10 不入坐标域)'
         # 无 session:不写(上一已知值保持)
         cbl.resolve_back_slots(SimpleNamespace(), None, level=7, cap=8)
         assert bs.back_layout.value == 8, '无 session 形态不落容器'
@@ -438,10 +447,10 @@ def test_pepe_roster_and_template(templates):
 
 def test_layout_hook_no_stop_only_evidence(
         test_context, templates, _layout_fresh, monkeypatch, frame):
-    """降级锁(7 格建档后语义):n_raw 未建档(用 9 模拟未来新档,
+    """降级锁(9 格建档后语义):n_raw 未建档(用 10 模拟未来新档,
     CV 三读稳定)→ **不停机**,落 back_layout_unarchived_grid 留证(带公式/
-    CV/防抖序列),无 flag 文件;真实 7 格(diff==1)已建档 → 见
-    test_layout_hook_silent_on_archived。"""
+    CV/防抖序列),无 flag 文件;已建档档(6/7/8/9,9 = 2026-09-12 交互
+    实锤)钩子静默 → 见 test_layout_hook_silent_on_archived_nine。"""
     import json as _json
 
     import sr_od.application.currency_war.kernel.cw_obs_core as core
@@ -461,9 +470,9 @@ def test_layout_hook_no_stop_only_evidence(
     monkeypatch.setattr(ctx, 'run_context', _FakeRunCtx())
     monkeypatch.setattr(core, 'is_prep_like_frame', lambda c, s: True)
     monkeypatch.setattr(cio, '_session_level', lambda c: 8)
-    # 公式 8(lv8 cap10 diff2)且 CV 三读稳定 9(防抖过)→ n_raw=9 未建档
+    # 公式 8(lv8 cap10 diff2)且 CV 三读稳定 10(防抖过)→ n_raw=10 未建档
     monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, level=None: 10)
-    monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 9)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 10)
     monkeypatch.setattr(ctx, 'screenshot', lambda: frame, raising=False)
     out = cio.read_deployed_chars(ctx, frame, templates, level=8)
     assert isinstance(out, list) and out                    # 读板照常不抛
@@ -473,10 +482,39 @@ def test_layout_hook_no_stop_only_evidence(
     assert journal.exists(), '降级后必须留证'
     rec = _json.loads(journal.read_text(encoding='utf-8').strip().splitlines()[-1])
     assert rec['row'] == 'obs_event' and rec['field'] == 'back_layout_unarchived_grid'
-    assert rec['observed']['old'] == 9 and rec['observed']['cv_readings'] == [9, 9, 9]
+    assert rec['observed']['old'] == 10 and rec['observed']['cv_readings'] == [10, 10, 10]
     assert '不停机' in rec['verdict']                        # 如实声明画面可能推进
     assert not (journal.parents[1] / '.debug/temp/currency_war/back_layout_stop_hook.flag').exists(), \
         '停机 flag 机制已废弃不得回流'
+
+
+def test_layout_hook_silent_on_archived_nine(
+        test_context, templates, _layout_fresh, monkeypatch, frame):
+    """9 档已建档静默锁:CV 读 9(2026-09-12 交互实锤档,screen_info
+    后排9槽-1..9)不再触发 back_layout_unarchived_grid 留证(钩子判据 =
+    n_raw ∉ _LAYOUT_PREFIX,9 入表自动静默,与 7 格同语义;paddle mock
+    不可得 → 仲裁弃权走信号②退化梯,cv>formula 采 CV → n_raw=9)。"""
+    import json as _json
+
+    import sr_od.application.currency_war.kernel.cw_obs_core as core
+    import sr_od.application.currency_war.obs.cw_back_layout as cbl
+    import sr_od.application.currency_war.obs.cw_identity_obs as cio
+    import sr_od.application.currency_war.obs.cw_observation as cwo
+    ctx = test_context
+    monkeypatch.setattr(core, 'is_prep_like_frame', lambda c, s: True)
+    monkeypatch.setattr(cio, '_session_level', lambda c: 8)
+    # 公式 8(lv8 cap10 diff2)且 CV 稳定 9(已建档,防抖门不触发直采)
+    monkeypatch.setattr(cwo, 'read_deploy_cap', lambda c, s, level=None: 10)
+    monkeypatch.setattr(cwo, 'read_deployed_count', lambda c, s: None)
+    monkeypatch.setattr(cbl, 'cv_back_slots', lambda s: 9)
+    out = cio.read_deployed_chars(ctx, frame, templates, level=8)
+    assert isinstance(out, list) and out                    # 读板照常不抛
+    journal = _layout_fresh
+    if journal.exists():
+        for line in journal.read_text(encoding='utf-8').strip().splitlines():
+            rec = _json.loads(line)
+            assert rec.get('field') != 'back_layout_unarchived_grid', \
+                '9 已建档,不得再触发未建档留证'
 
 
 # ==================== test_star3_positions ====================

@@ -109,7 +109,12 @@ class TestSlotOccupiedGroundTruth:
 # ===== 后台格数 CV 通道(cw_back_layout;真帧 = screens/货币战争-备战 布局族) =====
 
 class TestCvBackSlotsGroundTruth:
-    """std 剖面三态探针真帧锚(5 代表帧覆盖全部分支 + 越界守卫)。"""
+    """std 剖面三态探针真帧锚(5 代表帧覆盖 6/7/8 分支 + 9 格 4 帧 + 越界守卫)。
+
+    9 格帧族 = 2026-09-12 交互实锤归档(拖拽逐位落位+槽 9 点击浮窗,
+    screen_info 后排9槽-1..9);判别通路 = 外缘 (357/1564) 双 full(9 格
+    独有几何)∧ 内缘 (464/1458) 任一 full(板面结构复核),标定分布见
+    ``cw_back_layout._CV_OUTER_XS`` 注。"""
 
     def test_six_grid_frame(self):
         # run26 崩坏现场(6 格;W292 事故响应批真值帧,事故形态直接回归锚)
@@ -130,6 +135,34 @@ class TestCvBackSlotsGroundTruth:
     def test_eight_grid_empty_slot_still_full(self):
         # P3 局(cap11):左 1 空槽暗框 = 整格存在证据(占用态门消解旧不可判带)→ 8
         assert cbl_slots('后排8槽-P3局.webp') == 8
+
+    def test_nine_grid_first_frame(self):
+        # 9 格首帧(平放静止态,标定基准帧):外缘双 full ∧ 内缘 (full,full)
+        # → 9(旧判别饱和于 8——端探针与 8 格同签名;9 判别序先于 8 消解)
+        assert cbl_slots('后排9槽-cap7lv4.png') == 9
+
+    def test_nine_grid_hover_artifact_frame(self):
+        # -b 拖拽悬停态(伪影干扰样本:艾丝妲@5 悬停抬升渲染,像素级匹配
+        # 断言禁用本帧):槽 1 空置 + 内缘左端落擦线不可判带 (None,full)
+        # → 复核靠右端 full 判 9;外缘 357 整窗 12.2 紧贴弃权带上沿仍过
+        # (空左格形态的实拍边界,余量薄的鲁棒性实证)
+        assert cbl_slots('后排9槽-cap7lv4-b.png') == 9
+
+    def test_nine_grid_restored_clean_frame(self):
+        # -c 恢复态干净真值帧(光标停靠行间,全排平放;像素级匹配断言的
+        # 替身帧):内缘 (slice,full) → 9
+        assert cbl_slots('后排9槽-cap7lv4-c.png') == 9
+
+    def test_nine_grid_overlay_frame(self):
+        # 浮窗遮挡帧(overlay 干扰:浮窗覆盖槽 8/9 区):外缘右端对称 full
+        # (w=19.4)+ 内缘右端 full → 9(overlay 下判别器不塌)
+        assert cbl_slots('后排9槽-cap7lv4-浮窗遮挡.png') == 9
+
+    def test_shop_open_outer_false_positive_stays_none(self):
+        # 开商店族假阳负例:外缘双 full(右侧商店面板扩展进窗)但内缘全无
+        # full((None,None))→ 弃权 None;锚位 std 15.5/23.1 过锚位门拦不住
+        # 它,内缘复核门是唯一防线(标定:开商店族 10 帧同形态)
+        assert cbl_slots('shop_open.png') is None
 
     def test_non_1080p_frame_undeterminable(self):
         # 非 1080p 小帧:越界守卫 → None(不可判退公式,不猜)

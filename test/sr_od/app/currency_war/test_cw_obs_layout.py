@@ -64,7 +64,7 @@ class TestCapDiffFormula:
 
 
 class TestSelectBackLayoutDecisionTable:
-    """双通道对账裁决序:一致采公式/冲突不对称/CV 未建档防抖/9→8 超集。"""
+    """双通道对账裁决序:一致采公式/冲突不对称/CV 未建档防抖/9 档直读。"""
 
     def test_agree_takes_formula(self, monkeypatch):
         monkeypatch.setattr(cbl, 'cv_back_slots', lambda screen: 6)
@@ -89,22 +89,24 @@ class TestSelectBackLayoutDecisionTable:
         assert r['n'] == 8
 
     def test_unarchived_cv_reading_debounced_to_formula(self, monkeypatch):
-        # CV 读出未建档档(9 ∉ {6,7,8}):三次一致才采;ctx=None 重读不可得
-        # → 瞬态自愈退公式 + 重读序列留证(cv_readings)
-        monkeypatch.setattr(cbl, 'cv_back_slots', lambda screen: 9)
+        # CV 读出未建档档(10 ∉ {6,7,8,9},模拟未来新档占位;9 已交互建档
+        # 后不再是未建档值):三次一致才采;ctx=None 重读不可得 → 瞬态自愈
+        # 退公式 + 重读序列留证(cv_readings)
+        monkeypatch.setattr(cbl, 'cv_back_slots', lambda screen: 10)
         r = cbl.resolve_back_slots(None, _SCREEN, level=5, cap=5)
-        assert r['cv_readings'] == [9, None, None]
+        assert r['cv_readings'] == [10, None, None]
         assert r['cv_n'] is None
         assert r['n'] == 6   # 退公式值
 
-    def test_ruling_value_9_runs_as_8_superset(self):
-        # 裁决值与坐标档分离:diff=3 → 裁决 9(真实档),坐标未建档 → 运行 8 格
-        # 超集(扩展带读全不丢系统单位;拖到不存在格被游戏拒 = 廉价失败方向)
+    def test_ruling_value_9_reads_archived(self):
+        # 9 档已交互建档(2026-09-12 实机实锤:拖拽逐位落位+槽 9 点击浮窗,
+        # screen_info 后排9槽-1..9):diff=3 → 裁决 9 直读 9,不再退 8 格
+        # 超集(superset 标记随建档消失;残余分离面 = 未来新档 >9)
         r = cbl.resolve_back_slots(None, None, level=5, cap=8)
         assert r['formula_raw'] == 9
         assert r['n_raw'] == 9
-        assert r['n'] == 8
-        assert r['prefix'] == cbl._LAYOUT_PREFIX[8]
+        assert r['n'] == 9
+        assert r['prefix'] == cbl._LAYOUT_PREFIX[9]
 
     def test_screen_none_cv_abstains_formula_baselined(self):
         # CV 不可判(screen None)→ 公式值兜底(diff=0 → 6 档基线)
@@ -151,9 +153,10 @@ class TestLayoutRegistry:
     """布局档登记面:screen_info 建档变更后同步登记的清点门(被动更新型)。"""
 
     def test_archived_tiers(self):
-        # 在册档 = {6,7,8}:9 档坐标未交互建档(单帧剖面/无实锤不登记,
-        # 勿重蹈 ADR-0281 幻影档覆辙);新增档须先交互实锤再入表
-        assert set(cbl._layout_prefixes().keys()) == {6, 7, 8}
+        # 在册档 = {6,7,8,9}:9 档 2026-09-12 交互实锤建档(screen_info
+        # 后排9槽-1..9,几何 = 居中重排族带 321..1599);新增档须先交互
+        # 实锤再入表(10/11 旧幻影禁再登记,ADR-0281)
+        assert set(cbl._layout_prefixes().keys()) == {6, 7, 8, 9}
 
     def test_fallback_baseline_six_slots(self):
         # 无 ctx/无档兜底:静态 6 槽基线(与 screen_info 基线一致)
