@@ -409,7 +409,7 @@ class TestTokenWritePointLiveness:
         决策首帧桩化为 RefreshShop(终结动作:写点在终结 return 前,token
         保留可断言;真实 CloseShop 终结的序列会被下一帧入口读清=协议
         行为,不适用本断言面)。"""
-        from sr_od.application.currency_war.kernel import cw_state
+        from sr_od.application.currency_war.kernel import cw_vocab as cw_state
         from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )

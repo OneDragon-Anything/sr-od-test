@@ -23,7 +23,7 @@ _BRIDGE_REGISTERED: dict[str, str] = {
     'kernel/cw_game_state.py': '机制本体(函数定义+退役 docstring)',
     # 正名改居过渡壳(W8 段3):壳内 re-export 含桥符号字样,随壳删除
     # (寿命=在飞批落库 sweep;登记防「壳=回流」误判)。
-    'kernel/cw_board_state.py': '旧路径转发壳(候裁7 改居过渡;非调用)',
+    'kernel/cw_game_state.py': '旧路径转发壳(候裁7 改居过渡;非调用)',
     # 波 5b 消点后仍活调用:
     'kernel/cw_economy.py': '活调用·标量投影缝无 session(结构性豁免 '
                            'ADR-0598),退役挂 session 通道批/T-7',

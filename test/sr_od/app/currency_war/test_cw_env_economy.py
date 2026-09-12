@@ -275,7 +275,7 @@ def test_e1_bc_longterm_savings_formula(
     monkeypatch.setitem(ENV_ECONOMY_ESTIMATES, 'refresh_paid_after30_e', _e)
     _th, _refund = ENV_ECONOMY['长线利好'].gold_after_refreshes
     _new_cost = ENV_ECONOMY['长线利好'].refresh_cost_after[1]
-    from sr_od.application.currency_war.kernel.cw_state import REFRESH_COST_BASE
+    from sr_od.application.currency_war.kernel.cw_vocab import REFRESH_COST_BASE
     _save = REFRESH_COST_BASE - _new_cost
     assert _save == 1
     _v, _ok = env_economy_value('长线利好', _bs())

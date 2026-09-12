@@ -289,7 +289,7 @@ def test_slot8_all_positions_identified(templates):
 def test_resolve_back_slots_feeds_container(monkeypatch: pytest.MonkeyPatch):
     """back_max 语义裁决·闸门二写端锁(值源定谳 = W5 方案稿 §2.3 + 机制
     正本 board_structure.md 量化公式节):resolve_back_slots 已知帧裁决值
-    随写 BoardState.back_layout(挂三信号裁决单一源,零新增读)——
+    随写 GameState.back_layout(挂三信号裁决单一源,零新增读)——
     - 已建档裁决(7 = 佩佩局档;9 = 2026-09-12 交互实锤档)→ 容器直读、
       无 superset 标记(精确值);
     - 未建档新档(10,模拟未来档)→ 容器 8 + evidence 'superset'
@@ -303,7 +303,7 @@ def test_resolve_back_slots_feeds_container(monkeypatch: pytest.MonkeyPatch):
     from types import SimpleNamespace
 
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_of,
     )
     cbl.reset_layout_unknown_state()
@@ -360,7 +360,7 @@ def _layout_fresh(monkeypatch, tmp_path):
     .debug/)。原独立证据文件桩 ``_CONFLICT_JOURNAL`` 已随删除波 1 退役
     (cw_observe 写端收编,入库 3d4461438),证据行现归宿 = 统一 state
     账本 obs_event 行型——装配 sink + run_id 供给槽(局外行账本拒写),
-    并注入 BoardState 供给 provider(该槽缺省关,不注入则证据行不落,
+    并注入 GameState 供给 provider(该槽缺省关,不注入则证据行不落,
     与生产「无 sink 拒写」同语义)。
     yield 出账本 jsonl 路径,留证断言直接读它(obs_event 行形状:field/
     verdict 顶层,old/new/ctx 附加键内嵌 ``observed``)。"""
@@ -370,7 +370,7 @@ def _layout_fresh(monkeypatch, tmp_path):
         cw_state_journal,
         cw_telemetry_exit,
     )
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_of,
     )
     cbl.reset_layout_unknown_state()
@@ -432,7 +432,7 @@ def test_pepe_roster_and_template(templates):
     from sr_od.application.currency_war.data.cw_chars import get_char
     ch = get_char('佩佩')
     assert ch is not None and ch.cost == 0
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
     from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
         exclude_system_units,
     )

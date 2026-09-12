@@ -23,7 +23,7 @@ from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwWorkFrame,
-    _bench_char_cost,
+    bench_char_cost,
     sell_refund,
     xp_clicks_to_level,
 )
@@ -110,9 +110,9 @@ def test_sell_refund_cost_based() -> None:
 
 
 def test_bench_char_cost_unknown_defaults_3() -> None:
-    """_bench_char_cost:未知 char_id → 默认中费 3(sell_refund 兜底,防身份未识别时崩)。"""
-    assert _bench_char_cost(BenchChar(slot=0, char_id="", star=1)) == 3
-    assert _bench_char_cost(BenchChar(slot=0, char_id="不存在的角色xyz", star=1)) == 3
+    """bench_char_cost:未知 char_id → 默认中费 3(sell_refund 兜底,防身份未识别时崩)。"""
+    assert bench_char_cost(BenchChar(slot=0, char_id="", star=1)) == 3
+    assert bench_char_cost(BenchChar(slot=0, char_id="不存在的角色xyz", star=1)) == 3
 
 
 # ===== ADR-0129 购买经验模型(单击 +4 XP,攒门槛升级,溢出结转) =====

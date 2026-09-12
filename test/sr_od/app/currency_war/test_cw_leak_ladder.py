@@ -228,7 +228,7 @@ class TestL2L5LFM6Compression:
         (bench 硬闸;框架 simulate 纯投影推进)。"""
         monkeypatch.setattr(mandate, 'dominance_buy_eligible',
                             lambda *a, **kw: False)
-        from sr_od.application.currency_war.kernel import cw_state
+        from sr_od.application.currency_war.kernel import cw_vocab as cw_state
         km = _km()
         cost = _tier_cost()
         cand = _off_name(exclude=tuple(km), min_cost=cost)

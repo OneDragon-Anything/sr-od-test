@@ -1,6 +1,7 @@
 """统一 state 写入纪律锁(D1 旁路/效果域直摸)+ 恢复局旗标 live 接线(D2)。
 
-- **D1(设计 v3.1/v3.2 §3.2.4 硬约束 1,M1 门项)**:①BoardState Field 字段
+- **D1(设计 v3.1/v3.2 §3.2.4 硬约束 1,M1 门项)**:①GameState(正名前
+  暂名 BoardState)Field 字段
   禁绕 API 直写(grep 子串守卫锁——容器外零属性赋值;帧替换语义的结构前提);
   ②效果域写纪律 = inventory 方法域(禁直摸 ``.entries`` 内部结构,效果变更
   只经 register_strategy/bump_key/consume_use/advance_node 等方法)。

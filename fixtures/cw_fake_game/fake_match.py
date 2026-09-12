@@ -41,7 +41,7 @@ from typing import Any
 
 from fixtures.cw_fake_game import rules
 from sr_od.application.currency_war.cw_game_ports import ExecResult
-from sr_od.application.currency_war.kernel import cw_state
+from sr_od.application.currency_war.kernel import cw_vocab as cw_state
 from sr_od.application.currency_war.kernel.cw_battle_calib import (
     _deployable_depth,
     _settle_rung,
@@ -566,7 +566,7 @@ class FakeMatch:
         退役/兼容控制流动作为显式拒绝。
         """
         from sr_od.application.currency_war.kernel import cw_prep_actions as pa
-        from sr_od.application.currency_war.kernel import cw_state
+        from sr_od.application.currency_war.kernel import cw_vocab as cw_state
 
         if isinstance(action, pa.SellBench):
             return self.apply(cw_state.SellBench(bench_idx=action.slot - 1))
