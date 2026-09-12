@@ -458,7 +458,7 @@ def test_button_real_fixtures(real_ocr_ctx: SrTestContext) -> None:
         pytest.fail(
             '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
             '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
-            '(dd-029/T-13 形态),请再生 merged 并随批提交')
+            '(改名批漏再生形态),请再生 merged 并随批提交')
 
     from one_dragon.utils import cv2_utils
 
@@ -497,7 +497,7 @@ def test_free_anchor_three_state_boundary(real_ocr_ctx: SrTestContext) -> None:
         pytest.fail(
             '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
             '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
-            '(dd-029/T-13 形态),请再生 merged 并随批提交')
+            '(改名批漏再生形态),请再生 merged 并随批提交')
 
     from one_dragon.utils import cv2_utils
 
@@ -526,7 +526,7 @@ def test_price_reader_free_frame_count_is_not_price_via_gate(
         pytest.fail(
             '标识-免费刷新 area 未入运行时 screen_info(merged)——配置缺陷'
             '非环境缺失:分文件已建而 merged 缺 = 漏再生/漏随批提交'
-            '(dd-029/T-13 形态),请再生 merged 并随批提交')
+            '(改名批漏再生形态),请再生 merged 并随批提交')
     from one_dragon.utils import cv2_utils
     from sr_od.application.currency_war.obs.cw_shop_refresh_obs import (
         read_shop_refresh_price,

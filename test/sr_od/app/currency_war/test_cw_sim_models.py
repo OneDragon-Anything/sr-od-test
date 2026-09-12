@@ -1115,7 +1115,7 @@ _DELIVERY_LOSS_HIST: dict[str, dict[int, int]] = {
     'boss': {3: 1, 11: 2, 12: 1, 13: 2, 14: 4, 30: 1, 32: 5, 34: 11,
              36: 8},
 }
-# _LOSS_FIT 重拟合交付口径(dd-012:对局档案真值语料
+# _LOSS_FIT 重拟合交付口径(对局档案真值语料
 # tools/cw/proofs/p15/ corpus_battle_loss.jsonl 逐行最小二乘,
 # P1 非删失败局行 battle n=82 / encounter n=66;原值系已灭且污染
 # 的 w324 语料回归值,锁改理由 = 拟合依据语料不得再为已灭污染源)
@@ -1155,7 +1155,7 @@ def test_prior_share_hard_caps() -> None:
 
 def test_loss_mean_match_and_floor() -> None:
     """败态:battle 直方采样 + rung 均值匹配取整;hp 地板 = max(1,·)。"""
-    # rung0:13 + (11.48 − 0 − 10.45) = 14.03 → 14(dd-012 重拟合口径)
+    # rung0:13 + (11.48 − 0 − 10.45) = 14.03 → 14(重拟合口径)
     assert cb.sample_battle_delta(
         'battle', 0, 100, _ScriptRng(0.99, 13)) == -14
     # rung3:13 + (11.48 − 12.63 − 10.45) = 1.4 → 1(取整后落伤害地板;
@@ -1277,7 +1277,7 @@ def test_coarse_calib_version_disclosed_in_ledger_manifest(
     DESIGN §验证:局终指纹核对锚——防止「结构改了、披露没跟上」的
     跨版本对比污染;回归批脚本头部按本常量断言版本号。
     2→3 = F6 语料治理(P1 败局直方剔伪影档,pooled_mean 重算);
-    3→4 = dd-012 重拟合(P1 _LOSS_FIT 改对局档案真值语料回归值)。
+    3→4 = 重拟合(P1 _LOSS_FIT 改对局档案真值语料回归值)。
     """
     assert cb.COARSE_CALIB_VERSION == 4
     r = cw_sim.simulate_p1(1, pool='snapshot')

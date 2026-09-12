@@ -109,7 +109,7 @@ def _make_director(monkeypatch, collapse_open):
     monkeypatch.setattr(cfg_mod, 'CurrencyWarConfig', lambda idx: SimpleNamespace())
     match = SimpleNamespace(
         strategy=SimpleNamespace(
-            # W971 P2 黑板接口(dd-014)+序列契约 v1(dd-020):
+            # W971 P2 黑板接口+序列契约 v1:
             # 生产环按 list[PrepAction] 消费(长度 1)
             decide_prep_screen=lambda session, config: [StartBattle()]),
         session=SimpleNamespace(defer_count=0))

@@ -7,9 +7,9 @@ import inspect as _r336_batch4_locks_inspect
 
 
 def test_shop_open_collapse_wait_dd011() -> None:
-    """否定性回流锁(DD-011 裁决背书):商店路径「测量驱动稳定门」与
+    """否定性回流锁:商店路径「测量驱动稳定门」与
     「旧轮询 _legacy_poll」均已退役,不得无意回流——两者皆有事故/裁决史
-    (gate = 测量驱动等待被 DD-011 整体退役;_legacy_poll = 40min 空转死循环)。
+    (gate = 测量驱动等待已整体退役;_legacy_poll = 40min 空转死循环)。
     W970 批 A 原子化后商店路径 = 编排壳 buy + 波循环 run_buy_waves +
     开/关店原子核心,四落点同锁。
     注:不设肯定性断言(常量名在场类)——那类锁只是实现的影子,无独立语义。"""
@@ -29,7 +29,7 @@ def test_shop_open_collapse_wait_dd011() -> None:
         assert 'def _legacy_poll' not in src, \
             '旧轮询 _legacy_poll 已删(r347 40min 空转事故),不得回流'
         assert 'wait_stable_frame' not in src, \
-            '商店路径 gate 已按 DD-011 全退役(测量驱动等待),不得回流'
+            '商店路径 gate 已全退役(测量驱动等待),不得回流'
 
 
 def test_shop_currency_war_config_module_level() -> None:

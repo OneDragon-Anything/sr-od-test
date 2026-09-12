@@ -7,7 +7,7 @@
 - 真实 OCR 层:fixtures_settle/ 下 5 张实机帧(已入仓,读真值锚 = 帧本体;
   原始样本面为主仓 .debug 易失产物,判读结论以入仓帧为准),走
   test_context 的真 OCR 引擎锁读数真值。读点链语义出处 =
-  docs/develop/sr_od/application/currency_war/decisions/dd-006-settle-read-chain-boss-win-form.md。
+  本文件读点链各锁与代码注释(语义就地自足)。
 """
 from types import SimpleNamespace
 
@@ -173,7 +173,7 @@ def test_progress_fill_ratio_real_frames(test_context, test_image_dir) -> None:
         assert fill2 is None or 0 < fill2 <= 1.0
 
 
-# ===== boss 胜局读点链(DD-006):页1 判别 + 填充率页态门 =====
+# ===== boss 胜局读点链:页1 判别 + 填充率页态门 =====
 
 def test_boss_win_page1_positive_progress() -> None:
     """挑战进度 +N(节点胜利)→ boss 胜局页1 判 True(实跑 token 形态)。"""
@@ -188,7 +188,7 @@ def test_boss_win_page1_defeat_and_unreadable() -> None:
 
 
 def test_round_outcome_fill_only_on_page1() -> None:
-    """填充率页态门(DD-006):页2 帧(无「点击空白加速」)不读条——同矩形
+    """填充率页态门:页2 帧(无「点击空白加速」)不读条——同矩形
     罩 HP 心形会恒定读假值(0.392 三局同值实证);页1 帧才读。"""
     img = np.zeros((1080, 1920, 3), np.uint8)
     img[424:440, 710:1010] = (200, 40, 40)   # 进度条 60% 红填充
@@ -206,7 +206,7 @@ def test_round_outcome_fill_only_on_page1() -> None:
 
 
 def test_progress_sign_three_states() -> None:
-    """进度符号三态(DD-006 置闩门单一源):pos/neg/None 可分——None=OCR 漏读,
+    """进度符号三态(置闩门单一源):pos/neg/None 可分——None=OCR 漏读,
     两种形态页都可能漏,不得当败局真值置闩(防 boss 胜局 run 判废)。"""
     assert settle_page1_progress_sign(['挑战进度', '+2']) == 'pos'
     assert settle_page1_progress_sign(['-22', '挑战进度']) == 'neg'

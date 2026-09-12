@@ -163,7 +163,7 @@ def test_frontless_recovery_chain_wired() -> None:
 
 # ==================== ④ deployed 计数双源仲裁(板满门;实机停机局回归)====================
 # 事故:备战环后排空槽幻影占用 → CV 计数虚高 ≥ cap → 板满假判合法化
-# no-op → RunDeploy 同签名零推进停机(DD-030);paddle X 同帧真值 3。
+# no-op → RunDeploy 同签名零推进停机(环级守卫);paddle X 同帧真值 3。
 # 修法:板满门 deployed 计数走双源仲裁(取低值,规则单一源 =
 # cw_observation.arbitrate_deployed_count);板满谓词的全部早退分支
 # (含 CV 幻影满板的入口早退)统一经仲裁 + 留证。

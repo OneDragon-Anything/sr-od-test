@@ -46,7 +46,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 
 _REG = DEFAULT_REGISTRY
 # (危机臂关行为锁注入 _REG_CRISIS_OFF 已随 crisis_release_enabled
-# 死旋钮删除——零消费,dd-038 统一迁移批 / commit b94e9cfb,
+# 死旋钮删除——零消费,统一迁移批 commit b94e9cfb,
 # 2026-09-04 用户裁定清理。)
 
 

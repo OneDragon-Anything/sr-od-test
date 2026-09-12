@@ -2,7 +2,7 @@
 # 维护:uv run pytest sr-od-test/ -q -m "not slow" --durations=300 --durations-min=1.0 巡检回填(准入:>=2s;口径=标准桶,含非 CW)
 # 用法:快速层 = pytest sr-od-test/test/sr_od/app/currency_war -m "not slow";慢桶点名 = -m slow
 # 注:类内用例须带类名段;条目为短后缀形态(文件名::)。
-# 2026-09-03 合并战役收官重建(dd-038 v2 整删波后终态实测,-m slow 139.8s/55 条):
+# 2026-09-03 合并战役收官重建(v2 整删波后终态实测,-m slow 139.8s/55 条):
 # 旧名单 ~95 条对账——v2 时代重型件(plane_p2 变异探针/双 n20 零漂移门/equip_grant/
 # prep_director 实跑/economy/investment/sim_mutex/delta_pool/r420/zero_refresh 等)
 # 已随 decision_v2 整包删除消失,死条目一并清除;存活条目逐条对实测 ≥2s 保留。

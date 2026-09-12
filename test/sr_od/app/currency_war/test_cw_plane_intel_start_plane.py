@@ -87,7 +87,7 @@ def test_user_fixed_waits() -> None:
 def test_entry_takeover_passes_start_plane() -> None:
     """独立接管补采入口(cw_entry_plane_intel)在进详情之前现读当前位面
     并以 start_plane 传入采集 op(接线存在性烟雾,裁决 = 2026-09-03
-    DD-023 时序修正;失守 = 已通过位面被详情侧重采浪费)。
+    接管采集时序修正;失守 = 已通过位面被详情侧重采浪费)。
     cw_loop 备战环侧(cw_screen_prep)的接线与时序由行为锁
     test_cw_node_screens.py::test_plane_intel_takeover_refill_channel
     辖(读桩 (2,3)→start_plane 收 [2],先委派后读的序位反转即红),

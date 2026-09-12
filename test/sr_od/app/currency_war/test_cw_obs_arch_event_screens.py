@@ -351,7 +351,7 @@ def test_encounter_refresh_emission_counts_on_old_path_too(
 def test_encounter_refresh_guarded_by_session_flag_and_count(
         test_context, monkeypatch) -> None:
     """发射前置闸逐位保留:本局已用 / 无剩余次数 → 不发射(计数不动,
-    失败安全按原评分选);dd-004 单次尝试语义与执行侧旗标同点。"""
+    失败安全按原评分选);分支刷新单次尝试语义与执行侧旗标同点。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     # ①本局已用
     op, match, session = _make_encounter(

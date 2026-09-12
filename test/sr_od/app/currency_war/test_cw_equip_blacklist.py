@@ -1,9 +1,9 @@
-"""dd-015/dd-016 执行层修复批行为测试(复盘 g_20260902_181254 修复项 A/E)。
+"""拖拽失败降级/残余补部署 执行层修复批行为测试(复盘 g_20260902_181254 修复项 A/E)。
 
-- A(装备拖拽失败降级,dd-015):失败登记 ≥2 次拉黑该(件→角色)对、
+- A(装备拖拽失败降级):失败登记 ≥2 次拉黑该(件→角色)对、
   拉黑对从分配序列剔除、失败 1 次保留重试——纯函数桩,离线可测;
   session 级记忆字段存在(跨轮存活的载体)。
-- E(cap 空槽补部署,dd-016):``residual_fill_plan`` 对留置散牌生成
+- E(cap 空槽补部署):``residual_fill_plan`` 对留置散牌生成
   补部署计划;同名禁双跳过、cap 动态停、选排 fallback、两排皆满停。
 """
 
@@ -22,7 +22,7 @@ from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     register_equip_drag_failure,
 )
 
-# ==================== dd-015:A 失败拉黑 + 跳过继续 ====================
+# ==================== A:失败拉黑 + 跳过继续 ====================
 
 
 def test_register_blacklists_after_limit():
@@ -59,7 +59,7 @@ def test_filter_alloc_drops_blacklisted_keeps_once_failed():
     assert ('艾丝妲', '轮滑鞋') in out
 
 
-# ==================== dd-016:E 残余补部署计划 ====================
+# ==================== E:残余补部署计划 ====================
 
 
 def test_fill_plan_deploys_into_vacancy():

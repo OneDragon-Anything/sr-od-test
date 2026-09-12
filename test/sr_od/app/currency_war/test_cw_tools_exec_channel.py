@@ -10,7 +10,7 @@
 3. 建档画面 fixture 交互锁:存档备战帧(「攻略已应用」,含冶金炉/
    轮滑鞋真值,W546 批实证)→ read_equips → 计划端到端;
 4. 发射位锁(T-159 迁移 C 后 = entry.emit ②③之间;原 run_mandate M7.5
-   块已删,dd-027 回排特例消除):admitted 非空才发 RunTools + 执行位闩
+   块已删,M7 发射序回排特例消除):admitted 非空才发 RunTools + 执行位闩
    (mark_tools_pass_executed,发射位只读不写,与 M7 闩同型);
 5. 词表锁:RunTools 入 PREP_ACTION_TYPES 白名单 + entry 条件续分类。
 """
@@ -296,7 +296,7 @@ def _session_with(owned):
 class TestMandateEmission:
     """T-159 迁移 C 改写(锁语义重推,非机械跟绿):发射位自 run_mandate
     M7.5 块物理移出至 entry.emit ②证明 pass 与③升档器求值位之间(审 A1
-    主案:dd-027 回排使 run_mandate 内任何 RunTools 必被重排到 LevelUp
+    主案:M7 发射序回排块使 run_mandate 内任何 RunTools 必被重排到 LevelUp
     之后 ⇒ 同帧常态下本帧从未执行)——原「run_mandate 发射」断言面随
     设计出处失效,本组改锚 emit 链;admitted 门/评估留痕/执行位闩语义
     零变更。位置/执行序行为细锁 = test_cw_prep_flag_machine。"""

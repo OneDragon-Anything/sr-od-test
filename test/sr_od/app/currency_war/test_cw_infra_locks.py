@@ -577,7 +577,7 @@ def test_ci_smoke_snapshot_batch(tmp_path: _sim_cli_smoke_Path) -> None:
     # 的 M3 批量授权臂漏更检查器白名单致本锁预存红(seeds 9/16,裸跑
     # 才暴露:本测试在快速集被 slow 过滤);m3_batch 发射前置 =
     # arm1_existence([33] 人口位语境,与 pop_slot 同语义)∧ spend_
-    # unified(P48 整买)∧ 危机让位(dd-034),授权强度不低于旧三臂
+    # unified(P48 整买)∧ 危机让位,授权强度不低于旧三臂
     # ——出处 = strategy-docs 02_mandate_layer.md §3 M3 / ADR-0518。
     # 锁语义(低金追级须有授权依据)不变,回归 0 容忍。
     # ADR-0357(P1 配方锁):P1 锁定产物改体系对后,锁定局 form_ok

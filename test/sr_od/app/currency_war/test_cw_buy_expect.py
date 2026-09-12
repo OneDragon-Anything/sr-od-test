@@ -227,7 +227,7 @@ def test_compare_deployed_landing():
 
 
 def test_compare_snapshot_stale_landing_downgraded():
-    """真实空槽优先降级(DD-005;安灯 p2r2 停线同形态回归,局1):购买前
+    """真实空槽优先降级(安灯 p2r2 停线同形态回归,局1):购买前
     tracked 快照缺某槽占用(模型:槽1-8 占、槽9 空)→ 期望把新牌落槽9;
     实读槽9=快照缺读的旧牌、新牌在槽1-8 的真实空槽 → 期望实体在别处
     出现 = 快照空槽表过期 → 降级不评,不再误判不一致。"""
@@ -251,7 +251,7 @@ def test_compare_snapshot_stale_landing_downgraded():
 
 def test_compare_merge_not_happened_not_downgraded():
     """降级不吞「合成腾槽未发生」证据:期望空槽实读=同名 1★(原始购买名,
-    非终态新实体)→ 不降级,照旧落不一致(DD-005 边界②的锁)。"""
+    非终态新实体)→ 不降级,照旧落不一致(真实空槽优先降级边界②的锁)。"""
     exp = compute_buy_expect(
         [BuyPurchase(name='希儿', star=1, count=1, unit_cost=3)],
         _bench(_bc(1, '希儿'), _bc(4, '希儿')), [])

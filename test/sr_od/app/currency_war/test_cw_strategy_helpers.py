@@ -177,7 +177,7 @@ def test_abstract_members_exact_set() -> None:
 
 
 # ==================== supply_merge_crisis 段(自 test_cw_supply_merge_crisis.py 迁入) ====================
-# iter_7f 候选② 升星合并完成买入(M2b;dd-032 merge_completion_exempt 同款判读)。
+# iter_7f 候选② 升星合并完成买入(M2b;merge_completion_exempt 同款判读)。
 
 def _bc(name: str, slot: int = 0, star: int = 1) -> BenchChar:
     ch = CHARACTERS[name]

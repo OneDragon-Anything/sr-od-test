@@ -249,7 +249,7 @@ def test_read_encounter_options_reward_assigned_by_nearest_x() -> None:
     assert opts[1].difficulty == 5 and opts[1].rewards == ['晶矿']
 
 
-# —— read_encounter_refresh_count(dd-004 分支刷新执行链 reader)——
+# —— read_encounter_refresh_count(分支刷新执行链 reader)——
 
 
 def test_read_encounter_refresh_count_baseline() -> None:
@@ -610,7 +610,7 @@ def test_reward_spheres_empty_no_false_positive(test_context: SrTestContext) -> 
 
 # ==================== 奖励域幻检交叉验证(防幻检批)====================
 # 事故:奖励面板 ×12 礼盒蝴蝶结/扣饰被 Hough 幻检为 2 球 → 点击零消失 →
-# ClickSpheres 同签名死循环至 DD-030 停机。三道修:纹理/亮度/半径门
+# ClickSpheres 同签名死循环至环级守卫停机。三道修:纹理/亮度/半径门
 # (本节)+ 两帧持存 + 点击后零消失黑名单。
 
 def test_reward_giftbox_phantom_excluded(test_context: SrTestContext) -> None:
@@ -668,7 +668,7 @@ def test_read_reward_spheres_phantom_blacklist_filter(
 # 结构整体删):_click_spheres 点后「重读验消失」判效半与幻球检出→会话
 # 黑名单写点整体删除,球未消由下一帧观察回补(幻球 = 观察 bug,观察侧
 # 质量治理另立不入本线;读侧过滤函数 note_phantom_sphere/read 侧过滤与
-# 其单测归批5 dd-015 五文件面处置)。红 = 执行器侧拉黑结构复活。
+# 其单测归拖拽失败降级批五文件面处置)。红 = 执行器侧拉黑结构复活。
 
 
 # ==================== test_supply_box(补给箱识别) ====================

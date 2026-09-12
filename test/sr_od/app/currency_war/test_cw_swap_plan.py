@@ -1,6 +1,6 @@
 # 板满换阵补部署(M1″)基础设施锁——select_swap_plan 谓词 / 共享装配 /
 # 卖出通道统一排除 / 消费方分键 / engine 意图面 / engine 执行面。
-# 语义出处:ADR-0530(board-full swap redeploy)+ dd-037(留 bench
+# 语义出处:ADR-0530(board-full swap redeploy)+ 发射契约(留 bench
 # 合法稳态,fail-closed 不对称口径)。锁的存在性纪律:每条锁 docstring
 # 引出处;本批锁的是**基础设施语义**(谓词判定/装配契约/分键显影/
 # 执行转录),不锁 sim 帧分布上的发射频率(行为分布归批判读,频次
@@ -155,9 +155,9 @@ def test_fresh_buys_record_per_name_and_expire_by_round() -> None:
 # 一并承载:装配产物 membership=None 经同一谓词分支弃权,同文件超集)
 
 def test_swap_plan_cap_unreadable_abstain() -> None:
-    """cap_unreadable 锁(dd-037 维持 fail-closed;ADR-0530 决策1
+    """cap_unreadable 锁(发射契约维持 fail-closed;ADR-0530 决策1
     双弃权键 同构语义):cap 缺读 ⇒ 谓词弃权、计划空,与 M1/M1′ vacancy=0
-    门同向(dd-037 留 bench 合法稳态比误判发射便宜)。"""
+    门同向(留 bench 合法稳态比误判发射便宜)。"""
     reasons: dict[str, str] = {}
     plan = select_swap_plan(_base_ctx(deployed=_base_deployed(),
                                       bench=[_bc(_TARGET_BENCH)],

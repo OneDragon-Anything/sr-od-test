@@ -1,4 +1,4 @@
-"""op 逻辑效果推进接线单测(两态制 ADR-0651;前身为 DD-019 三缺口期望态接线批)。
+"""op 逻辑效果推进接线单测(两态制 ADR-0651;前身为战斗等待 op 三缺口期望态接线批)。
 
 覆盖:①overlay handler 侧确认逻辑推进(register_confirm_arrival 按 op 分道:
 owned 本体直推 / 现金为王 gold 直推 / chosen_* 与 ConfirmStrategy 零写——

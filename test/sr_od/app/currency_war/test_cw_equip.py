@@ -1,5 +1,5 @@
-"""CW 装备域测试(#10):分配不变量 4 代表行 + M7 转移门(dd-027 事故家族)
-+ 穿戴语义代表 + 阵营星徽(dd-015 事故代表)+ 穿着可行性三谓词(W1/W2/W3)。
+"""CW 装备域测试(#10):分配不变量 4 代表行 + M7 转移门(装备发射门事故家族)
++ 穿戴语义代表 + 阵营星徽(拖拽失败降级事故代表)+ 穿着可行性三谓词(W1/W2/W3)。
 
 收缩注记(CUT9 二次收缩:原 15 测试→8 测试;同分支变体/双保险重复砍,
 git 可复活):
@@ -8,7 +8,7 @@ git 可复活):
   门① 正向/门② 同相位闩/C3 部署终结不烧闩/截断存活四变体砍;
 - wear 留释放判据表 row5(committed/opening 不对称)1 代表;零上身
   哨兵兜底行砍(fail-closed 面由 transfer 门① 承载);
-- 星徽留同阵营排除(dd-015 定谳)1 代表,异阵营正常授予变体砍;
+- 星徽留同阵营排除(实机复盘定谳)1 代表,异阵营正常授予变体砍;
 - 真值锚留散文↔结构对拍(罚值 80%/8% 注册表真值);I5 轮转保序全序
   行砍(nocomp_empty 代表档已辖 comp=None 路径)。
 
@@ -18,7 +18,7 @@ git 可复活):
 - transfer gate:M7 可穿存在性门①(工具-only 活锁事故回归帧);
 - wear 代表:释放判据表 row5(committed 域豁免 + opening 不对称)+
   散文↔结构对拍真值锚(罚值 80%/8%);
-- 星徽:同阵营排除(dd-015 复盘 g_20260902_181254 定谳);
+- 星徽:同阵营排除(复盘 g_20260902_181254 定谳);
 - 穿着可行性三谓词(W1 同名∧非两基础件合成图谱对 / W2 件专属前置 /
   W3 骇客目标类 fail-closed):设计出处 =
   docs/develop/sr_od/application/currency_war/proofs/p95-allocation-feasibility-dominance.md
@@ -199,7 +199,7 @@ def test_allocation_invariants(ci, di, oi):
                         f'但非 core 拿了 {non_core_got} 件')
 
 
-# ----- dd-015 后补:阵营星徽排除同阵营角色(复盘 g_20260902_181254 定谳) -----
+# ----- 后补:阵营星徽排除同阵营角色(复盘 g_20260902_181254 定谳) -----
 
 def _mk_dep(char_id, row='back', slot=1):
     return BenchChar(slot=slot, char_id=char_id, faction='', star=1, position_pref=row)
@@ -221,11 +221,11 @@ def test_emblem_not_allocated_to_same_faction():
 
 
 # ==================== M7 装备转移发射门(自 test_cw_equip_transfer_gate.py 并入代表行) ====================
-# 事故链(dd-027):mandate 旧发射谓词「last_owned_equips 非空即发 RunEquip」,
+# 事故链(M7 装备发射门):mandate 旧发射谓词「last_owned_equips 非空即发 RunEquip」,
 # 而 owned 快照按 ADR-0387 全量含工具件(不可穿)——工具-only 库存谓词永真 ⇒
 # 每帧重发 RunEquip 且执行侧 0 穿 ⇒ 空批出口(StartBattle)永不可达,备战环
 # 活锁(实机 1-6 卡死)。修法 = 门① 可穿存在性 + 门② 备战期闩(置位在执行位)。
-# dd-027 修订(g_20260904_010335 漏发):RunEquip 落 OpenShop 截断点后被截断器
+# 发射序回排修订(g_20260904_010335 漏发):RunEquip 落 OpenShop 截断点后被截断器
 # 静默丢弃 ⇒ 发射序回排;TestM7EmissionOrder 锁 truncate 端到端存活。
 
 # 工具件/穿戴件取注册表真实规范名(锁语义不锁牌面;名字变动时改此处,

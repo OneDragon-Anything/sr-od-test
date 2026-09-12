@@ -102,12 +102,12 @@ def test_skip_round_ledger_row_and_pairing_intact() -> None:
 
 
 # (锁 2b 取证帧锁 test_seed_640576 / test_seed_643567 已随 decision_v2
-# 基线臂退役删除——取证形态不可复现;dd-038 检查点② / commit b94e9cfb,
+# 基线臂退役删除——取证形态不可复现;统一迁移批检查点② / commit b94e9cfb,
 # 2026-09-04 用户裁定清理。)
 
 
 # (保留集锁 test_reserved_pieces_not_deployed 已随 v3_hoard 通道退役
-# 删除——保留集投影恒空(A6 裁决 / dd-038 统一迁移批,2026-09-04
+# 删除——保留集投影恒空(A6 裁决 / 统一迁移批 commit b94e9cfb,2026-09-04
 # 用户裁定清理);同名 dedup 存留面由下一锁承载。)
 
 

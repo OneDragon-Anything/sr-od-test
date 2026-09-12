@@ -34,7 +34,7 @@ def test_encounter_bail_and_handler_wired() -> None:
 
 
 def test_encounter_refresh_execution_wired() -> None:
-    """分支刷新执行链接线(dd-004):decide_encounter 的 refresh 建议必须有消费端。
+    """分支刷新执行链接线:decide_encounter 的 refresh 建议必须有消费端。
 
     断链史:决策侧 refresh 字段 + 全克换批分支 + 纯逻辑测试锁(P1 起就在),
     handler 从未消费 → 「刷新换批」策略意图被静默丢弃。四件须同时在:

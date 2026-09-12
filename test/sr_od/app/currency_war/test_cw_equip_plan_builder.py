@@ -5,10 +5,10 @@
 - 计划产出位 = 分发段 ``prep_actions._build_equip_wear_plan``(对执行帧
   现读后由 kernel 判据单一源求值),静态计划(EquipWearStep 列表)随
   ``CwOpEquipAll.__init__(ctx, plan)`` 构造下发;
-- 空计划 = 合法稳态具名 NOOP(dd-037 形态):分发段短路发出事实 True,
+- 空计划 = 合法稳态具名 NOOP(发射契约形态):分发段短路发出事实 True,
   闩写点唯一仍在 ``PrepActionExecutor.execute`` 执行位(批3a 发出即置,
   T-223 回执退役后原「只看 ok」改「发出事实」)——hold 期闭环不变量
-  「每期 RunEquip 恰一次发出收敛」= dd-027 活锁不返场的直接断言面(锁②);
+  「每期 RunEquip 恰一次发出收敛」= 装备发射门活锁不返场的直接断言面(锁②);
 - op 侧四 kernel 判据(resolve_wear_release/classify_item_hold/
   apply_equip_env_variants/resolve_affix_priority_order)零引用(锁③,
   Q6 红线「不得残留为 op 调用的 helper」的执行断言);
@@ -291,7 +291,7 @@ def test_builder_missing_tm_grays_fails_not_empty_plan(monkeypatch) -> None:
     assert build.empty_reason == ''
 
 
-# ==================== 锁②:空计划闩闭合(dd-027 场景;R1 修正锚) ====================
+# ==================== 锁②:空计划闩闭合(装备发射门活锁场景;R1 修正锚) ====================
 
 def test_empty_plan_noop_sets_equip_latch_and_keeps_shopped(monkeypatch) -> None:
     """锁②(R1 修正:断言入口 = **公共入口 execute(RunEquip())**,置闩在
@@ -299,7 +299,7 @@ def test_empty_plan_noop_sets_equip_latch_and_keeps_shopped(monkeypatch) -> None
     executor 级空计划场景 →
     ①机械摘要含具名原因(发出事实 True = NOOP 合法稳态;批3a:T-223
       端口无返回,摘要经 last_detail 旁路);
-    ②``state.cw4_m7_equipped_phase == (plane, round)``(**闩照置 = dd-027
+    ②``state.cw4_m7_equipped_phase == (plane, round)``(**闩照置 = 装备发射门
       活锁不返场的直接断言**:hold 期门①恒真时,门②因闩置位挡同期重发;
       批3a 置位判据 = 发出事实,原 ok 门随 T-223 退役);
     ③预置 ``cw4_shopped_phase`` 后未被清(S1 清键门被调但 RunEquip 不命中
@@ -345,7 +345,7 @@ def test_empty_plan_noop_sets_equip_latch_and_keeps_shopped(monkeypatch) -> None
     assert 'opening_hold(row1):三门全不中(保留域扣留)' in detail, \
         f'具名原因必须逐字透传进 detail:{detail!r}'
     assert st.cw4_m7_equipped_phase == (1, 5), \
-        f'闩未照置(dd-027 活锁病返场信号):{st.cw4_m7_equipped_phase!r}'
+        f'闩未照置(装备发射门活锁病返场信号):{st.cw4_m7_equipped_phase!r}'
     assert st.cw4_shopped_phase == (1, 5), \
         'S1 清键闩被清(RunEquip 不应命中任何清键路径)'
     assert sentinel_calls == [(0, ('财富宝钻',),

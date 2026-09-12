@@ -226,7 +226,7 @@ def _fake_settle_ctx(texts: list[str]) -> SimpleNamespace:
 
 
 class TestRoundOutcomeChain:
-    """结算屏 → RoundOutcome 的组装语义:页态门/透传/失败屏真值(DD-006/T-83)。"""
+    """结算屏 → RoundOutcome 的组装语义:页态门/透传/失败屏真值(结算读点链/T-83)。"""
 
     def test_killed_and_progress_passthrough(self):
         # 败轮屏:挑战结束 -22 → killed=False;赢轮:挑战成功 → killed=True
@@ -248,7 +248,7 @@ class TestRoundOutcomeChain:
         assert obs.hp_after == 0 and obs.hp_confidence == 1.0
 
     def test_fill_ratio_only_on_page1(self):
-        # 页态门(DD-006):页 2 帧同矩形罩 HP 心形恒读假值(0.392 三局同值实证)
+        # 页态门:页 2 帧同矩形罩 HP 心形恒读假值(0.392 三局同值实证)
         # → 无「点击空白加速」标记词不读条;页 1 帧才读
         import numpy as np
         img = np.zeros((1080, 1920, 3), np.uint8)

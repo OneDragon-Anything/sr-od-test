@@ -159,7 +159,7 @@ def test_node_report_wiring_contract() -> None:
     锁压密度,单点维护;各断言面精确到字符串,仍可被对应单点变异单独
     打红):
     - deploy 节点先判 gate_fail(round_fail 原样透传具名状态)再进
-      dd-037 三分——失配闸命中禁被 STATUS_NOOP 合法稳态分支吞掉;
+      发射契约三分——失配闸命中禁被 STATUS_NOOP 合法稳态分支吞掉;
     - 计划非空 placed=0 = STATUS_LANDED_NONE round_fail 如实上报
       (熔断跳槽删除后,结构性拒绝以失败形态交回,3 环无进展由分发层
       prep_no_progress 停机留证——锁面 test_cw_no_progress_guard.py);
@@ -176,7 +176,7 @@ def test_node_report_wiring_contract() -> None:
     i_gate = deploy_src.find('if _gate_fail is not None:')
     assert i_gate >= 0, '节点缺 gate_fail 上报分支(D2 失配闸被吞)'
     i_noop = deploy_src.find('round_success(CwOpDeploy.STATUS_NOOP')
-    assert i_noop >= 0, 'NOOP 合法稳态出口缺失(dd-037 三分被破坏)'
+    assert i_noop >= 0, 'NOOP 合法稳态出口缺失(发射契约三分被破坏)'
     assert i_noop > i_gate, 'gate_fail 判定必须在 NOOP 出口之前'
     # gate_fail → round_fail 透传的行为面由 test_cw_front_invariant
     # L4b/L5 经 op.deploy() 端到端辖(BOARD_FULL_MISMATCH/PHANTOM 两形态

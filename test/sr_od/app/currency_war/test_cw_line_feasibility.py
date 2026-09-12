@@ -7,7 +7,7 @@
   registry.revoke_miss_tolerance_eps,零新自由参数。
 - 消费位(update_intention,均辖 plane==2):P2 移交强锁候选门槛 /
   P2 信号缓锁门 / 已锁线出口③「供给不可行降级」(降级到 unlocked,
-  下一轮由 dd-033 handoff_lock 重锁可行线;不写 evicted=可逆,
+  下一轮由 P2 移交(handoff_lock)重锁可行线;不写 evicted=可逆,
   un-evict 同款)。
 - 背景=sim_findings/R5 死法族:主死因为锁线目标件供给空缺(锁线波
   线内件出现率 16.7%),出口①证据门槛 N_req(3费@lv7=21 轮)在 P2
@@ -256,7 +256,7 @@ def test_p2_exit3_negative_plane3_scope(monkeypatch):
 
 
 def test_p2_exit3_next_round_handoff_relock(monkeypatch):
-    """降级次轮:dd-033 移交通道重锁可行线(换线闭环)。"""
+    """降级次轮:P2 移交通道重锁可行线(换线闭环)。"""
     locked = get_comp('希儿量子')
     alt_cores: set[str] = set()
     for c in ci._v2_comps():
@@ -276,7 +276,7 @@ def test_p2_exit3_next_round_handoff_relock(monkeypatch):
 
 def test_p2_handoff_feasibility_gate(monkeypatch):
     """移交候选补 G>ε 门:全线不可行 ⇒ 无候选 ⇒ 保持 unlocked
-    (dd-033 ⑤兜底语义;不可行线不进强锁)。"""
+    (⑤兜底语义;不可行线不进强锁)。"""
     monkeypatch.setattr(ci, 'line_completion_feasibility',
                         lambda *a, **k: 0.0)
     st = _state(plane=2, round_num=1, hp=40, level=7)

@@ -503,7 +503,7 @@ class FakeP1Run:
         """RunDeploy 完整装配(会话语境版)。
 
         选人/围栏/排序单一源 = kernel ``select_deployments_reasoned``;
-        输入装配与生产 CwOpDeploy dd-037 同源(deploy_target_sets/
+        输入装配与生产 CwOpDeploy 同源(deploy_target_sets/
         deployed_bond_counts/locked_faction_scope/
         locked_line_recipe_floor_conflict 全 kernel 函数,零第二推导)。
         身份/站位真值 = 注册表直查(假环境无 SIFT;position_pref 与

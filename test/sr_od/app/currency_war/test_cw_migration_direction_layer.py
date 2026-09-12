@@ -9,7 +9,7 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
    = test_cw_session_separation::test_none_state_criterion_faces_
    return_defaults(``committed_authority(None, bare) is False``)+ 本
    文件对拍锁帧 1-2(P1 帧ist 缺席 → False);原并入目标
-   test_cw_w620_migration_b1 本体已随 dd-038 批删除,指针收口重锚;
+   test_cw_w620_migration_b1 本体已随统一迁移批(commit b94e9cfb)删除,指针收口重锚;
 3. D3:息线单一源 = ``registry.interest_floor()`` 派生(interest_cap×10),
    全仓属性读点 = 0(grep 锁)+ ALL IN override 通道;
 4. P7:意向状态机驱动点契约——每 game-round 恰一次(键守卫幂等),
@@ -144,7 +144,7 @@ def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
 #  test_cw_session_separation::test_none_state_criterion_faces_return_
 #  defaults 直锁(committed_authority(None, bare) is False)+ 本文件
 #  对拍锁帧 1-2 承载。原并入目标 test_cw_w620_migration_b1 本体已随
-#  dd-038 批删除,死指针收口重锚。重复构成删并理由(README 纪律 8)。)
+#  统一迁移批删除,死指针收口重锚。重复构成删并理由(README 纪律 8)。)
 
 
 # ----------------------------------------------------- W629-R2 镜像雷锁

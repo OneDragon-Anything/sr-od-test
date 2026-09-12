@@ -1,6 +1,6 @@
 """环级无进展守卫锁(第 5 局放行硬门;F2 单键计数,T-167 迁移)。
 
-设计出处 = docs/develop/sr_od/application/currency_war/decisions/dd-030-no-progress-guard.md
+设计出处 = docs/develop/sr_od/application/currency_war/flow/guards.md(环级无进展守卫节)
 (环级活性不变量)+ docs/develop/sr_od/application/currency_war/flow/guards.md §1(防线总册)
 + docs/develop/sr_od/application/currency_war/decisions/0554-prep-exhaustion-battle-launch.md
 (ADR-0554 + T-167 修订节)。触发语义(F2):计数键 = 状态指纹单键

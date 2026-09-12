@@ -295,7 +295,7 @@ class TestR2InterestFloor:
     def test_cap_resolved_parameterizes_floor(self):
         """cap 语境锁(息线表锚):g*=10×cap_resolved 随 session 覆写参数
         化——cap=10(息律投资语境)下金 80 < 100+ρ ⇒ 拒(50 非域常数,
-        dd-026 备选 2「拍常数」禁案的判别锁)。
+        息线 floor「拍常数」禁案的判别锁)。
         (金钱类收缩:floor 门过下界/贴线拒刷两行按裁决不搬,git 可复活。)"""
         comp, st, sess = self._frame(80)
         sess.active_strategies = ['利息上调']   # ADR-0598 注入面迁移

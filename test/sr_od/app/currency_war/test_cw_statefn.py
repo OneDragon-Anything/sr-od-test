@@ -315,7 +315,7 @@ QUANTITY_OWNERS: dict[str, tuple[str, str]] = {
     '零重叠': ('predicates', 'zero_overlap'),
     '挂后台效果资格谓词(半步0)': ('predicates', 'bench_effect_qualified'),
     # D-dup 可部署战力谓词条目已删:RunDeploy 发射门重写(ADR-0517 决策2/
-    # dd-037 接线)后该独立谓词折叠进 kernel/cw_deploy_logic.has_deployable
+    # 发射契约接线)后该独立谓词折叠进 kernel/cw_deploy_logic.has_deployable
     # 的同源去重,不再是 statefn 独立数量(随 ADR-0519 清账批删除)。
     'resolved 息帽(实现下沉 kernel/cw_economy)': ('', 'interest_cap_resolved'),
 }

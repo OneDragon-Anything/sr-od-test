@@ -216,7 +216,7 @@ class TestSettlementDamage:
 
 
 class TestProgressSign:
-    """页 1 进度符号三态('pos'/'neg'/None);boss 胜局页 1 判别消费(DD-006)。"""
+    """页 1 进度符号三态('pos'/'neg'/None);boss 胜局页 1 判别消费。"""
 
     def test_pos(self):
         assert settle.settle_page1_progress_sign(['挑战进度', '+2']) == 'pos'

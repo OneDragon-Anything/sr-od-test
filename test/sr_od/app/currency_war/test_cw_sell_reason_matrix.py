@@ -11,8 +11,8 @@
 - docs/develop/sr_od/application/currency_war/proofs/math_proofs.md **P78** 行(P78-1 同
   visit 禁卖无条件下成立/P78-2 τ 分类/P78-5′ 四关系表:垫保在凑息
   绝对跳过、在 M4/funding 降序放行转化类);
-- docs/develop/sr_od/application/currency_war/decisions/dd-020-series-decision-contract.md(序列决策契约;词表落档行
-  = action_exec.md §1)。
+- 序列决策契约词表正本(落档行
+  = docs/develop/sr_od/application/currency_war/flow/action_exec.md §1)。
 
 载体面覆盖地图:line_switch_collapse 双写(entry 换线塌缩位)= 本文件
 test_prep_line_switch_collapse_dual_write;凑息回拉孤儿打标端到端 =

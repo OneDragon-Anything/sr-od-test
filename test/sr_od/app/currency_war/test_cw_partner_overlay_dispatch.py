@@ -1,4 +1,4 @@
-"""选择伙伴 overlay 分发回归锁(dd-029 第三起实机卡死,2026-09-04 01:02 局)。
+"""选择伙伴 overlay 分发回归锁(第三起实机卡死复盘,2026-09-04 01:02 局)。
 
 事故:运行时画面加载源 = ``screen_loader.reload()`` 默认读 ``_od_merged.yml``;
 「列车同行」改名批(git 75880dd1)只改了分文件 yml + 代码引用 + overlay 注册表,
@@ -88,7 +88,7 @@ def _merged_keys(_merged_data: dict[str, dict]) -> set[str]:
 def test_merged_yml_fresh_with_separated_files(_merged_data) -> None:
     """运行时加载源 merged 必须与分文件全集一致(screen_id 集 + 画面名 +
     area 名集)。分文件被改名/增删 area 后未再生 merged = 本锁红,提示跑
-    ``audit_merged_drift.py --regen``(dd-029:改名批漏再生 → 分发层查新名
+    ``audit_merged_drift.py --regen``(改名批漏再生 → 分发层查新名
     AREA_NO_CONFIG 静默跳过 → 伙伴遮罩下部署死局)。
 
     辖域声明:本锁读工作树文件,管「工作树工件」一致性——工作树 merged
@@ -105,7 +105,7 @@ def test_merged_yml_fresh_with_separated_files(_merged_data) -> None:
         assert sep[sid].get('screen_name') == merged[sid].get('screen_name'), (
             f'screen_id={sid} 画面名漂移: merged={merged[sid].get("screen_name")!r} '
             f'分文件={sep[sid].get("screen_name")!r}——运行时只见 merged 名,'
-            f'按新名查询的区域判定全部 AREA_NO_CONFIG(dd-029 事故形态);'
+            f'按新名查询的区域判定全部 AREA_NO_CONFIG(merged 漏再生事故形态);'
             f'请再生 merged(audit_merged_drift.py --regen)后提交')
         sa = {a['area_name'] for a in (sep[sid].get('area_list') or [])}
         ma = {a['area_name'] for a in (merged[sid].get('area_list') or [])}
@@ -168,7 +168,7 @@ def test_merged_yml_fresh_in_committed_tree() -> None:
     drift = sorted(sid for sid in sep if sep[sid] != merged[sid])
     assert not drift, (
         f'提交面 merged 与分文件全集漂移(运行时只读 merged,漂移 = 干净树'
-        f'上接线静默零生效,dd-029/T-13 形态): {drift}'
+        f'上接线静默零生效,改名批漏再生形态): {drift}'
         f'——请再生 merged 并与本批分文件改动同一笔提交')
 
 
@@ -184,7 +184,7 @@ def test_overlay_registry_resolvable_in_runtime_merged(_merged_keys) -> None:
             continue
         assert f'{spec.screen_name}.{spec.anchor_area}' in keys, (
             f'{spec.screen_name}.{spec.anchor_area} 不在运行时 merged——'
-            f'该 overlay 的分发分支每帧 AREA_NO_CONFIG 静默跳过(dd-029 形态)')
+            f'该 overlay 的分发分支每帧 AREA_NO_CONFIG 静默跳过(历史事故形态)')
         if spec.anchor_area_alt:
             assert f'{spec.screen_name}.{spec.anchor_area_alt}' in keys
         if spec.close_area:
@@ -204,12 +204,12 @@ def test_dispatch_order_matrix_anchors_resolvable_in_runtime_merged(
             continue
         assert f'{screen}.{anchor}' in keys, (
             f'序锁矩阵行「{name}」的锚 {screen}.{anchor} 不在运行时 merged'
-            f'(分发分支静默失效形态,dd-029)')
+            f'(分发分支静默失效形态)')
 
 
 def test_loop_dispatch_anchor_table_resolvable_in_runtime_merged(
         _merged_keys) -> None:
-    """主循环 iter1 分发锚预检表(dd-029)的全部锚都在 merged 中——预检在
+    """主循环 iter1 分发锚预检表的全部锚都在 merged 中——预检在
     生产侧只 log.error 不 fail(不中止对局),本锁补「测试侧 fail 硬门」:
     预检表里有漂移锚 = 本锁红,与生产日志双通道。"""
     from sr_od.application.currency_war.operations.cw_loop import CwLoop
@@ -217,7 +217,7 @@ def test_loop_dispatch_anchor_table_resolvable_in_runtime_merged(
     for branch, screen, anchor in CwLoop.DISPATCH_AREA_ANCHORS:
         assert f'{screen}.{anchor}' in keys, (
             f'分发锚预检表条目「{branch}」的 {screen}.{anchor} 不在运行时 '
-            f'merged——该分支每帧静默跳过(dd-029 事故形态)')
+            f'merged——该分支每帧静默跳过(merged 漏再生事故形态)')
 
 
 # ── 锁 3:事故帧路由 fixture ────────────────────────────────────────────
@@ -246,7 +246,7 @@ def test_partner_anchor_routes_on_incident_fixture(test_context) -> None:
         test_context, frame, _FIXTURE_SCREEN, '标识-选择伙伴',
     ) is FindAreaResultEnum.TRUE, (
         f'事故帧上 {_FIXTURE_SCREEN}.标识-选择伙伴 未命中——伙伴遮罩下部署'
-        f'死局(dd-029)的直因仍存活')
+        f'死局的直因仍存活')
     # 确认选择按钮也在(= CwScreenPartner 处理链完整可执行)
     assert screen_utils.find_area(
         test_context, frame, _FIXTURE_SCREEN, '按钮-确认选择',

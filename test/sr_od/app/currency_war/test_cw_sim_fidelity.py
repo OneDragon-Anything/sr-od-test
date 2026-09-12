@@ -102,12 +102,12 @@ from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 # 采样变)。单批内两变量,归因即本批任务书范围(校准语料治理),
 # 未触策略/决策代码。双跑确定性核验通过;新锚继续做 unintended
 # drift 哨兵。
-# p15 重拟合重锚(2026-09-02,dd-012):P1 _LOSS_FIT intercept/slope
+# p15 重拟合重锚(2026-09-02):P1 _LOSS_FIT intercept/slope
 # 改由对局档案真值语料重估(旧值系已灭且污染的 w324 语料回归值,
 # COARSE_CALIB_VERSION 3→4,战斗败态均值匹配偏移变)→ digest
 # 由 098ea088… 位移至 3e71aaaf…。单变量批(仅 _LOSS_FIT 三元组);
 # 双跑确定性核验通过;新锚继续做 unintended drift 哨兵。
-# 单臂切换重锚(2026-09-04,dd-038 检查点②/b94e9cfb):A9 裁决删
+# 单臂切换重锚(2026-09-04,统一迁移批检查点②/b94e9cfb):A9 裁决删
 # decision_v2 基线臂,注册面封闭集={'mandate_v1'},默认路径由
 # DecisionV2Strategy 合法换为 MandateV1Live → digest 由 3e71aaaf…
 # 位移至 f3d80127…。锁语义自此钉「mandate_v1 单臂默认路径零漂移」,
@@ -205,7 +205,7 @@ class TestG3XpPerRefresh:
 
     # (G3 取证形态三锁 test_overlay_value_change_follows /
     # test_paid_refresh_grants_xp_on_arm / test_off_arm_no_xp 已随
-    # decision_v2 基线臂退役删除——取证形态不可复现;dd-038 检查点② /
+    # decision_v2 基线臂退役删除——取证形态不可复现;统一迁移批检查点② /
     # commit b94e9cfb,2026-09-04 用户裁定清理。)
 
     def test_ledger_round_disclosure(self):
