@@ -95,7 +95,7 @@ def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
 
 
 def test_q1_registry_structure() -> None:
-    """Q1:恰 7 条 + 逐条字段 = §2.2.1 改写事实直读;pengding 歧义三条 notes
+    """Q1:恰 7 条 + 逐条字段 = §2.2.1 改写事实直读;pending 歧义三条 notes
     必填。红 = 效果原文变(实采定谳)或登记错装,对账源 = plaza id。"""
     assert set(ENV_POOL_REWRITE) == {
         '彩虹时代', '黄金时代', '白银时代', '头彩', '尾彩', '银·金·彩', '联席决策'}
