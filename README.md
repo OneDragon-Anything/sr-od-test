@@ -50,76 +50,21 @@ uv run python sr-od-test/tools/cw_invest_compare.py --out .debug/temp/currency_w
 纪律出处:假环境对拍为确认性(strategy-work §3,不构成数值合法性来源);
 申报缺项判例 = T-204 落地审 §三-G2(直出偏置在树活跃而报告未列)。
 
-## 并行批 commit 口径(GIT_INDEX_FILE 私有索引 + CAS 提交锚 + 落库完整性门,2026-09-13 起)
+## 并行批 commit 口径(2026-09-13 旧口径废止;新口径候 worktree 分开开发方案)
 
-本测试仓工作树被并行批共享,`.git/index`(共享暂存区)是全体批共用的可变态:
-A 批 `git add` 后滞留的暂存内容,会被 B 批随后的 `git commit` **整体卷走**
-(T-91/T-23 两起同型事故,均以空标记提交补救)。根治口径:**每批 commit 走
-自己的私有索引副本,共享暂存区不再承载任何待提交内容**——私有索引 = `.git/`
-下本批专属的 index 文件,由环境变量 `GIT_INDEX_FILE` 指向,git 的 add/commit
-只读写它,他批内容物理上进不了本笔提交。
+旧口径(GIT_INDEX_FILE 私有索引 + CAS 提交锚 + 落库完整性门,原占本节)
+已按用户 2026-09-12 裁定废止移除。废止原因:实验实证私有索引只隔离暂存
+动作,不隔离提交时的 HEAD 竞态——两批基于同一父提交各自 commit 时,后提
+交者若未基于新 HEAD 重建快照,其提交会把先提交者的内容从最新快照挤掉,
+且残缺树被后续提交持续继承;防覆盖完全依赖 CAS 校验的严格执行,反复出偏差。
 
-每批 commit 固定十步(第 1-9 步建笔,第 10 步落库完整性门=T-147 集成;在
-`sr-od-test/` 目录执行;`<批id>`=任务号如 `t111`;
-`<文件...>`=本批逐文件点名,禁 `add -A`/目录级 add):
+过渡口径(候 worktree 分开开发方案落地):
+- commit 前逐文件点名 `git add`,`git diff --cached --stat` 对账=本批申报
+  文件集,集合外一律不提交(停手上报编排者协调);
+- 提交用普通 `git commit`,禁裸 reset/checkout/restore;
+- 提交后 `git show --stat` 复核恰=本批文件集;
+- 共享 index 出现他批 staged 面时禁 commit,停手上报。
 
-```powershell
-$ErrorActionPreference = 'Continue'          # CAS 竞速重试是预期路径,勿让 stderr 中断
-$idx = "$PWD\.git\index-<批id>"
-$retries = 0
-while ($true) {
-  if ($retries -gt 5) { throw 'CAS 重试超限:并行提交过密,停手申报' }
-  $parent = (git rev-parse HEAD).Trim()      # 1. 锚定父提交快照
-  $env:GIT_INDEX_FILE = $idx
-  git read-tree $parent                      # 2. 私有索引 = parent 快照(不复制共享 index)
-  git add -- <文件...>                       # 3. 只暂存本批点名文件
-  git diff --cached $parent --stat           # 4. 核对 = 本批声明文件集;空输出 = 无可提交内容,停下排查勿硬提交
-  $tree = (git write-tree).Trim()            # 5. 固化树对象
-  Remove-Item Env:GIT_INDEX_FILE
-  $new = (git commit-tree $tree -p $parent -m '<任务id> <说明>').Trim()   # 6. 建 commit(父=parent)
-  git update-ref HEAD $new $parent 2>$null   # 7. CAS 提交锚:HEAD 被并行批推进则失败→回环重试
-  if ($LASTEXITCODE -eq 0) { break }
-  $retries++
-}
-Remove-Item $idx -ErrorAction SilentlyContinue
-git show --stat HEAD                         # 8. 核验:应恰=本批声明文件集
-git reset -q                                 # 9. 共享 index 对齐新 HEAD(清陈旧幻影)
-pwsh -File ..\tools\commit_tree_gate.ps1 -Repo $PWD -Commit $new -Paths '<文件...>' -SmokeTests '<测试目录,本批动了测试必给>'   # 10. 落库完整性门:不过禁 push
-```
-
-原理与边界:
-
-- **commit 内容成为 `parent 快照 + 本批点名文件` 的纯函数**:第 2 步从
-  parent 快照重建私有索引(禁止复制共享 index——那会把滞留内容一起复制),
-  第 3 步只写入点名文件;并行批滞留在共享 index 的内容与本笔提交无关。
-- **CAS 提交锚 = 乐观版串行化 commit 窗**:第 1 步锚定 parent、第 7 步带
-  旧值校验原子落地,两步之间 HEAD 被并行批推进时第 7 步失败,整轮回环
-  (以新 HEAD 重建)。没有它,裸私有索引在真并发下会用陈旧索引树配新父
-  提交,**静默回退他批已提交内容**(演练 12 轮×2 并发实测 12 处回退,见
-  `.debug/temp/t111-drill/`,易失产物、判例语义以本节为准)。第 7 步的
-  `fatal: update_ref failed ... but expected ...` 是预期内重试信号,不是事故。
-- **第 4/8 步取代旧「add 前查 staged 面」**:检查对象从共享可变态升级为
-  「本笔实际提交面」。第 8 步核验 ≠ 声明集(出现集合外文件/文件缺失)=
-  异常,停手在报告申报,禁改写历史(并行期禁 rebase/amend)。
-- **故障模式**:忘设 `GIT_INDEX_FILE` → 操作落到共享 index,第 4/8 步核验
-  即暴露,按九步重跑即可;残留私有 index 文件惰性无害(commit 后仍建议
-  清理);第 9 步 `git reset -q` 只重置共享 index、不动工作树,与并行批的
-  私有索引操作互不干扰(git index.lock 自串行),旧口径滞留的暂存内容会被
-  对齐清掉(内容仍在工作树,按九步重跑即可)。
-- **第 10 步落库完整性门 = push 前的机器断言(T-147 集成,细节以门脚本头注释
-  为准)**:三件核验(name-status 对账「入库面==申报面」/新增文件 cat-file 在树/
-  已删路径出树)+ 第四件 fresh 冒烟(临时 worktree 检出该笔跑 `pytest
-  --collect-only`)。**失败处置**:三件核验任一失败=提交面与申报面不符,按十步
-  重跑;冒烟本批改动面收集错误=修复后以新提交收口(并行期禁 amend/rebase);
-  冒烟其余收集错误只报告,归兄弟在飞面/预存缺陷,人工复核不阻塞。`-Commit`
-  必须给本笔 `$new` 禁裸 HEAD——门运行时 HEAD 可能已被并行批推进,裸 HEAD
-  验到的是别人的提交;预期集口径=name-status 新态路径(改名文件申报 R 行新
-  路径)。主仓调用验 committed src、测试仓调用验 committed 测试树,两仓各跑
-  各的门,T-7 新载体缺树事故的两个半边都盖住。
-- **同文件双写禁令不变**:本口径只治 commit 卷入与窗口竞速,不改变批间
-  文件面互斥分配。
-- 主仓的并行 commit 契约归 orchestration.md(同构机制可参照本节),本节
-  只辖本测试仓。
 
 
 ## 环境要求
@@ -343,15 +288,15 @@ sr-od-test/
     - 与第 19 条的关系：19 条管**文本/数据语料**（合成语料合法且优先），
       本条管**图片输入**专项（合成非法，真实为准）——「合成」一词两处含义不同。
 
-### 提交与落库(2026-09-13 T-147 起)
+### 提交与落库(2026-09-13 T-147 起;2026-09-12 门部分暂缓)
 
-22. **commit 后 push 前必跑落库完整性门**(双仓同规):每笔提交以
-    `tools/commit_tree_gate.ps1` 机器断言「入库面==申报面 + 新增在树/已删出树
-    + fresh 冒烟本批面零收集错误」,不过禁 push。背景=T-7 段3/段4/段5 三笔同型
-    缺陷:批量提交脚本解析 git status 的 R 行伪路径+吞错,新载体从未入树,本地
-    全量绿纯靠工作树 untracked 文件撑着,HEAD 不可运行/fresh 检出红——人工
-    核验防不住重演,须把验证视角对齐到提交树视角。用法与失败处置见
-    「并行批 commit 口径」第 10 步。
+22. **commit 后自查提交面**(双仓同规):提交后 `git show --stat` 复核
+    「入库面==申报面 + 新增文件在树/已删文件出树」,发现不符停手上报。
+    背景=T-7 段3/段4/段5 三笔同型缺陷:批量提交脚本解析 git status 的 R 行
+    伪路径+吞错,新载体从未入树,本地全量绿纯靠工作树 untracked 文件撑着,
+    HEAD 不可运行——自查视角必须是提交树(`git show`/`ls-tree`),不是工作树。
+    (机器断言版「落库完整性门」tools/commit_tree_gate.ps1 已建成但暂缓
+    强制,候 worktree 分开开发方案定夺提交协议后整合;脚本在库可用。)
 
 ## 写锁/评审四问(进门自检)
 
