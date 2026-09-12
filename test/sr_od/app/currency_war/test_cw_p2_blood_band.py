@@ -345,12 +345,12 @@ class TestLockGenFeasibilityObsKeys:
                             lambda *a, **k: 0.5)   # 移交候选可行 → 帧即锁
         strategy = self._flow()
         sess_lo = self._sess()
-        strategy._refresh_direction(_st2(hp=10, gold=0), sess_lo)
+        strategy._refresh_direction(_bsb(_st2(hp=10, gold=0)), sess_lo)
         ct_lo = state_of(sess_lo).cw4_counters
         assert ct_lo.get('lock_gen_feasibility_obs_lock_open_total') == 1
         assert ct_lo.get('lock_gen_feasibility_obs_lock_open_lowband') == 1
         sess_hi = self._sess()
-        strategy._refresh_direction(_st2(hp=40, gold=0), sess_hi)
+        strategy._refresh_direction(_bsb(_st2(hp=40, gold=0)), sess_hi)
         ct_hi = state_of(sess_hi).cw4_counters
         assert ct_hi.get('lock_gen_feasibility_obs_lock_open_total') == 1
         assert 'lock_gen_feasibility_obs_lock_open_lowband' not in ct_hi
@@ -363,8 +363,8 @@ class TestLockGenFeasibilityObsKeys:
                             lambda *a, **k: 0.5)
         strategy = self._flow()
         sess = self._sess()
-        strategy._refresh_direction(_st2(hp=40, gold=0), sess)   # 帧1:移交锁
-        strategy._refresh_direction(_st2(hp=40, gold=0, round_num=2), sess)
+        strategy._refresh_direction(_bsb(_st2(hp=40, gold=0)), sess)   # 帧1:移交锁
+        strategy._refresh_direction(_bsb(_st2(hp=40, gold=0, round_num=2)), sess)
         ct = state_of(sess).cw4_counters
         assert ct.get('lock_gen_feasibility_obs_lock_open_total') == 1, (
             '帧2保持锁非锁开事件,分母不重复计')
@@ -378,7 +378,7 @@ class TestLockGenFeasibilityObsKeys:
         )
         sess = self._sess()
         sess.node_type_current = 'boss'
-        bump_lock_gen_feasibility_obs(sess, _st2(hp=10, gold=0),
+        bump_lock_gen_feasibility_obs(sess, _bsb(_st2(hp=10, gold=0)),
                                       IntentionState(), 'lock:旧事件')
         assert state_of(sess).cw4_counters.get(
             'lock_gen_feasibility_obs_boss_neardeath_p2') == 1
@@ -387,7 +387,7 @@ class TestLockGenFeasibilityObsKeys:
         # 域外对照(hp=40):零计数
         sess2 = self._sess()
         sess2.node_type_current = 'boss'
-        bump_lock_gen_feasibility_obs(sess2, _st2(hp=40, gold=0),
+        bump_lock_gen_feasibility_obs(sess2, _bsb(_st2(hp=40, gold=0)),
                                       IntentionState(), 'lock:旧事件')
         assert 'lock_gen_feasibility_obs_boss_neardeath_p2' \
             not in state_of(sess2).cw4_counters
@@ -413,7 +413,7 @@ class TestLockGenFeasibilityObsKeys:
         strategy = self._flow()
         base = None
         for sess in (self._sess(), self._sess()):
-            strategy._refresh_direction(_st2(hp=10, gold=0), sess)
+            strategy._refresh_direction(_bsb(_st2(hp=10, gold=0)), sess)
             ist = state_of(sess).v3_intention
             snap = {f.name: getattr(ist, f.name)
                     for f in ist.__dataclass_fields__.values()}

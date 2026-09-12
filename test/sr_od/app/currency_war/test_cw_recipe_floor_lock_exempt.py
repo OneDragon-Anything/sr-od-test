@@ -25,9 +25,6 @@ from types import SimpleNamespace
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     RECIPE_FLOOR_TRAIN_CAP,
     SwapPlanContext,
@@ -40,6 +37,9 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     select_deployments_reasoned,
     select_swap_plan,
     xianzhou_supply_exists,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -79,18 +79,31 @@ def _session(counters: dict | None = None,
              locked_comp: str = '',
              board: dict | None = None) -> SimpleNamespace:
     """直驱桩 op 的 session 桩(策略状态 = SimpleNamespace,字段面 =
-    _deploy_deterministic 直接解引用的最小集)。``board`` 非空时构造
-    last_state(op 的计划构造 board 输入 = last_state.board,None 时
-    last_state=None → board 空 → 配对判定关闭)。"""
-    last_state = (SimpleNamespace(board=dict(board), level=3)
-                  if board is not None else None)
-    return SimpleNamespace(
-        last_state=last_state,
+    _deploy_deterministic 直接解引用的最小集)。``board`` 非空时播种
+    session 容器单例(op 的计划构造 board 输入 = 容器 board Field,
+    T-146 装配源换源;未播种 → board 空 → 配对判定关闭)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        NodeKey,
+        board_state_of,
+        register_sig_actors,
+    )
+    register_sig_actors('TestRecipeFloorRf')   # §3.2.4 写者登记面
+    sess = SimpleNamespace(
         strategy_state=SimpleNamespace(
             v3_intention=_ist(locked_comp),
             target_comp=None,
             transition_framework='',
             cw4_counters=counters if counters is not None else {}))
+    if board is not None:
+        # 容器播种(T-146 换源镜像:node/board/level = 旧 last_state 桩
+        # 的同值字段;sig = 测试写者身份,非生产渠道)
+        bs = board_state_of(sess)
+        _sig = ChannelSig(family='obs', actor='TestRecipeFloorRf', mode='read')
+        bs.observe(bs.node, NodeKey(plane=1, round_num=5, kind=''), sig=_sig)
+        bs.observe(bs.board, dict(board), sig=_sig)
+        bs.observe(bs.level, 3, sig=_sig)
+    return sess
 
 
 def _make_rf_op(monkeypatch, *, sess: SimpleNamespace,
@@ -509,14 +522,15 @@ def test_emission_frame_dedup_union_and_hold_key() -> None:
     state_of(sess).v3_intention = _ist()   # 未锁 → 豁免关
     frame = _tele_frame()
     for _ in range(3):
-        assert mandate._deployable(frame, sess, CwWorkFrame()) is False
+        assert mandate._deployable(
+            frame, sess, board_state_bridge(CwWorkFrame())) is False
     c = state_of(sess).cw4_counters
     assert c.get('deploy_emit_held_recipe_floor') == 1, c
     assert 'deploy_emit_floor_ctx_open' not in c
     assert 'deploy_emit_floor_exempt_open' not in c
     # 轮次推进 = 新帧,键重新可计(去重载体 phase 键式)
     frame2 = _tele_frame(round_num=4)
-    assert mandate._deployable(frame2, sess, CwWorkFrame()) is False
+    assert mandate._deployable(frame2, sess, board_state_bridge(CwWorkFrame())) is False
     assert state_of(sess).cw4_counters.get(
         'deploy_emit_held_recipe_floor') == 2
 
@@ -531,7 +545,8 @@ def test_emission_armed_release_and_exempt_fire_keys() -> None:
     state_of(sess).v3_intention = _ist('列车同行')
     frame = _tele_frame()
     for _ in range(2):
-        assert mandate._deployable(frame, sess, CwWorkFrame()) is True
+        assert mandate._deployable(
+            frame, sess, board_state_bridge(CwWorkFrame())) is True
     c = state_of(sess).cw4_counters
     assert 'deploy_emit_held_recipe_floor' not in c, c
     assert c.get('deploy_emit_floor_ctx_open') == 1

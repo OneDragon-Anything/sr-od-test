@@ -17,29 +17,16 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-# ==== ① 桥残余登记集(波 5b 消点后现树实描;文件相对 currency_war 根)====
+# ==== ① 桥残余登记集(T-146 装配源迁移后实描;文件相对 currency_war 根)====
 # 每项带辖域标签:消点推进时按标签找归属批,禁无主红。
 _BRIDGE_REGISTERED: dict[str, str] = {
-    'kernel/cw_game_state.py': '机制本体(函数定义+退役 docstring)',
-    # 正名改居过渡壳(W8 段3):壳内 re-export 含桥符号字样,随壳删除
-    # (寿命=在飞批落库 sweep;登记防「壳=回流」误判)。
-    'kernel/cw_game_state.py': '旧路径转发壳(候裁7 改居过渡;非调用)',
-    # 波 5b 消点后仍活调用:
-    # kernel/cw_economy.py 登记项已删(少红=推进协议):标量投影缝随
-    # T-145 消点退役——改直构造 kernel scalar_projection_state(桥引用
-    # 与惰性 CwWorkFrame 构造同批删除;等价锁 = 本文件投影等价测试)。
-    # kernel/cw_evolution.py 登记项已删:模块本体随 W8(T-7 段2)整模块
-    # 退役物理删除,桥引用随之消点(少红=推进协议,同批删登记项)。
-    'prep_actions.py': '活调用·根(他批辖域,波 5b 禁触 :289-291 面)',
-    'strategies/impl/flow.py': '活调用·策略域辖外',
-    'operations/cw_loop.py': '活调用·在飞面他批辖',
-    'operations/cw_op/cw_op_buy_cards.py': '活调用·他批辖域',
-    'operations/cw_op/cw_shop_action_ops.py': '活调用·他批辖域',
-    'operations/cw_screen/cw_screen_invest_strategy.py': '活调用·他批辖域',
-    'operations/cw_screen/cw_screen_planner.py': '活调用·他批辖域',
-    # 仅注释提及(非调用;登记防误判「文件已清零」):
-    'kernel/cw_hp_policy.py': '注释提及(投影过渡语义描述,非调用)',
-    'strategies/impl/mandate_v1/shop.py': '注释提及(W6 波3 装箱归属申报)',
+    # 桥本体(函数定义 + 退役 docstring)。src 活调用面已随 T-146 清零
+    #(prep 根/cw_loop 双点/shop_action_ops/invest_strategy/planner/
+    # flow 三 shim/cw_op_buy_cards fp 遥测全消;末项 = T-163 删帧链后
+    # 入口帧合成进容器单例,fp 读直取单例)。本体物理删除挂「测试仓
+    # harness 改指批」——22 测试文件 + fixtures 经桥构造容器夹具
+    #(T-83 harness 波在用),删除须与测试仓改指同批,防夹具断链。
+    'kernel/cw_game_state.py': '桥本体(函数定义+退役 docstring;删除挂测试仓 harness 改指批)',
 }
 
 _ROOT = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
@@ -141,11 +128,15 @@ def test_scalar_projection_equivalent_to_bridge_projection() -> None:
 
 
 def test_last_state_write_points_pinned_three() -> None:
-    """last_state 写点计数钉定(退役挂执行侧装配源迁移 ADR-0530 尾批/T-7;
-    本批不删写点——读者面 ~18 点未迁,先删=断执行侧装配源,设计序见
-    GameState-数据结构设计「消费切换余量归属/迁移尾批」)。计数变化 =
-    该面推进或扩面,须人工对账后更新钉值。口径 = AST 赋值语句(注释/
-    docstring 提及不计,同型误报实证 = cw_loop docstring 内装箱示例)。"""
+    """last_state 写点计数钉定(装配源读者面已随 T-146 尾批迁容器单例;
+    写点存续依据 = 遗留读者面仍在:环守卫指纹/收口假局判定/局终
+    MatchOutcome/identity_obs 等级链/exec_state gold 推进/词缀与效果
+    账本引导窗回退/battle_wait/screen_prep 杂读/overlay_confirm——
+    该面语义逐点钉在帧上(如 T-167 gold 指纹钉死),退役 = 各点独立
+    重验,归「last_state 链退役收尾批」(未立项,候编排者)。计数变化
+    = 该面推进或扩面,须人工对账后更新钉值。口径 = AST 赋值语句
+    (注释/docstring 提及不计,同型误报实证 = cw_loop docstring 内装箱
+    示例)。"""
     import ast
     hits: list[str] = []
     for path in _ROOT.rglob('*.py'):
@@ -160,3 +151,27 @@ def test_last_state_write_points_pinned_three() -> None:
     assert len(hits) == 3, (
         'last_state 写点数漂移(钉定 3 = cw_screen_prep 观察×2 + '
         f'cw_op_buy_cards 融合段×1),逐条对账: {hits}')
+
+
+def test_assembly_source_files_zero_last_state() -> None:
+    """装配源迁移完成锁(T-146 尾批,ADR-0530 决策2 换源核销):执行侧
+    装配源四文件(cw_op_deploy/cw_op_equip_all/prep_actions 执行器/
+    strategies flow)last_state 读点归零——属性加载与 getattr 字符串
+    两形态全扫(注释/docstring 提及不计)。红 = 装配源回流或迁移面
+    扩入新读者,人工对账。"""
+    import ast
+    _FILES = ('operations/cw_op/cw_op_deploy.py',
+              'operations/cw_op/cw_op_equip_all.py',
+              'prep_actions.py',
+              'strategies/impl/flow.py')
+    for rel in _FILES:
+        tree = ast.parse((_ROOT / rel).read_text(encoding='utf-8'))
+        for node in ast.walk(tree):
+            ok = not (isinstance(node, ast.Attribute)
+                      and node.attr == 'last_state')
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+                    and node.func.id == 'getattr' and len(node.args) >= 2:
+                a = node.args[1]
+                ok = ok and not (isinstance(a, ast.Constant)
+                                 and a.value == 'last_state')
+            assert ok, f'{rel}:L{node.lineno} last_state 读点回流(装配源应全容器)'

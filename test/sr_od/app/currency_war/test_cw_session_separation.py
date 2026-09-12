@@ -154,7 +154,7 @@ def test_none_session_returns_throwaway_no_cache() -> None:
 # ===== ADR-0563 决策-2:工厂钩子落位 =====
 
 def test_mandate_v1_create_state_override() -> None:
-    """mandate_v1 覆写 create_state 返回 MandateState(决策-2 申报面):
+    """mandate_v1 覆写 create_state 返回 StrategyState(决策-2 申报面):
     工厂容忍 config=None(sim 注入桩面),且不携带 live 初值
     (v3_phase FORM 由 create_session 唯一冷建口写入,ADR-0583;
     sim 直调工厂产物恒 '' 保 sim 旧读数)。"""
@@ -162,10 +162,10 @@ def test_mandate_v1_create_state_override() -> None:
         MandateV1Strategy,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-        MandateState,
+        StrategyState,
     )
     ms = MandateV1Strategy().create_state(None)
-    assert isinstance(ms, MandateState)
+    assert isinstance(ms, StrategyState)
     assert ms.v3_phase == '', '工厂产物不得携带 live 初值 FORM(归冷建口)'
     # 覆写落点断言(原 CwFlowStrategy 类直调句)已删:与上一断言调同一
     # 函数对象(MandateV1Strategy 经继承无 create_state 覆写),仅换接收者,
@@ -174,7 +174,7 @@ def test_mandate_v1_create_state_override() -> None:
 
 def test_create_session_sole_cold_build_entry_l4() -> None:
     """L4 冷建唯一口锁(出处 = ADR-0583 §2.3/§1.3 双冷建重叠消除):
-    create_session 后 strategy_state 为 MandateState 且 v3_phase='FORM'
+    create_session 后 strategy_state 为 StrategyState 且 v3_phase='FORM'
     (live 初值随唯一冷建口落位);二次 create_session 全量重建(新对象、
     新状态,工厂恰走一次);生命周期钩子 on_match_start/on_match_end 已删
     (残留调用点 = 墓碑锁辖,test_cw_blackboard L6 空间守卫)。"""
@@ -182,11 +182,11 @@ def test_create_session_sole_cold_build_entry_l4() -> None:
         MandateV1Strategy,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-        MandateState,
+        StrategyState,
     )
     strat = MandateV1Strategy()
     sess1 = strat.create_session(None)
-    assert isinstance(sess1.strategy_state, MandateState)
+    assert isinstance(sess1.strategy_state, StrategyState)
     assert sess1.strategy_state.v3_phase == 'FORM', (
         'live 相位初值必须随唯一冷建口(旧 on_match_start 写点语义收编)')
     calls: list[object] = []
@@ -231,8 +231,8 @@ def test_factory_slot_unregistered_returns_none_no_writeback(monkeypatch) -> Non
     「装配副作用(本包被导入即生效)」+ ADR-0563 决策-4 注册点声明):
     包导入即全局安装,_STATE_FACTORY is StrategyState(先于桩化断言,
     自带导入保证与测试顺序无关)。改锁依据 = 设计正本 §8.6-6 改名归位
-    (迁移批次三):状态类目标名 StrategyState,MandateState 为同对象
-    别名——锁语义(装配副作用 = 安装 mandate_v1 状态工厂)不变。"""
+    (迁移批次三):状态类目标名 StrategyState;历史名兼容别名已随迁移
+    尾批清理(T-146)——锁语义(装配副作用 = 安装 mandate_v1 状态工厂)不变。"""
     from sr_od.application.currency_war.kernel import cw_strategy_session as ss_mod
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         StrategyState,

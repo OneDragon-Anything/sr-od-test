@@ -26,12 +26,15 @@ import inspect
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     can_deploy_single,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
-    CwWorkFrame,
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    BenchChar,
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.sim.engine_p1 import (
     sim_decision_registry,
@@ -131,7 +134,7 @@ class TestBoardTargetLineWriter:
         (sim 引擎缺写守卫不重复触发)。"""
         sess = StrategySession()
         st = CwWorkFrame()
-        _mk_strat().write_shop_mirrors(st, sess)
+        _mk_strat().write_shop_mirrors(_bsb(st), sess)
         assert state_of(sess).v3_b_t == 0
         assert state_of(sess).v3_mirror_key == (1, 1)
 
@@ -141,13 +144,13 @@ class TestBoardTargetLineWriter:
         (B_t 按注册表查羁绊,未注册假名不计)。"""
         sess = StrategySession()
         st = CwWorkFrame()
-        _mk_strat().write_shop_mirrors(st, sess)
+        _mk_strat().write_shop_mirrors(_bsb(st), sess)
         base = state_of(sess).v3_b_t
         assert base == 0
         st.deployed = [BenchChar(slot=i, char_id='青雀', star=1,
                                  faction='仙舟', position_pref='back')
                        for i in range(3)]
-        _mk_strat().write_shop_mirrors(st, sess)
+        _mk_strat().write_shop_mirrors(_bsb(st), sess)
         assert state_of(sess).v3_b_t == 3, '三件线内上场件应逐件计 3'
 
     def test_out_of_line_and_unregistered_not_counted(self):
@@ -156,7 +159,7 @@ class TestBoardTargetLineWriter:
         st = CwWorkFrame()
         st.deployed = [BenchChar(slot=0, char_id='x_unregistered', star=1,
                                  faction='', position_pref='back')]
-        _mk_strat().write_shop_mirrors(st, sess)
+        _mk_strat().write_shop_mirrors(_bsb(st), sess)
         assert state_of(sess).v3_b_t == 0
 
     def test_phase_retired_form_ok_present_read(self):
@@ -168,7 +171,7 @@ class TestBoardTargetLineWriter:
         st = CwWorkFrame()
         st.deployed = [BenchChar(slot=0, char_id='x', star=1,
                                  faction='仙舟', position_pref='back')]
-        _mk_strat().write_shop_mirrors(st, sess)
+        _mk_strat().write_shop_mirrors(_bsb(st), sess)
         assert getattr(state_of(sess), 'v3_phase', None) in (None, '', 'FORM')
         assert state_of(sess).v3_form_ok is False
 

@@ -39,6 +39,34 @@ def _mk_comp(*, key_equips: list[str] | None = None,
                            required_deployed=None)
 
 
+def _seed_container(sess, state) -> None:
+    """容器播种(T-146 装配源换源镜像):builder/执行器闩读 session 容器
+    单例,node/board/enemy_affixes/level 按旧 last_state 桩同值观察写入
+    (写者 = 测试身份,sig 登记面在册)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        NodeKey,
+        board_state_of,
+        register_sig_actors,
+    )
+    register_sig_actors('TestEquipPlanBuilder')   # §3.2.4 写者登记面
+    _bs = board_state_of(sess)
+    _sig = ChannelSig(family='obs', actor='TestEquipPlanBuilder', mode='read')
+    _kind = getattr(state, 'node_type', None) or ''
+    _pl = int(getattr(state, 'plane', 1) or 1)
+    _rn = int(getattr(state, 'round_num', 1) or 1)
+    _bs.observe(_bs.node, NodeKey(plane=_pl, round_num=_rn, kind=_kind), sig=_sig)
+    _afx = list(getattr(state, 'enemy_affixes', None) or [])
+    if _afx:
+        _bs.observe(_bs.enemy_affixes, _afx, sig=_sig)
+    _board = getattr(state, 'board', None)
+    if _board:
+        _bs.observe(_bs.board, dict(_board), sig=_sig)
+    _lv = getattr(state, 'level', None)
+    if _lv is not None:
+        _bs.observe(_bs.level, int(_lv), sig=_sig)
+
+
 def _mk_builder_env(monkeypatch, *, owned_hits: list, deployed: list,
                     comp=None, state=None, row_equipped: dict | None = None):
     """``_build_equip_wear_plan`` 黑盒直调环境桩。
@@ -47,6 +75,9 @@ def _mk_builder_env(monkeypatch, *, owned_hits: list, deployed: list,
     read_equips=cw_equipment / read_row_equipped+read_deployed_chars=
     cw_identity_obs / select_back_layout=cw_back_layout / _area_rect=prep_actions。
     模板资源走 ctx 缓存命中(cw_equip_templates 等预置 object()),不触真实 assets。
+    (换源 T-146:builder 装配源 = session 容器单例——本桩按 ``state`` 参
+    同值播种容器(node/词缀/board/等级,``_seed_container``),替代旧
+    last_state SimpleNamespace 通道。)
     """
     import sr_od.application.currency_war.prep_actions as pa_mod
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -58,10 +89,12 @@ def _mk_builder_env(monkeypatch, *, owned_hits: list, deployed: list,
         cw_identity_obs,
     )
 
-    sess = StrategySession()
-    sess.last_state = state or SimpleNamespace(
+    _st_src = state or SimpleNamespace(
         plane=3, round_num=5, node_type='奖励', enemy_affixes=[],
         board={}, deployed=[])
+    sess = StrategySession()
+    sess.last_state = _st_src
+    _seed_container(sess, _st_src)
     sess.strategy_state = SimpleNamespace(target_comp=comp)
     match = SimpleNamespace(session=sess,
                             exec_state=SimpleNamespace(equip_drag_fail_counts={}))
@@ -287,6 +320,7 @@ def test_empty_plan_noop_sets_equip_latch_and_keeps_shopped(monkeypatch) -> None
     sess = StrategySession()
     sess.last_state = SimpleNamespace(plane=1, round_num=5, node_type='奖励',
                                       enemy_affixes=[])
+    _seed_container(sess, sess.last_state)   # 闩键源 = 容器 node(T-146 换源)
     match = SimpleNamespace(session=sess,
                             exec_state=SimpleNamespace(equip_drag_fail_counts={}))
     ctx = SimpleNamespace(screen_loader=SimpleNamespace(get_screen=lambda name: None),
@@ -422,6 +456,7 @@ def test_plan_stale_executor_status_flows_through(monkeypatch) -> None:
     sess = StrategySession()
     sess.last_state = SimpleNamespace(plane=1, round_num=5, node_type='奖励',
                                       enemy_affixes=[])
+    _seed_container(sess, sess.last_state)   # 闩键源 = 容器 node(T-146 换源)
     match = SimpleNamespace(session=sess,
                             exec_state=SimpleNamespace(equip_drag_fail_counts={}))
     ctx = SimpleNamespace(screen_loader=SimpleNamespace(get_screen=lambda name: None),

@@ -67,7 +67,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-    MandateState,
+    StrategyState,
     state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
@@ -135,14 +135,14 @@ class TestS1ResetWhitelist:
             _set_s2(sess, _bsb(_state()))
         return sess, st
 
-    def cleared(self, st: MandateState) -> bool:
+    def cleared(self, st: StrategyState) -> bool:
         return getattr(st, 'cw4_shopped_phase', None) is None
 
     def test_i_deploy_launch_landing_clears(self):
         """(i) 部署类:RunDeploy 落地 → 清键,遥测分键
         s1_reset_by_deploy_launch(route 类由动作类型承载,§5.1 M1 行)。"""
         sess, st = self._mk()
-        mandate.mark_s1_route_check(sess, _state(), RunDeploy(),
+        mandate.mark_s1_route_check(sess, _bsb(_state()), RunDeploy(),
                                     pre_bench_count=9, post_bench_count=8,
                                     landed=True)
         assert self.cleared(st)
@@ -155,7 +155,7 @@ class TestS1ResetWhitelist:
         25 次无信息量重开店)。landed 必传(落地审低②:删缺省防静默
         沿用旧「progressed 即落地」口径)。"""
         sess, st = self._mk()
-        mandate.mark_s1_route_check(sess, _state(), RunDeploy(),
+        mandate.mark_s1_route_check(sess, _bsb(_state()), RunDeploy(),
                                     pre_bench_count=9, post_bench_count=8,
                                     landed=False)
         assert not self.cleared(st), 'no-op RunDeploy 必须保持开店闩(F1b)'

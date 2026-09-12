@@ -88,7 +88,9 @@ class TestFormOkPresentReadWriter:
         st = SimpleNamespace(board=board, bench=[None] * 9,
                              deployed=[None] * 10, plane=1, round_num=1)
         assert state_of(sess).v3_form_ok is False
-        _fake_strat().write_shop_mirrors(st, sess)
+        # 换源 T-146:write_shop_mirrors 入参 = 容器(桥装 SimpleNamespace
+        # 桩帧,与生产容器单例同读口面)
+        _fake_strat().write_shop_mirrors(_bridge(st), sess)
         return sess, readiness_form_ok(_bridge(st), comp)
 
     def test_writer_matches_kernel_present_read(self):

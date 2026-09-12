@@ -22,13 +22,17 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+    ActiveEffectInventory,
+    CounterKey,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BENCH_CAPACITY_DEFAULT,
     BS_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
-    GameState,
     Field,
+    GameState,
     NodeKey,
     Unit,
     apply_effect_burst_grant,
@@ -51,13 +55,12 @@ from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors as _register_sig_actors,
 )
-from sr_od.application.currency_war.kernel.cw_effect_inventory import (
-    ActiveEffectInventory,
-    CounterKey,
-)
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_STRATEGIES,
     STRATEGY_EFFECTS,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
@@ -67,14 +70,10 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard as StateShopCard,
 )
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
-)
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CwStrategy,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-    MandateState,
     StrategyState,
     state_of,
 )
@@ -829,14 +828,15 @@ def test_consume_defect_sink_drains() -> None:
 # StrategyState 改名归位 + 下沉策略实现层 + 泛型携带
 
 
-def test_strategy_state_renamed_alias_is_same_object() -> None:
-    """§8.6-6(批次三已落):类名改名归位为目标名 StrategyState;历史名
-    MandateState = 同对象别名(isinstance/is X 全兼容,零行为差)。"""
-    assert StrategyState is MandateState
+def test_strategy_state_alias_retired() -> None:
+    """§8.6-6(批次三落)+ §8.7 尾批行(T-146 落):类名改名归位为目标名
+    StrategyState;历史名 MandateState 同对象兼容别名已清理——模块属性
+    不存在(墓碑翻转;消费面一律 import StrategyState)。"""
+    import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state as _ms_mod
+    assert not hasattr(_ms_mod, 'MandateState'), '历史名别名应已清理(§8.7 尾批行)'
     sess = StrategySession()
     assert state_of(sess) is sess.strategy_state
     assert isinstance(state_of(sess), StrategyState)
-    assert isinstance(state_of(sess), MandateState), '别名 isinstance 兼容'
 
 
 def test_framework_layer_does_not_import_concrete_state() -> None:
