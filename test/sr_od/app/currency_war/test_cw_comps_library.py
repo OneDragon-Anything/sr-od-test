@@ -518,16 +518,16 @@ def test_blank_window_cost_band_and_no_direction():
 
 def test_blank_window_not_blank_when_any_system_active():
     st = _state_with_deployed(['卡芙卡', '桑博'])   # DOT2 已激活
-    dec = blank_window_policy(st)
+    dec = blank_window_policy(_bridge(st))
     assert dec.is_blank is False
     assert dec.buy_idx == []
 
 
 # ==================== evolution ====================
 
-from sr_od.application.currency_war.kernel.cw_evolution import EvolutionState, UpgradeOption, UpgradeVerdict, evaluate_upgrade, evolution_step, execute_replacement, fill_gap_after, fill_slot_policy, propose_upgrades, rollback_weakest
+from sr_od.application.currency_war.kernel.cw_evolution import EvolutionState, UpgradeOption, UpgradeVerdict, evaluate_upgrade, evolution_step, execute_replacement, fill_gap_after, fill_slot_policy, propose_upgrades
 from sr_od.application.currency_war.kernel.cw_line_defs import _CORE_TRIO
-from sr_od.application.currency_war.kernel.cw_state import CompTransaction, SellDeployed, SwapDeploy, deployed_occupied, iter_occupied_deployed, simulate
+from sr_od.application.currency_war.kernel.cw_state import CompTransaction, deployed_occupied, iter_occupied_deployed, simulate
 
 
 def _dot2_state() -> GameState:
@@ -795,7 +795,11 @@ def test_execute_replacement_dedup_same_name_copies():
         '其余副本留 bench 当 3合1 素材(不卖)'
 
 
-# ---------- 5. 中断恢复 / 谷底回滚 ----------
+# ---------- 5. 中断恢复 ----------
+# (本节原「谷底回滚」半段的行为锁
+# test_valley_rollback_weakest_then_pause /
+# test_valley_rollback_no_retained_sells_weakest 已随 T-64 退役批删除:
+# 被锁函数 rollback_weakest 退役,04_survival_budget §7 #7,ADR-0638。)
 
 def test_freeze_on_encounter_recovery_revalidates():
     """遭遇/boss 前冻结不启动新替换;恢复 = 三条件重校验,成立则当轮执行。"""
@@ -823,40 +827,9 @@ def test_freeze_on_encounter_recovery_revalidates():
     assert mem2.pending is None   # 那次替换作废
 
 
-def test_valley_rollback_weakest_then_pause():
-    """谷底回滚:回滚一件最弱替换位(SwapDeploy 换回保留件)后放缓。"""
-    st = _dot2_state()
-    actions, mem = _run_evolution(st)
-    tx = next(a for a in actions if isinstance(a, CompTransaction))
-    out = simulate(st, tx)
-    # 掉血>15 触发(调用方观测)→ 回滚最弱新档位
-    action = rollback_weakest(out, mem)
-    assert action is not None and isinstance(action, SwapDeploy)
-    assert action.reason == 'valley_rollback'
-    assert mem.paused is True
-    rolled = simulate(out, action)
-    assert rolled.board == _recount_board(rolled.deployed)
-    # 回滚后再遇上遭遇轮:暂停生效,不续演进
-    rolled.node_type = '遭遇'
-    assert evolution_step(rolled, None, mem) == []
+# ---------- 5.1 谷底回滚登记槽全零守卫(结构面负向锁;T-64 退役批改判) ----------
 
-
-def test_valley_rollback_no_retained_sells_weakest():
-    """无 bench 保留件(回滚窗已耗尽)→ 退役最弱新档位(SellDeployed)。"""
-    st = _dot2_state()
-    actions, mem = _run_evolution(st)
-    tx = next(a for a in actions if isinstance(a, CompTransaction))
-    out = simulate(st, tx)
-    out.bench = []   # 回滚窗耗尽(旧档保留件已清)
-    mem.last_retained = []
-    action = rollback_weakest(out, mem)
-    assert isinstance(action, SellDeployed)
-    assert mem.paused is True
-
-
-# ---------- 5.1 谷底回滚登记槽零消费守卫(结构面负向锁) ----------
-
-#: 登记槽字段名(SwapDeploy 谷底回滚「登记半边」的唯一载体)。
+#: 登记槽字段名(SwapDeploy 谷底回滚「登记半边」的原唯一载体,已退役)。
 _SLOT = 'v3_pending_rollback'
 
 
@@ -889,50 +862,37 @@ def _scan_slot_accesses(src_root: Path) -> tuple[list[str], list[str], list[str]
 
 
 def test_valley_rollback_slot_zero_consumer_guard() -> None:
-    """谷底回滚登记槽零消费守卫(SwapDeploy 发射面退役 as-built 负向锁)。
+    """谷底回滚登记槽全零守卫(T-64 退役批:登记半边亦退役的负向锁)。
 
-    出处 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
-    §6.6 SwapDeploy 行(发射面退役 = as-built 事实申报;负向锁申报 =
-    登记槽非空告警)+ §7-T5 注意项(禁把 v3_pending_rollback 当 bug 接上
-    发射)。as-built:登记半边活(谷底回滚臂仍构造 SwapDeploy 写入本槽)、
-    发射半边退役(全仓零消费,SwapDeploy 无两适配器执行链映射)。
+    语义演进(改判有据,非机械跟绿):本锁前版基线 = 声明 1/写 1/读 1
+    (登记半边活:flow 谷底回滚臂构造 SwapDeploy 写入本槽;发射面先期
+    退役,出处 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op
+    基类设计.md §6.6 SwapDeploy 行 + §7-T5)。T-64 退役批把登记半边
+    亦删除(谷底回滚登记臂结构性不可达 = 零行为死链;2026-09-04 用户
+    裁定退役,04_survival_budget §7 #7;ADR-0638)→ 基线改判**恰 0**:
+    ``v3_pending_rollback`` 在全 src 声明/读/写零存在,任何复活
+    (重声明字段/重接登记臂)一律红。
 
-    断言面 = 结构形状:①声明恰 1(StrategyState 字段,mandate_state);
-    ②写恰 1(flow 谷底回滚登记臂);③**消费读基线 = 恰 1 且在 flow 登记
-    臂内**(即登记臂自身的槽空守卫读)——基线外任何新增读一律红,无论
-    跨文件还是**同文件**:flow 的 decide()/结算段是 §7-T5 点名的复活
-    热区,同文件读槽出发射是最高危向量,禁因「同在 flow」豁免。
-    基线实扫(2026-09-10):读 1(守卫)+ 写 1(登记)全在 flow 登记臂,
-    声明 1 在 mandate_state。
+    红(复活出现)处置 = 按 §7 #7 裁决走新立项(硬闸门),两适配器同批
+    补执行链映射并回写设计文档 §6.6 as-built 后改判本锁(禁机械跟绿);
+    误用(把槽当可消费队列)→ 删消费读。runtime 告警半边(执行器消费点
+    「槽非空」告警)挂 on_outcome 收编批落点,不属本结构锁。
 
-    红(新增读出现)处置 = 确要复活发射 → 两适配器同批补执行链映射并
-    回写设计文档 §6.6 as-built 后改判本锁(禁机械跟绿);误用(把待发槽
-    当可消费队列)→ 删消费读。
-    runtime 告警半边(执行器消费点「槽非空」告警)挂 on_outcome 收编批
-    落点,不属本结构锁。
-
-    与旧锁关系:同文件 ``test_valley_rollback_weakest_then_pause`` 断言
-    登记半边仍活(rollback_weakest 返回 SwapDeploy)——本锁守消费半边
-    恒零,两锁合成「登记活/发射退役」完整 as-built,断言面不重复。
+    断言面分工:本锁断言真实 src 全零;同文件盲区自检锁用合成样本钉
+    扫描器捕获能力(跨文件读/同文件盗版读必红),两锁断言面不重复。
+    18 符号退役集中其余 17 符号的全零守卫 =
+    test_cw_retired_symbols_guard(本槽由本锁专辖,不重复断言;该守卫
+    2026-09-12 归并批自 test_cw_t64_retired_symbols_guard.py 并入改名)。
     """
     from pathlib import Path
 
     src_root = Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
     decl, loads, stores = _scan_slot_accesses(src_root)
-    assert len(decl) == 1 and decl[0].startswith(
-        'application/currency_war/strategies/impl/mandate_v1/mandate_state.py'), (
-        f'{_SLOT} 声明面漂移(恰 1 处数据类字段声明,现 {decl})——'
-        f'槽载体变更须同批回写设计文档 §6.6 as-built')
-    assert len(stores) == 1 and stores[0].startswith(
-        'application/currency_war/strategies/impl/flow.py'), (
-        f'{_SLOT} 写点漂移(恰 1 处 = flow 谷底回滚登记臂,现 {stores})——'
-        f'第二写端 = 登记语义分叉,禁')
-    assert len(loads) == 1 and loads[0].startswith(
-        'application/currency_war/strategies/impl/flow.py'), (
-        f'{_SLOT} 消费读越出基线(基线 = 恰 1 处登记臂槽空守卫读,现 '
-        f'{len(loads)} 处:{loads})——发射面已退役(设计文档 §6.6/§7-T5):'
-        f'登记动作永不发射,新增读 = 静默复活(同文件 decide()/结算段读槽'
-        f'出发射即复活热区),重接须两适配器同批映射申报后改判本锁')
+    assert not decl and not loads and not stores, (
+        f'{_SLOT} 已随 T-64 退役批全删(04_survival_budget §7 #7,'
+        f'ADR-0638),src 树应零存在,现声明 {decl} / 读 {loads} / '
+        f'写 {stores}——复活须按裁决走新立项+设计文档 §6.6 as-built '
+        f'回写后改判本锁')
 
 
 def test_valley_rollback_slot_guard_blindspot(tmp_path: Path) -> None:
