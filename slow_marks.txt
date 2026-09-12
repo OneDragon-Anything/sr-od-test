@@ -84,3 +84,15 @@ test_window_run_mutex.py::test_cross_process_mutex_and_auto_release
 test_cw_shop_refresh_button.py::test_button_real_fixtures
 test_cw_shop_refresh_button.py::test_free_anchor_three_state_boundary
 test_cw_shop_refresh_button.py::test_price_reader_free_frame_count_is_not_price_via_gate
+
+# T-93 掩蔽式改造补登(2026-09-12 三审巡检:全树掩蔽域扫描三条,T-93 改造时未随批登记;
+# HEAD 1564765 工作区实态热跑复测 call 4.13s/4.00s/3.98s≥2s——掩蔽式 finditer 全文域比
+# 逐行扫描重,生产树增员还会继续上浮;结构性优化(三测试共享一次文件列表+文本读取的
+# module fixture,省 ~2/3)已申报归该文件辖域批,优化后 <2s 可巡检移除)
+test_cw_old_stream_write_retirement.py::test_defect_refs_no_retired_stream_anchors
+test_cw_old_stream_write_retirement.py::test_board_state_archive_writer_orphan_pinned
+test_cw_old_stream_write_retirement.py::test_no_retired_writer_call_sites_in_production_tree
+
+# 三审补登(2026-09-12:r4 写端退役锁,冷跑 setup 2.07s≥2s[注册表装配冷启],热跑 <1.9s——
+# 冷热取宽口径,同 T-69/T-84 边界件保守准入先例)
+test_cw_decision_trace_r4.py::test_state_ref_writer_retired
