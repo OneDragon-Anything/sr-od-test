@@ -38,10 +38,10 @@ def _load_marks() -> list[str]:
 
 
 def pytest_collection_finish(session):
-    """收集期全局日志守卫:拦截模块级 ``logging.disable`` 泄漏。
+    """收集期守卫①全局日志 + ②OCR 模型在位预检(各判据见下方两段)。
 
-    ``logging.disable`` 是进程全局态,而 pytest 在收集期就 import 全部测试
-    模块——任何模块级调用会对**整个测试会话**生效,静默饿死其他测试依赖
+    守卫①:``logging.disable`` 是进程全局态,而 pytest 在收集期就 import 全部
+    测试模块——任何模块级调用会对**整个测试会话**生效,静默饿死其他测试依赖
     日志落盘的断言(判例:test_log_utils_utf8_rollover_continuity 因此
     FileNotFoundError,单文件绿/全量红的假 flaky)。禁日志必须收口为本
     模块的 autouse fixture(见各 CW 测试文件的 ``_quiet_logging``)。
@@ -59,6 +59,33 @@ def pytest_collection_finish(session):
             "test_cw_hp_trust_defense.py / test_cw_investment.py 的 "
             "_quiet_logging),否则会静默"
             "破坏其他测试的日志断言。"
+        )
+    _check_ocr_models_ready()
+
+
+def _check_ocr_models_ready() -> None:
+    """收集期预检 OCR 模型文件在位,缺失即整轮报错带恢复指引。
+
+    为什么在收集期拦:模型目录 assets/models/onnx_ocr/ 被 gitignore 覆盖不入
+    git,清理工作树(git clean -x 类)会连带删掉模型;而测试进程有网络守卫
+    (test/conftest.py _block_external_network)不会自动补下载,OCR init 静默
+    失败后所有 OCR 依赖测试集体炸深处 AttributeError——2026-09-12 实测一次
+    ~262 条环境假红,失败集对照口径被完全淹没。模型在位时本检查零成本。
+    """
+    from one_dragon.base.matcher.ocr.onnx_ocr_matcher import (
+        DEFAULT_OCR_MODEL_NAME,
+        get_ocr_model_dir,
+    )
+
+    model_dir = Path(get_ocr_model_dir(DEFAULT_OCR_MODEL_NAME))
+    missing = [name for name in ('det.onnx', 'rec.onnx', 'cls.onnx')
+               if not (model_dir / name).exists()]
+    if missing:
+        raise pytest.UsageError(
+            f'OCR 模型文件缺失: {model_dir} 下缺 {missing}。'
+            '继续跑会把全部 OCR 依赖测试变成 AttributeError 假红。'
+            '恢复(任选其一):①检查网络/代理后调用任一 OCR 初始化链自动补下载'
+            '(框架 github/gitee 双源);②启动一条龙 GUI 的 OCR 功能触发下载。'
         )
 
 
