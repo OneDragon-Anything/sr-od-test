@@ -5,10 +5,13 @@
 检查面。样本事故驱动增量:识别出错的实况帧每种情况补 1 张,不预先铺满。
 
 挂账(正常样本待裁剪入库,按第 21 条随重建/改函数补):
-read_merge_preview(✦ 升星预览正样本缺帧——需「商店开 ∧ 我方持同名同星副本」
-帧,实机顺手采样后补)、find_bookcards。
-已划掉(2026-09-12 死码裁决):detect_bench_avatars / detect_empty_slots /
+find_bookcards(待 gold_card 语义核对后判定,疑似已有主)。
+已锚并划掉:read_merge_preview(本文件 TestMergePreviewGroundTruth);
+detect_bench_avatars / detect_empty_slots /
 detect_board_slots / detect_slot_centers——生产零外部消费死码已删,不补样本。
+read_merge_preview 已锚(本文件 TestMergePreviewGroundTruth:正样本 =
+shop_open_preview_star 帧 card5 ✦=2 看图确认,负样本 = shop_open 帧全 0);
+find_bookcards 待 gold_card 语义核对后判定(疑似已有主)。
 read_star(find_tomes/find_supply_boxes)由 test_cw_data_registry 现役主题件
 (装备识别与身份真值锚)辖;prep_stall 帧的 SIFT 身份+星级真值对已并入
 test_cw_identity_funnel(一图一测:该帧全库 SIFT 只在那里跑一次;
@@ -207,3 +210,36 @@ class TestSettlePage1GroundTruth:
         assert all(4 <= len(b) <= 8 for b in bosses), bosses   # 中文 4-8 字公司名
         difficulty = read_briefing_enemy_difficulty(test_context, screen)
         assert difficulty is not None and 0 < difficulty <= 300, difficulty
+
+
+# ===== 升星预览 ✦(cw_identity_obs.read_merge_preview;真帧 = 开商店档) =====
+
+class TestMergePreviewGroundTruth:
+    """商店牌头顶 ✦ 数(= 已持同名同星副本份数)真帧锚。
+
+    真值确认 = 看图人工核对(2026-09-12):shop_open_preview_star 帧仅 card5
+    (万敌,试用标)头顶 2 个金色 ✦,其余 4 牌无——我方持万敌同名同星副本
+    2 份形态。负样本 = shop_open 帧(同店态无副本)全 0,与正样本同测试
+    聚合对照(0 是合法语义:该牌无已持副本)。
+    """
+
+    def _previews(self, test_context, frame_name: str) -> list[int]:
+        from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
+        from sr_od.application.currency_war.obs.cw_identity_obs import (
+            read_merge_preview,
+        )
+        img = _read(_SCREEN_DIR.parent / '货币战争-备战-开商店' / frame_name)
+        out = []
+        for i in range(1, 6):
+            rect = _area_rect(test_context, f'商店牌-{i}', '货币战争-备战-开商店')
+            assert rect is not None, f'商店牌-{i} area 缺'
+            out.append(read_merge_preview(img[rect.y1:rect.y2, rect.x1:rect.x2]))
+        return out
+
+    def test_preview_star_frame(self, test_context):
+        assert self._previews(test_context, 'shop_open_preview_star.webp') == \
+            [0, 0, 0, 0, 2]
+
+    def test_no_preview_frame_all_zero(self, test_context):
+        # 负样本:无副本店帧全 0(0 = 「无✦」合法语义,非失读)
+        assert self._previews(test_context, 'shop_open.webp') == [0, 0, 0, 0, 0]
