@@ -1,4 +1,4 @@
-"""ADR 编号守卫:docs/develop/currency_war/decisions/ 的 INDEX 与文件一致性。
+"""ADR 编号守卫:docs/develop/sr_od/application/currency_war/decisions/ 的 INDEX 与文件一致性。
 
 动机(2026-08-26 两起撞号事故):
 - W132/W138 两批同用 0353:两文件并存、INDEX 两行撞号,后手工重编号(commit f30f408a);
@@ -26,7 +26,7 @@ from pathlib import Path
 # 主仓定位:本文件 = <主仓>/sr-od-test/test/sr_od/docs/test_cw_adr_index_guard.py
 # parents[4] 即主仓根(sr-od-test 是主仓根下被 gitignore 的独立测试仓)。
 _REPO_ROOT = Path(__file__).resolve().parents[4]
-_DECISIONS_DIR = _REPO_ROOT / 'docs' / 'develop' / 'currency_war' / 'decisions'
+_DECISIONS_DIR = _REPO_ROOT / 'docs' / 'develop' / 'sr_od' / 'application' / 'currency_war' / 'decisions'
 _INDEX_FILE = _DECISIONS_DIR / 'INDEX.md'
 
 # INDEX 表格行形态:首列为 markdown 链接 `| [label](href.md) | 标题 |`,
