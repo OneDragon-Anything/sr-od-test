@@ -5,14 +5,19 @@
 检查面。样本事故驱动增量:识别出错的实况帧每种情况补 1 张,不预先铺满。
 
 挂账(正常样本待裁剪入库,按第 21 条随重建/改函数补):
-read_star / read_merge_preview / find_bookcards / find_tomes / find_supply_boxes /
-detect_bench_avatars / detect_empty_slots——prep_stall 帧的 SIFT 身份+星级真值对
-已并入 test_cw_identity_funnel(一图一测:该帧全库 SIFT 只在那里跑一次;
-真值 2026-02-02 看图核对 + 用户裁决:花火 1★)。
+read_merge_preview(✦ 升星预览正样本缺帧——需「商店开 ∧ 我方持同名同星副本」
+帧,实机顺手采样后补)、find_bookcards。
+已划掉(2026-09-12 死码裁决):detect_bench_avatars / detect_empty_slots /
+detect_board_slots / detect_slot_centers——生产零外部消费死码已删,不补样本。
+read_star(find_tomes/find_supply_boxes)由 test_cw_data_registry 现役主题件
+(装备识别与身份真值锚)辖;prep_stall 帧的 SIFT 身份+星级真值对已并入
+test_cw_identity_funnel(一图一测:该帧全库 SIFT 只在那里跑一次;
+真值 2026-09-12 看图核对 + 用户裁决:花火 1★)。
 """
 from pathlib import Path
 
 import pytest
+
 from one_dragon.utils import cv2_utils
 from one_dragon.utils.file_utils import get_project_root
 
@@ -58,7 +63,8 @@ class TestNodeRowGroundTruth:
         # 未来类型序列真值同上口径
         img = _read(_DIR / 'cw_node_row_boss.png')
         from sr_od.application.currency_war.obs.cw_node_reader import (
-            classify_node_row, load_boss_templates,
+            classify_node_row,
+            load_boss_templates,
         )
         boss_tpls = load_boss_templates(
             get_project_root() / 'assets' / 'template' / 'currency_war' / 'boss_avatar')
@@ -68,6 +74,32 @@ class TestNodeRowGroundTruth:
         assert [s.node_type for s in slots[1:8]] == (
             ['reward', 'battle', 'battle', 'supply', 'battle',
              'encounter', 'reward'])
+
+
+# ===== 槽位占用判据(currency_war_cv.slot_occupied;现役唯一 CV 消费面) =====
+
+class TestSlotOccupiedGroundTruth:
+    """占用判据真帧锚:prep_stall 帧槽位占用态(真值 = 看图人工核对——
+    前排 4 全有角色 / 后排 1-3 有角色、4-6 空)。rect 单一源 = screen_info。"""
+
+    def test_prep_frame_occupancy_truth(self, test_context):
+        from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
+        from sr_od.application.currency_war.obs.currency_war_cv import slot_occupied
+        img = _read(_DIR / 'fixtures' / 'prep_stall_1788434979565.png')
+
+        def _center(area_name: str):
+            rect = _area_rect(test_context, area_name, '货币战争-备战')
+            assert rect is not None, f'area 缺: {area_name}'
+            return (rect.x1 + rect.x2) // 2, (rect.y1 + rect.y2) // 2
+
+        occupied = [f'前排-{i}' for i in range(1, 5)] + [f'后排-{i}' for i in (1, 2, 3)]
+        empty = [f'后排-{i}' for i in (4, 5, 6)]
+        for name in occupied:
+            cx, cy = _center(name)
+            assert slot_occupied(img, cx, cy) is True, f'{name} 应为已占'
+        for name in empty:
+            cx, cy = _center(name)
+            assert slot_occupied(img, cx, cy) is False, f'{name} 应为空槽'
 
 
 # ===== 后台格数 CV 通道(cw_back_layout;真帧 = screens/货币战争-备战 布局族) =====
@@ -98,6 +130,7 @@ class TestCvBackSlotsGroundTruth:
     def test_non_1080p_frame_undeterminable(self):
         # 非 1080p 小帧:越界守卫 → None(不可判退公式,不猜)
         import numpy as np
+
         from sr_od.application.currency_war.obs.cw_back_layout import cv_back_slots
         assert cv_back_slots(np.zeros((600, 900, 3), dtype=np.uint8)) is None
 
@@ -131,7 +164,8 @@ class TestSettlePage1GroundTruth:
         img = _read(_DIR / 'fixtures_settle'
                     / 'end_boss_win_with_breakdown_panel.png')
         from sr_od.application.currency_war.obs.cw_settlement_obs import (
-            parse_progress_fill_ratio, read_settle_damage_breakdown,
+            parse_progress_fill_ratio,
+            read_settle_damage_breakdown,
         )
         assert parse_progress_fill_ratio(img) == pytest.approx(0.828, abs=0.01)
         panel = read_settle_damage_breakdown(test_context, img)
@@ -160,7 +194,9 @@ class TestSettlePage1GroundTruth:
             pytest.skip('fixture 缺:screens/货币战争-简报/default.webp')
         screen = test_context.load_screen('货币战争-简报', 'default')
         from sr_od.application.currency_war.obs.cw_briefing_obs import (
-            read_affixes, read_bosses, read_briefing_enemy_difficulty,
+            read_affixes,
+            read_bosses,
+            read_briefing_enemy_difficulty,
         )
         affixes = read_affixes(test_context, screen)
         assert len(affixes) == 4, f'期望 4 词缀(A8 最高),实际 {affixes}'
