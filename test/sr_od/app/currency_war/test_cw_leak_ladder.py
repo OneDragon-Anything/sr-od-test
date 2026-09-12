@@ -363,7 +363,7 @@ class TestL7AllInCategoryFilter:
         return st
 
     def _allin_bs(self, hp: int | None, *, source: str = 'observation'
-                  ) -> BoardState:
+                  ) -> 'BoardState':
         """P21 域判据容器帧(波 2 起门输入 = BoardState):P2r7 boss 帧,
         来源三态 = 旧两位语义的容器形态(observation=真读/prior=不可信)。"""
         from sr_od.application.currency_war.kernel.cw_board_state import (
