@@ -183,13 +183,20 @@ def test_projection_matches_fake_truth_on_modeled_domains() -> None:
     from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
     class _PrepHost:
-        """投影链宿主最小桩(_project_prep_obs 只用 self,无 ctx 依赖)。"""
+        """投影链宿主最小桩(_project_prep_obs 用 self._session() 取
+        容器单例落投影写口;无 ctx 依赖)。"""
 
         from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
             CwScreenPrep,
         )
 
         _project_prep_obs = CwScreenPrep._project_prep_obs
+
+        def __init__(self, sess) -> None:
+            self._sess = sess
+
+        def _session(self):
+            return self._sess
 
     m = FakeMatch(seed=9, node_sequence=['reward'])
     m.state.bench = [None] * 9
@@ -199,15 +206,26 @@ def test_projection_matches_fake_truth_on_modeled_domains() -> None:
     obs = FakeCwObserver(m).observe_prep(None, 'prep_clean').prep
 
     # —— SellBench 槽 1:投影 bench 摘除 + 金账回金 == 真值 ——
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        board_state_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    from test.sr_od.app.currency_war._cw_helpers import cw4_feed
     gold_pre = m.state.gold
-    proj = _PrepHost()._project_prep_obs(SellBench(slot=1), obs)
+    sess = StrategySession()
+    cw4_feed(sess, m.state)   # 投影写口容器基座(金/席位真值预置)
+    proj = _PrepHost(sess)._project_prep_obs(SellBench(slot=1), obs)
     res = m.apply_prep(SellBench(slot=1))
     assert res.applied
     truth = FakeCwObserver(m).observe_prep(None, 'prep_clean').prep
     assert [b.slot for b in proj.bench_chars] == [], '投影 bench 未摘除'
     assert proj.bench_chars == truth.bench_chars, (
         'SellBench 投影 bench 与真值分叉')
-    assert proj.state.gold == truth.state.gold == (
+    # 金账载体 = 容器(容器化段 2:黑板帧 state 复制腿退役);投影写口
+    # 落 session 容器,与假环境状态机真值逐位对账。
+    assert board_state_of(sess).gold.value == m.state.gold == (
         gold_pre + res.income), 'SellBench 投影金账与真值分叉'
 
     # —— OpenBox:投影 boxes 摘件 == 真值(箱离席) ——
@@ -217,7 +235,7 @@ def test_projection_matches_fake_truth_on_modeled_domains() -> None:
     obs2 = FakeCwObserver(m2).observe_prep(None, 'prep_clean').prep
     assert obs2.boxes, '场景前置:箱未出现在观察面'
     box_slot = obs2.boxes[0][0]
-    proj2 = _PrepHost()._project_prep_obs(OpenBox(slot=box_slot), obs2)
+    proj2 = _PrepHost(sess)._project_prep_obs(OpenBox(slot=box_slot), obs2)
     res2 = m2.apply_prep(OpenBox(slot=box_slot))
     assert res2.applied
     truth2 = FakeCwObserver(m2).observe_prep(None, 'prep_clean').prep
@@ -234,7 +252,7 @@ def test_projection_matches_fake_truth_on_modeled_domains() -> None:
     m3.spawn_balls(2)
     obs3 = FakeCwObserver(m3).observe_prep(None, 'prep_clean').prep
     assert obs3.spheres, '场景前置:球未出现在观察面'
-    proj3 = _PrepHost()._project_prep_obs(ClickSpheres(max_k=3), obs3)
+    proj3 = _PrepHost(sess)._project_prep_obs(ClickSpheres(max_k=3), obs3)
     res3 = m3.apply_prep(ClickSpheres(max_k=3))
     assert res3.applied
     truth3 = FakeCwObserver(m3).observe_prep(None, 'prep_clean').prep
@@ -374,7 +392,10 @@ def test_sold_name_source_is_pre_transition_truth(
         pass
 
     env = _Env()
-    env.state = stale_frame
+    # env.state 现役载体 = 容器(波 4 ShopExecEnv 契约):陈旧期望世界
+    # 经容器喂入保留(「期望帧与真值刻意错位」场景语义不变)。
+    from test.sr_od.app.currency_war._cw_helpers import cw4_bs
+    env.state = cw4_bs(stale_frame, session)
     env.ledger = _Ledger()
 
     class _Match:

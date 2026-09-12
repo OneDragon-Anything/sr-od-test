@@ -299,7 +299,11 @@ class TestFakePorts:
         assert m.state.gold == 33
         assert st.hp_readable and st.hp_trusted
         assert st.gold_readable and st.board_readable and st.level_readable
-        assert bundle.prep is not None and bundle.prep.state is st
+        # obs.state 视图槽已退役(容器化段 2):prep 黑板只载视觉/占用域,
+        # 局内事实载体 = bundle.state 快照(观察源契约)。
+        assert bundle.prep is not None
+        assert not hasattr(bundle.prep, 'state') or \
+            bundle.prep.state is None
         assert bundle.prep.state_gold_trusted is True
 
     def test_installed_ports_drive_match_end_to_end(self) -> None:
