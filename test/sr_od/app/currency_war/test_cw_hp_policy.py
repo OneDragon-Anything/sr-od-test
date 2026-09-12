@@ -303,6 +303,42 @@ class TestL3TrustedBitSingleSource:
             hits = _attr_hits(rel, ('hp_readable', 'hp_trusted'))
             assert hits == [], f'{rel}: 手写双位模式复潮(行号 {hits})'
 
+    def test_discipline_dispatch_dual_form_no_int_leak(self) -> None:
+        """三审阻断回归锁:GameState/裸 int-hp 帧穿 hp_decision_trusted
+        不得漏入 hp_decision_trusted_of 的 bs.hp.source 直读(三审实测
+        AttributeError 'int' object has no attribute 'source')。
+
+        分派语义(双形态过渡,GameState 支随 W8 消亡):
+        - 容器帧(hp 为 Field 载体)→ hp_decision_trusted_of 单一源;
+        - GameState/桩帧(hp 为标量)→ 旧双位读法 hp_readable or hp_trusted,
+          值语义与切换前逐位一致(真读/沿用放行,双 False 拒)。
+        读口本体 hp_decision_trusted_of 保持严格容器形态零防御——裸帧
+        直穿它必须炸错暴露调用点,禁静默缺省(血线决策漂移最危险域)。"""
+        import pytest as _pytest
+
+        from sr_od.application.currency_war.kernel.cw_discipline_rules import (
+            hp_decision_trusted,
+        )
+        from sr_od.application.currency_war.kernel.cw_state import GameState
+        # GameState 真读帧 → 旧双位语义(与切换前逐位一致)
+        st_real = GameState(hp=80)
+        st_real.hp_readable = True
+        assert hp_decision_trusted(st_real) is True
+        # GameState 双 False 帧 → 拒(fail-closed 语义零回归)
+        st_ghost = GameState(hp=100)
+        st_ghost.hp_readable = False
+        st_ghost.hp_trusted = False
+        assert hp_decision_trusted(st_ghost) is False
+        # 桩帧(裸 int hp + 显式位)→ 旧双位,不漏容器支
+        stub = SimpleNamespace(hp=100, hp_readable=False, hp_trusted=False)
+        assert hp_decision_trusted(stub) is False
+        stub_ok = SimpleNamespace(hp=10, hp_readable=False, hp_trusted=True)
+        assert hp_decision_trusted(stub_ok) is True
+        # 读口本体保持严格:裸 int-hp 帧直穿 hp_decision_trusted_of 必炸
+        # (AttributeError=调用点未桥接的显式暴露,禁静默防御)
+        with _pytest.raises(AttributeError):
+            hp_decision_trusted_of(stub)
+
     def test_hp_quality_vocabulary_closed(self) -> None:
         """sig.quality['hp'] 词表封闭断言(三值全集
         real_read/prior/same_node_carried;新写端扩词表须随批登记申报)。
