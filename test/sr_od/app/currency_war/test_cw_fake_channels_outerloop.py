@@ -135,12 +135,19 @@ def test_supply_node_op_lands_equipment_grant(
                 f'补给节点分发序非 0e1 先行: {disp["dispatch"]}')
             assert len(m.state.equips) >= len(equips_pre) + 1, (
                 f'供给选装未落账({equips_pre} → {m.state.equips})')
-            granted = (set(m.state.equips) - set(equips_pre)).pop()
+            # 发放增量按名排序后断言(去进程 hash 依赖):发放增量 =
+            # {选中件 + engine 追加件} 时双元素集合的 .pop() 弹出序取决于
+            # 进程 PYTHONHASHSEED(对照实验实证 seed=2 红/seed=0 绿),追加件
+            # 掷中进阶层(EQUIP_GRANT_BONUS_ADV_SHARE)即误报「偏离基础件池」
+            # ——同一 seed 的批内复跑 flaky 即此根因。锁语义 = 选中件落账
+            # 且属于基础件池(选中件恒属增量,any 判即其真值);追加件构成
+            # 不在本断言辖内,由下方 EQUIP_GRANT 校准族 import 身份断言承载。
+            granted = sorted(set(m.state.equips) - set(equips_pre))
             # 选项池 = 基础件池(engine 供给校准段:基础件 8 名均匀池)
             from sr_od.application.currency_war.data.cw_synthesis import (
                 RESERVED_COMPONENTS,
             )
-            assert granted in RESERVED_COMPONENTS, (
+            assert any(name in RESERVED_COMPONENTS for name in granted), (
                 f'供给发放偏离基础件池: {granted}')
             # 追加件常量单一源 = engine EQUIP_GRANT 校准族直调
             import fixtures.cw_fake_game.rules as rules

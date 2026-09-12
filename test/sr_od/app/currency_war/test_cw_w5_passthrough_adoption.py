@@ -382,28 +382,41 @@ def test_shop_card_mapping_roundtrip_and_frame_alignment() -> None:
 
 def test_kernel_legacy_shopcard_reference_static_lock() -> None:
     """kernel 内零旧 ShopCard 引用静态锁(方案 §2.6④,精确辖域):豁免 =
-    ①cw_state.py(本体,旧类型唯一居所)②cw_game_state.shop_cards_to_legacy
-    (映射函数单一源)③cw_merge_simulate.py / cw_economy.py 的 TYPE_CHECKING
-    旧类型注解行(候裁9 迁移:两文件自 cw_state 迁入的函数自带旧类型签名
-    注解,随旧工作帧世界退役消亡;非映射函数外的新消费,运行时零依赖);
+    ①cw_vocab.py(本体,旧类型唯一居所;原居所 cw_state.py 随 W8 词汇正名
+    迁居 cw_vocab 后退役,本体引用不属「外部消费」)②cw_game_state.
+    shop_cards_to_legacy(映射函数单一源)③TYPE_CHECKING 旧类型注解行
+    (cw_game_state.py / cw_merge_simulate.py / cw_economy.py:注解随旧
+    工作帧世界退役消亡,非映射函数外的新消费运行时零依赖);
     其余 kernel 旧类型引用 = 红。"""
     from pathlib import Path
     kernel = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
               / 'currency_war' / 'kernel')
-    assert (kernel / 'cw_state.py').is_file(), '扫描根失准'
-    pat = re.compile(r'cw_state\s+import\s+[^#\n)]*\bShopCard\b'
+    # 扫描前提 = 豁免面与文件面对账:旧类型居所在位(cw_vocab.py),旧居所
+    # cw_state.py 已退役——居所再迁 = 本锁豁免面失准,须随迁重审。
+    assert (kernel / 'cw_vocab.py').is_file(), '扫描根失准'
+    assert not (kernel / 'cw_state.py').exists(), '旧居所已退役,勿回流'
+    # 两代居所引用形态同辖(单行/括号多行 import 与点取形态;旧居所分支
+    # 防退役面以旧形态回流)
+    pat = re.compile(r'cw_vocab\s+import\s*\(?\s*[^#)]*?\bShopCard\b'
+                     r'|cw_vocab\.ShopCard'
+                     r'|cw_state\s+import\s*\(?\s*[^#)]*?\bShopCard\b'
                      r'|cw_state\.ShopCard')
-    # 迁入函数的 TYPE_CHECKING 注解行豁免(候裁9 迁移伴随注解,见 docstring ③)
-    migrated_annotation = re.compile(
-        r'^\s*from\s+\S*kernel\.cw_state\s+import\s+ShopCard\s*\n', re.M)
-    annotation_exempt = {'cw_merge_simulate.py', 'cw_economy.py'}
+    # TYPE_CHECKING 注解行豁免(候裁9 迁移伴随注解,见 docstring ③;
+    # 形态 = 单行 import 与含 ShopCard 的括号多行 import,两形态同豁)
+    annotation_exempt = {'cw_game_state.py', 'cw_merge_simulate.py',
+                         'cw_economy.py'}
+    annotation_block = re.compile(
+        r'^\s*from\s+\S*kernel\.cw_vocab\s+import\s*\([^)]*ShopCard[^)]*\)'
+        r'\s*\n'
+        r'|^\s*from\s+\S*kernel\.cw_vocab\s+import\s+ShopCard[,\s]*\n',
+        re.M)
     offenders: dict[str, str] = {}
     for path in sorted(kernel.glob('*.py')):
-        if path.name == 'cw_state.py':
+        if path.name == 'cw_vocab.py':
             continue
         text = path.read_text(encoding='utf-8')
         if path.name in annotation_exempt:
-            text = migrated_annotation.sub('', text)
+            text = annotation_block.sub('', text)
         if path.name == 'cw_game_state.py':
             # 豁免面 = 映射函数本体(单一源);函数外残留 = 红
             import sr_od.application.currency_war.kernel.cw_game_state as _m
@@ -413,7 +426,10 @@ def test_kernel_legacy_shopcard_reference_static_lock() -> None:
     assert not offenders, (
         f'kernel 出现映射函数外的旧容器 ShopCard 引用(双 ShopCard 归一,'
         f'转换只许在映射函数发生):{offenders}')
-    # 变异自检:判据对真实旧引用形态有捕获力
+    # 变异自检:判据对真实旧引用形态有捕获力(两代居所 × 单行/多行/点取)
+    assert pat.search('from a.b.cw_vocab import ShopCard')
+    assert pat.search('from a.b.cw_vocab import (\n    ShopCard,\n)')
+    assert pat.search('cw_vocab.ShopCard(x=0)')
     assert pat.search('from a.b.cw_state import ShopCard')
     assert pat.search('cw_state.ShopCard(x=0)')
 
