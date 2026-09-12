@@ -1,0 +1,112 @@
+"""sr-od-test 慢桶隔离钩子。
+
+机制:slow_marks.txt 逐行一条 nodeid 后缀(形如 ``文件名::类::测试``),
+命中者打 ``slow`` marker。命令分层:
+- 快速集 / 点名域跑带 ``-m "not slow"`` → 慢桶跳过(慢桶多为 sim 行为锁/
+  校准锁/OCR 重推理,单条 ≥2s,日常循环不陪跑);
+- 全量跑不过滤(慢桶不可丢);
+- ``-m slow`` 单独点名慢桶维护。
+名单维护 = ``--durations`` 巡检回填,准入线:串行单条实测 ≥2s 且为
+「无断言密度增益的重操作链」(sim 锁类按 README 纪律 7 已取最小 n,
+保留在 quick 不入桶——是否入桶以逐条评审为准)。
+"""
+from pathlib import Path
+
+import pytest
+
+MARKS_FILE = Path(__file__).parent / "slow_marks.txt"
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """注册 slow 标记(慢桶隔离,口径见模块 docstring 与 sr-od-test/README.md)。"""
+    # slow 由 pytest_collection_modifyitems 按 slow_marks.txt 注入,此处注册
+    # 是为消 PytestUnknownMarkWarning(每次运行刷屏)并允许 --strict-markers
+    config.addinivalue_line(
+        "markers",
+        "slow: 慢桶(单条实测 ≥2s,名单 slow_marks.txt)——快速集 -m \"not slow\" 跳过,全量不过滤",
+    )
+
+
+def _load_marks() -> list[str]:
+    if not MARKS_FILE.exists():
+        return []
+    return [
+        line.strip()
+        for line in MARKS_FILE.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+
+
+def pytest_collection_finish(session):
+    """收集期守卫①全局日志 + ②OCR 模型在位预检(各判据见下方两段)。
+
+    守卫①:``logging.disable`` 是进程全局态,而 pytest 在收集期就 import 全部
+    测试模块——任何模块级调用会对**整个测试会话**生效,静默饿死其他测试依赖
+    日志落盘的断言(判例:test_log_utils_utf8_rollover_continuity 因此
+    FileNotFoundError,单文件绿/全量红的假 flaky)。禁日志必须收口为本
+    模块的 autouse fixture(见各 CW 测试文件的 ``_quiet_logging``)。
+    检测到泄漏即整轮报错并复位,让新违例当场红,而不是遥遥挂在无关测试。
+    """
+    import logging
+
+    disable_level = logging.root.manager.disable
+    if disable_level >= logging.WARNING:
+        logging.disable(logging.NOTSET)
+        raise pytest.UsageError(
+            "收集期检测到模块级 logging.disable 泄漏(全局禁言级别 "
+            f"{disable_level} >= WARNING)。禁止在测试模块顶层调用 "
+            "logging.disable——请改为模块内 autouse fixture(参考 "
+            "test_cw_hp_trust_defense.py / test_cw_investment.py 的 "
+            "_quiet_logging),否则会静默"
+            "破坏其他测试的日志断言。"
+        )
+    _check_ocr_models_ready()
+
+
+def _check_ocr_models_ready() -> None:
+    """收集期预检 OCR 模型文件在位,缺失即整轮报错带恢复指引。
+
+    为什么在收集期拦:模型目录 assets/models/onnx_ocr/ 被 gitignore 覆盖不入
+    git,清理工作树(git clean -x 类)会连带删掉模型;而测试进程有网络守卫
+    (test/conftest.py _block_external_network)不会自动补下载,OCR init 静默
+    失败后所有 OCR 依赖测试集体炸深处 AttributeError——2026-09-12 实测一次
+    ~262 条环境假红,失败集对照口径被完全淹没。模型在位时本检查零成本。
+    """
+    from one_dragon.base.matcher.ocr.onnx_ocr_matcher import (
+        DEFAULT_OCR_MODEL_NAME,
+        get_ocr_model_dir,
+    )
+
+    model_dir = Path(get_ocr_model_dir(DEFAULT_OCR_MODEL_NAME))
+    missing = [name for name in ('det.onnx', 'rec.onnx', 'cls.onnx')
+               if not (model_dir / name).exists()]
+    if missing:
+        raise pytest.UsageError(
+            f'OCR 模型文件缺失: {model_dir} 下缺 {missing}。'
+            '继续跑会把全部 OCR 依赖测试变成 AttributeError 假红。'
+            '恢复(任选其一):①检查网络/代理后调用任一 OCR 初始化链自动补下载'
+            '(框架 github/gitee 双源);②启动一条龙 GUI 的 OCR 功能触发下载。'
+        )
+
+
+def pytest_collection_modifyitems(config, items):
+    """按名单打 slow 标记;并自带 not slow/slow 选摘(不依赖核心 -m 求值顺序)。"""
+    marks = _load_marks()
+    if not marks:
+        return
+    slow, kept = [], []
+    for item in items:
+        # endswith 而非 in:名单条目=「文件名::类::测试」nodeid 后缀(模块
+        # docstring 同口径),子串包含会把「长名含短名」的兄弟用例误标 slow
+        # (判例:wave_normal_chain ⊂ wave_normal_chain_free_proc,后者的
+        #  fast 层回收被前者名字挡住)。
+        if any(item.nodeid.endswith(mark) for mark in marks):
+            item.add_marker(pytest.mark.slow)
+            slow.append(item)
+        else:
+            kept.append(item)
+    markexpr = (getattr(config.option, "markexpr", "") or "").strip()
+    if "not slow" in markexpr:
+        items[:] = kept
+    elif markexpr == "slow":
+        items[:] = slow

@@ -1,0 +1,274 @@
+"""W971 P3a 开局序列与 overlay 族 op 行为锁(cw_flow 新包;P3b 接线前离线验证)。
+
+覆盖面(每 op ≥1 条行为测试;离线桩手法 = test_cw_shop_refresh 同款:
+FixtureController 假游戏 + 替身 handler + round_by_* 判定替身 + fast_sleep):
+- CwScreenBriefing:内联简报观察直写 session(P3b;P3a 委托壳已升级);非简报屏 fail。
+- CwScreenPlaneTransition:提示命中 → 点「区域-空白点击」+ 验提示消失;提示未现 fail。
+- CwScreenWaitOneOne:锚命中即成功;假时钟验 ~10s 超时留证 fail。
+- 结构守卫:overlay 封装层退役墓碑(OpeningSequence 拆解退役后,开局两屏
+  分流接线由 test_cw_dispatch_order_matrix 承载)+ 完成承诺常量。
+  (原七 overlay op 行为测已随委托壳溶解退役,见「overlay 族」段注。)
+
+测试纪律:零真实副作用(save_screenshot/park_cursor 替身;台账不触)、
+execute() 包 fast_sleep、运行态用 enter/reset_running_state。
+"""
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+    CurrencyWarMatch,
+    StrategySession,
+)
+from test.conftest import SrTestContext
+from test.harness.fixture_controller import (
+    FixtureController,
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
+
+_FRAME = ('货币战争-备战', 'shop_closed')
+
+
+def _require_frame(test_context: SrTestContext) -> None:
+    if not test_context.has_screen(*_FRAME):
+        pytest.skip(f'存档截图缺失:screens/{_FRAME[0]}/{_FRAME[1]}.webp')
+
+
+class _StubStrategy:
+    """替身策略:decide_star_tome 记录调用并返回预置下标。"""
+
+    def __init__(self, idx: int = 0):
+        self.idx = idx
+        self.calls: list[list[str]] = []
+
+    def decide_star_tome(self, names: list[str], state, session, config) -> int:
+        self.calls.append(list(names))
+        return self.idx
+
+
+def _watched(op_cls: type) -> Any:
+    return type('W', (WatchdogOperationMixin, op_cls), {})
+
+
+def _make_op(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+             op_cls: type) -> tuple[Any, FixtureController]:
+    """装配被测 op:假游戏控制器 + 框架副作用替身(存图/移光标)。"""
+    _require_frame(test_context)
+    fc = FixtureController(test_context)
+    fc.set_phases([{'frame': _FRAME}])
+    monkeypatch.setattr(test_context, 'controller', fc)
+    op = _watched(op_cls)(test_context)
+    op._init_watchdog()  # type: ignore[attr-defined]
+    # FixtureController 缺 mouse_move(bug#1 缓解点击的 op 前置动作会触达)
+    monkeypatch.setattr(fc, 'mouse_move', lambda *a, **k: None, raising=False)
+    monkeypatch.setattr(op, 'park_cursor', lambda *a, **k: None)
+    monkeypatch.setattr(op, 'save_screenshot', lambda *a, **k: '<shot>')
+    return op, fc
+
+
+def _stub_find(op: Any, monkeypatch: pytest.MonkeyPatch,
+               hits: list[tuple[str, str]], misses_after: int | None = None) -> list[int]:
+    """round_by_find_area 替身:命中集内成功;``misses_after`` 次成功后全失败
+    (模拟「入口锚在、出口锚消失」的真转移)。返回成功调用计数容器。"""
+    counter = [0]
+
+    def _find(screen, screen_name: str, area_name: str, **k: Any) -> Any:
+        if misses_after is not None and counter[0] >= misses_after:
+            return op.round_fail('')
+        counter[0] += 1
+        if (screen_name, area_name) in hits:
+            return op.round_success('')
+        return op.round_fail('')
+
+    monkeypatch.setattr(op, 'round_by_find_area', _find)
+    return counter
+
+
+def _run(op: Any) -> Any:
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep():
+            return op.execute()
+    finally:
+        reset_running_state(op.ctx, op)
+
+
+# ==================== CwScreenBriefing ====================
+
+def test_briefing_op_reads_and_writes_session(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁①简报观察链(P3b 内联改写):入口锚命中 → 读词缀/boss/难度直写
+    session(ctx 信箱退役,唯一写点)→ 点「下一步」→ 出口验真转移成功。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_briefing as briefing_mod,
+    )
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_briefing import (
+        CwScreenBriefing,
+    )
+    op, _fc = _make_op(test_context, monkeypatch, CwScreenBriefing)
+    # 入口锚命中 1 次后全失败 = 出口「标识消失」真转移。
+    _stub_find(op, monkeypatch, [('货币战争-简报', '标识-本场对局首领')],
+               misses_after=1)
+    monkeypatch.setattr(op, 'round_by_find_and_click_area',
+                        lambda *a, **k: op.round_success(''))
+    monkeypatch.setattr(briefing_mod, 'read_affixes_with_pos',
+                        lambda ctx, screen: [('火弱点', None)])
+    monkeypatch.setattr(briefing_mod, 'read_bosses',
+                        lambda ctx, screen: ['碎星王虫'])
+    monkeypatch.setattr(briefing_mod, 'clean_boss_names_by_lcs', lambda bs: bs)
+    monkeypatch.setattr(briefing_mod, 'read_briefing_enemy_difficulty',
+                        lambda ctx, screen: 5)
+    monkeypatch.setattr(CwScreenBriefing, '_collect_affix_effects',
+                        lambda self, aff: {})   # 采集 best-effort,本锁不覆盖
+    # (cw_telemetry 遥测替身桩已随删除波 1 移除——简报 exogenous 存证行
+    #  写入端退役,模块不再引用 telemetry。)
+    monkeypatch.setattr(op, 'screenshot', lambda *a, **k: op.last_screenshot)
+    monkeypatch.setattr(test_context, 'cw_match',
+                        CurrencyWarMatch(_StubStrategy(), StrategySession()),
+                        raising=False)
+
+    result = _run(op)
+
+    assert result.success, f'简报步应成功:{result.status!r}'
+    session = test_context.cw_match.session   # type: ignore[union-attr]
+    assert session.briefing_affixes == ['火弱点']
+    assert session.briefing_bosses == ['碎星王虫']
+    assert session.enemy_difficulty == 5
+
+
+def test_briefing_op_mark_miss_fails_without_read(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁②入口识别不中(非简报屏)→ fail 且不做观察/点击(编排壳按步分流)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_briefing import (
+        CwScreenBriefing,
+    )
+    op, _fc = _make_op(test_context, monkeypatch, CwScreenBriefing)
+    _stub_find(op, monkeypatch, [])   # 锚恒不命中
+    clicked: list[int] = []
+
+    def _no_click(*a: Any, **k: Any) -> Any:
+        clicked.append(1)
+        return op.round_success('')
+
+    monkeypatch.setattr(op, 'round_by_find_and_click_area', _no_click)
+
+    result = _run(op)
+
+    assert not result.success and not clicked
+
+
+# ==================== CwScreenPlaneTransition ====================
+
+def test_plane_transition_clicks_blank_and_verifies(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁③位面过渡:提示命中 → 点「区域-空白点击」→ 提示消失 = 成功。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_plane_transition import (
+        CwScreenPlaneTransition,
+    )
+    op, fc = _make_op(test_context, monkeypatch, CwScreenPlaneTransition)
+    # 第 1 次判定(入口)= 提示在;第 2 次(出口验证)= 提示已消失
+    _stub_find(op, monkeypatch,
+               [('货币战争-位面过渡', '提示-点击空白继续')], misses_after=1)
+
+    result = _run(op)
+
+    assert result.success, f'过渡应成功:{result.status!r}'
+    assert fc.click_hit_area('货币战争-位面过渡', '区域-空白点击'), (
+        f'点击未落空白点击区:{[str(p) for p in fc.recorded_clicks]}')
+
+
+def test_plane_transition_prompt_missing_fails(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁④提示未现 = 该步不适用 → fail 交编排壳,不盲点。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_plane_transition import (
+        CwScreenPlaneTransition,
+    )
+    op, fc = _make_op(test_context, monkeypatch, CwScreenPlaneTransition)
+    _stub_find(op, monkeypatch, [])
+
+    result = _run(op)
+
+    assert not result.success
+    assert fc.recorded_clicks == []
+
+
+# ==================== CwScreenWaitOneOne ====================
+
+def test_wait_one_one_anchor_hit(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁⑤主判据:「备战阶段」锚命中即成功(不等固定 10s)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_wait_one_one import (
+        CwScreenWaitOneOne,
+    )
+    op, _fc = _make_op(test_context, monkeypatch, CwScreenWaitOneOne)
+    _stub_find(op, monkeypatch, [('货币战争-备战', '标识-备战阶段')])
+
+    result = _run(op)
+
+    assert result.success and result.status == '1-1 备战就绪'
+
+
+def test_wait_one_one_timeout_leaves_evidence(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """锁⑥超时兜底:锚一直不现 → ~10s 后 fail 留证(假时钟,不真等)。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_wait_one_one as mod,
+    )
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_wait_one_one import (
+        CwScreenWaitOneOne,
+    )
+    op, _fc = _make_op(test_context, monkeypatch, CwScreenWaitOneOne)
+    _stub_find(op, monkeypatch, [])
+    clock = {'now': 0.0}
+
+    def _fake_clock() -> float:
+        clock['now'] += 2.0   # 每轮 +2s(>轮询间隔 1s,快进)
+        return clock['now']
+
+    monkeypatch.setattr(mod, '_monotonic', _fake_clock)
+
+    result = _run(op)
+
+    assert not result.success and '超时' in (result.status or ''), result.status
+    assert clock['now'] >= 2.0 * 5   # 轮询至上界才退出,非首轮放弃
+
+
+# ==================== overlay 族(退役批终态:委托壳溶解,主循环直派真身) ====================
+# 旧「gate→委托 handler→settle」薄封装语义退役:入口门由主循环 0 系分支承担,
+# 处理本体 = 各 cw_screen 画面 op 真身(委托等价性由 0146a00c/89531a26 迁移红线
+# 与 p3b wrapper_family_dissolved 结构锁承载);原封装层用例随之退役。
+
+# ==================== 结构守卫 ====================
+
+def test_overlay_wrapper_family_absent() -> None:
+    """退役守卫:封装层三件套(CwScreenOverlay/HANDLER_FACTORY/OVERLAY_OPS)
+    不再存在于 cw_screen 包(迁移终态唯一真身 = 各 cw_screen_* 模块)。"""
+    import pkgutil
+    from pathlib import Path
+
+    import sr_od.application.currency_war.operations.cw_screen as pkg
+    for m in pkgutil.iter_modules(pkg.__path__):
+        mod_src = Path(pkg.__path__[0], m.name + '.py').read_text(encoding='utf-8')
+        assert 'CwScreenOverlay' not in mod_src, f'{m.name}: 委托壳类未溶解'
+        assert 'HANDLER_FACTORY' not in mod_src, f'{m.name}: 委托壳未溶解'
+        assert 'OVERLAY_OPS' not in mod_src, f'{m.name}: 注册表未溶解'
+
+
+
+def test_cw_flow_const_settle_values() -> None:
+    """锁⑮完成承诺常量:DD-011 形态①固定 1.0s 两处 + 1-1 超时 10s(W971 口述值)。"""
+    from sr_od.application.currency_war.operations.cw_screen import cw_flow_const
+    assert cw_flow_const.BRIEFING_SETTLE_S == 1.0
+    assert cw_flow_const.CW_OVERLAY_SETTLE_S == 1.0
+    assert cw_flow_const.ONE_ONE_MAX_WAIT_S == 10.0

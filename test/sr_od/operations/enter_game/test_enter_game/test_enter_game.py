@@ -1,26 +1,24 @@
+"""进入游戏 op:同意按钮位置测试(旧/新登录画面)。"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from one_dragon.utils import cv2_utils
 from sr_od.operations.enter_game.enter_game import EnterGame
-from test import SrTestBase
 
 
-class TestBattleScreenState(SrTestBase):
+def test_agree(test_context, test_image_dir: Path) -> None:
+    """测试同意按钮的位置。"""
+    op = EnterGame(test_context)
 
-    def __init__(self, *args, **kwargs):
-        SrTestBase.__init__(self, *args, **kwargs)
+    screen = cv2_utils.read_image(str(test_image_dir / 'old_login.png'))
+    r1 = op.round_by_find_area(screen, '进入游戏', '文本-同意-旧')
+    assert r1.is_success
+    r2 = op.round_by_find_area(screen, '进入游戏', '文本-同意-新')
+    assert not r2.is_success
 
-    def test_agree(self) -> None:
-        """
-        测试同意按钮的位置
-        """
-        op = EnterGame(self.ctx)
-
-        screen = self.get_test_image('old_login.png')
-        r1 = op.round_by_find_area(screen, '进入游戏', '文本-同意-旧')
-        self.assertTrue(r1.is_success)
-        r2 = op.round_by_find_area(screen, '进入游戏', '文本-同意-新')
-        self.assertFalse(r2.is_success)
-
-        screen = self.get_test_image('new_login.png')
-        r1 = op.round_by_find_area(screen, '进入游戏', '文本-同意-旧')
-        self.assertFalse(r1.is_success)
-        r2 = op.round_by_find_area(screen, '进入游戏', '文本-同意-新')
-        self.assertTrue(r2.is_success)
+    screen = cv2_utils.read_image(str(test_image_dir / 'new_login.png'))
+    r1 = op.round_by_find_area(screen, '进入游戏', '文本-同意-旧')
+    assert not r1.is_success
+    r2 = op.round_by_find_area(screen, '进入游戏', '文本-同意-新')
+    assert r2.is_success
