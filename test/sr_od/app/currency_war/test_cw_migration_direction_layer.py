@@ -35,6 +35,9 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -167,13 +170,14 @@ def test_p7_drive_intention_idempotent_per_round():
     """P7:同 (plane, round) 重入驱动 = 幂等(键守卫),跨轮才推进。"""
     sess = StrategySession()
     st = _state(plane=1, round_num=2)
-    drive_intention(st, sess)
+    # W6 波3:drive_intention 切容器签名,GameState 帧经过渡桥装箱。
+    drive_intention(board_state_bridge(st), sess)
     assert state_of(sess).v3_intention_key == (1, 2)
     ev1 = state_of(sess).v3_intention.last_event
-    drive_intention(st, sess)                     # 同轮重入:不重复驱动
+    drive_intention(board_state_bridge(st), sess)  # 同轮重入:不重复驱动
     assert state_of(sess).v3_intention_key == (1, 2)
     assert state_of(sess).v3_intention.last_event == ev1
-    drive_intention(_state(plane=1, round_num=3), sess)   # 跨轮:推进
+    drive_intention(board_state_bridge(_state(plane=1, round_num=3)), sess)   # 跨轮:推进
     assert state_of(sess).v3_intention_key == (1, 3)
 
 
@@ -194,9 +198,11 @@ def test_p6_registry_injection_reaches_state_machine():
     st.shop = [SimpleNamespace(name='万敌')]   # ③核心卡信号可见
     reg_def = _REG
     reg_inj = replace(_REG, line_env_lock_min_round=99)
-    ist_def = update_intention(st, IntentionState(phase='weak', weak_comp='万敌单C'),
+    ist_def = update_intention(board_state_bridge(st),
+                               IntentionState(phase='weak', weak_comp='万敌单C'),
                                None, registry=reg_def)
-    ist_inj = update_intention(st, IntentionState(phase='weak', weak_comp='万敌单C'),
+    ist_inj = update_intention(board_state_bridge(st),
+                               IntentionState(phase='weak', weak_comp='万敌单C'),
                                None, registry=reg_inj)
     assert ist_def.locked_comp == ''            # 缺省臂:环境判据缓锁(weak 保持)
     assert ist_inj.locked_comp != ''            # 注入臂:判据不辖 → 落锁
@@ -205,7 +211,7 @@ def test_p6_registry_injection_reaches_state_machine():
 def test_p4_ist_zero_residue_across_matches():
     """P4:跨局 ist 零残留——每局新建 StrategySession,ist/驱动键从零开始。"""
     sess = StrategySession()
-    drive_intention(_state(), sess)
+    drive_intention(board_state_bridge(_state()), sess)
     assert state_of(sess).v3_intention is not None and state_of(sess).v3_intention.evicted == set()
     fresh = StrategySession()   # 新局(构造性重置)
     assert state_of(fresh).v3_intention is None      # 策略器字段迁 MandateState

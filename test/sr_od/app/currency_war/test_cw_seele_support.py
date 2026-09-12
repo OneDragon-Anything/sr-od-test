@@ -19,6 +19,10 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    BoardState,
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
 
 
@@ -30,13 +34,14 @@ def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
                      position_pref=ch.position_pref(), star=star)
 
 
-def _p1_state(bench: list[BenchChar]) -> GameState:
-    """P1 支持度直调态(plane/round 仅为 GameState 必要字段)。"""
+def _p1_state(bench: list[BenchChar]) -> BoardState:
+    """P1 支持度直调态(容器形态;W6 波3 方向层切容器签名,
+    GameState 帧=旧构面,经过渡桥装箱——退役挂波5 喂入反转)。"""
     st = GameState()
     st.plane = 1
     st.round_num = 3
     st.bench = bench
-    return st
+    return board_state_bridge(st)
 
 
 class TestSeeleSupportFormula:

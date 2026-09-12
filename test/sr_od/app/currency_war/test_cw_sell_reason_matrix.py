@@ -730,7 +730,7 @@ class TestConsumptionSiteManifest:
     未登记,处置 = 清单加行 + 确认其排除集出自 sell_exclusions/
     funding_hold_fallback,非机械跟绿。"""
 
-    _MANIFEST: dict[str, int] = {'entry.py': 3, 'mandate.py': 3, 'shop.py': 7}
+    _MANIFEST: dict[str, int] = {'entry.py': 3, 'mandate.py': 3, 'shop.py': 6}
     # T-159 加行登记:entry.py +1 = 迁移 B 席满前置谓词的腾席卖(①位
     # spheres 分支,装配 A channel='m4_fuel' 同源);mandate.py +1 =
     # 迁移 A wanted 消费臂腿 2(M4 卖角色,同源候选)。两新消费位排除
@@ -740,10 +740,6 @@ class TestConsumptionSiteManifest:
     # 落点;金闸双桶探测与席满腾席共享同一装配,帧内惰性缓存)。排除集
     # 出自 sell_exclusions(channel='m4_fuel')单一入口,与 M2 缺员/
     # m2_stockpile 两腾席位同源,非手搓。
-    # T-20 加行登记(P92 席可落收窄批):shop.py +1 = p92_seat_
-    # recoverable 席可落判定(exclude_names 出自 sell_exclusions
-    #(channel='m4_fuel')单一入口,与腾席臂同参,非手搓;被收窄退役的
-    # 旧 P56 投影金额代理不走 exclude_names= 装配,不占本清单口径)。
 
     def _counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}

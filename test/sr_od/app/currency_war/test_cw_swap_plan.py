@@ -12,6 +12,9 @@
 # test_m1p_consumer_seam_gate_keeps_emission_closed 承载。
 from types import SimpleNamespace as _NS
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
@@ -139,13 +142,13 @@ def test_fresh_buys_record_per_name_and_expire_by_round() -> None:
     自动失效(M7 闩键式同构)。"""
     sess = _NS()
     st = GameState(plane=1, round_num=2)
-    record_fresh_buy(sess, st, '甲')
-    record_fresh_buy(sess, st, '乙')
-    assert fresh_buys_of(sess, st) == frozenset({'甲', '乙'})
+    record_fresh_buy(sess, _bsb(st), '甲')
+    record_fresh_buy(sess, _bsb(st), '乙')
+    assert fresh_buys_of(sess, _bsb(st)) == frozenset({'甲', '乙'})
     st2 = GameState(plane=1, round_num=3)
-    assert fresh_buys_of(sess, st2) == frozenset()   # 轮次推进自动失效
+    assert fresh_buys_of(sess, _bsb(st2)) == frozenset()   # 轮次推进自动失效
     st3 = GameState(plane=2, round_num=2)
-    assert fresh_buys_of(sess, st3) == frozenset()   # 位面推进同辖
+    assert fresh_buys_of(sess, _bsb(st3)) == frozenset()   # 位面推进同辖
 
 
 # 谓词锁⑤之一:cap 缺读弃权(membership 缺读弃权由下方装配级缺读锁
@@ -171,7 +174,7 @@ def test_assembly_abstains_membership_when_intention_missing() -> None:
     sess = _NS(v3_intention=None, target_comp=None,
                transition_framework='')
     st = GameState(plane=1, round_num=2, board={})
-    ctx = assemble_swap_plan_inputs(sess, state=st,
+    ctx = assemble_swap_plan_inputs(sess, state=_bsb(st),
                                     deployed=_base_deployed(),
                                     bench=[_bc(_TARGET_BENCH)], cap=6)
     assert ctx is not None and ctx.membership is None
@@ -260,13 +263,14 @@ def test_fenced_arm_revives_on_occupancy_full_frame() -> None:
            for i in range(1, 10)]   # 9 占用(喂入只计占用数,名不查注册表)
     st = GameState(gold=0, level=9, deploy_cap=9, plane=1, round_num=2,
                    board={'仙舟': 2}, deployed=list(dep), bench=[])
-    ctx = assemble_swap_plan_inputs(sess, state=st, deployed=dep,
+    ctx = assemble_swap_plan_inputs(sess, state=_bsb(st), deployed=dep,
                                     bench=[], cap=9)
     assert ctx is not None and ctx.fenced_on is True, '复活锁:占用数满帧臂开'
     # 未成型对照:同板面 fp<1.00 ⇒ 臂关(熔断保护原语义零变化)。
     st_half = GameState(gold=0, level=9, deploy_cap=9, plane=1,
                         round_num=2, board={'仙舟': 1},
                         deployed=list(dep), bench=[])
+    st_half = _bsb(st_half)  # W6 波3:容器签名,桥一次成型
     ctx_half = assemble_swap_plan_inputs(sess, state=st_half,
                                          deployed=dep, bench=[], cap=9)
     assert ctx_half is not None and ctx_half.fenced_on is False
@@ -303,8 +307,8 @@ def test_m1p_intent_face_bidirectional() -> None:
     assert rec_nd['nonempty'] is False
     assert rec_nd['abstain'] == 'no_direction'
     assert swap_realizable(assemble_swap_plan_inputs(
-        sess, state=_m1p_state(deployed=_base_deployed(),
-                               bench=[_bc(_TARGET_BENCH)]),
+        sess, state=_bsb(_m1p_state(deployed=_base_deployed(),
+                                    bench=[_bc(_TARGET_BENCH)])),
         deployed=_base_deployed(),
         bench=[_bc(_TARGET_BENCH)],
         cap=6)) == (False, 'no_direction'), 'sim 镜像与生产谓词同源同值'
@@ -422,7 +426,9 @@ def test_m1p_execution_face_noop_when_plan_empty() -> None:
 # 延伸至部署补上段)。锁面:①记录 up_names(R2);②R1-a 直投等价锁
 # (条件式【推】:前提面 = victim 名一致 + 占用序稳定,断言对象 = 名字
 # 集——对抗审 F3);③R1-b 防御锁(前提破帧缺口仍补);④mandate 计划
-# 载荷透传锁。
+# 载荷透传锁;⑤R1-b 收窄域等价性锁(卖出后重 derive 钉计划时点域,
+# 收窄域 ≡ 计划时点快照;生产主路径钉域防漂移,局 18 形态锁的同性质级
+# 收口)。
 
 def test_m1p_record_carries_up_names() -> None:
     """m1p 记录 up_names 锁(T-279 R2):记录 dict 追加上序名单(名字级,
@@ -602,6 +608,121 @@ def test_m1p_plan_fill_equivalence_locked_transition_domain() -> None:
         'm1p.up_names == 实际补部署名单(执行=计划等价,名字集断言)')
     assert sum(1 for _ in iter_occupied_deployed(gs2.deployed)) == 9, (
         '板满恢复 = 计划假想终态')
+
+
+def test_m1p_plan_fill_rederive_keeps_plan_time_narrow_domain() -> None:
+    """R1-b 收窄域等价性锁(ADR-0640;T-279 落地审新问题立项:R1-b 是
+    ADR-0640 决策3 明文的生产事实主路径,其钉域等价性此前无常驻锁——
+    局 18 形态锁的帧走 R1-a 直投,R1-b 防御锁的帧在域外)。锁线转型域帧
+    + 直投前提破(计划 pick 黄泉离席)⇒ 卖出后重 derive(装配单一源,
+    ``transition_domain`` 钉计划时点域事实)的收窄域 ≡ 计划时点域快照:
+    域布尔同值 ∧ 收窄键集同集。键集可断言逐位相等的原因:键集经
+    ``locked_redeploy_target_keys`` 对卖出后板面重算,本帧 victim 飞霄
+    非弹性键(减益/星间旅人)承载者,卖出不动达成档(局 18 账本形态
+    实证)。防漂移面 = 拔钉域(退域谓词现算:卖出后 board_full 翻假 ⇒
+    域塌 False ∧ 键集回全量 8 键 ∧ 补上件变丹恒·腾荒[护盾,仅全量键
+    资格]≠ 收窄键集判定件)——消费位(引擎 R1-b 钉定行)与装配位
+    (kernel 钉定传导)两处守卫移除变异均必红,已亲证。帧数据与局 18
+    形态锁(test_m1p_plan_fill_equivalence_locked_transition_domain)
+    同源,构造展开各自自持。"""
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        get_comp as _get_comp,
+    )
+    from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+        assemble_swap_plan_inputs as _assemble,
+    )
+    from sr_od.application.currency_war.kernel.cw_state import (
+        iter_occupied_deployed,
+    )
+    from sr_od.application.currency_war.sim.engine_p1 import (
+        _m1p_plan_and_record,
+        _m1p_plan_fill_deploy,
+        m1p_swap_execute,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of as _state_of,
+    )
+
+    def _g18_bc(name: str, slot: int) -> BenchChar:
+        ch = CHARACTERS[name]
+        return BenchChar(slot=slot, char_id=name, star=1,
+                         faction=(ch.factions[0] if ch.factions else '?'))
+
+    # 局 18 P2r4:计划时点板 = 末态板 + victim(藿藿),cap 9 板满;
+    # bench = 末态 bench(黄泉 = 本轮新购义务件,减益已达成 2 档)。
+    kept = ['三月七', '椒丘', '海瑟音', '桑博', '姬子·启行', '千冶·刃',
+            '飞霄', '艾丝妲']
+    pre_board = kept + ['藿藿']
+    bench_names = ['貊泽', '丹恒·腾荒', '黄泉', '银狼LV.999', '希儿',
+                   '瓦尔特', '彦卿', '貊泽']
+    board: dict[str, int] = {}
+    for _n in pre_board:
+        _c = CHARACTERS[_n]
+        for _f in tuple(_c.factions or ()) + tuple(_c.flows or ()):
+            board[_f] = board.get(_f, 0) + 1
+    sess = _NS()
+    _st = _state_of(sess)
+    _st.target_comp = _get_comp('列车同行')
+    _st.transition_framework = ''
+    _st.v3_intention = _NS(locked_comp='列车同行', p1_pair=(),
+                           phase='locked', transition_pair=())
+    gs = GameState(gold=0, level=9, deploy_cap=9, plane=2, round_num=4,
+                   board=board,
+                   deployed=[_g18_bc(n, i + 1)
+                             for i, n in enumerate(pre_board)],
+                   bench=[_g18_bc(n, i + 1)
+                          for i, n in enumerate(bench_names)])
+    plan, rec, ctx = _m1p_plan_and_record(gs, sess)
+    # —— 锁前提:计划时点域事实(锁线转型域收窄场景)——
+    assert ctx is not None and ctx.transition_domain is True, (
+        '锁前提:计划时点装配域事实 = True(锁线 ∧ fp<1.00 ∧ 板满)')
+    _narrow = ctx.target_factions
+    assert _narrow == frozenset({'减益', '列车同行', '星间旅人'}), (
+        f'收窄键集 = 局 18 账本 m1p 形态,实得 {sorted(_narrow)}')
+    assert rec['up_names'] == ['黄泉'] and plan.sell_names == ['飞霄']
+    acts: list[dict] = []
+    spend: dict = {'buys': {}, 'levelup': 0, 'refresh': 0, 'sell_income': 0}
+    gs2, sold = m1p_swap_execute(gs, plan, acts=acts, spend=spend,
+                                 pool=_RetPool())
+    assert sold is True
+    # 直投前提破:计划 pick 黄泉离席(漂移帧)→ 走 R1-b 重 derive
+    gs2.bench = [b for b in gs2.bench
+                 if b is None or b.char_id != '黄泉']
+    # —— 性质①:重 derive 输出的收窄域 ≡ 计划时点域快照(调用形态
+    # = 引擎 R1-b 行同款:装配单一源 + 钉计划时点域事实)——
+    ctx2 = _assemble(sess, state=_bsb(gs2),
+                     deployed=list(iter_occupied_deployed(gs2.deployed)),
+                     bench=[b for b in gs2.bench if b is not None],
+                     cap=gs2.max_units(),
+                     transition_domain=ctx.transition_domain)
+    assert ctx2 is not None
+    assert ctx2.transition_domain == ctx.transition_domain, (
+        '重 derive 域布尔 ≡ 计划时点域事实:卖出后 board_full 翻假,'
+        '域谓词现算必 False——域塌 = 钉域传导断裂(装配位或消费位)')
+    assert ctx2.target_factions == _narrow, (
+        f'重 derive 收窄键集 ≡ 计划时点键集:回全量 = 收窄辖域丢失,'
+        f'实得 {sorted(ctx2.target_factions)}')
+    # —— 性质②:下游后果 = 补上件由收窄键集判定(引擎 R1-b 消费重
+    # derive 视图补部署);判别样本 = 丹恒·腾荒(注册表前提自证:
+    # bonds∩收窄 = ∅ ∧ 仅全量键资格)——
+    _dt = CHARACTERS['丹恒·腾荒']
+    _dt_bonds = set(_dt.factions or ()) | set(_dt.flows or ())
+    assert not (_dt_bonds & set(_narrow)) and (_dt_bonds - set(_narrow)), (
+        '锁前提:丹恒·腾荒 = 仅全量键资格的判别样本(注册表事实)')
+    res_up, _held, _lag = _m1p_plan_fill_deploy(gs2, plan, ctx, sess)
+    dep_names = {d.char_id for d in iter_occupied_deployed(gs2.deployed)
+                 if d.char_id}
+    assert res_up == 1, '前提破帧缺口仍必须被补(R1-b 重 derive 补部署)'
+    assert sum(1 for _ in iter_occupied_deployed(gs2.deployed)) == 9, (
+        '板满恢复 = 计划假想终态')
+    assert '丹恒·腾荒' not in dep_names, (
+        '补上件禁为仅全量键资格件——域塌时该件必被改判上板(变异红证面)')
+    _filled = dep_names - {d.char_id for d in gs.deployed if d is not None}
+    assert _filled and all(
+        (set(CHARACTERS[n].factions or ())
+         | set(CHARACTERS[n].flows or ())) & set(_narrow)
+        for n in _filled), (
+        f'每个补上件都是收窄键集资格件,实得 {sorted(_filled)}')
 
 
 def test_mandate_carries_m1p_plan_payload() -> None:

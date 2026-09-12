@@ -25,6 +25,10 @@ import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    BoardState,
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
@@ -69,11 +73,12 @@ def _bc(names: list[str], stars: list[int] | None = None) -> list[BenchChar]:
             for i, (n, s) in enumerate(zip(names, stars))]
 
 
-def _p1_state(bench: list[BenchChar]) -> GameState:
+def _p1_state(bench: list[BenchChar]) -> BoardState:
+    """W6 波3:方向层谓词已切容器签名,旧 GameState 构面经过渡桥装箱。"""
     st = GameState(gold=10, level=5, plane=1, round_num=5, hp=100)
     st.bench = bench
     st.deployed = []
-    return st
+    return board_state_bridge(st)
 
 
 def _require_pure(tag: str, k: int) -> list[str]:

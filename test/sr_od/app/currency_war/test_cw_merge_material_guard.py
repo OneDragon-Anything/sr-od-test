@@ -27,6 +27,9 @@ from pathlib import Path
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     k_empty_window_fallback,
@@ -78,7 +81,9 @@ def _fallback_k(state: GameState) -> tuple[str, ...]:
     帧)——原 R2-1「禁 k_members=() 假设构造」禁的是无出处的假设,现在
     的空集是单一源评估真值,且让守卫锁更锐:zero_overlap 对空集全放,
     燃料候选唯一拦截 = merge 守卫本体。"""
-    k, token = k_empty_window_fallback(state, IntentionState())
+    # W6 波3:k 空窗回退已切容器签名,帧经过渡桥装箱。
+    k, token = k_empty_window_fallback(board_state_bridge(state),
+                                       IntentionState())
     assert token == 'p2plus'
     return tuple(sorted(k))
 

@@ -17,21 +17,24 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_intention
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge as _kbridge,
+)
 from sr_od.application.currency_war.kernel.cw_comps import (
     CORE_SINGLE_CARD_REGISTRY,
     get_comp,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
+    _p1_transition_eligible,
     arm_a_live_direction,
     char_declaration_index,
+    hoard_target_set,
     hub_covered_lines,
     hub_option_names,
     k_empty_window_fallback,
     line_completion_feasibility,
     no_target_arms,
-    hoard_target_set,
-    _p1_transition_eligible,
 )
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_state import (
@@ -118,24 +121,24 @@ class TestArmAStrongGate:
         st = _state(hp=100)
         st.bench = _own(*comp.core_chars)
         ist = IntentionState()
-        assert arm_a_live_direction(st, ist) == '希儿量子'
+        assert arm_a_live_direction(_kbridge(st), ist) == '希儿量子'
         # 独立重算(锁 2 的同源对拍;与意向层移交候选同一谓词链)
-        vis = cw_intention._visible_chars(st)
+        vis = cw_intention._visible_chars(_kbridge(st))
         reg = DEFAULT_REGISTRY
         cands = [c for c in cw_intention._v2_comps()
                  if c.name not in ist.evicted
                  and st.plane not in (c.weak_planes or ())
-                 and cw_intention._core_reachable(c, st, vis)
+                 and cw_intention._core_reachable(c, _kbridge(st), vis)
                  and (st.plane != 2
-                      or line_completion_feasibility(st, c, None, reg, vis)
+                      or line_completion_feasibility(_kbridge(st), c, None, reg, vis)
                       > reg.revoke_miss_tolerance_eps)]
         best = sorted(cands,
-                      key=lambda c: (-cw_intention._asset_thickness(c, st),
+                      key=lambda c: (-cw_intention._asset_thickness(c, _kbridge(st)),
                                      cw_intention.encounter_window_rounds(
                                          cw_intention.intention_core(c),
                                          st.level)))[0]
         assert best.name == '希儿量子'
-        kfb, tok = k_empty_window_fallback(st, ist)
+        kfb, tok = k_empty_window_fallback(_kbridge(st), ist)
         assert tok == 'p2plus'
         chars, _eq = cw_intention._line_hoard(comp)
         assert kfb == frozenset(chars)
@@ -146,12 +149,12 @@ class TestArmAStrongGate:
         囤货——回退成员集为空(fallback_hold),非绯英采购集。"""
         st = _state()
         ist = IntentionState()
-        arms = no_target_arms(st, ist)
+        arms = no_target_arms(_kbridge(st), ist)
         assert arms.direction == ''
         assert arms.char_targets == frozenset()
-        ht = hoard_target_set(st, ist)
+        ht = hoard_target_set(_kbridge(st), ist)
         assert ht.mode == 'fallback_hold' and not ht.char_targets
-        kfb, tok = k_empty_window_fallback(st, ist)
+        kfb, tok = k_empty_window_fallback(_kbridge(st), ist)
         assert kfb == frozenset() and tok == 'p2plus'
 
     def test_dead_direction_partial_g_no_hoard(self):
@@ -163,10 +166,10 @@ class TestArmAStrongGate:
         cores = [m for m in get_comp('绯英欢愉').core_chars if m != '瓦尔特']
         st.bench = _own(*cores)
         ist = IntentionState()
-        g = line_completion_feasibility(st, get_comp('绯英欢愉'), None, reg,
+        g = line_completion_feasibility(_kbridge(st), get_comp('绯英欢愉'), None, reg,
                                         None)
         assert 0 < g <= reg.revoke_miss_tolerance_eps
-        assert arm_a_live_direction(st, ist) == ''
+        assert arm_a_live_direction(_kbridge(st), ist) == ''
 
     def test_p1_bands_and_weak_out_of_scope(self):
         """必答⑥出辖(证明批 §4.1 裁决:p1 两带显式出辖)+ 域守卫
@@ -175,17 +178,17 @@ class TestArmAStrongGate:
         st1 = _state(hp=100)
         st1.plane = 1
         ist1 = IntentionState()
-        assert no_target_arms(st1, ist1).direction == ''
-        assert no_target_arms(st1, ist1).hub_names == ()
+        assert no_target_arms(_kbridge(st1), ist1).direction == ''
+        assert no_target_arms(_kbridge(st1), ist1).hub_names == ()
         # p1_gap 带回退 = 四体系引擎件全集(既有判据族,不入三臂)
-        kfb, tok = k_empty_window_fallback(st1, ist1)
+        kfb, tok = k_empty_window_fallback(_kbridge(st1), ist1)
         assert tok == 'p1_gap' and kfb
         stw = _state()
         istw = IntentionState()
         istw.phase = 'weak'
-        assert no_target_arms(stw, istw) == cw_intention.NoTargetArms(
+        assert no_target_arms(_kbridge(stw), istw) == cw_intention.NoTargetArms(
             '', frozenset())
-        assert hoard_target_set(stw, istw).mode == 'weak'   # 跨线骨架分带
+        assert hoard_target_set(_kbridge(stw), istw).mode == 'weak'   # 跨线骨架分带
 
     def test_locked_frame_three_arms_dormant(self):
         """锁 5(正本 §5.2):locked_buy_membership 非 None 帧本命题三臂
@@ -195,7 +198,7 @@ class TestArmAStrongGate:
         ist.phase = 'locked'
         ist.locked_comp = '希儿量子'
         st = _state(shop_cards=[_card('花火', cost=2)])
-        assert no_target_arms(st, ist).hub_names == ()
+        assert no_target_arms(_kbridge(st), ist).hub_names == ()
         sess = _session(ist)
         state_of(sess).target_comp = get_comp('希儿量子')
         act = _decide(st, sess)
@@ -246,9 +249,9 @@ class TestHubEligibility:
         注册单卡依赖核心 ⇒ 乙臂不发射、规则③通道发射,双通道互斥。"""
         st = _state(shop_cards=[_card('银狼LV.999', cost=5)])
         ist = IntentionState()
-        assert len(hub_covered_lines(st, ist, '银狼LV.999')) == 2
+        assert len(hub_covered_lines(_kbridge(st), ist, '银狼LV.999')) == 2
         assert '银狼LV.999' in CORE_SINGLE_CARD_REGISTRY
-        assert '银狼LV.999' not in hub_option_names(st, ist)
+        assert '银狼LV.999' not in hub_option_names(_kbridge(st), ist)
         sess = _session(ist)
         act = _decide(st, sess)
         assert isinstance(act, BuyCard)
@@ -263,10 +266,10 @@ class TestHubEligibility:
         (定理 B2-2 的运行时核)。"""
         st = _state()
         ist = IntentionState()
-        assert len(hub_covered_lines(st, ist, '希儿')) == 1
-        assert '希儿' not in hub_option_names(st, ist)
-        assert len(hub_covered_lines(st, ist, '花火')) >= 2
-        hubs = hub_option_names(st, ist)
+        assert len(hub_covered_lines(_kbridge(st), ist, '希儿')) == 1
+        assert '希儿' not in hub_option_names(_kbridge(st), ist)
+        assert len(hub_covered_lines(_kbridge(st), ist, '花火')) >= 2
+        hubs = hub_option_names(_kbridge(st), ist)
         assert '花火' in hubs and hubs
 
 
@@ -446,7 +449,7 @@ class TestArbitration:
         comp = get_comp(comp_name)
         st = _state(gold=gold, hp=100, shop_cards=shop_cards)
         st.bench = _own(*comp.core_chars)
-        assert arm_a_live_direction(st, IntentionState()) == comp_name
+        assert arm_a_live_direction(_kbridge(st), IntentionState()) == comp_name
         return st
 
     def test_layer1_covering_hub_beats_single_line_piece(self, monkeypatch):
@@ -541,8 +544,8 @@ class TestArbitration:
                                 _card('三月七', cost=1, x=101)])
         ist = IntentionState()
         assert char_declaration_index('三月七') < char_declaration_index('花火')
-        assert len(hub_covered_lines(st, ist, '三月七')) \
-            < len(hub_covered_lines(st, ist, '花火'))
+        assert len(hub_covered_lines(_kbridge(st), ist, '三月七')) \
+            < len(hub_covered_lines(_kbridge(st), ist, '花火'))
         sess = _session(ist)
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
@@ -621,6 +624,7 @@ class TestKMembersDownstream:
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1),
                                         _card('注册表外散件Z', cost=1)])
         st.bench = _own(*comp.core_chars)
+        st.deployed = [_bc('板上件锚', slot=1)]   # T-32 守卫非空板前置
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
@@ -727,15 +731,15 @@ class TestArmACorner:
                     shop_cards=[_card('绯英', cost=3)])
         st.bench = _own('绯英')
         ist = IntentionState()
-        arms = no_target_arms(st, ist)
+        arms = no_target_arms(_kbridge(st), ist)
         assert arms.direction == ''
         assert arms.corner_names == ('绯英欢愉',)
         # R2 双门分歧:同帧同输入,缓锁门 core 可见短路放行、强锁门判死
         reg = DEFAULT_REGISTRY
-        vis = cw_intention._visible_chars(st)
+        vis = cw_intention._visible_chars(_kbridge(st))
         sig = cw_intention.IntentionSignal(3, 'core_card', '绯英欢愉', '', 1.0)
         assert cw_intention._p2_signal_supply_ok(st, sig, None, reg, vis)
-        assert line_completion_feasibility(st, get_comp('绯英欢愉'), None,
+        assert line_completion_feasibility(_kbridge(st), get_comp('绯英欢愉'), None,
                                            reg, None) \
             <= reg.revoke_miss_tolerance_eps
         sess = _session(ist)

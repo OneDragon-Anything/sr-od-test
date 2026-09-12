@@ -25,6 +25,9 @@ from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     shop_unbought_reasons,
 )
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel import cw_intention as ci
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_intention import (
@@ -51,14 +54,18 @@ _P2_SESSION = SimpleNamespace(plane_node_table=[1] * 7)
 
 
 def _state(plane: int = 2, round_num: int = 1, hp: int = 40,
-           level: int = 7, gold: int = 0) -> GameState:
+           level: int = 7, gold: int = 0, **extra) -> BoardState:
+    """W6 波3:可行性/意向面已切容器签名,旧帧经过渡桥装箱。
+    extra = 其余字段(shop/bench 等);桥为一次性快照,变异须重建帧。"""
     st = GameState()
     st.plane = plane
     st.round_num = round_num
     st.hp = hp
     st.level = level
     st.gold = gold
-    return st
+    for _k, _v in extra.items():
+        setattr(st, _k, _v)
+    return board_state_bridge(st)
 
 
 def _locked_ist(comp_name: str) -> IntentionState:
@@ -79,13 +86,12 @@ def test_p2_supply_horizon_derivation():
     st = _state(plane=2, round_num=1, hp=41)
     # ceil(41/20.05)=3,位面剩余 7 → 取 3
     assert p2_supply_horizon(st, _P2_SESSION, None) == 3
-    st.hp = 200          # ceil(200/20.05)=10 > 7 → 位面剩余封顶
+    st = _state(plane=2, round_num=1, hp=200)   # ceil(200/20.05)=10 > 7 → 位面剩余封顶
     assert p2_supply_horizon(st, _P2_SESSION, None) == 7
-    st.hp = 5            # 濒死:ceil(5/20.05)=1
+    st = _state(plane=2, round_num=1, hp=5)     # 濒死:ceil(5/20.05)=1
     assert p2_supply_horizon(st, _P2_SESSION, None) == 1
-    st.hp = 0            # hp≤0 → 视界为零
+    st = _state(plane=2, round_num=1, hp=0)     # hp≤0 → 视界为零
     assert p2_supply_horizon(st, _P2_SESSION, None) == 0
-    st.hp = 100
     assert vd == 20.05   # 注册表锚(单一源,禁散写第二份)
 
 
@@ -99,18 +105,19 @@ def test_line_completion_feasibility_closed_form():
     h = p2_supply_horizon(st, _P2_SESSION, None)
     expect = 1.0
     for m in comp.core_chars:
-        q = ci._core_miss_q(m, st.level)
+        q = ci._core_miss_q(m, 7)
         expect *= 1.0 - (1.0 - q) ** h
     got = line_completion_feasibility(st, comp, _P2_SESSION, None)
     assert math.isclose(got, expect, rel_tol=1e-12)
     # 在店核心:该件 F=1(当轮可买),G 只剩其余缺件
-    st.shop = [ShopCard(x=0, name='希儿', cost=3)]
+    st = _state(plane=2, round_num=1, hp=41, level=7,
+                shop=[ShopCard(x=0, name='希儿', cost=3)])
     got_vis = line_completion_feasibility(st, comp, _P2_SESSION, None)
     expect_vis = 1.0
     for m in comp.core_chars:
         if m == '希儿':
             continue
-        q = ci._core_miss_q(m, st.level)
+        q = ci._core_miss_q(m, 7)
         expect_vis *= 1.0 - (1.0 - q) ** h
     assert math.isclose(got_vis, expect_vis, rel_tol=1e-12)
     assert got_vis > got
@@ -145,16 +152,16 @@ def test_p2_exit3_supply_infeasible_downgrade(monkeypatch):
         set(locked.core_chars), alt_cores))
     ist = _locked_ist('希儿量子')
     # 第 1 轮:有店无线内成员 → drought=1,先验 G≤ε 但证据未足,不撤
-    st1 = _state(plane=2, round_num=2, hp=40, level=7)
-    st1.shop = [ShopCard(x=0, name='娜塔莎', cost=2)]
+    st1 = _state(plane=2, round_num=2, hp=40, level=7,
+                 shop=[ShopCard(x=0, name='娜塔莎', cost=2)])
     out1 = update_intention(st1, ist, _P2_SESSION, None)
     assert out1.phase == 'locked'
     assert ci._track(out1, '希儿量子').member_drought == 1
     # 第 2 轮:断供=2 达 PAIR_SUPPLY_CONFIRM_ROUNDS,且替代线核心(白厄)
     # 在店=已验证可达 → 出口③开
-    st2 = _state(plane=2, round_num=3, hp=40, level=7)
-    st2.shop = [ShopCard(x=0, name='娜塔莎', cost=2),
-                ShopCard(x=1, name='白厄', cost=4)]
+    st2 = _state(plane=2, round_num=3, hp=40, level=7,
+                 shop=[ShopCard(x=0, name='娜塔莎', cost=2),
+                       ShopCard(x=1, name='白厄', cost=4)])
     out = update_intention(st2, out1, _P2_SESSION, None)
     assert out.phase == 'unlocked'
     assert out.locked_comp == ''
@@ -179,12 +186,12 @@ def test_p2_exit3_negative_alt_core_not_visible(monkeypatch):
             alt_cores |= set(c.core_chars)
     monkeypatch.setattr(ci, '_core_miss_q', _fake_q_by_line(
         set(locked.core_chars), alt_cores))
-    st = _state(plane=2, round_num=3, hp=40, level=7)
-    st.shop = [ShopCard(x=0, name='娜塔莎', cost=2)]   # 断供=2 但无替代核心
+    st = _state(plane=2, round_num=3, hp=40, level=7,
+                shop=[ShopCard(x=0, name='娜塔莎', cost=2)])   # 断供=2 但无替代核心
     ist = _locked_ist('希儿量子')
     # 先把断供累积到阈(第 1 轮)
-    st1 = _state(plane=2, round_num=2, hp=40, level=7)
-    st1.shop = [ShopCard(x=0, name='娜塔莎', cost=2)]
+    st1 = _state(plane=2, round_num=2, hp=40, level=7,
+                 shop=[ShopCard(x=0, name='娜塔莎', cost=2)])
     out1 = update_intention(st1, ist, _P2_SESSION, None)
     assert out1.phase == 'locked'
     out = update_intention(st, out1, _P2_SESSION, None)
@@ -202,9 +209,9 @@ def test_p2_exit3_negative_line_still_supplied(monkeypatch):
             alt_cores |= set(c.core_chars)
     monkeypatch.setattr(ci, '_core_miss_q', _fake_q_by_line(
         set(locked.core_chars), alt_cores))
-    st = _state(plane=2, round_num=2, hp=40, level=7)
+    st = _state(plane=2, round_num=2, hp=40, level=7,
+                shop=[ShopCard(x=0, name='符玄', cost=4)])
     # 线内非核心成员符玄在店:断供清零(G 仍 ≤ ε:其余缺件先验极低)
-    st.shop = [ShopCard(x=0, name='符玄', cost=4)]
     ist = _locked_ist('希儿量子')
     out = update_intention(st, ist, _P2_SESSION, None)
     assert out.phase == 'locked'
@@ -230,8 +237,8 @@ def test_p2_exit3_negative_core_visible(monkeypatch):
     locked = get_comp('希儿量子')
     monkeypatch.setattr(ci, '_core_miss_q', _fake_q_by_line(
         set(locked.core_chars), set(locked.core_chars)))
-    st = _state(plane=2, round_num=1, hp=40, level=7)
-    st.shop = [ShopCard(x=0, name='希儿', cost=3)]
+    st = _state(plane=2, round_num=1, hp=40, level=7,
+                shop=[ShopCard(x=0, name='希儿', cost=3)])
     ist = _locked_ist('希儿量子')
     out = update_intention(st, ist, _P2_SESSION, None)
     assert out.phase == 'locked'
@@ -298,7 +305,8 @@ def test_p2_signal_gate_blocks_infeasible_allows_core_visible(monkeypatch):
     out = update_intention(st, IntentionState(), _P2_SESSION, None)
     assert out.phase == 'unlocked'      # 缓锁:方向不落不可行线
     # 核心在店:门放行 → 锁定(P25 价值面,即使 G 低)
-    st.shop = [ShopCard(x=0, name=ci.intention_core(comp), cost=3)]
+    st = _state(plane=2, round_num=1, hp=40, level=7,
+                shop=[ShopCard(x=0, name=ci.intention_core(comp), cost=3)])
     out2 = update_intention(st, out, _P2_SESSION, None)
     assert out2.phase == 'locked'
     assert out2.locked_comp == comp.name
@@ -320,7 +328,9 @@ def test_shop_rejects_projects_bench_across_buys():
     """波内先买占掉末席后,同波后续线内件应归 missing_bench_full
     (旧口径误标 missing_no_path)。"""
     comp = None                       # transition 分类不辖,聚焦投影
-    st = _state(gold=99)
+    # shop_unbought_reasons 属 mandate_v1(波4 面,GameState 签名)——喂原始帧
+    st = GameState()
+    st.gold = 99
     st.bench = _bench(BENCH_CAPACITY - 1)     # 8/9,剩 1 席
     a = ShopCard(x=0, name='甲一', cost=3)
     b = ShopCard(x=1, name='乙二', cost=3)
@@ -335,7 +345,9 @@ def test_shop_rejects_projects_sell_refund_and_seat():
     """卖买同帧:卖出回金与席释放进投影——席满帧经 M4 腾席后线内件
     买入可行,不再留拒因。"""
     comp = None
-    st = _state(gold=5)
+    # 同上:mandate_v1 拒因面喂原始 GameState 帧
+    st = GameState()
+    st.gold = 5
     st.bench = _bench(BENCH_CAPACITY)         # 席满
     b = ShopCard(x=0, name='乙二', cost=5)
     st.shop = [b]

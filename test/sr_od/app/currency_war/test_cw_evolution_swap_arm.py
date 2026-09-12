@@ -17,6 +17,10 @@
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+    max_units_of,
+)
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
     assemble_swap_plan_inputs,
@@ -154,23 +158,23 @@ def test_assemble_computes_arm_and_leg_removals(monkeypatch) -> None:
     dep, bench = _all_two_star_deployed(), [_bc('三月七', 1, star=2)]
     st = GameState(gold=0, level=6, plane=2, round_num=3, board={},
                    deployed=list(dep), bench=list(bench))
-    ctx = assemble_swap_plan_inputs(sess, state=st,
+    ctx = assemble_swap_plan_inputs(sess, state=board_state_bridge(st),
                                     deployed=list(x for x in dep if x),
                                     bench=list(x for x in bench if x),
-                                    cap=st.max_units())
+                                    cap=max_units_of(board_state_bridge(st)))
     assert ctx is not None and ctx.evolution_swap_armed is True
     # 腿移除①:bench 无在册线件 → 臂关
     ctx_no = assemble_swap_plan_inputs(
-        sess, state=st, deployed=list(x for x in dep if x), bench=[],
-        cap=st.max_units())
+        sess, state=board_state_bridge(st), deployed=list(x for x in dep if x),
+        bench=[], cap=max_units_of(board_state_bridge(st)))
     assert ctx_no is not None and ctx_no.evolution_swap_armed is False
     # 腿移除②:板面已成型(board 列车 2 达档 → fp≥1.00)→ 臂关
     st_formed = GameState(gold=0, level=6, plane=2, round_num=3,
                           board={'列车同行': 2}, deployed=list(dep),
                           bench=list(bench))
     ctx_formed = assemble_swap_plan_inputs(
-        sess, state=st_formed, deployed=list(x for x in dep if x),
-        bench=list(x for x in bench if x), cap=st_formed.max_units())
+        sess, state=board_state_bridge(st_formed), deployed=list(x for x in dep if x),
+        bench=list(x for x in bench if x), cap=max_units_of(board_state_bridge(st_formed)))
     assert ctx_formed is not None and ctx_formed.evolution_swap_armed is False
 
 

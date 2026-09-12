@@ -31,6 +31,13 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     promote_candidates,
 )
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    BS_SCHEMA_VERSION,
+    BoardState,
+    Field,
+    NodeKey,
+    plane_of,
+)
 
 #: 12 线枚举快照(单篇 §3 逐线表;漂移 = 锁红 → 重推语义后同批更新)。
 #: 体系键交集列为**字面三羁绊键域**口径(M2 注:注册表快照口径;生产
@@ -54,18 +61,14 @@ _ENGINE_KEYS = tuple(b for b, _t in TRANSITION_TRAITS)
 _PAIR_KEYS = _ENGINE_KEYS + ('希儿系',)
 
 
-class _StubState:
-    """纯函数评估用最小状态桩(字段契约同 p65_check.py,零真实副作用)。"""
-
-    def __init__(self, plane: int, level: int, hp: int, round_num: int) -> None:
-        self.plane = plane
-        self.level = level
-        self.hp = hp
-        self.round_num = round_num
-        self.bench = []
-        self.deployed = []
-        self.shop = []
-        self.enemy_affixes = ()
+def _StubState(plane: int, level: int, hp: int, round_num: int) -> BoardState:
+    """纯函数评估用最小容器帧(W6 波3:promote_candidates 切容器签名;
+    零真实副作用——一次性 BoardState 不挂 session 旁表)。"""
+    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs.node = Field(NodeKey(plane=plane, round_num=round_num, kind='prep'))
+    bs.level = Field(level)
+    bs.hp = Field(hp)
+    return bs
 
 
 class _StubIst:
@@ -80,9 +83,9 @@ def _handoff(state, ist, visible) -> set[str]:
     符号锚 = `_p2_handoff` 支 cands 列表推导)。"""
     return {c.name for c in _v2_comps()
             if c.name not in ist.evicted
-            and state.plane not in (c.weak_planes or ())
+            and plane_of(state) not in (c.weak_planes or ())
             and _core_reachable(c, state, visible)
-            and (state.plane != 2
+            and (plane_of(state) != 2
                  or line_completion_feasibility(state, c, None, DEFAULT_REGISTRY,
                                                 visible)
                  > DEFAULT_REGISTRY.revoke_miss_tolerance_eps)}

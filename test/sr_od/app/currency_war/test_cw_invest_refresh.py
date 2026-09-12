@@ -24,6 +24,9 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.point import Point
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_comps import AUGMENT_COMP_AFFINITY
 from sr_od.application.currency_war.kernel.cw_events import decide_event
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
@@ -62,7 +65,9 @@ _STATE = GameState(board={}, hp=100, hp_readable=True)
 
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
-    return decide_event(options, cfg if cfg is not None else _cfg(), _STATE, **kw)
+    # W6 波3:decide_event 切容器签名,旧帧经过渡桥装箱。
+    return decide_event(options, cfg if cfg is not None else _cfg(),
+                        board_state_bridge(_STATE), **kw)
 
 
 # ===== kernel 锁 1:全顶级集 → refresh_slots=∅(S1 一案 + S2 一案)=====
