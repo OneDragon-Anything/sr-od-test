@@ -24,7 +24,7 @@ from fixtures.cw_fake_game.fake_match import (
 )
 from fixtures.cw_fake_game.fake_ports import FakeActionSink, FakeCwObserver
 
-import sr_od.application.currency_war.kernel.cw_state as cw_state
+import sr_od.application.currency_war.kernel.cw_vocab as cw_state
 from sr_od.application.currency_war.cw_game_ports import (
     action_sink,
     install_game_ports,
@@ -32,10 +32,10 @@ from sr_od.application.currency_war.cw_game_ports import (
     uninstall_game_ports,
 )
 from sr_od.application.currency_war.kernel.cw_coarse_battle import WIN_CAP
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     RefreshShop,
     SellBench,
     ShopCard,
@@ -108,10 +108,10 @@ class TestActionTransitionSingleSource:
         """接线守卫:apply 必经 cw_state.simulate(spy 记调用并转发真
         函数——把 fake_match 的直调改内联 = 本锁红)。"""
         m = FakeMatch(seed=3)
-        calls: list[tuple[GameState, object]] = []
+        calls: list[tuple[CwWorkFrame, object]] = []
         real = cw_state.simulate
 
-        def spy(state: GameState, action: object) -> GameState:
+        def spy(state: CwWorkFrame, action: object) -> CwWorkFrame:
             calls.append((state, action))
             return real(state, action)   # type: ignore[arg-type]
 

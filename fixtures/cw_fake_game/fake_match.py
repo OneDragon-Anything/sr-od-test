@@ -54,10 +54,10 @@ from sr_od.application.currency_war.kernel.cw_coarse_battle import (
 from sr_od.application.currency_war.kernel.cw_opening_hp import (
     OPENING_HP_BASE,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     XP_TO_NEXT_LEVEL,
     Action,
-    GameState,
+    CwWorkFrame,
     bench_place,
 )
 from sr_od.application.currency_war.sim.cw_sim_invest import (
@@ -225,7 +225,7 @@ class BattleSettlement:
 class FakeMatch:
     """一局假游戏的状态机(方案 §2.2「单一对象 FakeMatch」)。
 
-    状态槽:对局态 = 真 ``GameState``(零平行结构);画面身份 =
+    状态槽:对局态 = 真 ``CwWorkFrame``(零平行结构);画面身份 =
     ``phase``(screen_info 画面档名);节点日程 = ``node_sequence``
     (剧本注入或 ``sample_node_sequence`` 真码采样);牌池 = ``_Pool``
     真码;浮层栈 = ``overlay_stack``;随机流 = 主种子派生四股。
@@ -312,7 +312,7 @@ class FakeMatch:
             self._invest = InvestInjectionState.build(invest_profile)
             self._invest_sampler = SinkInvestSampler(seed)
             self.select_invest_env(invest_profile.active_env)
-        self.state: GameState = GameState(
+        self.state: CwWorkFrame = CwWorkFrame(
             plane=1,
             round_num=1,
             node_type=self.node_sequence[0],
@@ -340,7 +340,7 @@ class FakeMatch:
         牌从牌池 take(池守恒:开局牌占用副本计数)。
         """
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
         costs = [c for c, _ in START_BENCH_COST_WEIGHTS]
         weights = [w for _, w in START_BENCH_COST_WEIGHTS]
         for _ in range(START_BENCH_COUNT):
@@ -359,7 +359,7 @@ class FakeMatch:
     def _deal_bench_char(self, bc: cw_state.BenchChar) -> int | None:
         """一个角色入座首个空席并回填物理槽号(开局补给/球角色通道/选卡
         共用;座位真值 = bench 槽位表,禁列表 append)。"""
-        from sr_od.application.currency_war.kernel.cw_state import bench_place
+        from sr_od.application.currency_war.kernel.cw_vocab import bench_place
 
         placed = bench_place(self.state.bench, bc)
         return placed
@@ -376,7 +376,7 @@ class FakeMatch:
     def spawn_box(self) -> int | None:
         """生成一个占席补给箱(bench 上 is_item_slot 占位件;席满 = 无箱,
         返回 None)。物理槽 = 首个空席。"""
-        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
         for i, b in enumerate(self.state.bench):
             if b is None:
@@ -403,7 +403,7 @@ class FakeMatch:
         from sr_od.application.currency_war.kernel.cw_investments import (
             economy_effect_of,
         )
-        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
         for i, b in enumerate(self.state.bench):
             if b is None:
@@ -456,7 +456,7 @@ class FakeMatch:
             from sr_od.application.currency_war.data.cw_chars import (
                 CHARACTERS,
             )
-            from sr_od.application.currency_war.kernel.cw_state import (
+            from sr_od.application.currency_war.kernel.cw_vocab import (
                 BenchChar,
             )
             ch = CHARACTERS[char]
@@ -535,7 +535,7 @@ class FakeMatch:
     def scheduled_invest_pick(self, plane: int, round_num: int) -> str:
         """剧本日程回读(0e 驱动方取剧本名;无剧本/未命中 = '')。
 
-        [索引定义] 坐标系: (plane, round_num) = GameState 位面/位面内轮次
+        [索引定义] 坐标系: (plane, round_num) = CwWorkFrame 位面/位面内轮次
                     (1 基,与 SimInvestProfile.picks 同坐标系)
                     取值时机: 生成期快照(剧本装配期定死,执行期恒稳)
         """
@@ -628,7 +628,7 @@ class FakeMatch:
             clicks_to_next_level,
             xp_click_cost,
         )
-        from sr_od.application.currency_war.kernel.cw_state import LevelUp
+        from sr_od.application.currency_war.kernel.cw_vocab import LevelUp
 
         level_pre = self.state.level
         clicks = clicks_to_next_level(self.state)
@@ -711,7 +711,7 @@ class FakeMatch:
     def _draw_pool_char_to_bench(self) -> cw_state.BenchChar | None:
         """牌池抽一角色入座空席(池守恒:take;席满/池空返回 None)。"""
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
         if self._take_first_free_slot() is None:
             return None
@@ -757,7 +757,7 @@ class FakeMatch:
     def _pick_box_card(self, card_idx: int | None) -> ExecResult:
         """武装箱选卡:点选项入座(选中 take/未选 ret,池守恒)。"""
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
         frame = self.top_overlay('box')
         if frame is None:
@@ -838,7 +838,7 @@ class FakeMatch:
         """
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.kernel import cw_deploy_logic
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             DeployMove,
             iter_occupied_deployed,
         )
@@ -908,7 +908,7 @@ class FakeMatch:
             EQUIP_CAPACITY,
             equip_allocation,
         )
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             iter_occupied_deployed,
         )
 
@@ -952,7 +952,7 @@ class FakeMatch:
             self_advance,
             synthesize_target,
         )
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             iter_occupied_deployed,
         )
 
@@ -1073,7 +1073,7 @@ class FakeMatch:
                 self.shop_pool.ret(_sold.char_id)
         elif isinstance(action, cw_state.RefreshShop):
             # 刷新重抽 = 假游戏规则层(simulate 只扣金不模拟牌);
-            # probs 非空 = 轮岗翻倍后的概率表(ADR-0286,GameState 概率条
+            # probs 非空 = 轮岗翻倍后的概率表(ADR-0286,CwWorkFrame 概率条
             # 真值同构),None = 基线 REFRESH_PROB;直出 2★ 升档随抽
             # (T-122,rng 同抽店股流)
             self.state.shop = _upgrade_direct_outs(
@@ -1091,7 +1091,7 @@ class FakeMatch:
                           observed=self.state.copy())
 
     @staticmethod
-    def _sold_char(before: GameState,
+    def _sold_char(before: CwWorkFrame,
                    action: Action) -> cw_state.BenchChar | None:
         """卖出动作的目标角色(投影前快照取,供回池;取不到返回 None)。"""
         if isinstance(action, cw_state.SellBench):
@@ -1114,7 +1114,7 @@ class FakeMatch:
         """占位件登记表(boxes/tomes)对账到 bench 真值(T-216)。
 
         boxes/tomes 是本状态机私账(占位件的物理槽位表),bench 真值在
-        kernel ``GameState``——两者经 :meth:`apply` 直调 ``simulate``
+        kernel ``CwWorkFrame``——两者经 :meth:`apply` 直调 ``simulate``
         衔接,而 kernel 不认识 is_item_slot 概念:其卖出/上场/事务身份
         清等转移清掉占位件槽时,登记表不会自动跟随。实证链(T-209
         新发现④ → T-216 探针):商店段策略器腾席卖出通道把箱占位件
@@ -1159,7 +1159,7 @@ class FakeMatch:
         self.clock += 1
         _node = node or self.state.node_type or 'battle'
         st = self.state
-        from sr_od.application.currency_war.kernel.cw_board_state import (
+        from sr_od.application.currency_war.kernel.cw_game_state import (
             board_state_bridge,
         )
         if _node in ('battle', 'encounter', 'boss'):

@@ -32,24 +32,24 @@ import json
 
 import pytest
 
-from sr_od.application.currency_war.kernel import cw_board_state as bs_mod
+from sr_od.application.currency_war.kernel import cw_game_state as bs_mod
 from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
     MATCH_FINAL_FIELD,
     MATCH_FINAL_TYPES,
     OBS_EVENT_EVENTS,
-    BoardState,
+    GameState,
     _derive_node_observed,
     set_match_final_listener,
     write_match_final,
 )
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors as _register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_state_journal import (
@@ -127,14 +127,14 @@ def _final_rows() -> list[dict]:
 
 def test_match_final_domain_registered() -> None:
     """局终域入 bs_schema(缺域键 = 该域未建模,§3.7.1;同 receipts 先例)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.bs_schema.get('match_final') == 1
 
 
 def test_write_match_final_one_atomic_row(journal, run_id) -> None:
     """同版本原子:一次调用恰一行,载荷(类型/版本 id/快照/时长)一次装配
     (行头 v 与 at_version 恒等);渠道签名 = logic_hook/MatchClose。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.hp, 48, produced_by='test', sig=_lsig())
     assert write_match_final(bs, final_type='loss', plane=2, round_num=6,
                              level=7, hp=48, gold=53, streak=-1,
@@ -161,7 +161,7 @@ def test_write_match_final_one_atomic_row(journal, run_id) -> None:
 def test_write_match_final_segment_idempotent(journal, run_id) -> None:
     """段内幂等(G12 终局防重写前查重收编):本段已有终局行 → 第二次调用
     no-op 返 False,不产第二行。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs, final_type='win', plane=3, round_num=9) is True
     n_before = len(_rows())
     assert write_match_final(bs, final_type='loss', plane=3, round_num=9) is False
@@ -172,14 +172,14 @@ def test_write_match_final_segment_idempotent(journal, run_id) -> None:
 def test_match_final_closed_vocab() -> None:
     """终局类型词表封闭集:集外显式炸错(禁自由串)。"""
     assert MATCH_FINAL_TYPES == ('win', 'loss', 'stopped', 'abnormal')
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     with pytest.raises(ValueError):
         write_match_final(bs, final_type='completed')
 
 
 def test_write_match_final_default_duration_segment_level() -> None:
     """duration_s 缺省 = 段级自算(容器创建 → 判定,≥0);显式传值直通。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs, final_type='stopped') is True
     assert bs.match_final.value.duration_s is not None
     assert bs.match_final.value.duration_s >= 0.0
@@ -188,7 +188,7 @@ def test_write_match_final_default_duration_segment_level() -> None:
 def test_abnormal_backfill_note_recovered_version_allocated(journal, run_id) -> None:
     """异常终局补写(G8):backfilled=True → 版本 id 照常分配 + 行载荷
     backfilled 位 + 行注记缺省 recovered 显影(判读可辨真伪)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     v_before = bs.write_seq
     assert write_match_final(bs, final_type='abnormal', plane=1, round_num=3,
                              backfilled=True) is True
@@ -205,7 +205,7 @@ def test_match_final_listener_fires_on_row_only(journal, run_id) -> None:
     流转。未武装/局外两态的触发真值 = 下一把锁。"""
     fired: list[dict] = []
     set_match_final_listener(fired.append)
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs, final_type='win', plane=3, round_num=9) is True
     assert len(fired) == 1
     assert fired[0]['run_id'] == run_id
@@ -218,7 +218,7 @@ def test_match_final_listener_fires_on_row_only(journal, run_id) -> None:
         raise RuntimeError('listener boom')
 
     set_match_final_listener(_boom)
-    bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs2, final_type='loss') is True, \
         '监听异常不毒化终局流转'
 
@@ -231,7 +231,7 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
     set_match_final_listener(fired.append)
     # 态①未武装:sink 缺席 → 版本照耗、Field 照写、零落盘,事件照发
     reset_state_telemetry()
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs, final_type='win') is True
     assert len(fired) == 1
     assert fired[0]['run_id'] == ''
@@ -240,7 +240,7 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
     j = install_state_telemetry(tmp_path / 'state' / 'journal.jsonl',
                                 run_id_provider=lambda: '')
     try:
-        bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
+        bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
         assert write_match_final(bs2, final_type='loss') is True
         assert len(fired) == 2
         assert fired[1]['run_id'] == ''
@@ -269,7 +269,7 @@ def test_match_final_version_stamps(journal, run_id, monkeypatch) -> None:
     assert version_stamp.registry_fingerprint() == bs_mod._REGISTRY_FINGERPRINT
     monkeypatch.setattr(bs_mod, '_CODE_COMMIT', 't244commit')
     monkeypatch.setattr(bs_mod, '_REGISTRY_FINGERPRINT', 't244finger')
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs, final_type='loss', plane=2, round_num=6) is True
     after = _final_rows()[0]['after']
     assert after['code_commit'] == 't244commit'
@@ -283,7 +283,7 @@ def test_obs_event_vocab_closed_set() -> None:
     """obs_event 事件词表封闭集(§3.2.3 行型 2 产生面;硬约束 2 同纪律):
     arbitrate/miss/popup 合法,集外显式炸错。"""
     assert OBS_EVENT_EVENTS == ('arbitrate', 'miss', 'popup')
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     for ev in OBS_EVENT_EVENTS:
         bs.note_obs_event(ev, 'level', {'old': 1, 'new': 2}, sig=_sig())
     with pytest.raises(ValueError):
@@ -293,7 +293,7 @@ def test_obs_event_vocab_closed_set() -> None:
 def test_g10_retrograde_obs_event_evidence(journal, run_id) -> None:
     """G10 倒退留证:候选 < hist → 零状态变更(字段不动)+ obs_event 留证
     (event=arbitrate,actor 保留触发规则归因,占版本)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _derive_node_observed(bs, 5, trigger_screen='货币战争-备战', seq=1)
     assert bs.node_ord.value == 5
     n_before = len(_rows())
@@ -454,7 +454,7 @@ def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:
 def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     """载荷聚合锁:write_match_final(cw4_counters=…) → 载荷原样落账;
     写口浅拷贝(传入容器后写不串账)。None = 无策略载体诚实缺省。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     counters = {'shop_churn_pair_buy': 3, 'launch_frame_idle_gold': 120}
     assert write_match_final(bs, final_type='loss',
                              cw4_counters=counters) is True
@@ -464,7 +464,7 @@ def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     counters['shop_churn_pair_buy'] = 99
     assert payload.cw4_counters['shop_churn_pair_buy'] == 3, '后写不串'
     # None 形态(无 session/历史段补写无源)
-    bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs2, final_type='abnormal',
                              backfilled=True) is True
     assert bs2.match_final.value.cw4_counters is None, (
@@ -474,7 +474,7 @@ def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
 def test_match_final_cw4_aggregate_in_journal_row(journal, run_id) -> None:
     """端到端(写口→journal 行):局终行 after 载荷携带聚合键,行行自足
     可读(判读直接读行,零重放)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     write_match_final(bs, final_type='win',
                       cw4_counters={'m6_bench_full': 1})
     rows = _final_rows()

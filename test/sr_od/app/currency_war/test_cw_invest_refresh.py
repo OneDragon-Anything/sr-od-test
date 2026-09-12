@@ -24,7 +24,7 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import AUGMENT_COMP_AFFINITY
@@ -37,7 +37,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     get_strategy,
     is_blood_economy,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState, PickEvent
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame, PickEvent
 from sr_od.application.currency_war.obs.cw_node_obs import (
     pair_refresh_counts_to_slots,
     read_invest_refresh_counts,
@@ -61,7 +61,7 @@ def _cfg(**overrides) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
-_STATE = GameState(board={}, hp=100, hp_readable=True)
+_STATE = CwWorkFrame(board={}, hp=100, hp_readable=True)
 
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:

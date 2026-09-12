@@ -7,9 +7,9 @@ test_cw_dp_first_passage.py;本文件只留 effective_hp_threshold
 口径定稿与边界声明见 ADR-0440(标定源=W375 双源重标定,
 w375_dual_source_calib.json)。
 
-统一 state 迁移波 2:T-95 起阈值函数输入 = BoardState 容器帧(职级/
+统一 state 迁移波 2:T-95 起阈值函数输入 = GameState 容器帧(职级/
 位面/轮次/等级经容器域读法);帧构造经 :func:`_bs_frame`(观察三态
-写入,等价旧 GameState 标量构造)。
+写入,等价旧 CwWorkFrame 标量构造)。
 """
 from __future__ import annotations
 
@@ -18,13 +18,13 @@ import dataclasses
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_registry as reg_mod
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
-    BoardState,
+    GameState,
     ChannelSig,
     NodeKey,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     effective_hp_threshold,
 )
 
@@ -35,10 +35,10 @@ def _sig() -> ChannelSig:
 
 
 def _bs_frame(*, plane: int = 1, round_num: int = 1, level: int = 1,
-              selected_difficulty: str = '') -> BoardState:
+              selected_difficulty: str = '') -> GameState:
     """阈值函数容器帧构造器(波 2 签名;字段域 = selected_difficulty/
-    node/level,旧 GameState 标量构造的等价形态)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    node/level,旧 CwWorkFrame 标量构造的等价形态)。"""
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     if selected_difficulty:
         bs.observe(bs.selected_difficulty, selected_difficulty, sig=_sig())
     bs.observe(bs.node, NodeKey(plane=plane, round_num=round_num,

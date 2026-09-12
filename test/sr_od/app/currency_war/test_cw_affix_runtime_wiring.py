@@ -12,12 +12,12 @@
   简报开局首读(_read_and_advance)与位面详情补采落点(close_and_report)
   真实驱动产出登记事实(账本条目在案);选卡确认落地登记点
   (_append_confirmed_strategy)以注册表真条目驱动板面重写桥落成
-  BoardState 写端(清场+退款入金,设计 §5 全员晋升/人力重组两行的生产
+  GameState 写端(清场+退款入金,设计 §5 全员晋升/人力重组两行的生产
   写端)。挂点被拆/改名时账本零条目/板面原值,断言红,指向重接线。
 
 设计出处(持久索引):docs/develop/sr_od/application/currency_war/game_state/effect-domain.md
 §7.3(驱动事件映射·登记挂点纪律:best-effort 失败不阻塞读链)/§9.1(实例按
-spec_key 唯一);BoardState 数据结构设计 §5.1(词缀效果辖域申报·挂点接线)。
+spec_key 唯一);GameState 数据结构设计 §5.1(词缀效果辖域申报·挂点接线)。
 """
 
 # ⚠️ 待归并标记(2026-09-12 data 域解体批;台账 = .debug/temp/cw_obs_rebuild/DEBT.md):
@@ -32,7 +32,7 @@ import pytest
 from sr_od.application.currency_war.kernel.cw_affix_effects import (
     register_affixes_from_names,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     NodeKey,
     board_state_of,
@@ -50,9 +50,9 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     TriggerKind,
 )
 from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
     CwScreenInvestStrategy,
@@ -104,7 +104,7 @@ def test_idempotent_reregistration() -> None:
 
 
 def test_acquired_t_uses_board_node_snapshot() -> None:
-    """acquired_t = 登记时点节点序快照:(plane-1)*9+round 基 1,BoardState
+    """acquired_t = 登记时点节点序快照:(plane-1)*9+round 基 1,GameState
     节点单例优先(与策略源登记挂点同坐标系)。"""
     sess, bs = _session_with_node(plane=2, round_num=3)
     register_affixes_from_names(sess, ['成长的烦恼'])
@@ -241,18 +241,18 @@ def test_plane_intel_close_report_registers_hits_into_ledger(
 
 def test_append_confirmed_strategy_applies_board_rewrite(
         test_context, monkeypatch: pytest.MonkeyPatch) -> None:
-    """选卡确认落地登记点把板面重写桥落成 BoardState 写端(替代原源码
+    """选卡确认落地登记点把板面重写桥落成 GameState 写端(替代原源码
     在场锁):真实驱动 ``_append_confirmed_strategy('人力重组')``——
     注册表真条目(payload.board_rewrite = sell_all,单一源 =
     STRATEGY_EFFECTS)→ 出售面清场 + 退款按卖价公式入金;期望值从容器
     观察值经 cw_state 单一源现算(纪律 9),删桥调用 → 板面保持原值即红。
-    出处 = BoardState 数据结构设计 §5 人力重组行 / effect-domain.md §6.3
+    出处 = GameState 数据结构设计 §5 人力重组行 / effect-domain.md §6.3
     (归属判据确定性分支)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         STRATEGY_EFFECTS,
         normalize_invest_name,
     )
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         bench_char_cost,
         sell_refund,
     )
@@ -263,13 +263,13 @@ def test_append_confirmed_strategy_applies_board_rewrite(
     assert STRATEGY_EFFECTS.get(normalize_invest_name('人力重组')) is not None, \
         '人力重组注册表锚漂移(换锚并同步本注释)'
     session = StrategySession()
-    frame = GameState(plane=1, round_num=2)
+    frame = CwWorkFrame(plane=1, round_num=2)
     frame.gold = 40
     frame.bench = [BenchChar(slot=1, char_id='希儿', star=1)]
     frame.deployed = [BenchChar(slot=1, char_id='景元', star=2,
                                 position_pref='front')]
     # 合成进 session 惰性单例板(生产桥读写 = board_state_of(session),
-    # 独立 BoardState 对象不进桥视线)
+    # 独立 GameState 对象不进桥视线)
     bs = board_state_of(session)
     synthesize_from_game_state(bs, frame, at_round='p1-r2')
     # 期望退款从容器观察值经单一源现算(与桥内同式,预驱动读取)

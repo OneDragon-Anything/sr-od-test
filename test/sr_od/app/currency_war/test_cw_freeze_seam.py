@@ -30,12 +30,12 @@ import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 
 _PAIR: tuple[str, ...] = ('持续伤害', '列车同行')
@@ -60,9 +60,9 @@ def _mk_state(board: dict[str, int] | None = None,
               plane: int = 1,
               round_num: int = 5,
               gold: int = 10,
-              level: int = 5) -> GameState:
+              level: int = 5) -> CwWorkFrame:
     """最小对局帧:board 羁绊计数 + bench/deployed 名单(判据只读这几样)。"""
-    st = GameState(gold=gold, level=level, plane=plane,
+    st = CwWorkFrame(gold=gold, level=level, plane=plane,
                    round_num=round_num, hp=100)
     st.board = dict(board or {})
     st.bench = _bc(bench or [])
@@ -70,7 +70,7 @@ def _mk_state(board: dict[str, int] | None = None,
     return st
 
 
-def _form_ok_frame(round_num: int = 5) -> GameState:
+def _form_ok_frame(round_num: int = 5) -> CwWorkFrame:
     """派生对 = _PAIR 且 fp=1.0 的帧:bench 挂两系各 2 成员(支持度双 1.0,
     派生 top-2 = _PAIR)+ board 满两系档(form_progress=1.0)。"""
     bench = (_chars_with_tag('持续伤害', 2) + _chars_with_tag('列车同行', 2))
@@ -78,12 +78,12 @@ def _form_ok_frame(round_num: int = 5) -> GameState:
                      bench=bench, round_num=round_num)
 
 
-def _drive(state: GameState, ist: ci.IntentionState) -> ci.IntentionState:
+def _drive(state: CwWorkFrame, ist: ci.IntentionState) -> ci.IntentionState:
     # W6 波3:update_intention 已切容器签名,旧帧经过渡桥装箱。
     return ci.update_intention(board_state_bridge(state), ist)
 
 
-def _latched_ist(round_num: int = 5) -> tuple[GameState, ci.IntentionState]:
+def _latched_ist(round_num: int = 5) -> tuple[CwWorkFrame, ci.IntentionState]:
     """已闩状态:跑一帧 form_ok 帧,返回 (该帧 state, ist)。"""
     st = _form_ok_frame(round_num)
     ist = _drive(st, ci.IntentionState())
@@ -296,7 +296,7 @@ class TestUnfreezeClosedSet:
         """F=1 ⟹ frozen_pair≠() ∧ p1_pair==frozen_pair:闩→抑制→回落→
         出口→封印全序列逐帧扫描(写点全集断言,非真子集——§2.2 写点完备
         断言按全集建)。"""
-        scenarios: list[list[GameState]] = [
+        scenarios: list[list[CwWorkFrame]] = [
             # 甲:闩后连续资产扰动帧
             [_form_ok_frame(round_num=r) for r in (5, 6, 7)],
             # 乙:闩后回落再回复

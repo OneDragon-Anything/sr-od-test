@@ -63,11 +63,11 @@ class _SellEquippedStub:
         self.done = False
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
-        from sr_od.application.currency_war.kernel.cw_board_state import (
+        from sr_od.application.currency_war.kernel.cw_game_state import (
             bench_slots_of,
             board_state_of,
         )
-        from sr_od.application.currency_war.kernel.cw_state import SellBench
+        from sr_od.application.currency_war.kernel.cw_vocab import SellBench
         slots = bench_slots_of(board_state_of(sess))
         if self.done or not slots or slots[0] is None:
             return []

@@ -72,7 +72,7 @@ class _FrameTruth:
 
 def _bc(slot: int, char_id: str, cur_row: str) -> object:
     """BenchChar 快捷构造(cur_row = 现读行 front/back;pref 由注册表查)。"""
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
     return BenchChar(slot=slot, char_id=char_id, position_pref=cur_row)
 
 

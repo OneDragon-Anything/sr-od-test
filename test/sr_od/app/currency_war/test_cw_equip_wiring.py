@@ -23,9 +23,9 @@ import inspect
 from pathlib import Path
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
-    BoardState,
+    GameState,
     ChannelSig,
     register_sig_actors,
 )
@@ -34,7 +34,7 @@ register_sig_actors('TestSigWriter')
 
 
 def _sig() -> ChannelSig:
-    """渠道①签名(obs 族;观察构造 BoardState 前置态)。"""
+    """渠道①签名(obs 族;观察构造 GameState 前置态)。"""
     return ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
@@ -101,7 +101,7 @@ def test_strategy_card_hook_has_zero_equip_write_entries() -> None:
     扫描②):装备写端三载体的生命周期映射事件 = 节点推进/工具拖拽回执/
     战斗结算,与选卡落地(INSTANT 登记 + burst/板面重写两桥)零交集——
     三载体符号均不得落选卡登记面。原「既有登记三件在位」正向断言退役:
-    register_strategy/burst 与 test_cw_board_state
+    register_strategy/burst 与 test_cw_game_state
     .test_effect_hooks_wired_at_production_sites 同事实(纪律 7 择一),
     apply_board_rewrite 由 test_cw_affix_runtime_wiring
     .test_append_confirmed_strategy_applies_board_rewrite 行为锁承重。"""
@@ -124,14 +124,14 @@ def test_full_state_snapshot_captures_equip_progress_sidebar() -> None:
     equip_progress 以「装备名|装备者」键形携带计数(元组键 JSON 不安全,
     序列化为竖线串);空侧栏 = 空 dict(行形状稳定);既有 effects 整窗
     键不受影响。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     wearer = _char_by_cost(1)
     bs.effects.bump_equip_progress('数据拷贝仪', wearer)
     snap = bs.full_state_snapshot()
     assert snap['equip_progress'] == {f'数据拷贝仪|{wearer}': 1}
     assert 'effects' in snap, '既有 effects 整窗键不受本批影响'
     # 空侧栏 = 空 dict(行形状稳定,遥测面无键缺位歧义)
-    empty = BoardState(schema_version=BS_SCHEMA_VERSION).full_state_snapshot()
+    empty = GameState(schema_version=BS_SCHEMA_VERSION).full_state_snapshot()
     assert empty['equip_progress'] == {}
 
 
@@ -155,7 +155,7 @@ def test_tool_receipt_dispatch_privilege_inventory_leg() -> None:
     原位变换为·特权(logic 写);冶金炉回执 = 负写端观察收口零写留证
     (write_seq 不动);session None 防御零动作;分派炸错被吞不冒泡
     (best-effort,失败不阻塞执行主链)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_of,
     )
     from sr_od.application.currency_war.operations.cw_op.cw_op_tools import (

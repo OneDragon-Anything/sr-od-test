@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from sr_od.application.currency_war.kernel import cw_observe
-from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
 from sr_od.application.currency_war.telemetry import (
     defects,
     recorder,

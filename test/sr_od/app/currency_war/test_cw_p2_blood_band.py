@@ -36,8 +36,8 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
-    GameState,
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     StrategySession,
@@ -55,9 +55,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
 
 
 def _st2(hp: int = 10, plane: int = 2, gold: int = 30,
-         round_num: int = 2, level: int = 7) -> GameState:
+         round_num: int = 2, level: int = 7) -> CwWorkFrame:
     """P2 濒死带构造帧(信任门真值位显式置位;hp 缺省 10 ⊂ ≤15 带)。"""
-    st = GameState(gold=gold, level=level, round_num=round_num, hp=hp)
+    st = CwWorkFrame(gold=gold, level=level, round_num=round_num, hp=hp)
     st.plane = plane
     st.hp_readable = True
     st.hp_trusted = False
@@ -114,9 +114,9 @@ class TestP2AuthorityLatchComposite:
         """fail-closed 单点:闩缺省 False ⇒ p2_blood_floor_unlock 恒 False,
         即使帧在域内(设计稿 §1.2「收口前恒 False ⇒ 两面全部 P2 行为支
         fail-closed」;§3.2-3 未裁未证前全局 fail-closed)。"""
-        from sr_od.application.currency_war.kernel.cw_board_state import (
+        from sr_od.application.currency_war.kernel.cw_game_state import (
             BS_SCHEMA_VERSION,
-            BoardState,
+            GameState,
             ChannelSig,
             NodeKey,
         )
@@ -124,7 +124,7 @@ class TestP2AuthorityLatchComposite:
             hp_decision_trusted,
         )
         # 可信位前提锚(波 2 起容器形态:真读帧 = observation 源 → 可信)
-        bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+        bs = GameState(schema_version=BS_SCHEMA_VERSION)
         sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
         bs.observe(bs.hp, 10, sig=sig)
         bs.observe(bs.node, NodeKey(plane=2, round_num=2, kind='battle'),
@@ -220,7 +220,7 @@ class TestUnlockPackageFailClosed:
 
 class TestNearDeathObservationKeys:
 
-    def _run_mandate(self, state: GameState) -> StrategySession:
+    def _run_mandate(self, state: CwWorkFrame) -> StrategySession:
         frame = mandate.MandateFrame(
             gold=state.gold, level=state.level, bench=[], deployed=[],
             deploy_cap=6, node_type=None, stop_flag=False,

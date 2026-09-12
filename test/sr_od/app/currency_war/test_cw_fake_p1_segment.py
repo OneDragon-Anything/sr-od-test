@@ -515,7 +515,7 @@ class TestPrepEntryObserveViaPorts:
         )
 
         from sr_od.application.currency_war import cw_game_ports
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             BenchChar,
         )
         from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (

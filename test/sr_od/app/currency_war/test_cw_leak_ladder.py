@@ -31,7 +31,7 @@ from test.sr_od.app.currency_war._cw_helpers import (
 )
 
 if TYPE_CHECKING:
-    from sr_od.application.currency_war.kernel.cw_board_state import BoardState
+    from sr_od.application.currency_war.kernel.cw_game_state import GameState
 from sr_od.application.currency_war.kernel.cw_card_identity import (
     TIER_REGISTRY_CORE,
     TIER_TRANSITION,
@@ -41,10 +41,10 @@ from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     LevelUpShop,
     ShopCard,
 )
@@ -109,7 +109,7 @@ def _session_stub(locked: bool = True, target_comp=None) -> SimpleNamespace:
 
 def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
         deploy_cap: int | None = None, bench=None, deployed=None,
-        plane: int = 2, hp: int = 60, xp=None) -> GameState:
+        plane: int = 2, hp: int = 60, xp=None) -> CwWorkFrame:
     km = _km()
     if deployed is None:
         # 席位构造:cap=level(缺省)时上板 level−1 人 → vacancy≥1 且
@@ -117,7 +117,7 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
         n_dep = max(level - 1, 0)
         deployed = [_bc(m, star=2, slot=i + 1)
                     for i, m in enumerate(km[:n_dep])]
-    st = GameState(gold=gold, level=level, round_num=2, hp=hp)
+    st = CwWorkFrame(gold=gold, level=level, round_num=2, hp=hp)
     st.level_readable = True
     st.plane = plane
     st.shop = list(cards)
@@ -130,7 +130,7 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
     return st
 
 
-def _decide(st: GameState, sess) -> object:
+def _decide(st: CwWorkFrame, sess) -> object:
     return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
@@ -268,7 +268,7 @@ class TestL2L5LFM6Compression:
     def test_lf_round_registry_expiry(self):
         """新鲜度载体键式相位过期:跨轮/跨位面读数空集(排除上界 ≤1 轮)。"""
         sess = SimpleNamespace()
-        st = GameState(gold=10, level=5, round_num=3)
+        st = CwWorkFrame(gold=10, level=5, round_num=3)
         st.plane = 2
         mandate.record_round_sold(sess, st, '甲')
         assert mandate.round_sold_names(sess, st) == frozenset({'甲'})
@@ -314,7 +314,7 @@ class TestL3FlagRemoval:
             gold=60, level=3, bench=bench, deployed=[],
             deploy_cap=5, node_type=None, stop_flag=False,
             k_members=('目标件',), round_num=3)
-        state = GameState(gold=60, level=3, round_num=3)
+        state = CwWorkFrame(gold=60, level=3, round_num=3)
         state.hp = 60
         state.hp_readable = True
         mandate.run_mandate(frame, sess, state=state)
@@ -356,10 +356,10 @@ class TestL4BudgetGateSuspend:
 
 class TestL7AllInCategoryFilter:
 
-    def _allin_state(self, hp: int, *, readable: bool = True) -> GameState:
-        """GameState 帧(mandate_v1 闸入口仍持 GameState,闸内经桥装箱;
+    def _allin_state(self, hp: int, *, readable: bool = True) -> CwWorkFrame:
+        """CwWorkFrame 帧(mandate_v1 闸入口仍持 CwWorkFrame,闸内经桥装箱;
         位面/节点语义同 _allin_bs)。"""
-        st = GameState(gold=30, level=5, round_num=7, node_type='boss',
+        st = CwWorkFrame(gold=30, level=5, round_num=7, node_type='boss',
                        hp=hp)
         st.plane = 2
         st.hp_readable = readable
@@ -367,17 +367,17 @@ class TestL7AllInCategoryFilter:
         return st
 
     def _allin_bs(self, hp: int | None, *, source: str = 'observation'
-                  ) -> 'BoardState':
-        """P21 域判据容器帧(波 2 起门输入 = BoardState):P2r7 boss 帧,
+                  ) -> 'GameState':
+        """P21 域判据容器帧(波 2 起门输入 = GameState):P2r7 boss 帧,
         来源三态 = 旧两位语义的容器形态(observation=真读/prior=不可信)。"""
-        from sr_od.application.currency_war.kernel.cw_board_state import (
+        from sr_od.application.currency_war.kernel.cw_game_state import (
             BS_SCHEMA_VERSION,
-            BoardState,
+            GameState,
             ChannelSig,
             NodeKey,
         )
         sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
-        bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+        bs = GameState(schema_version=BS_SCHEMA_VERSION)
         if hp is not None:
             if source == 'observation':
                 bs.observe(bs.hp, hp, sig=sig)

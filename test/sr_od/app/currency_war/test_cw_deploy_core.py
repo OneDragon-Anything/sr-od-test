@@ -32,7 +32,7 @@ from sr_od.application.currency_war.kernel.cw_line_defs import (
     ENGINE_FACTIONS,
     RECIPE_FACTIONS,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.operations.cw_op.cw_op_deploy import (
     fenced_swap_arm_of,
     swap_arm_deployed_count,

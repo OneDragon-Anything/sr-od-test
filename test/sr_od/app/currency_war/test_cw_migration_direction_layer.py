@@ -35,7 +35,7 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
@@ -47,12 +47,12 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY as _REG,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
     CloseShop,
-    GameState,
+    CwWorkFrame,
     LevelUpShop,
     RefreshShop,
     ShopCard,
@@ -91,8 +91,8 @@ def _snapshot(plane: int = 1, round_num: int = 2) -> Snapshot:
     )
 
 
-def _state(plane: int = 1, round_num: int = 2, gold: int = 40) -> GameState:
-    st = GameState()
+def _state(plane: int = 1, round_num: int = 2, gold: int = 40) -> CwWorkFrame:
+    st = CwWorkFrame()
     st.plane = plane
     st.round_num = round_num
     st.gold = gold
@@ -171,7 +171,7 @@ def test_p7_drive_intention_idempotent_per_round():
     """P7:同 (plane, round) 重入驱动 = 幂等(键守卫),跨轮才推进。"""
     sess = StrategySession()
     st = _state(plane=1, round_num=2)
-    # W6 波3:drive_intention 切容器签名,GameState 帧经过渡桥装箱。
+    # W6 波3:drive_intention 切容器签名,CwWorkFrame 帧经过渡桥装箱。
     drive_intention(board_state_bridge(st), sess)
     assert state_of(sess).v3_intention_key == (1, 2)
     ev1 = state_of(sess).v3_intention.last_event
@@ -236,9 +236,9 @@ def _sc(name: str, cost: int = _JU23_STOCK_COST, star: int = 1) -> ShopCard:
     return ShopCard(name=name, faction='仙舟罗浮', cost=cost, x=0, star=star)
 
 
-def _ju23_frame(gold: int, shop: list[ShopCard] | None = None) -> GameState:
+def _ju23_frame(gold: int, shop: list[ShopCard] | None = None) -> CwWorkFrame:
     """局23 型帧:线成型(全员 2★ 上场)+ 备战空 + P1 局中。"""
-    return GameState(
+    return CwWorkFrame(
         plane=1, round_num=4, gold=gold, level=6, hp=80,
         shop_refresh_cost=2,
         deployed=[BenchChar(slot=20 + i, char_id=m, faction='仙舟罗浮',
@@ -370,7 +370,7 @@ def _old_ready(sig: CommitSignals, t: int = 0) -> bool:
     return lead is not None and lead[1] >= _COMMIT_SIGNAL_THRESHOLD
 
 
-def _old_committed(state: GameState, session: StrategySession) -> bool:
+def _old_committed(state: CwWorkFrame, session: StrategySession) -> bool:
     """旧语义复刻(退役战略层判定式;对拍基准,非生产路径)。
 
     committed = plane≥2 ∨ (signals.ready ∧ (可切换 ∨ target==领先线));

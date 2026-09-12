@@ -19,11 +19,11 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
-from sr_od.application.currency_war.kernel.cw_board_state import (
-    BoardState,
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    GameState,
     board_state_bridge,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwWorkFrame
 
 
 def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
@@ -34,10 +34,10 @@ def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
                      position_pref=ch.position_pref(), star=star)
 
 
-def _p1_state(bench: list[BenchChar]) -> BoardState:
+def _p1_state(bench: list[BenchChar]) -> GameState:
     """P1 支持度直调态(容器形态;W6 波3 方向层切容器签名,
-    GameState 帧=旧构面,经过渡桥装箱——退役挂波5 喂入反转)。"""
-    st = GameState()
+    CwWorkFrame 帧=旧构面,经过渡桥装箱——退役挂波5 喂入反转)。"""
+    st = CwWorkFrame()
     st.plane = 1
     st.round_num = 3
     st.bench = bench

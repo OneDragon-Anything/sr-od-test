@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     LevelUpShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (

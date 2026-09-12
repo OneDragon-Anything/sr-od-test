@@ -6,16 +6,16 @@
   唯一驱动 = 跳过执行成功回执 consume_use,达 2 移除;+30 经验 = 选牌
   当场)、§3(统一单调计数器模型)与 §4(递减余期与单调 counter 语义
   等价,表示法迁移候裁前按现行 remaining_uses 表示锁行为);
-- 载体正本 = BoardState 数据结构设计(docs/develop/sr_od/application/
+- 载体正本 = GameState 数据结构设计(docs/develop/sr_od/application/
   currency_war/changes/2026-09-11-unified-state/details/
-  BoardState-数据结构设计.md)§3.2.19(免战牌激活态与剩余跳过次数,
+  GameState-数据结构设计.md)§3.2.19(免战牌激活态与剩余跳过次数,
   正本 = effect_inventory.remaining_uses)/§5.1(登记播种与消费挂点)/
   §8.7 批次三件 5(EffectSpec 条目)与件 8(账本→字段桥三分);
 - 卡文原文(效果语义出处)= data/cw_invest_data.py PlazaAugment
   id='151301'「进入战斗节点时,直接跳过战斗并进入下一个节点,可生效
   2次。获得30点经验。」
 
-与 test_cw_board_state.py §8.7 批次三节(下称「批次三节」)的分工
+与 test_cw_game_state.py §8.7 批次三节(下称「批次三节」)的分工
 (测试纪律「同层不重复」):彼节锁**单链节**(登记播种/consume_use 单元/burst 桥零额度 no-op/
 spec 条目 id 面)与接线存在性烟雾(容忍档);本文件锁**行为链**两支——
 ①kernel 内全链流:授予(登记 + burst 桥同点采样,生产登记挂点形状)
@@ -31,9 +31,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war import prep_actions
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
-    BoardState,
+    GameState,
     apply_effect_burst_grant,
     board_state_of,
     grant_effect_node_refresh_balance,
@@ -57,13 +57,13 @@ _SPEC_ID: str = '151301'   # 免战牌 plaza 稳定 id(= EffectSpec.id,恒稳)
 
 def test_skip_card_grant_balance_consume_chain() -> None:
     """授予→余额→消费 kernel 内全链(一局同流;链节单元锁在批次三节
-    test_cw_board_state.py,本锁锁流;生产递减腿由本文件生产接线锁辖)。
+    test_cw_game_state.py,本锁锁流;生产递减腿由本文件生产接线锁辖)。
 
     覆盖申报:生产登记挂点形状(登记 + burst 桥同点)/节点 tick 挂点
     形状(advance_node advanced 位闸门 + per-node 桥)/consume_use
     递减语义本体。接线存在性烟雾与链节单元断言归批次三节,不在此重复。
     """
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     seq0 = bs.write_seq
 
     # —— 授予段:登记播种 + burst 桥同点(免战牌零刷新腿 → 余额零注入)
@@ -113,7 +113,7 @@ def test_skip_card_registry_semantics_gate() -> None:
     """卡文原文 ↔ 规格语义字段登记门(逐句映射)。
 
     id/duration_uses/xp_instant 三字段已由批次三节
-    (test_cw_board_state.py)test_skip_battle_spec_entry_matches_base_registry 辖,本锁补其余
+    (test_cw_game_state.py)test_skip_battle_spec_entry_matches_base_registry 辖,本锁补其余
     语义面;其中「payload 零刷新腿」是两桥零注入行为的注册表前提,
     建模漂移(给免战牌误加刷新腿)在此与链锁双红。锁红 = 建模语义
     判定被改:对照卡文逐句重推后登记新语义,禁机械跟绿。

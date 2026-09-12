@@ -216,12 +216,12 @@ def test_w3_resolve_final_type_judgment_order() -> None:
 
 def test_w3_write_match_final_idempotent() -> None:
     """写前查重 G12(终局防重挂局终域行):同段二写 no-op 返 False。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         BS_SCHEMA_VERSION,
-        BoardState,
+        GameState,
         write_match_final,
     )
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs, final_type='loss', plane=1) is True
     assert write_match_final(bs, final_type='loss', plane=1) is False
 
@@ -246,7 +246,7 @@ def test_w3_andon_reads_outcome_facts_not_files(monkeypatch, tmp_path) -> None:
     # plan_truncated 豁免(ADR-0456 防误停)结构性保留
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
+    from sr_od.application.currency_war.kernel.cw_vocab import BuyCard, ShopCard
     outcome = SimpleNamespace(
         visit_actions=[BuyCard(card=ShopCard(x=0, name='某卡', cost=3))],
         gold_open=30, plan_truncated=False, refresh_attempted=False,

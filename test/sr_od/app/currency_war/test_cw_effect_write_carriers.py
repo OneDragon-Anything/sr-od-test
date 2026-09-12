@@ -27,11 +27,11 @@ from sr_od.application.currency_war.kernel.cw_affix_effects import (
     EQUIP_WRITE_SIDES,
     apply_tool_execution_write,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
-    BoardState,
+    GameState,
     ChannelSig,
     Unit,
     register_sig_actors,
@@ -53,7 +53,7 @@ register_sig_actors('TestSigWriter')
 
 
 def _sig() -> ChannelSig:
-    """渠道①签名(obs 族;观察构造 BoardState 前置态)。"""
+    """渠道①签名(obs 族;观察构造 GameState 前置态)。"""
     return ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
@@ -74,9 +74,9 @@ def _make_bs(*, front: list[Unit] | None = None,
              back: list[Unit] | None = None,
              bench: BenchView | None = None,
              equips: list[str] | None = None,
-             gold: int | None = None) -> BoardState:
-    """构造带前置观察态的 BoardState(None = 该字段从未观察)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+             gold: int | None = None) -> GameState:
+    """构造带前置观察态的 GameState(None = 该字段从未观察)。"""
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     if front is not None:
         bs.observe(bs.front_row, front, sig=_sig())
     if back is not None:
@@ -397,13 +397,13 @@ def test_copy_machine_rows_unobserved_and_key_isolation() -> None:
     装备者) 天然隔离——不同装备/不同穿戴者不串账;n 非正 = 调用错炸错。"""
     wearer = _wearing(1, 1, 1, ['数据拷贝仪'])
     bs = _make_bs(front=[wearer])   # bench 未观察不碍事;front 已读
-    empty = BoardState(schema_version=BS_SCHEMA_VERSION)   # 全字段未观察
+    empty = GameState(schema_version=BS_SCHEMA_VERSION)   # 全字段未观察
     assert settle_copy_machine_participation(empty) == []
     assert empty.effects.equip_progress == {}
     other = _make_bs(front=[_wearing(2, 1, 1, ['数据拷贝仪Pro'])])
     settle_copy_machine_participation(other)
     assert bs.effects.equip_progress_of('数据拷贝仪', wearer.char_id) == 0, \
-        '不同 BoardState 会话天然隔离'
+        '不同 GameState 会话天然隔离'
     eff = other.effects
     assert eff.bump_equip_progress('数据拷贝仪Pro', '甲') == 1
     assert eff.bump_equip_progress('数据拷贝仪', '甲') == 1

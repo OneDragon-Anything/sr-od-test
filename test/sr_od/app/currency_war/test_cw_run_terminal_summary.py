@@ -5,7 +5,7 @@
 删除波 1(用户 2026-09-10 直迁裁定)重写:runs 流写入端(outcomes 收口终局
 行 T-185 件/防重门/runs summary 行)整段退役——本文件原辖的行面锁随写端
 消亡,收口位的现役语义 = 零落盘置跨局 run_id 重铸位(telemetry.state.close_run)
-+ 局终旁路面保留(cw4 计数快照/BoardState 归档/档案装配)。保留锁:
++ 局终旁路面保留(cw4 计数快照/GameState 归档/档案装配)。保留锁:
 
 - 结算词汇 normalizer(读面);
 - 收口位行为(真局守卫/幂等/after_operation_done 接线/档案装配连带);
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 from sr_od.application.currency_war.operations.cw_loop import CwLoop
 
 
@@ -68,7 +68,7 @@ def _make_stop_loop(*, summary_written: bool = False,
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
                     session=SimpleNamespace(
-                        last_state=GameState(plane=plane, round_num=round_num,
+                        last_state=CwWorkFrame(plane=plane, round_num=round_num,
                                              hp=hp, hp_readable=hp_readable),
                     ),
                 ),
@@ -176,7 +176,7 @@ def test_terminal_summary_triggers_archive_assemble(monkeypatch, tmp_path) -> No
 
 # ===== T-185 收口终局行(删除波 1 退役)=====
 # 原病灶(末轮无结算行→档案不可判)的写端面(outcomes 行/防重门)随
-# outcomes 流写入端退役;结算真值现役归宿 = BoardState settlement 域
+# outcomes 流写入端退役;结算真值现役归宿 = GameState settlement 域
 # apply_settlement_cover,局终收口形态归宿 = 局终域 match_final 行
 # (写点接线归后续批)。防半删:
 

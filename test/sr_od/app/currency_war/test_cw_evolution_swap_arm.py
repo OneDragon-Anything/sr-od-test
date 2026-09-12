@@ -17,7 +17,7 @@
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
     max_units_of,
 )
@@ -28,7 +28,7 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     select_swap_plan,
     swap_sell_exclusion_reason,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -147,7 +147,7 @@ def test_assemble_computes_arm_and_leg_removals(monkeypatch) -> None:
                         lambda session, state=None: True)
     monkeypatch.setattr(_int_mod, 'locked_buy_membership',
                         lambda ist, cap_hold=None: frozenset({'三月七'}))
-    from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
     comp = _NS(all_factions=('列车同行',), core_chars=('三月七',),
                factions=('列车同行',), form_tiers={'列车同行': 2},
                shared_chars=(), substitute_plan=None)
@@ -156,7 +156,7 @@ def test_assemble_computes_arm_and_leg_removals(monkeypatch) -> None:
                          transition_pair=()),
         target_comp=comp, transition_framework=''))
     dep, bench = _all_two_star_deployed(), [_bc('三月七', 1, star=2)]
-    st = GameState(gold=0, level=6, plane=2, round_num=3, board={},
+    st = CwWorkFrame(gold=0, level=6, plane=2, round_num=3, board={},
                    deployed=list(dep), bench=list(bench))
     ctx = assemble_swap_plan_inputs(sess, state=board_state_bridge(st),
                                     deployed=list(x for x in dep if x),
@@ -169,7 +169,7 @@ def test_assemble_computes_arm_and_leg_removals(monkeypatch) -> None:
         bench=[], cap=max_units_of(board_state_bridge(st)))
     assert ctx_no is not None and ctx_no.evolution_swap_armed is False
     # 腿移除②:板面已成型(board 列车 2 达档 → fp≥1.00)→ 臂关
-    st_formed = GameState(gold=0, level=6, plane=2, round_num=3,
+    st_formed = CwWorkFrame(gold=0, level=6, plane=2, round_num=3,
                           board={'列车同行': 2}, deployed=list(dep),
                           bench=list(bench))
     ctx_formed = assemble_swap_plan_inputs(
@@ -230,7 +230,7 @@ def test_run_mandate_emits_armed_two_star_swap(monkeypatch) -> None:
     唯一)。装配侧意向供给桩化同 test_cw_swap_transition_arm 既有形态。"""
     import sr_od.application.currency_war.kernel.cw_intention as _int_mod
     import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
-    from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
         run_mandate,
     )
@@ -250,7 +250,7 @@ def test_run_mandate_emits_armed_two_star_swap(monkeypatch) -> None:
     _st.target_comp = comp
     _st.transition_framework = ''
     dep, bench = _all_two_star_deployed(), [_bc('三月七', 1, star=2)]
-    st = GameState(gold=0, level=6, plane=2, round_num=3, board={},
+    st = CwWorkFrame(gold=0, level=6, plane=2, round_num=3, board={},
                    deployed=list(dep), bench=list(bench))
     out = run_mandate(_m1p_frame(dep, bench), sess, state=st)
     fired = [e for e in out if e.action.__class__.__name__ == 'RunDeploy'

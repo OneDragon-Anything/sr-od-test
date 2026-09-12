@@ -39,8 +39,8 @@ from __future__ import annotations
 
 import math
 
-from sr_od.application.currency_war.kernel.cw_state import (
-    GameState,
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwWorkFrame,
     RefreshShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
@@ -75,7 +75,7 @@ def _session_t88():
                     plane_lengths=[9, 5, 7], line_state=False)
 
 
-def _p1r8_frame(gold: int = 53) -> tuple[GameState, object]:
+def _p1r8_frame(gold: int = 53) -> tuple[CwWorkFrame, object]:
     """档案 p1r8 帧内联(gold/level/deployed 抄档案;bench 空;空店面
     隔离买面,使 R1 刷新为该帧唯一可能发射)。"""
     deployed = [
@@ -84,7 +84,7 @@ def _p1r8_frame(gold: int = 53) -> tuple[GameState, object]:
         _bc('藿藿', star=2, slot=1),
         _bc('忘归人', star=1, slot=2),
     ]
-    st = GameState(gold=gold, level=5, plane=1, round_num=8, hp=100)
+    st = CwWorkFrame(gold=gold, level=5, plane=1, round_num=8, hp=100)
     st.shop = []
     st.bench = []
     st.deployed = deployed

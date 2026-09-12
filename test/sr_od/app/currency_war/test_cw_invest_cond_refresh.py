@@ -1,6 +1,6 @@
 """条件判定型免费刷新(本金充裕/+)行为锁(账本 T-11;设计依据 =
 docs/develop/sr_od/application/currency_war/changes/2026-09-11-unified-state/
-details/BoardState-数据结构设计.md §3.3.5-§3.3.6(下称「设计」)+
+details/GameState-数据结构设计.md §3.3.5-§3.3.6(下称「设计」)+
 docs/develop/sr_od/application/currency_war/game_state/effect-domain.md(效果域正本)。
 
 锁面三族(任务口径):
@@ -12,19 +12,19 @@ docs/develop/sr_od/application/currency_war/game_state/effect-domain.md(效果�
 
 附加锁:棱彩加强值口径(两卡条件腿逐字同文 → 三元组同值;加强值只在
 instant_gold 26/45)+ 注册表条目形状(id 双匹配/同实例单一源/counter 不建)。
-断言全部按设计语义写;桥静态形态既有锁 = test_cw_board_state.py(§8.7
+断言全部按设计语义写;桥静态形态既有锁 = test_cw_game_state.py(§8.7
 批次三节),本文件不重复其断言面。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
-    BoardState,
+    GameState,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors as _register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -47,17 +47,17 @@ def _sig() -> _ChannelSig:
     return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
-def _grant(bs: BoardState, frame: str = '') -> None:
+def _grant(bs: GameState, frame: str = '') -> None:
     """桥调用(与生产挂点同式;闸门形态见 test_same_node_resample_*)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         grant_effect_node_refresh_balance,
     )
     grant_effect_node_refresh_balance(bs, frame=frame)
 
 
-def _bs_with_cond(gold: int | None) -> BoardState:
-    """本金充裕在册 + 金观察(或未读)的 BoardState 桩。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+def _bs_with_cond(gold: int | None) -> GameState:
+    """本金充裕在册 + 金观察(或未读)的 GameState 桩。"""
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.effects.register_strategy(STRATEGY_EFFECTS['本金充裕'], acquired_t=5)
     if gold is not None:
         bs.observe(bs.gold, gold, sig=_sig())
@@ -107,10 +107,10 @@ def test_prismatic_enhanced_value_scope() -> None:
 def test_conditional_grant_scales_with_gold() -> None:
     """条件触发+梯度:节点边界按当拍金现值评估,每额外 10 金 +1 次
     (70 金→+2;60 金→+1;59 金→余量不足 10 金→+0)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         grant_effect_node_refresh_balance,
     )
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.effects.register_strategy(STRATEGY_EFFECTS['本金充裕'], acquired_t=5)
     bs.observe(bs.gold, 70, sig=_sig())
     adv, _ = bs.effects.advance_node(6)
@@ -189,7 +189,7 @@ def test_no_grant_when_gold_unread() -> None:
 def test_static_and_conditional_stack_single_write() -> None:
     """并存叠加:双手狸(静态 2/节点,BattlefieldEffect 无条件字段)+ 本金
     充裕(条件 3)同局 → 一拍一笔写入合计 5(鸭子求和,缺省 0 不串账)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_t=5)
     bs.effects.register_strategy(STRATEGY_EFFECTS['本金充裕'], acquired_t=5)

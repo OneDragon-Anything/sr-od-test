@@ -25,7 +25,7 @@ from sr_od.application.currency_war.kernel.cw_prep_expect import (
     compare_buy_expect,
     compute_buy_expect,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     _save_buy_evidence,
 )

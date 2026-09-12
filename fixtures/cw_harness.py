@@ -224,7 +224,7 @@ class FakeP1Run:
         if invest_profile is not None and getattr(invest_profile,
                                                   'active_env', ''):
             _session.active_env = invest_profile.active_env
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             ledger_update_plane,
         )
         ledger_update_plane(_session, 1, list(self.match.node_sequence),
@@ -379,7 +379,7 @@ class FakeP1Run:
 
     def _bench_identity(self) -> dict[int, tuple[str, int]]:
         """假局 bench 占用身份表(槽位 → (char_id, star))。"""
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             iter_occupied,
         )
         return {b.slot: (b.char_id, b.star)
@@ -399,7 +399,7 @@ class FakeP1Run:
         from sr_od.application.currency_war.kernel.cw_exec_state import (
             exec_state_of,
         )
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             pad_bench,
             pad_deployed,
         )
@@ -514,7 +514,7 @@ class FakeP1Run:
         from sr_od.application.currency_war.cw_game_ports import ExecResult
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.kernel import cw_deploy_logic
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             DeployMove,
             iter_occupied_deployed,
         )
@@ -595,7 +595,7 @@ class FakeP1Run:
         """
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.kernel import cw_deploy_logic
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             iter_occupied_deployed,
         )
         st = match.state
@@ -851,7 +851,7 @@ class FakeP1Run:
         tc = getattr(strategy_state_of(sess), 'target_comp', None)
         if st is None or tc is None:
             return False, False
-        from sr_od.application.currency_war.kernel.cw_board_state import (
+        from sr_od.application.currency_war.kernel.cw_game_state import (
             board_state_bridge,
         )
         core = readiness_launch_decision(board_state_bridge(st), tc,
@@ -967,14 +967,14 @@ class FakeP1Run:
           实例级 patch 仅辖本局 strategy 对象,teardown 还原真判据。
         - 其余全链真码:入口锚/选项读取(浮层负载真值,读图域桩同族)/
           刷新链跳过(剧本 pick.refresh_slots 恒空 = ADR-0600 消费门
-          自然不进)/session 尾块 append + BoardState 写端 + 效果账本
+          自然不进)/session 尾块 append + GameState 写端 + 效果账本
           登记 + 确认到达登记(生产码原样执行)/机械半边 = 环境承接
           (:meth:`FakeMatch.pick_invest_strategy` 落状态机)。
         - 读图域桩:OCR 选项 = 浮层负载直出(x 列位 = 实机三列结构位
           460/959/1458 同形);area_center 桩 None = op 走兜底常量(与
           screen_info 缺档同形,点击点不消费——机械半边在承接桩)。
         """
-        from sr_od.application.currency_war.kernel.cw_state import PickEvent
+        from sr_od.application.currency_war.kernel.cw_vocab import PickEvent
         from sr_od.application.currency_war.operations.cw_screen import (
             cw_screen_invest_strategy as strat_mod,
         )
@@ -1272,7 +1272,7 @@ class FakeP1Run:
             rr = op.execute()   # 真 op 框架循环(fast_sleep 包裹,测试纪律 3)
         # 会话节点通道同步(plane 2;实机写点 = 位面详情采集/备战开局帧,
         # 四通道对位注见 FakeP1Run.__init__)
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             ledger_update_plane,
         )
         sess = self.cw_match.session

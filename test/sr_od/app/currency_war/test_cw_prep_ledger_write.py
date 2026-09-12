@@ -30,8 +30,8 @@ from types import SimpleNamespace
 import pytest
 
 import sr_od.application.currency_war.obs.cw_observation as cw_observation
-from sr_od.application.currency_war.kernel.cw_state import (
-    GameState,
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwWorkFrame,
     get_node_ledger,
     ledger_node_type,
     ledger_update_plane,
@@ -77,7 +77,7 @@ def _make_prep(monkeypatch: pytest.MonkeyPatch,
     screen=object() 走「透传帧」路径,零截图。
     """
     d = object.__new__(CwScreenPrep)
-    session.last_state = GameState(plane=plane, round_num=round_num)
+    session.last_state = CwWorkFrame(plane=plane, round_num=round_num)
     d.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
     monkeypatch.setattr(cw_observation, 'read_node_sequence',
                         lambda ctx, screen: slots)

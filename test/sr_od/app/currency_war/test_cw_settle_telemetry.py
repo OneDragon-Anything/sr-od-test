@@ -244,13 +244,13 @@ def test_outcome_record_persists_heal_longline(
     (观察半 pending 槽/performance.history 行内仍携 heal_longline,判读
     链不断流)。schema 字段缺失/透传缺失任一发生 → 行内无此键。"""
     from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-    from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         StrategySession,
     )
 
     _sess = StrategySession()
-    _sess.last_state = GameState()
+    _sess.last_state = CwWorkFrame()
     o = RoundOutcome(
         round_num=5, plane=1, node_type='普通战斗', comp_tag='x',
         hp_after=91, killed=True,

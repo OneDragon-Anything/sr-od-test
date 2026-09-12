@@ -26,7 +26,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_card_identity import (
@@ -40,11 +40,11 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 from sr_od.application.currency_war.kernel.cw_reward_node import (
     reward_node_suppressed,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
     CloseShop,
-    GameState,
+    CwWorkFrame,
     SellBench,
     ShopCard,
     sell_refund,
@@ -101,8 +101,8 @@ def _sess() -> StrategySession:
 
 
 def _state(gold: int, bench: list[BenchChar], *,
-           round_num: int = 3, node: str = 'battle') -> GameState:
-    st = GameState(gold=gold, level=7, round_num=round_num, hp=60)
+           round_num: int = 3, node: str = 'battle') -> CwWorkFrame:
+    st = CwWorkFrame(gold=gold, level=7, round_num=round_num, hp=60)
     st.plane = 2
     st.node_type = node
     st.bench = list(bench)

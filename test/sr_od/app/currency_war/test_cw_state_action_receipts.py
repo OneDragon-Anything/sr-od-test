@@ -24,11 +24,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
     RECEIPTS_WINDOW_CAP,
     SCREEN_CONTEXT_GUARD_PREV,
-    BoardState,
+    GameState,
     note_action_receipt,
 )
 from sr_od.application.currency_war.kernel.cw_state_journal import (
@@ -63,7 +63,7 @@ def run_id(monkeypatch):
 def _reset_journal_default():
     """每条用例前复位影子面 + 登记测试用 actor(防同进程其他测试装配
     残留串染;登记幂等,语义同 R1 锁 test_actor_registration_gate)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         register_sig_actors,
     )
     register_sig_actors('TestActorR2')
@@ -86,7 +86,7 @@ def _stub_session():
 
 def test_bs_schema_receipts_domain_registered() -> None:
     """§3.7.1 域登记:receipts 域入 bs_schema(缺域键 = 该域未建模,禁占位)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert bs.bs_schema.get('receipts') == 1
     assert RECEIPTS_WINDOW_CAP == 8, '设计 §3.1.1-4:滚动窗容量 8'
 
@@ -94,7 +94,7 @@ def test_bs_schema_receipts_domain_registered() -> None:
 def test_receipt_row_channel_and_shape(journal, run_id) -> None:
     """回执行 = 普通 write_logic 写入行:field='receipts',渠道② logic_action
     (域准入 ②=✓ 唯一合法族),group_id = act:<actor>@<seq>(§3.2.1 ②格式)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     note_action_receipt(bs, op='SellBench', applied=True,
                         reason='', screen='货币战争-备战',
                         actor='PrepActionExecutor')
@@ -116,7 +116,7 @@ def test_receipt_row_channel_and_shape(journal, run_id) -> None:
 
 def test_receipt_window_fifo_capacity_eight(journal, run_id) -> None:
     """滚动有界列表容量 8,先进先出(§3.1.1-4):超出淘汰最老回执。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     for i in range(10):
         note_action_receipt(bs, op=f'Op{i}', applied=True, actor='TestActorR2')
     window = bs.receipts.value
@@ -129,7 +129,7 @@ def test_receipt_failure_visibility_no_success_judgment(journal, run_id) -> None
     """失败可见性(§3.2.5):applied=false + reason 也产行;写点零成败判定
     (M1③ 发出即簿记——applied/reason 由调用方机械事实透传,本口不读屏
     不核验,extra 结构化字段原样入回执)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     note_action_receipt(bs, op='OpenBox', applied=False,
                         reason='无补给箱', screen='货币战争-备战',
                         actor='PrepActionExecutor')
@@ -155,7 +155,7 @@ def test_receipt_no_journal_no_rows_field_still_written(tmp_path, monkeypatch) -
     reset_state_telemetry()
     assert journal_mod_state_journal_instance() is None
     monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', 'run_off')
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     note_action_receipt(bs, op='SellBench', applied=True, actor='TestActorR2')
     assert bs.receipts.value is not None and len(bs.receipts.value) == 1, \
         '无实例 = 行不落而回执域照常写入'
@@ -168,7 +168,7 @@ def test_receipt_out_of_match_rejected(journal, monkeypatch) -> None:
     观察流同分层——行被拒,容器写入本体照常(版本照常分配,R1 锁
     test_run_id_empty_rejects_rows 同款语义,两锁互为印证)。"""
     monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', '')
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     note_action_receipt(bs, op='SellBench', applied=True, actor='TestActorR2')
     assert journal.rows == [], '局外不写假行'
     assert bs.current_version() == 1, '容器写入本体照常(版本照常分配)'
@@ -316,7 +316,7 @@ def test_prep_executor_stop_brake_no_receipt(journal, run_id, monkeypatch):
 def test_shop_action_receipt_channel(journal, run_id) -> None:
     """商店动作 op 回执:渠道② logic_action、actor=CwOpBuyCards、
     screen=商店面板(exec_events 动作族×画面词表承接)。"""
-    from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
+    from sr_od.application.currency_war.kernel.cw_vocab import BuyCard, ShopCard
     from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
         note_shop_action_receipt,
     )
@@ -339,7 +339,7 @@ def test_shop_action_receipt_channel(journal, run_id) -> None:
 def test_shop_action_receipt_blocked_paths_visible(journal, run_id) -> None:
     """受阻/放弃也簿记(exec_events 词表 blocked/放弃族):硬墙跳过与
     政策闸拒均产 applied=false 行,携带执行面结构化字段。"""
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         RefreshShop,
         SellBench,
     )
@@ -487,7 +487,7 @@ def test_guard_set_opening_chain_members_complete() -> None:
 def test_opening_chain_write_arms_popup_leg_s1(journal, run_id) -> None:
     """S1 开局形态(判定方案 §3.6):开局链分支写点供 prev_branch → 商店
     面板先被采到 → 弹窗腿推断候选 1(等 1-1 ∈ 守卫集是本链判据)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # cw_loop 分支写点同款输入(0r 简报 → 等待1-1;observe_screen_context 唯一写口)
     bs.observe_screen_context('货币战争-简报')
     bs.observe_screen_context('货币战争-等待1-1')
@@ -537,7 +537,7 @@ def test_cw_loop_branch_writepoints_wired(journal, run_id, monkeypatch):
 
 
 def journal_mod_board_state(session):
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_of,
     )
     return board_state_of(session)
@@ -548,7 +548,7 @@ def journal_mod_board_state(session):
 
 def test_receipt_window_json_safe_in_snapshot(journal, run_id) -> None:
     """回执窗随全量快照 JSON 安全化(行行自足;dict 窗序列化不炸)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     note_action_receipt(bs, op='SellBench', applied=False, reason='无补给箱',
                         screen='货币战争-备战', actor='TestActorR2')
     row = journal.rows[-1]

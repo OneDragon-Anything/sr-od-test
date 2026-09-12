@@ -1,50 +1,70 @@
-"""效果账本机制主题锁(effect inventory 写入归属·板面重写桥)。
+"""效果账本机制主题锁(effect inventory 写入归属·板面重写桥 + portal 登记端)。
 
 设计出处(持久索引):
-- 写入归属两行单一源 = BoardState 数据结构设计 §5「全员晋升/人力重组」两行
+- 写入归属两行单一源 = GameState 数据结构设计 §5「全员晋升/人力重组」两行
   (docs/develop/sr_od/application/currency_war/changes/2026-09-11-unified-state/
-  details/BoardState-数据结构设计.md,迭代期详设;持久正本 =
+  details/GameState-数据结构设计.md,迭代期详设;持久正本 =
   docs/develop/sr_od/application/currency_war/game_state/effect-domain.md §8 同名条);
 - 实现单一源 = kernel/cw_effect_inventory.py(BOARD_REWRITE_* 语义词表 +
-  apply_board_rewrite 桥);
-- 归属判据 = §5.3(确定性可算 → 逻辑写;含随机 → 零逻辑写端,观察收口)。
+  apply_board_rewrite 桥 + portal 登记端 env_portal_effects/register_portal_from_env);
+- 归属判据 = §5.3(确定性可算 → 逻辑写;含随机 → 零逻辑写端,观察收口);
+- portal 登记端 = invest-env 迭代 design.md §2.4 + 详设 env-value-models.md §2.3
+  (changes/2026-09-12-invest-env/,迭代内寿命引用)。
 
 辖域 = 板面重写两形态行为锁:整场上阵替换(全员晋升,随机面 = 负写端)/
 全场出售+再发牌(人力重组,出售面 = 逻辑写、发牌面 = 不造单位)+ 词表锚 +
 边界(从未观察字段/出售域部分读退款零写入/零退款金翻标禁令/未知语义/
-非重写条目)。
-同族桥(burst/每节点/容量投影)行为锁在 test_cw_board_state.py(§8.7 批次三节)。
+非重写条目) + portal 登记端(E5:结构化条目在册 portal 源/payload 类型/
+未入模占位含 G 组 GiftGrant notes 摘要/幂等/未知名零动作/handler 接线经
+生产链路)。
+同族桥(burst/每节点/容量投影)行为锁在 test_cw_game_state.py(§8.7 批次三节)。
 """
 from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_board_state import (
-    BS_SCHEMA_VERSION,
-    BenchSlot,
-    BenchView,
-    BoardState,
-    ChannelSig,
-    Unit,
-    register_sig_actors,
-)
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BOARD_REWRITE_SELL_ALL,
     BOARD_REWRITE_UPGRADE_ALL,
+    SOURCE_PORTAL,
     BoardRewriteReport,
+    EffectKind,
+    TriggerKind,
+    UnitBuffRef,
     apply_board_rewrite,
+    env_portal_effects,
+    register_portal_from_env,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BS_SCHEMA_VERSION,
+    BenchSlot,
+    BenchView,
+    ChannelSig,
+    GameState,
+    Unit,
+    board_state_of,
+    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
+    ENV_ECONOMY,
     STRATEGY_EFFECTS,
+    EnvEconomyEffect,
 )
-from sr_od.application.currency_war.kernel.cw_state import sell_refund
+from sr_od.application.currency_war.kernel.cw_vocab import sell_refund
 
 register_sig_actors('TestSigWriter')
 
+# 收集期触发表构建 = import 即炸门等效(_validate_strategy_effects 同款校验在
+# 构建函数内,惰性构建函数先例——孤儿键/id 漂移/payload↔category 违例时本模块
+# 收集即炸,测试体不执行;先例 = test_cw_affix_spec_registry 头注)。
+_PORTAL_SPECS = env_portal_effects()
+
 
 def _sig() -> ChannelSig:
-    """渠道①签名(obs 族;观察构造 BoardState 前置态)。"""
+    """渠道①签名(obs 族;观察构造 GameState 前置态)。"""
     return ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
@@ -61,9 +81,9 @@ def _unit(cost: int, star: int, slot: int) -> Unit:
 
 def _make_bs(front: list[Unit] | None, back: list[Unit] | None,
              bench_slots: list[BenchSlot] | None, gold: int | None,
-             capacity: int = 9) -> BoardState:
-    """构造带前置观察态的 BoardState(None = 该字段从未观察)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+             capacity: int = 9) -> GameState:
+    """构造带前置观察态的 GameState(None = 该字段从未观察)。"""
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     if front is not None:
         bs.observe(bs.front_row, front, sig=_sig())
     if back is not None:
@@ -76,7 +96,7 @@ def _make_bs(front: list[Unit] | None, back: list[Unit] | None,
     return bs
 
 
-def _populated_bs(gold: int | None = 20) -> BoardState:
+def _populated_bs(gold: int | None = 20) -> GameState:
     """标准出售局面前置:前排 2 单位 + 后排 1 单位 + 备战席 1 单位 1 箱。"""
     return _make_bs(
         front=[_unit(1, 1, 1), _unit(4, 2, 2)],
@@ -270,3 +290,128 @@ def test_noop_for_non_rewrite_entry_and_unknown_semantics() -> None:
         name='未知语义桩')
     assert apply_board_rewrite(bs, stub) is None, '未知语义保守 no-op(禁猜)'
     assert bs.write_seq == seq0, '两种 no-op 均零写入'
+
+
+# ============================================================ portal 登记端(E5)
+# (invest-env 迭代 design.md §2.4 / 详设 env-value-models.md §2.3;E5 锁面 =
+# ActiveEffect 在册(portal 源)/payload 类型正确/未入模环境占位登记(含 G 组
+# notes 摘要);实现单一源 = kernel/cw_effect_inventory.py portal 登记端段。)
+
+
+def test_portal_registry_anchor_and_coverage() -> None:
+    """结构化条目注册表锚:E5 锁的注册表面——A 类四条(增发货币/蓝海/
+    成功经验/策略大师)在册且 id/plaza 溯源逐条正确;覆盖方向 = 表 ⊆
+    ENV_ECONOMY(结构化条目只对经济环境建;数据批 B/C 类补表后未跟上 spec
+    的环境走占位不炸——锁恰等会把 3.3 数据批落地炸红,占位是合法形态);
+    payload 单一源 = ENV_ECONOMY 表内同一实例(登记与估值不双份)。"""
+    assert set(_PORTAL_SPECS) <= set(ENV_ECONOMY), \
+        '结构化条目越界(非经济环境禁建 spec,走占位)'
+    for name, spec in _PORTAL_SPECS.items():
+        assert spec.name == name, f'条目 name = 注册表键:{name!r}'
+    # 逐条 id/溯源锚(孤儿/id 双匹配校验由构建函数承责,此处锁代表条目值)
+    assert _PORTAL_SPECS['增发货币'].id == '103'
+    assert _PORTAL_SPECS['蓝海'].id == '113'
+    assert _PORTAL_SPECS['成功经验'].id == '138'
+    assert _PORTAL_SPECS['策略大师'].id == '147'
+    # payload 单一源:与 ENV_ECONOMY 表内实例同一对象(禁复制数值)
+    assert _PORTAL_SPECS['增发货币'].payload is ENV_ECONOMY['增发货币']
+    assert isinstance(_PORTAL_SPECS['增发货币'].payload, EnvEconomyEffect)
+
+
+def test_portal_register_structured_payload() -> None:
+    """E5①结构化登记行为:经济环境确认落地 → source='portal' 条目在册、
+    payload 类型正确(EnvEconomyEffect)、trigger/duration 按环境语义
+    (增发货币 = 位面周期 → PLANE_START/PERMANENT)。"""
+    sess: SimpleNamespace = SimpleNamespace()
+    spec = register_portal_from_env(sess, '增发货币')
+    assert spec is not None and spec.name == '增发货币'
+    entries = board_state_of(sess).effects.by_source(SOURCE_PORTAL)
+    assert [e.spec.name for e in entries] == ['增发货币'], \
+        'E5:选环境后 ActiveEffect 在册(portal 源)'
+    entry = entries[0]
+    assert entry.source == 'portal', '来源 = SOURCE_PORTAL 词表值'
+    assert isinstance(entry.spec.payload, EnvEconomyEffect), \
+        'E5:payload 类型正确(整局经济通道结构)'
+    assert entry.spec.payload is ENV_ECONOMY['增发货币'], 'payload 单一源'
+    assert entry.spec.trigger == TriggerKind.PLANE_START \
+        and entry.spec.duration.value == 'permanent', \
+        'trigger/duration 按环境语义(位面周期/整局)'
+
+
+def test_portal_register_placeholder_and_gift_notes() -> None:
+    """E5②未入模环境占位登记:已知名非经济环境 → UnitBuffRef 占位
+    (payload = 效果原文存档,category=UNIT_BUFF,bot 零响应);G 组
+    (ENV_GIFTS 命中)占位 notes 附 GiftGrant 摘要(即时/条件发放角色,
+    详设 §2.3「判读面可读」);未知名(注册表外)零动作返回 None。"""
+    sess: SimpleNamespace = SimpleNamespace()
+    # 非 G 组占位:品质改写型(无经济通道)
+    spec = register_portal_from_env(sess, '彩虹时代')
+    assert spec is not None
+    assert isinstance(spec.payload, UnitBuffRef), \
+        '占位 payload = UnitBuffRef(效果原文存档形态)'
+    assert spec.payload.effect_text == '这局的投资策略均为棱彩品质。', \
+        'E5:占位登记 payload = 效果原文存档(可见性优先)'
+    assert spec.category == EffectKind.UNIT_BUFF, '占位形态 = 零响应单位强化引用'
+    assert '未入模占位' in spec.notes
+    # G 组占位:notes 附 GiftGrant 摘要(即时/条件角色入 notes,判读面可读)
+    gift = register_portal_from_env(sess, '持续伤害契约')
+    assert gift is not None
+    assert gift.payload.effect_text.startswith('获得【椒丘】和【卡芙卡】'), \
+        'G 组占位同样存档效果原文'
+    assert 'GiftGrant' in gift.notes and '椒丘' in gift.notes \
+        and '卡芙卡' in gift.notes and '黑天鹅' in gift.notes, \
+        'E5:G 组占位 notes 附 GiftGrant 摘要(即时+条件发放角色)'
+    # 未知名零动作(无效果原文无从占位;调用侧 is_known_env 已 warning)
+    assert register_portal_from_env(sess, '???未知环境') is None, \
+        '注册表外零动作(fail-closed,禁造占位)'
+
+
+def test_portal_register_idempotent() -> None:
+    """幂等:同名 portal 条目在册跳过——环境确认链重入/retry 不得双登记
+    (实例按 spec_key 唯一,词缀源同款纪律;混合结构化+占位同册互不串)。"""
+    sess: SimpleNamespace = SimpleNamespace()
+    assert register_portal_from_env(sess, '增发货币').name == '增发货币'
+    assert register_portal_from_env(sess, '彩虹时代').name == '彩虹时代'
+    assert register_portal_from_env(sess, '增发货币') is None, '结构化条目幂等'
+    assert register_portal_from_env(sess, '彩虹时代') is None, '占位条目幂等'
+    entries = board_state_of(sess).effects.by_source(SOURCE_PORTAL)
+    assert [e.spec.name for e in entries] == ['增发货币', '彩虹时代'], \
+        '重登记零新增'
+
+
+def test_portal_handler_wiring_via_decide_and_act(
+        test_context, monkeypatch: pytest.MonkeyPatch) -> None:
+    """E5③handler 接线经生产链路(行为锁;原源码在场锁退役形态,先例 =
+    test_cw_affix_runtime_wiring 挂点接线锁):真实驱动
+    ``CwScreenInvestEnv._decide_and_act``——决策选中经济环境 → active_env
+    写入同址 portal 登记落成账本条目。删登记调用 → 账本零条目即红
+    (静默空转防线)。"""
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_invest_env as iem,
+    )
+
+    session = StrategySession()
+    strategy = SimpleNamespace(
+        decide_invest=lambda kind, names, st, sess_, cfg: SimpleNamespace(
+            option_idx=0, reason='stub'))
+    match = SimpleNamespace(strategy=strategy, session=session)
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    op = iem.CwScreenInvestEnv(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
+    monkeypatch.setattr(op, 'screenshot', lambda: object(), raising=False)
+    monkeypatch.setattr(op, '_refresh_node_ledger', lambda: None)
+    monkeypatch.setattr(iem, 'safe_click', lambda *a, **k: None)
+    monkeypatch.setattr(iem, 'emit_overlay_confirm', lambda *a, **k: None)
+    monkeypatch.setattr(iem.time, 'sleep', lambda *_: None)
+    opts = [('增发货币', 460), ('彩虹时代', 960), ('头彩', 1460)]
+    op._decide_and_act(opts)
+    assert board_state_of(session).active_env.value == '增发货币', \
+        '锁前提:active_env 选卡时点写在环(既有写入流对拍锁的语义)'
+    entries = board_state_of(session).effects.by_source(SOURCE_PORTAL)
+    assert [e.spec.name for e in entries] == ['增发货币'], \
+        'E5:确认链登记挂点缺位 = 账本零条目(静默空转,接线被拆即本断言红)'
+    assert isinstance(entries[0].spec.payload, EnvEconomyEffect), \
+        '经生产链路登记的条目 payload 类型正确'

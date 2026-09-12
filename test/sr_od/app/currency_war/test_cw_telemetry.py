@@ -106,7 +106,7 @@ sys.path.insert(0, str(_ROOT / 'src'))
 from sr_od.application.currency_war.kernel.cw_reconcile import (
     _merge_equips,  # noqa: E402
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar  # noqa: E402
 
 
 def _bc(cid: str, slot: int = 1, row: str = 'back') -> BenchChar:

@@ -22,7 +22,7 @@ import json
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BATTLE_WAIT_CONTEXT,
     BENCH_CAPACITY_DEFAULT,
     BS_SCHEMA_VERSION,
@@ -31,7 +31,7 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     SCREEN_PREP_FRAME,
     BenchSlot,
     BenchView,
-    BoardState,
+    GameState,
     ChannelSig,
     Field,
     Unit,
@@ -39,10 +39,10 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
 )
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors as _register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_state_journal import (
@@ -139,7 +139,7 @@ def test_channel_mode_closed_set_per_family() -> None:
 def test_actor_registration_gate() -> None:
     """§3.2.1/§3.2.4 硬约束 2:显式 sig 的 actor 须为登记面在册,集外 = 红。"""
     register_sig_actors('TestActorR1')
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # 未登记 actor + 显式 sig = 拒写
     with pytest.raises(ValueError):
         bs.observe(bs.gold, 20, sig=ChannelSig(family='obs', actor='NeverRegistered'))
@@ -151,7 +151,7 @@ def test_actor_registration_gate() -> None:
 def test_api_family_mismatch_rejected() -> None:
     """渠道族语义:观察 API 只收 obs 签名,logic API 不收 obs 签名(错渠道 = 红)。"""
     register_sig_actors('TestActorR1b')
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     logic_sig = ChannelSig(family='logic_action', actor='TestActorR1b')
     obs_sig = ChannelSig(family='obs', actor='TestActorR1b')
     with pytest.raises(ValueError):
@@ -166,7 +166,7 @@ def test_api_family_mismatch_rejected() -> None:
 def test_version_id_monotonic_contiguous_and_row_order(
         journal, run_id, tmp_path) -> None:
     """§3.2.2:run 段内自 1 连续单调不重不漏;行序 = 版本序;读口一致。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())                       # v1
     bs.observe(bs.gold, 21, sig=_sig())                       # v2(值未变重读也计版本见下条)
     bs.carry(bs.gold, frame='p1-r2', sig=_sig())              # v3
@@ -182,7 +182,7 @@ def test_version_id_monotonic_contiguous_and_row_order(
 def test_reread_same_value_still_versions_with_same_value_flag(
         journal, run_id) -> None:
     """§3.2.2 规则 4:值未变重读也是「观察发生了」,计版本 + 行注记 same_value。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())
     bs.observe(bs.gold, 20, sig=_sig())
     rows = journal.rows
@@ -193,7 +193,7 @@ def test_reread_same_value_still_versions_with_same_value_flag(
 
 def test_carry_without_value_no_row_no_version(journal, run_id) -> None:
     """§3.2.2 规则 4:carry 且值无正式值(early return)不换帧不产行不占版本。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.carry(bs.gold, frame='p1-r1', sig=_sig())   # gold 从未读过 → 不写
     assert journal.rows == []
     assert bs.current_version() == 0
@@ -202,7 +202,7 @@ def test_carry_without_value_no_row_no_version(journal, run_id) -> None:
 def test_write_logic_emits_row(journal, run_id) -> None:
     """渠道②:write_logic 逻辑直写产行(ADR-0651 两态制;原「预期登记/
     清账不产行」的簿记面随两步机制废除——逻辑写 = 正式写点必落账)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())
     before = len(journal.rows)
     bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
@@ -217,7 +217,7 @@ def test_write_logic_emits_row(journal, run_id) -> None:
 def test_row_schema_complete_and_self_contained(journal, run_id) -> None:
     """§3.2.3 行型 1:行 = v/ts/run_id/row/field/after/same_value/state/sig;
     任取一行可独立解读——行内 state 含该时点完整字段面(含此前写入)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())                                    # v1
     bs.observe(bs.bench, BenchView(
         slots=[BenchSlot(kind='unit',
@@ -248,7 +248,7 @@ def test_legacy_sig_synthesis_retired_sig_required(journal, run_id) -> None:
     路径已退役——写入口签名必填(缺位 = TypeError),显式 sig 的
     family/mode/actor 逐位落行(actor 在册,无空 actor 行)。本锁取代
     原「影子期合成签名逐 API 锁」(该锁钉的过渡语义已被直迁裁定取代)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # 写入口缺 sig = 结构性拒绝(TypeError),禁静默合成空 actor 行
     # (此处刻意缺 sig——签名必填的调用期 TypeError 正是本锁的断言对象)
     for call in (
@@ -289,7 +289,7 @@ def test_state_snapshot_effects_normalized(journal, run_id) -> None:
         TriggerKind,
         UnitBuffRef,
     )
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     for sid in ('s_204999', 's_204100'):
         bs.effects.entries.append(ActiveEffect(
             spec=EffectSpec(id=sid, name=f'n{sid}', trigger=TriggerKind.NODE_ENTER,
@@ -313,7 +313,7 @@ def test_no_journal_no_file_writes_still_flow(tmp_path) -> None:
     无流水实例 = 行不落零文件,但写路径照常(字段写入/版本分配不受
     记录层影响——记录被动,ADR-0634)。"""
     reset_state_telemetry()
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     v0 = bs.write_seq
     bs.observe(bs.gold, 20, sig=_sig())
     assert journal_mod.state_journal_instance() is None
@@ -329,7 +329,7 @@ def test_journal_passive_wiring_identical_trajectories(journal, run_id, tmp_path
     被动记录,零行为分支(ADR-0634 直迁裁定:常开后记录不再是可开关面)。"""
 
     def _trajectory() -> list[tuple]:
-        bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+        bs = GameState(schema_version=BS_SCHEMA_VERSION)
         bs.observe(bs.gold, 20, sig=_sig())
         bs.carry(bs.gold, frame='p1-r2', sig=_sig())
         bs.write_logic(bs.free_refresh_balance, 2, produced_by='RefreshShop',
@@ -356,7 +356,7 @@ def test_journal_passive_wiring_identical_trajectories(journal, run_id, tmp_path
 def test_run_id_empty_rejects_rows(journal, monkeypatch) -> None:
     """§3.2.3 局外写入拒绝:run_id 空 = 拒写假行(诚实缺失)。"""
     monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', '')
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())
     assert journal.rows == [], '局外不写假行'
     assert bs.current_version() == 1, 'state 写入本体照常(版本照常分配)'
@@ -368,7 +368,7 @@ def test_journal_batch_flush(tmp_path, monkeypatch) -> None:
     j = install_state_telemetry(tmp_path / 'state' / 'journal.jsonl',
                                 flush_every=2,
                                 run_id_provider=tel_state.current_run_id)
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 1, sig=_sig())
     assert not (tmp_path / 'state' / 'journal.jsonl').exists(), \
         '未到阈值不落盘(行在内存缓冲)'
@@ -398,7 +398,7 @@ def test_prep_leg_advances_node_observed(journal, run_id) -> None:
     = 解析顶栏文本成序键(ord = (plane-1)*9 + round);**逻辑层字段**(用户
     终裁 2026-09-11 字段层次终极版:四腿全部 write_logic,无 observe 写序键
     例外);顶栏原文的观察层落点 = top_bar_raw(独立字段)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 2, top_raw='备战阶段 1-2')
     assert bs.node_ord.value == 2
     assert bs.node_ord.source == 'logic', '序键 = 逻辑层(四腿全 write_logic)'
@@ -422,7 +422,7 @@ def test_prep_leg_advances_node_observed(journal, run_id) -> None:
 def test_prep_leg_same_value_reread_is_same_value_row(journal, run_id) -> None:
     """v3.1-N2 后到腿写字段裁定:备战重入重读(候选 == hist 且字段已同值)
     = 照录,行 = same_value 形态(计入行量预算);不构成第二次跃迁。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 2)
     _prep(bs, 1, 2)   # 同节点重入重读
     rows = _derive_rows(journal, 'derive_node_observed')
@@ -436,10 +436,10 @@ def test_effective_read_port_max_of_layer_and_hist(journal, run_id) -> None:
     """生效序读口 = max(node_ord 字段现值, hist)(effective_node_ord,派生
     计算非存储字段;单字段双层形态的用户终裁保留面):字段现值滞后于 hist
     的窗内不拖低生效序,弹窗腿候选照常越 hist 推进。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         effective_node_ord,
     )
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 5)                       # 腿 A 推进 hist=5
     # 种子:字段现值回拨到 4(低于 hist;单字段下现值=最近层写,种值只为
     # 单测读口判定,非旁路写入面)
@@ -454,7 +454,7 @@ def test_effective_read_port_max_of_layer_and_hist(journal, run_id) -> None:
 
 def test_prep_leg_retrograde_rejected(journal, run_id) -> None:
     """R3 规则三:候选 < 现值(读值倒退 = 缓存滞后)拒绝即免疫。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 5)
     _prep(bs, 1, 4)   # 倒退
     assert bs.node_ord.value == 5
@@ -465,7 +465,7 @@ def test_prep_leg_authority_correction(journal, run_id) -> None:
     (write_logic),顶栏原文 = 观察层(observe)——两字段两层,序键无
     observe 写入路径;派生规则间的先后覆盖(后写层)不改变「序键恒逻辑层」
     形态。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # 先让弹窗腿写逻辑层 2(开局形态候选 1 → 再次守卫通过候选 2)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 1))
@@ -482,7 +482,7 @@ def test_prep_leg_authority_correction(journal, run_id) -> None:
 def test_popup_leg_advances_by_inference(journal, run_id) -> None:
     """§3.4.1 规则一(弹窗腿):prev ∈ 守卫集 ∧ current ∈ 弹窗族 → 推断 +1
     (R3 候选 = last+1;开局无前值 → 1)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # 开局形态:守卫集(开局链/战斗等待)→ 商店面板先被采到,last 空 → 候选 1
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))
@@ -500,7 +500,7 @@ def test_popup_leg_prev_guard_rejects_reentry(journal, run_id) -> None:
     """R3 规则五:备战帧已分派后的弹窗 = 段内子阶段(prev ∉ 守卫集)零触发。
     单字段双层:node_ord 已由备战腿写 1(逻辑层 write_logic),弹窗腿零写的
     证据 = 推进行缺席 + hist 不动(不再断言字段 None)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 1)   # 备战帧先被采到(prev 备战 ∉ 守卫集)
     assert bs.node_ord.value == 1 and bs.node_ord.source == 'logic'
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))
@@ -513,7 +513,7 @@ def test_popup_leg_cache_guard_and_fallback_to_prep_leg(
         journal, run_id) -> None:
     """R3 规则二③/规则五:缓存 c != last → 零触发交腿 A 兜底;后续弹窗帧
     prev ∈ 弹窗族 ∉ 守卫集 → 持续零触发;下一节点备战帧由腿 A 兜底推进。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 1)                     # 腿 A 先推进 node_ord=1(逻辑层)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 3))
@@ -532,7 +532,7 @@ def test_two_legs_same_transition_popup_first(journal, run_id) -> None:
     """v3.1-N2「两腿落同一跃迁」:弹窗腿先到先推进;备战帧后到同序 = 照写
     (same_value 形态)但去重键已占,不构成第二次跃迁。四腿同写逻辑层
     (字段层次终极版),层级不因腿而异。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))
     assert bs.node_ord.value == 1           # 弹窗腿先到,先推进
@@ -550,7 +550,7 @@ def test_two_legs_same_transition_popup_first(journal, run_id) -> None:
 
 def test_popup_leg_resume_disabled(journal, run_id) -> None:
     """R3 规则六:恢复局 last 空时弹窗腿禁用不猜,交腿 A。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点', resumed=True)
     assert bs.node_ord.value is None
@@ -558,7 +558,7 @@ def test_popup_leg_resume_disabled(journal, run_id) -> None:
 
 def test_popup_leg_without_cache_reading_disabled(journal, run_id) -> None:
     """弹窗腿缓存守卫输入缺位(phase_round 未带)→ 禁用不猜(有 last 时)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 1)
     bs.observe_screen_context('货币战争-战斗等待')
     bs.observe_screen_context('货币战争-遭遇节点')
@@ -570,7 +570,7 @@ def test_derivation_fields_are_logic_hook_channel_only(journal, run_id) -> None:
     """§3.1.3 域准入(字段层次终极版):node_ord 序键 = 逻辑层(四腿全部
     logic_hook 行,无 observe 写序键路径);顶栏原文 top_bar_raw = 观察层
     (obs 族);上下文域唯一写点 = ①观察汇聚。影子行可对账。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 2, 1, top_raw='备战阶段 2-1')
     assert bs.node_ord.value == 10   # (2-1)*9+1
     writers = {(r['field'], r['sig']['family']) for r in journal.rows}
@@ -593,7 +593,7 @@ def test_popup_leg_boss_briefing_predecessor_advances(journal, run_id) -> None:
     ADR-0630 修订节·守卫族终版)0p/0q 出族——商店面板块后到弹窗腿被 prev 守卫结构性拒绝
     (缓存守卫 c=8≠hist=9 为第二道防线),级联双推进破口消除。锁意图
     (boss 节点恰一次推进、推进证据可归因)不变。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 8)                                    # 奖励关备战帧:腿 A 推 8
     assert SCREEN_BOSS_BRIEFING not in SCREEN_CONTEXT_GUARD_PREV, \
         '0p 出守卫族(专用腿③,残留 = 级联双推进破口,ADR-0630 修订节·守卫族终版)'
@@ -648,7 +648,7 @@ def test_funnel_transition_frames_never_write_context() -> None:
 def test_obs_event_occupies_version_and_embeds_state(journal, run_id) -> None:
     """v3.1-N1/§3.2.3 行型 2:obs_event 同流、占版本、内嵌当时 state——
     零状态变更;「run 段内行序 = 版本序」不变量覆盖全部行型。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 40, sig=_sig())                                    # v1 (write)
     bs.note_obs_event(
         'arbitrate', 'level', {'old': 4, 'new': 213},

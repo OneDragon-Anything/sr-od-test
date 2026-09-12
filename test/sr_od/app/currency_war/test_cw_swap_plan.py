@@ -13,7 +13,7 @@
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bsb,
 )
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
@@ -25,7 +25,7 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     select_swap_plan,
     swap_sell_exclusion_reason,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwWorkFrame
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     MandateFrame,
     run_mandate,
@@ -141,13 +141,13 @@ def test_fresh_buys_record_per_name_and_expire_by_round() -> None:
     发射批多个买入逐名登记(漏记 = 防抖失效静默);位面/轮次推进 = 集
     自动失效(M7 闩键式同构)。"""
     sess = _NS()
-    st = GameState(plane=1, round_num=2)
+    st = CwWorkFrame(plane=1, round_num=2)
     record_fresh_buy(sess, _bsb(st), '甲')
     record_fresh_buy(sess, _bsb(st), '乙')
     assert fresh_buys_of(sess, _bsb(st)) == frozenset({'甲', '乙'})
-    st2 = GameState(plane=1, round_num=3)
+    st2 = CwWorkFrame(plane=1, round_num=3)
     assert fresh_buys_of(sess, _bsb(st2)) == frozenset()   # 轮次推进自动失效
-    st3 = GameState(plane=2, round_num=2)
+    st3 = CwWorkFrame(plane=2, round_num=2)
     assert fresh_buys_of(sess, _bsb(st3)) == frozenset()   # 位面推进同辖
 
 
@@ -173,7 +173,7 @@ def test_assembly_abstains_membership_when_intention_missing() -> None:
     禁消费面自写第二份缺读语义)。"""
     sess = _NS(v3_intention=None, target_comp=None,
                transition_framework='')
-    st = GameState(plane=1, round_num=2, board={})
+    st = CwWorkFrame(plane=1, round_num=2, board={})
     ctx = assemble_swap_plan_inputs(sess, state=_bsb(st),
                                     deployed=_base_deployed(),
                                     bench=[_bc(_TARGET_BENCH)], cap=6)
@@ -242,7 +242,7 @@ def test_fenced_arm_revives_on_occupancy_full_frame() -> None:
     本锁红即回归护栏。"""
     # 纯函数面:level 驱动可达 cap 域(3..9,XP_TO_NEXT_LEVEL 键域)
     # 内「占用数 = cap」帧全开;cap 缺读/非法 = 臂关(fail-closed)。
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         XP_TO_NEXT_LEVEL,
     )
     caps = sorted(set(XP_TO_NEXT_LEVEL) | {max(XP_TO_NEXT_LEVEL) + 1})
@@ -261,13 +261,13 @@ def test_fenced_arm_revives_on_occupancy_full_frame() -> None:
     state_of(sess).transition_framework = ''
     dep = [BenchChar(slot=i, char_id=f'p{i}', star=1)
            for i in range(1, 10)]   # 9 占用(喂入只计占用数,名不查注册表)
-    st = GameState(gold=0, level=9, deploy_cap=9, plane=1, round_num=2,
+    st = CwWorkFrame(gold=0, level=9, deploy_cap=9, plane=1, round_num=2,
                    board={'仙舟': 2}, deployed=list(dep), bench=[])
     ctx = assemble_swap_plan_inputs(sess, state=_bsb(st), deployed=dep,
                                     bench=[], cap=9)
     assert ctx is not None and ctx.fenced_on is True, '复活锁:占用数满帧臂开'
     # 未成型对照:同板面 fp<1.00 ⇒ 臂关(熔断保护原语义零变化)。
-    st_half = GameState(gold=0, level=9, deploy_cap=9, plane=1,
+    st_half = CwWorkFrame(gold=0, level=9, deploy_cap=9, plane=1,
                         round_num=2, board={'仙舟': 1},
                         deployed=list(dep), bench=[])
     st_half = _bsb(st_half)  # W6 波3:容器签名,桥一次成型
@@ -279,8 +279,8 @@ def test_fenced_arm_revives_on_occupancy_full_frame() -> None:
 # ==================== engine M1″ 意图面:双向断言 ====================
 
 def _m1p_state(*, deployed: list[BenchChar], bench: list[BenchChar],
-               cap: int = 6) -> GameState:
-    return GameState(gold=0, level=6, deploy_cap=cap, plane=1, round_num=2,
+               cap: int = 6) -> CwWorkFrame:
+    return CwWorkFrame(gold=0, level=6, deploy_cap=cap, plane=1, round_num=2,
                      board={}, deployed=list(deployed), bench=list(bench))
 
 
@@ -457,7 +457,7 @@ def test_m1p_plan_fill_deploys_plan_up_names() -> None:
     (rec['sell'] == 实际转录名)+ 占用序稳定(卖出后占用数 = 计划时点
     −1)+ up 名单在 bench;断言对象 = 名字集(up_names == 实际补上名)。
     本帧形态与局 18/局 58 缺口帧同构(板满 + 计划非空 + up=1)。"""
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         iter_occupied_deployed,
     )
     from sr_od.application.currency_war.sim.engine_p1 import (
@@ -499,7 +499,7 @@ def test_m1p_plan_fill_falls_back_to_rederive_when_premise_broken() -> None:
     计划 pick 禁虚报)。陪衬件 = 景元(注册表事实:仙舟主阵营,板上
     仙舟 ≥2 成对 ⇒ 围栏认可可补)。非 m1p 显式动作轮不归本函数辖
     (F4 辖域钉 m1_swap_redeploy 轮,由引擎分支结构承载)。"""
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         iter_occupied_deployed,
     )
     from sr_od.application.currency_war.sim.engine_p1 import (
@@ -546,7 +546,7 @@ def test_m1p_plan_fill_equivalence_locked_transition_domain() -> None:
 
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS as _CH
     from sr_od.application.currency_war.kernel.cw_comps import get_comp as _get_comp
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         iter_occupied_deployed,
     )
     from sr_od.application.currency_war.sim.engine_p1 import (
@@ -581,7 +581,7 @@ def test_m1p_plan_fill_equivalence_locked_transition_domain() -> None:
     _st.transition_framework = ''
     _st.v3_intention = _NS2(locked_comp='列车同行', p1_pair=(),
                             phase='locked', transition_pair=())
-    gs = GameState(gold=0, level=9, deploy_cap=9, plane=2, round_num=4,
+    gs = CwWorkFrame(gold=0, level=9, deploy_cap=9, plane=2, round_num=4,
                    board=board,
                    deployed=[_g18_bc(n, i + 1)
                              for i, n in enumerate(pre_board)],
@@ -631,7 +631,7 @@ def test_m1p_plan_fill_rederive_keeps_plan_time_narrow_domain() -> None:
     from sr_od.application.currency_war.kernel.cw_deploy_logic import (
         assemble_swap_plan_inputs as _assemble,
     )
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         iter_occupied_deployed,
     )
     from sr_od.application.currency_war.sim.engine_p1 import (
@@ -666,7 +666,7 @@ def test_m1p_plan_fill_rederive_keeps_plan_time_narrow_domain() -> None:
     _st.transition_framework = ''
     _st.v3_intention = _NS(locked_comp='列车同行', p1_pair=(),
                            phase='locked', transition_pair=())
-    gs = GameState(gold=0, level=9, deploy_cap=9, plane=2, round_num=4,
+    gs = CwWorkFrame(gold=0, level=9, deploy_cap=9, plane=2, round_num=4,
                    board=board,
                    deployed=[_g18_bc(n, i + 1)
                              for i, n in enumerate(pre_board)],
@@ -730,7 +730,7 @@ def test_mandate_carries_m1p_plan_payload() -> None:
     cw4_m1p_plan_pending = {sell, up, trans_domain, occ}(载荷仅作部署段
     核对,不改卖出仲裁权);非 m1p 帧恒 None(帧级同宿复位)。"""
     dep, bench = _base_deployed(), [_bc(_TARGET_BENCH)]
-    st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
+    st = CwWorkFrame(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
     sess = _m1p_session(None, directed=True)
     out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess, state=st)
@@ -789,7 +789,7 @@ def test_m1p_consumer_seam_gate_keeps_emission_closed(
     (现役缺省)= 同帧形态发射(RunDeploy reason=m1_swap_redeploy +
     m1p_fired)。"""
     dep, bench = _base_deployed(), [_bc(_TARGET_BENCH)]
-    st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
+    st = CwWorkFrame(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
     # 回滚态(唯一写点值源 M1P_SEAM_VERIFIED 写回 False = fail-closed
     # 显影态;monkeypatch 模拟回滚编辑,不碰生产模块)
@@ -818,14 +818,14 @@ def test_m1p_consumer_counts_plan_empty_and_cap_unreadable() -> None:
     """消费方分键锁:计划空帧 → m1p_plan_empty;cap 缺读帧 →
     m1p_cap_unreadable(零静默,判读可归因)。"""
     dep, bench = _base_deployed(), [_bc(_TARGET_BENCH)]
-    st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
+    st = CwWorkFrame(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
     sess = _m1p_session(None, directed=True)
     # cap 满帧但上序空(bench 候选与在场件同名,M1/M1′ 因 vacancy=0 不发,
     # M1″ 计划空分键显影)
     dep_dup = [_bc(_VICTIM, 1), _bc('青雀', 2), _bc('停云', 3),
                _bc('藿藿', 4), _bc('爻光', 5), _bc(_TARGET_BENCH, 6)]
-    st_dup = GameState(gold=0, level=6, plane=1, round_num=2, board={},
+    st_dup = CwWorkFrame(gold=0, level=6, plane=1, round_num=2, board={},
                        deployed=list(dep_dup), bench=list(bench))
     run_mandate(_m1p_frame(deployed=dep_dup, bench=bench), sess,
                 state=st_dup)
@@ -1003,7 +1003,7 @@ def test_m1p_no_direction_incident_frame_no_emission(monkeypatch) -> None:
     # 板满 8/8:注册表真名(无方向帧在门①即弃权,件名羁绊不入判定)
     _full = [_bc('艾丝妲', 1), _bc('黑塔', 2), _bc('椒丘', 3), _bc('青雀', 4),
              _bc('停云', 5), _bc('藿藿', 6), _bc('爻光', 7), _bc('花火', 8)]
-    st = GameState(gold=31, level=8, plane=2, round_num=6, board={},
+    st = CwWorkFrame(gold=31, level=8, plane=2, round_num=6, board={},
                    deployed=_full,
                    bench=[_bc(_VICTIM, 1), _bc('花火', 2)])
     st2 = state_of(sess)
@@ -1034,7 +1034,7 @@ def test_shop_buy_emission_writes_fresh_buys() -> None:
         COMP_LIBRARY,
         get_comp,
     )
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         BuyCard,
         ShopCard,
     )
@@ -1051,7 +1051,7 @@ def test_shop_buy_emission_writes_fresh_buys() -> None:
     comp = get_comp(next(c.name for c in COMP_LIBRARY
                          if getattr(c, 'core_chars', None)))
     m = list(comp.core_chars)[0]
-    st = GameState(gold=30, level=3, round_num=2, plane=1)
+    st = CwWorkFrame(gold=30, level=3, round_num=2, plane=1)
     st.shop = [ShopCard(x=100, name=m, cost=3, star=1)]
     sess = StrategySession()
     state_of(sess).cw4_counters = {}

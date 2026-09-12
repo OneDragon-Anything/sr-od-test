@@ -4,10 +4,10 @@ from sr_od.application.currency_war.data.cw_chars import (
     is_trailblazer,
     trailblazer_form,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     DeployMove,
-    GameState,
+    CwWorkFrame,
     mutate_bench_deployed,
     simulate,
 )
@@ -35,7 +35,7 @@ def test_board_counts_follow_form():
 
 def test_simulate_deploy_switches_form():
     """simulate DeployMove:bench 欢愉形态拖前排 → deployed 变记忆形态(char_id/faction 同步)。"""
-    st = GameState(gold=20, round_num=2, level=4, plane=1, hp=90,
+    st = CwWorkFrame(gold=20, round_num=2, level=4, plane=1, hp=90,
                    bench=[BenchChar(slot=1, char_id='开拓者·欢愉', faction='列车同行', position_pref='back')],
                    deployed=[], board={})
     after = simulate(st, DeployMove(bench_idx=0, to_row='front', faction='列车同行'))

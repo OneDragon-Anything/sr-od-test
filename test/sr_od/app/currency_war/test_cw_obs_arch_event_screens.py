@@ -39,7 +39,7 @@ from __future__ import annotations
 import inspect
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
 from sr_od.application.currency_war.kernel.cw_events import (
     EncounterOption,
     EncounterPick,

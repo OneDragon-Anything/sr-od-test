@@ -29,16 +29,16 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_of,
     gold_of,
 )
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
-    GameState,
+    CwWorkFrame,
     RefreshShop,
     ShopCard,
 )
@@ -83,9 +83,9 @@ class _StubMatch:
 
 
 def _cur(plane: int, round_num: int, gold: int = 53,
-         node_type: str | None = None) -> GameState:
+         node_type: str | None = None) -> CwWorkFrame:
     """帧构造(node_type = 喂容器时的节点轴载体,直调帧轴读属性不经容器)。"""
-    return GameState(gold=gold, level=5, plane=plane, round_num=round_num,
+    return CwWorkFrame(gold=gold, level=5, plane=plane, round_num=round_num,
                      hp=100, node_type=node_type)
 
 
@@ -101,7 +101,7 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     (接线点为函数内 lazy import,每次调用取模块属性,monkeypatch 即
     生效)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards as buy_mod
-    from sr_od.application.currency_war.kernel.cw_state import CloseShop
+    from sr_od.application.currency_war.kernel.cw_vocab import CloseShop
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         CurrencyWarMatch,
         StrategySession,
@@ -255,7 +255,7 @@ class TestShopOpenFrameDualWrite:
         # ② 店开帧覆写(帧现值):金源切容器(W6 波 4),店开帧经喂入口写
         # 容器(生产同路 = 观察漏斗;测试同路 = cw4_feed 合成口),披露读
         # 容器现值
-        shop_state = GameState(gold=64, level=5, plane=1, round_num=8,
+        shop_state = CwWorkFrame(gold=64, level=5, plane=1, round_num=8,
                                hp=100, node_type='prep')
         cw4_feed(sess, shop_state)
         disclose_budget_at_shop_frame(shop_state, sess)
@@ -270,7 +270,7 @@ class TestShopOpenFrameDualWrite:
         # 口径):装配披露 = 容器现值重算。「陈旧店开溢余复位 0」旧语义随
         # 金源切容器消亡——失读沿用下披露恒按沿用金重算,不存在复位面;
         # F1 新会话构造测不到「覆写后再披露」面(翻轮清零语义归锁 D)。
-        cw4_feed(sess, GameState(gold=0, gold_readable=False, level=5,
+        cw4_feed(sess, CwWorkFrame(gold=0, gold_readable=False, level=5,
                                  plane=1, round_num=9, hp=100,
                                  node_type='prep'))
         assemble(self._closed_snap(1, 9, 64), sess)

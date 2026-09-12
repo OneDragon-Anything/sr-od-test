@@ -580,15 +580,15 @@ class TestBenchEffectContextAssembly:
 
     @staticmethod
     def _unit(name: str = '黑塔', equipped: bool = False):
-        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
         bc = BenchChar(slot=1, char_id=name)
         bc.equips = ['装备X'] if equipped else []
         return bc
 
     @staticmethod
     def _state(active_strategies=None, enemy_affixes=None, deployed=None):
-        from sr_od.application.currency_war.kernel.cw_state import GameState
-        st = GameState()
+        from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+        st = CwWorkFrame()
         st.active_strategies = list(active_strategies or [])
         st.enemy_affixes = list(enemy_affixes or [])
         st.deployed = list(deployed or [])
@@ -601,7 +601,7 @@ class TestBenchEffectContextAssembly:
             self._state(active_strategies=['黑塔纪元']), self._unit())
         assert ctx.herta_star_supply and not ctx.rust_affix_present
         # 板面存在承载对象「大黑塔」⇒ 语境在场
-        from sr_od.application.currency_war.kernel.cw_state import BenchChar
+        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
         ctx2 = predicates.bench_effect_context(
             self._state(deployed=[BenchChar(slot=1, char_id='大黑塔')]),
             self._unit())

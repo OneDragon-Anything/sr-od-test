@@ -69,7 +69,7 @@ from one_dragon.base.operation.operation_round_result import (
     OperationRoundResultEnum,
 )
 from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
-from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
 from sr_od.application.currency_war.kernel.cw_exec_state import (
     ExecState,
     exec_state_of,
@@ -459,7 +459,7 @@ def test_invest_strategy_active_strategies_appended_at_reentry_exit(
         test_context, monkeypatch) -> None:
     """写入流对拍(主门 (b)):``active_strategies`` append 时点 = 重入裁决
     出口(入口锚不在 = overlay 已关 = 选卡落地)——总纲契约 6 裁决出口写端
-    随共享段,单驱动两路径同承;值 = 待裁决选卡名 + 去重;BoardState 写端
+    随共享段,单驱动两路径同承;值 = 待裁决选卡名 + 去重;GameState 写端
     (list 本体)同点。红 = append 时点前移(幻影卡回潮,ADR-0598)。"""
     for install in (True, False):
         if install:
@@ -480,7 +480,7 @@ def test_invest_strategy_active_strategies_appended_at_reentry_exit(
         assert session.active_strategies == ['白银投资'], (
             f'install={install}:append 值 = 待裁决选卡名')
         assert board_state_of(session).active_strategies.value == ['白银投资'], (
-            f'install={install}:BoardState 写端同点(list 本体)')
+            f'install={install}:GameState 写端同点(list 本体)')
         assert op._lifecycle_trace == [], (
             f'install={install}:裁决在分流前共享段,本轮不经生命周期(零段迹)')
         # 去重:同卡二次确认不重复入列
@@ -524,7 +524,7 @@ def test_strategy_refresh_emission_semantics(test_context, monkeypatch,
     evidence/produced_by(流水行 sig.actor)逐位 = 现役内联位口径;发射后
     无条件重读 + 经 decide_invest 重决策(恰两次,验效双通道已拆形态)。
     两路径同断言(登记件经共用分派面,位置迁移语义不变)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         register_sig_actors,
     )
     register_sig_actors('CwScreenInvestStrategy')

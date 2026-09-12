@@ -1,8 +1,8 @@
 """装备改写成员写端落码主题锁(EQUIP_WRITE_SIDES 登记面 + 装备改写写端桥)。
 
 设计出处(持久索引):
-- 归属判据 = BoardState 数据结构设计 §5.3(docs/develop/sr_od/application/
-  currency_war/changes/2026-09-11-unified-state/details/BoardState-数据结构
+- 归属判据 = GameState 数据结构设计 §5.3(docs/develop/sr_od/application/
+  currency_war/changes/2026-09-11-unified-state/details/GameState-数据结构
   设计.md,迭代期详设;持久正本 = docs/develop/sr_od/application/currency_war/game_state/
   effect-domain.md §6.3 写入归属判据):确定性可算 → 逻辑写;含随机 → 零
   逻辑写端,观察收口;
@@ -28,11 +28,11 @@ from sr_od.application.currency_war.kernel.cw_affix_effects import (
     EQUIP_WRITE_SIDES,
     scan_rewrite_equipments,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
-    BoardState,
+    GameState,
     ChannelSig,
     Unit,
     register_sig_actors,
@@ -60,7 +60,7 @@ _EQUIP_SCAN = scan_rewrite_equipments()
 
 
 def _sig() -> ChannelSig:
-    """渠道①签名(obs 族;观察构造 BoardState 前置态)。"""
+    """渠道①签名(obs 族;观察构造 GameState 前置态)。"""
     return ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
@@ -82,9 +82,9 @@ def _make_bs(*, front: list[Unit] | None = None,
              bench: BenchView | None = None,
              equips: list[str] | None = None,
              gold: int | None = None,
-             hp: int | None = None) -> BoardState:
-    """构造带前置观察态的 BoardState(None = 该字段从未观察)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+             hp: int | None = None) -> GameState:
+    """构造带前置观察态的 GameState(None = 该字段从未观察)。"""
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     if front is not None:
         bs.observe(bs.front_row, front, sig=_sig())
     if back is not None:
@@ -187,7 +187,7 @@ def test_held_and_worn_count_basis() -> None:
     assert worn_equip_count(bs, '财富宝钻') == 0
     assert held_equip_count(bs, '生命之环') == 1
     # 全字段未观察 = 零源,诚实 0(不猜)
-    empty = BoardState(schema_version=BS_SCHEMA_VERSION)
+    empty = GameState(schema_version=BS_SCHEMA_VERSION)
     assert held_equip_count(empty, '财富') == 0
     assert worn_equip_count(empty, '财富') == 0
 
@@ -260,7 +260,7 @@ def test_spawn_equip_bench_unit_bench_full_or_unobserved() -> None:
     seq0 = full.write_seq
     assert spawn_equip_bench_unit(full, _char_by_cost(1), 1, 1) is False
     assert full.write_seq == seq0
-    unobserved = BoardState(schema_version=BS_SCHEMA_VERSION)
+    unobserved = GameState(schema_version=BS_SCHEMA_VERSION)
     seq0 = unobserved.write_seq
     assert spawn_equip_bench_unit(unobserved, _char_by_cost(1), 1, 1) is False
     assert unobserved.write_seq == seq0
@@ -292,7 +292,7 @@ def test_grant_and_transform_equips_inventory() -> None:
     assert transform_equip_to_privilege(bs, '不存在的进阶') is None
     assert bs.write_seq == seq1
     # 库存未观察 = 零写入(无容器)
-    empty = BoardState(schema_version=BS_SCHEMA_VERSION)
+    empty = GameState(schema_version=BS_SCHEMA_VERSION)
     assert grant_equip_item(empty, '生命之环') is False
     assert transform_equip_to_privilege(empty, '生命之环') is None
 

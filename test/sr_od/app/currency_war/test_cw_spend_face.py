@@ -30,10 +30,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     LevelUpShop,
     SellBench,
     simulate,
@@ -87,8 +87,8 @@ def _shop_session(comp) -> SimpleNamespace:
 
 
 def _st(gold: int = 30, shop_cards=None, bench=None, deployed=None,
-        level: int = 7, readable: bool = True) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, hp=60)
+        level: int = 7, readable: bool = True) -> CwWorkFrame:
+    st = CwWorkFrame(gold=gold, level=level, round_num=2, hp=60)
     st.level_readable = readable
     st.plane = 2
     st.shop = shop_cards if shop_cards is not None else []
@@ -231,7 +231,7 @@ class TestArm0LevelLag:
             round_num=3)
         # state.hp/hp_readable=健康真值(危机门放行;血线判据不在本批辖域);
         # level=2 < max_units()=3 且 < need=4(arm0 触发域)
-        state = GameState(gold=60, level=2, round_num=3)
+        state = CwWorkFrame(gold=60, level=2, round_num=3)
         state.hp = 100
         state.hp_readable = True
         state.level_readable = True

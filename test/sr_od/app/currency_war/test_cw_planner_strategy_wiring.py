@@ -7,14 +7,14 @@ from __future__ import annotations
 import inspect
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_events import (
     PlannerOption,
     decide_planner,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwWorkFrame
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import (
     CwScreenPlanner,
 )
@@ -35,9 +35,9 @@ def _session(target_comp) -> SimpleNamespace:
     return s
 
 
-def _planner_state() -> GameState:
+def _planner_state() -> CwWorkFrame:
     """备战态:bench 持有银狼(在场判定保守,不触发降权分支)。"""
-    st = GameState(hp=80)
+    st = CwWorkFrame(hp=80)
     st.bench = [BenchChar(slot=1, char_id='银狼LV.999', faction='?', star=2,
                           position_pref='front')]
     return st
@@ -82,7 +82,7 @@ def test_planner_strategy_delegates_kernel_bitwise() -> None:
     strat = MandateV1Live()
     # W6 波4:策略契约面已切容器(flow.decide_planner 直通 kernel 容器
     # 签名,生产防御支传 board_state_of(session))——「同输入」= 同一
-    # 容器,GameState 工作帧经单一转换点 board_state_bridge 装箱后喂两面。
+    # 容器,CwWorkFrame 工作帧经单一转换点 board_state_bridge 装箱后喂两面。
     # ① 无 target
     bs = board_state_bridge(_planner_state())
     via_strategy = strat.decide_planner(

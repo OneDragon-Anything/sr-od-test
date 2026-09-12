@@ -45,7 +45,7 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     TIER_TRANSITION,
     line_identity_tier,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
     LevelUpShop,
     RefreshShop,

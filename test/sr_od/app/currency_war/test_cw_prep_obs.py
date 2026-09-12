@@ -21,7 +21,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     ledger_update_plane,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
@@ -84,7 +84,7 @@ def test_p26_prep_obs_label_from_ledger_truth(tmp_path: Path, monkeypatch) -> No
     """采集真值面(删除波 1 重写锚):标签 = 位面节点台账真值(单一源),
     硬节点 token 原样透传不映射——锁 kernel 台账读链(ledger_node_type,
     原行内采集的读数源)对 1-based 轮次的下标换算与 boss token 透传。"""
-    from sr_od.application.currency_war.kernel.cw_state import ledger_node_type
+    from sr_od.application.currency_war.kernel.cw_vocab import ledger_node_type
     sess = StrategySession()
     ledger_update_plane(sess, 1, ['battle', 'encounter', 'supply', 'boss'],
                         source='plane_detail')

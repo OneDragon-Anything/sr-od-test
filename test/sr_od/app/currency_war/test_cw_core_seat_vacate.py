@@ -23,11 +23,11 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     locked_buy_membership,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     SellBench,
     ShopCard,
 )
@@ -80,8 +80,8 @@ def _locked_ist(comp_name: str) -> IntentionState:
 
 def _state(gold: int, shop_cards: list[ShopCard],
            bench: list[BenchChar] | None = None,
-           level: int = 7, plane: int = 2) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, hp=60)
+           level: int = 7, plane: int = 2) -> CwWorkFrame:
+    st = CwWorkFrame(gold=gold, level=level, round_num=2, hp=60)
     st.plane = plane
     st.shop = shop_cards
     st.bench = bench if bench is not None else []

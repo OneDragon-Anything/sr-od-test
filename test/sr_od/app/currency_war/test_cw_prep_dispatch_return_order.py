@@ -31,7 +31,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import sr_od.application.currency_war.kernel.cw_board_state as cw_board_state
+import sr_od.application.currency_war.kernel.cw_game_state as cw_game_state
 import sr_od.application.currency_war.obs.cw_identity_obs as cw_identity_obs
 from sr_od.application.currency_war import prep_actions
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
@@ -108,9 +108,9 @@ class TestLock1OpenBoxSlotMismatch:
         monkeypatch.setattr(prep_actions, 'read_supply_boxes',
                             lambda ctx, screen: [(7, _point())])
         captured: list[dict] = []
-        monkeypatch.setattr(cw_board_state, 'board_state_from_ctx',
+        monkeypatch.setattr(cw_game_state, 'board_state_from_ctx',
                             lambda ctx: object())
-        monkeypatch.setattr(cw_board_state, 'note_action_receipt',
+        monkeypatch.setattr(cw_game_state, 'note_action_receipt',
                             lambda bs, **kw: captured.append(kw))
         ex.execute(OpenBox(slot=5))
         assert len(captured) == 1, f'回执恰一条(每动作一行): {captured!r}'

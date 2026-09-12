@@ -15,7 +15,7 @@ W623 预验尸(D0-D4)+ W630 A/B 协议 + W615 R1-R4 规则集。锁契约:
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_economy import (
@@ -33,10 +33,10 @@ from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
@@ -54,8 +54,8 @@ def _state(*, gold: int = 100, plane: int = 1, r: int = 5, level: int = 6,
            hp: int = 80,
            bench: list[BenchChar | None] | None = None,
            shop: list[ShopCard] | None = None,
-           board: dict | None = None) -> GameState:
-    return GameState(
+           board: dict | None = None) -> CwWorkFrame:
+    return CwWorkFrame(
         plane=plane, round_num=r, gold=gold, level=level, hp=hp,
         shop_refresh_cost=2,
         deployed=[], bench=bench if bench is not None else [None] * BENCH_CAPACITY,
@@ -78,7 +78,7 @@ def test_schedule_pop_slot_trigger() -> None:
     """触发①[33] 人口位:cap 满 ∧ bench 有成型件(2★)→ 排程
     (最高义务;不受息引擎前置辖——当轮兑现战力)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_state import deployed_occupied
+    from sr_od.application.currency_war.kernel.cw_vocab import deployed_occupied
 
     def _ch(name: str, slot: int, star: int) -> BenchChar:
         fac = (CHARACTERS[name].factions or ('?',))[0]
@@ -97,7 +97,7 @@ def test_schedule_pop_slot_trigger() -> None:
     assert schedule_upgrade(st, sess_of(st))
 
 
-def sess_of(state: GameState) -> StrategySession:
+def sess_of(state: CwWorkFrame) -> StrategySession:
     return StrategySession()
 
 
@@ -332,7 +332,7 @@ def test_tracking_view_isolated_from_session_writers() -> None:
     装备拼接、deploy_bench 装备覆盖的真实别名写者)不穿透视图;
     equips 在视图侧固化为 tuple。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_state import snapshot_copy
+    from sr_od.application.currency_war.kernel.cw_vocab import snapshot_copy
     from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
         _tracking_view,
     )

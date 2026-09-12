@@ -26,16 +26,16 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_reward_node import (
     reward_node_suppressed,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
     CloseShop,
-    GameState,
+    CwWorkFrame,
     ShopCard,
     ledger_update_plane,
 )
@@ -59,9 +59,9 @@ def _card(name: str = '廉价杂件', cost: int = 1) -> ShopCard:
     return ShopCard(x=100, name=name, cost=cost, star=1)
 
 
-def _shop_frame(gold: int, cards: list[ShopCard]) -> GameState:
+def _shop_frame(gold: int, cards: list[ShopCard]) -> CwWorkFrame:
     """店开帧合成(p1r3 案件形态:gold=11 < g*,bench 空有席)。"""
-    st = GameState(gold=gold, level=7, hp=80, plane=1, round_num=3)
+    st = CwWorkFrame(gold=gold, level=7, hp=80, plane=1, round_num=3)
     st.shop = list(cards)
     return st
 
@@ -75,7 +75,7 @@ class _ProbeCloseStrategy:
     """
 
     def __init__(self) -> None:
-        self.frames: list[GameState] = []
+        self.frames: list[CwWorkFrame] = []
         self.actions: list[object] = []
 
     def decide_shop_action(self, session: StrategySession,
@@ -214,7 +214,7 @@ def test_none_frame_press_buy_silent() -> None:
     承载——该存活面的等价断言单点承载于 test_cw_realizable_interest_floor::
     test_pullback_success_closes_press_arm 前半(同输入帧型 + 同
     sorted(sells)==[1,2] 断言,跨文件等价择一,本侧原重复腿已删)。"""
-    st = GameState(gold=11, level=7, hp=80, plane=1, round_num=3)
+    st = CwWorkFrame(gold=11, level=7, hp=80, plane=1, round_num=3)
     st.shop = [_card()]
     sess = StrategySession()
     act = shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))

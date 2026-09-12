@@ -6,7 +6,7 @@
 ``docs/develop/sr_od/application/currency_war/game_state/journal.md``;设计工作稿存
 .debug/temp 为易失档,禁作正本指针)(判读 CLI 行:新视图族按行读 + 行间
 差分、零重放;并存期旧视图只读保留至 M5)。锁面四组 =
-- 新读能力锁:自足快照行(fixture 构造,与写端 kernel/cw_board_state
+- 新读能力锁:自足快照行(fixture 构造,与写端 kernel/cw_game_state
   ``_swap``/``note_obs_event`` 行键同形)→ 读回断言(读/清单/取值口/视图);
 - 宽容性锁:缺细节字段行、坏 JSON 行、非 dict 行、缺文件——不炸、给显式
   「缺失」形态(宽容读取契约,见 telemetry/journal_query 模块 docstring);

@@ -7,9 +7,9 @@
 """
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.operations.cw_op import (
@@ -47,7 +47,7 @@ def _drive(monkeypatch, ok: bool):
     match = SimpleNamespace(session=SimpleNamespace(
         shop_state_frame=None))
     state_of(match.session).cw4_visit_bought_names = []
-    state = GameState(bench=[])
+    state = CwWorkFrame(bench=[])
     visit_actions: list = []
     cw_op_buy_cards.apply_action_outcome(
         aop, aop.action, ok, state, match, ledger, visit_actions)

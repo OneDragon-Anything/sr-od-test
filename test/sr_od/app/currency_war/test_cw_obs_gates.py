@@ -29,7 +29,7 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.obs import cw_briefing_obs, cw_observation
@@ -705,7 +705,7 @@ def test_shop_refresh_cost_base_price_model_lock() -> None:
     src = Path(obs_mod.__file__).read_text(encoding='utf-8')
     assert 'state.shop_refresh_cost = read_shop_refresh_cost' not in src, \
         '主链不得再调用 read_shop_refresh_cost(徽标退役,ADR-0456)'
-    from sr_od.application.currency_war.kernel.cw_state import REFRESH_COST_BASE
+    from sr_od.application.currency_war.kernel.cw_vocab import REFRESH_COST_BASE
     assert REFRESH_COST_BASE == 2
 
 
@@ -936,7 +936,7 @@ def test_read_star_edge_slots_2star(test_context: _identity_obs_SrTestContext) -
 # ==================== board_by_row ====================
 
 from sr_od.application.currency_war.kernel.cw_board_by_row import board_by_row
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
 
 def _char(name: str, slot: int = 0, row: str = 'back',
@@ -1169,8 +1169,8 @@ from sr_od.application.currency_war.kernel.cw_comps import (  # noqa: E402
     COMP_LIBRARY,
     maybe_pivot,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
-    GameState as _test_pivot_plane_filter_GameState,  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwWorkFrame as _test_pivot_plane_filter_GameState,  # noqa: E402
 )
 
 
@@ -1217,8 +1217,8 @@ from sr_od.application.currency_war.kernel import cw_comps
 from sr_od.application.currency_war.kernel.cw_comps import (
     maybe_pivot as _pivot_invariant_maybe_pivot,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
-    GameState as _pivot_invariant_GameState,
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwWorkFrame as _pivot_invariant_GameState,
 )
 
 

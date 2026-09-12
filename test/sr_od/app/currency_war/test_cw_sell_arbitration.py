@@ -42,13 +42,13 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     SellBench as PrepSellBench,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench as ShopSellBench,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -114,8 +114,8 @@ def _locked_sess() -> StrategySession:
     return s
 
 
-def _state(gold: int, bench: list[BenchChar]) -> GameState:
-    st = GameState(gold=gold, level=7, round_num=2, hp=60)
+def _state(gold: int, bench: list[BenchChar]) -> CwWorkFrame:
+    st = CwWorkFrame(gold=gold, level=7, round_num=2, hp=60)
     st.plane = 2
     st.bench = list(bench)
     # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
@@ -314,7 +314,7 @@ class TestEntryFundingCells:
           ⇒ 不放行——期权损失(P01)已付而义务未达成 = 严格有害;
         - 活性伴随:普通燃料件走主路径(锁空转防御);
         - 红证:判据直调不带排除集 ⇒ ④件恰入卖出槽集。"""
-        st = GameState(gold=1, level=5, round_num=2, hp=40)
+        st = CwWorkFrame(gold=1, level=5, round_num=2, hp=40)
         # 非空板前置(T-32 空板止损守卫,同 _state 注):板空帧判据恒拒。
         st.deployed = [_bc('板上件锚', slot=1)]
         sess = SimpleNamespace()
@@ -388,8 +388,8 @@ class TestEmptyBoardSellGuard:
     """
     GUARD_KEY = 'empty_board_sell_guard'
 
-    def _empty_board_state(self, gold: int = 30) -> GameState:
-        st = GameState(gold=gold, level=5, round_num=2, hp=60)
+    def _empty_board_state(self, gold: int = 30) -> CwWorkFrame:
+        st = CwWorkFrame(gold=gold, level=5, round_num=2, hp=60)
         st.bench = []
         st.deployed = []          # 板空:s7022 型病灶帧
         st.shop = []

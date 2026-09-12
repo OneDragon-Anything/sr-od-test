@@ -14,9 +14,9 @@ proofs/p24-residual-fill-dominance.md:C=I=0 下残余补部署严格支配
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
     bench_occupied,
     iter_occupied_deployed,
 )
@@ -31,9 +31,9 @@ from sr_od.application.currency_war.sim.engine_p1 import (
 
 
 def _st(level: int, deployed: list[BenchChar],
-        bench: list[BenchChar]) -> GameState:
+        bench: list[BenchChar]) -> CwWorkFrame:
     """构造帧:deployed/bench 紧缩表,board=仙舟计数由调用方对齐。"""
-    return GameState(level=level, deployed=list(deployed),
+    return CwWorkFrame(level=level, deployed=list(deployed),
                      bench=list(bench), board={}, gold=20)
 
 
@@ -65,14 +65,14 @@ def test_residual_fill_deploys_into_vacancy() -> None:
 
 def test_skip_round_ledger_row_and_pairing_intact() -> None:
     """集成锁:skip_fence 账本行仍在(配对锁不破),residual 字段披露。"""
-    from sr_od.application.currency_war.kernel.cw_state import SellDeployed
+    from sr_od.application.currency_war.kernel.cw_vocab import SellDeployed
 
     class _Stub:
         fired = False
 
         def decide_shop_screen(self, sess, screen):  # noqa: ARG002
             # 决策后读帧断言改容器读(W6 波 4 迁移约定 2:黑板槽退役)。
-            from sr_od.application.currency_war.kernel.cw_board_state import (
+            from sr_od.application.currency_war.kernel.cw_game_state import (
                 board_state_of,
                 deployed_slots_of,
             )

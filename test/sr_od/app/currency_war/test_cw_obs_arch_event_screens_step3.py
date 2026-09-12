@@ -34,7 +34,7 @@ test_cw_obs_arch_event_screens.py 断言集模板):
   并存期)。红 = 迁移断线(结构退回)或分流判据破坏(生产误走新路径)。
 - **注册表零登记锁**(§6.4 收编面本批零行):八屏源无 register_outcome_
   hook / fire_emit_hooks 接线——§6.4 表登记件全不涉事件选卡屏;supply_
-  refresh_used BoardState 字段位 = 先申报禁静默(cw_board_state.py 字段行
+  refresh_used GameState 字段位 = 先申报禁静默(cw_game_state.py 字段行
   自注),执行侧防重入旗标 _supply_refresh_used 留守 _do_action,不入注册
   表。红 = 未经申报面擅立登记件(EMIT_TRIGGERED_DECLARED 同款纪律)。
 - **共享动作体锁**:七选卡屏 post-gate 体纯移入 ``_handle_overlay``(两路径
@@ -59,7 +59,7 @@ from one_dragon.base.operation.operation_round_result import (
     OperationRoundResult,
     OperationRoundResultEnum,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
@@ -137,7 +137,7 @@ def _make_supply(test_context, monkeypatch, *, in_node: bool):
     """补给屏真类装配(生产构造走 __init__;共享动作体 ``_do_action`` 桩)。
 
     桩面 = 节点完成门(round_by_find_area → _in_node)+ ``_do_action`` 计数;
-    会话 = 真 StrategySession(chosen/暂存面走真实 BoardState 语义)。
+    会话 = 真 StrategySession(chosen/暂存面走真实 GameState 语义)。
     返回 (op, match, session, calls)。
     """
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -249,8 +249,8 @@ def test_supply_reentry_discards_stale_pending_both_paths(
 
 def test_supply_no_outcome_registry_item(test_context, monkeypatch) -> None:
     """补给屏无 on_outcome 落地登记件(§6.4 收编面无补给行):
-    supply_refresh_used BoardState 字段位 = 先申报禁静默、无写端
-    (cw_board_state.py 字段行自注「收窄待证」);执行侧防重入旗标
+    supply_refresh_used GameState 字段位 = 先申报禁静默、无写端
+    (cw_game_state.py 字段行自注「收窄待证」);执行侧防重入旗标
     _supply_refresh_used 留守 _do_action。注册表缺席 = 零动作
     (盛会之星同式申报)。"""
     op, _match, _session, _calls = _make_supply(

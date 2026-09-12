@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_observe, cw_state_journal
-from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 
 # 分包期 6:恢复兜底族(DESIGN §4.4 hooks 行)归 sim/ledger_hooks,

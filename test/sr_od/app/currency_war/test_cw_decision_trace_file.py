@@ -44,7 +44,7 @@ import pytest
 from sr_od.application.currency_war.kernel import (
     cw_decision_trace as dt_mod,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Field,
     NodeKey,
@@ -418,8 +418,8 @@ def test_state_ref_pin_contract(run_env) -> None:
 
 
 def test_state_ref_default_entry_board_read(run_env) -> None:
-    """钉缺省 = 入口现读 BoardState 版本读口(读不写不占版本;R4 语义)。
-    行头 plane/round_num = cw_board_state 四读口单一源(读面衔接)。"""
+    """钉缺省 = 入口现读 GameState 版本读口(读不写不占版本;R4 语义)。
+    行头 plane/round_num = cw_game_state 四读口单一源(读面衔接)。"""
     s = _session({'k_a': 1})
     bs = board_state_of(s)
     bs.observe(bs.node,
@@ -433,7 +433,7 @@ def test_state_ref_default_entry_board_read(run_env) -> None:
 
 
 def test_state_ref_unreadable_honest_default(run_env, monkeypatch) -> None:
-    """钉读取失败/无 BoardState 面 = state_ref 诚实缺省 ''(不猜;
+    """钉读取失败/无 GameState 面 = state_ref 诚实缺省 ''(不猜;
     R4 读取失败语义)。"""
     class _BoomBoard:
         node = Field()

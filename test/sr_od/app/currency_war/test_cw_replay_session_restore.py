@@ -94,11 +94,11 @@ def test_restore_session_p1_pair_materializes_direction() -> None:
     from sr_od.application.currency_war.kernel.cw_intention import (
         pair_target_comp,
     )
-    from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 
     ist_dict = dict(_LOCKED_IST, locked_comp='', p1_pair=['仙舟', '持续伤害'])
     sess = _session()
-    sess.shop_state_frame = GameState(plane=1, round_num=5)
+    sess.shop_state_frame = CwWorkFrame(plane=1, round_num=5)
     cw_replay._restore_session(None, {'v3_intention': ist_dict}, sess)
     expected = pair_target_comp(('仙舟', '持续伤害'))
     assert _ms(sess).target_comp is not None
@@ -137,18 +137,18 @@ def test_rebuild_state_reads_trust_flags() -> None:
     """执行态可信位回读(T-312):state 携 hp_readable/hp_trusted 等逐字段还原。
 
     p1r4 实证帧形态(hp_readable=False ∧ hp_trusted=False)= 血预算停升级
-    门的 fail-closed 输入——回放此前恒按 GameState 缺省 True 读,升级类
+    门的 fail-closed 输入——回放此前恒按 CwWorkFrame 缺省 True 读,升级类
     分歧结构性不可比。本用例连消费语义一起锁:重建态的不可信形态经
     血预算停升级门判拒付,与可信形态判放行成对。
 
-    波 2 签名切换(T-95):血线门输入 = BoardState 容器帧(prior 支 =
-    旧两位皆 False 的容器等价,fail-closed 语义同面重钉;GameState 侧
+    波 2 签名切换(T-95):血线门输入 = GameState 容器帧(prior 支 =
+    旧两位皆 False 的容器等价,fail-closed 语义同面重钉;CwWorkFrame 侧
     帧→桥视图 hp source 恒 observation 的失真语义见 board_state_bridge
     docstring,防线主辖容器帧)。
     """
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         BS_SCHEMA_VERSION,
-        BoardState,
+        GameState,
         ChannelSig,
         NodeKey,
     )
@@ -167,9 +167,9 @@ def test_rebuild_state_reads_trust_flags() -> None:
     assert st.board_readable is True and st.deploy_cap == 6
     assert st.max_units() == 6          # deploy_cap 真值优先于 level 兜底
 
-    def _bs(hp: int | None, source: str) -> BoardState:
+    def _bs(hp: int | None, source: str) -> GameState:
         sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
-        bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+        bs = GameState(schema_version=BS_SCHEMA_VERSION)
         if hp is not None:
             if source == 'prior':
                 bs.write_prior(bs.hp, hp, evidence='prior:adr-0559', sig=sig)
@@ -190,7 +190,7 @@ def test_rebuild_state_reads_trust_flags() -> None:
 
 
 def test_rebuild_state_missing_flags_zero_drift() -> None:
-    """旧 schema 行缺可信位键 → 走 GameState 缺省,与 T-290 基线逐位一致。"""
+    """旧 schema 行缺可信位键 → 走 CwWorkFrame 缺省,与 T-290 基线逐位一致。"""
     st = cw_replay._rebuild_state({'hp': 50, 'plane': 1, 'round_num': 1})
     assert st.hp_readable is True and st.hp_trusted is False
     assert st.level_readable is True and st.gold_readable is True

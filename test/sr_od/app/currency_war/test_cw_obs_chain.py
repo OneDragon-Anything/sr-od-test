@@ -38,7 +38,7 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.obs.cw_observation import board_from_tracked
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
@@ -273,7 +273,7 @@ import pytest as _w287_obs_readchain_pytest
 
 import sr_od.application.currency_war.obs.cw_observation as obs_mod
 from one_dragon.utils import cv2_utils
-from sr_od.application.currency_war.kernel.cw_state import rebuild_deployed_from_board
+from sr_od.application.currency_war.kernel.cw_vocab import rebuild_deployed_from_board
 from sr_od.application.currency_war.obs.cw_observation import (
     _board_pairs,
     read_deployed_count,
@@ -390,7 +390,7 @@ def test_source_deployed_align_uses_paddle_not_board_sum() -> None:
 
 import inspect as _w289_match_start_reset_inspect
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar as _w289_match_start_reset_BenchChar,
 )
 from sr_od.application.currency_war.obs.cw_observation import reset_phase_round_cache
@@ -1038,7 +1038,7 @@ from sr_od.application.currency_war.kernel.cw_prep_expect import (
     _xp_compare,
     _xp_parse_buy_clicks,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     XP_TO_NEXT_LEVEL,
     xp_apply_clicks,
     xp_clicks_to_level,
@@ -1375,7 +1375,7 @@ def test_shop_fixture_end_to_end(test_context) -> None:
     本测试锁「识别输出能过一致性票」的生产形态,不锁具体牌名(牌名归 SIFT 锁)。
     """
     from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
-    from sr_od.application.currency_war.kernel.cw_state import card_cost
+    from sr_od.application.currency_war.kernel.cw_vocab import card_cost
     from sr_od.application.currency_war.obs.cw_observation import read_shop_cards
 
     state = 'shop_open_preview_star'

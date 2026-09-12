@@ -39,7 +39,7 @@ import sr_od.application.currency_war.operations.cw_screen.cw_screen_prep as pd_
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     StartBattle,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
 )
@@ -100,7 +100,7 @@ def _make_director(monkeypatch, collapse_open):
             PrepObservation,
         )
         obs = PrepObservation()
-        obs.state = GameState(plane=1, round_num=1)
+        obs.state = CwWorkFrame(plane=1, round_num=1)
         return obs
 
     monkeypatch.setattr(d, '_observe', _observe)

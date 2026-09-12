@@ -24,7 +24,7 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
     POOL_COPIES_PER_CARD,
     SHOP_SLOTS,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
@@ -35,10 +35,10 @@ from sr_od.application.currency_war.kernel.cw_plane_table import r_remaining
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
@@ -101,7 +101,7 @@ class TestLineMissingDecomposition:
     def test_items_and_dual_with_line_distance(self):
         """无超持态:逐档缺口项在手 + Σm == line_distance(口径对偶锁,
         防 tier_progress 分叉漂移)。"""
-        st = GameState(gold=30, level=7, board={}, shop=[])
+        st = CwWorkFrame(gold=30, level=7, board={}, shop=[])
         md = proof.line_missing_decomposition(_COMP, st)
         assert md, '空板局缺口非空'
         assert md[0][0] == _COMP.form_tiers[_TIER]
@@ -111,7 +111,7 @@ class TestLineMissingDecomposition:
     def test_satisfied_items_dropped(self):
         """已满足件剔除(P38 配方):板面齐档 ⇒ 空表(complete 域归
         调用方,本函数不发 complete)。"""
-        st = GameState(gold=30, level=7,
+        st = CwWorkFrame(gold=30, level=7,
                        board=dict(_COMP.form_tiers),
                        shop=[])
         assert proof.line_missing_decomposition(_COMP, st) == []
@@ -122,7 +122,7 @@ class TestLineMissingDecomposition:
         members = _tier_members(_TIER)
         cost = CHARACTERS[members[0]].cost
         shelf = [SimpleNamespace(faction=_TIER, cost=cost)]
-        st = GameState(gold=30, level=7, board={}, shop=shelf)
+        st = CwWorkFrame(gold=30, level=7, board={}, shop=shelf)
         md = proof.line_missing_decomposition(_COMP, st)
         assert md[0][0] == _COMP.form_tiers[_TIER] - 1
         assert md[0][1] == pytest.approx(
@@ -150,7 +150,7 @@ class TestLineMissingDecomposition:
             if target is not None:
                 break
         assert target is not None, '全库无「无 1 费成员档」comp,q=0 锁失配'
-        st = GameState(gold=30, level=1, board={}, shop=[])   # L1 只出 1 费
+        st = CwWorkFrame(gold=30, level=1, board={}, shop=[])   # L1 只出 1 费
         md = proof.line_missing_decomposition(target, st)
         assert (unreachable_need, 0.0) in md, 'q=0 不可达项被静默剔除'
 
@@ -164,7 +164,7 @@ class TestLineMissingDecomposition:
         }
         for comp in COMP_LIBRARY[:20]:
             for bd in boards.values():
-                st = GameState(gold=30, level=7, board=dict(bd), shop=[])
+                st = CwWorkFrame(gold=30, level=7, board=dict(bd), shop=[])
                 total_m = sum(m for m, _q in
                               proof.line_missing_decomposition(comp, st))
                 assert total_m >= line_distance(comp, _bridge(st)), (comp.name, bd)
@@ -176,7 +176,7 @@ class TestLineMissingDecomposition:
         cost = CHARACTERS[members[0]].cost
         shop = [SimpleNamespace(faction=_TIER, cost=cost)
                 for _ in range(_COMP.form_tiers[_TIER] + 2)]
-        st = GameState(gold=30, level=7, board={}, shop=shop)
+        st = CwWorkFrame(gold=30, level=7, board={}, shop=shop)
         assert proof.line_missing_decomposition(_COMP, st) == []
         assert line_distance(_COMP, _bridge(st)) == 0
 
@@ -224,7 +224,7 @@ class TestAssembleLockFrame:
         与递推×装配一致性锁在 test_cw_evidence_gate_calibration.py
         单一承载,本锁只辖映射与等待一帧语义)。"""
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         missing, trials, frame = proof.assemble_lock_frame(st, sess)
         assert missing
@@ -238,7 +238,7 @@ class TestAssembleLockFrame:
         """o_plus/d_death 恒 None(V_ms/Δλ【拟】挂账):None 期门恒不可评,
         ADR-0637 敞口申报的机器可读形态。"""
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         _missing, _trials, frame = proof.assemble_lock_frame(st, sess)
         assert frame.o_plus is None
@@ -254,7 +254,7 @@ class TestAssembleLockFrame:
                          and n not in k_names)
         cost = CHARACTERS[side_name].cost
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         st.bench = [BenchChar(slot=1, char_id=side_name, star=2)]
         missing, trials, frame = proof.assemble_lock_frame(st, sess)
@@ -270,11 +270,11 @@ class TestAssembleLockFrame:
         = 0;满 bench(free≤1)∧ 缺件可评 ⇒ c_hold > 0(缺件购入期权被
         阻断的饱和成本显影)。"""
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         _missing, _trials, frame = proof.assemble_lock_frame(st, sess)
         assert frame.c_hold == 0.0     # 无侧线件 ∧ free=9>1
-        st2 = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st2 = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                         shop=[])
         st2.bench = [BenchChar(slot=i, char_id=f'燃料{i}')
                      for i in range(1, BENCH_CAPACITY + 1)]
@@ -289,13 +289,13 @@ class TestEvaluateEvidenceGate:
 
     def test_state_none_or_no_target_skip(self):
         sess = _session(target=None)
-        assert proof.evaluate_evidence_gate(GameState(gold=20), sess) is None
+        assert proof.evaluate_evidence_gate(CwWorkFrame(gold=20), sess) is None
         assert _counters(sess) == {}
 
     def test_empty_missing_not_evaluated(self):
         """缺口空帧不评估(锁线时机问题不存在;不产计数噪声)。"""
         sess = _session()
-        st = GameState(gold=30, level=7,
+        st = CwWorkFrame(gold=30, level=7,
                        board=dict(_COMP.form_tiers),
                        shop=[])
         assert proof.evaluate_evidence_gate(st, sess) is None
@@ -305,7 +305,7 @@ class TestEvaluateEvidenceGate:
         """封印期:聚合键 + 成因分桶键逐键(聚合与成因不同键防混计,
         R24-2 纪律;摘任一成因桶写入行本锁红 = 守卫移除验证)。"""
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         ok, reason = proof.evaluate_evidence_gate(st, sess)
         assert ok is False
@@ -329,7 +329,7 @@ class TestEvaluateEvidenceGate:
         monkeypatch.setattr(proof, 'assemble_lock_frame',
                             lambda st_, sess_: ([(1, 0.5)], 1, frame))
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         ok, reason = proof.evaluate_evidence_gate(st, sess)
         assert ok is True
@@ -369,7 +369,7 @@ class TestWiringGuard:
         )
         strat = MandateV1Strategy()
         sess = _session()
-        st = GameState(gold=30, level=7, round_num=3, plane=1,
+        st = CwWorkFrame(gold=30, level=7, round_num=3, plane=1,
                        board={}, shop=[])
         obs = PrepObservation(state=st, bench_chars=[], deployed_chars=[],
                               spheres=[], boxes=[], tomes=[], deploy_vacancy=4)

@@ -314,7 +314,7 @@ class _LevelUpSpamStub:
     """升级桩:每段恒发 3 个 LevelUp——未满级时合法执行,满级后逼出守卫。"""
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001, ARG002
-        from sr_od.application.currency_war.kernel.cw_state import LevelUp
+        from sr_od.application.currency_war.kernel.cw_vocab import LevelUp
         return [LevelUp(cost=4) for _ in range(3)]
 
 
@@ -394,16 +394,16 @@ class _SpyPricedLevelUpStub:
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001, ARG002
         # 定价读 = 容器(W6 波 4 接缝族切容器帧;构造容器帧直接喂)
-        from sr_od.application.currency_war.kernel.cw_board_state import (
-            BoardState as _BS,
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            GameState as _BS,
         )
-        from sr_od.application.currency_war.kernel.cw_board_state import (
+        from sr_od.application.currency_war.kernel.cw_game_state import (
             ChannelSig,
         )
         from sr_od.application.currency_war.kernel.cw_economy import (
             xp_click_cost,
         )
-        from sr_od.application.currency_war.kernel.cw_state import LevelUp
+        from sr_od.application.currency_war.kernel.cw_vocab import LevelUp
         _bs = _BS(schema_version=1)
         _bs.write_logic(_bs.active_strategies, ['商业间谍'],
                         produced_by='test_spy_stub',

@@ -30,9 +30,9 @@ from pathlib import Path
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell,
@@ -56,13 +56,13 @@ def _item(slot: int = 1, star: int = 1) -> BenchChar:
 
 
 def _state(bench: list[BenchChar],
-           deployed: list[BenchChar] | None = None) -> GameState:
+           deployed: list[BenchChar] | None = None) -> CwWorkFrame:
     # deployed 缺省非空板:空板帧会被空板止损守卫
     # (sell_gate.empty_board_sell_blocked,ADR-0636)先于资格循环短路,
     # 测不到本文件辖的物理门本体;plane=2 压掉 P1 血线禁令域(凑息)。
     if deployed is None:
         deployed = [_bc('前线', slot=1)]
-    st = GameState()
+    st = CwWorkFrame()
     st.plane = 2
     st.hp = 50
     st.bench = list(bench)

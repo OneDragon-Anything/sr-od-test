@@ -33,7 +33,7 @@ import pytest
 
 from sr_od.application.currency_war.kernel import cw_launch_admission
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
 _LINE_MEMBERS = set()
 

@@ -42,9 +42,9 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     get_comp,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -122,9 +122,9 @@ def cw4_session(comp=None, *, plane_lengths=None,
 
 def cw4_state(gold: int = 30, shop=None, bench=None, deployed=None,
               level: int = 3, node=None, deploy_cap: int | None = None,
-              xp=None, hp: int = 100) -> GameState:
+              xp=None, hp: int = 100) -> CwWorkFrame:
     """prep/shop 决策帧(round_num=2 家族缺省;各轴缺省 = 空店/空席)。"""
-    st = GameState(gold=gold, level=level, round_num=2, node_type=node,
+    st = CwWorkFrame(gold=gold, level=level, round_num=2, node_type=node,
                    hp=hp)
     st.shop = shop if shop is not None else []
     st.bench = bench if bench is not None else []
@@ -138,11 +138,11 @@ def cw4_state(gold: int = 30, shop=None, bench=None, deployed=None,
 
 def battle_state(gold: int, level: int, *, xp: tuple[int, int] = (0, 6),
                  hp: int = 60, bench: list | None = None,
-                 deployed: list | None = None) -> GameState:
+                 deployed: list | None = None) -> CwWorkFrame:
     """血线族战斗帧(原 budget_gate/guarantee_floor 同款 ``_state``):
     开态可读等级、plane=2 battle、level_up_cost=4、refresh_probs={5:0}
     禁刷新(升级闸判据的隔离帧,刷新通道不得介入)。"""
-    st = GameState(gold=gold, level=level, round_num=2, hp=hp)
+    st = CwWorkFrame(gold=gold, level=level, round_num=2, hp=hp)
     st.level_readable = True
     st.plane = 2
     st.node_type = 'battle'
@@ -167,7 +167,7 @@ def ns_session(target_comp=None) -> SimpleNamespace:
                            active_strategies=[])
 
 
-def cw4_decide(state: GameState, session, cfg=None, *, registry=None):
+def cw4_decide(state: CwWorkFrame, session, cfg=None, *, registry=None):
     """商店决策驱动(decide_shop_screen)。``registry=None`` = sim 注入
     视图(shop_line 历史缺省,sim 冻结语义锁的面),传
     ``DEFAULT_REGISTRY`` = live 真值表(等级帽单一源锁的双表对拍面,
@@ -337,11 +337,11 @@ def cw4_feed(session, frame):
 
     节点缺席补写(node_type=None 帧的 plane/round 保真):合成口对
     node_type 未识别帧不写 node(禁 'prep' 占位假值),旧决策链直读
-    ``GameState.plane/round_num`` 标量、位面门照常生效——补写
+    ``CwWorkFrame.plane/round_num`` 标量、位面门照常生效——补写
     ``NodeKey(kind='')`` 与 kernel :func:`board_state_bridge` 的节点
     缺席补写同式(kind 空串 = 帧未识别的忠实镜像,禁词表值冒充真值),
     保 feed 与桥两路对同帧决策面行为逐位一致。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         NodeKey,
         ShopPayload,

@@ -28,9 +28,9 @@
 
 统一 state 迁移波 2(T-95):血线门切容器签名(hp 经政策层读口
 decision_hp,可信位 = hp_decision_trusted → hp_decision_trusted_of),
-组 2/3/5/7 的门谓词输入 = BoardState 容器帧(来源三态即旧两位语义的
+组 2/3/5/7 的门谓词输入 = GameState 容器帧(来源三态即旧两位语义的
 容器形态:observation=真读/carried=沿用/prior=不可信 fail-closed);
-GameState 侧帧→桥视图 hp source 恒 observation 的失真语义见
+CwWorkFrame 侧帧→桥视图 hp source 恒 observation 的失真语义见
 board_state_bridge docstring(过渡期申报面,防线主辖容器帧)。
 """
 from __future__ import annotations
@@ -40,9 +40,9 @@ import logging
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
-    BoardState,
+    GameState,
     ChannelSig,
     NodeKey,
 )
@@ -52,8 +52,8 @@ from sr_od.application.currency_war.kernel.cw_discipline_rules import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
-    GameState,
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import _apply_hp
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
@@ -80,13 +80,13 @@ def _sig() -> ChannelSig:
 
 
 def _bs_with_hp(hp: int | None, source: str, *, plane: int = 2,
-                round_num: int = 4, node_kind: str = 'battle') -> BoardState:
+                round_num: int = 4, node_kind: str = 'battle') -> GameState:
     """血线门容器帧构造器(组 2/3/5 共用):来源三态写入 + 节点键。
 
     - source='observation' = 真读帧;'carried' = 同节点沿用帧
       (值保持,来源翻沿用);'prior' = 不可信帧(局21 幽灵形态的容器
       等价:prior 支两位皆 False,fail-closed)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     if hp is not None:
         if source == 'observation':
             bs.observe(bs.hp, hp, sig=_sig())
@@ -102,17 +102,17 @@ def _bs_with_hp(hp: int | None, source: str, *, plane: int = 2,
     return bs
 
 
-def _ghost_bs(hp: int = 100) -> BoardState:
+def _ghost_bs(hp: int = 100) -> GameState:
     """局21 P2 r4 幽灵帧容器形态:P2 备战帧,hp=100 假值、来源不可信
     (prior 支 = 旧 (False, False) 两位形态的容器等价,fail-closed)。"""
     return _bs_with_hp(hp, 'prior')
 
 
-def _state_with_bits(hp: int | None, readable: bool, trusted: bool) -> GameState:
-    """GameState 最小帧构造器(组4 写侧位/组7 序列化共用;这两组辖
-    GameState 写端与遥测形状,非波 2 切换的血线门读口)。
+def _state_with_bits(hp: int | None, readable: bool, trusted: bool) -> CwWorkFrame:
+    """CwWorkFrame 最小帧构造器(组4 写侧位/组7 序列化共用;这两组辖
+    CwWorkFrame 写端与遥测形状,非波 2 切换的血线门读口)。
     plane/round/节点固定,gold=50 无锁面消费。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.plane, st.level, st.gold, st.hp = 2, 6, 50, hp
     st.round_num = 4
     st.node_type = 'battle'
@@ -121,8 +121,8 @@ def _state_with_bits(hp: int | None, readable: bool, trusted: bool) -> GameState
     return st
 
 
-def _ghost_state(hp: int = 100) -> GameState:
-    """局21 P2 r4 幽灵帧 GameState 形态(组4 写侧位锁专用:值写入了、
+def _ghost_state(hp: int = 100) -> CwWorkFrame:
+    """局21 P2 r4 幽灵帧 CwWorkFrame 形态(组4 写侧位锁专用:值写入了、
     保真位留在 (False, False) 的 shop 覆盖丢位产物)。"""
     st = _state_with_bits(hp, False, False)
     st.gold = 86   # 局21 实帧字段回放保真(锁面谓词不读 gold)
@@ -340,7 +340,7 @@ def test_r1_retry_read_hp_persistent_miss_honest_none(
     assert calls['n'] == 2   # 恰好重试上限,不无限等
 
 
-def _state_payload(st: GameState) -> dict:
+def _state_payload(st: CwWorkFrame) -> dict:
     """state 诚实位形状(删除波 1 重写锚:decisions 行写入退役,hp 诚实性
     语义的现役载体 = state 序列化形状,判读/档案读链消费同面)。"""
     from sr_od.application.currency_war.telemetry.schema import serialize_state

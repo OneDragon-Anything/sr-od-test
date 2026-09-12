@@ -26,7 +26,7 @@ import pytest
 
 _match_archive_sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.telemetry import match_archive as arch
@@ -619,9 +619,9 @@ from sr_od.application.currency_war.kernel.cw_performance import (
     RoundOutcome,
     star_achievement,
 )
-from sr_od.application.currency_war.kernel.cw_state import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_vocab import (  # noqa: E402
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 
 
@@ -762,9 +762,9 @@ def test_star_achievement_no_core_or_unheld_is_zero() -> None:
     """comp 无 core_chars,或 core 角色一个都不在 bench/deployed → 0.0
     (早期未成型语义;出处 = cw_performance.star_achievement 语义,
     限时 AV 星级=输出先验分量)。"""
-    assert star_achievement(_star_comp([]), _bridge(GameState())) == 0.0
+    assert star_achievement(_star_comp([]), _bridge(CwWorkFrame())) == 0.0
     # 场上只有非 core 角色 → core 未持有 → 0.0
-    state = GameState(bench=[_star_bc(1, '停云', 3)])
+    state = CwWorkFrame(bench=[_star_bc(1, '停云', 3)])
     assert star_achievement(_star_comp(['飞霄']), _bridge(state)) == 0.0
 
 
@@ -773,7 +773,7 @@ def test_star_achievement_star_normalization_anchors() -> None:
     (avg−1)/2)。"""
     comp = _star_comp(['飞霄'])
     for star, expect in ((1, 0.0), (2, 0.5), (3, 1.0)):
-        state = GameState(deployed=[_star_bc(0, '飞霄', star)])
+        state = CwWorkFrame(deployed=[_star_bc(0, '飞霄', star)])
         assert star_achievement(comp, _bridge(state)) == expect, \
             f'{star}★ → {expect}'
 
@@ -783,7 +783,7 @@ def test_star_achievement_full_domain_average() -> None:
     多核心取平均(一 2★+一 3★ → avg 2.5 → 0.75);bench 空槽滤除;
     非 core 角色星级不进平均。"""
     comp = _star_comp(['飞霄', '知更鸟'])
-    state = GameState(
+    state = CwWorkFrame(
         bench=[None, _star_bc(2, '飞霄', 2), _star_bc(3, '停云', 3)],
         deployed=[_star_bc(0, '知更鸟', 3)])
     # core 集 = {飞霄 2★, 知更鸟 3★} → avg 2.5 → (2.5−1)/2 = 0.75
@@ -824,7 +824,7 @@ import pytest as _w527_node_ledger_pytest
 _ROOT = _w527_node_ledger_Path(__file__).resolve().parents[5]          # 仓库根(StarRailOneDragon)
 _TEST_ROOT = _w527_node_ledger_Path(__file__).resolve().parents[4]     # 测试仓根(sr-od-test)
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     fill_boss_by_position,
     get_node_ledger,
     ledger_node_type,

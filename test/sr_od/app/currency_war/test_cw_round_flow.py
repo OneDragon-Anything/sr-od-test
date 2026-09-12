@@ -22,7 +22,7 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     ignition_gain,
     select_deployments,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwWorkFrame
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORK_FACTIONS,
     FRAMEWORKS,
@@ -725,7 +725,7 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
                 StrategySession as _SS,
             )
             _sess = _SS()
-            _sess.last_state = GameState()
+            _sess.last_state = CwWorkFrame()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
@@ -779,13 +779,13 @@ def test_branch3_records_before_continue_click() -> None:
 
 
 def test_battle_end_hook_advances_effect_ledger(monkeypatch) -> None:
-    """效果账本结算挂点行为锁(BoardState 设计 §5.1 挂点清单「结算挂点
+    """效果账本结算挂点行为锁(GameState 设计 §5.1 挂点清单「结算挂点
     (on_battle_end)」生产接线):真实 ``_record_round_outcome`` 回路 →
-    BoardState.effects 单例 ``_event_battle_end`` 事件计数真实推进(删接线行
+    GameState.effects 单例 ``_event_battle_end`` 事件计数真实推进(删接线行
     即红);telemetry-only 补录面(败局页)不标记(与 apply_settlement_cover
     同口径);挂点零 Field 写入(write_seq 不变)——账本事件面与观察覆盖
     互不冲突,「逻辑写后观察覆盖」路径不受接线影响。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_of,
     )
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -801,12 +801,12 @@ def test_battle_end_hook_advances_effect_ledger(monkeypatch) -> None:
                 is_new_match=True)
             self._unknown_streak = 0
             # 挂点载体 = 真实 StrategySession(effect_inventory 属性 →
-            # BoardState.effects 单例,批次三载体归一)
+            # GameState.effects 单例,批次三载体归一)
             from sr_od.application.currency_war.strategies.impl.cw_strategy import (
                 StrategySession as _SS,
             )
             _sess = _SS()
-            _sess.last_state = GameState()
+            _sess.last_state = CwWorkFrame()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(

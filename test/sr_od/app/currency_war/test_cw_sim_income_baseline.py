@@ -3,7 +3,7 @@
 对拍判据 = 「sim 开局金/首收入 vs 注册表直算值,同输入同输出,覆盖平局/
 连胜/利息三通道」(设计依据 = docs/develop/sr_od/application/currency_war/
 changes/2026-09-11-legacy-hygiene-ops/details/sim-baseline.md §T-21)。
-权威源 = kernel/cw_economy.round_start_income 函数族(BoardState 设计
+权威源 = kernel/cw_economy.round_start_income 函数族(GameState 设计
 §4.2 轮首收入行「两域禁第二份」;真值凭据 = economy.md §10/§11)。
 
 覆盖:
@@ -89,7 +89,7 @@ def test_income_row_cap_override_and_flat_channel() -> None:
 def test_base_plane_aware_key_calibration_points() -> None:
     """T-21 校准行为锁:P1 r1/r2 非奖励轮 base 3/4(原手搓段恒 5 =
     本批待校准差异);奖励轮查表同款;r3+ 恒 5;P2r1/P3r1=5(round
-    单键直查 hazard 回归,BoardState §4.2 奖励轮行禁用形态)。"""
+    单键直查 hazard 回归,GameState §4.2 奖励轮行禁用形态)。"""
     assert sim_round_income(1, 1, 'battle', 0, 0)['base'] == 3
     assert sim_round_income(1, 2, 'encounter', 0, 0)['base'] == 4
     assert sim_round_income(1, 1, 'supply', 0, 0)['base'] == 3

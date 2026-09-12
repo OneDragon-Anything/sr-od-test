@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -34,7 +34,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     get_env,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState, PickEvent
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame, PickEvent
 
 # ===== fixture 前提直调核验(锁语义依赖的注册表事实;漂移先红于此)=====
 
@@ -77,7 +77,7 @@ def _cfg(**overrides) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
-_STATE = GameState(board={}, hp=100, hp_readable=True)
+_STATE = CwWorkFrame(board={}, hp=100, hp_readable=True)
 
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:

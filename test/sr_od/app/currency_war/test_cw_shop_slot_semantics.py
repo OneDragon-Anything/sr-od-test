@@ -52,10 +52,10 @@ class _DoubleBuyStub:
     跳过 + 披露计数(金/池不消费)。"""
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
-        from sr_od.application.currency_war.kernel.cw_board_state import (
+        from sr_od.application.currency_war.kernel.cw_game_state import (
             board_state_of,
         )
-        from sr_od.application.currency_war.kernel.cw_state import BuyCard
+        from sr_od.application.currency_war.kernel.cw_vocab import BuyCard
         bs = board_state_of(sess)
         cards = bs.shop.value.cards if bs.shop.value is not None else []
         if not cards:
@@ -80,7 +80,7 @@ class _SyntheticCardStub:
 
     def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        from sr_od.application.currency_war.kernel.cw_state import BuyCard, ShopCard
+        from sr_od.application.currency_war.kernel.cw_vocab import BuyCard, ShopCard
         name = next(n for n in CHARACTERS if CHARACTERS[n].cost == 1)
         return [BuyCard(card=ShopCard(x=100, faction='?', name=name,
                                       cost=1), reason='stub')] * 12

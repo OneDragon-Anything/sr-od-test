@@ -16,11 +16,11 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -56,8 +56,8 @@ def _session() -> StrategySession:
 
 
 def _state(gold: int, shop_cards: list[ShopCard], bench: list | None = None,
-           deployed: list | None = None, level: int = 6) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=2, node_type='普通战斗')
+           deployed: list | None = None, level: int = 6) -> CwWorkFrame:
+    st = CwWorkFrame(gold=gold, level=level, round_num=2, node_type='普通战斗')
     st.plane = 2
     st.shop = shop_cards
     st.bench = bench if bench is not None else []
@@ -74,7 +74,7 @@ def _dep(name: str, slot: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=1)
 
 
-def _decide(st: GameState, session: StrategySession) -> list:
+def _decide(st: CwWorkFrame, session: StrategySession) -> list:
     from sr_od.application.currency_war.sim.engine_p1 import (
         sim_decision_registry,
     )

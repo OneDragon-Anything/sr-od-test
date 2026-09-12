@@ -35,7 +35,7 @@ import itertools
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_comps
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -51,9 +51,9 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 from sr_od.application.currency_war.kernel.cw_launch_admission import (
     readiness_form_ok,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 
 _SEELE_PAIR: tuple[str, ...] = ('列车同行', '希儿系')
@@ -61,10 +61,10 @@ _OTHER_PAIR: tuple[str, ...] = ('仙舟', '持续伤害')
 
 
 def _frame(board: dict[str, int], deployed: tuple[str, ...] = (),
-           bench: tuple[str, ...] = ()) -> GameState:
+           bench: tuple[str, ...] = ()) -> CwWorkFrame:
     """最小对局帧:board 羁绊计数 + 在板名单 + 可选 bench 名单(bench
     负例帧用;成型判据只读 board/deployed,bench 供部署维度区分格)。"""
-    st = GameState(gold=10, level=5, plane=1, round_num=5, hp=100)
+    st = CwWorkFrame(gold=10, level=5, plane=1, round_num=5, hp=100)
     st.board = dict(board)
     st.deployed = [BenchChar(slot=i + 1, char_id=n, star=1)
                    for i, n in enumerate(deployed)]
@@ -190,7 +190,7 @@ class TestProgressFolding:
         ② 条件域(希儿在板)嵌套包含:旧 AND 谓词(量≥3∧贝≥2∧他档满)
         成 ⟹ 新 OR 谓词必成,且存在严格反向格(量2贝0:新成旧不成)。
         (原两锁各自独立遍历 36 帧成本翻倍,并格后断言面逐格等价。)"""
-        def old_code_ok(st: GameState) -> bool:
+        def old_code_ok(st: CwWorkFrame) -> bool:
             # 被 ADR-0613 取代的旧口径(仅本锁内联重构作对照,非第二判定):
             # 他档满 ∧ 量子≥3 ∧ 贝≥2(cw_recipe 完全体档 AND)。
             return (st.board.get('列车同行', 0) >= 2
@@ -217,10 +217,10 @@ class TestProgressFolding:
         from sr_od.application.currency_war.kernel.cw_comps import get_comp
         comp = get_comp('追击飞霄')
         assert comp.or_legs == [] and comp.required_deployed == ()
-        assert form_progress(comp, _bridge(GameState(board={}))) == 0.0
-        assert form_progress(comp, _bridge(GameState(board={'追击': 2}))) \
+        assert form_progress(comp, _bridge(CwWorkFrame(board={}))) == 0.0
+        assert form_progress(comp, _bridge(CwWorkFrame(board={'追击': 2}))) \
             == pytest.approx(2.0 / 3.0, abs=1e-9)
-        assert form_progress(comp, _bridge(GameState(board={'追击': 3}))) == 1.0
+        assert form_progress(comp, _bridge(CwWorkFrame(board={'追击': 3}))) == 1.0
 
     def test_lightweight_board_only_state_tolerated(self, seele_comp) -> None:
         """轻量假想面板(仅 board 视图,mandate 部署差额折算消费形)不炸:
@@ -399,7 +399,7 @@ class TestStaticSeeleFormOk:
         新成旧不成)——新口径是旧口径在条件域上的严格放宽。"""
         comp = _static_seele_comp()
 
-        def old_full_form_ok(st: GameState) -> bool:
+        def old_full_form_ok(st: CwWorkFrame) -> bool:
             # 被取代的旧 AND 完全体口径(仅本锁内联重构作对照,非第二判定):
             # 量≥4 ∧ 贝≥2(静态条目旧 form_tiers 全档;量 3 是 pair 路径
             # 借 cw_recipe 的档,非静态旧档,勿混——落地审 B-2 锚位修正)。

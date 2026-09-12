@@ -22,7 +22,7 @@ CwScreenWaitOneOne / 位面情报采集 CwScreenPlaneIntel(薄转录 + 双节点
   (test_cw_plane_intel_start_plane.py / test_cw_node_screens.py,零触碰)
   + 本文件薄转录新路径行为锁。
 
-**写入流对拍 = 本阶段无适用面**(总纲 §2.2-4 如实申报):五屏零 BoardState
+**写入流对拍 = 本阶段无适用面**(总纲 §2.2-4 如实申报):五屏零 GameState
 写端;位面情报采集采集结果经 ``ctx.cw_plane_bosses``/``cw_plane_affixes``
 中转(消费接线批挂账,原样)。发射型接线锁/登记语义对拍锁/豁免留守锁亦无
 适用屏(全篇 on_outcome = 无登记件,注册表缺席 = 零动作)。

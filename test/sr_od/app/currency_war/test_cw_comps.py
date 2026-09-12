@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -46,9 +46,9 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     skeleton_factions,
     target_committed,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
 
@@ -70,9 +70,9 @@ def _cfg(**overrides) -> SimpleNamespace:
 
 def test_form_progress_monotonic() -> None:
     飞霄 = get_comp("追击飞霄")
-    s0 = GameState(board={})
-    s_half = GameState(board={"追击": 2})
-    s_full = GameState(board={"追击": 3})
+    s0 = CwWorkFrame(board={})
+    s_half = CwWorkFrame(board={"追击": 2})
+    s_full = CwWorkFrame(board={"追击": 3})
     v0 = form_progress(飞霄, _bridge(s0))
     v_half = form_progress(飞霄, _bridge(s_half))
     v_full = form_progress(飞霄, _bridge(s_full))
@@ -85,8 +85,8 @@ def test_form_progress_monotonic() -> None:
 def test_progress_includes_core_chars() -> None:
     """progress = 0.6 form + 0.4 core_char;持有核心角色 → 高于纯 form_progress。"""
     飞霄 = get_comp("追击飞霄")
-    s_no_core = GameState(board={"追击": 3})   # 满成型但无核心角色
-    s_with_core = GameState(board={"追击": 3},
+    s_no_core = CwWorkFrame(board={"追击": 3})   # 满成型但无核心角色
+    s_with_core = CwWorkFrame(board={"追击": 3},
                             bench=[BenchChar(slot=0, char_id="飞霄", faction="追击")])
     assert progress(飞霄, _bridge(s_with_core)) > progress(飞霄, _bridge(s_no_core)), (
         "持有核心角色 → progress 更高"
@@ -100,10 +100,10 @@ def test_equip_fit_aya_two_boots_supralinear() -> None:
     """阿雅 key_equips=[反重力皮靴×2, 白昼·光速螺旋桨, 火力风暴潮](ADR-0209 API 换血
     +guide 双鞋机制保留):双靴是最高优先件;2 靴 > 1 靴 > 无关。"""
     阿雅 = get_comp("昼神阿雅")
-    none_eq = GameState()                                   # 无装备数据 → None(ADR-0107 动态权重剔除)
-    one = GameState(equips=["反重力皮靴"])
-    two = GameState(equips=["反重力皮靴", "反重力皮靴"])
-    irrelevant = GameState(equips=["别的装备"])
+    none_eq = CwWorkFrame()                                   # 无装备数据 → None(ADR-0107 动态权重剔除)
+    one = CwWorkFrame(equips=["反重力皮靴"])
+    two = CwWorkFrame(equips=["反重力皮靴", "反重力皮靴"])
+    irrelevant = CwWorkFrame(equips=["别的装备"])
     assert equip_fit(阿雅, _bridge(none_eq)) is None, "无装备数据 → None(动态权重剔除)"
     assert equip_fit(阿雅, _bridge(two)) > 0.6, "2 靴(4 件 key 占 2;双靴超线性体现在 two>one 斜率)"
     assert equip_fit(阿雅, _bridge(two)) > equip_fit(阿雅, _bridge(one)), "2 靴 > 1 靴"
@@ -115,7 +115,7 @@ def test_equip_fit_no_key_equips_neutral() -> None:
     """comp 无关键装备依赖 → None(ADR-0107:无数据动态剔除,非 0.5 常量地板;用局部 Comp 不污染 LIBRARY)。"""
     comp_no_equip = Comp(name="测试", factions=["巡海游侠"], core_chars=[], form_tiers={},
                          strength="A", form_difficulty="easy", key_equips=[])
-    assert equip_fit(comp_no_equip, _bridge(GameState(equips=["冷笑话引擎"]))) is None, (
+    assert equip_fit(comp_no_equip, _bridge(CwWorkFrame(equips=["冷笑话引擎"]))) is None, (
         "无 key_equips 的 comp → None(动态权重剔除)"
     )
 
@@ -222,7 +222,7 @@ def test_current_enemy_mechanics_maps_affixes() -> None:
     """敌人词缀(OCR 名)→ 机制 tag;未知词缀原样透传。
     (D-55 两行映射并入本测:忍无可忍→多段惩罚、沉重脚步→行动延后;
     原独立测与本测同形体,同函数不同映射行,并一处断言。)"""
-    s = GameState(enemy_affixes=["正当防卫", "急速制冷", "忍无可忍", "沉重脚步", "未知词缀"])
+    s = CwWorkFrame(enemy_affixes=["正当防卫", "急速制冷", "忍无可忍", "沉重脚步", "未知词缀"])
     mechs = current_enemy_mechanics(_bridge(s))
     assert "反伤" in mechs
     assert "冻结" in mechs
@@ -237,7 +237,7 @@ def test_current_enemy_mechanics_maps_affixes() -> None:
 def test_select_comp_build_around_filter() -> None:
     """character_build_around 必含:只留含该角色的 comp(ADR-0152 后不死途属巡海击破+黄泉减益两 comp)。"""
     cfg = _cfg(character_build_around=["不死途"])
-    s = GameState(round_num=5, gold=50)
+    s = CwWorkFrame(round_num=5, gold=50)
     result = select_comp(_bridge(s), make_score_context(_bridge(s)), cfg)
     names = [c.name for c in result]
     assert names, "build_around=不死途 → 至少留巡海击破/黄泉减益"
@@ -246,7 +246,7 @@ def test_select_comp_build_around_filter() -> None:
 
 def test_select_comp_forbid_filter() -> None:
     """character_forbid / faction_forbid 排除。"""
-    s = GameState(round_num=5, gold=50)
+    s = CwWorkFrame(round_num=5, gold=50)
     cfg_char = _cfg(character_forbid=["阿格莱雅"])
     names = [c.name for c in select_comp(_bridge(s), make_score_context(_bridge(s)), cfg_char, top_n=99)]
     assert "昼神阿雅" not in names, "forbid 阿格莱雅 → 排除昼神阿雅"
@@ -257,7 +257,7 @@ def test_select_comp_forbid_filter() -> None:
 
 def test_select_comp_faction_build_around() -> None:
     """faction_build_around 必含阵营(all() 语义;成就局特定阵容,config.md §3)。"""
-    s = GameState(round_num=5, gold=50)
+    s = CwWorkFrame(round_num=5, gold=50)
     cfg = _cfg(faction_build_around=["追击"])
     comps = select_comp(_bridge(s), make_score_context(_bridge(s)), cfg, top_n=99)
     assert comps, "必含追击 → 至少留追击飞霄"
@@ -301,7 +301,7 @@ def test_acquirability_factor_pool_aware() -> None:
 
 def test_held_base_copies_folds_star() -> None:
     """ADR-0110:_held_base_copies 按 star 折基础副本(3合1:1星=1/2星=3/3星=9/4星=27),bench+deployed 合并。"""
-    s = GameState(
+    s = CwWorkFrame(
         bench=[BenchChar(slot=0, char_id="飞霄", star=2),     # 3 基础副本
                BenchChar(slot=1, char_id="知更鸟", star=1)],   # 1
         deployed=[BenchChar(slot=0, char_id="飞霄", star=3)],  # 9(同角色累加)
@@ -310,9 +310,9 @@ def test_held_base_copies_folds_star() -> None:
     assert held["飞霄"] == 3 + 9, "飞霄 2星(3)+ 3星(9)= 12 基础副本"
     assert held["知更鸟"] == 1, "知更鸟 1星 = 1"
     # 空 bench/deployed → {}
-    assert _held_base_copies(_bridge(GameState())) == {}
+    assert _held_base_copies(_bridge(CwWorkFrame())) == {}
     # 缺 char_id 的槽不计
-    s2 = GameState(bench=[BenchChar(slot=0, char_id="", star=2)])
+    s2 = CwWorkFrame(bench=[BenchChar(slot=0, char_id="", star=2)])
     assert _held_base_copies(_bridge(s2)) == {}, "空 char_id 不计"
 
 
@@ -322,7 +322,7 @@ def test_select_comp_optionality_top_n() -> None:
     注:select_comp 按 comp_score×乘法因子(phase/acq/board/formation)排序,**非纯 raw comp_score** ——
     乘法因子会改变排序(如反甲白厄 factions 空 → board/formation 中性 1.0,raw 低但总分可能高),
     故不验 raw comp_score 降序(旧断言假设错,反甲白厄 factions 修正后暴露)。"""
-    s = GameState(round_num=5, gold=50)
+    s = CwWorkFrame(round_num=5, gold=50)
     cfg = _cfg(character_priority=[], faction_priority=[])
     ctx = make_score_context(_bridge(s))
     top3 = select_comp(_bridge(s), ctx, cfg, top_n=3)
@@ -334,8 +334,8 @@ def test_difficulty_phase_factor_early_prefers_easy() -> None:
     """早期/穷:easy×1.15、hard×0.85;后期均 1.0。"""
     列车 = get_comp("列车同行")     # easy
     白厄 = get_comp("反甲白厄")     # hard
-    early = GameState(round_num=1, gold=10)
-    late = GameState(round_num=10, gold=80)
+    early = CwWorkFrame(round_num=1, gold=10)
+    late = CwWorkFrame(round_num=10, gold=80)
     assert _difficulty_phase_factor(列车, _bridge(early)) > _difficulty_phase_factor(白厄, _bridge(early)), (
         "早期 easy 因子 > hard"
     )
@@ -351,15 +351,15 @@ def test_difficulty_phase_factor_global_elapsed_not_per_plane() -> None:
     """
     列车 = get_comp("列车同行")   # easy
     # plane1 r2 = 全局 elapsed 2 ≤3(真早期)→ easy 因子 >1.0
-    assert _difficulty_phase_factor(列车, _bridge(GameState(plane=1, round_num=2, gold=80))) > 1.0, (
+    assert _difficulty_phase_factor(列车, _bridge(CwWorkFrame(plane=1, round_num=2, gold=80))) > 1.0, (
         "plane1 r2 全局 elapsed 2 ≤3 → 早期 easy 因子 >1.0"
     )
     # plane2 r2 = 全局 elapsed 8 >3(非早期)→ =1.0(原 per-plane 会误判 r2≤3 早期)
-    assert _difficulty_phase_factor(列车, _bridge(GameState(plane=2, round_num=2, gold=80))) == 1.0, (
+    assert _difficulty_phase_factor(列车, _bridge(CwWorkFrame(plane=2, round_num=2, gold=80))) == 1.0, (
         "plane2 r2 全局 elapsed 8 >3 → 非早期 =1.0(防 per-plane 误判)"
     )
     # plane3 r3 = 全局 elapsed 15 >3(非早期)→ =1.0
-    assert _difficulty_phase_factor(列车, _bridge(GameState(plane=3, round_num=3, gold=80))) == 1.0, (
+    assert _difficulty_phase_factor(列车, _bridge(CwWorkFrame(plane=3, round_num=3, gold=80))) == 1.0, (
         "plane3 r3 全局 elapsed 15 >3 → 非早期 =1.0"
     )
 
@@ -370,7 +370,7 @@ def test_difficulty_phase_factor_global_elapsed_not_per_plane() -> None:
 def test_comp_score_in_range_and_breakdown_keys() -> None:
     """comp_score 在合理范围;breakdown 含 schema 稳定字段(telemetry 用)。"""
     阿雅 = get_comp("昼神阿雅")
-    s = GameState(board={"昼之半神": 4}, round_num=8, gold=60,
+    s = CwWorkFrame(board={"昼之半神": 4}, round_num=8, gold=60,
                   enemy_affixes=["禁速"], active_env="昼之半神概念股")
     ctx = make_score_context(_bridge(s))
     sc = comp_score(阿雅, _bridge(s), ctx)
@@ -386,7 +386,7 @@ def test_comp_score_in_range_and_breakdown_keys() -> None:
 def test_maybe_pivot_no_target_returns_best() -> None:
     """target=None → maybe_pivot 返回 select_comp 第一(承诺转型到最优)。"""
     cfg = _cfg()
-    s = GameState(round_num=5, gold=50)
+    s = CwWorkFrame(round_num=5, gold=50)
     result = maybe_pivot(_bridge(s), make_score_context(_bridge(s)), cfg, target=None)
     assert result is not None
 
@@ -394,7 +394,7 @@ def test_maybe_pivot_no_target_returns_best() -> None:
 def test_maybe_pivot_low_hp_returns_fastest_easy() -> None:
     """hp<30 保命转型 → 返回成型最快的 easy comp(typical_form_round 最小)。"""
     cfg = _cfg()
-    s = GameState(hp=20, round_num=5, gold=50)
+    s = CwWorkFrame(hp=20, round_num=5, gold=50)
     result = maybe_pivot(_bridge(s), make_score_context(_bridge(s)), cfg, target=get_comp("昼神阿雅"))
     assert result is not None
     # 列车同行(easy,typical_form_round=4)是成型最快的 easy 之一
@@ -407,7 +407,7 @@ def test_maybe_pivot_low_hp_signal3_preempts_signal1() -> None:
     target=追击飞霄(medium),board 成型列车同行(easy,full progress)→ 保命选 列车同行(easy+board 支持),
     非弃成型切未成型 fast-easy。"""
     cfg = _cfg(faction_priority=["列车同行"])
-    s = GameState(board={"列车同行": 4}, round_num=5, plane=1, hp=20, gold=50)  # 列车同行成型(信号1 会选)
+    s = CwWorkFrame(board={"列车同行": 4}, round_num=5, plane=1, hp=20, gold=50)  # 列车同行成型(信号1 会选)
     result = maybe_pivot(_bridge(s), make_score_context(_bridge(s)), cfg, target=get_comp("追击飞霄"))
     assert result is not None, "hp 危险应 pivot"
     assert result.form_difficulty == "easy", "保命只选 easy comp"
@@ -423,7 +423,7 @@ def test_maybe_pivot_d141_no_easy_progress_keeps_target() -> None:
     0-foundation → 必死。本测锁修法:该场景保持 target,不弃有 progress 的去追 0-progress easy。"""
     cfg = _cfg()
     # board 只有追击(追击飞霄 factions)→ 追击飞霄有 progress;列车同行/DOT队(easy)都 0 progress。
-    s = GameState(board={"追击": 2}, round_num=8, plane=1, hp=20, gold=50)
+    s = CwWorkFrame(board={"追击": 2}, round_num=8, plane=1, hp=20, gold=50)
     result = maybe_pivot(_bridge(s), make_score_context(_bridge(s)), cfg, target=get_comp("追击飞霄"))
     assert result is None, "无 easy comp 有 progress + target 有 progress → 保持 target,不转 0-foundation easy"
 
@@ -432,7 +432,7 @@ def test_maybe_pivot_better_comp_emerges() -> None:
     """信号 1(更优涌现):target=反甲白厄(白厄无阵营/form_progress 0),场面成型列车同行(更优 + 分差>PIVOT_GAP)
     → pivot 到列车同行。early round(remaining 足够)+ hp 健康 → 信号 2/3 不触发,只验信号 1。"""
     cfg = _cfg(faction_priority=["列车同行"])
-    s = GameState(board={"列车同行": 4}, round_num=2, plane=1, hp=100, gold=50)  # 列车同行成型
+    s = CwWorkFrame(board={"列车同行": 4}, round_num=2, plane=1, hp=100, gold=50)  # 列车同行成型
     target = get_comp("反甲白厄")  # 白厄无阵营 → 远不如已成型的列车同行
     result = maybe_pivot(_bridge(s), make_score_context(_bridge(s)), cfg, target=target)
     assert result is not None, "更优 comp 涌现应 pivot"
@@ -443,7 +443,7 @@ def test_maybe_pivot_ceiling_unreachable_switches_easy() -> None:
     """信号 2(ceiling 不可达):target=阿雅(form_round=8)但 plane3 round5 → remaining≈1<8;
     board 部分成型使阿雅=best(信号 1 跳过)→ 切成型最快的 easy comp。"""
     cfg = _cfg(faction_priority=["昼之半神"])
-    s = GameState(board={"昼之半神": 2}, round_num=5, plane=3, hp=100, gold=50)  # 阿雅部分但来不及
+    s = CwWorkFrame(board={"昼之半神": 2}, round_num=5, plane=3, hp=100, gold=50)  # 阿雅部分但来不及
     target = get_comp("昼神阿雅")
     result = maybe_pivot(_bridge(s), make_score_context(_bridge(s)), cfg, target=target)
     assert result is not None, "target 来不及成型应 pivot"
@@ -454,7 +454,7 @@ def test_maybe_pivot_formed_target_no_ceiling_pivot() -> None:
     """信号2 已成型守卫:target=阿雅已成型(board=昼之半神:4=form_tiers)+ plane3 round5
     (remaining≈1<8)→ **不**因 ceiling 切走(form_progress=1.0 豁免信号2;不该放弃已完成 comp)。"""
     cfg = _cfg(faction_priority=["昼之半神"])
-    s = GameState(board={"昼之半神": 4}, round_num=5, plane=3, hp=100, gold=50)  # 阿雅成型
+    s = CwWorkFrame(board={"昼之半神": 4}, round_num=5, plane=3, hp=100, gold=50)  # 阿雅成型
     target = get_comp("昼神阿雅")
     result = maybe_pivot(_bridge(s), make_score_context(_bridge(s)), cfg, target=target)
     assert result is None, "已成型 target 不该因 ceiling 切走(信号2 已成型守卫)"
@@ -466,7 +466,7 @@ def test_maybe_pivot_formed_target_no_ceiling_pivot() -> None:
 def test_shop_supply_shop_present_high() -> None:
     """comp 阵营在 shop 出现 → 1.0(可成型:能买到核心)。"""
     comp = get_comp("列车同行")  # factions=["列车同行"]
-    s = GameState(shop=[ShopCard(x=0, faction="列车同行")])
+    s = CwWorkFrame(shop=[ShopCard(x=0, faction="列车同行")])
     assert shop_supply(comp, _bridge(s)) == 1.0
 
 
@@ -476,14 +476,14 @@ def test_shop_supply_board_only_low() -> None:
     r99:空 shop 语义改「无商店相位」(奖励关/事件节点,返 1.0 中性——无观测≠断供,
     局18 drought 白涨实证);board-only 弱信号场景需 shop 有真牌面。"""
     comp = get_comp("昼神阿雅")  # factions=["昼之半神"]
-    s = GameState(board={"昼之半神": 1}, shop=[ShopCard(x=0, faction="击破")])
+    s = CwWorkFrame(board={"昼之半神": 1}, shop=[ShopCard(x=0, faction="击破")])
     assert shop_supply(comp, _bridge(s)) == 0.3
 
 
 def test_shop_supply_neither_zero() -> None:
     """阵营 shop/board 都无 → 0.0(商店刷不出 → 不可成型)。"""
     comp = get_comp("列车同行")
-    s = GameState(shop=[ShopCard(x=0, faction="击破")], board={"持续伤害": 2})
+    s = CwWorkFrame(shop=[ShopCard(x=0, faction="击破")], board={"持续伤害": 2})
     assert shop_supply(comp, _bridge(s)) == 0.0
 
 
@@ -494,12 +494,12 @@ def test_shop_supply_neither_zero() -> None:
 
 def test_select_megastar_no_target_returns_first() -> None:
     """无 target → 返回第一个可选(naive 兜底)。"""
-    assert select_megastar(GameState(), None, ["花火", "知更鸟"]) == "花火"
+    assert select_megastar(CwWorkFrame(), None, ["花火", "知更鸟"]) == "花火"
 
 
 def test_select_megastar_empty_returns_none() -> None:
     """无可选 → None。"""
-    assert select_megastar(GameState(), None, []) is None
+    assert select_megastar(CwWorkFrame(), None, []) is None
 
 
 # —— COMP_LIBRARY 完整性 ——
@@ -571,7 +571,7 @@ def test_held_strategy_fit_opportunity_pivot() -> None:
     assert held_strategy_fit(other, ["追击星徽套组"]) == 0.5, "无关 comp 中性(有策略无命中)"
     assert held_strategy_fit(feixiao, []) is None, "无持有策略 → None(动态剔除)"
     # 端到端:空板 + 持有追击套组 → select_comp 偏向追击(机会型 pivot)
-    _board_free = GameState(gold=50, round_num=3, level=5, plane=1, hp=100, board={})
+    _board_free = CwWorkFrame(gold=50, round_num=3, level=5, plane=1, hp=100, board={})
     _with = _board_free.copy()
     _with.active_strategies = ["追击星徽套组"]
     pick_with = select_comp(_bridge(_with), make_score_context(_bridge(_with)), _cfg())[0]
@@ -661,7 +661,7 @@ def test_defining_augment_overrides_board_investment() -> None:
 
     lv5 板{列车同行:2}(fp 0.5 领先)+ 持有黑塔纪元 → select_comp 应选大黑塔银河学者。
     """
-    s = GameState(gold=50, round_num=4, level=5, plane=1, hp=100, board={"列车同行": 2})
+    s = CwWorkFrame(gold=50, round_num=4, level=5, plane=1, hp=100, board={"列车同行": 2})
     s.active_strategies = ["黑塔纪元"]
     pick = select_comp(_bridge(s), make_score_context(_bridge(s)), _cfg())[0]
     assert pick.name == "大黑塔银河学者", f"定义型 augment 应压过板面投入,得 {pick.name}"
@@ -670,7 +670,7 @@ def test_defining_augment_overrides_board_investment() -> None:
 def test_maybe_pivot_defining_augment_unlocks_commit() -> None:
     """评审🔴3c:已 commit 的 target 可被定义型 augment 解锁转型(与 losing streak 同级)。"""
     # 列车已 commit(fp≥0.4),持有黑塔纪元 → best=大黑塔 应能翻转
-    s = GameState(gold=50, round_num=4, level=5, plane=1, hp=100, board={"列车同行": 2})
+    s = CwWorkFrame(gold=50, round_num=4, level=5, plane=1, hp=100, board={"列车同行": 2})
     s.active_strategies = ["黑塔纪元"]
     ctx = make_score_context(_bridge(s))
     assert target_committed(get_comp("列车同行"), _bridge(s)), "前置:列车已 commit"

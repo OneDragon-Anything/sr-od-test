@@ -32,7 +32,7 @@ import json
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     DEPLOYED_CAPACITY,
 )

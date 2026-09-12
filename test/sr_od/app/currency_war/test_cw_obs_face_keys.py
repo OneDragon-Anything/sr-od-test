@@ -26,9 +26,9 @@ import inspect
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     can_deploy_single,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -114,7 +114,7 @@ class TestThetaUnavailableCauseKeys:
         防混淆;判返回值不变 = SwitchOutcome(False,'theta_unavailable'))。"""
         sess = StrategySession()
         state_of(sess).cw4_counters = {}   # 计数载体(entry 每局创建;直调需预置)
-        out = proof.should_switch(GameState(), sess, None, None)
+        out = proof.should_switch(CwWorkFrame(), sess, None, None)
         assert out.event is False and out.key == 'theta_unavailable'
         ct = state_of(sess).cw4_counters
         assert ct.get('theta_unavailable') == 1
@@ -130,7 +130,7 @@ class TestBoardTargetLineWriter:
         """空板 = 0(板面真空事实态照写不虚构);轮键戳盖章
         (sim 引擎缺写守卫不重复触发)。"""
         sess = StrategySession()
-        st = GameState()
+        st = CwWorkFrame()
         _mk_strat().write_shop_mirrors(st, sess)
         assert state_of(sess).v3_b_t == 0
         assert state_of(sess).v3_mirror_key == (1, 1)
@@ -140,7 +140,7 @@ class TestBoardTargetLineWriter:
         退役字段 v3_form_score 不再有写者)。char_id 用注册表真名
         (B_t 按注册表查羁绊,未注册假名不计)。"""
         sess = StrategySession()
-        st = GameState()
+        st = CwWorkFrame()
         _mk_strat().write_shop_mirrors(st, sess)
         base = state_of(sess).v3_b_t
         assert base == 0
@@ -153,7 +153,7 @@ class TestBoardTargetLineWriter:
     def test_out_of_line_and_unregistered_not_counted(self):
         """线外件与未注册件不计(件级承重口径:仅线内阵营集命中件计 1)。"""
         sess = StrategySession()
-        st = GameState()
+        st = CwWorkFrame()
         st.deployed = [BenchChar(slot=0, char_id='x_unregistered', star=1,
                                  faction='', position_pref='back')]
         _mk_strat().write_shop_mirrors(st, sess)
@@ -161,11 +161,11 @@ class TestBoardTargetLineWriter:
 
     def test_phase_retired_form_ok_present_read(self):
         """phase 维持无写端退役缺省;form_ok 已接 readiness_form_ok
-        板面现读(sim71 批死镜像处置;GameState 空板 → 现读 False,
+        板面现读(sim71 批死镜像处置;CwWorkFrame 空板 → 现读 False,
         与缺省同值但路径不同——写端已接线)。正确性细锁 =
         test_cw_obs_keys 直调写端面。"""
         sess = StrategySession()
-        st = GameState()
+        st = CwWorkFrame()
         st.deployed = [BenchChar(slot=0, char_id='x', star=1,
                                  faction='仙舟', position_pref='back')]
         _mk_strat().write_shop_mirrors(st, sess)

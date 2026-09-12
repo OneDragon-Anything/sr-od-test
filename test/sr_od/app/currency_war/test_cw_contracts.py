@@ -37,7 +37,7 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
@@ -379,7 +379,7 @@ class TestNoBypassDirectCalls:
 class TestMandateArm1Wiring:
 
     def _frame(self, deploy_cap):
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             DEPLOYED_CAPACITY,
         )
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
@@ -395,7 +395,7 @@ class TestMandateArm1Wiring:
     def test_constant_cap_feed_violates_and_abstains(self):
         """对抗场景 A 复验:固定槽表常数 cap 喂入(无 state 派生链)
         ⇒ 违例计数 + M3 弃权(修复前=零计数+M3 照发,旁路实证形态)。"""
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             DEPLOYED_CAPACITY,
         )
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate

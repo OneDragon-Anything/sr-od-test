@@ -30,13 +30,13 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     board_state_of,
     register_sig_actors,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
-    GameState,
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwWorkFrame,
     RefreshShop,
 )
 from sr_od.application.currency_war.obs import cw_shop_refresh_obs
@@ -53,7 +53,7 @@ from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
 from sr_od.application.currency_war.telemetry import defects as _defects
 from test.conftest import SrTestContext
 
-# 写入口签名 actor 在册(测试写面,ADR-0634;同 test_cw_board_state_consume 先例)
+# 写入口签名 actor 在册(测试写面,ADR-0634;同 test_cw_game_state_consume 先例)
 register_sig_actors('TestRefreshButtonWriter')
 
 _PRICE_RECT = Rect(1584, 513, 1664, 558)   # = screen_info「文本-刷新价格」建档值
@@ -195,8 +195,8 @@ def _drive_refresh(monkeypatch: pytest.MonkeyPatch,
                    ledger: object,
                    balance: int | None,
                    defect_calls: list | None = None) -> \
-        object:   # BoardState(惰性注解,免内核导入面上移)
-    """驱动一次 RefreshShop 落地门;每用例新 session(新局新 BoardState,
+        object:   # GameState(惰性注解,免内核导入面上移)
+    """驱动一次 RefreshShop 落地门;每用例新 session(新局新 GameState,
     防跨用例计数串染),返回该局 bs 供断言。"""
     if defect_calls is not None:
         monkeypatch.setattr(_defects, 'record_defect',
@@ -209,7 +209,7 @@ def _drive_refresh(monkeypatch: pytest.MonkeyPatch,
                             family='logic_hook', actor='TestRefreshButtonWriter',
                             mode='compute'))
     aop = RefreshShopOp(RefreshShop())
-    state = GameState(bench=[])
+    state = CwWorkFrame(bench=[])
     cw_op_buy_cards.apply_action_outcome(
         aop, aop.action, True, state,
         SimpleNamespace(session=session), ledger, [])
@@ -306,7 +306,7 @@ def _feed_ctx(sess: SimpleNamespace) -> SimpleNamespace:
 
 
 def _patch_feed_readers(monkeypatch: pytest.MonkeyPatch) -> None:
-    """观察流其他 reader 桩(零像素,复刻 test_cw_board_state._feed 套路)。"""
+    """观察流其他 reader 桩(零像素,复刻 test_cw_game_state._feed 套路)。"""
     from sr_od.application.currency_war.kernel import cw_reconcile
     from sr_od.application.currency_war.obs import cw_observation as obs
 

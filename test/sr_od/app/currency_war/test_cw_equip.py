@@ -69,7 +69,7 @@ from sr_od.application.currency_war.kernel.cw_equip_env import (
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     RunEquip,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )

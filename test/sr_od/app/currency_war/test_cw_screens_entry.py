@@ -960,7 +960,7 @@ from cv2.typing import MatLike
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.kernel.cw_state import HP_SAFE_THRESHOLD
+from sr_od.application.currency_war.kernel.cw_vocab import HP_SAFE_THRESHOLD
 from sr_od.application.currency_war.obs.cw_observation import (
     read_game_state,
     read_hp_opt,

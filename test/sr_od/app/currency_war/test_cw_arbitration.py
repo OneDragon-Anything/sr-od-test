@@ -95,17 +95,17 @@ def _stub_read_game_state(monkeypatch, tmp_path: Path, prep_like: bool):
     """read_game_state 真链驱动(reader 桩面镜像 test_cw_node_screens 注入
     手法),board 段注入分歧帧:badge_ocr=3 vs computed=2。返回 (state, rows)。
 
-    删除波 1:证据行归宿 = journal obs_event(装 tmp 账本 + BoardState 供给
+    删除波 1:证据行归宿 = journal obs_event(装 tmp 账本 + GameState 供给
     provider);rows 取账本 obs_event 行(field='board')。"""
     import sr_od.application.currency_war.kernel.cw_observe as core_obs
     from sr_od.application.currency_war.kernel import (
         cw_state_journal,
         cw_telemetry_exit,
     )
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_of,
     )
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
     cw_state_journal.install_state_telemetry(
         tmp_path / 'state' / 'journal.jsonl', flush_every=1,
@@ -181,10 +181,10 @@ def test_t2_board_no_divergence_zero_rows(tmp_path: Path, monkeypatch):
         cw_state_journal,
         cw_telemetry_exit,
     )
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_of,
     )
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
     cw_state_journal.install_state_telemetry(
         tmp_path / 'state' / 'journal.jsonl', flush_every=64,

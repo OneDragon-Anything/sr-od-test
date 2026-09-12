@@ -64,7 +64,7 @@ class TestFakeEnvDirectOuts:
         费用通道同形,merge_mechanics §2.6)。"""
         from fixtures.cw_fake_game.fake_match import _upgrade_direct_outs
 
-        from sr_od.application.currency_war.kernel.cw_state import ShopCard
+        from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
         name = next(n for n in CHARACTERS if CHARACTERS[n].cost == 3)
         base = ShopCard(x=0, name=name, cost=3, star=1)
         for s in range(200):

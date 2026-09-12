@@ -36,10 +36,10 @@ from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    GameState,
+    CwWorkFrame,
     RefreshShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -85,7 +85,7 @@ def _t3_name(session, k: tuple[str, ...]) -> str:
     raise AssertionError('注册表缺少线外无效果角色(锁前提失效)')
 
 
-def _t3_premise(session, state: GameState, k: tuple[str, ...],
+def _t3_premise(session, state: CwWorkFrame, k: tuple[str, ...],
                 t3: str) -> None:
     """收窄差的存在性地基:T3 活跃名 ∈ 投影排除集(旧代理视角不可变现)
     ∧ ∉ m4_fuel 排除集(腾席臂视角可转化放行)。两集合差 = T3 活跃集,
@@ -110,7 +110,7 @@ class TestP92SeatRecoverableDirect:
         comp = pair_target_comp(_COMP_PAIR)
         k = tuple(line_members(comp))
         s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-        st = GameState(gold=100, level=4, plane=1, round_num=_ROUND,
+        st = CwWorkFrame(gold=100, level=4, plane=1, round_num=_ROUND,
                        node_type='reward', hp=100)
         st.bench = list(bench)
         st.deployed = [_bc('前线', slot=1)]
@@ -152,7 +152,7 @@ class TestP92SeatRecoverableDirect:
         t3 = _t3_name(s, k)
         assert sell_gate.register_launch(
             s, t3, cause='stall_protect', round_num=_ROUND)
-        st = GameState(gold=100, level=4, plane=1, round_num=_ROUND,
+        st = CwWorkFrame(gold=100, level=4, plane=1, round_num=_ROUND,
                        node_type='reward', hp=100)
         st.bench = [_bc(t3, star=1, slot=1)]
         st.deployed = [_bc('前线', slot=1)]
@@ -165,7 +165,7 @@ class TestP92SeatRecoverableDirect:
 # ===== 集成行为差锁(P92 门经 decide_shop_screen)=====
 
 
-def _p92_frame(extra_bench_last: BenchChar) -> tuple[GameState, object, str]:
+def _p92_frame(extra_bench_last: BenchChar) -> tuple[CwWorkFrame, object, str]:
     """P92 集成帧(直达构造;缺员腾席臂隔离声明):
 
     - gold=100 > g*=50 过 r1 账/r2 预算门直达 P92 位;店空 ⇒ 其余
@@ -197,7 +197,7 @@ def _p92_frame(extra_bench_last: BenchChar) -> tuple[GameState, object, str]:
     fill = BENCH_CAPACITY - 2 - len(bench_rest)
     assert fill >= 1, '锁前提:线成员过多(席面装不下)'
     s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-    st = GameState(gold=100, level=4, plane=1, round_num=_ROUND,
+    st = CwWorkFrame(gold=100, level=4, plane=1, round_num=_ROUND,
                    node_type='reward', hp=100)
     st.deployed = st_deployed
     bench = [_bc(w, star=1, slot=1)]

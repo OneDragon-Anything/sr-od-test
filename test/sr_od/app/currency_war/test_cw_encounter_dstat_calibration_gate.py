@@ -21,7 +21,7 @@ from __future__ import annotations
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_events import EncounterOption
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -51,8 +51,8 @@ def _session() -> StrategySession:
     return s
 
 
-def _state() -> GameState:
-    return GameState(gold=20, hp=100, plane=1, round_num=2)
+def _state() -> CwWorkFrame:
+    return CwWorkFrame(gold=20, hp=100, plane=1, round_num=2)
 
 
 @pytest.fixture()

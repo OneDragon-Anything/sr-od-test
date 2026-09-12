@@ -47,14 +47,14 @@ def run_id(monkeypatch):
 
 _SRC_CW = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
            / 'currency_war')
-_BOARD_STATE_MODULE = 'cw_board_state.py'
+_BOARD_STATE_MODULE = 'cw_game_state.py'
 _EFFECT_INVENTORY_MODULE = 'cw_effect_inventory.py'
 
 #: D1-① 旁路锁扫描根豁免:容器本体(kernel)——Field 属性赋值的唯一合法面
 #: (工程结构 write_seq/frame_obs/node_hist_ord/hb_* 与 _swap 内部件)。
 _BYPASS_EXEMPT = {_BOARD_STATE_MODULE}
 
-#: D1-① 接收者词表:全仓 BoardState 实例的既定接收者命名(bs 绝对主导,
+#: D1-① 接收者词表:全仓 GameState 实例的既定接收者命名(bs 绝对主导,
 #: kernel/obs/prep/cw_op/sim 一致;新接收者名先登记本表再使用——扩面纪律
 #: 同 ADR-0571 grep 守卫)。边界申报:换名接收者的赋值本锁不可见,接收者
 #: 命名纪律 = 本锁的登记面前提。
@@ -107,7 +107,7 @@ def _scan_src(exempt: set[str], guard) -> dict[str, str]:
 
 
 def test_board_state_field_bypass_grep_lock() -> None:
-    """旁路直改锁(§3.2.4 硬约束 1①):容器外(kernel/cw_board_state.py 之外
+    """旁路直改锁(§3.2.4 硬约束 1①):容器外(kernel/cw_game_state.py 之外
     全子树)零「bs/board_state.<attr> =」形态——Field 帧替换只经 observe/
     carry/write_prior/write_logic/relay API(两态制 ADR-0651:expect/confirm
     已废除,write_logic = 标准逻辑写通道);工程结构
@@ -116,10 +116,10 @@ def test_board_state_field_bypass_grep_lock() -> None:
         '变异自检未命中'
     assert _bypass_guard_hits('bs.gold == 1') == [], '等比比较误报(== 形)'
     assert _bypass_guard_hits('state.gold = 1') == [], \
-        'GameState 接收者不在禁令内(旧容器直改归其自身纪律)'
+        'CwWorkFrame 接收者不在禁令内(旧容器直改归其自身纪律)'
     offenders = _scan_src(_BYPASS_EXEMPT, _bypass_guard_hits)
     assert not offenders, (
-        'BoardState 属性被容器外直改(禁令 = §3.2.4 硬约束 1:op 层一律经 '
+        'GameState 属性被容器外直改(禁令 = §3.2.4 硬约束 1:op 层一律经 '
         f'API 写,全仓硬约束):{offenders}')
 
 
@@ -129,7 +129,7 @@ def test_board_state_field_bypass_grep_lock() -> None:
 def test_effects_internal_mutation_grep_lock() -> None:
     """效果域直摸锁(§3.2.4 硬约束 1②):``.entries`` 内部结构变异只允许
     发生在 inventory 方法域本体(cw_effect_inventory.py);其余全子树
-    (含 cw_board_state 桥/快照——只读)禁直达 entries 变异。合法读面
+    (含 cw_game_state 桥/快照——只读)禁直达 entries 变异。合法读面
     (3 处迭代)不在禁令。变异自检防判据失准。"""
     assert _effects_guard_hits(
         'bs.effects.entries.append(x)') == ['effects.entries.append'], \
@@ -149,7 +149,7 @@ def test_v32_effect_bridge_actor_registered() -> None:
     """v3.2-G4:EffectLedgerBridge 登记类属在册(§3.2.1 登记面;桥写点
     显式签名化时的前置——project_effect_capacity/grant_effect_node_
     refresh_balance 的在册身份)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         actor_registered,
     )
     assert actor_registered('EffectLedgerBridge'), \
@@ -174,13 +174,13 @@ def test_resumed_flag_live_disables_popup_leg(journal, run_id, monkeypatch):
     """D2 主锁(全走生产漏斗):恢复局旗标(执行态)经漏斗进派生——恢复局
     首弹窗在 hist 空时禁用不猜(R3 规则六),防误推断开局节点 1;旗标 False
     的对照臂同序列正常推断候选 1(正常新局开局推断合法,不误伤)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_of,
     )
     from sr_od.application.currency_war.kernel.cw_exec_state import (
         exec_state_of,
     )
-    from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
     from sr_od.application.currency_war.obs import cw_shop_refresh_obs
     from sr_od.application.currency_war.obs.cw_observation import (
         PHASE_BATTLE_OR_TRANSIT,
@@ -197,12 +197,12 @@ def test_resumed_flag_live_disables_popup_leg(journal, run_id, monkeypatch):
             exec_state_of(session).cw_resumed_match = True   # 生产写端 = cw_loop 两确认点
         ctx = _resumed_probe_ctx(session)
         # 帧 1:战斗/过渡相位(恢复局重入首帧形态)→ 漏斗写分支 token
-        state = GameState()
+        state = CwWorkFrame()
         state.plane, state.round_num = 2, 3
         _feed_board_state(ctx, state, PHASE_BATTLE_OR_TRANSIT, None,
                           frozenset(), had_hp_real=False)
         # 帧 2:商店面板先被采到(恢复局首弹窗形态)→ 弹窗腿判定
-        state2 = GameState()
+        state2 = CwWorkFrame()
         state2.plane, state2.round_num = 2, 3
         _feed_board_state(ctx, state2, PHASE_PREP_SHOP_OPEN, None,
                           frozenset(), had_hp_real=False)

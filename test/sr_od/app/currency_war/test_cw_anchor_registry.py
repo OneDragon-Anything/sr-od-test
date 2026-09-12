@@ -216,7 +216,7 @@ def test_anchor_mechanism_write_direction_isolation():
     """写向隔离锁(§12.4-B④):①机制 API 面无 ctx/session/op 入参
     (拿不到就写不了,结构性隔离);②机制源面零停机/决策域写入词
     (锚钩子体调 stop_running = 红;观察写入 API 之外写决策域 = 红;
-    BoardState 观察写入合法面归未来钩子体,机制面零涉)。扫描根 =
+    GameState 观察写入合法面归未来钩子体,机制面零涉)。扫描根 =
     本批锚机制文件;触发口接线批落钩子体时同批扩根(先例 = ADR-0571
     grep 守卫扩面纪律)。"""
     import sr_od.application.currency_war.kernel.cw_anchor as cw_anchor

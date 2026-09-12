@@ -24,22 +24,22 @@ from collections import Counter
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BATTLE_WAIT_CONTEXT,
     BS_SCHEMA_VERSION,
     SCREEN_BOSS_BRIEFING,
     SCREEN_NODE_TYPE_DIRECT,
     SCREEN_PLANE_TRANSITION,
-    BoardState,
+    GameState,
     NodeKey,
     chain_node_type,
 )
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors as _register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_state_journal import (
@@ -128,7 +128,7 @@ def _advance_rows(journal) -> list[dict]:
 def test_plane_transition_leg_advances_next_plane_r1(journal, run_id) -> None:
     """§3.4.1 规则②:0q 被采到 → 逻辑节点 = (当前位面+1, 1)。位面来源① =
     调用方顶栏读数 phase_round;候选经坐标系公式 = plane*9+1(基 1)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 9)                                   # 腿 A:hist=9
     bs.observe_screen_context(SCREEN_PLANE_TRANSITION,
                               phase_round=(1, 9))
@@ -146,7 +146,7 @@ def test_plane_transition_leg_advances_next_plane_r1(journal, run_id) -> None:
 def test_plane_transition_leg_plane_from_observed_mirror(journal, run_id) -> None:
     """规则②位面来源② = bs.node 观察镜像(plane;生产 cw_loop 分支写点不携
     phase_round,镜像顶栏遗产为当前位面来源)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.node, NodeKey(plane=1, round_num=9, kind='boss'),
                sig=_sig())
     _wait(bs)
@@ -157,7 +157,7 @@ def test_plane_transition_leg_plane_from_observed_mirror(journal, run_id) -> Non
 
 def test_plane_transition_leg_plane_from_hist_derivation(journal, run_id) -> None:
     """规则②位面来源③ = hist 反解((hist-1)//9+1;镜像与 phase_round 双缺)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 9)                                   # hist=9,镜像 None
     bs.observe_screen_context(SCREEN_PLANE_TRANSITION)  # 无 phase_round
     assert bs.node_ord.value == 10, 'hist=9 反解位面 1 → (2,1)=10'
@@ -166,7 +166,7 @@ def test_plane_transition_leg_plane_from_hist_derivation(journal, run_id) -> Non
 def test_plane_transition_leg_reentry_deduped(journal, run_id) -> None:
     """共同语义:候选 ≤ hist 不写不锚——过渡屏多 loop pass 重复写点零重推
     (去重键已占,同序恰一次推进)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 9)
     bs.observe_screen_context(SCREEN_PLANE_TRANSITION, phase_round=(1, 9))
     n = len(_derive_rows(journal, 'derive_node_plane_transition'))
@@ -179,7 +179,7 @@ def test_plane_transition_leg_reentry_deduped(journal, run_id) -> None:
 def test_plane_transition_leg_no_plane_source_no_guess(journal, run_id) -> None:
     """开局过渡屏(投资环境前)无「当前位面」可推:三来源全缺 → 禁猜不写,
     交规则①④计数(v3.1-N5 同簇禁猜纪律)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe_screen_context(SCREEN_PLANE_TRANSITION)
     assert bs.node_ord.value is None
     assert bs.node_hist_ord is None
@@ -194,7 +194,7 @@ def test_boss_brief_leg_advances_current_plus_one_no_round9_hardcode(
     """§3.4.1 规则③:0p 被采到 → 逻辑节点 = 当前节点+1。平面 2 简报 → 13
     (禁写死 round=9:boss 序位随位面格数/环境加节点漂移,简报证据自带类型,
     序位只由「当前+1」承载)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 2, 3)                                   # hist = 9+3 = 12
     bs.observe_screen_context(SCREEN_BOSS_BRIEFING)
     assert bs.node_ord.value == 13, '当前(2,3)+1 → ord 13(非写死 9)'
@@ -208,7 +208,7 @@ def test_boss_brief_leg_advances_current_plus_one_no_round9_hardcode(
 def test_boss_brief_leg_type_boss_written_with_advance(journal, run_id) -> None:
     """规则③类型随简报自带:推进同行为批次写 node.kind='boss'(类型派生
     经节点域,§3.1.3 节点域③格;(plane,round) 由目标序坐标系公式反解)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 8)                                   # hist=8
     bs.observe_screen_context(SCREEN_BOSS_BRIEFING)
     assert bs.node_ord.value == 9
@@ -222,7 +222,7 @@ def test_boss_brief_leg_type_boss_written_with_advance(journal, run_id) -> None:
 
 def test_boss_brief_leg_unknown_current_no_guess(journal, run_id) -> None:
     """当前节点未知(effective/hist 双空)→ +1 不可计算,禁猜不写。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe_screen_context(SCREEN_BOSS_BRIEFING)
     assert bs.node_ord.value is None
     assert bs.node.value is None
@@ -232,7 +232,7 @@ def test_boss_brief_leg_unknown_current_no_guess(journal, run_id) -> None:
 def test_boss_brief_leg_repeat_deduped_type_idempotent(journal, run_id) -> None:
     """重复 0p(多 loop pass 写点):幂等锚(镜像 boss 节点键 = 本腿类型
     回执)命中 → 推进零重推零类型重写,简报屏重复现身零新增行。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 8)
     bs.observe_screen_context(SCREEN_BOSS_BRIEFING)
     n = len(_derive_rows(journal, 'derive_node_boss_brief'))
@@ -256,7 +256,7 @@ def test_boss_flow_rule3_suppresses_popup_double_advance(journal, run_id) -> Non
     【R1.2 锁语义重推】本锁前身为 R1.1「0p 纯前驱零腿」形态锁——四规则组
     终版(用户 2026-09-10 裁)把 0p 升格为规则③触发面,推进 actor 由弹窗腿
     改为简报腿,锁意图(boss 节点恰一次推进)不变。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 8)                                     # 腿 A:hist=8
     bs.observe_screen_context(SCREEN_BOSS_BRIEFING)     # ③:9 + boss 类型
     assert bs.node_ord.value == 9 and bs.node_hist_ord == 9
@@ -278,7 +278,7 @@ def test_plane_transition_flow_quiet_shop_popup(journal, run_id) -> None:
     """跨位面级联破口锁(ADR-0630 修订节·守卫族终版同族):0q 推进 (2,1) 后,商店面板块
     若被采到,弹窗腿被结构性拒绝(prev=0q 出守卫族终版;缓存 c=9≠hist=10
     双防)——位面切换后节点序不级联 +1;过渡屏自身零类型写边界同锁。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 9)
     bs.observe_screen_context(SCREEN_PLANE_TRANSITION, phase_round=(1, 9))
     assert bs.node_hist_ord == 10
@@ -293,7 +293,7 @@ def test_plane_transition_then_prep_same_value_backfill(journal, run_id) -> None
     """跨位面序:0q 推进 (2,1) 后,新位面首备战帧同序 = 观察层补录(腿 A 兜底
     确认,same_value 形态,禁二次跃迁);镜像不被②/①造帧(镜像=观察帧事实,
     漏斗现读更新)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 9)
     bs.observe_screen_context(SCREEN_PLANE_TRANSITION, phase_round=(1, 9))
     assert bs.node_hist_ord == 10
@@ -313,7 +313,7 @@ def test_layer_split_raw_text_obs_ordinal_logic(journal, run_id) -> None:
     原始读数——备战帧顶栏原文落 top_bar_raw;节点序键 = 逻辑层字段,四条腿
     (备战=解析顶栏文本成序键/弹窗/0q/0p)全部 write_logic,无 observe 写
     序键的例外;序键无原文不猜(top_raw 缺位 → 原文字段不写)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 3, top_raw='备战阶段 1-3')
     assert bs.top_bar_raw.value == '备战阶段 1-3'
     assert bs.top_bar_raw.source == 'observation', '原文 = 观察层(observe)'
@@ -322,7 +322,7 @@ def test_layer_split_raw_text_obs_ordinal_logic(journal, run_id) -> None:
     raw_rows = [r for r in journal.rows if r['field'] == 'top_bar_raw']
     assert raw_rows and raw_rows[0]['sig']['family'] == 'obs'
     # 原文缺读形态:top_raw 缺位 → 原文字段不写(禁猜),序键照常派生
-    bs2 = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
     bs2.observe_screen_context('货币战争-备战', phase_round=(1, 5))
     assert bs2.top_bar_raw.value is None, '原文缺读不写(禁猜)'
     assert bs2.node_ord.value == 5, '序键派生不依赖原文字段(解析在派生段)'
@@ -336,7 +336,7 @@ def test_popup_dedicated_screens_direct_type(journal, run_id) -> None:
     (词表 = boss/supply/encounter/invest 同源,禁新造 token);目标节点 =
     弹窗腿推进后 hist(弹窗屏属即将进入的节点)。弹窗屏无顶栏,缓存守卫
     输入 = 离开节点的顶栏遗产(c == hist 才推进)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _wait(bs)
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 1))
     assert bs.node.value == NodeKey(plane=1, round_num=1, kind='encounter')
@@ -356,7 +356,7 @@ def test_popup_dedicated_screens_direct_type(journal, run_id) -> None:
 def test_shop_panel_type_undetermined_no_write(journal, run_id) -> None:
     """商店面板不专属(任意节点类型都开商店)→ 类型「未定型」零写;
     查现行链接线候件 B 实施批(:func:`chain_node_type` 接口在位,本批不接)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _wait(bs)
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))
     assert bs.node_ord.value == 1, '弹窗腿照常推进(序与类型分域)'
@@ -368,7 +368,7 @@ def test_shop_panel_type_undetermined_no_write(journal, run_id) -> None:
 def test_popup_reentry_type_targets_current_node(journal, run_id) -> None:
     """弹窗重入(prev ∉ 守卫集,零推进):类型目标 = hist(本弹窗所属节点
     已由首次现身推进)——同节点同类型 = same_value 形态。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _wait(bs)
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 1))
     assert bs.node_hist_ord == 1
@@ -383,7 +383,7 @@ def test_popup_reentry_type_targets_current_node(journal, run_id) -> None:
 def test_type_conflict_same_node_obs_event_newest_wins(journal, run_id) -> None:
     """类型冲突纪律(G10 同簇):同节点两直定值不一致 → obs_event 留证
     (禁静默)+ 最新直定值落位(最新观察=真相)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _wait(bs)
     bs.observe_screen_context('货币战争-遭遇节点', phase_round=(1, 1))
     assert bs.node.value == NodeKey(plane=1, round_num=1, kind='encounter')
@@ -402,7 +402,7 @@ def test_type_conflict_same_node_obs_event_newest_wins(journal, run_id) -> None:
 def test_derivation_fixed_order_node_domain_then_type(journal, run_id) -> None:
     """固定次序(用户终裁):写入落账后节点域判定 → 类型派生——0p 触发的
     推进行版本序先于类型行(同临界区顺序落账,无 hook 框架)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _prep(bs, 1, 8)
     bs.observe_screen_context(SCREEN_BOSS_BRIEFING)
     seq_field = [(r['v'], r['field']) for r in _rows(journal)
@@ -419,7 +419,7 @@ def test_chain_query_reserved_interface_honest_none(journal, run_id) -> None:
     """件 B 接口语义(§3.4/§3.8):现行链该位原值零内建回落;链缺 = token
     None(「现行链不知道」,不是「该位不存在」);hu_dist 随 token,链缺恒
     None。当前生产零链写端(件 B §④B)→ 恒诚实 None。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     q = chain_node_type(bs, 1, 3)
     assert q.token is None and q.hu_dist is None, \
         '链缺 = 现行链不知道(零内建回落禁把基线/台账当兜底)'
@@ -428,7 +428,7 @@ def test_chain_query_reserved_interface_honest_none(journal, run_id) -> None:
 def test_chain_query_position_addressing_on_injected_chain(journal, run_id) -> None:
     """链在位形态(测试注入;生产写端归件 B B-2/B-3):位寻址 = seq[i] 第
     i+1 轮(round 基 1,与 PlaneNodeLedger 下标语义同式);位越界 = None。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.write_logic(bs.node_path, ['reward', 'battle', 'supply'], sig=_lsig(),
                    produced_by='TestChainWriter')
     assert chain_node_type(bs, 1, 2).token == 'battle'
@@ -444,7 +444,7 @@ def test_four_leg_synthetic_walkthrough_each_node_advanced_once(
     """四腿合成走查(§3.4.3 写点完备性;开局→普通→boss→跨位面全流程一遍):
     每节点序恰一次推进(M3 验收判定基准 = 推进去重键);类型逐节点直定;
     每次跃迁恰一行推进写入。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # 开局:战斗窗 → 商店面板块先被采到(④→1)
     _wait(bs)
     bs.observe_screen_context('货币战争-备战-开商店', phase_round=(1, 1))

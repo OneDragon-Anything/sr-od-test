@@ -20,7 +20,7 @@ from pathlib import Path
 # ==== ① 桥残余登记集(波 5b 消点后现树实描;文件相对 currency_war 根)====
 # 每项带辖域标签:消点推进时按标签找归属批,禁无主红。
 _BRIDGE_REGISTERED: dict[str, str] = {
-    'kernel/cw_board_state.py': '机制本体(函数定义+退役 docstring)',
+    'kernel/cw_game_state.py': '机制本体(函数定义+退役 docstring)',
     # 波 5b 消点后仍活调用:
     'kernel/cw_economy.py': '活调用·标量投影缝无 session(结构性豁免 '
                            'ADR-0598),退役挂 session 通道批/T-7',
@@ -102,7 +102,7 @@ def test_back_size_dead_field_tombstone() -> None:
 def test_last_state_write_points_pinned_three() -> None:
     """last_state 写点计数钉定(退役挂执行侧装配源迁移 ADR-0530 尾批/T-7;
     本批不删写点——读者面 ~18 点未迁,先删=断执行侧装配源,设计序见
-    BoardState-数据结构设计「消费切换余量归属/迁移尾批」)。计数变化 =
+    GameState-数据结构设计「消费切换余量归属/迁移尾批」)。计数变化 =
     该面推进或扩面,须人工对账后更新钉值。口径 = AST 赋值语句(注释/
     docstring 提及不计,同型误报实证 = cw_loop docstring 内装箱示例)。"""
     import ast

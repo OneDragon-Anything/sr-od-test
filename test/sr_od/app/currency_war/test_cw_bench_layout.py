@@ -41,10 +41,10 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     ShopCard,
     bench_from_compact,
     bench_place,
@@ -130,7 +130,7 @@ def test_t280_case2_frame_replay_seed_and_buy_isomorphic():
     sess = StrategySession()
     assert reconcile_tracking(sess, _sift_read(), [], None, source='t') is True
     tracked = exec_state_of(sess).tracked_bench_chars
-    state = GameState(gold=30, level=3, round_num=4, hp=40)
+    state = CwWorkFrame(gold=30, level=3, round_num=4, hp=40)
     state.bench = pad_bench(deepcopy(tracked))   # 与 cw_op_buy_cards 播种同式
     state.deployed = []
     act = BuyCard(card=deepcopy(_BUY_CARD))
@@ -152,7 +152,7 @@ def test_full_visit_chain_guard_silent(monkeypatch):
     sess = StrategySession()
     assert reconcile_tracking(sess, _sift_read(), [], None, source='t') is True
     tracked = exec_state_of(sess).tracked_bench_chars
-    state = GameState(gold=30, level=3, round_num=4, hp=40)
+    state = CwWorkFrame(gold=30, level=3, round_num=4, hp=40)
     state.bench = pad_bench(deepcopy(tracked))
     state.deployed = []
     act_buy = BuyCard(card=deepcopy(_BUY_CARD))
@@ -160,7 +160,7 @@ def test_full_visit_chain_guard_silent(monkeypatch):
     mutate_bench_deployed(tracked, exec_state_of(sess).tracked_deployed, act_buy)
     cw_shop_action_ops.guard_expected_vs_tracked(proj, sess)
     # 第二动作:卖掉刚买的(两域同序转移)
-    from sr_od.application.currency_war.kernel.cw_state import SellBench
+    from sr_od.application.currency_war.kernel.cw_vocab import SellBench
     act_sell = SellBench(bench_idx=1, expect='丹恒·饮月')
     proj2 = simulate(proj, act_sell)
     mutate_bench_deployed(tracked, exec_state_of(sess).tracked_deployed, act_sell)
@@ -242,12 +242,12 @@ def test_epoch_stable_on_deployed_only_drift():
 
 # ===== S3 检差三步封装锁 =====
 
-def _stale_state() -> tuple[GameState, StrategySession, list]:
+def _stale_state() -> tuple[CwWorkFrame, StrategySession, list]:
     """公共夹具:写回 → 播种 → (state, sess, tracked)。"""
     sess = StrategySession()
     assert reconcile_tracking(sess, _sift_read(), [], None, source='t') is True
     tracked = exec_state_of(sess).tracked_bench_chars
-    state = GameState(gold=30, level=3, round_num=4, hp=40)
+    state = CwWorkFrame(gold=30, level=3, round_num=4, hp=40)
     state.bench = pad_bench(deepcopy(tracked))
     state.deployed = []
     return state, sess, tracked
@@ -306,7 +306,7 @@ def test_guard_multiset_branch_detects_historical_bug_shape(monkeypatch):
     sess = StrategySession()
     exec_state_of(sess).tracked_bench_chars = tracked_compact
     # 旧世界投影:槽号重构布局(seed 槽号放置,洞@下标1),买后丹恒@洞
-    state = GameState(gold=30, level=3, round_num=4, hp=40)
+    state = CwWorkFrame(gold=30, level=3, round_num=4, hp=40)
     state.bench = bench_from_compact(deepcopy(_sift_read()))
     state.deployed = []
     proj = simulate(state, BuyCard(card=deepcopy(_BUY_CARD)))

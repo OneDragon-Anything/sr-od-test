@@ -6,7 +6,7 @@ scan_rewrite_affixes/scan_rewrite_equipments/EQUIP_REWRITE_DECLARATIONS)
 by_source)。
 
 锁四件事:
-1. **词缀规格值锁**(登记门):会改写 BoardState 字段的三条词缀(成长的烦恼/
+1. **词缀规格值锁**(登记门):会改写 GameState 字段的三条词缀(成长的烦恼/
    变宝为废/永久创伤)的结构化数值与触发面——数值即设计内容(效果写入归属
    判据:确定性→逻辑写 / 随机→观察收口),改值须同步归属语义再跟绿;
 2. **词缀源登记端行为锁**:register_affix 产 source='affix' 条目,与策略源
@@ -25,9 +25,9 @@ by_source)。
 本文件锁「豁免条目在册 ∧ 载体键在」防悬空豁免,数值归载体主题锁
 test_cw_opening_hp_prior。
 
-出处:统一 state 迭代 BoardState 数据结构设计
+出处:统一 state 迭代 GameState 数据结构设计
 docs/develop/sr_od/application/currency_war/changes/2026-09-11-unified-state/
-details/BoardState-数据结构设计.md §5.1(词缀效果辖域申报)/§5.3(写入归属
+details/GameState-数据结构设计.md §5.1(词缀效果辖域申报)/§5.3(写入归属
 判据)/§7(扫描范围源 c/源 e);开局不利数值 = ADR-0559。
 """
 from __future__ import annotations

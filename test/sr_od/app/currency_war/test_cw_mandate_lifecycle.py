@@ -40,10 +40,10 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     SellBench,
     StartBattle,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    GameState,
+    CwWorkFrame,
     bench_char_cost,
     sell_refund,
 )
@@ -81,8 +81,8 @@ def _sess(target=None) -> StrategySession:
 
 
 def _state(plane: int = 1, round_num: int = 3, gold: int = 2,
-           ) -> GameState:
-    return GameState(plane=plane, round_num=round_num, gold=gold, hp=100)
+           ) -> CwWorkFrame:
+    return CwWorkFrame(plane=plane, round_num=round_num, gold=gold, hp=100)
 
 
 def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
@@ -93,7 +93,7 @@ def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
                      faction=(ch.factions or ['?'])[0] if ch else '?')
 
 
-def _set_s2(sess: StrategySession, state: GameState,
+def _set_s2(sess: StrategySession, state: CwWorkFrame,
             missing: tuple[str, ...] = ('目标件',),
             in_shop: tuple[tuple[str, int], ...] | None = None) -> None:
     """经生产唯一写点 mandate.shop_wanted_defer 置 S2(禁直写字段:
@@ -184,7 +184,7 @@ class TestS2Lifecycle:
         (方案审 F2-6),本锁经生产链钉快照内容 = 在店缺员最便宜卡费用。"""
         from types import SimpleNamespace as _NS
 
-        from sr_od.application.currency_war.kernel.cw_state import ShopCard
+        from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
         comp = self._comp()
         missing = self._members(comp)[0]
         bench = [_bc(f'填充件{i}', slot=i, star=2)
@@ -306,7 +306,7 @@ def _director() -> CwScreenPrep:
     return object.__new__(CwScreenPrep)
 
 
-def _proj_obs(state: GameState | None = None) -> PrepObservation:
+def _proj_obs(state: CwWorkFrame | None = None) -> PrepObservation:
     return PrepObservation(state=state, free_bench_slots=2)
 
 
@@ -316,7 +316,7 @@ def test_sellbench_projection_adds_sell_refund_gold() -> None:
     判据读 ``obs.state.gold`` 即读到涨后金。"""
     d = _director()
     bc = BenchChar(slot=3, char_id='希儿', star=1)
-    obs = _proj_obs(GameState(gold=10))
+    obs = _proj_obs(CwWorkFrame(gold=10))
     obs.bench_chars = [BenchChar(slot=1, char_id='甲', star=1), bc]
     out = d._project_prep_obs(SellBench(slot=3), obs)
     assert out is not None
@@ -362,17 +362,17 @@ def _spheres(n: int) -> list:
 
 
 def _prep_state(gold: int = 99, round_num: int = 3,
-           bench: list | None = None, deployed: list | None = None) -> GameState:
-    """决策黑板(GameState.bench/deployed 必须同形接线:T-32 空板止损
+           bench: list | None = None, deployed: list | None = None) -> CwWorkFrame:
+    """决策黑板(CwWorkFrame.bench/deployed 必须同形接线:T-32 空板止损
     守卫对 state.deployed 现读,漏接线 = 腾席卖出腿结构性哑火,假红)。"""
-    gs = GameState(gold=gold, level=3, round_num=round_num, hp=60)
+    gs = CwWorkFrame(gold=gold, level=3, round_num=round_num, hp=60)
     gs.plane = 1
     gs.bench = list(bench or [])
     gs.deployed = list(deployed or [])
     return gs
 
 
-def _obs(state: GameState | None, bench: list, deployed: list,
+def _obs(state: CwWorkFrame | None, bench: list, deployed: list,
          spheres: list, free: int) -> PrepObservation:
     return PrepObservation(
         state=state, bench_chars=bench, deployed_chars=deployed,

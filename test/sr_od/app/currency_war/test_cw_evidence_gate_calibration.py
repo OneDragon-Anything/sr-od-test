@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.data.cw_shop_odds import SHOP_SLOTS
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
@@ -30,9 +30,9 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     streak_gold,
 )
 from sr_od.application.currency_war.kernel.cw_plane_table import r_remaining
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     XP_TO_NEXT_LEVEL,
-    GameState,
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     proof,
@@ -71,7 +71,7 @@ def _clean_slots():
 
 # ===== ① P38 ⑤层金位递推(budget.py 单一源)=====
 
-def _recalc_plan(state: GameState, session: SimpleNamespace,
+def _recalc_plan(state: CwWorkFrame, session: SimpleNamespace,
                  purchase: float, missing: int) -> tuple[int, int, bool]:
     """P38 ⑤层原式独立重推(kernel 原语直调;与被测实现零共享代码):
     返回 (R, int(B), B<0)。不动点按同款种子与保守端规则重演。"""
@@ -120,7 +120,7 @@ class TestP38BudgetRecursion:
         """递推公式锁:B/RC 逐位等于测试内 P38 原式独立重推(种子 =
         静态口径,不动点保守端同规则)。"""
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         plan = budget.p38_budget_recursion(st, sess, purchase_cost=11.0,
                                            missing_copies=4)
@@ -133,7 +133,7 @@ class TestP38BudgetRecursion:
         """B<0 分支(P38「买到即计数前提破产」):巨额缺口 + 低金 ⇒
         exhausted=True / R=0 / B<0。"""
         sess = _session()
-        st = GameState(gold=30, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=30, level=7, round_num=3, plane=1, board={},
                        shop=[])
         plan = budget.p38_budget_recursion(st, sess, purchase_cost=1000.0,
                                            missing_copies=5)
@@ -146,7 +146,7 @@ class TestP38BudgetRecursion:
         sess = _session()
         plans = []
         for gold in (40, 60, 90, 130):
-            st = GameState(gold=gold, level=7, round_num=3, plane=1,
+            st = CwWorkFrame(gold=gold, level=7, round_num=3, plane=1,
                            board={}, shop=[])
             plans.append(budget.p38_budget_recursion(
                 st, sess, purchase_cost=11.0, missing_copies=4))
@@ -156,12 +156,12 @@ class TestP38BudgetRecursion:
     def test_levelup_schedule_condition_and_deduction(self):
         """升级金 = 日程条件 × XP 抵扣:日程(target ≤ 当前)不扣;
         追级帧按 ⌈(need−cur−4·Σm)⁺/4⌉×单击价,买牌 XP 抵扣生效。"""
-        st_stay = GameState(gold=60, level=7, round_num=3, plane=1,
+        st_stay = CwWorkFrame(gold=60, level=7, round_num=3, plane=1,
                             board={}, shop=[])
         # 日程先验 _expected_level(3, P1)=5 ≤ 7 ⇒ 视界内无升级
         assert get_node_goal(1, 3).target_level <= 7
         assert budget.next_level_xp_cost(st_stay, 4) == 0
-        st_push = GameState(gold=60, level=4, round_num=3, plane=1,
+        st_push = CwWorkFrame(gold=60, level=4, round_num=3, plane=1,
                             board={}, shop=[])
         # target=5 > 4:need=XP_TO_NEXT_LEVEL[4]=6,cur=0,买 0 张
         # ⇒ clicks=⌈6/4⌉=2,单击价 = 兜底 4
@@ -171,7 +171,7 @@ class TestP38BudgetRecursion:
         assert budget.next_level_xp_cost(st_push, 2) == 0
         # xp_progress 现读 + 抵扣:lv5(round 6,target 6>5)need20
         # cur4,买 1 张(−4)⇒ remain 12 ⇒ clicks 3 × 兜底 4 = 12
-        st_prog = GameState(gold=60, level=5, round_num=6, plane=1,
+        st_prog = CwWorkFrame(gold=60, level=5, round_num=6, plane=1,
                             board={}, shop=[])
         st_prog.xp_progress = (4, XP_TO_NEXT_LEVEL[5])
         assert get_node_goal(1, 6).target_level == 6
@@ -253,7 +253,7 @@ class TestCalibrationApply:
         assert calibration.band_in_domain(3, 28) is False   # r_rem 出日程域
         calibration.apply()
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         monkeypatch.setattr(calibration, 'E2_DOMAIN_M_MAX', 3)
         _missing, _trials, frame = proof.assemble_lock_frame(st, sess)
@@ -266,7 +266,7 @@ class TestCalibrationApply:
         """域内常规帧不触带外成因(与上锁对偶,防守卫过宽)。"""
         calibration.apply()
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         _missing, _trials, frame = proof.assemble_lock_frame(st, sess)
         assert frame.band_domain_ok is True
@@ -279,7 +279,7 @@ class TestCalibrationApply:
         ——判读禁把 unavailable 读成门判负)。"""
         calibration.apply()
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         ok, reason = proof.evaluate_evidence_gate(st, sess)
         assert ok is False
@@ -296,7 +296,7 @@ class TestCalibrationApply:
 
 class TestAssembleTrialsUpgrade:
 
-    def _expected_purchase(self, comp, st: GameState) -> tuple[float, int]:
+    def _expected_purchase(self, comp, st: CwWorkFrame) -> tuple[float, int]:
         """缺口件期望购买成本与张数的独立重推(公开单一源直调:
         tier_progress 缺口 × slot_q_tag_by_cost 分费档概率加权单价)。"""
         from sr_od.application.currency_war.kernel import cw_line_switch
@@ -321,7 +321,7 @@ class TestAssembleTrialsUpgrade:
         (期望购账/张数)由公开单一源独立重推后直调递推,与装配
         输出逐位一致。"""
         sess = _session()
-        st = GameState(gold=60, level=7, round_num=3, plane=1, board={},
+        st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         purchase, copies = self._expected_purchase(_COMP, st)
         plan = budget.p38_budget_recursion(st, sess, purchase, copies)
@@ -344,7 +344,7 @@ class TestAssembleTrialsUpgrade:
         unavailable 成因 {o_plus,d_death}。"""
         calibration.apply()
         sess = _session()
-        st = GameState(gold=0, level=7, round_num=8, plane=3, board={},
+        st = CwWorkFrame(gold=0, level=7, round_num=8, plane=3, board={},
                        shop=[])
         missing, trials, frame = proof.assemble_lock_frame(st, sess)
         assert missing

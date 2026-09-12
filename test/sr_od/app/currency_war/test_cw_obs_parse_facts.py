@@ -8,13 +8,13 @@
 """
 import types
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     FINAL_ABNORMAL,
     FINAL_LOSS,
     FINAL_STOPPED,
     FINAL_WIN,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.obs import cw_briefing_obs
 from sr_od.application.currency_war.obs import cw_observation as cobs
 from sr_od.application.currency_war.obs import cw_settlement_obs as settle

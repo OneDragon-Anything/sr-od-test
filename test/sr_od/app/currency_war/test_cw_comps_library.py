@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 from collections import Counter
 
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -289,9 +289,9 @@ def test_plugin_majority_lines_doctrine() -> None:
 # ==================== system_cards ====================
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
     ShopCard,
     _recount_board,
 )
@@ -319,13 +319,13 @@ def _char(name: str, faction: str | None = None, row: str | None = None,
                      position_pref=row or c.position_pref())
 
 
-def _state_with_deployed(names: list[str]) -> GameState:
+def _state_with_deployed(names: list[str]) -> CwWorkFrame:
     """构造 deployed + 同步 board 的单帧(char 身份=注册表真值)。
 
     ADR-0312(W50):_recount_board 已是**全集口径**(factions+flows+
     independent)——旧「首阵营聚合后手工补多阵营」的补丁循环随之删除
     (保留会双计)。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.deployed = [_char(n, slot=i) for i, n in enumerate(names)]
     st.board = _recount_board(st.deployed)
     return st
@@ -414,7 +414,7 @@ def test_engine_required_and_star_goal_registry():
 def test_pick_dot2_wins_by_score_when_only_dot_pieces():
     """等价性②:仅 2 张 DOT 件在手 → DOT2 胜(原来靠首站加成,现在靠分;
     readiness=2/2 满格,其余系 0)。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [_char('卡芙卡'), _char('桑博')]
     st.board = {}
     dec = pick_card_combination(_bridge(st))
@@ -427,7 +427,7 @@ def test_pick_dot2_wins_by_score_when_only_dot_pieces():
 def test_equiv_trio_full_hand_beats_dot():
     """等价性①:铁三角全在手+DOT2 可达 → 仙舟3 仍胜
     (原来靠例外条款直取,现在靠分:pieces 3>2 且 readiness 双满格)。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [_char('卡芙卡'), _char('桑博')]   # DOT 也可达,制造竞争
     st.deployed = [_char('爻光', slot=0, row='back'),
                    _char('藿藿', slot=1, row='back'),
@@ -444,7 +444,7 @@ def test_readiness_unified_across_cards():
     希儿系≈3),门槛低=分高,无任何卡专属 if。"""
     # 2 仙舟件(readiness 2/3)vs 1 列车件(readiness 1/2):
     # pieces 2>1 主判据胜;readiness 0.667>0.5 同向
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [_char('爻光'), _char('藿藿'), _char('三月七')]
     dec = pick_card_combination(_bridge(st))
     assert dec.chosen[0] == 'xianzhou3'
@@ -453,7 +453,7 @@ def test_readiness_unified_across_cards():
 
 def test_pick_arrival_is_primary_signal():
     """来牌主判据:无词条无意向时,件数多的体系胜出。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [_char('三月七'), _char('姬子·启行'), _char('卡芙卡')]
     dec = pick_card_combination(_bridge(st))
     assert dec.chosen[0] == 'train2'   # 列车 2 件 > DOT 1 件
@@ -461,7 +461,7 @@ def test_pick_arrival_is_primary_signal():
 
 def test_pick_tie_break_ruling_nonempty_and_intent_breaks_tie():
     """同分构造:裁决记录非空;意向同向 tie-break 定向(非一票否决)。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [_char('三月七'), _char('桑博')]   # 列车 1 件 vs DOT 1 件 = 同分
     dec = pick_card_combination(_bridge(st))
     assert dec.scores['train2'] == dec.scores['dot2']
@@ -477,7 +477,7 @@ def test_pick_tie_break_ruling_nonempty_and_intent_breaks_tie():
 
 def test_pick_affix_input_adjusts_dot():
     """词条前置输入:敌方频动旺(忍无可忍)→ DOT 权重升;净化身心 → DOT 权重降。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [_char('三月七'), _char('桑博')]   # 平分底
     dec_like = pick_card_combination(_bridge(st), affixes=['忍无可忍'])
     assert dec_like.chosen[0] == 'dot2'
@@ -488,7 +488,7 @@ def test_pick_affix_input_adjusts_dot():
 
 def test_pick_seele_affix_fear_counter():
     """希儿系怕量子熄火(counter 警惕):3 件的领先被 fear(-3.0) 抵成落后。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [_char('希儿'), _char('符玄')]   # seele 件数 2(希儿引擎+符玄放大器,去重)
     dec = pick_card_combination(_bridge(st), affixes=['量子熄火'])
     assert SYSTEM_CARDS['seele'].affix_fears == ['量子熄火']
@@ -499,7 +499,7 @@ def test_pick_seele_affix_fear_counter():
 
 def test_pick_blank_when_nothing_arrived():
     """等价性④:空窗行为不变——四系 0 件(readiness 恒 0)→ blank_window=True,chosen=[]。"""
-    st = GameState()
+    st = CwWorkFrame()
     # 灵砂=狼狩+治疗,不沾四系任一判据阵营(瓦尔特含列车同行,不可用)
     st.bench = [_char('灵砂')]
     dec = pick_card_combination(_bridge(st))
@@ -512,7 +512,7 @@ def test_pick_blank_when_nothing_arrived():
 
 def test_blank_window_buy_target_only():
     """无体系+店有目标件 → 只买目标件;off-target 不进 buy_idx([31] 不为凑数 D)。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.bench = [_char('桑博')]   # 来牌方向=持续伤害(1 件)
     st.shop = _shop([('藿藿', '仙舟'),      # 引擎件(铁三角)→ 买
                      ('卡芙卡', '持续伤害'),  # 来牌方向件 → 买
@@ -530,7 +530,7 @@ def test_blank_window_buy_target_only():
 
 def test_blank_window_cost_band_and_no_direction():
     """无来牌方向:仅引擎件见即买;费用带=引擎件费用众数(铁三角 1,1,2 + 希儿 3 → 1)。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.shop = _shop([('瓦尔特', '星核猎手')])
     dec = blank_window_policy(_bridge(st))
     assert dec.is_blank is True

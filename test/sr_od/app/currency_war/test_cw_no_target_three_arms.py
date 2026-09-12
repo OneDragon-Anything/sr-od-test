@@ -7,7 +7,7 @@
   (§3 定理 A/B1-B5/C/M;§4 必答六件终裁;§6 落码批增量条款九件)。
 
 锁编号对齐:正本 §5.2 锁 1-7 + 证明批 §6 增量 1-9,逐测试 docstring 引出处。
-构帧口径:GameState 缺省 hp=0 ⇒ ``p2_supply_horizon``=0 ⇒ 全线 G=0(机器
+构帧口径:CwWorkFrame 缺省 hp=0 ⇒ ``p2_supply_horizon``=0 ⇒ 全线 G=0(机器
 判死形态的自然构帧);甲臂判活帧显式给 hp 并授满某线全部核心(G=1.0)。
 判读注册表事实(cov/声明序)一律运行时直调派生,不写死清单。
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_intention
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _kbridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -37,11 +37,11 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     no_target_arms,
 )
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     RefreshShop,
     ShopCard,
 )
@@ -80,8 +80,8 @@ def _state(gold: int = 45, level: int = 5, hp: int = 60,
            shop_cards: list[ShopCard] | None = None,
            bench: list[BenchChar] | None = None,
            deployed: list[BenchChar] | None = None,
-           round_num: int = 2) -> GameState:
-    st = GameState(gold=gold, level=level, round_num=round_num, hp=hp)
+           round_num: int = 2) -> CwWorkFrame:
+    st = CwWorkFrame(gold=gold, level=level, round_num=round_num, hp=hp)
     st.plane = 2
     st.shop = shop_cards if shop_cards is not None else []
     st.bench = bench if bench is not None else []
@@ -97,7 +97,7 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
 
 
-def _decide(st: GameState, sess: StrategySession):
+def _decide(st: CwWorkFrame, sess: StrategySession):
     return shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
 
 
@@ -349,7 +349,7 @@ class TestHubEmission:
         st = _state(shop_cards=[_card('花火', cost=2)],
                     bench=[_bc('花火', slot=1), _bc('花火', slot=2)])
         # 合并冻结态显影:同名同 1★ 对在场 = 滞留素材(判定单一源直核)
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             merge_material_stale_names,
         )
         assert merge_material_stale_names(st.bench, st.deployed) == ('花火',)
@@ -594,7 +594,7 @@ class TestArmCHoldDefault:
             gold=80, level=4, bench=[_bc('注册表外散件A', slot=1)],
             deployed=deployed, deploy_cap=4, node_type='battle',
             stop_flag=False, k_members=(), round_num=2)
-        st = GameState(gold=80, level=4, hp=30, plane=2, round_num=2)
+        st = CwWorkFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
         st.level_readable = True
         st.deploy_cap = 4
         st.node_type = 'battle'
@@ -715,7 +715,7 @@ class TestRetirementFaces:
         )
         sess = StrategySession()
         assert _schedule_target_core(sess) == ''
-        assert _target_peak_level(GameState(), sess) == peak_refresh_level(3)
+        assert _target_peak_level(CwWorkFrame(), sess) == peak_refresh_level(3)
         assert _target_core_cost(sess) == ('', 3)
 
 

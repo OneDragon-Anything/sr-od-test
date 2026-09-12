@@ -11,11 +11,11 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -92,7 +92,7 @@ def _stall_frame(gold: int, fuel_pieces: int = 0, extra_bench=(),
                                 min_cost=fuel_min_cost), slot=i + 1)
              for i in range(fuel_pieces)]
     bench.extend(extra_bench)
-    st = GameState(gold=gold, level=5, round_num=2, hp=60)
+    st = CwWorkFrame(gold=gold, level=5, round_num=2, hp=60)
     st.level_readable = True
     st.plane = 2
     st.shop = list(cards) if cards is not None else []
@@ -187,7 +187,7 @@ class TestExit3Emission:
         #(lv5 下宽集含被截成员——R1 后可卖,会抢跑 M4 腾席使 bench_full
         # 分键不可达;风暴前提「采购集件占位不可卖」须 B' 内成员)。
         _cap = cw_intention.locked_buy_cap_hold(
-            GameState(gold=0, level=5, round_num=2, hp=60))
+            CwWorkFrame(gold=0, level=5, round_num=2, hp=60))
         purchase = sorted(cw_intention.locked_buy_membership(
             ist, cap_hold=_cap) or frozenset())
         chaseable = [m for m in km if m != _causal_name()]
@@ -200,7 +200,7 @@ class TestExit3Emission:
                      for i in range(BENCH_CAPACITY - len(bench)))
         filler = _off_line_name(exclude=tuple(km))
         pad = _off_line_name(exclude=(filler,))
-        st = GameState(gold=51, level=5, round_num=2, hp=10)
+        st = CwWorkFrame(gold=51, level=5, round_num=2, hp=10)
         st.level_readable = True
         st.plane = 1   # 血线硬地板域(plane 1 专属)
         st.hp_decision_trusted = True

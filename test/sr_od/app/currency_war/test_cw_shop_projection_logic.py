@@ -18,7 +18,7 @@ import dataclasses
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     SHOP_PROJECTION_DOMAINS,
     ChannelSig,
     ShopActionExecuted,
@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     shop_cards_to_legacy,
     synthesize_from_game_state,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
     CloseShop,
     LevelUpShop,
@@ -53,7 +53,7 @@ _SIG = ChannelSig(family='logic_action', actor='CwOpBuyCards',
 
 
 def _bs_of(st):
-    """GameState 桩帧 → 容器(sim 合成口;测试/生产同一条喂入通道)。"""
+    """CwWorkFrame 桩帧 → 容器(sim 合成口;测试/生产同一条喂入通道)。"""
     bs = board_state_of(None)
     synthesize_from_game_state(bs, st)
     return bs
@@ -73,7 +73,7 @@ def _project_with_merge_leg(bs, action, executed, st_frame):
     apply_shop_action_logic(bs, action, executed=executed,
                             produced_by=type(action).__name__, sig=_SIG)
     if isinstance(action, BuyCard) and detect_merge_upgrade(st_frame, sim):
-        from sr_od.application.currency_war.kernel.cw_board_state import (
+        from sr_od.application.currency_war.kernel.cw_game_state import (
             bench_view_of_slots,
         )
         bs.write_logic(bs.bench, bench_view_of_slots(sim.bench),
@@ -164,7 +164,7 @@ class TestM1Equivalence:
                                    _card('希儿', cost=3, x=200)],
                     bench=bench)
         bs = _bs_of(st)
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             merge_buy_k,
         )
         k = merge_buy_k('希儿', 1, st.bench, st.deployed, st.shop)
@@ -255,7 +255,7 @@ class TestM1Equivalence:
 
     def test_out_of_set_action_no_write(self):
         """集外动作型零写(登记面申报;等观察覆盖,禁扩静默)。"""
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             DeployMove,
         )
         st = _state(gold=30, shop=[], bench=[_bc('希儿', slot=1)])

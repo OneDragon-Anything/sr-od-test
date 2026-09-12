@@ -12,10 +12,10 @@ from __future__ import annotations
 import inspect
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     SELL_BENCH_CONVERT_REASONS,
     BenchChar,
-    GameState,
+    CwWorkFrame,
     SellBench,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -399,7 +399,7 @@ class Test8EntryFundingFace:
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             SellBench as PrepSellBench,
         )
-        from sr_od.application.currency_war.kernel.cw_state import GameState
+        from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             entry,
         )
@@ -415,7 +415,7 @@ class Test8EntryFundingFace:
             gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('线内件X',),
             round_num=2)
-        st = GameState(gold=1, level=5, round_num=2, hp=40)
+        st = CwWorkFrame(gold=1, level=5, round_num=2, hp=40)
         st.deployed = _boarded().deployed
         out = entry._criteria_pass(
             frame, sess, st, ('线内件X',),
@@ -447,12 +447,12 @@ class Test8EntryFundingFace:
 # ===== 复用脚手架 =====
 
 
-def _boarded(st: GameState | None = None) -> GameState:
+def _boarded(st: CwWorkFrame | None = None) -> CwWorkFrame:
     """非空板测试环境(T-32 空板止损守卫前置):守卫钉「待卖后
     deployed 为空 ⇒ 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),
     直调卖出判据/发射位的环境须 ≥1 上场件,否则守卫 fail-closed 拒帧
     ——与被测语义无关的红按环境前置补齐,非跟绿。"""
-    st = st if st is not None else GameState()
+    st = st if st is not None else CwWorkFrame()
     st.deployed = [_bc('板上件锚', slot=1)]
     return st
 
@@ -486,9 +486,9 @@ def _off_line_filler(exclude: tuple[str, ...]) -> str:
     raise AssertionError('注册表缺少线外角色(锁前提失效)')
 
 
-def _m4_frame(bench: list[BenchChar]) -> GameState:
+def _m4_frame(bench: list[BenchChar]) -> CwWorkFrame:
     """M4 腾席形态帧:缺员(线内件全缺)∧ bench 满 ⇒ M4 卖燃料件。"""
-    st = GameState(gold=30, level=5, round_num=2, hp=40)
+    st = CwWorkFrame(gold=30, level=5, round_num=2, hp=40)
     st.level_readable = True
     st.plane = 1
     st.shop = []

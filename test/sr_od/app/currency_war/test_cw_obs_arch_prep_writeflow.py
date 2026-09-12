@@ -4,16 +4,16 @@ docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op�
 步骤 2 辖域,本文件不涉及)。
 
 夹具链路(§9.1-B2 实机半边):**固定帧源(桩化 reader 形态)→ 实机适配器
-payload → BoardState 全帧对拍(回归 pin 钉 payload)**。
+payload → GameState 全帧对拍(回归 pin 钉 payload)**。
 
 - 固定帧源 = 与现役在册行为锁**同源**的桩化 reader 形态:reader 桩直接
-  复用 ``test_cw_board_state._patch_clean_readers``(单一源,禁复制漂移;
+  复用 ``test_cw_game_state._patch_clean_readers``(单一源,禁复制漂移;
   其真读值面在 test_observation_feed_wires_board_state 已锁)——轻视觉
   域(球/箱/典籍/占用像素)在 pd_mod 命名空间桩空;
 - 被测链 = 真实 ``CwScreenPrep._observe(heavy=True)``(实机适配器①的
-  封口内容:observe_full + read_game_state 漏斗 + BoardState 观察写端)
+  封口内容:observe_full + read_game_state 漏斗 + GameState 观察写端)
   经五段生命周期 run_lifecycle 驱动(段1 observe → 段2 reconcile);
-- 对拍口径 = BoardState 全帧快照(值/来源/evidence 三元)逐字段对
+- 对拍口径 = GameState 全帧快照(值/来源/evidence 三元)逐字段对
   回归 pin;pin 面覆盖 prep_clean 帧触达的全部建模域 + 未触达域的
   恒 None 断言(禁静默新写端)。
 
@@ -39,7 +39,7 @@ from sr_od.application.currency_war.cw_game_ports import (
     action_sink,
     observation_source,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     Field,
     NodeKey,
     board_state_of,
@@ -58,7 +58,7 @@ from test.harness.fixture_controller import (
     reset_running_state,
 )
 from test.sr_od.app.currency_war._cw_helpers import make_prep_round_director
-from test.sr_od.app.currency_war.test_cw_board_state import (
+from test.sr_od.app.currency_war.test_cw_game_state import (
     _patch_clean_readers,
 )
 
@@ -157,7 +157,7 @@ def _make_director(test_context: SimpleNamespace,
 
 
 def _frame_snapshot(bs) -> dict[str, tuple]:
-    """BoardState 全帧快照:Field 域名 → (值, 来源, evidence) 三元。"""
+    """GameState 全帧快照:Field 域名 → (值, 来源, evidence) 三元。"""
     snap: dict[str, tuple] = {}
     for f in dataclasses.fields(bs):
         val = getattr(bs, f.name, None)
@@ -182,7 +182,7 @@ _PIN_FRAME: dict[str, tuple] = {
 
 def test_prep_writeflow_full_frame_pin(test_context: SimpleNamespace,
                                        monkeypatch: pytest.MonkeyPatch) -> None:
-    """主门(b)实机半边:固定帧源 → 实机适配器 → BoardState 全帧对拍。
+    """主门(b)实机半边:固定帧源 → 实机适配器 → GameState 全帧对拍。
 
     判据:①pin 面逐字段(值/来源/evidence 三元)对拍——写入流任一环
     节(读链/写闸/来源标注)漂移即红;②未被 prep_clean 帧触达的域恒
@@ -241,7 +241,7 @@ def test_prep_writeflow_merge_window_defers_observe(
     **本帧不写**——bench 保 BuyCard 的 logic 投影值,且不产生「投影 vs
     窗内旧星读数」的观察失配缺陷行(噪声抑制语义保留);下帧干净帧实读
     覆盖:一致 = 零缺陷行,失配 = 投影 bug 留证修码。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchView,
         ChannelSig,
         bench_view_of_slots,
@@ -355,19 +355,19 @@ def test_legacy_path_entry_collapse_probe_once(
     assert '交回外循环' in (rr.status or ''), f'单轮须交回外循环:{rr.status!r}'
 
 
-# ==================== 选卡调用面单一源守卫(BoardState 迁移收尾) ====================
+# ==================== 选卡调用面单一源守卫(GameState 迁移收尾) ====================
 
 def test_box_card_pick_single_source_wiring() -> None:
     """选卡决策区单一源守卫(墓碑 + 接线双角):``PrepActionExecutor
     ._default_box_card`` 是 pick 族调用面的容器直读接入点(prep_actions
     内单一源宣言注释;设计正本 = docs/develop/sr_od/application/
-    currency_war/changes/2026-09-11-unified-state/details/BoardState-数据
+    currency_war/changes/2026-09-11-unified-state/details/GameState-数据
     结构设计.md §8.7 批次二;W6 波 4 取帧点全部改道容器直读后,本接入点
     = board_state_of 同款)。
 
     - 墓碑角(否定式 + 退役背书):选卡决策区禁回落 ``last_state or
       GameState`` 直读字面——被删的 cw_screen_supply.pick_box_card 原本
-      同款直读,迁移批已切除;该第二源回流 = BoardState 观察流旁路
+      同款直读,迁移批已切除;该第二源回流 = GameState 观察流旁路
       (失读帧 carry 语义/记录模型全部绕过),全量照绿但单一源纪律破;
     - 接线角:同区必须仍含 board_state_of 调用——接入点静默脱落是
       回归直读的另一形态(换写法绕开墓碑字面),与墓碑角成对堵死;
@@ -382,7 +382,7 @@ def test_box_card_pick_single_source_wiring() -> None:
     assert 'decide_box_card' in src, '扫描锚失守:getsource 未取到选卡决策区'
     assert 'last_state or GameState' not in src, (
         '选卡决策区回落 last_state or GameState() 直读第二源'
-        '(BoardState 单一源纪律破,观察流被旁路)')
+        '(GameState 单一源纪律破,观察流被旁路)')
     assert 'board_state_of(' in src, (
         '选卡决策区容器直读接入点脱落(board_state_of 未被调用,'
         '回归直读同罪)')

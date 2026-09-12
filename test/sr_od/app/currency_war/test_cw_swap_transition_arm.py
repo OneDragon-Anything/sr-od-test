@@ -26,7 +26,7 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     select_swap_plan,
     swap_sell_exclusion_reason,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -199,7 +199,7 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     保守形态放行);deployed 六件非成员,victim 资格面不受桩影响。"""
     import sr_od.application.currency_war.kernel.cw_intention as _int_mod
     import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
-    from sr_od.application.currency_war.kernel.cw_state import GameState
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
         run_mandate,
     )
@@ -221,7 +221,7 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     _st.target_comp = comp
     _st.transition_framework = ''
     dep, bench = _lesion_frame_deployed(), [_bc('三月七', 1, star=2)]
-    st = GameState(gold=0, level=6, plane=1, round_num=2, board={},
+    st = CwWorkFrame(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
     out = run_mandate(_m1p_frame(dep, bench), sess, state=st)
     fired = [e for e in out if e.action.__class__.__name__ == 'RunDeploy'

@@ -38,7 +38,7 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     in_launch_spend_zone,
     saturation_line,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
     LevelUpShop,
     RefreshShop,

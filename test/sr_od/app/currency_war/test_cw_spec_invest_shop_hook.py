@@ -16,7 +16,7 @@ import numpy as np
 
 from one_dragon.base.geometry.rectangle import Rect
 from sr_od.application.currency_war.kernel import cw_obs_core
-from sr_od.application.currency_war.kernel.cw_board_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
 from sr_od.application.currency_war.kernel.cw_effect_inventory import ActiveEffect
 from sr_od.application.currency_war.kernel.cw_investments import STRATEGY_EFFECTS
 from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep

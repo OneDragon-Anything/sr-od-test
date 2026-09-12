@@ -29,7 +29,7 @@ W7 增量(r5-migration-plan.md §2 W7):清点补遗流 board_state_archive
   (决策行文件 docstring/注释实测误伤两处);掩蔽保留行/文本结构,代码域
   引用(字符串字面量/标识符/dict 字面量对)仍在域内,复合正则(缺陷 refs
   旧挂点形)跨 token 照常检出,防复活语义不弱化;
-- 行为零产出锁:模拟流(run 生命周期 + BoardState 写入 + obs_conflict
+- 行为零产出锁:模拟流(run 生命周期 + GameState 写入 + obs_conflict
   收编面 + run 收口)跑完,旧流文件零新增;journal 照常产出
   (write 行 + obs_event 行,run 归属一致);
 - 常开锁:state_journal 影子开关已销案(config 无此字段,app 装配段
@@ -55,13 +55,13 @@ from sr_od.application.currency_war import currency_war_config as cw_cfg_mod
 from sr_od.application.currency_war.kernel import cw_state_journal
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
-from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_of,
 )
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors as _register_sig_actors,
 )
 
@@ -251,14 +251,14 @@ def test_board_state_archive_writer_orphan_pinned(
         _masked_sources: tuple[MaskedSource, ...]) -> None:
     """board_state_archive 写点退役后 kernel 侧孤儿符号钉住(W7)。
 
-    ``archive_snapshot``(kernel/cw_board_state)是写点删除后的孤儿构造器:
+    ``archive_snapshot``(kernel/cw_game_state)是写点删除后的孤儿构造器:
     本体在该文件内(守卫族+波次面禁触,删除归 kernel 面批),锁其生产树
     **零调用点**防写面借尸复活;删除时机 = kernel 面微批,届时连同本锁
     收窄。tool/测试直接调用不受生产树扫描辖。
     """
     violations: list[str] = []
     for src in _masked_sources:
-        if src.rel == 'kernel/cw_board_state.py':
+        if src.rel == 'kernel/cw_game_state.py':
             continue   # 本体居所(孤儿待删,禁触面)
         for lineno, snippet, _pi in find_violations(
                 src.masked, _ORPHAN_SNAPSHOT_RE):
@@ -339,12 +339,12 @@ def test_docstring_mention_exempted_but_code_reference_flagged() -> None:
 
 def test_simulated_flow_zero_old_stream_output_and_journal_produces(
         tmp_path) -> None:
-    """模拟流(run 生命周期+BoardState 写入+obs_conflict 收编+run 收口)后:
+    """模拟流(run 生命周期+GameState 写入+obs_conflict 收编+run 收口)后:
     旧 9 流文件零新增;journal 照常产出(write+obs_event,归属一致)。"""
     from sr_od.application.currency_war.kernel import cw_telemetry_exit
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         BS_SCHEMA_VERSION,
-        BoardState,
+        GameState,
     )
 
     tel_state.set_recorder_replay_dir(tmp_path)
@@ -357,9 +357,9 @@ def test_simulated_flow_zero_old_stream_output_and_journal_produces(
         lambda: board_state_of(match.session))
     rid = tel_state.ensure_run_started(match, 'mandate_v1')
     assert rid, 'run 生命周期照常(run_id 供给 journal 归属)'
-    # BoardState 照常写入(journal write 行)
+    # GameState 照常写入(journal write 行)
     bs = board_state_of(match.session)
-    assert isinstance(bs, BoardState)
+    assert isinstance(bs, GameState)
     bs.schema_version = BS_SCHEMA_VERSION
     bs.observe(bs.gold, 20, sig=_sig())
     # obs_conflict 收编面:证据进 journal 行型 2,旧流零写入

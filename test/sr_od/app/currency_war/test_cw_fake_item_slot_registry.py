@@ -49,7 +49,7 @@ def test_sell_item_slot_refused_env_v8() -> None:
     expect='')``,expect 空放行见 kernel SellBench 分支守卫)。
     applied=False、零状态变化(金账/占位件在席/登记表三面钉死)。
     """
-    from sr_od.application.currency_war.kernel.cw_state import SellBench
+    from sr_od.application.currency_war.kernel.cw_vocab import SellBench
 
     m = FakeMatch(seed=7, node_sequence=['battle'])
     # —— 箱:spawn → 卖 → 拒绝且三面零变化 ——
@@ -86,7 +86,7 @@ def test_reconcile_prunes_cleared_slot_on_applied_transfer() -> None:
     v8 后现役 kernel 分支无此形,锁的是对账判据本身与未来分支)+
     一次普通 applied 转移(卖实角色)触发对账点。
     """
-    from sr_od.application.currency_war.kernel.cw_state import SellBench
+    from sr_od.application.currency_war.kernel.cw_vocab import SellBench
 
     m = FakeMatch(seed=7, node_sequence=['battle'])
     box_slot = m.spawn_box()

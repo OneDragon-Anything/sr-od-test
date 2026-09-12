@@ -9,7 +9,7 @@ CwOpCloseShop 三件直挂 CwScreenOpBase,start 节点方法顶部装配点分�
 
 **F11 sim 腿不适用例外清单(随批登记,总纲 §2.2-3)**:sim 无对应画面段
 (三件为备战/商店子相位的原子动作单元,非独立画面段;open/close 幂等
-原子动作零策略消费、零 BoardState 新写端——回执写端 = kernel 口既有,
+原子动作零策略消费、零 GameState 新写端——回执写端 = kernel 口既有,
 两路径同一份),等价判据主承重 = 在册行为锁(test_cw_state_action_
 receipts.py 回执三出口/test_cw_op_boundary、test_cw_launch_arbitrage
 模块缝替身,全走旧路径函数原样保绿)+ 本文件变体结构锁与新路径语义锁;

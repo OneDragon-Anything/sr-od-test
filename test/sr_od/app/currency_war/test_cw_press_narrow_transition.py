@@ -43,7 +43,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_intention
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -51,11 +51,11 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     get_comp,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import OpenShop
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -133,13 +133,13 @@ def _d_frame_deps(n_km: int = 0) -> tuple[list[BenchChar], frozenset[str]]:
     return deps, frozenset(names)
 
 
-def _d_frame_st(gold: int, cards: list[ShopCard]) -> GameState:
+def _d_frame_st(gold: int, cards: list[ShopCard]) -> CwWorkFrame:
     """D 帧默认形(n_km=0 纯垫件板):锁线 ∧ fp<1.00(board 空)∧ 板满。"""
     deps, _names = _d_frame_deps(0)
     return _lad_st(gold, cards, locked=True, deployed=deps)
 
 
-def _decide(st: GameState, sess) -> object:
+def _decide(st: CwWorkFrame, sess) -> object:
     return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
@@ -381,8 +381,8 @@ def _prep_frame(deployed: list[BenchChar], bench: list[BenchChar]):
                         stop_flag=False, k_members=('目标件',), round_num=3)
 
 
-def _prep_state(deployed: list[BenchChar]) -> GameState:
-    st = GameState(gold=60, level=3, round_num=3)
+def _prep_state(deployed: list[BenchChar]) -> CwWorkFrame:
+    st = CwWorkFrame(gold=60, level=3, round_num=3)
     st.plane = 2
     st.deployed = list(deployed)
     return st

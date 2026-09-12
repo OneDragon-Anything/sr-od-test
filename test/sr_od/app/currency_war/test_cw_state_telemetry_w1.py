@@ -27,10 +27,10 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
     REGISTERED_ACTORS,
-    BoardState,
+    GameState,
     ChannelSig,
     NodeKey,
     apply_settlement_cover,
@@ -38,7 +38,7 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
     register_sig_actors,
     synthesize_from_game_state,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 
 # ---- 测试签名(actor 已登记;语义同 test_cw_state_journal 的 W1 helper)----
 register_sig_actors('TestSigWriter')
@@ -49,7 +49,7 @@ def _sig() -> ChannelSig:
     return ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
-_KERNEL_PATH: Path = (Path(inspect.getfile(BoardState)))
+_KERNEL_PATH: Path = (Path(inspect.getfile(GameState)))
 
 
 @pytest.fixture()
@@ -73,9 +73,9 @@ def _reset_journal_default():
 # ============================================================ kind_inherited 保留锁(W1 ④)
 
 
-def _sim_state(node_type, plane: int = 1, round_num: int = 5) -> GameState:
-    """裸 sim GameState 桩(node_type 显式可控;gold/level 等按需置缺省)。"""
-    st = GameState(plane=plane, round_num=round_num)
+def _sim_state(node_type, plane: int = 1, round_num: int = 5) -> CwWorkFrame:
+    """裸 sim CwWorkFrame 桩(node_type 显式可控;gold/level 等按需置缺省)。"""
+    st = CwWorkFrame(plane=plane, round_num=round_num)
     st.node_type = node_type
     st.gold = 30
     st.gold_readable = True
@@ -88,12 +88,12 @@ def test_kind_inherited_branch_retained() -> None:
     """W1 ④(保留锁,非删除对象):node_type 未建模帧 kind 沿前值回写,
     evidence='kind_inherited'(ADR-0630 D3 勘误注:生产 sim 路径不可达、
     潜伏面无害,语义保留并补锁)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     _sig_synth = ChannelSig(family='obs', actor='synthesize_from_game_state',
                             mode='synthesized')
     bs.observe(bs.node, NodeKey(plane=1, round_num=4, kind='battle'),
                evidence='sim:synthesized', sig=_sig_synth)
-    # 前帧:node_type=None(裸 GameState 未建模该帧)
+    # 前帧:node_type=None(裸 CwWorkFrame 未建模该帧)
     synthesize_from_game_state(bs, _sim_state(None))
     assert bs.node.value is not None, '有前值 = 节点照写'
     assert bs.node.value.kind == 'battle', 'kind_inherited:类型沿前值回写'
@@ -104,7 +104,7 @@ def test_kind_inherited_branch_retained() -> None:
 def test_kind_inherited_no_prior_value_keeps_none() -> None:
     """W1 ④ 边界:node_type=None ∧ 无前值 → node 不写保持 None(禁 'prep'
     占位假值,P1-1 同型;诚实缺位)。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     synthesize_from_game_state(bs, _sim_state(None))
     assert bs.node.value is None, '无现值且未读:不写,禁合成假值'
 
@@ -115,7 +115,7 @@ def test_kind_inherited_no_prior_value_keeps_none() -> None:
 def test_settlement_row_carries_battle_done_note(journal) -> None:
     """W1 ⑤:结算覆盖的 settlement 行注记 = battle_done:<节点类型>
     (旧 exogenous 'node_enter' 行「接」半的收编归宿);逐字段行不带注记。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     apply_settlement_cover(
         bs, hp_after=76, streak_after=2, killed=True,
         gold=120, note='battle_done:battle')
@@ -136,10 +136,10 @@ def test_settlement_row_carries_battle_done_note(journal) -> None:
 def test_journal_rows_all_registered_actor(journal) -> None:
     """legacy 行 = 0:模拟流全行型(write/obs_event)actor 在册非空——
     影子期「空 actor 合成行」在常开账本中结构性消失(ADR-0634)。"""
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         note_action_receipt,
     )
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())
     bs.carry(bs.gold, frame='p1-r2', sig=_sig())
     bs.write_logic(bs.strategy_refresh_used, {'白银投资': 1},
@@ -188,7 +188,7 @@ def test_write_apis_require_sig(api: str) -> None:
     """写入口 sig 必填(inspect 签名面):7 个写 API 的 sig 参数无缺省值
     (显式签名铺满的结构保证;缺位 = 调用期 TypeError,非静默合成;
     confirm 已随 ADR-0651 两步机制废除出列)。"""
-    sig = inspect.signature(getattr(BoardState, api))
+    sig = inspect.signature(getattr(GameState, api))
     assert 'sig' in sig.parameters, f'{api} 缺 sig 参数'
     assert sig.parameters['sig'].default is inspect.Parameter.empty, \
         f'{api}.sig 应为必填(无缺省;影子期缺位合成已退役)'
@@ -197,4 +197,4 @@ def test_write_apis_require_sig(api: str) -> None:
 def test_board_singleton_provider_unchanged() -> None:
     """session 旁表供给口在位(铺满面消费不搬家;防误伤)。"""
     session = SimpleNamespace()
-    assert isinstance(board_state_of(session), BoardState)
+    assert isinstance(board_state_of(session), GameState)

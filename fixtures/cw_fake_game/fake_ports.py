@@ -32,10 +32,10 @@ from sr_od.application.currency_war.cw_game_ports import (
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     Action,
-    GameState,
+    CwWorkFrame,
     ShopCard,
 )
 
@@ -152,7 +152,7 @@ class FakeCwObserver:
                     {'method': e.method, 'arg': e.arg, 'clock': e.clock}
                     for e in m.observation_log[-8:]]}
 
-    def _snapshot_state(self) -> GameState:
+    def _snapshot_state(self) -> CwWorkFrame:
         """状态快照:deepcopy 断别名(ADR-0465 §9 快照拷贝语义同源)——
         观察帧改动不得污染状态机真值(观察是快照,动作才转移)。"""
         return self._match.state.copy()
@@ -186,7 +186,7 @@ class FakeActionSink:
 
     def _land_ledger(self, env: Any, action: Action, res: ExecResult,
                      pre_shop_names: list[str],
-                     pre_truth: GameState | None = None) -> None:
+                     pre_truth: CwWorkFrame | None = None) -> None:
         """账本位随动(方案 §2.4;与 live 动作 op execute 的账户增量
         逐项对照——对照锚 = cw_shop_action_ops 各 op 类的 execute,行号
         为 2026-09-08 时点):计数单一源 = 同一 ShopVisitLedger 槽位。
@@ -235,7 +235,7 @@ class FakeActionSink:
         from sr_od.application.currency_war.kernel.cw_round_ledger import (
             register_round_sold,
         )
-        from sr_od.application.currency_war.kernel.cw_state import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             BENCH_CAPACITY,
             BuyCard,
             LevelUp,
@@ -297,7 +297,7 @@ class FakeActionSink:
                                else None))
             _expected_name = (_expected.char_id
                               if _expected is not None else None)
-            from sr_od.application.currency_war.kernel.cw_board_state import (
+            from sr_od.application.currency_war.kernel.cw_game_state import (
                 board_state_bridge,
             )
             register_round_sold([_expected_name],
@@ -310,7 +310,7 @@ class FakeActionSink:
             ledger.total_level += 1
             ledger.spend_executed += action.cost
         elif isinstance(action, RefreshShop):
-            from sr_od.application.currency_war.kernel.cw_state import (
+            from sr_od.application.currency_war.kernel.cw_vocab import (
                 REFRESH_COST_BASE,
             )
             from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (

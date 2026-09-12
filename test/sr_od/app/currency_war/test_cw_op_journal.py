@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_state import GameState, LevelUp
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame, LevelUp
 from sr_od.application.currency_war.telemetry import op_journal
 from sr_od.application.currency_war.telemetry.match_archive import (
     _annotate_orphan_op_rows,
@@ -60,8 +60,8 @@ def test_flatten_diff_symmetric_and_trunc():
 def test_action_row_shape_and_frame_seq(journal: Path):
     """动作行:seq/frame_seq/exec_ok/gold/expected_delta 全落;段序推进生效。"""
     assert op_journal.advance_frame_seq() == 1
-    pre = GameState(plane=2, round_num=3, gold=10)
-    post = GameState(plane=2, round_num=3, gold=6)
+    pre = CwWorkFrame(plane=2, round_num=3, gold=10)
+    post = CwWorkFrame(plane=2, round_num=3, gold=6)
     op_journal.record_action_journal(
         match=None, action=LevelUp(cost=4), seq=2, exec_ok=True,
         pre_frame=pre, post_frame=post)
@@ -81,7 +81,7 @@ def test_no_run_id_writes_nothing(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(op_journal, '_frame_seq_by_run', {})
     monkeypatch.setattr(op_journal, 'current_run_id', lambda: '')
     op_journal.record_action_journal(None, LevelUp(cost=4), 1, True,
-                                     GameState(), GameState())
+                                     CwWorkFrame(), CwWorkFrame())
     assert op_journal.record_op_enter('战斗等待', 1, 1) is None
     assert not out.exists()
 
@@ -101,8 +101,8 @@ def test_row_count_soft_cap_retired():
 def test_row_cap_truncates(journal: Path, monkeypatch):
     """行帽截断:delta 超 12 条 → 精简行 + _trunc 分型标记。"""
     monkeypatch.setattr(op_journal, '_ROW_CAP', 200)
-    pre = GameState()
-    post = GameState(plane=1, round_num=1, gold=5, hp=90, level=3)
+    pre = CwWorkFrame()
+    post = CwWorkFrame(plane=1, round_num=1, gold=5, hp=90, level=3)
     op_journal.record_action_journal(None, LevelUp(cost=4), 1, True,
                                      pre, post)
     rows = _rows(journal)

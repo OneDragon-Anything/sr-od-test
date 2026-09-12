@@ -148,10 +148,10 @@ def test_read_game_state_hp_wired_through_reconcile(monkeypatch, tmp_path) -> No
 # 行为锁 test_hp_trusted_default_false 及后续行为覆盖守住)。
 
 def test_hp_trusted_default_false() -> None:
-    """GameState 默认 False(未知帧按不可信,保守);直接构造的帧不带
+    """CwWorkFrame 默认 False(未知帧按不可信,保守);直接构造的帧不带
     trusted=True——消费方守卫须显式依赖写入端赋值,不吃默认幸运值。"""
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    assert GameState().hp_trusted is False
+    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+    assert CwWorkFrame().hp_trusted is False
 
 
 # ===== 件5:075840 hp 真值链形态锁(T-109③ 定谳,ADR-0605) =====

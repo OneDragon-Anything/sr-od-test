@@ -49,10 +49,10 @@ from sr_od.application.currency_war.kernel.cw_first_passage import (
     risk_posture,
 )
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CompTransaction,
-    GameState,
+    CwWorkFrame,
     _recount_board,
     simulate,
 )

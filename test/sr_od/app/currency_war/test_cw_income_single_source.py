@@ -7,7 +7,7 @@
 ⑤利息分量(cap resolved 归一 + flat 修饰)⑥net_income 处置等价性锁
 (委托改造后消费域逐位不变,ADR-0623 §决策2)⑦round_base_income 薄别名。
 
-锁的出处:BoardState 设计 §4.2 轮首收入行(正本语义)/economy.md §10.1
+锁的出处:GameState 设计 §4.2 轮首收入行(正本语义)/economy.md §10.1
 (真值源)/ADR-0623 §决策1-2。既有语义锁 test_cw_statefn::
 test_net_income_schedule 的三个值点在本文件以等价性锁复述,两处同改。
 """
@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     streak_gold,
 )
 
-# --- ① 平面感知键(BoardState §4.2 奖励轮行;economy.md §10.1 直读定谳) ---
+# --- ① 平面感知键(GameState §4.2 奖励轮行;economy.md §10.1 直读定谳) ---
 
 def test_reward_base_gold_p1_round_table() -> None:
     """P1 键 = REWARD_BASE_GOLD_BY_ROUND {1:3,2:4},其余轮 5(注册表同源)。"""

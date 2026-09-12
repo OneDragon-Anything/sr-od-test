@@ -122,7 +122,7 @@ def test_rundeploy_landing_matches_fence_single_source() -> None:
     from sr_od.application.currency_war.kernel.cw_prep_actions import (
         RunDeploy,
     )
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         BenchChar,
     )
 
@@ -180,7 +180,7 @@ def test_projection_matches_fake_truth_on_modeled_domains() -> None:
         OpenBox,
         SellBench,
     )
-    from sr_od.application.currency_war.kernel.cw_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 
     class _PrepHost:
         """投影链宿主最小桩(_project_prep_obs 只用 self,无 ctx 依赖)。"""
@@ -262,7 +262,7 @@ def test_refresh_probs_rotation_env_models_doubled_tier() -> None:
         boosted_cost_tier,
         rotation_probs,
     )
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         REFRESH_COST_BASE,
         RefreshShop,
     )
@@ -343,9 +343,9 @@ def test_sold_name_source_is_pre_transition_truth(
     from sr_od.application.currency_war.kernel.cw_exec_state import (
         exec_state_of,
     )
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         BenchChar,
-        GameState,
+        CwWorkFrame,
         SellBench,
     )
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -361,7 +361,7 @@ def test_sold_name_source_is_pre_transition_truth(
     exec_state_of(session).v2_round_key = (
         m.state.plane, m.state.round_num)
     # 期望帧刻意陈旧:槽 0 指向「景元」,真值 = 希儿——修前登记名随期望帧漂
-    stale_frame = GameState(plane=m.state.plane,
+    stale_frame = CwWorkFrame(plane=m.state.plane,
                             round_num=m.state.round_num)
     stale_frame.bench = [BenchChar(slot=1, char_id='景元', faction='?')]
 

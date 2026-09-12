@@ -280,7 +280,7 @@ def _income_state(node: str, rn: int, streak: int, held: list[str],
 def test_held_win_reward_mult_scales_streak_component() -> None:
     """伟大征服 ×3 施于假环境连胜分量(fields.md §4.1「收入修饰」:
     施于连胜分量**含奖励轮**;T-64 切源后与引擎消费缝同源
-    round_start_income,BoardState「sim 修正随之」桶闭合)。
+    round_start_income,GameState「sim 修正随之」桶闭合)。
 
     补给槽零发、败补槽按 ADR-0439 类型表连胜槽替换(均不乘倍率);
     期望值注册表现算(纪律 9,kernel _streak_component 同式)。红 =

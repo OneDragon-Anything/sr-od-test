@@ -95,8 +95,8 @@ def test_tome_channel_acquisition_registration_consumption(
                 '星徽未入装备库存(owned += 星徽 断)')
             picked = (set(m.state.equips) - set(equips_pre)).pop()
             assert picked.endswith('星徽'), f'消耗产物非星徽件: {picked}'
-            # 生产写点:BoardState chosen_tome(CwScreenBookcard 写端)
-            from sr_od.application.currency_war.kernel.cw_board_state import (
+            # 生产写点:GameState chosen_tome(CwScreenBookcard 写端)
+            from sr_od.application.currency_war.kernel.cw_game_state import (
                 board_state_of,
             )
             bs = board_state_of(run.cw_match.session)
@@ -169,7 +169,7 @@ def test_wear_trigger_synthesis_advances_equipment() -> None:
         SYNTHESIS_BASES,
         synthesize_target,
     )
-    from sr_od.application.currency_war.kernel.cw_state import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         BenchChar,
     )
 

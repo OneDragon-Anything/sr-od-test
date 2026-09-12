@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from sr_od.application.currency_war.kernel.cw_state import BuyCard, GameState, ShopCard
+from sr_od.application.currency_war.kernel.cw_vocab import BuyCard, CwWorkFrame, ShopCard
 from sr_od.application.currency_war.operations.cw_op import cw_shop_action_ops
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     BuyCardOp,
@@ -53,7 +53,7 @@ def _setup(monkeypatch, before: np.ndarray, after: np.ndarray):
         tracked_bench_chars=[], tracked_deployed=[], v3_intention=None))
     env = ShopExecEnv(op=op, match=match, config=None, click_pts=[],
                       level_btn=None, refresh_btn=None, ledger=ledger,
-                      state=GameState(bench=[]))
+                      state=CwWorkFrame(bench=[]))
     rows = _capture(monkeypatch)
     _ok = BuyCardOp(action).execute(env)
     return ledger, rows, match, _ok

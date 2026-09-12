@@ -45,13 +45,13 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     LOSS_GOLD_BY_NODE,
     round_start_income,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 
 #: 战斗类节点(连胜/连败与败轮金的判定域;奖励/补给不结连胜)
 _COMBAT_NODES: tuple[str, ...] = ('battle', 'encounter', 'boss')
 
 
-def income_for_round(st: GameState, rng: random.Random,
+def income_for_round(st: CwWorkFrame, rng: random.Random,
                      prev_node: str | None, prev_combat_lost: bool) -> dict[str, int]:
     """每备战期收入分解(方案 §2.2 收入行;规则知识按 kernel 真码直调
     重述一次,ADR-0439 锚随迁——旧载体退役后本函数是该规则知识的
@@ -186,7 +186,7 @@ def box_card_options(pool_names: list[str], rng: random.Random,
     return names[:k]
 
 
-def settle_streak(st: GameState, delta: int, node: str) -> tuple[int, bool]:
+def settle_streak(st: CwWorkFrame, delta: int, node: str) -> tuple[int, bool]:
     """节点结算的连胜/败轮状态迁移(输入 = 采样 delta 与节点类型)。
 
     返回 (new_streak, combat_lost)。带符号口径逐位随迁 engine_p1

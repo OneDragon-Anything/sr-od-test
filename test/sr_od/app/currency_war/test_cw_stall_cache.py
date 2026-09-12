@@ -32,10 +32,10 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     locked_buy_cap_hold,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    GameState,
+    CwWorkFrame,
     SellBench,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -82,7 +82,7 @@ def _locked_session() -> StrategySession:
 
 
 def _storm_state(gold: int = 30, deployed: list[BenchChar] | None = None
-                 ) -> GameState:
+                 ) -> CwWorkFrame:
     """风暴帧构造:bench 9/9 全为锁定采购集成员(经 exclude 排除 ⇒ 腾席
     燃料集空)∧ 缺员核心件不在场 ⇒ M4 腾席无候选停摆形态。
     T-307/R1(ADR-0647)fixture 口径对齐:占位成员取截断义务集 B' 内
@@ -93,12 +93,12 @@ def _storm_state(gold: int = 30, deployed: list[BenchChar] | None = None
     core = set(predicates.line_members(comp))
     hoard_chars, _eq = cw_intention._line_hoard(comp)
     hoard_only = sorted(set(hoard_chars) - core)
-    st_probe = GameState(gold=gold, level=7, round_num=2, hp=60)
+    st_probe = CwWorkFrame(gold=gold, level=7, round_num=2, hp=60)
     bp = cw_intention.locked_buy_membership(
         _locked_ist_proxy(), cap_hold=locked_buy_cap_hold(st_probe)) or frozenset()
     hoard_only = [m for m in hoard_only if m in bp]
     assert len(hoard_only) >= BENCH_CAPACITY, '构造前提:B\' 内囤件须满席'
-    st = GameState(gold=gold, level=7, round_num=2, hp=60)
+    st = CwWorkFrame(gold=gold, level=7, round_num=2, hp=60)
     st.plane = 2
     st.shop = []
     st.bench = [_bc(m, slot=i + 1)
@@ -374,7 +374,7 @@ class TestPrepStallCache:
         frame.deployed = [_bc(material, slot=1)]    # 中唯一非 3★ 件 = 守卫目标)
         # 守卫的 deployed 域查经 run_mandate 的 state 参数现读,必须携带
         # 同名同星副本(与商店域 P56 位同款守卫输入)。
-        state = GameState()
+        state = CwWorkFrame()
         state.deployed = [_bc(material, slot=1)]
         sess = StrategySession()
         state_of(sess).cw4_counters = {}
@@ -423,7 +423,7 @@ class TestTokenWritePointLiveness:
 
         _stub_first_refresh.fired = False
         monkeypatch.setattr(strat, 'decide_shop_action', _stub_first_refresh)
-        st = GameState(gold=30, level=7, round_num=2, hp=60)
+        st = CwWorkFrame(gold=30, level=7, round_num=2, hp=60)
         st.plane = 2
         st.shop = []
         st.bench = []

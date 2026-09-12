@@ -31,7 +31,7 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     update_intention,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -46,16 +46,16 @@ def _plain_session() -> SimpleNamespace:
 def test_default_session_counter_container_lazily_created():
     """容器缺席 → 惰性建空 dict 再计数(先例 = mandate_v1/entry 初始化面);
     全部键落在登记前缀族内(与既有键族零交集,设计稿 §4 条款③)。
-    W6 波 4:update_intention 契约面已切容器——plane 真值改真 BoardState
-    节点域写入口写入(旧 GameState 帧直喂 = AttributeError)。"""
+    W6 波 4:update_intention 契约面已切容器——plane 真值改真 GameState
+    节点域写入口写入(旧 CwWorkFrame 帧直喂 = AttributeError)。"""
     sess = _plain_session()
-    from sr_od.application.currency_war.kernel.cw_board_state import (
+    from sr_od.application.currency_war.kernel.cw_game_state import (
         BS_SCHEMA_VERSION,
-        BoardState,
+        GameState,
         ChannelSig,
         NodeKey,
     )
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.node, NodeKey(plane=2, round_num=1, kind='battle'),
                sig=ChannelSig(family='obs',
                               actor='synthesize_from_game_state',
@@ -112,7 +112,7 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
             # 观察半直写面(ADR-0583):真实 StrategySession 承载
             #(performance/pending_round_outcomes 等字段齐备,零桩面特判)
             _sess = StrategySession()
-            _sess.last_state = GameState()
+            _sess.last_state = CwWorkFrame()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(

@@ -289,12 +289,12 @@ class TestRoundOutcomeChain:
     def test_outcome_row_carries_heal_longline(self):
         # RoundOutcome 行内字段(删除波 1 退役重写:观察半 history 行仍携该键)
         from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-        from sr_od.application.currency_war.kernel.cw_state import GameState
+        from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
         from sr_od.application.currency_war.strategies.impl.cw_strategy import (
             StrategySession,
         )
         sess = StrategySession()
-        sess.last_state = GameState()
+        sess.last_state = CwWorkFrame()
         o = RoundOutcome(
             round_num=5, plane=1, node_type='普通战斗', comp_tag='x',
             hp_after=91, killed=True,

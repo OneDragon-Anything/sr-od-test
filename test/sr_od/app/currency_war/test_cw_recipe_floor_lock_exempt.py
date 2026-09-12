@@ -25,7 +25,7 @@ from types import SimpleNamespace
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
@@ -46,7 +46,7 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     locked_faction_scope,
     locked_line_recipe_floor_conflict,
 )
-from sr_od.application.currency_war.kernel.cw_state import BenchChar, GameState
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwWorkFrame
 from sr_od.application.currency_war.operations.cw_op import cw_op_deploy as db
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
@@ -475,7 +475,7 @@ def test_swap_transition_arm_revived_on_lock_line() -> None:
             v3_intention=_ist('列车同行'), target_comp=None,
             transition_framework=''))
     ctx_asm = assemble_swap_plan_inputs(
-        sess_locked, state=board_state_bridge(GameState(plane=2, round_num=3)),
+        sess_locked, state=board_state_bridge(CwWorkFrame(plane=2, round_num=3)),
         deployed=deployed, bench=bench, cap=6)
     assert ctx_asm is not None
     assert ctx_asm.recipe_floor_lock_exempt is True, \
@@ -485,7 +485,7 @@ def test_swap_transition_arm_revived_on_lock_line() -> None:
         strategy_state=SimpleNamespace(
             v3_intention=_ist(), target_comp=None, transition_framework=''))
     ctx_plain = assemble_swap_plan_inputs(
-        sess_plain, state=board_state_bridge(GameState(plane=2, round_num=3)),
+        sess_plain, state=board_state_bridge(CwWorkFrame(plane=2, round_num=3)),
         deployed=deployed, bench=bench, cap=6)
     assert ctx_plain is not None and ctx_plain.recipe_floor_lock_exempt is False
 
@@ -509,14 +509,14 @@ def test_emission_frame_dedup_union_and_hold_key() -> None:
     state_of(sess).v3_intention = _ist()   # 未锁 → 豁免关
     frame = _tele_frame()
     for _ in range(3):
-        assert mandate._deployable(frame, sess, GameState()) is False
+        assert mandate._deployable(frame, sess, CwWorkFrame()) is False
     c = state_of(sess).cw4_counters
     assert c.get('deploy_emit_held_recipe_floor') == 1, c
     assert 'deploy_emit_floor_ctx_open' not in c
     assert 'deploy_emit_floor_exempt_open' not in c
     # 轮次推进 = 新帧,键重新可计(去重载体 phase 键式)
     frame2 = _tele_frame(round_num=4)
-    assert mandate._deployable(frame2, sess, GameState()) is False
+    assert mandate._deployable(frame2, sess, CwWorkFrame()) is False
     assert state_of(sess).cw4_counters.get(
         'deploy_emit_held_recipe_floor') == 2
 
@@ -531,7 +531,7 @@ def test_emission_armed_release_and_exempt_fire_keys() -> None:
     state_of(sess).v3_intention = _ist('列车同行')
     frame = _tele_frame()
     for _ in range(2):
-        assert mandate._deployable(frame, sess, GameState()) is True
+        assert mandate._deployable(frame, sess, CwWorkFrame()) is True
     c = state_of(sess).cw4_counters
     assert 'deploy_emit_held_recipe_floor' not in c, c
     assert c.get('deploy_emit_floor_ctx_open') == 1

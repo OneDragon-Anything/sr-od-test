@@ -133,16 +133,16 @@ class TestDifficultyLiveContamination:
 
 # ==================== difficulty_readchain ====================
 
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 
 
-def _state() -> GameState:
-    return GameState(plane=1, round_num=3, hp=80, gold=30,
+def _state() -> CwWorkFrame:
+    return CwWorkFrame(plane=1, round_num=3, hp=80, gold=30,
                      board={'仙舟': 1}, bench=[], shop=[], hp_readable=True)
 
 
 def test_state_field_default_and_serialize() -> None:
-    """GameState 字段默认(False)+ dataclass 全量序列化自带该字段
+    """CwWorkFrame 字段默认(False)+ dataclass 全量序列化自带该字段
     (decisions.jsonl 落盘无需白名单——serialize_state 全量语义锁)。"""
     st = _state()
     assert st.enemy_difficulty_live is False

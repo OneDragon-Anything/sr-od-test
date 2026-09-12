@@ -26,9 +26,9 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    GameState,
+    CwWorkFrame,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -75,8 +75,8 @@ def _sess() -> StrategySession:
 
 
 def _state(bench: list[BenchChar], *, plane: int = 2,
-           round_num: int = 3) -> GameState:
-    st = GameState(gold=50, level=7, round_num=round_num, hp=60)
+           round_num: int = 3) -> CwWorkFrame:
+    st = CwWorkFrame(gold=50, level=7, round_num=round_num, hp=60)
     st.plane = plane
     st.bench = list(bench)
     # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒

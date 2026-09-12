@@ -22,7 +22,7 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
-from sr_od.application.currency_war.kernel.cw_board_state import (
+from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
@@ -36,11 +36,11 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
-from sr_od.application.currency_war.kernel.cw_state import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    GameState,
+    CwWorkFrame,
     SellBench,
     ShopCard,
 )
@@ -53,10 +53,10 @@ _P2_SESSION = SimpleNamespace(plane_node_table=[1] * 7)
 
 
 def _state(plane: int = 2, round_num: int = 1, hp: int = 40,
-           level: int = 7, gold: int = 0, **extra) -> BoardState:
+           level: int = 7, gold: int = 0, **extra) -> GameState:
     """W6 波3:可行性/意向面已切容器签名,旧帧经过渡桥装箱。
     extra = 其余字段(shop/bench 等);桥为一次性快照,变异须重建帧。"""
-    st = GameState()
+    st = CwWorkFrame()
     st.plane = plane
     st.round_num = round_num
     st.hp = hp
@@ -327,8 +327,8 @@ def test_shop_rejects_projects_bench_across_buys():
     """波内先买占掉末席后,同波后续线内件应归 missing_bench_full
     (旧口径误标 missing_no_path)。"""
     comp = None                       # transition 分类不辖,聚焦投影
-    # shop_unbought_reasons 属 mandate_v1(波4 面,GameState 签名)——喂原始帧
-    st = GameState()
+    # shop_unbought_reasons 属 mandate_v1(波4 面,CwWorkFrame 签名)——喂原始帧
+    st = CwWorkFrame()
     st.gold = 99
     st.bench = _bench(BENCH_CAPACITY - 1)     # 8/9,剩 1 席
     a = ShopCard(x=0, name='甲一', cost=3)
@@ -344,8 +344,8 @@ def test_shop_rejects_projects_sell_refund_and_seat():
     """卖买同帧:卖出回金与席释放进投影——席满帧经 M4 腾席后线内件
     买入可行,不再留拒因。"""
     comp = None
-    # 同上:mandate_v1 拒因面喂原始 GameState 帧
-    st = GameState()
+    # 同上:mandate_v1 拒因面喂原始 CwWorkFrame 帧
+    st = CwWorkFrame()
     st.gold = 5
     st.bench = _bench(BENCH_CAPACITY)         # 席满
     b = ShopCard(x=0, name='乙二', cost=5)

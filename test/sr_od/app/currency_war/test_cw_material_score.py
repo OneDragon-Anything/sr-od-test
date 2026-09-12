@@ -2,7 +2,7 @@
 
 出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/sr_od/application/currency_war/strategy-docs/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-from sr_od.application.currency_war.kernel.cw_state import GameState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
@@ -23,7 +23,7 @@ def test_material_score_now_alive():
     旧代码读 .materials 恒空,材料分静默失效(局33b 根因)。"""
     st = MandateV1Strategy()
     sess = _sess_baiyu()
-    gs = GameState()
+    gs = CwWorkFrame()
     # 幸运星 vs 无关件:幸运星应胜
     i = st.decide_box_card(['幸运星', '完全无关的垃圾'], gs, sess, None)
     assert i == 0, '幸运星(key_equip 材料)应因材料分胜出'
