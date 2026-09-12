@@ -1,6 +1,6 @@
 """统一观察架构·逐屏迁移首批锁(试点步骤 2:遭遇节点 + 盛会之星)。
 
-设计正本 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
+设计正本 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度依据 = 开放问题清单 B3(先迁 2 个代表屏:
 遭遇 = 带刷新链最复杂、盛会之星 = 纯选卡最简 → 验证断言集模板 → 其余按族
 批量);迁移手法单一源 = 试点步骤 1 先例(CwScreenPrep:装配点分流 + 五段

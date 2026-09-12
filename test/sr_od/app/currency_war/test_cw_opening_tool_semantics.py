@@ -1,6 +1,6 @@
 """21 号稿「opening 窗口收窄 与 工具件消费语义」落码锁面(ADR-0531)。
 
-设计出处 = docs/develop/currency_war/strategy-docs/
+设计出处 = docs/develop/sr_od/application/currency_war/strategy-docs/
 21_opening_window_and_tool_consume.md(v3,对抗零发现收口);锁面分组:
 1. O1 战斗前置释放门(§2.3 三门;收编 row3 并前移);
 2. O2 自由件即穿门 + 自由件谓词(§2.2/§6 术语;支配性论证零新参数);

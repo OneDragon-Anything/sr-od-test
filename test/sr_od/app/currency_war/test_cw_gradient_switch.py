@@ -1,7 +1,7 @@
 """灰度接线+遥测 v2 字段验证(Phase A Day 11;评审修正后)。
 
 出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览
-docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。
+docs/develop/sr_od/application/currency_war/strategy-docs/README.md)(2026-08-31 测试瘦身批考证补记)。
 
 Manager 发现/实例化/值域三测已并入主题文件 test_cw_strategy.py
 (「StrategyManager 发现 / 去重 / 实例化 / 值域」节;覆盖对账:strategy 侧

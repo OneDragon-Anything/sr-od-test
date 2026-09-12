@@ -6,7 +6,7 @@
 
 
 出处:被测模块本体——现行基建锁(星级回归钩子;执行侧状态迁移表
-docs/develop/currency_war/flow/session.md §2.4 star_regression_count 行)
+docs/develop/sr_od/application/currency_war/flow/session.md §2.4 star_regression_count 行)
 (2026-08-31 测试瘦身批考证补记)。"""
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 import sys

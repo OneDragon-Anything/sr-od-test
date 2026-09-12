@@ -1,7 +1,7 @@
 """T-193 dominance_buy 买后金下限地板(结算线地板)单帧锁 + 发射级断言端到端。
 
 设计出处(锁纪律:新锁必引设计出处;持久载体 = ADR-0624,
-docs/develop/currency_war/decisions/0624-dominance-settlement-line-floor.md):
+docs/develop/sr_od/application/currency_war/decisions/0624-dominance-settlement-line-floor.md):
 - ADR-0624 决策 1/2/3:结算线地板谓词单一源(``shop.check_settlement_line``,
   gold − cost ≥ g*,g* = saturation_line(cap_resolved) 派生禁字面)/
   dominance 臂消费位与候选级分键 ``dominance_settlement_floor_reject``/

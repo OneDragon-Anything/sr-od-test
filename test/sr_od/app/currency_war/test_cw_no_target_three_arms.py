@@ -1,9 +1,9 @@
 """P86 无目标期三臂判据单帧锁(T-177 落码批)。
 
 出处(单一源):
-- 命题正本 = docs/develop/currency_war/proofs/p86-no-target-period-fund-allocation.md
+- 命题正本 = docs/develop/sr_od/application/currency_war/proofs/p86-no-target-period-fund-allocation.md
   (§2 三臂形态/§4.2 四面退役表/§4.4 旧锁清单与重推义务/§5.2 单帧锁清单);
-- 证明批 = docs/develop/currency_war/proofs/p86-proof-batch.md
+- 证明批 = docs/develop/sr_od/application/currency_war/proofs/p86-proof-batch.md
   (§3 定理 A/B1-B5/C/M;§4 必答六件终裁;§6 落码批增量条款九件)。
 
 锁编号对齐:正本 §5.2 锁 1-7 + 证明批 §6 增量 1-9,逐测试 docstring 引出处。

@@ -1,6 +1,6 @@
 """R5 W1 常开化+观察接线收尾·W1 专项锁面。
 
-范围锚 = docs/develop/currency_war/game_state/r5-migration-plan.md §2 W1 行;
+范围锚 = docs/develop/sr_od/application/currency_war/game_state/r5-migration-plan.md §2 W1 行;
 裁定正本 = ADR-0634(影子双写推翻:journal 无条件常开/写入口签名必填)。
 常开与签名必填的通用锁面在 test_cw_state_journal.py(锁语义重推申报在案),
 本文件收 W1 独有的四族:

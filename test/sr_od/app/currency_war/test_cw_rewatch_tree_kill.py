@@ -1,6 +1,6 @@
 """哨兵树终杀与杀后复扫断言锁(tools/cw/rewatch.py + cycle_restart 消费点)。
 
-出处 = ADR-0602(docs/develop/currency_war/decisions/,树终杀+杀后复扫
+出处 = ADR-0602(docs/develop/sr_od/application/currency_war/decisions/,树终杀+杀后复扫
 断言+cycle_restart 两消费点收口的决策 why)。病灶 = 2026-09-08 实录:手工
 Stop-Process 单点杀哨兵,Windows 不级联,pwsh 包装死后 uv→venv python
 链照常存活——孤儿占 runs_gap 锁拒新实例武装+报警链断成哑哨兵。

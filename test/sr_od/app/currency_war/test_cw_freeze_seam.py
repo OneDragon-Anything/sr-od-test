@@ -1,7 +1,7 @@
 """T-171 批序 3:冻结接缝单帧锁(命题 1b form_ok 冻结,ADR-0616 §2.2)。
 
 出处(全部设计定义量,零拟合常数):
-- 设计正本 = ADR-0616(docs/develop/currency_war/decisions/
+- 设计正本 = ADR-0616(docs/develop/sr_od/application/currency_war/decisions/
   0616-t166-pair-direction-predicate-ontology.md)§2.2 命题 1b:F 状态机
   (置位=事件闩 / 冻结抑制重派生 / 解冻闭集 p1_pair 域恰三项 / 外部清除
   ⟹F 同帧归 0 ⟹ F=1⟹对非空不变式 / 再闩封印防逐帧空转环);

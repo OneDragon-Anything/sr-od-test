@@ -891,7 +891,7 @@ def _scan_slot_accesses(src_root: Path) -> tuple[list[str], list[str], list[str]
 def test_valley_rollback_slot_zero_consumer_guard() -> None:
     """谷底回滚登记槽零消费守卫(SwapDeploy 发射面退役 as-built 负向锁)。
 
-    出处 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
+    出处 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
     §6.6 SwapDeploy 行(发射面退役 = as-built 事实申报;负向锁申报 =
     登记槽非空告警)+ §7-T5 注意项(禁把 v3_pending_rollback 当 bug 接上
     发射)。as-built:登记半边活(谷底回滚臂仍构造 SwapDeploy 写入本槽)、

@@ -10,7 +10,7 @@
 来源:本文件 = test_cw_enter_flow.py(git mv)+ test_cw_entry_exit_esc_free.py
 三锁并入(2026-09-09 套件重建批 A,#1)。其余历史锁已退役(git 可复活)。
 出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览
-docs/develop/currency_war/strategy/README.md)。
+docs/develop/sr_od/application/currency_war/strategy-docs/README.md)。
 """
 from __future__ import annotations
 

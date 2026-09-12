@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """统一观察架构·实机半边写入流对拍夹具(试点步骤 1;设计正本 =
-docs/develop/currency_war/design/统一观察架构-画面op基类设计.md §9.1 主门
+docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md §9.1 主门
 (b)腿「写入流分域夹具对拍」+ §2.3 实机实现 = 识别链映射表;sim 半边 =
 步骤 2 辖域,本文件不涉及)。
 

@@ -2,7 +2,7 @@
 在任优先/可行性门,逐层分立)。
 
 设计出处(全部断言的单一出处,零拟合常数):
-- 设计正本 = ADR-0616(docs/develop/currency_war/decisions/
+- 设计正本 = ADR-0616(docs/develop/sr_od/application/currency_war/decisions/
   0616-t166-pair-direction-predicate-ontology.md)§2.1 命题 1a(在任优先
   单席易手,严格大于,平手保持)/§2.3 命题 2(门槛过滤先行双量纲 +
   排除谓词 Ex_I + 排序维星级当量 + 第④格换算式)/§2.4 命题 3(可行性门

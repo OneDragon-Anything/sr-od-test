@@ -9,7 +9,7 @@ ADR-0601 板满失配闸短路,r250 场内前排保证永远不可达 → 备战
 + F3 0j 预算复位收紧。
 
 设计出处 = ``.debug/temp/currency_war/attacks/t174_reward_node/修复方案.md``
-v2(易失工作副本;持久收编 = docs/develop/currency_war/decisions/0610-*.md)。
+v2(易失工作副本;持久收编 = docs/develop/sr_od/application/currency_war/decisions/0610-deploy-front-invariant-and-rowfix-exemption.md)。
 锁编号 L1/L1b/L2/L2b/L2c/L3/L4/L4b/L5/L6 沿方案 §6.1 清单(L2c = 改动
 三审 C1/D1 收口批新增:NO_BENCH 第三出口不变量);L7 回归面 =
 既有 test_cw_deploy_battle_chain / test_cw_action_op_compliance

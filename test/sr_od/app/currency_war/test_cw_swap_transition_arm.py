@@ -1,7 +1,7 @@
 # 转型臂(M1″ swap 谓词触发域扩展)单帧锁——锁线后 fp<1.00 板满帧的
 # bench→板 换血通道:病灶回放/守恒门/合成素材守卫/1★ 守卫/卖后底线/
 # 双臂互斥/胜出不提权/执行侧同函数/发射分键/守恒门辖域不变式。
-# 语义出处:ADR-0534(docs/develop/currency_war/decisions/
+# 语义出处:ADR-0534(docs/develop/sr_od/application/currency_war/decisions/
 # 0534-swap-transition-arm.md)。病灶帧 = 实机「锁 列车同行 →
 # 三月七 2★ + 姬子·启行 bench 成型,deployed 恒 6 过渡件、3 备战轮未
 # 上板)。锁的存在性纪律:每条锁 docstring 引出处;守卫均为「移除即红」

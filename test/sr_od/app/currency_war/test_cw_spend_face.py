@@ -1,6 +1,6 @@
 """14号稿 P1 消费臂落码批·检查点锁组(CUT8 收缩批,上限 20 行)。
 
-设计出处 = docs/develop/currency_war/strategy-docs/14_p1_consume_arms.md
+设计出处 = docs/develop/sr_od/application/currency_war/strategy-docs/14_p1_consume_arms.md
 (v4.2.2)§3(臂①囤腿)/§4(arm0 升级授权回补)/§7/§9。CUT8 构成
 (分支记账见 reports/_cluster_CUT8.md):
 - 臂① m2_stockpile:j=1 发射 1 + cnt2>0 排除 1(N2 不制造死库存)+

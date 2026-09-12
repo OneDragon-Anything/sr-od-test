@@ -5,9 +5,9 @@
 # 线件待上(准入三元,谓词单一源 = evolution_swap_arm_trigger)时,
 # swap_sell_exclusion_reason 的 star_guard 对可读星级 >1 的 victim
 # 让位(ADR-0382 分级降级换血语义接入换血机器的参数化面)。语义出处:
-# - docs/develop/currency_war/decisions/0614-evolution-grade-swap-arm.md
+# - docs/develop/sr_od/application/currency_war/decisions/0614-evolution-grade-swap-arm.md
 #   (本批 ADR:修向原文/准入三元/卖出代价轴重推/P61 辖域注);
-# - docs/develop/currency_war/decisions/0382-engine-completion-graded-undeploy.md
+# - docs/develop/sr_od/application/currency_war/decisions/0382-engine-completion-graded-undeploy.md
 #   (分级保护:G0/G1 可动、G2 已成型引擎/pair/希儿系恒不可动;本臂
 #   不新增资格语义,只放开既有 1★ 限制、其余守卫全保留)。
 # 锁的存在性纪律:每条锁 docstring 引出处;守卫均为「移除即红」属性。

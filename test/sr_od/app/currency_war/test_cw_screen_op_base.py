@@ -1,5 +1,5 @@
 """统一观察架构·画面 op 基类锁(试点步骤 1;设计正本 =
-docs/develop/currency_war/design/统一观察架构-画面op基类设计.md,下称
+docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md,下称
 「架构设计」;§9.1 新锁面 = 基类生命周期锁(五段各一段)+ on_outcome
 单一发射口锁)。
 

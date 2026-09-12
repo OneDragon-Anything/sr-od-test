@@ -1,6 +1,6 @@
 """配方底线门「锁定线语境豁免」回归锁(ADR-0564)。
 
-设计出处:docs/develop/currency_war/decisions/0564-recipe-floor-lock-line-exempt.md
+设计出处:docs/develop/sr_od/application/currency_war/decisions/0564-recipe-floor-lock-line-exempt.md
 (设计稿 = fix_recipe_floor/方案-v3.md §5,8 条)。
 
 覆盖面(五处消费点 + 遥测 + 缺省逐位同旧):

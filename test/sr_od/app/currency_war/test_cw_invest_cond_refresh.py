@@ -1,7 +1,7 @@
 """条件判定型免费刷新(本金充裕/+)行为锁(账本 T-11;设计依据 =
 docs/develop/sr_od/application/currency_war/changes/2026-09-11-unified-state/
 details/BoardState-数据结构设计.md §3.3.5-§3.3.6(下称「设计」)+
-docs/develop/currency_war/game_state/effect-domain.md(效果域正本)。
+docs/develop/sr_od/application/currency_war/game_state/effect-domain.md(效果域正本)。
 
 锁面三族(任务口径):
 - **条件触发**:节点边界一次,按 bs.gold 现值评估——金 > 50 每额外 10 金

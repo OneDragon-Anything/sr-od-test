@@ -1,6 +1,6 @@
 """CW 商店/备战预算闸测试(#9):spend_unified 整买拒付锁 + 预算闸拒付
 单代表(上位 = P71-b 溢余段闸 ADR-0560;现役 = P72 全段闸 ADR-0576,
-证明 = docs/develop/currency_war/proofs/p72-full-band-budget-gate.md)。
+证明 = docs/develop/sr_od/application/currency_war/proofs/p72-full-band-budget-gate.md)。
 
 覆盖面(金钱类按 2026-09-09 编排者裁决收缩:实机结算对账 + sim 段检双层
 已覆盖预算闸逐面锁族,单位层只留拒付判据本体):

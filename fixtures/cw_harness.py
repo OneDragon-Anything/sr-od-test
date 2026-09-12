@@ -867,7 +867,7 @@ class FakeP1Run:
 
     # ---- 批 3:外循环分支序(方案 §6.2 批 3;批 2 申报的归批 3 面)----
     #
-    # 分支序正本 = docs/develop/currency_war/flow/outer_loop.md §2.2
+    # 分支序正本 = docs/develop/sr_od/application/currency_war/flow/outer_loop.md §2.2
     # (浮层先于备战双锚;序位漏项 = 实机事故源)。本节把批 2 申报归批 3
     # 的分支(0i 星徽秘典/0e1 补给/战斗窗/0q 位面过渡)接进假环境:
     # 每分支 = **真画面 op**(决策半真码)+ 读图域桩(识别缺陷面结构性

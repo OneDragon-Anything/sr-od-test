@@ -1,7 +1,7 @@
 """效果写端三载体主题锁(T-63:节点边界金结算载体/工具执行批/拷贝仪参与计数载体)。
 
 设计出处(持久索引):
-- 归属判据正本 = docs/develop/currency_war/game_state/effect-domain.md §6.3
+- 归属判据正本 = docs/develop/sr_od/application/currency_war/game_state/effect-domain.md §6.3
   (确定性→逻辑写;含随机→零逻辑写端,观察收口)+ §6.1(随事件必须落账
   →单版本事务内急算,组合写=一次落账);
 - 写入归属申报单一源 = kernel/cw_affix_effects.py EQUIP_REWRITE_DECLARATIONS

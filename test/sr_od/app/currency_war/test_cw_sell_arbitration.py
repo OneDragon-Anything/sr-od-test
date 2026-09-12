@@ -3,7 +3,7 @@
 出处(锁纪律:新锁必引设计出处):
 - ADR-0585(卖出通道排除仲裁单一源;Z1 吸收 / F2 拆三块修订 /
   P78-4 类资格本义 / 消费点渐进迁移申报);
-- docs/develop/currency_war/proofs/math_proofs.md **P78** 行(INV 主
+- docs/develop/sr_od/application/currency_war/proofs/math_proofs.md **P78** 行(INV 主
   不变量 / P78-4 M4·funding 对③④持有件禁卖 / P78-6 读端同源);
 - 方案 v3(`.debug/temp/currency_war/t126_sell_arbitration/方案.md`)
   §2.2(A 三段)/ §2.9 覆盖表(W4 · 备战F1 · 新格 A)/ §6.1 批 2 行;

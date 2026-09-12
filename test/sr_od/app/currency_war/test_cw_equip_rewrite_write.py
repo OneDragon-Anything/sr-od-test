@@ -3,7 +3,7 @@
 设计出处(持久索引):
 - 归属判据 = BoardState 数据结构设计 §5.3(docs/develop/sr_od/application/
   currency_war/changes/2026-09-11-unified-state/details/BoardState-数据结构
-  设计.md,迭代期详设;持久正本 = docs/develop/currency_war/game_state/
+  设计.md,迭代期详设;持久正本 = docs/develop/sr_od/application/currency_war/game_state/
   effect-domain.md §6.3 写入归属判据):确定性可算 → 逻辑写;含随机 → 零
   逻辑写端,观察收口;
 - 写入归属申报单一源 = kernel/cw_affix_effects.py EQUIP_REWRITE_DECLARATIONS

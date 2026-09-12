@@ -7,7 +7,7 @@ hp_after 缺失红(批40)/胜局不辖/无 boss 行不辖/显式 hp_before 键�
 跨 run 不回填、同 run 回填照常(批41)。
 
 
-出处:docs/develop/currency_war/decisions/0307-boss-hp0-semantics-reversal.md(2026-08-31 测试瘦身批考证补记)。"""
+出处:docs/develop/sr_od/application/currency_war/decisions/0307-boss-hp0-semantics-reversal.md(2026-08-31 测试瘦身批考证补记)。"""
 from __future__ import annotations
 
 

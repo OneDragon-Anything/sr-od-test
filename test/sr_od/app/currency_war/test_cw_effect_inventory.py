@@ -4,7 +4,7 @@
 - 写入归属两行单一源 = BoardState 数据结构设计 §5「全员晋升/人力重组」两行
   (docs/develop/sr_od/application/currency_war/changes/2026-09-11-unified-state/
   details/BoardState-数据结构设计.md,迭代期详设;持久正本 =
-  docs/develop/currency_war/game_state/effect-domain.md §8 同名条);
+  docs/develop/sr_od/application/currency_war/game_state/effect-domain.md §8 同名条);
 - 实现单一源 = kernel/cw_effect_inventory.py(BOARD_REWRITE_* 语义词表 +
   apply_board_rewrite 桥);
 - 归属判据 = §5.3(确定性可算 → 逻辑写;含随机 → 零逻辑写端,观察收口)。

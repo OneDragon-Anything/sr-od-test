@@ -1,7 +1,7 @@
 """T-190 批B 锁线转型域收窄单帧锁(P88;ADR-0627)。
 
 出处(单一源):
-- 命题正本 = docs/develop/currency_war/proofs/p88.md(§0 辖域/§1 调和
+- 命题正本 = docs/develop/sr_od/application/currency_war/proofs/p88.md(§0 辖域/§1 调和
   引理/§3 解封方向式;收窄集 S_spec = {dominance_buy, hub_option_buy},
   豁免 ⇔ reason ∈ LAUNCH_CAUSE_BY_ARM ∖ S_spec 闭集单一源);
 - 落码 = shop.py 两 S_spec 发射位辖域前置(分键 press_narrowed_

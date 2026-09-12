@@ -1,12 +1,12 @@
 """sim 决策下沉锁面(判据核上收 + 发射短路行为消费 + 反假阴性哨兵)。
 
-背景(裁决 = ADR-0557,docs/develop/currency_war/decisions/
+背景(裁决 = ADR-0557,docs/develop/sr_od/application/currency_war/decisions/
 0557-sim-sink-launch-criteria-kernel.md):生产达标臂发射帧**短路备战动作链**;
 判据上收 kernel 单一源 + sim 发射帧短路决策段(消金出口族 A/B 结构性
 假阴性)+ 反假阴性哨兵。
 
 **批 1 锁语义重推(非机械跟绿;出处 = 金出口族 DESIGN v1.1 §3.2/§5,
-ADR-0566,docs/develop/currency_war/decisions/0566-launch-frame-
+ADR-0566,docs/develop/sr_od/application/currency_war/decisions/0566-launch-frame-
 arbitrage-batch1.md)**:发射帧仲裁段(出口 B,P70 已证)落地后,发射帧
 允许**受限消费**(预算 = g − g*,花后金位 ≥ g*);哨兵断言从「金不花」
 升级为「自由决策段零执行 ∧ 仲裁段外零消费」。旧「actions 空 ∧ spend 零」

@@ -1,9 +1,9 @@
 """统一 state 账本判读读面锁(R3-1 消费方迁移第一批·离线工具族)。
 
-设计裁定正本 = ADR-0630(``docs/develop/currency_war/decisions/
+设计裁定正本 = ADR-0630(``docs/develop/sr_od/application/currency_war/decisions/
 0630-unified-state-journal.md``:决策 3 自足快照变更账+后果节 M4 消费方切换
 档案行「装配器 v12+:切片 = 两文件」;记录机制 as-built 正本面 =
-``docs/develop/currency_war/game_state/journal.md``;设计工作稿存
+``docs/develop/sr_od/application/currency_war/game_state/journal.md``;设计工作稿存
 .debug/temp 为易失档,禁作正本指针)(判读 CLI 行:新视图族按行读 + 行间
 差分、零重放;并存期旧视图只读保留至 M5)。锁面四组 =
 - 新读能力锁:自足快照行(fixture 构造,与写端 kernel/cw_board_state

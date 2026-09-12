@@ -29,7 +29,7 @@ test_cw_affix_effects_write.py(write 半面)按模块两面对归并(同一注�
 monkeypatch ``_AFFIX_EFFECTS_PATH``,不碰真实注册表 ``affix_effects_data.py``。
 
 出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览
-docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
+docs/develop/sr_od/application/currency_war/strategy-docs/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 import json
 
 import sr_od.application.currency_war.obs.cw_briefing_obs as mod

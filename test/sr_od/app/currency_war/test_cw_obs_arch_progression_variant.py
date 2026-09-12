@@ -1,6 +1,6 @@
 """统一观察架构·推进型基类收编锁(账本 T-47,余项收口阶段二)。
 
-设计正本 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
+设计正本 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
 (下称「架构设计」);收编粒度/变体五段依据 = changes/2026-09-11-
 unified-observation/details/推进型基类收编详设.md。辖域:CwProgression
 ScreenOp 改挂 CwScreenOpBase 作只读/导航变体(B4 选项②,ADR-0584 空决策

@@ -17,7 +17,7 @@
 接入前必须有」;批 2 visit/备战链已接入假局,锁随批落地)。
 
 **第二锁面:全仓 read_game_state 调用点封闭集(统一观察架构 B4 静态锁)**。
-出处 = ``docs/develop/currency_war/design/统一观察架构-画面op基类设计.md``
+出处 = ``docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md``
 §1.1-1(read_game_state 调用点全量扫描基线 + 调用点白名单制)。两锁面
 关系:本文件第一锁面(T-120)辖 operations 桶 × read_* 族的**改道登记
 冻结**;B4 锁面辖**全仓 src 树 × read_game_state 本体**的调用点封闭集
@@ -181,7 +181,7 @@ def test_scanner_catches_new_direct_call(tmp_path: Path) -> None:
 
 
 # ==================== B4 锁面:全仓 read_game_state 调用点封闭集 ====================
-# 出处 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
+# 出处 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
 # §1.1-1「read_game_state 调用点全量扫描基线」+「调用点白名单制」。
 # 立锁前基线复扫(2026-09-10,全仓 src 树):14 命中 = 真实调用 10(下表
 # 8 宿主,observe_full 宿主含 3 点)+ 注释 3 + def 1,与设计文档基线逐条

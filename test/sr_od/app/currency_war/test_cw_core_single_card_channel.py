@@ -1,7 +1,7 @@
 """C1 直通核心卡支配性支通道单帧锁(ADR-0569)。
 
 出处 = 设计《直通核心卡信号层入口》
-(docs/develop/currency_war/design/设计-C1直通核心入口.md,持久正本):
+(docs/develop/sr_od/application/currency_war/design/设计-C1直通核心入口.md,持久正本):
 - §2 案A:并列支配通道挂 dominance 邻位(既有 dominance_buy 之后、M3
   之前);发射判据 = registry 名单核心卡 ∧ 1★ 全额退(refund_full_star_ok
   共享单一源)∧ 不破息带(t5_p1_false,L 项零损)∧ bench 空槽

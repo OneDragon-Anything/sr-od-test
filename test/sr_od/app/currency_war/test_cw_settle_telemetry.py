@@ -7,7 +7,7 @@
 - 真实 OCR 层:fixtures_settle/ 下 5 张实机帧(已入仓,读真值锚 = 帧本体;
   原始样本面为主仓 .debug 易失产物,判读结论以入仓帧为准),走
   test_context 的真 OCR 引擎锁读数真值。读点链语义出处 =
-  docs/develop/currency_war/decisions/dd-006-settle-read-chain-boss-win-form.md。
+  docs/develop/sr_od/application/currency_war/decisions/dd-006-settle-read-chain-boss-win-form.md。
 """
 from types import SimpleNamespace
 

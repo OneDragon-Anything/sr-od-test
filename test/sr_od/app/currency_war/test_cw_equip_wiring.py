@@ -6,7 +6,7 @@
   拖拽回执点/拷贝仪参与结算→战斗结算覆盖带 on_battle_end 同分支同时序)
   与 §⑤.4(equip_progress 侧栏快照捕获缺口一行,归接线批);
 - 生命周期映射与登记挂点纪律正本 =
-  docs/develop/currency_war/game_state/effect-domain.md §7.3(best-effort
+  docs/develop/sr_od/application/currency_war/game_state/effect-domain.md §7.3(best-effort
   失败不阻塞主链;新增效果 = 新增规格声明,挂点代码零改动);
 - 载体实现单一源 = kernel/cw_effect_inventory.py / cw_affix_effects.py
   (T-51/T-63 交付;载体本体行为锁在 test_cw_effect_write_carriers.py,

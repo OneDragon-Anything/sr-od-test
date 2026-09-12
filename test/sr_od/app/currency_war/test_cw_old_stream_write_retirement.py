@@ -2,7 +2,7 @@
 
 裁定口径:不用影子开关/影子期,新账本 journal 无条件常开后,旧 12 流中
 「策略源收编 9 流」的写入端直接删除(处置表单一源 =
-docs/develop/currency_war/game_state/retirement.md §2)。禁碰面 =
+docs/develop/sr_od/application/currency_war/game_state/retirement.md §2)。禁碰面 =
 保留 2 流(defect_ledger/op_journal)+ journal 写路径本体 + 旧档案只读
 判读面(query/cli/match_archive 读旧档)。
 

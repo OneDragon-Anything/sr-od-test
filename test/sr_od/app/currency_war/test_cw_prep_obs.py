@@ -1,7 +1,7 @@
 """test_cw_prep_obs 主题锁(P26 备战帧无条件采集批)。
 
-数学出处 = ``docs/develop/currency_war/proofs/math_proofs.md`` P26 行 +
-``docs/develop/currency_war/proofs/p26-hardnode-prep-ev.md``(双挂账:
+数学出处 = ``docs/develop/sr_od/application/currency_war/proofs/math_proofs.md`` P26 行 +
+``docs/develop/sr_od/application/currency_war/proofs/p26-hardnode-prep-ev.md``(双挂账:
 Δp_prep 条件表 + L_node 分位口径);采集点裁定 = 19 号稿 §2.3-4
 (「实采须另立采集点,非 D-D 计数位」)。
 

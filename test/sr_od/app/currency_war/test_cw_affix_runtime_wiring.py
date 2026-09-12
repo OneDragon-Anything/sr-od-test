@@ -15,7 +15,7 @@
   (apply_board_rewrite,设计 §5 全员晋升/人力重组两行的生产写端)。
   挂点被拆/改名时红,指向重接线。
 
-设计出处(持久索引):docs/develop/currency_war/game_state/effect-domain.md
+设计出处(持久索引):docs/develop/sr_od/application/currency_war/game_state/effect-domain.md
 §7.3(驱动事件映射·登记挂点纪律:best-effort 失败不阻塞读链)/§9.1(实例按
 spec_key 唯一);BoardState 数据结构设计 §5.1(词缀效果辖域申报·挂点接线)。
 """

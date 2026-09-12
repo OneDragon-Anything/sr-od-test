@@ -7,7 +7,7 @@
 两锁承载,零覆盖损失(生产徽章定价单一源 = cw_observation.resolve_cost_
 star,倍率表 {1,3,9})。
 
-设计出处 = ``docs/develop/currency_war/proofs/p77-shop-spot-availability-signal.md``
+设计出处 = ``docs/develop/sr_od/application/currency_war/proofs/p77-shop-spot-availability-signal.md``
 (已收口命题,本批=装载批)与本批装载设计
 ``.debug/temp/currency_war/T-122-装载设计.md`` §1/§2;行为落点 =
 ``shop.py::decide_shop_action`` m2_stockpile 臂(缺口面1)与 M6 面 s_reserve

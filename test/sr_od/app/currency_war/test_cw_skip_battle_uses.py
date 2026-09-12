@@ -1,7 +1,7 @@
 """免战牌次数类余量链行为锁(授予→余额→消费全链)。
 
 设计依据(持久锚):
-- 效果语义正本 = docs/develop/currency_war/game_state/effect-domain.md
+- 效果语义正本 = docs/develop/sr_od/application/currency_war/game_state/effect-domain.md
   §8 免战牌条目(NODE_ENTER×WHILE_HELD×STATE,duties=track;次数余量
   唯一驱动 = 跳过执行成功回执 consume_use,达 2 移除;+30 经验 = 选牌
   当场)、§3(统一单调计数器模型)与 §4(递减余期与单调 counter 语义

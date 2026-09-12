@@ -1,7 +1,7 @@
 """T-165 振荡回归热修·同轮买卖互斥统一闩锁面(单帧锁)。
 
 设计出处(锁纪律:新锁必引设计出处;持久归档载体 = ADR-0611,
-docs/develop/currency_war/decisions/0611-t165-round-mutex-unified-latch.md):
+docs/develop/sr_od/application/currency_war/decisions/0611-t165-round-mutex-unified-latch.md):
 - **ADR-0611**(决策本体 §3 已实施架构/§4 申报边界/§5 落地审处置):
   L1 读源定谳 fresh_buys(§3-1)/垫保与换线孤儿双 carve-out(§3-1/§3-7)/
   L2 统一过滤位 + A4 抛错(§3-3/§3-4)/L3 convert_reason 分键(§3-5)/

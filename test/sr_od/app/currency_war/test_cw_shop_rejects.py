@@ -181,7 +181,7 @@ _REJECT_ENUM = frozenset({
     'transition_char', 'non_line',
     # C1 拒因拆键(ADR-0569):registry 核心卡在售未买帧,与真 non_line
     # 可辨(设计《直通核心卡信号层入口》§4 意向状态机行;设计稿 =
-    # docs/develop/currency_war/design/设计-C1直通核心入口.md)。
+    # docs/develop/sr_od/application/currency_war/design/设计-C1直通核心入口.md)。
     'core_candidate_rejected',
     # T-115 规则④ 拒因键(ADR-0580,D7 键序 = ④放行集先于 trans):
     # ④放行件在售未买帧可辨(交集卡不再落 transition_char)。

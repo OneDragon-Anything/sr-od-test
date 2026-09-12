@@ -3,10 +3,10 @@
 出处(锁纪律:新锁必引设计出处):
 - ADR-0585(卖出通道排除仲裁单一源;§2 发射登记载体/LaunchCause 闭集
   映射/兜底池定义,§3 四出口生命周期与五键分键,§6 批 3 行);
-- docs/develop/currency_war/proofs/math_proofs.md **P78** 行(P78-1 同
+- docs/develop/sr_od/application/currency_war/proofs/math_proofs.md **P78** 行(P78-1 同
   visit 禁卖无条件下成立 / P78-2b 压库·垫保 τ=同轮 / P78-3 锁线定型
   不是账闭合事件 / P78-5 兜底豁免四条件 / P78-6 读端同源);
-- docs/develop/currency_war/strategy-docs/11_shop_decisions.md §4.1
+- docs/develop/sr_od/application/currency_war/strategy-docs/11_shop_decisions.md §4.1
   (统一装配 as-built 语义);
 - 双攻击报告案号:shop_sell W1(②(b) 买 ↔ funding 同 visit 卖回)/
   W3(F1 锁线清空 → 凑息卖回漏口)/ W5(②(b) prio1 无星过滤,本批只

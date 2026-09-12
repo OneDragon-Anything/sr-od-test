@@ -5,7 +5,7 @@ DESIGN.md §3 P65 行「落码前 12 线枚举快照锁」):锁**结构事实**(
 不锁状态依赖数值(_core_reachable/G>ε 是逐帧数据面,归 sim 前置计数)。
 锁红 ≠ 改动错:COMP_LIBRARY/TRANSITION_TRAITS 漂移时先对照设计出处重推
 语义,确认漂移后同批更新快照表与单篇
-docs/develop/currency_war/proofs/p65-promote-candidate-set-reachability.md。
+docs/develop/sr_od/application/currency_war/proofs/p65-promote-candidate-set-reachability.md。
 
 v2 修订(复核 B1/B2):晋升侧直调生产 promote_candidates(cw_intention,
 G8 观测载体在用,公式已落码——禁字面键第二实现);体系键交集语义 =

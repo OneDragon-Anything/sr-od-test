@@ -2,7 +2,7 @@
 
 被测机制 = ``kernel/cw_anchor.py``(ANCHOR_REGISTRY 封闭集 + 锚行七字段封装
 AnchorEvent + 载体接线 emit_anchor + 观测-only 守卫)。设计正本 =
-``docs/develop/currency_war/design/统一观察架构-画面op基类设计.md`` §12
+``docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md`` §12
 (锚点事件集总表 §12.2 / 数据面 schema §12.3 / 测试锁五条 §12.4-B /
 对抗审发现 6/7 的锁④拆分与 effect_ref 结构锁,折入设计正本 §12.4-B 锁编号对照)。
 

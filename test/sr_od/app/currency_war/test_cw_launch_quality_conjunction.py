@@ -1,7 +1,7 @@
 """达标臂 armed 成型质量合取锁面(B_t 通道承重结构维;ADR-0570)。
 
 出处(docstring 引设计出处,锁的存在性纪律):
-- 命题 ADR = ``docs/develop/currency_war/decisions/
+- 命题 ADR = ``docs/develop/sr_od/application/currency_war/decisions/
   0570-launch-quality-load-bearing-conjunction.md``——armed = 配方完备
   ∧〔承重满额 ∨ 部署计划不可得 fail-open〕;质量维只消费 B_t 通道
   承重结构派生量(承重计数/槽位占用/部署计划存在性,零自由参数);

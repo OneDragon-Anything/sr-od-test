@@ -1,6 +1,6 @@
 """仲裁注册面(15 号稿批 A)锁族:T-1 注册面语义 / T-2 迁移对拍 / T-6 分键互不混流。
 
-出处:``docs/develop/currency_war/strategy-docs/15_observation_multisource_arbitration.md``
+出处:``docs/develop/sr_od/application/currency_war/strategy-docs/15_observation_multisource_arbitration.md``
 §2.2/§2.4(规则语义)/§6 T-1/T-2/T-6(锁清单)。批 A 严格零行为变更:
 本文件全部锁都是「注册面裁决 == 迁移前私写法/文档语义」的对拍,行为锁
 (布局三信号等)在批 B,不在此文件。

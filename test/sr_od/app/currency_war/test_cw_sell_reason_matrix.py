@@ -8,10 +8,10 @@
 - ADR-0585(历史设计:§3 reason 枚举闭集原 5 通道值×9 发射位装配/
   funding plain 分键,现状以该 ADR Status/§5 删除批增注为准;§5 契约
   正本落档 = flow/action_exec.md §1 卖出类行);
-- docs/develop/currency_war/proofs/math_proofs.md **P78** 行(P78-1 同
+- docs/develop/sr_od/application/currency_war/proofs/math_proofs.md **P78** 行(P78-1 同
   visit 禁卖无条件下成立/P78-2 τ 分类/P78-5′ 四关系表:垫保在凑息
   绝对跳过、在 M4/funding 降序放行转化类);
-- docs/develop/currency_war/decisions/dd-020(序列决策契约;词表落档行
+- docs/develop/sr_od/application/currency_war/decisions/dd-020-series-decision-contract.md(序列决策契约;词表落档行
   = action_exec.md §1)。
 
 载体面覆盖地图:line_switch_collapse 双写(entry 换线塌缩位)= 本文件

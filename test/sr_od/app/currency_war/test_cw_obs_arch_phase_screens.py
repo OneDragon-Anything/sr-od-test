@@ -1,6 +1,6 @@
 """统一观察架构·五相位屏迁移锁(账本 T-8,余项收口阶段一)。
 
-设计正本 = docs/develop/currency_war/design/统一观察架构-画面op基类设计.md
+设计正本 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度/五段形态依据 = changes/2026-09-11-
 unified-observation/details/五相位屏迁移详设.md(逐屏五段表与语义保真点);
 迁移手法单一源 = 装配点分流 + 五段钩子转录 + 实机适配器①封口 + on_outcome

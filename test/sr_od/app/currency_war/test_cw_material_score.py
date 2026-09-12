@@ -1,6 +1,6 @@
 """r130 合成材料分修复测试(字段名 recipes;局33b 获取侧根因)。
 
-出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/currency_war/strategy/README.md)(2026-08-31 测试瘦身批考证补记)。"""
+出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/sr_od/application/currency_war/strategy-docs/README.md)(2026-08-31 测试瘦身批考证补记)。"""
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY

@@ -1,6 +1,6 @@
 """T-162 投资刷新能力恢复 · 预注册单帧锁(kernel 锁 1-8 + handler 锁 9-14)。
 
-锁面出处 = ADR-0600(docs/develop/currency_war/decisions/
+锁面出处 = ADR-0600(docs/develop/sr_od/application/currency_war/decisions/
 0600-t162-invest-refresh-criterion.md,§3 判据与执行链 + §5 验证;推导权威 =
 ADR-0600 §3.2 + math_proofs P81;方案过程档案 = .debug/temp/currency_war/
 attacks/t162_invest_refresh/设计方案.md R4,四轮对抗 14→11→8→0)——预注册

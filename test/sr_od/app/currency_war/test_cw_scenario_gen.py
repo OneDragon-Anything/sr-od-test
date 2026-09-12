@@ -6,7 +6,7 @@
 真实决策维度。生成器与断言分离——新不变量直接加一条 assert 系列。
 
 
-出处:docs/develop/currency_war/decisions/0477-buylayer-takeover-strategy-v1-retirement.md(2026-08-31 测试瘦身批考证补记)。"""
+出处:docs/develop/sr_od/application/currency_war/decisions/0477-buylayer-takeover-strategy-v1-retirement.md(2026-08-31 测试瘦身批考证补记)。"""
 import itertools
 import sys
 

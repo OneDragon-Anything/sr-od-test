@@ -1,7 +1,7 @@
 """码哈希结构闸锁(ADR-0581;防线背景 = T-106 run6 混合码事故)。
 
 出处(持久锚):ADR-0581
-(docs/develop/currency_war/decisions/0581-start-match-code-hash-gate.md)
+(docs/develop/sr_od/application/currency_war/decisions/0581-start-match-code-hash-gate.md)
 = 设计口径/覆盖边界/豁免申报单一源;闸口径申报另一镜像 =
 kernel/cw_code_hash_gate.py 模块 docstring。实施批账本行(T-107,.debug/progress/
 易失)仅为辅助出处。闸语义:货币战争起局前比对「server 已加载码面(sys.modules
