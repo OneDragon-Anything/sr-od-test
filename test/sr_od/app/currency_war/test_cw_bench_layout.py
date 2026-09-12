@@ -197,6 +197,32 @@ def test_health_gate_rejects_unhealthy_slots(bad_slots, _no_conflict_io):
     assert any('槽号健康门' in v for v in verdicts), verdicts
 
 
+@pytest.mark.parametrize('bad_slots', [
+    pytest.param([None, 2], id='none_mixed'),
+    pytest.param([1, '3'], id='str_mixed'),
+])
+def test_health_gate_reject_branch_survives_mixed_type_slots(bad_slots,
+                                                             _no_conflict_io):
+    """非 int 槽号混型 → 拒绝分支留证不炸(健康门防御的对象正是非 int
+    槽号;留证排序 str 化后混型安全,来源 = T-308 落地审 P3 问题 2 小修)。
+    修复前该路径 sorted([None, 2]) 混型比较先 TypeError——拒绝留证与
+    保旧都未完成,防御分支自伤。有牙性:去掉 str 化本锁必红。"""
+    sess = StrategySession()
+    exec_state_of(sess).tracked_bench_chars = [
+        BenchChar(slot=1, char_id='旧账角色', star=1)]
+    _epoch0 = exec_state_of(sess).bench_layout_epoch
+    bench = [BenchChar(slot=s, char_id=n, star=1)
+             for s, n in zip(bad_slots, ['甲', '乙'], strict=True)]
+    assert reconcile_tracking(sess, bench, [], None, source='t') is True
+    tracked = exec_state_of(sess).tracked_bench_chars
+    assert [(b.char_id, b.slot) for b in tracked if b is not None] == \
+        [('旧账角色', 1)], '混型脏槽号 → 拒写保旧'
+    assert exec_state_of(sess).bench_layout_epoch == _epoch0, \
+        '拒绝分支不写回 → epoch 不递增'
+    verdicts = [kw.get('verdict', '') for _a, kw in _no_conflict_io]
+    assert any('槽号健康门' in v for v in verdicts), verdicts
+
+
 def test_health_gate_deployed_side_unaffected(_no_conflict_io):
     """健康门只辖 bench 写回分支:bench 侧被拒时 deployed 侧照常写回
     (deployed 槽位语义独立,ADR-0392;两分支互不牵连)。"""
