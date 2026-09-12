@@ -24,8 +24,8 @@ _BRIDGE_REGISTERED: dict[str, str] = {
     # 波 5b 消点后仍活调用:
     'kernel/cw_economy.py': '活调用·标量投影缝无 session(结构性豁免 '
                            'ADR-0598),退役挂 session 通道批/T-7',
-    'kernel/cw_evolution.py': '活调用·GameState 工作帧世界读口(src 零生产'
-                             '调用,仅测试锁),退役挂 T-7/W8 本体删除',
+    # kernel/cw_evolution.py 登记项已删:模块本体随 W8(T-7 段2)整模块
+    # 退役物理删除,桥引用随之消点(少红=推进协议,同批删登记项)。
     'prep_actions.py': '活调用·根(他批辖域,波 5b 禁触 :289-291 面)',
     'strategies/impl/flow.py': '活调用·策略域辖外',
     'operations/cw_loop.py': '活调用·在飞面他批辖',
