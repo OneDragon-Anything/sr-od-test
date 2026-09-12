@@ -258,7 +258,7 @@ def test_m7_tools_only_owned_never_fires():
     from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_bridge as _bsb,
     )
-    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame as _F
+    from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame as _F
     # state 容器必填(容器化段 2):帧轴镜像 _m7_frame 同值构造。
     st = _F(gold=0, level=3, bench=[], deployed=[], deploy_cap=4,
             node_type='战斗', round_num=3)

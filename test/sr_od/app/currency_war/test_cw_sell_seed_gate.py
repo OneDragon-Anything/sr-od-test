@@ -34,7 +34,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.sim.checks import selfcalc
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -78,8 +78,8 @@ def _sess() -> StrategySession:
 
 
 def _state(bench: list[BenchChar], *, plane: int = 2,
-           round_num: int = 3) -> CwWorkFrame:
-    st = CwWorkFrame(gold=50, level=7, round_num=round_num, hp=60)
+           round_num: int = 3) -> CwSimFrame:
+    st = CwSimFrame(gold=50, level=7, round_num=round_num, hp=60)
     st.plane = plane
     st.bench = list(bench)
     # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒

@@ -20,7 +20,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_events import EncounterOption
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwWorkFrame,
+    CwSimFrame,
     sell_refund,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -62,8 +62,8 @@ def _session() -> StrategySession:
     return s
 
 
-def _state(gold: int = 20, hp: int | None = 100) -> CwWorkFrame:
-    return CwWorkFrame(gold=gold, hp=hp, plane=1, round_num=2)
+def _state(gold: int = 20, hp: int | None = 100) -> CwSimFrame:
+    return CwSimFrame(gold=gold, hp=hp, plane=1, round_num=2)
 
 
 @pytest.fixture()
@@ -388,9 +388,9 @@ class TestWiring:
         opts = [EncounterOption(idx=0, difficulty=1),
                 EncounterOption(idx=1, difficulty=3)]
         # W6 波3:decide_encounter 切容器签名,空工作帧经桥装箱(未观察
-        # 全域保守缺省 = 旧空 CwWorkFrame 同向);未成型断言语义不变。
+        # 全域保守缺省 = 旧空 CwSimFrame 同向);未成型断言语义不变。
         pick = cw_events.decide_encounter(
-            opts, board_state_bridge(CwWorkFrame()), None, None)
+            opts, board_state_bridge(CwSimFrame()), None, None)
         assert pick.idx == 0
 
 

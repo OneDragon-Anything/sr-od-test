@@ -52,7 +52,7 @@ from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CompTransaction,
-    CwWorkFrame,
+    CwSimFrame,
     _recount_board,
     simulate,
 )

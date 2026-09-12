@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
     CloseShop,
-    CwWorkFrame,
+    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
@@ -99,7 +99,7 @@ def _make_prep(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     # W6 波 4 容器切换待修位适配(⚠️ src 缺口申报,非本锁辖域):
     # guard_expected_vs_tracked 守卫输入已切容器单例(cw_shop_action_ops
     # :337 bench_slots_of 直读),但 apply_action_outcome 调用位仍传投影
-    # 帧(cw_op_buy_cards apply_action_outcome 内,帧=CwWorkFrame ⇒ 守卫
+    # 帧(cw_op_buy_cards apply_action_outcome 内,帧=CwSimFrame ⇒ 守卫
     # AttributeError,生产买面同炸)。本测试辖域 = visit 编排面(守卫自身
     # 语义归 test_cw_buy_outcome_gate/test_cw_shop_refresh),此处按容器
     # 形态接通真守卫(帧输入改喂容器单例),判定语义零桩化。
@@ -128,7 +128,7 @@ def _make_prep(test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     # shop payload 恒离屏、提案守卫误炸。
     from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
-    _state = CwWorkFrame(gold=10, plane=1, round_num=5, level=5,
+    _state = CwSimFrame(gold=10, plane=1, round_num=5, level=5,
                        shop=_shop_cards(_OLD_NAMES))
 
     def _fake_read_state(*a, **k):
@@ -263,14 +263,14 @@ def test_visit_open_shop_entry_rebuilds_last_state(
     外循环上一轮的残值)→ 访问后 last_state = 入口现读重建态(plane/
     round/shop 与替身观察一致)——入口观察即对账(ADR-0517 决策 8)。"""
     sess0 = StrategySession()
-    sess0.last_state = CwWorkFrame(gold=99, plane=7, round_num=7, level=9,
+    sess0.last_state = CwSimFrame(gold=99, plane=7, round_num=7, level=9,
                                  shop=[])   # 陈旧残值
     monkeypatch.setattr(test_context, 'cw_match',
                         CurrencyWarMatch(_StubStrategy([]), sess0))
     prep, _close_calls, _clicks = _make_prep(
         test_context, monkeypatch, tmp_path, [])
     # _make_prep 重挂了 match,取其 session 注入陈旧值
-    test_context.cw_match.session.last_state = CwWorkFrame(
+    test_context.cw_match.session.last_state = CwSimFrame(
         gold=99, plane=7, round_num=7, level=9, shop=[])
     ok, detail = _visit(prep)
     assert ok, detail

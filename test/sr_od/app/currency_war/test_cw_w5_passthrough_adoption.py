@@ -43,7 +43,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 #  ——波 5b 双删,锁与所辖面同批退役;apply_settlement_cover 消费锁同批。)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.obs import cw_observation as cobs
 
@@ -71,9 +71,9 @@ def _mk_legacy_card(x: int, name: str, *, cost: int = 1, star: int = 1,
 
 # ============================================================ 逐域行为锁:常态帧逐位等价
 
-def _full_truth_frame() -> CwWorkFrame:
+def _full_truth_frame() -> CwSimFrame:
     """回放语料形态的真值帧(全域可读,无失读)。"""
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.plane, st.round_num, st.node_type = 1, 4, 'battle'
     st.gold, st.gold_readable = 37, True
     st.level, st.xp_progress, st.streak = 5, (2, 8), 3
@@ -156,20 +156,20 @@ def test_feed_deploy_cap_observes_truth_and_carries_rejection(
     sess = SimpleNamespace()
     ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
     bs = board_state_of(sess)
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.plane, st.round_num = 1, 3
     st.deploy_cap = 6
     cobs._feed_board_state(ctx, st, cobs.PHASE_PREP_CLEAN, None,
                            frozenset({'deploy_cap'}), had_hp_real=False)
     assert bs.deploy_cap.value == 6 and bs.deploy_cap.source == 'observation'
-    st2 = CwWorkFrame()
+    st2 = CwSimFrame()
     st2.plane, st2.round_num = 1, 3
     st2.deploy_cap = None   # 域外拒信/失读形态
     cobs._feed_board_state(ctx, st2, cobs.PHASE_PREP_CLEAN, None,
                            frozenset({'deploy_cap'}), had_hp_real=False)
     assert bs.deploy_cap.value == 6 and bs.deploy_cap.source == 'carried'
     # spec 无键阶段(prep_shop_open)根本没读 → 不写(诚实缺位不沿用)
-    st3 = CwWorkFrame()
+    st3 = CwSimFrame()
     st3.plane, st3.round_num = 1, 3
     st3.deploy_cap = 9   # 未读帧的杂值禁入记录
     cobs._feed_board_state(ctx, st3, cobs.PHASE_PREP_SHOP_OPEN, None,
@@ -184,7 +184,7 @@ def test_feed_equips_relay_from_session_mirror_when_never_written() -> None:
     sess = SimpleNamespace(last_owned_equips=['星币收集器'])
     ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
     bs = board_state_of(sess)
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.plane, st.round_num = 2, 1
     cobs._feed_board_state(ctx, st, cobs.PHASE_PREP_CLEAN, None,
                            frozenset(), had_hp_real=False)
@@ -202,7 +202,7 @@ def test_sim_synth_writes_w5_domains() -> None:
     synthesize_from_game_state(bs, st, at_round='p1-r4')
     assert bs.deploy_cap.value == 6
     assert bs.back_layout.value == 6, \
-        'back_layout 增补域:CwWorkFrame.back_max 真值直写(sim 场景侧设定)'
+        'back_layout 增补域:CwSimFrame.back_max 真值直写(sim 场景侧设定)'
     assert bs.plane_bosses.value == ['镜流', None, '卡芙卡']
     assert bs.enemy_affixes.value == ['迅捷']
     assert bs.active_env.value == '昼之半神概念股'
@@ -280,7 +280,7 @@ def test_encounter_read_point_gates_view_truth() -> None:
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         encounter as enc,
     )
-    st = CwWorkFrame(hp=75, plane=1, round_num=4)
+    st = CwSimFrame(hp=75, plane=1, round_num=4)
     st.hp_readable = True
     # 无锚:恒等(同对象),旧测试零波及
     assert enc._hp_gate_state(st, _session_with_settlement(None, None)) is st
@@ -290,7 +290,7 @@ def test_encounter_read_point_gates_view_truth() -> None:
         '门输出落副本(入参 state 不可变);λ 键 hp 维 = 门后值'
     # 决策入口接线:monkeypatch 侦 _branch_lambda_label 收到的 state = 门后
     from sr_od.application.currency_war.kernel.cw_events import EncounterOption
-    captured: list[CwWorkFrame] = []
+    captured: list[CwSimFrame] = []
 
     def _spy(option, state):
         captured.append(state)

@@ -65,7 +65,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard as StateShopCard,
@@ -529,7 +529,7 @@ def test_sim_synthesis_preserves_bench_slots() -> None:
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     # 经构造器传入(__post_init__ pad 到定长 9,ADR-0316 形状契约;直赋值
     # 绕过 pad 是旧紧缩构造兼容域,合成口输出侧补齐见模块实现)。
-    st = CwWorkFrame(bench=[
+    st = CwSimFrame(bench=[
         BenchChar(slot=1, char_id='阿格莱雅', star=1),
         None,
         BenchChar(slot=3, char_id='花火', star=2),
@@ -554,7 +554,7 @@ def test_sim_synthesis_none_truth_not_written() -> None:
     """sim 帧真值 None 的字段不写(sim 无识别过程,不存在失读;未建模域保持
     None 诚实缺位,禁合成假值)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    st = CwWorkFrame()   # hp=None(未观测态);gold 默认 0 且 readable=True(P2-3 实断言依据)
+    st = CwSimFrame()   # hp=None(未观测态);gold 默认 0 且 readable=True(P2-3 实断言依据)
     synthesize_from_game_state(bs, st, at_round='p1-r1')
     assert bs.hp.value is None
     assert bs.node.value is None, \
@@ -824,7 +824,7 @@ def test_cost_source_passthrough_not_folded() -> None:
     """P2-4:cost_source 原值透传不折叠——roster_fallback 的「徽章失读」
     证据分级禁丢(生产 reader 产三值,批次二消费前必须有区分)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.shop = [StateShopCard(x=1, name='花火', cost=2, star=1,
                              cost_source='roster_fallback')]
     synthesize_from_game_state(bs, st, at_round='p1-r3')
@@ -1200,14 +1200,14 @@ def test_synthesis_payload_offscreen_branch() -> None:
     误读成「商店仍开着」);encounter/supply 两域 sim 不建模,合成帧恒
     离屏口径;牌面在场帧照常观察落 payload。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    st_shop = CwWorkFrame()
+    st_shop = CwSimFrame()
     st_shop.shop = [StateShopCard(x=1, name='花火', cost=2, star=1,
                                   cost_source='badge')]
     synthesize_from_game_state(bs, st_shop, at_round='p1-r2')
     assert bs.shop.value is not None and bs.shop.value.cards[0].name == '花火'
 
     # 连续合成帧:真值缺席 → 离屏(旧 payload 不残留)
-    st_prep = CwWorkFrame()
+    st_prep = CwSimFrame()
     synthesize_from_game_state(bs, st_prep, at_round='p1-r3')
     assert bs.shop.value is None, '离屏帧 payload 置 None(禁残留)'
     assert bs.shop.source == 'observation' \

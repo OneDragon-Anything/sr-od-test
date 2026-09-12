@@ -217,7 +217,7 @@ def _attr_hits(rel: str, attrs: tuple[str, ...]) -> list[str]:
 
 def _container_fn_hp_hits(rel: str) -> list[str]:
     """AST 级扫描:容器签名函数(首参名 bs,GameState 形态约定)函数体内
-    零 `.hp` 属性访问(注释/docstring 不计;CwWorkFrame 形态旧函数的 state.hp
+    零 `.hp` 属性访问(注释/docstring 不计;CwSimFrame 形态旧函数的 state.hp
     读不属容器决策分支,随各自波次/退役批消亡,不在本锁辖域)。
     返回 [函数名, 行号, ...] 命中清单。"""
     import ast
@@ -245,7 +245,7 @@ class TestL2DecisionConsumptionSameGate:
     def test_kernel_decision_cluster_zero_direct_hp_read(self) -> None:
         """cw_economy / cw_discipline_rules 全量:容器签名决策函数零 `.hp`
         直读(hp 决策消费仅经政策层读口 cw_hp_policy;AST 级扫描,注释/
-        docstring 字样不判);CwWorkFrame 形态旧函数(state.hp 读)不属容器
+        docstring 字样不判);CwSimFrame 形态旧函数(state.hp 读)不属容器
         决策分支,不在本锁辖域。"""
         for rel in _L2_DIRECT_READ_FILES:
             hits = _container_fn_hp_hits(rel)
@@ -297,20 +297,20 @@ class TestL3TrustedBitSingleSource:
     def test_no_handwritten_dual_bit_pattern(self) -> None:
         """kernel 决策簇全量手写双位模式 grep=0(W393 A1.1 单一源纪律):
         cw_economy/cw_discipline_rules 代码面(AST 级)零 `hp_readable` /
-        `hp_trusted` 属性访问——可信位判定只经政策层读口;CwWorkFrame 侧
+        `hp_trusted` 属性访问——可信位判定只经政策层读口;CwSimFrame 侧
         旧实现已随容器切换消亡。"""
         for rel in _L2_DIRECT_READ_FILES:
             hits = _attr_hits(rel, ('hp_readable', 'hp_trusted'))
             assert hits == [], f'{rel}: 手写双位模式复潮(行号 {hits})'
 
     def test_discipline_dispatch_dual_form_no_int_leak(self) -> None:
-        """三审阻断回归锁:CwWorkFrame/裸 int-hp 帧穿 hp_decision_trusted
+        """三审阻断回归锁:CwSimFrame/裸 int-hp 帧穿 hp_decision_trusted
         不得漏入 hp_decision_trusted_of 的 bs.hp.source 直读(三审实测
         AttributeError 'int' object has no attribute 'source')。
 
-        分派语义(双形态过渡,CwWorkFrame 支随 W8 消亡):
+        分派语义(双形态过渡,兼容支随遗留调用面退役收口):
         - 容器帧(hp 为 Field 载体)→ hp_decision_trusted_of 单一源;
-        - CwWorkFrame/桩帧(hp 为标量)→ 旧双位读法 hp_readable or hp_trusted,
+        - CwSimFrame/桩帧(hp 为标量)→ 旧双位读法 hp_readable or hp_trusted,
           值语义与切换前逐位一致(真读/沿用放行,双 False 拒)。
         读口本体 hp_decision_trusted_of 保持严格容器形态零防御——裸帧
         直穿它必须炸错暴露调用点,禁静默缺省(血线决策漂移最危险域)。"""
@@ -319,13 +319,13 @@ class TestL3TrustedBitSingleSource:
         from sr_od.application.currency_war.kernel.cw_discipline_rules import (
             hp_decision_trusted,
         )
-        from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
-        # CwWorkFrame 真读帧 → 旧双位语义(与切换前逐位一致)
-        st_real = CwWorkFrame(hp=80)
+        from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
+        # CwSimFrame 真读帧 → 旧双位语义(与切换前逐位一致)
+        st_real = CwSimFrame(hp=80)
         st_real.hp_readable = True
         assert hp_decision_trusted(st_real) is True
-        # CwWorkFrame 双 False 帧 → 拒(fail-closed 语义零回归)
-        st_ghost = CwWorkFrame(hp=100)
+        # CwSimFrame 双 False 帧 → 拒(fail-closed 语义零回归)
+        st_ghost = CwSimFrame(hp=100)
         st_ghost.hp_readable = False
         st_ghost.hp_trusted = False
         assert hp_decision_trusted(st_ghost) is False

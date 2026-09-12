@@ -52,7 +52,7 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
 from sr_od.application.currency_war.kernel.cw_investments import EconomyEffect
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
     CwScreenInvestStrategy,
@@ -263,7 +263,7 @@ def test_append_confirmed_strategy_applies_board_rewrite(
     assert STRATEGY_EFFECTS.get(normalize_invest_name('人力重组')) is not None, \
         '人力重组注册表锚漂移(换锚并同步本注释)'
     session = StrategySession()
-    frame = CwWorkFrame(plane=1, round_num=2)
+    frame = CwSimFrame(plane=1, round_num=2)
     frame.gold = 40
     frame.bench = [BenchChar(slot=1, char_id='希儿', star=1)]
     frame.deployed = [BenchChar(slot=1, char_id='景元', star=2,

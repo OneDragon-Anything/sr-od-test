@@ -31,7 +31,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
 )
 
 _PAIR_A = '持续伤害'
@@ -75,10 +75,10 @@ def _bc(names: list[str], stars: list[int] | None = None) -> list[BenchChar]:
 
 def _p1_state(bench: list[BenchChar],
               board: dict | None = None) -> GameState:
-    """W6 波3:方向层谓词已切容器签名,旧 CwWorkFrame 构面经过渡桥装箱。
+    """W6 波3:方向层谓词已切容器签名,旧 CwSimFrame 构面经过渡桥装箱。
     board 须随帧装箱(桥产出容器 Field 形态,装箱后裸 dict 覆写 = 打穿
     Field 契约,消费面 ``bs.board.value`` 必炸)。"""
-    st = CwWorkFrame(gold=10, level=5, plane=1, round_num=5, hp=100)
+    st = CwSimFrame(gold=10, level=5, plane=1, round_num=5, hp=100)
     st.bench = bench
     st.deployed = []
     if board:
@@ -279,7 +279,7 @@ class TestIncumbentEasementLayer:
     空席填充无条件(ADR-0616 §2.1;支配性论证消参数,零新数值)。"""
 
     def _two_system_board(self, a_stars: list[int],
-                          b_stars: list[int]) -> CwWorkFrame:
+                          b_stars: list[int]) -> CwSimFrame:
         a = _require_pure(_PAIR_A, len(a_stars))
         b = _require_pure(_PAIR_B, len(b_stars))
         return _p1_state(_bc(a + b, a_stars + b_stars))

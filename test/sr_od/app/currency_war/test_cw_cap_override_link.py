@@ -44,7 +44,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
         / 'currency_war')
@@ -122,9 +122,9 @@ def test_budget_face_reserve_floor_linkage() -> None:
         strategy_state_of,
     )
 
-    def _frame(gold: int, session: StrategySession) -> CwWorkFrame:
+    def _frame(gold: int, session: StrategySession) -> CwSimFrame:
         # 排程关闭态帧(bench 空、等级已到峰值):R* = 守息线分量裸值
-        st = CwWorkFrame(plane=1, round_num=5, gold=gold, level=9, hp=80,
+        st = CwSimFrame(plane=1, round_num=5, gold=gold, level=9, hp=80,
                        shop_refresh_cost=2, deployed=[],
                        bench=[None] * 10, shop=[], node_type='battle',
                        board={})
@@ -148,7 +148,7 @@ def test_line_switch_affordable_window_linkage() -> None:
     from sr_od.application.currency_war.kernel.cw_line_switch import e_rounds
 
     comp = next(c for c in COMP_LIBRARY if c.form_tiers)
-    st = CwWorkFrame(plane=2, round_num=2, gold=55, level=7, hp=60,
+    st = CwSimFrame(plane=2, round_num=2, gold=55, level=7, hp=60,
                    shop_refresh_cost=2, deployed=[],
                    bench=[None] * 10, shop=[], node_type='battle',
                    board={})

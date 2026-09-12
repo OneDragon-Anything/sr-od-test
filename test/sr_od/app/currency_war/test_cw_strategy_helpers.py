@@ -35,7 +35,7 @@ from sr_od.application.currency_war.kernel.cw_events import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
@@ -83,7 +83,7 @@ def test_planner_strategy_tier_order_and_key_equip():
     from sr_od.application.currency_war.kernel.cw_comps import Comp
     # W6 波3:decide_planner 切容器签名,工作帧经桥装箱(单帧三连调共享
     # 一次装箱;bench 空 = 未观察 = 在场信息缺失,不降权语义不变)。
-    st = board_state_bridge(CwWorkFrame(hp=60))
+    st = board_state_bridge(CwSimFrame(hp=60))
     # 升费档 > 弱化档(无银狼线;bench 空 = 在场信息缺失 → 不降权,保守)
     opts = [PlannerOption(idx=0, text='使后续节点【弱化】,降低敌人属性。'),
             PlannerOption(idx=1, text='提升费用至4费,变为1星银狼')]
@@ -205,15 +205,15 @@ def _shop_session(comp) -> StrategySession:
 
 
 def _shop_state(gold: int = 30, shop=None, bench=None, deployed=None,
-                level: int = 3) -> CwWorkFrame:
-    st = CwWorkFrame(gold=gold, level=level, round_num=2)
+                level: int = 3) -> CwSimFrame:
+    st = CwSimFrame(gold=gold, level=level, round_num=2)
     st.shop = shop if shop is not None else []
     st.bench = bench if bench is not None else []
     st.deployed = deployed if deployed is not None else []
     return st
 
 
-def _decide_shop(state: CwWorkFrame, session: StrategySession):
+def _decide_shop(state: CwSimFrame, session: StrategySession):
     from sr_od.application.currency_war.sim.engine_p1 import (
         sim_decision_registry,
     )

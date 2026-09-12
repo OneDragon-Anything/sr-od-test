@@ -25,7 +25,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     XP_PER_BUY,
     XP_TO_NEXT_LEVEL,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.obs import cw_observation
 from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
@@ -237,10 +237,10 @@ def test_cap_debounce_out_of_domain_equal_pair_accepted(monkeypatch) -> None:
 
 def test_max_units_deploy_cap_priority() -> None:
     """max_units:deploy_cap 真值优先(≥level 才信),level 兜底,封顶 10。"""
-    assert CwWorkFrame(level=5, deploy_cap=7).max_units() == 7
-    assert CwWorkFrame(level=5, deploy_cap=12).max_units() == 10   # 封顶
-    assert CwWorkFrame(level=5, deploy_cap=None).max_units() == 5  # 兜底
-    assert CwWorkFrame(level=5, deploy_cap=3).max_units() == 5     # cap<level 不可信
+    assert CwSimFrame(level=5, deploy_cap=7).max_units() == 7
+    assert CwSimFrame(level=5, deploy_cap=12).max_units() == 10   # 封顶
+    assert CwSimFrame(level=5, deploy_cap=None).max_units() == 5  # 兜底
+    assert CwSimFrame(level=5, deploy_cap=3).max_units() == 5     # cap<level 不可信
 
 
 def test_sim_diamond_cap_channel_parameterized() -> None:
@@ -256,5 +256,5 @@ def test_sim_diamond_cap_channel_parameterized() -> None:
     rows2 = [(cap, lv) for _rn, _p, cap, lv in rec2.rows]
     assert rows2 and all(cap is not None and lv < cap <= lv + 9
                          for cap, lv in rows2), 'prob=1 → cap=level+宝钻数'
-    assert CwWorkFrame(level=rows2[0][1], deploy_cap=rows2[0][0]).max_units() \
+    assert CwSimFrame(level=rows2[0][1], deploy_cap=rows2[0][0]).max_units() \
         == min(rows2[0][0], 10), 'max_units 消费宝钻真值'

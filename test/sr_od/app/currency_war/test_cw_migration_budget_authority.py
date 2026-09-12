@@ -36,7 +36,7 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
@@ -54,8 +54,8 @@ def _state(*, gold: int = 100, plane: int = 1, r: int = 5, level: int = 6,
            hp: int = 80,
            bench: list[BenchChar | None] | None = None,
            shop: list[ShopCard] | None = None,
-           board: dict | None = None) -> CwWorkFrame:
-    return CwWorkFrame(
+           board: dict | None = None) -> CwSimFrame:
+    return CwSimFrame(
         plane=plane, round_num=r, gold=gold, level=level, hp=hp,
         shop_refresh_cost=2,
         deployed=[], bench=bench if bench is not None else [None] * BENCH_CAPACITY,
@@ -97,7 +97,7 @@ def test_schedule_pop_slot_trigger() -> None:
     assert schedule_upgrade(board_state_bridge(st), sess_of(st))
 
 
-def sess_of(state: CwWorkFrame) -> StrategySession:
+def sess_of(state: CwSimFrame) -> StrategySession:
     return StrategySession()
 
 

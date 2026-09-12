@@ -48,7 +48,7 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     LevelUpShop,
     RefreshShop,
     ShopCard,
@@ -138,14 +138,14 @@ def _fresh_sess() -> tuple[MandateV1Strategy, object]:
     return strat, sess
 
 
-def _frame_of_snapshot(snap: dict) -> CwWorkFrame:
-    """合成快照 dict → CwWorkFrame(本文件夹具本地转换)。
+def _frame_of_snapshot(snap: dict) -> CwSimFrame:
+    """合成快照 dict → CwSimFrame(本文件夹具本地转换)。
 
     cw_replay._rebuild_state 已随旧格式回放退役(回放源切 journal,
     容器经 restore_state_snapshot 直读);本文件快照由 _snapshot 自造、
-    字段即 CwWorkFrame 决策轴,转换改测试本地承载,字段名与
+    字段即 CwSimFrame 决策轴,转换改测试本地承载,字段名与
     cw4_feed 合成口消费面一致。"""
-    st = CwWorkFrame(gold=snap['gold'], hp=snap['hp'], level=snap['level'],
+    st = CwSimFrame(gold=snap['gold'], hp=snap['hp'], level=snap['level'],
                      plane=snap['plane'], round_num=snap['round_num'],
                      node_type=snap.get('node_type'))
     st.board = dict(snap.get('board') or {})

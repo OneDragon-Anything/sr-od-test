@@ -922,7 +922,7 @@ def test_wire_mismatch_records_defect(monkeypatch: _w547_faction_wire_pytest.Mon
     d = _make_director(monkeypatch, {'仙舟': 3, '能量': 5}, reading)
     obs = pd.PrepObservation()
     # 台账行 plane/round 读容器(obs.state 视图槽已退役):合成口喂入。
-    cw4_feed(d.ctx.cw_match.session, CwWorkFrame(plane=2, round_num=5))
+    cw4_feed(d.ctx.cw_match.session, CwSimFrame(plane=2, round_num=5))
     d._reconcile_faction_display(obs)
     assert len(calls) == 1
     kw = calls[0]['kwargs']
@@ -1041,7 +1041,7 @@ from sr_od.application.currency_war.kernel.cw_prep_expect import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     XP_TO_NEXT_LEVEL,
-    CwWorkFrame,
+    CwSimFrame,
     xp_apply_clicks,
     xp_clicks_to_level,
 )
@@ -1116,7 +1116,7 @@ def _obs(session, xp: tuple[int, int] | None, level: int, plane: int = 2,
          round_num: int = 5) -> PrepObservation:
     """黑板观察帧(纯视觉域):xp/level/plane/round 台账读数走容器,
     obs.state 视图槽已随容器化段 2 退役 = 合成口喂入。"""
-    cw4_feed(session, CwWorkFrame(xp_progress=xp, level=level,
+    cw4_feed(session, CwSimFrame(xp_progress=xp, level=level,
                                   plane=plane, round_num=round_num))
     return PrepObservation()
 

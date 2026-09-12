@@ -363,7 +363,7 @@ def test_sold_name_source_is_pre_transition_truth(
     )
     from sr_od.application.currency_war.kernel.cw_vocab import (
         BenchChar,
-        CwWorkFrame,
+        CwSimFrame,
         SellBench,
     )
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -379,7 +379,7 @@ def test_sold_name_source_is_pre_transition_truth(
     exec_state_of(session).v2_round_key = (
         m.state.plane, m.state.round_num)
     # 期望帧刻意陈旧:槽 0 指向「景元」,真值 = 希儿——修前登记名随期望帧漂
-    stale_frame = CwWorkFrame(plane=m.state.plane,
+    stale_frame = CwSimFrame(plane=m.state.plane,
                             round_num=m.state.round_num)
     stale_frame.bench = [BenchChar(slot=1, char_id='景元', faction='?')]
 

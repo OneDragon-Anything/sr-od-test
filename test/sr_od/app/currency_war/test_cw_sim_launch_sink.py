@@ -112,7 +112,7 @@ class _FakeComp:
 
 def _fake_state(board: dict[str, int], deployed: list = (),
                 bench: list = ()):
-    """最小 CwWorkFrame 形状(form_progress 只读 board;准入/质量维读
+    """最小 CwSimFrame 形状(form_progress 只读 board;准入/质量维读
     bench/deployed 定长表与 max_units——缺省空表 = 无 victim/bench、
     cap 兜底 10**6,合法输入)。
 

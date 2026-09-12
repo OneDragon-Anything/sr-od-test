@@ -52,7 +52,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
     bench_char_cost,
     sell_refund,
 )
@@ -88,8 +88,8 @@ def _sess(target=None) -> StrategySession:
 
 
 def _state(plane: int = 1, round_num: int = 3, gold: int = 2,
-           ) -> CwWorkFrame:
-    return CwWorkFrame(plane=plane, round_num=round_num, gold=gold, hp=100)
+           ) -> CwSimFrame:
+    return CwSimFrame(plane=plane, round_num=round_num, gold=gold, hp=100)
 
 
 def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
@@ -100,7 +100,7 @@ def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
                      faction=(ch.factions or ['?'])[0] if ch else '?')
 
 
-def _set_s2(sess: StrategySession, state: CwWorkFrame,
+def _set_s2(sess: StrategySession, state: CwSimFrame,
             missing: tuple[str, ...] = ('目标件',),
             in_shop: tuple[tuple[str, int], ...] | None = None) -> None:
     """经生产唯一写点 mandate.shop_wanted_defer 置 S2(禁直写字段:
@@ -324,7 +324,7 @@ def test_sellbench_projection_adds_sell_refund_gold() -> None:
     d = _director(_sess())
     bc = BenchChar(slot=3, char_id='希儿', star=1)
     # 容器 bench 喂入 = pad 形(合成按列表位映射物理槽;希儿须落槽 3)。
-    cw4_feed(d._session(), CwWorkFrame(
+    cw4_feed(d._session(), CwSimFrame(
         gold=10, bench=[BenchChar(slot=1, char_id='甲', star=1), None, bc]))
     obs = PrepObservation(
         bench_chars=[BenchChar(slot=1, char_id='甲', star=1), bc],
@@ -376,10 +376,10 @@ def _spheres(n: int) -> list:
 
 
 def _prep_state(gold: int = 99, round_num: int = 3,
-           bench: list | None = None, deployed: list | None = None) -> CwWorkFrame:
-    """决策黑板(CwWorkFrame.bench/deployed 必须同形接线:T-32 空板止损
+           bench: list | None = None, deployed: list | None = None) -> CwSimFrame:
+    """决策黑板(CwSimFrame.bench/deployed 必须同形接线:T-32 空板止损
     守卫对 state.deployed 现读,漏接线 = 腾席卖出腿结构性哑火,假红)。"""
-    gs = CwWorkFrame(gold=gold, level=3, round_num=round_num, hp=60)
+    gs = CwSimFrame(gold=gold, level=3, round_num=round_num, hp=60)
     gs.plane = 1
     gs.bench = list(bench or [])
     gs.deployed = list(deployed or [])

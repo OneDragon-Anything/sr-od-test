@@ -40,7 +40,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     SellBench,
     ShopCard,
 )
@@ -56,7 +56,7 @@ def _state(plane: int = 2, round_num: int = 1, hp: int = 40,
            level: int = 7, gold: int = 0, **extra) -> GameState:
     """W6 波3:可行性/意向面已切容器签名,旧帧经过渡桥装箱。
     extra = 其余字段(shop/bench 等);桥为一次性快照,变异须重建帧。"""
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.plane = plane
     st.round_num = round_num
     st.hp = hp
@@ -328,7 +328,7 @@ def test_shop_rejects_projects_bench_across_buys():
     (旧口径误标 missing_no_path)。"""
     comp = None                       # transition 分类不辖,聚焦投影
     # mandate_v1 拒因面已切容器签名(波4):旧帧经过渡桥装箱喂入
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.gold = 99
     st.bench = _bench(BENCH_CAPACITY - 1)     # 8/9,剩 1 席
     a = ShopCard(x=0, name='甲一', cost=3)
@@ -346,7 +346,7 @@ def test_shop_rejects_projects_sell_refund_and_seat():
     买入可行,不再留拒因。"""
     comp = None
     # 同上:mandate_v1 拒因面已切容器签名,旧帧经过渡桥装箱喂入
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.gold = 5
     st.bench = _bench(BENCH_CAPACITY)         # 席满
     b = ShopCard(x=0, name='乙二', cost=5)

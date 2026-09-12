@@ -6,7 +6,7 @@
   的哑臂漂移;C 类通道消费端单一源 = cw_env_economy._REWARD_BONUS_VARIANTS);
 - 注入链 e2e:注入过热环境 → ``piggy_reward`` 标记在奖励帧精确为 True
   (写点 = mandate_v1 shop/mandate 两栈,判据单一源 kernel/cw_reward_node;
-  shop 栈写点曾因旧 ``CwWorkFrame.node_type`` 属性失联 = T-143 修复对象,
+  shop 栈写点曾因旧 ``CwSimFrame.node_type`` 属性失联 = T-143 修复对象,
   本锁即其回归门);基线臂(无环境)恒零污染;
 - 批入口:run_piggy_batch 落账本 + manifest(seeds 键 = 占用段对账锚,
   sim-testing 种子段纪律)+ 报告结构(baseline_zero_piggy 闸)。

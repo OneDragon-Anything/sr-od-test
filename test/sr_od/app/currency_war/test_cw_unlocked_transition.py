@@ -22,7 +22,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
@@ -91,7 +91,7 @@ def _frame(gold: int, *, fuel_pieces: int = 1, fuel_cost: int = 5,
                  slot=i + 1)
              for i in range(fuel_pieces)]
     bench.extend(bench_extra)
-    st = CwWorkFrame(gold=gold, level=level, round_num=round_num, hp=60)
+    st = CwSimFrame(gold=gold, level=level, round_num=round_num, hp=60)
     st.level_readable = True
     st.plane = plane
     st.shop = list(cards) if cards is not None else []

@@ -92,7 +92,7 @@ def test_back_size_dead_field_tombstone() -> None:
 
 def test_scalar_projection_equivalent_to_bridge_projection() -> None:
     """标量投影容器等价锁(T-145 766 缝退役):kernel scalar_projection_
-    state 的输出与旧载体「惰性构造 CwWorkFrame + board_state_bridge 装箱」
+    state 的输出与旧载体「惰性构造 CwSimFrame + board_state_bridge 装箱」
     的投影**逐字段等价**——值/来源/evidence/工程结构经 full_state_snapshot
     逐项对拍。字段契约单一源 = scalar_projection_state docstring;桥本体
     映射将来变更时本锁强制两装配同批对账(禁静默漂移)。"""
@@ -100,7 +100,7 @@ def test_scalar_projection_equivalent_to_bridge_projection() -> None:
         board_state_bridge,
         scalar_projection_state,
     )
-    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+    from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 
     cases = [
         # (全参典型帧 / 全缺省 strategies=None / 空表 strategies=[]——
@@ -114,7 +114,7 @@ def test_scalar_projection_equivalent_to_bridge_projection() -> None:
     ]
     for kw in cases:
         bs_new = scalar_projection_state(**kw)
-        frame = CwWorkFrame(gold=kw['gold'], level=kw['level'],
+        frame = CwSimFrame(gold=kw['gold'], level=kw['level'],
                             hp=kw['hp'], plane=kw['plane'],
                             round_num=kw['round_num'])
         frame.active_strategies = list(kw['strategies'] or [])

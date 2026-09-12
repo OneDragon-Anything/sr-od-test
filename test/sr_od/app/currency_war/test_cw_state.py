@@ -1,4 +1,4 @@
-"""货币战争 CwWorkFrame 模型(cw_state)核不变量测试 —— 纯逻辑,不依赖游戏。
+"""货币战争 CwSimFrame 模型(cw_state)核不变量测试 —— 纯逻辑,不依赖游戏。
 
 覆盖面(#3 目标形态):mutate 不变量(buy+merge/sell/deploy,占用数守恒)/
 deploy 抽象(deployed_place 信息位归一)/双轨代表(mutate 就地 vs simulate
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
     bench_char_cost,
     sell_refund,
     xp_clicks_to_level,
@@ -124,7 +124,7 @@ def test_bench_char_cost_unknown_defaults_3() -> None:
 def test_simulate_level_up_crosses_threshold_with_carryover() -> None:
     """18/20 时点 1 次(22 XP)→ 升到 6 级,溢出 2 结转(2/40,用户门槛表)。"""
     from sr_od.application.currency_war.kernel.cw_vocab import LevelUp, simulate
-    s = CwWorkFrame(level=5, gold=40, xp_progress=(18, 20), hp=100)
+    s = CwSimFrame(level=5, gold=40, xp_progress=(18, 20), hp=100)
     s2 = simulate(s, LevelUp(cost=4))
     assert s2.level == 6
     assert s2.xp_progress == (2, 40)
@@ -133,7 +133,7 @@ def test_simulate_level_up_crosses_threshold_with_carryover() -> None:
 def test_simulate_level_up_xp_unknown_starts_zero() -> None:
     """xp 未知(None)按 0 进度起步 —— 保守(多估所需击数,不虚报升级)。"""
     from sr_od.application.currency_war.kernel.cw_vocab import LevelUp, simulate
-    s = CwWorkFrame(level=3, gold=10, xp_progress=None, hp=100)
+    s = CwSimFrame(level=3, gold=10, xp_progress=None, hp=100)
     s2 = simulate(s, LevelUp(cost=4))
     assert s2.level == 4, "lv3 门槛 4,一击 +4 恰好升级"
     assert s2.xp_progress == (0, 6)

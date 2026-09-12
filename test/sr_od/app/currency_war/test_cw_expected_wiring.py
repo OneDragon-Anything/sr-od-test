@@ -21,7 +21,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     DEPLOYED_FRONT_CAPACITY,
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -36,7 +36,7 @@ from sr_od.application.currency_war.operations.cw_screen._overlay_confirm import
 
 def _session() -> StrategySession:
     s = StrategySession()
-    s.last_state = CwWorkFrame(gold=50, plane=1, round_num=4)
+    s.last_state = CwSimFrame(gold=50, plane=1, round_num=4)
     return s
 
 

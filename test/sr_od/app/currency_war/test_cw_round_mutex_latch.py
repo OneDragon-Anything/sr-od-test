@@ -43,7 +43,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SELL_BENCH_CONVERT_REASONS,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench as ShopSellBench,
@@ -100,7 +100,7 @@ def _merged_fixture() -> tuple:
     sess = _sess()
     state_of(sess).target_comp = SimpleNamespace(
         name='测试线', core_chars=(_FUEL,), shared_chars=())
-    st = CwWorkFrame(gold=30, level=7, round_num=3, hp=60)
+    st = CwSimFrame(gold=30, level=7, round_num=3, hp=60)
     st.plane = 2
     st.bench = [_bc(_FUEL, slot=1), _bc(_FUEL, slot=2)]
     # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒

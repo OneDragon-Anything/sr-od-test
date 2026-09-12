@@ -40,7 +40,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.obs import cw_observation as cobs
 
@@ -73,8 +73,8 @@ def _hsig() -> _ChannelSig:
 #  直调=0,文件本体删除,视图语义无消费面可锁。)
 
 
-def _synth_bs_with(st: CwWorkFrame) -> GameState:
-    """CwWorkFrame 真值 → GameState(sim 合成口,批一资产)。"""
+def _synth_bs_with(st: CwSimFrame) -> GameState:
+    """CwSimFrame 真值 → GameState(sim 合成口,批一资产)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     from sr_od.application.currency_war.kernel.cw_game_state import (
         synthesize_from_game_state,
@@ -199,13 +199,13 @@ def test_board_next_tier_of_matches_registry_formula() -> None:
 def test_sim_bench_full_key_supplied_by_derived_function() -> None:
     """ADR-0488 席满观测键同键供给:合成后的 GameState 经
     bench_is_full 派生值 = 占用式(同一真值两形态;sim 段内 OR 支)。"""
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.bench = [BenchChar(slot=1, char_id='花火', star=1)] * 9 + [None] * 0
     st.bench = [BenchChar(slot=i + 1, char_id='花火', star=1)
                 for i in range(9)]
     bs = _synth_bs_with(st)
     assert bench_is_full(bs) is True
-    st2 = CwWorkFrame()
+    st2 = CwSimFrame()
     st2.bench = [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8
     bs2 = _synth_bs_with(st2)
     assert bench_is_full(bs2) is False
@@ -330,7 +330,7 @@ def test_detect_merge_upgrade_signature() -> None:
     )
 
     def _mk(bench, deployed=None):
-        st = CwWorkFrame()
+        st = CwSimFrame()
         st.bench = bench
         st.deployed = deployed or []
         return st

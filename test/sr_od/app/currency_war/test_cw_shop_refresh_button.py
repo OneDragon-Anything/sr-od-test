@@ -36,7 +36,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwWorkFrame,
+    CwSimFrame,
     RefreshShop,
 )
 from sr_od.application.currency_war.obs import cw_shop_refresh_obs
@@ -209,7 +209,7 @@ def _drive_refresh(monkeypatch: pytest.MonkeyPatch,
                             family='logic_hook', actor='TestRefreshButtonWriter',
                             mode='compute'))
     aop = RefreshShopOp(RefreshShop())
-    state = CwWorkFrame(bench=[])
+    state = CwSimFrame(bench=[])
     cw_op_buy_cards.apply_action_outcome(
         aop, aop.action, True, state,
         SimpleNamespace(session=session), ledger, [])

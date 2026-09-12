@@ -45,7 +45,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
     INVESTMENT_ENVS,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame, PickEvent
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame, PickEvent
 
 
 def _est(value: float, lo: float, hi: float) -> EconomyEstimate:
@@ -74,7 +74,7 @@ def _cfg(**overrides) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
-_STATE = CwWorkFrame(board={}, hp=100, hp_readable=True)
+_STATE = CwSimFrame(board={}, hp=100, hp_readable=True)
 
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:

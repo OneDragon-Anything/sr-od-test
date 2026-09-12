@@ -47,7 +47,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
     CloseShop,
-    CwWorkFrame,
+    CwSimFrame,
     SellBench,
     ShopCard,
     sell_refund,
@@ -101,8 +101,8 @@ def _sess() -> StrategySession:
 
 
 def _state(gold: int, bench: list[BenchChar], *,
-           round_num: int = 3, node: str = 'battle') -> CwWorkFrame:
-    st = CwWorkFrame(gold=gold, level=7, round_num=round_num, hp=60)
+           round_num: int = 3, node: str = 'battle') -> CwSimFrame:
+    st = CwSimFrame(gold=gold, level=7, round_num=round_num, hp=60)
     st.plane = 2
     st.node_type = node
     st.bench = list(bench)

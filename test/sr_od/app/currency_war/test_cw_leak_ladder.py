@@ -47,7 +47,7 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     LevelUpShop,
     ShopCard,
 )
@@ -112,7 +112,7 @@ def _session_stub(locked: bool = True, target_comp=None) -> SimpleNamespace:
 
 def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
         deploy_cap: int | None = None, bench=None, deployed=None,
-        plane: int = 2, hp: int = 60, xp=None) -> CwWorkFrame:
+        plane: int = 2, hp: int = 60, xp=None) -> CwSimFrame:
     km = _km()
     if deployed is None:
         # 席位构造:cap=level(缺省)时上板 level−1 人 → vacancy≥1 且
@@ -120,7 +120,7 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
         n_dep = max(level - 1, 0)
         deployed = [_bc(m, star=2, slot=i + 1)
                     for i, m in enumerate(km[:n_dep])]
-    st = CwWorkFrame(gold=gold, level=level, round_num=2, hp=hp)
+    st = CwSimFrame(gold=gold, level=level, round_num=2, hp=hp)
     st.level_readable = True
     st.plane = plane
     st.shop = list(cards)
@@ -133,7 +133,7 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
     return st
 
 
-def _decide(st: CwWorkFrame, sess) -> object:
+def _decide(st: CwSimFrame, sess) -> object:
     return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
@@ -280,7 +280,7 @@ class TestL2L5LFM6Compression:
     def test_lf_round_registry_expiry(self):
         """新鲜度载体键式相位过期:跨轮/跨位面读数空集(排除上界 ≤1 轮)。"""
         sess = SimpleNamespace()
-        st = CwWorkFrame(gold=10, level=5, round_num=3)
+        st = CwSimFrame(gold=10, level=5, round_num=3)
         st.plane = 2
         mandate.record_round_sold(sess, _bsb(st), '甲')
         assert mandate.round_sold_names(sess, _bsb(st)) == frozenset({'甲'})
@@ -326,7 +326,7 @@ class TestL3FlagRemoval:
             gold=60, level=3, bench=bench, deployed=[],
             deploy_cap=5, node_type=None, stop_flag=False,
             k_members=('目标件',), round_num=3)
-        state = CwWorkFrame(gold=60, level=3, round_num=3)
+        state = CwSimFrame(gold=60, level=3, round_num=3)
         state.hp = 60
         state.hp_readable = True
         mandate.run_mandate(frame, sess, state=_bsb(state))
@@ -368,10 +368,10 @@ class TestL4BudgetGateSuspend:
 
 class TestL7AllInCategoryFilter:
 
-    def _allin_state(self, hp: int, *, readable: bool = True) -> CwWorkFrame:
-        """CwWorkFrame 帧(mandate_v1 闸入口仍持 CwWorkFrame,闸内经桥装箱;
+    def _allin_state(self, hp: int, *, readable: bool = True) -> CwSimFrame:
+        """CwSimFrame 帧(mandate_v1 闸入口仍持 CwSimFrame,闸内经桥装箱;
         位面/节点语义同 _allin_bs)。"""
-        st = CwWorkFrame(gold=30, level=5, round_num=7, node_type='boss',
+        st = CwSimFrame(gold=30, level=5, round_num=7, node_type='boss',
                        hp=hp)
         st.plane = 2
         st.hp_readable = readable

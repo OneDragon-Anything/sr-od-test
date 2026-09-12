@@ -46,7 +46,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     SellBench,
     ShopCard,
     simulate,
@@ -107,8 +107,8 @@ def _locked_ist(comp_name: str = _LOCK_COMP) -> IntentionState:
 
 def _state(gold: int, shop_cards: list[ShopCard], plane: int = 2,
            level: int = 7, bench: list[BenchChar] | None = None
-           ) -> CwWorkFrame:
-    st = CwWorkFrame(gold=gold, level=level, round_num=2, hp=60)
+           ) -> CwSimFrame:
+    st = CwSimFrame(gold=gold, level=level, round_num=2, hp=60)
     st.plane = plane
     st.shop = shop_cards
     st.bench = bench if bench is not None else []
@@ -476,8 +476,8 @@ def _sess(comp, ist: IntentionState | None) -> SimpleNamespace:
 
 
 def _state_lv8(gold: int, shop_cards: list[ShopCard], level: int = 8,
-           bench: list[BenchChar] | None = None) -> CwWorkFrame:
-    st = CwWorkFrame(gold=gold, level=level, round_num=2, hp=60)
+           bench: list[BenchChar] | None = None) -> CwSimFrame:
+    st = CwSimFrame(gold=gold, level=level, round_num=2, hp=60)
     st.plane = 2
     st.shop = shop_cards
     st.bench = bench if bench is not None else []
@@ -486,7 +486,7 @@ def _state_lv8(gold: int, shop_cards: list[ShopCard], level: int = 8,
     return st
 
 
-def _b_prime(ist: IntentionState, st: CwWorkFrame) -> frozenset[str]:
+def _b_prime(ist: IntentionState, st: CwSimFrame) -> frozenset[str]:
     """截断义务集 B'(单一源直调;level 现读口径与生产装配一致)。"""
     return locked_buy_membership(
         ist, cap_hold=locked_buy_cap_hold(st)) or frozenset()
@@ -539,7 +539,7 @@ class TestObligationTruncation:
         """缺读 fail-closed 方向 = 保宽(r2 发现 2 裁决:零漂移端)——
         state 缺失/level≤0/容量派生异常帧 cap_hold=None。"""
         assert locked_buy_cap_hold(None) is None
-        assert locked_buy_cap_hold(CwWorkFrame(gold=1, level=0,
+        assert locked_buy_cap_hold(CwSimFrame(gold=1, level=0,
                                              round_num=1, hp=60)) is None
 
     def test_sub_capacity_comp_zero_drift(self):

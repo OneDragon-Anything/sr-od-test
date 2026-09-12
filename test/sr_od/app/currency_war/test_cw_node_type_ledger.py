@@ -38,7 +38,7 @@ from sr_od.application.currency_war.kernel.cw_reward_node import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
     CloseShop,
-    CwWorkFrame,
+    CwSimFrame,
     ShopCard,
     ledger_update_plane,
 )
@@ -62,9 +62,9 @@ def _card(name: str = '廉价杂件', cost: int = 1) -> ShopCard:
     return ShopCard(x=100, name=name, cost=cost, star=1)
 
 
-def _shop_frame(gold: int, cards: list[ShopCard]) -> CwWorkFrame:
+def _shop_frame(gold: int, cards: list[ShopCard]) -> CwSimFrame:
     """店开帧合成(p1r3 案件形态:gold=11 < g*,bench 空有席)。"""
-    st = CwWorkFrame(gold=gold, level=7, hp=80, plane=1, round_num=3)
+    st = CwSimFrame(gold=gold, level=7, hp=80, plane=1, round_num=3)
     st.shop = list(cards)
     return st
 
@@ -223,7 +223,7 @@ def test_none_frame_press_buy_silent() -> None:
     承载——该存活面的等价断言单点承载于 test_cw_realizable_interest_floor::
     test_pullback_success_closes_press_arm 前半(同输入帧型 + 同
     sorted(sells)==[1,2] 断言,跨文件等价择一,本侧原重复腿已删)。"""
-    st = CwWorkFrame(gold=11, level=7, hp=80, plane=1, round_num=3)
+    st = CwSimFrame(gold=11, level=7, hp=80, plane=1, round_num=3)
     st.shop = [_card()]
     sess = StrategySession()
     act = shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))

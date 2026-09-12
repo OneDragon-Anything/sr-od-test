@@ -50,7 +50,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
@@ -96,13 +96,13 @@ def _session() -> StrategySession:
     return s
 
 
-def _obs(session, state: CwWorkFrame | None = None, bench=None,
+def _obs(session, state: CwSimFrame | None = None, bench=None,
          deployed=None, spheres=(), boxes=(), tomes=(),
          vacancy: int = 4) -> PrepObservation:
     """黑板观察帧(纯视觉/占用域):局内事实经合成口喂 session 容器,
     obs.state 视图槽已随容器化段 2 退役。"""
     from test.sr_od.app.currency_war._cw_helpers import cw4_feed
-    cw4_feed(session, state or CwWorkFrame(gold=20))
+    cw4_feed(session, state or CwSimFrame(gold=20))
     return PrepObservation(
         bench_chars=bench or [], deployed_chars=deployed or [],
         spheres=list(spheres), boxes=list(boxes), tomes=list(tomes),
@@ -148,7 +148,7 @@ class TestSwapDecide:
         分键(R24-2:禁复用 switchline_skipped / switchline_exit_blocked)。"""
         session = _session()
         state_of(session).target_comp = COMP_LIBRARY[0]
-        out = proof.should_switch(CwWorkFrame(gold=20), session, None, None)
+        out = proof.should_switch(CwSimFrame(gold=20), session, None, None)
         assert not out.event
         assert out.key == 'theta_unavailable'
         assert 'theta_unavailable' in state_of(session).cw4_counters
@@ -172,7 +172,7 @@ class TestSwapDecide:
         def _fake_e(comp, state, registry=None, session=None):
             return 20.0 if comp.name == comps[0].name else 1.0
         monkeypatch.setattr(cw_line_switch, 'e_rounds', _fake_e)
-        out = proof.should_switch(CwWorkFrame(gold=30), session, None, None)
+        out = proof.should_switch(CwSimFrame(gold=30), session, None, None)
         assert out.event and out.alt_comp is not None
         assert out.alt_comp.name != comps[0].name
 
@@ -201,7 +201,7 @@ class TestEmitterContract:
             _obs(session, bench=[_bench(1, '燃料件')]),
             _obs(session, bench=[_bench(i, '燃料' + str(i)) for i in range(1, 10)],
                  vacancy=0),
-            _obs(session, state=CwWorkFrame(gold=99), bench=[_bench(1, '目标件')],
+            _obs(session, state=CwSimFrame(gold=99), bench=[_bench(1, '目标件')],
                  vacancy=0),
             _obs(session, spheres=[('red', _Pt(), 3)]),
             _obs(session, boxes=[(2, _Pt())]),
@@ -255,7 +255,7 @@ class TestMandateBehavior:
         from sr_od.application.currency_war.kernel.cw_game_state import (
             board_state_bridge as _bsb,
         )
-        gs = CwWorkFrame(gold=30, level=3, round_num=3, hp=60)
+        gs = CwSimFrame(gold=30, level=3, round_num=3, hp=60)
         gs.deployed = [_bench(1, '板上件锚')]
         out = mandate.run_mandate(frame, session, state=_bsb(gs))
         reasons = [e.reason for e in out]
@@ -266,7 +266,7 @@ class TestMandateBehavior:
         #(m2_retry_exhausted / bench_full_buy_abandon 计数由
         # test_cw_stall_cache.TestPrepStallCache 同帧形 ==1 强断言辖)
         bench2 = [_bench(i, '高价', star=3) for i in range(1, 10)]
-        gs2 = CwWorkFrame(gold=30, level=3, round_num=3, hp=60)
+        gs2 = CwSimFrame(gold=30, level=3, round_num=3, hp=60)
         gs2.deployed = [_bench(1, '板上件锚')]
         out2 = mandate.run_mandate(_frame(gold=30, bench=bench2, k=k),
                                    _session(), state=_bsb(gs2))
@@ -303,7 +303,7 @@ def test_decide_encounter_refresh_when_all_counter() -> None:
     comp = _mcomp(["速度依赖"])  # 忽快忽慢→速度抑制 counter(克)
     opts = [EncounterOption(idx=0, difficulty=1, affixes=["忽快忽慢"]),
             EncounterOption(idx=1, difficulty=2, affixes=["忽快忽慢"])]
-    pick = decide_encounter(opts, CwWorkFrame(), comp, cfg, refresh_used=False)
+    pick = decide_encounter(opts, CwSimFrame(), comp, cfg, refresh_used=False)
     assert pick.refresh, "全分支克 comp 应刷新换批"
 
 
@@ -312,6 +312,6 @@ def test_decide_supply_diamond_first() -> None:
     cfg = _cfg()
     opts = [SupplyOption(idx=0, equip="反重力皮靴"),                 # 高价值但无钻
             SupplyOption(idx=1, equip="光能电池", has_diamond=True)]  # 带钻
-    pick = decide_supply(opts, CwWorkFrame(), _comp_key([]), cfg)
+    pick = decide_supply(opts, CwSimFrame(), _comp_key([]), cfg)
     assert pick.idx == 1, "带钻应优先选"
     assert not pick.refresh

@@ -40,7 +40,7 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     StrategySession,
@@ -59,10 +59,10 @@ from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
 
 def _st2(hp: int = 10, plane: int = 2, gold: int = 30,
-         round_num: int = 2, level: int = 7) -> CwWorkFrame:
+         round_num: int = 2, level: int = 7) -> CwSimFrame:
     """P2 濒死带构造帧(信任门真值位显式置位;hp 缺省 10 ⊂ ≤15 带)。
     经济读口已切容器:消费位经 ``_bsb`` 桥装取容器。"""
-    st = CwWorkFrame(gold=gold, level=level, round_num=round_num, hp=hp)
+    st = CwSimFrame(gold=gold, level=level, round_num=round_num, hp=hp)
     st.plane = plane
     st.hp_readable = True
     st.hp_trusted = False
@@ -226,7 +226,7 @@ class TestUnlockPackageFailClosed:
 
 class TestNearDeathObservationKeys:
 
-    def _run_mandate(self, state: CwWorkFrame) -> StrategySession:
+    def _run_mandate(self, state: CwSimFrame) -> StrategySession:
         frame = mandate.MandateFrame(
             gold=state.gold, level=state.level, bench=[], deployed=[],
             deploy_cap=6, node_type=None, stop_flag=False,
@@ -275,10 +275,10 @@ class TestNearDeathObservationKeys:
                 event_overlay='', bench_chars=(), deployed_chars=(),
                 deploy_vacancy=0)
 
-        def _mk_frame(gold: int, hp: int) -> CwWorkFrame:
+        def _mk_frame(gold: int, hp: int) -> CwSimFrame:
             # 容器化段 2:局内事实喂 session 容器(观察源契约),黑板帧
             # 只载视觉/占用域。
-            return CwWorkFrame(gold=gold, level=6, round_num=2, hp=hp,
+            return CwSimFrame(gold=gold, level=6, round_num=2, hp=hp,
                                plane=2, node_type='战斗')
 
         st = _mk_frame(40, 10)
@@ -300,7 +300,7 @@ class TestNearDeathObservationKeys:
         advisor 计数面零交集)。"""
         monkeypatch.setattr(mandate, 'run_mandate',
                             lambda frame, session, **kw: [])
-        st = CwWorkFrame(gold=40, level=6, round_num=2, hp=60, plane=2,
+        st = CwSimFrame(gold=40, level=6, round_num=2, hp=60, plane=2,
                          node_type='战斗')
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
         cw4_feed(sess, st)

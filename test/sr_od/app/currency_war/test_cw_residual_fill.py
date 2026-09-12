@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
     bench_occupied,
     iter_occupied_deployed,
 )
@@ -31,9 +31,9 @@ from sr_od.application.currency_war.sim.engine_p1 import (
 
 
 def _st(level: int, deployed: list[BenchChar],
-        bench: list[BenchChar]) -> CwWorkFrame:
+        bench: list[BenchChar]) -> CwSimFrame:
     """构造帧:deployed/bench 紧缩表,board=仙舟计数由调用方对齐。"""
-    return CwWorkFrame(level=level, deployed=list(deployed),
+    return CwSimFrame(level=level, deployed=list(deployed),
                      bench=list(bench), board={}, gold=20)
 
 

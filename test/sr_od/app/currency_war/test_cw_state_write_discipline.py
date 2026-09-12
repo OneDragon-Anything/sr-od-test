@@ -117,7 +117,7 @@ def test_board_state_field_bypass_grep_lock() -> None:
         '变异自检未命中'
     assert _bypass_guard_hits('bs.gold == 1') == [], '等比比较误报(== 形)'
     assert _bypass_guard_hits('state.gold = 1') == [], \
-        'CwWorkFrame 接收者不在禁令内(旧容器直改归其自身纪律)'
+        'CwSimFrame 接收者不在禁令内(旧容器直改归其自身纪律)'
     offenders = _scan_src(_BYPASS_EXEMPT, _bypass_guard_hits)
     assert not offenders, (
         'GameState 属性被容器外直改(禁令 = §3.2.4 硬约束 1:op 层一律经 '
@@ -181,7 +181,7 @@ def test_resumed_flag_live_disables_popup_leg(journal, run_id, monkeypatch):
     from sr_od.application.currency_war.kernel.cw_exec_state import (
         exec_state_of,
     )
-    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+    from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
     from sr_od.application.currency_war.obs import cw_shop_refresh_obs
     from sr_od.application.currency_war.obs.cw_observation import (
         PHASE_BATTLE_OR_TRANSIT,
@@ -198,12 +198,12 @@ def test_resumed_flag_live_disables_popup_leg(journal, run_id, monkeypatch):
             exec_state_of(session).cw_resumed_match = True   # 生产写端 = cw_loop 两确认点
         ctx = _resumed_probe_ctx(session)
         # 帧 1:战斗/过渡相位(恢复局重入首帧形态)→ 漏斗写分支 token
-        state = CwWorkFrame()
+        state = CwSimFrame()
         state.plane, state.round_num = 2, 3
         _feed_board_state(ctx, state, PHASE_BATTLE_OR_TRANSIT, None,
                           frozenset(), had_hp_real=False)
         # 帧 2:商店面板先被采到(恢复局首弹窗形态)→ 弹窗腿判定
-        state2 = CwWorkFrame()
+        state2 = CwSimFrame()
         state2.plane, state2.round_num = 2, 3
         _feed_board_state(ctx, state2, PHASE_PREP_SHOP_OPEN, None,
                           frozenset(), had_hp_real=False)

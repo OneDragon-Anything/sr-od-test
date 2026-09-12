@@ -57,7 +57,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     RefreshShop,
     SellBench,
     ShopCard,
@@ -223,7 +223,7 @@ def test_gold_net_conserved_buy_sell_roundtrip() -> None:
     +sell_refund(1★,cost)=cost,净 0(对任意费用成立,注册表改费不红;
     支出面与退金面经同一事务单一源 cw_state.simulate)。红 = 中间事务
     静默分叉(花金/退金两套算账走样)。"""
-    s0 = CwWorkFrame(gold=50)
+    s0 = CwSimFrame(gold=50)
     s1 = simulate(s0, BuyCard(ShopCard(x=0, name='三月七', cost=1, star=1)))
     assert s1.gold < s0.gold, '买入应扣金(花出面缺席)'
     s2 = simulate(s1, SellBench(bench_idx=0))
@@ -258,8 +258,8 @@ def test_adr0150_base_layer_full() -> None:
 # 帧专属形状,留本地自持)
 
 
-def _state(gold: int, level: int = 3) -> CwWorkFrame:
-    st = CwWorkFrame(gold=gold, level=level, round_num=2)
+def _state(gold: int, level: int = 3) -> CwSimFrame:
+    st = CwSimFrame(gold=gold, level=level, round_num=2)
     st.shop = [ShopCard(x=100, name='垫', cost=3, star=1)]
     st.bench = []
     st.deployed = []
@@ -308,8 +308,8 @@ class TestR2InterestFloor:
 
 def test_economy_interest() -> None:
     """中期,存金近 50 > 存金 0(利息加分)。"""
-    rich = CwWorkFrame(gold=50, round_num=5, level=6, plane=2)
-    poor = CwWorkFrame(gold=0, round_num=5, level=6, plane=2)
+    rich = CwSimFrame(gold=50, round_num=5, level=6, plane=2)
+    poor = CwSimFrame(gold=0, round_num=5, level=6, plane=2)
     assert economy_score(rich, "adaptive") > economy_score(poor, "adaptive")
 
 
@@ -317,9 +317,9 @@ def test_economy_streak_bonus() -> None:
     """C 杠杆 2(streak 接线)。ADR-0128(复查 #5,核心机制:27):货币战争**无连败补偿** ——
     只计连胜方向;连败 0 分(旧 magnitude 对称计 = 虚构连败金,已修)。
     """
-    base = CwWorkFrame(gold=50, round_num=5, level=6, plane=2)             # streak 默认 0
-    win3 = CwWorkFrame(gold=50, round_num=5, level=6, plane=2, streak=3)   # 连胜 3
-    loss3 = CwWorkFrame(gold=50, round_num=5, level=6, plane=2, streak=-3)  # 连败 3
+    base = CwSimFrame(gold=50, round_num=5, level=6, plane=2)             # streak 默认 0
+    win3 = CwSimFrame(gold=50, round_num=5, level=6, plane=2, streak=3)   # 连胜 3
+    loss3 = CwSimFrame(gold=50, round_num=5, level=6, plane=2, streak=-3)  # 连败 3
     assert economy_score(win3, "adaptive") > economy_score(base, "adaptive"), "连胜 3 > 无 streak"
     assert economy_score(loss3, "adaptive") == pytest.approx(economy_score(base, "adaptive")), (
         "无连败补偿:连败 3 不加分(核心机制:27)"
@@ -334,7 +334,7 @@ def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespa
     """血闸消费面依赖桩:active_strategies + last_state(其余无关)。"""
     return SimpleNamespace(
         active_strategies=list(active or ['奋斗协议']),
-        last_state=CwWorkFrame(**state_kw),
+        last_state=CwSimFrame(**state_kw),
     )
 
 
@@ -428,7 +428,7 @@ def _xp_state(level: int = 5, strategies: list[str] | None = None,
     """费用轴最小决策帧(经济读口已切容器:桥装为测试迁移单一源形态)。
     strategies=已持投资策略;display=OCR 显示价,None=未读到走兜底支
     ——两支来源凭容器 level_up_cost Field 判别。"""
-    st = CwWorkFrame(gold=30, level=level, round_num=2)
+    st = CwSimFrame(gold=30, level=level, round_num=2)
     st.active_strategies = list(strategies or [])
     st.level_up_cost = display
     return _bsb(st)

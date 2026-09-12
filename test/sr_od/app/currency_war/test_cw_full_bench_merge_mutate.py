@@ -49,7 +49,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     ShopCard,
     _card_to_bench,
     _merge_bench,
@@ -88,8 +88,8 @@ def _session(bench=None, deployed=None) -> StrategySession:
 
 
 def _state(gold: int, shop: list[ShopCard],
-           deployed: list[BenchChar]) -> CwWorkFrame:
-    st = CwWorkFrame(gold=gold, level=5, round_num=9, hp=35)
+           deployed: list[BenchChar]) -> CwSimFrame:
+    st = CwSimFrame(gold=gold, level=5, round_num=9, hp=35)
     st.shop = shop
     st.bench = _seed_bench()
     st.deployed = deployed
@@ -259,7 +259,7 @@ class TestBranchFaces:
         sess = _session(bench=self._flat_full_bench('椒丘'),
                         deployed=deepcopy(deployed))
         tracked = deepcopy(exec_state_of(sess).tracked_bench_chars)
-        st = CwWorkFrame(gold=30, level=5, round_num=9, hp=35)
+        st = CwSimFrame(gold=30, level=5, round_num=9, hp=35)
         st.shop = [ShopCard(x=1, name='椒丘', cost=1, star=1),
                    ShopCard(x=2, name='椒丘', cost=1, star=1)]
         st.bench = self._flat_full_bench('椒丘')
@@ -285,7 +285,7 @@ class TestBranchFaces:
         sess = _session(bench=self._flat_full_bench('甲'),
                         deployed=deepcopy(deployed))
         tracked = deepcopy(exec_state_of(sess).tracked_bench_chars)
-        st = CwWorkFrame(gold=30, level=5, round_num=9, hp=35)
+        st = CwSimFrame(gold=30, level=5, round_num=9, hp=35)
         st.shop = [ShopCard(x=1, name='乙', cost=1, star=1)]
         st.bench = self._flat_full_bench('甲')
         st.deployed = []
@@ -309,7 +309,7 @@ class TestBranchFaces:
         sess = _session(bench=self._flat_full_bench('甲'),
                         deployed=deepcopy(deployed))
         tracked = deepcopy(exec_state_of(sess).tracked_bench_chars)
-        st = CwWorkFrame(gold=30, level=5, round_num=9, hp=35)
+        st = CwSimFrame(gold=30, level=5, round_num=9, hp=35)
         st.shop = [ShopCard(x=1, name='丙', cost=1, star=1),
                    ShopCard(x=2, name='丙', cost=1, star=1),
                    ShopCard(x=3, name='丙', cost=1, star=1)]

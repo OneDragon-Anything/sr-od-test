@@ -58,7 +58,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -133,13 +133,13 @@ def _d_frame_deps(n_km: int = 0) -> tuple[list[BenchChar], frozenset[str]]:
     return deps, frozenset(names)
 
 
-def _d_frame_st(gold: int, cards: list[ShopCard]) -> CwWorkFrame:
+def _d_frame_st(gold: int, cards: list[ShopCard]) -> CwSimFrame:
     """D 帧默认形(n_km=0 纯垫件板):锁线 ∧ fp<1.00(board 空)∧ 板满。"""
     deps, _names = _d_frame_deps(0)
     return _lad_st(gold, cards, locked=True, deployed=deps)
 
 
-def _decide(st: CwWorkFrame, sess) -> object:
+def _decide(st: CwSimFrame, sess) -> object:
     return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
@@ -381,8 +381,8 @@ def _prep_frame(deployed: list[BenchChar], bench: list[BenchChar]):
                         stop_flag=False, k_members=('目标件',), round_num=3)
 
 
-def _prep_state(deployed: list[BenchChar]) -> CwWorkFrame:
-    st = CwWorkFrame(gold=60, level=3, round_num=3)
+def _prep_state(deployed: list[BenchChar]) -> CwSimFrame:
+    st = CwSimFrame(gold=60, level=3, round_num=3)
     st.plane = 2
     st.deployed = list(deployed)
     return st

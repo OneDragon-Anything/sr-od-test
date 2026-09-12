@@ -590,8 +590,8 @@ class TestBenchEffectContextAssembly:
 
     @staticmethod
     def _state(active_strategies=None, enemy_affixes=None, deployed=None):
-        from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
-        st = CwWorkFrame()
+        from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
+        st = CwSimFrame()
         st.active_strategies = list(active_strategies or [])
         st.enemy_affixes = list(enemy_affixes or [])
         st.deployed = list(deployed or [])

@@ -57,7 +57,7 @@ _SIG = ChannelSig(family='logic_action', actor='CwOpBuyCards',
 
 
 def _bs_of(st):
-    """CwWorkFrame 桩帧 → 容器(sim 合成口;测试/生产同一条喂入通道)。"""
+    """CwSimFrame 桩帧 → 容器(sim 合成口;测试/生产同一条喂入通道)。"""
     bs = board_state_of(None)
     synthesize_from_game_state(bs, st)
     return bs

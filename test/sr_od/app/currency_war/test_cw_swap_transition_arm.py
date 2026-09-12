@@ -202,7 +202,7 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     from sr_od.application.currency_war.kernel.cw_game_state import (
         board_state_bridge as _bsb,
     )
-    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+    from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
         run_mandate,
     )
@@ -224,7 +224,7 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     _st.target_comp = comp
     _st.transition_framework = ''
     dep, bench = _lesion_frame_deployed(), [_bc('三月七', 1, star=2)]
-    st = CwWorkFrame(gold=0, level=6, plane=1, round_num=2, board={},
+    st = CwSimFrame(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
     out = run_mandate(_m1p_frame(dep, bench), sess, state=_bsb(st))
     fired = [e for e in out if e.action.__class__.__name__ == 'RunDeploy'

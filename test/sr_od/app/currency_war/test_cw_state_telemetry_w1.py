@@ -38,7 +38,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors,
     synthesize_from_game_state,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 
 # ---- 测试签名(actor 已登记;语义同 test_cw_state_journal 的 W1 helper)----
 register_sig_actors('TestSigWriter')
@@ -73,9 +73,9 @@ def _reset_journal_default():
 # ============================================================ kind_inherited 保留锁(W1 ④)
 
 
-def _sim_state(node_type, plane: int = 1, round_num: int = 5) -> CwWorkFrame:
-    """裸 sim CwWorkFrame 桩(node_type 显式可控;gold/level 等按需置缺省)。"""
-    st = CwWorkFrame(plane=plane, round_num=round_num)
+def _sim_state(node_type, plane: int = 1, round_num: int = 5) -> CwSimFrame:
+    """裸 sim CwSimFrame 桩(node_type 显式可控;gold/level 等按需置缺省)。"""
+    st = CwSimFrame(plane=plane, round_num=round_num)
     st.node_type = node_type
     st.gold = 30
     st.gold_readable = True
@@ -93,7 +93,7 @@ def test_kind_inherited_branch_retained() -> None:
                             mode='synthesized')
     bs.observe(bs.node, NodeKey(plane=1, round_num=4, kind='battle'),
                evidence='sim:synthesized', sig=_sig_synth)
-    # 前帧:node_type=None(裸 CwWorkFrame 未建模该帧)
+    # 前帧:node_type=None(裸 CwSimFrame 未建模该帧)
     synthesize_from_game_state(bs, _sim_state(None))
     assert bs.node.value is not None, '有前值 = 节点照写'
     assert bs.node.value.kind == 'battle', 'kind_inherited:类型沿前值回写'

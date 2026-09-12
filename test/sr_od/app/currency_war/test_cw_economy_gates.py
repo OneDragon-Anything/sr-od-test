@@ -42,7 +42,7 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     in_must_spend_zone,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwWorkFrame,
+    CwSimFrame,
     LevelUpShop,
     RefreshShop,
     ShopCard,
@@ -150,7 +150,7 @@ class TestR1AffordabilityGate:
     """
 
     @staticmethod
-    def _frame(gold: int) -> tuple[CwWorkFrame, object]:
+    def _frame(gold: int) -> tuple[CwSimFrame, object]:
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.data.cw_shop_odds import (
             expected_refreshes_for_card,
@@ -169,7 +169,7 @@ class TestR1AffordabilityGate:
         others = [m for m in members if m != target]
         bench = [_bc(target), _bc(target, slot=2)] \
             + [_bc(m, star=2, slot=i + 3) for i, m in enumerate(others)]
-        st = CwWorkFrame(gold=gold, level=6, round_num=8)
+        st = CwSimFrame(gold=gold, level=6, round_num=8)
         st.plane = 1
         st.shop = [ShopCard(x=100, name='垫', cost=3, star=1)]
         st.bench = bench

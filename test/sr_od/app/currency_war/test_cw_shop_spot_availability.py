@@ -90,8 +90,8 @@ def _sess():
 
 
 def _st(gold: int, shop_cards, bench, *, level: int = 7):
-    from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
-    st = CwWorkFrame(gold=gold, level=level, round_num=2, hp=60)
+    from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
+    st = CwSimFrame(gold=gold, level=level, round_num=2, hp=60)
     st.level_readable = True
     st.plane = 2
     st.shop = list(shop_cards)

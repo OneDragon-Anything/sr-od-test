@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 from sr_od.application.currency_war.operations.cw_loop import CwLoop
 
 
@@ -68,7 +68,7 @@ def _make_stop_loop(*, summary_written: bool = False,
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
                     session=SimpleNamespace(
-                        last_state=CwWorkFrame(plane=plane, round_num=round_num,
+                        last_state=CwSimFrame(plane=plane, round_num=round_num,
                                              hp=hp, hp_readable=hp_readable),
                     ),
                 ),

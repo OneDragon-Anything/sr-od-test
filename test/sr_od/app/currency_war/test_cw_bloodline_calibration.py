@@ -16,7 +16,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bsb,
 )
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
@@ -27,7 +27,7 @@ from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 def _eval_hp(hp):
     # 现役签名 = (session, bs 容器, hp):死参 gold 已随 prep 链容器化段 1
     # 删除(零消费);容器经桥装承载 λ 谓词读面(本文件阈值族不触 λ 臂)。
-    st = CwWorkFrame(node_type='战斗', enemy_difficulty=None, plane=1)
+    st = CwSimFrame(node_type='战斗', enemy_difficulty=None, plane=1)
     return entry._upgrader_evaluate(SimpleNamespace(), _bsb(st), hp)
 
 
@@ -79,7 +79,7 @@ class TestBloodlineCalibration:
         )
         monkeypatch.setattr(mandate, 'run_mandate',
                             lambda frame, session, **kw: [])
-        st = CwWorkFrame(gold=40, level=6, round_num=2, hp=10, plane=1,
+        st = CwSimFrame(gold=40, level=6, round_num=2, hp=10, plane=1,
                          node_type='战斗')
         obs = SimpleNamespace(
             box_overlay_open=False, boxes=(), tomes=(), spheres=(),

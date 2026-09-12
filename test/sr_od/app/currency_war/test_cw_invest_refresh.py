@@ -49,7 +49,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     get_strategy,
     is_blood_economy,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame, PickEvent
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame, PickEvent
 from sr_od.application.currency_war.obs.cw_node_obs import (
     pair_refresh_counts_to_slots,
     read_invest_refresh_counts,
@@ -79,7 +79,7 @@ def _cfg(**overrides) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
-_STATE = CwWorkFrame(board={}, hp=100, hp_readable=True)
+_STATE = CwSimFrame(board={}, hp=100, hp_readable=True)
 
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:

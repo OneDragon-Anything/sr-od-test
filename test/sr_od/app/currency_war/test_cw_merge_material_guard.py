@@ -36,7 +36,7 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
     merge_material_reject_reason,
     merge_material_stale_names,
 )
@@ -64,9 +64,9 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
 
 
 def _state(bench: list[BenchChar], deployed: list[BenchChar],
-           plane: int = 2) -> CwWorkFrame:
+           plane: int = 2) -> CwSimFrame:
     """案发帧形态:P2+(K 空窗回退带)、血线之上(凑息禁令不触发)。"""
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.plane = plane
     st.hp = 50
     st.bench = list(bench)
@@ -74,7 +74,7 @@ def _state(bench: list[BenchChar], deployed: list[BenchChar],
     return st
 
 
-def _fallback_k(state: CwWorkFrame) -> tuple[str, ...]:
+def _fallback_k(state: CwSimFrame) -> tuple[str, ...]:
     """案发帧真实 k_members——派生单一源 = cw_intention.k_empty_window_
     fallback P2+ 带。P86 落码批重推(证明批 §4.6:p2plus 空集合法):
     回退 = 三臂判据输出,本判死帧(机器门全灭)产**合法空集**(丙臂守息

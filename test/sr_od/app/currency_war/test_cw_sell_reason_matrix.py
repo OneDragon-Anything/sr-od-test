@@ -48,7 +48,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SELL_BENCH_CONVERT_REASONS,
-    CwWorkFrame,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench as ShopSellBench,
@@ -109,12 +109,12 @@ def _prep_emit_out(sells: list) -> list:
 
 
 def _boarded(gold: int = 1, level: int = 5, round_num: int = 2,
-             hp: int = 40) -> CwWorkFrame:
+             hp: int = 40) -> CwSimFrame:
     """非空板测试环境(T-32 空板止损守卫前置):守卫钉「待卖后
     deployed 为空 ⇒ 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),
     卖出判据/发射位直调环境须 ≥1 上场件,否则守卫 fail-closed 拒帧
     ——与被测语义无关的红按环境前置补齐,非跟绿。"""
-    st = CwWorkFrame(gold=gold, level=level, round_num=round_num, hp=hp)
+    st = CwSimFrame(gold=gold, level=level, round_num=round_num, hp=hp)
     st.deployed = [_bc('板上件锚', slot=1)]
     return st
 

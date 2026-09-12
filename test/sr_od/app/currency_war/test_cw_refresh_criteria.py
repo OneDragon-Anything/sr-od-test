@@ -34,7 +34,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
-    CwWorkFrame,
+    CwSimFrame,
     RefreshShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.refresh import (
@@ -89,9 +89,9 @@ def _table_session(comp, table: list[str] | None, anchor: int | None = 1):
 
 
 def _front_state(gold: int = 13, node: str = 'reward',
-                 round_num: int = 2) -> CwWorkFrame:
+                 round_num: int = 2) -> CwSimFrame:
     """前窗帧(round 2 ≤ 首战槽 3;reward 型触发 ②(b) 压库臂)。"""
-    st = CwWorkFrame(gold=gold, level=3, plane=1, round_num=round_num,
+    st = CwSimFrame(gold=gold, level=3, plane=1, round_num=round_num,
                    node_type=node, hp=100)
     st.shop = []
     st.bench = []
@@ -191,7 +191,7 @@ class TestQualifiedBand:
             r2_card_reserve,
         )
         bench = [_bc('停云', star=2, slot=1)]
-        st = CwWorkFrame(gold=10, level=5, plane=1, round_num=2, hp=100)
+        st = CwSimFrame(gold=10, level=5, plane=1, round_num=2, hp=100)
         assert r2_card_reserve(('停云', '景元', '卡芙卡'), bench, [],
                                st) == 2
 
@@ -207,7 +207,7 @@ class TestM6SameAxis:
         成员全 2★ ⇒ 带空(对照臂;席余 = bench_free ≥ 2 保 M6 开火)。"""
         comp = _pair_comp_xz_dot()
         s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-        st = CwWorkFrame(gold=51, level=4, plane=1, round_num=2,
+        st = CwSimFrame(gold=51, level=4, plane=1, round_num=2,
                        node_type='reward', hp=100)
         members = ['丹恒·饮月', '停云', '卡芙卡', '彦卿', '忘归人', '景元',
                    '桑博', '椒丘', '海瑟音', '爻光', '符玄', '艾丝妲',
@@ -359,7 +359,7 @@ class TestP92GateIntegration:
         r2 门直达 P92 位。"""
         comp = _pair_comp_xz_dot()
         s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-        st = CwWorkFrame(gold=gold, level=5, plane=1, round_num=2,
+        st = CwSimFrame(gold=gold, level=5, plane=1, round_num=2,
                        node_type='reward', hp=100)
         members = ['丹恒·饮月', '停云', '卡芙卡', '彦卿', '忘归人', '景元',
                    '桑博', '椒丘', '海瑟音', '爻光', '符玄', '艾丝妲',
@@ -548,7 +548,7 @@ def _elig_frame(y: str, *, y_third_star3: bool = False):
     assert refresh_prob(4, CHARACTERS[w].cost) > 0.0    # W r1 账合格集承载
     assert refresh_prob(4, CHARACTERS[y].cost) > 0.0    # Y 刷出维开着(④活性必要面)
     s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-    st = CwWorkFrame(gold=100, level=4, plane=1, round_num=2,
+    st = CwSimFrame(gold=100, level=4, plane=1, round_num=2,
                    node_type='reward', hp=100)
     formed = [m for m in members
               if m not in (w, x, y) and CHARACTERS[m].cost <= 3]

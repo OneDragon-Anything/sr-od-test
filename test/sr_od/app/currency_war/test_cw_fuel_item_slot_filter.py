@@ -31,7 +31,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    CwWorkFrame,
+    CwSimFrame,
     SellBench,
     ShopCard,
 )
@@ -63,13 +63,13 @@ def _item(slot: int = 1, star: int = 1) -> BenchChar:
 
 
 def _state(bench: list[BenchChar],
-           deployed: list[BenchChar] | None = None) -> CwWorkFrame:
+           deployed: list[BenchChar] | None = None) -> CwSimFrame:
     # deployed 缺省给非空板(占位一件即可):空板帧会被空板止损守卫
     # (sell_gate.empty_board_sell_blocked,ADR-0636)先于资格面短路,
     # 测不到本文件辖的滤门本体;空板帧行为由守卫自身锁面辖。
     if deployed is None:
         deployed = [_bc('前线', slot=1)]
-    st = CwWorkFrame()
+    st = CwSimFrame()
     st.plane = 2
     st.hp = 50
     st.bench = list(bench)
@@ -166,7 +166,7 @@ class TestSinkConsistencyBenchFull:
         km = list(line_members(get_comp(_COMP)))
         ist = SimpleNamespace(locked_comp=_COMP)
         _cap = cw_intention.locked_buy_cap_hold(
-            CwWorkFrame(gold=0, level=5, round_num=2, hp=60))
+            CwSimFrame(gold=0, level=5, round_num=2, hp=60))
         purchase = sorted(cw_intention.locked_buy_membership(
             ist, cap_hold=_cap) or frozenset())
         chaseable = [m for m in km if m != _causal()]
@@ -182,7 +182,7 @@ class TestSinkConsistencyBenchFull:
         bench[-1] = _item(slot=bench[-1].slot)
         filler = _off_line(exclude=tuple(km))
         pad = _off_line(exclude=(filler,))
-        st = CwWorkFrame(gold=51, level=5, round_num=2, hp=10)
+        st = CwSimFrame(gold=51, level=5, round_num=2, hp=10)
         st.level_readable = True
         st.plane = 1   # 血线硬地板域(plane 1 专属;压掉 arm0 升级抢先)
         st.hp_decision_trusted = True

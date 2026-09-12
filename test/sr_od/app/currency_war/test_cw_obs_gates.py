@@ -1170,7 +1170,7 @@ from sr_od.application.currency_war.kernel.cw_comps import (  # noqa: E402
     maybe_pivot,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwWorkFrame as _test_pivot_plane_filter_GameState,  # noqa: E402
+    CwSimFrame as _test_pivot_plane_filter_GameState,  # noqa: E402
 )
 
 
@@ -1218,7 +1218,7 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     maybe_pivot as _pivot_invariant_maybe_pivot,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwWorkFrame as _pivot_invariant_GameState,
+    CwSimFrame as _pivot_invariant_GameState,
 )
 
 

@@ -47,7 +47,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (  # noqa: E40
 from sr_od.application.currency_war.kernel.cw_strategy_session import (  # noqa: E402
     StrategySession,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame  # noqa: E402
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame  # noqa: E402
 from sr_od.application.currency_war.operations.cw_op.cw_op_tools import (  # noqa: E402
     ToolDragPlan,
     classify_tool_consume,
@@ -309,7 +309,7 @@ class TestMandateEmission:
         )
         from test.sr_od.app.currency_war._cw_helpers import cw4_feed
         # 黑板契约 = 紧缩型(仅已识别件;snapshot_from_obs 同款过滤),
-        # CwWorkFrame.bench 是 pad 态,禁原样传入决策面。局内事实经
+        # CwSimFrame.bench 是 pad 态,禁原样传入决策面。局内事实经
         # 合成口喂 session 容器(obs.state 视图槽已随容器化段 2 退役)。
         cw4_feed(s, st)
         obs = PrepObservation(
@@ -330,7 +330,7 @@ class TestMandateEmission:
         不可辨):owned 快照在场 ⇒ m7_5_evaluated 计数;判据全拒帧按拟
         执行动作分键(m7_5_reject_lucky_token_pick);零条目产出帧计
         m7_5_reject_none。发射门行为不变(全拒仍不发 RunTools)。"""
-        st = CwWorkFrame(plane=1, round_num=3)
+        st = CwSimFrame(plane=1, round_num=3)
         s2 = _session_with([_TOKEN])   # 令牌 R(c) 缺档 → 判据全拒
         out2 = self._emit(s2, st)
         assert state_of(s2).cw4_counters.get('m7_5_evaluated') == 1
@@ -352,14 +352,14 @@ class TestMandateEmission:
         """执行位闩:mark_tools_pass_executed 置位后同 phase 不再发
         (发射位只读不写,与 M7 装备闩同型);位面推进 = 新键自动失效。"""
         s = _session_with([_FURNACE, _DEAD])
-        st = CwWorkFrame(plane=1, round_num=3)
+        st = CwSimFrame(plane=1, round_num=3)
         out1 = self._emit(s, st)
         assert any(isinstance(e.action, RunTools) for e in out1)
         mandate.mark_tools_pass_executed(s, st)
         out2 = self._emit(s, st)
         assert not any(isinstance(e.action, RunTools) for e in out2)
         assert state_of(s).cw4_counters.get('tools_latch_skip', 0) == 1
-        st2 = CwWorkFrame(plane=1, round_num=4)   # 轮次推进 → 键失效重评
+        st2 = CwSimFrame(plane=1, round_num=4)   # 轮次推进 → 键失效重评
         out3 = self._emit(s, st2)
         assert any(isinstance(e.action, RunTools) for e in out3)
 

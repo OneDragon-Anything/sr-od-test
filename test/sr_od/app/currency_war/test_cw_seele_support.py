@@ -23,7 +23,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     board_state_bridge,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwWorkFrame
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwSimFrame
 
 
 def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
@@ -36,8 +36,8 @@ def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
 
 def _p1_state(bench: list[BenchChar]) -> GameState:
     """P1 支持度直调态(容器形态;W6 波3 方向层切容器签名,
-    CwWorkFrame 帧=旧构面,经过渡桥装箱——退役挂波5 喂入反转)。"""
-    st = CwWorkFrame()
+    CwSimFrame 帧=旧构面,经过渡桥装箱——退役挂波5 喂入反转)。"""
+    st = CwSimFrame()
     st.plane = 1
     st.round_num = 3
     st.bench = bench
