@@ -3,7 +3,7 @@
 正本锚:``docs/develop/sr_od/application/currency_war/design/决策行文件
 schema设计.md``(§2.1 行五段结构 / §2.4 首批发射面与披露族封闭清单 /
 §4 字段语义 / §5.1 窗口与锚 / §5.2 望远镜恒等式与终局对账 / §5.4 文件名
-与寿命契约 / §8-2 pin_scope 生命周期 / §10 锁面清单 L1-L6);定谳依据 =
+与寿命契约 / §10 锁面清单 L1-L6);定谳依据 =
 ``.debug/progress/2026-09-11-cw-clear-run/定谳记录-c1c8.md``(C1 降格
 主张 / C2 文件名 / C3 派生列不发射 / C4 首批发射面 / C7 独立版本常量 /
 C8 候裁 6 联动;挂波 C6 = W6 后)。
@@ -25,8 +25,7 @@ C8 候裁 6 联动;挂波 C6 = W6 后)。
   (同一容器来源,防第二命名);
 - 发射语义(§5.1):窗口归属(求值内写点入本行/执行侧写点入下一行)、
   一收口一行无节流、局段边界锚独立、局外拒写不产假行;
-- 钉(§8-2/R4):state_ref 形态与显式传参语义、pin_scope 恒空串
-  (挂波 W6 后,新行无过渡语义);
+- 钉(R4):state_ref 形态与显式传参语义;
 - 版本常量(定谳 C7):独立常量初值 1,行头取该常量;
 - 文件(定谳 C2):strategy/decision_trace.jsonl 缺省布局、装配落盘
   端到端、寿命联动(journal 已淘汰的同一 run_id 集协同淘汰,两文件禁
@@ -410,13 +409,11 @@ def test_sink_exception_does_not_poison(run_env) -> None:
 
 def test_state_ref_pin_contract(run_env) -> None:
     """钉契约:state_ref = '{run_id}#{v}';显式 state_ref_version 直用
-    零回读(R4:交错写点调用方显式传参防钉漂移);pin_scope 恒空串
-    (§8-2 挂波 W6 后,新行无过渡语义)。"""
+    零回读(R4:交错写点调用方显式传参防钉漂移)。"""
     s = _session({'k_a': 1})
     row = record_decision_frame(s, state_ref_version=41,
                                 strategy_id='mandate_v1', ev_arm='full')
     assert row['state_ref'] == f'{_RUN}#41', '显式钉版本直用'
-    assert row['pin_scope'] == ''
     assert row['strategy_id'] == 'mandate_v1' and row['ev_arm'] == 'full'
 
 
