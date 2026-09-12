@@ -70,14 +70,19 @@ def _pure_members(tag: str, k: int) -> list[str]:
 def _bc(names: list[str], stars: list[int] | None = None) -> list[BenchChar]:
     stars = stars or [1] * len(names)
     return [BenchChar(slot=i + 1, char_id=n, star=s)
-            for i, (n, s) in enumerate(zip(names, stars))]
+            for i, (n, s) in enumerate(zip(names, stars, strict=False))]
 
 
-def _p1_state(bench: list[BenchChar]) -> BoardState:
-    """W6 波3:方向层谓词已切容器签名,旧 GameState 构面经过渡桥装箱。"""
+def _p1_state(bench: list[BenchChar],
+              board: dict | None = None) -> BoardState:
+    """W6 波3:方向层谓词已切容器签名,旧 GameState 构面经过渡桥装箱。
+    board 须随帧装箱(桥产出容器 Field 形态,装箱后裸 dict 覆写 = 打穿
+    Field 契约,消费面 ``bs.board.value`` 必炸)。"""
     st = GameState(gold=10, level=5, plane=1, round_num=5, hp=100)
     st.bench = bench
     st.deployed = []
+    if board:
+        st.board = dict(board)
     return board_state_bridge(st)
 
 
@@ -397,20 +402,21 @@ class TestIncumbentEasementLayer:
         # 帧1 闩(板满 fp=1)/帧2 冻结抑制/帧3 超窗出口+封印/
         # 帧4 封印保持(fp=1 不回落,事件 hold)/帧5 门拒换席(fp<1 回落
         # 解封)/帧6 过门换席(over 关 → 门放行)
-        form_ok = dict(board={_PAIR_A: 2, _PAIR_B: 2})
+        form_ok = {'board': {_PAIR_A: 2, _PAIR_B: 2}}
         swap_bench = _bc(a + b + c, [1, 1, 2, 1, 2, 2, 1])
+        # 板面字典随帧装箱(W6 波3:桥产物是容器 Field 形态,禁装箱后
+        # 裸 dict 覆写);空板帧不喂 board = 未观察(读口 ``or {}`` 同判)。
         frames = [
-            (_p1_state(_bc(a + b)), form_ok, False),
-            (_p1_state(_bc(a + b)), form_ok, False),
-            (_p1_state(_bc(a + b)), form_ok, True),
-            (_p1_state(_bc(a + b)), form_ok, True),
-            (_p1_state(swap_bench), {}, True),
-            (_p1_state(swap_bench), {}, False),
+            (_p1_state(_bc(a + b), form_ok), False),
+            (_p1_state(_bc(a + b), form_ok), False),
+            (_p1_state(_bc(a + b), form_ok), True),
+            (_p1_state(_bc(a + b), form_ok), True),
+            (_p1_state(swap_bench), True),
+            (_p1_state(swap_bench), False),
         ]
         ist = _Watch()
         object.__setattr__(ist, '_chg', {})   # dataclass 构造期写入不计
-        for fi, (st, board, over) in enumerate(frames):
-            st.board = dict(board)
+        for fi, (st, over) in enumerate(frames):
             over_flag[0] = over
             ist = ci.update_intention(st, ist)
             chg = getattr(ist, '_chg', {})

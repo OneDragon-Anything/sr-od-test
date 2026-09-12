@@ -14,14 +14,16 @@ W623 预验尸(D0-D4)+ W630 A/B 协议 + W615 R1-R4 规则集。锁契约:
   pair 重派生;W578 代理门:驱逐后 pair_target_comp 物化非空。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_economy import (
     refresh_ev_budget,
     reserve_cap,
     schedule_upgrade,
 )
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     pair_target_comp,
@@ -38,6 +40,9 @@ from sr_od.application.currency_war.kernel.cw_state import (
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 
 _REG = DEFAULT_REGISTRY
 # (危机臂关行为锁注入 _REG_CRISIS_OFF 已随 crisis_release_enabled
@@ -248,7 +253,7 @@ def test_pair_drought_counters_never_evict() -> None:
     ist = IntentionState()
     sess = StrategySession()
     state_of(sess).v3_intention = ist
-    update_intention(_starve_frame(), ist, sess)
+    update_intention(board_state_bridge(_starve_frame()), ist, sess)
     assert ist.p1_pair == (), \
         '支持度 0.5(各系单件)< 门槛 1.0(羁绊满员)→ 空窗不锁(ADR-0519)'
     # 显式 pair 方向在场(模拟已锁帧),断供多轮:计数累积、永不驱逐
@@ -257,7 +262,7 @@ def test_pair_drought_counters_never_evict() -> None:
     sess2 = StrategySession()
     state_of(sess2).v3_intention = ist2
     for _ in range(6):
-        update_intention(_starve_frame(), ist2, sess2)
+        update_intention(board_state_bridge(_starve_frame()), ist2, sess2)
     assert ist2.pair_evicted == set(), '驱逐分支已退役(ADR-0519)'
     assert max(ist2.pair_drought.values(), default=0) >= 1, \
         '断供计数保留(pair 重派生随门槛收紧频繁回 (),计数窗口见注)'
@@ -382,5 +387,5 @@ def test_pair_drought_resets_when_member_visible() -> None:
     state_of(sess).v3_intention = ist
     st = _state(r=5, gold=100,
                 shop=[_sc('卡芙卡', 4)], board={})   # 卡芙卡=DOT 系成员
-    update_intention(st, ist, sess)
+    update_intention(board_state_bridge(st), ist, sess)
     assert ist.pair_drought.get('持续伤害', 0) == 0

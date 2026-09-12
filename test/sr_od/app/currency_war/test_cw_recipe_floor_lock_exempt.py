@@ -25,6 +25,9 @@ from types import SimpleNamespace
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_deploy_logic as dl
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     RECIPE_FLOOR_TRAIN_CAP,
     SwapPlanContext,
@@ -472,7 +475,7 @@ def test_swap_transition_arm_revived_on_lock_line() -> None:
             v3_intention=_ist('列车同行'), target_comp=None,
             transition_framework=''))
     ctx_asm = assemble_swap_plan_inputs(
-        sess_locked, state=GameState(plane=2, round_num=3),
+        sess_locked, state=board_state_bridge(GameState(plane=2, round_num=3)),
         deployed=deployed, bench=bench, cap=6)
     assert ctx_asm is not None
     assert ctx_asm.recipe_floor_lock_exempt is True, \
@@ -482,7 +485,7 @@ def test_swap_transition_arm_revived_on_lock_line() -> None:
         strategy_state=SimpleNamespace(
             v3_intention=_ist(), target_comp=None, transition_framework=''))
     ctx_plain = assemble_swap_plan_inputs(
-        sess_plain, state=GameState(plane=2, round_num=3),
+        sess_plain, state=board_state_bridge(GameState(plane=2, round_num=3)),
         deployed=deployed, bench=bench, cap=6)
     assert ctx_plain is not None and ctx_plain.recipe_floor_lock_exempt is False
 

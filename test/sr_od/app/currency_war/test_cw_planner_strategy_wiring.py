@@ -7,6 +7,9 @@ from __future__ import annotations
 import inspect
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_events import (
     PlannerOption,
     decide_planner,
@@ -77,16 +80,21 @@ def test_planner_strategy_delegates_kernel_bitwise() -> None:
     """
     opts = [_UPGRADE, _WEAKEN]
     strat = MandateV1Live()
+    # W6 波3:策略契约面仍持 GameState 工作帧(内部自桥),kernel 纯函数
+    # 已切容器签名——对拍「同输入」= 同帧值,经单一转换点 board_state_
+    # bridge 装箱后喂 kernel(与生产防御支 cw_screen_planner 同法)。
     # ① 无 target
     via_strategy = strat.decide_planner(
         opts, _planner_state(), _session(None), SimpleNamespace())
-    via_kernel = decide_planner(opts, _planner_state(), None)
+    via_kernel = decide_planner(opts, board_state_bridge(_planner_state()),
+                                None)
     assert (via_strategy.idx, via_strategy.reason) == (via_kernel.idx, via_kernel.reason)
     # ② target 在案(银狼线加成经 session 透传生效)
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     tgt = next(c for c in COMP_LIBRARY if c.name == '狼尊欢愉')
     via_strategy = strat.decide_planner(
         opts, _planner_state(), _session(tgt), SimpleNamespace())
-    via_kernel = decide_planner(opts, _planner_state(), tgt)
+    via_kernel = decide_planner(opts, board_state_bridge(_planner_state()),
+                                tgt)
     assert via_strategy.idx == 0 and '升费' in via_strategy.reason
     assert (via_strategy.idx, via_strategy.reason) == (via_kernel.idx, via_kernel.reason)

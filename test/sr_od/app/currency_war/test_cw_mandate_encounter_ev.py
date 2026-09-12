@@ -12,10 +12,12 @@
    「12>8 ⇒ 高难更优」结论不会在 G_gold 定带前产出(ADR-0536 §3)。
 """
 from __future__ import annotations
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_events import EncounterOption
 from sr_od.application.currency_war.kernel.cw_state import (
     GameState,
@@ -27,6 +29,9 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import encounter
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
     provisional,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     lambda_death,
@@ -382,7 +387,10 @@ class TestWiring:
         from sr_od.application.currency_war.kernel import cw_events
         opts = [EncounterOption(idx=0, difficulty=1),
                 EncounterOption(idx=1, difficulty=3)]
-        pick = cw_events.decide_encounter(opts, GameState(), None, None)
+        # W6 波3:decide_encounter 切容器签名,空工作帧经桥装箱(未观察
+        # 全域保守缺省 = 旧空 GameState 同向);未成型断言语义不变。
+        pick = cw_events.decide_encounter(
+            opts, board_state_bridge(GameState()), None, None)
         assert pick.idx == 0
 
 

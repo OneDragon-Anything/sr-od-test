@@ -21,6 +21,9 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     get_comp,
@@ -75,7 +78,9 @@ def test_planner_strategy_tier_order_and_key_equip():
     key_equip +15 = 装备域内命中优先键(域内排前,不跨域压弱化档);
     银狼不在场降档(40)< 弱化档的层间关系即「降档」语义本体。"""
     from sr_od.application.currency_war.kernel.cw_comps import Comp
-    st = GameState(hp=60)
+    # W6 波3:decide_planner 切容器签名,工作帧经桥装箱(单帧三连调共享
+    # 一次装箱;bench 空 = 未观察 = 在场信息缺失,不降权语义不变)。
+    st = board_state_bridge(GameState(hp=60))
     # 升费档 > 弱化档(无银狼线;bench 空 = 在场信息缺失 → 不降权,保守)
     opts = [PlannerOption(idx=0, text='使后续节点【弱化】,降低敌人属性。'),
             PlannerOption(idx=1, text='提升费用至4费,变为1星银狼')]

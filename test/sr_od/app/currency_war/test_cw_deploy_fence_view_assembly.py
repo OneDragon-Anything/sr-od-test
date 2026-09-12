@@ -7,6 +7,9 @@
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import get_char
+from sr_od.application.currency_war.kernel.cw_board_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_comps import Comp
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     assemble_swap_plan_inputs,
@@ -80,7 +83,8 @@ def test_b2_m1p_assembly_keeps_drop_piece_fence_identity() -> None:
     sess = _dual_track_session(final)
     st = GameState(plane=1, round_num=2, board={'仙舟': 2},
                    deployed=[_bc('藿藿', 1), _bc('爻光', 2)], bench=[])
-    ctx = assemble_swap_plan_inputs(sess, state=st, deployed=st.deployed,
+    ctx = assemble_swap_plan_inputs(sess, state=board_state_bridge(st),
+                                    deployed=st.deployed,
                                     bench=[], cap=6)
     assert ctx is not None
     # ①配方视图胜出:双轨 tgt = {仙舟, 持续伤害}(非终局键并集)
@@ -110,7 +114,8 @@ def test_b2_fence_deploy_drop_piece_not_scatter_held() -> None:
     sess = _dual_track_session(final)
     st = GameState(plane=1, round_num=2, board={'仙舟': 2},
                    deployed=[_bc('藿藿', 1), _bc('爻光', 2)], bench=[])
-    ctx = assemble_swap_plan_inputs(sess, state=st, deployed=st.deployed,
+    ctx = assemble_swap_plan_inputs(sess, state=board_state_bridge(st),
+                                    deployed=st.deployed,
                                     bench=[], cap=4)
     assert ctx is not None
     bench = [_bc('卡芙卡', 1), _bc('黑塔', 2)]   # 黑塔=银河学者,非目标件
