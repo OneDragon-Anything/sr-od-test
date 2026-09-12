@@ -9,8 +9,9 @@
 - 店已开 + 无可买牌 → CloseShop 直接收尾零买入(全函数「无动作可做」
   = 直接选终结 op,决策 5);
 - 关店未生效 → 访问失败返回(失败路径如实申报,不冒充进展);
-- 入口观察重建期望态(session.last_state 由入口现读刷新——0n 进入时
-  last_state 可能是外循环上一轮的陈旧值,靠入口观察归零,ADR-0517 决策 8)。
+- 入口观察重建期望态(容器单例由入口现读刷新——0n 进入时容器节点可能
+  是外循环上一轮的陈旧值,靠入口观察归零,ADR-0517 决策 8;链退役批:
+  断言面自 last_state 换容器节点)。
 
 分层声明:0n 分支路由面(判定互斥/序位/转交分键)单一源 =
 test_cw_shop_open_branch.py;run_buy_waves 循环内部语义(刷新终结/帧帽/
@@ -256,27 +257,38 @@ def test_visit_open_shop_no_buyable_closes_directly(
 #  店关没关由下一帧观察侧对账(0n 三锚/备战双锚)自然闭环。)
 
 
-def test_visit_open_shop_entry_rebuilds_last_state(
+def test_visit_open_shop_entry_rebuilds_container_observation(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
         tmp_path: pathlib.Path) -> None:
-    """入口观察重建锁:进入前 session.last_state 为陈旧值(0n 进入形态:
-    外循环上一轮的残值)→ 访问后 last_state = 入口现读重建态(plane/
-    round/shop 与替身观察一致)——入口观察即对账(ADR-0517 决策 8)。"""
+    """入口观察重建锁(链退役批重锚):进入前容器节点为陈旧值(0n 进入
+    形态:外循环上一轮的残值)→ 访问后容器节点/商店牌面 = 入口现读重建态
+    ——入口观察即对账(ADR-0517 决策 8;原 last_state 帧断言随链退役
+    换容器单例)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        NodeKey,
+        board_state_of,
+    )
     sess0 = StrategySession()
-    sess0.last_state = CwSimFrame(gold=99, plane=7, round_num=7, level=9,
-                                 shop=[])   # 陈旧残值
+    _sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
+    _bs0 = board_state_of(sess0)
+    _bs0.observe(_bs0.node, NodeKey(plane=7, round_num=7, kind='普通战斗'),
+                 sig=_sig)
     monkeypatch.setattr(test_context, 'cw_match',
                         CurrencyWarMatch(_StubStrategy([]), sess0))
     prep, _close_calls, _clicks = _make_prep(
         test_context, monkeypatch, tmp_path, [])
     # _make_prep 重挂了 match,取其 session 注入陈旧值
-    test_context.cw_match.session.last_state = CwSimFrame(
-        gold=99, plane=7, round_num=7, level=9, shop=[])
+    _bs_stale = board_state_of(test_context.cw_match.session)
+    _bs_stale.observe(_bs_stale.node,
+                      NodeKey(plane=7, round_num=7, kind='普通战斗'),
+                      sig=_sig)
     ok, detail = _visit(prep)
     assert ok, detail
-    ls = test_context.cw_match.session.last_state
-    assert (ls.plane, ls.round_num) == (1, 5), (
-        f'入口观察未重建 last_state(仍陈旧):plane={ls.plane} '
-        f'round={ls.round_num}')
-    assert [c.name for c in (ls.shop or [])] == _OLD_NAMES, (
-        '入口观察未现读牌面')
+    bs = board_state_of(test_context.cw_match.session)
+    _nd = bs.node.value
+    assert _nd is not None and (_nd.plane, _nd.round_num) == (1, 5), (
+        f'入口观察未重建容器节点(仍陈旧):plane={getattr(_nd, "plane", None)} '
+        f'round={getattr(_nd, "round_num", None)}')
+    assert [c.name for c in (bs.shop.value.cards if bs.shop.value else [])] \
+        == _OLD_NAMES, '入口观察未现读牌面'

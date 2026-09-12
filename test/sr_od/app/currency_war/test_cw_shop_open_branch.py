@@ -186,7 +186,6 @@ def _drive_loop_shop_open(monkeypatch, *, shop_hit: bool):
     op._screen = object()
     sess = type('S', (), {})()
     state_of(sess).target_comp = None
-    sess.last_state = None
     sess.last_prep_action_sig = None
     state_of(sess).cw4_counters = {}
     match = type('M', (), {})()

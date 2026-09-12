@@ -331,10 +331,9 @@ def test_economy_streak_bonus() -> None:
 
 
 def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespace:
-    """血闸消费面依赖桩:active_strategies + last_state(其余无关)。"""
+    """血闸消费面依赖桩:active_strategies(其余无关;金账读容器)。"""
     return SimpleNamespace(
         active_strategies=list(active or ['奋斗协议']),
-        last_state=CwSimFrame(**state_kw),
     )
 
 

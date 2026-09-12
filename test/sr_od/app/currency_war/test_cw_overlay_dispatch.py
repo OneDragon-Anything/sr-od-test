@@ -52,7 +52,7 @@ def _make_op(invest_find_hits_from: int, ocr_hits_from: int = 10 ** 9):
     op = _Op()
     op.calls = calls
     op.prep_hits = True   # 默认双锚穿透形态(浮层盖备战);no-overlay 锁改 False
-    sess = _NS(target_comp=None, last_state=None, cw4_counters={})
+    sess = _NS(target_comp=None, cw4_counters={})
     op.ctx = _NS(cw_match=_NS(session=sess))
     return op, sess, calls
 
@@ -184,7 +184,7 @@ def test_loop_routes_both_timing_forms_to_handler(monkeypatch):
     op = _Loop()
     op._screen = object()
     op.ctx = _NS(cw_match=_NS(session=_NS(
-        target_comp=None, last_state=None,
+        target_comp=None,
         last_prep_action_sig=None, cw4_counters={})))
     op.loop()
     assert executes, '淡入形态须经复探同路由分发 CwScreenInvestStrategy'
@@ -211,7 +211,7 @@ def test_loop_routes_both_timing_forms_to_handler(monkeypatch):
     op2._cw_back_btn_count = 0
     op2._battle_ts = None
     op2.ctx = _NS(cw_match=_NS(session=_NS(
-        target_comp=None, last_state=None,
+        target_comp=None,
         last_prep_action_sig=None, cw4_counters={})))
     op2.loop()
     assert executes, '首帧命中形态同路由分发'

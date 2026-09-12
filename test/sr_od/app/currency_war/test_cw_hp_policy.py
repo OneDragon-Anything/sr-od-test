@@ -304,36 +304,31 @@ class TestL3TrustedBitSingleSource:
             assert hits == [], f'{rel}: 手写双位模式复潮(行号 {hits})'
 
     def test_discipline_dispatch_dual_form_no_int_leak(self) -> None:
-        """三审阻断回归锁:CwSimFrame/裸 int-hp 帧穿 hp_decision_trusted
-        不得漏入 hp_decision_trusted_of 的 bs.hp.source 直读(三审实测
-        AttributeError 'int' object has no attribute 'source')。
+        """可信位分派锁(链退役批改写:双形态兼容支已随 last_state 链退役
+        删除——hp_decision_trusted 现为容器形态纯委托,声明面 =
+        kernel/cw_intention.py committed_authority 形态注,指针兑现)。
 
-        分派语义(双形态过渡,兼容支随遗留调用面退役收口):
-        - 容器帧(hp 为 Field 载体)→ hp_decision_trusted_of 单一源;
-        - CwSimFrame/桩帧(hp 为标量)→ 旧双位读法 hp_readable or hp_trusted,
-          值语义与切换前逐位一致(真读/沿用放行,双 False 拒)。
-        读口本体 hp_decision_trusted_of 保持严格容器形态零防御——裸帧
-        直穿它必须炸错暴露调用点,禁静默缺省(血线决策漂移最危险域)。"""
+        - 等价性:hp_decision_trusted(bs) ≡ hp_decision_trusted_of(bs)
+          (薄委托,禁第二实现);
+        - 读口本体保持严格容器形态零防御:裸 int-hp 桩帧直穿
+          hp_decision_trusted_of 必炸(AttributeError=调用点未桥接的
+          显式暴露,禁静默防御;血线决策漂移最危险域)——裸帧同样不得
+          再走任何「旧双位读法」旁路(兼容支删除后无第二通道)。"""
         import pytest as _pytest
 
         from sr_od.application.currency_war.kernel.cw_discipline_rules import (
             hp_decision_trusted,
         )
-        from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
-        # CwSimFrame 真读帧 → 旧双位语义(与切换前逐位一致)
-        st_real = CwSimFrame(hp=80)
-        st_real.hp_readable = True
-        assert hp_decision_trusted(st_real) is True
-        # CwSimFrame 双 False 帧 → 拒(fail-closed 语义零回归)
-        st_ghost = CwSimFrame(hp=100)
-        st_ghost.hp_readable = False
-        st_ghost.hp_trusted = False
-        assert hp_decision_trusted(st_ghost) is False
-        # 桩帧(裸 int hp + 显式位)→ 旧双位,不漏容器支
         stub = SimpleNamespace(hp=100, hp_readable=False, hp_trusted=False)
-        assert hp_decision_trusted(stub) is False
-        stub_ok = SimpleNamespace(hp=10, hp_readable=False, hp_trusted=True)
-        assert hp_decision_trusted(stub_ok) is True
+        # 等价性(容器形态委托单一源;carried 沿用放行 / prior 拒,
+        # 值语义由 hp_decision_trusted_of 本体锁辖,此处不重复)
+        _bs_carry = _mk_bs(80, source='carried')
+        assert hp_decision_trusted(_bs_carry) \
+            is hp_decision_trusted_of(_bs_carry) is True
+        # 裸桩帧不再有双位旁路:直穿委托口即透传到严格读口必炸
+        # (兼容支删除的显式暴露语义,替代旧「桩帧走旧双位」断言)
+        with _pytest.raises(AttributeError):
+            hp_decision_trusted(stub)
         # 读口本体保持严格:裸 int-hp 帧直穿 hp_decision_trusted_of 必炸
         # (AttributeError=调用点未桥接的显式暴露,禁静默防御)
         with _pytest.raises(AttributeError):

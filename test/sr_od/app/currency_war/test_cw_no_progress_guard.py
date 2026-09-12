@@ -41,15 +41,46 @@ def _fingerprint_module():
 
 def _session(plane=1, round_num=5, gold=30, node='battle',
              bench=('a', 'b'), deployed=('c',)):
-    """伪 session(守卫只读这些字段;镜像 prep_no_progress_state_fingerprint 契约)。"""
-    return SimpleNamespace(
-        last_state=SimpleNamespace(plane=plane, round_num=round_num, gold=gold),
+    """伪 session(守卫只读这些字段;last_state 链退役批重锚:轮次/金分量
+    源 = 容器单例 board_state_of,镜像 prep_no_progress_state_fingerprint
+    契约;prep_obs_frame 语义不变)。"""
+    sess = SimpleNamespace(
         last_node_type=node,
         prep_obs_frame=SimpleNamespace(
             bench_chars=[SimpleNamespace(char_id=c) for c in bench],
             deployed_chars=[SimpleNamespace(char_id=c) for c in deployed],
         ),
     )
+    _seed_container(sess, plane=plane, round_num=round_num, gold=gold)
+    return sess
+
+
+def _seed_container(sess, *, plane, round_num, gold=None):
+    """容器播种(node/gold 观察写;last_state 桩同值镜像,先例 =
+    test_cw_equip_plan_builder 的 _seed_container)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        NodeKey,
+        board_state_of,
+    )
+    sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
+    bs = board_state_of(sess)
+    bs.observe(bs.node, NodeKey(plane=plane, round_num=round_num,
+                                kind='普通战斗'), sig=sig)
+    if gold is not None:
+        bs.observe(bs.gold, int(gold), sig=sig)
+    return bs
+
+
+def _bump_gold(sess, gold):
+    """容器 gold 重播种(真 loop 路径健康推进面用)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        board_state_of,
+    )
+    board_state_of(sess).observe(
+        board_state_of(sess).gold, int(gold),
+        sig=ChannelSig(family='obs', actor='cw_observation', mode='read'))
 
 
 def _simulate(rings: list[tuple[tuple[str, ...] | None, object]],
@@ -118,33 +149,34 @@ def test_state_fingerprint_covers_all_progress_fields() -> None:
 
 
 def test_fingerprint_gold_pinned_to_trusted_frames() -> None:
-    """gold 分量钉死(F-5,T-167):仅开态可信帧(prep_obs_frame.state_
-    gold_trusted)更新可信陈值,其余帧沿用陈值——店店帧 gold 噪声
-    (0 兜底/OCR 抖动)不构成假推进也不毒化陈值。陈值载体 = session
-    属性(PREP_GOLD_TRUSTED_ATTR),同一 session 跨帧存活;无陈值的新
-    session 回退 raw 读数(开局首店前,噪声至多延迟出口)。"""
+    """gold 分量钉死(F-5,T-167;链退役批重锚容器源):仅开态可信帧
+    (prep_obs_frame.state_gold_trusted)更新可信陈值,其余帧沿用陈值。
+    容器 gold 由观察漏斗质量门写入(失读帧 carry 不落值),重锚后
+    「店关帧 raw 噪声」形态结构性消失(容器无噪声值可读),陈值语义
+    与「无陈值回退现值(未观察=None)」不变。陈值载体 = session
+    属性(PREP_GOLD_TRUSTED_ATTR),同一 session 跨帧存活。"""
     m = _fingerprint_module()
     # 开态可信帧:陈值写入,gold 进指纹
     sess = _session(gold=31)
     sess.prep_obs_frame.state_gold_trusted = True
     fp_t = m.prep_no_progress_state_fingerprint(sess)
     assert fp_t[3] == 31
-    # 店店帧(raw 29 = 事故局实测噪声形态):沿用陈值 31,指纹不变
+    # 非可信帧(容器 gold 变 29 = 假想噪声/救援形态):沿用陈值 31
     sess.prep_obs_frame.state_gold_trusted = False
-    sess.last_state.gold = 29
+    _bump_gold(sess, 29)
     assert m.prep_no_progress_state_fingerprint(sess)[3] == 31, (
-        '店店帧噪声不得改写 gold 分量(沿用陈值)')
-    # 店店失读兜底 0 形态:同样沿用陈值(wholesale raw 写入链,方案审 F-5)
-    sess.last_state.gold = 0
+        '非可信帧 gold 变化不得改写 gold 分量(沿用陈值)')
+    # 非可信帧 gold 失读(carry 不落值,容器值不动):同样沿用陈值
     assert m.prep_no_progress_state_fingerprint(sess)[3] == 31
     # 新可信帧推进 gold → 指纹变(真买入必经开店帧,进展检测无损)
     sess.prep_obs_frame.state_gold_trusted = True
-    sess.last_state.gold = 28
+    _bump_gold(sess, 28)
     assert m.prep_no_progress_state_fingerprint(sess)[3] == 28
-    # 无陈值的新 session(开局首店前)回退 raw 读数
-    sess_fresh = _session(gold=17)
+    # 无陈值的新 session(开局首店前)回退容器现值;未观察 = None(诚实
+    # 缺位,漏斗质量门保证无噪声值——旧 raw 兜底噪声面随链退役消失)
+    sess_fresh = _session(gold=None)
     sess_fresh.prep_obs_frame.state_gold_trusted = False
-    assert m.prep_no_progress_state_fingerprint(sess_fresh)[3] == 17
+    assert m.prep_no_progress_state_fingerprint(sess_fresh)[3] is None
 
 
 # ==================== 不误伤:健康序列/战斗等待/闩跳过 ====================
@@ -403,7 +435,7 @@ def test_loop_prep_guard_healthy_progress_never_stops(
     op = _make_loop_op(test_context, monkeypatch, session, stops, flags)
     with fast_sleep():
         for i in range(6):
-            session.last_state = SimpleNamespace(plane=1, round_num=5, gold=30 + i)
+            _bump_gold(session, 30 + i)
             op.loop()
     assert stops == [], f'状态推进中的同批动作不得停机:{stops!r}'
     assert flags == [], '健康序列不得写存证 flag'
@@ -707,7 +739,7 @@ def test_loop_exhaustion_attempts_reset_across_episodes(
     assert op._cw_exhaust_attempts == 1, (
         f'冻结情节内须产生尝试计数,实得 {op._cw_exhaust_attempts}')
     # 状态推进(gold 变)→ 指纹变 → 守卫计数归零 → 总尝试同步归零
-    session.last_state = SimpleNamespace(plane=1, round_num=5, gold=99)
+    _bump_gold(session, 99)
     with fast_sleep():
         op.loop()
     assert op._cw_exhaust_attempts == 0, (

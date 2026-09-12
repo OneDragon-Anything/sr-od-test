@@ -13,15 +13,15 @@ import pytest
 
 sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
-    CwSimFrame,
-    ShopCard,
-)
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORKS,
     pick_framework,
     transition_score,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    BenchChar,
+    CwSimFrame,
+    ShopCard,
 )
 
 # 代表件(每框架 carry/partial/drop 各一)
@@ -77,7 +77,7 @@ def test_inv_hoard_zero_for_drop_and_scatter(fw):
 @pytest.mark.parametrize('fw', FRAMEWORKS)
 def test_inv_same_name_never_deploys_twice(fw):
     carry = REPS[fw]['carry']
-    gs = CwSimFrame(round_num=5, plane=1, dual_track_phase=True)
+    gs = CwSimFrame(round_num=5, plane=1)   # P1 双轨期场景(帧不再携带双轨位,判定真家 = committed_from)
     gs.level = 6
     gs.bench = []
     gs.deployed = [_bc(carry, _fw_faction(fw)), _bc(SCATTER, '夜之半神')]
@@ -133,7 +133,7 @@ def test_drop_not_hoarded_but_deployable_when_framework_set():
 
 def test_framework_carry_deploys_in_dual_track():
     """双轨期仙舟框架件 carry(藿藿)在场下有空位 → deploy 判 True(r120 语义)。"""
-    gs = CwSimFrame(round_num=3, plane=1, dual_track_phase=True)
+    gs = CwSimFrame(round_num=3, plane=1)   # P1 双轨期场景(帧不再携带双轨位,判定真家 = committed_from)
     gs.level = 4
     gs.bench = []
     gs.deployed = [_bc('三月七', '列车同行', 'front')]

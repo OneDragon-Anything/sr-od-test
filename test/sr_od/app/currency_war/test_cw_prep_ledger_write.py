@@ -31,7 +31,6 @@ import pytest
 
 import sr_od.application.currency_war.obs.cw_observation as cw_observation
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwSimFrame,
     get_node_ledger,
     ledger_node_type,
     ledger_update_plane,
@@ -72,12 +71,24 @@ def _make_prep(monkeypatch: pytest.MonkeyPatch,
     """免 ctx 构造 CwScreenPrep + 读屏替身(obs_chain._make_director 同款)。
 
     read_node_sequence 替身产出合成槽序;采集钩子 stub(不落盘);
-    last_state = 合成帧(plane/round = 写点③位面键与「当前轮」锚,
-    生产真值 = 备战环 heavy 观察先于 probe 落 last_state);传入
+    容器 node = 播种值(plane/round = 写点③位面键与「当前轮」锚,
+    生产真值 = 备战环 heavy 观察先于 probe 刷新容器节点);传入
     screen=object() 走「透传帧」路径,零截图。
     """
     d = object.__new__(CwScreenPrep)
-    session.last_state = CwSimFrame(plane=plane, round_num=round_num)
+    # 容器节点播种(链退役批重锚:probe 位面锚源 = 容器 node,原
+    # last_state 合成帧桩同值镜像;plane/round = 写点③位面键与「当前轮」
+    # 锚,生产真值 = 备战环 heavy 观察先于 probe 刷新容器节点);
+    # 传入 screen=object() 走「透传帧」路径,零截图。
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        NodeKey,
+        board_state_of,
+    )
+    board_state_of(session).observe(
+        board_state_of(session).node,
+        NodeKey(plane=plane, round_num=round_num, kind='普通战斗'),
+        sig=ChannelSig(family='obs', actor='cw_observation', mode='read'))
     d.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=session))
     monkeypatch.setattr(cw_observation, 'read_node_sequence',
                         lambda ctx, screen: slots)
@@ -108,9 +119,10 @@ def test_p2_empty_ledger_prep_frame_fills_current_round(
     assert ledger_node_type(sess, 2, 5) == 'encounter'
 
 
-def test_prep_ledger_plane_alignment_uses_last_state_plane(
+def test_prep_ledger_plane_alignment_uses_container_node_plane(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """位面键 = last_state.plane(P2 帧 → seq_by_plane[2],禁误落 P1)。"""
+    """位面键 = 容器节点 plane(链退役批重锚;P2 帧 → seq_by_plane[2],
+    禁误落 P1)。"""
     sess = StrategySession()
     d = _make_prep(monkeypatch, sess, _p2_frame_slots())
     d._probe_node_type(screen=object())

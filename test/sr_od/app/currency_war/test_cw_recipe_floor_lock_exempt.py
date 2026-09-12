@@ -483,7 +483,6 @@ def test_swap_transition_arm_revived_on_lock_line() -> None:
     # CP4 装配武装锁:锁定 session 经生产装配函数 → ctx 新字段 True
     #(assemble_swap_plan_inputs→SwapPlanContext 接线;装配断链时红)
     sess_locked = SimpleNamespace(
-        last_state=None,
         strategy_state=SimpleNamespace(
             v3_intention=_ist('列车同行'), target_comp=None,
             transition_framework=''))
@@ -494,7 +493,6 @@ def test_swap_transition_arm_revived_on_lock_line() -> None:
     assert ctx_asm.recipe_floor_lock_exempt is True, \
         '装配函数未把锁定线语境武装进 ctx(CP4 接线断链)'
     sess_plain = SimpleNamespace(
-        last_state=None,
         strategy_state=SimpleNamespace(
             v3_intention=_ist(), target_comp=None, transition_framework=''))
     ctx_plain = assemble_swap_plan_inputs(

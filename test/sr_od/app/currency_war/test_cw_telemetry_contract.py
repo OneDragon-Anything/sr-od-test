@@ -112,7 +112,6 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
             # 观察半直写面(ADR-0583):真实 StrategySession 承载
             #(performance/pending_round_outcomes 等字段齐备,零桩面特判)
             _sess = StrategySession()
-            _sess.last_state = CwSimFrame()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(

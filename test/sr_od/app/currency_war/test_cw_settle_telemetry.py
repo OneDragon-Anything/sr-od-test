@@ -250,7 +250,6 @@ def test_outcome_record_persists_heal_longline(
     )
 
     _sess = StrategySession()
-    _sess.last_state = CwSimFrame()
     o = RoundOutcome(
         round_num=5, plane=1, node_type='普通战斗', comp_tag='x',
         hp_after=91, killed=True,

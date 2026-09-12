@@ -725,7 +725,6 @@ def test_loop_outcome_carries_damage(monkeypatch) -> None:
                 StrategySession as _SS,
             )
             _sess = _SS()
-            _sess.last_state = CwSimFrame()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
@@ -806,7 +805,6 @@ def test_battle_end_hook_advances_effect_ledger(monkeypatch) -> None:
                 StrategySession as _SS,
             )
             _sess = _SS()
-            _sess.last_state = CwSimFrame()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(

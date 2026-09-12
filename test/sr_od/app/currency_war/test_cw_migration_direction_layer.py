@@ -370,20 +370,40 @@ def _old_ready(sig: CommitSignals, t: int = 0) -> bool:
     return lead is not None and lead[1] >= _COMMIT_SIGNAL_THRESHOLD
 
 
-def _old_committed(state: CwSimFrame, session: StrategySession) -> bool:
+def _old_committed(state, session: StrategySession) -> bool:
     """旧语义复刻(退役战略层判定式;对拍基准,非生产路径)。
 
     committed = plane≥2 ∨ (signals.ready ∧ (可切换 ∨ target==领先线));
-    ready/t_of 消费退役前复刻(见上常量注)。
+    ready/t_of 消费退役前复刻(见上常量注)。链退役批重锚:输入 =
+    容器单例(plane/round 经节点读口)。
     """
-    if state.plane >= 2:
+    _nd = state.node.value
+    _plane = int(_nd.plane) if _nd is not None else 1
+    _round = int(_nd.round_num) if _nd is not None else 1
+    if _plane >= 2:
         return True
     sig = getattr(state_of(session), 'commit_signals', None)
     if sig is None:
         return False
-    ready = _old_ready(sig, _old_t_of(state.plane, state.round_num))
+    ready = _old_ready(sig, _old_t_of(_plane, _round))
     lead = sig.leader() if ready else None
     return bool(ready and lead is not None)
+
+
+def _bs_state(plane: int, round_num: int):
+    """容器单例构造(链退役批重锚:committed_authority 波5 兼容支退役,
+    对拍帧集换容器节点播种;真值语义 = 节点 plane/round)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        GameState,
+        NodeKey,
+    )
+    bs = GameState(schema_version=1)
+    bs.observe(bs.node, NodeKey(plane=plane, round_num=round_num,
+                                kind='普通战斗'),
+               sig=ChannelSig(family='obs', actor='cw_observation',
+                              mode='read'))
+    return bs
 
 
 def test_committed_predicate_frame_by_frame_vs_old():
@@ -396,22 +416,22 @@ def test_committed_predicate_frame_by_frame_vs_old():
     frames = []
     # 帧1-2:P1 前段,信号空、ist 未锁 → 双 False
     for rnd in (1, 3):
-        frames.append((_state(plane=1, round_num=rnd), StrategySession(),
+        frames.append((_bs_state(1, rnd), StrategySession(),
                        'both_false'))
     # 帧3:P1 信号 ready(分超阈+过轮门)但 ist 未锁 → 预期分歧(接管区,
     # 新谓词保守)
     s3 = StrategySession()
     state_of(s3).commit_signals = CommitSignals()
     state_of(s3).commit_signals.scores = {'万敌燃血': 99.0}
-    frames.append((_state(plane=1, round_num=8), s3, 'takeover_zone_only_old'))
+    frames.append((_bs_state(1, 8), s3, 'takeover_zone_only_old'))
     # 帧4:ist 已锁 → 双 True
     s4 = StrategySession()
     state_of(s4).v3_intention = IntentionState(phase='locked', locked_comp='万敌燃血')
     state_of(s4).commit_signals = CommitSignals()
     state_of(s4).commit_signals.scores = {'万敌燃血': 99.0}
-    frames.append((_state(plane=1, round_num=8), s4, 'both_true'))
+    frames.append((_bs_state(1, 8), s4, 'both_true'))
     # 帧5:P2 → 双 True(语义边界保留)
-    frames.append((_state(plane=2, round_num=1), StrategySession(),
+    frames.append((_bs_state(2, 1), StrategySession(),
                    'both_true_p2'))
     for st, sess, expect in frames:
         new_v = committed_authority(st, sess)
@@ -421,4 +441,5 @@ def test_committed_predicate_frame_by_frame_vs_old():
         elif expect == 'both_true' or expect == 'both_true_p2':
             assert new_v and old_v
         else:   # takeover_zone_only_old:旧翻新未翻 = 接管区唯一合法分歧形
-            assert old_v and not new_v, (st.plane, st.round_num, new_v, old_v)
+            _nd = st.node.value
+            assert old_v and not new_v, (_nd.plane, _nd.round_num, new_v, old_v)

@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 from sr_od.application.currency_war.operations.cw_loop import CwLoop
 
 
@@ -54,8 +53,16 @@ def _make_stop_loop(*, summary_written: bool = False,
                     hp_readable: bool = False) -> CwLoop:
     """构造 loop 桩(bypass __init__):喂 _write_terminal_summary_if_needed 依赖面。
 
-    last_state.hp=100 + hp_readable=False = 死局兜底污染面(ADR-0282 语义)。
+    容器播种 hp=100(历史死局兜底污染值形态,ADR-0282 语义;真值防线 =
+    _last_true_hp 优先结算轨迹,种子 hp 只作 fallback 入参)。
+    链退役批:hp/plane/round 源 = 容器单例,节点观察 = 「观察到对局态」
+    判据。
     """
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        NodeKey,
+        board_state_of,
+    )
     from sr_od.application.currency_war.operations import cw_loop as bl
 
     class _Loop(bl.CwLoop):
@@ -65,13 +72,19 @@ def _make_stop_loop(*, summary_written: bool = False,
             self._summary_written = summary_written
             self._settle = SimpleNamespace(
                 last_outcome_hp=last_outcome_hp, rounds_done=rounds_done)
+            _sess = SimpleNamespace()
+            _sig = ChannelSig(family='obs', actor='cw_observation',
+                              mode='read')
+            _bs = board_state_of(_sess)
+            _bs.observe(_bs.node, NodeKey(plane=plane, round_num=round_num,
+                                          kind='普通战斗'), sig=_sig)
+            _bs.write_logic(_bs.hp, hp, produced_by='t',
+                            evidence='test_seed',
+                            sig=ChannelSig(family='logic_action',
+                                           actor='PrepActionExecutor',
+                                           mode='compute'))
             self.ctx = SimpleNamespace(
-                cw_match=SimpleNamespace(
-                    session=SimpleNamespace(
-                        last_state=CwSimFrame(plane=plane, round_num=round_num,
-                                             hp=hp, hp_readable=hp_readable),
-                    ),
-                ),
+                cw_match=SimpleNamespace(session=_sess),
                 run_context=SimpleNamespace(is_context_stop=stopped),
                 # 基类 after_operation_done 会调 ctx.unlisten_all_event(self)
                 # (事件监听清理);SimpleNamespace 桩补 no-op 满足该依赖面。
@@ -104,7 +117,8 @@ def test_stop_closure_sets_marker_zero_writes(monkeypatch, tmp_path) -> None:
 
 def test_stop_summary_skips_true_fake_run(monkeypatch, tmp_path) -> None:
     """真·假局守卫(P4R4 语义,删除波 1 后照常):从未观察到对局态
-    (last_state 缺失)且零 outcome = 开局即失败 → 不走收口。"""
+    (session None = 容器节点不可观察)且零 outcome = 开局即失败 →
+    不走收口。"""
     import sr_od.application.currency_war.telemetry.state as tel
     monkeypatch.setattr(tel, '_CURRENT_RUN_ID', 'run_ghost_1')
     monkeypatch.setattr(tel, '_RUN_CLOSED', False)

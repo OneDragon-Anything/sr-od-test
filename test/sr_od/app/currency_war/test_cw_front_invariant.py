@@ -77,11 +77,10 @@ def _bc(slot: int, char_id: str, cur_row: str) -> object:
 
 
 def _counters_ctx(counters: dict) -> SimpleNamespace:
-    """带 cw4_counters 载体的 ctx 桩(分键断言用;last_state=None = 无
+    """带 cw4_counters 载体的 ctx 桩(分键断言用;容器未播种 = 无
     决策侧黑板,deploy() 的板面视图腿安全走 None 分支)。"""
     return SimpleNamespace(
         cw_match=SimpleNamespace(session=SimpleNamespace(
-            last_state=None,
             strategy_state=SimpleNamespace(cw4_counters=counters))))
 
 

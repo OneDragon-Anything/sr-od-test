@@ -544,22 +544,20 @@ class TestPrepEntryObserveViaPorts:
                                 lambda: None)   # 端口路径零读屏,帧不应被消费
             obs = prep._observe(heavy=True)
             # 端口真值直出(非读屏桩):金/hp/bench 身份来自状态机。
-            # obs.state 视图槽已退役(容器化段 2):局内事实载体 =
-            # session.last_state 快照(装配半部写点)+ session 容器
-            # (观察源喂入契约,与读屏路径 _feed_board_state 同语义)。
-            st = session_last = test_context.cw_match.session.last_state
-            assert st is not None
-            assert st.gold == 66 and st.hp == 55
-            assert [b.char_id for b in obs.bench_chars] == ['希儿', '景元']
-            assert obs.free_bench_slots == 7
-            assert st.deploy_cap == st.level   # cap=level 真值规则
-            # 装配半部 session 写点(与读屏路径同语义)
+            # obs.state 视图槽已退役(容器化段 2):局内事实载体 = session
+            # 容器(观察源喂入契约,与读屏路径 _feed_board_state 同语义;
+            # last_state 帧快照写点已随链退役批删除,断言面切容器)。
             session = test_context.cw_match.session
-            assert session.last_state is session_last
             from sr_od.application.currency_war.kernel.cw_game_state import (
                 board_state_of,
             )
-            assert board_state_of(session).gold.value == 66   # 容器喂入契约
+            _bs = board_state_of(session)
+            assert _bs.gold.value == 66   # 容器喂入契约
+            assert [b.char_id for b in obs.bench_chars] == ['希儿', '景元']
+            assert obs.free_bench_slots == 7
+            # 装配半部 session 写点(与读屏路径同语义):黑板帧 + 节点类型
+            # 缓存(原 last_state 身份断言随链退役,黑板帧指针为装配唯一
+            # 会话写位)。
             assert session.prep_obs_frame is obs
             # 观察留痕(读屏次数语义保留):入口观察留痕在案
             assert any(e.method == 'observe_prep'

@@ -472,7 +472,7 @@ def _make_op(test_context, monkeypatch: pytest.MonkeyPatch,
 
 def _wire(test_context, monkeypatch: pytest.MonkeyPatch,
           strategy: object) -> object:
-    sess = SimpleNamespace(active_strategies=[], last_state=None)
+    sess = SimpleNamespace(active_strategies=[])
     match = SimpleNamespace(strategy=strategy, session=sess)
     monkeypatch.setattr(test_context, 'cw_match', match)
     return sess

@@ -111,15 +111,14 @@ def test_acquired_t_uses_board_node_snapshot() -> None:
     assert bs.effects.first('成长的烦恼').acquired_t == (2 - 1) * 9 + 3
 
 
-def test_acquired_t_falls_back_to_last_state_then_none() -> None:
-    """node 未读 → 回退 session.last_state(引导窗同式);两者皆缺 → None
-    (登记期快照缺位不炸登记面,词缀现役 WHILE_HELD 无余期语义)。"""
-    sess = SimpleNamespace(last_state=SimpleNamespace(plane=2, round_num=1))
+def test_acquired_t_none_when_node_unobserved() -> None:
+    """node 未读(引导窗)→ acquired_t = None 缺位(last_state 链退役批:
+    帧回退分支删除,登记期快照缺位不炸登记面,词缀现役 WHILE_HELD 无余期
+    语义;None 条目无「登记当节点不推进」豁免,由 advance_node 既有守卫
+    语义承载——行为面 = 引导窗登记的时限形条目提前一拍起算,登记面不炸)。"""
+    sess: SimpleNamespace = SimpleNamespace()
     register_affixes_from_names(sess, ['成长的烦恼'])
-    assert board_state_of(sess).effects.first('成长的烦恼').acquired_t == 10
-    sess_none: SimpleNamespace = SimpleNamespace()
-    register_affixes_from_names(sess_none, ['成长的烦恼'])
-    assert board_state_of(sess_none).effects.first('成长的烦恼').acquired_t is None
+    assert board_state_of(sess).effects.first('成长的烦恼').acquired_t is None
 
 
 # ==================== 2. 声明式驱动(挂点零来源特判) ====================

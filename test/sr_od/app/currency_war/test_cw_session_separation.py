@@ -352,8 +352,9 @@ _RESIDUE_NEGATIVE_SAMPLES = (
     # 合法读口:经访问函数(与残留形态区分的机制面)
     "getattr(strategy_state_of(sess), 'v3_formed_stop', False)",
     "getattr(exec_state_of(session), 'defer_count', 0)",
-    # session 合法观察字段(未退役,不在墓碑域)
-    "getattr(sess, 'last_state', None)",
+    # session 合法观察字段(未退役,不在墓碑域;链退役批:last_state 槽
+    # 已删,负样本换 still-在册字段)
+    "getattr(sess, 'last_node_type', None)",
     "getattr(_sess, 'node_type_current', '')",
 )
 

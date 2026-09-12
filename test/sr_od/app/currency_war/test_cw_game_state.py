@@ -1409,17 +1409,20 @@ def test_ast_retired_symbols_zero_hits_repo_wide() -> None:
     assert not offenders, f'已退役符号标识符复活:{offenders}'
 
 
-def test_ast_record_layer_reads_no_last_state() -> None:
-    """§8.7 批次四静态锁(记录面):kernel/cw_game_state.py 零 last_state
-    标识符命中——记录模型只由观察流/写入 API/sim 合成口供数(§2.4),
-    禁读 session.last_state 旧观察帧(帧新鲜度差域的独立性与记录/消费
-    分离的结构前提)。
+def test_ast_currency_war_reads_no_last_state() -> None:
+    """§8.7 批次四静态锁(全仓扩展,链退役批兑现):CW 包全仓零 last_state
+    标识符命中(定义/引用/关键字实参皆算)——记录模型只由观察流/写入
+    API/sim 合成口供数(§2.4),session.last_state 旧观察帧链(三写点+
+    全部遗留读者)已整体退役删除,断言面按本锁原申报(「尾批完成后从
+    记录面扩到全仓」)扩展为永久防复活锁。
 
-    **锁面边界申报**:「last_state 全仓 0 命中」= 迁移尾批完成态断言——
-    执行侧装配源切换 ~18 点(ADR-0530,设计 §8.7 尾批行)在产消费
-    last_state,尾批完成后把本断言面从记录面扩到全仓;现写全仓零命中
-    断言 = 永久红锁,不做。
+    **锁面边界申报**:扫描域 = src 的 currency_war 子树;仓内其它应用
+    (world_patrol/tl_battle/sim_universe)的同名 ``last_state: str``
+    画面状态跟踪字段与本链无涉,不入扫描域。注释/docstring 提及不计
+    (AST 标识符口径),历史语义注记合法存留。
     """
-    ids = _identifiers(_PKG / 'kernel' / 'cw_game_state.py')
-    assert 'last_state' not in ids, \
-        '记录面(kernel/cw_game_state.py)不得引用 last_state 旧帧'
+    offenders: list[str] = []
+    for f in sorted(_PKG.rglob('*.py')):
+        if 'last_state' in _identifiers(f):
+            offenders.append(str(f.relative_to(_PKG)))
+    assert not offenders, f'last_state 旧帧链标识符复活:{offenders}'

@@ -64,7 +64,7 @@ def _dual_track_session(final_comp) -> _NS:
     """双轨期会话夹具:框架已选仙舟 ∧ 未定型(plane=1 ∧ ist 无锁无 pair)
     → decision_target 返回配方伪 comp(与装配单一源同链)。
     字段挂 ``session.strategy_state``(strategy_state_of 统一读口)。"""
-    sess = _NS(last_state=None)
+    sess = _NS()
     sess.strategy_state = _NS(target_comp=final_comp,
                               transition_framework='仙舟')
     sess.strategy_state.v3_intention = _NS(locked_comp='', p1_pair=(),

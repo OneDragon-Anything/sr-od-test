@@ -89,8 +89,7 @@ def _make_supply_op(monkeypatch):
 
     op = m.CwScreenSupplyNode.__new__(m.CwScreenSupplyNode)
     fake_screen = object()
-    match = SimpleNamespace(session=SimpleNamespace(target_comp=None,
-                                                    last_state=None))
+    match = SimpleNamespace(session=SimpleNamespace(target_comp=None))
     op.ctx = SimpleNamespace(cw_match=match, current_instance_idx=1)
     op.screenshot = lambda: fake_screen   # noqa: ANN001  实例属性遮蔽方法
     click_log: list[tuple] = []
@@ -234,7 +233,6 @@ def _w239_p2r1_loss_outcome_make_loop(monkeypatch, *, ocr_texts: list[str], read
             # 观察半直写面(ADR-0583):真实 StrategySession 承载
             #(performance/pending_round_outcomes 等字段齐备,零桩面特判)
             _sess = StrategySession()
-            _sess.last_state = CwSimFrame()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(
@@ -400,7 +398,6 @@ def _w28_outcome_write_defects_make_loop(monkeypatch, *, new_match: bool, elapse
                 StrategySession as _SS,
             )
             _sess = _SS()
-            _sess.last_state = CwSimFrame()
             state_of(_sess)
             self.ctx = SimpleNamespace(
                 cw_match=SimpleNamespace(

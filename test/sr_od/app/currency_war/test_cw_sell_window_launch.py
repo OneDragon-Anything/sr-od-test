@@ -519,7 +519,8 @@ class TestEmitRegistration:
         state_of(sess).target_comp = SimpleNamespace(
             name='测试线二', core_chars=('新目标',), shared_chars=())
         st2 = _state(1, [_bc('目标件', slot=1)], node='reward', round_num=4)
-        sess.last_state = st2   # 生产 last_state 写点同形(读端相位解析)
+        # (原「生产 last_state 写点同形」播种已随链退役删除:读端相位
+        #  解析源 = 容器(cw4_bs 合成喂入),帧槽赋值无消费面。)
         act2 = decide_shop_action(cw4_bs(st2, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act2, SellBench)
         assert act2.reason != 'line_switch_collapse' \

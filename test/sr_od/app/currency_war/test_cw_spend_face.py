@@ -624,7 +624,7 @@ class TestReadinessBattleArm:
 
         # 达标帧:达标臂发射(哨兵)且守卫计数零触达
         op = _mk_wired_op()
-        sess = _NS(last_state=_st(gold=30, level=3))
+        sess = _NS()
         state_of(sess).cw4_counters = {}
         state_of(sess).target_comp = _comp()
         # last_prep_action_sig 迁 ExecState(session 职责分离批):经
@@ -641,8 +641,7 @@ class TestReadinessBattleArm:
             lambda tc, st: 0.5)
         state_calls.update(launch=0, guard=0)
         op2 = _mk_wired_op()
-        op2.ctx = _NS(cw_match=_NS(session=_NS(
-                last_state=_st(gold=30, level=3))))
+        op2.ctx = _NS(cw_match=_NS(session=_NS()))
         # 非达标帧的签名同迁 ExecState(经 exec_state_of 附着)
         exec_state_of(op2.ctx.cw_match.session).last_prep_action_sig = ('m2',)
         op2.loop()
@@ -696,7 +695,7 @@ class TestReadinessBattleArm:
 
         monkeypatch.setattr(_pa, 'PrepActionExecutor', _FakeExecutor)
         op = self._stale_probe_loop(prep_visible=False)
-        sess = _NS(last_state=None)
+        sess = _NS()
         state_of(sess).cw4_counters = {}
         state_of(sess).target_comp = None
         op.ctx = _NS(cw_match=_NS(session=sess))
@@ -755,8 +754,7 @@ class TestReadinessBattleArm:
         op.last_screenshot = object()  # type: ignore[attr-defined]
         op._screen = object()
         comp = _comp()
-        sess = _NS(                   last_state=_st(gold=30, level=3),
-                   last_prep_action_sig=('m2',))
+        sess = _NS(last_prep_action_sig=('m2',))
         state_of(sess).cw4_counters = {}
         state_of(sess).target_comp = comp
         op.ctx = _NS(cw_match=_NS(session=sess))

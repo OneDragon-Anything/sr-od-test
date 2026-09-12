@@ -461,7 +461,8 @@ class FakeP1Run:
         return str(getattr(self.cw_match.session, 'node_type_current', '')
                    or self.match.state.node_type or '')
 
-    def prep_landing(self, action: Any) -> tuple[str, bool]:
+    def prep_landing(self, action: Any,
+                     executor: Any = None) -> tuple[str, bool]:
         """备战动作执行缝的假环境落点(执行器机械半边的替换面;批3a 申报
         面随 T-223 端口回执退役重钉)。
 
@@ -475,6 +476,12 @@ class FakeP1Run:
         动作应用语义,未发出 → wrapper 半边闩/期望态不登记);detail 带
         假环境显影前缀。原回执 ``(progressed, detail, landed)`` 三元组随
         T-223 退役(LANDED 判定归观察侧 reconcile,批5 落地供给)。
+
+        ``executor`` = 被替身的执行器实例(装配点 lambda 透传):LevelUp
+        发出时把假环境 verification 回执的 ``levelup_spent`` 喂执行器
+        ``_last_levelup_spent`` 显影字段(T-16 执行缝金账——生产机械半边
+        ``_level_up`` 逐击累计的假环境对位;假局 receipts/journal 金账与
+        审计 ``gold_channel`` 从此同源,单一计算点仍在假环境 apply)。
         """
         from sr_od.application.currency_war.kernel.cw_prep_actions import (
             RunDeploy,
@@ -496,6 +503,14 @@ class FakeP1Run:
             # tracked 真值重播(实机对位 = 执行器 tracked 随动;漏同步 =
             # 期望态 vs tracked 双账守卫炸「投影建模 bug」假象)
             self._seed_tracked_from_truth()
+        if executor is not None and res.applied:
+            from sr_od.application.currency_war.kernel.cw_prep_actions import (
+                LevelUp,
+            )
+            if isinstance(action, LevelUp):
+                executor._last_levelup_spent = int(
+                    (getattr(res, 'verification', None) or {})
+                    .get('levelup_spent', 0) or 0)
         mark = '✓(fake)' if res.applied else '✗(fake-rejected)'
         return (f'{type(action).__name__} {mark}', bool(res.applied))
 
@@ -793,7 +808,7 @@ class FakeP1Run:
         )
 
         monkeypatch.setattr(PrepActionExecutor, '_execute_dispatch',
-                            lambda ex, action: self.prep_landing(action))
+                            lambda ex, action: self.prep_landing(action, ex))
 
         def _gold_truth(*a: Any, **k: Any) -> int:
             return self.match.state.gold

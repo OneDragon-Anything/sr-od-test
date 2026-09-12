@@ -21,7 +21,6 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     DEPLOYED_FRONT_CAPACITY,
     BenchChar,
-    CwSimFrame,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -34,10 +33,31 @@ from sr_od.application.currency_war.operations.cw_screen._overlay_confirm import
 )
 
 
+def _seed_gold(session: 'StrategySession', gold: int) -> None:
+    """容器 gold 播种(链退役批重锚:op 效果金账直推宿主 = 容器单例;
+    actor = PrepActionExecutor,与 _advance_gold 写通道同 actor)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        board_state_of,
+    )
+    bs = board_state_of(session)
+    bs.write_logic(bs.gold, gold, produced_by='t', evidence='test_seed',
+                   sig=ChannelSig(family='logic_action',
+                                  actor='PrepActionExecutor',
+                                  mode='compute'))
+
+
 def _session() -> StrategySession:
     s = StrategySession()
-    s.last_state = CwSimFrame(gold=50, plane=1, round_num=4)
+    _seed_gold(s, 50)
     return s
+
+
+def _gold_of(session: StrategySession) -> int | None:
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        board_state_of,
+    )
+    return board_state_of(session).gold.value
 
 
 # ==================== ①overlay handler 侧确认逻辑推进 ====================
@@ -67,11 +87,12 @@ def test_confirm_tome_arrival_star_badge_named() -> None:
 
 
 def test_confirm_expert_cash_gold_direct_advance() -> None:
-    """专家邀请函「现金为王」:gold +4 直推 session.last_state.gold
-    (原「待实读」挂账条目随两态制废除转直推;shop_wave_top 实读覆盖修正)。"""
+    """专家邀请函「现金为王」:gold +4 直推容器金账(链退役批:宿主
+    last_state→容器单例;原「待实读」挂账条目随两态制废除转直推;
+    shop_wave_top 实读覆盖修正)。"""
     s = _session()
     register_confirm_arrival(s, 'ConfirmExpertCash', '现金为王', produced_by='t')
-    assert s.last_state.gold == 54, 'gold +4 逻辑直推(策略器立即可读)'
+    assert _gold_of(s) == 54, 'gold +4 逻辑直推(策略器立即可读)'
 
 
 def test_confirm_arrival_no_item_or_session_noop() -> None:
@@ -121,7 +142,7 @@ def test_register_equip_worn_none_session_safe() -> None:
 # ==================== ③apply_op_effect 原子 op 字段直推 ====================
 
 def test_apply_op_effect_sell_bench_advances_gold_refund() -> None:
-    """卖备战席:按注册表费算回金直推 last_state.gold(sell_refund
+    """卖备战席:按注册表费算回金直推容器金账(链退役批重锚;sell_refund
     星级×费率);tracked 本体推进 = 执行器辖,本函数不碰。"""
     s = _session()
     exec_state_of(s).tracked_bench_chars = [
@@ -129,7 +150,7 @@ def test_apply_op_effect_sell_bench_advances_gold_refund() -> None:
     effects = apply_op_effect(s, SellBench(slot=3), produced_by='t')
     # 回金 = sell_refund(2星, 花火费):直推为非零正增量(具体值 = 注册表
     # 单一源,断言锁定「推进发生且为正」,不锁分布数值)
-    assert s.last_state.gold > 50, '卖出回金逻辑直推'
+    assert _gold_of(s) > 50, '卖出回金逻辑直推'
     assert any(e['path'] == 'gold' for e in effects)
 
 
@@ -190,5 +211,5 @@ def test_confirm_chosen_family_has_no_registration_side_channel() -> None:
     register_confirm_arrival(s, 'ConfirmPartner', '丹恒', produced_by='t')
     assert getattr(exec_state_of(s), 'expected_state', None) is None
     # 无 owned/gold 副作用
-    assert s.last_state.gold == 50
+    assert _gold_of(s) == 50
     assert s.last_owned_equips in (None, [])
