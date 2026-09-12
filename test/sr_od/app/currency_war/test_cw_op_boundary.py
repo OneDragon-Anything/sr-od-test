@@ -223,20 +223,25 @@ def test_arbitration_exception_closes_row_with_error(
 
 
 def test_preclear_expert_invite_wired_via_wrapper() -> None:
-    """书册卡预清场经包装分发(ADR-0584 §5.3 收编件;T-176 V-2 收编重锚)。
+    """书册卡预清场经包装分发(ADR-0584 §5.3 收编件;T-176 V-2 收编重锚,
+    r2 随 journal 包装单一源化再锚)。
 
     接线烟雾(容差档):断言调用点存在,防「同一 op 双通道行缺口」回归
     ——失守事故 = S11 族同型:0k 分支经包装有 op 行、预清场直调
     .execute() 无行,复盘同 op 归属不一致(084421 三窗误标 0n 的近亲)。
     收编重锚:清场识别+点击自 cw_loop 备战分支迁
     CwScreenPrep._clear_prep_cards(外循环只保留分派),锁宿主随迁——
-    锁语义(处理链经包装保 op 行、journal 名与 0k 同名)不变。"""
+    锁语义(处理链经包装保 op 行、journal 名与 0k 同名)不变。r2:包装
+    实现自手写 enter/exit 收敛为单一源 ``journal_wrapped_execute``
+    (ok 判定 = resolve_dispatch_ok,r1 缺陷 1 的双源漂移根治),断言随
+    接线形态更新。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
         CwScreenPrep,
     )
 
     seg = inspect.getsource(CwScreenPrep._clear_prep_cards)
-    assert 'record_op_enter(' in seg, '预清场未走 journal 包装(行缺口回归)'
+    assert 'journal_wrapped_execute(' in seg, \
+        '预清场未走 journal 包装单一源(行缺口回归)'
     assert "'专家邀请函'" in seg, '预清场 op 行须与 0k 同名'
-    assert 'CwScreenExpertInvite(self.ctx).execute()' in seg, \
+    assert 'CwScreenExpertInvite(self.ctx)' in seg, \
         '书册卡处理链调用形态漂移'

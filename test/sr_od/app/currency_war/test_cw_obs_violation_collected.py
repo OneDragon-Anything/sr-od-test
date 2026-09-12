@@ -40,18 +40,22 @@ def _ast(obj):
     return ast.parse(textwrap.dedent(_src(obj)))
 
 
-def _ast_names(obj) -> set[str]:
-    """源码 AST 的调用名(Name/Attribute)与 import 绑定名集合。
+def _names_of_source(src: str) -> set[str]:
+    """源码字符串 AST 的调用名与 import 名集合(收集器内核)。
 
-    注释与 docstring 不入面(B4 锁同口径:文本匹配会把「禁 import cv2」
-    这类说明性注释误伤成红)。调用名取 ``Name`` 调用与 ``Attribute`` 尾名;
-    import 名取绑定名(asname/根名)。"""
-    tree = _ast(obj)
+    import 名**同时收绑定名与源名根**(r2 必修②修盲区:排查报告 V-1 实证
+    形态 = ``from x import slot_occupied as _slot_occ`` 别名导入 + 别名调用
+    ——只记绑定名(asname)时源名永不入面,同形态回归锁不红)。调用名取
+    ``Name`` 调用与 ``Attribute`` 尾名(Attribute 链 ``mod.slot_occupied(...)`
+    由尾名咬住)。注释与 docstring 不入面(B4 锁同口径)。"""
+    tree = ast.parse(textwrap.dedent(src))
     names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             for a in node.names:
-                names.add(a.asname or a.name.split('.')[0])
+                if a.asname:
+                    names.add(a.asname)
+                names.add(a.name.split('.')[0])
         elif isinstance(node, ast.Call):
             fn = node.func
             if isinstance(fn, ast.Name):
@@ -59,6 +63,11 @@ def _ast_names(obj) -> set[str]:
             elif isinstance(fn, ast.Attribute):
                 names.add(fn.attr)
     return names
+
+
+def _ast_names(obj) -> set[str]:
+    """对象源码的收集面(dedent 后走内核;类方法 getsource 带缩进)。"""
+    return _names_of_source(_src(obj))
 
 
 def _count_calls(obj, name: str) -> int:
@@ -105,6 +114,34 @@ def test_v1_frontless_recovery_signals_via_game_popup() -> None:
     assert 'POST_LAUNCH_BLOCKERS' in loop_src
 
 
+def test_ast_collector_bites_aliased_import() -> None:
+    """收集器盲区自检(r2 必修②,禁假绿):别名导入+别名调用形态必须入面。
+
+    旧码实证形态(收编前 0j 判效,排查报告 V-1 原文):
+    ``from ...currency_war_cv import (slot_occupied as _slot_occ,)`` +
+    ``_slot_occ(...)``——收集器只记绑定名时源名 ``slot_occupied`` 永不入面,
+    V-1 负锚对同形态回归零判别力(r1 咬红抽验不咬的根因)。修复判据:
+    源名与绑定名都入面;`import x.y as z` 的根名 ``x`` 同收。"""
+    legacy_v1_shape = (
+        'from sr_od.application.currency_war.obs.currency_war_cv import (\n'
+        '    slot_occupied as _slot_occ,\n'
+        ')\n'
+        'from sr_od.application.currency_war import prep_actions as _pa\n'
+        '\n'
+        '\n'
+        'def _judge(screen, pts):\n'
+        '    return any(_slot_occ(screen, int(p.x), int(p.y)) for p in pts)\n'
+    )
+    names = _names_of_source(legacy_v1_shape)
+    assert 'slot_occupied' in names, (
+        '别名导入的源名未入面(V-1 负锚对实证违规形态零判别力,r1 缺陷 2 回归)')
+    assert '_slot_occ' in names, '绑定名丢失(收集器过宽修复伤及绑定名)'
+    assert '_pa' in names and 'prep_actions' in names, (
+        '模块别名导入(asname+源名根)收集不完整')
+    # 无关名不入面(判别力正向检查:收集器不是全文文本匹配)
+    assert 'screen' not in names and 'judge' not in names
+
+
 # ==================== V-2:清场识别+点击迁画面 op ====================
 
 def test_v2_loop_free_of_prep_card_clearance_identify() -> None:
@@ -135,6 +172,85 @@ def test_v2_prep_entry_paths_wire_card_clearance() -> None:
         'run() 入口缺清场接线'
     assert '_clear_prep_cards()' in _src(CwScreenPrep.lifecycle_observe), \
         'lifecycle_observe() 入口缺清场接线'
+
+
+def test_v2_clearance_records_ok_outcome_on_success(monkeypatch) -> None:
+    """V-2 行为锁(r2 必修①):书册卡清场处理链**成功**记 ``outcome='ok'``。
+
+    journal 包装 ok 判定单一源 = op_journal.resolve_dispatch_ok(round-result
+    走轮次枚举语义);手写 ``getattr(res, 'success')`` 第二份判定会让
+    OperationRoundResult(只有 is_success 属性)成功恒记 fail(r1 缺陷 1
+    实证)——该语义再漂,本锁红。负面确认:RETRY 形态仍记 fail(判定
+    不是恒 ok 的假绿面)。"""
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    from one_dragon.base.geometry.point import Point
+    from one_dragon.base.operation.operation_round_result import (
+        OperationRoundResult,
+        OperationRoundResultEnum,
+    )
+    from sr_od.application.currency_war.kernel import cw_obs_core
+    from sr_od.application.currency_war.obs import cw_identity_obs
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_expert_invite as _invite_mod,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_prep as _prep_mod,
+    )
+    from sr_od.application.currency_war.telemetry import op_journal
+
+    exits: list[str] = []
+    enters: list[str] = []
+    enum_holder = {'value': OperationRoundResultEnum.SUCCESS}
+    monkeypatch.setattr(op_journal, '_op_journal_pos_of', lambda ctx: (0, 0))
+    monkeypatch.setattr(op_journal, 'record_op_enter',
+                        lambda name, *a, **k: enters.append(name))
+    monkeypatch.setattr(op_journal, 'record_op_exit',
+                        lambda token, outcome='', **k: exits.append(outcome))
+    monkeypatch.setattr(cw_identity_obs, 'find_trial_reveal_cards',
+                        lambda screen, slots: [])
+    _bc_hits = {'n': 0}
+
+    def _fake_bookcards(screen, slots):
+        _bc_hits['n'] += 1
+        # 桩只命中首轮(真机语义:开卡后卡片消失自然防重入);恒命中会让
+        # 上界 2 轮循环都进处理链,enter 计数翻倍。
+        return [(1, Point(1, 1))] if _bc_hits['n'] == 1 else []
+
+    monkeypatch.setattr(cw_identity_obs, 'find_bookcards', _fake_bookcards)
+    monkeypatch.setattr(cw_identity_obs, '_ctx_slots',
+                        lambda ctx, prefix, count: [])
+    monkeypatch.setattr(cw_obs_core, 'is_prep_like_frame',
+                        lambda ctx, screen: True)
+
+    class _FakeInvite:
+        def __init__(self, ctx) -> None:
+            pass
+
+        def execute(self):
+            return OperationRoundResult(enum_holder['value'], status='stub')
+
+    monkeypatch.setattr(_invite_mod, 'CwScreenExpertInvite', _FakeInvite)
+
+    op = _prep_mod.CwScreenPrep.__new__(_prep_mod.CwScreenPrep)
+    monkeypatch.setattr(op, 'ctx', SimpleNamespace(), raising=False)
+    monkeypatch.setattr(op, 'screenshot',
+                        lambda: np.zeros((4, 4, 3), dtype=np.uint8),
+                        raising=False)
+
+    op._clear_prep_cards()
+    assert enters == ['专家邀请函'], f'journal enter 行缺失/错名: {enters}'
+    assert exits == ['ok'], (
+        f'成功清场链 outcome 必须为 ok(恒 fail = 判定双源漂移,r1 缺陷 1): {exits}')
+
+    # 负面确认:RETRY 形态仍记 fail(判定分支真实在咬,不是恒 ok 假绿)
+    _bc_hits['n'] = 0   # 重置命中轮(第二轮循环再进一次处理链)
+    enum_holder['value'] = OperationRoundResultEnum.RETRY
+    exits.clear()
+    op._clear_prep_cards()
+    assert exits == ['fail'], f'RETRY 形态应记 fail(判定分支失守): {exits}'
 
 
 # ==================== V-3:刷新次数归入口观察 payload ====================
