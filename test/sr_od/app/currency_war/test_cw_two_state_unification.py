@@ -17,6 +17,7 @@ import dataclasses
 
 import pytest
 
+from sr_od.application.currency_war.kernel import cw_registry as reg_mod
 from sr_od.application.currency_war.kernel.cw_board_state import (
     BS_SCHEMA_VERSION,
     BoardState,
@@ -26,7 +27,6 @@ from sr_od.application.currency_war.kernel.cw_board_state import (
 from sr_od.application.currency_war.kernel.cw_state import (
     effective_hp_threshold,
 )
-from sr_od.application.currency_war.kernel import cw_registry as reg_mod
 
 
 def _sig() -> ChannelSig:

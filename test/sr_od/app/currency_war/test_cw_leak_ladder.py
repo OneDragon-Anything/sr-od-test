@@ -22,8 +22,12 @@ LF 钉的是档 2 自身闸链(档匹配/s_reserve/新鲜度/bench 硬闸),不�
 (test_cw_deploy_single_source 等)辖,本文件钉档 1 的接线。
 """
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+
+if TYPE_CHECKING:
+    from sr_od.application.currency_war.kernel.cw_board_state import BoardState
 from sr_od.application.currency_war.kernel.cw_card_identity import (
     TIER_REGISTRY_CORE,
     TIER_TRANSITION,
@@ -359,7 +363,7 @@ class TestL7AllInCategoryFilter:
         return st
 
     def _allin_bs(self, hp: int | None, *, source: str = 'observation'
-                  ) -> 'BoardState':
+                  ) -> BoardState:
         """P21 域判据容器帧(波 2 起门输入 = BoardState):P2r7 boss 帧,
         来源三态 = 旧两位语义的容器形态(observation=真读/prior=不可信)。"""
         from sr_od.application.currency_war.kernel.cw_board_state import (

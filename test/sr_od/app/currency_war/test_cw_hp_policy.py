@@ -284,8 +284,10 @@ class TestL3TrustedBitSingleSource:
     def test_discipline_helper_delegates_single_implementation(self) -> None:
         """hp_decision_trusted(容器形态)= 委托 hp_decision_trusted_of
         (同对象级单一源,非第二实现)。"""
-        from sr_od.application.currency_war.kernel import cw_discipline_rules
-        from sr_od.application.currency_war.kernel import cw_hp_policy
+        from sr_od.application.currency_war.kernel import (
+            cw_discipline_rules,
+            cw_hp_policy,
+        )
         assert cw_discipline_rules.hp_decision_trusted_of \
             is cw_hp_policy.hp_decision_trusted_of
         bs = _mk_bs(80, source='prior')

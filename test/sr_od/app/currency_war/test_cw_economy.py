@@ -22,10 +22,16 @@ A,#4;金钱类收缩随编排者裁决)。其余历史锁已退役(git 可复活
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+
+if TYPE_CHECKING:
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        BoardState,
+    )
 from sr_od.application.currency_war.data.cw_shop_odds import (
     DISTINCT_CARDS_PER_COST,
     POOL_COPIES_PER_CARD,
@@ -329,7 +335,7 @@ def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespa
 
 
 def _blood_bs(hp: int | None, *, source: str = 'observation',
-              level: int | None = None) -> 'BoardState':
+              level: int | None = None) -> BoardState:
     """血闸容器帧构造器(波 2 起闸输入 = BoardState;来源三态即旧两位
     语义的容器形态:observation=真读/prior=不可信 fail-closed)。"""
     from sr_od.application.currency_war.kernel.cw_board_state import (
