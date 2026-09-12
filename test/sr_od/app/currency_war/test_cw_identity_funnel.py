@@ -58,6 +58,13 @@ def test_funnel_equivalence_and_tiering() -> None:
 
     base = identify_slots(screen, templates, front + back, 'front', **kw)
     assert len(base) >= 5, f'基线帧应识别出足够角色,实得 {len(base)}'
+    # 真帧身份+星级真值锚(2026-02-02 看图人工核对 + 用户裁决:花火 1★;
+    # 前排-1..4 + 后排-1..6,后排 4/5/6 空):SIFT 全库在此帧只跑一次,
+    # 真值对随本测试聚合断言(测试纪律第 21 条一图一测)
+    assert _sig(base) == sorted([
+        (1, '缇宝', 2), (2, '希儿', 2), (3, '星期日', 1), (4, '椒丘', 1),
+        (1, '艾丝妲', 2), (2, '花火', 1), (3, '灵砂', 1),
+    ])
 
     session = SimpleNamespace()
     # 冷启动(空漏斗状态 → L3 全库兜底)
