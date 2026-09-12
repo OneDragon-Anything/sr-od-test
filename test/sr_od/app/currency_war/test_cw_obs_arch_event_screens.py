@@ -111,11 +111,8 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     monkeypatch.setattr(em, 'emit_overlay_confirm',
                         lambda o, **k: _confirm_rs)
     # (record_event_choice 替身桩已随删除波 1 移除——exogenous 写入端退役,
-    #  encounter 模块不再引用 telemetry。)
-    import sr_od.application.currency_war.kernel.cw_bs_view as bs_view_mod
-    from sr_od.application.currency_war.kernel.cw_state import GameState
-    monkeypatch.setattr(bs_view_mod, 'strategy_input_state',
-                        lambda sess: GameState())
+    #  encounter 模块不再引用 telemetry;(bs_view 桩同批移除——模块本体
+    #  随波 5b 双删,桩对象不存在。))
     return op, match, session
 
 

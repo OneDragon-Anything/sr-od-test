@@ -1202,7 +1202,7 @@ def test_snapshot_assembly_falls_back_to_board_state_view() -> None:
     obs = SimpleNamespace(
         state=None, state_gold_trusted=False, bench_chars=[], deployed_chars=[],
         spheres=[], boxes=[], tomes=[], deploy_vacancy=0, free_bench_slots=None,
-        front_occupied=set(), back_occupied=set(), front_size=4, back_size=6,
+        front_occupied=set(), back_occupied=set(), front_size=4,
         shop_open=False, box_overlay_open=False, event_overlay=None,
     )
     snap = snapshot_from_obs(obs, sess)
@@ -1211,22 +1211,15 @@ def test_snapshot_assembly_falls_back_to_board_state_view() -> None:
 
 
 def test_snapshot_anchor_state_falls_back_to_board_state_view() -> None:
-    """件 3:adapter._anchor_state 的 session 锚同切——快照值缺席域取
-    BoardState 记录值。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.adapter import (
-        _anchor_state,
+    """件 3 收口墓碑(原锁:adapter._anchor_state 的 session 锚回退取
+    BoardState 记录值)——该缝已随 T-116 段 2 退役删除(snapshot_from_obs
+    纯容器锚),符号复活即红;锚语义守护归 test_cw_w5_sim_retirement
+    哨兵与容器锚现役锁。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        adapter as _adapter,
     )
-
-    sess = StrategySession()
-    _bs_with_node(sess)
-    snap = SimpleNamespace(
-        plane=None, round_num=None, node_type=None, level=None,
-        xp_progress=None, level_up_cost=None, selected_difficulty='',
-        streak=None, gold_trusted=False, gold=None, hp_readable=False,
-    )
-    st = _anchor_state(snap, sess)
-    assert (st.plane, st.round_num) == (2, 5), '锚回退 = 记录值'
-    assert st.node_type == 'battle'
+    assert not hasattr(_adapter, '_anchor_state'), \
+        'adapter._anchor_state 应已删除(T-116 段 2 缝收敛)'
 
 
 # ============================================================ §8.7 批次四

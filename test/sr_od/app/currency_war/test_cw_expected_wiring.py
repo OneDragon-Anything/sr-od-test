@@ -9,9 +9,9 @@ owned 本体直推 / 现金为王 gold 直推 / chosen_* 与 ConfirmStrategy 零
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_expected_state import (
+from sr_od.application.currency_war.kernel.cw_exec_state import (
     apply_op_effect,
+    exec_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PickBoxCard,
@@ -161,12 +161,14 @@ def test_apply_op_effect_none_session_safe() -> None:
 def test_expected_state_ledger_api_retired() -> None:
     """ADR-0651 墓碑:ExpectedEntry/register_expected/clear_expected/
     reconcile_expected/set_evidence_sink/prep_obs_actual_for/
-    prep_stall_pending_expected 复活即红(防挂账对账机制半删回归)。"""
-    import sr_od.application.currency_war.kernel.cw_expected_state as es
-    for gone in ('ExpectedEntry', 'register_expected', 'clear_expected',
-                 'reconcile_expected', 'set_evidence_sink',
-                 '_emit_evidence', 'expected_round_key'):
-        assert not hasattr(es, gone), f'cw_expected_state.{gone} 应已废除'
+    prep_stall_pending_expected 复活即红(防挂账对账机制半删回归);
+    波 5b 起 cw_expected_state 模块本体已物理删除(op 效果直推迁
+    kernel/cw_exec_state,apply_op_effect 行为锁见本文件①-③),模块
+    复活即红。"""
+    import importlib.util
+    assert importlib.util.find_spec(
+        'sr_od.application.currency_war.kernel.cw_expected_state') is None, \
+        'cw_expected_state 模块应已删除(波 5b 双删)'
     assert not hasattr(exec_state_of(_session()), 'expected_state'), \
         'ExecState.expected_state 容器应已删除'
     from sr_od.application.currency_war.operations.cw_screen import (

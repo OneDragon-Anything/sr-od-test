@@ -31,6 +31,7 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_board_state import (
     board_state_of,
+    gold_of,
 )
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
@@ -48,9 +49,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
     accrue_release_spent,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.adapter import (
-    decision_state,
-)
+# (adapter.decision_state 已随 T-116 段 2 缝收敛退役删除——原 import 与其
+#  独立重算腿同批改读容器单一源,语义 = 重算输入与装配同容器,不变。)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
     assemble,
     disclose_budget_at_shop_frame,
@@ -174,12 +174,14 @@ class TestBudgetDisclosureWriteRead:
         st = state_of(sess)
         # 独立重算:同输入投影确定 ⇒ 与 _budget 内部同值(非转抄 turn);
         # 重算输入 = 同一容器实例(键戳/轮轴的单一来源)。
-        state = decision_state(snap, sess)
+        # (原经 adapter.decision_state——T-116 段 2 缝收敛后改读容器,
+        #  金值单一源 = 容器 gold 读口,值流不变。)
+        state = board_state_of(sess)
         expected_cap = kernel_reserve_cap(board_state_of(sess), sess)
         assert st.v3_reserve_cap == turn.budget.reserve_cap
         assert st.v3_reserve_cap == expected_cap
         assert st.v3_reserve_overflow == max(
-            0, int(state.gold or 0) - int(turn.budget.reserve_cap))
+            0, int(gold_of(state) or 0) - int(turn.budget.reserve_cap))
         assert st.v3_release_budget == turn.budget.obligation
         assert st.v3_disclosure_key == (1, 8)
         # 构造帧结构性非退化(gold 高于息线 ⇒ 溢余/义务应非零;恒 0 =
@@ -376,26 +378,19 @@ class TestReleaseSpentAccrual:
 
 def test_shop_frame_disclosure_wired_after_blackboard_write(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """接线行为锁(T-88 店开帧第二写点;锚⑤失守事故防线):``run_buy_waves``
-    段顶必须调用店开帧披露写点,且调用时点黑板已落本访问融合帧——spy
-    在调用时点读 session.shop_state_frame,非 None = 披露消费的是决策
-    循环同源的已融合帧。锁 F 直调薄壳腿只证「函数对」,本锁证「接到
-    商店循环且位次在黑板写点后」,二者合取才是完整接线证明。原「call
-    in src」文本烟雾 + 「.index() 文本次序锁」整形为本行为锁(瘦身批
-    2026-09-08:文本形态不证运行时序,且变量改名/调用挪行等合法重构
-    即假红,README 规则 8)——删调用块或挪到黑板写前 = 本锁红。"""
-
-    seen_frames: list = []
+    """接线存在锁(T-88 店开帧第二写点;原「黑板写点后位次」腿随黑板槽
+    退役消亡——T-116 prep 链段 2 删 session.shop_state_frame 载体,spy
+    位次判据前提(黑板帧非 None)结构性不成立,波 5b 收口为接线存在 +
+    循环收工两腿;黑板容器化后的喂入位次语义归 T-116 重放件)。"""
+    seen_calls: list = []
 
     def _spy(state, session, registry=None) -> None:
-        seen_frames.append(getattr(session, 'shop_state_frame', None))
+        seen_calls.append(1)
 
     _warned, rr, outcome = _run_buy_waves_offline_host(monkeypatch, tmp_path,
                                                        _spy)
-    assert len(seen_frames) == 1, \
-        f'店开帧披露写点调用次数异常({len(seen_frames)}):接线断裂/漂移'
-    assert seen_frames[0] is not None, \
-        '披露调用时点黑板未落帧(次序漂移:应在 shop_state_frame 写点后)'
+    assert len(seen_calls) == 1, \
+        f'店开帧披露写点调用次数异常({len(seen_calls)}):接线断裂/漂移'
     assert rr is None and outcome is not None, '商店循环未正常收工'
 
 

@@ -77,7 +77,6 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
 from sr_od.application.currency_war.kernel.cw_investments import (
     normalize_invest_name,
 )
-from sr_od.application.currency_war.kernel.cw_state import GameState
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
     CwScreenOpBase,
@@ -284,9 +283,6 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
     monkeypatch.setattr(iem, 'safe_click', _click)
     monkeypatch.setattr(iem, 'emit_overlay_confirm', lambda op_, **k: _RETRY_RS)
     monkeypatch.setattr(iem.time, 'sleep', lambda *_: None)
-    import sr_od.application.currency_war.kernel.cw_bs_view as bs_view_mod
-    monkeypatch.setattr(bs_view_mod, 'strategy_input_state',
-                        lambda sess: GameState())
     return op, match, session
 
 
@@ -411,9 +407,6 @@ def _make_strategy(test_context, monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(ism, 'emit_overlay_confirm', _confirm_stub)
     monkeypatch.setattr(ism.time, 'sleep', lambda *_: None)
     monkeypatch.setattr(op, '_interruptible_sleep', lambda s: None)
-    import sr_od.application.currency_war.kernel.cw_bs_view as bs_view_mod
-    monkeypatch.setattr(bs_view_mod, 'strategy_input_state',
-                        lambda sess: GameState())
     return op, match, session, clicks, decide_calls
 
 

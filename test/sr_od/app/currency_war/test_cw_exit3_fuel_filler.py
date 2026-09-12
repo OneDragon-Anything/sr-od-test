@@ -286,11 +286,14 @@ class TestExit3NegativeBranches:
 class TestExit3ProbBarSemantics:
     """A 支概率缺键/零值语义统一(单一源 =
     cw_economy.effective_refresh_prob,与 roll 可负担性门同消费语义):
-    parse_prob_bar 契约 = 全 5 键或 None——None = 不可得 fail 向;
-    结构内缺键 = 表值回退(因果支表值 0 ⇒ 回退即确证零,照常发射);
-    键在且 ≤0 = 轮岗只翻倍不归零,采样不可信回退表值(机制出处 =
-    注册表 cw_invest_data.py PlazaPortal 114「轮岗」);键在且 >0 但与
-    表值冲突 = 对账不一致 fail 向。"""
+    优先级单一源 = effective_refresh_prob(cw_economy:836-857 优先级表,
+    T-64+T-183 统一批定谳)——不可得(None/非 dict)/结构内缺键/键 ≤0
+    三形态一律退基线表;键在且 >0 = 实读真值(轮岗翻倍档直用;机制出处
+    = 注册表 cw_invest_data.py PlazaPortal 114「轮岗」)。
+    容器合成口径:帧 refresh_probs=None 经合成口塌缩为 payload 空表
+    (payload 域无「条不可得」三态)→ 与缺键同走表值回退——原「None
+    fail 向不判 A」锁钉的是统一前旧语义,锁红重推后随单一源返工
+    (T-122 波 5b triage 定谳)。"""
 
     def test_missing_key_falls_back_to_table_zero(self):
         """缺键形态:对账源为空 dict(全缺)→ 表值回退(0)⇒ 照常发射
@@ -301,15 +304,15 @@ class TestExit3ProbBarSemantics:
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
 
-    def test_prob_bar_none_fails_closed(self):
-        """None = 概率条不可得 ⇒ fail 向不判 A,零发射。"""
+    def test_prob_bar_none_falls_back_to_table(self):
+        """None(概率条不可得)形态:合成口塌缩 payload 空表 → 单一源
+        表值回退 ⇒ 照常判 A 并发射(与缺键同语义;原 fail 向锁随
+        T-64+T-183 统一裁决返工,锁红重推定谳见类 docstring)。"""
         st, sess = _stall_frame(gold=46, fuel_pieces=1, fuel_min_cost=5,
                                 cards=[_card(_off_line_name(), cost=1)],
                                 refresh_probs=None)
         act = _decide(st, sess)
-        assert not (isinstance(act, BuyCard)
-                    and act.reason == 'fuel_filler_stall')
-        assert 'fuel_filler_stall_buy' not in state_of(sess).cw4_counters
+        assert isinstance(act, BuyCard) and act.reason == 'fuel_filler_stall'
 
     def test_bar_conflicting_with_table_fails(self):
         """对账不一致:表 0 而概率条 >0 ⇒ fail 向不判 A,零发射。"""

@@ -286,17 +286,10 @@ class TestSerializationEquivalence:
         assert not check_no_same_round_buy_sell([row_ok]), \
             '结构化键豁免边被误收窄(批 3 转化类语义回归)'
 
-    def test_replay_diff_rendering_ignores_reason(self):
-        """cw_replay --diff 分歧面对 reason 免疫:新旧两渲染器都只取
-        bench_idx/shop 行名——reason 值(含已退役值)在回放对比面
-        结构性零漂移。"""
-        from sr_od.application.currency_war.sim.cw_replay import _fmt, _fmt_json
-        new_row = [ShopSellBench(bench_idx=2, income=1, expect='X',
-                                 reason='funding_support')]
-        old_row = [{'__type__': 'SellBench', 'bench_idx': 2}]
-        assert _fmt(new_row) == _fmt_json(old_row) == 'Sell(2)'
-        # prep 载体行(slot 域,无 bench_idx)渲染同样不含 reason 面。
-        assert _fmt_json([{'__type__': 'SellBench'}]) == 'Sell(None)'
+    # (test_replay_diff_rendering_ignores_reason 已随面退役(T-122 波 5b;
+    #  被测 cw_replay --diff 渲染面 _fmt/_fmt_json 随旧格式回放重建退役
+    #  于 T-98 段②删除——锁与所辖面同批退役,test_cw_replay_session_restore
+    #  先例;退役背书 = reviews/T-98-r1.md ④#5。))
 
     def test_shadow_adapter_fingerprint_aligned_with_action_key(self):
         """影子适配器指纹面(V2-02 清单 B「需映射」判定点,批 4 已映射):

@@ -237,7 +237,7 @@ def _make_executor(session, monkeypatch):
     executor.last_detail = ''
     # 发出位副作用面(mandate 登记件/期望态登记)桩化为 no-op:本锁面对准
     # 回执接线,非登记件语义(其自身面有专锁;测试隔离纪律 = 桩化整条链)。
-    from sr_od.application.currency_war.kernel import cw_expected_state
+    from sr_od.application.currency_war.kernel import cw_exec_state
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         mandate as _mandate,
     )
@@ -246,7 +246,7 @@ def _make_executor(session, monkeypatch):
     monkeypatch.setattr(_mandate, 'mark_tools_pass_executed',
                         lambda *a, **k: None)
     monkeypatch.setattr(_mandate, 'mark_s1_route_check', lambda *a, **k: None)
-    monkeypatch.setattr(cw_expected_state, 'apply_op_effect',
+    monkeypatch.setattr(cw_exec_state, 'apply_op_effect',
                         lambda *a, **k: None)
     return executor
 

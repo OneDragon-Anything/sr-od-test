@@ -22,7 +22,6 @@ import pytest
 from sr_od.application.currency_war.kernel.cw_board_state import (
     BS_SCHEMA_VERSION,
     BoardState,
-    apply_settlement_cover,
     bench_slots_to_legacy,
     board_state_of,
     deployed_rows_from_obs,
@@ -39,11 +38,10 @@ from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_board_state import (
     register_sig_actors as _register_sig_actors,
 )
-from sr_od.application.currency_war.kernel.cw_bs_view import (
-    game_state_view,
-)
+
+# (game_state_view 视图锁族 7 锁已随 kernel/cw_bs_view 文件退役同批删除
+#  ——波 5b 双删,锁与所辖面同批退役;apply_settlement_cover 消费锁同批。)
 from sr_od.application.currency_war.kernel.cw_state import (
-    DEPLOYED_FRONT_CAPACITY,
     BenchChar,
     GameState,
 )
@@ -100,124 +98,6 @@ def _full_truth_frame() -> GameState:
                    None, None, None, None, None]
     return st
 
-
-def test_view_adopted_domains_bitwise_equal_on_clean_frame() -> None:
-    """逐域行为锁(常态帧):收编域视图值与旧直读帧逐位一致——值源由同一
-    观察漏斗镜像(实机 = 喂入口/装配环,测试 = sim 合成口),回放语料
-    无失读 → 逐位零差(方案 §3.1 常态帧等价申报)。"""
-    st = _full_truth_frame()
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    synthesize_from_game_state(bs, st, at_round='p1-r4')
-    view = game_state_view(bs, st)
-    # 席位(bench 槽表逐位:身份/星/槽位;阵营不入容器 = 注册表派生,
-    # 派生正确性另锁 test_bench_slots_to_legacy_derives_faction_from_registry)
-    assert [(b.char_id, b.star, b.slot) if b is not None else None
-            for b in view.bench] == [
-        (b.char_id, b.star, b.slot) if b is not None else None
-        for b in st.bench]
-    # 席位(deployed 定长槽表:身份/排)
-    assert [(b.char_id, b.position_pref) if b is not None else None
-            for b in view.deployed] == [
-        (b.char_id, b.position_pref) if b is not None else None
-        for b in st.deployed]
-    # deploy_cap / 开局域 / 词缀 / 装备 / boss
-    assert view.deploy_cap == 6
-    assert view.active_env == '昼之半神概念股'
-    assert view.plane_bosses == ['镜流', None, '卡芙卡']
-    assert view.enemy_affixes == ['迅捷']
-    assert view.equips == ['星币收集器', '旧世仁医']
-    # 商店 payload(记录五字段逐位;执行域字段 x/merge_preview 同帧对齐)
-    assert [(c.name, c.faction, c.cost, c.star, c.cost_source)
-            for c in view.shop] == [('希儿', '仙舟', 1, 1, 'badge'),
-                                    ('景元', '仙舟', 4, 1, 'badge')]
-    assert [c.x for c in view.shop] == [300, 500], \
-        '同帧 raw 对齐:x 执行域字段透传(执行侧点击身份不受收编影响)'
-    assert view.refresh_probs == {1: 0.6, 2: 0.22}
-    # 残差键:front_max 常量供数 / back_max 容器动态真值供数(back_max 语义
-    # 裁决·闸门一,值源切 bs.back_layout:合成口已写 back_layout=6,视图取
-    # 容器值——与帧值逐位一致;引导窗仍透传帧,见 back_max 供数专项锁)
-    assert view.front_max == DEPLOYED_FRONT_CAPACITY == 4
-    assert view.back_max == st.back_max == 6
-    assert view.dual_track_phase is False
-
-
-def test_view_back_max_supplies_container_truth_with_frame_bootstrap() -> None:
-    """back_max 供数专项锁(语义裁决·闸门一;值源定谳 = W5 方案稿 §2.3,
-    机制正本 = board_structure.md 量化公式节「平常 6,上限 9」):容器
-    back_layout 有值(含 superset 标记态)→ 视图 = 容器值,帧旧值禁回流
-    (退回「恒透传帧」= 容器值被帧残留遮蔽,扩展局「链按 6 格自洽地错」
-    复发形态);容器空(引导窗/裸帧形态)→ 透传入参帧。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.back_layout, 8, sig=_sig())
-    fr = GameState()
-    fr.back_max = 6   # 帧旧值(与容器值不同 → 两值源可分)
-    assert game_state_view(bs, fr).back_max == 8, \
-        '容器有值 → back_max = 容器值(帧值不回流)'
-    # superset 标记态:值照常供数(9 格局 8 档超集运行,标记在 evidence)
-    bs.observe(bs.back_layout, 8, evidence='superset', sig=_sig())
-    assert game_state_view(bs, fr).back_max == 8, \
-        'superset 标记态容器值照常供数(标记不改变数值面)'
-    # 引导窗:容器无值 → 透传入参帧(自定义帧值可分)
-    bs_empty = BoardState(schema_version=BS_SCHEMA_VERSION)
-    fr7 = GameState()
-    fr7.back_max = 7
-    assert game_state_view(bs_empty, fr7).back_max == 7, \
-        '引导窗透传帧值(容器空壳期零行为变化)'
-    assert game_state_view(None, fr7).back_max == 7, \
-        '裸帧形态(bs=None)同引导窗口径'
-
-
-def test_view_payload_offscreen_never_falls_back_to_frame() -> None:
-    """payload 域离屏语义锁(方案 §2.1 + 对抗审 F8):容器无值 = 结构离屏,
-    返回空牌面,禁透传入参帧旧牌面(残留会把离屏帧误读成「商店仍开着」)。"""
-    st = _full_truth_frame()
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    synthesize_from_game_state(bs, st, at_round='p1-r4')
-    # 离屏:容器置 None(leave_screen 等价),入参帧带旧牌面
-    bs.leave_screen(bs.shop, sig=_sig())
-    fr = GameState()
-    fr.shop = [_mk_legacy_card(300, '陈旧牌')]
-    fr.refresh_probs = {1: 0.9}
-    view = game_state_view(bs, fr)
-    assert view.shop == [], '离屏帧禁透传旧牌面'
-    assert view.refresh_probs is None, '离屏帧禁透传旧概率条'
-
-
-def test_view_shop_open_miss_frame_returns_carried_payload_declared() -> None:
-    """payload 失读帧行为差申报锁(对抗审 v2 发现 3):开店态 OCR 失读帧
-    容器保持上一开店帧旧牌面(喂入口失读不写、无 carry 通道),视图如实
-    返回该沿用牌面——旧形态返回当帧实读空表(决策保守跳过)。差异 = 申报
-    面:失读窗内发射买牌由执行侧核对兜底(buy_click_ineffective 检出)。"""
-    st = _full_truth_frame()
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    synthesize_from_game_state(bs, st, at_round='p1-r4')
-    # 失读帧:读不到牌(raw 空),容器无新写入(保持上一开店牌面)
-    fr_miss = GameState()
-    fr_miss.shop = []
-    fr_miss.refresh_probs = None
-    view = game_state_view(bs, fr_miss)
-    assert [c.name for c in view.shop] == ['希儿', '景元'], \
-        '开店态失读帧返回容器沿用牌面(申报行为差,非透传帧空表)'
-
-
-def test_view_bootstrap_window_passes_frame_through() -> None:
-    """引导窗(bs 未观察):收编域透传入参帧,首帧前无行为差。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    fr = GameState()
-    fr.deploy_cap = 7
-    fr.equips = ['拆装扳手']
-    fr.bench = [BenchChar(slot=1, char_id='花火', star=1)]
-    fr.deployed = [BenchChar(slot=2, char_id='希儿', star=1,
-                             position_pref='front')]
-    fr.active_env = '战争边疆'
-    view = game_state_view(bs, fr)
-    assert view.deploy_cap == 7 and view.equips == ['拆装扳手']
-    assert view.active_env == '战争边疆'
-    assert view.bench == list(fr.bench) and view.deployed == list(fr.deployed)
-    assert view.shop == [], 'payload 域离屏语义无引导窗豁免(离屏 = 空)'
-
-
-# ============================================================ 席位换算单一源
 
 def test_deployed_rows_from_obs_splits_rows_and_guards_empty() -> None:
     """SIFT 读链 → (front_row, back_row):分排按 position_pref、行内 1 基
@@ -365,42 +245,6 @@ def _bs_hp_from_frame(frame_hp: int | None, *, readable: bool,
     return bs
 
 
-def test_view_hp_supplies_pre_gate_truth_with_source_mapping() -> None:
-    """hp 专项步 1:视图供门前真值(帧值不再预施门);readable = 最近观察
-    语义(observation→True;carried/prior→False);trusted 来源映射
-    (observation/carried→True;prior→False;对抗审 F6 定谳)。"""
-    # 真读帧:视图 = 容器真值(非入参帧的门后值)
-    bs = _bs_hp_from_frame(82, readable=True, source='observation')
-    fr = GameState()
-    fr.hp = 76   # 旧链门后值(与真值不同)
-    fr.hp_readable = True
-    view = game_state_view(bs, fr)
-    assert view.hp == 82, 'hp 消费 = 容器门前真值(记录/消费分离)'
-    assert view.hp_readable is True and view.hp_trusted is True
-    # 沿用帧:carried → readable False / trusted True(同节点沿用语义)
-    bs_carry = _bs_hp_from_frame(80, readable=False, source='carried')
-    view2 = game_state_view(bs_carry, GameState())
-    assert (view2.hp, view2.hp_readable, view2.hp_trusted) == (80, False, True)
-    # 先验帧:prior → 两位全 False(保守,决策 fail-closed)
-    bs_prior = _bs_hp_from_frame(82, readable=False, source='prior')
-    view3 = game_state_view(bs_prior, GameState())
-    assert (view3.hp_readable, view3.hp_trusted) == (False, False)
-
-
-def test_view_hp_settlement_cover_adjacent_frame_readable_true_declared() \
-        -> None:
-    """结算邻接帧行为差申报(对抗审 v2 发现 2):结算覆盖以 observation 源
-    写入 → 视图 readable=True =「最近观察」语义(ADR-0282 两来源可信度
-    等同真读的如实化),非常态帧行为差,对拍锁点名覆盖。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.hp, 90, sig=_sig())
-    apply_settlement_cover(bs, hp_after=41, streak_after=-1, killed=False)
-    view = game_state_view(bs, GameState())
-    assert view.hp == 41 and view.hp_readable is True, \
-        '结算覆盖帧 readable=True(最近观察语义,申报行为差)'
-    assert view.hp_trusted is True
-
-
 def test_hp_gate_equivalence_three_windows() -> None:
     """等价证明实证面(方案 §2.4):新链 gated_hp(容器真值, 视图 readable)
     与旧链语义在三窗逐位一致——①gap==1 真读帧:结算真值覆盖;②gap∈2..3
@@ -463,57 +307,39 @@ def test_encounter_read_point_gates_view_truth() -> None:
         'decide_encounter_ev 消费的是施门后 state(读点域接线在位)'
 
 
-def test_adapter_decision_state_readable_single_source_from_view() -> None:
-    """消费侧 readable 单一源 = 视图映射(对抗审 v2 发现 2 ①腿补):门输入
-    readable 与 st.hp_readable 同源(禁快照位残根双源)。判别场景 = gap∈2..3
-    放宽窗:视图沿用帧(readable False)→ 门放行结算覆盖;若误用快照位
-    (True)则窄窗不覆盖——两形态输出可分。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.adapter import (
-        decision_state,
+def test_adapter_decision_seams_retired_tombstone() -> None:
+    """T-116 段2 退役墓碑(原 readable 单一源锁+back_max 闸门三锁收口):
+    adapter 缝(decision_state/_anchor_state)已随 T-116 段 2 退役删除
+    (snapshot_from_obs 纯容器锚),符号复活即红。原两锁的断言面随之
+    消亡:decision back_max 供数单一源 = 容器 back_capacity_of(无 adapter
+    触点);Snapshot/PrepObservation back_size 死字段墓碑与 adapter 源
+    扫描归 test_cw_w5_sim_retirement 哨兵(波 5b)。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        adapter as _adapter,
     )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
-        Snapshot,
-        SubstateClassification,
-    )
-    sess = _session_with_settlement(40, 8, 8)   # t=10 → gap=2(放宽窗)
-    bs = board_state_of(sess)
-    # 沿用帧构造:先真读落值再 carry(值保持,来源翻沿用)→ 视图 readable False
-    bs.observe(bs.hp, 75, sig=_sig())
-    bs.carry(bs.hp, frame='p1-r4', sig=_sig())
-    snap = Snapshot(classification=SubstateClassification(name='prep_shop'),
-                    plane=1, round_num=10, hp=75, hp_readable=True)
-    st = decision_state(snap, sess)
-    assert st.hp_readable is False, 'readable = 视图映射(沿用帧 False)'
-    assert st.hp == 40, \
-        ('readable False → 放宽窗(gap=2)结算覆盖;快照位残根(True)会'
-         '停在 75,本断言即双源判别')
+    assert not hasattr(_adapter, 'decision_state'), \
+        'adapter.decision_state 应已删除(T-116 段 2 缝收敛)'
+    assert not hasattr(_adapter, '_anchor_state'), \
+        'adapter._anchor_state 应已删除(T-116 段 2 缝收敛)'
 
 
 def test_adapter_decision_state_back_max_from_container() -> None:
-    """闸门三锁(back_max 语义裁决):decision_state 的 back_max 供数 =
-    容器 back_layout(经视图单一源)——快照 back_size 是假动态(写端 =
-    len(「后排-N」)恒基线前缀 6,扩展档独立前缀区不进计数,裁决材料 F3)
-    不再进决策链;snapshot.back_size 字段保留(契约位)。判别场景 = 容器
-    8 vs 快照 6 两值源可分;容器空(引导窗)数值面与旧链一致(6)。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.adapter import (
-        decision_state,
+    """闸门三语义归宿注(原锁收口):decision back_max 供数单一源 =
+    容器 back_capacity_of——T-116 段 2 删 adapter.decision_state 缝后
+    本锁断言面消亡,语义守护迁 test_cw_w5_sim_retirement 哨兵
+    (Snapshot/PrepObservation back_size 死字段墓碑 + src 零回写扫描,
+    波 5b 版本演进移除 T-23-r1 §⑤.2)。本位保留符号墓碑防缝复活。"""
+    import dataclasses as _dc
+
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        adapter as _adapter,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
         Snapshot,
-        SubstateClassification,
     )
-    sess = _session_with_settlement(None, None)
-    bs = board_state_of(sess)
-    bs.observe(bs.back_layout, 8, sig=_sig())   # 容器裁决值(8 格局)
-    snap = Snapshot(classification=SubstateClassification(name='prep_shop'),
-                    plane=1, round_num=10, back_size=6)
-    st = decision_state(snap, sess)
-    assert st.back_max == 8, \
-        '决策链 back_max = 容器值(快照假动态 6 不回流——两值源可分)'
-    # 引导窗(容器空):数值面与旧链一致(快照缺省 6)
-    sess2 = _session_with_settlement(None, None)
-    st2 = decision_state(snap, sess2)
-    assert st2.back_max == 6, '容器空 → 引导窗缺省,数值面零变化'
+    assert not hasattr(_adapter, 'decision_state')
+    assert 'back_size' not in {f.name for f in _dc.fields(Snapshot)}, \
+        'Snapshot.back_size 死字段应已移除(波 5b 版本演进收口)'
 
 
 def test_posture_flip_guard_predicate_unchanged_on_view_outputs() -> None:
@@ -620,18 +446,17 @@ def test_phase_field_spec_no_invalid_keys_added() -> None:
 # ============================================================ 调用点基线(批首 grep 口径)
 
 def test_strategy_input_state_call_sites_baseline() -> None:
-    """孤儿态钉零锁(W6 波 4 重写,原调用点基线锁退役):W6 波 4 取帧点
-    全部改道容器直读(board_state_of 同款),src 树内 ``strategy_input_state(``
-    直调 = 0——cw_bs_view.strategy_input_state 成孤儿,退役挂波 5;孤儿
-    期任何复活调用点(新取帧点误接视图口)即本锁红,防退役前静默扩面。"""
+    """退役落地锁(原孤儿态钉零锁收口):波 5b 双删后 cw_bs_view 模块本体
+    已删除,src 树内 ``strategy_input_state(`` 直调恒 0——任何复活调用点
+    (新取帧点误接已退役视图口)即本锁红,防退役后静默回流。"""
     from pathlib import Path
     root = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
             / 'currency_war')
+    assert not (root / 'kernel' / 'cw_bs_view.py').exists(), \
+        'cw_bs_view.py 应已物理删除(波 5b 双删)'
     hits: list[str] = []
     for path in root.rglob('*.py'):
-        if path.name == 'cw_bs_view.py':
-            continue   # 模块内部定义/自调不计
         text = path.read_text(encoding='utf-8')
         hits += [f'{path.relative_to(root)}:{m.start()}'
                  for m in re.finditer(r'strategy_input_state\(', text)]
-    assert not hits, f'孤儿态被破坏(strategy_input_state 直调复活):{hits}'
+    assert not hits, f'退役面被破坏(strategy_input_state 直调复活):{hits}'

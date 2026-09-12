@@ -134,9 +134,18 @@ from sr_od.application.currency_war.sim.cw_sim_invest import SimInvestProfile
 # diff 对 sim 零行为位移)。守卫:指纹≠钉定值 → 带因跳过(可见非静默),
 # 重记归池属批(前提=池语料审计+再生窗口冻结);指纹相符时锚继续做
 # unintended drift 哨兵。
-_PINNED_POOL_FINGERPRINT = '002e53055e38b160'
+# 波 5b 重钉(2026-09-12,T-122):T-98 段①曾重记 460e+53b717b9(锚复活),
+# 该编辑随测试仓恢复 86802d0(瘦身裁定)丢失,本批按池属批口径重钉——
+# 活池指纹未变(460e6031e2f4ae06,T-98 后未再生;Δ池再生被 _DELTA_POOL_
+# FROZEN 冻结门把守,live journal 语料审计=2 轮快照全部缺 hp 端点,再生
+# 窗裁决前置不成立);digest 3a1f38b4… = 本批桥退役消点(engine_p1 五装箱
+# 点切喂入口直写+容器直读)/双删/back_size 移除后 6 seeds 投影,批内
+# 前后逐位一致(零漂移实证,对拍脚本=.debug/temp/w5b_zero_drift.py),
+# 与 T-98 时代 53b717b9 的差异来自其后续已落库行为批(T-120 hp 时基等),
+# 非本批位移。新锚继续做 unintended drift 哨兵。
+_PINNED_POOL_FINGERPRINT = '460e6031e2f4ae06'
 _ZERO_DRIFT_DIGEST_6 = (
-    '30e215ff7ccfaf81ab8dd860539338e517cffc2e82a60973685019687e393362')
+    '3a1f38b41e5b043bd086b0dbaa91064a45c0f17087364b50292055324db7b1b4')
 
 
 def _behavior_projection(results) -> str:

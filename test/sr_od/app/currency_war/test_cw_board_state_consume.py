@@ -38,10 +38,6 @@ from sr_od.application.currency_war.kernel.cw_board_state import (  # noqa: E402
 from sr_od.application.currency_war.kernel.cw_board_state import (
     register_sig_actors as _register_sig_actors,
 )
-from sr_od.application.currency_war.kernel.cw_bs_view import (
-    game_state_view,
-    strategy_input_state,
-)
 from sr_od.application.currency_war.kernel.cw_state import (
     BenchChar,
     GameState,
@@ -69,7 +65,12 @@ def _hsig() -> _ChannelSig:
 
 
 
-# ============================================================ §8.7 消费适配器
+# ============================================================ 共用 helper
+
+# (§8.7 消费适配器锁族(game_state_view/strategy_input_state 语义 7 锁)
+#  已随 kernel/cw_bs_view 文件退役同批删除(波 5b 双删;锁与所辖面同批
+#  退役,test_cw_replay_session_restore 先例)——适配器消费切换后生产
+#  直调=0,文件本体删除,视图语义无消费面可锁。)
 
 
 def _synth_bs_with(st: GameState) -> BoardState:
@@ -80,102 +81,6 @@ def _synth_bs_with(st: GameState) -> BoardState:
     )
     synthesize_from_game_state(bs, st, at_round='p1-r2')
     return bs
-
-
-def test_view_modeled_domains_equal_frame_on_clean_frame() -> None:
-    """§8.7 等价性:常态帧(无失读)下,已建模域视图值与旧直读帧逐位一致。"""
-    st = GameState()
-    st.gold = 37
-    st.hp = 82
-    st.streak = 3
-    st.level = 5
-    st.xp_progress = (2, 8)
-    st.board = {'列车同行': 2}
-    st.node_type = 'battle'
-    st.plane = 1
-    st.round_num = 4
-    st.active_strategies = ['白银投资']
-    st.selected_difficulty = 'A8'
-    bs = _synth_bs_with(st)
-    view = game_state_view(bs, st)
-    assert view.gold == 37 and view.gold_readable is True
-    assert view.level == 5 and view.streak == 3
-    assert view.xp_progress == (2, 8)
-    assert view.board == {'列车同行': 2}
-    assert (view.plane, view.round_num, view.node_type) == (1, 4, 'battle')
-    assert view.active_strategies == ['白银投资']
-
-
-def test_view_carries_last_good_value_on_miss_frame() -> None:
-    """§2.2 记录模型消费语义:失读帧(帧 raw 0 + readable False)下视图返回
-    BoardState 沿用值——适配器存在的核心语义(批一镜像 + 消费切换闭环);
-    回放语料无失读,此语义为 live 申报面。"""
-    st = GameState()
-    st.gold = 37
-    bs = _synth_bs_with(st)
-    # 失读帧:raw 0 + readable False(读屏 miss 形态)
-    miss = GameState()
-    miss.gold = 0
-    miss.gold_readable = False
-    view = game_state_view(bs, miss)
-    assert view.gold == 37, '失读帧消费沿用值,禁 raw 0 兜底入决策'
-    assert view.gold_readable is True
-
-
-def test_view_bootstrap_empty_bs_passes_frame_through() -> None:
-    """引导窗(bs 未观察)→ 帧值透传:与旧 ``last_state or GameState()``
-    分支同语义,首帧前无行为差。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    fr = GameState()
-    fr.gold = 12
-    fr.plane = 2
-    fr.round_num = 3
-    view = game_state_view(bs, fr)
-    assert view.gold == 12 and view.plane == 2 and view.round_num == 3
-
-
-def test_view_hp_supplies_pre_gate_truth() -> None:
-    """hp 域(W5 收编):视图供**门前真值**(记录/消费分离)——消费侧
-    施门(gated_hp)在策略读点显式进行(mandate adapter/encounter λ 键
-    读点),kernel 不可反向依赖策略实现;视图不再透传帧的门后值。
-    详锁 = test_cw_w5_passthrough_adoption.py hp 专项族。"""
-    st = GameState()
-    st.hp = 82
-    bs = _synth_bs_with(st)
-    fr = GameState()
-    fr.hp = 76   # 旧链门后消费值(与容器真值不同)
-    fr.hp_readable = True
-    view = game_state_view(bs, fr)
-    assert view.hp == 82, 'hp 消费 = 容器门前真值(施门迁消费侧)'
-    assert view.hp_readable is True, '真读帧 readable = observation 映射'
-
-
-def test_view_refresh_cost_policy_none_is_base_not_zero() -> None:
-    """§3.3.4 消费策略申报:刷价未读到(None)→ 建模基价显式缺省(原
-    ``or 2`` 兜底形态的搬迁归宿,数值恒同);现场识别值直通。"""
-    bs = BoardState(schema_version=BS_SCHEMA_VERSION)
-    view = game_state_view(bs, GameState())
-    assert view.shop_refresh_cost == 2
-    bs.observe(bs.shop_refresh_cost, 1, sig=_sig())   # 长线利好态现场识别值
-    assert game_state_view(bs, GameState()).shop_refresh_cost == 1
-
-
-def test_strategy_input_state_session_none_is_empty_view() -> None:
-    """调用面单一源:session None(局外/裸调用)→ 空态视图,与旧
-    ``or GameState()`` 分支同语义。"""
-    view = strategy_input_state(None)
-    assert isinstance(view, GameState)
-    assert view.gold == 0 and view.plane == 1
-
-
-def test_strategy_input_state_reads_board_state(tmp_path) -> None:
-    """调用面单一源:正常 session → view(board_state_of(session),
-    last_state);BoardState 有值域以记录值为准。"""
-    sess = SimpleNamespace(last_state=None)
-    bs = board_state_of(sess)
-    bs.observe(bs.gold, 55, sig=_sig())
-    view = strategy_input_state(sess)
-    assert view.gold == 55
 
 
 # ============================================================ §3.4 单次逻辑写入口
