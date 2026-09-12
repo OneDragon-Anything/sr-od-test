@@ -7,9 +7,12 @@
 - E(cap 空槽补部署,dd-016):``residual_fill_plan`` 对留置散牌生成
   补部署计划;同名禁双跳过、cap 动态停、选排 fallback、两排皆满停。
 """
+
+# ⚠️ 待归并标记(2026-09-12 data 域解体批;台账 = .debug/temp/cw_obs_rebuild/DEBT.md):
+# 本文件主体 = cw_op_equip_all 的策略执行行为(拉黑登记/补部署计划),
+# 非 data 表——待装备策略主题归并,禁按 data 域处置。
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.operations.cw_op.cw_op_equip_all import (
     DRAG_FAIL_BLACKLIST_LIMIT,
     equip_drag_key,

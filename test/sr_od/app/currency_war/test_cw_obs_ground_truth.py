@@ -73,19 +73,33 @@ class TestNodeRowGroundTruth:
 # ===== 后台格数 CV 通道(cw_back_layout;真帧 = screens/货币战争-备战 布局族) =====
 
 class TestCvBackSlotsGroundTruth:
-    """std 剖面三档锚:6/7/8 各一帧(档位真值 = 交互实锤 + 模块 docstring 标定)。"""
+    """std 剖面三态探针真帧锚(5 代表帧覆盖全部分支 + 越界守卫)。"""
 
     def test_six_grid_frame(self):
-        # run26 崩坏现场(6 格;W292 事故响应批真值帧)
+        # run26 崩坏现场(6 格;W292 事故响应批真值帧,事故形态直接回归锚)
         assert cbl_slots('后排6槽-run26崩坏现场.png') == 6
 
+    def test_six_grid_none_branch(self):
+        # shop_closed 帧(none,none)→ 6:两端纯背景分支
+        assert cbl_slots('shop_closed.webp') == 6
+
     def test_seven_grid_frame(self):
-        # 佩佩局拖测后(7 格;2026-08-26 交互实锤 + 空槽暗框中心逐位吻合)
+        # 佩佩局拖测后(7 格;(slice,slice) 切片签名分支;2026-08-26 交互实锤)
         assert cbl_slots('后排7槽-佩佩局-拖测后.png') == 7
 
     def test_eight_grid_frame(self):
-        # 狸猫局(8 格;docstring 标定分布 8 格档 38.8-65.6 来源帧族)
+        # 狸猫局(8 格;(full,full) 分支;docstring 标定分布 8 格档 38.8-65.6 来源帧族)
         assert cbl_slots('后排8槽-狸猫局.webp') == 8
+
+    def test_eight_grid_empty_slot_still_full(self):
+        # P3 局(cap11):左 1 空槽暗框 = 整格存在证据(占用态门消解旧不可判带)→ 8
+        assert cbl_slots('后排8槽-P3局.webp') == 8
+
+    def test_non_1080p_frame_undeterminable(self):
+        # 非 1080p 小帧:越界守卫 → None(不可判退公式,不猜)
+        import numpy as np
+        from sr_od.application.currency_war.obs.cw_back_layout import cv_back_slots
+        assert cv_back_slots(np.zeros((600, 900, 3), dtype=np.uint8)) is None
 
 
 def cbl_slots(name: str):

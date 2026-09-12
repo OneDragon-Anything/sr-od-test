@@ -167,6 +167,23 @@ class TestLevelSafety:
         assert cobs.read_level(ctx, _SCREEN, plane=2, round_num=3) == \
             _expected_level(3, 2)
 
+    def test_level_miss_inverts_from_xp_bar(self, test_context, monkeypatch):
+        # 真帧锁(2026-08-26 佩佩局实弹修复):等级漏读 → 经验条反推真级
+        # ("0/4"→lv3);仍读不到才退期望曲线。旧期望兜底 4 → cap−level=0 →
+        # 后排选 6 格档 → 佩佩@slot7 窗口未被枚举丢读(事故背书)
+        from pathlib import Path
+        from one_dragon.utils import cv2_utils
+        from one_dragon.utils.file_utils import get_project_root
+        img = cv2_utils.read_image(str(
+            get_project_root() / 'sr-od-test' / 'screens' / '货币战争-备战'
+            / '后排7槽-佩佩局-拖测后.png'))
+        assert img is not None, '佩佩局真帧缺失'
+        monkeypatch.setattr(cobs, 'read_level_raw_opt', lambda ctx, scr: None)
+        got = cobs.read_level(test_context, img, 1, 1)
+        assert got == 3, f'经验条反推应为 lv3(0/4),实得 {got}'
+        monkeypatch.setattr(cobs, 'read_xp_progress', lambda ctx, scr, **kw: None)
+        assert cobs.read_level(test_context, img, 1, 1) == cobs._expected_level(1, 1)
+
 
 # ===== cap 防抖门(ADR-0286/0420):域内直通 / 重读入域 / 双帧一致采信 / 其余拒信 =====
 

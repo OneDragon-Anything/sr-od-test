@@ -19,6 +19,10 @@
 §7.3(驱动事件映射·登记挂点纪律:best-effort 失败不阻塞读链)/§9.1(实例按
 spec_key 唯一);BoardState 数据结构设计 §5.1(词缀效果辖域申报·挂点接线)。
 """
+
+# ⚠️ 待归并标记(2026-09-12 data 域解体批;台账 = .debug/temp/cw_obs_rebuild/DEBT.md):
+# 本文件主体 = kernel/cw_affix_effects 运行时挂点接线锁(kernel 语义),
+# 非 data 表——待 kernel 接线主题归并,禁按 data 域处置。
 from __future__ import annotations
 
 import inspect

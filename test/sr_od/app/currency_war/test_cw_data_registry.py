@@ -1,22 +1,16 @@
-"""test_cw_data_registry 数据/标定族主题锁(CUT8 收缩批,上限 25 行)。
+"""装备识别与身份真值锚主题锁(obs 域;2026-09-12 data 域解体批改题)。
+
+2026-09-12 拆分:本文件原为「数据/标定族」杂物抽屉——data 表四种合同
+(引用完整/值域守恒/派生一致/登记门 + plaza 快照对拍)已迁
+``test_cw_data_tables.py``;公式路由/CV 探针帧 → test_cw_obs_layout /
+test_cw_obs_ground_truth;等级 XP 反推 → test_cw_obs_safety_semantics。
+本文件现役主题 = **装备识别与身份真值锚**(read_equipped_below /
+identify_slots / find_tomes / find_supply_boxes / read_star / below-icon
+diff / owned-order 管线计算 / layout 钩子降级),待装备识别主题批再归并。
 
 判据(用户三次递进裁定):保留核四类——①读取正确性直接喂决策的真值锚
 (每生产分支 1 行)②金钱净守恒 ③fail-closed 拒绝 ④入口 smoke;登记门
-每文件 ≤1。本文件构成(分支记账见 reports/_cluster_CUT8.md):
-- registry 登记门 1(chars 全费用覆盖)+ 注册表现算真值 1(plaza 官方
-  API 冻结条目全字段对拍,8 条全量);
-- K8 闭合 2(配方名 ↔ 装备注册表互证 + 36 进阶全量有配方);
-- CV/OCR 真值锚每真分支 1:read_equipped_below(前排 3 件/2 件布局/
-  后排最右 scale/空槽零假阳/多槽单帧)、identify_slots(8 格全位锚/
-  7 格生产参数锚/空槽零本底)、find_tomes/find_supply_boxes(金卡命中/
-  箱互斥)、read_star(全帧真值表)、cv_back_slots(探针真帧代表)、
-  read_level(OCR 漏读→经验条反推)、below-icon diff 验穿;
-- layout 钩子代表 1(未建档档不停机只留证,run 27 降级语义);
-- 读取管线计算锁:owned-order 换行负/行内跳格正、_select_equipped_layout
-  fail-closed(D-61)、equip_all 槽簿记、cap-diff 公式路由。
-被砍族:逐字段/逐派生 chars 锁、enemy_data 计算锁族、core_count_for 族、
-layout 仲裁/防抖/T-7 未知态/探针合成噪声族、9/10/11 档参数帧变体、
-模板尺寸/守卫计数锁。事故背书不再是保留理由(实机对账+sim 已兜底);
+每文件 ≤1。事故背书不再是保留理由(实机对账+sim 已兜底);
 被砍测试 git 可复活。
 """
 from __future__ import annotations
@@ -41,42 +35,6 @@ _REPO_ROOT = Path(__file__).resolve().parents[5]   # 仓库根(StarRailOneDragon
 _TEST_ROOT = Path(__file__).resolve().parents[4]   # 测试仓根(sr-od-test)
 FIXTURES = _TEST_ROOT / 'screens' / '货币战争-备战'  # 备战屏 fixture 目录
 
-# ==================== chars:registry 登记门 + 注册表现算真值 ====================
-def test_registry_complete_all_costs() -> None:
-    """注册表覆盖全费用 1-5;每条费用非空。"""
-    for cost in range(1, 6):
-        assert len(chars_by_cost(cost)) > 0, f"{cost}费应有角色"
-    # 总数合理(V4.4 ~70+,开拓者按命途合并性别)
-    assert len(CHARACTERS) > 60
-
-
-# ---- plaza 官方接口对拍守卫 ----
-# plaza 数据层 cw_chars_data.py 已删(2026-09 治理审计:零消费,生成器改对拍器);
-# 本守卫把「注册表 vs 官方接口」的对拍从纯口头升级为接线测试:抽查条目冻结自 plaza
-# config API V4.4(与 tools/cw/gen_plaza_chars.py 数据源同源),全量遍历 8 条比
-# cost/position/traits。全量对拍跑 `uv run python tools/cw/gen_plaza_chars.py`。
-_PLAZA_SAMPLE_POOL = (  # (plaza_id, 规范名, cost, 站位, traits);站位/费用=官方字段值
-    ("1001", "三月七", 1, "Back", ("列车同行", "护盾")),
-    ("1014", "Saber", 3, "Common", ("命运圣杯", "能量")),
-    ("1202", "停云", 1, "Back", ("仙舟", "能量")),
-    ("1304", "砂金", 2, "Front", ("公司", "追击", "护盾")),
-    ("1408", "白厄", 3, "Front", ("救世主",)),
-    ("1501", "火花", 4, "Front", ("星间旅人", "战技点", "欢愉")),
-    ("15061", "银狼LV.999", 3, "Front", ("星核猎手", "欢愉", "头号玩家")),
-    ("8009", "开拓者·欢愉", 4, "Back", ("列车同行", "能量", "欢愉")),
-)
-_PLAZA_POSITION = {"Front": "front", "Back": "back", "Common": "flex"}
-
-
-def test_plaza_official_snapshot_guard() -> None:
-    """全量遍历 8 条 plaza 冻结条目,断言 cost/position/traits 与 CHARACTERS 一致
-    (条目池小且纯内存比对,采样无收益只留盲区——瘦身批 F6 由固定种子抽 5 改全量)。"""
-    for pid, name, cost, pos, traits in _PLAZA_SAMPLE_POOL:
-        ch = CHARACTERS[name]
-        assert ch.cost == cost, f"{pid} {name}: cost {ch.cost} != plaza {cost}"
-        assert ch.position == _PLAZA_POSITION[pos], f"{pid} {name}: position {ch.position} != plaza {pos}"
-        reg_traits = set(ch.factions) | set(ch.flows) | ({ch.independent} if ch.independent else set())
-        assert reg_traits == set(traits), f"{pid} {name}: traits {sorted(reg_traits)} != plaza {sorted(traits)}"
 
 
 # ==================== equipment ====================
@@ -332,30 +290,6 @@ def test_slot8_all_positions_identified(templates):
     assert got == {1: '藿藿', 2: '爻光', 6: '开拓者·欢愉', 7: '狸小虎', 8: '狸小龙'}, got
 
 
-def test_cap_diff_routing():
-    """ADR-0385 口述公式「后台格数 = 6+(cap−level)」路由:
-    diff0→6 / diff1→7(已建档,2026-08-26 佩佩局实锤)/ diff≥2→8;
-    diff<0(读错族)按 0;diff>2(域外)按 2。level 单独不参与。"""
-    from sr_od.application.currency_war.obs.cw_back_layout import (
-        _LAYOUT_PREFIX,
-        back_slots_from_cap_diff,
-        fallback_back_slots,
-    )
-    # 三真值档(7 = 佩佩局交互实锤建档;9/10/11 仍是循环论证幻影,已删)
-    assert set(_LAYOUT_PREFIX) == {6, 7, 8}
-    assert _LAYOUT_PREFIX[6] == '后排'
-    assert _LAYOUT_PREFIX[7] == '后排7槽'
-    assert _LAYOUT_PREFIX[8] == '后排8槽'
-    for n in (9, 10, 11, 12):
-        assert n not in _LAYOUT_PREFIX
-    # 公式路由
-    assert back_slots_from_cap_diff(0) == 6
-    assert back_slots_from_cap_diff(1) == 7    # 7 格已建档 → 直读(佩佩局锚)
-    assert back_slots_from_cap_diff(2) == 8
-    assert back_slots_from_cap_diff(3) == 9    # 上限 9(用户口述 2026-09-11,board_structure.md;e4972b43 diff=5 实拍 9 格吻合封顶;diff>2 形状待实机)
-    assert back_slots_from_cap_diff(-1) == 6   # cap<level 读错族按 0
-    slots = fallback_back_slots()
-    assert len(slots) == 6 and slots[0][0] == 1
 
 
 def test_resolve_back_slots_feeds_container(monkeypatch: pytest.MonkeyPatch):
@@ -419,65 +353,38 @@ def _layout_fresh(monkeypatch, tmp_path):
     以此为范,防桩面漂移):
     ①模块级全局复位——未知态计数器/通道冲突节流表/选档日志(测试纪律 4:
     生产路径含模块级全局时 setup 一并桩化),用例结束再清一次防泄漏;
-    ②冲突日志重定向 tmp_path + 截图采集桩(测试纪律 2:不写真实 .debug/;
-    附带修好原 test_unknown_freeze 未桩 journal 直写生产路径的卫生缺口)。
-    yield 出 journal 路径,留证断言直接读它。"""
+    ②观察冲突证据归宿装 tmp 账本 + 截图采集桩(测试纪律 2:不写真实
+    .debug/)。原独立证据文件桩 ``_CONFLICT_JOURNAL`` 已随删除波 1 退役
+    (cw_observe 写端收编,入库 3d4461438),证据行现归宿 = 统一 state
+    账本 obs_event 行型——装配 sink + run_id 供给槽(局外行账本拒写),
+    并注入 BoardState 供给 provider(该槽缺省关,不注入则证据行不落,
+    与生产「无 sink 拒写」同语义)。
+    yield 出账本 jsonl 路径,留证断言直接读它(obs_event 行形状:field/
+    verdict 顶层,old/new/ctx 附加键内嵌 ``observed``)。"""
     import sr_od.application.currency_war.kernel.cw_observe as cobs
     import sr_od.application.currency_war.obs.cw_back_layout as cbl
-    journal = tmp_path / 'obs.jsonl'
+    from sr_od.application.currency_war.kernel import (
+        cw_state_journal,
+        cw_telemetry_exit,
+    )
+    from sr_od.application.currency_war.kernel.cw_board_state import (
+        board_state_of,
+    )
     cbl.reset_layout_unknown_state()
-    monkeypatch.setattr(cobs, '_CONFLICT_JOURNAL', journal)
+    journal = tmp_path / 'state' / 'journal.jsonl'
+    cw_state_journal.install_state_telemetry(
+        journal, flush_every=1, run_id_provider=lambda: 'run-layout-hook')
+    bs = board_state_of(None)
+    monkeypatch.setattr(cw_telemetry_exit, '_obs_event_board_provider',
+                        lambda: bs)
     monkeypatch.setattr(cobs, 'cw_shot_unique', lambda img, label: f'{label}.png')
     monkeypatch.setattr(cbl, '_channel_conflict_ts', {})
     monkeypatch.setattr(cbl, '_last_sel_log', None)
     yield journal
+    cw_state_journal.reset_state_telemetry()
     cbl.reset_layout_unknown_state()
 
 
-def test_cv_channel_grid_counts(templates):   # noqa: ARG001  复用模块级模板加载惰性
-    """CV 通道实测格数:占用态门三态探针(布局档对账批;真 fixture 全量标定)。
-
-    判据 = 每探针「整窗+两半窗」std 三段形态:none(整窗 <6)/ 擦线不可判
-    (整窗 ∈[6,12) → None 退公式)/ full(整窗 ≥12 ∧ 半窗对称比 <2.5)/
-    slice(整窗 ≥12 ∧ 对称比 ≥2.5);组合 (full,full)→8 /
-    (slice,slice)→7 / (none,none)→6 / 混合→None 退公式。
-    标定数字见 ``_PROBE_*`` 常量块注释。
-
-    8 格帧(狸猫/全位验证/cap9/cap10,两端整格 50.7-65.6,对称比 1.0-1.2)→ 8;
-    **P3 局(cap11)左 1 空槽暗框 = 整格存在证据**(整窗 38.8、对称比 1.0)
-    → 8(旧整窗判据落不可判带退公式;占用态门消解旧不可判带,运行值不变
-    仍 8 格);
-    6 格帧(shop_closed/a8_start/prep_1-6/deployed_p1r9/r1_idle_stop)→ 6;
-    「后排6槽-P2开局局」→ **6**(旧「7 槽」观察实为 6 格幻影,W535 按实格数
-    改名);
-    **真 7 格帧(佩佩局×2 + deployed_r9_7grid 停机哨兵帧)→ 7**(slice,
-    slice:不对称比 5.3-30.8 双双过分界;旧整窗判据落不可判带 → None 退
-    公式——占用态门把 ADR-0390 勘误案从「公式兜底」升级为「探针直读」)。
-    非 1080p 小帧 → None(越界守卫)。
-
-    run 26 崩坏现场帧(后排6槽-run26崩坏现场.png,编排者 VLM+右端位置双重
-    确认 = 标准 6 格正样本)→ 6:事故形态的直接回归锚。
-    """
-    import numpy as np
-
-    from sr_od.application.currency_war.obs.cw_back_layout import cv_back_slots
-    # CUT7 收缩:16 帧 → 6 代表帧(2026-09-09)。探针门分支覆盖:
-    # (full,full)→8 = 狸猫局;占用态门消解不可判带(空槽暗框=整格存在)
-    # = P3 局;(slice,slice)→7 = 佩佩局拖测后;none→6 = shop_closed;
-    # 事故回归锚 = run26 崩坏现场帧(6 格);越界守卫 = 非 1080p 小帧。
-    # 被删 10 帧均为对应分支的同签名数据变体(满级/双宝钻=full 支、
-    # 佩佩拖测前/r9_7grid=slice 支、P2开局/a8_start/prep_all/p1r9/
-    # r1_idle=none 支),探针三段判据错一版必被代表帧暴露。
-    for fn, want in (
-            ('后排8槽-狸猫局.webp', 8),
-            ('后排8槽-P3局.webp', 8),   # 空 1 槽暗框=整格存在(占用态门消解旧不可判带)
-            ('后排7槽-佩佩局-拖测后.png', 7),   # slice,slice:两端切片签名 → 直读 7
-            ('shop_closed.webp', 6),
-            ('后排6槽-run26崩坏现场.png', 6)):
-        img = cv2_utils.read_image(str(FIXTURES / fn))
-        got = cv_back_slots(img)
-        assert got == want, f'{fn}: CV 实测 {got} ≠ 期望 {want}'
-    assert cv_back_slots(np.zeros((600, 900, 3), dtype=np.uint8)) is None
 
 
 # ===== 7. 佩佩局真 7 格板面识别(2026-08-26 用户口述真值;ADR-0389/0390) =====
@@ -531,22 +438,6 @@ def test_pepe_roster_and_template(templates):
     assert [c.char_id for c in out] == ['万敌']
 
 
-def test_read_level_xp_backinference(test_context, monkeypatch):
-    """等级漏读 → 经验条反推真级(2026-08-26 佩佩局实弹修复):
-
-    OCR 漏读 Lv.3 小字 → 旧 _expected_level(P1,R1) 兜底 4 → cap−level=0
-    → 后排选 6 格档 → **佩佩@slot7 窗口未被枚举丢读**。修:漏读时
-    read_xp_progress 的 xp_to_next 经 XP_TO_NEXT_LEVEL 倒查("0/4"→lv3),
-    仍读不到才退期望曲线。"""
-    import sr_od.application.currency_war.obs.cw_observation as cwo
-    img = cv2_utils.read_image(str(FIXTURES / '后排7槽-佩佩局-拖测后.png'))
-    # 等级区漏读(直读单一源 = read_level_raw_opt,patch 该缝)
-    monkeypatch.setattr(cwo, 'read_level_raw_opt', lambda ctx, scr, level=None: None)
-    got = cwo.read_level(test_context, img, 1, 1)
-    assert got == 3, f'经验条反推应为 lv3(0/4),实得 {got}'
-    # 经验条也漏(全黑)→ 退期望曲线(旧行为)
-    monkeypatch.setattr(cwo, 'read_xp_progress', lambda ctx, scr, **kw: None)
-    assert cwo.read_level(test_context, img, 1, 1) == cwo._expected_level(1, 1)
 
 
 # ===== layout 钩子代表(CUT8:布局留证/停机降级族只留此 1 行)=====
@@ -587,10 +478,10 @@ def test_layout_hook_no_stop_only_evidence(
     journal = _layout_fresh
     assert journal.exists(), '降级后必须留证'
     rec = _json.loads(journal.read_text(encoding='utf-8').strip().splitlines()[-1])
-    assert rec['field'] == 'back_layout_unarchived_grid'
-    assert rec['old'] == 9 and rec['cv_readings'] == [9, 9, 9]
+    assert rec['row'] == 'obs_event' and rec['field'] == 'back_layout_unarchived_grid'
+    assert rec['observed']['old'] == 9 and rec['observed']['cv_readings'] == [9, 9, 9]
     assert '不停机' in rec['verdict']                        # 如实声明画面可能推进
-    assert not (journal.parent / '.debug/temp/currency_war/back_layout_stop_hook.flag').exists(), \
+    assert not (journal.parents[1] / '.debug/temp/currency_war/back_layout_stop_hook.flag').exists(), \
         '停机 flag 机制已废弃不得回流'
 
 
@@ -640,27 +531,6 @@ def test_star3_full_frame_truth(test_context: SrTestContext) -> None:
 
 
 # ==================== K8 闭合锁(自 test_cw_synthesis.py 逐字迁入) ====================
-# 装备合成图谱闭合 = 注册表登记门的合成域半边:配方名 ↔ 装备注册表互证,
-# 进阶全量有配方(K8 闭合;2026-08-26 官方 API 补齐后成立)。生产点名漂移兜底
-# (簇G 裁定:图谱漂移由本锁先红)。
-
-def test_all_recipe_names_in_roster() -> None:
-    """所有合成结果名(交叉+自配+光能系)都在装备注册表(OCR↔官方 API 双源对拍)。"""
-    names = (set(synth.CROSS_RECIPES) | set(synth.SELF_RECIPES)
-             | set(synth.GUANGNENG_CROSS_RECIPES) | set(synth.GUANGNENG_SELF_RECIPES))
-    miss = [n for n in names if n not in EQUIPMENT_ROSTER]
-    assert miss == [], f"注册表缺: {miss}"
-
-
-def test_all_advanced_have_recipe() -> None:
-    """36 件进阶全量有配方(K8 闭合;2026-08-26 官方 API 补齐后成立)。"""
-    from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
-    adv = [n for n, e in EQUIPMENTS.items() if e.category == '进阶']
-    assert len(adv) == 36
-    missing = [n for n in adv
-               if not (synth.cross_components(n) or synth.self_base(n))]
-    assert missing == [], f"进阶无配方: {missing}"
-
 
 if __name__ == '__main__':
     pytest.main([__file__])

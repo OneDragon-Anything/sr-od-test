@@ -341,8 +341,12 @@ def test_w3_retention_segment_granularity(tmp_path: Path) -> None:
     with jp.open('a', encoding='utf-8') as f:
         f.write('{bad half line\n')
     r1 = enforce_journal_retention(jp, now=now)
+    # T-91:summary 增段名册/实际淘汰归因两键(联动跟随者契约),锁语义不变
     assert r1 == {'checked': 3, 'retired': ['run_20260714_000000'],
-                  'rows_dropped': 3}
+                  'rows_dropped': 3,
+                  'segments': ['run_20260714_000000', 'run_20260902_000000',
+                               'run_20260911_000000'],
+                  'reasons': {'run_20260714_000000': 'age_real'}}
     kept_rows = [json.loads(ln) for ln in
                  jp.read_text(encoding='utf-8').strip().splitlines()
                  if not ln.startswith('{bad')]
@@ -398,7 +402,8 @@ def test_w3_retention_default_window_constant() -> None:
 def test_w3_retention_missing_file_noop(tmp_path: Path) -> None:
     """journal 缺席 = 零清理不炸(诚实缺失,装配面不受清理面波及)。"""
     r = enforce_journal_retention(tmp_path / 'nope' / 'journal.jsonl')
-    assert r == {'checked': 0, 'retired': [], 'rows_dropped': 0}
+    assert r == {'checked': 0, 'retired': [], 'rows_dropped': 0,
+                 'segments': [], 'reasons': {}}
 
 
 # ============================================================ ⑥ journal 宽容读回归

@@ -250,5 +250,7 @@ def test_idempotent_after_size_budget_pass(tmp_path: Path) -> None:
     r1 = enforce_journal_retention(jp, now=now, max_bytes=1)
     assert r1['retired'], '首跑触发体积窗回收'
     r2 = enforce_journal_retention(jp, now=now, max_bytes=1)
-    assert r2 == {'checked': r2['checked'], 'retired': [], 'rows_dropped': 0}, \
+    # T-91:summary 增段名册/实际淘汰归因两键(联动跟随者契约),锁语义不变
+    assert r2 == {'checked': r2['checked'], 'retired': [], 'rows_dropped': 0,
+                  'segments': r2['segments'], 'reasons': {}}, \
         '幂等:清后二跑零增量'
