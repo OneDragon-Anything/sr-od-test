@@ -50,7 +50,7 @@ uv run python sr-od-test/tools/cw_invest_compare.py --out .debug/temp/currency_w
 纪律出处:假环境对拍为确认性(strategy-work §3,不构成数值合法性来源);
 申报缺项判例 = T-204 落地审 §三-G2(直出偏置在树活跃而报告未列)。
 
-## 并行批 commit 口径(GIT_INDEX_FILE 私有索引 + CAS 提交锚,2026-09-13 起)
+## 并行批 commit 口径(GIT_INDEX_FILE 私有索引 + CAS 提交锚 + 落库完整性门,2026-09-13 起)
 
 本测试仓工作树被并行批共享,`.git/index`(共享暂存区)是全体批共用的可变态:
 A 批 `git add` 后滞留的暂存内容,会被 B 批随后的 `git commit` **整体卷走**
@@ -59,7 +59,8 @@ A 批 `git add` 后滞留的暂存内容,会被 B 批随后的 `git commit` **�
 下本批专属的 index 文件,由环境变量 `GIT_INDEX_FILE` 指向,git 的 add/commit
 只读写它,他批内容物理上进不了本笔提交。
 
-每批 commit 固定九步(在 `sr-od-test/` 目录执行;`<批id>`=任务号如 `t111`;
+每批 commit 固定十步(第 1-9 步建笔,第 10 步落库完整性门=T-147 集成;在
+`sr-od-test/` 目录执行;`<批id>`=任务号如 `t111`;
 `<文件...>`=本批逐文件点名,禁 `add -A`/目录级 add):
 
 ```powershell
@@ -83,6 +84,7 @@ while ($true) {
 Remove-Item $idx -ErrorAction SilentlyContinue
 git show --stat HEAD                         # 8. 核验:应恰=本批声明文件集
 git reset -q                                 # 9. 共享 index 对齐新 HEAD(清陈旧幻影)
+pwsh -File ..\tools\commit_tree_gate.ps1 -Repo $PWD -Commit $new -Paths '<文件...>' -SmokeTests '<测试目录,本批动了测试必给>'   # 10. 落库完整性门:不过禁 push
 ```
 
 原理与边界:
@@ -104,6 +106,16 @@ git reset -q                                 # 9. 共享 index 对齐新 HEAD(�
   清理);第 9 步 `git reset -q` 只重置共享 index、不动工作树,与并行批的
   私有索引操作互不干扰(git index.lock 自串行),旧口径滞留的暂存内容会被
   对齐清掉(内容仍在工作树,按九步重跑即可)。
+- **第 10 步落库完整性门 = push 前的机器断言(T-147 集成,细节以门脚本头注释
+  为准)**:三件核验(name-status 对账「入库面==申报面」/新增文件 cat-file 在树/
+  已删路径出树)+ 第四件 fresh 冒烟(临时 worktree 检出该笔跑 `pytest
+  --collect-only`)。**失败处置**:三件核验任一失败=提交面与申报面不符,按十步
+  重跑;冒烟本批改动面收集错误=修复后以新提交收口(并行期禁 amend/rebase);
+  冒烟其余收集错误只报告,归兄弟在飞面/预存缺陷,人工复核不阻塞。`-Commit`
+  必须给本笔 `$new` 禁裸 HEAD——门运行时 HEAD 可能已被并行批推进,裸 HEAD
+  验到的是别人的提交;预期集口径=name-status 新态路径(改名文件申报 R 行新
+  路径)。主仓调用验 committed src、测试仓调用验 committed 测试树,两仓各跑
+  各的门,T-7 新载体缺树事故的两个半边都盖住。
 - **同文件双写禁令不变**:本口径只治 commit 卷入与窗口竞速,不改变批间
   文件面互斥分配。
 - 主仓的并行 commit 契约归 orchestration.md(同构机制可参照本节),本节
@@ -330,6 +342,16 @@ sr-od-test/
       `screens/<画面名>/`）；缺帧 `pytest.skip` 不 error（离线机器可跑其余）；
     - 与第 19 条的关系：19 条管**文本/数据语料**（合成语料合法且优先），
       本条管**图片输入**专项（合成非法，真实为准）——「合成」一词两处含义不同。
+
+### 提交与落库(2026-09-13 T-147 起)
+
+22. **commit 后 push 前必跑落库完整性门**(双仓同规):每笔提交以
+    `tools/commit_tree_gate.ps1` 机器断言「入库面==申报面 + 新增在树/已删出树
+    + fresh 冒烟本批面零收集错误」,不过禁 push。背景=T-7 段3/段4/段5 三笔同型
+    缺陷:批量提交脚本解析 git status 的 R 行伪路径+吞错,新载体从未入树,本地
+    全量绿纯靠工作树 untracked 文件撑着,HEAD 不可运行/fresh 检出红——人工
+    核验防不住重演,须把验证视角对齐到提交树视角。用法与失败处置见
+    「并行批 commit 口径」第 10 步。
 
 ## 写锁/评审四问(进门自检)
 
