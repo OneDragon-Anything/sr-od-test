@@ -228,6 +228,93 @@ def test_deploy_deterministic_bench_empty_returns_noop_triple(
         f'{(placed, plan_empty, gate_fail)!r}'
 
 
+# ==================== T1-b:空板面(容器 board 域未观察)契约锁 ====================
+
+def test_deploy_deterministic_unobserved_board_is_legal_input(
+        monkeypatch) -> None:
+    """T1-b(T-175):容器 board 域未观察时 ``_deploy_deterministic`` 必须
+    按「空 dict」合法输入继续——空板面 = 板上无羁绊计数(备战首帧真实
+    局面),kernel 照常选人上场,不经异常路径;计划空稳态契约(dd-037,
+    flow/action_exec.md §2)辖的是「计划空」出口,空板面输入 ≠ 弃权。
+    回归形态:取数表达式把 ``or {}`` 挂在三元 else 支(Python 文法只粘
+    else 支),真支 ``_bs.board.value`` = None → ``dict(None)``
+    TypeError(实机 2026-09-13 备战 1-1 首战部署 Traceback 实证)。
+    最小现场 = 容器 node 已观察 ∧ board 未观察:写端 cw_observation 只
+    observe 非空板面,空板面走 carry 且无旧值可沿 = 机制性 None
+    (cw_game_state.GameState.carry);全未观察时 _bs=None 走 else 支,
+    到不了缺陷行。"""
+    from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        NodeKey,
+        board_state_of,
+        register_sig_actors,
+    )
+    from sr_od.application.currency_war.obs import cw_back_layout
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_op_deploy as db,
+    )
+
+    register_sig_actors('TestActionOpCompliance')   # §3.2.4 写者登记面
+    sess = SimpleNamespace(
+        strategy_state=SimpleNamespace(
+            v3_intention=None, target_comp=None,
+            transition_framework='', cw4_counters={}))
+    # 容器只播 node(= 崩溃时序:备战首帧入口观察写了 node,板面空未写
+    # board 域);board/level 留机制性 None。
+    bs = board_state_of(sess)
+    _sig = ChannelSig(family='obs', actor='TestActionOpCompliance',
+                      mode='read')
+    bs.observe(bs.node, NodeKey(plane=1, round_num=1, kind=''), sig=_sig)
+
+    op = db.CwOpDeploy.__new__(db.CwOpDeploy)
+    monkeypatch.setattr(op, 'screenshot', lambda: object())
+    monkeypatch.setattr(op, '_session_level', lambda: None)
+    monkeypatch.setattr(op, '_level_trusted', lambda: None)
+    monkeypatch.setattr(op, '_wait_slot_occupied', lambda pt, budget: True)
+    monkeypatch.setattr(op, '_decision_overlay_screen', lambda scr: None)
+    monkeypatch.setattr(db, 'read_deploy_cap_debounced',
+                        lambda ctx, scr, level: None)
+    monkeypatch.setattr(db, 'bench_item_slots',
+                        lambda ctx, scr, fuzzy: set())
+    monkeypatch.setattr(db, 'read_deployed_count', lambda ctx, scr: 0)
+    monkeypatch.setattr(cw_back_layout, 'select_back_layout',
+                        lambda ctx, scr, level=None, cap=None,
+                        level_trusted=None: (6, ''))
+    calls = {'n': 0}
+
+    def _fake_occ(scr, x, y):
+        i = calls['n']
+        calls['n'] += 1
+        if i < 9:
+            return i < 1        # bench 9 槽:1 个待部署角色
+        if i < 13:
+            return False        # 前排 4 槽全空(备战首帧板面空形态)
+        if i < 19:
+            return False        # 后排 6 槽全空
+        return int(y) >= 800    # 采样后 fresh 复查:bench 源槽占用照旧
+
+    monkeypatch.setattr(db, 'slot_occupied', _fake_occ)
+    drags: list[float] = []
+    monkeypatch.setattr(
+        db.DragCwChar, 'drag_char',
+        lambda op_, src, dst: drags.append(src.x) or True)
+    monkeypatch.setattr(db.time, 'sleep', lambda s: None)
+    op.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
+
+    bench_pts = [Point(100 + 30 * i, 900) for i in range(9)]
+    front_pts = [Point(500 + 30 * i, 400) for i in range(4)]
+    back_pts = [Point(500 + 30 * i, 650) for i in range(6)]
+    placed, plan_empty, gate_fail = op._deploy_deterministic(
+        bench_pts, front_pts, back_pts, None)
+    assert gate_fail is None, \
+        f'空板面输入不应命中失配闸,实得 {gate_fail!r}'
+    assert drags and placed >= 1 and plan_empty is False, (
+        '空板面 = kernel 正常合法输入,bench 角色照常选人上场(空 dict '
+        f'语义,dd-037);实得 placed={placed} plan_empty={plan_empty} '
+        f'drags={drags}')
+
+
 # ==================== 批A 下线面:退役机制双禁表(单次全树扫描) ====================
 
 def test_retired_mechanism_symbols_stay_offline() -> None:
