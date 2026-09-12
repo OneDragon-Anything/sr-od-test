@@ -61,10 +61,12 @@ def _hsig() -> _ChannelSig:
 
 def _mk_legacy_card(x: int, name: str, *, cost: int = 1, star: int = 1,
                     faction: str = '仙舟',
-                    cost_source: str = 'badge', merge_preview: int = 0):
+                    cost_source: str = 'badge', merge_preview: int = 0,
+                    slot: int = 0):
     from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
     return ShopCard(x=x, faction=faction, name=name, cost=cost, star=star,
-                    merge_preview=merge_preview, cost_source=cost_source)
+                    merge_preview=merge_preview, cost_source=cost_source,
+                    slot=slot)
 
 
 # ============================================================ 逐域行为锁:常态帧逐位等价
@@ -360,20 +362,22 @@ def test_posture_flip_guard_predicate_unchanged_on_view_outputs() -> None:
 # ============================================================ 类型去重(双 ShopCard 归一)
 
 def test_shop_card_mapping_roundtrip_and_frame_alignment() -> None:
-    """映射单一源往返:旧→容器保五记录字段;容器→旧 x/merge_preview 同帧
-    对齐透传,失配窗置 0(执行/读取器域引导窗,申报见映射函数)。"""
+    """映射单一源往返:旧→容器保五记录字段+槽号;容器→旧 x/merge_preview
+    同帧对齐透传、slot 自容器透传,失配窗置 0(执行/读取器域引导窗,
+    申报见映射函数)。"""
     legacy = _mk_legacy_card(300, '希儿', cost=1, star=2,
                              cost_source='roster_fallback',
-                             merge_preview=2)
+                             merge_preview=2, slot=3)
     container = shop_card_to_container(legacy)
     assert (container.name, container.faction, container.cost,
-            container.star, container.cost_source) == \
-        ('希儿', '仙舟', 1, 2, 'roster_fallback'), \
-        '五记录字段原值透传不折叠(cost_source 证据分级禁丢)'
+            container.star, container.cost_source, container.slot) == \
+        ('希儿', '仙舟', 1, 2, 'roster_fallback', 3), \
+        '五记录字段原值透传不折叠(cost_source 证据分级禁丢);物理槽号透传'
     assert not hasattr(container, 'x') and not hasattr(container,
                                                        'merge_preview')
     back = shop_cards_to_legacy([container], frame_cards=[legacy])
     assert (back[0].x, back[0].merge_preview) == (300, 2), '同帧下标对齐'
+    assert back[0].slot == 3, '槽号自容器透传(点击取坐标依据,不按下标)'
     back_misaligned = shop_cards_to_legacy([container],
                                            frame_cards=[legacy, legacy])
     assert (back_misaligned[0].x, back_misaligned[0].merge_preview) == (0, 0), \
