@@ -15,7 +15,11 @@
   ③ 驻留收账:general 首见入 outstanding + 证据落盘,恢复出账返回 None
     继续驻留;签名稳定(size_changed 不含大小值,同文件反复变不刷屏)。
   ④ rewatch 纳管(重武三步兼容):WATCHER_CMD_NAMES 含 cw_asset_sentinel,
-    词级匹配与既有哨兵名互不误配。
+    词级匹配与既有哨兵名互不误配;打印的武装命令脚本路径逐一实证存在
+    (asset 真身在 tools/cw/,散拼 skill 目录 = 死命令,T-173-r1 缺陷 B)。
+  ⑤ 显式重建穿越损坏基线(T-173-r1 缺陷 A):损坏 + --rebaseline → 重建
+    成功 exit 0(重建口被损坏挡死 = 报错指引自指死循环);损坏 + 无
+    --rebaseline → 仍 exit 2 拒静默重建。
 
 零真实副作用:全部 IO 走 tmp_path/合成树(main 路径经 monkeypatch 重定向,
 不写真实 .debug);junction 用例仅 Windows 走 _winapi.CreateJunction,其余
@@ -26,6 +30,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -103,8 +108,10 @@ def test_load_baseline_missing_returns_none(tmp_path: Path) -> None:
 
 
 def test_load_baseline_corrupt_exits_2(tmp_path: Path, capsys) -> None:
-    """基线损坏 → exit 2 拒静默重建:基线是对比锚,自动重建会把已发生的
-    清空钉成新正常态(--rebaseline 是唯一显式重建口)。"""
+    """基线损坏 → load_baseline exit 2 拒静默重建:基线是对比锚,自动重建
+    会把已发生的清空钉成新正常态(函数级契约;main 级 --rebaseline 穿越
+    重建的行为锁见 test_main_rebaseline_crosses_corrupt_baseline——
+    T-173-r1 缺陷 A 重推:该锁只辖无 --rebaseline 路径,不再辖重建口)。"""
     mod = _load(_TOOL_PATH, _MOD)
     bad = tmp_path / 'baseline.json'
     bad.write_text('{not json', encoding='utf-8')
@@ -260,6 +267,33 @@ def test_process_round_resident_resolve_and_critical_exit(
     assert 'ASSET-HIT]' in capsys.readouterr().out
 
 
+def test_process_round_same_signature_not_rereported(monkeypatch, tmp_path,
+                                                     capsys) -> None:
+    """同签名复见不重报直锁(T-173-r1 验收指出的覆盖缝):general 变更
+    首见报 [ASSET-HIT-CONT] 一条,复见(同 kind|key|path 签名,如同目录
+    再动)静默驻留——outstanding 不重复入账、不再打印 CONT(纪元内去重
+    是行为语义,不只由签名纯函数隐式保证)。"""
+    mod = _load(_TOOL_PATH, _MOD)
+    monkeypatch.setattr(mod, 'EVIDENCE_PATH', tmp_path / 'evidence.md')
+    watched = tmp_path / 'watched'
+    watched.mkdir()
+    spec = _spec(['watched'])
+    base = _wrap(mod.scan_target(tmp_path, spec))
+
+    def scan() -> dict:
+        return _wrap(mod.scan_target(tmp_path, spec))
+
+    outstanding: dict[str, tuple[str, str]] = {}
+    (watched / 'a.txt').write_text('v1')
+    assert mod.process_round(base, scan(), outstanding) is None
+    assert capsys.readouterr().out.count('ASSET-HIT-CONT') == 1
+    (watched / 'a.txt').write_text('v2-longer')   # 同签名(dir_refilled)复见
+    assert mod.process_round(base, scan(), outstanding) is None
+    second = capsys.readouterr().out
+    assert 'ASSET-HIT-CONT' not in second, '同签名复见被重报(纪元内去重失效)'
+    assert len(outstanding) == 1, '同签名复见重复入账(outstanding 簿记失效)'
+
+
 def test_evidence_body_lists_findings_and_advice() -> None:
     """证据正文含逐条明细(签名+严重度+首见时刻)与处置指引(恢复走
     框架下载链/git checkout,只报不修契约可读)。"""
@@ -349,6 +383,77 @@ def test_main_once_critical_exits_3_after_key_file_loss(monkeypatch, tmp_path,
     out = capsys.readouterr().out
     assert '[ASSET-HIT]' in out and 'det.onnx' in out
     assert (tmp_path / 'evidence_path').exists()
+
+
+# ---- 显式重建穿越损坏基线(T-173-r1 缺陷 A)-------------------------------
+
+
+def test_main_rebaseline_crosses_corrupt_baseline(monkeypatch, tmp_path,
+                                                  capsys) -> None:
+    """损坏基线 + --rebaseline → 穿越重建成功 exit 0(缺陷 A 行为锁):
+    报错与证据都指引「用 --rebaseline 重建」,重建口若被损坏检查挡死 =
+    指引自指死循环,运维唯一出路变成 undocumented 手动删文件。重建后
+    基线文件恢复合法可读。"""
+    mod = _load(_TOOL_PATH, _MOD)
+    root = tmp_path / 'repo_root'
+    _seed_full_tree(root)
+    baseline_file = tmp_path / 'baseline_path'
+    baseline_file.write_text('{corrupt', encoding='utf-8')
+    for name in ('BASELINE_PATH', 'EVIDENCE_PATH', 'LOCK_PATH', 'POS_PATH'):
+        monkeypatch.setattr(mod, name, tmp_path / name.lower())
+    monkeypatch.setattr(mod, 'REPO_ROOT', root)
+    monkeypatch.setattr(sys, 'argv',
+                        ['cw_asset_sentinel.py', '--rebaseline', '--once'])
+
+    with pytest.raises(SystemExit) as exc:
+        mod.main()
+    assert exc.value.code == 0
+    assert 'ASSET-BASELINE' in capsys.readouterr().out
+    rebased = json.loads(baseline_file.read_text(encoding='utf-8'))
+    assert rebased['targets']['ocr_ppocrv5']['file_count'] == 5
+
+
+def test_main_corrupt_baseline_without_rebaseline_still_exits_2(
+        monkeypatch, tmp_path, capsys) -> None:
+    """损坏基线 + 无 --rebaseline → 仍 exit 2 且不重建(缺陷 A 返工的
+    语义保持锁):拒静默重建的防线不因重建口打开而放松——exit 2 语义
+    只辖「非显式重建」路径,损坏字节原样保留(未被覆盖成新正常态)。"""
+    mod = _load(_TOOL_PATH, _MOD)
+    root = tmp_path / 'repo_root'
+    _seed_full_tree(root)
+    baseline_file = tmp_path / 'baseline_path'
+    corrupt_bytes = '{corrupt'
+    baseline_file.write_text(corrupt_bytes, encoding='utf-8')
+    for name in ('BASELINE_PATH', 'EVIDENCE_PATH', 'LOCK_PATH', 'POS_PATH'):
+        monkeypatch.setattr(mod, name, tmp_path / name.lower())
+    monkeypatch.setattr(mod, 'REPO_ROOT', root)
+    monkeypatch.setattr(sys, 'argv', ['cw_asset_sentinel.py', '--once'])
+
+    with pytest.raises(SystemExit) as exc:
+        mod.main()
+    assert exc.value.code == 2
+    assert '禁静默重建' in capsys.readouterr().out
+    assert baseline_file.read_text(encoding='utf-8') == corrupt_bytes
+
+
+# ---- 武装命令打印路径实证(T-173-r1 缺陷 B)-------------------------------
+
+
+def test_print_commands_paths_point_to_real_files(capsys) -> None:
+    """打印的武装命令脚本路径必须 is_file()(缺陷 B 行为锁):asset 哨兵
+    真身在 tools/cw/,经 SCRIPTS_DIR 散拼会打印不存在的 skill 路径——
+    照打印命令武装必失败,与 runtime-ops 手写例外命令矛盾。全部四件的
+    打印路径逐一实证存在,asset 件点名 tools/cw。"""
+    rw = _load(_REWATCH_PATH, _REWATCH_MOD)
+    rw.print_commands(['sentinel', 'gap', 'early', 'asset'])
+    out = capsys.readouterr().out
+    paths = re.findall(r"uv run python (.+?)\(", out)
+    assert len(paths) == 4, f'应打印 4 件武装命令,实得 {len(paths)}:{out}'
+    for p in paths:
+        assert Path(p.strip()).is_file(), f'打印的脚本路径不存在: {p}'
+    asset_path = next(p for p in paths if 'cw_asset_sentinel' in p)
+    assert str(Path('tools') / 'cw') in asset_path, (
+        f'asset 打印路径未指向 tools/cw 真身: {asset_path}')
 
 
 # ---- junction 实形态(Windows 可达)---------------------------------------
