@@ -381,20 +381,29 @@ def test_shop_card_mapping_roundtrip_and_frame_alignment() -> None:
 
 
 def test_kernel_legacy_shopcard_reference_static_lock() -> None:
-    """kernel 内零旧 ShopCard 引用静态锁(方案 §2.6④,精确辖域):唯一
-    豁免 = cw_state.py(本体)+ cw_board_state.shop_cards_to_legacy
-    (映射函数单一源);映射函数外的 kernel 旧类型引用 = 红。"""
+    """kernel 内零旧 ShopCard 引用静态锁(方案 §2.6④,精确辖域):豁免 =
+    ①cw_state.py(本体,旧类型唯一居所)②cw_board_state.shop_cards_to_legacy
+    (映射函数单一源)③cw_merge_simulate.py / cw_economy.py 的 TYPE_CHECKING
+    旧类型注解行(候裁9 迁移:两文件自 cw_state 迁入的函数自带旧类型签名
+    注解,随旧工作帧世界退役消亡;非映射函数外的新消费,运行时零依赖);
+    其余 kernel 旧类型引用 = 红。"""
     from pathlib import Path
     kernel = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
               / 'currency_war' / 'kernel')
     assert (kernel / 'cw_state.py').is_file(), '扫描根失准'
     pat = re.compile(r'cw_state\s+import\s+[^#\n)]*\bShopCard\b'
                      r'|cw_state\.ShopCard')
+    # 迁入函数的 TYPE_CHECKING 注解行豁免(候裁9 迁移伴随注解,见 docstring ③)
+    migrated_annotation = re.compile(
+        r'^\s*from\s+\S*kernel\.cw_state\s+import\s+ShopCard\s*\n', re.M)
+    annotation_exempt = {'cw_merge_simulate.py', 'cw_economy.py'}
     offenders: dict[str, str] = {}
     for path in sorted(kernel.glob('*.py')):
         if path.name == 'cw_state.py':
             continue
         text = path.read_text(encoding='utf-8')
+        if path.name in annotation_exempt:
+            text = migrated_annotation.sub('', text)
         if path.name == 'cw_board_state.py':
             # 豁免面 = 映射函数本体(单一源);函数外残留 = 红
             import sr_od.application.currency_war.kernel.cw_board_state as _m
