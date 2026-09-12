@@ -234,18 +234,20 @@ _TOOLS = ['拆装扳手', '冶金炉']          # 注册表 category='工具'
 _WEARABLE = ['和平手枪', '轮滑鞋']       # 注册表非工具类(历史 fixture 常用件)
 
 
-def _m7_frame(round_num: int = 3, stop: bool = True) -> mandate.MandateFrame:
-    """最小备战帧:stop=True 压掉 M2/dominance/M6 的开店发射面,本批只看 M7。"""
+def _m7_frame(round_num: int = 3, stop: bool = True,
+              owned: list[str] | None = None) -> mandate.MandateFrame:
+    """最小备战帧:stop=True 压掉 M2/dominance/M6 的开店发射面,本批只看 M7。
+    owned = 决策帧装备域输入(P4 观察接线 T-171:门①输入 = 黑板帧
+    owned_equips,经 emit 装配进 MandateFrame;None = 识别域未就绪)。"""
     return mandate.MandateFrame(
         gold=0, level=3, bench=[], deployed=[], deploy_cap=4,
         node_type='战斗', stop_flag=stop, k_members=(),
-        round_num=round_num)
+        round_num=round_num, owned_equips=owned)
 
 
-def _m7_session(owned: list[str]) -> StrategySession:
+def _m7_session() -> StrategySession:
     s = StrategySession()
     state_of(s).cw4_counters = {}
-    s.last_owned_equips = list(owned)
     return s
 
 
@@ -254,7 +256,11 @@ def _m7_actions(out: list) -> list:
 
 
 def test_m7_tools_only_owned_never_fires():
-    """门① 事故回归帧:owned 全工具件 → 不发 RunEquip(旧码永真重发=活锁根)。"""
+    """门① 事故回归帧(P4 接线重锚 T-171:门输入 = 决策帧 owned_equips,
+    旧 session.last_owned_equips 陈旧快照读点退役):owned 全工具件 →
+    不发 RunEquip(旧码永真重发=活锁根);可穿件在场 → 恰发一次(输入
+    通道 = 决策帧,门①与计划产出位同帧同源)。owned 缺供给(None =
+    识别域未就绪)→ 门保守关,同空处理。"""
     from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame as _F
     from test.sr_od.app.currency_war._cw_helpers import (
         cw4_box as _bsb,
@@ -262,8 +268,18 @@ def test_m7_tools_only_owned_never_fires():
     # state 容器必填(容器化段 2):帧轴镜像 _m7_frame 同值构造。
     st = _F(gold=0, level=3, bench=[], deployed=[], deploy_cap=4,
             node_type='战斗', round_num=3)
-    out = mandate.run_mandate(_m7_frame(), _m7_session(_TOOLS), state=_bsb(st))
+    out = mandate.run_mandate(_m7_frame(owned=_TOOLS), _m7_session(),
+                              state=_bsb(st))
     assert _m7_actions(out) == []
+    # 正面对照:可穿件在决策帧上 → 发射恰一次(同参仅换 owned 输入)
+    out2 = mandate.run_mandate(_m7_frame(owned=_WEARABLE), _m7_session(),
+                               state=_bsb(st))
+    assert len(_m7_actions(out2)) == 1, \
+        f'可穿件在场必须发射 RunEquip 恰一次,实得 {_m7_actions(out2)!r}'
+    # 缺供给(None)= 门保守关(与旧「镜像字段缺席关」同语义)
+    out3 = mandate.run_mandate(_m7_frame(owned=None), _m7_session(),
+                               state=_bsb(st))
+    assert _m7_actions(out3) == []
 
 
 # ==================== 穿戴语义代表行(自 test_cw_equip_wear_semantics.py 并入) ====================

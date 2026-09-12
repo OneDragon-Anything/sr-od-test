@@ -130,6 +130,11 @@ class FakeCwObserver:
             spheres=spheres,
             boxes=boxes,
             tomes=tomes,
+            # 装备域 owned 件名池(P4 观察接线 T-171 假环境对位):状态机
+            # 真值直出(保真位恒真形态;与节点序列四通道同先例)。occupied
+            # 明细假环境不建模(默认 None,消费方按识别域未就绪保守——
+            # 计划产出位在假环境由执行缝替换,不经该字段)。
+            owned_equips=list(st.equips or []),
         )
         return ObservationBundle(state=st, prep=prep)
 

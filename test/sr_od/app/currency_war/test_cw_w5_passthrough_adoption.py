@@ -458,8 +458,14 @@ def test_w5_write_points_anchor_via_entry_api() -> None:
     assert 'deployed_rows_from_obs' in prep_src, '空集守卫构造源在位'
     import sr_od.application.currency_war.prep_actions as _pa
     pa_src = inspect.getsource(_pa)
-    assert pa_src.count('_bs_eq.observe(_bs_eq.equips') == 2, \
-        'equips 观察写端两分支(M7 + 回退)同点在位'
+    # P4 观察接线(T-171)锁重锚:equips 观察写端自分发段两分支(M7 +
+    # 回退)迁备战入口观察装配点(采集同迁,单一写点)——旧锚钉零防回潮,
+    # 新锚钉一防缺位(写端语义不变:全量名单 observe 入 bs.equips)。
+    assert pa_src.count('_bs_eq.observe(_bs_eq.equips') == 0, \
+        'equips 写端已迁入口观察链,分发段残留 = 信息源回潮'
+    prep_observe_src = inspect.getsource(cw_screen_prep.CwScreenPrep._observe)
+    assert prep_observe_src.count('_bs_obs.observe(_bs_obs.equips') == 1, \
+        'equips 观察写端新位(备战入口观察装配点)在位'
 
 
 def test_phase_field_spec_no_invalid_keys_added() -> None:

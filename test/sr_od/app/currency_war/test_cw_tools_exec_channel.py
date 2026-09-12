@@ -317,7 +317,11 @@ class TestMandateEmission:
                          if b is not None],
             deployed_chars=[d for d in getattr(st, 'deployed', [])
                             if d is not None],
-            free_bench_slots=9)
+            free_bench_slots=9,
+            # owned 供给面 = 黑板帧 owned_equips(P4 观察接线 T-171;
+            # 旧 entry.py 直读 session 镜像读点退役)。桩经 session 镜像
+            # 字段映射注入:s4 置 None → or [] → 不评估,断言语义不变。
+            owned_equips=list(getattr(s, 'last_owned_equips', None) or []))
         return entry.emit(obs, SimpleNamespace(), s, None)
 
     # admitted 非空 → 发射 RunTools 的正面断言面由 test_cw_prep_flag_machine

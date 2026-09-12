@@ -635,9 +635,12 @@ class FakeP1Run:
                 if i < len(occ_idx) and st.bench[occ_idx[i]] is not None]
 
     def _inject_equips_truth(self) -> None:
-        """m7 发射门输入的假环境对位(session.last_owned_equips = 状态机
-        库存真值直拨;实机写点 = 识别链装备读,与节点序列四通道同先例:
-        实机信息通道的假环境对位,非策略可见特殊通道)。"""
+        """装备库存镜像的假环境对位(session.last_owned_equips = 状态机
+        库存真值直拨;实机写点 = 备战入口观察装配点全量重写[P4 观察接线
+        T-171] + 穿戴 pass 执行位步内覆写)。现辖消费面 = 商店线权重
+        (state.equips 拷贝);M7 发射门/工具评估输入已切黑板帧
+        owned_equips,假环境对位 = FakeCwObserver.observe_prep 的
+        owned_equips 真值直出,不经本注入。"""
         self.cw_match.session.last_owned_equips = list(
             self.match.state.equips or [])
 

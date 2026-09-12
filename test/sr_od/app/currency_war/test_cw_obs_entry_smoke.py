@@ -75,6 +75,12 @@ class TestObserveFullAssembly:
                             lambda ctx, frame, tpl: [('bench',)])
         monkeypatch.setattr(of_mod, 'read_deployed_chars',
                             lambda ctx, frame, tpl: [('deployed',)])
+        # 装备域采集资源置缺(P4 接线 T-171):None = 识别域未就绪 →
+        # 采集跳过、字段保持 None(不触真实模板装载/布局读)。
+        monkeypatch.setattr(of_mod, 'ensure_equip_sift_templates',
+                            lambda ctx: None)
+        monkeypatch.setattr(of_mod, 'ensure_equip_tm_templates',
+                            lambda ctx: None)
         states = [SimpleNamespace(gold=gold)]
         monkeypatch.setattr(of_mod, 'read_game_state',
                             lambda ctx, frame: states[len(states) - 1]
@@ -96,10 +102,78 @@ class TestObserveFullAssembly:
         # substate 尽力读:标注各模块可读性,不强行全读(A5)
         assert out['substate'] == {'node_seq': False, 'shop_cards': True}
         assert out['gold_reread'] is False
+        # 装备域三路:键恒在场(P4 接线 T-171 契约),资源缺 → None 保真位
+        assert out['owned_equips'] is None
+        assert out['occupied_equips'] is None
+        assert out['back_layout_slots'] is None
+
+    def test_heavy_equips_collection_wiring(self, monkeypatch):
+        """装备域 owned/occupied 采集(P4 接线 T-171):资源齐 → read_equips/
+        read_row_equipped 经组装层产出件名池与 (row, slot) 明细;布局未知
+        态(None, '')→ 后排不采集(宁缺勿造,同读侧单帧未知跳过先例)。"""
+        self._patch_heavy(monkeypatch, gold=91)
+        monkeypatch.setattr(of_mod, 'ensure_equip_sift_templates',
+                            lambda ctx: object())
+        monkeypatch.setattr(of_mod, 'ensure_equip_tm_templates',
+                            lambda ctx: object())
+        monkeypatch.setattr(of_mod, '_area_rect',
+                            lambda ctx, name, screen: SimpleNamespace(
+                                x1=1620, y1=90, x2=1918, y2=710))
+        eq_calls: list = []
+        monkeypatch.setattr(of_mod, 'read_equips',
+                            lambda frame, tpl, equip_rect=None:
+                            eq_calls.append(equip_rect)
+                            or [('财富宝钻', (0, 0), 90), ('冶金炉', (1, 1), 80)])
+        row_calls: list = []
+
+        def _fake_row(ctx, frame, grays, prefix, n):
+            row_calls.append((prefix, n))
+            # 真读契约:空槽不在 dict(read_equipped_below 空槽不产键)
+            return ({1: ['和平手枪']} if prefix == '前排'
+                    else {3: ['轮滑鞋']})
+        monkeypatch.setattr(of_mod, 'read_row_equipped', _fake_row)
+        monkeypatch.setattr(of_mod, 'select_back_layout',
+                            lambda ctx, frame: (6, '后排6槽'))
+        out = of_mod.observe_full(SimpleNamespace(), None, tier='heavy',
+                                  source='director', shop_open=True)
+        assert out['owned_equips'] == ['财富宝钻', '冶金炉']
+        assert eq_calls == [(1620, 90, 1918, 710)]
+        assert out['occupied_equips'] == {('front', 1): ['和平手枪'],
+                                          ('back', 3): ['轮滑鞋']}
+        assert row_calls == [('前排', 4), ('后排6槽', 6)]
+        assert out['back_layout_slots'] == 6
+
+    def test_heavy_equips_back_layout_unknown_skips_back_row(self, monkeypatch):
+        """布局未知态(双弃权帧):后排 occupied 不采集,前排照常(宁缺勿
+        造);back_layout_slots 透传 None 供消费方保守。"""
+        self._patch_heavy(monkeypatch, gold=91)
+        monkeypatch.setattr(of_mod, 'ensure_equip_sift_templates',
+                            lambda ctx: object())
+        monkeypatch.setattr(of_mod, 'ensure_equip_tm_templates',
+                            lambda ctx: object())
+        monkeypatch.setattr(of_mod, '_area_rect',
+                            lambda ctx, name, screen: SimpleNamespace(
+                                x1=1620, y1=90, x2=1918, y2=710))
+        monkeypatch.setattr(of_mod, 'read_equips', lambda frame, tpl,
+                            equip_rect=None: [])
+        monkeypatch.setattr(of_mod, 'read_row_equipped',
+                            lambda ctx, frame, grays, prefix, n:
+                            {1: ['和平手枪']} if prefix == '前排' else {})
+        monkeypatch.setattr(of_mod, 'select_back_layout',
+                            lambda ctx, frame: (None, ''))
+        out = of_mod.observe_full(SimpleNamespace(), None, tier='heavy',
+                                  source='director', shop_open=True)
+        assert out['occupied_equips'] == {('front', 1): ['和平手枪']}
+        assert out['back_layout_slots'] is None
 
     def test_templates_missing_keeps_none(self, monkeypatch):
         # 立绘库未加载 → 身份字段 None(调用方沿用缓存),不崩不造假
         monkeypatch.setattr(of_mod, 'ensure_portrait_templates', lambda ctx: None)
+        # 装备域采集资源同置缺(否则触真实模板装载)
+        monkeypatch.setattr(of_mod, 'ensure_equip_sift_templates',
+                            lambda ctx: None)
+        monkeypatch.setattr(of_mod, 'ensure_equip_tm_templates',
+                            lambda ctx: None)
         monkeypatch.setattr(of_mod, 'read_game_state',
                             lambda ctx, frame: SimpleNamespace(gold=5))
         monkeypatch.setattr(of_mod, 'read_node_sequence', lambda ctx, frame: [])
@@ -108,6 +182,8 @@ class TestObserveFullAssembly:
                                   source='deploy_bench')
         assert out['bench_chars'] is None
         assert out['deployed_chars'] is None
+        assert out['owned_equips'] is None
+        assert out['occupied_equips'] is None
 
     def test_gold_zero_no_op_skips_reread(self, monkeypatch):
         # 离线契约:op 不可传 → 重读跳过(同帧重读结果恒同,无意义)
@@ -289,7 +365,6 @@ class TestRoundOutcomeChain:
     def test_outcome_row_carries_heal_longline(self):
         # RoundOutcome 行内字段(删除波 1 退役重写:观察半 history 行仍携该键)
         from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
-        from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
         from sr_od.application.currency_war.strategies.impl.cw_strategy import (
             StrategySession,
         )
@@ -322,6 +397,11 @@ class TestObserveFullRereadGiveup:
 
     def test_gold_reread_keeps_zero_when_all_reads_zero(self, monkeypatch):
         monkeypatch.setattr(of_mod, 'ensure_portrait_templates', lambda ctx: None)
+        # 装备域采集资源同置缺(P4 接线 T-171;否则触真实模板装载)
+        monkeypatch.setattr(of_mod, 'ensure_equip_sift_templates',
+                            lambda ctx: None)
+        monkeypatch.setattr(of_mod, 'ensure_equip_tm_templates',
+                            lambda ctx: None)
         monkeypatch.setattr(of_mod, 'read_node_sequence', lambda ctx, frame: [])
         monkeypatch.setattr(of_mod, 'read_shop_cards', lambda ctx, frame: [])
         monkeypatch.setattr('time.sleep', lambda s: None)
