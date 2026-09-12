@@ -88,12 +88,11 @@ class TestFuelItemSlotGate:
         assert mandate.fuel_sell_candidates(
             bench, (), state=_state(bench)) == []
 
-    def test_gate_precedes_star_gate(self):
-        """门序锁:占位件判读先于星级门——物品语义与星级无关(任何星级
-        不可变现);star=2 占位件非真实帧形,钉的是门序而非游戏形态。"""
-        bench = [_item(slot=1, star=2)]
-        assert mandate.fuel_sell_candidates(
-            bench, (), state=_state(bench)) == []
+    # 「门序锁」已删(T-102,三审测试面可删项):滤门禁用变异下 star=2 占位件
+    # 输入仍被星门(mandate.fuel_sell_candidates 内 b.star != 1)同样拒——两门
+    # 同为纯拒、序不可观测,锁零拦截价值;滤门回归由上方星=1 两锁实际拦截
+    #(变异红证)。勿以「钉门序」为由重建:无合法可观测形态,重建只会沦为
+    # 源码形状锁。
 
     def test_order_preserved_with_placeholder_in_middle(self):
         """占位件夹层不改真件相对序(slot 升序确定性保持)。"""
