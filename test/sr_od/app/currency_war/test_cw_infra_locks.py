@@ -14,6 +14,11 @@
 from __future__ import annotations
 
 # ==================== telemetry_roots(布局单一源守卫)====================
+import ast
+import bisect
+import io
+import re
+import tokenize
 from pathlib import Path
 
 from one_dragon.utils.file_utils import get_project_root
@@ -80,9 +85,14 @@ def test_telemetry_old_root_tombstone() -> None:
     证明语料读端(历史冻结件,数据出处注记按写作时点记录旧根,禁随批
     改写——下次重跑证明时再顺带迁移)。出现新命中 = 有人把
     旧根写回活代码,按退役裁定驳回;文档/测试注释提及旧根不在此列
-    (历史出处引用合法,本扫描只辖会执行的路径字面量)。"""
-    import re
+    (历史出处引用合法,本扫描只辖会执行的路径字面量)。
 
+    判定域 = 掩蔽代码域(T-103 迁移;手法单一源 = T-93 定型版:同仓
+    test_cw_old_stream_write_retirement.py 的 _scan_code_violations,
+    commit 149f86b):注释/docstring 里的退役背书与历史出处注记按字符
+    置空豁免——「旧根已退役」类负向声明是退役背书而非路径字面量;
+    代码域字符串字面量(真实路径引用)仍判红,防写回。tokenize/ast
+    失败回退原文全判(宁误红不漏判)。"""
     pattern = re.compile(r'temp[/\\]+currency_war[/\\]+(replay|sim_runs)')
     scan_roots = [
         get_project_root() / 'src' / 'sr_od' / 'application' / 'currency_war',
@@ -105,11 +115,119 @@ def test_telemetry_old_root_tombstone() -> None:
                 text = p.read_text(encoding='utf-8')
             except (OSError, UnicodeDecodeError):
                 continue
-            for i, line in enumerate(text.splitlines(), 1):
-                if pattern.search(line):
-                    hits.append(f'{p.relative_to(get_project_root())}:{i}')
+            for lineno, _snippet, _pi in _scan_code_violations(text, pattern):
+                hits.append(f'{p.relative_to(get_project_root())}:{lineno}')
     assert not hits, ('旧根路径字面量回流活代码(布局已退役,T-125): '
                       f'{hits[:10]}')
+
+
+def _docstring_spans(text: str) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+    """收集模块/类/函数 docstring 跨度((起行,起列),(止行,止列))。
+
+    docstring 判定 = 定义体首语句为孤立字符串表达式(ast 标准语义),
+    嵌套定义逐层收集;解析失败返回空表(扫描回退逐行全判,宁误红)。"""
+    spans: list[tuple[tuple[int, int], tuple[int, int]]] = []
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return spans
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef,
+                             ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = getattr(node, 'body', [])
+            if (body and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)):
+                expr = body[0]
+                spans.append(((expr.lineno, expr.col_offset),
+                              (expr.end_lineno, expr.end_col_offset)))
+    return spans
+
+
+def _scan_code_violations(
+        text: str, *patterns: re.Pattern) -> list[tuple[int, str, int]]:
+    """在掩蔽后的代码文本上跑正则,返回 (行号, 命中行原文, 正则序号)。
+
+    机制 = T-93 定型掩蔽式:tokenize 取注释 token + ast 取 docstring 跨度,
+    逐字符等长置空(保行号),finditer 对掩蔽后全文跑正则——豁免注释/
+    docstring 文档性提及,正则按连续全文匹配,复合/跨 token 形照常检出
+    (禁逐 token search:该退化使跨 token 正则永久失配盲绿)。失败回退 =
+    tokenize 失败对原文全判、ast 失败不掩蔽 docstring(同向宁误红)。"""
+    lines = text.split('\n')
+    line_starts = [0]
+    for line in lines:
+        line_starts.append(line_starts[-1] + len(line) + 1)
+    masked_lines: list[str] | None
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    except (tokenize.TokenError, SyntaxError, IndentationError):
+        masked_lines = None   # 回退:原文全判
+    else:
+        masked_lines = list(lines)
+        doc_spans = _docstring_spans(text)
+
+        def _in_docstring(tok: tokenize.TokenInfo) -> bool:
+            start = (tok.start[0], tok.start[1])
+            end = (tok.end[0], tok.end[1])
+            return any(s <= start and end <= e for s, e in doc_spans)
+
+        def _blank(srow: int, scol: int, erow: int, ecol: int) -> None:
+            """把 (srow,scol)-(erow,ecol) 跨度逐字符置空(等长,保行号)。"""
+            for row in range(srow, erow + 1):
+                line = masked_lines[row - 1]
+                c0 = scol if row == srow else 0
+                c1 = ecol if row == erow else len(line)
+                masked_lines[row - 1] = \
+                    line[:c0] + ' ' * (c1 - c0) + line[c1:]
+
+        for tok in tokens:
+            if tok.type == tokenize.COMMENT or (
+                    tok.type == tokenize.STRING and _in_docstring(tok)):
+                _blank(tok.start[0], tok.start[1], tok.end[0], tok.end[1])
+
+    judge_text = '\n'.join(masked_lines) if masked_lines is not None else text
+    hits: dict[tuple[int, int], str] = {}
+    for pi, pat in enumerate(patterns):
+        for m in pat.finditer(judge_text):
+            row = bisect.bisect_right(line_starts, m.start()) - 1
+            hits.setdefault((row, pi), lines[row].strip()[:120])
+    return [(row + 1, hits[(row, pi)], pi)
+            for row, pi in sorted(hits)]
+
+
+def test_old_root_tombstone_scan_mutation_selfcheck() -> None:
+    """旧根墓碑掩蔽式扫描变异自检(双向):负向声明/出处注记不判红,
+    代码域路径字面量仍判红。
+
+    防两种回归:①豁免写宽 → 真实写回漏判;②豁免失效(回退逐行原文)→
+    docstring「旧根已退役」负向声明误红复发。含跨 token 复合形态
+    (多行语句中代码 token 与注释行相邻)。合成语料直扫
+    _scan_code_violations,不落扫描根。"""
+    pattern = re.compile(r'temp[/\\]+currency_war[/\\]+(replay|sim_runs)')
+    old_root = 'temp/currency_war/replay'
+    # 豁免腿:注释/docstring 中的退役背书与历史出处注记不得判红
+    assert _scan_code_violations(
+        '# 旧根 .debug/temp/currency_war/replay 已退役(T-125),禁写回',
+        pattern) == []
+    assert _scan_code_violations(
+        '"""旧根 .debug/temp/currency_war/sim_runs 同日退役,存量已迁。"""',
+        pattern) == []
+    # 检出腿:代码域路径字面量(裸字面量/dict 值/调用实参)必须判红
+    hits = _scan_code_violations(f'replay_dir = r".debug/{old_root}"',
+                                 pattern)
+    assert len(hits) == 1, f'路径字面量写回复活形须红,实得 {hits}'
+    hits = _scan_code_violations(
+        "cfg = {'dir': 'temp/currency_war/sim_runs'}", pattern)
+    assert len(hits) == 1, f'dict 值写回复活形须红,实得 {hits}'
+    # 混合腿:行尾注释不豁免同行代码引用(豁免按 token 置空,不按行)
+    hits = _scan_code_violations(
+        f'x = "{old_root}"  # 旧根已退役(负向声明)', pattern)
+    assert len(hits) == 1, f'行尾注释不豁免同行代码,实得 {hits}'
+    # 跨 token 复合形:引用行与注释行相邻,掩蔽只吞注释行不吞引用行
+    hits = _scan_code_violations(
+        f'p = Path(".debug/{old_root}")\n# 旧根已退役\nlog.info(p)', pattern)
+    assert len(hits) == 1 and hits[0][0] == 1, \
+        f'隔行注释掩蔽不吞引用行,实得 {hits}'
 
 
 # ==================== l0_andon_default_off ====================
