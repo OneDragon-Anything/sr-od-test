@@ -564,6 +564,41 @@ def test_sim_synthesis_none_truth_not_written() -> None:
         'gold 真值(缺省 0,readable)合成 observation;at_round 并入 evidence(P2-6)'
 
 
+def test_synthesis_unread_bench_no_clobber() -> None:
+    """bench 写门(CwWorkFrame.bench_readable,对齐 board_readable 先例):
+    未读域≠真空域。v1 漏斗帧(read_game_state 不读 bench 身份,bench 恒
+    默认空表)合成必须跳写 bench——容器内备战装配环的真读观察保持原值
+    原版本;可读真值帧(sim 形态,缺省 True)照写不回归。回归形态 = 无门
+    合成把 prep 装配环真读覆盖成「9 槽全空」,与执行账 tracked 在商店段
+    guard_expected_vs_tracked 播种对账处对撞(实机 2026-09-13 商店段
+    循环崩溃实证,T-177)。"""
+    sig = _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+    # 容器先有漏斗真读(deploy 后留 bench:物理槽 4 一人,1 基槽号信息位)
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs.observe(bs.bench, BenchView(
+        slots=[BenchSlot(kind='empty')] * 3
+        + [BenchSlot(kind='unit', unit=Unit(char_id='银枝', star=1, slot=4))]
+        + [BenchSlot(kind='empty')] * 5,
+        capacity=BENCH_CAPACITY_DEFAULT), sig=sig)
+    bench_field_before = bs.bench   # Field 实例同一性:_swap 写入即换实例
+    # v1 形态帧:bench 恒默认空表 + 不可读位(生产置位点 = read_game_state)
+    st_v1 = CwWorkFrame()
+    st_v1.bench_readable = False
+    synthesize_from_game_state(bs, st_v1, at_round='p1-r1')
+    view = bs.bench.value
+    assert view is not None and view.slots[3].unit is not None \
+        and view.slots[3].unit.char_id == '银枝', \
+        '未读 bench 合成跳写:容器内漏斗真读保持原值'
+    assert bs.bench is bench_field_before, \
+        '跳写 = bench Field 实例不换(其余域合成照写,版本推进不涉本域)'
+    # 真值帧(sim 形态,缺省可读)照写:域语义不回归
+    st_sim = CwWorkFrame(bench=[BenchChar(slot=1, char_id='花火', star=2)])
+    synthesize_from_game_state(bs, st_sim, at_round='p1-r2')
+    assert bs.bench.value.slots[0].unit is not None \
+        and bs.bench.value.slots[0].unit.char_id == '花火', \
+        '可读帧合成照写(真值域语义不变)'
+
+
 def test_sim_engine_feeds_board_state() -> None:
     """任务书件 7:engine_p1 决策帧合成段接线——sim 引擎跑一局,session 的
     GameState 被喂入(心跳推进 + bench 观察 sim:synthesized)。"""

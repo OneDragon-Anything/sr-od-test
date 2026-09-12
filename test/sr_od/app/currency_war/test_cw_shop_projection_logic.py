@@ -336,3 +336,48 @@ class TestM1Equivalence:
         assert len(legacy) == 1
         assert legacy[0].name == '希儿'
         assert legacy[0].x == 0   # 坐标不入存储(§2.5-5)
+
+
+def test_shop_entry_seed_guard_passes_with_funnel_bench() -> None:
+    """T-177 商店入口播种对账场景锁(run_buy_waves 入口链回归):visit 入口
+    = v1 帧合成 + guard_expected_vs_tracked(stage='seed')。容器 bench 由
+    漏斗真读写入(deploy 后留 bench 一人),执行账 tracked 持同一真值;
+    合成对未读 bench(CwWorkFrame.bench_readable=False)跳写后,守卫
+    seed 对账必须通过。回归形态 = 无门合成把 expected 覆盖成「9 槽全空」
+    → 与 tracked 多集分歧 AssertionError(实机 2026-09-13 商店段循环
+    崩溃 15+ 连发实证)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.kernel.cw_exec_state import (
+        exec_state_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        BenchView,
+        Unit,
+    )
+    from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+        guard_expected_vs_tracked,
+    )
+
+    bs = board_state_of(None)
+    # prep 装配环式真读观察(bench 观察写端 = 备战装配环 heavy 块;此处
+    # 复刻其产物形态):deploy 后 bench 物理槽 4 留一人
+    bs.observe(bs.bench, BenchView(
+        slots=[BenchSlot(kind='empty')] * 3
+        + [BenchSlot(kind='unit', unit=Unit(char_id='银枝', star=1, slot=4))]
+        + [BenchSlot(kind='empty')] * 5,
+        capacity=9),
+        sig=ChannelSig(family='obs', actor='CwScreenPrep', mode='read'))
+    session = SimpleNamespace()
+    exec_state_of(session).tracked_bench_chars = [_bc('银枝', star=1, slot=4)]
+    # v1 形态帧:bench 恒默认空表 + 不可读位(生产置位点 = read_game_state)
+    st = _state(gold=30, shop=[])
+    st.bench_readable = False
+    synthesize_from_game_state(bs, st)
+    # 旧无门合成在此把 expected 覆盖成 9 空槽 → 守卫 AssertionError
+    guard_expected_vs_tracked(bs, session, stage='seed')
+    view = bs.bench.value
+    assert view is not None and view.slots[3].unit is not None \
+        and view.slots[3].unit.char_id == '银枝', \
+        '守卫通过后容器 bench 仍为漏斗真读值(合成未覆盖)'
