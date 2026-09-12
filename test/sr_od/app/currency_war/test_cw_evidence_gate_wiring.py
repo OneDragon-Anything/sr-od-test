@@ -24,10 +24,10 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
     POOL_COPIES_PER_CARD,
     SHOP_SLOTS,
 )
+from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge as _bridge,
 )
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_line_switch import (
     line_distance,
 )
@@ -58,6 +58,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt impo
     p_complete,
     p_miss,
 )
+from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
 _COMP = COMP_LIBRARY[0]          # 列车同行,form_tiers = {'列车同行': 4}
 _TIER = '列车同行'
@@ -102,7 +103,7 @@ class TestLineMissingDecomposition:
         """无超持态:逐档缺口项在手 + Σm == line_distance(口径对偶锁,
         防 tier_progress 分叉漂移)。"""
         st = CwWorkFrame(gold=30, level=7, board={}, shop=[])
-        md = proof.line_missing_decomposition(_COMP, st)
+        md = proof.line_missing_decomposition(_COMP, _bridge(st))
         assert md, '空板局缺口非空'
         assert md[0][0] == _COMP.form_tiers[_TIER]
         assert 0.0 <= md[0][1] <= 1.0
@@ -114,7 +115,7 @@ class TestLineMissingDecomposition:
         st = CwWorkFrame(gold=30, level=7,
                        board=dict(_COMP.form_tiers),
                        shop=[])
-        assert proof.line_missing_decomposition(_COMP, st) == []
+        assert proof.line_missing_decomposition(_COMP, _bridge(st)) == []
 
     def test_shelf_subtracts_gap_and_enters_pool_decay(self):
         """货架件「买走即 held」(line_distance 同式):缺口减 1 + 同标签
@@ -123,7 +124,7 @@ class TestLineMissingDecomposition:
         cost = CHARACTERS[members[0]].cost
         shelf = [SimpleNamespace(faction=_TIER, cost=cost)]
         st = CwWorkFrame(gold=30, level=7, board={}, shop=shelf)
-        md = proof.line_missing_decomposition(_COMP, st)
+        md = proof.line_missing_decomposition(_COMP, _bridge(st))
         assert md[0][0] == _COMP.form_tiers[_TIER] - 1
         assert md[0][1] == pytest.approx(
             odds.slot_q_tag(_TIER, 7, {}, {cost: 1}))
@@ -151,7 +152,7 @@ class TestLineMissingDecomposition:
                 break
         assert target is not None, '全库无「无 1 费成员档」comp,q=0 锁失配'
         st = CwWorkFrame(gold=30, level=1, board={}, shop=[])   # L1 只出 1 费
-        md = proof.line_missing_decomposition(target, st)
+        md = proof.line_missing_decomposition(target, _bridge(st))
         assert (unreachable_need, 0.0) in md, 'q=0 不可达项被静默剔除'
 
     def test_per_tier_clamp_ge_global_declared(self):
@@ -166,7 +167,7 @@ class TestLineMissingDecomposition:
             for bd in boards.values():
                 st = CwWorkFrame(gold=30, level=7, board=dict(bd), shop=[])
                 total_m = sum(m for m, _q in
-                              proof.line_missing_decomposition(comp, st))
+                              proof.line_missing_decomposition(comp, _bridge(st)))
                 assert total_m >= line_distance(comp, _bridge(st)), (comp.name, bd)
 
     def test_shelf_overshoot_both_zero(self):
@@ -177,7 +178,7 @@ class TestLineMissingDecomposition:
         shop = [SimpleNamespace(faction=_TIER, cost=cost)
                 for _ in range(_COMP.form_tiers[_TIER] + 2)]
         st = CwWorkFrame(gold=30, level=7, board={}, shop=shop)
-        assert proof.line_missing_decomposition(_COMP, st) == []
+        assert proof.line_missing_decomposition(_COMP, _bridge(st)) == []
         assert line_distance(_COMP, _bridge(st)) == 0
 
 
@@ -226,7 +227,7 @@ class TestAssembleLockFrame:
         sess = _session()
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        missing, trials, frame = proof.assemble_lock_frame(st, sess)
+        missing, trials, frame = proof.assemble_lock_frame(_bridge(st), sess)
         assert missing
         r_rem = r_remaining(sess, 1, 3)
         assert trials % SHOP_SLOTS == 0
@@ -240,7 +241,7 @@ class TestAssembleLockFrame:
         sess = _session()
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        _missing, _trials, frame = proof.assemble_lock_frame(st, sess)
+        _missing, _trials, frame = proof.assemble_lock_frame(_bridge(st), sess)
         assert frame.o_plus is None
         assert frame.d_death is None
 
@@ -257,7 +258,7 @@ class TestAssembleLockFrame:
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
         st.bench = [BenchChar(slot=1, char_id=side_name, star=2)]
-        missing, trials, frame = proof.assemble_lock_frame(st, sess)
+        missing, trials, frame = proof.assemble_lock_frame(_bridge(st), sess)
         p_lock = p_complete(missing, trials)
         rescue = a7_lower_bound(7, cost, 2, 1, 0)
         expected_f = (1.0 - p_lock) * (p_miss(7, cost, 1, 0) * rescue + 1.0)
@@ -272,13 +273,13 @@ class TestAssembleLockFrame:
         sess = _session()
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        _missing, _trials, frame = proof.assemble_lock_frame(st, sess)
+        _missing, _trials, frame = proof.assemble_lock_frame(_bridge(st), sess)
         assert frame.c_hold == 0.0     # 无侧线件 ∧ free=9>1
         st2 = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                         shop=[])
         st2.bench = [BenchChar(slot=i, char_id=f'燃料{i}')
                      for i in range(1, BENCH_CAPACITY + 1)]
-        missing2, _t2, frame2 = proof.assemble_lock_frame(st2, sess)
+        missing2, _t2, frame2 = proof.assemble_lock_frame(_bridge(st2), sess)
         assert missing2     # L7 该档可达,缺件在册
         assert frame2.c_hold > 0.0
 
@@ -298,7 +299,7 @@ class TestEvaluateEvidenceGate:
         st = CwWorkFrame(gold=30, level=7,
                        board=dict(_COMP.form_tiers),
                        shop=[])
-        assert proof.evaluate_evidence_gate(st, sess) is None
+        assert proof.evaluate_evidence_gate(_bridge(st), sess) is None
         assert 'evidence_gate_evaluated' not in _counters(sess)
 
     def test_sealed_unavailable_aggregate_and_causes(self):
@@ -307,7 +308,7 @@ class TestEvaluateEvidenceGate:
         sess = _session()
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        ok, reason = proof.evaluate_evidence_gate(st, sess)
+        ok, reason = proof.evaluate_evidence_gate(_bridge(st), sess)
         assert ok is False
         assert reason.startswith('sandwich_unavailable')
         ct = _counters(sess)
@@ -331,7 +332,7 @@ class TestEvaluateEvidenceGate:
         sess = _session()
         st = CwWorkFrame(gold=60, level=7, round_num=3, plane=1, board={},
                        shop=[])
-        ok, reason = proof.evaluate_evidence_gate(st, sess)
+        ok, reason = proof.evaluate_evidence_gate(_bridge(st), sess)
         assert ok is True
         assert reason.startswith('sandwich_suff(')   # 数值串在 '(' 后
         assert _counters(sess)['evidence_gate_sandwich_suff'] == 1
@@ -371,7 +372,10 @@ class TestWiringGuard:
         sess = _session()
         st = CwWorkFrame(gold=30, level=7, round_num=3, plane=1,
                        board={}, shop=[])
-        obs = PrepObservation(state=st, bench_chars=[], deployed_chars=[],
+        # obs.state 视图槽已退役(容器化段 2):局内事实经容器喂入单一源
+        # 进 session 容器,emit 决策面走容器读口。
+        cw4_feed(sess, st)
+        obs = PrepObservation(bench_chars=[], deployed_chars=[],
                               spheres=[], boxes=[], tomes=[], deploy_vacancy=4)
         sess.prep_obs_frame = obs
         turn = assemble_turn(snapshot_from_obs(obs, sess), sess,

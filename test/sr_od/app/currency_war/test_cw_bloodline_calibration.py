@@ -12,16 +12,23 @@ test_cw_mandate_v1.py::TestR196ShadowKeys 承载(真注入 + 真谓词的
 """
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
 
 def _eval_hp(hp):
-    st = SimpleNamespace(node_type='战斗', enemy_difficulty=None, plane=1)
-    return entry._upgrader_evaluate(SimpleNamespace(), st, 0, hp)
+    # 现役签名 = (session, bs 容器, hp):死参 gold 已随 prep 链容器化段 1
+    # 删除(零消费);容器经桥装承载 λ 谓词读面(本文件阈值族不触 λ 臂)。
+    st = CwWorkFrame(node_type='战斗', enemy_difficulty=None, plane=1)
+    return entry._upgrader_evaluate(SimpleNamespace(), _bsb(st), hp)
 
 
 class TestBloodlineCalibration:
@@ -72,18 +79,16 @@ class TestBloodlineCalibration:
         )
         monkeypatch.setattr(mandate, 'run_mandate',
                             lambda frame, session, **kw: [])
-        st = SimpleNamespace(
-            gold=40, level=6, round_num=2, hp=10, plane=1,
-            node_type='战斗', shop=[], bench=[], deployed=[],
-            max_units=lambda: 6, level_readable=True,
-            hp_readable=True, hp_trusted=False,
-            enemy_difficulty=None, refresh_probs=None,
-            shop_refresh_cost=2)
+        st = CwWorkFrame(gold=40, level=6, round_num=2, hp=10, plane=1,
+                         node_type='战斗')
         obs = SimpleNamespace(
             box_overlay_open=False, boxes=(), tomes=(), spheres=(),
             event_overlay='', bench_chars=(), deployed_chars=(),
-            deploy_vacancy=0, state=st)
+            deploy_vacancy=0)
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
+        # 局内事实喂入 session 容器(obs.state 视图槽已退役;emit 决策面
+        # 经 decision_hp 容器读口消费 hp)。
+        cw4_feed(sess, st)
         entry.emit(obs, SimpleNamespace(), sess, None)
         assert state_of(sess).cw4_counters.get('advisor_bloodline_armed') == 1
         assert state_of(sess).cw4_counters.get('neardeath_unlock') == 1

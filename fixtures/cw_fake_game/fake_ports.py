@@ -69,6 +69,15 @@ class FakeCwObserver:
         """
         self._match.record_observation('observe_prep', phase)
         st = self._snapshot_state()
+        # 容器喂入(容器化段 2:obs.state 视图槽退役,黑板帧不再携带局内
+        # 事实——容器喂入归观察源实现方契约,与读屏路径 read_game_state
+        # ._feed_board_state 同语义,统一观察架构 §2.6 端口路径边界行):
+        # ctx 载 session 时经测试迁移单一源 cw4_feed 合成喂入;ctx=None
+        # 的直调形态(观察域单测)只取 obs 视觉域,不触容器。
+        session = getattr(getattr(ctx, 'cw_match', None), 'session', None)
+        if session is not None:
+            from test.sr_od.app.currency_war._cw_helpers import cw4_feed
+            cw4_feed(session, st)
         # 契约一则:保真位恒真 = 「完美观测」环境参数(方案 §2.3;
         # sim-wiring 三节「完美观测=终态」既有豁免口径),判读按方案
         # §4-6 申报「执行/识别缺陷面结构性为零」,识别质量归实机遥测
@@ -105,9 +114,7 @@ class FakeCwObserver:
         tomes = [(slot, Point(563 + 70 * i, 911))
                  for i, slot in enumerate(self._match.tomes)]
         prep = PrepObservation(
-            state=st,
-            # state_gold_trusted 语义 = heavy 时 shop 开(PrepObservation
-            # 字段注);假环境 gold 恒真读
+            # state 视图槽已退役(容器化段 2):局内事实经上方容器喂入。
             state_gold_trusted=True,
             bench_chars=bench_occ,
             deployed_chars=dep_occ,
@@ -248,7 +255,11 @@ class FakeActionSink:
         )
         ledger = env.ledger
         session = env.match.session
+        # 载体注(波 4 容器化):env.state 已切容器单例(生产 ShopExecEnv
+        # 契约);帧域读数一律取 pre_truth(转移前状态机真值快照),与旧
+        # 帧语义对齐,禁把容器 Field 当帧字段读。
         state = env.state
+        pre = pre_truth
         # tracked 账真值重播(整表替换;pad 单一源归一形状——compact 态
         # 先重播再 pad,槽位语义 = 物理槽位 1 基,与 live tracking 同契)
         _exec = exec_state_of(session)
@@ -269,10 +280,10 @@ class FakeActionSink:
                 # 满栏例外张数(与 BuyCardOp.execute 同一单一源现算;
                 # 金账补差 (k−1)×单价,张数禁执行侧二算)
                 k = 1
-                if bench_occupied(state.bench) >= BENCH_CAPACITY:
+                if bench_occupied(pre.bench) >= BENCH_CAPACITY:
                     k = max(1, merge_buy_k(
-                        action.card.name, action.card.star or 1, state.bench,
-                        _exec.tracked_deployed, state.shop))
+                        action.card.name, action.card.star or 1, pre.bench,
+                        _exec.tracked_deployed, pre.shop))
                     ledger.spend_executed += (action.card.cost or 0) * (k - 1)
                 from sr_od.application.currency_war.kernel.cw_prep_expect import (
                     BuyPurchase,
@@ -292,16 +303,12 @@ class FakeActionSink:
                            else None)
             _expected = (_truth_slot
                          if _truth_slot is not None
-                         else (state.bench[action.bench_idx]
-                               if 0 <= action.bench_idx < len(state.bench)
+                         else (pre.bench[action.bench_idx]
+                               if 0 <= action.bench_idx < len(pre.bench)
                                else None))
             _expected_name = (_expected.char_id
                               if _expected is not None else None)
-            from sr_od.application.currency_war.kernel.cw_game_state import (
-                board_state_bridge,
-            )
-            register_round_sold([_expected_name],
-                                board_state_bridge(state), session)
+            register_round_sold([_expected_name], state, session)
             ledger.total_sell += 1
             ledger.buy_has_sell = True
             ledger.total_sell_income += (res.income if res.income is not None
@@ -317,7 +324,7 @@ class FakeActionSink:
                 refresh_effective,
             )
             ledger.refresh_attempted = True
-            _fee = state.shop_refresh_cost or REFRESH_COST_BASE
+            _fee = pre.shop_refresh_cost or REFRESH_COST_BASE
             ledger.spend_executed += _fee
             ledger.total_refresh += 1
             ledger.did_refresh = True

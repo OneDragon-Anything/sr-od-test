@@ -33,6 +33,9 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 from sr_od.application.currency_war.kernel.cw_comps import (
     SEELE_OR_LEGS as _COMPS_SEELE_OR_LEGS,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
@@ -52,11 +55,13 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates as preds,
 )
+from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
 
 def _st2(hp: int = 10, plane: int = 2, gold: int = 30,
          round_num: int = 2, level: int = 7) -> CwWorkFrame:
-    """P2 濒死带构造帧(信任门真值位显式置位;hp 缺省 10 ⊂ ≤15 带)。"""
+    """P2 濒死带构造帧(信任门真值位显式置位;hp 缺省 10 ⊂ ≤15 带)。
+    经济读口已切容器:消费位经 ``_bsb`` 桥装取容器。"""
     st = CwWorkFrame(gold=gold, level=level, round_num=round_num, hp=hp)
     st.plane = plane
     st.hp_readable = True
@@ -75,26 +80,27 @@ class TestP2BloodFloorPredicate:
         hp>15 / hp None / 不可信帧 fail 向 ⇒ False(与 p1_blood_floor
         逐行同构,设计稿 §2.1;阈值单一源 = HP_BAND_NEAR_DEATH)。"""
         st = _st2(hp=10)
-        assert preds.p2_blood_floor(st) is True
+        assert preds.p2_blood_floor(_bsb(st)) is True
         st.hp = 16
-        assert preds.p2_blood_floor(st) is False
+        assert preds.p2_blood_floor(_bsb(st)) is False
         st.hp = 15   # ≤15 族含边界(p1_blood_floor 同款)
-        assert preds.p2_blood_floor(st) is True
+        assert preds.p2_blood_floor(_bsb(st)) is True
         st.hp = None
-        assert preds.p2_blood_floor(st) is False
+        assert preds.p2_blood_floor(_bsb(st)) is False
         st.hp = 10
         st.hp_readable = False   # P1 hp 读链毒化史口径:不可信帧 fail 向
-        assert preds.p2_blood_floor(st) is False
+        st.hp = None             # 容器形态:不可读 = 域未观察(无可信值可桥)
+        assert preds.p2_blood_floor(_bsb(st)) is False
 
     def test_plane_domain_complementary_with_p1(self):
         """位面域互补且不交(设计稿 §2.1「同构不同域,禁搭车」):P1 帧
         不得开 P2 域谓词(P1 半边 = p1_blood_floor 在册授权,零改);
         P3 帧属 P2+ 域(谓词 plane≥2 口径)。"""
         st = _st2(hp=10, plane=1)
-        assert preds.p1_blood_floor(st) is True
-        assert preds.p2_blood_floor(st) is False, 'P1 帧禁开 P2 域谓词'
+        assert preds.p1_blood_floor(_bsb(st)) is True
+        assert preds.p2_blood_floor(_bsb(st)) is False, 'P1 帧禁开 P2 域谓词'
         st3 = _st2(hp=10, plane=3)
-        assert preds.p2_blood_floor(st3) is True
+        assert preds.p2_blood_floor(_bsb(st3)) is True
 
     def test_threshold_single_source(self):
         """阈值常量单一源锁(设计稿 §1.1「禁任何第二份字面量 15」):
@@ -104,8 +110,8 @@ class TestP2BloodFloorPredicate:
             HP_BAND_NEAR_DEATH,
         )
         st = _st2(hp=HP_BAND_NEAR_DEATH)
-        assert preds.p2_blood_floor(st) is True, '边界=常量(≤15 族)'
-        assert preds.p2_blood_floor(_st2(hp=HP_BAND_NEAR_DEATH + 1)) is False
+        assert preds.p2_blood_floor(_bsb(st)) is True, '边界=常量(≤15 族)'
+        assert preds.p2_blood_floor(_bsb(_st2(hp=HP_BAND_NEAR_DEATH + 1))) is False
 
 
 class TestP2AuthorityLatchComposite:
@@ -114,14 +120,14 @@ class TestP2AuthorityLatchComposite:
         """fail-closed 单点:闩缺省 False ⇒ p2_blood_floor_unlock 恒 False,
         即使帧在域内(设计稿 §1.2「收口前恒 False ⇒ 两面全部 P2 行为支
         fail-closed」;§3.2-3 未裁未证前全局 fail-closed)。"""
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            BS_SCHEMA_VERSION,
-            GameState,
-            ChannelSig,
-            NodeKey,
-        )
         from sr_od.application.currency_war.kernel.cw_discipline_rules import (
             hp_decision_trusted,
+        )
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            BS_SCHEMA_VERSION,
+            ChannelSig,
+            GameState,
+            NodeKey,
         )
         # 可信位前提锚(波 2 起容器形态:真读帧 = observation 源 → 可信)
         bs = GameState(schema_version=BS_SCHEMA_VERSION)
@@ -131,18 +137,18 @@ class TestP2AuthorityLatchComposite:
                    sig=sig)
         assert hp_decision_trusted(bs) is True   # 前提锚:帧在域内且可信
         st = _st2(hp=10)
-        assert preds.p2_blood_floor(st) is True
+        assert preds.p2_blood_floor(_bsb(st)) is True
         assert preds.P2_BLOOD_BAND_AUTHORITY_OPEN is False
-        assert preds.p2_blood_floor_unlock(st) is False
+        assert preds.p2_blood_floor_unlock(_bsb(st)) is False
 
     def test_latch_flip_activates_composite(self, monkeypatch):
         """授权事件模拟(仅测试面;生产翻转 = 授权批落码):闩 True ∧
         帧在域内 ⇒ 合成 True;闩 True ∧ 帧域外(P1 帧/hp>15)⇒ 仍 False
         ——合成 = 闩 ∧ 谓词,任一门单独不构成判据(设计稿 §1.2)。"""
         monkeypatch.setattr(preds, 'P2_BLOOD_BAND_AUTHORITY_OPEN', True)
-        assert preds.p2_blood_floor_unlock(_st2(hp=10)) is True
-        assert preds.p2_blood_floor_unlock(_st2(hp=10, plane=1)) is False
-        assert preds.p2_blood_floor_unlock(_st2(hp=40)) is False
+        assert preds.p2_blood_floor_unlock(_bsb(_st2(hp=10))) is True
+        assert preds.p2_blood_floor_unlock(_bsb(_st2(hp=10, plane=1))) is False
+        assert preds.p2_blood_floor_unlock(_bsb(_st2(hp=40))) is False
         assert preds.p2_blood_floor_unlock(None) is False
 
 
@@ -162,7 +168,7 @@ class TestUnlockPackageFailClosed:
             level_spend_blocked,
         )
         sess = SimpleNamespace(node_type_current='normal')
-        assert level_spend_blocked(_st2(hp=10), sess,
+        assert level_spend_blocked(_bsb(_st2(hp=10)), sess,
                                    DEFAULT_REGISTRY) is True, (
             '闩关:P2 濒死帧停付照常(零行为)')
 
@@ -177,7 +183,7 @@ class TestUnlockPackageFailClosed:
         )
         monkeypatch.setattr(preds, 'P2_BLOOD_BAND_AUTHORITY_OPEN', True)
         assert level_spend_blocked(
-            _st2(hp=10), SimpleNamespace(node_type_current='normal'),
+            _bsb(_st2(hp=10)), SimpleNamespace(node_type_current='normal'),
             DEFAULT_REGISTRY) is False, '闩开:停付族让位(件①激活)'
 
     def test_guarantee_floor_survival_domain(self, monkeypatch):
@@ -189,10 +195,10 @@ class TestUnlockPackageFailClosed:
         )
         sess = SimpleNamespace(node_type_current='normal')
         st = _st2(hp=10)
-        assert _guarantee_floor_holds(st, sess, 5, 1, 4, 5) is False, (
+        assert _guarantee_floor_holds(_bsb(st), sess, 5, 1, 4, 5) is False, (
             '闩关:保底金门照常(零行为)')
         monkeypatch.setattr(preds, 'P2_BLOOD_BAND_AUTHORITY_OPEN', True)
-        assert _guarantee_floor_holds(st, sess, 5, 1, 4, 5) is True, (
+        assert _guarantee_floor_holds(_bsb(st), sess, 5, 1, 4, 5) is True, (
             '闩开:生存域让位(真花光合法通道 P2 半边)')
 
     def test_interest_ban_yields_when_authorized(self, monkeypatch):
@@ -202,16 +208,16 @@ class TestUnlockPackageFailClosed:
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
             sell_for_interest,
         )
-        slots, key = sell_for_interest(30, [], 4, (), state=_st2(hp=10))
+        slots, key = sell_for_interest(30, [], 4, (), state=_bsb(_st2(hp=10)))
         assert slots == [] and key != 'p2_blood_floor', (
             '闩关:P2 帧凑息行为零变更')
         monkeypatch.setattr(preds, 'P2_BLOOD_BAND_AUTHORITY_OPEN', True)
-        slots2, key2 = sell_for_interest(30, [], 4, (), state=_st2(hp=10))
+        slots2, key2 = sell_for_interest(30, [], 4, (), state=_bsb(_st2(hp=10)))
         assert slots2 == [] and key2 == 'p2_blood_floor', (
             '闩开:凑息禁令 P2 半边激活,分键独立')
         # P1 域对照:禁令在册语义零改('blood_floor' 原键)
         _slots_p1, key_p1 = sell_for_interest(30, [], 4, (),
-                                              state=_st2(hp=10, plane=1))
+                                              state=_bsb(_st2(hp=10, plane=1)))
         assert key_p1 == 'blood_floor'
 
 
@@ -227,7 +233,7 @@ class TestNearDeathObservationKeys:
             k_members=(), round_num=state.round_num)
         sess = StrategySession()
         state_of(sess).cw4_counters = {}
-        out = mandate.run_mandate(frame, sess, state=state)
+        out = mandate.run_mandate(frame, sess, state=_bsb(state))
         assert not any(e.reason.startswith('m3_levelup_batch') for e in out)
         return sess
 
@@ -267,27 +273,25 @@ class TestNearDeathObservationKeys:
             return SimpleNamespace(
                 box_overlay_open=False, boxes=(), tomes=(), spheres=(),
                 event_overlay='', bench_chars=(), deployed_chars=(),
-                deploy_vacancy=0, state=st)
+                deploy_vacancy=0)
 
-        st = SimpleNamespace(
-            gold=40, level=6, round_num=2, hp=10, plane=2,
-            node_type='战斗', shop=[], bench=[], deployed=[],
-            max_units=lambda: 6, level_readable=True,
-            hp_readable=True, hp_trusted=False,
-            enemy_difficulty=None, refresh_probs=None, shop_refresh_cost=2)
+        def _mk_frame(gold: int, hp: int) -> CwWorkFrame:
+            # 容器化段 2:局内事实喂 session 容器(观察源契约),黑板帧
+            # 只载视觉/占用域。
+            return CwWorkFrame(gold=gold, level=6, round_num=2, hp=hp,
+                               plane=2, node_type='战斗')
+
+        st = _mk_frame(40, 10)
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
+        cw4_feed(sess, st)
         out = entry.emit(_obs(st), SimpleNamespace(), sess, None)
         assert state_of(sess).cw4_counters.get('terminal_targetless_idle') == 1
         assert not any(isinstance(e.action, mandate.LevelUp) for e in out), (
             '观测零行为:形态⑥帧发射序列不变(无动作 ⇒ 出战路径)')
         # 对照:同帧域外不成立(g>g* 且必花域判定真)⇒ 不计
-        st_z = SimpleNamespace(
-            gold=80, level=6, round_num=2, hp=10, plane=2,
-            node_type='战斗', shop=[], bench=[], deployed=[],
-            max_units=lambda: 6, level_readable=True,
-            hp_readable=True, hp_trusted=False,
-            enemy_difficulty=None, refresh_probs=None, shop_refresh_cost=2)
+        st_z = _mk_frame(80, 10)
         sess_z = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
+        cw4_feed(sess_z, st_z)
         entry.emit(_obs(st_z), SimpleNamespace(), sess_z, None)
         assert 'terminal_targetless_idle' not in state_of(sess_z).cw4_counters
 
@@ -296,17 +300,14 @@ class TestNearDeathObservationKeys:
         advisor 计数面零交集)。"""
         monkeypatch.setattr(mandate, 'run_mandate',
                             lambda frame, session, **kw: [])
-        st = SimpleNamespace(
-            gold=40, level=6, round_num=2, hp=60, plane=2,
-            node_type='战斗', shop=[], bench=[], deployed=[],
-            max_units=lambda: 6, level_readable=True,
-            hp_readable=True, hp_trusted=False,
-            enemy_difficulty=None, refresh_probs=None, shop_refresh_cost=2)
+        st = CwWorkFrame(gold=40, level=6, round_num=2, hp=60, plane=2,
+                         node_type='战斗')
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
+        cw4_feed(sess, st)
         entry.emit(SimpleNamespace(
             box_overlay_open=False, boxes=(), tomes=(), spheres=(),
             event_overlay='', bench_chars=(), deployed_chars=(),
-            deploy_vacancy=0, state=st), SimpleNamespace(), sess, None)
+            deploy_vacancy=0), SimpleNamespace(), sess, None)
         assert 'terminal_targetless_idle' not in state_of(sess).cw4_counters
 
 

@@ -37,6 +37,9 @@ from pathlib import Path
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
 )
@@ -393,17 +396,24 @@ class TestMandateArm1Wiring:
             k_members=('爻光',), round_num=2)
 
     def test_constant_cap_feed_violates_and_abstains(self):
-        """对抗场景 A 复验:固定槽表常数 cap 喂入(无 state 派生链)
-        ⇒ 违例计数 + M3 弃权(修复前=零计数+M3 照发,旁路实证形态)。"""
-        from sr_od.application.currency_war.kernel.cw_vocab import (
-            DEPLOYED_CAPACITY,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
-        sess = _session(('爻光',))
-        out = mandate.run_mandate(self._frame(DEPLOYED_CAPACITY), sess)
-        assert state_of(sess).cw4_counters.get(
-            'criteria_contract_violation:predicates.arm1_existence', 0) >= 1
-        assert not any(type(e.action).__name__ == 'LevelUp' for e in out)
+        """对抗场景 A 防线复验(锁语义重推,非机械跟绿):cap 供给缺失
+        (deploy_cap=None 语境)⇒ 契约违例计数 + 判据弃权,禁静默放行。
+        迁移申报:消费位 run_mandate 的 cap 现役恒为 state 派生
+        (``_cap_now = max_units_of(state)``,容器必填形参),调用方常数
+        直喂通道已不存在——本防线存活载体 = ensure_contract 契约层
+        (任何消费位传 None cap 即违例弃权),本锁随迁该层。"""
+        ct: dict = {}
+        assert not contracts.ensure_contract(
+            ('predicates', 'arm1_existence'),
+            contracts.ContractCtx(deploy_cap=None), ct)
+        assert ct['criteria_contract_violation:predicates.arm1_existence'] == 1
+        # 派生链在场(int cap)⇒ 契约放行,零违例(消费位现状=int 派生)。
+        ct2: dict = {}
+        assert contracts.ensure_contract(
+            ('predicates', 'arm1_existence'),
+            contracts.ContractCtx(deploy_cap=4), ct2)
+        assert 'criteria_contract_violation:predicates.arm1_existence' \
+            not in ct2
 
     def test_state_derived_cap_emits_without_violation(self):
         """正向:state.max_units() 派生链喂入 ⇒ 零违例;板满(cap=板量)
@@ -422,7 +432,7 @@ class TestMandateArm1Wiring:
             deploy_cap=st.max_units(), node_type='normal', stop_flag=False,
             k_members=('爻光',), round_num=2)
         sess = _session(('爻光',))
-        out = mandate.run_mandate(frame, sess, state=st)
+        out = mandate.run_mandate(frame, sess, state=_bsb(st))
         assert state_of(sess).cw4_counters.get(
             'criteria_contract_violation:predicates.arm1_existence', 0) == 0
         assert any(type(e.action).__name__ == 'LevelUp' for e in out)

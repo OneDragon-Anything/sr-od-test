@@ -628,13 +628,19 @@ class FakeMatch:
             clicks_to_next_level,
             xp_click_cost,
         )
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            board_state_bridge,
+        )
         from sr_od.application.currency_war.kernel.cw_vocab import LevelUp
 
         level_pre = self.state.level
-        clicks = clicks_to_next_level(self.state)
+        # 经济读口族已切容器签名(W6 波 4):帧值经桥装箱后喂入,
+        # 与生产 bridge 残余辖域同法(本文件 register_round_sold 同款)。
+        _bs = board_state_bridge(self.state)
+        clicks = clicks_to_next_level(_bs)
         spent = 0
         for _ in range(max(1, clicks)):
-            price = xp_click_cost(self.state)
+            price = xp_click_cost(board_state_bridge(self.state))
             if self.state.gold < price:
                 break
             res = self.apply(LevelUp(cost=price))
@@ -1044,6 +1050,7 @@ class FakeMatch:
         if isinstance(action, cw_state.SellBench) \
                 and self._slot_holds_item(action.bench_idx + 1):
             return ExecResult(applied=False, observed=self.state.copy())
+        action = self._adapt_shop_card_carrier(action)
         before = self.state
         log_base = len(before.action_log)
         after = cw_state.simulate(before, action)
@@ -1089,6 +1096,36 @@ class FakeMatch:
         return ExecResult(applied=True, income=income,
                           verification=verification,
                           observed=self.state.copy())
+
+    def _adapt_shop_card_carrier(self, action: Action) -> Action:
+        """容器牌→词表牌适配(双 ShopCard 归一波 4 的假环境边界桥)。
+
+        决策核波 4 容器化后,BuyCard.card 可为容器 payload 牌(
+        cw_game_state.ShopCard,无 x 载体——坐标单一真相源=screen_info,
+        生产执行器走 ShopExecEnv.click_pts 不消费 x);simulate 的店内
+        槽位对账仍按 x 比对。按 (name, cost, star) 在当前店面找首个
+        匹配槽位回填词表牌(与真实店面板位一一对应语义;非 payload 牌
+        原样透传)。
+        """
+        if isinstance(action, cw_state.BuyCard) \
+                and not hasattr(action.card, 'x'):
+            from dataclasses import replace as _replace
+
+            from sr_od.application.currency_war.kernel.cw_game_state import (
+                ShopCard as _PayloadCard,
+            )
+            if isinstance(action.card, _PayloadCard):
+                _name = action.card.name or ''
+                for c in self.state.shop:
+                    if c.name == _name:
+                        return _replace(action, card=c)
+                # 店面已无同名牌(跨代际提案):回填离屏槽位语义(x=-1,
+                # simulate 的移除比对恒不等 = 不动店面),金/席照常结算。
+                return _replace(action, card=cw_state.ShopCard(
+                    x=-1, faction=action.card.faction,
+                    name=action.card.name, cost=action.card.cost,
+                    star=action.card.star))
+        return action
 
     @staticmethod
     def _sold_char(before: CwWorkFrame,

@@ -12,6 +12,9 @@ from __future__ import annotations
 import inspect
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SELL_BENCH_CONVERT_REASONS,
     BenchChar,
@@ -416,9 +419,9 @@ class Test8EntryFundingFace:
             node_type=None, stop_flag=True, k_members=('线内件X',),
             round_num=2)
         st = CwWorkFrame(gold=1, level=5, round_num=2, hp=40)
-        st.deployed = _boarded().deployed
+        st.deployed = _boarded_frame().deployed
         out = entry._criteria_pass(
-            frame, sess, st, ('线内件X',),
+            frame, sess, _bsb(st), ('线内件X',),
             k_switched=False, old_line_members=())
         return out, sess
 
@@ -447,11 +450,19 @@ class Test8EntryFundingFace:
 # ===== 复用脚手架 =====
 
 
-def _boarded(st: CwWorkFrame | None = None) -> CwWorkFrame:
+def _boarded(st: CwWorkFrame | None = None):
     """非空板测试环境(T-32 空板止损守卫前置):守卫钉「待卖后
     deployed 为空 ⇒ 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),
     直调卖出判据/发射位的环境须 ≥1 上场件,否则守卫 fail-closed 拒帧
-    ——与被测语义无关的红按环境前置补齐,非跟绿。"""
+    ——与被测语义无关的红按环境前置补齐,非跟绿。
+    经济/谓词读口已切容器:返回值经桥装箱(16 调用点单一转换)。"""
+    st = st if st is not None else CwWorkFrame()
+    st.deployed = [_bc('板上件锚', slot=1)]
+    return _bsb(st)
+
+
+def _boarded_frame(st: CwWorkFrame | None = None) -> CwWorkFrame:
+    """帧形态变体(测试侧需 ``.deployed`` 帧字段的场景直取帧)。"""
     st = st if st is not None else CwWorkFrame()
     st.deployed = [_bc('板上件锚', slot=1)]
     return st
@@ -493,5 +504,5 @@ def _m4_frame(bench: list[BenchChar]) -> CwWorkFrame:
     st.plane = 1
     st.shop = []
     st.bench = bench
-    st.deployed = _boarded().deployed
+    st.deployed = _boarded_frame().deployed
     return st

@@ -33,6 +33,12 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     Comp,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_of,
+)
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     ClickSpheres,
     PrepObservation,
@@ -40,15 +46,15 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     SellBench,
     StartBattle,
 )
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     CwWorkFrame,
     bench_char_cost,
     sell_refund,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
@@ -67,6 +73,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
 )
+from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
 _PHASE = (1, 3)
 
@@ -125,7 +132,7 @@ class TestS1ResetWhitelist:
         if s1:
             st.cw4_shopped_phase = _PHASE
         if s2:
-            _set_s2(sess, _state())
+            _set_s2(sess, _bsb(_state()))
         return sess, st
 
     def cleared(self, st: MandateState) -> bool:
@@ -229,8 +236,8 @@ class TestWantedPrecondition:
         wanted_precond_hold 计 1。"""
         sess = _sess()
         state = _state()
-        _set_s2(sess, state, in_shop=())
-        out = mandate.wanted_closure_emit(sess, state, self._bench_full(),
+        _set_s2(sess, _bsb(state), in_shop=())
+        out = mandate.wanted_closure_emit(sess, _bsb(state), self._bench_full(),
                                           [], 0, 3)
         assert out == []
         st = state_of(sess)
@@ -301,40 +308,47 @@ def test_run_deploy_dispatch_landing_retired_interim_failclosed(monkeypatch):
 # ===== 5. 备战投影金账(自 test_cw_prep_projection.py 并入;F2)=====
 
 
-def _director() -> CwScreenPrep:
-    # _project_prep_obs 纯计算不触 self 状态 → 无初始化实例即够
-    return object.__new__(CwScreenPrep)
-
-
-def _proj_obs(state: CwWorkFrame | None = None) -> PrepObservation:
-    return PrepObservation(state=state, free_bench_slots=2)
+def _director(sess) -> CwScreenPrep:
+    """投影纯计算 + 容器写口经 ``_session()`` 取 session 单例 → 桩注入
+    (object.__new__ 免 SrContext,余 self 状态不触)。"""
+    d = object.__new__(CwScreenPrep)
+    d._session = lambda: sess
+    return d
 
 
 def test_sellbench_projection_adds_sell_refund_gold() -> None:
     """卖出后投影金 = 原金 + sell_refund(star, bench_char_cost)——与
-    simulate 卖出分支同式(单一源公式);下一帧 funding_support 等金位
-    判据读 ``obs.state.gold`` 即读到涨后金。"""
-    d = _director()
+    simulate 卖出分支同式(单一源公式);金账写点 = session 容器 gold 域
+    (容器化段 2:黑板帧 state 复制腿退役,写口 apply_prep_action_logic
+    单一源),消费面读容器即读到涨后金。"""
+    d = _director(_sess())
     bc = BenchChar(slot=3, char_id='希儿', star=1)
-    obs = _proj_obs(CwWorkFrame(gold=10))
-    obs.bench_chars = [BenchChar(slot=1, char_id='甲', star=1), bc]
+    # 容器 bench 喂入 = pad 形(合成按列表位映射物理槽;希儿须落槽 3)。
+    cw4_feed(d._session(), CwWorkFrame(
+        gold=10, bench=[BenchChar(slot=1, char_id='甲', star=1), None, bc]))
+    obs = PrepObservation(
+        bench_chars=[BenchChar(slot=1, char_id='甲', star=1), bc],
+        free_bench_slots=2)
     out = d._project_prep_obs(SellBench(slot=3), obs)
     assert out is not None
     assert [b.slot for b in out.bench_chars if b is not None] == [1]
     assert out.free_bench_slots == 3
     expect = 10 + sell_refund(bc.star, bench_char_cost(bc))
-    assert out.state is not None and out.state.gold == expect
+    assert board_state_of(d._session()).gold.value == expect
 
 
 def test_sellbench_projection_state_none_skips_gold() -> None:
-    """state 缺失帧(heavy 未刷新)⇒ 金账跳过不造值,槽位摘除照常
-    (保守侧 = 低估回金,下一 heavy 重读对账)。"""
-    d = _director()
-    obs = _proj_obs(None)
-    obs.bench_chars = [BenchChar(slot=2, char_id='乙', star=1)]
+    """容器 gold 未读(None)⇒ 金账跳过不造值,黑板槽位摘除照常
+    (保守侧 = 低估回金,下一 heavy 重读对账;写口输入域 None 语义 =
+    域级独立跳写)。"""
+    sess = _sess()          # 未喂帧:容器 gold 未观察(None)
+    d = _director(sess)
+    obs = PrepObservation(
+        bench_chars=[BenchChar(slot=2, char_id='乙', star=1)],
+        free_bench_slots=2)
     out = d._project_prep_obs(SellBench(slot=2), obs)
     assert out is not None
-    assert out.state is None
+    assert board_state_of(sess).gold.value is None
     assert out.bench_chars == []
 
 # ===== 备战环席满让路门(球体延迟门;自 test_cw_t297_sphere_defer_gate.py 并入,ADR-0642)=====
@@ -372,10 +386,12 @@ def _prep_state(gold: int = 99, round_num: int = 3,
     return gs
 
 
-def _obs(state: CwWorkFrame | None, bench: list, deployed: list,
+def _obs(bench: list, deployed: list,
          spheres: list, free: int) -> PrepObservation:
+    """黑板观察帧(纯视觉/占用域;局内事实经 cw4_feed 喂 session 容器,
+    obs.state 视图槽已随 prep 链容器化段 2 退役)。"""
     return PrepObservation(
-        state=state, bench_chars=bench, deployed_chars=deployed,
+        bench_chars=bench, deployed_chars=deployed,
         spheres=list(spheres), boxes=[], tomes=[],
         free_bench_slots=free, deploy_vacancy=0)
 
@@ -411,7 +427,8 @@ def _stuck_pair(gold: int = 0, round_num: int = 3, spheres_n: int = 8):
         st = _prep_state(gold=overrides.get('gold', gold),
                     round_num=overrides.get('round_num', round_num),
                     bench=bench, deployed=deployed)
-        return _obs(st, bench, deployed,
+        cw4_feed(sess, st)   # 局内事实进 session 容器(决策面容器读口)
+        return _obs(bench, deployed,
                     _spheres(overrides.get('spheres_n', spheres_n)), free=0)
 
     return sess, _mk
@@ -429,7 +446,8 @@ def _fuel_pair():
         st = _prep_state(gold=overrides.get('gold', 99),
                     round_num=overrides.get('round_num', 3),
                     bench=bench, deployed=deployed)
-        return _obs(st, bench, deployed,
+        cw4_feed(sess, st)
+        return _obs(bench, deployed,
                     _spheres(overrides.get('spheres_n', 8)), free=0)
 
     return sess, _mk
@@ -491,7 +509,8 @@ class TestBenchFreeEquivalence:
         streak 恒 0、零让路计数(单帧偶发失败由既有逐帧重试自愈)。"""
         sess = _sess()
         st = _prep_state()
-        obs = _obs(st, [], [], _spheres(8), free=2)
+        cw4_feed(sess, st)
+        obs = _obs([], [], _spheres(8), free=2)
         for _ in range(3):
             out = _emit(sess, obs)
             assert len(out) == 1
@@ -513,7 +532,8 @@ class TestBenchFreeEquivalence:
         bench8 = [_plain_bc(f'高价{i}', slot=i, star=3) for i in range(1, 9)]
         deployed3 = [_plain_bc(f'板件{i}', slot=i, star=2) for i in range(1, 4)]
         st = _prep_state(bench=bench8, deployed=deployed3)
-        out_free = _emit(sess, _obs(st, bench8, deployed3, _spheres(8),
+        cw4_feed(sess, st)
+        out_free = _emit(sess, _obs(bench8, deployed3, _spheres(8),
                                     free=1))
         assert isinstance(out_free[0].action, ClickSpheres)
         assert state_of(sess).cw4_counters['sphere_defer_streak'] == 0

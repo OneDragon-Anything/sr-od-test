@@ -43,23 +43,23 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel import cw_intention
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_comps import (
     form_progress,
     get_comp,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bridge,
+)
 from sr_od.application.currency_war.kernel.cw_prep_actions import OpenShop
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     BuyCard,
     CwWorkFrame,
     ShopCard,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
@@ -157,7 +157,7 @@ class TestDominanceNarrowFire:
         cand = _lad_off_name(exclude=tuple(dep_names))
         st = _d_frame_st(60, [_lad_card(cand, cost=2, star=1)])
         sess = _lad_session(locked=True)
-        assert mandate.swap_transition_narrow_frame(st, sess) is True, \
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is True, \
             '前置失效:构帧非 D 帧(谓词现读 False,锁前提断裂)'
         act = _decide(st, sess)
         assert not (isinstance(act, BuyCard)
@@ -175,7 +175,7 @@ class TestDominanceNarrowFire:
         cand = _lad_off_name(exclude=tuple(dep_names))
         st = _d_frame_st(60, [_lad_card(cand, cost=2, star=2)])
         sess = _lad_session(locked=True)
-        assert mandate.swap_transition_narrow_frame(st, sess) is True
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is True
         _decide(st, sess)
         assert _NARROW_KEY not in state_of(sess).cw4_counters, \
             '无可发射笔帧分键照计 = 口径漂移(帧内无将发射笔)'
@@ -192,7 +192,7 @@ class TestExemptionArms:
         C1 照常发射 core_single_card_buy(零消费收窄旗)。"""
         st = _d_frame_st(55, [_lad_card('希儿', cost=3, star=1)])
         sess = _lad_session(locked=True)
-        assert mandate.swap_transition_narrow_frame(st, sess) is True
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is True
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) \
             and act.reason == 'core_single_card_buy', \
@@ -214,7 +214,7 @@ class TestExemptionArms:
                       if m not in km and m not in dep_names)
         st = _d_frame_st(60, [_lad_card(target, cost=2, star=1)])
         sess = _lad_session(locked=True)
-        assert mandate.swap_transition_narrow_frame(st, sess) is True
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is True
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'm2_locked_member', \
             f'D 帧 M2 义务买入被误伤(豁免破面): act={act!r}'
@@ -283,7 +283,7 @@ class TestZeroDriftOutsideDomain:
         st = _lad_st(60, [_lad_card(cand, cost=2, star=1)],
                      locked=False, deployed=_deps)
         sess = _lad_session(locked=False)
-        assert mandate.swap_transition_narrow_frame(st, sess) is False
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is False
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
         assert _NARROW_KEY not in state_of(sess).cw4_counters
@@ -295,7 +295,7 @@ class TestZeroDriftOutsideDomain:
         cand = _lad_off_name(exclude=tuple(km))
         st = _lad_st(60, [_lad_card(cand, cost=2, star=1)], locked=True)
         sess = _lad_session(locked=True)
-        assert mandate.swap_transition_narrow_frame(st, sess) is False, \
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is False, \
             '板未满帧误判 D 帧(board_full 输入装配漂移)'
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
@@ -316,7 +316,7 @@ class TestM6ZeroTouch:
         cand = _lad_off_name(exclude=tuple(dep_names), min_cost=cost)
         st = _d_frame_st(60, [_lad_card(cand, cost=cost, star=1)])
         sess = _lad_session(locked=True)
-        assert mandate.swap_transition_narrow_frame(st, sess) is True
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is True
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile', \
             f'D 帧 M6 被误触/被收窄连坐(零触碰破面): act={act!r}'
@@ -399,9 +399,9 @@ class TestPrepOpenShopSymmetry:
                  for i in range(BENCH_CAPACITY - 1)]
         sess = _prep_session()
         out = mandate.run_mandate(_prep_frame(dep, bench), sess,
-                                  state=_prep_state(dep))
+                                  state=_bridge(_prep_state(dep)))
         st = _prep_state(dep)
-        assert mandate.swap_transition_narrow_frame(st, sess) is True, \
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is True, \
             '前置失效:prep 构帧非 D 帧'
         assert any(isinstance(e.action, OpenShop)
                    and e.reason == 'dominance_buy' for e in out), \
@@ -416,7 +416,7 @@ class TestPrepOpenShopSymmetry:
                  for i in range(BENCH_CAPACITY - 1)]
         sess = _prep_session()
         out = mandate.run_mandate(_prep_frame(dep, bench), sess,
-                                  state=_prep_state(dep))
+                                  state=_bridge(_prep_state(dep)))
         assert any(isinstance(e.action, OpenShop)
                    and e.reason == 'dominance_buy' for e in out)
         assert _NARROW_PREP_KEY not in state_of(sess).cw4_counters
@@ -432,7 +432,7 @@ class TestHubSentinel:
         辖域)收窄旗恒 False ⇒ hub 照常发射、哨兵键零显影。"""
         st = _hub_state(shop_cards=[_hub_card('花火', cost=2)])
         sess = _hub_session(IntentionState())
-        assert mandate.swap_transition_narrow_frame(st, sess) is False
+        assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is False
         act = _hub_decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         ct = _hub_ct(sess)

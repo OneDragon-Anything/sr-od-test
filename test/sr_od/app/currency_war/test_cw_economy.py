@@ -46,6 +46,9 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     blood_xp_gate_for,
     economy_score,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
@@ -341,8 +344,8 @@ def _blood_bs(hp: int | None, *, source: str = 'observation',
     语义的容器形态:observation=真读/prior=不可信 fail-closed)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BS_SCHEMA_VERSION,
-        GameState,
         ChannelSig,
+        GameState,
     )
     sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
@@ -421,13 +424,14 @@ _JUST_SPY = '商业间谍'      # xp_buy_cost_discount=1(cw_investments 注册)
 
 
 def _xp_state(level: int = 5, strategies: list[str] | None = None,
-              display: int | None = None) -> CwWorkFrame:
-    """费用轴最小决策帧(strategies=已持投资策略;display=OCR 显示价,
-    None=未读到走兜底支——两支来源凭该字段可判别)。"""
+              display: int | None = None) -> GameState:
+    """费用轴最小决策帧(经济读口已切容器:桥装为测试迁移单一源形态)。
+    strategies=已持投资策略;display=OCR 显示价,None=未读到走兜底支
+    ——两支来源凭容器 level_up_cost Field 判别。"""
     st = CwWorkFrame(gold=30, level=level, round_num=2)
     st.active_strategies = list(strategies or [])
     st.level_up_cost = display
-    return st
+    return _bsb(st)
 
 
 def test_xp_fee_no_discount_invariance() -> None:

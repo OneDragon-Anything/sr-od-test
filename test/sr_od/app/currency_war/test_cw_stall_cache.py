@@ -28,18 +28,21 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     locked_buy_cap_hold,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     CwWorkFrame,
     SellBench,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
@@ -307,14 +310,17 @@ class TestPrepStallCache:
         frame = self._storm_frame()
         sess = StrategySession()
         state_of(sess).cw4_counters = {}
-        out1 = mandate.run_mandate(frame, sess)
+        # 现役容器形参(production phase/血线读口):桥装帧同值世界,
+        # 两帧共用同一容器(与执行零动作的镜像语义一致)。
+        st = CwWorkFrame(gold=30, level=3, round_num=3, hp=60)
+        out1 = mandate.run_mandate(frame, sess, _bsb(st))
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 1
         assert c.get('bench_full_buy_abandon', 0) == 1
         assert c.get('m2_stall_cache_rederive', 0) == 1
         assert state_of(sess).cw4_m2_stall_latch is not None
         _arm_shop_token(sess, 'LevelUp')
-        out2 = mandate.run_mandate(frame, sess)
+        out2 = mandate.run_mandate(frame, sess, _bsb(st))
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 1, '命中帧事件键不增'
         assert c.get('bench_full_buy_abandon', 0) == 1
@@ -328,9 +334,10 @@ class TestPrepStallCache:
         frame = self._storm_frame()
         sess = StrategySession()
         state_of(sess).cw4_counters = {}
-        mandate.run_mandate(frame, sess)
+        st = CwWorkFrame(gold=30, level=3, round_num=3, hp=60)
+        mandate.run_mandate(frame, sess, _bsb(st))
         _arm_shop_token(sess, 'SellBench')
-        mandate.run_mandate(frame, sess)
+        mandate.run_mandate(frame, sess, _bsb(st))
         c = state_of(sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 2
         assert c.get('bench_full_buy_abandon', 0) == 2
@@ -350,7 +357,7 @@ class TestPrepStallCache:
         state_of(shop_sess).cw4_segment_serial += 1   # 备战期开始:推进
         _arm_shop_token(shop_sess, 'LevelUp')         # prep 帧间动作
         frame = self._storm_frame()
-        mandate.run_mandate(frame, shop_sess)
+        mandate.run_mandate(frame, shop_sess, cw4_bs(st_state, shop_sess))
         c = state_of(shop_sess).cw4_counters
         assert c.get('m2_retry_exhausted', 0) == 2, '跨域闩失效 ⇒ prep 帧重推导计数'
         assert c.get('m2_stall_cache_rederive', 0) == 2
@@ -378,14 +385,14 @@ class TestPrepStallCache:
         state.deployed = [_bc(material, slot=1)]
         sess = StrategySession()
         state_of(sess).cw4_counters = {}
-        mandate.run_mandate(frame, sess, state)         # 帧1:重推导
+        mandate.run_mandate(frame, sess, _bsb(state))         # 帧1:重推导
         c = state_of(sess).cw4_counters
         assert c.get('merge_material_guard_blocked', 0) == 1, \
             '首推导:凑息臂首计,腾席环同帧去重不重复计'
         assert c.get('m2_retry_exhausted', 0) == 1
         assert state_of(sess).cw4_m2_stall_latch is not None
         _arm_shop_token(sess, 'LevelUp')
-        mandate.run_mandate(frame, sess, state)         # 帧2:命中跳过环
+        mandate.run_mandate(frame, sess, _bsb(state))         # 帧2:命中跳过环
         c = state_of(sess).cw4_counters
         assert c.get('m2_stall_cache_hit', 0) == 1, '帧2 须走缓存路径(锁有效前提)'
         assert c.get('merge_material_guard_blocked', 0) == 2, \

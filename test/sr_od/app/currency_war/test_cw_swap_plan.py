@@ -13,9 +13,6 @@
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
     assemble_swap_plan_inputs,
@@ -24,6 +21,9 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     record_fresh_buy,
     select_swap_plan,
     swap_sell_exclusion_reason,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge as _bsb,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwWorkFrame
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
@@ -733,7 +733,8 @@ def test_mandate_carries_m1p_plan_payload() -> None:
     st = CwWorkFrame(gold=0, level=6, plane=1, round_num=2, board={},
                    deployed=list(dep), bench=list(bench))
     sess = _m1p_session(None, directed=True)
-    out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess, state=st)
+    out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess,
+                      state=_bsb(st))
     fired = [e for e in out if e.action.__class__.__name__ == 'RunDeploy'
              and e.reason == 'm1_swap_redeploy']
     assert len(fired) == 1, '锁前提:m1p 发射帧'
@@ -743,7 +744,7 @@ def test_mandate_carries_m1p_plan_payload() -> None:
     # 非 m1p 帧(无方向 → 计划弃权 → 无发射):载荷恒 None
     sess_nd = _m1p_session(None, directed=False)
     out_nd = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess_nd,
-                         state=st)
+                         state=_bsb(st))
     assert not any(e.action.__class__.__name__ == 'RunDeploy' for e in out_nd)
     assert state_of(sess_nd).cw4_m1p_plan_pending is None
 
@@ -796,7 +797,8 @@ def test_m1p_consumer_seam_gate_keeps_emission_closed(
     import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
     monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', False)
     sess = _m1p_session(None, directed=True)
-    out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess, state=st)
+    out = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess,
+                      state=_bsb(st))
     assert state_of(sess).cw4_m1p_seam_verified is False
     assert not any(e.action.__class__.__name__ == 'RunDeploy' for e in out)
     assert state_of(sess).cw4_counters.get('m1p_input_seam_pending') == 1
@@ -805,7 +807,7 @@ def test_m1p_consumer_seam_gate_keeps_emission_closed(
     monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', True)
     sess2 = _m1p_session(None, directed=True)
     out2 = run_mandate(_m1p_frame(deployed=dep, bench=bench), sess2,
-                       state=st)
+                       state=_bsb(st))
     assert state_of(sess2).cw4_m1p_seam_verified is True   # 入口唯一写点自置位
     fired = [e for e in out2 if e.action.__class__.__name__ == 'RunDeploy'
              and e.reason == 'm1_swap_redeploy']
@@ -828,12 +830,12 @@ def test_m1p_consumer_counts_plan_empty_and_cap_unreadable() -> None:
     st_dup = CwWorkFrame(gold=0, level=6, plane=1, round_num=2, board={},
                        deployed=list(dep_dup), bench=list(bench))
     run_mandate(_m1p_frame(deployed=dep_dup, bench=bench), sess,
-                state=st_dup)
+                state=_bsb(st_dup))
     assert state_of(sess).cw4_counters.get('m1p_plan_empty') == 1
     # cap 缺读帧:frame.deploy_cap=None → 弃权键
     sess2 = _m1p_session(None, directed=True)
     run_mandate(_m1p_frame(deployed=dep, bench=bench, cap=None), sess2,
-                state=st)
+                state=_bsb(st))
     assert state_of(sess2).cw4_counters.get('m1p_cap_unreadable') == 1
 
 
@@ -1013,7 +1015,7 @@ def test_m1p_no_direction_incident_frame_no_emission(monkeypatch) -> None:
                      deployed=[d for d in st.deployed if d], deploy_cap=8,
                      node_type='battle', stop_flag=False, k_members=(),
                      round_num=6),
-        sess, state=st)
+        sess, state=_bsb(st))
     assert not any(e.action.__class__.__name__ == 'RunDeploy' for e in out), (
         f'闩闭帧不得再发射幻影 RunDeploy:{[e.reason for e in out]}')
     assert out == [], f'闩闭帧序列空(entry ⑥ 出战可达),实得 {[e.reason for e in out]}'
@@ -1034,12 +1036,12 @@ def test_shop_buy_emission_writes_fresh_buys() -> None:
         COMP_LIBRARY,
         get_comp,
     )
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
     from sr_od.application.currency_war.kernel.cw_vocab import (
         BuyCard,
         ShopCard,
-    )
-    from sr_od.application.currency_war.kernel.cw_strategy_session import (
-        StrategySession,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         proof as _proof,
