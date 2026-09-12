@@ -8,6 +8,13 @@ design.md §2.1(全集派生/落码面·形态 B)/§2.7(全集门锁表 U1-U6);�
 机器,消费方禁二次建模);落码面 = decide_event env 分支裸分前置谓词 +
 ``env-off-universe`` 失格归因 + 循环外全集单帧单读。
 
+帧面 3.5 集成调和(U1/U3/U4):三锁原帧含经济通道候选(增发货币/成功经验),
+3.5 经济域带接线(design §2.3 门 4「优先经济」,域带 111-119 压过裸分域)后该
+类候选恒胜出,淹没全集门的判别力(缺省胜者与 evicted 胜者同为一环境通道候选
+→ 收窄不可见)。帧内经济通道候选换成无通道裸分环境,各锁语义目标不变:
+U1 = 全集外裸分头名失格、全集内次名递补;U3 = evicted 独占阵营收窄;U4 =
+faction 空候选不受门影响。
+
 fixture 直调核验(design §2.1.1 全集核对表 + §2.7 锁表帧值;模块导入即验,
 COMP_LIBRARY/环境注册表漂移先红于此——漂移 = 修库后重核全集咬合面,不是改断言
 保绿):
@@ -22,14 +29,14 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     candidate_faction_universe,
 )
 from sr_od.application.currency_war.kernel.cw_events import decide_event
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge,
+)
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     get_env,
@@ -58,12 +65,14 @@ assert {c.name for c in COMP_LIBRARY if '追击' in c.factions} == {'追击飞�
     'U3 动态收窄前提漂移:追击阵营应独占于追击飞霄')
 
 # U 锁帧实卡(名, 裸分, faction)——design §2.7 锁表括号值逐卡直调
+# (增发货币/成功经验 = 经济通道条目,3.5 帧面调和后不在任何 U 锁帧内,值行随之移除;
+# 经济通道候选行为归 test_cw_env_economy.py E3/E4 辖)
 for _n, _pv, _f in [
     ('狼狩概念股', 40, '狼狩'), ('狼狩邀请', 30, '狼狩'),
     ('公司契约', 48, '公司'), ('盛会之星邀请', 30, '盛会之星'),
     ('战力提升', 38, ''), ('成功经验', 36, ''), ('仙舟概念股', 48, '仙舟'),
     ('敌后破坏', 46, ''), ('专家研讨会', 34, ''), ('追击概念股', 52, '追击'),
-    ('增发货币', 48, ''), ('人身意外险', 48, ''), ('彩虹时代', 72, ''),
+    ('人身意外险', 48, ''), ('彩虹时代', 72, ''),
     ('深井角斗场', 42, ''), ('火药味', 28, ''),
 ]:
     _e = get_env(_n)
@@ -91,8 +100,13 @@ def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
 
 def test_u1_off_universe_fails_gate() -> None:
     """U1:全集外 faction 环境跳过裸分支(分数 0 天然垫底)→ 全集内裸分者胜出。
-    归因串可见性(落码面条款)随锁:全失格帧胜出者 reason = env-off-universe。"""
-    p = _pick(['狼狩概念股', '战力提升', '成功经验'])
+    归因串可见性(落码面条款)随锁:全失格帧胜出者 reason = env-off-universe。
+
+    帧面 3.5 调和:原第三候选 成功经验(经济通道,域带 111-119 压过裸分域,
+    design §2.3 门 4)换 专家研讨会(34,无通道)——全集外裸分头名(狼狩概念股
+    40)对全集内裸分次名(战力提升 38)的失格递补判别保持:门关时狼狩概念股
+    40 胜(改门前行为锚点),门开后 38 递补。"""
+    p = _pick(['狼狩概念股', '战力提升', '专家研讨会'])
     assert p.option_idx == 1, (
         f'狼狩在全集外应失格,战力提升(38)胜出,实得 {p.reason}')
     assert 'env-eval' in p.reason, f'胜出者应走 env 裸分支,实得 {p.reason}'
@@ -118,21 +132,29 @@ def test_u2_in_universe_bare_score_kept() -> None:
 
 def test_u3_evicted_narrows_universe() -> None:
     """U3:缺省全集含追击 → 追击概念股(52)胜出;evicted={'追击飞霄'} 后追击
-    退出全集(独占阵营)→ 追击概念股失格,增发货币(48,首序)胜出。"""
-    base = ['追击概念股', '增发货币', '人身意外险']
+    退出全集(独占阵营)→ 追击概念股失格,人身意外险(48,首序)胜出。
+
+    帧面 3.5 调和:原第二候选 增发货币(经济通道,域带恒压过裸分域,design
+    §2.3 门 4)换 敌后破坏(46,无通道)——经济通道候选在两种全集态下都胜出,
+    收窄判别(缺省胜者 ≠ evicted 胜者)会被淹没。"""
+    base = ['追击概念股', '人身意外险', '敌后破坏']
     p0 = _pick(base)
     assert p0.option_idx == 0, f'缺省全集含追击,52 应胜出,实得 {p0.reason}'
     p1 = _pick(base, evicted={'追击飞霄'})
     assert p1.option_idx == 1, (
-        f"evicted 追击飞霄后追击概念股应失格,增发货币(48)胜出,实得 {p1.reason}")
+        f"evicted 追击飞霄后追击概念股应失格,人身意外险(48)胜出,实得 {p1.reason}")
 
 
 # ===== U4 faction 空不受门影响(design §2.7 行 4;门谓词前半支)=====
 
 
 def test_u4_factionless_env_untouched() -> None:
-    """U4:faction 空(时代/经济等阵容无关型)恒放行 → 裸分竞争不变。"""
-    p = _pick(['增发货币', '彩虹时代', '深井角斗场'])
+    """U4:faction 空(时代/规则等阵容无关型)恒放行 → 裸分竞争不变。
+
+    帧面 3.5 调和:原首候选 增发货币(经济通道,域带恒压过裸分域,design
+    §2.3 门 4)换 人身意外险(48,无通道)——本锁辖「门不影响 faction 空候选
+    的裸分序」,经济通道候选的放行行为归 E4 辖(test_cw_env_economy.py)。"""
+    p = _pick(['人身意外险', '彩虹时代', '深井角斗场'])
     assert p.option_idx == 1, f'faction 空环境不受门影响,彩虹时代(72)胜出,实得 {p.reason}'
 
 

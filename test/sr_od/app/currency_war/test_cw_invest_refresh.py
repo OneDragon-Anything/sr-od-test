@@ -7,6 +7,8 @@ attacks/t162_invest_refresh/设计方案.md R4,四轮对抗 14→11→8→0)—�
 合同,锁语义不锁卡名,docstring 引 ADR 章节。判据本体 = 零阈值结构存在性
 (ADR-0600 §3.2 逐槽弱占优论证):帧级触发(候选恰 3 ∧ 全精确分类 ∧ 非 env
 帧 ∧ 无 S1/S2 ∧ max_N≠1)+ 槽级动作集(非顶级 ∧ 逐卡计数闸 ∧ 唯一 L1 守卫)。
+环境帧轴 = invest-env 迭代 design.md §2.8 判据(3.5 接线,取代 ADR-0600
+「env 帧恒不刷」F9;R1-R5/R7 kernel 锁同文件落此,锁 5 已随翻转改形)。
 
 fixture 卡取自注册表实卡(分类谓词直调核验,模块导入即验,漂移即全文件先红):
 - 全普通 S4:赌神·银/恢复生机/气氛组(无引擎无对齐无血);
@@ -24,13 +26,21 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.point import Point
+from sr_od.application.currency_war.kernel.cw_comps import (
+    AUGMENT_COMP_AFFINITY,
+    candidate_faction_universe,
+)
+from sr_od.application.currency_war.kernel.cw_env_economy import (
+    ENV_ECONOMY_ESTIMATES,
+    EconomyEstimate,
+)
+from sr_od.application.currency_war.kernel.cw_events import decide_event
+from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_bridge,
 )
-from sr_od.application.currency_war.kernel.cw_comps import AUGMENT_COMP_AFFINITY
-from sr_od.application.currency_war.kernel.cw_events import decide_event
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_investments import (
+    INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
     EconomyEffect,
     InvestmentStrategy,
@@ -185,14 +195,18 @@ def test_lock4_all_forbidden_frame_all_slots_actionable() -> None:
         f'全禁帧全部槽可刷,实得 {p.refresh_slots}')
 
 
-# ===== kernel 锁 5:env kind 恒 ∅(结构检测,零 kind 参)=====
+# ===== kernel 锁 5:env 帧全部受保护槽形 → 刷新集空(F9 语义已被 §2.8 取代)=====
 
 
-def test_lock5_env_frame_never_refreshes() -> None:
-    """锁 5(ADR-0600 §2/§4):三选项全部精确命中环境注册表 → env 帧 → 动作集恒空
-    (F9 结构检测,decide_event 签名不变)。执行不启用,漏刷 = 保守向失败安全。"""
+def test_lock5_env_frame_all_protected_no_refresh() -> None:
+    """锁 5(原 F9「env 帧恒不刷」帧;行为翻转在册申报 = invest-env 迭代
+    design.md §2.8:ADR-0600 §2/§4 恒不刷规则由环境帧刷新判据取代,启用
+    前置「环境侧顶级类建模」由经济域带/送卡档接线满足)。本帧三槽全为
+    全集内/受保护形({追击概念股, 彩虹时代, 头彩}:无全集外零价值槽、
+    无被禁)→ 环境判据动作集空 → 不刷——与零价值槽可刷新语义(R 组)互补,
+    帧 fixture 保持原值作行为连续性对照。"""
     p = _pick(['追击概念股', '彩虹时代', '头彩'])
-    assert p.refresh_slots == () and p.refresh is False, 'env 帧恒不刷'
+    assert p.refresh_slots == () and p.refresh is False, '全保护 env 帧不刷'
 
 
 # ===== kernel 锁 6:判据零次数输入(签名结构锁)=====
@@ -270,6 +284,92 @@ def test_lock8_steering_priority_keeps_aligned_pick() -> None:
     repick = _pick(after, cfg, locked_comp='希儿量子')
     assert repick.option_idx == 0, (
         f'对齐卡+priority(140)应压过新 S1(120),实得 {repick}')
+
+
+# ===== 3.5 环境帧刷新判据 R 组(invest-env 迭代 design.md §2.8;kernel 侧)=====
+# 判据 = 零自由参数结构分类:零价值(全集门失格 ∧ 未被 user-priority 命中)
+# 恒可刷(逐槽弱占优:当前价值 0,替换样本任一 ≥ 0 且 P(>0) 显著,免费刷新
+# 用失即废)/ 被禁恒可刷(P5② 同构:被禁者永不被选,保护无对象)/ 顶级
+# (经济域带 resolved ∨ 阵营 floor 命中)与其余集内裸分槽(含送卡档、
+# unresolved 经济槽——基数化挂账 §2.8)保护不刷。帧级门 = 恰 3 ∧ 全部精确
+# 命中环境注册表(未知名 fail-closed 不刷,G7 轴同款)。
+# R 帧前提直调核验(漂移先红,重核 R 组咬合面):
+_R_OFF_UNIVERSE = ('狼狩概念股', '狼狩邀请', '盛会之星邀请')
+_UNIV0 = candidate_faction_universe()
+for _n in _R_OFF_UNIVERSE:
+    _e = INVESTMENT_ENVS[_n]
+    assert _e.faction and _e.faction not in _UNIV0, (
+        f'{_n} 应在全集外(R 组零价值槽前提)')
+assert INVESTMENT_ENVS['增发货币'].economy is not None, (
+    'R3/R7 顶级槽前提:增发货币应带经济通道')
+for _n in ('战力提升', '成功经验', '彩虹时代', '头彩', '火药味'):
+    assert INVESTMENT_ENVS[_n].faction == '', (
+        f'{_n} 应为 faction 空候选(集内槽前提)')
+
+
+def _inject_arrival_params(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R3/R7 到达参数注入(design R3 行「到达参数注入 resolved」;不依赖
+    注册表现值,全达帧 6+8+12=26 → 域带 116,方向确定)。"""
+    for _k in ('plane_arrival_p2', 'plane_arrival_p3'):
+        monkeypatch.setitem(ENV_ECONOMY_ESTIMATES, _k, EconomyEstimate(
+            value=1.0, ci=(0.9, 1.0), source='test-inject', cutoff='1970-01-01'))
+
+
+def test_r1_zero_value_slot_refreshable() -> None:
+    """R1(design §2.8 R1 行):{狼狩概念股, 战力提升, 成功经验} → 动作集 =
+    {0}——全集外零价值槽恒可刷,集内槽(裸分/经济顶级)不刷。"""
+    p = _pick(['狼狩概念股', '战力提升', '成功经验'])
+    assert p.refresh is True and p.refresh_slots == (0,), (
+        f'零价值槽可刷、集内槽不刷,实得 {p.refresh_slots} ({p.reason})')
+
+
+def test_r2_all_off_universe_all_slots() -> None:
+    """R2(design §2.8 R2 行):三全集外实卡(狼狩概念股/狼狩邀请/盛会之星
+    邀请)→ 全槽可刷。"""
+    p = _pick(list(_R_OFF_UNIVERSE))
+    assert p.refresh is True and p.refresh_slots == (0, 1, 2), (
+        f'三零价值槽全可刷,实得 {p.refresh_slots}')
+
+
+def test_r3_top_tier_protected_with_zero_slot(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """R3(design §2.8 R3 行):{增发货币, 狼狩概念股, 战力提升} + 到达参数
+    注入 resolved → 顶级保护(增发货币域带)与零槽可刷(狼狩概念股)并存,
+    集内裸分槽(战力提升)不刷 → (1,)。"""
+    _inject_arrival_params(monkeypatch)
+    p = _pick(['增发货币', '狼狩概念股', '战力提升'])
+    assert p.refresh is True and p.refresh_slots == (1,), (
+        f'仅零价值槽可刷,顶级与集内槽保护,实得 {p.refresh_slots}')
+
+
+def test_r4_priority_hit_off_universe_slot_kept() -> None:
+    """R4(design §2.8 R4 行):priority 命中全集外槽 → 该槽不入动作集
+    (用户点名保选,user-priority 最高语义与全集门 U5 同构);对照槽(狼狩
+    邀请,未命中 priority)零价值恒可刷 → (1,)。"""
+    p = _pick(['狼狩概念股', '狼狩邀请', '火药味'],
+              _cfg(env_priority=['狼狩概念股']))
+    assert p.refresh is True and p.refresh_slots == (1,), (
+        f'priority 命中集外槽不入动作集,实得 {p.refresh_slots}')
+
+
+def test_r5_unknown_name_fail_closed() -> None:
+    """R5(design §2.8 R5 行):含未注册名 → 帧级门(全部精确命中环境注册表)
+    不触发 → refresh_slots=∅(fail-closed:评分错只排错序、刷新错会弃掉真
+    顶级卡,不对称风险取严)。"""
+    p = _pick(['狼狩概念股', '战力提升', '完全未知卡'])
+    assert p.refresh_slots == () and p.refresh is False, '未知名 fail-closed 不刷'
+
+
+def test_r7_forbidden_slot_always_actionable(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """R7(design §2.8 R7 行):集内被禁槽(env_forbid 命中 彩虹时代)与顶级
+    (增发货币,注入 resolved)/集外零价值槽(狼狩概念股)并存 → 被禁槽恒入
+    动作集(顶级保护不辖被禁,P5② 同构:被禁者永不被选)→ (0, 2)。"""
+    _inject_arrival_params(monkeypatch)
+    p = _pick(['彩虹时代', '增发货币', '狼狩概念股'],
+              _cfg(env_forbid=['彩虹时代']))
+    assert p.refresh is True and p.refresh_slots == (0, 2), (
+        f'被禁槽恒可刷(顶级保护不辖),实得 {p.refresh_slots}')
 
 
 # ===== handler 锁 9-14(执行链;桩化 OCR/读数/点击,零真实副作用)=====

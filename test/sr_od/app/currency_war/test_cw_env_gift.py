@@ -1,8 +1,10 @@
-"""T-130 投资环境迭代 3.4 送卡型结构 · 预注册单帧锁(G1/G2/G8 半边)。
+"""T-130 投资环境迭代 3.4 送卡型结构 · 预注册单帧锁(G1/G2/G8 半边)
++ T-134 3.5 消费接线锁(G2 decide_event 行为半边 + G3-G7)。
 
 锁面出处(持久索引):
 - docs/develop/sr_od/application/currency_war/changes/2026-09-12-invest-env/
-  landing.md §3.4(批辖域 = G1 分档表直调锁 + G2 失格门构造锁 + G8 互斥断言半边);
+  landing.md §3.4(批辖域 = G1 分档表直调锁 + G2 失格门构造锁 + G8 互斥断言半边)
+  / §3.5(消费接线:G2 行为半边顺延 + G3-G7 消费锁);
 - docs/develop/sr_od/application/currency_war/changes/2026-09-12-invest-env/
   details/env-value-models.md §2.1(送卡型:§2.1.1 语义盘点/§2.1.2 估值形态与
   档位阶梯/§2.1.3 结构与落码面/§2.1.4 正交性/§2.1.5 G 组锁表)。
@@ -11,12 +13,11 @@
 校验 _validate_env_gifts)+ ``gift_hit_tier``/``candidate_char_universe``
 (kernel/cw_comps.py,COMP_LIBRARY 派生 helper 区)。档位 floor 常数
 (GIFT_FLOOR_CORE/SHARED/ADVISOR_CORE)= 定序实现常数(ADR-0524 同族先例),
-值只承载档间定序与对既有域带的位次,禁读基数。
+值只承载档间定序与对既有域带的位次,禁读基数。消费位 = cw_events env 分支
+送卡档 max() 支(3.5 接线),分派映射 = gift_hit_tier docstring 消费契约
+(禁二次推导):失格 ⇔ tier='off' ∧ 非 advisor ∧ 即时集非空(T-130 验收
+裁决口径,与设计意图一致;详设 §2.1.2 字面公式行的改口归正本更新批)。
 
-批内不碰 cw_events.py(landing §3.4 文件面边界):消费支(cw_events env 分支
-送卡档 max(),decide_event 行为帧)归 3.5 = G3-G7;G2 的 decide_event 行为
-半边(分 0/env-gift-off-universe 归因/argmax 落其余候选)随 G3-G7 同批落锁,
-本批只锁失格门构造(构造 GiftGrant → 档位机器判 'off' + 消费契约谓词)。
 G8 的 ∩ ENV_POOL_REWRITE 半边随 3.6 建表收全(= Q6)。
 
 fixture 直调核验(仿 test_cw_env_universe.py U 组先例;模块导入即验,
@@ -25,9 +26,12 @@ COMP_LIBRARY/环境/角色注册表漂移先红于此——漂移 = 修库后重
 - ENV_GIFTS 恰 11 条 + 效果原文对账 id(INVESTMENT_ENVS.source = plaza:<id>);
 - 分档表逐位(详设 §2.1.2 命中表的宿主套名单 + 全集外名单 + §2.1.1 faction 事实);
 - floor 常数锚点不等式(注册表派生:契约裸分上界 58/阵营 floor 下界 70/
-  env 裸分上界 72/结构可比簇上界 52/头彩 55)。
+  env 裸分上界 72/结构可比簇上界 52/头彩 55);
+- G 消费帧实卡裸分值(§2.1.5 G3-G7 行括号值)。
 """
 from __future__ import annotations
+
+from types import SimpleNamespace
 
 import pytest
 
@@ -36,6 +40,10 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     candidate_char_universe,
     gift_hit_tier,
+)
+from sr_od.application.currency_war.kernel.cw_events import decide_event
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
@@ -48,6 +56,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     GiftGrant,
 )
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame, PickEvent
 
 # ===== fixture 前提直调核验(锁语义依赖的注册表事实;漂移先红于此)=====
 
@@ -349,3 +358,132 @@ def test_g8_validator_fires(monkeypatch: pytest.MonkeyPatch) -> None:
                         GiftGrant(chars_immediate=('砂金',)))
     with pytest.raises(ValueError, match='ENV_ECONOMY'):
         inv._validate_env_gifts()
+
+
+# ===== 3.5 消费接线锁(G2 行为半边 + G3-G7;详设 §2.1.5 行 2-7)=====
+# 共用工具(仿 test_cw_env_universe.py 先例:kernel 纯函数直调,空板帧无
+# D* 信号/无 DoT 惩罚;容器桥沿 invest_refresh 先例)。
+
+def _cfg(**overrides) -> SimpleNamespace:
+    base: dict = {'strategy_priority': [], 'strategy_forbid': []}
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+_STATE = CwWorkFrame(board={}, hp=100, hp_readable=True)
+
+
+def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
+    return decide_event(options, cfg if cfg is not None else _cfg(),
+                        board_state_bridge(_STATE), **kw)
+
+
+# G 消费帧实卡裸分值(详设 §2.1.5 G3-G7 行括号值;漂移先红,重核锁表帧)
+for _n, _pv in [
+    ('持续伤害契约', 48), ('量子同频契约', 45), ('特邀专家:桑博', 35),
+    ('特邀专家:停云', 38), ('彩虹时代', 72), ('深井角斗场', 42),
+    ('人才储备', 48), ('敌后破坏', 46), ('人才引进', 36),
+    ('银·金·彩', 62), ('仙舟概念股', 48), ('火药味', 28),
+]:
+    assert INVESTMENT_ENVS[_n].pick_value == _pv, (
+        f'G 消费帧实卡裸分漂移:{_n} 期望 {_pv}')
+
+# G2/G7 evicted 传导前提(欢愉契约帧:排除双宿主套 → faction 欢愉仍经
+# 绯英欢愉在全集,而即时赠卡 银狼LV.999(core 宿 = 火花星间旅人/狼尊欢愉,
+# 见上方 _CORE_HOSTS)三名单皆不在 → tier='off',消费契约失格谓词咬合)
+_EVICT_HUANYU = frozenset({'狼尊欢愉', '火花星间旅人'})
+assert '欢愉' in {f for c in COMP_LIBRARY if c.name not in _EVICT_HUANYU
+                  for f in c.factions}, '欢愉阵营应经绯英欢愉仍在全集'
+assert gift_hit_tier(ENV_GIFTS['欢愉契约'], _EVICT_HUANYU) == 'off', (
+    '排除银狼LV.999 双宿主套后欢愉契约应落 off 档(evicted→失格传导前提)')
+
+
+def test_g2_decide_event_disqualify_behavior(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """G2 行为半边(3.5 接线;详设 §2.1.5 行 2 的 decide_event 面):
+    构造 GiftGrant(chars_immediate=('砂金',)) 注入 fixture 环境 → 档 'off'
+    → 分 0、归因 env-gift-off-universe,argmax 落其余候选。
+
+    帧 A 判别:fixture 裸分 60(高于两名全集内对照)——无消费支时会胜出,
+    消费支把白得全废卡压到 0 → 敌后破坏(46)递补;帧 B 观测面:三候选全废
+    (fixture 失格 + 狼狩×2 全集门失格)→ 首序胜出,env-gift-off-universe
+    归因可见。当前注册表 11 条无一触发(§2.1.2),门 = 演化时结构性咬合,
+    本锁用注入环境钉住 decide_event 端的接线形态。"""
+    grant = GiftGrant(chars_immediate=('砂金',))
+    _env = inv.InvestmentEnv(name='测试失格契约', category='契约', effect='',
+                             source='test', pick_value=60)
+    monkeypatch.setitem(inv.INVESTMENT_ENVS, '测试失格契约', _env)
+    monkeypatch.setitem(inv.ENV_GIFTS, '测试失格契约', grant)
+    p = _pick(['测试失格契约', '敌后破坏', '战力提升'])
+    assert p.option_idx == 1, (
+        f'白得全员集外应失格 0,敌后破坏(46)递补,实得 {p.reason}')
+    assert 'env-eval' in p.reason, f'递补者应走裸分支,实得 {p.reason}'
+    p2 = _pick(['测试失格契约', '狼狩概念股', '狼狩邀请'])
+    assert p2.option_idx == 0 and 'env-gift-off-universe' in p2.reason, (
+        f'全废帧胜出者应带 env-gift-off-universe 归因,实得 {p2.reason}')
+
+
+def test_g3_tier_lift_frame() -> None:
+    """G3 提档帧(详设 §2.1.5 行 3):{持续伤害契约, 人才储备 48, 敌后破坏 46}
+    → 选持续伤害契约,reason=gift-core(送卡档 66 > 48/46,即时不看条件集,
+    规则 1;黑天鹅条件集不参与定档)。"""
+    p = _pick(['持续伤害契约', '人才储备', '敌后破坏'])
+    assert p.option_idx == 0, f'送卡档 66 应压过裸分 48/46,实得 {p.reason}'
+    assert 'gift-core' in p.reason, f'胜出归因应为 gift-core,实得 {p.reason}'
+
+
+def test_g4_conditional_downgrade_frame() -> None:
+    """G4 条件降档帧(详设 §2.1.5 行 4;规则 3):{量子同频契约, 彩虹时代 72,
+    深井角斗场 42} → 选彩虹时代——量子同频即时空、条件 core 降一档 = shared
+    (60),60 < 72:条件降档不越知识评估上界。"""
+    p = _pick(['量子同频契约', '彩虹时代', '深井角斗场'])
+    assert p.option_idx == 1, (
+        f'条件降档 60 应让位彩虹时代(72),实得 {p.reason}')
+    assert 'env-eval' in p.reason, f'胜出应来自裸分支,实得 {p.reason}'
+
+
+def test_g5_advisor_frames() -> None:
+    """G5 advisor 帧(详设 §2.1.5 行 5;规则 2 族切换):{特邀专家:桑博,
+    深井角斗场 42, 人才引进 36} → 选桑博 reason=advisor-core(付费期权族
+    54 > 42);对照 {特邀专家:停云, 同帧} → 选深井角斗场——停云 advisor
+    off 无 floor 维持裸分 38 < 42(失格门不咬 advisor,不买即可无浪费)。"""
+    p1 = _pick(['特邀专家:桑博', '深井角斗场', '人才引进'])
+    assert p1.option_idx == 0, f'advisor-core 54 应压过 42/36,实得 {p1.reason}'
+    assert 'advisor-core' in p1.reason, f'归因应为 advisor-core,实得 {p1.reason}'
+    p2 = _pick(['特邀专家:停云', '深井角斗场', '人才引进'])
+    assert p2.option_idx == 1, (
+        f'停云无 floor 维持 38,深井角斗场(42)胜出,实得 {p2.reason}')
+
+
+def test_g6_floor_orthogonal() -> None:
+    """G6 floor 正交(详设 §2.1.5 行 6;§2.1.4-2):{持续伤害契约, 仙舟概念股,
+    火药味} + 锁线 DOT队(持续伤害套)→ 契约 faction floor 72(契约档)压过
+    送卡档 66,reason=align-locked——floor(动态对齐)> 送卡静态档,无交叉
+    处理代码,由 max() 次序自然承载。"""
+    p = _pick(['持续伤害契约', '仙舟概念股', '火药味'], locked_comp='DOT队')
+    assert p.option_idx == 0, f'契约 floor 72 应压过送卡档 66,实得 {p.reason}'
+    assert 'align-locked' in p.reason, f'归因应为阵营 floor,实得 {p.reason}'
+
+
+def test_g7_evicted_propagation_frames() -> None:
+    """G7 evicted 传导(详设 §2.1.5 行 7;§2.1.4-5)。
+
+    帧 1(design 行原帧):{持续伤害契约, 银·金·彩, 人才储备 48} +
+    evicted={DOT队, 专家桑博DOT, 千冶减益} → 持续伤害契约出局、银·金·彩
+    (62)胜出且无 env-gift 归因串。decide_event 层的出局机制 = 阵营全集门
+    先行(§2.1.4-1:持续伤害阵营仅 DOT队/专家桑博DOT 两宿,同批排除后退出
+    全集);档位机器的 transition 落点(卡芙卡/黑天鹅全集外、椒丘落
+    transition)已由 G1b 锁定,两层结论一致。
+    帧 2(失格传导,仅排除赠卡宿主、faction 宿主健在):欢愉契约 evicted
+    {狼尊欢愉, 火花星间旅人} → 欢愉仍经绯英欢愉在全集(门放行),即时赠卡
+    银狼LV.999 三名单皆不在 → tier='off' 失格 0、env-gift-off-universe
+    归因(全废帧首序胜出可见;狼狩×2 为全集门失格对照)。
+    """
+    p = _pick(['持续伤害契约', '银·金·彩', '人才储备'],
+              evicted=frozenset({'DOT队', '专家桑博DOT', '千冶减益'}))
+    assert p.option_idx == 1, (
+        f'持续伤害契约应出局,银·金·彩(62)胜出,实得 {p.reason}')
+    assert 'gift' not in p.reason, f'胜出者不应带送卡归因,实得 {p.reason}'
+    p2 = _pick(['欢愉契约', '狼狩概念股', '狼狩邀请'], evicted=_EVICT_HUANYU)
+    assert p2.option_idx == 0 and 'env-gift-off-universe' in p2.reason, (
+        f'欢愉契约失格传导应带 env-gift-off-universe 归因,实得 {p2.reason}')

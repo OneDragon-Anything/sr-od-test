@@ -1,4 +1,5 @@
-"""投资环境经济估值锁 E1/E2 + 3.3 数据批增锁(design.md §2.7 经济锁表)。
+"""投资环境经济估值锁 E1/E2 + 3.3 数据批增锁 + 3.5 汇合集成锁 E3/E4
+(design.md §2.7 经济锁表)。
 
 出处(持久索引):
 - docs/develop/sr_od/application/currency_war/changes/2026-09-12-invest-env/design.md
@@ -15,10 +16,15 @@
 (注入覆盖现值);依赖注册表现参的锁(二手市场 resolved 行/落表结构行)
 由注册表参数现算期望,不硬锁数据值,重采改参后照常可跑。
 """
+from types import SimpleNamespace
+
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_env_economy
 from sr_od.application.currency_war.kernel import cw_investments as inv
+from sr_od.application.currency_war.kernel.cw_comps import (
+    candidate_faction_universe,
+)
 from sr_od.application.currency_war.kernel.cw_env_economy import (
     ECON_VALUE_NORM,
     ENV_ECONOMY_ESTIMATES,
@@ -28,15 +34,18 @@ from sr_od.application.currency_war.kernel.cw_env_economy import (
     EconomyEstimate,
     env_economy_value,
 )
+from sr_od.application.currency_war.kernel.cw_events import decide_event
 from sr_od.application.currency_war.kernel.cw_game_state import (
     Field,
     GameState,
     NodeKey,
+    board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
     INVESTMENT_ENVS,
 )
+from sr_od.application.currency_war.kernel.cw_vocab import CwWorkFrame, PickEvent
 
 
 def _est(value: float, lo: float, hi: float) -> EconomyEstimate:
@@ -53,6 +62,24 @@ def _bs(plane: int | None = None, round_num: int = 1, held: int = 0) -> GameStat
     if held:
         bs.active_strategies = Field(value=['测试策略'] * held)
     return bs
+
+
+# ===== 3.5 汇合集成锁 E3/E4(design §2.7 行 3/4;decide_event 消费面)=====
+# 工具仿 test_cw_env_universe.py 先例(kernel 纯函数直调,空板帧无 D* 信号、
+# 无 DoT 惩罚;容器桥 = 同文件 U/refresh 组同款过渡桥形态)。
+
+def _cfg(**overrides) -> SimpleNamespace:
+    base: dict = {'strategy_priority': [], 'strategy_forbid': []}
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+_STATE = CwWorkFrame(board={}, hp=100, hp_readable=True)
+
+
+def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
+    return decide_event(options, cfg if cfg is not None else _cfg(),
+                        board_state_bridge(_STATE), **kw)
 
 
 def test_env_economy_whitelist_and_wiring() -> None:
@@ -387,3 +414,54 @@ def test_econ_value_norm_bounds(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cw_env_economy, 'ECON_VALUE_NORM', 0.5)
     with pytest.raises(ValueError):
         cw_env_economy._validate_estimates_governance()
+
+
+def test_e3_band_integration(monkeypatch: pytest.MonkeyPatch) -> None:
+    """E3 经济域带集成(design §2.7 E3 行;汇合次序单一真源 §2.3 门 4)。
+
+    帧 {增发货币, 仙舟概念股, 敌后破坏} + 锁线 景元仙舟:仙舟概念股走阵营
+    floor 78(概念股档),增发货币域带 = 111 + 8×min(v,40)/40 ≈ 114 > 78
+    → 胜出 reason=env-econ——「优先经济,然后终局阵容」在环境轴兑现,域带
+    压过 floor;期望值由注册表现参现算(不硬锁数据值,重采改参后照常可跑)。
+    估算缺失帧(delitem 到达参数):增发货币 fail-closed 退裸分 48 < 追击
+    概念股 52 → 追击概念股胜出 env-eval,与无经济通道接线时逐位一致。
+    """
+    p = _pick(['增发货币', '仙舟概念股', '敌后破坏'], locked_comp='景元仙舟')
+    assert p.option_idx == 0, f'域带(≈114)应压过阵营 floor 78,实得 {p.reason}'
+    assert 'env-econ' in p.reason, f'胜出归因应为经济域带,实得 {p.reason}'
+    monkeypatch.delitem(ENV_ECONOMY_ESTIMATES, 'plane_arrival_p2',
+                        raising=False)
+    monkeypatch.delitem(ENV_ECONOMY_ESTIMATES, 'plane_arrival_p3',
+                        raising=False)
+    p2 = _pick(['增发货币', '追击概念股', '敌后破坏'])
+    assert p2.option_idx == 1, (
+        f'估算缺失应退裸分,追击概念股(52)胜出,实得 {p2.reason}')
+    assert 'env-eval' in p2.reason, f'退路应来自裸分支,实得 {p2.reason}'
+
+
+def test_e4_gate_band_orthogonal() -> None:
+    """E4 两块正交(design §2.7 E4 行;§2.3 结构保证)。
+
+    全集外 faction 环境不因经济通道复活:faction 型环境结构性无经济通道
+    (A/B/C 入模环境 faction 恒空 = §2.2.1 注)——全集外咬合面逐条 economy
+    None 断言(结构性不可达)+ 行为帧 {公司契约, 敌后破坏, 战力提升}:
+    公司契约裸分 48 本应胜出(无门时),全集门失格 0 → 敌后破坏(46)递补;
+    经济环境全集门恒放行:ENV_ECONOMY 全表 faction 空断言(门谓词前半支恒真)
+    + 行为帧 {蓝海, 战力提升, 专家研讨会} → 蓝海(零参数精确通道 +6 金,
+    域带 112.2)胜出 env-econ。
+    """
+    _universe = candidate_faction_universe()
+    for _n, _e in INVESTMENT_ENVS.items():
+        if _e.faction and _e.faction not in _universe:
+            assert _e.economy is None, (
+                f'{_n} faction 型环境不得带经济通道(门杀后经通道复活 = 破门)')
+    p = _pick(['公司契约', '敌后破坏', '战力提升'])
+    assert p.option_idx == 1, (
+        f'公司契约全集外应失格,敌后破坏(46)递补,实得 {p.reason}')
+    assert 'env-eval' in p.reason, f'递补者应走裸分支,实得 {p.reason}'
+    for _n in ENV_ECONOMY:
+        assert INVESTMENT_ENVS[_n].faction == '', f'{_n} 经济环境 faction 应为空'
+    p2 = _pick(['蓝海', '战力提升', '专家研讨会'])
+    assert p2.option_idx == 0, (
+        f'经济环境应恒放行,蓝海域带(112)胜出,实得 {p2.reason}')
+    assert 'env-econ' in p2.reason, f'胜出归因应为经济域带,实得 {p2.reason}'
