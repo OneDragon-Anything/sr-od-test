@@ -147,18 +147,27 @@ def test_post_launch_blockers_registry() -> None:
 # ==================== ③ 前台无角色 → 验证重部署 → 出战链 ====================
 
 def test_frontless_recovery_chain_wired() -> None:
-    """源码锁(0j 升级):确认关闭 → CwOpDeploy 带验证重部署 → 验前排 ≥1
-    → 再出战;超限 round_fail(不再无限 round_wait)。"""
+    """源码锁(0j 升级;T-176 V-1 收编重推):确认关闭 → CwOpDeploy 带验证
+    重部署 → 直接再出战;超限 round_fail(不再无限 round_wait)。
+
+    锁语义重推记录(V-1 收编):旧形态「deploy 后 slot_occupied 像素判前排
+    ≥1」是分发段判效,与「动作 op 只管机械执行,落地判定归观察侧」裁定
+    冲突(统一观察架构 §5.1 v11/T-223)——判效读拆除,失败信号改由出战链
+    POST_LAUNCH_BLOCKERS 弹窗守卫承载(游戏对「出战时前台空」的弹窗信号,
+    重现即 0j 分支重入计重试)。预算/超限/CwOpDeploy/StartBattle 接线
+    不变;「分发段零识别直调」负锁归 test_cw_obs_violation_collected。"""
     from sr_od.application.currency_war.operations import cw_loop
     src = inspect.getsource(cw_loop.CwLoop.loop)
     assert 'FRONTLESS_REDEPLOY_LIMIT' in src
     assert 'CwOpDeploy(self.ctx).execute()' in src
     assert '_StartBattle()' in src
-    assert '前台仍空' in src                       # 出口判据:前排 ≥1 验证
+    assert '前台仍空' in src                       # 超限出口消息保留(预算兜底语义)
     assert "round_fail('前台无角色重部署超限(前台仍空)')" in src
     assert cw_loop.CwLoop.FRONTLESS_REDEPLOY_LIMIT == 2
     # 预算复位挂点:正常备战环成功跑完 = 部署链健康 → 复位(预算辖连续失败窗)
     assert 'self._frontless_redeploy = 0' in src
+    # V-1 收编:判效读拆除后的负锚(slot_occupied 禁回归)归
+    # test_cw_obs_violation_collected 模块级锁,此处不重复。
 
 
 # ==================== ④ deployed 计数双源仲裁(板满门;实机停机局回归)====================

@@ -784,12 +784,17 @@ def test_summon_hook_skips_trial_reveal_card(monkeypatch, tmp_path) -> None:
     assert not (tmp_path / '.debug/temp/currency_war/summon_stop_hook.flag').exists()
 
 
-def test_cw_loop_reveal_wiring_present() -> None:
-    """行为接线锁:cw_loop 备战分支的揭示清场在场(防误删后退回停机/漏增益)。"""
-    from sr_od.application.currency_war.operations import cw_loop
+def test_cw_prep_reveal_wiring_present() -> None:
+    """行为接线锁(T-176 V-2 收编重锚):揭示/书册卡清场接线在场,防误删
+    后退回停机/漏增益。宿主自 cw_loop 备战分支迁 CwScreenPrep 环入口
+    (``_clear_prep_cards``;外循环只保留分派,识别机制不出分发层)——
+    锁语义(清场接线存在)保持,宿主随收编迁移更新。"""
+    from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
 
-    src = inspect.getsource(cw_loop)
-    assert 'find_trial_reveal_cards' in src, 'cw_loop 试用揭示卡清场接线被移除'
+    src = inspect.getsource(cw_screen_prep.CwScreenPrep._clear_prep_cards)
+    assert 'find_trial_reveal_cards' in src, '揭示卡清场识别被移除'
+    assert 'find_bookcards' in src, '书册卡清场识别被移除'
+    assert 'record_op_enter' in src, '书册卡处理链 journal 包装被移除(双通道行缺口回归)'
 
 
 # ==================== w219_boss_collect_channel(简报/接管采集通道) ====================
