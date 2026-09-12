@@ -42,13 +42,13 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     get_comp,
 )
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwSimFrame,
     ShopCard,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
@@ -338,9 +338,8 @@ def cw4_feed(session, frame):
     节点缺席补写(node_type=None 帧的 plane/round 保真):合成口对
     node_type 未识别帧不写 node(禁 'prep' 占位假值),旧决策链直读
     ``CwSimFrame.plane/round_num`` 标量、位面门照常生效——补写
-    ``NodeKey(kind='')`` 与 kernel :func:`board_state_bridge` 的节点
-    缺席补写同式(kind 空串 = 帧未识别的忠实镜像,禁词表值冒充真值),
-    保 feed 与桥两路对同帧决策面行为逐位一致。"""
+    ``NodeKey(kind='')``(kind 空串 = 帧未识别的忠实镜像,禁词表值
+    冒充真值),保喂入路对未识别帧决策面行为保真。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         NodeKey,
@@ -374,3 +373,77 @@ def cw4_bs(frame, session):
     """帧 → 容器并返回容器(cw4_feed 的取值形态;decide_shop_action
     首参直喂迁移用)。"""
     return cw4_feed(session, frame)
+
+
+class _DuckFrame:
+    """鸭子帧属性缺读回落 CwSimFrame 缺省(轻量桩帧兼容——旧链消费只读
+    桩提供的字段;装箱经合成口搬运全域,缺属性按同帧 ``CwSimFrame()``
+    缺省解释,与「缺读 = 缺省保守值」惯例一致)。"""
+
+    __slots__ = ('_st', '_base')
+
+    def __init__(self, st_: object, base_: object) -> None:
+        object.__setattr__(self, '_st', st_)
+        object.__setattr__(self, '_base', base_)
+
+    def __getattr__(self, name: str):
+        st = object.__getattribute__(self, '_st')
+        base = object.__getattribute__(self, '_base')
+        try:
+            return getattr(st, name)
+        except AttributeError:
+            return getattr(base, name)
+
+
+def cw4_box(frame, session=None):
+    """帧 → 容器一次性装箱(「桥装箱」配方的退役承接:T-169 桥本体删除
+    批起,本函数 = 该配方测试侧单一源)。域写入语义与退役的 kernel
+    ``board_state_bridge`` 逐位同构,消费方式 = 别名导入(调用点零改动,
+    见模块头)。
+
+    - 载体 = 容器读口 ``board_state_of(session)``:session=None(缺省)
+      = 一次性空白容器(读口 None 分支契约:不缓存不挂载);传 session
+      时装入该 session 单例(适合「装箱面与生产读口面须同容器」的用例,
+      注意多次装箱同 session 为累加写,与一次性桥语义有差);
+    - 域写入 = 生产同路合成口 ``synthesize_from_game_state`` + 节点缺席
+      补写(NodeKey(kind=''),evidence=sim:synthesized)+ D 类域补写
+      (level_up_cost/shop_refresh_cost/selected_difficulty,帧值缺席
+      不写——喂入口现不写这三域(fields.md D 类行),桥期由桥独有补写
+      承载,此处原样承接,读口侧回落 None 缺省的语义与桥期一致);
+    - 与 cw4_feed 的两处刻意分叉(沿桥语义,勿「对齐」):①不补在屏空
+      payload(桥语义 = 合成口离屏分支原样,cw4_feed 的空牌面补写是旧
+      商店语境的对齐面);②节点补写 evidence=sim:synthesized(cw4_feed
+      用 kind_inherited)。两分叉各有存量断言辖,收敛归喂入口域覆盖批。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        SIM_SYNTHESIZED,
+        ChannelSig,
+        NodeKey,
+        board_state_of,
+        synthesize_from_game_state,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwSimFrame as _FrameDefaults,
+    )
+    bs = board_state_of(session)
+    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
+                      mode='synthesized')
+    st_view: object = (_DuckFrame(frame, _FrameDefaults())
+                       if not isinstance(frame, _FrameDefaults) else frame)
+    synthesize_from_game_state(bs, st_view)
+    if bs.node.value is None:
+        bs.observe(bs.node,
+                   NodeKey(plane=int(getattr(frame, 'plane', 1) or 1),
+                           round_num=int(getattr(frame, 'round_num', 1)
+                                         or 1),
+                           kind=''),
+                   evidence=SIM_SYNTHESIZED, sig=_sig)
+    if getattr(frame, 'level_up_cost', None) is not None:
+        bs.observe(bs.level_up_cost, int(frame.level_up_cost),
+                   evidence=SIM_SYNTHESIZED, sig=_sig)
+    if getattr(frame, 'shop_refresh_cost', None) is not None:
+        bs.observe(bs.shop_refresh_cost, int(frame.shop_refresh_cost),
+                   evidence=SIM_SYNTHESIZED, sig=_sig)
+    if getattr(frame, 'selected_difficulty', None):
+        bs.observe(bs.selected_difficulty, str(frame.selected_difficulty),
+                   evidence=SIM_SYNTHESIZED, sig=_sig)
+    return bs

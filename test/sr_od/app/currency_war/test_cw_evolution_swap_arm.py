@@ -17,10 +17,6 @@
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-    max_units_of,
-)
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
     assemble_swap_plan_inputs,
@@ -28,9 +24,15 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     select_swap_plan,
     swap_sell_exclusion_reason,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    max_units_of,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
 )
 
 _TGT_FACS = frozenset({'列车同行'})
@@ -158,23 +160,23 @@ def test_assemble_computes_arm_and_leg_removals(monkeypatch) -> None:
     dep, bench = _all_two_star_deployed(), [_bc('三月七', 1, star=2)]
     st = CwSimFrame(gold=0, level=6, plane=2, round_num=3, board={},
                    deployed=list(dep), bench=list(bench))
-    ctx = assemble_swap_plan_inputs(sess, state=board_state_bridge(st),
+    ctx = assemble_swap_plan_inputs(sess, state=cw4_box(st),
                                     deployed=list(x for x in dep if x),
                                     bench=list(x for x in bench if x),
-                                    cap=max_units_of(board_state_bridge(st)))
+                                    cap=max_units_of(cw4_box(st)))
     assert ctx is not None and ctx.evolution_swap_armed is True
     # 腿移除①:bench 无在册线件 → 臂关
     ctx_no = assemble_swap_plan_inputs(
-        sess, state=board_state_bridge(st), deployed=list(x for x in dep if x),
-        bench=[], cap=max_units_of(board_state_bridge(st)))
+        sess, state=cw4_box(st), deployed=list(x for x in dep if x),
+        bench=[], cap=max_units_of(cw4_box(st)))
     assert ctx_no is not None and ctx_no.evolution_swap_armed is False
     # 腿移除②:板面已成型(board 列车 2 达档 → fp≥1.00)→ 臂关
     st_formed = CwSimFrame(gold=0, level=6, plane=2, round_num=3,
                           board={'列车同行': 2}, deployed=list(dep),
                           bench=list(bench))
     ctx_formed = assemble_swap_plan_inputs(
-        sess, state=board_state_bridge(st_formed), deployed=list(x for x in dep if x),
-        bench=list(x for x in bench if x), cap=max_units_of(board_state_bridge(st_formed)))
+        sess, state=cw4_box(st_formed), deployed=list(x for x in dep if x),
+        bench=list(x for x in bench if x), cap=max_units_of(cw4_box(st_formed)))
     assert ctx_formed is not None and ctx_formed.evolution_swap_armed is False
 
 
@@ -252,7 +254,7 @@ def test_run_mandate_emits_armed_two_star_swap(monkeypatch) -> None:
     dep, bench = _all_two_star_deployed(), [_bc('三月七', 1, star=2)]
     st = CwSimFrame(gold=0, level=6, plane=2, round_num=3, board={},
                    deployed=list(dep), bench=list(bench))
-    out = run_mandate(_m1p_frame(dep, bench), sess, state=board_state_bridge(st))
+    out = run_mandate(_m1p_frame(dep, bench), sess, state=cw4_box(st))
     fired = [e for e in out if e.action.__class__.__name__ == 'RunDeploy'
              and e.reason == 'm1_swap_redeploy']
     assert len(fired) == 1

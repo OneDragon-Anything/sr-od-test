@@ -11,9 +11,6 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
     CwSimFrame,
@@ -23,6 +20,9 @@ from sr_od.application.currency_war.operations.cw_op import cw_shop_action_ops
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     BuyCardOp,
     ShopExecEnv,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
 )
 
 _RECT = (0, 0, 100, 150)
@@ -61,7 +61,7 @@ def _clicked_pts(monkeypatch, card: ShopCard, frame_cards: list) -> tuple:
     pts = [SimpleNamespace(x=100 * (i + 1), y=165) for i in range(5)]
     env = ShopExecEnv(op=op, match=match, config=None, click_pts=pts,
                       level_btn=None, refresh_btn=None, ledger=ledger,
-                      state=board_state_bridge(CwSimFrame(bench=[],
+                      state=cw4_box(CwSimFrame(bench=[],
                                                          shop=frame_cards)))
     ok = BuyCardOp(action).execute(env)
     return clicks, pts, ledger, ok

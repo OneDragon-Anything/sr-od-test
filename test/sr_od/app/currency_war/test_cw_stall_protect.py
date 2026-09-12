@@ -12,9 +12,6 @@ from __future__ import annotations
 import inspect
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SELL_BENCH_CONVERT_REASONS,
     BenchChar,
@@ -33,6 +30,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bs,
@@ -455,7 +455,7 @@ def _boarded(st: CwSimFrame | None = None):
     deployed 为空 ⇒ 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),
     直调卖出判据/发射位的环境须 ≥1 上场件,否则守卫 fail-closed 拒帧
     ——与被测语义无关的红按环境前置补齐,非跟绿。
-    经济/谓词读口已切容器:返回值经桥装箱(16 调用点单一转换)。"""
+    经济/谓词读口已切容器:返回值经一次性装箱(16 调用点单一转换)。"""
     st = st if st is not None else CwSimFrame()
     st.deployed = [_bc('板上件锚', slot=1)]
     return _bsb(st)

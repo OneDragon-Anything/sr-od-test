@@ -25,9 +25,6 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
@@ -44,6 +41,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bs,

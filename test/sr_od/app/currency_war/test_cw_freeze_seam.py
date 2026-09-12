@@ -30,12 +30,12 @@ import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwSimFrame,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
 )
 
 _PAIR: tuple[str, ...] = ('持续伤害', '列车同行')
@@ -79,8 +79,8 @@ def _form_ok_frame(round_num: int = 5) -> CwSimFrame:
 
 
 def _drive(state: CwSimFrame, ist: ci.IntentionState) -> ci.IntentionState:
-    # W6 波3:update_intention 已切容器签名,旧帧经过渡桥装箱。
-    return ci.update_intention(board_state_bridge(state), ist)
+    # W6 波3:update_intention 已切容器签名,旧帧经一次性装箱。
+    return ci.update_intention(cw4_box(state), ist)
 
 
 def _latched_ist(round_num: int = 5) -> tuple[CwSimFrame, ci.IntentionState]:
@@ -181,7 +181,7 @@ class TestOverwindowExit:
         当前为空,出口牙齿依赖注册表演化或读法变更(设计面,归编排者)。"""
         st_healthy = _form_ok_frame()
         over, e_f, r_rem = ci._p1_pair_overwindow(
-        _PAIR, board_state_bridge(st_healthy))
+        _PAIR, cw4_box(st_healthy))
         from sr_od.application.currency_war.kernel.cw_plane_table import (
             r_remaining,
         )
@@ -286,7 +286,7 @@ class TestUnfreezeClosedSet:
         承诺,ADR-0616 §2.2)。"""
         _st, ist = _latched_ist()
         sig = ci.IntentionSignal(3, 'core_card', '专家桑博DOT', '测试', 1.0)
-        ci._lock(ist, board_state_bridge(_st), sig)
+        ci._lock(ist, cw4_box(_st), sig)
         assert ist.p1_pair == ()
         assert ist.p1_pair_frozen is False
         assert ist.p1_pair_frozen_pair == ()

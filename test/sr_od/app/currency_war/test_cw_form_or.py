@@ -35,9 +35,6 @@ import itertools
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_comps
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_comps import (
     Comp,
     form_progress,
@@ -54,6 +51,9 @@ from sr_od.application.currency_war.kernel.cw_launch_admission import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwSimFrame,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
 )
 
 _SEELE_PAIR: tuple[str, ...] = ('列车同行', '希儿系')

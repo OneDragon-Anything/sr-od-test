@@ -27,9 +27,6 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
-from sr_od.application.currency_war.kernel.cw_game_state import (
     node_kind_of,
 )
 from sr_od.application.currency_war.kernel.cw_reward_node import (

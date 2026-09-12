@@ -19,9 +19,6 @@ if TYPE_CHECKING:
 from collections import Counter
 
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     V2_FAMILIES,
@@ -34,6 +31,9 @@ from sr_od.application.currency_war.kernel.cw_plugins import (
     PLUGIN_DISABLE_MATRIX,
     PLUGIN_LIBRARY,
     plugin_disabled,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
 )
 
 # ===== 1. key_equips 派生恒等(C5;裁决 2:先于数据变更落地)=====
@@ -289,12 +289,6 @@ def test_plugin_majority_lines_doctrine() -> None:
 # ==================== system_cards ====================
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
-    CwSimFrame,
-    ShopCard,
-    _recount_board,
-)
 from sr_od.application.currency_war.kernel.cw_system_cards import (
     _WEIGHT_PIECE,
     _WEIGHT_READINESS,
@@ -305,6 +299,12 @@ from sr_od.application.currency_war.kernel.cw_system_cards import (
     card_pieces,
     engine_missing,
     pick_card_combination,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    BenchChar,
+    CwSimFrame,
+    ShopCard,
+    _recount_board,
 )
 
 

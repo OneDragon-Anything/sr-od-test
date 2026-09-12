@@ -29,9 +29,6 @@ from types import SimpleNamespace
 import pytest
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.obs import cw_briefing_obs, cw_observation
 from sr_od.application.currency_war.obs.cw_briefing_obs import (
     parse_enemy_difficulty,
@@ -58,6 +55,9 @@ from sr_od.application.currency_war.obs.cw_settlement_obs import (
     parse_streak,
 )
 from test.conftest import SrTestContext
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
+)
 
 # 2026-08-05 实跑结算屏 OCR(战斗后「挑战结束」屏):小队生命值=71(战前 84,本战损 13)。
 _SETTLEMENT_OCR = [

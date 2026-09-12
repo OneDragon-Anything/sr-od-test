@@ -26,9 +26,6 @@ import inspect
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     can_deploy_single,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -49,6 +46,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 
 _SEED_CACHE: dict[int, object] = {}

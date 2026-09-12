@@ -30,9 +30,6 @@ from pathlib import Path
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwSimFrame,
@@ -43,6 +40,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     item_slot_unsellable,
     line_members,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 
 _COMP = '列车同行'

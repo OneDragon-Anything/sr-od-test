@@ -21,9 +21,11 @@ from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
-    board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwSimFrame
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
+)
 
 
 def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
@@ -36,12 +38,12 @@ def _bc(name: str, slot: int, star: int = 1) -> BenchChar:
 
 def _p1_state(bench: list[BenchChar]) -> GameState:
     """P1 支持度直调态(容器形态;W6 波3 方向层切容器签名,
-    CwSimFrame 帧=旧构面,经过渡桥装箱——退役挂波5 喂入反转)。"""
+    CwSimFrame 帧=旧构面,经一次性装箱)。"""
     st = CwSimFrame()
     st.plane = 1
     st.round_num = 3
     st.bench = bench
-    return board_state_bridge(st)
+    return cw4_box(st)
 
 
 class TestSeeleSupportFormula:

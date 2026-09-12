@@ -199,12 +199,12 @@ def test_mandate_counts_transition_trigger_and_reject_keys(
     保守形态放行);deployed 六件非成员,victim 资格面不受桩影响。"""
     import sr_od.application.currency_war.kernel.cw_intention as _int_mod
     import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate as _mandate_mod
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        board_state_bridge as _bsb,
-    )
     from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
         run_mandate,
+    )
+    from test.sr_od.app.currency_war._cw_helpers import (
+        cw4_box as _bsb,
     )
     monkeypatch.setattr(_mandate_mod, 'M1P_SEAM_VERIFIED', True)
     monkeypatch.setattr(_int_mod, 'committed_from',

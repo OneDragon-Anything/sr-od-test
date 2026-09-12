@@ -15,16 +15,13 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_events import EncounterOption
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwSimFrame,
     sell_refund,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import encounter
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
@@ -35,6 +32,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     lambda_death,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
 )
 
 _LOW = EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])
@@ -387,10 +387,10 @@ class TestWiring:
         from sr_od.application.currency_war.kernel import cw_events
         opts = [EncounterOption(idx=0, difficulty=1),
                 EncounterOption(idx=1, difficulty=3)]
-        # W6 波3:decide_encounter 切容器签名,空工作帧经桥装箱(未观察
+        # W6 波3:decide_encounter 切容器签名,空工作帧经一次性装箱(未观察
         # 全域保守缺省 = 旧空 CwSimFrame 同向);未成型断言语义不变。
         pick = cw_events.decide_encounter(
-            opts, board_state_bridge(CwSimFrame()), None, None)
+            opts, cw4_box(CwSimFrame()), None, None)
         assert pick.idx == 0
 
 

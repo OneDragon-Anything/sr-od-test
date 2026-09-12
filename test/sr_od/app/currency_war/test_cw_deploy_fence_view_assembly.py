@@ -7,9 +7,6 @@
 from types import SimpleNamespace as _NS
 
 from sr_od.application.currency_war.data.cw_chars import get_char
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_comps import Comp
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     _bonds_of,
@@ -19,11 +16,14 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     target_view_char_is,
 )
 from sr_od.application.currency_war.kernel.cw_recipe import recipe_comp
-from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwSimFrame
 from sr_od.application.currency_war.kernel.cw_transition import (
     FRAMEWORK_FACTIONS,
     FRAMEWORKS,
     TRANSITION_PACK,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, CwSimFrame
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
 )
 
 
@@ -89,7 +89,7 @@ def test_b2_m1p_assembly_keeps_drop_piece_fence_identity() -> None:
     sess = _dual_track_session(final)
     st = CwSimFrame(plane=1, round_num=2, board={'仙舟': 2},
                    deployed=[_bc('藿藿', 1), _bc('爻光', 2)], bench=[])
-    ctx = assemble_swap_plan_inputs(sess, state=board_state_bridge(st),
+    ctx = assemble_swap_plan_inputs(sess, state=cw4_box(st),
                                     deployed=st.deployed,
                                     bench=[], cap=6)
     assert ctx is not None
@@ -122,7 +122,7 @@ def test_b2_fence_deploy_drop_piece_not_scatter_held() -> None:
     sess = _dual_track_session(final)
     st = CwSimFrame(plane=1, round_num=2, board={'仙舟': 2},
                    deployed=[_bc('藿藿', 1), _bc('爻光', 2)], bench=[])
-    ctx = assemble_swap_plan_inputs(sess, state=board_state_bridge(st),
+    ctx = assemble_swap_plan_inputs(sess, state=cw4_box(st),
                                     deployed=st.deployed,
                                     bench=[], cap=4)
     assert ctx is not None

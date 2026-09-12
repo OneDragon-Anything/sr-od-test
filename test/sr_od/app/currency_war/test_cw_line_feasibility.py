@@ -22,9 +22,6 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionSignal,
@@ -47,6 +44,9 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     shop_unbought_reasons,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
+)
 
 #: P2 位面轮数真值(ADR-0366 语料:P2=7)。
 _P2_SESSION = SimpleNamespace(plane_node_table=[1] * 7)
@@ -54,7 +54,7 @@ _P2_SESSION = SimpleNamespace(plane_node_table=[1] * 7)
 
 def _state(plane: int = 2, round_num: int = 1, hp: int = 40,
            level: int = 7, gold: int = 0, **extra) -> GameState:
-    """W6 波3:可行性/意向面已切容器签名,旧帧经过渡桥装箱。
+    """W6 波3:可行性/意向面已切容器签名,旧帧经一次性装箱。
     extra = 其余字段(shop/bench 等);桥为一次性快照,变异须重建帧。"""
     st = CwSimFrame()
     st.plane = plane
@@ -64,7 +64,7 @@ def _state(plane: int = 2, round_num: int = 1, hp: int = 40,
     st.gold = gold
     for _k, _v in extra.items():
         setattr(st, _k, _v)
-    return board_state_bridge(st)
+    return cw4_box(st)
 
 
 def _locked_ist(comp_name: str) -> IntentionState:
@@ -327,14 +327,14 @@ def test_shop_rejects_projects_bench_across_buys():
     """波内先买占掉末席后,同波后续线内件应归 missing_bench_full
     (旧口径误标 missing_no_path)。"""
     comp = None                       # transition 分类不辖,聚焦投影
-    # mandate_v1 拒因面已切容器签名(波4):旧帧经过渡桥装箱喂入
+    # mandate_v1 拒因面已切容器签名(波4):旧帧经一次性装箱喂入
     st = CwSimFrame()
     st.gold = 99
     st.bench = _bench(BENCH_CAPACITY - 1)     # 8/9,剩 1 席
     a = ShopCard(x=0, name='甲一', cost=3)
     b = ShopCard(x=1, name='乙二', cost=3)
     st.shop = [a, b]
-    rejects = shop_unbought_reasons(board_state_bridge(st), comp,
+    rejects = shop_unbought_reasons(cw4_box(st), comp,
                                     ('甲一', '乙二'),
                                     [BuyCard(card=a, reason='t')])
     assert '甲一' not in rejects            # 已买不进拒因
@@ -345,18 +345,18 @@ def test_shop_rejects_projects_sell_refund_and_seat():
     """卖买同帧:卖出回金与席释放进投影——席满帧经 M4 腾席后线内件
     买入可行,不再留拒因。"""
     comp = None
-    # 同上:mandate_v1 拒因面已切容器签名,旧帧经过渡桥装箱喂入
+    # 同上:mandate_v1 拒因面已切容器签名,旧帧经一次性装箱喂入
     st = CwSimFrame()
     st.gold = 5
     st.bench = _bench(BENCH_CAPACITY)         # 席满
     b = ShopCard(x=0, name='乙二', cost=5)
     st.shop = [b]
     sell = SellBench(bench_idx=0, income=2, expect='娜塔莎')
-    rejects = shop_unbought_reasons(board_state_bridge(st), comp,
+    rejects = shop_unbought_reasons(cw4_box(st), comp,
                                     ('乙二',),
                                     [sell, BuyCard(card=b, reason='t')])
     assert '乙二' not in rejects              # 卖 1 买 1:席/金投影可行已买
     # 反事实:同帧只卖不买(买入未发射)→ 席空金足,如实归 no_path 侧语义
-    rejects2 = shop_unbought_reasons(board_state_bridge(st), comp,
+    rejects2 = shop_unbought_reasons(cw4_box(st), comp,
                                      ('乙二',), [sell])
     assert rejects2['乙二'] == 'missing_no_path'

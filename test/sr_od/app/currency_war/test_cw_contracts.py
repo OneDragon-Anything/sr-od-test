@@ -37,9 +37,6 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
 )
@@ -69,6 +66,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import predicates
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_session as _session,

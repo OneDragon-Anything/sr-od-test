@@ -1,42 +1,36 @@
 """W5 sim 退役·桥收敛哨兵(波 5b 重建立并升格;原 T-98 段③哨兵随测试仓
-86802d0 瘦身丢失,本文件按其机制原文重建 + 波 5b 双删面升格)。
+86802d0 瘦身丢失,本文件按其机制原文重建 + 波 5b 双删面升格;T-169 桥
+本体删除批起 ① 门转墓碑)。
 
 三扇哨兵门(多/少皆红;少红 = 退役推进,同批删登记项):
-- ① 桥(board_state_bridge)残余登记集:文件级扫描 == 登记集,防消点
-  批漏删登记项或新回流调用点静默扩面。登记集 = 现实单一源,禁据任何
-  docstring 误判消点进度(桥本体 docstring 同句声明)。
+- ① 桥(board_state_bridge)src 零字样墓碑:src 树文件级扫描恒空集
+  ——登记集已随 T-169 清零、桥本体已物理删除,此后 src 树任何文件
+  再现 board_state_bridge 字样 = 回流/复活,即红。
 - ② 波 5b 双删墓碑:cw_bs_view / cw_expected_state 模块本体已物理删除,
   文件复活或 src 树内 import 回流即红。
-- ③ back_size 死字段墓碑:last_state 写点计数钉定 —— back_size 按
+- ③ back_size 死字段墓碑 —— back_size 按
   T-23-r1 §⑤.2 版本演进已移除(写读闭环终端消费者零),任何触点回写
-  即红;last_state 三写点(prep 观察两处 + 买牌融合段一处)退役挂执行侧
-  装配源迁移(ADR-0530 尾批/T-7),计数变化 = 该面推进或扩面,人工对账。
+  即红。(last_state 写点计数钉定已随 T-170 链退役批退役:三写点与
+  遗留读者面收口,防复活断言 = test_cw_game_state 全仓零标识符锁。)
 """
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-# ==== ① 桥残余登记集(T-146 装配源迁移后实描;文件相对 currency_war 根)====
-# 每项带辖域标签:消点推进时按标签找归属批,禁无主红。
-_BRIDGE_REGISTERED: dict[str, str] = {
-    # 桥本体(函数定义 + 退役 docstring)。src 活调用面已随 T-146 清零
-    #(prep 根/cw_loop 双点/shop_action_ops/invest_strategy/planner/
-    # flow 三 shim/cw_op_buy_cards fp 遥测全消;末项 = T-163 删帧链后
-    # 入口帧合成进容器单例,fp 读直取单例)。本体物理删除挂「测试仓
-    # harness 改指批」——22 测试文件 + fixtures 经桥构造容器夹具
-    #(T-83 harness 波在用),删除须与测试仓改指同批,防夹具断链。
-    'kernel/cw_game_state.py': '桥本体(函数定义+退役 docstring;删除挂测试仓 harness 改指批)',
-}
+# ==== ① 桥零字样墓碑(T-169:登记集消点至零、本体已随批物理删除)====
+# 历史登记集(kernel/cw_game_state.py 桥本体)已清零摘除;本表留空 =
+# 墓碑态,src 树再现 board_state_bridge 字样即红(含 docstring 提及,
+# 防旧注释面残留误导消点判断)。
+_BRIDGE_REGISTERED: dict[str, str] = {}
 
 _ROOT = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
          / 'currency_war')
 
 
 def test_bridge_remnant_registration_set() -> None:
-    """桥残余登记集门:扫描集 == 登记集(多 = 回流/漏登记,少 = 消点推进
-    未同步登记)。全部登记项清零后,board_state_bridge 本体随批物理删除
-    (其内部消费与删除同批,桥 docstring 同款口径)。"""
+    """桥零字样墓碑门(T-169 起由登记集门转墓碑):扫描集恒空。红 =
+    src 树再现 board_state_bridge 字样(本体复活/新调用点/残留提及)。"""
     scanned: set[str] = set()
     for path in _ROOT.rglob('*.py'):
         rel = path.relative_to(_ROOT).as_posix()
@@ -90,67 +84,18 @@ def test_back_size_dead_field_tombstone() -> None:
     assert not hits, f'back_size 触点回写(死字段复活): {hits}'
 
 
-def test_scalar_projection_equivalent_to_bridge_projection() -> None:
-    """标量投影容器等价锁(T-145 766 缝退役):kernel scalar_projection_
-    state 的输出与旧载体「惰性构造 CwSimFrame + board_state_bridge 装箱」
-    的投影**逐字段等价**——值/来源/evidence/工程结构经 full_state_snapshot
-    逐项对拍。字段契约单一源 = scalar_projection_state docstring;桥本体
-    映射将来变更时本锁强制两装配同批对账(禁静默漂移)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        board_state_bridge,
-        scalar_projection_state,
-    )
-    from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
-
-    cases = [
-        # (全参典型帧 / 全缺省 strategies=None / 空表 strategies=[]——
-        #  空表与 None 同判不写 active_strategies,镜像桥行为)
-        {'gold': 73, 'level': 5, 'hp': 82, 'plane': 1, 'round_num': 3,
-         'strategies': ['淘金客', '定期福利']},
-        {'gold': 0, 'level': 3, 'hp': 80, 'plane': 2, 'round_num': 7,
-         'strategies': None},
-        {'gold': 51, 'level': 7, 'hp': 44, 'plane': 1, 'round_num': 9,
-         'strategies': []},
-    ]
-    for kw in cases:
-        bs_new = scalar_projection_state(**kw)
-        frame = CwSimFrame(gold=kw['gold'], level=kw['level'],
-                            hp=kw['hp'], plane=kw['plane'],
-                            round_num=kw['round_num'])
-        frame.active_strategies = list(kw['strategies'] or [])
-        bs_old = board_state_bridge(frame)
-        snap_new = bs_new.full_state_snapshot()
-        snap_old = bs_old.full_state_snapshot()
-        assert snap_new == snap_old, (
-            f'标量投影容器与桥投影失配(全参支 {kw}):'
-            f'new={snap_new!r} old={snap_old!r}')
-        assert bs_new.bs_schema == bs_old.bs_schema
+# (test_scalar_projection_equivalent_to_bridge_projection 已随 T-169 桥
+#  本体删除退役:该锁 = scalar_projection_state 对旧桥投影的差分等价
+#  锁,对拍对象随本体消亡,锁语义无现存载体可继承——非重锚而是退役;
+#  字段契约单一源 = kernel scalar_projection_state docstring 自辖。)
 
 
-def test_last_state_write_points_pinned_three() -> None:
-    """last_state 写点计数钉定(装配源读者面已随 T-146 尾批迁容器单例;
-    写点存续依据 = 遗留读者面仍在:环守卫指纹/收口假局判定/局终
-    MatchOutcome/identity_obs 等级链/exec_state gold 推进/词缀与效果
-    账本引导窗回退/battle_wait/screen_prep 杂读/overlay_confirm——
-    该面语义逐点钉在帧上(如 T-167 gold 指纹钉死),退役 = 各点独立
-    重验,归「last_state 链退役收尾批」(未立项,候编排者)。计数变化
-    = 该面推进或扩面,须人工对账后更新钉值。口径 = AST 赋值语句
-    (注释/docstring 提及不计,同型误报实证 = cw_loop docstring 内装箱
-    示例)。"""
-    import ast
-    hits: list[str] = []
-    for path in _ROOT.rglob('*.py'):
-        rel = path.relative_to(_ROOT).as_posix()
-        tree = ast.parse(path.read_text(encoding='utf-8'))
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
-                continue
-            target = node.targets[0]
-            if isinstance(target, ast.Attribute) and target.attr == 'last_state':
-                hits.append(f'{rel}:L{node.lineno}')
-    assert len(hits) == 3, (
-        'last_state 写点数漂移(钉定 3 = cw_screen_prep 观察×2 + '
-        f'cw_op_buy_cards 融合段×1),逐条对账: {hits}')
+# (test_last_state_write_points_pinned_three 已随 T-170 链退役批退役:
+#  三写点(cw_screen_prep 观察×2 + cw_op_buy_cards 融合段×1)与全部
+#  遗留读者已收口,写端退役 + StrategySession 槽本体删除——「写点计数
+#  钉定」失去对象,非重锚而是退役。防复活断言面按原申报扩展 =
+#  test_cw_game_state.test_ast_currency_war_reads_no_last_state(CW 包
+#  全仓零标识符命中,永久锁);装配源四文件窄锁(下方)保留作双保险。)
 
 
 def test_assembly_source_files_zero_last_state() -> None:

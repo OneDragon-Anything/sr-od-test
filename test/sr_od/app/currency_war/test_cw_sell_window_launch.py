@@ -31,9 +31,6 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     line_identity_tier,
     sell_hold_exclusion_names,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
@@ -68,6 +65,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt import (
     refund_full_star_ok,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
 )
 from test.sr_od.app.currency_war._cw_helpers import cw4_bs
 

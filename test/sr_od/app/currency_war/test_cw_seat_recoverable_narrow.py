@@ -33,9 +33,6 @@ from __future__ import annotations
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
 from sr_od.application.currency_war.kernel import cw_intention
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
 )
@@ -57,6 +54,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_decide as _decide,

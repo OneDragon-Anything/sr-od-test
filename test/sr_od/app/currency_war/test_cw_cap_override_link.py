@@ -33,9 +33,6 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     interest,
     saturation_line,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_ECONOMY,
     EconomyEffect,
@@ -45,6 +42,9 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
+)
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
         / 'currency_war')

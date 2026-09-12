@@ -19,9 +19,6 @@ from pathlib import Path
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
     derived,
     proof_consts,
@@ -36,6 +33,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     lambda_death as ld,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 
 _PROOFS = Path(__file__).resolve().parents[5] / 'tools' / 'cw' / 'proofs'

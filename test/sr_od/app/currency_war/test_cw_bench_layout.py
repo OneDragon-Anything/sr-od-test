@@ -40,9 +40,6 @@ from copy import deepcopy
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_reconcile import reconcile_tracking
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -59,6 +56,9 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     simulate,
 )
 from sr_od.application.currency_war.operations.cw_op import cw_shop_action_ops
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
+)
 
 
 def _layout(bench) -> list[tuple[int, str | None]]:
@@ -295,7 +295,7 @@ def test_stale_check_clean_when_epoch_unchanged():
 def test_stale_check_reseeded_on_epoch_bump(_no_conflict_io):
     """代次命中(人工递增模拟 visit 内 churn)→ 'reseeded':投影 bench
     按 tracked 重建(逐槽一致),真值侧胜出。(重播种写点 = 容器 bench 域
-    [波 4],断言面同切容器读口;state 帧 = 桥装箱载体。)"""
+    [波 4],断言面同切容器读口;state 帧 = 一次性装箱载体。)"""
     state, sess, tracked = _stale_state()
     bs = _bsb(state)
     _seed = exec_state_of(sess).bench_layout_epoch

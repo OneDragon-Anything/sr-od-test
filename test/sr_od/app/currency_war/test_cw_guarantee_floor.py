@@ -23,9 +23,6 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     LevelUpShop,
 )
@@ -43,6 +40,9 @@ from test.sr_od.app.currency_war._cw_helpers import (
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bs,

@@ -514,12 +514,12 @@ class FakeP1Run:
         from sr_od.application.currency_war.cw_game_ports import ExecResult
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.kernel import cw_deploy_logic
+        from sr_od.application.currency_war.kernel.cw_strategy_session import (
+            strategy_state_of,
+        )
         from sr_od.application.currency_war.kernel.cw_vocab import (
             DeployMove,
             iter_occupied_deployed,
-        )
-        from sr_od.application.currency_war.kernel.cw_strategy_session import (
-            strategy_state_of,
         )
 
         m = self.match
@@ -847,14 +847,17 @@ class FakeP1Run:
         )
 
         sess = self.cw_match.session
-        st = getattr(sess, 'last_state', None)
         tc = getattr(strategy_state_of(sess), 'target_comp', None)
-        if st is None or tc is None:
-            return False, False
         from sr_od.application.currency_war.kernel.cw_game_state import (
-            board_state_bridge,
+            board_state_of,
         )
-        core = readiness_launch_decision(board_state_bridge(st), tc,
+        # 容器读口直读(与生产 cw_loop 达标臂同参形态;容器新拍由假环境
+        # 观察源喂入线 cw4_feed 维持;last_state 链退役批:节点未观察 =
+        # 从未观察到对局态,不评估——旧 last_state None 守卫镜像)。
+        bs = board_state_of(sess)
+        if tc is None or bs.node.value is None:
+            return False, False
+        core = readiness_launch_decision(bs, tc,
                                          line_members=line_members)
         if not core.get('armed'):
             return True, False

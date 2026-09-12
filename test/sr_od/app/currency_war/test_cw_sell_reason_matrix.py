@@ -34,9 +34,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     SELL_BENCH_REASONS,
     BailToOuter,
@@ -74,6 +71,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
 )
 from sr_od.application.currency_war.telemetry.schema import serialize_action
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
+)
 from test.sr_od.app.currency_war._cw_helpers import cw4_bs, cw4_feed
 from test.sr_od.app.currency_war.test_cw_sell_window_launch import (
     _CORE_HOLD,

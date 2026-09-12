@@ -42,9 +42,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     gift_hit_tier,
 )
 from sr_od.application.currency_war.kernel.cw_events import decide_event
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
     ENV_FACTION_MATCH_FLOOR,
@@ -57,6 +54,9 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     GiftGrant,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame, PickEvent
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
+)
 
 # ===== fixture 前提直调核验(锁语义依赖的注册表事实;漂移先红于此)=====
 
@@ -362,7 +362,7 @@ def test_g8_validator_fires(monkeypatch: pytest.MonkeyPatch) -> None:
 
 # ===== 3.5 消费接线锁(G2 行为半边 + G3-G7;详设 §2.1.5 行 2-7)=====
 # 共用工具(仿 test_cw_env_universe.py 先例:kernel 纯函数直调,空板帧无
-# D* 信号/无 DoT 惩罚;容器桥沿 invest_refresh 先例)。
+# D* 信号/无 DoT 惩罚;容器一次性装箱沿 invest_refresh 先例)。
 
 def _cfg(**overrides) -> SimpleNamespace:
     base: dict = {'strategy_priority': [], 'strategy_forbid': []}
@@ -375,7 +375,7 @@ _STATE = CwSimFrame(board={}, hp=100, hp_readable=True)
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
     return decide_event(options, cfg if cfg is not None else _cfg(),
-                        board_state_bridge(_STATE), **kw)
+                        cw4_box(_STATE), **kw)
 
 
 # G 消费帧实卡裸分值(详设 §2.1.5 G3-G7 行括号值;漂移先红,重核锁表帧)

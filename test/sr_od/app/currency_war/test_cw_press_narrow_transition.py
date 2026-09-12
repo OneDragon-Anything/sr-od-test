@@ -47,9 +47,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     form_progress,
     get_comp,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_prep_actions import OpenShop
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -71,6 +68,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.sell_gate import (
     LAUNCH_CAUSE_BY_ARM,
     WINDOW_LAUNCH_CAUSES,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bs,

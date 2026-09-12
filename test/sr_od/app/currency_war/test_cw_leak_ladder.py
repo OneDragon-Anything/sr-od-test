@@ -38,9 +38,6 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     line_identity_tier,
 )
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
@@ -66,6 +63,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.odds import (
     tier_search_window,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 
 _COMP = '列车同行'
@@ -369,7 +369,7 @@ class TestL4BudgetGateSuspend:
 class TestL7AllInCategoryFilter:
 
     def _allin_state(self, hp: int, *, readable: bool = True) -> CwSimFrame:
-        """CwSimFrame 帧(mandate_v1 闸入口仍持 CwSimFrame,闸内经桥装箱;
+        """CwSimFrame 帧(mandate_v1 闸入口仍持 CwSimFrame,闸内经一次性装箱;
         位面/节点语义同 _allin_bs)。"""
         st = CwSimFrame(gold=30, level=5, round_num=7, node_type='boss',
                        hp=hp)

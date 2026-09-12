@@ -27,11 +27,13 @@ from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel import cw_intention as ci
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
-    board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwSimFrame,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
 )
 
 _PAIR_A = '持续伤害'
@@ -75,7 +77,7 @@ def _bc(names: list[str], stars: list[int] | None = None) -> list[BenchChar]:
 
 def _p1_state(bench: list[BenchChar],
               board: dict | None = None) -> GameState:
-    """W6 波3:方向层谓词已切容器签名,旧 CwSimFrame 构面经过渡桥装箱。
+    """W6 波3:方向层谓词已切容器签名,旧 CwSimFrame 构面经一次性装箱。
     board 须随帧装箱(桥产出容器 Field 形态,装箱后裸 dict 覆写 = 打穿
     Field 契约,消费面 ``bs.board.value`` 必炸)。"""
     st = CwSimFrame(gold=10, level=5, plane=1, round_num=5, hp=100)
@@ -83,7 +85,7 @@ def _p1_state(bench: list[BenchChar],
     st.deployed = []
     if board:
         st.board = dict(board)
-    return board_state_bridge(st)
+    return cw4_box(st)
 
 
 def _require_pure(tag: str, k: int) -> list[str]:

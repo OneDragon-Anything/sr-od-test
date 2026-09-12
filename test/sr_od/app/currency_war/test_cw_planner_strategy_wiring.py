@@ -7,9 +7,6 @@ from __future__ import annotations
 import inspect
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_events import (
     PlannerOption,
     decide_planner,
@@ -22,6 +19,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
     state_of,
 )
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import MandateV1Live
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
+)
 
 _UPGRADE = PlannerOption(idx=0, text='提升费用至4费,变为1星银狼')
 _WEAKEN = PlannerOption(idx=1, text='使后续节点【弱化】,降低敌人属性。')
@@ -82,9 +82,9 @@ def test_planner_strategy_delegates_kernel_bitwise() -> None:
     strat = MandateV1Live()
     # W6 波4:策略契约面已切容器(flow.decide_planner 直通 kernel 容器
     # 签名,生产防御支传 board_state_of(session))——「同输入」= 同一
-    # 容器,CwSimFrame 工作帧经单一转换点 board_state_bridge 装箱后喂两面。
+    # 容器,CwSimFrame 工作帧经测试迁移单一源 cw4_box 装箱后喂两面。
     # ① 无 target
-    bs = board_state_bridge(_planner_state())
+    bs = cw4_box(_planner_state())
     via_strategy = strat.decide_planner(
         opts, bs, _session(None), SimpleNamespace())
     via_kernel = decide_planner(opts, bs, None)
@@ -92,7 +92,7 @@ def test_planner_strategy_delegates_kernel_bitwise() -> None:
     # ② target 在案(银狼线加成经 session 透传生效)
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     tgt = next(c for c in COMP_LIBRARY if c.name == '狼尊欢愉')
-    bs2 = board_state_bridge(_planner_state())
+    bs2 = cw4_box(_planner_state())
     via_strategy = strat.decide_planner(
         opts, bs2, _session(tgt), SimpleNamespace())
     via_kernel = decide_planner(opts, bs2, tgt)

@@ -34,7 +34,6 @@ from sr_od.application.currency_war.kernel.cw_env_economy import (
 from sr_od.application.currency_war.kernel.cw_events import decide_event
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
-    board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
@@ -44,6 +43,9 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     get_env,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame, PickEvent
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
+)
 
 # ===== fixture 前提直调核验(锁语义依赖的注册表事实;漂移先红于此)=====
 
@@ -88,9 +90,9 @@ _STATE = CwSimFrame(board={}, hp=100, hp_readable=True)
 
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
-    """kernel 纯函数直调(空板帧:无 D* 信号/无 DoT 惩罚;容器桥沿 universe 先例)。"""
+    """kernel 纯函数直调(空板帧:无 D* 信号/无 DoT 惩罚;容器一次性装箱沿 universe 先例)。"""
     return decide_event(options, cfg if cfg is not None else _cfg(),
-                        board_state_bridge(_STATE), **kw)
+                        cw4_box(_STATE), **kw)
 
 
 # ===== Q1 结构表(§2.2.6 行 1;§2.2.1/§2.2.5)=====

@@ -46,9 +46,6 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     blood_xp_gate_for,
     economy_score,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
@@ -65,6 +62,9 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bc as _bc,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_comp as _comp,

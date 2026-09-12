@@ -252,9 +252,9 @@ class TestMandateBehavior:
         session = _session()
         # 非空板前置(T-32 空板止损守卫):板空帧守卫 fail-closed 拒卖,
         # 腾席环须 ≥1 上场件环境(state 缺读 = 拒,与生产 entry 恒传一致)。
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            board_state_bridge as _bsb,
-        )
+        from test.sr_od.app.currency_war._cw_helpers import (
+            cw4_box as _bsb,
+            )
         gs = CwSimFrame(gold=30, level=3, round_num=3, hp=60)
         gs.deployed = [_bench(1, '板上件锚')]
         out = mandate.run_mandate(frame, session, state=_bsb(gs))

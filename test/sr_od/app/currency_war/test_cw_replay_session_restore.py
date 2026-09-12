@@ -143,18 +143,18 @@ def test_rebuild_state_reads_trust_flags() -> None:
 
     波 2 签名切换(T-95):血线门输入 = GameState 容器帧(prior 支 =
     旧两位皆 False 的容器等价,fail-closed 语义同面重钉;CwSimFrame 侧
-    帧→桥视图 hp source 恒 observation 的失真语义见 board_state_bridge
-    docstring,防线主辖容器帧)。
+    帧经合成一次性装箱后 hp source 恒 observation(sim 真值语义,
+    防线主辖容器帧)。
     """
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        BS_SCHEMA_VERSION,
-        GameState,
-        ChannelSig,
-        NodeKey,
-    )
     from sr_od.application.currency_war.kernel.cw_discipline_rules import (
         blood_budget_levelup_blocked,
         hp_decision_trusted,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BS_SCHEMA_VERSION,
+        ChannelSig,
+        GameState,
+        NodeKey,
     )
     from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 

@@ -39,9 +39,6 @@ from copy import deepcopy
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -58,6 +55,9 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     pad_bench,
     pad_deployed,
     simulate,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 
 # ===== 事故帧载荷(取自 2026-09-09 05:52 运行局,禁改动语义)=====

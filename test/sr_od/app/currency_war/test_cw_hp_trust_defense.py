@@ -30,8 +30,8 @@
 decision_hp,可信位 = hp_decision_trusted → hp_decision_trusted_of),
 组 2/3/5/7 的门谓词输入 = GameState 容器帧(来源三态即旧两位语义的
 容器形态:observation=真读/carried=沿用/prior=不可信 fail-closed);
-CwSimFrame 侧帧→桥视图 hp source 恒 observation 的失真语义见
-board_state_bridge docstring(过渡期申报面,防线主辖容器帧)。
+CwSimFrame 侧帧经合成一次性装箱后 hp source 恒 observation(sim
+真值无识别过程语义,防线主辖容器帧)。
 """
 from __future__ import annotations
 
@@ -40,14 +40,14 @@ import logging
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
-    GameState,
-    ChannelSig,
-    NodeKey,
-)
 from sr_od.application.currency_war.kernel.cw_discipline_rules import (
     blood_budget_levelup_blocked,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BS_SCHEMA_VERSION,
+    ChannelSig,
+    GameState,
+    NodeKey,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,

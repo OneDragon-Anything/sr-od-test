@@ -26,9 +26,6 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     saturation_line,
     streak_gold,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_plane_table import r_remaining
 from sr_od.application.currency_war.kernel.cw_vocab import (
     XP_TO_NEXT_LEVEL,
@@ -47,6 +44,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     budget,
     odds,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
 )
 
 _COMP = COMP_LIBRARY[0]          # 列车同行,form_tiers = {'列车同行': 4}

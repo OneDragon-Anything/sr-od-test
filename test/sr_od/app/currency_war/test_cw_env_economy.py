@@ -39,13 +39,15 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     Field,
     GameState,
     NodeKey,
-    board_state_bridge,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
     INVESTMENT_ENVS,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame, PickEvent
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
+)
 
 
 def _est(value: float, lo: float, hi: float) -> EconomyEstimate:
@@ -66,7 +68,7 @@ def _bs(plane: int | None = None, round_num: int = 1, held: int = 0) -> GameStat
 
 # ===== 3.5 汇合集成锁 E3/E4(design §2.7 行 3/4;decide_event 消费面)=====
 # 工具仿 test_cw_env_universe.py 先例(kernel 纯函数直调,空板帧无 D* 信号、
-# 无 DoT 惩罚;容器桥 = 同文件 U/refresh 组同款过渡桥形态)。
+# 无 DoT 惩罚;容器一次性装箱 = 同文件 U/refresh 组同款形态)。
 
 def _cfg(**overrides) -> SimpleNamespace:
     base: dict = {'strategy_priority': [], 'strategy_forbid': []}
@@ -79,7 +81,7 @@ _STATE = CwSimFrame(board={}, hp=100, hp_readable=True)
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
     return decide_event(options, cfg if cfg is not None else _cfg(),
-                        board_state_bridge(_STATE), **kw)
+                        cw4_box(_STATE), **kw)
 
 
 def test_env_economy_whitelist_and_wiring() -> None:

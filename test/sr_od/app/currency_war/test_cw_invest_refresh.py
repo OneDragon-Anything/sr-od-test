@@ -38,9 +38,6 @@ from sr_od.application.currency_war.kernel.cw_env_economy import (
 )
 from sr_od.application.currency_war.kernel.cw_events import decide_event
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge,
-)
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
@@ -66,6 +63,9 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_env im
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_invest_strategy import (
     CwScreenInvestStrategy,
 )
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
+)
 
 # fixture 前提直调核验(锁语义依赖的分类事实;漂移 = 注册表/谓词变更,先红于此)
 assert AUGMENT_COMP_AFFINITY.get('黑塔纪元'), 'S1 fixture 须为定义型卡'
@@ -83,9 +83,9 @@ _STATE = CwSimFrame(board={}, hp=100, hp_readable=True)
 
 
 def _pick(options: list[str], cfg=None, **kw) -> PickEvent:
-    # W6 波3:decide_event 切容器签名,旧帧经过渡桥装箱。
+    # W6 波3:decide_event 切容器签名,旧帧经一次性装箱。
     return decide_event(options, cfg if cfg is not None else _cfg(),
-                        board_state_bridge(_STATE), **kw)
+                        cw4_box(_STATE), **kw)
 
 
 # ===== kernel 锁 1:全顶级集 → refresh_slots=∅(S1 一案 + S2 一案)=====

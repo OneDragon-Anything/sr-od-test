@@ -21,9 +21,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     CORE_SINGLE_CARD_REGISTRY,
     get_comp,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _kbridge,
-)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     _p1_transition_eligible,
@@ -54,6 +51,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt import (
     refund_full_star_ok,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _kbridge,
 )
 from test.sr_od.app.currency_war._cw_helpers import (
     cw4_bs,

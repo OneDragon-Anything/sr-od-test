@@ -34,9 +34,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     Comp,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
-from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
@@ -72,6 +69,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 

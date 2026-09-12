@@ -33,9 +33,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 from sr_od.application.currency_war.kernel.cw_comps import (
     SEELE_OR_LEGS as _COMPS_SEELE_OR_LEGS,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bsb,
-)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
@@ -54,6 +51,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates as preds,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 

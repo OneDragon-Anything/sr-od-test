@@ -26,10 +26,10 @@ import pytest
 
 _match_archive_sys.path.insert(0, 'src')
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.telemetry import match_archive as arch
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
+)
 
 
 def _write_jsonl(d: _match_archive_Path, name: str, rows: list[dict]) -> None:

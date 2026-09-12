@@ -255,10 +255,10 @@ def _m7_actions(out: list) -> list:
 
 def test_m7_tools_only_owned_never_fires():
     """门① 事故回归帧:owned 全工具件 → 不发 RunEquip(旧码永真重发=活锁根)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        board_state_bridge as _bsb,
-    )
     from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame as _F
+    from test.sr_od.app.currency_war._cw_helpers import (
+        cw4_box as _bsb,
+    )
     # state 容器必填(容器化段 2):帧轴镜像 _m7_frame 同值构造。
     st = _F(gold=0, level=3, bench=[], deployed=[], deploy_cap=4,
             node_type='战斗', round_num=3)

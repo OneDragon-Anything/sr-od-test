@@ -20,15 +20,14 @@ import itertools
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel.cw_deploy_logic import TRANSITION_TRAITS
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
-    GameState,
     Field,
+    GameState,
     NodeKey,
-    board_state_bridge,
     plane_of,
 )
-from sr_od.application.currency_war.kernel.cw_deploy_logic import TRANSITION_TRAITS
 from sr_od.application.currency_war.kernel.cw_intention import (
     _core_reachable,
     _derive_p1_pair,
@@ -40,6 +39,9 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 )
 from sr_od.application.currency_war.kernel.cw_registry import DEFAULT_REGISTRY
 from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box,
+)
 
 #: 12 线枚举快照(单篇 §3 逐线表;漂移 = 锁红 → 重推语义后同批更新)。
 #: 体系键交集列为**字面三羁绊键域**口径(M2 注:注册表快照口径;生产
@@ -194,11 +196,11 @@ def test_p65_hole_pair_derivable() -> None:
             self.char_id = cid
             self.faction = ''
 
-    # W6 波3:派生器吃容器帧,bench 须经桥装箱(桥保序映射备战槽位,
+    # W6 波3:派生器吃容器帧,bench 须经一次性装箱(合成口保序映射备战槽位,
     # 阵营由注册表派生;裸 list 覆写 bs.bench 打穿 Field 契约必炸)。
     st = CwSimFrame(hp=50, level=5, round_num=1)
     st.bench = [_Bc(n) for n in bench_names]
-    pair = _derive_p1_pair(board_state_bridge(st))
+    pair = _derive_p1_pair(cw4_box(st))
     assert set(pair) == {'仙舟', '希儿系'}, f'pair 派生性失效: {pair}'
 
 

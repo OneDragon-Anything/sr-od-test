@@ -624,23 +624,24 @@ class FakeMatch:
         与 live 执行器 _level_up 同向)。HP 支付结构性为零 = 环境边界
         (simulate 同不扣 HP,批 1 落地审申报面)。
         """
+        from test.sr_od.app.currency_war._cw_helpers import (
+            cw4_box,
+        )
+
         from sr_od.application.currency_war.kernel.cw_economy import (
             clicks_to_next_level,
             xp_click_cost,
         )
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            board_state_bridge,
-        )
         from sr_od.application.currency_war.kernel.cw_vocab import LevelUp
 
         level_pre = self.state.level
-        # 经济读口族已切容器签名(W6 波 4):帧值经桥装箱后喂入,
-        # 与生产 bridge 残余辖域同法(本文件 register_round_sold 同款)。
-        _bs = board_state_bridge(self.state)
+        # 经济读口族已切容器签名(W6 波 4):帧值经测试迁移单一源
+        # cw4_box 一次性装箱后喂入(容器读口家族,board_state_of 分支)。
+        _bs = cw4_box(self.state)
         clicks = clicks_to_next_level(_bs)
         spent = 0
         for _ in range(max(1, clicks)):
-            price = xp_click_cost(board_state_bridge(self.state))
+            price = xp_click_cost(cw4_box(self.state))
             if self.state.gold < price:
                 break
             res = self.apply(LevelUp(cost=price))
@@ -1196,17 +1197,17 @@ class FakeMatch:
         self.clock += 1
         _node = node or self.state.node_type or 'battle'
         st = self.state
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            board_state_bridge,
-        )
+        from test.sr_od.app.currency_war._cw_helpers import (
+            cw4_box,
+            )
         if _node in ('battle', 'encounter', 'boss'):
             delta = sample_battle_delta(
-                _node, _settle_rung(board_state_bridge(st)),
+                _node, _settle_rung(cw4_box(st)),
                 st.hp if st.hp is not None else 0,
                 self._rng_battle,
                 difficulty=st.enemy_difficulty, plane=st.plane)
         elif _node in ('reward', 'supply'):
-            _ld = live_delta_for(_node, _deployable_depth(board_state_bridge(st)),
+            _ld = live_delta_for(_node, _deployable_depth(cw4_box(st)),
                                  self._rng_battle,
                                  pool_map=self._delta_pool_map,
                                  plane=st.plane)

@@ -25,9 +25,6 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
     SHOP_SLOTS,
 )
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_bridge as _bridge,
-)
 from sr_od.application.currency_war.kernel.cw_line_switch import (
     line_distance,
 )
@@ -57,6 +54,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt impo
     a7_lower_bound,
     p_complete,
     p_miss,
+)
+from test.sr_od.app.currency_war._cw_helpers import (
+    cw4_box as _bridge,
 )
 from test.sr_od.app.currency_war._cw_helpers import cw4_feed
 
