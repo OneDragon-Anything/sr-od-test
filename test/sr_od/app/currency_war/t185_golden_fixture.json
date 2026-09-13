@@ -1,7 +1,7 @@
 {
  "meta": {
-  "captured_at": "2026-09-13T13:50:18",
-  "head_commit": "422439dd8",
+  "captured_at": "2026-09-13T19:42:41",
+  "head_commit": "44597092f",
   "simulate_status": "pre-retirement(批B 未动,平移前语义)",
   "generator": ".debug/temp/t185_capture_golden2.py(可再生)",
   "hash_seed_note": "构造与 simulate 分支零 rng/无集合序依赖;复跑建议 PYTHONHASHSEED=0 与批A 口径一致",
@@ -83,12 +83,31 @@
      "shop": {
       "cards": [
        {
-        "name": "银枝",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "银枝",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -245,7 +264,32 @@
       4,
       20
      ],
-     "hp": 80
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
+     }
     },
     "prov": {
      "node": {
@@ -278,7 +322,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -391,12 +435,31 @@
      "shop": {
       "cards": [
        {
-        "name": "银枝",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "银枝",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -543,7 +606,32 @@
       4,
       20
      ],
-     "hp": 80
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
+     }
     },
     "prov": {
      "node": {
@@ -576,7 +664,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -724,20 +812,38 @@
      "shop": {
       "cards": [
        {
-        "name": "银枝",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "银枝",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
        },
        {
-        "name": "银枝",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "银枝",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -924,7 +1030,32 @@
       4,
       20
      ],
-     "hp": 80
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
+     }
     },
     "prov": {
      "node": {
@@ -957,7 +1088,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -1105,12 +1236,31 @@
      "shop": {
       "cards": [
        {
-        "name": "砂金",
-        "faction": "公司",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "砂金",
+         "faction": "公司",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -1301,12 +1451,31 @@
      "shop": {
       "cards": [
        {
-        "name": "砂金",
-        "faction": "公司",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "砂金",
+         "faction": "公司",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -1457,7 +1626,32 @@
      "hp": 80,
      "equips": [
       "光速螺旋桨·特权"
-     ]
+     ],
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
+     }
     },
     "prov": {
      "node": {
@@ -1494,7 +1688,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -1604,7 +1798,32 @@
      "equips": [
       "光速螺旋桨·特权",
       "以太钻头"
-     ]
+     ],
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
+     }
     },
     "prov": {
      "node": {
@@ -1641,7 +1860,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -1750,7 +1969,32 @@
       4,
       20
      ],
-     "hp": 80
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
+     }
     },
     "prov": {
      "node": {
@@ -1783,7 +2027,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -1894,7 +2138,32 @@
       4,
       20
      ],
-     "hp": 80
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
+     }
     },
     "prov": {
      "node": {
@@ -1927,7 +2196,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -2041,6 +2310,31 @@
      "board": {
       "星间旅人": 1,
       "群攻": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
      }
     },
     "prov": {
@@ -2086,7 +2380,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -2189,7 +2483,32 @@
      "hp": 80,
      "equips": [
       "以太钻头"
-     ]
+     ],
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
+     }
     },
     "prov": {
      "node": {
@@ -2226,7 +2545,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -2338,6 +2657,31 @@
      "board": {
       "星间旅人": 1,
       "群攻": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
      }
     },
     "prov": {
@@ -2383,7 +2727,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -2496,6 +2840,31 @@
      "board": {
       "星间旅人": 1,
       "群攻": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
      }
     },
     "prov": {
@@ -2541,7 +2910,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -2663,6 +3032,31 @@
      "board": {
       "星间旅人": 1,
       "群攻": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
      }
     },
     "prov": {
@@ -2708,7 +3102,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -2832,6 +3226,31 @@
      "board": {
       "仙舟": 1,
       "欢愉": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
      }
     },
     "prov": {
@@ -2877,7 +3296,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -2994,6 +3413,31 @@
      "board": {
       "星间旅人": 1,
       "群攻": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
      }
     },
     "prov": {
@@ -3039,7 +3483,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -3158,6 +3602,31 @@
      "board": {
       "星间旅人": 1,
       "群攻": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
      }
     },
     "prov": {
@@ -3203,7 +3672,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -3333,12 +3802,31 @@
      "shop": {
       "cards": [
        {
-        "name": "刻律德菈",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "刻律德菈",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -3533,6 +4021,31 @@
      "board": {
       "夜之半神": 1,
       "战技点": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       }
+      ],
+      "refresh_probs": {}
      }
     },
     "prov": {
@@ -3578,7 +4091,7 @@
      },
      "shop": {
       "source": "observation",
-      "evidence": "left_screen"
+      "evidence": "sim:synthesized@golden-capture"
      },
      "encounter": {
       "source": "observation",
@@ -3708,12 +4221,31 @@
      "shop": {
       "cards": [
        {
-        "name": "刻律德菈",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "刻律德菈",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -3911,12 +4443,31 @@
      "shop": {
       "cards": [
        {
-        "name": "刻律德菈",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "刻律德菈",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -4073,12 +4624,31 @@
      "shop": {
       "cards": [
        {
-        "name": "银枝",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "银枝",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
@@ -4222,12 +4792,31 @@
      "shop": {
       "cards": [
        {
-        "name": "银枝",
-        "faction": "星间旅人",
-        "cost": 3,
-        "star": 1,
-        "cost_source": "roster",
-        "slot": 0
+        "kind": "content",
+        "card": {
+         "name": "银枝",
+         "faction": "星间旅人",
+         "cost": 3,
+         "star": 1,
+         "cost_source": "roster",
+         "slot": 0
+        }
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
+       },
+       {
+        "kind": "empty",
+        "card": null
        }
       ],
       "refresh_probs": {}
