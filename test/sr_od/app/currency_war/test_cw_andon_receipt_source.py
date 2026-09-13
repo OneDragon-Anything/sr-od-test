@@ -28,7 +28,10 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     RefreshShop,
     ShopCard,
 )
-from sr_od.application.currency_war.telemetry.query import classify_spend_unit
+from sr_od.application.currency_war.telemetry.query import (
+    classify_spend_unit,
+    plan_gold_flow,
+)
 from sr_od.application.currency_war.telemetry.schema import serialize_action
 
 # ---------------------------------------------------------------------------
@@ -197,3 +200,54 @@ def test_andon_new_source_blocked_row_not_in_plan():
     ]
     new_src = _new_source(rows, 20)
     assert [a['__type__'] for a in new_src['plan_actions']] == ['BuyCard']
+
+
+# ---------------------------------------------------------------------------
+# 切片5:访问事实行发射时增量追加(ledger.fact_rows,无窗上界)
+# ---------------------------------------------------------------------------
+
+def _emit_via_production_write_point(fact_rows: list) -> None:
+    """经生产写点(note_shop_action_receipt)发射 12 行(繁忙访问段)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.operations.cw_op.cw_op_buy_cards import (
+        note_shop_action_receipt,
+    )
+    # 桩 match:board_state_of 对裸对象惰性挂容器(桩面同源),receipts
+    # 域照常入账,journal 无 sink 不落盘(测试零副作用)。
+    match = SimpleNamespace(session=object())
+    for i in range(2):   # 头部大额买(窗截断时最先滚出)
+        note_shop_action_receipt(
+            match, BuyCard(card=ShopCard(x=i + 1, name=f'大额{i}',
+                                         faction='仙舟', cost=10)),
+            applied=True, fact_rows=fact_rows)
+    for i in range(10):   # 后续小额买(共 12 发射行 > 窗容量 8)
+        note_shop_action_receipt(
+            match, BuyCard(card=ShopCard(x=i + 3, name=f'小额{i}',
+                                         faction='仙舟', cost=1)),
+            applied=True, fact_rows=fact_rows)
+
+
+def test_fact_rows_accumulate_emission_time_no_cap():
+    """切片5 锁:事实行发射时增量追加,自积累无容量上界——12 发射行
+    (> receipts 滚动窗容量 8)plan 序列全额在案,planned_spend 不截断。"""
+    fact_rows: list = []
+    _emit_via_production_write_point(fact_rows)
+    assert len(fact_rows) == 12
+    facts = _new_source(fact_rows, 40)
+    assert len(facts['plan_actions']) == 12
+    assert plan_gold_flow(facts['plan_actions'])['planned_spend'] == 30
+
+
+def test_busy_visit_verdict_not_flipped_by_window():
+    """9+ 发射行访问判定不因窗截断翻转:全落地生效帧(计划 30 金,实付
+    30)= effective;若仍回读 receipts 滚动窗(容量 8),头部 2 张大额买
+    滚出窗 → planned_spend 截成 10 → 判定漂移 partial_mismatch(历史
+    形态对照,防回潜)。"""
+    fact_rows: list = []
+    _emit_via_production_write_point(fact_rows)
+    full = _classify(_new_source(fact_rows, 40), 10)
+    assert full == 'effective'
+    window_rows = [r for r in fact_rows[-8:] if r.get('action')]
+    flipped = _classify(_new_source(window_rows, 40), 10)
+    assert flipped == 'partial_mismatch'
