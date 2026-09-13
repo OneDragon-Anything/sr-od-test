@@ -337,42 +337,66 @@ def _install_ocr_content_memo(ocr_service, cache_dir: Path | None) -> None:
     # 缓存即语义零变化;磁盘层让跨会话 warm 命中。
     matcher = ocr_service.ocr_matcher
     orig_run_ocr = matcher.run_ocr
+    orig_ocr = matcher.ocr
+
+    def _matcher_memo_lookup(key: tuple, compute):
+        """进程内 + 磁盘两级查/填(磁盘层结构与 service memo 同款)。"""
+        dpath = _disk_path(key)
+        if dpath is not None and dpath.exists():
+            try:
+                with dpath.open('rb') as f:
+                    return pickle.load(f)
+            except Exception:
+                pass  # 坏缓存按 miss,最坏代价 = 重算一次
+        hit = compute()
+        if dpath is not None:
+            try:
+                tmp = dpath.with_suffix('.tmp')
+                with tmp.open('wb') as f:
+                    pickle.dump(hit, f)
+                tmp.replace(dpath)
+            except Exception:
+                pass  # 写失败只影响下次 warm 命中
+        return hit
+
+    def _matcher_base_key(image: MatLike, threshold, merge_line_distance) -> tuple:
+        return (
+            model_fp,
+            _content_digest(image),
+            image.shape, image.dtype.str,
+            threshold, merge_line_distance,
+        )
+
     matcher_memo: dict[tuple, dict] = {}
 
     def _memo_run_ocr(image: MatLike, threshold: float | None = 0,
                       merge_line_distance: float = -1) -> dict:
         if image is None:
             return orig_run_ocr(image, threshold, merge_line_distance)
-        key = (
-            model_fp,
-            _content_digest(image),
-            image.shape, image.dtype.str,
-            threshold, merge_line_distance,
-        )
+        key = ('run_ocr',) + _matcher_base_key(image, threshold,
+                                               merge_line_distance)
         if key not in matcher_memo:
-            matcher_memo[key] = orig_run_ocr(image, threshold,
-                                             merge_line_distance)
+            matcher_memo[key] = _matcher_memo_lookup(
+                key, lambda: orig_run_ocr(image, threshold,
+                                          merge_line_distance))
         return matcher_memo[key]
 
     matcher.run_ocr = _memo_run_ocr  # type: ignore[method-assign]
 
-    # `ocr()` = round_by_* 框架识别链的真实热路径(返回 list[OcrMatchResult]),
+    # ocr() = round_by_* 框架识别链的真实热路径(返回 list[OcrMatchResult]),
     # 参数面与 run_ocr 同形;同键缓存,语义零变化。
-    orig_ocr = matcher.ocr
     ocr_memo: dict[tuple, list] = {}
 
     def _memo_ocr(image: MatLike, threshold: float = 0,
                   merge_line_distance: float = -1) -> list:
         if image is None:
             return orig_ocr(image, threshold, merge_line_distance)
-        key = (
-            model_fp,
-            _content_digest(image),
-            image.shape, image.dtype.str,
-            threshold, merge_line_distance,
-        )
+        key = ('ocr',) + _matcher_base_key(image, threshold,
+                                           merge_line_distance)
         if key not in ocr_memo:
-            ocr_memo[key] = orig_ocr(image, threshold, merge_line_distance)
+            ocr_memo[key] = _matcher_memo_lookup(
+                key, lambda: orig_ocr(image, threshold,
+                                      merge_line_distance))
         return list(ocr_memo[key])
 
     matcher.ocr = _memo_ocr  # type: ignore[method-assign]
