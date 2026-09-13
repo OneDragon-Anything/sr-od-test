@@ -1195,3 +1195,60 @@ def test_terminal_row_exits_hp_truth_chains():
 # [退役墓碑,W3]test_terminal_row_query_hp_typed_not_fake(query_hp 显示面
 # 终局行分型)随 query_hp 旧视图删除退役(r5-migration-plan.md §2 W3);
 # 终局「诚实缺省」语义的现役载体 = match_final 行(test_cw_match_final 锁面)。
+
+
+# ============================================================ journal 直读装配
+# (自原 W3 锁面归并;断言语义零变化)
+
+def test_assign_games_admits_real_run_ids_rejects_fake(
+        tmp_path: _match_archive_Path) -> None:
+    """journal 直读装配段分型:实机形态 run_id 段采信入归局骨架;
+    sim/测试形态段不采信(_JOURNAL_RUN_ID_RE 分型,与清理面同源)。"""
+    jp = tmp_path / 'state' / 'journal.jsonl'
+    jp.parent.mkdir(parents=True)
+    rows = [
+        {'v': 1, 'ts': '2026-09-11T10:00:00', 'run_id': 'run_20260911_100000',
+         'row': 'write', 'field': 'node', 'after': {'plane': 1, 'round_num': 1},
+         'state': {'values': {'node': {'plane': 1, 'round_num': 1}}},
+         'sig': {'family': 'obs', 'actor': 'X', 'mode': 'read'},
+         'note': '', 'evidence_refs': []},
+        {'v': 2, 'ts': '2026-09-11T10:01:00', 'run_id': 'fake_sim_seg',
+         'row': 'write', 'field': 'gold', 'after': 5,
+         'state': {'values': {}}, 'sig': {'family': 'obs', 'actor': 'X',
+                                          'mode': 'read'},
+         'note': '', 'evidence_refs': []},
+        {'v': 3, 'ts': '2026-09-11T11:00:00', 'run_id': 'run_20260911_110000',
+         'row': 'write', 'field': 'node', 'after': {'plane': 1, 'round_num': 1},
+         'state': {'values': {'node': {'plane': 1, 'round_num': 1}}},
+         'sig': {'family': 'obs', 'actor': 'X', 'mode': 'read'},
+         'note': '', 'evidence_refs': []},
+    ]
+    with jp.open('w', encoding='utf-8') as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + '\n')
+    games = arch.assign_games(tmp_path)
+    segs = [s for g in games for s in g['segments']]
+    assert 'run_20260911_100000' in segs and 'run_20260911_110000' in segs, \
+        'journal 实机段应入归局骨架'
+    assert 'fake_sim_seg' not in segs, 'sim/测试段形态不采信(_JOURNAL_RUN_ID_RE)'
+
+
+def test_build_archive_tolerates_journal_only_directory(
+        tmp_path: _match_archive_Path) -> None:
+    """宽容装配契约:旧流全缺 + 仅 journal 的目录装配不炸,rounds 面宽容
+    退化空(深判读候 journal 侧重建)。"""
+    jp = tmp_path / 'state' / 'journal.jsonl'
+    jp.parent.mkdir(parents=True)
+    jp.write_text(json.dumps({
+        'v': 1, 'ts': '2026-09-11T10:00:00', 'run_id': 'run_20260911_100000',
+        'row': 'write', 'field': 'node', 'after': {'plane': 1, 'round_num': 1},
+        'state': {'values': {'node': {'plane': 1, 'round_num': 1},
+                             'hp': 70, 'gold': 30}},
+        'sig': {'family': 'obs', 'actor': 'X', 'mode': 'read'},
+        'note': '', 'evidence_refs': []}, ensure_ascii=False) + '\n',
+        encoding='utf-8')
+    games = arch.assign_games(tmp_path)
+    assert games and games[0]['segments'] == ['run_20260911_100000']
+    a = arch.build_archive(tmp_path, games[0])
+    assert a['rounds'] == [], '旧流切片拆除后 rounds 宽容退化(申报面)'
+    assert a['segments'][0]['run_id'] == 'run_20260911_100000'

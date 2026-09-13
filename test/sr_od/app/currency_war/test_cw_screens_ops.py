@@ -465,3 +465,63 @@ def test_fit_degenerate_inputs_fall_back_identity() -> None:
     assert fit_platt_scaling([1, 0], [float('nan'), 0.5]) == ident
     c = fit_platt_scaling([1, 0, 1, 0], [1.5, 0.1, 0.9, 0.2])
     assert c.a > 0  # 正常学出正斜率
+
+
+# ============================================================ 安灯执行失败停机钩子
+# (自原 W3 锁面归并;断言语义零变化。全仓唯一 exec_fail_hook 判定链锁——
+#  判定链单一源 = classify_spend_unit,一手事实 = BuyCardsOutcome 内存直读)
+
+def test_andon_exec_fail_hook_reads_outcome_facts(
+        monkeypatch, tmp_path) -> None:
+    """安灯执行事实改内存直读 BuyCardsOutcome:旧三流文件读面零调用
+    (spend_ledger/decisions/obs_conflicts 读数缺失 → facts 缺席不判)。
+    判定链单一源 = classify_spend_unit(W494 语义;边界豁免防误停保留)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+        CwScreenPrep,
+    )
+    prep = CwScreenPrep.__new__(CwScreenPrep)
+    prep._unit_facts = None
+    prep._unit_meta = {'seq': 1, 'plane': 1, 'round': 1}
+    prep._exec_fail_hook_fired = False
+    # facts 缺席 → 不判(不读任何文件,不炸)
+    prep._exec_fail_hook_check(prep._unit_meta, 'closed')
+    assert prep._exec_fail_hook_fired is False
+    # BuyCardsOutcome 一手事实:发射了花费动作但金没动 → not_effective 停机;
+    # plan_truncated 豁免(ADR-0456 防误停)结构性保留
+    from sr_od.application.currency_war.kernel.cw_vocab import BuyCard, ShopCard
+    outcome = SimpleNamespace(
+        visit_actions=[BuyCard(card=ShopCard(x=0, name='某卡', cost=3))],
+        gold_open=30, plan_truncated=False, refresh_attempted=False,
+        refresh_board_changed=None)
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.telemetry.state.current_run_id',
+        lambda: 'run_w3_andon')
+    prep._unit_facts = {'outcome': outcome, 'gold_close': 30}
+    fired: list[str] = []
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.run_state.write_exec_fail_flag',
+        lambda path, **kw: fired.append(kw) or 'flag')
+    monkeypatch.setattr(CwScreenPrep, 'save_screenshot', lambda self, prefix: None)
+
+    class _RC:
+        def __init__(self) -> None:
+            self.stopped = None
+
+        def stop_running(self, reason: str) -> None:
+            self.stopped = reason
+
+    rc = _RC()
+    prep.ctx = SimpleNamespace(run_context=rc)
+    prep._exec_fail_hook_check(prep._unit_meta, 'closed')
+    assert rc.stopped == 'hook:exec_fail_mismatch', \
+        '发射了花费动作+金差≈0 = not_effective(安灯不停 = 判据断线)'
+    # 截断豁免:同形态 + plan_truncated → 不停
+    outcome2 = SimpleNamespace(
+        visit_actions=[], gold_open=30, plan_truncated=True,
+        refresh_attempted=False, refresh_board_changed=None)
+    prep._exec_fail_hook_fired = False
+    prep._unit_facts = {'outcome': outcome2, 'gold_close': 30}
+    rc2 = _RC()
+    prep.ctx = SimpleNamespace(run_context=rc2)
+    prep._exec_fail_hook_check(prep._unit_meta, 'closed')
+    assert rc2.stopped is None, 'plan_truncated 豁免失效 = 误停回归'

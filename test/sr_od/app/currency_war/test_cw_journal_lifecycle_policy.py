@@ -8,8 +8,8 @@
 真实数据依据(2026-09-12 实测):现役账面 251.6MB 全部段为非实机段且段龄
 <2 天——30 天跨期语料窗对其永无效力,分型窗与体积窗是该实测直接产物。
 
-W3 既有锁(段粒度/archive 显影/活跃段保护/缺文件 noop)在
-test_cw_w3_journal_only_reads.py §5 延续,本文件不重复。
+段粒度/manifest 显影/活跃段保护/缺文件 noop 四锁自原 W3 锁面归并至本
+文件 §段粒度基础契约(源文件退役,迁移轮 2026-09-13)。
 """
 from __future__ import annotations
 
@@ -253,3 +253,73 @@ def test_idempotent_after_size_budget_pass(tmp_path: Path) -> None:
     assert r2 == {'checked': r2['checked'], 'retired': [], 'rows_dropped': 0,
                   'segments': r2['segments'], 'reasons': {}}, \
         '幂等:清后二跑零增量'
+
+
+# ============================================================ 段粒度基础契约
+# (自原 W3 锁面归并;断言语义零变化,helper 复用本文件形态)
+
+def test_retention_age_window_segment_granularity_bad_rows_kept(
+        tmp_path: Path) -> None:
+    """年龄窗整段淘汰基础契约:过期段整段淘汰,窗口内段与活跃段保留;
+    坏行原样保留(宽容契约,清理面不判定);天窗路径幂等二跑零增量。"""
+    now = datetime.now()
+    jp = _mk_journal(tmp_path, [
+        ('run_20260714_000000',
+         (now - timedelta(days=60)).isoformat(timespec='seconds'), 3),
+        ('run_20260902_000000',
+         (now - timedelta(days=10)).isoformat(timespec='seconds'), 2),
+        ('run_20260911_000000',
+         (now - timedelta(days=1)).isoformat(timespec='seconds'), 1),
+    ])
+    with jp.open('a', encoding='utf-8') as f:
+        f.write('{bad half line\n')
+    r1 = enforce_journal_retention(jp, now=now)
+    # T-91:summary 增段名册/实际淘汰归因两键(联动跟随者契约),锁语义不变
+    assert r1 == {'checked': 3, 'retired': ['run_20260714_000000'],
+                  'rows_dropped': 3,
+                  'segments': ['run_20260714_000000', 'run_20260902_000000',
+                               'run_20260911_000000'],
+                  'reasons': {'run_20260714_000000': 'age_real'}}
+    kept_rows = [json.loads(ln) for ln in
+                 jp.read_text(encoding='utf-8').strip().splitlines()
+                 if not ln.startswith('{bad')]
+    assert {r['run_id'] for r in kept_rows} == {
+        'run_20260902_000000', 'run_20260911_000000'}
+    assert 'version' not in kept_rows[0]   # 段内版本序完整(整段淘汰不切半段)
+    r2 = enforce_journal_retention(jp, now=now)
+    assert r2['retired'] == [], '幂等:二跑零增量'
+
+
+def test_retention_manifest_archived_out_row(tmp_path: Path) -> None:
+    """manifest 逐段一行显影:被淘汰段一行 archived_out=true,rows/last_ts
+    取自被淘汰段本体(判读者钉解析失败时辨「清理 vs 丢数据」)。"""
+    now = datetime.now()
+    jp = _mk_journal(tmp_path, [
+        ('run_gone', (now - timedelta(days=90)).isoformat(timespec='seconds'), 2),
+        ('run_keep', (now - timedelta(days=1)).isoformat(timespec='seconds'), 1),
+    ])
+    enforce_journal_retention(jp, now=now)
+    man = _read_manifest(tmp_path)
+    assert len(man) == 1
+    assert man[0]['run_id'] == 'run_gone' and man[0]['archived_out'] is True
+    assert man[0]['rows'] == 2 and man[0]['last_ts'].startswith(
+        (now - timedelta(days=90)).strftime('%Y-%m-%dT'))
+
+
+def test_retention_active_segment_never_cleaned(tmp_path: Path) -> None:
+    """活跃段(段末行最新)永不清理:400 天后仍保留(可能与进程内缓冲/
+    下一局续写交叠)。"""
+    now = datetime.now()
+    jp = _mk_journal(tmp_path, [
+        ('run_a', (now - timedelta(days=400)).isoformat(timespec='seconds'), 2),
+        ('run_b', (now - timedelta(days=400)).isoformat(timespec='seconds'), 2),
+    ])
+    r = enforce_journal_retention(jp, now=now + timedelta(days=400))
+    assert r['retired'] == ['run_a'], '活跃段(run_b,段末行最新)被保留'
+
+
+def test_retention_missing_file_noop(tmp_path: Path) -> None:
+    """journal 缺席 = 零清理不炸(诚实缺失,装配面不受清理面波及)。"""
+    r = enforce_journal_retention(tmp_path / 'nope' / 'journal.jsonl')
+    assert r == {'checked': 0, 'retired': [], 'rows_dropped': 0,
+                 'segments': [], 'reasons': {}}
