@@ -1,9 +1,18 @@
-"""r130 合成材料分修复测试(字段名 recipes;局33b 获取侧根因)。
+"""武装箱选卡:锁线材料档与直击优先(armory-box-value 重锚版)。
 
-出处:被测模块本体——现行基建锁(模块见本文件 import;设计总览 docs/develop/sr_od/application/currency_war/strategy-docs/README.md)(2026-08-31 测试瘦身批考证补记)。"""
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+出处:被测模块本体(flow.CwFlowStrategy.decide_box_card 薄壳 + kernel
+cw_equip_value 机器;design = changes/2026-09-12-armory-box-value/design.md
+§2.2/§2.3)。历史:r130 修复批原锚 = state_of.target_comp;armory-box-value
+锚定两态化后 target_comp 伪 comp 不再被箱打分消费(伪 comp key_equips
+恒空,原 ①③ 项在 P1 帧结构性恒死——锚切换行为等价),重锚 = locked_comp。
+两断言在新锚下语义保持:幸运星 tier1 胜未知件(tier0)、key 直击 tier3
+胜材料(tier1)。
+"""
+from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
-from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
+from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+    StrategySession,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
@@ -12,24 +21,25 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 
 
-def _sess_baiyu():
+def _sess_locked_baiyu():
     s = StrategySession()
-    state_of(s).target_comp = next(c for c in COMP_LIBRARY if c.name == '反甲白厄')
+    state_of(s).v3_intention = IntentionState(locked_comp='反甲白厄')
     return s
 
 
 def test_material_score_now_alive():
-    """反甲白厄定型:幸运星(以牙还牙甲材料)应拿 +30 材料分——
-    旧代码读 .materials 恒空,材料分静默失效(局33b 根因)。"""
+    """锁线反甲白厄:幸运星(key_equip 材料)tier1 胜未知件(tier0);
+    key 直击 tier3 胜材料 tier1。原 target_comp 锚已随两态化退役,
+    重锚 locked_comp(锁语义重推,见模块 docstring)。"""
     st = MandateV1Strategy()
-    sess = _sess_baiyu()
+    sess = _sess_locked_baiyu()
     gs = CwSimFrame()
     # 幸运星 vs 无关件:幸运星应胜
     i = st.decide_box_card(['幸运星', '完全无关的垃圾'], gs, sess, None)
-    assert i == 0, '幸运星(key_equip 材料)应因材料分胜出'
+    assert i == 0, '幸运星(key_equip 材料)应因材料档胜出'
     # key_equip 直命中仍最高
     i2 = st.decide_box_card(['幸运星', '以牙还牙甲'], gs, sess, None)
-    assert i2 == 1, 'key_equip 直命中(+100)应胜材料(+30)'
+    assert i2 == 1, 'key_equip 直击(tier3)应胜材料(tier1)'
 
 
 def test_material_chain_via_recipes():

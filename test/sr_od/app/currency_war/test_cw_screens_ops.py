@@ -38,9 +38,6 @@ from sr_od.application.currency_war.data.cw_plaza_posts import (
     PlazaPost,
     post_by_id,
 )
-from sr_od.application.currency_war.kernel.cw_prep_expect import (
-    material_value as _material_value,
-)
 from sr_od.application.currency_war.obs.cw_identity_obs import (
     read_reward_spheres,
     read_supply_boxes,
@@ -74,13 +71,6 @@ REPO = Path(__file__).resolve().parents[5]
 # ==================== test_handle_supply_sphere ====================
 
 
-def test_material_value_table() -> None:
-    """合成材料通用性表:生命之花(7 配方)最高,幸运星(3)低,未知 0。"""
-    assert _material_value('生命之花') == 7
-    assert _material_value('轮滑鞋') == 6
-    assert _material_value('未知装备') == 0
-
-
 def test_fixture_reads_spheres_and_box(test_context: SrTestContext) -> None:
     """8 球帧无箱(时间线:箱由后续球掉落);5 球帧球+箱同帧共存,两 reader 互不干扰。"""
     if not test_context.has_screen('货币战争-备战', 'reward_spheres_8'):
@@ -96,16 +86,18 @@ def test_fixture_reads_spheres_and_box(test_context: SrTestContext) -> None:
     assert len(spheres5) == 5 and [s for s, _p in boxes5] == [1], '5 球帧:球 5 + 箱槽1 共存'
 
 
-def test_pick_card_fallback_by_material_value() -> None:
-    """选卡回落路径锁:无 cw_match(局外)时按材料通用性选卡(生命之花 7 >
-    轮滑鞋 6)。现役载体 = PrepActionExecutor._default_box_card(原锁挂在
-    CwScreenSupply._pick_card 上,该死类随退役批删除,断言语义迁移至此;
-    key_equips 命中/策略打分路径需 cw_match 在场,不在本锁断言面)。"""
+def test_pick_card_fallback_by_output_prior() -> None:
+    """选卡回落路径锁(armory-box-value 行 10 重锚):无 cw_match(局外)
+    时走共享机器 pick_equipment 空键 = 纯通用输出先验排序。原锁钉「材料
+    通用性梯度回落」,该梯度出处文档已删、注册表无据,随虚构表退役
+    ——重锚非机械跟绿:帧不变(轮滑鞋/生命之花/幸运星),新语义下
+    轮滑鞋(base 4)胜出。key_equips 命中/策略打分路径需 cw_match 在场,
+    不在本锁断言面。"""
     ex = object.__new__(PrepActionExecutor)
     ex._ctx = SimpleNamespace(cw_match=None)
     assert ex._default_box_card(
         [('轮滑鞋', 100), ('生命之花', 200), ('幸运星', 300)],
-    ) == ('生命之花', 200)
+    ) == ('轮滑鞋', 100)
 
 
 # ==================== test_settlement_recognizer ====================

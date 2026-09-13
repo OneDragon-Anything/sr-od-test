@@ -12,7 +12,9 @@ from sr_od.application.currency_war.data.cw_equipment_data import (
     EQUIPMENT_ROSTER,
 )
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-from sr_od.application.currency_war.kernel.cw_events import _EQUIP_VALUE
+from sr_od.application.currency_war.kernel.cw_equip_value import (
+    EQUIP_GENERIC_VALUE as _EQUIP_VALUE,
+)
 from sr_od.application.currency_war.sim.checks.ledger import (
     check_equip_value_strategy_key_coverage,
 )
@@ -73,7 +75,8 @@ def test_coverage_check_discloses_any_single_reference_gap() -> None:
     probe = single_ref[0]
     shrunk = {k: v for k, v in _EQUIP_VALUE.items() if k != probe}
     with patch(
-            'sr_od.application.currency_war.kernel.cw_events._EQUIP_VALUE',
+            'sr_od.application.currency_war.kernel.cw_equip_value.'
+            'EQUIP_GENERIC_VALUE',
             shrunk):
         reported = check_equip_value_strategy_key_coverage([])
     assert any(probe in line for line in reported), \
