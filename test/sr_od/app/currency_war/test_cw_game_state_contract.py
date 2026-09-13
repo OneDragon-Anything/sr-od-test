@@ -562,3 +562,40 @@ def journal_sink():
     set_state_journal_sink(rows.append)
     yield rows
     set_state_journal_sink(None)
+
+
+# ============================================================ §9 渠道签名封闭集(登记门,自 state_journal 归并)
+
+def test_channel_family_closed_set() -> None:
+    """§3.2.1 硬约束 2:family 封闭集 {obs, logic_action, logic_hook},集外 = 红。"""
+    for family in ('obs', 'logic_action', 'logic_hook'):
+        assert Sig(family=family, actor='cw_observation').family == family
+    with pytest.raises(ValueError):
+        Sig(family='event', actor='x')
+    with pytest.raises(ValueError):
+        Sig(family='hook', actor='x')
+
+
+def test_channel_mode_closed_set_per_family() -> None:
+    """§3.2.1:obs 族子模 = read/carried/prior/synthesized;logic 两族恒 compute。"""
+    for mode in ('read', 'carried', 'prior', 'synthesized'):
+        Sig(family='obs', actor='cw_observation', mode=mode)
+    with pytest.raises(ValueError):
+        Sig(family='obs', actor='cw_observation', mode='compute')
+    for family in ('logic_action', 'logic_hook'):
+        Sig(family=family, actor='derive_node_observed', mode='compute')
+        with pytest.raises(ValueError):
+            Sig(family=family, actor='derive_node_observed', mode='read')
+
+
+def test_actor_registration_gate() -> None:
+    """§3.2.1/§3.2.4 硬约束 2:显式 sig 的 actor 须为登记面在册,集外 = 红。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        register_sig_actors,
+    )
+    register_sig_actors('TestActorR1')
+    bs = _bs()
+    with pytest.raises(ValueError):
+        bs.observe(bs.gold, 20, sig=Sig(family='obs', actor='NeverRegistered'))
+    bs.observe(bs.gold, 20, sig=Sig(family='obs', actor='TestActorR1'))
+    assert bs.gold.value == 20
