@@ -329,6 +329,54 @@ def _install_ocr_content_memo(ocr_service, cache_dir: Path | None) -> None:
 
     ocr_service.get_ocr_result_list = _memo_get_ocr_result_list  # type: ignore[method-assign]
 
+    # ---- matcher 直调路径的 memo(流程 op 走 ctx.ocr.run_ocr,不经 service)----
+    # 流程代码(enter_game/back_to_normal_world_plus 等 9 文件)直调
+    # ``ctx.ocr.run_ocr(整图)``——全图 det+rec 每次调用都重跑,与
+    # service 的帧内缓存/memo(键含 rect)双层都错配。matcher.run_ocr 是
+    # 纯函数(同图同参同果,onnx 推理确定性的实证见上),按内容哈希+参数
+    # 缓存即语义零变化;磁盘层让跨会话 warm 命中。
+    matcher = ocr_service.ocr_matcher
+    orig_run_ocr = matcher.run_ocr
+    matcher_memo: dict[tuple, dict] = {}
+
+    def _memo_run_ocr(image: MatLike, threshold: float | None = 0,
+                      merge_line_distance: float = -1) -> dict:
+        if image is None:
+            return orig_run_ocr(image, threshold, merge_line_distance)
+        key = (
+            model_fp,
+            _content_digest(image),
+            image.shape, image.dtype.str,
+            threshold, merge_line_distance,
+        )
+        if key not in matcher_memo:
+            matcher_memo[key] = orig_run_ocr(image, threshold,
+                                             merge_line_distance)
+        return matcher_memo[key]
+
+    matcher.run_ocr = _memo_run_ocr  # type: ignore[method-assign]
+
+    # `ocr()` = round_by_* 框架识别链的真实热路径(返回 list[OcrMatchResult]),
+    # 参数面与 run_ocr 同形;同键缓存,语义零变化。
+    orig_ocr = matcher.ocr
+    ocr_memo: dict[tuple, list] = {}
+
+    def _memo_ocr(image: MatLike, threshold: float = 0,
+                  merge_line_distance: float = -1) -> list:
+        if image is None:
+            return orig_ocr(image, threshold, merge_line_distance)
+        key = (
+            model_fp,
+            _content_digest(image),
+            image.shape, image.dtype.str,
+            threshold, merge_line_distance,
+        )
+        if key not in ocr_memo:
+            ocr_memo[key] = orig_ocr(image, threshold, merge_line_distance)
+        return list(ocr_memo[key])
+
+    matcher.ocr = _memo_ocr  # type: ignore[method-assign]
+
 
 @pytest.fixture(scope='session')
 def test_context(request: pytest.FixtureRequest) -> SrTestContext:

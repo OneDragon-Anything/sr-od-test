@@ -142,6 +142,9 @@ class FixtureController(MockController):
         self._phases: list[dict] = []
         self._phase_idx: int = 0
         self._poll_count: int = 0
+        # 帧解码缓存((screen_name, state) → 同一数组对象,保 OcrService
+        # 按 id(image) 键控的帧内复用缓存能命中;current_frame 用)
+        self._frame_cache: dict[tuple[str, str], MatLike] = {}
 
         # 动作记录(供测试断言)
         self.recorded_clicks: list[Point] = []
@@ -173,10 +176,23 @@ class FixtureController(MockController):
 
     @property
     def current_frame(self) -> MatLike:
-        """当前 phase 对应的存档截图。"""
+        """当前 phase 对应的存档截图。
+
+        按 (screen_name, state) 缓存解码结果并返回同一数组对象:生产
+        OcrService 的识别缓存按 ``id(image)``(对象身份)键控、语义是
+        「同一帧多 area 查询复用一次全图 OCR」——每次重新解码会产生新
+        对象、缓存永不命中,9 轮剧本就重跑 9 次全图 det+rec(~0.7s/轮)。
+        同对象返回后,同帧内跨轮的全部识别查询命中生产缓存,识别语义
+        零变化(同图同结果)。前提:识别链只读输入图(cv 惯例 resize/
+        cvtColor 均返回副本,OCR 管线不就地改图)。
+        """
         phase = self._phases[self._phase_idx]
         screen_name, state = phase['frame']
-        return self.ctx.load_screen(screen_name, state)
+        cached = self._frame_cache.get((screen_name, state))
+        if cached is None:
+            cached = self.ctx.load_screen(screen_name, state)
+            self._frame_cache[(screen_name, state)] = cached
+        return cached
 
     # ----------------------------- 框架接口 ----------------------------- #
 
