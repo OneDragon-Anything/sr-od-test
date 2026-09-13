@@ -1,0 +1,4309 @@
+{
+ "meta": {
+  "captured_at": "2026-09-13T13:50:18",
+  "head_commit": "422439dd8",
+  "simulate_status": "pre-retirement(批B 未动,平移前语义)",
+  "generator": ".debug/temp/t185_capture_golden2.py(可再生)",
+  "hash_seed_note": "构造与 simulate 分支零 rng/无集合序依赖;复跑建议 PYTHONHASHSEED=0 与批A 口径一致",
+  "merge_leg_semantics": "true = 金样锁须在简单腿(apply_shop_action_logic)后调 apply_shop_merge_leg(live 驱动器调用形态;sim executed=None 路径合成应用在函数内自算)",
+  "sim_applied_semantics": "BuyCard/RefreshShop 族 = 金流出>0(分支不写 action_log);SellBench/v2 族 = action_log result==applied",
+  "sim_reason_semantics": "action_log reason 透传;无 log 分支(简单买/拒买/刷新)= 空 —— LogicOutcome reason 对照仅辖非空案",
+  "case_count": 13
+ },
+ "cases": [
+  {
+   "name": "buy_place_simple",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 20,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "name": "银枝",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "BuyCard",
+    "card": {
+     "x": 0,
+     "faction": "星间旅人",
+     "name": "银枝",
+     "cost": 3,
+     "star": 1,
+     "cost_source": "roster"
+    },
+    "reason": "test"
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 17,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": true,
+   "sim_applied": true,
+   "sim_reason": ""
+  },
+  {
+   "name": "buy_merge3_on_bench",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 20,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "name": "银枝",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "BuyCard",
+    "card": {
+     "x": 0,
+     "faction": "星间旅人",
+     "name": "银枝",
+     "cost": 3,
+     "star": 1,
+     "cost_source": "roster"
+    },
+    "reason": "test"
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 2,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 17,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": true,
+   "sim_applied": true,
+   "sim_reason": ""
+  },
+  {
+   "name": "buy_fullbench_mergebuy",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "刃",
+         "star": 1,
+         "equips": [],
+         "slot": 4
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "卡芙卡",
+         "star": 1,
+         "equips": [],
+         "slot": 5
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "砂金",
+         "star": 1,
+         "equips": [],
+         "slot": 6
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "镜流",
+         "star": 1,
+         "equips": [],
+         "slot": 7
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "花火",
+         "star": 1,
+         "equips": [],
+         "slot": 8
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "佩拉",
+         "star": 1,
+         "equips": [],
+         "slot": 9
+        }
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 20,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "name": "银枝",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       },
+       {
+        "name": "银枝",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "BuyCard",
+    "card": {
+     "x": 0,
+     "faction": "星间旅人",
+     "name": "银枝",
+     "cost": 3,
+     "star": 1,
+     "cost_source": "roster"
+    },
+    "reason": "test"
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 2,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "刃",
+         "star": 1,
+         "equips": [],
+         "slot": 4
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "卡芙卡",
+         "star": 1,
+         "equips": [],
+         "slot": 5
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "砂金",
+         "star": 1,
+         "equips": [],
+         "slot": 6
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "镜流",
+         "star": 1,
+         "equips": [],
+         "slot": 7
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "花火",
+         "star": 1,
+         "equips": [],
+         "slot": 8
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "佩拉",
+         "star": 1,
+         "equips": [],
+         "slot": 9
+        }
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 14,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": true,
+   "sim_applied": true,
+   "sim_reason": ""
+  },
+  {
+   "name": "buy_fullbench_reject",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "刃",
+         "star": 1,
+         "equips": [],
+         "slot": 4
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "卡芙卡",
+         "star": 1,
+         "equips": [],
+         "slot": 5
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "砂金",
+         "star": 1,
+         "equips": [],
+         "slot": 6
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "镜流",
+         "star": 1,
+         "equips": [],
+         "slot": 7
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "花火",
+         "star": 1,
+         "equips": [],
+         "slot": 8
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "佩拉",
+         "star": 1,
+         "equips": [],
+         "slot": 9
+        }
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 20,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "name": "砂金",
+        "faction": "公司",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "BuyCard",
+    "card": {
+     "x": 0,
+     "faction": "公司",
+     "name": "砂金",
+     "cost": 3,
+     "star": 1,
+     "cost_source": "roster"
+    },
+    "reason": "test"
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "刃",
+         "star": 1,
+         "equips": [],
+         "slot": 4
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "卡芙卡",
+         "star": 1,
+         "equips": [],
+         "slot": 5
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "砂金",
+         "star": 1,
+         "equips": [],
+         "slot": 6
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "镜流",
+         "star": 1,
+         "equips": [],
+         "slot": 7
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "花火",
+         "star": 1,
+         "equips": [],
+         "slot": 8
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "佩拉",
+         "star": 1,
+         "equips": [],
+         "slot": 9
+        }
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 20,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "name": "砂金",
+        "faction": "公司",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": true,
+   "sim_applied": false,
+   "sim_reason": ""
+  },
+  {
+   "name": "sellbench_apply_equips",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [
+          "以太钻头"
+         ],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "equips": [
+      "光速螺旋桨·特权"
+     ]
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "equips": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 11,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "SellBench",
+    "bench_idx": 0,
+    "income": null,
+    "expect": "银枝",
+    "reason": "test",
+    "convert_reason": ""
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 12,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "equips": [
+      "光速螺旋桨·特权",
+      "以太钻头"
+     ]
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "equips": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 11,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": true,
+   "sim_reason": ""
+  },
+  {
+   "name": "sellbench_stale_reject",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "SellBench",
+    "bench_idx": 0,
+    "income": null,
+    "expect": "刃",
+    "reason": "test",
+    "convert_reason": ""
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": false,
+   "sim_reason": "stale_proposal:刃!=银枝"
+  },
+  {
+   "name": "selldeployed_apply",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "银枝",
+       "star": 1,
+       "equips": [
+        "以太钻头"
+       ],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "星间旅人": 1,
+      "群攻": 1
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "SellDeployed",
+    "deployed_idx": 0,
+    "income": null,
+    "reason": "test",
+    "expect": "银枝"
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 12,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "equips": [
+      "以太钻头"
+     ]
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "equips": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 11,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": true,
+   "sim_reason": "test"
+  },
+  {
+   "name": "selldeployed_stale_reject",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "银枝",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "星间旅人": 1,
+      "群攻": 1
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "SellDeployed",
+    "deployed_idx": 0,
+    "income": null,
+    "reason": "test",
+    "expect": "刃"
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "银枝",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "星间旅人": 1,
+      "群攻": 1
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": false,
+   "sim_reason": "stale_proposal:刃!=银枝"
+  },
+  {
+   "name": "swapdeploy_apply",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "银枝",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "星间旅人": 1,
+      "群攻": 1
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "SwapDeploy",
+    "deployed_idx": 0,
+    "bench_idx": 0,
+    "reason": "test",
+    "expect_deployed": "",
+    "expect_bench": ""
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "爻光",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "银枝",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "仙舟": 1,
+      "欢愉": 1
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": true,
+   "sim_reason": "test"
+  },
+  {
+   "name": "swapdeploy_idx_reject",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "银枝",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "星间旅人": 1,
+      "群攻": 1
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "SwapDeploy",
+    "deployed_idx": 5,
+    "bench_idx": 0,
+    "reason": "test",
+    "expect_deployed": "",
+    "expect_bench": ""
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "银枝",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 10,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "星间旅人": 1,
+      "群攻": 1
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": false,
+   "sim_reason": "idx_out_of_range:d5/b0"
+  },
+  {
+   "name": "comptx_apply",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "饮月",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "藿藿",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "佩拉",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 30,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "仙舟": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "name": "刻律德菈",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "CompTransaction",
+    "deploy": [],
+    "undeploy": [
+     0
+    ],
+    "sell": [
+     [
+      1,
+      "bench"
+     ]
+    ],
+    "fill": [
+     {
+      "source": "shop",
+      "idx": 0,
+      "row": "front",
+      "expect": "刻律德菈"
+     }
+    ],
+    "reason": "test",
+    "expect_deploy": null,
+    "expect_undeploy": null,
+    "expect_sell": null
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "刻律德菈",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "藿藿",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "饮月",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "佩拉",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 28,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "夜之半神": 1,
+      "战技点": 1
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": true,
+   "sim_reason": "test"
+  },
+  {
+   "name": "comptx_gold_short_reject",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "饮月",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "藿藿",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "佩拉",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 0,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "仙舟": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "name": "刻律德菈",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "CompTransaction",
+    "deploy": [],
+    "undeploy": [
+     0
+    ],
+    "sell": [
+     [
+      1,
+      "bench"
+     ]
+    ],
+    "fill": [
+     {
+      "source": "shop",
+      "idx": 0,
+      "row": "front",
+      "expect": "刻律德菈"
+     }
+    ],
+    "reason": "test",
+    "expect_deploy": null,
+    "expect_undeploy": null,
+    "expect_sell": null
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "front_row": [
+      {
+       "char_id": "饮月",
+       "star": 1,
+       "equips": [],
+       "slot": 1
+      }
+     ],
+     "back_row": [],
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "藿藿",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "停云",
+         "star": 1,
+         "equips": [],
+         "slot": 2
+        }
+       },
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "佩拉",
+         "star": 1,
+         "equips": [],
+         "slot": 3
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 0,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "board": {
+      "仙舟": 1
+     },
+     "shop": {
+      "cards": [
+       {
+        "name": "刻律德菈",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "front_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_row": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "board": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 13,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": false,
+   "sim_reason": "gold_short:0+1-3<0|tx_reason=test"
+  },
+  {
+   "name": "refresh_gold_leg",
+   "initial": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 20,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "name": "银枝",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "action": {
+    "__type__": "RefreshShop",
+    "cost": 2,
+    "reason": ""
+   },
+   "expected": {
+    "schema_version": 1,
+    "values": {
+     "node": {
+      "plane": 1,
+      "round_num": 3,
+      "kind": "battle"
+     },
+     "bench": {
+      "slots": [
+       {
+        "kind": "unit",
+        "unit": {
+         "char_id": "爻光",
+         "star": 1,
+         "equips": [],
+         "slot": 1
+        }
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       },
+       {
+        "kind": "empty",
+        "unit": null
+       }
+      ],
+      "capacity": 9
+     },
+     "back_layout": 6,
+     "gold": 18,
+     "level": 5,
+     "xp": [
+      4,
+      20
+     ],
+     "hp": 80,
+     "shop": {
+      "cards": [
+       {
+        "name": "银枝",
+        "faction": "星间旅人",
+        "cost": 3,
+        "star": 1,
+        "cost_source": "roster",
+        "slot": 0
+       }
+      ],
+      "refresh_probs": {}
+     }
+    },
+    "prov": {
+     "node": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "bench": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "back_layout": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "gold": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "level": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "xp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "hp": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "shop": {
+      "source": "observation",
+      "evidence": "sim:synthesized@golden-capture"
+     },
+     "encounter": {
+      "source": "observation",
+      "evidence": "left_screen"
+     },
+     "supply": {
+      "source": "observation",
+      "evidence": "left_screen"
+     }
+    },
+    "effects": [],
+    "equip_progress": {},
+    "frame_obs": "full",
+    "write_seq": 10,
+    "node_hist_ord": null,
+    "bs_schema": {
+     "node": 1,
+     "units": 1,
+     "economy": 1,
+     "match_facts": 1,
+     "refresh_counters": 1,
+     "node_screen_refresh": 1,
+     "inventory": 1,
+     "spheres": 1,
+     "substate": 1,
+     "shop": 1,
+     "encounter": 1,
+     "supply": 1,
+     "event_choices": 1,
+     "settlement": 1,
+     "effects": 1,
+     "derivation": 3,
+     "receipts": 1,
+     "match_final": 1
+    }
+   },
+   "merge_leg": false,
+   "sim_applied": true,
+   "sim_reason": ""
+  }
+ ]
+}
