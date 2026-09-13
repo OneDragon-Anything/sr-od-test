@@ -1217,6 +1217,31 @@ def test_synthesis_payload_offscreen_branch() -> None:
     assert bs.supply.value is None and bs.supply.evidence == 'left_screen'
 
 
+def test_synthesis_shop_empty_keeps_payload_in_recognition_domain() -> None:
+    """T-181:识别域(``shop_empty_off_screen=False``,店开相位实机喂入)
+    空牌面 = 买空/OCR 失读窗 → 不写保现值(失读窗沿用上一开店牌面),禁按
+    离屏清 None。实证 = 2026-09-13 实机局 run_20260913_085025:买空店重进
+    被真值口径清 None,``decide_shop_action`` 在屏前置 shop=None 契约崩
+    循环(journal 同帧 current_screen 开商店 ∧ prov.shop left_screen)。
+    真值域缺省分支的同帧行为 = test_synthesis_payload_offscreen_branch
+    (离屏锁不变,两域分叉 = 合成口 docstring「payload 域离屏分支」申报)。"""
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    st_shop = CwSimFrame()
+    st_shop.shop = [StateShopCard(x=1, name='花火', cost=2, star=1,
+                                  cost_source='badge')]
+    synthesize_from_game_state(bs, st_shop, at_round='p1-r2')
+    assert bs.shop.value is not None
+
+    # 买空店重进帧:shop 空表,识别域口径 → 保现值沿用(其余域照常合成)
+    st_empty = CwSimFrame()
+    synthesize_from_game_state(bs, st_empty, at_round='p1-r2',
+                               shop_empty_off_screen=False)
+    assert bs.shop.value is not None, '识别域空表 = 失读窗,禁清 None'
+    assert [c.name for c in bs.shop.value.cards] == ['花火'], \
+        '沿用上一开店牌面(失读窗语义,同观察漏斗「空牌面不写」口径)'
+    assert bs.shop.evidence != 'left_screen', '识别域空表非结构离屏'
+
+
 # ============================================================ §8.7 件 3
 # Snapshot 消费切换:mandate_v1 内部改读 GameState 视图
 
@@ -1248,8 +1273,8 @@ def test_snapshot_assembly_falls_back_to_board_state_view() -> None:
 def test_snapshot_anchor_state_falls_back_to_board_state_view() -> None:
     """件 3 收口墓碑(原锁:adapter._anchor_state 的 session 锚回退取
     GameState 记录值)——该缝已随 T-116 段 2 退役删除(snapshot_from_obs
-    纯容器锚),符号复活即红;锚语义守护归 test_cw_w5_sim_retirement
-    哨兵与容器锚现役锁。"""
+    纯容器锚),符号复活即红;回退链现役语义由容器锚锁守护,退役史
+    归 git 历史(T-116 段 2)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         adapter as _adapter,
     )
