@@ -38,14 +38,19 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     apply_effect_burst_grant,
     bench_free_slots,
     bench_is_full,
+    bench_slots_to_legacy,
     board_state_of,
     consume_defect_sink,
+    deployed_rows_from_obs,
     grant_effect_node_refresh_balance,
     note_board_state_heartbeat,
     project_effect_capacity,
     set_defect_sink,
+    shop_card_to_container,
+    shop_cards_to_legacy,
     slot_occupies,
     synthesize_from_game_state,
+    unit_rows_to_deployed,
 )
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
@@ -1451,3 +1456,198 @@ def test_ast_currency_war_reads_no_last_state() -> None:
         if 'last_state' in _identifiers(f):
             offenders.append(str(f.relative_to(_PKG)))
     assert not offenders, f'last_state 旧帧链标识符复活:{offenders}'
+
+
+# ==================== 容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================
+
+def _full_truth_frame() -> CwSimFrame:
+    """回放语料形态的真值帧(全域可读,无失读)。"""
+    st = CwSimFrame()
+    st.plane, st.round_num, st.node_type = 1, 4, 'battle'
+    st.gold, st.gold_readable = 37, True
+    st.level, st.xp_progress, st.streak = 5, (2, 8), 3
+    st.hp, st.hp_readable, st.hp_trusted = 82, True, True
+    st.deploy_cap = 6
+    st.board = {'仙舟': 2}
+    st.active_env = '昼之半神概念股'
+    st.plane_bosses = ['镜流', None, '卡芙卡']
+    st.enemy_affixes = ['迅捷']
+    st.equips = ['星币收集器', '旧世仁医']
+    st.active_strategies = ['白银投资']
+    st.selected_difficulty = 'A8'
+    st.shop = [_mk_legacy_card(300, '希儿'), _mk_legacy_card(500, '景元',
+                                                            cost=4)]
+    st.refresh_probs = {1: 0.6, 2: 0.22}
+    st.bench = [BenchChar(slot=1, char_id='花火', star=2, faction='仙舟'),
+                None, BenchChar(slot=3, char_id='佩佩', star=1,
+                                faction='贝洛伯格')] + [None] * 6
+    st.deployed = [BenchChar(slot=1, char_id='希儿', star=1, faction='仙舟',
+                             position_pref='front'),
+                   None, None, None,
+                   BenchChar(slot=1, char_id='景元', star=1, faction='仙舟',
+                             position_pref='back'),
+                   None, None, None, None, None]
+    return st
+
+# deployed_rows_from_obs 分排守卫/unit_rows_to_deployed 旧槽表重建/bench_slots_to_legacy
+# 注册表派生阵营/sim 合成口扩域(八域真值直写 evidence=sim:synthesized)/ShopCard 映射
+# 单一源往返 + kernel 内零旧类型引用静态锁(转换只许在映射函数发生)。断言零改动。
+def _mk_legacy_card(x: int, name: str, *, cost: int = 1, star: int = 1,
+                    faction: str = '仙舟',
+                    cost_source: str = 'badge', merge_preview: int = 0,
+                    slot: int = 0):
+    from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
+    return ShopCard(x=x, faction=faction, name=name, cost=cost, star=star,
+                    merge_preview=merge_preview, cost_source=cost_source,
+                    slot=slot)
+
+
+def test_deployed_rows_from_obs_splits_rows_and_guards_empty() -> None:
+    """SIFT 读链 → (front_row, back_row):分排按 position_pref、行内 1 基
+    slot 直传;空集/全无身份 = 失读返 None(P2-1 同款守卫,禁「全场无人」
+    假观察)。"""
+    assert deployed_rows_from_obs([]) is None
+    assert deployed_rows_from_obs([BenchChar(slot=0, char_id='')]) is None
+    front, back = deployed_rows_from_obs([
+        BenchChar(slot=2, char_id='希儿', star=2, position_pref='front'),
+        BenchChar(slot=1, char_id='景元', star=1, position_pref='back'),
+        BenchChar(slot=3, char_id='花火', star=1, position_pref='back'),
+    ])
+    assert [(u.char_id, u.slot) for u in front] == [('希儿', 2)]
+    assert [(u.char_id, u.slot) for u in back] == [('景元', 1), ('花火', 3)]
+
+
+def test_unit_rows_to_deployed_rebuilds_legacy_slot_table() -> None:
+    """容器席位 → 旧定长槽表(ADR-0392 0 基 0-3 前/4-9 后):视图收编后
+    消费形状零变化(None 填充,行内 1 基 slot = 旧下标换算)。"""
+    front, back = deployed_rows_from_obs([
+        BenchChar(slot=2, char_id='希儿', star=2, position_pref='front'),
+        BenchChar(slot=1, char_id='景元', star=1, position_pref='back'),
+    ])
+    table = unit_rows_to_deployed(front, back)
+    assert len(table) == 10
+    assert table[1] is not None and table[1].char_id == '希儿' \
+        and table[1].position_pref == 'front'
+    assert table[4] is not None and table[4].char_id == '景元' \
+        and table[4].position_pref == 'back'
+    assert all(table[i] is None for i in (0, 2, 3, 5, 6, 7, 8, 9))
+
+
+def test_bench_slots_to_legacy_derives_faction_from_registry() -> None:
+    """BenchView → 旧槽表:阵营不入容器(§3.2.3),查角色注册表派生
+    (识别链同源 get_char);槽位两端同构 1:1。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        bench_view_of_slots,
+    )
+    view = bench_view_of_slots([BenchChar(slot=1, char_id='花火', star=2),
+                                None])
+    table = bench_slots_to_legacy(view)
+    assert table[0] is not None and table[0].char_id == '花火' \
+        and table[0].star == 2 and table[0].slot == 1
+    assert table[0].faction != '?', '阵营自注册表派生(非容器存储)'
+    assert table[1] is None and len(table) == 9
+
+
+def test_sim_synth_writes_w5_domains() -> None:
+    """sim 合成口扩域(§2.6:合成口与实机喂入口域覆盖集对齐):八新域
+    (plane_bosses/enemy_affixes/active_env/equips/front_row/back_row/
+    deploy_cap + back_max 语义裁决增补的 back_layout)真值直写
+    observation + evidence=sim:synthesized;缺席域不写(禁假值)。"""
+    st = _full_truth_frame()
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    synthesize_from_game_state(bs, st, at_round='p1-r4')
+    assert bs.deploy_cap.value == 6
+    assert bs.back_layout.value == 6, \
+        'back_layout 增补域:CwSimFrame.back_max 真值直写(sim 场景侧设定)'
+    assert bs.plane_bosses.value == ['镜流', None, '卡芙卡']
+    assert bs.enemy_affixes.value == ['迅捷']
+    assert bs.active_env.value == '昼之半神概念股'
+    assert bs.equips.value == ['星币收集器', '旧世仁医']
+    assert [u.char_id for u in bs.front_row.value] == ['希儿']
+    assert [u.char_id for u in bs.back_row.value] == ['景元']
+    assert bs.front_row.value[0].slot == 1 and bs.back_row.value[0].slot == 1, \
+        'Unit.slot = 行内 1 基(前排 1..4/后排 1..N)'
+    assert all('sim:synthesized' in (f.evidence or '')
+               for f in (bs.deploy_cap, bs.back_layout, bs.plane_bosses,
+                         bs.enemy_affixes, bs.active_env, bs.equips,
+                         bs.front_row, bs.back_row))
+
+
+def test_shop_card_mapping_roundtrip_and_frame_alignment() -> None:
+    """映射单一源往返:旧→容器保五记录字段+槽号;容器→旧 x/merge_preview
+    同帧对齐透传、slot 自容器透传,失配窗置 0(执行/读取器域引导窗,
+    申报见映射函数)。"""
+    legacy = _mk_legacy_card(300, '希儿', cost=1, star=2,
+                             cost_source='roster_fallback',
+                             merge_preview=2, slot=3)
+    container = shop_card_to_container(legacy)
+    assert (container.name, container.faction, container.cost,
+            container.star, container.cost_source, container.slot) == \
+        ('希儿', '仙舟', 1, 2, 'roster_fallback', 3), \
+        '五记录字段原值透传不折叠(cost_source 证据分级禁丢);物理槽号透传'
+    assert not hasattr(container, 'x') and not hasattr(container,
+                                                       'merge_preview')
+    back = shop_cards_to_legacy([container], frame_cards=[legacy])
+    assert (back[0].x, back[0].merge_preview) == (300, 2), '同帧下标对齐'
+    assert back[0].slot == 3, '槽号自容器透传(点击取坐标依据,不按下标)'
+    back_misaligned = shop_cards_to_legacy([container],
+                                           frame_cards=[legacy, legacy])
+    assert (back_misaligned[0].x, back_misaligned[0].merge_preview) == (0, 0), \
+        '长度失配 = 失配窗置缺省(禁错位对齐)'
+
+
+def test_kernel_legacy_shopcard_reference_static_lock() -> None:
+    """kernel 内零旧 ShopCard 引用静态锁(方案 §2.6④,精确辖域):豁免 =
+    ①cw_vocab.py(本体,旧类型唯一居所;原居所 cw_state.py 随 W8 词汇正名
+    迁居 cw_vocab 后退役,本体引用不属「外部消费」)②cw_game_state.
+    shop_cards_to_legacy(映射函数单一源)③TYPE_CHECKING 旧类型注解行
+    (cw_game_state.py / cw_merge_simulate.py / cw_economy.py:注解随旧
+    工作帧世界退役消亡,非映射函数外的新消费运行时零依赖);
+    其余 kernel 旧类型引用 = 红。"""
+    from pathlib import Path
+    kernel = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
+              / 'currency_war' / 'kernel')
+    # 扫描前提 = 豁免面与文件面对账:旧类型居所在位(cw_vocab.py),旧居所
+    # cw_state.py 已退役——居所再迁 = 本锁豁免面失准,须随迁重审。
+    assert (kernel / 'cw_vocab.py').is_file(), '扫描根失准'
+    assert not (kernel / 'cw_state.py').exists(), '旧居所已退役,勿回流'
+    # 两代居所引用形态同辖(单行/括号多行 import 与点取形态;旧居所分支
+    # 防退役面以旧形态回流)
+    pat = re.compile(r'cw_vocab\s+import\s*\(?\s*[^#)]*?\bShopCard\b'
+                     r'|cw_vocab\.ShopCard'
+                     r'|cw_state\s+import\s*\(?\s*[^#)]*?\bShopCard\b'
+                     r'|cw_state\.ShopCard')
+    # TYPE_CHECKING 注解行豁免(候裁9 迁移伴随注解,见 docstring ③;
+    # 形态 = 单行 import 与含 ShopCard 的括号多行 import,两形态同豁)
+    annotation_exempt = {'cw_game_state.py', 'cw_merge_simulate.py',
+                         'cw_economy.py'}
+    annotation_block = re.compile(
+        r'^\s*from\s+\S*kernel\.cw_vocab\s+import\s*\([^)]*ShopCard[^)]*\)'
+        r'\s*\n'
+        r'|^\s*from\s+\S*kernel\.cw_vocab\s+import\s+ShopCard[,\s]*\n',
+        re.M)
+    offenders: dict[str, str] = {}
+    for path in sorted(kernel.glob('*.py')):
+        if path.name == 'cw_vocab.py':
+            continue
+        text = path.read_text(encoding='utf-8')
+        if path.name in annotation_exempt:
+            text = annotation_block.sub('', text)
+        if path.name == 'cw_game_state.py':
+            # 豁免面 = 映射函数本体(单一源);函数外残留 = 红
+            import sr_od.application.currency_war.kernel.cw_game_state as _m
+            text = text.replace(inspect.getsource(_m.shop_cards_to_legacy), '')
+        for m in pat.finditer(text):
+            offenders[f'{path.name}:{m.group(0)}'] = m.group(0)
+    assert not offenders, (
+        f'kernel 出现映射函数外的旧容器 ShopCard 引用(双 ShopCard 归一,'
+        f'转换只许在映射函数发生):{offenders}')
+    # 变异自检:判据对真实旧引用形态有捕获力(两代居所 × 单行/多行/点取)
+    assert pat.search('from a.b.cw_vocab import ShopCard')
+    assert pat.search('from a.b.cw_vocab import (\n    ShopCard,\n)')
+    assert pat.search('cw_vocab.ShopCard(x=0)')
+    assert pat.search('from a.b.cw_state import ShopCard')
+    assert pat.search('cw_state.ShopCard(x=0)')
+
+
+

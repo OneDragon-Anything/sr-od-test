@@ -28,10 +28,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
-    GameState,
     ChannelSig,
+    GameState,
     NodeKey,
 )
 from sr_od.application.currency_war.kernel.cw_hp_policy import (
@@ -500,3 +502,79 @@ def test_threshold_p1_untouched_by_p2_calib(monkeypatch: pytest.MonkeyPatch) -> 
     # 对照:P2 帧吃注入(位移发生,证明 P1 恒等不是恒真断言)
     assert effective_hp_threshold(
         _bs_frame(plane=2, round_num=1, level=7)) > 74
+
+
+# ==================== gated_hp 等价三窗/posture 可信位谓词(自 w5_passthrough 归并) ====================
+# 等价证明实证面:新链 gated_hp(容器真值,视图 readable)与旧链语义在三窗逐位一致
+# (gap==1 真读/2..3 失读放宽/>3 保持);posture flip 守卫谓词容器可信位口径
+# (carried 放行/prior 拒)。本节 _sig 解析到本文件签名(actor=cw_observation)。
+def _session_with_settlement(last_hp: int | None, last_t: int | None,
+                             last_node: int | None = None) -> Any:
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+    sess = StrategySession()
+    sess.last_hp = last_hp
+    sess.last_hp_t = last_t
+    sess.last_hp_real = last_hp
+    sess.last_hp_real_node = last_node
+    return sess
+
+
+def _bs_hp_from_frame(frame_hp: int | None, *, readable: bool,
+                      source: str) -> GameState:
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    if frame_hp is not None:
+        if source == 'observation':
+            bs.observe(bs.hp, frame_hp, sig=_sig())
+        elif source == 'carried':
+            bs.observe(bs.hp, frame_hp, sig=_sig())
+            bs.carry(bs.hp, frame='p1-r3', sig=_sig())   # 值保持,来源翻沿用
+        elif source == 'prior':
+            bs.write_prior(bs.hp, frame_hp, evidence='prior:adr-0559',
+                           sig=_sig())
+    return bs
+
+
+def test_hp_gate_equivalence_three_windows() -> None:
+    """等价证明实证面(方案 §2.4):新链 gated_hp(容器真值, 视图 readable)
+    与旧链语义在三窗逐位一致——①gap==1 真读帧:结算真值覆盖;②gap∈2..3
+    失读帧:放宽窗覆盖;③gap>3:保持现值。窗界外/窗界内均与旧链门输出
+    相同(门本体与 session 锚不动)。"""
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        gated_hp,
+    )
+
+    def _old_chain(frame_hp: int, readable: bool, gap: int) -> int | None:
+        # 旧链 = 门后帧值再过消费门(幂等):等价于对门后值单次施门
+        sess = _session_with_settlement(40, 10 - gap, 10 - gap)
+        t = 10
+        return gated_hp(gated_hp(frame_hp, sess, t, current_readable=readable),
+                        sess, t, current_readable=readable)
+
+    def _new_chain(truth: int, readable: bool, gap: int) -> int | None:
+        sess = _session_with_settlement(40, 10 - gap, 10 - gap)
+        return gated_hp(truth, sess, 10, current_readable=readable)
+
+    for gap, readable in ((1, True), (2, False), (3, False), (4, False),
+                          (2, True), (4, True)):
+        assert _new_chain(75, readable, gap) == _old_chain(75, readable, gap), \
+            f'gap={gap} readable={readable} 窗:新链 == 旧链(门幂等+同源)'
+
+
+def test_posture_flip_guard_predicate_unchanged_on_view_outputs() -> None:
+    """posture flip_hit 假帧守卫既有锁继续辖(容器可信位):
+    沿用帧(carried)守卫仍放行;先验帧(prior)仍拒——谓词口径零改
+    (方案 §2.4 等价验证申报面;波 2 起谓词 = 容器形态单一源
+    hp_decision_trusted_of)。"""
+    from sr_od.application.currency_war.kernel.cw_discipline_rules import (
+        hp_decision_trusted,
+    )
+
+    bs_carry = _bs_hp_from_frame(80, readable=False, source='carried')
+    assert hp_decision_trusted(bs_carry) is True
+    bs_prior = _bs_hp_from_frame(82, readable=False, source='prior')
+    assert hp_decision_trusted(bs_prior) is False
+
+
+

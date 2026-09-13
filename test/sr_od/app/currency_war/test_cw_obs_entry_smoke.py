@@ -14,6 +14,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    board_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 from sr_od.application.currency_war.obs import cw_briefing_obs as cwb
 from sr_od.application.currency_war.obs import cw_observation as cobs
 from sr_od.application.currency_war.obs import cw_observe_full as of_mod
@@ -40,6 +44,13 @@ class TestPhaseFieldSpec:
         # 「bench_full」通道已退役(迁移批次二 §3.2.5):键位删除防复活
         for fields in cobs.PHASE_FIELD_SPEC.values():
             assert 'bench_full' not in fields
+
+    def test_seat_domain_keys_not_in_spec(self):
+        # 席位域(bench/deployed/equips)不经漏斗读(备战入口观察装配点直写),
+        # PHASE_FIELD_SPEC 不得加这些键(防无效键复活)
+        for phase, keys in cobs.PHASE_FIELD_SPEC.items():
+            assert not ({'bench', 'deployed', 'equips'} & keys), \
+                f'{phase}: 席位域键不得入 spec'
 
     def test_battle_phase_reads_only_phase_round(self, monkeypatch):
         # spy 验证:battle_or_transit 阶段只真读位面轮次,其余字段全被门跳过
@@ -416,4 +427,53 @@ class TestObserveFullRereadGiveup:
             op=SimpleNamespace(screenshot=lambda: object()), shop_open=True)
         assert out['gold_reread'] is False
         assert reads['n'] == 4   # 首读 + 3 次补采(重读上限),不无限重试
+
+
+
+# ==================== 喂入口域覆盖(deploy_cap/equips;自 w5_passthrough 归并) ====================
+# deploy_cap 观察写端:采信门输出 observe/拒信帧 carry 沿用/spec 无键帧不写;
+# equips 载体中继兜底:从未写过 relay 自 session 镜像(logic+session_carrier)。
+def test_feed_deploy_cap_observes_truth_and_carries_rejection(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """deploy_cap 观察写端(§2.3 入容器):采信门输出(非 None)observe;
+    拒信/失读帧(None)carry 沿用——禁拿兜底当观察。"""
+    sess = SimpleNamespace()
+    ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
+    bs = board_state_of(sess)
+    st = CwSimFrame()
+    st.plane, st.round_num = 1, 3
+    st.deploy_cap = 6
+    cobs._feed_board_state(ctx, st, cobs.PHASE_PREP_CLEAN, None,
+                           frozenset({'deploy_cap'}), had_hp_real=False)
+    assert bs.deploy_cap.value == 6 and bs.deploy_cap.source == 'observation'
+    st2 = CwSimFrame()
+    st2.plane, st2.round_num = 1, 3
+    st2.deploy_cap = None   # 域外拒信/失读形态
+    cobs._feed_board_state(ctx, st2, cobs.PHASE_PREP_CLEAN, None,
+                           frozenset({'deploy_cap'}), had_hp_real=False)
+    assert bs.deploy_cap.value == 6 and bs.deploy_cap.source == 'carried'
+    # spec 无键阶段(prep_shop_open)根本没读 → 不写(诚实缺位不沿用)
+    st3 = CwSimFrame()
+    st3.plane, st3.round_num = 1, 3
+    st3.deploy_cap = 9   # 未读帧的杂值禁入记录
+    cobs._feed_board_state(ctx, st3, cobs.PHASE_PREP_SHOP_OPEN, None,
+                           frozenset(set()), had_hp_real=False)
+    assert bs.deploy_cap.value == 6, 'spec 无 deploy_cap 键的帧不写'
+
+
+def test_feed_equips_relay_from_session_mirror_when_never_written() -> None:
+    """equips 载体中继兜底(§2.2):从未写过 → relay 自 session 镜像
+    (source=logic + evidence=session_carrier);接线滞后窗值冻结申报见
+    喂入口 equips 段注释(观察写端 = 装备分配链现读)。"""
+    sess = SimpleNamespace(last_owned_equips=['星币收集器'])
+    ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
+    bs = board_state_of(sess)
+    st = CwSimFrame()
+    st.plane, st.round_num = 2, 1
+    cobs._feed_board_state(ctx, st, cobs.PHASE_PREP_CLEAN, None,
+                           frozenset(), had_hp_real=False)
+    assert bs.equips.value == ['星币收集器']
+    assert bs.equips.source == 'logic' and bs.equips.evidence == 'session_carrier'
+
+
 

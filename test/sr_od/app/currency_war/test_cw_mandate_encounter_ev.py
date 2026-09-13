@@ -396,3 +396,57 @@ class TestWiring:
 
 if __name__ == '__main__':
     pytest.main([__file__])
+
+
+# ==================== encounter 读点施门(自 w5_passthrough 归并) ====================
+# decide_encounter_ev 入口对 state.hp 施新鲜度门——视图真值+视图 readable 单一源;
+# session 无结算锚恒等返回;决策入口消费的是施门后 state。
+def test_encounter_read_point_gates_view_truth() -> None:
+    """encounter λ 键读点施门(W5 读点清单点名域):decide_encounter_ev
+    入口对 state.hp 施新鲜度门——视图真值 + 视图 readable 单一源;
+    session 无结算锚时恒等返回(旧行为,纯函数可单测)。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        encounter as enc,
+    )
+    st = CwSimFrame(hp=75, plane=1, round_num=4)
+    st.hp_readable = True
+    # 无锚:恒等(同对象),旧测试零波及
+    assert enc._hp_gate_state(st, _session_with_settlement(None, None)) is st
+    # gap==1 锚 + 真读:结算真值覆盖(门辖域)
+    gated = enc._hp_gate_state(st, _session_with_settlement(40, 3, 3))
+    assert gated is not None and gated.hp == 40 and st.hp == 75, \
+        '门输出落副本(入参 state 不可变);λ 键 hp 维 = 门后值'
+    # 决策入口接线:monkeypatch 侦 _branch_lambda_label 收到的 state = 门后
+    from sr_od.application.currency_war.kernel.cw_events import EncounterOption
+    captured: list[CwSimFrame] = []
+
+    def _spy(option, state):
+        captured.append(state)
+        return None, None
+
+    orig = enc._branch_lambda_label
+    enc._branch_lambda_label = _spy
+    try:
+        enc.decide_encounter_ev(
+            [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
+             EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])],
+            st, _session_with_settlement(40, 3, 3))
+    finally:
+        enc._branch_lambda_label = orig
+    assert captured and captured[0].hp == 40, \
+        'decide_encounter_ev 消费的是施门后 state(读点域接线在位)'
+
+
+
+def _session_with_settlement(last_hp: int | None, last_t: int | None,
+                             last_node: int | None = None):
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+    sess = StrategySession()
+    sess.last_hp = last_hp
+    sess.last_hp_t = last_t
+    sess.last_hp_real = last_hp
+    sess.last_hp_real_node = last_node
+    return sess
+
