@@ -130,8 +130,7 @@ class TestSeatVacateEmission:
     """腾席支发射锁(方案 v2 §10 新锁①):席满 + 合法燃料 victim ⇒
     SellBench(expect=victim,reason='' 缺省形态;income = 1★ 全额退)。
     发射契约与 M2 缺员/m2_stockpile 两既有腾席位逐字段一致(§5.2.3)。"""
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_unlocked_leg_vacates_seat(self):
         """未锁线恒买腿(病灶本体):席满帧金闸过 → 席门走腾席支,卖 1
         燃料件即止(单动作)。"""
@@ -146,8 +145,7 @@ class TestSeatVacateEmission:
         ct = _counters(sess)
         assert ct.get('core_candidate_seen') == 1
         assert ct.get('core_unlocked_seat_swap') == 1
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_locked_leg_vacates_seat_when_wide_set_owned(self):
         """锁线支配支腿(A1 帧门席维下放后可达域):锁定宽集全持有
         (missing∅ ⇒ M2 缺员腾席不抢)席满帧 → 星→息→金三门过 → 席门
@@ -166,8 +164,7 @@ class TestSeatVacateEmission:
         assert act.reason == ''
         ct = _counters(sess)
         assert ct.get('core_locked_seat_swap') == 1
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_transition_leg_vacates_seat(self):
         """④转线腿(候裁3 随批):席满帧 ④件在售 → 席门腾席。④腿时间
         辖域 = 未定型期(plane1;committed_from 唯一读端),帧构造同
@@ -189,8 +186,7 @@ class TestSeatVacateEmission:
 
 
 class TestSeatVacateConversion:
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_buy_fires_next_iteration_with_unchanged_reason(self):
         """转化锁(新锁②):腾席卖 1 张即止;下一决策迭代席空,恒买腿
         原判据买入,买因不变(core_single_card_buy:unlocked,与席空帧
@@ -226,8 +222,7 @@ def _nonfuel_full_bench(comp_name: str) -> list[BenchChar]:
 
 
 class TestHonestStallAndTailKey:
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_unlocked_no_fuel_honest_stall(self):
         """新锁③(未锁线形态):席满且无合法 victim(全 2★ 非燃料)
         ⇒ 不卖不买,core_unlocked_no_fuel 显影(观察桶,权限模型:禁卖
@@ -241,8 +236,7 @@ class TestHonestStallAndTailKey:
         ct = _counters(sess)
         assert ct.get('core_candidate_seen') == 1
         assert ct.get('core_unlocked_no_fuel') == 1
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_locked_star_fail_precedes_seat_gate_tail_key_fires(self):
         """新锁⑥ 后半(for-else 语义边界):席满帧唯一候补 2★ 直出
         ⇒ 星级门先于席门 continue,循环无 break 自然走完 ⇒ 尾键
@@ -265,8 +259,7 @@ class TestHonestStallAndTailKey:
 
 
 class TestSameVisitWindowBoundary:
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_press_active_fuel_not_vacated(self):
         """新锁④(P78-1 边界):本 visit 刚买的燃料(press 窗口段活跃)
         经 sell_exclusions 单一入口排除 ⇒ 腾席支无合法 victim ⇒ no_fuel
@@ -289,8 +282,7 @@ class TestSameVisitWindowBoundary:
 
 
 class TestGateReorderZeroDrift:
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_seat_free_frames_still_buy_all_three_legs(self):
         """新锁⑤(§5.3):金→席合取重排对席空帧零漂移——三腿席空帧
         照常直买,买因与重排前一致(④腿席空直买 + 未锁线恒买直买;
@@ -317,8 +309,7 @@ class TestGateReorderZeroDrift:
 
 
 class TestAffordableDoubleBucket:
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_unlocked_strict_when_no_fundable_victim(self):
         """新锁⑨ strict 形:金不足(g=2 < c=3)且无可筹 victim(全 2★
         席面,燃料候选空)⇒ *_unaffordable_strict,不卖不买。"""
@@ -331,8 +322,7 @@ class TestAffordableDoubleBucket:
         ct = _counters(sess)
         assert ct.get('core_unlocked_unaffordable_strict') == 1
         assert 'core_unlocked_unaffordable_fundable' not in ct
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_unlocked_fundable_when_victim_covers_gap(self):
         """新锁⑨ fundable 形(A4 判读面):金不足但 gold+refund(victim)
         ≥ cost(2+1 ≥ 3)⇒ *_unaffordable_fundable 显影;**C1 腿不卖不买**
@@ -349,8 +339,7 @@ class TestAffordableDoubleBucket:
         assert ct.get('core_unlocked_unaffordable_fundable') == 1
         assert 'core_unlocked_unaffordable_strict' not in ct
         assert 'core_unlocked_seat_swap' not in ct   # C1 腿未腾席
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_locked_unaffordable_keys_t5_shadowed(self):
         """锁线腿金闸双桶近不可达申报(收口复审残扫在案):息门先于金门
         (星→息→金),金不足帧 loss_exact > 0 恒被息门 continue 截先
@@ -439,8 +428,7 @@ class TestRedDetector:
 
 
 class TestExitKeyCompleteness:
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_all_fired_keys_within_closed_set(self):
         """新锁⑧(镜像双向锁的生产侧半):三腿发射/停摆/双桶帧实测
         落键全部 ∈ 检测器镜像闭集 ledger._CORE_EXIT_KEYS——生产键集

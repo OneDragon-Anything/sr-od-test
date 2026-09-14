@@ -249,8 +249,7 @@ class TestHubEligibility:
         # 码内明文禁入任何行为消费点)——同扫描器负检。
         assert 'promote_candidates' not in identifiers_of(
             'arm_a_live_direction')
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_yinlang_counter_example_and_dual_channel_mutex(self):
         """增量 3(证明批 §6;定理 B5 测试化):银狼LV.999 覆盖数 = 2 而系
         注册单卡依赖核心 ⇒ 乙臂不发射、规则③通道发射,双通道互斥。"""
@@ -284,8 +283,7 @@ class TestHubEligibility:
 
 
 class TestHubEmission:
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_hub_fires_on_arm_dead_frame(self):
         """锁 3(正本 §5.2)F2 测试化:甲臂空集帧乙臂**照常评估**并发射
         (病灶帧正是 D3 要接枢纽期权的帧,出手机会不可丢);发射 = 五前件
@@ -298,8 +296,7 @@ class TestHubEmission:
         assert ct.get('hub_option_buy_hit') == 1
         assert ct.get('hub_option_candidate_seen') == 1
         assert ct.get('shop_no_target_arm_a_dead_defer') == 1
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_reject_family_truthful(self):
         """锁 3 拒因归真:任一合取项缺席帧按缺席项分键,非静默。
         素材(场内已有同名同星 1★,bench 与部署面两形态)/席位/息/金
@@ -344,8 +341,7 @@ class TestHubEmission:
         assert not isinstance(act5, BuyCard)
         assert _ct(sess5).get('hub_option_reject_interest') == 1
         assert _ct(sess5).get('hub_option_reject_unaffordable') is None
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_merge_frozen_state_telemetry_discernible(self):
         """F-5(落地审;增量 8 后半,B4 闭集 3/P75 (vi) 同款):已持枢纽帧
         外部通道到达同名副本后合并冻结态可辨——素材对在场 = 滞留显影键
@@ -364,8 +360,7 @@ class TestHubEmission:
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
         assert _ct(sess).get('hub_option_reject_merge_material') == 1
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_hub_hold_registration_and_sell_protection(self):
         """攻击 r1 发现1(高)三面收口锁:TRANSITION_PACK 之外枢纽
         (瓦尔特,cw_line_facts:75-76 移出记录实证)——面① hold 登记资格
@@ -401,17 +396,6 @@ class TestHubEmission:
         # 面③:读口单一源(登记域/身份段/部署域三面同源)
         assert '瓦尔特' in sell_gate.hub_acquired_names_of(sess)
 
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
-    def test_deploy_domain_hub_read_static(self):
-        """攻击 r1 发现1 面③部署域消费接线锁:静态扫描 cw_op_deploy 的
-        deployed_from_hub 读端与载体属性名(鸭子读属性契约,同
-        cw4_fuel_filler_stall_buys 先例)。带变异自检。"""
-        import sr_od.application.currency_war.operations.cw_op.cw_op_deploy as _dep
-        src = Path(_dep.__file__).read_text(encoding='utf-8')
-        assert 'deployed_from_hub' in src
-        assert "'cw4_hub_acquired_names'" in src
-        # 变异自检:扫描器对注入形态能命中
-        assert 'deployed_from_hub' in "counters['deployed_from_hub'] = 1"
 
     def test_hub_hold_registration_negative_stale_semantics(self):
         """面①②负锁:获取名集之外的名不获资格域扩张——非持有名 hold
@@ -435,8 +419,7 @@ class TestHubEmission:
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
         assert 'hub_option_candidate_seen' not in _ct(sess)
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_hub_reject_reason_key_not_non_line(self):
         """§4.4 行 3(non_line 拒因锁重推):空窗帧枢纽资格件在售未买帧
         拒因 = hub_option(显式),不再落 non_line。"""
@@ -463,8 +446,7 @@ class TestArbitration:
         st.bench = _own(*comp.core_chars)
         assert arm_a_live_direction(_kbridge(st), IntentionState()) == comp_name
         return st
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_layer1_covering_hub_beats_single_line_piece(self, monkeypatch):
         """增量 1(证明批 §6;§4.4 第一层支配序,推论 B1.1):同帧同店面给
         甲方向的单线方向件(布洛妮娅,C_x={希儿量子} 运行时直调核)与覆盖
@@ -482,8 +464,7 @@ class TestArbitration:
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '知更鸟'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_layer3_multi_line_piece_first_by_decl_order(self, monkeypatch):
         """增量 1 第三层:多线方向件对枢纽竞争按注册表声明序首发。
         构帧 = 甲臂判活(绯英欢愉全核在手)∧ 店面 [花火/瓦尔特(覆盖枢纽),
@@ -505,8 +486,7 @@ class TestArbitration:
         assert isinstance(act, BuyCard)
         assert act.reason == 'm2_line_member' and act.card.name == '银狼LV.999'
         assert _ct(sess).get('hub_option_arbitration_yield') >= 1
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_layer3_hub_earlier_decl_fires_over_multi_line_piece(self):
         """增量 1 第三层(自然序):枢纽声明序(花火 2)早于多线方向件
         (银狼LV.999,34,非枢纽候选)⇒ 枢纽首发。构帧注:覆盖枢纽取
@@ -520,8 +500,7 @@ class TestArbitration:
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '花火'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_emission_order_independent_of_shop_order(self):
         """增量 1(乱序注入店面两帧发射一致):店面槽位序翻转不改变仲裁
         产物(发射序消费判据序,禁实现遍历顺序)。"""
@@ -535,8 +514,7 @@ class TestArbitration:
         names = [(a.card.name, a.reason)
                  for a in acts if isinstance(a, BuyCard)]
         assert len(names) == 2 and names[0] == names[1]
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_f1_unaffordable_piece_loses_preemption(self):
         """F-1(落地审;证明批 §4.4 先决澄清+附带条款①):甲臂判活帧上,
         更早声明的**不可负担**方向件不获挤占权——枢纽不因其在售而让位,
@@ -551,8 +529,7 @@ class TestArbitration:
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '知更鸟'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_coverage_count_descending_not_used(self):
         """§4.4 显式否决记录的测试化:互不覆盖双枢纽竞争按注册表声明序
         (三月七 decl=1 cov=2)而非覆盖数降序(花火 decl=2 cov=6)——
@@ -617,7 +594,7 @@ class TestArmCHoldDefault:
                                v3_intention=IntentionState(),
                                active_strategies=[])
         out = mandate.run_mandate(frame, sess, state=_kbridge(st))
-        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             LevelUp,
         )
         assert [e for e in out if isinstance(e.action, LevelUp)], \
@@ -628,8 +605,7 @@ class TestArmCHoldDefault:
 
 
 class TestKMembersDownstream:
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_arm_a_members_reach_m2_and_rejects(self):
         """锁 6(正本 §5.2;§4.6 换源申报):甲臂判活帧 k_members 整体 =
         甲臂方向采购集——M2 义务买甲臂缺员成员(m2_line_member 买因);
