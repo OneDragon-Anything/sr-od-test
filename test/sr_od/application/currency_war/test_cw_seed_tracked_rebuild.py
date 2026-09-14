@@ -7,10 +7,10 @@
 从未被建;种子守卫 guard_expected_vs_tracked(stage='seed') 真分歧即
 粘性崩溃循环(实机两局停机实证)。
 
-锁的五件事:
+锁的七件事:
 1. 接管形态(tracked 空 + 屏幕 9 件):重建出口两账(tracked+容器)
    同帧落地,真实守卫 stage='seed' 不炸,阀门落位;
-2. 分叉形态红线(tracked 有账缺件 = 实锤组成):出口零读屏零写
+2. 分叉形态红线(tracked 有账缺件 = 实锤组成,非接管):出口零读屏零写
    ('tracked_present'),真实种子守卫仍 AssertionError 红——有账分叉
    = 丢件/幻影,重建会掩盖真 bug,必须响亮暴露;
 3. 单向阀门:同 visit 第二次调用不再读屏('valve_closed'),读函数恰
@@ -18,7 +18,11 @@
 4. 槽号不健康(重复槽号):拒绝写账,tracked 保持空账(与 reconcile
    写回健康门同式,坏槽号不进不可逆卖出链);
 5. 失读/真空分型:读链 None = 失读落缺陷台账显影;[] = 屏幕席真空
-   (合法态)不落台账零写。
+   (合法态)不落台账零写;
+6. 接管待办反向分叉形态(2026-09-15 04:39 实锤:接管标记在场,容器
+   expected 8 件 vs tracked 9 件多镜流):有账也以屏幕真值两账再锚定,
+   真实种子守卫不炸,待办消费置 False;
+7. 接管待办读链失读:两账零写且待办不消费(下 visit 重试)。
 """
 from __future__ import annotations
 
@@ -203,3 +207,90 @@ def test_screen_vacant_is_legal_state_silent_and_zero_write(monkeypatch):
     assert outcome == 'screen_vacant'
     assert rows == []   # 真空合法态:零台账行(未触发过分键)
     assert _tracked_sig(session) == []
+
+
+# 04:39 实锤反向形态:容器(守卫 expected 侧)8 件缺镜流,tracked 9 件
+# 多镜流1(账屏结构性不同源,接管场景)
+_SCREEN_8_EXPECTED = [
+    ('花火', 1), ('丹恒·腾荒', 1), ('丹恒·腾荒', 1), ('艾丝妲', 1),
+    ('椒丘', 1), ('黄泉', 1), ('大丽花', 1), ('丹恒·腾荒', 2),
+]
+_TRACKED_9_STALE = [
+    ('花火', 1), ('丹恒·腾荒', 1), ('丹恒·腾荒', 1), ('艾丝妲', 1),
+    ('椒丘', 1), ('镜流', 1), ('大丽花', 1), ('丹恒·腾荒', 2), ('黄泉', 1),
+]
+
+
+def test_resume_anchor_rebuilds_reversed_divergence_and_guard_passes(
+        monkeypatch):
+    """接管待办反向分叉形态(04:39 实锤):有账也两账再锚定,守卫不炸。"""
+    _spy_defects(monkeypatch)
+    session = StrategySession()
+    bs = board_state_of(session)
+    bs.write_logic(bs.bench,
+                   bench_view_of_slots(_bench_chars(_SCREEN_8_EXPECTED)),
+                   produced_by='test', sig=_SIG)
+    exec_state_of(session).tracked_bench_chars = bench_from_compact(
+        _bench_chars(_TRACKED_9_STALE))
+    exec_state_of(session).cw_resume_seed_anchor = True   # 接管标记在场
+    # 屏幕真值 = 8 件(镜流已不在场;读取面含试用卡疑识别的账面陈旧件)
+    reader, calls = _fake_reader(_bench_chars(_SCREEN_8_EXPECTED))
+    ledger = ShopVisitLedger()
+
+    outcome = rebuild_tracked_at_seed_if_vacant(
+        session, object(), ledger, read_bench_fn=reader)
+
+    assert outcome == 'rebuilt'
+    assert len(calls) == 1
+    assert _tracked_sig(session) == _SCREEN_8_EXPECTED
+    assert ([(b.char_id, b.star) for b in bench_slots_of(bs) if b is not None]
+            == _SCREEN_8_EXPECTED)
+    assert exec_state_of(session).cw_resume_seed_anchor is False   # 成功消费
+    # 回归锁本形:真实种子守卫通过(双账同源后不抛)
+    guard_expected_vs_tracked(bs, session, stage='seed')
+
+
+def test_resume_anchor_read_failure_keeps_pending_for_retry(monkeypatch):
+    """接管待办 + 读链失读:两账零写,待办不消费(下 visit 重试)。"""
+    _spy_defects(monkeypatch)
+    session = StrategySession()
+    bs = board_state_of(session)
+    bs.write_logic(bs.bench,
+                   bench_view_of_slots(_bench_chars(_SCREEN_8_EXPECTED)),
+                   produced_by='test', sig=_SIG)
+    exec_state_of(session).tracked_bench_chars = bench_from_compact(
+        _bench_chars(_TRACKED_9_STALE))
+    exec_state_of(session).cw_resume_seed_anchor = True
+    reader, calls = _fake_reader(None)   # 失读
+    ledger = ShopVisitLedger()
+
+    outcome = rebuild_tracked_at_seed_if_vacant(
+        session, object(), ledger, read_bench_fn=reader)
+
+    assert outcome == 'read_failed'
+    assert exec_state_of(session).cw_resume_seed_anchor is True   # 不消费
+    assert _tracked_sig(session) == _TRACKED_9_STALE   # 零写
+    assert ledger.tracked_seed_rebuild_done is True   # 同 visit 阀门照关
+
+
+def test_non_resume_divergent_still_asserts_is_unaffected(monkeypatch):
+    """红线回归:同款反向分歧但无接管标记 → 照旧 tracked_present+守卫红。"""
+    _spy_defects(monkeypatch)
+    session = StrategySession()
+    bs = board_state_of(session)
+    bs.write_logic(bs.bench,
+                   bench_view_of_slots(_bench_chars(_SCREEN_8_EXPECTED)),
+                   produced_by='test', sig=_SIG)
+    exec_state_of(session).tracked_bench_chars = bench_from_compact(
+        _bench_chars(_TRACKED_9_STALE))
+    reader, calls = _fake_reader(_bench_chars(_SCREEN_8_EXPECTED))
+    ledger = ShopVisitLedger()
+
+    outcome = rebuild_tracked_at_seed_if_vacant(
+        session, object(), ledger, read_bench_fn=reader)
+
+    assert outcome == 'tracked_present'   # 红线:非接管有账不重建
+    assert calls == []
+    assert exec_state_of(session).cw_resume_seed_anchor is False
+    with pytest.raises(AssertionError, match='expected='):
+        guard_expected_vs_tracked(bs, session, stage='seed')
