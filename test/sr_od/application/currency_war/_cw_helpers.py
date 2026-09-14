@@ -101,8 +101,10 @@ def cw4_bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
 
 
-def cw4_card(name: str, cost: int = 3, star: int = 1, x: int = 100) -> ShopCard:
-    """在售店卡(x = 画面横向坐标桩值,家族缺省 100)。"""
+def cw4_card(name: str, cost: int = 3, star: int = 1, x: int = 0) -> ShopCard:
+    """在售店卡(x = 牌位桩值;三态合成口按 x 对物理槽(0 基,越界丢卡,
+    用户三态裁定 2026-09-13),缺省 0 = 物理槽 1;旧「画面横向坐标 100」
+    桩值语义已随容器三态化退役)。"""
     return ShopCard(x=x, name=name, cost=cost, star=star)
 
 
