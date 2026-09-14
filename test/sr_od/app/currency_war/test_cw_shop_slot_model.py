@@ -246,3 +246,35 @@ def test_anchor_binary_detectability() -> None:
         gray = cv2.cvtColor(binary, cv2.COLOR_BGR2GRAY)
         white = float((gray > 0).mean())
         assert white > 0.02, (fname, white)
+
+
+def test_ev_candidates_physical_slot_idx(monkeypatch) -> None:
+    """产生端物理槽锁:中段空位帧的 EV 候选 slot_idx = 数组下标
+    (物理槽-1;紧缩序分叉回归锁——实机打回切片 1 审计点)。
+    U_X 标定门 stub 掉(候选几何为本锁唯一标的)。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+        buy as _buy_mod,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.buy import (
+        ev_buy_candidates,
+    )
+
+    class _Prov:
+        @staticmethod
+        def is_none(_key: str) -> bool:
+            return False
+
+    monkeypatch.setattr(_buy_mod, 'provisional', _Prov())
+
+    def _slot(name: str | None) -> ShopSlot:
+        return (ShopSlot(kind='content', card=_card(name, 1))
+                if name else ShopSlot(kind='empty'))
+
+    # 布局:槽0 空、槽1=甲、槽2 空、槽3=乙(中段空位=分叉形态)
+    slots = [_slot(None), _slot('甲'), _slot(None), _slot('乙'),
+             _slot(None)]
+    cands, _key = ev_buy_candidates(
+        99, 0, slots, k_members=(), level=1,
+        window=frozenset({1}), counters=None)
+    got = sorted(c.slot_idx for c in cands)
+    assert got == [1, 3], got   # 物理下标;紧缩序会是 [0, 1]
