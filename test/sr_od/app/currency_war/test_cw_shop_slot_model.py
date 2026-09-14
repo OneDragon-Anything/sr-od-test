@@ -278,3 +278,47 @@ def test_ev_candidates_physical_slot_idx(monkeypatch) -> None:
         window=frozenset({1}), counters=None)
     got = sorted(c.slot_idx for c in cands)
     assert got == [1, 3], got   # 物理下标;紧缩序会是 [0, 1]
+
+
+def test_deployed_unknown_defect_recorded(monkeypatch) -> None:
+    """unknown 显态锁(T-191 批1):亮度≥50 的识别失败 → 缺陷台账
+    槽级 unknown;<50 确证空位不留痕(防刷屏判据与 shop 表同源)。"""
+    from types import SimpleNamespace as NS
+    import numpy as np
+    from sr_od.application.currency_war.obs import cw_identity_obs as io_mod
+    from sr_od.application.currency_war.kernel import cw_telemetry_exit
+
+    captured: list[tuple] = []
+    monkeypatch.setattr(cw_telemetry_exit, 'record_defect',
+                        lambda *a, **k: captured.append(a))
+    monkeypatch.setattr(io_mod, 'identify_character', lambda *a, **k: (None, 0))
+
+    class _Rect:
+        x1, y1, x2, y2 = 0, 0, 40, 40
+
+    for bright, expect_defect in ((60, True), (30, False)):
+        captured.clear()
+        screen = np.full((40, 40, 3), bright, dtype='uint8')
+        io_mod.identify_slots(screen, templates=None,
+                              slots=[(1, _Rect)], row='back')
+        assert bool(captured) is expect_defect, (bright, captured)
+
+
+def test_deployed_rows_slot_number_semantics() -> None:
+    """行几何锁:槽表→行表的行内槽号语义(前排 i+1/后排 i-3,1 基信息位;
+    缺席=None 不占行序——§7.2 表示不变的确定性不变量)。roundtrip 面
+    (unit_rows_to_deployed)契约另审,不入本锁。"""
+    from types import SimpleNamespace as NS
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        deployed_slots_to_rows,
+    )
+
+    def _u(name: str, slot: int) -> NS:
+        return NS(char_id=name, star=1, equips=[], slot=slot)
+
+    slots = [None, _u('桑博', 2), None, _u('刃', 4),
+             None, _u('银枝', 2), None, None, None, None]
+    front, back = deployed_slots_to_rows(slots)
+    assert [(u.char_id, u.slot) for u in front] == [('桑博', 2), ('刃', 4)]
+    assert [(u.char_id, u.slot) for u in back] == [('银枝', 2)]
+    assert (front[0].char_id, front[0].equips) == ('桑博', [])
