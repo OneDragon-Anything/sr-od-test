@@ -120,3 +120,4 @@ sr-od-test/
 
 - OCR 推理设备跟随本地 `config/model.yml` 的 `ocr_use_gpu`：本机开 DirectML 更快；无 GPU 的环境自动回退纯 CPU。注意开 GPU 时与同机其他 DML 进程（实机局 / MCP server）互相争用。
 - 排查某个测试要看完整框架日志：设 `SR_TEST_LOG_FILE=1`（见「测试基础设施」）。
+- `--durations` 里**第一条测试的 setup 约 2s 是全会话一次性启动成本**（session 级 `test_context`：构造 ctx + 注册全部应用工厂 ~0.6s + OCR 初始化 ~1.0s），只是恰好记在收集顺序第一条的测试头上——不是该测试自身的问题，勿据此排查。
