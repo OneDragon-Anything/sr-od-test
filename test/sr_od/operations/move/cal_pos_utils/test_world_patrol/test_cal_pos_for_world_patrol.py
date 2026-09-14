@@ -80,6 +80,14 @@ def _run_one_test_case(
 
 
 def test_cal_pos(test_context, test_image_dir: Path) -> None:
+    # 模型在位守卫:cal_pos 依赖 world_patrol YOLO 模型做小地图识别,
+    # 未下载时跳过(下载后自动恢复;避免测试触发真实下载链路)。
+    from one_dragon.utils import yolo_config_utils
+    model_dir = yolo_config_utils.get_model_dir(
+        'world_patrol', test_context.model_config.world_patrol)
+    if not (Path(model_dir) / 'model.onnx').exists():
+        pytest.skip('world_patrol YOLO 模型未下载:先在 GUI 下载模型,本用例自动恢复')
+
     # 预热(方便后续统计耗时)
     test_context.init_for_world_patrol()
     loader = TestCaseLoader(test_context)
