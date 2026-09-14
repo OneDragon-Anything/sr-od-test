@@ -1,0 +1,127 @@
+"""RunNode 历史抽象退役批:行为等价锁(用户裁决:按新架构统一)。
+
+RunSupplyNode → CwScreenSupplyNode(cw_screen/cw_screen_supply_node.py)、
+RunMegastarNode → CwScreenMegastar 内联(委托壳废止)。本文件锁迁移前后的
+**行为断言一致**:①验证完成才 success(离开节点画面)(原 ADR-0264 关态
+基线预置断言随 gate 模块退役删除,见 test_supply_leaves_node_success 注);
+②仍在节点内 = 做动作 + round_retry(计 node_max_retry_times=8 预算,
+超限框架转 FAIL 交回——预算语义不变)。
+
+T-252 恢复分诊:原文件第③腿「源码零残留掩蔽扫描」(fixtures.masked_scan
++ test_runnode_zero_residue_in_src / test_runnode_scan_mutation_selfcheck)
+不恢复——源码扫描形态(AGENTS §10.4.4 退役符号墓碑禁令),且其公共单一源
+fixtures/masked_scan.py 已随 09-13 清理(1cc1958b)删除;退役防复活跃责归
+review 与代码规范,行为腿 6 锁照常守护流转语义。
+"""
+from types import SimpleNamespace
+
+
+def _make_op(cls, *, in_node: bool, do_action_calls: list):
+    """构画面 op 桩(bypass __init__):round_by_find_area 程序化回 in_node。"""
+
+    class _FakeArea:
+        def __init__(self, ok: bool): self.is_success = ok
+
+    class _Op(cls):
+        def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
+            self.last_screenshot = object()
+            self.op_name = cls.__name__
+            self.ctx = SimpleNamespace(cw_match=None)
+
+        def round_by_find_area(self, scr, screen, area, **k):
+            return _FakeArea(in_node)
+
+        def _do_action(self, screen):
+            do_action_calls.append(1)
+
+        def round_success(self, status='', wait: float = 0):
+            return SimpleNamespace(status=status, wait=wait, success=True)
+
+        def round_retry(self, status='', wait: float = 0):
+            return SimpleNamespace(status=status, wait=wait, success=None,
+                                   _retry=True)
+
+        def round_fail(self, status=''):
+            return SimpleNamespace(status=status, success=False)
+
+        def save_screenshot(self, prefix=None):
+            return ''
+
+    return _Op()
+
+# ==================== 补给节点流转(行为等价①②) ====================
+
+def test_supply_leaves_node_success() -> None:
+    """验证完成才 success:离开补给屏(锚 miss)→ success(节点完成)。
+    (gate 清尾批:原「+关态稳定基线预置」断言随 gate 模块退役删除。)"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
+        CwScreenSupplyNode,
+    )
+    actions: list = []
+    op = _make_op(CwScreenSupplyNode, in_node=False, do_action_calls=actions)
+    res = op.handle()
+    assert res.success is True
+    assert '节点完成' in res.status
+    assert actions == []                       # 离开节点 = 不再发动作
+
+
+def test_supply_in_node_act_then_retry() -> None:
+    """仍在补给屏 → 做一个动作 + round_retry(计节点预算;不 success)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
+        CwScreenSupplyNode,
+    )
+    actions: list = []
+    op = _make_op(CwScreenSupplyNode, in_node=True, do_action_calls=actions)
+    res = op.handle()
+    assert actions == [1]                      # 每轮恰好一个动作
+    assert getattr(res, '_retry', False) is True
+
+
+def test_supply_budget_semantics_unchanged() -> None:
+    """预算语义不变:node_max_retry_times=8(原 RunNode 子类口径,
+    超限框架转 FAIL bail 交回)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
+        CwScreenSupplyNode,
+    )
+    node = CwScreenSupplyNode.handle.operation_node_annotation
+    assert node.node_max_retry_times == 8
+
+
+# ==================== 巨星流转(行为等价①②) ====================
+
+def test_megastar_leaves_node_success_with_settle() -> None:
+    """巨星:overlay 消失 → success(完成承诺 = 固定 1.0s,原委托壳语义)
+    (选中标记复位副作用随迁)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
+        CW_OVERLAY_SETTLE_S,
+    )
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
+        CwScreenMegastar,
+    )
+    actions: list = []
+    op = _make_op(CwScreenMegastar, in_node=False, do_action_calls=actions)
+    res = op.handle()
+    assert res.success is True
+    assert res.wait == CW_OVERLAY_SETTLE_S
+    assert actions == []
+
+
+def test_megastar_in_node_act_then_retry() -> None:
+    """巨星:仍在 overlay → 一个动作 + round_retry。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
+        CwScreenMegastar,
+    )
+    actions: list = []
+    op = _make_op(CwScreenMegastar, in_node=True, do_action_calls=actions)
+    res = op.handle()
+    assert actions == [1]
+    assert getattr(res, '_retry', False) is True
+
+
+def test_megastar_budget_semantics_unchanged() -> None:
+    """预算语义不变:node_max_retry_times=8(原 RunNode 子类口径)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
+        CwScreenMegastar,
+    )
+    node = CwScreenMegastar.handle.operation_node_annotation
+    assert node.node_max_retry_times == 8
