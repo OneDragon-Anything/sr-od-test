@@ -7,7 +7,9 @@
 """
 from unittest.mock import MagicMock, patch
 
-from sr_od.application.sim_universe.operations.sim_uni_enter_fight import SimUniEnterFight
+from sr_od.application.sim_universe.operations.sim_uni_enter_fight import (
+    SimUniEnterFight,
+)
 from sr_od.context.sr_context import SrContext
 from sr_od.screen_state import common_screen_state
 

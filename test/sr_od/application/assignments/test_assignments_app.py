@@ -23,6 +23,7 @@ fixture(screens/):
 
 import pytest
 from test.conftest import SrTestContext
+from test.harness.fixture_controller import fast_sleep
 
 from sr_od.application.assignments.assignments_app import AssignmentsApp
 
@@ -42,29 +43,29 @@ class TestAssignmentsApp:
         if not test_context.has_screen('委托', '委托派遣中'):
             pytest.skip('存档截图缺失:screens/委托/委托派遣中.webp')
         op = self._make_op(test_context, '委托', '委托派遣中')
-        result = op._check_status()
+        # 节点直调也会走 round_success/success_wait 的真实轮间等待,包 fast_sleep 免空等
+        with fast_sleep():
+            result = op._check_status()
         assert result.status == AssignmentsApp.STATUS_ASSIGNING, (
             f'派遣中应为 ASSIGNING,实际 status={result.status}'
         )
 
     def test_check_status_has_reward(self, test_context: SrTestContext) -> None:
-        """委托可领 → _check_status → STATUS_HAS_REWARD(``委托-领取奖励`` area 命中)。"""
+        """委托可领 → _check_status=HAS_REWARD + _claim_reward 点「委托-领取奖励」。
+
+        同帧两条节点断言共享一次 mock+识别(一图一测);节点直调包 fast_sleep 免真睡。
+        """
         if not test_context.has_screen('委托', '委托可领'):
             pytest.skip('存档截图缺失:screens/委托/委托可领.webp(委托有可领奖励时采)')
         op = self._make_op(test_context, '委托', '委托可领')
-        result = op._check_status()
-        assert result.status == AssignmentsApp.STATUS_HAS_REWARD, (
-            f'有奖励应为 HAS_REWARD,实际 status={result.status}'
+        with fast_sleep():
+            status = op._check_status()
+            claim = op._claim_reward()
+        assert status.status == AssignmentsApp.STATUS_HAS_REWARD, (
+            f'有奖励应为 HAS_REWARD,实际 status={status.status}'
         )
-
-    def test_claim_reward(self, test_context: SrTestContext) -> None:
-        """委托可领 → _claim_reward 点 ``委托-领取奖励``(round_by_find_and_click_area 命中)。"""
-        if not test_context.has_screen('委托', '委托可领'):
-            pytest.skip('存档截图缺失:screens/委托/委托可领.webp')
-        op = self._make_op(test_context, '委托', '委托可领')
-        result = op._claim_reward()
-        assert result.is_success, (
-            f'应命中并点击 委托-领取奖励,实际 status={result.status}'
+        assert claim.is_success, (
+            f'应命中并点击 委托-领取奖励,实际 status={claim.status}'
         )
 
     def test_click_empty(self, test_context: SrTestContext) -> None:
@@ -72,7 +73,8 @@ class TestAssignmentsApp:
         if not test_context.has_screen('委托', '委托领取弹窗'):
             pytest.skip('存档截图缺失:screens/委托/委托领取弹窗.webp(领奖后弹窗)')
         op = self._make_op(test_context, '委托', '委托领取弹窗')
-        result = op._click_empty()
+        with fast_sleep():
+            result = op._click_empty()
         assert result.is_success, (
             f'应命中并点击 委托-点击空白处关闭,实际 status={result.status}'
         )

@@ -121,20 +121,15 @@ class TestClaimRewardSemantics:
 
     def test_incomplete_is_benign_skip(self, test_context: SrTestContext,
                                        monkeypatch: pytest.MonkeyPatch) -> None:
-        """点击礼盒后复核仍未完成(当天实训未做)→ 良性跳过成功收批,不失败。"""
+        """点击礼盒后复核仍未完成(当天实训未做)→ 良性跳过成功收批,不失败。
+
+        兼锁旧失败标记墓碑:``self.failed`` 已随旧失败链删除,良性跳过不得
+        留下该属性(回潮 = 「还未完成」再度把一条龙整组标失败)。
+        """
         app = self._make_app(test_context, monkeypatch, completed_returns=[False, False])
         result = app.claim_reward()
         assert result.is_success, (
             f'还未完成是良性业务态应成功收批,实际 status={result.status}'
         )
         assert '还未完成' in result.status, f'状态应保留「还未完成」字样,实际 {result.status}'
-
-    def test_not_completed_after_claim_marks_no_fail_flag(
-            self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
-        """跳过路径不得再留失败标记(旧逻辑的 self.failed 已删除,防回归)。"""
-        app = self._make_app(test_context, monkeypatch, completed_returns=[False, False])
-        result = app.claim_reward()
-        assert not hasattr(app, 'failed') or not app.failed, (
-            '良性跳过不应留下失败标记(旧失败链语义已删)'
-        )
-        assert result.is_success
+        assert not hasattr(app, 'failed') or not app.failed, '良性跳过不应留下失败标记'

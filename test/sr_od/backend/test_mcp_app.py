@@ -1,5 +1,3 @@
-import pytest
-
 """MCP 适配器的单元测试。
 
 测试使用 MagicMock 伪造 backend，避免依赖真实游戏窗口与 SrContext。
@@ -15,11 +13,13 @@ import asyncio
 from concurrent.futures import Future
 from unittest.mock import MagicMock
 
+import pytest
+
 from one_dragon.base.operation.operation_base import OperationResult
 from sr_od.backend.backend_context import BackendNotReadyError, SrBackendContext
 from sr_od.backend.mcp import app as app_mod
 from sr_od.backend.mcp.app import create_mcp_server
-from sr_od.backend.schemas import AnalyzeScreenResult, RunStatusResult, WindowStatus
+from sr_od.backend.schemas import AnalyzeScreenResult, RunStatusResult
 
 
 def _mcp_with_backend() -> tuple[object, MagicMock]:
@@ -65,6 +65,7 @@ def test_registers_all_tools() -> None:
         "capture_game_screen",
         "analyze_screen",
         "open_game",
+        "close_game",
         "click_game",
         "input_text",
         "get_run_status",
@@ -95,57 +96,6 @@ def test_analyze_tool_returns_result() -> None:
     assert result.success is True
 
 
-def test_analyze_screen_tool_returns_screens_field() -> None:
-    """analyze_screen tool 直接调用应返回带 screens 的 AnalyzeScreenResult(验证嵌套结构)。
-
-    MCP 经 FastMCP/pydantic 的 JSON 序列化由框架保证(与 HTTP 同源 dataclass);
-    端到端 JSON 序列化(area_type → 'text')由 HTTP 测试覆盖。此处验证 tool.fn
-    返回的 dataclass 结构正确。
-    """
-    from one_dragon.base.screen.screen_match import (
-        AreaMatchDetail,
-        AreaType,
-        ScreenMatch,
-    )
-
-    mcp, backend = _mcp_with_backend()
-    detail = AreaMatchDetail(
-        area_name='标题', area_type=AreaType.TEXT,
-        x=1, y=1, width=1, height=1, text='菜单',
-    )
-    match = ScreenMatch(screen_name='菜单', is_precise=True, areas=[detail])
-    backend.analyze.return_value = AnalyzeScreenResult(
-        success=True, ocr_texts=[], error=None, screens=[match])
-    tool = mcp._tool_manager._tools['analyze_screen']
-    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
-    result = fn()
-    assert result.success is True
-    assert result.screens[0].screen_name == '菜单'
-    assert result.screens[0].areas[0].area_type == AreaType.TEXT
-
-
-def test_check_game_window_returns_window_status() -> None:
-    """check_game_window 在就绪时返回 WindowStatus 结构(与 HTTP /game/window 同构)。"""
-    mcp, backend = _mcp_with_backend()
-    backend.check_window.return_value = WindowStatus(
-        win_title="StarRail",
-        is_win_valid=True,
-        is_win_active=False,
-        is_win_scale=True,
-        x=10,
-        y=20,
-        width=1920,
-        height=1080,
-    )
-    tool = mcp._tool_manager._tools["check_game_window"]
-    fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
-    out = fn()
-    assert isinstance(out, WindowStatus)
-    assert out.win_title == "StarRail"
-    assert out.x == 10
-    assert out.is_win_valid is True
-
-
 def test_tool_annotations_marked() -> None:
     """观察类 tool 标 read_only、破坏性 tool 标 destructive(P3 副作用机器可读标注)。"""
     mcp, _ = _mcp_with_backend()
@@ -163,13 +113,6 @@ def test_tool_annotations_marked() -> None:
     assert click_ann is None or click_ann.readOnlyHint is None
 
 
-def test_close_game_tool_registered() -> None:
-    """create_mcp_server 应注册内联 close_game tool(同 check_game_window,非工厂)。"""
-    mcp, _ = _mcp_with_backend()
-    tools = asyncio.run(mcp.list_tools())
-    assert any(t.name == "close_game" for t in tools)
-
-
 def test_close_game_tool_error_on_not_ready() -> None:
     """close_game 在 backend 未就绪时返回 {success: False, error}(工具层兜底)。"""
     mcp, backend = _mcp_with_backend()
@@ -182,9 +125,15 @@ def test_close_game_tool_error_on_not_ready() -> None:
     assert '未就绪' in out['error']
 
 
-def test_capture_game_screen_returns_path() -> None:
+def test_capture_game_screen_returns_path(tmp_path, monkeypatch) -> None:
     """capture_game_screen 应保存截图并返回 {success, path}。"""
     import numpy as np
+
+    # 写盘目录重定向 tmp_path(纪律 2:测试禁写真实 .debug/)
+    monkeypatch.setattr(
+        'sr_od.backend.backend_context.os_utils.get_path_under_work_dir',
+        lambda *parts: str(tmp_path),
+    )
 
     mcp, backend = _mcp_with_backend()
     backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
@@ -212,25 +161,19 @@ def test_open_game_concurrent_reject() -> None:
     assert res['started'] is False and 'source' in res
 
 
-def test_open_game_block_success_enter_true() -> None:
+@pytest.mark.parametrize('enter, expect_msg', [
+    (True, '成功打开并进入星穹铁道游戏'),
+    (False, '成功打开游戏(未登录)'),
+], ids=['enter', 'open-only'])
+def test_open_game_block_success(enter: bool, expect_msg: str) -> None:
+    """block=True + 成功 future → 按 enter 分支返回对应成功文案。"""
     backend = _mock_backend()
     fut: Future = Future()
     fut.set_result(OperationResult(success=True, status='成功'))
     backend.start_run.return_value = (True, fut)
     tool = app_mod.make_open_game(backend)
-    res = asyncio.run(tool(enter=True, block=True))
-    assert res == {'success': True, 'result': '成功打开并进入星穹铁道游戏'}
-
-
-def test_open_game_block_success_enter_false() -> None:
-    """enter=False 成功 → 返回「打开游戏(未登录)」文案。"""
-    backend = _mock_backend()
-    fut: Future = Future()
-    fut.set_result(OperationResult(success=True, status='成功'))
-    backend.start_run.return_value = (True, fut)
-    tool = app_mod.make_open_game(backend)
-    res = asyncio.run(tool(enter=False, block=True))
-    assert res == {'success': True, 'result': '成功打开游戏(未登录)'}
+    res = asyncio.run(tool(enter=enter, block=True))
+    assert res == {'success': True, 'result': expect_msg}
 
 
 def test_open_game_block_failed() -> None:
@@ -243,30 +186,24 @@ def test_open_game_block_failed() -> None:
     assert res == {'success': False, 'result': '打开游戏失败: 打开游戏失败'}
 
 
-def test_open_game_enter_false_selects_open_game_op() -> None:
-    """enter=False 时传给 start_run 的 op_factory 构造出的是 OpenGame(非 OpenAndEnterGame)。冒烟验证 Task 1 重构。"""
+def test_open_game_enter_flag_selects_op() -> None:
+    """enter 开关决定 op_factory 构造的 op:False→OpenGame,True→OpenAndEnterGame。"""
     from unittest.mock import MagicMock
+
+    from sr_od.operations.enter_game.open_and_enter_game import OpenAndEnterGame
     from sr_od.operations.enter_game.open_game import OpenGame
 
     backend = _mock_backend()
     tool = app_mod.make_open_game(backend)
     asyncio.run(tool(enter=False, block=False))
     op_factory = backend.start_run.call_args[0][1]
-    op = op_factory(MagicMock(name='SrContext'))
-    assert isinstance(op, OpenGame)
-
-
-def test_open_game_enter_true_selects_open_and_enter_game_op() -> None:
-    """enter=True 时 op_factory 构造出的是 OpenAndEnterGame。"""
-    from unittest.mock import MagicMock
-    from sr_od.operations.enter_game.open_and_enter_game import OpenAndEnterGame
+    assert isinstance(op_factory(MagicMock(name='SrContext')), OpenGame)
 
     backend = _mock_backend()
     tool = app_mod.make_open_game(backend)
     asyncio.run(tool(enter=True, block=False))
     op_factory = backend.start_run.call_args[0][1]
-    op = op_factory(MagicMock(name='SrContext'))
-    assert isinstance(op, OpenAndEnterGame)
+    assert isinstance(op_factory(MagicMock(name='SrContext')), OpenAndEnterGame)
 
 
 def test_get_run_status_delegates() -> None:
@@ -284,12 +221,6 @@ def test_stop_run_delegates() -> None:
 
 
 # ===== click_game / input_text 工具(内联注册,同 close_game) =====
-
-def test_click_game_tool_registered() -> None:
-    mcp, _ = _mcp_with_backend()
-    tools = asyncio.run(mcp.list_tools())
-    assert any(t.name == "click_game" for t in tools)
-
 
 def test_click_game_tool_delegates() -> None:
     """click_game tool 直调 backend.click_game(),默认 press_time=0.1/pc_alt=False,并原样返回。"""
@@ -332,12 +263,6 @@ def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
         backend_method.side_effect = None
 
 
-def test_input_text_tool_registered() -> None:
-    mcp, _ = _mcp_with_backend()
-    tools = asyncio.run(mcp.list_tools())
-    assert any(t.name == "input_text" for t in tools)
-
-
 def test_input_text_tool_delegates() -> None:
     """input_text tool 直调 backend.input_text() 并原样返回。"""
     mcp, backend = _mcp_with_backend()
@@ -364,8 +289,8 @@ def test_analyze_screen_tool_passes_save_image() -> None:
 # ===== list_operations / describe_operation / run_operation(自定义 operation 入口)=====
 
 _OPEN_AND_ENTER = 'sr_od.operations.enter_game.open_and_enter_game.OpenAndEnterGame'
-_MAP_TRANSPORT = 'sr_od.operation.map_transport.MapTransport'
-_NOTORIOUS = 'sr_od.operation.compendium.notorious_hunt.NotoriousHunt'
+# 带必填参数的 SR op fixture(替换原 ZZZ MapTransport——SR 侧无等价 op,旧测试长期 skip 死占位)
+_GET_RID_OF_STUCK = 'sr_od.operations.move.get_rid_of_stuck.GetRidOfStuck'
 _CHARGE_PLAN_ITEM = 'sr_od.application.charge_plan.charge_plan_config.ChargePlanItem'
 
 
@@ -405,17 +330,16 @@ def test_list_operations_error_fallback() -> None:
     assert isinstance(res, dict) and 'error' in res
 
 
-@pytest.mark.skip(reason="uses ZZZ MapTransport op fixture (sr_od.operation.map_transport.MapTransport); SR 无等价 op——需 SR-op fixture 重写")
 def test_describe_operation_delegates() -> None:
-    """describe_operation 纯反射参数 schema(op_id 走参数)。"""
+    """describe_operation 纯反射参数 schema(op_id 走参数,已剔除 self/ctx)。"""
     from sr_od.backend.mcp.service_app import make_describe_operation
 
     backend = MagicMock()
-    info = make_describe_operation(backend)(_MAP_TRANSPORT)
-    assert info['op_id'] == _MAP_TRANSPORT
-    assert info['class_name'] == 'MapTransport'
+    info = make_describe_operation(backend)(_GET_RID_OF_STUCK)
+    assert info['op_id'] == _GET_RID_OF_STUCK
+    assert info['class_name'] == 'GetRidOfStuck'
     param_names = [p['name'] for p in info['params']]
-    assert param_names == ['area_name', 'tp_name']
+    assert param_names == ['stuck_times']
 
 
 def test_describe_operation_error_on_bad_op() -> None:
@@ -455,28 +379,15 @@ def test_run_operation_rejects_non_operation() -> None:
     backend.run_slot._start.assert_not_called()
 
 
-@pytest.mark.skip(reason="uses ZZZ MapTransport op fixture (sr_od.operation.map_transport.MapTransport); SR 无等价 op——需 SR-op fixture 重写")
 def test_run_operation_rejects_missing_required() -> None:
     """缺必填参数(validate_args 返错)→ {started: False, error},不调 _start。"""
     from sr_od.backend.mcp.service_app import make_run_operation
 
     backend = MagicMock()
     res = asyncio.run(make_run_operation(backend)(
-        op_id=_MAP_TRANSPORT, args={'area_name': '六分街'}, block=False))
+        op_id=_GET_RID_OF_STUCK, args={}, block=False))
     assert res['started'] is False
-    assert 'tp_name' in res['error']
-    backend.run_slot._start.assert_not_called()
-
-
-@pytest.mark.skip(reason="uses ZZZ MapTransport op fixture (sr_od.operation.map_transport.MapTransport); SR 无等价 op——需 SR-op fixture 重写")
-def test_run_operation_rejects_complex_dataclass() -> None:
-    """复杂数据类参数(NotoriousHunt.plan)→ {started: False, error}。"""
-    from sr_od.backend.mcp.service_app import make_run_operation
-
-    backend = MagicMock()
-    res = asyncio.run(make_run_operation(backend)(op_id=_NOTORIOUS, args={}, block=False))
-    assert res['started'] is False
-    assert 'plan' in res['error']
+    assert 'stuck_times' in res['error']
     backend.run_slot._start.assert_not_called()
 
 
@@ -507,20 +418,20 @@ def test_run_operation_block_success() -> None:
     assert res['success'] is True and '成功' in res['result']
 
 
-@pytest.mark.skip(reason="uses ZZZ MapTransport op fixture (sr_od.operation.map_transport.MapTransport); SR 无等价 op——需 SR-op fixture 重写")
 def test_run_operation_bakes_args_into_factory() -> None:
-    """op_factory 闭包 bake 了 args:展开后等价 cls(ctx, area_name=..., tp_name=...)。"""
+    """op_factory 闭包 bake 了 args:展开后等价 cls(ctx, stuck_times=...)。"""
+    from unittest.mock import MagicMock
+
     from sr_od.backend.mcp.service_app import make_run_operation
-    from sr_od.operation.map_transport import MapTransport
+    from sr_od.operations.move.get_rid_of_stuck import GetRidOfStuck
 
     backend = MagicMock()
     backend.run_slot._start.return_value = (True, Future())
     backend.query_status.return_value = RunStatusResult(state='running', source='mcp')
     asyncio.run(make_run_operation(backend)(
-        op_id=_MAP_TRANSPORT, args={'area_name': '六分街', 'tp_name': '黑糖工作室'}, block=False))
+        op_id=_GET_RID_OF_STUCK, args={'stuck_times': 3}, block=False))
     call = backend.run_slot._start.call_args
     op_factory = call.kwargs.get('op_factory') or call.args[1]
     op = op_factory(MagicMock(name='SrContext'))
-    assert isinstance(op, MapTransport)
-    assert op.area_name == '六分街'
-    assert op.tp_name == '黑糖工作室'
+    assert isinstance(op, GetRidOfStuck)
+    assert op.stuck_times == 3

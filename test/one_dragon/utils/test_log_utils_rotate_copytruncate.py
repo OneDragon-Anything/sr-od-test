@@ -84,6 +84,8 @@ def test_copytruncate_and_rename_both_blocked_defers_without_archive(tmp_path, m
     def _blocked(*_args, **_kwargs):
         raise PermissionError(13, '模拟归档名也被占用')
 
+    # 退避基数打桩:本测吃满 5 次重试退避(0.05×2^n ≈ 0.75s),语义=耗尽后降级
+    monkeypatch.setattr(log_utils_mod, '_ROTATE_RETRY_BASE_DELAY', 0.001)
     monkeypatch.setattr(log_utils_mod.shutil, 'copyfile', _blocked)
     handler = SafeTimedRotatingFileHandler(
         target, when='midnight', backupCount=3, encoding='utf-8', delay=True,

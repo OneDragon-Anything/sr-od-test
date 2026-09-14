@@ -89,6 +89,9 @@ def test_defer_reopen_guard_keeps_live_stream(tmp_path, monkeypatch) -> None:
 
     import one_dragon.utils.log_utils as log_utils_mod
 
+    # 退避基数打桩(语义=重试耗尽后降级,非真睡 0.75s;重试次数语义不受影响)
+    monkeypatch.setattr(log_utils_mod, '_ROTATE_RETRY_BASE_DELAY', 0.001)
+
     live = None
     calls = {'n': 0}
     real_rename = os.rename

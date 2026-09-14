@@ -7,7 +7,9 @@
 """
 from unittest.mock import MagicMock, patch
 
-from sr_od.application.div_uni.operations.ornamenet_extraction import ChallengeOrnamentExtraction
+from sr_od.application.div_uni.operations.ornamenet_extraction import (
+    ChallengeOrnamentExtraction,
+)
 from sr_od.context.sr_context import SrContext
 from sr_od.interastral_peace_guide.guide_def import GuideMission
 

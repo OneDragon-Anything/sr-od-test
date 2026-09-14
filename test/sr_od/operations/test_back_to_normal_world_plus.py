@@ -36,6 +36,7 @@ from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     WatchdogOperationMixin,
     enter_running_state,
+    fast_sleep,
     reset_running_state,
 )
 
@@ -115,15 +116,28 @@ def stuck_op(
 
 class TestBackToNormalWorldPlusFallback:
 
+    @pytest.mark.parametrize('click_fails', [False, True], ids=['click-no-effect', 'click-fails'])
     def test_stuck_fallback_fails_bounded(
         self,
         test_context: SrTestContext,
         stuck_op: tuple[_WatchedBackToNormal, dict[str, int], list[bool]],
         monkeypatch: pytest.MonkeyPatch,
+        click_fails: bool,
     ) -> None:
-        """兜底点击无法改变画面时:op 应 FAIL 且轮次有界(修复前永远 WAIT)。"""
+        """兜底点击无法改变画面 / 点击本身失败:op 应 FAIL 且轮次有界(修复前永远 WAIT)。
+
+        2026-08-24 实锤:两小时 WAIT 循环,结尾是点击失败后转入无 wait 的异常
+        风暴(每 ~24ms 一轮刷屏)。修复后兜底计入 retry,每轮 retry 带 wait=1,
+        耗尽 node_max_retry_times=20 后节点 FAIL。
+        """
         op, counters, click_alts = stuck_op
         sleeps = _patch_round_sleep(monkeypatch)
+        if click_fails:
+            def _fake_click_fail(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
+                counters['fallback_click'] += 1
+                return False
+
+            monkeypatch.setattr(op.ctx.controller, 'click', _fake_click_fail, raising=False)
 
         enter_running_state(test_context)
         try:
@@ -131,7 +145,6 @@ class TestBackToNormalWorldPlusFallback:
         finally:
             reset_running_state(test_context, op)
 
-        # 修复后:兜底计入 retry,超 node_max_retry_times=20 后节点 FAIL。
         assert not result.success, (
             f'兜底卡死场景不应 success:status={result.status}'
         )
@@ -139,98 +152,67 @@ class TestBackToNormalWorldPlusFallback:
         rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
         assert rounds <= 25, f'轮次超界({rounds}),疑似死循环未修复'
         assert rounds >= 20, f'轮次异常偏少({rounds}),应耗满 20 次 retry 才 FAIL'
-        # 每轮兜底都真实点击了右上角(点击发出但画面不变)。
-        assert counters['fallback_click'] == rounds, (
-            f'兜底点击数({counters["fallback_click"]}) != 轮次({rounds})'
-        )
-        # 锁光标恢复态加固锁:兜底每次点击都带 pc_alt=True(2026-09-02 恢复链
-        # 事故根修——锁光标下不带 Alt 的点击全部落空,兜底是最后出口必须按
-        # 最坏光标态点)。
-        assert len(click_alts) == rounds and all(click_alts), (
-            f'兜底点击未全部带 pc_alt=True:{click_alts}'
-        )
+        if not click_fails:
+            # 每轮兜底都真实点击了右上角(点击发出但画面不变)。
+            assert counters['fallback_click'] == rounds, (
+                f'兜底点击数({counters["fallback_click"]}) != 轮次({rounds})'
+            )
+            # 锁光标恢复态加固锁:兜底每次点击都带 pc_alt=True(2026-09-02 恢复链
+            # 事故根修——锁光标下不带 Alt 的点击全部落空,兜底是最后出口必须按
+            # 最坏光标态点)。
+            assert len(click_alts) == rounds and all(click_alts), (
+                f'兜底点击未全部带 pc_alt=True:{click_alts}'
+            )
         # 每轮 retry 都带 wait=1(防回归为无 wait 的异常风暴式快速重试)。
         assert len(sleeps) >= rounds, (
             f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
         )
 
-    def test_click_fail_fails_bounded(
-        self,
-        test_context: SrTestContext,
-        stuck_op: tuple[_WatchedBackToNormal, dict[str, int], list[bool]],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """兜底点击本身失败(如窗口失焦)时:同样应 FAIL 有界且每轮有 wait。
-
-        2026-08-24 实锤:两小时 WAIT 循环的结尾是 controller.click 失败后转入
-        无 wait 的异常风暴(每 ~24ms 一轮刷屏)。修复后该路径每轮 retry 带
-        wait=1,20 轮后有序 FAIL,不再提供风暴式无间隔重试。
-        """
-        op, counters, _click_alts = stuck_op
-        sleeps = _patch_round_sleep(monkeypatch)
-
-        # 兜底点击改为「点击失败」(controller.click 返回 False):
-        # 外层包装的 wait=1 兜住节奏。
-        def _fake_click_fail(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
-            counters['fallback_click'] += 1
-            return False
-
-        monkeypatch.setattr(op.ctx.controller, 'click', _fake_click_fail, raising=False)
-
-        enter_running_state(test_context)
-        try:
-            result = op.execute()
-        finally:
-            reset_running_state(test_context, op)
-
-        assert not result.success, f'点击失败场景不应 success:status={result.status}'
-        rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
-        assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
-        # 每轮都有 wait(≥ rounds 次 sleep),防无间隔风暴。
-        assert len(sleeps) >= rounds, (
-            f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds}),存在无 wait 重试轮'
-        )
-
 
 class TestNamelessHonorBranches:
-    """无名勋礼退出链分支:推广页 / 等级加速弹窗 / 主面板。
+    """无名勋礼退出链分支:推广页 / 等级加速弹窗 / 主面板(mock 分发锁)。
 
     背景:2026-08-26 版本周期首进无名勋礼先落购买推广页(点「开启无名勋礼」
-    不会付费,用户裁决),实证退出链(编排者 2026-08-27 live 四步全走通):
-    推广页 → 开启 → 等级加速弹窗(点提示位关闭)→ 主面板 → 右上角关闭 → 菜单页。
-    三支均「id_mark 命中 → area 点击 → round_retry 逐帧重识别」(大厅分支
-    同构):点击可能不落地,RETRY 计入 node_max_retry_times=20 有界 FAIL;
-    多跳中间态靠逐帧重识别天然容忍,无跨轮状态。
+    不会付费,用户裁决),实证退出链(实机四步全走通):推广页 → 开启 → 等级
+    加速弹窗(点提示位关闭)→ 主面板 → 右上角关闭 → 菜单页。三支均
+    「id_mark 命中 → area 点击 → round_retry 逐帧重识别」;点击可能不落地,
+    RETRY 计入 node_max_retry_times=20 有界 FAIL。画面识别层由 test_id_mark
+    集中锁定,此处只锁分发(命中专属 area + 不落兜底 + 不触守卫 + 有界)。
     """
 
-    def test_nameless_honor_promo_branch(
+    @pytest.mark.parametrize(
+        'screen_name, mark_area, click_area',
+        [
+            ('无名勋礼-购买推广页', '按钮-开启无名勋礼', '按钮-开启无名勋礼'),
+            ('无名勋礼-等级加速弹窗', '标识-等级加速', '按钮-点击空白处关闭'),
+            ('无名勋礼', '标识-无名勋礼', '按钮-关闭'),
+        ],
+        ids=['promo', 'levelup-popup', 'main-panel'],
+    )
+    def test_nameless_honor_branches(
         self,
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
+        screen_name: str,
+        mark_area: str,
+        click_area: str,
     ) -> None:
-        """场景:无名勋礼购买推广页帧命中专属分支,不进对话态守卫与兜底。
-
-        背景(2026-08-26 版本周期首进,编排者 2026-08-27 live 实证退出链):
-        版本更新后第一次进无名勋礼先落整屏购买推广页,点「开启无名勋礼」是
-        查看/继续语义(**不会付费**,用户裁决)→ 弹「等级加速」说明弹窗 →
-        主面板 → 右上角关闭 → 菜单页(既有分支接管)。本分支逐帧重识别,
-        多跳中间态天然容忍;round_retry 有界,点击不落地时 FAIL 不永动。
-        """
+        """该态帧命中专属分支:只 find+click 本态 area,有界 FAIL 不落兜底不触守卫。"""
         counters: dict[str, int] = {'fallback_click': 0}
         find_clicks: list[tuple[str, str]] = []
 
-        def _fake_find_area(self, screen, screen_name, area_name, *args, **kwargs):
-            if screen_name == '无名勋礼-购买推广页' and area_name == '按钮-开启无名勋礼':
-                return self.round_success(status=f'{screen_name}-{area_name}')
+        def _fake_find_area(self, screen, s_name, area_name, *args, **kwargs):
+            if s_name == screen_name and area_name == mark_area:
+                return self.round_success(status=f'{s_name}-{area_name}')
             return self.round_wait(status=f'未找到 {area_name}')
 
-        def _fake_find_and_click(self, screen, screen_name, area_name, *args, **kwargs):
-            if screen_name == '无名勋礼-购买推广页' and area_name == '按钮-开启无名勋礼':
-                find_clicks.append((screen_name, area_name))
-                return self.round_success(status=f'{screen_name}-{area_name}')
+        def _fake_find_and_click(self, screen, s_name, area_name, *args, **kwargs):
+            if s_name == screen_name and area_name == click_area:
+                find_clicks.append((s_name, area_name))
+                return self.round_success(status=f'{s_name}-{area_name}')
             return self.round_wait(status=f'未找到 {area_name}')
 
-        def _fake_click_area(self, screen_name, area_name, *args, **kwargs):
+        def _fake_click_area(self, s_name, area_name, *args, **kwargs):
             counters['fallback_click'] += 1
             return self.round_success(status=area_name)
 
@@ -249,11 +231,11 @@ class TestNamelessHonorBranches:
             'is_express_supply',
             lambda *args, **kw: False,
         )
-        # 守卫被触达即回归(会与推广页分支抢路径/误点对话隐藏按钮)
+        # 守卫被触达即回归(守卫位于所有具名分支之后;触达 = 分发串扰/分支缺失)
         monkeypatch.setattr(
             BackToNormalWorldPlus, 'check_npc_dialog',
             lambda self, screen: (_ for _ in ()).throw(
-                AssertionError('推广页应被专属分支接管,不应进入对话态守卫')),
+                AssertionError('该画面应被专属分支接管,不应进入对话态守卫')),
         )
 
         op = _WatchedBackToNormal(test_context)
@@ -271,58 +253,92 @@ class TestNamelessHonorBranches:
         rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
         assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
         assert len(sleeps) >= rounds, f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
-        # 每轮点的都是推广页「按钮-开启无名勋礼」area;兜底右上角返回不得被触达。
+        # 每轮点的都是本态专属 area;兜底右上角返回不得被触达。
         assert len(find_clicks) == rounds and counters['fallback_click'] == 0, (
             f'area 点击数({len(find_clicks)})应==轮次,兜底({counters["fallback_click"]})应为 0'
         )
         assert all(
-            sn == '无名勋礼-购买推广页' and an == '按钮-开启无名勋礼'
+            sn == screen_name and an == click_area
             for sn, an in find_clicks
         ), f'点击 area 漂移:{find_clicks[:3]}'
 
+
+class TestBranchRoutingMock:
+    """退出链其余分支的分发锁(mock 识别,零识别成本)。
+
+    真帧测试保留两处代表覆盖两类动作区风险(战斗失败=OCR 文本动作区、
+    CW 大厅=模板动作区+pc_alt 直点);画面识别层由 test_id_mark 集中锁定。
+    本类锁其余分支的「帧态 → 命中锚 → 点击动作」路由事实:
+
+    - 退出确认面板(2026-08-31 实证 40 分钟循环):命中「菜单-暂离」→ find+click;
+    - 版本公告轮播(2026-08-26 版本,无分支时兜底空转):标题命中后按
+      「按钮-关闭」可见与否区分子态——可见 find+click 关闭,缺席裸点右箭头翻页。
+    """
+
     @pytest.mark.parametrize(
-        'screen_name, mark_area, click_area',
+        'hit_finds, hit_clicks, expect_status, expect_find_clicks, expect_bare',
         [
-            ('无名勋礼-等级加速弹窗', '标识-等级加速', '按钮-点击空白处关闭'),
-            ('无名勋礼', '标识-无名勋礼', '按钮-关闭'),
+            # 退出确认面板:锚命中 → 点「菜单-暂离」→ round_retry
+            (
+                {('模拟宇宙', '菜单-暂离')},
+                {('模拟宇宙', '菜单-暂离')},
+                '模拟宇宙-退出确认面板',
+                [('模拟宇宙', '菜单-暂离')],
+                [],
+            ),
+            # 公告页 1:标题命中、「关闭」缺席 → 只裸点右箭头翻页
+            (
+                {('版本公告轮播', '标识-贪饕侵蚀')},
+                set(),
+                '版本公告轮播',
+                [],
+                [('版本公告轮播', '按钮-下一页')],
+            ),
+            # 公告页 2:「关闭」可见 → find+click 关闭,不再翻页
+            (
+                {('版本公告轮播', '标识-贪饕侵蚀'), ('版本公告轮播', '按钮-关闭')},
+                {('版本公告轮播', '按钮-关闭')},
+                '版本公告轮播',
+                [('版本公告轮播', '按钮-关闭')],
+                [],
+            ),
         ],
-        ids=['levelup-popup', 'main-panel'],
+        ids=['sim-uni-exit-confirm', 'announcement-page1-flip', 'announcement-page2-close'],
     )
-    def test_nameless_honor_intermediate_branches(
+    def test_branch_routing(
         self,
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
-        screen_name: str,
-        mark_area: str,
-        click_area: str,
+        hit_finds: set[tuple[str, str]],
+        hit_clicks: set[tuple[str, str]],
+        expect_status: str,
+        expect_find_clicks: list[tuple[str, str]],
+        expect_bare: list[tuple[str, str]],
     ) -> None:
-        """退出链中间态:弹窗帧点「点击空白处关闭」、主面板帧点「按钮-关闭」。
-
-        推广页分支(上一测)不命中时逐帧重识别落到这两支:每支都是「id_mark 命中
-        → area 点击 → round_retry」,多跳中间态靠逐帧重识别容忍。每支独立锁死
-        点击 area,防分支间串扰或落兜底。
-        """
+        """给定命中集,check_screen 单轮路由到本分支并做且只做预期动作。"""
         find_clicks: list[tuple[str, str]] = []
+        bare_clicks: list[tuple[str, str]] = []
 
-        def _fake_find_area(self, screen, s_name, area_name, *args, **kwargs):
-            if s_name == screen_name and area_name == mark_area:
-                return self.round_success(status=f'{s_name}-{area_name}')
-            return self.round_wait(status=f'未找到 {area_name}')
+        def _fake_find_area(self, screen, s_name, a_name, *a, **kw):
+            if (s_name, a_name) in hit_finds:
+                return self.round_success(status=a_name)
+            return self.round_wait(status=f'未找到 {a_name}')
 
-        def _fake_find_and_click(self, screen, s_name, area_name, *args, **kwargs):
-            if s_name == screen_name and area_name == click_area:
-                find_clicks.append((s_name, area_name))
-                return self.round_success(status=f'{s_name}-{area_name}')
-            return self.round_wait(status=f'未找到 {area_name}')
+        def _fake_find_and_click(self, screen, s_name, a_name, *a, **kw):
+            if (s_name, a_name) in hit_clicks:
+                find_clicks.append((s_name, a_name))
+                return self.round_success(status=a_name)
+            return self.round_wait(status=f'未找到 {a_name}')
+
+        def _fake_click_area(self, s_name, a_name, *a, **kw):
+            bare_clicks.append((s_name, a_name))
+            return self.round_success(status=a_name)
 
         monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
         monkeypatch.setattr(
             BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_and_click
         )
-        monkeypatch.setattr(
-            BackToNormalWorldPlus, 'round_by_click_area',
-            lambda self, s_name, area_name, *a, **kw: self.round_success(status=area_name),
-        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
         monkeypatch.setattr(
             btnw_module.sim_uni_screen_state,
             'get_sim_uni_screen_state',
@@ -333,93 +349,25 @@ class TestNamelessHonorBranches:
             'is_express_supply',
             lambda *args, **kw: False,
         )
+        monkeypatch.setattr(
+            btnw_module.cw_screen_state,
+            'get_in_match_screen_name',
+            lambda *args, **kw: None,
+        )
         monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
 
         op = _WatchedBackToNormal(test_context)
-        op._init_watchdog()  # type: ignore[attr-defined]
-        _patch_round_sleep(monkeypatch)
+        op.last_screenshot = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
-        enter_running_state(test_context)
-        try:
-            result = op.execute()
-        finally:
-            reset_running_state(test_context, op)
-
-        # 帧恒停在中间态时应有界 FAIL(retry 语义),且每轮点的都是该态专属 area。
-        assert not result.success
-        rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
-        assert 20 <= rounds <= 25
-        assert len(find_clicks) == rounds, (
-            f'{screen_name}: area 点击数({len(find_clicks)})应==轮次({rounds})'
-        )
-        assert all(sn == screen_name and an == click_area for sn, an in find_clicks)
-
-
-class TestVersionAnnouncementBranches:
-    """版本公告轮播分支:第 1 页翻页 / 第 2 页关闭,真帧输入。
-
-    背景:游戏级版本公告弹窗(「贪饕」侵蚀,2026-08-26 版本)待机自动弹出、
-    盖在任意画面上;第 1 页无出口只有右箭头翻页,第 2 页底部中央出「关闭」钮
-    (2026-08-27 实机实证;无此分支时 CW 独立 app 首跑 52s 失败)。
-    分支结构(与上方大厅/无名勋礼分支同构):标题 id_mark(两页共享)正面识别 → 「按钮-关闭」
-    可见与否区分子态 → area 点击 → round_retry 逐帧重识别。
-
-    与上方 mock 分支测试不同,本类**不 mock 画面识别**(round_by_find_area 走
-    session 级真 OCR / 真命中),只对点击层做记录——fixture 用测试仓归档的
-    真实公告帧(贪饕侵蚀-第1页/第2页.webp),锁「真帧 → 分支路由 + 点击 area」
-    全链,识别漂移(锚点失配 / 误吸他分支)会在此红。
-    """
-
-    SCREEN = '版本公告轮播'
-
-    def _run_check_screen(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-        state: str,
-    ) -> tuple[OperationRoundResult, list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]], list[tuple[Point | None, bool]]]:
-        return _run_real_frame_check_screen(
-            test_context, monkeypatch, self.SCREEN, state,
-        )
-
-    def test_page1_flips_to_next(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """页 1 真帧:标题 id_mark 命中、无「关闭」→ 点右箭头翻页 area,不点关闭。"""
-        result, finds, find_clicks, bare_clicks, _ctrl = self._run_check_screen(
-            test_context, monkeypatch, '贪饕侵蚀-第1页',
-        )
+        # 命中分支的 round_retry(wait=1~2) 会真睡,直调 check_screen 也包 fast_sleep
+        with fast_sleep():
+            result = op.check_screen()
 
         # 分支路由:round_retry 等下一轮逐帧重识别(非 success / 兜底)
-        assert not result.is_success, f'页 1 应 round_retry,status={result.status}'
-        assert result.status == '版本公告轮播'
-        # 识别事实(真 OCR):标题命中、关闭钮缺席(页 1 子态判据)
-        assert (self.SCREEN, '标识-贪饕侵蚀') in finds
-        assert (self.SCREEN, '按钮-关闭') not in finds
-        # 动作:只裸点右箭头翻页 area;不得点「关闭」
-        assert bare_clicks == [(self.SCREEN, '按钮-下一页')], f'裸点击漂移:{bare_clicks}'
-        assert find_clicks == [], f'页 1 不应有 find+click:{find_clicks}'
-
-    def test_page2_closes(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """页 2 真帧:「关闭」钮可见 → find+click 关闭 area,不再翻页。"""
-        result, finds, find_clicks, bare_clicks, _ctrl = self._run_check_screen(
-            test_context, monkeypatch, '贪饕侵蚀-第2页',
-        )
-
-        assert not result.is_success, f'页 2 应 round_retry,status={result.status}'
-        assert result.status == '版本公告轮播'
-        assert (self.SCREEN, '标识-贪饕侵蚀') in finds
-        assert (self.SCREEN, '按钮-关闭') in finds
-        assert find_clicks == [(self.SCREEN, '按钮-关闭')], (
-            f'关闭点击漂移:{find_clicks}'
-        )
-        assert bare_clicks == [], f'页 2 不应再翻页:{bare_clicks}'
+        assert not result.is_success, f'应 round_retry,status={result.status}'
+        assert result.status == expect_status, f'分支状态漂移:{result.status}'
+        assert find_clicks == expect_find_clicks, f'find+click 漂移:{find_clicks}'
+        assert bare_clicks == expect_bare, f'裸点击漂移:{bare_clicks}'
 
 
 def _run_real_frame_check_screen(
@@ -619,40 +567,6 @@ class TestBattleFailScreenBranch:
         assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
 
 
-class TestSimUniExitConfirmBranch:
-    """模拟宇宙退出确认面板分支真帧输入锁。
-
-    背景(2026-08-31 实证):上一 app 在模拟宇宙楼层内异常退出,本 op 起手点
-    「右上角返回」→ 弹出「退出模拟宇宙?」确认面板 → 只认识右上角 X →
-    关面板又见楼层退出按钮 → 无限循环 40 分钟。面板 area 早已建档
-    (sim_uni.yml 菜单-暂离),纯分发表缺条目。
-
-    真帧锁:fixture = 开拓力 FAIL 遗留现场真帧(暂离/结束并结算面板全开)。
-    不 mock 画面识别,真 OCR 照跑。
-    """
-
-    SCREEN = '模拟宇宙'
-    STATE = '退出模拟宇宙确认面板'
-
-    def test_exit_confirm_clicks_leave(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """面板真帧:命中暂离,find+click「菜单-暂离」,round_retry。"""
-        result, finds, find_clicks, bare_clicks, _ctrl = _run_real_frame_check_screen(
-            test_context, monkeypatch, self.SCREEN, self.STATE,
-        )
-
-        assert not result.is_success, f'面板应 round_retry,status={result.status}'
-        assert result.status == '模拟宇宙-退出确认面板'
-        assert (self.SCREEN, '菜单-暂离') in finds, f'识别命中:{finds}'
-        assert find_clicks == [(self.SCREEN, '菜单-暂离')], (
-            f'点击漂移:{find_clicks}'
-        )
-        assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
-
-
 def _patch_round_sleep(monkeypatch: pytest.MonkeyPatch) -> list[float]:
     """打桩框架轮间 sleep 并记录调用,提速测试(20 轮 × 1s 真睡太慢)+ 断言 wait 生效。
 
@@ -731,7 +645,9 @@ class TestNpcDialogGuard:
             lambda image, words, **kw: {'告别': _FakeMatchList(100, 80)},
         )
 
-        result = op.check_npc_dialog(self.BLANK)
+        # 命中路径 round_wait(wait=1) 会真睡,包 fast_sleep 免空等
+        with fast_sleep():
+            result = op.check_npc_dialog(self.BLANK)
 
         assert result is not None
         assert result.is_success is False  # round_wait 非成功、也非兜底点击
@@ -770,132 +686,6 @@ class TestNpcDialogGuard:
             f'未知文字不应构成对话态证据,status={getattr(result, "status", None)}'
         )
         assert clicks == [] and moves == [], '守卫不触发时不允许任何点击/移动'
-
-    def test_no_dialog_returns_none(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """交互区无任何文字:守卫不触发返回 None,落回原兜底(修复前行为保留)。"""
-        op, moves, clicks = self._make_op(test_context, monkeypatch)
-        monkeypatch.setattr(
-            test_context.ocr, 'match_words', lambda image, words, **kw: {},
-        )
-        monkeypatch.setattr(
-            test_context.ocr, 'run_ocr', lambda image, *a, **kw: {},
-        )
-
-        assert op.check_npc_dialog(self.BLANK) is None
-        assert clicks == [] and moves == []
-
-    def test_farewell_priority_over_unknown(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """告别词与未知选项同屏:优先告别(不进未知选项分支)。"""
-        op, moves, clicks = self._make_op(test_context, monkeypatch)
-        monkeypatch.setattr(
-            test_context.ocr, 'match_words',
-            lambda image, words, **kw: {'告别': _FakeMatchList(100, 80)},
-        )
-        # run_ocr 若被触达说明走了未知选项分支 —— 让它显式炸出来
-        def _boom(*args, **kwargs):
-            raise AssertionError('告别命中时不应再走 run_ocr 未知选项分支')
-
-        monkeypatch.setattr(test_context.ocr, 'run_ocr', _boom)
-
-        result = op.check_npc_dialog(self.BLANK)
-        assert result is not None
-        assert '对话态-告别' in (result.status or '')
-
-    def test_cw_lobby_panel_text_not_dialog(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """场景锁死:货币战争-大厅帧命中 check_screen 专属分支,不进对话态守卫。
-
-        背景(2026-08-27 run 46 实机):大厅前序分支全不命中,守卫对 INTERACT_RECT
-        OCR 把右侧面板文字(『数据银行』『预期收益』『√奖励已全领取』『83%』『75/91』)
-        误判为未知对话选项 → 点空白推进 → retry 永动 → 一条龙重启再陷。
-        修复=check_screen 补大厅分支(id_mark 命中 → 点右上角 X,round_retry 有界)。
-        """
-        counters: dict[str, int] = {'fallback_click': 0}
-        ctrl_clicks: list[tuple[Point | None, bool]] = []
-
-        def _fake_find_area(self, screen, screen_name, area_name, *args, **kwargs):
-            if screen_name == '货币战争-大厅' and area_name == '标识-创业指南':
-                return self.round_success(status=f'{screen_name}-{area_name}')
-            return self.round_wait(status=f'未找到 {area_name}')
-
-        def _fake_click_area(self, screen_name, area_name, *args, **kwargs):
-            counters['fallback_click'] += 1
-            return self.round_success(status=area_name)
-
-        # 大厅关闭按钮的直点(锁光标恢复态加固后走 controller.click + pc_alt);
-        # 其余 find_and_click 一律未命中(逐光捡金/战斗退出等分支不得误吸)。
-        def _record_click(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
-            ctrl_clicks.append((pos, bool(pc_alt)))
-            return True
-
-        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
-        monkeypatch.setattr(
-            BackToNormalWorldPlus, 'round_by_find_and_click_area',
-            lambda self, screen, s_name, a_name, *a, **kw: self.round_wait(
-                status=f'未找到 {a_name}'),
-        )
-        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
-        monkeypatch.setattr(
-            btnw_module.sim_uni_screen_state,
-            'get_sim_uni_screen_state',
-            lambda *args, **kw: None,
-        )
-        monkeypatch.setattr(
-            btnw_module.common_screen_state,
-            'is_express_supply',
-            lambda *args, **kw: False,
-        )
-        # 守卫被触达即回归(run 46 死循环路径)——显式炸出来
-        monkeypatch.setattr(
-            BackToNormalWorldPlus, 'check_npc_dialog',
-            lambda self, screen: (_ for _ in ()).throw(
-                AssertionError('CW 大厅应被专属分支接管,不应进入对话态守卫')),
-        )
-
-        op = _WatchedBackToNormal(test_context)
-        op._init_watchdog()  # type: ignore[attr-defined]
-        monkeypatch.setattr(op.ctx.controller, 'click', _record_click, raising=False)
-        sleeps = _patch_round_sleep(monkeypatch)
-
-        enter_running_state(test_context)
-        try:
-            result = op.execute()
-        finally:
-            reset_running_state(test_context, op)
-
-        # 分支每轮直点大厅「按钮-关闭」area 中心(实机验证的退出手势,点 X 回
-        # 大世界),round_retry 有界:耗尽 20 次 retry 后 FAIL,而非守卫时代的
-        # retry 永动。
-        assert not result.success, f'画面不变时应有界 FAIL,status={result.status}'
-        rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
-        assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
-        assert len(sleeps) >= rounds, f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
-        # 每轮直点的都是大厅「按钮-关闭」area 中心且带 pc_alt=True(锁光标恢复态
-        # 加固锁,2026-09-02 事故根修);兜底右上角返回 area 不得被触达。
-        close_area = test_context.screen_loader.get_area('货币战争-大厅', '按钮-关闭')
-        assert close_area is not None, '货币战争-大厅/按钮-关闭 area 未建档'
-        assert len(ctrl_clicks) == rounds and counters['fallback_click'] == 0, (
-            f'关闭直点数({len(ctrl_clicks)})应==轮次,兜底({counters["fallback_click"]})应为 0'
-        )
-        assert all(
-            pos is not None
-            and (int(pos.x), int(pos.y)) == (int(close_area.center.x), int(close_area.center.y))
-            and alt
-            for pos, alt in ctrl_clicks
-        ), (
-            f'关闭点击应全为 area 中心 + pc_alt=True:{ctrl_clicks[:3]}'
-        )
 
 
 class _RecordingFakeCwExit:
@@ -1006,90 +796,3 @@ class TestCwInMatchDelegationBranch:
             f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
         )
 
-    def test_prep_frame_real_routes_to_cw_exit(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """备战真帧:既有分支全不命中(真识别照跑)→ 命中委托分支,不落兜底。
-
-        真帧 = 测试仓归档备战帧(prep_1-6_all_positions.webp);对局中判定
-        用桩恒返「货币战争-备战」(画面匹配层由 cw 侧真帧测试单独锁定)。
-        """
-        fake = _RecordingFakeCwExit
-        fake.constructed = 0
-        fake.executed = 0
-        fake.fail_after = 99  # 单轮测试,恒成功
-
-        result, finds, find_clicks, bare_clicks, _ctrl = _run_real_frame_check_screen(
-            test_context, monkeypatch, '货币战争-备战', 'prep_1-6_all_positions',
-            in_match_screen_name='货币战争-备战',
-            exit_match_cls=fake,
-        )
-
-        # 分支路由:委托成功 → round_wait 等下一轮(大厅分支接管),非 success/兜底。
-        assert not result.is_success, f'应 round_wait 等大厅接管,status={result.status}'
-        # 委托发生:假类被构造并 execute 恰一次(单轮)。
-        assert fake.constructed == 1 and fake.executed == 1, (
-            f'应恰好委托一次:构造 {fake.constructed}/执行 {fake.executed}'
-        )
-        # 不落兜底:零裸点击(兜底「菜单-右上角返回」走 round_by_click_area 记录)。
-        assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
-        # 顺序判据:大厅分支(更轻的直点关闭)未抢在本分支前误吸备战帧。
-        assert ('货币战争-大厅', '标识-创业指南') not in finds, f'识别命中:{finds}'
-
-
-class TestCwSettlementDelegationRealFrame:
-    """CW 结算屏真帧 + 真判定的端到端委托锁(T-57 定谳,2026-08-24 债销账面)。
-
-    背景:.debug/temp/TODO.md 2026-08-24 登记「BackToNormalWorldPlus 不认识
-    CW P1 结算屏(挑战结束+继续挑战挂着时清场失败)」——该债登记早于
-    2026-09-01 的对局中委托分支(commit 5376b8f70):判定单一源
-    ``cw_screen_state``(货币战争- 前缀 − 大厅白名单)已自动收录结算屏,
-    命中即委托 CwEntryExit(残局清理优先路线)。本类与既有
-    ``TestCwInMatchDelegationBranch`` 的差别 = 判定不桩(use_real_cw_match):
-    真帧 + 真画面匹配 + 真路由一次锁死——识别(id_mark 失配/白名单误收)或
-    路由(分支被删/挪到兜底后)任一层回潮,本锁红。
-
-    真帧 = 测试仓归档 ``货币战争-结算/ended.webp``(挑战结束 + 1-9 首领 +
-    继续挑战,即 P1 位面末首领存活挂机态;判读见
-    docs/game/screens/currency_war_settlement.md「子态」)。
-    判定层(真画面匹配命中「货币战争-结算」)由 cw 侧
-    test_cw_entry_flow 的结算屏判定锁单独锁定,本锁在其上游证明路由全链。
-    """
-
-    def test_settlement_frame_real_match_routes_to_cw_exit(
-        self,
-        test_context: SrTestContext,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """结算屏真帧(真判定)→ 委托 CwEntryExit;兜底与大厅分支零触达。"""
-        if not test_context.has_screen('货币战争-结算', 'ended'):
-            pytest.skip('存档截图缺失:screens/货币战争-结算/ended.webp')
-
-        fake = _RecordingFakeCwExit
-        fake.constructed = 0
-        fake.executed = 0
-        fake.fail_after = 99  # 单轮测试,恒成功
-
-        result, finds, find_clicks, bare_clicks, ctrl_clicks = (
-            _run_real_frame_check_screen(
-                test_context, monkeypatch, '货币战争-结算', 'ended',
-                exit_match_cls=fake,
-                use_real_cw_match=True,
-            )
-        )
-
-        # 分支路由:委托成功 → round_wait 等下一轮(大厅分支接管)。
-        assert not result.is_success, (
-            f'结算屏真帧应经委托分支 round_wait,status={result.status}'
-        )
-        # 委托发生:真判定命中后假类被构造并 execute 恰一次。
-        assert fake.constructed == 1 and fake.executed == 1, (
-            f'真判定应命中并委托一次:构造 {fake.constructed}/执行 {fake.executed}'
-        )
-        # 兜底零触达:无裸点击、无 controller 直点(兜底/大厅关闭都是直点形态)。
-        assert bare_clicks == [], f'不应有兜底裸点击:{bare_clicks}'
-        assert ctrl_clicks == [], f'不应有兜底/大厅关闭直点:{ctrl_clicks}'
-        # 顺序判据:大厅分支未抢在前(结算屏无创业指南锚)。
-        assert ('货币战争-大厅', '标识-创业指南') not in finds, f'识别命中:{finds}'

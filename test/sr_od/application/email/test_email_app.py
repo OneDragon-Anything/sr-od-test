@@ -22,6 +22,7 @@ fixture(screens/):
 
 import pytest
 from test.conftest import SrTestContext
+from test.harness.fixture_controller import fast_sleep
 
 from sr_od.application.email.email_app import EmailApp
 
@@ -41,7 +42,9 @@ class TestEmailApp:
         if not test_context.has_screen('菜单', '菜单-邮件红点'):
             pytest.skip('存档截图缺失:screens/菜单/菜单-邮件红点.webp')
         op = self._make_op(test_context, '菜单', '菜单-邮件红点')
-        result = op._click_email()
+        # 节点直调也会走 round_success(wait=1)/success_wait 的真实轮间等待,包 fast_sleep 免空等
+        with fast_sleep():
+            result = op._click_email()
         assert result.is_success, '应识别到邮件图标(EMAILS template)'
         assert result.status == EmailApp.STATUS_WITH_ALERT, (
             f'有红点应为 WITH_ALERT,实际 status={result.status}'
@@ -52,7 +55,8 @@ class TestEmailApp:
         if not test_context.has_screen('菜单', '菜单-无邮件红点'):
             pytest.skip('存档截图缺失:screens/菜单/菜单-无邮件红点.webp')
         op = self._make_op(test_context, '菜单', '菜单-无邮件红点')
-        result = op._click_email()
+        with fast_sleep():
+            result = op._click_email()
         assert result.status == EmailApp.STATUS_NO_ALERT, (
             f'无红点应为 NO_ALERT,实际 status={result.status}'
         )
@@ -62,7 +66,8 @@ class TestEmailApp:
         if not test_context.has_screen('邮件', '邮件列表-有可领'):
             pytest.skip('存档截图缺失:screens/邮件/邮件列表-有可领.webp')
         op = self._make_op(test_context, '邮件', '邮件列表-有可领')
-        result = op._claim()
+        with fast_sleep():
+            result = op._claim()
         assert result.is_success, '应识别并点击「全部领取」'
 
     def test_claim_without_rewards(self, test_context: SrTestContext) -> None:
@@ -70,5 +75,6 @@ class TestEmailApp:
         if not test_context.has_screen('邮件', '邮件列表'):
             pytest.skip('存档截图缺失:screens/邮件/邮件列表.webp')
         op = self._make_op(test_context, '邮件', '邮件列表')
-        result = op._claim()
+        with fast_sleep():
+            result = op._claim()
         assert result.is_success, '无可领(灰色)也应识别「全部领取」'

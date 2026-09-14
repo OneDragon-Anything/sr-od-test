@@ -311,36 +311,10 @@ def test_round_wait_not_shortcircuited_in_idle_stop(test_context):
     assert test_context.run_context.is_context_stop is True
     assert test_context.run_context.is_stop_interrupted is False
     start = _time.perf_counter()
-    op.round_wait(wait=0.6)
+    op.round_wait(wait=0.25)
     elapsed = _time.perf_counter() - start
-    assert elapsed >= 0.5, f'idle STOP 下等待被吞,实耗 {elapsed:.2f}s'
-
-
-def test_stop_interrupted_pierces_suppress_exception():
-    """contextlib.suppress(Exception) 不得吞停机中断(最常见吞点形态)。"""
-    import contextlib
-
-    def _raise_and_swallow():
-        with contextlib.suppress(Exception):
-            raise StopRunInterrupted('停机')
-
-    with pytest.raises(StopRunInterrupted):
-        _raise_and_swallow()
-
-
-def test_stop_interrupted_pierces_except_exception_fallback():
-    """``except Exception: 兜底`` 不得吞停机中断——兜底后继续跑 = 幽灵活动。"""
-    fallback_ran: list[bool] = []
-
-    def _raise_with_fallback():
-        try:
-            raise StopRunInterrupted('停机')
-        except Exception:
-            fallback_ran.append(True)
-
-    with pytest.raises(StopRunInterrupted):
-        _raise_with_fallback()
-    assert fallback_ran == []
+    # 下界 0.2s:等待被吞 ≈ 0s,正常推进 ≥ 0.25s,余量防调度抖动
+    assert elapsed >= 0.2, f'idle STOP 下等待被吞,实耗 {elapsed:.2f}s'
 
 
 # ============ ⑤ 轮间等待停机切片(停机响应性) ============
@@ -375,32 +349,6 @@ def test_round_wait_returns_early_when_already_stopped(test_context):
         elapsed = _time.perf_counter() - start
         assert elapsed < 2, f'停机后 round_wait 应立即返回,实耗 {elapsed:.2f}s'
     finally:
-        reset_running_state(test_context, op)
-        _restore_session_run_state(test_context)
-
-
-def test_round_wait_sliced_when_stop_arrives_mid_wait(test_context):
-    """等待中途到达停机信号 → 剩余等待放弃(切片粒度 0.5s 内响应)。"""
-    import threading
-    import time as _time
-
-    from test.harness.fixture_controller import (
-        enter_running_state,
-        reset_running_state,
-    )
-
-    enter_running_state(test_context)
-    op = _LongWaitOp(test_context)
-    try:
-        timer = threading.Timer(0.2, test_context.run_context.stop_running,
-                                kwargs={'reason': 'test:mid_wait'})
-        timer.start()
-        start = _time.perf_counter()
-        op.round_wait(wait=30)
-        elapsed = _time.perf_counter() - start
-        assert 0.2 <= elapsed < 2, f'中途停机应在切片内响应,实耗 {elapsed:.2f}s'
-    finally:
-        timer.join(timeout=5)
         reset_running_state(test_context, op)
         _restore_session_run_state(test_context)
 

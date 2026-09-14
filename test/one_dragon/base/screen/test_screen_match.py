@@ -8,7 +8,6 @@ from one_dragon.base.screen.screen_info import ScreenInfo
 from one_dragon.base.screen.screen_match import (
     AreaMatchDetail,
     AreaType,
-    ScreenMatch,
     UnmatchedArea,
     UnmatchedReason,
     find_area_with_detail,

@@ -17,6 +17,7 @@
 
 import pytest
 from test.conftest import SrTestContext
+from test.harness.fixture_controller import fast_sleep
 
 from one_dragon.base.operation.operation import Operation
 from sr_od.challenge_mission.use_trailblaze_power import (
@@ -140,6 +141,8 @@ class TestWaitBattleResultTimeout:
             op, 'round_by_find_and_click_area',
             lambda screen, sn, area_name, **kw: pytest.fail('未结算不应点击'))
 
-        result = op._wait_battle_result_timeout()
+        # 直调节点函数同样会走 round_wait(wait=5) 的真实轮间等待,包 fast_sleep 免空等
+        with fast_sleep():
+            result = op._wait_battle_result_timeout()
 
         assert result.result.name == 'WAIT', f'应继续等待,实际 {result.result}'

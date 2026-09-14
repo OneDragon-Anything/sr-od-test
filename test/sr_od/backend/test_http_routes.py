@@ -23,9 +23,6 @@ from sr_od.backend.http import routes as routes_mod
 from sr_od.backend.http.routes import (
     handle_game_analyze,
     handle_game_capture,
-    handle_game_close,
-    handle_game_enter,
-    handle_game_window,
 )
 from sr_od.backend.schemas import AnalyzeScreenResult, RunStatusResult, WindowStatus
 
@@ -56,30 +53,7 @@ def _mock_backend(start_ok: bool = True) -> MagicMock:
     return b
 
 
-# ===== 直接 await 处理器（async 风格）=====
-
-@pytest.mark.asyncio
-async def test_handle_game_window_ok() -> None:
-    """handle_game_window 在就绪时应以 200 返回窗口状态 JSON。"""
-    backend = MagicMock()
-    backend.check_window.return_value = WindowStatus(
-        win_title="星穹铁道", is_win_valid=True, is_win_active=False, is_win_scale=True, x=1, y=2, width=3, height=4
-    )
-    resp = await handle_game_window(backend)
-    assert resp.status_code == 200
-    data = json.loads(resp.body.decode("utf-8"))
-    assert data["win_title"] == "星穹铁道"
-    assert data["x"] == 1
-
-
-@pytest.mark.asyncio
-async def test_handle_game_window_error() -> None:
-    """handle_game_window 在 backend 未就绪时应返回 503。"""
-    backend = MagicMock()
-    backend.check_window.side_effect = BackendNotReadyError("未就绪")
-    resp = await handle_game_window(backend)
-    assert resp.status_code == 503
-
+# ===== 直接 await 处理器（async 风格;仅保留路由层无对应端点覆盖的用例）=====
 
 @pytest.mark.asyncio
 async def test_handle_game_capture_returns_png_bytes() -> None:
@@ -92,17 +66,6 @@ async def test_handle_game_capture_returns_png_bytes() -> None:
     assert resp.status_code == 200
     assert resp.media_type == "image/png"
     assert resp.body[:4] == b"\x89PNG"  # PNG magic
-
-
-@pytest.mark.asyncio
-async def test_handle_game_analyze_ok() -> None:
-    """handle_game_analyze 在成功时应以 200 返回分析结果 JSON。"""
-    backend = MagicMock()
-    backend.analyze.return_value = AnalyzeScreenResult(success=True, ocr_texts=[], error=None)
-    resp = await handle_game_analyze(backend)
-    assert resp.status_code == 200
-    data = json.loads(resp.body.decode("utf-8"))
-    assert data["success"] is True
 
 
 @pytest.mark.asyncio
@@ -156,35 +119,6 @@ async def test_handle_game_analyze_save_image_default_false() -> None:
     backend.analyze.assert_called_once_with(None, False)
 
 
-@pytest.mark.asyncio
-async def test_handle_game_enter_ok() -> None:
-    """handle_game_enter 应委托 backend.start_run，返回 started/result JSON。
-
-    block=true（默认）且 start_run 返回 (True, 已完成 Future) 时，
-    响应体应包含 result 文本（success → 「成功打开并进入星穹铁道游戏」）。
-    """
-    from dataclasses import dataclass as _dataclass
-
-    @_dataclass
-    class _OpResult:
-        success: bool
-        status: str = ""
-
-    fut: Future = Future()
-    fut.set_result(_OpResult(success=True))
-    backend = MagicMock()
-    backend.start_run.return_value = (True, fut)
-    backend.query_status.return_value = RunStatusResult(
-        state="running", source="http", app="OpenAndEnterGame",
-        started_at="2026-07-02T00:00:00", duration_seconds=1.0,
-    )
-    resp = await handle_game_enter(backend, _FakeRequest({}))
-    assert resp.status_code == 200
-    data = json.loads(resp.body.decode("utf-8"))
-    assert data["result"] == "成功打开并进入星穹铁道游戏"
-    backend.start_run.assert_called_once()
-
-
 def test_register_http_routes_adds_custom_routes() -> None:
     """register_http_routes 应在 FastMCP 上挂载 /game/* 路由。"""
     from mcp.server.fastmcp import FastMCP
@@ -197,26 +131,6 @@ def test_register_http_routes_adds_custom_routes() -> None:
     app = mcp.streamable_http_app()
     paths = {getattr(r, "path", None) for r in app.routes}
     assert any(p and "game" in p for p in paths)
-
-
-@pytest.mark.asyncio
-async def test_handle_game_close_ok() -> None:
-    """handle_game_close 在就绪时应以 200 返回 backend.close_game() 文本。"""
-    backend = MagicMock()
-    backend.close_game.return_value = "已发送关闭游戏信号,可用 check_game_window 验证"
-    resp = await handle_game_close(backend)
-    assert resp.status_code == 200
-    data = json.loads(resp.body.decode("utf-8"))
-    assert data["result"] == "已发送关闭游戏信号,可用 check_game_window 验证"
-
-
-@pytest.mark.asyncio
-async def test_handle_game_close_error() -> None:
-    """handle_game_close 在 backend 未就绪时应返回 503。"""
-    backend = MagicMock()
-    backend.close_game.side_effect = BackendNotReadyError("未就绪")
-    resp = await handle_game_close(backend)
-    assert resp.status_code == 503
 
 
 def test_route_dispatch_game_close_ok() -> None:

@@ -9,7 +9,6 @@ from unittest.mock import MagicMock
 
 from one_dragon.base.operation.application.application_run_context import (
     ApplicationRunContext,
-    RunFinishReason,
 )
 from one_dragon.base.operation.operation import Operation
 

@@ -16,6 +16,7 @@ fixture(screens/):
 
 import pytest
 from test.conftest import SrTestContext
+from test.harness.fixture_controller import fast_sleep
 
 from sr_od.application.relic_salvage.relic_salvage_app import RelicSalvageApp
 from sr_od.application.relic_salvage.relic_salvage_config import RelicLevelEnum
@@ -72,7 +73,9 @@ class TestRelicSalvageApp:
         test_context.mock_screen('背包-遗器分解', '分解')
         op = RelicSalvageApp(test_context)
         op.screenshot()
-        result = op.click_filter()
+        # 节点 success_wait=1 会真睡,包 fast_sleep 免空等(两处节点直调同此)
+        with fast_sleep():
+            result = op.click_filter()
         assert result.is_success, f'应命中 按钮-快速选择,实际 status={result.status}'
 
     def test_choose_level_finds_area(self, test_context: SrTestContext) -> None:
@@ -82,5 +85,6 @@ class TestRelicSalvageApp:
         test_context.mock_screen('背包-遗器分解-快速选择', '快速选择')
         op = RelicSalvageApp(test_context)
         op.screenshot()
-        result = op.choose_level()
+        with fast_sleep():
+            result = op.choose_level()
         assert result.is_success, f'应命中 4星及以下,实际 status={result.status}'

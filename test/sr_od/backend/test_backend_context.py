@@ -182,53 +182,9 @@ def test_analyze_exception_no_writeback(monkeypatch) -> None:
     backend.ctx.screen_loader.update_current_screen_name.assert_not_called()
 
 
-def test_start_run_delegates_to_run_slot() -> None:
-    """start_run 应委托 run_slot._start(op 路径)，返回 (ok, future) 元组。
-
-    覆盖旧的 enter_game 用例：不再有同步 enter_game 方法，运行由
-    run_slot 异步派发；此处直接 mock run_slot，验证透传与返回结构。
-    """
-    from concurrent.futures import Future
-
-    backend = _backend(ready=True)
-    fut: Future = Future()
-    fut.set_result(object())
-    backend.run_slot = MagicMock()
-    backend.run_slot._start.return_value = (True, fut)
-
-    def _factory(_ctx: object) -> object:
-        return object()
-
-    ok, future = backend.start_run("mcp", _factory)
-    assert ok is True
-    assert future is fut
-    backend.run_slot._start.assert_called_once_with(
-        "mcp", op_factory=_factory, display_name=None
-    )
-
-
-def test_query_status_delegates_to_run_slot() -> None:
-    """query_status 应委托 run_slot._query_status 返回 RunStatusResult。"""
-    from sr_od.backend.schemas import RunStatusResult
-
-    expected = RunStatusResult(state="idle", source=None, app=None,
-                               started_at=None, duration_seconds=None)
-    backend = _backend(ready=True)
-    backend.run_slot = MagicMock()
-    backend.run_slot._query_status.return_value = expected
-
-    assert backend.query_status() is expected
-    backend.run_slot._query_status.assert_called_once()
-
-
-def test_stop_delegates_to_run_slot() -> None:
-    """stop 应封装 run_slot._stop，无运行时返回 {stopped: False, error}。"""
-    backend = _backend(ready=True)
-    backend.run_slot = MagicMock()
-    backend.run_slot._stop.return_value = (False, None)
-
-    assert backend.stop() == {"stopped": False, "error": "当前无运行"}
-    backend.run_slot._stop.assert_called_once()
+# (2026-09-14 瘦身:原 start_run/query_status/stop 三条 mock 委托测试删除——
+#  与 test_run_slot.py 的 SrBackendContext 委托族逐条重复(纪律 7 跨文件择一);
+#  后者用真 run_slot 走全链,行为层覆盖转发事实。)
 
 
 def test_list_applications_no_refresh(monkeypatch) -> None:
@@ -261,6 +217,7 @@ def test_list_applications_no_refresh(monkeypatch) -> None:
 def test_analyze_save_image_persists_and_returns_path(monkeypatch) -> None:
     """analyze(save_image=True) 实时模式:存盘 + screenshot_path 回传路径。"""
     import numpy as np
+
     import sr_od.backend.backend_context as bc
 
     saved_args: list = []
@@ -308,6 +265,7 @@ def test_analyze_offline_ignores_save_image(monkeypatch, tmp_path) -> None:
     """analyze(screenshot=path) 离线模式:save_image 被忽略,screenshot_path=None。"""
     import cv2
     import numpy as np
+
     import sr_od.backend.backend_context as bc
 
     called: list = []
@@ -342,6 +300,7 @@ def test_analyze_save_image_then_ocr_fail_returns_path(monkeypatch) -> None:
     OCR 异常只可能来自画面匹配链路,同样兜底为 success=False)。
     """
     import numpy as np
+
     import sr_od.backend.backend_context as bc
 
     monkeypatch.setattr(bc, '_save_screenshot', lambda img: '/tmp/fake.png')
@@ -362,6 +321,7 @@ def test_analyze_save_image_then_ocr_fail_returns_path(monkeypatch) -> None:
 def test_analyze_include_ocr_default_off(monkeypatch) -> None:
     """include_ocr=False(默认)→ 散落 OCR 不回传(ocr_texts 恒空)。"""
     import numpy as np
+
     import sr_od.backend.backend_context as bc
 
     monkeypatch.setattr(bc, '_save_screenshot', lambda img: '/tmp/fake.png')

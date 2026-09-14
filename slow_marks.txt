@@ -1,16 +1,10 @@
 # 慢桶名单:实测整条用例(call+setup)>=2s 的 nodeid 后缀,conftest 按后缀匹配注入 slow marker
 # 维护:uv run pytest sr-od-test/ -q --durations=300 --durations-min=1.0 巡检回填(准入:>=2s;口径=标准桶)
-# 2026-09-13 CW 测试域整体删除后的重整:剔除全部 test_cw_* 死条目(CW 域已不存在);
-# 存活条目 = 全仓实测 durations 排序 >=2s(530 passed/186.8s 基线)。
+# 2026-09-14 瘦身批:直调节点补 fast_sleep/退避打桩后大批摘牌;真帧测试收敛为
+# 两处代表(战斗失败=OCR 文本动作区、CW 大厅=模板动作区+pc_alt 直点),其余
+# 分支路由转 mock 分发锁(画面识别层由 test_id_mark 集中锁定)。
 test_enter_game_flow.py::TestEnterGameFlow::test_enter_game_switch_account
 test_enter_game_flow.py::TestEnterGameFlow::test_enter_game_input_account_password
-test_use_trailblaze_power_timeout.py::TestWaitBattleResultTimeout::test_cleanup_keeps_waiting_mid_battle
+test_cal_pos_for_world_patrol.py::test_cal_pos
 test_back_to_normal_world_plus.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
 test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
-test_back_to_normal_world_plus.py::TestSimUniExitConfirmBranch::test_exit_confirm_clicks_leave
-test_back_to_normal_world_plus.py::TestVersionAnnouncementBranches::test_page2_closes
-test_back_to_normal_world_plus.py::TestCwSettlementDelegationRealFrame::test_settlement_frame_real_match_routes_to_cw_exit
-test_cal_pos_for_world_patrol.py::test_cal_pos
-test_back_to_normal_world_plus.py::TestCwInMatchDelegationBranch::test_prep_frame_real_routes_to_cw_exit
-test_back_to_normal_world_plus.py::TestVersionAnnouncementBranches::test_page1_flips_to_next
-test_relic_salvage_app.py::TestRelicSalvageApp::test_click_filter_finds_button

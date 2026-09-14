@@ -76,8 +76,12 @@ def test_get_event_opt_list(test_context, test_image_dir: Path) -> None:
 
 def test_choose_target_path(test_context, test_image_dir: Path) -> None:
     """命途选择画面:OCR 入口-命途区域 找到目标命途(巡猎)并点击。"""
+    from test.harness.fixture_controller import fast_sleep
+
     screen = cv2_utils.read_image(str(test_image_dir / 'sim_uni_choose_path.png'))
     op = SimUniChoosePath(test_context, path=SimUniPath.HUNT)
     op.last_screenshot = screen
-    result = op._choose_target_path()
+    # 节点 success/retry 路径都带 wait=1,直调也会真睡,包 fast_sleep 免空等
+    with fast_sleep():
+        result = op._choose_target_path()
     assert result.is_success, f'应识别到巡猎命途: {result.status}'

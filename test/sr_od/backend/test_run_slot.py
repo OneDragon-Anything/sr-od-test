@@ -92,30 +92,23 @@ def test_op_path_backfills_current_op_and_stops(slot, mock_ctx):
     assert slot.current_op is None                           # 运行结束后清除
 
 
-def test_run_success(slot):
-    _, fut = slot._start('mcp', op_factory=_make_op(OperationResult(success=True, status='成功打开并进入游戏')))
+@pytest.mark.parametrize('op_status, expect_success, expect_state, expect_failed_node', [
+    ('成功打开并进入游戏', True, RunState.SUCCESS, None),
+    ('打开游戏失败', False, RunState.FAILED, '进入游戏'),
+    ('已停止[mcp:stop_run]', False, RunState.STOPPED, None),
+], ids=['success', 'failed', 'stopped'])
+def test_run_terminal_states(slot, op_status, expect_success, expect_state, expect_failed_node):
+    """op 结果 → 终态映射:FAILED 记失败节点(清 current_op 前本地捕获),
+    SUCCESS/STOPPED 不记;停止判据 = 「已停止[来源]」前缀。"""
+    _, fut = slot._start('mcp', op_factory=_make_op(
+        OperationResult(success=expect_success, status=op_status)))
     fut.result(timeout=5)
-    assert slot.terminal_state == RunState.SUCCESS
-    assert slot.last_status == '成功打开并进入游戏'
-    assert slot.app == 'OpenAndEnterGame'                     # op_name='' → fallback 类名
-    assert slot.failed_node is None                           # SUCCESS 不记失败节点
-    assert slot.finished_at is not None
-
-
-def test_run_failed(slot):
-    _, fut = slot._start('mcp', op_factory=_make_op(OperationResult(success=False, status='打开游戏失败')))
-    fut.result(timeout=5)
-    assert slot.terminal_state == RunState.FAILED
-    assert slot.failed_node == '进入游戏'                      # 清 current_op 前本地捕获
-    assert slot.last_status == '打开游戏失败'
-
-
-def test_run_stopped(slot):
-    """停止终态判据:「已停止[来源]」前缀(stop_source 贯通后替代旧文案「人工结束」)。"""
-    _, fut = slot._start('mcp', op_factory=_make_op(OperationResult(success=False, status='已停止[mcp:stop_run]')))
-    fut.result(timeout=5)
-    assert slot.terminal_state == RunState.STOPPED
-    assert slot.failed_node is None                           # STOPPED 不记失败节点
+    assert slot.terminal_state == expect_state
+    assert slot.failed_node == expect_failed_node
+    assert slot.last_status == op_status
+    if expect_state is RunState.SUCCESS:
+        assert slot.app == 'OpenAndEnterGame'                 # op_name='' → fallback 类名
+        assert slot.finished_at is not None
 
 
 def test_run_init_failed(slot, mock_ctx):

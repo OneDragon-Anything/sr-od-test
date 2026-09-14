@@ -273,9 +273,9 @@ class TestEnterGameFlow:
             if not test_context.has_screen(screen_name, state):
                 pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
 
-        # mock 账号密码(input_account_password 检查非空)。
-        monkeypatch.setattr(test_context.game_account_config, 'account', '18928573369')
-        monkeypatch.setattr(test_context.game_account_config, 'password', 'moyijie920.')
+        # mock 账号密码(input_account_password 检查非空;测试不校验内容,禁留真实凭据)。
+        monkeypatch.setattr(test_context.game_account_config, 'account', '13800000001')
+        monkeypatch.setattr(test_context.game_account_config, 'password', 'test_password_switch')
 
         fixture_controller.set_phases(_build_phases_switch_account())
 

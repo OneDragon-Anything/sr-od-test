@@ -87,9 +87,9 @@ else:
     _null_handler._one_dragon_logger_owner = framework_log.name  # noqa: SLF001
     framework_log.addHandler(_null_handler)
     framework_log.propagate = False
-# 降噪(模块级,对**所有**测试生效——cw sim 等纯逻辑测试不依赖 test_context
-# fixture,放 fixture 里单独跑它们时拦不住):sim 逐决策 INFO 一轮全量写
-# 100MB+ test.log(2026-08-25 实测:line_strategy/cw_economy 占 75%+)。
+# 降噪(模块级,对**所有**测试生效——纯逻辑测试不依赖 test_context
+# fixture,放 fixture 里单独跑它们时拦不住):逐决策 INFO 一轮全量写
+# 100MB+ test.log(实测:高频决策日志占 75%+)。
 # 排查具体测试时临时设 SR_TEST_LOG_FILE=1 并把本行改回 logging.INFO 重跑
 # (日志仍走 .log/test.log,恢复 INFO 量级)。
 framework_log.setLevel(logging.WARNING)
@@ -482,9 +482,9 @@ def test_image_dir(request) -> Path:
 # --------------------------------------------------------------------------- #
 # 背景:``test_context`` 是 session 级共享,测试若裸赋值替换其属性(如
 # ``ctx.run_context = _FakeRunCtx``)且不还原,污染会泄漏到**后续别的测试
-# 文件**才炸(单跑必过/全量必挂的假 flaky;实锤:test_cw_back_layout 裸赋值
-# run_context → test_cw_enter_flow 的 op 初始化读 run_context.event_bus
-# AttributeError,曾被误诊为并发干扰)。
+# 文件**才炸(单跑必过/全量必挂的假 flaky;实锤形态:A 文件裸赋值
+# run_context → B 文件的 op 初始化读 run_context 属性 AttributeError,
+# 曾被误诊为并发干扰)。
 #
 # 守卫语义:记录守卫属性的「对象身份」,测试后若被换成别的对象 → 还原 + 警告
 # (还原让后续测试不被拖垮;警告让污染点当场可见,而非几周后遥遥挂别处)。
@@ -664,95 +664,95 @@ def _isolate_window_run_mutex(
 
 
 # --------------------------------------------------------------------------- #
-# 安灯停线通道隔离(README 测试纪律 2 的机检层:零真实副作用)
+# 慢桶标记与收集期守卫(原仓根 conftest,并本文件:全部测试都在 test/ 下,
+# 钩子覆盖面不变)
 # --------------------------------------------------------------------------- #
-# 背景:L0 安灯 handler 是 ``telemetry.state._L0_ANDON_HANDLER`` 模块级单例,
-# 生产武装点 = CurrencyWarApp.__init__ 显式 ``set_l0_andon_handler``——同进程
-# 先跑的测试只要构造过 App,真 handler 就泄漏到后续所有测试:任何测试触发
-# L0 判级(决策关键面 ∧ gap_large ∧ 复现计数 ≥2)都会经真 handler 把停机
-# flag 写进真实 ``.debug/temp/currency_war/``,被值班误判成实机停线现场。
-# 判例(2026-09-03):test_cw_prep_director 构造 App 泄漏真 handler →
-# test_cw_shop_refresh 的台账分级测试(run_id='rt',牌名 'A'-'E' 测试桩字面量)
-# 升 L0 时真写 l0_andon_hook.flag,同进程另一测试真写 launch_dead_hook.flag
-# ——两条「实机停线」均无对应台账行/决策流,纯测试侧假停线。
-# 隔离:autouse 把 handler 钉回缺省 None(缺省关语义与生产一致,见
-# test_cw_infra_locks 锁1);需要真通道语义的测试用
-# ``monkeypatch.setattr(..., '_L0_ANDON_HANDLER', ...)`` 自行显式开启,
-# 其 setattr 晚于本 fixture 执行、正常覆盖。
+
+MARKS_FILE = Path(__file__).parent.parent / "slow_marks.txt"
 
 
-@pytest.fixture(autouse=True)
-def _isolate_l0_andon_handler(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """每条测试前把安灯停线 handler 钉回缺省 None(见上方注释)。"""
-    from sr_od.application.currency_war.telemetry import state as cw_telemetry_state
+def pytest_configure(config: pytest.Config) -> None:
+    """注册 slow 标记(慢桶隔离;标记本体由 pytest_collection_modifyitems 注入)。
 
-    monkeypatch.setattr(cw_telemetry_state, '_L0_ANDON_HANDLER', None)
-
-
-# --------------------------------------------------------------------------- #
-# 停机 flag 族 / exec_fail 族通道隔离(测试纪律 4 机检层:桩化整条副作用链)
-# --------------------------------------------------------------------------- #
-# 背景(进度账本 2026-08-31 迭代 :64 行余项):telemetry.state 的模块级单例簇
-# 是安灯/缺陷台账/暂存槽的唯一拥有者,缺省 enabled=True 且写**真实**
-# .debug/currency_war/telemetry/live/(2026-09-07 布局裁定前的旧根
-# .debug/temp/currency_war/replay 已退役)。测试只桩 run_id 不桩 _RECORDER 时
-# (实证:test_cw_telemetry_collect 的 run_id='w323-run' 桩),台账行照落真实
-# defect_ledger.jsonl——单日累积 2290 行测试残渣混进实机台账,离线按 run_id
-# 聚合时把测试行当真实局读。同族通道一并钉桩:
-# - _RECORDER:重定向到 tmp(保留 enabled=True 缺省语义,只换落盘域);
-# - _CURRENT_RUN_ID:钉回空串(record_defect 等便捷入口空 run_id 门控 no-op;
-#   防某测试泄漏 run_id 后,后续测试的旁路写入带错局归属);
-# - _L0_ANDON_FIRED_RUNS(局级闩锁)/ _defect_seen+_defect_seen_run(复现
-#   计数器):进程内状态,残留会让后续测试的 L0 判级/复现升级场景静默变形;
-# - (简报缓冲与三个暂存槽 _PENDING_BRIEFING_ROWS/_LAST_SUPPLY_PICK/
-#   _PENDING_UNIT_GOLD_CLOSE/_PENDING_UNIT_EXEC 已随删除波 1 的暂存槽退役
-#   删除,复位面随之移除。)
-# - flag 路径常量(defects._L0_ANDON_FLAG_RELPATH / run_state
-#   ._EXEC_FAIL_FLAG_RELPATH):两常量经 get_project_root() / relpath 求路径,
-#   pathlib 与绝对路径相接取右侧——钉成 tmp 绝对路径即把安灯/执行失败停机
-#   flag 的真实落盘域整体移出仓根 .debug/(测试触发钩子也不落真 flag)。
-# 需要真通道语义的测试照旧 monkeypatch 覆盖(setattr 晚于本 fixture 生效)。
-# 判别出处:README 测试纪律 1/2/4(模块级全局沿调用链全桩,非只桩被调物)。
+    注册是为了消 PytestUnknownMarkWarning(每次运行刷屏)并允许 --strict-markers。
+    """
+    config.addinivalue_line(
+        "markers",
+        "slow: 慢桶(单条实测 ≥2s,名单 slow_marks.txt)——快速集 -m \"not slow\" 跳过,全量不过滤",
+    )
 
 
-@pytest.fixture(autouse=True)
-def _isolate_cw_stop_flag_channels(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """每条测试前把 CW 停机 flag 族与 exec_fail 族的生产模块级全局钉桩(见上注释)。"""
-    from sr_od.application.currency_war import run_state
-    from sr_od.application.currency_war.telemetry import defects as cw_defects
-    from sr_od.application.currency_war.telemetry import recorder as cw_recorder
-    from sr_od.application.currency_war.telemetry import state as cw_state
+def _load_marks() -> list[str]:
+    if not MARKS_FILE.exists():
+        return []
+    return [
+        line.strip()
+        for line in MARKS_FILE.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
 
-    monkeypatch.setattr(
-        cw_state, '_RECORDER',
-        cw_recorder.TelemetryRecorder(enabled=True,
-                                       replay_dir=tmp_path / 'replay'))
-    monkeypatch.setattr(cw_state, '_CURRENT_RUN_ID', '')
-    # ADR-0588:run 铸造 token 与 _CURRENT_RUN_ID 同簇——mint 路径会模块级
-    # 赋值,不钉桩会跨测试残留(下一测试换容器判定被上局容器污染)。
-    monkeypatch.setattr(cw_state, '_RUN_MATCH', None)
-    # _RUN_CLOSED 是同簇第三件(record_run_summary 局终置位/start_run 铸造
-    # 复位,均为模块级裸写;ensure 门与 recorder 简报缓冲分流都消费该位):
-    # 残留 True 会把后续测试的 open run 误判「上局已收口」走重铸假分支
-    # (出处:.debug/temp/currency_war/attacks/three_review_20260908/
-    # 三审报告-第二波.md F1,易失产物待 ADR 回填;正规复位入口 =
-    # cw_state.reset_run_state,本钉桩是会话级兜底,两道防线不同层)。
-    monkeypatch.setattr(cw_state, '_RUN_CLOSED', False)
-    # _CURRENT_DIFFICULTY 是同簇第四件(start_run 与 _CURRENT_RUN_ID 同语句
-    # 铸造):残留会污染依赖该簇的后续测试(出处:
-    # .debug/temp/currency_war/attacks/three_review_20260908/
-    # 三审报告-第三波.md F3,易失产物待 ADR 回填;正规复位入口 =
-    # cw_state.reset_run_state,本钉桩是会话级兜底,两道防线不同层,
-    # 与 _RUN_CLOSED 同款分层)。
-    monkeypatch.setattr(cw_state, '_CURRENT_DIFFICULTY', '')
-    monkeypatch.setattr(cw_state, '_L0_ANDON_FIRED_RUNS', set())
-    monkeypatch.setattr(cw_state, '_defect_seen', {})
-    monkeypatch.setattr(cw_state, '_defect_seen_run', '')
-    monkeypatch.setattr(cw_defects, '_L0_ANDON_FLAG_RELPATH',
-                        str(tmp_path / 'l0_andon_hook.flag'))
-    monkeypatch.setattr(run_state, '_EXEC_FAIL_FLAG_RELPATH',
-                        tmp_path / 'cw_exec_fail_hook.flag')
+
+def pytest_collection_finish(session):
+    """收集期守卫:①全局日志禁言泄漏 + ②OCR 模型在位预检。
+
+    守卫①:``logging.disable`` 是进程全局态,而 pytest 在收集期就 import 全部
+    测试模块——任何模块级调用会对**整个测试会话**生效,静默饿死其他测试依赖
+    日志落盘的断言。禁日志必须收口为 autouse fixture;检测到泄漏即整轮报错
+    并复位,让新违例当场红,而不是遥遥挂在无关测试。
+    """
+    disable_level = logging.root.manager.disable
+    if disable_level >= logging.WARNING:
+        logging.disable(logging.NOTSET)
+        raise pytest.UsageError(
+            "收集期检测到模块级 logging.disable 泄漏(全局禁言级别 "
+            f"{disable_level} >= WARNING)。禁止在测试模块顶层调用 "
+            "logging.disable——请改为模块内 autouse fixture 内收口,"
+            "否则会静默破坏其他测试的日志断言。"
+        )
+    _check_ocr_models_ready()
+
+
+def _check_ocr_models_ready() -> None:
+    """收集期预检 OCR 模型文件在位,缺失即整轮报错带恢复指引。
+
+    为什么在收集期拦:模型目录被 gitignore 覆盖不入 git,清理工作树
+    (git clean -x 类)会连带删掉模型;而测试进程有外连阻断不会自动补下载,
+    OCR init 静默失败后所有 OCR 依赖测试集体炸深处 AttributeError——失败集
+    完全淹没真实失败。模型在位时本检查零成本。
+    """
+    from one_dragon.base.matcher.ocr.onnx_ocr_matcher import (
+        DEFAULT_OCR_MODEL_NAME,
+        get_ocr_model_dir,
+    )
+
+    model_dir = Path(get_ocr_model_dir(DEFAULT_OCR_MODEL_NAME))
+    missing = [name for name in ('det.onnx', 'rec.onnx', 'cls.onnx')
+               if not (model_dir / name).exists()]
+    if missing:
+        raise pytest.UsageError(
+            f'OCR 模型文件缺失: {model_dir} 下缺 {missing}。'
+            '继续跑会把全部 OCR 依赖测试变成 AttributeError 假红。'
+            '恢复(任选其一):①检查网络/代理后调用任一 OCR 初始化链自动补下载'
+            '(框架 github/gitee 双源);②启动一条龙 GUI 的 OCR 功能触发下载。'
+        )
+
+
+def pytest_collection_modifyitems(config, items):
+    """按 slow_marks.txt 打 slow 标记;并自带 not slow/slow 选摘。"""
+    marks = _load_marks()
+    if not marks:
+        return
+    slow, kept = [], []
+    for item in items:
+        # endswith 而非 in:名单条目 = nodeid 后缀,子串包含会把「长名含短名」
+        # 的兄弟用例误标 slow(名字互为前缀的用例分层会被挡)。
+        if any(item.nodeid.endswith(mark) for mark in marks):
+            item.add_marker(pytest.mark.slow)
+            slow.append(item)
+        else:
+            kept.append(item)
+    markexpr = (getattr(config.option, "markexpr", "") or "").strip()
+    if "not slow" in markexpr:
+        items[:] = kept
+    elif markexpr == "slow":
+        items[:] = slow

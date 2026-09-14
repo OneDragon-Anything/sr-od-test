@@ -124,7 +124,7 @@ def test_same_path_rollovers_serialized_by_path_lock(tmp_path, monkeypatch) -> N
         thread_a.start()
         assert started.wait(5.0), 'A 的换名未开始'
         thread_b.start()
-        time.sleep(0.3)
+        time.sleep(0.1)  # 负向断言观察窗:远大于线程调度延迟,足够检出 B 未被挡
         assert not b_done.is_set(), 'B 的轮转必须被路径锁挡在 A 之后'
         release.set()
         thread_a.join(5.0)
