@@ -165,9 +165,10 @@ class TestArchiveP1R8Frame:
         ``must_spend_r1_account_fail`` 开火(该帧 r_remaining=14 含
         后续位面,末轮豁免不辖);③域内义务来源披露照写
         v3_release_reason='must_spend'(披露面独立于刷新发射,写点在
-        R1 之前;同帧围栏键加密面由 test_cw_must_spend_zone g20 派生帧
-        承载,不双锁)。末轮豁免支的发射形态由 TestHorizonClosedYield
-        承载,不双锁。"""
+        R1 之前;同帧围栏键加密面无独立覆盖锁——现役近邻
+        test_cw_no_target_three_arms::test_must_spend_zone_no_refresh_burn
+        辖 p2plus 无目标帧族,非本档案帧族,不构成对偶覆盖)。末轮豁免支
+        的发射形态由 TestHorizonClosedYield 承载,不双锁。"""
         st, sess = _p1r8_frame()
         acts = _decide(st, sess)
         cnt = state_of(sess).cw4_counters
