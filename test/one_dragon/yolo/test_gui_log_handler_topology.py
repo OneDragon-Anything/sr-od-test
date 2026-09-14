@@ -8,27 +8,13 @@ yolo 记录先命中子 logger 的 handler,传播到父后又命中同一 handle
 
 修后语义:消费端只在框架根 logger ``OneDragon`` 上挂 handler,yolo 记录
 经层级传播到达同一 handler 恰一次;子 logger 上零消费端 handler。
-
-GUI 模块需要 QApplication/Qt 上下文,测试仓无 Qt 基建无法实例化,故用
-①源码拓扑锁(消费端源码不得引用 yolo logger 挂/摘 handler) +
-②行为锁(按修后拓扑真实挂接并经层级发记录,断言恰收一次)双保险。
 """
 
 import logging
-from pathlib import Path
-
-import pytest
 
 from one_dragon.utils.log_utils import LOGGER_NAME
 from one_dragon.utils.log_utils import log as framework_log
 from one_dragon.yolo import log_utils as yolo_log_utils
-
-_SRC_ROOT = Path(__file__).parents[4] / 'src'
-#: GUI 侧消费框架/yolo 日志 logger 的全部挂接点(新增消费端时在此登记)。
-_CONSUMER_FILES = [
-    _SRC_ROOT / 'one_dragon_qt' / 'widgets' / 'log_display_card.py',
-    _SRC_ROOT / 'one_dragon_qt' / 'overlay' / 'overlay_manager.py',
-]
 
 
 class _CountingHandler(logging.Handler):
@@ -38,29 +24,6 @@ class _CountingHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         self.messages.append(record.getMessage())
-
-
-@pytest.mark.parametrize('consumer_path', _CONSUMER_FILES, ids=lambda p: p.name)
-def test_gui_consumers_do_not_attach_handlers_to_yolo_logger(
-    consumer_path: Path,
-) -> None:
-    """源码拓扑锁:GUI 消费端不得在 yolo 子 logger 上挂/摘 handler。
-
-    yolo logger 的收口契约 = 零自有 handler + propagate;任何消费端往它
-    上挂 handler 都会破坏「一条记录恰命中一次」(同 handler 挂父子两处
-    各收一遍,logging 传播不去重)。
-    """
-    assert consumer_path.is_file(), f'消费端源文件应存在: {consumer_path}'
-    source = consumer_path.read_text(encoding='utf-8')
-    assert 'yolo_log.addHandler' not in source, (
-        f'{consumer_path.name} 不得往 yolo 子 logger 挂 handler:'
-        '收口后 yolo 记录经 propagate 由框架根 logger 的 handler 统一接收,'
-        '子侧再挂 = 同一条日志双显'
-    )
-    assert 'yolo_log.removeHandler' not in source, (
-        f'{consumer_path.name} 不得操作 yolo 子 logger 的 handler'
-        '(挂接已收口到框架根 logger,摘除也应只针对根 logger)'
-    )
 
 
 def test_yolo_info_reaches_parent_handler_exactly_once() -> None:

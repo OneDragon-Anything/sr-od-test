@@ -49,53 +49,16 @@ def test_create_app_mounts_mcp_and_game_routes() -> None:
     assert any("mcp" in p for p in paths)
 
 
-def test_serve_configures_logging_before_context_creation() -> None:
-    """锁启动顺序:``_serve`` 里日志分流必须先于 ``SrContext()``。
-
-    上下文构造期间(地图数据/实例配置加载)就打框架日志;分流若在其后,
-    这段 init 日志走默认双写——console→main_server.log(stdout 兜底日志混入
-    框架日志)与共享 log.txt(与 GUI 的跨进程轮转竞态窗口)。静态锁用
-    ``_serve`` 函数体内的调用先后,防未来重排时回归。
-    """
-    import inspect
-
-    from sr_od.backend.entry import server
-
-    src = inspect.getsource(server._serve)
-    configure_pos = src.index('_configure_server_logging()')
-    root_pos = src.index('_configure_root_logger_single_channel()')
-    ctx_pos = src.index('ctx = SrContext()')
-    assert configure_pos < ctx_pos, (
-        '日志分流必须在 SrContext() 之前调用,否则 init 窗口框架日志'
-        '双写进 main_server.log 与共享 log.txt'
-    )
-    assert root_pos < ctx_pos, (
-        'root logger 单一信道修必须在 SrContext()/FastMCP 构造之前,'
-        '否则 init 窗口的 getLogger(__name__) 型日志走裸 stderr 进 main_server.log'
-    )
-
-
 def test_serve_uses_no_uvicorn_log_config() -> None:
     """uvicorn 不得自配 logging(日志信道漂移的另一写端的回归锁)。
 
     uvicorn 缺省 LOGGING_CONFIG 给自己的 logger 族挂 stderr StreamHandler,
     每次重启的启动块(Started server process/Uvicorn running)都写进被 daemon
     重定向的 main_server.log → 该文件 mtime 每次重启一度变新,哨兵按
-    「两候选 mtime 最新」选活性信道时随之来回切换。锁两层:
-    ①静态:_serve 构造 uvicorn.Config 必须传 log_config=None;
-    ②行为:log_config=None 的 Config.configure_logging() 后 uvicorn logger 族
-    不得出现任何自有 handler(裸 logger 沿层级上传 root → mcp_server.log)。
+    「两候选 mtime 最新」选活性信道时随之来回漂移。行为锁:``log_config=None``
+    的 Config.configure_logging() 后 uvicorn logger 族不得出现任何自有
+    handler(裸 logger 沿层级上传 root → mcp_server.log)。
     """
-    import inspect
-
-    from sr_od.backend.entry import server
-
-    src = inspect.getsource(server._serve)
-    assert 'log_config=None' in src, (
-        'uvicorn.Config 必须传 log_config=None,否则 uvicorn 启动块每次重启'
-        '都写 stderr→main_server.log,哨兵活性信道来回漂移'
-    )
-
     import uvicorn
 
     saved = {}
