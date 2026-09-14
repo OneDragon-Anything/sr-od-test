@@ -154,3 +154,31 @@ def test_bought_out_end_to_end_shape() -> None:
                                   produced_by='MandateV1Strategy',
                                   sig=_SIG)
     assert out.applied and bs.shop.value is None
+
+
+def test_real_bought_out_frame_judgment() -> None:
+    """真实买光帧 fixture 锁(实机三败现场帧):真实帧 + screen_info 槽
+    rect → 逐槽亮度判定必产 [empty×5](买光真值;read_shop_cards 判定表
+    的离线可测腿,rect 单一源直读 yml,不经 ctx)。"""
+    from pathlib import Path as _P
+    import cv2
+    import yaml
+
+    frame_path = _P(__file__).parent / 'fixtures' / 'shop_bought_out_frame.png'
+    screen = cv2.imdecode(
+        __import__('numpy').fromfile(str(frame_path), dtype='uint8'),
+        cv2.IMREAD_COLOR)
+    assert screen is not None, 'fixture 帧缺失'
+    yml = (_P(__import__('sr_od').__file__).parents[2] / 'assets'
+           / 'game_data' / 'screen_info'
+           / 'currency_war_battle_prep_shop_open.yml')
+    doc = yaml.safe_load(yml.read_text(encoding='utf-8'))
+    areas = doc.get('area_list') if isinstance(doc, dict) else doc
+    kinds = []
+    for i in range(1, 6):
+        a = next(x for x in areas
+                 if x.get('area_name') == f'商店牌-{i}')
+        x1, y1, x2, y2 = a['pc_rect']
+        crop = screen[y1:y2, x1:x2]
+        kinds.append('empty' if float(crop.mean()) < 50 else 'non-empty')
+    assert kinds == ['empty'] * 5, kinds
