@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_of,
     bench_view_of_slots,
 )
-from sr_od.application.currency_war.kernel.cw_prep_actions import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -63,7 +63,7 @@ def test_overflow_absorb_syncs_tracked_guard_seed_passes():
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)]))
 
-    apply_prep_action_logic(bs, SellBench(slot=1), produced_by='test',
+    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
     tracked = exec_state_of(session).tracked_bench_chars
@@ -80,7 +80,7 @@ def test_overflow_absorb_after_executor_removal_compact_shape():
     session = StrategySession()
     bs = _seed(session, [BenchChar(slot=2, char_id='刃', star=1)])  # 花火已被摘
 
-    apply_prep_action_logic(bs, SellBench(slot=1), produced_by='test',
+    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
     tracked = exec_state_of(session).tracked_bench_chars
@@ -97,7 +97,7 @@ def test_overflow_no_session_keeps_tracked_untouched():
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)]))
 
-    apply_prep_action_logic(bs, SellBench(slot=1), produced_by='test',
+    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG)
 
     after = exec_state_of(session).tracked_bench_chars
@@ -112,7 +112,7 @@ def test_overflow_missing_identity_skips_tracked_absorb():
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)]), ov_id='')
 
-    apply_prep_action_logic(bs, SellBench(slot=1), produced_by='test',
+    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
     after = exec_state_of(session).tracked_bench_chars

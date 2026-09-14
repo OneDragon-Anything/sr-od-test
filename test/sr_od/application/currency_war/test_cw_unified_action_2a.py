@@ -37,7 +37,10 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_slots_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
-    PREP_ACTION_TYPES,
+    select_sphere_clicks,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CW_ACTION_TYPES,
     ClickSpheres,
     DeployMove,
     LevelUp,
@@ -45,7 +48,6 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
     SellBench,
     SellDeployed,
     WearEquip,
-    select_sphere_clicks,
 )
 from sr_od.application.currency_war.operations.cw_loop import (
     EXHAUSTION_WINDOW_ACTIONS,
@@ -119,14 +121,13 @@ def test_vocab_actions_all_have_logic_state_projection():
     已删——除转场类(§5 显式空)与终结化 OpenBox(R7)与组合壳死类(2b 删)
     外,每个词表成员投影必产出观察帧;词表外类型 = AssertionError 响亮
     暴露。"""
-    from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    from sr_od.application.currency_war.kernel.cw_vocab import (
         FurnaceUse,
         LuckyTokenUse,
         PerfectProjectorUse,
         PrecisionWrenchUse,
         PrivilegeCardUse,
         StaffProjectorUse,
-        WearEquip,
         WrenchUse,
     )
     stub = CwScreenPrep.__new__(CwScreenPrep)   # 绕道构造(无框架状态)
@@ -140,10 +141,10 @@ def test_vocab_actions_all_have_logic_state_projection():
     cases: list = [
         ClickSpheres(points=((1, 2),)),
         OpenTome(),
-        SellBench(slot=3),
-        DeployMove(from_slot=3, to_row='front', to_slot=2),
-        SellDeployed(row='front', slot=1),
-        LevelUp(),
+        SellBench(bench_idx=2),
+        DeployMove(bench_idx=2, to_row='front', faction=''),
+        SellDeployed(deployed_idx=0),
+        LevelUp(cost=4),
         WearEquip(item_name='轮滑鞋', char_name='刃', row='front', slot=2),
         FurnaceUse(target_kind='equip', item_name='轮滑鞋'),
         FurnaceUse(target_kind='char', row='front', slot=1),
@@ -154,7 +155,7 @@ def test_vocab_actions_all_have_logic_state_projection():
         PerfectProjectorUse(row='front', slot=1),
         LuckyTokenUse(row='front', slot=1),
     ]
-    names = {c.__name__ for c in PREP_ACTION_TYPES}
+    names = {c.__name__ for c in CW_ACTION_TYPES}
     assert 'PickBoxCard' not in names   # R7:词表删除,武装箱选卡归画面 op
     for action in cases:
         out = CwScreenPrep._project_prep_obs(stub, action, obs)
@@ -199,33 +200,41 @@ def _make_executor(controller: _RecordingController,
 
 def test_levelup_executes_single_click_per_frame():
     """R6 定案④执行器半:一次 execute = 恰一次单击(零授权零循环;
-    升 N 击 = N 帧)。金腿 = 执行缝金差(单击价记入 _last_levelup_spent)。"""
+    升 N 击 = N 帧)。金腿批2b 翻转 = action.cost 逻辑态直写(唯一写点
+    apply_prep_action_logic LevelUp 分支),执行缝金差退役:执行点
+    gold_delta 恒 0(不进回执 extra 键、不经 _advance_gold)。"""
     controller = _RecordingController()
     ex = _make_executor(controller)
-    ex.execute(LevelUp())
+    ex.execute(LevelUp(cost=4))
     assert len(controller.clicks) == 1
-    assert ex._last_levelup_spent is not None \
-        and ex._last_levelup_spent > 0
-    ex.execute(LevelUp())
+    assert ex.last_gold_delta == 0   # 执行缝金差退役(防双记)
+    ex.execute(LevelUp(cost=4))
     assert len(controller.clicks) == 2   # 第二帧再击
 
 
-def test_levelup_logic_state_advances_xp_level_without_gold():
-    """R6 定案④逻辑态半(2a 中间态):xp/level 跨门槛推进(推进算子
-    单一源 = xp_apply_clicks,单击步长);金腿本批不写(执行缝金差承担,
-    批 2b 翻转切 action.cost 直写)。"""
+def test_levelup_logic_state_advances_xp_level_and_gold():
+    """R6 定案④逻辑态半(批2b 翻转):xp/level 跨门槛推进(推进算子
+    单一源 = xp_apply_clicks,单击步长)+ 金腿 action.cost 直写(唯一
+    写点,执行缝金差退役防双记)。gold 未观察 = 域级跳写(值留观察)。"""
     bs = board_state_of(None)
     bs.observe(bs.level, 3, evidence='t', sig=_SIG_OBS)
     bs.observe(bs.xp, (10, 12), evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs, LevelUp(), produced_by='T', sig=_SIG)
+    bs.observe(bs.gold, 100, evidence='t', sig=_SIG_OBS)
+    apply_prep_action_logic(bs, LevelUp(cost=4), produced_by='T', sig=_SIG)
     exp_level, exp_cur = xp_apply_clicks(3, 10, 1)
     assert bs.level.value == exp_level
     assert bs.xp.value[0] == exp_cur
-    assert bs.gold.value is None   # 金域零写(域集封闭申报)
+    assert bs.gold.value == 96   # 金腿直写:-action.cost
     # 缺读跳写:level/xp 未观察帧零写不炸
     bs2 = board_state_of(None)
-    apply_prep_action_logic(bs2, LevelUp(), produced_by='T', sig=_SIG)
+    apply_prep_action_logic(bs2, LevelUp(cost=4), produced_by='T', sig=_SIG)
     assert bs2.level.value is None and bs2.xp.value is None
+    # gold 未观察 = 域级跳写(xp/level 照推进)
+    bs3 = board_state_of(None)
+    bs3.observe(bs3.level, 3, evidence='t', sig=_SIG_OBS)
+    bs3.observe(bs3.xp, (10, 12), evidence='t', sig=_SIG_OBS)
+    apply_prep_action_logic(bs3, LevelUp(cost=4), produced_by='T', sig=_SIG)
+    assert bs3.gold.value is None
 
 
 # ===== 原子通路对照锁(判据 7)=====
@@ -264,21 +273,26 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     )
     bs.observe(bs.bench, bench_view_of_slots(slots), evidence='t', sig=_SIG_OBS)
     bs.observe(bs.board, {'欢愉': 1}, evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs, DeployMove(from_slot=3, to_row='front',
-                                           to_slot=2),
+    apply_prep_action_logic(bs, DeployMove(bench_idx=2, to_row='front',
+                                           faction=''),
                             produced_by='T', sig=_SIG)
     bench_after = bench_slots_of(bs)
     assert bench_after[2] is None
     dep = deployed_slots_of(bs)
-    assert dep[1] is not None and dep[1].char_id == '甲'
-    # 陈旧提案:目标槽已被占 → 零写(前排 1 槽已有单位,再往 1 槽部署被守卫拒)
+    # 落位 = 首空(deployed_place 单一源,与 simulate 同式):前排 1 号
+    assert dep[0] is not None and dep[0].char_id == '甲'
+    # 陈旧提案:两排全满 → deployed_place 无位 = 零写(源槽不摘)
     bs.observe(bs.bench, bench_view_of_slots(list(slots)), evidence='t', sig=_SIG_OBS)
-    bs.observe(bs.front_row, [Unit(char_id='乙', star=1, equips=[],
-                                   slot=1)], evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs, DeployMove(from_slot=3, to_row='front',
-                                           to_slot=1),
+    bs.observe(bs.front_row, [Unit(char_id=f'乙{i}', star=1, equips=[],
+                                   slot=i + 1) for i in range(4)],
+               evidence='t', sig=_SIG_OBS)
+    bs.observe(bs.back_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
+                                  slot=i + 1) for i in range(6)],
+               evidence='t', sig=_SIG_OBS)
+    apply_prep_action_logic(bs, DeployMove(bench_idx=2, to_row='front',
+                                           faction=''),
                             produced_by='T', sig=_SIG)
-    assert deployed_slots_of(bs)[0].char_id == '乙'   # 已占槽未被覆盖
+    assert bench_slots_of(bs)[2].char_id == '甲'   # 源槽未摘(整笔零写)
 
 
 def test_selldeployed_logic_state_clears_slot_and_recounts_board():
@@ -287,13 +301,13 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
     bs = board_state_of(None)
     bs.observe(bs.front_row, [Unit(char_id='甲', star=2, equips=[],
                                    slot=1)], evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs, SellDeployed(row='front', slot=1),
+    apply_prep_action_logic(bs, SellDeployed(deployed_idx=0),
                             produced_by='T', sig=_SIG)
     dep = deployed_slots_of(bs)
     assert dep[0] is None
     assert bs.gold.value is None   # gold 未观察 = 域级跳写
     # 槽空(陈旧提案)= 零写不炸
-    apply_prep_action_logic(bs, SellDeployed(row='front', slot=1),
+    apply_prep_action_logic(bs, SellDeployed(deployed_idx=0),
                             produced_by='T', sig=_SIG)
 
 

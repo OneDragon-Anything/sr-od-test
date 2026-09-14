@@ -21,7 +21,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     bench_view_of_slots,
     board_state_of,
 )
-from sr_od.application.currency_war.kernel.cw_prep_actions import (
+from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench,
     StartBattle,
 )
@@ -54,9 +54,14 @@ def _frame(**kw) -> MandateFrame:
 
 
 def _state():
-    """空容器 + 上阵 1 人(免 empty_board_sell_guard:场上无人禁卖守卫,
-    守卫读容器上阵域非 frame)。"""
+    """容器种子 + 上阵 1 人(免 empty_board_sell_guard:场上无人禁卖守卫,
+    守卫读容器上阵域非 frame)。bench 槽表照实观察(生产 heavy 帧恒产出;
+    批2b 换算收口后溢出发射位按容器槽位表解析下标,黑板视图与容器同帧
+    同源是解析前提)。"""
     bs = board_state_of(None)
+    bs.write_logic(bs.bench, bench_view_of_slots(
+        [BenchChar(slot=1, char_id='椒丘', star=1)]),
+        produced_by='test', sig=_SIG)
     bs.write_logic(bs.front_row, [Unit(slot=1, char_id='刃', star=1)],
                    produced_by='test', sig=_SIG)
     return bs
@@ -69,7 +74,7 @@ def test_overflow_gate_narrows_to_single_sell():
                       state=_state())
     assert len(out) == 1
     assert isinstance(out[0].action, SellBench)
-    assert out[0].action.slot == 1   # 唯一冗余位 = 椒丘槽
+    assert out[0].action.bench_idx == 0   # 唯一冗余位 = 椒丘槽(槽1 → 容器下标0)
     assert not any(isinstance(e.action, StartBattle) for e in out)
     assert state_of(session).cw4_counters.get('overflow_clear_sell') == 1
 
@@ -96,7 +101,7 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     bs.write_logic(bs.overflow_warning, True, produced_by='test', sig=_SIG)
     bs.write_logic(bs.overflow_card, '不死途', produced_by='test', sig=_SIG)
 
-    apply_prep_action_logic(bs, SellBench(slot=1), produced_by='test',
+    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG)
 
     slots = bench_slots_of(bs)
@@ -119,7 +124,7 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     bs.write_logic(bs.overflow_warning, True, produced_by='test', sig=_SIG)
     bs.write_logic(bs.overflow_card, '', produced_by='test', sig=_SIG)
 
-    apply_prep_action_logic(bs, SellBench(slot=1), produced_by='test',
+    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG)
 
     slots = bench_slots_of(bs)

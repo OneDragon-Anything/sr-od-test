@@ -25,6 +25,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -71,7 +73,7 @@ def test_prep_mirror_backfills_card_and_keeps_free_count():
         free_bench_slots=7)
 
     out = CwScreenPrep._project_prep_obs(
-        _stub(session), SellBench(slot=1), obs)
+        _stub(session), SellBench(bench_idx=0), obs)
 
     assert sorted((b.slot, b.char_id)
                   for b in out.bench_chars if b is not None) == [
@@ -96,7 +98,7 @@ def test_prep_mirror_needs_leg_landed_not_flag_alone():
         free_bench_slots=7)
 
     out = CwScreenPrep._project_prep_obs(
-        _stub(session), SellBench(slot=1), obs)
+        _stub(session), SellBench(bench_idx=0), obs)
 
     assert [(b.slot, b.char_id) for b in out.bench_chars] == [(2, '刃')]
     assert out.free_bench_slots == 8       # 腿未落地 → 常规腿 +1(镜像不误发)

@@ -22,8 +22,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
-    CompTransaction,
-    FillSpec,
     RefreshShop,
     SellBench,
     SellDeployed,
@@ -60,10 +58,7 @@ def _build_action(a: dict):
                              cost=c['cost'], star=c['star'],
                              cost_source=c.get('cost_source', 'roster'))
         return BuyCard(**a)
-    if t == 'CompTransaction':
-        a['fill'] = [FillSpec(**f) for f in (a.get('fill') or [])] \
-            if a.get('fill') else None
-        return CompTransaction(**a)
+
     return {'SellBench': SellBench, 'SellDeployed': SellDeployed,
             'SwapDeploy': SwapDeploy, 'RefreshShop': RefreshShop}[t](**a)
 
@@ -73,7 +68,7 @@ def _build_action(a: dict):
     'buy_fullbench_reject', 'sellbench_apply_equips',
     'sellbench_stale_reject', 'selldeployed_apply',
     'selldeployed_stale_reject', 'swapdeploy_apply',
-    'swapdeploy_idx_reject', 'comptx_apply', 'comptx_gold_short_reject',
+    'swapdeploy_idx_reject',
     'refresh_gold_leg',
 ])
 def test_cw_transfer_golden(case_name: str) -> None:
@@ -95,5 +90,4 @@ def test_cw_transfer_golden(case_name: str) -> None:
         f'applied {out.applied} != {case["sim_applied"]}')
     if case['sim_reason']:
         assert out.reason == case['sim_reason']
-    if case_name == 'comptx_apply':
-        assert (int(out.income or 0), int(out.fill_cost or 0)) == (1, 3)
+
