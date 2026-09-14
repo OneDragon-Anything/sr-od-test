@@ -182,3 +182,61 @@ def test_real_bought_out_frame_judgment() -> None:
         crop = screen[y1:y2, x1:x2]
         kinds.append('empty' if float(crop.mean()) < 50 else 'non-empty')
     assert kinds == ['empty'] * 5, kinds
+
+
+def test_real_bought_out_frames_both_judged() -> None:
+    """双实机买光帧 fixture 锁(两败现场帧):同一判定表对两帧均产
+    [empty×5](实机失败 1/2 的直接回归锁)。"""
+    from pathlib import Path as _P
+    import cv2
+    import yaml
+
+    yml = (_P(__import__('sr_od').__file__).parents[2] / 'assets'
+           / 'game_data' / 'screen_info'
+           / 'currency_war_battle_prep_shop_open.yml')
+    doc = yaml.safe_load(yml.read_text(encoding='utf-8'))
+    areas = doc.get('area_list') if isinstance(doc, dict) else doc
+    rects = {a['area_name']: a['pc_rect'] for a in areas
+             if str(a.get('area_name', '')).startswith('商店牌-')}
+    for fname in ('shop_bought_out_frame.png',
+                  'shop_bought_out_frame2.png'):
+        fp = _P(__file__).parent / 'fixtures' / fname
+        screen = cv2.imdecode(
+            __import__('numpy').fromfile(str(fp), dtype='uint8'),
+            cv2.IMREAD_COLOR)
+        assert screen is not None, fname
+        kinds = []
+        for i in range(1, 6):
+            x1, y1, x2, y2 = rects[f'商店牌-{i}']
+            crop = screen[y1:y2, x1:x2]
+            kinds.append('empty' if float(crop.mean()) < 50 else 'non-empty')
+        assert kinds == ['empty'] * 5, (fname, kinds)
+
+
+def test_anchor_binary_detectability() -> None:
+    """锚二值可检锁(实机三败现场帧):按钮-收起 rect 裁剪二值化后
+    白字像素在场(二值化锚门 find_area_in_screen_binary 的 OCR-able
+    前提;暗态渲染下原彩色 OCR 拒识的根治判据)。"""
+    from pathlib import Path as _P
+    import cv2
+    import yaml
+
+    yml = (_P(__import__('sr_od').__file__).parents[2] / 'assets'
+           / 'game_data' / 'screen_info'
+           / 'currency_war_battle_prep_shop_open.yml')
+    doc = yaml.safe_load(yml.read_text(encoding='utf-8'))
+    areas = doc.get('area_list') if isinstance(doc, dict) else doc
+    rect = next(a['pc_rect'] for a in areas
+                if a.get('area_name') == '按钮-收起')
+    for fname in ('shop_bought_out_frame.png',
+                  'shop_bought_out_frame2.png'):
+        fp = _P(__file__).parent / 'fixtures' / fname
+        screen = cv2.imdecode(
+            __import__('numpy').fromfile(str(fp), dtype='uint8'),
+            cv2.IMREAD_COLOR)
+        x1, y1, x2, y2 = rect
+        crop = screen[y1:y2, x1:x2]
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)[1]
+        white = float((binary > 0).mean())
+        assert white > 0.02, (fname, white)
