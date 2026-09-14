@@ -30,10 +30,14 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
 """
 from __future__ import annotations
 
-import re
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
+
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_box,
+    cw4_bs,
+)
 
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_intention import (
@@ -72,10 +76,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
-)
-from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_box,
-    cw4_bs,
 )
 
 _SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
@@ -147,22 +147,12 @@ def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
 #  统一迁移批删除,死指针收口重锚。重复构成删并理由(README 纪律 8)。)
 
 
-# ----------------------------------------------------- W629-R2 镜像雷锁
-
-
-def test_d3_grep_lock_no_interest_floor_attribute_reads():
-    """grep 锁(D3):``registry/reg.interest_floor`` 属性读点全仓 = 0。
-
-    豁免:registry.py 定义处(方法本体/override 字段/注释);调用形态
-    ``.interest_floor()`` 不匹配(带括号),裸属性读(无括号)即违规。
-    """
-    pat = re.compile(r'\b(?:registry|reg)\.interest_floor\b(?!\()')
-    offenders = {}
-    for path in _SRC.rglob('*.py'):
-        hits = len(pat.findall(path.read_text(encoding='utf-8')))
-        if hits:
-            offenders[path.name] = hits
-    assert set(offenders) <= {'registry.py'}, offenders
+# ----------------------------------------------------- D3 grep 锁(不恢复)
+# T-252 分诊:原 test_d3_grep_lock_no_interest_floor_attribute_reads
+# (rglob 扫 src 断言 reg.interest_floor 裸属性读点 = 0)不恢复——源码
+# 扫描形态(AGENTS §10.4.4 禁,判据「红的时候是哪个运行行为坏了」答不
+# 出);「interest_floor 只可方法调用不可裸属性读」的 API 契约防线归
+# review 与代码规范,不进测试网。
 
 
 # ----------------------------------------------------- P7 驱动点契约 + P6 注入
