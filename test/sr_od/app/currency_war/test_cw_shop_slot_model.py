@@ -101,3 +101,56 @@ def test_unknown_window_suppress_spend(unknown_at: int) -> None:
                                 config=SimpleNamespace())
     assert isinstance(action, CloseShop)
     assert not isinstance(action, (BuyCard, RefreshShop))
+
+
+def test_bought_out_end_to_end_shape() -> None:
+    """买光店端到端形状锁(fixture 喂入):帧真值→容器→转移买空→决策
+    降级→引擎离屏,四段走真实管线(打回失败 2 的回归锁:买光店单跑
+    正常 CloseShop 收工,容器面不再出现 payload=None 假离屏)。"""
+    from types import SimpleNamespace as NS
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        synthesize_from_game_state,
+    )
+
+    def _frame_card(name: str, x: int) -> NS:
+        return NS(name=name, faction='仙舟', cost=1, star=1,
+                  cost_source='roster', slot=x + 1, x=x,
+                  merge_preview=None)
+
+    # 帧真值:店开 3 张(x=0/1/2;买光后帧紧缩表 = 残余 0 张)
+    class _Frame:
+        """最小帧桩:未设域 __getattr__ 缺省 None(synthesize 可选域全跳过)。"""
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+        def __getattr__(self, name):
+            return None
+
+    frame = _Frame(shop=[_frame_card('银枝', 0), _frame_card('黑塔', 1),
+                         _frame_card('刃', 2)],
+                   refresh_probs=None)
+    bs = board_state_of(None)
+    # 段入口:synthesize 按槽映射(店开显式位)
+    synthesize_from_game_state(bs, frame, shop_open=True)
+    assert len(bs.shop.value.cards) == 5
+    assert [s.kind for s in bs.shop.value.cards] == [
+        'content', 'content', 'content', 'empty', 'empty']
+    # 转移买空:逐张买 → [empty×5]
+    for _ in range(3):
+        nxt = next(s.card for s in bs.shop.value.cards
+                   if s.kind == 'content')
+        out = apply_shop_action_logic(bs, BuyCard(card=nxt, reason='test'),
+                                      produced_by='MandateV1Strategy',
+                                      sig=_SIG)
+        assert out.applied
+    assert all(s.kind == 'empty' for s in bs.shop.value.cards)
+    assert bs.shop.value is not None          # 买光 ≠ 离屏
+    # 决策降级:买光牌面 → CloseShop
+    action = decide_shop_action(bs, NS(strategy_state=None),
+                                config=NS())
+    assert isinstance(action, CloseShop)
+    # 引擎 CloseShop 腿:leave_screen,payload None = 真离屏
+    out = apply_shop_action_logic(bs, CloseShop(),
+                                  produced_by='MandateV1Strategy',
+                                  sig=_SIG)
+    assert out.applied and bs.shop.value is None
