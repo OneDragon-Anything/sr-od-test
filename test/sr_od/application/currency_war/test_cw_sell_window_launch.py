@@ -360,7 +360,7 @@ class TestW1SameVisitBan:
     def test_entry_ev_funding_blocked(self):
         """消费位②(entry EV pass funding):press 活跃件不被 prep
         筹资卖出(方案 v3 §2.9 新格 A 三位同源;登记侧实装后差分闭死)。"""
-        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             SellBench as PrepSellBench,
         )
         sess = _sess()
@@ -400,8 +400,7 @@ class TestW1SameVisitBan:
 
 class TestEmitRegistration:
     """发射位登记写点锁(方案 v3 §3.1;ADR-0585 §2 逐臂落位)。"""
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_dead_gold_press_buy_registers_by_prio(self):
         """②(b) prio2(燃料类)→ press:买入即登记(登记轮 = 当前轮,
         载体断言);旧 cw4_dead_gold_bought_names 载体退役并入统一簿。"""
@@ -411,8 +410,7 @@ class TestEmitRegistration:
         act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dead_gold_press_buy'
         assert _registry(sess) == {_FUEL: ('press', 3)}
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_dead_gold_prio0_absorbed_by_m2_on_reward_frames(self):
         """②(b) prio0(obligation)结构性吸收锁(三审报告-第三波.md F4,
         易失产物待 ADR 回填;ADR-0585 §2 prio 三分映射):奖励帧 ∧
@@ -455,8 +453,7 @@ class TestEmitRegistration:
             'obligation 登记出现资格断言拒收 = F4 不对称缺口已被行为修复'
             '批收口,本锁与吸收锁前提表述需同步重推')
         assert _registry(sess)[_FUEL] == ('obligation', 3)
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_dominance_buy_registers_press(self):
         """dominance_buy → press 写点(P78 INV 逃逸格封死;gold>g* ∧
         停手态帧的压库买入同受窗口段辖,W1 同源)。"""
@@ -470,8 +467,7 @@ class TestEmitRegistration:
         act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
         assert _registry(sess) == {_FUEL: ('press', 3)}
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_m2_obligation_buy_registers_obligation(self):
         """义务类登记写点补全(T-141;ADR-0585 §6「写点随矩阵批落」
         提前落):M2 线成员买入落 (obligation, 当轮) 登记账——义务件
@@ -486,8 +482,7 @@ class TestEmitRegistration:
         assert _registry(sess) == {'目标件': ('obligation', 3)}
         assert sell_gate.active_window(sess, 3) == frozenset(), \
             '义务账误入窗口段 = 排除面扩权(行为面回归)'
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_line_switch_orphan_interest_sell_marked(self):
         """线账闭合孤儿清算证明打标正格(T-141 方案审乙′;ADR-0591;
         P78-2a):本轮义务买入 → 次帧 K 收窄(成员出基座)→ 凑息回拉
@@ -508,8 +503,7 @@ class TestEmitRegistration:
             f'凑息回拉未发射(夹具失准,重推场景): {act2}'
         assert act2.expect == '目标件'
         assert act2.reason == 'line_switch_collapse'
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_stale_obligation_buy_not_marked_next_round(self):
         """防洗白反格:上一轮义务登记跨轮剪枝——同形态下一轮卖出非同轮
         买卖(检查器本就不辖),证明不得打标(2026-09-08 归因遥测删除批:
@@ -532,8 +526,7 @@ class TestEmitRegistration:
         assert act2.reason != 'line_switch_collapse' \
             and act2.reason == '', \
             '跨轮陈旧证明误打标 = 豁免面自由扩边(防洗白边界破)'
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_emit_merge_detection_closes_and_skips_registration(self):
         """合成销检出(V2-05):本笔 1★ 买入补齐同名 1★ 三张 ⇒ 旧登记
         销账(close_on_merge)且不为本笔开账(1★ 即刻合成离场,press 账
@@ -561,8 +554,7 @@ class TestW5RegistrationAssertion:
     """W5 登记侧锁(shop_sell 报告 W5;N1 划界 + V2-06 硬闸合取):
     ②(b) prio1 帧店内 2★ 转线直出卡 ⇒ 买入照常发射(买面门槛归臂自身
     批),登记被断言拒(launch_cause_mismatch 计数红 + 名不入簿)。"""
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_two_star_transition_buy_emits_but_registration_rejected(self):
         sess = _sess()
         st = _state(12, [], node='reward')
@@ -575,8 +567,7 @@ class TestW5RegistrationAssertion:
         # 登记侧:硬闸腿红(名字腿必过)→ launch_cause_mismatch + 拒登记
         assert ct.get('launch_cause_mismatch') == 1
         assert _TRANS_HOLD not in _registry(sess)
-
-    @pytest.mark.skip(reason="T-252 恢复分诊缓交:本锁红因在 mandate_v1 策略发射域,该域正被在飞批改造(T-243 死库存拒因接线/批2b 词表归一),期望形态未定;按任务书挂报告缓交,到期条件 = 上述在飞任务 done 后按其交付重分诊(收口后本 skip 必须摘除,禁永久挂起)")
+    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_one_star_transition_registers_hold(self):
         """红证伴随(合取必要性):1★ 转线件硬闸腿过 ⇒ hold 登记落账
         ——缺硬闸合取时本格与 2★ 格同绿 = 锁恒绿形态(V2-06 红对补齐
@@ -661,7 +652,7 @@ class TestFundingHoldFallback:
     def test_entry_ev_fallback_liquidates_prep_carrier(self):
         """消费位②(entry EV pass):兜底经 prep 载体发射(行为面;计数
         分键已随 2026-09-08 用户归因遥测删除指令拆除)。"""
-        from sr_od.application.currency_war.kernel.cw_prep_actions import (
+        from sr_od.application.currency_war.kernel.cw_vocab import (
             SellBench as PrepSellBench,
         )
         sess = SimpleNamespace()
@@ -676,7 +667,7 @@ class TestFundingHoldFallback:
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
         sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]
-        assert [s.slot for s in sells] == [1]
+        assert [s.bench_idx for s in sells] == [0]
 
 
 # ===== P78-6:projection 视图 = interest 全资格面(含 T3 活跃集)=====
