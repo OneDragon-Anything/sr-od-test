@@ -124,9 +124,18 @@ def test_d12_flags_plane_last_overspend():
 
 
 def test_d12_silent_when_within_cap_or_not_last_round():
-    """恰达上限(18 击)与超击非末轮:零条目(对账型零误报)。"""
+    """恰达上限与超击非末轮两形态:零条目(对账型零误报)。
+
+    非末轮构造 = 三行账本,超发 25 击落在 r9(其后还有同位面 r10,
+    末轮判定移交 r10)——D12 只辖位面末行,非末轮超发不入辖。"""
     assert d12_plane_last_xp_overspend(
         _sim_rows(8, -(-XP_TO_NEXT_LEVEL[8] // 4))) == []
+    rows = _sim_rows(8, 25)
+    rows.append({'plane': 1, 'round_num': 10,
+                 'sim': {'node': 'battle',
+                         'spend': {'levelup': 0, 'buys': {}}},
+                 'state': {'level': 8}, 'actions': []})
+    assert d12_plane_last_xp_overspend(rows) == []
 
 
 def test_d12_entry_level_by_row_shape():
