@@ -272,7 +272,14 @@ def test_m4_seat_vacate_emits_sellbench_not_closeshop():
 
 
 def test_sellbench_m3_refresh_chain_reachable():
-    """腾席卖出真执行后,单动作循环续评恢复买入,M3/刷新双通道可达。
+    """腾席卖出真执行后,单动作循环续评恢复买入,M3 通道可达。
+
+    T-245 语义演进(改锁重推记录):旧断言另含「RefreshShop 段内出现
+    = R1 发射位可达」——旧语义下该段 R1 帧走必花域全域 yielded 放行
+    (账超预算也刷)。账前件恢复后(零产出烧金段修复),本段 R1 帧按
+    计划账拦 = 正确决策而非通道窒息(拒因分键可辨);R1 通道活性由
+    test_cw_refresh_ledger::TestHorizonClosedYield(末轮豁免发射)与
+    TestInBudgetRefresh(域内账内常规发射)承载,本锁不再混锁该通道。
 
     序列断言写语义不锁巧合:腾席(SellBench)先于买入(BuyCard);
     升级(LevelUpShop)与刷新(RefreshShop)在段内出现 = M3/R1 发射
@@ -300,4 +307,5 @@ def test_sellbench_m3_refresh_chain_reachable():
     buy_idx = seq.index('BuyCard')
     assert sell_idx < buy_idx, f'腾席必须先于买入: {seq}'
     assert 'LevelUpShop' in seq, f'M3 升级发射位不可达: {seq}'
-    assert 'RefreshShop' in seq, f'R1 刷新发射位不可达: {seq}'
+    # R1 断言移除(语义演进见 docstring):R1 通道活性由
+    # test_cw_refresh_ledger 的末轮豁免/账内常规两发射锁承载。
