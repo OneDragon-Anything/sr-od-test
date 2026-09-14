@@ -405,7 +405,7 @@ def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
 # 前身 = test_cw_shop_odds.py 随测试重组批 f799914 整体退役;边界语义在现行
 # data/cw_shop_odds.py 未演进(p≤0/k≤0/j≥k → 0;查表无数据 → 0),回补防回潮。
 # v/a 参数从注册表单一源现算(DISTINCT_CARDS_PER_COST/POOL_COPIES_PER_CARD),
-# 不手抄旧锁常数(README 第 9 条);单一源守卫与消费面公式 =
+# 不手抄旧锁常数(README:数值型期望从单一来源现算);单一源守卫与消费面公式 =
 # test_cw_statefn.py(expected_refreshes 禁第二实现 + refresh_prob 进期望式)。
 
 def test_zero_p_returns_zero() -> None:
@@ -529,7 +529,7 @@ def test_xp_click_fallback_clamp_floor(monkeypatch) -> None:
 
     注册表现无合计 ≥4 的折扣源(间谍 1 + 快乐 1 = 2),钳臂经
     _strategy_economy 缝注入合成折扣覆盖(纯函数消费面,monkeypatch.setattr
-    隔离,README 第 1 条)。"""
+    隔离,测试零真实副作用)。"""
     from sr_od.application.currency_war.kernel import cw_economy as ke
     monkeypatch.setattr(
         ke, '_strategy_economy',
@@ -555,18 +555,11 @@ def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
     assert upgrade_plan_fee(observed) == clicks_to_level(5) * 3
 
 
-def test_upgrade_plan_fee_no_second_discount_implementation() -> None:
-    """结构锁:upgrade_plan_fee 内禁第二处独立取价/折扣实现(方案审关键修改①)。
-
-    「同一语义两处实现」正是互补单侧错的漂移温床(ADR-0632);源面
-    断言:只许委托 xp_click_cost,禁裸读 level_up_cost、禁折扣字段字样。"""
-    import inspect
-
-    from sr_od.application.currency_war.kernel import cw_economy as ke
-    src = inspect.getsource(ke.upgrade_plan_fee)
-    assert 'xp_click_cost' in src, '未委托 xp_click_cost 单一源'
-    assert 'level_up_cost' not in src, '裸字段取价复活 = 第二实现回归'
-    assert 'xp_buy_cost_discount' not in src, '独立折扣计算复活'
+# (T-252 三审整删)原 test_upgrade_plan_fee_no_second_discount_implementation
+# 「结构锁」(getsource 断言函数体内禁第二处取价/折扣实现)——源码扫描形态
+# (README 禁止清单);委托语义行为半由
+# test_upgrade_plan_fee_delegates_discount_aware_pricing 辖,「同一语义
+# 两处实现」防线归 review 与代码规范。
 
 
 # ==================== 预算核/排程核/断供驱逐(自 migration_budget_authority 归并) ====================

@@ -36,7 +36,6 @@
 """
 from __future__ import annotations
 
-import inspect
 from types import SimpleNamespace
 
 from test.sr_od.application.currency_war._cw_helpers import (
@@ -102,6 +101,10 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     monkeypatch.setattr(em, 'read_encounter_refresh_count',
                         lambda ctx, scr: cnt)
     monkeypatch.setattr(em, 'safe_click', lambda o, pt, **k: None)
+    # (T-252 三审便宜化)encounter op 入口有画面稳定期 time.sleep(2.0s,
+    # 真机等帧用)——mock 画面瞬时切换,等待纯属空睡;桩置空后单条
+    # 2.8-5.6s → 亚秒(先例 = _make_strategy 桩 ism.time.sleep)。
+    monkeypatch.setattr(em.time, 'sleep', lambda *_: None)
     from one_dragon.base.operation.operation_round_result import (
         OperationRoundResult,
         OperationRoundResultEnum,
@@ -243,21 +246,12 @@ def test_megastar_in_node_lifecycle_single_action_retry(
         f' observe 门,无验证段):{op._lifecycle_trace}')
 
 
-def test_event_screens_source_free_of_verify_segment() -> None:
-    """验证段废除·源面锁(用户裁定 2026-09-10:动作 op 只管机械执行,
-    禁止在画面 op 做验证):两屏源无「六段」表述、无 'verify' 段迹字面;
-    落地判定归动作适配器回执(§6.2),非生命周期段。红 = 验证段残面
-    回潮。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_encounter as em,
-    )
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_megastar as ms,
-    )
-    for name, mod in (('encounter', em), ('megastar', ms)):
-        src = inspect.getsource(mod)
-        assert '六段' not in src, f'{name} 源面残留「六段」表述(验证段已废除)'
-        assert "'verify'" not in src, f'{name} 源面残留 verify 段迹字面(验证段已废除)'
+# (T-252 三审整删)原 test_event_screens_source_free_of_verify_segment
+# 「验证段废除·源面锁」(getsource 断言两屏源无「六段」表述与 'verify'
+# 字面)——源码扫描形态(README 禁止清单,红时是注释/字面变了,答不出
+# 哪个运行行为坏了);验证段废除语义的行为面由 lifecycle 段迹行为锁
+# (test_megastar_in_node_lifecycle_single_action_retry 等断言迹到 act
+# 为止)承重。
 
 
 # ==================== 发射型接线锁(§6.4-R-E 在册①;B5 四件套)====================
@@ -265,26 +259,13 @@ def test_event_screens_source_free_of_verify_segment() -> None:
 
 def test_encounter_refresh_emission_wired_to_registry(test_context,
                                                       monkeypatch) -> None:
-    """发射接线形态(B5-② 登记调用点形态,断言面限定接线点;批3a 改形):
-    ①注册表在 __init__ 按 EncounterPick 登记发射钩子
-    (name=encounter_refresh_used,已入申报面);②单一发射口
-    fire_outcome_hooks 全模块恰一处(= _emit_refresh_click 两路径共用分派
-    点,触发唯一性;批3a:T-223 两 fire 口合并,原 fire_emit_hooks 口与
-    落地回执门混触防线的 _act_execute progressed 调用位随门退役);③写端
-    (write_logic encounter_refresh_used)住钩子体内联位零残留。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_encounter as em,
-    )
-    src = inspect.getsource(em)
-    assert src.count('fire_outcome_hooks') == 1, (
-        '发射触发点须唯一且经单一发射口(_emit_refresh_click 分派面;批3a)'
-        )
-    assert 'fire_emit_hooks' not in src, (
-        '原发射口名须已退役(两 fire 口合并,T-223)')
-    assert '_emit_refresh_click' in src and 'encounter_refresh_used' in src
-    hook_src = inspect.getsource(em.CwScreenEncounter._on_refresh_emitted)
-    assert 'write_logic' in hook_src and "evidence='refresh_click'" in hook_src, (
-        '登记件写端须住发射钩子体(B5-②:内联登记调用点零残留)')
+    """发射接线形态(B5-② 登记调用点形态;批3a 改形):注册表在 __init__
+    按 EncounterPick 登记发射钩子(name=encounter_refresh_used)。
+    (T-252 三审拆半:原 getsource 字符串计数/墓碑/钩子体字面扫描腿删,
+    「单一发射口恰一处/原口名退役/写端住钩子体」面归 review 与代码规范;
+    本锁辖运行时注册表取证行为半,值/evidence 行为半由
+    test_encounter_refresh_emission_counts_and_reread_redecide_new_path
+    承重同一事实。)"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, _session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
@@ -393,11 +374,5 @@ def test_encounter_chosen_inline_not_registry_collected(
     rs = _run_node(test_context, op, op.handle)
     assert not rs.is_success and board_state_of(
         session).chosen_encounter.value is None, '验关失败 → chosen 不写'
-    # 源形态:chosen 写端在 _record_chosen(出口验真通过分支调用),
-    # 不在发射型钩子体
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_encounter as em,
-    )
-    hook_src = inspect.getsource(em.CwScreenEncounter._on_refresh_emitted)
-    assert 'chosen_encounter' not in hook_src, (
-        'chosen_* 不入注册表收编面(豁免面不扩散)')
+    # (T-252 三审拆半:原尾部 getsource「chosen_* 不入注册表收编面」
+    # 字面不在场断言删,豁免面纪律归 review 与代码规范。)

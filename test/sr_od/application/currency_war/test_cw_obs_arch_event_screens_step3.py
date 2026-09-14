@@ -52,7 +52,6 @@ test_cw_obs_arch_event_screens.py 断言集模板):
 """
 from __future__ import annotations
 
-import inspect
 from types import SimpleNamespace
 
 from test.sr_od.application.currency_war._cw_helpers import (
@@ -360,68 +359,10 @@ def test_expert_choose_dispatch_both_ways(test_context, monkeypatch) -> None:
     assert calls_o == [1]
 
 
-def test_expert_open_card_node_stays_legacy() -> None:
-    """开卡节点 = 纯导航留旧路径申报面(两路径同式):源无装配点分流/
-    生命周期调用——六段辖选卡节点(决策承载段),开卡找卡/点卡动作无
-    决策消费面,不属观察端口辖(架构设计 §2.5 端口辖循环体决策面)。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_expert_invite as ei,
-    )
-    src = inspect.getsource(ei.CwScreenExpertInvite.open_card)
-    assert 'run_lifecycle' not in src and 'observation_source' not in src, (
-        '开卡节点不得接分流(纯导航节点留旧路径,申报面见本锁)')
-
-
-# ==================== 注册表零登记 + 源面形态锁 ====================
-
-
-def test_batch3_no_outcome_registry_wiring() -> None:
-    """注册表零登记锁(§6.4 收编面本批零行):八屏源无 register_outcome_
-    hook / fire_outcome_hooks 接线。§6.4 表登记件(刷新执行事实组/bump_key/
-    合成升星 expect/免战牌 consume_use/遭遇·策略屏刷新计数)全不涉事件
-    选卡屏;新登记件入册须先申报(EMIT_TRIGGERED_DECLARED 同款纪律),
-    红 = 未经申报擅立登记件。批3a:原 fire_emit_hooks 口名随两 fire 口
-    合并退役,本锁断言面对准合并后的单一发射口名。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_bookcard,
-        cw_screen_equip_pick,
-        cw_screen_expert_invite,
-        cw_screen_fortune,
-        cw_screen_partner,
-        cw_screen_planner,
-        cw_screen_supply_node,
-        cw_screen_wish_trial,
-    )
-    for mod in (cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
-                cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
-                cw_screen_equip_pick, cw_screen_expert_invite):
-        src = inspect.getsource(mod)
-        assert 'register_outcome_hook' not in src, (
-            f'{mod.__name__} 私设落地登记件(§6.4 收编面本批零行)')
-        assert 'fire_outcome_hooks' not in src, (
-            f'{mod.__name__} 私设发射触发(在册登记件不涉本批屏)')
-
-
-def test_batch3_sources_free_of_verify_segment() -> None:
-    """验证段废除·源面锁(用户裁定 2026-09-10:动作 op 只管机械执行,
-    禁止在画面 op 做验证):八屏源无「六段」表述、无 'verify' 段迹字面;
-    节点完成判定归 observe 门复检(观察驱动节点循环),落地判定归动作
-    适配器回执(§6.2)。红 = 验证段残面回潮。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_bookcard,
-        cw_screen_equip_pick,
-        cw_screen_expert_invite,
-        cw_screen_fortune,
-        cw_screen_partner,
-        cw_screen_planner,
-        cw_screen_supply_node,
-        cw_screen_wish_trial,
-    )
-    for mod in (cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
-                cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
-                cw_screen_equip_pick, cw_screen_expert_invite):
-        src = inspect.getsource(mod)
-        assert '六段' not in src, (
-            f'{mod.__name__} 源面残留「六段」表述(验证段已废除)')
-        assert "'verify'" not in src, (
-            f'{mod.__name__} 源面残留 verify 段迹字面(验证段已废除)')
+# (T-252 三审整删)原 test_expert_open_card_node_stays_legacy「纯导航留旧
+# 路径申报面」(getsource 方法体断言无 run_lifecycle/observation_source)——
+# 源码扫描形态(README 禁止清单);开卡节点路由面归 review 与代码规范。
+# (T-252 三审整删)原 test_batch3_no_outcome_registry_wiring「注册表零登记
+# 锁」与 test_batch3_sources_free_of_verify_segment「验证段废除·源面锁」
+# (八屏 getsource 字面在场/不在场断言)——源码扫描形态;注册表收编纪律
+# 与验证段废除语义的行为面由本文件 lifecycle 段迹行为锁承重。

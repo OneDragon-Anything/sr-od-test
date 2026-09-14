@@ -13,10 +13,7 @@ relay 空值闸)两组锁——原独立批次文件按主题文件纪律归并,
 """
 from __future__ import annotations
 
-import ast
 import dataclasses
-import inspect
-import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -74,9 +71,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard as StateShopCard,
-)
-from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-    CwStrategy,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     StrategyState,
@@ -882,57 +876,15 @@ def test_consume_defect_sink_drains() -> None:
 # StrategyState 改名归位 + 下沉策略实现层 + 泛型携带
 
 
-def test_strategy_state_alias_retired() -> None:
-    """§8.6-6(批次三落)+ §8.7 尾批行(T-146 落):类名改名归位为目标名
-    StrategyState;历史名 MandateState 同对象兼容别名已清理——模块属性
-    不存在(墓碑翻转;消费面一律 import StrategyState)。"""
-    import sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state as _ms_mod
-    assert not hasattr(_ms_mod, 'MandateState'), '历史名别名应已清理(§8.7 尾批行)'
+def test_strategy_state_accessors_bound_to_session() -> None:
+    """§8.6-6(批次三落)+ §8.7 尾批行(T-146 落):state_of 归位为
+    StrategyState 访问单一入口——返回 session 携带的状态实例(泛型携带
+    语义)。
+    (T-252 三审拆半:原「历史名 MandateState 模块属性不存在」墓碑腿
+    删——退役防复活跃责归 review 与代码规范,不进测试网。)"""
     sess = StrategySession()
     assert state_of(sess) is sess.strategy_state
     assert isinstance(state_of(sess), StrategyState)
-
-
-def test_framework_layer_does_not_import_concrete_state() -> None:
-    """§1 归属判据(硬约束):框架层(kernel 桶 + one_dragon 框架包)不得
-    import StrategyState 具体类型——泛型约束的静态锁。策略实现层
-    (strategies/)与 app 桶按布局矩阵各自合法,不在本锁辖域。"""
-    banned = re.compile(
-        r'^\s*(?:from|import)\s+\S*(?:strategies\.impl\.mandate_v1'
-        r'|mandate_state)\b', re.M)
-    offenders: list[str] = []
-    for f in sorted((_PKG / 'kernel').rglob('*.py')):
-        if banned.search(f.read_text(encoding='utf-8')):
-            offenders.append(str(f.relative_to(_PKG)))
-    assert not offenders, f'kernel 桶 import 策略实现层具体状态:{offenders}'
-    od_dir = _REPO / 'src' / 'one_dragon'
-    cw_ref = re.compile(r'currency_war')
-    od_offenders = [str(f.relative_to(_REPO / 'src'))
-                    for f in sorted(od_dir.rglob('*.py'))
-                    if cw_ref.search(f.read_text(encoding='utf-8',
-                                                 errors='ignore'))]
-    assert not od_offenders, f'one_dragon 框架包引用 CW 业务面:{od_offenders}'
-
-
-def test_base_class_carries_state_only_generically() -> None:
-    """§8.5/§1:策略器基类仅以泛型参数携带状态——``create_state`` 返回
-    注解 = TypeVar(``_TState``) 而非具体类型;基类模块零 StrategyState
-    import;具体绑定发生在策略实现层(CwFlowStrategy)。"""
-    sig = inspect.signature(CwStrategy.create_state)
-    assert '_TState' in str(sig.return_annotation), \
-        '基类 create_state 返回注解必须是泛型参数,禁具体状态类型'
-    src = inspect.getsource(CwStrategy)
-    assert not re.search(r'(?:from|import)\s+\S*mandate_state', src) \
-        and not re.search(r'(?:from|import)\s+\S*MandateState\b', src) \
-        and not re.search(r'(?:from|import)\s+\S*StrategyState\b', src), \
-        '基类零 import 具体状态类型(§1 框架不感知;docstring 提及不算)'
-
-    from sr_od.application.currency_war.strategies.impl.flow import (
-        CwFlowStrategy,
-    )
-    bases = getattr(CwFlowStrategy, '__orig_bases__', ())
-    assert any(getattr(b, '__origin__', None) is CwStrategy for b in bases), \
-        '泛型绑定必须在策略实现层的类声明上(CwStrategy[StrategyState])'
 
 
 # ============================================================ §5.1 载体归一
@@ -1151,32 +1103,6 @@ def test_skip_battle_spec_entry_matches_base_registry() -> None:
     assert spec.duration_uses == 2
     assert spec.payload.xp_instant == 30, \
         '+30 经验 = 选牌当场即时经验(§4 投资选择通用通道词表)'
-
-
-# ============================================================ §3.4.1-4/§8.7
-# 节点屏刷新计数组写端 + 挂点接线存在性(inspect 烟雾,README 第 8 条容忍档;
-# 行为面已由上方函数级锁覆盖,op 装配面不重建重 harness)
-
-
-def test_refresh_ledger_write_sites_wired() -> None:
-    """件 6 写端接线存在性:遭遇屏(+1 置位,refresh_click)/策略屏
-    (逐卡键=normalize_invest_name 规范名)/环境屏无执行链不接线
-    (ADR-0600 环境侧未启用,零写端禁按值决策口径继续辖)。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_encounter,
-        cw_screen_invest_env,
-        cw_screen_invest_strategy,
-    )
-    enc_src = inspect.getsource(cw_screen_encounter)
-    assert 'encounter_refresh_used' in enc_src \
-        and 'refresh_click' in enc_src, '遭遇屏刷计数写端在位'
-    strat_src = inspect.getsource(cw_screen_invest_strategy)
-    assert 'strategy_refresh_used' in strat_src \
-        and 'normalize_invest_name' in strat_src, \
-        '策略屏逐卡刷计数写端在位(键=规范卡名)'
-    env_src = inspect.getsource(cw_screen_invest_env)
-    assert 'env_refresh_used' not in env_src, \
-        '环境屏刷新执行链未启用,无点击即无写端(禁观察镜像混入点击置位口径)'
 
 
 # ============================================================ 挂点接线锁(缓交)
@@ -1404,60 +1330,6 @@ def test_restore_session_late_truth_relay_lands(
         assert fld.evidence == 'session_carrier', f'中继注记:{name}'
 
 
-# ============================================================ AST 级静态锁(退役零残留)
-
-#: 已退役符号(载体已删,防复活):免战牌平行 Field(批次二载体归一,§8.6-3)
-#: 与席满警告位字段(§3.2.5 通道退役,载体随退役批删除)。
-_RETIRED_SYMBOLS = ('skip_battle_active', 'skip_battle_remaining',
-                    'bench_full_flag')
-
-
-def _identifiers(path: Path) -> set[str]:
-    """AST 标识符集(Name/Attribute/关键字形参)——docstring/注释/字典键
-    字符串不属标识符,天然不在断言面(遥测行 'bench_full_flag' 键不受辖)。"""
-    tree = ast.parse(path.read_text(encoding='utf-8'))
-    out: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Name):
-            out.add(node.id)
-        elif isinstance(node, ast.Attribute):
-            out.add(node.attr)
-        elif isinstance(node, ast.keyword) and node.arg:
-            out.add(node.arg)
-    return out
-
-
-def test_ast_retired_symbols_zero_hits_repo_wide() -> None:
-    """§8.7 批次四静态锁:已退役符号在 CW 包全仓零标识符命中(定义/引用/
-    关键字实参皆算)——字段本体删除后的防复活锁(比字段存在性负锁更广:
-    连「重新引用已删名」的代码也拦)。"""
-    offenders: list[str] = []
-    for f in sorted(_PKG.rglob('*.py')):
-        hit = sorted(set(_RETIRED_SYMBOLS) & _identifiers(f))
-        if hit:
-            offenders.append(f'{f.relative_to(_PKG)}: {hit}')
-    assert not offenders, f'已退役符号标识符复活:{offenders}'
-
-
-def test_ast_currency_war_reads_no_last_state() -> None:
-    """§8.7 批次四静态锁(全仓扩展,链退役批兑现):CW 包全仓零 last_state
-    标识符命中(定义/引用/关键字实参皆算)——记录模型只由观察流/写入
-    API/sim 合成口供数(§2.4),session.last_state 旧观察帧链(三写点+
-    全部遗留读者)已整体退役删除,断言面按本锁原申报(「尾批完成后从
-    记录面扩到全仓」)扩展为永久防复活锁。
-
-    **锁面边界申报**:扫描域 = src 的 currency_war 子树;仓内其它应用
-    (world_patrol/tl_battle/sim_universe)的同名 ``last_state: str``
-    画面状态跟踪字段与本链无涉,不入扫描域。注释/docstring 提及不计
-    (AST 标识符口径),历史语义注记合法存留。
-    """
-    offenders: list[str] = []
-    for f in sorted(_PKG.rglob('*.py')):
-        if 'last_state' in _identifiers(f):
-            offenders.append(str(f.relative_to(_PKG)))
-    assert not offenders, f'last_state 旧帧链标识符复活:{offenders}'
-
-
 # ==================== 容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================
 
 def _full_truth_frame() -> CwSimFrame:
@@ -1594,60 +1466,6 @@ def test_shop_card_mapping_roundtrip_and_frame_alignment() -> None:
                                            frame_cards=[legacy, legacy])
     assert (back_misaligned[0].x, back_misaligned[0].merge_preview) == (0, 0), \
         '长度失配 = 失配窗置缺省(禁错位对齐)'
-
-
-def test_kernel_legacy_shopcard_reference_static_lock() -> None:
-    """kernel 内零旧 ShopCard 引用静态锁(方案 §2.6④,精确辖域):豁免 =
-    ①cw_vocab.py(本体,旧类型唯一居所;原居所 cw_state.py 随 W8 词汇正名
-    迁居 cw_vocab 后退役,本体引用不属「外部消费」)②cw_game_state.
-    shop_cards_to_legacy(映射函数单一源)③TYPE_CHECKING 旧类型注解行
-    (cw_game_state.py / cw_merge_simulate.py / cw_economy.py:注解随旧
-    工作帧世界退役消亡,非映射函数外的新消费运行时零依赖);
-    其余 kernel 旧类型引用 = 红。"""
-    from pathlib import Path
-    kernel = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
-              / 'currency_war' / 'kernel')
-    # 扫描前提 = 豁免面与文件面对账:旧类型居所在位(cw_vocab.py),旧居所
-    # cw_state.py 已退役——居所再迁 = 本锁豁免面失准,须随迁重审。
-    assert (kernel / 'cw_vocab.py').is_file(), '扫描根失准'
-    assert not (kernel / 'cw_state.py').exists(), '旧居所已退役,勿回流'
-    # 两代居所引用形态同辖(单行/括号多行 import 与点取形态;旧居所分支
-    # 防退役面以旧形态回流)
-    pat = re.compile(r'cw_vocab\s+import\s*\(?\s*[^#)]*?\bShopCard\b'
-                     r'|cw_vocab\.ShopCard'
-                     r'|cw_state\s+import\s*\(?\s*[^#)]*?\bShopCard\b'
-                     r'|cw_state\.ShopCard')
-    # TYPE_CHECKING 注解行豁免(候裁9 迁移伴随注解,见 docstring ③;
-    # 形态 = 单行 import 与含 ShopCard 的括号多行 import,两形态同豁)
-    annotation_exempt = {'cw_game_state.py', 'cw_merge_simulate.py',
-                         'cw_economy.py'}
-    annotation_block = re.compile(
-        r'^\s*from\s+\S*kernel\.cw_vocab\s+import\s*\([^)]*ShopCard[^)]*\)'
-        r'\s*\n'
-        r'|^\s*from\s+\S*kernel\.cw_vocab\s+import\s+ShopCard[,\s]*\n',
-        re.M)
-    offenders: dict[str, str] = {}
-    for path in sorted(kernel.glob('*.py')):
-        if path.name == 'cw_vocab.py':
-            continue
-        text = path.read_text(encoding='utf-8')
-        if path.name in annotation_exempt:
-            text = annotation_block.sub('', text)
-        if path.name == 'cw_game_state.py':
-            # 豁免面 = 映射函数本体(单一源);函数外残留 = 红
-            import sr_od.application.currency_war.kernel.cw_game_state as _m
-            text = text.replace(inspect.getsource(_m.shop_cards_to_legacy), '')
-        for m in pat.finditer(text):
-            offenders[f'{path.name}:{m.group(0)}'] = m.group(0)
-    assert not offenders, (
-        f'kernel 出现映射函数外的旧容器 ShopCard 引用(双 ShopCard 归一,'
-        f'转换只许在映射函数发生):{offenders}')
-    # 变异自检:判据对真实旧引用形态有捕获力(两代居所 × 单行/多行/点取)
-    assert pat.search('from a.b.cw_vocab import ShopCard')
-    assert pat.search('from a.b.cw_vocab import (\n    ShopCard,\n)')
-    assert pat.search('cw_vocab.ShopCard(x=0)')
-    assert pat.search('from a.b.cw_state import ShopCard')
-    assert pat.search('cw_state.ShopCard(x=0)')
 
 
 

@@ -234,7 +234,9 @@ def _frame_funding_hold_fallback():
 
 
 _SITE_FRAMES = {
-    'm4_missing_vacate': _frame_m4_missing_vacate,
+    # (T-252 三审删)'m4_missing_vacate': 与既有专测
+    # test_m4_seat_vacate_emits_sellbench_not_closeshop 同帧覆盖重复
+    # (专测额外断言 expect 面),按「测试要少」留专测删参数化项。
     'm2_stockpile_vacate': _frame_m2_stockpile_vacate,
     'core_unlocked_vacate': _frame_core_unlocked_vacate,
     'interest_sell': _frame_interest_sell,
@@ -245,10 +247,11 @@ _SITE_FRAMES = {
 
 @pytest.mark.parametrize('case', list(_SITE_FRAMES))
 def test_all_six_sell_launch_sites_emit_sellbench(case: str):
-    """六处店内卖决策点逐一锁:各帧首动作 = SellBench 非 CloseShop。
+    """五处店内卖决策点逐一锁(原六处:m4 项与既有专测重复,三审删):
+    各帧首动作 = SellBench 非 CloseShop。
 
-    T-238 病灶 = 任一处卖决策点把中间步表达成终结,六处只锁一处时
-    其余五处回退不红;本参数化逐处给帧构造,任一处回退即响亮红。"""
+    T-238 病灶 = 任一处卖决策点把中间步表达成终结,五处只锁一处时
+    其余回退不红;本参数化逐处给帧构造,任一处回退即响亮红。"""
     strategy, sess, config = _SITE_FRAMES[case]()
     action = strategy.decide_shop_action(sess, config)
     assert type(action).__name__ == 'SellBench', (

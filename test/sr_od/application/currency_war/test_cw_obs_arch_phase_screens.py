@@ -58,7 +58,6 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
 """
 from __future__ import annotations
 
-import inspect
 import time
 from types import SimpleNamespace
 
@@ -492,22 +491,15 @@ def test_invest_strategy_active_strategies_appended_at_reentry_exit(
 
 def test_strategy_refresh_emission_wired_to_registry(test_context,
                                                      monkeypatch) -> None:
-    """发射型接线锁(§6.4-R-E 在册两件②;B5-② 形态):①注册表在 __init__
-    按 StrategyRefreshClick 登记发射钩子(name=strategy_refresh_used,已在
-    申报面——基类申报面本批零增改;运行时注册表直接取证);②单一发射口
-    fire_outcome_hooks 全模块恰一处 + 原口名退役墓碑(两 fire 口合并,
-    T-223)。登记件写端住钩子体/发射点同步置位防重入旗标不再源码在场锁
-    (纪律 8 肯定性在场禁):两路径真实驱动的行为锁
-    (test_strategy_refresh_emission_semantics:值/evidence/防重入旗标/
-    sig.actor 逐位对拍)承重同一事实。"""
+    """发射型接线锁(§6.4-R-E 在册两件②;B5-② 形态):注册表在 __init__
+    按 StrategyRefreshClick 登记发射钩子(name=strategy_refresh_used)。
+    (T-252 三审拆半:原 getsource 字符串计数/墓碑扫描腿删——「单一发射口
+    恰一处/原口名退役」面归 review 与代码规范;本锁辖运行时注册表取证
+    行为半,值/evidence 行为半由 test_strategy_refresh_emission_semantics
+    承重同一事实。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_invest_strategy as ism,
     )
-    src = inspect.getsource(ism)
-    assert src.count('fire_outcome_hooks') == 1, (
-        '发射触发点须唯一且经单一发射口(_emit_refresh_click 分派面)')
-    assert 'fire_emit_hooks' not in src, (
-        '原发射口名须已退役(两 fire 口合并,T-223)')
     op = ism.CwScreenInvestStrategy(test_context)
     specs = op._outcome_hooks.get(
         ism.StrategyRefreshClick(slot=0, name='x').__class__, [])
@@ -582,41 +574,11 @@ def journal_rows(tmp_path):
 # ==================== 豁免留守锁(§2.2/§6.5-6)====================
 
 
-def test_write_flow_exempt_surfaces_stay_inline() -> None:
-    """豁免留守锁:``active_env``/``active_strategies``/效果账本登记不入
-    on_outcome 注册表收编面——①投资策略模块 register_outcome_hook 恰一处
-    (__init__ 接线),钩子体无 active_strategies/效果账本登记;
-    ``_append_confirmed_strategy`` 原位保留本体追加 + write_logic +
-    register_strategy + apply_effect_burst_grant;②投资环境模块零注册表
-    接线,active_env 写端住共享 ``_decide_and_act``(produced_by 面逐位)。
-    红 = 豁免面被顺手收编。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_invest_env as iem,
-    )
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_invest_strategy as ism,
-    )
-    ism_src = inspect.getsource(ism)
-    assert ism_src.count('register_outcome_hook') == 1, (
-        '投资策略注册表接线恰一处(__init__;豁免面不得另立登记件)')
-    hook_src = inspect.getsource(ism.CwScreenInvestStrategy._on_refresh_emitted)
-    assert 'active_strategies' not in hook_src, (
-        'active_strategies 不入注册表收编面(重入裁决出口豁免留守)')
-    assert 'register_strategy' not in hook_src and \
-        'apply_effect_burst_grant' not in hook_src, (
-        '效果账本登记不入注册表收编面(豁免留守)')
-    append_src = inspect.getsource(
-        ism.CwScreenInvestStrategy._append_confirmed_strategy)
-    for token in ('active_strategies', 'write_logic', 'register_strategy',
-                  'apply_effect_burst_grant'):
-        assert token in append_src, f'豁免留守面缺 {token}(_append_confirmed_strategy 原位)'
-    env_src = inspect.getsource(iem)
-    assert 'register_outcome_hook' not in env_src and \
-        'fire_outcome_hooks' not in env_src, (
-        '投资环境零登记件(环境侧刷新执行不启用,ADR-0600 §2/§4)')
-    act_src = inspect.getsource(iem.CwScreenInvestEnv._decide_and_act)
-    assert "produced_by='CwScreenInvestEnv'" in act_src, (
-        'active_env 写端 produced_by 逐位(选卡时点,选卡 handler 单次逻辑写入豁免)')
+# (T-252 三审整删)原 test_write_flow_exempt_surfaces_stay_inline「豁免
+# 留守锁」(getsource ×6:注册表接线恰一处/钩子体与豁免面字面在场/环境屏
+# 零登记件)——源码扫描形态(README 禁止清单,红时是文本变了,答不出哪个
+# 运行行为坏了);豁免面纪律归 review 与代码规范。豁免面的行为面
+# (chosen 写端不入注册表收编)由 event_screens 同名行为锁辖。
 
 
 # ==================== 简报:分流双向 + 三字段写语义 ====================
@@ -826,29 +788,10 @@ def test_boss_briefing_misread_takeover_new_path(test_context,
     assert op._lifecycle_trace[0] == 'observe'
 
 
-def test_boss_discrimination_single_source_consumers_unchanged() -> None:
-    """判别单一源消费面锁:`is_boss_briefing_texts` 消费点集合迁移前后不变
-    (cw_loop 0q 排他 / cw_screen_battle_wait 完成白名单 / cw_screen_boss_
-    briefing 模块定义);迁移只改宿主类,禁转录顺手复制判别逻辑(battle_wait
-    源面无 token 表、无判别函数定义)。红 = 判别面被复制成第二源。"""
-    from sr_od.application.currency_war.operations import cw_loop
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_battle_wait as bw,
-    )
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_boss_briefing as bb,
-    )
-    assert 'is_boss_briefing_texts' in inspect.getsource(cw_loop)
-    bw_src = inspect.getsource(bw)
-    assert bw_src.count('is_boss_briefing_texts') == 2, (
-        'battle_wait 消费面 = import + 调用恰两处(白名单同源,零复制)')
-    assert 'BOSS_BRIEFING_TOKENS' not in bw_src, (
-        'token 表不得被复制进 battle_wait(判别单一源)')
-    assert 'def is_boss_briefing_texts' not in bw_src
-    bb_src = inspect.getsource(bb)
-    assert 'BOSS_BRIEFING_TOKENS' in bb_src and \
-        'def is_boss_briefing_texts' in bb_src, (
-        '定义单一源仍在 boss_briefing 模块')
+# (T-252 三审整删)原 test_boss_discrimination_single_source_consumers_
+# unchanged「判别单一源消费面锁」(getsource ×3:消费点计数/import 复制面/
+# token 表扩散断言;且 import 在飞互斥面 cw_loop)——源码扫描形态(README
+# 禁止清单);「判别逻辑禁复制成第二源」防线归 review 与代码规范。
 
 
 # ==================== 战斗等待:B2-③ 主门(在册行为锁走新路径)====================

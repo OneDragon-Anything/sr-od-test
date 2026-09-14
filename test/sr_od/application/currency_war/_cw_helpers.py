@@ -4,9 +4,9 @@
 (``_comp/_members/_session/_state/_card/_bc/_decide``,DEBTS.md D17)、
 备战单轮 op 装配(``_make_round_director``,DEBTS.md D22)与 obs_arch
 六文件的运行外壳三件(``run_node``/``uninstall_ports``/``Area``,T-58
-夹具收敛——原为 6/4/4 份逐文件复制)。收敛建立在 sr-od-test README
-第 14 条「跨文件的复制夹具是漂移源头」之上;本模块文件名以下划线开头,
-pytest 不收集。
+夹具收敛——原为 6/4/4 份逐文件复制)。收敛建立在测试仓 README
+「跨文件的复制夹具是漂移源头」纪律之上(README 常驻摘要不编号,故不引
+条号);本模块文件名以下划线开头,pytest 不收集。
 
 消费面分层(参照 DEBTS D3/D17 的分叉教训,禁强行合一):
 

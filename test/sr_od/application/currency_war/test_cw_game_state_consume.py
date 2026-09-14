@@ -478,27 +478,13 @@ def test_bench_view_from_obs_empty_is_miss_not_full() -> None:
     assert view.slots[1].unit is not None and view.slots[1].unit.star == 2
 
 
-def test_prep_bench_obs_miss_guard_and_tome_choice_wiring() -> None:
-    """接线存在性烟雾(README 第 8 条容忍档;事故出处 = 批次二落地审 P2-1
-    「空集写 9 槽全空假值」、P3-6「chosen_tome 写端缺位」、P3-10「特效窗
-    核对噪声」):①prep 观察块经 bench_view_from_obs 守卫且失读分支走
-    carry;②bookcard 选卡落地写 chosen_tome(write_logic,§3.4.5);
-    ③prep 核对点过特效窗门(is_merge_effect_window,窗内顺延核对)。"""
-    import inspect
-
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_bookcard,
-        cw_screen_prep,
-    )
-    prep_src = inspect.getsource(cw_screen_prep)
-    assert 'bench_view_from_obs(obs.bench_chars)' in prep_src, \
-        'P2-1:守卫函数接线在位'
-    assert '_bs_obs.carry' in prep_src, 'P2-1:失读分支 carry(非 observe)'
-    assert 'is_merge_effect_window(screen)' in prep_src, \
-        'P3-10:核对点特效窗门在位'
-    book_src = inspect.getsource(cw_screen_bookcard)
-    assert '.chosen_tome' in book_src and 'write_logic' in book_src, \
-        'P3-6:chosen_tome 写端接线在位'
+# (T-252 三审整删)原 test_prep_bench_obs_miss_guard_and_tome_choice_wiring
+# 「接线存在性烟雾」(getsource 字符串在场四断言:bench_view_from_obs 接线/
+# _bs_obs.carry/特效窗门/chosen_tome 写端)——源码扫描形态(README 禁止
+# 清单,判据「红时哪个运行行为坏了」答不出)。守卫函数行为半由
+# test_bench_view_from_obs_empty_is_miss_not_full 辖;特效窗门行为半由
+# test_merge_effect_window_gate_default_off_and_injectable 辖;op 装配面
+# 接线归 review 与代码规范。
 
 
 def test_merge_effect_window_gate_default_off_and_injectable(
@@ -558,12 +544,11 @@ def _op_with_session(op_cls: type, sess: object) -> object:
 
 
 def test_encounter_chosen_written_on_true_pick_only() -> None:
-    """遭遇屏 chosen_encounter 接线锁(§3.4.5 余屏写端;先例形态 = P3-6
-    chosen_tome 锁):①写端接线在位且挂在出口验真通过分支;②真选写
-    (难度档, 奖励文本)原名口径、source=logic;③fallback(无会话/候选
-    未读到/越界)不写。"""
-    import inspect
-
+    """遭遇屏 chosen_encounter 记录面行为锁(§3.4.5 余屏写端):①真选写
+    (难度档, 奖励文本)原名口径、source=logic;②fallback(无会话/候选
+    未读到/越界)不写。
+    (T-252 三审拆半:原 getsource 字符串在场扫描腿删——写端接线在位/
+    落地验真后写的调用时点面归 review 与代码规范;本锁辖记录面行为半。)"""
     from sr_od.application.currency_war.kernel.cw_events import EncounterOption
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_encounter,
@@ -572,15 +557,6 @@ def test_encounter_chosen_written_on_true_pick_only() -> None:
         StrategySession,
     )
 
-    src = inspect.getsource(cw_screen_encounter)
-    assert '.chosen_encounter' in src and 'write_logic' in src, \
-        '遭遇屏 chosen_encounter 写端接线在位'
-    # 改写依据:写时点随 2026-09-14 断链修(用户裁定,退役回执
-    # rs.is_success 消费删除,见 cw_screen_encounter.handle 注释)改挂
-    # handle 顶部重入观察裁决——语义不变(选卡落地验真后才写,非点击
-    # 即写),形状锚更新为现役裁决载体。
-    assert '_confirm_pending' in src and '_record_chosen' in src, \
-        '写在出口验真(重入观察裁决:确认已发+入口锚消失)之后的收案路径'
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
             EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
     sess = StrategySession()
@@ -598,12 +574,13 @@ def test_encounter_chosen_written_on_true_pick_only() -> None:
 
 
 def test_supply_chosen_written_from_stash_after_exit_only() -> None:
-    """补给节点 chosen_supply 接线锁(§3.4.5;列数动态 → 值=选定列三元组
-    原文,不做列数假定):①真选暂存 → 出口验真方法写 (角色,装备,有钻石)
-    且写后取走暂存;②暂存空(兜底点卡/刷新轮)不写;③pop 取走即清
-    (重入轮入口先弃,防陈旧选跨轮/跨节点误写);无 match 安全空转。"""
-    import inspect
-
+    """补给节点 chosen_supply 记录面行为锁(§3.4.5;列数动态 → 值=选定列
+    三元组原文,不做列数假定):①真选暂存 → 出口验真方法写
+    (角色,装备,有钻石)且写后取走暂存;②暂存空(兜底点卡/刷新轮)不写;
+    ③pop 取走即清(重入轮入口先弃,防陈旧选跨轮/跨节点误写);无 match
+    安全空转。
+    (T-252 三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
+    review 与代码规范。)"""
     from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_supply_node,
@@ -612,10 +589,6 @@ def test_supply_chosen_written_from_stash_after_exit_only() -> None:
         StrategySession,
     )
 
-    src = inspect.getsource(cw_screen_supply_node)
-    assert '.chosen_supply' in src and 'write_logic' in src, \
-        '补给节点 chosen_supply 写端接线在位'
-    assert '_pending_chosen_supply' in src, '选定暂存中转在位(出口验真后写)'
     sess = StrategySession()
     op = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, sess)
     exec_state_of(sess)._pending_chosen_supply = ('希儿', '星币收集器', True)
@@ -642,11 +615,11 @@ def test_supply_chosen_written_from_stash_after_exit_only() -> None:
 
 
 def test_expert_chosen_written_on_card_pick_only() -> None:
-    """专家邀请函 chosen_expert 接线锁(§3.4.5):卡分支写羁绊原文名;
-    「现金为王」兜底分支不写(该事实由 ConfirmExpertCash +4 金到账登记
-    通道承载,照旧不动)——真选守卫照 chosen_tome 式。"""
-    import inspect
-
+    """专家邀请函 chosen_expert 记录面行为锁(§3.4.5):卡分支写羁绊原名
+    名;「现金为王」兜底分支不写(该事实由 ConfirmExpertCash +4 金到账
+    登记通道承载,照旧不动)——真选守卫照 chosen_tome 式。
+    (T-252 三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
+    review 与代码规范。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_expert_invite,
     )
@@ -654,10 +627,6 @@ def test_expert_chosen_written_on_card_pick_only() -> None:
         StrategySession,
     )
 
-    src = inspect.getsource(cw_screen_expert_invite)
-    assert '.chosen_expert' in src and 'write_logic' in src, \
-        '专家邀请函 chosen_expert 写端接线在位'
-    assert 'ConfirmExpertCash' in src, '现金为王 +4 金到账登记通道保持(照旧)'
     bonds: list[str | None] = ['仙舟', None, '贝洛伯格', None]
     sess = StrategySession()
     op = _op_with_session(cw_screen_expert_invite.CwScreenExpertInvite, sess)
@@ -675,11 +644,11 @@ def test_expert_chosen_written_on_card_pick_only() -> None:
 
 
 def test_wish_chosen_written_with_objective_text_only() -> None:
-    """祈愿试炼 chosen_wish 接线锁(§3.4.5):objective 原文名读到才写;
-    未读到(None)/选中槽文本空 = 盲选 fallback 不写——真选守卫照
-    chosen_tome 式。"""
-    import inspect
-
+    """祈愿试炼 chosen_wish 记录面行为锁(§3.4.5):objective 原文名读到
+    才写;未读到(None)/选中槽文本空 = 盲选 fallback 不写——真选守卫照
+    chosen_tome 式。
+    (T-252 三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
+    review 与代码规范。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_wish_trial,
     )
@@ -687,14 +656,6 @@ def test_wish_chosen_written_with_objective_text_only() -> None:
         StrategySession,
     )
 
-    src = inspect.getsource(cw_screen_wish_trial)
-    assert '.chosen_wish' in src and 'write_logic' in src, \
-        '祈愿试炼 chosen_wish 写端接线在位'
-    # 改写依据:出口验真收案调用点仍在(cw_screen_wish_trial 重入裁决
-    # 尾部 self._record_chosen(...)),仅形参名局部化(objs/_objs、
-    # pick_idx/_pick_idx)——形状锚收窄到调用点本身,参数名不作锚。
-    assert 'self._record_chosen(' in src, \
-        '写在出口验真(标识消失)之后的收案路径'
     sess = StrategySession()
     op = _op_with_session(cw_screen_wish_trial.CwScreenWishTrial, sess)
     op._record_chosen(['累计刷新10次', '', ''], 0)

@@ -58,7 +58,6 @@ CwScreenWaitOneOne / 位面情报采集 CwScreenPlaneIntel(薄转录 + 双节点
 """
 from __future__ import annotations
 
-import inspect
 from types import SimpleNamespace
 
 import pytest
@@ -139,23 +138,9 @@ def test_closing_ops_inherit_base() -> None:
             f'{cls_name} 未迁移到 CwScreenOpBase(T-48 收尾五屏)')
 
 
-def test_closing_ops_node_budget_gate() -> None:
-    """五 op 结构锁②(登记门):节点预算归装饰器、逐屏逐字登记
-    (总纲契约 1:预算不随路径变)。红时该登记的是「哪屏预算为何改」
-    ——登记门形态,照常跟绿;装配点分流的存在性/先后不再源码锁:
-    装两端口走五段段迹、不装走旧路径零段迹的双向行为锁(下方各屏)
-    在分流判据被删/后置时必红,承重同一事实。"""
-    _BUDGETS = {
-        'cw_screen_plane_transition': 'node_max_retry_times=8',
-        'cw_screen_armory_box': 'node_max_retry_times=8',
-        'cw_screen_deploy_not_full': 'node_max_retry_times=10',
-        'cw_screen_wait_one_one': "name='等待1-1', is_start_node=True)",
-        'cw_screen_plane_intel': 'node_max_retry_times=60',
-    }
-    for mod_name, cls_name, _node_name in _CLOSING_OPS:
-        cls = getattr(_closing_module(mod_name), cls_name)
-        assert _BUDGETS[mod_name] in inspect.getsource(cls), (
-            f'{cls_name}: 节点预算漂移(预算归装饰器不随路径变,总纲契约 1)')
+# (T-252 三审整删)原 test_closing_ops_node_budget_gate「五 op 结构锁②」
+# (getsource(cls) 断言预算装饰器字面逐屏在场)——源码扫描形态(README
+# 禁止清单);「节点预算归装饰器逐屏登记」防线归 review 与代码规范。
 
 
 @pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
@@ -521,22 +506,15 @@ def test_wait_one_one_timeout_leaves_evidence_new_path(test_context,
 
 def test_plane_intel_thin_transcription_single_body(test_context,
                                                     monkeypatch) -> None:
-    """薄转录锁(总纲契约 2,收尾屏详设 §5):①observe 直通(无门无早退,
-    场景门不前移);②决策循环消费 ``_collect_cycle`` 单一共享体(新旧路径
-    同一份,禁第二套转录);③新路径成功轮 = 五段迹 + 采集完 success(三位
-    面齐桩态);④旧路径同结果零段迹。红 = 体被转录成第二份或直通被拆门。"""
+    """薄转录锁行为半(总纲契约 2,收尾屏详设 §5):新路径成功轮 = 五段迹
+    + 采集完 success(三位面齐桩态);旧路径同结果零段迹。红 = 体被转录
+    成第二份或直通被拆门。
+    (T-252 三审拆半:原 getsource 三段「observe 直通无门/_collect_cycle
+    单一共享体/collect 恰一处委托」字面在场扫描腿删,转录单一源面归
+    review 与代码规范;行为面由本锁新旧路径驱动承重。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_plane_intel as pim,
     )
-    obs_src = inspect.getsource(pim.CwScreenPlaneIntel.lifecycle_observe)
-    assert 'round_fail' not in obs_src and 'round_retry' not in obs_src, (
-        '薄转录 observe 直通:场景门不得前移进观察段(收尾屏详设 §5)')
-    dc_src = inspect.getsource(
-        pim.CwScreenPlaneIntel.lifecycle_decision_cycle)
-    assert '_collect_cycle' in dc_src, '决策循环须消费共享采集体(零转录)'
-    collect_src = inspect.getsource(pim.CwScreenPlaneIntel.collect)
-    assert collect_src.count('return self._collect_cycle()') == 1, (
-        'collect 节点 = 分流 + 委托(体唯一住 _collect_cycle,禁双份)')
     for install in (True, False):
         if install:
             install_dispatch_stub_ports(monkeypatch)
