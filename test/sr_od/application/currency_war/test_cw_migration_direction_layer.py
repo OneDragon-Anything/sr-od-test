@@ -22,9 +22,13 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
    「不死守可辨收敛」两面经亲读对账由主题文件承载(test_cw_realizable_interest_floor/
    test_cw_statefn + test_cw_session_separation;test_cw_mandate_v1::
    test_shop_visit_sets_latch / test_cw_shop_line::
-   test_d_p2idle_idle_gold_counter / test_cw_must_spend_zone::
-   test_whitelist_empty_shop_cap_top_zero_consume),重复锁已删
-   (README 纪律 7 跨文件择一);复活史见哨兵节注;
+   test_d_p2idle_idle_gold_counter),重复锁已删
+   (README 纪律 7 跨文件择一);复活史见哨兵节注。原列
+   test_cw_must_spend_zone::test_whitelist_empty_shop_cap_top_zero_consume
+   系幽灵指针(该文件全史不存在,2026-09-15 覆盖对账勘误):
+   shop_r1_no_chaseable_member==1 面无本帧族独立覆盖锁,现役近邻 =
+   test_cw_no_target_three_arms::test_must_spend_zone_no_refresh_burn
+   (必花域空店帧同键断言,p2plus 无目标帧族,非局23 帧型);
 7. committed 翻真谓词 vs 旧 CommitSignals 判定:逐帧对拍锁(P1 段
    小帧集,分歧仅允许出现在方向层接管区并逐帧定性)。
 """
@@ -259,8 +263,10 @@ def _ju23_session() -> StrategySession:
 #  终结面 = test_cw_mandate_v1::test_shop_visit_sets_latch 同构造帧
 #  (_visit_state ≡ 本文件 _ju23_frame(100, []),gold/level/deployed 逐字段
 #  一致)同断言;shop_visit_idle_gold==1 = test_cw_shop_line::
-#  test_d_p2idle_idle_gold_counter,shop_r1_no_chaseable_member==1 =
-#  test_cw_must_spend_zone::test_whitelist_empty_shop_cap_top_zero_consume;
+#  test_d_p2idle_idle_gold_counter,shop_r1_no_chaseable_member==1 无本帧族独立覆盖锁,现役近邻 =
+#  test_cw_no_target_three_arms::test_must_spend_zone_no_refresh_burn
+#  (必花域空店帧同键断言,p2plus 无目标帧族,非局23 帧型;原指
+#  test_cw_must_spend_zone 系幽灵指针,全史不存在,2026-09-15 对账勘误);
 #  stockpile_buy 放行面 = test_cw_shop_line::test_stockpile_face_m6_
 #  opens_with_frame_window。README 纪律 7 跨文件择一。)
 
