@@ -236,7 +236,13 @@ def test_anchor_binary_detectability() -> None:
             cv2.IMREAD_COLOR)
         x1, y1, x2, y2 = rect
         crop = screen[y1:y2, x1:x2]
-        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)[1]
-        white = float((binary > 0).mean())
+        from one_dragon.utils import cv2_utils
+        binary = cv2_utils.to_binary(crop, threshold=127)
+        assert binary.ndim in (2, 3)
+        if binary.ndim == 2:
+            import cv2 as _cv2
+            binary = _cv2.cvtColor(binary, _cv2.COLOR_GRAY2BGR)
+        assert binary.shape[2] == 3   # 门内产物须 3 通道(实机四败回归位)
+        gray = cv2.cvtColor(binary, cv2.COLOR_BGR2GRAY)
+        white = float((gray > 0).mean())
         assert white > 0.02, (fname, white)
