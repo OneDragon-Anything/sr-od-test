@@ -180,7 +180,7 @@ class TestEnterGameFlow:
 
         enter_running_state(test_context)
         try:
-            with fast_sleep():
+            with fast_sleep(op):
                 result = op.execute()
         finally:
             reset_running_state(test_context, op)
@@ -229,7 +229,7 @@ class TestEnterGameFlow:
 
         enter_running_state(test_context)
         try:
-            with fast_sleep():
+            with fast_sleep(op):
                 result = op.execute()
         finally:
             reset_running_state(test_context, op)
@@ -285,7 +285,7 @@ class TestEnterGameFlow:
 
         enter_running_state(test_context)
         try:
-            with fast_sleep():
+            with fast_sleep(op):
                 result = op.execute()
         finally:
             reset_running_state(test_context, op)

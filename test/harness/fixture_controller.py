@@ -463,7 +463,7 @@ class _NoSleepTimeProxy:
 
 
 @contextmanager
-def fast_sleep() -> Iterator[list[float]]:
+def fast_sleep(op: object | None = None) -> Iterator[list[float]]:
     """流程测试内把 op 框架的轮间/点击前等待变成 no-op 记录。
 
     背景:op 框架的 ``_after_round_wait`` / ``pre_delay`` 在真机上等待画面切换,
@@ -472,23 +472,48 @@ def fast_sleep() -> Iterator[list[float]]:
     占全量套件 ~315s 中的 ~85s)。本上下文管理器把 ``operation.py`` 模块里的
     ``time`` 引用换成替身,``execute()`` 期间不再真实等待。
 
+    Args:
+        op: 可选,被测 op 实例。传入时顺 ``__mro__`` 把 op 类族各模块自己的
+            ``time`` 引用也换成替身 —— 覆盖「op 模块内裸 ``import time`` 直睡」
+            的写法(2026-09-15 实测:enter_game 账密节点 5 处裸睡 4.5s,基类桩
+            够不着)。生产语义不变:真机跑时这些仍是真实等待。
+
     用法::
 
-        with fast_sleep():
+        with fast_sleep(op):
             result = op.execute()
 
     Yields:
         被跳过的 sleep 时长列表(诊断/断言等待行为时可用)。
     """
+    import sys
+
     import one_dragon.base.operation.operation as operation_module
 
     skipped: list[float] = []
     real_time: ModuleType = operation_module.time
     operation_module.time = _NoSleepTimeProxy(real_time, skipped)  # type: ignore[assignment]
+
+    # op 类族各模块的裸 time 引用一并桩掉(按 MRO 去重;原值记录,退出时逆序还原)。
+    saved: list[tuple[ModuleType, ModuleType]] = []
+    if op is not None:
+        seen: set[int] = set()
+        for klass in type(op).__mro__:
+            mod_name = getattr(klass, '__module__', None)
+            if mod_name is None or id(mod_name) in seen:
+                continue
+            seen.add(id(mod_name))
+            mod = sys.modules.get(mod_name)
+            if mod is not None and hasattr(mod, 'time'):
+                saved.append((mod, mod.time))  # type: ignore[arg-type]
+                mod.time = _NoSleepTimeProxy(mod.time, skipped)  # type: ignore[assignment]
+
     try:
         yield skipped
     finally:
         operation_module.time = real_time  # type: ignore[assignment]
+        for mod, orig_time in reversed(saved):
+            mod.time = orig_time  # type: ignore[assignment]
 
 
 __all__ = [
