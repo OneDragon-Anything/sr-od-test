@@ -19,11 +19,7 @@ prep_shop_open 阶段设计上不读 bench 身份)→ 崩溃循环停机。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    BenchChar,
-    bench_from_compact,
-    exec_state_of,
-)
+from sr_od.application.currency_war.kernel.cw_exec_state import (BenchChar, bench_from_compact)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     apply_prep_action_logic,
@@ -51,7 +47,7 @@ def _seed(session, tracked, *, ov_id: str = '不死途'):
     bs.write_logic(bs.gold, 10, produced_by='test', sig=_SIG)
     bs.write_logic(bs.overflow_warning, True, produced_by='test', sig=_SIG)
     bs.write_logic(bs.overflow_card, ov_id, produced_by='test', sig=_SIG)
-    exec_state_of(session).tracked_bench_chars = tracked
+    board_state_of(session).tracked_books.bench = tracked
     return bs
 
 
@@ -65,7 +61,7 @@ def test_overflow_absorb_syncs_tracked():
     apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
-    tracked = exec_state_of(session).tracked_bench_chars
+    tracked = board_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]
     assert tracked[0] is not None and tracked[0].slot == 1   # 被卖槽回占
@@ -84,7 +80,7 @@ def test_overflow_absorb_after_executor_removal_compact_shape():
     apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
-    tracked = exec_state_of(session).tracked_bench_chars
+    tracked = board_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]
     assert tracked[1] is not None and tracked[1].char_id == '刃'   # 刃 仍在槽 2

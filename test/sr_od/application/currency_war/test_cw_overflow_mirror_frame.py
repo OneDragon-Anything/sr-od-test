@@ -13,11 +13,7 @@ tracked 吸收半已锁(test_cw_overflow_tracked_sync.py);本文件锁第三半
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    BenchChar,
-    bench_from_compact,
-    exec_state_of,
-)
+from sr_od.application.currency_war.kernel.cw_exec_state import (BenchChar, bench_from_compact)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     bench_view_of_slots,
@@ -49,7 +45,7 @@ def _seed(session, *, ov_id: str = '不死途'):
     bs.write_logic(bs.gold, 10, produced_by='test', sig=_SIG)
     bs.write_logic(bs.overflow_warning, True, produced_by='test', sig=_SIG)
     bs.write_logic(bs.overflow_card, ov_id, produced_by='test', sig=_SIG)
-    exec_state_of(session).tracked_bench_chars = bench_from_compact([
+    board_state_of(session).tracked_books.bench = bench_from_compact([
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)])
     return bs
@@ -79,7 +75,7 @@ def test_prep_mirror_backfills_card_and_keeps_free_count():
                   for b in out.bench_chars if b is not None) == [
         (1, '不死途'), (2, '刃')]          # 卖出件离席 + 入位卡回占槽 1
     assert out.free_bench_slots == 7       # 不 +1(缺镜像 = 假空席绕过席满门)
-    tracked = exec_state_of(session).tracked_bench_chars
+    tracked = board_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]          # 写口调用点透传 session = 执行账吸收
 
@@ -103,6 +99,6 @@ def test_prep_mirror_needs_leg_landed_not_flag_alone():
     assert [(b.slot, b.char_id) for b in out.bench_chars] == [(2, '刃')]
     assert out.free_bench_slots == 8       # 腿未落地 → 常规腿 +1(镜像不误发)
     assert bs.overflow_warning.value is True    # 旗标未消费(写口零写)
-    tracked = exec_state_of(session).tracked_bench_chars
+    tracked = board_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
         ('花火', 1), ('刃', 1)]            # 执行账零写

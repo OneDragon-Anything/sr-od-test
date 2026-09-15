@@ -402,7 +402,7 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
         sig=ChannelSig(family='obs', actor='CwScreenPrep', mode='read'))
     session = SimpleNamespace()
     _tracked = [_bc('银枝', star=1, slot=4)]
-    exec_state_of(session).tracked_bench_chars = _tracked
+    board_state_of(session).tracked_books.bench = _tracked
     # v1 形态帧:bench 恒默认空表 + 不可读位(生产置位点 = read_game_state)
     st = _state(gold=30, shop=[])
     st.bench_readable = False
@@ -413,5 +413,5 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
         and view.slots[3].unit.char_id == '银枝', \
         '合成后容器 bench 仍为漏斗真读值(未读域跳写,兜底空表不覆盖)'
     assert [(b.char_id, b.star) for b in
-            exec_state_of(session).tracked_bench_chars if b is not None] \
+            board_state_of(session).tracked_books.bench if b is not None] \
         == [('银枝', 1)], '执行账 tracked 不受合成影响(容器/执行两账同源)'

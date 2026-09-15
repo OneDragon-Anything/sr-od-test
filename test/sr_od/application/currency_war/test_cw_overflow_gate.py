@@ -12,7 +12,10 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_exec_state import (
+    BenchChar,
+    bench_from_compact,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
@@ -125,11 +128,7 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     bs.write_logic(bs.gold, 10, produced_by='test', sig=_SIG)
     bs.write_logic(bs.overflow_warning, True, produced_by='test', sig=_SIG)
     bs.write_logic(bs.overflow_card, '', produced_by='test', sig=_SIG)
-    from sr_od.application.currency_war.kernel.cw_exec_state import (
-        bench_from_compact,
-        exec_state_of,
-    )
-    exec_state_of(session).tracked_bench_chars = bench_from_compact([
+    bs.tracked_books.bench = bench_from_compact([
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)])
 
@@ -142,6 +141,6 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     assert bs.overflow_warning.value is True    # 未消费(未入位),留观察覆盖
     assert bs.overflow_card.value == ''
     # tracked 对称零写(身份缺读不吸收,两侧同测)
-    after = exec_state_of(session).tracked_bench_chars
+    after = board_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in after if b is not None] == [
         ('花火', 1), ('刃', 1)]
