@@ -26,9 +26,9 @@ import numpy as np
 import sr_od.application.currency_war.kernel.cw_observe as cw_observe
 from sr_od.application.currency_war import prep_actions as pa
 from sr_od.application.currency_war.kernel.cw_exec_state import (
+    BENCH_CAPACITY,
     BenchChar,
     bench_from_compact,
-    BENCH_CAPACITY,
     bench_occupied_slot_nos,
     bench_slots_healthy,
 )
@@ -95,8 +95,11 @@ def _bc(slot: int, name: str, star: int) -> BenchChar:
 # ===== 锁 1:星级锚定(reconcile_tracking)=====
 
 
-def test_star_flicker_two_frames_hold_third_frame_confirms(monkeypatch):
-    """N=3 确认门:连续 2 帧低读保旧不洗锚,第 3 帧才采新(超额证据)。"""
+def test_star_flicker_hold_then_confirm_and_oscillation_never_confirms(
+        monkeypatch):
+    """N=3 确认门两格(并一):连续 2 帧低读保旧不洗锚,第 3 帧才采新
+    (超额证据;抖动 episode 实测长度 = 2 帧,必须全程保旧);振荡断路
+    ——低读间夹恢复帧清计数 → 抖动形态零采新(本局病灶形态)。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
     board_state_of(session).tracked_books.bench = bench_from_compact(
@@ -111,15 +114,9 @@ def test_star_flicker_two_frames_hold_third_frame_confirms(monkeypatch):
     reconcile_tracking(session, read, [], source='test')
     assert _tracked_sig(session) == [('不死途', 1)]
     assert session.star_pending_regression == {}   # 确认后计数收口
-
-
-def test_star_flicker_with_recovery_never_confirms(monkeypatch):
-    """振荡断路:低读间夹恢复帧清计数 → 抖动形态零采新(本局病灶形态)。"""
-    _spy_conflicts(monkeypatch)
-    session = StrategySession()
+    # 振荡断路:恢复帧夹层清计数,零采新
     board_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '不死途', 2)])
-
     for star in (1, 1, 2, 1, 1):   # 2 帧抖动 episode ×2,中间恢复
         read = [_bc(1, '不死途', star)]
         reconcile_tracking(session, read, [], source='test')
@@ -177,14 +174,17 @@ def test_star_upgrade_read_raises_anchor_silently(monkeypatch):
 # ===== 锁 2:tracked 槽号守卫(写点置 None + 显影 + 仲裁门)=====
 
 
-def test_sell_removal_keeps_slot_layout_pad_shape():
-    """摘除腿按下标置 None:pad 态契约不破坏,存件不移位、信息位不动。"""
+def test_removal_keeps_layout_sell_and_move_legs():
+    """摘除腿按下标置 None 两腿(并一):sell 腿 pad 态契约不破坏,存件
+    不移位、信息位不动;DeployMove 腿同治本,bench 置 None 不移位 +
+    deployed 正常落槽。"""
+    # sell 腿:卖槽2(下标 1)
     session = StrategySession()
     board_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '花火', 1), _bc(2, '刃', 1), _bc(3, '椒丘', 1)])
     ex = _mk_executor(session)
 
-    ex._track_remove_bench(1)   # 卖槽2(下标 1)
+    ex._track_remove_bench(1)
 
     tracked = board_state_of(session).tracked_books.bench
     assert len(tracked) == BENCH_CAPACITY   # pad 态保持
@@ -193,32 +193,30 @@ def test_sell_removal_keeps_slot_layout_pad_shape():
         == ('花火', 1)
     assert tracked[2] is not None and (tracked[2].char_id, tracked[2].slot) \
         == ('椒丘', 3)   # 不移位:槽3 件仍在槽3(旧紧凑重排会把它挪到槽2)
-
-
-def test_move_removal_keeps_bench_layout_and_places_deployed():
-    """DeployMove 摘除腿同治本:bench 置 None 不移位 + deployed 正常落槽。"""
-    session = StrategySession()
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    # move 腿:花火 bench槽1 → 前排槽1
+    session_m = StrategySession()
+    board_state_of(session_m).tracked_books.bench = bench_from_compact(
         [_bc(1, '花火', 1), _bc(2, '刃', 1)])
-    board_state_of(session).tracked_books.deployed = []
-    ex = _mk_executor(session)
+    board_state_of(session_m).tracked_books.deployed = []
+    ex_m = _mk_executor(session_m)
 
-    ex._track_move_deployed(0, 'front', 1)   # 花火 bench槽1 → 前排槽1
+    ex_m._track_move_deployed(0, 'front', 1)
 
-    tracked = board_state_of(session).tracked_books.bench
-    assert tracked[0] is None and tracked[1].char_id == '刃' \
-        and tracked[1].slot == 2   # 刃 不移位
-    deployed = [b for b in board_state_of(session).tracked_books.deployed
+    tracked_m = board_state_of(session_m).tracked_books.bench
+    assert tracked_m[0] is None and tracked_m[1].char_id == '刃' \
+        and tracked_m[1].slot == 2   # 刃 不移位
+    deployed = [b for b in board_state_of(session_m).tracked_books.deployed
                 if b is not None]
     assert [(b.char_id, b.position_pref) for b in deployed] == [('花火', 'front')]
 
 
-def test_tracked_write_guard_records_defect_on_duplicate_slots(monkeypatch):
-    """写点健康显影:既有重复槽号 → bench_slot_unhealthy 台账行
-    (reader_source=tracked_write_guard),摘除腿照常执行(只减不增)。"""
+def test_tracked_write_guard_defect_and_healthy_silence(monkeypatch):
+    """写点健康显影两帧(并一):既有重复槽号 → bench_slot_unhealthy
+    台账行(reader_source=tracked_write_guard),摘除腿照常执行(只减
+    不增);健康账摘除零显影(常态无噪声)。"""
+    # 反帧:既有污染形态(信息位重复;模拟旧紧凑重排+买入追加累积产物)
     rows = _spy_defects(monkeypatch)
     session = StrategySession()
-    # 既有污染形态(信息位重复;模拟旧紧凑重排+买入追加累积产物)
     board_state_of(session).tracked_books.bench = [
         _bc(1, '花火', 1), _bc(2, '刃', 1), _bc(2, '椒丘', 1)]
     ex = _mk_executor(session)
@@ -232,18 +230,15 @@ def test_tracked_write_guard_records_defect_on_duplicate_slots(monkeypatch):
     assert reader == 'tracked_write_guard'
     tracked = board_state_of(session).tracked_books.bench
     assert tracked[0] is None   # 摘除未被拒(拒绝会让已卖件滞留 tracked)
-
-
-def test_healthy_removal_records_no_defect(monkeypatch):
-    """健康账摘除零显影(常态无噪声)。"""
-    rows = _spy_defects(monkeypatch)
-    session = StrategySession()
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    # 正帧:健康账摘除
+    rows_h = _spy_defects(monkeypatch)
+    session_h = StrategySession()
+    board_state_of(session_h).tracked_books.bench = bench_from_compact(
         [_bc(1, '花火', 1), _bc(2, '刃', 1)])
-    ex = _mk_executor(session)
+    ex_h = _mk_executor(session_h)
 
-    ex._track_remove_bench(1)
-    assert rows == []
+    ex_h._track_remove_bench(1)
+    assert rows_h == []
 
 
 def test_reconcile_bench_gate_rejects_duplicate_slots(monkeypatch):

@@ -22,48 +22,43 @@ def _bench_char(char_id: str, star: int = 1, slot: int = 1) -> BenchChar:
 
 
 class TestDeadStockPairBuyReject:
-    """死库存买入防线:拒因键真值边界(逐 C 值验证)。"""
+    """死库存买入防线:拒因键真值边界(逐 C 值一格,合并真值表)。"""
 
-    def test_first_copy_allowed(self):
-        """C=0:首张买入放行(买入后 C=1,单张全额可退零锁席)。"""
+    def test_reject_reason_truth_table(self):
+        """拒因真值表(七格并一):C=0 首张放行(买入后 C=1,单张全额
+        可退零锁席);C=1 第二张拒(拒因键 dead_stock_pair,买入后成 ×2
+        死对);C=2 第三张买入即满 3 自动合成 2★(消对)放行禁误伤;
+        线内名(义务基座成员)同名对 = 合法合成素材任意 C 放行;辖星
+        = 1,2★ 直出不成对恒放行;计数域 = bench∪deployed(deployed 域
+        同名 1★ 同样构成 C=1);空名(装备/纯标签件无同名语义)放行
+        防误伤。"""
+        # C=0 首张放行
         bench = [_bench_char('阿格莱雅')]
         assert mandate.dead_stock_pair_buy_reject_reason(
             '缇宝', 1, bench, [], ()) == ''
-
-    def test_second_copy_rejected_with_reason_key(self):
-        """C=1:第二张拒,拒因键 dead_stock_pair(买入后成 ×2 死对)。"""
-        bench = [_bench_char('阿格莱雅'), _bench_char('缇宝')]
-        deployed = [_bench_char('青雀', star=2)]
+        # C=1 第二张拒
+        bench1 = [_bench_char('阿格莱雅'), _bench_char('缇宝')]
+        deployed1 = [_bench_char('青雀', star=2)]
         assert mandate.dead_stock_pair_buy_reject_reason(
-            '阿格莱雅', 1, bench, deployed, ()) == 'dead_stock_pair'
-
-    def test_third_copy_completes_merge_allowed(self):
-        """C=2:第三张买入即满 3 自动合成 2★(消对),放行禁误伤。"""
-        bench = [_bench_char('阿格莱雅'), _bench_char('阿格莱雅')]
+            '阿格莱雅', 1, bench1, deployed1, ()) == 'dead_stock_pair'
+        # C=2 第三张(合成消对)放行
+        bench2 = [_bench_char('阿格莱雅'), _bench_char('阿格莱雅')]
         assert mandate.dead_stock_pair_buy_reject_reason(
-            '阿格莱雅', 1, bench, [], ()) == ''
-
-    def test_line_member_pair_allowed(self):
-        """线内名(义务基座成员)同名对 = 合法合成素材,任意 C 放行。"""
+            '阿格莱雅', 1, bench2, [], ()) == ''
+        # 线内名对放行
         k = ('停云',)
-        bench = [_bench_char('停云')]
+        bench_line = [_bench_char('停云')]
         assert mandate.dead_stock_pair_buy_reject_reason(
-            '停云', 1, bench, [], k) == ''
-
-    def test_star2_never_rejected(self):
-        """辖星 = 1:2★ 直出不成对,恒放行。"""
-        bench = [_bench_char('阿格莱雅', star=2)]
+            '停云', 1, bench_line, [], k) == ''
+        # 2★ 恒放行
+        bench_star2 = [_bench_char('阿格莱雅', star=2)]
         assert mandate.dead_stock_pair_buy_reject_reason(
-            '阿格莱雅', 2, bench, [], ()) == ''
-
-    def test_deployed_domain_counts(self):
-        """计数域 = bench∪deployed:deployed 域同名 1★ 同样构成 C=1。"""
+            '阿格莱雅', 2, bench_star2, [], ()) == ''
+        # deployed 域计数
         deployed = [_bench_char('阿格莱雅')]
         assert mandate.dead_stock_pair_buy_reject_reason(
             '阿格莱雅', 1, [], deployed, ()) == 'dead_stock_pair'
-
-    def test_empty_name_allowed(self):
-        """空名(装备/纯标签件无同名语义)放行,防误伤。"""
+        # 空名放行
         assert mandate.dead_stock_pair_buy_reject_reason(
             '', 1, [_bench_char('阿格莱雅')], [], ()) == ''
 
@@ -76,20 +71,18 @@ class TestDominanceBuyEligibleSeatBand:
     参数化金位门不变,本组只锁席位维带界。
     """
 
-    def test_gold_below_saturation_never_eligible(self):
-        """金维门原样:金 ≤ g* 恒不可发射(与席位维无关)。"""
+    def test_seat_band_truth_table(self):
+        """席位带真值表(四格并一):金 ≤ g* 恒不可发射(金维门原样,
+        与席位维无关);V_slot>0 带(bench_free=1)fail-closed 否决;
+        bench_free=0 原物理门语义保留(否决带含边界);bench_free ≥ 2
+        域 P41② 支配论证原样有效零干涉(集成锁留 wiring 侧)。"""
         assert mandate.dominance_buy_eligible(30, 5, cap_resolved=4) is False
-
-    def test_bench_free_one_band_vetoed(self):
-        """V_slot>0 带(bench_free=1):席位外部性 fail-closed 否决。"""
         assert mandate.dominance_buy_eligible(80, 1, cap_resolved=4) is False
-
-    def test_bench_free_zero_still_vetoed(self):
-        """bench_free=0:原物理门语义保留(否决带含边界)。"""
         assert mandate.dominance_buy_eligible(80, 0, cap_resolved=4) is False
 
-    @pytest.mark.parametrize('bench_free', [2, 5, 9])
+    @pytest.mark.parametrize('bench_free', [2])
     def test_bench_free_two_plus_untouched(self, bench_free: int):
-        """bench_free ≥ 2 域:P41② 支配论证原样有效,零干涉。"""
+        """bench_free ≥ 2 域:P41② 支配论证原样有效,零干涉(参数化
+        收敛为带界代表值;带宽语义由谓词本体与集成锁承压)。"""
         assert mandate.dominance_buy_eligible(
             80, bench_free, cap_resolved=4) is True

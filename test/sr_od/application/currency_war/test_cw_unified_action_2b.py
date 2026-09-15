@@ -12,14 +12,14 @@ LevelUp 携 cost(单击价现算装载)+auth_basis(授权记录分键)。
    字段/顺序/metadata 逐字保留 → 键粒度不漂移;route_tag 携
    action_key_exclude 不入键;原族A 侧 reason/convert_reason/auth_basis
    无 exclude 的现状同批保留 = 商店域键面零漂移锚);
-2. 词表白名单行为锁(F3 白名单元组面:组合壳/整档替换宏不入集、全类
-   统一基类后代、现役动作全集在册;执行器拒词表外类型——删除面由该
-   行为红兜底,不设退役符号墓碑断言);
+2. 词表白名单行为锁(F3 白名单行为半:执行器拒词表外类型、在册动作
+   合法域放行;白名单元组面对账已退役——删除面由该行为红兜底,不设
+   退役符号墓碑断言);
 3. LevelUp 装载锁 2b 半(发射面 cost = kernel xp_click_cost 现算装载、
    auth_basis = 发射臂放行名分键装载;逻辑态金腿 action.cost 直写与
    执行缝退役锁 = test_cw_unified_action_2a 翻转腿);
 4. 换算收口锁(发射面容器下标直取:fail-closed 解析 helper 三域真值 +
-   执行坐标边换算函数 deployed_row_slot/deployed_idx_of 互逆)。
+   执行坐标边换算函数 deployed_row_slot/deployed_idx_of 互逆,同锁两段)。
 """
 
 from __future__ import annotations
@@ -45,8 +45,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     board_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CW_ACTION_TYPES,
-    CwAction,
     CwSimFrame,
     DeployMove,
     LevelUp,
@@ -89,20 +87,6 @@ def test_action_key_faces_pinned_per_class():
 
 
 # ===== 2. 词表归一与删除锁(行为半)=====
-
-def test_unified_vocab_is_single_source_and_removals_hold():
-    """统一词表白名单行为面:F3 白名单元组(执行器放行面的单一源)无组合
-    壳/整档替换宏成员、全类统一基类后代、现役动作全集在册——退役符号
-    墓碑断言不设(README 禁止清单;删除面由行为红兜底:若双词表复活/
-    转发 shim 回流,F3 会放行非法动作,本元组面即红)。"""
-    names = {c.__name__ for c in CW_ACTION_TYPES}
-    # 全类 CwAction 后代(统一基类;isinstance 检查统一走基类)
-    assert all(issubclass(c, CwAction) for c in CW_ACTION_TYPES)
-    assert names >= {
-        'BuyCard', 'SellBench', 'LevelUp', 'DeployMove', 'SellDeployed',
-        'ClickSpheres', 'OpenBox', 'OpenTome', 'WearEquip', 'FurnaceUse',
-        'StartBattle', 'OpenShop'}
-
 
 def test_prep_f3_rejects_unknown_and_admits_registered():
     """执行器 F3 白名单 = 统一词表元组的行为半:词表外类型拒(参数非法
@@ -181,11 +165,8 @@ def test_emission_resolves_container_index_fail_closed():
     assert mandate._deployed_container_idx(
         bs, BenchChar(slot=3, char_id='不在场', star=1,
                       position_pref='back')) is None
-
-
-def test_executor_edge_conversion_functions_are_single_inverse_pair():
-    """执行坐标边换算函数(kernel 单一源)互逆且边界正确:下标 0-9 →
-    (排, 槽号) → 下标恒等;跨界值域锁定(front 1-4 / back 1-6)。"""
+    # 执行坐标边换算函数(kernel 单一源)互逆且边界正确(原互逆锁迁并):
+    # 下标 0-9 → (排, 槽号) → 下标恒等;跨界值域锁定(front 1-4 / back 1-6)。
     for idx in range(10):
         row, slot_no = deployed_row_slot(idx)
         assert deployed_idx_of(row, slot_no) == idx

@@ -10,11 +10,11 @@
   买断制 0——测试值一律注册表名,禁裸 override 数字)。
 
 锁面(方案审验收 ④-⑤ 编号):
-1. ①注册表直调三卡在册 → cap 联动(kernel 链 + 预算面 R* + 换线可负担窗);
-2. ②不在册 → 回落 DEFAULT(裸 session/None session/未注册名);
-3. ④None/0 区分锁(最高危陷阱):买断制 override=0 不得被 ``or`` 真值
+1. ①注册表直调三卡在册 → cap 联动(kernel 链 + 预算面 R* + 换线可负担窗;
+   前置锚 = 三卡覆写值在册直调;回落面 = 不在册 → DEFAULT);
+2. ④None/0 区分锁(最高危陷阱):买断制 override=0 不得被 ``or`` 真值
    折叠回 5——判别只认 None;
-4. ⑤并持 max 语义锁(ADR-0131):开源节流+利息上调 → 10;
+3. ⑤并持 max 语义锁(ADR-0131):开源节流+利息上调 → 10;
    买断制+开源节流 → 9。
 (原 5 墓碑 grep 锁已删:源码扫描形态,README 禁止清单。)
 """
@@ -60,22 +60,18 @@ def _sess_with(*names: str) -> StrategySession:
     return s
 
 
-def test_registry_override_values_are_reachable() -> None:
-    """前置锚:注册表三卡覆写值直调在册(9/10/0;表缺任一 = 本文件
-    全部按名注入的锁失去锚点,先修注册表再谈锁)。"""
+def test_three_cap_cards_linkage() -> None:
+    """锁①:注册表直调三卡在册 → cap 联动(resolved 链单点)。前置锚:
+    三卡覆写值直调在册(9/10/0;表缺任一 = 本文件全部按名注入的锁失去
+    锚点,先修注册表再谈锁)。回落面:不在册 → DEFAULT_INTEREST_CAP
+    (裸 session/None/未注册名三形态;回落问题实际形态 = 从未持有,
+    append-only)。"""
+    # 前置锚(原可达性锁迁并):三卡覆写值在册直调
     assert {9: '开源节流', 10: '利息上调', 0: '买断制'}.items() \
         <= _CAP_CARD_BY_VALUE.items()
-
-
-def test_three_cap_cards_linkage() -> None:
-    """锁①:注册表直调三卡在册 → cap 联动(resolved 链单点)。"""
     for cap, name in _CAP_CARD_BY_VALUE.items():
         assert cap_resolved_of_session(_sess_with(name)) == cap, name
-
-
-def test_default_fallback_without_cards() -> None:
-    """锁②:不在册 → 回落 DEFAULT_INTEREST_CAP(裸 session/None/
-    未注册名三形态;回落问题实际形态 = 从未持有,append-only)。"""
+    # 回落三形态(原回落锁迁并)
     assert cap_resolved_of_session(None) == DEFAULT_INTEREST_CAP
     assert cap_resolved_of_session(StrategySession()) == DEFAULT_INTEREST_CAP
     assert cap_resolved_of_session(_sess_with('未注册卡名')) \

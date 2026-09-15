@@ -1,33 +1,21 @@
 """泄金阶梯单帧锁(ADR-0604 判据锁;锁清单 = 设计方案 §4.3
 本批归属 L1-L7 + 档 2 轮内新鲜度排除,方案正本指针 = ADR-0604 头注)。
 
-锁清单(§4.3 表;本批 8 条):
-- L1  档 1 可上场买发射(锁线 ∧ 必花域 ∧ vacancy ∧ 围栏可落非垫件)。
-- L1b 档 1/出口③ 候选互斥切分(F12):垫件类(1★ 零重叠全额退)不归档 1。
-- L2  档 2 压库买发射(线未齐帧不再被 stop_flag 关死;窗口=在产 ω 塌缩带)。
-- L3  dominance 摘旗后线未齐帧发射 + 先于档 2(支配性优先序);prep 位
-      M6 摘旗扩域可达性(m6_bench_full 拒因在 stop=False 帧显影)。
-- L4  NORMAL 帧 P72 拒 → 档 1/档 2 同帧挂起(预留金不被击穿)。
-- L5  档 2 买后 bench 满(投影下一帧)→ 不再发射(bench 硬闸)。
-- LF  档 2 轮内新鲜度排除:同轮卖 X 买回 X 禁(模拟批#5 s108 实证)。
+锁清单(§4.3 表存续面):
+- LF′ 档 2 轮内新鲜度排除载体相位过期:跨轮/跨位面读数空集(排除
+      上界 ≤1 轮;发射位排除面归写端与消费位锁辖)。
+- L3′ prep 位 M6 摘旗可达性:stop_flag=False(线未齐)∧ gold>g* ∧
+      席满帧,M6 prep 块被触达(m6_bench_full 拒因显影——摘旗前该帧
+      被 stop_flag 短路、拒因结构性不可见)。
 - L7  ALL IN 类别过滤:P21 域(kernel all_in_xp_domain_hit)内非支A XP
       经 P72 闸拒;支A 形态/域外帧放行(指标 G=0 的判据面)。
 
-测试构造声明:档 2 锁帧以 ``mandate.dominance_buy_eligible`` 猴补关闭
-承载——档 0(dominance)按 ADR-0604 §2 发射序申报物理先于档 2,且
-摘旗后两臂候选集有包含关系(1★ 全额退非线内件同属两臂候选);L2/L5/
-LF 钉的是档 2 自身闸链(档匹配/s_reserve/新鲜度/bench 硬闸),不声明
-「该帧档 2 无条件可达」。围栏预检(kernel can_deploy_single)在 L1 帧
-猴补放行——围栏语义归 kernel 锁
-(test_cw_deploy_single_source 等)辖,本文件钉档 1 的接线。
+测试构造声明:候选/帧构造基建(_km/_bc/_card/_off_name/_session_stub/
+_st)保留 = test_cw_press_narrow_transition 的候选构造单一源(跨文件
+消费);L1/L1b/L2/L3/L5/LF 发射面锁与档 1 锁线门负腿已退役。
 """
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
-
-import pytest
-from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_bs,
-)
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 
@@ -48,13 +36,11 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    BuyCard,
     CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
-    shop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     levelup as crit_levelup,
@@ -64,9 +50,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.odds import (
-    tier_search_window,
 )
 
 _COMP = '列车同行'
@@ -134,149 +117,10 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
     return st
 
 
-def _decide(st: CwSimFrame, sess) -> object:
-    return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
-
-
-def _tier_cost(level: int = 5) -> int:
-    """在产 ω 塌缩带内的费档(窗口单一源 tier_search_window 现查,
-    零拍定——费档随表走,不硬编码)。"""
-    window = tier_search_window(level,
-                                DEFAULT_REGISTRY.omega_collapse_ratio)
-    if not window:
-        raise AssertionError('level 5 塌缩带空(锁前提失效)')
-    return sorted(window)[0]
-
-
-# ===== L1:档 1 可上场买发射 =====
-
-
-class TestL1DeployableBuy:
-    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
-    def test_l1_press_buy_deployable_emits(self, monkeypatch):
-        """锁 L1:锁线 ∧ 必花域 ∧ vacancy>0 ∧ bench_free≥1 ∧ 可上场非垫件
-        在售 ⇒ BuyCard('press_buy_deployable') + hit 分键。"""
-        monkeypatch.setattr(shop, 'can_deploy_single',
-                            lambda *a, **kw: (True, ''))
-        km = _km()
-        cand = _off_name(exclude=tuple(km))
-        st = _st(60, [_card(cand, cost=2, star=2)])   # 2★=非垫件类,非支配候选
-        sess = _session_stub(locked=True)
-        act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'press_buy_deployable'
-        assert state_of(sess).cw4_counters.get('press_buy_deployable_hit') == 1
-    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
-    def test_l1_filler_class_excluded_f12(self, monkeypatch):
-        """锁 L1b(F12 候选互斥切分):垫件类(1★ 零重叠全额退)不归档 1
-        ——filler_excluded 分键显影,发射让位出口③ 既有臂。(dominance
-        猴补关:垫件类同属档 0 支配候选,不关则帧被档 0 先吃,F12 的
-        档 1 侧排除面不可见——文件头构造声明同款。)"""
-        monkeypatch.setattr(shop, 'can_deploy_single',
-                            lambda *a, **kw: (True, ''))
-        monkeypatch.setattr(mandate, 'dominance_buy_eligible',
-                            lambda *a, **kw: False)
-        km = _km()
-        cand = _off_name(exclude=tuple(km), min_cost=1)
-        st = _st(60, [_card(cand, cost=1, star=1)])   # 1★=垫件类形态
-        sess = _session_stub(locked=True)
-        act = _decide(st, sess)
-        assert not (isinstance(act, BuyCard)
-                    and act.reason == 'press_buy_deployable')
-        assert state_of(sess).cw4_counters.get(
-            'press_buy_deployable_filler_excluded', 0) >= 1
-
-    def test_l1_unlocked_frame_off(self):
-        """档 1 锁线门(单一源 _ist.locked_comp):未锁帧不发射。"""
-        km = _km()
-        cand = _off_name(exclude=tuple(km))
-        st = _st(60, [_card(cand, cost=2, star=2)])
-        sess = _session_stub(locked=False)
-        act = _decide(st, sess)
-        assert not (isinstance(act, BuyCard)
-                    and act.reason == 'press_buy_deployable')
-
-
-# ===== L2/L5/LF:档 2 压库买(摘旗扩域 + 窗口维持 + 新鲜度)=====
-# 帧构造声明:dominance 猴补关(档 0 物理先行,见文件头);未锁帧构造
-# (档 1 锁线门天然关,隔离档 2 自身闸链)。
-
-
-def _m6_frame(gold: int = 60, cand: str | None = None, *,
-              bench=None, level: int = 5):
-    km = _km()
-    cost = _tier_cost(level)
-    if cand is None:
-        cand = _off_name(exclude=tuple(km), min_cost=cost)
-    st = _st(gold, [_card(cand, cost=min(cost, gold - 1), star=1)],
-             locked=False, level=level, bench=bench)
-    sess = _session_stub(locked=False)
-    return st, sess, cand
+# ===== LF′:档 2 轮内新鲜度排除载体相位过期 =====
 
 
 class TestL2L5LFM6Compression:
-    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
-    def test_l2_m6_fires_on_unformed_line(self, monkeypatch):
-        """锁 L2:线未齐 ∧ 必花域 ∧ bench_free≥1 ∧ 塌缩带档匹配件在售
-        ⇒ BuyCard('m6_stockpile')——摘旗前 stop_flag=False 帧该臂整体
-        关死(本批病灶三合取之二),摘旗后发射。"""
-        monkeypatch.setattr(mandate, 'dominance_buy_eligible',
-                            lambda *a, **kw: False)
-        st, sess, _cand = _m6_frame(gold=60)
-        act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile'
-        # 席位闸拒因零显影(发射帧)
-        assert state_of(sess).cw4_counters.get('m6_bench_full', 0) == 0
-    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
-    def test_l5_bench_full_stops_after_buy(self, monkeypatch):
-        """锁 L5:档 2 买入(bench_free=1→0 投影)后下一帧不再发射
-        (bench 硬闸;框架 simulate 纯投影推进)。"""
-        monkeypatch.setattr(mandate, 'dominance_buy_eligible',
-                            lambda *a, **kw: False)
-        from sr_od.application.currency_war.kernel import cw_vocab as cw_state
-        km = _km()
-        cost = _tier_cost()
-        cand = _off_name(exclude=tuple(km), min_cost=cost)
-        fill = [_bc(f'压库垫件{i}', star=1, slot=i + 1) for i in range(8)]
-        st, sess, _ = _m6_frame(gold=60, cand=cand, bench=fill)
-        act1 = _decide(st, sess)
-        assert isinstance(act1, BuyCard) and act1.reason == 'm6_stockpile'
-        # 决策核发射容器牌(无 x),投影下架按 x 对账:经单一源映射函数
-        # 回旧牌(同帧 raw 保序对齐透传 x),与 sim 引擎对齐块同族。
-        from dataclasses import replace as _dc_replace
-
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            shop_cards_to_legacy,
-        )
-        act1 = _dc_replace(act1, card=shop_cards_to_legacy(
-            [act1.card], frame_cards=st.shop)[0])
-        st2 = cw_state.simulate(st, act1)
-        act2 = _decide(st2, sess)
-        assert not (isinstance(act2, BuyCard)
-                    and act2.reason == 'm6_stockpile')
-    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
-    def test_lf_round_sold_excluded(self, monkeypatch):
-        """锁 LF(档 2 轮内新鲜度排除):同轮卖 X → 档 2 不买回 X
-        (m6_round_sold_excluded 分键);未卖的同档名照常发射——排除
-        面按名精确,非整臂关死(设计方案 §1.2 档 2;s108 实证)。"""
-        monkeypatch.setattr(mandate, 'dominance_buy_eligible',
-                            lambda *a, **kw: False)
-        km = _km()
-        cost = _tier_cost()
-        sold = _off_name(exclude=tuple(km), min_cost=cost)
-        st, sess, _ = _m6_frame(gold=60, cand=sold)
-        # 同轮卖出登记(写端单元面;发射位写点 = shop._note_sell 收口 +
-        # prep 凑息/M4,由 LF-写端锁另行覆盖)
-        mandate.record_round_sold(sess, _bsb(st), sold)
-        act = _decide(st, sess)
-        assert not (isinstance(act, BuyCard)
-                    and act.reason == 'm6_stockpile')
-        assert state_of(sess).cw4_counters.get(
-            'm6_round_sold_excluded', 0) >= 1
-        # 对照:另一未卖名(同费档)照常发射
-        other = _off_name(exclude=tuple(km) + (sold,), min_cost=cost)
-        st2, sess2, _ = _m6_frame(gold=60, cand=other)
-        act2 = _decide(st2, sess2)
-        assert isinstance(act2, BuyCard) and act2.reason == 'm6_stockpile'
 
     def test_lf_round_registry_expiry(self):
         """新鲜度载体键式相位过期:跨轮/跨位面读数空集(排除上界 ≤1 轮)。"""
@@ -292,26 +136,10 @@ class TestL2L5LFM6Compression:
         assert mandate.round_sold_names(sess, _bsb(st)) == frozenset()
 
 
-# ===== L3:dominance 摘旗(档 0)+ prep 位 M6 摘旗可达性 =====
+# ===== L3′:prep 位 M6 摘旗可达性 =====
 
 
 class TestL3FlagRemoval:
-    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
-    def test_l3_dominance_fires_unformed_before_m6(self, monkeypatch):
-        """锁 L3:线未齐帧 dominance 摘旗后发射,且同帧在售档匹配件时
-        仍 dominance 先发(支配性优先序先于带参档 2,设计方案 §1.2
-        发射序申报;单动作契约下物理位次即优先序)。"""
-        monkeypatch.setattr(shop, 'can_deploy_single',
-                            lambda *a, **kw: (True, ''))
-        km = _km()
-        cost = _tier_cost()
-        tier_cand = _off_name(exclude=tuple(km), min_cost=cost)
-        st = _st(60, [_card(tier_cand, cost=cost, star=1),
-                       _card('燃料件X', cost=1, star=1)],
-                 locked=True)
-        sess = _session_stub(locked=True)
-        act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
 
     def test_l3_prep_m6_reachable_without_stop_flag(self):
         """prep 位 M6 摘旗可达性:stop_flag=False(线未齐)∧ gold>g*

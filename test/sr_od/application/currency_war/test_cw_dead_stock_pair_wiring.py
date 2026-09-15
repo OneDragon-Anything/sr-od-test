@@ -121,7 +121,8 @@ class TestDominanceArmWiring:
     """dominance 臂死库存拒(§④ 接线点 1)+ band 否决分键。"""
 
     def test_second_copy_rejected_with_key(self):
-        """C=1:同名第二张拒买,dominance_dead_stock_pair_blocked 计 1。
+        """C=1:同名第二张拒买,dominance_dead_stock_pair_blocked 计 1;
+        C=0 对照:首张照常发射 dominance_buy,两新键零计数(防误伤面)。
 
         溢余带帧(gold > g* ∧ bench_free ≥ 2 = 资格门开),店刷 bench
         已持同名 1★ 的第二张——接线点在 zero_overlap 之后,拒后不发射
@@ -134,18 +135,16 @@ class TestDominanceArmWiring:
         assert counters.get('dominance_dead_stock_pair_blocked') == 1
         assert not (isinstance(action, BuyCard)
                     and action.reason == 'dominance_buy')
-
-    def test_first_copy_buys_keys_silent(self):
-        """C=0 对照:首张照常发射 dominance_buy,两新键零计数(防误伤面)。"""
-        fuels = _fuel_names(3)
-        strategy, sess, config = _single_card_session(
-            'prep', _DOM_GOLD, fuels[1:], fuels[0])
-        action = strategy.decide_shop_action(sess, config)
-        counters = state_of(sess).cw4_counters
-        assert isinstance(action, BuyCard)
-        assert action.reason == 'dominance_buy'
-        assert not counters.get('dominance_dead_stock_pair_blocked')
-        assert not counters.get('dominance_band_wait')
+        # C=0 对照:首张照常发射(原对照锁迁并)
+        fuels0 = _fuel_names(3)
+        strategy0, sess0, config0 = _single_card_session(
+            'prep', _DOM_GOLD, fuels0[1:], fuels0[0])
+        action0 = strategy0.decide_shop_action(sess0, config0)
+        counters0 = state_of(sess0).cw4_counters
+        assert isinstance(action0, BuyCard)
+        assert action0.reason == 'dominance_buy'
+        assert not counters0.get('dominance_dead_stock_pair_blocked')
+        assert not counters0.get('dominance_band_wait')
 
     def test_band_veto_key_on_seat_band(self):
         """bench_free=1 溢余帧:资格门 False 不再静默,dominance_band_wait 计 1。
@@ -167,7 +166,8 @@ class TestPressArmWiring:
     """dead_gold_press_buy 臂 prio2 燃料类死库存拒(§④ 接线点 2)。"""
 
     def test_prio2_second_copy_rejected_with_key(self):
-        """C=1:燃料类第二张拒买,press_dead_stock_pair_blocked 计 1。
+        """C=1:燃料类第二张拒买,press_dead_stock_pair_blocked 计 1;
+        C=0 对照:燃料类首张照常经 prio2 发射(防误伤面)。
 
         帧型 = 可辨奖励帧(②(b) 外门三条件:prio0 缺口/prio1 持有档
         均不命中,行进至 prio2 燃料类合取——实机局 s77091 R1 形成路径
@@ -182,15 +182,13 @@ class TestPressArmWiring:
         assert not counters.get('dominance_band_wait')
         assert not (isinstance(action, BuyCard)
                     and action.reason == 'dead_gold_press_buy')
-
-    def test_prio2_first_copy_buys(self):
-        """C=0 对照:燃料类首张照常经 prio2 发射(防误伤面)。"""
-        fuels = _fuel_names(3)
-        strategy, sess, config = _single_card_session(
-            'reward', _PRESS_GOLD, fuels[1:], fuels[0])
-        action = strategy.decide_shop_action(sess, config)
-        counters = state_of(sess).cw4_counters
-        assert isinstance(action, BuyCard)
-        assert action.reason == 'dead_gold_press_buy'
-        assert counters.get('dead_gold_press_buy_hit') == 1
-        assert not counters.get('press_dead_stock_pair_blocked')
+        # C=0 对照:首张照常经 prio2 发射(原对照锁迁并)
+        fuels0 = _fuel_names(3)
+        strategy0, sess0, config0 = _single_card_session(
+            'reward', _PRESS_GOLD, fuels0[1:], fuels0[0])
+        action0 = strategy0.decide_shop_action(sess0, config0)
+        counters0 = state_of(sess0).cw4_counters
+        assert isinstance(action0, BuyCard)
+        assert action0.reason == 'dead_gold_press_buy'
+        assert counters0.get('dead_gold_press_buy_hit') == 1
+        assert not counters0.get('press_dead_stock_pair_blocked')

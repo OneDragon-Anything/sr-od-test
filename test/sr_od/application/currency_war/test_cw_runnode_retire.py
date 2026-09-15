@@ -51,22 +51,12 @@ def _make_op(cls, *, in_node: bool, do_action_calls: list):
 
 # ==================== 补给节点流转(行为等价①②) ====================
 
-def test_supply_leaves_node_success() -> None:
-    """验证完成才 success:离开补给屏(锚 miss)→ success(节点完成)。
-    (gate 清尾批:原「+关态稳定基线预置」断言随 gate 模块退役删除。)"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
-        CwScreenSupplyNode,
-    )
-    actions: list = []
-    op = _make_op(CwScreenSupplyNode, in_node=False, do_action_calls=actions)
-    res = op.handle()
-    assert res.success is True
-    assert '节点完成' in res.status
-    assert actions == []                       # 离开节点 = 不再发动作
-
-
-def test_supply_in_node_act_then_retry() -> None:
-    """仍在补给屏 → 做一个动作 + round_retry(计节点预算;不 success)。"""
+def test_supply_node_flow_act_retry_then_success() -> None:
+    """补给流转两段(行为等价①②):仍在补给屏 → 做一个动作 +
+    round_retry(计 node_max_retry_times=8 预算,超限框架转 FAIL 交回
+    ——预算语义不变);锚 miss(离开节点画面)→ success(验证完成才
+    success,不再发动作)。(gate 清尾批:原「+关态稳定基线预置」断言随
+    gate 模块退役删除。)"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
         CwScreenSupplyNode,
     )
@@ -75,29 +65,24 @@ def test_supply_in_node_act_then_retry() -> None:
     res = op.handle()
     assert actions == [1]                      # 每轮恰好一个动作
     assert getattr(res, '_retry', False) is True
+    actions2: list = []
+    op2 = _make_op(CwScreenSupplyNode, in_node=False,
+                   do_action_calls=actions2)
+    res2 = op2.handle()
+    assert res2.success is True
+    assert '节点完成' in res2.status
+    assert actions2 == []                       # 离开节点 = 不再发动作
 
 
 # ==================== 巨星流转(行为等价①②) ====================
 
-def test_megastar_leaves_node_success_with_settle() -> None:
-    """巨星:overlay 消失 → success(完成承诺 = 固定 1.0s,原委托壳语义)
-    (选中标记复位副作用随迁)。"""
+def test_megastar_node_flow_act_retry_then_success() -> None:
+    """巨星流转两段:仍在 overlay → 一个动作 + round_retry;overlay
+    消失 → success(完成承诺 = 固定 1.0s,原委托壳语义;选中标记复位
+    副作用随迁)。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
         CW_OVERLAY_SETTLE_S,
     )
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
-        CwScreenMegastar,
-    )
-    actions: list = []
-    op = _make_op(CwScreenMegastar, in_node=False, do_action_calls=actions)
-    res = op.handle()
-    assert res.success is True
-    assert res.wait == CW_OVERLAY_SETTLE_S
-    assert actions == []
-
-
-def test_megastar_in_node_act_then_retry() -> None:
-    """巨星:仍在 overlay → 一个动作 + round_retry。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
         CwScreenMegastar,
     )
@@ -106,3 +91,10 @@ def test_megastar_in_node_act_then_retry() -> None:
     res = op.handle()
     assert actions == [1]
     assert getattr(res, '_retry', False) is True
+    actions2: list = []
+    op2 = _make_op(CwScreenMegastar, in_node=False,
+                   do_action_calls=actions2)
+    res2 = op2.handle()
+    assert res2.success is True
+    assert res2.wait == CW_OVERLAY_SETTLE_S
+    assert actions2 == []

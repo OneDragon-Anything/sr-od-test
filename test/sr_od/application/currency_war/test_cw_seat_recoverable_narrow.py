@@ -14,23 +14,19 @@
 行为差方向 = P92 在 T3 活跃帧少拦(差帧 ② 通道真实可达,旧拦为误拦
 ——白刷病灶面不回归:占位件帧两视图同空,拦刷行为不变)。
 
-锁三层:
-- 判定直调真值表(含垫保前提对:同名同轮帧 T3 名 ∈ 投影排除集 ∧
-  ∉ m4_fuel 排除集——两排除集差 = T3 活跃集,收窄差的存在性地基);
-- 集成行为差锁:席满 + 囤腿候选可刷可负担 + 唯一可腾件为 T3 活跃帧
-  → 刷新放行(旧代理该帧必拦;缺员置空隔离 M2 缺员腾席臂的先卖
-  后刷掩蔽效应);
+锁三层(存续面):
+- 判定直调真值表(含占位件负腿:仅占位件帧 ⇒ False,收窄判定经
+  fuel_sell_candidates 单一源自动继承占位件滤门);
 - 对照锁:同构帧唯一「可腾件」为占位件 → 拦刷 + 分键开火
-  (收窄不复活占位件高估(灶面回归网))。
+  (收窄不复活占位件高估灶面)。
+(T3 活跃垫保正格的直调锁与集成行为差锁已退役——该正格依赖 T3
+活跃帧构造,现行形态下两视图判据同源,行为差面归 falsifiable 复检。)
 
 fixture 说明:角色名/费档注册表现查(CHARACTERS/refresh_prob),帧
-构造前提以断言守卫;垫保登记走发射登记单一入口
-``sell_gate.register_launch(cause='stall_protect')``(同轮活跃 =
-τ=同轮,P78 §2.2)。
+构造前提以断言守卫。
 """
 from __future__ import annotations
 
-import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
@@ -49,7 +45,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
-from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
 )
@@ -60,7 +55,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     RefreshShop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-    sell_gate,
     shop,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
@@ -77,33 +71,6 @@ _ROUND = 2
 def _item(slot: int = 1) -> BenchChar:
     """占位件(假环境同款形态):SIFT 不可读 → char_id=''、1★。"""
     return BenchChar(slot=slot, char_id='', star=1, is_item_slot=True)
-
-
-def _t3_name(session, k: tuple[str, ...]) -> str:
-    """垫保登记名:线外、无后台效果、非 m4_fuel 排除集成员(前提守卫,
-    注册表/持有集变动时本文件红在前提而非行为断言)。"""
-    km = set(k)
-    for n, c in CHARACTERS.items():
-        if n in km or getattr(c, 'bench_effect', ''):
-            continue
-        return n
-    raise AssertionError('注册表缺少线外无效果角色(锁前提失效)')
-
-
-def _t3_premise(session, state: CwSimFrame, k: tuple[str, ...],
-                t3: str) -> None:
-    """收窄差的存在性地基:T3 活跃名 ∈ 投影排除集(旧代理视角不可变现)
-    ∧ ∉ m4_fuel 排除集(腾席臂视角可转化放行)。两集合差 = T3 活跃集,
-    任何一侧前提失效 = sell_gate 通道语义变更,本文件红在前提。"""
-    cap_hold = cw_intention.locked_buy_cap_hold(state)
-    excl_m4 = sell_gate.sell_exclusions(session, k, channel='m4_fuel',
-                                        cap_hold=cap_hold,
-                                        current_round=_ROUND)
-    excl_proj = sell_gate.sell_exclusions(session, k, channel='projection',
-                                          cap_hold=cap_hold,
-                                          current_round=_ROUND)
-    assert t3 in excl_proj, '前提失效:T3 活跃名不在投影视图(旧代理差面消失)'
-    assert t3 not in excl_m4, '前提失效:T3 活跃名被 m4_fuel 排除(腾席臂不可腾?)'
 
 
 # ===== 判定直调真值表(shop.p92_seat_recoverable)=====
@@ -146,25 +113,6 @@ class TestP92SeatRecoverableDirect:
         assert shop.p92_seat_recoverable(
             s, st.bench, k, _bsb(st), cap_hold=None, current_round=_ROUND,
             defer_names=frozenset()) is False
-    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = fixture 桥形态漂移(T3 活跃路径 AttributeError:'int' 无 .value,黑板桥喂参形状过期),非断言面语义红——同文件非 skip 直调锁在释放集接线批后全绿,归专项重分诊重推夹具,禁机械跟删/跟绿")
-    def test_t3_active_only_fuel_true(self):
-        """行为差帧(直调):唯一可腾件为 T3 活跃垫保件 ⇒ True。
-        旧代理同帧 = 投影读排除 T3 ⇒ liquid_refund=0 ⇒ False ⇒ P92
-        误拦;收窄后腾席臂 defer 转化放行语义如实建模。"""
-        comp = pair_target_comp(_COMP_PAIR)
-        k = tuple(line_members(comp))
-        s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-        t3 = _t3_name(s, k)
-        assert sell_gate.register_launch(
-            s, t3, cause='stall_protect', round_num=_ROUND)
-        st = CwSimFrame(gold=100, level=4, plane=1, round_num=_ROUND,
-                       node_type='reward', hp=100)
-        st.bench = [_bc(t3, star=1, slot=1)]
-        st.deployed = [_bc('前线', slot=1)]
-        _t3_premise(s, st, k, t3)
-        assert shop.p92_seat_recoverable(
-            s, st.bench, k, _bsb(st), cap_hold=cw_intention.locked_buy_cap_hold(st),
-            current_round=_ROUND, defer_names=frozenset({t3})) is True
 
 
 # ===== 集成行为差锁(P92 门经 decide_shop_screen)=====
@@ -216,23 +164,6 @@ def _p92_frame(extra_bench_last: BenchChar) -> tuple[CwSimFrame, object, str]:
 
 
 class TestP92AssemblyBehaviorDiff:
-    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = fixture 桥形态漂移(T3 活跃路径 AttributeError:'int' 无 .value,黑板桥喂参形状过期),非断言面语义红——同文件非 skip 直调锁在释放集接线批后全绿,归专项重分诊重推夹具,禁机械跟删/跟绿")
-    def test_t3_active_full_bench_refresh_proceeds(self):
-        """行为差锁(集成):唯一可腾件 = T3 活跃垫保件 ⇒ 席可落收窄
-        判定 True ⇒ ②(囤腿)通道可达 ⇒ 刷新放行、拦键恒零。旧代理
-        同帧 = 投影读 0 ⇒ 全通道死 ⇒ 误拦(修复前行为,变异回装应红)。"""
-        comp = pair_target_comp(_COMP_PAIR)
-        k = tuple(line_members(comp))
-        s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-        t3 = _t3_name(s, k)
-        assert sell_gate.register_launch(
-            s, t3, cause='stall_protect', round_num=_ROUND)
-        st, _s2, _w = _p92_frame(_bc(t3, star=1, slot=1))
-        _t3_premise(s, st, k, t3)
-        acts = _decide(st, s)
-        assert [a for a in acts if isinstance(a, RefreshShop)], acts
-        cnt = state_of(s).cw4_counters
-        assert cnt.get('p92_no_buy_refresh_blocked', 0) == 0
 
     def test_placeholder_full_bench_refresh_blocked(self):
         """对照锁:同构帧唯一「可腾件」为占位件 ⇒ 两视图同空 ⇒ 席不可落

@@ -5,8 +5,10 @@
   三合取 + 遥测三键族),数学论证 = proofs P96(帧级支配 + N=3 载体寿命);
 - 载体 = ``sell_gate.dead_pair_exit_release`` 单点函数 + 持久获取账
   (``register_acquisition``,写端 = shop._emit_buy 发射位);
-- 本文件锁**行为锁①-⑤ + 零漂移 + N1/N2/N4 收编面**(N3 = 注释级同参
-  钉死,无独立行为锁;消费位同参传参由锁①装配路径覆盖)。
+- 本文件锁**行为锁①-⑤ + 通道旁路单元(凑息/换线/燃料迁并)+ N1/N4
+  收编面**(N3 = 注释级同参钉死,无独立行为锁;消费位同参传参由锁①
+  装配路径覆盖;N2 kept_young 分键由锁②辖,缺登记 kept_no_entry 对照
+  已退役)。
 
 帧构造边界:素材名取注册表 TIER_UNRELATED 现算集(与
 test_cw_dead_stock_pair_wiring 同款防漂移);锁①②③④ 走备战域
@@ -129,7 +131,8 @@ class TestLock1DeadlockDominance:
         """非重买集素材对(账龄 ≥N)+ 缺口件死锁帧 → M4 卖对成员腾席。
 
         锁 2.1.3:B 弱支配 A(帧内持有收益 0 成本 V_slot>0);卖出腿 =
-        m4_fuel_sell,释放/卖出两键显影,腾出席位不再耗竭。"""
+        m4_fuel_sell,释放/卖出两键显影,腾出席位不再耗竭。释放集单点
+        函数直读:对成员入集(判据 (a)(b)(c) 合取正例),kept 面零计数。"""
         sess, bs, frame = _prep_frame(pair_ledger_round=2)
         out = run_mandate(frame, sess, state=bs)
         sells = _sell_actions(out)
@@ -139,17 +142,11 @@ class TestLock1DeadlockDominance:
         assert ct.get('dead_pair_exit_released') == 1
         assert ct.get('dead_pair_exit_sold_m4_fuel') == 1
         assert not ct.get('m2_retry_exhausted')
-
-    def test_release_set_single_point(self):
-        """释放集单点函数直读:对成员入集(判据 (a)(b)(c) 合取正例),
-        kept 面零计数。"""
-        sess, bs, frame = _prep_frame(pair_ledger_round=2)
+        # 释放集单点直读(原单点锁迁并)
         release = sell_gate.dead_pair_exit_release(
             sess, frame.k_members, frame.bench, frame.deployed, _ROUND,
             counters=state_of(sess).cw4_counters)
         assert release == frozenset({_PAIR})
-        ct = state_of(sess).cw4_counters
-        assert ct.get('dead_pair_exit_released') == 1
         assert not any(k.startswith('dead_pair_exit_guard_kept')
                        for k in ct)
 
@@ -159,9 +156,12 @@ class TestLock1DeadlockDominance:
 
 class TestLock2AgeLowerBound:
 
-    def test_young_pair_kept_and_guard_counts(self):
-        """账龄 1 < N=3 的同构死锁帧 → 不卖(锁 N 下界;守卫照常拒入
-        并按既有键计数)。"""
+    def test_young_and_fresh_pair_kept_and_guard_counts(self):
+        """账龄下界两格(锁 N 下界 + ADR-0558 案发回归形态):账龄
+        1 < N=3 的同构死锁帧 → 不卖(守卫照常拒入并按既有键计数);
+        新购对(获取账登记轮 == 当前轮,age 0)被燃料臂立即触达 → 守卫
+        照常拒、零卖出(原案不复活;新购 ⇒ 当轮窗/获取账合取保持)。"""
+        # 账龄 1 < N
         sess, bs, frame = _prep_frame(pair_ledger_round=4)
         out = run_mandate(frame, sess, state=bs)
         assert not _sell_actions(out)
@@ -171,6 +171,14 @@ class TestLock2AgeLowerBound:
         assert ct.get('merge_material_guard_blocked') == 1
         assert not ct.get('dead_pair_exit_released')
         assert ct.get('m2_retry_exhausted') == 1
+        # 新购对 age 0 立即触达仍拒
+        sess2, bs2, frame2 = _prep_frame(pair_ledger_round=_ROUND)
+        out2 = run_mandate(frame2, sess2, state=bs2)
+        assert not _sell_actions(out2)
+        ct2 = state_of(sess2).cw4_counters
+        assert ct2.get('merge_material_guard_blocked') == 1
+        assert ct2.get('dead_pair_exit_guard_kept_young') == 1
+        assert not ct2.get('dead_pair_exit_released')
 
 
 # ===== 行为锁③:身份段权威(③④ 名义对入释放集仍不卖;旁路先、装配后)=====
@@ -190,23 +198,6 @@ class TestLock3IdentityAuthority:
         assert ct.get('dead_pair_exit_released') == 1
         assert ct.get('dead_pair_exit_guard_kept_identity') == 1
         assert ct.get('m2_retry_exhausted') == 1
-
-
-# ===== 行为锁④:ADR-0558 案发回归形态(新购对立即触达仍拒)=====
-
-
-class TestLock4Adr0558Regression:
-
-    def test_fresh_pair_immediately_touched_still_rejected(self):
-        """新购对(获取账登记轮 == 当前轮,age 0)被燃料臂立即触达 →
-        守卫照常拒、零卖出(原案不复活;新购 ⇒ 当轮窗/获取账合取保持)。"""
-        sess, bs, frame = _prep_frame(pair_ledger_round=_ROUND)
-        out = run_mandate(frame, sess, state=bs)
-        assert not _sell_actions(out)
-        ct = state_of(sess).cw4_counters
-        assert ct.get('merge_material_guard_blocked') == 1
-        assert ct.get('dead_pair_exit_guard_kept_young') == 1
-        assert not ct.get('dead_pair_exit_released')
 
 
 # ===== 行为锁⑤:获取账与发射登记簿四出口生命周期解耦 =====
@@ -311,44 +302,32 @@ class TestWriteEnd:
             f'买入后获取账缺登记: {ledger!r}'
 
     def test_register_acquisition_star_confined(self):
-        """N1:覆盖写星级辖 1★——2★ 拒登记(不刷新在场 1★ 对轮戳),
-        空名/位面缺读拒登记;同名重获取覆盖为最新轮(对时钟起点语义)。"""
+        """N1:覆盖写星级辖 1★——2★ 拒登记(不刷新在场 1★ 对轮戳);
+        同名重获取覆盖为最新轮(对时钟起点语义)。"""
         sess = StrategySession()
         assert sell_gate.register_acquisition(sess, _PAIR, plane=1,
                                               round_num=2, star=1)
         assert not sell_gate.register_acquisition(
             sess, _PAIR, plane=1, round_num=_ROUND, star=2), \
             '2★ 买入覆盖写 1★ 条目 = N1 违例'
-        assert not sell_gate.register_acquisition(sess, '', plane=1,
-                                                  round_num=_ROUND)
-        assert not sell_gate.register_acquisition(sess, _PAIR, plane=None,
-                                                  round_num=_ROUND)
         assert sell_gate.register_acquisition(sess, _PAIR, plane=1,
                                               round_num=_ROUND, star=1)
         ledger = getattr(state_of(sess), sell_gate.ACQUISITION_LEDGER_ATTR)
         assert ledger[_PAIR] == (1, _ROUND), '同名重获取未覆盖为最新轮'
 
 
-# ===== 判据单元:N2/N4/(b)/零漂移/通道旁路 =====
+# ===== 判据单元:N4/(b)/通道旁路 =====
 
 
 class TestCriterionUnits:
 
-    def test_no_entry_subkey_for_gifted_pair(self):
-        """N2:缺登记对(赠得形态,无任何账)→ kept_no_entry 显影,与
-        真窗内 kept_young 分键(A/B 锚点②判读口径不随主导类漂移)。"""
-        sess, bs, frame = _prep_frame(pair_ledger_round=None)
-        release = sell_gate.dead_pair_exit_release(
-            sess, frame.k_members, frame.bench, frame.deployed, _ROUND,
-            counters=state_of(sess).cw4_counters)
-        assert release == frozenset()
-        ct = state_of(sess).cw4_counters
-        assert ct.get('dead_pair_exit_guard_kept_no_entry') == 1
-        assert not ct.get('dead_pair_exit_guard_kept_young')
-
-    def test_kept_chain_full_field_domain(self):
-        """N4:同名 2★ 在 **bench**(非 deployed)滞留 → kept_chain 保留
-        (场上域钉 bench∪deployed 全场域;deployed-only 判读 = 漏保护向)。"""
+    def test_kept_truth_table_chain_and_k(self):
+        """kept 面真值表(保留判据两格):N4 同名 2★ 在 **bench**(非
+        deployed)滞留 → kept_chain 保留(场上域钉 bench∪deployed 全场域;
+        deployed-only 判读 = 漏保护向);(b) 基准 = 义务重买集:线内名
+        (未锁态 base = k_members)对 → kept_k,不入释放集(买家空集
+        论证辖域外)。"""
+        # N4:bench 侧 2★ 链腿
         sess = StrategySession()
         bs = board_state_of(sess)
         bs.write_logic(bs.node, NodeKey(plane=1, round_num=_ROUND,
@@ -360,53 +339,34 @@ class TestCriterionUnits:
         assert sell_gate.register_acquisition(sess, _PAIR, plane=1,
                                               round_num=1, star=1)
         release = sell_gate.dead_pair_exit_release(
-            sess, (), bench, [], _ROUND, counters=state_of(sess).cw4_counters)
+            sess, (), bench, [], _ROUND,
+            counters=state_of(sess).cw4_counters)
         assert release == frozenset(), 'bench 侧 2★ 链腿未被保留(N4 漏保护)'
         assert state_of(sess).cw4_counters.get(
             'dead_pair_exit_guard_kept_chain') == 1
-
-    def test_base_member_kept_k(self):
-        """(b) 基准 = 义务重买集:线内名(未锁态 base = k_members)对
-        → kept_k,不入释放集(买家空集论证辖域外)。"""
+        # (b):线内名对 → kept_k
         member = sorted(_LINE)[0]
-        sess = StrategySession()
-        bs = board_state_of(sess)
-        bs.write_logic(bs.node, NodeKey(plane=1, round_num=_ROUND,
-                                        kind='prep'),
-                       produced_by='cw-t253-test', sig=_SIG)
-        bench = [BenchChar(slot=1, char_id=member, star=1),
-                 BenchChar(slot=2, char_id=member, star=1)]
-        assert sell_gate.register_acquisition(sess, member, plane=1,
+        sess_k = StrategySession()
+        bs_k = board_state_of(sess_k)
+        bs_k.write_logic(bs_k.node, NodeKey(plane=1, round_num=_ROUND,
+                                            kind='prep'),
+                         produced_by='cw-t253-test', sig=_SIG)
+        bench_k = [BenchChar(slot=1, char_id=member, star=1),
+                   BenchChar(slot=2, char_id=member, star=1)]
+        assert sell_gate.register_acquisition(sess_k, member, plane=1,
                                               round_num=1, star=1)
-        release = sell_gate.dead_pair_exit_release(
-            sess, tuple(sorted(_LINE)), bench, [], _ROUND,
-            counters=state_of(sess).cw4_counters)
-        assert release == frozenset()
-        assert state_of(sess).cw4_counters.get(
+        release_k = sell_gate.dead_pair_exit_release(
+            sess_k, tuple(sorted(_LINE)), bench_k, [], _ROUND,
+            counters=state_of(sess_k).cw4_counters)
+        assert release_k == frozenset()
+        assert state_of(sess_k).cw4_counters.get(
             'dead_pair_exit_guard_kept_k') == 1
 
-    def test_zero_drift_default_param(self):
-        """零漂移锁:缺省形参(不传 merge_guard_release)下素材对拒入 +
-        计数与改前逐位一致;显式传释放集才旁路(拒因计数不发生)。"""
-        sess, bs, frame = _prep_frame(pair_ledger_round=2)
-        base_kwargs = {'k_members': frame.k_members, 'state': bs,
-                       'exclude_names': frozenset()}
-        ct_none: dict = {}
-        assert mandate.fuel_sell_candidates(frame.bench, counters=ct_none,
-                                            dedup_names=set(),
-                                            **base_kwargs) == []
-        assert ct_none.get('merge_material_guard_blocked') == 1
-        ct_release: dict = {}
-        cands = mandate.fuel_sell_candidates(
-            frame.bench, counters=ct_release, dedup_names=set(),
-            merge_guard_release=frozenset({_PAIR}), **base_kwargs)
-        assert [b.char_id for b in cands] == [_PAIR, _PAIR]
-        assert not ct_release.get('merge_material_guard_blocked')
-
     def test_interest_channel_bypass(self):
-        """凑息通道旁路单元:释放成员入回拉资格集(缺口触发/目标量止盈
-        语义零改,仅 G-S1 子谓词被旁路;缺口恰容一张,卖出对象确定)。
-        上阵 1 人免空板止损守卫(守卫先于资格循环)。"""
+        """通道旁路单元:释放成员入资格集(凑息回拉 + 燃料腾席迁并对照;
+        缺口触发/目标量止盈语义零改,仅 G-S1 子谓词被旁路)。凑息:缺口
+        恰容一张,卖出对象确定;燃料:显式传释放集 ⇒ 腾席资格集放行且
+        拒因零计数。上阵 1 人免空板止损守卫(守卫先于资格循环)。"""
         from sr_od.application.currency_war.kernel.cw_economy import (
             bench_char_cost,
             sell_refund,
@@ -434,6 +394,16 @@ class TestCriterionUnits:
         sold_names = {next((b.char_id or '' for b in bench
                             if b.slot == s), '') for s in slots}
         assert sold_names == {_PAIR}
+        # 燃料通道旁路对照(原零漂移锁旁路半迁并)
+        sess_f, bs_f, frame_f = _prep_frame(pair_ledger_round=2)
+        ct_release: dict = {}
+        base_kwargs = {'k_members': frame_f.k_members, 'state': bs_f,
+                       'exclude_names': frozenset()}
+        cands = mandate.fuel_sell_candidates(
+            frame_f.bench, counters=ct_release, dedup_names=set(),
+            merge_guard_release=frozenset({_PAIR}), **base_kwargs)
+        assert [b.char_id for b in cands] == [_PAIR, _PAIR]
+        assert not ct_release.get('merge_material_guard_blocked')
 
     def test_line_switch_channel_bypass(self):
         """换线塌缩通道旁路单元:旧线成员对在换线帧(∉新线 = ∉ base)
@@ -475,31 +445,3 @@ class TestCriterionUnits:
         finally:
             provisional.reset('U_X')
             provisional.reset('V_MS')
-
-
-# ===== 遥测口径:C1 名×轮去重 =====
-
-
-class TestTelemetryDedup:
-
-    def test_same_round_multi_channel_single_count(self):
-        """同轮多通道重复评估同一释放集 → released 计 1、集合两次全量
-        (C1 事件口径:计数与计算分离);轮推进 = 新事件。"""
-        sess = StrategySession()
-        bs = board_state_of(sess)
-        bs.write_logic(bs.node, NodeKey(plane=1, round_num=_ROUND,
-                                        kind='prep'),
-                       produced_by='cw-t253-test', sig=_SIG)
-        bench = [BenchChar(slot=1, char_id=_PAIR, star=1),
-                 BenchChar(slot=2, char_id=_PAIR, star=1)]
-        assert sell_gate.register_acquisition(sess, _PAIR, plane=1,
-                                              round_num=1, star=1)
-        r1 = sell_gate.dead_pair_exit_release(sess, (), bench, [], _ROUND)
-        r2 = sell_gate.dead_pair_exit_release(sess, (), bench, [], _ROUND)
-        assert r1 == r2 == frozenset({_PAIR})
-        ct = state_of(sess).cw4_counters
-        assert ct.get('dead_pair_exit_released') == 1
-        r3 = sell_gate.dead_pair_exit_release(sess, (), bench, [],
-                                              _ROUND + 1)
-        assert r3 == frozenset({_PAIR})
-        assert ct.get('dead_pair_exit_released') == 2

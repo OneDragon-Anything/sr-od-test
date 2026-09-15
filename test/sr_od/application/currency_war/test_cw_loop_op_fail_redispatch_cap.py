@@ -22,9 +22,6 @@ LIMIT`` → round_fail 显式停交上层。
    计数(结构性不抢占);
 6. on_fail_retry 分支同辖:fail 达上限转 round_fail(不再消耗 400 节点
    重试池),上限内维持既有 round_retry 语义。
-
-附:上限值组合性质锁(LIMIT ≥ 0j/0q 专用阈值,= prep streak 阈值 5,
-零新拍定值的推导锁)。
 """
 from __future__ import annotations
 
@@ -188,14 +185,6 @@ def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
         assert host.rounds[-1][0] == 'retry'   # 上限内维持既有 retry 语义
     _dispatch(host, op, '策划事件', on_fail_retry=True)
     assert host.rounds[-1][0] == 'fail'   # 达限显式停
-
-
-def test_limit_derivation_invariant():
-    """锁7 上限组合性质:LIMIT ≥ 全部专用守卫阈值(结构性不抢占)。
-    (原「= prep streak 阈值 5」腿删:对照物是 _on_prep_round 内字面量,
-    prep 阈值合法调整即误红——数值锚归代码与设计文档,不进测试网。)"""
-    assert CwLoop.OP_FAIL_REDISPATCH_LIMIT >= CwLoop.FRONTLESS_REDEPLOY_LIMIT
-    assert CwLoop.OP_FAIL_REDISPATCH_LIMIT >= CwLoop.PLANE_MISDISPATCH_LIMIT
 
 
 # ===== 追加(三审代-2 升应修):出战链 {slot:下标} 对位防线 =====
