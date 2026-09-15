@@ -664,6 +664,35 @@ def _isolate_window_run_mutex(
 
 
 # --------------------------------------------------------------------------- #
+# state 流水装配根隔离(README 测试纪律 2 的机检层)
+# --------------------------------------------------------------------------- #
+# 背景:CW state 流水的生产兜底装配挂在 run 领取单点(telemetry.state.
+# ensure_run_started → kernel ensure_journal_assembly,「未装配即按生产缺省
+# 根补装」)。op 流程测试构造 CwLoop/CwEntryStart 就会过这个单点——不重定向
+# 有两个后果:① 测试真实写 .debug/currency_war/telemetry/live/state/journal.
+# jsonl(纪律 2 禁止);② 装配前置的寿命清理会读真实 85MB 账面(慢 + 可能
+# 重写开发数据)。隔离:把缺省路径缝(kernel default_journal_path)重定向到
+# tmp_path,兜底装配在测试里永远落 tmp;teardown 复位装配单例(关流 + 摘
+# sink/run_id provider 槽),防模块级残留跨测试泄漏(与复位簇纪律同源)。
+# 测试自己显式装配的实例(传 path)不受本口影响,自带 teardown 照旧。
+
+
+@pytest.fixture(autouse=True)
+def _isolate_state_journal(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Iterator[None]:
+    """把 state 流水生产缺省根重定向到 tmp_path 并复位装配残留(见上注释)。"""
+    from sr_od.application.currency_war.kernel import cw_state_journal
+
+    monkeypatch.setattr(
+        cw_state_journal, 'default_journal_path',
+        lambda: tmp_path / 'state' / 'journal.jsonl',
+    )
+    yield
+    cw_state_journal.reset_state_telemetry()
+
+
+# --------------------------------------------------------------------------- #
 # 慢桶标记与收集期守卫(原仓根 conftest,并本文件:全部测试都在 test/ 下,
 # 钩子覆盖面不变)
 # --------------------------------------------------------------------------- #
