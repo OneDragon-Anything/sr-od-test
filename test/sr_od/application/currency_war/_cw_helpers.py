@@ -130,20 +130,20 @@ def cw4_state(gold: int = 30, shop=None, bench=None, deployed=None,
 
 
 def cw4_decide(state: CwSimFrame, session, cfg=None, *, registry=None):
-    """商店决策驱动(decide_shop_screen)。``registry=None`` = sim 注入
-    视图(shop_line 历史缺省,sim 冻结语义锁的面),传
-    ``DEFAULT_REGISTRY`` = live 真值表(等级帽单一源锁的双表对拍面,
-    ADR-0565);cfg 缺省 = ``DecideCfg()``(ev_arm='full',与各文件原
-    SimpleNamespace/type 桩同语义:cfg 对象只承载 ev_arm 读数)。
+    """商店决策驱动(decide_shop_screen)。``registry=None`` = live
+    真值表 DEFAULT_REGISTRY(旧 sim 注入视图随 sim 重做删除面退役,
+    sim 重做设计稿 §2.4.4:策略器自带注册表,sim 不构造策略视图);
+    传 ``DEFAULT_REGISTRY`` 同义(保留参数 = 对拍面显式形态,cap 单一
+    源锁参考 ADR-0565);cfg 缺省 = ``DecideCfg()``(ev_arm='full',与
+    各文件原 SimpleNamespace/type 桩同语义:cfg 对象只承载 ev_arm 读数)。
 
     W6 波 4 黑板容器化:喂入通道 = sim 合成口写容器(生产/离线同路;
     原黑板槽直写随槽退役消亡,设计件《商店黑板容器化方案》§2.4-3)。"""
-    from sr_od.application.currency_war.sim.engine_p1 import (
-        sim_decision_registry,
+    from sr_od.application.currency_war.kernel.cw_registry import (
+        DEFAULT_REGISTRY,
     )
     strat = MandateV1Strategy(
-        registry=(sim_decision_registry() if registry is None
-                  else registry))
+        registry=(DEFAULT_REGISTRY if registry is None else registry))
     cw4_feed(session, state)
     return strat.decide_shop_screen(session, cfg or DecideCfg())
 

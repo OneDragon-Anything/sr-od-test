@@ -531,35 +531,6 @@ def test_synthesis_unread_bench_no_clobber() -> None:
         '可读帧合成照写(真值域语义不变)'
 
 
-def test_sim_engine_feeds_board_state() -> None:
-    """任务书件 7:engine_p1 决策帧合成段接线——sim 引擎跑一局,session 的
-    GameState 被喂入(心跳推进 + bench 观察)。"""
-    from sr_od.application.currency_war.sim.engine_p1 import simulate_p1
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
-    )
-
-    class _PassiveStrategy:
-        def decide_shop_screen(self, sess, cfg):  # noqa: ANN001
-            return []
-
-    sess = StrategySession()
-    simulate_p1(7, pool='fallback', strategy=_PassiveStrategy(), session=sess)
-    bs = board_state_of(sess)
-    assert bs.heartbeat() > 0, 'sim 合成口推进心跳(不断流)'
-    assert bs.bench.value is not None, '合成口写入 bench(槽位真值)'
-    assert bs.gold.source == 'observation'
-    # 改写依据:引擎切容器直写后(feed_sim_truth docstring「生产写入=引擎
-    # 直写」),引擎写点 evidence 契约 = 'sim:engine:<tag>' 前缀
-    # (engine_p1._ext_evidence 唯一生成端;该前缀在
-    # cw_game_state._MISMATCH_SUPPRESS_PREFIXES 登记为失配抑制面);
-    # 'sim:synthesized[@轮键]' 保留给合成口(离线/测试构造面),引擎
-    # 生产路径不再经它。
-    assert bs.gold.evidence is not None \
-        and bs.gold.evidence.startswith('sim:engine:'), \
-        '引擎直写 evidence 带 sim:engine 前缀(失配抑制登记面契约)'
-
-
 def _feed_ctx(sess: SimpleNamespace) -> SimpleNamespace:
     """read_game_state 观察流测试的最小 ctx(mock ocr_service 空读;
     screen_loader 空 = 全部 area rect 缺失 → 各 reader 自然失读)。"""

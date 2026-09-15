@@ -145,12 +145,9 @@ def test_cost_source_group_unknown_is_registry_conservative() -> None:
 
 def test_board_next_tier_of_matches_registry_formula() -> None:
     """§3.2.6/§8.8 准入③:下档阈值派生 = 注册表 tiers 取 >count 最小档;
-    obs computed 支与 sim 观测键(ADR-0488)均委托本源(结构锁:函数体
-    调用 kernel 单一源,禁第三份推导)。"""
+    obs computed 支委托本源(结构锁:函数体调用 kernel 单一源,禁第三份
+    推导;旧 sim 键对拍随 sim 重做删除面退役——新引擎写容器,无该键)。"""
     from sr_od.application.currency_war.data.cw_factions import FACTIONS
-    from sr_od.application.currency_war.sim.engine_p1 import (
-        _board_next_tier_of as sim_board_next_tier_of,
-    )
     board = {'列车同行': 2, '持续伤害': 0}
     expect = {}
     for f, c in board.items():
@@ -159,7 +156,6 @@ def test_board_next_tier_of_matches_registry_formula() -> None:
         if nt:
             expect[f] = nt
     assert board_next_tier_of(board) == expect
-    assert sim_board_next_tier_of(board) == expect, 'sim 键 = 同一派生函数'
     assert board_next_tier_of({}) == {}
 
 
