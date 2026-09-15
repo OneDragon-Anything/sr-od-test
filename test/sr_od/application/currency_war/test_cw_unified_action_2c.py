@@ -176,6 +176,57 @@ def test_clear_prep_cards_emits_open_bookcard_and_signals_handback(monkeypatch):
     assert len(executed) == 1
 
 
+# ===== DeployMove 帧投影占用集(改动三审 代-1 应修行为锁)=====
+
+def test_deploymove_projection_records_resolved_row():
+    """DeployMove 帧投影占用集按 fallback 解析排(``_row``)记行:首选排满
+    落位 fallback 另一排 = 记实落排(原按 to_row 记 = 假前排占位/漏记
+    后排,帧内部署决策读歪);满板信息位 slot=0 与源槽无件均不入集(0 非
+    物理槽号,真值归下一入口 heavy 现读)。"""
+    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+    from sr_od.application.currency_war.kernel.cw_vocab import DeployMove
+
+    stub = CwScreenPrep.__new__(CwScreenPrep)   # 绕道构造(无框架状态)
+    stub._session = lambda: None
+
+    def _obs(front, deployed):
+        return kpa.PrepObservation(
+            bench_chars=[BenchChar(slot=3, char_id='甲', star=1)],
+            deployed_chars=deployed, front_occupied=front,
+            back_occupied=set(), back_layout_slots=6, free_bench_slots=9)
+
+    # 前排满(deployed 视图)fallback 后排:记实落排 back,前排集不被污染
+    _front_full = [BenchChar(slot=i + 1, char_id=f'丙{i}', star=1,
+                             position_pref='front') for i in range(4)]
+    out = CwScreenPrep._project_prep_obs(
+        stub, DeployMove(bench_idx=2, to_row='front', faction=''),
+        _obs({1, 2, 3, 4}, _front_full))
+    assert out.back_occupied == {1} and out.front_occupied == {1, 2, 3, 4}
+    assert out.deployed_chars[-1].position_pref == 'back'
+    # 前排有空位:首选排照记(回归面)
+    out = CwScreenPrep._project_prep_obs(
+        stub, DeployMove(bench_idx=2, to_row='front', faction=''),
+        _obs({1}, [BenchChar(slot=1, char_id='乙', star=1,
+                             position_pref='front')]))
+    assert out.front_occupied == {1, 2} and out.back_occupied == set()
+    # 满板信息位 slot=0 不入集
+    _full = [BenchChar(slot=i + 1, char_id=f'甲{i}', star=1,
+                       position_pref='front') for i in range(4)] + \
+            [BenchChar(slot=i + 1, char_id=f'乙{i}', star=1,
+                       position_pref='back') for i in range(6)]
+    out = CwScreenPrep._project_prep_obs(
+        stub, DeployMove(bench_idx=2, to_row='front', faction=''),
+        _obs({1, 2, 3, 4}, _full))
+    assert out.front_occupied == {1, 2, 3, 4}
+    assert out.back_occupied == set() and 0 not in out.front_occupied
+    # 源槽无件(moved None)不入集
+    empty = kpa.PrepObservation(bench_chars=[], front_occupied={1},
+                                back_occupied=set(), back_layout_slots=6)
+    out = CwScreenPrep._project_prep_obs(
+        stub, DeployMove(bench_idx=2, to_row='front', faction=''), empty)
+    assert out.front_occupied == {1} and out.back_occupied == set()
+
+
 # ===== CwScreenExpertInvite 收缩(判据:无开卡残留,入口=弹窗已开)=====
 
 def test_expert_invite_entry_select_only(test_context, monkeypatch):
