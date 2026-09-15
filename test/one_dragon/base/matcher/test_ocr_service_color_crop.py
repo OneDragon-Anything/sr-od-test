@@ -8,6 +8,7 @@
 - crop_first 路径先裁后滤(纯性能,收到的图 = 恰好 rect 大小,无 margin)。
 """
 import numpy as np
+import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.base.matcher.ocr.ocr_match_result import OcrMatchResult
@@ -69,51 +70,32 @@ def test_color_crop_rect_filter_unchanged() -> None:
     assert results == []
 
 
-def test_cache_key_same_frame_same_rect_hits() -> None:
-    """同帧同区同 color_range → 第二次命中缓存,不重跑 OCR。"""
-    svc, matcher = _make_service()
-    screen = _make_image()
-    rect = Rect(100, 100, 180, 140)
-    svc.get_ocr_result_list(image=screen, rect=rect, color_range=CR)
-    svc.get_ocr_result_list(image=screen, rect=rect, color_range=CR)
-    assert len(matcher.shapes) == 1
-
-
-def test_cache_key_same_frame_other_rect_misses() -> None:
-    """同帧异区 → 缓存 miss(裁剪路径按 rect 分条,异区结果不同,防误命中)。"""
+@pytest.mark.parametrize('rect_b,same_frame,expect_ocr_cnt', [
+    (Rect(100, 100, 180, 140), True, 1),    # 同帧同区同 color_range → 命中缓存
+    (Rect(200, 200, 260, 240), True, 2),    # 同帧异区 → miss(裁剪路径按 rect 分条,防误命中)
+    (Rect(100, 100, 180, 140), False, 2),   # 异帧(新数组新 id)→ miss
+], ids=['same-frame-same-rect-hit', 'same-frame-other-rect-miss', 'other-frame-miss'])
+def test_cache_key_states(rect_b: Rect, same_frame: bool, expect_ocr_cnt: int) -> None:
+    """缓存 key 三态参数化:同帧同区命中;同帧异区 / 异帧 miss。"""
     svc, matcher = _make_service()
     screen = _make_image()
     svc.get_ocr_result_list(image=screen, rect=Rect(100, 100, 180, 140), color_range=CR)
-    svc.get_ocr_result_list(image=screen, rect=Rect(200, 200, 260, 240), color_range=CR)
-    assert len(matcher.shapes) == 2
+    svc.get_ocr_result_list(
+        image=screen if same_frame else _make_image(), rect=rect_b, color_range=CR)
+    assert len(matcher.shapes) == expect_ocr_cnt
 
 
-def test_cache_key_other_frame_misses() -> None:
-    """异帧(新数组新 id)→ 缓存 miss。"""
-    svc, matcher = _make_service()
-    rect = Rect(100, 100, 180, 140)
-    svc.get_ocr_result_list(image=_make_image(), rect=rect, color_range=CR)
-    svc.get_ocr_result_list(image=_make_image(), rect=rect, color_range=CR)
-    assert len(matcher.shapes) == 2
-
-
-def test_full_path_without_color_range_reuses_across_rects() -> None:
-    """无 color_range 全图路径语义不变:同帧全图 OCR 一次,异 rect 过滤复用。"""
+@pytest.mark.parametrize('color_range', [None, CR], ids=['no-cr', 'with-cr'])
+def test_full_path_ocr_once_and_reuse(color_range: list | None) -> None:
+    """无 rect 全图路径参数化(color_range 有 / 无):同帧全图 OCR 一次,收图恒为整帧,
+    后续调用复用缓存。无 CR 时再叠加一个 rect 过滤调用,验证跨 rect 复用不变。"""
     svc, matcher = _make_service()
     screen = _make_image()
-    svc.get_ocr_result_list(image=screen, rect=None, color_range=None)
-    svc.get_ocr_result_list(image=screen, rect=None, color_range=None)
-    svc.get_ocr_result_list(image=screen, rect=Rect(100, 100, 180, 140), color_range=None)
-    assert len(matcher.shapes) == 1   # 全图只识别一次,rect 过滤复用
-
-
-def test_color_range_without_rect_keeps_full_path() -> None:
-    """color_range 无 rect → 保持全图旧路径(收图=整帧),且同参命中缓存。"""
-    svc, matcher = _make_service()
-    screen = _make_image()
-    svc.get_ocr_result_list(image=screen, rect=None, color_range=CR)
-    svc.get_ocr_result_list(image=screen, rect=None, color_range=CR)
-    assert matcher.shapes == [(300, 400)]
+    svc.get_ocr_result_list(image=screen, rect=None, color_range=color_range)
+    svc.get_ocr_result_list(image=screen, rect=None, color_range=color_range)
+    if color_range is None:
+        svc.get_ocr_result_list(image=screen, rect=Rect(100, 100, 180, 140), color_range=None)
+    assert matcher.shapes == [(300, 400)]   # 全图只识别一次(整帧收图),其余调用走缓存
 
 
 def test_crop_first_receives_exact_rect_no_margin() -> None:

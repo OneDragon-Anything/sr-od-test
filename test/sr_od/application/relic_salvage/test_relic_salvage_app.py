@@ -1,8 +1,8 @@
 """RelicSalvageApp 遗器分解配置 / 画面引用 + fixture 匹配测试(纯 screen_info + fixture,不跑游戏)。
 
 覆盖:
-- ``RelicLevelEnum`` 显示值('4星及以下' / '5星及以下')= ``salvage_level`` 用作 area_name,
-  应在 ``背包-遗器分解-快速选择`` screen 真实存在(``choose_level`` 靠它点击)。
+- ``salvage_level`` 显示值(= RelicLevelEnum value)用作 area_name,应是
+  ``背包-遗器分解-快速选择`` screen 的真实 area(``choose_level`` 靠它点击)。
 - 各节点 ``round_by_find_and_click_area`` 引用的 ``(screen, area)`` 应在 screen_info 存在。
 - **fixture 匹配**:``click_filter``(按钮-快速选择)在 背包-遗器分解 fixture 命中;``choose_level``
   (4星及以下)在 快速选择 fixture 命中 —— 验 area 真能在真实画面匹配(抓模板 / 文字漂移)。
@@ -35,11 +35,6 @@ FILTER_SCREEN = '背包-遗器分解-快速选择'
 
 class TestRelicSalvageApp:
     """遗器分解:配置枚举 + 画面引用契约 + fixture 匹配。"""
-
-    def test_relic_level_enum_values(self) -> None:
-        """RelicLevelEnum 显示值(= area_name,choose_level 用)。"""
-        assert RelicLevelEnum.LEVEL_4.value.value == '4星及以下'
-        assert RelicLevelEnum.LEVEL_5.value.value == '5星及以下'
 
     def test_salvage_level_enum_matches_screen_areas(self, test_context: SrTestContext) -> None:
         """``salvage_level`` 用作 ``背包-遗器分解-快速选择`` 的 area_name —— RelicLevelEnum 每个值

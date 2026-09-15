@@ -5,6 +5,7 @@
 # 分支路由转 mock 分发锁(画面识别层由 test_id_mark 集中锁定)。
 # 2026-09-15 enter_game 摘牌:fast_sleep 支持 fast_sleep(op) 连带桩掉 op 模块
 # 自己的 time 引用(账密节点 5 处裸睡 4.5s 此前桩够不着),两条降至 <0.2s。
-test_cal_pos_for_world_patrol.py::test_cal_pos
+# 2026-09-15 摘牌:test_cal_pos_for_world_patrol.py::test_cal_pos 随测试文件删除移出
+# (cal_pos 真帧测试退役:依赖运行时下载的 YOLO 模型,环境不自足)。
 test_back_to_normal_world_plus.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
 test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobby_closes

@@ -52,14 +52,20 @@ def _external_mutex(rc: ApplicationRunContext) -> window_run_mutex.WindowRunMute
     )
 
 
-def test_start_acquires_lock_and_finish_releases() -> None:
-    """运行持锁(他方句柄取不到)、收口释放(释放后他方可取)。"""
+@pytest.mark.parametrize('finish', ['finish_running', 'stop_running'],
+                         ids=['finish-path', 'stop-path'])
+def test_running_lock_released_on_finish(finish: str) -> None:
+    """收口两路径参数化(finish_running / stop_running → _finish_running):
+    运行中他方句柄取不到,收口释放锁(释放后他方可再入)。"""
     rc = ApplicationRunContext(_StubCtx(_StubController()))
 
     assert rc.start_running() is True
     assert _external_mutex(rc).acquire() is False         # 运行中:窗口被本运行锁住
 
-    rc.finish_running()
+    if finish == 'finish_running':
+        rc.finish_running()
+    else:
+        rc.stop_running(reason='测试停止')
     assert rc.window_mutex_blocker is None
     assert _external_mutex(rc).acquire() is True          # 收口后:锁已释放
     _external_mutex(rc).release()
@@ -84,34 +90,21 @@ def test_start_refused_when_window_held_elsewhere() -> None:
     rc.finish_running()
 
 
-def test_init_failure_releases_lock() -> None:
-    """控制器初始化失败:拒绝启动且不持锁泄漏(他方可取)。"""
-    rc = ApplicationRunContext(_StubCtx(_StubController(init_result=False)))
+@pytest.mark.parametrize('init_mode', ['returns_false', 'raises'],
+                         ids=['init-false', 'init-raises'])
+def test_init_failure_releases_lock(init_mode: str) -> None:
+    """控制器初始化失败两形态(返 False / 抛异常):拒绝启动且不持锁泄漏(他方可取);
+    抛异常形态先还锁再上抛(锁不悬到进程退出)。"""
+    controller = (_StubController(init_result=False) if init_mode == 'returns_false'
+                  else _StubController(raises=RuntimeError('init 爆炸')))
+    rc = ApplicationRunContext(_StubCtx(controller))
 
-    assert rc.start_running() is False
-    assert rc.window_mutex_blocker is None                # 非占用类失败不写占用描述
+    if init_mode == 'raises':
+        with pytest.raises(RuntimeError):
+            rc.start_running()
+    else:
+        assert rc.start_running() is False
+        assert rc.window_mutex_blocker is None            # 非占用类失败不写占用描述
     external = _external_mutex(rc)
     assert external.acquire() is True
     external.release()
-
-
-def test_init_exception_releases_lock_and_propagates() -> None:
-    """取锁后初始化抛异常:先还锁再上抛(锁不悬到进程退出)。"""
-    boom = RuntimeError('init 爆炸')
-    rc = ApplicationRunContext(_StubCtx(_StubController(raises=boom)))
-
-    with pytest.raises(RuntimeError):
-        rc.start_running()
-    external = _external_mutex(rc)
-    assert external.acquire() is True
-    external.release()
-
-
-def test_stop_running_releases_lock() -> None:
-    """停止路径收口(stop_running → _finish_running)同样释放窗口锁。"""
-    rc = ApplicationRunContext(_StubCtx(_StubController()))
-    assert rc.start_running() is True
-
-    rc.stop_running(reason='测试停止')
-    assert _external_mutex(rc).acquire() is True          # 停止后:锁已释放
-    _external_mutex(rc).release()

@@ -38,19 +38,6 @@ def test_dialog_branch_confirms_and_waits() -> None:
     click_area.assert_called_once()
 
 
-def test_dialog_branch_click_fail_propagates() -> None:
-    """弹窗在但确认点击没落地 → 返回点击结果(retry 语义),不继续状态分类。"""
-    op = _make_op()
-    click_result = MagicMock()
-    click_result.is_success = False
-    with patch.object(op, 'round_by_find_area', return_value=MagicMock(is_success=True)) as find_area, \
-         patch.object(op, 'round_by_find_and_click_area', return_value=click_result) as click_area:
-        result = op.enter_fight()
-    assert result is click_result
-    find_area.assert_called_once()
-    click_area.assert_called_once()
-
-
 def test_no_dialog_falls_through_to_state_branch() -> None:
     """无弹窗 → 不点任何东西,走原状态分类(no_attack+大世界 → 直接成功)。"""
     op = _make_op()

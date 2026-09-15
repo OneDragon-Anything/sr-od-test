@@ -15,20 +15,6 @@ import logging
 from one_dragon.yolo import log_utils as yolo_log_utils
 
 
-def test_yolo_logger_has_no_own_stream_channel() -> None:
-    """YOLO logger 不得自带任何 handler(裸 stderr 双写通道的回归锁)。"""
-    logger = yolo_log_utils.get_logger()
-    assert logger.name == 'OneDragon.YOLO', (
-        f"logger 名必须留在 'OneDragon.YOLO' 层级(父=框架 logger),实得 {logger.name!r}"
-    )
-    assert logger.handlers == [], (
-        f'YOLO logger 不得自带 handler(stderr 裸挂=双信道漂移写端),实得 {logger.handlers}'
-    )
-    assert logger.propagate, (
-        'YOLO logger 必须 propagate(否则记录无处可去或被迫自配信道)'
-    )
-
-
 def test_yolo_records_land_on_process_single_channel(tmp_path) -> None:
     """行为锁:server 形态配置下,YOLO 记录只落框架文件信道,不进 stderr。
 

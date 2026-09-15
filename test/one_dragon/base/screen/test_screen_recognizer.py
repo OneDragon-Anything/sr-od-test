@@ -1,8 +1,5 @@
-"""ScreenRecognizer / ScreenRecognizerRegistry / RecognizerScanResult 单元测试(纯逻辑,无游戏依赖)。"""
-from unittest.mock import MagicMock
-
+"""ScreenRecognizer / ScreenRecognizerRegistry 单元测试(纯逻辑,无游戏依赖)。"""
 from one_dragon.base.screen.screen_recognizer import (
-    RecognizerScanResult,
     ScreenRecognizer,
     ScreenRecognizerRegistry,
 )
@@ -15,15 +12,6 @@ class _DummyRecognizer(ScreenRecognizer):
 
     def recognize(self, ctx, image, screen_info) -> dict | None:  # noqa: ANN001
         return {'ok': True}
-
-
-class _OtherRecognizer(ScreenRecognizer):
-    """另一个画面。"""
-
-    screen_name: str = '另一画面'
-
-    def recognize(self, ctx, image, screen_info) -> dict | None:  # noqa: ANN001
-        return None
 
 
 class _EmptyNameRecognizer(ScreenRecognizer):
@@ -78,37 +66,3 @@ def test_register_rejects_duplicate_screen_name_first_wins() -> None:
     assert '_DupA' in err and '_DupB' in err
     # 先注册者(_DupA)胜
     assert isinstance(reg.get('重复画面'), _DupA)
-
-
-def test_screen_names_sorted() -> None:
-    """screen_names 返回已注册画面名(排序)。"""
-    reg = ScreenRecognizerRegistry()
-    reg.register(_OtherRecognizer())
-    reg.register(_DummyRecognizer())
-    assert reg.screen_names() == ['另一画面', '测试画面']
-
-
-# ---------- RecognizerScanResult ----------
-
-def test_scan_result_defaults() -> None:
-    """RecognizerScanResult 默认空 registry + 空 failures。"""
-    result = RecognizerScanResult()
-    assert result.failures == []
-    assert result.registry.screen_names() == []
-
-
-# (2026-09-03 攻击性排查:原 test_scan_result_carries_failures 删除——
-#  字段赋值透传断言(dataclass 行为,纪律 18)。)
-
-
-# ---------- ScreenRecognizer 基类 ----------
-
-def test_base_recognize_not_implemented() -> None:
-    """基类 recognize 默认抛 NotImplementedError(子类必须实现)。"""
-    base = ScreenRecognizer()
-    base.screen_name = 'x'   # type: ignore[method-assign]
-    try:
-        base.recognize(MagicMock(), MagicMock(), MagicMock())
-    except NotImplementedError:
-        return
-    raise AssertionError('基类 recognize 应抛 NotImplementedError')

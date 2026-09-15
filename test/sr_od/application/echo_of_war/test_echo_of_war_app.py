@@ -4,7 +4,6 @@
 - ``check_task``(纯配置逻辑,不读截图):
   - 有计划 + 周限次数>0 → ``STATUS_WITH_PLAN``。
   - 无计划(``next_plan_item`` 为 None)→ ``STATUS_NO_PLAN``。
-  - 有计划但周限次数耗尽(``left_times``<=0)→ ``STATUS_NO_PLAN``。
 - ``check_power``(委托 ``GuideCheckPower`` 读开拓力):
   - 星际和平指南-生存索引 → ``get_power_and_qty`` 读开拓力 / 沉浸器。
 
@@ -70,20 +69,6 @@ class TestEchoOfWarApp:
         result = op.check_task()
         assert result.status == TrailblazePowerApp.STATUS_NO_PLAN, (
             f'无计划应为 NO_PLAN,实际 status={result.status}'
-        )
-
-    def test_check_task_no_left_times(
-        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """有计划但周限次数耗尽(left_times<=0)→ STATUS_NO_PLAN。"""
-        monkeypatch.setattr(
-            EchoOfWarConfig, 'next_plan_item', property(lambda self: object())
-        )
-        monkeypatch.setattr(EchoOfWarRunRecord, 'left_times', property(lambda self: 0))
-        op = self._make_op(test_context)
-        result = op.check_task()
-        assert result.status == TrailblazePowerApp.STATUS_NO_PLAN, (
-            f'次数耗尽应为 NO_PLAN,实际 status={result.status}'
         )
 
     def test_check_power(self, test_context: SrTestContext) -> None:

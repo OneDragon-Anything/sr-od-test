@@ -9,6 +9,8 @@
 import logging
 from unittest.mock import MagicMock
 
+import pytest
+
 from one_dragon.base.operation.application.application_run_context import (
     ApplicationRunContext,
     ApplicationRunContextStateEnum,
@@ -26,20 +28,17 @@ def _set_running(rc: ApplicationRunContext) -> None:
     rc._run_state = ApplicationRunContextStateEnum.RUNNING
 
 
-def test_stop_from_running_no_pause_log(caplog):
-    """① RUNNING 态 stop 不产生「暂停运行」日志。"""
+@pytest.mark.parametrize('from_running,reason', [
+    (True, 'mcp:stop_run'),   # RUNNING 态 stop
+    (False, 'hook:x'),        # 非 RUNNING 态(初始 STOP)stop
+], ids=['from-running', 'from-idle'])
+def test_stop_no_pause_log(caplog, from_running: bool, reason: str):
+    """① RUNNING / 非 RUNNING 两形态 stop 均不产生「暂停运行」日志。"""
     rc = _make_run_context()
-    _set_running(rc)
+    if from_running:
+        _set_running(rc)
     with caplog.at_level(logging.INFO, logger='one_dragon.base.operation.application.application_run_context'):
-        rc.stop_running(reason='mcp:stop_run')
-    assert '暂停运行' not in caplog.text
-
-
-def test_stop_from_idle_no_pause_log(caplog):
-    """①-补充:非 RUNNING 态(初始 STOP)stop 同样不打暂停日志。"""
-    rc = _make_run_context()
-    with caplog.at_level(logging.INFO, logger='one_dragon.base.operation.application.application_run_context'):
-        rc.stop_running(reason='hook:x')
+        rc.stop_running(reason=reason)
     assert '暂停运行' not in caplog.text
 
 
@@ -55,25 +54,19 @@ def test_stop_from_running_reaches_stop_and_keeps_source():
 
 
 def test_stop_from_pause_reaches_stop_directly(caplog):
-    """③ PAUSE 态下 stop 直达 STOP(无 RESUME 绕道,无暂停日志)。"""
+    """③ PAUSE 态 stop 直达 STOP(无 RESUME 绕道):状态收口 + stop_source 保留
+    + 事件序列只发 STOP 不发 PAUSE + 不打暂停日志。"""
     rc = _make_run_context()
     rc._run_state = ApplicationRunContextStateEnum.PAUSE
-    with caplog.at_level(logging.INFO, logger='one_dragon.base.operation.application.application_run_context'):
-        result = rc.stop_running(reason='gui:hotkey')
-    assert rc.is_context_stop
-    assert result.stop_source == 'gui:hotkey'
-    assert '暂停运行' not in caplog.text
-
-
-def test_stop_does_not_dispatch_pause_event():
-    """③-补充:stop 路径只发 STOP 事件,不发 PAUSE 事件(事件序列锁)。"""
-    rc = _make_run_context()
-    _set_running(rc)
     events: list[str] = []
     from one_dragon.base.operation.application.application_run_context import (
         ApplicationRunContextStateEventEnum,
     )
     rc.event_bus.listen_event(ApplicationRunContextStateEventEnum.PAUSE, lambda e: events.append('PAUSE'))
     rc.event_bus.listen_event(ApplicationRunContextStateEventEnum.STOP, lambda e: events.append('STOP'))
-    rc.stop_running(reason='mcp:stop_run')
+    with caplog.at_level(logging.INFO, logger='one_dragon.base.operation.application.application_run_context'):
+        result = rc.stop_running(reason='gui:hotkey')
+    assert rc.is_context_stop
+    assert result.stop_source == 'gui:hotkey'
     assert events == ['STOP']
+    assert '暂停运行' not in caplog.text

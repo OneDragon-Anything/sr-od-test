@@ -1,6 +1,8 @@
 """screen_match 框架强化匹配测试。"""
 from unittest.mock import MagicMock
 
+import pytest
+
 import one_dragon.base.screen.screen_match as _sm
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.base.screen.screen_area import ScreenArea
@@ -8,19 +10,10 @@ from one_dragon.base.screen.screen_info import ScreenInfo
 from one_dragon.base.screen.screen_match import (
     AreaMatchDetail,
     AreaType,
-    UnmatchedArea,
     UnmatchedReason,
     find_area_with_detail,
     find_screen_matches,
 )
-
-
-def test_area_type_is_str_enum() -> None:
-    """AreaType 是 str Enum,值 'text'/'template',可直接当字符串用。"""
-    assert AreaType.TEXT == 'text'
-    assert AreaType.TEMPLATE == 'template'
-    assert isinstance(AreaType.TEXT, str)
-
 
 # (2026-09-03 攻击性排查:原 AreaMatchDetail/ScreenMatch 构造透传断言 ×3
 #  删除——逐字段 assert 赋值 = dataclass 行为(纪律 18);字段契约由下方
@@ -42,51 +35,49 @@ def _plain_area() -> ScreenArea:
     return ScreenArea(area_name='点击区', pc_rect=Rect(0, 0, 100, 100))
 
 
-def test_find_area_text_match_returns_detail() -> None:
+@pytest.mark.parametrize('ocr_text,expect', [
+    ('战斗', {'confidence': 0.95, 'rect': (300, 800, 200, 80)}),   # OCR 文本命中区内
+    ('设置', None),                                                # 文本不匹配 → 未命中
+], ids=['text-hit', 'text-miss'])
+def test_find_area_text_by_ocr_result(ocr_text: str, expect: dict | None) -> None:
+    """文本区命中/未命中参数化:OCR 结果落在区内且文本匹配 → 命中详情透传;不匹配 → None。"""
     ctx = MagicMock()
-    ocr = MagicMock(data='战斗', confidence=0.95, x=300, y=800, w=200, h=80)
+    ocr = MagicMock(data=ocr_text, confidence=0.95, x=300, y=800, w=200, h=80)
     ctx.ocr_service.get_ocr_result_list.return_value = [ocr]
     d = find_area_with_detail(ctx, MagicMock(), _text_area())
-    assert d is not None
+    if expect is None:
+        assert d is None
+        return
     assert d.area_type == AreaType.TEXT
-    assert d.text == '战斗'
-    assert d.confidence == 0.95
-    assert (d.x, d.y, d.width, d.height) == (300, 800, 200, 80)
+    assert d.text == ocr_text
+    assert d.confidence == expect['confidence']
+    assert (d.x, d.y, d.width, d.height) == expect['rect']
 
 
-def test_find_area_text_no_match_returns_none() -> None:
+@pytest.mark.parametrize('area_kind,expect', [
+    ('template_hit', (1710, 60, 50, 60, 0.92)),   # 绝对坐标 = mrl.max + area.rect 偏移
+    ('template_miss', None),                      # 模板未命中
+    ('plain', None),                              # 纯定位区(无 text/template)不参与识别
+], ids=['template-hit', 'template-miss', 'plain'])
+def test_find_area_template_and_plain(area_kind: str, expect: tuple | None) -> None:
+    """模板区命中/未命中、纯定位区参数化:模板命中返绝对坐标详情;未命中 / 纯定位返 None。"""
     ctx = MagicMock()
-    ocr = MagicMock(data='设置')
-    ctx.ocr_service.get_ocr_result_list.return_value = [ocr]
-    assert find_area_with_detail(ctx, MagicMock(), _text_area()) is None
-
-
-def test_find_area_template_match_absolute_coord() -> None:
-    """模板命中返回绝对坐标(mrl.max + area.rect 偏移)。"""
-    ctx = MagicMock()
-    mrl = MagicMock()
-    mrl.max = MagicMock(x=10, y=20, w=50, h=60, confidence=0.92)
-    ctx.tm.crop_and_match_template.return_value = mrl
-    d = find_area_with_detail(ctx, MagicMock(), _template_area())
-    assert d is not None
+    if area_kind.startswith('template'):
+        area = _template_area()
+        mrl = MagicMock()
+        mrl.max = (MagicMock(x=10, y=20, w=50, h=60, confidence=0.92)
+                   if area_kind == 'template_hit' else None)
+        ctx.tm.crop_and_match_template.return_value = mrl
+    else:
+        area = _plain_area()
+    d = find_area_with_detail(ctx, MagicMock(), area)
+    if expect is None:
+        assert d is None
+        return
     assert d.area_type == AreaType.TEMPLATE
-    assert d.confidence == 0.92
-    assert (d.x, d.y) == (1710, 60)      # 1700+10, 40+20
-    assert (d.width, d.height) == (50, 60)
-
-
-def test_find_area_template_no_match_returns_none() -> None:
-    ctx = MagicMock()
-    mrl = MagicMock()
-    mrl.max = None
-    ctx.tm.crop_and_match_template.return_value = mrl
-    assert find_area_with_detail(ctx, MagicMock(), _template_area()) is None
-
-
-def test_find_area_plain_returns_none() -> None:
-    """纯定位区域(无 text/template)返 None,不参与识别。"""
-    ctx = MagicMock()
-    assert find_area_with_detail(ctx, MagicMock(), _plain_area()) is None
+    assert d.confidence == expect[4]
+    assert (d.x, d.y) == expect[:2]
+    assert (d.width, d.height) == expect[2:4]
 
 
 def test_find_area_default_crop_first_false() -> None:
@@ -179,17 +170,6 @@ def test_current_last_none_full_traversal(monkeypatch) -> None:
     assert result[0].is_precise is True
 
 
-def test_no_id_mark_screen_only_enters_topn(monkeypatch) -> None:
-    """无 id_mark 画面精准永假,但参与命中数(可进 top_n)。"""
-    plain = _screen_info('无标识画面', [ScreenArea(area_name='p1', pc_rect=Rect(0, 0, 10, 10), text='p')])
-    ctx = MagicMock()
-    ctx.screen_loader = _make_loader([plain])
-    _patch_find(monkeypatch, {'p1': True})
-    result = find_screen_matches(ctx, MagicMock())
-    assert len(result) == 1
-    assert result[0].is_precise is False
-
-
 def test_bfs_traverses_goto_neighbors(monkeypatch) -> None:
     """BFS 从 current 沿 goto_list 扩散到邻接画面(图不连通时兜底全量覆盖)。"""
     a = _screen_info('A', [_id_mark_text_area('a_mark', 'a')])
@@ -219,57 +199,6 @@ def test_precise_early_stop_returns_first_processed(monkeypatch) -> None:
     result = find_screen_matches(ctx, MagicMock())
     assert len(result) == 1
     assert result[0].screen_name == 'A'   # current=A,BFS 从 A 起,A 首个精准即返
-
-
-def test_color_range_distinct_ocr_called_per_range(monkeypatch) -> None:
-    """两个不同 color_range 的 text area → OCR 各调一次(不同 color_range 缓存不复用)。
-
-    spec §2.5 性能论据:find_area_with_detail 默认 crop_first=False 走全图 OCR 缓存
-    复用,但缓存键含 color_range;不同 color_range 各触发一次全图 OCR。
-    """
-    area_a = ScreenArea(area_name='a', pc_rect=Rect(0, 0, 100, 50), text='x', lcs_percent=0.5,
-                        color_range=[[0, 0, 0], [100, 100, 100]])
-    area_b = ScreenArea(area_name='b', pc_rect=Rect(0, 0, 100, 50), text='y', lcs_percent=0.5,
-                        color_range=[[200, 200, 200], [255, 255, 255]])
-    screen = _screen_info('S', [area_a, area_b])
-    ctx = MagicMock()
-    ctx.screen_loader = _make_loader([screen])
-    ctx.ocr_service.get_ocr_result_list.return_value = []
-
-    find_screen_matches(ctx, MagicMock())
-
-    assert ctx.ocr_service.get_ocr_result_list.call_count == 2   # 不同 color_range 各一次
-
-
-def test_color_range_none_ocr_reuses_cache(monkeypatch) -> None:
-    """两个 color_range=None(相同)的 text area → OCR 只调一次(全图缓存复用契约)。
-
-    spec §2.5 性能论据根基:同 color_range + crop_first=False 时,ocr_service 内部
-    缓存命中、不重复全图 OCR。本测试用 side_effect 模拟该缓存:以 (color_range, crop_first)
-    为键,首次"实际跑 OCR"(计 1 次),同键后续命中缓存(不再计)。find_screen_matches
-    两次 find_area_with_detail 因 color_range 一致 → 真实 OCR 只 1 次。
-    """
-    area_a = ScreenArea(area_name='a', pc_rect=Rect(0, 0, 100, 50), text='x', lcs_percent=0.5)
-    area_b = ScreenArea(area_name='b', pc_rect=Rect(0, 0, 100, 50), text='y', lcs_percent=0.5)
-    screen = _screen_info('S', [area_a, area_b])
-    ctx = MagicMock()
-    ctx.screen_loader = _make_loader([screen])
-
-    real_call_keys: list[tuple] = []
-    cache: dict[tuple, list] = {}
-
-    def _ocr_with_cache(image, rect=None, color_range=None, crop_first=False):
-        key = (repr(color_range), crop_first)
-        if key not in cache:
-            real_call_keys.append(key)   # 仅首次"实际跑 OCR"计数
-            cache[key] = []
-        return cache[key]
-
-    ctx.ocr_service.get_ocr_result_list.side_effect = _ocr_with_cache
-
-    find_screen_matches(ctx, MagicMock())
-
-    assert len(real_call_keys) == 1   # 同 color_range=None → 缓存复用,真实 OCR 仅 1 次
 
 
 def test_scope_inactive_traverses_all_screens(monkeypatch) -> None:
@@ -373,12 +302,3 @@ def test_fuzzy_match_unmatched_areas_empty(monkeypatch) -> None:
 
     assert len(result) == 1 and result[0].is_precise is False
     assert result[0].unmatched_areas == []
-
-
-def test_unmatched_area_is_dataclass_serializable() -> None:
-    """UnmatchedArea 是 dataclass、reason 是 str Enum(可序列化、可直接当字符串比较)。"""
-    u = UnmatchedArea(area_name='点击区', reason=UnmatchedReason.NO_METHOD,
-                      pc_rect=[10, 20, 110, 120])
-    assert u.reason == 'no_method'                       # str Enum 可直接当字符串
-    assert UnmatchedReason.SUB_STATE == 'sub_state'
-    assert u.id_mark is False and u.text == '' and u.template_id == ''

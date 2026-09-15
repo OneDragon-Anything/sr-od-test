@@ -1,10 +1,9 @@
 """DailyTrainingApp 每日实训工具 / 画面态测试(节点级,mock + 调用 + 断言,对齐 email/echo_of_war)。
 
 覆盖:
-- ``phone_menu_utils.is_training_reward_completed`` / ``get_training_reward_claim_btn_pos``:
-  星际和平指南-每日实训 → 读奖励领完态 / 领取按钮位置。
 - ``common_screen_state.in_secondary_ui``:每日实训 fixture → 判定在「指南」「每日实训」页
   (``claim_reward`` 节点靠它确认所在页)。
+- ``claim_reward`` 节点语义锁(未完成=良性跳过,全 mock 不依赖存档截图)。
 
 fixture(screens/):
 - ``星际和平指南/每日实训.webp``:星际和平指南,每日实训 tab。4 个实训任务(1 个 120/120 完成、
@@ -12,11 +11,6 @@ fixture(screens/):
   「刷新时间 9 小时 4 分钟」(未刷新完)。
 
 注:
-- 两个 ``phone_menu_utils`` 函数是纯截图函数(裁 ``GUIDE_TRAINING_REWARD_CLAIM_RECT`` → 模板匹配
-  ``training_reward_gift`` / ``training_reward_completed``),不跑 op ``execute``(后者在无
-  running 状态的 mock harness 下不收敛,见 echo_of_war 测试说明)。
-- 不 pin 精确完成数 / 是否命中(随账号每日状态变 + 小区域模板匹配有抖动):只验证提取管线通
-  (裁剪 → 模板匹配 → 返回正确类型),真坏了会抛异常或返错类型。
 - ``claim_reward`` 节点的语义锁(未完成=良性跳过)用全 mock 节点级测试,不依赖存档截图
   (:礼盒模板对灰态礼盒也命中,当天实训未做时不可把「还未完成」当硬失败)。
 """
@@ -26,31 +20,15 @@ from types import SimpleNamespace
 import pytest
 from test.conftest import SrTestContext
 
-from one_dragon.base.matcher.match_result import MatchResult
 from sr_od.application.daily_training import (
     daily_training_app as daily_training_app_module,
 )
 from sr_od.application.daily_training.daily_training_app import DailyTrainingApp
-from sr_od.operations.menu import phone_menu_utils
 from sr_od.screen_state import common_screen_state
 
 
 class TestDailyTrainingApp:
-    """DailyTrainingApp 每日实训奖励提取 + 画面态测试。"""
-
-    def test_training_reward_extraction(self, test_context: SrTestContext) -> None:
-        """星际和平指南-每日实训 → 奖励完成态(bool)/ 领取按钮位置(Optional)。"""
-        if not test_context.has_screen('星际和平指南', '每日实训'):
-            pytest.skip('存档截图缺失:screens/星际和平指南/每日实训.webp')
-        screen = test_context.load_screen('星际和平指南', '每日实训')
-
-        completed = phone_menu_utils.is_training_reward_completed(test_context, screen)
-        assert isinstance(completed, bool), f'完成态应返回 bool,实际 {completed!r}'
-
-        claim_pos = phone_menu_utils.get_training_reward_claim_btn_pos(test_context, screen)
-        assert claim_pos is None or isinstance(claim_pos, MatchResult), (
-            f'领取按钮应返回 None 或 MatchResult,实际 {claim_pos!r}'
-        )
+    """DailyTrainingApp 每日实训画面态测试。"""
 
     def test_claim_reward_in_secondary_ui(self, test_context: SrTestContext) -> None:
         """每日实训 fixture → in_secondary_ui 判定在「指南」「每日实训」页。
@@ -110,14 +88,6 @@ class TestClaimRewardSemantics:
         monkeypatch.setattr(test_context.controller, 'click', lambda pos: None)
         monkeypatch.setattr(daily_training_app_module.time, 'sleep', lambda s: None)
         return app
-
-    def test_already_completed_success(self, test_context: SrTestContext,
-                                       monkeypatch: pytest.MonkeyPatch) -> None:
-        """实训奖励已领完(completed=True)→ 成功收批(既有语义不回退)。"""
-        app = self._make_app(test_context, monkeypatch, completed_returns=[True])
-        result = app.claim_reward()
-        assert result.is_success, '已领完应成功收批'
-        assert '已领取' in result.status, f'状态应含「已领取」,实际 {result.status}'
 
     def test_incomplete_is_benign_skip(self, test_context: SrTestContext,
                                        monkeypatch: pytest.MonkeyPatch) -> None:

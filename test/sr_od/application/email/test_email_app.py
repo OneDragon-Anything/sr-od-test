@@ -37,44 +37,31 @@ class TestEmailApp:
         op.screenshot()
         return op
 
-    def test_click_email_with_alert(self, test_context: SrTestContext) -> None:
-        """有邮件红点的菜单 → _click_email 识别 EMAILS + 红点 → STATUS_WITH_ALERT。"""
-        if not test_context.has_screen('菜单', '菜单-邮件红点'):
-            pytest.skip('存档截图缺失:screens/菜单/菜单-邮件红点.webp')
-        op = self._make_op(test_context, '菜单', '菜单-邮件红点')
+    @pytest.mark.parametrize('state,expect_status', [
+        ('菜单-邮件红点', EmailApp.STATUS_WITH_ALERT),    # 有红点 → 点击进邮件列表
+        ('菜单-无邮件红点', EmailApp.STATUS_NO_ALERT),    # 无红点 → 不点击
+    ], ids=['with-alert', 'without-alert'])
+    def test_click_email_by_menu_alert(self, test_context: SrTestContext, state: str,
+                                       expect_status: str) -> None:
+        """菜单红点两态参数化:``_click_email`` 识别 EMAILS + 红点 → WITH_ALERT;无红点 → NO_ALERT。"""
+        if not test_context.has_screen('菜单', state):
+            pytest.skip(f'存档截图缺失:screens/菜单/{state}.webp')
+        op = self._make_op(test_context, '菜单', state)
         # 节点直调也会走 round_success(wait=1)/success_wait 的真实轮间等待,包 fast_sleep 免空等
         with fast_sleep():
             result = op._click_email()
         assert result.is_success, '应识别到邮件图标(EMAILS template)'
-        assert result.status == EmailApp.STATUS_WITH_ALERT, (
-            f'有红点应为 WITH_ALERT,实际 status={result.status}'
+        assert result.status == expect_status, (
+            f'{state} 应为 {expect_status},实际 status={result.status}'
         )
 
-    def test_click_email_without_alert(self, test_context: SrTestContext) -> None:
-        """无邮件红点的菜单 → _click_email 识别 EMAILS 但无红点 → STATUS_NO_ALERT(不点击)。"""
-        if not test_context.has_screen('菜单', '菜单-无邮件红点'):
-            pytest.skip('存档截图缺失:screens/菜单/菜单-无邮件红点.webp')
-        op = self._make_op(test_context, '菜单', '菜单-无邮件红点')
-        with fast_sleep():
-            result = op._click_email()
-        assert result.status == EmailApp.STATUS_NO_ALERT, (
-            f'无红点应为 NO_ALERT,实际 status={result.status}'
-        )
-
-    def test_claim_with_rewards(self, test_context: SrTestContext) -> None:
-        """有可领邮件列表 → _claim 识别并点击「邮件-全部领取」。"""
-        if not test_context.has_screen('邮件', '邮件列表-有可领'):
-            pytest.skip('存档截图缺失:screens/邮件/邮件列表-有可领.webp')
-        op = self._make_op(test_context, '邮件', '邮件列表-有可领')
+    @pytest.mark.parametrize('state', ['邮件列表-有可领', '邮件列表'],
+                             ids=['with-rewards', 'without-rewards'])
+    def test_claim_by_list_state(self, test_context: SrTestContext, state: str) -> None:
+        """邮件列表两态参数化:有可领(全部领取亮)/ 无可领(灰)→ ``_claim`` 都识别并点击「邮件-全部领取」。"""
+        if not test_context.has_screen('邮件', state):
+            pytest.skip(f'存档截图缺失:screens/邮件/{state}.webp')
+        op = self._make_op(test_context, '邮件', state)
         with fast_sleep():
             result = op._claim()
-        assert result.is_success, '应识别并点击「全部领取」'
-
-    def test_claim_without_rewards(self, test_context: SrTestContext) -> None:
-        """无可领邮件列表(全部领取灰)→ _claim 仍识别「邮件-全部领取」area。"""
-        if not test_context.has_screen('邮件', '邮件列表'):
-            pytest.skip('存档截图缺失:screens/邮件/邮件列表.webp')
-        op = self._make_op(test_context, '邮件', '邮件列表')
-        with fast_sleep():
-            result = op._claim()
-        assert result.is_success, '无可领(灰色)也应识别「全部领取」'
+        assert result.is_success, f'{state} 也应识别「全部领取」'

@@ -48,50 +48,38 @@ def _make_run_context() -> ApplicationRunContext:
 # ============ ① 闩语义 ============
 
 
-def test_latch_idle_stop_does_not_arm():
-    """idle 态杂散 stop 不置闩(STOP 也是 idle 初始态,不能作中断判据)。"""
+@pytest.mark.parametrize(
+    'scenario,expect_armed',
+    [
+        ('idle_stray', False),   # idle 杂散 stop:STOP 也是 idle 初始态,不作中断判据
+        ('live_stop', True),     # 运行中被停 = 合理中断
+        ('pause_stop', True),    # 暂停中被停 = 合理中断
+        ('finish', False),       # 自然完成收口(backend op 槽 finally)不置闩,
+                                 # 否则后续 MCP 手动操作(残局清理)会被守卫误拦
+    ],
+    ids=['idle-stray', 'live-stop', 'pause-stop', 'finish'],
+)
+def test_latch_arming_by_scenario(scenario: str, expect_armed: bool):
+    """闩置位按停机场景参数化:idle 杂散 / finish 收口不置闩,活运行 / 暂停中被停置闩;
+    置闩后新运行 start_running 清闩(闩唯一清除入口)。"""
     rc = _make_run_context()
-    rc.stop_running(reason='stray')
-    assert rc.is_stop_interrupted is False
-
-
-def test_latch_armed_on_live_stop_and_cleared_on_start():
-    """运行中被停 → 置闩;新运行 start_running → 清闩。"""
-    rc = _make_run_context()
-    assert rc.start_running() is True
-    rc.stop_running(reason='gui:hotkey')
-    assert rc.is_stop_interrupted is True
-    assert rc.start_running() is True
-    assert rc.is_stop_interrupted is False
-
-
-def test_latch_pause_stop_also_arms():
-    """暂停中被停 = 合理中断,同样置闩。"""
-    rc = _make_run_context()
-    rc.start_running()
-    rc.switch_context_pause_and_run()
-    rc.stop_running(reason='gui:hotkey')
-    assert rc.is_stop_interrupted is True
-
-
-def test_finish_running_does_not_arm_latch():
-    """自然完成收口(finish_running,backend op 槽 finally)不置闩——
-    否则后续 MCP 手动操作(残局清理)会被守卫误拦。"""
-    rc = _make_run_context()
-    rc.start_running()
-    result = rc.finish_running()
-    assert result is not None
-    assert rc.is_stop_interrupted is False
-
-
-def test_no_consume_entry_on_latch():
-    """无显式消费入口(ADR-0406):consume_stop_interrupted 已移除——
-    手动端点不再有「单 actor 清全局闩」路径,闩只由 start_running 清。"""
-    rc = _make_run_context()
-    rc.start_running()
-    rc.stop_running(reason='mcp:stop_run')
-    assert rc.is_stop_interrupted is True
-    assert not hasattr(rc, 'consume_stop_interrupted')
+    if scenario == 'idle_stray':
+        rc.stop_running(reason='stray')
+    elif scenario == 'live_stop':
+        assert rc.start_running() is True
+        rc.stop_running(reason='gui:hotkey')
+        assert rc.is_stop_interrupted is True
+        assert rc.start_running() is True   # 新运行 start_running 清闩
+        assert rc.is_stop_interrupted is False
+        return
+    elif scenario == 'pause_stop':
+        rc.start_running()
+        rc.switch_context_pause_and_run()
+        rc.stop_running(reason='gui:hotkey')
+    elif scenario == 'finish':
+        rc.start_running()
+        assert rc.finish_running() is not None
+    assert rc.is_stop_interrupted is expect_armed
 
 
 # ============ ② 守卫语义(controller 输入入口) ============

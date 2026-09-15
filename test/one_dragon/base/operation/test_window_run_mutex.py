@@ -74,18 +74,12 @@ def test_probe_reports_none_when_free_and_desc_when_held(tmp_path: Path) -> None
     assert probe_window_occupancy(lock_dir, 'k1') is None
 
 
-def test_sanitize_lock_key_handles_illegal_chars_and_empty() -> None:
-    """键净化:非法字符替换、同标题同键(跨进程一致)、异标题异键、空回退默认。"""
-    key = sanitize_lock_key('崩坏:星穹铁道')
-    assert ':' not in key
-    assert key == sanitize_lock_key('崩坏:星穹铁道')
-    assert key != sanitize_lock_key('崩坏_星穹铁道')
-    assert sanitize_lock_key(None) == DEFAULT_LOCK_KEY
-    assert sanitize_lock_key('') == DEFAULT_LOCK_KEY
+def test_lock_key_sanitize_and_controller_resolution() -> None:
+    """锁键净化与控制器标题推导合并验收。
 
-
-def test_resolve_lock_key_from_controller_title() -> None:
-    """键从控制器窗口标题推导;标题缺失/非字符串(测试替身)回退默认键。"""
+    净化面:非法字符替换、同标题同键(跨进程一致)、异标题异键、空回退默认。
+    推导面:键从控制器窗口标题推导;标题缺失 / 非字符串(测试替身)回退默认键。
+    """
 
     class _GameWin:
         win_title = '崩坏:星穹铁道'
@@ -93,15 +87,21 @@ def test_resolve_lock_key_from_controller_title() -> None:
     class _Controller:
         game_win = _GameWin()
 
-    assert resolve_lock_key(_Controller()) == sanitize_lock_key('崩坏:星穹铁道')
-    assert resolve_lock_key(object()) == DEFAULT_LOCK_KEY
-
     class _EmptyWin:
         win_title = None
 
     class _EmptyController:
         game_win = _EmptyWin()
 
+    key = sanitize_lock_key('崩坏:星穹铁道')
+    assert ':' not in key
+    assert key == sanitize_lock_key('崩坏:星穹铁道')
+    assert key != sanitize_lock_key('崩坏_星穹铁道')
+    assert sanitize_lock_key(None) == DEFAULT_LOCK_KEY
+    assert sanitize_lock_key('') == DEFAULT_LOCK_KEY
+
+    assert resolve_lock_key(_Controller()) == sanitize_lock_key('崩坏:星穹铁道')
+    assert resolve_lock_key(object()) == DEFAULT_LOCK_KEY
     assert resolve_lock_key(_EmptyController()) == DEFAULT_LOCK_KEY
 
 

@@ -7,6 +7,8 @@
 """
 from unittest.mock import MagicMock
 
+import pytest
+
 from one_dragon.base.operation.application.application_run_context import (
     ApplicationRunContext,
 )
@@ -32,10 +34,17 @@ def test_stop_running_idempotent_keeps_first_reason():
     assert rc.last_run_result.stop_source == 'hook:summon_unknown'
 
 
-def test_operation_stop_exit_message_contains_source():
-    """③ operation 停止出口文案含来源。"""
+@pytest.mark.parametrize('reason,expect_tail', [
+    ('hook:shop_unknown_card', '[hook:shop_unknown_card]'),   # 有源:文案带来源
+    (None, '[unknown]'),                                      # 无源:回退 'unknown'(不再是「人工结束」)
+], ids=['with-source', 'without-source'])
+def test_operation_stop_exit_message_contains_source(reason: str | None, expect_tail: str):
+    """③ operation 停止出口文案参数化:有源 = 「已停止[来源]」;无源回退 [unknown]。"""
     rc = _make_run_context()
-    rc.stop_running(reason='hook:shop_unknown_card')
+    if reason is None:
+        rc.stop_running()
+    else:
+        rc.stop_running(reason=reason)
     ctx = MagicMock(name='OneDragonContext')
     ctx.run_context = rc
     op = Operation(ctx)
@@ -44,16 +53,4 @@ def test_operation_stop_exit_message_contains_source():
     result = op.execute()
     assert not result.success
     assert result.status.startswith('已停止')
-    assert '[hook:shop_unknown_card]' in result.status
-
-
-def test_operation_stop_exit_message_unknown_when_no_reason():
-    """③-补充:无来源停止时出口文案回退 'unknown'(不再是「人工结束」)。"""
-    rc = _make_run_context()
-    rc.stop_running()
-    ctx = MagicMock(name='OneDragonContext')
-    ctx.run_context = rc
-    op = Operation(ctx)
-    op._init_before_execute = lambda: None  # type: ignore[method-assign]
-    result = op.execute()
-    assert result.status == '已停止[unknown]'
+    assert result.status.endswith(expect_tail)

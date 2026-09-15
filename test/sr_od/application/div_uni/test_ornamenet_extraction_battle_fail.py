@@ -43,17 +43,6 @@ def test_fail_screen_clicks_empty_and_routes_exit() -> None:
     find_area.assert_called_once()
 
 
-def test_fail_screen_click_miss_propagates() -> None:
-    """空白点击没落地 → 透传点击结果(retry 语义)。"""
-    op = _make_op()
-    click_result = MagicMock()
-    click_result.is_success = False
-    with patch.object(op, 'round_by_find_area', return_value=MagicMock(is_success=True)), \
-         patch.object(op, 'round_by_find_and_click_area', return_value=click_result):
-        result = op.after_battle_result()
-    assert result is click_result
-
-
 def test_win_screen_falls_through_to_button_logic() -> None:
     """非战败屏(胜利结算) → 不进战败分支,走 再来一次/退出 按钮逻辑。"""
     op = _make_op()

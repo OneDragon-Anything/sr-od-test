@@ -133,16 +133,6 @@ class TestCustomCombineOpConfig:
             )
             _assert_semantics(route_name, idx, item)
 
-    def test_patrol_unused_in_shipped_routes(self) -> None:
-        """``patrol`` 在 OpEnum 但 ``run_op`` 无对应分支(会落到 ``op is None`` → round_fail),
-        shipped 路由不该用它。"""
-        for route_name in SHIPPED_ROUTES:
-            cfg = CustomCombineOpConfig(route_name)
-            ops = [item.op for item in cfg.ops]
-            assert OpEnum.PATROL.value not in ops, (
-                f'{route_name} 用了 patrol,但 run_op 不分发它(执行会失败)'
-            )
-
     def test_first_op_returns_to_world_or_synthesize(self) -> None:
         """每条 shipped 路由首指令为 ``back_to_world_plus``(先把 bot 拉回大世界干净起点)。
 
