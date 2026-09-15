@@ -334,7 +334,8 @@ def test_unobserved_skip_streak_limit_stops(monkeypatch, tmp_path):
 
 
 def test_observed_visit_resets_streak_and_no_defect(monkeypatch, tmp_path):
-    """锁7 观察态正常访问:段顶复位计数,关店零跳过感知零台账行。"""
+    """锁7 观察态正常访问完整收工:复位连续计数,关店零跳过感知零台账行
+    (复位点 = 访问完成出口,K=2 数连续因未观察跳过)。"""
     rows = _spy_defects(monkeypatch)
     counters: dict = {'shop_skipped_unobserved_streak': 1}   # 前次残留
 
