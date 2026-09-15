@@ -100,7 +100,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     monkeypatch.setattr(em, 'read_encounter_refresh_count',
                         lambda ctx, scr: cnt)
     monkeypatch.setattr(em, 'safe_click', lambda o, pt, **k: None)
-    # (T-252 三审便宜化)encounter op 入口有画面稳定期 time.sleep(2.0s,
+    # (三审便宜化)encounter op 入口有画面稳定期 time.sleep(2.0s,
     # 真机等帧用)——mock 画面瞬时切换,等待纯属空睡;桩置空后单条
     # 2.8-5.6s → 亚秒(先例 = _make_strategy 桩 ism.time.sleep)。
     monkeypatch.setattr(em.time, 'sleep', lambda *_: None)
@@ -245,7 +245,7 @@ def test_megastar_in_node_lifecycle_single_action_retry(
         f' observe 门,无验证段):{op._lifecycle_trace}')
 
 
-# (T-252 三审整删)原 test_event_screens_source_free_of_verify_segment
+# (三审整删)原 test_event_screens_source_free_of_verify_segment
 # 「验证段废除·源面锁」(getsource 断言两屏源无「六段」表述与 'verify'
 # 字面)——源码扫描形态(README 禁止清单,红时是注释/字面变了,答不出
 # 哪个运行行为坏了);验证段废除语义的行为面由 lifecycle 段迹行为锁
@@ -266,7 +266,7 @@ def test_encounter_refresh_emission_counts_and_reread_redecide_new_path(
     侧载体)同步置位。验效双通道拆除后(用户裁定 2026-09-10 动作 op 禁
     验效):点钮+固定等待→无条件重读→带 refresh_used=True 自然重决策
     (恰两次决策)。
-    (T-252 改写:chosen 写时点腿——chosen_encounter 随 2026-09-14 断链修
+    (改写:chosen 写时点腿——chosen_encounter 随 2026-09-14 断链修
     迁挂 handle 顶部重入观察裁决,本访问交回不再写;重决策选卡仍在本
     访问,其 chosen 落账归重入轮。)"""
     install_dispatch_stub_ports(monkeypatch)
@@ -358,5 +358,5 @@ def test_encounter_chosen_inline_not_registry_collected(
     rs = _run_node(test_context, op, op.handle)
     assert not rs.is_success and board_state_of(
         session).chosen_encounter.value is None, '验关失败 → chosen 不写'
-    # (T-252 三审拆半:原尾部 getsource「chosen_* 不入注册表收编面」
+    # (三审拆半:原尾部 getsource「chosen_* 不入注册表收编面」
     # 字面不在场断言删,豁免面纪律归 review 与代码规范。)

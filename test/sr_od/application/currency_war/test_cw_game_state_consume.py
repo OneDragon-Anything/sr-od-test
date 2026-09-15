@@ -427,7 +427,7 @@ def test_bench_view_from_obs_empty_is_miss_not_full() -> None:
     assert view.slots[1].unit is not None and view.slots[1].unit.star == 2
 
 
-# (T-252 三审整删)原 test_prep_bench_obs_miss_guard_and_tome_choice_wiring
+# (三审整删)原 test_prep_bench_obs_miss_guard_and_tome_choice_wiring
 # 「接线存在性烟雾」(getsource 字符串在场四断言:bench_view_from_obs 接线/
 # _bs_obs.carry/特效窗门/chosen_tome 写端)——源码扫描形态(README 禁止
 # 清单,判据「红时哪个运行行为坏了」答不出)。守卫函数行为半由
@@ -496,7 +496,7 @@ def test_encounter_chosen_written_on_true_pick_only() -> None:
     """遭遇屏 chosen_encounter 记录面行为锁(§3.4.5 余屏写端):①真选写
     (难度档, 奖励文本)原名口径、source=logic;②fallback(无会话/候选
     未读到/越界)不写。
-    (T-252 三审拆半:原 getsource 字符串在场扫描腿删——写端接线在位/
+    (三审拆半:原 getsource 字符串在场扫描腿删——写端接线在位/
     落地验真后写的调用时点面归 review 与代码规范;本锁辖记录面行为半。)"""
     from sr_od.application.currency_war.kernel.cw_events import EncounterOption
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -528,7 +528,7 @@ def test_supply_chosen_written_from_stash_after_exit_only() -> None:
     (角色,装备,有钻石)且写后取走暂存;②暂存空(兜底点卡/刷新轮)不写;
     ③pop 取走即清(重入轮入口先弃,防陈旧选跨轮/跨节点误写);无 match
     安全空转。
-    (T-252 三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
+    (三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
     review 与代码规范。)"""
     from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -567,7 +567,7 @@ def test_expert_chosen_written_on_card_pick_only() -> None:
     """专家邀请函 chosen_expert 记录面行为锁(§3.4.5):卡分支写羁绊原名
     名;「现金为王」兜底分支不写(该事实由 ConfirmExpertCash +4 金到账
     登记通道承载,照旧不动)——真选守卫照 chosen_tome 式。
-    (T-252 三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
+    (三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
     review 与代码规范。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_expert_invite,
@@ -596,7 +596,7 @@ def test_wish_chosen_written_with_objective_text_only() -> None:
     """祈愿试炼 chosen_wish 记录面行为锁(§3.4.5):objective 原文名读到
     才写;未读到(None)/选中槽文本空 = 盲选 fallback 不写——真选守卫照
     chosen_tome 式。
-    (T-252 三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
+    (三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
     review 与代码规范。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_wish_trial,

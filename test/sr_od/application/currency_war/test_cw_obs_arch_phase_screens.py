@@ -1,4 +1,4 @@
-"""统一观察架构·五相位屏迁移锁(账本 T-8,余项收口阶段一)。
+"""统一观察架构·五相位屏迁移锁(余项收口阶段一)。
 
 设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度/五段形态依据 = changes/2026-09-11-
@@ -132,12 +132,12 @@ def _phase_mod(name: str):
 
 
 def test_phase_ops_inherit_base() -> None:
-    """五相位屏迁移(账本 T-8):五 op 均为 CwScreenOpBase 子类。
+    """五相位屏迁移:五 op 均为 CwScreenOpBase 子类。
     红 = 迁移回退或漏迁。"""
     for mod_name, cls_name in _PHASE_OPS:
         mod = _phase_mod(mod_name)
         assert issubclass(getattr(mod, cls_name), CwScreenOpBase), (
-            f'{cls_name} 未迁移到 CwScreenOpBase(T-8 五相位屏)')
+            f'{cls_name} 未迁移到 CwScreenOpBase(五相位屏)')
 
 
 @pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
@@ -509,7 +509,7 @@ def test_strategy_refresh_emission_semantics(test_context, monkeypatch,
     assert exec_state_of(session)._invest_refresh_used_slots == {0}, (
         '防重入旗标(执行侧载体)发射点同步置位')
     # 改写依据:逐卡刷新 = 终结动作(用户裁定 2026-09-14,照投资环境
-    # T-206 形态,见 cw_screen_invest_strategy._decide_and_act 注释)——
+    # 投资环境屏形态,见 cw_screen_invest_strategy._decide_and_act 注释)——
     # 点钮后本访问即交回(pending + round_retry),「刷后不重读不比对不
     # 重决策」;重决策 = 重入后重观察重决策,本访问恰一次决策。
     assert len(decide_calls) == 1, (
@@ -537,7 +537,7 @@ def journal_rows(tmp_path):
 # ==================== 豁免留守锁(§2.2/§6.5-6)====================
 
 
-# (T-252 三审整删)原 test_write_flow_exempt_surfaces_stay_inline「豁免
+# (三审整删)原 test_write_flow_exempt_surfaces_stay_inline「豁免
 # 留守锁」(getsource ×6:注册表接线恰一处/钩子体与豁免面字面在场/环境屏
 # 零登记件)——源码扫描形态(README 禁止清单,红时是文本变了,答不出哪个
 # 运行行为坏了);豁免面纪律归 review 与代码规范。豁免面的行为面
@@ -751,7 +751,7 @@ def test_boss_briefing_misread_takeover_new_path(test_context,
     assert op._lifecycle_trace[0] == 'observe'
 
 
-# (T-252 三审整删)原 test_boss_discrimination_single_source_consumers_
+# (三审整删)原 test_boss_discrimination_single_source_consumers_
 # unchanged「判别单一源消费面锁」(getsource ×3:消费点计数/import 复制面/
 # token 表扩散断言;且 import 在飞互斥面 cw_loop)——源码扫描形态(README
 # 禁止清单);「判别逻辑禁复制成第二源」防线归 review 与代码规范。
@@ -850,7 +850,7 @@ def test_battle_wait_settlement_branch_order_and_defer_new_path(
     """B2-③:结算分支新路径逐位——D-94 读点(结算观察半直写)先于「继续
     继续」点击(时序红线);C-1 新帧计数;段迹五段(单轮 = observe..
     on_outcome + round_wait 驻留)。
-    (T-252 分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
+    (分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
     (全仓零消费点),生产端无复位语义可锁。)"""
     order: list[str] = []
     op, _es = _make_bwait(

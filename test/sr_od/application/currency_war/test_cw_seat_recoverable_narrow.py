@@ -1,8 +1,8 @@
-"""P92 席可落代理收窄锁(T-20;旧账 T-316/详设 IC-1 单源)。
+"""P92 席可落代理收窄锁(详设 IC-1 单源)。
 
-出处:迭代详设「腾席资格面与代理收窄」T-20 节。旧装配 =
+出处:迭代详设「腾席资格面与代理收窄」节。旧装配 =
 ``seat_recoverable=(liquid_refund>0)``(P56 投影金额代理);其申报的
-偏宽面(占位件当可变现候选)已随投影读单一源化(T-18 燃料滤门)闭合,
+偏宽面(占位件当可变现候选)已随投影读单一源化(燃料滤门)闭合,
 残余失真 = 口径错配双向漂:①排除集——投影视图并 T3 活跃集
 (sell_gate channel='projection' 支),而腾席臂(M2 缺员/囤腿腾席位、
 恒买腾席支)对垫保是 defer 转化类放行非排除(channel='m4_fuel')
@@ -21,7 +21,7 @@
   → 刷新放行(旧代理该帧必拦;缺员置空隔离 M2 缺员腾席臂的先卖
   后刷掩蔽效应);
 - 对照锁:同构帧唯一「可腾件」为占位件 → 拦刷 + 分键开火
-  (收窄不复活占位件高估,T-18 灶面回归网)。
+  (收窄不复活占位件高估(灶面回归网))。
 
 fixture 说明:角色名/费档注册表现查(CHARACTERS/refresh_prob),帧
 构造前提以断言守卫;垫保登记走发射登记单一入口
@@ -75,7 +75,7 @@ _ROUND = 2
 
 
 def _item(slot: int = 1) -> BenchChar:
-    """占位件(T-216 假环境同款形态):SIFT 不可读 → char_id=''、1★。"""
+    """占位件(假环境同款形态):SIFT 不可读 → char_id=''、1★。"""
     return BenchChar(slot=slot, char_id='', star=1, is_item_slot=True)
 
 
@@ -141,12 +141,12 @@ class TestP92SeatRecoverableDirect:
 
     def test_placeholder_only_false_t18_gate_inherited(self):
         """仅占位件帧 ⇒ False:收窄判定经 fuel_sell_candidates 单一源
-        自动继承 T-18 占位件滤门(收窄不复活占位件高估灶面)。"""
+        自动继承占位件滤门(收窄不复活占位件高估灶面)。"""
         s, st, k = self._frame([_item(slot=1)])
         assert shop.p92_seat_recoverable(
             s, st.bench, k, _bsb(st), cap_hold=None, current_round=_ROUND,
             defer_names=frozenset()) is False
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = fixture 桥形态漂移(T3 活跃路径 AttributeError:'int' 无 .value,黑板桥喂参形状过期),非断言面语义红——同文件非 skip 直调锁在 T-253 释放集接线后全绿,归专项重分诊重推夹具,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = fixture 桥形态漂移(T3 活跃路径 AttributeError:'int' 无 .value,黑板桥喂参形状过期),非断言面语义红——同文件非 skip 直调锁在释放集接线批后全绿,归专项重分诊重推夹具,禁机械跟删/跟绿")
     def test_t3_active_only_fuel_true(self):
         """行为差帧(直调):唯一可腾件为 T3 活跃垫保件 ⇒ True。
         旧代理同帧 = 投影读排除 T3 ⇒ liquid_refund=0 ⇒ False ⇒ P92
@@ -216,7 +216,7 @@ def _p92_frame(extra_bench_last: BenchChar) -> tuple[CwSimFrame, object, str]:
 
 
 class TestP92AssemblyBehaviorDiff:
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = fixture 桥形态漂移(T3 活跃路径 AttributeError:'int' 无 .value,黑板桥喂参形状过期),非断言面语义红——同文件非 skip 直调锁在 T-253 释放集接线后全绿,归专项重分诊重推夹具,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = fixture 桥形态漂移(T3 活跃路径 AttributeError:'int' 无 .value,黑板桥喂参形状过期),非断言面语义红——同文件非 skip 直调锁在释放集接线批后全绿,归专项重分诊重推夹具,禁机械跟删/跟绿")
     def test_t3_active_full_bench_refresh_proceeds(self):
         """行为差锁(集成):唯一可腾件 = T3 活跃垫保件 ⇒ 席可落收窄
         判定 True ⇒ ②(囤腿)通道可达 ⇒ 刷新放行、拦键恒零。旧代理
@@ -236,7 +236,7 @@ class TestP92AssemblyBehaviorDiff:
 
     def test_placeholder_full_bench_refresh_blocked(self):
         """对照锁:同构帧唯一「可腾件」为占位件 ⇒ 两视图同空 ⇒ 席不可落
-        ⇒ 全通道死 ⇒ 拦刷 + 分键开火(收窄不复活 T-18 占位件高估灶面;
+        ⇒ 全通道死 ⇒ 拦刷 + 分键开火(收窄不复活占位件高估灶面;
         旧代理与收窄判定在该帧同判,零行为差)。"""
         st, s, _w = _p92_frame(_item(slot=BENCH_CAPACITY))
         acts = _decide(st, s)

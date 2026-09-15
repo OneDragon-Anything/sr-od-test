@@ -3,7 +3,7 @@
 收纳此前散布在十余个测试文件、各持一份近同构副本的桩构造六件套
 (``_comp/_members/_session/_state/_card/_bc/_decide``,DEBTS.md D17)、
 备战单轮 op 装配(``_make_round_director``,DEBTS.md D22)与 obs_arch
-六文件的运行外壳三件(``run_node``/``uninstall_ports``/``Area``,T-58
+六文件的运行外壳三件(``run_node``/``uninstall_ports``/``Area``,
 夹具收敛——原为 6/4/4 份逐文件复制)。收敛建立在测试仓 README
 「跨文件的复制夹具是漂移源头」纪律之上(README 常驻摘要不编号,故不引
 条号);本模块文件名以下划线开头,pytest 不收集。
@@ -293,7 +293,7 @@ class _DuckFrame:
 
 
 def cw4_box(frame, session=None):
-    """帧 → 容器一次性装箱(「桥装箱」配方的退役承接:T-169 桥本体删除
+    """帧 → 容器一次性装箱(「桥装箱」配方的退役承接:桥本体删除
     批起,本函数 = 该配方测试侧单一源)。域写入语义与退役的 kernel
     ``board_state_bridge`` 逐位同构,消费方式 = 别名导入(调用点零改动,
     见模块头)。

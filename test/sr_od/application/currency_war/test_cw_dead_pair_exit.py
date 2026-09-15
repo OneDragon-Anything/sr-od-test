@@ -1,4 +1,4 @@
-"""G-S1 死库存退出通道行为锁(T-253;landing 3.2 ⑤)。
+"""G-S1 死库存退出通道行为锁(landing 3.2 ⑤)。
 
 出处与语义单一源:
 - 判据规格 = changes/2026-09-15-gs1-exit-channel/design.md §2.1.5((a)(b)(c)

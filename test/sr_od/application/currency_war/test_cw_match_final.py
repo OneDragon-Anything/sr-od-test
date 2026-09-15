@@ -261,7 +261,7 @@ def test_match_final_version_stamps(journal, run_id, monkeypatch) -> None:
     (``_resolve_code_commit()`` vs ``code_commit()``),不拿 kernel 模块级
     导入快照(_CODE_COMMIT)比现读——快照冻结在导入时点、对拍发生在断言
     时点,测试进程存活窗口内主仓 HEAD 落盘(多批并行收口期常态)即假红
-    (实发判例:T-62 验收复跑咬红一次)。解析器同点对拍保住锁的本义
+    (实发判例:验收复跑咬红一次)。解析器同点对拍保住锁的本义
     「kernel 复刻与 telemetry 单一源双实现等值」且与时序解耦;模块常量 =
     同一解析器在导入时点的返回值,进程内结构性恒等,无需另锁。fingerprint
     不涉 git 且注册表进程内不变,无常量/现读时序差,维持常量对拍。

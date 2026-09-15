@@ -1,13 +1,13 @@
-"""凑息/支付变现通道占位件物理门锁(T-20;T-18 同族暴露上收)。
+"""凑息/支付变现通道占位件物理门锁(同族暴露上收)。
 
 出处:迭代详设「腾席资格面与代理收窄」(IC-1 跨通道共享谓词)+
-T-18 交付报告未尽①同族暴露登记。缺陷(修复前):criteria/sell.py
+交付报告未尽①同族暴露登记。缺陷(修复前):criteria/sell.py
 ``sell_for_interest`` / ``funding_support_sell`` 资格循环对占位件
 (``BenchChar.is_item_slot=True``,SIFT 不可读 ⇒ char_id=''、默认 1★)
 无物理门——空名不在排除集/线内、星级 1、无同名副本、注册表查无此名
 ⇒ bench_effect 谓词 False,门组全放行;凑息缺口帧/筹资帧占位件按
 未知名保守估 3 金计入止盈贪心 → 对不可卖对象发射 SellBench(实机 =
-白耗动作,与 M4 燃料通道 T-209 案发形同族;游戏真值 = 占位件无卖出
+白耗动作,与 M4 燃料通道案发形同族;游戏真值 = 占位件无卖出
 交互且无金币现值,知识锚 = board_structure.md §备战栏)。生产当前由
 观察层掩蔽(identify_slots 不产占位件条目),sim 假环境经观察面直喂
 可及。
@@ -52,7 +52,7 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
 
 
 def _item(slot: int = 1, star: int = 1) -> BenchChar:
-    """占位件(T-216 假环境同款形态):SIFT 不可读 → char_id=''、默认 1★。"""
+    """占位件(假环境同款形态):SIFT 不可读 → char_id=''、默认 1★。"""
     return BenchChar(slot=slot, char_id='', star=star, is_item_slot=True)
 
 
@@ -103,7 +103,7 @@ class TestInterestItemSlotGate:
         assert slots == []
         assert key == ''
 
-    # 「门序锁」已删(T-102,同燃料通道判):滤门禁用变异下 star=2 占位件
+    # 「门序锁」已删(同燃料通道判):滤门禁用变异下 star=2 占位件
     # 输入仍被星门(criteria/sell.py 内 b.star != 1)同样拒——两门同为纯拒、
     # 序不可观测,锁零拦截价值;滤门回归由星=1 两锁实际拦截(变异红证)。
     # 勿以「钉门序」为由重建:无合法可观测形态。
@@ -142,7 +142,7 @@ class TestFundingItemSlotGate:
         assert slots == []
         assert key == ''
 
-    # 「门序锁」已删(T-102,同凑息通道判):滤门禁用变异下 star=2 占位件
+    # 「门序锁」已删(同凑息通道判):滤门禁用变异下 star=2 占位件
     # 输入仍被星门(criteria/sell.py 内 b.star != 1)同样拒——序不可观测,
     # 锁零拦截价值;滤门回归由星=1 锁实际拦截(变异红证)。
 

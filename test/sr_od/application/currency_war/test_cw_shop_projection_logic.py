@@ -1,8 +1,8 @@
-"""T-97 W6波4 商店动作投影直写锁(设计件《商店黑板容器化方案》§4-M1/M5)。
+"""W6波4 商店动作投影直写锁(设计件《商店黑板容器化方案》§4-M1/M5)。
 
 - M1 投影行为等价锁:生产两写合计(``apply_shop_action_logic`` 投影口
   直写 + ``apply_shop_merge_leg`` 合成升星整表直写,买前快照基点;
-  T-163 起 simulate 前瞻投影已删,simulate 在本文件只作**等价性基准**)
+  此后 simulate 前瞻投影已删,simulate 在本文件只作**等价性基准**)
   vs ``cw_state.simulate``:同动作同输入逐域等价
   (gold/bench/shop payload/xp;含满栏多买 −k×单价)。波 5 sim 反转
   收敛单形态后本锁改钉单形态(设计件 M1 行申报)。
@@ -53,7 +53,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     simulate,
 )
 
-# 改写依据(T-252 分诊):写入者登记面随「商店单动作循环收编」演进——
+# 改写依据(分诊):写入者登记面随「商店单动作循环收编」演进——
 # 生产写点 actor 现役 = CwScreenBuyCards(cw_screen_buy_cards,登记面在册),
 # 旧名 CwOpBuyCards 已退役;测试模拟生产写入随登记面改名。
 _SIG = ChannelSig(family='logic_action', actor='CwScreenBuyCards',
@@ -74,7 +74,7 @@ def _sig_of(container):
 
 
 def _project_with_merge_leg(bs, action, executed, st_frame):
-    """执行落地门两写合计的测试复刻(T-163 后生产同形):买前快照三件组
+    """执行落地门两写合计的测试复刻(现生产同形):买前快照三件组
     → 投影口直写 → 升星腿整表直写(先投影口后升星写,后写赢)。
     ``simulate(st_frame, action)`` 作等价性基准(kernel 单步应用器;非
     策略决策消费)。"""
@@ -118,7 +118,7 @@ class TestM5Registration:
         """直写域集封闭八域(禁扩静默,登记面即锁);消费面 = 本类 M1
         逐域等价断言的覆盖清单申报——新增域必须同步进 _assert_domains_equal
         的比对轴,否则等价锁对该域失明。
-        (T-252 改写依据:域集随 v2 动作族扩容——front_row/back_row/board/
+        (改写依据:域集随 v2 动作族扩容——front_row/back_row/board/
         equips 四域入集,扩面依据 = cw_game_state.SHOP_PROJECTION_DOMAINS
         声明段「裁定 A:单一转移函数,域覆盖对齐 simulate 分支字段转移
         全集」。)"""
@@ -192,7 +192,7 @@ class TestM1Equivalence:
         _assert_domains_equal(bs, sim)
 
     def test_merge_leg_alone_prestate_basis(self):
-        """升星腿直锁(T-163 快照基点回归):腿单写(不跑投影口)时,
+        """升星腿直锁(快照基点回归):腿单写(不跑投影口)时,
         买前快照基点 + shop 视图透传的合成结果对 simulate bench 逐槽等价
         ——非满栏合成买与满栏合成买两形态;gold/payload 域零写(腿只辖
         bench 整表)。基点误取买后容器会重复落位、shop 视图缺失会漏满栏
@@ -213,7 +213,7 @@ class TestM1Equivalence:
             sim = simulate(st, act)
             bs = _bs_of(st)
             seq0 = bs.write_seq
-            # 改写依据(T-252 分诊):三态定长五槽模型(用户三态裁定
+            # 改写依据(分诊):三态定长五槽模型(用户三态裁定
             # 2026-09-13)后 payload.cards 恒定长 5,「长度不变」旧断言失效;
             # 「腿禁写 payload 域」等价形态 = payload 对象引用不变
             # (observe 换值才换引用)。测试体内 x=100/200 旧画面坐标桩值
@@ -224,7 +224,7 @@ class TestM1Equivalence:
                 pre_bench=list(bench_slots_of(bs)),
                 pre_deployed=list(deployed_slots_of(bs)),
                 # pre_shop 形态 = 旧牌紧缩视图(与生产投影口同形;
-                # T-252 分诊:三态 payload 直传 ShopSlot 列表喂不进
+                # 分诊:三态 payload 直传 ShopSlot 列表喂不进
                 # mutate 机器的满栏合成素材消费)。
                 pre_shop=(shop_cards_to_legacy(
                     shop_payload_content_cards(pre_shop_payload))
@@ -291,7 +291,7 @@ class TestM1Equivalence:
 
     def test_missing_receipt_selfcomputes_ideal_execution(self):
         """回执缺字段 = 该动作自算理想执行(单买 k=1)
-        (T-252 改写:旧锁「回执缺字段 = 零写」语义已随 T-185 转移函数
+        (改写:旧锁「回执缺字段 = 零写」语义已随转移函数
         单源化废止——apply_shop_action_logic docstring「k 来源」段申报:
         executed 给定 = 回执 k(live),None = 理想执行自算(简单腿 1,
         满栏从应用机器出);域未读跳写语义独立,归
@@ -373,12 +373,12 @@ class TestM1Equivalence:
 
 
 def test_shop_entry_funnel_bench_survives_synthesis() -> None:
-    """T-177 商店入口漏斗 bench 写门场景锁(run_buy_waves 入口链回归):
+    """商店入口漏斗 bench 写门场景锁(run_buy_waves 入口链回归):
     visit 入口 = v1 帧合成;容器 bench 由漏斗真读写入(deploy 后留 bench
     一人),v1 形态帧(bench_readable=False)合成对未读 bench 域跳写——
     容器 bench 保持漏斗真读值,与执行账 tracked 同源不破。回归形态 = 无门
     合成把容器 bench 覆盖成「9 槽全空」假真空(实机 2026-09-13 商店段
-    循环崩溃 15+ 连发实证;原断言载体双账守卫已随 T-268 退役,本锁改
+    循环崩溃 15+ 连发实证;原断言载体双账守卫已退役,本锁改
     容器/tracked 双侧直断言)。"""
     from types import SimpleNamespace
 

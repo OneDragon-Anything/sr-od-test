@@ -1,7 +1,7 @@
 """买入死库存防线 + dominance_buy 席位外部性否决的资格门单测。
 
 出处与语义单一源:
-- ``mandate.dead_stock_pair_buy_reject_reason``(T-229 方向②:G-S1 买侧
+- ``mandate.dead_stock_pair_buy_reject_reason``(方向②:G-S1 买侧
   对偶——非定向 1★ 买入禁制造同名 1★×2 死库存对,拒因键
   ``dead_stock_pair``);
 - ``mandate.dominance_buy_eligible`` 的 ADR-0616 命题 4 收紧(bench_free

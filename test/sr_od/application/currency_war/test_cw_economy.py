@@ -541,7 +541,7 @@ def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
     assert upgrade_plan_fee(observed) == clicks_to_level(5) * 3
 
 
-# (T-252 三审整删)原 test_upgrade_plan_fee_no_second_discount_implementation
+# (三审整删)原 test_upgrade_plan_fee_no_second_discount_implementation
 # 「结构锁」(getsource 断言函数体内禁第二处取价/折扣实现)——源码扫描形态
 # (README 禁止清单);委托语义行为半由
 # test_upgrade_plan_fee_delegates_discount_aware_pricing 辖,「同一语义
@@ -841,9 +841,9 @@ def test_injection_consistency_single_registry_source() -> None:
     assert bv_base.interest_floor == 50   # registry cap=4 不再移动预算面息线
 
 
-# (原 test_tracking_view_isolated_from_session_writers 随 T-268 三次修正
+# (原 test_tracking_view_isolated_from_session_writers 随修正裁定
 #  删除:锁主对象 _tracking_view(tracking 优先 + snapshot 静默回退)已按
-#  裁定退役——滞回职责被 T-261 kernel 锚定取代,回退路径即要消灭的掩盖
+#  裁定退役——滞回职责被对账仲裁批 kernel 锚定取代,回退路径即要消灭的掩盖
 #  面;策略消费只剩 game state。snapshot_copy 自身语义由迁移哨兵锁另辖。)
 
 

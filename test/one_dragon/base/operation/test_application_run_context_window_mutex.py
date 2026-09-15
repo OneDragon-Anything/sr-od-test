@@ -1,6 +1,6 @@
 """ApplicationRunContext 跨进程窗口互斥运行门测试。
 
-验收语义(T-59):
+验收语义:
 - start_running 在进程内单跑道检查通过后真实取得窗口锁;他进程(测试里用
   同键的第二个锁实例模拟,Windows 字节锁按句柄冲突)持锁时拒绝启动,并经
   ``window_mutex_blocker`` 透出占用者描述;

@@ -48,7 +48,7 @@ def _mock_backend(start_ok: bool = True) -> MagicMock:
         duration_seconds=1.0,
     )
     b.stop.return_value = {'stopped': False, 'error': '当前无运行'}
-    # 并发拒绝响应由 backend 统一助手产出(start 类工具只透传,T-59):
+    # 并发拒绝响应由 backend 统一助手产出(start 类工具只透传):
     # 绑真实现——方法只读 query_status / run_slot,二者均已被 mock。
     b.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(b, hint)
     return b
@@ -398,7 +398,7 @@ def test_run_operation_concurrent_reject() -> None:
     backend = MagicMock()
     backend.run_slot._start.return_value = (False, None)
     backend.query_status.return_value = RunStatusResult(state='running', source='http')
-    # 并发拒绝响应由 backend 统一助手产出(T-59),绑真实现(依赖均已被 mock)。
+    # 并发拒绝响应由 backend 统一助手产出,绑真实现(依赖均已被 mock)。
     backend.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(backend, hint)
     res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, block=False))
     assert res['started'] is False

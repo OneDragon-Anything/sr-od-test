@@ -1,4 +1,4 @@
-"""统一观察架构·收尾五屏迁移锁 + cw_screen/cw_op 收口锁(账本 T-48,余项收口阶段三)。
+"""统一观察架构·收尾五屏迁移锁 + cw_screen/cw_op 收口锁(余项收口阶段三)。
 
 设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度/五段形态依据 = changes/2026-09-11-
@@ -47,7 +47,7 @@ CwScreenWaitOneOne / 位面情报采集 CwScreenPlaneIntel(薄转录 + 双节点
 - **薄转录锁**(位面情报采集,总纲契约 2):observe 直通(场景门不前移)+
   决策循环消费 ``_collect_cycle`` 单一共享体(新旧路径同一份,禁第二套
   转录)+ 双节点图边(采集→关闭并回写)保留(收尾屏详设关键取舍 2)。
-- **收口锁不恢复**(T-252 分诊,原 landing 阶段三判据的目录级守卫):
+- **收口锁不恢复**(分诊,原 landing 阶段三判据的目录级守卫):
   「cw_screen/ 与 cw_op/ 顶层 op 类必为 CwScreenOpBase 后代(豁免登记
   门)」以 AST 全目录扫描实现,属源码扫描形态(AGENTS §10.4.4 禁),
   摘除不恢复;五屏本体结构面由 test_closing_ops_inherit_base 点名锁
@@ -136,10 +136,10 @@ def test_closing_ops_inherit_base() -> None:
     for mod_name, cls_name, _node in _CLOSING_OPS:
         cls = getattr(_closing_module(mod_name), cls_name)
         assert issubclass(cls, CwScreenOpBase), (
-            f'{cls_name} 未迁移到 CwScreenOpBase(T-48 收尾五屏)')
+            f'{cls_name} 未迁移到 CwScreenOpBase(收尾五屏)')
 
 
-# (T-252 三审整删)原 test_closing_ops_node_budget_gate「五 op 结构锁②」
+# (三审整删)原 test_closing_ops_node_budget_gate「五 op 结构锁②」
 # (getsource(cls) 断言预算装饰器字面逐屏在场)——源码扫描形态(README
 # 禁止清单);「节点预算归装饰器逐屏登记」防线归 review 与代码规范。
 
@@ -510,7 +510,7 @@ def test_plane_intel_thin_transcription_single_body(test_context,
     """薄转录锁行为半(总纲契约 2,收尾屏详设 §5):新路径成功轮 = 五段迹
     + 采集完 success(三位面齐桩态);旧路径同结果零段迹。红 = 体被转录
     成第二份或直通被拆门。
-    (T-252 三审拆半:原 getsource 三段「observe 直通无门/_collect_cycle
+    (三审拆半:原 getsource 三段「observe 直通无门/_collect_cycle
     单一共享体/collect 恰一处委托」字面在场扫描腿删,转录单一源面归
     review 与代码规范;行为面由本锁新旧路径驱动承重。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -552,7 +552,7 @@ def test_plane_intel_dual_node_graph_edge_preserved(test_context) -> None:
 
 # ==================== 收口锁(不恢复)====================
 #
-# T-252 分诊:原 test_closure_all_cw_screen_ops_inherit_base(AST 全目录
+# 分诊:原 test_closure_all_cw_screen_ops_inherit_base(AST 全目录
 # 扫描 + 继承闭包守卫 + _CLOSURE_EXEMPT 豁免登记门)不恢复——源码扫描
 # 形态(AGENTS §10.4.4 包布局/依赖方向守卫禁令):红的时候是静态结构变
 # 了,答不出「哪个运行行为坏了」。「画面 op 必挂 CwScreenOpBase 或逐名

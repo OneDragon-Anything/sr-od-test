@@ -1,6 +1,6 @@
-"""T-231 溢出腿黑板帧镜像锁面(T-227 三账同帧的镜像半补粒度)。
+"""溢出腿黑板帧镜像锁面(三账同帧的镜像半补粒度)。
 
-T-227 修法 = 三账同帧(容器腿/执行账 tracked/黑板帧):kernel 写口的
+修法 = 三账同帧(容器腿/执行账 tracked/黑板帧):kernel 写口的
 tracked 吸收半已锁(test_cw_overflow_tracked_sync.py);本文件锁第三半
 ——CwScreenPrep._project_prep_obs 的 SellBench 黑板帧镜像腿(纯计算零
 读屏,桩宿主 __new__ 绕道直调,模式同 test_cw_unified_action_2a.py):

@@ -1,4 +1,4 @@
-"""T-185 金样锁(v2 转移函数路径唯一锁面;迁移对照到期注记见下)。
+"""金样锁(v2 转移函数路径唯一锁面;迁移对照到期注记见下)。
 
 原对拍平移前 simulate 捕获的容器终态快照;2026-09-15 严格瘦身:
 - 6 案(buy_place_simple / buy_merge3_on_bench / buy_fullbench_mergebuy /

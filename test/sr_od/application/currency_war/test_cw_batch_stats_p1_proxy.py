@@ -5,7 +5,7 @@
 ADR-0357(P1 配方锁局 locked_comp 恒空)+ kernel/cw_intention.p1_pair
 字段契约(配方锁活跃 ⟺ p1_pair 非空,P2+ 恒空)。
 
-病灶(T-246):P1-only sim 载体下 locked_comp 恒空 → ④ 全批结构性
+病灶:P1-only sim 载体下 locked_comp 恒空 → ④ 全批结构性
 恒 0 = 指标-载体错配。修复 = locked_comp 空而 p1_pair 非空的帧族,
 锁定目标代理 = 配方对,④ 读同行 form_ok 并标 proxy(观测面专用;
 引擎 ADR-0357 语义零改)。锁四件事:

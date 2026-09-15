@@ -351,10 +351,10 @@ def test_expert_choose_dispatch_both_ways(test_context, monkeypatch) -> None:
     assert calls_o == [1]
 
 
-# (T-252 三审整删)原 test_expert_open_card_node_stays_legacy「纯导航留旧
+# (三审整删)原 test_expert_open_card_node_stays_legacy「纯导航留旧
 # 路径申报面」(getsource 方法体断言无 run_lifecycle/observation_source)——
 # 源码扫描形态(README 禁止清单);开卡节点路由面归 review 与代码规范。
-# (T-252 三审整删)原 test_batch3_no_outcome_registry_wiring「注册表零登记
+# (三审整删)原 test_batch3_no_outcome_registry_wiring「注册表零登记
 # 锁」与 test_batch3_sources_free_of_verify_segment「验证段废除·源面锁」
 # (八屏 getsource 字面在场/不在场断言)——源码扫描形态;注册表收编纪律
 # 与验证段废除语义的行为面由本文件 lifecycle 段迹行为锁承重。

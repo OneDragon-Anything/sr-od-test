@@ -144,7 +144,7 @@ def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
 
 
 # ----------------------------------------------------- D3 grep 锁(不恢复)
-# T-252 分诊:原 test_d3_grep_lock_no_interest_floor_attribute_reads
+# 分诊:原 test_d3_grep_lock_no_interest_floor_attribute_reads
 # (rglob 扫 src 断言 reg.interest_floor 裸属性读点 = 0)不恢复——源码
 # 扫描形态(AGENTS §10.4.4 禁,判据「红的时候是哪个运行行为坏了」答不
 # 出);「interest_floor 只可方法调用不可裸属性读」的 API 契约防线归
@@ -252,7 +252,7 @@ def _ju23_session() -> StrategySession:
 
 # (test_ju23_stock_match_buys_and_empty_shop_close_discernible 已删
 #  2026-09-08 覆盖对账:店空必花域帧原 → LevelUpShop(m3_batch:must_spend)
-#  终结面随 T-271 商店期升级决策面收缩退役,现役帧表达 = CloseShop 收工
+#  终结面随商店期升级决策面收缩退役,现役帧表达 = CloseShop 收工
 #  (本文件 test_ju23_star2_stock_card_has_no_refund_backing_no_spend
 #  同构造域承载);shop_visit_idle_gold==1 = test_cw_shop_line::
 #  test_d_p2idle_idle_gold_counter,shop_r1_no_chaseable_member==1 无本帧族独立覆盖锁,现役近邻 =
@@ -269,7 +269,7 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     stockpile_buy 与 dominance 同以 refund_full_star_ok 为背书门:
     2★ 件两条买面都不可发射,溢余滞留(不放行)而非带病买——
     锁「背书门在局23 帧端到端成立」,非单位锁复述。
-    T-271 收缩适配:必花域末位 L3 升级消费随商店期升级决策面退役,
+    商店收缩适配:必花域末位 L3 升级消费随商店期升级决策面退役,
     「全层无对象」的帧表达 = CloseShop 收工交回(原 LevelUpShop
     (m3_batch:must_spend) 形态不保留)。
     """
@@ -299,7 +299,7 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     §8.1 口径):任一 BuyCard/RefreshShop 花后金 ≥ s_reserve(本帧形状
     = 50);息线下(≤50)整访问零支出(无误清);每访问都以 CloseShop
     收束且有界迭代(无死守环)。
-    T-115 适配(ADR-0580):店卡改用真无关件(局23杂件,非④放行集/
+    恒买腾席适配(ADR-0580):店卡改用真无关件(局23杂件,非④放行集/
     registry 核心)——原探针花火 ∈ TRANSITION_PACK carry,未锁双轨
     P1 帧会被 ④转线放行臂在息线下买入(1★ 全额退 = 可逆资产,裁定
     408② 的有意取舍);「息线下零支出」不变式对④放行件域已被裁定

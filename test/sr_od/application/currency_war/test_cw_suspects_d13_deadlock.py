@@ -1,6 +1,6 @@
 """D13 席满死锁收敛缺陷线检测器锁面(合取判据 + 锚点归属 + 行形状)。
 
-出处 = sim/checks/suspects.py D13 docstring(判据 = T-229 报告 s77091
+出处 = sim/checks/suspects.py D13 docstring(判据 = 实机局 s77091 复盘
 下钻的最小充分组合:连续 ≥2 轮线内件 missing_bench_full ∧ bench 含
 同名 1★ 非线内对;拒因读波级 sim.shop_waves[].rejects 全量并,帧级
 shop_rejects 只作生产合并行回退)。

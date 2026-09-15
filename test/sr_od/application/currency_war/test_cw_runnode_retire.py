@@ -7,7 +7,7 @@ RunMegastarNode → CwScreenMegastar 内联(委托壳废止)。本文件锁迁�
 ②仍在节点内 = 做动作 + round_retry(计 node_max_retry_times=8 预算,
 超限框架转 FAIL 交回——预算语义不变)。
 
-T-252 恢复分诊:原文件第③腿「源码零残留掩蔽扫描」(fixtures.masked_scan
+恢复分诊:原文件第③腿「源码零残留掩蔽扫描」(fixtures.masked_scan
 + test_runnode_zero_residue_in_src / test_runnode_scan_mutation_selfcheck)
 不恢复——源码扫描形态(AGENTS §10.4.4 退役符号墓碑禁令),且其公共单一源
 fixtures/masked_scan.py 已随 09-13 清理(1cc1958b)删除;退役防复活跃责归

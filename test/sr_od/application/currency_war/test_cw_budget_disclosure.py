@@ -1,4 +1,4 @@
-"""T-88 决策环数据流断链修复 · 缺陷②回归锁(遥测四字段全库零赋值)。
+"""决策环数据流断链修复 · 缺陷②回归锁(遥测四字段全库零赋值)。
 
 病理(ADR-0571):``v3_reserve_cap / v3_reserve_overflow /
 v3_release_budget / v3_release_spent`` 在 MandateState 有字段声明、
@@ -94,7 +94,7 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     """锁 F 行为腿共用离线宿主(零真实副作用)。替身面 = run_buy_waves
     段顶消费面(读屏/帧留证/种子读链/决策源/遥测单例全替身):决策源
     首动作即 CloseShop 终结,循环只走入口观察组装段一次;入口读屏回执
-    gold=10 非零(跳过 gold 救援重读支);种子段读链桩 = T-251 分型的
+    gold=10 非零(跳过 gold 救援重读支);种子段读链桩 = 分型的
     「屏幕席真空」合法态(生产 SIFT 读链离线不可用,空账重建出口按
     合法态零写零台账);帧留证不落盘。返回 (warned, rr, ledger);
     disclose_impl 替换店开帧披露写点(接线点为函数内 lazy import,每次
@@ -155,7 +155,7 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',
                         lambda idx: SimpleNamespace(strategy_id='mandate_v1',
                                                     ev_arm=''))
-    # (种子段读链工厂替身已随 T-268 移除:原 T-251 店内读屏重建出口退役,
+    # (种子段读链工厂替身已移除:原店内读屏重建出口退役,
     #  未观察态改走「策略关店→备战 heavy 观察」链;本宿主观察态缺省可信,
     #  CloseShop 替身策略照常走正常关店收工。)
     monkeypatch.setattr(assembly_mod, 'disclose_budget_at_shop_frame',
@@ -364,7 +364,7 @@ class TestReleaseSpentAccrual:
 
 def test_shop_frame_disclosure_wired_at_shop_entry(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """接线存在锁(T-88 店开帧第二写点;原「黑板写点后位次」腿随黑板槽
+    """接线存在锁(店开帧第二写点;原「黑板写点后位次」腿随黑板槽
     退役消亡——迁移批 3.2 删 session.shop_state_frame 载体,spy 位次判据
     前提(黑板帧非 None)结构性不成立,收口为接线存在 + 循环收工两腿;
     黑板容器化后的喂入位次语义归容器化迁移批重放件)。改名申报:原

@@ -1,11 +1,11 @@
-"""T-227 溢出腿执行账吸收回归锁(2026-09-11 实机 2-4 停机事故)。
+"""溢出腿执行账吸收回归锁(2026-09-11 实机 2-4 停机事故)。
 
-事故形态:T-226 溢出腿(apply_prep_action_logic)把入位卡写进容器 bench,
+事故形态:溢出腿(apply_prep_action_logic)把入位卡写进容器 bench,
 执行侧 tracked 主账未吸收 → 商店 visit 入口两账结构性分叉粘性不可自愈
 (店开 0n 分发路径(visit_open_shop→run_buy_waves)不经过 director
 heavy 观察,reconcile_tracking 唯一生产写点;read_game_state 漏斗
 prep_shop_open 阶段设计上不读 bench 身份)→ 崩溃循环停机。
-(原「种子守卫 AssertionError」表述随 T-268 守卫退役改写:分叉检出
+(原「种子守卫 AssertionError」表述随批退役改写:分叉检出
 现归观察边界 reconcile 纠漂,本锁锁的吸收行为本体不变。)
 
 锁的两件事:

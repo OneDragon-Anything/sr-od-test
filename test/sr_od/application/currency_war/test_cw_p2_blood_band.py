@@ -423,7 +423,7 @@ class TestLockGenFeasibilityObsKeys:
             assert snap == base, '观测计数改变了状态机终态:零行为破线'
 
     def test_seele_constants_single_source_rider(self):
-        """搭车件(T-171 批序 4 挂账兑现):cw_intention 侧 SEELE_OR_LEGS/
+        """搭车件(批序 4 挂账兑现):cw_intention 侧 SEELE_OR_LEGS/
         SEELE_CARRY_CHAR 改指 cw_comps 真源(ADR-0621
         0621-seele-static-form-or-fold),双定义恒等态收敛为单一源——
         同对象断言(比恒等值更强的同一性锁)。"""

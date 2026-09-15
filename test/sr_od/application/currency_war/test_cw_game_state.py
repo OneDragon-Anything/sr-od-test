@@ -502,8 +502,8 @@ def test_synthesis_unread_bench_no_clobber() -> None:
     默认空表)合成必须跳写 bench——容器内备战装配环的真读观察保持原值
     原版本;可读真值帧(sim 形态,缺省 True)照写不回归。回归形态 = 无门
     合成把 prep 装配环真读覆盖成「9 槽全空」假真空,容器与执行账 tracked
-    两账从此不同源(实机 2026-09-13 商店段循环崩溃实证,T-177;原表述
-    中的双账对账载体已随 T-268 守卫退役,本门的防覆盖语义独立存续)。"""
+    两账从此不同源(实机 2026-09-13 商店段循环崩溃实证;原表述
+    中的双账对账载体已随批退役,本门的防覆盖语义独立存续)。"""
     sig = _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
     # 容器先有漏斗真读(deploy 后留 bench:物理槽 4 一人,1 基槽号信息位)
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
@@ -810,10 +810,10 @@ def test_consume_defect_sink_drains() -> None:
 
 
 def test_strategy_state_accessors_bound_to_session() -> None:
-    """§8.6-6(批次三落)+ §8.7 尾批行(T-146 落):state_of 归位为
+    """§8.6-6(批次三落)+ §8.7 尾批行(已落):state_of 归位为
     StrategyState 访问单一入口——返回 session 携带的状态实例(泛型携带
     语义)。
-    (T-252 三审拆半:原「历史名 MandateState 模块属性不存在」墓碑腿
+    (三审拆半:原「历史名 MandateState 模块属性不存在」墓碑腿
     删——退役防复活跃责归 review 与代码规范,不进测试网。)"""
     sess = StrategySession()
     assert state_of(sess) is sess.strategy_state
@@ -1032,11 +1032,11 @@ def test_skip_battle_spec_entry_matches_base_registry() -> None:
 
 # ============================================================ 挂点接线锁(缓交)
 # 原 test_effect_hooks_wired_at_production_sites(§5.1 四挂点+B1 桥两采样点
-# 字符串在场断言)本批不收录:T-252 分诊=修复需 import 在飞互斥面符号
+# 字符串在场断言)本批不收录:分诊=修复需 import 在飞互斥面符号
 # (cw_screen_buy_cards 的执行落地 bump、cw_loop 的节点 tick),且本体为
 # 源码扫描形态(AGENTS §10.4.4 禁)。挂点接线的行为锁待在飞批落地后按
 # 行为锁形态重写,台账见 .debug/progress/2026-09-11-cw-clear-run/reports/
-# T-252-r1.md。
+# 分诊报告(易失)。
 
 
 # ============================================================ 第 15 轮对抗审 C8
@@ -1071,7 +1071,7 @@ def test_synthesis_payload_offscreen_branch() -> None:
 
 
 def test_synthesis_shop_empty_keeps_payload_in_recognition_domain() -> None:
-    """T-181:识别域(``shop_empty_off_screen=False``,店开相位实机喂入)
+    """识别域(``shop_empty_off_screen=False``,店开相位实机喂入)
     空牌面 = 买空/OCR 失读窗 → 不写保现值(失读窗沿用上一开店牌面),禁按
     离屏清 None。实证 = 2026-09-13 实机局 run_20260913_085025:买空店重进
     被真值口径清 None,``decide_shop_action`` 在屏前置 shop=None 契约崩

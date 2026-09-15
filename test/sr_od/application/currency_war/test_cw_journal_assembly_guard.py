@@ -1,11 +1,11 @@
-"""journal 流水装配兜底 + 收口落盘锁(T-258;W3 欠账修复的行为契约)。
+"""journal 流水装配兜底 + 收口落盘锁(;W3 欠账修复的行为契约)。
 
 锁三件:
 
 1. ``ensure_journal_assembly`` 幂等兜底:未装配 → 按缺省根补装(测试进程
    经 conftest ``_isolate_state_journal`` 重定向 = tmp,证明测试零真实账面
    写入);已装配 → 现役实例原样保留(兜底口不顶掉测试/生产自管装配)。
-2. 正主单例建立路径接线(T-274 用户裁定 2026-09-15:遥测装配 = game state
+2. 正主单例建立路径接线(用户裁定 2026-09-15:遥测装配 = game state
    职责;精化令:触发只钉 board_state_of 局容器建立点,GameState 构造器零
    装配逻辑;原「run 领取单点接线」锁随分层纠正重定向至此):建立注入
    ``run_id_provider`` 即装配——行为等价锚 = 未初始化容器首写前装配已发生;
@@ -76,7 +76,7 @@ def test_ensure_assembly_preserves_armed_instance(tmp_path: Path) -> None:
 
 def test_board_state_establish_wires_assembly() -> None:
     """正主单例建立路径接线:board_state_of 局容器建立注入 run_id_provider
-    即装配(T-274 重定向原「run 领取单点接线」锁;精化令 2026-09-15:触发
+    即装配(重定向原「run 领取单点接线」锁;精化令 2026-09-15:触发
     只钉该建立点,GameState 构造器零装配逻辑;行为等价 = 未初始化容器首写
     前装配已发生)。"""
     reset_state_telemetry()
@@ -87,7 +87,7 @@ def test_board_state_establish_wires_assembly() -> None:
 
 def test_draft_birth_and_run_claim_do_not_wire_assembly(
         _reset_run_cluster: None) -> None:
-    """装配边界三支(T-274 分层归属 + 精化令):草稿容器直构(GameState
+    """装配边界三支(分层归属 + 精化令):草稿容器直构(GameState
     构造器零装配逻辑)/ 一次性空载体 / 缺省单例建立(sim/测试口径)均不
     装配;run 领取层 ``ensure_run_started`` 只铸 run,不辖装配。"""
     reset_state_telemetry()

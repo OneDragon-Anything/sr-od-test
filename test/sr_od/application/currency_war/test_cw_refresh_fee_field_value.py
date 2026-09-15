@@ -1,4 +1,4 @@
-"""T-251 刷新刷价 Field 读口回归锁(2026-09-15 04:37 实机停局事故)。
+"""刷新刷价 Field 读口回归锁(2026-09-15 04:37 实机停局事故)。
 
 事故形态:RefreshShopOp.execute 刷价读数 ``state.shop_refresh_cost or
 基价`` ——商店 env 容器化(W6 波 4 读者切换)后该属性是 GameState 容器的

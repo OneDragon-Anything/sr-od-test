@@ -1,4 +1,4 @@
-"""T-268 tracked 观察状态行为锁(用户裁定「观察状态落 game state 字段,
+"""tracked 观察状态行为锁(用户裁定「观察状态落 game state 字段,
 策略消费只走 game state」)。
 
 设计:容器字段 ``GameState.tracked_account_observed``(三态:None=从未写
@@ -9,8 +9,8 @@
 可用终结 CloseShop → 编排壳收店 → 外循环重判落回备战节点锚定 → 再进店,
 店内零原地重建。mandate_v1._tracking_view(tracking 优先 + snapshot 静默
 回退)已随三次修正删除——策略禁读 ExecState 簿记,消费口只有 game state
-(T-251 空账混同根因由此类型/架构层封死)。原 T-251 读屏重建出口/单向
-阀门与 T-230 恢复路由随守卫退役同批移除;守卫本体 guard_expected_vs_
+(空账混同根因由此类型/架构层封死)。原读屏重建出口/单向
+阀门与恢复路由锁随守卫退役同批移除;守卫本体 guard_expected_vs_
 tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,规则
 文本 = flow/screen_op.md §2.3/§4。
 
@@ -18,7 +18,7 @@ tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,�
 1. 未观察门:容器观察态 False → decide_shop_action 返回 CloseShop,决策
    核不可达(零咨询);
 2. 缺省可信/已观察放行:字段从未写(None,缺省)与已锚定(True)均放行
-   决策核——空表/未写不能冒充未观察(T-251 空账混同反向锁);
+   决策核——空表/未写不能冒充未观察(空账混同反向锁);
 3. 锚定置位:reconcile_tracking bench 侧屏幕真值写回成功 → True;
    失败形态(deployed-only 写回/双空读守卫)不置位 = 保持未观察;
 4. 接管置位:cw_loop._mark_session_resumed → False(接管检测确认点);
@@ -121,7 +121,7 @@ def test_unobserved_gate_returns_close_shop_without_consulting_core(
 
 def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
     """锁2 缺省可信/已锚定放行:字段从未写(None,缺省)与 True 均放行
-    决策核——席面观察态不能由「空账形态」推断(T-251 混同反向锁)。"""
+    决策核——席面观察态不能由「空账形态」推断(混同反向锁)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         shop as mandate_shop,
     )
@@ -218,7 +218,7 @@ def test_takeover_marks_tracked_unobserved():
 
 def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
                                    unobserved: bool):
-    """未观察跳过流锁的离线宿主(替身面沿 T-230 恢复锁宿主同式)。
+    """未观察跳过流锁的离线宿主(替身面沿恢复路由锁宿主同式)。
 
     构造 = 容器在屏空牌面 + 观察态按参;策略 = 生产 MandateV1Strategy
     (真实门路径:未观察 → CloseShop;观察态用例传 Idle 关店策略)。

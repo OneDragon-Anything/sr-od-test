@@ -1,4 +1,4 @@
-"""T-88 决策环数据流断链修复 · 缺陷①回归锁(刷新通道整局失能)。
+"""决策环数据流断链修复 · 缺陷①回归锁(刷新通道整局失能)。
 
 病理(ADR-0571):``_r1_ledger_terms`` 旧实现「任一成员该级不可追 ⇒
 共享累加器 ``e_sum = inf`` 且无复位」把非空合格集污染成「无可追」,
@@ -29,7 +29,7 @@ account`` 边界注释(P40 R0-1「合格集空 ⇒ EV 恒负」刷新侧特例)�
 过滤「部分不可追 ≠ 合格集空」的精确卡费面声称由同文件
 TestMixedPeakCompletionAccount lv6 臂承载(超集),本文件对应单测已删。
 ⚠️ 上两处承载文件**全史不存在(幽灵指针,2026-09-15 复查确认)**——
-被删断言面曾无载体,覆盖缺口已申报;纯数真值表四臂已随 T-253 批归位
+被删断言面曾无载体,覆盖缺口已申报;纯数真值表四臂已随批归位
 本文件(TestR1CommitmentAccountTruthTable 直测),混合集精确卡费面由
 下方 TestR1QualifiedSetSemantics::test_formed_check_precedes_chaseability_
 probe 承载先序面。
@@ -143,7 +143,7 @@ class TestR1QualifiedSetSemantics:
         assert fees == 3 * CHARACTERS['景元'].cost
 
 
-# ===== 判据纯数面:r1_commitment_account 真值表直测(T-253 收编)=====
+# ===== 判据纯数面:r1_commitment_account 真值表直测(收编)=====
 # (原声称载体 test_cw_vgap_frame_horizon.py::TestCriterionAffordability
 # 全史不存在 = 幽灵指针,被删断言面随本批归位本文件。)
 
@@ -188,7 +188,7 @@ class TestArchiveP1R8Frame:
     """p1r8 帧(gold=53,lv5,金过息线 50)= 本局「r8 该 D 未 D」的帧级
     事实。修复前:R1 账被污染为 inf → rkey=no_chaseable_member → 零动作;
     污染修复后:真 account_over_budget → 必花域切分线 yield → RefreshShop
-    发射;T-245 期望账前件恢复后:同帧(r_remaining=14,非末轮)超账
+    发射;刷新止损批期望账前件恢复后:同帧(r_remaining=14,非末轮)超账
     → 域内拦,零刷新发射。本文件主旨 = 拒因归真墓碑(污染签名不得
     复现)不变;行为断言随账前件恢复演进——旧语义(全域 yielded 放行,
     账买不齐也刷)把零产出烧金段固化成行为(2026-09-15 sim 批量找问题
@@ -227,7 +227,7 @@ class TestArchiveP1R8Frame:
 
 
 class TestHorizonClosedYield:
-    """T-245 末轮豁免锁(全局局终帧;谓词单一源 = crit_refresh.
+    """末轮豁免锁(全局局终帧;谓词单一源 = crit_refresh.
     r1_horizon_closed):r_remaining=1(含当前节点)帧金随局终沉没,
     刷新机会成本 = 0,正概率出牌机会弱支配停手——必花域超账帧放行
     照旧。这是域内 yielded 放行在账前件恢复后的唯一存活辖域;非末轮

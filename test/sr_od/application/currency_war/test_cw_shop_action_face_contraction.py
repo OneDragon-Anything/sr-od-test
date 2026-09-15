@@ -1,11 +1,11 @@
-"""CW 商店期动作面收缩锁(T-271;判例 = screens-actions-capability §5)。
+"""CW 商店期动作面收缩锁(判例 = screens-actions-capability §5)。
 
 判例:商店期动作面 = **买牌/刷新/关店**——卖备战(SellBench)与买经验
 (LevelUp/LevelUpShop)收缩至备战期决策(策略归属 = strategy-docs
 22/23 号篇);腾位/筹资/凑息动机的「先卖后做」由跨段状态 substrate
 承载(``shop.decide_shop_action`` 尾声明),框架侧不做动机判断。
 
-本文件前身 = test_cw_sell_bench_m3_reach.py(T-238/T-243:六处店内卖
+本文件前身 = test_cw_sell_bench_m3_reach.py(六处店内卖
 决策点发射 SellBench 锁 + M3 发射位可达锁)——该发射面随收缩退役,
 违例形态锁不保留,本文件改锁收缩后的目标形态:
 
@@ -200,7 +200,7 @@ _SHOP_ACTION_FACE = {'BuyCard', 'RefreshShop', 'CloseShop'}
 
 @pytest.mark.parametrize('case', list(_FORM_FRAMES))
 def test_shop_forms_stay_in_contracted_action_face(case: str):
-    """收缩锁(六形态逐一;T-243 参数化纪律沿袭):各形态帧首动作 ∈
+    """收缩锁(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈
     买牌/刷新/关店闭集,恒不发射 SellBench/LevelUpShop——任一处卖射/
     升级射复活(策略面回退)即响亮红。"""
     strategy, sess, config = _FORM_FRAMES[case]()
@@ -209,7 +209,7 @@ def test_shop_forms_stay_in_contracted_action_face(case: str):
     assert name in _SHOP_ACTION_FACE, (
         f'{case} 首动作 {name} 越出商店期动作面闭集 '
         f'{sorted(_SHOP_ACTION_FACE)}(SellBench/LevelUpShop 已收缩至'
-        '备战期,复活 = T-271 收缩回退)')
+        '备战期,复活 = 商店收缩回退)')
 
 
 def test_bench_full_close_hands_back_with_defer_state():

@@ -1,9 +1,9 @@
-"""T-266 外环 op-fail 重派防线上限锁(2026-09-15)。
+"""外环 op-fail 重派防线上限锁(2026-09-15)。
 
 病理(选择伙伴 15 连败,2026-09-15 事故):画面 op 退出 fail → 外环
 ``_dispatch_screen_op`` 默认映射 round_wait(零预算)→ 同分支每帧再命中
 → 同一 op 无界重派,直到 NODE-DWELL 900s 系统哨兵兜住。op 层有界化
-(T-264「确认被拒」显式 fail)后,外环仍对无判读 fail 空转。修 = 环级
+(「确认被拒」显式 fail)后,外环仍对无判读 fail 空转。修 = 环级
 连续 fail 上限:同一分发 op 连续 fail 达 ``CwLoop.OP_FAIL_REDISPATCH_
 LIMIT`` → round_fail 显式停交上层。
 
@@ -51,7 +51,7 @@ def _spy_journal(monkeypatch) -> list[str]:
 
 class _Host:
     """``_dispatch_screen_op`` 离线宿主:只供给包装消费面(round 工厂/
-    留证/位置键/上限值),镜像 T-230 恢复路由锁的替身纪律。
+    留证/位置键/上限值),镜像恢复路由锁的替身纪律。
 
     刻意**不**预置 ``_op_fail_streak_key/_n``——锁 getattr 缺省初始化
     路径与生产首帧形态一致。
@@ -201,10 +201,10 @@ def test_limit_derivation_invariant():
     assert CwLoop.OP_FAIL_REDISPATCH_LIMIT >= CwLoop.PLANE_MISDISPATCH_LIMIT
 
 
-# ===== T-266 追加(三审代-2 升应修):出战链 {slot:下标} 对位防线 =====
+# ===== 追加(三审代-2 升应修):出战链 {slot:下标} 对位防线 =====
 # 病理:容器槽位表存在重复/越界槽号时 `_cidx_of = {b.slot: i}` 字典推导
 # 静默保留后值 → DeployMove 对位同槽号另一条目、拖错人出场。修 = 判据
-# 单一源 bench_slots_healthy(T-261 槽号健康不变量)前置门:不健康 →
+# 单一源 bench_slots_healthy(槽号健康不变量)前置门:不健康 →
 # 整份部署计划 fail-closed 不出 + cw4 分键显影。
 
 _KEY_UNHEALTHY = 'deploy_chain_slot_table_unhealthy'
@@ -213,7 +213,7 @@ _KEY_UNHEALTHY = 'deploy_chain_slot_table_unhealthy'
 def _bcd_host(monkeypatch, bench_slots, counters):
     """`_battle_chain_deploy_moves` 离线宿主:容器读口给真读口喂桩容器、
     mandate 计划段桩化(select 返回指定 up_idx),锁定对位门行为
-    (镜像 T-230 恢复路由锁的替身纪律)。"""
+    (镜像恢复路由锁的替身纪律)。"""
     from types import SimpleNamespace as _NS
 
     import sr_od.application.currency_war.kernel.cw_game_state as _gs_mod

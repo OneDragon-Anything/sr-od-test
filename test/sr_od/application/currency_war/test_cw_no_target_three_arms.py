@@ -1,4 +1,4 @@
-"""P86 无目标期三臂判据单帧锁(T-177 落码批)。
+"""P86 无目标期三臂判据单帧锁(落码批)。
 
 出处(单一源):
 - 命题正本 = docs/develop/sr_od/application/currency_war/proofs/p86-no-target-period-fund-allocation.md
@@ -565,7 +565,7 @@ class TestKMembersDownstream:
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1),
                                         _card('注册表外散件Z', cost=1, x=1)])
         st.bench = _own(*comp.core_chars)
-        st.deployed = [_bc('板上件锚', slot=1)]   # T-32 守卫非空板前置
+        st.deployed = [_bc('板上件锚', slot=1)]   # 空板止损守卫前置
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'

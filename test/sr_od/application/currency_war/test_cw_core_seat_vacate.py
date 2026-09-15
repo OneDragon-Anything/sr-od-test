@@ -1,7 +1,7 @@
-"""C1/④ 三腿席满交回支锁(T-271 收缩形态;前身 = T-115 恒买腾席发射锁)。
+"""C1/④ 三腿席满交回支锁(商店期收缩形态;前身 = 恒买腾席发射锁)。
 
 出处(锁纪律:新锁必引设计出处):
-- 用户裁定 T-271(判例 = screens-actions-capability §5):卖备战收缩至
+- 用户裁定(判例 = screens-actions-capability §5):卖备战收缩至
   备战期,商店期动作面 = 买牌/刷新/关店——三腿(未锁线恒买/锁线支配支
   /④转线)席满帧不再腾席卖,表达 = **关店交回**(腾位链:关店→备战卖
   →重开,节点内牌面持久,research/economy.md §2.1),重开后原臂原判据
@@ -122,11 +122,11 @@ def _unlocked_members_filled(fuel_names: list[str]) -> list[BenchChar]:
             for i, n in enumerate(fuel_names + members + fillers)]
 
 
-# ===== 席满交回支(三腿;T-271 收缩形态)==============================
+# ===== 席满交回支(三腿;商店期收缩形态)==============================
 
 
 class TestCoreSeatFullClose:
-    """席满交回锁(T-271):三腿席满帧 = CloseShop 交回 + {prefix}_
+    """席满交回锁:三腿席满帧 = CloseShop 交回 + {prefix}_
     no_fuel 出口键(现辖席满停摆全形态;seen 帧必落 ≥1 出口键的红域
     由本桶承接)。"""
 

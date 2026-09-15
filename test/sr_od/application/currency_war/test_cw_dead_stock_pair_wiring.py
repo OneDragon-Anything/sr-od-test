@@ -1,20 +1,20 @@
-"""死库存买入防线消费接线 + dominance band 否决分键的店侧单测(T-243)。
+"""死库存买入防线消费接线 + dominance band 否决分键的店侧单测。
 
 出处与语义单一源:
 - ``mandate.dead_stock_pair_buy_reject_reason`` 拒因本体(谓词侧逐 C 值
   真值边界已由 test_cw_buy_dead_stock_pair.py 锁定;本文件锁**消费接线**):
-  dominance 臂(zero_overlap 检查后,T-234 报告 §④ 接线点 1)与
+  dominance 臂(zero_overlap 检查后,落地报告 §④ 接线点 1)与
   dead_gold_press_buy 臂 prio2 燃料类(接线点 2)拒成对第二张,计数
   分键 ``dominance_dead_stock_pair_blocked`` / ``press_dead_stock_pair_
   blocked``(判据本体单点,计数归消费位);prio0(缺口)/prio1(持有档)
   = 义务通道豁免不接;
 - ``mandate.dominance_buy_eligible`` band 否决(eligible=False)分键
-  ``dominance_band_wait``(T-234 验收观察:否决此前静默,观测面只剩
+  ``dominance_band_wait``(验收观察:否决此前静默,观测面只剩
   发射频次差;金带外 False = 非必花域常态,不计)。
 
 帧构造边界(判据面,断言不依赖):target_comp 给线(dominance 契约
 前提 k_members 非空);燃料名取注册表 TIER_UNRELATED 现算集(阿格莱雅
-= T-229 病灶名:sim 实证同名 1★×2 对经 press 臂 R1 形成后,被 G-S1
+= 病灶名:sim 实证同名 1★×2 对经 press 臂 R1 形成后,被 G-S1
 合成素材守卫永久锁卖锁席)。拒帧的后续臂动作(M6 压库豁免通道等)
 不在本文件断言域——closed set 见 mandate.dominance_buy_eligible
 docstring 辖域注。
@@ -118,7 +118,7 @@ def _single_card_session(node_kind: str, gold: int,
 
 
 class TestDominanceArmWiring:
-    """dominance 臂死库存拒(T-234 §④ 接线点 1)+ band 否决分键。"""
+    """dominance 臂死库存拒(§④ 接线点 1)+ band 否决分键。"""
 
     def test_second_copy_rejected_with_key(self):
         """C=1:同名第二张拒买,dominance_dead_stock_pair_blocked 计 1。
@@ -164,13 +164,13 @@ class TestDominanceArmWiring:
 
 
 class TestPressArmWiring:
-    """dead_gold_press_buy 臂 prio2 燃料类死库存拒(T-234 §④ 接线点 2)。"""
+    """dead_gold_press_buy 臂 prio2 燃料类死库存拒(§④ 接线点 2)。"""
 
     def test_prio2_second_copy_rejected_with_key(self):
         """C=1:燃料类第二张拒买,press_dead_stock_pair_blocked 计 1。
 
         帧型 = 可辨奖励帧(②(b) 外门三条件:prio0 缺口/prio1 持有档
-        均不命中,行进至 prio2 燃料类合取——T-229 s77091 R1 形成路径
+        均不命中,行进至 prio2 燃料类合取——实机局 s77091 R1 形成路径
         同构);拒后不发射 dead_gold_press_buy。"""
         fuels = _fuel_names(2)
         strategy, sess, config = _single_card_session(

@@ -7,7 +7,7 @@
 3. 真·跨进程证明:子进程持锁期间父进程拒绝,子进程退出(锁由操作系统回收)
    后父进程可再入——这是「锁文件 + 区间锁」根治双进程交替操作的直接验收。
 
-设计出处见模块 docstring(2026-08-24 双进程交替操作事故,T-59 根治)。
+设计出处见模块 docstring(2026-08-24 双进程交替操作事故根治)。
 测试经根 conftest 的 ``_isolate_window_run_mutex`` 把锁目录重定向到 tmp;
 子进程不继承 monkeypatch,故跨进程用例把锁目录经 argv 显式传给子进程。
 """
@@ -33,7 +33,7 @@ def _make_mutex(tmp_path: Path, key: str = 'k1') -> WindowRunMutex:
 
 
 def test_acquire_free_then_conflict_then_reacquire(tmp_path: Path) -> None:
-    """互斥三段:空闲可取 → 他方句柄拒绝 → 释放后可再入(T-59 验收判据)。"""
+    """互斥三段:空闲可取 → 他方句柄拒绝 → 释放后可再入(验收判据)。"""
     first = _make_mutex(tmp_path)
     assert first.acquire() is True
 

@@ -1,4 +1,4 @@
-"""T-126 卖出通道排除仲裁·窗口段与发射登记(单帧锁;批 3)。
+"""卖出通道排除仲裁·窗口段与发射登记(单帧锁;批 3)。
 
 出处(锁纪律:新锁必引设计出处):
 - ADR-0585(卖出通道排除仲裁单一源;§2 发射登记载体/LaunchCause 闭集
@@ -105,7 +105,7 @@ def _state(gold: int, bench: list[BenchChar], *,
     st.plane = 2
     st.node_type = node
     st.bench = list(bench)
-    # 非空板前置(T-32 空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
+    # 非空板前置(空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
     # 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),卖出判据/
     # 发射位的直调环境须 ≥1 上场件,否则守卫 fail-closed 拒帧——与被
     # 测语义无关的红按环境前置补齐,非跟绿。
@@ -190,7 +190,7 @@ class TestLaunchRegistry:
         该登记的语义 = 把新臂补进映射表并过对抗审,非机械跟绿)。
         press_buy_deployable = 泄金阶梯档 1 新臂(溢余 discretionary 面,
         因果类 press 同 M6/dominance;设计方案 §1.2 档 1)。
-        P86 重推(T-177):+hub_option_buy(乙臂枢纽期权,hold 类,
+        P86 重推:+hub_option_buy(乙臂枢纽期权,hold 类,
         出处 = p86-proof-batch.md §3.2/§4.2;映射行随批登记)。"""
         arms = ('m2_line_member', 'm2_locked_member', 'm2_stockpile',
                 'm2_merge_completion', 'dominance_buy', 'm6_stockpile',
@@ -399,7 +399,7 @@ class TestW1SameVisitBan:
 
 class TestEmitRegistration:
     """发射位登记写点锁(方案 v3 §3.1;ADR-0585 §2 逐臂落位)。"""
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_dead_gold_press_buy_registers_by_prio(self):
         """②(b) prio2(燃料类)→ press:买入即登记(登记轮 = 当前轮,
         载体断言);旧 cw4_dead_gold_bought_names 载体退役并入统一簿。"""
@@ -409,7 +409,7 @@ class TestEmitRegistration:
         act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dead_gold_press_buy'
         assert _registry(sess) == {_FUEL: ('press', 3)}
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_dead_gold_prio0_absorbed_by_m2_on_reward_frames(self):
         """②(b) prio0(obligation)结构性吸收锁(三审报告-第三波.md F4,
         易失产物待 ADR 回填;ADR-0585 §2 prio 三分映射):奖励帧 ∧
@@ -452,7 +452,7 @@ class TestEmitRegistration:
             'obligation 登记出现资格断言拒收 = F4 不对称缺口已被行为修复'
             '批收口,本锁与吸收锁前提表述需同步重推')
         assert _registry(sess)[_FUEL] == ('obligation', 3)
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_dominance_buy_registers_press(self):
         """dominance_buy → press 写点(P78 INV 逃逸格封死;gold>g* ∧
         停手态帧的压库买入同受窗口段辖,W1 同源)。"""
@@ -466,9 +466,9 @@ class TestEmitRegistration:
         act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
         assert isinstance(act, BuyCard) and act.reason == 'dominance_buy'
         assert _registry(sess) == {_FUEL: ('press', 3)}
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_m2_obligation_buy_registers_obligation(self):
-        """义务类登记写点补全(T-141;ADR-0585 §6「写点随矩阵批落」
+        """义务类登记写点补全(ADR-0585 §6「写点随矩阵批落」
         提前落):M2 线成员买入落 (obligation, 当轮) 登记账——义务件
         自此有账可闭,线账闭合读点真实运转。行为零面:义务类不入窗口段
         (active_window 过滤面不变,登记轮==当前轮也不入面),身份段由
@@ -481,9 +481,9 @@ class TestEmitRegistration:
         assert _registry(sess) == {'目标件': ('obligation', 3)}
         assert sell_gate.active_window(sess, 3) == frozenset(), \
             '义务账误入窗口段 = 排除面扩权(行为面回归)'
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_line_switch_orphan_interest_sell_marked(self):
-        """线账闭合孤儿清算证明打标正格(T-141 方案审乙′;ADR-0591;
+        """线账闭合孤儿清算证明打标正格(方案审乙′;ADR-0591;
         P78-2a):本轮义务买入 → 次帧 K 收窄(成员出基座)→ 凑息回拉
         清算 ⇒ reason='line_switch_collapse'(键带登记簿线账闭合证明,
         供同轮买卖检查豁免面分键;买入帧与卖出帧跨帧,证明由镜像簿
@@ -502,7 +502,7 @@ class TestEmitRegistration:
             f'凑息回拉未发射(夹具失准,重推场景): {act2}'
         assert act2.expect == '目标件'
         assert act2.reason == 'line_switch_collapse'
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_stale_obligation_buy_not_marked_next_round(self):
         """防洗白反格:上一轮义务登记跨轮剪枝——同形态下一轮卖出非同轮
         买卖(检查器本就不辖),证明不得打标(2026-09-08 归因遥测删除批:
@@ -525,7 +525,7 @@ class TestEmitRegistration:
         assert act2.reason != 'line_switch_collapse' \
             and act2.reason == '', \
             '跨轮陈旧证明误打标 = 豁免面自由扩边(防洗白边界破)'
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_emit_merge_detection_closes_and_skips_registration(self):
         """合成销检出(V2-05):本笔 1★ 买入补齐同名 1★ 三张 ⇒ 旧登记
         销账(close_on_merge)且不为本笔开账(1★ 即刻合成离场,press 账
@@ -553,7 +553,7 @@ class TestW5RegistrationAssertion:
     """W5 登记侧锁(shop_sell 报告 W5;N1 划界 + V2-06 硬闸合取):
     ②(b) prio1 帧店内 2★ 转线直出卡 ⇒ 买入照常发射(买面门槛归臂自身
     批),登记被断言拒(launch_cause_mismatch 计数红 + 名不入簿)。"""
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_two_star_transition_buy_emits_but_registration_rejected(self):
         sess = _sess()
         st = _state(12, [], node='reward')
@@ -566,7 +566,7 @@ class TestW5RegistrationAssertion:
         # 登记侧:硬闸腿红(名字腿必过)→ launch_cause_mismatch + 拒登记
         assert ct.get('launch_cause_mismatch') == 1
         assert _TRANS_HOLD not in _registry(sess)
-    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
+    @pytest.mark.skip(reason="重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,K 空窗回退需意向供给而裸夹具无 v3_intention → CloseShop;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_one_star_transition_registers_hold(self):
         """红证伴随(合取必要性):1★ 转线件硬闸腿过 ⇒ hold 登记落账
         ——缺硬闸合取时本格与 2★ 格同绿 = 锁恒绿形态(V2-06 红对补齐
@@ -583,7 +583,7 @@ class TestW5RegistrationAssertion:
 # ===== funding 兜底豁免(P78-5 四条件)=====
 
 
-# (原 TestFundingHoldFallback 店侧五锁随商店期筹资形态收缩退役,T-271:
+# (原 TestFundingHoldFallback 店侧五锁随商店期筹资形态收缩退役:
 #  店内兜底变现发射面删除,筹资形态 = 关店交回(锁 =
 #  test_cw_shop_action_face_contraction::test_funding_form_closes_with_
 #  defer_counter);兜底池定义/减法与达成量化的活跃消费位 =

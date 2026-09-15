@@ -1,7 +1,7 @@
 """CW 按局档案重装配保真锁面(match_archive 派生输入回源流补读)。
 
 出处 = telemetry/match_archive.py ``_load_derived_inputs``;背景 =
-T-242 真实双档重放实证的「重装配无益有损」:v12 起切片契约只含
+真实双档重放实证的「重装配无益有损」:v12 起切片契约只含
 op_journal + state/journal 两文件,而 rounds/loss_nodes/departures 等
 派生列的输入吃旧流键——任何重装配(load_archive 版本迁移 / 段集增长 /
 跨档守卫整体重装配)都会把派生列全量清空,此前只能靠一次性脚本按装配端
@@ -198,7 +198,7 @@ def test_assemble_rebuilds_derived_columns_from_legacy_streams(tmp_path: Path):
 def test_load_archive_migration_rebuilds_derived_columns(tmp_path: Path):
     """版本迁移读端路径保真:陈旧档案经 load_archive 自动重装配补齐派生列。
 
-    生产病灶触发形态(T-242 实证):存量 v11 档案直读时触发
+    生产病灶触发形态:存量 v11 档案直读时触发
     assemble_game 重装配,修复后派生列应完整而非全空。
     """
     rd = tmp_path / 'live'

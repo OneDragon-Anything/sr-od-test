@@ -4,7 +4,7 @@
 ``find_cross_archive_segment_dups``;口径单一源 = telemetry-reading.md
 「决策独有段(零结算段)按段首 ts 归前局」+ 模块 docstring 归局骨架节。
 
-病灶(T-242,实证 run_20260908_210431):旧装配口径时代的存量档案把
+病灶(实证 run_20260908_210431):旧装配口径时代的存量档案把
 续段错误组进了后开的新局(match_g_20260909_084216 段集含该续段),而
 该档案常落水位线以下(assemble_pending 永久跳过)、判读直读 JSON 又不
 经 load_archive 读端重装配——同一 journal 行集内嵌两个档案,跨档对照
