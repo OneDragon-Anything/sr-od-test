@@ -178,7 +178,9 @@ def test_match_final_closed_vocab() -> None:
 
 
 def test_write_match_final_default_duration_segment_level() -> None:
-    """duration_s 缺省 = 段级自算(容器创建 → 判定,≥0);显式传值直通。"""
+    """duration_s 缺省 = 段级自算(容器创建 → 判定,≥0)。
+    (显式传值直通半由 test_write_match_final_one_atomic_row 辖
+    (duration_s=1234.5 直通断言),docstring 不再重复申报。)"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs, final_type='stopped') is True
     assert bs.match_final.value.duration_s is not None
@@ -413,7 +415,7 @@ def test_view_match_final_reading(tmp_path) -> None:
         rows = list(j.rows)
         out = view_match_final(rows, 'run_a')
         assert any('type=loss' in ln for ln in out)
-        assert any('run_a' in out[0] for _ in [0])
+        assert 'run_a' in out[0]
         out_b = view_match_final(rows, 'run_b')
         assert any('type=abnormal' in ln and '补写' in ln for ln in out_b), \
             '补写行显影'

@@ -1,6 +1,6 @@
 """统一观察架构·收尾五屏迁移锁 + cw_screen/cw_op 收口锁(账本 T-48,余项收口阶段三)。
 
-设计正本 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
+设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度/五段形态依据 = changes/2026-09-11-
 unified-observation/details/收尾屏迁移详设.md(逐屏五段表与语义保真点);
 迁移手法单一源 = 装配点分流 + 五段钩子转录 + 实机适配器①封口 + on_outcome
@@ -14,12 +14,13 @@ CwScreenWaitOneOne / 位面情报采集 CwScreenPlaneIntel(薄转录 + 双节点
 **F11 sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
 
 - 位面过渡/武装箱弹窗/未达上限弹窗/等待1-1:sim 腿 = 不适用——sim 无对应
-  画面段(架构设计 §3.4 过渡相位/中断弹窗行),本批等价判据主承重 = 实机
-  在册行为锁(test_cw_flow_ops.py 等在册面原样保绿)+ 本文件新路径行为锁,
+  画面段(架构设计 §3.4 过渡相位/中断弹窗行),本批等价判据主承重 =
+  实机在册行为锁(旧路径流程测原样保绿)+ 本文件新路径行为锁,
   禁引用 sim 域对拍;
 - 位面情报采集:sim 腿 = 不适用——sim 无位面详情/敌人情报对应画面段
   (§3.4 sim 侧申报),等价判据主承重 = 纯函数三件在册测试锁
-  (test_cw_plane_intel_start_plane.py / test_cw_node_screens.py,零触碰)
+  (零触碰;原承载文件已随清理批退役,采集体行为面现无独立锁,
+  本文件薄转录锁只辖分流段迹,体面覆盖缺口已申报)
   + 本文件薄转录新路径行为锁。
 
 **写入流对拍 = 本阶段无适用面**(总纲 §2.2-4 如实申报):五屏零 GameState

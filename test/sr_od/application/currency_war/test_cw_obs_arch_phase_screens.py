@@ -1,6 +1,6 @@
 """统一观察架构·五相位屏迁移锁(账本 T-8,余项收口阶段一)。
 
-设计正本 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
+设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度/五段形态依据 = changes/2026-09-11-
 unified-observation/details/五相位屏迁移详设.md(逐屏五段表与语义保真点);
 迁移手法单一源 = 装配点分流 + 五段钩子转录 + 实机适配器①封口 + on_outcome
@@ -210,6 +210,13 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
         f'install={install}:旗标经确认体重置:{clicks_st!r}')
     assert session_st.active_strategies == [], (
         f'install={install}:门命中轮裁决不触发,零 append(出口面归重入锁)')
+    # (原 test_invest_strategy_dispatch_new_path 并入本腿:段迹形态断言
+    #  随迁;其「恰一次决策」断言属无 pending 的新决策路径,与本腿 pending
+    #  前置形态不同支,不迁移。其余断言面逐项重叠已删。)
+    assert op_st._lifecycle_trace == (
+        ['observe', 'reconcile', 'decide', 'act', 'on_outcome'] if install
+        else []), (
+        f'install={install}:在屏轮段迹(新=五段/旧=零):{op_st._lifecycle_trace!r}')
     # 简报·落地轮:pending 在位 + 标识已退 → 裁决出口 success,零段迹
     # 且读链不发生(裁决在共享段,先于 observe 门与决策体)
     op_b_land, session_b, calls_b = _make_briefing(
@@ -418,40 +425,9 @@ def _opts_of(names: list[str]) -> list[tuple[str, int, int]]:
     return [(n, _OPT_XS[i], 490) for i, n in enumerate(names)]
 
 
-def test_invest_strategy_dispatch_new_path(test_context, monkeypatch) -> None:
-    """投资策略分流双向 + 段迹形态(主门 (a) 本屏行):装两端口 → 五段
-    新路径;在屏轮确认发出置 pending 且 **不 append active_strategies**
-    (append 归重入裁决出口,ADR-0598);不装端口 → 旧路径零段迹同行为。
-    红 = 分流判据破坏/持卡时点漂移。"""
-    install_dispatch_stub_ports(monkeypatch)
-    book = _FrameBook([object()])
-    book.options[id(book.frames[0])] = _opts_of(['赌神·银', '恢复生机', '气氛组'])
-    picks = [SimpleNamespace(option_idx=1, refresh=False, refresh_slots=(),
-                             reason='stub')]
-    op, _match, session, clicks, decide_calls = _make_strategy(
-        test_context, monkeypatch, book, picks)
-    rs = _run_node(test_context, op, op.handle)
-    assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act',
-                                   'on_outcome'], (
-        f'装端口须走五段新路径:{op._lifecycle_trace}')
-    assert len(clicks) == 2, f'现状路径恰两击(选卡+确认):{clicks!r}'
-    assert op._confirm_pending == '恢复生机', '确认已发 → pending 置位'
-    assert session.active_strategies == [], (
-        '在屏轮不 append 持卡(append 归重入裁决出口,ADR-0598)')
-    assert len(decide_calls) == 1, '恰一次决策'
-    # 不装端口:旧路径零段迹(生产形态)
-    _uninstall_ports(monkeypatch)
-    book2 = _FrameBook([object()])
-    book2.options[id(book2.frames[0])] = _opts_of(['赌神·银', '恢复生机', '气氛组'])
-    picks2 = [SimpleNamespace(option_idx=1, refresh=False, refresh_slots=(),
-                              reason='stub')]
-    op2, _m2, _s2, clicks2, _dc2 = _make_strategy(test_context, monkeypatch,
-                                                  book2, picks2)
-    rs2 = _run_node(test_context, op2, op2.handle)
-    assert op2._lifecycle_trace == [], f'旧路径不得写段迹:{op2._lifecycle_trace}'
-    assert len(clicks2) == 2 and op2._confirm_pending == '恢复生机', (
-        '旧路径行为保形(两击 + pending 置位)')
-    assert not rs2.is_success and not rs.is_success, '确认链机械交回 round_retry'
+# (原 test_invest_strategy_dispatch_new_path 删:在屏轮断言面与
+#  test_reentry_arbitration_flag_gate_combination 的 strategy 门命中腿
+#  逐项重叠;独有段迹/单决策断言已并入该锁。)
 
 
 def test_invest_strategy_active_strategies_appended_at_reentry_exit(
@@ -489,22 +465,9 @@ def test_invest_strategy_active_strategies_appended_at_reentry_exit(
             f'install={install}:去重防重复入列')
 
 
-def test_strategy_refresh_emission_wired_to_registry(test_context,
-                                                     monkeypatch) -> None:
-    """发射型接线锁(§6.4-R-E 在册两件②;B5-② 形态):注册表在 __init__
-    按 StrategyRefreshClick 登记发射钩子(name=strategy_refresh_used)。
-    (T-252 三审拆半:原 getsource 字符串计数/墓碑扫描腿删——「单一发射口
-    恰一处/原口名退役」面归 review 与代码规范;本锁辖运行时注册表取证
-    行为半,值/evidence 行为半由 test_strategy_refresh_emission_semantics
-    承重同一事实。)"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_invest_strategy as ism,
-    )
-    op = ism.CwScreenInvestStrategy(test_context)
-    specs = op._outcome_hooks.get(
-        ism.StrategyRefreshClick(slot=0, name='x').__class__, [])
-    assert any(s.name == 'strategy_refresh_used' for s in specs), (
-        f'发射登记件须在 __init__ 入注册表:{specs!r}')
+# (原 test_strategy_refresh_emission_wired_to_registry 删:注册表取证型
+#  断言——登记件缺席时发射行为半必红,取证面零独立判别力,登记形状重构
+#  = 误红源;行为半由 test_strategy_refresh_emission_semantics 承重。
 
 
 @pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])

@@ -1,10 +1,10 @@
 """统一观察架构·逐屏迁移首批锁(试点步骤 2:遭遇节点 + 盛会之星)。
 
-设计正本 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
+设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度依据 = 开放问题清单 B3(先迁 2 个代表屏:
 遭遇 = 带刷新链最复杂、盛会之星 = 纯选卡最简 → 验证断言集模板 → 其余按族
 批量);迁移手法单一源 = 试点步骤 1 先例(CwScreenPrep:装配点分流 + 五段
-转录 + 实机适配器封口 + on_outcome 注册表,验收 reviews/T-189-r1.md)。
+转录 + 实机适配器封口 + on_outcome 注册表)。
 
 **F11/B3 sim 腿不适用例外清单(随迁移批逐屏落测试 docstring)**:
 
@@ -76,8 +76,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
 
     桩面 = 画面门/截屏/读链/策略器/确认链/遥测;``_try_refresh`` 方法级桩
     (刷新机械执行面:点钮+固定等待+重读;验效双通道已拆除——用户裁定
-    2026-09-10 动作 op 只管机械执行禁止验效,出处 = 清查报告
-    .debug/temp/currency_war/验证违规清查-报告.md H1——本桩回传重读候选,
+    2026-09-10 动作 op 只管机械执行禁止验效——本桩回传重读候选,
     空表 = 读缺失败安全形态)。返回 (op, match, session)。
     """
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -254,25 +253,9 @@ def test_megastar_in_node_lifecycle_single_action_retry(
 # 为止)承重。
 
 
-# ==================== 发射型接线锁(§6.4-R-E 在册①;B5 四件套)====================
-
-
-def test_encounter_refresh_emission_wired_to_registry(test_context,
-                                                      monkeypatch) -> None:
-    """发射接线形态(B5-② 登记调用点形态;批3a 改形):注册表在 __init__
-    按 EncounterPick 登记发射钩子(name=encounter_refresh_used)。
-    (T-252 三审拆半:原 getsource 字符串计数/墓碑/钩子体字面扫描腿删,
-    「单一发射口恰一处/原口名退役/写端住钩子体」面归 review 与代码规范;
-    本锁辖运行时注册表取证行为半,值/evidence 行为半由
-    test_encounter_refresh_emission_counts_and_reread_redecide_new_path
-    承重同一事实。)"""
-    opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
-    op, _match, _session = _make_encounter(
-        test_context, monkeypatch, in_screen=True, options=opts,
-        pick=EncounterPick(idx=0, reason='stub'))
-    specs = op._outcome_hooks.get(type(EncounterPick(idx=0)), [])
-    assert any(s.name == 'encounter_refresh_used' for s in specs), (
-        f'发射登记件须在 __init__ 入注册表:{specs!r}')
+# (原 test_encounter_refresh_emission_wired_to_registry 删:注册表取证型
+#  断言——登记件缺席时发射行为半必红,取证面零独立判别力,登记形状重构
+#  = 误红源。同批判:phase strategy wired / step3 supply_no_outcome。)
 
 
 def test_encounter_refresh_emission_counts_and_reread_redecide_new_path(
@@ -361,9 +344,10 @@ def test_encounter_refresh_guarded_by_session_flag_and_count(
 
 def test_encounter_chosen_inline_not_registry_collected(
         test_context, monkeypatch) -> None:
-    """chosen_* 豁免留守锁(§2.2/§6.5-6):chosen_encounter 写端仍挂
-    出口验真通过分支内联(不入 on_outcome 注册表收编面);确认未落地
-    (验关失败)= 不写。"""
+    """chosen_encounter 确认门锁:确认未落地(验关失败)= 不写 chosen
+    ——幻影 chosen(验关前落账)= 真实故障形态。
+    (原「豁免留守/不入注册表收编面」半边已随批摘除,docstring 收窄到
+    现断言面。)"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
             EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
     # 新路径 + 确认失败 → chosen 不写

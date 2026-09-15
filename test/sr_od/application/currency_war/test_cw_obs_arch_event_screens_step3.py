@@ -1,12 +1,11 @@
 """统一观察架构·逐屏迁移第二批量锁(试点步骤 3:补给 + 余事件屏按族批量)。
 
-设计正本 = docs/develop/sr_od/application/currency_war/design/统一观察架构-画面op基类设计.md
+设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度依据 = 开放问题清单 B3 三段走第二段(代表屏
 断言集模板已立 → 「补给 + 余事件屏按族批量」)+ §9.2 迁移步骤 4 建议序
 (遭遇 → 补给 → 事件屏族);迁移手法单一源 = 试点步骤 2 先例
-(commit 9c2e29a50 + 验收 reviews/T-215-r1.md:装配点分流 + 五段转录 +
-实机适配器封口 + on_outcome 注册表;本批八屏按其「盛会之星型」共享动作体
-形态落码,T-215-r1 §五.5 统一形态注意项 = lifecycle_observe 消费
+(装配点分流 + 五段转录 + 实机适配器封口 + on_outcome 注册表;本批八屏按
+其「盛会之星型」共享动作体形态落码,lifecycle_observe 消费
 ``_observation_port()`` 位)。
 
 **本批屏清单(B3 族表 = 架构设计 §6.6 事件选择行十屏 − 步骤 2 已迁两屏)**:
@@ -247,16 +246,9 @@ def test_supply_reentry_discards_stale_pending_both_paths(
             f'install={install}:重入轮入口弃陈旧暂存')
 
 
-def test_supply_no_outcome_registry_item(test_context, monkeypatch) -> None:
-    """补给屏无 on_outcome 落地登记件(§6.4 收编面无补给行):
-    supply_refresh_used GameState 字段位 = 先申报禁静默、无写端
-    (cw_game_state.py 字段行自注「收窄待证」);执行侧防重入旗标
-    _supply_refresh_used 留守 _do_action。注册表缺席 = 零动作
-    (盛会之星同式申报)。"""
-    op, _match, _session, _calls = _make_supply(
-        test_context, monkeypatch, in_node=True)
-    assert not getattr(op, '_outcome_hooks', None), (
-        f'补给屏不得私设登记件:{op._outcome_hooks!r}')
+# (原 test_supply_no_outcome_registry_item 删:负向注册表取证断言——
+#  「不得私设登记件」红时答不出哪个运行行为坏了,架构申报纪律归 review
+#  与代码规范;supply 行为面由同文件 chosen 暂存/重入弃陈旧两锁承重。)
 
 
 # ==================== 七选卡屏:装配点分流 + 共享动作体 ====================
