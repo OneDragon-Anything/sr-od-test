@@ -124,6 +124,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     from sr_od.application.currency_war.kernel.cw_vocab import (
         FurnaceUse,
         LuckyTokenUse,
+        OpenBookcard,
         PerfectProjectorUse,
         PrecisionWrenchUse,
         PrivilegeCardUse,
@@ -141,6 +142,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     cases: list = [
         ClickSpheres(points=((1, 2),)),
         OpenTome(),
+        OpenBookcard(),
         SellBench(bench_idx=2),
         DeployMove(bench_idx=2, to_row='front', faction=''),
         SellDeployed(deployed_idx=0),
