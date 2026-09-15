@@ -30,10 +30,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
+from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.operations import cw_loop as cw_loop_mod
 from sr_od.application.currency_war.operations.cw_loop import (
     CwLoop,
-    op_fail_redispatch_tick,
 )
 
 
@@ -103,13 +105,9 @@ def _dispatch(host, op, journal_name: str, **kwargs):
                                       frame_tag=None, wait=2, **kwargs)
 
 
-def test_tick_window_semantics():
-    """锁1 计数窗口语义:ok 归零/同键累加/异键换情节(纯函数)。"""
-    assert op_fail_redispatch_tick(None, 0, 'A', True) == (None, 0)
-    assert op_fail_redispatch_tick('A', 3, 'A', True) == (None, 0)
-    assert op_fail_redispatch_tick(None, 0, 'A', False) == ('A', 1)
-    assert op_fail_redispatch_tick('A', 2, 'A', False) == ('A', 3)
-    assert op_fail_redispatch_tick('A', 4, 'B', False) == ('B', 1)
+# (原 test_tick_window_semantics 删:纯函数窗口语义被锁2/3/4 的接线级
+#  断言完全辖——同键 ok 复位/异键 ok 闭窗计数从 1 重计/达限转 fail,单层
+#  归因价值不及冗余成本。)
 
 
 def test_cap_fires_at_limit_with_readout(monkeypatch):
@@ -196,12 +194,11 @@ def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
 
 
 def test_limit_derivation_invariant():
-    """锁7 上限组合性质:≥ 全部专用守卫阈值,= prep streak 阈值 5。"""
+    """锁7 上限组合性质:LIMIT ≥ 全部专用守卫阈值(结构性不抢占)。
+    (原「= prep streak 阈值 5」腿删:对照物是 _on_prep_round 内字面量,
+    prep 阈值合法调整即误红——数值锚归代码与设计文档,不进测试网。)"""
     assert CwLoop.OP_FAIL_REDISPATCH_LIMIT >= CwLoop.FRONTLESS_REDEPLOY_LIMIT
     assert CwLoop.OP_FAIL_REDISPATCH_LIMIT >= CwLoop.PLANE_MISDISPATCH_LIMIT
-    # prep 环 _director_fail_streak 阈值 5(loop._on_prep_round 内字面量):
-    # 通用网取同值 → 平手时 hook 先返回,结构性不抢占专用守卫。
-    assert CwLoop.OP_FAIL_REDISPATCH_LIMIT == 5
 
 
 # ===== T-266 追加(三审代-2 升应修):出战链 {slot:下标} 对位防线 =====
@@ -240,17 +237,20 @@ def _bcd_host(monkeypatch, bench_slots, counters):
     return session
 
 
-def test_deploy_chain_duplicate_slot_fails_closed(monkeypatch):
-    """锁8 重复槽号 → 整份计划不出(遮蔽通道 fail-closed)+ 分键显影。"""
-    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+@pytest.mark.parametrize('bench_slots', [
+    [BenchChar(slot=1, char_id='花火', faction='风'),
+     BenchChar(slot=1, char_id='艾丝妲', faction='光')] + [None] * 7,
+    [BenchChar(slot=10, char_id='花火', faction='风')],
+], ids=['duplicate-slot', 'out-of-range-slot'])
+def test_deploy_chain_unhealthy_slot_table_fails_closed(monkeypatch, bench_slots):
+    """锁8/9 槽号不健康(重复/越界)→ 整份计划不出(遮蔽通道 fail-closed)
+    + 分键显影——单一 bench_slots_healthy 门,两形态同分支数据变体
+    (参数化合并,原两独立测试删并)。"""
     from sr_od.application.currency_war.operations.cw_loop import (
         _battle_chain_deploy_moves,
     )
 
     counters: dict = {}
-    bench_slots = ([BenchChar(slot=1, char_id='花火', faction='风'),
-                    BenchChar(slot=1, char_id='艾丝妲', faction='光')]
-                   + [None] * 7)
     session = _bcd_host(monkeypatch, bench_slots, counters)
 
     import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
@@ -259,25 +259,6 @@ def test_deploy_chain_duplicate_slot_fails_closed(monkeypatch):
 
     assert _battle_chain_deploy_moves(session) == []   # 零 DeployMove
     assert counters[_KEY_UNHEALTHY] == 1   # 显影分键(禁静默降级)
-
-
-def test_deploy_chain_out_of_range_slot_fails_closed(monkeypatch):
-    """锁9 越界槽号(slot>BENCH_CAPACITY)→ 同门同罚(健康门两腿)。"""
-    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
-    from sr_od.application.currency_war.operations.cw_loop import (
-        _battle_chain_deploy_moves,
-    )
-
-    counters: dict = {}
-    bench_slots = [BenchChar(slot=10, char_id='花火', faction='风')]
-    session = _bcd_host(monkeypatch, bench_slots, counters)
-
-    import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
-    monkeypatch.setattr(_dl_mod, 'select_deployments_reasoned',
-                        lambda **k: ([0], [], []))
-
-    assert _battle_chain_deploy_moves(session) == []
-    assert counters[_KEY_UNHEALTHY] == 1
 
 
 def test_deploy_chain_healthy_table_maps_and_launches(monkeypatch):
