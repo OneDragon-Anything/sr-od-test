@@ -29,7 +29,10 @@ account`` 边界注释(P40 R0-1「合格集空 ⇒ EV 恒负」刷新侧特例)�
 过滤「部分不可追 ≠ 合格集空」的精确卡费面声称由同文件
 TestMixedPeakCompletionAccount lv6 臂承载(超集),本文件对应单测已删。
 ⚠️ 上两处承载文件**全史不存在(幽灵指针,2026-09-15 复查确认)**——
-被删断言面现无载体,覆盖缺口已申报用户裁决,不得当作已辖。
+被删断言面曾无载体,覆盖缺口已申报;纯数真值表四臂已随 T-253 批归位
+本文件(TestR1CommitmentAccountTruthTable 直测),混合集精确卡费面由
+下方 TestR1QualifiedSetSemantics::test_formed_check_precedes_chaseability_
+probe 承载先序面。
 本文件现辖:``_r1_ledger_terms`` 返回契约(inf 仅由合格集空三来源
 承载 + 成型先序探针)与档案帧端到端(污染墓碑 + 刷新发射 + 域外零漂移)。
 
@@ -55,6 +58,9 @@ from test.sr_od.application.currency_war._cw_helpers import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwSimFrame,
     RefreshShop,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    refresh as refresh_criteria,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
@@ -137,9 +143,44 @@ class TestR1QualifiedSetSemantics:
         assert fees == 3 * CHARACTERS['景元'].cost
 
 
-# 判据纯数面(r1_commitment_account 真值表)已并入判据主题文件
-# test_cw_vgap_frame_horizon.py::TestCriterionAffordability(四臂超集,
-# 覆盖对账后本文件三测子集删除,见文件头「覆盖对账」)。
+# ===== 判据纯数面:r1_commitment_account 真值表直测(T-253 收编)=====
+# (原声称载体 test_cw_vgap_frame_horizon.py::TestCriterionAffordability
+# 全史不存在 = 幽灵指针,被删断言面随本批归位本文件。)
+
+class TestR1CommitmentAccountTruthTable:
+    """``r1_commitment_account`` 纯数真值表(四臂:within/over/非有限/
+    零负预算)。判据本体 = criteria/refresh 单点(docstring 边界段:
+    非有限 ⇒ no_chaseable_member;零负预算恒不启动,息线双侧修正由
+    比较式结构承载,不另设门)。"""
+
+    @pytest.mark.parametrize('ledger,budget', [
+        (100.0, 100),     # 边界内(等号 = 可负担,启动)
+        (99.5, 100),      # 边界内严格小于
+    ], ids=['within-equal', 'within-strict'])
+    def test_within_budget_starts(self, ledger, budget):
+        assert refresh_criteria.r1_commitment_account(ledger, budget) \
+            == (True, '')
+
+    def test_over_budget_blocked(self):
+        assert refresh_criteria.r1_commitment_account(100.5, 100) \
+            == (False, 'account_over_budget')
+
+    @pytest.mark.parametrize('ledger', [
+        float('inf'), float('nan'),
+    ], ids=['inf', 'nan'])
+    def test_non_finite_is_no_chaseable_member(self, ledger):
+        """非有限总账(合格集空/E=∅ 的 inf 承载 + NaN 防御)⇒
+        no_chaseable_member,不与超账混桶(污染墓碑判读面)。"""
+        assert refresh_criteria.r1_commitment_account(ledger, 100) \
+            == (False, 'no_chaseable_member')
+
+    @pytest.mark.parametrize('budget', [0, -10], ids=['zero', 'negative'])
+    def test_nonpositive_budget_never_starts(self, budget):
+        """零负预算恒不启动(金在息线 g* 及以下;正账面 > 预算走
+        account_over_budget,不另设门)。"""
+        assert refresh_criteria.r1_commitment_account(1.0, budget) \
+            == (False, 'account_over_budget')
+
 
 # ===== 锁 B:档案帧端到端帧锁 =====
 

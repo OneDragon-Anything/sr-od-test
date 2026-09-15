@@ -152,7 +152,7 @@ def _tier_cost(level: int = 5) -> int:
 
 
 class TestL1DeployableBuy:
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
+    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,T-271 商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_l1_press_buy_deployable_emits(self, monkeypatch):
         """锁 L1:锁线 ∧ 必花域 ∧ vacancy>0 ∧ bench_free≥1 ∧ 可上场非垫件
         在售 ⇒ BuyCard('press_buy_deployable') + hit 分键。"""
@@ -165,7 +165,7 @@ class TestL1DeployableBuy:
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'press_buy_deployable'
         assert state_of(sess).cw4_counters.get('press_buy_deployable_hit') == 1
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
+    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,T-271 商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_l1_filler_class_excluded_f12(self, monkeypatch):
         """锁 L1b(F12 候选互斥切分):垫件类(1★ 零重叠全额退)不归档 1
         ——filler_excluded 分键显影,发射让位出口③ 既有臂。(dominance
@@ -214,7 +214,7 @@ def _m6_frame(gold: int = 60, cand: str | None = None, *,
 
 
 class TestL2L5LFM6Compression:
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
+    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,T-271 商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_l2_m6_fires_on_unformed_line(self, monkeypatch):
         """锁 L2:线未齐 ∧ 必花域 ∧ bench_free≥1 ∧ 塌缩带档匹配件在售
         ⇒ BuyCard('m6_stockpile')——摘旗前 stop_flag=False 帧该臂整体
@@ -226,7 +226,7 @@ class TestL2L5LFM6Compression:
         assert isinstance(act, BuyCard) and act.reason == 'm6_stockpile'
         # 席位闸拒因零显影(发射帧)
         assert state_of(sess).cw4_counters.get('m6_bench_full', 0) == 0
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
+    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,T-271 商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_l5_bench_full_stops_after_buy(self, monkeypatch):
         """锁 L5:档 2 买入(bench_free=1→0 投影)后下一帧不再发射
         (bench 硬闸;框架 simulate 纯投影推进)。"""
@@ -253,7 +253,7 @@ class TestL2L5LFM6Compression:
         act2 = _decide(st2, sess)
         assert not (isinstance(act2, BuyCard)
                     and act2.reason == 'm6_stockpile')
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
+    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,T-271 商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_lf_round_sold_excluded(self, monkeypatch):
         """锁 LF(档 2 轮内新鲜度排除):同轮卖 X → 档 2 不买回 X
         (m6_round_sold_excluded 分键);未卖的同档名照常发射——排除
@@ -296,7 +296,7 @@ class TestL2L5LFM6Compression:
 
 
 class TestL3FlagRemoval:
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
+    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = 发射面 fixture 形态漂移(期望动作不再发射,T-271 商店收缩后世界;计数键缺席是其结果非原因),「计数接线面=统计数值删除」判据不适用——需按现行决策核逐锁重推夹具与前提,归专项重分诊,禁机械跟删/跟绿")
     def test_l3_dominance_fires_unformed_before_m6(self, monkeypatch):
         """锁 L3:线未齐帧 dominance 摘旗后发射,且同帧在售档匹配件时
         仍 dominance 先发(支配性优先序先于带参档 2,设计方案 §1.2

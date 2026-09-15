@@ -146,7 +146,7 @@ class TestP92SeatRecoverableDirect:
         assert shop.p92_seat_recoverable(
             s, st.bench, k, _bsb(st), cap_hold=None, current_round=_ROUND,
             defer_names=frozenset()) is False
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
+    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = fixture 桥形态漂移(T3 活跃路径 AttributeError:'int' 无 .value,黑板桥喂参形状过期),非断言面语义红——同文件非 skip 直调锁在 T-253 释放集接线后全绿,归专项重分诊重推夹具,禁机械跟删/跟绿")
     def test_t3_active_only_fuel_true(self):
         """行为差帧(直调):唯一可腾件为 T3 活跃垫保件 ⇒ True。
         旧代理同帧 = 投影读排除 T3 ⇒ liquid_refund=0 ⇒ False ⇒ P92
@@ -216,7 +216,7 @@ def _p92_frame(extra_bench_last: BenchChar) -> tuple[CwSimFrame, object, str]:
 
 
 class TestP92AssemblyBehaviorDiff:
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
+    @pytest.mark.skip(reason="T-253 r1 重分诊亲测:本锁红因 = fixture 桥形态漂移(T3 活跃路径 AttributeError:'int' 无 .value,黑板桥喂参形状过期),非断言面语义红——同文件非 skip 直调锁在 T-253 释放集接线后全绿,归专项重分诊重推夹具,禁机械跟删/跟绿")
     def test_t3_active_full_bench_refresh_proceeds(self):
         """行为差锁(集成):唯一可腾件 = T3 活跃垫保件 ⇒ 席可落收窄
         判定 True ⇒ ②(囤腿)通道可达 ⇒ 刷新放行、拦键恒零。旧代理
