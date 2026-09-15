@@ -50,7 +50,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
     CwSimFrame,
-    LevelUpShop,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -335,34 +334,9 @@ class TestL3FlagRemoval:
         assert state_of(sess).cw4_counters.get('m6_bench_full', 0) >= 1
 
 
-# ===== L4:P72 拒帧档 1/2 挂起 =====
-
-
-class TestL4BudgetGateSuspend:
-
-    def test_l4_p72_reject_suspends_ladder(self, monkeypatch):
-        """锁 L4(NORMAL 限定):P72 预算闸拒帧,档 1 挂起(预留金不被
-        同帧击穿;复用 m6_budget_gate_suspend 先例,ADR-0560;FLOOR_ON
-        让位随 hp 闸批,本帧为 NORMAL)。档 2 同帧挂起(m6_budget_gate_
-        suspend 分键)同事实由 test_cw_budget_gate.TestShopM3M6
-        承载,本测不再双锁。"""
-        monkeypatch.setattr(shop, 'can_deploy_single',
-                            lambda *a, **kw: (True, ''))
-        km = _km()
-        cand = _off_name(exclude=tuple(km))
-        # arm0 触发形态(level 3 < cap 4,bench 线内候补 2 名)→ M3 评估
-        # → P72 闸拒(整批金不足 10τ+ρ+Σ预留)→ _budget_gate_blocked
-        st = _st(55, [_card(cand, cost=2, star=2)], locked=True,
-                 level=3, deploy_cap=4,
-                 deployed=[_bc(km[0], star=2, slot=1),
-                           _bc(km[1], star=2, slot=2)],
-                 bench=[_bc(km[2], slot=3), _bc(km[3], slot=4)],
-                 xp=(0, 8))
-        sess = _session_stub(locked=True)
-        act = _decide(st, sess)
-        assert not isinstance(act, (BuyCard, LevelUpShop))
-        assert state_of(sess).cw4_counters.get(
-            'press_buy_deployable_budget_suspend', 0) >= 1
+# (原 L4:P72 拒帧档 1/2 挂起锁随 P72 预算闸/L4 挂起面退役删除,T-271
+#  商店期升级决策面收缩——闸写点不存在,挂起分支结构性死路;档 2 同帧
+#  挂起的 TestShopM3M6 承载声明随之失效。)
 
 
 # ===== L7:ALL IN 类别过滤(P21 域辖;XP 仅支A 合法)=====

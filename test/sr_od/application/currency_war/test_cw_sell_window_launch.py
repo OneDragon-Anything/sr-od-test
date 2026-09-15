@@ -51,7 +51,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwSimFrame,
     SellBench,
     ShopCard,
-    sell_refund,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
@@ -584,70 +583,11 @@ class TestW5RegistrationAssertion:
 # ===== funding 兜底豁免(P78-5 四条件)=====
 
 
-class TestFundingHoldFallback:
-    """兜底豁免锁(P78-5;ADR-0585 §2 兜底池定义):主路径(非持有资格
-    面)空 ∧ 仍需筹资 ⇒ 兜底池单笔变现;两项减法与达成量化逐格反证。"""
-
-    def test_shop_fallback_liquidates_hold_last_resort(self):
-        """正格:bench 唯一 ③④ 持有件 + 缺员 + gold<need ⇒ 兜底卖出
-        (行为面;reason 分键填充已随 2026-09-08 用户归因遥测删除指令
-        拆除,缺省 '' 未标)。"""
-        sess = _sess()
-        st = _state(0, [_bc(_CORE_HOLD, slot=1)])   # 希儿 cost=3 → 退 3
-        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
-        assert isinstance(act, SellBench), \
-            '兜底豁免未接线 = ③④件变现出口缺席(ADR-0585 中介窗口未收)'
-        assert act.expect == _CORE_HOLD
-        assert act.reason == ''
-        assert act.income == sell_refund(1, 3)
-
-    def test_subtraction1_visit_bought_never_in_pool(self):
-        """减法①(P78-5 条①/M1):本 visit 买入的持有件禁入兜底——否则
-        豁免机制自己制造 P78-1 同 visit 违例(R1 面5 逃逸链)。"""
-        sess = _sess()
-        state_of(sess).cw4_visit_bought_names = [_CORE_HOLD]
-        act = decide_shop_action(
-            cw4_bs(_state(0, [_bc(_CORE_HOLD, slot=1)]), sess),
-            sess, SimpleNamespace(ev_arm='full'))
-        assert not isinstance(act, SellBench)
-
-    def test_subtraction2_obligation_base_never_in_pool(self):
-        """减法②(P78-5 条②/M2):义务基座成员禁入兜底——兜底卖义务件
-        → M2 重买换手,击穿义务基座自身(未锁态基座 = k_members)。"""
-        sess = _sess()
-        # k = ('目标件','希儿'):希儿在场(owned)⇒ 缺口只剩目标件;
-        # 希儿 ∈ k = 基座 ⇒ 兜底池减法②排空 ⇒ 零卖出
-        state_of(sess).target_comp = SimpleNamespace(
-            name='测试线', core_chars=('目标件', '希儿'), shared_chars=())
-        act = decide_shop_action(
-            cw4_bs(_state(0, [_bc(_CORE_HOLD, slot=1)]), sess),
-            sess, SimpleNamespace(ev_arm='full'))
-        assert not isinstance(act, SellBench)
-
-    def test_quantification_refund_must_cover_gap(self):
-        """达成量化(P78-5 条③,V3-04 机制授权条款):本笔退金 < need−gold
-        ⇒ 不放行——期权损失(P01)已付而义务未达成 = 严格有害;同时封死
-        逐帧级联清空兜底池路径。"""
-        sess = _sess()
-        # 三月七 cost=1 → 退 1 < 缺口 3(need 3 − gold 0)
-        act = decide_shop_action(
-            cw4_bs(_state(0, [_bc(_TRANS_CHEAP, slot=1)]), sess),
-            sess, SimpleNamespace(ev_arm='full'))
-        assert not isinstance(act, SellBench)
-
-    def test_main_path_nonempty_skips_fallback(self):
-        """顺序豁免(P78-5 条③):非持有资格面未耗尽 ⇒ 兜底不评估。
-        构造:垫保登记的燃料件在凑息侧被绝对跳过(defer)而凑息臂空手,
-        funding 主路径经降序放行吃它(转化类)——主路径非空,fallback
-        零评估。"""
-        sess = _sess()
-        sell_gate.register_launch(sess, _FUEL, cause='stall_protect',
-                                  round_num=3)
-        st = _state(0, [_bc(_CORE_HOLD, slot=1), _bc(_FUEL, slot=2)])
-        act = decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
-        assert isinstance(act, SellBench)
-        assert act.expect == _FUEL   # 主路径卖 T3 垫件,兜底池未动
-        assert act.reason == ''   # 2026-09-08 归因删除批:特化值填充已拆
+# (原 TestFundingHoldFallback 店侧五锁随商店期筹资形态收缩退役,T-271:
+#  店内兜底变现发射面删除,筹资形态 = 关店交回(锁 =
+#  test_cw_shop_action_face_contraction::test_funding_form_closes_with_
+#  defer_counter);兜底池定义/减法与达成量化的活跃消费位 =
+#  entry ②(a)/EV pass 备战侧,下方 entry 消费位锁保留。)
 
     def test_entry_ev_fallback_liquidates_prep_carrier(self):
         """消费位②(entry EV pass):兜底经 prep 载体发射(行为面;计数
