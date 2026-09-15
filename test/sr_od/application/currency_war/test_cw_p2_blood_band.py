@@ -1,13 +1,13 @@
-"""P2 低血带授权域统一件落码锁组(fail-closed 落码;T-35)。
+"""P2 低血带授权域统一件落码锁组(fail-closed 落码)。
 
-设计出处 = p2_blood_band_unified_design/DESIGN.md v2
-(.debug/temp/currency_war/_archive_20260908/p2_blood_band_unified_design/)
-§1.2(统一授权域单点 + 判定面/消费面分层正交合成)/§2.1(面①消费让位 +
+设计出处(纯语义索引;原设计稿存于本机工作区归档,未入 git):§1.2
+(统一授权域单点 + 判定面/消费面分层正交合成)/§2.1(面①消费让位 +
 解锁包三件同构移植 + fail-closed 只落观测分键)/§2.3-5(a)(面③出辖观察件
 lock_gen_feasibility_obs_* 族)/§4-8(分键族零交集对账);裁定条目定稿 =
-supply_arbitration_design/DESIGN.md §15.2「P2 低血带授权域统一裁定」
-(覆①消费让位 + 覆②濒死定向豁免 + 覆③出辖注记位,唯一权威);
-l3_pregate 分键四元合取与位面维分列 = 同稿 §15.1 R3-低3 兑付。
+「P2 低血带授权域统一裁定」(覆①消费让位 + 覆②濒死定向豁免 + 覆③出辖
+注记位,唯一权威);l3_pregate 分键四元合取与位面维分列 = R3-低3 兑付。
+单一语义权威现状 = 生产符号:谓词/授权闩 = statefn.predicates,分键写入端
+= flow.bump_lock_gen_feasibility_obs 与 mandate l3 前置短路。
 
 锁三类事:
 1. 判据结构——p2_blood_floor 域谓词真值表(plane≥2 域/信任门/阈值单一源)
