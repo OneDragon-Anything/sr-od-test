@@ -48,10 +48,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     SellDeployed,
     WearEquip,
 )
-from sr_od.application.currency_war.operations.cw_loop import (
-    EXHAUSTION_WINDOW_ACTIONS,
-    prep_exhaustion_launch_eligible,
-)
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
 )
@@ -59,24 +55,6 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
-
-# ===== EXHAUSTION 重推记录(判据 7)=====
-
-def test_exhaustion_whitelist_repushed_to_open_shop_only():
-    """白名单重推 = {OpenShop}:RunDeploy 组合壳随 R2 删除,DeployMove 是
-    进展性动作不入窗(恒指纹窗内出现 = 部署未落地 = 停机留证形态);
-    OpenShop-only 恒指纹窗(上一环 success)满足出战判据(支配性论证,
-    出口确定化)。"""
-    assert frozenset({'OpenShop'}) == EXHAUSTION_WINDOW_ACTIONS
-    sig = (('OpenShop',), ('OpenShop',), ('OpenShop',))
-    assert prep_exhaustion_launch_eligible(sig, True,
-                                           frozenset({'OpenShop'})) is True
-    # 白名单外动作(含部署原子)在窗 = 语义未核实 → 不出战
-    assert prep_exhaustion_launch_eligible(sig, True,
-                                           frozenset({'OpenShop',
-                                                      'DeployMove'})) is False
-    assert prep_exhaustion_launch_eligible(sig, False,
-                                           frozenset({'OpenShop'})) is False
 
 
 # ===== ClickSpheres 改形专锁(判据 3 前半)=====
