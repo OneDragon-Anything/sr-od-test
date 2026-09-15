@@ -125,10 +125,9 @@ def _final_rows() -> list[dict]:
 # ============================================================ 终局行 schema + 写口
 
 
-def test_match_final_domain_registered() -> None:
-    """局终域入 bs_schema(缺域键 = 该域未建模,§3.7.1;同 receipts 先例)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    assert bs.bs_schema.get('match_final') == 1
+# (原 test_match_final_domain_registered 删:单行「域键在场」断言,经核
+#  判读/档案消费面无人读 bs_schema['match_final'] 键——write 系测试红时
+#  同故障,子集断言不留。)
 
 
 def test_write_match_final_one_atomic_row(journal, run_id) -> None:
