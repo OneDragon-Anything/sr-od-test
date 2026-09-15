@@ -1,17 +1,20 @@
 """CW 统一动作工厂 批2b 锁面(词表归一 + 删除 + 消费面收口)。
 
-出处 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-14-unified-action-factory/landing.md §3.2b 判据点名的行为专锁 +
-design.md §2.6(词表归一/换算归属/LevelUp 类合并翻转)。
+出处(持久索引):备战词表单一源与坐标系裁定 = kernel/cw_vocab.py 模块头
+(现役声明与全类居所);动作逻辑态规则正本 =
+docs/develop/sr_od/application/currency_war/flow/action-logic-state.md;
+判据语义 = 备战动作统一词表(基类/元组/action_key 单一源)、席位域动作
+携容器槽位表下标(发射面吃下标,物理换算仅存观察写入边与执行坐标边)、
+LevelUp 携 cost(单击价现算装载)+auth_basis(授权记录分键)。
 
 锁面四组(全部运行时行为锁,源码扫描测试禁止,AGENTS.md §10.4):
 1. action_key 输出前后对照锁(逐类键面钉死:统一类 = 原族A 类原样,
    字段/顺序/metadata 逐字保留 → 键粒度不漂移;route_tag 携
    action_key_exclude 不入键;原族A 侧 reason/convert_reason/auth_basis
    无 exclude 的现状同批保留 = 商店域键面零漂移锚);
-2. 词表归一与删除锁(运行时属性面:族B 旧类/组合壳/CompTransaction/
-   FillSpec/PrepAction 在统一词表模块不可达;适配器映射表零组合壳行;
-   执行器 F3 拒词表外类型);
+2. 词表白名单行为锁(F3 白名单元组面:组合壳/整档替换宏不入集、全类
+   统一基类后代、现役动作全集在册;执行器拒词表外类型——删除面由该
+   行为红兜底,不设退役符号墓碑断言);
 3. LevelUp 装载锁 2b 半(发射面 cost = kernel xp_click_cost 现算装载、
    auth_basis = 发射臂放行名分键装载;逻辑态金腿 action.cost 直写与
    执行缝退役锁 = test_cw_unified_action_2a 翻转腿);
@@ -61,8 +64,8 @@ _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 # ===== 1. action_key 输出前后对照锁 =====
 
 def test_action_key_faces_pinned_per_class():
-    """逐类键面钉死(unified-action-factory §2.6:改名与字段合并不得漂移
-    键粒度):统一类 = 原族A 类原样 → 键串 = 归一前族A 形态逐字;
+    """逐类键面钉死(词表归一硬判据「改名与字段合并不得漂移
+    键粒度」,持久索引见模块头;语义 = 统一类 = 原族A 类原样 → 键串 = 归一前族A 形态逐字;
     prep 域键面变化 = 字段值更换(bench_idx),粒度(键内字段集)不变。"""
     # SellBench:字段集 = bench_idx/income/expect/reason/convert_reason
     # (route_tag 基类字段携 exclude 不入键)
@@ -87,46 +90,28 @@ def test_action_key_faces_pinned_per_class():
     assert 'deployed_idx' in action_key(SellDeployed(deployed_idx=0))
 
 
-# ===== 2. 词表归一与删除锁 =====
+# ===== 2. 词表归一与删除锁(行为半)=====
 
 def test_unified_vocab_is_single_source_and_removals_hold():
-    """词表单源 + 退役类运行时不可达:族B 旧类(物理槽位 SellBench 载体
-    已合并)/组合壳三件/CompTransaction/FillSpec/PrepAction 旧名在
-    cw_vocab 模块面全部 AttributeError;CW_ACTION_TYPES 无组合壳成员。"""
-    import sr_od.application.currency_war.kernel.cw_vocab as vocab_mod
-    import sr_od.application.currency_war.kernel.cw_prep_actions as kpa_mod
-    for dead in ('CompTransaction', 'FillSpec', 'RunDeploy', 'RunEquip',
-                 'RunTools', 'PickBoxCard', 'PrepAction',
-                 'PREP_ACTION_TYPES', '_resolve_comp_transaction',
-                 '_apply_comp_transaction'):
-        assert not hasattr(vocab_mod, dead), dead
-    # cw_prep_actions 词表退役:只剩观察视图与点球挑选 kernel
-    for dead in ('PrepAction', 'SellBench', 'DeployMove', 'RunDeploy',
-                 'PREP_ACTION_TYPES', 'action_key'):
-        assert not hasattr(kpa_mod, dead), dead
-    for live in ('PrepObservation', 'select_sphere_clicks',
-                 'SPHERE_CLICK_HARD_CAP'):
-        assert hasattr(kpa_mod, live), live
+    """统一词表白名单行为面:F3 白名单元组(执行器放行面的单一源)无组合
+    壳/整档替换宏成员、全类统一基类后代、现役动作全集在册——退役符号的
+    属性面墓碑断言不设(README 禁止清单;删除面由行为红兜底:若双词表
+    复活/转发 shim 回流,F3 会放行非法动作,本元组面即红)。"""
     names = {c.__name__ for c in CW_ACTION_TYPES}
     for dead in ('RunDeploy', 'RunEquip', 'RunTools', 'PickBoxCard',
                  'CompTransaction'):
         assert dead not in names, dead
     # 全类 CwAction 后代(统一基类;isinstance 检查统一走基类)
     assert all(issubclass(c, CwAction) for c in CW_ACTION_TYPES)
-    assert {c.__name__ for c in CW_ACTION_TYPES} >= {
+    assert names >= {
         'BuyCard', 'SellBench', 'LevelUp', 'DeployMove', 'SellDeployed',
         'ClickSpheres', 'OpenBox', 'OpenTome', 'WearEquip', 'FurnaceUse',
         'StartBattle', 'OpenShop'}
 
 
-def test_adapter_spec_rows_and_prep_f3_reject_unknown():
-    """适配器映射表零组合壳行(R2 删除面);执行器 F3 白名单 = 统一词表
-    元组,词表外类型拒(参数非法路径,Director 交回外循环留证)。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        adapter,
-    )
-    for dead in ('RunDeploy', 'RunEquip', 'RunTools', 'PickBoxCard'):
-        assert dead not in adapter._OP_SPECS, dead
+def test_prep_f3_rejects_unknown_and_admits_registered():
+    """执行器 F3 白名单 = 统一词表元组的行为半:词表外类型拒(参数非法
+    路径,Director 交回外循环留证),在册动作合法域放行。"""
     from sr_od.application.currency_war import prep_actions as pa
     from one_dragon.base.geometry.point import Point
     ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
@@ -140,7 +125,7 @@ def test_adapter_spec_rows_and_prep_f3_reject_unknown():
 # ===== 3. LevelUp 装载锁(2b 半:发射面)=====
 
 def test_levelup_emission_carries_cost_and_auth_basis():
-    """发射面装载(design.md §2.6 LevelUp 定案③口径):cost = kernel
+    """发射面装载(LevelUp 粒度定案③口径,持久索引见模块头):cost = kernel
     xp_click_cost 现算(bs.level_up_cost 缺读时函数内回退
     XP_CLICK_COST_FALLBACK 折扣支,发射位零本地回退分支);auth_basis =
     发射臂放行名分键(arm1/arm0/pop/must_spend 封闭集);route_tag 沿
@@ -177,7 +162,7 @@ def test_levelup_emission_carries_cost_and_auth_basis():
 # ===== 4. 换算收口锁 =====
 
 def test_emission_resolves_container_index_fail_closed():
-    """发射面容器下标解析(unified-action-factory §2.6 换算归属):bench
+    """发射面容器下标解析(换算归属裁定,持久索引见模块头):bench
     域按槽位信息位与容器槽位表读口对位取枚举下标;deployed 域按
     (排, 槽号) 二元组对位;失配 = None(fail-closed 跳过,禁猜位)。"""
     bs = board_state_of(None)
