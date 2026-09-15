@@ -3,19 +3,24 @@ R2 息线 floor / D 牌期望边界 / ev_arm 值域(aggregate_economy 分型登�
 
 覆盖面(金钱类按 2026-09-09 编排者裁决收缩:实机结算对账 + sim 段检双层
 已覆盖逐面金钱锁,单位层只留 commit→sim 空窗价值):
-- 金守恒(净守恒单代表):1★ 牌买卖回合 simulate 金总量守恒(净 0 对任意
-  费用成立,注册表改费不红)——红 = 支出面与退金面静默分叉;
 - budget 拒付(1 代表,归 fail-closed):hp 不可信帧 blood_xp_gate 拒;
 - R2 息线 floor:cap 语境参数化锁(ADR-0598 注入面);
 - D 牌期望边界:expected_refreshes/refresh_prob 边界一条(p≤0/j≥k/
   查表缺级 → 0;v/a 参数从注册表单一源现算,不手抄常数);
 - ev_arm 值域:aggregate_economy 分型登记表逐字段算子期望(值域表)。
 
-退役面(审计判决删除):economy_score 利息/streak 真值(src 零调用)、
-区分力非零证明锚(元测试)、refresh_prob 查表一致性锚(缺级→0 腿并入
-D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy 真值表一行)、pair 断供
-驱逐墓碑、ADR-0150 base 层全量计数锚(纯数据计数;其「过继锁禁删」
-声明随审计判决解除,335/83 计数归编 #15 test_cw_data_registry 待承接)。
+退役面(审计判决删除):金净守恒代表锁(test_gold_net_conserved_buy_sell_
+roundtrip,连 simulate import——锁的 simulate 全仓零生产消费,金钱面
+= 实机结算对账 + transfer_golden 活转移函数直锁)、economy_score 利息/
+streak 真值(src 零调用)、区分力非零证明锚(元测试)、refresh_prob 查表
+一致性锚(缺级→0 腿并入 D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy
+真值表一行)、pair 断供驱逐墓碑、ADR-0150 base 层全量计数锚(纯数据计
+数;其「过继锁禁删」声明随审计判决解除,335/83 计数归编 #15
+test_cw_data_registry 待承接)。
+
+合并面(第二刀):xp 费用无折扣不变+显示价直通并一;排程触发①②参数化
+真值表并一;预算值域+w721 塌缩带(合法 0 帧表驱动)并一;pair 物化+
+断供清零并一。
 
 来源:economy_typing(mv 主干)/ investment / r2_interest_floor /
 blood_xp_gate 核 / decisions 之 economy 真值两行(2026-09-09 套件重建批
@@ -87,12 +92,9 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    BuyCard,
     CwSimFrame,
     RefreshShop,
-    SellBench,
     ShopCard,
-    simulate,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     StrategySession,
@@ -224,19 +226,8 @@ def test_half3_distinguish_fixtures(patched_registry) -> None:
         assert ref[fname] == expect
 
 
-# ==================== 金守恒:净守恒单代表(金钱类按裁决收缩) ====================
-
-def test_gold_net_conserved_buy_sell_roundtrip() -> None:
-    """净守恒代表:1★ 牌买卖一回合金总量守恒——simulate 花 −cost、退
-    +sell_refund(1★,cost)=cost,净 0(对任意费用成立,注册表改费不红;
-    支出面与退金面经同一事务单一源 cw_state.simulate)。红 = 中间事务
-    静默分叉(花金/退金两套算账走样)。"""
-    s0 = CwSimFrame(gold=50)
-    s1 = simulate(s0, BuyCard(ShopCard(x=0, name='三月七', cost=1, star=1)))
-    assert s1.gold < s0.gold, '买入应扣金(花出面缺席)'
-    s2 = simulate(s1, SellBench(bench_idx=0))
-    assert s2.gold == s0.gold, (
-        f'1★ 买卖回合应净守恒,实得 {s0.gold}→{s1.gold}→{s2.gold}')
+# (金净守恒代表锁已删——simulate 零生产消费,审计判决;金钱面 = 实机
+#  结算对账 + test_cw_transfer_golden 活转移函数直锁。)
 
 
 # ==================== R2 息线 floor(cap 语境参数化) ====================
@@ -384,12 +375,18 @@ def _xp_state(level: int = 5, strategies: list[str] | None = None,
     return _bsb(st)
 
 
-def test_xp_fee_no_discount_invariance() -> None:
-    """无折扣局不变锁:未持任何折扣卡时费用与改前逐位一致(方案审修改清单④①)。
+def test_xp_fee_no_discount_invariant_and_display_passthrough() -> None:
+    """xp 费用两形态一锁(合并原 test_xp_fee_no_discount_invariance /
+    test_xp_click_display_price_passthrough,断言腿逐条保留):
 
-    改前病理只在持折扣卡时显形,本锁钉住占绝大多数的无间谍局零漂移:
-    显示价支原值直通、兜底支基价 4、upgrade_plan_fee = 击数×同价
-    (击数值来自 cw_plane_table 注册表,非本锁辖值)。"""
+    - 无折扣局不变锁:未持任何折扣卡时费用与改前逐位一致(方案审修改
+      清单④①)——显示价支原值直通、兜底支基价 4、upgrade_plan_fee =
+      击数×同价(击数值来自 cw_plane_table 注册表,非本锁辖值)。改前
+      病理只在持折扣卡时显形,本锁钉住占绝大多数的无间谍局零漂移;
+    - 显示价直通锁:持商业间谍时显示价 3 原样返回(改前双扣 = 2,真值 3)。
+      依据 = strategy-env-impacts §3 商业间谍条「显示价即折后价,游戏已
+      算好」(2026-09-10 用户确认);对已折显示价再减模型折扣 = 双重折扣,
+      对等级门折扣同样成立(成长快乐 8 级起,游戏侧显示价已含)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
         upgrade_plan_fee,
         xp_click_cost,
@@ -397,6 +394,7 @@ def test_xp_fee_no_discount_invariance() -> None:
     from sr_od.application.currency_war.kernel.cw_plane_table import (
         clicks_to_level,
     )
+    # 无折扣局不变(显示价支/兜底支/upgrade_plan_fee 两支)
     assert xp_click_cost(_xp_state(display=3)) == 3     # 显示价支:原样
     assert xp_click_cost(_xp_state(display=5)) == 5
     assert xp_click_cost(_xp_state(display=None)) == 4  # 兜底支:基价
@@ -404,16 +402,8 @@ def test_xp_fee_no_discount_invariance() -> None:
         == clicks_to_level(5) * 3
     assert upgrade_plan_fee(_xp_state(level=5, display=None)) \
         == clicks_to_level(5) * 4
-
-
-def test_xp_click_display_price_passthrough() -> None:
-    """显示价直通锁:持商业间谍时显示价 3 原样返回(改前双扣 = 2,真值 3)。
-
-    依据 = strategy-env-impacts §3 商业间谍条「显示价即折后价,游戏已算好」
-    (2026-09-10 用户确认);对已折显示价再减模型折扣 = 双重折扣。"""
-    from sr_od.application.currency_war.kernel.cw_economy import xp_click_cost
+    # 显示价直通(持折扣卡;改前双扣,等级门同理)
     assert xp_click_cost(_xp_state(strategies=[_JUST_SPY], display=3)) == 3
-    # 直通对等级门折扣同样成立(成长快乐 8 级起,游戏侧显示价已含):
     assert xp_click_cost(_xp_state(level=8, strategies=[_JUST_JOY],
                                    display=3)) == 3
 
@@ -508,30 +498,64 @@ def _sc(name: str, cost: int = 2) -> ShopCard:
 #  统一迁移批 ② MAP B 类;build_round_posture/evaluate_release 随 v2 消亡。)
 
 
-# --- 排程核规则锁(W615 R4)---------------------------------------------------
+# --- 排程核规则锁(W615 R4;触发①②真值表并一)-----------------------
 
 
-def test_schedule_pop_slot_trigger() -> None:
-    """触发①[33] 人口位:cap 满 ∧ bench 有成型件(2★)→ 排程
-    (最高义务;不受息引擎前置辖——当轮兑现战力)。"""
+def _schedule_rows() -> dict:
+    """排程触发①②表行构造器(帧构造延迟调用,保各触发前置构帧差异;
+    断言腿逐条 = 原 test_schedule_pop_slot_trigger /
+    test_schedule_probability_trigger_requires_engine)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_vocab import deployed_occupied
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        deployed_occupied,
+    )
 
     def _ch(name: str, slot: int, star: int) -> BenchChar:
         fac = (CHARACTERS[name].factions or ('?',))[0]
         return BenchChar(slot=slot, char_id=name, faction=fac, star=star)
 
-    bench = [_ch('阿格莱雅', i, 2) for i in range(BENCH_CAPACITY)]
-    st = _ba_state(gold=30, level=6, r=9,
-                bench=bench)                  # gold 30<息线:禁升②不触发
-    assert deployed_occupied(st.deployed) < st.max_units()   # 有空位(非满)
-    assert not schedule_upgrade(cw4_box(st), _ba_sess_of(st))
-    st.dep = None
-    # cap 满:deployed 填满 → 人口位触发
-    st.deployed = [BenchChar(slot=20 + i, char_id=f'杂{i}', faction='公司',
-                             star=1) for i in range(st.max_units())]
-    assert deployed_occupied(st.deployed) >= st.max_units()
-    assert schedule_upgrade(cw4_box(st), _ba_sess_of(st))
+    def _formed_bench() -> list[BenchChar]:
+        return [_ch('阿格莱雅', i, 2) for i in range(BENCH_CAPACITY)]
+
+    def pop_not_full():
+        # ①负腿:bench 满 2★ 成型件 ∧ deployed 未满 → 人口位不触发
+        #(gold 30<息线:禁升②不触发——双负前置帧)
+        st = _ba_state(gold=30, level=6, r=9, bench=_formed_bench())
+        assert deployed_occupied(st.deployed) < st.max_units()   # 有空位
+        assert not schedule_upgrade(cw4_box(st), _ba_sess_of(st))
+        st.dep = None
+        return st, _ba_sess_of(st)
+
+    def pop_cap_full():
+        # ①正腿:cap 满(deployed 填满)→ 人口位触发(最高义务)
+        st = _ba_state(gold=30, level=6, r=9, bench=_formed_bench())
+        st.dep = None
+        st.deployed = [BenchChar(slot=20 + i, char_id=f'杂{i}',
+                                 faction='公司', star=1)
+                       for i in range(st.max_units())]
+        assert deployed_occupied(st.deployed) >= st.max_units()
+        return st, _ba_sess_of(st)
+
+    def prob_engine_live():
+        # ②正腿:锁定 4 费核(大移位带,U_L 检验过;ADR-0516 修正①)
+        #+ 息引擎已立 + 峰值 9>7 ∧ 60≥息线
+        return _ba_state(gold=60, level=7), _ba_locked_4cost_sess()
+
+    def prob_engine_missing():
+        # ②负腿:金 49<息线 50 → 引擎未立,禁升(False 即预告态也不发)
+        return _ba_state(gold=49, level=7), _ba_locked_4cost_sess()
+
+    def prob_peak_reached():
+        # ②负腿:峰值已达(lv9=峰值级)→ 无排程
+        return _ba_state(gold=60, level=9), _ba_locked_4cost_sess()
+
+    return {
+        'pop-slot-bench-formed-not-full': (pop_not_full, False),
+        'pop-slot-cap-full': (pop_cap_full, True),
+        'probability-engine-live-peak-ahead': (prob_engine_live, True),
+        'probability-engine-missing': (prob_engine_missing, False),
+        'probability-peak-reached': (prob_peak_reached, False),
+    }
 
 
 def _ba_sess_of(state: CwSimFrame) -> StrategySession:
@@ -558,17 +582,20 @@ def _ba_locked_4cost_sess() -> StrategySession:
     return sess
 
 
-def test_schedule_probability_trigger_requires_engine() -> None:
-    """触发②[3]+[12]:目标峰值级>当前级 ∧ 息引擎已立;禁升条件=
-    息引擎未立不追级(gold<息线,False 即预告态也不发)。"""
-    # 锁定 4 费核(大移位带,U_L 检验过;ADR-0516 修正①)+ 息引擎已立
-    sess = _ba_locked_4cost_sess()
-    st = _ba_state(gold=60, level=7)             # 峰值 9>7 ∧ 60≥50 ∧ U_L 过
-    assert schedule_upgrade(cw4_box(st), sess)
-    st_low = _ba_state(gold=49, level=7)         # 引擎未立:禁升
-    assert not schedule_upgrade(cw4_box(st_low), _ba_locked_4cost_sess())
-    st_done = _ba_state(gold=60, level=9)        # 峰值已达:无排程
-    assert not schedule_upgrade(cw4_box(st_done), _ba_locked_4cost_sess())
+@pytest.mark.parametrize('case_id', list(_schedule_rows()))
+def test_schedule_triggers_truth_table(case_id: str) -> None:
+    """排程触发①②真值表一锁(参数化并一):
+    ①人口位[33]:cap 满 ∧ bench 有成型件(2★)→ 排程(最高义务,不受
+    息引擎前置辖——当轮兑现战力);
+    ②概率级[3]+[12]:目标峰值级>当前级 ∧ 息引擎已立;禁升条件 = 息引擎
+    未立不追级(gold<息线,False 即预告态也不发)、峰值已达无排程。"""
+    build, expect_scheduled = _schedule_rows()[case_id]
+    st, sess = build()
+    got = schedule_upgrade(cw4_box(st), sess)
+    if expect_scheduled:
+        assert got, f'{case_id}: 应排程'
+    else:
+        assert not got, f'{case_id}: 不应排程'
 
 
 def test_schedule_ul_threshold_negative_small_shift_band() -> None:
@@ -622,59 +649,85 @@ def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
     assert not schedule_upgrade(cw4_box(st), _ba_locked_4cost_sess())
 
 
-# --- 预算核契约锁(W623 D2)---------------------------------------------------
+# --- 预算核契约锁(W623 D2;值域+合法 0 帧表驱动并一)---------------------
 
 
-def test_budget_value_domain_and_legal_zero_frames() -> None:
-    """契约:值域 [0,6](6 刷帽单一源);合法 0 帧存在(g≤R* 常态帧;
-    全恒正=契约未实现)。"""
-    st = _ba_state(gold=200, level=6)
-    assert refresh_ev_budget(cw4_box(st), _ba_sess_of(st)) == 6     # 6 刷帽
-    st0 = _ba_state(gold=50, level=6)                     # g=R*:溢余 0
-    assert refresh_ev_budget(cw4_box(st0),_ba_sess_of(st0)) == 0   # 合法 0 帧
-    st1 = _ba_state(gold=51, level=6)                     # 溢余 1<刷价
-    assert refresh_ev_budget(cw4_box(st1), _ba_sess_of(st1)) == 0   # 合法 0 帧(准入门辖域)
+def _budget_rows() -> dict:
+    """预算值域表行(id → (帧构造, 期望);期望 int = 精确值,'>0' = 正值)。"""
+    def _collapse_frame():
+        # 塌缩带帧(ADR-0475):锁定 4 费核 ∧ lv5(比值 0.05 < ω=0.1)
+        return _ba_state(gold=200, level=5, hp=80,
+                         shop=[_sc('桑博', 2)], board={})
+
+    return {
+        # 6 刷帽(值域上界单一源)
+        'refresh-cap-six': (lambda: (_ba_state(gold=200, level=6),
+                                     StrategySession()), 6),
+        # 合法 0 帧:g=R*(溢余 0)
+        'legal-zero-exact-reserve': (lambda: (_ba_state(gold=50, level=6),
+                                              StrategySession()), 0),
+        # 合法 0 帧:溢余 1<刷价(准入门辖域)
+        'legal-zero-below-threshold': (lambda: (_ba_state(gold=51, level=6),
+                                                StrategySession()), 0),
+        # 塌缩带归零(合法 0 帧第三类;原 test_w721_collapse_band 零帧腿,
+        # 独家覆盖——原主题文件 test_cw_w721_overlay_b_budget 已消亡)
+        'collapse-band-locked-4cost-lv5': (
+            lambda: (_collapse_frame(), _ba_locked_4cost_sess()), 0),
+        # 同帧未锁定(兜底链)不归零——空帧豁免(D1「空帧不缩供给」契约)
+        'collapse-fallback-exempt': (
+            lambda: (_collapse_frame(), StrategySession()), '>0'),
+    }
+
+
+@pytest.mark.parametrize('case_id', list(_budget_rows()))
+def test_budget_value_domain_and_legal_zero_frames(case_id: str) -> None:
+    """预算核契约一锁(值域+合法 0 帧表驱动,合并原
+    test_budget_value_domain_and_legal_zero_frames /
+    test_w721_collapse_band_zero_and_fallback_exempt,断言腿逐条保留):
+    值域 [0,6](6 刷帽单一源);合法 0 帧三类共存——g≤R* 常态帧(全恒正
+    = 契约未实现)、准入门辖域帧、塌缩带归零帧(ADR-0475;归零帧再多
+    一类 max 合并结构不变);塌缩同形态的未锁定帧(兜底链)不归零——
+    空帧豁免优先(细则见 ADR-0475)。"""
+    build, expect = _budget_rows()[case_id]
+    st, sess = build()
+    got = refresh_ev_budget(cw4_box(st), sess)
+    if expect == '>0':
+        assert got > 0, f'{case_id}: 应为正值(空帧豁免)'
+    else:
+        assert got == expect, f'{case_id}: 预算期望 {expect}'
 
 
 # (test_blood_budget_stop_not_inflated_by_budget_merge 已随 DP 姿态/泄息
 #  指令死链删除——统一迁移批 ② MAP B 类。)
 
 
-def test_w721_collapse_band_zero_and_fallback_exempt() -> None:
-    """0 帧契约第三类(塌缩带归零)扩类用例(ADR-0475;补在穿透锁组:
-    归零帧再多一类,max 合并结构不变):①锁定 4 费核 ∧ lv5(比值 0.05
-    < ω=0.1)→ 预算 0(合法 0 帧第三类,穿透锁口径=合法 0 不是虚标);
-    ②同一形态的未锁定帧(兜底链)不归零——空帧豁免(D1「空帧不缩供给」
-    契约优先)。本锁为塌缩带归零语义独家覆盖(原主题文件
-    test_cw_w721_overlay_b_budget 已消亡);细则见 ADR-0475。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    from sr_od.application.currency_war.kernel.cw_intention import (
-        IntentionState,
-        intention_core,
-    )
-
-    st = _ba_state(gold=200, level=5, hp=80, shop=[_sc('桑博', 2)], board={})
-    comp = next(c for c in COMP_LIBRARY
-                if (CHARACTERS.get(intention_core(c)) is not None
-                    and CHARACTERS[intention_core(c)].cost == 4))
-    sess_locked = StrategySession()
-    state_of(sess_locked).v3_intention = IntentionState(
-        phase='locked', locked_comp=comp.name)
-    assert refresh_ev_budget(cw4_box(st), sess_locked) == 0
-    assert refresh_ev_budget(cw4_box(st), StrategySession()) > 0
-
-
 # --- R3 · pair 断供驱逐(蓝图 §4.3-R3 推广)------------------------------------
 
 
-def test_pair_eviction_keeps_target_chain_materialized() -> None:
-    """W578 代理门:pair 物化 → pair_target_comp(新 pair)非空
-    (target 链不盲;W622 P2 病灶防回归;驱逐退役后同样成立)。"""
+def test_pair_materialization_and_drought_reset() -> None:
+    """pair 体系两面一锁(合并原 test_pair_eviction_keeps_target_chain_
+    materialized / test_pair_drought_resets_when_member_visible,断言腿
+    逐条保留):
+
+    - 物化面(W578 代理门):pair 物化 → pair_target_comp(新 pair)非空
+      且档位账随物化(target 链不盲;W622 P2 病灶防回归;驱逐退役后同样
+      成立——部署/评分消费面不盲);
+    - 断供清零面:成员再现(在店/到手)→ 断供计数清零(计数语义同
+      LineTrack frozen_rounds:窗口重开即清零)。"""
+    # 物化面
     pair = ('仙舟', '持续伤害')
     comp = pair_target_comp(pair)
     assert comp is not None and comp.core_chars
     assert comp.form_tiers    # 档位账随物化(部署/评分消费面不盲)
+    # 断供清零面
+    ist = IntentionState()
+    ist.p1_pair = ('持续伤害', '仙舟')
+    sess = StrategySession()
+    state_of(sess).v3_intention = ist
+    st = _ba_state(r=5, gold=100,
+                shop=[_sc('卡芙卡', 4)], board={})   # 卡芙卡=DOT 系成员
+    update_intention(cw4_box(st), ist, sess)
+    assert ist.pair_drought.get('持续伤害', 0) == 0
 
 
 def test_injection_consistency_single_registry_source() -> None:
@@ -736,15 +789,3 @@ def test_injection_consistency_single_registry_source() -> None:
 #  裁定退役——滞回职责被对账仲裁批 kernel 锚定取代,回退路径即要消灭的掩盖
 #  面;策略消费只剩 game state。snapshot_copy 自身语义由迁移哨兵锁另辖。)
 
-
-def test_pair_drought_resets_when_member_visible() -> None:
-    """成员再现(在店/到手)→ 断供计数清零(计数语义同 LineTrack
-    frozen_rounds:窗口重开即清零)。"""
-    ist = IntentionState()
-    ist.p1_pair = ('持续伤害', '仙舟')
-    sess = StrategySession()
-    state_of(sess).v3_intention = ist
-    st = _ba_state(r=5, gold=100,
-                shop=[_sc('卡芙卡', 4)], board={})   # 卡芙卡=DOT 系成员
-    update_intention(cw4_box(st), ist, sess)
-    assert ist.pair_drought.get('持续伤害', 0) == 0

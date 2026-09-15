@@ -14,8 +14,13 @@
 - §4 画面上下文 → 节点派生（四腿代表行 + 去重 + 冲突留证）；
 - §5 合成口与新旧映射（sim 合成、ShopCard 往返、bench/deployed 槽表）；
 - §6 终局与结算（write_match_final 幂等、词汇封闭）；
-- §7 动作模拟（simulate 对买/卖/刷新/升级的状态迁移）；
 - §8 会话与执行状态（StrategySession 镜像字段、ExecState 延迟绑定）。
+
+退役面（审计判决删除）：§7 动作模拟两锁（test_simulate_buy_card_moves_
+shop_to_bench / test_simulate_level_up_costs_and_levels,连 _mk_state
+助手）——锁的 ``cw_vocab.simulate`` 全仓零生产消费（S9/S10 后动作链
+全走 apply_*_logic 直锁,商店动作状态面 = test_cw_transfer_golden 与
+test_cw_shop_projection_logic 的活函数锁),src 指针对账零命中。
 """
 from __future__ import annotations
 
@@ -26,7 +31,6 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     exec_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BENCH_CAPACITY_DEFAULT,
     BS_SCHEMA_VERSION,
     GameState,
     bench_free_slots,
@@ -42,16 +46,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
-)
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
-    BuyCard,
-    CwSimFrame,
-    LevelUpShop,
-    RefreshShop,
-    SellBench,
-    ShopCard,
-    simulate,
 )
 
 register_sig_actors('TestSigWriter')
@@ -341,44 +335,8 @@ def test_write_match_final_idempotent() -> None:
 #  test_settlement_cover_writes_truth_group / _loss_page / _unread_hp。)
 
 
-# ============================================================ §7 动作模拟
-
-def _mk_state() -> CwSimFrame:
-    st = CwSimFrame()
-    st.plane, st.round_num, st.gold, st.level = 1, 2, 10, 3
-    st.shop = [ShopCard(x=100, faction='仙舟', name='希儿', cost=2, star=1)]
-    st.bench = [None] * BENCH_CAPACITY_DEFAULT
-    st.deployed = [None] * 10
-    return st
-
-
-def test_simulate_buy_card_moves_shop_to_bench() -> None:
-    """simulate 合同:买牌 = 金减费 + 牌入 bench(2★ 合成走 merge 语义另辖);
-    卖 bench = 金加退款 + 槽清空;刷新 = 店面换新(金减刷费)。"""
-    st = _mk_state()
-    st2 = simulate(st, BuyCard(card=st.shop[0]))
-    assert st2.gold == 8, '10 - 费2'
-    assert any(u is not None and u.char_id == '希儿' for u in st2.bench), \
-        '牌入备战席'
-
-    st3 = _mk_state()
-    st3.bench[0] = BenchChar(slot=1, char_id='希儿', star=1,
-                                   faction='仙舟')
-    st4 = simulate(st3, SellBench(bench_idx=0, income=1, expect='希儿'))
-    assert st4.bench[0] is None and st4.gold == 13, '退款按注册表 sell_refund(费2,1星)=3,与 income 形参无关'
-
-    st5 = _mk_state()
-    st6 = simulate(st5, RefreshShop(cost=2))
-    assert st6.gold == 8, '刷新扣费(店内容更换需池上下文,归引擎域合同)'
-
-
-def test_simulate_level_up_costs_and_levels() -> None:
-    """升级模拟:金减级费,等级 +1。"""
-    st = _mk_state()
-    cost = 4
-    st7 = simulate(st, LevelUpShop(cost=cost))
-    assert st7.gold == 10 - cost
-    assert st7.level == st.level + 1
+# (§7 动作模拟两锁已删——simulate 零生产消费,审计判决;活转移函数
+#  test_cw_transfer_golden / test_cw_shop_projection_logic 直锁。)
 
 
 # ============================================================ §8 会话与执行状态

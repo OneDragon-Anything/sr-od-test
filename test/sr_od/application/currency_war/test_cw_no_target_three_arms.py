@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _kbridge,
 )
@@ -135,68 +136,79 @@ class TestArmAStrongGate:
         chars, _eq = cw_intention._line_hoard(comp)
         assert kfb == frozenset(chars)
 
-    def test_dead_direction_g0_no_hoard(self):
-        """锁 1(正本 §5.2)G=0 档:判死形态帧(构帧口径:hp 缺省 0 ⇒
-        视界零 ⇒ 全线 G=0,绯英 G=0.0000 是其注册表实例)不发射该方向
-        囤货——回退成员集为空(fallback_hold),非绯英采购集。"""
-        st = _state()
-        ist = IntentionState()
-        arms = no_target_arms(_kbridge(st), ist)
-        assert arms.direction == ''
-        assert arms.char_targets == frozenset()
-        ht = hoard_target_set(_kbridge(st), ist)
-        assert ht.mode == 'fallback_hold' and not ht.char_targets
-        kfb, tok = k_empty_window_fallback(_kbridge(st), ist)
-        assert kfb == frozenset() and tok == 'p2plus'
+    @pytest.mark.parametrize('case', [
+        'dead-g0-no-hoard', 'dead-partial-g-no-hoard',
+        'p1-bands-and-weak', 'locked-frame-dormant',
+    ])
+    def test_out_of_domain_matrix(self, case: str):
+        """出域矩阵一锁(参数化并一;合并原 test_dead_direction_g0_no_hoard /
+        test_dead_direction_partial_g_no_hoard / test_p1_bands_and_weak_out_
+        of_scope / test_locked_frame_three_arms_dormant,断言腿逐条保留):
 
-    def test_dead_direction_partial_g_no_hoard(self):
-        """锁 1(正本 §5.2)0<G≤ε 档(防 F1 修复回退):部分完成但
-        机器判死的线不获囤货授权。构帧 = 授满绯英欢愉除瓦尔特(5 费)外
-        全部核心,lv7/hp15 ⇒ G=q(瓦尔特)∈(0,ε](运行时核域,不写死值)。"""
-        reg = DEFAULT_REGISTRY
-        st = _state(hp=15, level=7)
-        cores = [m for m in get_comp('绯英欢愉').core_chars if m != '瓦尔特']
-        st.bench = _own(*cores)
-        ist = IntentionState()
-        g = line_completion_feasibility(_kbridge(st), get_comp('绯英欢愉'), None, reg,
-                                        None)
-        assert 0 < g <= reg.revoke_miss_tolerance_eps
-        assert arm_a_live_direction(_kbridge(st), ist) == ''
-
-    def test_p1_bands_and_weak_out_of_scope(self):
-        """必答⑥出辖(证明批 §4.1 裁决:p1 两带显式出辖)+ 域守卫
-        (引理 Z/正本 §6.2-4):plane=1 与 weak/demoted 帧三臂全空甲乙,
-        p1 带回退维持既有判据族(四体系全集/体系对)——退役面收窄。"""
-        st1 = _state(hp=100)
-        st1.plane = 1
-        ist1 = IntentionState()
-        assert no_target_arms(_kbridge(st1), ist1).direction == ''
-        assert no_target_arms(_kbridge(st1), ist1).hub_names == ()
-        # p1_gap 带回退 = 四体系引擎件全集(既有判据族,不入三臂)
-        kfb, tok = k_empty_window_fallback(_kbridge(st1), ist1)
-        assert tok == 'p1_gap' and kfb
-        stw = _state()
-        istw = IntentionState()
-        istw.phase = 'weak'
-        assert no_target_arms(_kbridge(stw), istw) == cw_intention.NoTargetArms(
-            '', frozenset())
-        assert hoard_target_set(_kbridge(stw), istw).mode == 'weak'   # 跨线骨架分带
-
-    def test_locked_frame_three_arms_dormant(self):
-        """锁 5(正本 §5.2):locked_buy_membership 非 None 帧本命题三臂
-        全部不发射——no_target_arms 出域返回空甲乙;店面枢纽件不落
-        hub_option_buy 买因(锁线态由 M2/C1 既有通道辖)。"""
-        ist = IntentionState()
-        ist.phase = 'locked'
-        ist.locked_comp = '希儿量子'
-        st = _state(shop_cards=[_card('花火', cost=2)])
-        assert no_target_arms(_kbridge(st), ist).hub_names == ()
-        sess = _session(ist)
-        state_of(sess).target_comp = get_comp('希儿量子')
-        act = _decide(st, sess)
-        assert not [a for a in ([act] if act else [])
-                    if isinstance(a, BuyCard) and a.reason == 'hub_option_buy']
-        assert 'hub_option_buy_hit' not in _ct(sess)
+        - dead-g0(锁 1,G=0 档):判死形态帧(构帧口径:hp 缺省 0 ⇒ 视界
+          零 ⇒ 全线 G=0,绯英 G=0.0000 是其注册表实例)不发射囤货——回退
+          成员集为空(fallback_hold),非绯英采购集;
+        - dead-partial-g(锁 1,0<G≤ε 档,防 F1 修复回退):部分完成但机器
+          判死的线不获囤货授权(构帧 = 授满绯英欢愉除瓦尔特(5 费)外全部
+          核心,lv7/hp15 ⇒ G=q(瓦尔特)∈(0,ε] 运行时核域,不写死值);
+        - p1-bands-and-weak(必答⑥出辖,证明批 §4.1 裁决 + 域守卫引理 Z/
+          正本 §6.2-4):plane=1 与 weak/demoted 帧三臂全空甲乙,p1 带回退
+          维持既有判据族(四体系全集/体系对)——退役面收窄;
+        - locked-frame(锁 5,正本 §5.2):locked_buy_membership 非 None 帧
+          本命题三臂全部不发射——no_target_arms 出域返回空甲乙;店面枢纽
+          件不落 hub_option_buy 买因(锁线态由 M2/C1 既有通道辖)。
+        """
+        if case == 'dead-g0-no-hoard':
+            st = _state()
+            ist = IntentionState()
+            arms = no_target_arms(_kbridge(st), ist)
+            assert arms.direction == ''
+            assert arms.char_targets == frozenset()
+            ht = hoard_target_set(_kbridge(st), ist)
+            assert ht.mode == 'fallback_hold' and not ht.char_targets
+            kfb, tok = k_empty_window_fallback(_kbridge(st), ist)
+            assert kfb == frozenset() and tok == 'p2plus'
+        elif case == 'dead-partial-g-no-hoard':
+            reg = DEFAULT_REGISTRY
+            st = _state(hp=15, level=7)
+            cores = [m for m in get_comp('绯英欢愉').core_chars
+                     if m != '瓦尔特']
+            st.bench = _own(*cores)
+            ist = IntentionState()
+            g = line_completion_feasibility(_kbridge(st), get_comp('绯英欢愉'),
+                                            None, reg, None)
+            assert 0 < g <= reg.revoke_miss_tolerance_eps
+            assert arm_a_live_direction(_kbridge(st), ist) == ''
+        elif case == 'p1-bands-and-weak':
+            st1 = _state(hp=100)
+            st1.plane = 1
+            ist1 = IntentionState()
+            assert no_target_arms(_kbridge(st1), ist1).direction == ''
+            assert no_target_arms(_kbridge(st1), ist1).hub_names == ()
+            # p1_gap 带回退 = 四体系引擎件全集(既有判据族,不入三臂)
+            kfb, tok = k_empty_window_fallback(_kbridge(st1), ist1)
+            assert tok == 'p1_gap' and kfb
+            stw = _state()
+            istw = IntentionState()
+            istw.phase = 'weak'
+            assert no_target_arms(_kbridge(stw), istw) == \
+                cw_intention.NoTargetArms('', frozenset())
+            assert hoard_target_set(_kbridge(stw), istw).mode == 'weak' \
+                # 跨线骨架分带
+        else:
+            assert case == 'locked-frame-dormant'
+            ist = IntentionState()
+            ist.phase = 'locked'
+            ist.locked_comp = '希儿量子'
+            st = _state(shop_cards=[_card('花火', cost=2)])
+            assert no_target_arms(_kbridge(st), ist).hub_names == ()
+            sess = _session(ist)
+            state_of(sess).target_comp = get_comp('希儿量子')
+            act = _decide(st, sess)
+            assert not [a for a in ([act] if act else [])
+                        if isinstance(a, BuyCard)
+                        and a.reason == 'hub_option_buy']
+            assert 'hub_option_buy_hit' not in _ct(sess)
 
 
 # ===== 证明批 §6 增量 2/3 + 定理 B5:乙臂资格核 =====
@@ -206,28 +218,25 @@ class TestHubEligibility:
 
     # (原 test_eligibility_input_face_static 删:AST 标识符负检 = 源码扫描
     #  形态,禁止清单无例外——「定理 B2 输入面解耦」防线归 review 与代码
-    #  规范;资格核的行为面由本类其余真值表锁承重。)
+    #  规范;资格核的行为面由本类真值表锁承重。)
 
-    def test_yinlang_counter_example_and_dual_channel_mutex(self):
-        """增量 3(证明批 §6;定理 B5 测试化):银狼LV.999 覆盖数 = 2 而系
-        注册单卡依赖核心 ⇒ 乙臂不发射、规则③通道发射,双通道互斥。"""
-        st = _state(shop_cards=[_card('银狼LV.999', cost=5)])
-        ist = IntentionState()
-        assert len(hub_covered_lines(_kbridge(st), ist, '银狼LV.999')) == 2
-        assert '银狼LV.999' in CORE_SINGLE_CARD_REGISTRY
-        assert '银狼LV.999' not in hub_option_names(_kbridge(st), ist)
-        sess = _session(ist)
-        act = _decide(st, sess)
-        assert isinstance(act, BuyCard)
-        assert act.reason == 'core_single_card_buy:unlocked'
-        ct = _ct(sess)
-        assert ct.get('core_unlocked_buy_hit') == 1
-        assert 'hub_option_buy_hit' not in ct
+    def test_hub_eligibility_truth_table(self):
+        """乙臂资格核真值表一锁(三案并一;合并原
+        test_yinlang_counter_example_and_dual_channel_mutex /
+        test_coverage_boundary_and_hubs_present / test_star2_hub_card_not_
+        enumerated,断言腿逐条保留):
 
-    def test_coverage_boundary_and_hubs_present(self):
-        """定理 B5 计数边界:覆盖数 = 1(希儿)不入枢纽档;覆盖数 ≥ 2
-        (花火,注册表全库直调)入档;资格核非空 = 病灶帧条件非空
-        (定理 B2-2 的运行时核)。"""
+        - 计数边界(定理 B5):覆盖数 = 1(希儿)不入枢纽档;覆盖数 ≥ 2
+          (花火,注册表全库直调)入档;资格核非空 = 病灶帧条件非空
+          (定理 B2-2 的运行时核);
+        - 银狼反例(增量 3,证明批 §6;定理 B5 测试化):银狼LV.999 覆盖数
+          = 2 而系注册单卡依赖核心 ⇒ 乙臂不发射、规则③通道发射,双通道
+          互斥;
+        - 2★ 前件(锁 8 前件,§3.2 合取:refund_full_star_ok 仅 1★):
+          2★ 枢纽直出卡不入候选枚举(2★ 退金 3c−1 ≠ 净 0,定理 B4 闭集 3
+          的事实面)。
+        """
+        # —— 计数边界 ——
         st = _state()
         ist = IntentionState()
         assert len(hub_covered_lines(_kbridge(st), ist, '希儿')) == 1
@@ -235,16 +244,47 @@ class TestHubEligibility:
         assert len(hub_covered_lines(_kbridge(st), ist, '花火')) >= 2
         hubs = hub_option_names(_kbridge(st), ist)
         assert '花火' in hubs and hubs
+        # —— 银狼反例 + 双通道互斥 ——
+        st_y = _state(shop_cards=[_card('银狼LV.999', cost=5)])
+        ist_y = IntentionState()
+        assert len(hub_covered_lines(_kbridge(st_y), ist_y,
+                                     '银狼LV.999')) == 2
+        assert '银狼LV.999' in CORE_SINGLE_CARD_REGISTRY
+        assert '银狼LV.999' not in hub_option_names(_kbridge(st_y), ist_y)
+        sess = _session(ist_y)
+        act = _decide(st_y, sess)
+        assert isinstance(act, BuyCard)
+        assert act.reason == 'core_single_card_buy:unlocked'
+        ct = _ct(sess)
+        assert ct.get('core_unlocked_buy_hit') == 1
+        assert 'hub_option_buy_hit' not in ct
+        # —— 2★ 前件:不入候选枚举 ——
+        assert not refund_full_star_ok(2, 2)
+        st_2 = _state(shop_cards=[_card('花火', cost=2, star=2)])
+        sess_2 = _session(IntentionState())
+        act_2 = _decide(st_2, sess_2)
+        assert not isinstance(act_2, BuyCard)
+        assert 'hub_option_candidate_seen' not in _ct(sess_2)
 
 
 # ===== 正本 §5.2 锁 3/8 + §4.4 行 3:乙臂发射与拒因归真 =====
 
 
 class TestHubEmission:
-    def test_hub_fires_on_arm_dead_frame(self):
-        """锁 3(正本 §5.2)F2 测试化:甲臂空集帧乙臂**照常评估**并发射
-        (病灶帧正是 D3 要接枢纽期权的帧,出手机会不可丢);发射 = 五前件
-        合取全过(资格核花火 + 非合并素材 + 1★ 全退 + 席 + 息 + 金)。"""
+    def test_hub_fire_and_reject_family_truthful(self):
+        """锁 3(正本 §5.2)发射+拒因归真一锁(合并原
+        test_hub_fires_on_arm_dead_frame / test_reject_family_truthful /
+        test_hub_reject_reason_key_not_non_line,断言腿逐条保留):
+
+        - 发射面(F2 测试化):甲臂空集帧乙臂**照常评估**并发射(病灶帧
+          正是 D3 要接枢纽期权的帧,出手机会不可丢);发射 = 五前件合取
+          全过(资格核花火 + 非合并素材 + 1★ 全退 + 席 + 息 + 金);
+        - 拒因面:任一合取项缺席帧按缺席项分键,非静默。素材(场内已有
+          同名同星 1★,bench 与部署面两形态)/席位/息/金四门逐帧判
+          (证明批 §3.2 五前件合取 + §6 增量 8);
+        - 拒因键面(§4.4 行 3 non_line 拒因锁重推):空窗帧枢纽资格件在售
+          未买帧拒因 = hub_option(显式),不再落 non_line。"""
+        # —— 发射面 ——
         st = _state(shop_cards=[_card('花火', cost=2)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
@@ -253,50 +293,56 @@ class TestHubEmission:
         assert ct.get('hub_option_buy_hit') == 1
         assert ct.get('hub_option_candidate_seen') == 1
         assert ct.get('shop_no_target_arm_a_dead_defer') == 1
-    def test_reject_family_truthful(self):
-        """锁 3 拒因归真:任一合取项缺席帧按缺席项分键,非静默。
-        素材(场内已有同名同星 1★,bench 与部署面两形态)/席位/息/金
-        四门逐帧判(证明批 §3.2 五前件合取 + §6 增量 8)。"""
-        # 非合并素材:副本在 bench
-        st = _state(shop_cards=[_card('花火', cost=2)],
-                    bench=[_bc('花火', slot=1)])
-        sess = _session(IntentionState())
-        act = _decide(st, sess)
-        assert not isinstance(act, BuyCard)
-        assert _ct(sess).get('hub_option_reject_merge_material') == 1
+        # —— 拒因面:非合并素材(副本在 bench)——
+        st_m = _state(shop_cards=[_card('花火', cost=2)],
+                      bench=[_bc('花火', slot=1)])
+        sess_m = _session(IntentionState())
+        act_m = _decide(st_m, sess_m)
+        assert not isinstance(act_m, BuyCard)
+        assert _ct(sess_m).get('hub_option_reject_merge_material') == 1
         # 非合并素材:副本在部署面(复核观察变体:核对面 = bench∪deployed
         # 全场域,same_star_count 单一源计数)
-        st2 = _state(shop_cards=[_card('花火', cost=2)],
-                     deployed=[_bc('花火', star=1, slot=1)])
-        sess2 = _session(IntentionState())
-        act2 = _decide(st2, sess2)
-        assert not isinstance(act2, BuyCard)
-        assert _ct(sess2).get('hub_option_reject_merge_material') == 1
+        st_d = _state(shop_cards=[_card('花火', cost=2)],
+                      deployed=[_bc('花火', star=1, slot=1)])
+        sess_d = _session(IntentionState())
+        act_d = _decide(st_d, sess_d)
+        assert not isinstance(act_d, BuyCard)
+        assert _ct(sess_d).get('hub_option_reject_merge_material') == 1
         # 席位:bench 满
-        st3 = _state(shop_cards=[_card('花火', cost=2)],
-                     bench=[_bc(f'注册表外散件{i}', slot=i + 1)
-                            for i in range(BENCH_CAPACITY)])
-        sess3 = _session(IntentionState())
-        act3 = _decide(st3, sess3)
-        assert not isinstance(act3, BuyCard)
-        assert _ct(sess3).get('hub_option_reject_seats') == 1
+        st_s = _state(shop_cards=[_card('花火', cost=2)],
+                      bench=[_bc(f'注册表外散件{i}', slot=i + 1)
+                             for i in range(BENCH_CAPACITY)])
+        sess_s = _session(IntentionState())
+        act_s = _decide(st_s, sess_s)
+        assert not isinstance(act_s, BuyCard)
+        assert _ct(sess_s).get('hub_option_reject_seats') == 1
         # 息:50 买 2 跨息档 ⇒ L>0 拒(C1 通道同口径金币构帧,P47 现算)
-        st4 = _state(gold=50, shop_cards=[_card('花火', cost=2)])
-        sess4 = _session(IntentionState())
-        act4 = _decide(st4, sess4)
-        assert not isinstance(act4, BuyCard)
-        assert _ct(sess4).get('hub_option_reject_interest') == 1
+        st_i = _state(gold=50, shop_cards=[_card('花火', cost=2)])
+        sess_i = _session(IntentionState())
+        act_i = _decide(st_i, sess_i)
+        assert not isinstance(act_i, BuyCard)
+        assert _ct(sess_i).get('hub_option_reject_interest') == 1
         # 金:不足帧的拒因按规范门序(席→息→金)取首败项——帧输入
         #(r_remaining=17 的息轨迹)下 poor 帧 L>0 先真,unaffordable 被
         # t5 结构性前遮;此处锁「门序首败项归真」语义本身,affordable
         # 闸独立显影面 = 消费同一单一源 mandate.check_affordable 的
         # C1/M2 通道既有锁。
-        st5 = _state(gold=1, shop_cards=[_card('花火', cost=2)])
-        sess5 = _session(IntentionState())
-        act5 = _decide(st5, sess5)
-        assert not isinstance(act5, BuyCard)
-        assert _ct(sess5).get('hub_option_reject_interest') == 1
-        assert _ct(sess5).get('hub_option_reject_unaffordable') is None
+        st_g = _state(gold=1, shop_cards=[_card('花火', cost=2)])
+        sess_g = _session(IntentionState())
+        act_g = _decide(st_g, sess_g)
+        assert not isinstance(act_g, BuyCard)
+        assert _ct(sess_g).get('hub_option_reject_interest') == 1
+        assert _ct(sess_g).get('hub_option_reject_unaffordable') is None
+        # —— 拒因键面:hub_option 显式,non_line 只辖线外件 ——
+        st_k = _state(gold=1, shop_cards=[_card('花火', cost=2),
+                                          _card('注册表外散件Z', cost=1,
+                                                x=1)])
+        sess_k = _session(IntentionState())
+        _decide(st_k, sess_k)
+        rejects = getattr(state_of(sess_k), 'cw4_shop_rejects', {})
+        assert rejects.get('花火') == 'hub_option'
+        assert rejects.get('注册表外散件Z') == 'non_line'
+
     def test_merge_frozen_state_telemetry_discernible(self):
         """F-5(落地审;增量 8 后半,B4 闭集 3/P75 (vi) 同款):已持枢纽帧
         外部通道到达同名副本后合并冻结态可辨——素材对在场 = 滞留显影键
@@ -315,17 +361,24 @@ class TestHubEmission:
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
         assert _ct(sess).get('hub_option_reject_merge_material') == 1
-    def test_hub_hold_registration_and_sell_protection(self):
-        """攻击 r1 发现1(高)三面收口锁:TRANSITION_PACK 之外枢纽
-        (瓦尔特,cw_line_facts:75-76 移出记录实证)——面① hold 登记资格
-        域 = 静态持有集 ∪ 乙臂获取名集(发射位先登记后 emit,当笔在场):
-        买入后 launch_cause_mismatch 零污染 + 登记簿落 (hold, 轮);
-        面② 装配 A 身份段并集:获取名 ∈ sell_exclusions(凑息/腾席/筹资
-        资格排除),1★ 期权不再被己方卖面跨轮卖掉;面③ 部署域读端 =
-        鸭子读同一载体(静态扫描锁见下)。"""
+    def test_hub_hold_registration_positive_and_negative(self):
+        """hold 登记资格域正负一锁(合并原 test_hub_hold_registration_and_
+        sell_protection / test_hub_hold_registration_negative_stale_
+        semantics,断言腿逐条保留):
+
+        - 正面(攻击 r1 发现1(高)三面收口):TRANSITION_PACK 之外枢纽
+          (瓦尔特,cw_line_facts:75-76 移出记录实证)——面① hold 登记
+          资格域 = 静态持有集 ∪ 乙臂获取名集(发射位先登记后 emit,当笔
+          在场):买入后 launch_cause_mismatch 零污染 + 登记簿落
+          (hold, 轮);面② 装配 A 身份段并集:获取名 ∈ sell_exclusions
+          (凑息/腾席/筹资资格排除),1★ 期权不再被己方卖面跨轮卖掉;
+          面③ 部署域读端 = 鸭子读同一载体;
+        - 负面:获取名集之外的名不获资格域扩张——非持有名 hold 登记仍拒
+          (launch_cause_mismatch 病灶信号语义不被乙臂面稀释)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             sell_gate,
         )
+        # —— 正面 ——
         st = _state(shop_cards=[_card('瓦尔特', cost=4)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
@@ -349,40 +402,18 @@ class TestHubEmission:
         assert not fuel
         # 面③:读口单一源(登记域/身份段/部署域三面同源)
         assert '瓦尔特' in sell_gate.hub_acquired_names_of(sess)
-
-
-    def test_hub_hold_registration_negative_stale_semantics(self):
-        """面①②负锁:获取名集之外的名不获资格域扩张——非持有名 hold
-        登记仍拒(launch_cause_mismatch 病灶信号语义不被乙臂面稀释)。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-            sell_gate,
-        )
-        sess = _session(IntentionState())
+        # —— 负面:非持有名不获扩张 ——
+        sess_neg = _session(IntentionState())
         ok = sell_gate.register_launch(
-            sess, '注册表外散件Q', cause='hold', round_num=3,
+            sess_neg, '注册表外散件Q', cause='hold', round_num=3,
             star=1, cost=1)
         assert not ok
-        assert _ct(sess).get('launch_cause_mismatch') == 1
+        assert _ct(sess_neg).get('launch_cause_mismatch') == 1
 
-    def test_star2_hub_card_not_enumerated(self):
-        """锁 8 前件(§3.2 合取:refund_full_star_ok 仅 1★):2★ 枢纽直出卡
-        不入候选枚举(2★ 退金 3c−1 ≠ 净 0,定理 B4 闭集 3 的事实面)。"""
-        assert not refund_full_star_ok(2, 2)
-        st = _state(shop_cards=[_card('花火', cost=2, star=2)])
-        sess = _session(IntentionState())
-        act = _decide(st, sess)
-        assert not isinstance(act, BuyCard)
-        assert 'hub_option_candidate_seen' not in _ct(sess)
-    def test_hub_reject_reason_key_not_non_line(self):
-        """§4.4 行 3(non_line 拒因锁重推):空窗帧枢纽资格件在售未买帧
-        拒因 = hub_option(显式),不再落 non_line。"""
-        st = _state(gold=1, shop_cards=[_card('花火', cost=2),
-                                        _card('注册表外散件Z', cost=1, x=1)])
-        sess = _session(IntentionState())
-        _decide(st, sess)
-        rejects = getattr(state_of(sess), 'cw4_shop_rejects', {})
-        assert rejects.get('花火') == 'hub_option'
-        assert rejects.get('注册表外散件Z') == 'non_line'
+    # (test_star2_hub_card_not_enumerated 已并入 TestHubEligibility.
+    #  test_hub_eligibility_truth_table;test_hub_reject_reason_key_not_
+    #  non_line 已并入上方 test_hub_fire_and_reject_family_truthful 的
+    #  拒因键面。)
 
 
 # ===== 证明批 §4.4 + §6 增量 1:同帧仲裁三层序 =====
@@ -399,12 +430,17 @@ class TestArbitration:
         st.bench = _own(*comp.core_chars)
         assert arm_a_live_direction(_kbridge(st), IntentionState()) == comp_name
         return st
-    def test_layer1_covering_hub_beats_single_line_piece(self, monkeypatch):
-        """增量 1(证明批 §6;§4.4 第一层支配序,推论 B1.1):同帧同店面给
-        甲方向的单线方向件(布洛妮娅,C_x={希儿量子} 运行时直调核)与覆盖
-        其线的枢纽件(知更鸟),资源两件都足 ⇒ 发射枢纽。判据力:变异夹具
-        把件声明序钉到枢纽之前(自然序 20<21 两序同向不判)——层序失效
-        降第三层时件将首发 → 本测红。"""
+    def test_layer1_dominance_and_shop_order_independence(self, monkeypatch):
+        """第一层支配序一锁(合并原 test_layer1_covering_hub_beats_single_
+        line_piece / test_emission_order_independent_of_shop_order,断言腿
+        逐条保留;增量 1,证明批 §6;§4.4 第一层支配序,推论 B1.1):
+
+        - 层序腿:同帧同店面给甲方向的单线方向件(布洛妮娅,C_x={希儿量子}
+          运行时直调核)与覆盖其线的枢纽件(知更鸟),资源两件都足 ⇒ 发射
+          枢纽。判据力:变异夹具把件声明序钉到枢纽之前(自然序 20<21 两序
+          同向不判)——层序失效降第三层时件将首发 → 本测红;
+        - 乱序腿:店面槽位序翻转不改变仲裁产物(发射序消费判据序,禁实现
+          遍历顺序)。"""
         st = self._arm_live_frame([_card('知更鸟', cost=4),
                                    _card('布洛妮娅', cost=2, x=1)])
         monkeypatch.setattr(
@@ -416,14 +452,35 @@ class TestArbitration:
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '知更鸟'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
-    def test_layer3_multi_line_piece_first_by_decl_order(self, monkeypatch):
-        """增量 1 第三层:多线方向件对枢纽竞争按注册表声明序首发。
-        构帧 = 甲臂判活(绯英欢愉全核在手)∧ 店面 [花火/瓦尔特(覆盖枢纽),
-        银狼LV.999(多线方向件:覆盖数 2 ∧ 注册单卡核心 ⇒ 非枢纽候选)],
-        变异夹具把件声明序钉到最先(当前注册表内该件自然 decl=34 晚于
-        全部覆盖枢纽,「件先发」支无自然实例——夹具只动序不动判据)→
-        全部枢纽让位、义务通道首发 m2_line_member。判据力:若实现按覆盖
-        数降序或店面序,枢纽将越过件发射 → 本测红。"""
+        # 乱序注入店面两帧发射一致
+        acts = []
+        for order in ([_card('知更鸟', cost=4), _card('布洛妮娅', cost=2, x=1)],
+                      [_card('布洛妮娅', cost=2),
+                       _card('知更鸟', cost=4, x=1)]):
+            st_o = self._arm_live_frame(list(order))
+            sess_o = _session(IntentionState())
+            acts.append(_decide(st_o, sess_o))
+        names = [(a.card.name, a.reason)
+                 for a in acts if isinstance(a, BuyCard)]
+        assert len(names) == 2 and names[0] == names[1]
+
+    def test_layer3_decl_order_decides_both_directions(self, monkeypatch):
+        """第三层支配序双向一锁(合并原 test_layer3_multi_line_piece_first_
+        by_decl_order / test_layer3_hub_earlier_decl_fires_over_multi_line_
+        piece,断言腿逐条保留;增量 1 第三层):多线方向件与覆盖枢纽竞争
+        按注册表声明序首发,两个方向各一腿——
+
+        - 件先发腿(变异夹具):构帧 = 甲臂判活(绯英欢愉全核在手)∧ 店面
+          [花火/瓦尔特(覆盖枢纽),银狼LV.999(多线方向件:覆盖数 2 ∧ 注册
+          单卡核心 ⇒ 非枢纽候选)],夹具把件声明序钉到最先(当前注册表内
+          该件自然 decl=34 晚于全部覆盖枢纽,「件先发」支无自然实例——夹具
+          只动序不动判据)→ 全部枢纽让位、义务通道首发 m2_line_member。
+          判据力:若实现按覆盖数降序或店面序,枢纽将越过件发射 → 本测红;
+        - 枢纽先发腿(自然序):枢纽声明序(花火 2)早于多线方向件
+          (银狼LV.999,34,非枢纽候选)⇒ 枢纽首发。构帧注:覆盖枢纽取
+          花火(非该线核心,不在 bench——核心枢纽在全核在手构帧下被非合并
+          素材前件拦,无法作发射观察位)。"""
+        # —— 件先发腿(夹具动序)——
         st = self._arm_live_frame([_card('花火', cost=2),
                                    _card('银狼LV.999', cost=5, x=1)],
                                   comp_name='绯英欢愉')
@@ -437,32 +494,18 @@ class TestArbitration:
         assert isinstance(act, BuyCard)
         assert act.reason == 'm2_line_member' and act.card.name == '银狼LV.999'
         assert _ct(sess).get('hub_option_arbitration_yield') >= 1
-    def test_layer3_hub_earlier_decl_fires_over_multi_line_piece(self):
-        """增量 1 第三层(自然序):枢纽声明序(花火 2)早于多线方向件
-        (银狼LV.999,34,非枢纽候选)⇒ 枢纽首发。构帧注:覆盖枢纽取
-        花火(非该线核心,不在 bench——核心枢纽在全核在手构帧下被非合并
-        素材前件拦,无法作发射观察位)。"""
-        st = self._arm_live_frame([_card('花火', cost=2),
-                                   _card('银狼LV.999', cost=5, x=1)],
-                                  comp_name='绯英欢愉')
-        sess = _session(IntentionState())
-        act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
-        assert act.card.name == '花火'
-        assert _ct(sess).get('hub_option_arbitration_yield') is None
-    def test_emission_order_independent_of_shop_order(self):
-        """增量 1(乱序注入店面两帧发射一致):店面槽位序翻转不改变仲裁
-        产物(发射序消费判据序,禁实现遍历顺序)。"""
-        acts = []
-        for order in ([_card('知更鸟', cost=4), _card('布洛妮娅', cost=2, x=1)],
-                      [_card('布洛妮娅', cost=2),
-                       _card('知更鸟', cost=4, x=1)]):
-            st = self._arm_live_frame(list(order))
-            sess = _session(IntentionState())
-            acts.append(_decide(st, sess))
-        names = [(a.card.name, a.reason)
-                 for a in acts if isinstance(a, BuyCard)]
-        assert len(names) == 2 and names[0] == names[1]
+        # 撤销夹具(monkeypatch 只辖本锁,两腿同函数——夹具不撤会污染
+        # 自然序腿的声明序)
+        monkeypatch.undo()
+        # —— 枢纽先发腿(自然序)——
+        st_n = self._arm_live_frame([_card('花火', cost=2),
+                                     _card('银狼LV.999', cost=5, x=1)],
+                                    comp_name='绯英欢愉')
+        sess_n = _session(IntentionState())
+        act_n = _decide(st_n, sess_n)
+        assert isinstance(act_n, BuyCard) and act_n.reason == 'hub_option_buy'
+        assert act_n.card.name == '花火'
+        assert _ct(sess_n).get('hub_option_arbitration_yield') is None
     def test_f1_unaffordable_piece_loses_preemption(self):
         """F-1(落地审;证明批 §4.4 先决澄清+附带条款①):甲臂判活帧上,
         更早声明的**不可负担**方向件不获挤占权——枢纽不因其在售而让位,
@@ -477,10 +520,19 @@ class TestArbitration:
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '知更鸟'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
-    def test_coverage_count_descending_not_used(self):
-        """§4.4 显式否决记录的测试化:互不覆盖双枢纽竞争按注册表声明序
-        (三月七 decl=1 cov=2)而非覆盖数降序(花火 decl=2 cov=6)——
-        若实现以覆盖数排序,本测红。"""
+    def test_coverage_order_veto_and_arm_a_corner(self):
+        """覆盖序否决 + 甲臂漏授角一锁(合并原 test_coverage_count_
+        descending_not_used / TestArmACorner.test_corner_detected_and_key_
+        fires,断言腿逐条保留):
+
+        - 覆盖序否决腿(§4.4 显式否决记录的测试化):互不覆盖双枢纽竞争
+          按注册表声明序(三月七 decl=1 cov=2)而非覆盖数降序(花火
+          decl=2 cov=6)——若实现以覆盖数排序,本腿红;
+        - 漏授角腿(增量 7,应修①测试化):plane==2 无目标帧,方向 d 过
+          三门但 G(d)≤ε 判死且意向核心在店/在手 ⇒ 漏授角显影(独立分键,
+          禁混入判死分键);甲臂仍不授权囤 d(G 门逐字);缓锁 core 可见
+          短路支与强锁门同帧判定相反(R2 双门机制)。"""
+        # —— 覆盖序否决 ——
         st = _state(shop_cards=[_card('花火', cost=2),
                                 _card('三月七', cost=1, x=1)])
         ist = IntentionState()
@@ -491,6 +543,28 @@ class TestArbitration:
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '三月七'
+        # —— 甲臂漏授角 ——
+        st_c = _state(hp=15, level=5, round_num=9,
+                      shop_cards=[_card('绯英', cost=3)])
+        st_c.bench = _own('绯英')
+        ist_c = IntentionState()
+        arms = no_target_arms(_kbridge(st_c), ist_c)
+        assert arms.direction == ''
+        assert arms.corner_names == ('绯英欢愉',)
+        # R2 双门分歧:同帧同输入,缓锁门 core 可见短路放行、强锁门判死
+        reg = DEFAULT_REGISTRY
+        vis = cw_intention._visible_chars(_kbridge(st_c))
+        sig = cw_intention.IntentionSignal(3, 'core_card', '绯英欢愉', '', 1.0)
+        assert cw_intention._p2_signal_supply_ok(st_c, sig, None, reg, vis)
+        assert line_completion_feasibility(_kbridge(st_c),
+                                           get_comp('绯英欢愉'), None,
+                                           reg, None) \
+            <= reg.revoke_miss_tolerance_eps
+        sess_c = _session(ist_c)
+        _decide(st_c, sess_c)
+        ct = _ct(sess_c)
+        assert ct.get('shop_no_target_arm_a_corner_defer') == 1
+        assert ct.get('shop_no_target_arm_a_dead_defer') == 1
 
 
 # ===== 正本 §5.2 锁 4 + 证明批 §4.3:丙臂守息缺省与辖域切分 =====
@@ -498,10 +572,23 @@ class TestArbitration:
 
 class TestArmCHoldDefault:
 
-    def test_hold_default_zero_buy_and_keys(self):
-        """锁 4(正本 §5.2):甲乙候选皆空帧(店面无枢纽资格件)零买入
-        + 守息分键(dead_defer/hold_default,合法空经 k_fallback_source
-        证据放行 = 契约零违例)。"""
+    def test_hold_consumption_three_faces(self):
+        """丙臂守息消费三面一锁(合并原 test_hold_default_zero_buy_and_keys /
+        test_must_spend_zone_no_refresh_burn / test_prep_m3_not_frozen_by_
+        hold,断言腿逐条保留):
+
+        - 默认守息面(锁 4,正本 §5.2):甲乙候选皆空帧(店面无枢纽资格件)
+          零买入 + 守息分键(dead_defer/hold_default,合法空经
+          k_fallback_source 证据放行 = 契约零违例);
+        - 必花域消解面(证明批 §4.3-4,必花域裁决②消解路径):p2plus 无
+          目标帧落必花域时,R1 合格集 = 判据臂输出 = 空 ⇒ no_chaseable_
+          member fail-closed ⇒ 烧费路径消失(P35 帧 14:18:21 形态不再
+          复发,零 RefreshShop);
+        - 升级不冻结面(锁 4 辖域切分腿,正本 §2.4/§5.2 锁 4):升级既有
+          授权不受丙臂冻结——k_members 空帧 arm1 触发(板满∧bench 有候补)
+          照常发射 LevelUp(mandate.MandateFrame 备战面直构)。
+        """
+        # —— 默认守息面 ——
         st = _state(shop_cards=[_card('注册表外散件Z', cost=1)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
@@ -509,41 +596,34 @@ class TestArmCHoldDefault:
         ct = _ct(sess)
         assert ct.get('shop_no_target_hold_default') == 1
         assert ct.get('shop_no_target_arm_a_dead_defer') == 1
-        assert not [k for k in ct if k.startswith('criteria_contract_violation')]
-
-    def test_must_spend_zone_no_refresh_burn(self):
-        """证明批 §4.3-4(必花域裁决②消解路径):p2plus 无目标帧落必花域
-        时,R1 合格集 = 判据臂输出 = 空 ⇒ no_chaseable_member fail-closed
-        ⇒ 烧费路径消失(P35 帧 14:18:21 形态不再复发,零 RefreshShop)。"""
-        st = _state(gold=80)
-        sess = _session(IntentionState())
-        act = _decide(st, sess)
-        assert not isinstance(act, (BuyCard, RefreshShop))
-        ct = _ct(sess)
-        assert ct.get('shop_r1_no_chaseable_member') == 1
-        assert 'must_spend_r1_account_yielded' not in ct
-
-    def test_prep_m3_not_frozen_by_hold(self):
-        """锁 4 辖域切分腿(正本 §2.4/§5.2 锁 4):升级既有授权不受丙臂
-        冻结——k_members 空帧 arm1 触发(板满∧bench 有候补)照常发射
-        LevelUp(mandate.MandateFrame 备战面直构)。"""
+        assert not [k for k in ct
+                    if k.startswith('criteria_contract_violation')]
+        # —— 必花域消解面 ——
+        st_ms = _state(gold=80)
+        sess_ms = _session(IntentionState())
+        act_ms = _decide(st_ms, sess_ms)
+        assert not isinstance(act_ms, (BuyCard, RefreshShop))
+        ct_ms = _ct(sess_ms)
+        assert ct_ms.get('shop_r1_no_chaseable_member') == 1
+        assert 'must_spend_r1_account_yielded' not in ct_ms
+        # —— 升级不冻结面 ——
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            LevelUp,
+        )
         deployed = [_bc(f'注册表外散件{i}', star=2, slot=i + 1)
                     for i in range(4)]
         frame = mandate.MandateFrame(
             gold=80, level=4, bench=[_bc('注册表外散件A', slot=1)],
             deployed=deployed, deploy_cap=4, node_type='battle',
             stop_flag=False, k_members=(), round_num=2)
-        st = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
-        st.level_readable = True
-        st.deploy_cap = 4
-        st.node_type = 'battle'
-        sess = SimpleNamespace(cw4_counters={}, target_comp=None,
-                               v3_intention=IntentionState(),
-                               active_strategies=[])
-        out = mandate.run_mandate(frame, sess, state=_kbridge(st))
-        from sr_od.application.currency_war.kernel.cw_vocab import (
-            LevelUp,
-        )
+        st_m3 = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
+        st_m3.level_readable = True
+        st_m3.deploy_cap = 4
+        st_m3.node_type = 'battle'
+        sess_m3 = SimpleNamespace(cw4_counters={}, target_comp=None,
+                                  v3_intention=IntentionState(),
+                                  active_strategies=[])
+        out = mandate.run_mandate(frame, sess_m3, state=_kbridge(st_m3))
         assert [e for e in out if isinstance(e.action, LevelUp)], \
             '丙臂守息不得冻结升级既有授权(发展优先不变量,01 §8-2)'
 
@@ -593,37 +673,10 @@ class TestKMembersDownstream:
 # review 与代码规范;①④面源码扫描形态原三审已删。
 
 
-# ===== 证明批 §6 增量 7:甲臂漏授角 =====
-
-
-class TestArmACorner:
-
-    def test_corner_detected_and_key_fires(self):
-        """增量 7(应修①测试化):plane==2 无目标帧,方向 d 过三门但
-        G(d)≤ε 判死且意向核心在店/在手 ⇒ 漏授角显影(独立分键,禁混入
-        判死分键);甲臂仍不授权囤 d(G 门逐字);缓锁 core 可见短路支
-        与强锁门同帧判定相反(R2 双门机制)。"""
-        st = _state(hp=15, level=5, round_num=9,
-                    shop_cards=[_card('绯英', cost=3)])
-        st.bench = _own('绯英')
-        ist = IntentionState()
-        arms = no_target_arms(_kbridge(st), ist)
-        assert arms.direction == ''
-        assert arms.corner_names == ('绯英欢愉',)
-        # R2 双门分歧:同帧同输入,缓锁门 core 可见短路放行、强锁门判死
-        reg = DEFAULT_REGISTRY
-        vis = cw_intention._visible_chars(_kbridge(st))
-        sig = cw_intention.IntentionSignal(3, 'core_card', '绯英欢愉', '', 1.0)
-        assert cw_intention._p2_signal_supply_ok(st, sig, None, reg, vis)
-        assert line_completion_feasibility(_kbridge(st), get_comp('绯英欢愉'), None,
-                                           reg, None) \
-            <= reg.revoke_miss_tolerance_eps
-        sess = _session(ist)
-        _decide(st, sess)
-        ct = _ct(sess)
-        assert ct.get('shop_no_target_arm_a_corner_defer') == 1
-        assert ct.get('shop_no_target_arm_a_dead_defer') == 1
-
+# ===== 证明批 §6 增量 7:甲臂漏授角 ==================
+# (TestArmACorner.test_corner_detected_and_key_fires 已并入上方
+#  TestArbitration.test_coverage_order_veto_and_arm_a_corner,断言腿
+#  零丢失。)
 
 # ===== 证明批 §6 增量 5:契约面单一源守卫 ============================
 # 增量 5 读端格(p2plus 合法空 + 三臂来源证据放行 / 无来源计违例 / p1 带

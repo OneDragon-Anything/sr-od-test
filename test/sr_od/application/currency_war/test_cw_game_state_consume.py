@@ -167,21 +167,9 @@ def test_settlement_cover_writes_truth_group() -> None:
 
 
 # ============================================================ 扩单件 3:§2.1 载体中继收敛
-
-
-def test_relay_skips_fields_with_official_value() -> None:
-    """§2.1 收敛核心:已有正式值的字段一律跳过——handler 已写的 logic
-    禁被中继翻成 observation(§8.1);observation 同样不翻。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.active_env, '战争边疆', produced_by='CwScreenInvestEnv',
-                   sig=_lsig())
-    assert bs.relay(bs.active_env, '昼之半神概念股', sig=_hsig()) is False
-    assert bs.active_env.value == '战争边疆', 'handler 真写端值保持'
-    assert bs.active_env.source == 'logic', '禁把 logic 翻成 observation'
-    assert bs.active_env.evidence is None, '真写端 evidence 不被中继污染'
-    bs.observe(bs.active_strategies, ['白银投资'], sig=_sig())
-    assert bs.relay(bs.active_strategies, [], sig=_hsig()) is False
-    assert bs.active_strategies.source == 'observation'
+# (test_relay_skips_fields_with_official_value 第二刀移入
+#  test_cw_game_state.py::test_relay_unit_gate_truth_table 的「已有正式值
+#  跳过」腿——relay 单元锁同域归并,断言腿零丢失。)
 
 
 # ============================================================ 扩单件 1:合成升星预期写端(§3.2.18 修法 a)
@@ -282,22 +270,20 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
 # ============================================================ 扩单件 4:parse_streak 失读 None 化(§8.8)
 
 
-def test_parse_streak_miss_is_none_real_zero_is_zero() -> None:
-    """§8.8:失读 → None(与 read_hp 100 假值同型消除);'连胜×0' = 真 0
-    (方向真值,fixture 核实 2026-08-11),两者分写。"""
-    from sr_od.application.currency_war.obs.cw_settlement_obs import (
-        parse_streak,
-    )
-    assert parse_streak(['挑战结束', '数据统计']) is None, '失读非 0'
-    assert parse_streak(['连胜×0']) == 0, '真 0 保留'
-    assert parse_streak(['连败×2']) == -2
+def test_streak_miss_semantics_parse_and_observation_half() -> None:
+    """streak 失读两腿并一(合并原 test_parse_streak_miss_is_none_real_
+    zero_is_zero / test_settlement_observation_half_preserves_streak_on_
+    miss,断言腿逐条保留):
 
-
-def test_settlement_observation_half_preserves_streak_on_miss() -> None:
-    """失读守卫:obs.streak None → session.last_streak 跳过沿用(旧行为
-    失读写 0 = 连胜/连败假复位);真值照写。"""
+    - 解析腿(§8.8):失读 → None(与 read_hp 100 假值同型消除);
+      '连胜×0' = 真 0(方向真值,fixture 核实 2026-08-11),两者分写;
+    - 消费腿(失读守卫):obs.streak None → session.last_streak 跳过沿用
+      (旧行为失读写 0 = 连胜/连败假复位);真值照写。"""
     from sr_od.application.currency_war.kernel.cw_performance import (
         RoundOutcome,
+    )
+    from sr_od.application.currency_war.obs.cw_settlement_obs import (
+        parse_streak,
     )
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait import (
         _write_settlement_observation,
@@ -305,6 +291,11 @@ def test_settlement_observation_half_preserves_streak_on_miss() -> None:
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         StrategySession,
     )
+    # 解析腿
+    assert parse_streak(['挑战结束', '数据统计']) is None, '失读非 0'
+    assert parse_streak(['连胜×0']) == 0, '真 0 保留'
+    assert parse_streak(['连败×2']) == -2
+    # 消费腿
 
     def _obs(streak):
         return RoundOutcome(round_num=2, plane=1, node_type='普通战斗',
@@ -381,34 +372,91 @@ def _op_with_session(op_cls: type, sess: object) -> object:
     return op
 
 
-def test_encounter_chosen_written_on_true_pick_only() -> None:
-    """遭遇屏 chosen_encounter 记录面行为锁(§3.4.5 余屏写端):①真选写
-    (难度档, 奖励文本)原名口径、source=logic;②fallback(无会话/候选
-    未读到/越界)不写。
-    (三审拆半:原 getsource 字符串在场扫描腿删——写端接线在位/
-    落地验真后写的调用时点面归 review 与代码规范;本锁辖记录面行为半。)"""
+def _chosen_rows() -> dict:
+    """chosen 记录面表行(遭遇/专家/祈愿三案;每行 = op 类 + chosen 字段
+    + 真选调用 + 期望值 + fallback 调用集;supply 暂存生命周期独立成案,
+    见下)。"""
     from sr_od.application.currency_war.kernel.cw_events import EncounterOption
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_encounter,
-    )
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
+        cw_screen_expert_invite,
+        cw_screen_wish_trial,
     )
 
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
             EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
+    bonds: list[str | None] = ['仙舟', None, '贝洛伯格', None]
+
+    return {
+        'encounter': {
+            'op_cls': cw_screen_encounter.CwScreenEncounter,
+            'field': 'chosen_encounter',
+            'pick': lambda op: op._record_chosen(op.ctx.cw_match.session,
+                                                 opts, 1),
+            'expected': (3, '随机4费×3'),
+            'fallbacks': [
+                lambda op: op._record_chosen(None, opts, 0),      # 无会话 = 盲选
+                lambda op: op._record_chosen(op.ctx.cw_match.session,
+                                             [], 0),              # 候选未读到
+                lambda op: op._record_chosen(op.ctx.cw_match.session,
+                                             opts, 5)],           # 决策越界
+        },
+        'expert': {
+            'op_cls': cw_screen_expert_invite.CwScreenExpertInvite,
+            'field': 'chosen_expert',
+            'pick': lambda op: op._record_chosen_expert(0, bonds),
+            'expected': '仙舟',
+            'fallbacks': [
+                lambda op: op._record_chosen_expert(-1, bonds),   # 现金为王兜底
+                lambda op: op._record_chosen_expert(9, bonds),    # 越界(防御面)
+                lambda op: op._record_chosen_expert(1, bonds)],   # 羁绊缺失(防御面)
+        },
+        'wish': {
+            'op_cls': cw_screen_wish_trial.CwScreenWishTrial,
+            'field': 'chosen_wish',
+            'pick': lambda op: op._record_chosen(['累计刷新10次', '', ''], 0),
+            'expected': '累计刷新10次',
+            'fallbacks': [
+                lambda op: op._record_chosen(None, 0),            # objective 未读到
+                lambda op: op._record_chosen(['', '难度3+战斗'], 0),  # 选中槽文本空
+                lambda op: op._record_chosen(['累计刷新10次'], 7)],    # 越界
+        },
+    }
+
+
+@pytest.mark.parametrize('case_id', list(_chosen_rows()))
+def test_chosen_record_face_true_pick_only(case_id: str) -> None:
+    """四事件屏 chosen_* 记录面真值表一锁(§3.4.5 余屏写端;三案表驱动
+    并一,合并原 test_encounter_chosen_written_on_true_pick_only /
+    test_expert_chosen_written_on_card_pick_only /
+    test_wish_chosen_written_with_objective_text_only,断言腿逐条保留;
+    supply 暂存生命周期独立成案见下):
+
+    - 真选写:值 = 原名口径(遭遇 = (难度档, 奖励文本) / 专家 = 卡羁绊
+      原文名 / 祈愿 = objective 原文名),source=logic(单次逻辑写入);
+    - fallback(无会话/候选未读到/越界/羁绊缺失/选中槽文本空)不写;
+      专家「现金为王」兜底不写——该事实由 ConfirmExpertCash +4 金到账
+      登记通道承载,照旧不动;真选守卫照 chosen_tome 式。
+    (三审拆半:原 getsource 字符串在场扫描腿删——写端接线在位/落地验真
+    后写的调用时点面归 review 与代码规范;本锁辖记录面行为半。)"""
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+
+    row = _chosen_rows()[case_id]
     sess = StrategySession()
-    op = _op_with_session(cw_screen_encounter.CwScreenEncounter, sess)
-    op._record_chosen(sess, opts, 1)
-    bs = board_state_of(sess)
-    assert bs.chosen_encounter.value == (3, '随机4费×3'), '值=(难度档,奖励文本)原名口径'
-    assert bs.chosen_encounter.source == 'logic', '单次逻辑写入(source=logic)'
+    op = _op_with_session(row['op_cls'], sess)
+    row['pick'](op)
+    fld = getattr(board_state_of(sess), row['field'])
+    assert fld.value == row['expected'], f'{case_id}: 真选值 = 原名口径'
+    assert fld.source == 'logic', f'{case_id}: 单次逻辑写入(source=logic)'
+    # fallback 帧(全新会话):逐个不写
     sess2 = StrategySession()
-    op2 = _op_with_session(cw_screen_encounter.CwScreenEncounter, sess2)
-    op2._record_chosen(None, opts, 0)     # 无策略会话 = 盲选
-    op2._record_chosen(sess2, [], 0)      # 候选未读到
-    op2._record_chosen(sess2, opts, 5)    # 决策越界
-    assert board_state_of(sess2).chosen_encounter.value is None, 'fallback 不写'
+    op2 = _op_with_session(row['op_cls'], sess2)
+    for fallback in row['fallbacks']:
+        fallback(op2)
+    assert getattr(board_state_of(sess2), row['field']).value is None, \
+        f'{case_id}: fallback 不写'
 
 
 def test_supply_chosen_written_from_stash_after_exit_only() -> None:
@@ -452,58 +500,6 @@ def test_supply_chosen_written_from_stash_after_exit_only() -> None:
     op3._record_chosen_supply()
 
 
-def test_expert_chosen_written_on_card_pick_only() -> None:
-    """专家邀请函 chosen_expert 记录面行为锁(§3.4.5):卡分支写羁绊原名
-    名;「现金为王」兜底分支不写(该事实由 ConfirmExpertCash +4 金到账
-    登记通道承载,照旧不动)——真选守卫照 chosen_tome 式。
-    (三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
-    review 与代码规范。)"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_expert_invite,
-    )
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
-    )
-
-    bonds: list[str | None] = ['仙舟', None, '贝洛伯格', None]
-    sess = StrategySession()
-    op = _op_with_session(cw_screen_expert_invite.CwScreenExpertInvite, sess)
-    op._record_chosen_expert(0, bonds)
-    assert board_state_of(sess).chosen_expert.value == '仙舟', '值=卡羁绊原文名'
-    assert board_state_of(sess).chosen_expert.source == 'logic', \
-        '单次逻辑写入(source=logic)'
-    sess2 = StrategySession()
-    op2 = _op_with_session(cw_screen_expert_invite.CwScreenExpertInvite, sess2)
-    op2._record_chosen_expert(-1, bonds)   # 现金为王兜底
-    op2._record_chosen_expert(9, bonds)    # 越界(防御面)
-    op2._record_chosen_expert(1, bonds)    # 羁绊缺失(防御面)
-    assert board_state_of(sess2).chosen_expert.value is None, \
-        '兜底/越界/羁绊缺失不写'
-
-
-def test_wish_chosen_written_with_objective_text_only() -> None:
-    """祈愿试炼 chosen_wish 记录面行为锁(§3.4.5):objective 原文名读到
-    才写;未读到(None)/选中槽文本空 = 盲选 fallback 不写——真选守卫照
-    chosen_tome 式。
-    (三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
-    review 与代码规范。)"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_wish_trial,
-    )
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
-    )
-
-    sess = StrategySession()
-    op = _op_with_session(cw_screen_wish_trial.CwScreenWishTrial, sess)
-    op._record_chosen(['累计刷新10次', '', ''], 0)
-    assert board_state_of(sess).chosen_wish.value == '累计刷新10次', \
-        '值=objective 原文名'
-    assert board_state_of(sess).chosen_wish.source == 'logic', \
-        '单次逻辑写入(source=logic)'
-    sess2 = StrategySession()
-    op2 = _op_with_session(cw_screen_wish_trial.CwScreenWishTrial, sess2)
-    op2._record_chosen(None, 0)                  # objective 未读到
-    op2._record_chosen(['', '难度3+战斗'], 0)    # 选中槽文本空
-    op2._record_chosen(['累计刷新10次'], 7)      # 越界
-    assert board_state_of(sess2).chosen_wish.value is None, 'fallback 不写'
+# (test_expert_chosen_written_on_card_pick_only /
+#  test_wish_chosen_written_with_objective_text_only 已表驱动并入上方
+#  test_chosen_record_face_true_pick_only,断言腿零丢失。)
