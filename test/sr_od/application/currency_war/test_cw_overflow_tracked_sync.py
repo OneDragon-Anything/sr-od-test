@@ -19,7 +19,10 @@ prep_shop_open 阶段设计上不读 bench 身份)→ 崩溃循环停机。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_exec_state import (BenchChar, bench_from_compact)
+from sr_od.application.currency_war.kernel.cw_exec_state import (
+    BenchChar,
+    bench_from_compact,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     apply_prep_action_logic,

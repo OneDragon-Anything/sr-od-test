@@ -13,7 +13,10 @@ tracked 吸收半已锁(test_cw_overflow_tracked_sync.py);本文件锁第三半
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_exec_state import (BenchChar, bench_from_compact)
+from sr_od.application.currency_war.kernel.cw_exec_state import (
+    BenchChar,
+    bench_from_compact,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     bench_view_of_slots,

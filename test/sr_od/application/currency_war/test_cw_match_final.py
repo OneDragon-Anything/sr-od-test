@@ -70,12 +70,6 @@ def _lsig() -> _ChannelSig:
                        mode='compute')
 
 
-def _hsig() -> _ChannelSig:
-    """渠道③签名(logic_hook 族;relay 中继)。"""
-    return _ChannelSig(family='logic_hook', actor='TestSigWriter',
-                       mode='compute')
-
-
 @pytest.fixture()
 def journal(tmp_path):
     """装一份指到 tmp 的状态流水(影子面武装;teardown 复位模块全局)。"""

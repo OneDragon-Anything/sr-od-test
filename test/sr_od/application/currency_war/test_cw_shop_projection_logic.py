@@ -360,9 +360,6 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
     容器/tracked 双侧直断言)。"""
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.kernel.cw_exec_state import (
-        exec_state_of,
-    )
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
         BenchView,
