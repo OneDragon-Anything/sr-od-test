@@ -25,9 +25,6 @@ T-18 交付报告未尽①同族暴露登记。缺陷(修复前):criteria/sell.p
 """
 from __future__ import annotations
 
-import ast
-from pathlib import Path
-
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _bsb,
 )
@@ -176,27 +173,7 @@ class TestItemSlotPredicateSingleSource:
 
         assert item_slot_unsellable(_NoMark()) is False   # type: ignore[arg-type]
 
-    def test_mandate_v1_tree_no_inline_item_slot_reads(self):
-        """mandate_v1 生产树 ``is_item_slot`` 属性读唯一居所 = 共享谓词
-        本体(statefn/predicates.py)。AST 判定(注释/docstring 字样
-        不误伤);新卖出通道经谓词消费,内联复制(第三处症状补丁)=
-        本锁红。部署侧 cw_deploy_logic 同名读在其树外,非本锁辖域。
-        """
-        src_root = (Path(__file__).resolve().parents[5] / 'src' / 'sr_od'
-                    / 'application' / 'currency_war'
-                    / 'strategies' / 'impl' / 'mandate_v1')
-        predicate_rel = 'statefn/predicates.py'
-        violations: list[str] = []
-        for py in sorted(src_root.rglob('*.py')):
-            rel = py.relative_to(src_root).as_posix()
-            if rel == predicate_rel:
-                continue
-            tree = ast.parse(py.read_text(encoding='utf-8'))
-            for node in ast.walk(tree):
-                if (isinstance(node, ast.Attribute)
-                        and node.attr == 'is_item_slot'):
-                    violations.append(f'{rel}:L{node.lineno} '
-                                      f'{type(node.value).__name__}')
-        assert violations == [], (
-            'mandate_v1 树出现 is_item_slot 内联读(判据单一源回潮):\n'
-            + '\n'.join(violations))
+    # (原 test_mandate_v1_tree_no_inline_item_slot_reads 删:rglob+AST 扫
+    #  mandate_v1 生产树 = 源码扫描形态,禁止清单无例外——「is_item_slot
+    #  判据单一源/禁内联复制」防线归 review 与代码规范;谓词行为面由
+    #  本文件真值表锁承重。)
