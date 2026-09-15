@@ -23,11 +23,13 @@ account`` 边界注释(P40 R0-1「合格集空 ⇒ EV 恒负」刷新侧特例)�
 同源;禁为保绿机械跟绿。
 
 覆盖对账(2026-09-08 瘦身批,亲读两处断言面):``r1_commitment_account``
-纯数面真值表(within/over/non-finite 含 NaN/零负预算四臂)由判据主题
+纯数面真值表(within/over/non-finite 含 NaN/零负预算四臂)声称由判据主题
 文件 test_cw_vgap_frame_horizon.py::TestCriterionAffordability 承载,
 本文件原 TestR1CommitmentAccountBoundary 三测为其真子集已删;混合集
-过滤「部分不可追 ≠ 合格集空」的精确卡费面由同文件
+过滤「部分不可追 ≠ 合格集空」的精确卡费面声称由同文件
 TestMixedPeakCompletionAccount lv6 臂承载(超集),本文件对应单测已删。
+⚠️ 上两处承载文件**全史不存在(幽灵指针,2026-09-15 复查确认)**——
+被删断言面现无载体,覆盖缺口已申报用户裁决,不得当作已辖。
 本文件现辖:``_r1_ledger_terms`` 返回契约(inf 仅由合格集空三来源
 承载 + 成型先序探针)与档案帧端到端(污染墓碑 + 刷新发射 + 域外零漂移)。
 
@@ -39,6 +41,7 @@ from __future__ import annotations
 
 import math
 
+import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
@@ -97,27 +100,20 @@ def _p1r8_frame(gold: int = 53) -> tuple[CwSimFrame, object]:
 class TestR1QualifiedSetSemantics:
     """钉 inf 返回契约:inf 只剩「合格集空」三来源(成员集空 / 全部
     2★ 成型 / 该级全不可追),任一非空合格集不得被打 inf(ADR-0571
-    污染缺陷的直锁形态);「部分不可追剔出合格集」的精确卡费行为面
-    由 test_cw_vgap_frame_horizon.py::TestMixedPeakCompletionAccount
-    承载(覆盖对账超集,本文件不双锁)。"""
+    污染缺陷的直锁形态)。(「部分不可追剔出合格集」的精确卡费面声称
+    由 test_cw_vgap_frame_horizon.py 承载——该文件全史不存在,幽灵
+    指针,缺口已申报。)"""
 
-    def test_all_unchaseable_is_inf(self):
-        """变异探针①:成员全不可追(lv5 的 5 费)⇒ (inf, 0)——合格集
-        空三来源之一,契约保持。"""
-        e_sum, fees = _r1_ledger_terms(('景元',), [], [], 5)
-        assert e_sum == float('inf')
-        assert fees == 0
-
-    def test_all_formed_is_inf(self):
-        """变异探针②:成员全 2★ 成型 ⇒ (inf, 0)——成型出域后合格集空。"""
-        bench = [_bc('停云', star=2, slot=1)]
-        e_sum, fees = _r1_ledger_terms(('停云',), bench, [], 5)
-        assert e_sum == float('inf')
-        assert fees == 0
-
-    def test_empty_membership_is_inf(self):
-        """变异探针③:成员集空 ⇒ (inf, 0)。"""
-        e_sum, fees = _r1_ledger_terms((), [], [], 5)
+    @pytest.mark.parametrize('members,bench,level', [
+        (('景元',), [], 5),                                  # 成员全不可追(lv5 的 5 费)
+        (('停云',), [_bc('停云', star=2, slot=1)], 5),       # 全 2★ 成型出域
+        ((), [], 5),                                         # 成员集空
+    ], ids=['all-unchaseable', 'all-formed', 'empty-membership'])
+    def test_qualified_set_empty_sources_are_inf(
+            self, members, bench, level):
+        """inf 三来源同契约:合格集空 ⇒ (inf, 0)(成员集空 / 全成型 /
+        全不可追,三案一锁)。"""
+        e_sum, fees = _r1_ledger_terms(members, bench, [], level)
         assert e_sum == float('inf')
         assert fees == 0
 

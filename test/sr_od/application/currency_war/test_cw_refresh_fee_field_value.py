@@ -61,8 +61,9 @@ def _env(state, ledger: ShopVisitLedger) -> ShopExecEnv:
         ledger=ledger, state=state)
 
 
-def test_refresh_fee_unobserved_field_falls_back_to_base():
+def test_refresh_fee_unobserved_field_falls_back_to_base(monkeypatch):
     """事故本形:刷价 Field 未观察(None)→ 记基价,不再 TypeError。"""
+    monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
     session = StrategySession()
     state = board_state_of(session)   # 新容器:shop_refresh_cost 未观察
     ledger = ShopVisitLedger()
@@ -74,8 +75,9 @@ def test_refresh_fee_unobserved_field_falls_back_to_base():
     assert ledger.did_refresh is True
 
 
-def test_refresh_fee_observed_value_is_used():
+def test_refresh_fee_observed_value_is_used(monkeypatch):
     """刷价 Field 现值在场 → 记现值(读现值意图不因修法丢失)。"""
+    monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
     session = StrategySession()
     state = board_state_of(session)
     state.observe(state.shop_refresh_cost, 3,

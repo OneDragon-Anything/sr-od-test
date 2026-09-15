@@ -155,10 +155,9 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',
                         lambda idx: SimpleNamespace(strategy_id='mandate_v1',
                                                     ev_arm=''))
-    # 种子段读链工厂替身(T-251 空账重建出口经 run_buy_waves 硬接线;
-    # 返 [] = 屏幕席真空合法态,零写零台账,守卫双空对拍通过)。
-    monkeypatch.setattr(buy_mod, 'make_seed_screen_bench_read',
-                        lambda ctx, session: (lambda frame: []))
+    # (种子段读链工厂替身已随 T-268 移除:原 T-251 店内读屏重建出口退役,
+    #  未观察态改走「策略关店→备战 heavy 观察」链;本宿主观察态缺省可信,
+    #  CloseShop 替身策略照常走正常关店收工。)
     monkeypatch.setattr(assembly_mod, 'disclose_budget_at_shop_frame',
                         disclose_impl)
     warned: list = []
@@ -197,29 +196,9 @@ class TestBudgetDisclosureWriteRead:
         assert st.v3_reserve_overflow > 0
         assert st.v3_release_budget > 0
 
-    def test_disclosure_fields_non_none_and_match_state(
-            self, monkeypatch: pytest.MonkeyPatch):
-        """预算披露状态面(删除波 1 重写:sess_* 五键的 decisions 行组装
-        写端已随 decisions 流写入端退役,行族归属策略侧决策行接线批):
-        assemble 装配点 + accrue 执行回执后,策略态五字段与预算构式一致
-        且非 None(读链写点两端对齐;T-84 修的读口在本锁钉「有真值可读」)。
-        W6 波 4:键戳轴读 session 容器,装配前先喂入(生产同路 = 观察漏斗)。"""
-        sess = StrategySession()
-        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
-        assemble(_snap(1, 8, 53), sess)
-        accrue_release_spent(_StubMatch(sess), RefreshShop(cost=2), True)
-        st = state_of(sess)
-
-        assert st.v3_disclosure_key == (1, 8)
-        assert st.v3_reserve_overflow is not None
-        assert st.v3_release_budget is not None
-        assert st.v3_release_spent is not None
-        assert st.v3_release_spent >= 2   # RefreshShop(cost=2) 执行回执已计
-        assert st.v3_release_reason is not None
-        # None 语义边界:default 栈帧(无写点)读端保持 None,非 0 假数据
-        assert all(getattr(st, k) is not None for k in (
-            'v3_reserve_cap', 'v3_reserve_overflow', 'v3_release_budget',
-            'v3_release_spent'))
+    # (原 test_disclosure_fields_non_none_and_match_state 删:非 None 面
+    #  弱于主锁值相等;spent/key/reason 三轴分别由 ReleaseSpentAccrual /
+    #  RoundBoundaryReset / refresh_ledger 组辖,子集断言不留。)
 
 
 # ===== 锁 F:店开帧双写(实机锚⑤补遗)=====

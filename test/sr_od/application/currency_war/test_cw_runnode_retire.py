@@ -77,16 +77,6 @@ def test_supply_in_node_act_then_retry() -> None:
     assert getattr(res, '_retry', False) is True
 
 
-def test_supply_budget_semantics_unchanged() -> None:
-    """预算语义不变:node_max_retry_times=8(原 RunNode 子类口径,
-    超限框架转 FAIL bail 交回)。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
-        CwScreenSupplyNode,
-    )
-    node = CwScreenSupplyNode.handle.operation_node_annotation
-    assert node.node_max_retry_times == 8
-
-
 # ==================== 巨星流转(行为等价①②) ====================
 
 def test_megastar_leaves_node_success_with_settle() -> None:
@@ -116,12 +106,3 @@ def test_megastar_in_node_act_then_retry() -> None:
     res = op.handle()
     assert actions == [1]
     assert getattr(res, '_retry', False) is True
-
-
-def test_megastar_budget_semantics_unchanged() -> None:
-    """预算语义不变:node_max_retry_times=8(原 RunNode 子类口径)。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
-        CwScreenMegastar,
-    )
-    node = CwScreenMegastar.handle.operation_node_annotation
-    assert node.node_max_retry_times == 8

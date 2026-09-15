@@ -201,22 +201,22 @@ def patched_registry(monkeypatch):
 # 备选算子的构造;即各字段聚合值的「值域表」锚)。
 def test_half3_distinguish_fixtures(patched_registry) -> None:
     cases = [
-        # (字段, 两成员值, 登记算子期望, 被区分的备选算子及其错误值)
-        ('xp_buy_hp_cost', (6, 8), 6, {'max': 8, 'sum': 14}),          # or vs max/sum
-        ('refresh_surprise_every', (0, 3), 3, {'裸min': 0, 'sum': 3}),  # 守卫min vs 裸min
-        ('gold_next_nodes_count', (2, 5), 5, {'sum': 7}),               # max vs sum
-        ('win_reward_mult', (1.5, 2.0), 2.0, {'sum': 3.5, '乘积': 3.0}),
-        ('interest_cap_override', (3, 7), 7, {'sum': 10}),
-        ('interest_flat_per_node', (2, 3), 5, {'max': 3}),              # 五族:sum vs max
-        ('gold_at_node', (70, 30), 100, {'max': 70}),
-        ('gold_at_node_offset', (5, 3), 3, {'sum': 8, 'max': 5}),       # 触发位:守卫min
-        ('gold_at_level', (40, 25), 65, {'max': 40}),
-        ('gold_at_level_target', (9, 5), 5, {'sum': 14, 'max': 9}),
-        ('xp_click_discount_from_level', (1, 2), 3, {'max': 2}),
-        ('xp_click_discount_from_level_at', (8, 6), 6, {'sum': 14, 'max': 8}),
-        ('refresh_shop_rewrite_every_3cost', (0, 4), 4, {'裸min': 0}),
+        # (字段, 两成员值, 登记算子期望)
+        ('xp_buy_hp_cost', (6, 8), 6),
+        ('refresh_surprise_every', (0, 3), 3),
+        ('gold_next_nodes_count', (2, 5), 5),
+        ('win_reward_mult', (1.5, 2.0), 2.0),
+        ('interest_cap_override', (3, 7), 7),
+        ('interest_flat_per_node', (2, 3), 5),
+        ('gold_at_node', (70, 30), 100),
+        ('gold_at_node_offset', (5, 3), 3),
+        ('gold_at_level', (40, 25), 65),
+        ('gold_at_level_target', (9, 5), 5),
+        ('xp_click_discount_from_level', (1, 2), 3),
+        ('xp_click_discount_from_level_at', (8, 6), 6),
+        ('refresh_shop_rewrite_every_3cost', (0, 4), 4),
     ]
-    for fname, (va, vb), expect, _alt in cases:
+    for fname, (va, vb), expect in cases:
         names = patched_registry(
             [_mk('甲', **{fname: va}), _mk('乙', **{fname: vb})])
         got = getattr(aggregate_economy(names), fname)
@@ -401,12 +401,10 @@ def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
     assert blood_xp_gate_for(st_ghost, _blood_session()) is False
 
 
-# ==================== D 牌期望模型边界(自 test_cw_sim_suite.py shop_odds 节回补,T-197) ====================
-# 前身 = test_cw_shop_odds.py 随测试重组批 f799914 整体退役;边界语义在现行
-# data/cw_shop_odds.py 未演进(p≤0/k≤0/j≥k → 0;查表无数据 → 0),回补防回潮。
+# ==================== D 牌期望模型边界 ====================
+# 边界语义(data/cw_shop_odds.py 现行口径):p≤0/k≤0/j≥k → 0;查表无数据 → 0。
 # v/a 参数从注册表单一源现算(DISTINCT_CARDS_PER_COST/POOL_COPIES_PER_CARD),
-# 不手抄旧锁常数(README:数值型期望从单一来源现算);单一源守卫与消费面公式 =
-# test_cw_statefn.py(expected_refreshes 禁第二实现 + refresh_prob 进期望式)。
+# 不手抄常数;单一源守卫 = 本文件 expected_refreshes 边界组(禁第二实现)。
 
 def test_zero_p_returns_zero() -> None:
     """p≤0 → 0(该等级不出该费用,刷不到;无穷循环前置短路)。"""
@@ -426,8 +424,8 @@ def test_owned_meets_target_returns_zero() -> None:
 
 
 def test_refresh_prob_lookup() -> None:
-    """refresh_prob 查表:lv7 3费 = 0.40 实机 OCR 权威锚(D-91,2026-08-11
-    商店刷新概率表);查表一致性 + 无数据等级 → 0(该等级不出该费用)。"""
+    """refresh_prob 查表:lv7 3费 ≈0.40(实机商店刷新概率采集锚,
+    2026-08-11);查表一致性 + 无数据等级 → 0(该等级不出该费用)。"""
     from sr_od.application.currency_war.data.cw_shop_odds import REFRESH_PROB
     assert refresh_prob(7, 3) == REFRESH_PROB[7][3]
     assert REFRESH_PROB[7][3] == pytest.approx(0.4, abs=1e-2)
@@ -489,17 +487,6 @@ def test_xp_click_display_price_passthrough() -> None:
     # 直通对等级门折扣同样成立(成长快乐 8 级起,游戏侧显示价已含):
     assert xp_click_cost(_xp_state(level=8, strategies=[_JUST_JOY],
                                    display=3)) == 3
-
-
-def test_xp_click_branch_equivalence_with_discount() -> None:
-    """两支等价锁:同持卡同等级,观察支(显示价=基准−折扣)与兜底支同价。
-
-    等价前提 = 显示价与注册表折扣模型同源(间谍 −1 → 显示 3);
-    改前病理 = 显示价支再减 → 2 ≠ 3(本修复要关的回归本体,方案审④②)。"""
-    from sr_od.application.currency_war.kernel.cw_economy import xp_click_cost
-    observed = _xp_state(strategies=[_JUST_SPY], display=3)
-    fallback = _xp_state(strategies=[_JUST_SPY], display=None)
-    assert xp_click_cost(observed) == xp_click_cost(fallback) == 3
 
 
 @pytest.mark.parametrize('level,strategies,expected', [

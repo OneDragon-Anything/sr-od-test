@@ -29,15 +29,15 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
    shop_r1_no_chaseable_member==1 面无本帧族独立覆盖锁,现役近邻 =
    test_cw_no_target_three_arms::test_must_spend_zone_no_refresh_burn
    (必花域空店帧同键断言,p2plus 无目标帧族,非局23 帧型);
-7. committed 翻真谓词 vs 旧 CommitSignals 判定:逐帧对拍锁(P1 段
-   小帧集,分歧仅允许出现在方向层接管区并逐帧定性)。
+7. committed 权威判定直锁(权威序三支 + 缺供给保守 False;原逐帧对拍锁
+   的对拍半边随退役旧判定式删除,现役语义腿重锚为直锁)。
 """
 from __future__ import annotations
 
 from dataclasses import replace
-from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box,
     cw4_bs,
@@ -52,7 +52,6 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY as _REG,
 )
-from sr_od.application.currency_war.kernel.cw_transition import CommitSignals
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
@@ -81,9 +80,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
     line_members,
 )
-
-_SRC = (Path(__file__).parents[5] / 'src' / 'sr_od' / 'application'
-        / 'currency_war')
 
 
 def _snapshot(plane: int = 1, round_num: int = 2) -> Snapshot:
@@ -144,11 +140,8 @@ def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
 
 
 # ----------------------------------------------------- D2 缺供给保守侧
-# (原 test_d2_missing_supply_falls_conservative 删并:缺供给保守侧现由
-#  test_cw_session_separation::test_none_state_criterion_faces_return_
-#  defaults 直锁(committed_authority(None, bare) is False)+ 本文件
-#  对拍锁帧 1-2 承载。原并入目标 test_cw_w620_migration_b1 本体已随
-#  统一迁移批删除,死指针收口重锚。重复构成删并理由(README 纪律 8)。)
+# (保守 False 直锁 = 本文件 test_committed_authority_semantics 的
+#  none/p1_unarmed 两案;原并入目标均已退役或全史不存在,指针已收口。)
 
 
 # ----------------------------------------------------- D3 grep 锁(不恢复)
@@ -344,51 +337,10 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
             assert st.gold == gold0, (gold0, st.gold)
 
 
-# ------------------------------------------- committed 谓词逐帧对拍(P1 附)
-
-# 旧语义复刻的基准常量:生产面 t_of/ready/阈值常量已随旧定型机退役
-# (working tree 在飞批删除),此处按退役前版本原值记录,只辖本对拍
-# 基准,非生产路径。
-_COMMIT_SIGNAL_THRESHOLD: float = 5.0
-_COMMIT_MIN_T: int = 7
-
-
-def _old_t_of(plane: int, round_num: int) -> int:
-    """全局节点序号((plane−1)*9 + round,round 1-9 截断;与 horizon 的 t 同构)。"""
-    return (min(plane, 3) - 1) * 9 + max(1, min(round_num, 9))
-
-
-def _old_ready(sig: CommitSignals, t: int = 0) -> bool:
-    """退役版 ready 判定:领先线信号分 ≥ 阈值 且 t ≥ 轮门。"""
-    if t and t < _COMMIT_MIN_T:
-        return False
-    lead = sig.leader()
-    return lead is not None and lead[1] >= _COMMIT_SIGNAL_THRESHOLD
-
-
-def _old_committed(state, session: StrategySession) -> bool:
-    """旧语义复刻(退役战略层判定式;对拍基准,非生产路径)。
-
-    committed = plane≥2 ∨ (signals.ready ∧ (可切换 ∨ target==领先线));
-    ready/t_of 消费退役前复刻(见上常量注)。链退役批重锚:输入 =
-    容器单例(plane/round 经节点读口)。
-    """
-    _nd = state.node.value
-    _plane = int(_nd.plane) if _nd is not None else 1
-    _round = int(_nd.round_num) if _nd is not None else 1
-    if _plane >= 2:
-        return True
-    sig = getattr(state_of(session), 'commit_signals', None)
-    if sig is None:
-        return False
-    ready = _old_ready(sig, _old_t_of(_plane, _round))
-    lead = sig.leader() if ready else None
-    return bool(ready and lead is not None)
-
+# ------------------------------------------- committed 权威判定直锁
 
 def _bs_state(plane: int, round_num: int):
-    """容器单例构造(链退役批重锚:committed_authority 波5 兼容支退役,
-    对拍帧集换容器节点播种;真值语义 = 节点 plane/round)。"""
+    """容器单例构造(真值语义 = 节点 plane/round)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         GameState,
@@ -402,40 +354,32 @@ def _bs_state(plane: int, round_num: int):
     return bs
 
 
-def test_committed_predicate_frame_by_frame_vs_old():
-    """committed 翻真谓词 vs 旧 CommitSignals 判定:逐帧对拍锁。
+@pytest.mark.parametrize('case', [
+    'none_conservative', 'p1_unarmed_conservative', 'p2_committed',
+    'locked_committed', 'p1_pair_committed'],
+    ids=['none-conservative', 'p1-unarmed-conservative', 'p2-committed',
+         'locked-committed', 'p1-pair-committed'])
+def test_committed_authority_semantics(case: str):
+    """committed 权威判定直锁(方向层单一派生源;原逐帧对拍锁的现役
+    语义腿重锚为直锁,对拍半边随退役旧判定式删除——迁移对照到期纪律)。
 
-    帧集(判前锁):分歧仅允许出现在「方向层接管区」= 新谓词尚保守
-    (ist 未锁)而旧信号已 ready 的窗口;反向分歧(新 True 旧 False)
-    仅允许 plane≥2 帧。任何出区分歧 = 谓词漂移,门红。
-    """
-    frames = []
-    # 帧1-2:P1 前段,信号空、ist 未锁 → 双 False
-    for rnd in (1, 3):
-        frames.append((_bs_state(1, rnd), StrategySession(),
-                       'both_false'))
-    # 帧3:P1 信号 ready(分超阈+过轮门)但 ist 未锁 → 预期分歧(接管区,
-    # 新谓词保守)
-    s3 = StrategySession()
-    state_of(s3).commit_signals = CommitSignals()
-    state_of(s3).commit_signals.scores = {'万敌燃血': 99.0}
-    frames.append((_bs_state(1, 8), s3, 'takeover_zone_only_old'))
-    # 帧4:ist 已锁 → 双 True
-    s4 = StrategySession()
-    state_of(s4).v3_intention = IntentionState(phase='locked', locked_comp='万敌燃血')
-    state_of(s4).commit_signals = CommitSignals()
-    state_of(s4).commit_signals.scores = {'万敌燃血': 99.0}
-    frames.append((_bs_state(1, 8), s4, 'both_true'))
-    # 帧5:P2 → 双 True(语义边界保留)
-    frames.append((_bs_state(2, 1), StrategySession(),
-                   'both_true_p2'))
-    for st, sess, expect in frames:
-        new_v = committed_authority(st, sess)
-        old_v = _old_committed(st, sess)
-        if expect == 'both_false':
-            assert not new_v and not old_v
-        elif expect == 'both_true' or expect == 'both_true_p2':
-            assert new_v and old_v
-        else:   # takeover_zone_only_old:旧翻新未翻 = 接管区唯一合法分歧形
-            _nd = st.node.value
-            assert old_v and not new_v, (_nd.plane, _nd.round_num, new_v, old_v)
+    权威序任一成立即 True:①plane≥2 ②ist.phase=='locked' ③ist.p1_pair
+    非空;缺供给(state/session 缺、未锁线)= 保守 False——True=已定型=
+    激进侧,攒息门/双轨买门全开(供给点清单 D2:拔掉供给探针必须落
+    保守侧)。"""
+    if case == 'none_conservative':
+        assert committed_authority(None, None) is False
+        return
+    if case == 'p1_unarmed_conservative':
+        assert committed_authority(_bs_state(1, 3), StrategySession()) is False
+        return
+    if case == 'p2_committed':
+        assert committed_authority(_bs_state(2, 1), StrategySession()) is True
+        return
+    sess = StrategySession()
+    if case == 'locked_committed':
+        state_of(sess).v3_intention = IntentionState(phase='locked',
+                                                     locked_comp='万敌燃血')
+    else:   # p1_pair_committed
+        state_of(sess).v3_intention = IntentionState(p1_pair=('万敌燃血',))
+    assert committed_authority(_bs_state(1, 8), sess) is True
