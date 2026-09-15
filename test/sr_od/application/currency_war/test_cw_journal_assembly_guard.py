@@ -5,20 +5,25 @@
 1. ``ensure_journal_assembly`` 幂等兜底:未装配 → 按缺省根补装(测试进程
    经 conftest ``_isolate_state_journal`` 重定向 = tmp,证明测试零真实账面
    写入);已装配 → 现役实例原样保留(兜底口不顶掉测试/生产自管装配)。
-2. run 领取单点接线:``ensure_run_started`` 必经兜底口——重置后首领取即
-   装配(生产装配契约 = app 装配段显式 + run 领取兜底,journal.md §7)。
+2. GameState 初始化接线(T-274 用户裁定 2026-09-15:遥测装配 = game state
+   初始化职责;原「run 领取单点接线」锁随分层纠正重定向至此):构造注入
+   ``run_id_provider`` 的容器首建即装配——行为等价锚 = 未初始化容器首写前
+   装配已发生;边界两支 = 缺省构造(sim/测试/一次性视图口径)不装配 +
+   run 领取层(``ensure_run_started``)只铸 run 不辖装配。
 3. 收口落盘:``close_run`` 在批量 flush 阈值之前把缓冲行落盘——批量阈值
    之间收口时档案装配读盘漏局终行的实证形态(g_20260915_070645 档案缺
    ``endgame.match_final``;行随进程终止永失)。
 
 背景实证:2026-09-14 18:56 起 8 连局零 state 行零档案(op 直跑 CwLoop 未经
 app 装配段,sink 缺席行按「诚实缺失」静默不落;深检 run_20260915_054718.md
-§0)。修法正本 = kernel ``ensure_journal_assembly`` docstring。
+§0)。修法正本 = kernel ``ensure_journal_assembly`` docstring +
+``cw_game_state.GameState.__post_init__`` 注释。
 """
 from pathlib import Path
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     ensure_journal_assembly,
     flush_pending,
@@ -64,14 +69,28 @@ def test_ensure_assembly_preserves_armed_instance(tmp_path: Path) -> None:
     assert state_journal_instance() is mine
 
 
-def test_ensure_run_started_wires_assembly_fallback(
-        _reset_run_cluster: None) -> None:
-    """run 领取单点接线:重置后首领取即装配(生产 4 调用点共同必经口)。"""
+def test_game_state_init_wires_assembly() -> None:
+    """GameState 初始化接线:构造注入 run_id_provider 的容器首建即装配
+    (T-274 重定向原「run 领取单点接线」锁;行为等价 = 未初始化容器首写前
+    装配已发生)。"""
     reset_state_telemetry()
     assert state_journal_instance() is None
-    ensure_run_started(match=object(), difficulty='A8')
+    board_state_of(object(), run_id_provider=current_run_id)
     assert state_journal_instance() is not None
-    assert current_run_id() != ''
+
+
+def test_default_birth_and_run_claim_do_not_wire_assembly(
+        _reset_run_cluster: None) -> None:
+    """装配边界两支(T-274 分层归属):缺省构造(sim/测试/一次性视图口径)
+    不装配——装配是显式注入面;run 领取层 ``ensure_run_started`` 只铸 run,
+    不辖装配。"""
+    reset_state_telemetry()
+    assert state_journal_instance() is None
+    board_state_of(object())   # 缺省 provider=None = 不装配
+    assert state_journal_instance() is None
+    ensure_run_started(match=object(), difficulty='A8')
+    assert current_run_id() != ''   # run 领取职责不变(ADR-0588 三分支)
+    assert state_journal_instance() is None   # 领取层不辖装配
 
 
 def test_close_run_flushes_buffered_rows_before_threshold(
