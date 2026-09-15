@@ -9,3 +9,4 @@
 # (cal_pos 真帧测试退役:依赖运行时下载的 YOLO 模型,环境不自足)。
 test_back_to_normal_world_plus.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
 test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
+test/sr_od/application/currency_war/test_cw_dispatch_corpus.py::test_dispatch_corpus_true_direction
