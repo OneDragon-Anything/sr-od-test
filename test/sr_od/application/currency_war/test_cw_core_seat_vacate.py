@@ -376,16 +376,13 @@ class TestRedDetector:
         out = ledger.check_core_ruling_seat_violation(rows)
         assert len(out) == 1 and '静默违' in out[0]
 
-    def test_no_fuel_row_bucket_not_red(self):
-        """新锁⑦b:出口键 = no_fuel(诚实停摆桶)→ 桶非红,零输出。"""
-        rows = [_row({'core_candidate_seen': 1,
-                      'core_unlocked_no_fuel': 1})]
-        assert ledger.check_core_ruling_seat_violation(rows) == []
-
-    def test_buy_hit_row_zero_output(self):
-        """新锁⑦c:出口键 = buy_hit → 零输出。"""
-        rows = [_row({'core_candidate_seen': 1,
-                      'core_unlocked_buy_hit': 1})]
+    @pytest.mark.parametrize('exit_key', [
+        'core_unlocked_no_fuel', 'core_unlocked_buy_hit'],
+        ids=['no-fuel-honest-stall', 'buy-hit'])
+    def test_exit_key_row_bucket_not_red(self, exit_key):
+        """新锁⑦b/c:合法出口键(no_fuel 诚实停摆桶 / buy_hit 买中)→
+        桶非红,零输出。(原两条独立测试同行为变体,参数化合并。)"""
+        rows = [_row({'core_candidate_seen': 1, exit_key: 1})]
         assert ledger.check_core_ruling_seat_violation(rows) == []
 
     def test_counting_form_mixed_frames(self):

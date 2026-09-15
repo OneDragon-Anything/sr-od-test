@@ -229,12 +229,12 @@ class TestExemptionArms:
 class TestClosedSet:
 
     def test_f4_launch_cause_closed_set_account(self):
-        """锁 F4:LAUNCH_CAUSE_BY_ARM 全集对账(现值 15 键)+ 收窄集 ⊆
-        闭集 + 豁免 = 闭集 ∖ S_spec 恰 13 键实名——新买入臂入映射表即
-        红(强制分类进收窄/豁免,防绕辖域前置的第五臂)。"""
+        """锁 F4:收窄集 ⊆ 买因闭集 + 豁免 = 闭集 ∖ S_spec 恰 13 键实名
+        ——新买入臂入映射表即红(强制分类进收窄/豁免,防绕辖域前置的
+        第五臂)。(15 键全集对账正本 =
+        test_cw_sell_window_launch 的 launch_cause_mapping_closed_contract,
+        此处不重复计数断言。)"""
         keys = set(LAUNCH_CAUSE_BY_ARM)
-        assert len(keys) == 15, \
-            f'买因闭集漂移: {len(keys)} 键(预期 15;新臂须同步分类)'
         assert keys >= mandate.PRESS_NARROWED_ARMS, \
             f'收窄集越出闭集: {mandate.PRESS_NARROWED_ARMS - keys}'
         exempt = keys - mandate.PRESS_NARROWED_ARMS
