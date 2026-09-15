@@ -36,8 +36,6 @@ dict,字段面即消费语义,参数化合一会把单侧夹具语义编码进�
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 from test.harness.fixture_controller import (
     enter_running_state,
     fast_sleep,
@@ -88,14 +86,6 @@ def cw4_members(comp) -> list[str]:
     return list(dict.fromkeys(ms))
 
 
-def cw4_km(comp) -> list[str]:
-    """线名册(statefn.predicates.line_members 注册表现读,禁手抄名)。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicates import (
-        line_members,
-    )
-    return list(line_members(comp))
-
-
 def cw4_bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
     """备战席件(slot/char_id/star;faction 走 BenchChar 缺省)。"""
     return BenchChar(slot=slot, char_id=name, star=star)
@@ -137,37 +127,6 @@ def cw4_state(gold: int = 30, shop=None, bench=None, deployed=None,
     if xp is not None:
         st.xp_progress = xp
     return st
-
-
-def battle_state(gold: int, level: int, *, xp: tuple[int, int] = (0, 6),
-                 hp: int = 60, bench: list | None = None,
-                 deployed: list | None = None) -> CwSimFrame:
-    """血线族战斗帧(原 budget_gate/guarantee_floor 同款 ``_state``):
-    开态可读等级、plane=2 battle、level_up_cost=4、refresh_probs={5:0}
-    禁刷新(升级闸判据的隔离帧,刷新通道不得介入)。"""
-    st = CwSimFrame(gold=gold, level=level, round_num=2, hp=hp)
-    st.level_readable = True
-    st.plane = 2
-    st.node_type = 'battle'
-    st.xp_progress = xp
-    st.level_up_cost = 4
-    st.shop = []
-    st.bench = list(bench) if bench is not None else []
-    st.deployed = list(deployed) if deployed is not None else []
-    st.refresh_probs = {5: 0}
-    return st
-
-
-def ns_session(target_comp=None) -> SimpleNamespace:
-    """SimpleNamespace 策略 session 桩(原 budget_gate/guarantee_floor
-    ``_sess`` 同款四键字面;cw4_counters/target_comp 生产读面经
-    state_of 载体对该桩同样生效)。"""
-    from sr_od.application.currency_war.kernel.cw_intention import (
-        IntentionState,
-    )
-    return SimpleNamespace(cw4_counters={}, target_comp=target_comp,
-                           v3_intention=IntentionState(),
-                           active_strategies=[])
 
 
 def cw4_decide(state: CwSimFrame, session, cfg=None, *, registry=None):
@@ -263,74 +222,9 @@ class Area:
         self.is_success = ok
 
 
-def make_prep_round_director(test_context, monkeypatch, scripted_actions,
-                             overlay=None, *, prewarm_state: bool = False,
-                             install_dispatch_ports: bool = True):
-    """备战单轮 op 单测装配(CwScreenPrep 最小桩面;DEBTS.md D22 单一源)。
-
-    镜像关系声明(原 no_progress_guard/stall_cache 两处互指声明归此):
-    本装配同源服务两个写点锁——no_progress_guard 锁
-    ``exec_state_of(session).last_prep_action_sig`` 签名写点、stall_cache
-    锁 ``cw4_frame_action_record`` token 载体写点;两写点同一决策出口,
-    禁删边留角。``prewarm_state=True`` = 预冷建 MandateState 并挂
-    session(token 载体锁的写点消费面需要载体先在;签名写点不需要)。
-
-    桩面 = 决策策略桩(scripted_actions 原样回放)+ 入口浮层清理/
-    收店探针/代收/步记录全 no-op + ``_observe`` 恒空观察(overlay 可注
-    模拟交回环)+ 开店阶段 read_only 短路。(read_bench_full 桩已随通道
-    退役删除——迁移批次二 §3.2.5,墓碑函数无桩面消费。)
-    返回 ``(director, match, session)``;运行外壳
-    (``fast_sleep`` + enter/reset_running_state)留在各锁自持。
-
-    装配点分流(统一观察架构 §9.1 并存期,试点批):缺省(缺省装配,
-    ``install_dispatch_ports=True``)monkeypatch ``cw_game_ports.
-    _INSTALLED`` 装入分流桩端口(teardown 自动复位 = 卸载语义)——使
-    run() 经装配点判据进入五段生命周期新路径,备战行为锁自此锁
-    「op execute() 走新基类」(架构设计 §9.1 主门 a)。``_observe`` 桩
-    使桩端口不被消费(端口方法 = 响错误,静默消费即桩面破缺信号)。
-    ``install_dispatch_ports=False`` = **不装端口(生产缺省形态)**,
-    run() 直连旧路径——并存窗旧路径代表锁专用(架构设计 §9.1 并存期:
-    生产在跑旧路径,零行为锁 = 回归网清零;**退役批随删**,旧路径删除
-    时本形态的消费锁一并退役)。
-    """
-    if install_dispatch_ports:
-        install_dispatch_stub_ports(monkeypatch)
-
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_prep as pd_mod,
-    )
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
-    )
-
-    class _StubStrategy:
-        def decide_prep_screen(self, session, config):
-            return list(scripted_actions)
-
-    d = pd_mod.CwScreenPrep(test_context)
-    session = StrategySession()
-    if prewarm_state:
-        state_of(session)   # 冷建 MandateState 并挂 session(写点消费面)
-    match = SimpleNamespace(strategy=_StubStrategy(), session=session)
-    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
-    monkeypatch.setattr(d, '_clear_entry_overlays', lambda: None)
-    monkeypatch.setattr(d, '_try_collapse_open_shop', lambda: False)
-    monkeypatch.setattr(d, '_takeover_collect_if_needed', lambda m, s: None)
-    monkeypatch.setattr(d, '_record_step', lambda o, a: None)
-
-    class _Obs:
-        event_overlay = overlay
-        state = None
-        bench_chars: list = []
-        deployed_chars: list = []
-        spheres: list = []
-        boxes: list = []
-        deploy_vacancy = 0
-
-    monkeypatch.setattr(d, '_observe', lambda heavy=True, screen=None: _Obs())
-    monkeypatch.setattr(d, '_open_shop_phase',
-                        lambda a, obs: (True, 'read_only 读牌完成'))
-    return d, match, session
+# (原 make_prep_round_director 删:声明消费方 test_cw_gate_hooks 文件已
+#  不存在,全树零消费死代码 ~68 行;备战单轮 op 装配需求出现时按现行
+#  纪律随锁重建。)
 
 
 def cw4_feed(session, frame):

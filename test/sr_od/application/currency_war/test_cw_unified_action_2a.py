@@ -12,7 +12,6 @@ kernel/执行器级用桩宿主,零真实 IO。
 
 from __future__ import annotations
 
-import time
 from types import SimpleNamespace
 
 import numpy as np
@@ -94,9 +93,12 @@ def test_sphere_selection_kernel_orders_big_first_and_caps():
     assert select_sphere_clicks([], 3) == ()
 
 
-def test_sphere_executor_is_mechanical_payload_clicks():
+def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
     """执行器机械半:逐载荷坐标点击,零读屏(读屏选球半随 R4 改形退役,
-    旧形态靠 op.screenshot 选球——零 screenshot 调用即机械化证明)。"""
+    旧形态靠 op.screenshot 选球——零 screenshot 调用即机械化证明)。
+    (monkeypatch time.sleep = 溢出/动画家族固定等待空等,真机等待节奏
+    非本锁辖面。)"""
+    monkeypatch.setattr('time.sleep', lambda _s: None)
 
     controller = _RecordingController()
     screens: list[int] = []
@@ -158,7 +160,9 @@ def test_vocab_actions_all_have_logic_state_projection():
         LuckyTokenUse(row='front', slot=1),
     ]
     names = {c.__name__ for c in CW_ACTION_TYPES}
-    assert 'PickBoxCard' not in names   # R7:词表删除,武装箱选卡归画面 op
+    assert names >= {
+        'ClickSpheres', 'OpenTome', 'SellBench', 'DeployMove',
+        'SellDeployed', 'LevelUp', 'WearEquip'}   # R9 逐动作投影的锚定面
     for action in cases:
         out = CwScreenPrep._project_prep_obs(stub, action, obs)
         assert out is not None, type(action).__name__
@@ -264,8 +268,9 @@ def test_deploy_slot_assignment_matches_kernel_plan():
 
 
 def test_deploymove_logic_state_moves_unit_and_increments_board():
-    """DeployMove 容器逻辑态(§3.1 落码):bench 摘槽 + deployed 落槽 +
-    board 羁绊增量;陈旧提案(源槽空/目标被占)= 零写。"""
+    """DeployMove 容器逻辑态(§3.1 落码):bench 摘槽 + deployed 落槽;
+    陈旧提案(源槽空/目标被占)= 零写。(docstring 收窄:board 羁绊增量
+    面本测未断言,不虚报。)"""
     bs = board_state_of(None)
     bc = BenchChar(slot=3, char_id='甲', star=1)
     slots = [None] * 9
@@ -298,8 +303,9 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
 
 
 def test_selldeployed_logic_state_clears_slot_and_recounts_board():
-    """SellDeployed 容器逻辑态(§3.2 落码):deployed 摘槽 + board 重算;
-    金域零写口径 = gold 未观察时跳写(回金公式单一源 = sell_refund)。"""
+    """SellDeployed 容器逻辑态(§3.2 落码):deployed 摘槽;金域零写口径
+    = gold 未观察时跳写(回金公式单一源 = sell_refund)。(docstring 收窄:
+    board 重算面本测未断言,不虚报。)"""
     bs = board_state_of(None)
     bs.observe(bs.front_row, [Unit(char_id='甲', star=2, equips=[],
                                    slot=1)], evidence='t', sig=_SIG_OBS)
@@ -317,7 +323,9 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
 
 def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
     """WearEquip 零比对出生(裁决 3):单次机械拖拽,拖后零验穿读屏
-    (原 avatar-slot CV-diff 判穿/补救链通道已删);落位真值归观察对账。"""
+    (原 avatar-slot CV-diff 判穿/补救链通道已删);落位真值归观察对账。
+    (monkeypatch time.sleep = 拖后固定等待空等,真机等待节奏非本锁辖面。)"""
+    monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war import prep_actions as pa
     from sr_od.application.currency_war.obs import cw_equipment
     from sr_od.application.currency_war.operations.cw_op import cw_op_equip_all
@@ -345,23 +353,18 @@ def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
                          row='front', slot=1))
     assert len(controller.drags) == 1   # 单次机械拖拽(无补救链重试)
     after_drag = len(screens)
-    time.sleep(0)   # 拖后仅固定等待,零读屏(零比对:无验穿 diff 读帧)
-    assert len(screens) == after_drag
+    assert len(screens) == after_drag   # 拖后零读屏(零比对:无验穿 diff 读帧)
 
 
 # ===== 武装箱专锁(判据 4)=====
 
-def test_pick_box_card_removed_from_vocab_and_specs(monkeypatch):
-    """R7 全链删除:词表无 PickBoxCard(选卡 = 武装箱选择画面 op,选卡即
-    终结);适配器映射表无该行(发射面已不存在);决策面 fail-closed 契约
-    (越界索引上抛,禁无声回落)由画面 op 决策半继承。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        adapter,
-    )
-    assert 'PickBoxCard' not in adapter._OP_SPECS
-    assert not hasattr(adapter, 'PickBoxCard')
-    # 选卡决策 fail-closed 契约(画面 op _decide_card_index 决策半,原位
-    # 消费策略契约;局部 fake 策略越界 → 上抛)
+# (原 test_pick_box_card_removed_from_vocab_and_specs 的词表/映射表墓碑
+#  两腿删:退役符号墓碑 = 源码扫描族,禁止清单无例外;fail-closed 决策
+#  契约行为半保留独立成锁。)
+
+def test_pick_box_decision_fail_closed():
+    """武装箱选卡决策 fail-closed 契约(画面 op _decide_card_index 决策
+    半,原位消费策略契约;局部 fake 策略越界 → 上抛,禁无声回落)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_box_pick as bp,
     )

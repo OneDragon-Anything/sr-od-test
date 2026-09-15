@@ -245,7 +245,6 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
     )
     uninstall_ports(monkeypatch)   # 生产缺省形态(旧路径直连)
     op = mod.CwScreenExpertInvite(test_context)
-    assert not hasattr(op, 'open_card')
     monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
     monkeypatch.setattr(op, 'screenshot', lambda: object(), raising=False)
     monkeypatch.setattr(op, 'round_by_find_area',

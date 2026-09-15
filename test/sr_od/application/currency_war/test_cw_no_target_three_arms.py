@@ -13,10 +13,8 @@
 """
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _kbridge,
 )
@@ -91,7 +89,9 @@ def _state(gold: int = 45, level: int = 5, hp: int = 60,
     return st
 
 
-def _card(name: str, cost: int = 3, star: int = 1, x: int = 100) -> ShopCard:
+def _card(name: str, cost: int = 3, star: int = 1, x: int = 0) -> ShopCard:
+    """x = 店面物理槽下标(0 基;三态定长五槽合成口按 x 对槽,越界丢弃——
+    旧画面坐标桩值 x=100 语义已退役,误用会把店面清成 5 空槽)。"""
     return ShopCard(x=x, name=name, cost=cost, star=star)
 
 
@@ -128,22 +128,9 @@ class TestArmAStrongGate:
         st.bench = _own(*comp.core_chars)
         ist = IntentionState()
         assert arm_a_live_direction(_kbridge(st), ist) == '希儿量子'
-        # 独立重算(锁 2 的同源对拍;与意向层移交候选同一谓词链)
-        vis = cw_intention._visible_chars(_kbridge(st))
-        reg = DEFAULT_REGISTRY
-        cands = [c for c in cw_intention._v2_comps()
-                 if c.name not in ist.evicted
-                 and st.plane not in (c.weak_planes or ())
-                 and cw_intention._core_reachable(c, _kbridge(st), vis)
-                 and (st.plane != 2
-                      or line_completion_feasibility(_kbridge(st), c, None, reg, vis)
-                      > reg.revoke_miss_tolerance_eps)]
-        best = sorted(cands,
-                      key=lambda c: (-cw_intention._asset_thickness(c, _kbridge(st)),
-                                     cw_intention.encounter_window_rounds(
-                                         cw_intention.intention_core(c),
-                                         st.level)))[0]
-        assert best.name == '希儿量子'
+        # (原「独立重算对拍」段删:按 cw_intention 内部谓词链重算候选集再
+        #  断言同名 = 复刻被测逻辑形态,删被测函数该段照样绿;强锁门行为
+        #  面由上断言与 fallback 两腿承重。)
         kfb, tok = k_empty_window_fallback(_kbridge(st), ist)
         assert tok == 'p2plus'
         chars, _eq = cw_intention._line_hoard(comp)
@@ -218,38 +205,10 @@ class TestArmAStrongGate:
 
 class TestHubEligibility:
 
-    def test_eligibility_input_face_static(self):
-        """增量 2(证明批 §6;定理 B2 实现守卫):乙臂资格核源码扫描——
-        输入面只含 (COMP_LIBRARY, evicted, weak_planes,
-        CORE_SINGLE_CARD_REGISTRY);G/_core_reachable/p2_supply_horizon/
-        promote_candidates 出现即红。扫描 = AST 标识符级(docstring/注释
-        的「禁入」声明不构成消费,不误伤);变异自检 = 同一扫描器对甲臂
-        函数命中合法 banned 符号(防恒绿)。"""
-        import ast
-        src = Path(cw_intention.__file__).read_text(encoding='utf-8')
-        tree = ast.parse(src)
+    # (原 test_eligibility_input_face_static 删:AST 标识符负检 = 源码扫描
+    #  形态,禁止清单无例外——「定理 B2 输入面解耦」防线归 review 与代码
+    #  规范;资格核的行为面由本类其余真值表锁承重。)
 
-        def identifiers_of(fn_name: str) -> set[str]:
-            node = next(n for n in tree.body
-                        if isinstance(n, ast.FunctionDef) and n.name == fn_name)
-            return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
-
-        for fn in ('hub_option_names', 'structural_candidate_lines',
-                   'hub_covered_lines'):
-            ids = identifiers_of(fn)
-            for banned in ('line_completion_feasibility', '_core_reachable',
-                           'p2_supply_horizon', 'promote_candidates',
-                           'e_rounds'):
-                assert banned not in ids, \
-                    f'{fn} 输入面混入 {banned}(定理 B2 解耦被破坏)'
-        # 变异自检:同一扫描器对甲臂函数命中 banned 符号(扫描器有效)
-        assert 'line_completion_feasibility' in identifiers_of(
-            'arm_a_live_direction')
-        # F-4(F11 落位):甲臂禁消费 promote_candidates(G8 观测载体,
-        # 码内明文禁入任何行为消费点)——同扫描器负检。
-        assert 'promote_candidates' not in identifiers_of(
-            'arm_a_live_direction')
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_yinlang_counter_example_and_dual_channel_mutex(self):
         """增量 3(证明批 §6;定理 B5 测试化):银狼LV.999 覆盖数 = 2 而系
         注册单卡依赖核心 ⇒ 乙臂不发射、规则③通道发射,双通道互斥。"""
@@ -283,7 +242,6 @@ class TestHubEligibility:
 
 
 class TestHubEmission:
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_hub_fires_on_arm_dead_frame(self):
         """锁 3(正本 §5.2)F2 测试化:甲臂空集帧乙臂**照常评估**并发射
         (病灶帧正是 D3 要接枢纽期权的帧,出手机会不可丢);发射 = 五前件
@@ -296,7 +254,6 @@ class TestHubEmission:
         assert ct.get('hub_option_buy_hit') == 1
         assert ct.get('hub_option_candidate_seen') == 1
         assert ct.get('shop_no_target_arm_a_dead_defer') == 1
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_reject_family_truthful(self):
         """锁 3 拒因归真:任一合取项缺席帧按缺席项分键,非静默。
         素材(场内已有同名同星 1★,bench 与部署面两形态)/席位/息/金
@@ -341,7 +298,6 @@ class TestHubEmission:
         assert not isinstance(act5, BuyCard)
         assert _ct(sess5).get('hub_option_reject_interest') == 1
         assert _ct(sess5).get('hub_option_reject_unaffordable') is None
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_merge_frozen_state_telemetry_discernible(self):
         """F-5(落地审;增量 8 后半,B4 闭集 3/P75 (vi) 同款):已持枢纽帧
         外部通道到达同名副本后合并冻结态可辨——素材对在场 = 滞留显影键
@@ -360,7 +316,6 @@ class TestHubEmission:
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
         assert _ct(sess).get('hub_option_reject_merge_material') == 1
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_hub_hold_registration_and_sell_protection(self):
         """攻击 r1 发现1(高)三面收口锁:TRANSITION_PACK 之外枢纽
         (瓦尔特,cw_line_facts:75-76 移出记录实证)——面① hold 登记资格
@@ -419,12 +374,11 @@ class TestHubEmission:
         act = _decide(st, sess)
         assert not isinstance(act, BuyCard)
         assert 'hub_option_candidate_seen' not in _ct(sess)
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_hub_reject_reason_key_not_non_line(self):
         """§4.4 行 3(non_line 拒因锁重推):空窗帧枢纽资格件在售未买帧
         拒因 = hub_option(显式),不再落 non_line。"""
         st = _state(gold=1, shop_cards=[_card('花火', cost=2),
-                                        _card('注册表外散件Z', cost=1)])
+                                        _card('注册表外散件Z', cost=1, x=1)])
         sess = _session(IntentionState())
         _decide(st, sess)
         rejects = getattr(state_of(sess), 'cw4_shop_rejects', {})
@@ -446,7 +400,6 @@ class TestArbitration:
         st.bench = _own(*comp.core_chars)
         assert arm_a_live_direction(_kbridge(st), IntentionState()) == comp_name
         return st
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_layer1_covering_hub_beats_single_line_piece(self, monkeypatch):
         """增量 1(证明批 §6;§4.4 第一层支配序,推论 B1.1):同帧同店面给
         甲方向的单线方向件(布洛妮娅,C_x={希儿量子} 运行时直调核)与覆盖
@@ -454,7 +407,7 @@ class TestArbitration:
         把件声明序钉到枢纽之前(自然序 20<21 两序同向不判)——层序失效
         降第三层时件将首发 → 本测红。"""
         st = self._arm_live_frame([_card('知更鸟', cost=4),
-                                   _card('布洛妮娅', cost=2)])
+                                   _card('布洛妮娅', cost=2, x=1)])
         monkeypatch.setattr(
             cw_intention, 'char_declaration_index',
             lambda n: 0 if n == '布洛妮娅' else 99 if n == '知更鸟'
@@ -464,7 +417,6 @@ class TestArbitration:
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '知更鸟'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_layer3_multi_line_piece_first_by_decl_order(self, monkeypatch):
         """增量 1 第三层:多线方向件对枢纽竞争按注册表声明序首发。
         构帧 = 甲臂判活(绯英欢愉全核在手)∧ 店面 [花火/瓦尔特(覆盖枢纽),
@@ -474,7 +426,7 @@ class TestArbitration:
         全部枢纽让位、义务通道首发 m2_line_member。判据力:若实现按覆盖
         数降序或店面序,枢纽将越过件发射 → 本测红。"""
         st = self._arm_live_frame([_card('花火', cost=2),
-                                   _card('银狼LV.999', cost=5)],
+                                   _card('银狼LV.999', cost=5, x=1)],
                                   comp_name='绯英欢愉')
         natural = char_declaration_index('银狼LV.999')
         monkeypatch.setattr(
@@ -486,35 +438,32 @@ class TestArbitration:
         assert isinstance(act, BuyCard)
         assert act.reason == 'm2_line_member' and act.card.name == '银狼LV.999'
         assert _ct(sess).get('hub_option_arbitration_yield') >= 1
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_layer3_hub_earlier_decl_fires_over_multi_line_piece(self):
         """增量 1 第三层(自然序):枢纽声明序(花火 2)早于多线方向件
         (银狼LV.999,34,非枢纽候选)⇒ 枢纽首发。构帧注:覆盖枢纽取
         花火(非该线核心,不在 bench——核心枢纽在全核在手构帧下被非合并
         素材前件拦,无法作发射观察位)。"""
         st = self._arm_live_frame([_card('花火', cost=2),
-                                   _card('银狼LV.999', cost=5)],
+                                   _card('银狼LV.999', cost=5, x=1)],
                                   comp_name='绯英欢愉')
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '花火'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_emission_order_independent_of_shop_order(self):
         """增量 1(乱序注入店面两帧发射一致):店面槽位序翻转不改变仲裁
         产物(发射序消费判据序,禁实现遍历顺序)。"""
         acts = []
-        for order in ([_card('知更鸟', cost=4), _card('布洛妮娅', cost=2)],
-                      [_card('布洛妮娅', cost=2, x=200),
-                       _card('知更鸟', cost=4, x=201)]):
+        for order in ([_card('知更鸟', cost=4), _card('布洛妮娅', cost=2, x=1)],
+                      [_card('布洛妮娅', cost=2),
+                       _card('知更鸟', cost=4, x=1)]):
             st = self._arm_live_frame(list(order))
             sess = _session(IntentionState())
             acts.append(_decide(st, sess))
         names = [(a.card.name, a.reason)
                  for a in acts if isinstance(a, BuyCard)]
         assert len(names) == 2 and names[0] == names[1]
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_f1_unaffordable_piece_loses_preemption(self):
         """F-1(落地审;证明批 §4.4 先决澄清+附带条款①):甲臂判活帧上,
         更早声明的**不可负担**方向件不获挤占权——枢纽不因其在售而让位,
@@ -523,19 +472,18 @@ class TestArbitration:
         瓦尔特(方向件,decl 3,cost 99 不可负担)],修复前该件仍触发让位
         → 枢纽发射机会丢失 → 本测红。"""
         st = self._arm_live_frame([_card('知更鸟', cost=4),
-                                   _card('瓦尔特', cost=99)])
+                                   _card('瓦尔特', cost=99, x=1)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
         assert act.card.name == '知更鸟'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_coverage_count_descending_not_used(self):
         """§4.4 显式否决记录的测试化:互不覆盖双枢纽竞争按注册表声明序
         (三月七 decl=1 cov=2)而非覆盖数降序(花火 decl=2 cov=6)——
         若实现以覆盖数排序,本测红。"""
-        st = _state(shop_cards=[_card('花火', cost=2, x=100),
-                                _card('三月七', cost=1, x=101)])
+        st = _state(shop_cards=[_card('花火', cost=2),
+                                _card('三月七', cost=1, x=1)])
         ist = IntentionState()
         assert char_declaration_index('三月七') < char_declaration_index('花火')
         assert len(hub_covered_lines(_kbridge(st), ist, '三月七')) \
@@ -605,7 +553,6 @@ class TestArmCHoldDefault:
 
 
 class TestKMembersDownstream:
-    @pytest.mark.skip(reason="T-252 恢复分诊批2b 重裁:本锁红因 = T-243 死库存拒因/计数接线面(词表归一面批2b 已清偿——本文件席位域字段/发射面断言全绿,缺席者为拒因/计数键),非批2b 面;随 T-253 交付重分诊摘除(禁永久挂起)")
     def test_arm_a_members_reach_m2_and_rejects(self):
         """锁 6(正本 §5.2;§4.6 换源申报):甲臂判活帧 k_members 整体 =
         甲臂方向采购集——M2 义务买甲臂缺员成员(m2_line_member 买因);
@@ -616,7 +563,7 @@ class TestKMembersDownstream:
         missing_piece = sorted(m for m in chars
                                if m not in comp.core_chars)[0]
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1),
-                                        _card('注册表外散件Z', cost=1)])
+                                        _card('注册表外散件Z', cost=1, x=1)])
         st.bench = _own(*comp.core_chars)
         st.deployed = [_bc('板上件锚', slot=1)]   # T-32 守卫非空板前置
         sess = _session(IntentionState())
@@ -644,44 +591,10 @@ class TestKMembersDownstream:
 
 class TestRetirementFaces:
 
-    def test_face123_constant_absent_from_src(self):
-        """四面退役完整性(正本 §4.2;墓碑注留注不留码):FALLBACK_COMP_NAME
-        在 src 的 currency_war 子树零**代码级**符号(AST Name/Attribute
-        标识符扫描——墓碑注/退役注是注释与 docstring 文本,不构成代码
-        引用,不误伤)。带变异自检(扫描器对注入代码形态能命中)。"""
-        import ast
-        root = Path(cw_intention.__file__).parents[1]
-        hits: list[str] = []
-        for py in root.rglob('*.py'):
-            text = py.read_text(encoding='utf-8', errors='replace')
-            if 'FALLBACK_COMP_NAME' not in text:
-                continue   # 预滤:AST 标识符命中必含裸串,免全树逐文件解析(纪律 15)
-            try:
-                tree = ast.parse(text)
-            except SyntaxError:
-                continue
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Name) and node.id == 'FALLBACK_COMP_NAME':
-                    hits.append(f'{py}:{node.lineno}')
-                if (isinstance(node, ast.Attribute)
-                        and node.attr == 'FALLBACK_COMP_NAME'):
-                    hits.append(f'{py}:{node.lineno}')
-        assert not hits, f'FALLBACK_COMP_NAME 代码引用残留: {hits}'
-        # 变异自检:同一扫描器对代码形态能命中
-        probe = ast.parse('x = FALLBACK_COMP_NAME\ny = m.FALLBACK_COMP_NAME')
-        found = [n for n in ast.walk(probe)
-                 if (isinstance(n, ast.Name) and n.id == 'FALLBACK_COMP_NAME')
-                 or (isinstance(n, ast.Attribute)
-                     and n.attr == 'FALLBACK_COMP_NAME')]
-        assert len(found) == 2
-
-    def test_face4_direction_view_field_removed(self):
-        """④面:DirectionView.fallback_comp 投影字段整体删除(单一写端、
-        grep 无读端准死字段);契约注记 = 模块 docstring 退役注。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.turn_state import (
-            DirectionView,
-        )
-        assert 'fallback_comp' not in DirectionView.__dataclass_fields__
+    # (原 test_face123_constant_absent_from_src 删:rglob+AST 扫退役常量
+    #  = 源码扫描/退役墓碑形态,禁止清单无例外;原
+    #  test_face4_direction_view_field_removed 同判删(字段缺席断言 =
+    #  墓碑变体,数据类字段归 review 与代码规范)。)
 
     def test_face3_p1_gate_dead_branch_assertion(self):
         """③面(正本 §4.2 行 ③;删前死分支断言的测试化):恒 no-op 支
@@ -745,19 +658,5 @@ class TestArmACorner:
 
 # ===== 证明批 §6 增量 5:契约面单一源守卫 ============================
 # 增量 5 读端格(p2plus 合法空 + 三臂来源证据放行 / 无来源计违例 / p1 带
-# 空集违例)= test_cw_contracts.test_k_projection_domain_covered_
-# derivable ⑤⑥(2026-09-09 瘦身批逐格亲读等价;p1_gap 显式带格与该测④
-# 同判违支,差异落在无判别力分支)——单一承载于契约主题位,此处不重复。
-
-
-class TestContractSourceToken:
-
-    def test_source_token_single_source(self):
-        """来源证据 token 单一源:契约面消费与 kernel 产出同值(禁第二
-        字面量)。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-            contracts,
-        )
-        src = Path(contracts.__file__).read_text(encoding='utf-8')
-        assert src.count("'three_arm'") == 0, \
-            '契约面不得内联 source 字面量(单一源 = K_FALLBACK_SOURCE_THREE_ARM)'
+# 空集违例)现无承载——原注释声称由 test_cw_contracts 承载,该文件全史
+# 不存在(幽灵指针,2026-09-15 复核);覆盖缺口已申报,不得当作已辖。

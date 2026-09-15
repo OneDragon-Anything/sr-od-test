@@ -115,7 +115,9 @@ def _assert_domains_equal(bs, sim):
 class TestM5Registration:
 
     def test_projection_domain_set_closed(self):
-        """直写域集封闭八域(禁扩静默,登记面即锁)。
+        """直写域集封闭八域(禁扩静默,登记面即锁);消费面 = 本类 M1
+        逐域等价断言的覆盖清单申报——新增域必须同步进 _assert_domains_equal
+        的比对轴,否则等价锁对该域失明。
         (T-252 改写依据:域集随 v2 动作族扩容——front_row/back_row/board/
         equips 四域入集,扩面依据 = cw_game_state.SHOP_PROJECTION_DOMAINS
         声明段「裁定 A:单一转移函数,域覆盖对齐 simulate 分支字段转移
@@ -126,7 +128,8 @@ class TestM5Registration:
 
     def test_executed_receipt_field_set(self):
         """executed 回执字段集登记(bought_count/levelup_clicks/
-        refresh_paid;缺字段 None = 该动作不投影)。"""
+        refresh_paid;缺字段 None = 该动作不投影)。消费面 = M1 各案按
+        字段名取值对拍,字段集漂移 = 出参契约漂移(跨批消费者按名解析)。"""
         assert [f.name for f in dataclasses.fields(ShopActionExecuted)] \
             == ['bought_count', 'levelup_clicks', 'refresh_paid']
         assert ShopActionExecuted().bought_count is None
@@ -364,22 +367,9 @@ class TestM1Equivalence:
         assert st.gold == simulate(st, BuyCard(card=_card('姬子', cost=3))
                                    ).gold   # simulate 同 no-op
 
-    def test_legacy_conversion_roundtrip_view(self):
-        """消费视图边界:容器牌 → 旧牌列表(shop_cards_to_legacy)五记录
-        字段透传,x/merge_preview 不随行(禁旧牌面兜底的成本源折叠)。
-        (T-252 改写依据:三态定长五槽模型(用户三态裁定 2026-09-13)后,
-        payload → 旧牌入参 = content 紧缩视图单一源
-        shop_payload_content_cards,消费点兼容读语义。)"""
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            shop_payload_content_cards,
-        )
-        st = _state(gold=30, shop=[_card('希儿', cost=3)])
-        bs = _bs_of(st)
-        legacy = shop_cards_to_legacy(
-            shop_payload_content_cards(bs.shop.value))
-        assert len(legacy) == 1
-        assert legacy[0].name == '希儿'
-        assert legacy[0].x == 0   # 坐标不入存储(§2.5-5)
+    # (原 test_legacy_conversion_roundtrip_view 删:转换透传面已被
+    #  test_cw_game_state.py 的 shop_card_mapping 往返锁完整辖住(x 对齐/
+    #  记录字段透传),本测为同函数低强度复述,子集断言不留。)
 
 
 def test_shop_entry_funnel_bench_survives_synthesis() -> None:
