@@ -491,27 +491,33 @@ def fast_sleep(op: object | None = None) -> Iterator[list[float]]:
     import one_dragon.base.operation.operation as operation_module
 
     skipped: list[float] = []
-    real_time: ModuleType = operation_module.time
-    operation_module.time = _NoSleepTimeProxy(real_time, skipped)  # type: ignore[assignment]
 
-    # op 类族各模块的裸 time 引用一并桩掉(按 MRO 去重;原值记录,退出时逆序还原)。
-    saved: list[tuple[ModuleType, ModuleType]] = []
+    # 单一 saved 表统一管理:基座模块与 op 类族模块同表登记、逆序还原。
+    # ⚠️ 基座模块只还原一次——此前版本「基座 finally 还原真 time 后,saved
+    # 表又把基座的一级代理盖回去」,导致 operation.time 永久滞留死上下文
+    # 代理,后续流程测试的等待记录全部丢失(2026-09-15 实证:enter_game
+    # 两条跑完后 back_to_normal 看门狗断言「带 wait 的轮次(0)」假红)。
+    saved: list[tuple[ModuleType, ModuleType]] = [
+        (operation_module, operation_module.time),  # type: ignore[arg-type]
+    ]
+    operation_module.time = _NoSleepTimeProxy(saved[0][1], skipped)  # type: ignore[assignment]
+
+    # op 类族其余模块的裸 time 引用一并桩掉(按 MRO 去重;基座已登记故跳过)。
+    seen: set[int] = {id(operation_module)}
     if op is not None:
-        seen: set[int] = set()
         for klass in type(op).__mro__:
             mod_name = getattr(klass, '__module__', None)
             if mod_name is None or id(mod_name) in seen:
                 continue
             seen.add(id(mod_name))
             mod = sys.modules.get(mod_name)
-            if mod is not None and hasattr(mod, 'time'):
+            if mod is not None and hasattr(mod, 'time') and mod is not saved[0][0]:
                 saved.append((mod, mod.time))  # type: ignore[arg-type]
                 mod.time = _NoSleepTimeProxy(mod.time, skipped)  # type: ignore[assignment]
 
     try:
         yield skipped
     finally:
-        operation_module.time = real_time  # type: ignore[assignment]
         for mod, orig_time in reversed(saved):
             mod.time = orig_time  # type: ignore[assignment]
 

@@ -18,6 +18,7 @@ run 26 实证背景:.log/mcp_server.log 08-26 12:56:12「已停止[gui:hotkey]�
 ADR-0406 实证背景(A1b):stop_run 返回≠run 线程结束,MCP 手动端点在
 run 收口期清全局闩 → unwind 中的多动作节点失去守卫成幽灵输入。
 """
+import contextlib
 import threading
 from unittest.mock import MagicMock
 
@@ -202,10 +203,8 @@ def test_exemption_is_thread_local():
     def _run_thread_input():
         # 模拟 unwind 中的 run 线程:无豁免,闩置位 → 被拦(异常就地吞,
         # 落地与否由 actions 断言)
-        try:
+        with contextlib.suppress(StopRunInterrupted):
             c.click(Point(1, 1))
-        except StopRunInterrupted:
-            pass
 
     with stop_guard_exemption():
         assert c.click(Point(100, 100)) is True  # 手动线程放行

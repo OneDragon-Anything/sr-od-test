@@ -31,7 +31,7 @@ def test_dialog_branch_confirms_and_waits() -> None:
     click_result.is_success = True
     with patch.object(op, 'round_by_find_area', return_value=MagicMock(is_success=True)) as find_area, \
          patch.object(op, 'round_by_find_and_click_area', return_value=click_result) as click_area, \
-         patch.object(op, 'round_wait', return_value='WAIT') as round_wait:
+         patch.object(op, 'round_wait', return_value='WAIT'):
         result = op.enter_fight()
     assert result == 'WAIT'
     find_area.assert_called_once()

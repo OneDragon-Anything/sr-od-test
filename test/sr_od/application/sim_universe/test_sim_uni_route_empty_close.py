@@ -45,7 +45,7 @@ def test_no_dialog_falls_through_to_turn() -> None:
     op = _make_op()
     with patch.object(op, 'round_by_find_area', return_value=MagicMock(is_success=False)) as find_area, \
          patch.object(op, 'round_by_click_area') as click_area, \
-         patch.object(op, 'round_success', return_value='OK') as round_success, \
+         patch.object(op, 'round_success', return_value='OK'), \
          patch('sr_od.application.sim_universe.operations.move_v2.sim_uni_run_route_base_v2.time') as _time:
         result = op.turn_when_nothing()
     assert result == 'OK'
