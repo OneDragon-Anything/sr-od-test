@@ -4,17 +4,38 @@
 2026-09-15-sim-redesign/design.md`` §2.5;锁面 = reset 开局真值与
 相位路由/环境屏门控/PREP 动作经单一转移函数/节点结算推进序(收入/
 商店/offer 日程/选卡族/补给/遭遇/奖励球)/局终三通道(P2 走完/
-p3_unobserved)/simulate_run 薄包装。
+p3_unobserved)/simulate_run 薄包装;r3 返工增锁 = M10 装备四路
+PREP 分派接线 + U24 披露三键并表 + M21 planner 触发正典
+(planner_overlay_due + 全域扫描 + SILVER_WOLF_ID)。
 """
 from __future__ import annotations
 
 import pytest
 
+from sr_od.application.currency_war.data.cw_equipment_data import (
+    EQUIPMENTS,
+    get_equip,
+)
+from sr_od.application.currency_war.data.cw_synthesis import CROSS_RECIPES
+from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    ChannelSig,
+    ShopCard,
+    ShopPayload,
+    ShopSlot,
+    Unit,
+    bench_view_of_slots,
+    register_sig_actors,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BuyCard,
+    FurnaceUse,
     OpenBox,
     PickEvent,
+    PrecisionWrenchUse,
     StartBattle,
+    WearEquip,
+    WrenchUse,
 )
 from sr_od.application.currency_war.sim.cw_sim_engine import (
     DISCLOSURE_P3_UNOBSERVED,
@@ -23,8 +44,18 @@ from sr_od.application.currency_war.sim.cw_sim_engine import (
     RunResult,
     simulate_run,
 )
+from sr_od.application.currency_war.sim.cw_sim_equips import (
+    FURNACE_CHAR_MODE_PENDING,
+    TOOL_EFFECTS_PENDING,
+    UNMODELED_GRANTS,
+)
 from sr_od.application.currency_war.sim.cw_sim_phase import CwSimPhase
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
+from sr_od.application.currency_war.sim.cw_sim_special import SILVER_WOLF_ID
+
+register_sig_actors('TestSigWriter')
+
+_SIG = ChannelSig(family='obs', actor='TestSigWriter')
 
 _CFG = RunConfig(selected_difficulty='A8', enemy_difficulty=108)
 
@@ -125,6 +156,121 @@ def test_open_box_leads_to_box_pick() -> None:
     ret2 = eng.step(PickEvent(option_idx=0))
     assert ret2.observation.phase is CwSimPhase.PREP
     assert len(ret2.observation.bs.equips.value) == 1
+
+
+# ================================================== M10 四路接线(r3)
+
+def _advance_pair() -> tuple[str, str, str]:
+    """取一对真配方(组件A, 组件B, 进阶产物)(注册表单一源取用)。"""
+    advance, (a, b) = next(iter(CROSS_RECIPES.items()))
+    return a, b, advance
+
+
+def test_disclosure_three_keys_merged_into_result() -> None:
+    """U24/M10 披露三键并表(unmodeled_grants/tool_effects/furnace_char)
+    进观测帧与局结果披露集——「发放空表随局披露」名实相符。"""
+    frame = CwSimEngine().reset(7, _CFG)
+    assert {UNMODELED_GRANTS, TOOL_EFFECTS_PENDING,
+            FURNACE_CHAR_MODE_PENDING} <= set(frame.disclosures)
+    result = _drive(CwSimEngine(), 61)
+    assert {UNMODELED_GRANTS, TOOL_EFFECTS_PENDING,
+            FURNACE_CHAR_MODE_PENDING} <= set(result.unmodeled)
+
+
+def test_prep_wear_equip_routes_to_sim_leg() -> None:
+    """M10 接线:PREP 的 WearEquip 经 cw_sim_equips 腿(穿着即合成),
+    不再落 kernel 商店转移口 unsupported_action_type 零写拒;owned 无
+    该件 = 腿拒回声(applied=False)。"""
+    a, b, advance = _advance_pair()
+    eng = CwSimEngine()
+    bs = eng.reset(7, _CFG).bs
+    slots: list[BenchChar | None] = [None] * 9
+    slots[0] = BenchChar(slot=1, char_id='淘金客', faction='散', star=1,
+                         equips=[a])
+    bs.observe(bs.bench, bench_view_of_slots(slots), sig=_SIG)
+    bs.observe(bs.equips, [b], sig=_SIG)
+    ret = eng.step(WearEquip(item_name=b, char_name='淘金客',
+                             row='front', slot=1))
+    assert ret.outcome is not None and ret.outcome.applied, '腿生效(旧=零写拒)'
+    worn = [list(s.unit.equips) for s in bs.bench.value.slots
+            if s is not None and s.kind == 'unit' and s.unit is not None]
+    assert worn == [[advance]], f'穿着即合成:{a}+{b} → {advance}'
+    assert bs.equips.value == [], '库存件已穿上'
+    ret_rej = eng.step(WearEquip(item_name='不在库的装备', char_name='淘金客',
+                                 row='front', slot=1))
+    assert not ret_rej.outcome.applied and ret_rej.outcome.reason
+
+
+def test_prep_wrench_routes_unequip_and_consume() -> None:
+    """M10 接线:扳手 = 取下回区 + 工具消耗;精密扳手 = 同取下不消耗。"""
+    a, _b, _adv = _advance_pair()
+    eng = CwSimEngine()
+    bs = eng.reset(7, _CFG).bs
+    bs.observe(bs.front_row,
+               [Unit(char_id='淘金客', star=1, equips=[a])], sig=_SIG)
+    bs.observe(bs.equips, ['拆装扳手', '精密拆装扳手'], sig=_SIG)
+    ret = eng.step(WrenchUse(row='front', slot=1))
+    assert ret.outcome is not None and ret.outcome.applied
+    assert bs.front_row.value[0].equips == [], '穿戴回区'
+    assert bs.equips.value == ['精密拆装扳手', a], '扳手消耗 + 装备入库'
+    ret2 = eng.step(PrecisionWrenchUse(row='front', slot=1))
+    assert ret2.outcome is not None and ret2.outcome.applied
+    assert '精密拆装扳手' in bs.equips.value, '精密扳手不消耗'
+
+
+def test_prep_furnace_routes_by_target_kind() -> None:
+    """冶金炉双模式接线:equip 模式 = 同类型重掷生效(M10/炉 流引擎
+    装配);char 模式首版不建模 = 显式拒 + 披露键在册。"""
+    simple = sorted(n for n, e in EQUIPMENTS.items()
+                    if e.category == '简易')
+    src = simple[0]
+    eng = CwSimEngine()
+    bs = eng.reset(7, _CFG).bs
+    bs.observe(bs.equips, [src], sig=_SIG)
+    ret = eng.step(FurnaceUse(target_kind='equip', item_name=src))
+    assert ret.outcome is not None and ret.outcome.applied
+    new_name = bs.equips.value[0]
+    assert new_name != src and get_equip(new_name).category == '简易', \
+        '同类型(同 category)重掷'
+    ret2 = eng.step(FurnaceUse(target_kind='char', row='front', slot=1))
+    assert ret2.outcome is not None and not ret2.outcome.applied, \
+        '拖角色模式未建模显式拒'
+    assert bs.equips.value == [new_name], '拒 = 零写'
+    assert FURNACE_CHAR_MODE_PENDING in ret2.observation.disclosures
+
+
+def test_planner_trigger_fires_on_deployed_merge() -> None:
+    """M21 触发正典:判据 = planner_overlay_due(动作前后全域银狼最高
+    星级快照);kernel 合成产物落点 = 场上同名位(M07)→ 产物落部署位
+    也必触发(旧「仅扫备战席 star≥2」近似在此漏触发);银狼身份单一源
+    = SILVER_WOLF_ID。overlay 呈现于下一结算收尾(M22 队列序)。"""
+    eng = CwSimEngine()
+    bs = eng.reset(7, _CFG).bs
+    slots: list[BenchChar | None] = [None] * 9
+    slots[0] = BenchChar(slot=1, char_id=SILVER_WOLF_ID, faction='?',
+                         star=1)
+    bs.observe(bs.bench, bench_view_of_slots(slots), sig=_SIG)
+    bs.observe(bs.front_row, [Unit(char_id=SILVER_WOLF_ID, star=1)],
+               sig=_SIG)
+    card = ShopCard(name=SILVER_WOLF_ID, cost=3, star=1)
+    bs.observe(bs.shop, ShopPayload(
+        cards=[ShopSlot(kind='content', card=card)]), sig=_SIG)
+    ret = eng.step(BuyCard(card=card))
+    assert ret.outcome is not None and ret.outcome.applied
+    assert bs.front_row.value[0].star == 2, '合成产物落场上同名位(M07)'
+    assert all(not (s is not None and s.kind == 'unit'
+                    and s.unit is not None
+                    and s.unit.char_id == SILVER_WOLF_ID)
+               for s in bs.bench.value.slots), '备战席已无银狼(旧判据必漏)'
+    frame = ret.observation
+    for _ in range(64):
+        if frame.phase is CwSimPhase.EVENT_OVERLAY:
+            break
+        ret2 = eng.step(_auto(frame))
+        assert ret2.result is None, '该Setup 不应局终'
+        frame = ret2.observation
+    assert frame.phase is CwSimPhase.EVENT_OVERLAY
+    assert frame.overlay_kind == 'planner', '部署位合成 2★ 银狼必触发'
 
 
 # ============================================================ 结算推进
