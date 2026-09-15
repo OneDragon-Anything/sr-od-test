@@ -148,10 +148,11 @@ class TestR1QualifiedSetSemantics:
 # 全史不存在 = 幽灵指针,被删断言面随本批归位本文件。)
 
 class TestR1CommitmentAccountTruthTable:
-    """``r1_commitment_account`` 纯数真值表(四臂:within/over/非有限/
-    零负预算)。判据本体 = criteria/refresh 单点(docstring 边界段:
-    非有限 ⇒ no_chaseable_member;零负预算恒不启动,息线双侧修正由
-    比较式结构承载,不另设门)。"""
+    """``r1_commitment_account`` 纯数真值表:within 启动双案 + 拒因五案
+    参数化一锁(超账/零负预算 ⇒ account_over_budget;非有限 ⇒
+    no_chaseable_member)。判据本体 = criteria/refresh 单点(docstring
+    边界段:非有限 ⇒ no_chaseable_member;零负预算恒不启动,息线双侧
+    修正由比较式结构承载,不另设门)。"""
 
     @pytest.mark.parametrize('ledger,budget', [
         (100.0, 100),     # 边界内(等号 = 可负担,启动)
@@ -161,25 +162,20 @@ class TestR1CommitmentAccountTruthTable:
         assert refresh_criteria.r1_commitment_account(ledger, budget) \
             == (True, '')
 
-    def test_over_budget_blocked(self):
-        assert refresh_criteria.r1_commitment_account(100.5, 100) \
-            == (False, 'account_over_budget')
-
-    @pytest.mark.parametrize('ledger', [
-        float('inf'), float('nan'),
-    ], ids=['inf', 'nan'])
-    def test_non_finite_is_no_chaseable_member(self, ledger):
-        """非有限总账(合格集空/E=∅ 的 inf 承载 + NaN 防御)⇒
-        no_chaseable_member,不与超账混桶(污染墓碑判读面)。"""
-        assert refresh_criteria.r1_commitment_account(ledger, 100) \
-            == (False, 'no_chaseable_member')
-
-    @pytest.mark.parametrize('budget', [0, -10], ids=['zero', 'negative'])
-    def test_nonpositive_budget_never_starts(self, budget):
-        """零负预算恒不启动(金在息线 g* 及以下;正账面 > 预算走
-        account_over_budget,不另设门)。"""
-        assert refresh_criteria.r1_commitment_account(1.0, budget) \
-            == (False, 'account_over_budget')
+    @pytest.mark.parametrize('ledger,budget,reason', [
+        (100.5, 100, 'account_over_budget'),          # 超账拦阻
+        (1.0, 0, 'account_over_budget'),              # 零预算恒不启动
+        (1.0, -10, 'account_over_budget'),            # 负预算恒不启动
+        (float('inf'), 100, 'no_chaseable_member'),   # 合格集空 inf 承载
+        (float('nan'), 100, 'no_chaseable_member'),   # NaN 防御
+    ], ids=['over-budget', 'budget-zero', 'budget-negative', 'inf', 'nan'])
+    def test_rejection_truth_table(self, ledger, budget, reason):
+        """拒因真值表:正账面 > 预算与零负预算走 account_over_budget(金在
+        息线 g* 及以下恒不启动,不另设门);非有限总账(合格集空/E=∅ 的
+        inf 承载 + NaN 防御)⇒ no_chaseable_member,不与超账混桶(污染
+        墓碑判读面)。"""
+        assert refresh_criteria.r1_commitment_account(ledger, budget) \
+            == (False, reason)
 
 
 # ===== 锁 B:档案帧端到端帧锁 =====
@@ -196,16 +192,20 @@ class TestArchiveP1R8Frame:
     记一句为什么旧语义过期。"""
 
     def test_p1r8_frame_pollution_absent_and_overaccount_blocked(self):
-        """档案 p1r8 必花域帧双面同帧锁:①拒因归真墓碑——
+        """档案 p1r8 必花域帧双帧同锁(区内 + 区外):①拒因归真墓碑——
         ``shop_r1_no_chaseable_member`` 键不得出现(修复前该键恰出现,
-        ADR-0571 污染签名);②超账拦阻——零刷新发射 + 域内账拦分键
+        ADR-0571 污染签名);②区内超账拦阻——零刷新发射 + 域内账拦分键
         ``must_spend_r1_account_fail`` 开火(该帧 r_remaining=14 含
         后续位面,末轮豁免不辖);③域内义务来源披露照写
         v3_release_reason='must_spend'(披露面独立于刷新发射,写点在
         R1 之前;同帧围栏键加密面无独立覆盖锁——现役近邻
         test_cw_no_target_three_arms::test_must_spend_zone_no_refresh_burn
-        辖 p2plus 无目标帧族,非本档案帧族,不构成对偶覆盖)。末轮豁免支
-        的发射形态由 TestHorizonClosedYield 承载,不双锁。"""
+        辖 p2plus 无目标帧族,非本档案帧族,不构成对偶覆盖);④域外零
+        漂移对照帧(gold=40 ≤ 息线)——R1 被 account_over_budget 拒
+        (真预算账,非污染拒因)且零刷新发射,域外帧刷新纪律与账前件
+        恢复无关(域外本就按账判)。末轮豁免支的发射形态由
+        TestHorizonClosedYield 承载,不双锁。"""
+        # 区内帧(gold=53,过息线)
         st, sess = _p1r8_frame()
         acts = _decide(st, sess)
         cnt = state_of(sess).cw4_counters
@@ -213,17 +213,13 @@ class TestArchiveP1R8Frame:
         assert not [a for a in acts if isinstance(a, RefreshShop)], acts
         assert cnt.get('must_spend_r1_account_fail', 0) >= 1
         assert state_of(sess).v3_release_reason == 'must_spend'
-
-    def test_outside_zone_frame_stays_closed(self):
-        """域外零漂移(息线纪律结构承载):同构帧金 40 ≤ 息线 ⇒ R1 被
-        account_over_budget 拒(真预算账,非污染拒因)且零刷新发射——
-        域外帧刷新纪律与账前件恢复无关(域外本就按账判),零漂移。"""
-        st, sess = _p1r8_frame(gold=40)
-        acts = _decide(st, sess)
-        assert not [a for a in acts if isinstance(a, RefreshShop)]
-        cnt = state_of(sess).cw4_counters
-        assert cnt.get('shop_r1_account_over_budget', 0) >= 1
-        assert 'shop_r1_no_chaseable_member' not in cnt
+        # 区外对照帧(gold=40,息线下)
+        st_out, sess_out = _p1r8_frame(gold=40)
+        acts_out = _decide(st_out, sess_out)
+        assert not [a for a in acts_out if isinstance(a, RefreshShop)]
+        cnt_out = state_of(sess_out).cw4_counters
+        assert cnt_out.get('shop_r1_account_over_budget', 0) >= 1
+        assert 'shop_r1_no_chaseable_member' not in cnt_out
 
 
 class TestHorizonClosedYield:

@@ -1,19 +1,21 @@
 """CW 经济域测试(#4):金守恒(单代表)/ budget 拒付(fail-closed 单代表)/
-interest+streak 表锚 / ev_arm 值域(aggregate_economy 分型登记)。
+R2 息线 floor / D 牌期望边界 / ev_arm 值域(aggregate_economy 分型登记)。
 
 覆盖面(金钱类按 2026-09-09 编排者裁决收缩:实机结算对账 + sim 段检双层
 已覆盖逐面金钱锁,单位层只留 commit→sim 空窗价值):
 - 金守恒(净守恒单代表):1★ 牌买卖回合 simulate 金总量守恒(净 0 对任意
   费用成立,注册表改费不红)——红 = 支出面与退金面静默分叉;
 - budget 拒付(1 代表,归 fail-closed):hp 不可信帧 blood_xp_gate 拒;
-- interest+streak 表锚:R2 息线 g*=10×cap 参数化表锚 + economy_score
-  利息单调 + streak 只计连胜方向(ADR-0128 无连败补偿);
-- ev_arm 值域:aggregate_economy 分型登记表逐字段算子期望(值域表)
-  + 区分力非零证明锚(篡改登记必分歧,非恒绿护栏);
-- 过继锁:投资注册表 335/83 计数(原 test_cw_investment 唯一承载,
-  终局归编 #15 data_registry,重建期暂挂本文件防断链)。
-退役面:投资收入入账本/息线 floor 行为两行/血闸阈值逐点(预算闸族逐面锁
-按裁决不搬,git 可复活)。
+- R2 息线 floor:cap 语境参数化锁(ADR-0598 注入面);
+- D 牌期望边界:expected_refreshes/refresh_prob 边界一条(p≤0/j≥k/
+  查表缺级 → 0;v/a 参数从注册表单一源现算,不手抄常数);
+- ev_arm 值域:aggregate_economy 分型登记表逐字段算子期望(值域表)。
+
+退役面(审计判决删除):economy_score 利息/streak 真值(src 零调用)、
+区分力非零证明锚(元测试)、refresh_prob 查表一致性锚(缺级→0 腿并入
+D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy 真值表一行)、pair 断供
+驱逐墓碑、ADR-0150 base 层全量计数锚(纯数据计数;其「过继锁禁删」
+声明随审计判决解除,335/83 计数归编 #15 test_cw_data_registry 待承接)。
 
 来源:economy_typing(mv 主干)/ investment / r2_interest_floor /
 blood_xp_gate 核 / decisions 之 economy 真值两行(2026-09-09 套件重建批
@@ -66,7 +68,6 @@ from sr_od.application.currency_war.kernel import cw_investments as inv
 from sr_od.application.currency_war.kernel.cw_economy import (
     blood_xp_gate,
     blood_xp_gate_for,
-    economy_score,
     refresh_ev_budget,
     reserve_cap,
     schedule_upgrade,
@@ -77,8 +78,6 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     update_intention,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
-    INVESTMENT_ENVS,
-    INVESTMENT_STRATEGIES,
     EconomyEffect,
     aggregate_economy,
 )
@@ -225,20 +224,6 @@ def test_half3_distinguish_fixtures(patched_registry) -> None:
         assert ref[fname] == expect
 
 
-# 区分力非零证明锚:篡改分型表算子(or→max)后,同 fixture 下求值器
-# 必须与实现分歧——证明本断言集在「仅隶属断言恒绿」的语义错账
-# 构造下会红,不是恒绿护栏。
-def test_half3_detection_power_proof(patched_registry) -> None:
-    mutated = {k: ({**v, 'op': 'max'} if k == 'xp_buy_hp_cost' else v)
-               for k, v in AGG_FIELDS.items()}
-    effects = [EconomyEffect(xp_buy_hp_cost=6), EconomyEffect(xp_buy_hp_cost=8)]
-    names = patched_registry([_mk('甲', xp_buy_hp_cost=6),
-                              _mk('乙', xp_buy_hp_cost=8)])
-    impl = aggregate_economy(names).xp_buy_hp_cost
-    assert impl == 6                       # 实现语义=or
-    assert _reference_aggregate(effects, mutated)['xp_buy_hp_cost'] == 8 != impl
-
-
 # ==================== 金守恒:净守恒单代表(金钱类按裁决收缩) ====================
 
 def test_gold_net_conserved_buy_sell_roundtrip() -> None:
@@ -254,29 +239,7 @@ def test_gold_net_conserved_buy_sell_roundtrip() -> None:
         f'1★ 买卖回合应净守恒,实得 {s0.gold}→{s1.gold}→{s2.gold}')
 
 
-def test_adr0150_base_layer_full() -> None:
-    """base 层全量:策略 335(334 plaza + 1 补遗)/ 环境 83(官方全量,与数据银行同口径)。
-
-    (过继锁:原 test_cw_investment 文件头声明本计数为全测试仓唯一承载,
-    禁删;套件重建批 A 暂挂本文件防断链,终局归编 #15 test_cw_data_registry。)
-    """
-    from sr_od.application.currency_war.data.cw_invest_data import (
-        PLAZA_AUGMENTS,
-        PLAZA_PORTALS,
-    )
-    assert len(PLAZA_AUGMENTS) == 334
-    assert len(PLAZA_PORTALS) == 83
-    assert len(INVESTMENT_STRATEGIES) == 335  # + 补遗 追击星徽套组(二)
-    assert len(INVESTMENT_ENVS) == 83
-    # id 主键唯一
-    ids = [a.id for a in PLAZA_AUGMENTS]
-    assert len(set(ids)) == len(ids)
-    # 补遗在表且 source 是米游社 content
-    extra = INVESTMENT_STRATEGIES["追击星徽套组(二)"]
-    assert extra.source == "6302"
-
-
-# ==================== interest+streak 表锚(R2 息线 floor) ====================
+# ==================== R2 息线 floor(cap 语境参数化) ====================
 # 测试基建(六件套单一源 = _cw_helpers;本文件 _state 为垫卡 shop
 # 帧专属形状,留本地自持)
 
@@ -324,29 +287,6 @@ class TestR2InterestFloor:
         sess.active_strategies = ['利息上调']   # ADR-0598 注入面迁移
         acts = _decide(st, sess)
         assert not [a for a in acts if isinstance(a, RefreshShop)]
-
-
-# —— economy_score 利息/streak 真值(自 test_cw_decisions economy 段并入) ——
-
-
-def test_economy_interest() -> None:
-    """中期,存金近 50 > 存金 0(利息加分)。"""
-    rich = CwSimFrame(gold=50, round_num=5, level=6, plane=2)
-    poor = CwSimFrame(gold=0, round_num=5, level=6, plane=2)
-    assert economy_score(rich, "adaptive") > economy_score(poor, "adaptive")
-
-
-def test_economy_streak_bonus() -> None:
-    """C 杠杆 2(streak 接线)。ADR-0128(复查 #5,核心机制:27):货币战争**无连败补偿** ——
-    只计连胜方向;连败 0 分(旧 magnitude 对称计 = 虚构连败金,已修)。
-    """
-    base = CwSimFrame(gold=50, round_num=5, level=6, plane=2)             # streak 默认 0
-    win3 = CwSimFrame(gold=50, round_num=5, level=6, plane=2, streak=3)   # 连胜 3
-    loss3 = CwSimFrame(gold=50, round_num=5, level=6, plane=2, streak=-3)  # 连败 3
-    assert economy_score(win3, "adaptive") > economy_score(base, "adaptive"), "连胜 3 > 无 streak"
-    assert economy_score(loss3, "adaptive") == pytest.approx(economy_score(base, "adaptive")), (
-        "无连败补偿:连败 3 不加分(核心机制:27)"
-    )
 
 
 # ==================== budget 拒付单代表(归 fail-closed;自 test_cw_blood_xp_gate 并入) ====================
@@ -405,30 +345,20 @@ def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
 # v/a 参数从注册表单一源现算(DISTINCT_CARDS_PER_COST/POOL_COPIES_PER_CARD),
 # 不手抄常数;单一源守卫 = 本文件 expected_refreshes 边界组(禁第二实现)。
 
-def test_zero_p_returns_zero() -> None:
-    """p≤0 → 0(该等级不出该费用,刷不到;无穷循环前置短路)。"""
+def test_expected_refreshes_boundaries() -> None:
+    """D 牌期望边界一条:p≤0 → 0(该等级不出该费用,刷不到,无穷循环前置
+    短路);j≥k → 0(已凑齐,无需再刷;2星 k=3 与 3星 k=9 两档);查表
+    缺级 → 0(refresh_prob 同契约,该等级不出该费用)。"""
     assert expected_refreshes(
         0.0, DISTINCT_CARDS_PER_COST[3], POOL_COPIES_PER_CARD[3], 0, 3, 0,
     ) == 0.0
-
-
-def test_owned_meets_target_returns_zero() -> None:
-    """j≥k → 0(已凑齐,无需再刷;2星 k=3 与 3星 k=9 两档)。"""
     assert expected_refreshes(
         0.4, DISTINCT_CARDS_PER_COST[3], POOL_COPIES_PER_CARD[3], 0, 3, 3,
     ) == 0.0
     assert expected_refreshes(
         0.4, DISTINCT_CARDS_PER_COST[3], POOL_COPIES_PER_CARD[3], 0, 9, 10,
     ) == 0.0
-
-
-def test_refresh_prob_lookup() -> None:
-    """refresh_prob 查表:lv7 3费 ≈0.40(实机商店刷新概率采集锚,
-    2026-08-11);查表一致性 + 无数据等级 → 0(该等级不出该费用)。"""
-    from sr_od.application.currency_war.data.cw_shop_odds import REFRESH_PROB
-    assert refresh_prob(7, 3) == REFRESH_PROB[7][3]
-    assert REFRESH_PROB[7][3] == pytest.approx(0.4, abs=1e-2)
-    assert refresh_prob(99, 3) == 0.0, '无该等级 → 0'
+    assert refresh_prob(99, 3) == 0.0, '查表缺级 → 0'
 
 
 # ==================== xp 买费折扣修复锁族(正本 = ADR-0632) ====================
@@ -488,39 +418,36 @@ def test_xp_click_display_price_passthrough() -> None:
                                    display=3)) == 3
 
 
-@pytest.mark.parametrize('level,strategies,expected', [
-    (7, [_JUST_JOY], 4),                    # 等级门前:无减项
-    (8, [_JUST_JOY], 3),                    # 门前跨档:−1
-    (9, [_JUST_JOY], 3),                    # 门后持续
-    (7, [_JUST_SPY, _JUST_JOY], 3),         # 门前:仅间谍 −1
-    (8, [_JUST_SPY, _JUST_JOY], 2),         # 门后:折扣叠加 −2
+@pytest.mark.parametrize('level,strategies,expected,patch_discount', [
+    (7, [_JUST_JOY], 4, None),              # 等级门前:无减项
+    (8, [_JUST_JOY], 3, None),              # 门前跨档:−1
+    (9, [_JUST_JOY], 3, None),              # 门后持续
+    (7, [_JUST_SPY, _JUST_JOY], 3, None),   # 门前:仅间谍 −1
+    (8, [_JUST_SPY, _JUST_JOY], 2, None),   # 门后:折扣叠加 −2
+    (7, [], 0, 6),                          # 兜底支钳 0:折扣合计超基准不出负
 ], ids=['gate-before', 'gate-at', 'gate-persists',
-        'spy-only-before', 'stacked-after'])
+        'spy-only-before', 'stacked-after', 'clamp-zero'])
 def test_xp_click_joy_level_gate_truth_table(
-        level: int, strategies: list[str], expected: int) -> None:
+        level: int, strategies: list[str], expected: int,
+        patch_discount: int | None, monkeypatch: pytest.MonkeyPatch) -> None:
     """成长的快乐真值表锁(兜底支等级门;方案审关键修改②,关闭
-    「登记不消费」豁免口)。
+    「登记不消费」豁免口)+ 兜底支下限 0 钳行。
 
     聚合分型已在册(sum+guarded_min,AGG_FIELDS 两字段在表),本锁钉消费位:
     折扣合计 = xp_buy_cost_discount + (等级 ≥ xp_click_discount_from_level_at
     时 xp_click_discount_from_level)。sim 恒兜底支(无 OCR),不消费 =
-    sim 对该卡局费用恒虚高 1 金/击,恰保留本修复要消灭的 sim/实机分歧。"""
+    sim 对该卡局费用恒虚高 1 金/击,恰保留本修复要消灭的 sim/实机分歧。
+    钳 0 行:注册表现无合计 ≥4 的折扣源(间谍 1 + 快乐 1 = 2),钳臂经
+    _strategy_economy 缝注入合成折扣覆盖(monkeypatch.setattr 隔离,测试
+    零真实副作用)。"""
+    from sr_od.application.currency_war.kernel import cw_economy as ke
     from sr_od.application.currency_war.kernel.cw_economy import xp_click_cost
+    if patch_discount is not None:
+        monkeypatch.setattr(
+            ke, '_strategy_economy',
+            lambda _st: EconomyEffect(xp_buy_cost_discount=patch_discount))
     assert xp_click_cost(
         _xp_state(level=level, strategies=strategies)) == expected
-
-
-def test_xp_click_fallback_clamp_floor(monkeypatch) -> None:
-    """兜底支下限 0 钳(语义保持):折扣合计超基准时钳 0 不出负。
-
-    注册表现无合计 ≥4 的折扣源(间谍 1 + 快乐 1 = 2),钳臂经
-    _strategy_economy 缝注入合成折扣覆盖(纯函数消费面,monkeypatch.setattr
-    隔离,测试零真实副作用)。"""
-    from sr_od.application.currency_war.kernel import cw_economy as ke
-    monkeypatch.setattr(
-        ke, '_strategy_economy',
-        lambda _st: EconomyEffect(xp_buy_cost_discount=6))
-    assert ke.xp_click_cost(_xp_state(display=None)) == 0
 
 
 def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
@@ -739,43 +666,6 @@ def test_w721_collapse_band_zero_and_fallback_exempt() -> None:
 
 
 # --- R3 · pair 断供驱逐(蓝图 §4.3-R3 推广)------------------------------------
-
-
-def _starve_frame(r: int = 5):
-    """配方锁帧工厂:bench 有 DOT/列车成员(支持度保 pair 重派生不脱窗),
-    店空(两体系新件渠道全断——「补不进的新件」量供给渠道,到手资产
-    不救供给)。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-
-    def _ch(name: str, slot: int) -> BenchChar:
-        fac = (CHARACTERS[name].factions or ('?',))[0]
-        return BenchChar(slot=slot, char_id=name, faction=fac, star=1)
-    bench = [_ch('卡芙卡', 0), _ch('姬子', 1)] \
-        + [None] * (BENCH_CAPACITY - 2)
-    return _ba_state(r=r, gold=100, bench=bench)
-
-
-def test_pair_drought_counters_never_evict() -> None:
-    """ADR-0519 重锚:断供驱逐已退役(未证阈值「未证即退役」)——
-    断供计数器照常累积(遥测/撤销证据输入),pair_evicted 恒空集、
-    pair 方向不因断供被移出候选。另锁锁线门槛 1.0(羁绊满员当量):
-    _starve_frame 的 0.5 支持度(各系单件)不足以锁 pair(空窗)。"""
-    ist = IntentionState()
-    sess = StrategySession()
-    state_of(sess).v3_intention = ist
-    update_intention(cw4_box(_starve_frame()), ist, sess)
-    assert ist.p1_pair == (), \
-        '支持度 0.5(各系单件)< 门槛 1.0(羁绊满员)→ 空窗不锁(ADR-0519)'
-    # 显式 pair 方向在场(模拟已锁帧),断供多轮:计数累积、永不驱逐
-    ist2 = IntentionState()
-    ist2.p1_pair = ('列车同行', '持续伤害')
-    sess2 = StrategySession()
-    state_of(sess2).v3_intention = ist2
-    for _ in range(6):
-        update_intention(cw4_box(_starve_frame()), ist2, sess2)
-    assert ist2.pair_evicted == set(), '驱逐分支已退役(ADR-0519)'
-    assert max(ist2.pair_drought.values(), default=0) >= 1, \
-        '断供计数保留(pair 重派生随门槛收紧频繁回 (),计数窗口见注)'
 
 
 def test_pair_eviction_keeps_target_chain_materialized() -> None:

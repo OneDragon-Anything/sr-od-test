@@ -3,10 +3,14 @@ docs/develop/sr_od/application/currency_war/
 changes/2026-09-11-unified-state/details/GameState-数据结构设计.md,下称「设计」)。
 
 锁面 = 批次二任务书件:§3.4 单次逻辑写入口(申报豁免写端,合同正本在
-批一文件)/§3.3.6-8 刷新执行事实组(免费帧闸)/
-§3.3.1 cost_source 三值归并消费/§3.2.6 board 下档派生单一源(ADR-0488 同键
-供给)/§3.5.1 结算覆盖写端/§6.2+§8.8 局终归档快照。断言全部按设计语义写;
-批一回归锁正本在 test_cw_game_state.py。
+批一文件)/§3.3.6-8 刷新执行事实组(付费/免费闸/下限 0/evidence 轮键
+一锁)/§3.2.6 board 下档派生单一源(ADR-0488 同键供给)/§3.5.1 结算
+覆盖写端(四形态一锁)。断言全部按设计语义写;批一回归锁正本在
+test_cw_game_state.py。
+
+退役面(审计判决删除):§3.3.1 cost_source 三值归并消费组(src 零调用)、
+§6.2+§8.8 局终归档快照锁(零调用)、relay 正写形态锁(game_state 侧
+正本辖)、bench_is_full 同键供给锁(派生面已由席空数锁辖)。
 """
 from __future__ import annotations
 
@@ -16,17 +20,11 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
-    COST_SOURCE_BADGE,
-    COST_SOURCE_REGISTRY,
     GameState,
-    NodeKey,
     apply_settlement_cover,
-    archive_snapshot,
-    bench_is_full,
     board_next_tier_of,
     board_state_of,
     consume_defect_sink,
-    cost_source_group,
     record_refresh_execution,
     set_defect_sink,
 )
@@ -72,72 +70,39 @@ def _hsig() -> _ChannelSig:
 #  直调=0,文件本体删除,视图语义无消费面可锁。)
 
 
-def _synth_bs_with(st: CwSimFrame) -> GameState:
-    """CwSimFrame 真值 → GameState(sim 合成口,批一资产)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        synthesize_from_game_state,
-    )
-    synthesize_from_game_state(bs, st, at_round='p1-r2')
-    return bs
-
-
 # ============================================================ §3.4 单次逻辑写入口
 # (write_logic 直写合同正本 = test_cw_game_state.py::test_write_logic_direct_write_immediately_readable;
-#  观察赢+失配留证正本 = 同文件 test_observe_over_logic_* 两件;此处不重复。)
+#  观察赢+失配留证正本(含一致静默反腿)= 同文件
+#  test_observe_over_logic_mismatch_emits_defect_row;此处不重复。)
 
 # ============================================================ §3.3.6-8 刷新执行事实组
 
 
-def test_refresh_execution_paid_increments_paid_and_total() -> None:
-    """§3.3.7/§3.3.8:付费刷新 = paid+1 ∧ total+1(RefreshShop 执行回执,
-    写入=仅逻辑)。"""
+def test_refresh_execution_paid_and_free_frame_gates() -> None:
+    """§3.3.6-8 刷新执行主锁(四腿一锁):①付费刷新 = paid+1 ∧ total+1
+    (RefreshShop 执行回执,写入=仅逻辑;付费帧不动免费余额);②免费帧闸
+    = 免费帧不进付费累计(长线利好触发计数载体禁混入免费刷),消耗免费
+    余额 + total 照计;③免费余额下限 0(计数器单调域,禁负值漂移);
+    ④evidence 落轮键 refresh_exec@<frame>(归因留证面,付费/免费帧同)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     record_refresh_execution(bs, free=False, frame='p1-r3')
     assert bs.paid_refresh_count.value == 1
     assert bs.total_refresh_count.value == 1
     assert bs.free_refresh_balance.value is None, '付费帧不动免费余额'
-
-
-def test_refresh_execution_free_gate_skips_paid_count() -> None:
-    """§3.3.7 免费帧闸(本批申报核心):免费帧不进付费累计(长线利好触发
-    计数载体禁混入免费刷),消耗免费余额 + total 照计。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.free_refresh_balance, 2, produced_by='effect',
-                   sig=_lsig())
-    record_refresh_execution(bs, free=True, frame='p1-r3')
-    assert bs.paid_refresh_count.value is None, '免费帧禁写付费计数'
-    assert bs.free_refresh_balance.value == 1, '免费余额消耗'
-    assert bs.total_refresh_count.value == 1, '全量计数含免费'
-
-
-def test_refresh_execution_free_balance_floor_zero() -> None:
-    """免费余额下限 0(计数器单调域,禁负值漂移)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.free_refresh_balance, 1, produced_by='effect',
-                   sig=_lsig())
-    record_refresh_execution(bs, free=True)
-    record_refresh_execution(bs, free=True)
-    assert bs.free_refresh_balance.value == 0
-
-
-# ============================================================ §3.3.1 cost_source 三值归并
-
-
-@pytest.mark.parametrize('src,group', [
-    ('badge', COST_SOURCE_BADGE),
-    ('roster', COST_SOURCE_REGISTRY),
-    ('roster_fallback', COST_SOURCE_REGISTRY),
-])
-def test_cost_source_group_merges_three_to_two(src: str, group: str) -> None:
-    """§3.3.1/§8.6-9:消费侧三值归并为两域(徽章直读 vs 注册表查表);
-    roster_fallback 的「徽章失读」分级只丢在归并面,原值仍在存储。"""
-    assert cost_source_group(src) == group
-
-
-def test_cost_source_group_unknown_is_registry_conservative() -> None:
-    """未知值保守归 registry(词表外值 = 上游漂移信号,归因看原值)。"""
-    assert cost_source_group('mystery') == COST_SOURCE_REGISTRY
+    assert bs.paid_refresh_count.evidence == 'refresh_exec@p1-r3'
+    assert bs.total_refresh_count.evidence == 'refresh_exec@p1-r3'
+    # ②/③ 免费帧闸换新容器:「不写付费计数」的语义承载于字段从未写过
+    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs2.write_logic(bs2.free_refresh_balance, 1, produced_by='effect',
+                    sig=_lsig())
+    record_refresh_execution(bs2, free=True, frame='p2-r1')
+    assert bs2.paid_refresh_count.value is None, '免费帧禁写付费计数'
+    assert bs2.free_refresh_balance.value == 0, '免费余额消耗,下限 0'
+    assert bs2.total_refresh_count.value == 1, '全量计数含免费'
+    assert bs2.total_refresh_count.evidence == 'refresh_exec@p2-r1', \
+        '免费帧 total 也带当次轮键'
+    record_refresh_execution(bs2, free=True, frame='p2-r2')
+    assert bs2.free_refresh_balance.value == 0, '免费余额下限 0(禁负值漂移)'
 
 
 # ============================================================ §3.2.6 派生单一源(ADR-0488)
@@ -159,27 +124,16 @@ def test_board_next_tier_of_matches_registry_formula() -> None:
     assert board_next_tier_of({}) == {}
 
 
-def test_sim_bench_full_key_supplied_by_derived_function() -> None:
-    """ADR-0488 席满观测键同键供给:合成后的 GameState 经
-    bench_is_full 派生值 = 占用式(同一真值两形态;sim 段内 OR 支)。"""
-    st = CwSimFrame()
-    st.bench = [BenchChar(slot=1, char_id='花火', star=1)] * 9 + [None] * 0
-    st.bench = [BenchChar(slot=i + 1, char_id='花火', star=1)
-                for i in range(9)]
-    bs = _synth_bs_with(st)
-    assert bench_is_full(bs) is True
-    st2 = CwSimFrame()
-    st2.bench = [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8
-    bs2 = _synth_bs_with(st2)
-    assert bench_is_full(bs2) is False
-
-
 # ============================================================ §3.5.1 结算覆盖写端
 
 
 def test_settlement_cover_writes_truth_group() -> None:
-    """§3.5.1:结算真值组覆盖 = observation;hp/streak 带方向/gold·level·xp
-    仅胜局;settlement 结构同步落。"""
+    """§3.5.1 结算覆盖写端四形态一锁:①胜局 = observation 真值组(hp/
+    streak 带方向/gold·level·xp 仅胜局)+ settlement 结构同步落;
+    ②败局页无收入面板(gold/level/xp 缺席不写),hp/streak 真值照覆;
+    ③hp 失读(结算页 OCR miss)不写(不可信帧不写,§2.2 写入闸),不清
+    既有正式值;④progress_delta 带符号真值落 settlement 结构(胜局正/
+    败局负;battle_wait 调用点传参为接线半,本锁辖函数半)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     apply_settlement_cover(bs, hp_after=76, streak_after=4,
                            killed=True, gold=23, level=6, xp=(3, 10))
@@ -189,66 +143,30 @@ def test_settlement_cover_writes_truth_group() -> None:
     assert bs.xp.value == (3, 10)
     s = bs.settlement.value
     assert s is not None and s.hp_after == 76 and s.killed is True
-
-
-def test_settlement_cover_loss_page_writes_no_win_only_fields() -> None:
-    """败局结算页:无收入面板(gold/level/xp 缺席不写,§3.5.1),hp/streak
-    真值照覆。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    apply_settlement_cover(bs, hp_after=41, streak_after=-2, killed=False)
-    assert bs.hp.value == 41 and bs.streak.value == -2
-    assert bs.gold.value is None and bs.level.value is None
-    assert bs.xp.value is None
-    assert bs.settlement.value.gold is None
-
-
-def test_settlement_cover_unread_hp_not_written() -> None:
-    """hp 失读(结算页 OCR miss)→ 不写(不可信帧不写,§2.2 写入闸),
-    不清既有正式值。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.hp, 80, sig=_sig())
-    apply_settlement_cover(bs, hp_after=None, streak_after=None)
-    assert bs.hp.value == 80 and bs.hp.source == 'observation'
-
-
-# ============================================================ §6.2/§8.8 局终归档快照
-
-
-def test_archive_snapshot_keys_and_prov_sparsity() -> None:
-    """§8.8 两键形态(ADR-0651 两态制后):bs_prov 只记非默认来源(稀疏化)/
-    bs_extra 工程结构+非 None 值(JSON 安全);bs_pending 挂起预期摘要键
-    已随两步机制废除退役。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.gold, 55, sig=_sig())                       # 默认 observation 无注记 → prov 不记
-    bs.write_prior(bs.hp, 82, evidence='prior:adr-0559',
-                   sig=_sig())   # prior → prov 记
-    bs.carry(bs.gold, frame='p1-r5', sig=_sig())              # carried → prov 记
-    bs.observe(bs.node, NodeKey(plane=1, round_num=5, kind='boss'), sig=_sig())
-    snap = archive_snapshot(bs)
-    assert set(snap) == {'schema_version', 'bs_prov', 'bs_extra'}, \
-        '两键形态:bs_pending 已随 ADR-0651 退役'
-    assert snap['bs_prov']['hp'] == {'source': 'prior',
-                                     'evidence': 'prior:adr-0559'}
-    assert snap['bs_prov']['gold']['source'] == 'carried'
-    assert 'node' not in snap['bs_prov'], '默认 observation 无注记不入 prov(稀疏化)'
-    extra = snap['bs_extra']
-    assert extra['bs_schema']['economy'] == 1
-    assert extra['values']['gold'] == 55
-    assert isinstance(extra['values']['node'], dict), 'dataclass 值 JSON 安全化'
-    assert extra['values']['node']['kind'] == 'boss'
+    # ② 败局页
+    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+    apply_settlement_cover(bs2, hp_after=41, streak_after=-2, killed=False)
+    assert bs2.hp.value == 41 and bs2.streak.value == -2
+    assert bs2.gold.value is None and bs2.level.value is None
+    assert bs2.xp.value is None
+    assert bs2.settlement.value.gold is None
+    # ③ hp 失读不写
+    bs3 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs3.observe(bs3.hp, 80, sig=_sig())
+    apply_settlement_cover(bs3, hp_after=None, streak_after=None)
+    assert bs3.hp.value == 80 and bs3.hp.source == 'observation'
+    # ④ progress_delta 带符号
+    bs4 = GameState(schema_version=BS_SCHEMA_VERSION)
+    apply_settlement_cover(bs4, hp_after=76, streak_after=4, killed=True,
+                           progress_delta=2, gold=23)
+    assert bs4.settlement.value is not None \
+        and bs4.settlement.value.progress_delta == 2
+    apply_settlement_cover(bs4, hp_after=70, streak_after=-1, killed=False,
+                           progress_delta=-22)
+    assert bs4.settlement.value.progress_delta == -22, '败局负增量照落'
 
 
 # ============================================================ 扩单件 3:§2.1 载体中继收敛
-
-
-def test_relay_writes_logic_with_carrier_evidence_when_never_written() -> None:
-    """§2.1 载体中继:从未写过的字段 → source=logic + evidence=
-    session_carrier(不设第五来源类,禁标 observation)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    assert bs.relay(bs.active_env, '昼之半神概念股', sig=_hsig()) is True
-    assert bs.active_env.value == '昼之半神概念股'
-    assert bs.active_env.source == 'logic'
-    assert bs.active_env.evidence == 'session_carrier'
 
 
 def test_relay_skips_fields_with_official_value() -> None:
@@ -451,31 +369,6 @@ def test_merge_effect_window_gate_default_off_and_injectable(
     monkeypatch.setattr(cw_reconcile, '_IS_MERGE_EFFECT_FRAME',
                         lambda screen: False, raising=False)
     assert cw_reconcile.is_merge_effect_window(object()) is False
-
-
-def test_settlement_cover_carries_progress_delta() -> None:
-    """P3-3:progress_delta 经覆盖写端落 settlement 结构(挑战进度带符号
-    真值;battle_wait 调用点传参为接线半,本锁辖函数半)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    apply_settlement_cover(bs, hp_after=76, streak_after=4, killed=True,
-                           progress_delta=2, gold=23)
-    assert bs.settlement.value is not None \
-        and bs.settlement.value.progress_delta == 2
-    apply_settlement_cover(bs, hp_after=70, streak_after=-1, killed=False,
-                           progress_delta=-22)
-    assert bs.settlement.value.progress_delta == -22, '败局负增量照落'
-
-
-def test_refresh_execution_evidence_carries_round_key() -> None:
-    """P3-2:刷新执行逻辑写入的 evidence 落轮键(refresh_exec@<frame>,
-    归因留证面;write_logic evidence 形参在册)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    record_refresh_execution(bs, free=False, frame='p1-r3')
-    assert bs.total_refresh_count.evidence == 'refresh_exec@p1-r3'
-    assert bs.paid_refresh_count.evidence == 'refresh_exec@p1-r3'
-    record_refresh_execution(bs, free=True, frame='p2-r1')
-    assert bs.total_refresh_count.evidence == 'refresh_exec@p2-r1', \
-        '免费帧 total 也带当次轮键'
 
 
 # ============================================================ 四事件屏 chosen_* 接线锁(设计 §3.4.5 余屏写端)

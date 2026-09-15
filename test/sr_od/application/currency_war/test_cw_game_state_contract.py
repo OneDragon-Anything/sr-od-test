@@ -35,7 +35,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     node_ordinal_of,
     register_sig_actors,
     slot_occupies,
-    synthesize_from_game_state,
     write_match_final,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -311,24 +310,9 @@ def test_plane_transition_leg_advances_plane() -> None:
 
 
 # ============================================================ §5 合成口与映射
-
-def test_synthesize_writes_observation_with_sim_evidence() -> None:
-    """sim 合成口(§2.6 域覆盖对齐):真值域直写 source=observation +
-    evidence=sim:synthesized@<round>;缺席域不写(禁假值)。"""
-    st = CwSimFrame()
-    st.plane, st.round_num, st.gold, st.level = 2, 3, 55, 7
-    bs = _bs()
-    synthesize_from_game_state(bs, st, at_round='p2-r3')
-    assert bs.gold.value == 55
-    assert bs.gold.source == 'observation'
-    assert bs.gold.evidence == 'sim:synthesized@p2-r3'
-    assert bs.level.value == 7
-    assert bs.node_ord.value is None, '合成口不写节点序(节点由观察链派生)'
-
-
-# ============================================================ §5 合成口与映射
-# (ShopCard 往返 / bench-deployed 槽表转换的合同锁正本 =
-#  test_cw_game_state.py「容器视图转换」组;此处不重复。)
+# (sim 合成口合同锁正本 = test_cw_game_state.py sim 合成口组,含
+#  「node_ord 不写」腿;ShopCard 往返 / bench-deployed 槽表转换的合同锁
+#  正本 = test_cw_game_state.py「容器视图转换」组;此处不重复。)
 
 
 def test_node_ordinal_and_tier_helpers() -> None:
@@ -426,17 +410,17 @@ def journal_sink():
 # ============================================================ §9 渠道签名封闭集(登记门,自 state_journal 归并)
 
 def test_channel_family_closed_set() -> None:
-    """§3.2.1 硬约束 2:family 封闭集 {obs, logic_action, logic_hook},集外 = 红。"""
+    """§3.2.1/§3.2.4 硬约束 2 签名门三分支:①family 封闭集 {obs,
+    logic_action, logic_hook},集外 = 红;②per-family 模态封闭(obs 族子模
+    = read/carried/prior/synthesized,logic 两族恒 compute,集外 = 红);
+    ③显式 sig 的 actor 须为登记面在册,集外 = 红。"""
     for family in ('obs', 'logic_action', 'logic_hook'):
         assert Sig(family=family, actor='cw_observation').family == family
     with pytest.raises(ValueError):
         Sig(family='event', actor='x')
     with pytest.raises(ValueError):
         Sig(family='hook', actor='x')
-
-
-def test_channel_mode_closed_set_per_family() -> None:
-    """§3.2.1:obs 族子模 = read/carried/prior/synthesized;logic 两族恒 compute。"""
+    # ② per-family 模态封闭
     for mode in ('read', 'carried', 'prior', 'synthesized'):
         Sig(family='obs', actor='cw_observation', mode=mode)
     with pytest.raises(ValueError):
@@ -445,10 +429,7 @@ def test_channel_mode_closed_set_per_family() -> None:
         Sig(family=family, actor='derive_node_observed', mode='compute')
         with pytest.raises(ValueError):
             Sig(family=family, actor='derive_node_observed', mode='read')
-
-
-def test_actor_registration_gate() -> None:
-    """§3.2.1/§3.2.4 硬约束 2:显式 sig 的 actor 须为登记面在册,集外 = 红。"""
+    # ③ actor 登记门
     from sr_od.application.currency_war.kernel.cw_game_state import (
         register_sig_actors,
     )

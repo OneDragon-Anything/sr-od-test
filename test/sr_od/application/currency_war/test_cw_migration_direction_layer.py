@@ -4,21 +4,20 @@
 W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
 
 1. D1:hoard 可信位——投影失败帧 ``hoard_readable=False``,消费域走保守域,
-   变异探针(投影抛错)下买侧行为 ≠ 空集放行;
+   变异探针(投影抛错)下买侧行为 ≠ 空集放行;正常帧对照腿并入探针锁;
 2. D2:committed 缺供给帧 = 保守侧 False——本文件不再持测;保守侧直锁
    = test_cw_session_separation::test_none_state_criterion_faces_
-   return_defaults(``committed_authority(None, bare) is False``)+ 本
-   文件对拍锁帧 1-2(P1 帧ist 缺席 → False);原并入目标
+   return_defaults(``committed_authority(None, bare) is False``);原并入目标
    test_cw_w620_migration_b1 本体已随统一迁移批(commit b94e9cfb)删除,指针收口重锚;
 3. D3:息线单一源 = ``registry.interest_floor()`` 派生(interest_cap×10),
    全仓属性读点 = 0(grep 锁)+ ALL IN override 通道;
-4. P7:意向状态机驱动点契约——每 game-round 恰一次(键守卫幂等),
-   registry 注入分歧探针(P6:注入臂与缺省臂必须出现受控分歧);
-5. P4:ist 跨局零残留(每局新建 StrategySession 构造性保证的行为锁);
-6. 哨兵锁:局23 型帧(100 金+备战空+息线姿态)在现行 mandate_v1 商店线
+4. P6 注入分歧探针:registry 注入臂与缺省臂必须出现受控分歧(注入链
+   可达证);
+5. 哨兵锁:局23 型帧(100 金+备战空+息线姿态)在现行 mandate_v1 商店线
    决策面(``decide_shop_action``)。2026-09-08 覆盖对账后收敛为两面:
-   2★ 压库件无退金背书 ⇒ 端到端零支出 + 必花域 L3 终结;金位不破息线
-   (0-100 金全决策面端到端,主题文件无此扫面)。原「息线供给恒等」
+   2★ 压库件无退金背书 ⇒ 端到端零支出;金位不破息线(金位全决策面端到端,
+   扫面收窄 = {0,49,50,51,100},息线两侧边界 + 两端,2026-09-17 审计判决;
+   主题文件无此扫面)。原「息线供给恒等」
    「不死守可辨收敛」两面经亲读对账由主题文件承载(test_cw_realizable_interest_floor/
    test_cw_statefn + test_cw_session_separation;test_cw_mandate_v1::
    test_shop_visit_sets_latch / test_cw_shop_line::
@@ -29,8 +28,15 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
    shop_r1_no_chaseable_member==1 面无本帧族独立覆盖锁,现役近邻 =
    test_cw_no_target_three_arms::test_must_spend_zone_no_refresh_burn
    (必花域空店帧同键断言,p2plus 无目标帧族,非局23 帧型);
-7. committed 权威判定直锁(权威序三支 + 缺供给保守 False;原逐帧对拍锁
-   的对拍半边随退役旧判定式删除,现役语义腿重锚为直锁)。
+6. committed 权威判定直锁(权威序三支 + 缺供给保守 False;原逐帧对拍锁
+   的对拍半边随退役旧判定式删除,现役语义腿重锚为直锁)。锁面三案 =
+   保守真帧一支(P1 未锁线)+ ist 定型两支(locked/p1_pair);plane≥2
+   位面序支与 None 退化输入案经审计判决简化(None 案直锁 =
+   test_cw_session_separation)。
+
+退役面(审计判决删除):P7 drive_intention 键守卫幂等锁(drive_intention
+生产调用点已清零)、P4 ist 跨局零残留锁(每局新建 StrategySession
+构造性保证,非行为锁面)。
 """
 from __future__ import annotations
 
@@ -47,7 +53,6 @@ from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     committed_authority,
-    drive_intention,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY as _REG,
@@ -101,29 +106,23 @@ def _state(plane: int = 1, round_num: int = 2, gold: int = 40) -> CwSimFrame:
 
 # ----------------------------------------------------- D1 hoard 可信位
 
-def test_d1_hoard_readable_normal_frame():
-    """正常帧:ist 未锁 → hoard = ⑤兜底域(fallback),可信位为真。
-
-    「空集双义」分离的关键:正常帧 readable 恒 True(含 fallback 非空域
-    与真空集),失败帧才 False——消费侧语义不因实现细节抖动。
-    """
-    sess = StrategySession()
-    state_of(sess).v3_intention = IntentionState()
-    turn = assemble(_snapshot(), sess)
-    assert turn.direction.hoard_readable is True
-    assert isinstance(turn.direction.hoard, frozenset)
-
-
 def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
     """变异探针(D1 验收判据):hoard_target_set 抛错 → 消费域 = 保守域。
 
     静默退空集 = 锁线局囤货方向消失一帧、买侧按无方向放行——本锁钉住
     「投影失败」与「真无目标」表示分离(hoard_readable 位)。
+    正常帧对照腿:ist 未锁 → hoard = ⑤兜底域(fallback),readable 恒
+    True(含 fallback 非空域与真空集)——「空集双义」分离的对照半。
     """
     import sr_od.application.currency_war.kernel.cw_intention as cw_intention_mod
 
     sess = StrategySession()
     state_of(sess).v3_intention = IntentionState()
+
+    # 正常帧对照:readable 恒真,hoard 为 frozenset 域
+    turn_ok = assemble(_snapshot(), sess)
+    assert turn_ok.direction.hoard_readable is True
+    assert isinstance(turn_ok.direction.hoard, frozenset)
 
     def _boom(_state, _ist):
         raise RuntimeError('注入:投影失败')
@@ -140,7 +139,7 @@ def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
 
 # ----------------------------------------------------- D2 缺供给保守侧
 # (保守 False 直锁 = 本文件 test_committed_authority_semantics 的
-#  none/p1_unarmed 两案;原并入目标均已退役或全史不存在,指针已收口。)
+#  p1_unarmed 一案;原并入目标均已退役或全史不存在,指针已收口。)
 
 
 # ----------------------------------------------------- D3 grep 锁(不恢复)
@@ -151,22 +150,7 @@ def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
 # review 与代码规范,不进测试网。
 
 
-# ----------------------------------------------------- P7 驱动点契约 + P6 注入
-
-def test_p7_drive_intention_idempotent_per_round():
-    """P7:同 (plane, round) 重入驱动 = 幂等(键守卫),跨轮才推进。"""
-    sess = StrategySession()
-    st = _state(plane=1, round_num=2)
-    # W6 波3:drive_intention 切容器签名,CwSimFrame 帧经一次性装箱。
-    drive_intention(cw4_box(st), sess)
-    assert state_of(sess).v3_intention_key == (1, 2)
-    ev1 = state_of(sess).v3_intention.last_event
-    drive_intention(cw4_box(st), sess)  # 同轮重入:不重复驱动
-    assert state_of(sess).v3_intention_key == (1, 2)
-    assert state_of(sess).v3_intention.last_event == ev1
-    drive_intention(cw4_box(_state(plane=1, round_num=3)), sess)   # 跨轮:推进
-    assert state_of(sess).v3_intention_key == (1, 3)
-
+# ----------------------------------------------------- P6 注入分歧探针
 
 def test_p6_registry_injection_reaches_state_machine():
     """P6 注入分歧探针:注入臂与缺省臂必须出现受控分歧,无分歧 = 注入链断。
@@ -193,16 +177,6 @@ def test_p6_registry_injection_reaches_state_machine():
                                None, registry=reg_inj)
     assert ist_def.locked_comp == ''            # 缺省臂:环境判据缓锁(weak 保持)
     assert ist_inj.locked_comp != ''            # 注入臂:判据不辖 → 落锁
-
-
-def test_p4_ist_zero_residue_across_matches():
-    """P4:跨局 ist 零残留——每局新建 StrategySession,ist/驱动键从零开始。"""
-    sess = StrategySession()
-    drive_intention(cw4_box(_state()), sess)
-    assert state_of(sess).v3_intention is not None and state_of(sess).v3_intention.evicted == set()
-    fresh = StrategySession()   # 新局(构造性重置)
-    assert state_of(fresh).v3_intention is None      # 策略器字段迁 MandateState
-    assert state_of(fresh).v3_intention_key is None
 
 
 # ----------------------------------------------------- 哨兵锁:局23 型帧
@@ -306,7 +280,8 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     取代,④例外语义由 test_cw_locked_buy_membership_split 重推锁
     承载,本锁在真无关件域保持。"""
     cfg = SimpleNamespace(ev_arm='full')
-    for gold0 in range(0, 101):
+    # 扫面收窄(审计判决):连续 0..100 → 息线两侧边界 + 两端代表点
+    for gold0 in (0, 49, 50, 51, 100):
         st = _ju23_frame(gold0, [_sc('局23杂件')])
         sess = _ju23_session()
         for _ in range(15):
@@ -349,10 +324,8 @@ def _bs_state(plane: int, round_num: int):
 
 
 @pytest.mark.parametrize('case', [
-    'none_conservative', 'p1_unarmed_conservative', 'p2_committed',
-    'locked_committed', 'p1_pair_committed'],
-    ids=['none-conservative', 'p1-unarmed-conservative', 'p2-committed',
-         'locked-committed', 'p1-pair-committed'])
+    'p1_unarmed_conservative', 'locked_committed', 'p1_pair_committed'],
+    ids=['p1-unarmed-conservative', 'locked-committed', 'p1-pair-committed'])
 def test_committed_authority_semantics(case: str):
     """committed 权威判定直锁(方向层单一派生源;原逐帧对拍锁的现役
     语义腿重锚为直锁,对拍半边随退役旧判定式删除——迁移对照到期纪律)。
@@ -360,15 +333,11 @@ def test_committed_authority_semantics(case: str):
     权威序任一成立即 True:①plane≥2 ②ist.phase=='locked' ③ist.p1_pair
     非空;缺供给(state/session 缺、未锁线)= 保守 False——True=已定型=
     激进侧,攒息门/双轨买门全开(供给点清单 D2:拔掉供给探针必须落
-    保守侧)。"""
-    if case == 'none_conservative':
-        assert committed_authority(None, None) is False
-        return
+    保守侧)。锁面三案 = 保守真帧一支(P1 未锁线)+ ist 定型两支
+    (locked/p1_pair);plane≥2 位面序支与 None 退化输入案经审计判决
+    简化(None 案直锁 = test_cw_session_separation)。"""
     if case == 'p1_unarmed_conservative':
         assert committed_authority(_bs_state(1, 3), StrategySession()) is False
-        return
-    if case == 'p2_committed':
-        assert committed_authority(_bs_state(2, 1), StrategySession()) is True
         return
     sess = StrategySession()
     if case == 'locked_committed':

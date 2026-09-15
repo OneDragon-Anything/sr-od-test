@@ -55,7 +55,9 @@ def _reset_run_cluster() -> None:
 
 def test_ensure_assembly_installs_at_default_root_when_absent(
         tmp_path: Path) -> None:
-    """未装配时兜底口按缺省根补装(测试进程 = conftest 重定向的 tmp 根)。"""
+    """兜底口双分支:未装配 → 按缺省根补装(测试进程 = conftest 重定向的
+    tmp 根);已装配 → 现役实例零成本直过(不 reset 不顶掉,兜底口禁顶掉
+    测试/生产自管装配)。"""
     reset_state_telemetry()
     assert state_journal_instance() is None
     ensure_journal_assembly(current_run_id)
@@ -64,11 +66,7 @@ def test_ensure_assembly_installs_at_default_root_when_absent(
     # conftest 把缺省根缝重定向到本测试的 tmp_path——兜底装配落 tmp,
     # 证明「自动装真实现」在测试进程不触真实账面(测试纪律 2)。
     assert journal.path == tmp_path / 'state' / 'journal.jsonl'
-
-
-def test_ensure_assembly_preserves_armed_instance(tmp_path: Path) -> None:
-    """已装配时兜底口零成本直过(现役实例原样保留,不 reset 不顶掉)。"""
-    reset_state_telemetry()
+    # 已装配分支:现役实例原样保留
     mine = install_state_telemetry(tmp_path / 'mine' / 'journal.jsonl')
     ensure_journal_assembly(current_run_id)
     assert state_journal_instance() is mine
@@ -103,7 +101,11 @@ def test_draft_birth_and_run_claim_do_not_wire_assembly(
 
 def test_close_run_flushes_buffered_rows_before_threshold(
         tmp_path: Path, _reset_run_cluster: None) -> None:
-    """收口落盘:批量阈值内的缓冲行随 close_run 落盘(装配读盘不漏局终行)。"""
+    """收口落盘:批量阈值内的缓冲行随 close_run 落盘(装配读盘不漏局终行);
+    无装配实例时 flush_pending 恒 0(收口单点在未武装进程零副作用)。"""
+    # 未武装进程:flush 零副作用(先于装配,隔离面)
+    reset_state_telemetry()
+    assert flush_pending() == 0
     jpath = tmp_path / 'journal.jsonl'
     install_state_telemetry(jpath)
     rid = start_run()
@@ -116,9 +118,3 @@ def test_close_run_flushes_buffered_rows_before_threshold(
     lines = jpath.read_text(encoding='utf-8').splitlines()
     assert len(lines) == 1
     assert state_journal_instance() is not None   # 收口 flush ≠ 拆装配
-
-
-def test_flush_pending_without_instance_is_zero() -> None:
-    """无装配实例时 flush_pending 恒 0(收口单点在未武装进程零副作用)。"""
-    reset_state_telemetry()
-    assert flush_pending() == 0
