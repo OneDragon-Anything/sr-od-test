@@ -2,11 +2,11 @@
 docs/develop/sr_od/application/currency_war/
 changes/2026-09-11-unified-state/details/GameState-数据结构设计.md,下称「设计」)。
 
-锁面 = 批次二任务书件:§8.7 消费适配器(旧读取对象 → GameState 适配层)/
-§3.4 单次逻辑写入口(申报豁免写端)/§3.3.6-8 刷新执行事实组(免费帧闸)/
+锁面 = 批次二任务书件:§3.4 单次逻辑写入口(申报豁免写端,合同正本在
+批一文件)/§3.3.6-8 刷新执行事实组(免费帧闸)/
 §3.3.1 cost_source 三值归并消费/§3.2.6 board 下档派生单一源(ADR-0488 同键
-供给)/§3.5.1 结算覆盖写端/§6.2+§8.8 局终归档快照/§3.2.5 read_bench_full
-通道退役墓碑。断言全部按设计语义写;批一 76 条回归锁另文件持续有效。
+供给)/§3.5.1 结算覆盖写端/§6.2+§8.8 局终归档快照。断言全部按设计语义写;
+批一回归锁正本在 test_cw_game_state.py。
 """
 from __future__ import annotations
 
@@ -42,7 +42,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwSimFrame,
 )
-from sr_od.application.currency_war.obs import cw_observation as cobs
 
 _register_sig_actors('TestSigWriter')
 
@@ -84,40 +83,8 @@ def _synth_bs_with(st: CwSimFrame) -> GameState:
 
 
 # ============================================================ §3.4 单次逻辑写入口
-
-
-def test_write_logic_writes_confirmed_logic_source() -> None:
-    """§3.4 申报豁免写端:单次逻辑写入直接转正(source=logic),并入
-    logic_written_fields;之后照受观察覆盖辖(§2.3)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.chosen_megastar, '花火', produced_by='CwScreenMegastar',
-                   sig=_lsig())
-    assert bs.chosen_megastar.value == '花火'
-    assert bs.chosen_megastar.source == 'logic'
-    assert bs.chosen_megastar in [
-        getattr(bs, n) for n in bs.logic_written_fields()]
-    # 观察覆盖照常赢(豁免不是免检通道)
-    bs.observe(bs.chosen_megastar, '希儿', sig=_sig())
-    assert bs.chosen_megastar.value == '希儿'
-    assert bs.chosen_megastar.source == 'observation'
-
-
-def test_write_logic_over_logic_mismatch_still_defects() -> None:
-    """§2.3 双向成立:logic 值被观察覆盖且失配 → 缺陷台账照常留证
-    (write_logic 产物与 confirm 产物同受观察赢辖)。"""
-    consume_defect_sink()
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.active_env, '昼之半神概念股', produced_by='x',
-                   sig=_lsig())
-    rows: list[dict] = []
-    set_defect_sink(rows.append)
-    try:
-        bs.observe(bs.active_env, '战争边疆', sig=_sig())
-    finally:
-        set_defect_sink(None)
-        consume_defect_sink()
-    assert len(rows) == 1 and rows[0]['field'] == 'active_env'
-
+# (write_logic 直写合同正本 = test_cw_game_state.py::test_write_logic_direct_write_immediately_readable;
+#  观察赢+失配留证正本 = 同文件 test_observe_over_logic_* 两件;此处不重复。)
 
 # ============================================================ §3.3.6-8 刷新执行事实组
 
@@ -275,22 +242,6 @@ def test_archive_snapshot_keys_and_prov_sparsity() -> None:
     assert extra['values']['node']['kind'] == 'boss'
 
 
-# ============================================================ §3.2.5 退役墓碑
-
-
-def test_read_bench_full_channel_retired_tombstone() -> None:
-    """§3.2.5:「备战席已满」警告 OCR 通道退役——墓碑调用即断言失败
-    (防复活);席满判定唯一入口 = 派生(批一锁 bench_is_full)。"""
-    with pytest.raises(RuntimeError, match='退役'):
-        cobs.read_bench_full(None, None)
-
-    with pytest.raises(RuntimeError, match='退役'):
-        from sr_od.application.currency_war.operations.cw_screen import (
-            cw_screen_prep,
-        )
-        cw_screen_prep.CwScreenPrep._bench_full_break_round(None, None, None, None, None)
-
-
 # ============================================================ 扩单件 3:§2.1 载体中继收敛
 
 
@@ -375,8 +326,6 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
     (观察赢)——一致静默,失配 = 投影 bug 缺陷留证后修推算代码。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         bench_view_of_slots,
-        consume_defect_sink,
-        set_defect_sink,
     )
     consume_defect_sink()
     proj_bench = [BenchChar(slot=1, char_id='花火', star=2)] + [None] * 8

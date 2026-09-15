@@ -20,17 +20,17 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
-    board_state_of,
     bench_view_of_slots,
+    board_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    SellBench,
-)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    SellBench,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,

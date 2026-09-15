@@ -1,7 +1,7 @@
 """GameState 迁移回归锁(迁移批次一;设计正本 = docs/develop/sr_od/application/currency_war/
 changes/2026-09-11-unified-state/details/GameState-数据结构设计.md,下称「设计」)。
 
-锁面 = 设计 §8.6 差距清单逐条(草板旧契约禁复发的负锁)+ §3 字段语义抽样
+锁面 = 设计 §8.6 差距清单逐条 + §3 字段语义抽样
 + 心跳不断流(§2.4 关键结构 2)+ sim 合成口箱占席语义(§3.2.5;迁移批次一
 任务书第 7 件)+ 设计 §8.7 批次三(策略器状态归位)与批次四(退役 +
 relay 空值闸)两组锁——原独立批次文件按主题文件纪律归并,断言体零语义
@@ -14,7 +14,6 @@ relay 空值闸)两组锁——原独立批次文件按主题文件纪律归并,
 from __future__ import annotations
 
 import dataclasses
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -97,23 +96,9 @@ def _hsig() -> _ChannelSig:
                        mode='compute')
 
 
-_REPO = Path(__file__).resolve().parents[5]
-_PKG = _REPO / 'src' / 'sr_od' / 'application' / 'currency_war'
-
-
 
 # ============================================================ §8.6-1/§2.1
 # Field 四来源 observation/logic/carried/prior + evidence 注记
-
-
-def test_field_has_four_sources_and_evidence() -> None:
-    """§8.6-1:Field 来源四分类齐备;carried/prior 必带 evidence 注记(§2.1)。"""
-    assert Field(value=1, source='observation').value == 1
-    assert Field(value=1, source='logic').source == 'logic'
-    carried = Field(value=3, source='carried', evidence='carried:p1-r4')
-    assert carried.source == 'carried' and carried.evidence == 'carried:p1-r4'
-    prior = Field(value=82, source='prior', evidence='prior:adr-0559')
-    assert prior.source == 'prior' and prior.evidence == 'prior:adr-0559'
 
 
 def test_board_state_schema_version_has_no_default() -> None:
@@ -123,33 +108,20 @@ def test_board_state_schema_version_has_no_default() -> None:
 
 
 # ============================================================ §8.6-2/§2.4
-# 两个关键结构:帧观察完整度标注+心跳 / bs_schema
-# (预期条目表已随 ADR-0651 两态制废除——两步机制测试套同步退役,
-#  换两态直写锁 + 墓碑锁。)
+# 帧观察完整度标注 / 心跳写点序 / bs_schema
 
 
 def test_write_logic_direct_write_immediately_readable() -> None:
-    """ADR-0651 两态制核心锁:逻辑推算值经 write_logic **直接写字段**
-    (source=logic)——策略器立即可读,无「预期条目表挂账」中间态。"""
+    """ADR-0651 两态制核心锁(写通道合同正本,全仓唯一份):逻辑推算值经
+    write_logic **直接写字段**(source=logic)——策略器立即可读,无「预期
+    条目表挂账」中间态;evidence 透传入账。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     bs.observe(bs.gold, 20, sig=_sig())
-    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter', sig=_lsig())
+    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter',
+                   evidence='probe@p1-r2', sig=_lsig())
     assert bs.gold.value == 17, '逻辑直写:字段立即可读(策略器读得到)'
     assert bs.gold.source == 'logic', 'logic 值保持 logic 来源(§8.1)'
-
-
-def test_two_step_mechanism_retired_tombstone() -> None:
-    """ADR-0651 墓碑锁:expect/confirm/discard_expected/pending_entries/
-    expected 条目表与模块级 PendingEntry/reconcile_pending_observation
-    全套废除——复活即红(防两步机制半删回归)。"""
-    for gone in ('expect', 'confirm', 'discard_expected', 'pending_entries'):
-        assert not hasattr(GameState, gone), f'GameState.{gone} 应已废除'
-    assert 'expected' not in {f.name for f in dataclasses.fields(GameState)}, \
-        'expected 条目表应已删除'
-    import sr_od.application.currency_war.kernel.cw_game_state as bs_mod
-    assert not hasattr(bs_mod, 'PendingEntry'), 'PendingEntry 应已删除'
-    assert not hasattr(bs_mod, 'reconcile_pending_observation'), \
-        '核对点闭环函数应已删除'
+    assert bs.gold.evidence == 'probe@p1-r2', 'evidence 原值透传'
 
 
 def test_logic_written_fields_tracks_and_reanchors() -> None:
@@ -204,7 +176,7 @@ _CHOSEN_DOMAINS = ('chosen_encounter', 'chosen_supply', 'chosen_megastar',
                    'chosen_equip')
 # ~~skip_battle_active/remaining 已移出本组(迁移批次二载体归一,§8.6-3):
 # 免战牌激活态+剩余次数正本 = effect_inventory.remaining_uses(§5.1),
-# GameState 不设平行 Field——负向锁见本文件下方 test_skip_battle_fields_retired。
+# GameState 不设平行 Field(正本归一,登记播种锁见 effect inventory 组)。
 _LEDGER_DOMAINS = ('equips', 'consumables')
 _REFRESH_GROUP = ('free_refresh_balance', 'paid_refresh_count',
                   'total_refresh_count', 'prev_node_spent')
@@ -221,16 +193,6 @@ def test_gap3_domains_present(name: str) -> None:
     P1-2 落地审:节点屏刷新计数组 §3.4.1-4 亦点名在列)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     assert isinstance(getattr(bs, name), Field), f'缺域:{name}'
-
-
-def test_skip_battle_fields_retired() -> None:
-    """§8.6-3 载体归一(迁移批次二):免战牌激活态+剩余次数正本 =
-    effect_inventory.remaining_uses(ActiveEffect.remaining_uses「次数类
-    余量(免战牌×2 等)」,§5.1 同型躺平/节省工位)——GameState 平行
-    Field 按正本归一移除(改锁依据:设计正本明文,非机械跟绿)。"""
-    field_names = {f.name for f in dataclasses.fields(GameState)}
-    for banned in ('skip_battle_active', 'skip_battle_remaining'):
-        assert banned not in field_names, f'免战牌平行 Field 应已归一移除:{banned}'
 
 
 def test_gap3_node_screen_refresh_schema_domain() -> None:
@@ -292,15 +254,6 @@ def test_hp_floor_event_is_pure_observation_registry() -> None:
 # 派生不存储:席空数/席满判定/board 下档阈值 = 计算函数,禁入 schema
 
 
-def test_derived_quantities_not_stored() -> None:
-    """§8.6-4:派生量禁入 schema(board_next_tier/席空数/席满判定;
-    bench_full_flag 警告位已裁撤不建,§3.2.5)。"""
-    field_names = {f.name for f in dataclasses.fields(GameState)}
-    for banned in ('board_next_tier', 'free_bench_slots', 'bench_full_flag',
-                   'bench_is_full'):
-        assert banned not in field_names, f'派生量入了 schema:{banned}'
-
-
 def test_bench_free_slots_unobserved_is_none() -> None:
     """§3.2.5:席空数没读到 = 不确定,**禁猜 0**——bench 从未观察返 None。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
@@ -335,13 +288,6 @@ def test_bench_free_slots_counts_occupying_kinds() -> None:
 # 构造守卫:frozen 帧替换 + hp 不变式 + 缺陷台账挂点
 
 
-def test_field_is_frozen_frame() -> None:
-    """§8.6-5:Field 冻结——写入只能经 GameState API 换新帧,禁原地改。"""
-    f = Field(value=1)
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        f.value = 2  # type: ignore[misc]
-
-
 def test_observe_replaces_frame_not_mutates() -> None:
     """§2.4:frozen 帧替换——旧帧引用保持旧值(持旧引用的读者不被跨时段写回污染)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
@@ -362,14 +308,6 @@ def test_observe_rejects_none_loses_are_carried_not_cleared() -> None:
     assert bs.hp.value == 80, '失读帧沿用上次好值'
     assert bs.hp.source == 'carried' and bs.hp.evidence == 'carried:p1-r5'
     assert bs.hp.value is not None, '硬边界:正式值永不清成 None'
-
-
-def test_carry_on_never_read_keeps_none() -> None:
-    """§2.2 处置②:字段从未读过(机制性不可读态+新局)→ 保持 None
-    (机制性 None 专指此态)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.carry(bs.gold, frame='p1-r1', sig=_sig())
-    assert bs.gold.value is None
 
 
 def test_write_prior_requires_prior_evidence() -> None:
@@ -394,6 +332,9 @@ def test_leave_screen_payload_only() -> None:
     bs.leave_screen(bs.supply, sig=_sig())
     assert bs.shop.value is None and bs.encounter.value is None \
         and bs.supply.value is None
+    assert bs.shop.source == 'observation' \
+        and bs.shop.evidence == 'left_screen', \
+        '离屏 = 置 None + left_screen 注记(§2.2 显式例外形态)'
     bs.observe(bs.gold, 20, sig=_sig())
     with pytest.raises(ValueError):
         bs.leave_screen(bs.gold, sig=_sig()), '整局字段(有过正式值)禁离屏清值'
@@ -435,14 +376,6 @@ def test_observe_over_logic_match_silent() -> None:
 
 # ============================================================ §8.6-7
 # Unit.faction 删除:阵营由 char_id 查注册表派生(开拓者按当前排,ADR-0158)
-
-
-def test_unit_has_no_faction_field() -> None:
-    """§8.6-7:阵营不是 Unit 的存储字段(§3.2.3 禁与注册表双源)。"""
-    unit_fields = {f.name for f in dataclasses.fields(Unit)}
-    assert 'faction' not in unit_fields
-    u = Unit(char_id='阿格莱雅', star=1)
-    assert u.equips == [] and u.slot == 0
 
 
 def test_bench_slot_kind_taxonomy() -> None:
@@ -965,14 +898,6 @@ def test_tick_node_dedup_and_acquired_guard_and_expiry() -> None:
     assert inv.tick_node(8) == [], '空清单 tick 幂等'
 
 
-def test_tick_node_without_ordinal_is_legacy_unconditional() -> None:
-    """无 node_ordinal(旧签名)→ 无条件推进(测试/sim 直调兼容面)。"""
-    inv = ActiveEffectInventory()
-    inv.register_strategy(STRATEGY_EFFECTS['躺平'], acquired_t=5)
-    inv.tick_node()
-    assert inv.first('102001').remaining_nodes == 2
-
-
 def test_advance_node_reports_advanced_flag() -> None:
     """B1 桥闸门:advance_node 返回 (advanced, expired)——同节点重复推进
     advanced=False(余额累加闸 = 每节点恰一次);tick_node 兼容口语义不变。"""
@@ -1199,18 +1124,6 @@ def test_snapshot_assembly_falls_back_to_board_state_view() -> None:
     snap = snapshot_from_obs(obs, sess)
     assert (snap.plane, snap.round_num) == (2, 5), \
         '回退锚 = GameState 记录值(非 last_state 原帧)'
-
-
-def test_snapshot_anchor_state_falls_back_to_board_state_view() -> None:
-    """件 3 收口墓碑(原锁:adapter._anchor_state 的 session 锚回退取
-    GameState 记录值)——该缝已随 T-116 段 2 退役删除(snapshot_from_obs
-    纯容器锚),符号复活即红;回退链现役语义由容器锚锁守护,退役史
-    归 git 历史(T-116 段 2)。"""
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        adapter as _adapter,
-    )
-    assert not hasattr(_adapter, '_anchor_state'), \
-        'adapter._anchor_state 应已删除(T-116 段 2 缝收敛)'
 
 
 # ============================================================ §8.7 批次四

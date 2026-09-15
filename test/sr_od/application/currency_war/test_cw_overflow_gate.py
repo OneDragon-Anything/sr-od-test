@@ -21,6 +21,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     bench_view_of_slots,
     board_state_of,
 )
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench,
     StartBattle,
@@ -32,9 +35,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
-)
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 
@@ -43,12 +43,12 @@ def _frame(**kw) -> MandateFrame:
     """最小骨架帧:round>1 免 M5;gold 充裕免凑息/买面;上阵 1 人免
     empty_board_sell_guard(场上无人禁卖守卫);单 1★ 备战件(椒丘 = 新
     会话默认身份排除集外的中性位,可入燃料候选)。"""
-    base = dict(gold=200, level=7,
-                bench=[BenchChar(slot=1, char_id='椒丘', star=1)],
-                deployed=[BenchChar(slot=1, char_id='刃', star=1,
-                                    position_pref='front')],
-                deploy_cap=7, node_type='battle',
-                stop_flag=False, k_members=('刃',), round_num=5)
+    base = {'gold': 200, 'level': 7,
+            'bench': [BenchChar(slot=1, char_id='椒丘', star=1)],
+            'deployed': [BenchChar(slot=1, char_id='刃', star=1,
+                                   position_pref='front')],
+            'deploy_cap': 7, 'node_type': 'battle',
+            'stop_flag': False, 'k_members': ('刃',), 'round_num': 5}
     base.update(kw)
     return MandateFrame(**base)
 

@@ -219,7 +219,6 @@ def _bcd_host(monkeypatch, bench_slots, counters):
     (镜像 T-230 恢复路由锁的替身纪律)。"""
     from types import SimpleNamespace as _NS
 
-    import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
     import sr_od.application.currency_war.kernel.cw_game_state as _gs_mod
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,

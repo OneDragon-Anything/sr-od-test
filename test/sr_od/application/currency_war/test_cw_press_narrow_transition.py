@@ -95,7 +95,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     form_progress,
     get_comp,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import OpenShop
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -104,6 +103,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     BuyCard,
     CwSimFrame,
+    OpenShop,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (

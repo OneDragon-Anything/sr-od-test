@@ -26,14 +26,14 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     apply_prep_action_logic,
-    board_state_of,
     bench_view_of_slots,
-)
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    SellBench,
+    board_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    SellBench,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     guard_expected_vs_tracked,

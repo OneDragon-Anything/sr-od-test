@@ -112,8 +112,8 @@ def test_unified_vocab_is_single_source_and_removals_hold():
 def test_prep_f3_rejects_unknown_and_admits_registered():
     """执行器 F3 白名单 = 统一词表元组的行为半:词表外类型拒(参数非法
     路径,Director 交回外循环留证),在册动作合法域放行。"""
-    from sr_od.application.currency_war import prep_actions as pa
     from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war import prep_actions as pa
     ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
     ex._bench_pts = [Point(i * 10, i * 10) for i in range(9)]
     ex._front_pts = [Point(i * 10, i * 10) for i in range(4)]

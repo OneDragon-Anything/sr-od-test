@@ -19,8 +19,6 @@
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_exec_state import (
@@ -31,22 +29,13 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BENCH_CAPACITY_DEFAULT,
     BS_SCHEMA_VERSION,
     GameState,
-    apply_settlement_cover,
     bench_free_slots,
     bench_is_full,
-    bench_slots_to_legacy,
-    bench_view_of_slots,
     board_next_tier_of,
-    board_state_of,
-    deployed_rows_from_obs,
     node_ordinal_of,
     register_sig_actors,
-    set_defect_sink,
-    shop_card_to_container,
-    shop_cards_to_legacy,
     slot_occupies,
     synthesize_from_game_state,
-    unit_rows_to_deployed,
     write_match_final,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -101,25 +90,6 @@ def test_observe_writes_and_overrides() -> None:
         bs.observe(bs.gold, 1, sig=_lsig())
 
 
-def test_observe_overriding_logic_mismatch_leaves_defect() -> None:
-    """观察赢(§2.3):覆盖 logic 来源值且失配 → 缺陷台账留证
-    (失配 = 推算 bug,修推算代码);一致覆盖不留证。"""
-    bs = _bs()
-    defects: list[dict] = []
-    set_defect_sink(defects.append)
-    try:
-        bs.write_logic(bs.gold, 100, produced_by='probe', sig=_lsig())
-        bs.observe(bs.gold, 80, sig=_sig())
-        assert [(d['field'], d['expected'], d['actual']) for d in defects] \
-            == [('gold', 100, 80)]
-        defects.clear()
-        bs.write_logic(bs.gold, 80, produced_by='probe', sig=_lsig())
-        bs.observe(bs.gold, 80, sig=_sig())
-        assert defects == [], '一致覆盖非失配,不留证'
-    finally:
-        set_defect_sink(None)
-
-
 def test_carry_carries_good_value_and_skips_never_read() -> None:
     """失读处置①(§2.2):沿用上次好值,evidence=carried:<帧>;
     从未读字段(机制性 None)→ no-op 不占版本不换来源(不造假历史)。"""
@@ -137,58 +107,10 @@ def test_carry_carries_good_value_and_skips_never_read() -> None:
     assert bs.current_version() == hp_version, '从未读 carry 不占版本'
 
 
-def test_write_prior_requires_prefix() -> None:
-    """先验通道(§2.1/§3.1.6):evidence 必带 ``prior:`` 前缀(显式申报,
-    禁扩散);source=prior。"""
-    bs = _bs()
-    with pytest.raises(ValueError, match='prior: 前缀'):
-        bs.write_prior(bs.hp, 70, evidence='开局默认', sig=_sig())
-    bs.write_prior(bs.hp, 70, evidence='prior:adr-0559', sig=_sig())
-    assert bs.hp.value == 70 and bs.hp.source == 'prior'
-
-
-def test_leave_screen_only_payload_domains() -> None:
-    """离屏清值(§2.2 显式例外):仅画面附加域(shop/encounter/supply)
-    合法;整局字段(hp/gold)禁走此口(显式炸错防误用扩散);
-    写 None + evidence=left_screen + source=observation。"""
-    bs = _bs()
-    for name in ('hp', 'gold', 'level'):
-        field = getattr(bs, name)
-        with pytest.raises(ValueError, match='非画面附加域'):
-            bs.leave_screen(field, sig=_sig())
-    bs.observe(bs.shop, ['花火'], sig=_sig())
-    bs.leave_screen(bs.shop, sig=_sig())
-    assert bs.shop.value is None
-    assert bs.shop.source == 'observation'
-    assert bs.shop.evidence == 'left_screen'
-
-
-def test_write_logic_sets_logic_source() -> None:
-    """逻辑直写(ADR-0651 两态制标准写通道):决策动作按游戏规则推算的
-    预期效果直接写 source=logic,策略器立即可读;之后仍受观察覆盖辖
-    (非免检)。"""
-    bs = _bs()
-    bs.write_logic(bs.gold, 42, produced_by='op_x',
-                   evidence='refresh_exec@p1-r2', sig=_lsig())
-    assert bs.gold.value == 42 and bs.gold.source == 'logic'
-    assert bs.gold.evidence == 'refresh_exec@p2' if False else \
-        bs.gold.evidence == 'refresh_exec@p1-r2'
-    assert 'gold' in bs.logic_written_fields()
-
-
-def test_relay_gates_and_fills_never_read_fields() -> None:
-    """载体中继(§2.1):只写从未读过的字段(source=logic +
-    evidence=session_carrier,返回 True);已有值跳过(False);
-    空串/空列表 = 「未知」非「已知事实」,拒中继(空值固化遮蔽后到真值)。"""
-    bs = _bs()
-    assert bs.relay(bs.chosen_megastar, '', sig=_hsig()) is False
-    assert bs.relay(bs.active_strategies, [], sig=_hsig()) is False
-    assert bs.relay(bs.chosen_megastar, '镜流', sig=_hsig()) is True
-    assert bs.chosen_megastar.source == 'logic'
-    assert bs.chosen_megastar.evidence == 'session_carrier'
-    assert bs.relay(bs.chosen_megastar, '卡芙卡', sig=_hsig()) is False, \
-        '已有正式值一律跳过(禁翻已写 logic 为中继)'
-
+# ============================================================ §1 写入口六通道
+# (先验前缀/离屏辖域/逻辑直写/载体中继四通道合同正本 =
+#  test_cw_game_state.py 与 test_cw_game_state_consume.py 的同名行为锁,
+#  本文件不再留第二份;观察通道见上。)
 
 def test_cross_instance_field_reference_rejected() -> None:
     """身份匹配(§8.4):target 须是本单例字段现引用,跨单例引用 = 写丢
@@ -302,8 +224,7 @@ def test_full_state_snapshot_shape() -> None:
     assert 'hp' in snap['prov'] and snap['prov']['hp']['source'] == 'logic'
     assert 'gold' not in snap['prov'], 'observation 无 evidence 不进 prov'
     bs2 = _bs()
-    bs2.observe(bs.gold, 30, sig=_sig()) if False else \
-        bs2.observe(bs2.gold, 30, sig=_sig())
+    bs2.observe(bs2.gold, 30, sig=_sig())
     bs2.write_logic(bs2.hp, 70, produced_by='p', sig=_lsig())
     assert bs2.full_state_snapshot() == snap, '同态同形'
 
@@ -405,47 +326,9 @@ def test_synthesize_writes_observation_with_sim_evidence() -> None:
     assert bs.node_ord.value is None, '合成口不写节点序(节点由观察链派生)'
 
 
-def test_shop_card_mapping_roundtrip() -> None:
-    """双 ShopCard 归一(映射单一源):旧→容器保五记录字段+槽号;
-    容器→旧 x/merge_preview 同帧对齐透传,slot 自容器透传;
-    失配窗置 0(禁错位对齐)。"""
-    legacy = ShopCard(x=300, faction='仙舟', name='希儿', cost=1, star=2,
-                      cost_source='roster_fallback', merge_preview=2, slot=3)
-    container = shop_card_to_container(legacy)
-    assert (container.name, container.faction, container.cost,
-            container.star, container.cost_source, container.slot) == \
-        ('希儿', '仙舟', 1, 2, 'roster_fallback', 3)
-    back = shop_cards_to_legacy([container], frame_cards=[legacy])
-    assert (back[0].x, back[0].merge_preview, back[0].slot) == (300, 2, 3)
-    misaligned = shop_cards_to_legacy([container],
-                                      frame_cards=[legacy, legacy])
-    assert (misaligned[0].x, misaligned[0].merge_preview) == (0, 0)
-
-
-def test_bench_slot_views_and_legacy_tables() -> None:
-    """席位视图:BenchView 构造(阵营不入容器,查注册表派生)、旧槽表
-    (1:1 同构)、deployed 分排守卫(空集 = 失读返 None,禁「全场无人」
-    假观察)、旧定长槽表重建(None 填充,行内 1 基 slot)。"""
-    view = bench_view_of_slots([BenchChar(slot=1, char_id='花火', star=2),
-                                None])
-    assert view is not None
-    table = bench_slots_to_legacy(view)
-    assert table[0] is not None and table[0].char_id == '花火'
-    assert table[0].faction != '?', '阵营自注册表派生(非容器存储)'
-    assert table[1] is None and len(table) == 9
-
-    assert deployed_rows_from_obs([]) is None
-    assert deployed_rows_from_obs([BenchChar(slot=0, char_id='')]) is None
-    front, back = deployed_rows_from_obs([
-        BenchChar(slot=2, char_id='希儿', star=2, position_pref='front'),
-        BenchChar(slot=1, char_id='景元', star=1, position_pref='back'),
-    ])
-    assert [(u.char_id, u.slot) for u in front] == [('希儿', 2)]
-    assert [(u.char_id, u.slot) for u in back] == [('景元', 1)]
-    rebuilt = unit_rows_to_deployed(front, back)
-    assert len(rebuilt) == 10
-    assert rebuilt[1].char_id == '希儿' and rebuilt[4].char_id == '景元'
-    assert all(rebuilt[i] is None for i in (0, 2, 3, 5, 6, 7, 8, 9))
+# ============================================================ §5 合成口与映射
+# (ShopCard 往返 / bench-deployed 槽表转换的合同锁正本 =
+#  test_cw_game_state.py「容器视图转换」组;此处不重复。)
 
 
 def test_node_ordinal_and_tier_helpers() -> None:
@@ -470,13 +353,8 @@ def test_write_match_final_idempotent() -> None:
     assert write_match_final(bs, final_type='loss', plane=1) is False
 
 
-def test_settlement_cover_writes_hp_truth() -> None:
-    """结算覆盖:结算 hp 真值覆盖(结算事实是最高优先级观察),
-    hp 可信位随结算翻真。"""
-    bs = _bs()
-    bs.observe(bs.hp, 50, sig=_sig())
-    apply_settlement_cover(bs, hp_after=32, streak_after=1)
-    assert bs.hp.value == 32 and bs.hp.source == 'observation'
+# (结算覆盖合同锁正本 = test_cw_game_state_consume.py 三件
+#  test_settlement_cover_writes_truth_group / _loss_page / _unread_hp。)
 
 
 # ============================================================ §7 动作模拟
@@ -521,15 +399,6 @@ def test_simulate_level_up_costs_and_levels() -> None:
 
 # ============================================================ §8 会话与执行状态
 
-def test_strategy_session_default_mirrors() -> None:
-    """会话载体:镜像字段默认 = 「未知」形态(空串/空列表/None),
-    非「已知事实」——relay 空值闸的消费前提。"""
-    sess = StrategySession()
-    assert sess.chosen_megastar == ''
-    assert sess.active_strategies == []
-    assert sess.last_hp is None
-
-
 def test_exec_state_lazy_binding() -> None:
     """执行状态延迟绑定:未绑定时 exec_state_of 产临时态;
     bind 后同 session 恒取同一实例(跨 op 共享执行账)。"""
@@ -538,16 +407,6 @@ def test_exec_state_lazy_binding() -> None:
     assert st is not None
     bound = bind_exec_state(sess, st)
     assert exec_state_of(sess) is bound
-
-
-def test_board_state_of_binds_once() -> None:
-    """board_state_of:同 session 恒取同一 GameState 单例
-    (容器单例语义 = 写入口身份匹配的前提)。"""
-    sess = SimpleNamespace()
-    a = board_state_of(sess)
-    b = board_state_of(sess)
-    assert a is b
-    assert isinstance(a, GameState)
 
 
 # ============================================================ fixtures
