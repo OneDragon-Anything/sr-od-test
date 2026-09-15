@@ -666,10 +666,11 @@ def _isolate_window_run_mutex(
 # --------------------------------------------------------------------------- #
 # state 流水装配根隔离(README 测试纪律 2 的机检层)
 # --------------------------------------------------------------------------- #
-# 背景:CW state 流水的生产兜底装配挂在 GameState 初始化(T-274 用户裁定
-# 2026-09-15:遥测装配 = game state 职责;kernel cw_game_state
-# GameState.__post_init__ → kernel ensure_journal_assembly,「未装配即按
-# 生产缺省根补装」;生产注入漏斗 = establish_new_match 容器建立点)。
+# 背景:CW state 流水的生产兜底装配挂在局容器单例建立点(T-274 用户裁定
+# 2026-09-15:遥测装配 = game state 职责,精化令:触发只钉 kernel
+# cw_game_state board_state_of 建立路径 → kernel ensure_journal_assembly,
+# 「未装配即按生产缺省根补装」;生产注入漏斗 = establish_new_match 容器
+# 建立点)。
 # op 流程测试驱动到容器建立/首建就会过这个点——不重定向
 # 有两个后果:① 测试真实写 .debug/currency_war/telemetry/live/state/journal.
 # jsonl(纪律 2 禁止);② 装配前置的寿命清理会读真实 85MB 账面(慢 + 可能
