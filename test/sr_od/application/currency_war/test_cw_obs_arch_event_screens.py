@@ -99,7 +99,11 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
                         lambda ctx, scr: list(options))
     monkeypatch.setattr(em, 'read_encounter_refresh_count',
                         lambda ctx, scr: cnt)
-    monkeypatch.setattr(em, 'safe_click', lambda o, pt, **k: None)
+    # 统一动作工厂批4:遭遇确认链体迁 pick op 模块——safe_click/
+    # emit_overlay_confirm 桩随体迁移(替身跟随被迁体;桩语义不变:
+    # 机械点击空操作、确认链回指定轮次结果)。
+    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    monkeypatch.setattr(pick_mod, 'safe_click', lambda o, pt, **k: None)
     # (三审便宜化)encounter op 入口有画面稳定期 time.sleep(2.0s,
     # 真机等帧用)——mock 画面瞬时切换,等待纯属空睡;桩置空后单条
     # 2.8-5.6s → 亚秒(先例 = _make_strategy 桩 ism.time.sleep)。
@@ -111,7 +115,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     _confirm_rs = OperationRoundResult(
         OperationRoundResultEnum.SUCCESS if confirm_success
         else OperationRoundResultEnum.RETRY, status='stub')
-    monkeypatch.setattr(em, 'emit_overlay_confirm',
+    monkeypatch.setattr(pick_mod, 'emit_overlay_confirm',
                         lambda o, **k: _confirm_rs)
     # (record_event_choice 替身桩已随删除波 1 移除——exogenous 写入端退役,
     #  encounter 模块不再引用 telemetry;(bs_view 桩同批移除——模块本体

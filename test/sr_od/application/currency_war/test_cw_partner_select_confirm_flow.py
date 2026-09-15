@@ -32,9 +32,6 @@ from test.harness.fixture_controller import (
     reset_running_state,
 )
 
-from sr_od.application.currency_war.operations.cw_screen import (
-    cw_screen_partner as partner_mod,
-)
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_partner import (
     CwScreenPartner,
 )
@@ -45,8 +42,8 @@ _BOARD_FRAME = ('货币战争-备战', 'deployed_2star')
 
 
 class _NoSleep:
-    """partner 模块内 ``time`` 替身:点击后等待记录不真睡(fast_sleep 只盖
-    op 框架的轮间等待,盖不到本模块自己的 ``time.sleep``)。"""
+    """模块内 ``time`` 替身:点击后等待记录不真睡(fast_sleep 只盖
+    op 框架的轮间等待,盖不到模块自己的 ``time.sleep``)。"""
 
     def __init__(self) -> None:
         self.skipped: list[float] = []
@@ -68,7 +65,12 @@ def _make_watched_op(test_context, monkeypatch) -> CwScreenPartner:
     monkeypatch.setattr(
         op, '_identify_portraits',
         lambda screen, cands: [n for n, _cx, _cy in cands])
-    monkeypatch.setattr(partner_mod, 'time', _NoSleep())
+    # 统一动作工厂批4:「点选候选 → 确认」脉冲链体迁 pick op 模块——
+    # 模块内 time 替身随体迁移(替身跟随被迁体,锁的「不真睡」意图不变;
+    # partner 模块本体已无直接 sleep)。本测试桩化的伙伴脉冲确认收尾
+    # (partner reset 根因链)不读屏,桩面= 记录点击。
+    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    monkeypatch.setattr(pick_mod, 'time', _NoSleep())
     return op
 
 
