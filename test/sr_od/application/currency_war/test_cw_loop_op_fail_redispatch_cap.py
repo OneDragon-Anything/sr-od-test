@@ -202,3 +202,105 @@ def test_limit_derivation_invariant():
     # prep 环 _director_fail_streak 阈值 5(loop._on_prep_round 内字面量):
     # 通用网取同值 → 平手时 hook 先返回,结构性不抢占专用守卫。
     assert CwLoop.OP_FAIL_REDISPATCH_LIMIT == 5
+
+
+# ===== T-266 追加(三审代-2 升应修):出战链 {slot:下标} 对位防线 =====
+# 病理:容器槽位表存在重复/越界槽号时 `_cidx_of = {b.slot: i}` 字典推导
+# 静默保留后值 → DeployMove 对位同槽号另一条目、拖错人出场。修 = 判据
+# 单一源 bench_slots_healthy(T-261 槽号健康不变量)前置门:不健康 →
+# 整份部署计划 fail-closed 不出 + cw4 分键显影。
+
+_KEY_UNHEALTHY = 'deploy_chain_slot_table_unhealthy'
+
+
+def _bcd_host(monkeypatch, bench_slots, counters):
+    """`_battle_chain_deploy_moves` 离线宿主:容器读口给真读口喂桩容器、
+    mandate 计划段桩化(select 返回指定 up_idx),锁定对位门行为
+    (镜像 T-230 恢复路由锁的替身纪律)。"""
+    from types import SimpleNamespace as _NS
+
+    import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
+    import sr_od.application.currency_war.kernel.cw_game_state as _gs_mod
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        mandate as _mandate_mod,
+    )
+
+    bs = _NS(node=_NS(value=None), back_layout=_NS(value=None),
+             deploy_cap=_NS(value=None), gold=_NS(value=10),
+             level=_NS(value=5), front_row=_NS(value=None),
+             back_row=_NS(value=None))
+    session = StrategySession()
+    session.strategy_state = _NS(cw4_counters=counters)
+    monkeypatch.setattr(_gs_mod, 'board_state_of', lambda s: bs)
+    monkeypatch.setattr(_gs_mod, 'bench_slots_of', lambda b: bench_slots)
+    monkeypatch.setattr(_mandate_mod, '_deploy_plan_inputs',
+                        lambda *a, **k: {})
+    return session
+
+
+def test_deploy_chain_duplicate_slot_fails_closed(monkeypatch):
+    """锁8 重复槽号 → 整份计划不出(遮蔽通道 fail-closed)+ 分键显影。"""
+    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+    from sr_od.application.currency_war.operations.cw_loop import (
+        _battle_chain_deploy_moves,
+    )
+
+    counters: dict = {}
+    bench_slots = ([BenchChar(slot=1, char_id='花火', faction='风'),
+                    BenchChar(slot=1, char_id='艾丝妲', faction='光')]
+                   + [None] * 7)
+    session = _bcd_host(monkeypatch, bench_slots, counters)
+
+    import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
+    monkeypatch.setattr(_dl_mod, 'select_deployments_reasoned',
+                        lambda **k: ([0], [], []))   # 计划段有选择,逼入门内
+
+    assert _battle_chain_deploy_moves(session) == []   # 零 DeployMove
+    assert counters[_KEY_UNHEALTHY] == 1   # 显影分键(禁静默降级)
+
+
+def test_deploy_chain_out_of_range_slot_fails_closed(monkeypatch):
+    """锁9 越界槽号(slot>BENCH_CAPACITY)→ 同门同罚(健康门两腿)。"""
+    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+    from sr_od.application.currency_war.operations.cw_loop import (
+        _battle_chain_deploy_moves,
+    )
+
+    counters: dict = {}
+    bench_slots = [BenchChar(slot=10, char_id='花火', faction='风')]
+    session = _bcd_host(monkeypatch, bench_slots, counters)
+
+    import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
+    monkeypatch.setattr(_dl_mod, 'select_deployments_reasoned',
+                        lambda **k: ([0], [], []))
+
+    assert _battle_chain_deploy_moves(session) == []
+    assert counters[_KEY_UNHEALTHY] == 1
+
+
+def test_deploy_chain_healthy_table_maps_and_launches(monkeypatch):
+    """锁10 健康表直通:门不误伤,对位取容器槽位表下标(bench_idx 语义)。"""
+    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+    from sr_od.application.currency_war.operations.cw_loop import (
+        _battle_chain_deploy_moves,
+    )
+
+    counters: dict = {}
+    bench_slots = ([BenchChar(slot=1, char_id='花火', faction='风'),
+                    BenchChar(slot=2, char_id='艾丝妲', faction='光')]
+                   + [None] * 7)
+    session = _bcd_host(monkeypatch, bench_slots, counters)
+
+    import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
+    monkeypatch.setattr(_dl_mod, 'select_deployments_reasoned',
+                        lambda **k: ([0], [], []))   # 选 bench 下标 0 上场
+
+    moves = _battle_chain_deploy_moves(session)
+    assert counters == {}   # 健康表零分键(门未触发)
+    assert len(moves) == 1
+    assert moves[0].bench_idx == 0   # = 槽号 1 在容器槽位表的下标(非槽号本身)
+    assert moves[0].faction == '风'   # faction = 容器槽位表角色对象现取
+    assert moves[0].to_row in ('front', 'back')   # 前排保证语义归 assign 单一源
