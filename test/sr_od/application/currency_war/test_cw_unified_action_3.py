@@ -17,6 +17,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from test.harness.fixture_controller import fast_sleep
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -109,8 +110,25 @@ def test_open_shop_row_is_terminal_carrier_and_execute_loud_fails():
             op.execute(env)
 
 
-# ===== StartBattle 基类契约在册例外锁(判据:例外条款落基类契约登记口;
-# ===== A6 挂账指向在册 = StartBattleOp 模块头申报,本锁锁行为半)=====
+# ===== StartBattle 基类契约在册例外锁(T-286 出战域重设计:点击序列语义;
+# ===== 弹窗确认路径 + 免战子态上报 + 免战牌递减经 game state 上报路径)=====
+
+#: 识别命中表的键 = (画面名, area 名)(op 桩 round_by_find_area 的判定面)。
+_HIT_BTN = ('货币战争-备战', '按钮-出战')
+_HIT_SKIP = ('货币战争-备战', '按钮-跳过')
+_HIT_NOTFULL = ('货币战争-未达上限警告', '标识-未达上限警告')
+_HIT_NOFRONT = ('货币战争-提示-前台无角色', '标识-无角色提示')
+
+#: area_center 桩返回表:每个交互 area 一个定值点(区分点击对象)。
+_AREA_POINTS = {
+    _HIT_BTN: Point(100, 200),
+    ('货币战争-备战-开商店', '按钮-出战'): Point(100, 200),
+    _HIT_SKIP: Point(110, 200),
+    ('货币战争-未达上限警告', '勾选-本局不再提示'): Point(300, 400),
+    ('货币战争-未达上限警告', '按钮-确认'): Point(301, 401),
+    ('货币战争-提示-前台无角色', '按钮-确认'): Point(302, 402),
+}
+
 
 class _RecordingController:
     def __init__(self) -> None:
@@ -124,53 +142,173 @@ class _RecordingController:
         self.clicks.append(p)
 
 
-def _make_executor(controller: _RecordingController) -> PrepActionExecutor:
+def _patch_area_center(monkeypatch) -> None:
+    """op 模块级 area_center 桩(命中表返回定值点;screen_info 坐标解析
+    本身不属本锁面,本锁只锁 op 的决策/点击序列)。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_start_battle_action as _sba,
+    )
+    monkeypatch.setattr(
+        _sba, 'area_center',
+        lambda ctx, name, screen_name=_sba.SCREEN_NAME:
+        _AREA_POINTS.get((screen_name, name)))
+
+
+def _make_stub_op(hits: set[tuple[str, str]]):
+    """op 桩:screenshot 恒同帧对象,round_by_find_area 按命中表演。"""
+
+    def _find(_screen, screen_name: str, area_name: str, **_kw):
+        return SimpleNamespace(is_success=(screen_name, area_name) in hits)
+
+    return SimpleNamespace(screenshot=lambda: object(),
+                           round_by_find_area=_find,
+                           save_screenshot=lambda prefix='': 'stub.png')
+
+
+def _make_executor(controller: _RecordingController, stub_op,
+                   cw_match=None) -> PrepActionExecutor:
     """执行器桩宿主(同 unified_action_2a harness 形状;本文件自持)。"""
-    op = SimpleNamespace(park_cursor=lambda **kw: None,
-                         screenshot=lambda: object(),
-                         save_screenshot=lambda prefix='': 'stub.png')
-    ctx = SimpleNamespace(controller=controller, cw_match=None,
+    ctx = SimpleNamespace(controller=controller, cw_match=cw_match,
                           run_context=None,
                           screen_loader=SimpleNamespace(
                               get_screen=lambda name: None))
-    return PrepActionExecutor(op, ctx)
+    return PrepActionExecutor(stub_op, ctx)
 
 
-def test_start_battle_execute_and_envelope_write_launch_fact(monkeypatch):
-    """在册例外 + 包络腿(两条并 1):StartBattleOp.execute 返回值 =
-    发射位**内部事实**(非恒 True;找不到按钮/未落地 = False),并经
-    env 旁路写 (detail, emitted) 供 runner 包络消费(last_launch_ok/
-    exec_state 写点在包络);经注册表分派后写 ``executor.last_launch_ok``
-    旁路(cw_loop 发射链读点;A6 判效面批4 同退役)与机械摘要
-    ``last_detail``,执行缝金差恒 0(非卖非点球),薄委托替身缝返回序
-    保持原 (ok, detail)。"""
+def _make_env(ex: PrepActionExecutor) -> SimpleNamespace:
+    return SimpleNamespace(op=ex._op, match=None, config=None,
+                           executor=ex, detail='', emitted=False,
+                           skip_substate=False)
+
+
+def test_start_battle_click_sequence_and_envelope(monkeypatch):
+    """在册例外(点击序列语义)+ 三条弹窗路径 + 包络腿(并 1):
+
+    - 常规帧:出战一次单击 → True(detail = 已点击无弹窗);零验证
+      (无轮询/重试面,单击即完成交回);
+    - 未达上限帧:勾选+确认两击后完成(勾选幂等,ADR-0136 行为对齐);
+    - 前台无角色帧:确认一击后完成;
+    - 找不到按钮:两屏查空 → False + 「未执行:找不到按钮」上报 + 零点击
+      (交回外循环重判,不炸);
+    - 包络腿:经注册表分派写 ``executor.last_launch_ok`` 旁路(点击序列
+      已执行语义)与机械摘要 ``last_detail``,执行缝金差恒 0,薄委托
+      替身缝返回序保持原 (ok, detail)。"""
     from sr_od.application.currency_war.operations.cw_op.cw_start_battle_action import (
         StartBattleOp as _SBO,
     )
+    _patch_area_center(monkeypatch)
     op = _SBO(StartBattle())
-    ex = _make_executor(_RecordingController())
-    env = SimpleNamespace(op=ex._op, match=None, config=None,
-                          executor=ex, detail='', emitted=False)
-    # 未落地形态:常规发射与重发均未落地(session 缺 = 连败计数挂空,
-    # escalate 放行)→ execute 返回 False
-    monkeypatch.setattr(_SBO, '_launch_attempt',
-                        lambda self, ex, press_time=0.1:
-                        (False, '出战 click 未落地'))
-    assert op.execute(env) is False            # 返回值非恒 True(内部事实)
-    assert env.emitted is False
-    assert '未落地' in env.detail
-    # 落地形态:execute True + env 旁路 (detail, emitted)
-    monkeypatch.setattr(_SBO, '_launch_attempt',
-                        lambda self, ex, press_time=0.1: (True, '出战成功'))
-    assert op.execute(env) is True
-    assert env.emitted is True and env.detail == '出战成功'
-    # 包络腿:发射位内部事实写 executor 旁路与机械摘要
-    ex.execute(StartBattle())
+    # 常规帧:无弹窗(直调路径 detail 走 env 旁路;last_detail 是 runner
+    # 包装写点,包络腿段另验)
+    ctl = _RecordingController()
+    ex = _make_executor(ctl, _make_stub_op({_HIT_BTN}))
+    env = _make_env(ex)
+    with fast_sleep():
+        assert op.execute(env) is True
+    assert ctl.clicks == [_AREA_POINTS[_HIT_BTN]]
+    assert '出战已点击' in env.detail and '无弹窗' in env.detail
+    # 未达上限帧:勾选 + 确认
+    ctl = _RecordingController()
+    ex = _make_executor(ctl, _make_stub_op({_HIT_BTN, _HIT_NOTFULL}))
+    env = _make_env(ex)
+    with fast_sleep():
+        assert op.execute(env) is True
+    assert ctl.clicks == [_AREA_POINTS[_HIT_BTN],
+                          _AREA_POINTS[('货币战争-未达上限警告',
+                                        '勾选-本局不再提示')],
+                          _AREA_POINTS[('货币战争-未达上限警告',
+                                        '按钮-确认')]]
+    assert '未达上限警告:勾选+确认' in env.detail
+    assert env.emitted is True and env.skip_substate is False
+    # 前台无角色帧:确认
+    ctl = _RecordingController()
+    ex = _make_executor(ctl, _make_stub_op({_HIT_BTN, _HIT_NOFRONT}))
+    env = _make_env(ex)
+    with fast_sleep():
+        assert op.execute(env) is True
+    assert ctl.clicks == [_AREA_POINTS[_HIT_BTN],
+                          _AREA_POINTS[('货币战争-提示-前台无角色',
+                                        '按钮-确认')]]
+    assert '前台无角色提示:确认' in env.detail
+    # 找不到按钮:未执行上报 + 零点击
+    ctl = _RecordingController()
+    ex = _make_executor(ctl, _make_stub_op(set()))
+    env = _make_env(ex)
+    with fast_sleep():
+        assert op.execute(env) is False
+    assert env.detail == '未执行:找不到按钮'
+    assert env.emitted is False and ctl.clicks == []
+    # 包络腿:注册表分派路径的旁路写点(点击序列已执行语义)
+    _patch_area_center(monkeypatch)
+    ctl = _RecordingController()
+    ex = _make_executor(ctl, _make_stub_op({_HIT_BTN}))
+    with fast_sleep():
+        ex.execute(StartBattle())
     assert ex.last_launch_ok is True
-    assert ex.last_detail == '出战成功'
+    assert '出战已点击' in ex.last_detail
     assert ex.last_gold_delta == 0
     # 薄委托替身缝:返回序保持原 (ok, detail)
-    assert ex._start_battle() == (True, '出战成功')
+    assert ex._start_battle()[0] is True
+
+
+def test_start_battle_skip_substate_reported_not_consumed(monkeypatch):
+    """免战子态上报锁(T-286):出战 miss + 「按钮-跳过」命中 → 点跳过
+    坐标 + env.skip_substate True;op 直调层零 game state 直写(递减
+    只发生在 game state 上报路径,行为锁见免战牌递减锁)。"""
+    from sr_od.application.currency_war.operations.cw_op.cw_start_battle_action import (
+        StartBattleOp as _SBO,
+    )
+    _patch_area_center(monkeypatch)
+    op = _SBO(StartBattle())
+    ctl = _RecordingController()
+    ex = _make_executor(ctl, _make_stub_op({_HIT_SKIP}))
+    env = _make_env(ex)
+    with fast_sleep():
+        assert op.execute(env) is True
+    assert env.skip_substate is True
+    assert ctl.clicks == [_AREA_POINTS[_HIT_SKIP]]
+    assert '出战已点击' in env.detail
+
+
+def test_freeze_card_decrement_via_report_path(monkeypatch):
+    """免战牌递减经 game state 上报路径锁(T-286):PrepActionExecutor
+    .execute(跳过型 StartBattle)→ apply_op_effect 在 session effects
+    递减 remaining_uses(上报时递减);常规出战零递减;未登记(登记面
+    缺位)零动作不炸。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        board_state_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_EFFECTS,
+    )
+    _patch_area_center(monkeypatch)
+    # 跳过型:登记免战牌 → 经包络执行 → 递减 2→1
+    sess = SimpleNamespace()
+    bs = board_state_of(sess)
+    bs.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=None)
+    ex = _make_executor(_RecordingController(), _make_stub_op({_HIT_SKIP}),
+                        cw_match=SimpleNamespace(session=sess))
+    with fast_sleep():
+        ex.execute(StartBattle())
+    assert bs.effects.first(STRATEGY_EFFECTS['免战牌'].id).remaining_uses == 1
+    # 常规出战(非跳过):零递减
+    sess2 = SimpleNamespace()
+    bs2 = board_state_of(sess2)
+    bs2.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=None)
+    ex2 = _make_executor(_RecordingController(), _make_stub_op({_HIT_BTN}),
+                         cw_match=SimpleNamespace(session=sess2))
+    with fast_sleep():
+        ex2.execute(StartBattle())
+    assert bs2.effects.first(
+        STRATEGY_EFFECTS['免战牌'].id).remaining_uses == 2
+    # 未登记:零动作不炸(递减挂点与登记面解耦;execute 无返回契约,
+    # 不抛 = 链路完整)
+    sess3 = SimpleNamespace()
+    ex3 = _make_executor(_RecordingController(), _make_stub_op({_HIT_SKIP}),
+                         cw_match=SimpleNamespace(session=sess3))
+    with fast_sleep():
+        ex3.execute(StartBattle())
+    assert ex3.last_launch_ok is True
 
 
 # ===== 分派收编锁(判据:分派链删除改查注册表)=====
