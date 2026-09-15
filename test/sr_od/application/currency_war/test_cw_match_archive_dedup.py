@@ -99,7 +99,9 @@ def _seed_wrong_archive(md: Path, gid: str, seg_rids: list[str],
 
 
 def test_assemble_converges_double_counted_segment(tmp_path: Path):
-    """装配收尾守卫收敛双计段:正确归属档案持有、错误档案摘除、核验归零。"""
+    """装配收尾守卫收敛双计段:正确归属档案持有、错误档案摘除、核验归零;
+    错误档案按当前口径整体重装配收敛(段集摘除续段,重装配路径不产生
+    剪枝记录——「不产剪枝记录」腿原属 rebuild 锁,并入)。"""
     rd = tmp_path / 'live'
     md = ma.matches_dir(rd)
     b_rows = [_row(_R_B, '2026-09-08T12:00:00', 2, 6),
@@ -118,20 +120,11 @@ def test_assemble_converges_double_counted_segment(tmp_path: Path):
     for rows in _read_archive(md, _G_C).get('slices', {}).values():
         assert all(r.get('run_id') != _R_B for r in rows)
     assert ma.find_cross_archive_segment_dups(rd) == []
-
-
-def test_rebuild_converges_archive_with_live_source(tmp_path: Path):
-    """源流在的错误档案(续段被旧口径组进后开新局)整体重装配收敛。"""
-    rd = tmp_path / 'live'
-    md = ma.matches_dir(rd)
-    _write_journal(rd, _journal_rows(rd))
-    _seed_wrong_archive(md, _G_C, [_R_C, _R_B],
-                        [_row(_R_B, '2026-09-08T12:00:00', 2, 6)])
-
-    assert ma.assemble_game(rd, _G_A) is not None
+    # 收敛形态(并入腿):C 档段集摘除 B(按当前口径只剩本局段),且
+    # 整体重装配路径不产生剪枝记录(pruned_segments 仅定向剪枝路径显影)
     arch_c = _read_archive(md, _G_C)
-    assert _seg_rids(arch_c) == [_R_C]   # B 摘除,按当前口径只剩本局段
-    assert 'pruned_segments' not in arch_c   # 重装配路径不产生剪枝记录
+    assert _seg_rids(arch_c) == [_R_C]
+    assert 'pruned_segments' not in arch_c
 
 
 def test_prune_converges_archive_with_lost_source(tmp_path: Path):

@@ -28,34 +28,28 @@ CwScreenWaitOneOne / 位面情报采集 CwScreenPlaneIntel(薄转录 + 双节点
 中转(消费接线批挂账,原样)。发射型接线锁/登记语义对拍锁/豁免留守锁亦无
 适用屏(全篇 on_outcome = 无登记件,注册表缺席 = 零动作)。
 
-锁的语义(测试纪律 7 自检;出处 = landing 阶段三判据 + 总纲契约 1-6):
+锁的语义(测试纪律 7 自检;出处 = landing 阶段三判据 + 总纲契约 1-6;
+生产端口恒 None 直连旧路径,五段新路径 = 测试驱动形态——五 op 结构锁与
+逐屏装端口分流/段迹锁已随并存窗收口整删,行为锁单驱动生产路径):
 
-- **五 op 结构锁**:五 op 是 CwScreenOpBase 子类 ∧ 节点预算逐屏逐字
-  登记归装饰器不随路径变(登记门,总纲契约 1);装配点分流的存在性/
-  先后不再源码锁——装两端口走五段段迹、不装端口零段迹的双向行为锁
-  在分流判据被删/后置时必红,承重同一事实(纪律 8:实现形状锁禁)。
 - **重入裁决×门组合行为锁**(总纲契约 6 行为面):「已发」旗标裁决
   住分流**之前**两路径共享段(位面过渡/武装箱 = 裁决先行式:门命中 +
-  pending 在位 → 不误判完成、失败轮旗标不复活;未达上限 = miss 分支内
-  式:门命中 + pending 在位 → 裁决不触发、确认重发)——两屏位序差异的
-  行为观测点 = 门命中+旗标在位时旗标清否,由组合行为锁承重(收尾屏
-  详设 §1-§3)。
-- **新路径行为锁**(§9.1-F2 主门 (a) 本阶段行,逐屏适用性随批登记:五屏全
-  适用):装两端口经节点方法走新路径,段迹形态 + 单轮动作/确认置位行为
-  (模板同构 = 五相位屏锁);不装端口 → 旧路径零段迹同行为(旧路径不写
-  迹纪律)。
-- **薄转录锁**(位面情报采集,总纲契约 2):observe 直通(场景门不前移)+
-  决策循环消费 ``_collect_cycle`` 单一共享体(新旧路径同一份,禁第二套
-  转录)+ 双节点图边(采集→关闭并回写)保留(收尾屏详设关键取舍 2)。
+  pending 在位 → 不误判完成、失败轮旗标不复活、落地轮裁决出口 success
+  零段迹;未达上限 = miss 分支内式:门命中 + pending 在位 → 裁决不触发、
+  确认重发,miss 已发 → 裁决 success)——两屏位序差异的行为观测点 =
+  门命中+旗标在位时旗标清否,由组合行为锁承重(收尾屏详设 §1-§3)。
+- **薄转录锁**(位面情报采集,总纲契约 2):决策循环消费
+  ``_collect_cycle`` 单一共享体(禁第二套转录)+ 双节点图边(采集→关闭
+  并回写)保留(收尾屏详设关键取舍 2;原装端口薄转录行为锁随并存窗
+  收口退役,双节点图边运行时锁留守)。
 - **收口锁不恢复**(分诊,原 landing 阶段三判据的目录级守卫):
   「cw_screen/ 与 cw_op/ 顶层 op 类必为 CwScreenOpBase 后代(豁免登记
   门)」以 AST 全目录扫描实现,属源码扫描形态(AGENTS §10.4.4 禁),
-  摘除不恢复;五屏本体结构面由 test_closing_ops_inherit_base 点名锁
-  辖。文件尾留分诊注。
+  摘除不恢复。文件尾留分诊注。
 
 驱动方式 = 真类实例(构造走 __init__,注册表/适配器位在位)+ 读链/点击链
 桩化;装配点分流桩端口 = ``_cw_helpers.install_dispatch_stub_ports`` 单一源;
-不装端口(生产缺省形态)= 旧路径代表驱动(并存窗旧路径锁专用)。
+不装端口 = 生产缺省形态(行为锁主驱动)。
 """
 from __future__ import annotations
 
@@ -79,41 +73,12 @@ from one_dragon.base.operation.operation_round_result import (
     OperationRoundResult,
     OperationRoundResultEnum,
 )
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
-    CwScreenOpBase,
-)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递不断言内容)
 
 _RETRY_RS = OperationRoundResult(OperationRoundResultEnum.RETRY, status='stub-confirm')
 
 _FULL_TRACE = ['observe', 'reconcile', 'decide', 'act', 'on_outcome']
-
-#: 五屏清单(模块名 → 画面 op 类名;start 节点方法名)
-_CLOSING_OPS = (
-    ('cw_screen_plane_transition', 'CwScreenPlaneTransition', 'handle'),
-    ('cw_screen_armory_box', 'CwScreenArmoryBox', 'handle'),
-    ('cw_screen_deploy_not_full', 'CwScreenDeployNotFull', 'handle'),
-    ('cw_screen_wait_one_one', 'CwScreenWaitOneOne', 'handle'),
-    ('cw_screen_plane_intel', 'CwScreenPlaneIntel', 'collect'),
-)
-
-
-def _closing_module(name: str):
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_armory_box,
-        cw_screen_deploy_not_full,
-        cw_screen_plane_intel,
-        cw_screen_plane_transition,
-        cw_screen_wait_one_one,
-    )
-    return {
-        'cw_screen_plane_transition': cw_screen_plane_transition,
-        'cw_screen_armory_box': cw_screen_armory_box,
-        'cw_screen_deploy_not_full': cw_screen_deploy_not_full,
-        'cw_screen_wait_one_one': cw_screen_wait_one_one,
-        'cw_screen_plane_intel': cw_screen_plane_intel,
-    }[name]
 
 
 def _stub_controller(test_context, monkeypatch: pytest.MonkeyPatch) -> list:
@@ -127,16 +92,13 @@ def _stub_controller(test_context, monkeypatch: pytest.MonkeyPatch) -> list:
     return clicks
 
 
-# ==================== 五 op 结构锁 + 重入裁决归属锁 ====================
+# ==================== 重入裁决归属锁 ====================
 
 
-def test_closing_ops_inherit_base() -> None:
-    """五 op 结构锁①(landing 阶段三判据 1):五 op 均为 CwScreenOpBase
-    子类。红 = 迁移回退或漏迁。"""
-    for mod_name, cls_name, _node in _CLOSING_OPS:
-        cls = getattr(_closing_module(mod_name), cls_name)
-        assert issubclass(cls, CwScreenOpBase), (
-            f'{cls_name} 未迁移到 CwScreenOpBase(收尾五屏)')
+# (收口整删)原 test_closing_ops_inherit_base「五 op 均为 CwScreenOpBase
+# 子类」(连 _CLOSING_OPS 常量与 _closing_module 装配 helper)删:继承
+# 结构 = 静态形状,红时答不出哪个运行行为坏了;结构面归 review 与代码
+# 规范。
 
 
 # (三审整删)原 test_closing_ops_node_budget_gate「五 op 结构锁②」
@@ -144,26 +106,24 @@ def test_closing_ops_inherit_base() -> None:
 # 禁止清单);「节点预算归装饰器逐屏登记」防线归 review 与代码规范。
 
 
-@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
-def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
-                                                   install: bool) -> None:
+def test_reentry_arbitration_flag_gate_combination(test_context,
+                                                   monkeypatch) -> None:
     """重入裁决×门组合行为锁(总纲契约 6 的行为面;替代原 .index() 位序
     源码锁——纪律 8 位序锁禁令。「裁决先行式 vs miss 分支内式」两屏差异
-    的行为观测点 = 门命中 + 旗标在位时裁决是否消费旗标):
+    的行为观测点 = 门命中 + 旗标在位时裁决是否消费旗标;裁决住分流之前
+    两路径共享段,单驱动生产路径承重,install 参数化腿已随并存窗收口
+    砍除):
     - 位面过渡/武装箱(裁决先行式):门命中 + pending 在位 → 裁决不误判
       完成(门在 = 动作未落地,重点一次机械交回);推进体缺坐标的失败轮
-      旗标保持已消费态不复活(裁决住分流前共享段——若被移进门后/miss
-      分支内,此轮旗标残留 True,断言红);
+      旗标保持已消费态不复活(若裁决被移进门后/miss 分支内,此轮旗标
+      残留 True,断言红);落地轮(提示已退 = 过渡完成)→ 裁决出口
+      success + 零动作零段迹 + 旗标清;
     - 未达上限(miss 分支内式):门命中 + pending 在位 → 裁决不触发,
-      勾选+确认重发、旗标经确认体重置(弹窗仍在 = 重发非完成)。
-    等待1-1/位面情报采集无裁决旗标,其「分流在首行」语义由双向行为锁段迹
-    承重:分流判据被移到锚判定/采集体委托之后时,装端口轮段迹偏离五段/仅
-    observe 形态即红(下方各屏行为锁)。
+      勾选+确认重发、旗标经确认体重置(弹窗仍在 = 重发非完成);miss 已发
+      → 裁决 success(零段迹零动作)。
+    等待1-1/位面情报采集无裁决旗标,其分流语义归同文件双向行为锁
+    (生产路径段迹承重;原装端口段迹分流锁已随并存窗收口整删)。
     红 = 裁决出口语义漂移(门命中误判完成 / 失败轮旗标复活)。"""
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
     # 位面过渡:门命中 + pending 在位 → 重点一轮(不误判完成)
     blank = SimpleNamespace(x=960, y=540)
     op, clicks = _make_plane_transition(test_context, monkeypatch,
@@ -171,11 +131,10 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
     op._click_pending = True
     rs = _run_node(test_context, op, op.handle)
     assert not rs.is_success and '点空白已发' in (rs.status or ''), (
-        f'install={install}:提示在 = 点击未落地,重点非完成:{rs!r}')
+        f'提示在 = 点击未落地,重点非完成:{rs!r}')
     assert clicks == [blank] and op._click_pending is True, (
-        f'install={install}:裁决不误清旗标,重点恰一次')
-    assert op._lifecycle_trace == (_FULL_TRACE if install else []), (
-        f'install={install}:段迹:{op._lifecycle_trace}')
+        '裁决不误清旗标,重点恰一次')
+    assert op._lifecycle_trace == [], f'段迹:{op._lifecycle_trace}'
     # 位面过渡失败轮:裁决已消费旗标 → 缺坐标 fail 轮旗标不复活
     op_f, _clicks_f = _make_plane_transition(test_context, monkeypatch,
                                              prompt_hit=True, blank=None)
@@ -183,9 +142,23 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
     rs_f = _run_node(test_context, op_f, op_f.handle)
     assert not rs_f.is_success \
         and '缺「区域-空白点击」建档' in (rs_f.status or ''), (
-        f'install={install}:失败轮入口:{rs_f!r}')
+        f'失败轮入口:{rs_f!r}')
     assert op_f._click_pending is False, (
-        f'install={install}:裁决先行消费旗标,失败轮不残留待裁决旗标')
+        '裁决先行消费旗标,失败轮不残留待裁决旗标')
+    # 位面过渡落地轮(并入原 reentry_success 锁):提示已退 = 过渡完成 →
+    # 裁决出口 success,零动作零段迹,旗标清。红 = 裁决移进 observe
+    # (段迹非空)或裁决出口语义漂移。
+    op_r, clicks_r = _make_plane_transition(test_context, monkeypatch,
+                                            prompt_hit=False,
+                                            blank=SimpleNamespace(x=1, y=1))
+    op_r._click_pending = True
+    rs_r = _run_node(test_context, op_r, op_r.handle)
+    assert rs_r.is_success \
+        and '过渡完成(重入观察裁决)' in (rs_r.status or ''), (
+        f'落地轮裁决 success 交回:{rs_r!r}')
+    assert op_r._click_pending is False, '裁决出口清旗标'
+    assert clicks_r == [] and op_r._lifecycle_trace == [], (
+        f'裁决轮零动作零段迹:{clicks_r!r} {op_r._lifecycle_trace!r}')
     # 武装箱:门命中 + pending 在位 → 重点一轮(不误判完成)
     close_pt = SimpleNamespace(x=1108, y=760)
     op_a, clicks_a = _make_armory(test_context, monkeypatch,
@@ -193,20 +166,39 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
     op_a._click_pending = True
     rs_a = _run_node(test_context, op_a, op_a.handle)
     assert not rs_a.is_success and '点 × 已发' in (rs_a.status or ''), (
-        f'install={install}:标识在 = 点击未落地,重点非完成:{rs_a!r}')
+        f'标识在 = 点击未落地,重点非完成:{rs_a!r}')
     assert clicks_a == [close_pt] and op_a._click_pending is True, (
-        f'install={install}:裁决不误清旗标,重点恰一次')
+        '裁决不误清旗标,重点恰一次')
     # 未达上限:门命中 + pending 在位 → 裁决不触发,确认链重发
     op_d, clicks_d = _make_deploy_not_full(test_context, monkeypatch,
                                            mark_hit=True)
     op_d._confirm_pending = True
     rs_d = _run_node(test_context, op_d, op_d.handle)
     assert not rs_d.is_success and 'stub-confirm' in (rs_d.status or ''), (
-        f'install={install}:门命中 = 裁决不触发,确认重发机械交回:{rs_d!r}')
+        f'门命中 = 裁决不触发,确认重发机械交回:{rs_d!r}')
     assert [c[0] for c in clicks_d] == ['check', 'confirm'], (
-        f'install={install}:勾选+确认重发恰两动作')
+        '勾选+确认重发恰两动作')
     assert op_d._confirm_pending is True, (
-        f'install={install}:miss 分支内裁决未触发,旗标经确认体重置')
+        'miss 分支内裁决未触发,旗标经确认体重置')
+    # 未达上限 miss 已发(并入原分流锁随死腿):重入裁决 success,
+    # 零动作零段迹(裁决留守分流前共享段)
+    op_r2, clicks_r2 = _make_deploy_not_full(test_context, monkeypatch,
+                                             mark_hit=False)
+    op_r2._confirm_pending = True
+    rs_r2 = _run_node(test_context, op_r2, op_r2.handle)
+    assert rs_r2.is_success and '未达上限弹窗已关(重入观察裁决)' in (
+        rs_r2.status or ''), f'重入裁决 success 交回:{rs_r2!r}'
+    assert op_r2._confirm_pending is False, '裁决出口清旗标'
+    assert clicks_r2 == [] and op_r2._lifecycle_trace == [], (
+        '裁决轮零动作零段迹')
+
+
+# ==================== 位面过渡(收口整删)====================
+
+
+# (收口整删)原 test_plane_transition_dispatch_both_ways「分流双向
+# 段迹锁」与 test_plane_transition_reentry_success_zero_trace(重入成功
+# 锁,已并入上方组合锁「落地轮」腿)删:装端口段迹面随并存窗收口退役。
 
 
 # ==================== 位面过渡:分流双向行为锁 ====================
@@ -229,63 +221,12 @@ def _make_plane_transition(test_context, monkeypatch: pytest.MonkeyPatch, *,
     return op, clicks
 
 
-@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
-def test_plane_transition_dispatch_both_ways(test_context, monkeypatch,
-                                             install: bool) -> None:
-    """位面过渡分流双向(主门 (a) 本屏行):装两端口 → 五段新路径(段迹恰
-    五段;点空白发出置 pending + round_retry 机械交回);提示 miss → observe
-    门 fail 早退(仅 observe 段迹,零动作);不装端口 → 旧路径零段迹同行为。
-    红 = 分流判据破坏或段迹漂移。"""
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
-    blank = SimpleNamespace(x=960, y=540)
-    op, clicks = _make_plane_transition(test_context, monkeypatch,
-                                        prompt_hit=True, blank=blank)
-    rs = _run_node(test_context, op, op.handle)
-    assert op._lifecycle_trace == (_FULL_TRACE if install else []), (
-        f'段迹形态漂移:{op._lifecycle_trace}')
-    assert clicks == [blank] and op._click_pending is True, (
-        '点空白恰一次 + pending 置位(重入裁决承载)')
-    assert not rs.is_success and '点空白已发' in (rs.status or ''), (
-        f'机械交回 round_retry(保形):{rs!r}')
-    # 提示 miss:门 fail 早退(新路径 = observe 段早退仅 observe 段迹;
-    # 旧路径 = 旧序列早退零段迹,行为同形)
-    op_f, clicks_f = _make_plane_transition(test_context, monkeypatch,
-                                            prompt_hit=False, blank=blank)
-    rs_f = _run_node(test_context, op_f, op_f.handle)
-    assert not rs_f.is_success and '位面过渡提示未出现' in (rs_f.status or ''), (
-        f'提示门早退语义不变:{rs_f!r}')
-    assert op_f._lifecycle_trace == (['observe'] if install else []), (
-        f'离屏早退段迹:{op_f._lifecycle_trace}')
-    assert clicks_f == [], '提示 miss 零动作(交编排壳按步分流)'
+# ==================== 武装箱弹窗(收口整删)====================
 
 
-def test_plane_transition_reentry_success_zero_trace(test_context,
-                                                     monkeypatch) -> None:
-    """重入裁决(两路径共用,分流前共享段):点空白已发 + 提示不在 = 过渡
-    完成 → success 交回,本轮不经生命周期(零段迹)。红 = 裁决移进 observe
-    (段迹非空)或裁决出口语义漂移。"""
-    for install, trace in ((True, []), (False, [])):
-        if install:
-            install_dispatch_stub_ports(monkeypatch)
-        else:
-            _uninstall_ports(monkeypatch)
-        op, clicks = _make_plane_transition(test_context, monkeypatch,
-                                            prompt_hit=False,
-                                            blank=SimpleNamespace(x=1, y=1))
-        op._click_pending = True
-        rs = _run_node(test_context, op, op.handle)
-        assert rs.is_success and '过渡完成(重入观察裁决)' in (rs.status or ''), (
-            f'install={install}:重入裁决 success 交回:{rs!r}')
-        assert op._click_pending is False, f'install={install}:裁决出口清旗标'
-        assert clicks == [], f'install={install}:裁决轮零动作'
-        assert op._lifecycle_trace == trace, (
-            f'install={install}:裁决在分流前共享段,本轮零段迹')
-
-
-# ==================== 武装箱弹窗:分流双向行为锁 ====================
+# (收口整删)原 test_armory_box_dispatch_both_ways「武装箱分流双向
+# 段迹锁」删:装端口段迹面随并存窗收口退役;其跨路径幸存断言(标识在 =
+# 点 × 重点恰一次、缺坐标 fail 零点击)由组合锁武装箱腿与下注说明承重。
 
 
 def _make_armory(test_context, monkeypatch: pytest.MonkeyPatch, *,
@@ -305,48 +246,7 @@ def _make_armory(test_context, monkeypatch: pytest.MonkeyPatch, *,
     return op, clicks
 
 
-@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
-def test_armory_box_dispatch_both_ways(test_context, monkeypatch,
-                                       install: bool) -> None:
-    """武装箱分流双向:装两端口 → 五段新路径(点 × 关闭 + 置位 + 机械交回);
-    标识 miss → observe 门 fail 早退('非武装箱弹窗');关闭钮坐标缺失 →
-    fail 缺坐标(共享体分支,新路径同语义);不装端口 → 旧路径零段迹同
-    行为。红 = 分流判据破坏或段迹漂移。"""
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
-    close_pt = SimpleNamespace(x=1108, y=760)
-    op, clicks = _make_armory(test_context, monkeypatch,
-                              mark_hit=True, close_pt=close_pt)
-    rs = _run_node(test_context, op, op.handle)
-    assert op._lifecycle_trace == (_FULL_TRACE if install else []), (
-        f'段迹形态漂移:{op._lifecycle_trace}')
-    assert clicks == [close_pt] and op._click_pending is True, (
-        '点 × 恰一次 + pending 置位')
-    assert not rs.is_success and '点 × 已发' in (rs.status or ''), (
-        f'机械交回 round_retry(保形):{rs!r}')
-    # 标识 miss:门 fail 早退
-    op_f, clicks_f = _make_armory(test_context, monkeypatch,
-                                  mark_hit=False, close_pt=close_pt)
-    rs_f = _run_node(test_context, op_f, op_f.handle)
-    assert not rs_f.is_success and '非武装箱弹窗' in (rs_f.status or ''), (
-        f'标识门早退语义不变:{rs_f!r}')
-    assert op_f._lifecycle_trace == (['observe'] if install else []), (
-        f'离屏早退段迹:{op_f._lifecycle_trace}')
-    assert clicks_f == [], '标识 miss 零动作'
-    # 关闭钮坐标缺失(共享体内分支):fail 缺坐标,零点击
-    op_n, clicks_n = _make_armory(test_context, monkeypatch,
-                                  mark_hit=True, close_pt=None)
-    rs_n = _run_node(test_context, op_n, op_n.handle)
-    assert not rs_n.is_success and '按钮-关闭' in (rs_n.status or ''), (
-        f'缺坐标 fail 语义不变:{rs_n!r}')
-    assert clicks_n == [], '缺坐标零点击'
-    if install:
-        assert op_n._lifecycle_trace == _FULL_TRACE, '缺坐标 fail 出自决策循环'
-
-
-# ==================== 未达上限弹窗:分流双向行为锁 ====================
+# ==================== 未达上限弹窗(收口整删)====================
 
 
 def _make_deploy_not_full(test_context, monkeypatch: pytest.MonkeyPatch, *,
@@ -371,45 +271,9 @@ def _make_deploy_not_full(test_context, monkeypatch: pytest.MonkeyPatch, *,
     return op, clicks
 
 
-@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
-def test_deploy_not_full_dispatch_both_ways(test_context, monkeypatch,
-                                            install: bool) -> None:
-    """未达上限分流双向:装两端口 → 五段新路径(勾选 + 确认 + 置位 + 机械
-    交回);miss 未发 → observe 门 fail('非未达上限弹窗',仅 observe 段迹);
-    miss 已发 → 裁决 success(零段迹,两路径共用);不装端口 → 旧路径零段迹
-    同行为。红 = 分流判据破坏或确认链语义漂移。"""
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
-    op, clicks = _make_deploy_not_full(test_context, monkeypatch, mark_hit=True)
-    rs = _run_node(test_context, op, op.handle)
-    assert op._lifecycle_trace == (_FULL_TRACE if install else []), (
-        f'段迹形态漂移:{op._lifecycle_trace}')
-    assert [c[0] for c in clicks] == ['check', 'confirm'], (
-        f'勾选 + 确认恰两动作:{clicks!r}')
-    assert op._confirm_pending is True, '确认已发 → pending 置位'
-    assert not rs.is_success and 'stub-confirm' in (rs.status or ''), (
-        'emit_overlay_confirm 机械交回(保形)')
-    # miss 未发:门 fail 早退
-    op_f, clicks_f = _make_deploy_not_full(test_context, monkeypatch,
-                                           mark_hit=False)
-    rs_f = _run_node(test_context, op_f, op_f.handle)
-    assert not rs_f.is_success and '非未达上限弹窗' in (rs_f.status or ''), (
-        f'标识门早退语义不变:{rs_f!r}')
-    assert op_f._lifecycle_trace == (['observe'] if install else []), (
-        f'离屏早退段迹:{op_f._lifecycle_trace}')
-    assert clicks_f == [], 'miss 未发零动作'
-    # miss 已发:重入裁决 success(分流前共享段,零段迹两路径同形)
-    op_r, clicks_r = _make_deploy_not_full(test_context, monkeypatch,
-                                           mark_hit=False)
-    op_r._confirm_pending = True
-    rs_r = _run_node(test_context, op_r, op_r.handle)
-    assert rs_r.is_success and '未达上限弹窗已关(重入观察裁决)' in (rs_r.status or ''), (
-        f'重入裁决 success 交回:{rs_r!r}')
-    assert op_r._confirm_pending is False, '裁决出口清旗标'
-    assert clicks_r == [] and op_r._lifecycle_trace == [], (
-        '裁决轮零动作零段迹(裁决留守分流前共享段)')
+# (收口整删)原 test_deploy_not_full_dispatch_both_ways「未达上限分流
+# 双向段迹锁」删:装端口段迹面随并存窗收口退役;门命中确认重发腿与
+# miss 已发裁决 success 腿并入上方组合锁。
 
 
 # ==================== 等待1-1:分流双向行为锁 ====================
@@ -502,36 +366,13 @@ def test_wait_one_one_timeout_leaves_evidence_new_path(test_context,
             assert op._lifecycle_trace == [], f'install={install}:旧路径零段迹'
 
 
-# ==================== 位面情报采集:薄转录 + 双节点保留 ====================
+# ==================== 位面情报采集:双节点保留 ====================
 
 
-def test_plane_intel_thin_transcription_single_body(test_context,
-                                                    monkeypatch) -> None:
-    """薄转录锁行为半(总纲契约 2,收尾屏详设 §5):新路径成功轮 = 五段迹
-    + 采集完 success(三位面齐桩态);旧路径同结果零段迹。红 = 体被转录
-    成第二份或直通被拆门。
-    (三审拆半:原 getsource 三段「observe 直通无门/_collect_cycle
-    单一共享体/collect 恰一处委托」字面在场扫描腿删,转录单一源面归
-    review 与代码规范;行为面由本锁新旧路径驱动承重。)"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_plane_intel as pim,
-    )
-    for install in (True, False):
-        if install:
-            install_dispatch_stub_ports(monkeypatch)
-        else:
-            _uninstall_ports(monkeypatch)
-        op = pim.CwScreenPlaneIntel(test_context)
-        op._cur_plane = 3   # 三位面已采桩态(体早退分支:round_success 采集完)
-        op._prep_plane = 2   # 会话位面真值桩(免顶栏 OCR 路径)
-        monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-        monkeypatch.setattr(op, 'round_by_find_area',
-                            lambda scr, s, a, **k: _Area(True))   # 已在位面详情
-        rs = _run_node(test_context, op, op.collect)
-        assert rs.is_success and '三位面采集完' in (rs.status or ''), (
-            f'install={install}:采集完 success:{rs!r}')
-        assert op._lifecycle_trace == (_FULL_TRACE if install else []), (
-            f'install={install}:段迹:{op._lifecycle_trace}')
+# (收口整删)原 test_plane_intel_thin_transcription_single_body「薄转录
+# 锁行为半(新五段/旧零段迹双驱动)」删:装端口段迹面随并存窗收口退役;
+# 采集完 success 语义由双节点图边锁同文件同构体承重,转录单一源面归
+# review 与代码规范。
 
 
 def test_plane_intel_dual_node_graph_edge_preserved(test_context) -> None:
@@ -556,5 +397,5 @@ def test_plane_intel_dual_node_graph_edge_preserved(test_context) -> None:
 # 扫描 + 继承闭包守卫 + _CLOSURE_EXEMPT 豁免登记门)不恢复——源码扫描
 # 形态(AGENTS §10.4.4 包布局/依赖方向守卫禁令):红的时候是静态结构变
 # 了,答不出「哪个运行行为坏了」。「画面 op 必挂 CwScreenOpBase 或逐名
-# 豁免登记」的收口裁决归 review 与代码规范。运行时逐类继承锁由下方
-# test_closing_ops_inherit_base 点名形态(绿)辖其五屏面。
+# 豁免登记」的收口裁决归 review 与代码规范(运行时点名继承锁亦随并存
+# 窗收口整删,同判:结构面无运行行为可断)。

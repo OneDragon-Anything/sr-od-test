@@ -30,7 +30,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
-    _p1_transition_eligible,
     arm_a_live_direction,
     char_declaration_index,
     hoard_target_set,
@@ -586,42 +585,12 @@ class TestKMembersDownstream:
         assert missing_piece not in names
 
 
-# ===== 正本 §4.2 四面退役表 =====
-
-
-class TestRetirementFaces:
-
-    # (原 test_face123_constant_absent_from_src 删:rglob+AST 扫退役常量
-    #  = 源码扫描/退役墓碑形态,禁止清单无例外;原
-    #  test_face4_direction_view_field_removed 同判删(字段缺席断言 =
-    #  墓碑变体,数据类字段归 review 与代码规范)。)
-
-    def test_face3_p1_gate_dead_branch_assertion(self):
-        """③面(正本 §4.2 行 ③;删前死分支断言的测试化):恒 no-op 支
-        删除后 _p1_transition_eligible(绯英欢愉) 由剩余分支判 False;
-        P1 信号路径行为零差锚 = 未资格信号被 update_intention 配方锁段
-        _direct_line_qualified 过滤(门后无消费)。"""
-        feiying = get_comp('绯英欢愉')
-        assert _p1_transition_eligible(feiying) is False
-        assert '欢愉' in (set(feiying.form_tiers) | set(feiying.sub_tiers))
-        assert '欢愉' not in cw_intention._ENGINE_BOND_KEYS
-
-    def test_face2_economy_peak_anchor_default3(self):
-        """②面(正本 §4.1-1 选项「维持缺省 3 费」):未锁帧排程峰值锚
-        回落 3 费缺省(概率校准分量,方向语义中性);_schedule_target_core
-        未锁帧返回 ''。"""
-        from sr_od.application.currency_war.kernel.cw_economy import (
-            _schedule_target_core,
-            _target_core_cost,
-            _target_peak_level,
-        )
-        from sr_od.application.currency_war.kernel.cw_plane_table import (
-            peak_refresh_level,
-        )
-        sess = StrategySession()
-        assert _schedule_target_core(sess) == ''
-        assert _target_peak_level(CwSimFrame(), sess) == peak_refresh_level(3)
-        assert _target_core_cost(sess) == ('', 3)
+# ===== 正本 §4.2 四面退役表(收口整删)====================
+# 原 TestRetirementFaces(test_face3_p1_gate_dead_branch_assertion /
+# test_face2_economy_peak_anchor_default3)删:③面 = 恒 no-op 支删除后
+# 判定函数对绯英欢愉返 False(静态形状断言,无运行行为可断);②面 =
+# 排程峰值锚缺省 3 费(缺省值复述,锁不出故障形态)。退役面纪律归
+# review 与代码规范;①④面源码扫描形态原三审已删。
 
 
 # ===== 证明批 §6 增量 7:甲臂漏授角 =====

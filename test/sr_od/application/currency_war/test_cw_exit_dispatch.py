@@ -8,11 +8,16 @@ FixtureController 记录点击。CwLoop 在委托锁①⑤中桩化(边界 op,�
 
 - ① 列车同行事故帧(2026-09-15 卡死形态)→ 路由走默认委托,零「备战退局发起」;
 - ② 免战帧 → 直接退局发起(屏名白名单,非锚判定);
-- ③ 干净备战帧 → 直接退局发起;
 - ④ 敌人信息浮层帧 → 点关闭回路由(⑤唯一特判,不走委托);
 - ⑤ 认不出帧 → 数拍重试后按计数判战斗中(右上 X),全程无 CwLoop 委托
   (⑥链的「委托一次 CwLoop」步骤已删,设计 §2.1);
 - ⑥ 委托后 A 类画面立即交还(停机位与路由③同源常量,无往返)。
+
+(收口整删)原锁③「干净备战帧 → 直接退局发起」:与锁②同走 A 类名单
+直退链,唯一差异 = 首帧建档(免战 vs 部署完成备战),直退判据 = 同一份
+PREP_DIRECT_EXIT_SCREENS 名单消费,②已承重同一份运行时行为;原
+test_route_table_has_no_battle_pause_dead_entry「ROUTE_BY_SCREEN 无死项」
+删:运行时对象成员断言 = 常量复述,答不出哪个运行行为坏了。
 """
 from __future__ import annotations
 
@@ -38,7 +43,6 @@ _PARTNER_FRAME = '伙伴遮罩-未选中'          # 2026-09-15 事故帧归档
 _SKIP_SCREEN = '货币战争-备战-免战'
 _SKIP_FRAME = '跳过态'
 _PREP_SCREEN = '货币战争-备战'
-_PREP_FRAME = 'deployed_2star'
 _ENEMY_SCREEN = '货币战争-敌人信息浮层'
 _ENEMY_FRAME = '详情页'
 _DIALOG_SCREEN = '货币战争-中断挑战弹窗'
@@ -181,27 +185,6 @@ def test_lock2_skip_state_frame_exits_directly(
     assert _StubCwLoop.calls == 0, 'A 类画面不得走委托'
 
 
-def test_lock3_clean_prep_frame_exits_directly(
-    test_context, fixture_controller: FixtureController,
-) -> None:
-    """锁③:干净备战帧 → 直接退局发起(不委托),完整退局链走通。"""
-    _require_screens(test_context, (_PREP_SCREEN, _PREP_FRAME),
-                     (_DIALOG_SCREEN, 'open'),
-                     ('货币战争-挑战失败', 'failed'),
-                     ('货币战争-结算-对局详情', 'default'),
-                     ('货币战争-结算-战报', 'default'), _LOBBY)
-    fixture_controller.set_phases(
-        _full_exit_chain((_PREP_SCREEN, _PREP_FRAME)))
-    op = _make_watched_exit(test_context)
-
-    result = _run_execute(test_context, op)
-
-    assert result.success, f'备战帧退局未走通:{result.status!r}'
-    assert fixture_controller.click_hit_area(_PREP_SCREEN, '按钮-退出对局'), (
-        '干净备战帧必须直接发起退局')
-    assert _StubCwLoop.calls == 0, 'A 类画面不得走委托'
-
-
 def test_lock4_enemy_info_frame_closed_inline(
     test_context, fixture_controller: FixtureController,
 ) -> None:
@@ -280,14 +263,3 @@ def test_lock6_stop_at_prep_returns_immediately_on_class_a(
     assert not fixture_controller.recorded_clicks, (
         '停机位命中前不得有任何分发点击'
         f':{fixture_controller.recorded_clicks}')
-
-
-def test_route_table_has_no_battle_pause_dead_entry() -> None:
-    """分发契约:ROUTE_BY_SCREEN 无「战斗暂停」死项。
-
-    该屏无 id_mark,建档精准匹配结构性不可达,入表即死项;实际入口 =
-    「战斗中点右上X」节点的直边(until 单锚命中「标识-战斗暂停」)。
-    本断言锁公共分发表契约(运行时对象,非源码扫描)。"""
-    assert '货币战争-战斗暂停' not in CwEntryExit.ROUTE_BY_SCREEN
-    assert '货币战争-敌人信息浮层' not in CwEntryExit.ROUTE_BY_SCREEN, \
-        '敌人信息浮层走⑤特判内联关闭,不经分发表'

@@ -21,21 +21,16 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
 - 简报/BOSS 简报:sim 腿 = 不适用——sim 无对应画面段(过渡相位,§3.2),
   等价判据主承重 = 实机在册行为锁 + 写入流对拍。
 
-锁的语义(测试纪律 7 自检;出处 = landing 阶段一判据 + 总纲契约 1-6):
+锁的语义(测试纪律 7 自检;出处 = landing 阶段一判据 + 总纲契约 1-6;
+生产端口恒 None 直连旧路径,五段新路径 = 测试驱动形态——迁移结构锁/
+新路径行为锁已随并存窗收口整删,行为锁单驱动生产路径):
 
-- **迁移结构锁**:五 op 是 CwScreenOpBase 子类 ∧ start 节点方法顶部装配点
-  分流(投资两屏/简报/BOSS 简报 = ``handle``,战斗等待 = ``wait()``;两端口
-  完整在场 → ``run_lifecycle``;缺省 None = 生产直连旧路径,§9.1 并存期)。
 - **重入裁决归属锁**(总纲契约 6,单一定谳;锁形 = 裁决×门组合行为锁
   ``test_reentry_arbitration_flag_gate_combination``,原位序源形锁已按
   纪律 8 退役):投资两屏/简报的「已发」旗标裁决住分流判据**之前**两路径
-  共享段(裁决出口写端随段共享);战斗等待/BOSS 简报无裁决旗标,分流在
-  出口判定之前(双向段迹行为锁承重)。先例锚 = cw_screen_encounter.py
+  共享段(裁决出口写端随段共享,单驱动生产路径承重);战斗等待/BOSS 简报
+  无裁决旗标,分流在出口判定之前。先例锚 = cw_screen_encounter.py
   :241-251(裁决)/:252-258(分流)。红 = 裁决被转录进 observe 段/适配器①。
-- **新路径行为锁**(§9.1-F2 主门 (a)):四屏装两端口经节点方法走新路径,
-  段迹形态 + 单轮动作/确认置位行为(模板同构 = 事件屏锁 :170-184 段迹、
-  :247-259 单动作);战斗等待在册行为锁语义(出口分叉/C-1 计数/defer 复位/
-  M39 长按/未知帧 bail/D-94 读点先于点击)经新路径逐条重驱动全绿(B2-③)。
 - **发射型接线锁**(§6.4-R-E 在册两件②):strategy_refresh_used 写端自
   刷新链内联位收编为 on_outcome 注册表发射型钩子,触发点唯一
   (``_emit_refresh_click`` 两路径共用分派面);「随点击置位不等验效」
@@ -54,7 +49,7 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
 
 驱动方式 = 真类实例(构造走 __init__,注册表/适配器位在位)+ 读链/点击链
 桩化;装配点分流桩端口 = ``_cw_helpers.install_dispatch_stub_ports`` 单一源;
-不装端口(生产缺省形态)= 旧路径代表驱动(并存窗旧路径锁专用)。
+不装端口 = 生产缺省形态(行为锁主驱动)。
 """
 from __future__ import annotations
 
@@ -62,11 +57,6 @@ import time
 from types import SimpleNamespace
 
 import pytest
-from test.harness.fixture_controller import (
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
-)
 from test.sr_od.application.currency_war._cw_helpers import (
     Area as _Area,
 )
@@ -94,9 +84,6 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     normalize_invest_name,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
-    CwScreenOpBase,
-)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递不断言内容)
 
@@ -104,14 +91,6 @@ _RETRY_RS = OperationRoundResult(OperationRoundResultEnum.RETRY, status='stub-co
 
 
 # ==================== 迁移结构锁 + 重入裁决归属锁 ====================
-
-_PHASE_OPS = (
-    ('cw_screen_invest_env', 'CwScreenInvestEnv'),
-    ('cw_screen_invest_strategy', 'CwScreenInvestStrategy'),
-    ('cw_screen_battle_wait', 'CwScreenBattleWait'),
-    ('cw_screen_briefing', 'CwScreenBriefing'),
-    ('cw_screen_boss_briefing', 'CwScreenBossBriefing'),
-)
 
 
 def _phase_mod(name: str):
@@ -131,21 +110,17 @@ def _phase_mod(name: str):
     }[name]
 
 
-def test_phase_ops_inherit_base() -> None:
-    """五相位屏迁移:五 op 均为 CwScreenOpBase 子类。
-    红 = 迁移回退或漏迁。"""
-    for mod_name, cls_name in _PHASE_OPS:
-        mod = _phase_mod(mod_name)
-        assert issubclass(getattr(mod, cls_name), CwScreenOpBase), (
-            f'{cls_name} 未迁移到 CwScreenOpBase(五相位屏)')
+# (原 test_phase_ops_inherit_base「五 op 均为 CwScreenOpBase 子类」结构与
+#  `_PHASE_OPS` 常量删:继承结构 = 静态形状,类体不迁移行为不变,红时答不
+#  出哪个运行行为坏了;结构面归 review 与代码规范。)
 
 
-@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
-def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
-                                                   install: bool) -> None:
+def test_reentry_arbitration_flag_gate_combination(test_context,
+                                                   monkeypatch) -> None:
     """重入裁决×门组合行为锁(总纲契约 6 的行为面;替代原 .index() 位序
     源码锁——纪律 8 位序锁禁令,收敛手法 = closing_screens 先例
-    test_reentry_arbitration_flag_gate_combination):
+    test_reentry_arbitration_flag_gate_combination;裁决住分流判据之前的
+    两路径共享段,单驱动生产路径承重,install 参数化腿已随并存窗收口砍除):
     - 投资环境/简报(裁决先行式两态):落地轮(锚已退 = overlay 已关)+
       旗标在位 → 裁决出口 success + **本轮零段迹**(裁决住分流前共享段;
       若被移进门后/五段 observe 段,段迹非空即红)+ 旗标保持已消费态不
@@ -155,26 +130,19 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
       append(append 归裁决出口,出口面由
       test_invest_strategy_active_strategies_appended_at_reentry_exit
       承重——该锁的成功轮零段迹断言同时钉「裁决住分流前」);
-    - 战斗等待/BOSS 简报无裁决旗标,其「分流在首行/出口判定之前」语义
-      由既有双向行为锁段迹承重(分流判据被移到锚判定之后时,装端口轮
-      段迹偏离五段/仅 observe 形态即红):test_battle_wait_execute_
-      terminal_exit_new_path / test_boss_briefing_dispatch_both_ways,
-      与 closing_screens 先例的无旗标屏处置同式。
+    - 战斗等待/BOSS 简报无裁决旗标,其分流语义归本文件在册行为锁
+      (生产路径段迹承重;原双向段迹分流锁已随并存窗收口整删)。
     红 = 裁决出口语义漂移(门命中误判完成 / 落地轮旗标复活 / 裁决移位)。"""
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
     # 投资环境·落地轮:pending 在位 + 锚已退 → 裁决出口 success,零段迹
     op_land, _m, _s = _make_env(test_context, monkeypatch, in_screen=False)
     op_land._confirm_pending = True
     rs_land = _run_node(test_context, op_land, op_land.handle)
     assert rs_land.is_success and '重入观察裁决' in (rs_land.status or ''), (
-        f'install={install}:落地轮裁决出口 success 交回:{rs_land!r}')
+        f'落地轮裁决出口 success 交回:{rs_land!r}')
     assert op_land._confirm_pending is False, (
-        f'install={install}:裁决先行消费旗标,落地轮不残留待裁决旗标')
+        '裁决先行消费旗标,落地轮不残留待裁决旗标')
     assert op_land._lifecycle_trace == [], (
-        f'install={install}:裁决在分流前共享段,本轮不经生命周期'
+        f'裁决在分流前共享段,本轮不经生命周期'
         f'(零段迹):{op_land._lifecycle_trace}')
     # 投资环境·门命中轮:pending 在位 + 锚仍在 → 不误判完成,确认链重发
     events: list = []
@@ -183,14 +151,13 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
     op_hit._confirm_pending = True
     rs_hit = _run_node(test_context, op_hit, op_hit.handle)
     assert not rs_hit.is_success, (
-        f'install={install}:锚在 = 确认未落地,裁决不误判完成:{rs_hit!r}')
+        f'锚在 = 确认未落地,裁决不误判完成:{rs_hit!r}')
     assert any(e[0] == 'card_click' for e in events), (
-        f'install={install}:裁决消费后正常流程重发(选卡点击在案):{events!r}')
+        f'裁决消费后正常流程重发(选卡点击在案):{events!r}')
     assert op_hit._confirm_pending is True, (
-        f'install={install}:旗标经确认体重置(非裁决出口):{events!r}')
-    assert op_hit._lifecycle_trace == (
-        ['observe', 'reconcile', 'decide', 'act', 'on_outcome'] if install
-        else []), f'install={install}:门命中轮段迹:{op_hit._lifecycle_trace}'
+        f'旗标经确认体重置(非裁决出口):{events!r}')
+    assert op_hit._lifecycle_trace == [], (
+        f'门命中轮段迹:{op_hit._lifecycle_trace}')
     # 投资策略·门命中轮:pending 在位 + 入口锚在 → 裁决不触发,在屏轮
     # 零 append(append 只归裁决出口)
     book = _FrameBook([object()])
@@ -203,20 +170,18 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
     op_st._confirm_pending = '白银投资'
     rs_st = _run_node(test_context, op_st, op_st.handle)
     assert not rs_st.is_success and 'stub-confirm' in (rs_st.status or ''), (
-        f'install={install}:在屏轮确认链机械交回:{rs_st!r}')
+        f'在屏轮确认链机械交回:{rs_st!r}')
     assert len(clicks_st) == 2, (
-        f'install={install}:裁决不触发,选卡+确认重发恰两击:{clicks_st!r}')
+        f'裁决不触发,选卡+确认重发恰两击:{clicks_st!r}')
     assert op_st._confirm_pending == '恢复生机', (
-        f'install={install}:旗标经确认体重置:{clicks_st!r}')
+        f'旗标经确认体重置:{clicks_st!r}')
     assert session_st.active_strategies == [], (
-        f'install={install}:门命中轮裁决不触发,零 append(出口面归重入锁)')
+        '门命中轮裁决不触发,零 append(出口面归重入锁)')
     # (原 test_invest_strategy_dispatch_new_path 并入本腿:段迹形态断言
     #  随迁;其「恰一次决策」断言属无 pending 的新决策路径,与本腿 pending
     #  前置形态不同支,不迁移。其余断言面逐项重叠已删。)
-    assert op_st._lifecycle_trace == (
-        ['observe', 'reconcile', 'decide', 'act', 'on_outcome'] if install
-        else []), (
-        f'install={install}:在屏轮段迹(新=五段/旧=零):{op_st._lifecycle_trace!r}')
+    assert op_st._lifecycle_trace == [], (
+        f'在屏轮段迹(生产路径零段迹):{op_st._lifecycle_trace!r}')
     # 简报·落地轮:pending 在位 + 标识已退 → 裁决出口 success,零段迹
     # 且读链不发生(裁决在共享段,先于 observe 门与决策体)
     op_b_land, session_b, calls_b = _make_briefing(
@@ -224,14 +189,14 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
     op_b_land._click_pending = True
     rs_b = _run_node(test_context, op_b_land, op_b_land.handle)
     assert rs_b.is_success and '已离开简报' in (rs_b.status or ''), (
-        f'install={install}:落地轮裁决出口 success 交回:{rs_b!r}')
+        f'落地轮裁决出口 success 交回:{rs_b!r}')
     assert op_b_land._click_pending is False, (
-        f'install={install}:裁决先行消费旗标,落地轮不残留')
+        '裁决先行消费旗标,落地轮不残留')
     assert op_b_land._lifecycle_trace == [], (
-        f'install={install}:裁决在分流前共享段,本轮零段迹:'
+        f'裁决在分流前共享段,本轮零段迹:'
         f'{op_b_land._lifecycle_trace}')
     assert calls_b['affix_read'] == 0 and calls_b['boss_read'] == 0, (
-        f'install={install}:裁决出口先行,读链不发生:{calls_b!r}')
+        f'裁决出口先行,读链不发生:{calls_b!r}')
     # 简报·门命中轮:pending 在位 + 标识仍在 → 「下一步」重发,旗标经
     # 置位体重置
     op_b_hit, _s_b2, _c_b2 = _make_briefing(test_context, monkeypatch,
@@ -241,15 +206,14 @@ def test_reentry_arbitration_flag_gate_combination(test_context, monkeypatch,
     op_b_hit._click_pending = True
     rs_bh = _run_node(test_context, op_b_hit, op_b_hit.handle)
     assert not rs_bh.is_success and '重入观察裁决' in (rs_bh.status or ''), (
-        f'install={install}:标识在 = 点击未落地,重点非完成:{rs_bh!r}')
+        f'标识在 = 点击未落地,重点非完成:{rs_bh!r}')
     assert op_b_hit._click_pending is True, (
-        f'install={install}:旗标经「下一步」置位体重置')
-    assert op_b_hit._lifecycle_trace == (
-        ['observe', 'reconcile', 'decide', 'act', 'on_outcome'] if install
-        else []), f'install={install}:门命中轮段迹:{op_b_hit._lifecycle_trace}'
+        '旗标经「下一步」置位体重置')
+    assert op_b_hit._lifecycle_trace == [], (
+        f'门命中轮段迹:{op_b_hit._lifecycle_trace}')
 
 
-# ==================== 投资环境:分流双向 + 写入流对拍 ====================
+# ==================== 投资环境:写入流对拍 ====================
 
 
 def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
@@ -292,39 +256,10 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
     return op, match, session
 
 
-@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
-def test_invest_env_dispatch_and_gate(test_context, monkeypatch,
-                                      install: bool) -> None:
-    """投资环境分流双向 + 段迹形态(§9.1-F2 主门 (a) 本屏行):装两端口 →
-    五段新路径(段迹 observe..on_outcome 恰五段;确认发出置 pending,落地
-    归重入裁决);离屏 → observe 门 fail 早退(仅 observe 段迹,零动作);
-    不装端口 → 旧路径零段迹同行为。红 = 分流判据破坏或段迹漂移。"""
-    opts = [('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)]
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
-    op, _match, _session = _make_env(test_context, monkeypatch,
-                                     in_screen=True, opts=opts, pick_idx=1)
-    rs = _run_node(test_context, op, op.handle)
-    if install:
-        assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act',
-                                       'on_outcome'], (
-            f'装端口须走五段新路径:{op._lifecycle_trace}')
-    else:
-        assert op._lifecycle_trace == [], f'旧路径不得写段迹:{op._lifecycle_trace}'
-    assert op._confirm_pending is True, '确认已发 → pending 置位(重入裁决承载)'
-    assert not rs.is_success, '确认链机械交回 round_retry(保形)'
-    # 离屏:门 fail 早退(新路径 = observe 段早退仅 observe 段迹;旧路径 =
-    # 旧序列早退零段迹,行为同形)
-    op_f, _m_f, _s_f = _make_env(test_context, monkeypatch, in_screen=False,
-                                 opts=opts)
-    rs_f = _run_node(test_context, op_f, op_f.handle)
-    assert not rs_f.is_success and '非投资环境屏' in (rs_f.status or ''), (
-        f'观察门早退语义不变:{rs_f!r}')
-    expected_gate_trace = ['observe'] if install else []
-    assert op_f._lifecycle_trace == expected_gate_trace, (
-        f'离屏早退段迹:{op_f._lifecycle_trace}')
+# (原 test_invest_env_dispatch_and_gate「投资环境分流双向 + 段迹形态」删:
+#  装两端口走五段新路径的分流/段迹面随并存窗收口整删(生产端口恒 None);
+#  其唯一跨路径幸存断言「确认发出置 pending」并入下方选卡时点写锁;
+#  离屏门 fail 早退语义由简报/BOSS 简报在册行为锁同形承重。)
 
 
 @pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
@@ -333,8 +268,9 @@ def test_invest_env_active_env_written_at_pick_time(test_context,
                                                     install: bool) -> None:
     """写入流对拍(§9.1-F2 主门 (b)):``active_env`` 选卡时点写——写时点 =
     点卡**前**(点击时点快照已见新值)、值 = 决策选中名、两路径逐位一致
-    (写端住共享 ``_decide_and_act``,零转录)。红 = 写时点后移(落选卡后)
-    或两路径值漂移。"""
+    (写端住共享 ``_decide_and_act``,零转录);确认发出置 pending(落地归
+    重入裁决,原分流锁唯一跨路径幸存断言随本腿补齐)。红 = 写时点后移
+    (落选卡后)、两路径值漂移或确认链置位断线。"""
     if install:
         install_dispatch_stub_ports(monkeypatch)
     else:
@@ -343,12 +279,15 @@ def test_invest_env_active_env_written_at_pick_time(test_context,
     opts = [('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)]
     op, _match, session = _make_env(test_context, monkeypatch, in_screen=True,
                                     opts=opts, pick_idx=1, events=events)
-    _run_node(test_context, op, op.handle)
+    rs = _run_node(test_context, op, op.handle)
     assert ('active_env_at_click', '彩虹时代') in events, (
         f'active_env 须写在点卡前(选卡时点语义):{events!r}')
     assert board_state_of(session).active_env.value == '彩虹时代', (
         '值 = 决策选中名(produced_by 面 = CwScreenInvestEnv,见豁免留守锁'
         '源形态断言)')
+    assert op._confirm_pending is True, (
+        '确认已发 → pending 置位(重入裁决承载)')
+    assert not rs.is_success, '确认链机械交回 round_retry(保形)'
 
 
 # ==================== 投资策略:分流双向 + 发射型接线 + 对拍 ====================
@@ -544,7 +483,7 @@ def journal_rows(tmp_path):
 # (chosen 写端不入注册表收编)由 event_screens 同名行为锁辖。
 
 
-# ==================== 简报:分流双向 + 三字段写语义 ====================
+# ==================== 简报:三字段写语义 ====================
 
 
 def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
@@ -586,59 +525,20 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
     return op, session, calls
 
 
-@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
-def test_briefing_dispatch_and_session_writes(test_context, monkeypatch,
-                                              install: bool) -> None:
-    """简报分流双向(主门 (a) 本屏行):装两端口 → 五段新路径(段迹恰五段;
-    「下一步」发出置 pending + round_retry 机械交回,落地归重入裁决);标识
-    miss → observe 门 fail 早退(仅 observe 段迹,零动作);不装端口 → 旧
-    路径零段迹同行为。红 = 分流判据破坏或段迹漂移。"""
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
-    op, session, calls = _make_briefing(
-        test_context, monkeypatch, mark_hit=True,
-        affixes=[('火弱点', None)], bosses=['碎星王虫'], difficulty=5)
-    rs = _run_node(test_context, op, op.handle)
-    if install:
-        assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act',
-                                       'on_outcome'], (
-            f'装端口须走五段新路径:{op._lifecycle_trace}')
-    else:
-        assert op._lifecycle_trace == [], f'旧路径不得写段迹:{op._lifecycle_trace}'
-    assert op._click_pending is True, '「下一步」已发 → pending 置位(重入裁决)'
-    assert not rs.is_success and '重入观察裁决' in (rs.status or ''), (
-        f'机械交回 round_retry(保形):{rs!r}')
-    assert session.briefing_affixes == ['火弱点'], '词缀 session 直写'
-    assert session.briefing_bosses == ['碎星王虫'], 'boss session 直写(恒覆写)'
-    assert session.enemy_difficulty == 5, '难度 session 直写(仅 None 写)'
-    # 标识 miss:门 fail 早退(新路径 = observe 段早退仅 observe 段迹;旧
-    # 路径 = 旧序列早退零段迹,行为同形)
-    op_f, _s_f, calls_f = _make_briefing(test_context, monkeypatch,
-                                         mark_hit=False)
-    rs_f = _run_node(test_context, op_f, op_f.handle)
-    assert not rs_f.is_success and '非简报屏' in (rs_f.status or ''), (
-        f'标识门早退语义不变:{rs_f!r}')
-    expected_gate_trace = ['observe'] if install else []
-    assert op_f._lifecycle_trace == expected_gate_trace, (
-        f'离屏早退段迹:{op_f._lifecycle_trace}')
-    assert calls_f['affix_read'] == 0 and calls_f['boss_read'] == 0, (
-        '离屏零观察(门失败后不做读链)')
+# (原 test_briefing_dispatch_and_session_writes「简报分流双向」删:装两
+#  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
+#  (「下一步」发出置 pending / 标识 miss 门 fail 早退零读链)分别由
+#  test_reentry_arbitration_flag_gate_combination 的简报两腿与三字段锁
+#  的幂等守卫腿承重。)
 
 
-@pytest.mark.parametrize('install', [True, False], ids=['new_path', 'old_path'])
 def test_briefing_session_write_semantics_three_fields(test_context,
-                                                       monkeypatch,
-                                                       install: bool) -> None:
+                                                       monkeypatch) -> None:
     """写入流对拍(主门 (b)):简报三字段三种写语义逐字——①词缀幂等守卫
     辖「读+采」(session 非空 → 跳过读与点采);②boss 恒覆写(不做已存
-    跳过,防跨局残留;读空 → 清 None);③敌人难度仅 None 时写。红 = 守卫
-    辖面漂移(如幂等只辖读不辖采)或覆写语义丢失。"""
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
+    跳过,防跨局残留;读空 → 清 None);③敌人难度仅 None 时写。单驱动
+    生产路径(写端住分流前共享段,install 参数化腿已随并存窗收口砍除)。
+    红 = 守卫辖面漂移(如幂等只辖读不辖采)或覆写语义丢失。"""
     # ① 词缀幂等守卫辖「读+采」
     session = StrategySession()
     session.briefing_affixes = ['已有词缀']
@@ -675,7 +575,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
         '难度已有值 → 不读不写(仅缺省写)')
 
 
-# ==================== BOSS 简报:分流双向 + 判别单一源 ====================
+# ==================== BOSS 简报:误读接管(生产路径)====================
 
 
 def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
@@ -705,50 +605,25 @@ def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
     return op, clicks
 
 
-def test_boss_briefing_dispatch_both_ways(test_context, monkeypatch) -> None:
-    """BOSS 简报分流双向(主门 (a) 本屏行):装两端口 → 横幅在 = 五段新
-    路径 + 点空白 + success 交回;横幅已退 = observe 早退 success(交回外
-    循环重判,零动作,仅 observe 段迹);不装端口 → 旧路径零段迹同行为。
-    红 = 分流判据破坏或早退语义漂移。"""
-    install_dispatch_stub_ports(monkeypatch)
-    op, clicks = _make_boss(test_context, monkeypatch, area_hit=True)
-    rs = _run_node(test_context, op, op.handle)
-    assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act',
-                                   'on_outcome'], (
-        f'装端口须走五段新路径:{op._lifecycle_trace}')
-    assert clicks == ['blank'], '横幅在 = 点空白恰一次'
-    assert rs.is_success and '点空白已发' in (rs.status or ''), (
-        f'交回外循环重判语义不变:{rs!r}')
-    # 横幅已退:observe 早退 success(零动作)
-    op_g, clicks_g = _make_boss(test_context, monkeypatch, area_hit=False,
-                                ocr_texts=['点击空白处继续', '备战阶段'])
-    rs_g = _run_node(test_context, op_g, op_g.handle)
-    assert op_g._lifecycle_trace == ['observe'], (
-        f'横幅已退 = 仅 observe 段迹(早退交回):{op_g._lifecycle_trace}')
-    assert clicks_g == [], '横幅已退 = 零动作'
-    assert rs_g.is_success and '推进完成' in (rs_g.status or ''), (
-        f'早退 success 交回外循环重判:{rs_g!r}')
-    # 不装端口:旧路径零段迹(生产形态)
-    _uninstall_ports(monkeypatch)
-    op_o, clicks_o = _make_boss(test_context, monkeypatch, area_hit=True)
-    rs_o = _run_node(test_context, op_o, op_o.handle)
-    assert op_o._lifecycle_trace == [], f'旧路径不得写段迹:{op_o._lifecycle_trace}'
-    assert clicks_o == ['blank'] and rs_o.is_success, '旧路径行为保形'
+# (原 test_boss_briefing_dispatch_both_ways「BOSS 简报分流双向」删:装两
+#  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
+#  (横幅在 = 点空白 + success 交回 / 横幅已退 = 零动作早退)由下方误读
+#  接管锁的生产路径驱动同形承重。)
 
 
-def test_boss_briefing_misread_takeover_new_path(test_context,
-                                                 monkeypatch) -> None:
-    """误读帧(「强敌米」)新路径仍接管:area 锚 miss + 片段判别命中 →
-    observe 判横幅在 → 点空白路径(P4R3 锚加固语义,判别单一源消费同源)。
+def test_boss_briefing_misread_takeover(test_context, monkeypatch) -> None:
+    """误读帧(「强敌米」)生产路径仍接管:area 锚 miss + 片段判别命中 →
+    观察判横幅在 → 点空白路径(P4R3 锚加固语义,判别单一源消费同源)。
     红 = 转录把片段判别兜底写丢。"""
-    install_dispatch_stub_ports(monkeypatch)
+    _uninstall_ports(monkeypatch)
     op, clicks = _make_boss(test_context, monkeypatch, area_hit=False,
                             ocr_texts=['强敌米', '点击空白处继续',
                                        '云骑骁卫·彦卿'])
     rs = _run_node(test_context, op, op.handle)
     assert clicks == ['blank'], '误读帧仍走「横幅命中 → 点空白」路径'
     assert rs.is_success and '点空白已发' in (rs.status or '')
-    assert op._lifecycle_trace[0] == 'observe'
+    assert op._lifecycle_trace == [], (
+        f'生产路径零段迹:{op._lifecycle_trace}')
 
 
 # (三审整删)原 test_boss_discrimination_single_source_consumers_
@@ -757,24 +632,22 @@ def test_boss_briefing_misread_takeover_new_path(test_context,
 # 禁止清单);「判别逻辑禁复制成第二源」防线归 review 与代码规范。
 
 
-# ==================== 战斗等待:B2-③ 主门(在册行为锁走新路径)====================
+# ==================== 战斗等待:B2-③ 主门(在册行为锁·生产路径)====
 
 
 def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
-                hit_areas: frozenset, *, install: bool = True):
+                hit_areas: frozenset):
     """战斗等待真类装配(生产构造走 __init__;RunLoop 注入面 =
     SettlementState + config 桩同形)。桩面 = 画面门/OCR 原语/存图/光标/
-    点击记录器;``ctx.ocr_service`` 桩恒空行(读图域不出单元)。"""
+    点击记录器;``ctx.ocr_service`` 桩恒空行(读图域不出单元)。
+    驱动 = 生产缺省形态(端口显式复位 None,直连旧路径)。"""
     from sr_od.application.currency_war.currency_war_config import (
         CurrencyWarConfig,
     )
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
     )
-    if install:
-        install_dispatch_stub_ports(monkeypatch)
-    else:
-        _uninstall_ports(monkeypatch)
+    _uninstall_ports(monkeypatch)
     st = bwo.SettlementState(run_start_ts=time.monotonic(), is_new_match=True)
     op = bwo.CwScreenBattleWait(
         test_context, st,
@@ -805,51 +678,28 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
     return op, es
 
 
-def test_battle_wait_execute_terminal_exit_new_path(test_context,
-                                                    monkeypatch) -> None:
-    """B2-③ 主门(经 ``execute()`` 走新路径):大厅终局锚命中 → observe 段
-    早退 terminal_lobby(交整局退出收口),op 终态 success,段迹仅 observe。
-    红 = 分流断线(execute 仍走旧路径)或出口语义漂移。"""
-    install_dispatch_stub_ports(monkeypatch)
-    op, _es = _make_bwait(
-        test_context, monkeypatch,
-        frozenset({('货币战争-大厅', '标识-创业指南')}))
-    with fast_sleep():
-        enter_running_state(test_context)
-        try:
-            result = op.execute()
-        finally:
-            reset_running_state(test_context, op)
-    assert result.success and result.status == 'terminal_lobby', (
-        f'终局出口语义不变(经 execute 走新路径):{result!r}')
-    assert op._lifecycle_trace == ['observe'], (
-        f'出口判定早退 = 仅 observe 段迹:{op._lifecycle_trace}')
+# (原 test_battle_wait_execute_terminal_exit_new_path「B2-③ 主门经
+#  execute() 走新路径:大厅终局锚 → terminal_lobby 早退」删:装端口驱动
+#  的出口门随并存窗收口整删;出口门生产那份由下方完成白名单锁承重。)
 
 
-def test_battle_wait_completion_exit_new_path(test_context,
-                                              monkeypatch) -> None:
-    """B2-③:完成白名单锚命中 → observe 段早退 back_to_loop(交回循环
-    分发)。旧路径对照(不装端口)= 同出口零段迹(生产缺省保形)。"""
+def test_battle_wait_completion_exit(test_context, monkeypatch) -> None:
+    """B2-③ 出口门(生产那份):完成白名单锚命中 → back_to_loop 交回
+    循环分发(生产缺省形态,零段迹)。"""
     op, _es = _make_bwait(
         test_context, monkeypatch,
         frozenset({('货币战争-备战', '备战标识-购买经验')}))
     rs = op.wait()
     assert rs.is_success and rs.status == 'back_to_loop'
-    assert op._lifecycle_trace == ['observe']
-    _uninstall_ports(monkeypatch)
-    op_o, _es_o = _make_bwait(
-        test_context, monkeypatch,
-        frozenset({('货币战争-备战', '备战标识-购买经验')}), install=False)
-    rs_o = op_o.wait()
-    assert rs_o.is_success and rs_o.status == 'back_to_loop'
-    assert op_o._lifecycle_trace == [], f'旧路径不得写段迹:{op_o._lifecycle_trace}'
+    assert op._lifecycle_trace == [], (
+        f'生产路径零段迹:{op._lifecycle_trace}')
 
 
-def test_battle_wait_settlement_branch_order_and_defer_new_path(
+def test_battle_wait_settlement_branch_order_and_defer(
         test_context, monkeypatch) -> None:
-    """B2-③:结算分支新路径逐位——D-94 读点(结算观察半直写)先于「继续
-    继续」点击(时序红线);C-1 新帧计数;段迹五段(单轮 = observe..
-    on_outcome + round_wait 驻留)。
+    """B2-③:结算分支逐位(生产路径驱动,共享体断言不变)——D-94 读点
+    (结算观察半直写)先于「继续挑战」点击(时序红线);C-1 新帧计数;
+    段迹零(生产缺省形态)。
     (分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
     (全仓零消费点),生产端无复位语义可锁。)"""
     order: list[str] = []
@@ -872,20 +722,19 @@ def test_battle_wait_settlement_branch_order_and_defer_new_path(
     monkeypatch.setattr(op, 'round_by_find_and_click_area', _click_area)
     rs = op.wait()
     assert order == ['record', 'click'], (
-        f'D-94 读点先于点击(时序红线,新路径同序):{order!r}')
+        f'D-94 读点先于点击(时序红线):{order!r}')
     assert _rec.called
     assert op._st.rounds_done == 1, 'C-1 新结算帧计数'
     assert op._st.settle_stay == 1, '停留计数继续执行到 round_wait'
     assert not rs.is_success and rs.result == OperationRoundResultEnum.WAIT, (
-        '驻留轮 round_wait(等待语义不随路径变)')
-    assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act',
-                                   'on_outcome'], (
-        f'单轮五段:{op._lifecycle_trace}')
+        '驻留轮 round_wait(等待语义)')
+    assert op._lifecycle_trace == [], (
+        f'生产路径零段迹:{op._lifecycle_trace}')
 
 
-def test_battle_wait_long_press_new_path(test_context, monkeypatch) -> None:
+def test_battle_wait_long_press(test_context, monkeypatch) -> None:
     """B2-③:M39 停留第 3 轮(点击未生效)→ 长按 (960,898) press_time=0.5
-    兜底推进 + 停留计数归零(在册时序行为锁走新路径)。"""
+    兜底推进 + 停留计数归零(在册时序行为锁,生产路径驱动)。"""
     clicks: list = []
     op, _es = _make_bwait(
         test_context, monkeypatch,
@@ -906,11 +755,11 @@ def test_battle_wait_long_press_new_path(test_context, monkeypatch) -> None:
     assert op._st.settle_stay == 0, '长按兜底后停留计数归零'
 
 
-def test_battle_wait_unknown_bail_new_path(test_context, monkeypatch,
-                                           tmp_path) -> None:
+def test_battle_wait_unknown_bail(test_context, monkeypatch,
+                                  tmp_path) -> None:
     """B2-③:未知帧达 UNKNOWN_BAIL_N(10)→ round_fail 交主循环兜底链 +
     flag 留证(get_project_root 重定向 tmp_path,留证不落真实 .debug)。
-    新路径逐轮 = observe 门双 miss → 决策循环分支链 miss → 计数。"""
+    生产路径逐轮 = 观察门双 miss → 决策循环分支链 miss → 计数。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
     )

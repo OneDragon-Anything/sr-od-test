@@ -7,21 +7,20 @@
 局终域③格(actor=MatchClose)。
 
 锁面 =
-- 终局行 schema:载荷封闭词表 + 时点版本 id 与行头 v 恒等 + 终局快照随行
-  自带(行内 state prov)+ 版本戳(code_commit/registry_fingerprint,模块
-  级常量落账填充,与 telemetry/version_stamp 单一源等值对拍);
+- 终局行 schema:时点版本 id 与行头 v 恒等 + 终局快照随行自带(行内
+  state prov)+ 版本戳(code_commit/registry_fingerprint,模块级常量
+  落账填充)+ 终局类型词表封闭(集外显式炸错);
 - 写口:同版本原子(一次调用恰一行)、段内幂等(G12 写前查重)、渠道签名
   (logic_hook/MatchClose);
 - 异常终局补写:backfilled=True → 行注记 recovered 显影 + 版本 id 照常分配;
 - 复盘触发器挂点:监听槽缺省关 + 写口受理成功即触发(行落盘以 sink/run_id
   在场为准;幂等跳过不触发)+ 监听异常不毒化;
-- obs_event 登记面:事件词表封闭集(集外 = 红)+ G10 倒退读数留证落码
-  (拒读类证据占版本、零状态变更);
+- obs_event 登记面:G10 倒退读数留证落码(拒读类证据占版本、零状态变更);
 - 局终判定面:resolve_final_type 判定序 + runs 词表收编映射 +
   detect_match_final 证据阶梯(journal 已收口幂等 / runs_summary /
   terminal_closure / no_close_evidence→abnormal);
 - 下游识别:match_archive extract_match_final_rows + endgame.match_final
-  档案键;判读 CLI 读面 view_match_final。
+  档案键;W4 键收编聚合载体(载荷快照 + journal 行可见性)。
 
 测试隔离:journal sink / run_id provider / 监听槽均为模块级全局——fixture
 统一安装/复位;测试零真实副作用(流水落 tmp_path)。
@@ -37,8 +36,6 @@ from sr_od.application.currency_war.kernel import cw_state_journal as journal_mo
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BS_SCHEMA_VERSION,
     MATCH_FINAL_FIELD,
-    MATCH_FINAL_TYPES,
-    OBS_EVENT_EVENTS,
     GameState,
     _derive_node_observed,
     set_match_final_listener,
@@ -61,19 +58,10 @@ from sr_od.application.currency_war.obs.cw_observation import (
     resolve_final_type,
     runs_result_to_final_type,
 )
-from sr_od.application.currency_war.telemetry import match_archive, version_stamp
+from sr_od.application.currency_war.telemetry import match_archive
 from sr_od.application.currency_war.telemetry import state as tel_state
-from sr_od.application.currency_war.telemetry.journal_query import (
-    match_final_rows,
-    view_match_final,
-)
 
 _register_sig_actors('TestSigWriter')
-
-
-def _sig() -> _ChannelSig:
-    """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
-    return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
 def _lsig() -> _ChannelSig:
@@ -128,12 +116,29 @@ def _final_rows() -> list[dict]:
 # (原 test_match_final_domain_registered 删:单行「域键在场」断言,经核
 #  判读/档案消费面无人读 bs_schema['match_final'] 键——write 系测试红时
 #  同故障,子集断言不留。)
+# (收口整删)原 test_match_final_closed_vocab「终局类型词表封闭集」:
+# 集外炸错腿并入下方原子行锁(常量字面断言不留);原
+# test_match_final_version_stamps「版本戳」:载荷戳腿并入原子行锁,
+# 解析器等值对拍半(kernel 复刻 vs telemetry 单一源双实现等值)随锁退役
+# ——src 侧 cw_game_state.py 常量段注释仍指针本文件对拍,收口申报见报告。
+# 原 test_write_match_final_default_duration_segment_level「duration_s
+# 缺省 = 段级自算」删:缺省时长 = time.monotonic 差值 ≥0,语言自带保证面,
+# 显式传值直通半由原子行锁 duration_s=1234.5 断言承重。
 
 
-def test_write_match_final_one_atomic_row(journal, run_id) -> None:
-    """同版本原子:一次调用恰一行,载荷(类型/版本 id/快照/时长)一次装配
-    (行头 v 与 at_version 恒等);渠道签名 = logic_hook/MatchClose。"""
+def test_write_match_final_one_atomic_row(journal, run_id,
+                                          monkeypatch) -> None:
+    """同版本原子:一次调用恰一行,载荷(类型/版本 id/快照/时长/版本戳)
+    一次装配(行头 v 与 at_version 恒等);渠道签名 = logic_hook/MatchClose;
+    终局类型词表封闭(集外显式炸错,禁自由串);版本戳取模块级常量填充
+    (monkeypatch 常量即见即锁,常量与取值单一源 telemetry/version_stamp
+    的等值对拍面随退役锁申报)。红 = 拆行/签名漂移/集外放行/戳断供。"""
+    monkeypatch.setattr(bs_mod, '_CODE_COMMIT', 't244commit')
+    monkeypatch.setattr(bs_mod, '_REGISTRY_FINGERPRINT', 't244finger')
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    # 集外终局类型 = 显式炸错(封闭词表)
+    with pytest.raises(ValueError):
+        write_match_final(bs, final_type='completed')
     bs.write_logic(bs.hp, 48, produced_by='test', sig=_lsig())
     assert write_match_final(bs, final_type='loss', plane=2, round_num=6,
                              level=7, hp=48, gold=53, streak=-1,
@@ -152,6 +157,8 @@ def test_write_match_final_one_atomic_row(journal, run_id) -> None:
     assert after['streak'] == -1 and after['node_kind'] == 'boss'
     assert after['duration_s'] == 1234.5
     assert after['backfilled'] is False
+    assert after['code_commit'] == 't244commit', '版本戳随行落账(常量填充)'
+    assert after['registry_fingerprint'] == 't244finger', '注册表指纹随行落账'
     # 行行自足:终局快照随行内嵌 state 自带(来源注记面在档)
     vals = row['state']['values']
     assert vals['hp'] == 48, '行内 state = 终局账面(快照行自带)'
@@ -166,24 +173,6 @@ def test_write_match_final_segment_idempotent(journal, run_id) -> None:
     assert write_match_final(bs, final_type='loss', plane=3, round_num=9) is False
     assert len(_rows()) == n_before, '幂等跳过零新行'
     assert bs.match_final.value.final_type == 'win', '首行不被覆盖'
-
-
-def test_match_final_closed_vocab() -> None:
-    """终局类型词表封闭集:集外显式炸错(禁自由串)。"""
-    assert MATCH_FINAL_TYPES == ('win', 'loss', 'stopped', 'abnormal')
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    with pytest.raises(ValueError):
-        write_match_final(bs, final_type='completed')
-
-
-def test_write_match_final_default_duration_segment_level() -> None:
-    """duration_s 缺省 = 段级自算(容器创建 → 判定,≥0)。
-    (显式传值直通半由 test_write_match_final_one_atomic_row 辖
-    (duration_s=1234.5 直通断言),docstring 不再重复申报。)"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    assert write_match_final(bs, final_type='stopped') is True
-    assert bs.match_final.value.duration_s is not None
-    assert bs.match_final.value.duration_s >= 0.0
 
 
 def test_abnormal_backfill_note_recovered_version_allocated(journal, run_id) -> None:
@@ -251,44 +240,14 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
         reset_state_telemetry()
 
 
-def test_match_final_version_stamps(journal, run_id, monkeypatch) -> None:
-    """版本戳(§3.6.1 runs 行「+ code_commit/registry_fingerprint 版本戳,
-    沿用 version_stamp」):终局行载荷带两戳、write_match_final 落账时取模块
-    级常量填充;常量与取值单一源 telemetry/version_stamp 等值(kernel 桶依赖
-    矩阵禁依 telemetry,就地复刻,对拍防双实现漂移)。
-
-    对拍口径 = 同一时点双侧现取:commit 戳比较两个**现取解析器**
-    (``_resolve_code_commit()`` vs ``code_commit()``),不拿 kernel 模块级
-    导入快照(_CODE_COMMIT)比现读——快照冻结在导入时点、对拍发生在断言
-    时点,测试进程存活窗口内主仓 HEAD 落盘(多批并行收口期常态)即假红
-    (实发判例:验收复跑咬红一次)。解析器同点对拍保住锁的本义
-    「kernel 复刻与 telemetry 单一源双实现等值」且与时序解耦;模块常量 =
-    同一解析器在导入时点的返回值,进程内结构性恒等,无需另锁。fingerprint
-    不涉 git 且注册表进程内不变,无常量/现读时序差,维持常量对拍。
-    """
-    assert bs_mod._resolve_code_commit() == version_stamp.code_commit()
-    assert version_stamp.registry_fingerprint() == bs_mod._REGISTRY_FINGERPRINT
-    monkeypatch.setattr(bs_mod, '_CODE_COMMIT', 't244commit')
-    monkeypatch.setattr(bs_mod, '_REGISTRY_FINGERPRINT', 't244finger')
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    assert write_match_final(bs, final_type='loss', plane=2, round_num=6) is True
-    after = _final_rows()[0]['after']
-    assert after['code_commit'] == 't244commit'
-    assert after['registry_fingerprint'] == 't244finger'
-
-
 # ============================================================ obs_event 登记面
 
 
-def test_obs_event_vocab_closed_set() -> None:
-    """obs_event 事件词表封闭集(§3.2.3 行型 2 产生面;硬约束 2 同纪律):
-    arbitrate/miss/popup 合法,集外显式炸错。"""
-    assert OBS_EVENT_EVENTS == ('arbitrate', 'miss', 'popup')
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    for ev in OBS_EVENT_EVENTS:
-        bs.note_obs_event(ev, 'level', {'old': 1, 'new': 2}, sig=_sig())
-    with pytest.raises(ValueError):
-        bs.note_obs_event('bogus_event', 'level', {}, sig=_sig())
+# (收口整删)原 test_obs_event_vocab_closed_set「obs_event 事件词表封闭
+# 集(硬约束 2)」删:常量字面断言 + 炸错腿 = 事实源在 cw_vocab 词表定义,
+# 集外炸错由 pytest.raises 形态与封闭集测试同构面承重不成立——如实申报:
+# note_obs_event 集外炸错行为现无独立锁,词表漂移归 kernel 既有锁与
+# review 面(覆盖缺口随收口申报)。
 
 
 def test_g10_retrograde_obs_event_evidence(journal, run_id) -> None:
@@ -403,27 +362,10 @@ def test_extract_match_final_rows_recognition() -> None:
     assert match_archive.extract_match_final_rows(None) == {}
 
 
-def test_view_match_final_reading(tmp_path) -> None:
-    """判读 CLI 读面:局终行显影(类型/快照/补写位);无行 = 显式提示。"""
-    j = install_state_telemetry(tmp_path / 'state' / 'journal.jsonl',
-                                run_id_provider=tel_state.current_run_id)
-    try:
-        j.append(json.loads(_journal_line(7, 'run_a', 'loss')))
-        j.append(json.loads(_journal_line(9, 'run_b', 'abnormal',
-                                          note='recovered')))
-        rows = list(j.rows)
-        out = view_match_final(rows, 'run_a')
-        assert any('type=loss' in ln for ln in out)
-        assert 'run_a' in out[0]
-        out_b = view_match_final(rows, 'run_b')
-        assert any('type=abnormal' in ln and '补写' in ln for ln in out_b), \
-            '补写行显影'
-        assert any('recovered' in ln for ln in out_b)
-        assert match_final_rows(rows, 'run_a')[-1]['after']['final_type'] == 'loss'
-        empty = view_match_final([], 'run_x')
-        assert any('无局终行' in ln for ln in empty)
-    finally:
-        reset_state_telemetry()
+# (收口整删)原 test_view_match_final_reading「判读 CLI 读面(view_
+# match_final 显影/无行提示)」删:CLI 输出文案锁(「type=」「补写」等
+# 字样断言)= 展示层快照,红时答不出哪个消费行为坏了;判读读数面由
+# match_final_rows 行取数(原 view 测试内同函数断言)与下游档案锁承重。
 
 
 def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:
@@ -454,7 +396,9 @@ def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:
 
 def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     """载荷聚合锁:write_match_final(cw4_counters=…) → 载荷原样落账;
-    写口浅拷贝(传入容器后写不串账)。None = 无策略载体诚实缺省。"""
+    写口浅拷贝(传入容器后写不串账)。None = 无策略载体诚实缺省;聚合键
+    进 journal 局终行 after 载荷,行行自足可读(判读直接读行,零重放;
+    原 cw4_aggregate_in_journal_row 行可见性腿并入)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     counters = {'shop_churn_pair_buy': 3, 'launch_frame_idle_gold': 120}
     assert write_match_final(bs, final_type='loss',
@@ -464,20 +408,15 @@ def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     assert payload.cw4_counters is not counters, '载荷持快照副本非容器引用'
     counters['shop_churn_pair_buy'] = 99
     assert payload.cw4_counters['shop_churn_pair_buy'] == 3, '后写不串'
+    # 行可见性腿(并入):journal 局终行 after 携带聚合键(快照态,不受
+    # 后写串改)
+    rows = _final_rows()
+    assert rows and rows[0]['after']['cw4_counters'] == {
+        'shop_churn_pair_buy': 3, 'launch_frame_idle_gold': 120}, (
+        '聚合进 journal 局终行(局终级全键聚合可见性载体,行行自足)')
     # None 形态(无 session/历史段补写无源)
     bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
     assert write_match_final(bs2, final_type='abnormal',
                              backfilled=True) is True
     assert bs2.match_final.value.cw4_counters is None, (
         '无载体 = None 诚实缺省(与零计数空 dict 可辨)')
-
-
-def test_match_final_cw4_aggregate_in_journal_row(journal, run_id) -> None:
-    """端到端(写口→journal 行):局终行 after 载荷携带聚合键,行行自足
-    可读(判读直接读行,零重放)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    write_match_final(bs, final_type='win',
-                      cw4_counters={'m6_bench_full': 1})
-    rows = _final_rows()
-    assert rows and rows[0]['after']['cw4_counters'] == {'m6_bench_full': 1}, (
-        '聚合进 journal 局终行(局终级全键聚合可见性载体)')

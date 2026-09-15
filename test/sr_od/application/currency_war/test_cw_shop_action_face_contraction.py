@@ -15,11 +15,11 @@
 2. 席满缺员帧 = 关店交回 + 义务残差状态在(bench_full_buy_abandon 计数
    + ``cw4_shop_wanted_pending`` 置位)——「交回+状态在」锁到框架
    边界;备战期消费臂(wanted_closure_emit)评估腾席/重开归策略侧;
+   筹资形态的 funding_close_defer 分键计数随本锁同承(原筹资专锁并入);
 3. 腾位链牌面持久契约锁:节点内关店→重开不刷新牌面
    (research/economy.md §2.1)——同 session 同店面 payload,关店
    交回 → 备战腾席(bench 移除一件)→ 重开重判,原缺员件在店且被
-   买入(腾位/筹资/凑息往返不损失已刷牌面);
-4. 筹资形态帧 = 关店交回(funding_close_defer 分键),零卖射。
+   买入(腾位/筹资/凑息往返不损失已刷牌面)。
 
 帧构造边界(判据面,断言不依赖):deployed 非空(空板帧语义独立,
 本锁不辖)、bench 燃料件异名(同名同星互为合成素材被 G-S1 守卫拒入
@@ -215,7 +215,9 @@ def test_shop_forms_stay_in_contracted_action_face(case: str):
 def test_bench_full_close_hands_back_with_defer_state():
     """腾位形态流锁(交回+状态在):席满缺员帧 = CloseShop 交回 +
     义务残差跨段状态置位(wanted_pending)——备战期消费臂评估腾席/
-    重开归策略侧,框架只锁「交回发生且状态在」。"""
+    重开归策略侧,框架只锁「交回发生且状态在」。筹资形态计数腿(并入,
+    原筹资专锁):缺员+金不足 = CloseShop 交回备战筹资
+    (funding_close_defer 分键),零卖射。"""
     strategy, sess, config = _frame_m4_missing_vacate()
     action = strategy.decide_shop_action(sess, config)
     assert type(action).__name__ == 'CloseShop'
@@ -224,6 +226,12 @@ def test_bench_full_close_hands_back_with_defer_state():
         '关店交回但 wanted 残差缺席 = 备战侧消费臂失去闭环输入'
     ct = st.cw4_counters
     assert ct.get('bench_full_buy_abandon', 0) == 1
+    # 筹资形态计数腿(并入):同形关店交回,分键计数归属正确
+    strategy_f, sess_f, config_f = _frame_funding_support_sell()
+    action_f = strategy_f.decide_shop_action(sess_f, config_f)
+    assert type(action_f).__name__ == 'CloseShop'
+    assert state_of(sess_f).cw4_counters.get('funding_close_defer', 0) == 1, (
+        '筹资形态关店交回,分键 = funding_close_defer(零卖射)')
 
 
 def test_vacate_chain_reopen_keeps_shop_face_and_buys():
@@ -253,12 +261,6 @@ def test_vacate_chain_reopen_keeps_shop_face_and_buys():
         f'重开买入 {act2.card.name!r} 非原在店缺员件 = 牌面被刷新'
         '(跨节点自动刷新语义误用到节点内)')
 
-
-def test_funding_form_closes_with_defer_counter():
-    """筹资形态锁:缺员+金不足 = CloseShop 交回备战筹资
-    (funding_close_defer 分键),零卖射。"""
-    strategy, sess, config = _frame_funding_support_sell()
-    action = strategy.decide_shop_action(sess, config)
-    assert type(action).__name__ == 'CloseShop'
-    ct = state_of(sess).cw4_counters
-    assert ct.get('funding_close_defer', 0) == 1
+# (收口整删)原 test_funding_form_closes_with_defer_counter「筹资形态
+# 专锁」删:funding_close_defer 分键计数腿并入上方腾位形态流锁(同形
+# 关店交回,分键归属面由同锁分腿承重)。

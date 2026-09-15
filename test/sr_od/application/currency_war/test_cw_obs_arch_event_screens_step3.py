@@ -26,19 +26,18 @@ CwScreenExpertInvite。武装箱弹窗(CwScreenArmoryBox)不在本批:B4 把它�
   后续),本批等价判据仍以实机在册行为锁承重。
 
 锁的语义(测试纪律 7 自检;出处 = 架构设计 §9.1/§6.4-R-E/B5;先例 =
-test_cw_obs_arch_event_screens.py 断言集模板):
+test_cw_obs_arch_event_screens.py 断言集模板;生产端口恒 None 直连旧
+路径——迁移结构锁与八屏装配点分流锁已随并存窗收口整删,行为锁单驱动
+生产路径):
 
-- **迁移结构锁**:八 op 是 CwScreenOpBase 子类 ∧ 决策承载节点顶部装配点
-  分流(两端口完整在场 → 五段生命周期;缺省 None = 生产直连旧路径,§9.1
-  并存期)。红 = 迁移断线(结构退回)或分流判据破坏(生产误走新路径)。
 - **注册表零登记锁**(§6.4 收编面本批零行):八屏源无 register_outcome_
   hook / fire_emit_hooks 接线——§6.4 表登记件全不涉事件选卡屏;supply_
   refresh_used GameState 字段位 = 先申报禁静默(cw_game_state.py 字段行
   自注),执行侧防重入旗标 _supply_refresh_used 留守 _do_action,不入注册
   表。红 = 未经申报面擅立登记件(EMIT_TRIGGERED_DECLARED 同款纪律)。
 - **共享动作体锁**:七选卡屏 post-gate 体纯移入 ``_handle_overlay``(两路径
-  共用零转录,先例 = 盛会之星 ``_do_action``);旧路径行为锁(出口 chosen
-  写端/门 fail 语义)经共享体持续成立。
+  共用零转录,先例 = 盛会之星 ``_do_action``);supply 暂存生命周期
+  (chosen 完成落账/取走清/重入弃陈旧)住 handle 出口/入口共享段。
 - **chosen_* 豁免留守锁**(§2.2/§6.5-6):chosen_* 写端仍内联于共享体
   (出口验真通过分支),不入 on_outcome 注册表收编面。
 - **验证段废除源面锁**(用户裁定 2026-09-10,同
@@ -46,8 +45,8 @@ test_cw_obs_arch_event_screens.py 断言集模板):
   'verify' 段迹字面。
 
 驱动方式 = 真类实例(构造走 __init__,适配器位在位)+ 画面门/动作体桩化
-(``_handle_overlay``/``_do_action`` 方法级桩;装配点分流桩端口 =
-``_cw_helpers.install_dispatch_stub_ports`` 单一源)。
+(``_do_action`` 方法级桩;生产端口缺省 None = 直连旧路径,行为锁单驱动
+生产形态)。
 """
 from __future__ import annotations
 
@@ -57,79 +56,14 @@ from test.sr_od.application.currency_war._cw_helpers import (
     Area as _Area,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
-    install_dispatch_stub_ports,
-)
-from test.sr_od.application.currency_war._cw_helpers import (
     run_node as _run_node,
 )
 
-from one_dragon.base.operation.operation_round_result import (
-    OperationRoundResult,
-    OperationRoundResultEnum,
-)
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_op_base import (
-    CwScreenOpBase,
-)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;共享体桩只验传递不断言内容)
-_OK_RS = OperationRoundResult(OperationRoundResultEnum.SUCCESS, status='stub')
-
-#: 本批八屏:(模块名, 类名)。单一源 = 迁移面清单(模块 docstring)。
-_BATCH3_SCREENS: tuple[tuple[str, str], ...] = (
-    ('cw_screen_supply_node', 'CwScreenSupplyNode'),
-    ('cw_screen_partner', 'CwScreenPartner'),
-    ('cw_screen_planner', 'CwScreenPlanner'),
-    ('cw_screen_wish_trial', 'CwScreenWishTrial'),
-    ('cw_screen_fortune', 'CwScreenFortune'),
-    ('cw_screen_bookcard', 'CwScreenBookcard'),
-    ('cw_screen_equip_pick', 'CwScreenEquipPick'),
-    ('cw_screen_expert_invite', 'CwScreenExpertInvite'),
-)
-
-
-def _make_op(test_context, monkeypatch, module_name: str, cls_name: str, *,
-             in_screen: bool):
-    """事件屏真类装配(生产构造走 __init__ = 适配器位在位)。
-
-    桩面 = 画面门(round_by_find_area 程序化回 in_screen)+ 共享动作体
-    ``_handle_overlay``(计数 + 回成功桩);``last_screenshot``/``screenshot``
-    桩喂稳定帧哨兵。返回 (op, calls)。
-    """
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_bookcard,
-        cw_screen_equip_pick,
-        cw_screen_expert_invite,
-        cw_screen_fortune,
-        cw_screen_partner,
-        cw_screen_planner,
-        cw_screen_wish_trial,
-    )
-    mod = {
-        'cw_screen_partner': cw_screen_partner,
-        'cw_screen_planner': cw_screen_planner,
-        'cw_screen_wish_trial': cw_screen_wish_trial,
-        'cw_screen_fortune': cw_screen_fortune,
-        'cw_screen_bookcard': cw_screen_bookcard,
-        'cw_screen_equip_pick': cw_screen_equip_pick,
-        'cw_screen_expert_invite': cw_screen_expert_invite,
-    }[module_name]
-    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
-    op = getattr(mod, cls_name)(test_context)
-    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-    monkeypatch.setattr(op, 'screenshot', lambda: _FRAME, raising=False)
-    monkeypatch.setattr(op, 'round_by_find_area',
-                        lambda scr, s, a, **k: _Area(in_screen))
-    calls: list[int] = []
-
-    def _stub_body(*_a, **_k) -> OperationRoundResult:
-        calls.append(1)
-        return _OK_RS
-
-    monkeypatch.setattr(op, '_handle_overlay', _stub_body)
-    return op, calls
 
 
 def _make_supply(test_context, monkeypatch, *, in_node: bool):
@@ -158,92 +92,47 @@ def _make_supply(test_context, monkeypatch, *, in_node: bool):
 # ==================== 迁移结构锁(§9.1 并存期)====================
 
 
-def test_migration_batch3_ops_inherit_base() -> None:
-    """逐屏迁移第二批量(试点步骤 3):补给 + 余事件屏八 op 均为
-    CwScreenOpBase 子类(B3 三段走第二段族表)。红 = 迁移回退或漏迁。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_bookcard,
-        cw_screen_equip_pick,
-        cw_screen_expert_invite,
-        cw_screen_fortune,
-        cw_screen_partner,
-        cw_screen_planner,
-        cw_screen_supply_node,
-        cw_screen_wish_trial,
-    )
-    for mod in (cw_screen_supply_node, cw_screen_partner, cw_screen_planner,
-                cw_screen_wish_trial, cw_screen_fortune, cw_screen_bookcard,
-                cw_screen_equip_pick, cw_screen_expert_invite):
-        cls_name = dict(_BATCH3_SCREENS)[mod.__name__.rsplit('.', 1)[-1]]
-        assert issubclass(getattr(mod, cls_name), CwScreenOpBase), (
-            f'{cls_name} 未迁移到 CwScreenOpBase(B3 第二段族表)')
+# (收口整删)原 test_migration_batch3_ops_inherit_base「八 op 均为
+# CwScreenOpBase 子类」(连 _BATCH3_SCREENS 常量)删:继承结构 = 静态形状,
+# 红时答不出哪个运行行为坏了;结构面归 review 与代码规范。
 
 
-def test_supply_dispatch_both_ways(test_context, monkeypatch) -> None:
-    """补给屏装配点分流双向:装端口 → 五段(observe 门起步,decide+act
-    内聚共享动作体,节点完成判定 = 下一轮 observe 门——无验证段,迹到
-    act 为止);不装端口 → 旧路径零段迹(行为保形:在屏 = 一动作 + retry)。"""
-    # 装端口 + 在屏:五段新路径
-    install_dispatch_stub_ports(monkeypatch)
-    op, _match, _session, calls = _make_supply(
-        test_context, monkeypatch, in_node=True)
-    rs = _run_node(test_context, op, op.handle)
-    assert calls == [1], f'每轮恰一个动作:{calls!r}'
-    assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act'], (
-        f'补给段迹 = observe/reconcile/decide/act(节点完成判定归下一轮 '
-        f'observe 门,无验证段):{op._lifecycle_trace}')
-    assert getattr(rs, '_retry', False) or not rs.is_success, '在屏 = retry'
-    # 不装端口:旧路径零段迹
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-    op2, _m2, _s2, calls2 = _make_supply(
-        test_context, monkeypatch, in_node=True)
-    rs2 = _run_node(test_context, op2, op2.handle)
-    assert op2._lifecycle_trace == [], f'旧路径不得写段迹:{op2._lifecycle_trace}'
-    assert calls2 == [1] and not rs2.is_success, (
-        '旧路径在屏 = 一个动作 + retry(保形)')
-
-
-def test_supply_exit_writes_chosen_on_lifecycle_path(test_context,
-                                                     monkeypatch) -> None:
-    """新路径出口分支:已离开节点画面 = 节点完成早退(observe 门内落
-    chosen 写端)→ chosen_supply 自选定暂存写入 + 暂存取走即清 + 段迹
-    仅 observe(后续段不执行)。"""
-    install_dispatch_stub_ports(monkeypatch)
+def test_supply_chosen_staging_lifecycle(test_context, monkeypatch) -> None:
+    """补给 chosen 暂存生命周期(supply 两条幸存锁并一:完成落账+取走清
+    +重入弃陈旧;单驱动生产旧路径,暂存生命周期住 handle 出口/入口共享
+    段,装端口段迹面随并存窗收口退役):
+    - 完成落账:已离开节点画面 = 节点完成早退 → chosen_supply 自选定
+      暂存写入 + 暂存取走即清(不跨节点残留),节点完成零动作;
+    - 重入弃陈旧:在屏轮开始先 pop 取走暂存再做动作(防跨轮/跨节点
+      误写),本轮动作照发。
+    (并锁 = 原 test_supply_exit_writes_chosen_on_lifecycle_path /
+    test_supply_reentry_discards_stale_pending_both_paths。红 = 幻影
+    chosen / 陈旧暂存跨节点误写。)"""
+    # ① 完成落账 + 取走清
     op, _match, session, calls = _make_supply(
         test_context, monkeypatch, in_node=False)
-    exec_state_of(session)._pending_chosen_supply = ('希儿', '星币收集器', True)
+    exec_state_of(session)._pending_chosen_supply = ('希儿', '星币收集器',
+                                                     True)
     rs = _run_node(test_context, op, op.handle)
     assert rs.is_success and '节点完成' in (rs.status or ''), (
         f'完成语义不变:{rs!r}')
     assert calls == [], '节点完成 = 不再发动作'
-    assert op._lifecycle_trace == ['observe'], (
-        f'出口早退 = 仅 observe 段迹:{op._lifecycle_trace}')
+    assert op._lifecycle_trace == [], (
+        f'生产路径零段迹:{op._lifecycle_trace}')
     bs = board_state_of(session)
     assert bs.chosen_supply.value == ('希儿', '星币收集器', True), (
         f'chosen_supply 自暂存写入:{bs.chosen_supply.value!r}')
     assert exec_state_of(session)._pending_chosen_supply is None, (
         '写后取走暂存(不跨节点残留)')
-
-
-def test_supply_reentry_discards_stale_pending_both_paths(
-        test_context, monkeypatch) -> None:
-    """重入轮入口弃陈旧暂存(防跨轮/跨节点误写)两路径保形:在屏轮开始
-    = 先 pop 取走暂存再做动作。"""
-    for install in (True, False):
-        if install:
-            install_dispatch_stub_ports(monkeypatch)
-        else:
-            from sr_od.application.currency_war import (
-                cw_game_ports as _ports_mod,
-            )
-            monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-        op, _match, session, _calls = _make_supply(
-            test_context, monkeypatch, in_node=True)
-        exec_state_of(session)._pending_chosen_supply = ('符玄', '旧选定', False)
-        _run_node(test_context, op, op.handle)
-        assert exec_state_of(session)._pending_chosen_supply is None, (
-            f'install={install}:重入轮入口弃陈旧暂存')
+    # ② 重入弃陈旧
+    op2, _m2, session2, calls2 = _make_supply(
+        test_context, monkeypatch, in_node=True)
+    exec_state_of(session2)._pending_chosen_supply = ('符玄', '旧选定', False)
+    rs2 = _run_node(test_context, op2, op2.handle)
+    assert exec_state_of(session2)._pending_chosen_supply is None, (
+        '重入轮入口弃陈旧暂存')
+    assert calls2 == [1] and not rs2.is_success, (
+        '弃陈旧后本轮动作照发(在屏 = 一动作 + retry,保形)')
 
 
 # (原 test_supply_no_outcome_registry_item 删:负向注册表取证断言——
@@ -251,105 +140,16 @@ def test_supply_reentry_discards_stale_pending_both_paths(
 #  与代码规范;supply 行为面由同文件 chosen 暂存/重入弃陈旧两锁承重。)
 
 
-# ==================== 七选卡屏:装配点分流 + 共享动作体 ====================
+# ==================== 七选卡屏(收口整删)====================
 
 
-def test_gated_screens_dispatch_both_ways(test_context, monkeypatch) -> None:
-    """带门选卡屏(伙伴/祈愿试炼/星徽秘典)分流双向 + 门 fail 语义:
-    装端口 → 五段(observe 门起步,共享动作体单触发);不装端口 → 旧路径
-    零段迹;离屏 = round_fail 早退(旧 handle 首闸逐位转录,仅 observe
-    段迹,动作体零触发)。"""
-    _CASES = (
-        ('cw_screen_partner', 'CwScreenPartner', '非选择伙伴屏'),
-        ('cw_screen_wish_trial', 'CwScreenWishTrial', '非祈愿试炼屏'),
-        ('cw_screen_bookcard', 'CwScreenBookcard', '非星徽秘典画面'),
-    )
-    for module_name, cls_name, fail_status in _CASES:
-        # 装端口 + 在屏:五段
-        install_dispatch_stub_ports(monkeypatch)
-        op, calls = _make_op(test_context, monkeypatch, module_name, cls_name,
-                             in_screen=True)
-        rs = _run_node(test_context, op, op.handle)
-        assert calls == [1], f'{cls_name}:装端口走新路径恰一动作:{calls!r}'
-        assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act'], (
-            f'{cls_name} 段迹 = 五段到 act:{op._lifecycle_trace}')
-        assert rs.is_success, f'{cls_name}:共享体回执直返'
-        # 装端口 + 离屏:observe 门 fail 早退
-        op_f, calls_f = _make_op(test_context, monkeypatch, module_name,
-                                 cls_name, in_screen=False)
-        rs_f = _run_node(test_context, op_f, op_f.handle)
-        assert not rs_f.is_success and fail_status in (rs_f.status or ''), (
-            f'{cls_name} 门 fail 语义不变:{rs_f!r}')
-        assert calls_f == [] and op_f._lifecycle_trace == ['observe'], (
-            f'{cls_name} 离屏早退 = 零动作、仅 observe 段迹')
-        # 不装端口:旧路径零段迹 + 共享体触发
-        from sr_od.application.currency_war import cw_game_ports as _ports_mod
-        monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-        op_o, calls_o = _make_op(test_context, monkeypatch, module_name,
-                                 cls_name, in_screen=True)
-        _run_node(test_context, op_o, op_o.handle)
-        assert op_o._lifecycle_trace == [], (
-            f'{cls_name} 旧路径不得写段迹:{op_o._lifecycle_trace}')
-        assert calls_o == [1], f'{cls_name} 旧路径在屏 = 一动作(保形)'
-
-
-def test_gateless_screens_dispatch_both_ways(test_context, monkeypatch) -> None:
-    """无门选卡屏(骇入策划/命运卜者/装备三选一)分流双向:入口判定归
-    主循环分发(0 系检测即门,op 内无首闸)→ observe 段 = 轻观察 payload
-    (现役帧获取内聚,盛会之星同式);装端口 → 五段;不装端口 → 旧路径
-    零段迹。"""
-    for module_name, cls_name in (
-            ('cw_screen_planner', 'CwScreenPlanner'),
-            ('cw_screen_fortune', 'CwScreenFortune'),
-            ('cw_screen_equip_pick', 'CwScreenEquipPick')):
-        install_dispatch_stub_ports(monkeypatch)
-        op, calls = _make_op(test_context, monkeypatch, module_name, cls_name,
-                             in_screen=True)
-        rs = _run_node(test_context, op, op.handle)
-        assert calls == [1], f'{cls_name}:装端口走新路径恰一动作:{calls!r}'
-        assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act'], (
-            f'{cls_name} 段迹 = 五段到 act:{op._lifecycle_trace}')
-        assert rs.is_success
-        from sr_od.application.currency_war import cw_game_ports as _ports_mod
-        monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-        op_o, calls_o = _make_op(test_context, monkeypatch, module_name,
-                                 cls_name, in_screen=True)
-        _run_node(test_context, op_o, op_o.handle)
-        assert op_o._lifecycle_trace == [], (
-            f'{cls_name} 旧路径不得写段迹:{op_o._lifecycle_trace}')
-        assert calls_o == [1], f'{cls_name} 旧路径 = 一动作(保形)'
-
-
-def test_expert_choose_dispatch_both_ways(test_context, monkeypatch) -> None:
-    """专家邀请函:装配点分流在**选卡节点**(决策承载段,读板面→选卡→
-    点击→验关内联其 handle 语义);开卡节点 = 纯导航(找卡/点卡/过渡帧
-    等待,零决策)两路径均留旧路径(本文件源面锁另钉)。装端口 → 五段;
-    不装端口 → 旧路径零段迹;弹窗未现 = round_fail 早退语义不变。"""
-    # 装端口 + 弹窗在:五段
-    install_dispatch_stub_ports(monkeypatch)
-    op, calls = _make_op(test_context, monkeypatch, 'cw_screen_expert_invite',
-                         'CwScreenExpertInvite', in_screen=True)
-    rs = _run_node(test_context, op, op.choose)
-    assert calls == [1] and rs.is_success
-    assert op._lifecycle_trace == ['observe', 'reconcile', 'decide', 'act'], (
-        f'选卡节点段迹 = 五段到 act:{op._lifecycle_trace}')
-    # 装端口 + 弹窗未现:observe 门 fail 早退
-    op_f, calls_f = _make_op(test_context, monkeypatch, 'cw_screen_expert_invite',
-                             'CwScreenExpertInvite', in_screen=False)
-    rs_f = _run_node(test_context, op_f, op_f.choose)
-    assert not rs_f.is_success and '邀请函弹窗未现' in (rs_f.status or ''), (
-        f'选卡入口门 fail 语义不变:{rs_f!r}')
-    assert calls_f == [] and op_f._lifecycle_trace == ['observe']
-    # 不装端口:旧路径零段迹
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
-    op_o, calls_o = _make_op(test_context, monkeypatch, 'cw_screen_expert_invite',
-                             'CwScreenExpertInvite', in_screen=True)
-    _run_node(test_context, op_o, op_o.choose)
-    assert op_o._lifecycle_trace == [], (
-        f'旧路径不得写段迹:{op_o._lifecycle_trace}')
-    assert calls_o == [1]
-
+# (收口整删)原 test_gated_screens_dispatch_both_ways /
+# test_gateless_screens_dispatch_both_ways / test_expert_choose_dispatch_
+# both_ways(带门/无门/专家邀请函三组选卡屏的装端口五段分流锁,连唯一
+# 消费者 _make_op helper)删:装端口驱动的段迹/分流面随并存窗收口退役
+# (生产端口恒 None);旧路径在屏单动作语义已由 supply 同族锁同形承重,
+# 七屏体为纯转录、无域写入面,无独立行为锁可立——覆盖缺口归总纲收口
+# 申报,不再以分流锁占位。
 
 # (三审整删)原 test_expert_open_card_node_stays_legacy「纯导航留旧
 # 路径申报面」(getsource 方法体断言无 run_lifecycle/observation_source)——
@@ -357,4 +157,4 @@ def test_expert_choose_dispatch_both_ways(test_context, monkeypatch) -> None:
 # (三审整删)原 test_batch3_no_outcome_registry_wiring「注册表零登记
 # 锁」与 test_batch3_sources_free_of_verify_segment「验证段废除·源面锁」
 # (八屏 getsource 字面在场/不在场断言)——源码扫描形态;注册表收编纪律
-# 与验证段废除语义的行为面由本文件 lifecycle 段迹行为锁承重。
+# 归 review 与代码规范,验证段废除语义 = 分流后无残迹可断。

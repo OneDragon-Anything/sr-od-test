@@ -6,16 +6,15 @@
   vs ``cw_state.simulate``:同动作同输入逐域等价
   (gold/bench/shop payload/xp;含满栏多买 −k×单价)。波 5 sim 反转
   收敛单形态后本锁改钉单形态(设计件 M1 行申报)。
-- M5 投影公式语义源锁:登记面断言(直写域集封闭/executed 回执字段集/
-  None 跳写形态)+ 渠道签名纪律(族错显式炸)。
+- M5 投影公式语义源锁:None 跳写形态 + 渠道签名纪律(族错显式炸)
+  (收口整删:直写域集封闭/executed 回执字段集两条登记面断言——常量
+  字面/字段名复述,红时答不出哪个运行行为坏了;消费面纪律归 review)。
 
 口径申报:payload 对比按 canonical 序(name,star,cost)——容器牌无 x
 坐标,simulate 的 x 槽位删除与投影口的 (name,star) 计数删除为同义多集
 操作;bench 对比按槽位表身份签名(逐槽 (char_id, star))。
 """
 from __future__ import annotations
-
-import dataclasses
 
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
@@ -29,7 +28,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    SHOP_PROJECTION_DOMAINS,
     ChannelSig,
     ShopActionExecuted,
     apply_shop_action_logic,
@@ -38,7 +36,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     bench_slots_to_legacy,
     board_state_of,
     deployed_slots_of,
-    detect_merge_upgrade,
     shop_cards_to_legacy,
     shop_payload_content_cards,
     synthesize_from_game_state,
@@ -114,25 +111,11 @@ def _assert_domains_equal(bs, sim):
 
 class TestM5Registration:
 
-    def test_projection_domain_set_closed(self):
-        """直写域集封闭八域(禁扩静默,登记面即锁);消费面 = 本类 M1
-        逐域等价断言的覆盖清单申报——新增域必须同步进 _assert_domains_equal
-        的比对轴,否则等价锁对该域失明。
-        (改写依据:域集随 v2 动作族扩容——front_row/back_row/board/
-        equips 四域入集,扩面依据 = cw_game_state.SHOP_PROJECTION_DOMAINS
-        声明段「裁定 A:单一转移函数,域覆盖对齐 simulate 分支字段转移
-        全集」。)"""
-        assert SHOP_PROJECTION_DOMAINS == (
-            'gold', 'bench', 'shop', 'xp',
-            'front_row', 'back_row', 'board', 'equips')
-
-    def test_executed_receipt_field_set(self):
-        """executed 回执字段集登记(bought_count/levelup_clicks/
-        refresh_paid;缺字段 None = 该动作不投影)。消费面 = M1 各案按
-        字段名取值对拍,字段集漂移 = 出参契约漂移(跨批消费者按名解析)。"""
-        assert [f.name for f in dataclasses.fields(ShopActionExecuted)] \
-            == ['bought_count', 'levelup_clicks', 'refresh_paid']
-        assert ShopActionExecuted().bought_count is None
+    # (收口整删)原 test_projection_domain_set_closed「直写域集封闭八域」
+    # 与 test_executed_receipt_field_set「executed 回执字段集登记」删:
+    # 常量/字段名复述断言,红时是常量或字段改名而非运行行为坏;消费面
+    # (M1 逐域比对轴/按字段名取值)由下方 M1 等价锁承重,登记面纪律归
+    # review 与代码规范。
 
     def test_wrong_family_sig_rejected(self):
         """渠道签名纪律:非 logic_action 族显式炸(§3.2.4 硬约束 2)。"""
@@ -159,18 +142,10 @@ class TestM1Equivalence:
             ShopActionExecuted(bought_count=1), st)
         _assert_domains_equal(bs, sim)
 
-    def test_buy_triggers_merge(self):
-        """合成买(2 副本在席 + 买第 3 张):落位写 + 升星整表写合计
-        对 simulate 等价。"""
-        st = _state(gold=30, shop=[_card('希儿', cost=3)],
-                    bench=[_bc('希儿', star=1, slot=1),
-                           _bc('希儿', star=1, slot=2)])
-        bs = _bs_of(st)
-        sim = _project_with_merge_leg(
-            bs, BuyCard(card=_card('希儿', cost=3)),
-            ShopActionExecuted(bought_count=1), st)
-        assert detect_merge_upgrade(st, sim)   # 升星腿确曾触发
-        _assert_domains_equal(bs, sim)
+    # (收口整删)原 test_buy_triggers_merge「合成买(2 副本在席 + 买第
+    #  3 张)」删:与 test_full_bench_merge_buy_k(满栏合成 k=2)和
+    #  test_merge_leg_alone_prestate_basis(升星腿双形态直锁)断言面重叠
+    #  ——同一升星腿的第三种摆放,留两形态承重。
 
     def test_full_bench_merge_buy_k(self):
         """满栏多买(k=2):gold −k×单价 + payload −k 张 + bench 归升星腿
@@ -246,21 +221,24 @@ class TestM1Equivalence:
         _assert_domains_equal(bs, sim)
 
     def test_levelup_clicks_and_level_cross(self):
-        """升级:击数×单击价扣金 + xp 推进(含升档结转;level 域不投影)。"""
+        """升级:击数×单击价扣金 + xp 推进(含升档结转;level 域不投影);
+        满级腿(并入):lv10 购买无效,零金零经验(与 simulate 同门)。"""
         st = _state(gold=30, shop=[], level=3, xp=(2, 6))
         bs = _bs_of(st)
         sim = _project_with_merge_leg(
             bs, LevelUpShop(cost=4), ShopActionExecuted(levelup_clicks=1), st)
         _assert_domains_equal(bs, sim)
         assert bs.level.value == st.level   # level 域不在投影域集
-
-    def test_levelup_full_cap_noop(self):
-        """满级 lv10 购买无效:零金零经验(与 simulate 同门)。"""
-        st = _state(gold=30, shop=[], level=10, xp=(0, 4))
-        bs = _bs_of(st)
-        sim = _project_with_merge_leg(
-            bs, LevelUpShop(cost=4), ShopActionExecuted(levelup_clicks=1), st)
-        _assert_domains_equal(bs, sim)
+        # 满级腿(并入,原 test_levelup_full_cap_noop):零金零经验
+        st_cap = _state(gold=30, shop=[], level=10, xp=(0, 4))
+        bs_cap = _bs_of(st_cap)
+        sim_cap = _project_with_merge_leg(
+            bs_cap, LevelUpShop(cost=4),
+            ShopActionExecuted(levelup_clicks=1), st_cap)
+        _assert_domains_equal(bs_cap, sim_cap)
+        assert bs_cap.gold.value == 30 and tuple(bs_cap.xp.value or ()) == (
+            0, 4), '满级购买零金零经验(购买无效)'
+        assert bs_cap.level.value == 10, 'level 域不投影(满级不动)'
 
     def test_refresh_paid_deducts_gold(self):
         """付费刷新:gold −刷新费;payload 不写(刷后牌面等续段重观察)。"""
@@ -329,22 +307,10 @@ class TestM1Equivalence:
         assert len(shop_payload_content_cards(bs.shop.value)) == 0
         assert bench_occupied(bench_slots_to_legacy(bs.bench.value)) == 1
 
-    def test_out_of_set_action_no_write(self):
-        """集外动作型零写(登记面申报;等观察覆盖,禁扩静默)。"""
-        from sr_od.application.currency_war.kernel.cw_vocab import (
-            DeployMove,
-        )
-        st = _state(gold=30, shop=[], bench=[_bc('希儿', slot=1)])
-        bs = _bs_of(st)
-        seq0 = bs.write_seq
-        apply_shop_action_logic(bs, DeployMove(bench_idx=0, to_row='front',
-                                               faction='?'),
-                                executed=ShopActionExecuted(),
-                                produced_by='DeployMove', sig=_SIG)
-        assert bs.write_seq == seq0
-
     def test_stale_sell_proposal_no_write(self):
-        """陈旧卖出提案(空槽/越界):守卫辖面,本口零写。"""
+        """陈旧卖出提案(空槽/越界):守卫辖面,本口零写;集外动作型零写
+        腿(并入,原 test_out_of_set_action_no_write):登记面未收编动作型
+        照样零写,禁扩静默。"""
         st = _state(gold=30, shop=[])
         bs = _bs_of(st)
         seq0 = bs.write_seq
@@ -352,6 +318,18 @@ class TestM1Equivalence:
                                 executed=ShopActionExecuted(),
                                 produced_by='SellBench', sig=_SIG)
         assert bs.write_seq == seq0
+        # 集外动作型腿(并入):DeployMove 不在投影登记面 → 零写
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            DeployMove,
+        )
+        st_oos = _state(gold=30, shop=[], bench=[_bc('希儿', slot=1)])
+        bs_oos = _bs_of(st_oos)
+        seq0_oos = bs_oos.write_seq
+        apply_shop_action_logic(
+            bs_oos, DeployMove(bench_idx=0, to_row='front', faction='?'),
+            executed=ShopActionExecuted(),
+            produced_by='DeployMove', sig=_SIG)
+        assert bs_oos.write_seq == seq0_oos, '集外动作型零写(禁扩静默)'
 
     def test_buy_rejected_when_full_and_no_merge(self):
         """满栏且合成不可达 = 游戏拒买(ADR-0283):零写(simulate 同判
