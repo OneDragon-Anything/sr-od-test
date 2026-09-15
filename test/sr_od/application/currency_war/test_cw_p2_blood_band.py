@@ -20,11 +20,16 @@ lock_gen_feasibility_obs_* 族)/§4-8(分键族零交集对账);裁定条目定�
    (锁开率分子/分母 + boss 濒死死区)只计数零行为。
 
 纪律:锁结构/回显不锁分布数值。
+
+锁面组织(极限合并):域真值表+P1 互补并一;三条观测键(形态⑥
+terminal_targetless_idle / 锁开率分子分母 / boss 死区)参数化并一;
+停付面与 l3 前置分键分列保留。
 """
 from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _bsb,
 )
@@ -69,12 +74,17 @@ def _st2(hp: int = 10, plane: int = 2, gold: int = 30,
 
 class TestP2BloodFloorPredicate:
 
-    def test_domain_truth_table(self):
-        """p2_blood_floor 真值表:plane≥2 ∧ hp≤15 ∧ 可信 ⇒ True;
+    def test_domain_truth_table_and_p1_complement(self):
+        """域真值表 + 位面域互补并一。
+        [真值表] p2_blood_floor:plane≥2 ∧ hp≤15 ∧ 可信 ⇒ True;
         hp>15 / hp None / 不可信帧 fail 向 ⇒ False(与 p1_blood_floor
         逐行同构,设计稿 §2.1)。阈值单一源(设计稿 §1.1「禁任何第二份
         字面量 15」):谓词边界 = HP_BAND_NEAR_DEATH 读数(≤15 族含
-        边界),非本地第二份——改常量即改边界,无第二值可漂。"""
+        边界),非本地第二份——改常量即改边界,无第二值可漂。
+        [互补] 位面域互补且不交(设计稿 §2.1「同构不同域,禁搭车」):
+        P1 帧不得开 P2 域谓词(P1 半边 = p1_blood_floor 在册授权,零改);
+        P3 帧属 P2+ 域(谓词 plane≥2 口径)。"""
+        # [真值表]
         st = _st2(hp=10)
         assert preds.p2_blood_floor(_bsb(st)) is True
         st.hp = 16
@@ -94,11 +104,7 @@ class TestP2BloodFloorPredicate:
         assert preds.p2_blood_floor(_bsb(_st2(hp=HP_BAND_NEAR_DEATH))) is True
         assert preds.p2_blood_floor(
             _bsb(_st2(hp=HP_BAND_NEAR_DEATH + 1))) is False
-
-    def test_plane_domain_complementary_with_p1(self):
-        """位面域互补且不交(设计稿 §2.1「同构不同域,禁搭车」):P1 帧
-        不得开 P2 域谓词(P1 半边 = p1_blood_floor 在册授权,零改);
-        P3 帧属 P2+ 域(谓词 plane≥2 口径)。"""
+        # [互补]
         st = _st2(hp=10, plane=1)
         assert preds.p1_blood_floor(_bsb(st)) is True
         assert preds.p2_blood_floor(_bsb(st)) is False, 'P1 帧禁开 P2 域谓词'
@@ -182,7 +188,41 @@ class TestNearDeathObservationKeys:
         assert 'l3_pregate_targetless_neardeath_p2' not in ct_o
         assert 'l3_pregate_targetless_neardeath_p1' not in ct_o
 
-    def test_terminal_targetless_idle_keyed_domain(self, monkeypatch):
+
+class TestLockGenObservationKeys:
+    """面③出辖观察件(载体 = flow.bump_lock_gen_feasibility_obs,strategies
+    侧消费位;kernel 观察位禁反向 import strategies,布局依赖矩阵)。
+
+    「切阵后 N 轮内亡率」(771014 型)不在本载体:策略层结构性不可见 hp0
+    (结算 drain 跳过 hp_after=0 帧 + hp0 即局终),归档案层离线派生,
+    申报义务在案(helper docstring 与交付报告承载)。
+
+    三条观测键(形态⑥ terminal_targetless_idle / 锁开率分子分母 /
+    boss 濒死死区)参数化并一:只计数零行为,逐键独立会话。"""
+
+    _OBS_CASES = ('terminal-targetless-idle', 'lock-open-rate',
+                  'boss-deadzone')
+
+    def _sess(self) -> SimpleNamespace:
+        return SimpleNamespace(cw4_counters={}, plane_node_table=[1] * 7)
+
+    def _flow(self):
+        from sr_od.application.currency_war.strategies.impl.flow import (
+            CwFlowStrategy,
+        )
+        # abstract 桩子类(CwFlowStrategy 的 decide_prep_screen 为 abstract;
+        # 本组只驱动方向节拍 _refresh_direction,备战主流程不触达)
+        class _Flow(CwFlowStrategy):
+            def decide_prep_screen(self, *a, **kw):
+                raise NotImplementedError
+
+        return _Flow()
+
+    @pytest.mark.parametrize('obs_case', _OBS_CASES)
+    def test_observation_key_count_only(self, obs_case, monkeypatch):
+        _OBS_KEY_CASES[obs_case](self, monkeypatch)
+
+    def _case_terminal_targetless_idle(self, monkeypatch):
         """形态⑥观测键(241 §5.1 键名,不分位面):target 空窗 ∧ 濒死带
         ∧ 域外 ∧ 持金 ∧ 本帧零金消费 ⇒ terminal_targetless_idle 计 1;
         域外帧(g>g* 且必花域判定真)与非濒死帧(hp=60)零显影。纯观测:
@@ -200,7 +240,7 @@ class TestNearDeathObservationKeys:
             # 容器化段 2:局内事实喂 session 容器(观察源契约),黑板帧
             # 只载视觉/占用域。
             return CwSimFrame(gold=gold, level=6, round_num=2, hp=hp,
-                               plane=2, node_type='战斗')
+                              plane=2, node_type='战斗')
 
         st = _mk_frame(40, 10)
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
@@ -223,32 +263,7 @@ class TestNearDeathObservationKeys:
         entry.emit(_obs(st_h), SimpleNamespace(), sess_h, None)
         assert 'terminal_targetless_idle' not in state_of(sess_h).cw4_counters
 
-
-class TestLockGenFeasibilityObsKeys:
-    """面③出辖观察件(载体 = flow.bump_lock_gen_feasibility_obs,strategies
-    侧消费位;kernel 观察位禁反向 import strategies,布局依赖矩阵)。
-
-    「切阵后 N 轮内亡率」(771014 型)不在本载体:策略层结构性不可见 hp0
-    (结算 drain 跳过 hp_after=0 帧 + hp0 即局终),归档案层离线派生,
-    申报义务在案(helper docstring 与交付报告承载)。
-    """
-
-    def _sess(self) -> SimpleNamespace:
-        return SimpleNamespace(cw4_counters={}, plane_node_table=[1] * 7)
-
-    def _flow(self):
-        from sr_od.application.currency_war.strategies.impl.flow import (
-            CwFlowStrategy,
-        )
-        # abstract 桩子类(CwFlowStrategy 的 decide_prep_screen 为 abstract;
-        # 本组只驱动方向节拍 _refresh_direction,备战主流程不触达)
-        class _Flow(CwFlowStrategy):
-            def decide_prep_screen(self, *a, **kw):
-                raise NotImplementedError
-
-        return _Flow()
-
-    def test_lock_open_rate_numerator_denominator(self, monkeypatch):
+    def _case_lock_open_rate(self, monkeypatch):
         """低血带新开 lock 开启率载体(wiring 锁:经 _refresh_direction
         生产驱动面触发):分母 = 锁开事件总数,分子 = λ 低血带帧锁开
         (带判定 = 血带结构锚单一源,统一设计稿 §5-F4);率由读端按两键
@@ -274,7 +289,7 @@ class TestLockGenFeasibilityObsKeys:
         assert ct_hi.get('lock_gen_feasibility_obs_lock_open_total') == 1, (
             '帧2保持锁非锁开事件,分母不重复计')
 
-    def test_boss_neardeath_deadzone_keyed_by_domain(self):
+    def _case_boss_deadzone(self, monkeypatch):
         """死区面计数(R1 存疑-1 兑付:boss 窗濒死帧恒闭死区不留白):
         boss 节点 ∧ 濒死带域内帧按授权域分列(_p1/_p2);域外帧不入键。
         直调 helper(帧级观测,不依赖锁开)。"""
@@ -296,3 +311,11 @@ class TestLockGenFeasibilityObsKeys:
                                       IntentionState(), 'lock:旧事件')
         assert 'lock_gen_feasibility_obs_boss_neardeath_p2' \
             not in state_of(sess2).cw4_counters
+
+
+_OBS_KEY_CASES = {
+    'terminal-targetless-idle': (
+        TestLockGenObservationKeys._case_terminal_targetless_idle),
+    'lock-open-rate': TestLockGenObservationKeys._case_lock_open_rate,
+    'boss-deadzone': TestLockGenObservationKeys._case_boss_deadzone,
+}

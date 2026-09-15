@@ -2,7 +2,8 @@
 
 病理(ADR-0571):``v3_reserve_cap / v3_reserve_overflow /
 v3_release_budget / v3_release_spent`` 在 MandateState 有字段声明、
-recorder/engine_p1 有读端,但全库零写点——预算投影(assembly._budget)
+但全库零写点(缺陷定谳时的读端 recorder/engine_p1 已随架构收口删除,
+读端现状 = telemetry/schema.py 透传消费)——预算投影(assembly._budget)
 每 prep 帧现算后算完即丢。实机局 g_20260907_021326 的 52 行 decisions
 切片四字段全 ``(0, 0, 0, 0, '')``,含升级窗口与滞留金轮,真值应非零。
 

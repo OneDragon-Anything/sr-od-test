@@ -683,9 +683,15 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
 #  的出口门随并存窗收口整删;出口门生产那份由下方完成白名单锁承重。)
 
 
-def test_battle_wait_completion_exit(test_context, monkeypatch) -> None:
-    """B2-③ 出口门(生产那份):完成白名单锚命中 → back_to_loop 交回
-    循环分发(生产缺省形态,零段迹)。"""
+def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
+    """正常出口两段并一(生产路径驱动,共享体断言不变)。
+    [完成白名单出口] B2-③ 出口门(生产那份):完成白名单锚命中 →
+    back_to_loop 交回循环分发(生产缺省形态,零段迹)。
+    [结算分支逐位] D-94 读点(结算观察半直写)先于「继续挑战」点击
+    (时序红线);C-1 新帧计数;段迹零(生产缺省形态)。
+    (分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
+    (全仓零消费点),生产端无复位语义可锁。)"""
+    # [完成白名单出口]
     op, _es = _make_bwait(
         test_context, monkeypatch,
         frozenset({('货币战争-备战', '备战标识-购买经验')}))
@@ -693,15 +699,7 @@ def test_battle_wait_completion_exit(test_context, monkeypatch) -> None:
     assert rs.is_success and rs.status == 'back_to_loop'
     assert op._lifecycle_trace == [], (
         f'生产路径零段迹:{op._lifecycle_trace}')
-
-
-def test_battle_wait_settlement_branch_order_and_defer(
-        test_context, monkeypatch) -> None:
-    """B2-③:结算分支逐位(生产路径驱动,共享体断言不变)——D-94 读点
-    (结算观察半直写)先于「继续挑战」点击(时序红线);C-1 新帧计数;
-    段迹零(生产缺省形态)。
-    (分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
-    (全仓零消费点),生产端无复位语义可锁。)"""
+    # [结算分支逐位]
     order: list[str] = []
     op, _es = _make_bwait(
         test_context, monkeypatch,
@@ -732,9 +730,16 @@ def test_battle_wait_settlement_branch_order_and_defer(
         f'生产路径零段迹:{op._lifecycle_trace}')
 
 
-def test_battle_wait_long_press(test_context, monkeypatch) -> None:
-    """B2-③:M39 停留第 3 轮(点击未生效)→ 长按 (960,898) press_time=0.5
-    兜底推进 + 停留计数归零(在册时序行为锁,生产路径驱动)。"""
+def test_battle_wait_fallback_exits(test_context, monkeypatch,
+                                    tmp_path) -> None:
+    """兜底出口两段并一(生产路径驱动)。
+    [长按] M39 停留第 3 轮(点击未生效)→ 长按 (960,898)
+    press_time=0.5 兜底推进 + 停留计数归零(在册时序行为锁)。
+    [未知 bail] 未知帧达 UNKNOWN_BAIL_N(10)→ round_fail 交主循环
+    兜底链 + flag 留证(get_project_root 重定向 tmp_path,留证不落
+    真实 .debug)。生产路径逐轮 = 观察门双 miss → 决策循环分支链
+    miss → 计数。"""
+    # [长按]
     clicks: list = []
     op, _es = _make_bwait(
         test_context, monkeypatch,
@@ -753,13 +758,7 @@ def test_battle_wait_long_press(test_context, monkeypatch) -> None:
     assert (point.x, point.y) == (960, 898)
     assert kw == {'press_time': 0.5}
     assert op._st.settle_stay == 0, '长按兜底后停留计数归零'
-
-
-def test_battle_wait_unknown_bail(test_context, monkeypatch,
-                                  tmp_path) -> None:
-    """B2-③:未知帧达 UNKNOWN_BAIL_N(10)→ round_fail 交主循环兜底链 +
-    flag 留证(get_project_root 重定向 tmp_path,留证不落真实 .debug)。
-    生产路径逐轮 = 观察门双 miss → 决策循环分支链 miss → 计数。"""
+    # [未知 bail]
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
     )

@@ -20,7 +20,7 @@
       ⇒ hub 照常发射、哨兵键零显影。
 (F1 开火/F2/F3 豁免/F5 零漂移/F6 M6 零触碰/F7 单一源/F8 prep 对称/
 F9 wiring 旗位各锁已退役;F4 闭集对账正本与 S_spec 辖域腿迁并
-test_cw_sell_window_launch::test_launch_cause_mapping_closed_contract。)
+test_cw_sell_window_launch::test_launch_cause_closed_set(15 臂映射段)。)
 
 构造声明:候选名注册表实名(线外/核心/枢纽,程序化选取与既有锁文件
 同款);D 帧构造 = 锁线(ist.locked_comp)∧ fp<1.00(board 空 dict)

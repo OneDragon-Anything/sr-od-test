@@ -19,6 +19,11 @@
 
 红证形态说明:红证均为「同构帧按修复前装配形态直调判据/装配」的机制
 复现(与 test_cw_sell_arbitration 批 2 红证同款),非代码变异测试。
+
+锁面组织(极限合并):闭集三锁(枚举拒/15 臂映射/press-stall 双视图)
+并一;生命周期三锁(τ 同轮/锁线不清登记/四出口)表驱动并一;通道无关
+阻断三锁(funding e2e/entry EV/M4)参数化并一;投影正证+红证并一;
+资格合取与 fallback 发射独立保留。
 """
 from __future__ import annotations
 
@@ -115,20 +120,63 @@ def _registry(sess: StrategySession) -> dict:
 class TestLaunchRegistry:
     """发射登记 API 锁(P78 §2.2 窗口段载体;ADR-0585 §2/§3)。"""
 
-    def test_cause_closed_set_rejects_unknown(self):
-        """登记闭集强制:LaunchCause 枚举外值拒收(方案 v3 §5.3 防复发
-        双闸②;新买入臂必须先归入某因果类才合法)。"""
+    def test_launch_cause_closed_set(self):
+        """闭集三锁并一:
+        [枚举拒] LaunchCause 枚举外值拒收(方案 v3 §5.3 防复发
+          双闸②;新买入臂必须先归入某因果类才合法);
+        [15 臂映射] 15 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 +
+          ev_buy→press(M4 修正补漏,方案 v3 §3.1;新买入臂未分类即登记
+          = 红,锁红时该登记的语义 = 把新臂补进映射表并过对抗审,非
+          机械跟绿)。press_buy_deployable = 泄金阶梯档 1 新臂(溢余
+          discretionary 面,因果类 press 同 M6/dominance;设计方案 §1.2
+          档 1)。P86 重推:+hub_option_buy(乙臂枢纽期权,hold 类,出处
+          = p86-proof-batch.md §3.2/§4.2;映射行随批登记)。P88 迁并腿
+          (原锁线转型域 F4 闭集锁):收窄集 S_spec ⊆ 闭集 + 豁免 =
+          闭集 ∖ S_spec 恰 13 键实名;
+        [双视图] 单载体双视图:press 登记入窗口段排除面(active_window),
+          垫保登记只入 T3 视图(stall_protect_active → defer 参数)——
+          垫保在凑息是 defer 跳过、在 M4/funding 是降序放行(转化类,
+          P78-5′ 四关系表「放行(在册语义保持)」),硬排除会杀死转化
+          类放行;窗口排除面 = press(P78-1 无对价豁免)。两簿合一 =
+          载体/生命周期合一(轮界共销账),非排除面合一。"""
+        # [枚举拒]
         with pytest.raises(ValueError):
             sell_gate.register_launch(_sess(), _FUEL, cause='speculate',
                                       round_num=3)
-
-    def test_press_and_stall_views_are_disjoint(self):
-        """单载体双视图:press 登记入窗口段排除面(active_window),
-        垫保登记只入 T3 视图(stall_protect_active → defer 参数)——
-        垫保在凑息是 defer 跳过、在 M4/funding 是降序放行(转化类,
-        P78-5′ 四关系表「放行(在册语义保持)」),硬排除会杀死转化
-        类放行;窗口排除面 = press(P78-1 无对价豁免)。两簿合一 =
-        载体/生命周期合一(轮界共销账),非排除面合一。"""
+        # [15 臂映射]
+        arms = ('m2_line_member', 'm2_locked_member', 'm2_stockpile',
+                'm2_merge_completion', 'dominance_buy', 'm6_stockpile',
+                'press_buy_deployable',
+                'ev_buy', 'core_single_card_buy',
+                'core_single_card_buy:unlocked', 'transition_component_buy',
+                'dead_gold_press_buy', 'fuel_filler_stall',
+                't3_unlocked_hemostat', 'hub_option_buy')
+        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) == set(arms)
+        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM.values()) \
+            <= sell_gate.LAUNCH_CAUSES
+        assert sell_gate.launch_cause_of('ev_buy') == 'press'
+        assert sell_gate.launch_cause_of('hub_option_buy') == 'hold'
+        assert sell_gate.launch_cause_of('不存在的臂') is None
+        # P88 迁并腿:收窄集 ⊆ 闭集;豁免集恰 13 键——新买入臂入映射表
+        # 即红(强制分类进收窄/豁免,防绕辖域前置的第五臂;对账符号 =
+        # mandate.PRESS_NARROWED_ARMS)
+        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) \
+            >= mandate.PRESS_NARROWED_ARMS, \
+            f'收窄集越出闭集: ' \
+            f'{mandate.PRESS_NARROWED_ARMS - set(sell_gate.LAUNCH_CAUSE_BY_ARM)}'
+        exempt = set(sell_gate.LAUNCH_CAUSE_BY_ARM) \
+            - mandate.PRESS_NARROWED_ARMS
+        must_exempt = {
+            'm2_line_member', 'm2_locked_member', 'm2_stockpile',
+            'm2_merge_completion', 'core_single_card_buy',
+            'core_single_card_buy:unlocked', 'm6_stockpile',
+            'press_buy_deployable', 'ev_buy', 'transition_component_buy',
+            'dead_gold_press_buy', 'fuel_filler_stall',
+            't3_unlocked_hemostat',
+        }
+        assert exempt == must_exempt, \
+            f'豁免集漂移: 多={exempt - must_exempt} 少={must_exempt - exempt}'
+        # [双视图]
         sess = _sess()
         assert sell_gate.register_launch(sess, _FUEL, cause='press',
                                          round_num=3)
@@ -167,57 +215,26 @@ class TestLaunchRegistry:
                                          round_num=3, star=2, cost=3)
         assert _registry(sess)[_CORE_HOLD] == ('hold', 3)
 
-    def test_launch_cause_mapping_closed_contract(self):
-        """登记门:15 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 + ev_buy→press
-        (M4 修正补漏,方案 v3 §3.1;新买入臂未分类即登记 = 红,锁红时
-        该登记的语义 = 把新臂补进映射表并过对抗审,非机械跟绿)。
-        press_buy_deployable = 泄金阶梯档 1 新臂(溢余 discretionary 面,
-        因果类 press 同 M6/dominance;设计方案 §1.2 档 1)。
-        P86 重推:+hub_option_buy(乙臂枢纽期权,hold 类,
-        出处 = p86-proof-batch.md §3.2/§4.2;映射行随批登记)。
-        P88 迁并腿(原锁线转型域 F4 闭集锁):收窄集 S_spec ⊆ 闭集 +
-        豁免 = 闭集 ∖ S_spec 恰 13 键实名。"""
-        arms = ('m2_line_member', 'm2_locked_member', 'm2_stockpile',
-                'm2_merge_completion', 'dominance_buy', 'm6_stockpile',
-                'press_buy_deployable',
-                'ev_buy', 'core_single_card_buy',
-                'core_single_card_buy:unlocked', 'transition_component_buy',
-                'dead_gold_press_buy', 'fuel_filler_stall',
-                't3_unlocked_hemostat', 'hub_option_buy')
-        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) == set(arms)
-        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM.values()) \
-            <= sell_gate.LAUNCH_CAUSES
-        assert sell_gate.launch_cause_of('ev_buy') == 'press'
-        assert sell_gate.launch_cause_of('hub_option_buy') == 'hold'
-        assert sell_gate.launch_cause_of('不存在的臂') is None
-        # P88 迁并腿:收窄集 ⊆ 闭集;豁免集恰 13 键——新买入臂入映射表
-        # 即红(强制分类进收窄/豁免,防绕辖域前置的第五臂;对账符号 =
-        # mandate.PRESS_NARROWED_ARMS)
-        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) \
-            >= mandate.PRESS_NARROWED_ARMS, \
-            f'收窄集越出闭集: ' \
-            f'{mandate.PRESS_NARROWED_ARMS - set(sell_gate.LAUNCH_CAUSE_BY_ARM)}'
-        exempt = set(sell_gate.LAUNCH_CAUSE_BY_ARM) \
-            - mandate.PRESS_NARROWED_ARMS
-        must_exempt = {
-            'm2_line_member', 'm2_locked_member', 'm2_stockpile',
-            'm2_merge_completion', 'core_single_card_buy',
-            'core_single_card_buy:unlocked', 'm6_stockpile',
-            'press_buy_deployable', 'ev_buy', 'transition_component_buy',
-            'dead_gold_press_buy', 'fuel_filler_stall',
-            't3_unlocked_hemostat',
-        }
-        assert exempt == must_exempt, \
-            f'豁免集漂移: 多={exempt - must_exempt} 少={must_exempt - exempt}'
-
 
 # ===== 窗口段:活跃 / 轮界过期 / 五键分键 =====
 
 
 class TestWindowLifecycle:
-    """窗口段生命周期锁(P78-2b τ=同轮;P78-3 轮界过期,W3 修法)。"""
+    """窗口段生命周期锁(P78-2b τ=同轮;P78-3 轮界过期,W3 修法;
+    四出口方案 v3 §3.1)——三场景表驱动并一,场景间独立会话互不复用。"""
 
-    def test_active_only_when_round_matches(self):
+    def test_window_lifecycle_table(self):
+        cases = (
+            ('press_tau_same_round', self._case_press_tau_same_round),
+            ('locked_frame_keeps_registry',
+             self._case_locked_frame_keeps_registry),
+            ('four_exits_close_and_count',
+             self._case_four_exits_close_and_count),
+        )
+        for _name, case in cases:
+            case()
+
+    def _case_press_tau_same_round(self):
         """press τ=同轮:登记轮==当前轮才入排除面,轮进销账(hold 类
         τ=∞ 留簿,P78-2a;行为面由身份段辖,此处锁登记账本身——轮进后
         press 销账、hold 留簿)。current_round=None ⇒ 窗口段失效(V2-09:
@@ -241,7 +258,7 @@ class TestWindowLifecycle:
         assert _FUEL not in _registry(sess)
         assert _registry(sess).get(_TRANS_HOLD) == ('hold', 3)
 
-    def test_locked_frame_never_clears_registry(self):
+    def _case_locked_frame_keeps_registry(self):
         """W3 反向锁:F1 锁线清空废除(P78-3:锁线定型不是任何买因类
         的账闭合事件)——锁线帧登记照常活跃、簿不清空;同 visit 卖回
         由登记轮==当前轮覆盖,过度禁卖上界 ≤1 轮有界可判读。"""
@@ -256,12 +273,7 @@ class TestWindowLifecycle:
         assert _FUEL in _registry(sess), \
             '锁线帧清空登记 = F1 错误语义回流(P78-3)'
 
-
-class TestFourExits:
-    """四出口生命周期锁(方案 v3 §3.1;①卖出销/②部署销/②′合成销/
-    ③轮界销)+ 换线闭合(五键之 close_on_switch)。"""
-
-    def test_four_exits_close_and_count(self):
+    def _case_four_exits_close_and_count(self):
         """四出口生命周期(方案 v3 §3.1):①卖出销(shim 同出口)/
         ②部署销(只销部署名,垫保账存)/②′合成销(V2-05;空账 no-op;
         未接线窗口滞留 ≤1 轮由轮界销兜底)/③换线闭合(P78 §2.1「线账
@@ -310,12 +322,20 @@ class TestFourExits:
 # ===== W1:同 visit 卖回全通道被禁(P78-1;shop_sell 报告 W1)=====
 
 
+_W1_CHANNEL_CASES = ('funding-e2e', 'entry-ev', 'm4-candidates')
+
+
 class TestW1SameVisitBan:
     """W1 锁:②(b)/dominance 等 press 类买入登记活跃帧(登记轮==
     当前轮),凑息/funding/M4 全通道资格面均不含该件——「拆窗口段时
-    该件恰入卖出槽集」的病理形态由红证直调复现。"""
+    该件恰入卖出槽集」的病理形态由红证直调复现。三通道参数化并一
+    (通道无关,P78 INV)。"""
 
-    def test_shop_funding_blocked_end_to_end(self):
+    @pytest.mark.parametrize('channel_case', _W1_CHANNEL_CASES)
+    def test_press_active_blocked_channel_agnostic(self, channel_case):
+        _W1_CASES[channel_case](self)
+
+    def _case_funding_e2e(self):
         """端到端:press 活跃件在 bench + 缺员 + gold<need ⇒ funding
         主路径与兜底豁免均不可达(fallback 池减法①语义:非持有名不入
         静态持有集)⇒ CloseShop 收尾,零卖出发射。红证:同构帧按批 2
@@ -337,12 +357,9 @@ class TestW1SameVisitBan:
             exclude_names=excl)
         assert key == '' and slots == [1], '红证失效:燃料件未穿过身份段外谓词'
 
-    def test_entry_ev_funding_blocked(self):
+    def _case_entry_ev(self):
         """消费位②(entry EV pass funding):press 活跃件不被 prep
         筹资卖出(方案 v3 §2.9 新格 A 三位同源;登记侧实装后差分闭死)。"""
-        from sr_od.application.currency_war.kernel.cw_vocab import (
-            SellBench as PrepSellBench,
-        )
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=2)
         bench = [_bc(_FUEL, slot=1)]
@@ -354,9 +371,9 @@ class TestW1SameVisitBan:
                                    _bridge(_state(1, bench, round_num=2)),
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
-        assert not [e for e in out if isinstance(e.action, PrepSellBench)]
+        assert not [e for e in out if isinstance(e.action, SellBench)]
 
-    def test_m4_channel_blocked_assembly_level(self):
+    def _case_m4_candidates(self):
         """M4 通道同禁(P78 INV 通道无关):press 活跃件不入腾席候选;
         红证 = 身份段-only 装配下该件恰入候选。"""
         sess = _sess()
@@ -375,6 +392,13 @@ class TestW1SameVisitBan:
         assert [b.char_id for b in cands] == [_FUEL], '红证失效'
 
 
+_W1_CASES = {
+    'funding-e2e': TestW1SameVisitBan._case_funding_e2e,
+    'entry-ev': TestW1SameVisitBan._case_entry_ev,
+    'm4-candidates': TestW1SameVisitBan._case_m4_candidates,
+}
+
+
 # ===== funding 兜底豁免(P78-5 四条件)=====
 
 
@@ -391,9 +415,6 @@ class TestFundingFallbackEntryConsumer:
     def test_entry_ev_fallback_liquidates_prep_carrier(self):
         """消费位②(entry EV pass):兜底经 prep 载体发射(行为面;计数
         分键已随 2026-09-08 用户归因遥测删除指令拆除)。"""
-        from sr_od.application.currency_war.kernel.cw_vocab import (
-            SellBench as PrepSellBench,
-        )
         sess = SimpleNamespace()
         state_of(sess).cw4_counters = {}
         bench = [_bc(_TRANS_HOLD, slot=1)]   # cost=2 → 退 2 ≥ 缺口 3−1
@@ -405,7 +426,7 @@ class TestFundingFallbackEntryConsumer:
                                    _bridge(_state(1, bench, round_num=2)),
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
-        sells = [e.action for e in out if isinstance(e.action, PrepSellBench)]
+        sells = [e.action for e in out if isinstance(e.action, SellBench)]
         assert [s.bench_idx for s in sells] == [0]
 
 
@@ -415,9 +436,14 @@ class TestFundingFallbackEntryConsumer:
 class TestProjectionFullFace:
     """读端同源锁(P78-6/M7):projection 视图 = 身份段 ∪ 窗口段 ∪
     T3 活跃集——投影漏 T3 则 liquid_refund 高估 → s_reserve 低估 →
-    预留被吃(方向链方案 v3 §2.8)。"""
+    预留被吃(方向链方案 v3 §2.8)。正证+红证并一。"""
 
-    def test_projection_equals_interest_face_union_t3(self):
+    def test_projection_face_union_t3_and_red_proof(self):
+        """正证:projection = 身份段 ∪ 窗口段 ∪ T3 活跃集,interest =
+        身份段 ∪ 窗口段(不含 T3)。红证(独立会话):投影视图漏 T3
+        活跃集(T3 垫件缺席排除面)⇒ 垫件被计入可变现投影 =
+        liquid_refund 高估形态(修复前新格 B 残余)。"""
+        # 正证
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
         sell_gate.register_launch(sess, '垫件P', cause='stall_protect',
@@ -432,17 +458,13 @@ class TestProjectionFullFace:
         assert sell_gate.sell_exclusions(sess, k, channel='interest',
                                          current_round=3) \
             == frozenset(set(identity) | set(window))
-
-    def test_projection_red_proof_without_t3(self):
-        """红证:投影视图漏 T3 活跃集(T3 垫件缺席排除面)⇒ 垫件被计入
-        可变现投影 = liquid_refund 高估形态(修复前新格 B 残余)。"""
-        sess = _sess()
-        sell_gate.register_launch(sess, '垫件P', cause='stall_protect',
+        # 红证(独立会话)
+        sess_red = _sess()
+        sell_gate.register_launch(sess_red, '垫件P', cause='stall_protect',
                                   round_num=3)
-        k = ('目标件',)
         no_t3 = frozenset(
-            set(sell_gate.identity_exclusions(sess, k))
-            | set(sell_gate.active_window(sess, 3)))
+            set(sell_gate.identity_exclusions(sess_red, k))
+            | set(sell_gate.active_window(sess_red, 3)))
         assert '垫件P' in sell_gate.sell_exclusions(
-            sess, k, channel='projection', current_round=3)
+            sess_red, k, channel='projection', current_round=3)
         assert '垫件P' not in no_t3, '红证失效:无 T3 并入面仍含垫件'

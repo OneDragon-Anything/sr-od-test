@@ -1,14 +1,14 @@
-"""CW 批统计 ④ 终局阵容完成率的 P1 配方对代理键锁面。
+"""CW 批统计 ④ 终局阵容完成率的 p1_pair 代理键锁面。
 
 出处 = skills/sr-od-currency-war-dev/scripts/cw_batch_stats.py ``game_metrics``
 ④ 分支(模块 docstring「P1 配方对代理键」节,口径单一源);语义依据 =
 ADR-0357(P1 配方锁局 locked_comp 恒空)+ kernel/cw_intention.p1_pair
 字段契约(配方锁活跃 ⟺ p1_pair 非空,P2+ 恒空)。
 
-病灶:P1-only sim 载体下 locked_comp 恒空 → ④ 全批结构性
-恒 0 = 指标-载体错配。修复 = locked_comp 空而 p1_pair 非空的帧族,
-锁定目标代理 = 配方对,④ 读同行 form_ok 并标 proxy(观测面专用;
-引擎 ADR-0357 语义零改)。锁四件事:
+锁的语义(现状):skill 脚本对真实对局档案的 p1_pair 代理——P1 配方
+锁局的档案行 locked_comp 结构性为空,④ 靠同行 p1_pair 非空识别「配方
+锁活跃」,以同行 form_ok 判定完成并标 proxy(观测面专用;引擎
+ADR-0357 语义零改)。锁四件事:
 1. 配方锁活跃帧:④ = form_ok 判定(1/0)且 comp_proxy=True;
 2. 未锁线帧(p1_pair 空)与锁线帧(locked_comp 非空)既有口径零漂移,
    proxy 恒 False;
@@ -58,8 +58,16 @@ def _row(round_num: int = 9, *, locked_comp: str | None = '',
 class TestCompDoneP1Proxy:
     """④ 判定分支矩阵(口径 = cw_batch_stats 模块 docstring ④ 节)。"""
 
-    def test_recipe_lock_active_judges_form_ok_with_proxy_mark(self):
-        # 配方锁活跃(locked_comp 空 ∧ p1_pair 非空):④ = 同行 form_ok,标 proxy
+    def test_game_metrics_comp_done_branch_matrix(self):
+        """④ 判定分支矩阵三段并一。
+        [代理活跃] 配方锁活跃(locked_comp 空 ∧ p1_pair 非空):
+        ④ = 同行 form_ok,标 proxy;
+        [零漂移] 未锁线(p1_pair 空):用户规格逐字 = 0,非代理(空窗
+        ≠ 锁定);锁线帧(locked_comp 非空):既有 form_ok 分支,代理
+        不辖(ADR-0357 语义零改的观测面半边:①资格锁/P2+ 判定不换道);
+        [档案行] 结构性 None = 无数据;代理不可达(不把无数据虚构读成
+        行为),不入分母。"""
+        # [代理活跃]
         ok = _bs.game_metrics(_game(
             [_row(p1_pair=('仙舟', '列车同行'), form_ok=True)]))
         ng = _bs.game_metrics(_game([_row(p1_pair=('仙舟',), form_ok=False)]))
@@ -67,15 +75,11 @@ class TestCompDoneP1Proxy:
         assert ok['comp_proxy'] is True
         assert ng['comp_done'] == 0
         assert ng['comp_proxy'] is True
-
-    def test_unlocked_and_locked_branches_zero_drift(self):
-        # 未锁线(p1_pair 空):用户规格逐字 = 0,非代理(空窗 ≠ 锁定)
+        # [零漂移]
         unl = _bs.game_metrics(_game(
             [_row(locked_comp='', p1_pair=(), form_ok=True)]))
         assert unl['comp_done'] == 0
         assert unl['comp_proxy'] is False
-        # 锁线帧(locked_comp 非空):既有 form_ok 分支,代理不辖
-        # (ADR-0357 语义零改的观测面半边:①资格锁/P2+ 判定不换道)
         lk0 = _bs.game_metrics(_game(
             [_row(locked_comp='不息之途', p1_pair=(), form_ok=False)]))
         lk1 = _bs.game_metrics(_game(
@@ -84,9 +88,7 @@ class TestCompDoneP1Proxy:
         assert lk0['comp_proxy'] is False
         assert lk1['comp_done'] == 1
         assert lk1['comp_proxy'] is False
-
-    def test_archive_row_structural_none_stays_out_of_denominator(self):
-        # 档案行(结构性 None)= 无数据;代理不可达(不把无数据虚构读成行为)
+        # [档案行]
         ar = _bs.game_metrics(_game(
             [_row(locked_comp=None, p1_pair=None, form_ok=True)]))
         assert ar['comp_done'] is None
