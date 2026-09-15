@@ -95,7 +95,7 @@ def _seed_wrong_archive(md: Path, gid: str, seg_rids: list[str],
     own_rows = [_row(own, '2026-09-08T09:00:00' if own == _R_D
                      else '2026-09-09T08:00:00', 1, 1)]
     _write_archive(md, gid, seg_rids,
-                   {'op_journal.jsonl': own_rows + b_rows})
+                   {'state/journal.jsonl': own_rows + b_rows})
 
 
 def test_assemble_converges_double_counted_segment(tmp_path: Path):

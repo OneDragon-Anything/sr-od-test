@@ -1,8 +1,9 @@
 """CW 按局档案重装配保真锁面(match_archive 派生输入回源流补读)。
 
 出处 = telemetry/match_archive.py ``_load_derived_inputs``;背景 =
-真实双档重放实证的「重装配无益有损」:v12 起切片契约只含
-op_journal + state/journal 两文件,而 rounds/loss_nodes/departures 等
+真实双档重放实证的「重装配无益有损」:v12 起切片契约 = 统一 state
+新账单键(op_journal 键已随该流 2026-09-15 退役拆除),而
+rounds/loss_nodes/departures 等
 派生列的输入吃旧流键——任何重装配(load_archive 版本迁移 / 段集增长 /
 跨档守卫整体重装配)都会把派生列全量清空,此前只能靠一次性脚本按装配端
 真函数重建。锁四件事:
@@ -133,15 +134,14 @@ def _seed_legacy_dir(rd: Path) -> None:
 
 
 def test_assemble_rebuilds_derived_columns_from_legacy_streams(tmp_path: Path):
-    """装配主路径保真:切片契约两文件,派生列从旧流源文件完整重建。"""
+    """装配主路径保真:切片契约单键(state 新账),派生列从旧流源文件完整重建。"""
     rd = tmp_path / 'live'
     _seed_legacy_dir(rd)
 
     arch = ma.assemble_game(rd, _GID)
     assert arch is not None
-    # 切片契约不回填:v12 两文件,旧流键不重入档案载荷
-    assert set(arch['slices'].keys()) == {'op_journal.jsonl',
-                                          'state/journal.jsonl'}
+    # 切片契约不回填:单键,旧流键不重入档案载荷
+    assert set(arch['slices'].keys()) == {'state/journal.jsonl'}
     # 逐轮表:3 轮,结算真值链/动作合并/快照/收口全在
     rounds = arch['rounds']
     assert [(r['plane'], r['round']) for r in rounds] == [(1, 1), (1, 2), (2, 3)]
@@ -234,8 +234,7 @@ def test_reassembly_degrades_honestly_without_streams(tmp_path: Path):
     assert arch['hp_events'] == []
     assert arch['resume_reconciliation'] == []
     assert arch['opening']['briefing_rows'] == []
-    assert set(arch['slices'].keys()) == {'op_journal.jsonl',
-                                          'state/journal.jsonl'}
+    assert set(arch['slices'].keys()) == {'state/journal.jsonl'}
 
 
 def test_derived_inputs_slice_precedence(tmp_path: Path):

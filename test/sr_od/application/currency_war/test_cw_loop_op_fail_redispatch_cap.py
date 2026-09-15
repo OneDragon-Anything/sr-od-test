@@ -11,8 +11,8 @@ LIMIT`` → round_fail 显式停交上层。
 1. 计数窗口语义(纯函数):ok 整窗归零(fail 间歇重置)/同键 fail 累加/
    异键 fail 换情节从 1 起算;
 2. 包装接线:连续 fail 至上限-1 仍走默认 round_wait,第 LIMIT 次转
-   round_fail(status 含 op 行名可判读)+ 留证截图恰一次 + journal
-   enter/exit 每次分发成对;
+   round_fail(status 含 op 行名可判读)+ 留证截图恰一次 + [cw-op]
+   日志行每次分发恰一行(出口即落);
 3. 间歇 ok 复位:fail 窗内穿插任一 ok → 计数清零,后续 fail 从 1 重计,
    不提前触发;
 4. 异键 ok 同闭窗:粘滞 op 的 fail 序列被**其他** op 的 ok 打断 → 该 op
@@ -39,20 +39,19 @@ from sr_od.application.currency_war.operations.cw_loop import (
 )
 
 
-def _spy_journal(monkeypatch) -> list[str]:
-    """桩掉 journal 写入(测试零真实副作用)+ 留出口行序列供配对断言。"""
-    exits: list[str] = []
-    monkeypatch.setattr(cw_loop_mod, 'record_op_enter',
-                        lambda name, *a, **k: {'op': name})
-    monkeypatch.setattr(cw_loop_mod, 'record_op_exit',
-                        lambda token, outcome='ok', **k: exits.append(outcome))
-    return exits
+def _spy_cw_op(monkeypatch) -> list[tuple[str, str]]:
+    """桩掉 [cw-op] 日志行落点(测试零真实日志副作用)+ 留 (op, outcome)
+    序列供配对断言(原 journal record_op_enter/exit 桩随该流退役换型)。"""
+    calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(cw_loop_mod, '_log_cw_op',
+                        lambda name, pos, dur, outcome, detail='':
+                        calls.append((name, outcome)))
+    return calls
 
 
 class _Host:
     """``_dispatch_screen_op`` 离线宿主:只供给包装消费面(round 工厂/
-    留证/位置键/上限值),镜像恢复路由锁的替身纪律。
-
+    留证/上限值),镜像恢复路由锁的替身纪律(ctx 缺省缺席 = 位置键退 (0, 0);
     刻意**不**预置 ``_op_fail_streak_key/_n``——锁 getattr 缺省初始化
     路径与生产首帧形态一致。
     """
@@ -78,9 +77,6 @@ class _Host:
     def save_screenshot(self, prefix: str = '') -> str:
         self.shots.append(prefix)
         return f'{prefix}.png'
-
-    def _op_journal_pos(self) -> tuple[int, int]:
-        return (0, 0)
 
 
 class _ScriptedOp:
@@ -112,7 +108,7 @@ def _dispatch(host, op, journal_name: str, **kwargs):
 
 def test_cap_fires_at_limit_with_readout(monkeypatch):
     """锁2 接线:上限-1 次维持默认映射,第 LIMIT 次转可判读 round_fail。"""
-    exits = _spy_journal(monkeypatch)
+    calls = _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     limit = CwLoop.OP_FAIL_REDISPATCH_LIMIT
     op = _ScriptedOp([False] * limit)
@@ -123,7 +119,8 @@ def test_cap_fires_at_limit_with_readout(monkeypatch):
     assert host.rounds[-1][0] == 'fail'
     assert '选择伙伴' in result.status   # op 行名进 status(可判读)
     assert host.shots == ['op_fail_cap']   # 留证恰一次
-    assert len(exits) == limit and exits[-1] == 'fail'   # 分发与出口行成对
+    # 分发与 [cw-op] 行一比一(出口即落,末行为 fail)
+    assert len(calls) == limit and calls[-1] == ('选择伙伴', 'fail')
 
 
 def test_intermittent_ok_resets_window(monkeypatch):
@@ -133,7 +130,7 @@ def test_intermittent_ok_resets_window(monkeypatch):
     (4+1=5)。实测 ok 后 limit-1 次连败全 wait = 计数确已清零,第 limit
     次才触发。
     """
-    _spy_journal(monkeypatch)
+    _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     limit = CwLoop.OP_FAIL_REDISPATCH_LIMIT
     op = _ScriptedOp([False] * (limit - 1) + [True] + [False] * limit)
@@ -146,7 +143,7 @@ def test_intermittent_ok_resets_window(monkeypatch):
 
 def test_other_op_ok_closes_window(monkeypatch):
     """锁4 异键 ok 同闭窗:其他 op 的 ok 打断粘滞 op 的 fail 序列。"""
-    _spy_journal(monkeypatch)
+    _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     limit = CwLoop.OP_FAIL_REDISPATCH_LIMIT
     stuck = _ScriptedOp([False] * limit)
@@ -163,7 +160,7 @@ def test_other_op_ok_closes_window(monkeypatch):
 
 def test_dedicated_hook_shadows_cap(monkeypatch):
     """锁5 专用守卫先于通用网:hook 返回自身轮次 → 恒 hook 结果且不计数。"""
-    _spy_journal(monkeypatch)
+    _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     op = _ScriptedOp([False] * 20)
 
@@ -182,7 +179,7 @@ def test_dedicated_hook_shadows_cap(monkeypatch):
 
 def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
     """锁6 on_fail_retry 分支同辖:达限转 round_fail,不再进 400 重试池。"""
-    _spy_journal(monkeypatch)
+    _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     limit = CwLoop.OP_FAIL_REDISPATCH_LIMIT
     op = _ScriptedOp([False] * (limit + 2))
