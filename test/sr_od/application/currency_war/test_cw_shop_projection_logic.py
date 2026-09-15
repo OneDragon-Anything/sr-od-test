@@ -382,14 +382,14 @@ class TestM1Equivalence:
         assert legacy[0].x == 0   # 坐标不入存储(§2.5-5)
 
 
-def test_shop_entry_seed_guard_passes_with_funnel_bench() -> None:
-    """T-177 商店入口播种对账场景锁(run_buy_waves 入口链回归):visit 入口
-    = v1 帧合成 + guard_expected_vs_tracked(stage='seed')。容器 bench 由
-    漏斗真读写入(deploy 后留 bench 一人),执行账 tracked 持同一真值;
-    合成对未读 bench(CwSimFrame.bench_readable=False)跳写后,守卫
-    seed 对账必须通过。回归形态 = 无门合成把 expected 覆盖成「9 槽全空」
-    → 与 tracked 多集分歧 AssertionError(实机 2026-09-13 商店段循环
-    崩溃 15+ 连发实证)。"""
+def test_shop_entry_funnel_bench_survives_synthesis() -> None:
+    """T-177 商店入口漏斗 bench 写门场景锁(run_buy_waves 入口链回归):
+    visit 入口 = v1 帧合成;容器 bench 由漏斗真读写入(deploy 后留 bench
+    一人),v1 形态帧(bench_readable=False)合成对未读 bench 域跳写——
+    容器 bench 保持漏斗真读值,与执行账 tracked 同源不破。回归形态 = 无门
+    合成把容器 bench 覆盖成「9 槽全空」假真空(实机 2026-09-13 商店段
+    循环崩溃 15+ 连发实证;原断言载体双账守卫已随 T-268 退役,本锁改
+    容器/tracked 双侧直断言)。"""
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.kernel.cw_exec_state import (
@@ -399,9 +399,6 @@ def test_shop_entry_seed_guard_passes_with_funnel_bench() -> None:
         BenchSlot,
         BenchView,
         Unit,
-    )
-    from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
-        guard_expected_vs_tracked,
     )
 
     bs = board_state_of(None)
@@ -414,14 +411,17 @@ def test_shop_entry_seed_guard_passes_with_funnel_bench() -> None:
         capacity=9),
         sig=ChannelSig(family='obs', actor='CwScreenPrep', mode='read'))
     session = SimpleNamespace()
-    exec_state_of(session).tracked_bench_chars = [_bc('银枝', star=1, slot=4)]
+    _tracked = [_bc('银枝', star=1, slot=4)]
+    exec_state_of(session).tracked_bench_chars = _tracked
     # v1 形态帧:bench 恒默认空表 + 不可读位(生产置位点 = read_game_state)
     st = _state(gold=30, shop=[])
     st.bench_readable = False
     synthesize_from_game_state(bs, st)
-    # 旧无门合成在此把 expected 覆盖成 9 空槽 → 守卫 AssertionError
-    guard_expected_vs_tracked(bs, session, stage='seed')
+    # 旧无门合成在此把容器 bench 覆盖成 9 空槽假真空
     view = bs.bench.value
     assert view is not None and view.slots[3].unit is not None \
         and view.slots[3].unit.char_id == '银枝', \
-        '守卫通过后容器 bench 仍为漏斗真读值(合成未覆盖)'
+        '合成后容器 bench 仍为漏斗真读值(未读域跳写,兜底空表不覆盖)'
+    assert [(b.char_id, b.star) for b in
+            exec_state_of(session).tracked_bench_chars if b is not None] \
+        == [('银枝', 1)], '执行账 tracked 不受合成影响(容器/执行两账同源)'

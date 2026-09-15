@@ -501,9 +501,9 @@ def test_synthesis_unread_bench_no_clobber() -> None:
     未读域≠真空域。v1 漏斗帧(read_game_state 不读 bench 身份,bench 恒
     默认空表)合成必须跳写 bench——容器内备战装配环的真读观察保持原值
     原版本;可读真值帧(sim 形态,缺省 True)照写不回归。回归形态 = 无门
-    合成把 prep 装配环真读覆盖成「9 槽全空」,与执行账 tracked 在商店段
-    guard_expected_vs_tracked 播种对账处对撞(实机 2026-09-13 商店段
-    循环崩溃实证,T-177)。"""
+    合成把 prep 装配环真读覆盖成「9 槽全空」假真空,容器与执行账 tracked
+    两账从此不同源(实机 2026-09-13 商店段循环崩溃实证,T-177;原表述
+    中的双账对账载体已随 T-268 守卫退役,本门的防覆盖语义独立存续)。"""
     sig = _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
     # 容器先有漏斗真读(deploy 后留 bench:物理槽 4 一人,1 基槽号信息位)
     bs = GameState(schema_version=BS_SCHEMA_VERSION)

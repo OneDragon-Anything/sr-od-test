@@ -1,16 +1,16 @@
 """T-227 溢出腿执行账吸收回归锁(2026-09-11 实机 2-4 停机事故)。
 
 事故形态:T-226 溢出腿(apply_prep_action_logic)把入位卡写进容器 bench,
-执行侧 tracked 主账未吸收 → 商店 visit 入口播种守卫
-guard_expected_vs_tracked(stage='seed')双账多集分歧 AssertionError;
-且店开 0n 分发路径(visit_open_shop→run_buy_waves)不经过 director
-heavy 观察(reconcile_tracking 唯一生产写点),read_game_state 漏斗
-prep_shop_open 阶段设计上不读 bench 身份 → 分叉粘性不可自愈 → 崩溃
-循环停机。
+执行侧 tracked 主账未吸收 → 商店 visit 入口两账结构性分叉粘性不可自愈
+(店开 0n 分发路径(visit_open_shop→run_buy_waves)不经过 director
+heavy 观察,reconcile_tracking 唯一生产写点;read_game_state 漏斗
+prep_shop_open 阶段设计上不读 bench 身份)→ 崩溃循环停机。
+(原「种子守卫 AssertionError」表述随 T-268 守卫退役改写:分叉检出
+现归观察边界 reconcile 纠漂,本锁锁的吸收行为本体不变。)
 
 锁的四件事:
 1. 溢出腿落地(session 在场):tracked 主账同帧吸收入位卡,槽位/身份
-   与容器腿同源——真实守卫 stage='seed' 不再炸;
+   与容器腿同源;
 2. 执行器摘除腿先行的生产时序(tracked 已缺卖件、形态紧缩)同样成立
    (吸收按槽号重建槽位表,对紧缩/缺件输入鲁棒);
 3. session 缺席(旧调用形态)= tracked 零写(离线/兼容行为零变化);
@@ -26,6 +26,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     apply_prep_action_logic,
+    bench_slots_of,
     bench_view_of_slots,
     board_state_of,
 )
@@ -34,9 +35,6 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     SellBench,
-)
-from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
-    guard_expected_vs_tracked,
 )
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
@@ -56,8 +54,8 @@ def _seed(session, tracked, *, ov_id: str = '不死途'):
     return bs
 
 
-def test_overflow_absorb_syncs_tracked_guard_seed_passes():
-    """溢出腿落地 → tracked 吸收入位卡;真实守卫 stage='seed' 不炸。"""
+def test_overflow_absorb_syncs_tracked():
+    """溢出腿落地 → tracked 吸收入位卡,槽位/身份与容器腿同源。"""
     session = StrategySession()
     bs = _seed(session, bench_from_compact([
         BenchChar(slot=1, char_id='花火', star=1),
@@ -70,8 +68,10 @@ def test_overflow_absorb_syncs_tracked_guard_seed_passes():
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]
     assert tracked[0] is not None and tracked[0].slot == 1   # 被卖槽回占
-    # 守卫锁(事故本形):容器 vs tracked 播种期对拍通过(不抛)
-    guard_expected_vs_tracked(bs, session, stage='seed')
+    # 吸收锁(事故本形):容器腿与 tracked 腿同槽同身份。
+    assert [(b.char_id, b.star) for b in
+            bench_slots_of(bs) if b is not None] == [
+        ('不死途', 1), ('刃', 1)]
 
 
 def test_overflow_absorb_after_executor_removal_compact_shape():
@@ -87,7 +87,6 @@ def test_overflow_absorb_after_executor_removal_compact_shape():
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]
     assert tracked[1] is not None and tracked[1].char_id == '刃'   # 刃 仍在槽 2
-    guard_expected_vs_tracked(bs, session, stage='seed')
 
 
 def test_overflow_no_session_keeps_tracked_untouched():
